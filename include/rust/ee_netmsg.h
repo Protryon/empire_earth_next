@@ -1158,6 +1158,21 @@ constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_BLOB = 8;
 /// A member that is not on the wire, as bytes (the box selection's rectangle).
 constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_RAW = 9;
 
+/// The capture's sweep of a type (EEMessageCapture.cpp's NMSW payloads): fixed members only.
+constexpr static const uint8_t EE_NETMSG_SWEEP_FIXED = 0;
+
+/// a string between fixed members
+constexpr static const uint8_t EE_NETMSG_SWEEP_STRING = 1;
+
+/// the unit id list (a u32 count)
+constexpr static const uint8_t EE_NETMSG_SWEEP_THESE_UNITS = 2;
+
+/// the upgrades (a u8 count), then a string
+constexpr static const uint8_t EE_NETMSG_SWEEP_CIV_UPGRADES = 3;
+
+/// the box selection's blob (swept by its own cases: only compressed buffers decode)
+constexpr static const uint8_t EE_NETMSG_SWEEP_SELECT_UNITS = 4;
+
 /// The header's size: reserved, type, target slot, originating slot.
 constexpr static const size_t HEADER_SIZE = 4;
 
@@ -1243,6 +1258,22 @@ struct EeNetMsgRecordRules {
   uint8_t response_type;
   uint8_t response_mine;
   uint8_t response_theirs;
+};
+
+/// A game message type's shape for the capture's sweep: its kind (`EE_NETMSG_SWEEP_*`), the bytes before its variable
+/// member with the 4-byte header (a fixed type's whole size), the fixed bytes after a string.
+struct EeNetMsgSweepShape {
+  uint8_t kind;
+  uint32_t prefix;
+  uint32_t suffix;
+};
+
+/// An engine message type's shape for the capture's sweep (NMNE): the fixed bytes after the header before its strings
+/// or its players' inputs, its strings, whether it carries the inputs (all 0 for no engine type).
+struct EeNetMsgEngineSweepShape {
+  uint32_t fixed;
+  uint32_t strings;
+  uint8_t inputs;
 };
 
 extern "C" {
@@ -1424,6 +1455,12 @@ EeNetMsgRecordField ee_netmsg_record_member(uint8_t message_type,
 
 /// A record type's rules (all 0 for any other type).
 EeNetMsgRecordRules ee_netmsg_record_rules(uint8_t message_type);
+
+/// The sweep shape of a game message type (its codec class's layout; all 0 for no game type).
+EeNetMsgSweepShape ee_netmsg_sweep_shape(uint8_t message_type);
+
+/// The sweep shape of an engine message type (its codec class's layout).
+EeNetMsgEngineSweepShape ee_netmsg_engine_sweep_shape(uint8_t message_type);
 
 }  // extern "C"
 

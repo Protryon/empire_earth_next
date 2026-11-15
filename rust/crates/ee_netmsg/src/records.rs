@@ -336,6 +336,74 @@ pub extern "C" fn ee_netmsg_record_rules(message_type: u8) -> EeNetMsgRecordRule
     EeNetMsgRecordRules { wait_field, response_type, response_mine, response_theirs }
 }
 
+/// The capture's sweep of a type (EEMessageCapture.cpp's NMSW payloads): fixed members only.
+pub const EE_NETMSG_SWEEP_FIXED: u8 = 0;
+/// a string between fixed members
+pub const EE_NETMSG_SWEEP_STRING: u8 = 1;
+/// the unit id list (a u32 count)
+pub const EE_NETMSG_SWEEP_THESE_UNITS: u8 = 2;
+/// the upgrades (a u8 count), then a string
+pub const EE_NETMSG_SWEEP_CIV_UPGRADES: u8 = 3;
+/// the box selection's blob (swept by its own cases: only compressed buffers decode)
+pub const EE_NETMSG_SWEEP_SELECT_UNITS: u8 = 4;
+
+/// A game message type's shape for the capture's sweep: its kind (`EE_NETMSG_SWEEP_*`), the bytes before its variable
+/// member with the 4-byte header (a fixed type's whole size), the fixed bytes after a string.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EeNetMsgSweepShape {
+    pub kind: u8,
+    pub prefix: u32,
+    pub suffix: u32,
+}
+
+/// The sweep shape of a game message type (its codec class's layout; all 0 for no game type).
+#[no_mangle]
+pub extern "C" fn ee_netmsg_sweep_shape(message_type: u8) -> EeNetMsgSweepShape {
+    let Some(&(_, class)) = TYPES.iter().find(|t| t.0 == message_type) else {
+        return EeNetMsgSweepShape { kind: 0, prefix: 0, suffix: 0 };
+    };
+    let fields = CLASSES[class as usize].fields;
+    let fixed = |f: &[Field]| f.iter().map(|f| f.kind.fixed_size().unwrap_or(0)).sum::<usize>() as u32;
+    let Some(v) = fields.iter().position(|f| f.kind.fixed_size().is_none()) else {
+        return EeNetMsgSweepShape { kind: EE_NETMSG_SWEEP_FIXED, prefix: 4 + fixed(fields), suffix: 0 };
+    };
+    let kind = match fields[v].kind {
+        Kind::WStr => EE_NETMSG_SWEEP_STRING,
+        Kind::Records32(_) => EE_NETMSG_SWEEP_THESE_UNITS,
+        Kind::Records8(_) => EE_NETMSG_SWEEP_CIV_UPGRADES,
+        _ => EE_NETMSG_SWEEP_SELECT_UNITS,
+    };
+    let suffix = if kind == EE_NETMSG_SWEEP_STRING { fixed(&fields[v + 1..]) } else { 0 };
+    EeNetMsgSweepShape { kind, prefix: 4 + fixed(&fields[..v]), suffix }
+}
+
+/// An engine message type's shape for the capture's sweep (NMNE): the fixed bytes after the header before its strings
+/// or its players' inputs, its strings, whether it carries the inputs (all 0 for no engine type).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EeNetMsgEngineSweepShape {
+    pub fixed: u32,
+    pub strings: u32,
+    pub inputs: u8,
+}
+
+/// The sweep shape of an engine message type (its codec class's layout).
+#[no_mangle]
+pub extern "C" fn ee_netmsg_engine_sweep_shape(message_type: u8) -> EeNetMsgEngineSweepShape {
+    use crate::engine::{ENGINE_CLASSES, ENGINE_TYPES};
+    let Some(&(_, class)) = ENGINE_TYPES.iter().find(|t| t.0 == message_type) else {
+        return EeNetMsgEngineSweepShape { fixed: 0, strings: 0, inputs: 0 };
+    };
+    let fields = ENGINE_CLASSES[(class - crate::engine::EE_NETMSG_ENGINE_BASE) as usize].fields;
+    let v = fields.iter().position(|f| f.kind.fixed_size().is_none()).unwrap_or(fields.len());
+    EeNetMsgEngineSweepShape {
+        fixed: fields[..v].iter().map(|f| f.kind.fixed_size().unwrap_or(0)).sum::<usize>() as u32,
+        strings: fields.iter().filter(|f| f.kind == Kind::WStr).count() as u32,
+        inputs: fields.iter().any(|f| f.kind == Kind::Inputs) as u8,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -506,5 +574,164 @@ mod tests {
             EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_INTEGER, offset: 1, size: 4 }
         );
         assert_eq!(ee_netmsg_record_flags(0x5d), PAUSED);
+    }
+
+    #[test]
+    fn the_sweep_shapes_are_the_capture_tables() {
+        // the capture's table before round 5 (type, kind, prefix, suffix): the unit id list's prefix (unused) was 9
+        let table: [(u8, u8, u32, u32); 107] = [
+            (0x50, 4, 6, 0),
+            (0x72, 0, 13, 0),
+            (0x9b, 0, 18, 0),
+            (0x4f, 4, 6, 0),
+            (0x49, 0, 9, 0),
+            (0x76, 0, 9, 0),
+            (0x9f, 0, 13, 0),
+            (0x70, 0, 10, 0),
+            (0x4c, 0, 11, 0),
+            (0x86, 0, 25, 0),
+            (0x56, 0, 18, 0),
+            (0x59, 0, 29, 0),
+            (0x6e, 0, 17, 0),
+            (0x75, 0, 25, 0),
+            (0x8d, 0, 6, 0),
+            (0x78, 0, 10, 0),
+            (0x5a, 1, 6, 0),
+            (0x85, 0, 13, 0),
+            (0xa7, 0, 6, 0),
+            (0x7f, 3, 10, 0),
+            (0x7e, 3, 10, 0),
+            (0x87, 0, 5, 0),
+            (0xa4, 0, 5, 0),
+            (0x61, 0, 9, 0),
+            (0x41, 0, 7, 0),
+            (0x42, 0, 9, 0),
+            (0x46, 0, 7, 0),
+            (0x47, 0, 9, 0),
+            (0x88, 0, 9, 0),
+            (0x89, 0, 9, 0),
+            (0x79, 0, 5, 0),
+            (0xa9, 1, 53, 0),
+            (0x60, 1, 13, 0),
+            (0x91, 0, 5, 0),
+            (0x5f, 0, 9, 0),
+            (0x51, 0, 10, 0),
+            (0xac, 0, 5, 0),
+            (0x6b, 0, 18, 0),
+            (0x58, 0, 5, 0),
+            (0x92, 0, 9, 0),
+            (0x95, 0, 14, 0),
+            (0x6c, 0, 5, 0),
+            (0x8e, 0, 6, 0),
+            (0x7d, 1, 5, 0),
+            (0xad, 0, 5, 0),
+            (0x5c, 0, 6, 0),
+            (0xa8, 0, 8, 0),
+            (0x97, 0, 6, 0),
+            (0x98, 0, 7, 0),
+            (0x64, 1, 20, 0),
+            (0x9a, 0, 9, 0),
+            (0x94, 0, 13, 0),
+            (0x71, 0, 10, 0),
+            (0x7b, 0, 14, 0),
+            (0x67, 0, 14, 0),
+            (0x8c, 0, 6, 0),
+            (0xab, 0, 6, 0),
+            (0x68, 0, 17, 0),
+            (0x55, 0, 5, 0),
+            (0x7c, 0, 7, 0),
+            (0x43, 0, 12, 0),
+            (0x4d, 0, 21, 0),
+            (0x73, 0, 9, 0),
+            (0x44, 0, 26, 0),
+            (0x5b, 1, 17, 23),
+            (0xaa, 0, 21, 0),
+            (0x6a, 1, 8, 0),
+            (0x6d, 0, 6, 0),
+            (0x4a, 0, 9, 0),
+            (0x57, 0, 10, 0),
+            (0x81, 0, 9, 0),
+            (0x53, 0, 15, 0),
+            (0x8b, 0, 13, 0),
+            (0x52, 0, 14, 0),
+            (0xa6, 0, 13, 0),
+            (0xa3, 0, 5, 0),
+            (0x90, 0, 10, 0),
+            (0x82, 0, 6, 0),
+            (0x93, 0, 6, 0),
+            (0x83, 0, 6, 0),
+            (0x84, 0, 7, 0),
+            (0xa0, 0, 17, 0),
+            (0xa2, 0, 10, 0),
+            (0x74, 0, 9, 0),
+            (0xa1, 0, 9, 0),
+            (0x96, 2, 9, 0),
+            (0x48, 0, 9, 0),
+            (0x4e, 4, 6, 0),
+            (0xa5, 0, 5, 0),
+            (0x9c, 0, 13, 0),
+            (0x80, 0, 22, 0),
+            (0x99, 0, 13, 0),
+            (0x66, 0, 22, 0),
+            (0x54, 0, 6, 0),
+            (0x8f, 0, 10, 0),
+            (0x5d, 0, 10, 0),
+            (0x5e, 0, 8, 0),
+            (0x8a, 0, 5, 0),
+            (0x63, 0, 5, 0),
+            (0x65, 0, 13, 0),
+            (0x62, 0, 5, 0),
+            (0x4b, 0, 5, 0),
+            (0x7a, 0, 10, 0),
+            (0x77, 0, 13, 0),
+            (0x6f, 0, 9, 0),
+            (0x9e, 0, 9, 0),
+            (0xae, 0, 11, 0),
+        ];
+        for (t, kind, prefix, suffix) in table {
+            let s = ee_netmsg_sweep_shape(t);
+            let prefix = if kind == EE_NETMSG_SWEEP_THESE_UNITS { 5 } else { prefix };
+            assert_eq!(s, EeNetMsgSweepShape { kind, prefix, suffix }, "{t:#x}");
+        }
+        assert_eq!(ee_netmsg_sweep_shape(0x9d), EeNetMsgSweepShape { kind: 0, prefix: 0, suffix: 0 });
+    }
+
+    #[test]
+    fn the_engine_sweep_shapes_are_the_capture_table() {
+        // the capture's table before round 5 (type, fixed, strings, inputs), in type order
+        let table: [(u8, u32, u32, u8); 28] = [
+            (0x20, 1, 1, 0),
+            (0x21, 0, 0, 0),
+            (0x22, 1, 2, 0),
+            (0x23, 10, 1, 0),
+            (0x24, 1, 0, 0),
+            (0x25, 4, 0, 0),
+            (0x26, 8, 0, 1),
+            (0x27, 10, 0, 1),
+            (0x28, 7, 0, 0),
+            (0x29, 4, 0, 0),
+            (0x2a, 4, 0, 0),
+            (0x2b, 4, 0, 0),
+            (0x2d, 4, 0, 0),
+            (0x2e, 4, 0, 0),
+            (0x2f, 0, 0, 0),
+            (0x30, 0, 0, 0),
+            (0x31, 5, 0, 0),
+            (0x32, 8, 0, 0),
+            (0x33, 8, 0, 0),
+            (0x34, 4, 0, 0),
+            (0x35, 8, 0, 0),
+            (0x36, 4, 0, 0),
+            (0x37, 8, 0, 0),
+            (0x38, 9, 0, 0),
+            (0x39, 0, 0, 0),
+            (0x3a, 0, 0, 0),
+            (0x3b, 0x405, 0, 0),
+            (0x3c, 7, 0, 0),
+        ];
+        for (t, fixed, strings, inputs) in table {
+            assert_eq!(ee_netmsg_engine_sweep_shape(t), EeNetMsgEngineSweepShape { fixed, strings, inputs }, "{t:#x}");
+        }
+        assert_eq!(ee_netmsg_engine_sweep_shape(0x2c), EeNetMsgEngineSweepShape { fixed: 0, strings: 0, inputs: 0 });
     }
 }

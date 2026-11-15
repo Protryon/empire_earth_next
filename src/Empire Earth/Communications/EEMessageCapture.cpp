@@ -13,7 +13,7 @@
 // NMNE: the engine messages (NEMessage.cpp, types 0x20..0x3c) over edge payloads, built by NEMessage::BuildNEMessage:
 //       the bytes in, the export (ExportSize, the bytes), the members as Import filled them; the two communications
 //       ticks with nested players' inputs (none, game and engine messages, unknown types, a tick in a tick, 255).
-// NMDC: the Execute decisions (ee/EEMessageExecute.h): every call in game (its kind, inputs and outputs), the
+// NMDC: the Execute decisions (ee_netmsg execute.rs): every call in game (its kind, inputs and outputs), the
 //       decisions' tables over edge values (once), and every five game minutes the real players' market
 //       prices, exchange steps and take tests and the disband refund of every unit.
 #include <windows.h>
@@ -120,7 +120,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEMessageCapture.h"
-#include "ee/EEMessageExecute.h"
 #include "rust/ee_netmsg.h"
 #include <initializer_list>
 
@@ -228,123 +227,16 @@ void EEMessageCaptureExecuted(NEMessage* inMessage)
         theMessage->Dereference();
 }
 
-enum { kSweepFixed, kSweepString, kSweepTheseUnits, kSweepCivUpgrades, kSweepSelectUnits };
-struct EESweepRow {
-    unsigned char mType;
-    int mKind;
-    unsigned long mPrefix;   // the fixed size (with the 4-byte header), or the bytes before the variable part
-    unsigned long mSuffix;   // the fixed bytes after a string
-};
-static const EESweepRow kSweepRows[] = {
-    {kMessageAddAndRemoveUnitsFromSelectedGroup, kSweepSelectUnits, 6, 0},   // EEMAddAndRemoveUnitsFromSelectedGroup
-    {kMessageAddPatrolPoint, kSweepFixed, 13, 0},   // EEMAddPatrolPoint
-    {kMessageAddRemoveResources, kSweepFixed, 18, 0},   // EEMAddRemoveResources
-    {kMessageAddUnitsToSelectedGroup, kSweepSelectUnits, 6, 0},   // EEMAddUnitsToSelectedGroup
-    {kMessageAddUnitToSelectedGroup, kSweepFixed, 9, 0},   // EEMAddUnitToSelectedGroup
-    {kMessageAlwaysAddUnitToSelectedGroup, kSweepFixed, 9, 0},   // EEMAlwaysAddUnitToSelectedGroup
-    {kMessageAttackGround, kSweepFixed, 13, 0},   // EEMAttackGround
-    {kMessageAttackPlayers, kSweepFixed, 10, 0},   // EEMAttackPlayers
-    {kMessageAttackUnit, kSweepFixed, 11, 0},   // EEMAttackUnit
-    {kMessageBuildGate, kSweepFixed, 25, 0},   // EEMBuildGate
-    {kMessageBuildUnit, kSweepFixed, 18, 0},   // EEMBuildUnit
-    {kMessageBuildWall, kSweepFixed, 29, 0},   // EEMBuildWall
-    {kMessageCameraLocationInfo, kSweepFixed, 17, 0},   // EEMCameraLocationInfo
-    {kMessageCastCalamity, kSweepFixed, 25, 0},   // EEMCastCalamity
-    {kMessageChangeSelectedUnitCollisionSphere, kSweepFixed, 6, 0},   // EEMChangeSelectedUnitCollisionSphere
-    {kMessageChangeFormation, kSweepFixed, 10, 0},   // EEMChangeFormation
-    {kMessageChat, kSweepString, 6, 0},   // EEMChat
-    {kMessageCheatCode, kSweepFixed, 13, 0},   // EEMCheatCode
-    {kMessageCivTimerExpired, kSweepFixed, 6, 0},   // EEMCivTimerExpired
-    {kMessageCivUpgradesPurchased, kSweepCivUpgrades, 10, 0},   // EEMCivUpgradesPurchased
-    {kMessageCivUpgradesRequested, kSweepCivUpgrades, 10, 0},   // EEMCivUpgradesRequested
-    {kMessageClearAirportCommands, kSweepFixed, 5, 0},   // EEMClearAirportCommands
-    {kMessageDisband, kSweepFixed, 5, 0},   // EEMDisband
-    {kMessageDropoffResource, kSweepFixed, 9, 0},   // EEMDropoffResource
-    {kMessageEdictProposal, kSweepFixed, 7, 0},   // EEMEdictProposal
-    {kMessageEdictVote, kSweepFixed, 9, 0},   // EEMEdictVote
-    {kMessageEdictPreProposal, kSweepFixed, 7, 0},   // EEMEdictPreProposal
-    {kMessageEdictPreProposalResponse, kSweepFixed, 9, 0},   // EEMEdictPreProposalResponse
-    {kMessageEnterShiftMode, kSweepFixed, 9, 0},   // EEMEnterShiftMode
-    {kMessageExitShiftMode, kSweepFixed, 9, 0},   // EEMExitShiftMode
-    {kMessageExplore, kSweepFixed, 5, 0},   // EEMExplore
-    {kMessageFullGameOptions, kSweepString, 53, 0},   // EEMFullGameOptions
-    {kMessageGameOptions, kSweepString, 13, 0},   // EEMGameOptions
-    {kMessageGameRestarting, kSweepFixed, 5, 0},   // EEMGameRestarting
-    {kMessageGameSpeed, kSweepFixed, 9, 0},   // EEMGameSpeed
-    {kMessageGatherResource, kSweepFixed, 10, 0},   // EEMGatherResource
-    {kMessageGoFanatic, kSweepFixed, 5, 0},   // EEMGoFanatic
-    {kMessageHackANewUnit, kSweepFixed, 18, 0},   // EEMHackANewUnit
-    {kMessageHaltSelectedGroup, kSweepFixed, 5, 0},   // EEMHaltSelectedGroup
-    {kMessageHealUnit, kSweepFixed, 9, 0},   // EEMHealUnit
-    {kMessageImmediateCargoUnload, kSweepFixed, 14, 0},   // EEMImmediateCargoUnload
-    {kMessageIncrementEpic, kSweepFixed, 5, 0},   // EEMIncrementEpic
-    {kMessageIncrementRallyTimer, kSweepFixed, 6, 0},   // EEMIncrementRallyTimer
-    {kMessageInGameChat, kSweepString, 5, 0},   // EEMInGameChat
-    {kMessageJITManufacturing, kSweepFixed, 5, 0},   // EEMJITManufacturing
-    {kMessageKillUnit, kSweepFixed, 6, 0},   // EEMKillUnit
-    {kMessageLagStatus, kSweepFixed, 8, 0},   // EEMLagStatus
-    {kMessageLoadMainScreen, kSweepFixed, 6, 0},   // EEMLoadMainScreen
-    {kMessageLoadMainScreenResponse, kSweepFixed, 7, 0},   // EEMLoadMainScreenResponse
-    {kMessageLoadOrSaveGame, kSweepString, 20, 0},   // EEMLoadOrSaveGame
-    {kMessageLoadOrSaveGameResponse, kSweepFixed, 9, 0},   // EEMLoadOrSaveGameResponse
-    {kMessageLoadPercent, kSweepFixed, 13, 0},   // EEMLoadPercent
-    {kMessageLoadUnitData, kSweepFixed, 10, 0},   // EEMLoadUnitData
-    {kMessageLoadGarrison, kSweepFixed, 14, 0},   // EEMLoadGarrison
-    {kMessageLoadTransport, kSweepFixed, 14, 0},   // EEMLoadTransport
-    {kMessageLockUnlock, kSweepFixed, 6, 0},   // EEMLockUnlock
-    {kMessagePackUnpack, kSweepFixed, 6, 0},   // EEMPackUnpack
-    {kMessageUnloadTransport, kSweepFixed, 17, 0},   // EEMUnloadTransport
-    {kMessageMakeWorldVisible, kSweepFixed, 5, 0},   // EEMMakeWorldVisible
-    {kMessageMigrationSlotInfo, kSweepFixed, 7, 0},   // EEMMigrationSlotInfo
-    {kMessageNewEdictEnacted, kSweepFixed, 12, 0},   // EEMNewEdictEnacted
-    {kMessagePathTo, kSweepFixed, 21, 0},   // EEMPathTo
-    {kMessagePatrol, kSweepFixed, 9, 0},   // EEMPatrol
-    {kMessagePayTribute, kSweepFixed, 26, 0},   // EEMPayTribute
-    {kMessageFullPlayerInformation, kSweepString, 17, 23},   // EEMFullPlayerInformation
-    {kMessagePlayerInformation, kSweepFixed, 21, 0},   // EEMPlayerInformation
-    {kMessagePlayerSlotInfo, kSweepString, 8, 0},   // EEMPlayerSlotInfo
-    {kMessageRecordFrames, kSweepFixed, 6, 0},   // EEMRecordFrames
-    {kMessageRemoveUnitFromSelectedGroup, kSweepFixed, 9, 0},   // EEMRemoveUnitFromSelectedGroup
-    {kMessageRepairUnit, kSweepFixed, 10, 0},   // EEMRepairUnit
-    {kMessageReplantFarms, kSweepFixed, 9, 0},   // EEMReplantFarms
-    {kMessageRemoveTechnology, kSweepFixed, 15, 0},   // EEMRemoveTechnology
-    {kMessageRemoveImprovement, kSweepFixed, 13, 0},   // EEMRemoveImprovement
-    {kMessageResearchTechnology, kSweepFixed, 14, 0},   // EEMResearchTechnology
-    {kMessageReportStatistics, kSweepFixed, 13, 0},   // EEMReportStatistics
-    {kMessageResign, kSweepFixed, 5, 0},   // EEMResign
-    {kMessageReturnToBase, kSweepFixed, 10, 0},   // EEMReturnToBase
-    {kMessageSavedGroupAddSelection, kSweepFixed, 6, 0},   // EEMSavedGroupAddSelection
-    {kMessageSavedGroupClear, kSweepFixed, 6, 0},   // EEMSavedGroupClear
-    {kMessageSavedGroupCreate, kSweepFixed, 6, 0},   // EEMSavedGroupCreate
-    {kMessageSavedGroupSelect, kSweepFixed, 7, 0},   // EEMSavedGroupSelect
-    {kMessageScrambleAircraft, kSweepFixed, 17, 0},   // EEMScrambleAircraft
-    {kMessageSelectCustomPlayerForChat, kSweepFixed, 10, 0},   // EEMSelectCustomPlayerForChat
-    {kMessageSelectPatrolGroup, kSweepFixed, 9, 0},   // EEMSelectPatrolGroup
-    {kMessageSelectPlayerChatType, kSweepFixed, 9, 0},   // EEMSelectPlayerChatType
-    {kMessageSelectTheseUnits, kSweepTheseUnits, 9, 0},   // EEMSelectTheseUnits
-    {kMessageSelectUnit, kSweepFixed, 9, 0},   // EEMSelectUnit
-    {kMessageSelectUnits, kSweepSelectUnits, 6, 0},   // EEMSelectUnits
-    {kMessageSelfDestruct, kSweepFixed, 5, 0},   // EEMSelfDestruct
-    {kMessageSendFlare, kSweepFixed, 13, 0},   // EEMSendFlare
-    {kMessageSetAirportCommand, kSweepFixed, 22, 0},   // EEMSetAirportCommand
-    {kMessageSetDiplomaticStance, kSweepFixed, 13, 0},   // EEMSetDiplomaticStance
-    {kMessageSetRallyGoal, kSweepFixed, 22, 0},   // EEMSetRallyGoal
-    {kMessageSetWaterLevel, kSweepFixed, 6, 0},   // EEMSetWaterLevel
-    {kMessageSmartFarmers, kSweepFixed, 10, 0},   // EEMSmartFarmers
-    {kMessageStartLoading, kSweepFixed, 10, 0},   // EEMStartLoading
-    {kMessageStartLoadingResponse, kSweepFixed, 8, 0},   // EEMStartLoadingResponse
-    {kMessageStopActiveGroup, kSweepFixed, 5, 0},   // EEMStopActiveGroup
-    {kMessageSnapToDaylight, kSweepFixed, 5, 0},   // EEMSnapToDaylight
-    {kMessageToggleCollisionDetection, kSweepFixed, 13, 0},   // EEMToggleCollisionDetection
-    {kMessageToggleDayNight, kSweepFixed, 5, 0},   // EEMToggleDayNight
-    {kMessageUnselectAllUnits, kSweepFixed, 5, 0},   // EEMUnselectAllUnits
-    {kMessageUpdatePingStat, kSweepFixed, 10, 0},   // EEMUpdatePingStat
-    {kMessageImproveUnit, kSweepFixed, 13, 0},   // EEMImproveUnit
-    {kMessageZoomInfo, kSweepFixed, 9, 0},   // EEMZoomInfo
-    {kMessageSetUnitBehavior, kSweepFixed, 9, 0},   // EEMSetUnitBehavior
-    {kMessageExchangeResources, kSweepFixed, 11, 0},   // EEMExchangeResources
-};
-
+// the sweep's types, in the capture's order (the original classes'); each one's shape is its codec layout's
+// (ee_netmsg_sweep_shape: fixed, a string between fixed members, a list, the box selection's blob)
+static const unsigned char kSweepTypes[] = {
+    0x50, 0x72, 0x9b, 0x4f, 0x49, 0x76, 0x9f, 0x70, 0x4c, 0x86, 0x56, 0x59, 0x6e, 0x75, 0x8d, 0x78,
+    0x5a, 0x85, 0xa7, 0x7f, 0x7e, 0x87, 0xa4, 0x61, 0x41, 0x42, 0x46, 0x47, 0x88, 0x89, 0x79, 0xa9,
+    0x60, 0x91, 0x5f, 0x51, 0xac, 0x6b, 0x58, 0x92, 0x95, 0x6c, 0x8e, 0x7d, 0xad, 0x5c, 0xa8, 0x97,
+    0x98, 0x64, 0x9a, 0x94, 0x71, 0x7b, 0x67, 0x8c, 0xab, 0x68, 0x55, 0x7c, 0x43, 0x4d, 0x73, 0x44,
+    0x5b, 0xaa, 0x6a, 0x6d, 0x4a, 0x57, 0x81, 0x53, 0x8b, 0x52, 0xa6, 0xa3, 0x90, 0x82, 0x93, 0x83,
+    0x84, 0xa0, 0xa2, 0x74, 0xa1, 0x96, 0x48, 0x4e, 0xa5, 0x9c, 0x80, 0x99, 0x66, 0x54, 0x8f, 0x5d,
+    0x5e, 0x8a, 0x63, 0x65, 0x62, 0x4b, 0x7a, 0x77, 0x6f, 0x9e, 0xae};
 static unsigned long sRandom = 0x2545f491u;
 static unsigned char NextRandom()
 {
@@ -553,20 +445,12 @@ static void BuildEngine(std::vector<unsigned char>& ioData)
     theRecord.Commit();
 }
 
-static size_t RowOf(unsigned char inType)
-{
-    for (size_t r = 0; r < sizeof(kSweepRows) / sizeof(kSweepRows[0]); r++)
-        if (kSweepRows[r].mType == inType)
-            return r;
-    return 0;
-}
-
 // a fixed game message of the sweep's rows with pattern p
 static void PutGameMessage(std::vector<unsigned char>& ioData, unsigned char inType, int inPattern)
 {
     std::vector<unsigned char> theMessage;
     Header(theMessage, inType, inPattern);
-    Pattern(theMessage, kSweepRows[RowOf(inType)].mPrefix - 4, inPattern);
+    Pattern(theMessage, ee_netmsg_sweep_shape(inType).prefix - 4, inPattern);
     ioData.insert(ioData.end(), theMessage.begin(), theMessage.end());
 }
 
@@ -625,58 +509,25 @@ static void PutInputs(std::vector<unsigned char>& ioData, int inList, int inPatt
     }
 }
 
-struct EEEngineSweepRow {
-    unsigned char mType;
-    unsigned long mFixed;   // the fixed bytes after the header (before the strings, the inputs)
-    int mStrings;           // the strings after them (a 4-byte member follows two)
-    bool mInputs;
-};
-static const EEEngineSweepRow kEngineRows[] = {
-    {kNetMessageAddPlayer, 1, 1, false},
-    {kNetMessageAddPlayerResponse, 0, 0, false},
-    {kNetMessageClientConnectionRequest, 1, 2, false},
-    {kNetMessageClientConnectionRequestResponse, 10, 1, false},
-    {kNetMessageClientDisconnectionNotification, 1, 0, false},
-    {kNetMessageClientDisconnectionNotificationResponse, 4, 0, false},
-    {kNetMessageCommunicationsTick, 8, 0, true},
-    {kNetMessageCommunicationsTickResponse, 10, 0, true},
-    {kNetMessagePhysicsTick, 7, 0, false},
-    {kNetMessagePlayerConnectionCheck, 4, 0, false},
-    {kNetMessagePlayerConnectionCheckResponse, 4, 0, false},
-    {kNetMessageRemovePlayer, 4, 0, false},
-    {kNetMessageStartGame, 4, 0, false},
-    {kNetMessageStartGameResponse, 4, 0, false},
-    {kNetMessageStopGame, 0, 0, false},
-    {kNetMessageStopGameResponse, 0, 0, false},
-    {kNetMessageWorldDatabaseChecksum, 5, 0, false},
-    {kNetMessageWorldDatabaseChecksumResponse, 8, 0, false},
-    {kNetMessagePauseGame, 8, 0, false},
-    {kNetMessagePauseGameResponse, 4, 0, false},
-    {kNetMessageUnPauseGame, 8, 0, false},
-    {kNetMessageUnPauseGameResponse, 4, 0, false},
-    {kNetMessageClientReconnectionRequest, 8, 0, false},
-    {kNetMessageClientReconnectionRequestResponse, 9, 0, false},
-    {kNetMessageClientRequestPause, 0, 0, false},
-    {kNetMessageServerIsAlive, 0, 0, false},
-    {kNetMessageXferMessage, 0x405, 0, false},
-    {kNetMessageXferStatus, 7, 0, false},
-};
-
+// every engine type (0x20..0x3c) by its shape (ee_netmsg_engine_sweep_shape: the fixed bytes before its strings or
+// its players' inputs; a 4-byte member follows two strings)
 static void EngineSweep()
 {
-    for (size_t r = 0; r < sizeof(kEngineRows) / sizeof(kEngineRows[0]); r++) {
-        const EEEngineSweepRow& theRow = kEngineRows[r];
+    for (unsigned char theType = 0x20; theType <= 0x3c; theType++) {
+        if (ee_netmsg_class_of_type(theType) == 0xffffffffu)
+            continue;
+        EeNetMsgEngineSweepShape theRow = ee_netmsg_engine_sweep_shape(theType);
         for (int p = 0; p < 9; p++) {
-            int theVariants = theRow.mInputs ? 7 : theRow.mStrings > 0 ? 8 : 1;
+            int theVariants = theRow.inputs ? 7 : theRow.strings > 0 ? 8 : 1;
             for (int v = 0; v < theVariants; v++) {
                 std::vector<unsigned char> theData;
-                Header(theData, theRow.mType, p);
-                Pattern(theData, theRow.mFixed, p);
-                if (theRow.mInputs) {
+                Header(theData, theType, p);
+                Pattern(theData, theRow.fixed, p);
+                if (theRow.inputs) {
                     PutInputs(theData, v, p);
-                } else if (theRow.mStrings > 0) {
+                } else if (theRow.strings > 0) {
                     PutString(theData, kStringLengths[v], p & 1);
-                    if (theRow.mStrings > 1) {
+                    if (theRow.strings > 1) {
                         PutString(theData, kStringLengths[(v + 3) % 8], (p + 1) & 1);
                         Pattern(theData, 4, p);
                     }
@@ -691,48 +542,49 @@ void EEMessageCaptureSweep()
 {
     if (!EESimCaptureRecord::Active())
         return;
-    for (size_t r = 0; r < sizeof(kSweepRows) / sizeof(kSweepRows[0]); r++) {
-        const EESweepRow& theRow = kSweepRows[r];
+    for (size_t r = 0; r < sizeof(kSweepTypes); r++) {
+        unsigned char theType = kSweepTypes[r];
+        EeNetMsgSweepShape theRow = ee_netmsg_sweep_shape(theType);
         for (int p = 0; p < 9; p++) {
             std::vector<unsigned char> theData;
-            switch (theRow.mKind) {
-            case kSweepFixed:
-                Header(theData, theRow.mType, p);
-                Pattern(theData, theRow.mPrefix - 4, p);
+            switch (theRow.kind) {
+            case EE_NETMSG_SWEEP_FIXED:
+                Header(theData, theType, p);
+                Pattern(theData, theRow.prefix - 4, p);
                 Build(theData);
                 break;
-            case kSweepString:
+            case EE_NETMSG_SWEEP_STRING:
                 for (size_t l = 0; l < sizeof(kStringLengths) / sizeof(kStringLengths[0]); l++) {
                     theData.clear();
-                    Header(theData, theRow.mType, p);
-                    Pattern(theData, theRow.mPrefix - 4, p);
+                    Header(theData, theType, p);
+                    Pattern(theData, theRow.prefix - 4, p);
                     PutString(theData, kStringLengths[l], p & 1);
-                    Pattern(theData, theRow.mSuffix, p);
+                    Pattern(theData, theRow.suffix, p);
                     Build(theData);
                 }
                 break;
-            case kSweepTheseUnits:
+            case EE_NETMSG_SWEEP_THESE_UNITS:
                 for (unsigned long n = 0; n <= 63; n += (n < 4 ? 1 : 19)) {
                     theData.clear();
-                    Header(theData, theRow.mType, p);
+                    Header(theData, theType, p);
                     Pattern(theData, 1, p);
                     PutU32(theData, n);
                     Pattern(theData, 4 * n, p);
                     Build(theData);
                 }
                 break;
-            case kSweepCivUpgrades:
+            case EE_NETMSG_SWEEP_CIV_UPGRADES:
                 for (unsigned long n = 0; n <= 40; n += (n < 3 ? 1 : 37)) {
                     theData.clear();
-                    Header(theData, theRow.mType, p);
-                    Pattern(theData, theRow.mPrefix - 4, p);
+                    Header(theData, theType, p);
+                    Pattern(theData, theRow.prefix - 4, p);
                     theData.push_back((unsigned char)n);
                     Pattern(theData, 4 * n, p);
                     PutString(theData, kStringLengths[(n + p) % 8], p & 1);
                     Build(theData);
                 }
                 break;
-            case kSweepSelectUnits:
+            case EE_NETMSG_SWEEP_SELECT_UNITS:
                 break;   // in UnitLists: only CompressUnits' buffers decode (DecompressUnits trusts its input)
             }
         }
@@ -755,7 +607,7 @@ void EEMessageCaptureSweep()
     EngineSweep();
 }
 
-// ---- NMDC: the Execute decisions (ee/EEMessageExecute.h) ----
+// ---- NMDC: the Execute decisions (ee_netmsg execute.rs) ----
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);   // EEWheel.cpp
 
 void EEMessageCaptureDecision(unsigned int inKind, const long long* inValues, unsigned int inCount)

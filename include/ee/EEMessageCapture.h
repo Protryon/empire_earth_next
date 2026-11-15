@@ -15,7 +15,7 @@ void EEMessageCaptureExecuted(NEMessage* inMessage);
 // every game message type over edge payloads, and the box selection's packing (NMSW, NMCU); once per game
 void EEMessageCaptureSweep();
 
-// the Execute decisions' kinds (ee/EEMessageExecute.h): one NMDC record per call, the kind and the call's values
+// the Execute decisions' kinds (ee_netmsg execute.rs, bodies.rs): one NMDC record per call, the kind and the call's values
 // (inputs, then outputs) as 64-bit integers (a float's bits)
 enum EEMessageDecisionKind {
     kDecisionSelectionMarksLocal = 1,
