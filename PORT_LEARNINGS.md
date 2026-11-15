@@ -21495,3 +21495,96 @@ to exist. Each class unit carried 30-40 lines of includes and comments and a 20-
   point i at the carrier's frame in its location scaled by its stats) and `RouteDockWaypoint` from another. The
   transformation's `Apply`, `ConvertToOrientation` and the point's `DistanceTo` are ee_ge's (the C++ forwards to
   them already), so the bits are the same. EE-PM-COUNT ends with "deck N", the placements.
+
+## R5b.4 game messages, round 4: the unit orders, the Lua AI's messages, the lobby's strings: 100 of the 108 game message types as EEMRecord (ee_netmsg records.rs; branch rust-msg4, 2026-11-14)
+
+The game messages lane's fourth round took round 3's "Left" list: the classes with outside member readers, the Lua
+AI's stack messages, the out-of-line constructors elsewhere, then the record itself (strings) so the remaining
+classes could go too.
+
+| Commit | What | C++ (src + include/ee) |
+|---|---|---|
+| 640d1b95 | the 21 unit orders as records; EEPhysics.cpp's order log and the fixture's order check read the record | +218 -965, net **-747** |
+| 550926b8 | the Lua AI's six stack messages with members as records | +54 -262, net **-208** |
+| 51e7039f | the out-of-line constructors elsewhere (4), the other readers' classes (7), the selection toggles, End Cinematic | +93 -559, net **-466** |
+| 9c67efae | records with one string: the chat lines, the lobby's options, player information and slot info | +169 -505, net **-336** |
+| (merge) | `rust` fffdedf4: already up to date (the branch started there) | |
+
+The round: net **-1,757** (EEMessage.cpp 3,852 -> 2,907 lines, ee/EEMessage.h 1,060 -> 280). 100 of the 108 game
+message types (107 factory types and End Cinematic's 0x9d) are records; 8 keep a class (below).
+
+- **The tool** (`build/msg4/convert.py`, from round 3's step scripts): per class, the header block and the comment lines
+  above it, the factory case, `GetCodecSlots`, `GetMessageLabel`, `ImportMessage`, the constructors (in EEMessage.cpp
+  and out of line elsewhere: EEPhysics.cpp's three, EEComplexUnit.cpp's) go; `Execute` becomes a static function over
+  the record (`this->mX` -> `m->Get<T>(i)` with the member's old C++ type, an assignment `m->Set`, the string
+  `m->mString`) in the type table; every sender in src/tests/include (`new X(...)`, a stack `X name(...)`, `X*`
+  variables and members) becomes an `EEMRecord` with the members in wire order, mapped from each old constructor's
+  arguments and defaults (EEMPathTo's five-argument form: rotating true, group movement false; EEMRemoveTechnology's
+  three: five times false; EEMChangeFormation: the flag true; EEMSetRallyGoal and EEMPlayerSlotInfo reordered).
+  Comments keep the old names. Every old constructor's parameter type is as wide as its member or wider and the record
+  converts as the assignment did (integer: the low bytes; bool: != 0; a float: `(float)`), so a sender's value lands
+  as before.
+- **The readers.** EEPhysics.cpp's order log (`EEPhysicsLogOrder`, the game log's "order" lines) reads 21 orders
+  through `Get<T>(i)` (a comment at the switch); the test fixture's order check (gather, repair, patrol, attack
+  ground); EEServer's edict vote and proposal and EEClient's/EEServer's lobby reads of Full Player Information and
+  Player Slot Info (the indexes in a comment); the scenario editor's click message (Select Unit, the toggle, Always
+  Add: one `Get<uint32_t>(1)` now that all three are records); EEACalamity's message pointer (`EEMRecord*`); the
+  lasso's (`EEMessage*`: it held EEMSelectPatrolGroup cast to `EEMSelectUnits*`, the original's cast);
+  EEDataPreLoading's start loading response.
+- **Two types, one class; a type without a row.** The toggle (0x49) and Always Add (0x76) share EEMAddUnitToSelected-
+  Group's codec class: records.rs rows can name their type (`rec_type`), each with its label and flags (both may be
+  sent paused and while out: Always Add inherited both). EEMEndCinematic (0x9d) is a record by type although no
+  `TYPES` row has it: the factory builds a record only for a type with a codec class (`ee_netmsg_class_of_type`), so
+  0x9d still hits the "Undefined message type" assert as in the original, and the capture still writes 0xffffffff
+  for it.
+- **EEMChangeFormation's flag.** Its import stops before its flag (`import_fields` 2 of 3), which the record leaves
+  0, as the old import constructor's `mB14(false)`; a sender passes true, as the old constructor did. The records'
+  test allows that one class a shorter import.
+- **Write-backs.** EEMPathTo's Execute let the Rust move the point (`&this->mX`): the record copies the two floats out
+  and `Set`s them back (mRecord is not 4-aligned in the object: no pointer into it). EEMHackANewUnit's Execute writes
+  the made class back (`Set<int32_t>(1, ...)`). The capture's NMEX record sees both as before.
+- **Strings in the record.** A record type may have one string member (`EE_NETMSG_RECORD_FIELD_STRING`: none has two):
+  `EEMRecord::mString`, outside `mRecord` (its offset and size are 0 of the record). The slots give the codec the
+  string as `EENetMsgString` did; `EEMRecord::ImportMessage` runs the codec, then `mString.Import` from where it
+  found the string (the old classes' imports did exactly that, each with its own assert line: now one). A sender
+  passes a `UWideString` (`EEMRecordValue` keeps a pointer for the constructor's call; a temporary like
+  `UWideString("")` lives to the end of the full expression). The record grew to 64 bytes (EEMFullGameOptions has 48
+  of fixed members). The lobby's two constructors that copied a whole object are `EENewFullGameOptions` and
+  `EENewFullPlayerInformation` (the members in wire order: the codec's order is alphabetical for the options).
+- **Behaviour changes.** None in a game's simulation (oracle traces, Lua AI traces and the captures identical). The
+  vtables of the 47 new record types are EEMRecord's; `GetMessageLabel` is the Rust's static string; the string
+  imports' asserts share one line. A record sender's members start at 0 (every old constructor set every member but
+  EEMChangeFormation's import, which the record matches).
+- **What runs it.** Single-player games execute the messages unencoded (the physics takes the objects): the oracle
+  and captures run the AI's walls and gates, the civ timer, replant farms, report statistics, exit shift mode; the Lua
+  AI (`--engine next`) builds its orders on the stack and executes them in every game (EE-SIM `--engine next`, seeds
+  2-3, its decision traces identical to the unmodified build's at every commit). The NMSW sweep imports every record
+  type over edge payloads (strings of 0..300 bytes and UTF-8 for the string types) through the factory. Only a LAN
+  game encodes them on the wire (`lan_game.py`: the lobby's options, slots, player information, chat, start and
+  loading responses). Not reached by any gate: the edict votes (no UI sends them), End Cinematic, the cheat's unit
+  (the unit hack form), the civilization builder.
+- **What keeps a class (8 types), and why.** `EEMSelectUnits` and its two subclasses: a blob member (the compressed
+  buffer) and the decoded id list the scenario editor reads, and a constructor that picks units (EEUnitPicker, the test
+  hook); `EEMSelectTheseUnits`: an id list without codec slots; `EEMCivUpgrades` and its two subclasses: a record list
+  and the `SetName` virtual; `EEMLoadOrSaveGame`: `IsResponse`, the send-to-all-and-wait id, `LoadOrSave` called by the
+  physics; `EEMStartLoading`: the legacy harness's hook (round 3). A record list kind (ids, `EECivUpgrade`s) in
+  `EEMRecord` would take the first two groups.
+- **Gates.** Each code commit: build `--sim` 0/0, the Rust gate PASS (commit 1: ee_gx's
+  `device_dropped_bind_groups_stay_bounded_when_the_gpu_lags` failed once under load, passed in the next three gates;
+  commit 1's test needed a rustfmt fix, folded into commit 2), the oracle identical on seeds 2-3, EE-SIM with the Lua
+  AI identical to the unmodified build on seeds 2-3 (`build/msg4/lua_ai.py`, sim_oracle compare), the oracle capture
+  at seeds 2-3 PASS (171 digests equal to golden_cpp.txt, NMIM/NMEX/NMSW/NMDC/NMNE/NMCU among them; no re-recording).
+  At the end (`rust` had not moved: the merge was "already up to date"; `rust_build.py header` current): build `--sim`
+  0/0; the test-profile build 0/0; the oracle identical on seeds 2-7; the captures at seeds 2-3 equal to the goldens
+  with no re-recording: oracle 171 digests, late 172, space 173, calamity 189 (the few "no golden" SMSV/TNMT digests
+  are other lanes' and were there before); `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` expect PASS, the
+  expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4,
+  space 1/4, calamity 4/4, next 0/4); the Rust gate PASS; nettest all seven equal (msgmgr 20,000,
+  queues 1,500, client 1,500, tune 20,000, server 1,500 sequences, protocol and message equal to their goldens).
+  Under the harness lock, on the test exe of 9c67efae: `lan_game.py` RESULT PASS lan-game (PT host 2873, joiner
+  2875; the lobby's options, slots, player information, ready and start, the loading responses on the wire);
+  `fixture_game.py --exercise ai-game --lobby 276=Boom --lobby 277=Boom` (both computers on the Lua AI, the gate's
+  Small/Hard/time factor 32/PT rate 40/seed 2) RESULT PASS ai-game outcome time-cap, alive_computers [2, 3], units
+  [5, 32, 33]. A first ai-game run failed before the game ("slot 0 human: index 0 outside []": the lobby's
+  player-type combos still empty 3 s after they appeared, with a saveload matrix and nettest saturating the machine);
+  the rerun passed. Not run: a tour, the orders and box-select exercises, macOS or Linux builds.
