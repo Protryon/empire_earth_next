@@ -1222,3 +1222,50 @@ ui e
 ctl e combo 1 12
 ctl e slide 2 50
 ui e
+# round 5: the condition and effect screens' own slots: the list's buttons on each (New, Duplicate, Up, Down, Sort,
+# Delete), a name and a description typed and stored (Store's texts), the sub-tab left and entered
+tab 4
+trigger 1
+tscreen select 1
+edit 0x7db Named_condition
+edit 0x963 condition_text
+tscreen select 0
+tscreen select 1
+conditionstate
+tscreen dup
+tscreenstate
+conditionstate
+tscreen up
+tscreen down
+tscreen sort
+tscreenstate
+conditionstate
+tscreen delete
+tscreenstate
+conditionstate
+form 97 113
+trigger 2
+tscreen select 1
+edit 0x7db Named_effect
+edit 0x963 effect_text
+tscreen select 0
+tscreen select 1
+effectstate
+tscreen new
+tscreen dup
+tscreenstate
+effectstate
+tscreen up
+tscreen down
+tscreen sort
+tscreenstate
+effectstate
+tscreen delete
+tscreenstate
+effectstate
+form 97 113
+ui e
+trigger 0
+trigger 2
+ui e
+tscreenstate

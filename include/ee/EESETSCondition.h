@@ -37,6 +37,8 @@ public:
 
     void ChangeConditionType();             // 0x17e8be (EESEEChangeConditionType)
     void TypeCall(unsigned long inSlot, EESMCondition* inCondition);   // the current type's slot (EE_SCREENS_SEET_*)
+    EESETSConditionControls* GetControls() const { return this->mControls; }   // the editor gate
+    UIComboBox* GetTypeComboBox() const { return this->mTypeComboBox; }       // the editor gate
 
     unsigned long mType;                    // +0x0c (the current mTypes index; 1 in the ctor)
     EeScreensSeConditions* mTypes;          // the seven condition types (ee_screens editor_conditions.rs; the

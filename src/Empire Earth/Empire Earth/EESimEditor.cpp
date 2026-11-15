@@ -925,13 +925,13 @@ UIControl* EditorControl(const std::string& inId)
 EESETSConditionControls* ConditionControls()
 {
     return static_cast<EESETSCondition*>(
-               gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition))->mControls;
+               gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition))->GetControls();
 }
 
 EESETSEffectControls* EffectControls()
 {
     return static_cast<EESETSEffect*>(
-               gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect))->mControls;
+               gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect))->GetControls();
 }
 
 // one control: its display mode, then a label's first line, a slider's value, a combo box's lines and selection
@@ -1540,16 +1540,16 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             theCode = [=] {
                 EESETSCondition* theScreen = static_cast<EESETSCondition*>(
                     gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition));
-                theScreen->mTypeComboBox->SetCurrentSelection(L(1) - 2);
+                theScreen->GetTypeComboBox()->SetCurrentSelection(L(1) - 2);
                 theScreen->ChangeConditionType();
             };
         else if (c == "etype")   // etype TYPE ACTION: the effect's type combo box (types from 1), then its action combo
             theCode = [=] {
                 EESETSEffect* theScreen = static_cast<EESETSEffect*>(
                     gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect));
-                theScreen->mTypeComboBox->SetCurrentSelection(L(1) - 1);
+                theScreen->GetTypeComboBox()->SetCurrentSelection(L(1) - 1);
                 theScreen->ChangeEffectType();
-                theScreen->mControls->mComboBoxes[0]->SetCurrentSelection(L(2));
+                theScreen->GetControls()->mComboBoxes[0]->SetCurrentSelection(L(2));
                 theScreen->ChangeEffectAction();
             };
         else if (c == "ctl" && w.size() > 2 && (w[2] == "list" || w[2] == "combo"))

@@ -41,6 +41,8 @@ public:
     void ChangeEffectAction();              // 0x182a3b (EESEEChangeEffectAction)
     void ChangeEffectType();                // 0x182a69 (EESEEChangeEffectType)
     void TypeCall(unsigned long inSlot, EESMEffect* inEffect);   // the current type's slot (EE_SCREENS_SEET_*)
+    EESETSEffectControls* GetControls() const { return this->mControls; }   // the editor gate
+    UIComboBox* GetTypeComboBox() const { return this->mTypeComboBox; }    // the editor gate
 
     unsigned long mType;                    // +0x0c (the current type, kSMEffect*; 1 in the ctor)
     EeScreensSeEffects* mTypes;             // the seven effect types (0 NoEffect, 1 Object, 2 Player, 3 Trigger, 4 Media, 5 Game, 6 AI)
