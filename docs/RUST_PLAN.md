@@ -54,6 +54,8 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | **R5b.4 world and units** | **Started**: [progress/r5b4-world-and-units.md](progress/r5b4-world-and-units.md) |
 | **R5b physics models** | **Started** (`ee_units`): [progress/r5b-physics-models.md](progress/r5b-physics-models.md) |
 | **R5b calamities** | **Started** (`ee_tech`): [progress/r5b-calamities.md](progress/r5b-calamities.md) |
+| **R5b unit utilities** | **Started** (`ee_units`): [progress/r5b-unit-utilities.md](progress/r5b-unit-utilities.md) |
+| **R5b.4 game messages** | **Started** (`ee_netmsg`): [progress/r5b4-game-messages.md](progress/r5b4-game-messages.md) |
 | **R5b.5 scenario manager and triggers** | **Started** (`ee_scenario`): [progress/r5b5-scenario-manager-and-triggers.md](progress/r5b5-scenario-manager-and-triggers.md) |
 | **R6 scenario editor screens** | **Started** (`ee_screens`): [progress/r6-scenario-editor-screens.md](progress/r6-scenario-editor-screens.md) |
 | **R5a.3 the renderer reads a snapshot** | **Done for units, players, the map and the camera**: [progress/r5a3-the-renderer-reads-a-snapshot.md](progress/r5a3-the-renderer-reads-a-snapshot.md) |
