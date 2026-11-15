@@ -39,6 +39,7 @@ size_t DmDls_release(DmDls* slf) {
 		DmDlsInstrument_free(&slf->instruments[i]);
 	}
 
+	tsf_close(slf->synth_template);   // (EE patch) its copies are closed first: each font retains its collection
 	Dm_free(slf->instruments);
 	Dm_free(slf->pool_table);
 	Dm_free(slf->wave_table);

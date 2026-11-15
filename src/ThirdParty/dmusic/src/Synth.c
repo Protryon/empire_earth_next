@@ -89,8 +89,15 @@ static DmResult DmSynth_updateFonts(DmSynth* slf, DmBand* band) {
 			DmSynthFont new_fnt;
 			new_fnt.dls = ins->dls;
 
+			// (EE patch) A copy of the synthesizer built when the collection was loaded (it shares the samples), else
+			// built now
 			DmResult rv = DmResult_SUCCESS;
-			rv = DmSynth_createTsfForDls(ins->dls, &new_fnt.syn);
+			if (ins->dls->synth_template != NULL) {
+				new_fnt.syn = tsf_copy(ins->dls->synth_template);
+				rv = new_fnt.syn != NULL ? DmResult_SUCCESS : DmResult_MEMORY_EXHAUSTED;
+			} else {
+				rv = DmSynth_createTsfForDls(ins->dls, &new_fnt.syn);
+			}
 			if (rv != DmResult_SUCCESS) {
 				continue;
 			}
@@ -105,6 +112,10 @@ static DmResult DmSynth_updateFonts(DmSynth* slf, DmBand* band) {
 				continue;
 			}
 
+			// (EE patch) The font keeps its collection alive (the font array's free releases it): the font reads it,
+			// and the collection's synthesizer, which the font's copy shares, is closed with it.
+			DmDls_retain(new_fnt.dls);
+
 			if (slf->channels_len > 0) {
 				// If we add an element to the font array, we need to adjust the cached fonts for each channel,
 				// since a resize might re-allocate the array and thus break existing references to the old array.
@@ -112,6 +123,8 @@ static DmResult DmSynth_updateFonts(DmSynth* slf, DmBand* band) {
 				rv = DmSynthFontArray_add(&slf->fonts, new_fnt);
 
 				if (rv != DmResult_SUCCESS) {
+					tsf_close(new_fnt.syn);   // (EE patch: not leaked)
+					DmDls_release(new_fnt.dls);
 					return rv;
 				}
 
@@ -128,6 +141,8 @@ static DmResult DmSynth_updateFonts(DmSynth* slf, DmBand* band) {
 			}
 
 			if (rv != DmResult_SUCCESS) {
+				tsf_close(new_fnt.syn);   // (EE patch: not leaked)
+				DmDls_release(new_fnt.dls);
 				return rv;
 			}
 		}
@@ -229,6 +244,15 @@ static DmResult DmSynth_assignInstrumentChannels(DmSynth* slf, DmBand* band) {
 	}
 
 	return DmResult_SUCCESS;
+}
+
+// (EE patch) The band's fonts created ahead of its band change (DmPerformance_playSegment, on the game's thread)
+DmResult DmSynth_prepareFonts(DmSynth* slf, DmBand* band) {
+	if (slf == NULL || band == NULL) {
+		return DmResult_INVALID_ARGUMENT;
+	}
+
+	return DmSynth_updateFonts(slf, band);
 }
 
 // See https://documentation.help/DirectMusic/usingbands.htm

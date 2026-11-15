@@ -137,6 +137,21 @@ DmResult DmPerformance_playSegment(DmPerformance* slf, DmSegment* sgt, DmTiming 
 		return DmResult_MUTEX_ERROR;
 	}
 
+	// (EE patch) The fonts of the segment's bands and of its styles' bands are created here, on the caller's thread,
+	// not when the band change is rendered (each a copy of its collection's synthesizer, built when it was loaded)
+	if (sgt != NULL) {
+		for (size_t i = 0; i < sgt->messages.length; ++i) {
+			DmMessage* m = &sgt->messages.data[i];
+			if (m->type == DmMessage_BAND && m->band.band != NULL) {
+				(void) DmSynth_prepareFonts(&slf->synth, m->band.band);
+			} else if (m->type == DmMessage_STYLE && m->style.style != NULL) {
+				for (size_t b = 0; b < m->style.style->bands.length; ++b) {
+					(void) DmSynth_prepareFonts(&slf->synth, m->style.style->bands.data[b]);
+				}
+			}
+		}
+	}
+
 	// (EE patch) The boundary is taken from the time under the lock (the render thread advances it)
 	uint32_t offset = Dm_getBoundaryOffset(slf, timing);
 	DmMessageQueue_add(&slf->control_queue, &msg, offset, DmQueueConflict_REPLACE);

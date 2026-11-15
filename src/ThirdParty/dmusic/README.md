@@ -48,3 +48,9 @@ Changes made here (each marked "(EE patch)" at its place in the source):
 - The reverb's buffers (`Reverb.c`) are sized from the rate: powers of two of at least 4096 frames per delay line and
   1024 per all-pass (the sizes that hold every delay up to 48 kHz, where the output is unchanged). Fixed at those
   sizes, the delays wrapped above about 54 kHz (88.2, 96, 192 kHz devices).
+- Collections' synthesizers off the audio thread (`Loader.c`, `Dls.c`, `Synth.c`, `Performance.c`, `Array.c`): each
+  collection's TSF instance is built once when the collection is loaded (`DmDls.synth_template`, with its segment on
+  the game's thread), and `DmPerformance_playSegment` creates the fonts of the segment's bands (and its styles'
+  bands) as copies of it (`tsf_copy`, sharing the samples) before the play is queued. Upstream converted a
+  collection inside the render callback when its first band played (the built-in general MIDI set: 879 KB parsed
+  between two audio blocks). A font retains its collection; a font the array cannot take is freed.

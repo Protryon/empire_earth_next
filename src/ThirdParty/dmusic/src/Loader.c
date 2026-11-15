@@ -189,6 +189,13 @@ DmResult DmLoader_getDownloadableSound(DmLoader* slf, DmReference const* ref, Dm
 		(*snd)->guid = ref->guid;
 	}
 
+	// (EE patch) The collection's synthesizer is built here, where the collection is loaded (with its segment, on the
+	// game's thread), not when its first band plays: upstream converted it in the render callback (the built-in
+	// general MIDI set: 879 KB parsed and converted between two audio blocks). A failure leaves it to be built then.
+	if (DmSynth_createTsfForDls(*snd, &(*snd)->synth_template) != DmResult_SUCCESS) {
+		(*snd)->synth_template = NULL;
+	}
+
 	// Add the new item to the cache
 	if (mtx_lock(&slf->lock) != thrd_success) {
 		return DmResult_MUTEX_ERROR;

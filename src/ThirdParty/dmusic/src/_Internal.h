@@ -686,6 +686,7 @@ DMINT void DmSynth_reset(DmSynth* slf);
 DMINT void DmSynth_setVolume(DmSynth* slf, float vol);
 DMINT DmResult DmSynth_createTsfForDls(DmDls* dls, tsf** out);
 DMINT void DmSynth_sendBandUpdate(DmSynth* slf, DmBand* band);
+DMINT DmResult DmSynth_prepareFonts(DmSynth* slf, DmBand* band);   // (EE patch)
 DMINT void DmSynth_sendControl(DmSynth* slf, uint32_t channel, uint8_t control, float value);
 DMINT void DmSynth_sendControlReset(DmSynth* slf, uint32_t channel, uint8_t control, float reset);
 DMINT void DmSynth_sendPitchBend(DmSynth* slf, uint32_t channel, int bend);
