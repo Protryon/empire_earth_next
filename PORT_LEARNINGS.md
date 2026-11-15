@@ -23635,3 +23635,31 @@ terrain 0 (the original indexes past its list); a kind radio whose control is mi
 The area screen's `MouseMove` and `Update` (EE-SIM has no mouse buttons: the rectangle's paint, the anchor's
 release, the mouse bounds and edge scroll); the controls' look; the instructions tab's import and export buttons
 (their events are C++ and unchanged); closing the editor (every destructor). No tour opens the editor.
+
+### Gates
+
+| Gate | Per move | Merged with rust (209ea06a) |
+|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same |
+| `tools/sim_editor.py` | PASS 13,956 (controls), 13,956 (map and area, gated together), 14,049 (instructions), each on the first run | PASS 14,049 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical (after the controls and after the instructions) | seeds 2-7 identical |
+| `rust_build.py gate` | the controls' run was spoiled (modules added mid-run: a stale header); after the instructions clippy failed (an eight-argument table helper: allowed, own commit), then PASS (3,489 tests) | PASS (3,716 tests) |
+| `build.py --test-profile windowed-software` | | EE-AOC 0 unresolved, 0 duplicates |
+| captures | not run: no simulation code changed | |
+
+The merge of rust needed two passes: the first (a08e075e) merged cleanly but did not compile
+(`EEFOFindNewTargetNearOldTarget.cpp` still named `EEUCAmbient`, which R5b.4 core 32 removed; rust's next head
+209ea06a had the fix); the second met only PORT_LEARNINGS (both sides' sections kept). Headers current; no
+`EE_SCREENS_*` name in two crates.
+
+C++ lines (src and include/ee, include/rust aside): the controls +98 -494, the map tab and area screen +228 -1,065,
+the instructions tab +140 -335, the area accessor +10 -0; the gate's TEST ONLY lines (EESimEditor.cpp, the
+alignment record) about +90. Net about **-1,330** for the moves and **-1,120** with the gate, short of the 1,500
+aimed at: the hosts of the world calls (the map's own controls and actions, the area's picking and paint action, the
+media strings' transfers) are a third of each moved unit.
+
+### Left
+
+The editor form (`EEUIFScenarioEditor.cpp`, 1,495 lines; its members are read across 16 units: accessors first), the
+terrain tab (857, its lists draw textures), the tech list box (595), the load thread (385), the elevation tab, the
+terrain paint radios, the unit tab's small control classes, the moved screens' hosts.
