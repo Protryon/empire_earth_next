@@ -14047,3 +14047,214 @@ step 1429 media
   history 8 'Long_ago'
   instructions 14 '|Do_this_first'
   export ''
+step 1434 trigreport
+  result 0
+step 1435 sm new 0
+  new 0 0
+step 1436 sm new 0
+  new 0 0
+step 1437 sm new 0
+  new 0 0
+step 1438 sm new 1
+  new 1 0
+step 1439 sm new 1
+  new 1 0
+step 1440 sm new 2
+  new 2 0
+step 1441 sm new 2
+  new 2 0
+step 1442 sm new 2
+  new 2 0
+step 1443 sm new 3
+  new 3 0
+step 1444 sm new 3
+  new 3 0
+step 1445 sm new 3
+  new 3 0
+step 1446 sm new 4
+  new 4 0
+step 1447 sm new 4
+  new 4 0
+step 1448 sm state
+  trigger 0 <Trigger0> id 1 c 0 e 0
+  trigger 1 <Trigger1> id 2 c 0 e 0
+  trigger 2 <Trigger2> id 3 c 0 e 0
+  condition 0 Always True id 0 type 0 object 0 trigger 0
+  condition 1 <Condition0> id 1 type 2 object 0 trigger 0
+  condition 2 <Condition1> id 2 type 2 object 0 trigger 0
+  condition 3 <3:<NONE> Exists> id 3 type 1 object 1 trigger 0
+  condition 4 <4:<NONE> Exists> id 4 type 1 object 2 trigger 0
+  condition 5 <5:<NONE> Exists> id 5 type 1 object 3 trigger 0
+  effect 0 Do Nothing id 0 areas 0 0 0 0 objects 0 0 0 0 0 trigger 0 list
+  effect 1 <Effect0> id 1 areas 0 0 0 0 objects 0 0 0 0 0 trigger 0 list
+  effect 2 <Effect1> id 2 areas 0 0 0 0 objects 0 0 0 0 0 trigger 0 list
+  effect 3 <Effect2> id 3 areas 0 0 0 0 objects 0 0 0 0 0 trigger 0 list
+  object 0 <NONE> id 0 area 0 parent 0 near 0
+  object 1 <NONE> id 1 area 0 parent 0 near 0
+  object 2 <NONE> id 2 area 0 parent 0 near 0
+  object 3 <NONE> id 3 area 0 parent 0 near 0
+  area 0 Off Map id 0
+  area 1 Previous Location id 0
+  area 2 <Area0> id 1
+  area 3 <Area1> id 2
+  timed
+  next 3 5 3 3 2
+  triggers |<Trigger0> |<Trigger1> |<Trigger2>
+  conditions |Always True |<Condition0> |<Condition1> |<<NONE> Exists> |<<NONE> Exists> |<<NONE> Exists>
+  user conditions |<Condition0> |<Condition1>
+  effects |Do Nothing |<Effect0> |<Effect1> |<Effect2>
+  user effects |<Effect0> |<Effect1> |<Effect2>
+  objects |<NONE> |<NONE> |<NONE> |<NONE>
+  user objects |<NONE> |<NONE> |<NONE>
+  areas |Off Map |Previous Location |<Area0> |<Area1>
+  user areas |<Area0> |<Area1>
+  triggers |[1]<Trigger0> |[2]<Trigger1> |[3]<Trigger2>
+  conditions |[0]Always True |[1]<Condition0> |[2]<Condition1> |[3]<<NONE> Exists> |[4]<<NONE> Exists> |[5]<<NONE> Exists>
+  user conditions |[1]<Condition0> |[2]<Condition1>
+  effects |[0]Do Nothing |[1]<Effect0> |[2]<Effect1> |[3]<Effect2>
+  user effects |[1]<Effect0> |[2]<Effect1> |[3]<Effect2>
+  objects |[0]<NONE> |[1]<NONE> |[2]<NONE> |[3]<NONE>
+  user objects |[1]<NONE> |[2]<NONE> |[3]<NONE>
+  areas |[0]Off Map |[0]Previous Location |[1]<Area0> |[2]<Area1>
+  user areas |[1]<Area0> |[2]<Area1>
+  find 0:Always True/Do Nothing/<NONE>/0 1:<Condition0>/<Effect0>/<NONE>/1 2:<Condition1>/<Effect1>/<NONE>/2 3:<<NONE> Exists>/<Effect2>/<NONE>/3 4:<<NONE> Exists>/-/-/-2 5:<<NONE> Exists>/-/-/-2 6:-/-/-/-2 7:-/-/-/-2
+step 1449 trigreport
+  result 0
+  | <Trigger0><CR>
+  | 	If  (Always True) <CR>
+  | 	Then  (Do Nothing) <CR>
+  | <CR>
+  | <Trigger1><CR>
+  | 	If  (Always True) <CR>
+  | 	Then  (Do Nothing) <CR>
+  | <CR>
+  | <Trigger2><CR>
+  | 	If  (Always True) <CR>
+  | 	Then  (Do Nothing) <CR>
+  | <CR>
+  | Effect: (<Effect0>) is not used in any trigger<CR>
+  | Effect: (<Effect1>) is not used in any trigger<CR>
+  | Effect: (<Effect2>) is not used in any trigger<CR>
+  | Condition: (<Condition0>) is not used in any trigger<CR>
+  | Condition: (<Condition1>) is not used in any trigger<CR>
+  | Object: (<NONE>) is not used in any condition, effect or other object<CR>
+  | Object: (<NONE>) is not used in any condition, effect or other object<CR>
+  | Object: (<NONE>) is not used in any condition, effect or other object<CR>
+  | Area: (<Area0>) is not used in any condition, effect or Object<CR>
+  | Area: (<Area1>) is not used in any condition, effect or Object<CR>
+step 1450 trigreport setup
+  result 0
+  | Report One<CR>
+  | Description:<CR>
+  | "A described trigger"<CR>
+  | 	Trigger starts OFF<CR>
+  | 	Conditions True for 7<CR>
+  | 	Looping<CR>
+  | 	If  NOT (<Condition0>)  OR (BAD CONDITION) <CR>
+  | 	Then  (Delay 4 sec)  (<Effect0>)  AND (BAD EFFECT) <CR>
+  | <CR>
+  | <Trigger1><CR>
+  | 	Looping<CR>
+  | 	If  (Always True) <CR>
+  | 	Then  (<Effect1>) <CR>
+  | <CR>
+  | <Trigger2><CR>
+  | 	If  (Always True) <CR>
+  | 	Then  (Do Nothing) <CR>
+  | <CR>
+  | Effect: (<Effect2>) is not used in any trigger<CR>
+  | Condition: (<Condition1>) is not used in any trigger<CR>
+  | Object: (<NONE>) is not used in any condition, effect or other object<CR>
+  | WARNING: Potential performance issue with looping Trigger (Report One) calling effect (<Effect0>) which repeatedly sets the objects name, class attribute or player tech<CR>
+step 1451 formstate
+  form tab=0 eg=1 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0
+step 1452 tab 2
+step 1453 formstate
+  form tab=2 eg=3 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=1 hl=1 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767 fg=0.996078,0.968627,0.12549 tr=1 fh=11 'Loading Terrain Ambients - Aquatic' lines=1 'Loading Terrain Ambients - Aquatic'
+  groups 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0
+step 1454 tab 5
+step 1455 formstate
+  form tab=5 eg=4 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=0 exit=0 mini=0 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 0 0 1 0 0 0 0 0 0 0 0 0 0
+step 1456 tab 1
+step 1457 formstate
+  form tab=1 eg=2 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=1 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0
+step 1458 tab 3
+step 1459 formstate
+  form tab=3 eg=6 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+step 1460 loadtext Loading_the_terrain
+step 1461 formstate
+  form tab=3 eg=6 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=1 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767 fg=0.996078,0.968627,0.12549 tr=1 fh=11 'Loading the terrain' lines=1 'Loading the terrain'
+  groups 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+step 1462 loadtext -
+step 1463 formstate
+  form tab=3 eg=6 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+step 1464 gameview 0 0 1024 700 1
+step 1465 formstate
+  form tab=3 eg=6 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=1 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+step 1466 gameview 0 0 1024 606 0
+step 1467 formstate
+  form tab=3 eg=6 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+step 1468 formcall store
+step 1469 formcall resume
+step 1470 formstate
+  form tab=3 eg=6 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+step 1471 blank 40 40 3
+step 1472 ghost 1 209 42 40 0
+  ghosts 209@42,40+
+step 1473 placeghost 1
+  placed 1
+step 1474 place 1 32 36.5 44.5 0
+step 1475 place 2 20 44.5 44.5 0
+step 1476 units
+  unit 16777267 type=209 player=1 tile=42,40
+  unit 16777268 type=32 player=1 tile=36,44
+  unit 33554454 type=20 player=2 tile=44,44
+step 1477 fsel add @42,40
+step 1478 formstate
+  form tab=3 eg=6 on=1 cargo=1 sel=[16777267] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+step 1479 fsel add @36,44
+step 1480 fsel add @44,44
+step 1481 fsel add @42,40
+step 1482 formstate
+  form tab=3 eg=6 on=1 cargo=2 sel=[16777267,16777268,33554454,16777267] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+step 1483 unittab
+  unit tab flags=0 under=-1 list=5/0/1 angle=0.7854 ghosts=0 cargo 0:
+step 1484 fsel remove @36,44
+step 1485 formstate
+  form tab=3 eg=6 on=1 cargo=2 sel=[16777267,33554454,16777267] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+step 1486 fsel first
+step 1487 formstate
+  form tab=3 eg=6 on=1 cargo=1 sel=[33554454,16777267!] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+step 1488 unittab
+  unit tab flags=0 under=-1 list=5/0/1 angle=0.7854 ghosts=0 cargo 0:
+step 1489 fsel remove @44,44
+step 1490 formstate
+  form tab=3 eg=6 on=1 cargo=1 sel=[16777267!] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+step 1491 fsel add @36,44
+step 1492 fsel add @42,40
+step 1493 formstate
+  form tab=3 eg=6 on=1 cargo=2 sel=[16777267,16777268,16777267] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+step 1494 fsel clear
+step 1495 formstate
+  form tab=3 eg=6 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+step 1496 unittab
+  unit tab flags=0 under=-1 list=5/0/1 angle=0.7854 ghosts=0 cargo 0:
+step 1497 tab 0
+step 1498 formstate
+  form tab=0 eg=1 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=0 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
+  groups 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0
