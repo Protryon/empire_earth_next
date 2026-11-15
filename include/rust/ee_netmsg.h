@@ -503,6 +503,15 @@ constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_VECTOR = 5;
 /// The type's string (`UWideString`; the C++ object's `mString`, not in the record: offset and size 0 of it).
 constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_STRING = 6;
 
+/// The type's list (the C++ object's `mList`, not in the record: offset 0, size one record's).
+constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_LIST = 7;
+
+/// The type's blob (the C++ object's `mList`, as many bytes as the member before it says: offset 0, size 1).
+constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_BLOB = 8;
+
+/// A member that is not on the wire, as bytes (the box selection's rectangle).
+constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_RAW = 9;
+
 /// The header's size: reserved, type, target slot, originating slot.
 constexpr static const size_t HEADER_SIZE = 4;
 
@@ -566,6 +575,15 @@ struct EeNetMsgRecordField {
   uint8_t kind;
   uint32_t offset;
   uint32_t size;
+};
+
+/// A record type's rules: its send-to-all-and-wait member (0: none) and `IsResponse`'s (the response's type, 0
+/// for none; this message's member and the response's, equal as 32-bit integers).
+struct EeNetMsgRecordRules {
+  uint8_t wait_field;
+  uint8_t response_type;
+  uint8_t response_mine;
+  uint8_t response_theirs;
 };
 
 extern "C" {
@@ -724,6 +742,13 @@ const char *ee_netmsg_record_label(uint8_t message_type);
 
 /// Member `index` of a record class (1 = the first after the selection id; NONE past the last).
 EeNetMsgRecordField ee_netmsg_record_field(uint32_t class_id, uint32_t index);
+
+/// Member `index` of a record type: the wire's, then the members that are not on the wire (NONE past the last).
+EeNetMsgRecordField ee_netmsg_record_member(uint8_t message_type,
+                                            uint32_t index);
+
+/// A record type's rules (all 0 for any other type).
+EeNetMsgRecordRules ee_netmsg_record_rules(uint8_t message_type);
 
 }  // extern "C"
 

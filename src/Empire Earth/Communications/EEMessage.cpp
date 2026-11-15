@@ -68,6 +68,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEGameLog.h"
+#include "ee/EECivUpgrade.h"
 #include "ee/EEMessage.h"
 #include "ee/EECPEngine.h"
 #include "ee/EECommunications.h"
@@ -111,8 +112,6 @@
 #include "rust/ee_netmsg.h"   // ee_netmsg
 #include "rust/ee_units.h"
 #include "ee/EEUnitHost.h"   // EESortFarms
-static unsigned char CompressUnits(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer);
-static void DecompressUnits(unsigned char* inBuffer, unsigned char inSize, std::vector<long>& outUnits);
 
 // ---- the codec (ee_netmsg, docs/RUST_PLAN.md R5b.4): each message hands its members to the Rust as slots in wire
 // order, the header's four first; the layout (sizes, order, the strings' and lists' forms) is the Rust table's ----
@@ -132,13 +131,6 @@ static inline EeNetMsgSlot EENetMsgString(const UWideString& inString)
     return theSlot;
 }
 
-// records: on export the first record, a record's size and the count
-static inline EeNetMsgSlot EENetMsgRecords(void* inRecords, uint32_t inSize, size_t inCount)
-{
-    EeNetMsgSlot theSlot = {(uint8_t*)inRecords, inSize, (uint32_t)inCount, 0};
-    return theSlot;
-}
-
 // a new buffer of the message's size, filled by the Rust (the original's ExportMessage shape)
 static void EENetMsgExport(uint32_t inClass, EeNetMsgSlot* inSlots, size_t inCount, unsigned char** outPayloadPointer,
                            unsigned long& outMessageSize)
@@ -148,16 +140,9 @@ static void EENetMsgExport(uint32_t inClass, EeNetMsgSlot* inSlots, size_t inCou
     outMessageSize = ee_netmsg_export(inClass, inSlots, inCount, *outPayloadPointer, theMessageSize);
 }
 
-// New (game messages lane, round 1): the codec's side of every game message, once. A class gives its codec class
-// and its members as slots in wire order (GetCodecSlots); these run the codec over them, as each class's own
-// ExportMessage, ExportSize and ImportMessage did (a class whose members the slots cannot carry overrides them).
-size_t EEMessage::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    // only a class that overrides the three (EEMSelectTheseUnits) has none: the codec refuses the class
-    outClass = 0xffffffffu;
-    return 0;
-}
-
+// New (game messages lane, round 1): the codec's side of every game message, once. The message gives its codec
+// class and its members as slots in wire order (GetCodecSlots); these run the codec over them, as each class's own
+// ExportMessage, ExportSize and ImportMessage did.
 void EEMessage::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
@@ -207,17 +192,18 @@ EEMRecord::EEMRecord(unsigned char* inData)
     this->ImportMessage(inData);
 }
 
-// a sender's: the members in wire order (fewer leave the rest 0)
+// a sender's: the members in wire order, then the ones off the wire (fewer leave the rest 0)
 EEMRecord::EEMRecord(unsigned char inType, std::initializer_list<EEMRecordValue> inValues)
     : EEMessage(inType, (ee_netmsg_record_flags(inType) & EE_NETMSG_RECORD_WHEN_OUT) != 0)
 {
     memset(this->mRecord, 0, sizeof(this->mRecord));
-    uint32_t theClass = ee_netmsg_record_class(inType);
-    ESVERIFY_AT(theClass != 0xffffffffu, __LINE__);
+    ESVERIFY_AT(ee_netmsg_record_class(inType) != 0xffffffffu, __LINE__);
     uint32_t theIndex = 1;
     for (const EEMRecordValue& theValue : inValues) {
-        EeNetMsgRecordField theField = ee_netmsg_record_field(theClass, theIndex);
-        unsigned char* theTo = theField.kind == EE_NETMSG_RECORD_FIELD_STRING ? NULL : this->Field(theIndex, theField.size);
+        EeNetMsgRecordField theField = ee_netmsg_record_member(inType, theIndex);
+        bool theBeside = theField.kind == EE_NETMSG_RECORD_FIELD_STRING || theField.kind == EE_NETMSG_RECORD_FIELD_LIST
+                         || theField.kind == EE_NETMSG_RECORD_FIELD_BLOB;
+        unsigned char* theTo = theBeside ? NULL : this->Field(theIndex, theField.size);
         theIndex++;
         float theFloat = theValue.mIsFloat ? theValue.mFloats[0] : (float)theValue.mInteger;
         long long theInteger = theValue.mIsFloat ? (long long)theValue.mFloats[0] : theValue.mInteger;
@@ -226,6 +212,16 @@ EEMRecord::EEMRecord(unsigned char inType, std::initializer_list<EEMRecordValue>
         case EE_NETMSG_RECORD_FIELD_STRING:   // the one string member (not in mRecord)
             ESVERIFY_AT(theValue.mString != NULL, __LINE__);
             this->mString = *theValue.mString;
+            break;
+        case EE_NETMSG_RECORD_FIELD_LIST:   // the one list (not in mRecord): each element's low bytes, one record
+            ESVERIFY_AT(theValue.mList != NULL && theValue.mListElement >= theField.size, __LINE__);
+            for (size_t i = 0; i < theValue.mListCount; i++) {
+                const unsigned char* theElement = (const unsigned char*)theValue.mList + i * theValue.mListElement;
+                this->mList.insert(this->mList.end(), theElement, theElement + theField.size);
+            }
+            break;
+        case EE_NETMSG_RECORD_FIELD_BLOB:   // the blob and a member off the wire as bytes: set by their sender
+        case EE_NETMSG_RECORD_FIELD_RAW:
             break;
         case EE_NETMSG_RECORD_FIELD_INTEGER:
             memcpy(theTo, &theInteger, theField.size);   // little-endian: the low bytes
@@ -245,7 +241,7 @@ EEMRecord::EEMRecord(unsigned char inType, std::initializer_list<EEMRecordValue>
 
 unsigned char* EEMRecord::Field(uint32_t inIndex, size_t inSize) const
 {
-    EeNetMsgRecordField theField = ee_netmsg_record_field(ee_netmsg_record_class(this->mType), inIndex);
+    EeNetMsgRecordField theField = ee_netmsg_record_member(this->mType, inIndex);
     ESVERIFY_AT(theField.kind != EE_NETMSG_RECORD_FIELD_NONE && theField.size == inSize, __LINE__);
     return const_cast<unsigned char*>(this->mRecord) + theField.offset;
 }
@@ -260,6 +256,30 @@ char* EEMRecord::GetMessageLabel() const
     return const_cast<char*>(ee_netmsg_record_label(this->mType));
 }
 
+bool EEMRecord::GetSendToAllAndWaitMessageID(unsigned long& outID) const
+{
+    EeNetMsgRecordRules theRules = ee_netmsg_record_rules(this->mType);
+    if (theRules.wait_field != 0)
+        outID = this->Get<uint32_t>(theRules.wait_field);
+    return theRules.wait_field != 0;
+}
+
+void EEMRecord::SetSendToAllAndWaitMessageID(unsigned long inID)
+{
+    EeNetMsgRecordRules theRules = ee_netmsg_record_rules(this->mType);
+    if (theRules.wait_field != 0)
+        this->Set<uint32_t>(theRules.wait_field, (uint32_t)inID);
+}
+
+// FUNCTION: EXE 0x4c0e6a (EEMLoadOrSaveGame::IsResponse)
+// Whether a message is this one's response, by the type's rule (Load or Save: the response for its tick)
+bool EEMRecord::IsResponse(NEMessage* inMessage)
+{
+    EeNetMsgRecordRules theRules = ee_netmsg_record_rules(this->mType);
+    return theRules.response_type != 0 && inMessage->GetType() == theRules.response_type
+           && this->Get<int32_t>(theRules.response_mine) == static_cast<EEMRecord*>(inMessage)->Get<int32_t>(theRules.response_theirs);
+}
+
 size_t EEMRecord::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
     outClass = ee_netmsg_record_class(this->mType);
@@ -268,22 +288,38 @@ size_t EEMRecord::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
     size_t theCount = 5;
     for (EeNetMsgRecordField theField; (theField = ee_netmsg_record_field(outClass, (uint32_t)theCount - 4)).kind != 0; theCount++) {
         EeNetMsgSlot theSlot = {this->mRecord + theField.offset, theField.size, 0, 0};
-        outSlots[theCount] = theField.kind == EE_NETMSG_RECORD_FIELD_STRING ? EENetMsgString(this->mString) : theSlot;
+        if (theField.kind == EE_NETMSG_RECORD_FIELD_STRING)
+            theSlot = EENetMsgString(this->mString);
+        else if (theField.kind == EE_NETMSG_RECORD_FIELD_LIST || theField.kind == EE_NETMSG_RECORD_FIELD_BLOB) {
+            // the records: the first, a record's size, the count; the blob: its bytes (the room for an import)
+            theSlot.data = this->mList.empty() ? NULL : &this->mList[0];
+            theSlot.size = theField.kind == EE_NETMSG_RECORD_FIELD_LIST ? theField.size : (uint32_t)this->mList.size();
+            theSlot.count = theField.kind == EE_NETMSG_RECORD_FIELD_LIST ? (uint32_t)(this->mList.size() / theField.size) : 0;
+        }
+        outSlots[theCount] = theSlot;
     }
     return theCount;
 }
 
-// the codec over the slots, then the string member's text from where the codec found it (UWideString::Import)
+// the codec over the slots, then the string member's text from where the codec found it (UWideString::Import), the
+// list's records from where it found them, the blob's bytes as many as it found
 void EEMRecord::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, __LINE__);
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
     uint32_t theClass;
+    this->mList.clear();   // the slots carry no room: the list and the blob are copied from where the codec found them
     size_t theCount = this->GetCodecSlots(theSlots, theClass);
     ee_netmsg_import(theClass, inPayloadPointer, theSlots, theCount);
     for (size_t i = 5; i < theCount; i++) {
-        if (ee_netmsg_record_field(theClass, (uint32_t)i - 4).kind == EE_NETMSG_RECORD_FIELD_STRING)
-            this->mString.Import(inPayloadPointer + theSlots[i].offset);
+        EeNetMsgRecordField theField = ee_netmsg_record_field(theClass, (uint32_t)i - 4);
+        unsigned char* theFrom = inPayloadPointer + theSlots[i].offset;
+        if (theField.kind == EE_NETMSG_RECORD_FIELD_STRING)
+            this->mString.Import(theFrom);
+        else if (theField.kind == EE_NETMSG_RECORD_FIELD_LIST)
+            this->mList.assign(theFrom, theFrom + theSlots[i].count * theField.size);
+        else if (theField.kind == EE_NETMSG_RECORD_FIELD_BLOB)
+            this->mList.assign(theFrom, theFrom + theSlots[i].count);
     }
 }
 
@@ -310,9 +346,6 @@ EEMRecord* EENewFullPlayerInformation(const EEGameOptionsPlayer& inPlayer)
                           inPlayer.mColor, inPlayer.mTeam, inPlayer.mStartingCitizens, inPlayer.mIsReady,
                           inPlayer.mIsLocal, inPlayer.mB36, (int32_t)inPlayer.mEngine});   // the engine: port
 }
-
-// EEMSelectTheseUnits' slot list (its id list is read and written around the codec)
-static size_t Slots(EEMSelectTheseUnits* inMessage, EeNetMsgSlot* outSlots, std::vector<int32_t>& ioIDs);
 
 // the Execute decisions (ee/EEMessageExecute.h), each call recorded by the capture's NMDC record (off by default)
 static inline uint8_t DecideSelectionMarksLocal(uint8_t inServer, uint8_t inLocal)
@@ -482,57 +515,26 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     unsigned char theType = inMemory[1];
     NEMessage* theMessage = NULL;
     ESVERIFY_AT(inMemory != NULL, 841);
-    // a record type (EEMRecord, ee_netmsg records.rs) the factory builds (not EEMEndCinematic's 0x9d: no game type)
+    // every type the factory builds is a record (EEMRecord, ee_netmsg records.rs; not EEMEndCinematic's 0x9d: no game
+    // type)
     if (ee_netmsg_record_class(theType) != 0xffffffffu && ee_netmsg_class_of_type(theType) != 0xffffffffu)
         theMessage = new EEMRecord(inMemory);
-    else switch (theType) {
-    case kMessageAddAndRemoveUnitsFromSelectedGroup:
-        theMessage = new EEMAddAndRemoveUnitsFromSelectedGroup(inMemory);
-        break;
-    case kMessageAddUnitsToSelectedGroup:
-        theMessage = new EEMAddUnitsToSelectedGroup(inMemory);
-        break;
-    case kMessageCivUpgradesPurchased:
-        theMessage = new EEMCivUpgradesPurchased(inMemory);
-        break;
-    case kMessageCivUpgradesRequested:
-        theMessage = new EEMCivUpgradesRequested(inMemory);
-        break;
-    case kMessageLoadOrSaveGame:
-        theMessage = new EEMLoadOrSaveGame(inMemory);
-        break;
-    case kMessageSelectTheseUnits:
-        theMessage = new EEMSelectTheseUnits(inMemory);
-        break;
-    case kMessageSelectUnits:
-        theMessage = new EEMSelectUnits(inMemory);
-        break;
-    case kMessageStartLoading:
-        theMessage = new EEMStartLoading(inMemory);
-        break;
-    default:
+    else
         ESVERIFY_AT("Undefined message type" == NULL, 1275);
-        break;
-    }
     EEMessageCaptureImport(theMessage, inMemory);   // TEST ONLY: the simulation capture's NMIM record (off by default)
     return theMessage;
      }
 
 // FUNCTION: EXE 0x4badd0
 // Toggles the listed units in the sender's selection (twice while a selection is being replayed)
-void EEMAddAndRemoveUnitsFromSelectedGroup::Execute()
+static void ExecuteAddAndRemoveUnitsFromSelectedGroup(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
+    std::vector<long> theUnitIDs;
+    EESelectUnitsIDs(m, theUnitIDs);
     uint32_t thePasses = DecideSelectionPasses();
     for (uint32_t i = 0; i < thePasses; i++)
-        thePlayer->AddAndRemoveUnitsFromSelectedGroup(this->mUnitIDs);
-}
-
-// FUNCTION: EXE 0x4bae45
-// Returns the Add And Remove Units From Selected Group message's debug label
-char* EEMAddAndRemoveUnitsFromSelectedGroup::GetMessageLabel() const
-{
-    return "Remove Units From Selected Group";
+        thePlayer->AddAndRemoveUnitsFromSelectedGroup(theUnitIDs);
 }
 
 // FUNCTION: EXE 0x4bae4b
@@ -581,17 +583,11 @@ static void ExecuteAddUnitToSelectedGroup(EEMRecord* m)
 
 // FUNCTION: EXE 0x4bb44b
 // Adds the listed units to the sender's selection
-void EEMAddUnitsToSelectedGroup::Execute()
+static void ExecuteAddUnitsToSelectedGroup(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    thePlayer->AddUnitsToSelectedGroup(this->mUnitIDs);
-}
-
-// FUNCTION: EXE 0x4bb473
-// Returns the Add Units To Selected Group message's debug label
-char* EEMAddUnitsToSelectedGroup::GetMessageLabel() const
-{
-    return "Add Units To Selected Group";
+    std::vector<long> theUnitIDs;
+    EESelectUnitsIDs(m, theUnitIDs);
+    gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->AddUnitsToSelectedGroup(theUnitIDs);
 }
 
 // FUNCTION: EXE 0x4bb479
@@ -827,50 +823,22 @@ static void ExecuteCivTimerExpired(EEMRecord* m)
     }
 }
 
-// EEMCivUpgrades' members as the codec's slots
-size_t EEMCivUpgrades::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_CIV_UPGRADES;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mPlayerID);
-    outSlots[6] = EENetMsgField(this->mNameString);
-    outSlots[7] = EENetMsgRecords(this->mUpgrades.empty() ? NULL : &this->mUpgrades[0], sizeof(EECivUpgrade),
-                                  this->mUpgrades.size());
-    outSlots[8] = EENetMsgString(this->mCivName);
-    return 9;
-}
-
-// FUNCTION: EXE 0x4bd327
-// Reads the civilization upgrades message (player, name string, upgrades, civ name) from a network buffer
-void EEMCivUpgrades::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 4392);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_CIV_UPGRADES, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
-    for (unsigned long i = 0; i < theSlots[7].count; i++) {
-        EECivUpgrade theUpgrade;
-        memcpy(&theUpgrade, inPayloadPointer + theSlots[7].offset + i * sizeof(theUpgrade), sizeof(theUpgrade));
-        this->mUpgrades.push_back(theUpgrade);
-    }
-    this->mCivName.Import(inPayloadPointer + theSlots[8].offset);
-}
-
 // FUNCTION: EXE 0x4bd3f7
 // Applies a player's civilization (name and upgrades) validated by the server, once only when civs are bought;
-// locks the choice for players other than the local one
-void EEMCivUpgradesPurchased::Execute()
+// locks the choice for players other than the local one (members: the player, the name string, the upgrades, the name)
+static void ExecuteCivUpgradesPurchased(EEMRecord* m)
 {
     UWideString theName;
-    unsigned long thePlayerIndex = this->mPlayerID;
+    unsigned long thePlayerIndex = m->Get<unsigned char>(1);
     EEPlayer* thePlayer = gWorld.mPlayers[thePlayerIndex];
     bool theApply = gWorld.mGameOptions.CanBuyCivilization() ? !thePlayer->mCivUpgradesPurchased : true;
     if (theApply) {
-        theName = this->mCivName;
-        if (this->mNameString)
-            gResource->GetString(this->mNameString, theName);
+        theName = m->mString;
+        if (m->Get<int32_t>(2))
+            gResource->GetString(m->Get<int32_t>(2), theName);
         thePlayer->mCivilization.SetName(theName);
-        thePlayer->mCivilization.AddUpgrades(this->mUpgrades, thePlayerIndex, true);
+        std::vector<EECivUpgrade> theUpgrades = m->GetList<EECivUpgrade>();
+        thePlayer->mCivilization.AddUpgrades(theUpgrades, thePlayerIndex, true);
         thePlayer->mCivUpgradesPurchased = true;
         if (thePlayer != gWorld.GetCurrentPlayer()) {
             thePlayer->mCivilizationChosen = true;
@@ -879,25 +847,12 @@ void EEMCivUpgradesPurchased::Execute()
     }
 }
 
-// FUNCTION: EXE 0x4bd4ad
-// Returns the Civ Upgrades Purchased message's debug label
-char* EEMCivUpgradesPurchased::GetMessageLabel() const
-{
-    return "Civilization Builder upgrades validated and purchased from server";
-}
-
 // FUNCTION: EXE 0x4bd4b3
 // Has the server validate a player's requested civilization upgrades (EECBRequestUpgrades)
-void EEMCivUpgradesRequested::Execute()
+static void ExecuteCivUpgradesRequested(EEMRecord* m)
 {
-    EECBRequestUpgrades(this->mPlayerID, this->mCivName, this->mUpgrades);
-}
-
-// FUNCTION: EXE 0x4bd4ca
-// Returns the Civ Upgrades Requested message's debug label
-char* EEMCivUpgradesRequested::GetMessageLabel() const
-{
-    return "Civilization Builder requesting upgrades from server";
+    std::vector<EECivUpgrade> theUpgrades = m->GetList<EECivUpgrade>();
+    EECBRequestUpgrades(m->Get<unsigned char>(1), m->mString, theUpgrades);
 }
 
 // FUNCTION: EXE 0x4bd588
@@ -1442,68 +1397,33 @@ static void ExecuteLoadMainScreenResponse(EEMRecord* m)
     }
 }
 
-// EEMLoadOrSaveGame's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMLoadOrSaveGame::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_LOAD_OR_SAVE_GAME;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mIsLoad);
-    outSlots[6] = EENetMsgField(this->mIsQuiet);
-    outSlots[7] = EENetMsgField(this->mTick);
-    outSlots[8] = EENetMsgField(this->mTime);
-    outSlots[9] = EENetMsgField(this->mIsAutoSave);
-    outSlots[10] = EENetMsgField(this->mWaitMessageID);
-    outSlots[11] = EENetMsgString(this->mFileName);
-    return 12;
-}
-
-// FUNCTION: EXE 0x4c0dae
-// Reads the load/save request (header, load, quiet, tick, time, auto-save, wait id, file name) from a received payload
-void EEMLoadOrSaveGame::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 8602);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_LOAD_OR_SAVE_GAME, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
-    this->mFileName.Import(inPayloadPointer + theSlots[11].offset);
-}
-
-// FUNCTION: EXE 0x4c0e6a
-// Returns whether the message is the load/save response for this request's tick
-bool EEMLoadOrSaveGame::IsResponse(NEMessage* inMessage)
-{
-    bool theResult = false;
-    if (inMessage->GetType() == kMessageLoadOrSaveGameResponse && this->mTick == static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1))
-        theResult = true;
-    return theResult;
-}
-
 #include "ee/EESaveLoad.h"
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);  // 0x14cfb1
 
 // FUNCTION: EXE 0x4c0e83
 // Single-player server load: loads the saved game and logs a response; anything else queues the save with the
-// physics thread; announces it in the chat log and shows the error box if loading failed
-void EEMLoadOrSaveGame::Execute()
+// physics thread; announces it in the chat log and shows the error box if loading failed (members: load, quiet,
+// tick, time, auto-save, the wait id, the file name)
+static void ExecuteLoadOrSaveGame(EEMRecord* m)
 {
     UWideString theText;
     UWideString theFormat;
     UString theDirectory;
     long theResult;
-    if (this->mIsLoad && gCommunications->IsServer() && !gCommunications->GetIsMultiplayerSession()) {
+    if (m->Get<unsigned char>(1) && gCommunications->IsServer() && !gCommunications->GetIsMultiplayerSession()) {
         gResource->GetString(IDS_LOADING, theFormat);
-        sprintf(theText, theFormat, (const char*)this->mFileName);
+        sprintf(theText, theFormat, (const char*)m->mString);
         gUserInterface->AddChatLogEntry(theText, 0);
         theDirectory = "data\\";
         theDirectory += "Saved Games\\";
-        theResult = EELoadSavedGameFile(UString(this->mFileName), true, this->mIsQuiet, theDirectory, 1);
-        EEMRecord* theResponse = new EEMRecord(kMessageLoadOrSaveGameResponse, {this->mTick});
+        theResult = EELoadSavedGameFile(UString(m->mString), true, m->Get<bool>(2), theDirectory, 1);
+        EEMRecord* theResponse = new EEMRecord(kMessageLoadOrSaveGameResponse, {m->Get<int32_t>(3)});
         theResponse->SetOriginatingSlot(gWorld.GetCurrentPlayer()->mSlot);
         static_cast<NESynchronousServer*>(gCommunications)->LogResponse(theResponse);
     } else {
-        gPhysics->QueueMessage(this);
+        gPhysics->QueueMessage(m);
         gResource->GetString(IDS_SAVING_GAME_AS, theFormat);
-        sprintf(theText, theFormat, (const char*)this->mFileName);
+        sprintf(theText, theFormat, (const char*)m->mString);
         gUserInterface->AddChatLogEntry(theText, 0);
         theResult = 0;
     }
@@ -1517,7 +1437,7 @@ extern long& gAutoSaveCount;                 // 0x5308b8 (the auto-save count Lo
 // FUNCTION: EXE 0x4c1052
 // Saves the game under the requested name, rotates the auto-saves for an auto-save, restores the mouse and reports
 // an error box on failure; returns the request's tick
-long EEMLoadOrSaveGame::LoadOrSave()
+long EELoadOrSave(EEMRecord* m)
 {
     GE2DPoint thePosition = gMouse->mPosition;
     UString theName;
@@ -1528,13 +1448,13 @@ long EEMLoadOrSaveGame::LoadOrSave()
     theFolder = "data\\";
     theFolder += "Saved Games\\";
     gISMouse->SetUseBufferedMovement(false);
-    long theResult = SaveGame(UString(this->mFileName), this->mTime, this->mIsQuiet, theFolder);
-    if (this->mIsAutoSave == 1) {
+    long theResult = SaveGame(UString(m->mString), m->Get<int32_t>(4), m->Get<bool>(2), theFolder);
+    if (m->Get<unsigned char>(5) == 1) {
         theDirectory = UString("data\\") + UString("Saved Games\\");
         theName = UString("AutoSave") + UString("*") + gSavedGameExtension;
         TrimAutoSaves(theName, theDirectory, gAutoSaveCount);
     }
-    if (gCommunications->IsServer() && !this->mIsQuiet && theResult == 0)
+    if (gCommunications->IsServer() && !m->Get<bool>(2) && theResult == 0)
         gUserInterface->CloseForm(NULL);
     gISMouse->Refresh();
     gISMouse->SetUseBufferedMovement(true);
@@ -1542,7 +1462,7 @@ long EEMLoadOrSaveGame::LoadOrSave()
     gMouse->SetPosition(thePosition);
     if (theResult != 0)
         gUIManager->DisplayMessage(gLoadSaveErrorMessage, 1, NULL, NULL, true);
-    return this->mTick;
+    return m->Get<int32_t>(3);
 }
 
 // FUNCTION: EXE 0x4c1264
@@ -2167,65 +2087,17 @@ static void ExecuteSelectPlayerChatType(EEMRecord* m)
 }
 
 // FUNCTION: EXE 0x4c5aaa
-// Replaces the sender's selection with the listed units that still exist
-void EEMSelectTheseUnits::Execute()
+// Replaces the sender's selection with the listed units that still exist (the list: int32 ids)
+static void ExecuteSelectTheseUnits(EEMRecord* m)
 {
-    EEGroup* theGroup = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup;
+    EEGroup* theGroup = gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup;
     theGroup->Clear();
-    for (std::vector<long>::iterator it = this->mUnitIDs.begin(); it != this->mUnitIDs.end(); ++it) {
+    std::vector<int32_t> theUnitIDs = m->GetList<int32_t>();
+    for (size_t i = 0; i < theUnitIDs.size(); i++) {
         // a listed unit may have died between sending and executing (it used to be read through NULL)
-        EEUnit* theUnit = gWorld.GetUnit(*it);
+        EEUnit* theUnit = gWorld.GetUnit(theUnitIDs[i]);
         if (theUnit != NULL)
             theGroup->Add(theUnit->GetComplexUnit());
-    }
-}
-
-// EEMSelectTheseUnits' members as the codec's slots; the ids go through ioIDs as int32 (the wire's width)
-static size_t Slots(EEMSelectTheseUnits* inMessage, EeNetMsgSlot* outSlots, std::vector<int32_t>& ioIDs)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgRecords(ioIDs.empty() ? NULL : &ioIDs[0], sizeof(int32_t), ioIDs.size());
-    return 6;
-}
-
-// FUNCTION: EXE 0x4c5afb
-// Packs the unit list (header, selection id, count, unit ids) into a new send buffer
-void EEMSelectTheseUnits::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    std::vector<int32_t> theIDs(this->mUnitIDs.begin(), this->mUnitIDs.end());   // 4 bytes on the wire (LP64: long is 8)
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SELECT_THESE_UNITS, theSlots, Slots(this, theSlots, theIDs), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4c5bc8
-// Returns the unit list's payload size: 4 bytes per unit plus 9
-unsigned long EEMSelectTheseUnits::ExportSize()
-{
-    std::vector<int32_t> theIDs(this->mUnitIDs.size());
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    return ee_netmsg_export_size(EE_NETMSG_SELECT_THESE_UNITS, theSlots, Slots(this, theSlots, theIDs));
-}
-
-// FUNCTION: EXE 0x4c5be3
-// Returns the message's debug label "Select These Units"
-char* EEMSelectTheseUnits::GetMessageLabel() const
-{
-    return "Select These Units";
-}
-
-// FUNCTION: EXE 0x4c5be9
-// Reads the unit list (header, selection id, count, unit ids) from a received payload, appending the ids
-void EEMSelectTheseUnits::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 14244);
-    std::vector<int32_t> theIDs;
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SELECT_THESE_UNITS, inPayloadPointer, theSlots, Slots(this, theSlots, theIDs));
-    for (unsigned long i = 0; i < theSlots[5].count; i++) {
-        int32_t theUnitID;
-        memcpy(&theUnitID, inPayloadPointer + theSlots[5].offset + i * sizeof(theUnitID), sizeof(theUnitID));
-        this->mUnitIDs.push_back(theUnitID);
     }
 }
 
@@ -2241,90 +2113,50 @@ static void ExecuteSelectUnit(EEMRecord* m)
 // decoded ids as its message is built on the UI thread; NULL otherwise
 void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs) = NULL;
 
-// FUNCTION: EXE 0x4c5d7f
-// Creates a box selection: picks the local player's units of the given type in the rectangle and stores
-// them compressed (and decoded)
-EEMSelectUnits::EEMSelectUnits(const GERectangle& inRectangle, long inUnitType, unsigned char inType)
-    : EEMessage(inType, true)
+// FUNCTION: EXE 0x4c5d7f (the EEMSelectUnits constructor)
+// Creates a box selection: picks the local player's units of the given type in the rectangle and stores them
+// compressed (the count, the blob), the rectangle and the type beside (members 3 and 4, off the wire). The selection
+// on the wire: byte 0 is the owner (the ids' top byte), then runs of a count byte (low 6 bits; the top 2 bits: 0, 1
+// or 2 bytes of the ids' middle 16 bits follow) and the ids' low bytes; at most 63 ids (CompressUnits 0x4c5e67,
+// ee_netmsg units.rs).
+EEMRecord* EENewSelectUnits(const GERectangle& inRectangle, long inUnitType, unsigned char inType)
 {
     std::vector<unsigned long> theUnits;
-    this->mRectangle = inRectangle;
-    this->mL30 = inUnitType;
-    gUnitPicker.PickUnits(this->mRectangle, gWorld.GetCurrentPlayer(), inUnitType, theUnits);
-    long thePlayerID = gWorld.GetCurrentPlayer()->mPlayerID;
-    this->mBufferSize = CompressUnits(theUnits, thePlayerID, this->mBuffer);
-    DecompressUnits(this->mBuffer, this->mBufferSize, this->mUnitIDs);
-    if (gEESelectUnitsTestHook != NULL)   // TEST ONLY: the UI fixture's box selection (EETestFixture.cpp)
-        gEESelectUnitsTestHook(this->mUnitIDs);
+    gUnitPicker.PickUnits(inRectangle, gWorld.GetCurrentPlayer(), inUnitType, theUnits);
+    std::vector<uint32_t> theIDs(theUnits.begin(), theUnits.end());   // only the low 24 bits count
+    unsigned char theBuffer[0x100];
+    unsigned char theSize = ee_netmsg_compress_units(theIDs.empty() ? NULL : &theIDs[0], theIDs.size(),
+                                                     (uint32_t)gWorld.GetCurrentPlayer()->mPlayerID, theBuffer);
+    EEMRecord* theMessage = new EEMRecord(inType, {theSize, 0, 0, inUnitType});
+    theMessage->mList.assign(theBuffer, theBuffer + theSize);
+    theMessage->Set<GERectangle>(3, inRectangle);
+    if (gEESelectUnitsTestHook != NULL) {   // TEST ONLY: the UI fixture's box selection (EETestFixture.cpp)
+        std::vector<long> theUnitIDs;
+        EESelectUnitsIDs(theMessage, theUnitIDs);
+        gEESelectUnitsTestHook(theUnitIDs);
+    }
+    return theMessage;
 }
 
-// The selection on the wire: byte 0 is the owner (the ids' top byte), then runs of a count byte (low 6 bits; the top 2 bits: 0, 1 or 2 bytes of the ids' middle 16 bits follow) and the ids' low bytes; at most 63 ids.
-// FUNCTION: EXE 0x4c5e67
-// Packs unit ids into the compact selection format above (at most 63 ids); returns the byte count
-static unsigned char CompressUnits(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer)
-{
-    std::vector<uint32_t> theIDs(inUnits.begin(), inUnits.end());   // only the low 24 bits count
-    return ee_netmsg_compress_units(theIDs.empty() ? NULL : &theIDs[0], theIDs.size(), (uint32_t)inOwner, outBuffer);
-}
-
-// FUNCTION: EXE 0x4c5fd1
-// Decodes a compact selection buffer into unit ids, replacing the list
-static void DecompressUnits(unsigned char* inBuffer, unsigned char inSize, std::vector<long>& outUnits)
+// FUNCTION: EXE 0x4c5fd1 (DecompressUnits)
+// Decodes a box selection's compact buffer into unit ids, replacing the list
+void EESelectUnitsIDs(const EEMRecord* inMessage, std::vector<long>& outUnits)
 {
     int32_t theIDs[0x100];
-    size_t theCount = ee_netmsg_decompress_units(inBuffer, inSize, theIDs, 0x100);
+    size_t theCount = ee_netmsg_decompress_units(inMessage->mList.empty() ? NULL : &inMessage->mList[0],
+                                                 (unsigned char)inMessage->mList.size(), theIDs, 0x100);
     outUnits.clear();
     for (size_t i = 0; i < theCount && i < 0x100; i++)
         outUnits.push_back(theIDs[i]);   // the original's long: the 32-bit value, sign-extended on LP64
 }
 
-// New (port), TEST ONLY: the two helpers above for the simulation capture's NMCU record (ee/EEMessageCapture.h)
-unsigned char EEMessageCaptureCompress(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer,
-                                       std::vector<long>& outUnits)
-{
-    unsigned char theSize = CompressUnits(inUnits, inOwner, outBuffer);
-    DecompressUnits(outBuffer, theSize, outUnits);
-    return theSize;
-}
-
 // FUNCTION: EXE 0x4c606b
 // Selects the decoded units for the sender
-void EEMSelectUnits::Execute()
+static void ExecuteSelectUnits(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    thePlayer->SelectUnits(this->mUnitIDs);
-}
-
-// EEMSelectUnits' members as the codec's slots (the buffer: mBufferSize of its bytes)
-size_t EEMSelectUnits::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SELECT_UNITS;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mBufferSize);
-    EeNetMsgSlot theBuffer = {this->mBuffer, this->mBufferSize, 0, 0};
-    outSlots[6] = theBuffer;
-    return 7;
-}
-
-// FUNCTION: EXE 0x4c613d
-// Returns the message's debug label "Select Units"
-char* EEMSelectUnits::GetMessageLabel() const
-{
-    return "Select Units";
-}
-
-// FUNCTION: EXE 0x4c6143
-// Reads the box selection (header, selection id, buffer size, compressed ids) from a received payload and
-// decodes its unit ids
-void EEMSelectUnits::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 14536);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    this->CodecSlots(theSlots);
-    theSlots[6].size = sizeof(this->mBuffer);   // room for the bytes the Rust copies in
-    ee_netmsg_import(EE_NETMSG_SELECT_UNITS, inPayloadPointer, theSlots, 7);
-    DecompressUnits(this->mBuffer, this->mBufferSize, this->mUnitIDs);
+    std::vector<long> theUnitIDs;
+    EESelectUnitsIDs(m, theUnitIDs);
+    gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->SelectUnits(theUnitIDs);
 }
 
 // FUNCTION: EXE 0x4c626c
@@ -2477,32 +2309,21 @@ void EESortFarms(std::vector<EEComplexUnit*>& ioFarms, long inX, long inY, bool 
         std::sort(ioFarms.begin(), ioFarms.end(), EETileDistanceLess(EETileCoordinate(inX, inY)));
 }
 
-// EEMStartLoading's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMStartLoading::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
+// FUNCTION: EXE 0x4c7cdc (EEMStartLoading::Execute)
+// Starts loading the game: seeds the random generator, sets the human player count and multiplayer flag (members:
+// the humans, the seed). Not static: the legacy harness's seed pin breaks here and writes the seed into the record
+// (tools/build.py HARNESS_HOOKS, tools/harness/game_session.py).
+void EEStartLoading(EEMRecord* m)
 {
-    outClass = EE_NETMSG_START_LOADING;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mNumHumanPlayers);
-    outSlots[6] = EENetMsgField(this->mSeed);
-    return 7;
-}
-
-// FUNCTION: EXE 0x4c7cdc
-// Starts loading the game: seeds the random generator, sets the human player count and multiplayer flag
-void EEMStartLoading::Execute()
-{
-    FSFileSpec theFile;
-    UString theName;
     if (gPlatSimSeedSet)   // TEST ONLY: the headless simulation's seed (platform/PlatSim.h; the harness's --seed pin)
-        this->mSeed = (long)gPlatSimSeed;
+        m->Set<int32_t>(2, (int32_t)gPlatSimSeed);
     gGameOptions.mLock->ReadLock();
     gGameOptions.Fn130272();
     gGameOptions.mLock->ReadUnlock();
-    gPhysics->mRandom.SetSeed(this->mSeed);
-    gUserInterface->mRandomSeed = this->mSeed;
-    gCommunications->SetNumHumanPlayers(this->mNumHumanPlayers);
-    gCommunications->SetIsMultiplayerSession(this->mNumHumanPlayers > 1);
+    gPhysics->mRandom.SetSeed(m->Get<int32_t>(2));
+    gUserInterface->mRandomSeed = m->Get<int32_t>(2);
+    gCommunications->SetNumHumanPlayers(m->Get<unsigned char>(1));
+    gCommunications->SetIsMultiplayerSession(m->Get<unsigned char>(1) > 1);
     gUserInterface->PostStartLoading();
 }
 
@@ -2803,9 +2624,11 @@ static const struct {
     unsigned char mType;
     void (*mExecute)(EEMRecord* m);
 } kRecordExecutes[] = {
+    {kMessageAddAndRemoveUnitsFromSelectedGroup, ExecuteAddAndRemoveUnitsFromSelectedGroup},
     {kMessageAddPatrolPoint, ExecuteAddPatrolPoint},
     {kMessageAddRemoveResources, ExecuteAddRemoveResources},
     {kMessageAddUnitToSelectedGroup, ExecuteAddUnitToSelectedGroup},
+    {kMessageAddUnitsToSelectedGroup, ExecuteAddUnitsToSelectedGroup},
     {kMessageAlwaysAddUnitToSelectedGroup, ExecuteAlwaysAddUnitToSelectedGroup},
     {kMessageAttackGround, ExecuteAttackGround},
     {kMessageAttackPlayers, ExecuteAttackPlayers},
@@ -2819,6 +2642,8 @@ static const struct {
     {kMessageChat, ExecuteChat},
     {kMessageCheatCode, ExecuteCheatCode},
     {kMessageCivTimerExpired, ExecuteCivTimerExpired},
+    {kMessageCivUpgradesPurchased, ExecuteCivUpgradesPurchased},
+    {kMessageCivUpgradesRequested, ExecuteCivUpgradesRequested},
     {kMessageClearAirportCommands, ExecuteClearAirportCommands},
     {kMessageDisband, ExecuteDisband},
     {kMessageDropoffResource, ExecuteDropoffResource},
@@ -2848,6 +2673,7 @@ static const struct {
     {kMessageLoadGarrison, ExecuteLoadGarrison},
     {kMessageLoadMainScreen, ExecuteLoadMainScreen},
     {kMessageLoadMainScreenResponse, ExecuteLoadMainScreenResponse},
+    {kMessageLoadOrSaveGame, ExecuteLoadOrSaveGame},
     {kMessageLoadPercent, ExecuteLoadPercent},
     {kMessageLoadTransport, ExecuteLoadTransport},
     {kMessageLoadUnitData, ExecuteLoadUnitData},
@@ -2877,7 +2703,9 @@ static const struct {
     {kMessageSelectCustomPlayerForChat, ExecuteSelectCustomPlayerForChat},
     {kMessageSelectPatrolGroup, ExecuteSelectPatrolGroup},
     {kMessageSelectPlayerChatType, ExecuteSelectPlayerChatType},
+    {kMessageSelectTheseUnits, ExecuteSelectTheseUnits},
     {kMessageSelectUnit, ExecuteSelectUnit},
+    {kMessageSelectUnits, ExecuteSelectUnits},
     {kMessageSelfDestruct, ExecuteSelfDestruct},
     {kMessageSendFlare, ExecuteSendFlare},
     {kMessageSetAirportCommand, ExecuteSetAirportCommand},
@@ -2886,6 +2714,7 @@ static const struct {
     {kMessageSetUnitBehavior, ExecuteSetUnitBehavior},
     {kMessageSmartFarmers, ExecuteSmartFarmers},
     {kMessageSnapToDaylight, ExecuteSnapToDaylight},
+    {kMessageStartLoading, EEStartLoading},
     {kMessageStartLoadingResponse, ExecuteStartLoadingResponse},
     {kMessageStopActiveGroup, ExecuteStopActiveGroup},
     {kMessageToggleCollisionDetection, ExecuteToggleCollisionDetection},

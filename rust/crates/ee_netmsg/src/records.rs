@@ -1,13 +1,16 @@
 //! The game messages without a C++ class of their own (RUST_PLAN R5b.4, game messages round 3): `EEMRecord`
 //! (ee/EEMessage.h) carries any of these types: its codec class's fixed members after the selection id, packed in
 //! wire order in a byte record, and at most one string (round 4: the chat lines, the lobby's options and slots),
-//! which the C++ object keeps beside the record (`mString`). No record list or blob. The C++ asks here
-//! for the layout, the type's two flags and its debug label. The classes these types had (`EEMCheatCode`,
+//! which the C++ object keeps beside the record (`mString`); round 5: at most one list (records of a size: unit ids,
+//! civilization upgrades) or blob (the box selection's compressed units), kept beside it too (`mList`), and members
+//! that are not on the wire (`locals`: the box selection's rectangle and unit type, which the scenario editor reads).
+//! The C++ asks here for the layout, the type's flags, its send-to-all-and-wait member, its response rule and its
+//! debug label. The classes these types had (`EEMCheatCode`,
 //! `EEMPayTribute`, ...) were touched only by their senders' constructors, their own `Execute` and the capture (which
 //! reads every message through its codec slots).
 
 use crate::classes::*;
-use crate::schema::Kind;
+use crate::schema::{Field, Kind};
 use std::ffi::c_char;
 
 /// `GetCanSendWhilePaused` answers true.
@@ -22,27 +25,44 @@ const PAUSED: u8 = EE_NETMSG_RECORD_PAUSED;
 const WHEN_OUT: u8 = EE_NETMSG_RECORD_WHEN_OUT;
 
 /// One record type: its codec class, its message type when the class has several (0: the class's one type in
-/// `TYPES`), its flags, its label (NUL-terminated: `GetMessageLabel` hands it to C++).
+/// `TYPES`), its flags, its label (NUL-terminated: `GetMessageLabel` hands it to C++); round 5: its members that are
+/// not on the wire (after the wire's), its send-to-all-and-wait member (0: none) and its response rule (`IsResponse`:
+/// the response's type, 0 for none, then this message's member and the response's, equal as 32-bit integers).
 pub struct RecordType {
     pub class: u32,
     pub message_type: u8,
     pub flags: u8,
     pub label: &'static str,
+    pub locals: &'static [Field],
+    pub wait_field: u8,
+    pub response: (u8, u8, u8),
 }
 
 const fn rec(class: u32, flags: u8, label: &'static str) -> RecordType {
-    RecordType { class, message_type: 0, flags, label }
+    RecordType { class, message_type: 0, flags, label, locals: &[], wait_field: 0, response: (0, 0, 0) }
 }
 
 /// A record type of a class that several message types share (`EEMAddUnitToSelectedGroup`'s toggle and Always
 /// Add), or of a type that is in no `TYPES` row (`EEMEndCinematic`'s 0x9d: the factory builds none).
 const fn rec_type(class: u32, message_type: u8, flags: u8, label: &'static str) -> RecordType {
-    RecordType { class, message_type, flags, label }
+    RecordType { class, message_type, flags, label, locals: &[], wait_field: 0, response: (0, 0, 0) }
+}
+
+/// The box selection's members that are not on the wire: the picked rectangle and the unit type (the scenario
+/// editor's lasso reads both from its message).
+static SELECT_UNITS_LOCALS: [Field; 2] = [Field::new("mRectangle", Kind::Raw(16)), Field::new("mL30", Kind::I32)];
+
+/// The box selections (0x4e, and the two the lasso builds with Shift and Control): sent paused and while out.
+const fn select_units(message_type: u8, label: &'static str) -> RecordType {
+    RecordType {
+        locals: &SELECT_UNITS_LOCALS,
+        ..rec_type(EE_NETMSG_SELECT_UNITS, message_type, PAUSED | WHEN_OUT, label)
+    }
 }
 
 /// The record types, by codec class (a `rec` row: the class's one message type in `TYPES`; a `rec_type` row names
 /// its type).
-pub static RECORD_TYPES: [RecordType; 100] = [
+pub static RECORD_TYPES: [RecordType; 108] = [
     rec(EE_NETMSG_ADD_REMOVE_RESOURCES, PAUSED, "Add Remove Resources\0"),
     rec(EE_NETMSG_ATTACK_PLAYERS, 0, "Attack Players\0"),
     rec(EE_NETMSG_CAMERA_LOCATION_INFO, 0, "Camera Location\0"),
@@ -148,6 +168,25 @@ pub static RECORD_TYPES: [RecordType; 100] = [
     rec(EE_NETMSG_GAME_OPTIONS, 0, "Game Options\0"),
     rec(EE_NETMSG_IN_GAME_CHAT, PAUSED | WHEN_OUT, "In Game Chat\0"),
     rec(EE_NETMSG_PLAYER_SLOT_INFO, WHEN_OUT, "Player Slot Info\0"),
+    // round 5: the eight with a list, a blob or a rule
+    select_units(0x4e, "Select Units\0"),
+    select_units(0x4f, "Add Units To Selected Group\0"),
+    select_units(0x50, "Remove Units From Selected Group\0"),
+    rec(EE_NETMSG_SELECT_THESE_UNITS, PAUSED | WHEN_OUT, "Select These Units\0"),
+    rec_type(EE_NETMSG_CIV_UPGRADES, 0x7e, PAUSED, "Civilization Builder requesting upgrades from server\0"),
+    rec_type(
+        EE_NETMSG_CIV_UPGRADES,
+        0x7f,
+        PAUSED | WHEN_OUT,
+        "Civilization Builder upgrades validated and purchased from server\0",
+    ),
+    // the wait id is member 6; the response (0x9a) answers this request's tick (member 3) with its member 1
+    RecordType {
+        wait_field: 6,
+        response: (0x9a, 3, 1),
+        ..rec(EE_NETMSG_LOAD_OR_SAVE_GAME, PAUSED | WHEN_OUT, "Load or Save\0")
+    },
+    rec(EE_NETMSG_START_LOADING, PAUSED, "Start Loading\0"),
 ];
 
 /// The record type of a message type, if it is one: a row naming the type, else the row of the type's class.
@@ -183,26 +222,69 @@ pub const EE_NETMSG_RECORD_FIELD_POINT: u8 = 4;
 pub const EE_NETMSG_RECORD_FIELD_VECTOR: u8 = 5;
 /// The type's string (`UWideString`; the C++ object's `mString`, not in the record: offset and size 0 of it).
 pub const EE_NETMSG_RECORD_FIELD_STRING: u8 = 6;
+/// The type's list (the C++ object's `mList`, not in the record: offset 0, size one record's).
+pub const EE_NETMSG_RECORD_FIELD_LIST: u8 = 7;
+/// The type's blob (the C++ object's `mList`, as many bytes as the member before it says: offset 0, size 1).
+pub const EE_NETMSG_RECORD_FIELD_BLOB: u8 = 8;
+/// A member that is not on the wire, as bytes (the box selection's rectangle).
+pub const EE_NETMSG_RECORD_FIELD_RAW: u8 = 9;
 
-/// Member `index` of a record class (1 = the first after the selection id).
-pub fn record_field(class_id: u32, index: u32) -> EeNetMsgRecordField {
-    let none = EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_NONE, offset: 0, size: 0 };
-    let Some(c) = CLASSES.get(class_id as usize) else { return none };
-    if index == 0 || index as usize >= c.fields.len() {
-        return none;
-    }
-    let offset: usize = c.fields[1..index as usize].iter().map(|f| f.kind.fixed_size().unwrap_or(0)).sum();
-    let f = c.fields[index as usize];
-    let kind = match f.kind {
+fn field_kind(kind: Kind) -> Option<u8> {
+    Some(match kind {
         Kind::U8 | Kind::U16 | Kind::I32 | Kind::U32 => EE_NETMSG_RECORD_FIELD_INTEGER,
         Kind::Bool => EE_NETMSG_RECORD_FIELD_BOOL,
         Kind::F32 => EE_NETMSG_RECORD_FIELD_FLOAT,
         Kind::Point2 => EE_NETMSG_RECORD_FIELD_POINT,
         Kind::Vec3 => EE_NETMSG_RECORD_FIELD_VECTOR,
         Kind::WStr => EE_NETMSG_RECORD_FIELD_STRING,
-        _ => return none,
-    };
-    EeNetMsgRecordField { kind, offset: offset as u32, size: f.kind.fixed_size().unwrap_or(0) as u32 }
+        Kind::Records8(_) | Kind::Records32(_) => EE_NETMSG_RECORD_FIELD_LIST,
+        Kind::Blob => EE_NETMSG_RECORD_FIELD_BLOB,
+        Kind::Raw(_) => EE_NETMSG_RECORD_FIELD_RAW,
+        Kind::Inputs => return None,
+    })
+}
+
+/// The size a member reports (a list's: one record's; a blob's: 1; a string's: 0).
+fn field_size(kind: Kind) -> usize {
+    match kind {
+        Kind::Records8(n) | Kind::Records32(n) => n as usize,
+        Kind::Blob => 1,
+        k => k.fixed_size().unwrap_or(0),
+    }
+}
+
+/// The bytes a member takes in the record (the string, the list and the blob are beside it).
+pub fn record_bytes(kind: Kind) -> usize {
+    match kind {
+        Kind::WStr | Kind::Records8(_) | Kind::Records32(_) | Kind::Blob => 0,
+        k => k.fixed_size().unwrap_or(0),
+    }
+}
+
+fn member(fields: &[&Field], index: u32) -> EeNetMsgRecordField {
+    let none = EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_NONE, offset: 0, size: 0 };
+    if index == 0 || index as usize >= fields.len() {
+        return none;
+    }
+    let offset: usize = fields[1..index as usize].iter().map(|f| record_bytes(f.kind)).sum();
+    let f = fields[index as usize];
+    match field_kind(f.kind) {
+        Some(kind) => EeNetMsgRecordField { kind, offset: offset as u32, size: field_size(f.kind) as u32 },
+        None => none,
+    }
+}
+
+/// Member `index` of a record class (1 = the first after the selection id), the wire's only.
+pub fn record_field(class_id: u32, index: u32) -> EeNetMsgRecordField {
+    let fields: Vec<&Field> = CLASSES.get(class_id as usize).map_or(Vec::new(), |c| c.fields.iter().collect());
+    member(&fields, index)
+}
+
+/// Member `index` of a record type: the wire's, then the type's locals (after the wire's in the record).
+pub fn record_member(message_type: u8, index: u32) -> EeNetMsgRecordField {
+    let Some(r) = record_type(message_type) else { return member(&[], index) };
+    let fields: Vec<&Field> = CLASSES[r.class as usize].fields.iter().chain(r.locals.iter()).collect();
+    member(&fields, index)
 }
 
 /// The codec class of a record message type, or `u32::MAX` for a type with a class of its own (or none).
@@ -229,6 +311,31 @@ pub extern "C" fn ee_netmsg_record_field(class_id: u32, index: u32) -> EeNetMsgR
     record_field(class_id, index)
 }
 
+/// Member `index` of a record type: the wire's, then the members that are not on the wire (NONE past the last).
+#[no_mangle]
+pub extern "C" fn ee_netmsg_record_member(message_type: u8, index: u32) -> EeNetMsgRecordField {
+    record_member(message_type, index)
+}
+
+/// A record type's rules: its send-to-all-and-wait member (0: none) and `IsResponse`'s (the response's type, 0
+/// for none; this message's member and the response's, equal as 32-bit integers).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EeNetMsgRecordRules {
+    pub wait_field: u8,
+    pub response_type: u8,
+    pub response_mine: u8,
+    pub response_theirs: u8,
+}
+
+/// A record type's rules (all 0 for any other type).
+#[no_mangle]
+pub extern "C" fn ee_netmsg_record_rules(message_type: u8) -> EeNetMsgRecordRules {
+    let (wait_field, (response_type, response_mine, response_theirs)) =
+        record_type(message_type).map_or((0, (0, 0, 0)), |r| (r.wait_field, r.response));
+    EeNetMsgRecordRules { wait_field, response_type, response_mine, response_theirs }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -246,8 +353,12 @@ mod tests {
             }
             let strings = c.fields[1..].iter().filter(|f| f.kind == Kind::WStr).count();
             assert!(strings <= 1, "{}", c.name);
-            let size: usize =
-                c.fields[1..].iter().filter(|f| f.kind != Kind::WStr).map(|f| f.kind.fixed_size().expect(c.name)).sum();
+            let lists = c.fields[1..]
+                .iter()
+                .filter(|f| matches!(f.kind, Kind::Records8(_) | Kind::Records32(_) | Kind::Blob))
+                .count();
+            assert!(lists <= 1, "{}", c.name);
+            let size: usize = c.fields[1..].iter().chain(r.locals.iter()).map(|f| record_bytes(f.kind)).sum();
             assert!(size <= EE_NETMSG_RECORD_BYTES, "{}", c.name);
             assert!(r.label.ends_with('\0') && !r.label[..r.label.len() - 1].contains('\0'));
             for i in 1..c.fields.len() as u32 {
@@ -319,9 +430,9 @@ mod tests {
         assert_eq!(record_field(EE_NETMSG_FULL_GAME_OPTIONS, 18).offset, 44); // the last fixed member
                                                                               // EEMStartLoadingResponse (0x5e)
         assert_eq!(ee_netmsg_record_flags(0x5e), PAUSED | WHEN_OUT);
-        // a type with a class of its own, and no type
-        assert_eq!(ee_netmsg_record_class(0x4e), u32::MAX); // EEMSelectUnits
-        assert_eq!(ee_netmsg_record_flags(0x4e), 0);
+        // no type
+        assert_eq!(ee_netmsg_record_class(0x40), u32::MAX);
+        assert_eq!(ee_netmsg_record_flags(0x40), 0);
         let label = |t| unsafe { std::ffi::CStr::from_ptr(ee_netmsg_record_label(t)) }.to_str().unwrap().to_string();
         assert_eq!(label(0x44), "Pay Tribute");
         assert_eq!(label(0x4d), "Path To");
@@ -329,8 +440,71 @@ mod tests {
         assert_eq!(label(0x49), "Add Unit To Selected Group");
         assert_eq!(label(0x76), "Always Add Units To Selected Group");
         assert_eq!(label(0x9d), "End Cinematic");
-        assert_eq!(label(0x4e), "");
+        assert_eq!(label(0x40), "");
         let select = TYPES.iter().find(|t| t.1 == EE_NETMSG_SELECT_UNIT).unwrap().0;
         assert_eq!(ee_netmsg_record_flags(select), PAUSED | WHEN_OUT);
+    }
+
+    #[test]
+    fn every_factory_type_is_a_record() {
+        for &(t, class) in &TYPES {
+            assert_eq!(ee_netmsg_record_class(t), class, "{t:#x}");
+        }
+    }
+
+    #[test]
+    fn lists_blobs_locals_and_rules() {
+        let none = EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_NONE, offset: 0, size: 0 };
+        // the box selections: the count, the blob, then the rectangle and the unit type off the wire
+        for t in [0x4e, 0x4f, 0x50] {
+            assert_eq!(ee_netmsg_record_class(t), EE_NETMSG_SELECT_UNITS);
+            assert_eq!(ee_netmsg_record_flags(t), PAUSED | WHEN_OUT);
+            let m = |i| record_member(t, i);
+            assert_eq!(m(1), EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_INTEGER, offset: 0, size: 1 });
+            assert_eq!(m(2), EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_BLOB, offset: 1, size: 1 });
+            assert_eq!(m(3), EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_RAW, offset: 1, size: 16 });
+            assert_eq!(m(4), EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_INTEGER, offset: 17, size: 4 });
+            assert_eq!(m(5), none);
+            // the wire's members stop at the blob
+            assert_eq!(record_field(EE_NETMSG_SELECT_UNITS, 3), none);
+        }
+        // the id list: 4-byte records
+        assert_eq!(
+            record_member(0x96, 1),
+            EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_LIST, offset: 0, size: 4 }
+        );
+        assert_eq!(ee_netmsg_record_flags(0x96), PAUSED | WHEN_OUT);
+        // the upgrades: the player, the name string, the upgrades, the name; only the purchase may be sent while out
+        assert_eq!(record_member(0x7f, 3).kind, EE_NETMSG_RECORD_FIELD_LIST);
+        assert_eq!(
+            record_member(0x7f, 4),
+            EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_STRING, offset: 5, size: 0 }
+        );
+        assert_eq!(ee_netmsg_record_flags(0x7e), PAUSED);
+        assert_eq!(ee_netmsg_record_flags(0x7f), PAUSED | WHEN_OUT);
+        // the load or save request: the tick at 2, the wait id at 11, the file name; its rules
+        assert_eq!(
+            record_member(0x64, 3),
+            EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_INTEGER, offset: 2, size: 4 }
+        );
+        assert_eq!(
+            record_member(0x64, 6),
+            EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_INTEGER, offset: 11, size: 4 }
+        );
+        assert_eq!(record_member(0x64, 7).kind, EE_NETMSG_RECORD_FIELD_STRING);
+        assert_eq!(
+            ee_netmsg_record_rules(0x64),
+            EeNetMsgRecordRules { wait_field: 6, response_type: 0x9a, response_mine: 3, response_theirs: 1 }
+        );
+        assert_eq!(
+            ee_netmsg_record_rules(0x5d),
+            EeNetMsgRecordRules { wait_field: 0, response_type: 0, response_mine: 0, response_theirs: 0 }
+        );
+        // the start: the humans, then the seed (the legacy harness writes it at record offset 1)
+        assert_eq!(
+            record_member(0x5d, 2),
+            EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_INTEGER, offset: 1, size: 4 }
+        );
+        assert_eq!(ee_netmsg_record_flags(0x5d), PAUSED);
     }
 }

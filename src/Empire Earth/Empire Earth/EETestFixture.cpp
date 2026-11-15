@@ -569,7 +569,7 @@ void BoxLassoHook(const std::vector<long>& inUnitIDs)
     }
     if (theDead >= 0) {   // (the lock is released: these messages' ctors run the hook too, disarmed now)
         std::vector<long> theOne(1, theDead);
-        BoxPost(new EEMSelectTheseUnits(theOne));
+        BoxPost(new EEMRecord(kMessageSelectTheseUnits, {theOne}));
         BoxPost(new EEMRecord(kMessageKillUnit, {(unsigned char)0}));   // the first selected unit
     }
 }

@@ -829,8 +829,7 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
                 theTime.mDay, theTime.mHour, theTime.mMinute, theTime.mSecond, (const char*)gSavedGameExtension);
         gGamePreferences.mSettings.mLastQuickSave = theName;
         gGamePreferences.Save();
-        theServer->SendToAllAndWait(new EEMLoadOrSaveGame(theName, TMGetTime(), 0, 1,
-                                                          gCommunications->GetNumberOfCTsProcessedInPhysics(), 0),
+        theServer->SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame, {0, 1, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 0, 0, theName}),
                                     15000, 12);
         break;
     }
@@ -1601,7 +1600,7 @@ static uint32_t EEScreensCivChoiceCall(UIForm* inForm, UIEntity* inEntity, uint3
         EEScreensPdcsControl(3)->ResetSelection();
         break;
     case EE_SCREENS_GAME_PDCS_REQUEST: {
-        NEMessage* theRequest = new EEMCivUpgradesRequested(gWorld.mCurrentPlayer, sPdcsUpgrades, sPdcsName, 0);
+        NEMessage* theRequest = new EEMRecord(kMessageCivUpgradesRequested, {gWorld.mCurrentPlayer, 0, sPdcsUpgrades, sPdcsName});
         if (gCommunications->GetIsMultiplayerSession())
             gCommunications->ProcessLocalUserInput(theRequest, kSlotServer);
         else {
@@ -2283,7 +2282,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         static_cast<EEServer*>(gCommunications)->mNumLoadResponses = false;
         static_cast<EEServer*>(gCommunications)->StopPing();
         static_cast<EEServer*>(gCommunications)->mLoadState = true;
-        NEMessage* theMessage = new EEMStartLoading(1, TMGetTime());
+        NEMessage* theMessage = new EEMRecord(kMessageStartLoading, {1, TMGetTime()});
         gLocalPlayerOut = false;
         gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
         break;
@@ -2467,7 +2466,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     }
     case EE_SCREENS_GAME_LE_START_LOADING:
-        gCommunications->ProcessGuaranteedLocalUserInput(new EEMStartLoading((unsigned char)inA, (long)(int32_t)inB),
+        gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageStartLoading, {(unsigned char)inA, (int32_t)inB}),
                                                          kSlotNone);
         break;
     case EE_SCREENS_GAME_LE_SAVE_LAST_OPTIONS:
@@ -3176,8 +3175,8 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         return 1;
     }
     case EE_SCREENS_TEXT_SAVE_MESSAGE:
-        sSaveObject = reinterpret_cast<UIForm*>(static_cast<NEMessage*>(new EEMLoadOrSaveGame(
-            theText, TMGetTime(), 0, 0, gCommunications->GetNumberOfCTsProcessedInPhysics(), 0)));
+        sSaveObject = reinterpret_cast<UIForm*>(static_cast<NEMessage*>(new EEMRecord(
+            kMessageLoadOrSaveGame, {0, 0, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 0, 0, theText})));
         break;
     case EE_SCREENS_TEXT_SAVE_ACTION: {
         std::vector<UString> theParts = Parts(inText, inLength);
@@ -3225,7 +3224,7 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
             gGameStateLoadType = 2;
             static_cast<EEServer*>(gCommunications)->StopPing();
             static_cast<EEServer*>(gCommunications)->SetLoadState(true);
-            gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
             return 1;
         }
         if (theFile != NULL)

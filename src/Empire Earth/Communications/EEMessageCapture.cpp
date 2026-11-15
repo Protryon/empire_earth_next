@@ -144,7 +144,7 @@ static void Longs(EESimCaptureRecord& ioRecord, const std::vector<long>& inValue
 
 // the members Import filled, read through the codec's slots (EEMessage::GetCodecSlots, in wire order): a fixed
 // member its bytes, a string its bytes and character count, records their count and bytes, a blob its bytes; then
-// what the slots do not carry (the selections' unit lists)
+// the box selection's ids decoded
 static void Members(EESimCaptureRecord& ioRecord, NEMessage* inMessage)
 {
     ioRecord.U32(inMessage->GetType());
@@ -158,11 +158,6 @@ static void Members(EESimCaptureRecord& ioRecord, NEMessage* inMessage)
     EeNetMsgSlot theSlots[32];
     uint32_t theClass;
     theMessage->GetCodecSlots(theSlots, theClass);
-    if (theClass == 0xffffffffu) {   // EEMSelectTheseUnits: an id list beside its slots
-        ioRecord.Bytes(&theMessage->mFastSelectionID, sizeof(theMessage->mFastSelectionID));
-        Longs(ioRecord, static_cast<EEMSelectTheseUnits*>(theMessage)->mUnitIDs);
-        return;
-    }
     uint32_t theCount = ee_netmsg_import_fields(theClass);
     for (uint32_t i = 0; i < theCount; i++) {
         const EeNetMsgSlot& theSlot = theSlots[4 + i];
@@ -181,8 +176,11 @@ static void Members(EESimCaptureRecord& ioRecord, NEMessage* inMessage)
             break;
         }
     }
-    if (theClass == EE_NETMSG_SELECT_UNITS)
-        Longs(ioRecord, static_cast<EEMSelectUnits*>(theMessage)->mUnitIDs);
+    if (theClass == EE_NETMSG_SELECT_UNITS) {
+        std::vector<long> theUnitIDs;
+        EESelectUnitsIDs(static_cast<EEMRecord*>(theMessage), theUnitIDs);
+        Longs(ioRecord, theUnitIDs);
+    }
 }
 
 static bool sEngineSweep = false;   // the engine sweep: the nested game inputs are in its NMNE records
@@ -419,8 +417,12 @@ static const unsigned long kIDs[] = {0, 1, 0xff, 0x100, 0x1ff, 0xffff, 0x10000, 
 static unsigned char Compress(const std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer,
                               std::vector<long>& outUnits)
 {
-    std::vector<unsigned long> theUnits = inUnits;
-    return EEMessageCaptureCompress(theUnits, inOwner, outBuffer, outUnits);
+    std::vector<uint32_t> theIDs(inUnits.begin(), inUnits.end());   // CompressUnits, then DecompressUnits over its bytes
+    unsigned char theSize = ee_netmsg_compress_units(theIDs.empty() ? NULL : &theIDs[0], theIDs.size(), (uint32_t)inOwner, outBuffer);
+    EEMRecord theMessage(kMessageSelectUnits);
+    theMessage.mList.assign(outBuffer, outBuffer + theSize);
+    EESelectUnitsIDs(&theMessage, outUnits);
+    return theSize;
 }
 
 static void CompressCase(const std::vector<unsigned long>& inUnits, unsigned long inOwner)

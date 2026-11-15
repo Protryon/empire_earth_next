@@ -24,7 +24,7 @@ sys.path.insert(0,str(HERE))
 import exe_boot as boot
 
 
-SEED_SYMBOL='?Execute@EEMStartLoading@@UEAAXXZ'
+SEED_SYMBOL='?EEStartLoading@@YAXPEAVEEMRecord@@@Z'   # the start's Execute (EEMStartLoading::Execute until messages round 5)
 SEED_RVA_ORIGINAL=0xc7cdc   # original/experimental layout (orig 0x4c7cdc)
 PHYSICS_SYMBOL='?gPhysics@@3PEAVEEPhysics@@EA'
 PHYSICS_VA_ORIGINAL=0x9318f0
@@ -110,7 +110,7 @@ def main():
     ap.add_argument('--trace-symbol',action='append',default=[],help='TEST ONLY: count entries of this map symbol (at most 8)')
     ap.add_argument('--seed',type=lambda v:int(v,0),
                     help='TEST ONLY (round 36): the harness debugger writes this fixed start seed into '
-                         'EEMStartLoading::[this+0x14] at each EEMStartLoading::Execute entry (replacing the lobby value '
+                         'the start record seed at each EEStartLoading entry (EEMStartLoading::Execute; replacing the lobby value '
                          'srand(TMGetTime()); rand() value); every write is logged and recorded in the session json')
     ap.add_argument('--pt-rate',type=int,
                     help='TEST ONLY (round 36): pin Min = Max PTs per Second to N in the snapshot-restored EE-AOC key '
@@ -178,9 +178,11 @@ def main():
         trace_names={linkmap.rva(s):s for s in a.trace_symbol}
     if a.seed is not None:   # opt-in test intervention; the image is not patched
         seed_rva=(LinkMap(fulllink_map).rva(SEED_SYMBOL) if a.fulllink else SEED_RVA_ORIGINAL)
-        harness_extra=tuple(harness_extra)+('--seed-pin',f'{seed_rva:x}',f"{layout.off('EEMStartLoading',0x14):x}",str(a.seed))
+        # the seed: the start record's member 2, at record byte 1 (ee_netmsg records.rs; the hook's first argument)
+        seed_off=layout.field('EEMRecord','mRecord')+1
+        harness_extra=tuple(harness_extra)+('--seed-pin',f'{seed_rva:x}',f"{seed_off:x}",str(a.seed))
         print(f"TEST seed pin {a.seed} at {SEED_SYMBOL} rva {seed_rva:#x} [rcx+"
-              f"{layout.off('EEMStartLoading',0x14):#x}]",flush=True)
+              f"{seed_off:#x}]",flush=True)
     mutex_rva=None
     if a.instance is not None:   # round 39 opt-in: parallel instance; the image is not patched
         mutex_rva=mutex_bypass_rva((stage/'EE-AOC.exe').read_bytes(),LinkMap(fulllink_map) if a.fulllink else None)
