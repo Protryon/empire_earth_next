@@ -235,6 +235,33 @@ pub struct EeGfxDaylightTables {
     pub moon: GeVector,
 }
 
+/// `EEInitialiseScene` (0x50ae74)'s key frames: the light colours (`gU4E9348`), the light's intensity (`gU4E92EC`),
+/// the terrain's ambient intensity (`gU4E92A8`), the units' (`gU4E9264`) and the three fill lights (`gU4E9240`,
+/// normalised as `GEVector::Normalize`). The ambient colour and the sun's and moon's directions are the caller's.
+pub fn initial_tables() -> EeGfxDaylightTables {
+    let c = |red, green, blue| EeGfxColor { red, green, blue };
+    let (dawn, white, dusk, night) = (c(1.0, 0.4, 0.0), c(1.0, 1.0, 1.0), c(0.775, 0.475, 0.5), c(0.549, 0.549, 1.0));
+    let mut t = EeGfxDaylightTables {
+        colors: [
+            dawn, white, white, white, white, white, white, white, dawn, dusk, night, night, night, night, night, dusk,
+            dawn,
+        ],
+        light: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.9, 0.9, 0.0, 1.0],
+        ambient: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.7, 0.3, 0.3, 0.3, 0.3, 0.3, 0.7, 0.5],
+        unit_ambient: [0.7, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.7, 0.7, 0.6, 0.6, 0.6, 0.6, 0.7, 0.7],
+        fill: [
+            GeVector { x: 0.0, y: 0.0, z: -1.0 },
+            GeVector { x: 1.0, y: 1.0, z: -1.0 },
+            GeVector { x: -1.0, y: -1.0, z: -1.0 },
+        ],
+        ..EeGfxDaylightTables::default()
+    };
+    for f in t.fill.iter_mut() {
+        f.normalize();
+    }
+    t
+}
+
 /// The lights at a time of day.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -318,6 +345,16 @@ pub fn daylight(t: &EeGfxDaylightTables, time_of_day: f32) -> EeGfxDaylight {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_initial_tables_are_the_scenes_key_frames() {
+        let t = initial_tables();
+        assert_eq!(t.colors[9], EeGfxColor { red: 0.775, green: 0.475, blue: 0.5 });
+        assert_eq!(t.colors[12], EeGfxColor { red: 0.549, green: 0.549, blue: 1.0 });
+        assert_eq!((t.light[9], t.ambient[10], t.unit_ambient[0], t.unit_ambient[11]), (0.0, 0.3, 0.7, 0.6));
+        assert_eq!(t.fill[0], GeVector { x: 0.0, y: 0.0, z: -1.0 });
+        assert!((t.fill[1].magnitude() - 1.0).abs() < 1e-6 && t.fill[1].x == t.fill[1].y && t.fill[2].x == -t.fill[1].x);
+    }
 
     #[test]
     fn fades_start_from_the_current_value() {

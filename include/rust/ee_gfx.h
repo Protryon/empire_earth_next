@@ -2501,20 +2501,6 @@ struct EeGfxLetterbox {
   float bottom_bar_start;
 };
 
-/// The lights at a time of day.
-struct EeGfxDaylight {
-  /// the lit direction (`gU4E9210`): the moon's at night
-  EeGeVector direction;
-  /// the terrain's and units' light colour
-  EeGfxColor light;
-  float light_intensity;
-  float ambient_intensity;
-  float unit_ambient_intensity;
-  /// the prelit colour (and `mColor54`), clamped; its half
-  EeGfxColor prelit;
-  EeGfxColor dim_prelit;
-};
-
 /// The time-of-day light tables (`EEInitialiseScene`'s 17 key frames: `gU4E9348` the colours, `gU4E92EC` the light's
 /// intensity, `gU4E92A8` the terrain's ambient intensity, `gU4E9264` the units'; `gU4E9338` the ambient colour,
 /// `gU4E9240` the three fill lights) and the sun's and moon's directions.
@@ -2527,6 +2513,20 @@ struct EeGfxDaylightTables {
   EeGeVector fill[3];
   EeGeVector sun;
   EeGeVector moon;
+};
+
+/// The lights at a time of day.
+struct EeGfxDaylight {
+  /// the lit direction (`gU4E9210`): the moon's at night
+  EeGeVector direction;
+  /// the terrain's and units' light colour
+  EeGfxColor light;
+  float light_intensity;
+  float ambient_intensity;
+  float unit_ambient_intensity;
+  /// the prelit colour (and `mColor54`), clamped; its half
+  EeGfxColor prelit;
+  EeGfxColor dim_prelit;
 };
 
 /// A call: `value` for the integer argument, `f` for the floats (a colour's red, green, blue; a direction's x, y, z;
@@ -4040,6 +4040,9 @@ EeGfxSceneStep ee_gfx_scene_step(EeGfxSceneFade *s, float elapsed, float zoom);
 
 /// The view band at `zoom` and the bars' rows at the window height `height`.
 EeGfxLetterbox ee_gfx_scene_letterbox(float zoom, float height);
+
+/// `EEInitialiseScene`'s key frames (the ambient colour and the sun's and moon's directions left zero).
+EeGfxDaylightTables ee_gfx_scene_daylight_tables();
 
 /// The lights at `time_of_day`.
 ///

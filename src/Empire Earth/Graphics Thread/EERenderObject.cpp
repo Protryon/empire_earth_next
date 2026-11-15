@@ -118,20 +118,10 @@ EEEffectQueue gEffectQueues[5];
 // SYNTHETIC: EXE 0x50ac64   (registrar)
 // SYNTHETIC: EXE 0x50ac70   (dtor)
 
-// 0x4e9348 (17 colours; provisional name)
-GEColor gU4E9348[17];
-// SYNTHETIC: EXE 0x50ac9a   (wrapper)
-// SYNTHETIC: EXE 0x50aca4   (ctor)
-// SYNTHETIC: EXE 0x50acbf   (registrar)
-// SYNTHETIC: EXE 0x50accb   (dtor)
-
+// 0x4e9348 (17 colours) and its init chain: EEInitialiseScene's key frames, ee_gfx scene.rs initial_tables
 GEColor gU4E9338(1.0f, 1.0f, 1.0f);
 float gU4E9330;                            // 0x4e9330 (no init chain)
-// three per-time-of-day tables (17 entries, like gU4E9348; EEInitialiseScene fills them, Fn10C036 blends them)
-// (provisional names)
-float gU4E92EC[17];                         // 0x4e92ec
-float gU4E92A8[17];                         // 0x4e92a8
-float gU4E9264[17];                         // 0x4e9264
+// the three per-time-of-day tables (0x4e92ec, 0x4e92a8, 0x4e9264; 17 entries): ee_gfx scene.rs initial_tables
 // 0x4413ac: EEInitialiseScene's 0.549f is a literal (__real COMDAT; the fst chain of a literal, not a static const reload)
 // Fn10C036's constants (.rdata 0x441334..0x4413c4: the view band, the clocks' rates, the moon's hours, the fill share):
 // ee_gfx scene.rs
@@ -150,13 +140,7 @@ static const float kEERenderObject_F441350 = 0.35f;   // 0x441350 (the see-throu
 // SYNTHETIC: EXE 0x50ad09   (registrar)
 // SYNTHETIC: EXE 0x50ad15   (dtor)
 
-// 0x4e9240 (3 vectors; provisional name)
-GEVector gU4E9240[3];
-// SYNTHETIC: EXE 0x50ad16   (wrapper)
-// SYNTHETIC: EXE 0x50ad20   (ctor)
-// SYNTHETIC: EXE 0x50ad3b   (registrar)
-// SYNTHETIC: EXE 0x50ad47   (dtor)
-
+// 0x4e9240 (the three fill lights) and its init chain: ee_gfx scene.rs initial_tables
 std::vector<unsigned long> gU4E9230;
 // SYNTHETIC: EXE 0x50ad62   (wrapper)
 // SYNTHETIC: EXE 0x50ad6c   (ctor)
@@ -240,120 +224,7 @@ void EEInitialiseScene()
     gU4E9338.SetRed(0.663f);
     gU4E9338.SetGreen(0.784f);
     gU4E9338.SetBlue(1.0f);
-    gU4E9348[0].SetRed(1.0f);
-    gU4E9348[0].SetGreen(0.4f);
-    gU4E9348[0].SetBlue(0.0f);
-    gU4E9348[1].SetRed(1.0f);
-    gU4E9348[1].SetGreen(1.0f);
-    gU4E9348[1].SetBlue(1.0f);
-    gU4E9348[2].SetRed(1.0f);
-    gU4E9348[2].SetGreen(1.0f);
-    gU4E9348[2].SetBlue(1.0f);
-    gU4E9348[3].SetRed(1.0f);
-    gU4E9348[3].SetGreen(1.0f);
-    gU4E9348[3].SetBlue(1.0f);
-    gU4E9348[4].SetRed(1.0f);
-    gU4E9348[4].SetGreen(1.0f);
-    gU4E9348[4].SetBlue(1.0f);
-    gU4E9348[5].SetRed(1.0f);
-    gU4E9348[5].SetGreen(1.0f);
-    gU4E9348[5].SetBlue(1.0f);
-    gU4E9348[6].SetRed(1.0f);
-    gU4E9348[6].SetGreen(1.0f);
-    gU4E9348[6].SetBlue(1.0f);
-    gU4E9348[7].SetRed(1.0f);
-    gU4E9348[7].SetGreen(1.0f);
-    gU4E9348[7].SetBlue(1.0f);
-    gU4E9348[8].SetRed(1.0f);
-    gU4E9348[8].SetGreen(0.4f);
-    gU4E9348[8].SetBlue(0.0f);
-    gU4E9348[9].SetRed(0.775f);
-    gU4E9348[9].SetGreen(0.475f);
-    gU4E9348[9].SetBlue(0.5f);
-    gU4E9348[10].SetRed(0.549f);
-    gU4E9348[10].SetGreen(0.549f);
-    gU4E9348[10].SetBlue(1.0f);
-    gU4E9348[11].SetRed(0.549f);
-    gU4E9348[11].SetGreen(0.549f);
-    gU4E9348[11].SetBlue(1.0f);
-    gU4E9348[12].SetRed(0.549f);
-    gU4E9348[12].SetGreen(0.549f);
-    gU4E9348[12].SetBlue(1.0f);
-    gU4E9348[13].SetRed(0.549f);
-    gU4E9348[13].SetGreen(0.549f);
-    gU4E9348[13].SetBlue(1.0f);
-    gU4E9348[14].SetRed(0.549f);
-    gU4E9348[14].SetGreen(0.549f);
-    gU4E9348[14].SetBlue(1.0f);
-    gU4E9348[15].SetRed(0.775f);
-    gU4E9348[15].SetGreen(0.475f);
-    gU4E9348[15].SetBlue(0.5f);
-    gU4E9348[16].SetRed(1.0f);
-    gU4E9348[16].SetGreen(0.4f);
-    gU4E9348[16].SetBlue(0.0f);
-    gU4E92EC[0] = 1.0f;
-    gU4E92EC[1] = 1.0f;
-    gU4E92EC[2] = 1.0f;
-    gU4E92EC[3] = 1.0f;
-    gU4E92EC[4] = 1.0f;
-    gU4E92EC[5] = 1.0f;
-    gU4E92EC[6] = 1.0f;
-    gU4E92EC[7] = 1.0f;
-    gU4E92EC[8] = 1.0f;
-    gU4E92EC[9] = 0.0f;
-    gU4E92EC[10] = 0.9f;
-    gU4E92EC[11] = 0.9f;
-    gU4E92EC[12] = 0.9f;
-    gU4E92EC[13] = 0.9f;
-    gU4E92EC[14] = 0.9f;
-    gU4E92EC[15] = 0.0f;
-    gU4E92EC[16] = 1.0f;
-    gU4E92A8[0] = 0.5f;
-    gU4E92A8[1] = 0.5f;
-    gU4E92A8[2] = 0.5f;
-    gU4E92A8[3] = 0.5f;
-    gU4E92A8[4] = 0.5f;
-    gU4E92A8[5] = 0.5f;
-    gU4E92A8[6] = 0.5f;
-    gU4E92A8[7] = 0.5f;
-    gU4E92A8[8] = 0.5f;
-    gU4E92A8[9] = 0.7f;
-    gU4E92A8[10] = 0.3f;
-    gU4E92A8[11] = 0.3f;
-    gU4E92A8[12] = 0.3f;
-    gU4E92A8[13] = 0.3f;
-    gU4E92A8[14] = 0.3f;
-    gU4E92A8[15] = 0.7f;
-    gU4E92A8[16] = 0.5f;
-    gU4E9264[0] = 0.7f;
-    gU4E9264[1] = 0.6f;
-    gU4E9264[2] = 0.6f;
-    gU4E9264[3] = 0.6f;
-    gU4E9264[4] = 0.6f;
-    gU4E9264[5] = 0.6f;
-    gU4E9264[6] = 0.6f;
-    gU4E9264[7] = 0.6f;
-    gU4E9264[8] = 0.6f;
-    gU4E9264[9] = 0.7f;
-    gU4E9264[10] = 0.7f;
-    gU4E9264[11] = 0.6f;
-    gU4E9264[12] = 0.6f;
-    gU4E9264[13] = 0.6f;
-    gU4E9264[14] = 0.6f;
-    gU4E9264[15] = 0.7f;
-    gU4E9264[16] = 0.7f;
-    gU4E9240[0].SetX(0.0f);
-    gU4E9240[0].SetY(0.0f);
-    gU4E9240[0].SetZ(-1.0f);
-    gU4E9240[1].SetX(1.0f);
-    gU4E9240[1].SetY(1.0f);
-    gU4E9240[1].SetZ(-1.0f);
-    gU4E9240[2].SetX(-1.0f);
-    gU4E9240[2].SetY(-1.0f);
-    gU4E9240[2].SetZ(-1.0f);
-    gU4E9240[0].Normalize();
-    gU4E9240[1].Normalize();
-    gU4E9240[2].Normalize();
+    // the key frames (gU4E9348, gU4E92EC, gU4E92A8, gU4E9264) and the fill lights (gU4E9240): ee_gfx scene.rs
     ee_gfx_scene_reset(&sSceneFade);
     gB529066 = false;
     gCameraFollowing = false;
@@ -656,16 +527,8 @@ void EERenderObject::Fn10C036()
         gRenderEnvironment.mTimeOfDay = theTimeOfDay;
         gRenderEnvironment.mTimeOfDayChanged = true;
         // the blend of the 17 key frames, the lit direction and the prelit colour: ee_gfx scene.rs
-        EeGfxDaylightTables theTables;
-        for (unsigned long i = 0; i < 17; i++) {
-            theTables.colors[i] = {gU4E9348[i].mRed, gU4E9348[i].mGreen, gU4E9348[i].mBlue};
-            theTables.light[i] = gU4E92EC[i];
-            theTables.ambient[i] = gU4E92A8[i];
-            theTables.unit_ambient[i] = gU4E9264[i];
-        }
+        EeGfxDaylightTables theTables = ee_gfx_scene_daylight_tables();
         theTables.ambient_color = {gU4E9338.mRed, gU4E9338.mGreen, gU4E9338.mBlue};
-        for (unsigned long i = 0; i < 3; i++)
-            theTables.fill[i] = {gU4E9240[i].mX, gU4E9240[i].mY, gU4E9240[i].mZ};
         theTables.sun = {gWorld.mSunDirection.mX, gWorld.mSunDirection.mY, gWorld.mSunDirection.mZ};
         theTables.moon = {gWorld.mMoonDirection.mX, gWorld.mMoonDirection.mY, gWorld.mMoonDirection.mZ};
         EeGfxDaylight theLight = ee_gfx_scene_daylight(&theTables, theTimeOfDay);
