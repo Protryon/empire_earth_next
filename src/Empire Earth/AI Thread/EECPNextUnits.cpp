@@ -71,9 +71,7 @@
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EECPCivilizationManager.h"
 #include "ee/EETeam.h"
-#include "ee/EECPResourceManager.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPASGFlags.h"
 #include "ee/EEMessageID.h"
@@ -89,6 +87,7 @@
 #include "ee/EETechTreeTechID.h"
 #include "ee/EELuaApi.h"
 #include "ee/EECPNext.h"
+#include "ee/EECPPlacement.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EEAutoPathRequest.h"
 #include "ee/EEAIPathGoalModifiers.h"
@@ -408,53 +407,18 @@ static void EECPUnitsTake(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECompl
     s->mHeld.insert(theID);
     if (!inUnit->mUnitClass->IsBuilding()) {
         inPlayer->DetachUnitFromAI(inUnit);
-        if (inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mResourceManager != NULL)
-            inPlayer->mCivilizationManager->mResourceManager->RemoveGatherer(inUnit);
     }
 }
 
-// inWork (ai.release(ids, {gather = true})): a citizen or boat that gathers goes onto its resource's gatherer list, so
-// the engine's runners count it where it works (else only an idle one rejoins them, on the idle list)
+// a unit the script lets go is the engine's again (stage 6: no runner takes it; the Lua verbs hold the citizens)
 static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EEComplexUnit* inUnit, bool inWork)
 {
+    (void)inPlayer;
+    (void)inWork;
     if (s->mHeld.erase((long)inUnit->mUnitID) == 0 || inUnit->mUnitClass->IsBuilding())
         return;
     if (inUnit->mIsDetachedFromAI)
         inUnit->mIsDetachedFromAI = false;
-    long theCategory = inUnit->mUnitClass->mCategory;
-    if ((theCategory != kUnitCategoryLandCitizen && theCategory != kUnitCategoryNavalCitizen)
-        || inPlayer->mCivilizationManager == NULL || inPlayer->mCivilizationManager->mResourceManager == NULL)
-        return;
-    EECPResourceManager* theManager = inPlayer->mCivilizationManager->mResourceManager;
-    if (EECPUnitsIdle(inUnit)) {
-        theManager->AddIdleGatherer(inUnit);
-        return;
-    }
-    EEUGGather* theGoal = inWork ? dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal()) : NULL;
-    if (theGoal != NULL && theGoal->mResource != NULL && theGoal->mResource->mHitPoints > 0) {
-        long theResource = (long)theGoal->mResource->GetResourceType();
-        if (theResource >= 0 && theResource < 7) {
-            theManager->RemoveGatherer(inUnit);
-            theManager->AddGatherer(inUnit, theResource);
-            return;
-        }
-    }
-    // new (docs/AI_RESEARCH.md §8.51): a citizen released at work that is not idle yet (stopped this tick, hunting, or
-    // released without {gather = true}) went onto no list at all, and the engine never moved or counted it again: in
-    // a boom game 18 of 33 citizens were on no list, so the food list stayed short, more went hunting (30 on food
-    // against 19 wanted) and the mines got nobody. It goes onto its resource's list (hunting: food), else the idle one
-    if (theCategory == kUnitCategoryLandCitizen) {
-        EEUGGather* theWork = dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal());
-        EEUGAttackUnit* theHunt = dynamic_cast<EEUGAttackUnit*>(inUnit->GetLoadGoal());
-        long theResource = theWork != NULL && theWork->mResource != NULL ? (long)theWork->mResource->GetResourceType()
-            : theHunt != NULL && theHunt->mTarget != NULL && theHunt->mTarget->GetUnitClass()->GetFamily() == kUnitFamilyAnimal
-            ? (long)kResourceFood : -1;
-        theManager->RemoveGatherer(inUnit);
-        if (theResource >= kResourceFood && theResource < 7)
-            theManager->AddGatherer(inUnit, theResource);
-        else
-            theManager->AddIdleGatherer(inUnit);
-    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -3643,6 +3607,45 @@ static int LuaCancel(lua_State* L)
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
 }
 
+// the tech node of a unit class the player may make now; else the refusal's reason
+static EETechTreeNode* EECPNextClassNode(EEComputerPlayer* inPlayer, long inType, long& outReason)
+{
+    outReason = kNextReasonUnknownClass;
+    if (inType < 0 || (unsigned long)inType >= EEUnitClassCount() || gUnitClassTable[inType] == NULL
+        || inPlayer->mTechnologies == NULL)
+        return NULL;
+    EETechTreeNode* theNode = inPlayer->mTechnologies->Get(gUnitClassTable[inType]->mTechnology);
+    if (theNode == NULL || theNode->mData == NULL)
+        return NULL;
+    outReason = kNextReasonNotInEpoch;
+    if (!theNode->GetIsAvailable() || theNode->GetIsObsolete())
+        return NULL;
+    outReason = kNextReasonNone;
+    return theNode;
+}
+
+
+// node now or no such improvement (ai.improve_cost, docs/AI_LUA_UNITS.md §11)
+bool EECPNextImproveCost(EEComputerPlayer* inPlayer, long inType, long inImprovement, long outCost[5], long& outLevel,
+                         long& outMax)
+{
+    long theReason;
+    EETechTreeNode* theNode = EECPNextClassNode(inPlayer, inType, theReason);
+    if (theNode == NULL)
+        return false;
+    EEUnitClass* theClass = gUnitClassTable[inType];
+    if (inImprovement < 0 || inImprovement >= 16 || theClass->mImprovements == NULL)
+        return false;
+    EEUnitClassUpgrade* theUpgrade = inPlayer->mUnitClassUpgrades[inType];
+    outLevel = inPlayer->GetImprovementLevel(inType, inImprovement);
+    outMax = theClass->mImprovements->GetMaxLevel();
+    float theFactor = theClass->mImprovements->mEntries[inImprovement].mCostFactor * (float)outLevel;
+    for (long i = 0; i < kNextResources; i++)
+        outCost[i] = inPlayer->ScaleCost(UMFloatToLong((float)theNode->mData->mCosts[kResourceFood + i] * theUpgrade->mCostScale * theFactor));
+    return true;
+}
+
+
 // ai.improve(unit, n): one level of improvement n (dbupgrade's order: the unit panel's buttons) for the unit's class
 static int LuaImprove(lua_State* L)
 {
@@ -3834,7 +3837,7 @@ static int LuaWall(lua_State* L)
         return r;
     // the class: "wall" (or nil) is the epoch's wall as the classic wall manager takes it (GetWallClass)
     long theType = (lua_type(L, 2) == LUA_TNIL || (lua_type(L, 2) == LUA_TSTRING && strcmp(lua_tostring(L, 2), "wall") == 0))
-        && me->mCivilizationManager != NULL ? me->mCivilizationManager->GetWallClass() : EECPUnitsClassArg(L, 2);
+        && me->mTechnologies != NULL ? EECPWallClass(me) : EECPUnitsClassArg(L, 2);
     if (theType < 0 || (unsigned long)theType >= EEUnitClassCount() || gUnitClassTable[theType] == NULL
         || !gUnitClassTable[theType]->mIsWall || !lua_isinteger(L, 3) || !lua_isinteger(L, 4) || !lua_isinteger(L, 5)
         || !lua_isinteger(L, 6))
@@ -3870,7 +3873,7 @@ static int LuaGate(lua_State* L)
     EEComputerPlayer* me = EECPUnitsMe(L);
     EECPUnitsState* s = EECPUnitsGet(me);
     long theType = (lua_type(L, 1) == LUA_TNIL || (lua_type(L, 1) == LUA_TSTRING && strcmp(lua_tostring(L, 1), "gate") == 0))
-        && me->mCivilizationManager != NULL ? me->mCivilizationManager->GetGateClass() : EECPUnitsClassArg(L, 1);
+        && me->mTechnologies != NULL ? EECPGateClass(me) : EECPUnitsClassArg(L, 1);
     if (theType < 0 || (unsigned long)theType >= EEUnitClassCount() || gUnitClassTable[theType] == NULL
         || dynamic_cast<EEUCGate*>(gUnitClassTable[theType]) == NULL || !lua_isinteger(L, 2) || !lua_isinteger(L, 3))
         return EECPUnitsResult(L, kBadArgument, 0, 0);

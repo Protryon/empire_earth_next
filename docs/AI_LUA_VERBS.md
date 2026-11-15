@@ -129,3 +129,29 @@ EECPRMMilitia's odds and orders on ai.seen / ai.strength / ai.attack / ai.move, 
 by the verbs' finders in place of `ai.site_blocked`'s `danger`, and the naval flight on the ships' events. Each
 reflex is benched on its own (rush for the militia, an island map for the naval flight); then `ai.reflex` and the C++
 reflexes go.
+
+## 6. As built (stage 6)
+
+**Lua** (data/ai/lib/verbs.lua): the eleven economy verbs and their runners, the view fields of §3, the held state
+the script sees (who holds a citizen: the library holds them all in the engine, a script's ai.take and ai.release move
+them between the two), the results merged in order. boom and ageofai return `require("lib.verbs").wrap(M)`;
+classic_lua needs none of it.
+
+**C++ kept, as helpers** (ee/EECPPlacement.h, ee/EECPReflexes.h, the view):
+- EECPPlacement: the town centre tile (the unit manager's UnitAdded rule), the shore and space site tiles, the "unit
+  near" tests, CanBuildAt, FindSite and its finders (centre, granary, production, shore, tower, wonder, airport,
+  anti-air, space), the epoch's classes (tower, wall, gate, anti-air, fishing boat), and the build verb's ring,
+  tower-ring, by-the-resource and dock-by-the-fish searches; Lua reaches them through `ai.place`;
+- the reflexes (§5) with the danger zones on EEComputerPlayer;
+- the view: the gatherers and the idle by their goals, the producers by a unit scan, the game near the town, the
+  forest edge (the forests sorted by the town, EECPNextForestTarget / EECPNextWoodTarget), the scouting memory
+  (EECPNextArmy.cpp's scan: the enemies' units seen, gather spots, towers);
+- `ai.site_blocked`, `ai.build_unsafe`, `ai.techs{name}`, `view.sites[].id` and `.ids`, `ai.reflex{held}`.
+
+**Deleted:** EECPUnitManager, EECPBuildManager (but the placement), EECPResourceManager (but the reflexes),
+EECPResearchManager, EECPCivilizationManager, EECPWallManager, EECPNextTactics.cpp, the economy verbs' order parsing
+and state (claim range, reserve, food preference, exact, granary farms, explore walkers, repairs), the group verbs
+(attack, raid, defend, scout, retreat, regroup, disband) and their groups' step and save block (only rush, balanced and
+test_opening called them: rush and balanced are gone with the remove-rush branch, test_opening with this stage), the
+classic's dead epoch-pressure helpers, the scenario setters' mirror into the building counts, the managers' save
+blocks (the state block is version 6; older saves do not load).

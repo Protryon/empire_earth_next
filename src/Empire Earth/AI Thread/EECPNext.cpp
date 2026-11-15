@@ -35,11 +35,8 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EECPCivilizationManager.h"
-#include "ee/EECPUnitManager.h"
-#include "ee/EECPBuildManager.h"
-#include "ee/EECPResourceManager.h"
-#include "ee/EECPResearchManager.h"
+#include "ee/EECPPlacement.h"
+#include "ee/EECPReflexes.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPEngine.h"
@@ -76,11 +73,9 @@ const char* EECPNextReasonName(long inReason)
 }
 
 EECPNextState::EECPNextState()
-    : mClaimRange(kEECPClaimRange), mFoodPrefer(kNextPreferPatch), mFoodLand(0), mExact(0), mGranaryFarms(-1), mEpoch(-1), mEpochStart(0),
-      mNextRepairTime(0), mIncomeSteps(0), mNextGroup(1), mThreatsTime(-1), mLua(NULL), mStarted(false), mFailed(false), mRestore(false), mErrors(0),
+    : mEpoch(-1), mEpochStart(0), mIncomeSteps(0), mThreatsTime(-1), mLua(NULL), mStarted(false), mFailed(false), mRestore(false), mErrors(0),
       mShadow(NULL)
 {
-    memset(this->mReserve, 0, sizeof(this->mReserve));
     memset(this->mIncomeTotal, 0, sizeof(this->mIncomeTotal));
     memset(this->mIncomeRing, 0, sizeof(this->mIncomeRing));
     memset(this->mSeenArmy, 0, sizeof(this->mSeenArmy));
@@ -110,26 +105,14 @@ void EECPNextDeleteState(EEComputerPlayer* inPlayer)
     inPlayer->mNextState = NULL;
 }
 
-// EEComputerPlayer::CanAfford for the next engine: the plain check (EEPlayer::CanAfford), then the strategy's reserve,
-// which only the epoch advance may spend (no epoch pressure, army cap, boom or recovery rule)
+// EEComputerPlayer::CanAfford: the plain check (EEPlayer::CanAfford), an epoch free with the epochs cheat (stage 6: the
+// strategy's reserve is the Lua verbs' own check, data/ai/lib/verbs.lua)
 bool EECPNextCanAfford(EEComputerPlayer* inPlayer, EETechTreeNode* inNode, long inUnitType, long inCount)
 {
     bool theEpoch = inNode != NULL && inNode->mData != NULL && EEIsEpochID(inNode->mData->mID);
     if (theEpoch && inPlayer->mTechnologies != NULL && EECPCheatOn(inPlayer, kAICheatEpochs))
         return true;
-    if (!inPlayer->EEPlayer::CanAfford(inNode, inUnitType, inCount))
-        return false;
-    if (theEpoch || inPlayer->mNextState == NULL)
-        return true;
-    for (long i = 0; i < kNextResources; i++) {
-        long theReserve = inPlayer->mNextState->mReserve[i];
-        if (theReserve <= 0)
-            continue;
-        long theCost = inPlayer->ScaleCost(inNode->GetCost(kResourceFood + i, inUnitType, 1.0f)) * inCount;
-        if (theCost > 0 && inPlayer->mResourceCaps[kResourceFood + i] - theCost < theReserve)
-            return false;
-    }
-    return true;
+    return inPlayer->EEPlayer::CanAfford(inNode, inUnitType, inCount);
 }
 
 void EECPNextIncome(EEComputerPlayer* inPlayer, long inResource, long inAmount)
@@ -154,16 +137,6 @@ void EECPNextEventAdd(const EEComputerPlayer* inPlayer, long inKind, long inType
         theState->mEvents.push_back(theEvent);
 }
 
-long EECPNextFoodPreference(const EEComputerPlayer* inPlayer)
-{
-    return inPlayer->mNextState != NULL ? inPlayer->mNextState->mFoodPrefer : (long)kNextPreferPatch;
-}
-
-long EECPNextClaimRangeOf(const EEComputerPlayer* inPlayer)
-{
-    return inPlayer->mNextState != NULL ? inPlayer->mNextState->mClaimRange : kEECPClaimRange;
-}
-
 static const char* EECPNextEventName(long inKind)
 {
     switch (inKind) {
@@ -180,8 +153,7 @@ static const char* EECPNextEventName(long inKind)
 void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime)
 {
     EECPNextState* theState = EECPNextGetState(inPlayer);
-    EECPCivilizationManager* theCivilization = inPlayer->mCivilizationManager;
-    if (theCivilization == NULL || inPlayer->mTechnologies == NULL)
+    if (inPlayer->mPlacement == NULL || inPlayer->mTechnologies == NULL)
         return;
     // the bookkeeping the classic tick does first (EEComputerPlayer::Update): new units into resource centres, the
     // combat state's decay and the population cap (WorkOutPopulation; GetPopulationLimit reads it). EnableManagers
@@ -204,30 +176,10 @@ void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime)
             theState->mEpochStart = inTime;
         theState->mEpoch = inPlayer->mTechnologies->mCurrentEpoch;
     }
-    // the runners (EECPCivilizationManager::Update's executors; its decisions stay classic-only)
-    {
-        EECPTraceScope theScope("unit");
-        theCivilization->mUnitManager->Update(inTime);
-    }
-    {
-        EECPTraceScope theScope("resource");
-        theCivilization->mResourceManager->Update(inTime);
-    }
-    {
-        EECPTraceScope theScope("build");
-        theCivilization->mBuildManager->Update(inTime);
-    }
-    {
-        EECPTraceScope theScope("research");
-        theCivilization->mResearchManager->Update(inTime);
-    }
-    // the reflexes: repairs, and the attack groups' state machines (the militia, flee and naval flee run on the
-    // damage events)
-    if (inPlayer->mCanBuild && inTime >= theState->mNextRepairTime) {
-        EECPTraceScope theScope("civ");
-        theCivilization->RepairBuildings();
-        theState->mNextRepairTime = inTime + 31000;
-    }
+    // the reflexes' danger zones expire, the gatherers in one go home (stage 6: the economy runners are the Lua verbs',
+    // data/ai/lib/verbs.lua: production, gathering, building, research and repairs)
+    if (inPlayer->mCanGather)
+        EECPRMFleeRaids(inPlayer);
     {
         EECPTraceScope theScope("next");
         EECPNextArmyStep(inPlayer);   // the next engine's groups (EECPNextArmy.cpp)

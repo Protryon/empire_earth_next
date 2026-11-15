@@ -15,7 +15,14 @@
 class EEComplexUnit;
 class EEComputerPlayer;
 class EEUnitClass;
-struct EECPUMRequest;                       // ee/EECPCivilizationManager.h
+// a request counted by the gatherers (the original unit manager's request; stage 6 passes the units in production as
+// requests of one)
+struct EECPUMRequest {
+    unsigned long mUnitClass;               // +0x00
+    unsigned long mCount;                   // +0x04
+    long mTownID;                           // +0x08
+    unsigned short mContinent;              // +0x0c
+};
 
 class EECPUMGatherUnitsScreenBase {
 public:
@@ -63,5 +70,9 @@ public:
     long mUnitType;                         // +0x14 (EEUnitClass +0x1bc)
     long mCategory;                         // +0x18 (EEUnitClass +0x1d0)
 };
+
+// the unit manager's GatherUnits over the player's units (stage 6: no unit manager): by class (the player's units of each
+// class), then the units in production at its land buildings as requests of one
+void EECPGatherUnits(EEComputerPlayer* inPlayer, EECPUMGatherUnitsScreenBase& ioGatherer);
 
 #endif

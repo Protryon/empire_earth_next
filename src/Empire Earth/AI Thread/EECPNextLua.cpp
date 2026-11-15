@@ -321,29 +321,6 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         theEvents.Push(std::move(e));
     }
     v.Set("events", std::move(theEvents));
-    EECPLuaValue theGroups = EECPLuaValue::NewArray();
-    for (unsigned long k = 0; k < inView.groups.size(); k++) {
-        const EECPNextGroupView& g = inView.groups[k];
-        EECPLuaValue e = EECPLuaValue::NewMap();
-        e.Set("id", EECPNextInt(g.id));
-        e.Set("task", EECPLuaValue::Str(EECPNextTaskName(g.task)));
-        e.Set("state", EECPLuaValue::Str(EECPNextGroupStateName(g.state)));
-        e.Set("units", EECPNextInt(g.units));
-        e.Set("strength", EECPNextInt(g.strength));
-        e.Set("x", EECPNextInt(g.x));
-        e.Set("y", EECPNextInt(g.y));
-        e.Set("target", EECPNextInt(g.target));
-        e.Set("tx", EECPNextInt(g.tx));
-        e.Set("ty", EECPNextInt(g.ty));
-        e.Set("enemy_count", EECPNextInt(g.enemy_count));
-        e.Set("enemy_strength", EECPNextInt(g.enemy_strength));
-        e.Set("targets", EECPNextInt(g.targets));
-        e.Set("started", EECPNextInt(g.started));
-        e.Set("lost", EECPNextInt(g.lost));
-        e.Set("created", EECPNextInt(g.created));
-        theGroups.Push(std::move(e));
-    }
-    v.Set("groups", std::move(theGroups));
     v.Set("free_soldiers", EECPNextInt(inView.free_soldiers));
     v.Set("free_strength", EECPNextInt(inView.free_strength));
     // §8.35: the game near the town, the hunters, the worked forest edge
@@ -365,8 +342,6 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         e.Set("code", EECPLuaValue::Str(EECPNextCodeName(inResults[k].mCode)));
         e.Set("reason", EECPLuaValue::Str(EECPNextResultReasonName(inResults[k].mReason)));
         e.Set("count", EECPNextInt(inResults[k].mCount));
-        if (inResults[k].mGroup != 0)
-            e.Set("group", EECPNextInt(inResults[k].mGroup));   // the group verbs
         theResults.Push(std::move(e));
     }
     v.Set("results", std::move(theResults));
@@ -490,136 +465,10 @@ static EECPNextResult EECPNextRunOrder(EEComputerPlayer* inPlayer, const EECPLua
     outVerb = theVerb->AsString();
     const std::string& v = outVerb;
     EECPNextOrderReader r(inOrder);
-    if (v == "gather") {
-        std::string theResource = r.Str("resource", "", true);
-        long n = r.Int("n", 0, true);
-        std::string thePrefer = r.Str("prefer", "patch");
-        long theExact = r.Int("exact", -1);
-        long theGranaryFarms = r.Int("granary_farms", -2);   // (-2: unchanged; -1: the engine's rule)
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        long theIndex = EECPNextResourceIndex(theResource);
-        long thePreferKind = thePrefer == "patch" ? kNextPreferPatch : thePrefer == "hunt" ? kNextPreferHunt : -1;
-        if (theIndex < 0 || thePreferKind < 0)
-            return EECPNextRefuse(inPlayer, v, theIndex < 0 ? "resource " + theResource : "prefer " + thePrefer);
-        return EECPNextGather(inPlayer, theIndex, n, thePreferKind, theExact, theGranaryFarms);
-    }
-    if (v == "claim" || v == "release") {
-        long theSite = r.Int("site", 0, true);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return v == "claim" ? EECPNextClaim(inPlayer, theSite - 1) : EECPNextRelease(inPlayer, theSite - 1);
-    }
-    if (v == "claim_range") {
-        long theRange = r.Int("range", 0, true);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return EECPNextClaimRange(inPlayer, theRange);
-    }
-    if (v == "build") {
-        std::string theType = r.Str("type", "", true);
-        std::string theNear = r.Str("near", "town");
-        long theNearKind = theNear == "town" ? kNextNearTown : theNear == "site" ? kNextNearSite : theNear == "tile" ? kNextNearTile : -1;
-        long a1 = 0, a2 = 0;
-        if (theNearKind == kNextNearSite)
-            a1 = r.Int("site", 0, true) - 1;
-        else if (theNearKind == kNextNearTile) {
-            a1 = r.Int("x", 0, true);
-            a2 = r.Int("y", 0, true);
-        }
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        if (theNearKind < 0)
-            return EECPNextRefuse(inPlayer, v, "near " + theNear);
-        long theClass = EECPNextClassByName(theType);
-        if (theClass < 0)
-            return EECPNextRefuse(inPlayer, v, "unknown type " + theType);
-        return EECPNextBuild(inPlayer, theClass, theNearKind, a1, a2);
-    }
-    if (v == "fish") {
-        long theBoats = r.Int("boats", 0, true);
-        long theDocks = r.Int("docks", 1);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return EECPNextFish(inPlayer, theBoats, theDocks);
-    }
-    if (v == "train") {
-        std::string theType = r.Str("type", "", true);
-        long n = r.Int("n", 0, true);
-        long theTown = r.Int("town", 0);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        long theClass = EECPNextClassByName(theType);
-        if (theClass < 0)
-            return EECPNextRefuse(inPlayer, v, "unknown type " + theType);
-        return EECPNextTrain(inPlayer, theClass, n, theTown);
-    }
-    if (v == "reserve") {
-        long theAmounts[kNextResources];
-        for (long i = 0; i < kNextResources; i++)
-            theAmounts[i] = r.Int(kNextResourceNames[i], 0);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return EECPNextReserve(inPlayer, theAmounts[0], theAmounts[1], theAmounts[2], theAmounts[3], theAmounts[4]);
-    }
-    if (v == "research") {
-        std::string theTech = r.Str("tech", "", true);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        long theID = EECPNextTechByName(theTech);
-        if (theID < 0)
-            return EECPNextRefuse(inPlayer, v, "unknown tech " + theTech);
-        return EECPNextResearch(inPlayer, theID);
-    }
-    if (v == "improve") {
-        // {verb="improve", type="b_guard_tower_paleo", what="range"} (§8.35); what: attack, hit_points, range, speed
-        std::string theType = r.Str("type", "", true);
-        std::string theWhat = r.Str("what", "", true);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        long theClass = EECPNextClassByName(theType);
-        if (theClass < 0)
-            return EECPNextRefuse(inPlayer, v, "unknown type " + theType);
-        long theKind = theWhat == "range" ? kImprovementRange : theWhat == "attack" ? kImprovementAttack
-            : theWhat == "hit_points" ? kImprovementHitPoints : theWhat == "speed" ? kImprovementSpeed : -1;
-        if (theKind < 0)
-            return EECPNextRefuse(inPlayer, v, "what " + theWhat);
-        return EECPNextImprove(inPlayer, theClass, theKind);
-    }
-    if (v == "advance") {
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return EECPNextAdvance(inPlayer);
-    }
-    if (v == "attack" || v == "raid" || v == "defend" || v == "scout") {
-        // {verb=, n=, group=, from=, classes={...}, player= (attack, raid), x=, y=, radius= (defend)}
-        EECPNextGroupOrder theOrder;
-        theOrder.mGroup = r.Int("group", 0);
-        theOrder.mFrom = r.Int("from", 0);
-        theOrder.mCount = r.Int("n", 0, theOrder.mGroup == 0);
-        theOrder.mClasses = r.Classes("classes");
-        theOrder.mPlayer = v == "attack" || v == "raid" ? r.Int("player", 0) : 0;
-        theOrder.mX = r.Int("x", -1);
-        theOrder.mY = r.Int("y", -1);
-        theOrder.mRadius = v == "defend" ? r.Int("radius", 0) : 0;
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        long theTask = v == "attack" ? kNextTaskAttack : v == "raid" ? kNextTaskRaid : v == "defend" ? kNextTaskDefend : kNextTaskScout;
-        return EECPNextGroupTask(inPlayer, theTask, theOrder);
-    }
-    if (v == "retreat" || v == "regroup") {
-        long theGroup = r.Int("group", 0, v == "regroup");
-        long x = r.Int("x", -1), y = r.Int("y", -1);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return v == "retreat" ? EECPNextRetreat(inPlayer, theGroup, x, y) : EECPNextRegroup(inPlayer, theGroup, x, y);
-    }
-    if (v == "disband") {
-        long theGroup = r.Int("group", 0, true);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return EECPNextDisband(inPlayer, theGroup);
-    }
+    // (stage 6: gather, claim, release, claim_range, build, fish, train, reserve, research, improve and advance are
+    // data/ai/lib/verbs.lua's; an AI that sends them here without it gets "unknown verb")
+    // (stage 6: the group verbs attack, raid, defend, scout, retreat, regroup and disband are gone with EECPNextArmy's
+    // groups; no AI calls them)
     std::string theUnknown = outVerb;
     outVerb = "?";
     return EECPNextRefuse(inPlayer, outVerb, "unknown verb " + theUnknown);
@@ -787,7 +636,6 @@ static void EECPNextRunOrders(EEComputerPlayer* inPlayer, EECPNextState* inState
         theEntry.mCode = theResult.mCode;
         theEntry.mReason = theResult.mReason;
         theEntry.mCount = theResult.mCount;
-        theEntry.mGroup = theResult.mGroup;
         inState->mResults.push_back(theEntry);
     }
 }
@@ -875,11 +723,9 @@ void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView
 
 // ---------------------------------------------------------------------------------------------------------------
 // The save (EEPPlayerHelper, from version 0.252): little-endian int32 fields, strings as a uint32 length and bytes.
-//   "EENS", uint32 version 5 (1: the same without the army block below; 3 adds the gather safety's spots and scan
-//     time; 4 the granary_farms setting, gather(granary_farms = n); 5 drops the deleted C++ test opening's memory)
-//   the tactics' state: claim range, reserve[5], food preference, land food gatherers, epoch, epoch start, next repair
-//     time, income totals[5], the income ring[60][5], its step count; per player id 0..63: seen army, seen strength,
-//     last seen, seen town x, y; the events (count, then kind, type, count each); (to version 4: 4 fields of the C++ test opening)
+//   "EENS", uint32 version 6 (stage 6: only this version loads; the economy verbs' state is the script's memory)
+//   the state: epoch, epoch start, income totals[5], the income ring[60][5], its step count; per player id 0..63: seen
+//     army, seen strength, last seen, seen town x, y; the events (count, then kind, type, count each)
 //   the strategy: the script name; started, failed (one byte each); the last step's results (count, then verb, code,
 //     reason, count each); the Lua memory bytes (EECPLuaState::SaveMemory; length 0: no Lua state)
 // Not saved (rebuilt): the Lua state itself (the modules run again from scratch), the view, the class name tables.
@@ -970,24 +816,6 @@ static void EECPNextPutSpots(std::string& ioBytes, const std::vector<EECPNextSpo
 
 static void EECPNextEncodeArmy(const EECPNextState* s, std::string& outBytes)
 {
-    EECPNextPut(outBytes, s->mNextGroup);
-    EECPNextPut(outBytes, (long)s->mGroups.size());
-    for (unsigned long g = 0; g < s->mGroups.size(); g++) {
-        const EECPNextGroup& theGroup = s->mGroups[g];
-        const long theFields[] = {theGroup.mID, theGroup.mTask, theGroup.mState, theGroup.mTarget, theGroup.mX, theGroup.mY,
-            theGroup.mRadius, theGroup.mCreated, theGroup.mStateTime, theGroup.mWayX, theGroup.mWayY, theGroup.mWayTime,
-            theGroup.mStarted, theGroup.mLost};
-        for (unsigned long f = 0; f < sizeof(theFields) / sizeof(theFields[0]); f++)
-            EECPNextPut(outBytes, theFields[f]);
-        EECPNextPut(outBytes, (long)theGroup.mUnits.size());
-        for (unsigned long k = 0; k < theGroup.mUnits.size(); k++) {
-            EECPNextPut(outBytes, theGroup.mUnits[k]);
-            EECPNextPut(outBytes, theGroup.mAims[k]);
-        }
-        EECPNextPut(outBytes, (long)theGroup.mSkips.size());
-        for (unsigned long k = 0; k < theGroup.mSkips.size(); k++)
-            EECPNextPut(outBytes, theGroup.mSkips[k]);
-    }
     EECPNextPutSpots(outBytes, s->mSpots);
     EECPNextPutSpots(outBytes, s->mTowers);
     for (long p = 0; p < 64; p++) {
@@ -995,9 +823,6 @@ static void EECPNextEncodeArmy(const EECPNextState* s, std::string& outBytes)
         EECPNextPut(outBytes, s->mArmyX[p]);
         EECPNextPut(outBytes, s->mArmyY[p]);
     }
-    EECPNextPut(outBytes, (long)s->mResults.size());
-    for (unsigned long k = 0; k < s->mResults.size(); k++)
-        EECPNextPut(outBytes, s->mResults[k].mGroup);
 }
 
 static void EECPNextGetSpots(EECPNextGetter& g, std::vector<EECPNextSpot>& outSpots)
@@ -1018,27 +843,6 @@ static void EECPNextGetSpots(EECPNextGetter& g, std::vector<EECPNextSpot>& outSp
 
 static void EECPNextDecodeArmy(EECPNextState* s, EECPNextGetter& g)
 {
-    s->mNextGroup = g.Get();
-    long theGroups = g.Get();
-    s->mGroups.clear();
-    for (long n = 0; g.mOK && n < theGroups; n++) {
-        EECPNextGroup theGroup;
-        long* const theFields[] = {&theGroup.mID, &theGroup.mTask, &theGroup.mState, &theGroup.mTarget, &theGroup.mX,
-            &theGroup.mY, &theGroup.mRadius, &theGroup.mCreated, &theGroup.mStateTime, &theGroup.mWayX, &theGroup.mWayY,
-            &theGroup.mWayTime, &theGroup.mStarted, &theGroup.mLost};
-        for (unsigned long f = 0; f < sizeof(theFields) / sizeof(theFields[0]); f++)
-            *theFields[f] = g.Get();
-        long theUnits = g.Get();
-        for (long k = 0; g.mOK && k < theUnits; k++) {
-            theGroup.mUnits.push_back(g.Get());
-            theGroup.mAims.push_back(g.Get());
-        }
-        long theSkips = g.Get();
-        for (long k = 0; g.mOK && k < theSkips; k++)
-            theGroup.mSkips.push_back(g.Get());
-        if (n < 1000)
-            s->mGroups.push_back(theGroup);
-    }
     EECPNextGetSpots(g, s->mSpots);
     EECPNextGetSpots(g, s->mTowers);
     for (long p = 0; p < 64; p++) {
@@ -1046,27 +850,15 @@ static void EECPNextDecodeArmy(EECPNextState* s, EECPNextGetter& g)
         s->mArmyX[p] = g.Get();
         s->mArmyY[p] = g.Get();
     }
-    long theResults = g.Get();
-    for (long k = 0; g.mOK && k < theResults; k++) {
-        long theGroup = g.Get();
-        if ((unsigned long)k < s->mResults.size())
-            s->mResults[k].mGroup = theGroup;
-    }
 }
 
 static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMemory, std::string& outBytes)
 {
     outBytes.clear();
     outBytes.append("EENS", 4);
-    EECPNextPut(outBytes, 5);
-    EECPNextPut(outBytes, s->mClaimRange);
-    for (long i = 0; i < kNextResources; i++)
-        EECPNextPut(outBytes, s->mReserve[i]);
-    EECPNextPut(outBytes, s->mFoodPrefer);
-    EECPNextPut(outBytes, s->mFoodLand);
+    EECPNextPut(outBytes, 6);
     EECPNextPut(outBytes, s->mEpoch);
     EECPNextPut(outBytes, (long)s->mEpochStart);
-    EECPNextPut(outBytes, (long)s->mNextRepairTime);
     for (long i = 0; i < kNextResources; i++)
         EECPNextPut(outBytes, s->mIncomeTotal[i]);
     for (long k = 0; k < 60; k++)
@@ -1101,8 +893,6 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
     // version 3: the gather safety's memory (the enemy soldiers seen lately, as the spots; the time of its last scan)
     EECPNextPutSpots(outBytes, s->mThreats);
     EECPNextPut(outBytes, s->mThreatsTime);
-    // version 4: gather(granary_farms = n)'s setting (§8.51)
-    EECPNextPut(outBytes, s->mGranaryFarms);
 }
 
 // the state from its bytes (false: not a version 1 block, or bytes left over); the Lua memory goes to mRestoreBytes,
@@ -1114,16 +904,10 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
     EECPNextGetter g(inBytes);
     g.mOffset = 4;
     long theVersion = g.Get();
-    if (theVersion < 1 || theVersion > 5)
+    if (theVersion != 6)
         return false;
-    s->mClaimRange = g.Get();
-    for (long i = 0; i < kNextResources; i++)
-        s->mReserve[i] = g.Get();
-    s->mFoodPrefer = g.Get();
-    s->mFoodLand = g.Get();
     s->mEpoch = g.Get();
     s->mEpochStart = (unsigned long)(uint32_t)g.Get();
-    s->mNextRepairTime = (unsigned long)(uint32_t)g.Get();
     for (long i = 0; i < kNextResources; i++)
         s->mIncomeTotal[i] = g.Get();
     for (long k = 0; k < 60; k++)
@@ -1147,8 +931,6 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
         if (k < 256)
             s->mEvents.push_back(theEvent);
     }
-    for (long k = 0; theVersion < 5 && k < 4; k++)
-        g.Get();   // (the deleted C++ test opening's memory)
     s->mScript = g.GetString();
     s->mStarted = g.GetByte();
     s->mFailed = g.GetByte();
@@ -1160,20 +942,15 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
         theEntry.mCode = g.Get();
         theEntry.mReason = g.Get();
         theEntry.mCount = g.Get();
-        theEntry.mGroup = 0;   // (version 2: from the army block)
         if (k < (long)kNextMaxOrders)
             s->mResults.push_back(theEntry);
     }
     std::string theMemory = g.GetString();
-    if (theVersion >= 2)
-        EECPNextDecodeArmy(s, g);   // (a version 1 block: no groups, no army memory)
+    EECPNextDecodeArmy(s, g);
     s->mThreats.clear();
     s->mThreatsTime = -1;
-    if (theVersion >= 3) {
-        EECPNextGetSpots(g, s->mThreats);
-        s->mThreatsTime = g.Get();
-    }
-    s->mGranaryFarms = theVersion >= 4 ? g.Get() : -1;
+    EECPNextGetSpots(g, s->mThreats);
+    s->mThreatsTime = g.Get();
     if (!g.mOK || g.mOffset != inBytes.size())
         return false;
     delete s->mLua;

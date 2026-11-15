@@ -2205,3 +2205,26 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Benches beside other agents' benches**: with sim_bench's default `--port-base 2000`, EE-SIM runs crashed before
   the game (rc 0xC0000005, no report) while other agents' games ran on the same TCP ports. Give each concurrent bench
   its own `--port-base` (e.g. 13000, 21000, 31000).
+
+## Stage 6: the economy verbs in Lua, the managers deleted (2026-11-15, docs/AI_LUA_VERBS.md, docs/AI_RESEARCH.md §8.91)
+
+- **A foundation from `ai.build` is not on the map until its builder reaches it** (`pending` in its record; `ai.units`
+  and the C++ view leave it out). A verbs library that counts buildings for the script must count its own pending
+  foundations, and those it placed after the view was built, or the script orders the same building again.
+- **The old `EEUGBuildRepair::Abandon` hook killed and refunded a computer player's foundation** when its builder
+  left it and the build manager found no engine-held citizen to replace it (`BuildingAbandoned`). Once the Lua verbs
+  held every citizen, the hook killed every foundation whose builder a script had taken. The same tower was placed 24
+  times, and the Bronze Age came 6 minutes later. With the managers gone the hook does nothing, and the library sends
+  a builder again every 3 s.
+- **`record.gathers` is what a citizen carries, not what its goal works.** A citizen sent from food to gold still
+  says "food" until its first trip. Use its target's `kind`, and food for a farm or game.
+- **The held state the script sees:** the library holds the seat's citizens and boats in the engine, so it stands in
+  front of `ai.take`, `ai.release`, `ai.units{held}`, `ai.unit().held` and `ai.get{held}`. Its own citizens look like
+  the engine's to the script, and a builder on its way to a pending foundation looks held, so that boom's own modules
+  do not take it.
+- **A Python edit of a source file on Windows must keep its line endings** (`open(..., newline='')`, both ways). The
+  repository stores every file byte for byte (`.gitattributes: * -text`). A text-mode read and write turned 6 files
+  into CRLF and a 13,000-line diff.
+- **Units the deleted units emitted:** `EEComplexUnit::IsResearchQueued` (EECPUnitManager.cpp's range),
+  `EEUnit::IsPathMarker` (EECPCivilizationManager.cpp's) and `RTSMapTileRun`'s two members (EECPWallManager.cpp's)
+  moved to EECPEngineHelpers.cpp. The link names them as unresolved when they are missing.

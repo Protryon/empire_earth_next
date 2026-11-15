@@ -1878,248 +1878,144 @@ void EESMEffect::ScriptCamera()
 }
 
 
-#include "ee/EECPCivilizationManager.h"
 
-// EEComputerPlayer's scenario tuning setters (declared in ee/EEComputerPlayer.h): store the value, then mirror it
-// into the civilization manager's map under the unit type. The local manager pointer makes all 34 exact (the
-// original reloads ecx from +0xbc4 after the store). Emitted after SetAIVariable (0x1c1ca9..0x1c24c8).
+// EEComputerPlayer's scenario tuning setters (declared in ee/EEComputerPlayer.h): store the value (the original also
+// mirrored it into the civilization manager's building counts, gone in stage 6). Emitted after SetAIVariable (0x1c1ca9..0x1c24c8).
 inline void EEComputerPlayer::SetAntiAirMax(long inValue)
 {
     this->mAntiAirMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeAA10Gun88mm] = inValue;
 }
 inline void EEComputerPlayer::SetAirportMax(long inValue)
 {
     this->mAirportMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeAirport] = inValue;
 }
 inline void EEComputerPlayer::SetArcheryRangeMax(long inValue)
 {
     this->mArcheryRangeMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeArcheryRange] = inValue;
 }
 inline void EEComputerPlayer::SetBarracksMax(long inValue)
 {
     this->mBarracksMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeBarracks] = inValue;
 }
 inline void EEComputerPlayer::SetDockMax(long inValue)
 {
     this->mDockMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeDock] = inValue;
 }
 inline void EEComputerPlayer::SetGranaryMax(long inValue)
 {
     this->mGranaryMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeFarm] = inValue;
 }
 inline void EEComputerPlayer::SetHospitalMax(long inValue)
 {
     this->mHospitalMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeHospital] = inValue;
 }
 inline void EEComputerPlayer::SetCyberFactoryMax(long inValue)
 {
     this->mCyberFactoryMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeCyberFactory] = inValue;
 }
 inline void EEComputerPlayer::SetCyberLabMax(long inValue)
 {
     this->mCyberLabMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeCyberLaboratory] = inValue;
 }
 inline void EEComputerPlayer::SetNavalYardMax(long inValue)
 {
     this->mNavalYardMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeNavyYard] = inValue;
 }
 inline void EEComputerPlayer::SetSiegeFactoryMax(long inValue)
 {
     this->mSiegeFactoryMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeSiegeFactory] = inValue;
 }
 inline void EEComputerPlayer::SetSpaceDockMax(long inValue)
 {
     this->mSpaceDockMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeSpaceDock] = inValue;
 }
 inline void EEComputerPlayer::SetStableMax(long inValue)
 {
     this->mStableMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeStable] = inValue;
 }
 inline void EEComputerPlayer::SetTankFactoryMax(long inValue)
 {
     this->mTankFactoryMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeTankFactory] = inValue;
 }
 inline void EEComputerPlayer::SetTempleMax(long inValue)
 {
     this->mTempleMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeTemple] = inValue;
 }
 inline void EEComputerPlayer::SetTowerMax(long inValue)
 {
     this->mTowerMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeGuardTowerPaleo] = inValue;
 }
 inline void EEComputerPlayer::SetUniversityMax(long inValue)
 {
     this->mUniversityMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeUniversity] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerAntiAirBuilding(long inValue)
 {
     this->mUnitsPerAntiAirBuilding = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeAA10Gun88mm] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerAirport(long inValue)
 {
     this->mUnitsPerAirport = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeAirport] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerArcheryRange(long inValue)
 {
     this->mUnitsPerArcheryRange = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeArcheryRange] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerBarracks(long inValue)
 {
     this->mUnitsPerBarracks = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeBarracks] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerDock(long inValue)
 {
     this->mUnitsPerDock = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeDock] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerGranary(long inValue)
 {
     this->mUnitsPerGranary = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeFarm] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerHospital(long inValue)
 {
     this->mUnitsPerHospital = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeHospital] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerCyberFactory(long inValue)
 {
     this->mUnitsPerCyberFactory = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeCyberFactory] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerCyberLab(long inValue)
 {
     this->mUnitsPerCyberLab = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeCyberLaboratory] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerNavalYard(long inValue)
 {
     this->mUnitsPerNavalYard = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeNavyYard] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerSiegeFactory(long inValue)
 {
     this->mUnitsPerSiegeFactory = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeSiegeFactory] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerSpaceDock(long inValue)
 {
     this->mUnitsPerSpaceDock = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeSpaceDock] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerStable(long inValue)
 {
     this->mUnitsPerStable = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeStable] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerTankFactory(long inValue)
 {
     this->mUnitsPerTankFactory = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeTankFactory] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerTemple(long inValue)
 {
     this->mUnitsPerTemple = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeTemple] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerTower(long inValue)
 {
     this->mUnitsPerTower = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeGuardTowerPaleo] = inValue;
 }
 inline void EEComputerPlayer::SetUnitsPerUniversity(long inValue)
 {
     this->mUnitsPerUniversity = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeUniversity] = inValue;
 }
 
 // FUNCTION: EXE 0x5c0cc9

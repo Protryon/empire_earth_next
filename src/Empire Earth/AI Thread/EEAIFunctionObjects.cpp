@@ -42,10 +42,9 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EECPASGFlags.h"
 #include "ee/EECPUnitRequirement.h"
-#include "ee/EECPCivilizationManager.h"
+#include "ee/EECPPlacement.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
-#include "ee/EECPUnitManager.h"
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include <EEAIFunctionObjects.h>
 #include "ee/EEUnitSetManager.h"
@@ -238,7 +237,7 @@ long EEAIFOUnitsToKillScoringBase::GetCitizenSurplus(EEComputerPlayer* inPlayer,
     long theCount = 0;
     EECPUGatherCitizenUnitsCount theGatherer(inPlayer);
     long theMaximum = inPlayer->GetPopulationLimit(0);
-    inPlayer->mCivilizationManager->mUnitManager->GatherUnits(theGatherer);
+    EECPGatherUnits(inPlayer, theGatherer);
     if (theMaximum > 0) {
         float theMaximumF = (float)theMaximum;
         theRatio = (float)(theGatherer.mUnits + theGatherer.mRequested) / theMaximumF;
@@ -317,9 +316,7 @@ bool EEAIFOFavoriteUnitScreener::Screen(EEUnitClass* inClass)
                     if (theFirstNode) {
                         bool theAvailable = true;
                         if (theFirstNode->GetIsObsolete() || theFirstNode->mScenEditorObsoleted) {   // the builder node's flag (was the class node's)
-                            std::deque<EEComplexUnit*>* theUnits =
-                                this->mPlayer->mCivilizationManager->GetUnitManager()->GetUnits(theNode->GetUnitClass(0));
-                            if (theUnits == NULL || theUnits->size() <= 0)
+                            if (EECPCountOwn(this->mPlayer, theNode->GetUnitClass(0)) <= 0)
                                 theAvailable = false;
                         }
                         if (!theAvailable)
@@ -490,16 +487,14 @@ bool EEAIFOCurrentlyBuildableUnitScreener::Screen(EEUnitClass* inClass)
                 EETechTreeNode* theBuilderNode = this->GetPlayer()->GetTechTree()->Get(theBuilder->GetTechnology());
                 if (theBuilderNode) {
                     if (theBuilderNode->GetIsObsolete() || theBuilderNode->GetScenEditorObsoleted()) {   // the builder node's flag (was the class node's)
-                        std::deque<EEComplexUnit*>* theUnits =
-                            this->GetPlayer()->GetCivilizationManager()->GetUnitManager()->GetUnits(theNode->GetUnitClass(0));
-                        if (theUnits == NULL || theUnits->size() == 0) {
+                        if (EECPCountOwn(this->GetPlayer(), theNode->GetUnitClass(0)) == 0) {
                             theResult = false;
                             return theResult;
                         }
                     }
                     if ((inClass->GetDomains() & kMovementAir) && theBuilder->GetCategory() == kUnitCategoryNavalBuilding && theBuilder->GetAirTrafficType()) {
                         EECPUGatheAircraftCarriersCount theGatherer(this->GetPlayer());
-                        this->GetPlayer()->GetCivilizationManager()->GetUnitManager()->GatherUnits(theGatherer);
+                        EECPGatherUnits(this->GetPlayer(), theGatherer);
                         theResult = theGatherer.GetUnits() + theGatherer.GetRequested() != 0;
                         if (!theResult)
                             return theResult;
@@ -783,4 +778,56 @@ long EETechTreeNode::GetUnitClass(unsigned long inIndex)
     if (inIndex < this->mData->mUnitClasses.size())
         return this->mData->mUnitClasses[inIndex];
     return this->mData->mDefaultUnitClass;
+}
+
+// the unit manager's GatherUnits without the unit manager (stage 6): the player's units by class (each class's units in
+// the player's order), then what its land buildings make (one request each: the one being made and the queue)
+void EECPGatherUnits(EEComputerPlayer* inPlayer, EECPUMGatherUnitsScreenBase& ioGatherer)
+{
+    if (ioGatherer.mByClass) {
+        std::map<long, std::deque<EEComplexUnit*> > theUnits;
+        for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            EEComplexUnit* c = theUnit->mComplexUnit;
+            long theCategory = theUnit->mUnitClass->mCategory;
+            if (c == NULL || !(theUnit->mHitPoints > 0) || theCategory == kUnitCategoryProjectile || theCategory == kUnitCategoryBomb
+                || theCategory == kUnitCategoryMissile || theUnit->mUnitClass->mUnitType == kUnitTypePathPoint)
+                continue;
+            theUnits[theUnit->mUnitClass->mUnitType].push_back(c);
+        }
+        for (std::map<long, std::deque<EEComplexUnit*> >::iterator it = theUnits.begin(); it != theUnits.end(); ++it) {
+            if (!ioGatherer.mByUnit)
+                ioGatherer.CountUnits(gUnitClassTable[it->first], &it->second);
+            else
+                for (long i = (long)it->second.size() - 1; i >= 0; i--)
+                    ioGatherer.CountUnit(it->second[i]);
+        }
+    }
+    if (!ioGatherer.mRequests)
+        return;
+    EECPUMRequest theRequest;
+    theRequest.mContinent = 0;
+    theRequest.mTownID = 0;
+    theRequest.mUnitClass = 0;
+    theRequest.mCount = 0;
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        if (!theComplex || !theComplex->mUnitClass->IsLandBuilding())
+            continue;
+        EETechTreeNode* theNode;
+        long theClass;
+        if (theComplex->mCurrentResearch != kTechNone && (theNode = inPlayer->GetTechTree()->Get(theComplex->mCurrentResearch)) != NULL
+            && (theClass = theNode->mData->mUnitClass) > 0 && gUnitClassTable[theClass]) {
+            theRequest.mCount = 1;
+            theRequest.mUnitClass = theClass;
+            ioGatherer.CountRequest(gUnitClassTable[theClass], &theRequest);
+        }
+        for (long k = theComplex->GetBuildQueueSize() - 1; k >= 0; k--) {
+            theNode = inPlayer->GetTechTree()->Get(theComplex->mBuildQueue[k].mTechnology);
+            if (!theNode || !((theClass = theNode->mData->mUnitClass) > 0) || !gUnitClassTable[theClass])
+                continue;
+            theRequest.mCount = 1;
+            theRequest.mUnitClass = theClass;
+            ioGatherer.CountRequest(gUnitClassTable[theClass], &theRequest);
+        }
+    }
 }

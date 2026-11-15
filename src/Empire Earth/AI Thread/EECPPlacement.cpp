@@ -1,5 +1,5 @@
-// C:\EEX\Empire Earth\AI Thread\EECPBuildManager.cpp (file name inferred: no __FILE__; RTTI class
-// EECPBuildManager, vtable 0x43c050; its key "EECPBuildManager-Data" names the class). A computer player's build
+// C:\EEX\Empire Earth\AI Thread\EECPPlacement.cpp (file name inferred: no __FILE__; RTTI class
+// EECPPlacement, vtable 0x43c050; its key "EECPPlacement-Data" names the class). A computer player's build
 // manager: 0x66af0..0x6e8d4 (the class-static key's guarded chain first, then three distance predicates built without
 // /Og, the members in address order; the deque/vector/heap/sort COMDATs close the unit; EECPAttackSubGroupUnit.cpp ends
 // at 0x66af0 and EECPCivilizationManager.cpp's key chain starts at 0x6e8d4).
@@ -53,18 +53,15 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EECPCivilizationManager.h"
-#include "ee/EECPResourceManager.h"
-#include "ee/EECPWallManager.h"
+#include "ee/EECPPlacement.h"
 #include "ee/EECPResourceCenter.h"
-#include "ee/EECPUnitManager.h"
 #include "ee/EEUnitCollector.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 
 // the class key (0x4e5d00, guard 0x4e5cf8 bit 1)
-const UString EECPBuildManager::sData("EECPBuildManager-Data");
+const UString EECPPlacement::sData("EECPPlacement-Data");
 // SYNTHETIC: EXE 0x466af0   (wrapper)
 // SYNTHETIC: EXE 0x466afa   (ctor)
 // SYNTHETIC: EXE 0x466b0b   (registrar)
@@ -110,26 +107,23 @@ bool EETileDistanceLess::operator()(EEAIChokePoint* inFirst, EEAIChokePoint* inS
 
 // FUNCTION: EXE 0x466c5d
 // Creates the build manager for a civilization manager's player, with empty queues and no town centre tile
-EECPBuildManager::EECPBuildManager(EECPCivilizationManager* inManager)
-    : mManager(inManager)
+EECPPlacement::EECPPlacement(EEComputerPlayer* inPlayer)
+    : mPlayer(inPlayer)
 {
-    this->mPlayer = inManager->mPlayer;
     this->mTownCenterTile = U2DPoint<long>(-10000, -10000);
     this->mNextResourceCenter = 0;
-    this->mNextBuilderCheckTime = 0;
-    this->mNextUpdateTime = 0;
     this->mSiteTilesCollected = false;
 }
 
 // FUNCTION: EXE 0x466d17
 // Destroys the build manager (members only)
-EECPBuildManager::~EECPBuildManager()
+EECPPlacement::~EECPPlacement()
 {
 }
 
 // FUNCTION: EXE 0x466d50
 // Tells whether the player has a unit of the given type within the squared distance of a tile
-bool EECPBuildManager::HasUnitNear(long inUnitType, long inX, long inY, float inDistance)
+bool EECPPlacement::HasUnitNear(long inUnitType, long inX, long inY, float inDistance)
 {
     std::vector<EEUnit*> theUnits;
     EEGetPlayerUnitsOfType(inUnitType, this->mPlayer->mPlayerID, theUnits);
@@ -141,10 +135,10 @@ bool EECPBuildManager::HasUnitNear(long inUnitType, long inX, long inY, float in
 // FUNCTION: EXE 0x466de3
 // Tells whether one of the player's anti-air buildings covers a tile (within its range)
 // NEAR (69): the two mF9C reads and the product order; temporary vs named predicate
-bool EECPBuildManager::HasAntiAirNear(long inX, long inY)
+bool EECPPlacement::HasAntiAirNear(long inX, long inY)
 {
     std::vector<EEUnit*> theUnits;
-    long theType = this->mPlayer->mCivilizationManager->GetAntiAirClass();
+    long theType = EECPAntiAirClass(this->mPlayer);
     float theFirst = this->mPlayer->mUnitClassUpgrades[theType]->mRange;
     float theSecond = this->mPlayer->mUnitClassUpgrades[theType]->mRange;
     EEGetPlayerUnitsOfType(theType, this->mPlayer->mPlayerID, theUnits);
@@ -157,7 +151,7 @@ bool EECPBuildManager::HasAntiAirNear(long inX, long inY)
 // Tells whether one of the player's settlements, town centres or capitols is within the distance of a tile
 // NEAR (99.5): the predicate temporary's r*r store comes before mCenter.mY here, after it in the original (header
 // ctor probes in build/a: body assignment, const-reference x/y: no change)
-bool EECPBuildManager::HasTownCenterNear(long inX, long inY, float inDistance)
+bool EECPPlacement::HasTownCenterNear(long inX, long inY, float inDistance)
 {
     std::vector<EEUnit*> the2B;
     std::vector<EEUnit*> the23;
@@ -178,11 +172,11 @@ bool EECPBuildManager::HasTownCenterNear(long inX, long inY, float inDistance)
 
 // FUNCTION: EXE 0x467122
 // Tells whether one of the player's gates is within the radius of a tile
-bool EECPBuildManager::HasGateNear(long inX, long inY, float inRadius)
+bool EECPPlacement::HasGateNear(long inX, long inY, float inRadius)
 {
     std::vector<EEUnit*> theUnits;
     float theDistance = inRadius * inRadius;
-    EEGetPlayerUnitsOfType(this->mManager->GetGateClass(), this->mPlayer->GetPlayerID(), theUnits);
+    EEGetPlayerUnitsOfType(EECPGateClass(this->mPlayer), this->mPlayer->GetPlayerID(), theUnits);
     std::vector<EEUnit*>::iterator theIt = std::find_if(theUnits.begin(), theUnits.end(),
         EECPUnitWithinDistance(inX, inY, theDistance));
     return theIt != theUnits.end();
@@ -190,10 +184,10 @@ bool EECPBuildManager::HasGateNear(long inX, long inY, float inRadius)
 
 // FUNCTION: EXE 0x4671c2
 // Tells whether one of the player's towers is within a tile's squared distance (inRadius is used as squared)
-bool EECPBuildManager::HasTowerNear(long inX, long inY, float inRadius)
+bool EECPPlacement::HasTowerNear(long inX, long inY, float inRadius)
 {
     std::vector<EEUnit*> theUnits;
-    long theType = this->mManager->GetTowerClass();
+    long theType = EECPTowerClass(this->mPlayer);
     EEGetPlayerUnitsOfType(theType, this->mPlayer->mPlayerID, theUnits);
     EECPUnitWithinDistance thePredicate(inX, inY, inRadius);
     std::vector<EEUnit*>::iterator theIt = std::find_if(theUnits.begin(), theUnits.end(), thePredicate);
@@ -202,326 +196,16 @@ bool EECPBuildManager::HasTowerNear(long inX, long inY, float inRadius)
 
 // FUNCTION: EXE 0x46725e
 // Tells whether one of the player's walls is within a tile's squared distance (inRadius is used as squared)
-bool EECPBuildManager::HasWallNear(long inX, long inY, float inRadius)
+bool EECPPlacement::HasWallNear(long inX, long inY, float inRadius)
 {
     std::vector<EEUnit*> theUnits;
-    long theType = this->mManager->GetWallClass();
+    long theType = EECPWallClass(this->mPlayer);
     EEGetPlayerUnitsOfType(theType, this->mPlayer->mPlayerID, theUnits);
     EECPUnitWithinDistance thePredicate(inX, inY, inRadius);
     std::vector<EEUnit*>::iterator theIt = std::find_if(theUnits.begin(), theUnits.end(), thePredicate);
     return theIt != theUnits.end();
 }
 
-// FUNCTION: EXE 0x4672fa
-// Tells whether a building class is waiting in any epoch's build queue
-bool EECPBuildManager::IsQueued(long inUnitClass)
-{
-    bool theFound = false;
-    for (unsigned long i = 0; i < EEEpochCount() && !theFound; i++) {
-        if (this->mQueues[i].size() > 0) {
-            for (EECPBuildQueue::iterator it = this->mQueues[i].begin(); it != this->mQueues[i].end() && !theFound; ++it)
-                theFound = (*it).first == inUnitClass;
-        }
-    }
-    return theFound;
-}
-
-
-// The queue a class goes to: the epoch of its tech (an epoch's own id; a node's epoch) (provisional name)
-static inline long EECPBMQueueIndex(long inTechTreeID)
-{
-    return EETechTreeEpochOf(inTechTreeID);
-}
-
-// FUNCTION: EXE 0x467356
-// Replaces a lost builder of an unfinished building: orders another citizen to build it, or puts the
-// building back at the front of its queue when none is free
-void EECPBuildManager::BuilderLost(EEComplexUnit* inUnit)
-{
-    EECPBuildManager* theThis = this;
-    EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(inUnit->GetLoadGoal());
-    if (UShutdownInProgress() || theGoal == NULL)
-        return;
-    EEUnit* theTargetUnit = theGoal->mTarget;
-    EEComplexUnit* theTarget = dynamic_cast<EEComplexUnit*>(theTargetUnit);
-    if (theTarget == NULL || !theTarget->IsFoundation())
-        return;
-    // docs/AI_RESEARCH.md §8.35: a builder lost where enemy towers or soldiers are seen is not replaced (the playtest
-    // sent 80 citizens one after another to a settlement under the other player's towers)
-    if (EECPNextBuildUnsafe(this->mPlayer, theTarget->mTileX, theTarget->mTileY) != kNextBlockedNone) {
-        EE_CP_TRACE(this->mPlayer, "build.unsafe", "cls=%ld x=%ld y=%ld why=builder_lost", (long)theTarget->mUnitClass->mUnitType,
-            (long)theTarget->mTileX, (long)theTarget->mTileY);
-        return;
-    }
-    EEComplexUnit* theWorker;
-    {
-        long theUnitType = theTarget->mUnitClass->mUnitType;
-        U2DPoint<long> theTile(theTarget->mTileX, theTarget->mTileY);
-        EECPUnitManager* theUnitManager = this->mManager->mUnitManager;
-        theWorker = theUnitManager->FindBuilderForTile(theTile, theUnitType);
-    }
-    if (theWorker != NULL) {
-        EEUGBuildRepair* theNew = new EEUGBuildRepair(theWorker->GetPlayer(), theTarget, false);
-        EEUnitGoal* theOld = theWorker->GetLoadGoal();
-        if (theOld != NULL && theOld->mKind == kGoalGather && theTarget->mUnitClass->mUnitType != kUnitTypeFarm)
-            theWorker->SetGoal(theNew, 1, 0);
-        else {
-            theWorker->ClearGoalQueue(0);
-            theWorker->SetGoal(theNew, 0, 0);
-        }
-        theWorker->StartAction(kActionMoveToRepairSite);
-        theWorker->mUnitClass->ActionChanged(theWorker);
-    } else {
-        unsigned long theClass = theGoal->mTargetType;
-        long theID = gUnitClassTable[theClass] != NULL ? gUnitClassTable[theClass]->mTechnology : 100000;
-        long theIndex = EECPBMQueueIndex(theID);
-        EECPBuildRequest theRequest(theClass, U2DPoint<long>(theTarget->mTileX, theTarget->mTileY));
-        theThis->mQueues[theIndex].push_front(theRequest);
-    }
-}
-
-// FUNCTION: EXE 0x4674c4
-// Starts a queued building: walls go to the wall manager; else finds a site and builder and orders the
-// build; returns whether the request is done (also for classes that may be skipped when no builder exists)
-// NEAR (92): the tile local types (P1/P5)
-bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
-{
-    std::vector<EEComplexUnit*> theWorkers;
-    std::vector<EEUnit*> theUnused1;
-    std::vector<EEUnit*> theUnused2;
-    EETileCoordinate theTile(0, 0);
-    std::vector<EEUnit*> theUnused3;
-    EECPBuildManager* theThis = this;
-    EEUnitClass* theClass = gUnitClassTable[inRequest.first];
-    EECPUnitManager* theUnitManager = this->mManager->mUnitManager;
-    long theClassID = inRequest.first;
-    long theID = theClass != NULL ? theClass->mTechnology : 100000;
-    long theIndex = EECPBMQueueIndex(theID);
-    bool theResult = false;
-    bool theNoSite = false;   // the next engine: no site, the request is dropped
-    theTile.mX = inRequest.second.mX;
-    theTile.mY = inRequest.second.mY;
-    bool theHasTile = theTile.mX != 0 && theTile.mY != 0;
-    if (theClass != NULL && theClass->mIsWall && !theClass->mIsTower) {
-        if (theHasTile)
-            this->mManager->mWallManager->BuildWall(inRequest.second, inRequest.second, theClassID, false);
-        theResult = true;
-    } else if (theHasTile && EECPNextBuildUnsafe(this->mPlayer, theTile.mX, theTile.mY) != kNextBlockedNone) {
-        // the next engine (§8.35): the site (or the way there) came under enemy towers or soldiers since it was
-        // queued: dropped, and the strategy told
-        EE_CP_TRACE(this->mPlayer, "build.unsafe", "cls=%ld x=%ld y=%ld why=queued", theClassID, (long)theTile.mX,
-            (long)theTile.mY);
-        EECPNextEventAdd(this->mPlayer, kNextEventNoSite, theClassID, 1);
-        theNoSite = true;
-    } else {
-        this->mManager->mUnitManager->GetIdleCitizens(theWorkers);
-        if (theWorkers.size() > 0) {
-            EEComplexUnit* theWorker = NULL;
-            if (theHasTile || this->FindSite(theClassID, theTile)) {
-                EECPUnitManager* theManager = theThis->mManager->mUnitManager;
-                theWorker = theManager->FindBuilderForTile(theTile, theClassID);
-                if (theWorker == NULL)
-                    EE_CP_TRACE(this->mPlayer, "build.nobuilder", "cls=%ld x=%ld y=%ld", theClassID, (long)theTile.mX,
-                        (long)theTile.mY);
-            } else {
-                EE_CP_TRACE(this->mPlayer, "build.nosite", "cls=%ld", theClassID);
-                // economy.forage_patches: no room for a farm, granary or settlement: claim more land (the towers follow
-                // the new worked sites, EECPRMGuardSites)
-                // the request is dropped and the strategy told (it decides where else, or to claim more land)
-                EECPNextEventAdd(this->mPlayer, kNextEventNoSite, theClassID, 1);
-                theNoSite = true;
-            }
-            if (theWorker != NULL) {
-                EEUnit* theTarget;
-                if (theClassID == kUnitTypeFarm || theClassID == kUnitTypeRoboticFarm) {
-                    RTSTileUnitNode* theNode = gWorld.mMap->GetTileAtLocation(theTile)->mUnits;
-                    theTarget = NULL;
-                    for (; theNode != NULL; theNode = theNode->mNext) {
-                        if (theNode->mUnit != NULL && theNode->mUnit->mUnitClass->mUnitType == theClassID)
-                            theTarget = theNode->mUnit;
-                    }
-                    if (theTarget == NULL) {
-                        inRequest.second.mX = 0;
-                        inRequest.second.mY = 0;
-                        theThis->mQueues[theIndex].push_front(inRequest);
-                    }
-                } else
-                    theTarget = EEMakeBuilding(theThis->mPlayer, theClassID, theTile.mX, theTile.mY);
-                if (theTarget != NULL) {   // a requeued farm request orders no one (was a build goal on NULL)
-                    EEUGBuildRepair* theGoal = new EEUGBuildRepair(theWorker->GetPlayer(), theTarget, false);
-                    theWorker->ClearGoalQueue(0);
-                    theWorker->SetGoal(theGoal, 0, 0);
-                    theWorker->StartAction(kActionMoveToRepairSite);
-                    theWorker->mUnitClass->ActionChanged(theWorker);
-                    EE_CP_TRACE(this->mPlayer, "build.start", "cls=%ld x=%ld y=%ld tc=%ld", theClassID, (long)theTile.mX,
-                        (long)theTile.mY, this->mTownCenterTile.mX == -10000 ? -1L
-                        : (long)sqrt((double)((theTile.mX - this->mTownCenterTile.mX) * (theTile.mX - this->mTownCenterTile.mX)
-                                              + (theTile.mY - this->mTownCenterTile.mY) * (theTile.mY - this->mTownCenterTile.mY))));
-                }
-                theResult = true;
-            } else {
-                bool theSpace = (gWorld.mMap->mMapCharacteristics & kRMMapWaterlessMap) == kRMMapWaterlessMap;
-                theResult = theClassID == kUnitTypeTemple || theClassID == kUnitTypeUniversity || theClassID == kUnitTypeHospital || theClassID == kUnitTypeHouse
-                    || theClassID == kUnitTypeFarm || theClassID == kUnitTypeRoboticFarm || theClassID == kUnitTypeGranary || theClassID == kUnitTypePriestTower
-                    || (theClassID == kUnitTypeDock && theUnitManager->GetCount(0x24) > 0)
-                    || (theClassID == kUnitTypeNavyYard && theUnitManager->GetCount(0x41) > 0)
-                    || (theClassID == kUnitTypeDock && theSpace) || (theClassID == kUnitTypeNavyYard && theSpace)
-                    || (theClassID == kUnitTypeAirport && theUnitManager->GetCount(0x42) > 0)
-                    || (theClassID == kUnitTypeSpaceDock && theUnitManager->GetCount(0x2d8) > 0);
-            }
-        }
-    }
-    return theResult || theNoSite;
-}
-
-// AssignBuilders's two worker tests (find_if 0x6bdbe/0x6be1f; their operator() 0x6bde5/0x6be46 follow among the COMDATs)
-// (provisional names)
-struct EECPBMBuildsTarget {
-    EECPBMBuildsTarget(EEUnit* inTarget) : mTarget(inTarget) {}
-    bool operator()(EEComplexUnit* inWorker);
-
-    EEUnit* mTarget;                        // +0x00
-};
-
-
-bool EECPBMBuildsTarget::operator()(EEComplexUnit* inWorker)
-{
-    EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(inWorker->GetLoadGoal());
-    return theGoal != NULL && theGoal->mTarget == this->mTarget;
-}
-
-struct EECPBMQueuedTarget {
-    EECPBMQueuedTarget(EEUnit* inTarget) : mTarget(inTarget) {}
-    bool operator()(EEComplexUnit* inWorker)
-    {
-        bool theFound = false;
-        for (unsigned long i = 0; i < inWorker->mCitizenBuildQueue.size() && !theFound; i++)
-            theFound = inWorker->mCitizenBuildQueue[i] == this->mTarget;
-        return theFound;
-    }
-
-    EEUnit* mTarget;                        // +0x00
-};
-
-// FUNCTION: EXE 0x4677c6
-// Makes sure every unfinished building has a builder: idles a citizen that only has it queued, else orders
-// the best free citizen to build it
-// GetLoadGoal() (+0x1ec) and a named iterator for both find_if results give the original's code
-void EECPBuildManager::AssignBuilders()
-{
-    std::vector<EEUnit*> theBuildings;
-    std::vector<EEComplexUnit*> theWorkers;
-    EECPBuildManager* theThis = this;
-    std::vector<EEComplexUnit*>::iterator theFound;
-    EEUnit* theUnit = this->mPlayer->mFirstUnit;
-    EECPUnitManager* theUnitManager = this->mManager->mUnitManager;
-    for (; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (!theUnit->mUnitClass->IsLandBuilding())
-            continue;
-        if (theUnit->mComplexUnit->IsFoundation()
-            || (theUnit->mComplexUnit->IsRepairable() && !theUnit->mComplexUnit->mIsBuilt))
-            theBuildings.push_back(theUnit);
-    }
-    this->mManager->mUnitManager->GetCitizens(theWorkers);
-    for (std::vector<EEUnit*>::iterator it = theBuildings.begin(); it != theBuildings.end(); it++) {
-        if (EECPUnitsHolds(this->mPlayer, (*it)->mComplexUnit))
-            continue;   // a script's foundation (ee/EECPNextUnits.h): its own builders
-        long theUnsafe = EECPNextBuildUnsafe(this->mPlayer, (*it)->mTileX, (*it)->mTileY);
-        if (theUnsafe != kNextBlockedNone) {
-            // the next engine (§8.35): no builder is sent; its builders leave it; a foundation under a seen enemy tower
-            // (or with one on the way) is given up and refunded, as CancelStalledBuilds does
-            for (unsigned long w = 0; w < theWorkers.size(); w++)
-                if (EECPBMBuildsTarget(*it)(theWorkers[w])) {
-                    theWorkers[w]->ClearGoalQueue(0);
-                    theWorkers[w]->StartAction(kActionIdle);
-                    theWorkers[w]->mUnitClass->ActionChanged(theWorkers[w]);
-                }
-            EEComplexUnit* theFoundation = (*it)->mComplexUnit;
-            if (theUnsafe == kNextBlockedTower && theFoundation != NULL && theFoundation->IsFoundation()) {
-                EE_CP_TRACE(this->mPlayer, "build.unsafe", "cls=%ld x=%ld y=%ld why=cancelled",
-                    (long)(*it)->mUnitClass->mUnitType, (long)(*it)->mTileX, (long)(*it)->mTileY);
-                EETechTreeNode* theNode = this->mPlayer->mTechnologies->Get((*it)->mUnitClass->mTechnology);
-                (*it)->Kill(0, 0, 0);
-                for (unsigned long i = 2; theNode != NULL && i < 7; i++)
-                    this->mPlayer->AddResource(i, this->mPlayer->ScaleCost(theNode->GetCost(i, 0x20, 1.0f)));
-                EECPNextEventAdd(this->mPlayer, kNextEventNoSite, (*it)->mUnitClass->mUnitType, 1);
-            }
-            continue;
-        }
-        theFound = std::find_if(theWorkers.begin(), theWorkers.end(), EECPBMBuildsTarget(*it));
-        if (theFound != theWorkers.end())
-            continue;
-        theFound = std::find_if(theWorkers.begin(), theWorkers.end(), EECPBMQueuedTarget(*it));
-        if (theFound != theWorkers.end()) {
-            if (dynamic_cast<EEUGBuildRepair*>((*theFound)->GetLoadGoal()) == NULL) {
-                (*theFound)->ClearGoalQueue(0);
-                (*theFound)->StartAction(kActionIdle);
-                (*theFound)->mUnitClass->ActionChanged(*theFound);
-            }
-        } else {
-            EEComplexUnit* theWorker = theUnitManager->FindBuilderForTarget(*it, (*it)->mUnitClass->mUnitType);
-            if (theWorker != NULL) {
-                EEUGBuildRepair* theGoal = new EEUGBuildRepair(theThis->mPlayer, *it, false);
-                theWorker->ClearGoalQueue(0);
-                theWorker->SetGoal(theGoal, 0, 0);
-                theWorker->StartAction(theGoal->GetStartAction());
-                theWorker->mUnitClass->ActionChanged(theWorker);
-            }
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4679d7
-// Cancels every stalled build: requeues it in front (without its site), destroys the foundation, refunds its cost and sends
-// the builder back to the town centre (or idles it)
-// NEAR (60): the original refuses the request's U2DPoint copy ctor (0x44d28b) and loads the player's vptr first
-void EECPBuildManager::CancelStalledBuilds()
-{
-    EEComplexUnit* theUnit = this->mManager->mUnitManager->FindStalledBuilder();
-    while (theUnit != NULL) {
-        EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(theUnit->GetLoadGoal());
-        long theClassID = theGoal->mTargetType;
-        long theID = gUnitClassTable[theClassID] != NULL ? gUnitClassTable[theClassID]->mTechnology
-            : 100000;
-        long theIndex = EECPBMQueueIndex(theID);
-        if (gCPTraceOn) {   // what holds the site: the first blocking unit on the footprint other than the building
-            std::vector<U2DPoint<long> > theTiles;
-            std::vector<EEUnit*> theBlockers;
-            long theBlocker = -1;
-            long theOwner = -1;
-            EEGetFootprintTiles(theGoal->mTarget, theTiles);
-            for (unsigned long i = 0; i < theTiles.size() && theBlocker < 0; i++) {
-                theBlockers.clear();
-                EEGetBlockingUnits(this->mPlayer, theClassID, gWorld.mMap->GetTile(theTiles[i].GetX(), theTiles[i].GetY()), 0,
-                    theBlockers);
-                for (unsigned long j = 0; j < theBlockers.size() && theBlocker < 0; j++)
-                    if (theBlockers[j] != theGoal->mTarget) {
-                        theBlocker = theBlockers[j]->mUnitClass->mUnitType;
-                        theOwner = theBlockers[j]->mPlayer != NULL ? (long)theBlockers[j]->mPlayer->mPlayerID : -1;
-                    }
-            }
-            EECPTraceOut(this->mPlayer, "build.stalled", "cls=%ld x=%ld y=%ld blocker=%ld owner=%ld", theClassID,
-                (long)theGoal->mTarget->mTileX, (long)theGoal->mTarget->mTileY, theBlocker, theOwner);
-        }
-        // Requeued without its site (the original kept the stalled foundation's tile): a blocker that stays (most
-        // often the AI's own earlier foundation at that tile, still dying) stalled every new foundation there, and the
-        // AI ordered the same building at the same tile every 3-4 s for the rest of the game (docs/AI_RESEARCH.md
-        // §8.6: 1,426 of 1,466 stalls in six 60-minute games). FindSite now picks a free site.
-        this->mQueues[theIndex].push_front(EECPBuildRequest(theClassID, U2DPoint<long>(0, 0)));
-        theGoal->mTarget->Kill(0, 0, 0);
-        for (unsigned long i = 2; i < 7; i++)
-            this->mPlayer->AddResource(i, this->mPlayer->ScaleCost(theGoal->mTargetNode->GetCost(i, 0x20, 1.0f)));
-        if (this->mTownCenterTile.mX != -10000 && this->mTownCenterTile.mY != -10000) {
-            theUnit->ClearGoalQueue(0);
-            theUnit->SetGoal(new EEUGLocation((float)this->mTownCenterTile.GetX(), (float)this->mTownCenterTile.GetY(), 0.0f, false, true,
-                false, 0.0f, false, false), 0, 0);
-            theUnit->StartAction(kActionPrepareToMove);
-        } else
-            theUnit->StartAction(kActionIdle);
-        theUnit->mUnitClass->ActionChanged(theUnit);
-        theUnit = this->mManager->mUnitManager->FindStalledBuilder();
-    }
-}
 
 
 
@@ -529,14 +213,14 @@ void EECPBuildManager::CancelStalledBuilds()
 // FUNCTION: EXE 0x467b87
 // Collects candidate dock tiles (kind 2: water) or space dock tiles (kind 4: space) on the largest such area
 // next to the town centre's continent, nearest the town first; then marks the site tiles collected
-void EECPBuildManager::CollectSiteTiles(char inKind)
+void EECPPlacement::CollectSiteTiles(char inKind)
 {
     std::vector<U2DPoint<long> > theRegion;
     std::vector<U2DPoint<long> > theRing;
     U2DPoint<long> theCenter;
     EEMap* theMap = gWorld.mMap;
     std::vector<U2DPoint<long> >& theTiles = inKind == 2 ? this->mWaterSites : this->mSpaceSites;
-    theCenter = this->mManager->mBuildManager->mTownCenterTile;
+    theCenter = this->mTownCenterTile;
     if (theMap == NULL || theCenter.mX == -10000 || theCenter.mY == -10000)
         return;
     unsigned short theKindID = (unsigned short)gContinentManager.GetLargestContinent(inKind);
@@ -569,7 +253,7 @@ void EECPBuildManager::CollectSiteTiles(char inKind)
 // FUNCTION: EXE 0x467e10
 // Tells whether armed enemy units stand near a tile (influence regions around it, one tile on small island
 // or planet maps), ignoring idle searchers (timer above 60 s)
-bool EECPBuildManager::HasEnemyNear(long inX, long inY)
+bool EECPPlacement::HasEnemyNear(long inX, long inY)
 {
     // a real threat that the player sees or remembers (EECPNextSiteThreat: enemy soldiers seen within kNextThreatRange
     // tiles lately, an enemy tower or armed building in range; docs/AI_RESEARCH.md §8.34). The original counted every
@@ -580,11 +264,11 @@ bool EECPBuildManager::HasEnemyNear(long inX, long inY)
 // FUNCTION: EXE 0x467f97
 // Finds an airport site with room for 4 (else 3) runway pieces facing away from the town centre, rings 5..99
 // around it, reachable and with no enemies near
-bool EECPBuildManager::FindAirportSite(EETileCoordinate& outTile)
+bool EECPPlacement::FindAirportSite(EETileCoordinate& outTile)
 {
     std::vector<U2DPoint<long> > theTiles;
     bool theResult = false;
-    U2DPoint<long>& theTownTile = this->mManager->mBuildManager->mTownCenterTile;
+    U2DPoint<long>& theTownTile = this->mTownCenterTile;
     EETileCoordinate theCenter;
     theCenter.mX = theTownTile.mX;
     theCenter.mY = theTownTile.mY;
@@ -636,7 +320,7 @@ bool EECPBuildManager::FindAirportSite(EETileCoordinate& outTile)
 }
 // FUNCTION: EXE 0x4681b3
 // Finds an anti-air site around a building (FindAntiAirSiteAround its tile and size)
-bool EECPBuildManager::FindAntiAirSiteNear(EEUnit* inUnit, EETileCoordinate& outTile)
+bool EECPPlacement::FindAntiAirSiteNear(EEUnit* inUnit, EETileCoordinate& outTile)
 {
     long theSize = inUnit->mUnitClass->mTileSize;
     EETileCoordinate theTile = inUnit->GetTile();
@@ -646,12 +330,12 @@ bool EECPBuildManager::FindAntiAirSiteNear(EEUnit* inUnit, EETileCoordinate& out
 // FUNCTION: EXE 0x4681e3
 // Finds an anti-air site in square rings growing out from a tile up to the anti-air range, on the tile's
 // continent
-bool EECPBuildManager::FindAntiAirSiteAround(EETileCoordinate& inTile, long inSize, EETileCoordinate& outTile)
+bool EECPPlacement::FindAntiAirSiteAround(EETileCoordinate& inTile, long inSize, EETileCoordinate& outTile)
 {
     std::vector<EETileCoordinate> theTiles;
     std::vector<EETileCoordinate> theUnused;
     unsigned short theContinent = gContinentManager.GetContinent(inTile, kAIPathLandMass);
-    long theType = this->mManager->GetAntiAirClass();
+    long theType = EECPAntiAirClass(this->mPlayer);
     bool theResult = false;
     EEUnitClass* theClass = gUnitClassTable[theType];
     long theRange = UMFloatToLong(this->mPlayer->GetUpgrade(theType)->mRange);
@@ -698,7 +382,7 @@ struct EECPBMClusterGreater {
 // FUNCTION: EXE 0x46832b
 // Finds an anti-air site: by a capitol not yet covered, then by a wonder, then in the biggest clusters of
 // the player's buildings
-bool EECPBuildManager::FindAntiAirSite(EETileCoordinate& outTile)
+bool EECPPlacement::FindAntiAirSite(EETileCoordinate& outTile)
 {
     std::vector<EECPBMCluster> theClusters;
     EEAIAStarBounds theBounds;
@@ -707,7 +391,7 @@ bool EECPBuildManager::FindAntiAirSite(EETileCoordinate& outTile)
     theTile.mX = 0;
     theTile.mY = 0;
     EETechTree* theTechTree = this->mPlayer->GetTechTree();
-    long theType = this->mManager->GetAntiAirClass();
+    long theType = EECPAntiAirClass(this->mPlayer);
     bool theResult = false;
     std::vector<EEUnit*>::iterator it;
     EEUnit* theUnit;
@@ -766,7 +450,7 @@ bool EECPBuildManager::FindAntiAirSite(EETileCoordinate& outTile)
 // FindCenterSite's sort of the resource centres (8 bytes by value to std::sort 0x6c120; its operator() sits among the sort
 // COMDATs) (provisional name)
 // New: a resource centre's squared tile distance from the town centre (1 << 40 with no town centre or unit)
-static long long EECPBMHomeDistance2(EECPBuildManager* inManager, EECPResourceCenter* inCenter)
+static long long EECPBMHomeDistance2(EECPPlacement* inManager, EECPResourceCenter* inCenter)
 {
     EEUnit* theUnit = inCenter->mUnit != NULL ? static_cast<EEUnit*>(inCenter->mUnit)
         : inCenter->mUnits.empty() ? NULL : inCenter->mUnits[0];
@@ -782,7 +466,7 @@ static const long long kHomeSiteRange = 20;
 
 // New: orders resource centres by their squared tile distance from the town centre (stable: equal distances
 // keep their order; centres with no unit go last)
-static void EECPBMNearestHomeFirst(EECPBuildManager* inManager, std::vector<EECPResourceCenter*>& ioCenters)
+static void EECPBMNearestHomeFirst(EECPPlacement* inManager, std::vector<EECPResourceCenter*>& ioCenters)
 {
     if (inManager->mTownCenterTile.mX == -10000)
         return;
@@ -831,7 +515,7 @@ struct EECPBMCenterLess {
 // FUNCTION: EXE 0x46865a
 // Finds a site at a resource centre: a settlement at an unclaimed one, else a temple, university or hospital
 // at a claimed one, preferring centres whose units stand in fewer matching area effects
-bool EECPBuildManager::FindCenterSite(long inUnitClass, EETileCoordinate& outTile)
+bool EECPPlacement::FindCenterSite(long inUnitClass, EETileCoordinate& outTile)
 {
     std::vector<EECPResourceCenter*> theCenters;
     EETileCoordinate theTile;
@@ -899,7 +583,7 @@ bool EECPBuildManager::FindCenterSite(long inUnitClass, EETileCoordinate& outTil
 
 // FUNCTION: EXE 0x468862
 // Finds a granary site just beyond a resource centre's drop-off distance with room for farms around it
-bool EECPBuildManager::FindGranarySite(EETileCoordinate& outTile)
+bool EECPPlacement::FindGranarySite(EETileCoordinate& outTile)
 {
     std::vector<EETileCoordinate> theTiles;
     bool theResult = false;
@@ -956,7 +640,7 @@ bool EECPBuildManager::FindGranarySite(EETileCoordinate& outTile)
 // FUNCTION: EXE 0x4689d0
 // Finds a site for a production building at the active resource centres, round robin from the last used one
 // Common found result and loop exit preserve the original 117-byte body.
-bool EECPBuildManager::FindProductionSite(long inUnitClass, EETileCoordinate& outTile)
+bool EECPPlacement::FindProductionSite(long inUnitClass, EETileCoordinate& outTile)
 {
     // port: the active resource centres nearest the town centre first (the original went round robin through all
     // of them: barracks and archery ranges stood 30+ tiles out at an undefended mine, playtest 2026-11-06)
@@ -976,7 +660,7 @@ bool EECPBuildManager::FindProductionSite(long inUnitClass, EETileCoordinate& ou
 // FUNCTION: EXE 0x468a45
 // Finds a dock or navy yard site among the water site tiles away from existing ones; sites without a
 // builder are skipped
-bool EECPBuildManager::FindShoreSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
+bool EECPPlacement::FindShoreSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
 {
     std::vector<EEUnit*> the24;
     std::vector<EEUnit*> the41;
@@ -984,7 +668,6 @@ bool EECPBuildManager::FindShoreSite(long inUnitClass, long inSize, EETileCoordi
     unsigned short theContinent = gContinentManager.GetContinent(this->mTownCenterTile, kAIPathLandMass);
     bool theResult = false;
     std::vector<U2DPoint<long> >& theSites = this->mWaterSites;
-    EECPUnitManager* theUnitManager = this->mManager->mUnitManager;
     unsigned long thePlayerID = this->mPlayer->mPlayerID;
     if (theSites.size() > 0) {
         EEGetPlayerUnitsOfType(kUnitTypeDock, thePlayerID, the24);
@@ -997,7 +680,7 @@ bool EECPBuildManager::FindShoreSite(long inUnitClass, long inSize, EETileCoordi
                 continue;
             theResult = this->CanBuildAt(theContinent, inUnitClass, theSites[i], inSize, false, true, this->mTownCenterTile.GetX(),
                 this->mTownCenterTile.GetY());
-            if (theResult && theUnitManager->FindBuilderForTile(theSites[i], inUnitClass) != NULL) {
+            if (theResult && this->HasBuilderFor(theSites[i], inUnitClass)) {
                 outTile.mX = theSites[i].GetX();
                 outTile.mY = theSites[i].GetY();
             } else
@@ -1013,7 +696,7 @@ bool EECPBuildManager::FindShoreSite(long inUnitClass, long inSize, EETileCoordi
 // Class 0x302 searches the shore tiles of the town continents (nearest first) on planet maps, else the town continent's
 // shore tiles near own units; others use mSpaceSites. 0x2d8 keeps 75 from its kind and uses EEIsSpaceDockSiteOpen
 // (its tile moved by -1, -1)
-bool EECPBuildManager::FindSpaceSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
+bool EECPPlacement::FindSpaceSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
 {
     bool theResult = false;
     std::vector<U2DPoint<long> >& theWater = this->mSpaceSites;
@@ -1061,7 +744,6 @@ bool EECPBuildManager::FindSpaceSite(long inUnitClass, long inSize, EETileCoordi
     if (theSites.size() > 0) {
         std::vector<EEUnit*> theUnits;
         unsigned short theContinent = gContinentManager.GetContinent(this->mTownCenterTile, kAIPathLandMass);
-        EECPUnitManager* theUnitManager = this->mManager->mUnitManager;
         unsigned long thePlayerID = this->mPlayer->mPlayerID;
         float theDistance;
         if (inUnitClass == 0x2d8)
@@ -1079,7 +761,7 @@ bool EECPBuildManager::FindSpaceSite(long inUnitClass, long inSize, EETileCoordi
                     this->mTownCenterTile.mX, this->mTownCenterTile.GetY());
             else
                 theResult = EEIsSpaceDockSiteOpen(theSites[i].mX, theSites[i].GetY(), this->mPlayer);
-            if (theResult && theUnitManager->FindBuilderForTile(theSites[i], inUnitClass) == NULL)
+            if (theResult && !this->HasBuilderFor(theSites[i], inUnitClass))
                 theResult = false;   // no builder: keep looking
             if (!theResult)
                 continue;
@@ -1097,7 +779,7 @@ bool EECPBuildManager::FindSpaceSite(long inUnitClass, long inSize, EETileCoordi
 // FUNCTION: EXE 0x469245
 // Finds a tower site: along town continent shores on island maps, then at a resource centre, then near an
 // open gate, then at a choke point near a town not yet guarded by that class
-bool EECPBuildManager::FindTowerSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
+bool EECPPlacement::FindTowerSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
 {
     std::vector<EEUnit*> theGates;
     std::vector<EEAIChokePoint*> theChokePoints;
@@ -1111,7 +793,7 @@ bool EECPBuildManager::FindTowerSite(long inUnitClass, long inSize, EETileCoordi
     EETileArea theArea;
     EEMap* theMap = gWorld.GetMap();
     EEUnitClass* theClass = gUnitClassTable[inUnitClass];
-    long theGateType = this->GetManager()->GetGateClass();
+    long theGateType = EECPGateClass(this->mPlayer);
     unsigned long thePlayerID = this->GetPlayer()->GetPlayerID();
     bool theResult = false;
     unsigned long i;
@@ -1276,18 +958,17 @@ bool EECPBuildManager::FindTowerSite(long inUnitClass, long inSize, EETileCoordi
 // Finds a wonder site with a margin of inSize in rings around the town centre (only once a wall gate exists)
 // NEAR (38): the outTile store through EETileCoordinate(theTiles[i].GetX() + h, h + theTiles[i].GetY()) scores 62.5
 // but the equivalence check calls it DIFF (the mX read through the out-of-line operator+ return)
-bool EECPBuildManager::FindWonderSite(long inUnitClass, unsigned long inSize, EETileCoordinate& outTile)
+bool EECPPlacement::FindWonderSite(long inUnitClass, unsigned long inSize, EETileCoordinate& outTile)
 {
     EEUnitClass* theClass = gUnitClassTable[inUnitClass];
     std::vector<EETileCoordinate> theTiles;
     bool theResult = false;
     EETileCoordinate theCenter(0, 0);
     long theClassSize = theClass->GetTileSize();
-    theCenter = this->GetManager()->GetBuildManager()->mTownCenterTile;
+    theCenter = this->mTownCenterTile;
     if (theCenter.GetX() != -10000 && theCenter.GetY() != -10000) {
         unsigned short theContinent = gContinentManager.GetContinent(theCenter, kAIPathLandMass);
-        EECPWallManager* theWalls = this->GetManager()->mWallManager;
-        if (theWalls->mGateTile.GetX() != 0 && theWalls->mGateTile.GetY() != 0) {
+        {   // (the original searched only once its wall manager had planned a gate; stage 6 has none)
             for (unsigned long r = 1; r < 200; r++) {
                 EEGetSquareRingTiles(theCenter.GetX(), theCenter.GetY(), r, theTiles);
                 unsigned long theCount = theTiles.size();
@@ -1312,7 +993,7 @@ bool EECPBuildManager::FindWonderSite(long inUnitClass, unsigned long inSize, EE
 // anti-air, space) or, for farms, an unbuilt farm foundation; returns whether one was found
 // NEAR (55): the switch layout, which depends on the tile parameter: the shared declaration takes a long*
 // (EECPCivilizationManager.cpp), this definition a tile reference
-bool EECPBuildManager::FindSite(long inUnitClass, EETileCoordinate& theTile)
+bool EECPPlacement::FindSite(long inUnitClass, EETileCoordinate& theTile)
 {
     long theID = gUnitClassTable[inUnitClass] != NULL ? gUnitClassTable[inUnitClass]->GetTechnology() : 100000;
     EETechTreeNode* theNode = this->mPlayer->GetTechTree()->Get(theID);
@@ -1387,44 +1068,9 @@ bool EECPBuildManager::FindSite(long inUnitClass, EETileCoordinate& theTile)
 }
 
 
-
-// FUNCTION: EXE 0x46a73b
-// Reads the build queues, town centre tile and next update time from a saved game (older saves lack
-// the last queue or the time); returns the first read error
-long EECPBuildManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    long theResult = 0;
-    U2DPoint<long> theTile;
-    for (unsigned long i = 0; i < EEEpochCount(); i++) {
-        if (theResult != 0)
-            break;
-        this->mQueues[i].clear();
-        if (inMajorVersion == 0 && inMinorVersion < 0xea && i == 14)
-            continue;
-        unsigned long theCount;
-        theResult = inFile.Read(theCount);
-        if (theResult != 0)
-            continue;
-        for (unsigned long j = 0; j < theCount && theResult == 0; j++) {
-            unsigned long theClass;
-            theResult = inFile.Read(theClass);
-            if (theResult != 0)
-                continue;
-            theResult = theTile.Load(inFile);
-            if (theResult == 0)
-                this->mQueues[i].push_back(EECPBuildRequest(theClass, theTile));
-        }
-    }
-    if (theResult == 0)
-        theResult = this->mTownCenterTile.Load(inFile);
-    if ((inMajorVersion != 0 || inMinorVersion >= 0xdc) && theResult == 0)
-        theResult = inFile.Read(this->mNextUpdateTime);
-    return theResult;
-}
-
 // FUNCTION: EXE 0x46a833
 // Tells whether a square of inSize at a tile lies within the distance of the far end of an airport runway
-bool EECPBuildManager::IsNearAirportEnd(long inX, long inY, long inSize, float inDistance)
+bool EECPPlacement::IsNearAirportEnd(long inX, long inY, long inSize, float inDistance)
 {
     std::vector<EEUnit*> theUnits;
     U2DPoint<long> theCenter(inX + inSize / 2, inSize / 2 + inY);
@@ -1468,230 +1114,15 @@ bool EECPBuildManager::IsNearAirportEnd(long inX, long inY, long inSize, float i
     return theResult;
 }
 
-// FUNCTION: EXE 0x46a989
-// Tells whether any queue of a later epoch than the current one holds requests
-bool EECPBuildManager::HasLaterEpochRequests()
-{
-    long theEpoch = this->mPlayer->GetTechTree()->mCurrentEpoch;
-    bool theFound = false;
-    for (long i = theEpoch + 1; i < EEEpochCount() && !theFound; i++) {
-        if (this->mQueues[i].size() > 0)
-            theFound = true;
-    }
-    return theFound;
-}
 
-// FUNCTION: EXE 0x46a9c1
-// Queues a building class in its epoch's queue (appended, or once only and not while one is unfinished,
-// at the front or back) and reserves its cost
-// NEAR (85.5): bools (byte tests) and make_pair (the three pair ctors 0x46c5f3 out of line one level down, the
-// temporary straight into push_back: first is the element's unsigned long); open: inUnitClass kept in memory, cmp al, bl
-void EECPBuildManager::QueueBuilding(unsigned long inUnitClass, bool inAppend, bool inFront)
-{
-    U2DPoint<long> theTile;
-    EECPBuildQueue::iterator it;
-    EECPBuildRequest theRequest;
-    EETechTree* theTechTree = this->mPlayer->GetTechTree();
-    long theID = gUnitClassTable[inUnitClass] != NULL ? gUnitClassTable[inUnitClass]->mTechnology : 100000;
-    long theIndex = EETechTreeEpochOf(theID);
-    if (theIndex < 0)
-        return;   // a class with no tech (the original indexed past its 15 queues)
-    if (inAppend)
-        this->mQueues[theIndex].push_back(std::make_pair(inUnitClass, theTile));
-    else {
-        EECPBuildQueue& theQueue = this->mQueues[theIndex];
-        for (it = theQueue.begin(); it != theQueue.end(); ++it) {
-            theRequest = *it;
-            if (theRequest.first == inUnitClass)
-                break;
-        }
-        if (it == theQueue.end()) {
-            bool theSkip = false;
-            if (inUnitClass != 0x2a && inUnitClass != 0x33a)
-                theSkip = this->mManager->GetUnitManager()->HasUnfinished(inUnitClass);
-            if (theSkip)
-                return;
-            if (inFront)
-                theQueue.push_front(std::make_pair(inUnitClass, theTile));
-            else
-                theQueue.push_back(std::make_pair(inUnitClass, theTile));
-        } else
-            return;
-    }
-    EE_CP_TRACE(this->mPlayer, "build.queue", "cls=%lu front=%d", inUnitClass, inFront ? 1 : 0);
-    this->mManager->GetResourceManager()->AddCosts(theTechTree->Get(theID), 1);
-}
 
-// FUNCTION: EXE 0x46ab26
-// Queues a building class at a given tile in its epoch's queue and reserves its cost
-void EECPBuildManager::QueueBuildingAt(long inUnitClass, long inX, long inY)
-{
-    EETechTree* theTechTree = this->mPlayer->GetTechTree();
-    long theID = gUnitClassTable[inUnitClass] != NULL ? gUnitClassTable[inUnitClass]->mTechnology : 100000;
-    long theIndex = EETechTreeEpochOf(theID);
-    if (theIndex < 0)
-        return;   // a class with no tech (the original indexed past its 15 queues)
-    this->mQueues[theIndex].push_back(EECPBuildRequest(inUnitClass, U2DPoint<long>(inX, inY)));
-    EE_CP_TRACE(this->mPlayer, "build.queue", "cls=%ld x=%ld y=%ld", inUnitClass, inX, inY);
-    this->mManager->GetResourceManager()->AddCosts(theTechTree->Get(theID), 1);
-}
-
-// FUNCTION: EXE 0x46abb5
-// Handles an unfinished building left without builders: orders a citizen to repair it, else (not for town
-// centres) destroys it, refunds its cost and queues it again
-// (the repair goes to the citizen FindBuilderForTile returns, not to inUnit; an earlier draft had it reversed)
-void EECPBuildManager::BuildingAbandoned(EEComplexUnit* inUnit)
-{
-    long theType = inUnit->mUnitClass->mUnitType;
-    if (!(inUnit->mHitPoints > 0) || inUnit->mNumBuilders != 0)
-        return;
-    U2DPoint<long> theTile(inUnit->mTileX, inUnit->mTileY);
-    EECPUnitManager* theUnitManager = this->mManager->mUnitManager;
-    EEComplexUnit* theCitizen = theUnitManager->FindBuilderForTile(theTile, theType);
-    if (theCitizen != NULL)
-        theCitizen->OrderRepair(inUnit);
-    else if (theType != kUnitTypeSettlement && theType != kUnitTypeTownCenter && theType != kUnitTypeCapitol) {
-        long theID = gUnitClassTable[theType] != NULL ? gUnitClassTable[theType]->mTechnology : 100000;
-        EETechTreeNode* theNode = this->mPlayer->GetTechTree()->Get(theID);
-        inUnit->Kill(0, 0, 0);
-        for (unsigned long i = 2; i < 7; i++) {
-            long theAmount = this->mPlayer->ScaleCost(theNode->GetCost(i, 0x20, 1.0f));
-            this->mPlayer->AddResource(i, theAmount);
-        }
-        this->QueueBuilding(theType, 1, 0);
-    }
-}
-
-// FUNCTION: EXE 0x46acb8
-// Forgets every queued request's site, the town centre tile and the update time
-void EECPBuildManager::Reset()
-{
-    for (unsigned long i = 0; i < EEEpochCount(); i++) {
-        for (EECPBuildQueue::iterator it = this->mQueues[i].begin(); it != this->mQueues[i].end(); ++it) {
-            (*it).second = U2DPoint<long>(0, 0);
-        }
-    }
-    this->mTownCenterTile = U2DPoint<long>(-10000, -10000);
-    this->mNextUpdateTime = 0;
-}
-
-// FUNCTION: EXE 0x46ad23
-// Removes requests from the queues before an epoch whose building is obsolete by then
-// (mQueues[i] re-indexed at each use, no reference local)
-void EECPBuildManager::DropObsoleteRequests(long inEpoch)
-{
-    EECPBuildQueue::iterator it;
-    EETechTree* theTechTree = this->mPlayer->GetTechTree();
-    for (long i = 0; i < inEpoch; i++) {
-        for (it = this->mQueues[i].begin(); it != this->mQueues[i].end();) {
-            EEUnitClass* theClass = gUnitClassTable[(*it).first];
-            long theID = theClass != NULL ? theClass->mTechnology : 100000;
-            if (theTechTree->Get(theID)->mObsoleteEpoch < inEpoch)
-                it = this->mQueues[i].erase(it, it + 1);
-            else
-                ++it;
-        }
-    }
-}
-
-// FUNCTION: EXE 0x46add5
-// Recollects the dock and space dock site tiles after loading and rebases the update time; returns 0
-long EECPBuildManager::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    this->mWaterSites.clear();
-    this->CollectSiteTiles(2);
-    this->mSpaceSites.clear();
-    this->CollectSiteTiles(4);
-    this->mNextUpdateTime += gPhysics->mGameTime;
-    return 0;
-}
-
-// FUNCTION: EXE 0x46ae17
-// Writes the build queues, town centre tile and time to the next update to the saved game; returns the
-// first write error
-// NEAR (91): loop/test order
-long EECPBuildManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    EECPBuildQueue::iterator it;
-    unsigned long theCount;
-    long theResult = 0;
-    for (unsigned long i = 0; i < EEEpochCount() && theResult == 0; i++) {
-        theCount = this->mQueues[i].size();
-        theResult = outFile.Write(theCount);
-        if (theResult != 0)
-            continue;
-        for (it = this->mQueues[i].begin(); it != this->mQueues[i].end() && theResult == 0; ++it) {
-            theResult = outFile.Write((*it).first);
-            if (theResult == 0)
-                theResult = (*it).second.Save(outFile);
-        }
-    }
-    if (theResult == 0 && (theResult = this->mTownCenterTile.Save(outFile)) == 0) {
-        theResult = outFile.Write(this->mNextUpdateTime - gPhysics->mGameTime);
-    }
-    return theResult;
-}
 
 // FUNCTION: EXE 0x46aef3
 // Records a unit's tile as the town centre tile
 // SetXY: VC6 evaluates the arguments right to left (mTileY first)
-void EECPBuildManager::SetTownCenter(EEUnit* inUnit)
+void EECPPlacement::SetTownCenter(EEUnit* inUnit)
 {
     this->mTownCenterTile.SetXY(inUnit->mTileX, inUnit->mTileY);
-}
-// FUNCTION: EXE 0x46af0d
-// Every 3 seconds starts the first buildable request of each epoch up to the current one (rotating ones
-// not yet producible, dropping obsolete ones), cancels stalled builds and every 2 minutes reassigns builders
-// Explicit zero request and staged tech-node lookup preserve the original 443-byte body.
-void EECPBuildManager::Update(unsigned long inTime)
-{
-    EECPBuildRequest theRequest(0UL, U2DPoint<long>(0, 0));
-    EETechTree* theTechTree = this->mPlayer->GetTechTree();
-    long theEpoch = theTechTree->mCurrentEpoch;
-    if (!this->mPlayer->mCanBuild || !(inTime > this->mNextUpdateTime))
-        return;
-    if (!this->mSiteTilesCollected) {
-        this->CollectSiteTiles(2);
-        this->CollectSiteTiles(4);
-    }
-    this->CancelStalledBuilds();
-    // One start per update, as the original, but a request that cannot start (no site, no builder) no longer uses up
-    // the update: up to kStartAttempts producible requests are tried in queue order (the original tried one, so a
-    // tower with no site took every other update for the whole game; docs/AI_RESEARCH.md §8.7)
-    const long kStartAttempts = 4;
-    long theAttempts = 0;
-    bool theStarted = false;
-    for (long i = 0; i <= theEpoch && !theStarted && theAttempts < kStartAttempts; i++) {
-        for (unsigned long theLeft = this->mQueues[i].size(); theLeft > 0 && !theStarted && theAttempts < kStartAttempts;
-             theLeft--) {
-            theRequest = this->mQueues[i].front();
-            long theID = gUnitClassTable[theRequest.first] != NULL ? gUnitClassTable[theRequest.first]->mTechnology
-                : 100000;
-            EETechTreeNode* theNode = theTechTree->Get(theID);
-            this->mQueues[i].pop_front();
-            if (theNode != NULL && theNode->GetIsObsolete())
-                continue;   // dropped
-            if (!this->mPlayer->CanProduceUnitType(theRequest.first, 0x20, NULL)) {
-                this->mQueues[i].push_back(theRequest);
-                break;   // as the original: the next epoch's queue
-            }
-            theAttempts++;
-            if (this->StartBuilding(theRequest)) {
-                long theID2 = gUnitClassTable[theRequest.first] != NULL
-                    ? gUnitClassTable[theRequest.first]->mTechnology : 100000;
-                EETechTreeNode* theNode2 = theTechTree->Get(theID2);
-                this->mManager->mResourceManager->RemoveCosts(theNode2, 1);
-                theStarted = true;
-            } else
-                this->mQueues[i].push_back(theRequest);
-        }
-    }
-    if (inTime > this->mNextBuilderCheckTime) {
-        if (this->mNextBuilderCheckTime > 0)
-            this->AssignBuilders();
-        this->mNextBuilderCheckTime = inTime + 120000;
-    }
-    this->mNextUpdateTime = inTime + 3000;
 }
 // (static: only CanBuildAt calls it; emitted before it) (provisional name)
 // FUNCTION: EXE 0x46b0c8
@@ -1717,7 +1148,7 @@ struct EECPBMOnContinent {
 // strictly also no choke point, hill, bush, runway end, town centre, gate near and walkable ground around it
 // inMargin adds a one-tile margin; the reachability test (civ power 0x30) starts at (inX, inY); site classes need
 // a side or corner tile on inContinent. The border must be passable except one run (at least 3 tiles for site classes)
-bool EECPBuildManager::CanBuildAt(unsigned short inContinent, long inUnitClass, EETileCoordinate& inTile, long inSize,
+bool EECPPlacement::CanBuildAt(unsigned short inContinent, long inUnitClass, EETileCoordinate& inTile, long inSize,
     bool inMargin, bool inStrict, long inX, long inY)
 {
     std::vector<U2DPoint<long> > theTiles;
@@ -1768,7 +1199,7 @@ bool EECPBuildManager::CanBuildAt(unsigned short inContinent, long inUnitClass, 
                     if (inUnitClass == kUnitTypeFarm || inUnitClass == kUnitTypeRoboticFarm)
                         theResult = EEGetTileUnitOfType(inTile, kUnitTypeResForageBush) == NULL;
                     if (theResult) {
-                        if (this->mManager->mUnitManager->GetCount(0x42) > 0)
+                        if (EECPCountOwn(this->mPlayer, kUnitTypeAirport) > 0)
                             theResult = !this->IsNearAirportEnd(theX, theY, inSize, 2.0f);
                         if (theResult) {
                             if (!EECPIsSiteClass(inUnitClass))
@@ -1979,3 +1410,500 @@ bool EECPUnitWithinDistance::operator()(EEUnit* inUnit) const
 // TEMPLATE: EXE 0x46c585
 // TEMPLATE: EXE 0x46c5a2
 // TEMPLATE: EXE 0x46e62a
+
+
+// whether one of the player's living citizens on the map could build a class at a tile: the unit manager's FindBuilder
+// rule (the site's path area, or for the site classes and towers a shore of its continent touching the footprint) over
+// every citizen, whoever holds it (the Lua verbs pick the builder)
+bool EECPPlacement::HasBuilderFor(const U2DPoint<long>& inTile, long inUnitClass)
+{
+    EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(inTile);
+    bool theEdge = gWorld.mMap != NULL && gWorld.mMap->IsEdgeTile(inTile.mX, inTile.mY);
+    for (EEUnit* theUnit = this->mPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        EEComplexUnit* c = theUnit->mComplexUnit;
+        long theCategory = theUnit->mUnitClass->mCategory;
+        if (c == NULL || theCategory != kUnitCategoryLandCitizen || !(theUnit->mHitPoints > 0) || c->mTileX == -10000)
+            continue;
+        if (theEdge || gContinentManager.GetPathAreaAt(c) == theArea)
+            return true;
+        if (EECPIsSiteClass(inUnitClass) || inUnitClass == EECPTowerClass(this->mPlayer)) {
+            long theSize = gUnitClassTable[inUnitClass]->mTileSize;
+            EEAIContinent* theContinent = gContinentManager.GetContinentAt(c->GetTileX(), c->GetTileY());
+            if (theContinent == NULL)
+                continue;
+            const std::vector<U2DPoint<long> >& theTiles = theContinent->mShoreTiles;
+            for (long x = inTile.mX; x < inTile.mX + theSize; x++)
+                for (long y = inTile.mY; y < inTile.mY + theSize; y++)
+                    if (std::find(theTiles.begin(), theTiles.end(), U2DPoint<long>(x, y)) != theTiles.end())
+                        return true;
+        }
+    }
+    return false;
+}
+
+// the site tiles collected again after a load
+long EECPPlacement::Restore()
+{
+    this->mWaterSites.clear();
+    this->CollectSiteTiles(2);
+    this->mSpaceSites.clear();
+    this->CollectSiteTiles(4);
+    return 0;
+}
+
+// the town centre tile: the first own unit tracked with no tile yet (the unit manager's UnitAdded rule), saved
+long EECPPlacement::Load(FSFile& inFile)
+{
+    return this->mTownCenterTile.Load(inFile);
+}
+
+long EECPPlacement::Save(FSFile& outFile)
+{
+    return this->mTownCenterTile.Save(outFile);
+}
+
+void EECPPlacement::Reset()
+{
+    this->mTownCenterTile = U2DPoint<long>(-10000, -10000);
+    this->mTypesSeen.clear();
+}
+
+void EECPPlacement::UnitAdded(EEComplexUnit* inUnit)
+{
+    if (inUnit == NULL || inUnit->mUnitClass == NULL || !(inUnit->mHitPoints > 0))
+        return;
+    long theCategory = inUnit->mUnitClass->mCategory;
+    long theType = inUnit->mUnitClass->mUnitType;
+    if (theCategory == kUnitCategoryProjectile || theCategory == kUnitCategoryBomb || theCategory == kUnitCategoryMissile
+        || theType == kUnitTypePathPoint)
+        return;
+    if (!this->mTypesSeen.insert(theType).second)
+        return;
+    if (this->mTownCenterTile.mX == -10000 && this->mTownCenterTile.mY == -10000 && !inUnit->mUnitClass->IsLandBuilding())
+        this->SetTownCenter(inUnit);
+}
+
+long EECPCountOwn(EEComputerPlayer* inPlayer, long inType)
+{
+    long theCount = 0;
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+        if (theUnit->mUnitClass->mUnitType == inType && theUnit->mComplexUnit != NULL && theUnit->mHitPoints > 0)
+            theCount++;
+    return theCount;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The epoch's classes (EECPCivilizationManager's, moved here with the placement searches in stage 6)
+
+long EECPAntiAirClass(EEComputerPlayer* inPlayer)
+{
+    long theResult = 0;
+    long theEpoch = inPlayer->mTechnologies->mCurrentEpoch;
+    if (theEpoch >= kTechEpochAtomicWW1) {
+        if (theEpoch > kTechEpochAtomicModern) {
+            if (theEpoch > kTechEpochNano) {
+                if (theEpoch == kTechEpochSpace)
+                    theResult = 0x300;
+            } else
+                theResult = 0x93;
+        } else
+            theResult = 0x91;
+    }
+    return theResult;
+}
+
+long EECPFishingBoatClass(EEComputerPlayer* inPlayer)
+{
+    long theResult = 0;
+    long theEpoch = inPlayer->mTechnologies->mCurrentEpoch;
+    if (theEpoch >= kTechEpochPrehistoric) {
+        if (theEpoch > kTechEpochCopper) {
+            if (theEpoch > kTechEpochIndustrial) {
+                if (theEpoch <= kTechEpochSpace)
+                    theResult = 0xd3;
+            } else
+                theResult = 0x6d;
+        } else
+            theResult = 0x6c;
+    }
+    return theResult;
+}
+
+long EECPGateClass(EEComputerPlayer* inPlayer)
+{
+    long theResult = 0;
+    switch (inPlayer->mTechnologies->mCurrentEpoch) {
+    case kTechEpochPrehistoric:
+    case kTechEpochStone:
+        theResult = 0x2e;
+        break;
+    case kTechEpochCopper:
+        theResult = 0x1d9;
+        break;
+    case kTechEpochBronze:
+    case kTechEpochDark:
+        theResult = 0x1c6;
+        break;
+    case kTechEpochMiddle:
+    case kTechEpochRenaissance:
+        theResult = 0x1bc;
+        break;
+    case kTechEpochImperial:
+    case kTechEpochIndustrial:
+        theResult = 0x1bb;
+        break;
+    case kTechEpochAtomicWW1:
+    case kTechEpochAtomicWW2:
+    case kTechEpochAtomicModern:
+        theResult = 0x1ba;
+        break;
+    case kTechEpochDigital:
+    case kTechEpochNano:
+        theResult = 0x126;
+        break;
+    case kTechEpochSpace:
+        theResult = 0x2ff;
+        break;
+    }
+    return theResult;
+}
+
+long EECPTowerClass(EEComputerPlayer* inPlayer)
+{
+    long theResult = 0;
+    switch (inPlayer->mTechnologies->mCurrentEpoch) {
+    case kTechEpochPrehistoric:
+    case kTechEpochStone:
+        theResult = 0x2f;
+        break;
+    case kTechEpochCopper:
+        theResult = 0x1cd;
+        break;
+    case kTechEpochBronze:
+    case kTechEpochDark:
+        theResult = 0x1ce;
+        break;
+    case kTechEpochMiddle:
+    case kTechEpochRenaissance:
+        theResult = 0x1cf;
+        break;
+    case kTechEpochImperial:
+    case kTechEpochIndustrial:
+        theResult = 0x1d0;
+        break;
+    case kTechEpochAtomicWW1:
+    case kTechEpochAtomicWW2:
+    case kTechEpochAtomicModern:
+        theResult = 0x1d1;
+        break;
+    case kTechEpochDigital:
+    case kTechEpochNano:
+        theResult = 0x1d2;
+        break;
+    case kTechEpochSpace:
+        theResult = 0x2fd;
+        break;
+    }
+    return theResult;
+}
+
+long EECPWallClass(EEComputerPlayer* inPlayer)
+{
+    long theResult = 0;
+    switch (inPlayer->mTechnologies->mCurrentEpoch) {
+    case kTechEpochCopper:
+        theResult = 0x1d3;
+        break;
+    case kTechEpochBronze:
+    case kTechEpochDark:
+        theResult = 0x1d4;
+        break;
+    case kTechEpochMiddle:
+    case kTechEpochRenaissance:
+        theResult = 0x1d5;
+        break;
+    case kTechEpochImperial:
+    case kTechEpochIndustrial:
+        theResult = 0x1d6;
+        break;
+    case kTechEpochAtomicWW1:
+    case kTechEpochAtomicWW2:
+    case kTechEpochAtomicModern:
+        theResult = 0x1d7;
+        break;
+    case kTechEpochDigital:
+    case kTechEpochNano:
+        theResult = 0x1d8;
+        break;
+    case kTechEpochSpace:
+        theResult = 0x2fe;
+        break;
+    }
+    return theResult;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The placement searches of the Lua verbs (ai.place; the build verb's rules, EECPNextTactics.cpp before stage 6)
+
+static EECPResourceCenter* EECPNextSiteAt(EEComputerPlayer* inPlayer, long inSite)
+{
+    if (inSite < 0 || (unsigned long)inSite >= inPlayer->GetNumResourceCenters())
+        return NULL;
+    return inPlayer->GetResourceCenter((unsigned long)inSite);
+}
+
+// the tile of a centre's first resource unit with some left (what its site in the view shows; a worked mine's hit
+// points are 0)
+static bool EECPNextSiteTile(EECPResourceCenter* inCenter, long& outX, long& outY)
+{
+    for (unsigned long u = 0; u < inCenter->mUnits.size(); u++) {
+        EEUnit* theUnit = inCenter->mUnits[u];
+        if (theUnit->mResourceAmount > 0 && theUnit->mTile != NULL) {
+            outX = theUnit->GetTileX();
+            outY = theUnit->GetTileY();
+            return true;
+        }
+    }
+    return false;
+}
+
+// the first tile in the rings inFirst..inLast round a tile where the class can be built (CanBuildAt, as
+// EECPRMPatchSite's rings round a forage patch)
+static bool EECPNextRingSite(EEComputerPlayer* inPlayer, long inType, long inX, long inY, long inFirst, long inLast,
+    EETileCoordinate& outTile)
+{
+    EECPPlacement* theBuild = inPlayer->mPlacement;
+    EEUnitClass* theClass = gUnitClassTable[inType];
+    unsigned short theContinent = gContinentManager.GetContinent(U2DPoint<long>(inX, inY), kAIPathLandMass);
+    std::vector<EETileCoordinate> theTiles;
+    for (long theRing = inFirst; theRing <= inLast; theRing++) {
+        if (theRing == 0) {
+            EETileCoordinate theTile(inX, inY);
+            if (theBuild->CanBuildAt(theContinent, inType, theTile, theClass->GetTileSize(), true, true, inX, inY)) {
+                outTile = theTile;
+                return true;
+            }
+            continue;
+        }
+        theTiles.clear();
+        EEGetSquareRingTiles(inX, inY, theRing, theTiles);
+        for (unsigned long k = 0; k < theTiles.size(); k++)
+            if (theBuild->CanBuildAt(theContinent, inType, theTiles[k], theClass->GetTileSize(), true, true, inX, inY)) {
+                outTile = theTiles[k];
+                return true;
+            }
+    }
+    return false;
+}
+
+// a tower's tile in the rings inFirst..inLast round a tile, none of the player's towers within its range of it (the
+// rings' order: deterministic; CanBuildAt: only tiles in sight, no armed enemy near)
+static bool EECPNextTowerRingSite(EEComputerPlayer* inPlayer, long inType, long inX, long inY, long inFirst, long inLast,
+    EETileCoordinate& outTile)
+{
+    EECPPlacement* theBuild = inPlayer->mPlacement;
+    EEUnitClass* theClass = gUnitClassTable[inType];
+    unsigned short theContinent = gContinentManager.GetContinent(U2DPoint<long>(inX, inY), kAIPathLandMass);
+    float theSpacing = inPlayer->mUnitClassUpgrades[inType]->mRange;
+    std::vector<EETileCoordinate> theTiles;
+    for (long theRing = inFirst; theRing <= inLast; theRing++) {
+        theTiles.clear();
+        EEGetSquareRingTiles(inX, inY, theRing, theTiles);
+        for (unsigned long k = 0; k < theTiles.size(); k++)
+            if (!theBuild->HasTowerNear(theTiles[k].mX, theTiles[k].mY, theSpacing * theSpacing)
+                && theBuild->CanBuildAt(theContinent, inType, theTiles[k], theClass->GetTileSize(), true, true, inX, inY)) {
+                outTile = theTiles[k];
+                return true;
+            }
+    }
+    return false;
+}
+
+// the tiles between a building of inSize at a tile (its corner) and a resource unit's footprint (0: touching)
+static long EECPNextGap(long inX, long inY, long inSize, EEUnit* inUnit)
+{
+    long theUX = inUnit->GetTileX(), theUY = inUnit->GetTileY();
+    long theUSize = inUnit->mUnitClass->GetTileSize() > 0 ? inUnit->mUnitClass->GetTileSize() : 1;
+    long theDX = (std::max)((std::max)(theUX - (inX + inSize), inX - (theUX + theUSize)), 0L);
+    long theDY = (std::max)((std::max)(theUY - (inY + inSize), inY - (theUY + theUSize)), 0L);
+    return (std::max)(theDX, theDY);
+}
+
+static long long EECPNextDistance2Of(long inX, long inY, long inX2, long inY2)
+{
+    long long theDX = inX - inX2, theDY = inY - inY2;
+    return theDX * theDX + theDY * theDY;
+}
+
+// a drop site by its resource (§8.35, the owner: "settlements directly adjacent to all resource mines, not just randomly
+// 3 tiles away"): of the tiles in the rings 1..inLast round a tile where the class can be built (CanBuildAt keeps a
+// one-tile margin free, the gatherers' side), the one nearest the resource units (inUnits; the tile itself when
+// empty), then nearest the town centre (the shorter way home), then the first in the rings' order
+static bool EECPNextAdjacentSite(EEComputerPlayer* inPlayer, long inType, long inX, long inY, long inLast,
+    const std::vector<EEUnit*>& inUnits, EETileCoordinate& outTile, long& outGap)
+{
+    EECPPlacement* theBuild = inPlayer->mPlacement;
+    EEUnitClass* theClass = gUnitClassTable[inType];
+    long theSize = theClass->GetTileSize() > 0 ? theClass->GetTileSize() : 1;
+    // the town's land (a tree's tile is forest, on no land continent: every settlement by a forest was refused)
+    unsigned short theContinent = gContinentManager.GetContinent(theBuild->mTownCenterTile, kAIPathLandMass);
+    long theTownX = theBuild->mTownCenterTile.mX, theTownY = theBuild->mTownCenterTile.mY;
+    std::vector<EETileCoordinate> theTiles;
+    bool theFound = false;
+    long theBestGap = 0;
+    long long theBestHome = 0;
+    for (long theRing = 1; theRing <= inLast; theRing++) {
+        theTiles.clear();
+        EEGetSquareRingTiles(inX - theSize / 2, inY - theSize / 2, theRing, theTiles);
+        for (unsigned long k = 0; k < theTiles.size(); k++) {
+            long theGap = 1000;
+            if (inUnits.empty()) {
+                long theDX = (std::max)((std::max)(inX - (theTiles[k].mX + theSize - 1), theTiles[k].mX - inX), 0L);
+                long theDY = (std::max)((std::max)(inY - (theTiles[k].mY + theSize - 1), theTiles[k].mY - inY), 0L);
+                theGap = (std::max)(theDX, theDY);
+            }
+            for (unsigned long u = 0; u < inUnits.size(); u++)
+                theGap = (std::min)(theGap, EECPNextGap(theTiles[k].mX, theTiles[k].mY, theSize, inUnits[u]));
+            if (theFound && theGap > theBestGap)
+                continue;
+            long long theDX = theTiles[k].mX - theTownX, theDY = theTiles[k].mY - theTownY;
+            long long theHome = theDX * theDX + theDY * theDY;
+            if (theFound && theGap == theBestGap && theHome >= theBestHome)
+                continue;
+            if (!theBuild->CanBuildAt(theContinent, inType, theTiles[k], theSize, true, true, inX, inY))
+                continue;
+            theFound = true;
+            theBestGap = theGap;
+            theBestHome = theHome;
+            outTile = theTiles[k];
+            outGap = theGap;
+        }
+        if (theFound && theBestGap <= 1 && theRing >= theBestGap + 2)
+            break;   // (nothing nearer lies further out)
+    }
+    return theFound;
+}
+
+static const long kNextDockSpacing = 12;   // tiles: fish this near one of the player's docks are served by it
+// The placement searches for the Lua verbs (data/ai/lib/verbs.lua, docs/AI_LUA_VERBS.md; ai.place): one search each,
+// the rules build() placed by; which search, round what and in what order is the script's choice
+
+// the dock's tile by the nearest fish within kNextDockReach of the town centre with none of the player's docks within
+// kNextDockSpacing of it (any fish, seen or not: the start's food, as EECPNextDockByFish); false: none (outReason)
+static bool EECPNextDockFishSite(EEComputerPlayer* inPlayer, EETileCoordinate& outTile, long& outFishX, long& outFishY)
+{
+    EECPPlacement* theBuild = inPlayer->mPlacement;
+    if (theBuild->mTownCenterTile.mX == -10000 || gUnitClassTable[kUnitTypeDock] == NULL || gWorld.mPlayers[0] == NULL)
+        return false;
+    long theTownX = theBuild->mTownCenterTile.mX, theTownY = theBuild->mTownCenterTile.mY;
+    std::vector<EEUnit*> theDocks;
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+        if (theUnit->mUnitClass->mUnitType == kUnitTypeDock && theUnit->mHitPoints > 0)
+            theDocks.push_back(theUnit);
+    EEUnitClass* theClass = gUnitClassTable[kUnitTypeDock];
+    long theSize = theClass->GetTileSize() > 0 ? theClass->GetTileSize() : 1;
+    unsigned short theContinent = gContinentManager.GetContinent(theBuild->mTownCenterTile, kAIPathLandMass);
+    EEUnit* theBestFish = NULL;
+    long long theBestD2 = 0;
+    std::vector<EETileCoordinate> theTiles;
+    for (EEUnit* theFish = gWorld.mPlayers[0]->mFirstUnit; theFish != NULL; theFish = static_cast<EEUnit*>(theFish->mNext)) {
+        if (theFish->mUnitClass->mFamily != kUnitFamilyFish || theFish->mResourceType != kResourceFood
+            || !(theFish->mResourceAmount > 0) || theFish->mTile == NULL)
+            continue;
+        long long theDX = theFish->GetTileX() - theTownX, theDY = theFish->GetTileY() - theTownY;
+        long long theD2 = theDX * theDX + theDY * theDY;
+        if (theD2 > (long long)kNextDockReach * kNextDockReach || (theBestFish != NULL && theD2 >= theBestD2))
+            continue;
+        bool theServed = false;
+        for (unsigned long d = 0; d < theDocks.size() && !theServed; d++) {
+            long long theX = theDocks[d]->GetTileX() - theFish->GetTileX(), theY = theDocks[d]->GetTileY() - theFish->GetTileY();
+            theServed = theX * theX + theY * theY <= (long long)kNextDockSpacing * kNextDockSpacing;
+        }
+        if (theServed)
+            continue;
+        bool theShore = false;
+        for (long theRing = 1; theRing <= 6 && !theShore; theRing++) {
+            theTiles.clear();
+            EEGetSquareRingTiles(theFish->GetTileX(), theFish->GetTileY(), theRing, theTiles);
+            for (unsigned long k = 0; k < theTiles.size() && !theShore; k++)
+                theShore = theBuild->CanBuildAt(theContinent, kUnitTypeDock, theTiles[k], theSize, false, true, theTownX, theTownY);
+        }
+        if (theShore) {
+            theBestFish = theFish;
+            theBestD2 = theD2;
+        }
+    }
+    if (theBestFish == NULL)
+        return false;
+    bool theFound = false;
+    long long theBestHome = 0;
+    for (long theRing = 1; theRing <= 6 && !theFound; theRing++) {
+        theTiles.clear();
+        EEGetSquareRingTiles(theBestFish->GetTileX(), theBestFish->GetTileY(), theRing, theTiles);
+        for (unsigned long k = 0; k < theTiles.size(); k++) {
+            if (!theBuild->CanBuildAt(theContinent, kUnitTypeDock, theTiles[k], theSize, false, true, theTownX, theTownY))
+                continue;
+            long long theDX = theTiles[k].mX - theTownX, theDY = theTiles[k].mY - theTownY;
+            if (!theFound || theDX * theDX + theDY * theDY < theBestHome) {
+                theFound = true;
+                theBestHome = theDX * theDX + theDY * theDY;
+                outTile = theTiles[k];
+            }
+        }
+    }
+    outFishX = theBestFish->GetTileX();
+    outFishY = theBestFish->GetTileY();
+    return theFound;
+}
+
+bool EECPNextPlaceSearch(EEComputerPlayer* inPlayer, long inType, long inMode, long inX, long inY, long inFirst,
+    long inLast, const std::vector<long>& inUnits, long inSite, long& outX, long& outY, long& outGap)
+{
+    outX = outY = -1;
+    outGap = -1;
+    if (inType < 0 || (unsigned long)inType >= EEUnitClassCount() || gUnitClassTable[inType] == NULL
+        || inPlayer->mPlacement == NULL || gWorld.mMap == NULL)
+        return false;
+    EETileCoordinate theTile(0, 0);
+    bool theFound = false;
+    switch (inMode) {
+    case kNextPlaceRing:
+        theFound = EECPNextRingSite(inPlayer, inType, inX, inY, inFirst, inLast, theTile);
+        break;
+    case kNextPlaceTower:
+        theFound = EECPNextTowerRingSite(inPlayer, inType, inX, inY, inFirst, inLast, theTile);
+        break;
+    case kNextPlaceAdjacent: {
+        std::vector<EEUnit*> theUnits;
+        for (unsigned long k = 0; k < inUnits.size(); k++) {
+            EEUnit* theUnit = gWorld.GetUnit((unsigned long)inUnits[k]);
+            if (theUnit != NULL && theUnit->mIsValid && theUnit->mTile != NULL)
+                theUnits.push_back(theUnit);
+        }
+        theFound = EECPNextAdjacentSite(inPlayer, inType, inX, inY, inLast, theUnits, theTile, outGap);
+        break;
+    }
+    case kNextPlaceCentre: {
+        EECPResourceCenter* theCenter = EECPNextSiteAt(inPlayer, inSite);
+        theFound = theCenter != NULL && theCenter->FindBuildSite(inType, theTile);
+        break;
+    }
+    case kNextPlaceClassic:
+        theFound = inPlayer->mPlacement->FindSite(inType, theTile);
+        break;
+    case kNextPlaceDock: {
+        long theFishX = -1, theFishY = -1;
+        theFound = EECPNextDockFishSite(inPlayer, theTile, theFishX, theFishY);
+        outGap = theFishX >= 0 ? theFishX * 65536 + theFishY : -1;   // (the fish's tile, for the trace)
+        break;
+    }
+    default:
+        return false;
+    }
+    if (!theFound || (theTile.mX == 0 && theTile.mY == 0))
+        return false;
+    outX = theTile.mX;
+    outY = theTile.mY;
+    return true;
+}
+

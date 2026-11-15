@@ -123,3 +123,34 @@ unsigned long EEComplexUnit::GetNumGoalQueues()
 {
     return this->mGoalQueues.size();
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Engine members the deleted economy managers' units emitted (stage 6, docs/AI_LUA_VERBS.md)
+
+// FUNCTION: EXE 0x4937dd (EECPUnitManager.cpp's range)
+// Returns whether a technology is in the unit's build queue
+bool EEComplexUnit::IsResearchQueued(long inTechnology)
+{
+    return std::find(this->mBuildQueue.begin(), this->mBuildQueue.end(), inTechnology) != this->mBuildQueue.end();
+}
+
+// FUNCTION: EXE 0x4708c9 (EECPCivilizationManager.cpp's range)
+// Returns true for waypoint and path point units
+bool EEUnit::IsPathMarker()
+{
+    return this->mUnitClass->mUnitType == kUnitTypeWaypoint || this->mUnitClass->mUnitType == kUnitTypePathPoint;
+}
+
+// RTSMapTileRun (ee/EEMap.h): its two out-of-line members sat among EECPWallManager.cpp's COMDATs (RTSMap.cpp calls them)
+bool RTSMapTileRun::operator==(const RTSMapTileRun& inOther) const
+{
+    return inOther.mStart.mX == this->mStart.mX && inOther.mStart.mY == this->mStart.mY && inOther.mEnd.mX == this->mEnd.mX &&
+        inOther.mEnd.mY == this->mEnd.mY;
+}
+
+// FUNCTION: EXE 0x4a016f (EECPWallManager.cpp's range)
+// Creates a tile run from inStart to inEnd
+RTSMapTileRun::RTSMapTileRun(const U2DPoint<long>& inStart, const U2DPoint<long>& inEnd)
+    : mStart(inStart), mEnd(inEnd)
+{
+}

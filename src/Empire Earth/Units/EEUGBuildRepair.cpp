@@ -42,8 +42,6 @@
 #include "lle/GERasterizer.h"
 #include "lle/UIManager.h"
 #include "ee/EEComputerPlayer.h"
-#include "ee/EECPCivilizationManager.h"
-#include "ee/EECPWallManager.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGameSound.h"
@@ -215,8 +213,6 @@ bool EEUGBuildRepair::FinishBuilding(EEComplexUnit* inUnit)
             if (theTarget->mUnitClass->GetUnitType() == kUnitTypeWallSpace
                 && thePlayer->mTechnologies->Get(kTechWallSpace)->GetIsAvailable())
                 EECreateSpaceWallEnergyWall(theTarget);
-            if (thePlayer->mComputerPlayer != NULL)
-                thePlayer->mComputerPlayer->mCivilizationManager->mWallManager->AddGates(theTarget);
             if (thePlayer == ::gWorld.GetCurrentPlayer()) {
                 EESoundObject* theSound = theTarget->mStats->mCreationSound;
                 if (theSound != NULL)
@@ -590,9 +586,8 @@ long EEUGBuildRepair::Load(unsigned long inMajorVersion, unsigned long inMinorVe
 // Tells the computer player's build manager that its unbuilt building is abandoned
 void EEUGBuildRepair::Abandon(EEComplexUnit* inUnit)
 {
-    EEComputerPlayer* theComputer = inUnit->mPlayer->mComputerPlayer;
-    if (theComputer != NULL && this->mTarget != NULL && !this->mTarget->mComplexUnit->mIsBuilt)
-        theComputer->mCivilizationManager->mBuildManager->BuildingAbandoned(this->mTarget->mComplexUnit);
+    // (stage 6: the Lua verbs send builders to the foundations left without one, data/ai/lib/verbs.lua)
+    (void)inUnit;
 }
 
 // FUNCTION: EXE 0x61f21a

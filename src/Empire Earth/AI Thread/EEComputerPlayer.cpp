@@ -41,15 +41,15 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EECPCivilizationManager.h"
-#include "ee/EECPResourceManager.h"
 #include "ee/EECPResourceCenter.h"
-#include "ee/EECPResearchManager.h"
-#include "ee/EECPWallManager.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
-#include "ee/EECPUnitManager.h"
-#include "ee/EECPBuildManager.h"
+#include "ee/EECPPlacement.h"
+#include "ee/EECPReflexes.h"
+#include "ee/EEUnitAction.h"
+#include "ee/EEUGLoadTransport.h"
+#include "ee/EEUGUnloadTransport.h"
+#include "ee/UReferenceContainer.h"
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include <EEAIFunctionObjects.h>
 #include "ee/EECalamityManager.h"
@@ -193,7 +193,7 @@ EEComputerPlayer::~EEComputerPlayer()
     }
     this->mUnitsToKill.clear();
     delete this->GetCombatManager();
-    delete this->GetCivilizationManager();
+    delete this->mPlacement;
     DeleteVectorContents(this->mResourceCenters);
     EECPNextDeleteState(this);
     EECPUnitsDelete(this);
@@ -204,7 +204,6 @@ EEComputerPlayer::~EEComputerPlayer()
 void EEComputerPlayer::AddResource(long inIndex, long inAmount)
 {
     EEPlayer::AddResource(inIndex, inAmount);
-    this->mCivilizationManager->mResourceManager->Spend(inIndex, inAmount);
     if (gCPTraceOn)
         EECPTraceIncome(this, inIndex, inAmount);
     if (this->mNextState != NULL)
@@ -435,7 +434,6 @@ void EEComputerPlayer::UnitCompleted(EEComplexUnit* inUnit)
         unsigned long i, n;
         for (i = 0, n = this->mResourceCenters.size(); i < n; i++)
             this->mResourceCenters[i]->AdoptDropSite(inUnit);
-        this->mCivilizationManager->mUnitManager->BalanceProduction(inUnit);
     }
 }
 
@@ -444,11 +442,8 @@ void EEComputerPlayer::UnitCompleted(EEComplexUnit* inUnit)
 long EEComputerPlayer::GetHeroCount(bool inByClass, bool inRequests)
 {
     EECPUGatherHeroesCount theGatherer(this, inByClass, inRequests);
-    if (this->mCivilizationManager != NULL && this->mCivilizationManager->mUnitManager != NULL) {
-        this->mCivilizationManager->mUnitManager->GatherUnits(theGatherer);
-        return theGatherer.mUnits + theGatherer.mRequested;
-    }
-    return EEPlayer::GetHeroCount(inByClass, inRequests);
+    EECPGatherUnits(this, theGatherer);
+    return theGatherer.mUnits + theGatherer.mRequested;
 }
 
 // FUNCTION: EXE 0x42e2a3
@@ -470,8 +465,8 @@ void EEComputerPlayer::Regroup()
         theWaterMap = true;
     else
         theWaterMap = false;
-    theTown.mX = this->mCivilizationManager->mBuildManager->mTownCenterTile.mX;
-    theTown.mY = this->mCivilizationManager->mBuildManager->mTownCenterTile.mY;
+    theTown.mX = this->mPlacement->mTownCenterTile.mX;
+    theTown.mY = this->mPlacement->mTownCenterTile.mY;
     if (gWorld.mPlayers[0] != NULL && theTown.mX != -10000 && theTown.mY != -10000) {
         this->GetObjectsToGroup(theUnits, theCount);
         unsigned long theNumUnits;
@@ -493,9 +488,12 @@ void EEComputerPlayer::Regroup()
             }
         }
         std::sort(this->mResourceCenters.begin(), this->mResourceCenters.end(), EECPCenterDistanceLess(theTown));
-        std::deque<EEComplexUnit*>* theTownCenters = this->mCivilizationManager->mUnitManager->GetUnits(0x29);
-        if (theTownCenters != NULL && theTownCenters->size() != 0) {
-            EEComplexUnit* theTownCenter = *theTownCenters->begin();
+        EEComplexUnit* theFirstCapitol = NULL;   // (the unit manager's first tracked capitol)
+        for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL && theFirstCapitol == NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+            if (theUnit->mUnitClass->mUnitType == 0x29 && theUnit->mComplexUnit != NULL && theUnit->mHitPoints > 0)
+                theFirstCapitol = theUnit->mComplexUnit;
+        if (theFirstCapitol != NULL) {
+            EEComplexUnit* theTownCenter = theFirstCapitol;
             if (theTownCenter != NULL) {
                 bool theNew = this->mResourceCenters.size() == 0;
                 if (!theNew) {
@@ -507,7 +505,6 @@ void EEComputerPlayer::Regroup()
                     theNewCenter->SetUnit(theTownCenter);
                     this->mResourceCenters.insert(this->mResourceCenters.begin(), theNewCenter);
                 }
-                this->mCivilizationManager->mWallManager->AddGates(theTownCenter);
             }
         }
         unsigned long theNumCenters;
@@ -719,8 +716,8 @@ void EEComputerPlayer::GetObjectsToGroup(std::vector<EEUnit*>& outUnits, long& o
         theAnyContinent = true;
     else
         theAnyContinent = false;
-    theTile.mX = this->mCivilizationManager->mBuildManager->mTownCenterTile.GetX();
-    theTile.mY = this->mCivilizationManager->mBuildManager->mTownCenterTile.GetY();
+    theTile.mX = this->mPlacement->mTownCenterTile.GetX();
+    theTile.mY = this->mPlacement->mTownCenterTile.GetY();
     outUnits.clear();
     outCount = 0;
     for (EEUnit* theUnit = theNature->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
@@ -749,9 +746,7 @@ void EEComputerPlayer::GetObjectsToGroup(std::vector<EEUnit*>& outUnits, long& o
 long EEComputerPlayer::GetExtraPopulation(long inUnitClass)
 {
     long theResult = 1;
-    if ((inUnitClass == 0x20 || inUnitClass == 0x1e0)
-        && (this->mCivilizationManager->mGarrison != NULL || this->mCivilizationManager->mNextFortressTime != 0))
-        theResult = 50;
+    (void)inUnitClass;   // (50 for citizens while the classic's garrison or fortress was planned: gone in stage 6)
     return theResult;
 }
 
@@ -765,161 +760,18 @@ EECPResourceCenter* EEComputerPlayer::GetResourceCenter(unsigned long inIndex)
 // New: the epoch advance the research manager has queued and not yet started (kTechNone: none)
 long EECPPendingEpoch(EEComputerPlayer* inPlayer)
 {
-    if (inPlayer->mCivilizationManager == NULL || inPlayer->mCivilizationManager->mResearchManager == NULL)
-        return kTechNone;
-    EECPResearchManager* theManager = inPlayer->mCivilizationManager->mResearchManager;
-    for (long j = 0; j < EEEpochCount(); j++)
-        for (unsigned long k = 0; k < theManager->mEpochIDs[j].size(); k++)
-            if (EEIsEpochID(theManager->mEpochIDs[j][k]))
-                return theManager->mEpochIDs[j][k];
+    // stage 6: an epoch researched or queued at one of the player's buildings (the research manager's queue is gone)
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        EEComplexUnit* c = theUnit->mComplexUnit;
+        if (c == NULL || !c->mUnitClass->IsBuilding() || !(theUnit->mHitPoints > 0))
+            continue;
+        if (c->mCurrentResearch != kTechNone && EEIsEpochID(c->mCurrentResearch))
+            return c->mCurrentResearch;
+        for (unsigned long q = 0; q < c->GetBuildQueueSize(); q++)
+            if (EEIsEpochID((*(c->mBuildQueue.begin() + q)).mTechnology))
+                return (*(c->mBuildQueue.begin() + q)).mTechnology;
+    }
     return kTechNone;
-}
-
-unsigned long EECPEpochTimerSpan(EEComputerPlayer* inPlayer)
-{
-    float theSpan = (inPlayer->GetEpochFrequencyMin() + inPlayer->GetEpochFrequencyMax()) * 0.5f
-        * inPlayer->GetEpochFrequencyModifier() * 60000.0f;
-    return theSpan > 60000.0f ? (unsigned long)UMFloatToLong(theSpan) : 60000UL;
-}
-
-float EECPScheduleSpan(EEComputerPlayer* inPlayer)
-{
-    if (inPlayer->mTechnologies == NULL)
-        return 0.0f;
-    if (inPlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric)
-        return EECPStoneSpan(inPlayer);
-    if (EECPExperiment(inPlayer, "span15"))
-        return 15.0f;
-    if (EECPExperiment(inPlayer, "span20"))
-        return 20.0f;
-    if (EECPExperiment(inPlayer, "span25"))
-        return 25.0f;
-    if (EECPExperiment(inPlayer, "span30"))
-        return 30.0f;
-    return 0.0f;
-}
-
-// the Prehistoric counts from the game's start; a later epoch from when the player was first seen in it (TEST ONLY
-// bookkeeping: not saved; the AI asks often enough that the lag is a few seconds)
-unsigned long EECPScheduleStart(EEComputerPlayer* inPlayer, unsigned long inTime)
-{
-    static long sEpoch[64];
-    static unsigned long sStart[64];
-    if (inPlayer->mTechnologies == NULL || inPlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric)
-        return 0;
-    unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
-    long theEpoch = inPlayer->mTechnologies->mCurrentEpoch;
-    if (sEpoch[theID] != theEpoch || sStart[theID] > inTime) {
-        sEpoch[theID] = theEpoch;
-        sStart[theID] = inTime;
-    }
-    return sStart[theID];
-}
-
-float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime)
-{
-    if (inPlayer->mCivilizationManager == NULL)
-        return 0.0f;
-    // the experiments "stone22" and "stone30" (docs/AI_RESEARCH.md §8.27; the owner reaches the Stone Age at 21 min,
-    // the AI's timer at about 48): in the Prehistoric the pressure is the game time over a 22 (30) minute span, so
-    // the advance is asked for from 0.3 of it and wholly reserved from 0.8; the later epochs keep the timer
-    float theSchedule = EECPScheduleSpan(inPlayer);
-    if (theSchedule > 0.0f) {
-        unsigned long theStart = EECPScheduleStart(inPlayer, inTime);
-        return (float)(inTime - theStart) / (theSchedule * 60000.0f) + EECPPressureBonus(inPlayer);
-    }
-    unsigned long theSpan = EECPEpochTimerSpan(inPlayer);
-    unsigned long theDue = inPlayer->mCivilizationManager->mNextEpochAdvanceTime;
-    long long theLeft = (long long)theDue - (long long)inTime;
-    float thePressure = 1.0f - (float)theLeft / (float)theSpan + EECPPressureBonus(inPlayer);
-    return thePressure < 0.0f ? 0.0f : thePressure;
-}
-
-bool EECPBooming(EEComputerPlayer* inPlayer)
-{
-    long theWorkers = 0, theMinutes = 0;
-    if (EECPExperiment(inPlayer, "boom25")) {
-        theWorkers = 25;
-        theMinutes = 12;
-    } else if (EECPExperiment(inPlayer, "boom35")) {
-        theWorkers = 35;
-        theMinutes = 15;
-    } else
-        return false;
-    if (inPlayer->mCivilizationManager == NULL || inPlayer->mCivilizationManager->mUnitManager == NULL)
-        return false;
-    return gPhysics->mGameTime < (unsigned long)theMinutes * 60000
-        && (long)inPlayer->mCivilizationManager->mUnitManager->GetNumWorkers() < theWorkers;
-}
-
-// military.prehistoric_army's answer to a rush (docs/AI_RESEARCH.md §8.26; the owner: "if I scout a rush, I scramble
-// and build up an army as needed"): enemy soldiers within kCPThreatRange tiles of the town centre stronger (hit
-// points x attack) than its own army lift the cap for kCPThreatMs; checked every kCPThreatCheckMs
-static const long kCPThreatRange = 40;
-static const unsigned long kCPThreatMs = 240000;
-static const unsigned long kCPThreatCheckMs = 5000;
-
-static bool EECPIsSoldier(EEUnit* inUnit)
-{
-    if (inUnit->mComplexUnit == NULL || !(inUnit->mHitPoints > 0) || inUnit->mStats->mAttack == 0.0f
-        || inUnit->mUnitClass->IsLandBuilding())
-        return false;
-    long theCategory = inUnit->mUnitClass->mCategory;
-    return theCategory == kUnitCategoryLand || theCategory == kUnitCategoryLandMilitaryHero;
-}
-
-static bool EECPArmyThreat(EEComputerPlayer* inPlayer)
-{
-    static unsigned long sChecked[64];
-    static unsigned long sUntil[64];
-    unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
-    unsigned long theNow = gPhysics->mGameTime;
-    if (sChecked[theID] != 0 && theNow >= sChecked[theID] && theNow - sChecked[theID] < kCPThreatCheckMs)
-        return theNow < sUntil[theID];
-    sChecked[theID] = theNow;
-    if (sUntil[theID] > theNow + kCPThreatMs)
-        sUntil[theID] = 0;   // a new game (the clock started over)
-    EECPBuildManager* theBuild = inPlayer->mCivilizationManager != NULL ? inPlayer->mCivilizationManager->mBuildManager : NULL;
-    if (theBuild == NULL || theBuild->mTownCenterTile.mX == -10000)
-        return theNow < sUntil[theID];
-    long theX = theBuild->mTownCenterTile.mX, theY = theBuild->mTownCenterTile.mY;
-    float theOwn[2] = {0.0f, 0.0f}, theEnemy[2] = {0.0f, 0.0f};
-    for (unsigned long p = 1; p < gWorld.mNumPlayers; p++) {
-        EEPlayer* theOther = gWorld.mPlayers[p];
-        if (theOther == NULL)
-            continue;
-        bool theMine = theOther == inPlayer;
-        if (!theMine && inPlayer->IsAlly(theOther))
-            continue;
-        for (EEUnit* theUnit = theOther->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            if (!EECPIsSoldier(theUnit))
-                continue;
-            long theDX = theUnit->GetTileX() - theX, theDY = theUnit->GetTileY() - theY;
-            if (!theMine && theDX * theDX + theDY * theDY > kCPThreatRange * kCPThreatRange)
-                continue;
-            float* theSum = theMine ? theOwn : theEnemy;
-            theSum[0] += (float)theUnit->mHitPoints;
-            theSum[1] += theUnit->mStats->mAttack;
-        }
-    }
-    if (theEnemy[0] > 0.0f && theEnemy[0] * theEnemy[1] > theOwn[0] * theOwn[1]) {
-        if (theNow >= sUntil[theID])
-            EE_CP_TRACE(inPlayer, "threat", "enemy=%.0f own=%.0f", theEnemy[0] * theEnemy[1], theOwn[0] * theOwn[1]);
-        sUntil[theID] = theNow + kCPThreatMs;
-    }
-    return theNow < sUntil[theID];
-}
-
-// epoch_pressure.safe_bonus (docs/AI_RESEARCH.md §8.29): from the Stone Age, while no stronger enemy army has come near
-// the town (EECPArmyThreat: none for its 4 minutes), the epoch pressure is that much higher: the advance is asked
-// for sooner and its reserve fills faster; a threat drops it back, and the reserve frees the resources for soldiers
-float EECPPressureBonus(EEComputerPlayer* inPlayer)
-{
-    float theBonus = EECPSafeBonus(inPlayer);
-    if (!(theBonus > 0.0f) || inPlayer->mTechnologies == NULL
-        || inPlayer->mTechnologies->mCurrentEpoch < kTechEpochStone || EECPArmyThreat(inPlayer))
-        return 0.0f;
-    return theBonus;
 }
 
 // FUNCTION: EXE 0x42f033
@@ -927,7 +779,7 @@ float EECPPressureBonus(EEComputerPlayer* inPlayer)
 bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCount)
 {
     // the plain check and the strategy's reserve (ee/EECPNext.h; the C++ classic's saving rules were deleted in stage 5)
-    return EECPNextCanAfford(this, inTechnology, inUnitType, inCount);
+    return EECPNextCanAfford(this, inTechnology, inUnitType, inCount);   // (the plain check; the free epochs cheat)
 }
 
 // FUNCTION: EXE 0x42f16d
@@ -944,9 +796,9 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
     // the experiment "navalflee" (docs/AI_RESEARCH.md §8.27; the owner: units should leave a bombardment they cannot
     // answer, fishing boats should run): EECPResourceManager.cpp EECPRMNavalFlee
     if (inPlayer > 0 && EECPNavalFleeOn(this) && !inUnit->mUnitClass->IsLandBuilding() && EECPUnitsReflexOn(this, "naval_flee")
-        && inUnit->mComplexUnit != NULL && this->mCivilizationManager != NULL && this->mCivilizationManager->mResourceManager != NULL
+        && inUnit->mComplexUnit != NULL
         && (unsigned long)inPlayer < gWorld.mNumPlayers && gWorld.mPlayers[inPlayer] != NULL && !this->IsAlly(gWorld.mPlayers[inPlayer]))
-        EECPRMNavalFlee(this->mCivilizationManager->mResourceManager, inUnit, inUnit->mComplexUnit->mLastAttacker);
+        EECPRMNavalFlee(this, inUnit, inUnit->mComplexUnit->mLastAttacker);
     if (theCategory == kUnitCategoryNavalCitizen || theCategory == kUnitCategoryLandCitizen) {
         this->mCitizenDamaged = true;
         if (this->mNextState != NULL && gCPTraceOn)
@@ -954,13 +806,12 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
         // new: a hit by a human player's unit marks a danger zone the gatherers run from (EECPResourceManager.cpp
         // EECPRMNoteDanger; against computer players only with the experiment "flee": docs/AI_RESEARCH.md §8.22)
         if (inPlayer > 0 && theCategory == kUnitCategoryLandCitizen
-            && this->mCivilizationManager != NULL && this->mCivilizationManager->mResourceManager != NULL
             && (unsigned long)inPlayer < gWorld.mNumPlayers && gWorld.mPlayers[inPlayer] != NULL
             && !this->IsAlly(gWorld.mPlayers[inPlayer])
             && (gWorld.mPlayers[inPlayer]->IsHuman() || EECPExperiment(this, "flee") || EECPMilitiaOn(this))
             && EECPUnitsReflexOn(this, "danger")
             && (!EECPUnitsHolds(this, inUnit->mComplexUnit) || EECPUnitsReflexOn(this, "held")))
-            EECPRMNoteDanger(this->mCivilizationManager->mResourceManager, inUnit, (unsigned long)inPlayer);
+            EECPRMNoteDanger(this, inUnit, (unsigned long)inPlayer);
     }
 }
 
@@ -1210,7 +1061,7 @@ void EEComputerPlayer::Init()
     this->mReplaceOnLoad = false;
     this->mRegroupPending = false;
     this->mAttackStarted = false;
-    this->mCivilizationManager = new EECPCivilizationManager(this);
+    this->mPlacement = new EECPPlacement(this);
     this->mCombatManager = new EECPCombatManager(this);
 }
 
@@ -1241,7 +1092,7 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
     if (theResult == kErrorOK)
         theResult = this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
     if (theResult == kErrorOK)
-        theResult = this->mCivilizationManager->Load(inMajorVersion, inMinorVersion, inFile);
+        theResult = this->mPlacement->Load(inFile);   // (stage 6: the managers' block is the town centre tile)
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mLBD4);
     if (theResult == kErrorOK)
@@ -1786,7 +1637,6 @@ void EEComputerPlayer::RefreshResourceCenters()
         this->UpdateGroups();
     if (this->mResourceCenters.size() == 0)
         this->Regroup();
-    this->mCivilizationManager->mResourceManager->Refresh();
     this->RefreshTownGroups();
 }
 
@@ -1803,7 +1653,6 @@ void EEComputerPlayer::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
 {
     if (this->mUnitsState != NULL)
         EECPUnitsOnSwapped(this, ioSwaps);   // the held set and the script's ids follow the new units
-    this->mCivilizationManager->UnitsSwapped(ioSwaps);
     for (std::vector<EEPUnitSwap>::iterator it = ioSwaps.begin(); it != ioSwaps.end(); it++) {
         EEComplexUnit* theUnit = it->mNew;
         if (theUnit->GetUnitClass()->IsDropSite()) {
@@ -1822,7 +1671,8 @@ void EEComputerPlayer::Clear()
     EEPlayer::Clear();
     DeleteVectorContents(this->mResourceCenters);
     this->mIsStarted = false;
-    this->mCivilizationManager->Reset();
+    this->mPlacement->Reset();
+    this->mDangerZones.clear();
     delete this->mCombatManager;
     this->mCombatManager = new EECPCombatManager(this);
 }
@@ -1834,7 +1684,7 @@ long EEComputerPlayer::RepairPointers(unsigned long inMajorVersion, unsigned lon
 {
     long theResult = EEPlayer::RepairPointers(inMajorVersion, inMinorVersion);
     if (theResult == kErrorOK)
-        theResult = this->mCivilizationManager->Restore(inMajorVersion, inMinorVersion);
+        theResult = this->mPlacement->Restore();
     if (theResult == kErrorOK) {
         this->mNextAttackTime += gPhysics->mGameTime;
         for (unsigned long i = 0, n = this->mResourceCenters.size(); i < n; i++) {
@@ -1992,7 +1842,9 @@ static void EECPRetireObsoleteUnits(EEComputerPlayer* inPlayer)
 // Tells the research manager about a new epoch, enters it if it is a real epoch, then runs the base handling
 void EEComputerPlayer::EpochReached(long inEpoch)
 {
-    this->mCivilizationManager->mResearchManager->EpochReached(inEpoch);
+    // (the research manager's EpochReached: the reached epoch's SOL count starts over)
+    if (EEIsEpochID(inEpoch) && !gLoadingSavedGame && this->mTechnologies != NULL)
+        this->mTechnologies->mEpochs[this->mTechnologies->mCurrentEpoch].mCurrentSOL = 0;
     if (EEIsEpochID(inEpoch))
         this->EnterEpoch(inEpoch);
     EEPlayer::EpochReached(inEpoch);
@@ -2057,7 +1909,7 @@ long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorV
     if (theResult == kErrorOK)
         theResult = this->mCombatManager->Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult == kErrorOK)
-        theResult = this->mCivilizationManager->Save(inMajorVersion, inMinorVersion, outFile);
+        theResult = this->mPlacement->Save(outFile);
     if (theResult == kErrorOK)
         theResult = outFile.Write(this->mLBD4);
     if (theResult == kErrorOK)
@@ -2489,11 +2341,12 @@ long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorV
 // Turns the AI on or off, handing all units to the unit manager or releasing them when the state changes
 void EEComputerPlayer::SetActive(bool inActive)
 {
-    if (inActive) {
-        if (!this->mActive)
-            this->mCivilizationManager->mUnitManager->AddAllUnits();
-    } else if (this->mActive)
-        this->mCivilizationManager->mUnitManager->ReleaseUnits();
+    if (inActive && !this->mActive) {
+        // (the unit manager's AddAllUnits: the town centre tile from the units the player has)
+        for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+            if (theUnit->mComplexUnit != NULL)
+                this->mPlacement->UnitAdded(theUnit->mComplexUnit);
+    }
     this->mActive = inActive;
 }
 
@@ -2611,7 +2464,7 @@ void EEComputerPlayer::PayImprovement(EEUnitClass* inClass, long inImprovement)
                     float theCost = (float)theNode->mData->mCosts[i] * theUpgrade->mCostScale;
                     theCost *= theFactor;
                     long theAmount = UMFloatToLong(theCost);
-                    this->mCivilizationManager->mResourceManager->Earn(i, this->ScaleCost(theAmount));
+                    (void)theAmount;   // (the resource manager's needs ledger: gone in stage 6)
                 }
             }
         }
@@ -2628,7 +2481,7 @@ void EEComputerPlayer::UnitPlaced(EEComplexUnit* inUnit)
     if (this->mUnitsState != NULL)
         EECPUnitsOnPlaced(this, inUnit);
     if (this->mActive) {
-        this->mCivilizationManager->UnitAdded(inUnit);
+        this->mPlacement->UnitAdded(inUnit);
     }
 }
 
@@ -2647,12 +2500,52 @@ void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
         EECPNextTraceDeath(this, theUnit);   // the next engine's losses trace (nothing the game reads)
     if (this->mNextState != NULL && !inSwapped && theUnit->mUnitClass != NULL)
         EECPNextEventAdd(this, kNextEventUnitLost, theUnit->mUnitClass->mUnitType, 1);   // the next engine's view
-    if (this->mActive)
-        this->mCivilizationManager->UnitLost(theUnit, inSwapped);
     if (theUnit->mUnitClass->IsLandBuilding()) {
         unsigned long i, n;
         for (i = 0, n = this->mResourceCenters.size(); i < n; i++)
             this->mResourceCenters[i]->ReleaseUnit(theUnit);
+    }
+}
+
+// an idle transport not a script's (the resource manager's TransportIdle, kept in stage 6): the citizens it was loading
+// stop, and it unloads at its rendezvous; an unloading one that was detached tries its destination again
+static void EECPTransportIdle(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
+{
+    EEUnitGoal* theGoal = inUnit->mActiveGoal;
+    EEUGLoadTransport* theLoad = dynamic_cast<EEUGLoadTransport*>(theGoal);
+    EEUGUnloadTransport* theUnload = dynamic_cast<EEUGUnloadTransport*>(theGoal);
+    bool theChanged = false;
+    if (theLoad != NULL) {
+        UReferenceContainer<EEComplexUnit*>& theCargo = theLoad->mUnits;
+        if (theCargo.GetSize() > 0) {
+            for (EEUnit* theCitizen = inPlayer->mFirstUnit; theCitizen != NULL; theCitizen = static_cast<EEUnit*>(theCitizen->mNext)) {
+                EEComplexUnit* theUnit = theCitizen->mComplexUnit;
+                long theType = theCitizen->mUnitClass->mUnitType;
+                if (theUnit == NULL || (theType != 0x20 && theType != 0x1e0))
+                    continue;
+                std::vector<EEComplexUnit*>::iterator theWhere;
+                if (!theCargo.Contains(theUnit, theWhere))
+                    continue;
+                theUnit->ClearGoalQueue(0);
+                theUnit->StartAction(kActionIdle);
+                theUnit->mUnitClass->ActionChanged(theUnit);
+                theChanged = true;
+            }
+            if (theChanged) {
+                if (inUnit->GetNumCargoUnits() > 0 && theLoad->EvaluateCondition(inUnit, kTriggerHaveReachedRendezvousPoint)) {
+                    U2DPoint<long> theTile = theLoad->mContainerTile;
+                    inUnit->UnloadCargoAtTile(theTile.GetX(), theTile.GetY(), true);
+                }
+                inUnit->ClearGoalQueue(0);
+            }
+        }
+    } else if (theUnload != NULL) {
+        if (inUnit->GetNumCargoUnits() > 0 && inUnit->mIsDetachedFromAI) {
+            EEUGUnloadTransport* theNew = new EEUGUnloadTransport(inUnit, theUnload->mDestination.GetX(),
+                                                                  theUnload->mDestination.GetY(), true);
+            if (theNew->CanUnloadAtDestination())
+                inUnit->QueueGoal(theNew, 0);
+        }
     }
 }
 
@@ -2663,7 +2556,7 @@ void EEComputerPlayer::UnitGoalDone(EEComplexUnit* inUnit)
 {
     unsigned long theGoals = inUnit->mGoalQueues[0].mGoals.size();
     if (inUnit->GetClass()->IsTransport() && !EECPUnitsHolds(this, inUnit)) {
-        this->GetCivilizationManager()->GetResourceManager()->TransportIdle(inUnit);
+        EECPTransportIdle(this, inUnit);
         if (theGoals == 1 && inUnit->IsRepairable() && inUnit->GetNumCargoUnits() == 0)
             this->SendToNearestBase(inUnit);
         if (inUnit->GetGoalState() != NULL && inUnit->GetGoalState()->GetKind() == kGoalLoadTransport && inUnit->GetNumCargoUnits() == 0)
@@ -2677,12 +2570,9 @@ void EEComputerPlayer::UnitGoalDone(EEComplexUnit* inUnit)
             inUnit->GetActiveGroup()->RemoveUnit(inUnit);
         return;
     }
-    if (inUnit->GetIsDetachedFromAI() && theGoals <= 1 && !EECPNextHoldsUnit(this, inUnit)) {   // (a next group keeps its units)
+    if (inUnit->GetIsDetachedFromAI() && theGoals <= 1) {
         inUnit->mIsDetachedFromAI = false;
     }
-    long theCategory = inUnit->GetClass()->GetCategory();
-    if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
-        this->GetCivilizationManager()->GetResourceManager()->AddIdleGatherer(inUnit);
     if (theGoals <= 1 && inUnit->GetActiveGroup() != NULL)
         inUnit->GetActiveGroup()->RemoveUnit(inUnit);
 }
@@ -2748,7 +2638,7 @@ void EEComputerPlayer::UpdateGroups()
     std::vector<EEUnit*> theUnits;
     U2DPoint<long> theCenter;
     EECPResourceCenter* theNewCenter = NULL;
-    theCenter = this->mCivilizationManager->mBuildManager->mTownCenterTile;
+    theCenter = this->mPlacement->mTownCenterTile;
     if (theCenter.mX != -10000 && theCenter.mY != -10000) {
         long theCount;
         this->GetObjectsToGroup(theUnits, theCount);

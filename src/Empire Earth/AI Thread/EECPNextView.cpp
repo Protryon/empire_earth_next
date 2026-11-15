@@ -42,12 +42,10 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGAttackUnit.h"
-#include "ee/EECPCivilizationManager.h"
-#include "ee/EECPUnitManager.h"
-#include "ee/EECPBuildManager.h"
-#include "ee/EECPResourceManager.h"
+#include "ee/EECPPlacement.h"
+#include "ee/EECPReflexes.h"
+#include "ee/EEAIForest.h"
 #include "ee/EECPResourceCenter.h"
-#include "ee/EECPResearchManager.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPNext.h"
@@ -180,7 +178,7 @@ long EECPNextRouteTower(EEComputerPlayer* inPlayer, long inX, long inY)
     EECPNextState* theState = EECPNextGetState(inPlayer);
     if (theState->mTowers.empty() && theState->mSeen.empty())
         return 0;
-    EECPBuildManager* theBuild = inPlayer->mCivilizationManager->mBuildManager;
+    EECPPlacement* theBuild = inPlayer->mPlacement;
     if (theBuild->mTownCenterTile.mX == -10000)
         return 0;
     long theTownX = theBuild->mTownCenterTile.mX, theTownY = theBuild->mTownCenterTile.mY;
@@ -200,7 +198,7 @@ long EECPNextBuildUnsafe(EEComputerPlayer* inPlayer, long inX, long inY)
     EECPNextState* theState = EECPNextGetState(inPlayer);
     if (EECPNextTowerAt(theState, inX, inY, kNextTowerMargin) != 0 || EECPNextRouteTower(inPlayer, inX, inY) != 0)
         return kNextBlockedTower;
-    EECPBuildManager* theBuild = inPlayer->mCivilizationManager->mBuildManager;
+    EECPPlacement* theBuild = inPlayer->mPlacement;
     if (theBuild->mTownCenterTile.mX != -10000
         && EECPNextDistance2(inX, inY, theBuild->mTownCenterTile.mX, theBuild->mTownCenterTile.mY)
             <= (long long)kNextBuildHome * kNextBuildHome)
@@ -208,7 +206,7 @@ long EECPNextBuildUnsafe(EEComputerPlayer* inPlayer, long inX, long inY)
     long theKind = kNextBlockedNone;
     if (EECPNextSiteThreat(inPlayer, inX, inY, false, &theKind) != 0)
         return theKind;
-    if (EECPRMResourceInDanger(inPlayer->mCivilizationManager->mResourceManager, inX, inY))
+    if (EECPRMResourceInDanger(inPlayer, inX, inY))
         return kNextBlockedDanger;
     return kNextBlockedNone;
 }
@@ -294,16 +292,6 @@ static bool EECPNextDropIn(const std::vector<long>& inDrops, long inX, long inY,
     return false;
 }
 
-bool EECPNextExploring(EEComputerPlayer* inPlayer, EEUnit* inUnit)
-{
-    EECPNextState* theState = EECPNextGetState(inPlayer);
-    long theNow = (long)gPhysics->mGameTime;
-    for (unsigned long e = 0; e < theState->mExplore.size(); e++)
-        if (theState->mExplore[e].mUnit == (long)inUnit->mUnitID && theNow - theState->mExplore[e].mTime <= kNextExploreMs)
-            return true;
-    return false;
-}
-
 bool EECPNextDropReady(EEComputerPlayer* inPlayer, long inX, long inY, bool inFood, long inSlack)
 {
     std::vector<long> theDrops;
@@ -355,7 +343,7 @@ long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inN
 static void EECPNextUpdateHome(EEComputerPlayer* inPlayer, EECPNextState* inState)
 {
     inState->mHome.clear();
-    EECPBuildManager* theBuild = inPlayer->mCivilizationManager->mBuildManager;
+    EECPPlacement* theBuild = inPlayer->mPlacement;
     if (theBuild->mTownCenterTile.mX == -10000)
         return;
     long theTownX = theBuild->mTownCenterTile.mX, theTownY = theBuild->mTownCenterTile.mY;
@@ -416,8 +404,7 @@ long EECPNextSiteBlocked(EEComputerPlayer* inPlayer, EEUnit* inUnit, long* outCa
         *outCause = theCause;
     if (theCause != 0)
         return kNextBlockedTower;
-    EECPCivilizationManager* theCivilization = inPlayer->mCivilizationManager;
-    if (EECPRMResourceInDanger(theCivilization->mResourceManager, theX, theY))
+    if (EECPRMResourceInDanger(inPlayer, theX, theY))
         return kNextBlockedDanger;
     for (unsigned long j = 0; j < gWorld.mNumPlayers; j++) {
         EEPlayer* theOther = gWorld.mPlayers[j];
@@ -466,6 +453,112 @@ static void EECPNextTraceSites(EEComputerPlayer* inPlayer, const EECPNextView& i
     }
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// The forests by the town (the resource manager's forest list and FindForestTarget before stage 6): the continent
+// manager's forests, nearest the town centre first (by their closest hull point), sorted again when the town tile
+// changes or a minute has passed
+
+static void EECPNextSortForests(EEComputerPlayer* inPlayer, EECPNextState* inState)
+{
+    U2DPoint<long> theTown = inPlayer->mPlacement->mTownCenterTile;
+    unsigned long theNow = gPhysics->mGameTime;
+    if (!inState->mForests.empty() && inState->mForestsX == theTown.mX && inState->mForestsY == theTown.mY
+        && theNow >= inState->mForestsTime && theNow - inState->mForestsTime < 60000)
+        return;
+    inState->mForests.clear();
+    inState->mForestsX = theTown.mX;
+    inState->mForestsY = theTown.mY;
+    inState->mForestsTime = theNow;
+    std::vector<std::pair<long long, unsigned short> > theOrder;
+    for (unsigned long i = 0, n = gContinentManager.mForests.size(); i < n; i++) {
+        EEAIForest* theForest = gContinentManager.mForests[(unsigned short)i];
+        if (theForest == NULL)
+            continue;
+        long long theKey = 0;
+        if (theTown.mX != -10000) {
+            U2DPoint<long> thePoint = theForest->GetClosestHullPoint(theTown);
+            theKey = EECPNextDistance2(thePoint.mX, thePoint.mY, theTown.mX, theTown.mY);
+        }
+        theOrder.push_back(std::make_pair(theKey, theForest->mID));
+    }
+    std::stable_sort(theOrder.begin(), theOrder.end(),
+        [](const std::pair<long long, unsigned short>& a, const std::pair<long long, unsigned short>& b) { return a.first < b.first; });
+    for (unsigned long k = 0; k < theOrder.size(); k++)
+        inState->mForests.push_back(theOrder[k].second);
+}
+
+static EEUnit* EECPNextTreeAt(long inX, long inY, bool inWithWood)
+{
+    EEMapTile* theMapTile = gWorld.mMap != NULL ? gWorld.mMap->GetTile(inX, inY) : NULL;
+    for (RTSTileUnitNode* theNode = theMapTile != NULL ? theMapTile->mUnits : NULL; theNode != NULL; theNode = theNode->mNext) {
+        EEUnit* theUnit = theNode->mUnit;
+        if (theUnit != NULL && theUnit->GetUnitClass()->mResourceType == kResourceWood && (!inWithWood || theUnit->mResourceAmount > 0))
+            return theUnit;
+    }
+    return NULL;
+}
+
+EEUnit* EECPNextForestTarget(EEComputerPlayer* inPlayer)
+{
+    if (inPlayer->mPlacement == NULL || inPlayer->mPlacement->mTownCenterTile.mX == -10000 || gWorld.mMap == NULL)
+        return NULL;
+    EECPNextState* theState = EECPNextGetState(inPlayer);
+    EECPNextSortForests(inPlayer, theState);
+    U2DPoint<long> theCenter = inPlayer->mPlacement->mTownCenterTile;
+    for (unsigned long i = 0; i < theState->mForests.size(); i++) {
+        EEAIForest* theForest = gContinentManager.mForests[theState->mForests[i]];
+        if (theForest == NULL)
+            continue;
+        // (a forest of one tree only while fewer than 8 gather: the original's inCount, 0 here)
+        U2DPoint<long> thePoint = theForest->GetClosestPoint(theCenter);
+        EEUnit* theTree = EECPNextTreeAt(thePoint.mX, thePoint.mY, false);
+        if (theTree != NULL)
+            return theTree;
+    }
+    return NULL;
+}
+
+EEUnit* EECPNextWoodTarget(EEComputerPlayer* inPlayer)
+{
+    EEUnit* theTree = EECPNextForestTarget(inPlayer);
+    if (theTree != NULL && EECPNextDropReady(inPlayer, theTree->GetTileX(), theTree->GetTileY(), false, kNextWoodSlack))
+        return theTree;
+    if (inPlayer->mPlacement == NULL || inPlayer->mPlacement->mTownCenterTile.mX == -10000 || gWorld.mMap == NULL)
+        return NULL;
+    EECPNextState* theState = EECPNextGetState(inPlayer);
+    U2DPoint<long> theTown = inPlayer->mPlacement->mTownCenterTile;
+    std::vector<long> theDrops;
+    EECPNextReadyDrops(inPlayer, false, theDrops);
+    std::vector<std::pair<long long, unsigned long> > theOrder;   // (distance from the town, the drop's first long)
+    for (unsigned long d = 0; d + 2 < theDrops.size(); d += 3)
+        theOrder.push_back(std::make_pair(EECPNextDistance2(theDrops[d], theDrops[d + 1], theTown.mX, theTown.mY), d));
+    std::sort(theOrder.begin(), theOrder.end());
+    for (unsigned long o = 0; o < theOrder.size(); o++) {
+        unsigned long d = theOrder[o].second;
+        U2DPoint<long> theDrop(theDrops[d], theDrops[d + 1]);
+        long theReach = kNextDropReach + kNextWoodSlack + theDrops[d + 2];
+        EEUnit* theBest = NULL;
+        long long theBestDistance = 0;
+        for (unsigned long i = 0; i < theState->mForests.size(); i++) {
+            EEAIForest* theForest = gContinentManager.mForests[theState->mForests[i]];
+            if (theForest == NULL)
+                continue;
+            U2DPoint<long> thePoint = theForest->GetClosestPoint(theDrop);
+            long long theDistance = EECPNextDistance2(thePoint.mX, thePoint.mY, theDrop.mX, theDrop.mY);
+            if (theDistance > (long long)theReach * theReach || (theBest != NULL && theDistance >= theBestDistance))
+                continue;
+            EEUnit* theUnit = EECPNextTreeAt(thePoint.mX, thePoint.mY, true);
+            if (theUnit != NULL) {
+                theBest = theUnit;
+                theBestDistance = theDistance;
+            }
+        }
+        if (theBest != NULL)
+            return theBest;
+    }
+    return NULL;
+}
+
 struct EECPNextPlace {
     long mX, mY, mReach, mStrength;
 };
@@ -489,10 +582,7 @@ const EECPNextClassCost* EECPNextFindCost(const EECPNextView& inView, long inTyp
 void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
 {
     EECPNextState* theState = EECPNextGetState(inPlayer);
-    EECPCivilizationManager* theCivilization = inPlayer->mCivilizationManager;
-    EECPResourceManager* theResources = theCivilization->mResourceManager;
-    EECPBuildManager* theBuild = theCivilization->mBuildManager;
-    EECPUnitManager* theUnits = theCivilization->mUnitManager;
+    EECPPlacement* theBuild = inPlayer->mPlacement;
     EETechTree* theTree = inPlayer->mTechnologies;
     unsigned long theNow = gPhysics->mGameTime;
     // the gather safety's memory (the army step's scan just ran) and the home resources
@@ -504,28 +594,22 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
     outView.epoch = theTree->mCurrentEpoch;
     outView.epoch_start = (long)theState->mEpochStart;
     outView.last_epoch = gWorld.mGameOptions.mEpochEnd < EEEpochCount() - 1 ? (long)gWorld.mGameOptions.mEpochEnd : EEEpochCount() - 1;
-    outView.advancing = EECPPendingEpoch(inPlayer) != kTechNone || theCivilization->mAdvancingEpoch ? 1 : 0;
+    outView.advancing = EECPPendingEpoch(inPlayer) != kTechNone ? 1 : 0;   // (an epoch at a building; the Lua verbs add their queue)
     long theSlot = theState->mIncomeSteps % 60;
     for (long i = 0; i < kNextResources; i++) {
         outView.stock[i] = inPlayer->mResourceCaps[kResourceFood + i];
         outView.income[i] = theState->mIncomeTotal[i] - theState->mIncomeRing[theSlot][i];
         outView.income_total[i] = theState->mIncomeTotal[i];
-        outView.reserve[i] = theState->mReserve[i];
+        // (stage 6: the reserve, the wanted gatherers, the claims and the queues are the Lua verbs', which fill these
+        // fields: data/ai/lib/verbs.lua)
+        outView.reserve[i] = 0;
         outView.gatherers[i] = 0;
-        outView.wanted[i] = i == 0 ? theState->mFoodLand : (long)theResources->mWantedGatherers[kResourceFood + i];
+        outView.wanted[i] = 0;
         outView.next_epoch_cost[i] = 0;
         outView.epoch2_cost[i] = 0;
     }
-    outView.idle = 0;
-    for (long r = 0; r < 7; r++)
-        for (unsigned long k = 0; k < theResources->mGatherers[r].size(); k++) {
-            if (theResources->mGatherers[r][k]->GetUnitClass()->mCategory == kUnitCategoryNavalCitizen)
-                continue;
-            if (r == 0)
-                outView.idle++;
-            else if (r >= kResourceFood && r < kResourceFood + kNextResources)
-                outView.gatherers[r - kResourceFood]++;
-        }
+    outView.idle = 0;   // (below: the land citizens by their goals)
+    outView.hunters = 0;
     outView.population = inPlayer->GetTotalPopulation(true, false);
     outView.population_cap = inPlayer->GetPopulationLimit(0);
     bool theTown = theBuild->mTownCenterTile.mX != -10000;
@@ -538,6 +622,7 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
     std::map<long, EECPNextBuildings> theBuildings;
     std::map<long, EECPNextSoldiers> theSoldiers;
     std::map<long, long> theInProduction;   // by the class made
+    std::map<long, long> theBuilt;          // finished buildings by class (the producers)
     std::vector<EECPNextPlace> theDrops, theFoodDrops, theTowers;
     outView.citizens = 0;
     outView.boats = 0;
@@ -550,8 +635,24 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
         EEUnitClass* theClass = theUnit->mUnitClass;
         long theType = theClass->mUnitType;
         long theCategory = theClass->mCategory;
-        if (theCategory == kUnitCategoryLandCitizen)
+        if (theCategory == kUnitCategoryLandCitizen) {
             outView.citizens++;
+            // what it does: gathers (its resource), hunts (food), or nothing (idle)
+            EEUnitGoal* theGoal = theComplex->GetLoadGoal();
+            EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoal);
+            EEUGAttackUnit* theHunt = dynamic_cast<EEUGAttackUnit*>(theGoal);
+            bool theHunting = (theGather != NULL && theGather->mResource != NULL
+                    && theGather->mResource->mUnitClass->mFamily == kUnitFamilyAnimal)
+                || (theHunt != NULL && theHunt->mTarget != NULL && theHunt->mTarget->GetUnitClass()->GetFamily() == kUnitFamilyAnimal);
+            long r = theGather != NULL && theGather->mResource != NULL ? (long)theGather->mResource->mResourceType - kResourceFood
+                : theHunting ? 0 : -1;
+            if (r >= 0 && r < kNextResources)
+                outView.gatherers[r]++;
+            else if (theGoal == NULL)
+                outView.idle++;
+            if (theHunting)
+                outView.hunters++;
+        }
         else if (theCategory == kUnitCategoryNavalCitizen)
             outView.boats++;
         if (theClass->IsBuilding()) {
@@ -559,6 +660,7 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
             theEntry.type = theType;
             if (theComplex->mIsBuilt) {
                 theEntry.finished++;
+                theBuilt[theType]++;
                 long theQueue = (long)theComplex->GetBuildQueueSize();
                 if (theQueue > 0)
                     theEntry.busy++;
@@ -589,15 +691,6 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
             outView.army_strength += EECPNextStrength(theUnit);
         }
     }
-    for (long e = 0; e < EEEpochCount(); e++)
-        for (unsigned long k = 0; k < theBuild->mQueues[e].size(); k++) {
-            unsigned long theClass = theBuild->mQueues[e][k].first;
-            if (theClass >= EEUnitClassCount() || gUnitClassTable[theClass] == NULL)
-                continue;
-            long theType = gUnitClassTable[theClass]->mUnitType;
-            theBuildings[theType].type = theType;
-            theBuildings[theType].queued++;
-        }
     for (std::map<long, EECPNextBuildings>::iterator it = theBuildings.begin(); it != theBuildings.end(); ++it)
         outView.buildings.push_back(it->second);
     for (std::map<long, EECPNextSoldiers>::iterator it = theSoldiers.begin(); it != theSoldiers.end(); ++it)
@@ -765,7 +858,7 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
             if (EECPNextDistance2(theSite.x, theSite.y, theEnemySoldiers[e].mX, theEnemySoldiers[e].mY)
                 <= (long long)kNextSiteDangerRange * kNextSiteDangerRange)
                 theSite.danger += theEnemySoldiers[e].mStrength;
-        if (EECPRMResourceInDanger(theResources, theSite.x, theSite.y))
+        if (EECPRMResourceInDanger(inPlayer, theSite.x, theSite.y))
             theSite.danger++;
         outView.sites.push_back(theSite);
     }
@@ -805,13 +898,11 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
         theCost.military = inPlayer->mCombatManager != NULL && inPlayer->mCombatManager->IsMilitaryClass(theClass) ? 1 : 0;
         theCost.producer = theNode->GetNumUnitClasses() > 0 ? theNode->GetUnitClass(0) : -1;
         for (unsigned long i = 0; i < theNode->GetNumUnitClasses(); i++) {
-            std::deque<EEComplexUnit*>* theMakers = theUnits->GetUnits(theNode->GetUnitClass(i));
-            for (unsigned long m = 0; theMakers != NULL && m < theMakers->size(); m++)
-                if ((*theMakers)[m]->mIsBuilt)
-                    theCost.producers++;
+            std::map<long, long>::iterator theMakers = theBuilt.find(theNode->GetUnitClass(i));
+            if (theMakers != theBuilt.end())
+                theCost.producers += theMakers->second;
         }
-        std::map<unsigned long, unsigned long>::iterator theWaiting = theUnits->mWaitingCounts.find(c);
-        theCost.requested = theWaiting != theUnits->mWaitingCounts.end() ? (long)theWaiting->second : 0;
+        theCost.requested = 0;   // (the Lua verbs' requests)
         std::map<long, long>::iterator theMaking = theInProduction.find((long)c);
         theCost.in_production = theMaking != theInProduction.end() ? theMaking->second : 0;
         theCost.counts_toward_epoch = theNode->mData->mCountsTowardEpoch ? 1 : 0;
@@ -821,40 +912,29 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
     // §8.35: the game near the town (what the hunters can take without walking 40 tiles), the hunters, and the forest
     // edge the wood gatherers go to (FindForestTarget's) with whether a drop site is at hand there
     outView.hunt = 0;
-    outView.hunters = 0;
     outView.wood_x = outView.wood_y = -1;
     outView.wood_distance = 0;
     outView.wood_drop = 0;
     outView.wood_ready = 0;
     if (theTown) {
-        for (unsigned long i = 0; i < theResources->mMines.size() && outView.hunt < kNextHuntMax; i++) {
-            EEComplexUnit* theAnimal = theResources->mMines[i];
-            if (theAnimal == NULL || !(theAnimal->mResourceAmount > 0) || !(theAnimal->mHitPoints > 0) || theAnimal->mTile == NULL)
+        // the game near the town: nature's animals with food and no attack within the hunt reach, in sight, not blocked
+        // (the resource manager's animal list before stage 6; the Lua verbs count with their claim range)
+        long theReach = EECPNextHuntReach(inPlayer);
+        for (EEUnit* theAnimal = gWorld.mPlayers[0] != NULL ? gWorld.mPlayers[0]->mFirstUnit : NULL;
+             theAnimal != NULL && outView.hunt < kNextHuntMax; theAnimal = static_cast<EEUnit*>(theAnimal->mNext)) {
+            if (theAnimal->mUnitClass->GetFamily() != kUnitFamilyAnimal || theAnimal->GetResourceType() != kResourceFood
+                || !(theAnimal->mResourceAmount > 0) || !(theAnimal->mHitPoints > 0) || theAnimal->mTile == NULL
+                || theAnimal->GetStats()->GetAttack() != 0.0f)
                 continue;
-            long theReach = EECPNextHuntReach(inPlayer);
-            if (EECPNextDistance2(theAnimal->GetTileX(), theAnimal->GetTileY(), theTownX, theTownY)
-                > (long long)theReach * theReach)
+            if (EECPNextDistance2(theAnimal->GetTileX(), theAnimal->GetTileY(), theTownX, theTownY) > (long long)theReach * theReach)
                 continue;
             if (!static_cast<EETile*>(theAnimal->mTile)->IsVisibleTo(inPlayer)
                 || EECPNextSiteBlocked(inPlayer, theAnimal, NULL) > kNextBlockedUnexplored)
                 continue;
             outView.hunt++;
         }
-        for (unsigned long k = 0; k < theResources->mGatherers[kResourceFood].size(); k++) {
-            EEComplexUnit* theUnit = theResources->mGatherers[kResourceFood][k];
-            if (theUnit->GetUnitClass()->mCategory != kUnitCategoryLandCitizen)
-                continue;
-            EEUnitGoal* theGoal = theUnit->GetLoadGoal();
-            EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoal);
-            EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
-            if ((theGather != NULL && theGather->mResource != NULL
-                    && theGather->mResource->mUnitClass->mFamily == kUnitFamilyAnimal)
-                || (theAttack != NULL && theAttack->mTarget != NULL
-                    && theAttack->mTarget->GetUnitClass()->GetFamily() == kUnitFamilyAnimal))
-                outView.hunters++;
-        }
-        outView.wood_ready = EECPNextWoodTarget(inPlayer, 0, NULL) != NULL ? 1 : 0;
-        EEUnit* theTree = theResources->FindForestTarget(0, NULL);
+        outView.wood_ready = EECPNextWoodTarget(inPlayer) != NULL ? 1 : 0;
+        EEUnit* theTree = EECPNextForestTarget(inPlayer);
         if (theTree != NULL && theTree->mTile != NULL) {
             outView.wood_x = theTree->GetTileX();
             outView.wood_y = theTree->GetTileY();

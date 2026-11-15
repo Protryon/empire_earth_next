@@ -34,10 +34,7 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EECPCivilizationManager.h"
-#include "ee/EECPUnitManager.h"
-#include "ee/EECPBuildManager.h"
-#include "ee/EECPResourceManager.h"
+#include "ee/EECPPlacement.h"
 #include "ee/EECPResourceCenter.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPASGFlags.h"
@@ -259,7 +256,7 @@ bool EECPPrehistoricPeaceOn(const EEComputerPlayer* inPlayer)
 
 long EECPClaimRange(const EEComputerPlayer* inPlayer)
 {
-    return EECPNextClaimRangeOf(inPlayer);   // the strategy's claim_range (ee/EECPNext.h)
+    return kEECPClaimRange;   // (stage 6: the strategy's claim range is the Lua verbs', data/ai/lib/verbs.lua)
 }
 
 bool EECPClaimRangeOn(const EEComputerPlayer* inPlayer)
@@ -380,8 +377,7 @@ static void EECPTraceSoldierLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
     EEComplexUnit* c = inUnit->mComplexUnit;
     long theX = inUnit->mTileX, theY = inUnit->mTileY;
     long theTown = -1;
-    U2DPoint<long> theCenter = inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mBuildManager != NULL
-        ? inPlayer->mCivilizationManager->mBuildManager->mTownCenterTile : U2DPoint<long>(-10000, -10000);
+    U2DPoint<long> theCenter = inPlayer->mPlacement != NULL ? inPlayer->mPlacement->mTownCenterTile : U2DPoint<long>(-10000, -10000);
     if (theCenter.mX != -10000 && theX != -10000) {
         long theDX = theX - theCenter.mX, theDY = theY - theCenter.mY;
         theTown = (long)sqrt((double)(theDX * theDX + theDY * theDY));
@@ -453,8 +449,7 @@ void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
         sLost[theID][0]++;
         EEComplexUnit* theKiller = inUnit->mComplexUnit->mLastAttacker;
         sLostBy[theID][theKiller == NULL ? 2 : theKiller->mPlayer != NULL && theKiller->mPlayer->mPlayerID != 0 ? 0 : 1]++;
-        U2DPoint<long> theCenter = inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mBuildManager != NULL
-            ? inPlayer->mCivilizationManager->mBuildManager->mTownCenterTile : U2DPoint<long>(-10000, -10000);
+        U2DPoint<long> theCenter = inPlayer->mPlacement != NULL ? inPlayer->mPlacement->mTownCenterTile : U2DPoint<long>(-10000, -10000);
         if (theCenter.mX != -10000) {
             long theDX = inUnit->mTileX - theCenter.mX, theDY = inUnit->mTileY - theCenter.mY;
             long theSquared = theDX * theDX + theDY * theDY;
@@ -567,9 +562,13 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
         } else
             theOther++;
     }
-    std::vector<EEComplexUnit*> theFree;   // the citizens the build manager may take (idle or gathering)
-    if (inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mUnitManager != NULL)
-        inPlayer->mCivilizationManager->mUnitManager->GetIdleCitizens(theFree);
+    std::vector<EEComplexUnit*> theFree;   // the citizens idle or gathering
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        EEComplexUnit* c = theUnit->mComplexUnit;
+        if (c != NULL && theUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen && theUnit->mHitPoints > 0 && c->mTileX != -10000
+            && (c->mActiveGoal == NULL || c->mActiveGoal->mKind == kGoalGather))
+            theFree.push_back(c);
+    }
     long theEpoch = inPlayer->mTechnologies != NULL ? inPlayer->mTechnologies->mCurrentEpoch : -1;
     const char* theSaved = gCPTraceManager;
     gCPTraceManager = "cp";
@@ -587,8 +586,7 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
         theGatherers[kResourceGold], theGatherers[kResourceIron], theGatherers[0], theBuildings, theUnfinished, theOther);
     // the resource manager's model: the gatherers it wants per resource, the ones it has listed, and its needs
     // ledger (queued costs earned minus what was gathered or started; UpdateWantedGatherers splits by it)
-    if (inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mResourceManager != NULL) {
-        EECPResourceManager* theRM = inPlayer->mCivilizationManager->mResourceManager;
+    {
         // the resource units the player's resource centers hold, by resource, and the gatherers they take
         // (mMiningLimit per unit); "centers" the resource centers
         unsigned long theSites[kResourceIron + 1] = {0};
@@ -600,12 +598,9 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
                     theSites[theType]++;
             }
         }
-        EECPTraceOut(inPlayer, "sites", "units=%lu/%lu/%lu/%lu/%lu limit=%ld centers=%lu wanted_citizens=%ld workers=%lu in_production=%ld",
+        EECPTraceOut(inPlayer, "sites", "units=%lu/%lu/%lu/%lu/%lu limit=%ld centers=%lu",
             theSites[kResourceFood], theSites[kResourceWood], theSites[kResourceStone], theSites[kResourceGold],
-            theSites[kResourceIron], inPlayer->mMiningLimit, (unsigned long)inPlayer->GetNumResourceCenters(),
-            inPlayer->mCivilizationManager->mUnitManager != NULL ? inPlayer->mCivilizationManager->mUnitManager->GetWantedCitizens() : -1L,
-            inPlayer->mCivilizationManager->mUnitManager != NULL ? inPlayer->mCivilizationManager->mUnitManager->GetNumWorkers() : 0UL,
-            inPlayer->mCivilizationManager->mUnitManager != NULL ? (long)inPlayer->mCivilizationManager->mUnitManager->mNumInProduction : -1L);
+            theSites[kResourceIron], inPlayer->mMiningLimit, (unsigned long)inPlayer->GetNumResourceCenters());
         // the mean distance from each gatherer's resource to the nearest built drop site that takes it, by resource, and
         // how many are past the drop-off distance (where BuildSettlementFor asks for a settlement); the drop sites
         double theTrip[kResourceIron + 1] = {0};
@@ -681,45 +676,6 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
         EECPTraceOut(inPlayer, "builders", "unbuilt=%ld built=%ld act build=%ld repair=%ld move=%ld other=%ld cls=%ld other_action=%ld other_hp=%ld",
             theBuilders[0], theBuilders[1], theBuilders[2], theBuilders[3], theBuilders[4], theBuilders[5], theBuildClass,
             theOtherAction, theOtherHealth);
-        // the pending unit requests other than citizens: class, count, affordable now, built producers, room
-        if (inPlayer->mCivilizationManager->mUnitManager != NULL && inPlayer->mTechnologies != NULL) {
-            EECPUnitManager* theUM = inPlayer->mCivilizationManager->mUnitManager;
-            char theList[200];
-            theList[0] = '\0';
-            size_t theUsed = 0;
-            long theShown = 0;
-            for (long e = 0; e < EEEpochCount() && theShown < 4; e++)
-                for (unsigned long k = 0; k < theUM->mRequests[e].size() && theShown < 4; k++) {
-                    const EECPUMRequest& theRequest = theUM->mRequests[e][k];
-                    long theClass = (long)theRequest.mUnitClass;
-                    if (theClass == kUnitTypeCitizen || theClass == kUnitTypeFemaleCitizen || gUnitClassTable[theClass] == NULL)
-                        continue;
-                    EETechTreeNode* theNode = inPlayer->mTechnologies->Get(gUnitClassTable[theClass]->mTechnology);
-                    long theProducers = 0;
-                    if (theNode != NULL)
-                        for (unsigned long u = 0; u < theNode->GetNumUnitClasses(); u++) {
-                            std::deque<EEComplexUnit*>* theBuilt = theUM->GetUnits(theNode->GetUnitClass(u));
-                            if (theBuilt != NULL && gUnitClassTable[theNode->GetUnitClass(u)]->IsBuilding())
-                                for (unsigned long b = 0; b < theBuilt->size(); b++)
-                                    theProducers += (*theBuilt)[b]->mIsBuilt ? 1 : 0;
-                        }
-                    int theAfford = theNode != NULL && inPlayer->CanAfford(theNode, theClass, 1) ? 1 : 0;
-                    int n = snprintf(theList + theUsed, sizeof(theList) - theUsed, " %ld:%lu:%d:%ld", theClass,
-                        (unsigned long)theRequest.mCount, theAfford, theProducers);
-                    if (n > 0 && theUsed + n < sizeof(theList))
-                        theUsed += n;
-                    theShown++;
-                }
-            long theRoom = inPlayer->GetPopulationLimit(0) - theUM->mNumInProduction - inPlayer->GetTotalPopulation(true, false);
-            EECPTraceOut(inPlayer, "pending", "room=%ld cls:n:afford:producers%s", theRoom, theList);
-        }
-        EECPTraceOut(inPlayer, "econ", "want=%lu/%lu/%lu/%lu/%lu listed=%lu/%lu/%lu/%lu/%lu/%lu need=%ld/%ld/%ld/%ld/%ld",
-            theRM->mWantedGatherers[2], theRM->mWantedGatherers[3], theRM->mWantedGatherers[4],
-            theRM->mWantedGatherers[5], theRM->mWantedGatherers[6], (unsigned long)theRM->mGatherers[2].size(),
-            (unsigned long)theRM->mGatherers[3].size(), (unsigned long)theRM->mGatherers[4].size(),
-            (unsigned long)theRM->mGatherers[5].size(), (unsigned long)theRM->mGatherers[6].size(),
-            (unsigned long)theRM->mGatherers[0].size(), theRM->mNeeds[2], theRM->mNeeds[3], theRM->mNeeds[4],
-            theRM->mNeeds[5], theRM->mNeeds[6]);
     }
     gCPTraceManager = theSaved;
 }
@@ -763,14 +719,9 @@ unsigned long EECPOutOfSynchChecksum()
         EEComputerPlayer* theCP = thePlayer->mComputerPlayer;
         if (theCP != NULL) {
             theSum = theSum * 31 + (unsigned long)theCP->mPopulationCap;
-            if (EECPCivilizationManager* theCiv = theCP->mCivilizationManager) {
-                theSum = theSum * 31 + theCiv->mNextEpochAdvanceTime;
-                if (theCiv->mBuildManager != NULL)
-                    for (long e = 0; e < EEEpochCount(); e++)
-                        theSum = theSum * 31 + (unsigned long)theCiv->mBuildManager->mQueues[e].size();
-                if (theCiv->mUnitManager != NULL)
-                    theSum = theSum * 31 + (unsigned long)theCiv->mUnitManager->mNumWaiting;
-            }
+            if (theCP->mPlacement != NULL)   // (stage 6: the managers' queues are the Lua verbs', in the script's memory)
+                theSum = theSum * 31 + (unsigned long)(theCP->mPlacement->mTownCenterTile.mX * 1024 + theCP->mPlacement->mTownCenterTile.mY);
+            theSum = theSum * 31 + (unsigned long)theCP->mDangerZones.size();
         }
         theChecksum += theSum * (thePlayer->mPlayerID + 1);
     }
