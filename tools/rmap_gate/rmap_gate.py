@@ -6,9 +6,9 @@ map sizes x player counts, compared with the digests recorded from the C++ gener
   python -I tools/rmap_gate/rmap_gate.py record [--data TREE] [-j N]     (over)write the golden digests
   python -I tools/rmap_gate/rmap_gate.py diff SCRIPT SIZE PLAYERS TEAMS SEED   per-stage digests of one map
   ... check|record --reader                     the .rmv reader alone: the digest after SetRandomMapValues
-                                                (golden_reader.txt, recorded from the C++ reader)
+                                                (golden_reader.txt, recorded from the C++ reader Unit10.cpp)
 
-The tool compiles the .rmv reader (Unit10.cpp), the C++ adapter (Default.cpp) and the engine units they need, and links
+The tool compiles the C++ adapter (Default.cpp: the PIM entry points, the reader's host) and the engine units it needs, and links
 the generator as ee_rmap_gatelib. The golden digests were recorded from the C++ generator (commit 7e470841) before
 it was deleted; there is no way to re-record them from C++ now. `record` overwrites them from the Rust generator: only
 do that at a declared rebaseline.
@@ -35,7 +35,7 @@ GOLDEN_READER = HERE / "golden_reader.txt"
 DATA_DEFAULT = ROOT.parent / "empire_earth_next" / "build" / "open_data" / "tree"
 DEFAULT = ROOT / "src" / "Empire Earth" / "Random Map" / "Random Map Generators" / "Default"
 UTIL = ROOT / "src" / "Low-Level Engine"
-READER = ["Unit10.cpp"]
+READER = []   # the .rmv reader is Rust now (ee_rmap rmv.rs); Unit10.cpp was compiled here
 # engine units the dump tool compiles for real: the geometry math, the random stream, the strings and the fractal
 LLE_UNITS = ["Utilities/UString.cpp", "Utilities/UMath.cpp",
              "File System/FSBasicFile.cpp", "File System/FSFileSpec.cpp", "Graphics Engine/GE3DLine.cpp",
