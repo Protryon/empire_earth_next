@@ -134,6 +134,8 @@ static void* CoreObjectOf(void* inObject,EeWonCoreObject inKind)
         return static_cast<UDPManagerRecvOp*>(static_cast<AsyncOp*>(anObject))->GetUdpObject();
     case EeWonCoreObject::UdpSendRecv:
         return static_cast<UDPManagerSendRecvOp*>(static_cast<AsyncOp*>(anObject))->GetUdpObject();
+    case EeWonCoreObject::ServerConn:
+        return static_cast<ServerConnection*>(static_cast<AsyncSocket*>(anObject))->GetConnObject();
     }
     return NULL;
 }
@@ -151,6 +153,10 @@ static void* CoreNewSocketOp(EeWonCoreSocketOp inKind,void* inSocket,void* inByt
     case EeWonCoreSocketOp::Close: anOp=new CloseOp(aSocket); break;
     case EeWonCoreSocketOp::QueueClose: anOp=new QueueCloseOp; anOp->SetRunAsyncImmediately(false); break;
     case EeWonCoreSocketOp::RecvFrom: anOp=new RecvBytesFromOp(inSize,aSocket); break;
+    case EeWonCoreSocketOp::RecvMsg: anOp=new RecvMsgOp(aSocket); break;
+    case EeWonCoreSocketOp::SendMsg:
+        anOp=new SendMsgOp(static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes)),aSocket);
+        break;
     case EeWonCoreSocketOp::SendTo:
         anOp=new SendBytesToOp(static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes)),
                                IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)),aSocket);

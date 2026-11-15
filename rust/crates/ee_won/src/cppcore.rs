@@ -21,10 +21,14 @@ use std::ptr::null_mut;
 use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
+use crate::buffer::ee_won_bytes_copy;
 use crate::buffer::{ee_won_bytes_data, ee_won_bytes_length, EeWonByteBuffer};
 use crate::ipobj::{ee_won_ipaddr_free, EeWonIpAddr};
 use crate::opobj::{EeWonAsyncOp, EeWonCompletion, HeldRef};
 use crate::qsock::{EeWonQueueSocket, EeWonQueueSocketHooks};
+use crate::servconn::{
+    ee_won_servconn_connect_callback, ee_won_servconn_keep_alive_callback, EeWonServerConn, EeWonServerConnHooks,
+};
 use crate::sockobj::{EeWonAsyncSocket, EeWonAsyncSocketHooks};
 use crate::sockop::{EeWonSocketOp, EeWonSocketOpBaseHooks};
 use crate::sockops::{ee_won_socketop_address, ee_won_socketop_received};
@@ -59,6 +63,8 @@ pub enum EeWonCoreObject {
     UdpRecv = 5,
     /// a `UDPManagerSendRecvOp*`'s [`EeWonUdpSendRecvOp`]
     UdpSendRecv = 6,
+    /// a `ServerConnection*`'s [`EeWonServerConn`]
+    ServerConn = 7,
 }
 
 /// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
@@ -73,6 +79,10 @@ pub enum EeWonCoreSocketOp {
     RecvFrom = 2,
     /// `new SendBytesToOp(bytes, addr, socket)`
     SendTo = 3,
+    /// `new RecvMsgOp(socket)`
+    RecvMsg = 4,
+    /// `new SendMsgOp(bytes, socket)`
+    SendMsg = 5,
 }
 
 /// The C++ calls of the whole library (AsyncOp.cpp's one table). Every object crosses as its `RefCount*`; a `new`
@@ -887,6 +897,146 @@ pub static NATIVE_SOCKET: EeWonAsyncSocketHooks = EeWonAsyncSocketHooks {
     transform_send: Some(n_transform_send),
     transform_recv: Some(n_transform_recv),
     transform_free: Some(n_transform_free),
+};
+
+// ---- the server connection
+
+/// What only the C++ `ServerConnection` answers: the peer authentication op's maker and its virtual `MsgCallback`.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct EeWonServerConnCpp {
+    /// `new PeerAuthOp(*address, context, type, conn, true)` (the op's reference not yet taken)
+    pub new_peer_auth: Option<
+        unsafe extern "C" fn(conn: *mut c_void, address: *const c_void, context: *mut c_void, auth: i32) -> *mut c_void,
+    >,
+    /// `conn->MsgCallback(message)` (a `ByteBuffer*`)
+    pub msg_callback: Option<unsafe extern "C" fn(conn: *mut c_void, message: *mut c_void)>,
+}
+
+static SERVCONN: AtomicPtr<EeWonServerConnCpp> = AtomicPtr::new(null_mut());
+
+/// Binds the server connection's C++ table (the same one every time).
+pub fn bind_servconn(cpp: *const EeWonServerConnCpp) {
+    if !cpp.is_null() {
+        SERVCONN.store(cpp.cast_mut(), Ordering::Release);
+    }
+}
+fn servconn_cpp() -> Option<&'static EeWonServerConnCpp> {
+    // SAFETY: a bound table lives for the program
+    unsafe { SERVCONN.load(Ordering::Acquire).as_ref() }
+}
+fn servconn(conn: *mut c_void) -> *const EeWonServerConn {
+    object_of(conn, EeWonCoreObject::ServerConn).cast()
+}
+
+unsafe extern "C" fn n_op_run_block(o: *mut c_void, t: u32) {
+    if let Some(x) = op(o) {
+        x.run(2, t);
+    }
+}
+unsafe extern "C" fn n_new_peer_auth(conn: *mut c_void, a: *const c_void, ctx: *mut c_void, auth: i32) -> *mut c_void {
+    // SAFETY: the table's contract
+    servconn_cpp().and_then(|c| c.new_peer_auth).map_or(null_mut(), |h| unsafe { h(conn, a, ctx, auth) })
+}
+/// `StaticConnectCallback` / `StaticKeepAliveCallback`, holding the connection
+fn conn_completion(conn: *mut c_void, keep_alive: bool) -> *mut c_void {
+    let held = hold(conn);
+    completion(move |o| {
+        let _param = hold(held.get());
+        let _op = hold(o);
+        let c = servconn(held.get());
+        if !c.is_null() {
+            // SAFETY: the connection's live Rust object
+            unsafe {
+                if keep_alive {
+                    ee_won_servconn_keep_alive_callback(c, o)
+                } else {
+                    ee_won_servconn_connect_callback(c, o)
+                }
+            };
+        }
+    })
+}
+unsafe extern "C" fn n_route_connect(conn: *mut c_void, o: *mut c_void) {
+    // SAFETY: a live op; it takes the completion's reference
+    unsafe { n_op_set_completion(o, conn_completion(conn, false)) };
+}
+unsafe extern "C" fn n_new_keep_alive(conn: *mut c_void) -> *mut c_void {
+    // SAFETY: the table's contract
+    let t = core().and_then(|c| c.new_op).map_or(null_mut(), |h| unsafe { h() });
+    // SAFETY: the new op takes the completion's reference
+    unsafe { n_op_set_completion(t, conn_completion(conn, true)) };
+    t
+}
+unsafe extern "C" fn n_start_messages(conn: *mut c_void) {
+    let Some(q) = queue(conn) else { return };
+    let held = hold(conn);
+    // `StaticMsgCallback`: a received message to the virtual MsgCallback
+    q.set_repeat_completion(completion(move |o| {
+        let _param = hold(held.get());
+        let _op = hold(o);
+        if op(o).map_or(WS_NONE, EeWonAsyncOp::status) != WS_SUCCESS {
+            return;
+        }
+        let so = socket_op(o);
+        // SAFETY: the op's live Rust object; the message is held for the call (`GetMsg()`'s temporary)
+        let message =
+            hold(if so.is_null() { null_mut() } else { unsafe { crate::sockops::ee_won_socketop_message(so) } });
+        if let Some(h) = servconn_cpp().and_then(|c| c.msg_callback) {
+            // SAFETY: the table's contract
+            unsafe { h(held.get(), message.get()) };
+        }
+    }));
+    q.set_repeat_op(new_socket_op(EeWonCoreSocketOp::RecvMsg, null_mut(), null_mut(), std::ptr::null(), 0));
+}
+unsafe extern "C" fn n_stop_messages(conn: *mut c_void) {
+    if let Some(q) = queue(conn) {
+        q.set_repeat_completion(null_mut());
+    }
+}
+unsafe extern "C" fn n_queue_message(conn: *mut c_void, bytes: *const u8, length: usize) {
+    // SAFETY: the caller's bytes; a new buffer with one reference (`ByteBufferPtr aMsg`)
+    let b = unsafe { n_bytes_adopt(ee_won_bytes_copy(bytes, length as _)) };
+    if let Some(q) = queue(conn) {
+        q.queue_op(new_socket_op(EeWonCoreSocketOp::SendMsg, null_mut(), b, std::ptr::null(), 0), -1);
+    }
+    ref_release(b);
+}
+unsafe extern "C" fn n_length_field_size(conn: *mut c_void) -> u8 {
+    socket(conn).map_or(0, EeWonAsyncSocket::length_field_size)
+}
+unsafe extern "C" fn n_queue_close_hook(conn: *mut c_void) {
+    if let Some(q) = queue(conn) {
+        q.close_hook();
+    }
+}
+unsafe extern "C" fn n_queue_kill_hook(conn: *mut c_void) {
+    if let Some(q) = queue(conn) {
+        q.kill_hook();
+    }
+}
+
+/// The server connection's calls: in Rust but the peer authentication op's maker and `MsgCallback`.
+pub static NATIVE_SERVCONN: EeWonServerConnHooks = EeWonServerConnHooks {
+    add_ref: Some(n_ref_add),
+    release: Some(n_ref_release),
+    op_status: Some(n_op_status),
+    op_killed: Some(n_op_killed),
+    op_kill: Some(n_op_kill),
+    op_set_completion: Some(n_op_set_completion),
+    op_run_async: Some(n_op_run_async),
+    op_run_block: Some(n_op_run_block),
+    complete: Some(n_completion_call),
+    new_peer_auth: Some(n_new_peer_auth),
+    route_connect: Some(n_route_connect),
+    new_keep_alive: Some(n_new_keep_alive),
+    start_messages: Some(n_start_messages),
+    stop_messages: Some(n_stop_messages),
+    queue_message: Some(n_queue_message),
+    close: Some(n_socket_close),
+    length_field_size: Some(n_length_field_size),
+    queue_close_hook: Some(n_queue_close_hook),
+    queue_kill_hook: Some(n_queue_kill_hook),
 };
 
 #[cfg(test)]

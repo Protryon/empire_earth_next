@@ -1348,25 +1348,43 @@ private:
 // A Rust object since net round 16 (rust/crates/ee_won/src/servconn.rs EeWonServerConn: the auth context +0xa0 and
 // type +0xa4, the peer authentication op +0xa8, the connect completion +0xac, the keep-alive timer +0xb0 and period
 // +0xb4, and every step of ServerConnection.cpp); this class is the shim RoutingConnection and the lobby derive from
+// Since net round 25 its calls back are Rust's (cppcore.rs NATIVE_SERVCONN: the ops, the completions the original's
+// static callbacks were, 2ab160 / 2ab6a0 / 2ab7b0, the messages, the socket) but the peer authentication op's maker
+// and the virtual MsgCallback (ServerConnection.cpp)
 class ServerConnection : public BlockingSocket {
 public:
-    void StartKeepAlive(); //2aaf10
-    static void StaticConnectCallback(AsyncOpPtr,SmartPtr<RefCount>); //2ab160
-    static void StaticMsgCallback(AsyncOpPtr,SmartPtr<RefCount>); //2ab6a0
-    static void StaticKeepAliveCallback(AsyncOpPtr,SmartPtr<RefCount>); //2ab7b0
-    void KeepAliveCallback(AsyncOp*); //2ab840
-    void SendNoOp(); //2ab910
-    ServerConnection(); //2aab10
-    virtual ~ServerConnection(); // the Rust object (the original's was implicit, 2aabe0)
-    virtual void CloseHook(); //CloseHook2abe70
-    virtual void KillHook();  //KillHook2abf50
-    void ConnectCallback(PeerAuthOp*); //ConnectCallback2ab1f0 (virtual in the SDK; nothing overrides it)
-    virtual void MsgCallback(const ByteBuffer*); //MsgCallback2fa500,ret4
-    void SetAuth(AuthContext*, AuthType);  //SetAuth
-    PeerAuthOp* ConnectAsync(const IPAddr&, unsigned long); //2abc40; raw borrowed member result
-    WONStatus ConnectBlock(const IPAddr&,DWORD inTimeout=0xffffffff);
-    void SetKeepAlivePeriod(DWORD);
-    void SetConnectCompletion(CompletionBase<AsyncOpPtr>*); //2abdc0
+    // restarts the keep-alive timer (none for a 0 period) (2aaf10)
+    void StartKeepAlive() { ee_won_servconn_start_keep_alive(this->mConn); }
+    // a no-op message, the timer restarted, when the current keep-alive timer fires (2ab840)
+    void KeepAliveCallback(AsyncOp* inOp) { ee_won_servconn_keep_alive_callback(this->mConn,static_cast<RefCount*>(inOp)); }
+    void SendNoOp() { ee_won_servconn_send_no_op(this->mConn); } // a no-op message queued (2ab910)
+    ServerConnection(); //2aab10: unauthenticated, a 300-second keep-alive
+    virtual ~ServerConnection() { ee_won_servconn_free(this->mConn); } // the original's was implicit, 2aabe0
+    // the keep-alive timer and a pending connect stopped, the message callback dropped, the socket closed (2abe70)
+    virtual void CloseHook() { ee_won_servconn_close_hook(this->mConn); }
+    // the socket killed, the connect completion and auth context dropped (2abf50)
+    virtual void KillHook() { ee_won_servconn_kill_hook(this->mConn); }
+    // the connect's result; on success the messages and the keep-alive start (2ab1f0, virtual in the SDK; nothing
+    // overrides it)
+    void ConnectCallback(PeerAuthOp* inOp)
+    { ee_won_servconn_connect_callback(this->mConn,reinterpret_cast<RefCount*>(inOp)); }
+    virtual void MsgCallback(const ByteBuffer*) {} //MsgCallback2fa500,ret4
+    void SetAuth(AuthContext* inContext, AuthType inType)
+    { ee_won_servconn_set_auth(this->mConn,reinterpret_cast<RefCount*>(inContext),inType); }
+    // the socket closed and an authenticated connect started; the peer authentication op (2abc40, borrowed)
+    PeerAuthOp* ConnectAsync(const IPAddr& address, unsigned long timeout)
+    {
+        return reinterpret_cast<PeerAuthOp*>(static_cast<RefCount*>(
+            ee_won_servconn_connect_async(this->mConn,static_cast<const void*>(&address),(long)timeout)));
+    }
+    // the socket closed, a blocking connect, then the connect callback's report; its status
+    WONStatus ConnectBlock(const IPAddr& theAddr,DWORD theTimeout=0xffffffff)
+    { return ee_won_servconn_connect_block(this->mConn,static_cast<const void*>(&theAddr),theTimeout); }
+    void SetKeepAlivePeriod(DWORD theSeconds) { ee_won_servconn_set_keep_alive_period(this->mConn,theSeconds); }
+    // the completion called when a connect finishes (2abdc0)
+    void SetConnectCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
+    { ee_won_servconn_set_connect_completion(this->mConn,static_cast<RefCount*>(inCompletion)); }
+    EeWonServerConn* GetConnObject() const { return this->mConn; }
 private:
     ServerConnection(const ServerConnection&);
     ServerConnection& operator=(const ServerConnection&);

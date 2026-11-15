@@ -705,8 +705,7 @@ WON_TESTS = {
                                                              "StringParserLists.cpp", "StringUtil.cpp")]],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
-                                  *[WON_SRC / "WONServer" / f for f in ("ServerConnection.cpp",
-                                                                       "ServerConnectionDefaults.cpp")],
+                                  WON_SRC / "WONServer" / "ServerConnection.cpp",
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
 WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"], WON_SRC / "WONCommon" / "StringUtil.cpp"]
 # WONRouting's RoutingGetUserStatusOp over 127.0.0.1 with a routing server stand-in (golden:

@@ -5156,6 +5156,8 @@ enum class EeWonCoreObject {
   UdpRecv = 5,
   /// a `UDPManagerSendRecvOp*`'s [`EeWonUdpSendRecvOp`]
   UdpSendRecv = 6,
+  /// a `ServerConnection*`'s [`EeWonServerConn`]
+  ServerConn = 7,
 };
 
 /// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
@@ -5168,6 +5170,10 @@ enum class EeWonCoreSocketOp {
   RecvFrom = 2,
   /// `new SendBytesToOp(bytes, addr, socket)`
   SendTo = 3,
+  /// `new RecvMsgOp(socket)`
+  RecvMsg = 4,
+  /// `new SendMsgOp(bytes, socket)`
+  SendMsg = 5,
 };
 
 /// A resource's kind (the `ResourceConfig::SafeGet*` that reads it).
@@ -8627,38 +8633,12 @@ using EeWonScrollTextHostFn = ptrdiff_t(*)(void *comp,
                                            int32_t w,
                                            int32_t h);
 
-/// What the connection object calls back in the C++. One static table serves every connection. Every object is
-/// passed as its `RefCount*`.
-struct EeWonServerConnHooks {
-  /// `object->AddRef()`, `->Release()` (an auth context, an op or a completion)
-  void (*add_ref)(void *object);
-  void (*release)(void *object);
-  /// an op's `GetStatus()`, `IsKilled()`, `Kill(true)`, `SetCompletion(c)`, `RunAsync(t)`, `RunBlock(t)`
-  long (*op_status)(void *op);
-  bool (*op_killed)(void *op);
-  void (*op_kill)(void *op);
-  void (*op_set_completion)(void *op, void *completion);
-  void (*op_run_async)(void *op, long timeout);
-  void (*op_run_block)(void *op, uint32_t timeout);
-  /// `completion->Complete(AsyncOpPtr(op))`
-  void (*complete)(void *completion, void *op);
+/// What only the C++ `ServerConnection` answers: the peer authentication op's maker and its virtual `MsgCallback`.
+struct EeWonServerConnCpp {
   /// `new PeerAuthOp(*address, context, type, conn, true)` (the op's reference not yet taken)
   void *(*new_peer_auth)(void *conn, const void *address, void *context, int32_t auth);
-  /// `op->SetCompletion(new ParamCompletion(StaticConnectCallback, conn))`
-  void (*route_connect)(void *conn, void *op);
-  /// `new AsyncOp` with its completion `ParamCompletion(StaticKeepAliveCallback, conn)` (reference not taken)
-  void *(*new_keep_alive)(void *conn);
-  /// `SetRepeatCompletion(new ParamCompletion(StaticMsgCallback, conn))`, then `SetRepeatOp(new RecvMsgOp)`
-  void (*start_messages)(void *conn);
-  /// `SetRepeatCompletion(NULL)`
-  void (*stop_messages)(void *conn);
-  /// `QueueOp(new SendMsgOp(new ByteBuffer(bytes)), -1)`
-  void (*queue_message)(void *conn, const uint8_t *bytes, size_t length);
-  /// the socket's `Close()`, `GetLengthFieldSize()`, and `QueueSocket::CloseHook()`, `QueueSocket::KillHook()`
-  void (*close)(void *conn);
-  uint8_t (*length_field_size)(void *conn);
-  void (*queue_close_hook)(void *conn);
-  void (*queue_kill_hook)(void *conn);
+  /// `conn->MsgCallback(message)` (a `ByteBuffer*`)
+  void (*msg_callback)(void *conn, void *message);
 };
 
 /// `srand(time(NULL))` (`seed` true, the result unused) or `rand()`.
@@ -15662,11 +15642,15 @@ ptrdiff_t ee_won_scrolltext_call(const EeWonScrollText *st,
                                  ptrdiff_t a,
                                  ptrdiff_t b);
 
-/// A new connection object for the C++ `conn` (the hooks get it), on the socket's lock `lock`.
+/// A new connection object for the C++ `conn`, on the socket's lock `lock`; its calls are answered in Rust over the
+/// library's `core` table but the two of `cpp` (cppcore.rs).
 ///
 /// # Safety
-/// `hooks` is a static table; `conn` and `lock` outlive the object.
-EeWonServerConn *ee_won_servconn_new(void *conn, const EeWonServerConnHooks *hooks, void *lock);
+/// `core` and `cpp` are static tables; `conn` and `lock` outlive the object.
+EeWonServerConn *ee_won_servconn_new(void *conn,
+                                     const EeWonCoreHooks *core,
+                                     const EeWonServerConnCpp *cpp,
+                                     void *lock);
 
 /// Frees the connection object (its references go).
 ///
