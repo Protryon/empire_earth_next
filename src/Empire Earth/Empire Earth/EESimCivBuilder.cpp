@@ -95,9 +95,8 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EECBUIListBox.h"
-#include "ee/EECBEditableCivilization.h"
-#include "ee/EECBCivilizationCreator.h"
 #include "ee/EECivilizationBuilder.h"
+#include "rust/ee_screens.h"   // the edited civilization's TEST ONLY queries
 #include "ee/EEAResetAllPlayerInfo.h"
 #include "ee/EESimEditor.h"
 
@@ -230,30 +229,44 @@ std::string CivDigest(const char* inLabel, EECivilization* inCiv)
            " bought=" + Upgrades(inCiv->mPurchasedUpgrades) + " deferred=" + Upgrades(inCiv->mDeferredUpgrades);
 }
 
-// the edited civilization (gEditableCivilization) as the builder keeps it
-std::string EditDigest()
+// the edited civilization as the builder keeps it (ee_screens civ_whole.rs: its TEST ONLY queries)
+std::string QueryList(uint32_t inCount, uint32_t inItem)
 {
-    EECBEditableCivilization* e = gEditableCivilization;
-    if (e == NULL)
-        return "  edit none";
-    EECBCivilizationCreator* theCreator = dynamic_cast<EECBCivilizationCreator*>(e);
-    std::string theKind = theCreator == NULL ? "edit" : theCreator->mIsUnlimited ? "create-unlimited" : "create";
-    return "  edit " + theKind + " name=" + Text(*e->GetName()) + " left=" + std::to_string(e->GetPointsLeft()) +
-           " max=" + std::to_string(e->GetMaxPoints()) + " raw=" + std::to_string(e->mPointsLeft) + " player=" +
-           std::to_string(e->mPlayer) + " choices=" + (e->HasChoices() ? "1" : "0") + " canchange=" +
-           (e->CanChange() ? "1" : "0") + " upgrades=" + Upgrades(e->mUpgrades) + " ids=" + Upgrades(e->CopyUpgradeIDs());
+    std::string theText = "[";
+    for (int64_t i = 0, n = ee_screens_cb_civilization_query(inCount, 0); i < n; i++)
+        theText += (i ? "," : "") + std::to_string(ee_screens_cb_civilization_query(inItem, (uint32_t)i));
+    return theText + "]";
 }
 
-UString UserFile(const std::string& inName)
+std::string RustText(size_t (*inGet)(uint8_t*, size_t))
 {
-    return CivBuilderGetUserDirectory() + UString(inName.c_str()) + ".civ";
+    std::string theText(inGet(NULL, 0), '\0');
+    inGet(reinterpret_cast<uint8_t*>(&theText[0]), theText.size());
+    return "'" + theText + "'";
+}
+
+std::string EditDigest()
+{
+    int64_t theKind = ee_screens_cb_civilization_query(0, 0);
+    if (theKind == 0)
+        return "  edit none";
+    const char* theKinds[] = {"", "edit", "create", "create-unlimited"};
+    auto Q = [](uint32_t inWhat) { return std::to_string(ee_screens_cb_civilization_query(inWhat, 0)); };
+    return std::string("  edit ") + theKinds[theKind] + " name=" + RustText(ee_screens_cb_civilization_name) +
+           " left=" + Q(1) + " max=" + Q(2) + " raw=" + Q(3) + " player=" + Q(4) + " choices=" + Q(5) +
+           " canchange=" + Q(6) + " upgrades=" + QueryList(7, 8) + " ids=" + QueryList(9, 10);
+}
+
+UString UserDirectory()
+{
+    return gStartupDirectory + "Users\\default\\Civilizations\\";
 }
 
 FSFileSpec UserSpec(const std::string& inName)
 {
     FSFileSpec theFile;
     theFile.SetVolume(gStartupVolume);
-    theFile.SetDirectory(CivBuilderGetUserDirectory());
+    theFile.SetDirectory(UserDirectory());
     theFile.SetFile(UString(inName.c_str()) + ".civ");
     return theFile;
 }
@@ -370,7 +383,7 @@ bool EESimCivBuilderStep(const std::vector<std::string>& w, std::vector<std::str
             outLines.push_back(std::string("  chosen=") + (thePlayer->mCivilizationChosen ? "1" : "0") + " locked=" +
                                (thePlayer->mCivilizationLocked ? "1" : "0") + " file=" + Text(UWideString((const char*)thePlayer->mCivilizationFile)));
         outLines.push_back(EditDigest());
-        outLines.push_back("  last=" + Text(UWideString((const char*)gLastCivilizationFile)));
+        outLines.push_back("  last=" + RustText(ee_screens_cb_last_file));
     } else if (c == "file") {
         FSFileSpec theFile = UserSpec(w[2]);
         std::string theLine = "  file " + w[2];
