@@ -19,6 +19,15 @@
 #include "dx7/DX7StdColorVertexArray.h"
 #include "rust/ee_dx7.h"
 #include "lle/TSCriticalSection.h"
+#include "platform/PlatFont.h"
+#include "lle/GEBitmap.h"
+#include "lle/GEFont.h"
+#include "lle/GEFontBitmap.h"
+#include "lle/GELine.h"
+#include "lle/GEMaterial.h"
+#include "lle/GEPoint.h"
+#include "lle/GERhombus.h"
+#include "lle/GEText.h"
 
 // The U2D key init chains:
 // SYNTHETIC: DX7HR 0x100091aa
@@ -416,6 +425,292 @@ long DX7Rasterizer::ShowScene(unsigned long inScreen) { return ee_dx7r_show_scen
 long DX7Rasterizer::UpdateLight(unsigned long inIndex, GELight& inLight, unsigned long inScreen)
 {
     return ee_dx7r_update_light(this->mDX7, inIndex, &inLight, inScreen);
+}
+
+// ---- the draws (the four Draw units of the original, deleted in R4.3 part 14): the 2D draws are Rust (ee_dx7 draw2d.rs),
+// the ee_dx7cpp_* below read the GE objects for it
+long DX7Rasterizer::Draw(GEBitmap* inBitmap, unsigned long inScreen)
+{
+    return ee_dx7r_draw_bitmap(this->mDX7, inScreen, inBitmap);
+}
+
+long DX7Rasterizer::Draw(GELine* inLine, unsigned long inCount, unsigned long inScreen)
+{
+    return ee_dx7r_draw_lines(this->mDX7, inScreen, inLine, inCount);
+}
+
+long DX7Rasterizer::Draw(GEPoint* inPoint, unsigned long inCount, unsigned long inScreen)
+{
+    return ee_dx7r_draw_points(this->mDX7, inScreen, inPoint, inCount);
+}
+
+long DX7Rasterizer::Draw(GERhombus* inRhombus, unsigned long inScreen)
+{
+    return ee_dx7r_draw_rhombus(this->mDX7, inScreen, inRhombus);
+}
+
+static Dx7StdColorVertex* DX7StdColorVerticesOf(GEVertexArray* inArray)
+{
+    return reinterpret_cast<Dx7StdColorVertex*>(static_cast<DX7StdColorVertexArray*>(inArray)->mVertices);
+}
+
+extern "C" {
+void* ee_dx7cpp_bitmap_texture(void* inBitmap, unsigned long inScreen) { return static_cast<GEBitmap*>(inBitmap)->GetTexture(inScreen); }
+Dx7StdColorVertex* ee_dx7cpp_bitmap_vertices(void* inBitmap) { return DX7StdColorVerticesOf(static_cast<GEBitmap*>(inBitmap)->GetVertexArray()); }
+void* ee_dx7cpp_line_texture(void* inLines, unsigned long inScreen) { return static_cast<GELine*>(inLines)->GetTexture(inScreen); }
+Dx7StdColorVertex* ee_dx7cpp_line_vertices(void* inLines, unsigned long inIndex) { return DX7StdColorVerticesOf(static_cast<GELine*>(inLines)[inIndex].GetVertexArray()); }
+void* ee_dx7cpp_point_texture(void* inPoints, unsigned long inScreen) { return static_cast<GEPoint*>(inPoints)->GetTexture(inScreen); }
+Dx7StdColorVertex* ee_dx7cpp_point_vertices(void* inPoints, unsigned long inIndex) { return DX7StdColorVerticesOf(static_cast<GEPoint*>(inPoints)[inIndex].GetVertexArray()); }
+Dx7StdColorVertex* ee_dx7cpp_rhombus_vertices(void* inRhombus) { return DX7StdColorVerticesOf(static_cast<GERhombus*>(inRhombus)->GetVertexArray()); }
+void ee_dx7cpp_texture_frame(void* inTexture, float* outSize, float* outCorner)
+{
+    GETexture* theTexture = static_cast<GETexture*>(inTexture);
+    *outSize = theTexture->GetFrameUVSize();
+    outCorner[0] = theTexture->GetFrameTopLeftCorner().GetU();
+    outCorner[1] = theTexture->GetFrameTopLeftCorner().GetV();
+}
+int32_t ee_dx7cpp_text_measure(const void* inFont, const char* inText, uint32_t inLength) { return PlatFontMeasure(static_cast<const PlatFont*>(inFont), inText, inLength); }
+const void* ee_dx7cpp_text_scaled(const void* inFont, float inScale) { return PlatFontScaled(static_cast<const PlatFont*>(inFont), inScale); }
+int32_t ee_dx7cpp_font_height(const void* inFont)
+{
+    PlatFontMetrics theMetrics;
+    PlatFontGetMetrics(static_cast<const PlatFont*>(inFont), &theMetrics);
+    return theMetrics.mHeight;
+}
+void ee_dx7cpp_text_draw(const void* inFont, const char* inText, uint32_t inLength, int32_t inX, int32_t inY, uint32_t inColor, int inOpaque,
+                         uint32_t inBackground, const int32_t* inClip, const void* inTarget)
+{
+    PlatFontRect theClip = {inClip[0], inClip[1], inClip[2], inClip[3]};
+    PlatFontDraw(static_cast<const PlatFont*>(inFont), inText, inLength, inX, inY, inColor, inOpaque, inBackground, &theClip,
+                 static_cast<const PlatFontTarget*>(inTarget));
+}
+}
+
+// One text draw's plain inputs (Rust: draw2d.rs TextInfo). The layout and the draws are in Rust.
+static EeDx7TextInfo DX7TextInfoOf(GEText* inText)
+{
+    GEFont* theFont = inText->GetFont();
+    EeDx7TextInfo theInfo;
+    theInfo.font = theFont->GetOSFont();
+    theInfo.text = inText->GetText();
+    // the text's bytes, as PlatFontMeasure/PlatFontDraw take it (GetLength counts characters: under UTF-8, decision
+    // D6, a multi-byte character made it short, and the text lost its last characters)
+    theInfo.length = inText->GetText().GetTCHARLength();
+    theInfo.x = inText->GetLocation().GetX();
+    theInfo.y = inText->GetLocation().GetY();
+    theInfo.alignment = inText->GetAlignment();
+    theInfo.transparent = inText->GetIsTransparent();
+    theInfo.shadow_font = (theFont->GetFontStyle() & kFontStyleShadow) != 0;
+    theInfo.foreground[0] = inText->GetFgColor().GetRed();
+    theInfo.foreground[1] = inText->GetFgColor().GetGreen();
+    theInfo.foreground[2] = inText->GetFgColor().GetBlue();
+    theInfo.background[0] = inText->GetBgColor().GetRed();
+    theInfo.background[1] = inText->GetBgColor().GetGreen();
+    theInfo.background[2] = inText->GetBgColor().GetBlue();
+    return theInfo;
+}
+
+static_assert(sizeof(EeDx7TextRect) == sizeof(RECT), "ee_dx7/src/draw2d.rs TextRect");
+
+// One text draw (GDI in the original): a GXSurface::DrawText callback; the target covers the surface from
+// (inOriginX, inOriginY). The font is referenced around the draw, as the original did.
+struct DX7TextJob {
+    GEText* mText;
+    const RECT* mClip;
+    long mResult;
+};
+
+static bool DX7DrawTextPlat(const PlatFontTarget& inTarget, long inOriginX, long inOriginY, void* inJob)
+{
+    DX7TextJob* theJob = static_cast<DX7TextJob*>(inJob);
+    GEFont* theFont = theJob->mText->GetFont();
+    theFont->Reference();
+    EeDx7TextInfo theInfo = DX7TextInfoOf(theJob->mText);
+    if (!ee_dx7r_text_draw(&theInfo, reinterpret_cast<const EeDx7TextRect*>(theJob->mClip), inOriginX, inOriginY,
+                           inTarget.mWidth, inTarget.mHeight, inTarget.mScale, &inTarget))
+        theJob->mResult = kErrorNativeError;
+    theFont->Dereference();
+    return true;
+}
+
+// Draws a text on the target: onto the GPU copy of a GPU-resident target (no read-back), else onto its CPU copy (a
+// text-locked surface: the glyph atlases)
+static long DX7DrawText(GEText* inText, const RECT* inClip, GESurface* inTarget)
+{
+    DX7TextJob theJob = {inText, inClip, kErrorOK};
+    GXSurface* theSurface = *static_cast<DX7Surface*>(inTarget);
+    EeDx7TextInfo theInfo = DX7TextInfoOf(inText);
+    EeDx7TextRect theBounds;
+    ee_dx7r_text_bounds(&theInfo, reinterpret_cast<const EeDx7TextRect*>(inClip), &theBounds);
+    RECT theRect;
+    memcpy(&theRect, &theBounds, sizeof(RECT));
+    if (theSurface->DrawText(theRect, DX7DrawTextPlat, &theJob) != GX_OK && theJob.mResult == kErrorOK)
+        theJob.mResult = kErrorNativeError;
+    return theJob.mResult;
+}
+
+// Draws a text with GDI on the target, aligned; shadow fonts get a black or white shadow 1 pixel down-right
+long DX7Rasterizer::Draw(GEText* inText, GESurface* inTarget)
+{
+    return DX7DrawText(inText, NULL, inTarget);
+}
+
+// Draws a text clipped to a rectangle: with the font's bitmap font when it has one, else with GDI (aligned, shadowed)
+long DX7Rasterizer::Draw(GEText* inText, const GERectangle& inRectangle, GESurface* inTarget)
+{
+    if (inText->GetFont()->GetFontBitmap() != NULL)
+        return inText->GetFont()->GetFontBitmap()->Draw(inText, inRectangle, this, 0);
+    RECT theClip;
+    theClip.top = UMFloor(inRectangle.GetTop());
+    theClip.left = UMFloor(inRectangle.GetLeft());
+    theClip.right = UMFloor(inRectangle.GetRight());
+    theClip.bottom = UMFloor(inRectangle.GetBottom());
+    return DX7DrawText(inText, &theClip, inTarget);
+}
+
+// The model draws are Rust (ee_dx7 draw_model.rs; the original's CopyStd*/CopyAndSmooth* are its blend_*/white_copy, the
+// transform stack a call parameter); the ee_dx7cpp_* below read the GE objects for it.
+
+extern "C" {
+void ee_dx7cpp_model_info(void* inModel, EeDx7ModelInfo* outInfo)
+{
+    GEModel* theModel = static_cast<GEModel*>(inModel);
+    outInfo->material_count = theModel->GetMaterialCount();
+    outInfo->lod_count = theModel->GetLODCount();
+    outInfo->sub_model_count = theModel->GetSubModelCount();
+    outInfo->current_frame = theModel->GetGraphicsCurrentFrame();
+    outInfo->next_frame = theModel->GetGraphicsNextFrame();
+    outInfo->vertex_type = theModel->GetVertexArray(0)->GetType();
+    outInfo->scale = theModel->GetGraphicsScale();
+    outInfo->opacity = theModel->GetModelOpacity();
+    outInfo->fraction = theModel->GetFractionalFramePosition();
+    const GETransformation& theTransform = theModel->GetGraphicsTransform();
+    for (int r = 0; r < 4; r++)
+        for (int c = 0; c < 4; c++)
+            outInfo->transform[r][c] = theTransform.GetElement(r, c);
+}
+
+void ee_dx7cpp_material_info(void* inModel, unsigned long inScreen, unsigned long inIndex, unsigned long inLOD, EeDx7MaterialInfo* outInfo)
+{
+    GEMaterial* theMaterial = static_cast<GEModel*>(inModel)->GetMaterial(inIndex);
+    outInfo->texture = theMaterial->GetTexture(inScreen);
+    outInfo->polygon_start = theMaterial->GetPolygonStartingIndex(inLOD);
+    outInfo->polygon_length = theMaterial->GetPolygonRangeLength(inLOD);
+    outInfo->vertex_start = theMaterial->GetVertexStartingIndex();
+    outInfo->vertex_length = theMaterial->GetVertexRangeLength();
+    outInfo->opacity = theMaterial->GetOpacity();
+    outInfo->color[0] = theMaterial->GetColor().GetRed();
+    outInfo->color[1] = theMaterial->GetColor().GetGreen();
+    outInfo->color[2] = theMaterial->GetColor().GetBlue();
+}
+
+const unsigned short* ee_dx7cpp_polygon_indices(void* inModel, unsigned long inLOD)
+{
+    return static_cast<DX7PolygonArray*>(static_cast<GEModel*>(inModel)->GetPolygonArray(inLOD))->mIndices;
+}
+
+const void* ee_dx7cpp_frame_vertices(void* inModel, unsigned long inFrame, unsigned long inVertexType)
+{
+    GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(inFrame);
+    if (inVertexType == 0)
+        return static_cast<DX7StandardVertexArray*>(theArray)->mVertices;
+    return static_cast<DX7StdColorVertexArray*>(theArray)->mVertices;
+}
+
+void* ee_dx7cpp_sub_model(void* inModel, unsigned long inIndex) { return static_cast<GEModel*>(inModel)->GetSubModel(inIndex); }
+}
+
+// Draws an indexed triangle list with an identity world transform and D3D clipping on; counts the triangles drawn
+long DX7Rasterizer::Draw(GEPolygonArray& inPolygons, unsigned long inCount, GEVertexArray& inVertices,
+                         unsigned long inVertexCount, GETexture* inTexture, unsigned long inScreen, bool inSorted)
+{
+    unsigned long theType = inVertices.GetType();
+    const void* theVertices = theType == 1 ? static_cast<const void*>(((DX7StdColorVertexArray&)inVertices).mVertices)
+                                           : static_cast<const void*>(((DX7StandardVertexArray&)inVertices).mVertices);
+    return ee_dx7r_draw_polygon_array(this->mDX7, inScreen, ((DX7PolygonArray&)inPolygons).mIndices,
+                                      inCount, theType, theVertices, inVertexCount, inTexture);
+}
+
+// Draws a model and its sub-models under the drawing lock (the float argument becomes the level-of-detail divisor)
+long DX7Rasterizer::Draw(GEModel* inModel, unsigned long inScreen, float inOpacity, bool inOrthographic)
+{
+    return ee_dx7r_draw_model(this->mDX7, inScreen, inModel, inOpacity, inOrthographic);
+}
+
+// Draws a textured polyline (at most 1200 segments) as a red line list in camera space, advancing the texture V
+// along it (without the drawing lock)
+long DX7Rasterizer::Draw3DLine(std::vector<std::pair<GE3DPoint, float> >& inPoints, GETexture* inTexture,
+                               float inV, unsigned long inScreen, bool inOrthographic)
+{
+    static_assert(sizeof(std::pair<GE3DPoint, float>) == 16, "ee_dx7/src/draw_model.rs draw_3d_line: (x, y, z, advance)");
+    return ee_dx7r_draw_3d_line(this->mDX7, inScreen, reinterpret_cast<const float(*)[4]>(inPoints.data()), inPoints.size(),
+                                inTexture, inV, inOrthographic);
+}
+
+// Draws a model and recursively its sub-models (no parent: the top of a hierarchy); stops at the first sub-model error
+long DX7Rasterizer::DrawModelHierarchy(GEModel* inModel, unsigned long inScreen, float inDetail, bool inOrthographic)
+{
+    return ee_dx7r_draw_model_hierarchy(this->mDX7, inScreen, inModel, inDetail, inOrthographic);
+}
+
+// Draws the sky model like any model; always returns kErrorOK
+long DX7Rasterizer::DrawSky(GEModel* inModel, unsigned long inScreen, float inOpacity, bool inOrthographic)
+{
+    this->Draw(inModel, inScreen, inOpacity, inOrthographic);
+    return kErrorOK;
+}
+
+// The terrain draws are Rust (ee_dx7 draw_terrain.rs), reading the mesh's visible frame off its Rust object (ee_ge tmobj.rs).
+static_assert(sizeof(std::pair<U2DPoint<long>, U2DPoint<long> >) == 4 * sizeof(long), "ee_dx7 draw_terrain grid lines");
+
+// Draws the visible terrain texture by texture, unclipped then clipped polygons (space maps draw materials 1..8 first);
+// with no visible tile row fills the view with two black quads instead
+long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
+{
+    return ee_dx7r_draw_terrain(this->mDX7, inScreen, inMesh.GetRust(), inOrthographic);
+}
+
+// Draws grid lines between tile corners whose both ends are visible, as one red line list of at most 1200 lines
+long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
+                                  std::vector<std::pair<U2DPoint<long>, U2DPoint<long> > >& inLines,
+                                  GETexture* inTexture, float inWidth, unsigned long inScreen, bool inOrthographic)
+{
+    return ee_dx7r_draw_grid_lines(this->mDX7, inScreen, inMesh.GetRust(), reinterpret_cast<const long(*)[4]>(inLines.data()),
+                                   inLines.size(), inTexture, inWidth, inOrthographic);
+}
+
+// Draws two red edge lines for every visible tile, one draw call per tile
+long DX7Rasterizer::DrawTerrainGrid(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
+{
+    return ee_dx7r_draw_terrain_grid(this->mDX7, inScreen, inMesh.GetRust(), inOrthographic);
+}
+
+// Shades a tile rectangle with a translucent colour over every valid visible tile, drawn in batches of 400 quads
+long DX7Rasterizer::DrawTerrainHighlight(GETerrainMesh& inMesh, const U2DRectangle<long>& inRectangle,
+                                         unsigned long inScreen, bool inOrthographic, const GEColor& inColor,
+                                         float inOpacity)
+{
+    const long theRect[4] = {inRectangle.mLeft, inRectangle.mTop, inRectangle.mRight, inRectangle.mBottom};
+    return ee_dx7r_draw_terrain_highlight(this->mDX7, inScreen, inMesh.GetRust(), theRect, reinterpret_cast<const float*>(&inColor),
+                                          inOpacity, inOrthographic);
+}
+
+// Draws every water material, unclipped then clipped polygons, and counts its triangles
+long DX7Rasterizer::DrawWater(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
+{
+    return ee_dx7r_draw_water(this->mDX7, inScreen, inMesh.GetRust(), inOrthographic);
+}
+
+// Lights the visible terrain and water vertices: ambient plus each active directional light, normalised, times
+// the vertex colour
+void DX7Rasterizer::Light(GETerrainMesh& inMesh, unsigned long inScreen) { ee_dx7r_light_terrain(this->mDX7, inScreen, inMesh.GetRust()); }
+
+// Moves the visible terrain and water vertices to camera space (animating the water waves) and sets their clip flags,
+// then sorts each material's polygons into unclipped and clipped lists; water-only mode skips dry vertices
+void DX7Rasterizer::TransformToCamera(GETerrainMesh& inMesh, GEViewport& inViewport, float inScale, bool inWaterOnly,
+                                      bool inOrthographic)
+{
+    ee_dx7r_transform_to_camera(this->mDX7, inMesh.GetRust(), &inViewport, inScale, inWaterOnly, inOrthographic);
 }
 
 // COMDATs this unit is the first (link order) to instantiate, then the template-static init chain head and atexit
