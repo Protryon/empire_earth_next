@@ -24668,3 +24668,112 @@ Round: -245 net for the moves (the TEST ONLY capture +106 aside), far under the 
   blocks, `EESMCreateUnit`, the cinematics, `EEEvent`'s handlers, the stream and list hosts); the elements' strings and
   lists. The next real saving is the element classes themselves as Rust records with C++ accessors, to be planned with
   the editor lane.
+
+## R6: the scenario editor screens, round 7: the editor form and the elevation tab whole in Rust; the trigger-only save's report over the scenario's records; the editor gate drives the form (ee_screens editor_form.rs, editor_elevation.rs; branch rust-editor7, 2026-11-15)
+
+### The gate first (TEST ONLY, recorded on the unmodified form: two runs identical, the 14,049 old lines unchanged)
+
+- `formstate`: the form's tab, control group and its flag, the cargo count, the selection (ids, `!` for a unit no
+  longer marked selected), its flags, the mini map's, help label's and load text's display modes (the load text's
+  text after `SyncLoadThread`), the brush highlight, the saved view, the panel, the edge scroll's edges, and every
+  control group's enabled flag.
+- `loadtext`, `gameview`, `formcall store|resume`, `fsel add|remove|first|clear` (the selection members called
+  directly over a trojan horse with cargo room, a citizen and a clubman: duplicates, a removal that is not the first,
+  the first removed while a duplicate of it stays).
+- `trigreport [setup]`: the trigger-only save (Ctrl+S) through a TEST ONLY hook in the form's unit
+  (`EESETestSaveTriggersOnly`), ScenarioTriggers.txt read back byte by byte (`<CR>` shown: the file is text mode).
+  `setup` makes an off, timed, described and looping trigger, a NOT and an OR, a condition and an effect wrapper past
+  their lists, a class-name effect in a looping trigger, an object in an effect's list, a parent, an area an
+  object's and one an effect's. 14,049 -> 14,260.
+
+### The moves
+
+- **The form** (`editor_form.rs`): its controls, events, flags, tab and the saved view and panel rectangles are one
+  array of `AtomicUsize` slots (`EE_SCREENS_SEFM_*`; the graphics thread reads the current tab, the panel and the
+  UI's hidden flag in `DrawBackground` and the trigger tab's draw while the UI thread changes them), the selection a
+  `Mutex<Vec<u32>>` of unit ids (`EEUnitHandle`'s; the host resolves each read). The C++ shell makes the Rust object
+  first and builds it second (`EE_SCREENS_SEFM_BUILD`): the map tab's button's `Check` at the end of the build calls
+  `SelectTab`, which comes back into the object. No lock is held across a host call.
+- The tables (`sEditorTabs`, `sToolbarButtons`) are Rust's; every button from the button texture is one record
+  (`EeScreensSefmButton`: a tab button or a plain button with its normal and pressed sources, its destination and
+  control rectangle, its event).
+- The members other units read became accessors (`GetTabGroup`, `GetLoadThread`, `GetBrushGroup`, ...): 30 reads in
+  20 units, rewritten by a script (one slip: `mSelectedUnits[i[1]]` became `GetSelectedUnit(i[1)]`, the regex's
+  `[^\]]+` stopping at the inner bracket).
+- **The trigger-only save** (`EEUIESaveScenarioTriggersOnly`) is an `EESEERust` of a new kind (17); its report is
+  Rust's (`trigger_report` over a `ScenarioRecords` trait): the records' numbers are read in place
+  (`EeScenario*Fields`, the C++ records' bases), the names, descriptions and the wrappers through the host. The
+  file is still written by the host in text mode (`PlatFOpen(..., "w")`), so the CR LF lines are the same.
+- **The elevation tab** (`editor_elevation.rs`): the radios and labels on the shared maker (a new flag puts a radio's
+  background opacity on its text label, as the original does), the paint area and the two sliders in the host.
+- **The hosts' unused includes**: the form's unit and the twelve hosts of the moved screens still carried the
+  original units' include lists (often three concatenated copies): 639 of 1,228 lines dropped, each removal compiled
+  (`build/ed7/trim2.py`: recursive halving over `clang_build.py --only`, about 15 s a try, 1,800 tries in all);
+  `<windows.h>` (its macros rename members) and the Rust headers kept. The headers are not self-contained, so a
+  removal can only be judged by compiling it.
+
+### Traps
+
+- The host takes the form from p1 (the maker's convention, p0 being the output); five ops passed it in p0 and the
+  first run crashed in `UIForm::GetEntityGroup` at the editor's open. The map file resolves EE-SIM's fault frames
+  (`build/clang/exe/EE-SIM.map`: `Rva+Base` column).
+- cbindgen emits `usize` as `size_t` and `isize` as `ptrdiff_t`; a hand declaration in a C++ header (to keep the
+  umbrella header out of a widely included one) must use the same types.
+- A record used by no exported function needs the cbindgen `include` list (`EeScreensSefmButton`).
+- The form unit's includes depend on their order (headers are not self-contained): a fresh, sorted include list did
+  not compile; the original order deduplicated did.
+
+### Mutations (build/ed7/mut.py; each built and run through the editor gate)
+
+| Mutation | Diff lines |
+|---|---|
+| report: the description line not written | 2 |
+| SelectUnit: a carrier not counted | 14 |
+| SetLoadText: the label never hidden | 34 |
+| SelectTab: no brush highlight on the painting tabs | 4 |
+| DeselectUnit: the status shown again when the unit was not the first | 2 |
+| elevation: the strength slider not hidden | 2 |
+| elevation: the radios' label background not set (the maker's new flag) | 8 |
+
+No mutation left the output unchanged.
+
+### Behaviour
+
+None intended. The radios of the elevation tab get one tool event each (the original shared one object: the same
+code runs). On undefined paths: a selected unit whose id no longer resolves is skipped by the deselects (the
+original dereferenced it); a tool bar id outside the table makes the exit button's event (the original set a NULL
+event and dereferenced it).
+
+### Only a person reaches
+
+`UpdateKeyboard` (the `;` and `/` quick keys, T / Shift+T, 1-8 and Alt+1-8: EE-SIM has no keys), `UpdateMouse`,
+`CopyData`'s edge scroll and ghost, `DrawBackground` (EE-SIM draws nothing), `Open`'s exit-after-save, `ExitEditor`
+(test or quit), the hot keys, closing the editor (the destructor), the elevation tab's `Update` and `MouseMove`. No
+tour opens the editor.
+
+### Gates
+
+| Gate | Per move | Merged with rust (c80a1b00) |
+|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates (form, elevation, include trim) | EE-AOC and EE-SIM 0 unresolved, 0 duplicates |
+| `tools/sim_editor.py` | gate commit: two runs identical, old lines unchanged; PASS 14,260 after the form (after the host fix), the elevation tab and the trim, each on the first run of the finished code | PASS 14,260 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical (elevation, trim) | seeds 2-7 identical |
+| `rust_build.py gate` | the elevation run failed clippy (three lints, fixed in their own commit) and then rustfmt (own commit); PASS after (3,726 tests) | PASS (3,871 tests) |
+| `build.py --test-profile windowed-software` | | EE-AOC 0 unresolved, 0 duplicates |
+| captures | not run: no simulation code changed | |
+
+C++ lines (src and include/ee, include/rust aside): the gate (TEST ONLY) +141; the form +843 -1,368 (-525, the
+gate's accessor reads +13 in it); the elevation tab +96 -219 (-123, its include trim in it); the hosts' unused
+includes -639 (of 1,228 include lines in 13 units). Net **-1,287** for the moves, **-1,146** with the gate.
+
+The merge of rust needed the branch's history rewritten first (the lead's `fix_plan_history.sh`: the oversized
+`docs/RUST_PLAN.md` blobs replaced, the code unchanged); its conflicts were the gate's command list (the civilization
+builder's `cb` and this round's commands, both kept), cbindgen's include list (rust's plus `EeScreensSefmButton`) and
+the regenerated `ee_screens.h`. No `EE_SCREENS_SEFM_*` / `EE_SCREENS_SEEL_*` name is another crate's.
+
+### Left
+
+The terrain tab (857; its lists draw textures, its sort a `std::sort` of localized names: keep it in the host), the
+tech list box (595), the load thread (385), the brush group (`EEUIEOpenCivBuilder.cpp`), the events' host, the unit
+tab's small control classes, the hosts (EESERBUnitTypes.cpp, EESEUnit.cpp, EESETSEffect.cpp, EESETSObject.cpp,
+EEUIFScenarioEditor.cpp: about 600 lines of world calls).
