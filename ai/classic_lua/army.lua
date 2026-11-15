@@ -3887,7 +3887,8 @@ end
 -- lib.tactics POOL: every 5 s the land soldiers the engine holds on the town's land (no explorer: explore.lua
 -- takes its own) go into the pool group, a defence at the town over the claim range; the group is made again when
 -- it died out
-local POOL_MS = 5000
+local POOL_MS, POOL_MAX = 5000, 40   -- (at most POOL_MAX in the pool: a 100-unit defence group's targeting passed the
+                                     -- step's instruction budget; the rest stay the engine's)
 local function pool_step(view, memory)
     local a = army(memory)
     if not TAC.opts.pool or view.town_x < 0 or view.time - (a.pool_t or 0) < POOL_MS then
@@ -3910,11 +3911,18 @@ local function pool_step(view, memory)
     local g = G.role(a, "pool")
     local r = math.max(view.claim_range or 0, GUARD_RADIUS)
     if g == nil and #take > 0 then
+        while #take > POOL_MAX do
+            take[#take] = nil
+        end
         g = G.create(a, {task = "defend", role = "pool", x = view.town_x, y = view.town_y, radius = r, target = 0})
         g.mission = 1
     end
     if g ~= nil then
         g.x, g.y, g.radius = view.town_x, view.town_y, r
+        local room = POOL_MAX - #g.units
+        while #take > math.max(room, 0) do
+            take[#take] = nil
+        end
         if #take > 0 then
             G.add(a, g, take)
         end
