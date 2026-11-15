@@ -578,6 +578,9 @@ WON_TESTS = {
     "won_guievent_test": [],
     # WONGUI's config readers' key tables (the instruction keys, the flag and value names), the original's compares
     # against ee_won's guiconf tables, the names through the real GUIString
+    # the resource configs' table reader (cfgtab.rs) against the 45 handlers' original statements over the shipped
+    # resource files and random instructions (golden: rust/crates/ee_won/src/golden_cfgtab.txt)
+    "won_cfgtab_test": "won_guiconf_test",
     "won_guiconf_test": [WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
                                                          "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
                                                          "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],

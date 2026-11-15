@@ -25468,3 +25468,141 @@ appended sections: rust's copy kept with round 9's section added; one at the end
 `rust_build.py header` regenerated include/rust/ee_screens.h at the first; `rust_includes.py` at the end added
 `rust/ee_won.h` to WONLobbyModelObj.h (a fragment WONLobbyGUI.h includes after the header already came in through
 WONLobbyMap.h: the guard keeps it out of the namespace).
+
+## R6 WON round 39: the resource configs' table-shaped handlers as one Rust table reader (ee_won cfgtab.rs; branch rust-r6-won39, 2026-11-15)
+
+Round 38's census found 33 pure-table config handlers and 12 with optional or repeated arguments. This round they
+became programs of one Rust table reader, with ComponentConfig's own instructions and the WON skin's, 49 handlers
+in all. 19 config units were deleted.
+
+WON C++ (`wc -l` of every .cpp, .h and .inl under `src/Empire Earth/WONAPI` and `include/ee/wonapi`): 63,586 at the
+branch's start (306fae35, after round 38's merge of rust) -> 62,190 before the merge of rust (net -1,396).
+
+### The table reader (ee_won cfgtab.rs)
+
+- **What a handler was.** `MSButtonConfig::Virtual24(key)` and its kind asked guiconf for the key's index, then for
+  that key read its arguments in order (`ReadInt`, `EnsureComma`, `ReadBool`, a name read mapped to an enum, ...)
+  and called one setter or a few on the typed component; an unknown key went to the base class.
+- **What it is now.** One program per key, in the handlers' order. A program is a few steps: a read, a comma, a
+  setter, a constant, a name read (the last string read, matched against guiconf's name table, its value into
+  the frame, or the original's exception message, or nothing), jumps on end-of-string or an empty flag, and a
+  frame clear for a loop's next turn. Flag lists, text-item lists, optional arguments, the button states' four
+  images are such programs.
+- **The host** (`include/ee/wonapi/WONCfgTable.inl`, compiled in `ConfigTableHost.cpp`): each read fills a frame of
+  ints, strings, a font, an image, components, a sound, a background, a selection colour, a frame value, a cursor;
+  each setter is one `case table<<8|n:` over the frame. ReadInt's expressions over live components, the
+  resource lookups and the typed component checks stay C++ reads.
+- **Exceptions.** A read, comma or setter that throws is caught in the host and kept (`std::exception_ptr`); the
+  Rust stops and returns 1; `ComponentConfig::RunTable` rethrows. No C++ exception crosses Rust frames.
+- **Each Virtual24** is one line: `RunTable(table,key) || Base::Virtual24(key)`. WONHeaderControlConfig asked its
+  base first and stays so; the percent layout, colour scheme and skin had no base. ComponentConfig's MODIFY and
+  MAPCOMPONENT answer through their C++ handlers (their result is the answer), before the table.
+- **Order kept.** The set-size flags of WIDTH, HEIGHT, SIZE and POSSIZE are setters before the read, as the original
+  set them before reading (a throwing read leaves them set). The frame component's BORDERS sets each border as
+  read. LISTBOXSIZE reads two ints with no comma between, as the original did. ADDINVISIBLESPLITTER's size defaults
+  to 10, CURSORBLINKRATE's off to on, TRANSLUCENTCOLOR's level to 4, HORZTEXTPAD's right to the button's.
+- **ButtonConfig::HandleButtonFlags** tested name index 5 twice; the second test could never match. The flag table
+  maps each name once: the original behaviour, without the dead test.
+- **Enum values** (directions, quadrants, splitter types, sort types, font sizes, image button types, scrollbar
+  conditions) are the C++ enumerators' values in the Rust tables; the driver's stand-in enums are copies of the
+  game's, so a wrong value is a trace mismatch.
+- **What moved to plain C++ inlines.** The deleted units' leftovers (eight `SetComponent` bindings as one macro,
+  the predefined children of the combo box, scrollbar and tab control, the frame component's named values,
+  ButtonConfig's FITTEXT, WONFrame's copy constructor) are in ConfigTableHost.cpp; five empty constructors are
+  inline. WONSimpleButtonConfig's, WONButtonConfig's and SplitterConfig's members became public (the setters read
+  them).
+
+### The driver (tests/won/won_cfgtab_test.cpp)
+
+- The 49 handlers' statements, copied verbatim from 306fae35 (`won_cfgtab_orig.h`, written by a generator), and the
+  port (the game's own WONCfgTable.inl over cfgtab.rs) are compiled over the same stand-in world
+  (`won_cfgtab_world.h`), included in two namespaces: reads from a cursor over the value text (a token beginning
+  `!` throws), traced components (every setter and field write), a traced skin and globals, typed component checks
+  by a mask.
+- **The shipped resource files.** Every `Key: value` line of the 61 files in the data tree's
+  `Data/WONLobby Resources` (2,185 instructions) on every one of the 49 configs: 107,065 checks, identical. The reader
+  held the key 8,149 times (93 threw).
+- **Random.** 5,000 random instructions (a key of the reader's tables or of any table; numbers, booleans, every name
+  of guiconf's name tables with and without +/-, components, images, junk, commas, a throwing token) on every
+  config: 245,000 checks, identical (the reader held the key 14,227 times, 6,822 threw).
+- Each check compares the whole trace: every read and its value, every call and its arguments, every field write,
+  the base calls, the result or exception message, the reader's position, the set-size flags and the percent
+  layout's arrays.
+- `golden_cfgtab.txt` (10,026 runs: the host's events of the resource files' instructions and 400 random ones) is
+  replayed by cargo: a host answering from the recorded events checks each request the interpreter makes.
+
+### Mutations
+
+`build/r39/mutate.py`: 21 mutations of cfgtab.rs, each against cargo's tests; 7 also rebuilt into the driver.
+
+| Mutation | cargo | driver |
+|---|---|---|
+| LISTBOXSIZE read with a comma | replay | 39 mismatches |
+| text items: one end-of-string test | unit test | - |
+| CURSORBLINKRATE's jump one short | unit test | - |
+| WantDefault as 0x40 | unit test | - |
+| quadrants Right and Top swapped | replay | 5 (4 in the resource files) |
+| the arrow's direction throwing on another word | replay, unit test | - |
+| the sort type's message with the name | replay, unit test | - |
+| the 3D frame's UP read as an int | replay | - |
+| BORDERS: the left set after the top's read | unit test | - |
+| a flag not counted as a string | unit test, replay | - |
+| the empty-flag test inverted | unit test, replay | - |
+| CheckedPressed unchecked | first missed; unit test added | - |
+| ADDINVISIBLESPLITTER without its comma | first missed; unit test added | 3 |
+| DelayWordWrap as 0x40 | first missed; unit test added | - |
+| a throwing setter ignored | first missed; unit test added | - |
+| the component flags Clip and WantTabFocus swapped | replay | 15 |
+| WIDTH's set flag after the read | unit test | missed (a throwing WIDTH read is rare in the random values) |
+| TRANSLUCENTCOLOR's jump one short | unit test, replay | - |
+| Vert: another word vertical | unit test, replay | - |
+| SETARROWBUTTON without its comma | replay | 27 (4 in the resource files) |
+| no frame clear at a loop's turn | unit tests, replay | - |
+
+The four that cargo first missed were caught once the golden held the resource files' instructions and four unit
+tests were added (a throwing setter, an optional size's comma, every button state's and text flag's value).
+
+### Commits, gates
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 2d73acab | the 45 pure-table handlers as cfgtab.rs programs; 19 config units deleted | 63,586 -> 62,366 (-1,220) |
+| 0cb01124 | ComponentConfig's and WONSkinConfig's instructions through the reader | -> 62,227 (-139) |
+| 31393a67 | FontConfig's and ImageConfig's instructions through the reader | -> 62,190 (-37) |
+
+- Each commit built on its own (`build.py --sim` 0/0, EE-AOC and EE-SIM) and passed the oracle on seeds 2-3. The
+  Rust gate first failed on clippy (`result_unit_err`: `run` returned `Result<(), ()>`, now a bool), rustfmt (the
+  module's place in lib.rs) and the checked-in header, each folded into the first commit.
+- **The history fix.** Before the merge, the lead's `fix_plan_history.sh` rewrote the branch's 21 commits that
+  origin/rust lacks (the bloated docs/RUST_PLAN.md replaced); the code is untouched, the SHAs above are the rewritten
+  ones.
+- **The merge of rust** (94a4d5b0) conflicted only in PORT_LEARNINGS.md (both sections kept; the diff3 base block
+  dropped). `rust_includes.py` added `#include "rust/ee_won.h"` to WONCfgTable.inl: harmless (the header is guarded
+  and both includers include it first), but note that the .inl is included inside a namespace.
+- On the merged tree: `build.py --sim` 0/0 (EE-AOC, EE-SIM), the test-profile build 0/0, the oracle
+  identical on seeds 2-7, the Rust gate PASS, `xbuild.py wontest` every program passing (128 of 129 in the
+  full run; won_routemsg_test, another lane's, hit the 1,200 s limit under the machine's load and passed alone:
+  4,256,706 checks, 0 failures, in 14 minutes), `lan_game.py` RESULT PASS (PT host
+  3146, joiner 3135; no fault line in either game.log). The lobby captures (the LAN screen, the create dialog with its
+  radio buttons and skill combo, the staging screen with its option combos, check boxes, colour buttons, list
+  headers and skinned frames) look as before: every one of those controls was configured through the reader.
+- **A trap: a stale driver after a failed rebuild.** After the mutation runs, a driver rebuild failed to compile
+  (a missing stand-in enum) and the run that followed executed the last mutant's driver: 23 mismatches that were
+  not the source's. Check `built` before trusting a driver's run.
+
+### What only the lobby reaches
+
+Every resource file the lobby loads goes through these programs: every control's position, size, flags, text,
+font and colours, and the WON skin's template controls. EE-SIM never loads the lobby; the driver over the shipped
+files and the LAN game are what exercise them.
+
+### What is left of WONGUI
+
+- the configs that are not table-shaped: ContainerConfig's instructions (layout helpers), StretchImageConfig's
+  exports, ImageFilterConfig's filters, and the GetNamedValue / GetPredefinedComponent
+  handlers (small; the reader could take them with an out-parameter frame);
+- the platform layer (PlatWindowManager, PlatGraphics, PlatGUIWindow, PlatNativeImage, PlatGUIFont);
+- the WON skin's compositions (WONMSSkin's constructor, WONSkin's factories): looked at, not moved. A recipe table
+  would need a C++ interpreter nearly the size of the statements (25 typed slots, a dozen op kinds);
+- Image.cpp (object constructors and the raw images' layouts) and the decoders (JPG on libjpeg);
+- the hosts.

@@ -3188,6 +3188,56 @@ enum class EeWonBtnStatic : uint32_t {
   DialogDefault,
 };
 
+/// A read the host makes into its frame.
+enum class EeWonCfgRead : int32_t {
+  /// `ReadInt()` (an expression) into the ints.
+  Int = 0,
+  /// `ReadBool()` into the ints.
+  Bool = 1,
+  /// `ReadColor()` into the ints.
+  Color = 2,
+  /// `ReadChar()` into the ints.
+  Char = 3,
+  /// `ReadVertAlign()` into the ints.
+  VertAlign = 4,
+  /// `ReadHorzAlign()` into the ints.
+  HorzAlign = 5,
+  /// `ReadString(false)` into the strings.
+  Str = 6,
+  /// `ReadFlag(&on)` (on starting true): the flag into the strings, on into the ints.
+  Flag = 7,
+  /// `ReadFont()` into the fonts.
+  Font = 8,
+  /// `ReadImage(false)` into the images.
+  Image = 9,
+  /// `ReadSound()`.
+  Sound = 10,
+  /// `ReadBackground()`.
+  Background = 11,
+  /// `ReadSelectionColor()`.
+  SelColor = 12,
+  /// `ReadComponent()` into the components.
+  Comp = 13,
+  /// `SafeConfigGetComponent<Container*>(ReadComponent(),"Container")` into the components.
+  Container = 14,
+  /// The same as a Button.
+  Button = 15,
+  /// The same as a Scroller.
+  Scroller = 16,
+  /// The same as a MultiListArea.
+  MultiListArea = 17,
+  /// `dynamic_cast<ScrollArea*>(ReadComponent())`, "Expecting ScrollArea" when it is not one.
+  ScrollArea = 18,
+  /// WONFrameValueConfig's frame value (an image, one or four borders).
+  Frame = 19,
+  /// `ReadCursor()`.
+  Cursor = 20,
+  /// `ReadDirection()` into the ints.
+  Direction = 21,
+  /// `ReadStandardCursor()` into the ints.
+  StdCursor = 22,
+};
+
 /// A number of the parser.
 enum class EeWonChatParserNumber {
   Error = 0,
@@ -10096,6 +10146,28 @@ struct EeWonCacheEntry {
   size_t lengths[4];
 };
 
+/// The host: the C++ config's reads, its frame and its setters. Every callback that can throw catches and keeps
+/// the exception and answers false.
+struct EeWonCfgTabHost {
+  void *ctx;
+  /// A read into the frame.
+  bool (*read)(void *ctx, EeWonCfgRead kind);
+  /// `EnsureComma()`.
+  bool (*comma)(void *ctx);
+  /// `EndOfString()` (it skips whitespace).
+  bool (*end)(void *ctx);
+  /// The frame's string `slot`: its units (`mText`), their count and size.
+  const void *(*text)(void *ctx, int32_t slot, uint16_t *len, uint32_t *unit);
+  /// A value into the frame's ints.
+  void (*push)(void *ctx, int32_t value);
+  /// The setter `table << 8 | n` over the frame.
+  bool (*apply)(void *ctx, int32_t setter);
+  /// Keep a ConfigObjectException of `len` bytes of `msg`, then the frame's string `slot` narrowed (none if < 0).
+  void (*fail)(void *ctx, const uint8_t *msg, size_t len, int32_t slot);
+  /// Empty the frame.
+  void (*clear)(void *ctx);
+};
+
 /// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
 struct EeWonChatText {
   const void *text;
@@ -12748,6 +12820,19 @@ void ee_won_cachemap_write(const char *path,
 /// A new `GetCertOp`: its auth context (`EE_WON_GETCERT_AUTH_CONTEXT`) and its server context
 /// (`EE_WON_REQHOST_CONTEXT`, the auth context's) are set after the bind.
 EeWonHostOp *ee_won_hostop_getcert();
+
+/// The handler of `table` for the instruction `key` (`len` bytes): -1 when the handler does not hold the key (the
+/// caller asks its base), 0 when it was handled, 1 when it threw (the host holds the exception).
+///
+/// # Safety
+/// `host` is valid and its callbacks do not unwind; `key` holds `len` bytes (or is NULL with 0).
+int32_t ee_won_cfg_tab_run(const EeWonCfgTabHost *host,
+                           int32_t table,
+                           const uint8_t *key,
+                           size_t len);
+
+/// Whether `table` is one of the reader's handlers, for the drivers.
+bool ee_won_cfg_tab_has(int32_t table);
 
 /// `GetCommandName`.
 const char *ee_won_chat_command_name(int32_t command);
