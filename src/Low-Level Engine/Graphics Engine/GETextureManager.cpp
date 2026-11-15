@@ -34,7 +34,7 @@
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GERenderState.h"
-#include "GEOpenFormats.h"   // GEFindTextureFile: a texture's PNG frames
+#include "GEOpenFormats.h"   // the data path's host for ee_of_find_texture (a texture's PNG frames)
 #include "rust/ee_ge.h"       // the manager (ee_ge texobj.rs), the texture pack (managers.rs)
 #include "rust/ee_openformats.h"   // ee_of_texture_free
 
@@ -114,7 +114,7 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
                 (const char*)a, theTexture->mReferenceCount);
         return 0;
     case EeGeManOp::TexFindFile:
-        return GEFindTextureFile((FSPath*)inObj, UString((const char*)a), *(EeOfTexture**)c);
+        return ee_of_find_texture(&GEOpenFormatsHost, inObj, (const char*)a, (EeOfTexture**)c);
     case EeGeManOp::TexFreeFile:
         ee_of_texture_free((EeOfTexture*)inObj);
         return 0;

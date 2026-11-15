@@ -8,23 +8,100 @@
 #include <stddef.h>
 #include "ee_ge.h"
 
+/// The calls the lookups make on the path and its files. `obj` the path or a file (`FSFileSpec*`).
+enum class EeOfFileOp : uint32_t {
+  /// `path->FindFile(UString((const char*)a), file)` -> the file (`new`) when found, else NULL.
+  PathFind = 1,
+  /// `file->Open(kFileAccessRead)` -> the result.
+  FileOpen,
+  /// `file->GetLength(*(unsigned long*)a)` -> the result.
+  FileLength,
+  /// `file->Read((unsigned char*)a, b, read)` -> the bytes read, or -1 when the read fails.
+  FileRead,
+  /// `file->Close()`.
+  FileClose,
+  /// `delete file`.
+  FileDelete,
+  /// `ESVerify(__FILE__, __LINE__, (const char*)a)`: a file that does not decode stops the game.
+  Verify,
+};
+
+/// The calls `GESurface`'s image members make on other objects. `obj` is the object called (the surface, the file,
+/// or a libjpeg handle); `a`, `b`, `c` as each says. Results are `long`s unless said otherwise.
+enum class EeOfSurfOp : uint32_t {
+  /// `surface->GetPixelFormat()`.
+  Format = 1,
+  /// `surface->GetPixelDepth()`.
+  Depth,
+  /// `surface->GetBytesPerRow()`.
+  BytesPerRow,
+  /// `surface->GetMemoryAddress()`.
+  Memory,
+  /// `surface->GetPixelWidth()`.
+  PixelWidth,
+  /// `surface->GetPixelHeight()`.
+  PixelHeight,
+  /// `surface->GetSurfaceDescription().mNoAlpha`.
+  NoAlpha,
+  /// `surface->Lock()`.
+  Lock,
+  /// `surface->Unlock()`.
+  Unlock,
+  /// `file->GetIsOpen()`.
+  FileIsOpen,
+  /// `file->GetFileAccess()`.
+  FileAccess,
+  /// `file->Open(a)`.
+  FileOpen,
+  /// `file->Close()`.
+  FileClose,
+  /// `file->FOpen((char*)a)`.
+  FileFOpen,
+  /// `(FILE*)*file`.
+  FileStream,
+  /// `file->GetPosition(*(long*)a)`.
+  FilePosition,
+  /// `file->SetPosition(a, b, c != 0)`.
+  FileSetPosition,
+  /// `file->Write((const unsigned char*)a, b, written)` (the count written is not read).
+  FileWrite,
+  /// `file->Write((unsigned short)a)`.
+  FileWriteU16,
+  /// `file->Write((long)a)`.
+  FileWriteLong,
+  /// `file->Read((unsigned char*)a, b, *(unsigned long*)c)`.
+  FileRead,
+  /// `file->GetLength(*(unsigned long*)a)`.
+  FileLength,
+  /// A new decompressor (`jpeg_std_error`, `jpeg_create_decompress`) -> its handle.
+  JpegDecNew,
+  /// `jpeg_stdio_src(obj, (FILE*)a)`, `jpeg_read_header`, `jpeg_start_decompress`, the row buffer allocated;
+  /// `b` (three `u32`) gets the output width, height and components -> the row's length.
+  JpegDecStart,
+  /// The next scanline while `output_scanline < output_height` and `jpeg_read_scanlines` reads one -> the row, or
+  /// NULL.
+  JpegDecRow,
+  /// `jpeg_finish_decompress(obj)`.
+  JpegDecFinish,
+  /// `jpeg_destroy_decompress(obj)`; the handle freed.
+  JpegDecDestroy,
+  /// A new quality-80 RGB compressor of `b` x `c` on stream `a`, started, with its row buffer of `b * 3 + b % 4`
+  /// bytes -> its handle.
+  JpegEncNew,
+  /// The compressor's row buffer.
+  JpegEncBuffer,
+  /// `jpeg_write_scanlines(obj, buffer, 1)`.
+  JpegEncRow,
+  /// `jpeg_finish_compress(obj)`, `jpeg_destroy_compress(obj)`; the handle freed.
+  JpegEncEnd,
+};
+
 /// A texture's frames and the size of the surfaces they go into (frame 0's, or its "ee:surface" text).
 struct EeOfTexture;
 
 /// A byte buffer owned by Rust; free it with `ee_of_bytes_free`.
 struct EeOfBytes {
   uint8_t *ptr;
-  size_t len;
-};
-
-/// Reads an external file a glTF names (`uri`, its bytes, percent-decoded; relative to the .gltf). On success stores
-/// the bytes in `*out` with `ee_of_bytes_copy` and returns true; false when it cannot be found. `user` is the
-/// `resolve_user` given to `ee_of_gltf_to_model`.
-using EeOfResolve = bool(*)(void *user, const uint8_t *uri, size_t uri_len, EeOfBytes *out);
-
-/// A byte buffer the caller owns (one PNG frame).
-struct EeOfSlice {
-  const uint8_t *ptr;
   size_t len;
 };
 
@@ -53,13 +130,13 @@ struct EeOfPicture {
   EeOfBytes bgra;
 };
 
-extern "C" {
+/// The host.
+using EeOfFileHostFn = ptrdiff_t(*)(EeOfFileOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
-/// Copies `len` bytes into a Rust-owned buffer (a resolver's answer).
-///
-/// # Safety
-/// `data` is valid for `len` bytes.
-EeOfBytes ee_of_bytes_copy(const uint8_t *data, size_t len);
+/// The host. `obj` as `EeOfSurfOp` says.
+using EeOfSurfHostFn = ptrdiff_t(*)(EeOfSurfOp op, void *obj, ptrdiff_t a, ptrdiff_t b, ptrdiff_t c);
+
+extern "C" {
 
 /// Frees a buffer returned by this interface.
 ///
@@ -67,34 +144,10 @@ EeOfBytes ee_of_bytes_copy(const uint8_t *data, size_t len);
 /// `bytes` came from this interface and is not used again.
 void ee_of_bytes_free(EeOfBytes bytes);
 
-/// `GEFindModelFile`: a .gltf or .glb -> the model `GEModel::StoreLoaded` stores (free it with `ee_ge_cem_free`),
-/// with the frames the game shares (`shared`, sorted by frame: EEGraphicObject's map); null with the
-/// message in `*err` when the file does not convert.
-///
-/// # Safety
-/// `data` is valid for `len` bytes, `shared` for `shared_count` entries (or null when 0), `err` for writing;
-/// `resolve`, if any, follows `EeOfResolve`'s contract.
-EeGeCemModel *ee_of_gltf_to_model(const uint8_t *data,
-                                  size_t len,
-                                  EeOfResolve resolve,
-                                  void *resolve_user,
-                                  const EeGeSharedFrame *shared,
-                                  size_t shared_count,
-                                  EeOfBytes *err);
-
-/// `GETextureManager`: PNG frames -> the texture `GETexture::Load` stores (free it with `ee_of_texture_free`); null
-/// with the message in `*err` on the first problem.
-///
-/// # Safety
-/// `frames` is valid for `count` slices, each slice for its bytes; `err` for writing.
-EeOfTexture *ee_of_png_to_texture(const EeOfSlice *frames,
-                                  size_t count,
-                                  EeOfBytes *err);
-
 /// The texture's size and frame count.
 ///
 /// # Safety
-/// `texture` came from `ee_of_png_to_texture` and is live; `out` is valid for writing.
+/// `texture` came from `ee_of_find_texture` and is live; `out` is valid for writing.
 void ee_of_texture_info(const EeOfTexture *texture, EeOfTextureInfo *out);
 
 /// Frame `index` (below the frame count).
@@ -103,10 +156,10 @@ void ee_of_texture_info(const EeOfTexture *texture, EeOfTextureInfo *out);
 /// `texture` is live; `out` is valid for writing.
 void ee_of_texture_frame(const EeOfTexture *texture, uint32_t index, EeOfTextureFrame *out);
 
-/// Frees a texture from `ee_of_png_to_texture`.
+/// Frees a texture from `ee_of_find_texture`.
 ///
 /// # Safety
-/// `texture` came from `ee_of_png_to_texture` (or is null) and is freed once.
+/// `texture` came from `ee_of_find_texture` (or is null) and is freed once.
 void ee_of_texture_free(EeOfTexture *texture);
 
 /// `GESurface::LoadPNG`: a PNG file -> its pixels in `*out`, or false with the message in `*err`.
@@ -114,6 +167,57 @@ void ee_of_texture_free(EeOfTexture *texture);
 /// # Safety
 /// `data` is valid for `len` bytes, `out` and `err` for writing.
 bool ee_of_png_to_picture(const uint8_t *data, size_t len, EeOfPicture *out, EeOfBytes *err);
+
+/// A model on the path: `<name>.glb`, else `<name>.gltf` (its external buffers relative to it), decoded with the
+/// frames the model shares; `*out` the model (freed with `ee_ge_cem_free`) -> kErrorOK, kErrorNotFound when neither
+/// file is there, kErrorFailed (after `ESVerify`) when the file does not convert.
+///
+/// # Safety
+/// `host` serves `path`; `name` is a C string; `shared` holds `shared_count` entries (or is NULL when 0); `out` is
+/// valid for writing.
+long ee_of_find_model(EeOfFileHostFn host,
+                      void *path,
+                      const char *name,
+                      const EeGeSharedFrame *shared,
+                      size_t shared_count,
+                      EeGeCemModel **out);
+
+/// A texture on the path: `<name>.png` and its further frames `<name>@1.png`, ... (up to the first missing one),
+/// decoded; `*out` the texture (freed with `ee_of_texture_free`) -> kErrorOK, kErrorNotFound when `<name>.png` is not
+/// there, kErrorFailed (after `ESVerify`) when a frame does not decode.
+///
+/// # Safety
+/// `host` serves `path`; `name` is a C string; `out` is valid for writing.
+long ee_of_find_texture(EeOfFileHostFn host,
+                        void *path,
+                        const char *name,
+                        EeOfTexture **out);
+
+/// `GESurface::Load(file, type)` (`surface` the `GESurface*`, `file` the `FSFileSpec*`): BMP fails (never read),
+/// JPG, JPG2, PNG; any other type fails (TGA: no longer read, D9).
+///
+/// # Safety
+/// `host` serves the surface and the file; both are live.
+long ee_of_surf_load(EeOfSurfHostFn host,
+                     void *surface,
+                     void *file,
+                     uint8_t kind);
+
+/// `GESurface::Save(file, type)`: BMP, JPG, JPG2; any other type fails.
+///
+/// # Safety
+/// As `ee_of_surf_load`.
+long ee_of_surf_save(EeOfSurfHostFn host, void *surface, void *file, uint8_t kind);
+
+/// `GESurface::GetImageFileAttributes(file, type, ...)`: `out` the width, height and depth (written only as the
+/// original wrote them). BMP fails, JPG, JPG2 (its colour image's size, 32 bits), PNG; any other type fails.
+///
+/// # Safety
+/// `host` serves the file; `out` holds three values.
+long ee_of_surf_attributes(EeOfSurfHostFn host,
+                           void *file,
+                           uint8_t kind,
+                           unsigned long (*out)[3]);
 
 }  // extern "C"
 

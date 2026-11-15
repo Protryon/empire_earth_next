@@ -26,8 +26,31 @@
 #include "lle/FSPath.h"
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
-#include "GEOpenFormats.h"   // GEFindModelFile: a model's .glb/.gltf
+#include <vector>
+#include "GEOpenFormats.h"   // the data path's host for ee_of_find_model (a model's .glb/.gltf)
 #include "rust/ee_ge.h"       // the manager (ee_ge manobj.rs), ee_ge_cem_free
+
+// ---- the open-format lookups' host: the calls ee_openformats find.rs makes on the data path and its files
+intptr_t GEOpenFormatsHost(EeOfFileOp inOp, void* inObj, intptr_t a, intptr_t b)
+{
+    FSFileSpec* theFile = (FSFileSpec*)inObj;
+    unsigned long theRead = 0;
+    switch (inOp) {
+    case EeOfFileOp::PathFind: {
+        FSFileSpec* theFound = NULL;
+        return ((FSPath*)inObj)->FindFile(UString((const char*)a), theFound) == kErrorOK ? (intptr_t)theFound : 0;
+    }
+    case EeOfFileOp::FileOpen: return theFile->Open((unsigned long)a);
+    case EeOfFileOp::FileLength: return theFile->GetLength(*(unsigned long*)a);
+    case EeOfFileOp::FileRead:
+        return theFile->Read((unsigned char*)a, (unsigned long)b, theRead) == kErrorOK ? (intptr_t)theRead : -1;
+    case EeOfFileOp::FileClose: return theFile->Close();
+    case EeOfFileOp::FileDelete: delete theFile; return 0;
+    case EeOfFileOp::Verify: ESVerify(__FILE__, __LINE__, (const char*)a); return 0;   // a file that does not decode
+    }
+    return 0;
+}
+// ---- end of the open-format lookups' host
 
 // CreateModel's and CreateSubModel's counts and flags, through the Rust object to the host
 struct GEModelCreateArgs {
@@ -85,9 +108,13 @@ intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr
         theSubModel->UReferenceCounter::Dereference();
         return (intptr_t)theSubModel;
     }
-    case EeGeManOp::ModelFindFile:
-        return GEFindModelFile((FSPath*)inObj, UString((const char*)a), *(std::map<unsigned long, long>*)b,
-                               *(EeGeCemModel**)c);
+    case EeGeManOp::ModelFindFile: {
+        std::vector<EeGeSharedFrame> theShared;   // the frames the model shares, in the map's order
+        for (const std::pair<const unsigned long, long>& theFrame : *(std::map<unsigned long, long>*)b)
+            theShared.push_back({(uint32_t)theFrame.first, (int32_t)theFrame.second});
+        return ee_of_find_model(&GEOpenFormatsHost, inObj, (const char*)a, theShared.data(), theShared.size(),
+                                (EeGeCemModel**)c);
+    }
     case EeGeManOp::ModelNewEmpty:
         return (intptr_t)new GEModel(theManager);
     case EeGeManOp::ModelStoreLoaded:

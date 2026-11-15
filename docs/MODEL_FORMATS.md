@@ -2,7 +2,7 @@
 
 The game's 3D models (`.cem`, tag "SSMF") and textures (`.sst`, `.tga`): what the files hold, what the game reads
 of them (with the reading code), and the open formats that replace them: glTF 2.0 for models, PNG for textures.
-`tools/eemodel` converts in both directions; the game reads the open forms only (`GEOpenFormatsFile.cpp`; RUST_PLAN.md
+`tools/eemodel` converts in both directions; the game reads the open forms only (`ee_openformats` `find.rs`; RUST_PLAN.md
 D9): sections 2 and 3 describe the retail files the importers read, and the loaders that read them before D9. Sources: this repository's engine (`src/Low-Level Engine/Graphics Engine/`), the AoC
 install's `Data\data.ssa` and the original game's `Data\data.ssa` (the AoC exe searches both, section 1), parsed end to
 end by `eemodel.py check`.
@@ -219,26 +219,26 @@ levels, Targa footers, IDs, colour map and origin fields, the compressed flag.
 
 ---
 
-## 6. The game reading the open forms (`GEOpenFormatsFile.cpp`)
+## 6. The game reading the open forms (`ee_openformats` `find.rs`)
 
 Since D9 (RUST_PLAN.md) the game reads glTF models and PNG textures only; no `.cem`, `.sst` or `.tga` is looked up
 through the model and texture managers, and their readers and writers are gone (`GEModel::Load`/`Save`, the
 version-1 conversion, `GETexture`'s `.sst`/`.tga` reading and `Save`).
 
-* `GEModelManager::LoadModel("models\x", frames)` asks `GEFindModelFile` for `models\x.glb`, else `models\x.gltf`
-  (external buffers next to the `.gltf`, on the path). Rust (`ee_openformats`, `ee_of_gltf_to_model`) decodes it
+* `GEModelManager::LoadModel("models\x", frames)` asks `ee_of_find_model` for `models\x.glb`, else `models\x.gltf`
+  (external buffers next to the `.gltf`, on the path; the path and its files through `GEOpenFormatsHost`) and decodes it
   straight into the model the `.cem` reader produced (counts, names, polygon lists, material ranges, frames with their
   vertices, tag points, transforms and boxes, sub-models; the frames the caller shares go into the last frame's arrays
   as `LoadFrameChunk` put them), and `GEModel::StoreLoaded` stores it as before. A model the reader refused (no
   polygons, vertices, materials or frames) still fails, and a refused sub-model makes every later one in file order
   fail as the `.cem` reader's rewind did. The cache key is the name as given (`models\x`; it was `models\x.cem`).
-* `GETextureManager::LoadTexture`, `ReloadTexture` and `RefreshAllTextures` ask `GEFindTextureFile` for `<stem>.png`
-  and its frames `<stem>@1.png`, ...; Rust (`ee_of_png_to_texture`) decodes them into the surface size and each frame's
+* `GETextureManager::LoadTexture`, `ReloadTexture` and `RefreshAllTextures` ask `ee_of_find_texture` for `<stem>.png`
+  and its frames `<stem>@1.png`, ..., and decode them into the surface size and each frame's
   RGB or RGBA pixels, and `GETexture::Load` stores them where the Targa reader stored a `.sst` frame (same surfaces,
   MIP levels, dropped levels, frame formats and pixel packing). The stem and cache key is the name as given, or
   without its last extension when it contains `.sst` (`textures\x` and `textures\x.sst` are one texture, as they
   were one cached `textures\x.sst` before); the texture pack maps the stem (`textures-4x\x`).
-* The pictures read around the texture manager are PNG files read by `GESurface::LoadPNG` (`ee_of_png_to_picture`,
+* The pictures read around the texture manager are PNG files read by `GESurface::LoadPNG` (`ee_openformats` `surface_file.rs`,
   the same decoder as the textures'); `GESurface::LoadTGA` and `GEFindTargaFile` are gone.
 * A file that does not convert stops the game with its message (`ESVerify`). Nothing in a saved game names a model or
   texture file: the keys changed without a save format change.

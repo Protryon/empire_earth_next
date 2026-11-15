@@ -2021,10 +2021,10 @@ void ee_ge_modman_set_path(EeGeModelManager *p, void *path);
 /// `p` is live.
 void ee_ge_modman_verify(EeGeModelManager *p);
 
-/// Frees a model (`ee_of_gltf_to_model`'s; not a sub-model's handle).
+/// Frees a model (`ee_of_find_model`'s; not a sub-model's handle).
 ///
 /// # Safety
-/// `model` came from `ee_of_gltf_to_model` and is freed once.
+/// `model` came from `ee_of_find_model` and is freed once.
 void ee_ge_cem_free(EeGeCemModel *model);
 
 /// `GEModel(manager)`.
