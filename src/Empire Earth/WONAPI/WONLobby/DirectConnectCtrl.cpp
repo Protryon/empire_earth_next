@@ -24,6 +24,7 @@ DirectConnectCtrl::DirectConnectCtrl() {}
 // The destructor (0x7badf0) stores its own vptr (0x7bae0f), then releases the remove button (+0x8c),
 // the add button (+0x88) and the connection list (+0x84), then the Container
 DirectConnectCtrl::~DirectConnectCtrl() {}
+// FUNCTION: WON 0x007baeb0
 // Looks up the connection list and the add and remove buttons from the layout and listens for broadcasts
 void DirectConnectCtrl::InitComponent(ComponentInit& inInit)
 {
@@ -35,6 +36,7 @@ void DirectConnectCtrl::InitComponent(ComponentInit& inInit)
     SafeGetComponent(config,this->mRemoveButton,"RemoveButton",__FILE__,36);
     this->SubscribeToBroadcast(1);
 }
+// FUNCTION: WON 0x007baf20
 // Asks to add a direct connection on Add, or to remove the selected one on Remove; the rest goes to Component
 void DirectConnectCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -54,3 +56,14 @@ void DirectConnectCtrl::HandleComponentEvent(ComponentEvent* inEvent)
     Component::HandleComponentEvent(inEvent);
 }
 }
+// TEMPLATE: WON 0x007cdba0
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007badd0
+// (public: virtual void * __thiscall WONAPI::DirectConnectCtrl::`scalar deleting destructor'(unsigned int)    [??_GDirectConnectCtrl@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007badf0
+// (public: virtual __thiscall WONAPI::DirectConnectCtrl::~DirectConnectCtrl(void)    [??1DirectConnectCtrl@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007bada0
+// (public: __thiscall WONAPI::DirectConnectCtrl::DirectConnectCtrl(void)    [??0DirectConnectCtrl@WONAPI@@QAE@XZ])

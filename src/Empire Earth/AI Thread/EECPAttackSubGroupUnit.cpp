@@ -66,8 +66,8 @@
 #include "ee/EEFOLocationScreenBase.h"
 #include "ee/EEAIKindIDs.h"
 
-extern EEToHitTable gToHitTable;
-extern long& gNumPlayers;
+extern EEToHitTable gToHitTable;           // 0x5318e8
+extern long& gNumPlayers;                    // 0x530e0c (provisional name)
 
 // Name tables that no function reads: three std::map<long, UString> class statics of two classes (the first
 // with guard byte 0x4e5cc1, the other two sharing 0x4e5cc0). Only the construction and destruction remain.
@@ -78,16 +78,17 @@ struct EECPASGUNameTableB {
     static std::map<long, UString> sNames;
     static std::map<long, UString> sTitles;
 };
-std::map<long, UString> EECPASGUNameTableA::sNames;
-std::map<long, UString> EECPASGUNameTableB::sNames;
-std::map<long, UString> EECPASGUNameTableB::sTitles;
+std::map<long, UString> EECPASGUNameTableA::sNames;    // 0x4e5ce8
+std::map<long, UString> EECPASGUNameTableB::sNames;    // 0x4e5cd8
+std::map<long, UString> EECPASGUNameTableB::sTitles;   // 0x4e5cc8
 
-static const float kASGURange0 = 256.0f;
-static const float kASGURange1 = 400.0f;
-static const float kASGURange2 = 576.0f;
+static const float kASGURange0 = 256.0f;    // 0x43bf38
+static const float kASGURange1 = 400.0f;    // 0x43bf3c
+static const float kASGURange2 = 576.0f;    // 0x43bf40
 // 0x43bf10 is the pooled `/ 10.0f` literal (RandomizePersonality 0x464f98)
 // 0x43bffc is the pooled 81.0f literal (Virtual0C 0x463b33)
 
+// FUNCTION: EXE 0x46307d
 // Rates a unit as a calamity target: 1 for a wonder, 0.9 tower, 0.8 gate, 0.6 hospital, 0.5 university,
 // 0.4 temple, 0.7 plus a small hit-point term for a unit-producing building, else 0
 static float ASGUWonderValue(EEComplexUnit* inUnit)
@@ -128,12 +129,14 @@ static float ASGUWonderValue(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x46315b
 // Rates a unit as a calamity target the same way as ASGUWonderValue (a second entry point)
 static float ASGUWonderValue2(EEComplexUnit* inUnit)
 {
     return ASGUWonderValue(inUnit);
 }
 
+// FUNCTION: EXE 0x46319f
 // Creates the attack entry for a unit in a sub group (both referenced), idle and without target or escort;
 // importance is the class influence times a hero/siege/calamity/range factor; then rolls a personality
 EECPAttackSubGroupUnit::EECPAttackSubGroupUnit(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
@@ -173,6 +176,10 @@ EECPAttackSubGroupUnit::EECPAttackSubGroupUnit(EEComplexUnit* inUnit, EECPAttack
     this->RandomizePersonality();
 }
 
+// SYNTHETIC: EXE 0x4632a5
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4632c1
 // Creates an empty entry for a saved game to load into: references the sub group, no unit, idle
 EECPAttackSubGroupUnit::EECPAttackSubGroupUnit(EECPAttackSubGroup* inSubGroup)
     : mL3C(0), mL40(0)
@@ -195,6 +202,7 @@ EECPAttackSubGroupUnit::EECPAttackSubGroupUnit(EECPAttackSubGroup* inSubGroup)
     this->mPostAttackMode = 0;
 }
 
+// FUNCTION: EXE 0x463360
 // Destroys the entry, releasing its target, unit, escort and sub group references
 EECPAttackSubGroupUnit::~EECPAttackSubGroupUnit()
 {
@@ -206,6 +214,7 @@ EECPAttackSubGroupUnit::~EECPAttackSubGroupUnit()
     this->ReleaseSubGroup();
 }
 
+// FUNCTION: EXE 0x4633ad
 // Returns 0 when the target's type counters this unit, 1 when this unit counters the target, else 0.5
 float EECPAttackSubGroupUnit::GetCounterFactor(EECPASTargetUnit* inTarget)
 {
@@ -217,6 +226,7 @@ float EECPAttackSubGroupUnit::GetCounterFactor(EECPASTargetUnit* inTarget)
     return theResult;
 }
 
+// FUNCTION: EXE 0x463408
 // Returns how badly the target is damaged: 1 minus its hit-point fraction (at least 0)
 float EECPAttackSubGroupUnit::GetTargetDamage(EECPASTargetUnit* inTarget)
 {
@@ -227,6 +237,7 @@ float EECPAttackSubGroupUnit::GetTargetDamage(EECPASTargetUnit* inTarget)
     return theResult;
 }
 
+// FUNCTION: EXE 0x463431
 // Returns the target class's influence divided by this unit's (0 when either is not positive)
 float EECPAttackSubGroupUnit::GetImportanceRatio(EECPASTargetUnit* inTarget)
 {
@@ -240,6 +251,7 @@ float EECPAttackSubGroupUnit::GetImportanceRatio(EECPASTargetUnit* inTarget)
     return theResult;
 }
 
+// FUNCTION: EXE 0x46346c
 // Picks the best-scored target that can still catch one of the unit's contagions and moves onto it
 void EECPAttackSubGroupUnit::SpreadContagion()
 {
@@ -252,6 +264,7 @@ void EECPAttackSubGroupUnit::SpreadContagion()
 
 // NEAR (77.7): frame slots (0x1c vs 0x10: the original keeps the clamped terms on the FP stack) and the armour
 // ratio's operand order (`fld; fld; fdivp`: an accessor value?).
+// FUNCTION: EXE 0x463494
 // Scores an enemy target for this unit from to-hit chance, targeting weight, distance, importance, damage,
 // attack ratio, counters (added twice: x12 and x9), threat and alliance bonuses, and crowding by other attackers
 float EECPAttackSubGroupUnit::ScoreTarget(EECPASTargetUnit* inTarget)
@@ -391,6 +404,7 @@ float EECPAttackSubGroupUnit::ScoreTarget(EECPASTargetUnit* inTarget)
     return theScore;
 }
 
+// FUNCTION: EXE 0x463aef
 // Returns the to-hit table's attack factor of this unit's ammo against the target's class and player
 float EECPAttackSubGroupUnit::GetToHit(EECPASTargetUnit* inTarget)
 {
@@ -403,6 +417,7 @@ float EECPAttackSubGroupUnit::GetToHit(EECPASTargetUnit* inTarget)
     return gToHitTable.GetAttackFactor(theKind, theTargetClass, thePlayer, theTargetPlayer);
 }
 
+// FUNCTION: EXE 0x463b2a
 // Returns 1 for any target (overridden by the unit kinds)
 float EECPAttackSubGroupUnit::Virtual5C(EECPASTargetUnit* inTarget)
 {
@@ -411,6 +426,7 @@ float EECPAttackSubGroupUnit::Virtual5C(EECPASTargetUnit* inTarget)
 
 // GetUnit()/GetPlayer()/GetPlayerID() as the later inline sites make VC6 refuse the _Tree ctor (0x298e2b) and the
 // first mTargets begin() as in the original; the sub group in a local gives its lea ecx, [eax+0x30].
+// FUNCTION: EXE 0x463b33
 // Picks a sub group target outside a protective area effect that can catch one of the unit's calamities:
 // the first found, or with inScore the best by nearby targets, distance and a random bonus; NULL if none
 EEComplexUnit* EECPAttackSubGroupUnit::PickContagionTarget(bool inScore)
@@ -453,6 +469,7 @@ EEComplexUnit* EECPAttackSubGroupUnit::PickContagionTarget(bool inScore)
 }
 
 // EEIsLineToUnitBlocked's third out-argument is the blocking unit (compared with a unit pointer here).
+// FUNCTION: EXE 0x463d50
 // Chooses the next target from the scored sub group targets, preferring armed ones and the current one unless
 // beaten by 28; drops blocked, unreachable or rejected-sector targets; may return an attack tile in outTile
 EECPASTargetUnit* EECPAttackSubGroupUnit::ChooseTarget(bool inTakeFirst, EETileCoordinate& outTile)
@@ -664,6 +681,7 @@ EECPASTargetUnit* EECPAttackSubGroupUnit::ChooseTarget(bool inTakeFirst, EETileC
     return theResult;
 }
 
+// FUNCTION: EXE 0x46449e
 // Casts a calamity if it can; else chooses a target and orders an attack unless the unit already attacks it;
 // returns whether the unit has a target
 bool EECPAttackSubGroupUnit::Retarget()
@@ -691,6 +709,7 @@ bool EECPAttackSubGroupUnit::Retarget()
 }
 
 // The unit class's slot +0x40 is called with mUnit here.
+// FUNCTION: EXE 0x4645ba
 // Moves the unit away from danger: out of a nearby calamity area or from contagious targets, back towards
 // the sub group's centre, else lets the unit class flee and runs from the nearest target
 void EECPAttackSubGroupUnit::Flee()
@@ -811,6 +830,7 @@ void EECPAttackSubGroupUnit::Flee()
     }
 }
 
+// FUNCTION: EXE 0x464d4f
 // Accepts a flee point on the map whose land or water area matches the screen's area
 bool EEFleeFromLocationScreenCheckPathAreaID::Screen(const GE3DPoint& inPoint)
 {
@@ -823,6 +843,7 @@ bool EEFleeFromLocationScreenCheckPathAreaID::Screen(const GE3DPoint& inPoint)
     return false;
 }
 
+// FUNCTION: EXE 0x464dcb
 // Returns the targeting-table weight of a target: bonuses when it attacks this unit, is in range, hits harder,
 // is faster or immobile, closeness, plus a to-hit term (looked up against this unit's own class)
 long EECPAttackSubGroupUnit::GetTargetWeight(EECPASTargetUnit* inTarget)
@@ -864,6 +885,7 @@ long EECPAttackSubGroupUnit::GetTargetWeight(EECPASTargetUnit* inTarget)
     return (long)(EEAIUnitTargetingTable::sTable[theKind][6] * theToHit) + theResult;
 }
 
+// FUNCTION: EXE 0x464f98
 // Rolls the unit's courage, aggression and two other personality traits from its class (melee, ranged
 // or unarmed), raising two of them for veterans
 void EECPAttackSubGroupUnit::RandomizePersonality()
@@ -932,6 +954,7 @@ void EECPAttackSubGroupUnit::RandomizePersonality()
     this->mCourage = theBonus;
 }
 
+// FUNCTION: EXE 0x4652e0
 // Tells whether the unit is out of the fight or dead
 bool EECPAttackSubGroupUnit::IsDone()
 {
@@ -940,6 +963,7 @@ bool EECPAttackSubGroupUnit::IsDone()
 
 // NEAR (59.3): case layout as the original; it keeps 0 in edi and loads the commander counter and gNumPlayers
 // before the GetRandom call.
+// FUNCTION: EXE 0x4652f6
 // Enters a state and runs its entry action (retarget and schedule the next one, move to the escort, flee,
 // spread contagion, retreat, or release the target and pick the post-attack mode)
 void EECPAttackSubGroupUnit::SetState(long inState, unsigned long inTime)
@@ -991,6 +1015,7 @@ void EECPAttackSubGroupUnit::SetState(long inState, unsigned long inTime)
 
 // NEAR (60.5): the original keeps the !Virtual50(..) flags of the other cases in a dead byte store ([ebp+0xb], an
 // ebp frame); ours drops them. Case order and tail merges follow the original.
+// FUNCTION: EXE 0x46544c
 // Advances the unit's state machine by checking the current state's conditions; next update in 1 second
 void EECPAttackSubGroupUnit::Update(unsigned long inTime)
 {
@@ -1107,6 +1132,7 @@ void EECPAttackSubGroupUnit::Update(unsigned long inTime)
     this->mNextUpdateTime = inTime + 1000;
 }
 
+// FUNCTION: EXE 0x46577b
 // Tells whether the unit can damage the target and is not ignoring it
 bool EECPAttackSubGroupUnit::CanAttack(EECPASTargetUnit* inTarget)
 {
@@ -1133,6 +1159,7 @@ bool EECPAttackSubGroupUnit::CanAttack(EECPASTargetUnit* inTarget)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4657e5
 // Tells whether the unit is below a quarter health and was attacked or is targeted by a sub group target
 bool EECPAttackSubGroupUnit::IsInDanger()
 {
@@ -1152,6 +1179,7 @@ bool EECPAttackSubGroupUnit::IsInDanger()
     return theResult;
 }
 
+// FUNCTION: EXE 0x465859
 // Tells whether a calamity-carrying target within 8 tiles could infect the unit (not under protection)
 bool EECPAttackSubGroupUnit::IsExposedToCalamity()
 {
@@ -1181,12 +1209,14 @@ bool EECPAttackSubGroupUnit::IsExposedToCalamity()
     return theResult;
 }
 
+// FUNCTION: EXE 0x4659a0
 // Prejudices do not change targeting through this slot: no effect
 void EECPAttackSubGroupUnit::ApplyPrejudices(EECPASTargetUnit* inTarget)
 {
     // the search for a prejudice matching the target's class discarded its result, so it is gone
 }
 
+// FUNCTION: EXE 0x4659ee
 // Reads the entry from a saved game (location, unit/target/escort ids, timers, traits, state); returns the
 // first read error
 long EECPAttackSubGroupUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -1251,6 +1281,7 @@ long EECPAttackSubGroupUnit::Load(unsigned long inMajorVersion, unsigned long in
 }
 
 // NEAR: the original reads the last waypoint's y before converting its x (a float pair converted in one place?).
+// FUNCTION: EXE 0x465b2d
 // Orders the unit to move to another unit's tile (or its last waypoint) unless that unit is contained
 void EECPAttackSubGroupUnit::MoveTo(EEComplexUnit* inUnit, bool inArg2, bool inUseDestination)
 {
@@ -1274,6 +1305,7 @@ void EECPAttackSubGroupUnit::MoveTo(EEComplexUnit* inUnit, bool inArg2, bool inU
     }
 }
 
+// FUNCTION: EXE 0x465c2f
 // Drops the target reference and clears the retarget time
 void EECPAttackSubGroupUnit::ReleaseTarget()
 {
@@ -1283,6 +1315,7 @@ void EECPAttackSubGroupUnit::ReleaseTarget()
     this->mNextRetargetTime = 0;
 }
 
+// FUNCTION: EXE 0x465c48
 // Resolves the saved unit, target and escort ids into references after loading; returns 0
 long EECPAttackSubGroupUnit::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -1308,6 +1341,7 @@ long EECPAttackSubGroupUnit::Restore(unsigned long inMajorVersion, unsigned long
     return 0;
 }
 
+// FUNCTION: EXE 0x465d0c
 // Drops the sub group reference
 void EECPAttackSubGroupUnit::ReleaseSubGroup()
 {
@@ -1316,6 +1350,7 @@ void EECPAttackSubGroupUnit::ReleaseSubGroup()
     this->mSubGroup = NULL;
 }
 
+// FUNCTION: EXE 0x465d22
 // Drops the unit reference
 void EECPAttackSubGroupUnit::ReleaseUnit()
 {
@@ -1324,6 +1359,7 @@ void EECPAttackSubGroupUnit::ReleaseUnit()
     this->mUnit = NULL;
 }
 
+// FUNCTION: EXE 0x465d37
 // Writes the entry to the saved game (location, unit/target/escort ids, timers, traits, state); returns the
 // first write error
 long EECPAttackSubGroupUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -1386,6 +1422,7 @@ long EECPAttackSubGroupUnit::Save(unsigned long inMajorVersion, unsigned long in
     return theResult;
 }
 
+// FUNCTION: EXE 0x465eb6
 // Replaces the target with a referenced unit
 void EECPAttackSubGroupUnit::SetTarget(EEComplexUnit* inUnit)
 {
@@ -1394,6 +1431,7 @@ void EECPAttackSubGroupUnit::SetTarget(EEComplexUnit* inUnit)
     this->mTarget->Reference();
 }
 
+// FUNCTION: EXE 0x465ecc
 // Replaces the controlled unit with a referenced unit
 void EECPAttackSubGroupUnit::SetUnit(EEComplexUnit* inUnit)
 {
@@ -1404,6 +1442,7 @@ void EECPAttackSubGroupUnit::SetUnit(EEComplexUnit* inUnit)
 
 // NEAR (69.2): the original places `theResult = true` inline after the tests (ours at the end) and loads the player
 // id before the target's tile.
+// FUNCTION: EXE 0x465ee2
 // Tells whether the contagion target is gone, dead, contained, or standing in the unit's own protection area
 bool EECPAttackSubGroupUnit::IsContagionTargetLost()
 {
@@ -1419,6 +1458,7 @@ bool EECPAttackSubGroupUnit::IsContagionTargetLost()
     return theResult;
 }
 
+// FUNCTION: EXE 0x465f65
 // Evaluates one state-machine condition (targets, escort, danger, calamity, waypoints, retarget timer ...)
 bool EECPAttackSubGroupUnit::CheckCondition(long inState, unsigned long inTime)
 {
@@ -1475,6 +1515,7 @@ bool EECPAttackSubGroupUnit::CheckCondition(long inState, unsigned long inTime)
     return theResult;
 }
 
+// FUNCTION: EXE 0x466066
 // Lets an SAS explosive expert or cyber ninja (65% of the time, with enough power) cast its calamity on
 // the highest-rated building target; returns whether the order was given
 bool EECPAttackSubGroupUnit::TryCastCalamity()
@@ -1516,6 +1557,7 @@ bool EECPAttackSubGroupUnit::TryCastCalamity()
     return false;
 }
 
+// FUNCTION: EXE 0x466209
 // Tells whether the unit (or its destination) is farther than the given squared distance from its escort
 bool EECPAttackSubGroupUnit::IsFarFromEscort(float inDistanceSquared)
 {
@@ -1533,6 +1575,7 @@ bool EECPAttackSubGroupUnit::IsFarFromEscort(float inDistanceSquared)
     return theResult;
 }
 
+// FUNCTION: EXE 0x466295
 // Retreats by fleeing
 void EECPAttackSubGroupUnit::Retreat()
 {
@@ -1540,6 +1583,7 @@ void EECPAttackSubGroupUnit::Retreat()
 }
 
 // NEAR (72.7): the original keeps theResult in bl (ours spills it to a frame byte).
+// FUNCTION: EXE 0x46629a
 // Tells whether the target is still a live, on-map enemy the unit is attacking (or has no target)
 bool EECPAttackSubGroupUnit::IsTargetValid()
 {
@@ -1554,15 +1598,59 @@ bool EECPAttackSubGroupUnit::IsTargetValid()
     return true;
 }
 
+// The chains of the name tables at the top of the file: wrapper, construction, atexit registration, guarded destruction.
+// SYNTHETIC: EXE 0x462f8a
+// SYNTHETIC: EXE 0x462f94
+// SYNTHETIC: EXE 0x462fb4
+// SYNTHETIC: EXE 0x462fc0
+// SYNTHETIC: EXE 0x462fdb
+// SYNTHETIC: EXE 0x462fe5
+// SYNTHETIC: EXE 0x463005
+// SYNTHETIC: EXE 0x463011
+// SYNTHETIC: EXE 0x46302c
+// SYNTHETIC: EXE 0x463036
+// SYNTHETIC: EXE 0x463056
+// SYNTHETIC: EXE 0x463062
+
+// TEMPLATE: EXE 0x46631c
+// TEMPLATE: EXE 0x4664be
+// TEMPLATE: EXE 0x466916
+// TEMPLATE: EXE 0x466372
+// TEMPLATE: EXE 0x46639d
+// TEMPLATE: EXE 0x466457
+// TEMPLATE: EXE 0x466493
+// TEMPLATE: EXE 0x46652f
+// TEMPLATE: EXE 0x4665a0
+// TEMPLATE: EXE 0x466843
+// TEMPLATE: EXE 0x466951
+// TEMPLATE: EXE 0x466983
+// TEMPLATE: EXE 0x4669b5
+// TEMPLATE: EXE 0x4669ea
+// TEMPLATE: EXE 0x466a15
+// TEMPLATE: EXE 0x464dae
+// TEMPLATE: EXE 0x466347
+// TEMPLATE: EXE 0x4665e4
+// TEMPLATE: EXE 0x46663e
+// TEMPLATE: EXE 0x4666af
+// TEMPLATE: EXE 0x4668a5
+// TEMPLATE: EXE 0x466a57
+// TEMPLATE: EXE 0x466a89
+
+// ICF-FOLDED: EXE 0x4fca98
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
 long EECPAttackSubGroupUnit::Virtual18()
 {
     return 0;
 }
 
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EECPAttackSubGroupUnit::Virtual48()
 {
 }
 
+// ICF-FOLDED: EXE 0x67c0b4
+// (no address of its own: folded into the shared `xor al, al; ret` body the vtable slot points at)
 bool EECPAttackSubGroupUnit::ShouldRetreat()
 {
     return false;

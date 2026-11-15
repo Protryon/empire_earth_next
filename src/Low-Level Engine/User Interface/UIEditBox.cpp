@@ -167,6 +167,7 @@ struct UIEditBoxRust {
 typedef EeUiEditCall C;
 typedef UIEditBoxRust R;
 
+// FUNCTION: LLE 0x10069e8b
 // Creates an empty edit box (one blank line) with caret, key-repeat timers and text; multi-line boxes get a scroll bar
 UIEditBox::UIEditBox(unsigned long inId, GEFont* inFont, unsigned long inMaxChars, bool inNumbersOnly,
                      const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
@@ -232,3 +233,29 @@ long UIEditBox::MouseMove(const GE2DPoint& inLocation) { return (long)R::Point(t
 void UIEditBox::ProcessEnterKey() { R::Call(this, C::ProcessEnterKey); }
 void UIEditBox::TabbedFrom() { R::Call(this, C::TabbedFrom); }
 void UIEditBox::TabbedTo() { R::Call(this, C::TabbedTo); }
+
+// Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
+// SYNTHETIC: LLE 0x10069d6b
+// SYNTHETIC: LLE 0x10069d75
+// SYNTHETIC: LLE 0x10069d85
+// SYNTHETIC: LLE 0x10069d91
+// SYNTHETIC: LLE 0x10069d9b
+// SYNTHETIC: LLE 0x10069da5
+// SYNTHETIC: LLE 0x10069db5
+// SYNTHETIC: LLE 0x10069dc1
+// SYNTHETIC: LLE 0x10069dcb
+// SYNTHETIC: LLE 0x10069dd5
+// SYNTHETIC: LLE 0x10069de5
+// SYNTHETIC: LLE 0x10069df1
+// SYNTHETIC: LLE 0x10069dfb
+// SYNTHETIC: LLE 0x10069e05
+// SYNTHETIC: LLE 0x10069e15
+// SYNTHETIC: LLE 0x10069e21
+// SYNTHETIC: LLE 0x10069e2b
+// SYNTHETIC: LLE 0x10069e35
+// SYNTHETIC: LLE 0x10069e45
+// SYNTHETIC: LLE 0x10069e51
+// SYNTHETIC: LLE 0x10069e5b
+// SYNTHETIC: LLE 0x10069e65
+// SYNTHETIC: LLE 0x10069e75
+// SYNTHETIC: LLE 0x10069e81

@@ -11,7 +11,7 @@ class UString;
 
 class EECivilization {
 public:
-    EECivilization();
+    EECivilization();                       // 0x12c57d
     // the save keys (EECivilization.cpp's guarded chains 0x12c3eb..0x12c57d, guard byte 0x529a88). EEPlayer holds an
     // EECivilization by value, so the original EEPlayer.h included this header and every includer saw these statics:
     // the $E/$S renumbering they cause is names.txt metadata (tools/rebind.py), not a source shape
@@ -21,7 +21,7 @@ public:
     static const UString sMaxPoints;              // bit 8
     static const UString sCivBuilderLastVisited;  // bit 0x10
     static const UString sIsDefaultCiv;           // bit 0x20
-    ~EECivilization();
+    ~EECivilization();                      // 0x162677
     // 0x12c5e9 (ret 0xc): the cost of inUpgrade (inList, else mPurchasedUpgrades, for the category count) into outCost; true when
     // affordable (or gGameOptions.mAllowCustomCivs is clear)
     bool CanAfford(EECivUpgrade inUpgrade, unsigned long* outCost, std::vector<EECivUpgrade>* inList);
@@ -38,19 +38,19 @@ public:
 
     // (provisional names): 0x12c6bc/0x12c6fe/0x12c5d9/0x12c70f never touch this (forwarders to
     // gCivilizationManager; the civilization builder calls them through its civilization)
-    long GetBaseCost(EECivUpgrade inUpgrade);
-    long GetExtraCost(EECivUpgrade inUpgrade);
+    long GetBaseCost(EECivUpgrade inUpgrade);     // 0x12c6bc
+    long GetExtraCost(EECivUpgrade inUpgrade);    // 0x12c6fe
     long ComputeCost(long inBase, long inStep, long inCount);  // 0x12c5d9 (inA + inB * inC)
-    long CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList);
+    long CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList);  // 0x12c70f
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x12c74c, ret12/status
     long Save(FSFile& outFile);             // 0x12c9ee (EEPlayer::Save; provisional name)
     bool GetNoPointsAdded();                // 0x12c6fa (mB3C; EEPlayer::RepairPointers; provisional name)
     long Reapply(class EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion);    // 0x12c916 (EEPlayer::RepairPointers)
     long ApplyDeferred(class EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion);  // 0x12c9a1 (EEWorld::Fn139749; provisional name)
     void ApplyLevel21ToWorld();             // 0x12c8ce (EEWorld::SetPopulationLimit; provisional name)
-    bool GetUnchanged();
-    long GetAvailablePoints();
-    long GetMaxPoints();
+    bool GetUnchanged();                                           // 0x12c72c
+    long GetAvailablePoints();                              // 0x12c730
+    long GetMaxPoints();                                    // 0x12c734
     std::vector<EECivUpgrade>& GetPurchasedUpgrades();  // 0x12c738 (returns this)
 
     std::vector<EECivUpgrade> mPurchasedUpgrades;  // +0x00 (clear() is 0x2987d, an ICF-shared COMDAT)

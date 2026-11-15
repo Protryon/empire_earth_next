@@ -16,6 +16,7 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
+// FUNCTION: WON 0x007842f0
 // Reads a string value, or the string resource named after '@'
 GUIString ComponentConfig::ReadString(bool stopAtWhitespace)
 {
@@ -30,6 +31,7 @@ GUIString ComponentConfig::ReadString(bool stopAtWhitespace)
     this->mStringParser->ReadString(value,stopAtWhitespace);
     return GUIString(value);
 }
+// FUNCTION: WON 0x00784480
 // Reads a font: '@resource', '(CFG,name)' from a FontConfig found up the parent chain, or a literal font spec
 // (the parent search has no end test: a FontConfig found nowhere walks past the root config)
 SmartPtr<Font> ComponentConfig::ReadFont()
@@ -68,6 +70,7 @@ SmartPtr<Font> ComponentConfig::ReadFont()
     }
     return ResourceConfig::SafeReadFont(*this->mStringParser);
 }
+// FUNCTION: WON 0x00784890
 // Resolves an image spec: '@CFG_name' from an ImageConfig up the parent chain, '@NULL', '@resource',
 // or an image file to decode; throws on failure
 SmartPtr<Image> ComponentConfig::GetImageFromStr(const std::string& spec,bool getRaw)
@@ -107,11 +110,13 @@ SmartPtr<Image> ComponentConfig::GetImageFromStr(const std::string& spec,bool ge
         throw ConfigObjectException("Failed to decode image: "+spec);
     return image;
 }
+// FUNCTION: WON 0x00784f10
 // Resolves an image spec as a raw image
 SmartPtr<RawImage> ComponentConfig::GetRawImageFromStr(const std::string& spec)
 {
     return (RawImage*)this->GetImageFromStr(spec,true).get();
 }
+// FUNCTION: WON 0x00784fa0
 // Reads an image spec and resolves it (raw or delay-loaded)
 SmartPtr<Image> ComponentConfig::ReadImage(bool getRaw)
 {
@@ -120,12 +125,14 @@ SmartPtr<Image> ComponentConfig::ReadImage(bool getRaw)
     aParser.ReadString(name,false);
     return this->GetImageFromStr(name,getRaw);
 }
+// FUNCTION: WON 0x00785050
 // Reads an image spec and resolves it as a raw image
 SmartPtr<RawImage> ComponentConfig::ReadRawImage()
 {
     SmartPtr<RawImage> result=(RawImage*)this->ReadImage(true).get();
     return result;
 }
+// FUNCTION: WON 0x00785120
 // Reads a predefined cursor name (Arrow, Hand, IBeam, EastWest, NorthSouth ...); throws on an unknown name
 StandardCursor ComponentConfig::ReadStandardCursor()
 {
@@ -139,6 +146,7 @@ StandardCursor ComponentConfig::ReadStandardCursor()
     if(aNameIdx_name==5) return StandardCursor_NorthSouthEastWest;
     throw ConfigObjectException("Invalid predefined cursor type: "+(std::string)name);
 }
+// FUNCTION: WON 0x00785380
 // Reads a cursor; only 'Predefined,<name>' is supported, anything else throws
 SmartPtr<Cursor> ComponentConfig::ReadCursor()
 {
@@ -150,6 +158,7 @@ SmartPtr<Cursor> ComponentConfig::ReadCursor()
     }
     throw ConfigObjectException("Invalid cursor type: "+(std::string)type);
 }
+// FUNCTION: WON 0x00785cd0
 // Reads a selection color: a background color plus an optional foreground mode
 // (USEFOREGROUND with a color, INVERTORIGINAL, USEORIGINAL)
 SelectionColor ComponentConfig::ReadSelectionColor()

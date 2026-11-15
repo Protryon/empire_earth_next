@@ -18,8 +18,10 @@ TextLink::TextLink()
     this->mDownColor=0xff0000;
     this->mPressed=false;
 }
+// FUNCTION: WON 0x00711560
 // Returns the parameter delivered when the link is activated
 const GUIString& TextLink::GetLinkParam() { return this->mLinkParam; }
+// FUNCTION: WON 0x00711640
 // Marks the link pressed and switches it to its pressed colour, remembering the normal colour
 void TextLink::Pressed()
 {
@@ -27,6 +29,7 @@ void TextLink::Pressed()
     this->mNormalColor=this->mColor;
     this->mColor=this->mDownColor;
 }
+// FUNCTION: WON 0x00711660
 // Restores the normal colour of a pressed link; returns whether it was pressed
 bool TextLink::Released()
 {
@@ -41,3 +44,13 @@ bool TextLink::Released()
 // 0x006f30d0)
 bool TextLink::IsLink() { return true; }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007114f0
+// (public: __thiscall WONAPI::TextLink::TextLink(void)    [??0TextLink@WONAPI@@QAE@XZ])
+// TEMPLATE: WON 0x00711590
+// (public: virtual __thiscall WONAPI::TextLink::~TextLink(void)    [??1TextLink@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00711570
+// (public: virtual void * __thiscall WONAPI::TextLink::`scalar deleting destructor'(unsigned int)    [??_GTextLink@WONAPI@@UAEPAXI@Z])

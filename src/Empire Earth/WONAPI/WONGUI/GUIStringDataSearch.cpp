@@ -12,6 +12,7 @@
 #include "rust/ee_won.h"
 // The searches are ee_won's guistring module (rust/crates/ee_won/src/guistring.rs)
 namespace WONAPI {
+// FUNCTION: WON 0x00728410
 // Returns the last position of a character at or before start (-1 = from the end), or -1
 int GUIStringData::rFind(int character,int start) const
 {

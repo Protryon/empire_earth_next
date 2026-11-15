@@ -105,43 +105,72 @@ const GEColor kTimeWarpColor(0.2f, 0.2f, 1.0f);
 
 // 0x963238: the time of the last fanaticism colour update (UpdateFanaticismColor; only this unit) (provisional name)
 static unsigned long sU563238;
+// SYNTHETIC: EXE 0x5f57d3   (wrapper)
+// SYNTHETIC: EXE 0x5f57dd   (ctor)
+// SYNTHETIC: EXE 0x5f57f8   (registrar)
+// SYNTHETIC: EXE 0x5f5804   (dtor)
 
 // chain at 0x5f5805 (wrapper)
 //   object 0x963218  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 //   guarded dtor (byte ptr [0x963210], 1): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
 //   object bound as ?sData@EEComplexUnit@@2VUString@@B
 const UString EEComplexUnit::sData("EEComplexUnit-Data");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
+// SYNTHETIC: EXE 0x5f5805   (wrapper)
+// SYNTHETIC: EXE 0x5f580f   (ctor)
+// SYNTHETIC: EXE 0x5f5820   (registrar)
+// SYNTHETIC: EXE 0x5f582c   (dtor)
 
 // chain at 0x5f5848 (wrapper)
 //   object 0x963200  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 //   guarded dtor (byte ptr [0x963210], 2): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
 //   object bound as ?sCloakableOpacity@EEComplexUnit@@2VUString@@B
 const UString EEComplexUnit::sCloakableOpacity("EEComplexUnit-CloakableOpacity");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
+// SYNTHETIC: EXE 0x5f5848   (wrapper)
+// SYNTHETIC: EXE 0x5f5852   (ctor)
+// SYNTHETIC: EXE 0x5f5863   (registrar)
+// SYNTHETIC: EXE 0x5f586f   (dtor)
 
 // chain at 0x5f588b (wrapper)
 //   object 0x9631f0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 //   guarded dtor (byte ptr [0x963210], 4): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
 //   object bound as ?sIsCloaked@EEComplexUnit@@2VUString@@B
 const UString EEComplexUnit::sIsCloaked("EEComplexUnit-IsCloaked");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
+// SYNTHETIC: EXE 0x5f588b   (wrapper)
+// SYNTHETIC: EXE 0x5f5895   (ctor)
+// SYNTHETIC: EXE 0x5f58a6   (registrar)
+// SYNTHETIC: EXE 0x5f58b2   (dtor)
 
 // chain at 0x5f58ce (wrapper)
 //   object 0x9631e0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 //   guarded dtor (byte ptr [0x963210], 8): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
 //   object bound as ?sDrawAreaEffects@EEComplexUnit@@2VUString@@B
 const UString EEComplexUnit::sDrawAreaEffects("EEComplexUnit-DrawAreaEffects");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
+// SYNTHETIC: EXE 0x5f58ce   (wrapper)
+// SYNTHETIC: EXE 0x5f58d8   (ctor)
+// SYNTHETIC: EXE 0x5f58e9   (registrar)
+// SYNTHETIC: EXE 0x5f58f5   (dtor)
 
 // chain at 0x5f5911 (wrapper)
 //   object 0x9631d0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 //   guarded dtor (byte ptr [0x963210], 0x10): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
 //   object bound as ?sAreaEffectsTick@EEComplexUnit@@2VUString@@B
 const UString EEComplexUnit::sAreaEffectsTick("EEComplexUnit-AreaEffectsTick");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
+// SYNTHETIC: EXE 0x5f5911   (wrapper)
+// SYNTHETIC: EXE 0x5f591b   (ctor)
+// SYNTHETIC: EXE 0x5f592c   (registrar)
+// SYNTHETIC: EXE 0x5f5938   (dtor)
 
 // chain at 0x5f5954 (wrapper)
 //   object 0x963198  ctor ??0?$UMemoryPool@VEEComplexUnit@@@@QAE@XZ  dtor ?Release@?$UMemoryPool@VEEComplexUnit@@@@QAE_NXZ
 //   guarded dtor (byte ptr [0x963210], 0x20): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
 //   object bound as ?sMemoryPool@EEComplexUnit@@2V?$UMemoryPool@VEEComplexUnit@@@@A
 UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
+// SYNTHETIC: EXE 0x5f5954   (wrapper)
+// SYNTHETIC: EXE 0x5f595e   (ctor)
+// SYNTHETIC: EXE 0x5f5968   (registrar)
+// SYNTHETIC: EXE 0x5f5974   (dtor)
 
+// FUNCTION: EXE 0x5f5999
 // Creates a complex unit with every unit, mobile-unit and reference state reset to defaults
 EEComplexUnit::EEComplexUnit()
 {
@@ -155,18 +184,21 @@ EEComplexUnit::EEComplexUnit()
     this->mReferenceCount = 0;
 }
 
+// FUNCTION: EXE 0x5f5b5b
 // Adds the unit's line of sight at its current tile
 void EEComplexUnit::SightOnHere()
 {
     this->SightOn(this->GetTileX(), this->GetTileY());
 }
 
+// FUNCTION: EXE 0x5f5b67
 // Returns whether the unit is still a building foundation
 bool EEComplexUnit::IsFoundation()
 {
     return this->mIsFoundation;
 }
 
+// FUNCTION: EXE 0x5f5b6e
 // Resets the unit to its default state and marks it invalid (back in the pool)
 void EEComplexUnit::Clear()
 {
@@ -176,24 +208,28 @@ void EEComplexUnit::Clear()
     this->mIsValid = false;
 }
 
+// FUNCTION: EXE 0x5f5b8e
 // Removes the unit's line of sight at its current tile
 void EEComplexUnit::SightOffHere()
 {
     this->SightOff(this->GetTileX(), this->GetTileY());
 }
 
+// FUNCTION: EXE 0x5f5b9a
 // Sets whether the unit is a building foundation
 void EEComplexUnit::SetFoundation(bool inIsFoundation)
 {
     this->mIsFoundation = inIsFoundation;
 }
 
+// FUNCTION: EXE 0x5f5ba7
 // Destroys the unit, freeing its turret angles, orbitals, wheels and model
 EEComplexUnit::~EEComplexUnit()
 {
     this->FreeNode();
 }
 
+// FUNCTION: EXE 0x5f5c42
 // Makes the unit hold another unit, keeping the held units sorted by growth
 // the mHeldUnits order (std::sort 0x200df9: its heap code compares the units' mGrowth) (provisional name)
 struct EEComplexUnitGrowthLess {
@@ -208,6 +244,7 @@ void EEComplexUnit::HoldUnit(EEComplexUnit* inUnit)
     std::sort(this->mHeldUnits.begin(), this->mHeldUnits.end(), EEComplexUnitGrowthLess());
 }
 
+// FUNCTION: EXE 0x5f5ca2
 // Sets the unit that holds this one, swapping the references
 void EEComplexUnit::SetHolder(EEComplexUnit* inUnit)
 {
@@ -219,6 +256,7 @@ void EEComplexUnit::SetHolder(EEComplexUnit* inUnit)
     inUnit->Reference();
 }
 
+// FUNCTION: EXE 0x5f5cc7
 // Ignores a target for 30 seconds from both units' current tiles, or renews an existing ignore entry
 void EEComplexUnit::IgnoreTarget(EEComplexUnit* inTarget)
 {
@@ -227,6 +265,7 @@ void EEComplexUnit::IgnoreTarget(EEComplexUnit* inTarget)
     EECombatCaptureIgnored(EE_COMBAT_XR_IGNORE, this, inTarget, 0, 0);
 }
 
+// FUNCTION: EXE 0x5f5d8b
 // Creates an empty ignored-target entry
 EEComplexUnitAttacker::EEComplexUnitAttacker()
 {
@@ -238,6 +277,7 @@ EEComplexUnitAttacker::EEComplexUnitAttacker()
     this->mTime = 0;
 }
 
+// FUNCTION: EXE 0x5f5da1
 // Loads a living unit as cargo if there is room (or room is ignored), taking it off the map; returns 0 or 7
 long EEComplexUnit::LoadCargo(EEComplexUnit* inCargo, bool inIgnoreRoom, bool inArg3)
 {
@@ -273,6 +313,7 @@ long EEComplexUnit::LoadCargo(EEComplexUnit* inCargo, bool inIgnoreRoom, bool in
     return theResult;
 }
 
+// FUNCTION: EXE 0x5f5ebf
 // Garrisons a unit if capacity allows: adds its weight and population, then removes it as a dead unit
 bool EEComplexUnit::GarrisonUnit(EEComplexUnit* inCargo)
 {
@@ -295,6 +336,7 @@ bool EEComplexUnit::GarrisonUnit(EEComplexUnit* inCargo)
     return theResult;
 }
 
+// FUNCTION: EXE 0x5f5f55
 // Adds garrison weight (never below 0) and sets the garrisoned population, if capacity allows
 bool EEComplexUnit::AddGarrison(long inAmount, long inGarrisonPopulation)
 {
@@ -309,6 +351,7 @@ bool EEComplexUnit::AddGarrison(long inAmount, long inGarrisonPopulation)
     return theResult;
 }
 
+// FUNCTION: EXE 0x5f5f97
 // Queues and pays for a technology or unit at this building (front or back), honouring the hero limit
 void EEComplexUnit::QueueResearch(long inTechnology, bool inFront)
 {
@@ -360,6 +403,7 @@ void EEComplexUnit::QueueResearchUncaptured(long inTechnology, bool inFront)
     }
 }
 
+// FUNCTION: EXE 0x5f60ea
 // Stops the citizen's goals and puts the target first in its build queue, keeping a current build target
 void EEComplexUnit::OrderRepair(EEUnit* inTarget)
 {
@@ -383,6 +427,7 @@ void EEComplexUnit::OrderRepair(EEUnit* inTarget)
     this->mHasShiftQueuedBuild = false;
 }
 
+// FUNCTION: EXE 0x5f61c8
 // Appends a building to the citizen's build queue unless it is already queued
 void EEComplexUnit::AddBuildTarget(EEUnit* inTarget)
 {
@@ -393,6 +438,7 @@ void EEComplexUnit::AddBuildTarget(EEUnit* inTarget)
     }
 }
 
+// FUNCTION: EXE 0x5f6226
 // Adds a unit to the contact (collision) list unless it is already there
 void EEComplexUnit::AddContact(EEComplexUnit* inUnit)
 {
@@ -402,6 +448,7 @@ void EEComplexUnit::AddContact(EEComplexUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x5f625b
 // Appends a waypoint with its running path distance (off-map points are snapped or refused)
 void EEComplexUnit::AddWaypoint(const GE3DPoint& inLocation, bool inSnapToMap)
 {
@@ -457,6 +504,7 @@ static const float kMinimumFootprint = 1.0f;   // 0x446db8 (FindContacts; provis
 static const float kPathSpeedScale = 5.0f;     // 0x446dbc (ShouldMoveToNextAutoWaypoint: mFormationRank / 5 region sizes; provisional name)
 bool gSightUpdatesEnabled = true;           // 0x4c76ec (.data = 1; just before this unit's 0x4c76f0 table; EEUserInterface/EEWorld/EEMap read it; provisional name)
 
+// FUNCTION: EXE 0x5f65bd
 // Refunds part of the unit's cost as insurance and tells the local player when a refund threshold is passed
 // Original 0x4c76f0: the notification thresholds, used in ascending order.
 static const long kResourceRefundThresholds[11] = {100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000, 10000};
@@ -517,6 +565,7 @@ void EEComplexUnit::PayInsurance(float inFraction)
 }
 
 
+// FUNCTION: EXE 0x5f6817
 // Records as mutual contacts the living collidable units under the unit's footprint in the same layer
 void EEComplexUnit::FindContacts()
 {
@@ -564,12 +613,14 @@ void EEComplexUnit::FindContacts()
     }
 }
 
+// FUNCTION: EXE 0x5f6a1a
 // Returns whether the unit accepts the resource type (any, or the one it carries)
 bool EEComplexUnit::CanTake(EEComplexUnit* inCargo, unsigned long inValue)
 {
     return this->mResourceType == kResourceAny || this->mResourceType == inValue ? true : false;
 }
 
+// FUNCTION: EXE 0x5f6a31
 // Collects the other unit's calamities this unit could catch; returns only the last calamity's test
 bool EEComplexUnit::GetCatchableContagions(EEComplexUnit* inUnit, unsigned long& outFlags)
 {
@@ -589,6 +640,7 @@ bool EEComplexUnit::GetCatchableContagions(EEComplexUnit* inUnit, unsigned long&
     return theResult;
 }
 
+// FUNCTION: EXE 0x5f6acb
 // Removes the unit from play: drops its path, goals, queues, sound and every unit reference it holds
 void EEComplexUnit::Invalidate()
 {
@@ -662,6 +714,7 @@ void EEComplexUnit::Invalidate()
     this->mIsFoundation = false;
 }
 
+// FUNCTION: EXE 0x5f6d1a
 // Releases the unit's sound instance
 void EEComplexUnit::ReleaseSound()
 {
@@ -670,6 +723,7 @@ void EEComplexUnit::ReleaseSound()
     this->mSound = NULL;
 }
 
+// FUNCTION: EXE 0x5f6d44
 // Clears every goal queue of the unit
 void EEComplexUnit::ClearAllGoalQueues()
 {
@@ -677,6 +731,7 @@ void EEComplexUnit::ClearAllGoalQueues()
         this->ClearGoalQueue(i);
 }
 
+// FUNCTION: EXE 0x5f6d6a
 // Releases every held unit, detaching those this unit holds
 void EEComplexUnit::ReleaseHeldUnits()
 {
@@ -688,6 +743,7 @@ void EEComplexUnit::ReleaseHeldUnits()
     this->mHeldUnits.clear();
 }
 
+// FUNCTION: EXE 0x5f6de2
 // Takes the unit out of every area effect acting on it and empties that list
 void EEComplexUnit::RemoveAffectingAreaEffects()
 {
@@ -698,6 +754,7 @@ void EEComplexUnit::RemoveAffectingAreaEffects()
     theList.mItems.clear();
 }
 
+// FUNCTION: EXE 0x5f6e19
 // Refunds the current research and every queued item, re-allowing techs and updating the hero count
 void EEComplexUnit::UpdateJITManufacturing()
 {
@@ -728,6 +785,7 @@ void EEComplexUnit::UpdateJITManufacturing()
         gUserInterface->UpdateJITManufacturing();
 }
 
+// FUNCTION: EXE 0x5f6f2a
 // Empties the citizen's build queue, releasing each building
 void EEComplexUnit::ClearBuildTargets()
 {
@@ -738,6 +796,7 @@ void EEComplexUnit::ClearBuildTargets()
     this->mHasShiftQueuedBuild = false;
 }
 
+// FUNCTION: EXE 0x5f6f65
 // Empties the contact list, removing this unit from each contact's list too
 void EEComplexUnit::ClearContacts()
 {
@@ -748,6 +807,7 @@ void EEComplexUnit::ClearContacts()
     this->mContacts.Clear();
 }
 
+// FUNCTION: EXE 0x5f6f99
 // Destroys the unit's conversion graphic effect, if any
 void EEComplexUnit::ReleaseConversionEffect()
 {
@@ -758,6 +818,7 @@ void EEComplexUnit::ReleaseConversionEffect()
     }
 }
 
+// FUNCTION: EXE 0x5f6fbc
 // Clears one goal queue (abandoning the main queue's goals first) and frees the unit's airport slot
 void EEComplexUnit::ClearGoalQueue(unsigned long inIndex)
 {
@@ -775,6 +836,7 @@ void EEComplexUnit::ClearGoalQueue(unsigned long inIndex)
     }
 }
 
+// FUNCTION: EXE 0x5f709c
 // Destroys the unit's heal graphic effect, if any
 void EEComplexUnit::ReleaseHealEffect()
 {
@@ -785,6 +847,7 @@ void EEComplexUnit::ReleaseHealEffect()
     }
 }
 
+// FUNCTION: EXE 0x5f70bf
 // Destroys the fire effect of a citizen, gate or wall, or removes a cloak effect from a CP market
 void EEComplexUnit::ReleaseFireEffect()
 {
@@ -800,6 +863,7 @@ void EEComplexUnit::ReleaseFireEffect()
         EERemoveCloakEffect(this);
 }
 
+// FUNCTION: EXE 0x5f7112
 // Drops the unit's waypoints (the original stepped through them instead while its never-set waypoint marking flag
 // 0x963234 was on)
 void EEComplexUnit::DropPath()
@@ -808,6 +872,7 @@ void EEComplexUnit::DropPath()
     this->mCollisionResolutionCount = 0.0f;
 }
 
+// FUNCTION: EXE 0x5f713d
 // Copies a replaced unit's state into this one: position, timers, scaled hit points, goals, cargo, links
 void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
 {
@@ -900,12 +965,14 @@ void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
     EEUnit::CopyFrom(inUnit);
 }
 
+// FUNCTION: EXE 0x5f7b45
 // Returns the unit's mB34F flag
 bool EEComplexUnit::GetB34F()
 {
     return this->mB34F;
 }
 
+// FUNCTION: EXE 0x5f7b4c
 // Replaces the unit's sound instance, referencing the new one
 void EEComplexUnit::SetSound(SESMInstanceNode* inSound)
 {
@@ -915,6 +982,7 @@ void EEComplexUnit::SetSound(SESMInstanceNode* inSound)
         inSound->Reference();
 }
 
+// FUNCTION: EXE 0x5f7b69
 // Returns whether the unit carries the given calamity
 bool EEComplexUnit::HasCalamityFlag(unsigned long inFlag)
 {
@@ -934,6 +1002,7 @@ static EEComplexUnit* EENewPoolUnit()
     return sPoolOff ? new EEComplexUnit : EEComplexUnit::sMemoryPool.New();
 }
 
+// FUNCTION: EXE 0x5f7b7c
 // Takes a unit from the pool and resets it to defaults
 EEComplexUnit* EEComplexUnit::Create()
 {
@@ -944,6 +1013,7 @@ EEComplexUnit* EEComplexUnit::Create()
     return theUnit;
 }
 
+// FUNCTION: EXE 0x5f7ba6
 // Sizes the unit pool and the unit-list node pool (twice the chunk size); returns the unit pool's result
 bool EEComplexUnit::SetPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks)
 {
@@ -951,6 +1021,7 @@ bool EEComplexUnit::SetPoolSize(unsigned long inChunkSize, unsigned long inMaxCh
     return EEComplexUnit::sMemoryPool.SetSize(inChunkSize, inMaxChunks, 1);
 }
 
+// FUNCTION: EXE 0x5f7bd2
 // Takes a unit from the pool and initialises it for a class, placement, player and goal queue count
 EEComplexUnit* EEComplexUnit::Create(EEUnitClass* inClass, const GETransformation& inTransformation,
                                      EEPlayer* inPlayer, unsigned long inGoalQueueCount)
@@ -960,6 +1031,7 @@ EEComplexUnit* EEComplexUnit::Create(EEUnitClass* inClass, const GETransformatio
     return theUnit;
 }
 
+// FUNCTION: EXE 0x5f7bfa
 // Reallocates the turret angle array with the given count, all zero
 void EEComplexUnit::ResizeTurretAngles(unsigned long inCount)
 {
@@ -973,6 +1045,7 @@ void EEComplexUnit::ResizeTurretAngles(unsigned long inCount)
     }
 }
 
+// FUNCTION: EXE 0x5f7c47
 // Sets the water state of a sea or space unit from its class's water kind (and the tile's depth level)
 void EEComplexUnit::UpdateWaterState(bool inArg)
 {
@@ -1010,6 +1083,7 @@ void EEComplexUnit::UpdateWaterState(bool inArg)
         this->mWaterState = 0;
 }
 
+// FUNCTION: EXE 0x5f7ce7
 // Adds the unit's sight at a tile for its player, sight sharers and allies, revealing it on the minimap
 void EEComplexUnit::SightOn(unsigned long inX, unsigned long inY)
 {
@@ -1105,6 +1179,7 @@ void EEComplexUnit::SightOn(unsigned long inX, unsigned long inY)
 }
 
 
+// FUNCTION: EXE 0x5f8357
 // Updates whether the unit hides others or is hidden behind a building; returns whether it is hidden
 bool EEComplexUnit::UpdateHidden()
 {
@@ -1211,6 +1286,7 @@ bool EEComplexUnit::UpdateHidden()
     return (this->mHiddenFlags & kHiddenFlagHidden) == kHiddenFlagHidden && !this->IsFoundation();
 }
 
+// FUNCTION: EXE 0x5f88fe
 // Abandons goals of a queue from the front until one that suits the unit starts
 void EEComplexUnit::ClearGoals(long inIndex)
 {
@@ -1238,12 +1314,14 @@ void EEComplexUnit::ClearGoals(long inIndex)
     this->RefreshActiveGoal();
 }
 
+// FUNCTION: EXE 0x5f8a26
 // Returns the queue's first goal
 EEUnitGoal* EEUnitVectorItem::GetFront()
 {
     return this->mGoals.front();
 }
 
+// FUNCTION: EXE 0x5f8a43
 // Frees the unit's turret angles, orbitals, wheels and model, then the base unit's data
 void EEComplexUnit::FreeNode()
 {
@@ -1263,6 +1341,7 @@ void EEComplexUnit::FreeNode()
     EEUnit::FreeNode();
 }
 
+// FUNCTION: EXE 0x5f8af6
 // Kills every cargo unit and records each as a dead unit in its player's statistics
 void EEComplexUnit::KillCargo()
 {
@@ -1290,6 +1369,7 @@ void EEComplexUnit::KillCargo()
     }
 }
 
+// FUNCTION: EXE 0x5f8bd8
 // Empties the garrison count and population
 void EEComplexUnit::ClearGarrison()
 {
@@ -1297,6 +1377,7 @@ void EEComplexUnit::ClearGarrison()
     this->mGarrisonCount = 0;
 }
 
+// FUNCTION: EXE 0x5f8be7
 // Dumps the unit pool's statistics and releases the pool
 void EEComplexUnit::ReleasePool()
 {
@@ -1306,6 +1387,7 @@ void EEComplexUnit::ReleasePool()
     EEComplexUnit::sMemoryPool.Release();
 }
 
+// FUNCTION: EXE 0x5f8c2d
 // Completes the unit's pending group path and, with at most two waypoints left, its own path
 void EEComplexUnit::RefreshPath()
 {
@@ -1318,6 +1400,7 @@ void EEComplexUnit::RefreshPath()
         ::gPathManager.CompletePath(this);
 }
 
+// FUNCTION: EXE 0x5f8c73
 // Builds a "!Leaking Unit" line per used pool unit and clears its reference count (the report is gone)
 // The reference-counter buckets are walked too, their report compiled away (provisional name, from Empire Earth.cpp)
 void EEReportLeakingUnits()
@@ -1350,6 +1433,7 @@ void EEReportLeakingUnits()
     }
 }
 
+// FUNCTION: EXE 0x5f8e7c
 // Writes every used pool unit to the dump file with its class, tile, id, action and growth
 // Part of EEWorld's dump; the second copy of the arguments fed a trace the shipping build compiled away
 // (provisional name)
@@ -1372,6 +1456,7 @@ static void EEDumpWrite(void* inFile, const char* inText, size_t inLength)
     fwrite(inText, 1, inLength, static_cast<FILE*>(inFile));
 }
 
+// FUNCTION: EXE 0x5f908d
 // Writes the unit's goals, physics, class stats, waypoints and area effects to the out-of-sync dump
 void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
 {
@@ -1453,6 +1538,7 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
         (*theEffect)->Dump(inFile);
 }
 
+// FUNCTION: EXE 0x5f9b72
 // Applies the built unit's area effects to the units within the largest effect radius
 void EEComplexUnit::ApplyAreaEffects()
 {
@@ -1472,6 +1558,7 @@ void EEComplexUnit::ApplyAreaEffects()
     ::gAEManager.CollectEffects(theRadius, theLocation, thePlayerID, &this->mAreaEffects, this);
 }
 
+// FUNCTION: EXE 0x5f9c9b
 // Tries random points away from a threat until the screen accepts one; returns whether one was found
 bool EEComplexUnit::FindFleePoint(GE3DPoint* inTarget, GE3DPoint* outPoint, long inTries, float inMinAngle,
                             float inMaxAngle, float inMinDistance, float inMaxDistance,
@@ -1495,6 +1582,7 @@ bool EEComplexUnit::FindFleePoint(GE3DPoint* inTarget, GE3DPoint* outPoint, long
     return theResult;
 }
 
+// FUNCTION: EXE 0x5f9d91
 // Adds the finished building's sight and, for other players' units, shows it on the minimap
 void EEComplexUnit::PartFinished()
 {
@@ -1503,12 +1591,14 @@ void EEComplexUnit::PartFinished()
         gMiniMap->MoveUnit(this, -10000, -10000, this->GetTileX(), this->GetTileY());
 }
 
+// FUNCTION: EXE 0x5f9dcb
 // Returns the unit's line of sight: its upgraded stat plus its sight bonus
 float EEComplexUnit::GetLineOfSight()
 {
     return this->GetStats()->mLineOfSight + this->mSight;
 }
 
+// FUNCTION: EXE 0x5f9ddb
 // Returns whether an area effect of the given kind acts on the unit
 bool EEComplexUnit::HasEffect(long inKind)
 {
@@ -1516,6 +1606,7 @@ bool EEComplexUnit::HasEffect(long inKind)
     return this->GetEffect(inKind, theEffect);
 }
 
+// FUNCTION: EXE 0x5f9df3
 // Finds the graphic effect of the first area effect of a kind acting on the unit; returns whether found
 bool EEComplexUnit::GetEffect(long inKind, EEGraphicEffect*& outEffect)
 {
@@ -1530,6 +1621,7 @@ bool EEComplexUnit::GetEffect(long inKind, EEGraphicEffect*& outEffect)
     return theResult;
 }
 
+// FUNCTION: EXE 0x5f9e2d
 // Returns whether the unit may be deleted; a built unit of the citizen tech's types not with one capitol
 bool EEComplexUnit::CanDelete()
 {
@@ -1542,6 +1634,7 @@ bool EEComplexUnit::CanDelete()
     return theResult;
 }
 
+// FUNCTION: EXE 0x5f9e81
 // Returns whether a unit may pass through this gate (closed and locked rules, Trojan horse) or tile blocker
 bool EEComplexUnit::IsPassableBy(EEComplexUnit* inUnit)
 {
@@ -1568,6 +1661,7 @@ bool EEComplexUnit::IsPassableBy(EEComplexUnit* inUnit)
     return true;
 }
 
+// FUNCTION: EXE 0x5f9f85
 // Returns the cargo unit with the given id, or NULL
 EEComplexUnit* EEComplexUnit::FindPassenger(unsigned long inUnitID)
 {
@@ -1582,6 +1676,7 @@ EEComplexUnit* EEComplexUnit::FindPassenger(unsigned long inUnitID)
     return theResult;
 }
 
+// FUNCTION: EXE 0x5f9fbb
 // Moves a tile position to the centre of the unit's footprint
 void EEComplexUnit::AddCenterOffset(float& ioX, float& ioY)
 {
@@ -1596,6 +1691,7 @@ void EEComplexUnit::AddCenterOffset(float& ioX, float& ioY)
     }
 }
 
+// FUNCTION: EXE 0x5fa013
 // Returns the first waypoint and the remaining path length; 7 when there is no path
 long EEComplexUnit::GetPathStart(GE3DPoint& outLocation, float& outLength)
 {
@@ -1608,6 +1704,7 @@ long EEComplexUnit::GetPathStart(GE3DPoint& outLocation, float& outLength)
     return 7;
 }
 
+// FUNCTION: EXE 0x5fa07f
 // Returns the unit's out-of-sync checksum for the selected parts (tile, physics, goals, area effects)
 long EEComplexUnit::GetChecksum(unsigned long inFlags)
 {
@@ -1645,12 +1742,14 @@ long EEComplexUnit::GetChecksum(unsigned long inFlags)
     return EEUnit::GetChecksum(inFlags) + theSum;
 }
 
+// FUNCTION: EXE 0x5fa1cd
 // Returns the goals of a goal queue
 EEGoalDeque& EEComplexUnit::GetQueueGoals(unsigned long inIndex)
 {
     return this->mGoalQueues[inIndex].mGoals;
 }
 
+// FUNCTION: EXE 0x5fa1e1
 // Returns the remaining path length; 7 when there is no path
 long EEComplexUnit::GetPathLength(float& outDistance)
 {
@@ -1662,6 +1761,7 @@ long EEComplexUnit::GetPathLength(float& outDistance)
     return 7;
 }
 
+// FUNCTION: EXE 0x5fa229
 // Returns the next waypoint's location; 7 when there is no path
 long EEComplexUnit::GetNextWaypointPoint(GE3DPoint& outLocation)
 {
@@ -1672,6 +1772,7 @@ long EEComplexUnit::GetNextWaypointPoint(GE3DPoint& outLocation)
     return 7;
 }
 
+// FUNCTION: EXE 0x5fa269
 // Appends a debug description: action, collision state, velocity and the current goal
 void EEComplexUnit::Describe(UWideString& ioString)
 {
@@ -1699,6 +1800,7 @@ void EEComplexUnit::Describe(UWideString& ioString)
     ioString += theString;
 }
 
+// FUNCTION: EXE 0x5fa385
 // Returns the unit's (or its container's) tile, or a nearby tile on a continent of the wanted kind
 EETileCoordinate EEComplexUnit::FindAreaTile(bool inFlag, long inRange)
 {
@@ -1731,6 +1833,7 @@ EETileCoordinate EEComplexUnit::FindAreaTile(bool inFlag, long inRange)
 }
 
 
+// FUNCTION: EXE 0x5fa473
 // Returns the unit's model, or the player's foundation graphic for a foundation
 EEModel* EEComplexUnit::GetModel()
 {
@@ -1739,12 +1842,14 @@ EEModel* EEComplexUnit::GetModel()
     return EEGetPlayerClassGraphic(this->GetPlayer(), this->GetUnitClass());
 }
 
+// FUNCTION: EXE 0x5fa493
 // Returns the unit's world position
 void EEComplexUnit::GetPosition(GE3DPoint& outPosition)
 {
     this->mPhysicalModel.GetLocation().GetPosition(outPosition);
 }
 
+// FUNCTION: EXE 0x5fa4b4
 // Returns the height of the model's top for effects, scaled by build progress while unbuilt
 float EEComplexUnit::GetEffectHeight(bool inUseCurrentFrame)
 {
@@ -1760,6 +1865,7 @@ float EEComplexUnit::GetEffectHeight(bool inUseCurrentFrame)
     return theHeight;
 }
 
+// FUNCTION: EXE 0x5fa563
 // Returns whether a target is ignored (optionally only from the same tiles), dropping expired entries
 bool EEComplexUnit::IsTargetIgnored(EEComplexUnit* inTarget, bool inCheckLocation)
 {
@@ -1770,18 +1876,21 @@ bool EEComplexUnit::IsTargetIgnored(EEComplexUnit* inTarget, bool inCheckLocatio
     return theResult;
 }
 
+// FUNCTION: EXE 0x5fa661
 // Returns whether the unit is disabled by a time warp (reasons 0x1a / 0x1c)
 bool EEComplexUnit::IsProtected()
 {
     return this->mIsDisabled && (this->mDisabledReason == 0x1a || this->mDisabledReason == 0x1c);
 }
 
+// FUNCTION: EXE 0x5fa67f
 // Returns whether the unit's current goal is gathering
 bool EEComplexUnit::IsGathering()
 {
     return this->mGoalState != NULL && this->mGoalState->mKind == kGoalGather;
 }
 
+// FUNCTION: EXE 0x5fa696
 // Returns whether another unit is on another continent (space docks and turrets by their planet)
 bool EEComplexUnit::IsOnOtherContinentThan(EEComplexUnit* inUnit)
 {
@@ -1798,6 +1907,7 @@ bool EEComplexUnit::IsOnOtherContinentThan(EEComplexUnit* inUnit)
     return false;
 }
 
+// FUNCTION: EXE 0x5fa6f9
 // Returns whether a tile is out of reach: unreachable for air, else on another planet in a space map
 bool EEComplexUnit::IsOnOtherContinent(long inTileX, long inTileY)
 {
@@ -1809,6 +1919,7 @@ bool EEComplexUnit::IsOnOtherContinent(long inTileX, long inTileY)
                   != ::gContinentManager.GetContinent(EETileCoordinate(inTileX, inTileY), kAIPathNonSpace);
 }
 
+// FUNCTION: EXE 0x5fa785
 // Returns whether the unit can get to a target, directly or through connected continents
 bool EEComplexUnit::CanReachUnit(EEUnit* inTarget)
 {
@@ -1818,6 +1929,7 @@ bool EEComplexUnit::CanReachUnit(EEUnit* inTarget)
     return theResult;
 }
 
+// FUNCTION: EXE 0x5fa7f6
 // Returns the first continent of the given kind under the unit's footprint, or 0
 unsigned short EEComplexUnit::GetFootprintContinent(long inKind)
 {
@@ -1832,6 +1944,7 @@ unsigned short EEComplexUnit::GetFootprintContinent(long inKind)
     return theResult;
 }
 
+// FUNCTION: EXE 0x5fa856
 // Returns the player's town containing the unit's tile, else the town whose outline is nearest
 EETown* EEComplexUnit::FindNearestTown()
 {
@@ -1856,6 +1969,7 @@ EETown* EEComplexUnit::FindNearestTown()
     return theResult;
 }
 
+// FUNCTION: EXE 0x5fa906
 // Makes the unit fanatic for a while: costs a share of its hit points (at least 1 left) and tints it
 void EEComplexUnit::GoFanatic()
 {
@@ -1869,18 +1983,21 @@ void EEComplexUnit::GoFanatic()
     this->SetIsTinted(true);
 }
 
+// FUNCTION: EXE 0x5fa96c
 // Returns whether the unit's fanaticism timer is running
 bool EEComplexUnit::IsCloaked()
 {
     return this->mCloaked > 0;
 }
 
+// FUNCTION: EXE 0x5fa979
 // Removes the unit's colour tint
 void EEComplexUnit::ClearTint()
 {
     this->SetIsTinted(false);
 }
 
+// FUNCTION: EXE 0x5fa98c
 // Pulses a fanatic unit's colour between the fanaticism effect's two colours; ends it when time runs out
 void EEComplexUnit::UpdateFanaticismColor()
 {
@@ -1917,6 +2034,16 @@ void EEComplexUnit::UpdateFanaticismColor()
     }
 }
 
+// FUNCTION: EXE 0x5fab53
+// Destroys UpdateFanaticismColor's third static colour at exit (an empty destructor)
+
+// FUNCTION: EXE 0x5fab54
+// Destroys UpdateFanaticismColor's second static colour at exit (an empty destructor)
+
+// FUNCTION: EXE 0x5fab55
+// Destroys UpdateFanaticismColor's first static colour at exit (an empty destructor)
+
+// FUNCTION: EXE 0x5fab56
 // Returns whether a tile is the unit's tile or one of the side or corner tiles around its footprint
 bool EEComplexUnit::IsNextToTile(long inX, long inY)
 {
@@ -1946,6 +2073,7 @@ bool EEComplexUnit::IsNextToTile(long inX, long inY)
 }
 
 
+// FUNCTION: EXE 0x5fac37
 // Resets every mobile-unit field to defaults with the given goal queue count, optionally a random heading
 void EEComplexUnit::ResetEEComplexUnit(unsigned long inGoalQueueCount, bool inRandomHeading)
 {
@@ -2019,6 +2147,7 @@ void EEComplexUnit::ResetEEComplexUnit(unsigned long inGoalQueueCount, bool inRa
     this->mFireEffect.mValue = 0;
 }
 
+// FUNCTION: EXE 0x5fb18f
 // Initialises a new unit from its class, placement and player: collision, hiding, tile, scale, area effects
 void EEComplexUnit::Init(EEUnitClass* inClass, const GETransformation& inPlacement,
                          EEPlayer* inPlayer, unsigned long inGoalQueueCount)
@@ -2054,6 +2183,7 @@ void EEComplexUnit::Init(EEUnitClass* inClass, const GETransformation& inPlaceme
     }
 }
 
+// FUNCTION: EXE 0x5fb383
 // Kills or removes the unit: records death statistics and insurance, releases cargo, garrison, holder, goals
 // and effects, then kills its later parts and spawns its death and remains units
 void EEComplexUnit::Kill(bool inKilled, bool inKeepResearch, bool inOther)
@@ -2163,6 +2293,7 @@ void EEComplexUnit::Kill(bool inKilled, bool inKeepResearch, bool inOther)
 
 
 
+// FUNCTION: EXE 0x5fb7fb
 // Returns the unit to the complex-unit memory pool when its last reference goes
 void EEComplexUnit::LastDereference()
 {
@@ -2171,6 +2302,7 @@ void EEComplexUnit::LastDereference()
     EEComplexUnit::sMemoryPool.Delete(this);
 }
 
+// FUNCTION: EXE 0x5fb814
 // Loads the unit's model (the foundation model, or the animation model with turret angles, orbitals and wheels)
 // and, except for land buildings, the player's buttons for its class
 void EEComplexUnit::LoadMedia(bool inIsFoundation)
@@ -2208,6 +2340,7 @@ void EEComplexUnit::LoadMedia(bool inIsFoundation)
     }
 }
 
+// FUNCTION: EXE 0x5fb9a0
 // Moves an idle or gathering unit to a random free tile around a footprint being placed (a waiting gatherer looks for
 // another gather spot instead); returns true if it was sent away
 bool EEComplexUnit::StepAside(EEPlayer* inPlayer, EEUnitClass* inClass, long inX, long inY, bool inForce)
@@ -2267,6 +2400,7 @@ bool EEComplexUnit::StepAside(EEPlayer* inPlayer, EEUnitClass* inClass, long inX
     return theResult;
 }
 
+// FUNCTION: EXE 0x5fbc3b
 // Finds the unit's waypoint on the given tile (off-map waypoints count at their closest tile); returns true if found
 bool EEComplexUnit::FindWaypointAtTile(long inX, long inY, EEComplexUnitWaypoint*& outWaypoint)
 {
@@ -2286,12 +2420,14 @@ bool EEComplexUnit::FindWaypointAtTile(long inX, long inY, EEComplexUnitWaypoint
     return theFound;
 }
 
+// FUNCTION: EXE 0x5fbd5f
 // Returns true if the unit is built, alive and below its maximum hit points
 bool EEComplexUnit::IsRepairable()
 {
     return this->mHitPoints > 0 && this->mHitPoints < this->GetStats()->mMaxHitPoints && this->mIsBuilt;
 }
 
+// FUNCTION: EXE 0x5fbd81
 // Adjusts a value by the unit's morale: positive morale takes a share off, negative morale adds one (combat.yaml
 // morale: 80% and 60% in the original)
 void EEComplexUnit::ApplyMorale(long inValue, long& outValue)
@@ -2301,6 +2437,7 @@ void EEComplexUnit::ApplyMorale(long inValue, long& outValue)
     outValue = EECombatMorale(theIn);
 }
 
+// FUNCTION: EXE 0x5fbdd1
 // Drops the unit's first waypoint; returns 0, or 7 if there was none
 long EEComplexUnit::NextWaypoint()
 {
@@ -2314,6 +2451,7 @@ long EEComplexUnit::NextWaypoint()
     return theResult;
 }
 
+// FUNCTION: EXE 0x5fbecf
 // Gets the location of the unit's second waypoint; returns 0, or 7 if it has fewer than two
 long EEComplexUnit::GetSecondWaypoint(GE3DPoint& outLocation)
 {
@@ -2324,6 +2462,7 @@ long EEComplexUnit::GetSecondWaypoint(GE3DPoint& outLocation)
     return 7;
 }
 
+// FUNCTION: EXE 0x5fbf16
 // Pops the citizen's build queue until a still-valid unit comes out; returns it, or NULL when the queue runs out
 EEUnit* EEComplexUnit::PopBuildTarget()
 {
@@ -2338,6 +2477,7 @@ EEUnit* EEComplexUnit::PopBuildTarget()
     return theResult;
 }
 
+// FUNCTION: EXE 0x5fbf66
 // Drops goals from the front of a goal queue while they no longer suit the unit, then refreshes its current goals
 void EEComplexUnit::DropUnsuitedGoals(unsigned long inIndex)
 {
@@ -2354,6 +2494,7 @@ void EEComplexUnit::DropUnsuitedGoals(unsigned long inIndex)
         this->RefreshActiveGoal();
 }
 
+// FUNCTION: EXE 0x5fbfdd
 // Moves the unit away after a calamity: a computer player's prophet steps away from the cast, other AI units go idle,
 // a human's unit walks to a random point ahead (unless inArg is set)
 void EEComplexUnit::FleeAfterCalamity(long inArg)
@@ -2380,6 +2521,7 @@ void EEComplexUnit::FleeAfterCalamity(long inArg)
     this->GetUnitClass()->ActionChanged(this);
 }
 
+// FUNCTION: EXE 0x5fc0a8
 // Turns a group path into location goals for the unit (replacing its location goal, or after its attack goal),
 // skipping up to three points near its start sector, and sets it moving
 // inPath's constness is inferred (non-const is the least the body needs)
@@ -2468,6 +2610,7 @@ done:
     this->RefreshActiveGoal();
 }
 
+// FUNCTION: EXE 0x5fc507
 // Snaps the last waypoint to the goal's exact location when both share a tile (location, attack, build, load goals)
 void EEComplexUnit::SnapLastWaypoint()
 {
@@ -2491,6 +2634,7 @@ void EEComplexUnit::SnapLastWaypoint()
     }
 }
 
+// FUNCTION: EXE 0x5fc61b
 // Adjusts a path for the unit's class and adds it as waypoints (stored end first), skipping the start tile it stands on
 void EEComplexUnit::TakePath(std::vector<GE3DPoint>& ioPath, bool inSmooth)
 {
@@ -2502,6 +2646,7 @@ void EEComplexUnit::TakePath(std::vector<GE3DPoint>& ioPath, bool inSmooth)
         this->AddWaypoint(ioPath[i], false);
 }
 
+// FUNCTION: EXE 0x5fc6e8
 // Swaps replaced units (old -> new pairs) in the unit's goals, cargo, parts and build queue
 void EEComplexUnit::ReplaceUnits(const std::vector<EEPUnitSwap>& inReplacements)
 {
@@ -2540,6 +2685,7 @@ void EEComplexUnit::ReplaceUnits(const std::vector<EEPUnitSwap>& inReplacements)
     }
 }
 
+// FUNCTION: EXE 0x5fc90c
 // Places the unit on the ground at the location, pitching and rolling it with the terrain when its class does
 void EEComplexUnit::PlaceOnGround(const GE3DPoint& inLocation)
 {
@@ -2565,6 +2711,7 @@ void EEComplexUnit::PlaceOnGround(const GE3DPoint& inLocation)
     this->mPhysicalModel.SetLocation(theTransformation);
 }
 
+// FUNCTION: EXE 0x5fca21
 // Queues a goal on squadron queues 1..3 (1..4 with the paratroopers power), as the goal or clones of it
 void EEComplexUnit::QueueSquadronGoals(EEUnitGoal* inGoal, bool inCloneGoal)
 {
@@ -2582,6 +2729,7 @@ void EEComplexUnit::QueueSquadronGoals(EEUnitGoal* inGoal, bool inCloneGoal)
     }
 }
 
+// FUNCTION: EXE 0x5fca95
 // Removes a unit from the units this one holds; returns true if it was held
 bool EEComplexUnit::ReleaseHeld(EEComplexUnit* inUnit)
 {
@@ -2594,6 +2742,7 @@ bool EEComplexUnit::ReleaseHeld(EEComplexUnit* inUnit)
     return theFound;
 }
 
+// FUNCTION: EXE 0x5fcb0e
 // Pops auto-waypoint goals off the main queue, starting each following goal that suits the unit
 void EEComplexUnit::DropFinishedGoals(bool inStartAll)
 {
@@ -2619,6 +2768,7 @@ void EEComplexUnit::DropFinishedGoals(bool inStartAll)
     this->RefreshActiveGoal();
 }
 
+// FUNCTION: EXE 0x5fcb8c
 // Removes a unit from the cargo and gives its room back; refreshes the icon bar if the transport is selected
 void EEComplexUnit::ReleaseCargo(EEComplexUnit* inCargo)
 {
@@ -2638,6 +2788,7 @@ void EEComplexUnit::ReleaseCargo(EEComplexUnit* inCargo)
     theCargo->mContainer = NULL;
 }
 
+// FUNCTION: EXE 0x5fcc91
 // Unloads every cargo unit that fits near the tile (teleporters show the teleport effect) and drops dead ones;
 // posts an unload-failed event if any stay aboard
 void EEComplexUnit::UnloadCargoAtTile(long inX, long inY, bool inArg)
@@ -2673,6 +2824,7 @@ void EEComplexUnit::UnloadCargoAtTile(long inX, long inY, bool inArg)
     }
 }
 
+// FUNCTION: EXE 0x5fce47
 // Empties the build queue, refunding each entry and allowing its technology again
 void EEComplexUnit::CancelQueuedProduction()
 {
@@ -2690,6 +2842,7 @@ void EEComplexUnit::CancelQueuedProduction()
     }
 }
 
+// FUNCTION: EXE 0x5fcf16
 // Unloads a cargo unit at the location (aircraft at cruise altitude) and sets it idle; returns it if something else
 // still references it, else NULL
 EEComplexUnit* EEComplexUnit::UnloadCargoAt(unsigned long inIndex, const GETransformation& inLocation)
@@ -2739,6 +2892,7 @@ EEComplexUnit* EEComplexUnit::UnloadCargoAt(unsigned long inIndex, const GETrans
     return theReferences > 1 ? theCargo : 0;
 }
 
+// FUNCTION: EXE 0x5fd0fe
 // Unloads one cargo unit next to the transport now (a dead one is just released); returns true on success
 bool EEComplexUnit::UnloadCargoNow(EEComplexUnit* inCargo)
 {
@@ -2771,6 +2925,7 @@ bool EEComplexUnit::UnloadCargoNow(EEComplexUnit* inCargo)
     return theResult;
 }
 
+// FUNCTION: EXE 0x5fd2ba
 // Unloads the cargo unit with the given unit id at the location; returns what UnloadCargoAt returns, or NULL
 EEComplexUnit* EEComplexUnit::UnloadCargoByID(unsigned long inUnitID, const GETransformation& inLocation)
 {
@@ -2785,6 +2940,7 @@ EEComplexUnit* EEComplexUnit::UnloadCargoByID(unsigned long inUnitID, const GETr
     return theResult;
 }
 
+// FUNCTION: EXE 0x5fd2ff
 // Removes a unit from this unit's contact list
 void EEComplexUnit::RemoveContactUnit(EEComplexUnit* inUnit)
 {
@@ -2795,6 +2951,7 @@ void EEComplexUnit::RemoveContactUnit(EEComplexUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x5fd336
 // Removes the unit's line of sight at the tile for its player, its sight sharers, the minimap and terrain mesh
 // (plus a wonder's extra sight; kind-4 units also clear it for every player)
 void EEComplexUnit::SightOff(unsigned long inX, unsigned long inY)
@@ -2881,6 +3038,7 @@ void EEComplexUnit::SightOff(unsigned long inX, unsigned long inY)
 }
 
 
+// FUNCTION: EXE 0x5fd8f3
 // Cancels the building's current research or production, refunding it and clearing the production time
 void EEComplexUnit::ToggleJITManufacturing()
 {
@@ -2896,6 +3054,7 @@ void EEComplexUnit::ToggleJITManufacturing()
     this->SetProductionTime(0);
 }
 
+// FUNCTION: EXE 0x5fd984
 // Removes a technology from the build queue with a refund (the first match only unless inRemoveAll); if none was
 // queued, cancels it when it is the building's current research
 void EEComplexUnit::RemoveResearch(long inTechnology, long inRemoveAll)
@@ -2929,6 +3088,7 @@ void EEComplexUnit::RemoveResearch(long inTechnology, long inRemoveAll)
         this->ToggleJITManufacturing();
 }
 
+// FUNCTION: EXE 0x5fdaf3
 // Takes the unit and its parts off the map (deselected, moved to -10000, deactivated) and sets it idle
 void EEComplexUnit::TakeOffMap()
 {
@@ -2961,6 +3121,7 @@ void EEComplexUnit::TakeOffMap()
     this->ReleaseFireEffect();
 }
 
+// FUNCTION: EXE 0x5fdc58
 // Starts the next build-queue entry the built building can produce (a citizen may come out female), dropping and
 // refunding unavailable entries
 void EEComplexUnit::StartProduction()
@@ -3024,18 +3185,21 @@ void EEComplexUnit::StartProduction()
     } while (true);
 }
 
+// FUNCTION: EXE 0x5fdf06
 // Returns true if the class uses air traffic control and is not a building
 bool EEUnitClass::IsAircraft()
 {
     return this->mAirTrafficType != 0 && !this->IsLandBuilding() && this->mCategory != kUnitCategoryNavalBuilding && this->mCategory != kUnitCategorySpaceBuilding;
 }
 
+// FUNCTION: EXE 0x5fdf31
 // Sets the unit's current goal to the front of its main goal queue and returns it
 EEUnitGoal* EEComplexUnit::RefreshGoals()
 {
     return this->mGoalState = this->GetQueuedGoal(0);
 }
 
+// FUNCTION: EXE 0x5fdf43
 // Sets the active goal to the first main-queue goal that is not an auto waypoint
 void EEComplexUnit::RefreshActiveGoal()
 {
@@ -3052,6 +3216,7 @@ void EEComplexUnit::RefreshActiveGoal()
     this->mActiveGoal = theResult;
 }
 
+// FUNCTION: EXE 0x5fdfa5
 // Switches the unit to an action and updates its camouflage; a dying unit refuses any non-dying action
 void EEComplexUnit::StartAction(long inAction)
 {
@@ -3066,6 +3231,7 @@ void EEComplexUnit::StartAction(long inAction)
     this->mCommand = this->GetUnitClass()->FindAction(inAction);
 }
 
+// FUNCTION: EXE 0x5fe02a
 // Switches the unit's animation and frame, stops its sound and plays the new frame's sound
 void EEComplexUnit::SetAnimation(long inPart, long inFrame, bool inIsAnimationPaused)
 {
@@ -3115,6 +3281,7 @@ void EEComplexUnit::SetAnimation(long inPart, long inFrame, bool inIsAnimationPa
         this->mSound->Dereference();
 }
 
+// FUNCTION: EXE 0x5fe1df
 // Sets the unit's mine (reference counted)
 void EEComplexUnit::SetMine(EEUnit* inUnit)
 {
@@ -3125,6 +3292,7 @@ void EEComplexUnit::SetMine(EEUnit* inUnit)
         inUnit->Reference();
 }
 
+// FUNCTION: EXE 0x5fe202
 // Sets the unit that blocks this one (reference counted)
 void EEComplexUnit::SetBlockingUnit(RTSUnit* inUnit)
 {
@@ -3138,6 +3306,7 @@ void EEComplexUnit::SetBlockingUnit(RTSUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x5fe230
 // Marks the unit and its parts built or unbuilt; finishing one updates sight, airports and completion stats
 // (a granary replants farms) and pays for it
 void EEComplexUnit::SetBuilt(long inIsBuilt, long inUpdateSight, long inLoadButtons)
@@ -3171,6 +3340,7 @@ void EEComplexUnit::SetBuilt(long inIsBuilt, long inUpdateSight, long inLoadButt
     } while (theUnit);
 }
 
+// FUNCTION: EXE 0x5fe372
 // Sets the resource the unit gathers, releasing the old one and sending a gatherer waiting for it
 void EEComplexUnit::SetGatheredResource(EEUnit* inUnit)
 {
@@ -3193,6 +3363,7 @@ void EEComplexUnit::SetGatheredResource(EEUnit* inUnit)
     ::gWorld.AddResourceUser(this->mGatheredResource);
 }
 
+// FUNCTION: EXE 0x5fe405
 // Sets the unit's model, scaled by its class tile size
 void EEComplexUnit::SetScaledModel(GEModel* inModel)
 {
@@ -3200,6 +3371,7 @@ void EEComplexUnit::SetScaledModel(GEModel* inModel)
     this->mPhysicalModel.SetScale(this->GetUnitClass()->GetTileSize());
 }
 
+// FUNCTION: EXE 0x5fe42b
 // Replaces the goals on squadron queues 1..3 (1..4 with the paratroopers power) with the goal or clones of it
 void EEComplexUnit::SetSquadronGoals(EEUnitGoal* inGoal, bool inCloneGoal)
 {
@@ -3214,6 +3386,7 @@ void EEComplexUnit::SetSquadronGoals(EEUnitGoal* inGoal, bool inCloneGoal)
     }
 }
 
+// FUNCTION: EXE 0x5fe49a
 // Sets the unit's growth scale, scaling its model and collision radius (at least 0.05)
 void EEComplexUnit::SetGrowth(float inScale)
 {
@@ -3233,6 +3406,7 @@ void EEComplexUnit::SetGrowth(float inScale)
     }
 }
 
+// FUNCTION: EXE 0x5fe536
 // Disables or re-enables the unit for a reason, updating its airport and the time-warp tint
 void EEComplexUnit::SetDisabled(bool inAway, long inReason)
 {
@@ -3256,6 +3430,7 @@ void EEComplexUnit::SetDisabled(bool inAway, long inReason)
         this->SetIsTinted(false);
 }
 
+// FUNCTION: EXE 0x5fe5e3
 // Sets the last resource the unit gathered from (reference counted)
 void EEComplexUnit::SetLastResource(RTSUnit* inUnit)
 {
@@ -3269,6 +3444,7 @@ void EEComplexUnit::SetLastResource(RTSUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x5fe611
 // Moves the unit to the tile under a point, refreshing its contacts, flight height and swim animation
 void EEComplexUnit::MoveToLocation(float inX, float inY, bool inUpdateTiles)
 {
@@ -3294,6 +3470,7 @@ void EEComplexUnit::MoveToLocation(float inX, float inY, bool inUpdateTiles)
         this->SetAnimation(2, -1, 0);
 }
 
+// FUNCTION: EXE 0x5fe73b
 // Moves the unit and its model to an x/y point
 void EEComplexUnit::SetLocationXY(float inX, float inY, bool inUpdateTiles)
 {
@@ -3301,6 +3478,7 @@ void EEComplexUnit::SetLocationXY(float inX, float inY, bool inUpdateTiles)
     this->mPhysicalModel.SetLocationXY(inX, inY);
 }
 
+// FUNCTION: EXE 0x5fe76e
 // Moves the unit and its model to a 3D point
 void EEComplexUnit::SetLocation(const GE3DPoint& inLocation, bool inUpdateTiles)
 {
@@ -3308,6 +3486,7 @@ void EEComplexUnit::SetLocation(const GE3DPoint& inLocation, bool inUpdateTiles)
     this->mPhysicalModel.SetLocationXYZ(inLocation);
 }
 
+// FUNCTION: EXE 0x5fe7a8
 // Moves the unit and sets its model's transformation
 void EEComplexUnit::SetTransformation(const GETransformation& inTransformation, bool inUpdateTiles)
 {
@@ -3315,6 +3494,7 @@ void EEComplexUnit::SetTransformation(const GETransformation& inTransformation, 
     this->mPhysicalModel.SetLocation(inTransformation);
 }
 
+// FUNCTION: EXE 0x5fe7d9
 // Links the unit as the next part of another unit, unlinking it from its previous part
 void EEComplexUnit::LinkPart(EEComplexUnit* inUnit)
 {
@@ -3332,6 +3512,7 @@ void EEComplexUnit::LinkPart(EEComplexUnit* inUnit)
     this->mPreviousPart->mNextPart->Reference();
 }
 
+// FUNCTION: EXE 0x5fe83f
 // Sets the unit's patrol group (reference counted)
 void EEComplexUnit::SetPatrolGroup(EEPPatrolGroup* inGroup)
 {
@@ -3348,6 +3529,7 @@ inline void EEUnitVectorItem::AddFront(EEUnitGoal* inGoal)
     inGoal->SetOwner(this->mUnit);
 }
 
+// FUNCTION: EXE 0x5fe863
 // Puts a goal at the front of a goal queue, replacing the current goal and its leading auto waypoints unless
 // inKeepCurrent; on the main queue it becomes the current goal
 void EEComplexUnit::SetGoal(EEUnitGoal* inGoal, bool inKeepCurrent, long inIndex)
@@ -3382,6 +3564,7 @@ void EEComplexUnit::SetGoal(EEUnitGoal* inGoal, bool inKeepCurrent, long inIndex
     this->mGoalState = inGoal;
 }
 
+// FUNCTION: EXE 0x5fe9fb
 // Sets the unit's home base (reference counted)
 void EEComplexUnit::SetHomeBase(EEComplexUnit* inBase)
 {
@@ -3392,6 +3575,7 @@ void EEComplexUnit::SetHomeBase(EEComplexUnit* inBase)
     this->mHomeBase = inBase;
 }
 
+// FUNCTION: EXE 0x5fea22
 // Sets the reload timer to a reload time scaled by a random factor from world table entry 87
 void EEComplexUnit::SetRandomReloadTimer(long inReloadTime)
 {
@@ -3406,6 +3590,7 @@ void EEComplexUnit::SetRandomReloadTimer(long inReloadTime)
     this->SetReloadTimer(UMFloatToLong(gPhysics->GetRandom(sMinimum, sMaximum) * inReloadTime));
 }
 
+// FUNCTION: EXE 0x5fea99
 // Sets the building's current research, unloading the old one's media and preloading the new one's (100000 = none)
 void EEComplexUnit::PlayEffect(long inTechnology)
 {
@@ -3424,6 +3609,7 @@ void EEComplexUnit::PlayEffect(long inTechnology)
         gDataPreLoading->PostLoadTechnology(this->mPlayer->mPlayerID, inTechnology);
 }
 
+// FUNCTION: EXE 0x5feb61
 // Returns true when a unit on an auto waypoint has a finished path that is short or ends in a neighbouring sector,
 // so it may move on to the next goal
 bool EEComplexUnit::ShouldMoveToNextAutoWaypoint()
@@ -3457,6 +3643,7 @@ bool EEComplexUnit::ShouldMoveToNextAutoWaypoint()
     return theResult;
 }
 
+// FUNCTION: EXE 0x5fecd8
 // Replaces a cargo unit with another, adjusting the cargo room
 void EEComplexUnit::ReplaceCargo(EEComplexUnit* inOld, EEComplexUnit* inNew)
 {
@@ -3479,6 +3666,7 @@ void EEComplexUnit::ReplaceCargo(EEComplexUnit* inOld, EEComplexUnit* inNew)
     }
 }
 
+// FUNCTION: EXE 0x5fed98
 // Turns the unit level to face a point
 void EEComplexUnit::FaceToward(GE3DPoint inPoint)
 {
@@ -3489,6 +3677,7 @@ void EEComplexUnit::FaceToward(GE3DPoint inPoint)
     this->SetTransformation(theTransformation, true);
 }
 
+// FUNCTION: EXE 0x5fedfb
 // Turns the unit level to face the center of a square of tiles
 void EEComplexUnit::FaceTowardSquare(long inX, long inY, long inSize)
 {
@@ -3503,6 +3692,7 @@ void EEComplexUnit::FaceTowardSquare(long inX, long inY, long inSize)
     this->SetTransformation(theTransformation, true);
 }
 
+// FUNCTION: EXE 0x5feeb9
 // Turns the unit to face a target: a large target's footprint center, else its scaled top point or position
 void EEComplexUnit::FaceTarget(EEUnit* inTarget)
 {
@@ -3524,6 +3714,7 @@ void EEComplexUnit::FaceTarget(EEUnit* inTarget)
     }
 }
 
+// FUNCTION: EXE 0x5fef90
 // Stops the unit: clears its build targets, goals and airport queue and sets it idle (aircraft circle)
 void EEComplexUnit::Halt()
 {
@@ -3539,6 +3730,7 @@ void EEComplexUnit::Halt()
     this->GetUnitClass()->ActionChanged(this);
 }
 
+// FUNCTION: EXE 0x5fefff
 // Returns true if the unit can hit a target from where it stands (melee contact, range, or a ballistic shot from
 // any weapon tag point; a legionnaire's special attack uses its heal range)
 bool EEComplexUnit::IsInReach(EEUnit* inTarget)
@@ -3552,6 +3744,7 @@ bool EEComplexUnit::IsInReach(EEUnit* inTarget)
     return theReach;
 }
 
+// FUNCTION: EXE 0x5ff18a
 // Returns true if the unit can attack a tile from where it stands (melee: adjacent; ballistic: a clear arc;
 // else in range and on the same continent)
 bool EEComplexUnit::CanReachTile(long inX, long inY)
@@ -3593,6 +3786,7 @@ static void NoteAIStep(EEComplexUnit* inUnit, uint32_t* ioWords)
     EEUnitStateNote(kUnitStateAIStep, inUnit->mUnitID, ioWords, 9);
 }
 
+// FUNCTION: EXE 0x5ff2e8
 // Evaluates the unit's current action and switches to the next one (dropping finished goals); an idle unit stops
 // evaluating 350 ticks after it went idle until its trigger time is reset
 // New (R5b.4 leaf 6): Rust over the unit store (ee_units ai.rs ai_step), the goal's activity, the actions' starts and
@@ -3615,6 +3809,7 @@ void EEComplexUnit::AIStep()
     }
 }
 
+// FUNCTION: EXE 0x5ff400
 // Returns true if a range-1 unit stands on the target's tile or a tile along its sides or corners
 bool EEComplexUnit::IsOnTileBorderingTarget(EEUnit* inTarget)
 {
@@ -3624,6 +3819,7 @@ bool EEComplexUnit::IsOnTileBorderingTarget(EEUnit* inTarget)
     return theResult;
 }
 
+// FUNCTION: EXE 0x5ff4f9
 // Replaces a unit in the cargo, and relinks this unit to the new one if the old one was its previous part
 void EEComplexUnit::ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew)
 {
@@ -3647,6 +3843,7 @@ void EEComplexUnit::ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew)
     }
 }
 
+// FUNCTION: EXE 0x5ff58b
 // Returns the last attacker while it is still attacking this unit (in reach with a clear line, or a ground attack
 // covering it); otherwise forgets it and returns NULL
 EEComplexUnit* EEComplexUnit::GetConditionTarget()
@@ -3678,6 +3875,7 @@ EEComplexUnit* EEComplexUnit::GetConditionTarget()
     return this->mLastAttacker;
 }
 
+// FUNCTION: EXE 0x5ff6b4
 // Updates the camouflage power's timers when the unit changes action (idling starts it); without vital buildings
 // the unit loses its cloak
 void EEComplexUnit::UpdateCamouflage(long inAction)
@@ -3706,6 +3904,7 @@ void EEComplexUnit::UpdateCamouflage(long inAction)
     }
 }
 
+// FUNCTION: EXE 0x5ff7f8
 // Moves the unit's area effects to its position and updates them for the elapsed time
 void EEComplexUnit::UpdateAreaEffects(unsigned long inValue)
 {
@@ -3713,6 +3912,7 @@ void EEComplexUnit::UpdateAreaEffects(unsigned long inValue)
     this->mAreaEffects.MoveAndUpdate(thePoint, (float)inValue);
 }
 
+// FUNCTION: EXE 0x5ff834
 // Moves the unit's line of sight from the old tile to the new one (adds or removes it when either is off the map)
 void EEComplexUnit::SightMoved(unsigned long inOldX, unsigned long inOldY, unsigned long inNewX, unsigned long inNewY)
 {
@@ -3741,6 +3941,7 @@ void EEComplexUnit::SightMoved(unsigned long inOldX, unsigned long inOldY, unsig
 }
 
 
+// FUNCTION: EXE 0x5ff928
 // Switches the unit to another graphic, keeping its animation progress and turret, orbital and wheel angles
 void EEComplexUnit::SwapGraphic(EEGraphicObject* inOldModel, EEGraphicObject* inNewModel)
 {
@@ -3799,6 +4000,7 @@ void EEComplexUnit::SwapGraphic(EEGraphicObject* inOldModel, EEGraphicObject* in
     this->mNumWheels = theWheelCount;
 }
 
+// FUNCTION: EXE 0x5ffbc2
 // Replaces a technology in the current research and the build queue with another (100000 removes it)
 void EEComplexUnit::ReplaceResearch(long inTechnology, long inNewTechnology)
 {
@@ -3826,6 +4028,7 @@ void EEComplexUnit::ReplaceResearch(long inTechnology, long inNewTechnology)
     }
 }
 
+// FUNCTION: EXE 0x5ffcb2
 // Recreates the unit's area effects from the four area-effect templates in its stats
 void EEComplexUnit::MakeAreaEffects()
 {
@@ -3843,6 +4046,39 @@ void EEComplexUnit::MakeAreaEffects()
     }
 }
 
+// FUNCTION: EXE 0x5ffd23
+// Destroys an area-effect reference container (UReferenceContainer<EEAreaEffect*> destructor)
+
+// SYNTHETIC: EXE 0x5ffd44
+// (the scalar deleting destructor, emitted with the vtable; slot EEUnitAreaEffectList+0x0, slot UReferenceContainer<EEAreaEffect *>+0x0)
+
+// TEMPLATE: EXE 0x5ffd60
+// ??4?$UReferenceContainer@PAVEEAreaEffect@@@@QAEXABV0@@Z
+
+// TEMPLATE: EXE 0x5ffda1
+
+// TEMPLATE: EXE 0x5ffe45
+
+// FUNCTION: EXE 0x5ffe7f
+// Assigns one waypoint deque to another (deque<EEComplexUnitWaypoint>::operator=)
+
+// FUNCTION: EXE 0x5fff23
+// Returns a waypoint by index (deque<EEComplexUnitWaypoint>::operator[])
+
+// FUNCTION: EXE 0x5fff45
+// Inserts a waypoint at the front of a waypoint deque (push_front)
+
+// TEMPLATE: EXE 0x5fffd6
+
+// FUNCTION: EXE 0x600002
+// Resizes the unit's goal-queue vector (vector<EEUnitVectorItem>::resize)
+
+// TEMPLATE: EXE 0x6000be
+
+// FUNCTION: EXE 0x6000f9
+// Inserts an attacker record at the front of an attacker deque (push_front)
+
+// FUNCTION: EXE 0x60018a
 // Copies an attacker record (tile, origin, unit id and time)
 // (ICF-folded with EESEAPlaceWallEntry's copy; the deque copies call it)
 EEComplexUnitAttacker& EEComplexUnitAttacker::operator=(const EEComplexUnitAttacker& inOther)
@@ -3856,6 +4092,11 @@ EEComplexUnitAttacker& EEComplexUnitAttacker::operator=(const EEComplexUnitAttac
     return *this;
 }
 
+// TEMPLATE: EXE 0x6001b5
+
+// TEMPLATE: EXE 0x60025e
+
+// FUNCTION: EXE 0x600292
 // Returns the number of wheels on the graphic object
 // Declared out of line in ee/EEGraphicObject.h like GetOrbitalCount; its only out-of-line copy follows this
 // unit's template block (provisional name)
@@ -3864,14 +4105,161 @@ unsigned long EEGraphicObject::GetWheelCount() const
     return this->mWheels.size();
 }
 
+// SYNTHETIC: EXE 0x6002a5
+// (the scalar deleting destructor, emitted with the vtable; slot UMemoryPool<EEComplexUnit>+0x0, stores UMemoryPool<EEComplexUnit> vtable)
+
+// TEMPLATE: EXE 0x6002c7
+
+// FUNCTION: EXE 0x6002ec
+// Returns an iterator to the first unit of a deque<EEComplexUnit*> (begin)
+// Not emitted by ours (0xf bytes): the original calls this begin out of line, ours expands it (inline budget, depth)
+
+// TEMPLATE: EXE 0x6002fb
+
+// TEMPLATE: EXE 0x6003a4
+
+// FUNCTION: EXE 0x6003bd
+// Erases a range of waypoints from a waypoint deque (erase)
+
+// FUNCTION: EXE 0x600466
+// Inserts copies of a goal queue into the goal-queue vector (vector<EEUnitVectorItem>::insert)
+
+// TEMPLATE: EXE 0x600740
+
+// TEMPLATE: EXE 0x6007ab
+
+// TEMPLATE: EXE 0x6007d7
+
+// TEMPLATE: EXE 0x600806
+
+// TEMPLATE: EXE 0x600914
+// ?push_back@?$vector@PAVEEAreaEffect@@V?$allocator@PAVEEAreaEffect@@@std@@@std@@QAEXABQAVEEAreaEffect@@@Z
+
+// FUNCTION: EXE 0x600940
+// Copy-constructs a run of goal queues in raw storage (vector<EEUnitVectorItem>::_Ufill)
+
+// TEMPLATE: EXE 0x60096b
+
+// TEMPLATE: EXE 0x6009d8
+
+// TEMPLATE: EXE 0x600a3b
+// (UMemoryPool<EEComplexUnit>::GetUsed, template COMDAT: the leak dumps)
+
+// TEMPLATE: EXE 0x600a61
+
+// TEMPLATE: EXE 0x600b4c
+
+// TEMPLATE: EXE 0x600c59
+
+// TEMPLATE: EXE 0x600d66
+
+// TEMPLATE: EXE 0x600d8b
+
+// TEMPLATE: EXE 0x600dbf
+
+// TEMPLATE: EXE 0x600df9
+
+// TEMPLATE: EXE 0x600eb6
+
+// TEMPLATE: EXE 0x600ef2
+
+// TEMPLATE: EXE 0x600f35
+
+// TEMPLATE: EXE 0x600f78
+
+// FUNCTION: EXE 0x600fbb
+// Copies a range of waypoints backward (std::copy_backward on deque<EEComplexUnitWaypoint>)
+
+// FUNCTION: EXE 0x600ffe
+// Copies a range of waypoints (std::copy on deque<EEComplexUnitWaypoint>)
+
+// FUNCTION: EXE 0x601041
+// Copy-constructs goal queues from a range into raw storage (vector<EEUnitVectorItem>::_Ucopy)
+
+// FUNCTION: EXE 0x60106d
+// Assigns a goal queue to every element of a range (std::fill on EEUnitVectorItem)
+
+// FUNCTION: EXE 0x60108a
+// Copies goal queues backward (std::copy_backward on EEUnitVectorItem)
+
+// FUNCTION: EXE 0x6010b6
+// Copies goal queues (std::copy on EEUnitVectorItem)
+
+// FUNCTION: EXE 0x6010da
+// Copy-constructs a goal queue in place (std::_Construct on EEUnitVectorItem)
+
+// TEMPLATE: EXE 0x6010ec
+
+// SYNTHETIC: EXE 0x6010fd
+// SYNTHETIC: EXE 0x601107
+// The chain of UList<EEComplexUnit*>::sNodePool (object 0x96700c): wrapper and registrar; its ctor and dtor are the
+// copies at 0x54624d / 0x5462a6.
+
+// TEMPLATE: EXE 0x601113
+
+// TEMPLATE: EXE 0x601199
+
+// TEMPLATE: EXE 0x6011b3
+// (UMemoryPoolChunk<EEComplexUnit>::GetUsed, template COMDAT: the leak dumps)
+
+// TEMPLATE: EXE 0x6012c9
+
+// FUNCTION: EXE 0x601335
+// Destroys a complex unit (or an array of them) and frees the memory (vector deleting destructor)
+
+// TEMPLATE: EXE 0x601396
+
+// TEMPLATE: EXE 0x601409
+
+// TEMPLATE: EXE 0x601468
+
+// TEMPLATE: EXE 0x601551
+
+// TEMPLATE: EXE 0x60157a
+
+// TEMPLATE: EXE 0x60164d
+
+// FUNCTION: EXE 0x60167e
+// Inserts a range of waypoints into a waypoint deque (deque<EEComplexUnitWaypoint>::_Insert)
+
+// TEMPLATE: EXE 0x6018e2
+
+// TEMPLATE: EXE 0x601955
+
+// TEMPLATE: EXE 0x6019f5
+
+// TEMPLATE: EXE 0x601a2f
+
+// TEMPLATE: EXE 0x601a70
+
+// TEMPLATE: EXE 0x601ba3
+
+// TEMPLATE: EXE 0x601bd3
+
+// TEMPLATE: EXE 0x601c17
+
+// TEMPLATE: EXE 0x601c40
+
+// TEMPLATE: EXE 0x601cae
+
+// TEMPLATE: EXE 0x601d01
+
+// TEMPLATE: EXE 0x601d51
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEComplexUnit::DescribeLong(class UWideString &)
 {
 }
 
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
 void EEComplexUnit::FnE123D()
 {
 }
 
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEComplexUnit::ResearchCompleted(unsigned long)
 {
 }

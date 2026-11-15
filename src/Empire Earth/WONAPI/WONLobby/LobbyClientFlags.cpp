@@ -16,6 +16,7 @@
 namespace WONAPI {
 // Saves a player name's ignored state in the persistent settings (0x75d100)
 void LobbySetNameIgnored(const GUIString&,bool);
+// FUNCTION: WON 0x0075b850
 // Blocks or unblocks a player and refreshes the player lists; does nothing unless the config's mCDKeyCheck is set
 void LobbySetClientBlocked(LobbyClient* client,bool inBlocked,unsigned int roomSpec)
 {
@@ -25,6 +26,7 @@ void LobbySetClientBlocked(LobbyClient* client,bool inBlocked,unsigned int roomS
     client->SetBlocked(inBlocked);
     LobbyBroadcastEvent(new ClientChangedEvent(client,roomSpec,2),true);
 }
+// FUNCTION: WON 0x0075b7b0
 // Ignores or unignores a player, remembers the name in the settings and refreshes the player lists
 void LobbySetClientIgnored(LobbyClient* client,bool inIgnored,unsigned int roomSpec)
 {

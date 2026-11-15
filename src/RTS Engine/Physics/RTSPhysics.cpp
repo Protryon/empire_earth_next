@@ -22,7 +22,12 @@
 // chain at 0x56100f (wrapper)
 //   object 0x931d90  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 UString gRTSPhysicsDataKey("RTSPhysics Data");
+// SYNTHETIC: EXE 0x56100f   (wrapper)
+// SYNTHETIC: EXE 0x561019   (ctor)
+// SYNTHETIC: EXE 0x56102a   (registrar)
+// SYNTHETIC: EXE 0x561036   (dtor)
 
+// FUNCTION: EXE 0x561041
 // Creates the simulation with its events, a stopped timer and its thread; waits until the thread starts
 RTSPhysics::RTSPhysics(RTSGraphics* inGraphics, TMTimer* inTimer, long inDefaultTicksPerSecond, long inThreadPriority)
     : mRandom(1)
@@ -57,6 +62,10 @@ RTSPhysics::RTSPhysics(RTSGraphics* inGraphics, TMTimer* inTimer, long inDefault
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mServerMessageQueueLock) == keseOK, 91);
 }
 
+// SYNTHETIC: EXE 0x561204
+// (the scalar deleting destructor, emitted with the vtable; slot RTSPhysics+0x10)
+
+// FUNCTION: EXE 0x561220
 // Stops the timer, destroys the thread and its events and releases every queued server message
 RTSPhysics::~RTSPhysics()
 {
@@ -76,6 +85,7 @@ RTSPhysics::~RTSPhysics()
     TSScheduler::DestroyCriticalSection(this->mServerMessageQueueLock);
 }
 
+// ICF-FOLDED: EXE 0x4437ab
 // Returns the simulation's next random number between 0 and 1
 // (`add ecx, 0x18; jmp __imp_Generate`: its body was folded into an identical AI-range function)
 float RTSPhysics::GetRandom()
@@ -83,12 +93,14 @@ float RTSPhysics::GetRandom()
     return this->mRandom.Generate();
 }
 
+// FUNCTION: EXE 0x5612b9
 // Returns a simulation random number between the minimum and the maximum
 float RTSPhysics::GetRandom(float inMinimum, float inMaximum)
 {
     return this->mRandom.Generate() * (inMaximum - inMinimum) + inMinimum;
 }
 
+// FUNCTION: EXE 0x5612d3
 // Returns a simulation random integer from the minimum to the maximum inclusive
 long RTSPhysics::GetRandom(long inMinimum, long inMaximum)
 {
@@ -99,6 +111,7 @@ long RTSPhysics::GetRandom(long inMinimum, long inMaximum)
     return theResult;
 }
 
+// FUNCTION: EXE 0x56130d
 // Reads the random seed, speed, tick counters and flags and resets the timer, restarting it only if it was
 // already running (the saved running flag is read but dropped); returns the first read error
 long RTSPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -145,6 +158,7 @@ long RTSPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return theResult;
 }
 
+// FUNCTION: EXE 0x56140c
 // Runs the simulation thread: handles its messages and, while the timer runs, ticks the game (at most twice
 // per timer tick, limited by the communication ticks) and wakes the renderer; idles otherwise
 unsigned long RTSPhysics::Main(void* inPointer)
@@ -242,6 +256,7 @@ unsigned long RTSPhysics::Main(void* inPointer)
     return 0;
 }
 
+// FUNCTION: EXE 0x561609
 // Handles a thread message: quit, stop the timer, stop it and reset the speed, or start the timer
 void RTSPhysics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
 {
@@ -274,6 +289,7 @@ void RTSPhysics::HandleMessage(unsigned long inMessage, void* inParameter1, void
     }
 }
 
+// FUNCTION: EXE 0x5616a4
 // Writes the random seed, timer flags, speed and tick counters; returns the first write error
 long RTSPhysics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -311,6 +327,7 @@ long RTSPhysics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     return theResult;
 }
 
+// FUNCTION: EXE 0x561774
 // Sets the seconds per tick, reprogramming the timer when it changes, then updates the timing
 void RTSPhysics::SetSpeed(float inSpeed)
 {
@@ -325,3 +342,6 @@ void RTSPhysics::SetSpeed(float inSpeed)
     }
     this->UpdateTiming();
 }
+
+// TEMPLATE: EXE 0x561812
+// std::deque<long>::pop_back (the ICF representative of the deques' identical pop_back)

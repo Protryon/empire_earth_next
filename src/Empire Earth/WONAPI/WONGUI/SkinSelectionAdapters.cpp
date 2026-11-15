@@ -12,11 +12,13 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyMSSkinImage.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00715530
 // Returns a new copy of the skin's tab button
 WONButton* WONSkin::GetTabButton()
 {
     return this->mTabButton->Duplicate();
 }
+// FUNCTION: WON 0x00715550
 // Returns a new copy of the skin's arrow button for a direction, with its desired size cleared
 WONSimpleButton* WONSkin::GetArrowButton(Direction direction)
 {
@@ -24,11 +26,13 @@ WONSimpleButton* WONSkin::GetArrowButton(Direction direction)
     button->SetDesiredSize(0,0);
     return button;
 }
+// FUNCTION: WON 0x00715660
 // Returns a new copy of the skin's vertical or horizontal scroll thumb
 WONSimpleButton* WONSkin::GetScrollThumb(bool vertical)
 {
     return this->mScrollThumb[vertical?1:0]->Duplicate();
 }
+// FUNCTION: WON 0x00715680
 // Returns a new copy of the skin's vertical or horizontal scroll gutter
 WONSimpleButton* WONSkin::GetScrollGutter(bool vertical)
 {

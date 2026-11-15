@@ -50,6 +50,7 @@ static_assert(sizeof(EEToHitRecord) == 132, "on-disk record: 132 bytes on every 
 
 std::vector<EEUnitBehavior*> EEUnitBehavior::sTable;
 
+// FUNCTION: EXE 0x4dc930
 // Creates a unit behaviour with every permission off
 EEUnitBehavior::EEUnitBehavior()
 {
@@ -62,11 +63,16 @@ EEUnitBehavior::EEUnitBehavior()
     this->mCanFlee = false;
 }
 
+// SYNTHETIC: EXE 0x4dc950
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4dc96c
 // Destroys the unit behaviour (nothing to release)
 EEUnitBehavior::~EEUnitBehavior()
 {
 }
 
+// FUNCTION: EXE 0x4dc973
 // Loads the unit behaviours (move, pursue, target, return and flee permissions) from db\dbUnitBehavior.dat; returns
 // the last read status
 long EEUnitBehavior::Load(FSFileSpec* inFile)
@@ -100,6 +106,7 @@ long EEUnitBehavior::Load(FSFileSpec* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4dca3d
 // Destroys every unit behaviour and empties the table
 void EEUnitBehavior::Unload()
 {
@@ -110,12 +117,14 @@ void EEUnitBehavior::Unload()
     EEUnitBehavior::sTable.clear();
 }
 
+// FUNCTION: EXE 0x4dca7d
 // Returns whether a unit may move freely: always, or by the melee or ranged permission matching its class
 bool EEUnitBehavior::CanMoveFreely(EEUnit* inUnit)
 {
     return this->mCanMoveFreely || (inUnit->GetUnitClass()->mIsMelee && this->mMeleeCanMoveFreely) || (!inUnit->GetUnitClass()->mIsMelee && this->mRangedCanMoveFreely);
 }
 
+// FUNCTION: EXE 0x4dcaad
 // Loads the 6 x 6 weapon to-hit factors (percent to fraction) from db\dbweapontohit.dat; returns the last read status
 long EEToHitTable::Load(FSFileSpec* inFile)
 {
@@ -139,12 +148,14 @@ long EEToHitTable::Load(FSFileSpec* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4dcb53
 // Creates an empty world constants table
 EEWorldTable::EEWorldTable()
 {
     this->Clear();
 }
 
+// FUNCTION: EXE 0x4dcb79
 // Loads the world constants from a file and caches entry 42 as the game speed; returns the first read error
 long EEWorldTable::Load(FSFileSpec* inFile)
 {
@@ -163,8 +174,28 @@ long EEWorldTable::Load(FSFileSpec* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4dcc2b
 // Empties the world constants table
 void EEWorldTable::Clear()
 {
     this->mEntries.clear();
 }
+
+// SYNTHETIC: EXE 0x4dc8e7
+// SYNTHETIC: EXE 0x4dc8f1
+// SYNTHETIC: EXE 0x4dc909
+// SYNTHETIC: EXE 0x4dc915
+
+// TEMPLATE: EXE 0x4dcc33
+// TEMPLATE: EXE 0x4dcce7
+// TEMPLATE: EXE 0x4dcd1e
+// TEMPLATE: EXE 0x4dcfd9
+// TEMPLATE: EXE 0x4dcfed
+// TEMPLATE: EXE 0x4dd01f
+// TEMPLATE: EXE 0x4dd042
+// TEMPLATE: EXE 0x4dd071
+// SYNTHETIC: EXE 0x4dd087
+// TEMPLATE: EXE 0x4dd0b7
+// TEMPLATE: EXE 0x4dd0f2
+// TEMPLATE: EXE 0x4dd136
+// (the vector<EEWorldTableEntry> COMDATs and EEWorldTable::`scalar deleting destructor`)

@@ -13,10 +13,10 @@ protected:
 public:
     // four guarded vector<long> class statics (`$E` chains 0x172b0f..0x172c4a, one guard byte 0x531fa8, bits 1/2/4/8;
     // read by EESEPlayerScreen 0x175eb2..; provisional owner class and names)
-    static std::vector<long> sV531FB0;
-    static std::vector<long> sBuildingTechs;
-    static std::vector<long> sV531F88;
-    static std::vector<long> sTechnologyTechs;
+    static std::vector<long> sV531FB0;      // 0x531fb0
+    static std::vector<long> sBuildingTechs;  // 0x531f98
+    static std::vector<long> sV531F88;      // 0x531f88
+    static std::vector<long> sTechnologyTechs;  // 0x531f78
 };
 
 #endif

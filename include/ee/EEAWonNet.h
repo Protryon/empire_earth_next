@@ -16,8 +16,8 @@ public:
     EEAWonNet(long inType, const UWideString& inText, long inHumans, long inPlayers, bool inHasPassword, bool inIsPrivate, bool inIsInProgress);
     // 0x5523 (EEWonNet 0xd05ca/0xd0c6b: types 6/7, a chat line)
     EEAWonNet(long inType, UITextLabel* inChat, const UWideString& inPrefix, const UWideString& inText, bool inIsFromMe);
-    virtual ~EEAWonNet();
-    virtual void Virtual4();
+    virtual ~EEAWonNet();                   // 0x5611 (??_G 0x52f3)
+    virtual void Virtual4();                // 0x564a
     virtual void Virtual8();                // +0x08 (the shared empty slot 0x1720c6)
 
     UIListBox<UWideString>* mList;          // +0x0c (type 4)

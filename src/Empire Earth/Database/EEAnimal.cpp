@@ -66,6 +66,7 @@ static_assert(sizeof(EEAnimalRecord) == 272, "on-disk record: 272 bytes on every
 
 std::vector<EEAnimal*> EEAnimal::sTable;
 
+// FUNCTION: EXE 0x4d4958
 // Creates an empty animal type: no media, sounds, flags or intervals
 EEAnimal::EEAnimal()
 {
@@ -91,6 +92,10 @@ EEAnimal::EEAnimal()
     this->mB89 = false;
 }
 
+// SYNTHETIC: EXE 0x4d49da
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4d49f6
 // Destroys the animal type, releasing its sounds and its media
 EEAnimal::~EEAnimal()
 {
@@ -99,6 +104,7 @@ EEAnimal::~EEAnimal()
         this->mMedia->UnloadMedia();
 }
 
+// FUNCTION: EXE 0x4d4a22
 // Releases the animal type's sounds (last first) and empties its sound list
 void EEAnimal::ClearSounds()
 {
@@ -107,6 +113,7 @@ void EEAnimal::ClearSounds()
     this->mSounds.clear();
 }
 
+// FUNCTION: EXE 0x4d4a5d
 // Loads the animal types from db\dbAnimals.dat (intervals from seconds to ms), loading each one's media and up to three
 // sounds; returns the last read status
 long EEAnimal::Load(FSFileSpec* inFile)
@@ -197,6 +204,7 @@ long EEAnimal::Load(FSFileSpec* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4d52b4
 // Destroys every loaded animal type and empties the table
 void EEAnimal::Unload()
 {
@@ -205,12 +213,14 @@ void EEAnimal::Unload()
     EEAnimal::sTable.clear();
 }
 
+// FUNCTION: EXE 0x4d52f6
 // Returns the unit class of the animal type's unit
 EEUnitClass* EEAnimal::GetUnitClass()
 {
     return gUnitClassTable[this->mUnitType];
 }
 
+// FUNCTION: EXE 0x4d5301
 // Returns the animal type of a unit type (searching from the end of the table), or NULL
 EEAnimal* EEAnimal::Find(long inUnitType)
 {
@@ -224,6 +234,7 @@ EEAnimal* EEAnimal::Find(long inUnitType)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4d53e2
 // Returns the media table entry at an index, or NULL when out of range
 EEMedia* EEMedia::Get(unsigned long inIndex)
 {
@@ -231,3 +242,14 @@ EEMedia* EEMedia::Get(unsigned long inIndex)
         return gMediaTable[inIndex];
     return NULL;
 }
+
+// TEMPLATE: EXE 0x4d5345
+// std::vector<EEMedia*>::push_back
+
+// TEMPLATE: EXE 0x4d5371
+// std::vector<EEMedia*>::_Xlen (ICF-named for vector<EEUnit*>)
+
+// SYNTHETIC: EXE 0x4d490f
+// SYNTHETIC: EXE 0x4d4919
+// SYNTHETIC: EXE 0x4d4931
+// SYNTHETIC: EXE 0x4d493d

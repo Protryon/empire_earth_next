@@ -79,7 +79,9 @@ typedef my_upsampler * my_upsample_ptr;
  * This is taken directly from jdcolor.c; see that file for more info.
  */
 
+// FUNCTION: JPEG 0x1008ef07
 LOCAL(void)
+// FUNCTION: EXEIMG 0x811b80
 build_ycc_rgb_table (j_decompress_ptr cinfo)
 {
   my_upsample_ptr upsample = (my_upsample_ptr) cinfo->upsample;
@@ -122,7 +124,9 @@ build_ycc_rgb_table (j_decompress_ptr cinfo)
  * Initialize for an upsampling pass.
  */
 
+// FUNCTION: JPEG 0x1008efb7
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x811c40
 start_pass_merged_upsample (j_decompress_ptr cinfo)
 {
   my_upsample_ptr upsample = (my_upsample_ptr) cinfo->upsample;
@@ -140,7 +144,9 @@ start_pass_merged_upsample (j_decompress_ptr cinfo)
  * The control routine just handles the row buffering considerations.
  */
 
+// FUNCTION: JPEG 0x1008efcc
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x811c60
 merged_2v_upsample (j_decompress_ptr cinfo,
 		    JSAMPIMAGE input_buf, JDIMENSION *in_row_group_ctr,
 		    JDIMENSION in_row_groups_avail,
@@ -189,7 +195,9 @@ merged_2v_upsample (j_decompress_ptr cinfo,
 }
 
 
+// FUNCTION: JPEG 0x1008f073
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x811d30
 merged_1v_upsample (j_decompress_ptr cinfo,
 		    JSAMPIMAGE input_buf, JDIMENSION *in_row_group_ctr,
 		    JDIMENSION in_row_groups_avail,
@@ -222,7 +230,9 @@ merged_1v_upsample (j_decompress_ptr cinfo,
  * Upsample and color convert for the case of 2:1 horizontal and 1:1 vertical.
  */
 
+// FUNCTION: JPEG 0x1008f0a4
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x811d70
 h2v1_merged_upsample (j_decompress_ptr cinfo,
 		      JSAMPIMAGE input_buf, JDIMENSION in_row_group_ctr,
 		      JSAMPARRAY output_buf)
@@ -284,7 +294,9 @@ h2v1_merged_upsample (j_decompress_ptr cinfo,
  * Upsample and color convert for the case of 2:1 horizontal and 2:1 vertical.
  */
 
+// FUNCTION: JPEG 0x1008f1fb
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x811ed0
 h2v2_merged_upsample (j_decompress_ptr cinfo,
 		      JSAMPIMAGE input_buf, JDIMENSION in_row_group_ctr,
 		      JSAMPARRAY output_buf)
@@ -366,7 +378,9 @@ h2v2_merged_upsample (j_decompress_ptr cinfo,
  * of this module; no safety checks are made here.
  */
 
+// FUNCTION: JPEG 0x1008ee91
 GLOBAL(void)
+// FUNCTION: EXEIMG 0x811af0
 jinit_merged_upsampler (j_decompress_ptr cinfo)
 {
   my_upsample_ptr upsample;

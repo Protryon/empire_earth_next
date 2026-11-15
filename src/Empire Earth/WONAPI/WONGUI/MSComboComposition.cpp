@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 namespace WONAPI {
+// FUNCTION: WON 0x006ffb20
 // Creates a framed combo box: a 16-pixel non-repeating down-arrow button, an edit box and a scrolling list,
 // both in the MSButton font, with a vertical scrollbar only when needed
 MSComboBox::MSComboBox()
@@ -31,3 +32,11 @@ MSComboBox::MSComboBox()
     this->mButton->SetButtonFlags(2,false);
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006ffde0
+// (public: virtual __thiscall WONAPI::MSComboBox::~MSComboBox(void)    [??1MSComboBox@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006ffdc0
+// (public: virtual void * __thiscall WONAPI::MSComboBox::`scalar deleting destructor'(unsigned int)    [??_GMSComboBox@WONAPI@@UAEPAXI@Z])

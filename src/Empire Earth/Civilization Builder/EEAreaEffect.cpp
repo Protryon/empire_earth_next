@@ -205,6 +205,7 @@ void EEAEHost::Call(void* inContext, const EeAreaEffectCall* c, EeAreaEffectRepl
 
 }   // namespace
 
+// FUNCTION: EXE 0x67bf4b
 // Creates an area effect of its template's kind that holds a reference to the template, with no unit or player yet
 // (the morale from buildings' cap: the template's maximum level plus the game variant's morale bonus), and loads its
 // media
@@ -219,6 +220,10 @@ EEAreaEffect::EEAreaEffect(EEAreaEffectTemplate* inTemplate)
     this->LoadMedia(false);
 }
 
+// SYNTHETIC: EXE 0x67bf83
+// (the scalar deleting destructor; 0x1c bytes)
+
+// FUNCTION: EXE 0x67bf9f
 // Destroys the area effect, releasing its template and unit and unloading its media
 EEAreaEffect::~EEAreaEffect()
 {
@@ -235,6 +240,7 @@ void EEAreaEffect::AppliedTo(EEComplexUnit* inUnit)
     ee_area_effect_applied(this, &theHost.mFfi, false);
 }
 
+// FUNCTION: EXE 0x67bfcd
 // Tells whether the effect, by its kind, covers the unit from a point for a player
 bool EEAreaEffect::Covers(unsigned long inPlayer, EEComplexUnit* inUnit, const GE2DPoint& inPoint)
 {
@@ -243,6 +249,7 @@ bool EEAreaEffect::Covers(unsigned long inPlayer, EEComplexUnit* inUnit, const G
                                  (int32_t)inUnit->GetPlayer()->mPlayerID, inPoint.mX, inPoint.mY);
 }
 
+// FUNCTION: EXE 0x67bff1
 // Plays the template's graphic effect on the unit, if it has one
 void EEAreaEffect::ShowOn(EEUnit* inUnit)
 {
@@ -251,6 +258,7 @@ void EEAreaEffect::ShowOn(EEUnit* inUnit)
         gEffectManager->CreateUnitEffect(inUnit, theEffect, NULL, false, 0, 0);
 }
 
+// FUNCTION: EXE 0x67c014
 // Writes the effect's location, owning unit id and player to the out-of-sync dump
 void EEAreaEffect::Dump(FILE* inFile)
 {
@@ -260,6 +268,7 @@ void EEAreaEffect::Dump(FILE* inFile)
     fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Player Number %ld\n", this->mPlayer);
 }
 
+// FUNCTION: EXE 0x67c073
 // Returns a sync checksum of the location's float bits, the player and the owning unit id
 long EEAreaEffect::Checksum()
 {
@@ -281,6 +290,7 @@ long EEAreaEffect::GetLevel()
     return ee_area_effect_level(this, this->mTemplate, &theHost.mFfi);
 }
 
+// FUNCTION: EXE 0x67c0a0
 // Returns the template's radius times the effect's scale
 float EEAreaEffect::GetRadius()
 {
@@ -294,6 +304,7 @@ bool EEAreaEffect::IsImmunity()
     return ee_area_effect_is_immunity(this);
 }
 
+// FUNCTION: EXE 0x67c0b7
 // Returns the owning unit's area-effect scale, or 1 without a unit
 float EEAreaEffect::GetScale()
 {
@@ -301,6 +312,7 @@ float EEAreaEffect::GetScale()
     return ee_area_effect_scale(&theHost.mFfi);
 }
 
+// FUNCTION: EXE 0x67c0cb
 // Sets the owning unit, taking a reference to it
 void EEAreaEffect::SetUnit(EEComplexUnit* inUnit)
 {
@@ -309,6 +321,7 @@ void EEAreaEffect::SetUnit(EEComplexUnit* inUnit)
         inUnit->Reference();
 }
 
+// FUNCTION: EXE 0x67c0dc
 // Loads the template's media
 void EEAreaEffect::LoadMedia(bool inIsOnDemand)
 {
@@ -335,6 +348,7 @@ void EEAreaEffect::MarkDirty()
     ee_area_effect_mark_dirty(this);
 }
 
+// FUNCTION: EXE 0x67c0eb
 // Unloads the template's media
 void EEAreaEffect::UnloadMedia()
 {
@@ -355,6 +369,7 @@ void EEAreaEffect::Tick(EEComplexUnit* inUnit, float inElapsed)
     ee_area_effect_tick(this, this->mTemplate, &theHost.mFfi, inElapsed);
 }
 
+// FUNCTION: EXE 0x67c0f3
 // Creates an empty template: square shape, radius 1, allied players, no unit set or graphics, white tint
 EEAreaEffectTemplate::EEAreaEffectTemplate()
 {
@@ -364,6 +379,10 @@ EEAreaEffectTemplate::EEAreaEffectTemplate()
     this->mMedia = NULL;
 }
 
+// SYNTHETIC: EXE 0x67c17d
+// (the scalar deleting destructor; 0x1c bytes)
+
+// FUNCTION: EXE 0x67c199
 // Destroys the template, releasing its two graphic effects
 EEAreaEffectTemplate::~EEAreaEffectTemplate()
 {
@@ -373,6 +392,7 @@ EEAreaEffectTemplate::~EEAreaEffectTemplate()
         this->mGraphicEffect18->Dereference();
 }
 
+// FUNCTION: EXE 0x67c1c5
 // Tells whether the template's player mode (1 self, 2 allies, 3 enemies, 4 everyone) affects the other player
 bool EEAreaEffectTemplate::AffectsPlayer(long inPlayer, long inOther)
 {
@@ -380,6 +400,7 @@ bool EEAreaEffectTemplate::AffectsPlayer(long inPlayer, long inOther)
     return ee_area_effect_affects_player(this, &theHost.mFfi, inPlayer, inOther, false);
 }
 
+// FUNCTION: EXE 0x67c233
 // Tells whether the other player falls outside the template's mode (1 others, 2 enemies, 3 friends)
 bool EEAreaEffectTemplate::AffectsPlayerReversed(long inPlayer, long inOther)
 {
@@ -387,6 +408,7 @@ bool EEAreaEffectTemplate::AffectsPlayerReversed(long inPlayer, long inOther)
     return ee_area_effect_affects_player(this, &theHost.mFfi, inPlayer, inOther, true);
 }
 
+// FUNCTION: EXE 0x67c334
 // Tells whether a point lies in the square or circular area around a center on the same continent; a space
 // dock or turret carried by another unit also passes when the point is on its owner's planet
 bool EEAreaEffectTemplate::IsWithin(const GE2DPoint& inCenter, const GE2DPoint& inPoint, float inScale,
@@ -397,6 +419,7 @@ bool EEAreaEffectTemplate::IsWithin(const GE2DPoint& inCenter, const GE2DPoint& 
                                     inUnit != NULL);
 }
 
+// FUNCTION: EXE 0x67c489
 // Fills the template from an area-effect file record, resolving its graphic effects and media
 bool EEAreaEffectTemplate::Init(const EEAreaEffectData& inData)
 {

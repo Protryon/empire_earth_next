@@ -47,6 +47,7 @@
 
 #include "ee/EECPAITargetPriority.h"
 #include "ee/EECPASGUMechProphet.h"
+// FUNCTION: EXE 0x4065b0
 // Scores the sub group's unit-set targets and picks the best for a time warp; stores its tile and unit, returns
 // its score (0 and NULL when none scores)
 float EECPASGUProphetCalamityAnalyzerTimeWarp::PickBest(EEComplexUnit*& outUnit)
@@ -73,6 +74,7 @@ float EECPASGUProphetCalamityAnalyzerTimeWarp::PickBest(EEComplexUnit*& outUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4066c6
 // Rates casting a time warp: random 0.45..1 times 0.35 plus the best target's score; below 0.5 releases the target
 // and excludes the analyzer
 float EECPASGUProphetCalamityAnalyzerTimeWarp::Evaluate()
@@ -95,6 +97,7 @@ float EECPASGUProphetCalamityAnalyzerTimeWarp::Evaluate()
     return theScore;
 }
 
+// FUNCTION: EXE 0x40675f
 // Scores a castable enemy for a time warp: veterancy, special or calamity units, the sub group's main AI kind,
 // being targeted by the prophet or an important unit, and attack strength
 float EECPASGUProphetCalamityAnalyzerTimeWarp::ScoreTarget(EEComplexUnit* inUnit)
@@ -132,6 +135,7 @@ float EECPASGUProphetCalamityAnalyzerTimeWarp::ScoreTarget(EEComplexUnit* inUnit
     return theScore;
 }
 
+// FUNCTION: EXE 0x4068b4
 // Scores the sub group's targets and picks the best enemy to teleport next to; stores its tile and unit, returns
 // its score (0 and NULL when none scores)
 float EECPASGUProphetCalamityAnalyzerTeleport::PickBest(EEComplexUnit*& outUnit)
@@ -158,6 +162,7 @@ float EECPASGUProphetCalamityAnalyzerTeleport::PickBest(EEComplexUnit*& outUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4069c9
 // Picks the best own unit to teleport (passes MayGo, highest ScoreAlly) and holds it as the ally target; needs a
 // chosen enemy; returns its score
 float EECPASGUProphetCalamityAnalyzerTeleport::PickAlly(EEComplexUnit*& outUnit)
@@ -185,18 +190,25 @@ float EECPASGUProphetCalamityAnalyzerTeleport::PickAlly(EEComplexUnit*& outUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x406a9b
+// Returns the number of units in the attack sub group
+// (EECPAttackSubGroup::GetNumUnits: inline in ee/EECPAttackSubGroup.h)
+
+// FUNCTION: EXE 0x406aae
 // Returns the game unit of the sub group unit at an index, or NULL when the index is out of range
 EEComplexUnit* EECPAttackSubGroup::GetUnitUnit(unsigned long inIndex) const
 {
     return inIndex < this->mUnits.size() ? this->mUnits[inIndex]->mUnit : 0;
 }
 
+// FUNCTION: EXE 0x406ad7
 // Returns the sub group unit at an index, or NULL when the index is out of range
 EECPAttackSubGroupUnit* EECPAttackSubGroup::GetUnitAt(unsigned long inIndex) const
 {
     return inIndex < this->mUnits.size() ? this->mUnits[inIndex] : 0;
 }
 
+// FUNCTION: EXE 0x406afd
 // Holds a unit as the analyzer's ally target, moving the unit reference from the old one
 void EECPASGUProphetCalamityAnalyzerTeleport::SetTarget(EEComplexUnit* inUnit)
 {
@@ -221,6 +233,7 @@ void EECPASGUProphetCalamityAnalyzerShieldBattery::SetTarget(EEComplexUnit* inUn
         inUnit->Reference();
 }
 
+// FUNCTION: EXE 0x406b24
 // Tells whether a unit can be teleported to the target tile: it can stand there, or a placement is found within
 // the calamity's placement range
 bool EECPASGUProphetCalamityAnalyzerTeleport::CanPlace(EEComplexUnit* inUnit)
@@ -238,6 +251,7 @@ bool EECPASGUProphetCalamityAnalyzerTeleport::CanPlace(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x406b9e
 // Tells whether an own unit may be teleported: alive, enabled, on the map, able to damage the enemy, outside its
 // range of it, brave enough, not a calamity unit or hero, armed, and placeable at the target
 bool EECPASGUProphetCalamityAnalyzerTeleport::MayGo(EECPAttackSubGroupUnit* inUnit)
@@ -260,6 +274,7 @@ bool EECPASGUProphetCalamityAnalyzerTeleport::MayGo(EECPAttackSubGroupUnit* inUn
     return theResult;
 }
 
+// FUNCTION: EXE 0x406c84
 // Rates teleporting an own unit next to an enemy (random plus enemy and ally scores); at 0.8 or more the ally
 // becomes the unit to cast on, else both are released and the analyzer is excluded
 float EECPASGUProphetCalamityAnalyzerTeleport::Evaluate()
@@ -297,6 +312,7 @@ float EECPASGUProphetCalamityAnalyzerTeleport::Evaluate()
     return theScore;
 }
 
+// FUNCTION: EXE 0x406d6d
 // Scores a castable enemy as a teleport destination: veterancy, special, calamity, priest and splash units,
 // distance from the prophet (squared distance against its squared range), and the prophet being in its range
 float EECPASGUProphetCalamityAnalyzerTeleport::ScoreTarget(EEComplexUnit* inUnit)
@@ -336,6 +352,7 @@ float EECPASGUProphetCalamityAnalyzerTeleport::ScoreTarget(EEComplexUnit* inUnit
     return theScore;
 }
 
+// FUNCTION: EXE 0x406ef9
 // Tells whether the unit class is a land, naval, helicopter or building priest
 bool EEUnitClass::IsPriest()
 {
@@ -343,6 +360,7 @@ bool EEUnitClass::IsPriest()
     return theCategory == kUnitCategoryLandPriest || theCategory == kUnitCategoryNavalPriest || theCategory == kUnitCategoryHelicopterPriest || theCategory == kUnitCategoryBuildingPriest;
 }
 
+// FUNCTION: EXE 0x406f1a
 // Scores an own unit other than the prophet for teleporting: non-special, melee, distance from the enemy (squared
 // distance against its squared range), the enemy being countered by it, and attack strength
 float EECPASGUProphetCalamityAnalyzerTeleport::ScoreAlly(EEComplexUnit* inUnit)
@@ -375,6 +393,7 @@ float EECPASGUProphetCalamityAnalyzerTeleport::ScoreAlly(EEComplexUnit* inUnit)
     return theScore;
 }
 
+// FUNCTION: EXE 0x407028
 // Tells whether a unit type's AI kind is one of this class's three counter kinds (never for kind none)
 bool EEUnitClass::IsCounteredBy(long inUnitType)
 {
@@ -382,6 +401,11 @@ bool EEUnitClass::IsCounteredBy(long inUnitType)
     return theKind != kAIKindNone && (theKind == this->mCounterKind1 || theKind == this->mCounterKind2 || theKind == this->mCounterKind3);
 }
 
+// FUNCTION: EXE 0x40705f
+// Returns the sub group unit's game unit
+// inline in ee/EECPAttackSubGroupUnit.h; the COMDAT is emitted for the callers that refuse to inline it
+
+// FUNCTION: EXE 0x407063
 // Accepts a target that has other targets near it and whose unit type is in the analyzer's unit set
 bool EECPASGUPCTargetIsUnitSetScreenOnlySplashUnits::Passes(EECPASTargetUnit* inTarget)
 {
@@ -391,6 +415,7 @@ bool EECPASGUPCTargetIsUnitSetScreenOnlySplashUnits::Passes(EECPASTargetUnit* in
     return theResult;
 }
 
+// FUNCTION: EXE 0x407089
 // Accepts a special or ranged (range above 1) target; when asked, only if its unit type is in the analyzer's unit set
 bool EECPASGUPCTargetIsUnitSetScreenRangedOrSpecialUnits::Passes(EECPASTargetUnit* inTarget)
 {
@@ -403,6 +428,10 @@ bool EECPASGUPCTargetIsUnitSetScreenRangedOrSpecialUnits::Passes(EECPASTargetUni
     return theResult;
 }
 
+// SYNTHETIC: EXE 0x4070d6
+// (the scalar deleting destructor; 0x1d bytes)
+
+// FUNCTION: EXE 0x4070f3
 // Rates casting a nano virus: random score, town penalty and cluster bonus; 0 without a castable target; below
 // 0.35 releases the target and excludes the analyzer
 float EECPASGUProphetCalamityAnalyzerNanoVirus::Evaluate()
@@ -421,6 +450,7 @@ float EECPASGUProphetCalamityAnalyzerNanoVirus::Evaluate()
     return theScore;
 }
 
+// FUNCTION: EXE 0x40718e
 // Raises a score by 15% per nearby target of the most clustered unit-set target of the sub group
 float EECPASGUProphetCalamityAnalyzerBase::ApplyClusterBonus(float inScore)
 {
@@ -439,6 +469,7 @@ float EECPASGUProphetCalamityAnalyzerBase::ApplyClusterBonus(float inScore)
     return theResult;
 }
 
+// FUNCTION: EXE 0x407236
 // Picks a castable target, first among clustered unit-set targets, then among ranged or special ones, trying them
 // from the end of a target-priority sort; stores its tile and unit
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerInferno::PickTarget()
@@ -485,6 +516,7 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerInferno::PickTarget()
     return theResult;
 }
 
+// FUNCTION: EXE 0x4074f3
 // Rates casting an inferno: random score, town penalty, citizen and cluster bonuses; 0 without a castable target;
 // below 0.45 releases the target and excludes the analyzer
 float EECPASGUProphetCalamityAnalyzerInferno::Evaluate()
@@ -503,6 +535,7 @@ float EECPASGUProphetCalamityAnalyzerInferno::Evaluate()
     return theScore;
 }
 
+// FUNCTION: EXE 0x40759d
 // Raises a score by 2.5% per land or naval citizen among the sub group's targets
 float EECPASGUProphetCalamityAnalyzerInferno::ApplyCitizenBonus(float inScore)
 {
@@ -519,6 +552,7 @@ float EECPASGUProphetCalamityAnalyzerInferno::ApplyCitizenBonus(float inScore)
     return theResult;
 }
 
+// FUNCTION: EXE 0x40760e
 // Adds the raw (unscaled) experience of every unit-set target to a score when the targets include aircraft
 float EECPASGUProphetCalamityAnalyzerAntiMatterStorm::AddTargetVeterancy(float inScore)
 {
@@ -532,6 +566,7 @@ float EECPASGUProphetCalamityAnalyzerAntiMatterStorm::AddTargetVeterancy(float i
     return theScore;
 }
 
+// FUNCTION: EXE 0x40769e
 // Rates casting an anti-matter storm: random score, aircraft bonus, target veterancy; 0 without a castable target;
 // below 0.5 releases the target and excludes the analyzer
 float EECPASGUProphetCalamityAnalyzerAntiMatterStorm::Evaluate()
@@ -550,6 +585,7 @@ float EECPASGUProphetCalamityAnalyzerAntiMatterStorm::Evaluate()
     return theScore;
 }
 
+// FUNCTION: EXE 0x40773d
 // Adds 0.05 per target aircraft, 0.1 per bomber and 0.3 per mL20 unit to a score (only when there are aircraft)
 float EECPASGUProphetCalamityAnalyzerAntiMatterStorm::ApplyAircraftBonus(float inScore)
 {
@@ -564,6 +600,7 @@ float EECPASGUProphetCalamityAnalyzerAntiMatterStorm::ApplyAircraftBonus(float i
     return theResult;
 }
 
+// FUNCTION: EXE 0x407799
 // Scores the sub group's targets and picks the most threatening enemy for a shield battery; stores its tile and
 // unit, returns its score (0 and NULL when none scores)
 float EECPASGUProphetCalamityAnalyzerShieldBattery::PickBest(EEComplexUnit*& outUnit)
@@ -590,6 +627,7 @@ float EECPASGUProphetCalamityAnalyzerShieldBattery::PickBest(EEComplexUnit*& out
     return theResult;
 }
 
+// FUNCTION: EXE 0x4078ae
 // Picks the best own unit to shield (passes MayShield, highest ScoreAlly) and holds it as the ally target; needs a
 // chosen enemy; returns its score
 float EECPASGUProphetCalamityAnalyzerShieldBattery::PickAlly(EEComplexUnit*& outUnit)
@@ -617,6 +655,7 @@ float EECPASGUProphetCalamityAnalyzerShieldBattery::PickAlly(EEComplexUnit*& out
     return theResult;
 }
 
+// FUNCTION: EXE 0x40797c
 // Tells whether an own unit may be shielded: alive, enabled, on the map and of a type in the analyzer's unit set
 bool EECPASGUProphetCalamityAnalyzerShieldBattery::MayShield(EECPAttackSubGroupUnit* inUnit)
 {
@@ -627,6 +666,7 @@ bool EECPASGUProphetCalamityAnalyzerShieldBattery::MayShield(EECPAttackSubGroupU
     return theResult;
 }
 
+// FUNCTION: EXE 0x4079b0
 // Rates casting a shield battery (random plus enemy and ally scores); at 0.05 or more the ally becomes the unit
 // to cast on, else both are released and the analyzer is excluded
 float EECPASGUProphetCalamityAnalyzerShieldBattery::Evaluate()
@@ -664,6 +704,7 @@ float EECPASGUProphetCalamityAnalyzerShieldBattery::Evaluate()
     return theScore;
 }
 
+// FUNCTION: EXE 0x407a9d
 // Scores a castable enemy as a threat: veterancy (capped at 15), plus a bonus when it is attacking one of the sub
 // group's units, more if that unit is important
 float EECPASGUProphetCalamityAnalyzerShieldBattery::ScoreTarget(EEComplexUnit* inUnit)
@@ -696,6 +737,7 @@ float EECPASGUProphetCalamityAnalyzerShieldBattery::ScoreTarget(EEComplexUnit* i
     return theScore;
 }
 
+// FUNCTION: EXE 0x407bab
 // Scores an own unit for shielding (the prophet only while in danger): special units, mech Zeus units, and most
 // when the chosen enemy is attacking it
 float EECPASGUProphetCalamityAnalyzerShieldBattery::ScoreAlly(EECPAttackSubGroupUnit* inUnit)
@@ -716,6 +758,7 @@ float EECPASGUProphetCalamityAnalyzerShieldBattery::ScoreAlly(EECPAttackSubGroup
     return theScore;
 }
 
+// FUNCTION: EXE 0x407c45
 // Creates the mech prophet's attack sub group unit for a unit
 EECPASGUMechProphet::EECPASGUMechProphet(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     : EECPASGUProphet(inUnit, inSubGroup)
@@ -723,6 +766,10 @@ EECPASGUMechProphet::EECPASGUMechProphet(EEComplexUnit* inUnit, EECPAttackSubGro
     this->mType = kASGUKindMechProphet;
 }
 
+// SYNTHETIC: EXE 0x407c68
+// (the scalar deleting destructor; 0x1c bytes)
+
+// FUNCTION: EXE 0x407c84
 // Creates a mech prophet sub group unit with no game unit yet
 EECPASGUMechProphet::EECPASGUMechProphet(EECPAttackSubGroup* inSubGroup)
     : EECPASGUProphet(inSubGroup)
@@ -730,11 +777,13 @@ EECPASGUMechProphet::EECPASGUMechProphet(EECPAttackSubGroup* inSubGroup)
     this->mType = kASGUKindMechProphet;
 }
 
+// FUNCTION: EXE 0x407ca3
 // Destroys the mech prophet sub group unit (base class only)
 EECPASGUMechProphet::~EECPASGUMechProphet()
 {
 }
 
+// FUNCTION: EXE 0x407cae
 // Creates the analyzer for a mech prophet power (nano virus, anti-matter storm, inferno, teleport, time warp,
 // shield battery); other power types get the prophet's analyzers
 EECPASGUProphetCalamityAnalyzerBase* EECPASGUMechProphet::CreateAnalyzer(long inTechID, unsigned long inType)
@@ -756,6 +805,7 @@ EECPASGUProphetCalamityAnalyzerBase* EECPASGUMechProphet::CreateAnalyzer(long in
     return EECPASGUProphet::CreateAnalyzer(inTechID, inType);
 }
 
+// FUNCTION: EXE 0x407dd3
 // Tells whether a teleport is worth considering: at least 3 targets, or no fewer targets than sub group units
 bool EECPASGUProphetCalamityAnalyzerTeleport::IsApplicable()
 {
@@ -765,6 +815,7 @@ bool EECPASGUProphetCalamityAnalyzerTeleport::IsApplicable()
     return true;
 }
 
+// FUNCTION: EXE 0x407e03
 // Releases the held ally target and resets the analyzer
 void EECPASGUProphetCalamityAnalyzerShieldBattery::Reset()
 {
@@ -774,6 +825,10 @@ void EECPASGUProphetCalamityAnalyzerShieldBattery::Reset()
     EECPASGUProphetCalamityAnalyzerBase::Reset();
 }
 
+// SYNTHETIC: EXE 0x407e1f
+// (the scalar deleting destructor; 0x1c bytes)
+
+// FUNCTION: EXE 0x407e3b
 // Destroys the teleport analyzer, releasing its held ally target
 EECPASGUProphetCalamityAnalyzerTeleport::~EECPASGUProphetCalamityAnalyzerTeleport()
 {
@@ -782,24 +837,34 @@ EECPASGUProphetCalamityAnalyzerTeleport::~EECPASGUProphetCalamityAnalyzerTelepor
     this->mTarget = NULL;
 }
 
+// FUNCTION: EXE 0x407e63
 // Tells whether a nano virus is worth considering: the sub group's targets include cyborgs
 bool EECPASGUProphetCalamityAnalyzerNanoVirus::IsApplicable()
 {
     return this->mProphet->mSubGroup->mCounts.mNumCyborgs > 0 ? true : false;
 }
 
+// FUNCTION: EXE 0x407e74
 // Tells whether an inferno is worth considering: the sub group's targets include plague targets
 bool EECPASGUProphetCalamityAnalyzerInferno::IsApplicable()
 {
     return this->mProphet->mSubGroup->mCounts.mNumPlagueTargets > 0 ? true : false;
 }
 
+// FUNCTION: EXE 0x407e85
 // Tells whether an anti-matter storm is worth considering: the sub group's targets include aircraft
 bool EECPASGUProphetCalamityAnalyzerAntiMatterStorm::IsApplicable()
 {
     return this->mProphet->mSubGroup->mCounts.mNumAircraft > 0 ? true : false;
 }
 
+// SYNTHETIC: EXE 0x407e96
+// (the scalar deleting destructor; 0x22 bytes)
+
+// SYNTHETIC: EXE 0x407eb8
+// (the scalar deleting destructor; 0x1c bytes)
+
+// FUNCTION: EXE 0x407ed4
 // Destroys the shield battery analyzer, releasing its held ally target
 EECPASGUProphetCalamityAnalyzerShieldBattery::~EECPASGUProphetCalamityAnalyzerShieldBattery()
 {
@@ -808,6 +873,7 @@ EECPASGUProphetCalamityAnalyzerShieldBattery::~EECPASGUProphetCalamityAnalyzerSh
     this->mTarget = NULL;
 }
 
+// FUNCTION: EXE 0x407efc
 // Retargets as a prophet; if that finds nothing and the unit has an initial attack action, retargets as a plain
 // attacker; returns whether it has a target
 bool EECPASGUMechProphet::Retarget()
@@ -818,6 +884,7 @@ bool EECPASGUMechProphet::Retarget()
     return theResult;
 }
 
+// FUNCTION: EXE 0x407f2d
 // Records the new state, then enters it as a prophet does
 void EECPASGUMechProphet::SetState(long inState, unsigned long inTime)
 {
@@ -825,12 +892,14 @@ void EECPASGUMechProphet::SetState(long inState, unsigned long inTime)
     EECPASGUProphet::SetState(inState, inTime);
 }
 
+// FUNCTION: EXE 0x407f41
 // Tests a sub group unit condition the way a prophet does
 bool EECPASGUMechProphet::CheckCondition(long inState, unsigned long inTime)
 {
     return EECPASGUProphet::CheckCondition(inState, inTime);
 }
 
+// FUNCTION: EXE 0x407f51
 // Runs the state machine: contained while off the map; when attacking, goes idle without targets, retreats,
 // or chooses an action without a target or in danger, else re-attacks when due (other states as a prophet)
 void EECPASGUMechProphet::Update(unsigned long inTime)
@@ -859,13 +928,86 @@ void EECPASGUMechProphet::Update(unsigned long inTime)
     }
 }
 
+// FUNCTION: EXE 0x408023
+// Removes the last pointer from a list of target pointers (std::vector pop_back, a body shared by pointer vectors)
+
+// FUNCTION: EXE 0x408057
+// Destroys a ranked target multimap (score to target, highest first), freeing every node
+
+// FUNCTION: EXE 0x408082
+// Destroys a ranked unit multimap (score to unit, highest first), freeing every node
+
+// FUNCTION: EXE 0x4080ad
+// Returns the iterator moved forward n elements (std::_Ptrit operator+, a body shared by pointer vectors)
+
+// FUNCTION: EXE 0x4080bf
+// Erases a range of entries from a ranked target multimap; returns the iterator after them (std::_Tree erase)
+
+// FUNCTION: EXE 0x408130
+// Inserts a (score, pointer) entry into a highest-first float multimap (std::_Tree insert, a shared body)
+
+// FUNCTION: EXE 0x408192
+// Erases a range of entries from a ranked unit multimap; returns the iterator after them (std::_Tree erase)
+
+// FUNCTION: EXE 0x408203
+// Returns the unit's map tile (EEUnit::GetTile)
+
+// FUNCTION: EXE 0x408215
+// Throws a copy of the length error (std::length_error::_Doraise)
+
+// FUNCTION: EXE 0x40821e
+// Frees a subtree of a ranked unit multimap, node by node (std::_Tree _Erase)
+
+// FUNCTION: EXE 0x408250
+// Frees a subtree of a ranked target multimap, node by node (std::_Tree _Erase)
+
 // 0x408282 is U2DComputeCenterPoint<long> (lle/U2DPoint.h; EEComputeTileCenterPoint): its marker is in EECPASGUProphet.cpp, whose
 // analyzers instantiate it
+
+// FUNCTION: EXE 0x40841e
+// Sorts a list of attack targets by target priority (std::sort with EECPAITargetPriority)
+
+// FUNCTION: EXE 0x408502
+// Insertion-sorts a range of attack targets by target priority (std::_Insertion_sort)
+
+// FUNCTION: EXE 0x408535
+// Quick-sorts a range of attack targets by target priority, switching to a heap sort when too deep (std::_Sort)
+
+// FUNCTION: EXE 0x40863d
+// Insertion-sorts attack targets with no lower-bound check (std::_Unguarded_insertion_sort)
+
+// FUNCTION: EXE 0x40867f
+// Arranges a range of attack targets into a heap by target priority (std::make_heap)
+
+// FUNCTION: EXE 0x4086c3
+// Sorts a heap of attack targets by target priority (std::sort_heap)
+
+// FUNCTION: EXE 0x408710
+// Partitions a range of attack targets around a pivot by target priority (std::_Unguarded_partition)
+
+// FUNCTION: EXE 0x408830
+// Shifts an attack target back into its place in a sorted range (std::_Unguarded_insert)
+
+// FUNCTION: EXE 0x408863
+// Builds a heap of attack targets by sifting down every parent (std::_Make_heap)
+
+// FUNCTION: EXE 0x4088c0
+// Moves the top attack target of a heap to its end and restores the heap (std::pop_heap)
+
+// FUNCTION: EXE 0x4088f3
+// Sifts an attack target down into its place in a heap by target priority (std::_Adjust_heap)
+
+// FUNCTION: EXE 0x40896d
+// Pops the top attack target of a heap to its end (std::_Pop_heap_0)
+
+// FUNCTION: EXE 0x4089dd
+// Moves the top attack target of a heap to a given slot and re-inserts a value (std::_Pop_heap)
 
 // 0x408a21: its marker is in EECPASGUProphet.cpp (that object instantiates it)
 
 // 0x408a38: its marker is in EECPASGUProphet.cpp (that object instantiates it)
 
+// FUNCTION: EXE 0x408a3f
 // Returns the squared tile distance from the stored centre tile to a given tile
 long EETileDistanceLess::DistanceSquared(const EETileCoordinate& inTile) const
 {
@@ -882,6 +1024,7 @@ long EETileDistanceLess::DistanceSquared(const EETileCoordinate& inTile) const
 
 // 0x408dc7: its marker is in EECPASGUProphet.cpp (that object instantiates it)
 
+// FUNCTION: EXE 0x408de3
 // Creates the priest's attack sub group unit for a unit
 EECPASGUPriest::EECPASGUPriest(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inUnit, inSubGroup)
@@ -889,6 +1032,10 @@ EECPASGUPriest::EECPASGUPriest(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubG
     this->mType = kASGUKindPriest;
 }
 
+// SYNTHETIC: EXE 0x408e06
+// (the scalar deleting destructor; 0x1c bytes)
+
+// FUNCTION: EXE 0x408e22
 // Creates a priest sub group unit with no game unit yet
 EECPASGUPriest::EECPASGUPriest(EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inSubGroup)
@@ -896,11 +1043,13 @@ EECPASGUPriest::EECPASGUPriest(EECPAttackSubGroup* inSubGroup)
     this->mType = kASGUKindPriest;
 }
 
+// FUNCTION: EXE 0x408e41
 // Destroys the priest sub group unit (base class only)
 EECPASGUPriest::~EECPASGUPriest()
 {
 }
 
+// FUNCTION: EXE 0x408e4c
 // Returns the target's hit points as a fraction of its maximum, capped at 1
 float EECPASGUPriest::GetTargetDamage(EECPASTargetUnit* inTarget)
 {
@@ -910,6 +1059,7 @@ float EECPASGUPriest::GetTargetDamage(EECPASTargetUnit* inTarget)
     return theRatio;
 }
 
+// FUNCTION: EXE 0x408e6f
 // Chooses a target as any attacker does, but only one the priest can convert (else NULL)
 EECPASTargetUnit* EECPASGUPriest::ChooseTarget(bool inTakeFirst, EETileCoordinate& outTile)
 {
@@ -919,6 +1069,7 @@ EECPASTargetUnit* EECPASGUPriest::ChooseTarget(bool inTakeFirst, EETileCoordinat
     return theTarget;
 }
 
+// FUNCTION: EXE 0x408ea0
 // Picks a convertible target and, if the unit can convert, sends it after the target unless it already is;
 // returns whether it has a target
 bool EECPASGUPriest::Retarget()
@@ -942,6 +1093,7 @@ bool EECPASGUPriest::Retarget()
     return this->mTarget ? true : false;
 }
 
+// FUNCTION: EXE 0x408f37
 // Tells whether the priest can attack a target: a plain attacker could, and the priest can convert it
 bool EECPASGUPriest::CanAttack(EECPASTargetUnit* inTarget)
 {
@@ -951,7 +1103,19 @@ bool EECPASGUPriest::CanAttack(EECPASTargetUnit* inTarget)
     return theResult;
 }
 
+// FUNCTION: EXE 0x408f67
+// Orders two attack targets by squared tile distance to a centre, nearest first (EECPAITargetNearest::operator())
+// No source here: EECPAITargetNearest is defined in EECPASGUProphet.cpp, so this object does not emit it
+
+// TEMPLATE: EXE 0x408fd7
+// Orders two attack targets for sorting: more nearby targets first, then the one farther from the centre tile
+// EECPAITargetPriority::operator() (ee/EECPAITargetPriority.h), out of line and built without /Og in the original
+// (frame locals, jmp chains, setg); the header's optimize pragma around the struct reproduces it. 0x408f67 is
+// EECPAITargetNearest::operator() (setl), the same shape, defined in EECPASGUProphet.cpp
+
+// ICF-FOLDED: EXE 0x407e03
 // Releases the held ally target and resets the analyzer
+// (no address of its own: the same body as EECPASGUProphetCalamityAnalyzerShieldBattery::Reset, which ICF kept)
 void EECPASGUProphetCalamityAnalyzerTeleport::Reset()
 {
     if (this->mTarget != NULL)
@@ -960,6 +1124,7 @@ void EECPASGUProphetCalamityAnalyzerTeleport::Reset()
     EECPASGUProphetCalamityAnalyzerBase::Reset();
 }
 
+// ICF-FOLDED: EXE 0x40ac63
 // Picks a castable target among the unit-set targets: the one on their centre tile, else the last castable one;
 // stores its tile and unit (no address of its own: ICF kept EECPASGUProphetCalamityAnalyzerHurricane::PickTarget)
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerAntiMatterStorm::PickTarget()
@@ -1004,7 +1169,9 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerAntiMatterStorm::PickTarget()
     return theResult;
 }
 
+// ICF-FOLDED: EXE 0x407236
 // Picks a castable target the same way as the inferno analyzer (clustered unit-set targets, then ranged or special)
+// (no address of its own: the same body as EECPASGUProphetCalamityAnalyzerInferno::PickTarget, which ICF kept)
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerNanoVirus::PickTarget()
 {
     std::vector<EECPASTargetUnit*> theTargets;
@@ -1049,7 +1216,9 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerNanoVirus::PickTarget()
     return theResult;
 }
 
+// ICF-FOLDED: EXE 0x40b5b1
 // Returns the best enemy target found by PickBest (NULL when none scores)
+// (no address of its own: the same body as EECPASGUProphetCalamityAnalyzerShieldBattery::PickTarget, which ICF kept)
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerTeleport::PickTarget()
 {
     EEComplexUnit* theUnit = NULL;
@@ -1057,7 +1226,9 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerTeleport::PickTarget()
     return theUnit;
 }
 
+// ICF-FOLDED: EXE 0x40b5b1
 // Returns the best time-warp target found by PickBest (NULL when none scores)
+// (no address of its own: the same body as EECPASGUProphetCalamityAnalyzerShieldBattery::PickTarget, which ICF kept)
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerTimeWarp::PickTarget()
 {
     EEComplexUnit* theUnit = NULL;
@@ -1065,7 +1236,9 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerTimeWarp::PickTarget()
     return theUnit;
 }
 
+// ICF-FOLDED: EXE 0x407dd3
 // Tells whether a time warp is worth considering: at least 3 targets, or no fewer targets than sub group units
+// (no address of its own: the same body as EECPASGUProphetCalamityAnalyzerTeleport::IsApplicable, which ICF kept)
 bool EECPASGUProphetCalamityAnalyzerTimeWarp::IsApplicable()
 {
     unsigned long theCount = this->mProphet->mSubGroup->mTargets.size();

@@ -11,6 +11,7 @@
 
 EECPBehavior gCPBehaviors[129];
 
+// FUNCTION: EXE 0x4d5f97
 // Loads the computer-player behaviour values into their slots of the table, squaring the maximum attack response
 // range; returns the last read status
 // NEAR: the original squares mF30 with a second memory read (fld [x]; fmul [x]), ours reuses st(0)
@@ -35,3 +36,6 @@ long EECPBehavior::Load(FSFileSpec* inFile)
     inFile->Close();
     return theResult;
 }
+
+// SYNTHETIC: EXE 0x4d5f7e
+// SYNTHETIC: EXE 0x4d5f83

@@ -69,7 +69,9 @@ METHODDEF(void) post_process_2pass
  * Initialize for a processing pass.
  */
 
+// FUNCTION: JPEG 0x1008e112
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x810a30
 start_pass_dpost (j_decompress_ptr cinfo, J_BUF_MODE pass_mode)
 {
   my_post_ptr post = (my_post_ptr) cinfo->post;
@@ -122,7 +124,9 @@ start_pass_dpost (j_decompress_ptr cinfo, J_BUF_MODE pass_mode)
  * This is used for color precision reduction as well as one-pass quantization.
  */
 
+// FUNCTION: JPEG 0x1008e1b8
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x810b30
 post_process_1pass (j_decompress_ptr cinfo,
 		    JSAMPIMAGE input_buf, JDIMENSION *in_row_group_ctr,
 		    JDIMENSION in_row_groups_avail,
@@ -154,7 +158,9 @@ post_process_1pass (j_decompress_ptr cinfo,
  * Process some data in the first pass of 2-pass quantization.
  */
 
+// FUNCTION: JPEG 0x1008e21d
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x810bb0
 post_process_prepass (j_decompress_ptr cinfo,
 		      JSAMPIMAGE input_buf, JDIMENSION *in_row_group_ctr,
 		      JDIMENSION in_row_groups_avail,
@@ -198,7 +204,9 @@ post_process_prepass (j_decompress_ptr cinfo,
  * Process some data in the second pass of 2-pass quantization.
  */
 
+// FUNCTION: JPEG 0x1008e2ae
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x810c60
 post_process_2pass (j_decompress_ptr cinfo,
 		    JSAMPIMAGE input_buf, JDIMENSION *in_row_group_ctr,
 		    JDIMENSION in_row_groups_avail,
@@ -246,7 +254,9 @@ post_process_2pass (j_decompress_ptr cinfo,
  * Initialize postprocessing controller.
  */
 
+// FUNCTION: JPEG 0x1008e08f
 GLOBAL(void)
+// FUNCTION: EXEIMG 0x8109a0
 jinit_d_post_controller (j_decompress_ptr cinfo, boolean need_full_buffer)
 {
   my_post_ptr post;

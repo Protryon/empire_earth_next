@@ -16,7 +16,7 @@ class EEUICUnitIconBar : public UIControl {
 public:
     // 0x259f7f (the user-defined control factory 0x274b82)
     EEUICUnitIconBar(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm);
-    virtual ~EEUICUnitIconBar();
+    virtual ~EEUICUnitIconBar();            // 0x25a194
     virtual long CopyData();                // +0x14 0x25a258
     virtual long DrawPolygons();            // +0x18 0x25a32f
     // 0x25b010: refills the icons from the local player's selected group (EEUIFMainGame 0x26814f) (provisional name)

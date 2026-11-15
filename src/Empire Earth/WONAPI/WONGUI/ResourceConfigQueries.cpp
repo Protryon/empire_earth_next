@@ -11,12 +11,14 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00793340
 // Counts one more parse pass of the resource group (the generation stamped on resources added afterwards); always true
 bool ResourceConfig::PreParse(ConfigParser*)
 {
     ++this->mParseCount;
     return true;
 }
+// FUNCTION: WON 0x007934c0
 // Looks up a named string resource; copies it to the output and returns true when found
 bool ResourceConfig::GetString(const std::string& name,GUIString& output)
 {
@@ -29,6 +31,7 @@ bool ResourceConfig::GetString(const std::string& name,GUIString& output)
     }
     return false;
 }
+// FUNCTION: WON 0x00793570
 // Looks up a named image resource; stores the image pointer and returns true when found
 bool ResourceConfig::GetImage(const std::string& name,Image*& output)
 {
@@ -41,6 +44,7 @@ bool ResourceConfig::GetImage(const std::string& name,Image*& output)
     }
     return false;
 }
+// FUNCTION: WON 0x007935d0
 // Looks up a named font resource; stores the font pointer and returns true when found
 bool ResourceConfig::GetFont(const std::string& name,Font*& output)
 {
@@ -53,6 +57,7 @@ bool ResourceConfig::GetFont(const std::string& name,Font*& output)
     }
     return false;
 }
+// FUNCTION: WON 0x00793630
 // Looks up a named sound resource; stores the sound pointer and returns true when found
 bool ResourceConfig::GetSound(const std::string& name,Sound*& output)
 {
@@ -65,6 +70,7 @@ bool ResourceConfig::GetSound(const std::string& name,Sound*& output)
     }
     return false;
 }
+// FUNCTION: WON 0x007936a0
 // Looks up a named color resource; stores the color and returns true when found
 bool ResourceConfig::GetColor(const std::string& name,DWORD& output)
 {
@@ -77,6 +83,7 @@ bool ResourceConfig::GetColor(const std::string& name,DWORD& output)
     }
     return false;
 }
+// FUNCTION: WON 0x00793710
 // Looks up a named background resource; copies it to the output and returns true when found
 bool ResourceConfig::GetBackground(const std::string& name,Background& output)
 {
@@ -89,6 +96,7 @@ bool ResourceConfig::GetBackground(const std::string& name,Background& output)
     }
     return false;
 }
+// FUNCTION: WON 0x00793820
 // Looks up a named integer resource; stores the value and returns true when found
 bool ResourceConfig::GetInt(const std::string& name,int& output)
 {
@@ -102,3 +110,7 @@ bool ResourceConfig::GetInt(const std::string& name,int& output)
     return false;
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007a4c00
+// (protected: struct std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic)

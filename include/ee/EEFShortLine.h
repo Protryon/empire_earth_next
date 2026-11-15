@@ -6,8 +6,8 @@
 
 class EEFShortLine : public EEFLine {
 public:
-    EEFShortLine();
-    virtual ~EEFShortLine();
+    EEFShortLine();                     // 0xdde94
+    virtual ~EEFShortLine();             // 0xddedc (??_G 0xddec0)
 };
 
 #endif

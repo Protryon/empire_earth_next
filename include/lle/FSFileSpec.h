@@ -13,10 +13,10 @@ public:
     using FSFile::Read;    // the long/unsigned long adapters (lle/FSFile.h)
     using FSFile::Write;
     FSFileSpec();                                     // 0x8d15: names from gStartupVolume/gStartupDirectory
-    FSFileSpec(const FSFileSpec& inSpec);
-    FSFileSpec(const UString& inPath);
-    virtual ~FSFileSpec();
-    FSFileSpec& operator=(const FSFileSpec& inSpec);
+    FSFileSpec(const FSFileSpec& inSpec);             // 0x8dad
+    FSFileSpec(const UString& inPath);                // 0x8dcd
+    virtual ~FSFileSpec();                            // 0x8efe
+    FSFileSpec& operator=(const FSFileSpec& inSpec);  // 0x8f2f
     bool operator<(FSFileSpec& inSpec);               // 0x8f74 (non-const parameter, as exported)
 
     // Members in alphabetical order, as the first unit's emission order shows (CloseSearchHandle 0x13d6, GetFirstFile
@@ -37,7 +37,7 @@ public:
     virtual long GetFirstFile(const UString& inPattern, FSFileSpec& outFile);  // +0xac 0x9406
     virtual bool GetIsOpen() const;                                             // +0x24 (folded 0x4b4d9)
     virtual long GetLength(unsigned long& outLength) const;                     // +0xb4 0x95e3
-    long GetLengthFromClosedFile(unsigned long& outLength);
+    long GetLengthFromClosedFile(unsigned long& outLength);   // 0x9627
     virtual long GetNextFile(FSFileSpec& outFile);                              // +0xb8 0x9661
     virtual void GetParentDirectory(FSFileSpec& outDirectory) const;            // +0xbc 0x9816
     virtual long GetPosition(long& outPosition) const;                          // +0xc0 0x98d8

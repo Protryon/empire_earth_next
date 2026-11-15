@@ -220,6 +220,7 @@ private:
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 
 
+// FUNCTION: LLE 0x10053ca1
 // Creates an unowned critical section
 TSCriticalSection::TSCriticalSection()
 {
@@ -229,12 +230,14 @@ TSCriticalSection::TSCriticalSection()
     ESVERIFY(this->mSection != NULL);
 }
 
+// FUNCTION: LLE 0x10053cb7
 // Destroys the critical section
 TSCriticalSection::~TSCriticalSection()
 {
     PlatMutexDestroy(this->mSection);
 }
 
+// FUNCTION: LLE 0x10053cbf
 // Enters the critical section, recording the owning thread on the first entry
 void TSCriticalSection::Enter()
 {
@@ -244,6 +247,7 @@ void TSCriticalSection::Enter()
         this->mOwnerThread = PlatCurrentThreadId();
 }
 
+// FUNCTION: LLE 0x10053cdd
 // Leaves the critical section, clearing the owning thread on the last exit
 void TSCriticalSection::Leave()
 {
@@ -268,18 +272,21 @@ bool TSCriticalSection::TryEnter()
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 
 
+// FUNCTION: LLE 0x10053cee
 // Wraps an event handle (manual or automatic reset)
 TSEvent::TSEvent(PlatEvent* inHandle, bool inManualReset)
     : mHandle(inHandle), mManualReset(inManualReset)
 {
 }
 
+// FUNCTION: LLE 0x10053d00
 // Destroys the event, closing its handle
 TSEvent::~TSEvent()
 {
     PlatEventDestroy(this->mHandle);
 }
 
+// FUNCTION: LLE 0x10053d09
 // Signals the event; records the native error on failure
 long TSEvent::Set()
 {
@@ -293,6 +300,7 @@ long TSEvent::Set()
     return theResult;
 }
 
+// FUNCTION: LLE 0x10053d2e
 // Resets the event to unsignalled; records the native error on failure
 long TSEvent::Clear()
 {
@@ -306,6 +314,7 @@ long TSEvent::Clear()
     return theResult;
 }
 
+// FUNCTION: LLE 0x10053d53
 // Waits for the event up to the timeout; kErrorTimeout on time-out, records the native error on failure
 long TSEvent::Wait(unsigned long inTimeout)
 {
@@ -336,6 +345,7 @@ long TSEvent::WaitAny(TSEvent* const* inEvents, unsigned long inCount, unsigned 
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 
 
+// FUNCTION: LLE 0x10053d8b
 // Creates a read/write lock from a writer lock and two events, with no readers
 TSReadWriteLock::TSReadWriteLock(TSCriticalSection* inWriteLock, TSEvent* inNoReaders, TSEvent* inReading)
     : mWriteLock(inWriteLock), mNoReaders(inNoReaders), mReading(inReading)
@@ -345,6 +355,7 @@ TSReadWriteLock::TSReadWriteLock(TSCriticalSection* inWriteLock, TSEvent* inNoRe
     this->mReaderCount = 0;
 }
 
+// FUNCTION: LLE 0x10053db9
 // Destroys the read/write lock and its writer lock and events
 TSReadWriteLock::~TSReadWriteLock()
 {
@@ -353,6 +364,7 @@ TSReadWriteLock::~TSReadWriteLock()
     TSScheduler::DestroyEvent(this->mReading);
 }
 
+// FUNCTION: LLE 0x10053dd8
 // Takes a read lock: the first reader waits until no writer holds the lock, then readers wait for reading to open
 void TSReadWriteLock::ReadLock()
 {
@@ -363,6 +375,7 @@ void TSReadWriteLock::ReadLock()
     this->mReading->Wait(kTSWaitInfinite);
 }
 
+// FUNCTION: LLE 0x10053e08
 // Releases a read lock: the last reader closes reading and lets writers in
 void TSReadWriteLock::ReadUnlock()
 {
@@ -372,6 +385,7 @@ void TSReadWriteLock::ReadUnlock()
     }
 }
 
+// FUNCTION: LLE 0x10053e2b
 // Takes the write lock: one writer at a time, waiting until no readers are left
 void TSReadWriteLock::WriteLock()
 {
@@ -379,6 +393,7 @@ void TSReadWriteLock::WriteLock()
     this->mNoReaders->Wait(kTSWaitInfinite);
 }
 
+// FUNCTION: LLE 0x10053e41
 // Releases the write lock and lets readers in
 void TSReadWriteLock::WriteUnlock()
 {
@@ -389,8 +404,18 @@ void TSReadWriteLock::WriteUnlock()
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 
 
+// Compiler-generated for this unit (names in analysis/lle/names.txt):
+// TEMPLATE: LLE 0x100541b2
+// TEMPLATE: LLE 0x100541de
+// TEMPLATE: LLE 0x100541eb
+// SYNTHETIC: LLE 0x10053e55
+// SYNTHETIC: LLE 0x10053e5f
+// SYNTHETIC: LLE 0x10053e77
+// SYNTHETIC: LLE 0x10053e83
+
 std::vector<TSThread*> TSScheduler::sThreads;
 
+// FUNCTION: LLE 0x10053e9e
 // Creates a critical section; kErrorOutOfMemory if the allocation fails
 long TSScheduler::CreateCriticalSection(TSCriticalSection*& outSection)
 {
@@ -398,6 +423,7 @@ long TSScheduler::CreateCriticalSection(TSCriticalSection*& outSection)
     return outSection ? kErrorOK : kErrorOutOfMemory;
 }
 
+// FUNCTION: LLE 0x10053ec6
 // Creates an event (manual or auto reset) wrapped in a TSEvent; records the native error if creation fails
 // NEAR: register choice only (the original keeps theResult/NULL in esi and the handle in edi)
 long TSScheduler::CreateEvent(TSEvent*& outEvent, bool inManualReset)
@@ -417,6 +443,7 @@ long TSScheduler::CreateEvent(TSEvent*& outEvent, bool inManualReset)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10053f26
 // Creates a read/write lock from a write critical section and two events, destroying the parts made so far on failure
 long TSScheduler::CreateReadWriteLock(TSReadWriteLock*& outLock)
 {
@@ -446,6 +473,7 @@ long TSScheduler::CreateReadWriteLock(TSReadWriteLock*& outLock)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10053fdc
 // Creates, registers and starts a thread object for a function; kErrorOutOfMemory if allocation fails
 // NEAR: block layout only (the original places the kErrorOutOfMemory return after the success path)
 long TSScheduler::CreateThread(TSThread*& outThread, unsigned long (*inFunction)(void*), void* inParameter,
@@ -459,6 +487,7 @@ long TSScheduler::CreateThread(TSThread*& outThread, unsigned long (*inFunction)
     return kErrorOutOfMemory;
 }
 
+// FUNCTION: LLE 0x10054029
 // Registers an existing thread (handle and ID) as a thread object; kErrorOutOfMemory if allocation fails
 long TSScheduler::CreateThread(PlatThread* inHandle, unsigned long inThreadID, bool inSuspended)
 {
@@ -470,6 +499,7 @@ long TSScheduler::CreateThread(PlatThread* inHandle, unsigned long inThreadID, b
     return kErrorOutOfMemory;
 }
 
+// FUNCTION: LLE 0x1005406f
 // Destroys a critical section (NULL is ignored)
 void TSScheduler::DestroyCriticalSection(TSCriticalSection* inSection)
 {
@@ -477,6 +507,7 @@ void TSScheduler::DestroyCriticalSection(TSCriticalSection* inSection)
         delete inSection;
 }
 
+// FUNCTION: LLE 0x10054088
 // Destroys an event (NULL is ignored)
 void TSScheduler::DestroyEvent(TSEvent* inEvent)
 {
@@ -484,6 +515,7 @@ void TSScheduler::DestroyEvent(TSEvent* inEvent)
         delete inEvent;
 }
 
+// FUNCTION: LLE 0x100540a1
 // Destroys a read/write lock (NULL is ignored)
 void TSScheduler::DestroyReadWriteLock(TSReadWriteLock* inLock)
 {
@@ -491,6 +523,7 @@ void TSScheduler::DestroyReadWriteLock(TSReadWriteLock* inLock)
         delete inLock;
 }
 
+// FUNCTION: LLE 0x100540ba
 // Unregisters and deletes a thread object; kErrorNotFound if it is not registered (NULL is ignored)
 long TSScheduler::DestroyThread(TSThread* inThread)
 {
@@ -507,6 +540,7 @@ long TSScheduler::DestroyThread(TSThread* inThread)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10054142
 // Returns the registered thread object of the calling thread, or NULL
 TSThread* TSScheduler::GetCurrentThread()
 {
@@ -520,6 +554,7 @@ TSThread* TSScheduler::GetCurrentThread()
     return theThread;
 }
 
+// FUNCTION: LLE 0x1005417a
 // Returns the registry index of the calling thread, or -1 if it is not registered
 unsigned long TSScheduler::GetCurrentThreadIndex()
 {
@@ -536,6 +571,7 @@ unsigned long TSScheduler::GetCurrentThreadIndex()
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 
 
+// FUNCTION: LLE 0x10054203
 // Creates a thread object for a function and parameter (not started yet), with its message lock
 TSThread::TSThread(unsigned long (*inFunction)(void*), void* inParameter, unsigned long inStackSize,
                    bool inSuspended)
@@ -544,6 +580,7 @@ TSThread::TSThread(unsigned long (*inFunction)(void*), void* inParameter, unsign
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mMessageLock) == keseOK, 51);
 }
 
+// FUNCTION: LLE 0x1005425d
 // Creates a thread object wrapping an existing thread handle and ID, with its message lock
 TSThread::TSThread(PlatThread* inHandle, unsigned long inThreadID, bool inSuspended)
     : mFunction(NULL), mParameter(NULL), mHandle(inHandle), mThreadID(inThreadID), mSuspended(inSuspended),
@@ -552,6 +589,7 @@ TSThread::TSThread(PlatThread* inHandle, unsigned long inThreadID, bool inSuspen
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mMessageLock) == keseOK, 71);
 }
 
+// FUNCTION: LLE 0x100542bf
 // Destroys the thread object, closing its handle and message lock (the thread itself keeps running)
 TSThread::~TSThread()
 {
@@ -576,6 +614,7 @@ void TSThread::DispatchWindowEvents()
             ;
 }
 
+// FUNCTION: LLE 0x100542e5
 // Returns the thread's exit code (STILL_ACTIVE while running); 0 and a recorded native error on failure
 unsigned long TSThread::GetExitCode()
 {
@@ -588,6 +627,7 @@ unsigned long TSThread::GetExitCode()
     return theExitCode;
 }
 
+// FUNCTION: LLE 0x10054315
 // Returns the thread's priority (PLAT_PRIORITY_ERROR, with the error recorded, on failure)
 long TSThread::GetPriority()
 {
@@ -601,6 +641,7 @@ long TSThread::GetPriority()
 
 // (0x1005433f, POSIXThreadMain: the unused _beginthreadex twin of the thread entry, gone with it.)
 
+// FUNCTION: LLE 0x10054377
 // Posts a message to the thread's queue (the original's Win32 thread message queue, retried until it accepted);
 // optionally queues its ID too
 long TSThread::Post(unsigned long inMessage, void* inParameter1, void* inParameter2, bool inQueue)
@@ -617,6 +658,7 @@ long TSThread::Post(unsigned long inMessage, void* inParameter1, void* inParamet
     return kErrorOK;
 }
 
+// FUNCTION: LLE 0x100543c4
 // Takes one message off the calling thread's queue, else (on the window thread) dispatches one window event;
 // kErrorNotFound if none is left. A posted message counts when it is WM_QUIT (0x12) or a WM_USER (0x400) one, as a
 // window-less Win32 thread message did; a dispatched event counts only while queued IDs are left (Post inQueue).
@@ -651,6 +693,7 @@ long TSThread::Receive(unsigned long& outMessage, void*& outParameter1, void*& o
     return theResult;
 }
 
+// FUNCTION: LLE 0x1005446f
 // Resumes the suspended thread; kErrorNotSuspended if it was not suspended, kErrorNativeError on failure
 // NEAR: the original stores mSuspended = false from al after zeroing eax for the return
 long TSThread::Resume()
@@ -668,6 +711,7 @@ long TSThread::Resume()
     return kErrorNativeError;
 }
 
+// FUNCTION: LLE 0x100544aa
 // Names the thread (debugger name is a no-op in this build) and stores the name
 void TSThread::SetName(UString& inName)
 {
@@ -675,6 +719,7 @@ void TSThread::SetName(UString& inName)
     this->mName = inName;
 }
 
+// FUNCTION: LLE 0x100544cd
 // Starts the thread (suspended if requested), retrying up to 100 times; kErrorNativeError if it never starts
 long TSThread::StartThread(unsigned long inStackSize)
 {
@@ -700,6 +745,7 @@ long TSThread::StartThread(unsigned long inStackSize)
     return kErrorOK;
 }
 
+// FUNCTION: LLE 0x10054552
 // Sets the thread's priority (PLAT_PRIORITY_*); kErrorNativeError on failure
 long TSThread::SetPriority(long inPriority)
 {
@@ -709,6 +755,7 @@ long TSThread::SetPriority(long inPriority)
     return kErrorNativeError;
 }
 
+// FUNCTION: LLE 0x1005457a
 // Suspends the thread; kErrorNativeError on failure
 long TSThread::Suspend()
 {
@@ -720,6 +767,7 @@ long TSThread::Suspend()
     return kErrorNativeError;
 }
 
+// FUNCTION: LLE 0x100545a5
 // Kills the thread; kErrorNativeError on failure
 long TSThread::Terminate()
 {
@@ -729,6 +777,7 @@ long TSThread::Terminate()
     return kErrorNativeError;
 }
 
+// FUNCTION: LLE 0x100545c8
 // Thread entry: runs the thread function; its result is the thread's exit code (the platform thread procedure
 // initialises COM around it on Win32, as WIN32ThreadMain did here)
 uint32_t TSThread::ThreadMain(void* inThread)
@@ -750,8 +799,9 @@ void TSThread::SetThreadName(unsigned long inThreadID, const char* inName)
 
 static void TSShutdown(bool inForced);
 
-bool gThreadSystemInitialized;
+bool gThreadSystemInitialized;              // 0x12ded0 (provisional name)
 
+// FUNCTION: LLE 0x10053675
 // Starts the thread system: registers its shutdown and registers the calling (main) thread as a thread object
 long TSInitialize()
 {
@@ -772,6 +822,7 @@ long TSInitialize()
     return theResult;
 }
 
+// FUNCTION: LLE 0x100536f0
 // Shuts the thread system down by destroying the calling thread's object
 static void TSShutdown(bool inForced)
 {

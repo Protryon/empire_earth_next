@@ -22,16 +22,16 @@ struct EEUIFMGIconBitmap;   // EEUIFMGStatusBox.cpp (one loaded icon, 0x14 bytes
 
 class EEUIFMGStatusBox {
 public:
-    EEUIFMGStatusBox(UIForm* inForm);
+    EEUIFMGStatusBox(UIForm* inForm);    // 0x26ada8
     ~EEUIFMGStatusBox();                    // (ICF-folded into the empty 0xe123d)
     void Fill(EEUnit* inUnit);              // 0x26b593 (the main group's new selection)
     void HideBackgrounds();                 // 0x26c470 (before the main group fills the controls in)
     void Refresh(EEUnit* inUnit);           // 0x26cbe1 (each update of the same selection)
-    void UpdateQueuedCounts(EEComplexUnit* inUnit, long inImprovement);
+    void UpdateQueuedCounts(EEComplexUnit* inUnit, long inImprovement);  // 0x26dae7
     // the rest of EEUIFMGStatusBox.cpp (provisional names; FillArmorAttributes, UpdateArmorTexts and GetAttributeText
     // are Rust's: ee_screens status_box.rs)
     static void LoadIcons();                // 0x26c4fe (the 50 icon bitmaps of the three unit improvement textures)
-    static void UnloadIcons();
+    static void UnloadIcons();              // 0x26c8f4
     static long ReloadIcons();              // 0x26dcd9 (ReloadTexture of the three textures)
     // 0x564ed8: the 50 loaded icons, a class static (its atexit dtor is guarded: bit of 0x564ed0)
     // (provisional name)

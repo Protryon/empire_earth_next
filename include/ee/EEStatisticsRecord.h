@@ -9,9 +9,9 @@
 
 class EEStatisticsRecord {
 public:
-    EEStatisticsRecord();
+    EEStatisticsRecord();                   // 0x13b66c
     // the copy ctor 0x13d28a and operator= 0x13e451 are implicit (member-wise)
-    ~EEStatisticsRecord();
+    ~EEStatisticsRecord();                  // 0x16db75
     void Clear();                           // 0x16dadc (the ctor's last call; provisional name)
 
     EEPlayerStatistics mStatistics;         // +0x000

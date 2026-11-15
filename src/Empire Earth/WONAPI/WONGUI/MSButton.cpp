@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONGUIDraw.h"
 using namespace WONAPI;
 
+// FUNCTION: WON 0x006fed20
 // Paints a Windows push button: face, a dark outline when it is the default button, a raised or pressed frame, and
 // the text shifted one pixel while pressed (mspaint.rs Button)
 void MSButton::Paint(Graphics& g) {

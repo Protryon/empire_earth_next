@@ -29,6 +29,7 @@
 #include "lle/GERasterizer.h"
 #include "lle/GEPoint.h"
 
+// FUNCTION: LLE 0x100230ea
 // Creates a single-vertex point primitive with no textures, fully opaque
 GEPoint::GEPoint()
 {
@@ -43,6 +44,7 @@ GEPoint::GEPoint()
     this->mVertices->SetTextureCoordinate(GETextureCoordinate(0.0f, 0.0f), 0);
 }
 
+// FUNCTION: LLE 0x1002315d
 // Creates a point primitive at a 2D position with a colour and opacity, with no textures
 GEPoint::GEPoint(GE2DPoint& inPoint, GEColor& inColor, float inOpacity)
 {
@@ -83,3 +85,29 @@ void GEPoint::SetTexture(GETexture* inTexture, unsigned long inScreen)
 }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
+
+// Compiler-generated, continued:
+// SYNTHETIC: LLE 0x10022fca
+// SYNTHETIC: LLE 0x10022fd4
+// SYNTHETIC: LLE 0x10022fe4
+// SYNTHETIC: LLE 0x10022ff0
+// SYNTHETIC: LLE 0x10022ffa
+// SYNTHETIC: LLE 0x10023004
+// SYNTHETIC: LLE 0x10023014
+// SYNTHETIC: LLE 0x10023020
+// SYNTHETIC: LLE 0x1002302a
+// SYNTHETIC: LLE 0x10023034
+// SYNTHETIC: LLE 0x10023044
+// SYNTHETIC: LLE 0x10023050
+// SYNTHETIC: LLE 0x1002305a
+// SYNTHETIC: LLE 0x10023064
+// SYNTHETIC: LLE 0x10023074
+// SYNTHETIC: LLE 0x10023080
+// SYNTHETIC: LLE 0x1002308a
+// SYNTHETIC: LLE 0x10023094
+// SYNTHETIC: LLE 0x100230a4
+// SYNTHETIC: LLE 0x100230b0
+// SYNTHETIC: LLE 0x100230ba
+// SYNTHETIC: LLE 0x100230c4
+// SYNTHETIC: LLE 0x100230d4
+// SYNTHETIC: LLE 0x100230e0

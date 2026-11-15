@@ -20,6 +20,7 @@
 #include "ee/EECPAttackSubGroupUnit.h"
 #include "ee/EECPASGUSpace.h"
 
+// FUNCTION: EXE 0x40d22b
 // Creates a space sub group unit for a unit
 EECPASGUSpace::EECPASGUSpace(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inUnit, inSubGroup)
@@ -27,6 +28,10 @@ EECPASGUSpace::EECPASGUSpace(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGro
     this->mType = kASGUKindSpace;
 }
 
+// SYNTHETIC: EXE 0x40d24e
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x40d26a
 // Creates an empty space sub group unit (no unit yet; used when loading)
 EECPASGUSpace::EECPASGUSpace(EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inSubGroup)
@@ -34,11 +39,13 @@ EECPASGUSpace::EECPASGUSpace(EECPAttackSubGroup* inSubGroup)
     this->mType = kASGUKindSpace;
 }
 
+// FUNCTION: EXE 0x40d289
 // Destroys the space sub group unit (base members only)
 EECPASGUSpace::~EECPASGUSpace()
 {
 }
 
+// FUNCTION: EXE 0x40d294
 // Updates the unit; a planet spaceship that is carried or back on the map leaves the contained state for idle, and
 // an idle one chooses an action when there are targets, else flies to the active task when free; next in 1 s
 void EECPASGUSpace::Update(unsigned long inTime)

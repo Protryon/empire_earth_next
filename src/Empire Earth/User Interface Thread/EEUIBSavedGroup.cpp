@@ -36,6 +36,7 @@
 static unsigned long sSavedGroupUpSound;        // 0x564568 (sound 0x208)
 static unsigned long sSavedGroupDownSound;      // 0x56456c (sound 0x207)
 
+// FUNCTION: EXE 0x655c2a
 // Creates a saved-group button with its pressed bitmaps, an empty portrait and the two button sounds
 EEUIBSavedGroup::EEUIBSavedGroup(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm)
     : UIButton(inTable.GetID(), NULL, NULL, NULL, inRectangle, inForm, inTable.GetFormIndex(), 0),
@@ -61,6 +62,10 @@ EEUIBSavedGroup::EEUIBSavedGroup(UIControlsTable& inTable, const GERectangle& in
     this->mTexture = NULL;
 }
 
+// SYNTHETIC: EXE 0x655d57
+// (the scalar deleting destructor, emitted with the vtable; slot EEUIBSavedGroup+0x0)
+
+// FUNCTION: EXE 0x655d73
 // Destroys the saved-group button, releasing its portrait and texture and unloading its sounds
 EEUIBSavedGroup::~EEUIBSavedGroup()
 {
@@ -75,6 +80,7 @@ EEUIBSavedGroup::~EEUIBSavedGroup()
     EESoundObject::Get(kSoundButton2)->UnloadMedia();
 }
 
+// FUNCTION: EXE 0x655dd5
 // Snapshots the button for drawing: whether to draw the unit portrait, with its texture
 long EEUIBSavedGroup::CopyData()
 {
@@ -84,6 +90,7 @@ long EEUIBSavedGroup::CopyData()
     return UIButton::CopyData();
 }
 
+// FUNCTION: EXE 0x655e0b
 // Draws the group's unit portrait under the button
 long EEUIBSavedGroup::DrawPolygons()
 {
@@ -94,6 +101,7 @@ long EEUIBSavedGroup::DrawPolygons()
     return UIButton::DrawPolygons();
 }
 
+// FUNCTION: EXE 0x655e66
 // On a double click, sends a select-saved-group message with its double-click flag set (if it has units)
 long EEUIBSavedGroup::MouseLButtonDoublePressed()
 {
@@ -107,6 +115,7 @@ long EEUIBSavedGroup::MouseLButtonDoublePressed()
     return 0;
 }
 
+// FUNCTION: EXE 0x655ee7
 // On a click, adds the selection to the group (shift), saves the selection as the group (empty group) or
 // selects the group, and plays the button sound
 // NEAR: register permutation only (orig: this edi, player esi, message ebx); declaration order and NULL tests do not move it
@@ -131,6 +140,7 @@ long EEUIBSavedGroup::MouseLButtonUp()
     return UIButton::MouseLButtonUp();
 }
 
+// FUNCTION: EXE 0x655fce
 // On a right click, clears the saved group and plays the release sound
 long EEUIBSavedGroup::MouseRButtonUp()
 {
@@ -145,6 +155,11 @@ long EEUIBSavedGroup::MouseRButtonUp()
     return 0;
 }
 
+// FUNCTION: EXE 0x65604f
+// Creates a clear-saved-group message for a group index
+// (inline in EEMessage.h; emitted after its first user)
+
+// FUNCTION: EXE 0x65607c
 // Shows the first unit of the player's saved group, or no portrait when the group is empty
 void EEUIBSavedGroup::Refresh()
 {
@@ -164,6 +179,7 @@ void EEUIBSavedGroup::Refresh()
     }
 }
 
+// FUNCTION: EXE 0x6560e1
 // Shows a unit's portrait on the button (marked dirty when the portrait changes; always, once it had one)
 void EEUIBSavedGroup::SetUnit(EEComplexUnit* inUnit)
 {

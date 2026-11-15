@@ -27,12 +27,14 @@
 #include "ee/EEGameLog.h"
 #include "ee/EECPNextUnits.h"
 
+// FUNCTION: EXE 0x42cc87
 // Returns a unit type's weight: 3 for the space fighter, 1 otherwise
 long EEAIGetUnitTypeWeight(long inUnitType)
 {
     return inUnitType == kUnitTypeSp15SpaceFighter ? 3 : 1;
 }
 
+// FUNCTION: EXE 0x42cc9a
 // Returns the player's first unit of the type whose class transport capacity over its complex unit's, plus
 // its cargo room, is nonzero; NULL when none
 EEUnit* EEAIFindUpgradableUnit(long inUnitType, EEPlayer* inPlayer)
@@ -47,6 +49,7 @@ EEUnit* EEAIFindUpgradableUnit(long inUnitType, EEPlayer* inPlayer)
     return NULL;
 }
 
+// FUNCTION: EXE 0x42cd0e
 // Lists every player's computer player and spreads their updates over a second (1000 ms / count), starting
 // with the first at time 0
 void EEArtificialIntelligence::CollectComputerPlayers()
@@ -63,6 +66,7 @@ void EEArtificialIntelligence::CollectComputerPlayers()
     this->mNextUpdateTime = 0;
 }
 
+// FUNCTION: EXE 0x42cd99
 // When the next update time is reached, updates the next active computer player in turn and schedules the
 // following one an interval later
 void EEArtificialIntelligence::Update()
@@ -89,3 +93,6 @@ void EEArtificialIntelligence::Update()
         this->mNextPlayer = 0;
     this->mNextUpdateTime = this->mUpdateInterval + theTime;
 }
+
+// TEMPLATE: EXE 0x42ce02
+// std::vector<EEComputerPlayer*>::push_back (first used by CollectComputerPlayers)

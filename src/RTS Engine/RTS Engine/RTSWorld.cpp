@@ -14,6 +14,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/RTSUnit.h"
 
+// FUNCTION: EXE 0x547dfd
 // Creates an empty world: no players or map, normal game speed, a population limit of 800
 RTSWorld::RTSWorld()
 {
@@ -29,6 +30,10 @@ RTSWorld::RTSWorld()
     this->mPopulationLimit = 800;
 }
 
+// SYNTHETIC: EXE 0x547e9a
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x547eb6
 // Destroys the world's lock and its map
 RTSWorld::~RTSWorld()
 {
@@ -38,6 +43,7 @@ RTSWorld::~RTSWorld()
     }
 }
 
+// FUNCTION: EXE 0x547eee
 // Splits the population limit among the active players (player 0 excluded), optionally recounting each
 // player's population
 void RTSWorld::UpdatePlayerPopulationLimit(bool inRecount)
@@ -63,6 +69,7 @@ void RTSWorld::UpdatePlayerPopulationLimit(bool inRecount)
     }
 }
 
+// FUNCTION: EXE 0x547f71
 // Deletes every player and the map
 void RTSWorld::Clear()
 {
@@ -78,6 +85,7 @@ void RTSWorld::Clear()
     this->mMap = NULL;
 }
 
+// FUNCTION: EXE 0x547faf
 // Adds every player, the map and the player count to the sync checksum
 void RTSWorld::GetChecksum(ESChecksum& ioChecksum)
 {
@@ -96,6 +104,7 @@ void RTSWorld::GetChecksum(ESChecksum& ioChecksum)
     ioChecksum.AddChecksum("RTSWorld", theNumPlayers);
 }
 
+// FUNCTION: EXE 0x548024
 // Returns the player's index in the world, -1 if absent
 long RTSWorld::GetPlayerIndex(EEPlayer* inPlayer)
 {
@@ -108,6 +117,7 @@ long RTSWorld::GetPlayerIndex(EEPlayer* inPlayer)
     return theResult;
 }
 
+// FUNCTION: EXE 0x54804f
 // Finds a unit by id through the player in the id's top byte; NULL for an out-of-range player
 RTSUnit* RTSWorld::GetUnit(unsigned long inUnitID)
 {
@@ -118,6 +128,7 @@ RTSUnit* RTSWorld::GetUnit(unsigned long inUnitID)
     return NULL;
 }
 
+// FUNCTION: EXE 0x548072
 // Places the queued units, then releases and empties the placement queue
 void RTSWorld::FlushQueuedPlacements()
 {
@@ -128,6 +139,7 @@ void RTSWorld::FlushQueuedPlacements()
     this->mQueuedPlacements.clear();
 }
 
+// FUNCTION: EXE 0x5480ad
 // Queues a referenced unit for placement after another unit
 void RTSWorld::AddUnitEntry(RTSUnit* inUnit, RTSUnit* inInsertAfter)
 {
@@ -138,6 +150,7 @@ void RTSWorld::AddUnitEntry(RTSUnit* inUnit, RTSUnit* inInsertAfter)
     this->mQueuedPlacements.push_back(theEntry);
 }
 
+// FUNCTION: EXE 0x5480d1
 // Clears every player and deletes the map
 void RTSWorld::Reset()
 {
@@ -152,6 +165,7 @@ void RTSWorld::Reset()
     this->mMap = NULL;
 }
 
+// FUNCTION: EXE 0x54810b
 // Sets the camera, deriving its view line, yaw and pitch, and reports the change
 void RTSWorld::SetCameraTransformation(const GETransformation& inTransformation)
 {
@@ -167,6 +181,7 @@ void RTSWorld::SetCameraTransformation(const GETransformation& inTransformation)
     this->CameraChanged(inTransformation);
 }
 
+// FUNCTION: EXE 0x5481c9
 // Puts a player in a slot, deleting the slot's previous player
 void RTSWorld::SetPlayer(long inIndex, EEPlayer* inPlayer)
 {
@@ -178,6 +193,7 @@ void RTSWorld::SetPlayer(long inIndex, EEPlayer* inPlayer)
     this->mPlayers[inIndex] = inPlayer;
 }
 
+// FUNCTION: EXE 0x5481ee
 // Sets the player count, then re-splits the population limit and recounts every player's population
 void RTSWorld::SetNumPlayers(unsigned long inNumPlayers)
 {
@@ -185,8 +201,18 @@ void RTSWorld::SetNumPlayers(unsigned long inNumPlayers)
     this->UpdatePlayerPopulationLimit(true);
 }
 
+// FUNCTION: EXE 0x548202
 // Sets the world's total population limit
 void RTSWorld::SetPopulationLimit(unsigned long inLimit)
 {
     this->mPopulationLimit = inLimit;
 }
+
+// TEMPLATE: EXE 0x54820f
+// std::vector<RTSWorldUnitEntry>::push_back (first user 0x1480ad)
+
+// TEMPLATE: EXE 0x54823b
+// std::vector<RTSWorldUnitEntry>::_Buy (the ctor's vector(); ICF-folded name vector<EETileCoordinate>::_Buy)
+
+// SYNTHETIC: EXE 0x548274
+// RTSDummyHeader<RTSUnit>'s scalar deleting destructor (shared with RTSDummyUnit)

@@ -46,6 +46,7 @@
 #include "ee/EETown.h"
 
 // NEAR: only the register of the two argument copies differs (ecx vs eax); store order right
+// FUNCTION: EXE 0x4abbaf
 // Creates a player's town with the given id: an empty town area with no patrol group, not near water
 EETown::EETown(EEPlayer* inPlayer, long inTownID)
     : mNearMapEdge(false)
@@ -59,6 +60,10 @@ EETown::EETown(EEPlayer* inPlayer, long inTownID)
     this->Reset();
 }
 
+// SYNTHETIC: EXE 0x4abbf4
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4abc10
 // Destroys the town, releasing its patrol group
 EETown::~EETown()
 {
@@ -67,6 +72,7 @@ EETown::~EETown()
 
 // NEAR: the original refuses GetPoint's operator+ out of line and copies Virtual50's result field by field (a U2DPoint<long>
 // return type? EEUnit.h is shared); registers otherwise
+// FUNCTION: EXE 0x4abc27
 // Adds a unit's building to the town when it is the first or the town can take it: adds its tile, sets the patrol
 // group's points to the hull and counts it (walls at a tenth of their value); returns whether it was added
 bool EETown::AddUnit(EEUnit* inUnit)
@@ -124,6 +130,7 @@ bool EETown::AddUnit(EEUnit* inUnit)
 }
 
 // NEAR: the original calls GetPoint's begin()/operator+ out of line (as 0xac573 does here); ours expands them
+// FUNCTION: EXE 0x4abdf3
 // Adds a tile (the first sets the continent); rebuilds the hull and the near-water flags unless the tile is inside
 // the hull and not a vertex; returns true
 bool EETown::AddTile(const U2DPoint<long>& inTile)
@@ -156,6 +163,7 @@ bool EETown::AddTile(const U2DPoint<long>& inTile)
     return true;
 }
 
+// FUNCTION: EXE 0x4abede
 // Adds another town's counters and tiles to this one (the hull is not rebuilt)
 void EETown::Merge(EETown* inOther)
 {
@@ -172,6 +180,7 @@ void EETown::Merge(EETown* inOther)
         this->GetTileSet().Insert(thePoints[i]);
 }
 
+// FUNCTION: EXE 0x4abf8f
 // Zeroes the town's counters and continent, sets its reach to 256 and releases its patrol group
 void EETown::Reset()
 {
@@ -191,6 +200,7 @@ void EETown::Reset()
 }
 
 // NEAR: the original calls both vectors' _Ptrit::operator+ out of line; ours expands them (inline budget)
+// FUNCTION: EXE 0x4abfda
 // Recomputes whether the town is within 10 tiles of a connected water continent (and of a space one: the map-edge
 // flag); returns the water flag
 bool EETown::UpdateNearWater()
@@ -219,6 +229,7 @@ bool EETown::UpdateNearWater()
 }
 
 // NEAR: the original calls GetPoint's begin()/operator+ out of line (index in memory); ours expands them
+// FUNCTION: EXE 0x4ac116
 // Adopts (references) the patrol group of one of the owner's path-point units on a hull vertex, if any
 void EETown::FindPatrolGroup()
 {
@@ -239,6 +250,7 @@ void EETown::FindPatrolGroup()
 }
 
 // NEAR: register order of `left + GetRandom(..)` (the original adds into ecx after the call)
+// FUNCTION: EXE 0x4ac203
 // Returns a random map tile inside the town's hull (16 tries within its bounds), else the area's random point
 U2DPoint<long> EETown::GetRandomPoint()
 {
@@ -261,6 +273,7 @@ U2DPoint<long> EETown::GetRandomPoint()
 }
 
 // NEAR: theResult is kept in memory where the original keeps it in bl (the zero register of the NULL tests)
+// FUNCTION: EXE 0x4ac2b6
 // Returns whether a unit is a placed, immobile, non-ambient land building on a land continent (walls only when
 // a human player owns them)
 bool EETown::IsTownUnit(EEUnit* inUnit)
@@ -280,6 +293,7 @@ bool EETown::IsTownUnit(EEUnit* inUnit)
 }
 
 // NEAR: Virtual50's result copied field by field in the original (see AddUnit)
+// FUNCTION: EXE 0x4ac351
 // Removes a unit's building from the town (the mirror of AddUnit), counting its counters down; returns whether its tile was in the town (true if not taken)
 bool EETown::RemoveUnit(EEUnit* inUnit)
 {
@@ -321,6 +335,7 @@ bool EETown::RemoveUnit(EEUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4ac4b6
 // Finds or creates the town's patrol group (once the hull has two points) and sets its patrol points to the hull
 void EETown::RefreshPatrolGroup()
 {
@@ -340,6 +355,7 @@ void EETown::RefreshPatrolGroup()
     this->mPatrolGroup->SetPatrolPoints(thePoints, this->mPlayer->mPlayerID);
 }
 
+// FUNCTION: EXE 0x4ac573
 // Removes a tile from the town; when it was a hull vertex, rebuilds the hull (cleared when no tile is left) and the
 // patrol points; returns whether the tile was in the town
 bool EETown::RemoveHullTile(const U2DPoint<long>& inTile)
@@ -381,6 +397,7 @@ bool EETown::RemoveHullTile(const U2DPoint<long>& inTile)
 }
 
 // NEAR: theResult kept in memory where the original keeps it in bl, U2DPoint zero stores sunk below the first test
+// FUNCTION: EXE 0x4ac6f7
 // Returns whether an own town unit belongs to the town: always when the town is empty, else when it stands on the
 // town's continent inside the hull or within the reach (squared distance) of its closest hull point
 bool EETown::CanTake(EEUnit* inUnit)

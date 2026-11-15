@@ -30,7 +30,7 @@
 #include "ee/EEUnitGoal.h"
 #include "rust/ee_units.h"
 
-extern FSPath* gDataPath;
+extern FSPath* gDataPath;                   // 0x531908
 
 // New (R5b.4 round 20): the reader of a script's file for the Rust parser (ee_units script.rs): Unit AI
 // Scripts\<name>.tai through the data path, its bytes pushed to the sink; false when it is missing or does not open

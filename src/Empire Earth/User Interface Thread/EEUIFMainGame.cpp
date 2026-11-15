@@ -108,7 +108,7 @@ bool EEFn27C0B4B(void* inForm);   // another `return false` (the ctor reloads it
                                              // function, ICF-folded into the same body)
 long EEModeMouseNone(void* inLocation, void* inForm);  // `return 0` (ICF-folded)
 bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection);  // 0x2116a2 (EEUIBuildGate.cpp's)
-void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, long inPlayer);
+void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, long inPlayer);  // 0x23eb4c
 void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (the calamity's ghost at the mouse) (provisional name)
 // EESetCivBuilderButtonBlinking 0x27fcf0: ee/EmpireEarth.h (Open passes mIsButtonBlinking)
 void EEPostGraphicsAll();                   // 0x10fc0c (Open) (provisional name)
@@ -160,7 +160,11 @@ UWideString gDefaultPlayerNames[32] = {
     "Player 29",
     "Player 30",
     "Player 31"
-};
+};   // 0x564608 (provisional name)
+// SYNTHETIC: EXE 0x66272b   (wrapper)
+// SYNTHETIC: EXE 0x662735   (ctor)
+// SYNTHETIC: EXE 0x6628be   (registrar)
+// SYNTHETIC: EXE 0x6628ca   (dtor)
 
 // The unit hack whole in Rust (ee_screens unit_hack.rs): the original's members 0x2628e5 (ctor: the sorted
 // class names), 0x262a91 (dtor), 0x262aa5 PlaceUnit, 0x262c6f FillComboBox, 0x262cdc LoadUnitData, 0x262d66
@@ -329,6 +333,16 @@ struct EEUIFMGFormCall {
           mCaster(NULL), mCalamity(NULL), mOldMedia(NULL), mMedia(NULL) {}
 };
 
+// FUNCTION: EXE 0x664b4b
+// FUNCTION: EXE 0x66568e
+// FUNCTION: EXE 0x66572f
+// FUNCTION: EXE 0x6662d7
+// FUNCTION: EXE 0x666367
+// FUNCTION: EXE 0x66676e
+// FUNCTION: EXE 0x666960
+// FUNCTION: EXE 0x6669e8
+// FUNCTION: EXE 0x66716e
+// FUNCTION: EXE 0x6671b0
 // Runs a member that is Rust's (EE_SCREENS_MF_DO_*: Activate, Deactivate, Open, Close, DrawPolygons and the
 // original's UpdateBackgroundMedia, ShowAllBackgrounds, SetPauseText, PauseInformation, ResumeInformation,
 // SetChatTop, HideAllBackgrounds, HideMessages, RefreshSavedGroups, UpdateIconBar: ee_screens main_form.rs)
@@ -348,6 +362,7 @@ void EEUIFMainGame::HideAllBackgrounds()
     this->Rust(EE_SCREENS_MF_DO_HIDE_BACKGROUNDS);
 }
 
+// FUNCTION: EXE 0x662e73
 // Creates the main game form: its panel groups, mouse actions (scroll, zoom, click, lasso, build, calamity),
 // the mouse and keyboard tests of every interface mode, the unit hack, the hot keys (ee_screens main_form.rs
 // construct; it reads no control: they are made after it)
@@ -357,6 +372,73 @@ EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData) 
     ee_screens_main_form_construct(&theCall);
 }
 
+// FUNCTION: EXE 0x66443e
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x664469
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x664494
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x6644bf
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x6644ea
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x664515
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x664540
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x66456b
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x664596
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x6645c1
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x6645ec
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x664617
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x664642
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x66466d
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x664698
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x6646c3
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x6646ee
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x664719
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x664744
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x66476f
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// FUNCTION: EXE 0x66479a
+// Destroys a main game form event (scalar deleting destructor, emitted after its first user, the form's ctor)
+
+// SYNTHETIC: EXE 0x6647c5
+// (the scalar deleting destructor, emitted with the vtable; slot EEUIFMainGame+0x0)
+
+// FUNCTION: EXE 0x6647e1
 // Destroys the main game form, its actions, panel groups, poll and unit hack
 EEUIFMainGame::~EEUIFMainGame()
 {
@@ -377,6 +459,7 @@ EEUIFMainGame::~EEUIFMainGame()
     delete this->mUnitHack;
 }
 
+// FUNCTION: EXE 0x6648d4
 // Activates the form: frees the mouse, resumes a game paused only by leaving it, refreshes the saved groups
 void EEUIFMainGame::Activate()
 {
@@ -384,6 +467,7 @@ void EEUIFMainGame::Activate()
 }
 
 
+// FUNCTION: EXE 0x6649a2
 // Shows a chat message in the next free chat line (scrolling the lines up when full), wrapping the rest of a
 // long message onto further lines (ee_screens main_form.rs)
 void EEUIFMainGame::DisplayChatLine(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
@@ -397,12 +481,14 @@ void EEUIFMainGame::DisplayChatLine(const GEColor& inColor, const UWideString& i
     ee_screens_main_form_chat_line(&theCall);
 }
 
+// FUNCTION: EXE 0x664b1f
 // Builds a gate at a location facing a direction
 void EEUIFMainGame::BuildGate(const GE2DPoint& inLocation, long inDirection)
 {
     this->mBuild->BuildGate(inLocation, inDirection);
 }
 
+// FUNCTION: EXE 0x664b35
 // Builds a wall between two points
 void EEUIFMainGame::BuildWall(const GE2DPoint& inStart, const GE2DPoint& inEnd)
 {
@@ -410,6 +496,7 @@ void EEUIFMainGame::BuildWall(const GE2DPoint& inStart, const GE2DPoint& inEnd)
 }
 
 
+// FUNCTION: EXE 0x664cd5
 // Shows a text in the main game form's title label
 void EEUIFMainGame::SetStatusText(const UWideString& inText)
 {
@@ -419,6 +506,7 @@ void EEUIFMainGame::SetStatusText(const UWideString& inText)
         theLabel->SetText(inText);
 }
 
+// FUNCTION: EXE 0x664cf1
 // Closes the form: hides the messages, gives the graphics thread the UI render object back and unloads the
 // background media
 void EEUIFMainGame::Close()
@@ -426,12 +514,14 @@ void EEUIFMainGame::Close()
     this->Rust(EE_SCREENS_MF_DO_CLOSE);
 }
 
+// FUNCTION: EXE 0x664d40
 // Deactivates the form: frees and resets the mouse and leaves any interface mode
 void EEUIFMainGame::Deactivate()
 {
     this->Rust(EE_SCREENS_MF_DO_DEACTIVATE);
 }
 
+// FUNCTION: EXE 0x664dc4
 // Snapshots the form for drawing: selection state, error log, status refresh each poll, the panel group, edge
 // scrolling and the gate or wall preview of the current mode (ee_screens main_form.rs)
 long EEUIFMainGame::CopyData()
@@ -440,6 +530,7 @@ long EEUIFMainGame::CopyData()
     return (long)ee_screens_main_form_copy_data(&theCall);
 }
 
+// FUNCTION: EXE 0x66522b
 // Creates one of the six panel groups (main, statistics, chat, diplomacy, options, civilization builder)
 void EEUIFMainGame::CreateGroup(unsigned long inIndex)
 {
@@ -457,6 +548,7 @@ void EEUIFMainGame::CreateGroup(unsigned long inIndex)
     }
 }
 
+// FUNCTION: EXE 0x665317
 // Shows a chat message when the form has its chat lines
 void EEUIFMainGame::DisplayChat(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                                 unsigned long inFlags, unsigned long inArg5)
@@ -465,6 +557,7 @@ void EEUIFMainGame::DisplayChat(const GEColor& inColor, const UWideString& inNam
         this->DisplayChatLine(inColor, inName, inText, inFlags);
 }
 
+// FUNCTION: EXE 0x66533e
 // Shows an information message: scrolling text, the speaker's portrait and its sound; hides the messages
 // without a text control (ee_screens main_form.rs)
 void EEUIFMainGame::ShowInformation(EEUIFMGInformation* inInformation)
@@ -474,12 +567,14 @@ void EEUIFMainGame::ShowInformation(EEUIFMGInformation* inInformation)
     ee_screens_main_form_show_information(&theCall);
 }
 
+// FUNCTION: EXE 0x66550c
 // Draws the form's fixed background panels (the unit panels only with a selection)
 long EEUIFMainGame::DrawPolygons()
 {
     return (long)this->Rust(EE_SCREENS_MF_DO_DRAW);
 }
 
+// FUNCTION: EXE 0x6655da
 // Switches the bottom panel to another entity group and selects its panel group (ee_screens main_form.rs)
 void EEUIFMainGame::SetEntityGroup(long inGroup)
 {
@@ -489,6 +584,7 @@ void EEUIFMainGame::SetEntityGroup(long inGroup)
 
 
 
+// FUNCTION: EXE 0x665a06
 // Tells whether a screen point is in the game view and not under the unit information panel
 bool EEUIFMainGame::IsInGameView(const GE2DPoint& inLocation)
 {
@@ -501,6 +597,7 @@ bool EEUIFMainGame::IsInGameView(const GE2DPoint& inLocation)
     return false;
 }
 
+// FUNCTION: EXE 0x665ff6
 // Stores an error log line for the next snapshot
 void EEUIFMainGame::SetErrorString(const UWideString& inText, unsigned long inIndex)
 {
@@ -510,6 +607,7 @@ void EEUIFMainGame::SetErrorString(const UWideString& inText, unsigned long inIn
     this->mErrorCriticalSection->Leave();
 }
 
+// FUNCTION: EXE 0x666038
 // Opens the form: sound latency and volume, centred mouse, empty error log, the cancel-mode event, the
 // backgrounds and the civilization builder button's blinking
 void EEUIFMainGame::Open()
@@ -517,6 +615,12 @@ void EEUIFMainGame::Open()
     this->Rust(EE_SCREENS_MF_DO_OPEN);
 }
 
+// FUNCTION: EXE 0x6662ac
+// Destroys a cancel-mode event (scalar deleting destructor)
+// (an inline COMDAT after its first user, Open)
+
+
+// FUNCTION: EXE 0x6662f4
 // Reads the information and civilization builder blinking flags from a saved game (version 0.0xd2 on)
 long EEUIFMainGame::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -530,6 +634,7 @@ long EEUIFMainGame::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     return theResult;
 }
 
+// FUNCTION: EXE 0x66633a
 // Writes the information and civilization builder blinking flags to the saved game
 long EEUIFMainGame::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -541,6 +646,7 @@ long EEUIFMainGame::Save(unsigned long inMajorVersion, unsigned long inMinorVers
 }
 
 
+// FUNCTION: EXE 0x666384
 // Starts placing a building from a unit's tech when it can be produced; otherwise beeps and explains in
 // the chat log (ee_screens main_form.rs, as the other start modes)
 void EEUIFMainGame::BuildUnit(unsigned long inUnitID, long inTechnology)
@@ -549,6 +655,7 @@ void EEUIFMainGame::BuildUnit(unsigned long inUnitID, long inTechnology)
     ee_screens_main_form_build_unit(&theCall, (int64_t)inUnitID, inTechnology);
 }
 
+// FUNCTION: EXE 0x6664b4
 // Starts placing a gate for a tech (gate placement mode)
 void EEUIFMainGame::StartGate(long inTechnology)
 {
@@ -556,6 +663,7 @@ void EEUIFMainGame::StartGate(long inTechnology)
     ee_screens_main_form_start(&theCall, 0, inTechnology);
 }
 
+// FUNCTION: EXE 0x666572
 // Creates the build action with no tech chosen
 EEABuild::EEABuild()
 {
@@ -564,6 +672,7 @@ EEABuild::EEABuild()
     this->mIsQueued = 0;
 }
 
+// FUNCTION: EXE 0x666594
 // Starts placing a wall for a tech (wall placement mode)
 void EEUIFMainGame::StartWall(long inTechnology)
 {
@@ -571,6 +680,7 @@ void EEUIFMainGame::StartWall(long inTechnology)
     ee_screens_main_form_start(&theCall, 1, inTechnology);
 }
 
+// FUNCTION: EXE 0x66662d
 // Starts casting the calamity of a tech with the first selected unit: at once for self-targeted ones,
 // otherwise in calamity mode (with a volcano ghost for tech 0x3f9)
 void EEUIFMainGame::StartCalamity(long inTechnology)
@@ -580,6 +690,7 @@ void EEUIFMainGame::StartCalamity(long inTechnology)
 }
 
 
+// FUNCTION: EXE 0x66679a
 // Enters flare mode when units are selected
 void EEUIFMainGame::StartFlare()
 {
@@ -587,6 +698,7 @@ void EEUIFMainGame::StartFlare()
     ee_screens_main_form_start(&theCall, 3, 0);
 }
 
+// FUNCTION: EXE 0x66681d
 // Enters patrol mode when units are selected
 void EEUIFMainGame::StartPatrol()
 {
@@ -594,6 +706,7 @@ void EEUIFMainGame::StartPatrol()
     ee_screens_main_form_start(&theCall, 4, 0);
 }
 
+// FUNCTION: EXE 0x6668ee
 // Switches the interface mode, clearing ghosts and ending a wall or gate placement
 void EEUIFMainGame::SetUIState(long inUIState)
 {
@@ -1267,6 +1380,7 @@ extern "C" int32_t ee_screenscpp_cursor(void* inContext, uint32_t inOp, uint32_t
     return 0;
 }
 
+// FUNCTION: EXE 0x666f8b
 // Picks the mouse cursor for the unit under it from what the selection can do to it (ee_screens cursor.rs, with
 // GetAttackStance, GetTransportCommand, GetRepairCommand, GetCommandOnUnit, Fn265D7A and EEGetAttackRangeKind)
 void EEUIFMainGame::UpdateCursorKind()
@@ -1282,21 +1396,100 @@ void EEUIFMainGame::UpdateCursorKind()
 
 
 
+// FUNCTION: EXE 0x6671df
+// Creates the calamity casting action
+// (EEACalamity's ctor: inline in EEACalamity.h, emitted here out of line)
+
+// FUNCTION: EXE 0x66720f
+// Appends a row to the status update's countdown vector (std::vector::push_back, ICF-shared)
+// (vector<12-byte score entry>::push_back: a template COMDAT, ICF-folded with vector<EEATCCandidate>'s)
+
+// FUNCTION: EXE 0x66723b
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort over the status update's score entries: template COMDATs 0x26723b..0x26782d, emitted once 0x266a3b is
+// written)
+
+// FUNCTION: EXE 0x6672e6
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x66730b
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x6673d0
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x667408
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x6674b1
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x6674eb
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x667521
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x667616
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x66763e
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x6676a0
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x6676c5
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x667742
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x66779f
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x6677ed
+// Sorts the wonder countdown rows of the status update (std::sort template COMDAT)
+// (std::sort COMDAT)
+
+// FUNCTION: EXE 0x66782d
+// Returns an error log line by index (std::vector<UWideString>::operator[])
+// (vector<UWideString>::operator[]: a template COMDAT; CopyData calls it out of line)
+
 // ICF-folded empty members (no address of their own: 0x157269 / 0xe123d are their twins)
 void EEUIFMainGame::FnE123D()
 {
 }
 
+// ICF-FOLDED: EXE 0x67c0b4
+// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEPlagueFunctor::InfectsAlliesOnly)
 bool EEFn27C0B4B(void *)
 {
     return false;
 }
 
+// ICF-FOLDED: EXE 0x67c0b4
+// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEPlagueFunctor::InfectsAlliesOnly)
 bool EEModeKeyboardNone(void *)
 {
     return false;
 }
 
+// ICF-FOLDED: EXE 0x4fca98
+// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEUnitGoal::GetOutOfSynchChecksum)
 long EEModeMouseNone(void *,void *)
 {
     return 0;

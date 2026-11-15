@@ -19,6 +19,7 @@
 #include "ee/EEScenarioHost.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
+// FUNCTION: EXE 0x5c5783
 // Appends the scenario's sound and map picture files (lower case; the movie is not listed) to the list and each
 // missing file's error text to outError; returns false if one is missing
 bool EESMMediaStrings::ListMediaFiles(const UWideString& inFile, std::vector<UWideString>& ioFiles,
@@ -42,6 +43,7 @@ bool EESMMediaStrings::ListMediaFiles(const UWideString& inFile, std::vector<UWi
     return theResult;
 }
 
+// FUNCTION: EXE 0x5c5828
 // Finds the movie (0), sound (1: .wav, then .mp3) or map picture (2) in the data path, with the campaign prefix on
 // request; a missing file is reported in outError and returns false
 bool EESMMediaStrings::GetMediaFile(const UWideString& inScenarioName, unsigned long inKind, UWideString& outFile,
@@ -118,6 +120,7 @@ bool EESMMediaStrings::GetMediaFile(const UWideString& inScenarioName, unsigned 
     return theResult;
 }
 
+// FUNCTION: EXE 0x5c5e78
 // Reads the seven media strings from the saved file; returns the first error (ee_scenario save.rs strings)
 long EESMMediaStrings::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -128,6 +131,7 @@ long EESMMediaStrings::Load(unsigned long inMajorVersion, unsigned long inMinorV
     return ee_scenario_strings_io(&theTable, 7, false);
 }
 
+// FUNCTION: EXE 0x5c5ecc
 // Writes the seven media strings to the saved file; returns the first error
 long EESMMediaStrings::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {

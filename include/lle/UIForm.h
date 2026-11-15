@@ -227,7 +227,7 @@ private:
     // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number)
 #if defined(LLE_UIFORM_CPP)
     // Inferred: visible to UIForm.cpp only (shown to UIControl.cpp it renumbers that unit's $E chains)
-    static ISEntity* sTabKey;
+    static ISEntity* sTabKey;               // 0x1012e708
 #endif
     static ISEntity* sShiftKey;             // 0x1012e70c (read by UIControl::ShiftKeyPressed)
 #endif

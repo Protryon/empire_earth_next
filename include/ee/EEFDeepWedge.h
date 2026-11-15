@@ -6,8 +6,8 @@
 
 class EEFDeepWedge : public EEFWedge {
 public:
-    EEFDeepWedge();
-    virtual ~EEFDeepWedge();
+    EEFDeepWedge();                     // 0xdd861
+    virtual ~EEFDeepWedge();             // 0xdd8a7 (??_G 0xdd88b)
 };
 
 #endif

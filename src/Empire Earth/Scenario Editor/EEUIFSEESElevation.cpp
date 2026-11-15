@@ -19,6 +19,7 @@
 #include "ee/EEUIFSEESElevation.h"
 #include "ee/EEScenarioEditorIDs.h"
 
+// FUNCTION: EXE 0x5a1397
 // Creates the elevation tab's vertical slider, 20 pixels wide and the given height
 EEUIFSEESElevation::EEUIFSEESElevation(unsigned long inId, const GE2DPoint& inPosition, unsigned long inHeight,
                                        UIForm* inForm, unsigned long inIndex)
@@ -26,11 +27,16 @@ EEUIFSEESElevation::EEUIFSEESElevation(unsigned long inId, const GE2DPoint& inPo
 {
 }
 
+// SYNTHETIC: EXE 0x5a13f5
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x5a1411
 // Destroys the elevation slider
 EEUIFSEESElevation::~EEUIFSEESElevation()
 {
 }
 
+// FUNCTION: EXE 0x5a1437
 // Moves the slider, first showing the new elevation level (max - value - 24) in the value label when it changes
 void EEUIFSEESElevation::ChangeRange(unsigned long inValue)
 {

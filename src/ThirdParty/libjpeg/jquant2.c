@@ -220,7 +220,9 @@ typedef my_cquantizer * my_cquantize_ptr;
  * NULL pointer).
  */
 
+// FUNCTION: JPEG 0x1008f692
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x8123d0
 prescan_quantize (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
 		  JSAMPARRAY output_buf, int num_rows)
 {
@@ -269,7 +271,9 @@ typedef struct {
 typedef box * boxptr;
 
 
+// FUNCTION: JPEG 0x10090303
 LOCAL(boxptr)
+// FUNCTION: EXEIMG 0x8132c0
 find_biggest_color_pop (boxptr boxlist, int numboxes)
 /* Find the splittable box with the largest color population */
 /* Returns NULL if no splittable boxes remain */
@@ -289,7 +293,9 @@ find_biggest_color_pop (boxptr boxlist, int numboxes)
 }
 
 
+// FUNCTION: JPEG 0x10090332
 LOCAL(boxptr)
+// FUNCTION: EXEIMG 0x813300
 find_biggest_volume (boxptr boxlist, int numboxes)
 /* Find the splittable box with the largest (scaled) volume */
 /* Returns NULL if no splittable boxes remain */
@@ -309,7 +315,9 @@ find_biggest_volume (boxptr boxlist, int numboxes)
 }
 
 
+// FUNCTION: JPEG 0x1008fe55
 LOCAL(void)
+// FUNCTION: EXEIMG 0x812d30
 update_box (j_decompress_ptr cinfo, boxptr boxp)
 /* Shrink the min/max bounds of a box to enclose only nonzero elements, */
 /* and recompute its volume and population */
@@ -420,7 +428,9 @@ update_box (j_decompress_ptr cinfo, boxptr boxp)
 }
 
 
+// FUNCTION: JPEG 0x100901ef
 LOCAL(int)
+// FUNCTION: EXEIMG 0x813180
 median_cut (j_decompress_ptr cinfo, boxptr boxlist, int numboxes,
 	    int desired_colors)
 /* Repeatedly select and split the largest box until we have enough boxes */
@@ -495,7 +505,9 @@ median_cut (j_decompress_ptr cinfo, boxptr boxlist, int numboxes,
 }
 
 
+// FUNCTION: JPEG 0x1009035b
 LOCAL(void)
+// FUNCTION: EXEIMG 0x813330
 compute_color (j_decompress_ptr cinfo, boxptr boxp, int icolor)
 /* Compute representative color for a box, put it in colormap[icolor] */
 {
@@ -535,7 +547,9 @@ compute_color (j_decompress_ptr cinfo, boxptr boxp, int icolor)
 }
 
 
+// FUNCTION: JPEG 0x1008fdc9
 LOCAL(void)
+// FUNCTION: EXEIMG 0x812ca0
 select_colors (j_decompress_ptr cinfo, int desired_colors)
 /* Master routine for color selection */
 {
@@ -642,7 +656,9 @@ select_colors (j_decompress_ptr cinfo, int desired_colors)
  * inner-loop variables.
  */
 
+// FUNCTION: JPEG 0x1008f87a
 LOCAL(int)
+// FUNCTION: EXEIMG 0x812640
 find_nearby_colors (j_decompress_ptr cinfo, int minc0, int minc1, int minc2,
 		    JSAMPLE colorlist[])
 /* Locate the colormap entries close enough to an update box to be candidates
@@ -771,7 +787,9 @@ find_nearby_colors (j_decompress_ptr cinfo, int minc0, int minc1, int minc2,
 }
 
 
+// FUNCTION: JPEG 0x1008fa1e
 LOCAL(void)
+// FUNCTION: EXEIMG 0x812830
 find_best_colors (j_decompress_ptr cinfo, int minc0, int minc1, int minc2,
 		  int numcolors, JSAMPLE colorlist[], JSAMPLE bestcolor[])
 /* Find the closest colormap entry for each cell in the update box,
@@ -851,7 +869,9 @@ find_best_colors (j_decompress_ptr cinfo, int minc0, int minc1, int minc2,
 }
 
 
+// FUNCTION: JPEG 0x1008f7af
 LOCAL(void)
+// FUNCTION: EXEIMG 0x812520
 fill_inverse_cmap (j_decompress_ptr cinfo, int c0, int c1, int c2)
 /* Fill the inverse-colormap entries in the update box that contains */
 /* histogram cell c0/c1/c2.  (Only that one cell MUST be filled, but */
@@ -911,7 +931,9 @@ fill_inverse_cmap (j_decompress_ptr cinfo, int c0, int c1, int c2)
  * Map some rows of pixels to the output colormapped representation.
  */
 
+// FUNCTION: JPEG 0x1008f703
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x812450
 pass2_no_dither (j_decompress_ptr cinfo,
 		 JSAMPARRAY input_buf, JSAMPARRAY output_buf, int num_rows)
 /* This version performs no dithering */
@@ -945,7 +967,9 @@ pass2_no_dither (j_decompress_ptr cinfo,
 }
 
 
+// FUNCTION: JPEG 0x1008fb38
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x812990
 pass2_fs_dither (j_decompress_ptr cinfo,
 		 JSAMPARRAY input_buf, JSAMPARRAY output_buf, int num_rows)
 /* This version performs Floyd-Steinberg dithering */
@@ -1104,7 +1128,9 @@ pass2_fs_dither (j_decompress_ptr cinfo,
  * to Aaron Giles for this idea.
  */
 
+// FUNCTION: JPEG 0x1008f4f1
 LOCAL(void)
+// FUNCTION: EXEIMG 0x812210
 init_error_limit (j_decompress_ptr cinfo)
 /* Allocate and fill in the error_limiter table */
 {
@@ -1139,7 +1165,9 @@ init_error_limit (j_decompress_ptr cinfo)
  * Finish up at the end of each pass.
  */
 
+// FUNCTION: JPEG 0x1008fda7
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x812c70
 finish_pass1 (j_decompress_ptr cinfo)
 {
   my_cquantize_ptr cquantize = (my_cquantize_ptr) cinfo->cquantize;
@@ -1163,7 +1191,9 @@ finish_pass2 (j_decompress_ptr cinfo)
  * Initialize for each processing pass.
  */
 
+// FUNCTION: JPEG 0x1008f590
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x8122b0
 start_pass_2_quant (j_decompress_ptr cinfo, boolean is_pre_scan)
 {
   my_cquantize_ptr cquantize = (my_cquantize_ptr) cinfo->cquantize;
@@ -1226,7 +1256,9 @@ start_pass_2_quant (j_decompress_ptr cinfo, boolean is_pre_scan)
  * Switch to a new external colormap between output passes.
  */
 
+// FUNCTION: JPEG 0x10090497
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x8134c0
 new_color_map_2_quant (j_decompress_ptr cinfo)
 {
   my_cquantize_ptr cquantize = (my_cquantize_ptr) cinfo->cquantize;
@@ -1240,7 +1272,9 @@ new_color_map_2_quant (j_decompress_ptr cinfo)
  * Module initialization routine for 2-pass color quantization.
  */
 
+// FUNCTION: JPEG 0x1008f3e2
 GLOBAL(void)
+// FUNCTION: EXEIMG 0x8120e0
 jinit_2pass_quantizer (j_decompress_ptr cinfo)
 {
   my_cquantize_ptr cquantize;

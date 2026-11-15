@@ -134,6 +134,22 @@
 // moved to EEUIFSETerrain.cpp (one translation unit; its UIListBox<vector<GEColor> > /
 // UIListBox<EESEUITTData> COMDATs are what that file compiles).
 
+// FUNCTION: EXE 0x5af47b
+// Shows the unit limit per player (slider value / non-gaia players) and updates the slider's own label
+// (EESEEGameUnitLimit; ee_screens editor_events.rs)
+
+// FUNCTION: EXE 0x5af4c1
+// (EESEEHideUI::ProcessEvent: ee_screens editor_events.rs)
+
+// FUNCTION: EXE 0x5af55a
+// (EESEEChangeViewport::ProcessEvent: ee_screens editor_events.rs)
+
+// FUNCTION: EXE 0x5af58e
+// (EESEEQuickLoad::ProcessEvent: ee_screens editor_events.rs)
+
+// FUNCTION: EXE 0x5af874
+// (EESEEQuickSave::ProcessEvent: ee_screens editor_events.rs)
+
 // The host of the editor form's events whole in Rust (EE_SCREENS_SEE_OP_*; EESEERust in ee/EESEARust.h)
 void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESEEvents.cpp
 void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, bool inAreas);   // EESETSEffect.cpp
@@ -266,6 +282,16 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
     return 0;
 }
 
+// FUNCTION: EXE 0x5af8ad
+// Creates a quick save action referencing the quick save/load state (inline ctor, out of line after its first user)
+
+// SYNTHETIC: EXE 0x5af8cd
+// (the scalar deleting destructor, emitted with the vtable)
+
+// SYNTHETIC: EXE 0x5af900
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x5af92b
 // Reads the dialog message (text, unit type, sound, duration, unit, scroll speed, and from version 0.200 on
 // the cinematic flag) from the saved scenario; returns the first read error
 long EESMDialogMessage::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -299,6 +325,7 @@ long EESMDialogMessage::Load(unsigned long inMajorVersion, unsigned long inMinor
     return inFile.Read(this->mIsCinematic);
 }
 
+// FUNCTION: EXE 0x5afa14
 // Writes the dialog message, cinematic flag included, to the saved scenario; returns the first write error
 long EESMDialogMessage::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {

@@ -58,15 +58,18 @@ RegKey::RegKey(int root,const std::string& path,bool create,bool nonvolatile)
 {
     this->OpenNewKey(root,path,create,nonvolatile);
 }
+// FUNCTION: WON 0x6a42e0
 // Destroys the key wrapper
 RegKey::~RegKey()
 {
 }
+// FUNCTION: WON 0x6a4370
 // Closes the key if it is open
 void RegKey::CloseKey()
 {
     this->mIsOpen=false;
 }
+// FUNCTION: WON 0x6a4390
 // Reads the named value's text; false when it is missing
 bool RegKey::GetToBuf(const std::string& name,std::string& outText) const
 {
@@ -77,6 +80,7 @@ bool RegKey::GetToBuf(const std::string& name,std::string& outText) const
     outText=&buffer[0];
     return true;
 }
+// FUNCTION: WON 0x6a4680
 // Reads a DWORD value; returns 0 on success, 2 for a wrong type, 1 when missing (value is 0 then)
 int RegKey::QueryDWORD(const std::string& name,DWORD& value)
 {
@@ -92,6 +96,7 @@ int RegKey::QueryDWORD(const std::string& name,DWORD& value)
     return this->GetToBuf(name,text) ? 2 : 1;
 }
 // An empty binary value returns 4 (no size) and leaves the caller's buffer alone
+// FUNCTION: WON 0x6a46e0
 // Reads a binary value into a new byte buffer; returns 0, 2 wrong type, 4 empty or 1 missing
 int RegKey::QueryBinary(const std::string& name,ConstSmartPtr<ByteBuffer>& value)
 {
@@ -107,6 +112,7 @@ int RegKey::QueryBinary(const std::string& name,ConstSmartPtr<ByteBuffer>& value
     value=new ByteBuffer(bytes.data(),bytes.length(),false);
     return 0;
 }
+// FUNCTION: WON 0x6a4830
 // Deletes the named subkey of an open key; returns whether it was deleted
 bool RegKey::DeleteSubKey(const std::string& key)
 {
@@ -115,6 +121,7 @@ bool RegKey::DeleteSubKey(const std::string& key)
     return PlatConfigDelete(ConfigBlock(this->mBlock,key).c_str(),NULL)!=0;
 }
 // The child is closed only when this parent is open
+// FUNCTION: WON 0x6a4870
 // Closes the given child key and deletes it by its path; returns whether it was deleted
 bool RegKey::DeleteSubKey(RegKey& key)
 {
@@ -129,6 +136,7 @@ bool RegKey::DeleteSubKey(RegKey& key)
 
 namespace WONAPI {
 // The root is passed as int (0 classes root .. 6 dyn data); every root maps to the same "won" block
+// FUNCTION: WON 0x006a4440
 // Opens or creates the key under the root given by index
 bool RegKey::OpenNewKey(int root,const std::string& path,bool create,bool nonvolatile)
 {
@@ -139,6 +147,7 @@ bool RegKey::OpenNewKey(int root,const std::string& path,bool create,bool nonvol
     return this->OpenBlock("won",path);
 }
 // A block needs no creating (setting a value creates it): opening a missing key succeeds as creating it did
+// FUNCTION: WON 0x006a4470
 // Closes the current key and opens the path under the parent block, remembering the path; returns success
 bool RegKey::OpenBlock(const std::string& parent,const std::string& path)
 {
@@ -254,3 +263,9 @@ RegKey::GetResult RegKey::GetValue(const string& theName, string& theValR) const
 	return this->GetToBuf(theName, theValR) ? Ok : NotFound;
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006a4240
+// (public: virtual void * __thiscall WONAPI::RegKey::`scalar deleting destructor'(unsigned int)    [??_GRegKey@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x006a4260
+// (public: __thiscall WONAPI::RegKey::RegKey(int,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,bool,boo)

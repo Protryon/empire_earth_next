@@ -9,6 +9,7 @@
 
 #include "lle/LowLevelEngine.h"
 
+// FUNCTION: LLE 0x10083b0a
 // Formats into the string's buffer (grown first when the text does not fit: the original wrote past it), then
 // updates its character and byte lengths
 long sprintf(UWideString& outString, const char* inFormat, ...)
@@ -27,11 +28,13 @@ long sprintf(UWideString& outString, const char* inFormat, ...)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10083c38
 UWideString::~UWideString()
 {
     ee_uwstring_free(&this->mState);
 }
 
+// FUNCTION: LLE 0x1008422b
 // Adds a checksum of the characters (weighted by position, times the length) named after the text
 void UWideString::GetChecksum(ESChecksum& ioChecksum)
 {
@@ -40,6 +43,7 @@ void UWideString::GetChecksum(ESChecksum& ioChecksum)
     ioChecksum.AddChecksum(theName, ee_uwstring_checksum(&this->mState));
 }
 
+// FUNCTION: LLE 0x100845b5
 // Reads a size and that many bytes from the file; on failure leaves the string empty and returns the error
 long UWideString::Load(FSFile& inFile)
 {
@@ -59,6 +63,7 @@ long UWideString::Load(FSFile& inFile)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10084670
 // Writes the byte size and the bytes, both counting the terminator, to the file; returns the first error
 long UWideString::Save(FSFile& inFile) const
 {
@@ -73,6 +78,7 @@ long UWideString::Save(FSFile& inFile) const
     return theResult;
 }
 
+// FUNCTION: LLE 0x100846cb
 // Splits the string at any of the separator characters into outTokens (ee_uwstring_tokenize gives the tokens'
 // first and last characters), skipping empty tokens; always true
 bool UWideString::Tokenize(const UWideString& inSeparators, std::vector<UWideString>& outTokens) const

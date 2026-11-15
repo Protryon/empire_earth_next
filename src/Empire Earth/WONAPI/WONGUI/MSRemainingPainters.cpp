@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONGUIDraw.h"
 
 namespace WONAPI {
+// FUNCTION: WON 0x006ff000
 // Paints a list header button and, when its column is sorted, a small up or down triangle after the text (shifted
 // by one pixel while pressed)
 void MSHeaderButton::Paint(Graphics& g)
@@ -23,6 +24,7 @@ void MSHeaderButton::Paint(Graphics& g)
                               (int)MultiListHeader::GetSortTypeForButton(this),this->mText->GetWidth(),this->GetLeftTextPad()));
 }
 
+// FUNCTION: WON 0x006ff2a0
 // Paints a close button: face background, a raised or sunken 3D frame and the X, shifted while pressed
 void MSCloseButton::Paint(Graphics& g)
 {
@@ -30,6 +32,7 @@ void MSCloseButton::Paint(Graphics& g)
     WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::CloseButton,this->Width(),this->Height(),this->IsPressed()?EE_WON_MSPAINT_PRESSED:0));
 }
 
+// FUNCTION: WON 0x006ff360
 // Paints a scrollbar thumb: face background with a raised frame
 void MSScrollThumb::Paint(Graphics& g)
 {
@@ -37,6 +40,7 @@ void MSScrollThumb::Paint(Graphics& g)
     WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::ScrollThumb,this->Width(),this->Height()));
 }
 
+// FUNCTION: WON 0x006ff7d0
 // Paints a label: face background unless transparent, then the text
 void MSLabel::Paint(Graphics& g)
 {

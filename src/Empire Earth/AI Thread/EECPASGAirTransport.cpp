@@ -78,6 +78,7 @@
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"
 
+// FUNCTION: EXE 0x4440cd
 // Creates an air transport sub-group for the attack group, with no land group to carry yet
 EECPASGAirTransport::EECPASGAirTransport(EECPAttackGroup* inGroup, long inKind) : EECPASGAir(inGroup, inKind)
 {
@@ -85,11 +86,16 @@ EECPASGAirTransport::EECPASGAirTransport(EECPAttackGroup* inGroup, long inKind) 
     this->mOwner = this;
 }
 
+// SYNTHETIC: EXE 0x44410b
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x444127
 // Destroys the air transport sub-group (base members only)
 EECPASGAirTransport::~EECPASGAirTransport()
 {
 }
 
+// FUNCTION: EXE 0x444150
 // Sets the task as an air sub-group does and flags every unit as needing new orders
 void EECPASGAirTransport::SetTask(const EECPAGTask& inTask)
 {
@@ -99,6 +105,7 @@ void EECPASGAirTransport::SetTask(const EECPAGTask& inTask)
     }
 }
 
+// FUNCTION: EXE 0x444188
 // Counts the units carried by all transports in the sub-group
 long EECPASGAirTransport::CountCargo()
 {
@@ -109,6 +116,7 @@ long EECPASGAirTransport::CountCargo()
     return theResult;
 }
 
+// FUNCTION: EXE 0x4441cb
 // Picks a random player among itself and (if asked) its allies with towns, then a random point in a random town
 // of the first one as the new rally point; returns the rally point (unchanged if that player has no town)
 EETileLocation EECPASGAirTransport::GetRallyPoint(bool inIncludeAllies)
@@ -139,6 +147,7 @@ EETileLocation EECPASGAirTransport::GetRallyPoint(bool inIncludeAllies)
     return this->mRallyPoint.mTile;
 }
 
+// FUNCTION: EXE 0x4443f3
 // Launches the transports: every unit retargets now and needs orders, flies to a location or attack task, and updates
 void EECPASGAirTransport::Launch(unsigned long inTime)
 {
@@ -151,6 +160,7 @@ void EECPASGAirTransport::Launch(unsigned long inTime)
     this->UpdateUnits(inTime);
 }
 
+// FUNCTION: EXE 0x44446b
 // Takes requested units and regroups; without an active task, releases targets, flags units for orders and zeroes
 // the on-map units' flight time unless units were just taken
 void EECPASGAirTransport::GoIdle()
@@ -171,6 +181,7 @@ void EECPASGAirTransport::GoIdle()
     }
 }
 
+// FUNCTION: EXE 0x44454f
 // Recalls every active transport that has a flight time (zeroes it or clears its holder's goals), clears its
 // goals, then requests removal
 void EECPASGAirTransport::RequestRemoval()
@@ -189,6 +200,7 @@ void EECPASGAirTransport::RequestRemoval()
     EECPAttackSubGroup::RequestRemoval();
 }
 
+// FUNCTION: EXE 0x444643
 // Switches state: remove flies to the rally point and recalls, load boards the land group, release frees the
 // land group and sets a return task to a new rally point; other states go to the air sub-group
 void EECPASGAirTransport::SetState(long inState, long inTime)
@@ -225,6 +237,7 @@ void EECPASGAirTransport::SetState(long inState, long inTime)
     }
 }
 
+// FUNCTION: EXE 0x444740
 // Asks the land group to board the active transports and marks the cargo stage as loading
 void EECPASGAirTransport::LoadCargo()
 {
@@ -240,6 +253,7 @@ void EECPASGAirTransport::LoadCargo()
     this->mCargoStage = 1;
 }
 
+// FUNCTION: EXE 0x4447e3
 // Runs the transport state machine (next update in 2 s): scans targets, updates units, then steps through idle,
 // wait, launch, load, carry and release, ending in removal or idle
 void EECPASGAirTransport::Update(long inTime)
@@ -304,6 +318,7 @@ void EECPASGAirTransport::Update(long inTime)
     this->mNextUpdateTime = inTime + 2000;
 }
 
+// FUNCTION: EXE 0x4449fb
 // Loads the air sub-group and then the transport data from a saved game; returns the first error
 long EECPASGAirTransport::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -314,6 +329,7 @@ long EECPASGAirTransport::Load(unsigned long inMajorVersion, unsigned long inMin
     return theResult;
 }
 
+// FUNCTION: EXE 0x444a2c
 // Sends the sub-group to its next waypoint if that tile is on the map
 void EECPASGAir::MoveToDestination()
 {
@@ -321,6 +337,7 @@ void EECPASGAir::MoveToDestination()
         this->SetDestination(this->mNextWaypoint);
 }
 
+// FUNCTION: EXE 0x444a58
 // Switches to the load state if the land group still has units not aboard
 void EECPASGAirTransport::StartLoading()
 {
@@ -332,6 +349,7 @@ void EECPASGAirTransport::StartLoading()
         this->SetState(kASGStateLoad, gPhysics->mGameTime);
 }
 
+// FUNCTION: EXE 0x444ada
 // Restores the air sub-group and then the transport links after a load; returns the first error
 long EECPASGAirTransport::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -342,12 +360,14 @@ long EECPASGAirTransport::Restore(unsigned long inMajorVersion, unsigned long in
     return theResult;
 }
 
+// FUNCTION: EXE 0x444b05
 // Sets the land group the transports carry
 void EECPASGAirTransport::SetLand(EECPASGLand* inLand)
 {
     EECPASGTransport::SetLand(inLand);
 }
 
+// FUNCTION: EXE 0x444b11
 // Tests a transport condition: task valid and has-cargo mean the land group has units; also should-return, all
 // aboard, all unloaded; any-aboard is always false; others go to the base
 bool EECPASGAirTransport::TestCondition(long inState, long inTime)
@@ -385,6 +405,7 @@ bool EECPASGAirTransport::TestCondition(long inState, long inTime)
     return theResult;
 }
 
+// FUNCTION: EXE 0x444c2f
 // Orders each transport to unload at the location; empty ones and those unable to unload there (the tile is marked
 // to avoid) move to a random tile within 7 of it instead; marks the cargo stage as unloading
 void EECPASGAirTransport::UnloadAt(const EECPILocation& inLocation)
@@ -425,6 +446,22 @@ void EECPASGAirTransport::UnloadAt(const EECPILocation& inLocation)
     this->mCargoStage = 2;
 }
 
+// SYNTHETIC: EXE 0x444e63
+// (the scalar deleting destructor)
+
+// SYNTHETIC: EXE 0x444e6e
+// (the this-adjusting thunk into Load (sub ecx, 0x1e8; jmp), compiler-generated for the EECPASGTransport base)
+
+// SYNTHETIC: EXE 0x444e79
+// (the this-adjusting thunk into Restore (sub ecx, 0x1e8; jmp))
+
+// SYNTHETIC: EXE 0x444e84
+// (the this-adjusting thunk into Save (sub ecx, 0x1e8; jmp))
+
+// FUNCTION: EXE 0x444e8f
+// Appends a player to a list of players (std::vector push_back)
+
+// FUNCTION: EXE 0x444ebb
 // Accepts a live unit of another player that passes the land target filter
 bool EECPALandTargetFilter::operator()(EEComplexUnit* inUnit)
 {
@@ -433,6 +470,7 @@ bool EECPALandTargetFilter::operator()(EEComplexUnit* inUnit)
     return this->Accept(inUnit);
 }
 
+// FUNCTION: EXE 0x444eda
 // Accepts visible, targetable units of the player or its enemies except runways, foundations, harmless Gaia units and
 // walls or gates (unless allowed and reachable); near a ready transport only badly hurt units; wonder tasks narrow it
 bool EECPALandTargetFilter::Accept(EEComplexUnit* inUnit)
@@ -527,6 +565,7 @@ bool EECPALandTargetFilter::Accept(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44527e
 // Accepts a live unit of another player that passes the air target filter
 bool EECPAAirTargetFilter::operator()(EEComplexUnit* inUnit)
 {
@@ -535,6 +574,7 @@ bool EECPAAirTargetFilter::operator()(EEComplexUnit* inUnit)
     return this->Accept(inUnit);
 }
 
+// FUNCTION: EXE 0x44529d
 // Accepts enabled, targetable units of the player or its enemies except walls, runways, foundations and harmless
 // Gaia units; cloaked units, or any unit below hard difficulty, must be seen by the player
 bool EECPAAirTargetFilter::Accept(EEComplexUnit* inUnit)
@@ -564,6 +604,7 @@ bool EECPAAirTargetFilter::Accept(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4453a4
 // Accepts a live unit of another player that passes the sea target filter
 bool EECPASeaTargetFilter::operator()(EEComplexUnit* inUnit)
 {
@@ -572,6 +613,7 @@ bool EECPASeaTargetFilter::operator()(EEComplexUnit* inUnit)
     return this->Accept(inUnit);
 }
 
+// FUNCTION: EXE 0x4453c3
 // Accepts enabled, targetable units of the player or its enemies except foundations, runways, harmless Gaia units and
 // walls (towers and, above easy, shore walls only with shore attacks); visibility as for air; or the alternate rule
 bool EECPASeaTargetFilter::Accept(EEComplexUnit* inUnit)
@@ -618,6 +660,7 @@ bool EECPASeaTargetFilter::Accept(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x445559
 // Accepts enabled, targetable units of the player or its enemies except runways, foundations, buildings when naval
 // targets are off and harmless Gaia units; cloaked units, or any unit below hard difficulty, must be seen
 bool EECPASeaTargetFilter::AcceptAlternate(EEComplexUnit* inUnit)
@@ -646,6 +689,7 @@ bool EECPASeaTargetFilter::AcceptAlternate(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x445655
 // Accepts a live unit of another player that passes the helicopter target filter
 bool EECPAHelicopterTargetFilter::operator()(EEComplexUnit* inUnit)
 {
@@ -654,6 +698,7 @@ bool EECPAHelicopterTargetFilter::operator()(EEComplexUnit* inUnit)
     return this->Accept(inUnit);
 }
 
+// FUNCTION: EXE 0x445674
 // Accepts targets as the air filter does; for a wonder task (kind-4 tech node) only the wonder itself and
 // non-building units not hostile to its owner
 bool EECPAHelicopterTargetFilter::Accept(EEComplexUnit* inUnit)
@@ -699,6 +744,7 @@ bool EECPAHelicopterTargetFilter::Accept(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4457de
 // Accepts a live unit of another player that passes the spaceship target filter
 bool EECPASpaceshipTargetFilter::operator()(EEComplexUnit* inUnit)
 {
@@ -707,6 +753,7 @@ bool EECPASpaceshipTargetFilter::operator()(EEComplexUnit* inUnit)
     return this->Accept(inUnit);
 }
 
+// FUNCTION: EXE 0x4457fd
 // Accepts targets by the same rules as the sea filter's normal mode
 bool EECPASpaceshipTargetFilter::Accept(EEComplexUnit* inUnit)
 {
@@ -749,12 +796,16 @@ bool EECPASpaceshipTargetFilter::Accept(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// ICF-FOLDED: EXE 0x4ac98e
 // Does nothing: transports do not attack
+// (no address of its own: folded into the shared `ret 0xc` body the vtable slot points at)
 void EECPASGAirTransport::AttackWith(EECPAttackSubGroupUnit*,EEComplexUnit*,EETileCoordinate*)
 {
 }
 
+// ICF-FOLDED: EXE 0x450fa8
 // Saves the sub-group and then the transport data; returns the first error
+// (no address of its own: the same body as EECPASGSpaceTransport::Save, which ICF kept; [sib 2])
 long EECPASGAirTransport::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     long theResult = EECPAttackSubGroup::Save(inMajorVersion, inMinorVersion, outFile);
@@ -763,7 +814,9 @@ long EECPASGAirTransport::Save(unsigned long inMajorVersion, unsigned long inMin
     return theResult;
 }
 
+// ICF-FOLDED: EXE 0x450ab8
 // Sums the transport capacity of the sub-group's units
+// (no address of its own: the same body as EECPASGSpaceTransport::Virtual08, which ICF kept; [sib 15])
 long EECPASGAirTransport::GetCargoCapacity()
 {
     long theSum = 0;
@@ -772,8 +825,10 @@ long EECPASGAirTransport::GetCargoCapacity()
     return theSum;
 }
 
+// ICF-FOLDED: EXE 0x45110d
 // Removes the unit; while loading, restarts loading once if any active unit remains (not while the world is cleared
 // or a game loads); returns whether the unit was removed
+// (no address of its own: the same body as EECPASGSpaceTransport::RemoveUnit, which ICF kept; [sib 25])
 bool EECPASGAirTransport::RemoveUnit(EEComplexUnit* inUnit)
 {
     bool theResult = EECPAttackSubGroup::RemoveUnit(inUnit);
@@ -788,14 +843,18 @@ bool EECPASGAirTransport::RemoveUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// ICF-FOLDED: EXE 0x44e76a
 // Releases the land group and shuts the sub-group down
+// (no address of its own: the same body as EECPASGSeaTransport::Shutdown, which ICF kept; [sib 46])
 void EECPASGAirTransport::Shutdown()
 {
     EECPASGTransport::ReleaseLand();
     EECPAttackSubGroup::Shutdown();
 }
 
+// ICF-FOLDED: EXE 0x4509f2
 // Returns the share of units in danger, at least 0.75 if any of them carries cargo; 0 while redirecting cargo
+// (no address of its own: the same body as EECPASGSpaceTransport::GetDangerRatio, which ICF kept; [sib 51])
 float EECPASGAirTransport::GetDangerRatio(long inArg1)
 {
     float theResult = 0.0f;
@@ -820,7 +879,9 @@ float EECPASGAirTransport::GetDangerRatio(long inArg1)
     return theResult;
 }
 
+// ICF-FOLDED: EXE 0x4459d6
 // Sets every path cost weight to zero
+// (no address of its own: the same body as EECPASGHelicopter::GetPathCosts, which ICF kept; [sib 53])
 void EECPASGAirTransport::GetPathCosts(void* inFrom, void* inTo, EECPASGWeights& outWeights)
 {
     outWeights.Fill(0.0f);

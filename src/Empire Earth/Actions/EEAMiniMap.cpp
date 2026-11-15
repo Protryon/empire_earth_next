@@ -66,7 +66,10 @@
 #include "ee/EEAMiniMap.h"
 
 GETransformation gMiniMapTransformation;
+// SYNTHETIC: EXE 0x402a84   (wrapper: a bare jmp, GETransformation has no destructor)
+// SYNTHETIC: EXE 0x402a89   (ctor)
 
+// FUNCTION: EXE 0x402a94
 // Runs the mini-map click: centres the camera (mode 0) or sends the selected group there (mode 1)
 void EEAMiniMap::Virtual4()
 {
@@ -80,6 +83,7 @@ void EEAMiniMap::Virtual4()
     }
 }
 
+// FUNCTION: EXE 0x402aaa
 // Sends the selected group (or sets the rally point) to the clicked mini-map location, queued with Shift
 void EEAMiniMap::SendGroup()
 {
@@ -111,6 +115,15 @@ void EEAMiniMap::SendGroup()
     }
 }
 
+// FUNCTION: EXE 0x402ca6
+// Creates the message that sets a building's rally goal
+// (EEMSetRallyGoal's inline ctor, ee/EEMessage.h)
+
+// TEMPLATE: EXE 0x402cf6
+// Returns the set-rally-goal message's label
+// (EEMSetRallyGoal::GetMessageLabel, inline in ee/EEMessage.h)
+
+// FUNCTION: EXE 0x402cfc
 // Returns the group's first unit, or NULL when the group is empty
 // (EEGroup::GetFirstUnit: out of line after its first user) slot 0x18 then slot 0x14(0)
 EEComplexUnit* EEGroup::GetFirstUnit()
@@ -120,6 +133,7 @@ EEComplexUnit* EEGroup::GetFirstUnit()
     return NULL;
 }
 
+// FUNCTION: EXE 0x402d17
 // Centres the camera on the clicked mini-map point, clamping points off the map to the nearest tile
 void EEAMiniMap::CenterCamera()
 {
@@ -172,6 +186,12 @@ void EEAMiniMap::CenterCamera()
     ::gWorld.mCameraControl.SetChanged();
 }
 
+// FUNCTION: EXE 0x402f85
+// Returns the map tile at a tile position, or NULL off the map
+// (EEMap::GetTile, inline in ee/EEMap.h: its out-of-line copy, first called here)
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEAMiniMap::Virtual8()
 {
 }

@@ -56,6 +56,7 @@ long EEAIHasResourceUnit(EETile* inTile);
 
 // EEAIContinent's inline kind-id adders (COMDATs 0x1887f..0x189a2 after AssignKindIDs): ee_astar continent.rs
 
+// FUNCTION: EXE 0x4173cc
 // Creates the path-area flood-fill goal with no area grid, no owner, no tiles and the area/forest ids starting at 1
 EEAIAStarPathAreaGoal::EEAIAStarPathAreaGoal()
     : mAreas(NULL), mOwnerID(-1), mPlayerID(0), mTileCount(0), mResources1(0), mResources2(0), mResources3(0),
@@ -64,6 +65,7 @@ EEAIAStarPathAreaGoal::EEAIAStarPathAreaGoal()
 {
 }
 
+// FUNCTION: EXE 0x41747c
 // Stamps every closed and open node's tile with the next path area id and collects those tiles into the area's list
 void EEAIAStarPathAreaGoal::CollectTiles()
 {
@@ -80,6 +82,7 @@ void EEAIAStarPathAreaGoal::CollectTiles()
     }
 }
 
+// FUNCTION: EXE 0x417510
 // Turns the filled tiles into a new path area (plus a forest with its resource counts for forest tiles) or, in a
 // kind pass, assigns the next kind id; then marks the bounds dirty and resets the fill state for the next area
 void EEAIAStarPathAreaGoal::CreateAreas()
@@ -126,7 +129,11 @@ void EEAIAStarPathAreaGoal::CreateAreas()
     this->mResources3 = 0;
 }
 
+// FUNCTION: EXE 0x4176c7
+// ClassifyTile: ee_astar area_goals::path_area_classify (AcceptTile's kind pass)
+
 // The set's insert result is unused; the continents get the id through their kind vectors.
+// FUNCTION: EXE 0x417a4b
 // Gives every path area under the filled tiles the next water-body, space-region, land-mass or surface-region id
 // (by mode) and adds that id to each touched continent's matching id list
 void EEAIAStarPathAreaGoal::AssignKindIDs()
@@ -159,6 +166,7 @@ void EEAIAStarPathAreaGoal::AssignKindIDs()
     }
 }
 
+// FUNCTION: EXE 0x417bcb
 // Decides whether the flood fill takes a tile into the current area and, if so, counts it and grows the bounds
 // (ee_astar area_goals::path_area_accept over the goal's fill state; the machine's corner checks as it leaves them)
 bool EEAIAStarPathAreaGoal::AcceptTile(long inX, long inY, bool inStart)
@@ -204,6 +212,7 @@ bool EEAIAStarPathAreaGoal::AcceptTile(long inX, long inY, bool inStart)
 
 // 0x4184d1 (the 4-argument ClassifyTile wrapper): in ee_astar's path_area_accept
 
+// FUNCTION: EXE 0x418a84
 // Returns the path area at tile (inX, inY), or NULL off the grid
 // Not inline: AssignKindIDs calls it.
 EEAIPathArea* EEAIAStarPathAreaGoal::GetArea(unsigned long inX, unsigned long inY)
@@ -211,7 +220,41 @@ EEAIPathArea* EEAIAStarPathAreaGoal::GetArea(unsigned long inX, unsigned long in
     return inX < this->mAreasSize && inY < this->mAreasSize ? this->mAreas[this->mAreasSize * inX + inY] : 0;
 }
 
+// FUNCTION: EXE 0x418ac8
 // Destroys the goal and its tile list and area/forest maps (members only)
 EEAIAStarPathAreaGoal::~EEAIAStarPathAreaGoal()
 {
 }
+
+// Compiler-generated for this unit (names in analysis/exe/names.txt):
+// TEMPLATE: EXE 0x4184f1
+// TEMPLATE: EXE 0x41852b
+// TEMPLATE: EXE 0x4185e5
+// TEMPLATE: EXE 0x418610
+// TEMPLATE: EXE 0x418681
+// TEMPLATE: EXE 0x418815
+// TEMPLATE: EXE 0x41884d
+// TEMPLATE: EXE 0x41887f
+// TEMPLATE: EXE 0x4188e0
+// TEMPLATE: EXE 0x418941
+// TEMPLATE: EXE 0x4189a2
+// TEMPLATE: EXE 0x418a03
+// TEMPLATE: EXE 0x418a58
+// TEMPLATE: EXE 0x418aa9
+// TEMPLATE: EXE 0x418aac
+// TEMPLATE: EXE 0x418af1
+// TEMPLATE: EXE 0x418b1d
+// TEMPLATE: EXE 0x418b48
+// TEMPLATE: EXE 0x418b73
+// TEMPLATE: EXE 0x418b90
+// TEMPLATE: EXE 0x418bdf
+// TEMPLATE: EXE 0x418c16
+// TEMPLATE: EXE 0x418c87
+// TEMPLATE: EXE 0x418cf8
+// TEMPLATE: EXE 0x418f86
+// TEMPLATE: EXE 0x418fb8
+// TEMPLATE: EXE 0x418fea
+// TEMPLATE: EXE 0x418ffd
+// TEMPLATE: EXE 0x419021
+// TEMPLATE: EXE 0x41903a
+// TEMPLATE: EXE 0x41905f

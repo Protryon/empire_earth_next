@@ -19,7 +19,7 @@ class LLE_API UIBackgroundTable : private EeUiBgTableFields {
     friend struct UIBackgroundTableHost;    // the Rust table's calls out (UIBackgroundTable.cpp)
 public:
     UIBackgroundTable();
-    virtual ~UIBackgroundTable() {}
+    virtual ~UIBackgroundTable() {}         // 0x1005c34a
     static long Create(FSFileSpec& inFile);
     static void CreateBackgrounds(UIManager* inManager);
     static void DeleteAll();

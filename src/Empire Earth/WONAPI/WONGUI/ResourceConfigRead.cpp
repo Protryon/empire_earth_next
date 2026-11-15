@@ -24,6 +24,7 @@ static int GetHexDigit(char inChar)
     return -1;
 }
 
+// FUNCTION: WON 0x00790f20
 // Consumes the next ',' in the resource text or throws "Expecting ','"
 void ResourceConfig::EnsureComma(StringParser& inParser)
 {
@@ -31,6 +32,7 @@ void ResourceConfig::EnsureComma(StringParser& inParser)
         throw ConfigObjectException("Expecting ','");
 }
 
+// FUNCTION: WON 0x00791060
 // Consumes the next ')' in the resource text or throws "Expecting ')'"
 void ResourceConfig::EnsureCloseParen(StringParser& inParser)
 {
@@ -39,6 +41,7 @@ void ResourceConfig::EnsureCloseParen(StringParser& inParser)
 }
 
 inline int MakeStdColor(int inIndex) { return inIndex|0x80000000; }
+// FUNCTION: WON 0x007911a0
 // Reads a color: (STD,<system color name>), (DEC,r,g,b) or six hex digits RRGGBB; throws on bad input
 // (an unknown standard color reports the type "STD" rather than the bad name; another type yields 0)
 int ResourceConfig::SafeReadColor(StringParser& inParser)
@@ -101,6 +104,7 @@ int ResourceConfig::SafeReadColor(StringParser& inParser)
     return color;
 }
 
+// FUNCTION: WON 0x007916c0
 // Reads font style words (Bold, Italic, Plain, Underline) into style bits; throws on an unknown word
 int ResourceConfig::SafeReadFontStyle(StringParser& inParser)
 {
@@ -119,6 +123,7 @@ int ResourceConfig::SafeReadFontStyle(StringParser& inParser)
     return style;
 }
 
+// FUNCTION: WON 0x00791870
 // Reads face, style and size and returns that font from the default window; throws on a size <= 0
 SmartPtr<Font> ResourceConfig::SafeReadFont(StringParser& parser)
 {
@@ -133,6 +138,7 @@ SmartPtr<Font> ResourceConfig::SafeReadFont(StringParser& parser)
     return Window::GetDefaultWindow()->GetFont(FontDescriptor(face,style,size));
 }
 
+// FUNCTION: WON 0x00791ab0
 // Reads a sound path or (path,flags) with Preload/Music/Muted and decodes it; throws on a bad flag or decode failure
 SmartPtr<Sound> ResourceConfig::SafeReadSound(StringParser& parser)
 {
@@ -166,6 +172,7 @@ SmartPtr<Sound> ResourceConfig::SafeReadSound(StringParser& parser)
     return sound;
 }
 
+// FUNCTION: WON 0x00791ea0
 // Reads an image path and decodes it as a delay-loaded image; throws when decoding fails
 SmartPtr<Image> ResourceConfig::SafeReadImage(StringParser& parser)
 {
@@ -177,6 +184,7 @@ SmartPtr<Image> ResourceConfig::SafeReadImage(StringParser& parser)
     return image;
 }
 
+// FUNCTION: WON 0x00792050
 // Reads a background: COLOR, IMAGE, STRETCHIMAGE, WATERMARK (no offsets) or NONE; throws on anything else
 Background ResourceConfig::SafeReadBackground(StringParser& parser)
 {
@@ -211,3 +219,9 @@ Background ResourceConfig::SafeReadBackground(StringParser& parser)
 }
 
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00791680
+// (int __cdecl WONAPI::GetHexDigit(char)    [?GetHexDigit@WONAPI@@YAHD@Z])
+// TEMPLATE: WON 0x00791e60
+// (public: __thiscall WONAPI::SoundDescriptor::~SoundDescriptor(void)    [??1SoundDescriptor@WONAPI@@QAE@XZ])

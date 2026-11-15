@@ -46,18 +46,24 @@ EE_TECH_RECORD_SAME(mDefaultUnitClass);
 
 const UString EETechTreeEpoch::sEpochsCurrentSOL("EETechTreeEpoch-EpochsCurrentSOL");
 
+// FUNCTION: EXE 0x5cdf68
 // Creates an empty epoch node (no techs counted toward it yet)
 EETechTreeEpoch::EETechTreeEpoch()
 {
     // the counters start at 0 (the record's init)
 }
 
+// SYNTHETIC: EXE 0x5cdfb3
+// (the scalar deleting destructor, emitted with the vtable; slot EETechTreeEpoch+0x0)
+
+// FUNCTION: EXE 0x5cdfcf
 // Destroys the epoch and the tech nodes it owns
 EETechTreeEpoch::~EETechTreeEpoch()
 {
     this->DeleteNodes();
 }
 
+// FUNCTION: EXE 0x5cdff6
 // Deletes every tech node of the epoch
 void EETechTreeEpoch::DeleteNodes()
 {
@@ -72,6 +78,7 @@ void EETechTreeEpoch::DeleteNodes()
     this->mNodes.clear();
 }
 
+// FUNCTION: EXE 0x5ce038
 // Returns an epoch's cost in a resource scaled by the game variant's epoch cost factors (first, second or
 // later epoch advanced in this game)
 long EETechTreeEpoch::GetCost(long inResource, long inUnitClass, float inScale)
@@ -92,12 +99,14 @@ long EETechTreeEpoch::GetCostUncaptured(long inResource, long inUnitClass, float
     return EETechTreeNode::GetCost(inResource, inUnitClass, theScale);
 }
 
+// FUNCTION: EXE 0x5ce0e7
 // Returns how many techs counting toward this epoch were researched
 long EETechTreeEpoch::GetCurrentSOL()
 {
     return this->mCurrentSOL;
 }
 
+// FUNCTION: EXE 0x5ce0eb
 // Returns the epoch's research time; computer players need half of it
 long EETechTreeEpoch::GetBuildTime()
 {
@@ -109,6 +118,7 @@ long EETechTreeEpoch::GetBuildTime()
     return theResult;
 }
 
+// FUNCTION: EXE 0x5ce10e
 // Reads the epoch's record and its tech nodes from the tech tree file (nodes with epoch ids are dropped)
 void EERegisterTechNode(long inID, long inEpoch);   // EETechTree.cpp
 
@@ -149,6 +159,11 @@ long EETechTreeEpoch::Load(FSFile& inFile, EETechTree* inTree)
     return theResult;
 }
 
+// FUNCTION: EXE 0x5ce39e
+// Creates empty tech node data
+// (RTSTechTreeNodeData's implicit ctor, ee/EEPlayer.h: its first user is Load)
+
+// FUNCTION: EXE 0x5ce3c9
 // Unloads and deletes every tech node and the epoch's data
 long EETechTreeEpoch::Unload()
 {
@@ -169,6 +184,7 @@ long EETechTreeEpoch::Unload()
     return 0;
 }
 
+// FUNCTION: EXE 0x5ce439
 // Appends the ids of the epoch's tech nodes
 void EETechTreeEpoch::GetNodeIDs(std::vector<long>& outIDs)
 {
@@ -180,18 +196,21 @@ void EETechTreeEpoch::GetNodeIDs(std::vector<long>& outIDs)
     }
 }
 
+// FUNCTION: EXE 0x5ce474
 // Tells whether the epoch can be researched: available, not obsolete, not researched
 bool EETechTreeEpoch::GetIsAvailable()
 {
     return EETechNodeWalk(this, EeTechNodeOp::IsAvailable) != 0;
 }
 
+// FUNCTION: EXE 0x5ce494
 // Tells whether the epoch is obsolete
 bool EETechTreeEpoch::GetIsObsolete()
 {
     return this->mIsObsolete;
 }
 
+// FUNCTION: EXE 0x5ce498
 // Counts one more tech toward the epoch; when enough are researched the epoch becomes available (event 0x7d2)
 void EETechTreeEpoch::AddSOL()
 {
@@ -210,6 +229,14 @@ void EETechTreeEpoch::AddSOL()
         EETechEpochWalk(this, EeTechEpochOp::AddSol);
 }
 
+// FUNCTION: EXE 0x5ce4f2
+// Reads the epoch's researched-tech count from the saved game, to be applied later
+
+// FUNCTION: EXE 0x5ce53f
+// Does nothing: the original walked the nodes needing unit media and computed each one's media mask, then dropped
+// it (the check was never finished); the unused computation is removed
+
+// FUNCTION: EXE 0x5ce5b5
 // Loads the media of every unit class the epoch's buildings make and the epoch's own media
 void EETechTreeEpoch::LoadMedia(EEPlayer* inPlayer)
 {
@@ -227,6 +254,7 @@ void EETechTreeEpoch::LoadMedia(EEPlayer* inPlayer)
     EETechTreeNode::LoadMedia(inPlayer);
 }
 
+// FUNCTION: EXE 0x5ce624
 // Loads the media of the epoch's nodes of one kind
 void EETechTreeEpoch::LoadMediaOfKind(long inKind)
 {
@@ -240,6 +268,19 @@ void EETechTreeEpoch::LoadMediaOfKind(long inKind)
     }
 }
 
+// FUNCTION: EXE 0x5ce675
+// Makes a node of the epoch obsolete, or the epoch itself when it is still ahead (its obsolete event fires)
+
+// FUNCTION: EXE 0x5ce6e9
+// Makes the nodes whose obsolete epoch has passed obsolete
+
+// FUNCTION: EXE 0x5ce738
+// Satisfies one prerequisite of a node of the epoch
+
+// FUNCTION: EXE 0x5ce766
+// Unlocks the epoch: available with its count complete; its nodes become available or get the epoch prerequisite
+
+// FUNCTION: EXE 0x5ce7db
 // Makes the epoch available once enough techs count toward it, and gives its nodes the epoch prerequisite
 void EETechTreeEpoch::UpdateAvailability()
 {
@@ -258,6 +299,7 @@ void EETechTreeEpoch::UpdateAvailability()
         EETechEpochWalk(this, EeTechEpochOp::UpdateAvailability);
 }
 
+// FUNCTION: EXE 0x5ce862
 // Researches the epoch itself
 long EETechTreeEpoch::ResearchNode(EEComplexUnit* inUnit)
 {
@@ -265,12 +307,20 @@ long EETechTreeEpoch::ResearchNode(EEComplexUnit* inUnit)
     return this->Research(theID, inUnit);
 }
 
+// FUNCTION: EXE 0x5ce875
+// Researches the epoch and its nodes researched with it (every node when asked)
+
+// FUNCTION: EXE 0x5ce8c5
 // Researches the epoch's nodes of one kind (only those researched with the epoch when asked)
 void EETechTreeEpoch::ResearchKind(long inKind, bool inEpochOnly)
 {
     EETechEpochWalk(this, EeTechEpochOp::ResearchKind, inKind, inEpochOnly);
 }
 
+// FUNCTION: EXE 0x5ce918
+// Makes the epoch available and researches it
+
+// FUNCTION: EXE 0x5ce930
 // Researches a node of the epoch, or the epoch itself: fires its event, makes it current, obsoletes outdated nodes;
 // returns 2 when already researched, 9 when not possible
 long EETechTreeEpoch::Research(long inID, EEComplexUnit* inUnit)
@@ -290,6 +340,10 @@ long EETechTreeEpoch::Research(long inID, EEComplexUnit* inUnit)
     return EETechEpochWalk(this, EeTechEpochOp::Research, inID, false, inUnit);
 }
 
+// FUNCTION: EXE 0x5cea3e
+// Writes the epoch's researched-tech count to the saved game
+
+// FUNCTION: EXE 0x5cea53
 // Unloads the unit class media the epoch loaded and the epoch's own media
 void EETechTreeEpoch::UnloadMedia(EEPlayer* inPlayer)
 {
@@ -301,6 +355,7 @@ void EETechTreeEpoch::UnloadMedia(EEPlayer* inPlayer)
     EETechTreeNode::UnloadMedia(inPlayer);
 }
 
+// FUNCTION: EXE 0x5cea9a
 // Unloads the media of the epoch's nodes of one kind
 void EETechTreeEpoch::UnloadMediaOfKind(long inKind)
 {
@@ -314,6 +369,7 @@ void EETechTreeEpoch::UnloadMediaOfKind(long inKind)
     }
 }
 
+// FUNCTION: EXE 0x5ceaeb
 // Returns the epoch (for its own id) or one of its nodes, or NULL
 EETechTreeNode* EETechTreeEpoch::Get(long inID)
 {
@@ -328,6 +384,7 @@ EETechTreeNode* EETechTreeEpoch::Get(long inID)
     return theResult;
 }
 
+// FUNCTION: EXE 0x5ceb26
 // Copies another epoch's state and deep-copies its nodes for this tree (the node data stays shared)
 EETechTreeEpoch& EETechTreeEpoch::operator=(const EETechTreeEpoch& inOther)
 {
@@ -346,3 +403,40 @@ EETechTreeEpoch& EETechTreeEpoch::operator=(const EETechTreeEpoch& inOther)
     }
     return *this;
 }
+
+// FUNCTION: EXE 0x5cec0e
+// Destroys a class-cost map
+// (std::map<long, long*>'s dtor: _Tree::~_Tree, Dinkum <xtree>)
+
+// FUNCTION: EXE 0x5cec39
+// Destroys a node map
+// (std::map<long, EETechTreeNode*>'s dtor: _Tree::~_Tree, Dinkum <xtree>)
+
+// FUNCTION: EXE 0x5cec64
+// Empties a node map
+// (std::map<long, EETechTreeNode*>::clear, Dinkum <xtree>)
+
+// FUNCTION: EXE 0x5cec78
+// Erases a range of a class-cost map
+// (std::map<long, long*>'s _Tree::erase(first, last), Dinkum <xtree>)
+
+// FUNCTION: EXE 0x5cece9
+// Erases a range of a node map
+// (std::map<long, EETechTreeNode*>'s _Tree::erase(first, last), Dinkum <xtree>)
+
+// FUNCTION: EXE 0x5ced5a
+// Erases a subtree of a class-cost map
+// (std::map<long, long*>'s _Tree::_Erase, Dinkum <xtree>)
+
+// FUNCTION: EXE 0x5ced8c
+// Erases a subtree of a node map
+// (std::map<long, EETechTreeNode*>'s _Tree::_Erase, Dinkum <xtree>)
+
+// FUNCTION: EXE 0x5cedbe
+// Returns the game variant of the current game options
+// (EEWorld::GetGameVariant, inline in ee/EEWorld.h)
+
+// SYNTHETIC: EXE 0x5cdf25
+// SYNTHETIC: EXE 0x5cdf2f
+// SYNTHETIC: EXE 0x5cdf40
+// SYNTHETIC: EXE 0x5cdf4c

@@ -14,7 +14,7 @@ struct SoundDescriptor {
     SoundDescriptor(); // 0x329810 (no flags, empty path)
     SoundDescriptor(const char*);
     void SetSoundFlags(int,bool); // 0x329990 (sets or clears one flag bit)
-    SoundDescriptor(const std::string& inPath, long inType);
+    SoundDescriptor(const std::string& inPath, long inType);    // 0x329830
 
     long mSoundFlags;                       // +0x00
     std::string mPath;                      // +0x04
@@ -28,13 +28,13 @@ public:
     virtual void StopHook() {}              // +0x08 (empty; shared body 0x326b60)
     virtual void ResumeHook() {}            // +0x0c (empty; shared body 0x326b60)
     virtual void RewindHook() {}            // +0x10 (empty; shared body 0x326b60)
-    void Play();
-    void Stop();
-    void Resume();
+    void Play();                            // 0x329bd0
+    void Stop();                           // 0x3a6db0
+    void Resume();                         // 0x3a6dc0
     void Rewind();
     void SetLooping(bool inLooping) { this->mIsLooping = inLooping; }
     void SetMuted(bool inMuted);            // 0x329bf0: sets or clears the descriptor's flag 4 (provisional name)
-    bool GetMuted();
+    bool GetMuted();                       // 0x329c20
 
     SoundDescriptor mDescriptor;            // +0x08
     bool mIsLooping;                        // +0x1c (padding to 0x1f; the constructor stores a byte)
@@ -44,7 +44,7 @@ typedef SmartPtr<Sound> SoundPtr;
 
 class SoundDecoder : public RefCount {
 public:
-    SoundDecoder();
+    SoundDecoder();                         // 0x34a530
     virtual ~SoundDecoder();                // 0x328590 (ICF: ~LobbyPlayer; ??_GEELobbySoundDecoder 0x297dc5 calls it)
     SoundPtr DecodeDescriptor(const SoundDescriptor& inDescriptor); // 0x34a540 (forwards to Decode)
     virtual SoundPtr Decode(const SoundDescriptor& inDescriptor) = 0;   // +0x04
@@ -54,7 +54,7 @@ public:
 // the hooks are ee_won's eesound.rs objects; the host is EELobbyGlueHost.cpp)
 class EELobbyMusic : public Sound {
 public:
-    EELobbyMusic(const SoundDescriptor& inDescriptor);
+    EELobbyMusic(const SoundDescriptor& inDescriptor);    // 0x29ce06
     virtual ~EELobbyMusic();
 
     virtual void PlayHook();                // +0x04 0x29ce46
@@ -68,7 +68,7 @@ public:
 // object's)
 class EELobbySound : public Sound {
 public:
-    EELobbySound(const SoundDescriptor& inDescriptor, unsigned long inSampleID);
+    EELobbySound(const SoundDescriptor& inDescriptor, unsigned long inSampleID);    // 0x29ce7d
     virtual ~EELobbySound();                // 0x29cebc (unloads the sample)
 
     virtual void PlayHook();                // +0x04 0x29ceeb

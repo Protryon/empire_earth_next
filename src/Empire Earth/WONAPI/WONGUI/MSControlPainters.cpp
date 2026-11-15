@@ -15,6 +15,7 @@
 #include "ee/wonapi/WONSkinLayout.h"
 
 namespace WONAPI {
+// FUNCTION: WON 0x006ffa70
 // Fills the scrollbar track when it needs repainting (unless transparent), then paints the buttons and thumb
 void MSScrollbar::Paint(Graphics& g)
 {
@@ -24,6 +25,7 @@ void MSScrollbar::Paint(Graphics& g)
     Container::Paint(g);
 }
 
+// FUNCTION: WON 0x006ffdf0
 // Paints the combo box and, if framed, a sunken 3D frame around it
 void MSComboBox::Paint(Graphics& g)
 {
@@ -38,6 +40,7 @@ void MSComboBox::GetDesiredSize(int& width,int& height)
     height=22;
 }
 
+// FUNCTION: WON 0x006ffe30
 // Lays out the combo box: the arrow button (if visible) at the right inside the frame, the edit box filling the rest
 // of the width and the full height (skinlay.rs)
 void MSComboBox::Virtual08()
@@ -46,6 +49,7 @@ void MSComboBox::Virtual08()
     WONSkinLayout(this,EeWonSkinLayKind::MsCombo);
 }
 
+// FUNCTION: WON 0x00700290
 // Lays out the scroll container: visible scrollbars along the right and bottom edges inside the 3D frame, the scroll
 // area in the rest below the header (skinlay.rs)
 void MSScrollContainer::Virtual08()
@@ -54,6 +58,7 @@ void MSScrollContainer::Virtual08()
     WONSkinLayout(this,EeWonSkinLayKind::MsScroll);
 }
 
+// FUNCTION: WON 0x00700390
 // Paints the scroll container: fills the corner between two visible scrollbars and draws a 3D or
 // dark one-pixel frame
 void MSScrollContainer::Paint(Graphics& g)

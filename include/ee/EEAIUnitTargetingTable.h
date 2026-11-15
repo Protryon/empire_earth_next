@@ -13,7 +13,7 @@ public:
     virtual ~EEAIUnitTargetingTable() {}
 
     static long Load(FSFileSpec* inFile);   // 0xd47a1 (three records)
-    static void Unload();
+    static void Unload();                   // 0xd48d8
 
     static long** sTable;                   // 0x4e60c0: three rows of ten values (provisional name; read by
                                             // EECPAttackSubGroupUnit.cpp and two UI units, so a class static)

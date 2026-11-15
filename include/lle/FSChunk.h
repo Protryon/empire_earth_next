@@ -11,18 +11,18 @@ class FSPersistent;
 
 class LLE_API FSChunk {                     // sizeof 0x1c
 public:
-    FSChunk();
-    virtual ~FSChunk();
+    FSChunk();                                                                  // 0x7db9
+    virtual ~FSChunk();                                                         // 0x7ddc
     // implicit copy ctor (0x41b2) and operator= (0x41f1), emitted with File System.cpp's inlines
 
-    bool GetChunkSize(unsigned long& outSize) const;
-    long LoadChunkFromFile(FSFile& inFile);
-    long LoadPersistentFromChunk(FSPersistent*& outPersistent);
-    long LoadChunkHeader(FSFile& inFile);
-    long SaveChunkToFile(FSFile& outFile);
+    bool GetChunkSize(unsigned long& outSize) const;                            // 0x7e2a
+    long LoadChunkFromFile(FSFile& inFile);                                     // 0x7e3f
+    long LoadPersistentFromChunk(FSPersistent*& outPersistent);                 // 0x7eb7
+    long LoadChunkHeader(FSFile& inFile);                                       // 0x7efd
+    long SaveChunkToFile(FSFile& outFile);                                      // 0x7fab
     long SavePersistentToChunk(unsigned long inMajorVersion, unsigned long inMinorVersion,
-                               FSPersistent* inPersistent);
-    long SkipChunk(FSFile& inFile);
+                               FSPersistent* inPersistent);                     // 0x7fce
+    long SkipChunk(FSFile& inFile);                                             // 0x805e
 
 private:
     // The debug-file hooks (a never-set static text mirror, FSDebugFile) and the four static UString labels only it

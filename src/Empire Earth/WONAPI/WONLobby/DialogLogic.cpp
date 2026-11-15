@@ -24,41 +24,56 @@ namespace WONAPI {
 
 static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 
+// FUNCTION: WON 0x7dc3f0
 DialogLogic::DialogLogic() : mRust(ee_won_dlglogic_new(this, DialogLogicHost)) {}
+// FUNCTION: WON 0x7dc480
 DialogLogic::~DialogLogic() { ee_won_dlglogic_free(this->mRust); }
+// FUNCTION: WON 0x7dc5a0
 void DialogLogic::InitComponent(ComponentConfig* inConfig) { this->Call(EeWonDlgLogicCall::Init, (intptr_t)inConfig); }
+// FUNCTION: WON 0x7dc630
 void DialogLogic::KillHook() { this->Call(EeWonDlgLogicCall::KillHook); }
+// FUNCTION: WON 0x7dc680
 void DialogLogic::StatusOpComplete(AsyncOp* inOp) { this->Call(EeWonDlgLogicCall::StatusOpComplete, (intptr_t)inOp); }
+// FUNCTION: WON 0x7dc6d0
 void DialogLogic::ClearDialogs() { this->Call(EeWonDlgLogicCall::ClearDialogs); }
+// FUNCTION: WON 0x7dc9a0
 int DialogLogic::DoDialog(Component* inDialog) { return (int)this->Call(EeWonDlgLogicCall::DoDialog, (intptr_t)inDialog); }
+// FUNCTION: WON 0x7dcc70
 void DialogLogic::RunOpWithStatus(AsyncOp* inOp, unsigned long, const GUIString& inTitle, const GUIString& inStatus,
                                   int inStatusMode, unsigned long inTimeout)
 {
     this->Call(EeWonDlgLogicCall::RunOpWithStatus, (intptr_t)inOp, (intptr_t)&inTitle, (intptr_t)&inStatus,
                inStatusMode, (intptr_t)inTimeout);
 }
+// FUNCTION: WON 0x7dcdb0
 void DialogLogic::ShowStatus(const GUIString& inTitle, const GUIString& inStatus, bool inCancel)
 {
     this->Call(EeWonDlgLogicCall::ShowStatus, (intptr_t)&inTitle, (intptr_t)&inStatus, inCancel);
 }
+// FUNCTION: WON 0x7dce10
 void DialogLogic::ShowError(const GUIString& inTitle, const GUIString& inStatus)
 {
     this->Call(EeWonDlgLogicCall::ShowError, (intptr_t)&inTitle, (intptr_t)&inStatus);
 }
+// FUNCTION: WON 0x7dce50
 // An error box with a WON status's text (no sound)
 void DialogLogic::ShowError(const GUIString& inTitle, WONStatus inStatus)
 {
     this->ShowStatus(inTitle, GetWONStatusString(inStatus), false);
 }
+// FUNCTION: WON 0x7dd050
 int DialogLogic::ShowOkCancel(const GUIString& inTitle, const GUIString& inText, bool inPlaySound)
 {
     return (int)this->Call(EeWonDlgLogicCall::ShowOkCancel, (intptr_t)&inTitle, (intptr_t)&inText, inPlaySound);
 }
+// FUNCTION: WON 0x7dd0a0
 int DialogLogic::ShowYesNo(const GUIString& inTitle, const GUIString& inText, bool inPlaySound)
 {
     return (int)this->Call(EeWonDlgLogicCall::ShowYesNo, (intptr_t)&inTitle, (intptr_t)&inText, inPlaySound);
 }
+// FUNCTION: WON 0x7dd0f0
 void DialogLogic::Reset() { this->Call(EeWonDlgLogicCall::Reset); }
+// FUNCTION: WON 0x007dced0
 void DialogLogic::UpdateStatus(WONStatus inStatus) { this->Call(EeWonDlgLogicCall::UpdateStatus, (intptr_t)inStatus); }
 bool DialogLogic::GetStatusCancelled() { return this->Call(EeWonDlgLogicCall::Field, 0) != 0; }
 
@@ -179,3 +194,9 @@ static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a,
     return 0;
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007dc460
+// (public: virtual void * __thiscall WONAPI::DialogLogic::`scalar deleting destructor'(unsigned int)    [??_GDialogLogic@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007f1300
+// (public: virtual void __thiscall WONAPI::LogicCompletion<class WONAPI::DialogLogic>::Run(class WONAPI::AsyncOp *)    [?Run@?$LogicCompletion@VDialogLog)

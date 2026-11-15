@@ -9,7 +9,7 @@ class EESEUICTriggerSelectUnits : public EEUICSelectUnits {
 public:
     EESEUICTriggerSelectUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex, EEAMouseClick* inClick,
                               EEALasso* inLasso);
-    virtual ~EESEUICTriggerSelectUnits();
+    virtual ~EESEUICTriggerSelectUnits();  // 0x1973dd
 protected:
     virtual long MouseLButtonUp();          // +0x38 0x197491
     virtual long MouseLButtonDoublePressed();   // +0x3c 0x1973e8

@@ -37,6 +37,7 @@
 static unsigned long sIconBarUpSound;           // 0x56458c (sound 0x208)
 static unsigned long sIconBarDownSound;         // 0x564590 (sound 0x207)
 
+// FUNCTION: EXE 0x659f7f
 // Creates the selected-units icon bar with its icon frame bitmap and click sounds (its state and icon rectangle:
 // ee_screens icon_bar.rs)
 EEUICUnitIconBar::EEUICUnitIconBar(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm)
@@ -58,6 +59,10 @@ EEUICUnitIconBar::EEUICUnitIconBar(UIControlsTable& inTable, const GERectangle& 
     }
 }
 
+// SYNTHETIC: EXE 0x65a178
+// (the scalar deleting destructor, emitted with the vtable; slot EEUICUnitIconBar+0x0)
+
+// FUNCTION: EXE 0x65a194
 // Destroys the icon bar, unloading its sounds and releasing its bitmaps and buttons
 EEUICUnitIconBar::~EEUICUnitIconBar()
 {
@@ -72,6 +77,15 @@ EEUICUnitIconBar::~EEUICUnitIconBar()
     ee_screens_icon_bar_free(this->mState, this);
 }
 
+// FUNCTION: EXE 0x65a258
+// FUNCTION: EXE 0x65a32f
+// FUNCTION: EXE 0x65a954
+// FUNCTION: EXE 0x65a9e2
+// FUNCTION: EXE 0x65aa43
+// FUNCTION: EXE 0x65aa9b
+// FUNCTION: EXE 0x65ae44
+// FUNCTION: EXE 0x65afa5
+// FUNCTION: EXE 0x65b010
 // The snapshot, the drawing, the clicks and the refill from the selection (and the original's GetUnit,
 // GetIconIndex, GetUnitIDs): ee_screens icon_bar.rs over the host below
 long EEUICUnitIconBar::CopyData() { return ee_screens_icon_bar_copy_data(this->mState, this); }
@@ -81,6 +95,15 @@ long EEUICUnitIconBar::MouseRButtonUp() { return ee_screens_icon_bar_mouse_r_up(
 long EEUICUnitIconBar::MouseMove(const GE2DPoint& inLocation) { return ee_screens_icon_bar_mouse_move(this->mState, this); }
 void EEUICUnitIconBar::Update() { ee_screens_icon_bar_update(this->mState, this); }
 
+// FUNCTION: EXE 0x65ad92
+// Creates a scramble-aircraft message for a unit and a tile
+// (EEMScrambleAircraft::EEMScrambleAircraft(long, long, long), inline in EEMessage.h; emitted after its first user)
+
+// FUNCTION: EXE 0x65adcd
+// Creates a select-these-units message from a list of ids
+// (EEMSelectTheseUnits::EEMSelectTheseUnits(std::vector<long>&), inline in EEMessage.h; emitted after its first user)
+
+// FUNCTION: EXE 0x65ae3b
 // Captures the mouse on a right press (also the left press, ICF-folded)
 long EEUICUnitIconBar::MouseRButtonDown()
 {
@@ -93,6 +116,18 @@ long EEUICUnitIconBar::MouseLButtonDown()
     this->CaptureMouse();
     return 0;
 }
+
+// FUNCTION: EXE 0x65af3d
+// Creates an immediate cargo unload message for a transport and a cargo unit
+// (EEMImmediateCargoUnload::EEMImmediateCargoUnload(long, long, bool), inline in EEMessage.h; emitted after its first user)
+
+// FUNCTION: EXE 0x65af78
+// Creates a remove-from-selection message for a unit
+// (EEMRemoveUnitFromSelectedGroup::EEMRemoveUnitFromSelectedGroup(long), inline in EEMessage.h; emitted after its first user)
+
+// FUNCTION: EXE 0x65b2a2
+// Appends a button to a vector (std::vector<EEButtonObject*>::push_back)
+// (std::vector<EEButtonObject*>::push_back, a template COMDAT closing the unit)
 
 // The bar's host (icon_bar.rs EE_SCREENS_IB_OP_*): units and buttons as handles, ioF the op's floats
 extern "C" int64_t ee_screenscpp_icon_bar(void* inBar, uint32_t inOp, int64_t inA, int64_t inB, float* ioF)

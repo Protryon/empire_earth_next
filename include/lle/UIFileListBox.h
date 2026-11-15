@@ -17,7 +17,7 @@ public:
     UIFileListBox(unsigned long inId, GEFont* inFont, bool inAutoSelect, const GERectangle& inRectangle,
                   UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness);
     virtual ~UIFileListBox();
-    void AddValidExtension(const UString& inExtension) { this->mValidExtensions.push_back(inExtension); }
+    void AddValidExtension(const UString& inExtension) { this->mValidExtensions.push_back(inExtension); }  // 0x100669b6
     void CreateEntries(unsigned long inSortType);
     long DeleteSelectedFile();
     FSPath* GetFilePath() const { return this->mFilePath; }  // ICF-folded (0x1005968d)

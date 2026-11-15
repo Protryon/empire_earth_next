@@ -27,6 +27,7 @@ static GUIString sEELobbyStrings[kEELobbyStringCount];
 
 static void EELobbyResource_Load(ResourceConfigTable* inTable);
 
+// FUNCTION: EXE 0x69b1ed
 // Registers the game lobby's string loader with a resource table, creating the table when none is given
 // Not identical: the original stores the returned smart pointer copy only once, after the NULL test
 ResourceConfigTablePtr EELobbyResource_Init(ResourceConfigTable* inCollection)
@@ -40,6 +41,7 @@ ResourceConfigTablePtr EELobbyResource_Init(ResourceConfigTable* inCollection)
     return theCollection;
 }
 
+// FUNCTION: EXE 0x69b26c
 // Returns the game lobby string with the given table index (epochs, game options, dialog texts)
 GUIString& EELobbyResource_GetString(int inID)
 {
@@ -68,6 +70,7 @@ static GUIString* EELobbyResourceSlotFor(size_t inIndex)
     return &sEELobbyStrings[inIndex];
 }
 
+// FUNCTION: EXE 0x69b278
 // Loads the game options, player options, connect, file dialog, game status and lobby texts from resources (ee_won's
 // rows in order: a section is looked up where it changes, as the original's statements did)
 static void EELobbyResource_Load(ResourceConfigTable* inTable)
@@ -85,6 +88,7 @@ static void EELobbyResource_Load(ResourceConfigTable* inTable)
     }
 }
 
+// FUNCTION: EXE 0x69c961
 // Resets every game lobby string to the empty string (ee_won's rows in order)
 void EELobbyResource_Destroy()
 {
@@ -92,3 +96,7 @@ void EELobbyResource_Destroy()
     for (size_t i = 0; i < aCount; i++)
         *EELobbyResourceSlotFor(i) = GetEmptyGUIStringData();
 }
+
+// TEMPLATE: EXE 0x69cdf2
+// (SmartPtr<GUIStringData>::operator=(const SmartPtr&), refused inside GUIString::operator= at the first 48 sites of
+// EELobbyResource_Load)

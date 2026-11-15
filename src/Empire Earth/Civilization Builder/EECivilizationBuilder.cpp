@@ -86,7 +86,12 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 //   object 0x9654a8  ctor __imp_??0UString@@QAE@XZ  dtor __imp_??1UString@@UAE@XZ
 // the last civilization file name saved (CivBuilderSaveAs; CivBuilderShowSaveDialog offers it in the save box) (provisional name)
 UString gLastCivilizationFile;
+// SYNTHETIC: EXE 0x67efca   (wrapper)
+// SYNTHETIC: EXE 0x67efd4   (ctor)
+// SYNTHETIC: EXE 0x67efdf   (registrar)
+// SYNTHETIC: EXE 0x67efeb   (dtor)
 
+// FUNCTION: EXE 0x67eff6
 // Accepts the change-name dialog: a non-empty typed name becomes the builder's title, then the dialog closes
 long CivBuilderAcceptName()
 {
@@ -108,6 +113,7 @@ long CivBuilderAcceptName()
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f08f
 // Finds the file list of the given load (0x11) or save (0x10) dialog; returns false for any other form
 bool CivBuilderGetFileList(UIForm* inForm, UIFileListBox** outList)
 {
@@ -131,6 +137,7 @@ bool CivBuilderGetFileList(UIForm* inForm, UIFileListBox** outList)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f0f7
 // Returns the main game form's civilization builder button (control 5), or NULL
 UIBlinkingButton* CivBuilderGetMainGameButton()
 {
@@ -144,6 +151,7 @@ UIBlinkingButton* CivBuilderGetMainGameButton()
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f134
 // Reads the civilization name from the builder's title label; returns 3 when the label is missing
 long CivBuilderGetName(UWideString& outName)
 {
@@ -160,6 +168,7 @@ long CivBuilderGetName(UWideString& outName)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f1a9
 // Reads the text typed in the change-name dialog's edit box; returns 3 when it is missing
 long CivBuilderGetTypedName(UWideString& outText)
 {
@@ -176,6 +185,7 @@ long CivBuilderGetTypedName(UWideString& outText)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f221
 // Reads the file name typed in the save dialog's edit box; returns 3 when it is missing
 long CivBuilderGetTypedFileName(UWideString& outText)
 {
@@ -192,6 +202,7 @@ long CivBuilderGetTypedFileName(UWideString& outText)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f299
 // Reads the id, bonus and cost of the selected line in the available (0xcb, inBought true) or bought (0xcc)
 // upgrade list
 bool CivBuilderGetSelectedUpgrade(bool inBought, EECivUpgrade* outUpgrade, unsigned long* outBonus, unsigned long* outCost)
@@ -208,6 +219,7 @@ bool CivBuilderGetSelectedUpgrade(bool inBought, EECivUpgrade* outUpgrade, unsig
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f2e8
 // Hides the builder's points labels and accept-changes button; always returns 3
 long CivBuilderHidePoints()
 {
@@ -220,12 +232,14 @@ long CivBuilderHidePoints()
     return 3;
 }
 
+// FUNCTION: EXE 0x67f340
 // Closes the current form
 long CivBuilderCloseForm()
 {
     return gUserInterface->CloseForm(NULL);
 }
 
+// FUNCTION: EXE 0x67f34e
 // Fills both upgrade lists: 0xcc with the given upgrades, 0xcb with all others; both are selectable unless
 // the lists are locked (gB565566)
 // the original fills control 0xcc (vtable +0xc8) before 0xcb (+0xc4)
@@ -247,12 +261,14 @@ long CivBuilderFillUpgradeLists(std::vector<EECivUpgrade>& inUpgrades)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f3fc
 // Opens the civilization builder form
 long CivBuilderPushBuilderForm()
 {
     return gUIManager->Push(gUIManager->GetFormByID(kFormCivBuilder));
 }
 
+// FUNCTION: EXE 0x67f418
 // Opens the form with the given id; returns 3 when it does not exist
 long CivBuilderPushForm(unsigned long inFormID)
 {
@@ -263,6 +279,7 @@ long CivBuilderPushForm(unsigned long inFormID)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f43f
 // Shows a name in the builder's title label; returns 3 when the label is missing
 long CivBuilderSetName(const UWideString& inName)
 {
@@ -278,6 +295,7 @@ long CivBuilderSetName(const UWideString& inName)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f4a9
 // Shows the points left (0 when negative) and the points spent (max - left) on the builder form
 long EEShowCivBuilderPoints(long inPointsLeft, long inMax)
 {
@@ -302,6 +320,7 @@ long EEShowCivBuilderPoints(long inPointsLeft, long inMax)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f546
 // Lists the civilization files (Users\default\Civilizations\*.civ) in a file list box
 long CivBuilderFillFileList(UIFileListBox* inList)
 {
@@ -320,6 +339,7 @@ long CivBuilderFillFileList(UIFileListBox* inList)
     return 0;
 }
 
+// FUNCTION: EXE 0x67f6a4
 // Saves the civilization under the name typed in the save dialog and remembers that name
 long CivBuilderSaveAs()
 {
@@ -332,6 +352,7 @@ long CivBuilderSaveAs()
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f700
 // Opens the change-name dialog with the current name (or the default string 0x1b98) selected for editing
 long CivBuilderShowNameDialog()
 {
@@ -351,12 +372,14 @@ long CivBuilderShowNameDialog()
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f7b1
 // Opens the load dialog with its civilization file list
 long CivBuilderShowLoadDialog()
 {
     return CivBuilderShowFileDialog(0x11, 0x1a9);
 }
 
+// FUNCTION: EXE 0x67f7c0
 // Opens a dialog and fills its file list control with the civilization files
 long CivBuilderShowFileDialog(unsigned long inFormID, unsigned long inControl)
 {
@@ -370,6 +393,7 @@ long CivBuilderShowFileDialog(unsigned long inFormID, unsigned long inControl)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f824
 // Opens the save dialog with the last saved file name (or the civilization's name) in its edit box
 long CivBuilderShowSaveDialog()
 {
@@ -388,6 +412,7 @@ long CivBuilderShowSaveDialog()
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f8c7
 // Returns the form's control with the given id as an upgrade list box, or NULL
 EECBUIListBox* CivBuilderGetUpgradeList(UIForm* inForm, unsigned long inControl)
 {
@@ -398,6 +423,7 @@ EECBUIListBox* CivBuilderGetUpgradeList(UIForm* inForm, unsigned long inControl)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67f8f7
 // Returns the load dialog's civilization file list
 UIFileListBox* CivBuilderGetLoadFileList()
 {
@@ -406,6 +432,7 @@ UIFileListBox* CivBuilderGetLoadFileList()
     return dynamic_cast<UIFileListBox*>(theControl);
 }
 
+// FUNCTION: EXE 0x67f92a
 // Moves an upgrade (the selected line when 0) to the bought list or back, then reformats the lists
 // (on a buy only the source list is reformatted)
 bool CivBuilderMoveUpgrade(UIForm* inForm, bool inBuy, EECivUpgrade inUpgrade)
@@ -450,6 +477,7 @@ bool CivBuilderMoveUpgrade(UIForm* inForm, bool inBuy, EECivUpgrade inUpgrade)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67fa40
 // Handles the civilization timer: unless a builder form is up, opens the predefined-civilization selection once
 // (locking the choice), or the builder when custom civilizations are allowed
 long EEProcessTimerExpired()
@@ -478,6 +506,7 @@ long EEProcessTimerExpired()
     return theResult;
 }
 
+// FUNCTION: EXE 0x67fb5f
 // Clears the selection of the given upgrade list; returns 3 when it is missing
 long CivBuilderResetUpgradeSelection(UIForm* inForm, unsigned long inControl)
 {
@@ -489,18 +518,21 @@ long CivBuilderResetUpgradeSelection(UIForm* inForm, unsigned long inControl)
     return 3;
 }
 
+// FUNCTION: EXE 0x67fb83
 // Clears the available upgrade list's (0xcb) selection
 long CivBuilderResetAvailableSelection(UIForm* inForm)
 {
     return CivBuilderResetUpgradeSelection(inForm, 0xcb);
 }
 
+// FUNCTION: EXE 0x67fb94
 // Clears the bought upgrade list's (0xcc) selection
 long CivBuilderResetBoughtSelection(UIForm* inForm)
 {
     return CivBuilderResetUpgradeSelection(inForm, 0xcc);
 }
 
+// FUNCTION: EXE 0x67fba5
 // Moves every upgrade in the bought list (0xcc) back to the available list; always returns true
 bool CivBuilderReturnAllUpgrades()
 {
@@ -515,6 +547,7 @@ bool CivBuilderReturnAllUpgrades()
     return true;
 }
 
+// FUNCTION: EXE 0x67fc30
 // Copies the save dialog's selected file name into its edit box
 long CivBuilderSaveNameSelected()
 {
@@ -536,6 +569,7 @@ long CivBuilderSaveNameSelected()
     return theResult;
 }
 
+// FUNCTION: EXE 0x67fcf0
 // Starts or stops the blinking of the main game's civilization builder button and its large alert
 long EESetCivBuilderButtonBlinking(bool inBlinking)
 {
@@ -556,6 +590,7 @@ long EESetCivBuilderButtonBlinking(bool inBlinking)
     return 0;
 }
 
+// FUNCTION: EXE 0x67fd5a
 // Buys an upgrade, playing the button sound on success; returns 0xd when it cannot be moved
 long CivBuilderMoveToBought(EECivUpgrade inUpgrade)
 {
@@ -568,6 +603,7 @@ long CivBuilderMoveToBought(EECivUpgrade inUpgrade)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67fdab
 // Sells an upgrade back, playing the button sound on success; returns 0xd when it cannot be moved
 long CivBuilderMoveToAvailable(EECivUpgrade inUpgrade)
 {

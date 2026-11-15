@@ -60,7 +60,7 @@ public:
     float GetX() const { return this->mMatrix[0][3]; }  // exported, ICF-folded (0x10058d38)
     float GetY() const { return this->mMatrix[1][3]; }
     float GetYaw() const;
-    float GetZ() const { return this->mMatrix[2][3]; }
+    float GetZ() const { return this->mMatrix[2][3]; }  // 0x1000d7c4
     long Load(FSFile& inFile);
     void MakeIdentity();
     void MakeInverse(GETransformation& outInverse) const;

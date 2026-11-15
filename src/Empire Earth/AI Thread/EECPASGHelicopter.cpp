@@ -61,28 +61,36 @@
 #include "ee/EEAIAStarPathGraphGoal.h"
 #include "ee/EEAIKindIDs.h"
 
+// FUNCTION: EXE 0x44597f
 // Creates a helicopter attack sub-group (a kind of land sub-group) for the attack group
 EECPASGHelicopter::EECPASGHelicopter(EECPAttackGroup* inGroup, long inKind) : EECPASGLand(inGroup, inKind)
 {
 }
 
+// SYNTHETIC: EXE 0x44599b
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4459b7
 // Destroys the helicopter sub-group (base members only)
 EECPASGHelicopter::~EECPASGHelicopter()
 {
 }
 
+// FUNCTION: EXE 0x4459c2
 // Attacks with the generic sub-group behaviour, bypassing the land sub-group's version
 void EECPASGHelicopter::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUnit* inTarget, EETileCoordinate* inTile)
 {
     EECPAttackSubGroup::AttackWith(inUnit, inTarget, inTile);
 }
 
+// FUNCTION: EXE 0x4459d6
 // Sets every path cost weight to zero
 void EECPASGHelicopter::GetPathCosts(void* inFrom, void* inTo, EECPASGWeights& outWeights)
 {
     outWeights.Fill(0.0f);
 }
 
+// FUNCTION: EXE 0x4459e6
 // Takes the requested units as the base does, then refreshes the units; returns the base's result
 bool EECPASGHelicopter::TakeRequestedUnits()
 {
@@ -91,6 +99,7 @@ bool EECPASGHelicopter::TakeRequestedUnits()
     return theResult;
 }
 
+// FUNCTION: EXE 0x445a00
 // Picks units to split off as the base does, but always leaves at least one in the group
 void EECPASGHelicopter::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
 {
@@ -99,12 +108,14 @@ void EECPASGHelicopter::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
         outUnits.pop_back();
 }
 
+// FUNCTION: EXE 0x445a4e
 // Returns the player's high-ground guard share raised by 15% (0 without a computer player)
 float EECPASGHelicopter::GetGuardHighGroundPercentage()
 {
     return this->mPlayer2 != NULL ? this->mPlayer2->mGuardHighGroundPercentage * 1.15f : 0;
 }
 
+// FUNCTION: EXE 0x445a68
 // Adds every unit in the bounds that passes the helicopter target filter (enemies optional) to the targets
 void EECPASGHelicopter::CollectTargets(EEAIAStarBounds* inBounds, bool inIncludeEnemies)
 {
@@ -129,6 +140,7 @@ void EECPASGHelicopter::CollectTargets(EEAIAStarBounds* inBounds, bool inInclude
     }
 }
 
+// FUNCTION: EXE 0x445b25
 // Requests a path between two tiles with the group's terrain flags and the helicopter route planner
 void EECPASGHelicopter::RequestPath(void* inFrom, void* inTo)
 {
@@ -148,6 +160,12 @@ void EECPASGHelicopter::RequestPath(void* inFrom, void* inTo)
     theModifier->Dereference();
 }
 
+// FUNCTION: EXE 0x445bc8
+// Collects the units in the bounds that pass the helicopter target filter, dropping duplicates only when a
+// multi-tile unit was accepted and uniqueness was asked for; returns the count
+// EECollectASGTargets<EECPAHelicopterTargetFilter>, emitted by CollectTargets above.
+
+// FUNCTION: EXE 0x445d71
 // Returns the step cost between path sub-sectors: 10 straight or 14 diagonal, doubled into a wall and again when a
 // link joins a kind-13 sub-sector to another kind 13 or one the goal cannot cross; at least 1
 long EEAIGPGModifierLandWallAvoider::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
@@ -174,24 +192,32 @@ long EEAIGPGModifierLandWallAvoider::GetCost(EEAIAStarGraphNode* inFrom, EEAIPat
     return theCost;
 }
 
+// ICF-FOLDED: EXE 0x67c0b4
 // Returns false
+// (no address of its own: folded into the shared `xor al, al; ret` body the vtable slot points at)
 bool EECPASGHelicopter::DecideSplit()
 {
     return false;
 }
 
+// ICF-FOLDED: EXE 0x4e123d
 // Does nothing for helicopter paths
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EECPASGHelicopter::PrunePath()
 {
 }
 
+// ICF-FOLDED: EXE 0x4b3257
 // Returns true: helicopters can reach any location
+// (no address of its own: folded into the shared `mov al, 1; ret 4` body the vtable slot points at)
 bool EECPASGHelicopter::CanReach(EECPILocation const*)
 {
     return true;
 }
 
+// ICF-FOLDED: EXE 0x441948
 // Returns the continent-guard share, fixed at 1.0
+// (no address of its own: the same body as EECPASGAir::GetGuardContinentPercentage, which ICF kept; [sib 60])
 float EECPASGHelicopter::GetGuardContinentPercentage()
 {
     return 1.0f;

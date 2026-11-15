@@ -27,9 +27,18 @@
 
 // degrees to radians: written as a literal (0x446094 is its __real constant; a named const float loads first)
 
-UString gOrbitalClockwisePrefix("orbital_cw_");
-UString gOrbitalCounterClockwisePrefix("orbital_ccw_");
+// SYNTHETIC: EXE 0x608c37   (wrapper)
+// SYNTHETIC: EXE 0x608c41   (ctor)
+// SYNTHETIC: EXE 0x608c52   (registrar)
+// SYNTHETIC: EXE 0x608c5e   (dtor)
+UString gOrbitalClockwisePrefix("orbital_cw_");          // 0x9634b8
+// SYNTHETIC: EXE 0x608c69   (wrapper)
+// SYNTHETIC: EXE 0x608c73   (ctor)
+// SYNTHETIC: EXE 0x608c84   (registrar)
+// SYNTHETIC: EXE 0x608c90   (dtor)
+UString gOrbitalCounterClockwisePrefix("orbital_ccw_");  // 0x9634a8
 
+// FUNCTION: EXE 0x608c9b
 // Returns whether a model's name starts with orbital_cw_ or orbital_ccw_ (ignoring case)
 bool EEOrbital::IsOrbitalModel(GEModel* inModel)
 {
@@ -40,6 +49,7 @@ bool EEOrbital::IsOrbitalModel(GEModel* inModel)
     return false;
 }
 
+// FUNCTION: EXE 0x608ce6
 // Attaches the orbiting part to a model, speed from the name in degrees per second (orbital_cw_<deg>_... clockwise,
 // orbital_ccw_ counterclockwise); the prefix test ignores case
 void EEOrbital::Init(GEModel* inModel)
@@ -72,6 +82,7 @@ void EEOrbital::Init(GEModel* inModel)
     }
 }
 
+// FUNCTION: EXE 0x608e28
 // Advances the orbiting part's angle by its speed over the tick, wrapped to -pi..pi
 void EEOrbital::Update()
 {

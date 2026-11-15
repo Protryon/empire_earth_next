@@ -14,6 +14,7 @@
 namespace WONAPI {
 // Does nothing when the position changes (the linker folds this body into the identical one at 0x008142a0)
 void Component::PositionChanged() {}
+// FUNCTION: WON 0x006f5050
 // Reports a hit when the component is visible and does not ignore input (flag 0x800)
 bool Component::HitTest(int,int)
 {
@@ -27,11 +28,13 @@ bool Component::TimerEvent(int) { return true; }
 bool Component::CanClose() { return true; }
 // Does nothing when the enabled state changes (the linker folds this body into the identical one at 0x00556dd8)
 void Component::EnabledChanged(bool) {}
+// FUNCTION: WON 0x006f4c40
 // Passes the cursor request up to the parent
 void Component::SetCursor(Cursor* cursor)
 {
     if(this->mParent!=NULL) this->mParent->SetCursor(cursor);
 }
+// FUNCTION: WON 0x006f52c0
 // Handles a broadcast event like any component event
 void Component::HandleBroadcastEvent(ComponentEvent* event)
 {
@@ -39,17 +42,20 @@ void Component::HandleBroadcastEvent(ComponentEvent* event)
 }
 // Returns no mouse child (the linker folds this body into the identical one at 0x005ad67e)
 Component* Component::GetMouseChild() { return NULL; }
+// FUNCTION: WON 0x006f52a0
 // Marks the event as a broadcast and delivers it, now or queued
 void Component::FireBroadcastEvent(ComponentEvent* event,bool sendNow)
 {
     event->mBroadcast=true;
     this->DeliverEvent(event,sendNow);
 }
+// FUNCTION: WON 0x006f4c20
 // Asks the parent to stack this component above the sibling
 void Component::EnsureOnTopOf(Component* sibling)
 {
     if(this->mParent!=NULL) this->mParent->EnsureOnTopOf(sibling,this);
 }
+// FUNCTION: WON 0x006f4fb0
 // Makes the component translucent with the given color and level, through its background grabber
 void Component::SetTranslucentColor(int color,int level)
 {

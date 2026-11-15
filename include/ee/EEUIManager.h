@@ -26,7 +26,7 @@ public:
     // factories, loads the UI database, then the members (store order +0x12c, +0x13c, +0x130, +0x13d, +0x138)
     EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSurfaces, unsigned long inScreen,
                 const UString& inUnused);
-    virtual ~EEUIManager();
+    virtual ~EEUIManager();                 // 0x27156e (??_G 0x271552)
     // vtable overrides (slots from 0x44ae90): CreateUserDefinedBackground 0x14 (0x274564), CreateUserDefinedControl
     // 0x18 (0x274647; not declared yet), CreateForm 0x1c (0x274c94), UpdateKeyboard 0x2c (0x2750a9), UpdateMouse
     // 0x30 (0x2751ab)
@@ -73,7 +73,7 @@ public:
     bool mB13D;                             // +0x13d 0 in the ctor
 };
 
-extern EEUIManager* gUIManager;
+extern EEUIManager* gUIManager;             // 0x53191c
 
 // Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 32 'Available
 // Games (Sierra) Form'; names from the dbuicontrols control names (form prefix dropped).

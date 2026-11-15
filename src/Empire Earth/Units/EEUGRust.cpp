@@ -97,6 +97,7 @@ long gSpaceUnloadSoundID = 498;             // 0x4c8fa8 (.data = 0x1f2; the tele
 
 // ---- the build/repair goal's world work (EEUGBuildRepair.cpp's helpers; the goal itself is build.rs)
 
+// FUNCTION: EXE 0x61e104
 // Orders units farthest from the reference tile first, so a sort leaves the nearest unit last
 inline long EETileDistanceLess::DistanceSquared(EEUnit* inUnit) const
 {

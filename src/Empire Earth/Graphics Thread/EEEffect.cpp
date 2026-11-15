@@ -50,7 +50,15 @@
 #include "rust/ee_gfx.h"
 #include "ee/EEEffectMesh.h"
 
+// SYNTHETIC: EXE 0x50251d
+// SYNTHETIC: EXE 0x502527
+// SYNTHETIC: EXE 0x502538
+// SYNTHETIC: EXE 0x502544
 const UString EEEffect::sData("EEEffect-Data");
+
+// SYNTHETIC: EXE 0x502560
+// SYNTHETIC: EXE 0x502565
+// (the effects' random numbers, the original's file-static URandom: ee_gfx effect_state.rs)
 
 // The effects' records (ee_gfx effect_state.rs) hold the GE value classes as their mirrors
 static_assert(sizeof(GETransformation) == sizeof(EeGeTransformation), "GE mirrors");
@@ -129,11 +137,11 @@ struct EEEffectBatch {
     float mAlphaReference;                  // +0x08 (the smallest reference value of the batch; 1 when empty)
     unsigned long mCount;                   // +0x0c vertices
 };
-static EEEffectBatch sEffectGroundBatch;
-static EEEffectBatch sEffectBatch;
+static EEEffectBatch sEffectGroundBatch;          // 0x4e8da8
+static EEEffectBatch sEffectBatch;                // 0x4e8db8
 static GEPolygonArray* sEffectPolygons;           // 0x4e8df0 (0x400 polygons: two per quad)
-GEModel* gU4E8DF4;
-GEModel* gEffect2DModel;
+GEModel* gU4E8DF4;                          // 0x4e8df4
+GEModel* gEffect2DModel;                    // 0x4e8df8
 
 void FlushEffectBatch();
 // The quads' corners, colours, normals and opacities are ee_gfx effects.rs (RUST_PLAN R4.4); the GE value classes
@@ -155,6 +163,7 @@ static void AddEffectQuad(EEEffectBatch& ioBatch, const EeGfxEffectQuad& inQuad,
 // inline accessors: `fld; fld; fmulp`; a GEQuaternion by its x, y, z, w accessors) (provisional name; type inferred)
 void FlushEffectGroundBatch();
 
+// FUNCTION: EXE 0x50258e
 // Creates an effect on a unit (or none) with a graphic effect, referencing both, in no region yet, and loads its media
 EEEffect::EEEffect(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind, bool inKeepsUnit)
 {
@@ -170,6 +179,7 @@ EEEffect::EEEffect(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind
     this->LoadMedia(gLoadingSavedGame == false);
 }
 
+// FUNCTION: EXE 0x502600
 // Destroys the effect: unloads and releases its graphic effect, leaves its map region and releases its unit
 EEEffect::~EEEffect()
 {
@@ -192,6 +202,7 @@ EEEffect::~EEEffect()
     this->mRecord = NULL;
 }
 
+// FUNCTION: EXE 0x50269c
 // Creates the quad batches' shared polygon array (two triangles per quad, 0x200 quads) and both vertex arrays
 // (provisional name)
 void CreateEffectBatchBuffers()
@@ -207,6 +218,7 @@ void CreateEffectBatchBuffers()
     sEffectGroundBatch.mVertices = gRasterizer->CreateVertexArray(1, 0x800);
 }
 
+// FUNCTION: EXE 0x502724
 // Starts both quad batches empty with the given texture, referencing it once per batch (provisional name)
 void BeginEffectBatches(GETexture* inTexture)
 {
@@ -222,6 +234,7 @@ void BeginEffectBatches(GETexture* inTexture)
     sEffectGroundBatch.mAlphaReference = 1.0f;
 }
 
+// FUNCTION: EXE 0x502759
 // Returns the unit's position (physical model, else its tile centre at the tile's height; the origin without a
 // unit) in a shared static point
 const GE3DPoint& EEEffect::GetUnitLocation()
@@ -250,6 +263,10 @@ const GE3DPoint& EEEffect::GetUnitLocation()
     return sLocation;
 }
 
+// SYNTHETIC: EXE 0x502806
+// (sLocation's atexit dtor: GE3DPoint's empty user dtor)
+
+// FUNCTION: EXE 0x502807
 // Returns 10 (skip) for an effect shown only to another player, else 0
 long EEEffect::Queue(EEEffectQueue* inQueues)
 {
@@ -276,6 +293,7 @@ static GEModel* CreatePlaneModel(bool inStanding)
     return theModel;
 }
 
+// FUNCTION: EXE 0x50281f
 // Creates the shared horizontal quad model gU4E8DF4 (unit square in the ground plane, facing up) (provisional name)
 void CreateHorizontalPlaneModel()
 {
@@ -286,6 +304,7 @@ void CreateHorizontalPlaneModel()
     gU4E8DF4 = CreatePlaneModel(false);
 }
 
+// FUNCTION: EXE 0x502b1c
 // Creates the shared upright quad model gEffect2DModel (unit square facing -y, which the 2D effects turn to the
 // camera) (provisional name)
 void CreateStandingPlaneModel()
@@ -297,6 +316,7 @@ void CreateStandingPlaneModel()
     gEffect2DModel = CreatePlaneModel(true);
 }
 
+// FUNCTION: EXE 0x502e1b
 // Deletes the quad batches' polygon array and vertex arrays (provisional name)
 void DeleteEffectBatchBuffers()
 {
@@ -311,6 +331,7 @@ void DeleteEffectBatchBuffers()
     sEffectGroundBatch.mVertices = NULL;
 }
 
+// FUNCTION: EXE 0x502e61
 // Releases what the destructor releases (graphic effect, map region, unit) without destroying the effect
 void EEEffect::ReleaseResources()
 {
@@ -333,6 +354,7 @@ void EEEffect::ReleaseResources()
     this->mTileY = -1;
 }
 
+// FUNCTION: EXE 0x502ef0
 // Releases the shared horizontal quad model
 void ReleaseHorizontalPlaneModel()
 {
@@ -341,6 +363,7 @@ void ReleaseHorizontalPlaneModel()
     gU4E8DF4 = NULL;
 }
 
+// FUNCTION: EXE 0x502f08
 // Releases the shared upright quad model gEffect2DModel
 void ReleaseStandingPlaneModel()
 {
@@ -349,6 +372,7 @@ void ReleaseStandingPlaneModel()
     gEffect2DModel = NULL;
 }
 
+// FUNCTION: EXE 0x502f20
 // Drops the two texture references BeginEffectBatches took (both through the first batch's texture)
 void EndEffectBatches()
 {
@@ -358,18 +382,21 @@ void EndEffectBatches()
     }
 }
 
+// FUNCTION: EXE 0x502f3d
 // Returns a random float between the minimum and the maximum from the effects' random generator
 float GetEffectRandomFloat(float inMinimum, float inMaximum)
 {
     return ee_gfx_effect_random_float(inMinimum, inMaximum);
 }
 
+// FUNCTION: EXE 0x502f57
 // Returns a random long from the minimum to the maximum (clamped to the maximum) (provisional name)
 long GetEffectRandomLong(long inMinimum, long inMaximum)
 {
     return ee_gfx_effect_random_long((int32_t)inMinimum, (int32_t)inMaximum);
 }
 
+// FUNCTION: EXE 0x502f8b
 // Returns the next random fraction from the effects' random generator
 float EEEffect::GetRandom()
 {
@@ -382,12 +409,14 @@ unsigned long EEEffectRandomSeed()
     return ee_gfx_effect_random_seed();
 }
 
+// FUNCTION: EXE 0x502f96
 // Returns the graphic object (media) of the effect's graphic effect, or null without one
 EEGraphicObject* EEEffect::GetGraphicObject()
 {
     return this->mGraphicEffect ? static_cast<EEGraphicObject*>(this->mGraphicEffect->GetMedia()) : 0;
 }
 
+// FUNCTION: EXE 0x502fa6
 // Resets a pooled effect and attaches it to a new unit and graphic effect, referencing both, then loads its media
 void EEEffect::Reinit(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, bool inKeepsUnit)
 {
@@ -402,6 +431,7 @@ void EEEffect::Reinit(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, bool inK
     this->LoadMedia(gLoadingSavedGame == false);
 }
 
+// FUNCTION: EXE 0x502fe7
 // Resets a pooled effect to the empty state with the given keeps-unit flag
 void EEEffect::Reinit(bool inKeepsUnit)
 {
@@ -409,6 +439,7 @@ void EEEffect::Reinit(bool inKeepsUnit)
     this->mKeepsUnit = inKeepsUnit;
 }
 
+// FUNCTION: EXE 0x502ffa
 // Clears the effect's unit, graphic effect, links, handle, region and flags (shown to everyone, saved)
 void EEEffect::Init()
 {
@@ -417,6 +448,7 @@ void EEEffect::Init()
     ee_gfx_effect_init(this->mRecord);
 }
 
+// FUNCTION: EXE 0x503027
 // Reads the graphic effect id (and loads its media), region, saved unit id, handle and keeps-unit flag; returns
 // the first read error
 // (the reads are ee_gfx effect_state.rs's; the graphic effect is resolved after them: its media load reads no file)
@@ -435,6 +467,7 @@ long EEEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
     return theResult;
 }
 
+// FUNCTION: EXE 0x5030ab
 // Creates the two shared quad models (provisional name)
 void CreatePlaneModels()
 {
@@ -442,6 +475,7 @@ void CreatePlaneModels()
     CreateStandingPlaneModel();
 }
 
+// FUNCTION: EXE 0x5030b5
 // Loads the graphic effect's media (on demand or now)
 void EEEffect::LoadMedia(bool inIsOnDemand)
 {
@@ -450,6 +484,7 @@ void EEEffect::LoadMedia(bool inIsOnDemand)
 }
 
 // NEAR: block layout of the three returns; fld1 and fldz where ours loads the literals
+// FUNCTION: EXE 0x5030c8
 // Returns the fog visibility of a point: 1 unless the fog mode is linear, else fades from 1 at the fog start to 0
 // at the fog end, by the distance along the camera (row 1 of the inverse)
 float GetEffectFogFactor(const GE3DPoint& inPoint, unsigned long inFog)
@@ -466,8 +501,12 @@ float GetEffectFogFactor(const GE3DPoint& inPoint, unsigned long inFog)
                                     reinterpret_cast<const EeGeTransformation*>(&gU4E8F08.GetCameraInverse()));
 }
 
+// TEMPLATE: EXE 0x503154
+// (GERFogAttributes' inline ctor, emitted after its first user)
+
 // NEAR: register allocation (ours hoists the Apply(GE3DPoint) import into esi; the original keeps the index
 // in esi and inPosition in edi) and the GEVector stores' order
+// FUNCTION: EXE 0x50317d
 // Adds a camera-facing additive quad to the camera batch (colour dimmed by fog, alpha and brightness), drawing the
 // batch first when it is full
 void AddGlowSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
@@ -487,6 +526,7 @@ void AddGlowSprite(const GE3DPoint& inPosition, const GEColor& inColor, float in
     AddEffectQuad(sEffectBatch, theQuad, theIndex);
 }
 
+// FUNCTION: EXE 0x5033f1
 // Adds a flat ground quad turned by the rotation to the ground batch with one opacity, drawing the batch first when
 // it is full
 void AddGroundSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
@@ -505,6 +545,7 @@ void AddGroundSprite(const GE3DPoint& inPosition, const GEColor& inColor, float 
     AddEffectQuad(sEffectGroundBatch, theQuad, theIndex);
 }
 
+// FUNCTION: EXE 0x503634
 // Adds a flat ground quad turned by the yaw to the ground batch with a separate opacity per corner, drawing the
 // batch first when it is full
 void AddGroundQuad(const GE3DPoint& inCenter, const GEColor& inColor, float inYaw, float inSize, float* inHeights,
@@ -522,6 +563,7 @@ void AddGroundQuad(const GE3DPoint& inCenter, const GEColor& inColor, float inYa
     AddEffectQuad(sEffectGroundBatch, theQuad, theIndex);
 }
 
+// FUNCTION: EXE 0x50387b
 // Adds a camera-facing quad to the alpha-blended ground batch, drawing the batch first when it is full
 void AddBlendedSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
               float inBrightness, float inAlphaReference)
@@ -539,6 +581,7 @@ void AddBlendedSprite(const GE3DPoint& inPosition, const GEColor& inColor, float
     AddEffectQuad(sEffectGroundBatch, theQuad, theIndex);
 }
 
+// FUNCTION: EXE 0x503ac8
 // Adds an upright quad from inFrom to inTo, inHeight tall above the ground line between them, to the ground batch,
 // textured from inOrigin over inSize (EEE3DEnergyWave) (provisional names)
 void AddGroundStrip(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inHeight, const GEColor& inColor,
@@ -559,6 +602,7 @@ void AddGroundStrip(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inHeig
     AddEffectQuad(sEffectGroundBatch, theQuad, theIndex);
 }
 
+// FUNCTION: EXE 0x503db7
 // Draws and empties the camera batch: additive, no fog, no culling, z test only (provisional name)
 void FlushEffectBatch()
 {
@@ -580,6 +624,7 @@ void FlushEffectBatch()
     sEffectBatch.mAlphaReference = 1.0f;
 }
 
+// FUNCTION: EXE 0x503ea6
 // Draws and empties the ground batch: alpha-blended, no culling, z test only (provisional name)
 void FlushEffectGroundBatch()
 {
@@ -598,6 +643,7 @@ void FlushEffectGroundBatch()
     sEffectGroundBatch.mAlphaReference = 1.0f;
 }
 
+// FUNCTION: EXE 0x503f64
 // Draws whatever the ground batch and then the camera batch still hold (provisional name)
 void FlushEffectBatches()
 {
@@ -607,6 +653,7 @@ void FlushEffectBatches()
         FlushEffectBatch();
 }
 
+// FUNCTION: EXE 0x503f81
 // After a load, turns the saved unit id back into the unit (returns 7 when it is gone) and joins the effect's
 // map region
 long EEEffect::RepairPointers()
@@ -629,6 +676,7 @@ long EEEffect::RepairPointers()
     return theResult;
 }
 
+// FUNCTION: EXE 0x50400a
 // Writes the graphic effect id, region, unit id (-1 without a unit), handle and keeps-unit flag; returns the first
 // write error
 long EEEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -638,6 +686,7 @@ long EEEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, 
                               this->mUnit ? (uint32_t)this->mUnit->mUnitID : 0xffffffffu);
 }
 
+// FUNCTION: EXE 0x50409b
 // Moves the effect to the map region under a point when that region changed (mTileX/mTileY hold region
 // coordinates)
 void EEEffect::MoveToPoint(const GE3DPoint& inLocation)
@@ -664,12 +713,14 @@ void EEEffect::MoveToRegion(float inX, float inY)
     }
 }
 
+// FUNCTION: EXE 0x504175
 // Moves the effect to the map region under a transformation's translation when that region changed
 void EEEffect::MoveToTransformation(const GETransformation& inTransformation)
 {
     this->MoveToRegion(inTransformation.GetX(), inTransformation.GetY());
 }
 
+// FUNCTION: EXE 0x504250
 // Moves the effect from the old unit to the new one (when it is on the old unit and does not keep its unit)
 void EEEffect::ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
 {
@@ -680,6 +731,7 @@ void EEEffect::ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
     this->mUnit->Reference();
 }
 
+// FUNCTION: EXE 0x504275
 // Releases the two shared quad models (provisional name)
 void ReleasePlaneModels()
 {
@@ -687,6 +739,7 @@ void ReleasePlaneModels()
     ReleaseStandingPlaneModel();
 }
 
+// FUNCTION: EXE 0x50427f
 // Unloads the graphic effect's media
 void EEEffect::UnloadMedia()
 {
@@ -694,26 +747,36 @@ void EEEffect::UnloadMedia()
         this->mGraphicEffect->Unload();
 }
 
+// ICF-FOLDED: EXE 0x5ad67e
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
 long EEEffect::DrawPass2()
 {
     return 0;
 }
 
+// ICF-FOLDED: EXE 0x5ad67e
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
 long EEEffect::DrawPass3()
 {
     return 0;
 }
 
+// ICF-FOLDED: EXE 0x5ad67e
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
 long EEEffect::DrawPass4()
 {
     return 0;
 }
 
+// ICF-FOLDED: EXE 0x5ad67e
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
 long EEEffect::DrawPass5()
 {
     return 0;
 }
 
+// ICF-FOLDED: EXE 0x5ad67e
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
 long EEEffect::DrawPass6()
 {
     return 0;

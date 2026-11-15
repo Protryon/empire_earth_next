@@ -169,6 +169,7 @@ void EEMRecord::SetSendToAllAndWaitMessageID(unsigned long inID)
         this->Set<uint32_t>(theRules.wait_field, (uint32_t)inID);
 }
 
+// FUNCTION: EXE 0x4c0e6a (EEMLoadOrSaveGame::IsResponse)
 // Whether a message is this one's response, by the type's rule (Load or Save: the response for its tick)
 bool EEMRecord::IsResponse(NEMessage* inMessage)
 {
@@ -220,6 +221,7 @@ void EEMRecord::ImportMessage(unsigned char* inPayloadPointer)
     }
 }
 
+// FUNCTION: EXE 0x4be6c6 (the EEMFullGameOptions constructor)
 // The lobby's game options, whole (the server sends gGameOptions); the members in wire order
 EEMRecord* EENewFullGameOptions(const EEGameOptions& inOptions)
 {
@@ -233,6 +235,7 @@ EEMRecord* EENewFullGameOptions(const EEGameOptions& inOptions)
                           inOptions.GetMapType()});
 }
 
+// FUNCTION: EXE 0x4c378e (the EEMFullPlayerInformation constructor)
 // One lobby slot, whole (the server sends it to the players); the members in wire order
 EEMRecord* EENewFullPlayerInformation(const EEGameOptionsPlayer& inPlayer)
 {

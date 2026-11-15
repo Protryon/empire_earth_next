@@ -114,7 +114,9 @@
  * producing a reduced-size 4x4 output block.
  */
 
+// FUNCTION: JPEG 0x10094f97
 GLOBAL(void)
+// FUNCTION: EXEIMG 0x816230
 jpeg_idct_4x4 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 	       JCOEFPTR coef_block,
 	       JSAMPARRAY output_buf, JDIMENSION output_col)
@@ -267,7 +269,9 @@ jpeg_idct_4x4 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
  * producing a reduced-size 2x2 output block.
  */
 
+// FUNCTION: JPEG 0x10095285
 GLOBAL(void)
+// FUNCTION: EXEIMG 0x8165e0
 jpeg_idct_2x2 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 	       JCOEFPTR coef_block,
 	       JSAMPARRAY output_buf, JDIMENSION output_col)
@@ -375,7 +379,9 @@ jpeg_idct_2x2 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
  * producing a reduced-size 1x1 output block.
  */
 
+// FUNCTION: JPEG 0x10095447
 GLOBAL(void)
+// FUNCTION: EXEIMG 0x816810
 jpeg_idct_1x1 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 	       JCOEFPTR coef_block,
 	       JSAMPARRAY output_buf, JDIMENSION output_col)

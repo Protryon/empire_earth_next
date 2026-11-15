@@ -44,6 +44,10 @@
 #include "ee/EECPTrace.h"
 #include "ee/EECPNext.h"
 const UString EECPResearchManager::sData("EECPResearchManager-Data");
+// SYNTHETIC: EXE 0x489fc4   (wrapper)
+// SYNTHETIC: EXE 0x489fce   (ctor)
+// SYNTHETIC: EXE 0x489fdf   (registrar)
+// SYNTHETIC: EXE 0x489feb   (dtor)
 
 static long sHistoryCounter;                // 0x4e5d50 (AddHistory)
 
@@ -56,6 +60,7 @@ struct EECPRMEntryLess {
     }
 };
 
+// FUNCTION: EXE 0x48a007
 // Creates the research manager for the civilization manager's player, disabled and with no epoch seen yet
 EECPResearchManager::EECPResearchManager(EECPCivilizationManager* inManager)
     : mManager(inManager)
@@ -69,11 +74,16 @@ EECPResearchManager::EECPResearchManager(EECPCivilizationManager* inManager)
     this->mEnabled = false;
 }
 
+// SYNTHETIC: EXE 0x48a09c
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x48a0b8
 // Destroys the research manager (members only)
 EECPResearchManager::~EECPResearchManager()
 {
 }
 
+// FUNCTION: EXE 0x48a0f0
 // Picks a random research: a producible candidate that upgrades citizen attributes, else a shuffled one whose
 // researching building the player has; starts it if its costs stay below the resource caps and records it
 void EECPResearchManager::ChooseResearch()
@@ -134,6 +144,10 @@ void EECPResearchManager::ChooseResearch()
         this->mCandidates.erase(theIterator);
 }
 
+// SYNTHETIC: EXE 0x48a42e
+// (EETechTreeNode::GetNumUnitClasses, inline in ee/EEPlayer.h: emitted after its first user)
+
+// FUNCTION: EXE 0x48a447
 // Collects the wanted, not yet researched techs of the current and earlier epochs as research candidates
 void EECPResearchManager::BuildCandidates()
 {
@@ -150,6 +164,7 @@ void EECPResearchManager::BuildCandidates()
     }
 }
 
+// FUNCTION: EXE 0x48a4bf
 // Returns whether the player could produce the tech with its costs added to the resource caps; outTotal gets
 // its total unscaled cost
 bool EECPResearchManager::CanAfford(EETechTreeNode* inNode, long& outTotal)
@@ -170,6 +185,7 @@ bool EECPResearchManager::CanAfford(EETechTreeNode* inNode, long& outTotal)
     return theResult;
 }
 
+// FUNCTION: EXE 0x48a5c5
 // Reads the candidates, the per-epoch queues (techs that make units are dropped; 14 epochs before version 0.234),
 // the next research time, the epoch and the enabled flag; returns the first read error
 long EECPResearchManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -222,6 +238,7 @@ long EECPResearchManager::Load(unsigned long inMajorVersion, unsigned long inMin
     return theResult;
 }
 
+// FUNCTION: EXE 0x48a73f
 // Returns whether any epoch after the current one has queued techs
 bool EECPResearchManager::HasLaterEpochIDs()
 {
@@ -233,12 +250,14 @@ bool EECPResearchManager::HasLaterEpochIDs()
     return theResult;
 }
 
+// FUNCTION: EXE 0x48a77a
 // Queues research of the tech that unlocks a unit class
 void EECPResearchManager::ResearchUnitClass(long inUnitClass)
 {
     this->Research(gUnitClassTable[inUnitClass] ? gUnitClassTable[inUnitClass]->mTechnology : 100000);
 }
 
+// FUNCTION: EXE 0x48a79f
 // Queues a wanted tech in its epoch's list (epoch advances first), first ordering a building or unit that can
 // research it if the player has none, and reserves its costs
 void EECPResearchManager::Research(long inID)
@@ -274,6 +293,7 @@ void EECPResearchManager::Research(long inID)
     EE_CP_TRACE(this->mPlayer, "research.request", "tech=%ld epoch=%ld", inID, theEpoch);
 }
 
+// FUNCTION: EXE 0x48a91e
 // Builds inCount unit-making techs that can be sited, cheapest affordable first (repeating the list if short);
 // with none, adds inCount to the next epoch's SOL count (a null epoch at the last epoch)
 void EECPResearchManager::ResearchCheapest(unsigned long inCount)
@@ -375,6 +395,7 @@ void EECPResearchManager::ResearchCheapest(unsigned long inCount)
     }
 }
 
+// FUNCTION: EXE 0x48ade8
 // Rebuilds the candidates, drops unaffordable unit-making techs from the epoch queues and builds as many of the
 // cheapest instead
 void EECPResearchManager::ReplaceUnaffordable()
@@ -398,6 +419,7 @@ void EECPResearchManager::ReplaceUnaffordable()
         this->ResearchCheapest(theCount);
 }
 
+// FUNCTION: EXE 0x48ae93
 // Re-fetches the player's tech tree after loading; returns OK
 long EECPResearchManager::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -405,6 +427,7 @@ long EECPResearchManager::Restore(unsigned long inMajorVersion, unsigned long in
     return kErrorOK;
 }
 
+// FUNCTION: EXE 0x48aeaa
 // Queues a tech at an idle built unit that can research it; if there is none, orders that building or unit (or
 // schedules the epoch advance); returns whether the research was queued
 bool EECPResearchManager::TryResearch(long inID)
@@ -476,6 +499,7 @@ bool EECPResearchManager::TryResearch(long inID)
     return theResult;
 }
 
+// FUNCTION: EXE 0x48b0df
 // Writes the candidates, the 15 epoch queues, the next research time, the epoch and the enabled flag; returns
 // the first write error
 long EECPResearchManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -509,6 +533,7 @@ long EECPResearchManager::Save(unsigned long inMajorVersion, unsigned long inMin
     return theResult;
 }
 
+// FUNCTION: EXE 0x48b1fb
 // Schedules the next random research the player's research frequency (seconds, scaled by its modifier) after inTime
 void EECPResearchManager::SetNextRandomResearchTime(unsigned long inTime)
 {
@@ -519,6 +544,7 @@ void EECPResearchManager::SetNextRandomResearchTime(unsigned long inTime)
                (double)theDelay);
 }
 
+// FUNCTION: EXE 0x48b24e
 // On reaching a valid epoch, schedules the next epoch advance (not while loading) and resets the current epoch's
 // SOL count
 void EECPResearchManager::EpochReached(long inEpoch)
@@ -533,6 +559,7 @@ void EECPResearchManager::EpochReached(long inEpoch)
     this->mTechTree->mEpochs[this->mTechTree->mCurrentEpoch].mCurrentSOL = 0;
 }
 
+// FUNCTION: EXE 0x48b288
 // Returns whether a tech is worth researching: not an epoch or unit tech and researched at a non-citizen unit
 // that is not an epoch building
 bool EECPResearchManager::IsWanted(long inID)
@@ -556,6 +583,7 @@ bool EECPResearchManager::IsWanted(long inID)
     return theResult;
 }
 
+// FUNCTION: EXE 0x48b34b
 // Starts the first queued tech it can (rebuilding candidates on a new epoch) and, when due, a random research;
 // only the first computer player records history
 void EECPResearchManager::Update(unsigned long inTime)
@@ -595,6 +623,7 @@ void EECPResearchManager::Update(unsigned long inTime)
     this->SetNextRandomResearchTime(inTime);
 }
 
+// FUNCTION: EXE 0x48b467
 // Records a researched tech at the front of the last-5 history (when this player records history)
 void EECPResearchManager::AddHistory(long inID)
 {
@@ -607,3 +636,25 @@ void EECPResearchManager::AddHistory(long inID)
         this->mHistory.erase(this->mHistory.end() - 1);
     this->mHistory.insert(this->mHistory.begin(), EECPRMHistoryEntry(sHistoryCounter, inID));
 }
+
+// Compiler-generated for this unit (names in analysis/exe/names.txt):
+// TEMPLATE: EXE 0x48b51f
+// TEMPLATE: EXE 0x48b52f
+// TEMPLATE: EXE 0x48b55b
+// TEMPLATE: EXE 0x48b582
+// TEMPLATE: EXE 0x48b642
+// TEMPLATE: EXE 0x48b664
+// TEMPLATE: EXE 0x48b696
+// TEMPLATE: EXE 0x48b6bf
+// TEMPLATE: EXE 0x48b797
+// TEMPLATE: EXE 0x48b7cb
+// TEMPLATE: EXE 0x48b866
+// TEMPLATE: EXE 0x48b8a0
+// TEMPLATE: EXE 0x48b8e1
+// TEMPLATE: EXE 0x48b9c6
+// TEMPLATE: EXE 0x48b9f5
+// TEMPLATE: EXE 0x48ba40
+// TEMPLATE: EXE 0x48ba69
+// TEMPLATE: EXE 0x48bae3
+// TEMPLATE: EXE 0x48bb39
+// TEMPLATE: EXE 0x48bb82

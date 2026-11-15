@@ -75,6 +75,7 @@ extern "C" float ee_uicpp_ime_line(void* inList, const unsigned char* inNumber, 
                                     inLength);
 }
 
+// FUNCTION: LLE 0x100775d9
 // Creates the IME candidate window with its screen-size ratios and font, a blue selection bar and black background
 UIIMECandidate::UIIMECandidate(UIManager* inManager, float inHeightRatio, float inWidthRatio, GEFont* inFont)
     : mManager(inManager), mHeightRatio(inHeightRatio)
@@ -87,6 +88,7 @@ UIIMECandidate::UIIMECandidate(UIManager* inManager, float inHeightRatio, float 
     this->mBackgroundRhombus.SetColor(GEColor(0.0f, 0.0f, 0.0f));
 }
 
+// FUNCTION: LLE 0x100776d7
 // Destroys the candidate window's texts
 UIIMECandidate::~UIIMECandidate()
 {
@@ -96,6 +98,7 @@ UIIMECandidate::~UIIMECandidate()
         delete this->mCopyText;
 }
 
+// FUNCTION: LLE 0x1007771e
 // Redraws what the candidate window covered on the current form
 void UIIMECandidate::CloseCandidateWindow()
 {
@@ -103,6 +106,7 @@ void UIIMECandidate::CloseCandidateWindow()
     this->mManager->GetCurrentForm()->RedrawIntersectControls(this->mCandidateRectangle);
 }
 
+// FUNCTION: LLE 0x1007774a
 // Copies the candidate lines, text, rectangle and selection for drawing
 long UIIMECandidate::CopyData()
 {
@@ -113,6 +117,7 @@ long UIIMECandidate::CopyData()
     return kErrorOK;
 }
 
+// FUNCTION: LLE 0x1007778c
 // Draws the candidate window background, the selection bar and a two-pixel bevelled border
 long UIIMECandidate::DrawPolygons()
 {
@@ -139,6 +144,7 @@ long UIIMECandidate::DrawPolygons()
     return theResult;
 }
 
+// FUNCTION: LLE 0x10077aa8
 // Draws each candidate line onto the secondary surface
 long UIIMECandidate::DrawTextA()
 {
@@ -153,6 +159,7 @@ long UIIMECandidate::DrawTextA()
     return kErrorOK;
 }
 
+// FUNCTION: LLE 0x10077bbc
 // Places the candidate window below the control (above it near the screen bottom), clipped to the screen;
 // the IME page size it sets comes from the window's previous height
 void UIIMECandidate::OpenCandidateWindow(const GERectangle& inScreenRectangle, const GERectangle& inControlRectangle)
@@ -163,6 +170,7 @@ void UIIMECandidate::OpenCandidateWindow(const GERectangle& inScreenRectangle, c
                                                               this->mWidthRatio, this->mHeightRatio));
 }
 
+// FUNCTION: LLE 0x10077d28
 // Fills the window with the current page of IME candidates ("n: text"), sizes it to fit and marks the selected line
 void UIIMECandidate::SetCandidateList(const UIIMECandidateList& inList, float inLeft)
 {
@@ -178,3 +186,29 @@ void UIIMECandidate::SetCandidateList(const UIIMECandidateList& inList, float in
     this->mCandidateRectangle.SetRight(theFit.right);
     this->mSelection = theFit.selection;
 }
+
+// Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
+// SYNTHETIC: LLE 0x100774b9
+// SYNTHETIC: LLE 0x100774c3
+// SYNTHETIC: LLE 0x100774d3
+// SYNTHETIC: LLE 0x100774df
+// SYNTHETIC: LLE 0x100774e9
+// SYNTHETIC: LLE 0x100774f3
+// SYNTHETIC: LLE 0x10077503
+// SYNTHETIC: LLE 0x1007750f
+// SYNTHETIC: LLE 0x10077519
+// SYNTHETIC: LLE 0x10077523
+// SYNTHETIC: LLE 0x10077533
+// SYNTHETIC: LLE 0x1007753f
+// SYNTHETIC: LLE 0x10077549
+// SYNTHETIC: LLE 0x10077553
+// SYNTHETIC: LLE 0x10077563
+// SYNTHETIC: LLE 0x1007756f
+// SYNTHETIC: LLE 0x10077579
+// SYNTHETIC: LLE 0x10077583
+// SYNTHETIC: LLE 0x10077593
+// SYNTHETIC: LLE 0x1007759f
+// SYNTHETIC: LLE 0x100775a9
+// SYNTHETIC: LLE 0x100775b3
+// SYNTHETIC: LLE 0x100775c3
+// SYNTHETIC: LLE 0x100775cf

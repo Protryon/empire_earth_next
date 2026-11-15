@@ -16,9 +16,11 @@
 #include "ee/wonapi/WONLobbyControls.h"
 #include "rust/ee_won.h"
 namespace WONAPI {
+// FUNCTION: WON 0x007bb000
 // Creates a friends list entry with no friend (a separator line until a friend is set)
 FriendsListItem::FriendsListItem() { this->mSeparator=true; this->mSortGroup=0; }
 // The implicit destructor (0x7bb0a0) releases mFriend, then destroys the TextListItem base
+// FUNCTION: WON 0x007bb180
 // Sizes a separator (8 pixels high when shown, else 1) or a friend's text entry
 void FriendsListItem::CalcDimensions(ListArea* inList)
 {
@@ -28,6 +30,7 @@ void FriendsListItem::CalcDimensions(ListArea* inList)
         else this->mHeight=1;
     } else TextListItem::CalcDimensions(inList);
 }
+// FUNCTION: WON 0x007bb1c0
 // Orders entries by sort group, highest first (online friends, separator, others), then by text
 int FriendsListItem::Compare(const ListItem* inOther,ListArea* inList) const
 {
@@ -35,6 +38,7 @@ int FriendsListItem::Compare(const ListItem* inOther,ListArea* inList) const
     if(result!=0) return result;
     return TextListItem::Compare(inOther,inList);
 }
+// FUNCTION: WON 0x007bb1e0
 // Draws a shown separator as a line across the list, or a friend's text entry
 void FriendsListItem::Paint(Graphics& inGraphics,ListArea* inList)
 {
@@ -51,6 +55,7 @@ void FriendsListItem::Paint(Graphics& inGraphics,ListArea* inList)
 // constructor emitted at 0x7bb250
 FriendsListCtrl::FriendsListCtrl() {}
 // The implicit destructor (0x7bb2a0) releases four members, then destroys the Container base
+// FUNCTION: WON 0x007bb380
 // Looks up the friends list and the Remove and Locate buttons, creates the separator and listens to broadcasts
 void FriendsListCtrl::InitComponent(ComponentInit& inInit)
 {
@@ -66,6 +71,7 @@ void FriendsListCtrl::InitComponent(ComponentInit& inInit)
     this->SubscribeToBroadcast(1);
     this->UpdateButtons();
 }
+// FUNCTION: WON 0x007bb620
 // Shows the separator only when it has entries on both sides
 void FriendsListCtrl::UpdateSeparator()
 {
@@ -77,6 +83,7 @@ void FriendsListCtrl::UpdateSeparator()
         this->mFriendsList->RefreshItem(this->mSeparator.get());
     }
 }
+// FUNCTION: WON 0x007bb6a0
 // Fills an entry from a friend: name, icon (searching, in game, in chat, unknown), sort group, and italic unless online
 void FriendsListCtrl::UpdateFriend(LobbyFriend* inFriend,FriendsListItem* inItem)
 {
@@ -100,6 +107,7 @@ void FriendsListCtrl::UpdateFriend(LobbyFriend* inFriend,FriendsListItem* inItem
         inItem->mFont=this->GetDefaultFontMod(2,0);
     }
 }
+// FUNCTION: WON 0x007bb810
 // Returns the entry of the friend with the same user id, or NULL
 FriendsListItem* FriendsListCtrl::FindFriend(LobbyFriend* inFriend)
 {
@@ -110,6 +118,7 @@ FriendsListItem* FriendsListCtrl::FindFriend(LobbyFriend* inFriend)
     }
     return NULL;
 }
+// FUNCTION: WON 0x007bb860
 // Returns the friend of the selected entry, or NULL
 LobbyFriend* FriendsListCtrl::GetSelectedFriend()
 {
@@ -117,6 +126,7 @@ LobbyFriend* FriendsListCtrl::GetSelectedFriend()
     if(item!=NULL) return item->mFriend.get();
     return NULL;
 }
+// FUNCTION: WON 0x007bb880
 // Adds, removes or refreshes a friend's entry, then updates the buttons and separator
 void FriendsListCtrl::HandleFriendChanged(FriendChangedEvent* inEvent)
 {
@@ -137,6 +147,7 @@ void FriendsListCtrl::HandleFriendChanged(FriendChangedEvent* inEvent)
     this->UpdateButtons();
     this->UpdateSeparator();
 }
+// FUNCTION: WON 0x007bb9a0
 // Refreshes every friend's entry from its friend, then the buttons and separator
 void FriendsListCtrl::RefreshFriends()
 {
@@ -149,6 +160,7 @@ void FriendsListCtrl::RefreshFriends()
     this->UpdateButtons();
     this->UpdateSeparator();
 }
+// FUNCTION: WON 0x007bba10
 // Rebuilds the list from the lobby's friends plus the separator
 void FriendsListCtrl::FillFriends() {
     this->mFriendsList->BeginUpdate();
@@ -163,6 +175,7 @@ void FriendsListCtrl::FillFriends() {
     this->UpdateButtons();
     this->UpdateSeparator();
 }
+// FUNCTION: WON 0x007bbb40
 // Enables Locate and Remove only while an entry is selected
 void FriendsListCtrl::UpdateButtons()
 {
@@ -174,6 +187,7 @@ void FriendsListCtrl::UpdateButtons()
         this->mRemoveButton->SetEnabled(true);
     }
 }
+// FUNCTION: WON 0x007bbb90
 // Handles Remove, Locate, selection, the right-click friend menu, double-click locate and friend list events
 void FriendsListCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -208,3 +222,20 @@ void FriendsListCtrl::HandleComponentEvent(ComponentEvent* inEvent)
     Component::HandleComponentEvent(inEvent);
 }
 }
+
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007bb2a0
+// (public: virtual __thiscall WONAPI::FriendsListCtrl::~FriendsListCtrl(void)    [??1FriendsListCtrl@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007bb080
+// (public: virtual void * __thiscall WONAPI::FriendsListItem::`scalar deleting destructor'(unsigned int)    [??_GFriendsListItem@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007bb0a0
+// (public: virtual __thiscall WONAPI::FriendsListItem::~FriendsListItem(void)    [??1FriendsListItem@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x007bb280
+// (public: virtual void * __thiscall WONAPI::FriendsListCtrl::`scalar deleting destructor'(unsigned int)    [??_GFriendsListCtrl@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007bb250
+// (public: __thiscall WONAPI::FriendsListCtrl::FriendsListCtrl(void)    [??0FriendsListCtrl@WONAPI@@QAE@XZ])

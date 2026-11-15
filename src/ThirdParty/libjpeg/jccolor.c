@@ -82,6 +82,7 @@ typedef my_color_converter * my_cconvert_ptr;
  * Initialize for RGB->YCC colorspace conversion.
  */
 
+// FUNCTION: JPEG 0x1009413d
 METHODDEF(void)
 rgb_ycc_start (j_compress_ptr cinfo)
 {
@@ -126,6 +127,7 @@ rgb_ycc_start (j_compress_ptr cinfo)
  * offset required on that side.
  */
 
+// FUNCTION: JPEG 0x10094201
 METHODDEF(void)
 rgb_ycc_convert (j_compress_ptr cinfo,
 		 JSAMPARRAY input_buf, JSAMPIMAGE output_buf,
@@ -182,6 +184,7 @@ rgb_ycc_convert (j_compress_ptr cinfo,
  * We assume rgb_ycc_start has been called (we only use the Y tables).
  */
 
+// FUNCTION: JPEG 0x10094300
 METHODDEF(void)
 rgb_gray_convert (j_compress_ptr cinfo,
 		  JSAMPARRAY input_buf, JSAMPIMAGE output_buf,
@@ -221,6 +224,7 @@ rgb_gray_convert (j_compress_ptr cinfo,
  * We assume rgb_ycc_start has been called.
  */
 
+// FUNCTION: JPEG 0x10094385
 METHODDEF(void)
 cmyk_ycck_convert (j_compress_ptr cinfo,
 		   JSAMPARRAY input_buf, JSAMPIMAGE output_buf,
@@ -276,6 +280,7 @@ cmyk_ycck_convert (j_compress_ptr cinfo,
  * The source can be either plain grayscale or YCbCr (since Y == gray).
  */
 
+// FUNCTION: JPEG 0x100944bd
 METHODDEF(void)
 grayscale_convert (j_compress_ptr cinfo,
 		   JSAMPARRAY input_buf, JSAMPIMAGE output_buf,
@@ -305,6 +310,7 @@ grayscale_convert (j_compress_ptr cinfo,
  * We assume input_components == num_components.
  */
 
+// FUNCTION: JPEG 0x10094517
 METHODDEF(void)
 null_convert (j_compress_ptr cinfo,
 	      JSAMPARRAY input_buf, JSAMPIMAGE output_buf,
@@ -348,6 +354,7 @@ null_method (j_compress_ptr cinfo)
  * Module initialization routine for input colorspace conversion.
  */
 
+// FUNCTION: JPEG 0x10093fa6
 GLOBAL(void)
 jinit_color_converter (j_compress_ptr cinfo)
 {

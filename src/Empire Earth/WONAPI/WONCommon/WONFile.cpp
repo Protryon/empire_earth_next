@@ -34,11 +34,13 @@ void WONFileOutOfRange()
 }
 }
 namespace WONAPI {
+// FUNCTION: WON 0x006a7610
 // Creates a file object for the given path
 WONFile::WONFile(const std::string& inPath)
 {
     this->SetFilePath(inPath);
 }
+// FUNCTION: WON 0x006a76c0
 // Clears the path and invalidates every cached path part and stat value
 void WONFile::Reset()
 {
@@ -54,12 +56,14 @@ void WONFile::Reset()
     this->mFullPathValid = false;
     this->mIsDir = false;
 }
+// FUNCTION: WON 0x006a7840
 // Sets the path, converting forward slashes to backslashes
 void WONFile::SetFilePath(const std::string& inPath)
 {
     this->Reset();
     ee_won_path_given(WONFileBytes(inPath), inPath.length(), WONFileSink, &this->mPath);
 }
+// FUNCTION: WON 0x006a7960
 // Deletes the file, first clearing its read-only flag when asked; returns success
 bool WONFile::Delete(bool inEvenIfReadOnly)
 {
@@ -71,6 +75,7 @@ bool WONFile::Delete(bool inEvenIfReadOnly)
     }
     return PlatDeleteFile(this->mPath.c_str()) != 0;
 }
+// FUNCTION: WON 0x006a79b0
 // Sets or clears the file's read-only flag; returns success
 bool WONFile::SetReadOnly(bool inReadOnly)
 {
@@ -82,8 +87,10 @@ bool WONFile::SetReadOnly(bool inReadOnly)
     return PlatPathSetAttributes(this->mPath.c_str(), attributes != 0 ? attributes : PLAT_ATTR_NORMAL) != 0;
 }
 
+// FUNCTION: WON 0x006a79e0
 // Returns the path as given
 const std::string& WONFile::GetFilePath() { return this->mPath; }
+// FUNCTION: WON 0x006a79f0
 // Stats the file and caches existence, read-only flag, size, modify time and directory flag
 void WONFile::CalcFileInfo()
 {
@@ -113,6 +120,7 @@ void WONFile::CalcFileInfo()
         this->mIsReadOnly = false;
     }
 }
+// FUNCTION: WON 0x006a7a60
 // Splits the path at the last backslash into the cached directory and file name
 void WONFile::CalcFileDirectory()
 {
@@ -123,6 +131,7 @@ void WONFile::CalcFileDirectory()
     this->mFileDirectoryValid = true;
     this->mFileNameValid = true;
 }
+// FUNCTION: WON 0x006a7c30
 // Caches the absolute form of the path
 void WONFile::CalcFullPath()
 {
@@ -144,6 +153,7 @@ void WONFile::CalcFullPath()
         WONFileOutOfRange();
     this->mFullPath = full;
 }
+// FUNCTION: WON 0x006a7d80
 // Splits the file name at the last dot into the cached extension and base name
 void WONFile::CalcFileExtension()
 {
@@ -157,54 +167,63 @@ void WONFile::CalcFileExtension()
     }
     this->mFileExtensionValid = true;
 }
+// FUNCTION: WON 0x006a7fd0
 // Returns the directory part of the path
 const std::string& WONFile::GetFileDirectory()
 {
     if (!this->mFileDirectoryValid) this->CalcFileDirectory();
     return this->mFileDirectory;
 }
+// FUNCTION: WON 0x006a7ff0
 // Returns the file name part of the path
 const std::string& WONFile::GetFileName()
 {
     if (!this->mFileNameValid) this->GetFileDirectory();
     return this->mFileName;
 }
+// FUNCTION: WON 0x006a8010
 // Returns the file extension without the dot
 const std::string& WONFile::GetFileExtension()
 {
     if (!this->mFileExtensionValid) this->CalcFileExtension();
     return this->mFileExtension;
 }
+// FUNCTION: WON 0x006a8030
 // Returns the absolute path
 const std::string& WONFile::GetFullPath()
 {
     if (!this->mFullPathValid) this->CalcFullPath();
     return this->mFullPath;
 }
+// FUNCTION: WON 0x006a8050
 // Returns the file size, 0 when it does not exist
 unsigned long WONFile::GetSize()
 {
     if (!this->mStatValid) this->CalcFileInfo();
     return this->mSize;
 }
+// FUNCTION: WON 0x006a8070
 // Returns the file's last modify time, 0 when it does not exist
 long WONFile::GetModifyTime()
 {
     if (!this->mStatValid) this->CalcFileInfo();
     return this->mModifyTime;
 }
+// FUNCTION: WON 0x006a8090
 // Returns true when the file exists
 bool WONFile::Exists()
 {
     if (!this->mStatValid) this->CalcFileInfo();
     return this->mExists;
 }
+// FUNCTION: WON 0x006a80b0
 // Returns true when the path is a directory
 bool WONFile::IsDir()
 {
     if (!this->mStatValid) this->CalcFileInfo();
     return this->mIsDir;
 }
+// FUNCTION: WON 0x006a80d0
 // Creates the path as a directory; when it exists returns whether it is a directory
 bool WONFile::CreateAsDirectory(bool inUnused)
 {

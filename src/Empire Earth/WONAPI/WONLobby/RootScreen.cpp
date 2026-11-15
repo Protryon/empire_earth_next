@@ -15,6 +15,7 @@
 #include "ee/wonapi/WONLobbyRoomServer.h"
 namespace WONAPI {
 // The original reloads mTabCtrl and its bottom tab bar for every call
+// FUNCTION: WON 0x007c4880
 // Enables the game tab and switches to it, or switches back to the previous tab and disables the game tab
 void RootScreen::EnterGameTab(bool enter)
 {
@@ -34,17 +35,21 @@ void RootScreen::EnterGameTab(bool enter)
         this->mTabCtrl->EnableTab(this->mGameTab,false);
     }
 }
+// FUNCTION: WON 0x007c4930
 // Switches to the Internet lobby tab
 void RootScreen::ShowLobbyTab(){this->mTabCtrl->SetCurTab(this->mLobbyTab,true);}
+// FUNCTION: WON 0x007c4950
 // Opens the game tab when the player has joined a game of this screen's kind (Internet or LAN)
 void RootScreen::HandleJoinedGame()
 {
     LobbyGame* aGame=GetMyLobbyGame();
     if(aGame!=NULL && aGame->MatchesRoomSpec(this->mRoomSpecFlags)) this->EnterGameTab(true);
 }
+// FUNCTION: WON 0x007c4980
 // Leaves and disables the game tab after the player left the game
 void RootScreen::HandleLeftGame(){this->EnterGameTab(false);}
 // The banner height is a function-local static, read from the layout on the first call
+// FUNCTION: WON 0x007c46d0
 // Lays out the lower bar: hidden, sized for the cross-promotion banner, or for the logo and back button
 void RootScreen::Virtual08()
 {
@@ -87,6 +92,7 @@ void RootScreen::Virtual08()
     Container::Virtual08();
 }
 // A tab-selected event still goes on to Component::HandleComponentEvent after its handler
+// FUNCTION: WON 0x007c4ae0
 // Handles tab changes, the relayout button and entered-screen/joined-game/left-game events
 void RootScreen::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -103,6 +109,7 @@ void RootScreen::HandleComponentEvent(ComponentEvent* inEvent)
     Component::HandleComponentEvent(inEvent);
 }
 // The original sets these members in the constructor body, not in an initializer list
+// FUNCTION: WON 0x007c3c00
 // Creates the root screen for the Internet or the LAN lobby, with no tab ids known yet
 RootScreen::RootScreen(bool inIsLan)
 {
@@ -114,18 +121,22 @@ RootScreen::RootScreen(bool inIsLan)
     this->mIsSwat=false;
 }
 // The original stores the class's own vtable, then destroys the members
+// FUNCTION: WON 0x007c3d10
 // Destroys the root screen (members only)
 RootScreen::~RootScreen() {}
+// FUNCTION: WON 0x007c3ec0
 // Returns whether the LAN screen is showing its direct connect tab
 bool RootScreen::OnDirectConnectTab()
 {
     return this->mIsLan && this->mTabCtrl->GetCurTabId()==this->mDirectConnectTab;
 }
+// FUNCTION: WON 0x007c3f00
 // Returns whether the LAN screen is showing its LAN games tab
 bool RootScreen::OnLanTab()
 {
     return this->mIsLan && this->mTabCtrl->GetCurTabId()==this->mLanTab;
 }
+// FUNCTION: WON 0x007c4990
 // Resets the help and news browsers and selects the tab saved in the user's preferences
 void RootScreen::HandleEnteredScreen()
 {
@@ -135,6 +146,7 @@ void RootScreen::HandleEnteredScreen()
     aTabs->SetCurTabByName(LobbyGetTabSelect(),true);
 }
 
+// FUNCTION: WON 0x007c3f40
 // Finds the screen's tabs and lower bar controls in the layout and tells the children the room kind
 void RootScreen::InitComponent(ComponentInit& inInit)
 {
@@ -170,6 +182,7 @@ void RootScreen::InitComponent(ComponentInit& inInit)
     }
     this->SubscribeToBroadcast(1);
 }
+// FUNCTION: WON 0x007c49d0
 // Saves the user's preferences on a tab change; in SWAT mode shrinks the window on tab 2 and restores it
 void RootScreen::HandleTabCtrlTabSelected(ComponentEvent* inEvent)
 {
@@ -205,3 +218,15 @@ void RootScreen::HandleTabCtrlTabSelected(ComponentEvent* inEvent)
 }
 
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007c3cf0
+// (public: virtual void * __thiscall WONAPI::RootScreen::`scalar deleting destructor'(unsigned int)    [??_GRootScreen@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007c4620
+// (public: __thiscall WONAPI::SetRoomSpecFlagsEvent::SetRoomSpecFlagsEvent(int))
+// TEMPLATE: WON 0x007c4650
+// (public: virtual void * __thiscall WONAPI::SetRoomSpecFlagsEvent::`scalar deleting destructor'(unsigned int)    [??_GSetRoomSpecFlagsEvent@WONAPI@@UAEP)
+// TEMPLATE: WON 0x007c4670
+// (public: virtual __thiscall WONAPI::SetRoomSpecFlagsEvent::~SetRoomSpecFlagsEvent(void)    [??1SetRoomSpecFlagsEvent@WONAPI@@UAE@XZ])

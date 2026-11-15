@@ -28,23 +28,23 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // +0x10 0x58625
 
     // (EECPAttackCommander.cpp's calls; provisional names; argument types inferred)
-    EECPAttackGroup(EECPAttackCommander* inCommander);
+    EECPAttackGroup(EECPAttackCommander* inCommander);   // 0x5473a
     void AssignTask(EECPAttackSubGroup* inSubGroup);    // 0x57962 (ret 4; EECPASGAir::SetState state 0) (provisional name)
     EECPASGTransport* FindLandTransport(EECPASGLand* inLand);  // 0x579f4 (ret 4; EECPASGLand::RequestTransport: a transport for inLand) (provisional name)
-    bool JoinSubGroup(EEComplexUnit* inOld, EEComplexUnit* inUnit);
-    bool PlaceInSubGroup(EEComplexUnit* inUnit);
+    bool JoinSubGroup(EEComplexUnit* inOld, EEComplexUnit* inUnit);  // 0x54829 (ret 8)
+    bool PlaceInSubGroup(EEComplexUnit* inUnit);  // 0x54948 (ret 4)
     void TargetPlayerNotice(EEPlayer* inPlayer, bool inFlag); // 0x55cdd (ret 8): drops (inFlag) or re-tasks its subgroups when inPlayer is the target
     EECPAttackSubGroup* FindHolder(EEUnit* inUnit);  // 0x56a9c (ret 4): the sub group holding inUnit, 0 if none
     // 0x56ae6 (ret 8; returns outGroups.size())
     unsigned long ListUnit(EEComplexUnit* inUnit, std::vector<EECPAttackSubGroup*>& outGroups);
-    void CollectUnits(std::vector<EEComplexUnit*>& inUnits);
-    bool KeepsUnit(EEComplexUnit* inUnit);
-    void MakePlan(EECPCombatStrategy& inStrategy, std::vector<long>& outUnitIDs);
-    bool ReleaseUnit(EEComplexUnit* inUnit);
+    void CollectUnits(std::vector<EEComplexUnit*>& inUnits);  // 0x56b35 (ret 4)
+    bool KeepsUnit(EEComplexUnit* inUnit);  // 0x56caf (ret 4)
+    void MakePlan(EECPCombatStrategy& inStrategy, std::vector<long>& outUnitIDs);  // 0x57391 (ret 8)
+    bool ReleaseUnit(EEComplexUnit* inUnit);         // 0x577d4 (ret 4)
     // 0x589c4 (ret 8: the first sub group whose slot +0x128 takes the unit change; returns al, types from that slot)
     bool ReplaceUnit(EEComplexUnit* inUnit, EEComplexUnit* inNewUnit);
     bool RemoveUnit(EEUnit* inUnit);        // 0x58a06 (ret 4; a group member: it walks mSubGroups)
-    void Tick(unsigned long inTime);
+    void Tick(unsigned long inTime);        // 0x58a9e (ret 4)
     // inline (COMDAT 0x51cf8 right after its first user EECPAttackCommander::CreateGroup; called out of line there):
     // done when flagged or without sub groups (provisional name)
     bool IsSpent() const { return this->mIsFinished || this->mSubGroups.size() == 0; }
@@ -65,17 +65,17 @@ public:
     bool MergeSubGroups(EECPAttackSubGroup* inInto, EECPAttackSubGroup* inFrom);  // 0x55d55 (ret 8: inFrom's units into inInto)
     // 0x55dbd (ret 8): one new sub group per kind of inGroup's units and classes, into outSubGroups
     void MakeSubGroups(EECPUnitSelectionGroup& inGroup, std::vector<EECPAttackSubGroup*>& outSubGroups);
-    void PlaceSubGroups(EECPUnitSelectionGroup& inGroup);
+    void PlaceSubGroups(EECPUnitSelectionGroup& inGroup);  // 0x56416 (ret 4)
     void RemoveSubGroup(EECPAttackSubGroup* inSubGroup);  // 0x569f8 (ret 4: removes and releases inSubGroup)
     void GetTargetLocations(std::vector<EECPILocation>& outTargets);  // 0x56b73 (ret 4: the target player's targets)
     long GetSubGroupKind(EEUnitClass* inClass);  // 0x56bee (ret 4: the sub group kind of a unit class, 100 if none)
     void DropOrdersOf(EECPAttackSubGroup* inSubGroup);  // 0x56f9e (ret 4: clears the orders naming inSubGroup)
-    bool FindAirTarget(EECPAttackSubGroup* inSubGroup, EECPILocation& inFrom, EECPILocation& outTo);
-    bool FindLandTarget(EECPAttackSubGroup* inSubGroup, EECPILocation& inFrom, EECPILocation& outTo);
-    bool FindSeaTarget(EECPAttackSubGroup* inSubGroup, EECPILocation& inFrom, EECPILocation& outTo);
-    bool FindSpaceTarget(EECPAttackSubGroup* inSubGroup, EECPILocation& inFrom, EECPILocation& outTo);
+    bool FindAirTarget(EECPAttackSubGroup* inSubGroup, EECPILocation& inFrom, EECPILocation& outTo);  // 0x57017 (ret 0xc)
+    bool FindLandTarget(EECPAttackSubGroup* inSubGroup, EECPILocation& inFrom, EECPILocation& outTo);  // 0x571e4 (ret 0xc)
+    bool FindSeaTarget(EECPAttackSubGroup* inSubGroup, EECPILocation& inFrom, EECPILocation& outTo);  // 0x5737e (ret 0xc)
+    bool FindSpaceTarget(EECPAttackSubGroup* inSubGroup, EECPILocation& inFrom, EECPILocation& outTo);  // 0x5738c (ret 0xc)
     bool ExecuteOrder(EECPAGOrder& inOrder, unsigned long inTime);  // 0x57727 (ret 8: carries out one order)
-    void CheckUnit(EECPAGOrder& inOrder);
+    void CheckUnit(EECPAGOrder& inOrder);   // 0x577e0 (ret 4)
     // the target filter after GetTargetLocations's GetTargets: empty (ICF-folded into 0x157269, `ret 4`) (provisional
     // name)
     void FilterTargets(std::vector<EECPILocation>& ioTargets);

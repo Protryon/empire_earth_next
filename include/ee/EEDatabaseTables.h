@@ -57,7 +57,7 @@ static_assert(sizeof(EEWorldTableEntry) == 28, "on-disk record: 28 bytes on ever
 // its op+ `imul 0x1c` (refused at some sites: 0x84d7b; the out-of-line operator[] 0x1ae53b, `mov ecx, 0x92fca4`).
 class EEWorldTable {
 public:
-    EEWorldTable();
+    EEWorldTable();                         // 0xdcb53
     virtual ~EEWorldTable() { this->mEntries.clear(); }
     long Load(FSFileSpec* inFile);          // 0xdcb79 (db\dbworld.dat)
     void Clear();                           // 0xdcc2b (the ctor calls it)
@@ -67,9 +67,9 @@ public:
     // A constant is named by its id (ee/EEWorldConstants.h, generated from dbworld's ids): a raw row number does
     // not compile. F, F2, L, L2: the four values of a row (docs/DATA_FORMATS.md 8.3).
     float GetFloatValue(EEWorldConstant inID) const { return this->mEntries[inID].mFloatValue; }
-    float GetFloatValue2(EEWorldConstant inID) const { return this->mEntries[inID].mFloatValue2; }
-    unsigned long GetLongValue(EEWorldConstant inID) const { return this->mEntries[inID].mLongValue; }
-    unsigned long GetLongValue2(EEWorldConstant inID) const { return this->mEntries[inID].mLongValue2; }
+    float GetFloatValue2(EEWorldConstant inID) const { return this->mEntries[inID].mFloatValue2; }  // 0x61de8
+    unsigned long GetLongValue(EEWorldConstant inID) const { return this->mEntries[inID].mLongValue; }  // 0xcd4b3
+    unsigned long GetLongValue2(EEWorldConstant inID) const { return this->mEntries[inID].mLongValue2; }  // 0x178554
 
 private:
     std::vector<EEWorldTableEntry> mEntries;    // +0x04 (_First +0x08 = 0x52fca8)
@@ -80,19 +80,19 @@ extern EEWorldTable gWorldTable;            // 0x52fca0 (Empire Earth.cpp)
 // RTTI EETerrainTable (vtable 0x43f7e4; ctor 0xdb245, dtor 0xdbc7d, ??_G 0xdbc61)
 class EETerrainTable {
 public:
-    EETerrainTable();
-    virtual ~EETerrainTable();
+    EETerrainTable();                       // 0xdb245
+    virtual ~EETerrainTable();              // 0xdbc7d
 
     // (from EESELoadThread's Handle408 0x172433; provisional names)
     // 0xdbc39 (cdecl): the loaded entry inIndex of the static table (vector at 0x8e86d8), 0 past its end or when the
     // entry's +0x50 is negative
     static EETerrainTable* Get(long inIndex);
     static long Load(FSFileSpec* inFile);   // 0xdb2ce (db\dbterrain.dat)
-    static void Unload();
-    static void DumpAllLoadedMedia(FSFileSpec& inFile);
+    static void Unload();                   // 0xdb4c4
+    static void DumpAllLoadedMedia(FSFileSpec& inFile);   // 0xdb551
     void Load(GETerrainMesh& ioMesh);       // 0xdb5c8 (counted by +0x48; sets the mesh's texture sets)
-    void Unload(GETerrainMesh& ioMesh);
-    GETexture* LoadTexture(const UString& inFile);
+    void Unload(GETerrainMesh& ioMesh);     // 0xdb9e3
+    GETexture* LoadTexture(const UString& inFile);   // 0xdb69d (provisional name)
     void LoadTextures();                    // 0xdb762 (Load's worker, outside the lock; provisional name)
     void AttachTextures(GETextureSet* inTextureSet);  // 0xdb96c (EEMap::RegisterTerrainSets hands it the registered set) (provisional name)
     // inline (out-of-line COMDAT 0x11e1d8 after its first user, EEMap::Load) (provisional name)
@@ -131,15 +131,15 @@ public:
     bool mIsAmbientsOnly;                   // +0x87 (untouched)
     volatile bool mIsLoading;               // +0x88 (set while Load runs; polled by other threads)
     // the two tables share the guard byte 0x8e86d4 (bits 1, 2); only their unit sees them
-    static std::vector<EETerrainTable*> sTable;
-    static std::vector<class EECliffTerrainTable*> sCliffTable;
+    static std::vector<EETerrainTable*> sTable;             // 0x8e86d8
+    static std::vector<class EECliffTerrainTable*> sCliffTable;   // 0x8e86c0
 };
 
 // RTTI EECliffTerrainTable (vtable 0x43f7f0; ctor 0xdbafe, ??_G 0xdbca2; sizeof 0x24): db\dbcliffterrain.dat
 // (provisional names)
 class EECliffTerrainTable {
 public:
-    EECliffTerrainTable();
+    EECliffTerrainTable();                  // 0xdbafe
     virtual ~EECliffTerrainTable() {}
     static long Load(FSFileSpec* inFile);   // 0xdbb22 (records with a negative +0x68 stay NULL)
     static long Unload();                   // 0xdbbfb (returns 0)
@@ -154,12 +154,12 @@ public:
 // RTTI EETerrainTypeTable (vtable 0x43f7f8; ctor 0xdbd11, ??_G 0xdbe27). Inline dtor.
 class EETerrainTypeTable {
 public:
-    EETerrainTypeTable();
+    EETerrainTypeTable();                   // 0xdbd11
     virtual ~EETerrainTypeTable() {}
     static long Load(FSFileSpec* inFile);   // 0xdbd2e (db\dbterrainType.dat)
-    static void Unload();
+    static void Unload();                   // 0xdbde7
     static long LoadDamageTables(FSFileSpec* inFile);  // 0xdbf11 (gDamageTable and its two twins; provisional name)
-    static void ClearDamageTables();
+    static void ClearDamageTables();        // 0xdc5bb
     // members from the ctor: +0x08..+0x18 = 0, +0x1c = false; sizeof 0x20 (new site)
     long mColorSetID;                       // +0x04 (untouched by the ctor)
     long mID;                               // +0x08
@@ -177,10 +177,10 @@ public:
 // RTTI EERandomMapTable (vtable 0x43f7b8; ctor 0xda407, ??_G 0xda550). Inline dtor.
 class EERandomMapTable {
 public:
-    EERandomMapTable();
+    EERandomMapTable();                     // 0xda407
     virtual ~EERandomMapTable() {}
     // 0xda47b Load (db\dbrandommap.dat, every record dropped): removed (RUST_PLAN D9); the table stays empty
-    static void Unload();
+    static void Unload();                   // 0xda510
     // members from the ctor: longs 0, eighteen floats 0.0f; sizeof 0x60 (new site)
     long mL04;                              // +0x04
     long mL08;                              // +0x08

@@ -69,11 +69,13 @@ static std::string StringUtilToNarrow(const wchar_t* in, size_t count)
         ee_won_utf8_from_wide(in,sizeof(wchar_t),count,StringUtilByteSink,&result);
     return result;
 }
+// FUNCTION: WON 0x006a6130
 // Converts a string to wide, stopping at the first NUL
 std::wstring StringToWString(const std::string& in)
 {
     return StringUtilToWide(in.c_str(),strlen(in.c_str()));
 }
+// FUNCTION: WON 0x006a6280
 // Converts a wide string to narrow, stopping at the first NUL
 std::string WStringToString(const std::wstring& in)
 {
@@ -81,11 +83,13 @@ std::string WStringToString(const std::wstring& in)
     while(length<in.length() && in[length]!=0) length++;
     return StringUtilToNarrow(in.c_str(),length);
 }
+// FUNCTION: WON 0x006a6410
 // Converts a wide string to narrow (any code page: UTF-8), keeping embedded NULs
 std::string WStringToString(const std::wstring& in,int codePage)
 {
     return StringUtilToNarrow(in.data(),in.length());
 }
+// FUNCTION: WON 0x006a6590
 // Converts a string to wide (any code page: UTF-8), keeping embedded NULs
 std::wstring StringToWString(const std::string& in,int codePage)
 {
@@ -97,6 +101,7 @@ std::wstring StringToWString(const std::string& in,int codePage)
 #include <wctype.h>
 namespace WONAPI {
 // tolower gets the signed char; the loop runs over the counted length, not to a NUL
+// FUNCTION: WON 0x6a66f0
 // Returns a lower-case copy of the string
 std::string StringToLowerCase(const std::string& text)
 {
@@ -104,6 +109,7 @@ std::string StringToLowerCase(const std::string& text)
     StringUtilCaseInPlace(result, false);
     return result;
 }
+// FUNCTION: WON 0x6a6850
 // Returns an upper-case copy of the wide string
 std::wstring WStringToUpperCase(const std::wstring& text)
 {
@@ -112,12 +118,14 @@ std::wstring WStringToUpperCase(const std::wstring& text)
     return result;
 }
 // Both indexed accesses are non-const (each unshares the copy-on-write string)
+// FUNCTION: WON 0x6a69a0
 // Upper-cases the string in place
 void StringToUpperCaseInPlace(std::string& text)
 {
     StringUtilCaseInPlace(text, true);
 }
 // The mismatch branch calls toupper again
+// FUNCTION: WON 0x6a6ab0
 // Compares two strings ignoring case; returns -1, 0 or 1, the shorter string first on a common prefix
 int StringCompareNoCase(const std::string& first,const std::string& second)
 {
@@ -125,6 +133,7 @@ int StringCompareNoCase(const std::string& first,const std::string& second)
                                   reinterpret_cast<const uint8_t*>(second.data()), second.length());
 }
 // towupper results are compared as 16-bit values
+// FUNCTION: WON 0x6a6b60
 // Compares two wide strings ignoring case; returns -1, 0 or 1, the shorter string first on a common prefix
 int WStringCompareNoCase(const std::wstring& first,const std::wstring& second)
 {
@@ -148,6 +157,7 @@ const std::string& GetEmptyStr()
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x006a6090
 // Returns a shared empty wide string
 const std::wstring& GetEmptyWStr()
 {
@@ -181,3 +191,23 @@ void WStringToLowerCaseInPlace(std::wstring &theStr)
     StringUtilCaseInPlace(theStr, false);
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006a6250
+// (unsigned short * __cdecl WONAPI::StringUtilToWideBuffer(unsigned short *,char const *,int)    [?StringUtilToWideBuffer@WONAPI@@YAPAGPAGPBDH@Z])
+// TEMPLATE: WON 0x006a63a0
+// (char * __cdecl WONAPI::StringUtilToNarrowBuffer(char *,unsigned short const *,int)    [?StringUtilToNarrowBuffer@WONAPI@@YAPADPADPBGH@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006a6040
+// (_$E73    [_$E73])
+// TEMPLATE: WON 0x006a60e0
+// (_$E75    [_$E75])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006a6570
+// (int __cdecl WONAPI::StringUtilDefaultCodePage(void)    [?StringUtilDefaultCodePage@WONAPI@@YAHXZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006a5ff0
+// (class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const & __cdecl WONAPI::GetEmptyStr(void)    [?GetEmptyStr@WON)

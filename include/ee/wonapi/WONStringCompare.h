@@ -2,7 +2,7 @@
 #define EE_WONAPI_WONSTRINGCOMPARE_H
 #include <string>
 namespace WONAPI {
-int WStringCompareNoCase(const std::wstring& inLeft, const std::wstring& inRight);
+int WStringCompareNoCase(const std::wstring& inLeft, const std::wstring& inRight); // 0x2a6b60
 struct WStringLessNoCase {
     bool operator()(const std::wstring& inLeft, const std::wstring& inRight) const
     { return WStringCompareNoCase(inLeft, inRight) < 0; }

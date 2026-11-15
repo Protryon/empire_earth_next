@@ -98,6 +98,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
+// FUNCTION: EXE 0x57ccf3
 // Creates the area sub-screen: the red 'no area selected' label, the area selection mode combo
 // and the center camera button, in rectangle mode with no area drawn
 EESETSArea::EESETSArea(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
@@ -153,6 +154,10 @@ EESETSArea::EESETSArea(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
     this->mPaintAction = NULL;
 }
 
+// SYNTHETIC: EXE 0x57d07f
+// (EESETSArea's scalar deleting destructor)
+
+// FUNCTION: EXE 0x57d09b
 // Destroys the area sub-screen's controls and releases a rectangle still being drawn
 EESETSArea::~EESETSArea()
 {
@@ -163,12 +168,14 @@ EESETSArea::~EESETSArea()
         this->mPaintAction->Dereference();
 }
 
+// FUNCTION: EXE 0x57d0e0
 // Sorts the scenario's areas by name
 void EESETSArea::Sort()
 {
     gWorld.mScenarioManager->SortList(EE_SCENARIO_LIST_AREAS);
 }
 
+// FUNCTION: EXE 0x57d0eb
 // Drags the corner of the rectangle being drawn to the tile under the mouse (or the ground point)
 void EESETSArea::Update()
 {
@@ -189,18 +196,21 @@ void EESETSArea::Update()
     ee_screens_sew_area_corner(this->mPaintAction->mAction, theX, theY);
 }
 
+// FUNCTION: EXE 0x57d1d5
 // Moves the selected area one place down the list
 void EESETSArea::MoveDown()
 {
     gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_AREAS, this->mSelection + 2, false);
 }
 
+// FUNCTION: EXE 0x57d1e7
 // Moves the selected area one place up the list
 void EESETSArea::MoveUp()
 {
     gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_AREAS, this->mSelection + 2, true);
 }
 
+// FUNCTION: EXE 0x57d1f9
 // Deletes the selected area and hides the area highlight
 void EESETSArea::Delete()
 {
@@ -209,18 +219,21 @@ void EESETSArea::Delete()
     theEditor->GetBrushGroup()->SetIsHighlightShown(false);
 }
 
+// FUNCTION: EXE 0x57d21d
 // Hides the area highlight when the sub-screen is left
 void EESETSArea::Deactivate()
 {
     static_cast<EEUIFScenarioEditor*>(this->mCenterButton->GetForm())->mBrushGroup->mIsHighlightShown = false;
 }
 
+// FUNCTION: EXE 0x57d22e
 // Duplicates the selected area
 void EESETSArea::Duplicate()
 {
     gWorld.mScenarioManager->DuplicateEntry(EE_SCENARIO_LIST_AREAS, this->mSelection + 2);
 }
 
+// FUNCTION: EXE 0x57d240
 // Hides the trigger screen's text box and shows the alphabetic sort button
 void EESETSArea::Activate()
 {
@@ -229,6 +242,7 @@ void EESETSArea::Activate()
 }
 
 // NEAR: `mSelection + 2` as `add eax, 2` in the original (ours inc/inc)
+// FUNCTION: EXE 0x57d272
 // Stores the name, text, selection mode and the drawn rectangle or anchor into the selected area
 void EESETSArea::Store()
 {
@@ -246,6 +260,13 @@ void EESETSArea::Store()
     }
 }
 
+// FUNCTION: EXE 0x57d34c
+// Sets the area's rectangle and marks it as having one (EESMArea::SetRectangle, inline)
+
+// FUNCTION: EXE 0x57d381
+// Sets the area's anchor tile and marks it as having one (EESMArea::SetAnchor, inline)
+
+// FUNCTION: EXE 0x57d3aa
 // Returns the center of the drawn rectangle (or the anchor point in point mode), false if none
 bool EESETSArea::GetCenter(GE2DPoint& outCenter)
 {
@@ -262,12 +283,14 @@ bool EESETSArea::GetCenter(GE2DPoint& outCenter)
     return theResult;
 }
 
+// FUNCTION: EXE 0x57d3e6
 // Returns the names of the scenario's user areas
 void EESETSArea::GetNames(std::vector<UWideString>& outNames)
 {
     gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_USER_AREAS, outNames);
 }
 
+// FUNCTION: EXE 0x57d3f8
 // Hides the label, mode combo and center camera button
 void EESETSArea::Hide()
 {
@@ -278,6 +301,7 @@ void EESETSArea::Hide()
 
 // NEAR: inline budget (the original expands GetArea and the three GetTriggerScreen calls with their vector calls
 // refused; ours calls GetArea out of line)
+// FUNCTION: EXE 0x57d41b
 // Shows the selected area: name, text, mode, and its rectangle or anchor highlighted on the map (or the
 // 'no area selected' label)
 void EESETSArea::Load()
@@ -311,6 +335,7 @@ void EESETSArea::Load()
     }
 }
 
+// FUNCTION: EXE 0x57d597
 // Sets the map rectangle the editor highlights
 // (defined in this unit: every caller calls it out of line)
 void EEUIFScenarioEditor::SetPaintArea(const GERectangle& inRectangle)
@@ -318,12 +343,14 @@ void EEUIFScenarioEditor::SetPaintArea(const GERectangle& inRectangle)
     this->mBrushGroup->mRectangle = inRectangle;
 }
 
+// FUNCTION: EXE 0x57d5ba
 // Adds a new area to the scenario
 void EESETSArea::New()
 {
     gWorld.mScenarioManager->NewEntry(EE_SCENARIO_LIST_AREAS);
 }
 
+// FUNCTION: EXE 0x57d5c5
 // Switches between rectangle and point mode, highlighting the area drawn in that mode and showing
 // the label or center button unless the editor UI is hidden
 void EESETSArea::SetAreaMode(bool inRectangle)
@@ -363,6 +390,7 @@ void EESETSArea::SetAreaMode(bool inRectangle)
     }
 }
 
+// FUNCTION: EXE 0x57d667
 // Shows the mode combo plus the 'no area selected' label or, once an area is drawn, the center button
 void EESETSArea::Show()
 {
@@ -378,6 +406,7 @@ void EESETSArea::Show()
 
 // NEAR: inline budget (the original calls GERectangle's operator= for the first edge rectangle, ours expands it)
 // and register choice
+// FUNCTION: EXE 0x57d6a9
 // Draws the area with the left button: drags a rectangle (mouse confined to the view) or sets the
 // anchor point on release, then highlights it
 void EESETSArea::MouseMove(const GE2DPoint& inLocation)
@@ -441,3 +470,15 @@ void EESETSArea::MouseMove(const GE2DPoint& inLocation)
         this->mCenterButton->SetDisplayMode(kDisplayModeShown);
     }
 }
+
+// FUNCTION: EXE 0x57d991
+// (the rectangle drawing action's ctor: ee_screens editor_whole.rs, an EESEARust)
+
+// FUNCTION: EXE 0x57da08
+// Returns the scenario's area by index (EEScenarioManager::GetArea, inline)
+
+// SYNTHETIC: EXE 0x57da35
+// (EESETSBaseObject's scalar deleting destructor)
+
+// SYNTHETIC: EXE 0x57da7d
+// (EESEECenterCameraOnArea's scalar deleting destructor)

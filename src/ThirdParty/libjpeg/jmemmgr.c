@@ -213,7 +213,9 @@ print_mem_stats (j_common_ptr cinfo, int pool_id)
 #endif /* MEM_STATS */
 
 
+// FUNCTION: JPEG 0x10089d24
 LOCAL(void)
+// FUNCTION: EXEIMG 0x80ae60
 out_of_memory (j_common_ptr cinfo, int which)
 /* Report an out-of-memory error and stop execution */
 /* If we compiled MEM_STATS support, report alloc requests before dying */
@@ -253,7 +255,9 @@ static const size_t extra_pool_slop[JPOOL_NUMPOOLS] =
 #define MIN_SLOP  50		/* greater than 0 to avoid futile looping */
 
 
+// FUNCTION: JPEG 0x10089c27
 METHODDEF(void *)
+// FUNCTION: EXEIMG 0x80ad30
 alloc_small (j_common_ptr cinfo, int pool_id, size_t sizeofobject)
 /* Allocate a "small" object */
 {
@@ -338,7 +342,9 @@ alloc_small (j_common_ptr cinfo, int pool_id, size_t sizeofobject)
  * deliberately bunch rows together to ensure a large request size.
  */
 
+// FUNCTION: JPEG 0x10089d41
 METHODDEF(void FAR *)
+// FUNCTION: EXEIMG 0x80ae80
 alloc_large (j_common_ptr cinfo, int pool_id, size_t sizeofobject)
 /* Allocate a "large" object */
 {
@@ -391,7 +397,9 @@ alloc_large (j_common_ptr cinfo, int pool_id, size_t sizeofobject)
  * a virtual array.
  */
 
+// FUNCTION: JPEG 0x10089dd2
 METHODDEF(JSAMPARRAY)
+// FUNCTION: EXEIMG 0x80af30
 alloc_sarray (j_common_ptr cinfo, int pool_id,
 	      JDIMENSION samplesperrow, JDIMENSION numrows)
 /* Allocate a 2-D sample array */
@@ -439,7 +447,9 @@ alloc_sarray (j_common_ptr cinfo, int pool_id,
  * This is essentially the same as the code for sample arrays, above.
  */
 
+// FUNCTION: JPEG 0x10089e6a
 METHODDEF(JBLOCKARRAY)
+// FUNCTION: EXEIMG 0x80afe0
 alloc_barray (j_common_ptr cinfo, int pool_id,
 	      JDIMENSION blocksperrow, JDIMENSION numrows)
 /* Allocate a 2-D coefficient-block array */
@@ -519,7 +529,9 @@ alloc_barray (j_common_ptr cinfo, int pool_id,
  */
 
 
+// FUNCTION: JPEG 0x10089f0e
 METHODDEF(jvirt_sarray_ptr)
+// FUNCTION: EXEIMG 0x80b090
 request_virt_sarray (j_common_ptr cinfo, int pool_id, boolean pre_zero,
 		     JDIMENSION samplesperrow, JDIMENSION numrows,
 		     JDIMENSION maxaccess)
@@ -549,7 +561,9 @@ request_virt_sarray (j_common_ptr cinfo, int pool_id, boolean pre_zero,
 }
 
 
+// FUNCTION: JPEG 0x10089f6f
 METHODDEF(jvirt_barray_ptr)
+// FUNCTION: EXEIMG 0x80b100
 request_virt_barray (j_common_ptr cinfo, int pool_id, boolean pre_zero,
 		     JDIMENSION blocksperrow, JDIMENSION numrows,
 		     JDIMENSION maxaccess)
@@ -579,7 +593,9 @@ request_virt_barray (j_common_ptr cinfo, int pool_id, boolean pre_zero,
 }
 
 
+// FUNCTION: JPEG 0x10089fd0
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x80b170
 realize_virt_arrays (j_common_ptr cinfo)
 /* Allocate the in-memory buffers for any unrealized virtual arrays */
 {
@@ -686,7 +702,9 @@ realize_virt_arrays (j_common_ptr cinfo)
 }
 
 
+// FUNCTION: JPEG 0x1008a273
 LOCAL(void)
+// FUNCTION: EXEIMG 0x80b440
 do_sarray_io (j_common_ptr cinfo, jvirt_sarray_ptr ptr, boolean writing)
 /* Do backing store read or write of a virtual sample array */
 {
@@ -719,7 +737,9 @@ do_sarray_io (j_common_ptr cinfo, jvirt_sarray_ptr ptr, boolean writing)
 }
 
 
+// FUNCTION: JPEG 0x1008a428
 LOCAL(void)
+// FUNCTION: EXEIMG 0x80b630
 do_barray_io (j_common_ptr cinfo, jvirt_barray_ptr ptr, boolean writing)
 /* Do backing store read or write of a virtual coefficient-block array */
 {
@@ -752,7 +772,9 @@ do_barray_io (j_common_ptr cinfo, jvirt_barray_ptr ptr, boolean writing)
 }
 
 
+// FUNCTION: JPEG 0x1008a153
 METHODDEF(JSAMPARRAY)
+// FUNCTION: EXEIMG 0x80b2f0
 access_virt_sarray (j_common_ptr cinfo, jvirt_sarray_ptr ptr,
 		    JDIMENSION start_row, JDIMENSION num_rows,
 		    boolean writable)
@@ -837,7 +859,9 @@ access_virt_sarray (j_common_ptr cinfo, jvirt_sarray_ptr ptr,
 }
 
 
+// FUNCTION: JPEG 0x1008a303
 METHODDEF(JBLOCKARRAY)
+// FUNCTION: EXEIMG 0x80b4e0
 access_virt_barray (j_common_ptr cinfo, jvirt_barray_ptr ptr,
 		    JDIMENSION start_row, JDIMENSION num_rows,
 		    boolean writable)
@@ -926,7 +950,9 @@ access_virt_barray (j_common_ptr cinfo, jvirt_barray_ptr ptr,
  * Release all objects belonging to a specified pool.
  */
 
+// FUNCTION: JPEG 0x1008a4b9
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x80b6d0
 free_pool (j_common_ptr cinfo, int pool_id)
 {
   my_mem_ptr mem = (my_mem_ptr) cinfo->mem;
@@ -998,7 +1024,9 @@ free_pool (j_common_ptr cinfo, int pool_id)
  * Note that this cannot be called unless cinfo->mem is non-NULL.
  */
 
+// FUNCTION: JPEG 0x1008a5a0
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x80b7d0
 self_destruct (j_common_ptr cinfo)
 {
   int pool;
@@ -1024,7 +1052,9 @@ self_destruct (j_common_ptr cinfo)
  * When this is called, only the error manager pointer is valid in cinfo!
  */
 
+// FUNCTION: JPEG 0x10089b12
 GLOBAL(void)
+// FUNCTION: EXEIMG 0x80abf0
 jinit_memory_mgr (j_common_ptr cinfo)
 {
   my_mem_ptr mem;

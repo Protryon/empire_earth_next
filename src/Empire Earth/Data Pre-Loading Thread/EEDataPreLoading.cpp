@@ -49,6 +49,7 @@
 #include "ee/EEClient.h"
 #include "ee/EEMessage.h"
 #include "ee/EEDataPreLoading.h"
+// FUNCTION: EXE 0x4d3ff4
 // Creates the data pre-loading thread at the given priority and waits until it is running
 EEDataPreLoading::EEDataPreLoading(long inThreadPriority)
 {
@@ -65,6 +66,10 @@ EEDataPreLoading::EEDataPreLoading(long inThreadPriority)
     this->mThread->SetName(gDataPreLoadingThreadName);
 }
 
+// SYNTHETIC: EXE 0x4d4105
+// (the scalar deleting destructor, emitted with the vtable; slot EEDataPreLoading+0x0)
+
+// FUNCTION: EXE 0x4d4121
 // Destroys the pre-loader: frees its events, deletes every queued message and destroys the thread
 EEDataPreLoading::~EEDataPreLoading()
 {
@@ -77,6 +82,7 @@ EEDataPreLoading::~EEDataPreLoading()
     TSScheduler::DestroyThread(this->mThread);
 }
 
+// FUNCTION: EXE 0x4d4176
 // Runs the pre-loading thread: drains its messages (queueing or handling each, 1 ms apart) until told to quit
 unsigned long EEDataPreLoading::Main(void* inThis)
 {
@@ -108,6 +114,7 @@ unsigned long EEDataPreLoading::Main(void* inThis)
     return 0;
 }
 
+// FUNCTION: EXE 0x4d4231
 // Handles one pre-loader message: quit, start/flush queueing, (un)load unit class or tech media, load a game
 void EEDataPreLoading::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
 {
@@ -150,6 +157,7 @@ void EEDataPreLoading::HandleMessage(unsigned long inMessage, void* inParameter1
     }
 }
 
+// FUNCTION: EXE 0x4d4332
 // Loads (or unloads) a unit class's media and command buttons for a player
 void EEDataPreLoading::LoadUnitClassMedia(EEPlayer* inPlayer, EEUnitClass* inClass, bool inLoad)
 {
@@ -162,6 +170,7 @@ void EEDataPreLoading::LoadUnitClassMedia(EEPlayer* inPlayer, EEUnitClass* inCla
     }
 }
 
+// FUNCTION: EXE 0x4d4376
 // Loads (or unloads) a technology's media for a player
 void EEDataPreLoading::LoadTechnologyMedia(EEPlayer* inPlayer, EETechTreeNode* inNode, bool inLoad)
 {
@@ -173,6 +182,7 @@ void EEDataPreLoading::LoadTechnologyMedia(EEPlayer* inPlayer, EETechTreeNode* i
     TMGetTime();
 }
 
+// FUNCTION: EXE 0x4d439f
 // Builds the game world from the current game options with load progress, then reports loaded to the host;
 // on failure exits the game and shows the error
 void EEDataPreLoading::LoadGame(bool inSkipGameMedia, bool inClearWorld)
@@ -230,18 +240,21 @@ void EEDataPreLoading::LoadGame(bool inSkipGameMedia, bool inClearWorld)
     this->mThread->SetPriority(thePriority);
 }
 
+// FUNCTION: EXE 0x4d4613
 // Tells the user interface that loading the game failed once the error box is closed
 void EEDataPreLoading::LoadGameErrorDone(UIForm* inForm)
 {
     gUserInterface->PostLoadGameFailed(false);
 }
 
+// FUNCTION: EXE 0x4d4621
 // Starts holding incoming messages in the queue instead of handling them
 void EEDataPreLoading::StartQueueing()
 {
     this->mQueueing = true;
 }
 
+// FUNCTION: EXE 0x4d4626
 // Stops queueing and handles then deletes every queued message in order
 void EEDataPreLoading::FlushQueue()
 {
@@ -253,6 +266,7 @@ void EEDataPreLoading::FlushQueue()
     this->mQueue.clear();
 }
 
+// FUNCTION: EXE 0x4d465f
 // Queues a message for later; a flush message instead handles the queue now
 void EEDataPreLoading::QueueMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
 {
@@ -267,36 +281,42 @@ void EEDataPreLoading::QueueMessage(unsigned long inMessage, void* inParameter1,
     }
 }
 
+// FUNCTION: EXE 0x4d46a9
 // Asks the pre-loading thread to load the game
 void EEDataPreLoading::PostLoadGame(bool inSkipGameMedia, bool inClearWorld)
 {
     this->mThread->Post(0x402, (void*)(inSkipGameMedia == true), (void*)(inClearWorld == true), true);
 }
 
+// FUNCTION: EXE 0x4d46d2
 // Asks the pre-loading thread to load a player's technology media
 void EEDataPreLoading::PostLoadTechnology(long inPlayer, long inTechnology)
 {
     this->mThread->Post(0x40a, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inTechnology), true);
 }
 
+// FUNCTION: EXE 0x4d46ed
 // Asks the pre-loading thread to load a player's unit class media
 void EEDataPreLoading::PostLoadUnitClass(long inPlayer, long inUnitClass)
 {
     this->mThread->Post(0x404, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inUnitClass), true);
 }
 
+// FUNCTION: EXE 0x4d4708
 // Asks the pre-loading thread to unload a player's technology media
 void EEDataPreLoading::PostUnloadTechnology(long inPlayer, long inTechnology)
 {
     this->mThread->Post(0x40b, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inTechnology), true);
 }
 
+// FUNCTION: EXE 0x4d4723
 // Asks the pre-loading thread to unload a player's unit class media
 void EEDataPreLoading::PostUnloadUnitClass(long inPlayer, long inUnitClass)
 {
     this->mThread->Post(0x409, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inUnitClass), true);
 }
 
+// FUNCTION: EXE 0x4d473e
 // Waits until the pre-loading thread has handled every message posted so far; returns the post result
 long EEDataPreLoading::WaitForMessageQueue()
 {
@@ -307,3 +327,6 @@ long EEDataPreLoading::WaitForMessageQueue()
     }
     return theResult;
 }
+
+// TEMPLATE: EXE 0x4d4775
+// std::vector<EEDataPreLoadingMessage*>::push_back (QueueMessage)

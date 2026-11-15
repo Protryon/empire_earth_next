@@ -54,12 +54,17 @@
 const float kEEFShortLineSpacing = 1.0f;
 const float kEEFShortLineDepth = 0.0f;
 
+// FUNCTION: EXE 0x4dde94
 // Creates the short line formation (type 0, rows of 5 at unit spacing, a gap row after every 5)
 EEFShortLine::EEFShortLine()
     : EEFLine(0, kEEFShortLineSpacing, kEEFShortLineDepth, 5, 5)
 {
 }
 
+// SYNTHETIC: EXE 0x4ddec0
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4ddedc
 // Destroys the short line formation
 EEFShortLine::~EEFShortLine()
 {

@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 #include "ee/wonapi/WONLobbyWONListConfig.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00798e30
 // Returns the list's HEADER or MULTILISTAREA child with a new config for it; asks the scroll container config otherwise
 bool WONListCtrlConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
 {

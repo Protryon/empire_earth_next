@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyWONInputBox.h"
 #include "ee/wonapi/WONLobbySkinListControls.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00718d40
 // Returns a new skinned button with this one's attributes copied
 WONButton* WONButton::Duplicate()
 {
@@ -20,6 +21,7 @@ WONButton* WONButton::Duplicate()
     copy->CopyAttributes(this);
     return copy;
 }
+// FUNCTION: WON 0x00719350
 // Returns a new skinned header button with this one's attributes copied
 WONHeaderButton* WONHeaderButton::Duplicate()
 {
@@ -33,3 +35,7 @@ WONFrameComponent::WONFrameComponent(const WONFrame& frame)
     this->mFrame.Copy(frame);
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x0071a740
+// (public: __thiscall WONAPI::WONFrameComponent::WONFrameComponent(class WONAPI::WONFrame const &)    [??0WONFrameComponent@WONAPI@@QAE@ABVWONFrame@1@@Z])

@@ -89,6 +89,7 @@ static void EEPlaceStorm(EEE3DStorm* inStorm, const EeGe3DPoint& inPoint)
     inStorm->SetTransformation(theTransformation);
 }
 
+// FUNCTION: EXE 0x4fb0c8
 // Creates a weather storm of the given kind over a copy of the tiles, 5 s long at full intensity (the record's
 // defaults), centred on them
 EEE3DStorm::EEE3DStorm(long inKind, const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inGraphicEffect)
@@ -104,6 +105,10 @@ EEE3DStorm::EEE3DStorm(long inKind, const std::vector<EETileCoordinate>& inTiles
     this->GetCenter();
 }
 
+// SYNTHETIC: EXE 0x4fb175
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x4fb191
 // Creates an empty storm of the given kind (for loading)
 EEE3DStorm::EEE3DStorm(long inKind)
     : EEEffect3D(inKind)
@@ -111,6 +116,7 @@ EEE3DStorm::EEE3DStorm(long inKind)
     this->mModel = NULL;
 }
 
+// FUNCTION: EXE 0x4fb217
 // Destroys the storm, releasing its model (the record frees the tiles and drops)
 EEE3DStorm::~EEE3DStorm()
 {
@@ -120,6 +126,7 @@ EEE3DStorm::~EEE3DStorm()
     }
 }
 
+// FUNCTION: EXE 0x4fb252
 // Steps every storm tile one tile towards its place around the new centre (a tile that would leave the map stays),
 // recentres the storm and returns the tiles' bounds; the radius becomes half the longer side (ee_gfx
 // effect_storm.rs)
@@ -138,6 +145,7 @@ void EEE3DStorm::Move(const U2DPoint<long>& inCenter, U2DRectangle<long>& outBou
     EEPlaceStorm(this, thePoint);
 }
 
+// FUNCTION: EXE 0x4fb500
 // Recomputes the storm centre as the mean of its tiles and moves the effect there on the terrain (ee_gfx
 // effect_storm.rs)
 void EEE3DStorm::GetCenter()
@@ -148,6 +156,7 @@ void EEE3DStorm::GetCenter()
         EEPlaceStorm(this, thePoint);
 }
 
+// FUNCTION: EXE 0x4fb6b4
 // Returns the bounding rectangle of the storm's tiles (unchanged when it has none)
 void EEE3DStorm::GetBounds(U2DRectangle<long>& outBounds)
 {
@@ -160,6 +169,7 @@ void EEE3DStorm::GetBounds(U2DRectangle<long>& outBounds)
     outBounds.mBottom = theBounds[3];
 }
 
+// FUNCTION: EXE 0x4fb72e
 // Reads fall speed, spawn height, density and duration from the storm's graphic effect
 void EEE3DStorm::Virtual64()
 {
@@ -170,6 +180,7 @@ void EEE3DStorm::Virtual64()
     this->mDuration = theEffect->mDuration;
 }
 
+// FUNCTION: EXE 0x4fa291
 // Reads the settings, then places the storm at the mean of its tiles on the terrain, with a radius reaching its
 // farthest tile in x or y (the rain's and the snow's; ee_gfx effect_storm.rs)
 long EEE3DStorm::SetUp()
@@ -182,6 +193,8 @@ long EEE3DStorm::SetUp()
     return 0;
 }
 
+// FUNCTION: EXE 0x4f76da
+// FUNCTION: EXE 0x4f9e42
 // Copies the drops into the draw list and queues the storm in render queue 4 under its texture
 long EEE3DStorm::Queue(EEEffectQueue* inQueues)
 {
@@ -213,6 +226,7 @@ void EEE3DStorm::BeginDraw()
     SetSceneFog();
 }
 
+// FUNCTION: EXE 0x4fb756
 // Reads the storm's elapsed time, tiles, centre, intensity and sustained flag, then the leaf's drop count, the
 // rain's thunder delay, a position (discarded), the bounding radius and the number of drops to recreate (ee_gfx
 // effect_storm.rs); returns the first read error
@@ -226,6 +240,8 @@ long EEE3DStorm::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return theResult;
 }
 
+// FUNCTION: EXE 0x4f7d0f
+// FUNCTION: EXE 0x4fa5f3
 // After loading, reloads the settings, recreates the saved number of drops at random heights and marks the storm
 // restored (the rain's sound restarts)
 long EEE3DStorm::RepairPointers()
@@ -239,6 +255,7 @@ long EEE3DStorm::RepairPointers()
     return theResult;
 }
 
+// FUNCTION: EXE 0x4fb83f
 // Writes the base effect, elapsed time, tiles, centre, intensity and sustained flag, then the leaf's drop count, the
 // rain's thunder delay, the position, the radius and the live drop count (ee_gfx effect_storm.rs); returns the
 // first write error
@@ -252,6 +269,7 @@ long EEE3DStorm::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     return theResult;
 }
 
+// FUNCTION: EXE 0x4fa70d
 // Spawns and moves the drops (the snow's fall by the tick over the game speed) and ages the storm; returns 7 once
 // its duration has passed (the snow's: and its last flake landed) unless it is sustained (ee_gfx effect_storm.rs)
 long EEE3DStorm::Step()

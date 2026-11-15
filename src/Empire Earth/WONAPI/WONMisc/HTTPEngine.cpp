@@ -127,41 +127,48 @@ struct HTTPEngineHooks {
     }
 };
 
+// FUNCTION: WON 0x006d28f0
 // Queues an HTTP get on the connection for its host, creating the connection on first use
 void HTTPSession::AddOp(RustServerOp* inOp)
 {
     ee_won_http_session_add_op(this->mImpl, HTTPEngineHooks::Ref(static_cast<AsyncOp*>(inOp)));
 }
 
+// FUNCTION: WON 0x006d2bc0
 // Kills every connection's running and queued requests
 void HTTPSession::KillAll()
 {
     ee_won_http_session_kill_all(this->mImpl);
 }
 
+// FUNCTION: WON 0x006d2c80
 // Creates an idle connection with pipelining on
 HTTPConnection::HTTPConnection(HTTPSession* inSession)
 {
     this->mSession = inSession;
     this->mImpl = HTTPEngineHooks::NewConnImpl(this);
 }
+// TEMPLATE: WON 0x006d2d50
 // Destroys the connection: its socket, queues and saved completions
 HTTPConnection::~HTTPConnection()
 {
     ee_won_http_conn_free(this->mImpl);
 }
 
+// FUNCTION: WON 0x006d3600
 // Kills the running and queued requests (finishing queued ones as killed) and drops the socket
 void HTTPConnection::Kill()
 {
     ee_won_http_conn_kill(this->mImpl);
 }
 
+// FUNCTION: WON 0x006d33a0
 // Queues a request as send-only on the pipeline queue, or as a full request when pipelining is off
 void HTTPConnection::QueueOp(RustServerOp* inOp)
 {
     ee_won_http_conn_queue_op(this->mImpl, HTTPEngineHooks::Ref(static_cast<AsyncOp*>(inOp)));
 }
+// FUNCTION: WON 0x006d3290
 // Appends a request to the send (0) or receive (1) queue and starts it when the queue was empty
 void HTTPConnection::QueueOp(RustServerOp* inOp,int inId)
 {
@@ -174,17 +181,20 @@ HTTPSession::HTTPSession()
 {
     this->mImpl = HTTPEngineHooks::NewSessionImpl(this);
 }
+// TEMPLATE: WON 0x006d2870
 // Destroys the session: its connections
 HTTPSession::~HTTPSession()
 {
     ee_won_http_session_free(this->mImpl);
 }
+// FUNCTION: WON 0x006d3430
 // Starts the next request of a queue on the shared socket, routing its completion back to the connection
 void HTTPConnection::RunOp(int inId)
 {
     ee_won_http_conn_run_op(this->mImpl, inId);
 }
 
+// FUNCTION: WON 0x006d2df0
 // Completion trampoline: passes a finished request to its connection's OpCallback
 void HTTPConnection::StaticOpCallback(AsyncOpPtr inOp,SmartPtr<RefCount> inConnection)
 {
@@ -192,6 +202,7 @@ void HTTPConnection::StaticOpCallback(AsyncOpPtr inOp,SmartPtr<RefCount> inConne
         static_cast<RustServerOp*>(inOp.get()));
 }
 
+// FUNCTION: WON 0x006d2e80
 // Handles a finished request: queues a sent one for its reply or completes it; requeues all when the pipeline drops
 void HTTPConnection::OpCallback(RustServerOp* inOp)
 {
@@ -209,3 +220,40 @@ int HTTPConnection::GetNumOps()
     return ee_won_http_conn_num_ops(this->mImpl);
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006d2d30
+// (public: virtual void * __thiscall WONAPI::HTTPConnection::`scalar deleting destructor'(unsigned int)    [??_GHTTPConnection@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006d27b0
+// (public: __thiscall WONAPI::HTTPSession::HTTPSession(void)    [??0HTTPSession@WONAPI@@QAE@XZ])
+// TEMPLATE: WON 0x006d2870
+// (public: virtual __thiscall WONAPI::HTTPSession::~HTTPSession(void)    [??1HTTPSession@WONAPI@@UAE@XZ])
+
+// TEMPLATE: WON 0x006d2850
+// (HTTPSession scalar deleting destructor)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006d2b30
+// (public: __thiscall std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,class WONAPI::SmartPtr<cla)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006dad40
+// (public: class std::list<class WONAPI::SmartPtr<class WONAPI::HTTPGetOp>,class std::allocator<class WONAPI::SmartPtr<class WONAPI::HTTPGetOp> > >::iter)
+// TEMPLATE: WON 0x006dc9b0
+// (public: void __thiscall std::list<class WONAPI::SmartPtr<class WONAPI::HTTPGetOp>,class std::allocator<class WONAPI::SmartPtr<class WONAPI::HTTPGetOp>)
+// TEMPLATE: WON 0x006d9c10
+// (public: __thiscall std::list<class WONAPI::SmartPtr<class WONAPI::HTTPGetOp>,class std::allocator<class WONAPI::SmartPtr<class WONAPI::HTTPGetOp> > >:)
+// TEMPLATE: WON 0x006daa30
+// (protected: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic_)
+// TEMPLATE: WON 0x006dc680
+// (protected: void __thiscall std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class s)
+// TEMPLATE: WON 0x006dc6c0
+// (protected: void __thiscall std::list<class WONAPI::SmartPtr<class WONAPI::HTTPGetOp>,class std::allocator<class WONAPI::SmartPtr<class WONAPI::HTTPGet)
+// TEMPLATE: WON 0x006da980
+// (public: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic_str)
+// TEMPLATE: WON 0x006dc160
+// (public: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic_str)
+// TEMPLATE: WON 0x006dcac0
+// (void __cdecl std::_Construct(struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,class WON)

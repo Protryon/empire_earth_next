@@ -57,11 +57,11 @@
 // 0x447038..0x447050: the unit's named float constants (one .rdata block per unit) (provisional names)
 static const float kLandableNone = -10000.0f;   // 0x447038 (mInitialContactHeading: no landing height)
 
-static const float kLandableCeiling = 12.0f;
+static const float kLandableCeiling = 12.0f;    // 0x44703c
 
 static const float kLandableAngle = 0.5235988f; // 0x447040 (the approach's 30 degrees)
 
-static const float kLandableAhead = 2.0f;
+static const float kLandableAhead = 2.0f;       // 0x447044
 
 static const float kLandableLow = 0.1f;         // 0x447048 (the touch-down height)
 
@@ -71,6 +71,7 @@ void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 // 0x24485b: the enemy unit near (inX, inY) within inRange that inUnit can attack (provisional name)
 EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inRange);
 
+// FUNCTION: EXE 0x613c60
 // Takes off from the ground: rolls 3 ahead, climbs 7 ahead to 3/4 cruising height (plus the ground height when the
 // ground is higher), then flies to the goal; returns true, doing nothing without an air traffic control
 bool EEUnitClass::LandableReturnToAirport(EEComplexUnit* inUnit)
@@ -96,6 +97,7 @@ bool EEUnitClass::LandableReturnToAirport(EEComplexUnit* inUnit)
     return true;
 }
 
+// FUNCTION: EXE 0x613db5
 // Drops the path and adds a waypoint at the home carrier's take-off point (its tag point 2; its centre without tags)
 void EEUnitClass::RouteDockWaypoint(EEComplexUnit* inUnit)
 {
@@ -121,6 +123,7 @@ void EEUnitClass::RouteDockWaypoint(EEComplexUnit* inUnit)
     this->AddWaypointAt(inUnit, theTarget.GetX(), theTarget.GetY(), theTarget.GetZ(), true);
 }
 
+// FUNCTION: EXE 0x613ed2
 // Returns the height to fly at towards a point: its height above the ground, over the highest tile corner ahead
 // (the turning circle while circling, else the line to it), at most 12
 float EEUnitClass::LandableGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
@@ -177,6 +180,7 @@ float EEUnitClass::LandableGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& i
     return theHeight;
 }
 
+// FUNCTION: EXE 0x6141a3
 // Gets the sound parameters, giving a moving plane's sound a Doppler pitch shift against the camera
 void EEUnitClass::LandableGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                               float* outPitch)
@@ -220,6 +224,7 @@ void EEUnitClass::LandableGetSoundParameters(EEUnit* inUnit, EESoundObject* inSo
     *outPitch = theGamma / (1.0f - theRatio * ((theRatio + theCosine) / (1.0f - theRatio * theCosine)));
 }
 
+// FUNCTION: EXE 0x614402
 // Paths a plane from a point to its goal's location (move, patrol, explore, attack ground, unload, attack unit)
 // at cruising height; an explore goal without a target picks a new area first
 void EEUnitClass::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
@@ -275,6 +280,7 @@ void EEUnitClass::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
     this->PathToward(inUnit, inPoint, theTarget, true);
 }
 
+// FUNCTION: EXE 0x614612
 // Gives the ground height under a point (the closest tile's off the map; 0 under water)
 void EEUnitClass::GetGroundHeight(GE3DPoint& inPoint, float* outHeight)
 {
@@ -288,6 +294,7 @@ void EEUnitClass::GetGroundHeight(GE3DPoint& inPoint, float* outHeight)
         *outHeight = 0.0f;
 }
 
+// FUNCTION: EXE 0x6146a9
 // Gets the unit's next waypoint and the climb to it; returns nonzero when there is none
 long EEUnitClass::GetNextFlightPoint(EEComplexUnit* inUnit, GE3DPoint& outTarget, float* outClimb)
 {
@@ -491,6 +498,7 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
     return 0;
 }
 
+// FUNCTION: EXE 0x615246
 // Sets the unit's initial contact location
 void EEComplexUnit::SetInitialContactLocation(const GE3DPoint& inPoint)
 {
@@ -498,6 +506,7 @@ void EEComplexUnit::SetInitialContactLocation(const GE3DPoint& inPoint)
         this->mInitialContactLocation = inPoint;
 }
 
+// FUNCTION: EXE 0x615290
 // Sets up a new plane: adds its weight to its air traffic control and starts it on the ground
 void EEUnitClass::LandableUnitCreated(EEComplexUnit* inUnit)
 {
@@ -506,6 +515,7 @@ void EEUnitClass::LandableUnitCreated(EEComplexUnit* inUnit)
     inUnit->SetHeight(0.0f);
 }
 
+// FUNCTION: EXE 0x6152d0
 // Returns whether a bomb dropped now lands within reach of the attack target along its ballistic arc (reach:
 // half the area effect for the last bomb on a moving target, else 0.25 for the last bomb or none)
 bool EEUnitClass::IsBombOnTarget(EEComplexUnit* inUnit)
@@ -571,6 +581,7 @@ bool EEUnitClass::IsBombOnTarget(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x61562f
 // Plans a plane's approach to its home carrier's deck (tag point 0): turn, descent and touch-down (inSteep: the
 // full approach whatever the height), or just the deck when braking; makes the deck the move goal
 void EEUnitClass::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
@@ -643,6 +654,7 @@ void EEUnitClass::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
         EESetLocationGoalPoint(theLocation, theDeck);
 }
 
+// FUNCTION: EXE 0x615a4d
 // Plans a take-off from the home carrier: on take-off, sits at the deck start (tag point 0) and heads for the
 // take-off point; otherwise flies off the deck end (tag point 2) towards the goal
 void EEUnitClass::TakeOffFromCarrier(EEComplexUnit* inUnit)
@@ -699,6 +711,7 @@ void EEUnitClass::TakeOffFromCarrier(EEComplexUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x615ccf
 // Returns 0 (left) or 1 (right) when the next waypoint or goal lies inside the turning circle beside or behind
 // the plane, else 5
 unsigned long EEUnitClass::GetNextFlightState(EEComplexUnit* inUnit)
@@ -771,6 +784,7 @@ unsigned long EEUnitClass::GetNextFlightState(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x615ed8
 // Returns whether the plane reached its next waypoint (within 0.5); braking onto a runway's last one, whether
 // inValue is at most 0.05
 bool EEUnitClass::LandableHasArrived(EEComplexUnit* inUnit, float inValue)
@@ -787,6 +801,7 @@ bool EEUnitClass::LandableHasArrived(EEComplexUnit* inUnit, float inValue)
     return theTarget.DistanceToSquared(thePosition) <= 0.25f;
 }
 
+// FUNCTION: EXE 0x615f7d
 // Plans a land plane's runway approach in a direction: turn onto the line, descent and touch-down at the airport
 // (a navy yard: its pier), then makes the airport the move goal (the queue kept behind an explore goal)
 void EEUnitClass::ApproachRunway(EEComplexUnit* inUnit, long inDX, long inDY)
@@ -869,30 +884,35 @@ void EEUnitClass::ApproachRunway(EEComplexUnit* inUnit, long inDX, long inDY)
     inUnit->SetGoal(theMove, theKeep, 0);
 }
 
+// FUNCTION: EXE 0x616308
 // Plans the runway approach along +x
 void EEUnitClass::ApproachRunwayPosX(EEComplexUnit* inUnit)
 {
     this->ApproachRunway(inUnit, 1, 0);
 }
 
+// FUNCTION: EXE 0x616318
 // Plans the runway approach along +y
 void EEUnitClass::ApproachRunwayPosY(EEComplexUnit* inUnit)
 {
     this->ApproachRunway(inUnit, 0, 1);
 }
 
+// FUNCTION: EXE 0x616328
 // Plans the runway approach along -y
 void EEUnitClass::ApproachRunwayNegY(EEComplexUnit* inUnit)
 {
     this->ApproachRunway(inUnit, 0, -1);
 }
 
+// FUNCTION: EXE 0x616338
 // Plans the runway approach along -x
 void EEUnitClass::ApproachRunwayNegX(EEComplexUnit* inUnit)
 {
     this->ApproachRunway(inUnit, -1, 0);
 }
 
+// FUNCTION: EXE 0x616348
 // Plans a runway take-off in a direction: rolls 3 tiles low, climbs to 3/4 cruising height 7 tiles out, then
 // flies to the goal
 void EEUnitClass::TakeOffFromRunway(EEComplexUnit* inUnit, long inDX, long inDY)
@@ -911,30 +931,35 @@ void EEUnitClass::TakeOffFromRunway(EEComplexUnit* inUnit, long inDX, long inDY)
     this->FlyToGoal(theTarget, inUnit);
 }
 
+// FUNCTION: EXE 0x616430
 // Plans the runway take-off along +x
 void EEUnitClass::TakeOffFromRunwayPosX(EEComplexUnit* inUnit)
 {
     this->TakeOffFromRunway(inUnit, 1, 0);
 }
 
+// FUNCTION: EXE 0x616440
 // Plans the runway take-off along +y
 void EEUnitClass::TakeOffFromRunwayPosY(EEComplexUnit* inUnit)
 {
     this->TakeOffFromRunway(inUnit, 0, 1);
 }
 
+// FUNCTION: EXE 0x616450
 // Plans the runway take-off along -y
 void EEUnitClass::TakeOffFromRunwayNegY(EEComplexUnit* inUnit)
 {
     this->TakeOffFromRunway(inUnit, 0, -1);
 }
 
+// FUNCTION: EXE 0x616460
 // Plans the runway take-off along -x
 void EEUnitClass::TakeOffFromRunwayNegX(EEComplexUnit* inUnit)
 {
     this->TakeOffFromRunway(inUnit, -1, 0);
 }
 
+// FUNCTION: EXE 0x616470
 // Returns whether the move goal is more than 1 from the home carrier's deck point (tag point 0): the carrier moved
 bool EEUnitClass::IsAwayFromGoal(EEComplexUnit* inUnit)
 {
@@ -959,6 +984,7 @@ bool EEUnitClass::IsAwayFromGoal(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x61655a
 // Answers the plane's flight triggers (waypoint on ground, in air, higher, same, lower; bomb in range; fuel alarm;
 // clearance; airport destroyed; secondary target; controller moved; request queued); others the common way
 long EEUnitClass::LandableEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
@@ -1067,6 +1093,7 @@ long EEUnitClass::LandableEvaluateCondition(EEComplexUnit* inUnit, unsigned long
     return theResult;
 }
 
+// FUNCTION: EXE 0x616c22
 // Sets the opacity of a unit and the pieces linked after it (stops at the first already at the value)
 void EEComplexUnit::SetOpacityChain(float inValue)
 {
@@ -1163,6 +1190,10 @@ void EEAirplaneHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit)
         inUnit->SetHeight(theClass->GetHeightAt(inUnit, thePosition));
 }
 
+// TEMPLATE: EXE 0x60b671
+// EEAirTrafficControl::GetNumSlots (inline in ee/EEAirTrafficControl.h)
+
+// FUNCTION: EXE 0x60b687
 // Returns whether a tile is on the map, not cliff, deep water or space, and not on the map edge
 bool EEIsTileFree(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
@@ -1172,6 +1203,7 @@ bool EEIsTileFree(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
            !::gWorld.mMap->IsEdgeTile(inX, inY);
 }
 
+// FUNCTION: EXE 0x60b6ff
 // Fills a new carrier with aircraft of the best of three fighter techs its player has (else unit class 0x1f)
 void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer)
 {
@@ -1198,6 +1230,7 @@ void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer)
     }
 }
 
+// FUNCTION: EXE 0x60b824
 // Sends a leaving plane off the map: hands it to player 0, fuels it for 1000 s and flies it out 1000 tiles along
 // its direction from the map origin
 void EEUnitClass::FlyOffMap(EEComplexUnit* inUnit)
@@ -1238,6 +1271,7 @@ static const float kAirAnimalAhead = 2.0f;       // 0x446fc4 (the look-ahead bey
 
 static const float kAirAnimalDoppler = 0.0025f;  // 0x446fc8 (0.05 squared)
 
+// FUNCTION: EXE 0x60a279
 // Lands the animal like a plane: two waypoints ahead (on the ground, then at 3/4 of cruise altitude) and a flight there
 bool EEUnitClass::AirAnimalReturnToAirport(EEComplexUnit* inUnit)
 {
@@ -1261,6 +1295,7 @@ bool EEUnitClass::AirAnimalReturnToAirport(EEComplexUnit* inUnit)
     return true;
 }
 
+// FUNCTION: EXE 0x60a3c0
 // Returns the height to fly at toward a point: its height above ground kept over the highest terrain on the way
 // (the circle ahead when circling, else the tile line), capped at 12
 float EEUnitClass::AirAnimalGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
@@ -1317,6 +1352,7 @@ float EEUnitClass::AirAnimalGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& 
     return theHeight;
 }
 
+// FUNCTION: EXE 0x60a691
 // Gets the base sound parameters, then Doppler-shifts the pitch of a moving animal by its speed toward the camera
 void EEUnitClass::AirAnimalGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                               float* outPitch)
@@ -1390,6 +1426,7 @@ void EEAirAnimalDeathRoll(EEUnitClass* inClass, EEComplexUnit* inUnit)
     inUnit->mAngularVelocity = GEOrientation(inUnit->mAngularVelocity.GetYaw(), inUnit->mAngularVelocity.GetPitch(), inUnit->mAngularVelocity.GetYaw());
 }
 
+// FUNCTION: EXE 0x60ad1c
 // Sets up a new animal on the ground (height 0)
 void EEUnitClass::AirAnimalUnitCreated(EEComplexUnit* inUnit)
 {
@@ -1397,6 +1434,7 @@ void EEUnitClass::AirAnimalUnitCreated(EEComplexUnit* inUnit)
     inUnit->SetHeight(0.0f);
 }
 
+// FUNCTION: EXE 0x60ad46
 // Returns whether the animal reached its next waypoint (within 0.5 tiles), or when braking on its last one, has stopped
 bool EEUnitClass::AirAnimalHasArrived(EEComplexUnit* inUnit, float inValue)
 {
@@ -1412,6 +1450,7 @@ bool EEUnitClass::AirAnimalHasArrived(EEComplexUnit* inUnit, float inValue)
     return theTarget.DistanceToSquared(thePosition) <= 0.25f;
 }
 
+// FUNCTION: EXE 0x60ade9
 // Answers the flight triggers (next waypoint lower, level, higher, in the air or on the ground; move prepared; fall
 // finished); other triggers go to the common unit class
 long EEUnitClass::AirAnimalEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
@@ -1516,6 +1555,7 @@ static const float kHelicopterCeiling = 12.0f;
 // 0x249560 (cdecl): the point to fly to for the attack on inTarget (EEMap.cpp's range) (provisional name)
 void EEGetAimPoint(EEComplexUnit* inUnit, GE3DPoint* inTarget, GE3DPoint* outLocation);
 
+// FUNCTION: EXE 0x612a6f
 // Returns the height to fly at towards a point: cruising height above the highest tile corner on the way, at least
 // the point's height, kept between cruising height and 12
 float EEUnitClass::HelicopterGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
@@ -1583,6 +1623,7 @@ void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
 // 0x447358: the highest a spaceship flies over the terrain (one .rdata copy per unit: a named const)
 static const float kSpaceshipHeight = 12.0f;
 
+// FUNCTION: EXE 0x61a219
 // Returns the flying height for a location: its z raised to clear every tile corner on the way by the cruise
 // altitude, kept between the cruise altitude and 12
 // The floor clamp is the class's mCruiseAltitude offset (the original keeps it on the FPU after the loop)
@@ -1622,6 +1663,7 @@ float EEUnitClass::SpaceshipGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& 
     return theHeight;
 }
 
+// FUNCTION: EXE 0x61a404
 // Returns a sound's volume, pan and pitch, with a doppler shift
 void EEUnitClass::SpaceshipGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                               float* outPitch)
@@ -1630,6 +1672,7 @@ void EEUnitClass::SpaceshipGetSoundParameters(EEUnit* inUnit, EESoundObject* inS
     EEGetDopplerPitch(inUnit, inSound, outVolume, outPan, outPitch);
 }
 
+// FUNCTION: EXE 0x61a59e
 // Answers dying done (always) and move preparation complete (has a path); others to the base class
 long EEUnitClass::SpaceshipEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {

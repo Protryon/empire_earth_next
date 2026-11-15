@@ -45,14 +45,17 @@ static int32_t ContextRand(bool inSeed)
 ServerContext::ServerContext() : mList(ee_won_ctx_new()) {}
 ServerContext::~ServerContext() { ee_won_ctx_free(this->mList); }
 
+// FUNCTION: WON 0x006ac390
 // Removes every server address and re-enables the one-time shuffle
 void ServerContext::Clear() { ee_won_ctx_clear(this->mList); }
+// FUNCTION: WON 0x006ac4b0
 // Appends a valid address not yet in the list; returns whether it was added
 bool ServerContext::AddAddress(const IPAddr& inAddress)
 {
     EeWonAddr a = ToRust(inAddress);
     return ee_won_ctx_add(this->mList, &a);
 }
+// FUNCTION: WON 0x006ac980
 // Moves a server that failed to the end of the list
 void ServerContext::NotifyFailed(const IPAddr& inAddress)
 {
@@ -71,6 +74,7 @@ static void DirAddresses(const DirEntityList& inEntities, const wchar_t* inNameF
         outAddrs.push_back(entity->GetNetAddrAsIP());
     }
 }
+// FUNCTION: WON 0x006acab0
 // Adds the addresses of the directory's services (optionally only those with the given name)
 bool ServerContext::AddAddressesFromDir(const DirEntityList& inEntities, const wchar_t* inNameFilter)
 {
@@ -81,12 +85,14 @@ bool ServerContext::AddAddressesFromDir(const DirEntityList& inEntities, const w
         if (this->AddAddress(anAddrs[i])) added = true;
     return added;
 }
+// FUNCTION: WON 0x006ac6d0
 // Copies the address list, shuffling it randomly the first time
 void ServerContext::CopyAddresses(AddrList& inCopy)
 {
     inCopy.clear();
     ee_won_ctx_copy(this->mList, ContextRand, ToList, &inCopy);
 }
+// FUNCTION: WON 0x006acc00
 // Removes every server address
 void ServerContext::RemoveAllAddresses() { this->Clear(); }
 unsigned long ServerContext::GetNumAddresses() { return (unsigned long)ee_won_ctx_len(this->mList); }

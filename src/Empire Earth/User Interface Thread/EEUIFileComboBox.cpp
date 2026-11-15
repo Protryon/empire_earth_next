@@ -60,6 +60,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIFileComboBox.h"
 #include "ee/EEStringIDs.h"
+// FUNCTION: EXE 0x6624a6
 // Creates a file combo box listing the files of a path that match a pattern
 EEUIFileComboBox::EEUIFileComboBox(FSPath* inPath, const UString& inPattern, unsigned long inId,
                                    unsigned long inTextBoxType, std::vector<UWideString> inData, GEFont* inFont,
@@ -76,12 +77,17 @@ EEUIFileComboBox::EEUIFileComboBox(FSPath* inPath, const UString& inPattern, uns
     this->CreateEntries();
 }
 
+// SYNTHETIC: EXE 0x662567
+// (the scalar deleting destructor, emitted with the vtable; slot EEUIFileComboBox+0x0)
+
+// FUNCTION: EXE 0x662583
 // Destroys the file combo box, releasing its path
 EEUIFileComboBox::~EEUIFileComboBox()
 {
     this->mPath->Dereference();
 }
 
+// FUNCTION: EXE 0x6625ae
 // Refills the list: "none" first, then each matching file name without its 4-character extension
 void EEUIFileComboBox::CreateEntries()
 {
@@ -101,6 +107,7 @@ void EEUIFileComboBox::CreateEntries()
     this->SetCurrentSelection(0);
 }
 
+// FUNCTION: EXE 0x662699
 // Selects the line equal to a file name, or the first line ("none") when it is not listed
 long EEUIFileComboBox::SelectFile(const UWideString& inName)
 {

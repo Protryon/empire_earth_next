@@ -62,6 +62,7 @@
 #include "ee/EECPAttackCommander.h"
 #include "ee/EECPAttackSubGroup.h"
 #include "ee/EECPDefenseCommander.h"
+// FUNCTION: EXE 0x484d8d
 // Creates a recalled aid package with no sub groups; the first send waits the town-guard delay for the difficulty
 EECPMilitaryAidPackage::EECPMilitaryAidPackage(EEComputerPlayer* inPlayer)
     : mThreat(0.0f), mPlayer(inPlayer), mTarget(NULL), mTownID(0), mState(kAidStateRecalled), mPlayerID(0)
@@ -99,6 +100,7 @@ EECPMilitaryAidPackage::EECPMilitaryAidPackage(EEComputerPlayer* inPlayer)
     this->mNextUpdateTime = 0;
 }
 
+// FUNCTION: EXE 0x484e42
 // Requests more sub groups when the town's worst threats outnumber them (send delay permitting), deploys them
 // to the threats and restarts the send delay (ally-assist delay when helping a human)
 void EECPMilitaryAidPackage::Gather()
@@ -168,12 +170,14 @@ void EECPMilitaryAidPackage::Gather()
     }
     this->mPlayer->IsDeathmatch();
 }
+// FUNCTION: EXE 0x485006
 // Puts the package in state 3
 void EECPMilitaryAidPackage::EnterState3()
 {
     this->mState = 3;
 }
 
+// FUNCTION: EXE 0x48500e
 // Returns the first tile of the target town ((0, 0) if the town is gone or empty) and stores it as the location
 U2DPoint<long> EECPMilitaryAidPackage::GetLocation()
 {
@@ -194,6 +198,7 @@ U2DPoint<long> EECPMilitaryAidPackage::GetLocation()
 }
 
 // NEAR: the original indexes the ids through an out-of-line begin() + i
+// FUNCTION: EXE 0x485084
 // Calls off every live sub group: those on mission 3 switch to combat mode, the others drop their task
 void EECPMilitaryAidPackage::Recall()
 {
@@ -208,12 +213,14 @@ void EECPMilitaryAidPackage::Recall()
     }
 }
 
+// FUNCTION: EXE 0x485105
 // Returns true once the threat is at or below the aid threshold or the package has no sub groups
 bool EECPMilitaryAidPackage::IsFinished()
 {
     return !(this->mPlayer->mAidThreatThreshold < this->mThreat && this->mSubGroupIDs.size() != 0);
 }
 
+// FUNCTION: EXE 0x485131
 // Changes the package's state and runs its entry action (recall, gather, or just the state change for 2 and 3)
 void EECPMilitaryAidPackage::SetState(long inState)
 {
@@ -234,6 +241,7 @@ void EECPMilitaryAidPackage::SetState(long inState)
     }
 }
 
+// FUNCTION: EXE 0x485163
 // Drops dead sub groups and runs the current state's update (releasing everything if the town is gone);
 // returns the delay until the next update and schedules it
 unsigned long EECPMilitaryAidPackage::Update(unsigned long inTime)
@@ -267,6 +275,7 @@ unsigned long EECPMilitaryAidPackage::Update(unsigned long inTime)
     return theDelay;
 }
 
+// FUNCTION: EXE 0x4851ec
 // Reads the package from a saved game (target as a player id until Restore; the send time only from
 // version 0.212 on); returns the first read error
 long EECPMilitaryAidPackage::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -338,6 +347,7 @@ long EECPMilitaryAidPackage::Load(unsigned long inMajorVersion, unsigned long in
     return theResult;
 }
 
+// FUNCTION: EXE 0x4853e3
 // Sends each idle sub group near the town (or inside its hull) and not already at a threat to the threats in
 // turn in combat mode, moving it there unless it is already close or busy loading, unloading or attacking
 void EECPMilitaryAidPackage::Deploy(std::vector<EECPDCTownThreat>& inThreats)
@@ -404,6 +414,7 @@ void EECPMilitaryAidPackage::Deploy(std::vector<EECPDCTownThreat>& inThreats)
     }
 }
 
+// FUNCTION: EXE 0x48566a
 // Removes the ids of sub groups that no longer exist
 void EECPMilitaryAidPackage::DropDeadSubGroups()
 {
@@ -414,6 +425,7 @@ void EECPMilitaryAidPackage::DropDeadSubGroups()
     }
 }
 
+// FUNCTION: EXE 0x4856e4
 // Turns the loaded player id back into the target player, finds the town nearest the saved location and
 // drops dead sub groups; returns OK
 long EECPMilitaryAidPackage::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -429,6 +441,7 @@ long EECPMilitaryAidPackage::Restore(unsigned long inMajorVersion, unsigned long
     return 0;
 }
 
+// FUNCTION: EXE 0x48572c
 // Clears the task of every live sub group and forgets all of them
 void EECPMilitaryAidPackage::ReleaseSubGroups()
 {
@@ -443,6 +456,7 @@ void EECPMilitaryAidPackage::ReleaseSubGroups()
     this->mSubGroupIDs.clear();
 }
 
+// FUNCTION: EXE 0x485789
 // Refreshes the location and writes the package to the saved game (target by player id); returns the first
 // write error
 long EECPMilitaryAidPackage::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -477,12 +491,14 @@ long EECPMilitaryAidPackage::Save(unsigned long inMajorVersion, unsigned long in
     return theResult;
 }
 
+// FUNCTION: EXE 0x48588a
 // Puts the package in state 2
 void EECPMilitaryAidPackage::EnterState2()
 {
     this->mState = 2;
 }
 
+// FUNCTION: EXE 0x485892
 // Recomputes the town's threat; recalls the package if it fell to the aid threshold, otherwise gathers again;
 // returns the next update delay
 unsigned long EECPMilitaryAidPackage::UpdateGathering(EETown* inTown)
@@ -503,6 +519,7 @@ unsigned long EECPMilitaryAidPackage::UpdateGathering(EETown* inTown)
         this->Gather();
     return theDelay;
 }
+// FUNCTION: EXE 0x485922
 // State 3 update: reads the town's threat; recalls the package if it fell to the aid threshold, otherwise
 // gathers again; returns the next update delay
 unsigned long EECPMilitaryAidPackage::UpdateState3(EETown* inTown)
@@ -520,6 +537,7 @@ unsigned long EECPMilitaryAidPackage::UpdateState3(EETown* inTown)
     return theDelay;
 }
 
+// FUNCTION: EXE 0x485981
 // Reads the town's threat and starts gathering once it exceeds the aid threshold; returns the next update delay
 unsigned long EECPMilitaryAidPackage::UpdateRecalled(EETown* inTown)
 {
@@ -535,6 +553,7 @@ unsigned long EECPMilitaryAidPackage::UpdateRecalled(EETown* inTown)
     return theDelay;
 }
 
+// FUNCTION: EXE 0x4859d7
 // State 2 update: reads the town's threat; recalls the package if it fell to the aid threshold, otherwise
 // gathers again; returns the next update delay
 unsigned long EECPMilitaryAidPackage::UpdateState2(EETown* inTown)
@@ -552,6 +571,7 @@ unsigned long EECPMilitaryAidPackage::UpdateState2(EETown* inTown)
     return theDelay;
 }
 
+// FUNCTION: EXE 0x485a36
 // Copies another package (EECPDefenseCommander's package copies), all but its location
 // Member order inferred from the stores
 EECPMilitaryAidPackage& EECPMilitaryAidPackage::operator=(const EECPMilitaryAidPackage& inOther)

@@ -9,7 +9,7 @@ class EEGameOptionsPlayer;
 
 class EEClient : public NESynchronousClient {
 public:
-    EEClient();
+    EEClient();                             // 0xb71e1
     virtual ~EEClient();                    // +0x00 0xb7278 (??_G 0xb725c)
     // the engine's pure callbacks, implemented by the game (vtable 0x43d054; bodies in EEClient.cpp, names by base
     // slot; declared so that EEAJoinOrHostAGame.cpp can `new EEClient`)

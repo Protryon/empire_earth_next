@@ -127,6 +127,7 @@
 static long sSEMapSizes[25] = {15, 25, 50, 60, 70, 75, 80, 90, 100, 125, 130, 135, 140, 145, 150, 155, 160, 165, 175,
                                200, 225, 250, 300, 350, 400};
 
+// FUNCTION: EXE 0x5a18f1
 // Releases the Create Map button and creates the map from the tab's settings
 void UIBMap::ButtonUp()
 {
@@ -134,6 +135,7 @@ void UIBMap::ButtonUp()
     this->mMap->CreateMap();
 }
 
+// FUNCTION: EXE 0x5a1907
 // Selects a map mode (blank, random or seeded) and shows only that mode's controls; blank re-runs the
 // elevation file selection handler
 void UIRBMap::Check()
@@ -172,6 +174,7 @@ void UIRBMap::Check()
     }
 }
 
+// FUNCTION: EXE 0x5a1a6b
 // Hides every mode-specific control of the map tab
 void UIRBMap::HideControls()
 {
@@ -199,6 +202,11 @@ void UIRBMap::HideControls()
     this->GetForm()->GetControlById(kSEMapWaterCutoff)->SetDisplayMode(kDisplayModeHidden);
 }
 
+// FUNCTION: EXE 0x5a1bc6
+// Shows the elevation controls when an elevation file is selected (selection above 0), else hides them
+// (EEUIFSEEMapType; ee_screens editor_events.rs)
+
+// FUNCTION: EXE 0x5a1be6
 // Builds the map tab: the editor terrains, the size, terrain, style and seed controls, the mode radio buttons,
 // the Create Map button and the elevation file controls (the seed edit box starts with the text "HE0")
 EEUIFSEMap::EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
@@ -615,6 +623,19 @@ EEUIFSEMap::EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
     this->ShowElevationControls(false);
 }
 
+// FUNCTION: EXE 0x5a3a9a
+// Destroys the Create Map button and frees it if asked (UIBMap's scalar deleting destructor, emitted with its vtable)
+
+// FUNCTION: EXE 0x5a3abd
+// Destroys and frees a map mode radio button (UIRBMap's scalar deleting destructor, emitted with its vtable)
+
+// FUNCTION: EXE 0x5a3ae0
+// Destroys and frees the elevation file event (EEUIFSEEMapType's scalar deleting destructor, with its vtable)
+
+// SYNTHETIC: EXE 0x5a3b0b
+// (EEUIFSEMap's scalar deleting destructor)
+
+// FUNCTION: EXE 0x5a3b27
 // Destroys the map tab, deleting all of its controls
 EEUIFSEMap::~EEUIFSEMap()
 {
@@ -646,6 +667,7 @@ EEUIFSEMap::~EEUIFSEMap()
     delete this->mElevationFile;
 }
 
+// FUNCTION: EXE 0x5a3c7d
 // Creates a blank map of the chosen size and terrain (then draws a new random seed), or a random map of the chosen
 // size and style with a fresh seed (shown in the seed label) or the seed typed in the edit box
 void EEUIFSEMap::CreateMap()
@@ -678,6 +700,7 @@ void EEUIFSEMap::CreateMap()
     }
 }
 
+// FUNCTION: EXE 0x5a3dec
 // In blank mode shows or hides the water/land elevation controls (the height box does the opposite); else hides all
 void EEUIFSEMap::ShowElevationControls(bool inShow)
 {
@@ -706,9 +729,16 @@ void EEUIFSEMap::ShowElevationControls(bool inShow)
     }
 }
 
+// FUNCTION: EXE 0x5a3ebf
 // Refreshes the elevation file list when the tab is entered
 void EEUIFSEMap::Enter()
 {
     if (this->mElevationFile != NULL)
         this->mElevationFile->CreateEntries();
 }
+
+// FUNCTION: EXE 0x5a3ecc
+// Appends a terrain table to the tab's terrain list (vector<EETerrainTable*>::push_back; first user the ctor)
+
+// FUNCTION: EXE 0x5a3ef8
+// Returns the number of terrain tables (EETerrainTable::GetNumTables, inline COMDAT; first user the ctor)

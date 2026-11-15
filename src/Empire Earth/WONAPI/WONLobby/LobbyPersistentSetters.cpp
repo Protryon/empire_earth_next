@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyCore.h"
 namespace WONAPI {
+// FUNCTION: WON 0x0075e3f0
 // Sets the LAN broadcast port, marking the user's preferences changed
 void LobbySetLanBroadcastPort(unsigned short value)
 {
@@ -21,6 +22,7 @@ void LobbySetLanBroadcastPort(unsigned short value)
         data->ChangeLanBroadcastPort(value);
 }
 
+// FUNCTION: WON 0x0075e410
 // Turns chat profanity filtering on or off, marking the user's preferences changed
 void LobbySetFilterDirtyWords(bool value)
 {
@@ -29,6 +31,7 @@ void LobbySetFilterDirtyWords(bool value)
         data->ChangeFlag(LobbyPersistentData::kFilterDirtyWords, value);
 }
 
+// FUNCTION: WON 0x0075e430
 // Turns automatic away-when-idle on or off, marking the user's preferences changed
 void LobbySetDoAutoAFK(bool value)
 {
@@ -37,6 +40,7 @@ void LobbySetDoAutoAFK(bool value)
         data->ChangeFlag(LobbyPersistentData::kDoAutoAFK, value);
 }
 
+// FUNCTION: WON 0x0075e450
 // Turns cross-promotion messages on or off, marking the user's preferences changed
 void LobbySetCrossPromotion(bool value)
 {
@@ -45,6 +49,7 @@ void LobbySetCrossPromotion(bool value)
         data->ChangeFlag(LobbyPersistentData::kCrossPromotion, value);
 }
 
+// FUNCTION: WON 0x0075e4e0
 // Turns lobby sound effects on or off; the global dirty flag is set to whether it now differs from the saved
 // state, which can clear an unrelated pending global change
 void LobbySetLobbySoundEffects(bool value)
@@ -54,6 +59,7 @@ void LobbySetLobbySoundEffects(bool value)
         data->ChangeFlag(LobbyPersistentData::kLobbySoundEffects, value); // the global flag: whether it differs from the saved one
 }
 
+// FUNCTION: WON 0x0075e510
 // Turns chat sound effects on or off, marking the user's preferences changed
 void LobbySetChatSoundEffects(bool value)
 {
@@ -62,6 +68,7 @@ void LobbySetChatSoundEffects(bool value)
         data->ChangeFlag(LobbyPersistentData::kChatSoundEffects, value);
 }
 
+// FUNCTION: WON 0x0075e530
 // Turns staging-room sound effects on or off, marking the user's preferences changed
 void LobbySetStagingSoundEffects(bool value)
 {
@@ -70,6 +77,7 @@ void LobbySetStagingSoundEffects(bool value)
         data->ChangeFlag(LobbyPersistentData::kStagingSoundEffects, value);
 }
 
+// FUNCTION: WON 0x0075e550
 // Turns lobby music on or off; the global dirty flag is set to whether it now differs from the saved state,
 // which can clear an unrelated pending global change
 void LobbySetLobbyMusic(bool value)
@@ -79,6 +87,7 @@ void LobbySetLobbyMusic(bool value)
         data->ChangeFlag(LobbyPersistentData::kLobbyMusic, value); // the global flag: whether it differs from the saved one
 }
 
+// FUNCTION: WON 0x0075e580
 // Turns confirmation dialogs on or off, marking the user's preferences changed
 void LobbySetShowConfirmations(bool value)
 {
@@ -87,6 +96,7 @@ void LobbySetShowConfirmations(bool value)
         data->ChangeFlag(LobbyPersistentData::kShowConfirmations, value);
 }
 
+// FUNCTION: WON 0x0075e5a0
 // Turns automatic pinging of listed games on or off, marking the user's preferences changed
 void LobbySetAutoPingGames(bool value)
 {
@@ -95,6 +105,7 @@ void LobbySetAutoPingGames(bool value)
         data->ChangeFlag(LobbyPersistentData::kAutoPingGames, value);
 }
 
+// FUNCTION: WON 0x0075e5c0
 // Shows or hides games in progress in the game list, marking the user's preferences changed
 void LobbySetShowGamesInProgress(bool value)
 {
@@ -103,6 +114,7 @@ void LobbySetShowGamesInProgress(bool value)
         data->ChangeFlag(LobbyPersistentData::kShowGamesInProgress, value);
 }
 
+// FUNCTION: WON 0x0075e5e0
 // Sets whether the user hides their location from friends, marking the user's preferences changed
 void LobbySetAnonymousToFriends(bool value)
 {
@@ -111,6 +123,7 @@ void LobbySetAnonymousToFriends(bool value)
         data->ChangeFlag(LobbyPersistentData::kAnonymousToFriends, value);
 }
 
+// FUNCTION: WON 0x0075e600
 // Sets the user's connection speed, marking the user's preferences changed
 void LobbySetConnectionSpeed(unsigned short value)
 {
@@ -119,6 +132,7 @@ void LobbySetConnectionSpeed(unsigned short value)
         data->ChangeConnectionSpeed(value);
 }
 
+// FUNCTION: WON 0x0075e660
 // Writes _wonlobbypersistent.dat when the global settings changed or when forced
 void LobbySaveGlobalPrefs(bool force)
 {
@@ -127,6 +141,7 @@ void LobbySaveGlobalPrefs(bool force)
         data->SaveGlobalPrefs();
 }
 
+// FUNCTION: WON 0x0075e680
 // Writes the current user's preferences file when they changed or when forced
 void LobbySaveUserPrefs(bool force)
 {

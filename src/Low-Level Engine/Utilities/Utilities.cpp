@@ -7,15 +7,19 @@
 #include "lle/LowLevelEngine.h"
 #include "rust/ee_util.h"
 
+// FUNCTION: LLE 0x100837e5
 // Returns the user's default language id
 unsigned short UGetOSLanguage() { return ee_util_os_language(); }
 
+// FUNCTION: LLE 0x10083826
 // Registers a function to call at engine shutdown; always returns kErrorOK
 long URegisterShutdown(void (*inFunction)(bool)) { return ee_util_register_shutdown(inFunction); }
 
+// FUNCTION: LLE 0x10083838
 // Calls every registered shutdown function, last registered first; with inTerminate, ends the platform's services
 // and exits (inForced: exit(0), else abort)
 void UShutdown(bool inForced, bool inTerminate) { ee_util_shutdown(inForced, inTerminate); }
 
+// FUNCTION: LLE 0x10083891
 // Returns whether UShutdown has started
 bool UShutdownInProgress() { return ee_util_shutdown_in_progress(); }

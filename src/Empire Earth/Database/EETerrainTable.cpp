@@ -29,7 +29,7 @@ std::vector<EECliffTerrainTable*> EETerrainTable::sCliffTable;
 
 // 0x4e86d0: the first loaded terrain's +0x50 (-1 until one with a name loads); 0x4e86e8: the first cliff index
 // (provisional names)
-extern unsigned long& gTexturePixelDepth;
+extern unsigned long& gTexturePixelDepth;     // 0x5308b4
 // 0x5308b0: the terrain textures' mip levels to drop (LoadTexture; provisional name)
 extern unsigned long& gTerrainMIPLevelsToDrop;
 extern bool& gTrilinearFilter;               // 0x5308da (mip filtering on)
@@ -78,6 +78,7 @@ struct EECliffTerrainRecord {
 };
 static_assert(sizeof(EECliffTerrainRecord) == 124, "on-disk record: 124 bytes on every target");
 
+// FUNCTION: EXE 0x4db245
 // Creates an empty terrain: no textures, not water, colour type -1
 EETerrainTable::EETerrainTable()
 {
@@ -102,6 +103,7 @@ EETerrainTable::EETerrainTable()
     this->mPreviewTexture = NULL;
 }
 
+// FUNCTION: EXE 0x4db2ce
 // Loads the terrains from db\dbterrain.dat (texture grid, ambient unit classes, colour, water) numbering their
 // textures, and notes the first named one as the default terrain; returns the last read status
 long EETerrainTable::Load(FSFileSpec* inFile)
@@ -157,6 +159,7 @@ long EETerrainTable::Load(FSFileSpec* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4db4c4
 // Releases every terrain's textures, destroys the terrains and empties the table (the texture arrays are not freed)
 void EETerrainTable::Unload()
 {
@@ -174,6 +177,7 @@ void EETerrainTable::Unload()
     EETerrainTable::sTable.resize(0);
 }
 
+// FUNCTION: EXE 0x4db551
 // Writes each referenced terrain and each terrain with a list-box preview to a media dump file
 void EETerrainTable::DumpAllLoadedMedia(FSFileSpec& inFile)
 {
@@ -195,6 +199,7 @@ void EETerrainTable::DumpAllLoadedMedia(FSFileSpec& inFile)
 #include "ee/EEUnit.h"
 #include "ee/EEButtonObject.h"
 
+// FUNCTION: EXE 0x4db5c8
 // Adds a reference to the terrain's textures; the first one loads them and attaches them (columns mirrored) to the
 // mesh's texture set, later callers wait for that load
 void EETerrainTable::Load(GETerrainMesh& ioMesh)
@@ -222,6 +227,7 @@ void EETerrainTable::Load(GETerrainMesh& ioMesh)
     sDatabaseLock.mLock->Leave();
 }
 
+// FUNCTION: EXE 0x4db69d
 // Loads one terrain texture and sets its terrain stage modes (clamped; linear mip filter when trilinear is on)
 // No NULL test: the original references the result directly
 GETexture* EETerrainTable::LoadTexture(const UString& inFile)
@@ -240,6 +246,7 @@ GETexture* EETerrainTable::LoadTexture(const UString& inFile)
     return theTexture;
 }
 
+// FUNCTION: EXE 0x4db762
 // Loads every texture of the terrain's grid (its file name numbered _n, from the last down) into its texture array
 void EETerrainTable::LoadTextures()
 {
@@ -263,6 +270,7 @@ void EETerrainTable::LoadTextures()
     }
 }
 
+// FUNCTION: EXE 0x4db85a
 // Loads each terrain's list-box preview texture (its file name with _1) and references the button of its first unit
 // class
 // (the terrain list of EEUIFSETerrain)
@@ -293,6 +301,7 @@ void EELoadTerrainPreviews()
     }
 }
 
+// FUNCTION: EXE 0x4db96c
 // Attaches the terrain's loaded textures (columns mirrored) to a texture set, once any load has finished
 void EETerrainTable::AttachTextures(GETextureSet* inTextureSet)
 {
@@ -308,6 +317,7 @@ void EETerrainTable::AttachTextures(GETextureSet* inTextureSet)
     sDatabaseLock.mLock->Leave();
 }
 
+// FUNCTION: EXE 0x4db9e3
 // Drops a reference to the terrain's textures; the last one detaches them from the mesh and releases them
 void EETerrainTable::Unload(GETerrainMesh& ioMesh)
 {
@@ -334,6 +344,7 @@ void EETerrainTable::Unload(GETerrainMesh& ioMesh)
     sDatabaseLock.mLock->Leave();
 }
 
+// FUNCTION: EXE 0x4dba99
 // Releases each terrain's preview texture and its first unit class's button reference
 void EEReleaseTerrainPreviews()
 {
@@ -351,6 +362,7 @@ void EEReleaseTerrainPreviews()
     }
 }
 
+// FUNCTION: EXE 0x4dbafe
 // Creates an empty cliff terrain entry
 EECliffTerrainTable::EECliffTerrainTable()
 {
@@ -360,6 +372,7 @@ EECliffTerrainTable::EECliffTerrainTable()
     this->mB20 = false;
 }
 
+// FUNCTION: EXE 0x4dbb22
 // Loads the cliff terrains from db\dbcliffterrain.dat (empty slots for negative indices) and notes the first one;
 // returns the last read status
 long EECliffTerrainTable::Load(FSFileSpec* inFile)
@@ -396,6 +409,7 @@ long EECliffTerrainTable::Load(FSFileSpec* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4dbbfb
 // Destroys every cliff terrain and empties the cliff table; returns 0
 long EECliffTerrainTable::Unload()
 {
@@ -405,6 +419,7 @@ long EECliffTerrainTable::Unload()
     return 0;
 }
 
+// FUNCTION: EXE 0x4dbc39
 // Returns the terrain at an index, or NULL when out of range or unused (negative id)
 EETerrainTable* EETerrainTable::Get(long inIndex)
 {
@@ -413,7 +428,27 @@ EETerrainTable* EETerrainTable::Get(long inIndex)
     return NULL;
 }
 
+// SYNTHETIC: EXE 0x4dbc61
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4dbc7d
 // Destroys the terrain (members only)
 EETerrainTable::~EETerrainTable()
 {
 }
+
+// SYNTHETIC: EXE 0x4dbca2
+// (EECliffTerrainTable's scalar deleting destructor)
+
+// SYNTHETIC: EXE 0x4db169
+// SYNTHETIC: EXE 0x4db173
+// SYNTHETIC: EXE 0x4db18b
+// SYNTHETIC: EXE 0x4db197
+// SYNTHETIC: EXE 0x4db1b2
+// SYNTHETIC: EXE 0x4db1bc
+// SYNTHETIC: EXE 0x4db1d4
+// SYNTHETIC: EXE 0x4db1e0
+// SYNTHETIC: EXE 0x4db1fb
+// SYNTHETIC: EXE 0x4db205
+// SYNTHETIC: EXE 0x4db22b
+// SYNTHETIC: EXE 0x4db237

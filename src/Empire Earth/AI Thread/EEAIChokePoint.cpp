@@ -66,17 +66,20 @@ static void EEAIChokeGetTileInfo(EETile* inTile, long inX, long inY, EeChokeTile
 static void EEAIChokeCreate(EEMap* inMap);
 static void EEAIChokeDone();
 
+// FUNCTION: EXE 0x41c740
 // Destroys the choke point (members only)
 EEAIChokePoint::~EEAIChokePoint()
 {
 }
 
+// FUNCTION: EXE 0x41c75a
 // Appends the serials of the areas the choke point joins
 void EEAIChokePoint::AddAreaSerials(const std::vector<unsigned long>& inSerials)
 {
     this->mAreaSerials.insert(this->mAreaSerials.end(), inSerials.begin(), inSerials.end());
 }
 
+// FUNCTION: EXE 0x41c949
 // Builds the continent manager's choke points: classifies every tile by area serial, smooths inPasses - 1
 // times to flag the tiles between areas, flood-fills the flagged runs into choke points and frees the grids
 // (Rust: ee_astar choke.rs build_grids does the classification (EEAIChokeGetTileSerial 0x1ccd0 over what
@@ -113,6 +116,7 @@ void EEAIBuildChokePoints(EEMap* inMap, long inPasses)
 
 // NEAR: the original calls the storage's Virtual0C through the vtable (an inline helper or a pointer: unknown) and
 // default-constructs the iterator at the top ([ebp-8]); declared there, the slots swap
+// FUNCTION: EXE 0x41cb7e
 // Flood-fills every flagged non-area tile not yet in a choke point into a new choke point, then gives each one
 // a serial and registers it with the continent manager
 static void EEAIChokeCreate(EEMap* inMap)
@@ -179,3 +183,30 @@ static void EEAIChokeGetTileInfo(EETile* inTile, long inX, long inY, EeChokeTile
 static void EEAIChokeDone()
 {
 }
+
+// Compiler-generated for this unit (names in analysis/exe/names.txt): the machine's ctor/dtor/inline slots/??_G, the
+// vector<long> insert helpers, Run and its steps (above), the inline FastStorage lookups 0x1d74b/0x1d773 (AddNode,
+// their only caller, is ICF-kept at 0x28fc9), EEAIAStarMachineBase's inline ctor/Virtual34/??_G, vector resize.
+// TEMPLATE: EXE 0x41cdae
+// TEMPLATE: EXE 0x41cdfb
+// TEMPLATE: EXE 0x41ce2f
+// TEMPLATE: EXE 0x41ce36
+// TEMPLATE: EXE 0x41ce3d
+// TEMPLATE: EXE 0x41ce4a
+// TEMPLATE: EXE 0x41ce57
+// TEMPLATE: EXE 0x41ce6e
+// TEMPLATE: EXE 0x41ce8a
+// TEMPLATE: EXE 0x41ceb1
+// TEMPLATE: EXE 0x41cf34
+// TEMPLATE: EXE 0x41d184
+// TEMPLATE: EXE 0x41d1fb
+// TEMPLATE: EXE 0x41d527
+// TEMPLATE: EXE 0x41d63b
+// TEMPLATE: EXE 0x41d6b1
+// TEMPLATE: EXE 0x41d6f8
+// TEMPLATE: EXE 0x41d700
+// TEMPLATE: EXE 0x41d729
+// TEMPLATE: EXE 0x41d72e
+// TEMPLATE: EXE 0x41d74b
+// TEMPLATE: EXE 0x41d773
+// TEMPLATE: EXE 0x41d79b

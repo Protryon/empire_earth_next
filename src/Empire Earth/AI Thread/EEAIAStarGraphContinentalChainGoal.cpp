@@ -42,6 +42,7 @@
 #include "ee/EEAIAStarGraphGoalBase.h"
 #include "ee/EEAIAStarGraphContinentalChainGoal.h"
 
+// FUNCTION: EXE 0x415dae
 // Creates the continent chain goal with no start continent, no chain kind and no continent category allowed
 EEAIAStarGraphContinentalChainGoal::EEAIAStarGraphContinentalChainGoal()
     : mStartContinent(NULL), mStartCategory(false)
@@ -52,6 +53,7 @@ EEAIAStarGraphContinentalChainGoal::EEAIAStarGraphContinentalChainGoal()
         this->mKinds[i] = false;
 }
 
+// FUNCTION: EXE 0x415dd5
 // Gives every continent the search reached (closed and open) the next chain id of the goal's chain kind
 void EEAIAStarGraphContinentalChainGoal::NumberChain()
 {
@@ -71,6 +73,7 @@ void EEAIAStarGraphContinentalChainGoal::NumberChain()
     }
 }
 
+// FUNCTION: EXE 0x415e50
 // Appends the found chain's node indices to outIndices
 void EEAIAStarGraphContinentalChainGoal::GetPath(std::vector<long>& outIndices)
 {
@@ -92,6 +95,7 @@ void EEAIAStarGraphContinentalChainGoal::GetPath(std::vector<long>& outIndices)
     }
 }
 
+// FUNCTION: EXE 0x415ebc
 // Appends the found chain's tiles to outTiles (skipping a repeat of the last tile) and its node indices to
 // outIndices
 void EEAIAStarGraphContinentalChainGoal::GetPath(std::vector<EETileCoordinate>& outTiles,
@@ -121,6 +125,7 @@ void EEAIAStarGraphContinentalChainGoal::GetPath(std::vector<EETileCoordinate>& 
     }
 }
 
+// FUNCTION: EXE 0x415f97
 // Returns whether the chain may grow onto a neighbouring continent (the same one, or one of an allowed
 // category), counting each accepted step
 bool EEAIAStarGraphContinentalChainGoal::AcceptNeighbor(EEAIContinent* inNeighbor, EEAIContinent* inFrom)
@@ -132,3 +137,9 @@ bool EEAIAStarGraphContinentalChainGoal::AcceptNeighbor(EEAIContinent* inNeighbo
         this->mCount++;
     return theResult;
 }
+
+// Compiler-generated for this unit (names in analysis/exe/names.txt):
+// TEMPLATE: EXE 0x415fbb
+// TEMPLATE: EXE 0x415ff5
+// TEMPLATE: EXE 0x416027
+// SYNTHETIC: EXE 0x416053

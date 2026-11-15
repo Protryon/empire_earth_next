@@ -16,29 +16,29 @@ class EEUIFScenarioEditor;
 class EESELoadThread {
 public:
     EESELoadThread(EEUIFScenarioEditor* inEditor, long inThreadPriority);    // 0x172125 (new'd by the editor 0x19f794)
-    ~EESELoadThread();
+    ~EESELoadThread();                                        // 0x172295
     static unsigned long Main(void* inThis);                  // 0x1727ae (the thread procedure)
-    void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);
+    void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);   // 0x17285c
 
     // the posting side (one TSThread::Post each; provisional names by message number)
-    void Post404();
-    void Post401();
+    void Post404();                         // 0x1729bd
+    void Post401();                         // 0x1729d2
     void Post40B(UReferenceCounter* inObject);   // 0x1729e7 (references inObject)
     void Post40C(UReferenceCounter* inObject);   // 0x172a04 (references inObject)
-    void Post408(void* inParameter);
-    void Post406(void* inParameter1, void* inParameter2);
+    void Post408(void* inParameter);        // 0x172a21
+    void Post406(void* inParameter1, void* inParameter2);   // 0x172a3a
     void Post407(void* inParameter1, void* inParameter2);   // ICF-folded into 0x11aa6c (EEAResetAllPlayerInfo)
-    void Post403(void* inParameter, bool inFlag);
-    void Post402(void* inParameter1, void* inParameter2);
-    void Post405();
-    void Post409(void* inParameter);
+    void Post403(void* inParameter, bool inFlag);           // 0x172a55
+    void Post402(void* inParameter1, void* inParameter2);   // 0x172a72
+    void Post405();                         // 0x172a8d
+    void Post409(void* inParameter);        // 0x172aa2
 
     // the handlers (names inferred from the message numbers)
-    void Handle406(unsigned long inPlayer, unsigned long inCount);
+    void Handle406(unsigned long inPlayer, unsigned long inCount);    // 0x1722c6
     void Handle408(unsigned long inArg1, bool inFlag);       // 0x172433 (0x409 passes true)
-    void Handle402(unsigned long inUnitClass, unsigned long inPlayer);
-    void Handle403(unsigned long inPlayer, bool inFlag);
-    void Handle407(unsigned long inPlayer, unsigned long inArg2);
+    void Handle402(unsigned long inUnitClass, unsigned long inPlayer);  // 0x17263f
+    void Handle403(unsigned long inPlayer, bool inFlag);       // 0x172967
+    void Handle407(unsigned long inPlayer, unsigned long inArg2);  // 0x172abb
 
     EEUIFScenarioEditor* mEditor;           // +0x00 (the ctor's first argument: the editor; Handle402 reads its mTabGroups[3], mouse location)
     TSThread* mThread;                      // +0x04

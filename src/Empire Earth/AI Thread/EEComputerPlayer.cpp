@@ -83,7 +83,7 @@ long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);
 // by value: EETileDistanceLess's copy ctor). Unit-local (provisional name)
 struct EECPCenterDistanceLess {
     EECPCenterDistanceLess(const U2DPoint<long>& inCenter) : mCenter(inCenter) {}
-    long DistanceSquared(const EETileCoordinate& inTile) const;
+    long DistanceSquared(const EETileCoordinate& inTile) const;   // 0x8a3f (ICF)
     bool operator()(EECPResourceCenter* inFirst, EECPResourceCenter* inSecond) const;
 
     EETileCoordinate mCenter;
@@ -95,12 +95,21 @@ struct EECPCenterDistanceLess {
 //   object 0x8e5c70  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 //   guarded dtor (byte ptr [0x8e5c68], 1): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
 const UString EEComputerPlayer::sData("EEComputerPlayer-Data");   // class static member (owner from the key prefix; EEComputerPlayer declares `static const UString ...;`) (provisional name)
+// SYNTHETIC: EXE 0x42ce2e   (wrapper)
+// SYNTHETIC: EXE 0x42ce38   (ctor)
+// SYNTHETIC: EXE 0x42ce49   (registrar)
+// SYNTHETIC: EXE 0x42ce55   (dtor)
 
 // chain at 0x42ce71 (wrapper)
 //   object 0x8e5c58  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 //   guarded dtor (byte ptr [0x8e5c68], 2): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
 const UString EEComputerPlayer::sCPUOnlyFlag("EEComputerPlayer-CPU Only Flag");   // class static member (owner from the key prefix; EEComputerPlayer declares `static const UString ...;`) (provisional name)
+// SYNTHETIC: EXE 0x42ce71   (wrapper)
+// SYNTHETIC: EXE 0x42ce7b   (ctor)
+// SYNTHETIC: EXE 0x42ce8c   (registrar)
+// SYNTHETIC: EXE 0x42ce98   (dtor)
 
+// FUNCTION: EXE 0x42ceb4
 // Returns true when the first resource center lies nearer to mCenter than the second (provisional name)
 // The centers by the distance of their centres from mCenter. Owner and name PROVISIONAL (a unit-local predicate over
 // EETileDistanceLess). Built without /Og (rule 4 evidence: every local memory-resident, `leave`, the bool through a
@@ -134,6 +143,7 @@ inline long EECPCenterDistanceLess::DistanceSquared(const EETileCoordinate& inTi
     return theDX + theDY;
 }
 
+// FUNCTION: EXE 0x42cf1e
 // Returns true when the first unit's tile lies nearer to mCenter than the second's (provisional name)
 // Built without /Og (rule 4 evidence: memory-resident locals, `leave`; exact with the pragma and the header's undone-inline
 // DistanceSquared, r37); the units by the distance of their tiles from mCenter (owner and name PROVISIONAL)
@@ -149,6 +159,7 @@ bool EECPUnitTileDistanceLess::operator()(EEUnit* inFirst, EEUnit* inSecond) con
 
 // EECPUnitTileDistanceLess::DistanceSquared (ICF-folds into 0x8a3f): inline in ee/EECPUnitTileDistanceLess.h
 
+// FUNCTION: EXE 0x42cf7e
 // Creates a named computer player with the given player id and initialises its AI tuning and managers
 EEComputerPlayer::EEComputerPlayer(const UWideString& inName, unsigned long inPlayerID)
     : EEPlayer(inName, inPlayerID)
@@ -159,6 +170,7 @@ EEComputerPlayer::EEComputerPlayer(const UWideString& inName, unsigned long inPl
     this->mComputerPlayer = dynamic_cast<EEComputerPlayer*>(this);
 }
 
+// FUNCTION: EXE 0x42d003
 // Sets the AI's combat state, clearing the next manager-enable time when the state changes
 void EEComputerPlayer::SetCombatState(unsigned long inCombatState)
 {
@@ -167,6 +179,10 @@ void EEComputerPlayer::SetCombatState(unsigned long inCombatState)
     this->mCombatState = inCombatState;
 }
 
+// SYNTHETIC: EXE 0x42d021
+// (the scalar deleting destructor, emitted with the vtable; slot EEComputerPlayer+0x0)
+
+// FUNCTION: EXE 0x42d03d
 // Creates an unnamed computer player (for loading) and initialises its AI tuning and managers
 EEComputerPlayer::EEComputerPlayer()
 {
@@ -176,6 +192,7 @@ EEComputerPlayer::EEComputerPlayer()
     this->mComputerPlayer = dynamic_cast<EEComputerPlayer*>(this);
 }
 
+// FUNCTION: EXE 0x42d0bb
 // Destroys the computer player: releases the units queued to kill, deletes its managers and resource centers
 EEComputerPlayer::~EEComputerPlayer()
 {
@@ -194,6 +211,7 @@ EEComputerPlayer::~EEComputerPlayer()
     EECPUnitsDelete(this);
 }
 
+// FUNCTION: EXE 0x42d1a5
 // Adds a resource amount to the player and records it as spent with the AI's resource manager
 void EEComputerPlayer::AddResource(long inIndex, long inAmount)
 {
@@ -205,6 +223,7 @@ void EEComputerPlayer::AddResource(long inIndex, long inAmount)
         EECPNextIncome(this, inIndex, inAmount);   // the next engine's view (ee/EECPNext.h)
 }
 
+// FUNCTION: EXE 0x42d1c7
 // Sets the AI's population cap: its own limit if another team is winning by wonders or in deathmatch,
 // else a weighted average of its own limit and the largest human population, scaled by difficulty
 void EEComputerPlayer::WorkOutPopulation()
@@ -246,6 +265,7 @@ void EEComputerPlayer::WorkOutPopulation()
     }
 }
 
+// FUNCTION: EXE 0x42d334
 // Chooses which AI managers (epoch, settlements, research, production, building, defense, exploration,
 // combat, morale) run this turn by combat-state priority, up to the enabled-manager limit
 void EEComputerPlayer::EnableManagers(unsigned long inTime)
@@ -371,6 +391,7 @@ void EEComputerPlayer::EnableManagers(unsigned long inTime)
     }
 }
 
+// FUNCTION: EXE 0x42db35
 // Detaches a unit from AI control: marks it, removes it from the combat manager and sets its AI state
 void EEComputerPlayer::DetachUnitFromAI(EEComplexUnit* inUnit)
 {
@@ -381,6 +402,7 @@ void EEComputerPlayer::DetachUnitFromAI(EEComplexUnit* inUnit)
         inUnit->mAIState = 290008;
 }
 
+// FUNCTION: EXE 0x42db6d
 // Groups the enabled unit types that pass the screener by AI kind into the map, allocating new type lists
 void EEComputerPlayer::GetScreenedTypesByLine(std::map<long, std::vector<long>*>& ioMap, EEAIFOUnitSelectionScreener& inScreener)
 {
@@ -406,6 +428,7 @@ void EEComputerPlayer::GetScreenedTypesByLine(std::map<long, std::vector<long>*>
     }
 }
 
+// FUNCTION: EXE 0x42dc51
 // Returns true for epoch technologies; otherwise asks the player and refuses a missing node or one of kind 5
 bool EEComputerPlayer::CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason)
 {
@@ -423,6 +446,7 @@ bool EEComputerPlayer::CanProduce(long inTechnology, long inUnitClass, long inCo
     return theResult;
 }
 
+// FUNCTION: EXE 0x42dca6
 // Tells the combat manager and then the player about a target player notice
 void EEComputerPlayer::NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag)
 {
@@ -430,6 +454,7 @@ void EEComputerPlayer::NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag)
     EEPlayer::NoticeTargetPlayer(inPlayer, inFlag);
 }
 
+// FUNCTION: EXE 0x42dccf
 // Picks a random air unit type of the current epoch as the favorite and records it in the history
 // Shape shared by all four ChooseFavorite*Type: the iterator default-constructed after the map, the epoch loaded
 // into a local before the screener, the index drawn before begin(), the inner random index in a local, make_pair
@@ -453,6 +478,7 @@ void EEComputerPlayer::ChooseFavoriteAirType()
     this->mFavoriteTypeHistory.push_back(std::make_pair(this->mFavoriteAirType, this->mTechnologies->mCurrentEpoch));
 }
 
+// FUNCTION: EXE 0x42ddfb
 // Creates a favorite-unit screener for the allowed movement kinds, with the epoch clamped to 0..14
 EEAIFOFavoriteUnitScreener::EEAIFOFavoriteUnitScreener(EEComputerPlayer* inPlayer, bool inAllowAir, bool inAllowLand, bool inAllowSea,
     bool inAllowSpace, long inEpoch, long inEpochSpan)
@@ -464,6 +490,11 @@ EEAIFOFavoriteUnitScreener::EEAIFOFavoriteUnitScreener(EEComputerPlayer* inPlaye
         this->mEpoch = 0;
 }
 
+// FUNCTION: EXE 0x42de43
+// Base unit screener check: asserts and refuses every class (EEAIFOUnitSelectionScreener::Screen)
+// Emitted here: inline in EEAIFunctionObjects.h; slot EEAIFOUnitSelectionScreener+0x4
+
+// FUNCTION: EXE 0x42de60
 // Picks a random land unit type of the current epoch as the favorite and records it in the history
 void EEComputerPlayer::ChooseFavoriteLandType()
 {
@@ -484,6 +515,7 @@ void EEComputerPlayer::ChooseFavoriteLandType()
     this->mFavoriteTypeHistory.push_back(std::make_pair(this->mFavoriteLandType, this->mTechnologies->mCurrentEpoch));
 }
 
+// FUNCTION: EXE 0x42df8c
 // Picks a random sea unit type of the current epoch as the favorite and records it in the history
 void EEComputerPlayer::ChooseFavoriteSeaType()
 {
@@ -504,6 +536,7 @@ void EEComputerPlayer::ChooseFavoriteSeaType()
     this->mFavoriteTypeHistory.push_back(std::make_pair(this->mFavoriteSeaType, this->mTechnologies->mCurrentEpoch));
 }
 
+// FUNCTION: EXE 0x42e0b8
 // Picks a random space unit type of the current epoch as the favorite and records it in the history
 void EEComputerPlayer::ChooseFavoriteSpaceType()
 {
@@ -524,12 +557,14 @@ void EEComputerPlayer::ChooseFavoriteSpaceType()
     this->mFavoriteTypeHistory.push_back(std::make_pair(this->mFavoriteSpaceType, this->mTechnologies->mCurrentEpoch));
 }
 
+// FUNCTION: EXE 0x42e1e4
 // Forwards to the player's handler for this slot
 void EEComputerPlayer::Virtual60()
 {
     EEPlayer::Virtual60();
 }
 
+// FUNCTION: EXE 0x42e1e9
 // Handles a finished unit; a land building is offered as drop site to every resource center and rebalances production
 void EEComputerPlayer::UnitCompleted(EEComplexUnit* inUnit)
 {
@@ -544,6 +579,7 @@ void EEComputerPlayer::UnitCompleted(EEComplexUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x42e248
 // Counts the AI's heroes plus hero requests via the unit manager, falling back to the player's count
 long EEComputerPlayer::GetHeroCount(bool inByClass, bool inRequests)
 {
@@ -555,6 +591,7 @@ long EEComputerPlayer::GetHeroCount(bool inByClass, bool inRequests)
     return EEPlayer::GetHeroCount(inByClass, inRequests);
 }
 
+// FUNCTION: EXE 0x42e2a3
 // Rebuilds the resource centers around nearby nature resources, sorts them by distance from the town center,
 // puts the town center first, activates the ones in range (and connected on water maps) and sets fishing use
 void EEComputerPlayer::Regroup()
@@ -630,6 +667,7 @@ void EEComputerPlayer::Regroup()
 }
 
 
+// FUNCTION: EXE 0x42e6ae
 // Activates the first inactive resource center whose continent holds no enemy capitol (checked on water maps only)
 void EEComputerPlayer::FlagGroup()
 {
@@ -670,6 +708,7 @@ void EEComputerPlayer::FlagGroup()
     }
 }
 
+// FUNCTION: EXE 0x42e851
 // Kills or queues the AI's highest-scoring units until the scorer's population count is met, within the
 // citizen and transport quotas; returns the number of units chosen
 long EEComputerPlayer::ChooseUnitsToKill(EEAIFOUnitsToKillScoringBase& inScorer, bool inKill)
@@ -709,6 +748,7 @@ long EEComputerPlayer::ChooseUnitsToKill(EEAIFOUnitsToKillScoringBase& inScorer,
     return theCount;
 }
 
+// FUNCTION: EXE 0x42e9e7
 // Returns the most frequent path area id among the tiles around the unit (0 when none has one)
 unsigned short EEComputerPlayer::GetObjectRegion(EEComplexUnit* inUnit)
 {
@@ -736,6 +776,7 @@ unsigned short EEComputerPlayer::GetObjectRegion(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x42eace
 // Returns a cost scaled by the difficulty's unit cost modifier when the AI cheats, never below 0
 long EEComputerPlayer::ScaleCost(long inCost)
 {
@@ -747,6 +788,7 @@ long EEComputerPlayer::ScaleCost(long inCost)
     return theResult;
 }
 
+// FUNCTION: EXE 0x42eafc
 // Returns the attack delay factor for easy or hard difficulty (percent / 100), else 1
 float EEComputerPlayer::GetAttackDelayModifier()
 {
@@ -758,6 +800,7 @@ float EEComputerPlayer::GetAttackDelayModifier()
     return theResult;
 }
 
+// FUNCTION: EXE 0x42eb26
 // Returns the attack frequency factor for easy or hard difficulty (percent / 100), else 1
 float EEComputerPlayer::GetAttackFrequencyModifier()
 {
@@ -769,6 +812,7 @@ float EEComputerPlayer::GetAttackFrequencyModifier()
     return theResult;
 }
 
+// FUNCTION: EXE 0x42eb50
 // Returns the attack group size factor for the AI's difficulty (percent / 100)
 float EEComputerPlayer::GetAttackGroupModifier()
 {
@@ -782,6 +826,7 @@ float EEComputerPlayer::GetAttackGroupModifier()
     return theResult;
 }
 
+// FUNCTION: EXE 0x42eb7c
 // Returns the unit cost factor for the AI's difficulty (percent / 100)
 float EEComputerPlayer::GetUnitCostModifier()
 {
@@ -795,6 +840,7 @@ float EEComputerPlayer::GetUnitCostModifier()
     return theResult;
 }
 
+// FUNCTION: EXE 0x42eba8
 // Returns the deathmatch attack frequency factor for the AI's difficulty, else 1
 float EEComputerPlayer::GetDMAttackFrequencyModifier()
 {
@@ -808,6 +854,7 @@ float EEComputerPlayer::GetDMAttackFrequencyModifier()
     return theResult;
 }
 
+// FUNCTION: EXE 0x42ebd9
 // Returns the deathmatch initial attack factor for the AI's difficulty, else 1
 float EEComputerPlayer::GetDMInitialAttackModifier()
 {
@@ -821,6 +868,7 @@ float EEComputerPlayer::GetDMInitialAttackModifier()
     return theResult;
 }
 
+// FUNCTION: EXE 0x42ec0a
 // Returns the epoch advance factor: the deathmatch catch-up value, else easy/hard percent / 100, else 1
 float EEComputerPlayer::GetEpochFrequencyModifier()
 {
@@ -834,6 +882,7 @@ float EEComputerPlayer::GetEpochFrequencyModifier()
     return theResult;
 }
 
+// FUNCTION: EXE 0x42ec52
 // Returns true for a deathmatch game (resource setting 4, not a scenario)
 bool EEComputerPlayer::IsDeathmatch()
 {
@@ -843,12 +892,14 @@ bool EEComputerPlayer::IsDeathmatch()
     return theResult;
 }
 
+// FUNCTION: EXE 0x42ec67
 // Returns true when the resource setting is 5 (EnableManagers then runs every manager)
 bool EEComputerPlayer::RunsEveryManager()
 {
     return gWorld.mGameOptions.mResources == 5;
 }
 
+// FUNCTION: EXE 0x42ec74
 // Returns the population cap factor for the AI's difficulty (percent / 100)
 float EEComputerPlayer::GetPopLimitAdjustment()
 {
@@ -862,6 +913,7 @@ float EEComputerPlayer::GetPopLimitAdjustment()
     return theResult;
 }
 
+// FUNCTION: EXE 0x42eca0
 // Returns the research frequency factor for easy or hard difficulty (percent / 100), else 1
 float EEComputerPlayer::GetResearchFrequencyModifier()
 {
@@ -873,6 +925,7 @@ float EEComputerPlayer::GetResearchFrequencyModifier()
     return theResult;
 }
 
+// FUNCTION: EXE 0x42ecca
 // Returns the AI's population cap, working it out first if unset and inactive; the player's limit when ignoring others
 long EEComputerPlayer::GetPopulationLimit(long inArg)
 {
@@ -883,6 +936,7 @@ long EEComputerPlayer::GetPopulationLimit(long inArg)
     return this->mPopulationCap;
 }
 
+// FUNCTION: EXE 0x42ed01
 // Returns the island expansion interval for the AI's difficulty, else 60 seconds
 unsigned long EEComputerPlayer::GetIslandExpansionTimer()
 {
@@ -896,6 +950,7 @@ unsigned long EEComputerPlayer::GetIslandExpansionTimer()
     return theResult;
 }
 
+// FUNCTION: EXE 0x42ed2f
 // Returns true when the AI may attack and its next attack time has come
 bool EEComputerPlayer::IsAttackDue(unsigned long inTime)
 {
@@ -904,6 +959,7 @@ bool EEComputerPlayer::IsAttackDue(unsigned long inTime)
     return this->mCanAttack && inTime >= this->mNextAttackTime;
 }
 
+// FUNCTION: EXE 0x42ed4b
 // Returns true on an island or planets map once the next island expansion time has come
 bool EEComputerPlayer::IsIslandExpansionDue()
 {
@@ -911,6 +967,7 @@ bool EEComputerPlayer::IsIslandExpansionDue()
         && gPhysics->mGameTime >= this->mNextIslandExpansionTime;
 }
 
+// FUNCTION: EXE 0x42ed85
 // Appends the enabled, currently buildable unit types of a category to outTypes; returns its size
 unsigned long EEComputerPlayer::GetBuildableTypes(long inCategory, std::vector<long>& outTypes)
 {
@@ -925,6 +982,7 @@ unsigned long EEComputerPlayer::GetBuildableTypes(long inCategory, std::vector<l
     return outTypes.size();
 }
 
+// FUNCTION: EXE 0x42edff
 // Collects nature's stone, gold, iron and forage resources reachable from the town center (all on water maps)
 // into outUnits and counts the fish
 // NEAR: the original passes one tile local to GetPathAreaAt (U2DPoint) and GetContinentAt (EETileCoordinate)
@@ -964,6 +1022,7 @@ void EEComputerPlayer::GetObjectsToGroup(std::vector<EEUnit*>& outUnits, long& o
     }
 }
 
+// FUNCTION: EXE 0x42ef32
 // Returns 50 for unit classes 0x20 and 0x1e0 while a garrison or fortress is planned, else 1
 long EEComputerPlayer::GetExtraPopulation(long inUnitClass)
 {
@@ -974,12 +1033,14 @@ long EEComputerPlayer::GetExtraPopulation(long inUnitClass)
     return theResult;
 }
 
+// FUNCTION: EXE 0x42ef5e
 // Returns the resource center at an index
 EECPResourceCenter* EEComputerPlayer::GetResourceCenter(unsigned long inIndex)
 {
     return this->mResourceCenters[inIndex];
 }
 
+// FUNCTION: EXE 0x42ef6e
 // Returns the resource center holding the unit, or NULL
 EECPResourceCenter* EEComputerPlayer::GetResourceCenterOf(EEUnit* inUnit)
 {
@@ -1316,6 +1377,7 @@ float EECPPressureBonus(EEComputerPlayer* inPlayer)
 // by the same threat rule (towers hold the rest)
 static const long kStoneArmy = 10;
 
+// FUNCTION: EXE 0x42f033
 // Returns true for epoch technologies; otherwise asks the player whether it can afford the cost
 // New (docs/AI_RESEARCH.md §8.7): without the free-epochs cheat, a pending epoch advance reserves its cost: anything
 // else that needs one of its resources is affordable only from what is left above it (citizens too: like a player
@@ -1418,6 +1480,7 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
     return true;
 }
 
+// FUNCTION: EXE 0x42f064
 // When another player is in a later epoch, pulls the AI's next epoch advance forward to a random catch-up time
 void EEComputerPlayer::CatchUpEpoch(EEPlayer* inPlayer)
 {
@@ -1445,6 +1508,7 @@ void EEComputerPlayer::CatchUpEpoch(EEPlayer* inPlayer)
         this->mCivilizationManager->SetNextEpochAdvanceTime(theTime, true);
 }
 
+// FUNCTION: EXE 0x42f16d
 // Records that the player took damage: the time, and whether a land building or a citizen was hit
 void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
 {
@@ -1477,6 +1541,7 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x42f1c8
 // Initialises the computer player: difficulty, default favourite unit types, timers and flags, every tuning
 // value from the AI behaviour records, then creates the exploration, civilization, combat and other managers
 // The tuning members come from the computer player behaviour records (gCPBehaviors, db\dbcpbehavior.dat:
@@ -1729,6 +1794,7 @@ void EEComputerPlayer::Init()
     this->mDiplomacyManager = new EECPDiplomacyManager(this);
 }
 
+// FUNCTION: EXE 0x42fd50
 // Loads the computer player from a saved game, one block per save format: the base player, the combat,
 // civilization and exploration managers, the resource centers and the tuning values; returns the first read error
 // Built without /Og while the rest of the unit is -O1 (CLAUDE.md rule 4 evidence: 4,968 [ebp-N] references, every
@@ -5075,6 +5141,7 @@ void EEComputerPlayer::SetManagerTimers(const unsigned long* inTimers)
 }
 #pragma optimize("g", on)
 
+// FUNCTION: EXE 0x43c992
 // Loads the epoch's kind-7 tech-tree media for a real epoch, then the player's own epoch media
 void EEComputerPlayer::EpochMediaLoaded(long inEpoch)
 {
@@ -5083,6 +5150,7 @@ void EEComputerPlayer::EpochMediaLoaded(long inEpoch)
     EEPlayer::EpochMediaLoaded(inEpoch);
 }
 
+// FUNCTION: EXE 0x43c9c5
 // Enters an epoch: researches its kind-7 technologies, re-picks the favourite land, sea, air and space types and,
 // outside saved-game loading, retires obsolete units and tells the combat manager
 void EEComputerPlayer::EnterEpoch(long inEpoch)
@@ -5102,6 +5170,7 @@ void EEComputerPlayer::EnterEpoch(long inEpoch)
     }
 }
 
+// FUNCTION: EXE 0x43ca49
 // Picks a random premade civilization that fits the current epoch (some excluded on waterless maps, Japan and
 // Korea only on space maps) and loads it for the player
 void EEComputerPlayer::ChooseCivilization()
@@ -5165,6 +5234,7 @@ void EEComputerPlayer::ChooseCivilization()
     }
 }
 
+// FUNCTION: EXE 0x43ce2e
 // Answers an ally's flare by sending the combat manager to attack at the flared tile (not in observer mode)
 void EEComputerPlayer::FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile)
 {
@@ -5173,6 +5243,7 @@ void EEComputerPlayer::FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inT
 }
 
 
+// FUNCTION: EXE 0x43ce56
 // Rebuilds or updates the resource centers (regrouping if none exist), then refreshes combat, resources and town groups
 void EEComputerPlayer::RefreshResourceCenters()
 {
@@ -5187,12 +5258,14 @@ void EEComputerPlayer::RefreshResourceCenters()
     this->RefreshTownGroups();
 }
 
+// FUNCTION: EXE 0x43cec9
 // Lets the combat personnel draft the units it deferred
 void EEComputerPlayer::RefreshTownGroups()
 {
     this->mCombatManager->mPersonnel->DraftDeferred();
 }
 
+// FUNCTION: EXE 0x43ced7
 // Passes replaced units to the combat, civilization and exploration managers and the base player; a replacing
 // drop site is offered to every resource center
 void EEComputerPlayer::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
@@ -5212,6 +5285,7 @@ void EEComputerPlayer::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
     EEPlayer::UnitsSwapped(ioSwaps);
 }
 
+// FUNCTION: EXE 0x43cf73
 // Clears the player: deletes its resource centers, resets the civilization manager and recreates the
 // exploration and combat managers
 void EEComputerPlayer::Clear()
@@ -5226,6 +5300,7 @@ void EEComputerPlayer::Clear()
     this->mCombatManager = new EECPCombatManager(this);
 }
 
+// FUNCTION: EXE 0x43cff8
 // After loading, restores the managers and resource centers, rebases saved times to the game clock, fixes the
 // attack bounds and missing favourite types, and flags stranded units; returns the first error
 // port: the computer players repaired while gDeferComputerPlayerRestore was set, with EEPlayer::RepairPointers' result
@@ -5328,6 +5403,7 @@ long EEComputerPlayer::RestoreManagers(unsigned long inMajorVersion, unsigned lo
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
 
+// FUNCTION: EXE 0x43d2be
 // Sends an empty naval, helicopter or space transport to the berth of its nearest dock, airport or space dock
 // and detaches it from the AI
 void EEComputerPlayer::SendToNearestBase(EEComplexUnit* inUnit)
@@ -5355,6 +5431,7 @@ void EEComputerPlayer::SendToNearestBase(EEComplexUnit* inUnit)
 }
 
 
+// FUNCTION: EXE 0x43d416
 // Appends a goal to one of the unit's goal queues and refreshes its goals
 void EEComplexUnit::QueueGoal(EEUnitGoal* inGoal, long inItem)
 {
@@ -5366,6 +5443,7 @@ void EEComplexUnit::QueueGoal(EEUnitGoal* inGoal, long inItem)
     this->RefreshActiveGoal();
 }
 
+// FUNCTION: EXE 0x43d45d
 // Tells the research manager about a new epoch, enters it if it is a real epoch, then runs the base handling
 void EEComputerPlayer::EpochReached(long inEpoch)
 {
@@ -5375,6 +5453,7 @@ void EEComputerPlayer::EpochReached(long inEpoch)
     EEPlayer::EpochReached(inEpoch);
 }
 
+// FUNCTION: EXE 0x43d492
 // Schedules the next manager-enable check mEnableInterval seconds after inTime
 void EEComputerPlayer::SetEnableTime(long inTime)
 {
@@ -5382,6 +5461,7 @@ void EEComputerPlayer::SetEnableTime(long inTime)
     this->mIsEnableTimeSet = true;
 }
 
+// FUNCTION: EXE 0x43d4cd
 // Schedules the next attack: a random number of minutes (initial delay before the first, frequency after), scaled
 // by epoch span and difficulty or deathmatch modifier, clamped, added to inTime
 void EEComputerPlayer::SetNextAttackTime(unsigned long inTime)
@@ -5420,6 +5500,7 @@ void EEComputerPlayer::SetNextAttackTime(unsigned long inTime)
     }
 }
 
+// FUNCTION: EXE 0x43d61a
 // Schedules the next expansion check after the difficulty's expansion timer (seconds) from inTime
 void EEComputerPlayer::SetNextExpansionTime(unsigned long inTime)
 {
@@ -5433,12 +5514,17 @@ void EEComputerPlayer::SetNextExpansionTime(unsigned long inTime)
     this->mNextExpansionTime = theSeconds * 1000 + inTime;
 }
 
+// FUNCTION: EXE 0x43d652
 // Schedules the next island expansion the difficulty's island timer (minutes) from now
 void EEComputerPlayer::SetNextIslandExpansionTime()
 {
     unsigned long theNow = gPhysics->mGameTime;
     this->mNextIslandExpansionTime = this->GetIslandExpansionTimer() * 60000 + theNow;
 }
+
+// FUNCTION: EXE 0x43d677
+// Writes the base player, the managers, the resource centers and every tuning value to the saved game; returns
+// the first write error (resource center errors are ignored; the enable-time flag is written as false)
 
 long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -5896,6 +5982,7 @@ long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorV
     return theResult;
 }
 
+// FUNCTION: EXE 0x43ec42
 // Turns the AI on or off, handing all units to the unit manager or releasing them when the state changes
 void EEComputerPlayer::SetActive(bool inActive)
 {
@@ -5907,6 +5994,7 @@ void EEComputerPlayer::SetActive(bool inActive)
     this->mActive = inActive;
 }
 
+// FUNCTION: EXE 0x43ec89
 // Sets the share of the population kept as citizens and marks it as set
 void EEComputerPlayer::SetCitizenPercentage(float inValue)
 {
@@ -5914,6 +6002,7 @@ void EEComputerPlayer::SetCitizenPercentage(float inValue)
     this->mIsCitizenPercentageSet = true;
 }
 
+// FUNCTION: EXE 0x43ec9d
 // Sets the deathmatch attack frequency modifier for the player's difficulty
 void EEComputerPlayer::SetDMAttackFrequencyModifier(float inValue)
 {
@@ -5925,6 +6014,7 @@ void EEComputerPlayer::SetDMAttackFrequencyModifier(float inValue)
         this->mDMAttackFrequencyModifierHard = inValue;
 }
 
+// FUNCTION: EXE 0x43ecd6
 // Sets the deathmatch initial attack delay modifier for the player's difficulty
 void EEComputerPlayer::SetDMInitialAttackModifier(float inValue)
 {
@@ -5936,6 +6026,7 @@ void EEComputerPlayer::SetDMInitialAttackModifier(float inValue)
         this->mDMInitialAttackModifierHard = inValue;
 }
 
+// FUNCTION: EXE 0x43ed0f
 // Sets the island expansion timer for the player's difficulty
 void EEComputerPlayer::SetIslandExpansionTimer(unsigned long inValue)
 {
@@ -5947,6 +6038,7 @@ void EEComputerPlayer::SetIslandExpansionTimer(unsigned long inValue)
         this->mIslandExpansionTimerHard = inValue;
 }
 
+// FUNCTION: EXE 0x43ed48
 // Queues a stranded unit to be killed on the next update; a stranded citizen is also reported as a threat
 void EEComputerPlayer::UnitStranded(EEComplexUnit* inUnit)
 {
@@ -5956,6 +6048,7 @@ void EEComputerPlayer::UnitStranded(EEComplexUnit* inUnit)
         this->mCombatManager->NoteThreat(inUnit, true);
 }
 
+// FUNCTION: EXE 0x43ed81
 // Takes a resource amount from the player, ignoring zero or negative amounts
 void EEComputerPlayer::TakeResource(long inIndex, long inAmount)
 {
@@ -5963,6 +6056,7 @@ void EEComputerPlayer::TakeResource(long inIndex, long inAmount)
         EEPlayer::TakeResource(inIndex, inAmount);
 }
 
+// FUNCTION: EXE 0x43ed98
 // Pays for a technology, except epoch advances, which are free for the computer player
 void EEComputerPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction)
 {
@@ -5997,6 +6091,7 @@ void EEComputerPlayer::Pay(EETechnology* inTechnology, long inUnitType, float in
     }
 }
 
+// FUNCTION: EXE 0x43edc0
 // Credits the resource manager's accounts with the scaled cost of a unit improvement, then pays it as a normal
 // player does
 void EEComputerPlayer::PayImprovement(EEUnitClass* inClass, long inImprovement)
@@ -6024,6 +6119,7 @@ void EEComputerPlayer::PayImprovement(EEUnitClass* inClass, long inImprovement)
 }
 
 
+// FUNCTION: EXE 0x43eeca
 // Returns whether the stock of a resource reaches the enable threshold of a manager kind (morale buildings
 // use the build threshold)
 bool EEComputerPlayer::CanEnableManager(long inKind, long inResource)
@@ -6045,6 +6141,7 @@ bool EEComputerPlayer::CanEnableManager(long inKind, long inResource)
     return theResult;
 }
 
+// FUNCTION: EXE 0x43ef5d
 // Registers a new unit with the player and, while the AI is active, with the civilization and combat managers
 void EEComputerPlayer::UnitPlaced(EEComplexUnit* inUnit)
 {
@@ -6057,6 +6154,7 @@ void EEComputerPlayer::UnitPlaced(EEComplexUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x43ef91
 // Forgets a unit leaving the player: base bookkeeping, then the civilization, combat and exploration managers
 // and, for a land building, every resource center
 void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
@@ -6084,6 +6182,7 @@ void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
     }
 }
 
+// FUNCTION: EXE 0x43f028
 // Handles a unit finishing a goal: idles transports (sending empty damaged ones home), returns detached units to
 // the combat manager, marks citizens as idle gatherers and drops nearly idle units from their group
 void EEComputerPlayer::UnitGoalDone(EEComplexUnit* inUnit)
@@ -6116,6 +6215,7 @@ void EEComputerPlayer::UnitGoalDone(EEComplexUnit* inUnit)
 }
 
 
+// FUNCTION: EXE 0x43f142
 // Unloads the epoch's kind-7 tech-tree media for a real epoch, then the player's own epoch media
 void EEComputerPlayer::EpochMediaUnloaded(long inEpoch)
 {
@@ -6150,6 +6250,7 @@ void EEComputerPlayer::KeepStandingArmy()
     theUnits->RequestUnits(this->mFavoriteLandType, theWanted, 0, 0);
 }
 
+// FUNCTION: EXE 0x43f175
 // Runs the AI tick: one-time start-up on the first call, then the enable, attack-state, population and
 // expansion timers and the manager updates; finally kills the units queued as stranded
 void EEComputerPlayer::Update(unsigned long inTime)
@@ -6249,6 +6350,7 @@ void EEComputerPlayer::Update(unsigned long inTime)
     }
 }
 
+// FUNCTION: EXE 0x43f3f1
 // Assigns ungrouped units to resource centers, creating new inactive centers for the rest, then re-sorts the
 // centers by distance from the town center and activates gaps; new centers only gather units if centers existed
 void EEComputerPlayer::UpdateGroups()
@@ -6336,6 +6438,7 @@ void EEComputerPlayer::UpdateGroups()
 }
 
 
+// FUNCTION: EXE 0x43f73e
 // Returns true for citizens and for loaded transports that carry only citizens
 bool EEComputerPlayer::AvoidsEnemies(EEComplexUnit* inUnit)
 {
@@ -6358,18 +6461,64 @@ bool EEComputerPlayer::AvoidsEnemies(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x43f7ba
 // Has the combat manager respond to an enemy wonder being started
 void EEComputerPlayer::WonderStarted(EEComplexUnit* inUnit)
 {
     this->mCombatManager->RespondToUnit(inUnit);
 }
 
+// FUNCTION: EXE 0x43f7cc
+// Returns the network message a deque iterator points to (std::deque<NEMessage*> iterator operator*)
+
+// FUNCTION: EXE 0x43f7f2
+// Appends a unit to a unit list (std::vector push_back)
+
+// FUNCTION: EXE 0x43f81e
 // Returns the number of teams in the world
 unsigned long EEWorld::GetNumTeams()
 {
     return this->mTeams.size();
 }
 
+// FUNCTION: EXE 0x43f83a
+// Appends a resource center to the player's list (std::vector push_back)
+
+// TEMPLATE: EXE 0x43f866
+// (vector<pair<unsigned long, long> >::resize(n, x))
+
+// FUNCTION: EXE 0x43f911
+// Appends an (unsigned long, long) pair to a list (std::vector<pair<unsigned long, long> > push_back)
+
+// FUNCTION: EXE 0x43f93d
+// Destroys a map of id to id-list pointers, freeing its nodes (std::map<long, vector<long>*> tree dtor)
+
+// FUNCTION: EXE 0x43f968
+// Destroys a map of id to complex unit, freeing its nodes (std::map<long, EEComplexUnit*> tree dtor)
+
+// FUNCTION: EXE 0x43f993
+// Returns the count stored for a short key, inserting 0 if absent (std::map<unsigned short, unsigned long> operator[])
+
+// FUNCTION: EXE 0x43f9bd
+// Destroys a map of short key to count, freeing its nodes (std::map<unsigned short, unsigned long> tree dtor)
+
+// TEMPLATE: EXE 0x43f9e8
+// (vector<pair<unsigned long, long> >::insert(P, N, X))
+
+// FUNCTION: EXE 0x43fc85
+// Erases a range of entries from a map of id to id-list pointers (std::map<long, vector<long>*> tree erase)
+
+// FUNCTION: EXE 0x43fcf6
+// Inserts a (value, complex unit) entry into a multimap sorted by descending value (std::multimap insert)
+
+// FUNCTION: EXE 0x43fd55
+// Erases a range of entries from a map of id to complex unit, or clears it if the range is all of it (std::map erase)
+// Also the body of multimap<long, EEComplexUnit*, greater<long> >::erase (ICF)
+
+// FUNCTION: EXE 0x43fdc6
+// Erases a range of entries from a map of short key to count, or clears it if the range is all of it (std::map erase)
+
+// FUNCTION: EXE 0x43fe37
 // Returns whether the given player is a member of the team
 bool EETeam::ContainsPlayer(unsigned long inPlayerID)
 {
@@ -6380,3 +6529,148 @@ bool EETeam::ContainsPlayer(unsigned long inPlayerID)
             break;
     return it != theEnd;
 }
+
+// FUNCTION: EXE 0x43fe5a
+// Frees a subtree of a map of id to id-list pointers, node by node (std::map _Erase)
+
+// FUNCTION: EXE 0x43fe8c
+// Frees a subtree of a map of id to complex unit, node by node (std::map _Erase)
+// Also the body of multimap<long, EEComplexUnit*, greater<long> >::_Erase (ICF)
+
+// FUNCTION: EXE 0x43febe
+// Frees a subtree of a map of short key to count, node by node (std::map _Erase)
+
+// TEMPLATE: EXE 0x43fef0
+// (DeleteVectorContents(vector<EECPResourceCenter*>&) (ee/EECalamityManager.h))
+
+// FUNCTION: EXE 0x43ff2d
+// Shuffles a range of ids with the AI random generator (EEAIRandomShuffle)
+
+// FUNCTION: EXE 0x43ff54
+// Sorts resource centers by distance from a point, nearest first (std::sort with EECPCenterDistanceLess)
+
+// FUNCTION: EXE 0x440038
+// Returns the number of elements between two pointer-list iterators (std::_Ptrit operator-; several types, ICF)
+
+// TEMPLATE: EXE 0x440046
+// (std::make_pair<long, long>; emitted by Load's make_pair(0L, 0L))
+
+// FUNCTION: EXE 0x44005c
+// Sorts units by tile distance from a point, nearest first (std::sort with EECPUnitTileDistanceLess)
+
+// FUNCTION: EXE 0x440140
+// Inserts a copied range of ids before a position, growing the storage if needed (std::vector<long> _Insert; ICF)
+
+// FUNCTION: EXE 0x440412
+// Insertion-sorts a short range of resource centers by distance from a point (std::_Insertion_sort)
+
+// FUNCTION: EXE 0x440445
+// Quick-sorts resource centers by distance from a point, falling back to heap sort past the depth limit (std::_Sort)
+
+// FUNCTION: EXE 0x44054d
+// Finishes sorting nearly sorted resource centers without bounds checks (std::_Unguarded_insertion_sort)
+
+// FUNCTION: EXE 0x44058f
+// Insertion-sorts a short range of units by tile distance from a point (std::_Insertion_sort)
+
+// FUNCTION: EXE 0x4405c2
+// Quick-sorts units by tile distance from a point, falling back to heap sort past the depth limit (std::_Sort)
+
+// FUNCTION: EXE 0x4406ca
+// Copies a range of 4-byte elements to raw storage and returns its end (std::copy; shared by several types through ICF)
+
+// FUNCTION: EXE 0x4406ea
+// Shuffles a range of ids using the AI random generator (std::_Random_shuffle)
+
+// FUNCTION: EXE 0x440741
+// Adds the number of elements between two iterators to a counter (std::_Distance; shared by several types through ICF)
+
+// FUNCTION: EXE 0x44076c
+// Insertion-sorts resource centers by distance from a point, one element at a time (std::_Insertion_sort_1)
+
+// FUNCTION: EXE 0x44081d
+// Arranges resource centers into a heap ordered by distance from a point (std::make_heap)
+
+// FUNCTION: EXE 0x440861
+// Sorts a heap of resource centers by distance from a point (std::sort_heap)
+
+// FUNCTION: EXE 0x4408ae
+// Partitions resource centers around a pivot distance and returns the split point (std::_Unguarded_partition)
+
+// FUNCTION: EXE 0x4409ce
+// Moves a resource center back to its sorted place among nearer ones (std::_Unguarded_insert)
+
+// FUNCTION: EXE 0x440a01
+// Arranges units into a heap ordered by tile distance from a point (std::make_heap)
+
+// FUNCTION: EXE 0x440a45
+// Sorts a heap of units by tile distance from a point (std::sort_heap)
+
+// FUNCTION: EXE 0x440a92
+// Builds a heap of resource centers ordered by distance from a point, sifting down from the middle (std::_Make_heap)
+
+// FUNCTION: EXE 0x440aef
+// Moves the farthest resource center of a heap to the end and restores the heap (std::pop_heap)
+
+// FUNCTION: EXE 0x440b22
+// Builds a heap of units ordered by tile distance from a point, sifting down from the middle (std::_Make_heap)
+
+// FUNCTION: EXE 0x440b7f
+// Moves the farthest unit of a heap to the end and restores the heap (std::pop_heap)
+
+// FUNCTION: EXE 0x440bb2
+// Swaps the elements two iterators point to (std::iter_swap; shared by several types through ICF)
+
+// FUNCTION: EXE 0x440bd7
+// Sifts a resource center down a heap ordered by distance from a point (std::_Adjust_heap)
+
+// FUNCTION: EXE 0x440c51
+// Pops the top resource center of a heap ordered by distance from a point (std::_Pop_heap_0)
+
+// FUNCTION: EXE 0x440cc1
+// Pops the top unit of a heap ordered by tile distance from a point (std::_Pop_heap_0)
+
+// FUNCTION: EXE 0x440d31
+// Sifts a resource center up a heap ordered by distance from a point (std::_Push_heap)
+
+// FUNCTION: EXE 0x440d80
+// Moves the top resource center of a heap to a given slot and re-heaps the rest (std::_Pop_heap)
+
+// FUNCTION: EXE 0x440dc4
+// Sifts a unit up a heap ordered by tile distance from a point (std::_Push_heap; also EETileDistanceLess, ICF)
+
+// FUNCTION: EXE 0x440e13
+// Moves the top unit of a heap to a given slot and re-heaps the rest (std::_Pop_heap)
+
+// FUNCTION: EXE 0x440e57
+// Appends a string to a string list (std::vector<UString> push_back)
+
+// FUNCTION: EXE 0x440e83
+// Inserts one string before a position and returns an iterator to it (std::vector<UString> insert)
+
+// FUNCTION: EXE 0x440ed3
+// Returns an iterator n teams further on (std::_Ptrit<EETeam> operator+; shared by several types through ICF)
+
+// FUNCTION: EXE 0x440ee8
+// Destroys every wide string in a list and frees its storage (std::vector<UWideString> _Tidy)
+
+// FUNCTION: EXE 0x440f21
+// Inserts n copies of a string before a position, growing the storage if needed (std::vector<UString> insert)
+
+// FUNCTION: EXE 0x4411ce
+// Copy-constructs n copies of a string into raw storage and returns its end (std::vector<UString> _Ufill)
+
+// TEMPLATE: EXE 0x4411ff
+// (_Ptrit<pair<unsigned long, long> >::operator-(n))
+
+// FUNCTION: EXE 0x441213
+// Copy-constructs a range of strings into raw storage and returns its end (std::vector<UString> _Ucopy)
+
+// FUNCTION: EXE 0x441249
+// Assigns a string to every element of a range (std::fill<UString>)
+
+// FUNCTION: EXE 0x441267
+// Copies a range of strings backwards onto a later, overlapping range (std::copy_backward<UString>)
+
+// FUNCTION: EXE 0x441294
+// Copy-constructs a string in place (std::_Construct<UString>)

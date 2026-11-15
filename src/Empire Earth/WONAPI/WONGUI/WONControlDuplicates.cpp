@@ -14,6 +14,7 @@
 #include "ee/wonapi/WONLobbySkinnedContainers.h"
 #include "ee/wonapi/WONLobbySkinTab.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00717ae0
 // Returns a copy of the simple button: state images, scaling, mouse-down check, attributes and size
 WONSimpleButton* WONSimpleButton::Duplicate()
 {
@@ -25,6 +26,7 @@ WONSimpleButton* WONSimpleButton::Duplicate()
     button->SetSize(this->Width(),this->Height());
     return button;
 }
+// FUNCTION: WON 0x007199e0
 // Returns a new skinned combo box with the same frame and frame options
 WONComboBox* WONComboBox::Duplicate()
 {
@@ -34,6 +36,7 @@ WONComboBox* WONComboBox::Duplicate()
     combo->mButtonInFrame=this->mButtonInFrame;
     return combo;
 }
+// FUNCTION: WON 0x00719f00
 // Returns a new skinned scroll container with the same attributes
 WONScrollContainer* WONScrollContainer::Duplicate()
 {
@@ -41,6 +44,7 @@ WONScrollContainer* WONScrollContainer::Duplicate()
     container->CopyAttributes(this);
     return container;
 }
+// FUNCTION: WON 0x0071ad20
 // Returns a new skinned tab control on the same skin with the same attributes, transparency and frame
 WONTabCtrl* WONTabCtrl::Duplicate()
 {

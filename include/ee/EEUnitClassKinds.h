@@ -36,7 +36,7 @@ extern EEPhysicsModel* gPhysicsModels[12];     // 0x531d58 (EEPMLand.cpp: pointe
 // cdecl helpers of the flying classes (provisional names; types inferred)
 void EEGetTilesNearPoint(const GE3DPoint& inPoint, float inDistance, std::vector<EETileCoordinate>& outTiles);  // 0x24b212 (EEMap.cpp's range)
 // 0x24939d: EEFindDropLocation (ee/EEUnit.h)
-float EEGetHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inArg3, float inArg4);
+float EEGetHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inArg3, float inArg4);  // 0x2494cb
 // 0x242110 (cdecl): the space version of the sound volume/pan/pitch (EEUCSpaceship::GetSoundParameters) (provisional
 // name)
 void EEGetDopplerPitch(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);

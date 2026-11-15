@@ -7,8 +7,8 @@
 
 class EEAIAStarChokePointStorage : public EEAIAStarTerrainStorage {
 public:
-    EEAIAStarChokePointStorage();
-    virtual ~EEAIAStarChokePointStorage();
+    EEAIAStarChokePointStorage();           // 0x1540d
+    virtual ~EEAIAStarChokePointStorage();  // 0x1543f
     // +0x10 0x1545a: sizes the arrays for an inWidth x inHeight search (a same-size call only clears the part the last
     // search touched, grown by one tile)
     virtual void PrepareGrid(long inWidth, long inHeight);

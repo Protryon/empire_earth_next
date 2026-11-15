@@ -7,7 +7,7 @@
 class EEVoting {
 public:
     EEVoting();                             // 0x137b3f: +4/+6 = 0 (words), +0xa/+8 = 0 (bytes)
-    virtual ~EEVoting();
+    virtual ~EEVoting();                    // 0x137b74
     long Propose(unsigned short inEdict, long inArg2);  // 0x137b7b (1: a proposal is already open) (EEMEdictProposal 0xbde48; provisional name)
 
     short mEdict;                           // +0x04

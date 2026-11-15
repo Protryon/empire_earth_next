@@ -14,6 +14,7 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
+// FUNCTION: WON 0x00795740
 // Handles a tab control configuration key (add tab, bar on right, arrows on left, bar height, tab and bar
 // overlap, tab offsets); passes other keys to the container configuration
 bool TabCtrlConfig::Virtual24(const std::string& key)
@@ -41,6 +42,7 @@ bool TabCtrlConfig::Virtual24(const std::string& key)
     } else return ContainerConfig::Virtual24(key);
     return true;
 }
+// FUNCTION: WON 0x007958e0
 // Returns a plain configuration and the tab control's page layout point for CONTAINERLAYOUT; passes other
 // names to the container configuration
 bool TabCtrlConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
@@ -55,6 +57,7 @@ bool TabCtrlConfig::GetPredefinedComponent(const std::string& name,ComponentConf
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x00795720
 // Creates a tab control configuration (base members only)
 TabCtrlConfig::TabCtrlConfig()
 {

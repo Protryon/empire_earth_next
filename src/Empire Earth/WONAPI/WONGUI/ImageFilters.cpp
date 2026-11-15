@@ -32,6 +32,8 @@ static inline void CopyInfo(RawImage1*,RawImage1*) {}
 static inline void CopyInfo(RawImage8* dst,RawImage8* src) { dst->mPalette=src->mPalette;dst->mTransparentColor=src->mTransparentColor; }
 static inline void CopyInfo(RawImage32* dst,RawImage32* src) { dst->mDoTransparency=src->mDoTransparency; }
 
+// FUNCTION: WON 0x00752220
+// FUNCTION: WON 0x00752380
 // Returns a new image holding a rectangle copied row by row from a raw image, with its palette or transparency
 // settings (instances: 0x00752220 8-bit, 0x00752380 32-bit)
 template<class ImageType,class PixelType>
@@ -44,6 +46,7 @@ static SmartPtr<ImageType> CropPixels(ImageType* src,int x,int y,int width,int h
     return dst;
 }
 
+// FUNCTION: WON 0x00748a60
 // Returns the filter's rectangle cut out of an 8- or 32-bit image; NULL for other image types
 SmartPtr<RawImage> CropImageFilter::Filter(RawImage* image)
 {
@@ -55,6 +58,7 @@ SmartPtr<RawImage> CropImageFilter::Filter(RawImage* image)
     return NULL;
 }
 
+// FUNCTION: WON 0x00748ba0
 // Resolves the target size (percent of the image when set, at least 1x1); true if it equals the image size
 bool ScaleImageFilter::CheckSize(Image* image)
 {
@@ -62,6 +66,9 @@ bool ScaleImageFilter::CheckSize(Image* image)
                                   image->mWidth,image->mHeight);
 }
 
+// FUNCTION: WON 0x00752690
+// FUNCTION: WON 0x00752820
+// FUNCTION: WON 0x007524b0
 // Returns a nearest-neighbour scaled copy of a raw image, with its palette or transparency settings (instances:
 // 0x007524b0 1-bit, 0x00752690 8-bit, 0x00752820 32-bit)
 template<class ImageType>
@@ -74,6 +81,7 @@ static SmartPtr<ImageType> ScalePixels(ImageType* src,int width,int height)
     return dst;
 }
 
+// FUNCTION: WON 0x00748c30
 // Returns the image scaled to the filter's size; the image itself when the size already matches or the type is
 // unknown
 SmartPtr<RawImage> ScaleImageFilter::Filter(RawImage* image)
@@ -88,6 +96,7 @@ SmartPtr<RawImage> ScaleImageFilter::Filter(RawImage* image)
     }
 }
 
+// FUNCTION: WON 0x00748dd0
 // Tints the image in place by per-channel percentages (8-bit: on a duplicated palette; 32-bit: every pixel, alpha
 // kept) and returns it
 SmartPtr<RawImage> TintImageFilter::Filter(RawImage* image)
@@ -104,6 +113,7 @@ SmartPtr<RawImage> TintImageFilter::Filter(RawImage* image)
     return image;
 }
 
+// FUNCTION: WON 0x00749110
 // Makes one colour transparent (fixed, or sampled from a corner pixel) and returns the image; 8-bit images get a
 // transparent palette index, 32-bit pixels get alpha 0 or opaque
 SmartPtr<RawImage> TransparentImageFilter::Filter(RawImage* image)
@@ -138,6 +148,7 @@ SmartPtr<RawImage> TransparentImageFilter::Filter(RawImage* image)
     return image;
 }
 
+// FUNCTION: WON 0x00748b60
 // Sets the scale target as a percentage of the source image size
 void ScaleImageFilter::SetPercentSize(int thePercentWidth, int thePercentHeight)
 {
@@ -146,6 +157,7 @@ void ScaleImageFilter::SetPercentSize(int thePercentWidth, int thePercentHeight)
 	this->mIsPercent = true;
 }
 
+// FUNCTION: WON 0x00748b80
 // Sets the scale target to a fixed size in pixels
 void ScaleImageFilter::SetAbsSize(int theWidth, int theHeight)
 {

@@ -12,8 +12,8 @@ class EEGameOptions;
 class FSFile;
 class FSFileSpec;
 
-extern const unsigned long kSaveGameMajorVersion;
-extern const unsigned long kSaveGameMinorVersion;
+extern const unsigned long kSaveGameMajorVersion;   // 0x4420ac
+extern const unsigned long kSaveGameMinorVersion;   // 0x4420b0
 // port: from 0.254 a save holds the running game's own values where the original wrote others or nothing, so a game
 // loaded from it plays on as the game that was saved ("load equals continue", docs/RUST_PLAN.md R5a.2). It was 0.253
 // on the rust branch until the merge of main ce3df9e4, whose 0.253 is the next engine's AI id (EEPPlayerHelper)

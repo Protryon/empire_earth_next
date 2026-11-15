@@ -13,12 +13,17 @@
 #include "ee/EEAIAStarTerrainStorage.h"
 #include "ee/EEAIAStarPathAreaStorage.h"
 
+// FUNCTION: EXE 0x419072
 // Creates the path-area search storage with no per-tile area id grid yet
 EEAIAStarPathAreaStorage::EEAIAStarPathAreaStorage()
     : mPathAreaIDs(NULL)
 {
 }
 
+// SYNTHETIC: EXE 0x419088
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4190a4
 // Destroys the storage, freeing its per-tile path area ids
 EEAIAStarPathAreaStorage::~EEAIAStarPathAreaStorage()
 {

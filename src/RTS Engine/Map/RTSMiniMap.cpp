@@ -20,6 +20,7 @@
 #include "ee/EEMiniMap.h"
 #include "lle/GERenderState.h"
 
+// FUNCTION: EXE 0x5240b3
 // Creates a player's mini map: a 128x128 terrain texture, a 64x64 world texture and unit layer cleared to
 // black, their locks and an empty 64x64 battle-flag grid
 RTSMiniMap::RTSMiniMap(RTSPlayer* inPlayer, GEScreen* inScreen)
@@ -110,6 +111,10 @@ RTSMiniMap::RTSMiniMap(RTSPlayer* inPlayer, GEScreen* inScreen)
     memset(this->mBattleFlags, 0, 0x1000);
 }
 
+// SYNTHETIC: EXE 0x524418
+// (the scalar deleting destructor, emitted with the vtable; slot RTSMiniMap+0x0)
+
+// FUNCTION: EXE 0x524434
 // Destroys the mini map, releasing its locks, textures, unit layer and battle-flag grid
 RTSMiniMap::~RTSMiniMap()
 {
@@ -122,6 +127,7 @@ RTSMiniMap::~RTSMiniMap()
         delete[] this->mBattleFlags;
 }
 
+// FUNCTION: EXE 0x524497
 // Flags the mini-map cell under a map point as a fresh battle (8), queueing the cell if it was not flagged
 void RTSMiniMap::Ping(const GE2DPoint& inPoint)
 {
@@ -135,3 +141,9 @@ void RTSMiniMap::Ping(const GE2DPoint& inPoint)
         this->mBattleCells.push_back(theCell);
     this->mBattleFlags[theCell.mY * this->mBattleFlagsWidth + theCell.mX] = 8;
 }
+
+// TEMPLATE: EXE 0x524540
+// std::list<RTSMiniMapCell>::list (the ctor's mU148)
+
+// TEMPLATE: EXE 0x524563
+// std::list<RTSMiniMapCell>::_Insert (Ping's push_back)

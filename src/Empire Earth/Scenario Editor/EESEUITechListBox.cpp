@@ -181,6 +181,7 @@ struct EESETLTechLess {
     }
 };
 
+// FUNCTION: EXE 0x59764b
 // Creates a tech list box of the player tab's tech tree page, with a dark green selection highlight
 EESEUITechListBox::EESEUITechListBox(unsigned long inID, std::vector<UWideString>& inStrings, GEFont* inFont,
                                      bool inAutoSelect, const GE2DPoint& inLocation, unsigned long inWidth,
@@ -192,6 +193,7 @@ EESEUITechListBox::EESEUITechListBox(unsigned long inID, std::vector<UWideString
     this->GetSelectedBackground()->SetColor(GEColor(0.0f, 0.38f, 0.0f));
 }
 
+// FUNCTION: EXE 0x597709
 // Appends a tech id to the list's techs (Rebuild writes the lines)
 void EESEUITechListBox::AddTech(long inID)
 {
@@ -200,6 +202,7 @@ void EESEUITechListBox::AddTech(long inID)
 
 // NEAR: inline budget: the original refuses _Ptrit::operator+ in the first two mTechs[] (the counter in memory,
 // three iterator temporaries); ours expands them
+// FUNCTION: EXE 0x59771c
 // Copies the list for drawing and marks the visible lines related to the selected tech: in the enabled list the
 // techs that depend on it, in the disabled list the techs it depends on; returns the base copy result
 long EESEUITechListBox::CopyData()
@@ -236,6 +239,11 @@ long EESEUITechListBox::CopyData()
     return theResult;
 }
 
+// FUNCTION: EXE 0x59787b
+// Returns the scenario editor's player tab (EEUIFScenarioEditor::GetPlayerScreen, inline in
+// ee/EEUIFScenarioEditor.h; refused and emitted here, its first user)
+
+// FUNCTION: EXE 0x597885
 // Empties the list's techs and lines
 void EESEUITechListBox::Clear()
 {
@@ -243,6 +251,7 @@ void EESEUITechListBox::Clear()
     this->DeleteAllEntries();
 }
 
+// FUNCTION: EXE 0x59789f
 // Draws the list box plus a blue bar behind each line CopyData marked; returns the last draw result
 long EESEUITechListBox::DrawPolygons()
 {
@@ -265,6 +274,7 @@ long EESEUITechListBox::DrawPolygons()
 
 // NEAR: mId is read early (an accessor at the first use only?), and the SetScenEditorObsoleted loop's bound is
 // recomputed from _First every pass
+// FUNCTION: EXE 0x5979c1
 // Moves the techs of lines inFirst..inLast to the other list (disables or enables them for the current player, which
 // is marked changed if one is in a reached epoch), refills both lists and reselects a nearby tech and the other's
 void EESEUITechListBox::Fill(long inFirst, long inLast)
@@ -321,6 +331,7 @@ void EESEUITechListBox::Fill(long inFirst, long inLast)
         theOther->ChangeSelectionIndex(0, false, true);
 }
 
+// FUNCTION: EXE 0x597c9f
 // Sorts the techs (by epoch first when Display Epochs is checked, then by the tech's name on the Technologies page,
 // else by its unit's name) and rewrites the lines, "<epoch>: <name>" when by epoch; scrolls to the selection
 void EESEUITechListBox::Rebuild()
@@ -373,6 +384,206 @@ void EESEUITechListBox::Rebuild()
     // epoch loop's mTechs[i]; 11 units at the end make it exact
 }
 
+// FUNCTION: EXE 0x597f4a
+// Sorts a tech id list by epoch, then unit name (std::sort over vector<long>)
+// (the four sorts' helpers follow in reference order)
+
+// FUNCTION: EXE 0x598007
+// Sorts a tech id list by epoch, then tech name (std::sort over vector<long>)
+
+// FUNCTION: EXE 0x5980c4
+// Sorts a tech id list by unit name (std::sort over vector<long>)
+
+// FUNCTION: EXE 0x598181
+// Sorts a tech id list by tech name (std::sort over vector<long>)
+
+// FUNCTION: EXE 0x59823e
+// Insertion-sorts a short tech id range by epoch, then unit name (std::_Insertion_sort)
+
+// FUNCTION: EXE 0x598267
+// Quicksorts a tech id range by epoch, then unit name, heap-sorting when the recursion gets too deep (std::_Sort)
+
+// FUNCTION: EXE 0x59833a
+// Insertion-sorts the rest of a tech id range by epoch, then unit name, unguarded (std::_Unguarded_insertion_sort)
+
+// FUNCTION: EXE 0x59836b
+// Insertion-sorts a short tech id range by epoch, then tech name (std::_Insertion_sort)
+
+// FUNCTION: EXE 0x598394
+// Quicksorts a tech id range by epoch, then tech name, heap-sorting when the recursion gets too deep (std::_Sort)
+
+// FUNCTION: EXE 0x598467
+// Insertion-sorts the rest of a tech id range by epoch, then tech name, unguarded (std::_Unguarded_insertion_sort)
+
+// FUNCTION: EXE 0x598498
+// Insertion-sorts a short tech id range by unit name (std::_Insertion_sort)
+
+// FUNCTION: EXE 0x5984c1
+// Quicksorts a tech id range by unit name, heap-sorting when the recursion gets too deep (std::_Sort)
+
+// FUNCTION: EXE 0x598594
+// Insertion-sorts the rest of a tech id range by unit name, unguarded (std::_Unguarded_insertion_sort)
+
+// FUNCTION: EXE 0x5985c5
+// Insertion-sorts a short tech id range by tech name (std::_Insertion_sort)
+
+// FUNCTION: EXE 0x5985ee
+// Quicksorts a tech id range by tech name, heap-sorting when the recursion gets too deep (std::_Sort)
+
+// FUNCTION: EXE 0x5986c1
+// Insertion-sorts the rest of a tech id range by tech name, unguarded (std::_Unguarded_insertion_sort)
+
+// FUNCTION: EXE 0x5986f2
+// Insertion-sorts a tech id range by epoch, then unit name (std::_Insertion_sort_1, _Insertion_sort's worker)
+
+// FUNCTION: EXE 0x59879d
+// Returns whether a tech id sorts first, by epoch, then unit name (EESETLEpochUnitLess::operator(), refused inline)
+
+// FUNCTION: EXE 0x5988b9
+// Builds a heap of tech ids by epoch, then unit name (std::make_heap)
+
+// FUNCTION: EXE 0x5988f3
+// Sorts a heap of tech ids by epoch, then unit name (std::sort_heap)
+
+// FUNCTION: EXE 0x598934
+// Partitions tech ids around a median of three, by epoch, then unit name; returns the split (std::_Unguarded_partition)
+
+// FUNCTION: EXE 0x598a45
+// Moves one tech id back to its sorted place by epoch, then unit name (std::_Unguarded_insert)
+
+// FUNCTION: EXE 0x598a75
+// Insertion-sorts a tech id range by epoch, then tech name (std::_Insertion_sort_1, _Insertion_sort's worker)
+
+// FUNCTION: EXE 0x598b20
+// Returns whether a tech id sorts first, by epoch, then tech name (EESETLEpochTechLess::operator(), refused inline)
+
+// FUNCTION: EXE 0x598c22
+// Builds a heap of tech ids by epoch, then tech name (std::make_heap)
+
+// FUNCTION: EXE 0x598c5c
+// Sorts a heap of tech ids by epoch, then tech name (std::sort_heap)
+
+// FUNCTION: EXE 0x598c9d
+// Partitions tech ids around a median of three, by epoch, then tech name; returns the split (std::_Unguarded_partition)
+
+// FUNCTION: EXE 0x598dae
+// Moves one tech id back to its sorted place by epoch, then tech name (std::_Unguarded_insert)
+
+// FUNCTION: EXE 0x598dde
+// Insertion-sorts a tech id range by unit name (std::_Insertion_sort_1, _Insertion_sort's worker)
+
+// FUNCTION: EXE 0x598e89
+// Returns whether a tech id sorts first, by unit name (EESETLUnitLess::operator(), refused inline)
+
+// FUNCTION: EXE 0x598f2e
+// Builds a heap of tech ids by unit name (std::make_heap)
+
+// FUNCTION: EXE 0x598f68
+// Sorts a heap of tech ids by unit name (std::sort_heap)
+
+// FUNCTION: EXE 0x598fa9
+// Partitions tech ids around a median of three, by unit name; returns the split (std::_Unguarded_partition)
+
+// FUNCTION: EXE 0x5990ba
+// Moves one tech id back to its sorted place by unit name (std::_Unguarded_insert)
+
+// FUNCTION: EXE 0x5990ea
+// Insertion-sorts a tech id range by tech name (std::_Insertion_sort_1, _Insertion_sort's worker)
+
+// FUNCTION: EXE 0x599195
+// Returns whether a tech id sorts first, by tech name (EESETLTechLess::operator(), refused inline)
+
+// FUNCTION: EXE 0x599220
+// Builds a heap of tech ids by tech name (std::make_heap)
+
+// FUNCTION: EXE 0x59925a
+// Sorts a heap of tech ids by tech name (std::sort_heap)
+
+// FUNCTION: EXE 0x59929b
+// Partitions tech ids around a median of three, by tech name; returns the split (std::_Unguarded_partition)
+
+// FUNCTION: EXE 0x5993ac
+// Moves one tech id back to its sorted place by tech name (std::_Unguarded_insert)
+
+// FUNCTION: EXE 0x5993dc
+// Heapifies a tech id range by epoch, then unit name (std::_Make_heap, make_heap's worker)
+
+// FUNCTION: EXE 0x599420
+// Moves the top tech id of a heap by epoch, then unit name to its end (std::pop_heap)
+
+// FUNCTION: EXE 0x599449
+// Heapifies a tech id range by epoch, then tech name (std::_Make_heap, make_heap's worker)
+
+// FUNCTION: EXE 0x59948d
+// Moves the top tech id of a heap by epoch, then tech name to its end (std::pop_heap)
+
+// FUNCTION: EXE 0x5994b6
+// Heapifies a tech id range by unit name (std::_Make_heap, make_heap's worker)
+
+// FUNCTION: EXE 0x5994fa
+// Moves the top tech id of a heap by unit name to its end (std::pop_heap)
+
+// FUNCTION: EXE 0x599523
+// Heapifies a tech id range by tech name (std::_Make_heap, make_heap's worker)
+
+// FUNCTION: EXE 0x599567
+// Moves the top tech id of a heap by tech name to its end (std::pop_heap)
+
+// FUNCTION: EXE 0x599590
+// Sifts a tech id down a heap by epoch, then unit name (std::_Adjust_heap)
+
+// FUNCTION: EXE 0x5995fd
+// Pops the top tech id of a heap by epoch, then unit name (std::_Pop_heap_0, pop_heap's worker)
+
+// FUNCTION: EXE 0x599650
+// Sifts a tech id down a heap by epoch, then tech name (std::_Adjust_heap)
+
+// FUNCTION: EXE 0x5996bd
+// Pops the top tech id of a heap by epoch, then tech name (std::_Pop_heap_0, pop_heap's worker)
+
+// FUNCTION: EXE 0x599710
+// Sifts a tech id down a heap by unit name (std::_Adjust_heap)
+
+// FUNCTION: EXE 0x59977d
+// Pops the top tech id of a heap by unit name (std::_Pop_heap_0, pop_heap's worker)
+
+// FUNCTION: EXE 0x5997d0
+// Sifts a tech id down a heap by tech name (std::_Adjust_heap)
+
+// FUNCTION: EXE 0x59983d
+// Pops the top tech id of a heap by tech name (std::_Pop_heap_0, pop_heap's worker)
+
+// FUNCTION: EXE 0x599890
+// Sifts a tech id up a heap by epoch, then unit name (std::_Push_heap)
+
+// FUNCTION: EXE 0x5998e1
+// Moves a heap's top tech id to a slot and re-sifts the old value by epoch, then unit name (std::_Pop_heap)
+
+// FUNCTION: EXE 0x599915
+// Sifts a tech id up a heap by epoch, then tech name (std::_Push_heap)
+
+// FUNCTION: EXE 0x599966
+// Moves a heap's top tech id to a slot and re-sifts the old value by epoch, then tech name (std::_Pop_heap)
+
+// FUNCTION: EXE 0x59999a
+// Sifts a tech id up a heap by unit name (std::_Push_heap)
+
+// FUNCTION: EXE 0x5999eb
+// Moves a heap's top tech id to a slot and re-sifts the old value by unit name (std::_Pop_heap)
+
+// FUNCTION: EXE 0x599a1f
+// Sifts a tech id up a heap by tech name (std::_Push_heap)
+
+// FUNCTION: EXE 0x599a70
+// Moves a heap's top tech id to a slot and re-sifts the old value by tech name (std::_Pop_heap)
+
+// SYNTHETIC: EXE 0x599aa4
+// (EESEUITechListBox's scalar deleting destructor)
+
+// FUNCTION: EXE 0x599ac0
+// Destroys the tech list box (inline in the header; the out-of-line copy its scalar deleting destructor calls)
+
+// FUNCTION: EXE 0x599ae9
 // Returns the player chosen in the player tab's player combo box (+0xd8; its selection + 1 indexes gWorld.mPlayers)
 // The original's COMDAT closes this unit (inline in the real header, emitted after its first user); defined here
 // out of line at the same place, because ee/EESEPlayerScreen.h does not include EEWorld.h

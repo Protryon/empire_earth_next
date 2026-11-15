@@ -27,7 +27,7 @@ template <class T> class U2DPoint;
 // out of line in the range before 0x241c2d, built without /Og) (provisional name)
 struct EEUUTileNearerToUnit {
     EEUUTileNearerToUnit(EEComplexUnit* inUnit) : mUnit(inUnit) {}
-    bool operator()(const U2DPoint<long>& inFirst, const U2DPoint<long>& inSecond) const;
+    bool operator()(const U2DPoint<long>& inFirst, const U2DPoint<long>& inSecond) const;   // 0x23ddc1
     EEComplexUnit* mUnit;
 };
 

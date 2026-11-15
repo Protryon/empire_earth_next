@@ -55,6 +55,7 @@
 #include "rust/ee_formations.h"
 #include "ee/EEFormationRust.h"
 
+// FUNCTION: EXE 0x4ddf3a
 // Creates a wedge formation: arms opening at inAngle with inSpacing between units, inCount units per
 // wedge, the gap to the next wedge capped by the arm geometry
 EEFWedge::EEFWedge(long inType, float inSpacing, float inAngle, unsigned long inCount)
@@ -72,6 +73,7 @@ EEFWedge::~EEFWedge()
 {
 }
 
+// FUNCTION: EXE 0x4de019
 // Places the units in wedges: a leader at the point, then pairs down the left and right arms, further
 // wedges behind; arms are scaled by the largest collision radius (NaN when every radius is 0)
 void EEFWedge::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots)

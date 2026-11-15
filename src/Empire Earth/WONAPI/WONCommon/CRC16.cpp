@@ -5,9 +5,11 @@
 #include "rust/ee_won.h"
 #include "ee/wonapi/WONCRC16.h"
 namespace WONAPI {
+// FUNCTION: WON 0x006a0c70
 // Creates a CRC with the given initial and final XOR values and resets it
 CRC16::CRC16(unsigned short initial, unsigned short xorOut)
     : mInitValue(initial), mXOROutValue(xorOut) { this->Reset(); }
+// FUNCTION: WON 0x006a0c90
 // Feeds the given bytes into the running CRC
 void CRC16::Put(const void* data, unsigned int length)
 {

@@ -8,6 +8,10 @@
 
 void *operator new(size_t);
 
+// FUNCTION: TCP 0x100047b0
+// FUNCTION: LLE 0x100847f0
+// FUNCTION: DX7HR 0x1000fd10
+// FUNCTION: DX7HRTNL 0x10010590
 // Allocates an array with plain operator new
 void *operator new[](size_t count)
 {

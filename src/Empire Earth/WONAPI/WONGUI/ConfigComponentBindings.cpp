@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 #include "ee/wonapi/WONLobbyWONListConfig.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00782d50
 // Sets the component the config reads its settings into
 void ComponentConfig::SetComponent(Component* component)
 {
@@ -68,6 +69,7 @@ void ListAreaConfig::SetComponent(Component* component)
     this->mListArea=static_cast<ListArea*>(component);
 }
 
+// FUNCTION: WON 0x0078fd10
 // Binds the multi-column list config to its list area
 void MultiListAreaConfig::SetComponent(Component* component)
 {
@@ -82,6 +84,7 @@ void ScrollbarConfig::SetComponent(Component* component)
     this->mScrollbar=static_cast<Scrollbar*>(component);
 }
 
+// FUNCTION: WON 0x0079b5f0
 // Binds the tree config to its tree area
 void TreeAreaConfig::SetComponent(Component* component)
 {
@@ -96,6 +99,7 @@ void ComboBoxConfig::SetComponent(Component* component)
     this->mComboBox=static_cast<ComboBox*>(component);
 }
 
+// FUNCTION: WON 0x0078e7d0
 // Binds the Windows-style combo-box config to its combo box
 void MSComboBoxConfig::SetComponent(Component* component)
 {
@@ -117,6 +121,7 @@ void MSEtchedFrameGroupConfig::SetComponent(Component* component)
     this->mFrame=static_cast<MSEtchedFrameGroup*>(component);
 }
 
+// FUNCTION: WON 0x0078f100
 // Binds the Windows-style tab-control config to its tab control
 void MSTabCtrlConfig::SetComponent(Component* component)
 {
@@ -124,6 +129,7 @@ void MSTabCtrlConfig::SetComponent(Component* component)
     this->mMSTabCtrl=static_cast<MSTabCtrl*>(component);
 }
 
+// FUNCTION: WON 0x0078fd10
 // Binds the Windows-style scroll container config to its scroll container (one folded body with MultiListAreaConfig's)
 void MSScrollContainerConfig::SetComponent(Component* component)
 {
@@ -131,6 +137,7 @@ void MSScrollContainerConfig::SetComponent(Component* component)
     this->mScrollContainer=static_cast<MSScrollContainer*>(component);
 }
 
+// FUNCTION: WON 0x0078f2a0
 // Binds the Windows-style header-control config to its header
 void MSHeaderControlConfig::SetComponent(Component* component)
 {
@@ -138,6 +145,7 @@ void MSHeaderControlConfig::SetComponent(Component* component)
     MultiListHeaderConfig::SetComponent(component);
 }
 
+// FUNCTION: WON 0x0078f380
 // Binds the Windows-style list-control config to its list control
 void MSListCtrlConfig::SetComponent(Component* component)
 {
@@ -145,6 +153,7 @@ void MSListCtrlConfig::SetComponent(Component* component)
     MSScrollContainerConfig::SetComponent(component);
 }
 
+// FUNCTION: WON 0x0078f100
 // Binds the WON scrollbar config to its scrollbar (one folded body with MSTabCtrlConfig's)
 void WONScrollbarConfig::SetComponent(Component* component)
 {
@@ -152,6 +161,7 @@ void WONScrollbarConfig::SetComponent(Component* component)
     this->mScrollbar=static_cast<WONScrollbar*>(component);
 }
 
+// FUNCTION: WON 0x00798f70
 // Binds the WON header-control config to its header
 void WONHeaderControlConfig::SetComponent(Component* component)
 {
@@ -159,6 +169,7 @@ void WONHeaderControlConfig::SetComponent(Component* component)
     this->mHeader=static_cast<WONHeaderControl*>(component);
 }
 
+// FUNCTION: WON 0x00796d00
 // Binds the WON list-control config to its list control
 void WONListCtrlConfig::SetComponent(Component* component)
 {

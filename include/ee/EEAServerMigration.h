@@ -10,7 +10,7 @@
 
 class EEAServerMigration : public EEAction {
 public:
-    EEAServerMigration();
+    EEAServerMigration();                   // 0x4a0b
     virtual void Virtual4();                // +0x04 0x4a1f
     virtual void Virtual8();                // +0x08 (the shared empty slot 0x1720c6)
 };

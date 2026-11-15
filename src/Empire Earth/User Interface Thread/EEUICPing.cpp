@@ -13,6 +13,9 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUICPing.h"
 
+// FUNCTION: EXE 0x658464
+// FUNCTION: EXE 0x6585a6
+// FUNCTION: EXE 0x6585e7
 // Creates the lobby's ping meter (60x10; its bars placed by ee_screens ping.rs, which draws them and sets the lit
 // count: DrawPolygons and SetPing forward)
 EEUICPing::EEUICPing(unsigned long inId, const GE2DPoint& inLocation, UIForm* inForm, unsigned long inIndex)

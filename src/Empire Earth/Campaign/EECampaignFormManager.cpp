@@ -61,6 +61,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EECampaignFormManager.h"
 
+// FUNCTION: EXE 0x68f0cb
 // Creates the campaign selection form's manager at the current difficulty, with no campaign chosen
 EECampaignFormManager::EECampaignFormManager()
     : mAllScenariosOpen(false)
@@ -72,11 +73,16 @@ EECampaignFormManager::EECampaignFormManager()
     this->mChecksum = 0;
 }
 
+// SYNTHETIC: EXE 0x68f150
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x68f16c
 // Destroys the campaign selection form's manager
 EECampaignFormManager::~EECampaignFormManager()
 {
 }
 
+// FUNCTION: EXE 0x68f1ae
 // Returns the campaign scenario selection form's manager, creating and attaching it on first use
 EECampaignFormManager* EECampaignFormManager::Get()
 {
@@ -91,6 +97,7 @@ EECampaignFormManager* EECampaignFormManager::Get()
     return theManager;
 }
 
+// FUNCTION: EXE 0x68f1f8
 // Returns the expected checksum of a built-in campaign (the three AoC campaigns, the demo and the tutorial), else 0
 unsigned long EECampaignFormManager::GetBuiltInCampaign(const UWideString& inName)
 {
@@ -108,6 +115,7 @@ unsigned long EECampaignFormManager::GetBuiltInCampaign(const UWideString& inNam
     return theResult;
 }
 
+// FUNCTION: EXE 0x68f285
 // Recomputes the checksum of the chosen campaign's file (0 when it is not found)
 void EECampaignFormManager::UpdateChecksum()
 {

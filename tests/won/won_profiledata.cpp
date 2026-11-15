@@ -11,28 +11,34 @@
 #include "ee/wonapi/WONStatus.h"
 #include "won_profiledata.h"
 namespace WONAPI {
+// FUNCTION: WON 0x006cd770
 // Creates an empty profile (no birth date, no custom action)
 ProfileData::ProfileData()
     : mProfile(ee_won_profile_new())
 {
 }
+// FUNCTION: WON 0x006cd830
 // Destroys the profile, releasing its newsletter list and custom action data
 ProfileData::~ProfileData() { ee_won_profile_free(this->mProfile); }
+// FUNCTION: WON 0x006cd9e0
 // Sets whether the account subscribes to a newsletter
 void ProfileData::AddNewsletterSub(unsigned short inId,bool inSubscribe)
 {
     ee_won_profile_set_newsletter(this->mProfile,inId,inSubscribe);
 }
+// FUNCTION: WON 0x006cdae0
 // Returns whether the account subscribes to a newsletter (false if unknown)
 bool ProfileData::GetNewsletterSub(unsigned short inId)
 {
     return ee_won_profile_newsletter(this->mProfile,inId);
 }
+// FUNCTION: WON 0x006cdc20
 // Forgets every newsletter subscription
 void ProfileData::ClearNewsletterSubs()
 {
     ee_won_profile_clear_newsletter(this->mProfile,0,true);
 }
+// FUNCTION: WON 0x006cdcc0
 // Appends the profile fields to a request (newsletters as set or get, custom action, birth date)
 void ProfileData::PackRequestData(WriteBuffer& inMsg,bool inIsSet)
 {
@@ -40,6 +46,7 @@ void ProfileData::PackRequestData(WriteBuffer& inMsg,bool inIsSet)
     ee_won_profile_pack(this->mProfile,inIsSet,Append,&aBytes);
     inMsg.AppendBytes(aBytes.data(),(unsigned long)aBytes.size());
 }
+// FUNCTION: WON 0x006cde20
 // Reads newsletter, custom action and birth date fields from a reply; stops quietly when it runs short
 void ProfileData::UnpackGetData(ReadBuffer& inMsg)
 {
@@ -47,6 +54,7 @@ void ProfileData::UnpackGetData(ReadBuffer& inMsg)
                                       inMsg.length(),(size_t)inMsg.pos());
     inMsg.SetPos((int)aPos);
 }
+// FUNCTION: WON 0x006ce070
 // Sets the birth month, day and year
 void ProfileData::SetBirthDate(unsigned char inMonth,unsigned char inDay,unsigned short inYear)
 {

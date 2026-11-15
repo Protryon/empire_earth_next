@@ -58,8 +58,9 @@
 
 // cdecl helper (types inferred): the wall ghosts on inTiles for technology inTechnology of player inPlayer
 // (provisional name)
-void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, long inPlayer);
+void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, long inPlayer);  // 0x23eb4c
 
+// FUNCTION: EXE 0x65643d
 // Asks the main game form to build a wall from the start to the end point
 void EEUIBuildWall::Build()
 {
@@ -72,6 +73,7 @@ void EEUIBuildWall::Cancel()
     gUIManager->mMainGameForm->SetUIState(0);
 }
 
+// FUNCTION: EXE 0x656456
 // Starts wall placement for a player: no points yet, the wall class's media loaded
 void EEUIBuildWall::Initialize(long inPlayer)
 {
@@ -86,6 +88,7 @@ void EEUIBuildWall::Initialize(long inPlayer)
     this->mPlayer = inPlayer;
 }
 
+// FUNCTION: EXE 0x6564a2
 // Ends wall placement: unlocks the cursor and unloads the wall class's media
 void EEUIBuildWall::Terminate()
 {
@@ -95,6 +98,7 @@ void EEUIBuildWall::Terminate()
     thePlayer->UnloadUnitClassMedia(theNode->mData->mUnitClass);
 }
 
+// FUNCTION: EXE 0x6564df
 // Tracks the mouse in wall placement: a left click sets the start, then builds each segment and chains from
 // its end; a right click cancels; moving previews the wall ghosts along the line
 // NEAR: the original keeps 0.5f on the FP stack for the tile centres and compares the floored ends through a

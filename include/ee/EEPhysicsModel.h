@@ -36,6 +36,6 @@ void EEPlaceImpactDecal(EEComplexUnit* inUnit, GE3DPoint& inLocation);
 // model's dive depth) (provisional name)
 void EEAdjustDiveDepth(EEComplexUnit* inUnit, GE3DPoint& ioLocation);
 void EEInitPhysicsModels();     // 0x1543b7 (creates the 12 singletons gPhysicsModels[], reads world table entry 79)
-void EEFreePhysicsModels();
+void EEFreePhysicsModels();     // 0x1550ba
 
 #endif

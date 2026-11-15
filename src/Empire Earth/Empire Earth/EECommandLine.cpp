@@ -74,25 +74,41 @@
 #include "ee/EESaveGameFiles.h"
 
 extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when a local server starts; provisional name)
-long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);
+long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);  // 0x14cfb1
 void CreatePlaneModels();                   // 0x1030ab (EEEffect.cpp)
 
 // The four file statics (0x529ad0, 0x529ac0, 0x529ab0, 0x529aa0)
 // chain at 0x52cac8 (wrapper)
 //   object 0x929ad0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 static UString sDash("-");
+// SYNTHETIC: EXE 0x52cac8   (wrapper)
+// SYNTHETIC: EXE 0x52cad2   (ctor)
+// SYNTHETIC: EXE 0x52cae3   (registrar)
+// SYNTHETIC: EXE 0x52caef   (dtor)
 
 // chain at 0x52cafa (wrapper)
 //   object 0x929ac0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 static UString sTab("/t");
+// SYNTHETIC: EXE 0x52cafa   (wrapper)
+// SYNTHETIC: EXE 0x52cb04   (ctor)
+// SYNTHETIC: EXE 0x52cb15   (registrar)
+// SYNTHETIC: EXE 0x52cb21   (dtor)
 
 // chain at 0x52cb2c (wrapper)
 //   object 0x929ab0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 static UString sQuote("\"");
+// SYNTHETIC: EXE 0x52cb2c   (wrapper)
+// SYNTHETIC: EXE 0x52cb36   (ctor)
+// SYNTHETIC: EXE 0x52cb47   (registrar)
+// SYNTHETIC: EXE 0x52cb53   (dtor)
 
 // chain at 0x52cb5e (wrapper)
 //   object 0x929aa0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 static UString sText("Text-");
+// SYNTHETIC: EXE 0x52cb5e   (wrapper)
+// SYNTHETIC: EXE 0x52cb68   (ctor)
+// SYNTHETIC: EXE 0x52cb79   (registrar)
+// SYNTHETIC: EXE 0x52cb85   (dtor)
 
 
 // The balancer command's target: compiled away in the shipping build (an empty cdecl body ICF-folded into 0xe123d,
@@ -101,6 +117,7 @@ void EERunBalancer(const UString& inFile)
 {
 }
 
+// FUNCTION: EXE 0x52cb90
 // "loadgame": starts a saved game on a local server, or falls back to a client, then opens the main menu
 long EELoadGameFromCommandLine(const UString& inName)
 {
@@ -138,6 +155,7 @@ long EELoadGameFromCommandLine(const UString& inName)
     return 0;
 }
 
+// FUNCTION: EXE 0x52cda7
 // Loads one saved game or scenario from a directory and saves it again under a new name; returns the first error
 long EEConvertGameFile(const UString& inDirectory, const UString& inFile, const UString& inNewFile)
 {
@@ -150,6 +168,7 @@ long EEConvertGameFile(const UString& inDirectory, const UString& inFile, const 
     return theResult;
 }
 
+// FUNCTION: EXE 0x52ce0c
 // "update_saved_games": converts every saved game and scenario to "UPDATED <name>", logging to "saved game
 // conversion.log", and deletes each original once its conversion succeeded
 void EEUpdateSavedGames()
@@ -240,6 +259,7 @@ void EEUpdateSavedGames()
     gWorld.mLock->WriteUnlock();
 }
 
+// FUNCTION: EXE 0x52d3a4
 // Returns whether an argument starts with a command (case-insensitively: the argument is lowered first)
 bool EEIsCommand(UString inArgument, UString inCommand)
 {
@@ -253,6 +273,7 @@ bool EEIsCommand(UString inArgument, UString inCommand)
     return theResult;
 }
 
+// FUNCTION: EXE 0x52d414
 // "hostgame": hosts a multiplayer game with the given game name as the given player
 bool EEHostGameFromCommandLine(const UString& inPlayerName, const UString& inGameName)
 {
@@ -275,6 +296,7 @@ bool EEHostGameFromCommandLine(const UString& inPlayerName, const UString& inGam
     return true;
 }
 
+// FUNCTION: EXE 0x52d5a5
 // "joinbyip": joins the game at an address as the given player, trying a given number of times
 bool EEJoinByIPFromCommandLine(const UString& inPlayerName, const UString& inAddress, long inTrys)
 {
@@ -297,6 +319,7 @@ bool EEJoinByIPFromCommandLine(const UString& inPlayerName, const UString& inAdd
     return true;
 }
 
+// FUNCTION: EXE 0x52d703
 // Runs the command-line commands after startup; without one, starts a client and opens the main menu. Returns
 // false when the game should quit (update_saved_games)
 bool EEParseCommandLine(const char* inCommandLine)
@@ -351,6 +374,7 @@ bool EEParseCommandLine(const char* inCommandLine)
     return theResult;
 }
 
+// FUNCTION: EXE 0x52d9e5
 // Scans the command line at startup: no intro movies when it hosts or joins a game; always returns true
 bool EEParseCommandLineFirstPass(const char* inCommandLine, bool& outShowMovies)
 {
@@ -370,3 +394,10 @@ bool EEParseCommandLineFirstPass(const char* inCommandLine, bool& outShowMovies)
     }
     return true;
 }
+
+// The deferred COMDATs: EEMStartLoading ctor, EEUIEMSEMultiPlayer ??_G, vector<UString>::clear/erase, copy
+// TEMPLATE: EXE 0x52cd73
+// TEMPLATE: EXE 0x52d57a
+// TEMPLATE: EXE 0x52dadd
+// TEMPLATE: EXE 0x52db18
+// TEMPLATE: EXE 0x52db83

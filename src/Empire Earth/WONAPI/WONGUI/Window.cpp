@@ -91,6 +91,7 @@ extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t 
     }
 }
 
+// FUNCTION: WON 0x00729c30
 // Creates a closed window on the default window manager with a new root container and the title "Sierra App" (the
 // Rust window: closed, hidden, no parent, the mouse outside, sizes 0..64000)
 Window::Window()
@@ -102,11 +103,13 @@ Window::Window()
 	this->mTitle = "Sierra App";
 }
 
+// FUNCTION: WON 0x0072a020
 // Destroys the window: the members, then the Rust window (its child set; mWinObj is the first member)
 Window::~Window()
 {
 }
 
+// FUNCTION: WON 0x0072a230
 // Returns the cached font for a descriptor, creating it through the platform on first use
 SmartPtr<Font> Window::GetFont(const FontDescriptor &theDescriptor)
 {
@@ -121,6 +124,7 @@ SmartPtr<Font> Window::GetFont(const FontDescriptor &theDescriptor)
 	return aFont;
 }
 
+// FUNCTION: WON 0x0072adc0
 // Sets the window title, updating the platform window when open
 void Window::SetTitle(const GUIString &theTitle)
 {
@@ -128,6 +132,7 @@ void Window::SetTitle(const GUIString &theTitle)
 	this->WCall(EeWonWinCall::TitleChanged);
 }
 
+// FUNCTION: WON 0x0072ae20
 // Sets the window icon, updating the platform window when open
 void Window::SetIcon(NativeIcon *theIcon)
 {
@@ -135,6 +140,7 @@ void Window::SetIcon(NativeIcon *theIcon)
 	this->WCall(EeWonWinCall::IconChanged);
 }
 
+// FUNCTION: WON 0x0072a900
 // Opens the window: default icon, registration with the parent, root sized to the rectangle, added to the manager
 void Window::Create(const WONRectangle& theWindowRectR)
 {
@@ -144,12 +150,14 @@ void Window::Create(const WONRectangle& theWindowRectR)
 	this->WCall(EeWonWinCall::Create, theWindowRectR.Width(), theWindowRectR.Height());
 }
 
+// FUNCTION: WON 0x0072a220
 // Returns the default window manager's default window
 Window* Window::GetDefaultWindow()
 {
 	return WONAPI::WindowManager::GetDefaultWindowManager()->GetDefaultWindow();
 }
 
+// FUNCTION: WON 0x0072a8c0
 // Creates an image of the given size for the window's display
 SmartPtr<NativeImage> Window::CreateImage(int theWidth, int theHeight)
 {
@@ -158,11 +166,13 @@ SmartPtr<NativeImage> Window::CreateImage(int theWidth, int theHeight)
 
 static bool gWindowSkipDecodeImages = false;
 
+// FUNCTION: WON 0x0072a640
 // Turns image decoding off or on for every window (a blank placeholder is used)
 void Window::SetSkipDecodeImages(bool skip) {
     gWindowSkipDecodeImages = skip;
 }
 
+// FUNCTION: WON 0x0072a650
 // Decodes an image file for the window's display; while decoding is off returns one shared blank 10x10 image
 SmartPtr<NativeImage> Window::DecodeImage(const char* path) {
     if(gWindowSkipDecodeImages) {
@@ -177,6 +187,7 @@ SmartPtr<NativeImage> Window::DecodeImage(const char* path) {
     return this->mManager->DecodeImage(this->mDisplayContext.get(),path);
 }
 
+// FUNCTION: WON 0x0072a800
 // Decodes a raw image file; while decoding is off returns a blank 10x10 image
 SmartPtr<RawImage> Window::DecodeImageRaw(const char* path) {
     if(gWindowSkipDecodeImages)
@@ -185,6 +196,7 @@ SmartPtr<RawImage> Window::DecodeImageRaw(const char* path) {
 }
 
 // The two functions after this one are not identified in the original exe
+// FUNCTION: WON 0x0072a8f0
 // Returns the window's offscreen image
 NativeImage* Window::GetOffscreenImage()
 {
@@ -197,20 +209,20 @@ Graphics& Window::GetGraphics()
 }
 
 // The forwarders (the header's one-line methods are the rest)
-bool Window::CanClose() { return this->WCall(EeWonWinCall::CanClose) != 0; }
-bool Window::Close() { return this->WCall(EeWonWinCall::Close) != 0; }
-void Window::CheckResize(DWORD theTick) { this->WCall(EeWonWinCall::CheckResize, (intptr_t)(uint32_t)theTick); }
-void Window::Center(bool inParent) { this->WCall(EeWonWinCall::Center, inParent ? 1 : 0); }
-void Window::SetClientSize(int w, int h) { this->WCall(EeWonWinCall::SetClientSize, w, h); }
-void Window::Show(bool show) { this->WCall(EeWonWinCall::Show, show ? 1 : 0); }
-void Window::HandleMouseExit() { this->WCall(EeWonWinCall::HandleMouseExit); }
+bool Window::CanClose() { return this->WCall(EeWonWinCall::CanClose) != 0; }                       // 0x0072ab80
+bool Window::Close() { return this->WCall(EeWonWinCall::Close) != 0; }                             // 0x0072ac30
+void Window::CheckResize(DWORD theTick) { this->WCall(EeWonWinCall::CheckResize, (intptr_t)(uint32_t)theTick); } // 0x0072ac90
+void Window::Center(bool inParent) { this->WCall(EeWonWinCall::Center, inParent ? 1 : 0); }        // 0x0072ae80
+void Window::SetClientSize(int w, int h) { this->WCall(EeWonWinCall::SetClientSize, w, h); }       // 0x0072af30
+void Window::Show(bool show) { this->WCall(EeWonWinCall::Show, show ? 1 : 0); }                    // 0x0072af70
+void Window::HandleMouseExit() { this->WCall(EeWonWinCall::HandleMouseExit); }                     // 0x0072b120
 static EeWonWinEvent WinEvent(InputEvent* e)
 {
     EeWonWinEvent r = {};
     r.kind = (int32_t)e->mEventType;
     return r;
 }
-void Window::HandleKeyEvent(KeyEvent *e)
+void Window::HandleKeyEvent(KeyEvent *e)                                                           // 0x0072b170
 {
     EeWonWinEvent r = WinEvent(e);
     r.key_mod = e->mKeyMod;
@@ -226,17 +238,17 @@ static EeWonWinEvent MouseWinEvent(MouseEvent* e)
     r.button = e->mButtonOrAmount;
     return r;
 }
-void Window::HandleMouseDown(MouseEvent *e)
+void Window::HandleMouseDown(MouseEvent *e)                                                        // 0x0072b1c0
 {
     EeWonWinEvent r = MouseWinEvent(e);
     this->WCall(EeWonWinCall::HandleMouseDown, (intptr_t)&r);
 }
-void Window::HandleMouseEvent(MouseEvent *e)
+void Window::HandleMouseEvent(MouseEvent *e)                                                       // 0x0072b260
 {
     EeWonWinEvent r = MouseWinEvent(e);
     this->WCall(EeWonWinCall::HandleMouseEvent, (intptr_t)&r);
 }
-void Window::HandleInputEvent(InputEvent *e)
+void Window::HandleInputEvent(InputEvent *e)                                                       // 0x0072b390
 {
     EeWonWinEvent r = WinEvent(e);
     if (e->mEventType == InputEvent_SizeChange) {
@@ -245,17 +257,17 @@ void Window::HandleInputEvent(InputEvent *e)
     }
     this->WCall(EeWonWinCall::HandleInputEvent, (intptr_t)&r);
 }
-bool Window::IdleUpdate() { return this->WCall(EeWonWinCall::IdleUpdate) != 0; }
-void Window::TimerEvent(DWORD e) { this->WCall(EeWonWinCall::TimerEvent, (intptr_t)(uint32_t)e); }
-void Window::SetParent(Window *p) { this->WCall(EeWonWinCall::SetParent, (intptr_t)p); }
-void Window::PlatformClose() { this->WCall(EeWonWinCall::PlatformClose); }
-void Window::ShowNativeCursor(bool show) { this->WCall(EeWonWinCall::ShowNativeCursor, show ? 1 : 0); }
-void Window::AddComponent(Component* c) { this->WCall(EeWonWinCall::AddComponent, (intptr_t)c); }
-void Window::SetModal(bool modal) { this->WCall(EeWonWinCall::SetModal, modal ? 1 : 0); }
-void Window::CheckSetCursor(bool force) { this->WCall(EeWonWinCall::CheckSetCursor, force ? 1 : 0); }
+bool Window::IdleUpdate() { return this->WCall(EeWonWinCall::IdleUpdate) != 0; }                   // 0x0072b460
+void Window::TimerEvent(DWORD e) { this->WCall(EeWonWinCall::TimerEvent, (intptr_t)(uint32_t)e); } // 0x0072b4b0
+void Window::SetParent(Window *p) { this->WCall(EeWonWinCall::SetParent, (intptr_t)p); }           // 0x0072a210
+void Window::PlatformClose() { this->WCall(EeWonWinCall::PlatformClose); }                         // 0x0072aa60
+void Window::ShowNativeCursor(bool show) { this->WCall(EeWonWinCall::ShowNativeCursor, show ? 1 : 0); } // 0x0072afc0
+void Window::AddComponent(Component* c) { this->WCall(EeWonWinCall::AddComponent, (intptr_t)c); }  // 0x0072b040
+void Window::SetModal(bool modal) { this->WCall(EeWonWinCall::SetModal, modal ? 1 : 0); }          // 0x0072b060
+void Window::CheckSetCursor(bool force) { this->WCall(EeWonWinCall::CheckSetCursor, force ? 1 : 0); } // 0x0072afd0
 namespace WONAPI {
-void Window::InvalidateRoot() { this->WCall(EeWonWinCall::InvalidateRoot); }
-void Window::Minimize(bool minimize) { this->WCall(EeWonWinCall::Minimize, minimize ? 1 : 0); }
+void Window::InvalidateRoot() { this->WCall(EeWonWinCall::InvalidateRoot); }                       // 0x0072a1e0
+void Window::Minimize(bool minimize) { this->WCall(EeWonWinCall::Minimize, minimize ? 1 : 0); }    // 0x0072afb0
 }
 void Window::SuspendRootResize(bool suspend) { this->WCall(EeWonWinCall::SuspendRootResize, suspend ? 1 : 0); }
 void Window::RemoveComponent(Component* c) { this->WCall(EeWonWinCall::RemoveComponent, (intptr_t)c); }

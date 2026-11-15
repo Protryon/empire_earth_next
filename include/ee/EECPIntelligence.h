@@ -70,13 +70,13 @@ struct EECPIFamilyCount {
 
 class EECPIntelligencePlayerFile {
 public:
-    EECPIntelligencePlayerFile(EEPlayer* inOwner, EEPlayer* inPlayer);
+    EECPIntelligencePlayerFile(EEPlayer* inOwner, EEPlayer* inPlayer);   // 0x80c69
     virtual ~EECPIntelligencePlayerFile();  // +0x00 (??_G 0x80cd5, dtor 0x80cf1)
     void AddToArmies(EEComplexUnit* inUnit);   // 0x80d19 (ret 4): into the nearest army, merging the ones it joins
     float GetScanRange(float inValue);      // 0x814bd (ret 4): inValue times the const 0x43c074 (EECPAttackSubGroup::TakeRequestedUnits) (provisional name)
     // 0x80f9b (ret 0xc): refreshes the file (at most every 30 s unless inForce; the armies only with inArmies)
     void Update(EEComputerPlayer* inPlayer, bool inForce, bool inArmies);
-    void DeleteArmies();
+    void DeleteArmies();                    // 0x81438
     void Reset();                           // 0x81443 (the ctor and Update)
     long GetFamilyCount(long inFamily);     // 0x814ca (ret 4): the count of inFamily (+0x24 searched from the back)
     // 0x81500 (ret 0xc): the living units on the map (on inContinent unless 0) whose class passes CanMoveOnTerrain
@@ -86,9 +86,9 @@ public:
     // 0x81654 (ret 8): the player's units (its buildings first, WriteDetailsHook) as locations, best target first
     void GetTargets(std::vector<EECPILocation>& outLocations, long inArg);
     long GetInfluence(long inX, long inY, long inRadius);   // 0x819c0 (ret 0xc): our influence around tile (inX, inY)
-    void AddFamily(EEUnit* inUnit);
-    void AddUnitType(EEUnit* inUnit);
-    void AddUnitClass(EEUnit* inUnit);
+    void AddFamily(EEUnit* inUnit);         // 0x81aaa (ret 4)
+    void AddUnitType(EEUnit* inUnit);       // 0x81b0e (ret 4)
+    void AddUnitClass(EEUnit* inUnit);      // 0x81c42 (ret 4)
     // mArmies.size() out of line (ICF-folded into 0x91f11; EECPDefenseCommander 0x77e8e/0x79382) (provisional name)
     unsigned long GetNumArmies() const { return this->mArmies.size(); }
 
@@ -152,7 +152,7 @@ public:
     virtual ~EECPIntelligence();            // +0x00 (??_G 0x81cfc, dtor 0x81d18)
     EECPIntelligencePlayerFile* GetFile(EEPlayer* inPlayer);   // 0x81d60 (ret 4): inPlayer's file
     // (EECPCombatManager.cpp's calls; provisional names)
-    EECPIntelligence(EEComputerPlayer* inPlayer);
+    EECPIntelligence(EEComputerPlayer* inPlayer);   // 0x81cd0
     // 0x81da1 (ret 8): inPlayer's file, created on first use, then refreshed
     EECPIntelligencePlayerFile* UpdateFile(EEComputerPlayer* inOwner, EEPlayer* inPlayer);
     EEPlayer* GetRandomEnemy(EEPlayer* inPlayer);  // 0x81e30 (ret 4): a random enemy of inPlayer (player 0 if none)

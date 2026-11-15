@@ -14,6 +14,7 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
+// FUNCTION: WON 0x0078f810
 // Handles DRAWFRAME for a combo box; other keys go to the combo box config
 bool MSComboBoxConfig::Virtual24(const std::string& key)
 {
@@ -22,6 +23,7 @@ bool MSComboBoxConfig::Virtual24(const std::string& key)
     else return ComboBoxConfig::Virtual24(key);
     return true;
 }
+// FUNCTION: WON 0x0078f880
 // Handles TRANSPARENT for a scrollbar; other keys go to the scrollbar config
 bool MSScrollbarConfig::Virtual24(const std::string& key)
 {
@@ -30,6 +32,7 @@ bool MSScrollbarConfig::Virtual24(const std::string& key)
     else return ScrollbarConfig::Virtual24(key);
     return true;
 }
+// FUNCTION: WON 0x0078fa40
 // Handles TITLE and CONTAINEDCOMPONENT for an etched frame group; other keys go to the container config
 bool MSEtchedFrameGroupConfig::Virtual24(const std::string& key)
 {
@@ -39,6 +42,7 @@ bool MSEtchedFrameGroupConfig::Virtual24(const std::string& key)
     else return ContainerConfig::Virtual24(key);
     return true;
 }
+// FUNCTION: WON 0x0078fb30
 // Handles TRANSPARENT and ADDSTANDARDTAB (title, container) for a tab control; other keys go to the
 // tab control config
 bool MSTabCtrlConfig::Virtual24(const std::string& key)
@@ -52,6 +56,7 @@ bool MSTabCtrlConfig::Virtual24(const std::string& key)
     } else return TabCtrlConfig::Virtual24(key);
     return true;
 }
+// FUNCTION: WON 0x0078fd30
 // Handles DRAWFRAME, DRAW3DFRAME and TRANSPARENT for a scroll container; other keys go to the
 // scroller config
 bool MSScrollContainerConfig::Virtual24(const std::string& key)
@@ -63,6 +68,7 @@ bool MSScrollContainerConfig::Virtual24(const std::string& key)
     else return ScrollbarScrollerConfig::Virtual24(key);
     return true;
 }
+// FUNCTION: WON 0x0078ff00
 // Handles SETSTANDARDCOLUMN (column, title) for a list header; other keys go to the header config
 bool MSHeaderControlConfig::Virtual24(const std::string& key)
 {
@@ -73,6 +79,7 @@ bool MSHeaderControlConfig::Virtual24(const std::string& key)
     } else return MultiListHeaderConfig::Virtual24(key);
     return true;
 }
+// FUNCTION: WON 0x0078ffd0
 // Handles HEADERHEIGHT for a list control; other keys go to the scroll container config
 bool MSListCtrlConfig::Virtual24(const std::string& key)
 {

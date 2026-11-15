@@ -16,7 +16,7 @@ class UITextLabel;
 
 class EESEInstructions : public EEUIFSEMainGroup {
 public:
-    EESEInstructions(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont);
+    EESEInstructions(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont);   // 0x1707ff
     virtual ~EESEInstructions();                        // +0x00 0x171bf5 (??_G 0x171b9f)
     virtual void Leave() { this->Store(); }             // +0x08 (ICF-folded `jmp [vptr+0x1c]` 0x66295)
     virtual void Load();                                // +0x14 0x171ce3

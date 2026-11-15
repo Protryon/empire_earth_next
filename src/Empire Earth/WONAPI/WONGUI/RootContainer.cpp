@@ -59,6 +59,7 @@ extern "C" intptr_t ee_won_guicpp_root_call(void* inComp, EeWonGuiOp op, intptr_
     }
 }
 
+// FUNCTION: WON 0x007040d0
 // Creates the top-level container of a window: arrow cursor, window dragging allowed, tab focus kept inside (the Rust
 // root: no invalid rectangle, no cursor component, no drag, no background)
 RootContainer::RootContainer(Window *theWindow)
@@ -70,5 +71,6 @@ RootContainer::RootContainer(Window *theWindow)
 	this->SetIsolateTabFocus(true);
 }
 
+// TEMPLATE: WON 0x007043c0
 // Destroys the root: the Rust root gives the queued backgrounds' images back (the implicit destructor in the original)
 RootContainer::~RootContainer() { ee_won_root_free(this->mRootObj); }

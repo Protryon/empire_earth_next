@@ -33,6 +33,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EETechCapture.h"
 #include "ee/EETechRust.h"
+// FUNCTION: EXE 0x5cedce
 // Creates an empty tech node, allowed and obsolete only after the space epoch
 EETechTreeNode::EETechTreeNode()
     : mTree(NULL), mButton(NULL)
@@ -40,12 +41,17 @@ EETechTreeNode::EETechTreeNode()
     // the record's values (allowed, obsolete after the space epoch): RTSTechTreeNode's ee_tech_node_fields_init
 }
 
+// FUNCTION: EXE 0x5cee02
 // Returns the node's research time
 long EETechTreeNode::GetBuildTime()
 {
     return this->mData->mBuildTime;
 }
 
+// SYNTHETIC: EXE 0x5cee09
+// (the scalar deleting destructor, emitted with the vtable; slot EETechTreeNode+0x0)
+
+// FUNCTION: EXE 0x5cee25
 // Destroys the node, unloading its unit media and giving its unit classes their default buttons back
 EETechTreeNode::~EETechTreeNode()
 {
@@ -62,6 +68,7 @@ EETechTreeNode::~EETechTreeNode()
     this->ClearClassCosts();
 }
 
+// FUNCTION: EXE 0x5ceeb3
 // Frees the node's per-unit-class cost tables
 void EETechTreeNode::ClearClassCosts()
 {
@@ -76,6 +83,7 @@ void EETechTreeNode::ClearClassCosts()
     this->mData->mClassCosts.clear();
 }
 
+// FUNCTION: EXE 0x5ceefc
 // Deletes the node's data
 long EETechTreeNode::Unload()
 {
@@ -86,6 +94,7 @@ long EETechTreeNode::Unload()
     return 0;
 }
 
+// FUNCTION: EXE 0x5cef26
 // Returns a node's cost in a resource for a unit class: per-class cost, scaled for unit-making nodes by wonder
 // epoch, cost set and upgrade cost scale, and by the just-in-time manufacturing factor for rally-point classes
 long EETechTreeNode::GetCost(long inResource, long inUnitClass, float inScale)
@@ -134,6 +143,11 @@ long EETechTreeNode::GetCostUncaptured(long inResource, long inUnitClass, float 
     return ee_tech_node_cost(&theInput);
 }
 
+// FUNCTION: EXE 0x5cf0a2
+// Tells whether the unit class has a rally point
+// (EEUnitClass::HasRallyPoint, inline in ee/EEUnit.h)
+
+// FUNCTION: EXE 0x5cf0e2
 // Builds the "Food: n Gold: n ..." cost text of the node for a unit class (wood shown as carbon when used)
 void EETechTreeNode::GetCostString(UWideString& outString, long inUnitClass, float inScale)
 {
@@ -185,6 +199,7 @@ void EETechTreeNode::GetCostString(UWideString& outString, long inUnitClass, flo
     outString += " ";
 }
 
+// FUNCTION: EXE 0x5cf370
 // Reads the node's record from the tech tree file, with a cost table per unit class scaled by its factor
 long EETechTreeNode::Load(FSFile& inFile, EETechTree* inTree)
 {
@@ -219,12 +234,14 @@ long EETechTreeNode::Load(FSFile& inFile, EETechTree* inTree)
     return theResult;
 }
 
+// FUNCTION: EXE 0x5cf686
 // Tells whether the node can be researched now (wonders only after enough epochs or in the last epoch)
 bool EETechTreeNode::GetIsAvailable()
 {
     return EETechNodeWalk(this, EeTechNodeOp::IsAvailable) != 0;
 }
 
+// FUNCTION: EXE 0x5cf6e5
 // Tells whether the node lists a unit class
 bool EETechTreeNode::Contains(long inUnitClass)
 {
@@ -233,12 +250,14 @@ bool EETechTreeNode::Contains(long inUnitClass)
     return theUnitClass != this->mData->mUnitClasses.end();
 }
 
+// FUNCTION: EXE 0x5cf742
 // Tells whether the node is obsolete, by flag or because its obsolete epoch has passed
 bool EETechTreeNode::GetIsObsolete()
 {
     return EETechNodeWalk(this, EeTechNodeOp::IsObsolete) != 0;
 }
 
+// FUNCTION: EXE 0x5cf75b
 // Tells whether the node makes a building or mine whose media this game needs
 bool EETechTreeNode::NeedsUnitMedia()
 {
@@ -260,12 +279,14 @@ bool EETechTreeNode::NeedsUnitMediaUncaptured()
                                     (int32_t)this->mObsoleteEpoch, (int32_t)this->mTree->mStartEpoch);
 }
 
+// FUNCTION: EXE 0x5cf79a
 // Tells whether the node depends on a tech, directly or through its prerequisites (ee_tech depends_on)
 bool EETechTreeNode::DependsOn(long inID)
 {
     return EETechNodeWalk(this, EeTechNodeOp::DependsOn, inID) != 0;
 }
 
+// FUNCTION: EXE 0x5cf882
 // Loads the node's media: the unit class and its buttons, and the media its research event uses
 void EETechTreeNode::LoadMedia(EEPlayer* inPlayer)
 {
@@ -306,6 +327,7 @@ void EETechTreeNode::LoadMedia(EEPlayer* inPlayer)
     inPlayer->EpochMediaLoaded(this->mData->mID);
 }
 
+// FUNCTION: EXE 0x5cf995
 // Satisfies one prerequisite (an epoch or one of the four techs); with all met the node becomes available
 // (event 0x7d1, statistics series 0x16)
 void EETechTreeNode::SetPrerequisite(long inID)
@@ -323,12 +345,14 @@ void EETechTreeNode::SetPrerequisite(long inID)
     EETechNodeWalk(this, EeTechNodeOp::SetPrerequisite, inID);
 }
 
+// FUNCTION: EXE 0x5cfa3c
 // Makes the node available with every prerequisite met
 void EETechTreeNode::MakeAvailable()
 {
     EETechNodeWalk(this, EeTechNodeOp::MakeAvailable);
 }
 
+// FUNCTION: EXE 0x5cfa53
 // Researches the node if available: fires its event; returns 2 when already researched (repeatable kind 3 excepted),
 // 9 when not possible; counts down a research delay
 long EETechTreeNode::ResearchNode(EEComplexUnit* inUnit)
@@ -347,6 +371,7 @@ long EETechTreeNode::ResearchNode(EEComplexUnit* inUnit)
     return EETechNodeWalk(this, EeTechNodeOp::Research, 0, false, inUnit);
 }
 
+// FUNCTION: EXE 0x5cfae9
 // Sets the scenario editor's obsoleted flag; recursively obsoletes the nodes depending on it, or un-obsoletes
 // its prerequisites
 void EETechTreeNode::SetScenEditorObsoleted(bool inValue, bool inRecurse)
@@ -354,12 +379,14 @@ void EETechTreeNode::SetScenEditorObsoleted(bool inValue, bool inRecurse)
     EETechNodeWalk(this, EeTechNodeOp::SetEditorObsoleted, inValue ? 1 : 0, inRecurse);
 }
 
+// FUNCTION: EXE 0x5cfbfe
 // Makes the node obsolete (obsolete event, unloading its unit media unless kept) or clears the flag
 void EETechTreeNode::SetObsolete(bool inValue, bool inKeepMedia)
 {
     EETechNodeWalk(this, EeTechNodeOp::SetObsolete, inValue ? 1 : 0, inKeepMedia);
 }
 
+// FUNCTION: EXE 0x5cfc72
 // Gives the node a new button and swaps it into its unit classes
 void EETechTreeNode::SetButton(unsigned long inButton)
 {
@@ -369,6 +396,7 @@ void EETechTreeNode::SetButton(unsigned long inButton)
     this->mButton = EEButtonObject::Get(inButton);
 }
 
+// FUNCTION: EXE 0x5cfcc9
 // Unloads the node's media: the unit class and its buttons, and the media its research event uses
 void EETechTreeNode::UnloadMedia(EEPlayer* inPlayer)
 {
@@ -409,6 +437,7 @@ void EETechTreeNode::UnloadMedia(EEPlayer* inPlayer)
     inPlayer->EpochMediaUnloaded(this->mData->mID);
 }
 
+// FUNCTION: EXE 0x5cfde2
 // Copies another node's state and shares its data (with its class cost tables)
 EETechTreeNode& EETechTreeNode::operator=(const EETechTreeNode& inOther)
 {
@@ -423,3 +452,18 @@ EETechTreeNode& EETechTreeNode::operator=(const EETechTreeNode& inOther)
     }
     return *this;
 }
+
+// FUNCTION: EXE 0x5cfeb6
+// Empties a class-cost map
+// (std::map<long, long*>::clear, Dinkum <xtree>)
+
+// FUNCTION: EXE 0x5cfeca
+// Tells whether the base node is available
+// (RTSTechTreeNode::GetIsAvailable, inline in ee/EEPlayer.h)
+
+// FUNCTION: EXE 0x5cfece
+// Tells whether the base node is obsolete
+// (RTSTechTreeNode::GetIsObsolete, inline in ee/EEPlayer.h)
+
+// SYNTHETIC: EXE 0x5cfed2
+// (RTSTechTreeNode's scalar deleting destructor: its inline empty dtor)

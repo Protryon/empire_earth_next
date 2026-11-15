@@ -10,11 +10,13 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 using namespace WONAPI;
+// FUNCTION: WON 0x006fb7b0
 // Creates the tooltip of a list box, showing no item
 ListAreaToolTip::ListAreaToolTip(ListArea* area) {
     this->mListArea=area;
     this->mItem=NULL;
 }
+// FUNCTION: WON 0x006fb8d0
 // Draws the tipped list item in full on a tooltip background with a tooltip-coloured border, using the
 // list box's colour scheme unless the tooltip has its own
 void ListAreaToolTip::Paint(Graphics& g) {
@@ -34,6 +36,7 @@ void ListAreaToolTip::Paint(Graphics& g) {
     g.DrawRect(0,0,this->Width(),this->Height());
     g.mColorScheme=scheme;
 }
+// FUNCTION: WON 0x006fb9b0
 // Opens the tooltip over a list item, at least as wide as the list box; closes the old tip first unless
 // the same item is already shown, and stops there for no item
 void ListAreaToolTip::DoTip(ListItem* item) {
@@ -50,7 +53,14 @@ void ListAreaToolTip::DoTip(ListItem* item) {
     this->SetSize(width,this->mItem->mHeight+4);
     this->mListArea->GetRoot()->OpenPopup(params);
 }
+// FUNCTION: WON 0x006fbab0
 // Closes the tooltip popup if it is open
 void ListAreaToolTip::EndTip() {
     if(this->mParent!=NULL) this->mListArea->GetRoot()->ClosePopup(this);
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006fb840
+// (public: virtual void * __thiscall WONAPI::ListAreaToolTip::`scalar deleting destructor'(unsigned int)    [??_GListAreaToolTip@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x006fb860
+// (ListAreaToolTip implicit destructor)

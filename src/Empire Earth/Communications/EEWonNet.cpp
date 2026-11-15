@@ -55,16 +55,16 @@
 #include "ee/wonapi/WONStatus.h"
 using namespace WONAPI;
 
-char* kWonGameKey = "GAME";
+char* kWonGameKey = "GAME";                          // 0x4bba5c
 char* kWonGameObject = "EE Game Object";             // 0x4bba60 (the data objects that describe the games)
 char* kWonRoomObject = "EE Room Object";             // 0x4bba64 (the data objects that describe the rooms)
-char* kWonProductName = "EmpireEarth";
-wchar_t* kWonAuthDirectory = L"/TitanServers/Auth";
-wchar_t* kWonDBProxyDirectory = L"/TitanServers/DBProxy";
-wchar_t* kWonFirewallDirectory = L"/TitanServers/Firewall";
-wchar_t* kWonRoutingServerType = L"TitanRoutingServerG2";
-wchar_t* kWonProductDirectory = L"/EmpireEarth";
-wchar_t* kWonCommunityName = L"EmpireEarth";
+char* kWonProductName = "EmpireEarth";               // 0x4bba68
+wchar_t* kWonAuthDirectory = L"/TitanServers/Auth";             // 0x4bba6c
+wchar_t* kWonDBProxyDirectory = L"/TitanServers/DBProxy";       // 0x4bba70
+wchar_t* kWonFirewallDirectory = L"/TitanServers/Firewall";     // 0x4bba74
+wchar_t* kWonRoutingServerType = L"TitanRoutingServerG2";       // 0x4bba78
+wchar_t* kWonProductDirectory = L"/EmpireEarth";                // 0x4bba7c
+wchar_t* kWonCommunityName = L"EmpireEarth";                    // 0x4bba80
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 unsigned long gWonClientId;                 // 0x4e60b8 (RegisterCallback stores the server's client id)
@@ -81,6 +81,7 @@ static void CancelOpCallback(UIForm* inForm);
 class EEWonNetCompletion : public CompletionBase<AsyncOpPtr> {
 public:
     EEWonNetCompletion(EEWonNet::Callback inCallback) : mCallback(inCallback) {}
+// FUNCTION: EXE 0x4ce068
 // Calls the completion's EEWonNet member on gWonNet with the finished op (nothing when gWonNet is gone)
     virtual void Complete(AsyncOpPtr inOp)
     {
@@ -95,6 +96,7 @@ public:
 class RoutingCompletion : public CompletionBase<AsyncOpPtr> {
 public:
     RoutingCompletion(EEWonNet::Callback inCallback) : mCallback(inCallback) {}
+// FUNCTION: EXE 0x4ce08c
 // Calls the completion's EEWonNet member with the finished op, only for ops of gWonNet's own routing connection
     virtual void Complete(AsyncOpPtr inOp)
     {
@@ -107,12 +109,14 @@ public:
     EEWonNet::Callback mCallback;           // +0x08
 };
 
+// FUNCTION: EXE 0x4cd4ee
 // Reports a WON error (the status text is computed and dropped)
 void EEWonNetError(const char* inWhere, WONStatus inStatus)
 {
     WONStatusToString(inStatus);
 }
 
+// FUNCTION: EXE 0x4cd4f9
 // Returns the name of a routing op type ("Unknown Routing Type" when out of range)
 const char* RoutingOpTypeToString(RoutingOpType inType)
 {
@@ -256,6 +260,7 @@ EEWonNet::~EEWonNet()
     TSScheduler::DestroyCriticalSection(this->mLock8);
 }
 
+// FUNCTION: EXE 0x4cd794
 // Converts inLength characters (UTF-8, decision D6) to wide into the caller's buffer of inLength units (the original
 // converted with the ANSI code page)
 wchar_t* EEWonNet::A2W(wchar_t* outString, const char* inString, int inLength)
@@ -282,6 +287,7 @@ static std::vector<SmartRoutingConnection::GroupInfo> RoutingGroups(SmartRouting
     return theGroups;
 }
 
+// FUNCTION: EXE 0x4cd7d2
 // Resets two counters and walks every routing group and member, converting each name into a scratch buffer
 void EEWonNet::ConnectToLobby()
 {
@@ -320,6 +326,7 @@ static RoutingMemberMap MembersOf(AsyncOp* inOp)
     return theMembers;
 }
 
+// FUNCTION: EXE 0x4cd8e6
 // Replaces the game list with the game objects read from the server and marks the game and room lists changed
 void EEWonNet::ListGamesCallback(AsyncOp* inOp)
 {
@@ -344,6 +351,7 @@ void EEWonNet::ListGamesCallback(AsyncOp* inOp)
     }
 }
 
+// FUNCTION: EXE 0x4cda04
 // Rebuilds the room list from the server's chat-room groups (name, maximum players) and the rooms' descriptions
 // from their data objects
 void EEWonNet::ListRoomCallback(AsyncOp* inOp)
@@ -396,6 +404,7 @@ void EEWonNet::ListRoomCallback(AsyncOp* inOp)
     }
 }
 
+// FUNCTION: EXE 0x4cdcbb
 // Handles the routing connection closing: reports the lost Sierra connection (unless expected) and disconnects
 void EEWonNet::CloseCallback(AsyncOp* inOp)
 {
@@ -410,6 +419,7 @@ void EEWonNet::CloseCallback(AsyncOp* inOp)
         this->Disconnect();
 }
 
+// FUNCTION: EXE 0x4cdd2c
 // Reports a failed routing op (the catch-all handler)
 void EEWonNet::TempCallback(AsyncOp* inOp)
 {
@@ -419,6 +429,7 @@ void EEWonNet::TempCallback(AsyncOp* inOp)
         EEWonNetError("EEWonNet::TempCallback", inOp->GetStatus());
 }
 
+// FUNCTION: EXE 0x4cdd5e
 // Connects to a routing server: installs the connect, close, chat and data-object handlers, shows a cancel box
 void EEWonNet::SelectServer(const std::wstring& inName, IPAddr inAddress)
 {
@@ -446,6 +457,7 @@ void EEWonNet::SelectServer(const std::wstring& inName, IPAddr inAddress)
                               gUIManager->GetFormByID(kFormSelectServer));
 }
 
+// FUNCTION: EXE 0x4ce0c2
 // Handles the connection result: registers the client, or disconnects and reports the error; when cancelled or
 // stale only closes the server selection form
 void EEWonNet::ConnectCallback(AsyncOp* inOp)
@@ -469,6 +481,7 @@ void EEWonNet::ConnectCallback(AsyncOp* inOp)
     }
 }
 
+// FUNCTION: EXE 0x4ce244
 // Opens the room list screen once the group list arrived and reads the room and game objects
 void EEWonNet::ChatRoomListCallback(AsyncOp* inOp)
 {
@@ -489,6 +502,7 @@ void EEWonNet::ChatRoomListCallback(AsyncOp* inOp)
     gUIManager->UnlockUIForCopyData();
 }
 
+// FUNCTION: EXE 0x4ce421
 // Stores the created game's info and starts hosting it; on failure leaves the game and reports it
 void EEWonNet::JoinGameDataCallback(AsyncOp* inOp)
 {
@@ -518,6 +532,7 @@ void EEWonNet::JoinGameDataCallback(AsyncOp* inOp)
     this->mLock->Leave();
 }
 
+// FUNCTION: EXE 0x4ce695
 // Publishes the hosted game's data object (name, address, password, flags) once its group exists, or reports
 // the failure or a duplicate game name
 void EEWonNet::CreateGameCallback(AsyncOp* inOp)
@@ -566,12 +581,14 @@ void EEWonNet::CreateGameCallback(AsyncOp* inOp)
     }
 }
 
+// FUNCTION: EXE 0x4ce995
 // Creates the game group (the callback of the firewall warning box)
 static void HostGameCallback(UIForm* inForm)
 {
     reinterpret_cast<EEWonNet*>(inForm)->CreateGame();
 }
 
+// FUNCTION: EXE 0x4ce99e
 // Asks the routing server to create the game's group (8 players, with the password)
 void EEWonNet::CreateGame()
 {
@@ -579,6 +596,7 @@ void EEWonNet::CreateGame()
                           new RoutingCompletion(&EEWonNet::CreateGameCallback));
 }
 
+// FUNCTION: EXE 0x4ce9e1
 // Hosts a WON game: stores its name and password, then creates the group (after a warning when behind a firewall)
 void EEWonNet::HostGame(const char* inName, const char* inPassword)
 {
@@ -602,6 +620,7 @@ void EEWonNet::HostGame(const char* inName, const char* inPassword)
     }
 }
 
+// FUNCTION: EXE 0x4ceb2d
 // Rewrites the joined game's data object when this client is its host
 void EEWonNet::UpdateGameObject()
 {
@@ -614,6 +633,7 @@ void EEWonNet::UpdateGameObject()
     }
 }
 
+// FUNCTION: EXE 0x4cebbd
 // Writes a game's info (version 1: name, address, password, counts, host, flags, room) into a new buffer
 void EEWonNet::ExportGameInfo(EEWonNetGameInfo& inInfo, unsigned char*& outData, unsigned long& outSize)
 {
@@ -644,6 +664,7 @@ void EEWonNet::ExportGameInfo(EEWonNetGameInfo& inInfo, unsigned char*& outData,
     outSize = theMessageSize;
 }
 
+// FUNCTION: EXE 0x4cece1
 // Reads a game's info from a buffer (version 1 strings, else C strings), then counts, host, flags and room
 void EEWonNet::ImportGameInfo(unsigned char* inMemoryPointer, EEWonNetGameInfo& outInfo)
 {
@@ -676,6 +697,7 @@ void EEWonNet::ImportGameInfo(unsigned char* inMemoryPointer, EEWonNetGameInfo& 
     memcpy(&outInfo.mRoomGroupId, &inMemoryPointer[theLocation], 2);
 }
 
+// FUNCTION: EXE 0x4cede5
 // Joins the named game group with the password, or reports that it was not found
 void EEWonNet::JoinGame(const char* inName, const char* inPassword)
 {
@@ -720,6 +742,7 @@ void EEWonNet::JoinGame(const char* inName, const char* inPassword)
     PlatMutexUnlock(this->mRouting->GetDataLock());
 }
 
+// FUNCTION: EXE 0x4cf02c
 // Handles a game join: leaves the room and reads the game's object, or reports a bad password or failure
 void EEWonNet::JoinGroupCallback(AsyncOp* inOp)
 {
@@ -750,6 +773,7 @@ void EEWonNet::JoinGroupCallback(AsyncOp* inOp)
     }
 }
 
+// FUNCTION: EXE 0x4cf1fc
 // Joins the host of each game object read, or rejoins the room and reports that the game was not found
 void EEWonNet::JoinGameObjectsCallback(AsyncOp* inOp)
 {
@@ -785,6 +809,7 @@ void EEWonNet::JoinGameObjectsCallback(AsyncOp* inOp)
     }
 }
 
+// FUNCTION: EXE 0x4cf3f4
 // Rejoins the last room and rereads its games; returns false (reporting the lost connection) when there is none
 bool EEWonNet::RejoinRoom(bool inFlag)
 {
@@ -806,6 +831,7 @@ bool EEWonNet::RejoinRoom(bool inFlag)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4cf570
 // Leaves the current groups and joins the named chat room with the password, showing a cancel box
 void EEWonNet::JoinRoom(const char* inRoom, const char* inPassword)
 {
@@ -847,6 +873,7 @@ void EEWonNet::JoinRoom(const char* inRoom, const char* inPassword)
     }
 }
 
+// FUNCTION: EXE 0x4cf7ec
 // Handles a room join: opens the game list screen, or reports a bad password or failure; leaves stale joins
 void EEWonNet::JoinRoomCallback(AsyncOp* inOp)
 {
@@ -879,6 +906,9 @@ void EEWonNet::JoinRoomCallback(AsyncOp* inOp)
     }
 }
 
+// TEMPLATE: EXE 0x4cf927
+
+// FUNCTION: EXE 0x4cf952
 // Closes the routing connection, leaving the room and the game
 void EEWonNet::Disconnect()
 {
@@ -892,6 +922,7 @@ void EEWonNet::Disconnect()
     this->mServerName.erase();
 }
 
+// FUNCTION: EXE 0x4cf99b
 // Cancels a pending room join and leaves the current room
 void EEWonNet::LeaveGroups()
 {
@@ -906,6 +937,7 @@ void EEWonNet::LeaveGroups()
     this->mRoomName.erase();
 }
 
+// FUNCTION: EXE 0x4cf9fe
 // Updates the hosted game object, cancels a pending game join and leaves the current game group
 void EEWonNet::ClearGames()
 {
@@ -920,6 +952,7 @@ void EEWonNet::ClearGames()
     this->mGameGroupId = 0xffff;
 }
 
+// FUNCTION: EXE 0x4cfa56
 // Refills the games box with the room's games that pass the in-progress, password and private filters
 void EEWonNet::UpdateGameList()
 {
@@ -963,6 +996,7 @@ void EEWonNet::UpdateGameList()
     this->mGamesChanged = false;
 }
 
+// FUNCTION: EXE 0x4cfc91
 // Starts listing the room's players (requests the client list) unless a listing is running
 void EEWonNet::RefreshGameList(UIControl* inGamesBox)
 {
@@ -973,6 +1007,7 @@ void EEWonNet::RefreshGameList(UIControl* inGamesBox)
     this->mRouting->GetClientList(new RoutingCompletion(&EEWonNet::ClientListCallback));
 }
 
+// FUNCTION: EXE 0x4cfce5
 // Stores the client list and requests the room's members
 void EEWonNet::ClientListCallback(AsyncOp* inOp)
 {
@@ -984,6 +1019,7 @@ void EEWonNet::ClientListCallback(AsyncOp* inOp)
     }
 }
 
+// FUNCTION: EXE 0x4cfd42
 // Refills the player list box with the names of the room's members
 void EEWonNet::MembersCallback(AsyncOp* inOp)
 {
@@ -1142,6 +1178,7 @@ bool EEWonNet::Initialize()
     return true;
 }
 
+// FUNCTION: EXE 0x4cffb5
 // Copies the joined game's info, when there is one
 void EEWonNet::GetGameInfo(EEWonNetGameInfo& outInfo)
 {
@@ -1149,18 +1186,21 @@ void EEWonNet::GetGameInfo(EEWonNetGameInfo& outInfo)
         outInfo = this->mGameInfo;
 }
 
+// FUNCTION: EXE 0x4cffd3
 // Leaves the current game (ClearGames)
 void EEWonNet::ClearGameList()
 {
     this->ClearGames();
 }
 
+// FUNCTION: EXE 0x4cffd8
 // Leaves the current room (LeaveGroups)
 void EEWonNet::LeaveRoom()
 {
     this->LeaveGroups();
 }
 
+// FUNCTION: EXE 0x4cffdd
 // Passes the value to the lobby host's Fn2F2D20, when a lobby exists
 void EEWonNet::FnCFFDD(long inArg)
 {
@@ -1168,6 +1208,7 @@ void EEWonNet::FnCFFDD(long inArg)
         this->mLobby->Pump((unsigned long)inArg, 0);
 }
 
+// FUNCTION: EXE 0x4cfff2
 // Calls the lobby window's Virtual18 when the window exists
 void EEWonNet::FnCFFF2()
 {
@@ -1176,6 +1217,7 @@ void EEWonNet::FnCFFF2()
         this->mLobbyWindow->Virtual18();
 }
 
+// FUNCTION: EXE 0x4d0001
 // Starts a WON account update with the new name and password and the e-mail flag
 void EEWonNet::UpdateAccount(const UWideString& inName, const UWideString& inPassword, bool inFlag)
 {
@@ -1187,6 +1229,7 @@ void EEWonNet::UpdateAccount(const UWideString& inName, const UWideString& inPas
     theOp->RunAsync(15000);
 }
 
+// FUNCTION: EXE 0x4d0141
 // Reports the account update's result in a message box (nothing when cancelled)
 void EEWonNet::UpdateAccountCallback(AsyncOp* inOp)
 {
@@ -1205,6 +1248,7 @@ void EEWonNet::UpdateAccountCallback(AsyncOp* inOp)
     gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
 }
 
+// FUNCTION: EXE 0x4d01c3
 // Requests the current account info and shows a cancel box
 void EEWonNet::OpenUpdateAccount()
 {
@@ -1220,12 +1264,14 @@ void EEWonNet::OpenUpdateAccount()
                               gUIManager->GetFormByID(kFormUpdateSierraAccount));
 }
 
+// FUNCTION: EXE 0x4d02ae
 // Kills the pending WON op (the cancel box's callback)
 static void CancelOpCallback(UIForm* inForm)
 {
     reinterpret_cast<AsyncOp*>(inForm)->Kill(true);
 }
 
+// FUNCTION: EXE 0x4d02ba
 // Fills the account form's e-mail box and checkbox from the account info, or reports the error
 void EEWonNet::GetAccountCallback(AsyncOp* inOp)
 {
@@ -1251,6 +1297,7 @@ void EEWonNet::GetAccountCallback(AsyncOp* inOp)
     }
 }
 
+// FUNCTION: EXE 0x4d040c
 // Shows an incoming chat line in the games screen or lobby and remembers a whisper's sender for /r
 void EEWonNet::OnChat(AsyncOp* inOp)
 {
@@ -1281,6 +1328,7 @@ void EEWonNet::OnChat(AsyncOp* inOp)
     }
 }
 
+// FUNCTION: EXE 0x4d0612
 // Does nothing (enters and leaves a lock)
 void EEWonNet::OnDataObjectChanged(AsyncOp* inOp)
 {
@@ -1288,6 +1336,7 @@ void EEWonNet::OnDataObjectChanged(AsyncOp* inOp)
     this->mLock8->Leave();
 }
 
+// FUNCTION: EXE 0x4d062b
 // Adds a new game object to the game list (and to the joined game's info) and marks the list changed
 void EEWonNet::OnDataObjectCreated(AsyncOp* inOp)
 {
@@ -1304,6 +1353,7 @@ void EEWonNet::OnDataObjectCreated(AsyncOp* inOp)
     this->mLock->Leave();
 }
 
+// FUNCTION: EXE 0x4d0714
 // Removes a deleted game from the list; leaves it and rejoins the room when it was the joined game
 void EEWonNet::OnDataObjectDeleted(AsyncOp* inOp)
 {
@@ -1323,6 +1373,7 @@ void EEWonNet::OnDataObjectDeleted(AsyncOp* inOp)
     this->mLock->Leave();
 }
 
+// FUNCTION: EXE 0x4d07c2
 // Updates a modified game object in the game list (and the joined game's info)
 void EEWonNet::OnDataObjectModified(AsyncOp* inOp)
 {
@@ -1340,6 +1391,7 @@ void EEWonNet::OnDataObjectModified(AsyncOp* inOp)
     this->mLock->Leave();
 }
 
+// FUNCTION: EXE 0x4d08ab
 // Updates a room's maximum players and flags the room list when it is the current room
 void EEWonNet::OnGroupMaxPlayersChanged(AsyncOp* inOp)
 {
@@ -1351,6 +1403,7 @@ void EEWonNet::OnGroupMaxPlayersChanged(AsyncOp* inOp)
     this->mLock->Leave();
 }
 
+// FUNCTION: EXE 0x4d0929
 // Handles the client registration: requests the group list, or reports the failure (name in use) and disconnects
 void EEWonNet::RegisterCallback(AsyncOp* inOp)
 {
@@ -1374,6 +1427,7 @@ void EEWonNet::RegisterCallback(AsyncOp* inOp)
         EEWonNetError("ESReport::RegisterCompletion", theStatus);
 }
 
+// FUNCTION: EXE 0x4d09f9
 // Reports a failed chat send
 void EEWonNet::SendChatCallback(AsyncOp* inOp)
 {
@@ -1383,6 +1437,7 @@ void EEWonNet::SendChatCallback(AsyncOp* inOp)
         EEWonNetError("EEWonNet::SendChatMessage", theStatus);
 }
 
+// FUNCTION: EXE 0x4d0a14
 // Sends a chat line to the room; /i and /u ignore or unignore a user, /t whispers, /r replies to the last whisper
 void EEWonNet::SendChat(const UWideString& inText)
 {
@@ -1482,6 +1537,7 @@ void EEWonNet::SendChat(const UWideString& inText)
     }
 }
 
+// FUNCTION: EXE 0x4d0f8c
 // Converts a multibyte string to a wide string (empty for NULL or "")
 std::wstring EEWonNet::ToWString(const char* inString)
 {
@@ -1496,6 +1552,7 @@ std::wstring EEWonNet::ToWString(const char* inString)
     return theString;
 }
 
+// FUNCTION: EXE 0x4d104d
 // Publishes the joined game's info to its data object and keeps a copy
 void EEWonNet::SetGameInfo(EEWonNetGameInfo& inInfo)
 {
@@ -1512,6 +1569,7 @@ void EEWonNet::SetGameInfo(EEWonNetGameInfo& inInfo)
     this->mGameInfo = inInfo;
 }
 
+// FUNCTION: EXE 0x4d1104
 // Refills the rooms box (games and players per room), keeps the selection and shows the server and totals
 void EEWonNet::UpdateRoomList(EEUICWonNetRoomsBox* inRooms, UITextLabel* inLabel16, UITextLabel* inLabel14)
 {
@@ -1567,6 +1625,7 @@ void EEWonNet::UpdateRoomList(EEUICWonNetRoomsBox* inRooms, UITextLabel* inLabel
     this->mLock->Leave();
 }
 
+// FUNCTION: EXE 0x4d146d
 // Converts a wide string to multibyte into the caller's buffer
 char* EEWonNet::W2A(char* outString, int inSize, const wchar_t* inString, int inLength)
 {
@@ -1582,18 +1641,181 @@ char* EEWonNet::W2A(char* outString, int inSize, const wchar_t* inString, int in
     return outString;
 }
 
+// TEMPLATE: EXE 0x4d14a9
+// (EEWonNet::ToString, the class's inline)
+
+// FUNCTION: EXE 0x4cf7e4
 // Sets the cancel flag it was given (the cancel box of a connect or join)
 static void CancelConnectCallback(UIForm* inForm)
 {
     *(bool*)inForm = true;
 }
 
+// FUNCTION: EXE 0x4d1564
 // Closes back to the main menu (after the lost-connection message)
 static void CloseMessageCallback(UIForm* inForm)
 {
     gUserInterface->CloseForm(gUIManager->GetFormByID(kFormMainMenu));
 }
 
+// TEMPLATE: EXE 0x4cd775
+// TEMPLATE: EXE 0x4cd9ba
+// TEMPLATE: EXE 0x4ce00f
+// TEMPLATE: EXE 0x4ce01c
+// TEMPLATE: EXE 0x4ce3f6
+// TEMPLATE: EXE 0x4d15d2
+// TEMPLATE: EXE 0x4d165a
+// TEMPLATE: EXE 0x4d1685
+// TEMPLATE: EXE 0x4d16d8
+// TEMPLATE: EXE 0x4d1710
+// TEMPLATE: EXE 0x4d1744
+// TEMPLATE: EXE 0x4d182a
+// TEMPLATE: EXE 0x4d1880
+// TEMPLATE: EXE 0x4d18d1
+// TEMPLATE: EXE 0x4d18e5
+// TEMPLATE: EXE 0x4d1921
+// TEMPLATE: EXE 0x4d1a12
+// TEMPLATE: EXE 0x4d1a2e
+// TEMPLATE: EXE 0x4d1ac0
+// TEMPLATE: EXE 0x4d1ba2
+// TEMPLATE: EXE 0x4d1c02
+// TEMPLATE: EXE 0x4d1e5e
+// TEMPLATE: EXE 0x4d1e96
+// TEMPLATE: EXE 0x4d1eea
+// TEMPLATE: EXE 0x4d1fca
+// TEMPLATE: EXE 0x4d20f5
+// TEMPLATE: EXE 0x4d212d
+// TEMPLATE: EXE 0x4d22a4
+// TEMPLATE: EXE 0x4d26e3
+// TEMPLATE: EXE 0x4d299b
+// TEMPLATE: EXE 0x4d2a1e
+// TEMPLATE: EXE 0x4d2b19
+// TEMPLATE: EXE 0x4d2d6c
+// TEMPLATE: EXE 0x4d318f
+// TEMPLATE: EXE 0x4d3445
+// TEMPLATE: EXE 0x4d347f
+// TEMPLATE: EXE 0x4d3613
+// TEMPLATE: EXE 0x4d363e
+// TEMPLATE: EXE 0x4d38f6
+// TEMPLATE: EXE 0x4d3932
+// TEMPLATE: EXE 0x4d3ac6
+// TEMPLATE: EXE 0x4d3b5f
+// TEMPLATE: EXE 0x4d3ba1
+// TEMPLATE: EXE 0x4d3c0c
+// TEMPLATE: EXE 0x4d3c4e
+// TEMPLATE: EXE 0x4d3c92
+// TEMPLATE: EXE 0x4d17ea
+// TEMPLATE: EXE 0x4d2df7
+// TEMPLATE: EXE 0x4d3f4c
+// TEMPLATE: EXE 0x4d3cbd
+// TEMPLATE: EXE 0x4d3cfe
+// TEMPLATE: EXE 0x4d3d40
+// TEMPLATE: EXE 0x4d3d84
+// TEMPLATE: EXE 0x4d3dfd
+// TEMPLATE: EXE 0x4d3f29
+// TEMPLATE: EXE 0x4d3f3b
+// TEMPLATE: EXE 0x4d3f5c
+// TEMPLATE: EXE 0x4d3f9a
+// TEMPLATE: EXE 0x4d3fc7
+// TEMPLATE: EXE 0x4d16ad
+// ??1?$_Tree@GU?$pair@$$CBGV?$SmartPtr@URoutingMemberInfo@WONAPI@@@WONAPI@@@std@@U_Kfn@?$map@GV?$SmartPtr@URoutingMemberInfo@WONAPI@@@WONAPI@@U?$less@G@std@@V?$allocator@U?$pair@$$CBGV?$SmartPtr@URoutingMemberInfo@WONAPI@@@WONAPI@@@std@@@4@@2@U?$less@G@2@V?$allocator@U?$pair@$$CBGV?$SmartPtr@URoutingMemberInfo@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@QAE@XZ
+// TEMPLATE: EXE 0x4d1758
+// ??1?$_Tree@GU?$pair@$$CBGV?$SmartPtr@URoutingGroupInfo@WONAPI@@@WONAPI@@@std@@U_Kfn@?$map@GV?$SmartPtr@URoutingGroupInfo@WONAPI@@@WONAPI@@U?$less@G@std@@V?$allocator@U?$pair@$$CBGV?$SmartPtr@URoutingGroupInfo@WONAPI@@@WONAPI@@@std@@@4@@2@U?$less@G@2@V?$allocator@U?$pair@$$CBGV?$SmartPtr@URoutingGroupInfo@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@QAE@XZ
+// TEMPLATE: EXE 0x4d1783
+// ??4?$_Tree@GU?$pair@$$CBGV?$SmartPtr@URoutingGroupInfo@WONAPI@@@WONAPI@@@std@@U_Kfn@?$map@GV?$SmartPtr@URoutingGroupInfo@WONAPI@@@WONAPI@@U?$less@G@std@@V?$allocator@U?$pair@$$CBGV?$SmartPtr@URoutingGroupInfo@WONAPI@@@WONAPI@@@std@@@4@@2@U?$less@G@2@V?$allocator@U?$pair@$$CBGV?$SmartPtr@URoutingGroupInfo@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@QAEAAV01@ABV01@@Z
+// TEMPLATE: EXE 0x4d17b7
+// ??1?$list@GV?$allocator@G@std@@@std@@QAE@XZ
+// TEMPLATE: EXE 0x4d1985
+// ?clear@?$_Tree@GU?$pair@$$CBGUEEWonNetRoomInfo@@@std@@U_Kfn@?$map@GUEEWonNetRoomInfo@@U?$less@G@std@@V?$allocator@U?$pair@$$CBGUEEWonNetRoomInfo@@@std@@@3@@2@U?$less@G@2@V?$allocator@U?$pair@$$CBGUEEWonNetRoomInfo@@@std@@@2@$0A@@std@@QAEXXZ
+// TEMPLATE: EXE 0x4d1999
+// ?find@?$_Tree@GU?$pair@$$CBGUEEWonNetRoomInfo@@@std@@U_Kfn@?$map@GUEEWonNetRoomInfo@@U?$less@G@std@@V?$allocator@U?$pair@$$CBGUEEWonNetRoomInfo@@@std@@@3@@2@U?$less@G@2@V?$allocator@U?$pair@$$CBGUEEWonNetRoomInfo@@@std@@@2@$0A@@std@@QAE?AViterator@12@ABG@Z
+// TEMPLATE: EXE 0x4d1cbc
+// ?erase@?$_Tree@GU?$pair@$$CBGUEEWonNetRoomInfo@@@std@@U_Kfn@?$map@GUEEWonNetRoomInfo@@U?$less@G@std@@V?$allocator@U?$pair@$$CBGUEEWonNetRoomInfo@@@std@@@3@@2@U?$less@G@2@V?$allocator@U?$pair@$$CBGUEEWonNetRoomInfo@@@std@@@2@$0A@@std@@QAE?AViterator@12@V312@0@Z
+// TEMPLATE: EXE 0x4d1d2d
+// ?_Copy@?$_Tree@GU?$pair@$$CBGV?$SmartPtr@URoutingClientInfo@WONAPI@@@WONAPI@@@std@@U_Kfn@?$map@GV?$SmartPtr@URoutingClientInfo@WONAPI@@@WONAPI@@U?$less@G@std@@V?$allocator@U?$pair@$$CBGV?$SmartPtr@URoutingClientInfo@WONAPI@@@WONAPI@@@std@@@4@@2@U?$less@G@2@V?$allocator@U?$pair@$$CBGV?$SmartPtr@URoutingClientInfo@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@IAEXABV12@@Z
+// TEMPLATE: EXE 0x4d2084
+// ?erase@?$_Tree@GU?$pair@$$CBGUEEWonNetGameInfo@@@std@@U_Kfn@?$map@GUEEWonNetGameInfo@@U?$less@G@std@@V?$allocator@U?$pair@$$CBGUEEWonNetGameInfo@@@std@@@3@@2@U?$less@G@2@V?$allocator@U?$pair@$$CBGUEEWonNetGameInfo@@@std@@@2@$0A@@std@@QAE?AViterator@12@V312@0@Z
+// TEMPLATE: EXE 0x4d2258
+// ??0EEWonNetGameInfo@@QAE@ABU0@@Z
+// TEMPLATE: EXE 0x4d23ef
+// ?erase@?$_Tree@VIPAddr@WONAPI@@U?$pair@$$CBVIPAddr@WONAPI@@K@std@@U_Kfn@?$map@VIPAddr@WONAPI@@KU?$less@VIPAddr@WONAPI@@@std@@V?$allocator@U?$pair@$$CBVIPAddr@WONAPI@@K@std@@@4@@4@U?$less@VIPAddr@WONAPI@@@4@V?$allocator@U?$pair@$$CBVIPAddr@WONAPI@@K@std@@@4@$0A@@std@@QAE?AViterator@12@V312@@Z
+// TEMPLATE: EXE 0x4d26a7
+// ?_Erase@?$_Tree@VIPAddr@WONAPI@@U?$pair@$$CBVIPAddr@WONAPI@@K@std@@U_Kfn@?$map@VIPAddr@WONAPI@@KU?$less@VIPAddr@WONAPI@@@std@@V?$allocator@U?$pair@$$CBVIPAddr@WONAPI@@K@std@@@4@@4@U?$less@VIPAddr@WONAPI@@@4@V?$allocator@U?$pair@$$CBVIPAddr@WONAPI@@K@std@@@4@$0A@@std@@IAEXPAU_Node@12@@Z
+// TEMPLATE: EXE 0x4d3dc5
+// ?_Inc@const_iterator@?$_Tree@VIPAddr@WONAPI@@U?$pair@$$CBVIPAddr@WONAPI@@K@std@@U_Kfn@?$map@VIPAddr@WONAPI@@KU?$less@VIPAddr@WONAPI@@@std@@V?$allocator@U?$pair@$$CBVIPAddr@WONAPI@@K@std@@@4@@4@U?$less@VIPAddr@WONAPI@@@4@V?$allocator@U?$pair@$$CBVIPAddr@WONAPI@@K@std@@@4@$0A@@std@@QAEXXZ
+// TEMPLATE: EXE 0x4d3f19
+// ?_Destroy@std@@YAXPAU?$pair@$$CBVIPAddr@WONAPI@@K@1@@Z
+// TEMPLATE: EXE 0x4d3f7b
+// ?_Construct@std@@YAXPAU?$pair@$$CBGUEEWonNetRoomInfo@@@1@ABU21@@Z
+// TEMPLATE: EXE 0x4ceaec
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4ceb08
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4d15f7
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4d161a
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4d1f0e
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4d1f5e
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4d23b5
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4d2ebc
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4d3be5
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4d3e35
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4d3e63
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4d3e94
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4d3ebc
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4d3ee3
+// (r25pre-won-2: emitted by the DEAD-IN-AOC Initialize; ServerContext / vector<std::string>)
+// TEMPLATE: EXE 0x4d1b31
+// (a map family's member, named by its caller)
+// TEMPLATE: EXE 0x4d1d8d
+// (a map family's member, named by its caller)
+// TEMPLATE: EXE 0x4d1dfe
+// (a map family's member, named by its caller)
+// TEMPLATE: EXE 0x4d21e7
+// (a map family's member, named by its caller)
+// TEMPLATE: EXE 0x4d2a5a
+// (a map family's member, named by its caller)
+// TEMPLATE: EXE 0x4d2add
+// (a map family's member, named by its caller)
+// TEMPLATE: EXE 0x4d2cad
+// (a map family's member, named by its caller)
+// TEMPLATE: EXE 0x4d2d30
+// (a map family's member, named by its caller)
+// TEMPLATE: EXE 0x4cff2a
+// (CDKey's implicit dtor, emitted by the DEAD-IN-AOC Login/LoginCallback)
+// TEMPLATE: EXE 0x4cff46
+// (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
+// TEMPLATE: EXE 0x4cff95
+// (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
+// TEMPLATE: EXE 0x4d157f
+// (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
+// TEMPLATE: EXE 0x4d1a6a
+// (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
+// TEMPLATE: EXE 0x4d1a95
+// (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
+// TEMPLATE: EXE 0x4d22d3
+// (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
+// TEMPLATE: EXE 0x4d2344
+// (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
+// TEMPLATE: EXE 0x4d2e31
+// (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
+// TEMPLATE: EXE 0x4d3af1
+// (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
+// TEMPLATE: EXE 0x4d3b23
+// (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
 void EEWonNet::PlayerJoined()
 {
 }

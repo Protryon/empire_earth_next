@@ -20,6 +20,7 @@ extern bool gShowParseTime;
 extern int gLinesParsed;
 
 namespace WONAPI {
+// FUNCTION: WON 0x007828c0
 // Parses the configuration file, glues its resources and initialises every configured component; on failure
 // returns false with the error text, leaving the resource table, parse-time flag and image caching as set
 bool ComponentConfig::ReadConfig_Unsafe(Component* component,const char* fileName,
@@ -65,6 +66,7 @@ bool ComponentConfig::ReadConfig_Unsafe(Component* component,const char* fileNam
     return true;
 }
 
+// FUNCTION: WON 0x00782cc0
 // Initialises the component from this configuration once, then every child configuration in name order
 void ComponentConfig::InitComponents()
 {
@@ -105,3 +107,7 @@ ComponentConfigInit::ComponentConfigInit(ComponentConfig* theConfig)
     this->mConfig = theConfig;
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x0078aa40
+// (public: __thiscall WONAPI::ComponentConfigInit::ComponentConfigInit(class WONAPI::ComponentConfig *)    [??0ComponentConfigInit@WONAPI@@QAE@PAVCompone)

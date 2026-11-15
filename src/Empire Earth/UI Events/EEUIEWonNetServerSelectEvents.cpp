@@ -63,6 +63,7 @@ long EEUIEWNSSCancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return inForm->GetManager()->Pop();
 }
 
+// FUNCTION: EXE 0x5eb7fb
 // Connects to the WON server selected in the server list (nothing when none or out of range)
 long EEUIEWNSSOk::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -82,6 +83,7 @@ long EEUIEWNSSOk::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
+// FUNCTION: EXE 0x5eb8a7
 // Sets up the WON server list: hooks OK and Cancel, lists each server's display name (or name), selects a lone one
 long EEUIEWNSSOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -111,3 +113,30 @@ long EEUIEWNSSOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         theList->ChangeSelectionIndex(0, true, false);
     return kErrorOK;
 }
+
+// FUNCTION: EXE 0x5ebad1
+// Destroys the server list's cancel event and frees it when asked (scalar deleting destructor)
+// (??_G of EEUIEWNSSCancel, then EEUIEWNSSOk's)
+
+// FUNCTION: EXE 0x5ebafc
+// Destroys the server list's OK event and frees it when asked (scalar deleting destructor)
+
+// FUNCTION: EXE 0x5ebb27
+// Copies a list of WON directory entries
+// (the server list's template COMDATs: list copy ctor, iterator::operator*, begin() const, assign, _Insert(P, F, L),
+// _Assign)
+
+// FUNCTION: EXE 0x5ebb71
+// Returns the directory entry an entry-list iterator points at
+
+// FUNCTION: EXE 0x5ebb77
+// Returns an iterator to the first entry of a WON directory entry list
+
+// FUNCTION: EXE 0x5ebb8b
+// Replaces a WON directory entry list's contents with a copy of another list
+
+// FUNCTION: EXE 0x5ebba0
+// Inserts copies of a range of directory entries into a list before a position
+
+// FUNCTION: EXE 0x5ebbc6
+// Makes a WON directory entry list a copy of a range, reusing its existing nodes

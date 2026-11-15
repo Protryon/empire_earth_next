@@ -88,6 +88,6 @@ public:
     bool mRevealMap;                        // +0x502
 };
 
-extern EEGameState gGameState;
+extern EEGameState gGameState;              // 0x52f678
 
 #endif

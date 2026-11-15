@@ -128,14 +128,14 @@ public:
     void QueueMessage(NEMessage* inMessage);   // 0x153403 (under mSaveGameLock; referenced)
     void QueueUnitSwap(EEComplexUnit* inOld, EEComplexUnit* inNew);   // 0x153c23 (both referenced; processed by 0x1534d1)
     void UpdateAreaEffectsClock();          // 0x153c59 (mF9C += mF98; every 2000: gAEManager)
-    void DrainInput();
+    void DrainInput();                      // 0x15355c
     void CheckShiftMode();                  // 0x153f47 (Virtual20's; provisional name)
     void ReportStatistics();                // 0x153836 (Virtual20's; provisional name)
     void ProcessUnitSwaps();                // 0x1534d1 (the queued unit swaps: every player's Virtual9C, then each swap)
     // the thread messages (provisional names)
-    long PostAutoSave();
-    long PostShowDialogMessage();
-    long PostInit();
+    long PostAutoSave();                    // 0x153b8d
+    long PostShowDialogMessage();           // 0x153ba6
+    long PostInit();                        // 0x153bbf
     // inline (COMDAT 0x761b5, first emitted by EECPCombatManager.cpp): the queued unit swaps (mSound2Index7.size())
     // (provisional name)
     unsigned long GetNumUnitSwaps() const { return this->mUnitSwaps.size(); }
@@ -165,7 +165,7 @@ public:
     unsigned long mLastOutOfSynchChecksum;  // GetOutOfSynchChecksum's last result (written, never read)
 };
 
-extern EEPhysics* gPhysics;
+extern EEPhysics* gPhysics;                 // 0x5318f0 (provisional name)
 extern UString gPhysicsThreadName;          // 0x52a270 (RTSPhysics's thread name)
 // port, TEST ONLY: the unit EEPhysics::UpdateUnits is stepping (NULL outside the loop); EE-SIM's --rng-trace names it
 extern EEComplexUnit* gPhysicsSteppingUnit;

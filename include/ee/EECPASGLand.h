@@ -32,7 +32,7 @@ struct EECPASGLandPathPoint {
 
 class EECPASGLand : public EECPAttackSubGroup {
 public:
-    EECPASGLand(EECPAttackGroup* inGroup, long inKind);
+    EECPASGLand(EECPAttackGroup* inGroup, long inKind);   // 0x45ee9
     virtual ~EECPASGLand();                 // +0x00 (0x45f80)
     virtual void SetTask(const EECPAGTask& inTask);     // +0x14 0x46065
     // +0x1c 0x46094

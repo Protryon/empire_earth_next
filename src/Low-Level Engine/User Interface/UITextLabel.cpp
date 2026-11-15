@@ -91,6 +91,7 @@ struct UITextLabelRust {
 };
 typedef EeUiLabelCall C;
 
+// FUNCTION: LLE 0x1007e579
 // Creates a text label (type 0 one line, type 1 multi-line with a scroll bar area) and sets its initial text
 UITextLabel::UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle,
                          UIForm* inForm, unsigned long inLabelType, unsigned long inIndex,

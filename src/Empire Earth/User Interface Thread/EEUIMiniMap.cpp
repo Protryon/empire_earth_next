@@ -41,7 +41,7 @@
 #include "rust/ee_gfx.h"
 #include "rust/ee_screens.h"   // mini_map.rs
 
-extern unsigned long& gTexturePixelDepth;
+extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 
 // (EEMSendFlare's inline ctor: ee/EEMessage.h)
 
@@ -53,8 +53,8 @@ extern unsigned long& gTexturePixelDepth;
 static GEBitmap* sMapBitmap;                // 0x565328 the terrain texture
 static GEBitmap* sWorldBitmap;              // 0x56532c the units' texture (twice the scale)
 static GEBitmap* sFlareBitmap;              // 0x565330 "textures\Flare"
-GERectangle EEUIMiniMap::sBounds;
-static GEColor sFlareColor(1.0f, 0.0f, 0.0f);
+GERectangle EEUIMiniMap::sBounds;           // 0x565318
+static GEColor sFlareColor(1.0f, 0.0f, 0.0f);   // 0x565308
 static GEColor sFlareBlinkColor;            // 0x5652f8 (1, 1, 1)
 
 // gMiniMap's transformations' 2D entries (m00 m01 m03 m10 m11 m13) for ee_screens mini_map.rs
@@ -68,6 +68,20 @@ static void EEUIMiniMapMatrix(const GETransformation& inTransformation, float ou
     outMatrix[5] = inTransformation.mMatrix[1][3];
 }
 
+// SYNTHETIC: EXE 0x6753b1
+// SYNTHETIC: EXE 0x6753bb
+// SYNTHETIC: EXE 0x6753dc
+// SYNTHETIC: EXE 0x6753e8
+// SYNTHETIC: EXE 0x6753f9
+// SYNTHETIC: EXE 0x675403
+// SYNTHETIC: EXE 0x67541c
+// SYNTHETIC: EXE 0x675428
+// SYNTHETIC: EXE 0x675429
+// SYNTHETIC: EXE 0x675433
+// SYNTHETIC: EXE 0x67544c
+// SYNTHETIC: EXE 0x675458
+
+// FUNCTION: EXE 0x675459
 // Creates the mini map control with its click action, the map drawn inside its border
 EEUIMiniMap::EEUIMiniMap(const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inId,
                          unsigned long inBorderThickness)
@@ -85,6 +99,7 @@ EEUIMiniMap::EEUIMiniMap(const GERectangle& inRectangle, UIForm* inForm, unsigne
     this->mFlareBlink = true;
 }
 
+// FUNCTION: EXE 0x675523
 // Releases the mouse after a right click on the mini map
 long EEUIMiniMap::MouseRButtonUp()
 {
@@ -92,6 +107,10 @@ long EEUIMiniMap::MouseRButtonUp()
     return 0;
 }
 
+// SYNTHETIC: EXE 0x67552b
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x675547
 // Destroys the mini map control and its click action
 EEUIMiniMap::~EEUIMiniMap()
 {
@@ -99,6 +118,7 @@ EEUIMiniMap::~EEUIMiniMap()
         this->mAction->Dereference();
 }
 
+// FUNCTION: EXE 0x675585
 // Snapshots the mini map for drawing: refreshes the units texture, scales the map to the window, places the
 // camera outline and the blinking flare (redrawing the screen when the flare leaves the map's inner area); the
 // numbers are ee_screens mini_map.rs', the C++ reads and applies them in the original's order
@@ -157,6 +177,7 @@ long EEUIMiniMap::CopyData()
     return UIControl::CopyData();
 }
 
+// FUNCTION: EXE 0x675a2d
 // Creates the terrain, units and flare bitmaps and loads the flare texture
 void EEUIMiniMap::LoadMedia()
 {
@@ -183,6 +204,7 @@ void EEUIMiniMap::LoadMedia()
     sFlareBitmap->SetTexture(theTexture, gScreenIndex);
 }
 
+// FUNCTION: EXE 0x675b67
 // Releases the terrain, units and flare bitmaps
 void EEUIMiniMap::UnloadMedia()
 {
@@ -194,6 +216,7 @@ void EEUIMiniMap::UnloadMedia()
     sFlareBitmap = NULL;
 }
 
+// FUNCTION: EXE 0x675ba1
 // Draws the terrain, the units, the flare and the camera outline clipped to the map: ee_screens mini_map.rs' plan,
 // executed in its order (the result is the last bitmap's or line's draw)
 long EEUIMiniMap::DrawPolygons()
@@ -237,6 +260,7 @@ long EEUIMiniMap::DrawPolygons()
     return theResult;
 }
 
+// FUNCTION: EXE 0x675e45
 // On a right press, posts a mini map action (mode 1) at the clicked map point, clamped to the map
 long EEUIMiniMap::MouseRButtonDown()
 {
@@ -260,6 +284,7 @@ long EEUIMiniMap::MouseRButtonDown()
 
 // NEAR: the original's frame has a zeroed dword at -4 (not identified) and builds the message's tile in the
 // tile's slot after operator new
+// ICF-FOLDED: EXE 0x65ae3b
 // Captures the mouse on a left press (folded with EEUICUnitIconBar::MouseRButtonDown in the original)
 long EEUIMiniMap::MouseLButtonDown()
 {
@@ -267,6 +292,7 @@ long EEUIMiniMap::MouseLButtonDown()
     return 0;
 }
 
+// FUNCTION: EXE 0x675f72
 // On a left release: in flare mode sends a flare at the clicked tile and leaves flare mode, otherwise centres
 // the camera there (ee_screens mini_map.rs)
 long EEUIMiniMap::MouseLButtonUp()
@@ -274,6 +300,7 @@ long EEUIMiniMap::MouseLButtonUp()
     return (long)ee_screens_mini_map_mouse_l_up(this);
 }
 
+// FUNCTION: EXE 0x6760af
 // Keeps centring the camera while the left button drags over the mini map (not in flare mode) (ee_screens
 // mini_map.rs)
 long EEUIMiniMap::MouseMove(const GE2DPoint& inLocation)
@@ -321,6 +348,7 @@ int64_t EEUIMiniMap::HostOp(EEUIMiniMap* inMap, uint32_t inOp, int64_t inA, int6
     return 0;
 }
 
+// FUNCTION: EXE 0x6760ec
 // Centres the camera on the map point under the mouse, clamped to the map
 void EEUIMiniMap::CenterCamera()
 {
@@ -337,6 +365,7 @@ void EEUIMiniMap::CenterCamera()
     gUserInterface->PostAction(theAction);
 }
 
+// FUNCTION: EXE 0x6761f6
 // Moves the mini map control and its map origin
 void EEUIMiniMap::SetLocation(const GE2DPoint& inLocation)
 {
@@ -346,6 +375,7 @@ void EEUIMiniMap::SetLocation(const GE2DPoint& inLocation)
     this->mOrigin.SetY(inLocation.GetY() + theBorder);
 }
 
+// FUNCTION: EXE 0x676236
 // Points the mini map bitmaps at a new map's terrain and units textures and recomputes the map bounds (the numbers:
 // ee_screens mini_map.rs)
 void EEUIMiniMap::Update(EEMiniMap* inMiniMap)
@@ -379,3 +409,7 @@ void EEUIMiniMap::Update(EEMiniMap* inMiniMap)
     if (sWorldBitmap != NULL)
         sWorldBitmap->SetTexture(inMiniMap->mWorldTexture, gScreenIndex);
 }
+
+// FUNCTION: EXE 0x676420
+// Creates the mini map click action
+// (EEAMiniMap's inline ctor, emitted after its first user, the ctor)

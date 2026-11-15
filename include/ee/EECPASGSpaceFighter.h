@@ -11,7 +11,7 @@
 
 class EECPASGSpaceFighter : public EECPASGSpaceship {
 public:
-    EECPASGSpaceFighter(EECPAttackGroup* inGroup, long inKind);
+    EECPASGSpaceFighter(EECPAttackGroup* inGroup, long inKind);   // 0x4fd61
     virtual ~EECPASGSpaceFighter();         // +0x00 (0x4fd7d)
     // +0x1c 0x4fda4
     virtual void AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUnit* inTarget, EETileCoordinate* inTile);

@@ -27,23 +27,30 @@ const UString EEPMultiplayerHelper::sSNessLastCt("EEPMultiplayerHelper-sNessLast
 const UString EEPMultiplayerHelper::sNessCt("EEPMultiplayerHelper-NessCt");
 const UString EEPMultiplayerHelper::sNessPt("EEPMultiplayerHelper-NessPt");
 
+// FUNCTION: EXE 0x54ae4d
 // Creates the saved multiplayer-state chunk
 EEPMultiplayerHelper::EEPMultiplayerHelper()
     : FSPersistent(kPersistentMultiplayer)
 {
 }
 
+// SYNTHETIC: EXE 0x54ae5d
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x54ae79
 // Destroys the saved multiplayer-state chunk
 EEPMultiplayerHelper::~EEPMultiplayerHelper()
 {
 }
 
+// FUNCTION: EXE 0x54ae87
 // Creates an empty saved multiplayer-state chunk (persistent factory)
 FSPersistent* EEPMultiplayerHelper::CreateDefault() const
 {
     return new EEPMultiplayerHelper;
 }
 
+// FUNCTION: EXE 0x54ae9e
 // Reads the physics state and the eight network tick counters; restores only the server's or client's physics tick
 // from them (the other counters are read and dropped); returns the first read error
 long EEPMultiplayerHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -95,6 +102,7 @@ long EEPMultiplayerHelper::Load(unsigned long inMajorVersion, unsigned long inMi
     return theResult;
 }
 
+// FUNCTION: EXE 0x54aff1
 // Writes the physics state and the server's or client's network tick counters to a save (nothing for versions up to
 // 0.12); returns the first write error
 long EEPMultiplayerHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -154,3 +162,36 @@ long EEPMultiplayerHelper::Save(unsigned long inMajorVersion, unsigned long inMi
         return theResult;
     return outFile.Write(theNessPt);
 }
+
+// SYNTHETIC: EXE 0x54ac35
+// SYNTHETIC: EXE 0x54ac3f
+// SYNTHETIC: EXE 0x54ac50
+// SYNTHETIC: EXE 0x54ac5c
+// SYNTHETIC: EXE 0x54ac78
+// SYNTHETIC: EXE 0x54ac82
+// SYNTHETIC: EXE 0x54ac93
+// SYNTHETIC: EXE 0x54ac9f
+// SYNTHETIC: EXE 0x54acbb
+// SYNTHETIC: EXE 0x54acc5
+// SYNTHETIC: EXE 0x54acd6
+// SYNTHETIC: EXE 0x54ace2
+// SYNTHETIC: EXE 0x54acfe
+// SYNTHETIC: EXE 0x54ad08
+// SYNTHETIC: EXE 0x54ad19
+// SYNTHETIC: EXE 0x54ad25
+// SYNTHETIC: EXE 0x54ad41
+// SYNTHETIC: EXE 0x54ad4b
+// SYNTHETIC: EXE 0x54ad5c
+// SYNTHETIC: EXE 0x54ad68
+// SYNTHETIC: EXE 0x54ad84
+// SYNTHETIC: EXE 0x54ad8e
+// SYNTHETIC: EXE 0x54ad9f
+// SYNTHETIC: EXE 0x54adab
+// SYNTHETIC: EXE 0x54adc7
+// SYNTHETIC: EXE 0x54add1
+// SYNTHETIC: EXE 0x54ade2
+// SYNTHETIC: EXE 0x54adee
+// SYNTHETIC: EXE 0x54ae0a
+// SYNTHETIC: EXE 0x54ae14
+// SYNTHETIC: EXE 0x54ae25
+// SYNTHETIC: EXE 0x54ae31

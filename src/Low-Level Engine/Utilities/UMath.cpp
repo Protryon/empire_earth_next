@@ -13,47 +13,57 @@
 #include "rust/ee_ge.h"
 #include "rust/ee_util.h"
 
+// FUNCTION: LLE 0x10080c07
 // Does nothing (the square root table is not built in the retail engine)
 void UMFastMath::BuildSqrtTable()
 {
 }
 
+// FUNCTION: LLE 0x10080c08
 // Returns the arc cosine from a lookup table, or a series near 1; clamps below -1, returns 0 above 1
 float UMArcCos(float inValue)
 {
     return ee_ge_um_arccos(inValue);
 }
 
+// FUNCTION: LLE 0x10080ce8
 // Returns the arc tangent by a short power series, folding values outside -1..1 back into it
 float UMArcTan(float inValue)
 {
     return ee_ge_um_arctan(inValue);
 }
 
+// FUNCTION: LLE 0x10080dff
 // Returns the angle of the vector (y, x) in -pi..pi from the arc cosine of its normalised x
 float UMArcTan2(float inY, float inX)
 {
     return ee_ge_um_arctan2(inY, inX);
 }
 
+// FUNCTION: LLE 0x10080e6c
 // Returns the cosine of an angle from a lookup table after wrapping it into -pi..pi
 float UMCos(float inAngle)
 {
     return ee_ge_um_cos(inAngle);
 }
 
+// FUNCTION: LLE 0x10080ed1
 // Returns the FPU precision setting (24, 53 or 64 bits): 53 without an x87 (ee_util fp.rs)
 unsigned long UMGetFloatingPointPrecision() { return ee_util_fp_precision(); }
 
+// FUNCTION: LLE 0x10080f02
 // Returns the FPU rounding mode (float.h's _RC_* value)
 unsigned long UMGetFloatingPointRoundingMode() { return ee_util_fp_rounding(); }
 
+// FUNCTION: LLE 0x10080fab
 // Sets the FPU precision (nothing to set without an x87)
 void UMSetFloatingPointPrecision(unsigned long inPrecision) { ee_util_fp_set_precision(inPrecision); }
 
+// FUNCTION: LLE 0x10080fbd
 // Sets the FPU rounding mode
 void UMSetFloatingPointRoundingMode(unsigned long inMode) { ee_util_fp_set_rounding(inMode); }
 
+// FUNCTION: LLE 0x10080fcf
 // Returns the tangent from the table sine and cosine; plus or minus FLT_MAX where the cosine is 0
 float UMTan(float inAngle)
 {

@@ -10,7 +10,7 @@ public:
 protected:
     // 0x10058e86: the vptr is stored before mType (assigned in the body)
     UIEntity(unsigned long inType) { this->mType = inType; }
-    virtual ~UIEntity() {}
+    virtual ~UIEntity() {}                  // 0x10058e98
 
     unsigned long mType;                    // +0x04
 };

@@ -13,6 +13,7 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
+// FUNCTION: WON 0x00798440
 // Handles the frame component skin keys BORDERS (left, top, right, bottom) and IMAGE; passes other keys on
 bool WONFrameComponentConfig::Virtual24(const std::string& key)
 {
@@ -27,6 +28,7 @@ bool WONFrameComponentConfig::Virtual24(const std::string& key)
     } else return ComponentConfig::Virtual24(key);
     return true;
 }
+// FUNCTION: WON 0x00798590
 // Returns the frame paddings LEFTPAD, RIGHTPAD, TOPPAD, BOTTOMPAD, HORZPAD and VERTPAD; asks the base config otherwise
 bool WONFrameComponentConfig::GetNamedValue(const std::string& key,int& value)
 {
@@ -45,6 +47,7 @@ bool WONFrameComponentConfig::GetNamedValue(const std::string& key,int& value)
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x00796ba0
 // Binds the config to the frame component it configures
 void WONFrameComponentConfig::SetComponent(Component* component) { ComponentConfig::SetComponent(component); this->mFrameComponent=static_cast<WONFrameComponent*>(component); }
 }

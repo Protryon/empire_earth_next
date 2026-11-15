@@ -38,12 +38,14 @@ void TagValueSink(void* inContext, const char* inValue)
 
 }   // namespace
 
+// FUNCTION: LLE 0x10004e29
 // Creates an archive with no file set and nothing mapped
 FSArchive::FSArchive()
     : mTable(ee_fs_archive_new()), mMapping(NULL), mView(NULL), mViewLength(0)
 {
 }
 
+// FUNCTION: LLE 0x10004e71
 // Creates an archive for the given archive file, not yet opened
 FSArchive::FSArchive(const FSFileSpec& inFile)
     : mTable(ee_fs_archive_new()), mMapping(NULL), mView(NULL), mViewLength(0)
@@ -58,6 +60,7 @@ FSArchive::FSArchive(const FSArchive& inArchive)
 {
 }
 
+// FUNCTION: LLE 0x10004ec8
 // Destroys the archive, unmapping and closing it
 FSArchive::~FSArchive()
 {
@@ -66,6 +69,7 @@ FSArchive::~FSArchive()
     this->mTable = NULL;
 }
 
+// FUNCTION: LLE 0x10004ef0
 // Closes the archive and takes over the other archive's file name (not its contents)
 FSArchive& FSArchive::operator=(const FSArchive& inArchive)
 {
@@ -74,6 +78,7 @@ FSArchive& FSArchive::operator=(const FSArchive& inArchive)
     return *this;
 }
 
+// FUNCTION: LLE 0x10004f0e
 // Adds every file under a directory that matches a pattern (recursing if asked) to the table with its packed length
 long FSArchive::BuildFAT(const FSFileSpec& inRoot, const FSFileSpec& inDirectory, const UString& inPattern,
                          unsigned long inCompression, bool inRecursive)
@@ -108,6 +113,7 @@ long FSArchive::BuildFAT(const FSFileSpec& inRoot, const FSFileSpec& inDirectory
     return theResult;
 }
 
+// FUNCTION: LLE 0x100050c4
 // Adds the listed files under a root to the file table with their compressed lengths
 long FSArchive::BuildFAT(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression)
 {
@@ -126,6 +132,7 @@ long FSArchive::BuildFAT(const FSFileSpec& inRoot, std::vector<UString>& inFiles
     return kErrorOK;
 }
 
+// FUNCTION: LLE 0x100051fe
 // Closes the archive, dropping its file table and tags
 long FSArchive::Close()
 {
@@ -134,6 +141,7 @@ long FSArchive::Close()
     return kErrorOK;
 }
 
+// FUNCTION: LLE 0x10005212
 // Returns the compressed length of a file (0 when it cannot be read)
 unsigned long FSArchive::ComputeCompressedFileLength(const FSFileSpec& inFile, unsigned long inCompression)
 {
@@ -154,6 +162,7 @@ unsigned long FSArchive::ComputeCompressedFileLength(const FSFileSpec& inFile, u
     return theCompressedLength;
 }
 
+// FUNCTION: LLE 0x100052cd
 // Returns a file's path relative to the archive root
 void FSArchive::ComputeFATFilename(const FSFileSpec& inRoot, const FSFileSpec& inFile, UString& outName)
 {
@@ -167,6 +176,7 @@ void FSArchive::ComputeFATFilename(const FSFileSpec& inRoot, const FSFileSpec& i
     outName.Copy(theFilename, theOffset, theFilename.GetLength() - theOffset, 0, false);
 }
 
+// FUNCTION: LLE 0x10005429
 // Builds an archive from the files under a root matching a pattern, writes it, reopens it and checks the offsets
 long FSArchive::Create(const FSFileSpec& inRoot, const UString& inPattern, unsigned long inCompression, bool inRecursive)
 {
@@ -177,6 +187,7 @@ long FSArchive::Create(const FSFileSpec& inRoot, const UString& inPattern, unsig
     return this->FinishCreate(inRoot, inCompression);
 }
 
+// FUNCTION: LLE 0x10005618
 // Builds an archive from a list of files under a root, writes it, reopens it and checks the offsets
 long FSArchive::Create(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression)
 {
@@ -235,6 +246,7 @@ void FSArchive::CheckFATAfterCreate()
     }
 }
 
+// FUNCTION: LLE 0x10005801
 // Extracts every archived file below a destination directory, creating directories as needed
 long FSArchive::ExtractAll(const FSFileSpec& inDestination)
 {
@@ -289,6 +301,7 @@ long FSArchive::ExtractAll(const FSFileSpec& inDestination)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10005a79
 // Finds a file by name (case-insensitive) and returns it decompressed as a memory file
 long FSArchive::FindFile(const UString& inName, FSMemoryFile*& outFile)
 {
@@ -305,12 +318,14 @@ long FSArchive::FindFile(const UString& inName, FSMemoryFile*& outFile)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10005b4d
 // Returns the value of a named archive tag, or kErrorNotFound
 long FSArchive::GetTag(const UWideString& inName, UWideString& outValue) const
 {
     return ee_fs_archive_get_tag(this->mTable, (const char*)inName, TagValueSink, &outValue);
 }
 
+// FUNCTION: LLE 0x10005b81
 // Lists archived files matching a '*' pattern
 long FSArchive::ListFiles(const UString& inPattern, std::set<UString>& outFiles, bool inClear)
 {
@@ -320,6 +335,7 @@ long FSArchive::ListFiles(const UString& inPattern, std::set<UString>& outFiles,
     return kErrorOK;
 }
 
+// FUNCTION: LLE 0x10005c58
 // Opens the archive for reading: checks the header, reads the file and tag tables, maps the file into memory
 long FSArchive::Open()
 {
@@ -356,6 +372,7 @@ long FSArchive::Open()
     return theResult;
 }
 
+// FUNCTION: LLE 0x10005e83
 // Returns one archived file as a new memory file, decompressing it when it is compressed
 long FSArchive::ReadFATFile(const ArchivedFile& inFile, FSMemoryFile*& outFile)
 {
@@ -365,6 +382,7 @@ long FSArchive::ReadFATFile(const ArchivedFile& inFile, FSMemoryFile*& outFile)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10005fa3
 // Copies a whole file into a memory file
 long FSArchive::ReadIntoMemoryFile(FSFileSpec& inFile, FSMemoryFile& outFile)
 {
@@ -379,6 +397,7 @@ long FSArchive::ReadIntoMemoryFile(FSFileSpec& inFile, FSMemoryFile& outFile)
     return theResult;
 }
 
+// FUNCTION: LLE 0x1000608e
 // Unmaps the archive view, closes the archive file and empties the file table
 void FSArchive::Reset()
 {
@@ -392,6 +411,7 @@ void FSArchive::Reset()
     ee_fs_archive_clear_fat(this->mTable);
 }
 
+// FUNCTION: LLE 0x100060c8
 // Closes the archive and points it at another archive file
 long FSArchive::SetArchive(const FSFileSpec& inFile)
 {
@@ -400,6 +420,7 @@ long FSArchive::SetArchive(const FSFileSpec& inFile)
     return kErrorOK;
 }
 
+// FUNCTION: LLE 0x1000612f
 // Sets a named tag's value; an empty value removes the tag
 long FSArchive::SetTag(const UWideString& inName, const UWideString& inValue)
 {
@@ -407,6 +428,7 @@ long FSArchive::SetTag(const UWideString& inName, const UWideString& inValue)
     return kErrorOK;
 }
 
+// FUNCTION: LLE 0x1000626d
 // Writes every listed file, compressed, at its planned offset in the archive
 long FSArchive::WriteFATFiles(const FSFileSpec& inRoot, unsigned long inCompression)
 {
@@ -460,11 +482,45 @@ long FSArchive::WriteFATFiles(const FSFileSpec& inRoot, unsigned long inCompress
 // functions come from the exports (local names provisional).
 
 
+// Compiler-generated for this unit (names in analysis/lle/names.txt):
+// TEMPLATE: LLE 0x1000b1c0
+// TEMPLATE: LLE 0x1000b217
+// TEMPLATE: LLE 0x1000b304
+// TEMPLATE: LLE 0x1000b35e
+// TEMPLATE: LLE 0x1000b6f8
+// TEMPLATE: LLE 0x1000bac1
+// SYNTHETIC: LLE 0x1000a880
+// TEMPLATE: LLE 0x1000b18d
+// TEMPLATE: LLE 0x1000b2c6
+// TEMPLATE: LLE 0x1000b40d
+// TEMPLATE: LLE 0x1000b763
+// TEMPLATE: LLE 0x1000b79a
+// TEMPLATE: LLE 0x1000b7d3
+// TEMPLATE: LLE 0x1000bb2c
+// TEMPLATE: LLE 0x1000bb66
+// TEMPLATE: LLE 0x1000bb9f
+// TEMPLATE: LLE 0x1000bbca
+// TEMPLATE: LLE 0x1000bbf5
+// TEMPLATE: LLE 0x1000bc0c
+// TEMPLATE: LLE 0x1000bc35
+// TEMPLATE: LLE 0x1000bc5e
+// TEMPLATE: LLE 0x1000bc8a
+// TEMPLATE: LLE 0x1000bca7
+// TEMPLATE: LLE 0x1000bcd3
+// TEMPLATE: LLE 0x1000bcf7
+// TEMPLATE: LLE 0x1000bd23
+// TEMPLATE: LLE 0x1000bd40
+// TEMPLATE: LLE 0x1000bd6c
+// SYNTHETIC: LLE 0x1000bd90
+// SYNTHETIC: LLE 0x1000bda2
+
+// FUNCTION: LLE 0x1000a843
 // Creates an empty search path
 FSPath::FSPath()
 {
 }
 
+// FUNCTION: LLE 0x1000a8da
 // Creates a copy of a search path, adding (and reopening) each of its archives and directories in order
 FSPath::FSPath(const FSPath& inPath)
 {
@@ -475,11 +531,13 @@ FSPath::FSPath(const FSPath& inPath)
         this->AddDirectory(inPath.mDirectories[i], true);
 }
 
+// FUNCTION: LLE 0x1000a984
 // Destroys the search path (members only)
 FSPath::~FSPath()
 {
 }
 
+// FUNCTION: LLE 0x1000a9a5
 // Replaces the path's archives and directories with copies of another path's, in order
 FSPath& FSPath::operator=(const FSPath& inPath)
 {
@@ -493,6 +551,7 @@ FSPath& FSPath::operator=(const FSPath& inPath)
     return *this;
 }
 
+// FUNCTION: LLE 0x1000aa30
 // Adds an archive (appended, else first): closes every archive, adds the new one, then reopens them all
 void FSPath::AddArchive(const FSArchive& inArchive, bool inAppend)
 {
@@ -514,6 +573,7 @@ void FSPath::AddArchive(const FSArchive& inArchive, bool inAppend)
         this->mArchives[i].Open();
 }
 
+// FUNCTION: LLE 0x1000ab27
 // Adds a directory to the path, appended or in front
 void FSPath::AddDirectory(const FSFileSpec& inDirectory, bool inAppend)
 {
@@ -525,6 +585,7 @@ void FSPath::AddDirectory(const FSFileSpec& inDirectory, bool inAppend)
         this->mDirectories.push_back(inDirectory);
 }
 
+// FUNCTION: LLE 0x1000ab85
 // Returns whether the named file is on the path (kErrorOK), discarding the found file
 long FSPath::FindFile(const UString& inName)
 {
@@ -535,6 +596,7 @@ long FSPath::FindFile(const UString& inName)
     return theResult;
 }
 
+// FUNCTION: LLE 0x1000abcb
 // Returns whether the named file (wide name) is on the path (kErrorOK), discarding the found file
 long FSPath::FindFile(const UWideString& inName)
 {
@@ -545,6 +607,7 @@ long FSPath::FindFile(const UWideString& inName)
     return theResult;
 }
 
+// FUNCTION: LLE 0x1000ac15
 // Finds the named file on the path; returns it as a new file spec the caller deletes
 long FSPath::FindFile(const UString& inName, FSFileSpec*& outFile)
 {
@@ -552,6 +615,7 @@ long FSPath::FindFile(const UString& inName, FSFileSpec*& outFile)
     return this->FindFile(inName, outFile, theDirectory);
 }
 
+// FUNCTION: LLE 0x1000ac48
 // Finds a file in the directories, then the archives: returns a new file spec (an FSMemoryFile from an archive)
 // and, in outDirectory, the found file itself or the archive file it came from
 long FSPath::FindFile(const UString& inName, FSFileSpec*& outFile, FSFileSpec& outDirectory)
@@ -586,12 +650,14 @@ long FSPath::FindFile(const UString& inName, FSFileSpec*& outFile, FSFileSpec& o
     return theResult;
 }
 
+// FUNCTION: LLE 0x1000ad7a
 // Returns the archive at an index (unchecked)
 const FSArchive& FSPath::GetArchive(unsigned long inIndex) const
 {
     return this->mArchives[inIndex];
 }
 
+// FUNCTION: LLE 0x1000ad89
 // Copies the archive at an index to outArchive; kErrorBeyondEnd past the last one
 long FSPath::GetArchive(unsigned long inIndex, FSArchive& outArchive) const
 {
@@ -602,6 +668,7 @@ long FSPath::GetArchive(unsigned long inIndex, FSArchive& outArchive) const
     return kErrorBeyondEnd;
 }
 
+// FUNCTION: LLE 0x1000adc1
 // Copies the directory at an index to outDirectory; kErrorBeyondEnd past the last one
 long FSPath::GetDirectory(unsigned long inIndex, FSFileSpec& outDirectory) const
 {
@@ -612,6 +679,7 @@ long FSPath::GetDirectory(unsigned long inIndex, FSFileSpec& outDirectory) const
     return kErrorBeyondEnd;
 }
 
+// FUNCTION: LLE 0x1000adfa
 // Sets outArchived to whether the named file comes from an archive rather than a directory; returns whether the
 // file was found
 bool FSPath::GetFileArchiveStatus(const UString& inName, bool& outArchived)
@@ -629,6 +697,7 @@ bool FSPath::GetFileArchiveStatus(const UString& inName, bool& outArchived)
     return true;
 }
 
+// FUNCTION: LLE 0x1000aea1
 // Wide-name form of GetFileArchiveStatus
 bool FSPath::GetFileArchiveStatus(const UWideString& inName, bool& outArchived)
 {
@@ -636,6 +705,7 @@ bool FSPath::GetFileArchiveStatus(const UWideString& inName, bool& outArchived)
     return this->GetFileArchiveStatus(theName, outArchived);
 }
 
+// FUNCTION: LLE 0x1000aed9
 // Collects the names of the files matching a pattern from every archive and directory (relative to the directory);
 // returns the last search's result, which is the end-of-search code when the path has directories
 long FSPath::ListFiles(const UString& inPattern, std::set<UString>& outFiles)
@@ -666,6 +736,7 @@ long FSPath::ListFiles(const UString& inPattern, std::set<UString>& outFiles)
     return theResult;
 }
 
+// FUNCTION: LLE 0x1000b0cd
 // Closes and removes the archive at an index; kErrorBeyondEnd past the last one
 long FSPath::RemoveArchive(unsigned long inIndex)
 {
@@ -677,6 +748,7 @@ long FSPath::RemoveArchive(unsigned long inIndex)
     return kErrorBeyondEnd;
 }
 
+// FUNCTION: LLE 0x1000b136
 // Removes the directory at an index; kErrorBeyondEnd past the last one
 long FSPath::RemoveDirectory(unsigned long inIndex)
 {
@@ -686,3 +758,12 @@ long FSPath::RemoveDirectory(unsigned long inIndex)
     }
     return kErrorBeyondEnd;
 }
+
+// Vector COMDATs left ambiguous by match_templates (byte-identical across the two element types except for
+// their callees):
+// TEMPLATE: LLE 0x1000b194
+// TEMPLATE: LLE 0x1000b28b
+// TEMPLATE: LLE 0x1000b2d8
+// TEMPLATE: LLE 0x1000b3d2
+// TEMPLATE: LLE 0x1000b422
+// TEMPLATE: LLE 0x1000b7e7

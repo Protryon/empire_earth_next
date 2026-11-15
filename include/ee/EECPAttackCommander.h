@@ -27,19 +27,19 @@ public:
     EECPAttackSubGroup* FindHolder(EEUnit* inUnit);
 
     // (EECPCombatManager.cpp's calls; provisional names; argument types inferred)
-    EECPAttackCommander(EEComputerPlayer* inPlayer, EECPPersonnel* inPersonnel, EECPIntelligence* inIntelligence);
+    EECPAttackCommander(EEComputerPlayer* inPlayer, EECPPersonnel* inPersonnel, EECPIntelligence* inIntelligence);   // 0x5198e
     bool Offer(EEComplexUnit* inOld, EEComplexUnit* inUnit);     // 0x51a45 (ret 8): any group's 0x54829 (the last first)
     void TargetPlayerNotice(EEPlayer* inPlayer, bool inFlag); // 0x51e14 (ret 8): each group's 0x55cdd, then 0x51e61(+0x24)
-    void DeleteGroups();
+    void DeleteGroups();                    // 0x51ef0
     void CollectDefendingUnits(std::vector<EEComplexUnit*>& inUnits);  // 0x52060 (ret 4): each group with mContinentID == 0: 0x56b35
     bool KeepsUnit(EEComplexUnit* inUnit);  // 0x520bd (ret 4): any group's 0x56caf (the last first)
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    void UpdateGroups();
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x520ff
+    void UpdateGroups();                    // 0x521d1
     void UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps);  // 0x5220a (ret 4): each group's ReplaceUnit(old, new)
     bool ReleaseFromAreaGroups(EEComplexUnit* inUnit);  // 0x52283 (ret 4; returns the first group's 0x577d4 that is true)
-    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
-    bool RemoveUnit(EEUnit* inUnit);
+    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);   // 0x522ec
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // 0x52337
+    bool RemoveUnit(EEUnit* inUnit);        // 0x523b0 (ret 4)
     unsigned long ListUnit(EEComplexUnit* inUnit, std::vector<EECPAttackSubGroup*>& outGroups);  // 0x51fc0 (ret 8; returns outGroups.size())
     // (EECPDefenseCommander.cpp's calls; provisional names): a new attack group for inTask from a default
     // strategy (0x51bb9, ret 8) or from inStrategy (0x51d8e, ret 0xc; the group's unit ids into outUnitIDs)
@@ -53,7 +53,7 @@ public:
             if (inFilter(*(this->mGroups.begin() + i)))
                 (*(this->mGroups.begin() + i))->Collect(outGroups, inFilter);
     }
-    void Update(unsigned long inTime);
+    void Update(unsigned long inTime);      // 0x523f2 (ret 4)
     // (EECPAttackCommander.cpp; provisional names)
     bool TakeUnit(EEComplexUnit* inUnit);        // 0x51a8a (ret 4; EECPAttackSubGroup 0x5d29b, 0x869f3): a group on inUnit's continent takes it
     void DropSpentGroups(unsigned long inTime);  // 0x51e61 (ret 4): deletes the finished groups; mL24 = inTime + 45000

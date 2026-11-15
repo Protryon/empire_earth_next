@@ -53,6 +53,7 @@ namespace WONAPI {
 ChildLayoutManager::ChildLayoutManager() { this->mMgr = ee_won_lmgr_new(this, ee_won_guicpp_layout_call); }
 // Destroys the manager: the Rust manager releases the layout points, then the instructions
 ChildLayoutManager::~ChildLayoutManager() { ee_won_lmgr_free(this->mMgr); }
+// FUNCTION: WON 0x00736d60
 // Appends a layout instruction to the manager's list (held)
 void ChildLayoutManager::AddInstruction(ChildLayoutInstructionBase* instruction)
 {
@@ -121,6 +122,7 @@ PercentLayout::PercentLayout(Component* target, const PercentLayoutParam& param)
     this->Make(init);
 }
 
+// FUNCTION: WON 0x00737690
 // Centres a child in its parent once, horizontally and/or vertically (the original's temporary centre layout is the
 // Rust's)
 void CenterLayout::Center(Component* parent, Component* child, bool horz, bool vert)

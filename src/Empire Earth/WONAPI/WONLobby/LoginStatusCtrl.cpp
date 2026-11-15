@@ -16,6 +16,7 @@ namespace WONAPI {
 LoginStatusCtrl::LoginStatusCtrl() {}
 // The implicit destructor (0x7c0240) releases the label, then the Container base.
 // Does not call the base InitComponent
+// FUNCTION: WON 0x007c02b0
 // Looks up the status label from the layout and listens for broadcasts
 void LoginStatusCtrl::InitComponent(ComponentInit& inInit)
 {
@@ -25,6 +26,7 @@ void LoginStatusCtrl::InitComponent(ComponentInit& inInit)
     SafeGetComponent(config, this->mStatusLabel, "StatusLabel", __FILE__, 26);
     this->SubscribeToBroadcast(1);
 }
+// FUNCTION: WON 0x007c02f0
 // Shows the status text of a login status event; the rest goes to Component
 void LoginStatusCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -34,3 +36,15 @@ void LoginStatusCtrl::HandleComponentEvent(ComponentEvent* inEvent)
         Component::HandleComponentEvent(inEvent);
 }
 }
+
+
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007c0220
+// (public: virtual void * __thiscall WONAPI::LoginStatusCtrl::`scalar deleting destructor'(unsigned int)    [??_GLoginStatusCtrl@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007c0240
+// (public: virtual __thiscall WONAPI::LoginStatusCtrl::~LoginStatusCtrl(void)    [??1LoginStatusCtrl@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007c0200
+// (public: __thiscall WONAPI::LoginStatusCtrl::LoginStatusCtrl(void)    [??0LoginStatusCtrl@WONAPI@@QAE@XZ])

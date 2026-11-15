@@ -7,9 +7,9 @@
 
 class EECPASGUAirBomber : public EECPAttackSubGroupUnit {
 public:
-    EECPASGUAirBomber(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);
-    EECPASGUAirBomber(EECPAttackSubGroup* inSubGroup);
-    virtual ~EECPASGUAirBomber();
+    EECPASGUAirBomber(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);   // 0x5d47
+    EECPASGUAirBomber(EECPAttackSubGroup* inSubGroup);  // 0x5d86
+    virtual ~EECPASGUAirBomber();           // 0x5da5
     virtual bool Retarget();                // +0x14 0x5db0
     virtual void Flee();                    // +0x1c 0xe123d (`ret`, ICF-shared)
     // +0x34 0x631c: only the base's (ICF: EECPASGUAirFighter's, the kept copy)

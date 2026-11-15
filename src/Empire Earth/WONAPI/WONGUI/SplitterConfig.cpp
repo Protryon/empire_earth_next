@@ -15,6 +15,7 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
+// FUNCTION: WON 0x00794ed0
 // Reads a quadrant name (Left, Right, Top, Bottom, TopLeft ...); throws a config error for any other name
 Splitter::QuadrantPosition SplitterConfig::ReadQuadrant()
 {
@@ -42,6 +43,7 @@ Splitter::QuadrantPosition SplitterConfig::ReadQuadrant()
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+// FUNCTION: WON 0x007951b0
 // Reads a splitter type name (LeftRight, UpDown, LeftRight_Top ..., Center); throws a config error otherwise
 Splitter::SplitterType SplitterConfig::ReadSplitterType()
 {
@@ -68,6 +70,7 @@ Splitter::SplitterType SplitterConfig::ReadSplitterType()
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+// FUNCTION: WON 0x00795450
 // Reads the splitter keys (quadrants, splitters, minimum sizes, percentages, maximize); others go to the container
 // config. The restore key is spelled UNMAXQUADRAN
 bool SplitterConfig::Virtual24(const std::string& theInstruction)
@@ -158,3 +161,7 @@ void SplitterConfig::SetComponent(Component* component)
     this->mSplitter=static_cast<Splitter*>(component);
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007a1fc0
+// (class WONAPI::Container * __cdecl WONAPI::SafeConfigGetComponent(class WONAPI::Component *,char const *)    [?SafeConfigGetComponent@WONAPI@@YAPAVCont)

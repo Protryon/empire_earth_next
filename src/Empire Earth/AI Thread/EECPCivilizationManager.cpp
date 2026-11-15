@@ -51,6 +51,10 @@
 #include "ee/EESaveGameFiles.h"
 
 const UString EECPCivilizationManager::sData("EECPCivilizationManager-Data");
+// SYNTHETIC: EXE 0x46e8d4   (wrapper)
+// SYNTHETIC: EXE 0x46e8de   (ctor)
+// SYNTHETIC: EXE 0x46e8ef   (registrar)
+// SYNTHETIC: EXE 0x46e8fb   (dtor)
 
 // RepairBuildings's worker test (16 bytes passed by value to find_if; its operator() 0x71796 closes the unit among the sort
 // COMDATs, after its first user find_if 0x7176f) (provisional name)
@@ -71,6 +75,7 @@ struct EECPCMSameContinent {
     bool mConnected;                        // +0x0c
 };
 
+// FUNCTION: EXE 0x46e917
 // Creates the civilization manager with its resource, build, unit, research and wall managers; building counts
 // start at zero, units-per-building and maximum counts come from the player's AI settings
 EECPCivilizationManager::EECPCivilizationManager(EEComputerPlayer* inPlayer)
@@ -158,6 +163,10 @@ EECPCivilizationManager::EECPCivilizationManager(EEComputerPlayer* inPlayer)
     this->mScheduleEpochAdvance = true;
 }
 
+// SYNTHETIC: EXE 0x46f0e3
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x46f0ff
 // Destroys the manager and its five sub-managers, releasing the garrison and fortress town centres
 EECPCivilizationManager::~EECPCivilizationManager()
 {
@@ -177,6 +186,7 @@ EECPCivilizationManager::~EECPCivilizationManager()
         this->mFortress->Dereference();
 }
 
+// FUNCTION: EXE 0x46f18d
 // Adds inDelta to the building counts a unit feeds: a non-building raises the population-based buildings and the
 // building that trains it, a building (not a farm or anti-air) the anti-air count; returns true if any changed
 bool EECPCivilizationManager::AdjustUnitCount(long inUnitType, long inDelta)
@@ -222,6 +232,7 @@ bool EECPCivilizationManager::AdjustUnitCount(long inUnitType, long inDelta)
     return theResult;
 }
 
+// FUNCTION: EXE 0x46f3bc
 // Tries to advance an epoch once the advance time is reached: researches the cheapest technologies for missing SOL,
 // else drops obsolete requests and starts the epoch research (or waits 60 s when ahead of every human)
 void EECPCivilizationManager::AttemptEpochAdvance(unsigned long inTime)
@@ -288,6 +299,7 @@ void EECPCivilizationManager::AttemptEpochAdvance(unsigned long inTime)
     }
 }
 
+// FUNCTION: EXE 0x46f4d4
 // Fills a centre's garrison: on island/planet maps a town centre hires citizens for the free slots, otherwise idle
 // connected citizens are sent in and any slots still free are added to the garrison count outright
 void EECPCivilizationManager::FillGarrison(EEComplexUnit* inUnit)
@@ -361,6 +373,7 @@ void EECPCivilizationManager::FillGarrison(EEComplexUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x46f7b8
 // Queues the buildings the unit counts call for (one per units-per share up to the maximum; military buildings
 // by the difficulty's minimum), skipping docks on waterless maps, space docks off space maps and early airports
 // NEAR (99.3): the deque end() in the unit loop adds _Myoff + _Mysize in the other order (Dinkum deque::end)
@@ -493,6 +506,7 @@ void EECPCivilizationManager::CheckBuildingCounts()
     this->mBuildingCountsChecked = true;
 }
 
+// FUNCTION: EXE 0x46fb5e
 // Queues a house at the first resource centre whose morale is not full and that has a house site, unless one is
 // already queued
 void EECPCivilizationManager::QueueMoraleBuilding()
@@ -511,6 +525,7 @@ void EECPCivilizationManager::QueueMoraleBuilding()
     }
 }
 
+// FUNCTION: EXE 0x46fbe2
 // Returns the transport class for the docks, airports and space docks owned; with none, looks for an airport or
 // space dock site (at most every 2 minutes) and otherwise falls back to a sea transport
 long EECPCivilizationManager::ChooseTransportClass()
@@ -553,6 +568,7 @@ long EECPCivilizationManager::ChooseTransportClass()
     return this->GetTransportClass(theHave24, theHave42, theHave2D8);
 }
 
+// FUNCTION: EXE 0x46fd9c
 // Returns the anti-air building class for the current epoch (0 before the WW1 epoch)
 long EECPCivilizationManager::GetAntiAirClass()
 {
@@ -571,6 +587,7 @@ long EECPCivilizationManager::GetAntiAirClass()
     return theResult;
 }
 
+// FUNCTION: EXE 0x46fdd3
 // Returns the fishing boat class for the current epoch (stone, bronze or modern boat)
 long EECPCivilizationManager::GetFishingBoatClass()
 {
@@ -589,6 +606,7 @@ long EECPCivilizationManager::GetFishingBoatClass()
     return theResult;
 }
 
+// FUNCTION: EXE 0x46fe05
 // Returns the gate class for the current epoch
 long EECPCivilizationManager::GetGateClass()
 {
@@ -629,6 +647,7 @@ long EECPCivilizationManager::GetGateClass()
     return theResult;
 }
 
+// FUNCTION: EXE 0x46fe86
 // Returns the guard tower class for the current epoch
 long EECPCivilizationManager::GetTowerClass()
 {
@@ -669,6 +688,7 @@ long EECPCivilizationManager::GetTowerClass()
     return theResult;
 }
 
+// FUNCTION: EXE 0x46ff07
 // Returns the transport class for the current epoch, preferring space, then air, then sea as available; 0 if none
 long EECPCivilizationManager::GetTransportClass(bool inSea, bool inAir, bool inSpace)
 {
@@ -731,6 +751,7 @@ long EECPCivilizationManager::GetTransportClass(bool inSea, bool inAir, bool inS
     return theResult;
 }
 
+// FUNCTION: EXE 0x46ffdc
 // Returns the wall class for the current epoch (0 before the Copper epoch)
 long EECPCivilizationManager::GetWallClass()
 {
@@ -767,6 +788,7 @@ long EECPCivilizationManager::GetWallClass()
     return theResult;
 }
 
+// FUNCTION: EXE 0x47005a
 // Returns the latest current epoch among the human players (0 with none)
 long EECPCivilizationManager::GetMaxEpoch()
 {
@@ -786,6 +808,7 @@ long EECPCivilizationManager::GetMaxEpoch()
     return theMax;
 }
 
+// FUNCTION: EXE 0x4700a9
 // Returns true when some human player is in a later epoch than this player
 bool EECPCivilizationManager::IsBehindInEpoch()
 {
@@ -798,6 +821,7 @@ bool EECPCivilizationManager::IsBehindInEpoch()
     return theResult;
 }
 
+// FUNCTION: EXE 0x4700cb
 // Reads the sub-managers and the epoch, building-count and garrison state from a saved game (garrison and fortress
 // as unit ids until Restore); returns the first read error
 long EECPCivilizationManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -862,12 +886,14 @@ long EECPCivilizationManager::Load(unsigned long inMajorVersion, unsigned long i
     return theResult;
 }
 
+// FUNCTION: EXE 0x4702b6
 // Returns true when inAmount is below the player's cap for the resource
 bool EECPCivilizationManager::IsBelowResourceCap(long inResource, long inAmount)
 {
     return inAmount < this->mPlayer->mResourceCaps[inResource];
 }
 
+// FUNCTION: EXE 0x4702d4
 // Releases a swapped garrison or fortress (re-requesting the garrison's citizens on island maps), then passes the
 // swaps to the resource and wall managers
 void EECPCivilizationManager::UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps)
@@ -898,6 +924,7 @@ void EECPCivilizationManager::UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps)
     this->mWallManager->UnitsSwapped(inSwaps);
 }
 
+// FUNCTION: EXE 0x47037c
 // Resets the build, resource, unit and wall managers, replaces unaffordable research and clears the epoch flags
 void EECPCivilizationManager::Reset()
 {
@@ -911,6 +938,7 @@ void EECPCivilizationManager::Reset()
 
 static const float kCMRepairHealthRatio = 0.8f;   // 0x43c060 (a unit-local const: not the pooled 0.8f)
 
+// FUNCTION: EXE 0x4703b4
 // Sends idle citizens to repair buildings below 80% hit points (not farms or volcanoes), nearest connected worker
 // first; a gate chain is repaired from its nearer end
 void EECPCivilizationManager::RepairBuildings()
@@ -966,6 +994,7 @@ void EECPCivilizationManager::RepairBuildings()
     }
 }
 
+// FUNCTION: EXE 0x470765
 // Restores the sub-managers after loading, recounts the player's units, turns saved delays back into game times and
 // the garrison/fortress ids into referenced units; returns the first error
 long EECPCivilizationManager::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -1015,12 +1044,14 @@ long EECPCivilizationManager::Restore(unsigned long inMajorVersion, unsigned lon
     return theResult;
 }
 
+// FUNCTION: EXE 0x4708c9
 // Returns true for waypoint and path point units
 bool EEUnit::IsPathMarker()
 {
     return this->mUnitClass->mUnitType == kUnitTypeWaypoint || this->mUnitClass->mUnitType == kUnitTypePathPoint;
 }
 
+// FUNCTION: EXE 0x4708e7
 // Writes the sub-managers and the manager's state (times relative to now, garrison/fortress as unit ids or -1) to
 // the saved game, marking the building counts checked; returns the first write error
 long EECPCivilizationManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -1102,6 +1133,7 @@ long EECPCivilizationManager::Save(unsigned long inMajorVersion, unsigned long i
     return theResult;
 }
 
+// FUNCTION: EXE 0x470b04
 // Sets the next epoch advance time: inTime itself when inActual, else a random delay from the player's epoch
 // frequency, lengthened when ahead of the humans and shortened when behind (a quarter when 3+ epochs behind)
 void EECPCivilizationManager::SetNextEpochAdvanceTime(unsigned long inTime, bool inActual)
@@ -1135,6 +1167,7 @@ void EECPCivilizationManager::SetNextEpochAdvanceTime(unsigned long inTime, bool
     }
 }
 
+// FUNCTION: EXE 0x470bf6
 // Sends every citizen bound for the garrison centre back to idle and drops the garrison
 void EECPCivilizationManager::ReleaseGarrison()
 {
@@ -1155,6 +1188,7 @@ void EECPCivilizationManager::ReleaseGarrison()
     this->mGarrison = NULL;
 }
 
+// FUNCTION: EXE 0x470c9d
 // Sends every citizen bound for the fortress town centre back to idle and drops the fortress
 void EECPCivilizationManager::ReleaseFortress()
 {
@@ -1175,6 +1209,7 @@ void EECPCivilizationManager::ReleaseFortress()
     this->mFortress = NULL;
 }
 
+// FUNCTION: EXE 0x470d44
 // Registers a new unit with the unit manager and building counts; a new citizen heads for the garrison or fortress
 // (a random one when both exist), and buildings and walls go to the wall manager
 void EECPCivilizationManager::UnitAdded(EEComplexUnit* inUnit)
@@ -1209,6 +1244,7 @@ void EECPCivilizationManager::UnitAdded(EEComplexUnit* inUnit)
         this->mWallManager->UnitAdded(inUnit);
 }
 
+// FUNCTION: EXE 0x470ed1
 // Removes a lost unit from the unit manager, the resource manager (citizens and the other gatherers), the building
 // counts and the wall manager (buildings and walls)
 void EECPCivilizationManager::UnitLost(EEComplexUnit* inUnit, bool inSwapped)
@@ -1227,6 +1263,7 @@ void EECPCivilizationManager::UnitLost(EEComplexUnit* inUnit, bool inSwapped)
         this->mWallManager->UnitLost(inUnit, inSwapped);
 }
 
+// FUNCTION: EXE 0x470f52
 // Runs the civilization each tick: first-update requests, the sub-managers, epoch advance, building counts every
 // 30 s, repairs every 31 s, garrison and fortress choice, and a morale house every 59 s
 void EECPCivilizationManager::Update(unsigned long inTime)
@@ -1312,6 +1349,7 @@ void EECPCivilizationManager::Update(unsigned long inTime)
     this->mNextMoraleBuildingTime = inTime + 59000;
 }
 
+// FUNCTION: EXE 0x4711ac
 // Picks a random connected settlement to garrison (on island maps one with enough available citizens) when none is
 // held and no citizen is requested, then fills it if there are enough workers or it can afford the citizens
 void EECPCivilizationManager::ChooseGarrison()
@@ -1382,6 +1420,7 @@ void EECPCivilizationManager::ChooseGarrison()
     this->FillGarrison(this->mGarrison);
 }
 
+// FUNCTION: EXE 0x4714c2
 // Picks a random town centre as the fortress when none is held and no citizen is requested, then fills it if there
 // are enough workers or it can afford the citizens
 void EECPCivilizationManager::ChooseFortress()
@@ -1417,3 +1456,19 @@ void EECPCivilizationManager::ChooseFortress()
     theCenter->Reference();
     this->FillGarrison(this->mFortress);
 }
+
+// TEMPLATE: EXE 0x471663
+// TEMPLATE: EXE 0x47168b
+// TEMPLATE: EXE 0x47176f
+// TEMPLATE: EXE 0x471796
+// TEMPLATE: EXE 0x4717f5
+// TEMPLATE: EXE 0x471828
+// TEMPLATE: EXE 0x471930
+// TEMPLATE: EXE 0x4719e1
+// TEMPLATE: EXE 0x471a25
+// TEMPLATE: EXE 0x471a72
+// TEMPLATE: EXE 0x471acf
+// TEMPLATE: EXE 0x471b02
+// TEMPLATE: EXE 0x471b7c
+// TEMPLATE: EXE 0x471bec
+// TEMPLATE: EXE 0x471c3b

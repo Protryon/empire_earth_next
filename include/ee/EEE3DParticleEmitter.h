@@ -12,8 +12,8 @@ class SESMInstanceNode;
 
 class EEE3DParticleEmitter : public EEEffect3D {
 public:
-    EEE3DParticleEmitter(GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect, long inKind);
-    EEE3DParticleEmitter(GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long inKind);
+    EEE3DParticleEmitter(GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect, long inKind);   // 0xf5dd7
+    EEE3DParticleEmitter(GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long inKind);        // 0xf5e82
     // 0xf5f23: on inUnit (its complex unit's transformation, else its tile's centre on the terrain)
     EEE3DParticleEmitter(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind, unsigned long inTagPoint);
     EEE3DParticleEmitter(long inKind);      // 0xf604d (the load-time ctor)
@@ -32,8 +32,8 @@ public:
     // outPosition (7 off the map; bounces off the terrain when the graphic's mB89 is set) (provisional name)
     virtual long Move(float inSeconds, GE3DPoint& outPosition);
 
-    void StopSound();
-    void ReleaseSound();
+    void StopSound();                       // 0xf60a6
+    void ReleaseSound();                    // 0xf60cb
     void SetSound(SESMInstanceNode* inSound); // 0xf69bc (set-if-different, referenced; provisional name)
 
     static const UString sData;             // "EEE3DParticleEmitter" (no -Data suffix; provisional name)

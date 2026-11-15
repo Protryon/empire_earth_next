@@ -19,6 +19,7 @@
 const float kScenarioEditorInset = 0.43f;
 const float kInset = 0.46f;
 
+// FUNCTION: EXE 0x6691b2
 // Creates an improvement button drawn as an icon, a green status bar and two value labels (and a queued
 // count), laid out for the main game or the scenario editor
 EEUIFMGStatusBar::EEUIFMGStatusBar(unsigned long inId, unsigned long inIndex, UILayoutUtility* inLayout,
@@ -107,6 +108,13 @@ EEUIFMGStatusBar::EEUIFMGStatusBar(unsigned long inId, unsigned long inIndex, UI
     }
 }
 
+// SYNTHETIC: EXE 0x6697cf
+// (the scalar deleting destructor, emitted with the vtable; slot EEUIFMGStatusBar+0x0)
+
+// SYNTHETIC: EXE 0x6697eb
+// (GEFontBitmap's scalar deleting destructor, emitted with the exe's copy of its vtable)
+
+// FUNCTION: EXE 0x669808
 // Destroys the status bar button and its parts
 EEUIFMGStatusBar::~EEUIFMGStatusBar()
 {
@@ -119,6 +127,7 @@ EEUIFMGStatusBar::~EEUIFMGStatusBar()
     delete this->mCount;
 }
 
+// FUNCTION: EXE 0x669896
 // Snapshots the button and its parts for drawing; shows the number of queued improvements
 long EEUIFMGStatusBar::CopyData()
 {
@@ -138,6 +147,7 @@ long EEUIFMGStatusBar::CopyData()
     return theResult;
 }
 
+// FUNCTION: EXE 0x66993f
 // Draws the button face (when enabled), the icon, the bar and the labels
 long EEUIFMGStatusBar::DrawPolygons()
 {
@@ -149,6 +159,7 @@ long EEUIFMGStatusBar::DrawPolygons()
     return this->mValue2->DrawPolygons();
 }
 
+// FUNCTION: EXE 0x66997f
 // Draws the parts' texts, the second label when it has text, and the queued count
 // NEAR: the original copies the count's location y first and stores the rectangle's top later (schedule only)
 long EEUIFMGStatusBar::DrawTextA()
@@ -168,6 +179,7 @@ long EEUIFMGStatusBar::DrawTextA()
     return theResult;
 }
 
+// FUNCTION: EXE 0x669a40
 // On a left press inside an enabled button, nudges the icon down-right as pressed
 long EEUIFMGStatusBar::MouseLButtonDown()
 {
@@ -183,6 +195,7 @@ long EEUIFMGStatusBar::MouseLButtonDown()
     return theResult;
 }
 
+// FUNCTION: EXE 0x669a9c
 // On a left release inside an enabled button, moves the icon back
 long EEUIFMGStatusBar::MouseLButtonUp()
 {
@@ -198,6 +211,7 @@ long EEUIFMGStatusBar::MouseLButtonUp()
     return theResult;
 }
 
+// FUNCTION: EXE 0x669afa
 // While the mouse is captured, presses or releases the icon as it enters or leaves the button
 // NEAR: ours hoists the imported GERectangle::Contains into a register (one more callee-saved register)
 long EEUIFMGStatusBar::MouseMove(const GE2DPoint& inLocation)
@@ -217,6 +231,7 @@ long EEUIFMGStatusBar::MouseMove(const GE2DPoint& inLocation)
     return EEUIBUpgrade::MouseMove(inLocation);
 }
 
+// FUNCTION: EXE 0x669b8b
 // On a right press inside an enabled button, nudges the icon down-right as pressed
 long EEUIFMGStatusBar::MouseRButtonDown()
 {
@@ -232,6 +247,7 @@ long EEUIFMGStatusBar::MouseRButtonDown()
     return theResult;
 }
 
+// FUNCTION: EXE 0x669be6
 // On a right release inside an enabled button, moves the icon back
 long EEUIFMGStatusBar::MouseRButtonUp()
 {
@@ -247,6 +263,7 @@ long EEUIFMGStatusBar::MouseRButtonUp()
     return theResult;
 }
 
+// FUNCTION: EXE 0x669c43
 // Moves the icon by an offset when the improvement can be bought
 void EEUIFMGStatusBar::MoveIcon(const GE2DPoint& inOffset)
 {

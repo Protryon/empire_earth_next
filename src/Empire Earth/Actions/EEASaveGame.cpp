@@ -57,6 +57,7 @@
 #include "ee/EEAction.h"
 #include "ee/EEASaveGame.h"
 
+// FUNCTION: EXE 0x404613
 // Creates the save-game action for a file name, flag and description
 EEASaveGame::EEASaveGame(const UString& inFileName, bool inFlag, UString inDescription)
     : EEAction(false)
@@ -66,6 +67,7 @@ EEASaveGame::EEASaveGame(const UString& inFileName, bool inFlag, UString inDescr
     this->mDescription = inDescription;
 }
 
+// FUNCTION: EXE 0x404672
 // Saves the game; closes the form on success, else shows the load/save error message
 void EEASaveGame::Virtual4()
 {
@@ -76,11 +78,17 @@ void EEASaveGame::Virtual4()
         gUIManager->DisplayMessage(gLoadSaveErrorMessage, true, NULL, NULL, true);
 }
 
+// FUNCTION: EXE 0x4046e5
 // Destroys the save-game action
 EEASaveGame::~EEASaveGame()
 {
 }
 
+// SYNTHETIC: EXE 0x4046c9
+// (the scalar deleting destructor)
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEASaveGame::Virtual8()
 {
 }

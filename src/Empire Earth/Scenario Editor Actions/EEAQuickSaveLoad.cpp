@@ -83,6 +83,7 @@
 #include "ee/EESaveLoad.h"
 #include "ee/EEAQuickSaveLoad.h"
 
+// FUNCTION: EXE 0x5a5529
 // Quick-loads (flag mIsLoad set) or quick-saves EEQuickSave<name> with sound muted and a hosted game paused: loads
 // from data\Scenarios (error box on failure), or saves into a new memory file and, if asked, writes it to disk
 void EEAQuickSaveLoad::Virtual4()
@@ -130,6 +131,11 @@ void EEAQuickSaveLoad::Virtual4()
     gPhysics->mTicksOwed = 0;
 }
 
+// FUNCTION: EXE 0x5a57b6
+// Destroys a memory file and frees it if asked (FSMemoryFile's scalar deleting destructor)
+// (emitted by its first user Virtual4)
+
+// FUNCTION: EXE 0x5a57d3
 // Writes the quick save memory file to data\Scenarios\<inName>, if the file opens
 void EEAQuickSaveLoad::SaveToFile(const UString& inName)
 {
@@ -144,6 +150,8 @@ void EEAQuickSaveLoad::SaveToFile(const UString& inName)
     }
 }
 
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEAQuickSaveLoad::Virtual8()
 {
 }

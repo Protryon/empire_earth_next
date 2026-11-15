@@ -38,6 +38,7 @@
 
 static UString sThreadName("MusicManager");
 
+// FUNCTION: EXE 0x531bde
 // Creates the music manager and starts its music thread at the given priority, waiting until the thread runs
 EEMusicManager::EEMusicManager(SEConductor* inConductor, long inThreadPriority)
     : mConductor(inConductor)
@@ -65,6 +66,10 @@ EEMusicManager::EEMusicManager(SEConductor* inConductor, long inThreadPriority)
     this->mConductor->SetIntensity(this->mIntensity, true);
 }
 
+// SYNTHETIC: EXE 0x531d98
+// (the scalar deleting destructor, emitted with the vtable; slot EEMusicManager+0x0)
+
+// FUNCTION: EXE 0x531db4
 // Destroys the music manager: tells the thread to exit, waits for it and frees the events and the thread
 EEMusicManager::~EEMusicManager()
 {
@@ -165,6 +170,7 @@ void ee_musiccpp_global_set_intensity(uint32_t inIntensity, bool inImmediate)
 }
 }
 
+// FUNCTION: EXE 0x531e0a
 // Runs the music thread: waits for exit, pause, intensity, start or stop requests (or the next-song timeout) and
 // hands each wake-up to the Rust step until it says to exit
 unsigned long EEMusicManager::MusicManagerMain(void* inThis)
@@ -195,12 +201,14 @@ unsigned long EEMusicManager::MusicManagerMain(void* inThis)
     return 0;
 }
 
+// FUNCTION: EXE 0x531f67
 // Asks the music thread to pause the music
 void EEMusicManager::Pause()
 {
     this->mPause->Set();
 }
 
+// FUNCTION: EXE 0x531f87
 // Requests a new music intensity, delaying a drop by five seconds; the music thread applies it
 void EEMusicManager::SetIntensity(unsigned long inIntensity)
 {
@@ -208,20 +216,32 @@ void EEMusicManager::SetIntensity(unsigned long inIntensity)
     this->mSetIntensity->Set();
 }
 
+// FUNCTION: EXE 0x532000
 // Asks the music thread to start the music
 void EEMusicManager::Start()
 {
     this->mStart->Set();
 }
 
+// FUNCTION: EXE 0x5321b1
 // Asks the music thread to stop the music
 void EEMusicManager::Stop()
 {
     this->mStop->Set();
 }
 
+// FUNCTION: EXE 0x532410
 // Counts down the time to the next song, switching songs when it runs out
 void EEMusicManager::Update(unsigned long inElapsedTime)
 {
     ee_music_update(this, (uint32_t)inElapsedTime);
 }
+
+// SYNTHETIC: EXE 0x531b7c
+// SYNTHETIC: EXE 0x531b81
+// SYNTHETIC: EXE 0x531b90
+// SYNTHETIC: EXE 0x531b95
+// SYNTHETIC: EXE 0x531bac
+// SYNTHETIC: EXE 0x531bb6
+// SYNTHETIC: EXE 0x531bc7
+// SYNTHETIC: EXE 0x531bd3

@@ -29,8 +29,9 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEImprovementIDs.h"
 #include "rust/ee_screens.h"   // ee_screens_upgrade_* (ee_screens upgrade.rs)
-static const float kBgOpacity = 0.15f;
+static const float kBgOpacity = 0.15f;      // 0x449d4c
 
+// FUNCTION: EXE 0x656845
 // Creates an improvement button, faintly tinted with a thin border, without a cost label
 EEUIBUpgrade::EEUIBUpgrade(unsigned long inId, const GE2DPoint& inLocation, unsigned long inWidth,
                            unsigned long inHeight, UIForm* inForm, unsigned long inIndex, bool inScenarioEditor,
@@ -49,6 +50,18 @@ EEUIBUpgrade::EEUIBUpgrade(unsigned long inId, const GE2DPoint& inLocation, unsi
     this->mDisabled = false;
 }
 
+// FUNCTION: EXE 0x656943
+// Handles a left press as a button press
+// (EEUIBUpgrade::MouseLButtonDown, in the class)
+
+// FUNCTION: EXE 0x656949
+// Handles a left release as a button release
+// (EEUIBUpgrade::MouseLButtonUp, in the class)
+
+// SYNTHETIC: EXE 0x65694f
+// (the scalar deleting destructor, emitted with the vtable; slot EEUIBUpgrade+0x0)
+
+// FUNCTION: EXE 0x656980
 // Presses the button unless the improvement is unavailable, and updates the help text
 void EEUIBUpgrade::ButtonDown()
 {
@@ -57,6 +70,7 @@ void EEUIBUpgrade::ButtonDown()
     this->GetForm()->UpdateHelpString();
 }
 
+// FUNCTION: EXE 0x656ae2
 // Snapshots the button and its cost label for drawing
 long EEUIBUpgrade::CopyData()
 {
@@ -68,6 +82,7 @@ long EEUIBUpgrade::CopyData()
     return theResult;
 }
 
+// FUNCTION: EXE 0x656b1e
 // Draws the button text and its cost label
 long EEUIBUpgrade::DrawTextA()
 {
@@ -86,6 +101,13 @@ struct EEUIBUpgradeCall {
     const GE2DPoint* mLocation;
 };
 
+// FUNCTION: EXE 0x6569a2
+// FUNCTION: EXE 0x656b3c
+// FUNCTION: EXE 0x656bd3
+// FUNCTION: EXE 0x656c83
+// FUNCTION: EXE 0x656f5a
+// FUNCTION: EXE 0x657081
+// FUNCTION: EXE 0x657169
 // The presses, availability, tooltip, level tracking and cost update: ee_screens upgrade.rs over the host below
 void EEUIBUpgrade::ButtonUp()
 {
@@ -135,6 +157,7 @@ void EEUIBUpgrade::UpdateCost(const UWideString& inText)
     ee_screens_upgrade_update_cost(&theCall);
 }
 
+// FUNCTION: EXE 0x657040
 // Shows the hover state only when the improvement can be bought
 void EEUIBUpgrade::MouseOver()
 {
@@ -143,6 +166,7 @@ void EEUIBUpgrade::MouseOver()
         UIButton::MouseOver();
 }
 
+// FUNCTION: EXE 0x65706a
 // Presses the button on a right press, capturing the mouse
 long EEUIBUpgrade::MouseRButtonDown()
 {
@@ -151,6 +175,7 @@ long EEUIBUpgrade::MouseRButtonDown()
     return kErrorOK;
 }
 
+// FUNCTION: EXE 0x65713e
 // Marks the button and its cost label dirty
 void EEUIBUpgrade::SetDirty(bool inDirty)
 {

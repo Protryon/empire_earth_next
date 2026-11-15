@@ -138,7 +138,7 @@ public:
         return (T)sqrt((float)theDX + theDY);
     }
 #else
-    T DistanceTo(const U2DPoint& inPoint) const
+    T DistanceTo(const U2DPoint& inPoint) const     // 0x1002fe41
     {
         T theDistance = (this->mX - inPoint.GetX()) * (this->mX - inPoint.GetX()) + (this->mY - inPoint.GetY()) * (this->mY - inPoint.GetY());
         return (T)sqrt(theDistance);
@@ -147,9 +147,9 @@ public:
     // each difference written out twice (a squaring macro's shape): the one form that gives both the float copy
     // (GETerrainMesh.cpp 0x1002fe6c: y difference first, the squares from st0/st2) and the long copy
     // (U2DSparseArray.cpp 0x10055899: x and y kept in eax/edx, inPoint in esi)
-    T DistanceToSquared(const U2DPoint& inPoint) const
+    T DistanceToSquared(const U2DPoint& inPoint) const   // 0x1002fe6c
         { return (this->mX - inPoint.GetX()) * (this->mX - inPoint.GetX()) + (this->mY - inPoint.GetY()) * (this->mY - inPoint.GetY()); }
-    long Load(FSFile& inFile)
+    long Load(FSFile& inFile)               // 0x10030515
     {
         long theResult;
         if (inFile.GetIsOpen()) {
@@ -160,7 +160,7 @@ public:
             theResult = 4;
         return theResult;
     }
-    long Save(FSFile& inFile) const
+    long Save(FSFile& inFile) const         // 0x10030549
     {
         long theResult;
         if (inFile.GetIsOpen()) {

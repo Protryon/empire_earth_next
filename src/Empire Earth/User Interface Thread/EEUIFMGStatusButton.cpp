@@ -81,6 +81,7 @@ void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (the calamity
 static bool sB5652F0;                       // 0x5652f0 (the airport commands' shift state)
 static bool sB5652F1;                       // 0x5652f1 (the rally point's shift state)
 
+// FUNCTION: EXE 0x66de97
 // Creates a main game command button with its icon, dither and queue count text
 EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle& inRectangle, UIControlsTable& inTable)
     : UIButton(inTable.GetID(), NULL, NULL, NULL, inRectangle, inManager->GetFormByID(inTable.GetFormID()),
@@ -143,6 +144,10 @@ EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle
     }
 }
 
+// SYNTHETIC: EXE 0x66e209
+// (the scalar deleting destructor, emitted with the vtable; slot EEUIFMGStatusButton+0x0)
+
+// FUNCTION: EXE 0x66e225
 // Destroys the command button and its parts
 EEUIFMGStatusButton::~EEUIFMGStatusButton()
 {
@@ -387,6 +392,7 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
     return 0;
 }
 
+// FUNCTION: EXE 0x66e274
 // Presses a command or tech button: runs the command, starts placing a building, wall or gate, queues the
 // research (Shift: five), or starts a calamity when a selected unit can pay it; refusals beep and explain in the chat
 // (ee_screens status_button.rs)
@@ -396,6 +402,7 @@ void EEUIFMGStatusButton::ButtonUp()
     ee_screens_status_button_up(&thePress);
 }
 
+// FUNCTION: EXE 0x66e71d
 // Releases the button's button object
 void EEUIFMGStatusButton::ReleaseButton()
 {
@@ -405,6 +412,7 @@ void EEUIFMGStatusButton::ReleaseButton()
     }
 }
 
+// FUNCTION: EXE 0x66e734
 // Snapshots the button for drawing: whether it is available, its icon and the queued count
 // The availability of the button: a command button by its own test (mB148), else its technology through the
 // player's WriteDetailsHook, or for a calamity with a cost whether a selected unit can pay it (each branch stores
@@ -415,6 +423,7 @@ long EEUIFMGStatusButton::CopyData()
     return (long)ee_screens_status_button_copy_data(&thePress);   // ee_screens status_button.rs copy_data
 }
 
+// FUNCTION: EXE 0x66eaf4
 // Draws the button's icon, dithered when unavailable
 // The icon (and the dither over an unavailable one at the last drawn rectangle) under the button
 long EEUIFMGStatusButton::DrawPolygons()
@@ -431,6 +440,7 @@ long EEUIFMGStatusButton::DrawPolygons()
     return UIButton::DrawPolygons();
 }
 
+// FUNCTION: EXE 0x66ebb5
 // Draws the queued count over the button
 long EEUIFMGStatusButton::DrawTextA()
 {
@@ -439,6 +449,7 @@ long EEUIFMGStatusButton::DrawTextA()
     return UIButton::DrawTextA();
 }
 
+// FUNCTION: EXE 0x66ebdf
 // Builds the button's help text: market trade prices, command help (with conversion cost for priests) and
 // hot key, or a tech's name, cost and description (ee_screens status_button.rs help_string)
 bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
@@ -450,12 +461,14 @@ bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
     return ee_screens_status_button_help(&thePress);
 }
 
+// FUNCTION: EXE 0x66f16c
 // Presses the button from its hot key
 void EEUIFMGStatusButton::HotKeyDown()
 {
     this->ButtonDown();
 }
 
+// FUNCTION: EXE 0x66f174
 // Releases the button from its hot key
 void EEUIFMGStatusButton::HotKeyUp()
 {
@@ -463,6 +476,7 @@ void EEUIFMGStatusButton::HotKeyUp()
         this->ButtonUp();
 }
 
+// FUNCTION: EXE 0x66f186
 // Presses a tech button on a right press
 long EEUIFMGStatusButton::MouseRButtonDown()
 {
@@ -473,6 +487,7 @@ long EEUIFMGStatusButton::MouseRButtonDown()
     return 0;
 }
 
+// FUNCTION: EXE 0x66f1a4
 // Runs a command button on a right release, or cancels one queued tech (Shift: five, for units only)
 // (ee_screens status_button.rs)
 long EEUIFMGStatusButton::MouseRButtonUp()
@@ -482,6 +497,40 @@ long EEUIFMGStatusButton::MouseRButtonUp()
     return 0;
 }
 
+// FUNCTION: EXE 0x66f2b0
+// Creates a remove-technology message
+// (inline ctor, out of line after its first user)
+
+
+// FUNCTION: EXE 0x66f927
+// Creates a clear-airport-commands message
+// (EEMClearAirportCommands' inline ctor)
+
+// FUNCTION: EXE 0x66f94b
+// Creates a market trade message
+// (EEMExchangeResources' inline ctor)
+
+// FUNCTION: EXE 0x66f986
+// Creates a go-fanatic message
+// (EEMGoFanatic's inline ctor)
+
+// FUNCTION: EXE 0x66f9aa
+// Creates a just-in-time manufacturing message
+// (EEMJITManufacturing's inline ctor)
+
+// FUNCTION: EXE 0x66f9ce
+// Creates a lock/unlock message
+// (EEMLockUnlock's inline ctor)
+
+// FUNCTION: EXE 0x66f9fb
+// Creates a pack/unpack message
+// (EEMPackUnpack's inline ctor)
+
+// FUNCTION: EXE 0x66fa28
+// Creates a patrol message
+// (EEMPatrol's inline ctor)
+
+// FUNCTION: EXE 0x66fa55
 // Asks the main panel to refill its unit (clearing its flag)
 void EEUIManager::Fn26FA55()
 {
@@ -490,6 +539,7 @@ void EEUIManager::Fn26FA55()
     theGroup->mReset = true;
 }
 
+// FUNCTION: EXE 0x66fa6a
 // Asks the main panel to refill its unit (setting its flag)
 void EEUIManager::Fn26FA6A()
 {
@@ -498,6 +548,7 @@ void EEUIManager::Fn26FA6A()
     theGroup->mReset = true;
 }
 
+// FUNCTION: EXE 0x66fa82
 // Makes the button a command button showing a button object
 void EEUIFMGStatusButton::SetCommandButton(unsigned long inButton)
 {
@@ -509,6 +560,7 @@ void EEUIFMGStatusButton::SetCommandButton(unsigned long inButton)
     this->mButtonObject->Acquire();
 }
 
+// FUNCTION: EXE 0x66faba
 // Makes the button a tech button for a unit's technology, showing the tech's button
 void EEUIFMGStatusButton::SetTechButton(long inTechnology, unsigned long inUnitType, unsigned long inUnitID)
 {
@@ -523,6 +575,7 @@ void EEUIFMGStatusButton::SetTechButton(long inTechnology, unsigned long inUnitT
     this->mButtonObject->Acquire();
 }
 
+// FUNCTION: EXE 0x66fb19
 // Moves the button, its icon and its queue count text
 void EEUIFMGStatusButton::SetLocation(const GE2DPoint& inLocation)
 {
@@ -534,6 +587,7 @@ void EEUIFMGStatusButton::SetLocation(const GE2DPoint& inLocation)
     UIButton::SetLocation(inLocation);
 }
 
+// FUNCTION: EXE 0x66fb79
 // Releases a pressed button when tabbing away
 void EEUIFMGStatusButton::TabbedFrom()
 {
@@ -543,12 +597,14 @@ void EEUIFMGStatusButton::TabbedFrom()
         UIButton::TabbedFrom();
 }
 
+// FUNCTION: EXE 0x66fb8d
 // Handles tabbing to the button
 void EEUIFMGStatusButton::TabbedTo()
 {
     UIButton::TabbedTo();
 }
 
+// FUNCTION: EXE 0x66fb93
 // Ends the cinematic at its saved end time (sends the end-cinematic message)
 // (EEMEndCinematic takes the end time as a float)
 long EEUIEndCinematicModeEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
@@ -557,6 +613,14 @@ long EEUIEndCinematicModeEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
+// FUNCTION: EXE 0x66fbca
+// Creates an end-cinematic message
+// (EEMEndCinematic's inline ctor)
+
+// SYNTHETIC: EXE 0x66fbf7
+// (EEMessage's scalar deleting destructor, ICF-folded with every EEM* class's that has no members to destroy)
+
+// FUNCTION: EXE 0x66fc22
 // Handles the mouse in an airport rally mode: previews and, on a click, sends the airport command at the
 // clicked point (Shift keeps the mode)
 // NEAR: theChance lives in memory in the original; the pressed block is placed after the epilogue
@@ -617,54 +681,67 @@ long EEModeAirport(void* inLocation, void* inForm, long inCommand, long inKind)
     return false;
 }
 
+// FUNCTION: EXE 0x66fe14
+// Creates a set-airport-command message
+// (EEMSetAirportCommand's inline ctor)
+
+// FUNCTION: EXE 0x66fe64
 // Handles the mouse in atomic bomber rally mode (airport command 0xa)
 long EEModeAtomicBomberRally(void* inLocation, void* inForm)
 {
     return EEModeAirport(inLocation, inForm, 0xa, 0);
 }
 
+// FUNCTION: EXE 0x66fe79
 // Handles the mouse in paratrooper rally mode (airport command 0x14)
 long EEModeParatrooperRally(void* inLocation, void* inForm)
 {
     return EEModeAirport(inLocation, inForm, 0x14, 0);
 }
 
+// FUNCTION: EXE 0x66fe8e
 // Handles the mouse in bomber rally mode (airport command 9)
 long EEModeBomberRally(void* inLocation, void* inForm)
 {
     return EEModeAirport(inLocation, inForm, 9, 0);
 }
 
+// FUNCTION: EXE 0x66fea3
 // Handles the mouse in fighter rally mode (airport command 8)
 long EEModeFighterRally(void* inLocation, void* inForm)
 {
     return EEModeAirport(inLocation, inForm, 8, 0xc);
 }
 
+// FUNCTION: EXE 0x66feb8
 // Handles the mouse in timed atomic bomber rally mode (airport command 0xc)
 long EEModeTimedAtomicBomberRally(void* inLocation, void* inForm)
 {
     return EEModeAirport(inLocation, inForm, 0xc, 0);
 }
 
+// FUNCTION: EXE 0x66fecd
 // Handles the mouse in timed bomber rally mode (airport command 0xd)
 long EEModeTimedBomberRally(void* inLocation, void* inForm)
 {
     return EEModeAirport(inLocation, inForm, 0xd, 0);
 }
 
+// FUNCTION: EXE 0x66fee2
 // Handles the mouse in timed fighter rally mode (airport command 0xe)
 long EEModeTimedFighterRally(void* inLocation, void* inForm)
 {
     return EEModeAirport(inLocation, inForm, 0xe, 0xc);
 }
 
+// FUNCTION: EXE 0x66fef7
 // Handles the mouse in timed rally mode (airport command 0xf)
 long EEModeTimedRally(void* inLocation, void* inForm)
 {
     return EEModeAirport(inLocation, inForm, 0xf, 0xc);
 }
 
+// FUNCTION: EXE 0x66ff0c
 // Handles the mouse in attack-ground mode: range cursor, then an attack-ground order at the clicked point
 // NEAR: the range test's x87 shape and block layout
 long EEModeAttackGround(void* inLocation, void* inForm)
@@ -707,6 +784,7 @@ long EEModeAttackGround(void* inLocation, void* inForm)
     return false;
 }
 
+// FUNCTION: EXE 0x67012b
 // Handles the mouse in build mode: previews the building ghost and places it on a click
 // NEAR: the ghost loop (out-of-line vector operator[]/_Ptrit operator+ in the original)
 long EEModeBuild(void* inLocation, void* inForm)
@@ -751,6 +829,7 @@ long EEModeBuild(void* inLocation, void* inForm)
     return false;
 }
 
+// FUNCTION: EXE 0x670343
 // Handles the mouse in gate placement mode
 long EEModeGate(void* inLocation, void* inForm)
 {
@@ -763,6 +842,7 @@ long EEModeGate(void* inLocation, void* inForm)
     return false;
 }
 
+// FUNCTION: EXE 0x670379
 // Handles the mouse in wall placement mode
 long EEModeWall(void* inLocation, void* inForm)
 {
@@ -775,6 +855,7 @@ long EEModeWall(void* inLocation, void* inForm)
     return false;
 }
 
+// FUNCTION: EXE 0x6703af
 // Handles the mouse in flare mode: a click on the map sends a flare there and leaves the mode
 long EEModeFlare(void* inLocation, void* inForm)
 {
@@ -799,6 +880,11 @@ long EEModeFlare(void* inLocation, void* inForm)
     return false;
 }
 
+// FUNCTION: EXE 0x67048e
+// Creates a send-flare message
+// (inline ctor: ee/EEMessage.h)
+
+// FUNCTION: EXE 0x6704c9
 // Handles the mouse in garrison mode: shows whether the unit under the cursor can take the selection, and
 // garrisons on a click
 // NEAR: the original reads the view rectangle through an out-of-line vector operator[]
@@ -859,6 +945,7 @@ long EEModeGarrison(void* inLocation, void* inForm)
     return false;
 }
 
+// FUNCTION: EXE 0x670703
 // Handles the mouse in unload mode: unloads the selected transport at the clicked point
 // NEAR: the original reads the view rectangle through out-of-line begin()/operator+
 long EEModeUnload(void* inLocation, void* inForm)
@@ -897,6 +984,7 @@ long EEModeUnload(void* inLocation, void* inForm)
     return false;
 }
 
+// FUNCTION: EXE 0x670898
 // Handles the mouse in heal mode: a click on a unit the healer's set can heal sends a heal order
 // NEAR: GetViewport inline budget, register choice
 long EEModeHeal(void* inLocation, void* inForm)
@@ -938,6 +1026,7 @@ long EEModeHeal(void* inLocation, void* inForm)
     return false;
 }
 
+// FUNCTION: EXE 0x6709ee
 // Handles the mouse in convert mode: shows whether a selected unit can convert the unit under the cursor
 // (and is in range), and orders it on a click (Shift keeps the mode)
 // NEAR: view rectangle access and the loop shape
@@ -1004,6 +1093,7 @@ done:
     return false;
 }
 
+// FUNCTION: EXE 0x670c08
 // Handles the mouse in calamity mode: previews the calamity at the cursor and casts it on a click
 // NEAR: GetViewport expands vector::operator[] (the original calls it), epilogue placement
 long EEModeCalamity(void* inLocation, void* inForm)
@@ -1056,6 +1146,7 @@ long EEModeCalamity(void* inLocation, void* inForm)
     return false;
 }
 
+// FUNCTION: EXE 0x670d77
 // Handles the mouse in the normal mode: selection, camera and the unit editing hack
 long EEModeNormal(void* inLocation, void* inForm)
 {
@@ -1104,6 +1195,7 @@ long EEModeNormal(void* inLocation, void* inForm)
     return false;
 }
 
+// FUNCTION: EXE 0x670f20
 // Handles the mouse in rally point mode: sets the selected buildings' rally point at the clicked point
 // theShift is a byte (`setg` into it, `setne` when it is copied to the bool sB5652F1)
 long EEModeRally(void* inLocation, void* inForm)
@@ -1161,6 +1253,7 @@ finish:
     return false;
 }
 
+// FUNCTION: EXE 0x6710d0
 // Starts a drag selection on a left press in the game view (stops following a unit)
 long EEModeCamera(void* inLocation, void* inForm)
 {
@@ -1179,6 +1272,7 @@ long EEModeCamera(void* inLocation, void* inForm)
     return false;
 }
 
+// FUNCTION: EXE 0x67115c
 // Handles the keys in cinematic mode: Escape or F1 ends it, F3 pauses, F9 takes a screenshot
 static bool EECinematicKeyPressed(unsigned long inKey)
 {
@@ -1204,6 +1298,10 @@ bool EEModeKeyboardCinematic(void* inForm)
     return true;
 }
 
+// SYNTHETIC: EXE 0x671265
+// (EEUIEndCinematicModeEvent's scalar deleting destructor, after its first user)
+
+// FUNCTION: EXE 0x671290
 // Runs the keyboard test of the current interface mode, else the form's keys
 // the keyboard tests take the form only (EEUIFMGKeyboardTest)
 long EEUIFMainGame::UpdateKeyboard()
@@ -1215,6 +1313,7 @@ long EEUIFMainGame::UpdateKeyboard()
     return theResult;
 }
 
+// FUNCTION: EXE 0x6712b8
 // Runs the mouse: the unit hack, the form's controls, then the current interface mode's mouse test
 // returns the last UpdateMouse/mouse-test result (the original never resets eax after `xor eax, eax`)
 long EEUIFMainGame::UpdateMouse()

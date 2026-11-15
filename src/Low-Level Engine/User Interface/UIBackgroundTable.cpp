@@ -96,14 +96,44 @@ struct UIBackgroundTableHost {
     }
 };
 
+// FUNCTION: LLE 0x1005c5be
 // Creates an empty background table entry (IDs -1, bitmap type, hidden, full opacity, draw priority 1)
 UIBackgroundTable::UIBackgroundTable() { ee_ui_bgtable_init(this); }
+// FUNCTION: LLE 0x1005c631
 // Loads every background table entry from the file (NULL for nameless records); returns the last read result
 long UIBackgroundTable::Create(FSFileSpec& inFile) { return ee_ui_bgtable_create(&inFile, UIBackgroundTableHost::Op); }
+// FUNCTION: LLE 0x1005c80e
 // Deletes every background table entry and empties the table
 void UIBackgroundTable::DeleteAll() { ee_ui_bgtable_delete_all(UIBackgroundTableHost::Op); }
+// FUNCTION: LLE 0x1007a216
 // Creates every background in the UI background database on its form, by type (UIManager::CreateBackgrounds)
 void UIBackgroundTable::CreateBackgrounds(UIManager* inManager)
 {
     ee_ui_bgtable_create_backgrounds(inManager, UIBackgroundTableHost::Op);
 }
+
+// Header-inline members first emitted here (names in analysis/lle/names.txt)
+// SYNTHETIC: LLE 0x1005c34a
+// SYNTHETIC: LLE 0x1005c358
+// SYNTHETIC: LLE 0x1005c370
+// SYNTHETIC: LLE 0x1005c374
+// SYNTHETIC: LLE 0x1005c378
+// SYNTHETIC: LLE 0x1005c37c
+// SYNTHETIC: LLE 0x1005c380
+// SYNTHETIC: LLE 0x1005c384
+// SYNTHETIC: LLE 0x1005c388
+// SYNTHETIC: LLE 0x1005c38c
+// SYNTHETIC: LLE 0x1005c390
+// SYNTHETIC: LLE 0x1005c394
+// SYNTHETIC: LLE 0x1005c398
+// SYNTHETIC: LLE 0x1005c39c
+// SYNTHETIC: LLE 0x1005c3aa
+// SYNTHETIC: LLE 0x1005c3ae
+// SYNTHETIC: LLE 0x1005c44b
+// SYNTHETIC: LLE 0x1005c4f9
+
+// Compiler-generated: the sUIBackgroundArray init chain (names in analysis/lle/names.txt)
+// SYNTHETIC: LLE 0x1005c575
+// SYNTHETIC: LLE 0x1005c57f
+// SYNTHETIC: LLE 0x1005c597
+// SYNTHETIC: LLE 0x1005c5a3

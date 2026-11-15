@@ -104,17 +104,23 @@ struct EECPUSFamilyWeightLess {
 #include "ee/EETeam.h"
 #include "ee/EEGlobalConstants.h"
 
+// FUNCTION: EXE 0x4979ff
 // Creates the unit selector for a computer player
 EECPUnitSelector::EECPUnitSelector(EEComputerPlayer* inPlayer)
 {
     this->mPlayer = inPlayer;
 }
 
+// SYNTHETIC: EXE 0x497a11
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x497a2d
 // Destroys the unit selector (nothing to release)
 EECPUnitSelector::~EECPUnitSelector()
 {
 }
 
+// FUNCTION: EXE 0x497a34
 // Fills a fixed requirement: per remaining unit takes a class of its kind, class or category; mobile combat classes
 // join the group, buildings are queued (at the group's tile when on the map), anything else is traced and dropped
 void EECPUnitSelector::AllocateAlreadyDefinedUnits(EECPUnitSelectionGroup* inGroup, EECPUnitRequirement* inRequirement)
@@ -165,6 +171,7 @@ void EECPUnitSelector::AllocateAlreadyDefinedUnits(EECPUnitSelectionGroup* inGro
     }
 }
 
+// FUNCTION: EXE 0x497c53
 // Lowers the strategy's remaining unit count by one, not below 0
 // (both callers call it out of line)
 void EECPCombatStrategy::DecrementRemaining()
@@ -173,6 +180,7 @@ void EECPCombatStrategy::DecrementRemaining()
 }
 
 // NEAR: the original calls the vector begin()/operator+ and DecrementRemaining out of line (more inline pressure than ours); the iterator is default-constructed at the top
+// FUNCTION: EXE 0x497c61
 // Fills a held-units requirement from the units the group holds: the most common unit types first (no heroes,
 // priests, prophets or naval buildings), within the domain counts; moves them into the group's unit IDs
 void EECPUnitSelector::AllocateHeldUnits(EECPUnitSelectionGroup* inGroup, EECPUnitRequirement* inRequirement)
@@ -268,6 +276,7 @@ void EECPUnitSelector::AllocateHeldUnits(EECPUnitSelectionGroup* inGroup, EECPUn
     theStrategy->mNumRemaining = theRest;
 }
 
+// FUNCTION: EXE 0x4980a0
 // Fills each domain's count with the player's favorite air/sea/space/land type or a random available class that
 // passes the favorite screen; the air, sea and space counts are then added to land even when they were filled
 void EECPUnitSelector::AllocateFavoriteUnits(EECPUnitSelectionGroup* inGroup)
@@ -399,6 +408,7 @@ void EECPUnitSelector::AllocateFavoriteUnits(EECPUnitSelectionGroup* inGroup)
 }
 
 // NEAR: the original keeps `this` and the element offset in frame slots and the 0x28 divisor in ebx (allocation)
+// FUNCTION: EXE 0x498731
 // Runs each of the strategy's requirements through its allocator (counter, held, special, already defined), then
 // adds favorite units when the strategy asks for them
 void EECPUnitSelector::AllocateRequirements(EECPUnitSelectionGroup* inGroup)
@@ -424,6 +434,7 @@ void EECPUnitSelector::AllocateRequirements(EECPUnitSelectionGroup* inGroup)
         this->AllocateFavoriteUnits(inGroup);
 }
 
+// FUNCTION: EXE 0x4987c7
 // Fills a counter requirement: weighs unit families by the target's unit types, then per domain picks from a few
 // random gathered classes weighted by family (special classes with mSpecializedUnitChance); siege share capped
 // Requirement kind 0. NEAR: the original rounds the counts up through a float (fild/__ftol after the ceiling) and
@@ -625,6 +636,7 @@ void EECPUnitSelector::AllocateCounterUnits(EECPUnitSelectionGroup* inGroup, EEC
     }
 }
 
+// FUNCTION: EXE 0x4995ea
 // Fills a special requirement: maybe a paratrooper plane, then priests, prophets, heroes and carriers by the
 // player's chances and population caps, taking the group's own units first, then gathered classes
 // Requirement kind 2. Unit 0x2e1 needs civ power 0x34 and comes half the time; each special kind is counted with an
@@ -849,6 +861,7 @@ void EECPUnitSelector::AllocateSpecialUnits(EECPUnitSelectionGroup* inGroup, EEC
     }
 }
 
+// FUNCTION: EXE 0x49a1d1
 // Moves the counts of domains without candidate classes to one random usable domain (air, sea with over 100
 // water tiles, land, space with over 100 space tiles), else to land
 void EECPUnitSelector::RedistributeDomainCounts(EECPUnitSelectionGroup* inGroup)
@@ -878,6 +891,7 @@ void EECPUnitSelector::RedistributeDomainCounts(EECPUnitSelectionGroup* inGroup)
     s->mNumLand=pool+old3C;
 }
 
+// FUNCTION: EXE 0x49a44f
 // Sorts the group's candidate classes into air, sea, land and space lists (no transports, priests, prophets,
 // heroes or land buildings)
 void EECPUnitSelector::SplitByDomain(EECPUnitSelectionGroup* inGroup, std::vector<long>& outKind34,
@@ -904,6 +918,7 @@ void EECPUnitSelector::SplitByDomain(EECPUnitSelectionGroup* inGroup, std::vecto
     }
 }
 
+// FUNCTION: EXE 0x49a5a9
 // Frees the group's candidate class lists and releases the units it holds
 void EECPUnitSelector::FreeUnits(EECPUnitSelectionGroup* inGroup)
 {
@@ -912,6 +927,7 @@ void EECPUnitSelector::FreeUnits(EECPUnitSelectionGroup* inGroup)
     inGroup->mUnits.clear();
 }
 
+// FUNCTION: EXE 0x49a5fc
 // Deletes every class list in the map and empties it
 void EECPUnitSelector::FreeClassesByKind(std::map<long, std::vector<long>*>& ioMap)
 {
@@ -921,6 +937,7 @@ void EECPUnitSelector::FreeClassesByKind(std::map<long, std::vector<long>*>& ioM
     ioMap.clear();
 }
 
+// FUNCTION: EXE 0x49a64a
 // Selects the units of a combat group: gathers candidates, sizes the group, shares it out by domain, fills the
 // strategy's requirements and frees the work lists
 void EECPUnitSelector::Select(EECPUnitSelectionGroup* inGroup)
@@ -935,6 +952,7 @@ void EECPUnitSelector::Select(EECPUnitSelectionGroup* inGroup)
     this->FreeUnits(inGroup);
 }
 
+// FUNCTION: EXE 0x49a695
 // Sets the strategy's space, air, sea and land shares (unless they sum to exactly 100) from the epoch, map,
 // towns and both players' strengths, then lets the strategy compute its counts
 void EECPUnitSelector::ComputeDomainShares(EECPUnitSelectionGroup* inGroup)
@@ -1002,6 +1020,7 @@ void EECPUnitSelector::ComputeDomainShares(EECPUnitSelectionGroup* inGroup)
     inGroup->mStrategy->Calculate(inGroup->mPlayerFile,inGroup->mTargetFile);
 }
 
+// FUNCTION: EXE 0x49ab2f
 // Returns the share of the group for the sea (inSea) or space, from the domain's tile share, own vs target
 // strength and a random factor; with no target strength there it uses the own unit count of that domain
 float EECPUnitSelector::GetDomainShare(EECPUnitSelectionGroup* inGroup, bool inSea)
@@ -1054,6 +1073,7 @@ float EECPUnitSelector::GetDomainShare(EECPUnitSelectionGroup* inGroup, bool inS
     return theResult;
 }
 
+// FUNCTION: EXE 0x49ad60
 // Sets the strategy's unit count from a random attack/defense share of the target's strength (or its own count);
 // what the units chosen for deletion do not cover becomes a held-units requirement in front
 // Units to delete: the citizens' surplus, or all but five of the unit manager's workers when the target's wonder
@@ -1133,6 +1153,7 @@ void EECPUnitSelector::ComputeGroupSize(EECPUnitSelectionGroup* inGroup)
 }
 
 // NEAR: the original expands the units' begin() and calls its operator+ out of line (ours expands both); frame 0xc larger
+// FUNCTION: EXE 0x49b126
 // Adds attack-capable units from the player's defending groups to the group (skipping units it already has) and
 // references them
 void EECPUnitSelector::GatherDefendingUnits(EECPUnitSelectionGroup* inGroup)
@@ -1148,6 +1169,7 @@ void EECPUnitSelector::GatherDefendingUnits(EECPUnitSelectionGroup* inGroup)
 }
 
 // NEAR: the original keeps the result in bl (ours al); register allocation only
+// FUNCTION: EXE 0x49b24a
 // Accepts a unit with the wanted attack/defense flags that is in no attack subgroup, or in one on mission 0, 1
 // or 3 (not in transit or carrying) whose group has no continent
 // (EECPUSGatherUnitsFromDefendingGroups::operator(): its COMDAT follows its first user GatherDefendingUnits)
@@ -1172,6 +1194,10 @@ bool EECPUSGatherUnitsFromDefendingGroups::operator()(EEUnit* inUnit)
     return theResult;
 }
 
+// SYNTHETIC: EXE 0x49b2cc
+// (EEAIFOGatherUnits's scalar deleting destructor, shared by ICF with EECPUSGatherUnitsFromDefendingGroups's)
+
+// FUNCTION: EXE 0x49b2e9
 // Gathers the available personnel and the buildable classes by line; attack strategies also take defending
 // units; then keeps the best classes of each line
 void EECPUnitSelector::GatherCandidates(EECPUnitSelectionGroup* inGroup)
@@ -1185,6 +1211,7 @@ void EECPUnitSelector::GatherCandidates(EECPUnitSelectionGroup* inGroup)
 }
 
 // NEAR: the original passes a temporary copy of mCounterKind1/mCounterKind2/mL1DC to find (a key-type conversion: the members may be unsigned) and builds the first pair out of line
+// FUNCTION: EXE 0x49b34e
 // Adds 3, 2 and 1 to the family weights of the class's first, second and third counter kinds that have candidates
 void EECPUnitSelector::WeighCounters(EEUnitClass* inClass, std::map<long, long>& ioCounts,
                                std::map<long, std::vector<long>*>& inMap)
@@ -1225,6 +1252,7 @@ void EECPUnitSelector::WeighCounters(EEUnitClass* inClass, std::map<long, long>&
         ioCounts.insert(std::make_pair(it->first, 1));
 }
 
+// FUNCTION: EXE 0x49b497
 // Fetches and updates the intelligence files of the target and of the group's player
 void EECPUnitSelector::GetIntelligenceFiles(EECPUnitSelectionGroup* inGroup)
 {
@@ -1234,6 +1262,7 @@ void EECPUnitSelector::GetIntelligenceFiles(EECPUnitSelectionGroup* inGroup)
     inGroup->mPlayerFile->Update(this->mPlayer, 0, 0);
 }
 
+// FUNCTION: EXE 0x49b4fa
 // Returns whether the class is among the candidate classes of any kind
 bool EECPUnitSelector::IsCandidate(long inClass, std::map<long, std::vector<long>*>& inMap)
 {
@@ -1252,6 +1281,7 @@ bool EECPUnitSelector::IsCandidate(long inClass, std::map<long, std::vector<long
 }
 
 // NEAR: the original loads mPlayer->mTechnologies after the argument (scheduling only)
+// FUNCTION: EXE 0x49b569
 // Returns whether the class's technology is available, or else whether the personnel gatherer holds the class
 bool EECPUnitSelector::IsAvailable(long inClass, EEAIFOPAvailablePersonnelGatherer& inGatherer)
 {
@@ -1263,6 +1293,7 @@ bool EECPUnitSelector::IsAvailable(long inClass, EEAIFOPAvailablePersonnelGather
     return theResult;
 }
 
+// FUNCTION: EXE 0x49b5ca
 // Sorts each line's classes and cuts it at the first drop in epoch, keeping the cut transports and unit-set
 // 0x80 classes at the end
 void EECPUnitSelector::KeepBestClasses(std::map<long, std::vector<long>*>& ioMap)
@@ -1295,6 +1326,7 @@ void EECPUnitSelector::KeepBestClasses(std::map<long, std::vector<long>*>& ioMap
     }
 }
 
+// FUNCTION: EXE 0x49b817
 // Returns a random candidate class of the kind, or 0
 long EECPUnitSelector::GetRandomOfKind(long inKind, std::map<long, std::vector<long>*>& inMap)
 {
@@ -1306,6 +1338,7 @@ long EECPUnitSelector::GetRandomOfKind(long inKind, std::map<long, std::vector<l
 }
 
 // NEAR: the original calls the list's begin() + i operator+ out of line (budget)
+// FUNCTION: EXE 0x49b86b
 // Returns a random candidate class of the category, or 0
 long EECPUnitSelector::GetRandomOfCategory(long inCategory, std::map<long, std::vector<long>*>& inMap)
 {
@@ -1327,6 +1360,7 @@ long EECPUnitSelector::GetRandomOfCategory(long inCategory, std::map<long, std::
 }
 
 // NEAR: one compare scheduled before a store (99%)
+// FUNCTION: EXE 0x49b949
 // Except for strategy kinds 4 and 5, drops candidate classes without the strategy's attack/defense flag
 // (transports kept) and deletes emptied lines
 void EECPUnitSelector::FilterByStrategy(EECPUnitSelectionGroup* inGroup)
@@ -1351,3 +1385,49 @@ void EECPUnitSelector::FilterByStrategy(EECPUnitSelectionGroup* inGroup)
             ++it;
     }
 }
+
+// Inline and template COMDATs this unit emits (first users here):
+// (0x49ba76 EEDebugTrace is an inline COMDAT of this unit too; it waits for AllocateAlreadyDefinedUnits. DecrementRemaining
+// 0x497c53 is defined above)
+// TEMPLATE: EXE 0x49ba62
+// TEMPLATE: EXE 0x49ba76
+// TEMPLATE: EXE 0x49ba80
+// TEMPLATE: EXE 0x49bb40
+// TEMPLATE: EXE 0x49bb5d
+// TEMPLATE: EXE 0x49bb76
+// TEMPLATE: EXE 0x49bbb8
+// TEMPLATE: EXE 0x49bc75
+// TEMPLATE: EXE 0x49bcf7
+// TEMPLATE: EXE 0x49bd20
+// TEMPLATE: EXE 0x49bdf8
+// TEMPLATE: EXE 0x49be2c
+// TEMPLATE: EXE 0x49be55
+// TEMPLATE: EXE 0x49bf28
+// TEMPLATE: EXE 0x49bf59
+// TEMPLATE: EXE 0x49bf7f
+// TEMPLATE: EXE 0x49bfc2
+// TEMPLATE: EXE 0x49bff6
+// TEMPLATE: EXE 0x49c092
+// TEMPLATE: EXE 0x49c0cc
+// TEMPLATE: EXE 0x49c10d
+// TEMPLATE: EXE 0x49c1f9
+// TEMPLATE: EXE 0x49c229
+// TEMPLATE: EXE 0x49c2d4
+// TEMPLATE: EXE 0x49c30e
+// TEMPLATE: EXE 0x49c34f
+// TEMPLATE: EXE 0x49c460
+// TEMPLATE: EXE 0x49c529
+// TEMPLATE: EXE 0x49c56d
+// TEMPLATE: EXE 0x49c667
+// TEMPLATE: EXE 0x49c6d4
+// TEMPLATE: EXE 0x49c7ae
+// TEMPLATE: EXE 0x49c7ff
+
+// Template and inline COMDATs this unit already emits (compared by name)
+// TEMPLATE: EXE 0x49c490
+// TEMPLATE: EXE 0x49c4db
+// TEMPLATE: EXE 0x49c504
+// TEMPLATE: EXE 0x49c596
+// TEMPLATE: EXE 0x49c611
+// TEMPLATE: EXE 0x49c727
+// TEMPLATE: EXE 0x49c771

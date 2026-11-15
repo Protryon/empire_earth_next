@@ -10,6 +10,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONGUIDraw.h"
 using namespace WONAPI;
+// FUNCTION: WON 0x006ff150
 // Draws the arrow button: face, frame and arrow, shifted one pixel while pressed and greyed when disabled
 void MSArrowButton::Paint(Graphics& g) {
     Component::Paint(g);

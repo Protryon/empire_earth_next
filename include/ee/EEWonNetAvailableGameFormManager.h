@@ -7,9 +7,9 @@
 
 class EEWonNetAvailableGameFormManager : public UIFormManager {
 public:
-    EEWonNetAvailableGameFormManager();
+    EEWonNetAvailableGameFormManager();     // 0x27a37e
     virtual ~EEWonNetAvailableGameFormManager();   // +0x00 0x27a3cb (??_G 0x27a3af)
-    static EEWonNetAvailableGameFormManager* Get();
+    static EEWonNetAvailableGameFormManager* Get();   // 0x27a3eb
     TMPoll* GetPoll() const { return this->mPoll; }
 
     TMPoll* mPoll;                          // +0x04 the game list refresh timer (3 s)

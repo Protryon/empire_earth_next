@@ -14,6 +14,7 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
+// FUNCTION: WON 0x00795f10
 // Handles the LISTSORTTYPE config key for a tree area; passes other keys to the list area config
 bool TreeAreaConfig::Virtual24(const std::string& instruction)
 {

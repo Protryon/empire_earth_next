@@ -17,7 +17,7 @@ class EEComplexUnit;
 
 class EEAIAStarPathfindingGoalBase {
 public:
-    EEAIAStarPathfindingGoalBase();
+    EEAIAStarPathfindingGoalBase();         // 0x19a93
     virtual ~EEAIAStarPathfindingGoalBase();   // +0x00 (dtor 0x19b22)
     virtual void ReleaseModifier();         // +0x04 0x19b6e
     virtual bool Prepare();                 // +0x08 0x19b84
@@ -34,7 +34,7 @@ public:
     }
 
     void CollectUnitTiles();                // 0x19b4b (the unit's class flag 4: 0x248fe4(unit, mUnitTiles, 0.0f))
-    void Reset();
+    void Reset();                           // 0x19b9d
     void SetUnit(EEComplexUnit* inUnit);    // 0x19c0f (referenced; its continent id, mAvoidUnits from its player/class)
     void SetGoalBounds(const U2DPoint<long>& inTile, long inMargin);  // 0x19c77 (mGoalBounds = the tile, grown)
     void SetStartBounds(const U2DPoint<long>& inTile, long inMargin);  // 0x19ca1 (mStartBounds = the tile, grown)

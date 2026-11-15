@@ -11,11 +11,11 @@ class EEVCWonder;                          // RTTI EEVCWonder > EEVictoryConditi
 
 class EETeam : public FSRestorable {
 public:
-    EETeam();
+    EETeam();                                                                   // 0x13d013
     // user-defined: each copy news its own victory condition. Inline below the class (it needs EEVCWonder);
     // out-of-line COMDAT 0x13e831 in EEWorld.cpp's vector<EETeam> range (_Construct 0x13e955 calls it)
     EETeam(const EETeam& inTeam);
-    ~EETeam();
+    ~EETeam();                                                                  // 0x131b02
     // user-defined: copies the players only (vector<EETeam> fill 0x13e8e3 / copy 0x13e2a7 expand it: one vector
     // operator=, mVictoryCondition untouched)
     EETeam& operator=(const EETeam& inTeam) { this->mPlayers = inTeam.mPlayers; return *this; }
@@ -30,7 +30,7 @@ public:
     void Merge(const EETeam& inTeam);       // 0x136b6d (AddPlayer for each of inTeam's players)
     void AddPlayer(unsigned long inPlayer); // 0x136ba1 (push_back unless present; pushes &inPlayer itself: the element type)
     void RemovePlayer(long inPlayer, std::vector<unsigned long>& outPlayers);   // 0x136bfc (outPlayers = the players without inPlayer)
-    bool Contains(long inPlayer1, long inPlayer2);
+    bool Contains(long inPlayer1, long inPlayer2);   // 0x136c64
     long GetVictoryState();                 // 0x136d5e (mVictoryCondition's slot +0x04)
     // inline (out of line through the ICF-folded COMDAT 0x91f11)
     unsigned long GetNumPlayers() const { return this->mPlayers.size(); }

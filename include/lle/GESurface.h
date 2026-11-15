@@ -30,7 +30,7 @@ struct GESurfaceDescription {
 
 class LLE_API GESurface : public UReferenceCounter {   // sizeof 8 (vector deleting dtor 0xdf58)
 protected:
-    GESurface() {}
+    GESurface() {}                          // 0xdf33
     virtual ~GESurface() {}                 // slot 0 (exported protected: ??1GESurface@@MAE@XZ)
 public:
     virtual long AttachSurface(GESurface* inSurface) = 0;

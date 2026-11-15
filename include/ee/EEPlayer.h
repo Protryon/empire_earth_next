@@ -102,7 +102,7 @@ public:
 // A group of units (RTTI EEGroup > UReferenceCounter; EEGroup.cpp around 0x205ee4)
 class EEGroup : public UReferenceCounter {
 public:
-    EEGroup(EEPlayer* inPlayer);
+    EEGroup(EEPlayer* inPlayer);            // 0x20601b
     virtual ~EEGroup();                     // +0x00 0x2060a2 (??_G 0x206086)
     virtual void Add(EEComplexUnit* inUnit);   // +0x04 0x206174 (`ret 4`; EEMSelectTheseUnits adds through it)
     // +0x08 0x206280: cancels and deletes the path request of path inPathID (mU08's key)
@@ -149,7 +149,7 @@ public:
     // 0x206581: a path request for inCluster's units from inFrom to inTo (EEActiveGroup::RequestPaths)
     void RequestPath(const EETileCoordinate& inFrom, const EETileCoordinate& inTo, EEGroupCluster* inCluster);
     void CancelPathRequest(long inPathID);  // 0x206cc9 (EEActiveGroup 0x1efa05)
-    void RemoveAt(long inIndex);
+    void RemoveAt(long inIndex);            // 0x206d40
     // 0x206f1a (cdecl; EECPAttackSubGroup::PickSplitUnits, 0x45e8d2, EEActiveGroup::RequestPaths): inUnits split into
     // clusters (ee/EEGroupCluster.h) by continent / boats / distance inDistance (squared first when inSquare)
     static void MakeClusters(std::vector<EEComplexUnit*>& inUnits, std::vector<EEGroupCluster*>& outClusters,
@@ -196,14 +196,14 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // +0x30 0x2093df
     virtual void Validate();                // +0x34 0x209469
     virtual void AddIfAbsent(EEComplexUnit* inUnit, bool inNeedsSort);  // +0x40 0x2091df (new slot)
-    void AddUnit(EEComplexUnit* inUnit, bool inNeedsSort);
+    void AddUnit(EEComplexUnit* inUnit, bool inNeedsSort);  // 0x209185
     void SortUnits();                       // 0x20942f (std::sort by EESGUnitSorter when mB44 is set)
     // 0x209b15 (a template COMDAT among EESelectedGroup.cpp's std::sort instantiations): std::sort(mUnits, inSorter);
     // (provisional name; its instantiator includes <algorithm>; VC6 binds std::sort at the instantiation)
     template <class T> void SortBy(T inSorter) { std::sort(this->mUnits.begin(), this->mUnits.end(), inSorter); }
-    void ShowSelectionAreas();
-    void RefreshSelectionAreas(EEComplexUnit* inUnit);
-    unsigned short GetContinent();
+    void ShowSelectionAreas();              // 0x209500
+    void RefreshSelectionAreas(EEComplexUnit* inUnit);  // 0x2097b3
+    unsigned short GetContinent();          // 0x20924f
 
     // inline (EEPlayer::Reset 0x165813 news three: EEGroup(inPlayer) out of line, then the vptr
     // and +0x3c, +0x44, +0x40; the vtable and ??_G 0x165c20 are emitted in EEPlayer.cpp)
@@ -221,7 +221,7 @@ class EETechTreeNode;
 // selected group and push it into EEPlayer +0x854. Names are provisional.
 class EEActiveGroup : public EEGroup {
 public:
-    EEActiveGroup(EEPlayer* inPlayer);
+    EEActiveGroup(EEPlayer* inPlayer);      // 0x1ebc86
     virtual ~EEActiveGroup();               // +0x00 0x1ebd27 (??_G 0x1ebd0b)
     virtual void Add(EEComplexUnit* inUnit);   // +0x04 0x1ebcfd: Virtual48(inUnit, false)
     virtual void Clear();                   // +0x24 0x1eeb6d (the dtor calls it first)
@@ -248,7 +248,7 @@ public:
     // 0x1edc93: mGoal = inGoal, +0xb5 = inFlag, +0xb6 = (kind 1 and its +0x33)
     void SetGoal(EEUnitGoal* inGoal, bool inFlag);
     void Plan();                            // 0x1edcc0 (after SetGoal)
-    void KeepNonCitizens();
+    void KeepNonCitizens();                 // 0x1eebb9
     // 0x1edbb2..0x1edc72: a unit's stat, or the group's when mBB6 is set (SetGoal: a kind-1 goal with its +0x33)
     // (provisional names)
     float GetMaxVelocity(EEComplexUnit* inUnit);  // 0x1edbb2: mF70 / mStats->mFAC
@@ -258,13 +258,13 @@ public:
     float GetInverseMaxVelocity(EEComplexUnit* inUnit);  // 0x1edc30: mFA0 / mStats->mFD0
     float GetInverseAcceleration(EEComplexUnit* inUnit);  // 0x1edc51: mFA4 / mStats->mFC4
     float GetInverseAngularAcceleration(EEComplexUnit* inUnit);  // 0x1edc72: mFAC / mStats->mParam8
-    void KeepGroundAttackers();
+    void KeepGroundAttackers();             // 0x1eef30
     void ResetUnitsPaths();                 // 0x1edac5 (EEMPathTo)
     void KeepCitizens();                    // 0x1eef6c (EEMBuildWall)
     void SpreadAroundResource(EEUnit* inTarget);  // 0x1eefbe (EEMGatherResource)
     void SpreadAroundTile(long inTileX, long inTileY);  // 0x1ef2d4 (EEMDropoffResource: the drop-off's tile)
     void SpreadAroundUnit(EEUnit* inTarget, long inTileX, long inTileY);  // 0x1eecb2 (EEMAttackUnit: the target and its tile)
-    void KeepMobileUnits();
+    void KeepMobileUnits();                 // 0x1ef56d
     void TellGroup(EEComplexUnit* inUnit, const GE3DPoint& inLocation);  // 0x1efca8 (the teleport calamity)
     // inline (out-of-line COMDAT 0xbb02a after its first user EEMAddPatrolPoint::Execute; 25 callers, none expands
     // it): defined in ee/EEActiveGroup.h, where EEUnitGoal is complete (its delete calls the virtual dtor)
@@ -346,7 +346,7 @@ public:
 
 class EETechTreeNode : public RTSTechTreeNode {
 public:
-    EETechTreeNode();
+    EETechTreeNode();                       // 0x1cedce
     virtual ~EETechTreeNode();              // +0x00 0x1cee25 (??_G 0x1cee09)
     virtual bool GetIsAvailable();          // +0x04 0x1cf686
     virtual bool GetIsObsolete();           // +0x08 0x1cf742
@@ -359,23 +359,23 @@ public:
 
     void ClearClassCosts();                 // 0x1ceeb3 (delete[]s mU08->mClassCosts' arrays, then clear())
     long Unload();                          // 0x1ceefc (deletes mU08; 0)
-    void GetCostString(UWideString& outString, long inUnitClass, float inScale);
+    void GetCostString(UWideString& outString, long inUnitClass, float inScale);   // 0x1cf0e2
     long Load(FSFile& inFile, EETechTree* inTree);  // 0x1cf370 (one 0x10c-byte database record)
     bool Contains(long inUnitClass);        // 0x1cf6e5 (std::find in mU08->mUnitClasses)
-    bool NeedsUnitMedia();
+    bool NeedsUnitMedia();                  // 0x1cf75b
     bool NeedsUnitMediaUncaptured();        // (TNWK, TEST ONLY: NeedsUnitMedia records its answer)
     bool DependsOn(long inID);              // 0x1cf79a (recursive over the prerequisites)
-    void SetPrerequisite(long inID);
-    void MakeAvailable();
-    void SetScenEditorObsoleted(bool inValue, bool inRecurse);
-    void SetObsolete(bool inValue, bool inKeepMedia);
-    void SetButton(unsigned long inButton);
+    void SetPrerequisite(long inID);        // 0x1cf995
+    void MakeAvailable();                   // 0x1cfa3c
+    void SetScenEditorObsoleted(bool inValue, bool inRecurse);  // 0x1cfae9
+    void SetObsolete(bool inValue, bool inKeepMedia);  // 0x1cfbfe
+    void SetButton(unsigned long inButton); // 0x1cfc72
     // GetCost's body (the virtual adds the simulation capture's record: ee/EETechCapture.h)
     long GetCostUncaptured(long inResource, long inUnitClass, float inScale);
     // 0x268dc6 (in EEUIFMGMainGroup.cpp after its first user ShowCommands, called out of line: defined there): the hot key
     // mU08->mHotKey, 0 out of range (provisional name)
     UIHotKey* GetHotKey();
-    EETechTreeNode& operator=(const EETechTreeNode& inOther);
+    EETechTreeNode& operator=(const EETechTreeNode& inOther);   // 0x1cfde2
     // 0x2a995 (a COMDAT in the AI range: inline there?): mU08->mUnitClasses[inIndex], mU08->mU40 past the end
     long GetUnitClass(unsigned long inIndex);
     // 0x8a42e (a COMDAT first emitted by EECPResearchManager.cpp, every call out of line): mU08->mUnitClasses.size();
@@ -405,7 +405,7 @@ public:
 // other nodes of its ids.
 class EETechTreeEpoch : public EETechTreeNode {
 public:
-    EETechTreeEpoch();
+    EETechTreeEpoch();                      // 0x1cdf68
     virtual ~EETechTreeEpoch();             // +0x00 0x1cdfcf (??_G 0x1cdfb3)
     virtual bool GetIsAvailable();          // +0x04 0x1ce474
     virtual bool GetIsObsolete();           // +0x08 0x1ce494
@@ -415,21 +415,21 @@ public:
     virtual long ResearchNode(EEComplexUnit* inUnit);  // +0x18 0x1ce862
     virtual void UnloadMedia(EEPlayer* inPlayer);  // +0x1c 0x1cea53
 
-    void DeleteNodes();
-    long GetCurrentSOL();
+    void DeleteNodes();                     // 0x1cdff6
+    long GetCurrentSOL();                   // 0x1ce0e7
     long GetRequiredSOL() const { return this->mRequiredSOL; }  // inline (AttemptEpochAdvance 0x6f406 loads it before the GetCurrentSOL call) (provisional name)
     long Load(FSFile& inFile, EETechTree* inTree);  // 0x1ce10e (the epoch's record, then its nodes)
-    long Unload();
-    void GetNodeIDs(std::vector<long>& outIDs);
-    void AddSOL();
-    void LoadMediaOfKind(long inKind);
-    void UpdateAvailability();
-    void ResearchKind(long inKind, bool inEpochOnly);
-    long Research(long inID, EEComplexUnit* inUnit);
+    long Unload();                          // 0x1ce3c9
+    void GetNodeIDs(std::vector<long>& outIDs);     // 0x1ce439
+    void AddSOL();                          // 0x1ce498
+    void LoadMediaOfKind(long inKind);      // 0x1ce624
+    void UpdateAvailability();              // 0x1ce7db
+    void ResearchKind(long inKind, bool inEpochOnly); // 0x1ce8c5
+    long Research(long inID, EEComplexUnit* inUnit);   // 0x1ce930
     long GetCostUncaptured(long inResource, long inUnitClass, float inScale);   // GetCost's body (ee/EETechCapture.h)
-    void UnloadMediaOfKind(long inKind);
+    void UnloadMediaOfKind(long inKind);    // 0x1cea9a
     EETechTreeNode* Get(long inID);         // 0x1ceaeb (EETechTree::Get's lookup in one epoch; provisional name)
-    EETechTreeEpoch& operator=(const EETechTreeEpoch& inOther);
+    EETechTreeEpoch& operator=(const EETechTreeEpoch& inOther);  // 0x1ceb26
 
     // the save key (EETechTreeEpoch.cpp's `$E` chain 0x1cdf25; guard byte 0x562dd8). Unguarded
     // a class static only renumbers an includer's `$E` symbols
@@ -465,7 +465,7 @@ private:
 // over EETechHost (ee/EETechRust.h)
 class EETechTree : public RTSTechTree, public EeTechTreeFields {
 public:
-    EETechTree();
+    EETechTree();                           // 0x1cbcc2
     virtual ~EETechTree();                  // +0x00 0x1cbd99 (??_G 0x1cbd7d)
     // inline in the real header (the COMDAT 0x18a4 sits in EEABuild.cpp, its first user; every caller calls it
     // out of line). An epoch's id is its position; a node is found in its epoch (EETechTreeEpochOf).
@@ -483,28 +483,28 @@ public:
     bool GetTechIDState(long inTechID, bool& outIsResearched, bool& outIsObsolete, bool& outScenEditorObsoleted);   // 0x1cbc87 (the asserts name it)
     long Load(FSFileSpec& inFile);          // 0x1cbdf0 (the database: every epoch block of the file)
     static void BuildUnitClassInfo();       // 0x1cbe4a (gTechTree's events by unit class)
-    void UnloadAll();
-    void GetNodeIDs(std::vector<long>& outIDs);
-    void GetEpochNodeIDs(long inEpoch, std::vector<long>& outIDs);
-    void GetChecksum(ESChecksum& ioChecksum);
-    void SumCosts(long inID, long inUnitClass, long* ioCosts);
-    static bool IsLatestEffect(EETechTree* inTree, long inID, long inUnitClass, long inKind);
-    EEPlayer* GetPlayer();
-    void AdvanceEpoch();
-    void ApplySavedState(bool inApplyObsoleted, bool inApplyResearch);
+    void UnloadAll();                       // 0x1cc282
+    void GetNodeIDs(std::vector<long>& outIDs);     // 0x1cc4af
+    void GetEpochNodeIDs(long inEpoch, std::vector<long>& outIDs);   // 0x1cc4cc
+    void GetChecksum(ESChecksum& ioChecksum);       // 0x1cc4ec
+    void SumCosts(long inID, long inUnitClass, long* ioCosts);   // 0x1cc5db
+    static bool IsLatestEffect(EETechTree* inTree, long inID, long inUnitClass, long inKind);  // 0x1cc9e8
+    EEPlayer* GetPlayer();                  // 0x1ccb1f
+    void AdvanceEpoch();                    // 0x1ccb34
+    void ApplySavedState(bool inApplyObsoleted, bool inApplyResearch);  // 0x1ccb4a
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x1ccbc9 (saved game)
-    void MakeObsolete(long inID);
-    void SetPrerequisite(long inID, long inPrerequisite);
+    void MakeObsolete(long inID);           // 0x1ccdea
+    void SetPrerequisite(long inID, long inPrerequisite);  // 0x1cce4c
     void Research(long inID, EEComplexUnit* inUnit);   // 0x1ccec2 (inUnit: the researching unit, passed on to EEEvent::Trigger)
     void SumCostsUncaptured(long inID, long inUnitClass, long* ioCosts);   // SumCosts' body (ee/EETechCapture.h)
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
-    void SetEpoch(long inEpoch);
-    void SetEpochRange(long inStart, long inEnd);
-    void ResetEpochRange(long inStart, long inEnd);
-    void SetNodeAvailable(long inID, bool inValue);
-    void SetPlayer(EEPlayer* inPlayer);
-    void UpdateInterface(bool inEpochChanged);
-    EETechTree& operator=(const EETechTree& inOther);
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // 0x1cd046
+    void SetEpoch(long inEpoch);            // 0x1cd2a7
+    void SetEpochRange(long inStart, long inEnd);   // 0x1cd2ed
+    void ResetEpochRange(long inStart, long inEnd);  // 0x1cd30a
+    void SetNodeAvailable(long inID, bool inValue);  // 0x1cd33b
+    void SetPlayer(EEPlayer* inPlayer);     // 0x1cd358
+    void UpdateInterface(bool inEpochChanged);  // 0x1cd374
+    EETechTree& operator=(const EETechTree& inOther);   // 0x1cd3cb
     // 0x267eaa: the epoch the statistics group shows (inline in the original's EEUIFMGGStatistics.h, the COMDAT after
     // its Select; defined in EEUIFMGMainGroup.cpp with the panel groups' host; provisional name)
     long GetShownEpoch() const;
@@ -602,7 +602,7 @@ struct RTSUnitBucket {
 // (ee_units rts_player_save.rs; names, types and order kept), Load and Save Rust over it
 class RTSPlayer : public EeUnitsRtsPlayerFields {
 public:
-    RTSPlayer();
+    RTSPlayer();                            // 0x16f095
     RTSPlayer(const UWideString& inName, unsigned long inPlayerID);   // 0x16f12e (EEPlayer's ctor; mSaveVisMap = inPlayerID != 0)
     virtual ~RTSPlayer();                   // +0x00 (??_G 0x16f112, dtor 0x16f1cf)
     // +0x04 0x16f1f3: Virtual28(each mPendingUnits unit, inArg1), then Virtual0C() if inArg2 (both tested as bytes;
@@ -688,7 +688,7 @@ public:
 class EEPlayer : public RTSPlayer, public EeUnitsPlayerSaved, public EeUnitsPlayerFields {
 public:
     // out of line in EEPlayer.cpp (EEHumanPlayer's ctors call them; its ??_G calls the dtor)
-    EEPlayer();
+    EEPlayer();                             // 0x162048
     EEPlayer(const UWideString& inName, unsigned long inPlayerID);   // 0x161da5 (RTSPlayer(inName, inPlayerID) 0x16f12e first)
     virtual ~EEPlayer();                    // +0x00 0x162297
     // the FSRestorable-style slots EEPlayer overrides (EEHumanPlayer's wrappers call them)
@@ -796,16 +796,16 @@ public:
     void UpdateSelection(EEUnit* inUnit, bool inFlag);
     // per unit class (+0x888, one per unit class; the meteor storm's Virtual28/Virtual34 with its meteor class)
     // (provisional names)
-    void LoadUnitClassMedia(long inUnitClass);
+    void LoadUnitClassMedia(long inUnitClass);              // 0x16c776
     void GetHerdsOfType(std::vector<EEHerd*>& outHerds, long inUnitType);  // 0x164e78 (the herds of inUnitType's animal; EESMObject 0x1c8e37; provisional name)
     void ApplyMapRestrictions();            // 0x16c249 (the space/sea-map techs off, or the unit-selection hot keys for them; 0x13a3f9; provisional name)
     void DisableCamouflagePower();          // 0x16c5f9 (civ power 0x31: each complex unit in its unit set loses mIsCloakable/mIsCloaked, mCamouflageTimer/mU32C; VirtualXX 0x16b987; provisional name)
     void CheckButtonsPreloaded(long inUnitClass);  // 0x16c6fa (EEUnitClass::CreateUnitAt before a new unit; provisional name)
-    void SetUnitClassMedia(long inUnitClass, long inMediaFlags);
-    void UnloadUnitClassMedia(long inUnitClass);
+    void SetUnitClassMedia(long inUnitClass, long inMediaFlags);  // 0x167c7d
+    void UnloadUnitClassMedia(long inUnitClass);            // 0x16b61c
     // logic bomb (provisional names): Stop passes the target's complex unit and false, Update the unit
-    void AddWonder(EEComplexUnit* inUnit, bool inIsLoading);
-    void RemoveWonder(EEComplexUnit* inUnit);
+    void AddWonder(EEComplexUnit* inUnit, bool inIsLoading);  // 0x1636cd
+    void RemoveWonder(EEComplexUnit* inUnit);               // 0x168ff2
     void DeselectUnit(EEUnit* inUnit);                      // 0x168eb9 (the hurricane's Stop, its unit)
     // 0x164e22: the last town of the vector at +0x7cc whose area holds inUnit's tile, or 0 (the prophet analyzers'
     // 0xaa8b; provisional name)
@@ -819,17 +819,17 @@ public:
     EEWUnitsOffMapInfo* GetOffMapInfo(EEComplexUnit* inUnit);  // (mUnitsOffMap's entry; was a gap struct EEPlayerUnitInfo)
     void SelectUnits(std::vector<long>& inUnitIDs);   // 0x16a658 (EEMSelectUnits::Execute; provisional name)
     // selection by the EEM* messages (EEMessage.cpp Executes; provisional names)
-    void AddUnitToSelectedGroup(unsigned long inUnitID, bool inFlag);
-    void AddUnitsToSelectedGroup(std::vector<long>& inUnitIDs);
-    void IncrementEpic();
-    void RemoveUnitFromSelectedGroup(long inUnitID);
-    void SelectUnit(unsigned long inUnitID, bool inArg1, bool inNewGroup);
-    void UnselectAllUnits();
+    void AddUnitToSelectedGroup(unsigned long inUnitID, bool inFlag);   // 0x1629e4
+    void AddUnitsToSelectedGroup(std::vector<long>& inUnitIDs);   // 0x162a5d
+    void IncrementEpic();                   // 0x165808
+    void RemoveUnitFromSelectedGroup(long inUnitID);   // 0x1688ed
+    void SelectUnit(unsigned long inUnitID, bool inArg1, bool inNewGroup);  // 0x16a53b
+    void UnselectAllUnits();                // 0x16bc55
     void ReloadTechTree(bool inFlag);       // 0x1697ff (EESELoadThread Handle403; provisional name)
     void LoadAllClassMedia();               // 0x167bff (Handle406, before its loop; provisional name)
     void UnloadAllClassMedia();             // 0x16b5b6 (Handle407, before its loop: per +0x8d8 entry, then clear; provisional name)
     void ClearSavedGroup(long inGroup);     // 0x163f95 (EEMSavedGroupClear)
-    void AddAndRemoveUnitsFromSelectedGroup(std::vector<long>& inUnitIDs);
+    void AddAndRemoveUnitsFromSelectedGroup(std::vector<long>& inUnitIDs);   // 0x162816 (provisional name)
     EEPPatrolGroup* GetPatrolGroup(unsigned long inID);   // 0x16519e (mPatrolGroups's group with that id; EEUGPatrol::RepairPointers)
     void AddPatrolGroup(EEPPatrolGroup* inGroup);   // 0x16279f: referenced, pushed into mPatrolGroups (provisional name)
     long CountQueuedImprovements(unsigned long inUnitType, long inArg) const;  // 0x164f4a (EEMRemoveImprovement; const: the const vector reads and the dead const-operator[] lea; provisional name)
@@ -840,7 +840,7 @@ public:
     // EEMessage.cpp's caller passes &theText
     bool CanBuy(long inUnitType, long inImprovement, UWideString* outText);     // (QueueImprovement passes 0: a pointer)
     void QueueImprovement(unsigned long inUnitType, unsigned long inImprovement, bool inFront, bool inAlreadyPaid);  // 0x162694 (EEMImproveUnit; args 3/4 tested as bytes)
-    bool CanImprove(long inUnitType, long inImprovement, UWideString* outReason);
+    bool CanImprove(long inUnitType, long inImprovement, UWideString* outReason);  // 0x163c6d (ret 0xc)
     void Reset();                           // 0x165813 (both ctors call it after the vptr store; the arrays and groups; hides RTSPlayer::Reset)
     const UWideString& GetName();           // 0x167eda (&mName, out of line; Reset's; provisional name)
     bool AddUnitToTown(EEComplexUnit* inUnit);
@@ -903,13 +903,13 @@ public:
     // provisional name)
     bool IsAlliedWith(EEPlayer* inPlayer);
     // EEPPlayerEvent's (de)activation at a tile (provisional names)
-    void RemoveSharedSightAt(const EETileLocation& inLocation);
+    void RemoveSharedSightAt(const EETileLocation& inLocation);  // 0x164309
     void ExecuteSelectionMessage(NEMessage* inMessage);  // 0x1646fc (EEServer::PrepareLocalInput: a fast-selection message; provisional name)
-    void AddSharedSightAt(const EETileLocation& inLocation);
+    void AddSharedSightAt(const EETileLocation& inLocation);  // 0x1681e8
     // a tile's player references (the doppelganger manager follows them; provisional names)
     void RemoveSharedSight(RTSTile* inTile);  // 0x164287 (also for the allies that share the line of sight)
-    void RemoveOwnSight(RTSTile* inTile);
-    void RemoveOwnSightAt(const EETileLocation& inLocation);
+    void RemoveOwnSight(RTSTile* inTile);   // 0x164327
+    void RemoveOwnSightAt(const EETileLocation& inLocation);  // 0x16434c
     void AddSightSharer(EEPlayer* inPlayer);  // 0x1627b9 (pushes inPlayer into mSightSharers between two walks of the units)
     void RemoveSightSharer(EEPlayer* inPlayer);  // 0x1684ab (the mirror: inPlayer out of mSightSharers; RemoveWonderPower, 0x16ab41)
     void RemoveTownID(long inID);           // 0x163605 (erases mTownsByID's entry inID)
@@ -924,7 +924,7 @@ public:
     EEComplexUnit* GetNextComplexUnit(EEUnit* inUnit);  // 0x167ede (the next unit with a complex unit after inUnit, from the first when 0)
     void AddSharedSight(EETile* inTile, long inX, long inY);  // 0x168120 (AddOwnSight, then the allies sharing the line of sight)
     void AddOwnSight(EETile* inTile, long inX, long inY);  // 0x16820e (counts this player in at the tile)
-    void AddOwnSightAt(const EETileLocation& inLocation);
+    void AddOwnSightAt(const EETileLocation& inLocation);  // 0x168266
     void RemoveConstructionSite(EEComplexUnit* inUnit);  // 0x168fdf (out of mConstructionSites)
     void RemoveAlly(EEPlayer* inPlayer);    // 0x1683da (inPlayer out of mAllies)
     void RemovePatrolGroup(EEPPatrolGroup* inGroup); // 0x168889 (out of mPatrolGroups, dereferenced)
@@ -962,20 +962,20 @@ public:
     void AddLoadedMedia(EEMedia* inMedia);  // 0x162740 (pushes into mLoadedMedia unless 0; provisional name)
     void DelayWonderTimers(long inAmount);  // 0x162b08 (adds to every unit's mCloaked in mWonders; provisional name)
     bool RemoveLoadedMedia(EEMedia* inMedia);  // 0x16843f (UnloadPlayerEffects unloads the media when true; provisional name)
-    void LoadPlayerEffects();
-    void UnloadPlayerEffects();
+    void LoadPlayerEffects();               // 0x16c7f2 (provisional name)
+    void UnloadPlayerEffects();             // 0x16c829
     long GetNumHeroes(bool inFirst, bool inSecond);   // 0x164223 (mNumHeroes and/or mNumHeroesInProduction; provisional name)
     long GetWonderTime(long inIndex) const;  // 0x165644 (mWonders's unit inIndex's mCloaked; provisional name)
     unsigned long GetNumWonderUnits() const;   // 0x16565f: mWonders->GetSize() (provisional name)
     // per unit class (mUnitClassUpgrades[inUnitClass] when inUnitClass < EEUnitClassCount(); provisional names)
     EEUnitClassUpgrade* GetUpgrade(long inUnitClass) { return this->mUnitClassUpgrades[inUnitClass]; }  // inline COMDAT 0x1bcae9
-    void SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* inFirst, EEButtonObject* inSecond);
-    void SetClassAcknowledgeSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex);
-    void SetClassCreationSound(unsigned long inUnitClass, EESoundObject* inSound);
-    void SetClassDeathSound(unsigned long inUnitClass, EESoundObject* inSound);
+    void SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* inFirst, EEButtonObject* inSecond);  // 0x163d72
+    void SetClassAcknowledgeSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex);  // 0x163db9
+    void SetClassCreationSound(unsigned long inUnitClass, EESoundObject* inSound);  // 0x163de1
+    void SetClassDeathSound(unsigned long inUnitClass, EESoundObject* inSound);  // 0x163e05
     void SetClassModel(unsigned long inUnitClass, EEGraphicObject* inModel);  // 0x163e29 (EEModel)
     void SetClassButton(unsigned long inUnitClass, EEButtonObject* inButton);  // 0x163e4d (the unit class's button; EEEvent SetEventButton)
-    void SetClassSelectionSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex);
+    void SetClassSelectionSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex);  // 0x163e71
 
     // Layout (no gaps; sizeof 0xb80: EEHumanPlayer adds a UWideString at +0xb80, sizeof 0xb94):
     // the ctor 0x161da5 (member ctors), its Reset 0x165813 (the array loops: 20, 4, 17, 10, 10, 17, 17 elements) and

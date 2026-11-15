@@ -4,19 +4,19 @@
 #include "ee/wonapi/WONLobbyResource.h"
 namespace WONAPI {
 class Component;
-int LobbyDoDialog(Component* inDialog);
+int LobbyDoDialog(Component* inDialog); // 0x758e50
 WONStatus LobbyGetVersionStatus(); // 0x75b520 (status 70, or 100004 without a lobby)
 int LobbyDoYesNoDialog(const GUIString& inTitle, const GUIString& inText, bool inPlaySound); // 0x758ef0 (callers pass true)
-void LobbyExit(int inScreen);
-void LobbyShowCreateAccount();
-void LobbyShowLostPassword();
-void LobbyShowLostUsername();
-void LobbySetVersionStatus(WONStatus inStatus);
-ServerContext* LobbyGetAccountServers();
-ServerContext* LobbyGetAuthServers();
-ServerContext* LobbyGetFirewallDetectServers();
-ServerContext* LobbyGetPatchServers();
-void LobbyResetRoomDirServers();
+void LobbyExit(int inScreen);     // 0x7627f0
+void LobbyShowCreateAccount(); // 0x7610d0
+void LobbyShowLostPassword(); // 0x7610f0
+void LobbyShowLostUsername(); // 0x761110
+void LobbySetVersionStatus(WONStatus inStatus); // 0x75b500
+ServerContext* LobbyGetAccountServers(); // 0x75b1f0
+ServerContext* LobbyGetAuthServers(); // 0x75b250
+ServerContext* LobbyGetFirewallDetectServers(); // 0x75b370
+ServerContext* LobbyGetPatchServers(); // 0x75b3d0
+void LobbyResetRoomDirServers(); // 0x75b430
 class Container;
 class ChatCommandParser;
 class UDPManager;
@@ -79,7 +79,7 @@ ColorScheme* LobbyGetColorScheme(); // Component::GetColorScheme 0x6f5970
 void LobbyAddLogicListener(Component* inComponent); // wraps AddListener 0x6f4b10
 void LobbyHandleStagingReadBuffer(ReadBuffer& inData, LobbyClient* inClient); // staging logic 0x7efb50
 unsigned short LobbyGetLobbyPort(); // the private state's 0xb8; 0 without a lobby
-Component* LobbyGetCurrentScreen();
+Component* LobbyGetCurrentScreen(); // 0x760ea0
 void LobbySetNetworkAdapter(long inAddress); // 0x75b9c0 (a numeric IPv4 address)
 ServerContext* LobbyGetDirServers(); // 0x75b2b0 (not owned; the private state's 0x60)
 ServerContext* LobbyGetRoomDirServers(); // 0x75b310 (not owned; the private state's 0x64)

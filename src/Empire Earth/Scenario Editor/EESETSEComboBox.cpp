@@ -73,6 +73,7 @@
 #include "ee/EESETSConditionControls.h"
 #include "ee/EESETSEffectControls.h"
 
+// FUNCTION: EXE 0x581792
 // Creates the effect page's shared controls (labels, combos, edit boxes, radio buttons, sliders, player
 // pickers, list boxes), all hidden, and adds them to the trigger form
 EESETSEffectControls::EESETSEffectControls(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
@@ -260,6 +261,7 @@ EESETSEffectControls::EESETSEffectControls(GEFont* inFont, UIForm* inForm, unsig
     }
 }
 
+// FUNCTION: EXE 0x582445
 // Creates an effect-page combo box of the given width, 20 pixels high
 EESETSEComboBox::EESETSEComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString>& inData,
                                  GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
@@ -270,6 +272,7 @@ EESETSEComboBox::EESETSEComboBox(unsigned long inId, unsigned long inTextBoxType
 {
 }
 
+// FUNCTION: EXE 0x5824bd
 // Changes the selection and refreshes the effect page's generated name
 void EESETSEComboBox::ChangeSelection()
 {
@@ -277,6 +280,10 @@ void EESETSEComboBox::ChangeSelection()
     static_cast<EESETriggerScreen*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabTriggers])->GetScreen(kSETriggerScreenEffect)->RefreshControls();
 }
 
+// SYNTHETIC: EXE 0x5824df
+// (the scalar deleting destructor of EESETSEComboBox's implicit dtor; ICF-shared with EESETSCComboBox's)
+
+// FUNCTION: EXE 0x5824fc
 // Destroys the effect page's shared controls
 EESETSEffectControls::~EESETSEffectControls()
 {

@@ -16,8 +16,10 @@ namespace WONAPI {
 
 UpdateAccountCtrl::UpdateAccountCtrl() {}
 // The original stores its own vptr (0x7c9d3f), so the destructor is written out
+// FUNCTION: WON 0x007c9d20
 // Destroys the dialog, releasing its controls and the remembered old password
 UpdateAccountCtrl::~UpdateAccountCtrl() {}
+// FUNCTION: WON 0x007c9ef0
 // Looks up the account fields, error labels and buttons from the layout; the user name stays read-only
 void UpdateAccountCtrl::InitComponent(ComponentInit& inInit)
 {
@@ -41,12 +43,14 @@ void UpdateAccountCtrl::InitComponent(ComponentInit& inInit)
     this->SubscribeToBroadcast(1);
 }
 // Static (cdecl) in the original
+// FUNCTION: WON 0x007ca080
 // Shows or hides an error label and returns whether it is shown
 bool UpdateAccountCtrl::SetDesc(bool inCondition,Label* inLabel)
 {
     inLabel->SetVisible(inCondition);
     return inCondition;
 }
+// FUNCTION: WON 0x007ca0a0
 // Flags a wrong old password, short or unconfirmed new password and bad e-mail; enables update and query
 void UpdateAccountCtrl::CheckInput()
 {
@@ -63,6 +67,7 @@ void UpdateAccountCtrl::CheckInput()
     this->mQueryButton->SetEnabled(queryAllowed);
 }
 // Reads the user name and password of the auth context at +0x50 and +0x60 (inferred)
+// FUNCTION: WON 0x007ca250
 // Fills in the logged-in user name, clears the other fields and remembers the login password to check against
 void UpdateAccountCtrl::HandleEnteredScreen()
 {
@@ -76,12 +81,14 @@ void UpdateAccountCtrl::HandleEnteredScreen()
     this->mNewsletterCheck->SetCheck(false,false);
     this->mActualOldPassword=GUIString(new GUIStringData(context->GetPassword()));
 }
+// FUNCTION: WON 0x007ca3e0
 // Shows the e-mail address and newsletter choice returned by the account query
 void UpdateAccountCtrl::HandleQueryAccountResult(QueryAccountResultEvent* inEvent)
 {
     this->mEmailInput->SetText(inEvent->mEmail,true);
     this->mNewsletterCheck->SetCheck(inEvent->mNewsletter,false);
 }
+// FUNCTION: WON 0x007ca410
 // Revalidates on typing, queries the account or sends the update request, and refreshes on entering the screen
 void UpdateAccountCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -102,3 +109,15 @@ void UpdateAccountCtrl::HandleComponentEvent(ComponentEvent* inEvent)
     }
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007c9d00
+// (public: virtual void * __thiscall WONAPI::UpdateAccountCtrl::`scalar deleting destructor'(unsigned int)    [??_GUpdateAccountCtrl@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007ca5d0
+// (public: virtual void * __thiscall WONAPI::UpdateAccountEvent::`scalar deleting destructor'(unsigned int)    [??_GUpdateAccountEvent@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007ca5f0
+// (public: virtual __thiscall WONAPI::UpdateAccountEvent::~UpdateAccountEvent(void)    [??1UpdateAccountEvent@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007c9c40
+// (public: __thiscall WONAPI::UpdateAccountCtrl::UpdateAccountCtrl(void)    [??0UpdateAccountCtrl@WONAPI@@QAE@XZ])

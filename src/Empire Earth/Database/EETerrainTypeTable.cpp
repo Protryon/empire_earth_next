@@ -37,6 +37,7 @@ static_assert(sizeof(EETerrainTypeRecord) == 128, "on-disk record: 128 bytes on 
 
 std::vector<EETerrainTypeTable*> EETerrainTypeTable::sTable;
 
+// FUNCTION: EXE 0x4dbd11
 // Creates an empty terrain type
 EETerrainTypeTable::EETerrainTypeTable()
 {
@@ -48,6 +49,7 @@ EETerrainTypeTable::EETerrainTypeTable()
     this->mIsInEditor = false;
 }
 
+// FUNCTION: EXE 0x4dbd2e
 // Loads the terrain types (id, colour range, name, editor flag) from db\dbterrainType.dat; returns the last read status
 long EETerrainTypeTable::Load(FSFileSpec* inFile)
 {
@@ -75,6 +77,7 @@ long EETerrainTypeTable::Load(FSFileSpec* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4dbde7
 // Destroys every terrain type and empties the table
 void EETerrainTypeTable::Unload()
 {
@@ -82,6 +85,9 @@ void EETerrainTypeTable::Unload()
         delete EETerrainTypeTable::sTable[i];
     EETerrainTypeTable::sTable.resize(0);
 }
+
+// SYNTHETIC: EXE 0x4dbe27
+// (the scalar deleting destructor)
 
 // the lookup's classes (included after the table's init chain, as EETerrainTable.cpp does)
 #include "lle/GE2DPoint.h"
@@ -99,6 +105,7 @@ void EETerrainTypeTable::Unload()
 #include "ee/EERulesWorld.h"
 #include "ee/EECombatFormulas.h"
 
+// FUNCTION: EXE 0x4dbe44
 // Returns the damage factor of an attack kind against a unit class (its family row), 0 when it cannot be attacked or a
 // player is missing; the base table unless exactly one player (player 0 aside) is human, then a twin by difficulty
 float EEToHitTable::GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned long inPlayer, unsigned long inTargetPlayer)
@@ -149,6 +156,7 @@ float EEDamageFactor(long inRow, long inColumn)
     return ee_combat_damage_factor((int32_t)inRow, (int32_t)inColumn);
 }
 
+// FUNCTION: EXE 0x4dbf11
 // Loads every row of 0x44 damage factors (percent to fraction; the original: up to 60 rows) and builds the two twin
 // tables scaled by world constant 0x59's two values; returns the last read status (new: the tables are ee_combat's,
 // damage_table.rs; gDamageTable and its twins point at its rows)
@@ -201,6 +209,7 @@ long EETerrainTypeTable::LoadDamageTables(FSFileSpec* inFile)
 }
 
 
+// FUNCTION: EXE 0x4dc5bb
 // Frees the three damage tables and zeroes their sizes (the rows are ee_combat's)
 void EETerrainTypeTable::ClearDamageTables()
 {
@@ -214,3 +223,8 @@ void EETerrainTypeTable::ClearDamageTables()
     gDamageTableColumnCount = 0;
     gDamageTableRowCount = 0;
 }
+
+// SYNTHETIC: EXE 0x4dbcc8
+// SYNTHETIC: EXE 0x4dbcd2
+// SYNTHETIC: EXE 0x4dbcea
+// SYNTHETIC: EXE 0x4dbcf6

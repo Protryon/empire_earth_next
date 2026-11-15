@@ -19,9 +19,9 @@ public:
     // gViewport's view rectangle top-left; references inClick and inLasso
     EEUICSelectUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex, EEAMouseClick* inClick,
                      EEALasso* inLasso);
-    virtual ~EEUICSelectUnits();
-    virtual long CopyData() { return this->Rust(EE_SCREENS_SU_DO_COPY_DATA); }
-    virtual long DrawPolygons() { return this->Rust(EE_SCREENS_SU_DO_DRAW); }
+    virtual ~EEUICSelectUnits();            // 0x259739
+    virtual long CopyData() { return this->Rust(EE_SCREENS_SU_DO_COPY_DATA); }   // 0x259775
+    virtual long DrawPolygons() { return this->Rust(EE_SCREENS_SU_DO_DRAW); }   // 0x2597e2
     // 0x259ec5: a left press at inLocation starts a selection (EEUIFMainGame, the scenario editor)
     void StartSelection(const GE2DPoint& inLocation) { this->Rust(EE_SCREENS_SU_DO_START, &inLocation); }
     // inline accessors (EERenderObject::FillRenderLists picks the units in the drawn box; provisional names)
@@ -32,8 +32,8 @@ public:
     bool GetIsDragging() const { return this->mDragging; }
     const GE2DPoint& GetDragEnd() const { return *reinterpret_cast<const GE2DPoint*>(&this->mDragEnd); }
 protected:
-    virtual long MouseLButtonUp() { return this->Rust(EE_SCREENS_SU_DO_MOUSE_L_UP); }
-    virtual long MouseLButtonDoublePressed() { return this->Rust(EE_SCREENS_SU_DO_DOUBLE_CLICK); }
+    virtual long MouseLButtonUp() { return this->Rust(EE_SCREENS_SU_DO_MOUSE_L_UP); }   // 0x259bda
+    virtual long MouseLButtonDoublePressed() { return this->Rust(EE_SCREENS_SU_DO_DOUBLE_CLICK); }   // 0x259af1
     virtual long MouseMove(const GE2DPoint& inLocation) { return this->Rust(EE_SCREENS_SU_DO_MOUSE_MOVE, &inLocation); }
     virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
     long Rust(uint32_t inWhich, const GE2DPoint* inLocation = NULL);

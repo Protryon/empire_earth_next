@@ -188,7 +188,7 @@ private:
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)
     // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number)
 protected:
-    static ISEntity* sSpaceKey;
+    static ISEntity* sSpaceKey;            // 0x1012e2f4
     static ISEntity* sAltKey;
     static ISEntity* sEnterKey;
     static ISEntity* sControlKey;
@@ -213,8 +213,8 @@ protected:
     static ISEntity* sPasteKey;
     static ISEntity* sInsertKey;
 private:
-    static GEColor sLightBorder;
-    static GEColor sDarkBorder;
+    static GEColor sLightBorder;            // 0x1012e2d8
+    static GEColor sDarkBorder;             // 0x1012e2e8
 #endif
 };
 

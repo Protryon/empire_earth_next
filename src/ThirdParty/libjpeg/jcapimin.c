@@ -26,6 +26,7 @@
  * The error manager must already be set up (in case memory manager fails).
  */
 
+// FUNCTION: JPEG 0x100875a6
 GLOBAL(void)
 jpeg_CreateCompress (j_compress_ptr cinfo, int version, size_t structsize)
 {
@@ -84,6 +85,7 @@ jpeg_CreateCompress (j_compress_ptr cinfo, int version, size_t structsize)
  * Destruction of a JPEG compression object
  */
 
+// FUNCTION: JPEG 0x1008765a
 GLOBAL(void)
 jpeg_destroy_compress (j_compress_ptr cinfo)
 {
@@ -115,6 +117,7 @@ jpeg_abort_compress (j_compress_ptr cinfo)
  * jcparam.o would be linked whether the application used it or not.
  */
 
+// FUNCTION: JPEG 0x10087665
 GLOBAL(void)
 jpeg_suppress_tables (j_compress_ptr cinfo, boolean suppress)
 {
@@ -143,6 +146,7 @@ jpeg_suppress_tables (j_compress_ptr cinfo, boolean suppress)
  * work including most of the actual output.
  */
 
+// FUNCTION: JPEG 0x100876af
 GLOBAL(void)
 jpeg_finish_compress (j_compress_ptr cinfo)
 {

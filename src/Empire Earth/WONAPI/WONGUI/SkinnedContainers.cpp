@@ -19,6 +19,7 @@
 #include "ee/wonapi/WONSkinLayout.h"
 namespace WONAPI {
 
+// FUNCTION: WON 0x00719A70
 // Returns the combo box's desired size: edit height + 2 (else 22), widest item + 10 + button (else 100) wide
 // (skinlay.rs)
 void WONComboBox::GetDesiredSize(int &width, int &height)
@@ -26,6 +27,7 @@ void WONComboBox::GetDesiredSize(int &width, int &height)
 	WONSkinLayout(this,EeWonSkinLayKind::WonComboSize,0,0,0,&width,&height);
 }
 
+// FUNCTION: WON 0x00719B00
 // Lays out the combo box: the edit fills the width left of the button, the button sits inside or beside the frame
 // (skinlay.rs)
 void WONComboBox::Virtual08()
@@ -34,6 +36,7 @@ void WONComboBox::Virtual08()
 	WONSkinLayout(this,EeWonSkinLayKind::WonCombo);
 }
 
+// FUNCTION: WON 0x00719BF0
 // Paints the combo box and its frame, leaving the button out of the frame when it sits outside it
 void WONComboBox::Paint(Graphics& g)
 {
@@ -51,6 +54,7 @@ void WONComboBox::Paint(Graphics& g)
 	WONDrawRun(g,anOps,aSlots);
 }
 
+// FUNCTION: WON 0x00719DF0
 // Lays out the visible scrollbars inside the frame and gives the rest, below the header, to the scroll area
 // (skinlay.rs)
 void WONScrollContainer::Virtual08()
@@ -59,6 +63,7 @@ void WONScrollContainer::Virtual08()
 	WONSkinLayout(this,EeWonSkinLayKind::WonScroll);
 }
 
+// FUNCTION: WON 0x00719FF0
 // Paints the container, the corner image between two visible scrollbars (when opaque) and the frame
 void WONScrollContainer::Paint(Graphics &g)
 {

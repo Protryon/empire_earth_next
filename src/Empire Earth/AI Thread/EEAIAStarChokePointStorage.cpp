@@ -12,12 +12,17 @@
 #include "ee/EEAIAStarTerrainStorage.h"
 #include "ee/EEAIAStarChokePointStorage.h"
 
+// FUNCTION: EXE 0x41540d
 // Creates the choke point search storage with no choke point id grid
 EEAIAStarChokePointStorage::EEAIAStarChokePointStorage()
     : mChokePointIDs(NULL)
 {
 }
 
+// SYNTHETIC: EXE 0x415423
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x41543f
 // Destroys the storage, freeing its choke point id grid
 EEAIAStarChokePointStorage::~EEAIAStarChokePointStorage()
 {
@@ -25,6 +30,7 @@ EEAIAStarChokePointStorage::~EEAIAStarChokePointStorage()
 }
 
 // NEAR: as EEAIAStarPathSectorStorage::PrepareGrid 0x1b829 (the same shape without the node-array test)
+// FUNCTION: EXE 0x41545a
 // Sizes the id, node and tile-flag grids (reallocating, ids zeroed, on a size change) and clears the node and flag
 // grids, only the span covering the dirty bounds plus 1 when unchanged; then forgets the dirty bounds
 void EEAIAStarChokePointStorage::PrepareGrid(long inWidth, long inHeight)

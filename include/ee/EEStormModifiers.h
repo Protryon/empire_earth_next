@@ -33,17 +33,17 @@ public:
 class EEAIGPGModifierStormRoutePlannerBase : public EEAIGraphPathGoalModifierBase {
 public:
     EEAIGPGModifierStormRoutePlannerBase() {}
-    virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom) { return true; }
+    virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom) { return true; }    // 0xac9ee (ICF)
 };
 
 class EEAIGPGModifierStormRoutePlannerRain : public EEAIGPGModifierStormRoutePlannerBase {
 public:
-    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
+    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);     // 0x12dd54
 };
 
 class EEAIGPGModifierStormRoutePlannerSnow : public EEAIGPGModifierStormRoutePlannerBase {
 public:
-    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
+    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);     // 0x12dcca
 };
 
 #endif

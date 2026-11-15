@@ -44,6 +44,7 @@
 #include "ee/RTSGraphics.h"
 #include "platform/PlatSim.h"
 
+// FUNCTION: EXE 0x51a1cc
 // Creates the graphics thread, paused, drawing a rasterizer screen with the mouse and UI, and waits until it runs
 RTSGraphics::RTSGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMouse* inMouse,
                          UIManager* inUIManager, bool inIsFullScreen, long inThreadPriority)
@@ -81,6 +82,10 @@ RTSGraphics::RTSGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTS
     this->mThread->SetName(gGraphicsThreadName);
 }
 
+// SYNTHETIC: EXE 0x51a34c
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x51a368
 // Destroys the graphics thread and its events, releasing any movie
 RTSGraphics::~RTSGraphics()
 {
@@ -98,6 +103,7 @@ RTSGraphics::~RTSGraphics()
     TSScheduler::DestroyThread(this->mThread);
 }
 
+// FUNCTION: EXE 0x51a3af
 // Tells every render object a frame is starting
 void RTSGraphics::FrameStarting()
 {
@@ -106,6 +112,7 @@ void RTSGraphics::FrameStarting()
     }
 }
 
+// FUNCTION: EXE 0x51a3d5
 // Runs the graphics thread: handles posted messages and, unless paused, quitting or suspended, updates the mouse and
 // renders a frame, every millisecond; signals when it ends
 unsigned long RTSGraphics::Main(void* inGraphics)
@@ -146,18 +153,21 @@ unsigned long RTSGraphics::Main(void* inGraphics)
     return 0;
 }
 
+// FUNCTION: EXE 0x51a4c9
 // Removes the last render object
 void RTSGraphics::PopRenderObject()
 {
     this->mRenderObjects.pop_back();
 }
 
+// FUNCTION: EXE 0x51a4d1
 // Adds a render object, drawn after the others
 void RTSGraphics::PushRenderObject(RTSRenderObject* inObject)
 {
     this->mRenderObjects.push_back(inObject);
 }
 
+// FUNCTION: EXE 0x51a4e1
 // Handles a graphics thread message: quit, pause/resume, the render object list, rasterizer and UI changes, vsync,
 // movie start/stop (sound muted while it plays) and the debug display modes
 void RTSGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
@@ -251,12 +261,14 @@ void RTSGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, voi
     }
 }
 
+// FUNCTION: EXE 0x51a703
 // Restores the screen's lost surfaces; returns the result
 long RTSGraphics::RestoreSurfaces()
 {
     return this->mRasterizer->GetScreen(this->mScreen)->RestoreAllSurfaces();
 }
 
+// FUNCTION: EXE 0x51a71c
 // Draws one frame: the movie's frame while it plays (finishing it when it ends), else every render object's scene;
 // then the mouse pointer and the flip as asked; restores lost surfaces on failure
 void RTSGraphics::Render(bool inDrawMouse, bool inShowScene)
@@ -427,6 +439,7 @@ void RTSGraphics::RenderLobby()
     EELobbyUnlock();
 }
 
+// FUNCTION: EXE 0x51a8fb
 // Tells every render object a scene is starting
 void RTSGraphics::SceneStarting()
 {
@@ -435,6 +448,7 @@ void RTSGraphics::SceneStarting()
     }
 }
 
+// FUNCTION: EXE 0x51a922
 // Resets the alpha test reference to 0 and has every render object draw its scene
 void RTSGraphics::RenderScene()
 {
@@ -444,6 +458,7 @@ void RTSGraphics::RenderScene()
     }
 }
 
+// FUNCTION: EXE 0x51a95d
 // Tells every render object the frame is done
 void RTSGraphics::FrameDone()
 {
@@ -452,12 +467,14 @@ void RTSGraphics::FrameDone()
     }
 }
 
+// FUNCTION: EXE 0x51a984
 // Asks the graphics thread to remove every render object
 void RTSGraphics::PostClearRenderObjects()
 {
     this->mThread->Post(0x406, NULL, NULL, true);
 }
 
+// FUNCTION: EXE 0x51a999
 // Asks the graphics thread to quit and waits until it has
 void RTSGraphics::Shutdown()
 {
@@ -465,6 +482,7 @@ void RTSGraphics::Shutdown()
     this->mThreadDone->Wait(kTSWaitInfinite);
 }
 
+// FUNCTION: EXE 0x51a9bd
 // Asks the graphics thread to pause rendering (message 0x402) once a pending resume is handled; returns the post result
 long RTSGraphics::PostPause()
 {
@@ -475,6 +493,7 @@ long RTSGraphics::PostPause()
     return this->mThread->Post(0x402, NULL, NULL, true);
 }
 
+// FUNCTION: EXE 0x51a9ea
 // Asks the graphics thread to play a movie file (a copy the thread deletes), keeping a reference to the done event
 long RTSGraphics::PlayMovie(const FSFileSpec& inFile, UReferenceCounter* inMovieDoneEvent)
 {
@@ -486,30 +505,35 @@ long RTSGraphics::PlayMovie(const FSFileSpec& inFile, UReferenceCounter* inMovie
     return this->mThread->Post(0x40c, theFile, NULL, true);
 }
 
+// FUNCTION: EXE 0x51aa38
 // Asks the graphics thread to add a render object
 void RTSGraphics::PostPushRenderObject(RTSRenderObject* inObject)
 {
     this->mThread->Post(0x404, inObject, NULL, true);
 }
 
+// FUNCTION: EXE 0x51aa51
 // Asks the graphics thread to set the slow-playback flag (message 0x40a)
 void RTSGraphics::PostSetFlag5B(bool inFlag)
 {
     this->mThread->Post(0x40a, (void*)inFlag, NULL, true);
 }
 
+// FUNCTION: EXE 0x51aa6c
 // Asks the graphics thread to switch to another rasterizer and screen
 void RTSGraphics::PostSetRasterizer(GERasterizer* inRasterizer, unsigned long inScreen)
 {
     this->mThread->Post(0x407, inRasterizer, reinterpret_cast<void*>(inScreen), true);
 }
 
+// FUNCTION: EXE 0x51aa87
 // Asks the graphics thread to set its flag +0x54 (message 0x408); clearing it redraws the whole UI
 void RTSGraphics::PostSetFlag54(bool inFlag)
 {
     this->mThread->Post(0x408, (void*)inFlag, NULL, true);
 }
 
+// FUNCTION: EXE 0x51aaa2
 // Asks the graphics thread to resume rendering (message 0x403) once a pending pause is handled
 void RTSGraphics::PostResume()
 {
@@ -520,12 +544,14 @@ void RTSGraphics::PostResume()
     this->mThread->Post(0x403, NULL, NULL, true);
 }
 
+// FUNCTION: EXE 0x51aacf
 // Asks the graphics thread to stop the movie, report it done and restore the sound volumes
 void RTSGraphics::PostStopMovie()
 {
     this->mThread->Post(0x40d, NULL, NULL, true);
 }
 
+// FUNCTION: EXE 0x51aae4
 // Sets the surface to draw on and, for the mouse, the last surface of its attached chain before the z-buffer
 void RTSGraphics::SetSurface(GESurface* inSurface)
 {
@@ -537,3 +563,6 @@ void RTSGraphics::SetSurface(GESurface* inSurface)
         }
     }
 }
+
+// TEMPLATE: EXE 0x51ab29
+// std::vector<RTSRenderObject*>::push_back (first user 0x11a4d1)

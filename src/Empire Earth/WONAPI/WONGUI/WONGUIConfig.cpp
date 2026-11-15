@@ -20,6 +20,7 @@
 #include "ee/wonapi/WONLobbyMSConfig.h"
 #include "ee/wonapi/WONLobbyWONSkinConfig.h"
 namespace WONAPI {
+// FUNCTION: WON 0x0079a1a0
 // Registers the base GUI component types and their config factories, then the MS, image, font and WON
 // control types and the Ok and Cancel control ids
 void WONGUIConfig_Init(ResourceConfigTable* table)
@@ -54,30 +55,35 @@ void WONGUIConfig_Init(ResourceConfigTable* table)
 // Config factories the registration table calls
 namespace WONAPI {
 
+// FUNCTION: WON 0x0079aab0
 // Creates a new plain component config for the skin loader
 ComponentConfig* ComponentConfig::CfgFactory()
 {
     return new ComponentConfig;
 }
 
+// FUNCTION: WON 0x0079b090
 // Creates a new rectangle component config for the skin loader
 ComponentConfig* RectangleComponentConfig::CfgFactory()
 {
     return new RectangleComponentConfig;
 }
 
+// FUNCTION: WON 0x0079b140
 // Creates a new 3D rectangle component config for the skin loader
 ComponentConfig* RectangleComponent3DConfig::CfgFactory()
 {
     return new RectangleComponent3DConfig;
 }
 
+// FUNCTION: WON 0x0079b1f0
 // Creates a new image component config for the skin loader
 ComponentConfig* ImageComponentConfig::CfgFactory()
 {
     return new ImageComponentConfig;
 }
 
+// FUNCTION: WON 0x0079b350
 // Creates a new screen container config for the skin loader
 ComponentConfig* ScreenContainerConfig::CfgFactory()
 {
@@ -102,40 +108,64 @@ ComponentConfig* DialogConfig::CfgFactory()
     return new DialogConfig;
 }
 
+// FUNCTION: WON 0x0079ad10
+// Creates a new image button config for the skin loader
+
 ComponentConfig* ImageButtonConfig::CfgFactory()
 {
     return new ImageButtonConfig;
 }
+
+// FUNCTION: WON 0x00782150
+// Creates a new list area config for the skin loader
 
 ComponentConfig* ListAreaConfig::CfgFactory()
 {
     return new ListAreaConfig;
 }
 
+// FUNCTION: WON 0x0079ae90
+// Creates a new multi-column list area config for the skin loader
+
 ComponentConfig* MultiListAreaConfig::CfgFactory()
 {
     return new MultiListAreaConfig;
 }
+
+// FUNCTION: WON 0x0079af50
+// Creates a new multi-column list header config for the skin loader
 
 ComponentConfig* MultiListHeaderConfig::CfgFactory()
 {
     return new MultiListHeaderConfig;
 }
 
+// FUNCTION: WON 0x00782100
+// Creates a new input box config for the skin loader
+
 ComponentConfig* InputBoxConfig::CfgFactory()
 {
     return new InputBoxConfig;
 }
+
+// FUNCTION: WON 0x0079b410
+// Creates a new splitter config for the skin loader
 
 ComponentConfig* SplitterConfig::CfgFactory()
 {
     return new SplitterConfig;
 }
 
+// FUNCTION: WON 0x0079b4d0
+// Creates a new text area config for the skin loader
+
 ComponentConfig* TextAreaConfig::CfgFactory()
 {
     return new TextAreaConfig;
 }
+
+// FUNCTION: WON 0x0079b590
+// Creates a new tree area config for the skin loader
 
 ComponentConfig* TreeAreaConfig::CfgFactory()
 {
@@ -145,11 +175,13 @@ ComponentConfig* TreeAreaConfig::CfgFactory()
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x0078f9e0
 // Creates a new label config for the skin loader
 ComponentConfig* LabelConfig::CfgFactory()
 {
     return new LabelConfig;
 }
+// FUNCTION: WON 0x0079add0
 // Creates a new tab control config for the skin loader
 ComponentConfig* TabCtrlConfig::CfgFactory()
 {
@@ -158,21 +190,25 @@ ComponentConfig* TabCtrlConfig::CfgFactory()
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x0079ac50
 // Creates a new dialog for the skin loader
 Component* DialogConfig::CompFactory()
 {
     return new Dialog;
 }
+// FUNCTION: WON 0x0079ab90
 // Creates a new input box for the skin loader
 Component* InputBoxConfig::CompFactory()
 {
     return new InputBox;
 }
+// FUNCTION: WON 0x0079afd0
 // Creates a new label for the skin loader
 Component* LabelConfig::CompFactory()
 {
     return new Label;
 }
+// FUNCTION: WON 0x0079ad70
 // Creates a new tab control for the skin loader
 Component* TabCtrlConfig::CompFactory()
 {
@@ -181,6 +217,7 @@ Component* TabCtrlConfig::CompFactory()
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x0079b3b0
 // Creates a new splitter for the skin loader
 Component* SplitterConfig::CompFactory()
 {
@@ -189,16 +226,19 @@ Component* SplitterConfig::CompFactory()
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x00765120
 // Creates a new container for the skin loader
 Component* ContainerConfig::CompFactory()
 {
     return new Container;
 }
+// FUNCTION: WON 0x0079ab10
 // Creates a new layout point component
 Component* ContainerConfig::LayoutPointFactory()
 {
     return new LayoutPoint;
 }
+// FUNCTION: WON 0x0079acb0
 // Creates a new image button for the skin loader
 Component* ImageButtonConfig::CompFactory()
 {
@@ -207,24 +247,36 @@ Component* ImageButtonConfig::CompFactory()
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x0079abf0
 // Creates a new list area for the skin loader
 Component* ListAreaConfig::CompFactory()
 {
     return new ListArea;
 }
+// FUNCTION: WON 0x0079ae30
 // Creates a new multi-column list area for the skin loader
 Component* MultiListAreaConfig::CompFactory()
 {
     return new MultiListArea;
 }
+// FUNCTION: WON 0x0079aef0
 // Creates a new multi-column list header for the skin loader
 Component* MultiListHeaderConfig::CompFactory()
 {
     return new MultiListHeader;
 }
+// FUNCTION: WON 0x0079b530
 // Creates a new tree area for the skin loader
 Component* TreeAreaConfig::CompFactory()
 {
     return new TreeArea;
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x0079b470
+// (public: static class WONAPI::Component * __cdecl WONAPI::TextAreaConfig::CompFactory(void)    [?CompFactory@TextAreaConfig@WONAPI@@SAPAVComponent@2@XZ)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x0079afb0
+// (public: virtual void __thiscall WONAPI::MultiListHeaderConfig::Virtual34(class WONAPI::Component *)    [?Virtual34@MultiListHeaderConfig@WONAPI@@UAEXP)

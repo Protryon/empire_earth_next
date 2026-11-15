@@ -22,6 +22,7 @@ static void FileWriterCheck(int inStatus)
 FileWriter::FileWriter() { ee_won_file_writer_init(&this->mCore); }
 
 FileWriter::~FileWriter() { this->Close(); }
+// FUNCTION: WON 0x006a1e30
 // Opens the given file for binary writing, clearing its read-only flag and retrying when asked
 bool FileWriter::Open(const char* inPath, bool inOpenIfReadOnly)
 {
@@ -33,38 +34,48 @@ bool FileWriter::Open(const char* inPath, bool inOpenIfReadOnly)
     file.SetReadOnly(false);
     return ee_won_file_writer_open(&this->mCore, inPath);
 }
+// FUNCTION: WON 0x006a2060
 // Closes the file
 void FileWriter::Close() { ee_won_file_writer_close(&this->mCore); }
 
+// FUNCTION: WON 0x006a2080
 // Returns the current write position, 0 with no file open
 unsigned long FileWriter::pos() { return ee_won_file_writer_pos(&this->mCore); }
+// FUNCTION: WON 0x006a20a0
 // Moves the write position; throws FileWriterException when the seek fails
 void FileWriter::SetPos(unsigned long inPos) { FileWriterCheck(ee_won_file_writer_set_pos(&this->mCore, inPos)); }
+// FUNCTION: WON 0x006a2400
 // Writes the given bytes; throws FileWriterException with no file or on a short write
 void FileWriter::WriteBytes(const void* inData, unsigned long inLength)
 {
     FileWriterCheck(ee_won_file_writer_write_bytes(&this->mCore, inData, inLength));
 }
 
+// FUNCTION: WON 0x006a25f0
 // Writes one byte
 void FileWriter::WriteByte(unsigned char inValue) { this->WriteBytes(&inValue, 1); }
 
+// FUNCTION: WON 0x006a2600
 // Writes a 16-bit value
 void FileWriter::WriteShort(unsigned short inValue) { this->WriteBytes(&inValue, 2); }
 
+// FUNCTION: WON 0x006a2610
 // Writes a 32-bit value
 void FileWriter::WriteLong(int32_t inValue) { this->WriteBytes(&inValue, 4); }
+// FUNCTION: WON 0x006a2620
 // Writes a length as a 1, 2 or 4 byte field; writes nothing for any other size
 void FileWriter::WriteLength(unsigned long inLength, unsigned char inFieldSize)
 {
     FileWriterCheck(ee_won_file_writer_write_length(&this->mCore, inLength, inFieldSize));
 }
 
+// FUNCTION: WON 0x006a2660
 // Writes the string's characters without a length or terminator
 void FileWriter::WriteRawString(const std::string& inString)
 {
     this->WriteBytes(inString.c_str(), inString.length());
 }
+// FUNCTION: WON 0x006a2680
 // Writes a length-prefixed string with the given length field size
 void FileWriter::WriteString(const std::string& inString, unsigned char inFieldSize)
 {
@@ -89,3 +100,19 @@ void FileWriter::WriteWString(const std::wstring &theWStr, unsigned char theLeng
 	this->WriteRawWString(theWStr);
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006a1e20
+// (public: __thiscall WONAPI::FileWriter::~FileWriter(void)    [??1FileWriter@WONAPI@@QAE@XZ])
+// TEMPLATE: WON 0x006a21f0
+// (public: virtual void * __thiscall WONAPI::FileWriterException::`scalar deleting destructor'(unsigned int)    [??_GFileWriterException@WONAPI@@UAEPAXI@)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006a1e10
+// (public: __thiscall WONAPI::FileWriter::FileWriter(void)    [??0FileWriter@WONAPI@@QAE@XZ])
+// TEMPLATE: WON 0x006a2210
+// (public: virtual __thiscall WONAPI::FileWriterException::~FileWriterException(void)    [??1FileWriterException@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006a2280
+// (public: __thiscall WONAPI::FileWriterException::FileWriterException(class WONAPI::FileWriterException const &)    [??0FileWriterException@WONAPI@@QAE@)

@@ -22,17 +22,17 @@ class UserListCtrl : public Container {
 public:
     UserListCtrl();
     virtual ~UserListCtrl(); // 0x7ca960; writes its own vtable pointer
-    virtual void InitComponent(ComponentInit&);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    void UpdateItem(LobbyClient*,UserListItem*);
-    void RefreshSeparators();
-    UserListItem* FindItem(LobbyClient*);
-    UserListItem* GetSelectedItem();
-    LobbyClient* GetSelectedClient();
-    void UpdateButtons();
-    void JoinedRoom(JoinedRoomEvent*);
-    void LeftRoom(LeftRoomEvent*);
-    void ClientChanged(ClientChangedEvent*);
+    virtual void InitComponent(ComponentInit&); // 0x7cadf0
+    virtual void HandleComponentEvent(ComponentEvent*); // 0x7cb4d0
+    void UpdateItem(LobbyClient*,UserListItem*); // 0x7caa70
+    void RefreshSeparators(); // 0x7cacf0
+    UserListItem* FindItem(LobbyClient*); // 0x7cb0e0
+    UserListItem* GetSelectedItem(); // 0x7cb130
+    LobbyClient* GetSelectedClient(); // 0x7cb140
+    void UpdateButtons(); // 0x7cb160
+    void JoinedRoom(JoinedRoomEvent*); // 0x7cb200
+    void LeftRoom(LeftRoomEvent*); // 0x7cb360
+    void ClientChanged(ClientChangedEvent*); // 0x7cb3a0
     bool mUpdating; // 0x84
     int GetRoomSpecFlags() const { return this->mModeFlags; }
     int mModeFlags; // 0x88, room-spec flags; 5 from the constructor

@@ -11,11 +11,13 @@
 #include "ee/wonapi/WONGUIDraw.h"
 #include "ee/wonapi/WONSkinLayout.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00700a60
 // Returns the contained component's size plus a 20-pixel margin and the title height (20 x 20 when empty;
 // skinlay.rs)
 void MSEtchedFrameGroup::GetDesiredSize(int& width,int& height) {
     WONSkinLayout(this,EeWonSkinLayKind::EtchedSize,0,0,0,&width,&height);
 }
+// FUNCTION: WON 0x00700ab0
 // On first joining a parent, adds the title label 5 pixels in at the top and the contained component
 // below it, 10 pixels in from the frame
 void MSEtchedFrameGroup::AddedToParent() {
@@ -31,13 +33,16 @@ void MSEtchedFrameGroup::AddedToParent() {
     }
     Container::AddedToParent();
 }
+// FUNCTION: WON 0x00700b70
 // Sets the group's title and sizes the label to it with 10 pixels to spare
 void MSEtchedFrameGroup::SetLabelText(const GUIString& text) {
     this->mLabel->SetText(text);
     this->mLabel->SetDesiredSize(10,0);
 }
+// FUNCTION: WON 0x00700ba0
 // Sets the component the group frames
 void MSEtchedFrameGroup::AddContainedComponent(Component* c) { this->mComponent=c; }
+// FUNCTION: WON 0x00700c00
 // Paints the etched group frame from the middle of the title down, leaving a gap for the title
 void MSEtchedFrameGroup::Paint(Graphics& g) {
     Container::Paint(g);

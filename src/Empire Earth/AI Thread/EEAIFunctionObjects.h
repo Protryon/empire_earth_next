@@ -51,7 +51,7 @@ public:
 // scores, +0x10 0x2a271, +0x14 0x2a2d7); ctor 0x2a246 (ret 0x10; called from 0x8740b, 0x9ad76)
 class EEAIFOUnitsToKillForMilitary : public EEAIFOUnitsToKillScoringBase {
 public:
-    EEAIFOUnitsToKillForMilitary(EEComputerPlayer* inPlayer, long inCitizensToKill, long inTransportsToKill, long inMilitaryToKill);
+    EEAIFOUnitsToKillForMilitary(EEComputerPlayer* inPlayer, long inCitizensToKill, long inTransportsToKill, long inMilitaryToKill);  // 0x2a246
     virtual bool CanKill(EEComplexUnit* inUnit);     // +0x10 0x2a271
     virtual long GetKillScore(EEComplexUnit* inUnit);  // +0x14 0x2a2d7
 
@@ -95,7 +95,7 @@ public:
 // categories 0x20/0x15; mB14 weighs them by the class's AddedToParent. Ctor 0x2b207 (ret 0x10).
 class EECPUGatherMilitaryUnitsCount : public EECPUMGatherUnitsScreenBase {
 public:
-    EECPUGatherMilitaryUnitsCount(EEComputerPlayer* inPlayer, bool inByClass, bool inRequests, bool inCountPopulation);
+    EECPUGatherMilitaryUnitsCount(EEComputerPlayer* inPlayer, bool inByClass, bool inRequests, bool inCountPopulation);  // 0x2b207
     virtual bool CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest);   // +0x04 0x2b239
     virtual bool CountUnit(EEComplexUnit* inUnit);   // +0x08 0x2b2b2
     virtual bool CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits);   // +0x0c 0x2b323
@@ -108,7 +108,7 @@ public:
 // 0x2b422): the transport classes (EEUnitClass::IsTransport). Ctor 0x2b3a7 (ret 0xc).
 class EECPUGatherTransportUnitsCount : public EECPUMGatherUnitsScreenBase {
 public:
-    EECPUGatherTransportUnitsCount(EEComputerPlayer* inPlayer, bool inByClass, bool inRequests);
+    EECPUGatherTransportUnitsCount(EEComputerPlayer* inPlayer, bool inByClass, bool inRequests);   // 0x2b3a7
     virtual bool CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest);   // +0x04 0x2b3d2
     virtual bool CountUnit(EEComplexUnit* inUnit);   // +0x08 0x2b3fc
     virtual bool CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits);   // +0x0c 0x2b422
@@ -140,7 +140,7 @@ public:
 class EEAIFOFavoriteUnitScreener : public EEAIFOUnitSelectionScreener {
 public:
     EEAIFOFavoriteUnitScreener(EEComputerPlayer* inPlayer, bool inAllowAir, bool inAllowLand, bool inAllowSea, bool inAllowSpace, long inEpoch,
-        long inEpochSpan);
+        long inEpochSpan);                  // 0x2ddfb
     virtual bool Screen(EEUnitClass* inClass);   // +0x04 0x2a7d2 (EEAIFunctionObjects.cpp)
 
     EEComputerPlayer* mPlayer;              // +0x04
@@ -165,7 +165,7 @@ class EECPILocation;
 // scorer; sizeof 0x10 (EECPAttackGroup::FindLandTarget's frame); slot/member names provisional
 class EEAIFOBestRegionToAttack {
 public:
-    EEAIFOBestRegionToAttack(EECPAttackSubGroup* inSubGroup, const EETileLocation& inTile);
+    EEAIFOBestRegionToAttack(EECPAttackSubGroup* inSubGroup, const EETileLocation& inTile);   // 0x2b100
     virtual ~EEAIFOBestRegionToAttack() {}
     virtual float operator()(const EECPILocation& inLocation) = 0;   // +0x04
 
@@ -176,7 +176,7 @@ public:
 // RTTI EEAIFOBestInfluenceRegionToAttack (vtable 0x43a4e8): the land scorer of EECPAttackGroup::FindLandTarget
 class EEAIFOBestInfluenceRegionToAttack : public EEAIFOBestRegionToAttack {
 public:
-    EEAIFOBestInfluenceRegionToAttack(EECPAttackSubGroup* inSubGroup, const EETileLocation& inTile);
+    EEAIFOBestInfluenceRegionToAttack(EECPAttackSubGroup* inSubGroup, const EETileLocation& inTile);   // 0x2b129
     virtual float operator()(const EECPILocation& inLocation);   // +0x04 0x2b145 (0.0f)
 };
 

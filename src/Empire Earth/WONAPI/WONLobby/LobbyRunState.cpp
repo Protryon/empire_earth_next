@@ -19,6 +19,7 @@ extern SmartPtr<Dialog> gLobbyFailureDialog;
 extern bool gLobbyInitFailed;
 void LobbyNetSuspend(); // calls the network logic's virtual at +0x44
 void LobbyNetResume(); // calls the network logic's virtual at +0x48
+// FUNCTION: WON 0x00762760
 // Runs the lobby until it exits and returns its exit status; after a failed start only shows the failure dialog
 int LobbyRun()
 {
@@ -38,6 +39,7 @@ int LobbyRun()
     if(gLobbyData.get()==NULL) return 0;
     return gLobbyData->mLobbyStatus;
 }
+// FUNCTION: WON 0x007627f0
 // Sets the lobby's exit status, tells all controls the lobby is closing and ends the loop if it is running
 void LobbyExit(int status)
 {
@@ -50,6 +52,7 @@ void LobbyExit(int status)
         if(manager!=NULL) manager->ExitMessageLoop();
     }
 }
+// FUNCTION: WON 0x00762830
 // Suspends the lobby: stops its music and logon sound, cancels pending pings and suspends networking
 void LobbySuspend()
 {
@@ -63,6 +66,7 @@ void LobbySuspend()
     }
     LobbyNetSuspend();
 }
+// FUNCTION: WON 0x00762880
 // Resumes the lobby: restarts the music if enabled and resumes networking
 void LobbyResume()
 {
@@ -77,6 +81,7 @@ void LobbyResume()
 
 namespace WONAPI {
 // WON SDK lobby entry point
+// FUNCTION: WON 0x00762740
 // Starts the lobby's start-up sequence (connect and log in)
 void LobbyStart()
 {

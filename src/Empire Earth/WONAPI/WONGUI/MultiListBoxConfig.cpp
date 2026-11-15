@@ -14,6 +14,7 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
+// FUNCTION: WON 0x00790160
 // Handles one multi-column list instruction (sort column/func, widths, column count, alignment, auto-grow)
 // or passes it to the list area config; throws on an unknown sort function
 bool MultiListAreaConfig::Virtual24(const std::string& instruction)
@@ -45,6 +46,7 @@ bool MultiListAreaConfig::Virtual24(const std::string& instruction)
     } else return ListAreaConfig::Virtual24(instruction);
     return true;
 }
+// FUNCTION: WON 0x00790490
 // Handles SETCOLUMN and MULTILISTAREA for a list header, or passes the instruction to the container config
 bool MultiListHeaderConfig::Virtual24(const std::string& instruction)
 {
@@ -59,3 +61,7 @@ bool MultiListHeaderConfig::Virtual24(const std::string& instruction)
     return true;
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007a20d0
+// (class WONAPI::MultiListArea * __cdecl WONAPI::SafeConfigGetComponent(class WONAPI::Component *,char const *)    [?SafeConfigGetComponent@WONAPI@@YAPAV)

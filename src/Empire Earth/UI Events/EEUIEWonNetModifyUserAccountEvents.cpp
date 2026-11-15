@@ -57,6 +57,7 @@
 #include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEUIEWonNetModifyUserAccountEvents.h"
 #include "ee/EEStringIDs.h"
+// FUNCTION: EXE 0x5eb5e2
 // Sends the new password, e-mail address and e-mail opt-in to WON if both passwords match; else shows a message
 long EEUIEWNMUASubmit::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -77,6 +78,7 @@ long EEUIEWNMUASubmit::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
+// FUNCTION: EXE 0x5eb704
 // Hooks the update-account screen's Update and Don't Update buttons to their events
 long EEUIEWNMUAOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -86,6 +88,14 @@ long EEUIEWNMUAOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
+// FUNCTION: EXE 0x5eb792
+// Destroys the update-account cancel event and frees it when asked (scalar deleting destructor)
+// (??_G of EEUIEWNMUACancel, then EEUIEWNMUASubmit's)
+
+// FUNCTION: EXE 0x5eb7bd
+// Destroys the update-account submit event and frees it when asked (scalar deleting destructor)
+
+// FUNCTION: EXE 0x5eb7e8
 // Returns to the previous screen
 // (also EEUIEWNARBack's and EEUIEWNSSCancel's ProcessEvent: ICF keeps this copy)
 long EEUIEWNMUACancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity)

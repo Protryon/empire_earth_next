@@ -121,6 +121,7 @@
 // only the level height is a named constant
 extern const float kSEPELevelHeight = 0.20412414f;     // 0x445618 (EESEAPaintElevation.cpp reads it)
 
+// FUNCTION: EXE 0x5a4470
 // Creates the elevation tab's paint area, with no right-button drag in progress
 EEUIFSEPaintElevation::EEUIFSEPaintElevation(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes, unsigned long inId,
                                              const GE2DPoint& inLocation, unsigned long inWidth,
@@ -130,11 +131,16 @@ EEUIFSEPaintElevation::EEUIFSEPaintElevation(EEAScroll* inScroll, EEUIFSEBrushGr
 {
 }
 
+// SYNTHETIC: EXE 0x5a44c0
+// (EEUIFSEPaintElevation's scalar deleting destructor)
+
+// FUNCTION: EXE 0x5a44dc
 // Destroys the elevation paint area
 EEUIFSEPaintElevation::~EEUIFSEPaintElevation()
 {
 }
 
+// FUNCTION: EXE 0x5a44e7
 // Creates an elevation paint action for the level to paint: from the dragged tile (right button), the tile under
 // the mouse (Space held), or the hills / cliffs slider; the brush is never centered
 EESEAPaint* EEUIFSEPaintElevation::CreatePaintAction()
@@ -166,6 +172,16 @@ EESEAPaint* EEUIFSEPaintElevation::CreatePaintAction()
     return theAction;
 }
 
+// FUNCTION: EXE 0x5a46d4
+// (EESEAPaintElevation's inline ctor, out of line after its first user: an EESEAPaintRust, ee/EESEAPaint.h)
+
+// FUNCTION: EXE 0x5a4719
+// (EESEAPaintElevation's scalar deleting destructor: likewise)
+
+// FUNCTION: EXE 0x5a4735
+// (EESEAPaintElevation's inline dtor: likewise)
+
+// FUNCTION: EXE 0x5a475d
 // Stops painting; if the right button is still down, starts a right-button elevation drag again
 long EEUIFSEPaintElevation::MouseLButtonUp()
 {
@@ -175,6 +191,7 @@ long EEUIFSEPaintElevation::MouseLButtonUp()
     return theResult;
 }
 
+// FUNCTION: EXE 0x5a4782
 // During a right-button drag, raises or lowers the grabbed tile's brush square to the height under the mouse
 // (within the level limits); otherwise paints as usual
 long EEUIFSEPaintElevation::MouseMove(const GE2DPoint& inLocation)
@@ -218,6 +235,7 @@ long EEUIFSEPaintElevation::MouseMove(const GE2DPoint& inLocation)
     return theResult;
 }
 
+// FUNCTION: EXE 0x5a4a31
 // Starts a right-button elevation drag on the tile under the mouse: captures the mouse, remembers the tile,
 // its level, the brush size and a vertical drag plane through it
 long EEUIFSEPaintElevation::MouseRButtonDown()
@@ -242,6 +260,7 @@ long EEUIFSEPaintElevation::MouseRButtonDown()
     return 0;
 }
 
+// FUNCTION: EXE 0x5a4b6b
 // Ends a right-button elevation drag (unless the left button is down), restoring the mouse and scroll bounds
 long EEUIFSEPaintElevation::MouseRButtonUp()
 {

@@ -9,7 +9,7 @@
 
 class EEHumanPlayer : public EEPlayer {
 public:
-    EEHumanPlayer();
+    EEHumanPlayer();                        // 0xa543d
     EEHumanPlayer(const UWideString& inName, unsigned long inPlayerID);   // 0xa54fe (called from 0x1306f2)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x18 0xa5551
     virtual long RepairPointers(unsigned long inFirst, unsigned long inSecond);   // +0x20 0xa5565

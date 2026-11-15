@@ -77,18 +77,24 @@
 #include "ee/EEStringIDs.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
+// FUNCTION: EXE 0x52a54a
 // Creates the cheat code table from the string resources
 EECheatCodes::EECheatCodes()
 {
     this->Init();
 }
 
+// Compiler-generated: the ??_G of the virtual dtor:
+// TEMPLATE: EXE 0x52a589
+
+// FUNCTION: EXE 0x52a5a5
 // Destroys the cheat code table
 EECheatCodes::~EECheatCodes()
 {
     this->mCodes.clear();
 }
 
+// FUNCTION: EXE 0x52a5cb
 // Adds a cheat code (lower-cased text) with its number and whether it is single-player only
 void EECheatCodes::AddCheatCode(const UWideString& inText, long inCode, bool inEnabled)
 {
@@ -102,6 +108,7 @@ void EECheatCodes::AddCheatCode(const UWideString& inText, long inCode, bool inE
     this->mIsSinglePlayerOnly.insert(std::pair<const long, bool>(inCode, inEnabled));
 }
 
+// FUNCTION: EXE 0x52a669
 // Gives a player an amount of a resource
 void EECheatCodes::AddResource(long inResource, unsigned long inPlayer, long inAmount)
 {
@@ -109,6 +116,7 @@ void EECheatCodes::AddResource(long inResource, unsigned long inPlayer, long inA
         gWorld.mPlayers[inPlayer]->AddResource(inResource, inAmount);
 }
 
+// FUNCTION: EXE 0x52a68c
 // Lists the cheat codes in the chat log, up to five per line
 void EECheatCodes::ListCheatCodes()
 {
@@ -166,6 +174,7 @@ void EECheatCodes::ListCheatCodes()
     gUserInterface->AddChatLogEntry(theTitle + theLine, 0);
 }
 
+// FUNCTION: EXE 0x52aef8
 // Runs a cheat code for a player (when cheats are enabled): resources, reveal/explore, epochs, instant build,
 // research, healing, power, refuel, win/lose, kill units, or the code list
 void EECheatCodes::ApplyCheatCode(long inCode, long inPlayerID, long inParameter)
@@ -267,6 +276,7 @@ void EECheatCodes::ApplyCheatCode(long inCode, long inPlayerID, long inParameter
     }
 }
 
+// FUNCTION: EXE 0x52b169
 // Fills the cheat code table with every cheat's text from the string resources and its number
 void EECheatCodes::Init()
 {
@@ -325,6 +335,7 @@ void EECheatCodes::Init()
     this->AddCheatCode(theText, 0x1b, false);
 }
 
+// FUNCTION: EXE 0x52b4bb
 // Kills every unit of a player (emptying its resource units); a player number plus 10 spares the local player's
 // selected and viewed units
 void EECheatCodes::RevealMap(unsigned long inPlayer)
@@ -354,6 +365,7 @@ void EECheatCodes::RevealMap(unsigned long inPlayer)
     }
 }
 
+// FUNCTION: EXE 0x52b575
 // Returns the cheat number for a lowered chat text, or 0 when unknown or single-player only in a multiplayer game
 long EECheatCodes::LookUp(const UWideString& inText)
 {
@@ -368,6 +380,7 @@ long EECheatCodes::LookUp(const UWideString& inText)
     return theCode;
 }
 
+// FUNCTION: EXE 0x52b5d6
 // Parses a chat line: "goto x y" and "find [player] id" move the camera; otherwise strips a trailing number as
 // the parameter and looks the rest up as a cheat code
 void EECheatCodes::ParseCheatCode(const UWideString& inText, long& outCode, long& outParameter)
@@ -430,6 +443,7 @@ void EECheatCodes::ParseCheatCode(const UWideString& inText, long& outCode, long
     }
 }
 
+// FUNCTION: EXE 0x52b8cc
 // Explores the whole map for a player
 void EECheatCodes::ExploreMap(unsigned long inPlayer)
 {
@@ -437,6 +451,7 @@ void EECheatCodes::ExploreMap(unsigned long inPlayer)
         gWorld.mMap->ExploreUnseen(gWorld.mPlayers[inPlayer]);
 }
 
+// FUNCTION: EXE 0x52b8ed
 // Refuels every living aircraft of a player, making grounded ones commandable again
 void EECheatCodes::Refuel(unsigned long inPlayer)
 {
@@ -453,6 +468,7 @@ void EECheatCodes::Refuel(unsigned long inPlayer)
     }
 }
 
+// FUNCTION: EXE 0x52b965
 // Heals every living unit of a player to full hit points
 void EECheatCodes::HealUnits(unsigned long inPlayer)
 {
@@ -464,6 +480,7 @@ void EECheatCodes::HealUnits(unsigned long inPlayer)
     }
 }
 
+// FUNCTION: EXE 0x52b9a2
 // Restores the power of a player's living units that have power
 void EECheatCodes::RestorePower(unsigned long inPlayer)
 {
@@ -478,6 +495,7 @@ void EECheatCodes::RestorePower(unsigned long inPlayer)
     }
 }
 
+// FUNCTION: EXE 0x52b9f2
 // Sends the message that makes the whole world visible, if the player is the local player
 void EECheatCodes::MakeWorldVisible(unsigned long inPlayer)
 {
@@ -491,6 +509,7 @@ void EECheatCodes::MakeWorldVisible(unsigned long inPlayer)
     gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
 }
 
+// FUNCTION: EXE 0x52ba6d
 // Researches every improvement a player can still get, to its highest level, and drops the queued improvements
 void EECheatCodes::ResearchAll(unsigned long inPlayer)
 {
@@ -515,6 +534,7 @@ void EECheatCodes::ResearchAll(unsigned long inPlayer)
     }
 }
 
+// FUNCTION: EXE 0x52bb21
 // Advances a player to a later epoch (valid epochs above the prehistoric one only)
 void EECheatCodes::AdvanceEpoch(long inEpoch, unsigned long inPlayer)
 {
@@ -525,6 +545,7 @@ void EECheatCodes::AdvanceEpoch(long inEpoch, unsigned long inPlayer)
         thePlayer->SetEpoch(inEpoch);
 }
 
+// FUNCTION: EXE 0x52bb58
 // Toggles instant building for a player
 void EECheatCodes::ToggleInstantBuild(unsigned long inPlayer)
 {
@@ -532,6 +553,7 @@ void EECheatCodes::ToggleInstantBuild(unsigned long inPlayer)
         gWorld.mPlayers[inPlayer]->mInstantBuild = !gWorld.mPlayers[inPlayer]->mInstantBuild;
 }
 
+// FUNCTION: EXE 0x52bb7b
 // Ends the game, as a defeat when the player is the local player (else a victory)
 void EECheatCodes::ClearPhysicsFlagForPlayer(unsigned long inPlayer)
 {
@@ -539,6 +561,7 @@ void EECheatCodes::ClearPhysicsFlagForPlayer(unsigned long inPlayer)
         gPhysics->EndGame(gWorld.mPlayers[inPlayer] != gWorld.GetCurrentPlayer());
 }
 
+// FUNCTION: EXE 0x52bbad
 // Ends the game, as a victory when the player is the local player (else a defeat)
 void EECheatCodes::SetPhysicsFlagForPlayer(unsigned long inPlayer)
 {
@@ -546,9 +569,27 @@ void EECheatCodes::SetPhysicsFlagForPlayer(unsigned long inPlayer)
         gPhysics->EndGame(gWorld.mPlayers[inPlayer] == gWorld.GetCurrentPlayer());
 }
 
+// FUNCTION: EXE 0x52bbdf
 // Sets a player's stock of a resource to zero
 void EECheatCodes::ClearResource(long inResource, unsigned long inPlayer)
 {
     if (inPlayer < gWorld.mNumPlayers)   // players are 0..mNumPlayers - 1 (the test was <=)
         gWorld.mPlayers[inPlayer]->mResourceCaps[inResource] = 0;
 }
+
+// The two maps' COMDATs (map<UWideString, long> clear/find/insert/_Erase/..., map<long, bool>'s):
+// TEMPLATE: EXE 0x52bc01
+// TEMPLATE: EXE 0x52bc2c
+// TEMPLATE: EXE 0x52bcfc
+// TEMPLATE: EXE 0x52bd10
+// TEMPLATE: EXE 0x52bd54
+// TEMPLATE: EXE 0x52bd7f
+// TEMPLATE: EXE 0x52bdf0
+// TEMPLATE: EXE 0x52bf84
+// TEMPLATE: EXE 0x52bff5
+// TEMPLATE: EXE 0x52c2ac
+// TEMPLATE: EXE 0x52c2e7
+// TEMPLATE: EXE 0x52c31d
+// TEMPLATE: EXE 0x52c361
+// TEMPLATE: EXE 0x52c393
+// TEMPLATE: EXE 0x52c3cb

@@ -25,13 +25,13 @@ public:
     bool CanUpgrade(EEUnitClass* inUnitClass, long inImprovement);
     long GetCost(long inImprovement);       // 0x23aee3 (ret 4; EEPlayer 0x163cf2 adds mL44 to it; provisional name)
     // EEUnitClassImprovement.cpp's other members (provisional names; the arithmetic is ee_units improve.rs)
-    void CopyLevelsTo(EEUnitClassUpgrade* inUpgrade, EEUnitClassImprovement* inTarget);
-    void GetGainText(EEUnitClassUpgrade* inUpgrade, long inLevel, long inImprovement, UWideString& outText);
-    void GetName(EEUnitClass* inUnitClass, long inImprovement, UWideString& outName);
-    void ChangeLevel(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade, long inImprovement, long inDelta);
+    void CopyLevelsTo(EEUnitClassUpgrade* inUpgrade, EEUnitClassImprovement* inTarget);  // 0x23a737
+    void GetGainText(EEUnitClassUpgrade* inUpgrade, long inLevel, long inImprovement, UWideString& outText);  // 0x23a8a8
+    void GetName(EEUnitClass* inUnitClass, long inImprovement, UWideString& outName);    // 0x23adbd
+    void ChangeLevel(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade, long inImprovement, long inDelta);  // 0x23afc1
     void Reapply(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade);    // 0x23b35b (every level back to 1)
-    long Load(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    long Load(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x23b39b
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // 0x23b5e4
 
     // +0x04 (= 1). int32_t, not long: Load and Save move the array as 0x40 raw bytes (16 4-byte words, as on
     // 32-bit Windows); with an 8-byte long (LP64) only levels 0..7 reached the file and back.

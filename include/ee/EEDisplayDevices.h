@@ -24,6 +24,6 @@ struct EEDisplayRasterizer {                // sizeof 0x28
     unsigned long mIndex;                   // +0x24 the GERasterizer index
 };
 
-extern std::vector<EEDisplayRasterizer> gDisplayRasterizers;
+extern std::vector<EEDisplayRasterizer> gDisplayRasterizers;   // 0x5319f8
 
 #endif

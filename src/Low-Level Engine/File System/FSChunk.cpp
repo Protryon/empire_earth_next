@@ -18,18 +18,21 @@
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
+// FUNCTION: LLE 0x10007db9
 // Creates an empty chunk with no header or data loaded
 FSChunk::FSChunk()
 {
     ee_fs_chunk_init(&this->mState);
 }
 
+// FUNCTION: LLE 0x10007ddc
 // Destroys the chunk, freeing its data
 FSChunk::~FSChunk()
 {
     ee_fs_chunk_free(&this->mState);
 }
 
+// FUNCTION: LLE 0x10007e2a
 // Returns the chunk's size in outSize once its header is loaded; false before that
 bool FSChunk::GetChunkSize(unsigned long& outSize) const
 {
@@ -40,6 +43,7 @@ bool FSChunk::GetChunkSize(unsigned long& outSize) const
     return true;
 }
 
+// FUNCTION: LLE 0x10007e3f
 // Loads the chunk header if needed, then reads and decompresses the chunk data from a file
 long FSChunk::LoadChunkFromFile(FSFile& inFile)
 {
@@ -48,6 +52,7 @@ long FSChunk::LoadChunkFromFile(FSFile& inFile)
     return ee_fs_chunk_load_from_file(&this->mState, &theOps);
 }
 
+// FUNCTION: LLE 0x10007eb7
 // Creates the persistent object registered for the chunk's tag and loads it from the chunk data
 long FSChunk::LoadPersistentFromChunk(FSPersistent*& outPersistent)
 {
@@ -60,6 +65,7 @@ long FSChunk::LoadPersistentFromChunk(FSPersistent*& outPersistent)
     return outPersistent->Load(this->mState.major, this->mState.minor, theData);
 }
 
+// FUNCTION: LLE 0x10007efd
 // Reads the chunk header (versions, tag, size); a size of 2 GB or more fails
 long FSChunk::LoadChunkHeader(FSFile& inFile)
 {
@@ -68,6 +74,7 @@ long FSChunk::LoadChunkHeader(FSFile& inFile)
     return ee_fs_chunk_load_header(&this->mState, &theOps);
 }
 
+// FUNCTION: LLE 0x10007fab
 // Writes the chunk header and its data to a file
 long FSChunk::SaveChunkToFile(FSFile& outFile)
 {
@@ -76,6 +83,7 @@ long FSChunk::SaveChunkToFile(FSFile& outFile)
     return ee_fs_chunk_save_to_file(&this->mState, &theOps);
 }
 
+// FUNCTION: LLE 0x10007fce
 // Saves a persistent object into new compressed chunk data; returns the save's error when it fails
 long FSChunk::SavePersistentToChunk(unsigned long inMajorVersion, unsigned long inMinorVersion,
                                     FSPersistent* inPersistent)
@@ -92,6 +100,7 @@ long FSChunk::SavePersistentToChunk(unsigned long inMajorVersion, unsigned long 
     return kErrorOK;
 }
 
+// FUNCTION: LLE 0x1000805e
 // Skips over the chunk's data in a file, loading the header first if needed
 long FSChunk::SkipChunk(FSFile& inFile)
 {

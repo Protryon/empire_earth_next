@@ -13,6 +13,7 @@
 // SetSize's and SetSizeAtLeast's size rules are ee_won's guilayout module (rust/crates/ee_won/src/guilayout.rs).
 #include "ee/wonapi/WONComponentFlags.h"
 namespace WONAPI {
+// FUNCTION: WON 0x006f52d0
 // Marks the event as a broadcast and hands it to this component's broadcast handler
 void Component::BroadcastEventDown(ComponentEvent* event)
 {
@@ -21,6 +22,7 @@ void Component::BroadcastEventDown(ComponentEvent* event)
     this->HandleBroadcastEvent(event);
 }
 
+// FUNCTION: WON 0x006f53f0
 // Sends the event now (broadcast through the window manager or bubbled up from here) or queues it on the
 // root window; drops it when there is no open root window
 void Component::DeliverEvent(ComponentEvent* event, bool sendNow)
@@ -48,6 +50,7 @@ void Component::DeliverEvent(ComponentEvent* event, bool sendNow)
         window->QueueEvent(event);
 }
 
+// FUNCTION: WON 0x006f4b70
 // Moves the component within its parent and notifies the position change
 void Component::SetPos(int x, int y)
 {
@@ -56,6 +59,7 @@ void Component::SetPos(int x, int y)
     this->PositionChanged();
 }
 
+// FUNCTION: WON 0x006f4b90
 // Resizes the component (negative sizes become 0) and notifies the size change when it differs
 void Component::SetSize(int width, int height)
 {
@@ -66,6 +70,7 @@ void Component::SetSize(int width, int height)
     this->Virtual08();
 }
 
+// FUNCTION: WON 0x006f4bc0
 // Grows the component to at least the given width and height; never shrinks it
 void Component::SetSizeAtLeast(int width, int height)
 {
@@ -74,6 +79,7 @@ void Component::SetSizeAtLeast(int width, int height)
 }
 
 
+// FUNCTION: WON 0x006f4bf0
 // Moves and resizes the component
 void Component::SetPosSize(int x, int y, int width, int height)
 {
@@ -81,6 +87,7 @@ void Component::SetPosSize(int x, int y, int width, int height)
     this->SetSize(width,height);
 }
 
+// FUNCTION: WON 0x006f4e90
 // Resizes the component to its desired size plus the extra width and height
 void Component::SetDesiredSize(int extraWidth,int extraHeight)
 {
@@ -89,6 +96,7 @@ void Component::SetDesiredSize(int extraWidth,int extraHeight)
     this->SetSize(width+extraWidth,height+extraHeight);
 }
 
+// FUNCTION: WON 0x006f4ee0
 // Sets the component's width to its desired width plus the padding, keeping its height
 void Component::SetDesiredWidth(int padding)
 {
@@ -97,6 +105,7 @@ void Component::SetDesiredWidth(int padding)
     this->SetSize(width+padding,this->Height());
 }
 
+// FUNCTION: WON 0x006f56d0
 // Converts a point in the component's coordinates to root window coordinates
 void Component::LocalToRoot(int& x,int& y)
 {
@@ -109,6 +118,7 @@ void Component::LocalToRoot(int& x,int& y)
     }
 }
 
+// FUNCTION: WON 0x006f50e0
 // Passes a dirty rectangle up to the parent, offset by this component's position (changes the rectangle)
 void Component::InvalidateRect(WONRectangle& rect)
 {
@@ -119,6 +129,7 @@ void Component::InvalidateRect(WONRectangle& rect)
     this->mParent->InvalidateRect(rect);
 }
 
+// FUNCTION: WON 0x006f5660
 // Enables or disables the component when its control id is in the set
 void Component::EnableControlsById(const ControlIdSet& ids,bool enabled)
 {
@@ -129,12 +140,14 @@ void Component::EnableControlsById(const ControlIdSet& ids,bool enabled)
     }
 }
 
+// FUNCTION: WON 0x006f5080
 // Returns whether the point (in parent coordinates) lies inside the component
 bool Component::Contains(int x,int y)
 {
     return x>=this->Left() && x<this->Left()+this->Width() && y>=this->Top() && y<this->Top()+this->Height();
 }
 
+// FUNCTION: WON 0x006f55b0
 // Shows or hides the component, telling the parent, redrawing and notifying the change of visibility
 void Component::SetVisible(bool visible)
 {
@@ -147,6 +160,7 @@ void Component::SetVisible(bool visible)
     this->NotifyRootVisibility(visible);
 }
 
+// FUNCTION: WON 0x006f5610
 // Enables or disables the component, notifying itself and its parent and redrawing
 void Component::SetEnabled(bool enabled)
 {
@@ -159,6 +173,7 @@ void Component::SetEnabled(bool enabled)
 }
 }
 
+// FUNCTION: WON 0x006f49e0
 // Creates a component with no parent, no flags, no control id and no extra data
 namespace WONAPI {
 Component::Component()
@@ -174,9 +189,14 @@ Component::Component()
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x006f50c0
 // Returns whether the component's bounds overlap the other component's bounds
 bool Component::Intersects(Component* component)
 {
     return this->mBounds.Intersects(component->mBounds);
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006f4a50
+// (public: virtual void * __thiscall WONAPI::Component::`scalar deleting destructor'(unsigned int)    [??_GComponent@WONAPI@@UAEPAXI@Z])

@@ -10,7 +10,7 @@
 
 class EEAIAStarGraphContinentalChainGoal : public EEAIAStarGraphGoalBase<EEAIAStarGraphTerrainStorage> {
 public:
-    EEAIAStarGraphContinentalChainGoal();
+    EEAIAStarGraphContinentalChainGoal();   // 0x15dae
     // +0x14 (ICF 0x156dd8): the search is over (the graph machine's Expand 0x274a3 calls it with itself; the path
     // goal's +0x18 twin is EEAIAStarPathGraphGoal::SearchDone) (provisional name)
     virtual void SearchDone(EEAIAStarGraphMachineBase* inMachine) {}

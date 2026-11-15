@@ -92,59 +92,91 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 // chain at 0x67fdfe (wrapper)
 //   object 0x965478  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 UString gU565478(".civ");
+// SYNTHETIC: EXE 0x67fdfe   (wrapper)
+// SYNTHETIC: EXE 0x67fe08   (ctor)
+// SYNTHETIC: EXE 0x67fe19   (registrar)
+// SYNTHETIC: EXE 0x67fe25   (dtor)
 
 // chain at 0x67fe30 (wrapper)
 //   object 0x965498  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 UString gU565498("Civilizations");
+// SYNTHETIC: EXE 0x67fe30   (wrapper)
+// SYNTHETIC: EXE 0x67fe3a   (ctor)
+// SYNTHETIC: EXE 0x67fe4b   (registrar)
+// SYNTHETIC: EXE 0x67fe57   (dtor)
 
 // chain at 0x67fe62 (wrapper)
 //   object 0x965488  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 UString gU565488("Users");
+// SYNTHETIC: EXE 0x67fe62   (wrapper)
+// SYNTHETIC: EXE 0x67fe6c   (ctor)
+// SYNTHETIC: EXE 0x67fe7d   (registrar)
+// SYNTHETIC: EXE 0x67fe89   (dtor)
 
 // chain at 0x67fe94 (wrapper)
 //   object 0x965518  ctor __imp_??0FSFileSpec@@QAE@XZ  dtor __imp_??1FSFileSpec@@UAE@XZ
 // the civilization file being saved
 FSFileSpec gU565518;
+// SYNTHETIC: EXE 0x67fe94   (wrapper)
+// SYNTHETIC: EXE 0x67fe9e   (ctor)
+// SYNTHETIC: EXE 0x67fea9   (registrar)
+// SYNTHETIC: EXE 0x67feb5   (dtor)
 
 // chain at 0x67fec0 (wrapper)
 //   object 0x965508  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 UString gDefaultUserFolder("default");
+// SYNTHETIC: EXE 0x67fec0   (wrapper)
+// SYNTHETIC: EXE 0x67feca   (ctor)
+// SYNTHETIC: EXE 0x67fedb   (registrar)
+// SYNTHETIC: EXE 0x67fee7   (dtor)
 
 // chain at 0x67fef2 (wrapper)
 //   object 0x9654f8  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 UString gU5654F8("sounds\\button1.wav");
+// SYNTHETIC: EXE 0x67fef2   (wrapper)
+// SYNTHETIC: EXE 0x67fefc   (ctor)
+// SYNTHETIC: EXE 0x67ff0d   (registrar)
+// SYNTHETIC: EXE 0x67ff19   (dtor)
 
 // chain at 0x67ff24 (wrapper)
 //   object 0x9654e8  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 UString gU5654E8("sounds\\button2.wav");
+// SYNTHETIC: EXE 0x67ff24   (wrapper)
+// SYNTHETIC: EXE 0x67ff2e   (ctor)
+// SYNTHETIC: EXE 0x67ff3f   (registrar)
+// SYNTHETIC: EXE 0x67ff4b   (dtor)
 
 unsigned long gU5654E4;                     // 0x5654e4 the buy/sell sound
 unsigned long gU5654E0;                     // 0x5654e0 the refused sound
-long gL5654B8;
-EECBEditableCivilization* gEditableCivilization;
+long gL5654B8;                              // 0x5654b8
+EECBEditableCivilization* gEditableCivilization;   // 0x565560
 bool gB565564;                              // 0x565564 the builder paused the game
 bool gB565565;                              // 0x565565 the players using the saved file reload it
 bool gB565566;                              // 0x565566 the upgrade lists are read-only
 bool gB565567;                              // 0x565567 a premade civilization was loaded
 
+// FUNCTION: EXE 0x67ff56
 // Tells whether the edited civilization may still change
 bool CivBuilderCanChange()
 {
     return gEditableCivilization->CanChange();
 }
 
+// FUNCTION: EXE 0x67ff61
 // Sets the edited civilization's name
 void CivBuilderSetCivilizationName(const UWideString& inName)
 {
     gEditableCivilization->SetName(inName);
 }
 
+// FUNCTION: EXE 0x67ff71
 // Tells whether any upgrade or a new name was chosen
 bool CivBuilderHasChoices()
 {
     return gEditableCivilization->HasChoices();
 }
 
+// FUNCTION: EXE 0x67ff7c
 // Closes the builder (applying the edits when asked), resuming a game it paused, and unloads its sounds
 long CivBuilderClose(bool inApply)
 {
@@ -156,24 +188,28 @@ long CivBuilderClose(bool inApply)
     return CivBuilderUnloadSounds();
 }
 
+// FUNCTION: EXE 0x67ffae
 // Returns the civilization choice time limit (300 s)
 unsigned long EEGetCivTimerLimit()
 {
     return 0x493e0;
 }
 
+// FUNCTION: EXE 0x67ffb4
 // Returns the time of the civilization timer's first warning (240 s)
 unsigned long EEGetCivTimerFirstWarning()
 {
     return 0x3a980;
 }
 
+// FUNCTION: EXE 0x67ffba
 // Returns the time of the civilization timer's second warning (270 s)
 unsigned long EEGetCivTimerSecondWarning()
 {
     return 0x41eb0;
 }
 
+// FUNCTION: EXE 0x67ffc0
 // Returns the civilization folder: the user's full path (Users\default\Civilizations\) or the relative one
 UString EEGetCivilizationDirectory(bool inX)
 {
@@ -185,6 +221,7 @@ UString EEGetCivilizationDirectory(bool inX)
     return theDirectory;
 }
 
+// FUNCTION: EXE 0x68006b
 // Loads the builder's buy/sell and refused button sounds; returns 3 when either fails
 long CivBuilderLoadSounds()
 {
@@ -196,6 +233,7 @@ long CivBuilderLoadSounds()
     return theResult;
 }
 
+// FUNCTION: EXE 0x6800b3
 // Unloads the builder's two button sounds
 long CivBuilderUnloadSounds()
 {
@@ -204,6 +242,7 @@ long CivBuilderUnloadSounds()
     return 0;
 }
 
+// FUNCTION: EXE 0x6800da
 // Returns the user civilization directory (Users\default\Civilizations\ under the startup directory)
 UString CivBuilderGetUserDirectory()
 {
@@ -212,6 +251,7 @@ UString CivBuilderGetUserDirectory()
     return theDirectory;
 }
 
+// FUNCTION: EXE 0x68015d
 // Saves the civilization under a file name: refuses a premade civilization's name and asks before
 // overwriting an existing file
 long CivBuilderSaveCivilization(const UString& inName, bool inOverwrite)
@@ -250,6 +290,7 @@ long CivBuilderSaveCivilization(const UString& inName, bool inOverwrite)
 static bool EEKeyedCivilization(const std::string& inName, const std::vector<EECivUpgrade>& inUpgrades,
                                 std::string& outText);   // (below)
 
+// FUNCTION: EXE 0x6802ef
 // Writes the civilization file (name, upgrade count, upgrades), tells players using that file to reload it,
 // and reports errors; the answer to the overwrite question, its form argument the close-the-builder flag
 // (a checksum of the name and upgrades that was summed up but never written or used has been removed)
@@ -330,6 +371,7 @@ void CivBuilderWriteCivilization(UIForm* inClose)
     }
 }
 
+// FUNCTION: EXE 0x68060c
 // Loads a civilization file (the game's, else the user's) into the builder: resets the edit, then buys its
 // upgrades again; fails when neither file loads
 long CivBuilderLoadCivilization(const UString& inName)
@@ -352,6 +394,7 @@ long CivBuilderLoadCivilization(const UString& inName)
     return theResult;
 }
 
+// FUNCTION: EXE 0x6806e7
 // Gives a player the civilization from a file (the game's, else the user's), buying its upgrades at no cost;
 // a game file's premade civilization keeps its localized name
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer)
@@ -427,6 +470,7 @@ static long EEReadKeyedCivilization(const std::string& inText, const UString& in
     return kErrorFailed;
 }
 
+// FUNCTION: EXE 0x680840
 // Reads a civilization file's name and upgrade ids from the data path or the given directory
 // (the legacy binary form: its (category << 6) | level ids converted; or the keyed text, EEKeyedCivilization)
 long EELoadCivilization(const UString& inName, const UString& inDirectory, UWideString& outName,
@@ -491,6 +535,7 @@ long EELoadCivilization(const UString& inName, const UString& inDirectory, UWide
     return theResult;
 }
 
+// FUNCTION: EXE 0x680a05
 // Grants a player's civilization upgrade request when allowed, valid and affordable (broadcast in multiplayer);
 // otherwise posts a chat line naming the refused civilization
 void EECBRequestUpgrades(unsigned char inPlayer, UWideString& inName, std::vector<EECivUpgrade>& inUpgrades)
@@ -527,12 +572,14 @@ void EECBRequestUpgrades(unsigned char inPlayer, UWideString& inName, std::vecto
     }
 }
 
+// FUNCTION: EXE 0x680ba7
 // Sets whether players using the saved civilization file reload it
 void CivBuilderSetReloadPlayers(bool inFlag)
 {
     gB565565 = inFlag;
 }
 
+// FUNCTION: EXE 0x680bb1
 // Opens the current player's civilization for editing
 void CivBuilderEditCurrentCivilization()
 {
@@ -540,6 +587,7 @@ void CivBuilderEditCurrentCivilization()
                                                          ::gWorld.mCurrentPlayer);
 }
 
+// FUNCTION: EXE 0x680be9
 // Opens the builder form for the current player (buttons chosen by game kind), fills its lists, name and
 // points and loads its sounds
 long CivBuilderOpenForm()
@@ -607,6 +655,7 @@ long CivBuilderOpenForm()
     return theResult;
 }
 
+// FUNCTION: EXE 0x680f34
 // Opens the load dialog, or says (string 0x7458) that the civilization may no longer change
 long CivBuilderShowLoad()
 {
@@ -622,12 +671,14 @@ long CivBuilderShowLoad()
     return theResult;
 }
 
+// FUNCTION: EXE 0x680faa
 // Opens the save dialog
 long CivBuilderShowSave()
 {
     return CivBuilderShowSaveDialog();
 }
 
+// FUNCTION: EXE 0x680faf
 // Pauses the game and opens the builder on the current player's civilization, marking it chosen
 long CivBuilderEditCivilization()
 {
@@ -643,6 +694,7 @@ long CivBuilderEditCivilization()
     return theResult;
 }
 
+// FUNCTION: EXE 0x680ffd
 // Pauses the game and opens the builder on a new civilization to create from the given one
 long CivBuilderCreateCivilization(EECivilization* inCivilization, bool inReload)
 {
@@ -656,6 +708,7 @@ long CivBuilderCreateCivilization(EECivilization* inCivilization, bool inReload)
     return theResult;
 }
 
+// FUNCTION: EXE 0x68105e
 // Buys an upgrade (the selected available one when 0) and updates the points; plays the refused sound when
 // it is not affordable
 long CivBuilderBuyUpgrade(EECivUpgrade inUpgrade)
@@ -686,6 +739,7 @@ long CivBuilderBuyUpgrade(EECivUpgrade inUpgrade)
     return theResult;
 }
 
+// FUNCTION: EXE 0x681120
 // Sells the selected bought upgrade back, unless the civilization already owned it before the edit
 long CivBuilderReturnUpgrade()
 {
@@ -715,6 +769,7 @@ long CivBuilderReturnUpgrade()
     return theResult;
 }
 
+// FUNCTION: EXE 0x6811d9
 // Asks whether to delete the selected civilization file
 long CivBuilderAskDelete(UIForm* inForm, UIEntity* inEntity)
 {
@@ -725,6 +780,7 @@ long CivBuilderAskDelete(UIForm* inForm, UIEntity* inEntity)
     return theResult;
 }
 
+// FUNCTION: EXE 0x68122c
 // Deletes the civilization file selected in the dialog's list, reporting a failure
 void CivBuilderDeleteSelected(UIForm* inForm)
 {
@@ -739,6 +795,7 @@ void CivBuilderDeleteSelected(UIForm* inForm)
     }
 }
 
+// FUNCTION: EXE 0x6812bc
 // Warns that not all points were spent and asks before closing the builder
 long CivBuilderAskAccept(UIForm* inForm)
 {
@@ -749,6 +806,7 @@ long CivBuilderAskAccept(UIForm* inForm)
     return theResult;
 }
 
+// FUNCTION: EXE 0x68130f
 // Closes the builder, applying a changed civilization (an unchanged one named from the campaign map, else
 // string 0x771c unless a premade one was loaded)
 void CivBuilderAcceptChanges(UIForm* inForm)
@@ -778,6 +836,12 @@ void CivBuilderAcceptChanges(UIForm* inForm)
     CivBuilderClose(theApply);
 }
 
+// FUNCTION: EXE 0x6813be
+// Creates the action that resets the given players' info (the out-of-line inline constructor)
+// (EEAResetAllPlayerInfo's inline ctor, out of line after its first user CivBuilderWriteCivilization)
+
+// ICF-FOLDED: EXE 0x4fca98
+// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEUnitGoal::GetOutOfSynchChecksum)
 long EECBTrace(bool)
 {
     return 0;

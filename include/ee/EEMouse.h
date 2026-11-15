@@ -25,6 +25,6 @@ public:
     GESurface* mExtraPointerSurfaces[14];   // +0xa8 the extra pointers (zeroed with one rep stosd of 14; LoadPointer loads them)
 };
 
-extern EEMouse* gMouse;
+extern EEMouse* gMouse;                     // 0x531924
 
 #endif

@@ -18,6 +18,7 @@
 
 using namespace WONAPI;
 
+// FUNCTION: WON 0x0074a7c0
 // Resets the text to wrapping, left-aligned and zero size with no maximum width
 void WrappedText::Init()
 {
@@ -28,6 +29,7 @@ void WrappedText::Init()
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+// FUNCTION: WON 0x0074a7e0
 // Creates empty wrapped text with the default settings
 WrappedText::WrappedText()
 {
@@ -38,8 +40,17 @@ WrappedText::WrappedText()
 ///////////////////////////////////////////////////////////////////////////////
 
 
+// FUNCTION: WON 0x0074a880
+// Destroys the wrapped text and frees it when asked (scalar deleting destructor)
+// (??_GWrappedText@WONAPI@@UAEPAXI@Z)
+
+// FUNCTION: WON 0x0074a8a0
+// Destroys the wrapped text, releasing its string, font, rich text and line breaks
+// (??1WrappedText@WONAPI@@UAE@XZ)
+
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+// FUNCTION: WON 0x0074a9b0
 // Recomputes the line breaks and the text's width and height for the font and maximum width
 void WrappedText::CalcWrap()
 {
@@ -82,6 +93,7 @@ void WrappedText::CalcWrap()
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+// FUNCTION: WON 0x0074acc0
 // Sets the text and rewraps it
 void WrappedText::SetText(const GUIString &theText)
 {
@@ -97,6 +109,7 @@ void WrappedText::SetText(const GUIString &theText)
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+// FUNCTION: WON 0x0074ad20
 // Turns wrapping on or off, rewrapping when it changes
 void WrappedText::SetWrap(bool wrap)
 {
@@ -109,6 +122,7 @@ void WrappedText::SetWrap(bool wrap)
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+// FUNCTION: WON 0x0074ad40
 // Sets whether each line is centred
 void WrappedText::SetCentered(bool isCentered)
 {
@@ -117,6 +131,7 @@ void WrappedText::SetCentered(bool isCentered)
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+// FUNCTION: WON 0x0074ad50
 // Sets the font and rewraps the text
 void WrappedText::SetFont(Font *theFont)
 {
@@ -126,6 +141,7 @@ void WrappedText::SetFont(Font *theFont)
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+// FUNCTION: WON 0x0074adb0
 // Sets the maximum line width (at least 0), rewrapping only when the new width can change the breaks
 void WrappedText::SetMaxWidth(int theMaxWidth)
 {
@@ -140,6 +156,7 @@ void WrappedText::SetMaxWidth(int theMaxWidth)
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+// FUNCTION: WON 0x0074adf0
 // Draws each wrapped line of the text (centred if set) from the given top-left point
 void WrappedText::Paint(Graphics &g, int x, int y)
 {
@@ -177,3 +194,9 @@ WrappedText::WrappedText(const GUIString &theText)
 	this->mText = theText;
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007508c0
+// (protected: void __thiscall std::list<struct WONAPI::WrappedText::BreakInfo,class std::allocator<struct WONAPI::WrappedText::BreakInfo> >::_Incsize(uns)
+// TEMPLATE: WON 0x00754bc0
+// (void __cdecl std::_Construct(struct WONAPI::WrappedText::BreakInfo *,struct WONAPI::WrappedText::BreakInfo const &))

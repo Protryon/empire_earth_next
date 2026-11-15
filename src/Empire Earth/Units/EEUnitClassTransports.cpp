@@ -60,8 +60,9 @@
 // unit-local constants (provisional names)
 static const float kTransportNoPath = 10000.0f;   // 0x44736c (EEGetPathLengthTo: no path)
 
-static const float kTransportNearSquared = 25.0f;
+static const float kTransportNearSquared = 25.0f; // 0x447370
 
+// FUNCTION: EXE 0x61b27a
 // Returns the index of the unit nearest a tile and puts that unit's tile in outTile (0, nothing set, for no units)
 long EEUnitClass::TransportFindGatheringTile(std::vector<EEComplexUnit*>* inUnits, U2DPoint<long> inFrom, U2DPoint<long>* outTile)
 {
@@ -90,6 +91,7 @@ long EEUnitClass::TransportFindGatheringTile(std::vector<EEComplexUnit*>* inUnit
     return theResult;
 }
 
+// FUNCTION: EXE 0x61b33f
 // Uses the transport's own tile as both the transport's and the units' meeting tile
 void EEUnitClass::TransportFindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport,
                               U2DPoint<long>* outTransportTile, U2DPoint<long>* outUnitTile)
@@ -98,6 +100,7 @@ void EEUnitClass::TransportFindRendezvousTiles(std::vector<EEComplexUnit*>* inUn
     *outUnitTile = *outTransportTile;
 }
 
+// FUNCTION: EXE 0x61b38e
 // Picks the unit's boarding tile: its own when the transport can unload there, else the nearest free one within
 // two tiles, else the transport's tile (naval and space transports) or the unit's own
 // Returns nothing (no value in eax at the ret); compare EEUCSpaceTransport::FindRendezvousTiles
@@ -128,6 +131,7 @@ void EEUnitClass::FindMeetingTiles(EEComplexUnit* inTransport, EEComplexUnit* in
         *ioUnitTile = U2DPoint<long>(inUnit->GetTileX(), inUnit->GetTileY());
 }
 
+// FUNCTION: EXE 0x61b4de
 // Lists the 8 tiles around a tile (the four sides first, then the corners)
 void EEUnitClass::GetRingTiles(long inX, long inY, std::vector<U2DPoint<long> >& outTiles)
 {
@@ -143,6 +147,7 @@ void EEUnitClass::GetRingTiles(long inX, long inY, std::vector<U2DPoint<long> >&
     outTiles.push_back(U2DPoint<long>(inX - 1, inY - 1));
 }
 
+// FUNCTION: EXE 0x61b5ab
 // Returns whether a unit may enter this kind of transport (land, helicopter, naval or space transport, fortress)
 bool EEUnitClass::TransportCanCarry(EEComplexUnit* inUnit1, EEComplexUnit* inUnit2)
 {
@@ -152,6 +157,7 @@ bool EEUnitClass::TransportCanCarry(EEComplexUnit* inUnit1, EEComplexUnit* inUni
         || (theCategory == kUnitCategoryFortress && inUnit2->mUnitClass->mCanEnterFortresses);
 }
 
+// FUNCTION: EXE 0x61b613
 // Returns whether the transport can pick a unit up now: on one continent when the squared path length is in load
 // range or the unit is next to it; across water when the unit and transport are near its shore tile
 bool EEUnitClass::CanLoad(EEComplexUnit* inTransport, EEComplexUnit* inUnit)
@@ -211,6 +217,10 @@ bool EEUnitClass::CanLoad(EEComplexUnit* inTransport, EEComplexUnit* inUnit)
     return theResult;
 }
 
+// TEMPLATE: EXE 0x61b819
+// EEComplexUnit::DistanceSquaredToTile (inline in ee/EEUnit.h; COMDAT after its first user CanLoad)
+
+// FUNCTION: EXE 0x61b83f
 // Returns whether cargo unloaded here reaches the destination within unload range (squared path length, plus
 // the transport's distance to the first cargo tile across water); siege towers path as towers
 bool EEUnitClass::CanUnloadNear(EEComplexUnit* inTransport, EEComplexUnit* inCargo,
@@ -264,6 +274,7 @@ bool EEUnitClass::CanUnloadNear(EEComplexUnit* inTransport, EEComplexUnit* inCar
     return theResult;
 }
 
+// FUNCTION: EXE 0x61ba6f
 // Returns the squared 3D distance from the unit to a point
 float EEComplexUnit::DistanceSquared3D(const GE3DPoint& inPoint)
 {
@@ -273,6 +284,7 @@ float EEComplexUnit::DistanceSquared3D(const GE3DPoint& inPoint)
     return theDX * theDX + theDY * theDY + theDZ * theDZ;
 }
 
+// FUNCTION: EXE 0x61baac
 // Picks where cargo lands: from deep water or space the free ring tile on the continent nearest the target, from
 // a cliff the transport's tile, otherwise (or when none fits) the unload tile itself
 void EEUnitClass::FindLandingTile(EEComplexUnit* inTransport, U2DPoint<long>* inUnloadTile,
@@ -319,6 +331,7 @@ void EEUnitClass::FindLandingTile(EEComplexUnit* inTransport, U2DPoint<long>* in
     *outTile = *inUnloadTile;
 }
 
+// FUNCTION: EXE 0x61bc79
 // Takes a tile as the unload tile when it is free of blocking units, within 5 tiles of the target and (when
 // restricted) water for a naval transport or space for a space transport
 // cdecl (provisional names). Reads only the transport's player (+0x18) and class (+0x2c); whether the original
@@ -338,6 +351,7 @@ void EETestUnloadTile(EEUnit* inTransport, const U2DPoint<long>& inTile,
         *outTile = inTile;
 }
 
+// FUNCTION: EXE 0x61bd41
 // Keeps a tile as the best unload tile when it passes the same tests and is no further from the target than the
 // best so far (0: none yet)
 // cdecl (provisional names). The first argument needs only the base unit; its original type is not
@@ -362,6 +376,7 @@ void EEUpdateBestUnloadTile(EEUnit* inTransport, const U2DPoint<long>& inTile,
     }
 }
 
+// FUNCTION: EXE 0x61be21
 // Picks a shore tile of the transport's region next to the destination's continent, nearest the target (the start
 // tile when in 5 tiles); the destination when there is no region, (0,0) when no tile fits
 void EEUnitClass::FindShoreTile(EEComplexUnit* inTransport, const EETileCoordinate& inFrom,
@@ -439,6 +454,7 @@ void EEUnitClass::FindShoreTile(EEComplexUnit* inTransport, const EETileCoordina
     }
 }
 
+// FUNCTION: EXE 0x61c255
 // Picks the shore tile between the start and destination continents nearest the target (else the first shore
 // tile); returns its distance from the start, or 0 with outTile -10000 when there is none
 float EEUnitClass::FindBestShoreTile(EEComplexUnit* inTransport, const U2DPoint<long>& inFrom,
@@ -513,6 +529,7 @@ float EEUnitClass::FindBestShoreTile(EEComplexUnit* inTransport, const U2DPoint<
     return theResult;
 }
 
+// FUNCTION: EXE 0x61c610
 // Finds where cargo leaves the transport: a tile around it for a unit that cannot move, else a free placement
 // near the location (water allowed for non-land units); returns whether one was found
 bool EEUnitClass::TransportFindBoardingLocation(EEComplexUnit* inTransport, EEComplexUnit* inCargo,
@@ -543,6 +560,7 @@ bool EEUnitClass::TransportFindBoardingLocation(EEComplexUnit* inTransport, EECo
     return theResult;
 }
 
+// FUNCTION: EXE 0x61c75c
 // Returns whether cargo can be unloaded on a tile (on the map, not a cliff, space or a map edge tile)
 bool EEUnitClass::TransportCanUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 {
@@ -551,6 +569,7 @@ bool EEUnitClass::TransportCanUnloadAt(EEComplexUnit* inTransport, long inX, lon
         && !::gWorld.mMap->IsEdgeTile(inX, inY);
 }
 
+// FUNCTION: EXE 0x61c7d1
 // Sets up a new transport as any unit, then gives it its class's resource type and amount
 void EEUnitClass::TransportUnitCreated(EEComplexUnit* inUnit)
 {
@@ -560,6 +579,7 @@ void EEUnitClass::TransportUnitCreated(EEComplexUnit* inUnit)
         inUnit->SetResourceAmount(this->mResourceAmount);
 }
 
+// FUNCTION: EXE 0x61c806
 // Moves the units that cannot board (not commandable, calamity flags 0x10 or 1, already inside something, off
 // the map or on deep water, or not carried by this class) from the list to outRejected
 void EEUnitClass::TransportFilterLoadable(std::vector<EEComplexUnit*>* ioUnits, EEComplexUnit* inTransport,
@@ -578,6 +598,7 @@ void EEUnitClass::TransportFilterLoadable(std::vector<EEComplexUnit*>* ioUnits, 
     }
 }
 
+// FUNCTION: EXE 0x61c8f7
 // Unloads the transport's cargo at a tile (siege towers with the tower flag set)
 void EEUnitClass::TransportUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 {
@@ -595,6 +616,7 @@ void EEUnitClass::TransportUnloadAt(EEComplexUnit* inTransport, long inX, long i
 // the exe's module set. Its ctor is inline (vtable 0x448930); the slots +0xe4, +0xf4, +0xf8, +0x8c, +0xb8 in address
 // order. +0x8c and +0xf4 are also EEUCFortress's (ICF).
 
+// FUNCTION: EXE 0x616de3
 // Picks where a land transport meets the unit FindGatheringTile picks: the tile on the line between them split by
 // their top speeds, refined by FindMeetingTiles; the units board there too
 void EEUnitClass::LandTransportFindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport,
@@ -614,6 +636,7 @@ void EEUnitClass::LandTransportFindRendezvousTiles(std::vector<EEComplexUnit*>* 
     *outUnitTile = *outTransportTile;
 }
 
+// FUNCTION: EXE 0x616f17
 // Returns whether the transport can carry a unit: both on the map, on the same continent, and the common test allows it
 bool EEUnitClass::LandTransportCanCarry(EEComplexUnit* inUnit1, EEComplexUnit* inUnit2)
 {
@@ -633,6 +656,7 @@ bool EEUnitClass::LandTransportCanCarry(EEComplexUnit* inUnit1, EEComplexUnit* i
     return theResult;
 }
 
+// FUNCTION: EXE 0x616f8e
 // Returns whether the transport can unload on a tile: on its own continent, and the common test allows it
 bool EEUnitClass::LandTransportCanUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 {
@@ -640,6 +664,7 @@ bool EEUnitClass::LandTransportCanUnloadAt(EEComplexUnit* inTransport, long inX,
         && this->TransportCanUnloadAt(inTransport, inX, inY);
 }
 
+// FUNCTION: EXE 0x616fea
 // Unloads all cargo at once when the transport is badly hurt
 void EEUnitClass::LandTransportBadlyHurt(EEUnit* inUnit)
 {
@@ -669,6 +694,7 @@ static const float kHelicopterTransportCeiling = 12.0f;
 // 0x23ca26 (cdecl; EEUCHelicopter.cpp declares it the same way) (provisional name)
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 
+// FUNCTION: EXE 0x61339d
 // Picks the gathering tile near the transport's own tile; the units board there too
 void EEUnitClass::HelicopterTransportFindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport,
                                         U2DPoint<long>* outTransportTile, U2DPoint<long>* outUnitTile)
@@ -678,6 +704,7 @@ void EEUnitClass::HelicopterTransportFindRendezvousTiles(std::vector<EEComplexUn
     *outUnitTile = *outTransportTile;
 }
 
+// FUNCTION: EXE 0x6133e8
 // Returns the height to fly at towards a point: cruising height above the highest tile corner on the way, at least
 // the point's height, at most 12
 float EEUnitClass::HelicopterTransportGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
@@ -713,6 +740,7 @@ float EEUnitClass::HelicopterTransportGetHeightAt(EEComplexUnit* inUnit, const G
     return theHeight;
 }
 
+// FUNCTION: EXE 0x6135c1
 // Returns whether the transport can unload on a tile: not deep water (1) or cliff (9), and the common test allows it
 bool EEUnitClass::HelicopterTransportCanUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 {
@@ -744,6 +772,7 @@ void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit
     theClass->PathToward(inUnit, thePosition, theTarget, false);
 }
 
+// FUNCTION: EXE 0x613774
 // Sets up a new transport helicopter as a transport, then lifts it to its flying height
 void EEUnitClass::HelicopterTransportUnitCreated(EEComplexUnit* inUnit)
 {
@@ -759,6 +788,7 @@ void EEUnitClass::HelicopterTransportUnitCreated(EEComplexUnit* inUnit)
     inUnit->SetHeight(theZ);
 }
 
+// FUNCTION: EXE 0x6137f8
 // Answers the dying-finished (below its tile's height) and move-prepared (has waypoints) triggers; others the
 // common way
 long EEUnitClass::HelicopterTransportEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
@@ -790,6 +820,7 @@ long EEUnitClass::HelicopterTransportEvaluateCondition(EEComplexUnit* inUnit, un
 // slots +0x04, +0xe8, +0xf8, +0xfc, +0x88, +0x104, +0xb8 in source order (Virtual08/0C/30/34/A0/E4/F4 are other
 // units' copies by ICF).
 
+// FUNCTION: EXE 0x618a5f
 // Finds where the transport unloads for a destination: shore and landing tiles, then the destination when in range
 // and reachable, else the last good tile on the line from the landing tile (the first one if none is good)
 void EEUnitClass::NavalTransportFindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination,
@@ -835,6 +866,7 @@ void EEUnitClass::NavalTransportFindUnloadTiles(EEComplexUnit* inTransport, U2DP
     }
 }
 
+// FUNCTION: EXE 0x618c48
 // Returns whether the transport can unload at a tile: not deep water, cliff or space, both continents known, the base
 // class agrees, and its land continent connects to the tile's (or its water body is flagged for it)
 bool EEUnitClass::NavalTransportCanUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
@@ -867,6 +899,7 @@ bool EEUnitClass::NavalTransportCanUnloadAt(EEComplexUnit* inTransport, long inX
     return theResult;
 }
 
+// FUNCTION: EXE 0x618d4b
 // Returns whether the transport may stop: already sinking, at the path's end tile with its speed reached, or slow
 bool EEUnitClass::NavalTransportHasArrived(EEComplexUnit* inUnit, float inValue)
 {
@@ -901,6 +934,7 @@ bool EEUnitClass::NavalTransportHasArrived(EEComplexUnit* inUnit, float inValue)
 // the spaceship unit's kSpaceshipHeight (0x447358): the bodies below are the class's own copies of EEUCSpaceship's
 static const float kSpaceTransportHeight = 12.0f;
 
+// FUNCTION: EXE 0x61a6e0
 // Finds where a space transport meets its passengers: the base rule on one continent, else its shore tile and
 // their landing tile, then the meeting tiles near them
 void EEUnitClass::SpaceTransportFindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport,
@@ -925,6 +959,7 @@ void EEUnitClass::SpaceTransportFindRendezvousTiles(std::vector<EEComplexUnit*>*
     this->FindMeetingTiles(inTransport, (*inUnits->begin()), outTransportTile, outUnitTile);
 }
 
+// FUNCTION: EXE 0x61a838
 // Returns whether the transport can carry a unit: both on the map, the base rule agrees and their continents connect
 bool EEUnitClass::SpaceTransportCanCarry(EEComplexUnit* inUnit1, EEComplexUnit* inUnit2)
 {
@@ -940,6 +975,7 @@ bool EEUnitClass::SpaceTransportCanCarry(EEComplexUnit* inUnit1, EEComplexUnit* 
     return theResult;
 }
 
+// FUNCTION: EXE 0x61a8aa
 // Returns whether the transport can unload at a tile: not deep water, cliff or space, both continents known, the base
 // class agrees, and its land continent connects to the tile's (or its space region is flagged for it)
 bool EEUnitClass::SpaceTransportCanUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
@@ -972,6 +1008,7 @@ bool EEUnitClass::SpaceTransportCanUnloadAt(EEComplexUnit* inTransport, long inX
     return theResult;
 }
 
+// FUNCTION: EXE 0x61a995
 // Returns whether two continents connect: the same one, or a neighbour of the first that is the second or (not a
 // cliff) is flagged as linked to it
 bool EEUnitClass::ContinentsConnect(unsigned short inFrom, unsigned short inTo)
@@ -994,6 +1031,7 @@ bool EEUnitClass::ContinentsConnect(unsigned short inFrom, unsigned short inTo)
     return theResult;
 }
 
+// FUNCTION: EXE 0x61aa74
 // Sets up a new space transport at its flying height, with the class's resource type and amount
 void EEUnitClass::SpaceTransportUnitCreated(EEComplexUnit* inUnit)
 {
@@ -1003,6 +1041,7 @@ void EEUnitClass::SpaceTransportUnitCreated(EEComplexUnit* inUnit)
         inUnit->SetResourceAmount(this->mResourceAmount);
 }
 
+// FUNCTION: EXE 0x61aaa9
 // Adds the transport to its own tile only
 void EEUnitClass::SpaceTransportAddToTile(EEUnit* inUnit)
 {
@@ -1013,6 +1052,7 @@ void EEUnitClass::SpaceTransportAddToTile(EEUnit* inUnit)
         theTile->mUnits = theTile->AddUnit(theUnit, theTile->mUnits);
 }
 
+// FUNCTION: EXE 0x61aaf5
 // Removes the transport from its own tile only
 void EEUnitClass::SpaceTransportRemoveFromTile(EEUnit* inUnit)
 {
@@ -1023,6 +1063,7 @@ void EEUnitClass::SpaceTransportRemoveFromTile(EEUnit* inUnit)
         theTile->RemoveUnit(theUnit);
 }
 
+// FUNCTION: EXE 0x61ab3b
 // Answers dying done (always) and move preparation complete (has a path) as a spaceship; others to the base class
 long EEUnitClass::SpaceTransportEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
@@ -1107,8 +1148,10 @@ long EEUnitClass::SpaceshipVirtualA0(EEComplexUnit* inUnit, unsigned long inEven
     return theResult;
 }
 
+// ICF-FOLDED: EXE 0x618a5f
 // Finds where the transport unloads for a destination: shore and landing tiles, then the destination when in range
 // and reachable, else the last good tile on the line from the landing tile (the first one if none is good)
+// (no address of its own: the same body as EEUCNavalTransport::FindUnloadTiles, which ICF kept)
 void EEUnitClass::SpaceTransportFindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination,
                                    U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile,
                                    U2DPoint<long>* outTile)
@@ -1159,6 +1202,7 @@ void EEUnitClass::SpaceTransportFindUnloadTiles(EEComplexUnit* inTransport, U2DP
 // 0x4c8fa4 (.data, a word): the faith a teleporter spends per full unload (provisional name)
 unsigned short gFortressUnloadCost = 100;
 
+// FUNCTION: EXE 0x610153
 // Unloads where the fortress stands; a teleporter unloads at the destination
 void EEUnitClass::FortressFindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination,
                              U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile, U2DPoint<long>* outTile)
@@ -1174,6 +1218,7 @@ void EEUnitClass::FortressFindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<l
     }
 }
 
+// FUNCTION: EXE 0x6101f8
 // Returns whether the player's population has room for the unit's cost
 bool EEUnitClass::FortressHasRoom(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
 {
@@ -1183,6 +1228,7 @@ bool EEUnitClass::FortressHasRoom(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
     return theResult;
 }
 
+// FUNCTION: EXE 0x610235
 // Returns whether a tile can take the cargo: within unload range for a fortress, visible for a teleporter, and
 // allowed by the transport rules
 bool EEUnitClass::FortressCanUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
@@ -1196,6 +1242,7 @@ bool EEUnitClass::FortressCanUnloadAt(EEComplexUnit* inTransport, long inX, long
     return theTile != NULL && theTile->IsVisibleTo(inTransport->GetPlayer()) && this->TransportCanUnloadAt(inTransport, inX, inY);
 }
 
+// FUNCTION: EXE 0x61030a
 // Sets up a new fortress as built, with a 1 s regeneration timer
 void EEUnitClass::FortressUnitCreated(EEComplexUnit* inUnit)
 {
@@ -1204,6 +1251,7 @@ void EEUnitClass::FortressUnitCreated(EEComplexUnit* inUnit)
     inUnit->SetRegenerationTimer(1000);
 }
 
+// FUNCTION: EXE 0x610357
 // Answers the fall-finished trigger once it has sunk below -2; other triggers go to the common unit class
 long EEUnitClass::FortressEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
@@ -1220,6 +1268,7 @@ long EEUnitClass::FortressEvaluateCondition(EEComplexUnit* inUnit, unsigned long
     return theResult;
 }
 
+// FUNCTION: EXE 0x610391
 // Unloads at a tile; a teleporter needs 100 faith and spends it in proportion to the cargo unloaded, else warns
 // its owner (event 0x274e)
 void EEUnitClass::FortressUnloadAt(EEComplexUnit* inTransport, long inX, long inY)

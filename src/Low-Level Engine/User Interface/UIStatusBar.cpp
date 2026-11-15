@@ -66,6 +66,7 @@ struct UIStatusBarHost {
 };
 typedef EeUiStatusBarCall C;
 
+// FUNCTION: LLE 0x1007dc7b
 // Creates a progress bar control: empty range, black fill, white text and a text area inset by the border
 UIStatusBar::UIStatusBar(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
                          unsigned long inBorderThickness)

@@ -83,9 +83,9 @@ LobbyFriend* LobbyFindFriend(unsigned long inUserId); // looks the user up in th
 // LobbyServer: a WON routing server with its groups and clients; 0x68 bytes, RTTI LobbyServer : RefCount.
 class LobbyServer : public RefCount {
 public:
-    LobbyServer();
-    void Disconnect();
-    virtual ~LobbyServer();
+    LobbyServer();                         // 0x7a91c0
+    void Disconnect(); // 0x7a96a0
+    virtual ~LobbyServer();                // 0x7a9500
     bool HasAddress(const std::string& inName);
     void SetConnection(RoutingConnection* inConnection);
     void ReadDirEntity(DirEntity* inEntity);

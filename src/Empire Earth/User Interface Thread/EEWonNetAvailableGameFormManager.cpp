@@ -79,18 +79,24 @@
 // 0x27a896 (defined below, after its user)
 bool EEGetLanguageStringReference(const UWideString& inText, unsigned long& outID);
 
+// FUNCTION: EXE 0x67a37e
 // Creates the WON available-games form manager with a 3-second refresh poll
 EEWonNetAvailableGameFormManager::EEWonNetAvailableGameFormManager()
 {
     this->mPoll = new TMPoll(3000, 0, false);
 }
 
+// SYNTHETIC: EXE 0x67a3af
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x67a3cb
 // Destroys the form manager and its poll
 EEWonNetAvailableGameFormManager::~EEWonNetAvailableGameFormManager()
 {
     delete this->mPoll;
 }
 
+// FUNCTION: EXE 0x67a3eb
 // Returns the available-games form's manager, creating and attaching it on first use
 EEWonNetAvailableGameFormManager* EEWonNetAvailableGameFormManager::Get()
 {
@@ -105,6 +111,7 @@ EEWonNetAvailableGameFormManager* EEWonNetAvailableGameFormManager::Get()
     return theManager;
 }
 
+// FUNCTION: EXE 0x67a432
 // Translates a "<string id>::text" reference into the language string; other text is copied unchanged
 void EETranslateString(const UWideString& inText, UWideString& outText)
 {
@@ -115,6 +122,7 @@ void EETranslateString(const UWideString& inText, UWideString& outText)
 
 // NEAR: register choice only: the original frees esi (the hoisted GetFormByID import, reloaded after the
 // block) for the three string imports; ours keeps esi and calls the UWideString dtor through memory
+// FUNCTION: EXE 0x67a470
 // Opens the scenario intro (pausing the game) when a single-player scenario starts with intro media; campaign
 // media paths get the campaign folder prefix
 void EEDisplayScenarioIntro()
@@ -146,6 +154,7 @@ void EEDisplayScenarioIntro()
     gUserInterface->PostPauseInformation(true);
 }
 
+// FUNCTION: EXE 0x67a60c
 // Shows the command-confirmation click effect at the ground point under the cursor
 void EEOrderAtCursor(const GE2DPoint& inPoint, EEUnit* inUnit)
 {
@@ -155,6 +164,7 @@ void EEOrderAtCursor(const GE2DPoint& inPoint, EEUnit* inUnit)
     EEMakeCalamityEffect(thePoint, inUnit);
 }
 
+// FUNCTION: EXE 0x67a644
 // Creates the local-only click confirmation effect on a unit or on the ground
 void EEMakeCalamityEffect(const GE3DPoint& inLocation, EEUnit* inUnit)
 {
@@ -179,6 +189,7 @@ void EEMakeCalamityEffect(const GE3DPoint& inLocation, EEUnit* inUnit)
     theFlare->mPlayer = thePlayerID;
 }
 
+// FUNCTION: EXE 0x67a701
 // Returns the local player's first selected unit; false when nothing is selected
 bool EEGetFirstSelectedUnit(EEComplexUnit*& outUnit)
 {
@@ -191,6 +202,7 @@ bool EEGetFirstSelectedUnit(EEComplexUnit*& outUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67a737
 // Finds the tile under a screen point (picking the visible tile first); false when only the plain map lookup hit
 bool EEPointUnitOrTileXY(const GE2DPoint& inPoint, EETile*& outTile, long& outX, long& outY, bool inFlag)
 {
@@ -203,6 +215,7 @@ bool EEPointUnitOrTileXY(const GE2DPoint& inPoint, EETile*& outTile, long& outX,
 
 // NEAR: the original stores the tile centre's y to a frame float (inPoint's dead slot) and reloads it for
 // GetMeshZ (fstp/fld); ours keeps it on the FP stack (fst)
+// FUNCTION: EXE 0x67a77a
 // Finds the ground point under a screen point; without a pick it uses the tile centre at terrain height and
 // returns false
 bool EEPointUnitOrTile(const GE2DPoint& inPoint, EETile*& outTile, GE3DPoint& outPoint, bool inFlag)
@@ -219,6 +232,7 @@ bool EEPointUnitOrTile(const GE2DPoint& inPoint, EETile*& outTile, GE3DPoint& ou
     return false;
 }
 
+// FUNCTION: EXE 0x67a7f5
 // Takes a screenshot on F9: Alt, Ctrl or Shift choose the in-game variants, otherwise a plain screenshot
 void EEPostF9Key()
 {
@@ -237,6 +251,7 @@ void EEPostF9Key()
         gUserInterface->PostScreenShot(-1, true, false);
 }
 
+// FUNCTION: EXE 0x67a896
 // Parses a "<string id>::text" reference; returns its string id
 bool EEGetLanguageStringReference(const UWideString& inText, unsigned long& outID)
 {
@@ -254,6 +269,7 @@ bool EEGetLanguageStringReference(const UWideString& inText, unsigned long& outI
 
 // NEAR: the original pushes mCurrentPlayer as a dword: ExecuteRemovePlayer's first parameter is wider than
 // the header's unsigned char (NESynchronousCommunications/EEServer/EEClient; header item)
+// FUNCTION: EXE 0x67a93e
 // Leaves the game: a client removes itself (server lost) or notifies the server; the server posts the removal
 // of all players when the game is open, running or paused
 void EEExitGame()

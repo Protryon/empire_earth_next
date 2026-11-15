@@ -14,6 +14,7 @@
 #include "rust/ee_won.h"
 // WantFocus's rule is ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs).
 namespace WONAPI {
+// FUNCTION: WON 0x006f5230
 // Returns the next or previous sibling in the parent's child list, optionally wrapping (NULL without a parent)
 Component* Component::GetNextSibling(bool forward,bool wrap)
 {
@@ -21,6 +22,7 @@ Component* Component::GetNextSibling(bool forward,bool wrap)
     return this->mParent->NextChild(this,forward,wrap);
 }
 
+// FUNCTION: WON 0x006f5160
 // Hooks a newly added child into its parent: hands over or drops focus, registers timers, propagates root visibility
 // and invalidates it
 void Component::AddedToParent()
@@ -35,6 +37,7 @@ void Component::AddedToParent()
     this->Invalidate();
 }
 
+// FUNCTION: WON 0x006f5720
 // Converts root coordinates into this component's coordinates by subtracting every ancestor's position
 void Component::RootToChild(int& x,int& y)
 {
@@ -43,6 +46,7 @@ void Component::RootToChild(int& x,int& y)
     if(this->mParent!=NULL) this->mParent->RootToChild(x,y);
 }
 
+// FUNCTION: WON 0x006f5810
 // Returns whether the component can take focus: focusable, visible, enabled, and not blocked by a modal parent
 bool Component::WantFocus()
 {
@@ -52,12 +56,14 @@ bool Component::WantFocus()
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x006f5a00
 // Returns the font matching a descriptor from the component's window
 SmartPtr<Font> Component::GetFont(const FontDescriptor& descriptor)
 {
     Window* root=this->GetRoot();
     return root->GetFont(descriptor);
 }
+// FUNCTION: WON 0x006f5a30
 // Returns a variant of a font with another style and, if size > 0, another size
 Font* Component::GetFontMod(Font* font,int style,int size)
 {
@@ -66,6 +72,7 @@ Font* Component::GetFontMod(Font* font,int style,int size)
     if(size>0) descriptor.mSize=size;
     return this->GetFont(descriptor).get();
 }
+// FUNCTION: WON 0x006f54e0
 // Passes a non-broadcast event to the component's listener, else its parent, else the root of the owner window
 void Component::BubbleEvent(ComponentEvent* event)
 {
@@ -89,11 +96,13 @@ void Component::BubbleEvent(ComponentEvent* event)
 DWORD gComponentToolTipStartTime=500;
 DWORD gComponentToolTipEndTime=5000;
 namespace WONAPI {
+// FUNCTION: WON 0x006f4cc0
 // Shows the component's default cursor when the mouse enters
 void Component::MouseEnter(int x,int y)
 {
     if(this->mExtraStuff!=NULL) this->SetCursor(this->mExtraStuff->mDefaultCursor.get());
 }
+// FUNCTION: WON 0x006f4ce0
 // Closes the component's tooltip and re-arms it when the mouse leaves
 void Component::MouseExit()
 {
@@ -102,6 +111,7 @@ void Component::MouseExit()
         this->GetRoot()->ClosePopup(this->mExtraStuff->mToolTip.get());
     }
 }
+// FUNCTION: WON 0x006f4d10
 // Opens the tooltip beside the mouse once the hover delay passes and closes it after the display time
 void Component::MouseHover(unsigned long elapsed)
 {
@@ -118,11 +128,13 @@ void Component::MouseHover(unsigned long elapsed)
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x006f5590
 // Records whether the component's root is visible
 void Component::NotifyRootVisibility(bool visible)
 {
     this->SetComponentFlags(0x40000,visible);
 }
+// FUNCTION: WON 0x006f5850
 // Takes focus on the initial tab step if the component is a tab stop and can take focus; returns whether it did
 bool Component::TabFocus(bool forward,bool init)
 {
@@ -135,6 +147,7 @@ bool Component::TabFocus(bool forward,bool init)
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x006f57d0
 // Turns the component's timer request on or off and tells the parent when its timer need changes
 void Component::RequestTimer(bool on)
 {
@@ -144,6 +157,7 @@ void Component::RequestTimer(bool on)
     bool wantTimer=this->mTimerFlags!=0;
     if(wantTimer!=oldWantTimer && this->mParent!=NULL) this->mParent->AddTimerChild(this);
 }
+// FUNCTION: WON 0x006f5890
 // Gives the component focus through its parent (or directly when it has none) if it can take it
 void Component::RequestFocus()
 {
@@ -151,6 +165,7 @@ void Component::RequestFocus()
     if(this->mParent==NULL) this->GotFocus();
     else this->mParent->SetFocusChild(this);
 }
+// FUNCTION: WON 0x006f58f0
 // Returns the topmost ancestor if it is a root container, else NULL
 RootContainer* Component::GetRootContainer()
 {
@@ -158,6 +173,7 @@ RootContainer* Component::GetRootContainer()
     while(root->mParent!=NULL) root=root->mParent;
     return dynamic_cast<RootContainer*>(root);
 }
+// FUNCTION: WON 0x006f5920
 // Returns the window of the component's root container, or the default window when it has none
 Window* Component::GetRoot()
 {
@@ -165,6 +181,7 @@ Window* Component::GetRoot()
     if(root!=NULL) return root->mWindow;
     return Window::GetDefaultWindow();
 }
+// FUNCTION: WON 0x006f5940
 // Returns the window of the component's root container, or NULL when it has none
 Window* Component::GetRootWindow()
 {
@@ -172,16 +189,19 @@ Window* Component::GetRootWindow()
     if(root!=NULL) return root->mWindow;
     return NULL;
 }
+// FUNCTION: WON 0x006f5600
 // Returns whether the component's root is visible
 bool Component::IsRootVisible()
 {
     return this->ComponentFlagSet(0x40000);
 }
+// FUNCTION: WON 0x006f58d0
 // Marks the component as focused
 void Component::GotFocus()
 {
     this->SetComponentFlags(ComponentFlag_HasFocus,true);
 }
+// FUNCTION: WON 0x006f58e0
 // Marks the component as not focused
 void Component::LostFocus()
 {
@@ -190,6 +210,7 @@ void Component::LostFocus()
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x006f4db0
 // Returns whether the component grabs its background, creating the background grabber on first use
 bool Component::CheckGrabBG()
 {
@@ -201,6 +222,7 @@ bool Component::CheckGrabBG()
     }
     return false;
 }
+// FUNCTION: WON 0x006f4f60
 // Returns whether an invalid component needs painting: when visible, or when its grabbed background must be drawn
 bool Component::NeedsPaint()
 {
@@ -208,6 +230,7 @@ bool Component::NeedsPaint()
     if(this->IsVisible()) return true;
     return this->CheckGrabBG() && this->mExtraStuff->mGrabBG->NeedDrawBG();
 }
+// FUNCTION: WON 0x006f5110
 // Invalidates the whole component, tells the parent, and marks it invalid (no-op if already fully invalid)
 void Component::Invalidate()
 {
@@ -217,6 +240,7 @@ void Component::Invalidate()
     if(this->mParent!=NULL) this->mParent->ChildInvalidated(this);
     this->MarkInvalid();
 }
+// FUNCTION: WON 0x006f51f0
 // Marks the component fully invalid and queues its background grabber with the root container
 void Component::MarkInvalid()
 {
@@ -227,22 +251,26 @@ void Component::MarkInvalid()
     RootContainer* root=this->GetRootContainer();
     if(root!=NULL) root->AddBG(this->mExtraStuff->mGrabBG);
 }
+// FUNCTION: WON 0x006f4e50
 // Tells the background grabber that the component's size changed
 void Component::Virtual08()
 {
     if(this->CheckGrabBG()) this->mExtraStuff->mGrabBG->SizeChanged(this);
 }
+// FUNCTION: WON 0x006f4ff0
 // Lets the background grabber capture the background before painting
 void Component::PrePaint(Graphics& graphics)
 {
     if(this->CheckGrabBG()) this->mExtraStuff->mGrabBG->PrePaint(this,graphics);
 }
+// FUNCTION: WON 0x006f5020
 // Clears the invalid state, then lets the background grabber paint the saved background
 void Component::Paint(Graphics& graphics)
 {
     this->mInvalidState=0;
     if(this->CheckGrabBG()) this->mExtraStuff->mGrabBG->Paint(this,graphics);
 }
+// FUNCTION: WON 0x006f51d0
 // Discards the grabbed background
 void Component::ClearGrabBG()
 {

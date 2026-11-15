@@ -28,6 +28,7 @@ static const float kWindStepMaximum = 1.3333333e-06f;
 static const float kWindMinimum = 1.25e-06f;
 static const float kWindMaximum = 1.4285714e-06f;
 
+// FUNCTION: EXE 0x52ed4e
 // Creates the weather manager, disabled, with no storms, calm wind and at most three storms at a time
 EEEnvironmentManager::EEEnvironmentManager()
     : FSPersistent(kPersistentEnvironment), mState(0)
@@ -43,12 +44,17 @@ EEEnvironmentManager::EEEnvironmentManager()
     this->mF44 = 0.75f;
 }
 
+// Compiler-generated: the ??_G of the virtual dtor (calls it out of line):
+// TEMPLATE: EXE 0x52ede0
+
+// FUNCTION: EXE 0x52edfc
 // Destroys the weather manager, releasing and deleting every storm
 EEEnvironmentManager::~EEEnvironmentManager()
 {
     this->DeleteStorms();
 }
 
+// FUNCTION: EXE 0x52ee1b
 // Returns whether a tile lies inside a storm: rain or hurricane storms and/or snow or blizzard storms, as asked
 bool EEEnvironmentManager::IsInStorm(const U2DPoint<long>& inPoint, bool inTypes13, bool inTypes24)
 {
@@ -66,12 +72,14 @@ bool EEEnvironmentManager::IsInStorm(const U2DPoint<long>& inPoint, bool inTypes
     return theResult;
 }
 
+// FUNCTION: EXE 0x52ef03
 // Creates a new default weather manager (the persistent-object factory)
 FSPersistent* EEEnvironmentManager::CreateDefault() const
 {
     return new EEEnvironmentManager;
 }
 
+// FUNCTION: EXE 0x52ef1a
 // Advances the storms and the wind, clears a finished state and schedules the next weather step by game speed
 void EEEnvironmentManager::Step(unsigned long inTime)
 {
@@ -83,6 +91,7 @@ void EEEnvironmentManager::Step(unsigned long inTime)
     this->mNextStep = UMFloatToLong(gWorld.GetGameSpeed() * this->mInterval) + inTime;
 }
 
+// FUNCTION: EXE 0x52ef75
 // Reads the storms, state, wind and timing from a saved game; returns the first read error (it used to return 0
 // whatever the reads returned)
 long EEEnvironmentManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -107,6 +116,7 @@ long EEEnvironmentManager::Load(unsigned long inMajorVersion, unsigned long inMi
     return theResult;
 }
 
+// FUNCTION: EXE 0x52f083
 // Reconnects the loaded storms after a load, deleting the ones that fail to restore; returns 0
 long EEEnvironmentManager::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
@@ -119,6 +129,7 @@ long EEEnvironmentManager::RepairPointers(unsigned long inFirst, unsigned long i
     return 0;
 }
 
+// FUNCTION: EXE 0x52f0ff
 // Writes the storms, state, wind and timing to a saved game; returns the first write error (it used to return
 // success whatever the writes returned)
 long EEEnvironmentManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -143,6 +154,7 @@ long EEEnvironmentManager::Save(unsigned long inMajorVersion, unsigned long inMi
     return theResult;
 }
 
+// FUNCTION: EXE 0x52f1fb
 // Turns the weather on or off: off deletes every storm and unloads the rain and snow effects, on loads them
 void EEEnvironmentManager::SetEnabled(bool inEnabled)
 {
@@ -159,6 +171,7 @@ void EEEnvironmentManager::SetEnabled(bool inEnabled)
     }
 }
 
+// FUNCTION: EXE 0x52f25b
 // Releases and deletes every storm and empties the storm list
 void EEEnvironmentManager::DeleteStorms()
 {
@@ -169,6 +182,7 @@ void EEEnvironmentManager::DeleteStorms()
     this->mStorms.clear();
 }
 
+// FUNCTION: EXE 0x52f2a6
 // Steps every storm and deletes the ones that are over; then rolls for a new storm below the limit but never creates
 // one (the roll and the rain effect lookup have no further effect)
 void EEEnvironmentManager::UpdateStorms(float inTimeOfDay, unsigned long inTime)
@@ -190,6 +204,7 @@ void EEEnvironmentManager::UpdateStorms(float inTimeOfDay, unsigned long inTime)
 
 static const float kWindStepMinimum = 1e-08f;
 
+// FUNCTION: EXE 0x52f3d6
 // Moves the wind one step toward its target; once there, picks a new random target and a step rate that reaches
 // it in about fifteen steps
 void EEEnvironmentManager::UpdateWind(float inTimeOfDay, unsigned long inTime)
@@ -218,6 +233,8 @@ void EEEnvironmentManager::UpdateWind(float inTimeOfDay, unsigned long inTime)
     }
 }
 
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
 void EEEnvironmentManager::FnE123D()
 {
 }

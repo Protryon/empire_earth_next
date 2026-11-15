@@ -12,19 +12,28 @@
 #include "ee/EEAIAStarTerrainStorage.h"
 #include "ee/EEAIAStarHillStorage.h"
 
+// FUNCTION: EXE 0x4171b5
 // Creates the hill search storage with no hill tile grid
 EEAIAStarHillStorage::EEAIAStarHillStorage()
     : mTiles60(NULL)
 {
 }
 
+// SYNTHETIC: EXE 0x4171cb
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4171e7
 // Destroys the storage, freeing its hill tile grid
 EEAIAStarHillStorage::~EEAIAStarHillStorage()
 {
     delete[] this->mTiles60;
 }
 
+// SYNTHETIC: EXE 0x417207
+// (EEAIAStarHillTile's vector deleting destructor, ICF-folded with EEAIAStarContinentTile's)
+
 // NEAR: as EEAIAStarContinentStorage::PrepareGrid 0x15a99 (the same shape; register choice of inWidth/inHeight)
+// FUNCTION: EXE 0x417239
 // Sizes the hill tile, node and flag grids (reallocating on a size change) and clears the node and flag grids,
 // only the span covering the dirty bounds plus 1 when unchanged; then forgets the dirty bounds
 void EEAIAStarHillStorage::PrepareGrid(long inWidth, long inHeight)

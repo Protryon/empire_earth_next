@@ -68,22 +68,29 @@ EECPAttackSubGroupUnit* EECPCreateSubGroupUnit(EEComplexUnit*, EECPAttackSubGrou
 #include "ee/EEAIPathGoalModifiers.h"
 #include "ee/EECPCombatManager.h"
 
+// FUNCTION: EXE 0x44192c
 // Creates an air attack sub-group belonging to the given attack group
 EECPASGAir::EECPASGAir(EECPAttackGroup* inGroup, long inKind) : EECPAttackSubGroup(inGroup, inKind)
 {
 }
 
+// FUNCTION: EXE 0x441948
 // Returns the continent-guard share, fixed at 1.0 for air sub-groups
 float EECPASGAir::GetGuardContinentPercentage()
 {
     return 1.0f;
 }
 
+// SYNTHETIC: EXE 0x44194f
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x44196b
 // Destroys the air sub-group (base members only)
 EECPASGAir::~EECPASGAir()
 {
 }
 
+// FUNCTION: EXE 0x441976
 // Replaces the sub-group's personnel request with a town request (at the town's centre) or a continent request
 // for the given classes; during a wonder race the request expires after 300 s
 void EECPASGAir::RequestUnits(std::vector<long>& inClasses, std::vector<long>& inUnitIDs, long inContinent, long inTownID)
@@ -105,6 +112,7 @@ void EECPASGAir::RequestUnits(std::vector<long>& inClasses, std::vector<long>& i
         this->mRequest->mDeadline = gPhysics->mGameTime + 300000;
 }
 
+// FUNCTION: EXE 0x441a2e
 // Sets the sub-group's task and flags every unit as needing new orders
 void EECPASGAir::SetTask(const EECPAGTask& inTask)
 {
@@ -114,6 +122,7 @@ void EECPASGAir::SetTask(const EECPAGTask& inTask)
     }
 }
 
+// FUNCTION: EXE 0x441a66
 // Orders a unit to attack the target (or the unit holding it): a parked plane gets an attack goal; otherwise,
 // unless it is taking off or landing, fighters fly to the target's tile and other units get an attack goal
 void EECPASGAir::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUnit* inTarget, EETileCoordinate* inTile)
@@ -159,6 +168,7 @@ void EECPASGAir::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUnit* inTar
     }
 }
 
+// FUNCTION: EXE 0x441ce6
 // Moves the rally point to a position found for the sub-group; always returns true
 bool EECPASGAir::RegroupHere()
 {
@@ -168,6 +178,7 @@ bool EECPASGAir::RegroupHere()
     return true;
 }
 
+// FUNCTION: EXE 0x441d18
 // Fills the air route cost weights: all zero except weight 10, which is 1
 void EECPASGAir::GetPathCosts(void* inFrom, void* inTo, EECPASGWeights& outWeights)
 {
@@ -175,6 +186,7 @@ void EECPASGAir::GetPathCosts(void* inFrom, void* inTo, EECPASGWeights& outWeigh
     outWeights.mValues[10] = 1.0f;
 }
 
+// FUNCTION: EXE 0x441d2f
 // Clears every unit's goals and all goal queues of the airport or carrier holding it, then disbands the sub-group
 void EECPASGAir::Disband()
 {
@@ -191,12 +203,14 @@ void EECPASGAir::Disband()
     EECPAttackSubGroup::Disband();
 }
 
+// FUNCTION: EXE 0x441da1
 // Returns the number of goal queues the unit has
 unsigned long EEComplexUnit::GetNumGoalQueues()
 {
     return this->mGoalQueues.size();
 }
 
+// FUNCTION: EXE 0x441dbd
 // Moves every unit delivered by the personnel request into the sub-group, raising the scan range to the best
 // unit's; then releases the request and re-ranks and refreshes the units; always returns true
 bool EECPASGAir::TakeRequestedUnits()
@@ -235,24 +249,28 @@ bool EECPASGAir::TakeRequestedUnits()
     return true;
 }
 
+// FUNCTION: EXE 0x441eb3
 // Returns true if the request holds no unit slots
 bool EECPPersonnelRequest::IsEmpty()
 {
     return this->mUnits.size() == 0;
 }
 
+// FUNCTION: EXE 0x441ed0
 // Returns the player's air chokepoint-guard share (0 without a computer player)
 float EECPASGAir::GetGuardChokepointPercentage()
 {
     return this->mPlayer2 != NULL ? this->mPlayer2->mGuardChokepointAirPercentage : 0;
 }
 
+// FUNCTION: EXE 0x441ee4
 // Returns the player's town-guard share (0 without a computer player)
 float EECPASGAir::GetGuardTownPercentage()
 {
     return this->mPlayer2 != NULL ? this->mPlayer2->mGuardTownPercentage : 0;
 }
 
+// FUNCTION: EXE 0x441ef8
 // Launches the sub-group: every unit retargets now and needs orders, then all fly to the task location if active
 void EECPASGAir::Launch(unsigned long inTime)
 {
@@ -264,6 +282,7 @@ void EECPASGAir::Launch(unsigned long inTime)
         this->SetDestination(this->mTask.mLocation);
 }
 
+// FUNCTION: EXE 0x441f4a
 // Adds every unit in the bounds that passes the air target filter (enemies optional) to the sub-group's targets
 void EECPASGAir::CollectTargets(EEAIAStarBounds* inBounds, bool inIncludeEnemies)
 {
@@ -282,6 +301,7 @@ void EECPASGAir::CollectTargets(EEAIAStarBounds* inBounds, bool inIncludeEnemies
     }
 }
 
+// FUNCTION: EXE 0x442000
 // Returns true if the sub-group is empty, the location is invalid, it has a helicopter, or some plane's fuel range
 // (flight seconds x speed x 0.9) from its holder (else its home base; planes with neither are skipped) reaches
 // the location
@@ -321,6 +341,7 @@ bool EECPASGAir::CanReach(const EECPILocation* inLocation)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44211d
 // Returns the squared distance from the unit's position to a tile
 float EEComplexUnit::DistanceSquaredToTileXY(long inTileX, long inTileY)
 {
@@ -329,6 +350,7 @@ float EEComplexUnit::DistanceSquaredToTileXY(long inTileX, long inTileY)
     return theDY * theDY + theDX * theDX;
 }
 
+// FUNCTION: EXE 0x442142
 // Counts the units that can reach the location: units without a base or fuel limit always count, others only
 // if the location lies within 90% of their fuel range from their base
 // NEAR: inlining and register allocation differ from the original
@@ -356,6 +378,7 @@ long EECPASGAir::CountUnitsInRange(const EECPILocation& inLocation)
     return theCount;
 }
 
+// FUNCTION: EXE 0x442220
 // Gives a live, enabled unit that is on the map or held by another the goal and starts the action; false otherwise
 bool EECPASGAir::GiveGoal(EEComplexUnit* inUnit, EEUnitGoal* inGoal, bool inKeepCurrent, long inAction)
 {
@@ -370,6 +393,7 @@ bool EECPASGAir::GiveGoal(EEComplexUnit* inUnit, EEUnitGoal* inGoal, bool inKeep
     return theResult;
 }
 
+// FUNCTION: EXE 0x442273
 // Takes any requested units; without an active task, releases all targets, sends paratrooper planes off the map
 // and drops them from the sub-group, and zeroes other on-map planes' flight time unless units were just taken
 void EECPASGAir::GoIdle()
@@ -397,6 +421,7 @@ void EECPASGAir::GoIdle()
     }
 }
 
+// FUNCTION: EXE 0x4423d4
 // Recalls every active unit (zeroes its flight time or clears its holder's goals), clears its goals, asks for removal
 void EECPASGAir::RequestRemoval()
 {
@@ -412,6 +437,7 @@ void EECPASGAir::RequestRemoval()
     EECPAttackSubGroup::RequestRemoval();
 }
 
+// FUNCTION: EXE 0x44249f
 // Switches state: idle gets a new task and goes idle; remove, launch, hold-at-task and hold-territory (return to
 // the task) run their handlers; other states go to the base class
 void EECPASGAir::SetState(long inState, long inTime)
@@ -445,12 +471,14 @@ void EECPASGAir::SetState(long inState, long inTime)
     }
 }
 
+// FUNCTION: EXE 0x442564
 // Returns true if any unit can reach the location
 bool EECPASGAir::IsInRange(const EECPILocation& inLocation)
 {
     return this->CountUnitsInRange(inLocation) ? true : false;
 }
 
+// FUNCTION: EXE 0x442578
 // Loads the sub-group from a saved game (base data only); returns the base's error code
 long EECPASGAir::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -458,6 +486,7 @@ long EECPASGAir::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return EECPAttackSubGroup::Load(inMajorVersion, inMinorVersion, inFile);
 }
 
+// FUNCTION: EXE 0x44259e
 // Counts the units able to attack each target and returns true if any can; with all targets and release set,
 // releases the targets no unit can attack
 bool EECPASGAir::MatchTargetsToUnits(bool inAllTargets, bool inAllUnits, bool inReleaseUnmatched)
@@ -488,6 +517,7 @@ bool EECPASGAir::MatchTargetsToUnits(bool inAllTargets, bool inAllUnits, bool in
     return theResult;
 }
 
+// FUNCTION: EXE 0x442759
 // Sends every active unit to the location (its area if off the map): parked planes prepare to move, others not
 // taking off or landing get a move goal, forced for active non-wonder tasks
 void EECPASGAir::SetDestination(const EECPILocation& inLocation)
@@ -533,6 +563,7 @@ void EECPASGAir::SetDestination(const EECPILocation& inLocation)
     }
 }
 
+// FUNCTION: EXE 0x442a47
 // Sends one unit to the centre of the location's tile (its area if off the map) like SetDestination; inFlag forces it
 void EECPASGAir::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPILocation& inLocation, bool inFlag)
 {
@@ -570,6 +601,7 @@ void EECPASGAir::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPILocation&
     }
 }
 
+// FUNCTION: EXE 0x442cac
 // Requests an air route between two tiles from the path manager, all terrain allowed, with the airplane route planner
 void EECPASGAir::RequestPath(void* inFrom, void* inTo)
 {
@@ -592,6 +624,7 @@ void EECPASGAir::RequestPath(void* inFrom, void* inTo)
         theModifier->Dereference();
 }
 
+// FUNCTION: EXE 0x442d81
 // Copies the locations that have influence for the task's player and that some unit can reach
 void EECPASGAir::FilterReachableLocations(const std::vector<EECPILocation>& inLocations,
                           std::vector<EECPILocation>& outLocations)
@@ -606,6 +639,7 @@ void EECPASGAir::FilterReachableLocations(const std::vector<EECPILocation>& inLo
     }
 }
 
+// FUNCTION: EXE 0x442e47
 // Returns the player's influence value for the region holding the tile
 long EEInfluenceTable::GetTileValue(unsigned long inPlayer, const U2DPoint<long>& inTile)
 {
@@ -613,6 +647,7 @@ long EEInfluenceTable::GetTileValue(unsigned long inPlayer, const U2DPoint<long>
     return this->GetValue(inPlayer, theRegion);
 }
 
+// FUNCTION: EXE 0x442e77
 // Re-rolls target preferences: bombers may prefer citizens (10%) or anti-air units (15-40%), fighters may prefer
 // bombers (35-70%), each only if their ammo can hurt that kind; transports get none
 void EECPASGAir::AssignPrejudices()
@@ -661,6 +696,10 @@ void EECPASGAir::AssignPrejudices()
     }
 }
 
+// SYNTHETIC: EXE 0x4431fe
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x44321b
 // Tests a condition: request filled, task valid or invalid (through CheckTask), no targets; others go to the base
 bool EECPASGAir::TestCondition(long inState, long inTime)
 {
@@ -687,6 +726,7 @@ bool EECPASGAir::TestCondition(long inState, long inTime)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44327d
 // Re-checks the task at random 15-180 s intervals: a location attack stays valid while enemies have influence within
 // 2 regions, a wonder defence while the wonder lives; other defence tasks lapse with a 35% chance
 bool EECPASGAir::IsLocationTaskValid(long inTime)
@@ -733,6 +773,7 @@ bool EECPASGAir::IsLocationTaskValid(long inTime)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44343c
 // Returns true while the task's unit is alive
 bool EECPAttackSubGroup::IsUnitTaskValid(long inTime)
 {
@@ -741,24 +782,117 @@ bool EECPAttackSubGroup::IsUnitTaskValid(long inTime)
     return false;
 }
 
+// FUNCTION: EXE 0x443455
+// Appends a unit to a list of sub-group units (std::vector push_back)
+
+// FUNCTION: EXE 0x443481
+// Appends a target preference to a list (std::vector push_back)
+
+// FUNCTION: EXE 0x4434ad
+// Empties a list of target preferences (std::vector clear)
+
+// FUNCTION: EXE 0x4434e8
+// Reserves room in a list of AI locations (std::vector reserve)
+
+// FUNCTION: EXE 0x4435c4
+// Appends an AI location to a list (std::vector push_back)
+
+// FUNCTION: EXE 0x4435f0
+// Empties a list of AI locations (std::vector clear)
+
+// FUNCTION: EXE 0x44362b
+// Inserts one target preference before a position (std::vector insert)
+
+// FUNCTION: EXE 0x44367b
+// Erases a range of target preferences (std::vector erase)
+
+// FUNCTION: EXE 0x4436e6
+// Inserts one AI location before a position (std::vector insert)
+
+// FUNCTION: EXE 0x443740
+// Erases a range of AI locations (std::vector erase)
+
+// FUNCTION: EXE 0x4437ab
+// Returns a random float from the physics random generator (the body RTSPhysics::GetRandom() shares through ICF)
+// No source here: 0x4437ab is the ICF representative of an AI function identical to RTSPhysics::GetRandom(),
+// not RTSPhysics' own body
+
+// FUNCTION: EXE 0x4437b4
+// Inserts n copies of a target preference (std::vector insert)
+
+// FUNCTION: EXE 0x443a68
+// Inserts n copies of an AI location (std::vector insert)
+
+// FUNCTION: EXE 0x443d3a
+// Copy-constructs n target preferences into raw storage (std::vector _Ufill)
+
+// FUNCTION: EXE 0x443d61
+// Copy-constructs n AI locations into raw storage (std::vector _Ufill)
+
+// FUNCTION: EXE 0x443d8c
+// Returns the iterator moved back n elements (std::_Ptrit operator-, a shared body)
+
+// FUNCTION: EXE 0x443da3
+// Collects the units in the bounds that pass the air target filter, dropping duplicates when a multi-tile unit
+// was accepted and uniqueness was asked for; returns the count
+// EECollectASGTargets<EECPAAirTargetFilter> (ee/EECPAreaTargetCollector.h), emitted by CollectTargets above
+
+// FUNCTION: EXE 0x443f4c
+// Copy-constructs a range of AI locations into raw storage (std::vector _Ucopy)
+
+// FUNCTION: EXE 0x443f78
+// Copies a range of target preferences (std::copy)
+
+// FUNCTION: EXE 0x443fa5
+// Copies a range of AI locations (std::copy)
+
+// FUNCTION: EXE 0x443fc9
+// Copy-constructs a range of target preferences into raw storage (std::vector _Ucopy)
+
+// FUNCTION: EXE 0x443ff1
+// Assigns one target preference to every element of a range (std::fill)
+
+// FUNCTION: EXE 0x44401b
+// Copies a range of target preferences back to front (std::copy_backward)
+
+// FUNCTION: EXE 0x44404d
+// Assigns one AI location to every element of a range (std::fill)
+
+// FUNCTION: EXE 0x44406a
+// Copies a range of AI locations back to front (std::copy_backward)
+
+// FUNCTION: EXE 0x444096
+// Copy-constructs one target preference in place (std::_Construct)
+
+// FUNCTION: EXE 0x4440bb
+// Copy-constructs one AI location in place (std::_Construct)
+
+// ICF-FOLDED: EXE 0x67c0b4
 // Returns false
+// (no address of its own: folded into the shared `xor al, al; ret` body the vtable slot points at)
 bool EECPASGAir::IsAwayFromTowns()
 {
     return false;
 }
 
+// ICF-FOLDED: EXE 0x67c0b4
+// (no address of its own: folded into the shared `xor al, al; ret` body the vtable slot points at)
 bool EECPASGAir::DecideSplit()
 {
     return false;
 }
 
+// ICF-FOLDED: EXE 0x4e123d
 // Does nothing for air sub-groups
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EECPASGAir::MoveToNearestTown()
 {
 }
 
+// ICF-FOLDED: EXE 0x45019d
 // Runs the state machine (next update in 3 s): scans or drops targets, updates units, then moves between the idle,
 // wait, launch, hold, follow, reposition and hold-territory states as their conditions change
+// (no address of its own: the same body as EECPASGSpaceFighter::Update, which ICF kept; [sib 4])
 void EECPASGAir::Update(long inTime)
 {
     if (this->mNextScanTime <= inTime && this->mUnits.size() > 0)
@@ -835,7 +969,9 @@ void EECPASGAir::Update(long inTime)
     this->mNextUpdateTime = inTime + 3000;
 }
 
+// ICF-FOLDED: EXE 0x44e240
 // Returns true while the task location still has influence for the task's player
+// (no address of its own: the same body as EECPASGSea::IsTerritoryTaskValid, which ICF kept; [sib 40])
 bool EECPASGAir::IsTerritoryTaskValid(long inTime)
 {
     EEInfluenceTable* theTable = gWorld.mInfluenceTable;

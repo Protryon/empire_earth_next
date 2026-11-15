@@ -45,12 +45,14 @@
 
 #include "ee/EEAIPathArea.h"
 
+// FUNCTION: EXE 0x41d846
 // Creates an empty continent with no category, id 0 and all seven counts zero
 EEAIContinent::EEAIContinent()
 {
     ee_astar_continent_init(this);
 }
 
+// FUNCTION: EXE 0x41d94d
 // Destroys the continent (members only)
 EEAIContinent::~EEAIContinent()
 {
@@ -87,6 +89,7 @@ static uint16_t EEAIShoreRegion(void*, long inX, long inY, bool inSpace)
     return gContinentManager.GetContinent(theNeighbor, inSpace ? kAIPathSpaceRegion : kAIPathWaterBody);
 }
 
+// FUNCTION: EXE 0x41da61
 // Finds this continent's shore tile and the other continent's hull outline point closest to each other; falls
 // back to the area version when the other is not a continent or either has no shore. Returns success
 bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
@@ -129,6 +132,7 @@ bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis,
     return theResult;
 }
 
+// FUNCTION: EXE 0x41dbf4
 // Returns the continent's path area containing a point, or NULL
 EEAIPathArea* EEAIContinent::GetPathAreaAt(const U2DPoint<long>& inPoint)
 {
@@ -144,6 +148,7 @@ EEAIPathArea* EEAIContinent::GetPathAreaAt(const U2DPoint<long>& inPoint)
     return theResult;
 }
 
+// FUNCTION: EXE 0x41dc54
 // Appends the continent's shore tiles next to area inID (all of them for id 0)
 void EEAIContinent::GetShoreNextTo(unsigned short inID, std::vector<U2DPoint<long> >& outTiles)
 {
@@ -155,6 +160,7 @@ void EEAIContinent::GetShoreNextTo(unsigned short inID, std::vector<U2DPoint<lon
     }
 }
 
+// FUNCTION: EXE 0x41dccf
 // Collects the shore tiles whose path area lies in one of the water-body (or space-region) ids, or land tiles
 // with a neighbour in one of those regions; all shore tiles when the list is empty or holds a 0 (Rust:
 // area_geom.rs shore_in_regions; the original read the path area's id before its NULL test, bytes 0x41dda7, and
@@ -187,6 +193,7 @@ void EEAIContinent::GetShoreInRegions(const std::vector<unsigned short>& inIDs, 
     }
 }
 
+// FUNCTION: EXE 0x41e45e
 // Collects the continent's shore tiles in one water body or space region
 void EEAIContinent::GetShoreInRegion(unsigned short inID, std::vector<U2DPoint<long> >& outTiles, long inKind)
 {
@@ -194,3 +201,34 @@ void EEAIContinent::GetShoreInRegion(unsigned short inID, std::vector<U2DPoint<l
     theIDs.push_back(inID);
     this->GetShoreInRegions(theIDs, outTiles, inKind);
 }
+
+// Compiler-generated for this unit (names in analysis/exe/names.txt):
+// SYNTHETIC: EXE 0x41d931
+// TEMPLATE: EXE 0x41e5bd
+// TEMPLATE: EXE 0x41e602
+// TEMPLATE: EXE 0x41e60a
+// TEMPLATE: EXE 0x41e627
+// TEMPLATE: EXE 0x41e639
+// TEMPLATE: EXE 0x41e69a
+// TEMPLATE: EXE 0x41e6ac
+// TEMPLATE: EXE 0x41e756
+// TEMPLATE: EXE 0x41e78b
+// TEMPLATE: EXE 0x41e7af
+// TEMPLATE: EXE 0x41e7d4
+// TEMPLATE: EXE 0x41e893
+// TEMPLATE: EXE 0x41e8c4
+// TEMPLATE: EXE 0x41e935
+// TEMPLATE: EXE 0x41e9be
+// TEMPLATE: EXE 0x41e9c4
+// TEMPLATE: EXE 0x41e9fb
+// TEMPLATE: EXE 0x41ea2d
+// TEMPLATE: EXE 0x41eb11
+// TEMPLATE: EXE 0x41eb3a
+// TEMPLATE: EXE 0x41eb65
+// TEMPLATE: EXE 0x41eba6
+// TEMPLATE: EXE 0x41ebcb
+// TEMPLATE: EXE 0x41ebf0
+// TEMPLATE: EXE 0x41ec50
+// TEMPLATE: EXE 0x41eca5
+// TEMPLATE: EXE 0x41ecbc
+// TEMPLATE: EXE 0x41ecfa

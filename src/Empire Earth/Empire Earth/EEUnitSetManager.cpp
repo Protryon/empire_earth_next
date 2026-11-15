@@ -24,12 +24,16 @@ struct EEUnitSetRecord {
 };
 static_assert(sizeof(EEUnitSetRecord) == 184, "on-disk record: 184 bytes on every target");
 
+// FUNCTION: EXE 0x536f4c
 // Destroys the unit set manager, deleting every unit set
 EEUnitSetManager::~EEUnitSetManager()
 {
     for (unsigned long i = 0; i < this->mSets.size(); i++)
         delete this->mSets[i];
 }
+
+// FUNCTION: EXE 0x536f8d
+// Destroys the unit set manager and frees it when asked (scalar deleting destructor)
 
 // Returns the unit set at an index, or NULL past the end (no address in this range: 0xd150 in EECPASGUProphet.cpp's
 // range is the ICF representative that every caller calls; GetSize is out of line there, 0x91f11. Defined here for
@@ -39,6 +43,7 @@ EEUnitSet* EEUnitSetManager::GetSet(unsigned long inSet)
     return inSet < this->GetSize() ? this->mSets[inSet] : 0;
 }
 
+// FUNCTION: EXE 0x536fa9
 // Loads the unit sets from the database file (an empty slot for each unused record), then links each set's
 // included and excluded sets; returns the last read's result
 long EEUnitSetManager::Load(FSFile* inFile)
@@ -81,3 +86,6 @@ long EEUnitSetManager::Load(FSFile* inFile)
     }
     return theResult;
 }
+
+// TEMPLATE: EXE 0x53727a
+// ?push_back@?$vector@PAVEEUnitSet@@V?$allocator@PAVEEUnitSet@@@std@@@std@@QAEXABQAVEEUnitSet@@@Z

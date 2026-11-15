@@ -20,8 +20,8 @@ public:
     bool IsStepLimit(long inSteps) const { return false; }
     bool IsRevLimit(long inRevs) const { return false; }
     bool IsCheaper(unsigned long inCost, unsigned long inOld) const { return false; }
-    EEAIAStarChokePointGoal();
-    virtual ~EEAIAStarChokePointGoal();
+    EEAIAStarChokePointGoal();              // 0x10d5d
+    virtual ~EEAIAStarChokePointGoal();     // 0x1118f (??_G 0x11173)
     // +0x10 0x10db7: the base's three members, then the map's size as the search size
     virtual void Attach(EEMap* inMap, EEAIAStarChokePointStorage* inStorage, EEAIAStarMachineBase* inMachine);
     void CollectTiles();                    // 0x10ddb: the storage's open and closed nodes get the index; mTiles gets them

@@ -30,6 +30,7 @@
 #include "lle/GEMaterial.h"
 #include "rust/ee_ge.h"       // ee_ge_material_size_of (ee_ge texture.rs)
 
+// FUNCTION: LLE 0x10016b9b
 // Creates an untextured, opaque material with a texture slot per screen and a polygon range per detail level
 GEMaterial::GEMaterial(unsigned long inScreenCount, unsigned long inLODCount)
     : mScreenCount(inScreenCount)
@@ -45,6 +46,7 @@ GEMaterial::GEMaterial(unsigned long inScreenCount, unsigned long inLODCount)
     this->mTextureIndex = 0;
 }
 
+// FUNCTION: LLE 0x10016c23
 // Destroys the material, releasing the texture of every screen and freeing its polygon ranges
 GEMaterial::~GEMaterial()
 {
@@ -57,6 +59,7 @@ GEMaterial::~GEMaterial()
     delete[] this->mPolygonRangeLengths;
 }
 
+// FUNCTION: LLE 0x10016c75
 // Sets the material's texture for one screen, releasing the old one and referencing the new one
 void GEMaterial::SetTexture(GETexture* inTexture, unsigned long inScreen)
 {
@@ -67,6 +70,7 @@ void GEMaterial::SetTexture(GETexture* inTexture, unsigned long inScreen)
         inTexture->Reference();
 }
 
+// FUNCTION: LLE 0x10016ca7
 // Returns the material's memory footprint: the object, its name, texture slots and per-level polygon ranges
 unsigned long GEMaterial::SizeOf()
 {
@@ -75,3 +79,29 @@ unsigned long GEMaterial::SizeOf()
 }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
+
+// Compiler-generated, continued:
+// SYNTHETIC: LLE 0x10016a7b
+// SYNTHETIC: LLE 0x10016a85
+// SYNTHETIC: LLE 0x10016a95
+// SYNTHETIC: LLE 0x10016aa1
+// SYNTHETIC: LLE 0x10016aab
+// SYNTHETIC: LLE 0x10016ab5
+// SYNTHETIC: LLE 0x10016ac5
+// SYNTHETIC: LLE 0x10016ad1
+// SYNTHETIC: LLE 0x10016adb
+// SYNTHETIC: LLE 0x10016ae5
+// SYNTHETIC: LLE 0x10016af5
+// SYNTHETIC: LLE 0x10016b01
+// SYNTHETIC: LLE 0x10016b0b
+// SYNTHETIC: LLE 0x10016b15
+// SYNTHETIC: LLE 0x10016b25
+// SYNTHETIC: LLE 0x10016b31
+// SYNTHETIC: LLE 0x10016b3b
+// SYNTHETIC: LLE 0x10016b45
+// SYNTHETIC: LLE 0x10016b55
+// SYNTHETIC: LLE 0x10016b61
+// SYNTHETIC: LLE 0x10016b6b
+// SYNTHETIC: LLE 0x10016b75
+// SYNTHETIC: LLE 0x10016b85
+// SYNTHETIC: LLE 0x10016b91

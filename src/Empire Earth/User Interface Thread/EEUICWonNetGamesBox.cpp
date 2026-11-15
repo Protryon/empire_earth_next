@@ -59,6 +59,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUICWonNetGamesBox.h"
 #include "ee/EEStringIDs.h"
+// FUNCTION: EXE 0x65b2ce
 // Creates the WON game room's game list with its [password], [private] and [in progress] labels measured
 EEUICWonNetGamesBox::EEUICWonNetGamesBox(unsigned long inId, GEFont* inFont, const GE2DPoint& inLocation,
                                          unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
@@ -88,6 +89,10 @@ EEUICWonNetGamesBox::EEUICWonNetGamesBox(unsigned long inId, GEFont* inFont, con
     this->mInProgressWidth = this->mCopiedText->GetTextExtent().GetWidth() + 8.0f;
 }
 
+// SYNTHETIC: EXE 0x65b61e
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x65b63a
 // Destroys the game list and its texts
 EEUICWonNetGamesBox::~EEUICWonNetGamesBox()
 {
@@ -95,6 +100,7 @@ EEUICWonNetGamesBox::~EEUICWonNetGamesBox()
     delete this->mText;
 }
 
+// FUNCTION: EXE 0x65b68e
 // Snapshots the list and its text style for drawing
 long EEUICWonNetGamesBox::CopyData()
 {
@@ -103,12 +109,14 @@ long EEUICWonNetGamesBox::CopyData()
     return theResult;
 }
 
+// FUNCTION: EXE 0x65b6b0
 // Draws the game list's background and selection
 long EEUICWonNetGamesBox::DrawPolygons()
 {
     return UIListBox<EEUICWNGBLine>::DrawPolygons();
 }
 
+// FUNCTION: EXE 0x65b6b5
 // Draws each game line: player count, name and its in-progress, password and private tags; joinable games
 // (not in progress, not full) in bold black, the others in grey
 long EEUICWonNetGamesBox::DrawTextA()
@@ -178,3 +186,151 @@ long EEUICWonNetGamesBox::DrawTextA()
     }
     return theResult;
 }
+
+// FUNCTION: EXE 0x65bb37
+// Template code for the games list: UIListBox<EEUICWNGBLine>::UIListBox<EEUICWNGBLine>
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65bdb1
+// Template code for the games list: UIListBox<EEUICWNGBLine>::~UIListBox<EEUICWNGBLine>
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65be45
+// Template code for the games list: UIListBox<EEUICWNGBLine>::AppendLine
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65be6b
+// Template code for the games list: UIListBox<EEUICWNGBLine>::AppendStringArray
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65beb7
+// Template code for the games list: UIListBox<EEUICWNGBLine>::ChangeSelectionIndex
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65bf6f
+// Template code for the games list: UIListBox<EEUICWNGBLine>::ClearSelection
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65bf77
+// Template code for the games list: UIListBox<EEUICWNGBLine>::CopyData
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c1ce
+// Template code for the games list: UIListBox<EEUICWNGBLine>::DeleteAllEntries
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c1ff
+// Template code for the games list: UIListBox<EEUICWNGBLine>::DeleteLine
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c28d
+// Template code for the games list: UIListBox<EEUICWNGBLine>::DrawPolygons
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c4ab
+// Template code for the games list: UIListBox<EEUICWNGBLine>::GetLineCount
+// (UIListBox<EEUICWNGBLine>::GetNumLines, ICF-identical with GetLineCount, the name names.txt binds here)
+
+// FUNCTION: EXE 0x65c4c4
+// Template code for the games list: UIListBox<EEUICWNGBLine>::MouseLButtonUp
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c5c1
+// Template code for the games list: UIListBox<EEUICWNGBLine>::ProcessUp
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c61f
+// Template code for the games list: UIListBox<EEUICWNGBLine>::TabbedFrom
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c647
+// Template code for the games list: UIListBox<EEUICWNGBLine>::`scalar deleting destructor'
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c663
+// Template code for the games list: EEUICWNGBLine::operator=
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c697
+// Template code for the games list: UIListBox<EEUICWNGBLine>::DrawScrollBarText
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c6ad
+// Template code for the games list: std::vector<EEUICWNGBLine,A>::operator=
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c7ff
+// Template code for the games list: std::vector<EEUICWNGBLine,A>::size
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c812
+// Template code for the games list: std::vector<EEUICWNGBLine,A>::resize
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c82f
+// Template code for the games list: std::vector<EEUICWNGBLine,A>::push_back
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c85b
+// Template code for the games list: std::vector<EEUICWNGBLine,A>::erase
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c8cf
+// Template code for the games list: std::vector<EEUICWNGBLine,A>::clear
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c90a
+// Template code for the games list: std::vector<EEUICWNGBLine,A>::_Tidy
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c943
+// Template code for the games list: std::vector<EEUICWNGBLine,A>::resize
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65c9f7
+// Template code for the games list: std::vector<EEUICWNGBLine,A>::insert
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65ca47
+// Template code for the games list: std::vector<EEUICWNGBLine,A>::erase
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65cab1
+// Template code for the games list: std::vector<EEUICWNGBLine,A>::insert
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65cd66
+// Template code for the games list: EEUICWNGBLine::EEUICWNGBLine
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65cd9a
+// Template code for the games list: std::vector<EEUICWNGBLine,A>::_Ufill
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65cdc5
+// Template code for the games list: steps a line iterator back (std::_Ptrit::operator-)
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65cdd9
+// Template code for the games list: std::copy
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65ce02
+// Template code for the games list: std::copy
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65ce26
+// Template code for the games list: std::vector<EEUICWNGBLine,A>::_Ucopy
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65ce52
+// Template code for the games list: std::fill
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65ce6f
+// Template code for the games list: std::copy_backward
+// (template COMDAT)
+
+// FUNCTION: EXE 0x65ce9b
+// Template code for the games list: std::_Construct
+// (template COMDAT)

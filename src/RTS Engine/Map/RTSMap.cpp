@@ -30,15 +30,28 @@ const float kNegativeHeightEpsilon = -0.01f;   // 0x441dbc (SmoothVertex)
 // chain at 0x521c78 (wrapper)
 //   object 0x929840  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ (guard 0x929838 bit 1)
 const UString RTSMap::sMapWidth("RTSMap-MapWidth");
+// SYNTHETIC: EXE 0x521c78   (wrapper)
+// SYNTHETIC: EXE 0x521c82   (ctor)
+// SYNTHETIC: EXE 0x521c93   (registrar)
+// SYNTHETIC: EXE 0x521c9f   (dtor)
 
 // chain at 0x521cbb (wrapper)
 //   object 0x929828  (guard 0x929838 bit 2)
 const UString RTSMap::sMapHeight("RTSMap-MapHeight");
+// SYNTHETIC: EXE 0x521cbb   (wrapper)
+// SYNTHETIC: EXE 0x521cc5   (ctor)
+// SYNTHETIC: EXE 0x521cd6   (registrar)
+// SYNTHETIC: EXE 0x521ce2   (dtor)
 
 // chain at 0x521cfe (wrapper)
 //   object 0x929818  (guard 0x929838 bit 4)
 const UString RTSMap::sVertexColorIndex("RTSMap-VertexColorIndex");
+// SYNTHETIC: EXE 0x521cfe   (wrapper)
+// SYNTHETIC: EXE 0x521d08   (ctor)
+// SYNTHETIC: EXE 0x521d19   (registrar)
+// SYNTHETIC: EXE 0x521d25   (dtor)
 
+// FUNCTION: EXE 0x521d41
 // Creates an empty map with the given scale value (also copied to gMapTileSize) and its colored-rectangle lock
 RTSMap::RTSMap(float inF1955F4)
 {
@@ -59,12 +72,17 @@ RTSMap::RTSMap(float inF1955F4)
     gMapTileSize = this->GetF1955F4();
 }
 
+// ICF-FOLDED: EXE 0x557269
 // Adds nothing to the sync checksum (the engine map's empty override)
 // (vtable 0x841d94 slot 0: an out-of-line empty override; EEMap::GetChecksum 0x51c531 calls it)
 void RTSMap::GetChecksum(ESChecksum& ioChecksum) const
 {
 }
 
+// SYNTHETIC: EXE 0x521e20
+// (the scalar deleting destructor, emitted with the vtable; slot RTSMap+0x10)
+
+// FUNCTION: EXE 0x521e3c
 // Destroys the map, freeing its tile table and its colored-rectangle lock
 RTSMap::~RTSMap()
 {
@@ -72,6 +90,7 @@ RTSMap::~RTSMap()
     TSScheduler::DestroyCriticalSection(this->mCriticalSectionForColoredRectangles);
 }
 
+// FUNCTION: EXE 0x521e7d
 // Smooths the slope below a raised area ring by ring until nothing changes; returns the lowest row reached
 // and keeps the deepest ring that moved a corner vertex for SpreadLeft/SpreadRight
 long RTSMap::SpreadDown(long inX, long inY, long inEnd, float inHeight, float inSlope)
@@ -114,6 +133,7 @@ long RTSMap::SpreadDown(long inX, long inY, long inEnd, float inHeight, float in
     return inEnd - theRing;
 }
 
+// FUNCTION: EXE 0x521fa8
 // Smooths the slope above a raised area ring by ring until nothing changes; returns the highest row reached
 // and keeps the last ring that moved a corner vertex (overwritten, not maxed as in SpreadDown)
 long RTSMap::SpreadUp(long inX, long inY, long inEnd, float inHeight, float inSlope)
@@ -156,6 +176,7 @@ long RTSMap::SpreadUp(long inX, long inY, long inEnd, float inHeight, float inSl
 
 // NEAR: register choice only; the original keeps inX in edx through the loop (reloaded after the calls)
 // and the ring count in eax, and reloads `this` before each call instead of after it.
+// FUNCTION: EXE 0x5220d6
 // Smooths the slope left of a raised area until nothing changes and the corner rings are covered;
 // returns the leftmost column reached
 long RTSMap::SpreadLeft(long inX, long inY, long inEnd, float inHeight, float inSlope)
@@ -192,6 +213,7 @@ long RTSMap::SpreadLeft(long inX, long inY, long inEnd, float inHeight, float in
     return inX - max(this->mL195600, theRing);
 }
 
+// FUNCTION: EXE 0x5221e6
 // Smooths the slope right of a raised area until nothing changes and the corner rings are covered;
 // returns the rightmost column reached
 long RTSMap::SpreadRight(long inX, long inY, long inEnd, float inHeight, float inSlope)
@@ -234,6 +256,7 @@ long RTSMap::SpreadRight(long inX, long inY, long inEnd, float inHeight, float i
 // NEAR: the frame order of the five floats/tile/count (no-/Og layout follows the local-name hash;
 // original: Z01 -4, Z00 -8, tile -0xc, count -0x10, Z11 -0x14, Z10 -0x18, lowest -0x1c). GetTile's ternary
 // form (a temporary [-0x34], then the copy) is what the original shows; it is neutral at -O1 in the includers.
+// FUNCTION: EXE 0x5222ed
 // Counts the tile's corners at least 0.4 above its lowest corner (0 off the map)
 // (built without /Og: every local lives in the frame, `leave`, the inline GetTile/GetZ results go through
 // temporaries; its neighbours are normal -O1 code)
@@ -261,6 +284,7 @@ long RTSMap::GetNumRaisedCorners(unsigned long inX, unsigned long inY)
 }
 #pragma optimize("g", on)
 
+// FUNCTION: EXE 0x522517
 // Turns every explored but unseen tile back to unexplored for each player but player 0, then unregisters
 // those players from the doppelganger manager (done before a scenario is saved)
 void EEMap::PrepareSave()
@@ -281,12 +305,14 @@ void EEMap::PrepareSave()
         gDoppelgangerManager.UnregisterPlayer(::gWorld.mPlayers[i]);
 }
 
+// FUNCTION: EXE 0x5225ef
 // Empties the map's area-outline tile runs
 void RTSMap::ClearU1955DC()
 {
     this->mU1955DC.clear();
 }
 
+// FUNCTION: EXE 0x5225fa
 // Recomputes the height and water flag of the four tiles around a vertex and puts their units back on the ground
 void RTSMap::UpdateTiles(long inX, long inY)
 {
@@ -312,6 +338,7 @@ void RTSMap::UpdateTiles(long inX, long inY)
 // NEAR: (1) the 0.01f is the pooled constant 0x43bf0c, not the `__real` 0.01f names.txt binds at
 // 0x43a688 (two 0.01f constants exist; 10 other functions use 0x43bf0c); (2) register/slot choice (`this` at -4,
 // theResult at -8, the mesh pointer at -0xc and used for the row-count reads).
+// FUNCTION: EXE 0x522761
 // Brings a vertex within the slope of a neighbour (copies its height at slope 0), updating tiles and water;
 // returns -1 if raised, 1 if lowered or copied, 0 if unchanged
 long RTSMap::SmoothVertex(unsigned long inX, unsigned long inY, unsigned long inFromX, unsigned long inFromY,
@@ -359,6 +386,7 @@ long RTSMap::SmoothVertex(unsigned long inX, unsigned long inY, unsigned long in
 }
 
 // NEAR: only the load of inPlayerCount is scheduled differently (the original loads it with inWidth).
+// FUNCTION: EXE 0x5229b3
 // Sets up a diamond-shaped map of the given width and height for the player count, optionally creating its
 // tiles, and builds a flat terrain mesh
 void RTSMap::Create(long inWidth, long inHeight, unsigned long inPlayerCount, bool inCreateTiles)
@@ -409,6 +437,7 @@ void RTSMap::Create(long inWidth, long inHeight, unsigned long inPlayerCount, bo
 }
 
 // NEAR: inline budget: the original refuses every _Ptrit::operator+ except the innermost mIndices site.
+// FUNCTION: EXE 0x522b06
 // Paints the queued vertex-color rectangles onto the terrain mesh (newest first) and empties the queue
 void RTSMap::ApplyVertexColors()
 {
@@ -427,6 +456,7 @@ void RTSMap::ApplyVertexColors()
     this->mVertexColors.clear();
 }
 
+// FUNCTION: EXE 0x522c9b
 // Returns the tile closest to a point and stores its coordinates
 EEMapTile* EEMap::GetClosestTile(GE3DPoint* inPoint, long* ioX, long* ioY)
 {
@@ -434,6 +464,7 @@ EEMapTile* EEMap::GetClosestTile(GE3DPoint* inPoint, long* ioX, long* ioY)
     return this->GetTile(*ioX, *ioY);
 }
 
+// FUNCTION: EXE 0x522ce1
 // Returns whether a tile's corner heights differ by at most 0.7 times the map's scale value (false off the map)
 bool RTSMap::IsTileFlat(unsigned long inX, unsigned long inY)
 {
@@ -461,6 +492,7 @@ bool RTSMap::IsTileFlat(unsigned long inX, unsigned long inY)
     return false;
 }
 
+// FUNCTION: EXE 0x522dec
 // Returns whether the tiles a radius's diagonal away left, right, below and above a tile are all on the map
 bool EEMap::IsAreaOnMap(unsigned long inX, unsigned long inY, unsigned long inRadius)
 {
@@ -473,6 +505,7 @@ bool EEMap::IsAreaOnMap(unsigned long inX, unsigned long inY, unsigned long inRa
     return theResult;
 }
 
+// FUNCTION: EXE 0x522ee8
 // Returns the tile where a line meets the terrain, or the water surface if asked and it comes first,
 // and stores its coordinates; NULL if nothing is hit
 EEMapTile* RTSMap::GetTileOnLine(const GE3DLine& inLine, long& outX, long& outY, bool inHitWaterSurface)
@@ -508,6 +541,7 @@ EEMapTile* RTSMap::GetTileOnLine(const GE3DLine& inLine, long& outX, long& outY,
     return theTile;
 }
 
+// FUNCTION: EXE 0x52307d
 // Returns the tile where a line meets the terrain, or the water surface if asked and it comes first,
 // and stores the hit point; NULL if nothing is hit
 EEMapTile* RTSMap::GetLocationOnLine(const GE3DLine& inLine, GE3DPoint& outLocation, bool inHitWaterSurface)
@@ -538,6 +572,7 @@ EEMapTile* RTSMap::GetLocationOnLine(const GE3DLine& inLine, GE3DPoint& outLocat
     return theTile;
 }
 
+// FUNCTION: EXE 0x52320d
 // Returns the color of one of a tile's four corner vertices
 const GEColor& RTSMap::GetVertexColor(long inX, long inY, long inCorner)
 {
@@ -556,6 +591,7 @@ const GEColor& RTSMap::GetVertexColor(long inX, long inY, long inCorner)
     return this->mTerrainMesh.GetVertexColor(inX, inY);
 }
 
+// FUNCTION: EXE 0x523259
 // Reads the map's size and player count, recreates the map and loads its tiles and terrain mesh; returns the
 // first read error (tiles get x = row start + column, which only old saves' terrain lookup uses)
 long RTSMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -566,6 +602,7 @@ long RTSMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
 
 // NEAR: induction variable x - 1 ([ebp-4], with x + 1 as +2) and the dead-parameter slots of the
 // results/loop counters differ.
+// FUNCTION: EXE 0x523389
 // Raises or smooths the terrain of a rectangle, spreads its edges, recomputes normals and shorelines and
 // returns the changed rectangle through the in/out bounds
 void RTSMap::Raise(long* ioLeft, long* ioRight, long* ioTop, long* ioBottom, float inHeight, float inSlope,
@@ -623,12 +660,14 @@ void RTSMap::Raise(long* ioLeft, long* ioRight, long* ioTop, long* ioBottom, flo
     *ioBottom = theBottom;
 }
 
+// FUNCTION: EXE 0x5236e6
 // Frees the map's tile pointer table (not the tiles)
 void RTSMap::DeleteTiles()
 {
     delete[] this->mTiles;
 }
 
+// FUNCTION: EXE 0x5236f3
 // Fogs every tile the player has seen or explored: it becomes explored but not in sight
 void RTSMap::FogSeen(EEPlayer* inPlayer)
 {
@@ -641,6 +680,7 @@ void RTSMap::FogSeen(EEPlayer* inPlayer)
     }
 }
 
+// FUNCTION: EXE 0x52377f
 // Marks every unexplored tile as explored for the player (reveals the map)
 void RTSMap::ExploreUnseen(EEPlayer* inPlayer)
 {
@@ -653,6 +693,7 @@ void RTSMap::ExploreUnseen(EEPlayer* inPlayer)
     }
 }
 
+// FUNCTION: EXE 0x523807
 // Writes the map's size, player count, every tile and the terrain mesh; returns the first write error
 long RTSMap::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -663,6 +704,7 @@ long RTSMap::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
 // NEAR: inline budget (begin() refused in the prologue, Contains/operator+ out of line) and the
 // by-value point copies: the original copies the points with the out-of-line copy ctor 0x4d28b (479 callers in
 // the exe), so the exe's U2DPoint<long> probably has the user-declared copy ctor that U2DPoint.h keeps engine-only.
+// FUNCTION: EXE 0x5238bd
 // Rebuilds the outline runs of continent areas: every rectangle edge not covered by another area of the same
 // continent
 void RTSMap::BuildAreaOutlines(std::vector<U2DRectangle<long> >& inAreas, std::vector<unsigned short>& inContinents)
@@ -734,6 +776,7 @@ void RTSMap::BuildAreaOutlines(std::vector<U2DRectangle<long> >& inAreas, std::v
 }
 
 // NEAR: which of the run start's coordinates sits in ebx (the original: y, from inStart.mY directly).
+// FUNCTION: EXE 0x523e36
 // Adds an outline edge as one tile run; on space maps splits it into the runs whose tiles lie on the continent
 void RTSMap::AddOutlineEdge(U2DPoint<long> inStart, U2DPoint<long> inEnd, unsigned short inContinent)
 {
@@ -781,3 +824,22 @@ void RTSMap::AddOutlineEdge(U2DPoint<long> inStart, U2DPoint<long> inEnd, unsign
         this->mU1955DC.push_back(theRun);
     }
 }
+
+// TEMPLATE: EXE 0x523f63
+// (vector<RTSMapVertexColors>::clear; the template COMDATs close the unit)
+
+// TEMPLATE: EXE 0x523f9e
+// (vector<RTSMapVertexColors>::erase(F, L))
+
+// TEMPLATE: EXE 0x524008
+// (vector<RTSMapVertexColors>::_Tidy)
+
+// TEMPLATE: EXE 0x524040
+// (std::copy of RTSMapVertexColors)
+
+// TEMPLATE: EXE 0x524064
+// (std::_Destroy(RTSMapVertexColors*))
+
+// FUNCTION: EXE 0x524072
+// Sets the tile's visibility state for a player
+// (RTSTile::SetVisibility, inline in ee/EEMap.h: its out-of-line copy, first called by PrepareSave)

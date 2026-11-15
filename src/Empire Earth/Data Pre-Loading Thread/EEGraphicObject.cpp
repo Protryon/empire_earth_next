@@ -37,8 +37,8 @@ std::vector<EEMedia*> gMediaTable;          // 0x4e8448 (EEMedia::Get/GetCount r
 #include "ee/EESoundObject.h"
 #include "ee/EEGlobalConstants.h"
 
-extern unsigned long& gTexturePixelDepth;
-extern unsigned long& gTextureMipLevelsToDrop;
+extern unsigned long& gTexturePixelDepth;     // 0x5308b4
+extern unsigned long& gTextureMipLevelsToDrop; // 0x530894 (provisional name)
 extern bool& gTrilinearFilter;
 
 // 0x43e584: the tag-point kind names, one per graphic-effect kind (0x48 of 0x40 chars; the last two empty). .rdata
@@ -247,8 +247,9 @@ struct EEGraphicObjectRecord {
 };
 static_assert(sizeof(EEGraphicObjectRecord) == 716, "on-disk record: 716 bytes on every target");
 
-void EELoadGraphicObjectRecord(EEGraphicObject* inObject, EEGraphicObjectRecord* inRecord);
+void EELoadGraphicObjectRecord(EEGraphicObject* inObject, EEGraphicObjectRecord* inRecord);  // 0xd7b37 (cdecl)
 
+// FUNCTION: EXE 0x4d7354
 // Creates an empty, unloaded graphic object: no names, models, textures or sounds, drawn, mip maps on
 EEGraphicObject::EEGraphicObject()
 {
@@ -301,6 +302,11 @@ EEGraphicObject::EEGraphicObject()
     this->mIsLoading = false;
 }
 
+// FUNCTION: EXE 0x4d754c
+// Destroys the graphic object and frees its memory when asked (scalar deleting destructor)
+// Compiler-generated: the ??_G of the virtual dtor below
+
+// FUNCTION: EXE 0x4d7568
 // Destroys the graphic object: unloads its media if loaded, frees its file names and colour groups
 EEGraphicObject::~EEGraphicObject()
 {
@@ -321,6 +327,7 @@ EEGraphicObject::~EEGraphicObject()
             delete this->mColorGroups[thePart][j];
 }
 
+// FUNCTION: EXE 0x4d76a1
 // Collects the model's turret parts, orbitals and wheels, recursing into its sub-models
 // The part scan of inModel under inParent: a "turret_" model becomes a turret part at its transformed origin, an
 // orbiting model an EEOrbital, a wheel model an EEWheel; then the sub-models under the combined transformation
@@ -347,6 +354,7 @@ void EEGraphicObject::CollectParts(GEModel* inModel, const GETransformation& inP
         this->CollectParts(inModel->GetSubModel(i), theTransformation);
 }
 
+// FUNCTION: EXE 0x4d7833
 // Reads the graphics table into the media table (names, then the record); entries with media index 0 are
 // dropped. Returns the last read result
 long EEGraphicObject::LoadTable(FSFile* inFile)
@@ -393,6 +401,7 @@ long EEGraphicObject::LoadTable(FSFile* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4d7a8f
 // Deletes every entry of the media table and empties it
 void EEDeleteMediaTable()
 {
@@ -401,6 +410,7 @@ void EEDeleteMediaTable()
     gMediaTable.resize(0);
 }
 
+// FUNCTION: EXE 0x4d7acf
 // Writes to the file each graphic object that is still loaded, with its file name and use count
 void EEDumpGraphicObjectTable(FSFileSpec& inFile)
 {
@@ -413,6 +423,7 @@ void EEDumpGraphicObjectTable(FSFileSpec& inFile)
     }
 }
 
+// FUNCTION: EXE 0x4d7b37
 // Copies a graphics table record into the graphic object: animation states, sounds, alpha and mip settings
 // The record loader: the record's fields into the object, the sounds by id (an unset sound clears its index to -1),
 // then the frame counts from the frame ranges
@@ -668,6 +679,7 @@ void EELoadGraphicObjectRecord(EEGraphicObject* inObject, EEGraphicObjectRecord*
 }
 
 
+// FUNCTION: EXE 0x4d84ec
 // Returns the tag points of a kind on a part's model, or NULL when it has none
 EETagPointList* EEGraphicObject::GetTagPoints(unsigned long inPart, long inKind)
 {
@@ -683,6 +695,7 @@ EETagPointList* EEGraphicObject::GetTagPoints(unsigned long inPart, long inKind)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4d8546
 // Returns one of the attack points, picked by the game time, or the default point when there are none
 const GE3DPoint& EEGraphicObject::PickPoint()
 {
@@ -692,6 +705,7 @@ const GE3DPoint& EEGraphicObject::PickPoint()
     return this->mPoints[theTime % this->mPoints.size()];
 }
 
+// FUNCTION: EXE 0x4d85aa
 // Finds the turret part for a model and returns its index; returns 0 when found, else 3
 long EEGraphicObject::FindTurretPart(GEModel* inModel, unsigned long& outIndex)
 {
@@ -707,6 +721,7 @@ long EEGraphicObject::FindTurretPart(GEModel* inModel, unsigned long& outIndex)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4d85ed
 // Loads the object's models, textures, sounds and parts on first use (counting later uses); returns 9 if a
 // model failed
 // The load (vtable 0x43f788 +0x04): on the first use, under the database lock, the frame ranges of each animated part
@@ -841,6 +856,7 @@ long EEGraphicObject::LoadMedia()
     return theResult;
 }
 
+// FUNCTION: EXE 0x4d8b09
 // Loads a texture by name into the slot if it is empty, with modulate, wrap and the object's mip settings
 void EEGraphicObject::LoadTexture(const UString& inName, GETexture*& ioTexture, const GETextureDescription& inDescription,
                               bool inUnused)
@@ -860,6 +876,7 @@ void EEGraphicObject::LoadTexture(const UString& inName, GETexture*& ioTexture, 
     }
 }
 
+// FUNCTION: EXE 0x4d8bb2
 // Collects a part model's tag points, attack and status bar points and player-colour materials, recursively
 // The tag points and colour groups of model part inPart's model inModel (recursive over the sub-models): each tag point
 // named for a point kind goes into the kind's list for the root model (not for the sub-models of part 0's model when
@@ -942,6 +959,7 @@ void EEGraphicObject::CollectTagPoints(unsigned long inPart, GEModel* inModel, c
         this->CollectTagPoints(inPart, inModel->GetSubModel(i), theTransformation);
 }
 
+// FUNCTION: EXE 0x4d9008
 // Sets the colour of every player-colour material of a part
 void EEGraphicObject::SetGroupColor(const GEColor& inColor, unsigned long inPart)
 {
@@ -952,6 +970,7 @@ void EEGraphicObject::SetGroupColor(const GEColor& inColor, unsigned long inPart
     }
 }
 
+// FUNCTION: EXE 0x4d907e
 // Counts one use down; on the last use releases all the object's models, textures, sounds and parts.
 // Returns 0
 // The unload: waits while the object is being loaded (mIsLoading), then under the database lock, on the last use, releases
@@ -1035,6 +1054,31 @@ long EEGraphicObject::UnloadMedia()
     return 0;
 }
 
+// TEMPLATE: EXE 0x4d93de
+// (std::vector<EETurretPart*>::push_back, a template COMDAT emitted by this unit)
+
+// TEMPLATE: EXE 0x4d940a
+// (std::vector<EEOrbital*>::push_back, a template COMDAT emitted by this unit)
+
+// TEMPLATE: EXE 0x4d9436
+// (std::vector<EEWheel*>::push_back, a template COMDAT emitted by this unit)
+
+// TEMPLATE: EXE 0x4d948e
+// (the tag-point kind map's _Tree destructor, a template COMDAT emitted by this unit)
+
+// TEMPLATE: EXE 0x4d95af
+// (the tag-point kind map's _Tree::erase(first, last), a template COMDAT emitted by this unit)
+
+
+// TEMPLATE: EXE 0x4d9988
+// (std::map<long, long>'s _Tree::_Lbound, a template COMDAT emitted by this unit)
+
+// TEMPLATE: EXE 0x4d99b1
+// (the tag-point kind map's _Tree::_Erase, a template COMDAT emitted by this unit)
+
+
+
+// FUNCTION: EXE 0x4d9a5d
 // Creates a tag point referring to tag point inIndex of the model, holding a reference to the model
 inline EETagPoint::EETagPoint(GEModel* inModel, unsigned long inIndex)
 {
@@ -1047,3 +1091,35 @@ inline void EETagPointList::Add(GEModel* inModel, unsigned long inIndex)
 {
     this->mPoints.push_back(new EETagPoint(inModel, inIndex));
 }
+
+// TEMPLATE: EXE 0x4d9a97
+// (compiler-generated ??_GEEOrbital@@UAEPAXI@Z; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4d9ab4
+// (EETurretPart's inline ctor, emitted for CollectParts)
+
+// The init chains (gMediaTable; the second global):
+// SYNTHETIC: EXE 0x4d72c1
+// SYNTHETIC: EXE 0x4d72cb
+// SYNTHETIC: EXE 0x4d72e3
+// SYNTHETIC: EXE 0x4d72ef
+// SYNTHETIC: EXE 0x4d730a
+// SYNTHETIC: EXE 0x4d7314
+// SYNTHETIC: EXE 0x4d733a
+// SYNTHETIC: EXE 0x4d7346
+
+// The map/vector COMDATs of the tag-point tables (template tail)
+// TEMPLATE: EXE 0x4d9358
+// TEMPLATE: EXE 0x4d939f
+// TEMPLATE: EXE 0x4d93ca
+// TEMPLATE: EXE 0x4d9462
+// TEMPLATE: EXE 0x4d94b9
+// TEMPLATE: EXE 0x4d94cd
+// TEMPLATE: EXE 0x4d953e
+// TEMPLATE: EXE 0x4d9620
+// TEMPLATE: EXE 0x4d98d7
+// TEMPLATE: EXE 0x4d9912
+// TEMPLATE: EXE 0x4d9956
+// TEMPLATE: EXE 0x4d99e3
+// TEMPLATE: EXE 0x4d9a25
+// TEMPLATE: EXE 0x4d9aff

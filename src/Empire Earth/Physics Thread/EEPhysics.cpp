@@ -99,9 +99,9 @@ UString gPhysicsDataKey("EEPhysics Data");
 // the unit's other data (provisional names): the area effects' update period (0x4422f8, a unit-local .rdata float)
 // (the physics totals 0x531cf0 / 0x531cf4 are EEPhysics::mInputMessagesProcessed / mLastOutOfSynchChecksum)
 static const float kAreaEffectInterval = 2000.0f;
-static unsigned long sReportedFirst;
-static unsigned long sReportedSecond;
-static unsigned long sReportPeriod;
+static unsigned long sReportedFirst;        // 0x531cf8
+static unsigned long sReportedSecond;       // 0x531cfc
+static unsigned long sReportPeriod;         // 0x531d00
 static bool sFirstReport = true;            // 0x4c1e34 (.data)
 extern UString gCampaignUser;              // 0x531cd0 (defined at the end of this unit; provisional name)
 // EESetCivBuilderButtonBlinking 0x27fcf0: ee/EmpireEarth.h (the main game form's blinking buttons)
@@ -110,7 +110,12 @@ unsigned long EEGetCivTimerSecondWarning();  // 0x27ffba (270000) (provisional n
 unsigned long EEGetCivTimerFirstWarning();  // 0x27ffb4 (240000)
 extern unsigned long& gContinentManagerChecksum;  // 0x530d10 (the continent manager's checksum; provisional name)
 extern unsigned long gCollisionPeriod;      // 0x4c237c (.data = 1 after gCollisionDetectionUnit; provisional name)
+// SYNTHETIC: EXE 0x551c28   (wrapper)
+// SYNTHETIC: EXE 0x551c32   (ctor)
+// SYNTHETIC: EXE 0x551c43   (registrar)
+// SYNTHETIC: EXE 0x551c4f   (dtor)
 
+// FUNCTION: EXE 0x551c5a
 // Creates the physics simulation: makes its save-game lock, resets its clocks and starts the thread's main loop
 EEPhysics::EEPhysics(EEGraphics* inGraphics, TMTimer* inTimer)
     : RTSPhysics(inGraphics, inTimer, 1, 0xf), mInputMessagesProcessed(0), mLastOutOfSynchChecksum(0)
@@ -120,12 +125,17 @@ EEPhysics::EEPhysics(EEGraphics* inGraphics, TMTimer* inTimer)
     this->mStartThreadMainLoop->Set();
 }
 
+// SYNTHETIC: EXE 0x551cd4
+// (the scalar deleting destructor, emitted with the vtable; slot EEPhysics+0x10)
+
+// FUNCTION: EXE 0x551cf0
 // Destroys the physics simulation, releasing its save-game lock
 EEPhysics::~EEPhysics()
 {
     TSScheduler::DestroyCriticalSection(this->mSaveGameLock);
 }
 
+// FUNCTION: EXE 0x551d1f
 // Autosaves when autosaves are on: names the file "AutoSave <date - time>", records it in the preferences
 // and sends every player the save request (waiting up to 15 s)
 void EEPhysics::AutoSave()
@@ -144,6 +154,7 @@ void EEPhysics::AutoSave()
     }
 }
 
+// FUNCTION: EXE 0x551e4d
 // Drops every queued server message (under the server queue lock)
 void EEPhysics::ClearServerMessages()
 {
@@ -156,6 +167,7 @@ void EEPhysics::ClearServerMessages()
     this->mServerMessageQueueLock->Leave();
 }
 
+// FUNCTION: EXE 0x551e9f
 // Places the queued units, adds every player's pending units, applies the queued unit swaps, then removes
 // every player's killed units
 void EEPhysics::FlushWorld()
@@ -176,6 +188,7 @@ void EEPhysics::FlushWorld()
     }
 }
 
+// FUNCTION: EXE 0x551efe
 // Runs every owed physics tick, draining the input queue for more whenever none are left
 void EEPhysics::RunOwedTicks()
 {
@@ -188,6 +201,7 @@ void EEPhysics::RunOwedTicks()
     }
 }
 
+// FUNCTION: EXE 0x551f3a
 // Ends the game: every non-observer player but player 0 wins or loses, a won campaign scenario is recorded,
 // the in-game options button blinks, the teams are cleared and a server pauses the game
 void EEPhysics::EndGame(bool inIsVictory)
@@ -222,6 +236,7 @@ void EEPhysics::EndGame(bool inIsVictory)
     this->mGameOver = true;
 }
 
+// FUNCTION: EXE 0x5520cf
 // Returns the world's out-of-synch checksum (inFlags picks the parts: map, calamities, air traffic, continents,
 // selections); inDump also writes everything to "OOS <date>.log"
 // NEAR: frame 8 bytes smaller (two temporaries of the out-of-line begin()/operator+); register choice
@@ -344,6 +359,10 @@ unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlag
     return theChecksum;
 }
 
+// FUNCTION: EXE 0x552525
+// (EEPlayer::GetNumRunningGroups: the inline COMDAT after its first user above)
+
+// FUNCTION: EXE 0x55253e
 // Returns the game speed and elapsed game time as text ("<speed> hh:mm:ss"); the time-of-day conversions are
 // computed and unused
 // NEAR: the time of day is also copied to a frame float (fld [ebp-4]) in the original
@@ -368,6 +387,7 @@ UWideString EEPhysics::GetTimeString()
     return theString;
 }
 
+// FUNCTION: EXE 0x55268d
 // Splits a game time in ms (0: the current one) into whole minutes and the seconds past them
 void EEPhysics::GetMinutesAndSeconds(unsigned long* outMinutes, unsigned long* outSeconds, unsigned long inTime)
 {
@@ -377,6 +397,7 @@ void EEPhysics::GetMinutesAndSeconds(unsigned long* outMinutes, unsigned long* o
     *outSeconds = (inTime - *outMinutes * 60000) / 1000;
 }
 
+// FUNCTION: EXE 0x5526d2
 // Returns the unit's role in the queued unit swaps (the earliest wins): old 1, new 3; other owner 2 / 4;
 // citizen to non-citizen 5 / 7, non-citizen to citizen 6 / 8; 0 when it is not swapped
 // NEAR: inline budget: the original calls begin() out of line from the second mSound2Index7[i] on; mIsCitizen through a cast
@@ -416,6 +437,7 @@ long EEPhysics::GetUnitSwapKind(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x552909
 // Resets the simulation's clocks, tick counters and game flags and drops the queued server messages and
 // load/save requests
 void EEPhysics::Init()
@@ -502,6 +524,7 @@ static int32_t EEPhysicsSaveOperation(void* inContext, int32_t inOp, uint32_t, E
     return EESavePrimitive(*theContext.mFile, inOp, io);
 }
 
+// FUNCTION: EXE 0x552a4d
 // Reads the physics clocks, tick counters, timing averages and civ timer state from a saved game (the game-over
 // flag after version 0.0xce, the resource timer from 0xfa); returns the first read error
 long EEPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -518,18 +541,21 @@ long EEPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
     return theResult;
 }
 
+// FUNCTION: EXE 0x552f29
 // Takes the world's write lock
 void EEPhysics::Lock()
 {
     gWorld.mLock->WriteLock();
 }
 
+// FUNCTION: EXE 0x552f35
 // Appends a message to the server message queue (no lock taken)
 void EEPhysics::QueueServerMessage(NEMessage* inMessage)
 {
     this->mServerMessages.push_back(inMessage);
 }
 
+// FUNCTION: EXE 0x552f45
 // Handles the physics thread's messages: start (restarts the tick clock), time of day toggle / reset, scenario
 // dialog, re-init, autosave, a load/save request (queued with no lock), 0x50c; passes the rest to the base
 void EEPhysics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
@@ -571,6 +597,7 @@ void EEPhysics::HandleMessage(unsigned long inMessage, void* inParameter1, void*
     }
 }
 
+// FUNCTION: EXE 0x55305a
 // With the free camera on, drains the input queue and flushes the world under the world lock
 void EEPhysics::Idle()
 {
@@ -582,6 +609,7 @@ void EEPhysics::Idle()
     this->Unlock();
 }
 
+// FUNCTION: EXE 0x553082
 // Runs one physics tick: game clock, civ and resource timers, weather, paths, area effects, units, effects,
 // calamities, AI, scenario and game over; then the timing averages and, on a server, the autosave clock
 // NEAR: GetLongValue(0x5e) out of line and signed in the original (fild dword); TMGetTime hoisted into ebx
@@ -697,6 +725,7 @@ void EEPhysics::Tick()
     gCommunications->GetCurrentCommunicationsTick();
 }
 
+// FUNCTION: EXE 0x553403
 // Queues a load/save request under the save-game lock, taking a reference to it
 void EEPhysics::QueueMessage(NEMessage* inMessage)
 {
@@ -706,6 +735,7 @@ void EEPhysics::QueueMessage(NEMessage* inMessage)
     this->mSaveGameLock->Leave();
 }
 
+// FUNCTION: EXE 0x553430
 // Applies one unit swap: the camera follows the new unit (or drops the old one), and the contagions, the
 // scenario and the effects switch to it
 // NEAR: the original loads mUnitA into eax first and only the else branch keeps &gWorld.mCameraControl in ebx
@@ -727,6 +757,7 @@ void EEPhysics::SwapUnit(EEUnit* inOld, EEUnit* inNew)
     gEffectManager->ReplaceUnit(inOld, inNew);
 }
 
+// FUNCTION: EXE 0x5534d1
 // Applies the queued unit swaps: tells every player but player 0, swaps each pair, releases both units, clears
 void EEPhysics::ProcessUnitSwaps()
 {
@@ -1021,6 +1052,7 @@ static void EEPhysicsLogSelection(NEMessage* inMessage, unsigned long inTime)
     EEGameLogLine((std::string(theHead) + theUnits + "\n").c_str());
 }
 
+// FUNCTION: EXE 0x55355c
 // Runs the queued physics tick messages (one while the timer runs): checksums or dumps the world when asked,
 // takes the owed ticks and speed, executes the tick's player inputs; a stray non-tick message at the head is dropped
 // NEAR: inline budget: the original calls deque::begin() out of line for the first front(); esi/ebx/edi roles
@@ -1118,6 +1150,11 @@ void EEPhysics::DrainInput()
     this->mServerMessageQueueLock->Leave();
 }
 
+// FUNCTION: EXE 0x553811
+// (the shared scalar deleting destructor of the engine messages with implicit destructors: NEMWorldDatabaseChecksumResponse's,
+// emitted after its first user above)
+
+// FUNCTION: EXE 0x553836
 // Every 2.5..5 s (a random period drawn once) sends the current player's two statistics to the others when
 // they changed
 // (Virtual20's; provisional names)
@@ -1143,12 +1180,14 @@ void EEPhysics::ReportStatistics()
     gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageReportStatistics, {theFirst, theSecond}), kSlotNone);
 }
 
+// FUNCTION: EXE 0x55394b
 // Creates the game timer
 void EEPhysics::CreateGameTimer()
 {
     EECreateGameTimer();
 }
 
+// FUNCTION: EXE 0x553950
 // Writes the physics clocks, tick counters, timing averages, civ timer state, game-over flag and resource timer
 // to the saved game; returns the first write error
 long EEPhysics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -1157,6 +1196,7 @@ long EEPhysics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion,
     return ee_units_physics_save(&theContext, &EEPhysicsSaveOperation, static_cast<EeUnitsPhysicsSaved*>(this));
 }
 
+// FUNCTION: EXE 0x553b8d
 // Posts the autosave message (0x50a) to the physics thread; returns the post result (0 with no thread)
 long EEPhysics::PostAutoSave()
 {
@@ -1166,6 +1206,7 @@ long EEPhysics::PostAutoSave()
     return theResult;
 }
 
+// FUNCTION: EXE 0x553ba6
 // Posts the show-scenario-dialog message (0x508) to the physics thread; returns the post result (0 with no thread)
 long EEPhysics::PostShowDialogMessage()
 {
@@ -1175,6 +1216,7 @@ long EEPhysics::PostShowDialogMessage()
     return theResult;
 }
 
+// FUNCTION: EXE 0x553bbf
 // Posts the re-init message (0x509) to the physics thread; returns the post result (0 with no thread)
 long EEPhysics::PostInit()
 {
@@ -1184,6 +1226,7 @@ long EEPhysics::PostInit()
     return theResult;
 }
 
+// FUNCTION: EXE 0x553bd8
 // Recomputes the ticks per game second and the tick length (s and ms) from the tick rate and the game speed
 void EEPhysics::UpdateTiming()
 {
@@ -1193,6 +1236,7 @@ void EEPhysics::UpdateTiming()
     this->mTickTimeMs = UMFloatToLong(this->mTickTime);
 }
 
+// FUNCTION: EXE 0x553c23
 // Queues a unit swap (inOld replaced by inNew), taking a reference to both units
 void EEPhysics::QueueUnitSwap(EEComplexUnit* inOld, EEComplexUnit* inNew)
 {
@@ -1204,12 +1248,14 @@ void EEPhysics::QueueUnitSwap(EEComplexUnit* inOld, EEComplexUnit* inNew)
     this->mUnitSwaps.push_back(theSwap);
 }
 
+// FUNCTION: EXE 0x553c4d
 // Releases the world's write lock
 void EEPhysics::Unlock()
 {
     gWorld.mLock->WriteUnlock();
 }
 
+// FUNCTION: EXE 0x553c59
 // Advances the area effects clock and ticks the area effects once per 2 s of game time
 void EEPhysics::UpdateAreaEffectsClock()
 {
@@ -1220,6 +1266,7 @@ void EEPhysics::UpdateAreaEffectsClock()
     }
 }
 
+// FUNCTION: EXE 0x553ca1
 // Runs the civilization timer on a server: warnings at 240 s and 270 s, expiry at 300 s, and the civ builder
 // button blinks for a player with no civilization; elsewhere (or with no civ buying) the timer stops
 void EEPhysics::UpdateCivTimer()
@@ -1251,6 +1298,7 @@ void EEPhysics::UpdateCivTimer()
     }
 }
 
+// FUNCTION: EXE 0x553dff
 // Between ticks runs every queued load/save request (under the save-game lock) and sends one response with
 // the last result (logged on a server); with ticks owed it waits
 // NEAR: the original inlines the EEMLoadOrSaveGameResponse ctor (ee/EEMessage.h declares it out of line, 0xc1025)
@@ -1282,6 +1330,7 @@ void EEPhysics::ServeLoadSaveRequests()
     this->mSaveGameLock->Leave();
 }
 
+// FUNCTION: EXE 0x553f47
 // Every 4 s of game time takes the current player out of shift mode when the Shift key (0xe1) is up
 // (Virtual20's; provisional name)
 void EEPhysics::CheckShiftMode()
@@ -1298,6 +1347,7 @@ void EEPhysics::CheckShiftMode()
         gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageExitShiftMode, {this->mGameTime}), kSlotNone);
 }
 
+// FUNCTION: EXE 0x55401e
 // Sets the collision period (the active units spread over gCollisionDetectionUnit ticks, at least 1), updates
 // every player, then steps each active unit (last first); returns the unit count
 // New (R5b.4 leaf 6): the loop is Rust over the stepped units' list (ee_units tick.rs update_units: the period, the
@@ -1348,8 +1398,12 @@ unsigned long EEPhysics::UpdateUnits()
 EEComplexUnit* gPhysicsSteppingUnit = NULL;   // TEST ONLY (ee/EEPhysics.h)
 void (*gPhysicsAfterTickHook)(void) = NULL;   // TEST ONLY (ee/EEPhysics.h; RTSPhysics::Main's simulation loop)
 
+// FUNCTION: EXE 0x5540dc
+// (EEComplexUnit::Step: the inline COMDAT after its first user above)
+
 static const float kWindDrift = 0.005f;   // 0x442370 (unit-local const: the wind direction random walk step; provisional name)
 
+// FUNCTION: EXE 0x5540fb
 // Advances the day/night clock (when it runs) and the wind direction's random walk, then ticks the environment
 // EEEnvironmentManager::Tick is an out-of-line member defined at the end of this file (0x55439f)
 void EEPhysics::UpdateWeather()
@@ -1379,10 +1433,24 @@ void EEPhysics::UpdateWeather()
     gWorld.mEnvironmentManager->Tick(this->mGameTime);
 }
 
+// FUNCTION: EXE 0x554215
+// (vector<NEMessage*>::push_back: the template COMDAT)
+
+// FUNCTION: EXE 0x554241
+// (vector<EEPUnitSwap>::push_back: the template COMDAT)
+
+// FUNCTION: EXE 0x55426d
+// (deque<NEMessage*>::_Growmap: the template COMDAT)
+
 // the unit's last global (0x531cd0, "default" 0x4b5210): its init chain follows the template COMDATs
 // (EndGame: the campaign progress's user; not EEUIECampaignSelectScreenEvents.cpp's gCampaignDefaultUser 0x562ee0)
 UString gCampaignUser("default");
+// SYNTHETIC: EXE 0x55436d   (wrapper)
+// SYNTHETIC: EXE 0x554377   (ctor)
+// SYNTHETIC: EXE 0x554388   (registrar)
+// SYNTHETIC: EXE 0x554394   (dtor)
 
+// FUNCTION: EXE 0x55439f
 // Steps the environment manager when it is enabled and its next step time has come
 // not inline: defined here after the unit's init chain (UpdateWeather calls it)
 void EEEnvironmentManager::Tick(unsigned long inTime)

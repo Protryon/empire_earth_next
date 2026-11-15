@@ -44,7 +44,12 @@ static long sMinYValue = 100;
 
 // 0x5297a8: the pointer textures' transparent colour (blue)
 static GEColor sTransparencyColor(0.0f, 0.0f, 1.0f);
+// SYNTHETIC: EXE 0x51ab55   (wrapper)
+// SYNTHETIC: EXE 0x51ab5f   (ctor)
+// SYNTHETIC: EXE 0x51ab78   (registrar)
+// SYNTHETIC: EXE 0x51ab84   (dtor)
 
+// FUNCTION: EXE 0x51ab85
 // Creates the mouse with its render and input locks and the desktop size: normal pointer, plus overlay, no surfaces
 RTSMouse::RTSMouse()
 {
@@ -72,6 +77,10 @@ RTSMouse::RTSMouse()
         this->mPointerSurfaces[i] = NULL;
 }
 
+// SYNTHETIC: EXE 0x51acbe
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x51acda
 // Destroys the mouse's input and render locks
 RTSMouse::~RTSMouse()
 {
@@ -79,6 +88,7 @@ RTSMouse::~RTSMouse()
     TSScheduler::DestroyCriticalSection(this->mRenderLock);
 }
 
+// FUNCTION: EXE 0x51acf9
 // Saves the screen under the pointer (at the frame's drawn position, clipped to the surface) into the current
 // save-under record
 void RTSMouse::SaveUnder(GESurface* inSurface, const GE2DPoint& inOrigin)
@@ -105,6 +115,7 @@ void RTSMouse::SaveUnder(GESurface* inSurface, const GE2DPoint& inOrigin)
     inSurface->CopyTo(this->mCurrentSaveUnder->mSurface, theSource, theDestination, false);
 }
 
+// FUNCTION: EXE 0x51ae5d
 // Puts back the screen saved under the pointer from the previous record (windowed: the current one, unshifted);
 // the first call after a load only clears the just-loaded flag; returns the copy's result
 long RTSMouse::RestoreUnder(GESurface* inSurface, const GE2DPoint& inOrigin, bool inIsWindowed)
@@ -132,6 +143,7 @@ long RTSMouse::RestoreUnder(GESurface* inSurface, const GE2DPoint& inOrigin, boo
     return 0;
 }
 
+// FUNCTION: EXE 0x51af52
 // Returns the texture of pointer inIndex (NULL past the 10 pointers)
 GESurface* RTSMouse::GetPointerSurface(unsigned long inIndex)
 {
@@ -206,6 +218,7 @@ static long LoadPackPointer(const char* inFile, GEScreen* inScreen, const GESurf
     return kErrorOK;
 }
 
+// FUNCTION: EXE 0x51af66
 // Loads a 32x32 pointer picture (PNG) from the texture path into a surface (created if needed), blue transparent;
 // returns the first error of finding, loading and closing the file
 long RTSMouse::LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** ioSurface)
@@ -246,6 +259,7 @@ long RTSMouse::LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** i
     return theResult;
 }
 
+// FUNCTION: EXE 0x51b02b
 // Loads the 10 pointer textures and creates the two 32x32 save-under surfaces on a screen; returns the first error
 long RTSMouse::Load(GEScreen* inScreen)
 {
@@ -280,6 +294,7 @@ long RTSMouse::Load(GEScreen* inScreen)
     return theResult;
 }
 
+// FUNCTION: EXE 0x51b131
 // Draws the frame's pointer transparently over the current save-under rectangle, shifted by inOrigin
 void RTSMouse::Draw(GESurface* inSurface, const GE2DPoint& inOrigin)
 {
@@ -297,6 +312,7 @@ void RTSMouse::Draw(GESurface* inSurface, const GE2DPoint& inOrigin)
     this->mCurrentSurface->CopyTo(inSurface, theSource, theDestination, true);
 }
 
+// FUNCTION: EXE 0x51b1dd
 // Starts a pointer frame: enters the render lock (EndFrame leaves it), takes the position and pointer (in shift mode
 // the pointer with the overlay drawn over it, composed in spare slot 9) and swaps the save-under records
 void RTSMouse::BeginFrame()
@@ -329,6 +345,7 @@ void RTSMouse::BeginFrame()
 // the GE value classes as their #[repr(C)] mirrors (the same storage)
 static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GERectangle) == sizeof(EeGeRectangle), "GE mirrors");
 
+// FUNCTION: EXE 0x51b31c
 // Keeps the pointer position inside the bounds (the right and bottom edges excluded): ee_gfx mouse.rs
 void RTSMouse::ClampPosition()
 {
@@ -336,6 +353,7 @@ void RTSMouse::ClampPosition()
                        reinterpret_cast<const EeGeRectangle*>(&this->mBounds));
 }
 
+// FUNCTION: EXE 0x51b373
 // Releases the pointer textures, both save-under surfaces and the frame's pointer; returns 0
 long RTSMouse::Release()
 {
@@ -360,6 +378,7 @@ long RTSMouse::Release()
     return 0;
 }
 
+// FUNCTION: EXE 0x51b3cc
 // Moves the pointer by the raw mouse axes (scaled by bounds over desktop, sensitivity and the smallest move seen;
 // the arithmetic is ee_gfx mouse.rs) unless frozen, clamps it, and reads the wheel (0 without one)
 void RTSMouse::Update()

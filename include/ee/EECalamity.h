@@ -19,8 +19,8 @@ class SESMInstanceNode;
 // the checksum, Load and Save); the members below stay C++
 class EECalamity : public FSRestorable, public EeCalamityFields {
 public:
-    EECalamity();
-    EECalamity(EECalamityClass* inClass, EEUnit* inCasterUnit);
+    EECalamity();                           // 0xad1ad
+    EECalamity(EECalamityClass* inClass, EEUnit* inCasterUnit);   // 0xad0f4
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0xad618
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0xad85e
     virtual ~EECalamity();                  // +0x10 0xad218
@@ -30,15 +30,15 @@ public:
     virtual void PlaySound();               // +0x20 0xadaa3: mClass->Virtual2C(this)
 
     void StopSound();                       // 0xad267: stops mSound (provisional name)
-    void ReleaseSound();
-    void ReleaseSecondarySound();
-    void Reset();
+    void ReleaseSound();                    // 0xad289 (provisional name)
+    void ReleaseSecondarySound();           // 0xad2ad (provisional name)
+    void Reset();                           // 0xad2d1 (provisional name)
     // 0xad5bb: the whole discrete updates in mTimeElapsedSinceLastUpdate (keeps the remainder) (provisional name)
     unsigned long GetDiscreteUpdates();
     bool GetTargetUnit(EEUnit*& outUnit);   // 0xad5fc: mTargetUnit (0 and false if none)
     void SetCasterUnit(EEUnit* inUnit);     // 0xadab3 (keeps a reference) (provisional name)
     void SetSound(SESMInstanceNode* inSound);    // 0xadae7: stops the old one, keeps a reference (provisional name)
-    void SetSecondarySound(SESMInstanceNode* inSound);
+    void SetSecondarySound(SESMInstanceNode* inSound);   // 0xadb01 (provisional name)
     void SetTargetUnit(EEUnit* inUnit);     // 0xadb1b (keeps a reference) (provisional name)
     // out of line in another unit (0xdfd80; EECalamity.cpp calls it): stops mSecondarySound (provisional name)
     void StopSecondarySound();

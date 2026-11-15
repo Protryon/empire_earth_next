@@ -26,6 +26,7 @@
  * which modules will be used and give them appropriate initialization calls.
  */
 
+// FUNCTION: JPEG 0x1008b43d
 GLOBAL(void)
 jinit_compress_master (j_compress_ptr cinfo)
 {

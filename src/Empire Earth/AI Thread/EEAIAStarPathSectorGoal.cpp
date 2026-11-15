@@ -54,6 +54,7 @@
 // 0x29ced (cdecl): non-zero when a resource unit stands on inTile (EEAIAStarPathAreaGoal.cpp declares it too)
 long EEAIHasResourceUnit(EETile* inTile);
 
+// FUNCTION: EXE 0x41a9ec
 // Creates the sub-sector flood-fill goal with no sector, no path area storage, no tiles and no owner unit
 EEAIAStarPathSectorGoal::EEAIAStarPathSectorGoal()
     : mSector(NULL), mPathAreaStorage(NULL), mTileCount(0), mUnitID(-1), mPlayerID(0), mWA0(0), mWA2(0), mKind(kAITileNone), mContinentID(0), mCategory(kContinentCategoryNone), mPathAreaID(0),
@@ -61,6 +62,7 @@ EEAIAStarPathSectorGoal::EEAIAStarPathSectorGoal()
 {
 }
 
+// FUNCTION: EXE 0x41aac4
 // Takes a new sub-sector id from the continent manager, stamps it on every closed and open node's tile and
 // collects those tiles
 void EEAIAStarPathSectorGoal::CollectTiles()
@@ -79,6 +81,7 @@ void EEAIAStarPathSectorGoal::CollectTiles()
 }
 
 // NEAR: differs in the sector's map insert (call target ICF name) and the storage bounds' store schedule
+// FUNCTION: EXE 0x41ab68
 // Builds a sub-sector from the sorted filled tiles, adds it to the sector and the goal's map, marks the bounds
 // dirty and resets the fill state
 void EEAIAStarPathSectorGoal::CreateSubSector()
@@ -107,6 +110,7 @@ void EEAIAStarPathSectorGoal::CreateSubSector()
     this->mKind = kAITileNone;
 }
 
+// FUNCTION: EXE 0x41acbf
 // Decides whether the fill takes a tile (ee_astar area_goals::path_sector_accept with its ClassifyTile 0x41ae1d, over
 // the goal's fill state; the machine's corner checks as it leaves them, a stale tile to mStaleTiles)
 bool EEAIAStarPathSectorGoal::AcceptTile(unsigned long inX, unsigned long inY, long inStart)
@@ -157,7 +161,17 @@ bool EEAIAStarPathSectorGoal::AcceptTile(unsigned long inX, unsigned long inY, l
     return theResult;
 }
 
+// FUNCTION: EXE 0x41b6a8
 // Destroys the goal and its tile lists and sub-sector map (members only)
 EEAIAStarPathSectorGoal::~EEAIAStarPathSectorGoal()
 {
 }
+
+// Compiler-generated for this unit (names in analysis/exe/names.txt):
+// TEMPLATE: EXE 0x41b652
+// SYNTHETIC: EXE 0x41b68c
+// TEMPLATE: EXE 0x41b6d9
+// TEMPLATE: EXE 0x41b704
+// TEMPLATE: EXE 0x41b71c
+// TEMPLATE: EXE 0x41b739
+// TEMPLATE: EXE 0x41b7aa

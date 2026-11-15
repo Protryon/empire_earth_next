@@ -16,9 +16,9 @@
 #include "lle/PIMModule.h"
 #include "rust/ee_net_tcp.h"
 
-UString gProtocolName("TCP/IP Protocol");
+UString gProtocolName("TCP/IP Protocol");        // 0x72a8
 unsigned long gProtocolKind = 1;                 // 0x7020 (NPIMGetProtocolType)
-unsigned long gProtocolType = 'ntwk';
+unsigned long gProtocolType = 'ntwk';            // 0x7024
 
 // ---- the engine calls Rust needs (extern "C" so Rust can link them)
 

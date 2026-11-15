@@ -16,6 +16,7 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 using namespace WONAPI;
+// FUNCTION: WON 0x00788000
 // Finds the component this config is named after in the parent config; reports an error if it is missing
 bool PercentLayoutConfig::PreParse(ConfigParser* parser)
 {
@@ -27,6 +28,7 @@ bool PercentLayoutConfig::PreParse(ConfigParser* parser)
     }
     return true;
 }
+// FUNCTION: WON 0x007880c0
 // Reads a percent layout instruction: a reference component per edge (REF = LEFT, RIGHT, TOP, BOTTOM)
 // or one of the percentages (PX, PY, PW, PH, LP, TP, RP, BP)
 bool PercentLayoutConfig::Virtual24(const std::string& instruction)
@@ -51,6 +53,7 @@ bool PercentLayoutConfig::Virtual24(const std::string& instruction)
     else if(param>=0) this->params[param]=this->ReadInt();
     return true;
 }
+// FUNCTION: WON 0x007883b0
 // Starts from the colors of the nearest parent component with its own scheme, else the window manager's
 bool ColorSchemeConfig::PreParse(ConfigParser*)
 {
@@ -70,6 +73,7 @@ bool ColorSchemeConfig::PreParse(ConfigParser*)
     memcpy(this->mColorScheme->mColors,scheme->mColors,sizeof(this->mColorScheme->mColors));
     return true;
 }
+// FUNCTION: WON 0x00788410
 // Sets one standard color of the scheme from its instruction name (3DFACE, HILIGHT, LINK ...)
 bool ColorSchemeConfig::Virtual24(const std::string& instruction)
 {

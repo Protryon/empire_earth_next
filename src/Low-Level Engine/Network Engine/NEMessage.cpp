@@ -82,6 +82,7 @@ void NEMessage::GetHeaderSlots(EeNetMsgSlot* outSlots)
     outSlots[3] = NetMsgField(this->mOriginatingSlot);
 }
 
+// FUNCTION: LLE 0x1003e05c
 // Builds a message from received bytes with the builder registered for its type; NULL for a type with none
 NEMessage* NEMessage::ConvertMemoryToMessage(unsigned char* inMemory)
 {
@@ -94,12 +95,14 @@ void NEMessage::RegisterBuilder(unsigned char inFirst, unsigned char inLast, NEM
     ee_netmsg_register_builder(inFirst, inLast, reinterpret_cast<void* (*)(uint8_t*)>(inBuilder));
 }
 
+// FUNCTION: LLE 0x1003e12b
 // Registers the engine's own message builder for the engine message types 0x20..0x3c
 void NEMessage::RegisterKnownMessages()
 {
     NEMessage::RegisterBuilder(0x20, 0x3c, NEMessage::BuildNEMessage);
 }
 
+// FUNCTION: LLE 0x1003e13d
 // Builds the engine message of the type in the header from received bytes; asserts on an unknown type
 NEMessage* NEMessage::BuildNEMessage(unsigned char* inData)
 {
@@ -172,6 +175,7 @@ uintptr_t NEMRecord::Value(uint32_t inIndex) const
     return (uintptr_t)theValue;
 }
 
+// FUNCTION: LLE 0x1003eecf
 // Releases every player input the message holds
 NEMRecord::~NEMRecord()
 {
@@ -227,6 +231,7 @@ char* NEMRecord::GetMessageLabel() const
     return const_cast<char*>(ee_netmsg_ne_type(this->mType).label);
 }
 
+// FUNCTION: LLE 0x1003f270
 // Whether a message is this one's response, by the type's rule: a tick and the response for its tick, a pause or an
 // unpause and the response with its unique ID
 bool NEMRecord::IsResponse(NEMessage* inMessage)
@@ -237,6 +242,7 @@ bool NEMRecord::IsResponse(NEMessage* inMessage)
                static_cast<NEMRecord*>(inMessage)->Get<uint32_t>(theType.response_theirs);
 }
 
+// FUNCTION: LLE 0x1003ef11
 // Adds a player input message; kErrorBadPath once the list holds 255
 long NEMRecord::AddPlayerInput(NEMessage* inInput)
 {
@@ -247,6 +253,7 @@ long NEMRecord::AddPlayerInput(NEMessage* inInput)
     return kErrorBadPath;
 }
 
+// FUNCTION: LLE 0x1003ef3f
 // Returns the player input message at an index; kErrorBeyondEnd past the end
 long NEMRecord::GetPlayerInput(unsigned long inIndex, NEMessage*& outInput)
 {
@@ -281,6 +288,7 @@ size_t NEMRecord::CodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass, std::ve
     return 4 + theType.wire_fields;
 }
 
+// FUNCTION: LLE 0x1003e751
 unsigned long NEMRecord::ExportSize()
 {
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
@@ -290,6 +298,7 @@ unsigned long NEMRecord::ExportSize()
     return ee_netmsg_export_size(theClass, theSlots, theCount);
 }
 
+// FUNCTION: LLE 0x1003e75d
 // Exports the message into a new buffer of its size
 void NEMRecord::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
@@ -304,6 +313,7 @@ void NEMRecord::ExportMessage(unsigned char** outPayloadPointer, unsigned long& 
     NetMsgFree(theBuffers);
 }
 
+// FUNCTION: LLE 0x1003e7de
 // Imports the message: the fixed members into the record, then the strings and the players' inputs where the codec
 // found them
 void NEMRecord::ImportMessage(unsigned char* inPayloadPointer)

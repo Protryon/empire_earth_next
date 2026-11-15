@@ -12,7 +12,7 @@
 
 class EECPASGSpaceTransport : public EECPASGSpaceship, public EECPASGTransport {
 public:
-    EECPASGSpaceTransport(EECPAttackGroup* inGroup, long inKind);
+    EECPASGSpaceTransport(EECPAttackGroup* inGroup, long inKind);   // 0x5096f
     virtual ~EECPASGSpaceTransport();       // +0x00 (0x509ad)
     virtual void SetTask(const EECPAGTask& inTask);     // +0x14 0x41a2e
     // +0x1c 0xac98e (`ret 0xc`)

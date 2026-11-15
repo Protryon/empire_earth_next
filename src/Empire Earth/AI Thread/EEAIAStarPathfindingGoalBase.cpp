@@ -46,7 +46,7 @@
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIAStarPathfindingGoalBase.h"
 
-void EEGetUnitTiles(EEUnit* inUnit, std::vector<U2DPoint<long> >& ioPoints, float inArg);
+void EEGetUnitTiles(EEUnit* inUnit, std::vector<U2DPoint<long> >& ioPoints, float inArg);  // 0x248fe4 (cdecl) (provisional name)
 
 // The units blocking a path near the goal (0x19ccb's local; sizeof 0x3c; ctor 0x19da3 out of line, members in
 // address order after Virtual14) (provisional name)
@@ -67,6 +67,7 @@ public:
 };
 
 // NEAR: the +0x54/+0x58 init-list stores sink below the float stores
+// FUNCTION: EXE 0x419a93
 // Creates the path goal base with no unit or modifier, then resets it
 EEAIAStarPathfindingGoalBase::EEAIAStarPathfindingGoalBase()
     : mOffsetX(0.0f), mOffsetY(0.0f)
@@ -76,6 +77,10 @@ EEAIAStarPathfindingGoalBase::EEAIAStarPathfindingGoalBase()
     this->Reset();
 }
 
+// SYNTHETIC: EXE 0x419b06
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x419b22
 // Destroys the goal, releasing its unit and its modifier
 EEAIAStarPathfindingGoalBase::~EEAIAStarPathfindingGoalBase()
 {
@@ -83,6 +88,7 @@ EEAIAStarPathfindingGoalBase::~EEAIAStarPathfindingGoalBase()
     this->ReleaseModifier();
 }
 
+// FUNCTION: EXE 0x419b4b
 // Collects the tiles a sea unit stands on into the goal's unit tile list (other units: none)
 void EEAIAStarPathfindingGoalBase::CollectUnitTiles()
 {
@@ -90,6 +96,7 @@ void EEAIAStarPathfindingGoalBase::CollectUnitTiles()
         EEGetUnitTiles(this->mUnit, this->mUnitTiles, 0.0f);
 }
 
+// FUNCTION: EXE 0x419b6e
 // Dereferences the goal's cost/entry modifier and clears it
 void EEAIAStarPathfindingGoalBase::ReleaseModifier()
 {
@@ -98,6 +105,7 @@ void EEAIAStarPathfindingGoalBase::ReleaseModifier()
     this->mModifier = NULL;
 }
 
+// FUNCTION: EXE 0x419b84
 // Collects the unit's own tiles (when there is a unit) and marks the blocked tiles; always returns true
 bool EEAIAStarPathfindingGoalBase::Prepare()
 {
@@ -108,6 +116,7 @@ bool EEAIAStarPathfindingGoalBase::Prepare()
 }
 
 // NEAR: store schedule of the 0.5f pair
+// FUNCTION: EXE 0x419b9d
 // Resets the goal: releases the unit, clears the bounds, blocked and unit tiles and destination, offsets back to 0.5
 void EEAIAStarPathfindingGoalBase::Reset()
 {
@@ -124,6 +133,7 @@ void EEAIAStarPathfindingGoalBase::Reset()
     this->mAvoidUnits = false;
 }
 
+// FUNCTION: EXE 0x419bf3
 // Replaces the goal's modifier, referencing the new one and pointing it back at this goal
 void EEAIAStarPathfindingGoalBase::SetModifier(EEAIPathGoalModifierBase* inModifier)
 {
@@ -134,6 +144,7 @@ void EEAIAStarPathfindingGoalBase::SetModifier(EEAIPathGoalModifierBase* inModif
 }
 
 // NEAR: the GetContinentID argument push is scheduled earlier
+// FUNCTION: EXE 0x419c0f
 // Sets the unit to path for (moving the reference), takes its continent, and avoids other units unless it is a
 // computer player's non-transport unit
 void EEAIAStarPathfindingGoalBase::SetUnit(EEComplexUnit* inUnit)
@@ -154,6 +165,7 @@ void EEAIAStarPathfindingGoalBase::SetUnit(EEComplexUnit* inUnit)
         this->mAvoidUnits = true;
 }
 
+// FUNCTION: EXE 0x419c77
 // Sets the goal bounds to a tile grown by inMargin on every side
 void EEAIAStarPathfindingGoalBase::SetGoalBounds(const U2DPoint<long>& inTile, long inMargin)
 {
@@ -161,6 +173,7 @@ void EEAIAStarPathfindingGoalBase::SetGoalBounds(const U2DPoint<long>& inTile, l
     this->mGoalBounds.Grow(inMargin, true);
 }
 
+// FUNCTION: EXE 0x419ca1
 // Sets the start bounds to a tile grown by inMargin on every side
 void EEAIAStarPathfindingGoalBase::SetStartBounds(const U2DPoint<long>& inTile, long inMargin)
 {
@@ -168,6 +181,7 @@ void EEAIAStarPathfindingGoalBase::SetStartBounds(const U2DPoint<long>& inTile, 
     this->mStartBounds.Grow(inMargin, true);
 }
 
+// FUNCTION: EXE 0x419ccb
 // Copies the unit's bounded-path tiles as blocked and, for sea units, adds the tiles of stationary contacts in
 // the way (not the goal)
 void EEAIAStarPathfindingGoalBase::CollectBlockedTiles(const U2DPoint<long>& inGoal)
@@ -185,6 +199,7 @@ void EEAIAStarPathfindingGoalBase::CollectBlockedTiles(const U2DPoint<long>& inG
     }
 }
 
+// FUNCTION: EXE 0x419da3
 // Creates a blocker collector for a walker, its goal tile and naval/wide flags, seeded with the already blocked tiles
 EEAIPathBlockerCollector::EEAIPathBlockerCollector(EEComplexUnit* inUnit, std::vector<U2DPoint<long> >& inBlocked,
                                                    const U2DPoint<long>& inGoal, bool inNaval, bool inWide)
@@ -195,6 +210,7 @@ EEAIPathBlockerCollector::EEAIPathBlockerCollector(EEComplexUnit* inUnit, std::v
 }
 
 // NEAR: the original compares the two naval tests as bytes (an inline bool helper?) and keeps this in ecx
+// FUNCTION: EXE 0x419e38
 // Adds a contact's tiles as blockers when it is a stopped sea unit of the walker's naval kind, not the walker and
 // not in its group (naval buildings with air traffic always count); always returns false
 bool EEAIPathBlockerCollector::Add(EEComplexUnit* inUnit)
@@ -211,6 +227,7 @@ bool EEAIPathBlockerCollector::Add(EEComplexUnit* inUnit)
 }
 
 // NEAR: the original loads both F178s (fld/fld/fcompp) and calls _Ptrit::operator+ out of line
+// FUNCTION: EXE 0x419eb0
 // Adds a unit's footprint tiles (not the goal, not already blocked) when it is at least as big as the walker or
 // push-immune; always returns false
 bool EEAIPathBlockerCollector::AddTiles(EEComplexUnit* inUnit)
@@ -226,3 +243,20 @@ bool EEAIPathBlockerCollector::AddTiles(EEComplexUnit* inUnit)
     }
     return false;
 }
+
+// U2DRectangle<long>::Grow (the bounds' out-of-line COMDAT, first used here; lle/U2DRectangle.h exe view)
+// TEMPLATE: EXE 0x419f9d
+
+// Compiler-generated for this unit (first users here): set<U2DPoint<long> > dtor/insert/find/erase/_Erase/_Lbound
+// 0x19fd0..0x1a19f, vector<U2DPoint<long> >::insert(P, F, L) 0x1a1d1 / its _Insert 0x1a20a / _Distance 0x1a4e2, and
+// operator= 0x1a4f4 (Virtual14's mBlockedTiles = mUnit->mBoundedPathTiles).
+// TEMPLATE: EXE 0x419fd0
+// TEMPLATE: EXE 0x419ffb
+// TEMPLATE: EXE 0x41a0bb
+// TEMPLATE: EXE 0x41a0fc
+// TEMPLATE: EXE 0x41a16d
+// TEMPLATE: EXE 0x41a19f
+// TEMPLATE: EXE 0x41a1d1
+// TEMPLATE: EXE 0x41a20a
+// TEMPLATE: EXE 0x41a4e2
+// TEMPLATE: EXE 0x41a4f4

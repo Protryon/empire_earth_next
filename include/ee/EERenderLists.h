@@ -197,7 +197,7 @@ struct EERenderEnvironment {
     bool mB8C;                              // +0x8c (false)
     bool mTimeOfDayChanged;                 // +0x8d (true)
 };
-extern EERenderEnvironment gRenderEnvironment;
+extern EERenderEnvironment gRenderEnvironment;   // 0x528ce0
 
 
 // the fog/sky colour (0x4e9220, EERenderObject.cpp's chain 0x10ad9a; EEROTerrain sets it) (provisional name)

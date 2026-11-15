@@ -85,6 +85,7 @@ extern EEAIContinentManager gContinentManager;
 // 0x524a88..0x524b34: the original's two EE-level trigonometry caller logs ("UMCos EE-Level", "UMSin EE-Level",
 // ESCallerLog, never called), deleted with the class (LLE lane round 1)
 
+// FUNCTION: EXE 0x524b34
 // Creates a silent ambient sound with no sound object, full probability and normal pitch
 EEAmbientSound::EEAmbientSound()
     : mSound(NULL), mSoundID(0), mInstance(NULL), mProbability(1.0f), mVolume(0.0f), mTargetVolume(0.0f), mInterval(0),
@@ -106,6 +107,10 @@ EEAmbientSound::EEAmbientSound()
     this->mF3C = 1.0f;
 }
 
+// FUNCTION: EXE 0x524b85
+// Destroys the ambient sound and frees it when asked (scalar deleting destructor)
+
+// FUNCTION: EXE 0x524ba1
 // Destroys the ambient sound, unloading its sound object's media
 EEAmbientSound::~EEAmbientSound()
 {
@@ -113,6 +118,7 @@ EEAmbientSound::~EEAmbientSound()
         this->mSound->UnloadMedia();
 }
 
+// FUNCTION: EXE 0x524bb4
 // Sets up the ambient sound from its database record (sound, fades, volumes, probability, interval in ms), silent
 void EEAmbientSound::Init(const EEAmbientSoundRecord& inRecord)
 {
@@ -131,6 +137,7 @@ void EEAmbientSound::Init(const EEAmbientSoundRecord& inRecord)
     this->mInterval = inRecord.mIntervalSeconds != 0 ? inRecord.mIntervalSeconds * 1000 : 0;
 }
 
+// FUNCTION: EXE 0x524c16
 // Raises the volume one fade step toward the target (from silence straight to the start volume) and plays it
 void EEAmbientSound::FadeIn()
 {
@@ -140,6 +147,7 @@ void EEAmbientSound::FadeIn()
     this->PlayAtVolume(theVolume);
 }
 
+// FUNCTION: EXE 0x524c46
 // Lowers the volume one fade step toward the target, silencing the sound at 0.005 or below
 // (the 0.005 silence threshold: .rdata 0x43f924)
 void EEAmbientSound::FadeOut()
@@ -152,6 +160,7 @@ void EEAmbientSound::FadeOut()
     this->PlayAtVolume(theVolume);
 }
 
+// FUNCTION: EXE 0x524c72
 // Loads the sound object and its media on first use; returns whether the ambient sound has one
 bool EEAmbientSound::LoadSound()
 {
@@ -167,6 +176,7 @@ bool EEAmbientSound::LoadSound()
     return theResult;
 }
 
+// FUNCTION: EXE 0x524ca9
 // Plays the sound at a volume (starting it at the start volume, or updating the playing instance); 0 or less stops it
 void EEAmbientSound::PlayAtVolume(float inVolume)
 {
@@ -189,6 +199,7 @@ void EEAmbientSound::PlayAtVolume(float inVolume)
     }
 }
 
+// FUNCTION: EXE 0x524d4e
 // Unloads the sound object's media and forgets the sound object
 void EEAmbientSound::UnloadSound()
 {
@@ -197,6 +208,7 @@ void EEAmbientSound::UnloadSound()
     this->mSound = NULL;
 }
 
+// FUNCTION: EXE 0x524d63
 // Counts a visible unit for the ambient sounds: citizens, farms, goats, eagles, attackers, and enemy bombers over
 // the local player's towns (from the atomic epochs on)
 void EEAmbientWorldAnalyzer::CountUnit(EEComplexUnit* inUnit)
@@ -237,6 +249,7 @@ void EEAmbientWorldAnalyzer::CountUnit(EEComplexUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x524e80
 // Counts a visible tree when the unit is a wood resource
 void EEAmbientWorldAnalyzer::CountTree(EEUnit* inUnit)
 {
@@ -244,6 +257,7 @@ void EEAmbientWorldAnalyzer::CountTree(EEUnit* inUnit)
         this->AddTree(inUnit);
 }
 
+// FUNCTION: EXE 0x524e99
 // Counts a visible tree and, if no forest type is known yet, takes it from the AI forest at the unit
 void EEAmbientWorldAnalyzer::AddTree(EEUnit* inUnit)
 {
@@ -255,6 +269,7 @@ void EEAmbientWorldAnalyzer::AddTree(EEUnit* inUnit)
         this->mForestType = theForest->GetResourceKind();
 }
 
+// FUNCTION: EXE 0x524ec1
 // Resets the world analyzer's counters for the next ambient update
 void EEAmbientWorldAnalyzer::Clear()
 {

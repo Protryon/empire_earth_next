@@ -7,6 +7,7 @@
 
 #include "ee/EEVoting.h"
 
+// FUNCTION: EXE 0x537b3f
 // Creates an empty edict vote with no edict proposed
 EEVoting::EEVoting()
 {
@@ -14,11 +15,16 @@ EEVoting::EEVoting()
     this->mB08 = this->mB0A = false;
 }
 
+// Compiler-generated: the ??_G of the virtual dtor (calls it out of line):
+// TEMPLATE: EXE 0x537b58
+
+// FUNCTION: EXE 0x537b74
 // Destroys the edict vote
 EEVoting::~EEVoting()
 {
 }
 
+// FUNCTION: EXE 0x537b7b
 // Proposes an edict for a vote unless one is already pending; returns 0 when accepted, 1 when busy
 long EEVoting::Propose(unsigned short inEdict, long inArg2)
 {

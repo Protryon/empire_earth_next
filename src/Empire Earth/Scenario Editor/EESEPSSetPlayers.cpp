@@ -34,12 +34,29 @@
 #include "lle/UIEvent.h"
 #include "ee/EESEPSSetPlayers.h"
 #include "ee/EEStringIDs.h"
+// SYNTHETIC: EXE 0x572b0f
+// SYNTHETIC: EXE 0x572b19
+// SYNTHETIC: EXE 0x572b31
+// SYNTHETIC: EXE 0x572b3d
+// SYNTHETIC: EXE 0x572b58
+// SYNTHETIC: EXE 0x572b62
+// SYNTHETIC: EXE 0x572b7a
+// SYNTHETIC: EXE 0x572b86
+// SYNTHETIC: EXE 0x572ba1
+// SYNTHETIC: EXE 0x572bab
+// SYNTHETIC: EXE 0x572bc3
+// SYNTHETIC: EXE 0x572bcf
+// SYNTHETIC: EXE 0x572bea
+// SYNTHETIC: EXE 0x572bf4
+// SYNTHETIC: EXE 0x572c0c
+// SYNTHETIC: EXE 0x572c18
 // the class statics' `$E` chains 0x172b0f / 0x172b58 / 0x172ba1 / 0x172bea (definition order)
 std::vector<long> EESEPSSetPlayers::sV531FB0;
 std::vector<long> EESEPSSetPlayers::sBuildingTechs;
 std::vector<long> EESEPSSetPlayers::sV531F88;
 std::vector<long> EESEPSSetPlayers::sTechnologyTechs;
 
+// FUNCTION: EXE 0x572c4a
 // Creates the 100x25 'Set All Players' button with transparent text
 EESEPSSetPlayers::EESEPSSetPlayers(const GE2DPoint& inPosition, GEFont* inFont, UIForm* inForm, unsigned long inIndex)
     : UIButton(0x144, NULL, NULL, NULL,
@@ -54,6 +71,10 @@ EESEPSSetPlayers::EESEPSSetPlayers(const GE2DPoint& inPosition, GEFont* inFont, 
     theGEText->SetIsTransparent(true);
 }
 
+// SYNTHETIC: EXE 0x572ceb
+// (the scalar deleting destructor, emitted with the vtable; slot EESEPSSetPlayers+0x0)
+
+// FUNCTION: EXE 0x572d0e
 // Copies the first player's settings to every player when released
 void EESEPSSetPlayers::ButtonUp()
 {

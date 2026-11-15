@@ -43,12 +43,14 @@
 #include "ee/EEAIAStarCapture.h"
 #include "ee/EEAIAStarContinentGoal.h"
 
+// FUNCTION: EXE 0x4155c0
 // Creates the continent flood fill goal with no kind chosen yet; continent ids start at 1
 EEAIAStarContinentGoal::EEAIAStarContinentGoal()
     : mTileCount(0), mKind(kContinentCategoryNone), mNextID(1)
 {
 }
 
+// FUNCTION: EXE 0x415607
 // Stamps every closed and open node's tile with the current continent id and kind and collects those tiles
 void EEAIAStarContinentGoal::CollectTiles()
 {
@@ -69,6 +71,7 @@ void EEAIAStarContinentGoal::CollectTiles()
     }
 }
 
+// FUNCTION: EXE 0x4156b2
 // Builds a continent of the current id and kind from the collected tiles, files it, marks its bounds dirty in
 // the storage, then starts the next id with no kind
 void EEAIAStarContinentGoal::CreateContinent()
@@ -88,6 +91,7 @@ void EEAIAStarContinentGoal::CreateContinent()
 }
 
 // NEAR: the tests are in the original's order (1, 2, 4, 3, 5, 0); block layout and the shared edge test differ
+// FUNCTION: EXE 0x41575c
 // Returns whether the fill takes a tile of the continent's kind (land, deep water, space, cliff or map edge; the
 // first tile picks the kind), counting it; map edge tiles join only map edge continents
 bool EEAIAStarContinentGoal::AcceptTile(unsigned long inX, unsigned long inY, bool inStart)
@@ -103,7 +107,16 @@ bool EEAIAStarContinentGoal::AcceptTile(unsigned long inX, unsigned long inY, bo
     return theResult;
 }
 
+// FUNCTION: EXE 0x41593b
 // Destroys the goal (members only)
 EEAIAStarContinentGoal::~EEAIAStarContinentGoal()
 {
 }
+
+// Compiler-generated for this unit (names in analysis/exe/names.txt):
+// TEMPLATE: EXE 0x4158e5
+// SYNTHETIC: EXE 0x41591f
+// TEMPLATE: EXE 0x41595c
+// TEMPLATE: EXE 0x415987
+// TEMPLATE: EXE 0x4159a4
+// TEMPLATE: EXE 0x415a15

@@ -59,10 +59,11 @@
 // the unit's named float constants (.rdata 0x440be8..0x440bfc, in this order; reloaded at each use; the spawn's
 // and the thunder's are ee_gfx effect_storm.rs's) (provisional names)
 static const float kRainFadeTime = 6500.0f;     // 0x440be8 (ms to full strength)
-static const float kRainDensity = 0.4f;
-static const float kRainDropWidth = 0.04f;
-static const float kRainDropLength = 0.6f;
+static const float kRainDensity = 0.4f;         // 0x440bec
+static const float kRainDropWidth = 0.04f;      // 0x440bf0
+static const float kRainDropLength = 0.6f;      // 0x440bf4
 
+// FUNCTION: EXE 0x4f7394
 // Creates a rain storm over the given tiles for a graphic effect, with no sounds yet and first thunder within 2.25 s
 EEE3DRain::EEE3DRain(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inGraphicEffect)
     : EEE3DStorm(0x2a, inTiles, inGraphicEffect)
@@ -75,6 +76,10 @@ EEE3DRain::EEE3DRain(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffe
     ee_gfx_rain_new(this->mRecord);
 }
 
+// SYNTHETIC: EXE 0x4f7421
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x4f743d
 // Creates an empty rain storm (for loading), with no sounds
 EEE3DRain::EEE3DRain()
     : EEE3DStorm(0x2a)
@@ -86,6 +91,7 @@ EEE3DRain::EEE3DRain()
     this->mRumble = NULL;
 }
 
+// FUNCTION: EXE 0x4f74a0
 // Destroys the rain, stopping the rain and thunder sounds and unloading the three sound objects' media
 EEE3DRain::~EEE3DRain()
 {
@@ -102,6 +108,7 @@ EEE3DRain::~EEE3DRain()
         theSound->UnloadMedia();
 }
 
+// FUNCTION: EXE 0x4f7519
 // Stops the rain sound, if any, and releases it
 void EEE3DRain::StopSound()
 {
@@ -111,6 +118,7 @@ void EEE3DRain::StopSound()
     }
 }
 
+// FUNCTION: EXE 0x4f753e
 // Stops the thunder sound, if any, and releases it
 void EEE3DRain::StopRumble()
 {
@@ -120,6 +128,7 @@ void EEE3DRain::StopRumble()
     }
 }
 
+// FUNCTION: EXE 0x4f7563
 // Drops the reference to the rain sound
 void EEE3DRain::ReleaseSound()
 {
@@ -128,6 +137,7 @@ void EEE3DRain::ReleaseSound()
     this->mSound = NULL;
 }
 
+// FUNCTION: EXE 0x4f758d
 // Drops the reference to the thunder sound
 void EEE3DRain::ReleaseRumble()
 {
@@ -136,6 +146,7 @@ void EEE3DRain::ReleaseRumble()
     this->mRumble = NULL;
 }
 
+// FUNCTION: EXE 0x4f7792
 // Reads fall speed, spawn height, density, sound ids and duration from the effect and loads the sounds; on first use
 // builds the shared raindrop triangle model with textures\raindrop
 void EEE3DRain::Virtual64()
@@ -198,6 +209,10 @@ void EEE3DRain::Virtual64()
     this->mModel->ComputeBoundingVolumes();
 }
 
+// FUNCTION: EXE 0x4f7b54
+// Destroys Virtual64's static raindrop colour at exit
+
+// FUNCTION: EXE 0x4f7b55
 // Draws every queued drop as the camera-facing drop model, alpha blended; stops at the first draw error
 long EEE3DRain::DrawPass6()
 {
@@ -219,6 +234,7 @@ long EEE3DRain::DrawPass6()
     return theResult;
 }
 
+// FUNCTION: EXE 0x4f7e3f
 // Updates the sounds, then the storm's drops and age (ee_gfx effect_storm.rs); returns 7 once its duration has
 // passed unless it is sustained
 long EEE3DRain::Step()
@@ -227,6 +243,7 @@ long EEE3DRain::Step()
     return EEE3DStorm::Step();
 }
 
+// FUNCTION: EXE 0x4f80e8
 // Sets a storm sound's volume, pan and pitch from the camera's distance to the storm (range 5x its radius), scaled by
 // inVolume, and by 0.4 during the first 6.5 s
 void EEE3DRain::SetSoundLevel(SESMInstanceNode* inSound, float inVolume)
@@ -245,6 +262,7 @@ void EEE3DRain::SetSoundLevel(SESMInstanceNode* inSound, float inVolume)
     gSoundManager->SetSoundParameters(inSound, theVolume, thePan, thePitch);
 }
 
+// FUNCTION: EXE 0x4f8195
 // Starts the rain sound when the storm begins or is restored, plays one of the two thunder sounds whenever the delay
 // runs out (the timer and its draws: ee_gfx effect_storm.rs), and updates both sound levels
 long EEE3DRain::StartSounds()
@@ -273,6 +291,7 @@ long EEE3DRain::StartSounds()
     return 0;
 }
 
+// FUNCTION: EXE 0x4f8337
 // Replaces the rain sound, referencing the new one and releasing the old
 void EEE3DRain::SetSound(SESMInstanceNode* inSound)
 {
@@ -284,6 +303,7 @@ void EEE3DRain::SetSound(SESMInstanceNode* inSound)
         inSound->Reference();
 }
 
+// FUNCTION: EXE 0x4f835e
 // Replaces the thunder sound, referencing the new one and releasing the old
 void EEE3DRain::SetRumble(SESMInstanceNode* inSound)
 {

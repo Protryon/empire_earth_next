@@ -16,8 +16,8 @@ public:
     bool IsStepLimit(long inSteps) const { return false; }
     bool IsRevLimit(long inRevs) const { return false; }
     bool IsCheaper(unsigned long inCost, unsigned long inOld) const { return false; }
-    EEAIAStarHillGoal();
-    virtual ~EEAIAStarHillGoal();
+    EEAIAStarHillGoal();                    // 0x16c0e
+    virtual ~EEAIAStarHillGoal();           // 0x170a9
     void CollectTiles();                    // 0x16c56: the storage's open and closed nodes get the ids; mTiles gets them
     void CreateHill();                      // 0x16d04: a new EEAIHill of mTiles, registered in mHills
     // 0x16db8 (ret 0xc): whether the fill may take the tile

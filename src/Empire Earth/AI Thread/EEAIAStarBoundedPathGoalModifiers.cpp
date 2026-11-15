@@ -81,6 +81,7 @@ inline BOOL EEIsStraightStep(long inFromX, long inFromY, long inX, long inY)
     return inFromX == inX || inFromY == inY;
 }
 
+// FUNCTION: EXE 0x40f53b
 // Returns a sea (inSea) or space walker's step cost (ee_astar modifiers::step_cost over a quiet view of the world map)
 long EEAIPathGoalModifierBase::GetStepCost(bool inSea, long inFromX, long inFromY, long inX, long inY, long inParentX,
                                        long inParentY)
@@ -95,6 +96,7 @@ long EEAIPathGoalModifierBase::GetStepCost(bool inSea, long inFromX, long inFrom
     return ee_astar_mod_step_cost(&theCallbacks, &theGoal, inSea, inFromX, inFromY, inX, inY, inParentX, inParentY);
 }
 
+// FUNCTION: EXE 0x40f9bb
 // Returns whether the walker (inGoal's unit, else inBoundedGoal's) may enter a tile (ee_astar modifiers::is_passable)
 bool EEAIPathGoalModifierBase::IsPassable(EEAIAStarPathfindingGoalBase* inGoal, EEAIAStarBoundedPathGoal* inBoundedGoal,
                                        long inX, long inY, bool inAtGoal)
@@ -106,6 +108,7 @@ bool EEAIPathGoalModifierBase::IsPassable(EEAIAStarPathfindingGoalBase* inGoal, 
 
 // (0x40fa75 IsSeaBlocker and 0x40fb08 IsLandBlocker: EEAIAStarView::HasStepBlocker, with the walker as an argument)
 
+// FUNCTION: EXE 0x40fb57
 // Creates a bounded-goal modifier attached to the given bounded path goal
 EEAIBoundedPathGoalModifierBase::EEAIBoundedPathGoalModifierBase(EEAIAStarBoundedPathGoal* inGoal)
     : EEAIPathGoalModifierBase(inGoal)
@@ -113,6 +116,7 @@ EEAIBoundedPathGoalModifierBase::EEAIBoundedPathGoalModifierBase(EEAIAStarBounde
     this->mBoundedGoal = inGoal;
 }
 
+// FUNCTION: EXE 0x40fb80
 // Attaches the modifier to a bounded path goal (also as its plain goal)
 void EEAIBoundedPathGoalModifierBase::SetGoal(EEAIAStarBoundedPathGoal* inGoal)
 {
@@ -120,18 +124,24 @@ void EEAIBoundedPathGoalModifierBase::SetGoal(EEAIAStarBoundedPathGoal* inGoal)
     this->mGoal = this->mBoundedGoal;
 }
 
+// FUNCTION: EXE 0x40fb98
 // Creates the space walker's modifier for a bounded path goal
 EEAIBPGModifierSpace::EEAIBPGModifierSpace(EEAIAStarBoundedPathGoal* inGoal)
     : EEAIBoundedPathGoalModifierBase(inGoal)
 {
 }
 
+// FUNCTION: EXE 0x40fbb0
 // Creates the sea walker's modifier for a bounded path goal
 EEAIBPGModifierSea::EEAIBPGModifierSea(EEAIAStarBoundedPathGoal* inGoal)
     : EEAIBoundedPathGoalModifierBase(inGoal)
 {
 }
 
+// SYNTHETIC: EXE 0x40fbc8
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x40fbe4
 // Creates the modifier that ends a search within the unit's weapon range of the target, referencing both units
 EEAIBPGModifierEnemyIsAttackableByUnit::EEAIBPGModifierEnemyIsAttackableByUnit(EEComplexUnit* inUnit,
                                                                                EEComplexUnit* inTarget)
@@ -143,6 +153,7 @@ EEAIBPGModifierEnemyIsAttackableByUnit::EEAIBPGModifierEnemyIsAttackableByUnit(E
     this->mRangeSquared = UMSquare(inUnit->mStats->GetRange());
 }
 
+// FUNCTION: EXE 0x40fc3e
 // Destroys the modifier, releasing its references to the unit and the target
 EEAIBPGModifierEnemyIsAttackableByUnit::~EEAIBPGModifierEnemyIsAttackableByUnit()
 {
@@ -150,6 +161,7 @@ EEAIBPGModifierEnemyIsAttackableByUnit::~EEAIBPGModifierEnemyIsAttackableByUnit(
     this->mTarget->Dereference();
 }
 
+// FUNCTION: EXE 0x40fc6e
 // Returns whether a node lies within weapon range of the goal's destination; if so, moves the destination and
 // the goal tile onto the node
 bool EEAIBPGModifierEnemyIsAttackableByUnit::CheckNode(EEAIAStarNode* inNode)
@@ -167,6 +179,7 @@ bool EEAIBPGModifierEnemyIsAttackableByUnit::CheckNode(EEAIAStarNode* inNode)
     return theResult;
 }
 
+// FUNCTION: EXE 0x40fcdf
 // Returns a flat step cost of 10
 long EEAIBPGModifierEnemyIsAttackableByUnit::GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX,
                                                        long inParentY)
@@ -174,6 +187,7 @@ long EEAIBPGModifierEnemyIsAttackableByUnit::GetCost(long inFromX, long inFromY,
     return 10;
 }
 
+// FUNCTION: EXE 0x40fce5
 // Returns whether the unit may enter a tile (ee_astar modifiers::attacker_can_enter)
 bool EEAIBPGModifierEnemyIsAttackableByUnit::CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
 {
@@ -182,6 +196,7 @@ bool EEAIBPGModifierEnemyIsAttackableByUnit::CanEnter(EETile* inTile, long inX, 
     return ee_astar_mod_attacker_can_enter(&theCallbacks, this->mUnit, inX, inY);
 }
 
+// FUNCTION: EXE 0x40fdab
 // Creates the modifier that lets a walker path through walls
 EEAIBPGModifierWallsDoNotBlock::EEAIBPGModifierWallsDoNotBlock()
 {
@@ -194,6 +209,7 @@ long EEAIBPGModifierWallsDoNotBlock::GetCost(long inFromX, long inFromY, long in
     return EEIsStraightStep(inFromX, inFromY, inX, inY) ? 10 : 14;
 }
 
+// FUNCTION: EXE 0x40fdc3
 // Returns whether the walker may enter a tile, walls passable (ee_astar modifiers::walls_can_enter)
 bool EEAIBPGModifierWallsDoNotBlock::CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
 {
@@ -202,6 +218,7 @@ bool EEAIBPGModifierWallsDoNotBlock::CanEnter(EETile* inTile, long inX, long inY
     return ee_astar_mod_walls_can_enter(&theCallbacks, this->mBoundedGoal->mUnit, inX, inY);
 }
 
+// FUNCTION: EXE 0x40fe55
 // Creates an influence-cost modifier for the player against an enemy, with the given weights
 EEAIGPGModiferUseInfluenceCostsBase::EEAIGPGModiferUseInfluenceCostsBase(unsigned long inPlayerID,
                                                                          unsigned long inEnemyID,
@@ -210,6 +227,7 @@ EEAIGPGModiferUseInfluenceCostsBase::EEAIGPGModiferUseInfluenceCostsBase(unsigne
 {
 }
 
+// FUNCTION: EXE 0x40fe8f
 // Creates an influence-cost modifier for the player against an enemy, with zero weights
 EEAIGPGModiferUseInfluenceCostsBase::EEAIGPGModiferUseInfluenceCostsBase(unsigned long inPlayerID,
                                                                          unsigned long inEnemyID)
@@ -217,6 +235,7 @@ EEAIGPGModiferUseInfluenceCostsBase::EEAIGPGModiferUseInfluenceCostsBase(unsigne
 {
 }
 
+// FUNCTION: EXE 0x40fec1
 // Returns 1 plus the influence in the target sector's region: enemy influence against the player (inEnemies),
 // else the enemy player's own
 unsigned long EEAIGPGModiferUseInfluenceCostsBase::GetInfluenceCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo,
@@ -232,6 +251,10 @@ unsigned long EEAIGPGModiferUseInfluenceCostsBase::GetInfluenceCost(EEAIAStarGra
     return theInfluence + 1;
 }
 
+// TEMPLATE: EXE 0x40ff19
+// EEInfluenceTable::GetValue(unsigned long, const U2DPoint<long>&) (inline, after its first user)
+
+// FUNCTION: EXE 0x40ff38
 // Creates the enemy-avoidance route modifier for the player
 EEAIGPModifierEnemyAvoidance::EEAIGPModifierEnemyAvoidance(unsigned long inPlayerID)
     : EEAIGPGModiferUseInfluenceCostsBase(inPlayerID, 0)
@@ -239,6 +262,7 @@ EEAIGPModifierEnemyAvoidance::EEAIGPModifierEnemyAvoidance(unsigned long inPlaye
 }
 
 /// NEAR: the original calls std::pair<long, int>'s ctor 0xaa817 out of line (ours expands it: the Dinkum depth family)
+// FUNCTION: EXE 0x40ff52
 // Returns a sector step cost: 1 inside one sector, else 10/14; +350 when enemies have influence within one region
 long EEAIGPModifierEnemyAvoidance::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
 {
@@ -279,6 +303,7 @@ bool EEAIGPModifierEnemyAvoidance::CanEnter(EEAIPathSubSector* inSector, EEAIPat
     return theResult;
 }
 
+// FUNCTION: EXE 0x41001a
 // Creates the land route planner for an attack subgroup, its two continents and weights; it avoids friendly walls
 EEAIGPGModifierLandAttackSubGroupRoutePlanner::EEAIGPGModifierLandAttackSubGroupRoutePlanner(
     EECPAttackSubGroup* inSubGroup, unsigned short inContinent1, unsigned short inContinent2, bool inAnyContinent,
@@ -290,6 +315,7 @@ EEAIGPGModifierLandAttackSubGroupRoutePlanner::EEAIGPGModifierLandAttackSubGroup
 }
 
 /// NEAR: the original reaches theLinks[i] through the out-of-line _Ptrit::operator+ 0x13dc48 in the first tests (Dinkum depth family)
+// FUNCTION: EXE 0x410074
 // Returns a land attack step cost: 10/14 plus weighted wall (750, 3750 if friendly), gate (800) and influence costs,
 // scaled by terrain weights; x10 into a wall from water or space, x50 on a continent flagged against the first
 long EEAIGPGModifierLandAttackSubGroupRoutePlanner::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
@@ -388,6 +414,7 @@ long EEAIGPGModifierLandAttackSubGroupRoutePlanner::GetCost(EEAIAStarGraphNode* 
 }
 
 /// NEAR: the result byte lives in inSector's dead slot; RTSMap::GetTile 0x2f85 out of line twice
+// FUNCTION: EXE 0x410465
 // Returns whether the planner may enter a sector: a passable kind or open gate, no friendly wall, a passable link
 // from inFrom, and water to water only across a water-type link when the water weight is set
 bool EEAIGPGModifierLandAttackSubGroupRoutePlanner::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
@@ -442,6 +469,7 @@ bool EEAIGPGModifierLandAttackSubGroupRoutePlanner::CanEnter(EEAIPathSubSector* 
     return theResult;
 }
 
+// FUNCTION: EXE 0x410639
 // Creates the computer player's wall route planner for the player against an enemy
 EEAIGPGModifierComputerPlayerWallPlanner::EEAIGPGModifierComputerPlayerWallPlanner(unsigned long inPlayerID,
                                                                                    long inEnemyID)
@@ -449,6 +477,7 @@ EEAIGPGModifierComputerPlayerWallPlanner::EEAIGPGModifierComputerPlayerWallPlann
 {
 }
 
+// FUNCTION: EXE 0x410655
 // Returns whether the player may pass the gate sector: true when its gate is missing or destroyed, or is the
 // player's or an ally's unlocked main part
 bool EEAIGPGModifierComputerPlayerWallPlanner::IsGateOpen(EEAIPathSubSector* inSector, unsigned long inPlayerID)
@@ -483,6 +512,7 @@ bool EEAIGPGModifierComputerPlayerWallPlanner::IsGateOpen(EEAIPathSubSector* inS
     return theBlocked;
 }
 
+// FUNCTION: EXE 0x410745
 // Returns whether a gate part is an end part (last, with a part before it) or the middle part
 // (EEUCGate::IsSidePart: out of line after its first user Virtual10)
 bool EEUnitClass::IsSidePart(EEComplexUnit* inGate)
@@ -490,12 +520,14 @@ bool EEUnitClass::IsSidePart(EEComplexUnit* inGate)
     return inGate->mNextPart == NULL && inGate->mPreviousPart != NULL || this->IsMiddlePart(inGate);
 }
 
+// FUNCTION: EXE 0x41076f
 // Returns whether a gate part is second to last with a part before it (the middle of a three-part gate)
 bool EEUnitClass::IsMiddlePart(EEComplexUnit* inGate)
 {
     return inGate->mNextPart != NULL && inGate->mNextPart->mNextPart == NULL && inGate->mPreviousPart != NULL;
 }
 
+// FUNCTION: EXE 0x410799
 // Returns a sector step cost: 1 inside one sector, else 10 straight or 14 diagonal
 // (the path graph goal's default step cost is ICF-folded into it)
 long EEAIGPGModifierComputerPlayerWallPlanner::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
@@ -507,6 +539,7 @@ long EEAIGPGModifierComputerPlayerWallPlanner::GetCost(EEAIAStarGraphNode* inFro
     return 1;
 }
 
+// FUNCTION: EXE 0x4107cb
 // Returns whether the planner may enter a sector: a passable kind or a gate open to the player, then a passable
 // link from inFrom
 bool EEAIGPGModifierComputerPlayerWallPlanner::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
@@ -523,6 +556,7 @@ bool EEAIGPGModifierComputerPlayerWallPlanner::CanEnter(EEAIPathSubSector* inSec
 }
 
 // The wall pather (ee/EEAIBoundedPathGoalModifierBase.h); its +0x04 is also EEAIBPGModifierWallsDoNotBlock's
+// FUNCTION: EXE 0x410814
 // Returns 10 for a straight step, 14 for a diagonal one
 long EEAIGPGModifierComputerPlayerWallPather::GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX,
                                                         long inParentY)
@@ -530,6 +564,7 @@ long EEAIGPGModifierComputerPlayerWallPather::GetCost(long inFromX, long inFromY
     return EEIsStraightStep(inFromX, inFromY, inX, inY) ? 10 : 14;
 }
 
+// FUNCTION: EXE 0x41083c
 // Returns whether the wall pather may enter a tile, trees passable (ee_astar modifiers::wall_pather_can_enter)
 bool EEAIGPGModifierComputerPlayerWallPather::CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
 {
@@ -538,6 +573,7 @@ bool EEAIGPGModifierComputerPlayerWallPather::CanEnter(EETile* inTile, long inX,
     return ee_astar_mod_wall_pather_can_enter(&theCallbacks, this->mBoundedGoal->mUnit, inX, inY);
 }
 
+// FUNCTION: EXE 0x4108d6
 // Creates the sea route planner for an attack subgroup with the given weights
 EEAIGPGModifierSeaRoutePlanner::EEAIGPGModifierSeaRoutePlanner(unsigned long inPlayerID, EECPAttackSubGroup* inSubGroup,
                                                                const EECPASGWeights& inWeights)
@@ -574,6 +610,7 @@ bool EEAIGPGModifierSeaRoutePlanner::CanEnter(EEAIPathSubSector* inSector, EEAIP
     return theResult;
 }
 
+// FUNCTION: EXE 0x410909
 // Creates the helicopter route planner for an attack subgroup with the given weights
 EEAIGPGModifierHelicopterAttackSubGroupRoutePlanner::EEAIGPGModifierHelicopterAttackSubGroupRoutePlanner(
     EECPAttackSubGroup* inSubGroup, const EECPASGWeights& inWeights)
@@ -612,6 +649,7 @@ bool EEAIGPGModifierHelicopterAttackSubGroupRoutePlanner::CanEnter(EEAIPathSubSe
     return theResult;
 }
 
+// FUNCTION: EXE 0x410947
 // Creates the airplane route planner for an attack subgroup with the given weights
 EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner::EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner(
     EECPAttackSubGroup* inSubGroup, const EECPASGWeights& inWeights)
@@ -620,6 +658,7 @@ EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner::EEAIGPGModifierAirplaneAttack
 {
 }
 
+// FUNCTION: EXE 0x410985
 // Returns a sector step cost: 10 straight or 14 diagonal plus the weighted enemy influence; at least 1
 long EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
 {
@@ -649,6 +688,7 @@ bool EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner::CanEnter(EEAIPathSubSect
     return theResult;
 }
 
+// FUNCTION: EXE 0x4109ed
 // Creates the space route planner for an attack subgroup with the given weights
 EEAIGPGModifierSpaceRoutePlanner::EEAIGPGModifierSpaceRoutePlanner(unsigned long inPlayerID,
                                                                    EECPAttackSubGroup* inSubGroup,
@@ -657,6 +697,7 @@ EEAIGPGModifierSpaceRoutePlanner::EEAIGPGModifierSpaceRoutePlanner(unsigned long
 {
 }
 
+// FUNCTION: EXE 0x410a20
 // Returns a sector step cost: 10 straight or 14 diagonal plus the weighted enemy influence; at least 1
 long EEAIGPGModifierSpaceRoutePlanner::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
 {
@@ -672,6 +713,7 @@ long EEAIGPGModifierSpaceRoutePlanner::GetCost(EEAIAStarGraphNode* inFrom, EEAIP
     return theCost;
 }
 
+// FUNCTION: EXE 0x410aa1
 // Returns whether the planner may enter a sector: a passable kind or a gate open to the player, then a passable
 // link from inFrom
 bool EEAIGPGModifierSpaceRoutePlanner::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
@@ -686,3 +728,17 @@ bool EEAIGPGModifierSpaceRoutePlanner::CanEnter(EEAIPathSubSector* inSector, EEA
         theResult = this->mGoal->HasPassableLink(inSector, inFrom);
     return theResult;
 }
+
+// The inline COMDATs of their first users: RTSRegionTable::GetRegion(const U2DPoint<long>&) (GetStepCost), then the
+// bases' inline slots (EEAIPathGoalModifierBase +0x04/+0x08/??_G, EEAIGraphPathGoalModifierBase +0x04/+0x08/??_G,
+// EEAIBoundedPathGoalModifierBase +0x0c, EEAIBPGModifierSpace/Sea +0x04/+0x08 ICF-shared)
+// TEMPLATE: EXE 0x410ae9
+// TEMPLATE: EXE 0x410b12
+// TEMPLATE: EXE 0x410b18
+// TEMPLATE: EXE 0x410b24
+// TEMPLATE: EXE 0x410b48
+// TEMPLATE: EXE 0x410b4e
+// TEMPLATE: EXE 0x410b5a
+// TEMPLATE: EXE 0x410b7e
+// TEMPLATE: EXE 0x410b8a
+// TEMPLATE: EXE 0x410baa

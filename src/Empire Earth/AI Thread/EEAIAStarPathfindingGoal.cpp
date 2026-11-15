@@ -56,16 +56,22 @@
 // .rdata 0x439ff4 (next to the vtables): a unit's full hit point fraction
 static const float kEEPFGFull = 1.0f;
 
+// FUNCTION: EXE 0x4190bf
 // Creates the unbounded unit path search goal (bases only)
 EEAIAStarPathfindingGoal::EEAIAStarPathfindingGoal()
 {
 }
 
+// SYNTHETIC: EXE 0x4190e3
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4190ff
 // Destroys the goal (bases only)
 EEAIAStarPathfindingGoal::~EEAIAStarPathfindingGoal()
 {
 }
 
+// FUNCTION: EXE 0x419124
 // Clears the last search's state and resets the goal base
 void EEAIAStarPathfindingGoal::Reset()
 {
@@ -94,6 +100,7 @@ EeAStarPathGoal EEAIAStarPathfindingGoal::PathState(EEAIAStarMachineBase* inMach
     return theGoal;
 }
 
+// FUNCTION: EXE 0x419138
 // Marks the search failed when the open lists run dry, when the reached tile next to the goal is not enterable,
 // or when the machine has used up its revolutions
 void EEAIAStarPathfindingGoal::SearchDone(EEAIAStarMachineBase* inMachine)
@@ -107,6 +114,7 @@ void EEAIAStarPathfindingGoal::SearchDone(EEAIAStarMachineBase* inMachine)
     this->mTookNearest = theGoal.took_nearest;
 }
 
+// FUNCTION: EXE 0x4191d1
 // Returns true for no node, the goal tile, or a tile next to an unenterable goal (diagonals only when both corner
 // tiles are enterable while corner checks are on)
 bool EEAIAStarPathfindingGoal::IsGoalNode(EEAIAStarNode* inNode)
@@ -118,6 +126,7 @@ bool EEAIAStarPathfindingGoal::IsGoalNode(EEAIAStarNode* inNode)
     return theResult;
 }
 
+// FUNCTION: EXE 0x41929e
 // Appends the found path's tiles in order
 void EEAIAStarPathfindingGoal::GetPath(std::vector<U2DPoint<long> >& outPath)
 {
@@ -134,6 +143,7 @@ void EEAIAStarPathfindingGoal::GetPath(std::vector<U2DPoint<long> >& outPath)
     } while (theMore);
 }
 
+// FUNCTION: EXE 0x419315
 // Appends the found path's tiles, and every tile on the fast closed and open lists to outVisited
 void EEAIAStarPathfindingGoal::GetPath(std::vector<U2DPoint<long> >& outPath, std::vector<U2DPoint<long> >& outVisited)
 {
@@ -144,6 +154,7 @@ void EEAIAStarPathfindingGoal::GetPath(std::vector<U2DPoint<long> >& outPath, st
 }
 
 // NEAR: the original adds the offsets as fld member + faddp
+// FUNCTION: EXE 0x419388
 // Appends the found path as world points (tile plus the goal's offset, height 0)
 void EEAIAStarPathfindingGoal::GetPoints(std::vector<GE3DPoint>& outPath)
 {
@@ -160,6 +171,7 @@ void EEAIAStarPathfindingGoal::GetPoints(std::vector<GE3DPoint>& outPath)
     } while (theMore);
 }
 
+// FUNCTION: EXE 0x419429
 // Appends the found path as world points, and every tile on all open and closed lists to outVisited
 void EEAIAStarPathfindingGoal::GetPoints(std::vector<GE3DPoint>& outPath, std::vector<U2DPoint<long> >& outVisited)
 {
@@ -173,6 +185,7 @@ void EEAIAStarPathfindingGoal::GetPoints(std::vector<GE3DPoint>& outPath, std::v
 }
 
 // NEAR: the original loads the parent tile into registers before the vtable
+// FUNCTION: EXE 0x419528
 // Returns the step cost between two tiles: the modifier's cost (given the current node's parent, or -10000s)
 // when one is set, else the default cost
 long EEAIAStarPathfindingGoal::GetCost(long inFromX, long inFromY, long inX, long inY)
@@ -188,6 +201,7 @@ long EEAIAStarPathfindingGoal::GetCost(long inFromX, long inFromY, long inX, lon
 
 // AcceptDefault: ee_astar path_goals::accept_tile
 
+// FUNCTION: EXE 0x419983
 // Prepares the base and sets 3-tile start and goal bounds around the start and goal tiles; always returns true
 bool EEAIAStarPathfindingGoal::Prepare()
 {
@@ -197,6 +211,7 @@ bool EEAIAStarPathfindingGoal::Prepare()
     return true;
 }
 
+// FUNCTION: EXE 0x4199fa
 // Returns whether the unit can enter tile (inX, inY); false off the map
 bool EEAIAStarPathfindingGoal::AcceptTile(long inX, long inY, bool inGoal)
 {
@@ -215,3 +230,10 @@ void EEAIAStarPathfindingGoal::MarkBlockedTiles()
     for (long i = this->mBlockedTiles.size() - 1; i >= 0; i--)
         this->mStorage->MarkTile(this->mBlockedTiles[i].mX, this->mBlockedTiles[i].mY, false);
 }
+
+// Compiler-generated for this unit: EEAIAStarGoalBase<EEAIAStarStorage, EEMap>'s ctor
+// 0x199b0 and ??_G 0x19a76, the second base's adjustor thunks 0x199ea (??_E) / 0x199f2 (Virtual0C).
+// TEMPLATE: EXE 0x4199b0
+// TEMPLATE: EXE 0x4199ea
+// TEMPLATE: EXE 0x4199f2
+// TEMPLATE: EXE 0x419a76

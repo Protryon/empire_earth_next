@@ -91,7 +91,7 @@ class Cursor : public RefCount {
 protected:
     virtual ~Cursor(); // out of line
 public:
-    Cursor();
+    Cursor(); // 0x326540
     virtual Cursor* GetNative(); // vtable +0x04, out of line
     virtual Component* GetComponent(int&,int&); // vtable +0x08, out of line
     static Cursor* GetStandardCursor(StandardCursor); // 0x326550: returns a shared cursor (not owned by the caller)
@@ -103,8 +103,8 @@ protected:
     SmartPtr<Cursor> mCursor; //08
 public:
     CursorRef(Cursor* cursor) : mCursor(cursor) {}
-    virtual Cursor* GetNative() { return this->mCursor->GetNative(); }
-    virtual Component* GetComponent(int& x,int& y) { return this->mCursor->GetComponent(x,y); }
+    virtual Cursor* GetNative() { return this->mCursor->GetNative(); } // 0x326660
+    virtual Component* GetComponent(int& x,int& y) { return this->mCursor->GetComponent(x,y); } // 0x326670
     void SetCursor(Cursor* cursor) { this->mCursor=cursor; }
 };
 // Only the prefix is declared; 0x326ce0 reads 17 DWORDs from +0x08
@@ -195,18 +195,18 @@ class Graphics;
 class RootContainer;
 class ComponentListener;
 struct PopupParams;
-extern GUIString gEmptyGUIString;
+extern GUIString gEmptyGUIString;           // 0x966244
 
 // a GUI component (0x30 bytes: EELobbyColorChooser's members start at +0x30; vtable 0x84d71c, 43
 // slots). Unknown slots are named by vtable offset. The inline bodies are the COMDATs the first lobby unit
 // (EELobbyColorButton.cpp 0x29059d, 0x2905a2) keeps; the other tiny slots are ICF-folded into game code.
 class WONRectangle {
 public:
-    WONRectangle();
-    WONRectangle(int inX, int inY, int inWidth, int inHeight);
+    WONRectangle();                         // 0x349300
+    WONRectangle(int inX, int inY, int inWidth, int inHeight);    // 0x349310
     void DoIntersect(const WONRectangle&); // 0x349330, called from 0x3271b1
     void DoUnion(const WONRectangle&); // 0x3493b0 (called from RootContainer at 0x30498b)
-    bool Intersects(const WONRectangle&) const;
+    bool Intersects(const WONRectangle&) const; // 0x349450
     int Left() const { return this->x; }
     int Top() const { return this->y; }
     int Width() const { return this->width; }
@@ -270,48 +270,48 @@ public:
     void SetColorScheme(ColorScheme* inScheme); // 0x2f59a0, owns ComponentExtra+4
     ColorScheme* GetOwnColorScheme(); // 0x2f5960, the component's own scheme
     ColorScheme* GetColorScheme(); // 0x2f5970, own or inherited scheme
-    void SetPos(int inX, int inY);
-    void SetSize(int inWidth, int inHeight);
-    void SetSizeAtLeast(int inMinWidth, int inMinHeight);
-    void SetPosSize(int inX, int inY, int inWidth, int inHeight);
-    void Fn2F4EE0(int inPadding);
-    void FireBroadcastEvent(ComponentEvent* inEvent, bool inFlag);
+    void SetPos(int inX, int inY);            // 0x2f4b70
+    void SetSize(int inWidth, int inHeight);  // 0x2f4b90
+    void SetSizeAtLeast(int inMinWidth, int inMinHeight); // 0x2f4bc0
+    void SetPosSize(int inX, int inY, int inWidth, int inHeight); // 0x2f4bf0
+    void Fn2F4EE0(int inPadding);            // 0x2f4ee0
+    void FireBroadcastEvent(ComponentEvent* inEvent, bool inFlag); // 0x2f52a0
     void BroadcastEventDown(ComponentEvent* inEvent); // 0x2f52d0, broadcasts down to the children
-    void DeliverEvent(ComponentEvent* inEvent, bool inSendNow);
+    void DeliverEvent(ComponentEvent* inEvent, bool inSendNow); // 0x2f53f0
     SmartPtr<Font> GetFont(const FontDescriptor&); // 0x2f5a00: returns the font through a hidden result pointer (ret 8)
-    Font* GetFontMod(Font* inFont, int inStyle, int inOptionalSize);
-    Font* GetDefaultFont();
+    Font* GetFontMod(Font* inFont, int inStyle, int inOptionalSize); // 0x2f5a30
+    Font* GetDefaultFont();                  // 0x2f5b20
     Font* GetNamedFont(const std::string&); // 0x2f5b30: looks the font up in the window manager
-    Font* GetDefaultFontMod(int inStyle, int inSize);
-    void AddListener(ComponentListener* inListener);
+    Font* GetDefaultFontMod(int inStyle, int inSize);  // 0x2f5b50
+    void AddListener(ComponentListener* inListener);           // 0x2f4b10
     void SetDesiredSize(int inA, int inB);  // 0x2f4e90 (on a new popup: 0, 0)
     void Fn2F5380(int inType, int inParam) { this->FireEvent(inType, inParam != 0); } // 0x2f5380: FireEvent's older name
-    void FireEvent(int,bool=false);
+    void FireEvent(int,bool=false); // 0x2f5380
     bool IsRootVisible();                   // 0x2f5600: visible all the way up to the root (flag bit 18)
     void LocalToRoot(int& ioX, int& ioY);   // 0x2f56d0 (to the root's coordinates?)
     void BubbleEvent(ComponentEvent* inEvent); // 0x2f54e0: passes the event up to the parents
     Component* GetNextSibling(bool,bool=false); // 0x2f5230: sibling traversal
     bool WantFocus(); // 0x2f5810: can take the focus
-    void RootToChild(int&,int&);
-    void GetMousePos(int&,int&);
-    int GetKeyMod();
-    bool CheckDoubleClick(int);
+    void RootToChild(int&,int&); // 0x2f5720
+    void GetMousePos(int&,int&); // 0x2f5770
+    int GetKeyMod(); // 0x2f57a0
+    bool CheckDoubleClick(int); // 0x2f57b0
     bool Contains(int,int); // 0x2f5080: point-in-bounds test in parent coordinates
     bool Intersects(Component*); // 0x2f50c0: rectangle intersection test
     Cursor* GetDefaultCursor(); // 0x2f4b00: default cursor getter
     BackgroundGrabber* GetGrabBG(); // 0x2f4af0, from the extra data at +0x10
-    void AllocateExtraStuff();
+    void AllocateExtraStuff(); // 0x2f4ac0
     bool CheckGrabBG(); // 0x2f4db0: decides whether to grab the background
     void EnsureOnTopOf(Component*); // 0x2f4c20: forwards to the parent (0x2f6f60)
     void SetDefaultCursor(Cursor*); // 0x2f4c60: sets the component's own default cursor (not the virtual at +0x78)
-    void SetDesiredHeight(int);
-    void SetDesiredWidth(int=0);
-    void SetTranslucentColor(int,int=4);
-    void SetComponentFlags(int,bool);
+    void SetDesiredHeight(int); // 0x2f4f20
+    void SetDesiredWidth(int=0); // 0x2f4ee0
+    void SetTranslucentColor(int,int=4); // 0x2f4fb0
+    void SetComponentFlags(int,bool); // 0x2f5560
     void SetWantGrabBG(bool inGrab) { this->SetComponentFlags(0x100,inGrab); }
     void SubscribeToBroadcast(bool); // 0x2f5360 (nonvirtual)
-    void RequestTimer(bool);
-    void RequestFocus();
+    void RequestTimer(bool); // 0x2f57d0
+    void RequestFocus();                    // 0x2f5890
     Window* GetRoot();               // 0x2f5920, legacy nominal name; true SDKGetWindow
     RootContainer* GetRootContainer(); // 0x2f58f0: walks up the parents and dynamic_casts to RootContainer
     Window* GetRootWindow();         // 0x2f5940 (root Window or default Window)
@@ -360,12 +360,12 @@ class ChildLayoutManager : public RefCount {
 public:
     ChildLayoutManager();
     virtual ~ChildLayoutManager(); // the layout points, then the instructions, released (the original's members)
-    void ExecuteInstructions(Component* c) { this->MCall(EeWonLayoutMgrCall::Execute,(intptr_t)c); }
-    void AddInstruction(ChildLayoutInstructionBase*);
-    void AddLayoutPoint(LayoutPoint* p) { this->MCall(EeWonLayoutMgrCall::AddLayoutPoint,(intptr_t)static_cast<Component*>(p)); }
-    void RemoveComponent(Component* c) { this->MCall(EeWonLayoutMgrCall::RemoveComponent,(intptr_t)c); }
-    void Clear() { this->MCall(EeWonLayoutMgrCall::Clear); }
-    void EnableInstructions(int g, bool e) { this->MCall(EeWonLayoutMgrCall::EnableInstructions,g,e); }
+    void ExecuteInstructions(Component* c) { this->MCall(EeWonLayoutMgrCall::Execute,(intptr_t)c); } // 0x736d20
+    void AddInstruction(ChildLayoutInstructionBase*); // 0x736d60
+    void AddLayoutPoint(LayoutPoint* p) { this->MCall(EeWonLayoutMgrCall::AddLayoutPoint,(intptr_t)static_cast<Component*>(p)); } // 0x736e90
+    void RemoveComponent(Component* c) { this->MCall(EeWonLayoutMgrCall::RemoveComponent,(intptr_t)c); } // 0x736fc0
+    void Clear() { this->MCall(EeWonLayoutMgrCall::Clear); } // 0x737030
+    void EnableInstructions(int g, bool e) { this->MCall(EeWonLayoutMgrCall::EnableInstructions,g,e); } // 0x7370c0
     // Container::AddChildLayout's statements (the group, the first run, the hold)
     void AddChildLayout(ChildLayoutInstructionBase* instr, int id, Component* container);
     EeWonLayoutMgr* mMgr;
@@ -384,51 +384,51 @@ public:
     Container();                            // 0x2f5b70 (WONAPI, /GX)
     virtual ~Container();                   // 0x2f5e80 (WONAPI, /GX)
     // Overrides (vtable 0x44d7cc).
-    virtual void Virtual08() { this->CCall(EeWonCtCall::SizeChanged); }
-    virtual void GetDesiredSize(int& w, int& h) { this->CCall(EeWonCtCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); }
-    virtual void PrePaint(Graphics& g) { this->CCall(EeWonCtCall::PrePaint,(intptr_t)&g); }
-    virtual void Paint(Graphics& g) { this->CCall(EeWonCtCall::Paint,(intptr_t)&g); }
-    virtual bool HitTest(int x, int y) { return this->CCall(EeWonCtCall::HitTest,x,y)!=0; }
-    virtual void MouseEnter(int x, int y) { this->CCall(EeWonCtCall::MouseEnter,x,y); }
-    virtual void MouseExit() { this->CCall(EeWonCtCall::MouseExit); }
-    virtual void MouseDown(int x, int y, int b) { this->CCall(EeWonCtCall::MouseDown,x,y,b); }
-    virtual void MouseUp(int x, int y, int b) { this->CCall(EeWonCtCall::MouseUp,x,y,b); }
-    virtual void MouseMove(int x, int y) { this->CCall(EeWonCtCall::MouseMove,x,y); }
-    virtual void MouseDrag(int x, int y) { this->CCall(EeWonCtCall::MouseDrag,x,y); }
-    virtual bool MouseWheel(int n) { return this->CCall(EeWonCtCall::MouseWheel,n)!=0; }
-    virtual void MouseHover(unsigned long d) { this->CCall(EeWonCtCall::MouseHover,(intptr_t)d); }
-    virtual bool TimerEvent(int d) { return this->CCall(EeWonCtCall::TimerEvent,d)!=0; }
-    virtual void GotFocus() { this->CCall(EeWonCtCall::GotFocus); }
-    virtual void LostFocus() { this->CCall(EeWonCtCall::LostFocus); }
-    virtual bool KeyChar(int k) { return this->CCall(EeWonCtCall::KeyChar,k)!=0; }
-    virtual bool KeyDown(int k) { return this->CCall(EeWonCtCall::KeyDown,k)!=0; }
-    virtual bool KeyUp(int k) { return this->CCall(EeWonCtCall::KeyUp,k)!=0; }
-    virtual bool CanClose() { return this->CCall(EeWonCtCall::CanClose)!=0; }
-    virtual void MarkInvalid() { this->CCall(EeWonCtCall::MarkInvalid); }
-    virtual void AddedToParent() { this->CCall(EeWonCtCall::AddedToParent); }
-    virtual void ClearGrabBG() { this->CCall(EeWonCtCall::ClearGrabBG); }
-    virtual void SetCursor(Cursor* c) { this->CCall(EeWonCtCall::SetCursor,(intptr_t)c); }
-    virtual void HandleBroadcastEvent(ComponentEvent* e) { this->CCall(EeWonCtCall::HandleBroadcastEvent,(intptr_t)e); }
-    virtual void NotifyRootVisibility(bool v) { this->CCall(EeWonCtCall::NotifyRootVisibility,v); }
-    virtual bool TabFocus(bool f, bool i) { return this->CCall(EeWonCtCall::TabFocus,f,i)!=0; }
-    virtual void EnableControlsById(const ControlIdSet& ids, bool e) { this->CCall(EeWonCtCall::EnableControlsById,(intptr_t)&ids,e); }
-    virtual Component* GetMouseChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::MouseChild); }
+    virtual void Virtual08() { this->CCall(EeWonCtCall::SizeChanged); } // 0x2f62b0
+    virtual void GetDesiredSize(int& w, int& h) { this->CCall(EeWonCtCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); } // 0x2f62d0
+    virtual void PrePaint(Graphics& g) { this->CCall(EeWonCtCall::PrePaint,(intptr_t)&g); } // 0x2f6340
+    virtual void Paint(Graphics& g) { this->CCall(EeWonCtCall::Paint,(intptr_t)&g); } // 0x2f63b0
+    virtual bool HitTest(int x, int y) { return this->CCall(EeWonCtCall::HitTest,x,y)!=0; } // 0x2f6520
+    virtual void MouseEnter(int x, int y) { this->CCall(EeWonCtCall::MouseEnter,x,y); } // 0x2f6700
+    virtual void MouseExit() { this->CCall(EeWonCtCall::MouseExit); } // 0x2f6730
+    virtual void MouseDown(int x, int y, int b) { this->CCall(EeWonCtCall::MouseDown,x,y,b); } // 0x2f6880
+    virtual void MouseUp(int x, int y, int b) { this->CCall(EeWonCtCall::MouseUp,x,y,b); } // 0x2f6840
+    virtual void MouseMove(int x, int y) { this->CCall(EeWonCtCall::MouseMove,x,y); } // 0x2f6780
+    virtual void MouseDrag(int x, int y) { this->CCall(EeWonCtCall::MouseDrag,x,y); } // 0x2f6810
+    virtual bool MouseWheel(int n) { return this->CCall(EeWonCtCall::MouseWheel,n)!=0; } // 0x2f67c0
+    virtual void MouseHover(unsigned long d) { this->CCall(EeWonCtCall::MouseHover,(intptr_t)d); } // 0x2f67f0
+    virtual bool TimerEvent(int d) { return this->CCall(EeWonCtCall::TimerEvent,d)!=0; } // 0x2f7210
+    virtual void GotFocus() { this->CCall(EeWonCtCall::GotFocus); } // 0x2f7400
+    virtual void LostFocus() { this->CCall(EeWonCtCall::LostFocus); } // 0x2f7420
+    virtual bool KeyChar(int k) { return this->CCall(EeWonCtCall::KeyChar,k)!=0; } // 0x2f7710
+    virtual bool KeyDown(int k) { return this->CCall(EeWonCtCall::KeyDown,k)!=0; } // 0x2f7690
+    virtual bool KeyUp(int k) { return this->CCall(EeWonCtCall::KeyUp,k)!=0; } // 0x2f76f0
+    virtual bool CanClose() { return this->CCall(EeWonCtCall::CanClose)!=0; } // 0x2f7730
+    virtual void MarkInvalid() { this->CCall(EeWonCtCall::MarkInvalid); } // 0x2f6940
+    virtual void AddedToParent() { this->CCall(EeWonCtCall::AddedToParent); } // 0x2f6990
+    virtual void ClearGrabBG() { this->CCall(EeWonCtCall::ClearGrabBG); } // 0x2f69a0
+    virtual void SetCursor(Cursor* c) { this->CCall(EeWonCtCall::SetCursor,(intptr_t)c); } // 0x2f7360
+    virtual void HandleBroadcastEvent(ComponentEvent* e) { this->CCall(EeWonCtCall::HandleBroadcastEvent,(intptr_t)e); } // 0x2f7320
+    virtual void NotifyRootVisibility(bool v) { this->CCall(EeWonCtCall::NotifyRootVisibility,v); } // 0x2f64d0
+    virtual bool TabFocus(bool f, bool i) { return this->CCall(EeWonCtCall::TabFocus,f,i)!=0; } // 0x2f75a0
+    virtual void EnableControlsById(const ControlIdSet& ids, bool e) { this->CCall(EeWonCtCall::EnableControlsById,(intptr_t)&ids,e); } // 0x2f6480
+    virtual Component* GetMouseChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::MouseChild); } // 0x1c42ce
     // 0x2f6140 (ret 0x20): adds inChild laid out against inRef (EELobbyInterface 0x2972c6: the lobby screen, 3,
     // the root, 0, 0, 0, 0, 0; provisional name)
     void Fn2F6140(Component* inChild, int inFlags, Component* inRef, int inA, int inB, int inC, int inD, int inE);
     void AddChildLayout(ChildLayoutInstructionBase*,int=0); // 0x2f61d0: keeps the instruction; group id 0 runs first (the test reads the full int, the id is stored as a byte)
-    void EnableLayoutInstructions(int inId, bool inEnabled);
-    void Relayout();
+    void EnableLayoutInstructions(int inId, bool inEnabled); // 0x2f6120
+    void Relayout();                         // 0x2f6290
     void EnterModal() { this->CCall(EeWonCtCall::EnterModal); } // 0x2f6210: counts the modal level and moves the focus
     void LeaveModal() { this->CCall(EeWonCtCall::LeaveModal); } // 0x2f6260: ends the modal state and moves the focus
-    void RemoveAllChildren() { this->CCall(EeWonCtCall::RemoveAllChildren); }
-    void UpdateMouseChild(int x,int y) { this->CCall(EeWonCtCall::UpdateMouseChild,x,y); }
+    void RemoveAllChildren() { this->CCall(EeWonCtCall::RemoveAllChildren); } // 0x2f6d80
+    void UpdateMouseChild(int x,int y) { this->CCall(EeWonCtCall::UpdateMouseChild,x,y); } // 0x2f6650
     void MouseAt() { this->CCall(EeWonCtCall::MouseAt); } // 0x2f66c0: refreshes the mouse state
     void SetOnlyChildInput(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::OnlyChildInput,v); }
     void SetIsolateTabFocus(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::IsolateTabFocus,v); }
     void AddLayoutPoint(LayoutPoint*); // 0x2f6100: keeps the layout point as a child
-    void AddChildEx(Component* c,int p) { this->CCall(EeWonCtCall::AddChildEx,(intptr_t)c,p); }
-    void BringToTop(Component* c) { this->CCall(EeWonCtCall::BringToTop,(intptr_t)c); }
+    void AddChildEx(Component* c,int p) { this->CCall(EeWonCtCall::AddChildEx,(intptr_t)c,p); } // 0x2f6b50
+    void BringToTop(Component* c) { this->CCall(EeWonCtCall::BringToTop,(intptr_t)c); } // 0x2f6dd0
     void SetHasUsedDialogKeys(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::HasUsedDialogKeys,v); }
     bool HasUsedDialogKeys() { return this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::HasUsedDialogKeys)!=0; }
     Component* GetFocusChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::FocusChild); }
@@ -439,18 +439,18 @@ public:
     // Component::GetNextSibling's walk (0x2f5230)
     Component* NextChild(Component* c,bool f,bool w) { return (Component*)this->CCall(EeWonCtCall::NextChild,(intptr_t)c,f,w); }
     void DropFocusChild() { this->CCall(EeWonCtCall::DropFocusChild); }
-    unsigned char GetNextFocusId() { return (unsigned char)this->CCall(EeWonCtCall::NextFocusId); }
-    void SetFocusToLastFocusChild() { this->CCall(EeWonCtCall::SetFocusToLastFocusChild); }
-    void EnsureOnTopOf(Component* b,Component* t) { this->CCall(EeWonCtCall::EnsureOnTopOf,(intptr_t)b,(intptr_t)t); }
-    void AddChild(Component* c) { this->CCall(EeWonCtCall::AddChild,(intptr_t)c); }
-    virtual Component* FindChildAt(int x, int y) { return (Component*)this->CCall(EeWonCtCall::FindChildAt,x,y); }
-    virtual Component* FindClickChildAt(int inX, int inY) { return this->FindChildAt(inX, inY); }
-    virtual void SetFocusChild(Component* c) { this->CCall(EeWonCtCall::SetFocusChild,(intptr_t)c); }
-    virtual void AddTimerChild(Component* c) { this->CCall(EeWonCtCall::AddTimerChild,(intptr_t)c); }
-    virtual void ChildStateChanged(Component* c) { this->CCall(EeWonCtCall::ChildStateChanged,(intptr_t)c); }
-    virtual bool ChildInvalidated(Component* c) { return this->CCall(EeWonCtCall::ChildInvalidated,(intptr_t)c)!=0; }
-    virtual void RemoveChild(Component* c) { this->CCall(EeWonCtCall::RemoveChild,(intptr_t)c); }
-    virtual Component* FindChildById(int id) { return (Component*)this->CCall(EeWonCtCall::FindChildById,id); }
+    unsigned char GetNextFocusId() { return (unsigned char)this->CCall(EeWonCtCall::NextFocusId); } // 0x2f6010
+    void SetFocusToLastFocusChild() { this->CCall(EeWonCtCall::SetFocusToLastFocusChild); } // 0x2f6030
+    void EnsureOnTopOf(Component* b,Component* t) { this->CCall(EeWonCtCall::EnsureOnTopOf,(intptr_t)b,(intptr_t)t); } // 0x2f6f60
+    void AddChild(Component* c) { this->CCall(EeWonCtCall::AddChild,(intptr_t)c); } // 0x2f6a60
+    virtual Component* FindChildAt(int x, int y) { return (Component*)this->CCall(EeWonCtCall::FindChildAt,x,y); } // 0x2f65b0
+    virtual Component* FindClickChildAt(int inX, int inY) { return this->FindChildAt(inX, inY); } // 0x2909c7
+    virtual void SetFocusChild(Component* c) { this->CCall(EeWonCtCall::SetFocusChild,(intptr_t)c); } // 0x2f7440
+    virtual void AddTimerChild(Component* c) { this->CCall(EeWonCtCall::AddTimerChild,(intptr_t)c); } // 0x2f70c0
+    virtual void ChildStateChanged(Component* c) { this->CCall(EeWonCtCall::ChildStateChanged,(intptr_t)c); } // 0x2f7510
+    virtual bool ChildInvalidated(Component* c) { return this->CCall(EeWonCtCall::ChildInvalidated,(intptr_t)c)!=0; } // 0x2f68c0
+    virtual void RemoveChild(Component* c) { this->CCall(EeWonCtCall::RemoveChild,(intptr_t)c); } // 0x2f6c60
+    virtual Component* FindChildById(int id) { return (Component*)this->CCall(EeWonCtCall::FindChildById,id); } // 0x2f7770
 
     EeWonContainer* mCt;
     ChildLayoutManager* mChildLayout; // owned: destroyed between the cursor and the timer children, as the member was
@@ -504,20 +504,20 @@ class Dialog : public Container {
 public:
     Dialog();                               // 0x2f7910 (WONAPI)
     virtual ~Dialog();
-    virtual void Virtual08() { this->DCall(EeWonDlgCall::SizeChanged); }
-    virtual void MouseExit() { this->DCall(EeWonDlgCall::MouseExit); }
-    virtual void MouseDown(int x, int y, int b) { this->DCall(EeWonDlgCall::MouseDown,x,y,b); }
-    virtual void MouseUp(int x, int y, int b) { this->DCall(EeWonDlgCall::MouseUp,x,y,b); }
-    virtual void MouseDrag(int x, int y) { this->DCall(EeWonDlgCall::MouseDrag,x,y); }
-    virtual void GotFocus() { this->DCall(EeWonDlgCall::GotFocus); }
-    virtual void LostFocus() { this->DCall(EeWonDlgCall::LostFocus); }
-    virtual bool KeyDown(int k) { return this->DCall(EeWonDlgCall::KeyDown,k)!=0; }
-    virtual bool CanClose() { return this->DCall(EeWonDlgCall::CanClose)!=0; }
-    void SetEndOnEscape(int id) { this->DCall(EeWonDlgCall::SetEndOnEscape,id); }
-    void SetDontEndOnEscape() { this->DCall(EeWonDlgCall::SetDontEndOnEscape); }
+    virtual void Virtual08() { this->DCall(EeWonDlgCall::SizeChanged); } // 0x2f7a60
+    virtual void MouseExit() { this->DCall(EeWonDlgCall::MouseExit); } // 0x2f7b20
+    virtual void MouseDown(int x, int y, int b) { this->DCall(EeWonDlgCall::MouseDown,x,y,b); } // 0x2f7a70
+    virtual void MouseUp(int x, int y, int b) { this->DCall(EeWonDlgCall::MouseUp,x,y,b); } // 0x2f7af0
+    virtual void MouseDrag(int x, int y) { this->DCall(EeWonDlgCall::MouseDrag,x,y); } // 0x2f7b40
+    virtual void GotFocus() { this->DCall(EeWonDlgCall::GotFocus); } // 0x2f7a20
+    virtual void LostFocus() { this->DCall(EeWonDlgCall::LostFocus); } // 0x2f7a40
+    virtual bool KeyDown(int k) { return this->DCall(EeWonDlgCall::KeyDown,k)!=0; } // 0x2f7c30
+    virtual bool CanClose() { return this->DCall(EeWonDlgCall::CanClose)!=0; } // 0x2f7c90
+    void SetEndOnEscape(int id) { this->DCall(EeWonDlgCall::SetEndOnEscape,id); } // 0x2f7990
+    void SetDontEndOnEscape() { this->DCall(EeWonDlgCall::SetDontEndOnEscape); } // 0x2f79b0
     void SetDefaultButton(Button*); // 0x2f79c0: keeps the button (held)
-    bool ActivateDefaultButton() { return this->DCall(EeWonDlgCall::ActivateDefaultButton)!=0; }
-    virtual void HandleComponentEvent(ComponentEvent* e) { this->DCall(EeWonDlgCall::HandleComponentEvent,(intptr_t)e); }
+    bool ActivateDefaultButton() { return this->DCall(EeWonDlgCall::ActivateDefaultButton)!=0; } // 0x2f7ce0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->DCall(EeWonDlgCall::HandleComponentEvent,(intptr_t)e); } // 0x2f7d20
     // the config's writes (DialogConfig)
     void SetAllowDrag(bool v) { this->DCall(EeWonDlgCall::SetField,(intptr_t)EeWonDlgField::AllowDrag,v); }
     void SetKeepInRoot(bool v) { this->DCall(EeWonDlgCall::SetField,(intptr_t)EeWonDlgField::KeepInRoot,v); }
@@ -539,10 +539,10 @@ public:
     Button();                               // 0x2f3070 (WONAPI)
     virtual ~Button();                      // 0x2f3100 (WONAPI)
     virtual bool HandleActivate();          // +0xac (a click; EELobbyColorButton 0x290669)
-    virtual void SetTextHook(const GUIString&);
+    virtual void SetTextHook(const GUIString&); // 0x2f30d0
     virtual void SetText(const GUIString& t, bool inv) { this->BCall(EeWonBtnCall::SetText,(intptr_t)&t,inv); } // +0xb4 (0x2f3180)
     virtual const GUIString& GetText() { return gEmptyGUIString; }   // +0xb8 0x2905a8
-    void SetCheck(bool c, bool n = false) { this->BCall(EeWonBtnCall::SetCheck,c,n); }
+    void SetCheck(bool c, bool n = false) { this->BCall(EeWonBtnCall::SetCheck,c,n); } // 0x2f3500
     void SetButtonFlags(unsigned long f, bool s) { this->BCall(EeWonBtnCall::SetButtonFlags,(intptr_t)f,s); } // 0x2f3370 (EELobbyColorButton: 0x40, true)
 
     // the flag tests read one bit through an inline bool getter (shr n; test 1: Button::SetButtonFlags 0x2f3370)
@@ -578,9 +578,9 @@ public:
     virtual void GotFocus() { this->BCall(EeWonBtnCall::GotFocus); } //2f37a0
     virtual void LostFocus() { this->BCall(EeWonBtnCall::LostFocus); } //2f37d0
     virtual bool KeyUp(int k) { return this->BCall(EeWonBtnCall::KeyUp,k)!=0; } // 0x2f38b0, vtable +0x58
-    virtual bool KeyDown(int k) { return this->BCall(EeWonBtnCall::KeyDown,k)!=0; }
-    virtual bool TimerEvent(int d) { return this->BCall(EeWonBtnCall::TimerEvent,d)!=0; }
-    virtual void MouseHover(unsigned long d) { this->BCall(EeWonBtnCall::MouseHover,(intptr_t)d); }
+    virtual bool KeyDown(int k) { return this->BCall(EeWonBtnCall::KeyDown,k)!=0; } // 0x2f3800
+    virtual bool TimerEvent(int d) { return this->BCall(EeWonBtnCall::TimerEvent,d)!=0; } // 0x2f38d0
+    virtual void MouseHover(unsigned long d) { this->BCall(EeWonBtnCall::MouseHover,(intptr_t)d); } // 0x2f3900
 private:
     intptr_t BCall(EeWonBtnCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_btn_call(this->mBtn,c,a,b,cc); }
 };
@@ -669,8 +669,8 @@ public:
 // The destructor is out of line.
 class MSButton : public MSButtonBase {
 public:
-    MSButton();
-    MSButton(const GUIString&);
+    MSButton(); // 0x2fec30
+    MSButton(const GUIString&); // 0x2feca0 (ret 4)
     virtual ~MSButton(); // 0x2fed10, out of line
     virtual void Paint(Graphics&); //2fed20
     void SetUseFrame2(bool useFrame2) { this->mUseFrame2=useFrame2; } // inline
@@ -684,14 +684,14 @@ class MSCheckbox : public MSButtonBase {
 public:
     MSCheckbox(); // 0x2ff3e0; no members beyond the base's 0x5c bytes
 protected:
-    void Init();
+    void Init(); // 0x2ff3b0
 public:
     virtual ~MSCheckbox(); // 0x2ff420, out of line
     virtual void Paint(Graphics&); // 0x2ff470, vtable +0x18
     typedef void (*CheckboxPainterFunc)(Graphics&,MSCheckbox*);
     static CheckboxPainterFunc CheckboxPainter;
     static int mCheckboxWidth,mCheckboxHeight;
-    static void DefaultCheckboxPainterFunc(Graphics&,MSCheckbox*);
+    static void DefaultCheckboxPainterFunc(Graphics&,MSCheckbox*); // 0x2ff430
 };
 // MSRadioButton (0x5c bytes, no members of its own); constructor out of line
 class MSRadioButton : public MSButtonBase {
@@ -699,19 +699,19 @@ public:
 protected:
     void Init(); // inlined into the constructor at 0x2ff530
 public:
-    MSRadioButton();
+    MSRadioButton(); // 0x2ff530
     virtual ~MSRadioButton(); // 0x2ff5b0, out of line
     virtual void Paint(Graphics&); // 0x2ff600, vtable +0x18
     typedef void (*RadioPainterFunc)(Graphics&,MSRadioButton*);
     static RadioPainterFunc RadioPainter;
     static int mRadioWidth,mRadioHeight;
-    static void DefaultRadioPainterFunc(Graphics&,MSRadioButton*);
+    static void DefaultRadioPainterFunc(Graphics&,MSRadioButton*); // 0x2ff5c0
 };
 
 // MSArrowButton (0x48 bytes): Button (0x44) plus the direction at +0x44; constructor and destructor out of line
 class MSArrowButton : public Button {
 public:
-    MSArrowButton(Direction=Direction_Up);
+    MSArrowButton(Direction=Direction_Up); // 0x2ff0c0 (ret 4)
     virtual ~MSArrowButton(); // out of line
     virtual void Paint(Graphics&); // vtable +0x18
     void SetDirection(Direction d) { this->mDirection=d; }
@@ -728,7 +728,7 @@ public:
 // MSTabButton (0x60 bytes): MSButtonBase (0x5c) plus mLowerAmount at +0x5c; constructor and destructor out of line
 class MSTabButton : public MSButtonBase {
 public:
-    MSTabButton(const GUIString& = "",bool=true,int=3);
+    MSTabButton(const GUIString& = "",bool=true,int=3); // 0x2fee20 (ret 12)
 
     virtual void Paint(Graphics&); // vtable +0x18
     virtual void GetDesiredSize(int&,int&); // vtable +0x0c
@@ -738,7 +738,7 @@ public:
 // MS3DFrame (0x38 bytes): Component (0x30) plus a bool at +0x30 and an int at +0x34; constructor and destructor out of line
 class MS3DFrame : public Component {
 public:
-    MS3DFrame(int=3,bool=false);
+    MS3DFrame(int=3,bool=false); // 0x300780 (ret 8)
     virtual void Paint(Graphics&); // 0x3007b0, vtable +0x18
     void SetIsUp(bool v) { this->mIsUp=v; }
     void SetFrameType(int t) { this->mType=t; }
@@ -863,10 +863,10 @@ public:
     int mLeft,mTop,mRight,mBottom;
     SmartPtr<Image> mImage;
     WONFrame(Image* =NULL,int=0); // 0x3175f0 (ret 8): one border width on all sides
-    WONFrame(Image*,int,int,int,int);
-    WONFrame(StretchImage*);
+    WONFrame(Image*,int,int,int,int); // 0x317690 (ret 0x14)
+    WONFrame(StretchImage*); // 0x317550 (ret 4)
     WONFrame(const WONFrame&); // copies the image (not identified in the original exe)
-    WONFrame& operator=(const WONFrame&);
+    WONFrame& operator=(const WONFrame&); // 0x3177a0
     void Copy(const WONFrame&); // 0x3177c0: duplicates the image instead of sharing it
     void SetImage(Image*); // shares the body at 0x349ab0
     void SetImage(Image*,int,int,int,int); // 0x317730: sets the image and the borders
@@ -876,8 +876,8 @@ public:
 // WONFrameComponent (0x44 bytes): Component (0x30) plus a WONFrame (0x14)
 class WONFrameComponent : public Component {
 public:
-    WONFrameComponent(Image* =NULL,int=0,int=0,int=0,int=0);
-    WONFrameComponent(const WONFrame&);
+    WONFrameComponent(Image* =NULL,int=0,int=0,int=0,int=0); // 0x31a5b0 (ret 0x14)
+    WONFrameComponent(const WONFrame&); // 0x31a740 (ret 4)
     const WONFrame& GetFrame(void) { return this->mFrame; } // inline
     // Implicit virtual destructor: releases the frame's image, then Component's cleanup
     virtual void Paint(Graphics& inGraphics); // override
@@ -898,7 +898,7 @@ public:
 // Constructor and destructor are out of line.
 class ImageComponent : public Component {
 public:
-    ImageComponent(Image* = NULL,bool = false);
+    ImageComponent(Image* = NULL,bool = false); // 0x306b10
     // Implicit virtual destructor: releases the image at +0x30, then Component's cleanup
     virtual void GetDesiredSize(int&, int&);  // 306cf0
     virtual void Paint(Graphics&);          // 306d30
@@ -925,28 +925,28 @@ class TabBar : public Container {
 public:
     TabBar(TabCtrl*);
     virtual ~TabBar(); // the implicit destructor (0x3081f0): the Rust bar gives the buttons back
-    virtual void HandleComponentEvent(ComponentEvent* e) { ee_won_tabbar_call(this->mBar,EeWonTabBarCall::HandleComponentEvent,(intptr_t)e); }
+    virtual void HandleComponentEvent(ComponentEvent* e) { ee_won_tabbar_call(this->mBar,EeWonTabBarCall::HandleComponentEvent,(intptr_t)e); } // 0x308610
     EeWonTabBar* mBar;
 };
 class TabCtrl : public Container {
 public:
-    TabCtrl();
+    TabCtrl(); // 0x308670
     virtual ~TabCtrl(); // the implicit destructor (0x301340): the Rust control gives the arrows back
     virtual void Virtual08() { this->TCall(EeWonTabCall::SizeChanged); } // SizeChanged 0x308f50
-    virtual void GetDesiredSize(int& w,int& h) { this->TCall(EeWonTabCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); }
-    virtual bool KeyDown(int k) { return this->TCall(EeWonTabCall::KeyDown,k)!=0; }
-    virtual void AddedToParent() { this->TCall(EeWonTabCall::AddedToParent); }
-    virtual void HandleComponentEvent(ComponentEvent* e) { this->TCall(EeWonTabCall::HandleComponentEvent,(intptr_t)e); }
-    virtual bool TabFocus(bool f,bool i) { return this->TCall(EeWonTabCall::TabFocus,f,i)!=0; }
-    void CopyAttributes(TabCtrl* from) { this->TCall(EeWonTabCall::CopyAttributes,(intptr_t)from->mTab); }
-    void SetTabBarOnRight(bool v) { this->TCall(EeWonTabCall::SetTabBarOnRight,v); }
-    void SetArrowsOnLeft(bool v) { this->TCall(EeWonTabCall::SetArrowsOnLeft,v); }
-    void SetTabArrows(Button* l,Button* r) { this->TCall(EeWonTabCall::SetTabArrows,(intptr_t)static_cast<Component*>(l),(intptr_t)static_cast<Component*>(r)); }
-    void SetCurTab(int id,bool f) { this->TCall(EeWonTabCall::SetCurTab,id,f); }
-    void SetCurTabByName(const GUIString& n,bool f) { this->TCall(EeWonTabCall::SetCurTabByName,(intptr_t)&n,f); }
-    int GetTabIdForContainer(Container* c) { return (int)this->TCall(EeWonTabCall::GetTabIdForContainer,(intptr_t)static_cast<Component*>(c)); }
-    void EnableTab(int id,bool e) { this->TCall(EeWonTabCall::EnableTab,id,e); }
-    void AddTab(Button* t,Container* c) { this->TCall(EeWonTabCall::AddTab,(intptr_t)static_cast<Component*>(t),(intptr_t)static_cast<Component*>(c)); }
+    virtual void GetDesiredSize(int& w,int& h) { this->TCall(EeWonTabCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); } // 0x3089e0
+    virtual bool KeyDown(int k) { return this->TCall(EeWonTabCall::KeyDown,k)!=0; } // 0x309240
+    virtual void AddedToParent() { this->TCall(EeWonTabCall::AddedToParent); } // 0x308cb0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->TCall(EeWonTabCall::HandleComponentEvent,(intptr_t)e); } // 0x3090e0
+    virtual bool TabFocus(bool f,bool i) { return this->TCall(EeWonTabCall::TabFocus,f,i)!=0; } // 0x309140
+    void CopyAttributes(TabCtrl* from) { this->TCall(EeWonTabCall::CopyAttributes,(intptr_t)from->mTab); } // 0x308960
+    void SetTabBarOnRight(bool v) { this->TCall(EeWonTabCall::SetTabBarOnRight,v); } // 0x308a30
+    void SetArrowsOnLeft(bool v) { this->TCall(EeWonTabCall::SetArrowsOnLeft,v); } // 0x308a40
+    void SetTabArrows(Button* l,Button* r) { this->TCall(EeWonTabCall::SetTabArrows,(intptr_t)static_cast<Component*>(l),(intptr_t)static_cast<Component*>(r)); } // 0x308a50
+    void SetCurTab(int id,bool f) { this->TCall(EeWonTabCall::SetCurTab,id,f); } // 0x309350
+    void SetCurTabByName(const GUIString& n,bool f) { this->TCall(EeWonTabCall::SetCurTabByName,(intptr_t)&n,f); } // 0x309370
+    int GetTabIdForContainer(Container* c) { return (int)this->TCall(EeWonTabCall::GetTabIdForContainer,(intptr_t)static_cast<Component*>(c)); } // 0x309390
+    void EnableTab(int id,bool e) { this->TCall(EeWonTabCall::EnableTab,id,e); } // 0x3093d0
+    void AddTab(Button* t,Container* c) { this->TCall(EeWonTabCall::AddTab,(intptr_t)static_cast<Component*>(t),(intptr_t)static_cast<Component*>(c)); } // 0x3093f0
     void RemoveTab(int id) { this->TCall(EeWonTabCall::RemoveTab,id); } // removes the tab and reselects
     // the selected tab's id and the configs' writes (TabCtrlConfig, RootScreen)
     int GetCurTabId() { return (int)this->TCall(EeWonTabCall::GetField,(intptr_t)EeWonTabField::CurTabId); }
@@ -970,15 +970,15 @@ private:
 // scrollers hold (MSScrollbar and WONScrollbar derive from it). Constructor 0x305e10, destructor 0x305eb0.
 class Scrollbar : public Container {
 public:
-    Scrollbar(bool=true);
-    virtual ~Scrollbar();
+    Scrollbar(bool=true); // 0x305e10 (ret 4)
+    virtual ~Scrollbar(); // 0x305eb0
     virtual void Virtual08() { this->Call(EeWonBarCall::SizeChanged); } //306380
     virtual void MouseDown(int x,int y,int b) { this->Call(EeWonBarCall::MouseDown,x,y,b); } //3064c0
     virtual void MouseDrag(int x,int y) { this->Call(EeWonBarCall::MouseDrag,x,y); } //306510
     virtual void AddedToParent() { this->Call(EeWonBarCall::AddedToParent); } //305fe0
     virtual void HandleComponentEvent(ComponentEvent* e) { this->Call(EeWonBarCall::HandleEvent,(intptr_t)e); } //306690
     virtual void SetEnabled(bool on) { this->Call(EeWonBarCall::SetEnabled,on); } // 0x3067e0, vtable +0x90
-    void CopyAttributes(Scrollbar* from) { this->Call(EeWonBarCall::CopyAttributes,(intptr_t)from->mRust); }
+    void CopyAttributes(Scrollbar* from) { this->Call(EeWonBarCall::CopyAttributes,(intptr_t)from->mRust); } // 0x305fa0
     void AddControls() { this->Call(EeWonBarCall::AddControls); } //306000
     void LayoutThumb(bool changePos) { this->Call(EeWonBarCall::LayoutThumb,changePos); } //3061d0
     // the parts the skins, the configs and the scroller read and set
@@ -1008,14 +1008,14 @@ private:
 // the combo box, the scroll areas and the scroll containers (MSScrollContainer, WONScrollContainer) hold.
 class Scroller : public Container {
 public:
-    Scroller();
+    Scroller(); // 0x305540
     virtual ~Scroller(); // the implicit destructors (0x3001e0, ScrollbarScroller's 0x300060)
     virtual void MouseDown(int x,int y,int b) { this->SCall(EeWonScrollerCall::MouseDown,x,y,b); } //305670
     virtual bool MouseWheel(int n) { return this->SCall(EeWonScrollerCall::MouseWheel,n)!=0; } //3056c0
     virtual void NotifyScrollChange(bool) {} // empty inline (shared body at 0x30a800)
     ScrollArea* GetScrollArea() { return (ScrollArea*)this->SCall(EeWonScrollerCall::GetScrollArea); }
     // (a ScrollArea's Component is at its own address: single inheritance)
-    void SetScrollArea(ScrollArea* a) { this->SCall(EeWonScrollerCall::SetScrollArea,(intptr_t)a); }
+    void SetScrollArea(ScrollArea* a) { this->SCall(EeWonScrollerCall::SetScrollArea,(intptr_t)a); } // 0x305580
     void SetOffsets(int h,int v) { this->SCall(EeWonScrollerCall::SetOffsets,h,v); } //3055e0 horizontal then vertical
     void SetVertOffset(int v) { this->SCall(EeWonScrollerCall::SetVertOffset,v); } //305630
     void SetHorzOffset(int h) { this->SCall(EeWonScrollerCall::SetHorzOffset,h); } //305650
@@ -1035,7 +1035,7 @@ public:
     Scrollbar* GetScrollbar(bool vertical) { return (Scrollbar*)this->SCall(EeWonScrollerCall::GetScrollbar,vertical); }
     void SetBar(bool vertical,Scrollbar* s) { this->SCall(EeWonScrollerCall::SetBar,vertical,(intptr_t)static_cast<Component*>(s)); } // the field only (MSScrollContainer's constructor)
     bool EnableScrollbar(Scrollbar* s,ScrollbarCondition c) { return this->SCall(EeWonScrollerCall::EnableScrollbar,(intptr_t)static_cast<Component*>(s),c)!=0; } //3058d0
-    void SetScrollbarConditions(ScrollbarCondition h,ScrollbarCondition v) { this->SCall(EeWonScrollerCall::SetScrollbarConditions,h,v); }
+    void SetScrollbarConditions(ScrollbarCondition h,ScrollbarCondition v) { this->SCall(EeWonScrollerCall::SetScrollbarConditions,h,v); } // 0x305990
 };
 enum ScrollButtonCondition {
     ScrollButtonCondition_Disable=0, ScrollButtonCondition_Enable=1,
@@ -1059,24 +1059,24 @@ public:
     virtual void AddedToParent() { this->BCall(EeWonComboCall::AddedToParent); } //2f3ef0
     virtual void HandleComponentEvent(ComponentEvent* e) { this->BCall(EeWonComboCall::HandleComponentEvent,(intptr_t)e); } //2f44e0
     virtual void SetEnabled(bool e) { this->BCall(EeWonComboCall::SetEnabled,e); } //2f4800
-    ListItem* AddString(const GUIString& s,int pos=-1) { return (ListItem*)this->BCall(EeWonComboCall::AddString,(intptr_t)&s,pos); }
-    void InsertItem(TextListItem* item,int pos=-1) { this->BCall(EeWonComboCall::InsertItem,(intptr_t)item,pos); }
-    void DeleteItem(int pos) { this->BCall(EeWonComboCall::DeleteItem,pos); }
-    void UpdateItem(TextListItem* item) { this->BCall(EeWonComboCall::UpdateItem,(intptr_t)item); }
-    void Clear(bool input=true) { this->BCall(EeWonComboCall::Clear,input); }
-    int GetSelItem() { return (int)this->BCall(EeWonComboCall::GetSelItem); }
-    void SetSelItem(int pos,bool notify=false) { this->BCall(EeWonComboCall::SetSelItem,pos,notify); }
-    void SetListBox(Scroller* s);
-    void AddControls() { this->BCall(EeWonComboCall::AddControls); }
-    void CalcListBoxSize() { this->BCall(EeWonComboCall::CalcListBoxSize); }
-    void SetListBoxDimensions(int w,int h) { this->BCall(EeWonComboCall::SetListBoxDimensions,w,h); }
-    void SetListBoxWidth(int w) { this->BCall(EeWonComboCall::SetListBoxWidth,w); }
-    void SetListBoxHeight(int h) { this->BCall(EeWonComboCall::SetListBoxHeight,h); }
-    void SetInputBoxToListSelection(bool active=false,bool fire=true) { this->BCall(EeWonComboCall::SetInputBoxToListSelection,active,fire); }
-    void SetText(const GUIString& s,bool notify=false) { this->BCall(EeWonComboCall::SetText,(intptr_t)&s,notify); }
-    void SetTextAndSel(const GUIString& s,bool notify) { this->BCall(EeWonComboCall::SetTextAndSel,(intptr_t)&s,notify); }
-    void ShowList() { this->BCall(EeWonComboCall::ShowList); }
-    void SetNoType(bool v) { this->BCall(EeWonComboCall::SetNoType,v); }
+    ListItem* AddString(const GUIString& s,int pos=-1) { return (ListItem*)this->BCall(EeWonComboCall::AddString,(intptr_t)&s,pos); } // 0x2f3b70
+    void InsertItem(TextListItem* item,int pos=-1) { this->BCall(EeWonComboCall::InsertItem,(intptr_t)item,pos); } // 0x2f3bb0
+    void DeleteItem(int pos) { this->BCall(EeWonComboCall::DeleteItem,pos); } // 0x2f3c10
+    void UpdateItem(TextListItem* item) { this->BCall(EeWonComboCall::UpdateItem,(intptr_t)item); } // 0x2f3c40
+    void Clear(bool input=true) { this->BCall(EeWonComboCall::Clear,input); } // 0x2f3c60
+    int GetSelItem() { return (int)this->BCall(EeWonComboCall::GetSelItem); } // 0x2f3d40
+    void SetSelItem(int pos,bool notify=false) { this->BCall(EeWonComboCall::SetSelItem,pos,notify); } // 0x2f3d60
+    void SetListBox(Scroller* s); // 0x2f3e70
+    void AddControls() { this->BCall(EeWonComboCall::AddControls); } // 0x2f3f10
+    void CalcListBoxSize() { this->BCall(EeWonComboCall::CalcListBoxSize); } // 0x2f3fa0
+    void SetListBoxDimensions(int w,int h) { this->BCall(EeWonComboCall::SetListBoxDimensions,w,h); } // 0x2f4030
+    void SetListBoxWidth(int w) { this->BCall(EeWonComboCall::SetListBoxWidth,w); } // 0x2f4050
+    void SetListBoxHeight(int h) { this->BCall(EeWonComboCall::SetListBoxHeight,h); } // 0x2f4070
+    void SetInputBoxToListSelection(bool active=false,bool fire=true) { this->BCall(EeWonComboCall::SetInputBoxToListSelection,active,fire); } // 0x2f40c0
+    void SetText(const GUIString& s,bool notify=false) { this->BCall(EeWonComboCall::SetText,(intptr_t)&s,notify); } // 0x2f42b0
+    void SetTextAndSel(const GUIString& s,bool notify) { this->BCall(EeWonComboCall::SetTextAndSel,(intptr_t)&s,notify); } // 0x2f42e0
+    void ShowList() { this->BCall(EeWonComboCall::ShowList); } // 0x2f4370
+    void SetNoType(bool v) { this->BCall(EeWonComboCall::SetNoType,v); } // 0x2f47a0
     void SetShowButtonWhenDisabled(bool v) { this->BCall(EeWonComboCall::SetField,(intptr_t)EeWonComboField::ShowButtonWhenDisabled,v); } // ComboBoxConfig
     SmartPtr<InputBox> mEdit; //84
     SmartPtr<Button> mButton; //88
@@ -1099,9 +1099,9 @@ struct LobbyNetAddress {
 // 0x78-byte base, constructor and destructor out of line; the private 0x24-byte tail is opaque.
 class ComponentConfig : public ConfigObject {
 public:
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
-    bool ReadConfig_Unsafe(Component*,const char*,ResourceConfigTable*,ConfigParser*);
+    static ComponentConfig* CfgFactory(); // 0x39aab0
+    static Component* CompFactory(); // 0x396960
+    bool ReadConfig_Unsafe(Component*,const char*,ResourceConfigTable*,ConfigParser*); // 0x3828c0 (ret 0x10)
     void ReadConfig(Component*,const char*,ResourceConfigTable* = NULL,ConfigParser* = NULL);
     Component* GetChildComponent(const std::string&);
     ComponentConfig* GetChildConfig(const std::string&);
@@ -1109,32 +1109,32 @@ public:
     Direction ReadDirection(); //3856f0
     HorzAlign ReadHorzAlign(); //385950
     VertAlign ReadVertAlign(); //385b10
-    static void SetResourceFolder(const std::string&);
-    static std::string mResourceFolder;
+    static void SetResourceFolder(const std::string&); // 0x387ca0
+    static std::string mResourceFolder; // 0x566b18
     SmartPtr<Sound> ReadSound(); // 0x3855f0 (the caller owns the result)
     void EnsureComma(); //382e00; SkipComma is382dd0
-    int GetIntValue();
+    int GetIntValue(); // 0x382f40
     int ParseExpression(int); //383560
     int ReadChar(); //383930
     GUIString ReadFlag(bool* = NULL); //383a90
     GUIString ReadRawString(bool); //383b00
-    SmartPtr<Font> ReadFont();
+    SmartPtr<Font> ReadFont(); // 0x384480
     SmartPtr<Image> ReadImage(bool); // 0x384fa0 (hidden result)
-    SelectionColor ReadSelectionColor();
-    ComponentConfig* GetComponentConfig(const GUIString&,bool);
+    SelectionColor ReadSelectionColor(); // 0x385cd0
+    ComponentConfig* GetComponentConfig(const GUIString&,bool); // 0x386380
     ComponentConfig* ReadComponentConfig(); // 0x3868d0: config lookup
     bool HandleMapComponent(); // 0x386960 (0x386950 is a separate 9-byte wrapper)
-    bool HandleModifyGroup(ConfigParser&);
-    bool HandleResourceGroup(ConfigParser&);
-    bool HandleModify();
+    bool HandleModifyGroup(ConfigParser&); // 0x386d80
+    bool HandleResourceGroup(ConfigParser&); // 0x386f20
+    bool HandleModify(); // 0x3870a0
     bool BaseHandleInstruction(ConfigParser&,const std::string&,StringParser&); // 0x387370 (forwarder)
-    void SetDesiredSizeIfNecessary();
+    void SetDesiredSizeIfNecessary(); // 0x3860b0
     SmartPtr<Cursor> ReadCursor(); // 0x385380 (hidden result)
     int GetIntResource(const std::string&); //384210
     static SmartPtr<ResourceConfigTable> mResourceConfigTable; // 0x566b28 (declaration only)
-    SmartPtr<RawImage> ReadRawImage();
+    SmartPtr<RawImage> ReadRawImage(); // 0x385050
     SmartPtr<Image> GetImageFromStr(const std::string&,bool); //384890
-    SmartPtr<RawImage> GetRawImageFromStr(const std::string&);
+    SmartPtr<RawImage> GetRawImageFromStr(const std::string&); // 0x384f10
     StandardCursor ReadStandardCursor(); //385120
     void AddChildToConfigMap(const GUIString&,ComponentConfig*); // 0x386c30; the parent keeps the child
     GUIString GetStringResource(const std::string&); //383bd0
@@ -1145,12 +1145,12 @@ public:
     void GetBackgroundResource(const std::string&,Background&); //384140
     Background ReadBackground(); // 0x385ea0, returns a Background (0x14 bytes) by value
     int ReadInt(); // 0x3837e0, no arguments
-    Component* ReadComponent();
+    Component* ReadComponent(); // 0x386950
     bool EndOfString(); //382db0
     void SkipComma(); //382e00
     static std::string GetResourceFile(const std::string&); //387e50
 
-    ComponentConfig();
+    ComponentConfig();                     // 0x3825b0
     virtual ~ComponentConfig();            // 0x382690, own VT451f54
     virtual bool HandleInstruction(ConfigParser*, const std::string&);
     virtual bool HandleValueInstruction(ConfigParser*, const std::string&, StringParser&);
@@ -1232,19 +1232,19 @@ public:
 
 class ContainerConfig : public ComponentConfig {
 public:
-    static Component* LayoutPointFactory();
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
-    bool HandleAdd();
-    bool HandleAddLayoutPoint();
-    bool HandleLayout(bool chain=false,bool repeat=false);
-    bool HandleSameSizeLayout(bool,bool);
-    bool HandleCenterLayout(bool,bool);
-    bool HandleClearRightLayout();
-    bool HandleSpaceEvenlyLayout(bool);
-    bool HandleNoOverlapLayout();
-    bool HandleSizeAtLeastLayout();
-    bool HandleNewLayoutPoint();
+    static Component* LayoutPointFactory(); // 0x39ab10
+    static ComponentConfig* CfgFactory(); // 0x295842
+    static Component* CompFactory(); // 0x365120
+    bool HandleAdd(); // 0x388840
+    bool HandleAddLayoutPoint(); // 0x388870
+    bool HandleLayout(bool chain=false,bool repeat=false); // 0x3888b0
+    bool HandleSameSizeLayout(bool,bool); // 0x388e20
+    bool HandleCenterLayout(bool,bool); // 0x388f30
+    bool HandleClearRightLayout(); // 0x389080
+    bool HandleSpaceEvenlyLayout(bool); // 0x389280
+    bool HandleNoOverlapLayout(); // 0x3894b0
+    bool HandleSizeAtLeastLayout(); // 0x389860
+    bool HandleNewLayoutPoint(); // 0x389a70
     ContainerConfig();                      // 0x387f90; the class is 0x98 bytes
     // The implicit destructor (0x38ef70) jumps to ComponentConfig's.
     virtual bool HandleInstruction(ConfigParser*, const std::string&); //3885d0
@@ -1259,8 +1259,8 @@ public:
 
 class DialogConfig : public ContainerConfig {
 public:
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
+    static ComponentConfig* CfgFactory(); // 0x29585c
+    static Component* CompFactory(); // 0x39ac50
     virtual bool Virtual24(const std::string&); //389f80
     virtual void SetComponent(Component*);  //38f960
     Dialog* mDialog;                        // +98, borrowed
@@ -1268,11 +1268,11 @@ public:
 
 class LobbyConfig : public ConfigObject {
 public:
-    LobbyConfig();
+    LobbyConfig();                          // 0x358090
     typedef LobbyConfig* (*ConfigAllocator)();
     static ConfigAllocator mAllocator; // class static at 0x4d954c
-    static LobbyConfig* DefaultAllocator();
-    static std::string mDefaultFileName;
+    static LobbyConfig* DefaultAllocator(); // 0x357f30
+    static std::string mDefaultFileName; // 0x566310
     static void SetAllocator(ConfigAllocator allocator) { LobbyConfig::mAllocator=allocator; } // inline setter
     virtual bool HandleValueInstruction(ConfigParser* inParser, const std::string& inKey, StringParser& inValue);
     virtual bool PostParse(ConfigParser* inParser);
@@ -1312,7 +1312,7 @@ class ListItem : public RefCount {
 protected:
     virtual ~ListItem() {} // protected inline destructor
 public:
-    ListItem();
+    ListItem();                             // 0x2fa280
     virtual void Paint(Graphics&, ListArea*);
     virtual void CalcDimensions(ListArea*);
     virtual void SetViewport(ListArea*, Container*);
@@ -1344,7 +1344,7 @@ public:
     SmartPtr<NativeImage> mBGImage; //00
     SmartPtr<Window> mDebugWindow; //28
     EeWonGrabber* mRust;
-    BackgroundGrabber();
+    BackgroundGrabber(); // 0x336000
     ~BackgroundGrabber();
     void PrePaint(Component* c,Graphics& g) { this->GCall(EeWonGrabCall::PrePaint,(intptr_t)c,(intptr_t)&g); } //336070
     void Paint(Component* c,Graphics& g) { this->GCall(EeWonGrabCall::Paint,(intptr_t)c,(intptr_t)&g); } //3360f0
@@ -1365,7 +1365,7 @@ private:
 // MouseEnter, which only called the container's.
 class RootContainer : public Container {
 public:
-    RootContainer(Window*);
+    RootContainer(Window*); // 0x3040d0
     virtual ~RootContainer();
     virtual void Virtual08() { this->RCall(EeWonRootCall::SizeChanged); } //304730 SizeChanged
     virtual void PrePaint(Graphics& g) { this->RCall(EeWonRootCall::PrePaint,(intptr_t)&g); } //304760
@@ -1393,7 +1393,7 @@ private:
 
 // how a popup is opened (0x2c bytes, on the stack; provisional names)
 struct PopupParams {
-    PopupParams(Component* inPopup,int inFlags,Component* inOwner,int inX=-1,int inY=-1);
+    PopupParams(Component* inPopup,int inFlags,Component* inOwner,int inX=-1,int inY=-1); // 0x328540
     Window* mParent; //00, borrowed
     Component* mPopup; //04, borrowed
     Component* mInputComponent; //08, borrowed
@@ -1423,7 +1423,7 @@ public:
 // The four SmartPtr members release themselves; mGrabBG is owned outright.
 class ComponentExtra {
 public:
-    ComponentExtra();
+    ComponentExtra(); // 0x2f4890
     virtual ~ComponentExtra(); // destructor 0x2f48d0, deleting 0x2f48b0
     SmartPtr<ColorScheme> mColorScheme; //04
     SmartPtr<ComponentListener> mListener; //08, AddListener2f4b10 /Deliver2f54e0
@@ -1555,8 +1555,8 @@ public:
     // +0x60 a game message (inType 0x64..0x6a) from inFrom
     virtual void HandleGameMessageHook(unsigned char inType, ReadBuffer& inBuffer, LobbyClient* inFrom) {}
     virtual GUIString GetStatusStringHook(short inStatus) { return gEmptyGUIString; } // returns an empty string
-    void CopyFrom(LobbyGame* inGame);
-    void SetClients(LobbyClientList* inClients);
+    void CopyFrom(LobbyGame* inGame);       // 0x3a69d0
+    void SetClients(LobbyClientList* inClients); // 0x3a6c10
     void SetName(const GUIString& inName) { this->mName = inName; }
     void SetPassword(const GUIString& inPassword) { this->mPassword = inPassword; }
     void SetAskToJoin(bool inAsk) { this->mAskToJoin = inAsk; }
@@ -1568,7 +1568,7 @@ public:
     long GetSkill() const { return this->mSkill; }
     bool GetAskToJoin() const { return this->mAskToJoin; }
     bool GetHasPassword() const { return this->mHasPassword; }
-    LobbyClient* FindClient(unsigned short inId);
+    LobbyClient* FindClient(unsigned short inId); // 0x3a6c70
     bool MatchesRoomSpec(long inFlags);
     bool IsPinging();
     bool IsQueryingDetails();
@@ -1667,8 +1667,8 @@ template <class T> class SmartPtr;
 // 0x361b60 / 0x361b80 (cdecl): a game message to the lobby
 void LobbySendToCaptain(const ByteBuffer* inMessage);
 void LobbyBroadcastToGame(const ByteBuffer* inMessage);
-void LobbySendToClient(LobbyClient* inClient, const ByteBuffer* inMessage);
-void LobbyResetReadyFlags();
+void LobbySendToClient(LobbyClient* inClient, const ByteBuffer* inMessage);  // 0x361ba0
+void LobbyResetReadyFlags();                // 0x361290
 
 // a client of the lobby's room (its name at +0x08; provisional name)
 class LobbyPlayer;
@@ -1676,7 +1676,7 @@ class LobbyPlayer;
 class LobbyClient : public RefCount {
 public:
     LobbyClient();                         // 0x3a51a0; new 0x2c
-    virtual ~LobbyClient();
+    virtual ~LobbyClient();                // 0x3a5260
     void ClearGroup(unsigned short inId, bool inGame);
     bool IsInChatGroup();
     bool IsFriend(); // the linker folds this body into the identical one at 0x2b31d0; nonconst in the SDK
@@ -1745,8 +1745,8 @@ public:
     virtual void WriteData(WriteBuffer& outBuffer) {} // empty (shared body at 0x30a800)
     virtual bool IsTeammate(LobbyPlayer* inOther);
     bool ReadFromBuffer(ReadBuffer& inBuffer); // 0x3a90f0 (typed exception handler/tail separately audited)
-    void WriteToBuffer(WriteBuffer& outBuffer);
-    bool IsSameTeam(LobbyPlayer* inOther);
+    void WriteToBuffer(WriteBuffer& outBuffer); // 0x3a9170
+    bool IsSameTeam(LobbyPlayer* inOther);     // 0x3a91a0
 
 protected:
     typedef LobbyPlayer* (*LobbyPlayerFactory)();
@@ -1839,12 +1839,12 @@ public:
     SmartPtr<RawImage> DecodeImageRaw(const char*); //32d160
     void SetSoundDecoder(SoundDecoder*); //32d490
     SmartPtr<Sound> DecodeSound(const SoundDescriptor&); //32d4f0
-    void CloseAllWindows();
+    void CloseAllWindows(); // 0x32d5b0
     void CalcModality(); //32da30
     bool NotModalWindow(Window*); // 0x32dc30 (called from the window procedure at 0x3d1730)
     // 0x32dbe0 is a separate static SetModal(Component*,bool) helper, not a member.
     int DoDialog(Window*,Component*); //32dc50
-    void EndDialog(int,Window*,Component*);
+    void EndDialog(int,Window*,Component*); // 0x32ddb0
     void ExitMessageLoop(); //32ddf0
     void AdjustPopupPosition(Window*,Component*,bool,const WONRectangle&); //32de00
     void DoPopup(const PopupParams&); //32e040
@@ -1859,7 +1859,7 @@ public:
     // DeliverEvent (round 34)
     void DeliverEvent(WindowEventBase*); //32ef20
     void SubscribeToBroadcast(Component*,bool); //32f3f0
-    void BroadcastEvent(ComponentEvent*);
+    void BroadcastEvent(ComponentEvent*); // 0x32f680
     void ClearSubscriptions(); //32f5d0
     WindowEventBase* PeekNextEvent(); //32f700
     void ProcessEvents(); //32f760
@@ -1902,7 +1902,7 @@ WindowManager* GetLobbyWindow();
 // a window's icon (0x0c bytes; vtable 0x85107c)
 class NativeIcon : public RefCount {
 public:
-    NativeIcon(DisplayContext* inContext);
+    NativeIcon(DisplayContext* inContext);  // 0x328990
     virtual ~NativeIcon(); // 0x328a00; protected in the SDK, public here
 
     SmartPtr<DisplayContext> mContext;      // +0x08
@@ -1937,7 +1937,7 @@ public:
     void RemoveComponent(Component*);
     bool IsMouseDown(MouseButton);
     void ShowNativeCursor(bool); // 0x32afc0, wrapper
-    void CheckSetCursor(bool);
+    void CheckSetCursor(bool); // 0x32afd0
     bool CheckDoubleClick(MouseButton); // 0x32b110; the button index is not range-checked (reads at +0x38)
     void HandleMouseExit(); //32b120
     void HandleKeyEvent(KeyEvent*); //32b170
@@ -1945,7 +1945,7 @@ public:
     void HandleMouseEvent(MouseEvent*); //32b260
     void HandleInputEvent(InputEvent*); //32b390
 
-    Window();
+    Window();                              // 0x329c30
     virtual ~Window();                     // 0x32a020, out of line
     virtual SmartPtr<Font> PlatformGetFont(const FontDescriptor&);
     virtual bool IdleUpdate();
@@ -1968,21 +1968,21 @@ public:
     virtual void PlatformSetMouseCapture(bool);
     virtual void QueueEvent(WindowEventBase*);
     virtual bool PlatformIsVisible();
-    static Window* GetDefaultWindow();
-    SmartPtr<NativeImage> DecodeImage(const char*);
-    int RunDialog(Component*);
+    static Window* GetDefaultWindow();      // 0x32a220
+    SmartPtr<NativeImage> DecodeImage(const char*); // 0x32a650
+    int RunDialog(Component*);              // 0x32b080
     void AddComponent(Component*); // 0x32b040: forwards to the root
     void SetModal(bool); // 0x32b060: calls Container::EnterModal/LeaveModal
     bool Close();                          // 0x32ac30, returns false or true
-    void SetClientSize(int, int);
-    void Center(bool);
-    void EndDialog(int, Component*);
-    void OpenPopup(PopupParams&);
-    void ClosePopup(Component*);
-    void InvalidateRoot();
+    void SetClientSize(int, int);           // 0x32af30
+    void Center(bool);                     // 0x32ae80
+    void EndDialog(int, Component*);         // 0x32b0a0
+    void OpenPopup(PopupParams&);           // 0x32b0c0
+    void ClosePopup(Component*);            // 0x32b0e0
+    void InvalidateRoot();                  // 0x32a1e0
     void SetParent(Window*);                // 0x32a210, the parent at +0x80
-    void SetTitle(const GUIString&);
-    void SetIcon(NativeIcon*);
+    void SetTitle(const GUIString&);        // 0x32adc0
+    void SetIcon(NativeIcon*);              // 0x32ae20
     // R6 WON round 32: the state is the Rust window (rust/crates/ee_won/src/winobj.rs); these read and set it
     int GetKeyMod() const { return (int)this->WField(EeWonWinField::KeyMod); }
     int GetWindowState() const { return (int)this->WField(EeWonWinField::State); }
@@ -2024,22 +2024,22 @@ public:
 
 // WONAPI lobby state functions the game's lobby glue calls
 int LobbyRun();                             // 0x362760 (how the lobby was left: 1, 2 or 3)
-void LobbySuspend();
-void LobbyResume();
-void LobbyShutdown();
-Container* LobbyGetContainer();
-void LobbyStart();
-void LobbyGetNetAddresses(std::list<LobbyNetAddress>& outAddresses, bool inFlag);
+void LobbySuspend();                        // 0x362830
+void LobbyResume();                         // 0x362880
+void LobbyShutdown();                       // 0x362170
+Container* LobbyGetContainer();             // 0x362250
+void LobbyStart();                          // 0x362740
+void LobbyGetNetAddresses(std::list<LobbyNetAddress>& outAddresses, bool inFlag);   // 0x2b32b0 (cdecl)
 
 // 0x361390: the local player (NULL when none)
 LobbyPlayer* GetMyLobbyPlayer();
 // 0x34a100 (cdecl): a text with its %s-style argument filled in (provisional name)
 GUIString LobbyFormatString(const GUIString& inFormat, const GUIString& inArg);
 void LobbySetGameInProgress(bool inFlag);   // 0x3612b0, SDK SetGameInProgress(bool)
-bool LobbyLeaveGame(bool inFlag);
-bool LobbyIAmCaptain();
-void LobbyNetAdvertiseGame();
-void LobbyNotifyStagingChange();
+bool LobbyLeaveGame(bool inFlag);            // 0x361310
+bool LobbyIAmCaptain();                     // 0x3613c0
+void LobbyNetAdvertiseGame();               // 0x361260
+void LobbyNotifyStagingChange();            // 0x3613e0
 
 class ServerListCtrl;
 class ServerDetailsItem;
@@ -2141,10 +2141,10 @@ public:
 
 class ComponentEvent : public WindowEventBase {
 public:
-    ComponentEvent(Component* inComponent, int inType);
-    virtual void Deliver();
-    void SetComponent(Component* inComponent);
-    int GetControlId() const;
+    ComponentEvent(Component* inComponent, int inType); // 0x32b530
+    virtual void Deliver();                // 0x32b610
+    void SetComponent(Component* inComponent); // 0x32b5a0
+    int GetControlId() const;               // 0x32b600
     SmartPtr<Component> mComponentRef;      // +0x10
     int mType;                              // +0x14
     bool mBroadcast;                        // +0x18
@@ -2241,6 +2241,7 @@ bool LobbyIsBehindFirewall();
 void LobbyBroadcastLobbyEvent(int inType, bool inFlag);
 // 0x359100 (cdecl): delivers inEvent to the lobby's components
 void LobbyBroadcastEvent(ComponentEvent* inEvent, bool inFlag);
+// 0x361bc0
 void LobbyKickClient(LobbyClient* inClient, bool inFlag);
 
 // 0x361250: default GUI manager (global 0x566270, assigned by WindowManager constructor).
@@ -2270,9 +2271,9 @@ inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall:
 // FontConfig (0x98 bytes): the factory 0x38a160 allocates it, constructor 0x38a1c0, implicit destructor 0x38a250.
 class FontConfig : public ComponentConfig {
 public:
-    static ComponentConfig* CfgFactory();
-    static Component* CompFactory();
-    FontConfig();
+    static ComponentConfig* CfgFactory(); // 0x38a160
+    static Component* CompFactory(); // 0x2c7b10
+    FontConfig(); // 0x38a1c0
     Font* GetFont(); // 0x38a300; recalculates the font on demand
     void SetFont(Font*); //38a3e0
     virtual bool PostParse(ConfigParser*); // 0x3099f0 (shared hook body)
@@ -2430,9 +2431,9 @@ public:
     TextListItem(const GUIString& inText, Image* inImage) : mText(inText), mColor(-1), mImage(inImage) {}
     TextListItem(const GUIString& inText, Font* inFont) : mText(inText), mColor(-1), mFont(inFont) {}
     virtual ~TextListItem() {}              // explicit inline destructor
-    virtual void Paint(Graphics&, ListArea*);
-    virtual void CalcDimensions(ListArea*);
-    virtual int Compare(const ListItem*, ListArea*) const;
+    virtual void Paint(Graphics&, ListArea*);     // 0x2fa380
+    virtual void CalcDimensions(ListArea*);  // 0x2fa2c0
+    virtual int Compare(const ListItem*, ListArea*) const;   // 0x2fa360
     GUIString mText;                        // +18
     long mColor;                            // +1c
     SmartPtr<Font> mFont;                   // +20
@@ -2453,7 +2454,7 @@ class PopupMenu;
 class MenuItem : public TextListItem {
 public:
     // Implicit virtual destructor (0x2fcde0)
-    MenuItem(const GUIString&,ComponentListener*);
+    MenuItem(const GUIString&,ComponentListener*); // 0x2fcd30
     virtual void Paint(Graphics&,ListArea*);     // 0x2fcf10, vtable +0x04
     virtual void CalcDimensions(ListArea*); // 0x2fcee0, vtable +0x08
     SmartPtr<PopupMenu> mSubMenu;            // +28
@@ -2516,7 +2517,7 @@ enum ListSortType { ListSortType_Ascending, ListSortType_Descending, ListSortTyp
 // Component (0x30) plus the ListArea pointer at +0x30 and the owned item at +0x34; 43 vtable slots.
 class ListAreaToolTip : public Component {
 public:
-    ListAreaToolTip(ListArea*);
+    ListAreaToolTip(ListArea*); // 0x2fb7b0
     virtual void Paint(Graphics&); // 0x2fb8d0, vtable +0x18
     void DoTip(ListItem*); //2fb9b0
     void EndTip(); //2fbab0
@@ -2533,7 +2534,7 @@ public:
     ListArea(); // at 0x006fa570 in the original
     virtual ~ListArea();
     typedef int (*SortFunc)(ListArea*, const ListItem*, const ListItem*);
-    static int NumberSortFunc(ListArea*,const ListItem*,const ListItem*);
+    static int NumberSortFunc(ListArea*,const ListItem*,const ListItem*); // 0x2faaf0
     struct LineSortPred {
         ListArea* mListArea; SortFunc mSortFunc; bool mAscending;
         LineSortPred(ListArea* area,SortFunc func,int type):mListArea(area),mSortFunc(func),mAscending(type==0) {}
@@ -2611,24 +2612,24 @@ class TreeArea;
 class TreeItem : public ListItem {
 public:
     TreeItem(); // 0x3140f0: a closed row at indent 0 with no parent and no index (the Rust row, GuiHost.cpp)
-    virtual ~TreeItem();
-    virtual void Paint(Graphics& g,ListArea* l) { this->NCall(l,EeWonTNodeCall::Paint,(intptr_t)&g); }
-    virtual void CalcDimensions(ListArea* l) { this->NCall(l,EeWonTNodeCall::CalcDimensions); }
-    virtual void SetViewport(ListArea* l,Container* v) { this->NCall(l,EeWonTNodeCall::SetViewport,(intptr_t)v); }
-    virtual int Compare(const ListItem* o,ListArea* l) const { return (int)const_cast<TreeItem*>(this)->NCall(l,EeWonTNodeCall::Compare,(intptr_t)o); }
-    virtual bool CanSelect(ListArea* l,int x,int y) { return this->NCall(l,EeWonTNodeCall::CanSelect,x,y)!=0; }
-    virtual void SetPos(int x,int y) { this->NCall(NULL,EeWonTNodeCall::SetPos,x,y); }
-    virtual void MouseEnter(ListArea* l,int x,int y) { this->NCall(l,EeWonTNodeCall::MouseEnter,x,y); }
-    virtual void MouseExit(ListArea* l) { this->NCall(l,EeWonTNodeCall::MouseExit); }
-    virtual void MouseMove(ListArea* l,int x,int y) { this->NCall(l,EeWonTNodeCall::MouseMove,x,y); }
-    virtual void MouseDrag(ListArea* l,int x,int y) { this->NCall(l,EeWonTNodeCall::MouseDrag,x,y); }
-    virtual void MouseDown(ListArea* l,int x,int y,int b) { this->NCall(l,EeWonTNodeCall::MouseDown,x,y,b); }
-    virtual void MouseUp(ListArea* l,int x,int y,int b) { this->NCall(l,EeWonTNodeCall::MouseUp,x,y,b); }
-    TreeItem* GetChild(int i) { return (TreeItem*)this->NCall(NULL,EeWonTNodeCall::GetChild,i); }
-    TreeItem* GetNextNonChild() { return (TreeItem*)this->NCall(NULL,EeWonTNodeCall::GetNextNonChild); }
-    void CloseAll() { this->NCall(NULL,EeWonTNodeCall::CloseAll); }
-    bool IsLastChild() { return this->NCall(NULL,EeWonTNodeCall::IsLastChild)!=0; }
-    bool ContainsPoint(int x,int y) { return this->NCall(NULL,EeWonTNodeCall::ContainsPoint,x,y)!=0; }
+    virtual ~TreeItem(); // 0x314170
+    virtual void Paint(Graphics& g,ListArea* l) { this->NCall(l,EeWonTNodeCall::Paint,(intptr_t)&g); } // 0x314b60
+    virtual void CalcDimensions(ListArea* l) { this->NCall(l,EeWonTNodeCall::CalcDimensions); } // 0x314df0
+    virtual void SetViewport(ListArea* l,Container* v) { this->NCall(l,EeWonTNodeCall::SetViewport,(intptr_t)v); } // 0x314dd0
+    virtual int Compare(const ListItem* o,ListArea* l) const { return (int)const_cast<TreeItem*>(this)->NCall(l,EeWonTNodeCall::Compare,(intptr_t)o); } // 0x314e20
+    virtual bool CanSelect(ListArea* l,int x,int y) { return this->NCall(l,EeWonTNodeCall::CanSelect,x,y)!=0; } // 0x314e40
+    virtual void SetPos(int x,int y) { this->NCall(NULL,EeWonTNodeCall::SetPos,x,y); } // 0x314b40
+    virtual void MouseEnter(ListArea* l,int x,int y) { this->NCall(l,EeWonTNodeCall::MouseEnter,x,y); } // 0x3142c0
+    virtual void MouseExit(ListArea* l) { this->NCall(l,EeWonTNodeCall::MouseExit); } // 0x3142e0
+    virtual void MouseMove(ListArea* l,int x,int y) { this->NCall(l,EeWonTNodeCall::MouseMove,x,y); } // 0x314310
+    virtual void MouseDrag(ListArea* l,int x,int y) { this->NCall(l,EeWonTNodeCall::MouseDrag,x,y); } // 0x314340
+    virtual void MouseDown(ListArea* l,int x,int y,int b) { this->NCall(l,EeWonTNodeCall::MouseDown,x,y,b); } // 0x3143b0
+    virtual void MouseUp(ListArea* l,int x,int y,int b) { this->NCall(l,EeWonTNodeCall::MouseUp,x,y,b); } // 0x314370
+    TreeItem* GetChild(int i) { return (TreeItem*)this->NCall(NULL,EeWonTNodeCall::GetChild,i); } // 0x314440
+    TreeItem* GetNextNonChild() { return (TreeItem*)this->NCall(NULL,EeWonTNodeCall::GetNextNonChild); } // 0x314470
+    void CloseAll() { this->NCall(NULL,EeWonTNodeCall::CloseAll); } // 0x314850
+    bool IsLastChild() { return this->NCall(NULL,EeWonTNodeCall::IsLastChild)!=0; } // 0x314b10
+    bool ContainsPoint(int x,int y) { return this->NCall(NULL,EeWonTNodeCall::ContainsPoint,x,y)!=0; } // 0x314e60
     bool IsOpen() { return this->NCall(NULL,EeWonTNodeCall::IsOpen)!=0; }
     ListItem* GetWrappedItem() { return (ListItem*)this->NCall(NULL,EeWonTNodeCall::Item); } // mItem
     int GetNumChildren() { return (int)this->NCall(NULL,EeWonTNodeCall::NumChildren); }
@@ -2649,21 +2650,21 @@ public:
 class TreeArea : public ListArea {
 public:
     TreeArea(); // 0x314ea0: the root row, open; list flags 0x30 off and 0x200 on; tree flags 3
-    virtual ~TreeArea();
-    virtual void HandleComponentEvent(ComponentEvent* e) { this->TCall(EeWonTreeCall::HandleEvent,(intptr_t)e); }
-    virtual void NotifyMouseItemGone() { this->TCall(EeWonTreeCall::NotifyMouseItemGone); }
-    virtual bool Sort() { return false; }
-    void SetSortType(ListSortType t) { this->TCall(EeWonTreeCall::SetSortType,t); }
+    virtual ~TreeArea(); // 0x314fc0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->TCall(EeWonTreeCall::HandleEvent,(intptr_t)e); } // 0x315280
+    virtual void NotifyMouseItemGone() { this->TCall(EeWonTreeCall::NotifyMouseItemGone); } // 0x315060
+    virtual bool Sort() { return false; } // 0x315050
+    void SetSortType(ListSortType t) { this->TCall(EeWonTreeCall::SetSortType,t); } // 0x315030
     void Sort(TreeItem* i,bool recursive=false) { this->TCall(EeWonTreeCall::SortItem,(intptr_t)i,recursive); } // sorts the visible subtree
     TreeItem* InsertString(TreeItem*,const GUIString&,Image* =NULL,int=-1);
     void CloseItem(TreeItem* i,bool all=false,bool send=true) { this->TCall(EeWonTreeCall::CloseItem,(intptr_t)i,all,send); }
     void SetTreeFlags(int f,bool on) { this->TCall(EeWonTreeCall::SetTreeFlags,f,on); }
-    TreeItem* InsertTreeItem(TreeItem* p,ListItem* i,int pos=-1) { return (TreeItem*)this->TCall(EeWonTreeCall::InsertTreeItem,(intptr_t)p,(intptr_t)i,pos); }
-    void RemoveTreeItem(TreeItem* i) { this->TCall(EeWonTreeCall::RemoveTreeItem,(intptr_t)i); }
+    TreeItem* InsertTreeItem(TreeItem* p,ListItem* i,int pos=-1) { return (TreeItem*)this->TCall(EeWonTreeCall::InsertTreeItem,(intptr_t)p,(intptr_t)i,pos); } // 0x315080
+    void RemoveTreeItem(TreeItem* i) { this->TCall(EeWonTreeCall::RemoveTreeItem,(intptr_t)i); } // 0x315190
     void ClearTree(bool=true) { this->TCall(EeWonTreeCall::RemoveAllItems,0); } // 0x3151a0 (the flag unused)
-    void RemoveAllItems(TreeItem* p) { this->TCall(EeWonTreeCall::RemoveAllItems,(intptr_t)p); }
-    void OpenItem(TreeItem* i,bool send=true) { this->TCall(EeWonTreeCall::OpenItem,(intptr_t)i,send); }
-    void ToggleItem(TreeItem* i,bool all=false,bool send=true) { this->TCall(EeWonTreeCall::ToggleItem,(intptr_t)i,all,send); }
+    void RemoveAllItems(TreeItem* p) { this->TCall(EeWonTreeCall::RemoveAllItems,(intptr_t)p); } // 0x3151b0
+    void OpenItem(TreeItem* i,bool send=true) { this->TCall(EeWonTreeCall::OpenItem,(intptr_t)i,send); } // 0x315220
+    void ToggleItem(TreeItem* i,bool all=false,bool send=true) { this->TCall(EeWonTreeCall::ToggleItem,(intptr_t)i,all,send); } // 0x315240
     bool TreeFlagSet(int flags) { return (this->TCall(EeWonTreeCall::TreeFlags)&flags)!=0; }
     EeWonTree* mTree;
 private:
@@ -2681,21 +2682,21 @@ inline intptr_t TreeItem::NCall(ListArea* l,EeWonTNodeCall c,intptr_t a,intptr_t
 class PopupMenu : public ListArea {
 public:
     PopupMenu(); // 0x2fd150: default configuration
-    virtual ~PopupMenu();
-    virtual void MouseDown(int x,int y,int b) { this->PCall(EeWonMenuCall::MouseDown,x,y,b); }
-    virtual void MouseUp(int x,int y,int b) { this->PCall(EeWonMenuCall::MouseUp,x,y,b); }
-    virtual void MouseMove(int x,int y) { this->PCall(EeWonMenuCall::MouseMove,x,y); }
-    virtual bool TimerEvent(int d) { return this->PCall(EeWonMenuCall::TimerEvent,d)!=0; }
-    virtual void HandleComponentEvent(ComponentEvent* e) { this->PCall(EeWonMenuCall::HandleEvent,(intptr_t)e); }
-    virtual void ListSelChangedHook() { this->PCall(EeWonMenuCall::ListSelChangedHook); }
+    virtual ~PopupMenu(); // 0x2fd340
+    virtual void MouseDown(int x,int y,int b) { this->PCall(EeWonMenuCall::MouseDown,x,y,b); } // 0x2fdb70
+    virtual void MouseUp(int x,int y,int b) { this->PCall(EeWonMenuCall::MouseUp,x,y,b); } // 0x2fdc10
+    virtual void MouseMove(int x,int y) { this->PCall(EeWonMenuCall::MouseMove,x,y); } // 0x2fdb10
+    virtual bool TimerEvent(int d) { return this->PCall(EeWonMenuCall::TimerEvent,d)!=0; } // 0x2fd820
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->PCall(EeWonMenuCall::HandleEvent,(intptr_t)e); } // 0x2fd7d0
+    virtual void ListSelChangedHook() { this->PCall(EeWonMenuCall::ListSelChangedHook); } // 0x2fd860
     MenuItem* AddItem(const GUIString&,int); //2fd440,ret8
-    MenuItem* AddItem(const GUIString&,ComponentListener*,int);
+    MenuItem* AddItem(const GUIString&,ComponentListener*,int); // 0x2fd460 (ret 0x0c)
     MenuItem* AddItem(const GUIString&,NativeImage*,ComponentListener*,int); //2fd480,ret10
     void AddSeperator(); //2fd8b0,ret0
-    void EndSubMenu() { this->PCall(EeWonMenuCall::EndSubMenu); }
-    void CheckSubMenu() { this->PCall(EeWonMenuCall::CheckSubMenu); }
+    void EndSubMenu() { this->PCall(EeWonMenuCall::EndSubMenu); } // 0x2fd580
+    void CheckSubMenu() { this->PCall(EeWonMenuCall::CheckSubMenu); } // 0x2fd610
     bool TryKeyDown(int k) { return this->PCall(EeWonMenuCall::TryKeyDown,k)!=0; } // the keys, the submenu's first
-    void Reset() { this->PCall(EeWonMenuCall::Reset); }
+    void Reset() { this->PCall(EeWonMenuCall::Reset); } // 0x2fd400
     EeWonMenu* mMenu;
 private:
     intptr_t PCall(EeWonMenuCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_menu_call(this->mMenu,c,a,b,cc); }
@@ -2722,31 +2723,31 @@ class MultiListHeader;
 // MultiListArea (0x1a4 bytes in the original).
 class MultiListArea : public ListArea {
 public:
-    MultiListArea(int=1);
+    MultiListArea(int=1); // 0x3033a0 (ret 4)
     virtual ~MultiListArea();
-    virtual void NotifyMouseItemGone() { this->MCall(EeWonMultiCall::NotifyMouseItemGone); }
-    void SetNumColumns(int n) { this->MCall(EeWonMultiCall::SetNumColumns,n); }
+    virtual void NotifyMouseItemGone() { this->MCall(EeWonMultiCall::NotifyMouseItemGone); } // 0x3035d0
+    void SetNumColumns(int n) { this->MCall(EeWonMultiCall::SetNumColumns,n); } // 0x303600
     void SetColumnSizeMode(int c,unsigned char m) { this->MCall(EeWonMultiCall::SetColumnSizeMode,c,m); }
     MultiListItem* InsertRow(int=-1); // inserts a blank row
-    void SetColumnWidth(int c,int w,bool fromSize) { this->MCall(EeWonMultiCall::SetColumnWidth,c,w,fromSize); }
+    void SetColumnWidth(int c,int w,bool fromSize) { this->MCall(EeWonMultiCall::SetColumnWidth,c,w,fromSize); } // 0x3037e0
     int GetColumnPaintContext() { return (int)this->MCall(EeWonMultiCall::PaintContext); }
     int GetSortColumn() { return (int)this->MCall(EeWonMultiCall::SortColumn); }
     int GetSortColumnPrev() { return (int)this->MCall(EeWonMultiCall::SortColumnPrev); }
     void SetDynamicSizeColumn(int c) { this->MCall(EeWonMultiCall::SetDynamicSizeColumn,c); }
     void SetAutoGrowColumns(bool on) { this->MCall(EeWonMultiCall::SetAutoGrowColumns,on); }
-    void SetSortColumn(int c,ListSortType t) { this->MCall(EeWonMultiCall::SetSortColumn,c,t); }
-    void SetSortColumnFunc(int c,SortFunc f) { this->MCall(EeWonMultiCall::SetSortColumnFunc,c,(intptr_t)f); }
-    void SetColumnHAlign(int c,HorzAlign a) { this->MCall(EeWonMultiCall::SetColumnHAlign,c,a); }
-    virtual void AdjustPosition(bool b) { this->MCall(EeWonMultiCall::AdjustPosition,b); }
+    void SetSortColumn(int c,ListSortType t) { this->MCall(EeWonMultiCall::SetSortColumn,c,t); } // 0x303ac0
+    void SetSortColumnFunc(int c,SortFunc f) { this->MCall(EeWonMultiCall::SetSortColumnFunc,c,(intptr_t)f); } // 0x303b50
+    void SetColumnHAlign(int c,HorzAlign a) { this->MCall(EeWonMultiCall::SetColumnHAlign,c,a); } // 0x303790
+    virtual void AdjustPosition(bool b) { this->MCall(EeWonMultiCall::AdjustPosition,b); } // 0x303bb0
     virtual void Virtual08() { this->MCall(EeWonMultiCall::SizeChanged); } // 0x303be0 SizeChanged
-    virtual void ScrollPaint(Graphics& g) { this->MCall(EeWonMultiCall::ScrollPaint,(intptr_t)&g); }
-    MultiListItem* UpdateItem(MultiListItem* r) { return (MultiListItem*)this->MCall(EeWonMultiCall::UpdateItem,(intptr_t)r); }
-    MultiListItem* SetCell(int r,int c,ListItem* i) { return (MultiListItem*)this->MCall(EeWonMultiCall::SetCell,r,c,(intptr_t)i); }
-    int GetColumnAt(int x) { return (int)this->MCall(EeWonMultiCall::ColumnAt,x); }
-    int GetColumnPos(int c) { return (int)this->MCall(EeWonMultiCall::ColumnPos,c); }
-    int GetColumnWidth(int c) { return (int)this->MCall(EeWonMultiCall::ColumnWidth,c); }
-    MultiListItem* InsertItem(MultiListItem* r,int pos=-1);
-    MultiListItem* SetString(int,int,const GUIString&,Image* =NULL);
+    virtual void ScrollPaint(Graphics& g) { this->MCall(EeWonMultiCall::ScrollPaint,(intptr_t)&g); } // 0x303c70
+    MultiListItem* UpdateItem(MultiListItem* r) { return (MultiListItem*)this->MCall(EeWonMultiCall::UpdateItem,(intptr_t)r); } // 0x303e50
+    MultiListItem* SetCell(int r,int c,ListItem* i) { return (MultiListItem*)this->MCall(EeWonMultiCall::SetCell,r,c,(intptr_t)i); } // 0x303ee0
+    int GetColumnAt(int x) { return (int)this->MCall(EeWonMultiCall::ColumnAt,x); } // 0x3039c0
+    int GetColumnPos(int c) { return (int)this->MCall(EeWonMultiCall::ColumnPos,c); } // 0x303a60
+    int GetColumnWidth(int c) { return (int)this->MCall(EeWonMultiCall::ColumnWidth,c); } // 0x303960
+    MultiListItem* InsertItem(MultiListItem* r,int pos=-1); // 0x303e30
+    MultiListItem* SetString(int,int,const GUIString&,Image* =NULL); // 0x303f60
     EeWonMulti* mMulti;
 private:
     intptr_t MCall(EeWonMultiCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_multi_call(this->mMulti,c,a,b,cc); }
@@ -2757,8 +2758,8 @@ public:
     MultiListItem(); // the Rust row (GuiHost.cpp)
     virtual ~MultiListItem();
     void InsertItem(ListItem* i) { this->RCall(NULL,EeWonMRowCall::InsertItem,(intptr_t)i); } // appends a cell
-    void SetItem(ListItem* i,int c) { this->RCall(NULL,EeWonMRowCall::SetItem,(intptr_t)i,c); }
-    ListItem* GetItem(int c) const { return (ListItem*)const_cast<MultiListItem*>(this)->RCall(NULL,EeWonMRowCall::GetItem,c); }
+    void SetItem(ListItem* i,int c) { this->RCall(NULL,EeWonMRowCall::SetItem,(intptr_t)i,c); } // 0x302480
+    ListItem* GetItem(int c) const { return (ListItem*)const_cast<MultiListItem*>(this)->RCall(NULL,EeWonMRowCall::GetItem,c); } // 0x302500
     virtual void Paint(Graphics& g,ListArea* l) { this->RCall(l,EeWonMRowCall::Paint,(intptr_t)&g); }
     virtual void CalcDimensions(ListArea* l) { this->RCall(l,EeWonMRowCall::CalcDimensions); }
     virtual void SetViewport(ListArea* l,Container* v) { this->RCall(l,EeWonMRowCall::SetViewport,(intptr_t)v); }
@@ -2783,24 +2784,24 @@ inline MultiListItem* MultiListArea::InsertRow(int row) { return this->InsertIte
 // MultiListHeader (0xac bytes in the original, the 51 vtable slots of Container; ten overrides).
 class MultiListHeader : public Container {
 public:
-    MultiListHeader(MultiListArea* =NULL);
+    MultiListHeader(MultiListArea* =NULL); // 0x302a90 (ret 4)
     virtual ~MultiListHeader();
     virtual void Virtual08() { this->HCall(EeWonMHeadCall::SizeChanged); } // 0x302fb0 SizeChanged
     virtual void Paint(Graphics&); // 0x305e00 (the container paint)
-    virtual void MouseExit() { this->HCall(EeWonMHeadCall::MouseExit); }
-    virtual void MouseDown(int x,int y,int b) { this->HCall(EeWonMHeadCall::MouseDown,x,y,b); }
-    virtual void MouseUp(int x,int y,int b) { this->HCall(EeWonMHeadCall::MouseUp,x,y,b); }
-    virtual void MouseMove(int x,int y) { this->HCall(EeWonMHeadCall::MouseMove,x,y); }
-    virtual void MouseDrag(int x,int y) { this->HCall(EeWonMHeadCall::MouseDrag,x,y); }
-    virtual void HandleComponentEvent(ComponentEvent* e) { this->HCall(EeWonMHeadCall::HandleEvent,(intptr_t)e); }
+    virtual void MouseExit() { this->HCall(EeWonMHeadCall::MouseExit); } // 0x303390
+    virtual void MouseDown(int x,int y,int b) { this->HCall(EeWonMHeadCall::MouseDown,x,y,b); } // 0x303260
+    virtual void MouseUp(int x,int y,int b) { this->HCall(EeWonMHeadCall::MouseUp,x,y,b); } // 0x303350
+    virtual void MouseMove(int x,int y) { this->HCall(EeWonMHeadCall::MouseMove,x,y); } // 0x303290
+    virtual void MouseDrag(int x,int y) { this->HCall(EeWonMHeadCall::MouseDrag,x,y); } // 0x3032f0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->HCall(EeWonMHeadCall::HandleEvent,(intptr_t)e); } // 0x302be0
     virtual Component* FindChildAt(int,int); // 0x304710 (the container hit test)
-    void SetColumnItem(int c,Component* i) { this->HCall(EeWonMHeadCall::SetColumnItem,c,(intptr_t)i); }
-    void SetMultiListArea(MultiListArea* a) { this->HCall(EeWonMHeadCall::SetMultiListArea,(intptr_t)a); }
-    void NotifyColumnChange() { this->HCall(EeWonMHeadCall::NotifyColumnChange); }
-    void SetSortColumn(int c,ListSortType t) { this->HCall(EeWonMHeadCall::SetSortColumn,c,t); }
-    static ListSortType GetSortTypeForButton(Component*);
-    int GetColumnIndex(Component* c) { return (int)this->HCall(EeWonMHeadCall::ColumnIndex,(intptr_t)c); }
-    ListSortType GetSortType(int c) { return (ListSortType)this->HCall(EeWonMHeadCall::SortType,c); }
+    void SetColumnItem(int c,Component* i) { this->HCall(EeWonMHeadCall::SetColumnItem,c,(intptr_t)i); } // 0x302cf0
+    void SetMultiListArea(MultiListArea* a) { this->HCall(EeWonMHeadCall::SetMultiListArea,(intptr_t)a); } // 0x302bc0
+    void NotifyColumnChange() { this->HCall(EeWonMHeadCall::NotifyColumnChange); } // 0x302e10
+    void SetSortColumn(int c,ListSortType t) { this->HCall(EeWonMHeadCall::SetSortColumn,c,t); } // 0x302cb0
+    static ListSortType GetSortTypeForButton(Component*); // 0x303050
+    int GetColumnIndex(Component* c) { return (int)this->HCall(EeWonMHeadCall::ColumnIndex,(intptr_t)c); } // 0x302fd0
+    ListSortType GetSortType(int c) { return (ListSortType)this->HCall(EeWonMHeadCall::SortType,c); } // 0x303010
     bool DrawSortArrow() { return this->HCall(EeWonMHeadCall::DrawSortArrow)!=0; }
     EeWonMHead* mHead;
 private:

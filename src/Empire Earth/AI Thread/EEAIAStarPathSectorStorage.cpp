@@ -12,18 +12,24 @@
 #include "ee/EEAIAStarTerrainStorage.h"
 #include "ee/EEAIAStarPathSectorStorage.h"
 
+// FUNCTION: EXE 0x41b7dc
 // Creates the path-sector search storage with no per-tile sub-sector id grid yet
 EEAIAStarPathSectorStorage::EEAIAStarPathSectorStorage()
     : mSubSectorIDs(NULL)
 {
 }
 
+// SYNTHETIC: EXE 0x41b7f2
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x41b80e
 // Destroys the storage, freeing its per-tile sub-sector ids
 EEAIAStarPathSectorStorage::~EEAIAStarPathSectorStorage()
 {
     delete[] this->mSubSectorIDs;
 }
 
+// FUNCTION: EXE 0x41b829
 // Sizes the node arrays and per-tile sub-sector ids for an inWidth x inHeight search (reallocating on a size change)
 // and clears node and tile flags, only the last search's dirty bounds plus one when it can
 // NEAR: the block layout and the frameless shape match; the original keeps inWidth/inHeight in

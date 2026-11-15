@@ -28,3 +28,21 @@ WONScrollThumb::WONScrollThumb()
     this->SetScaleImage(true);
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00717990
+// (public: __thiscall WONAPI::WONSimpleButton::WONSimpleButton(void)    [??0WONSimpleButton@WONAPI@@QAE@XZ])
+// TEMPLATE: WON 0x007194a0
+// (public: __thiscall WONAPI::WONScrollThumb::WONScrollThumb(void)    [??0WONScrollThumb@WONAPI@@QAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00717a10
+// (public: virtual void * __thiscall WONAPI::WONSimpleButton::`scalar deleting destructor'(unsigned int)    [??_GWONSimpleButton@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007194c0
+// (public: virtual void * __thiscall WONAPI::WONScrollThumb::`scalar deleting destructor'(unsigned int)    [??_GWONScrollThumb@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00717a30
+// (public: virtual __thiscall WONAPI::WONSimpleButton::~WONSimpleButton(void))
+// TEMPLATE: WON 0x007194e0
+// (public: virtual __thiscall WONAPI::WONScrollThumb::~WONScrollThumb(void))

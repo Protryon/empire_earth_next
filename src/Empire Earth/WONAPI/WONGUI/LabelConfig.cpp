@@ -16,6 +16,7 @@
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 
 namespace WONAPI {
+// FUNCTION: WON 0x0078d2b0
 // Handles the label configuration keys TEXT, FONT, TEXTCOLOR, BACKGROUND, VERTALIGN, HORZALIGN, WRAP and
 // ADJUSTHEIGHTTOFITTEXT; passes other keys to the base configuration
 bool LabelConfig::Virtual24(const std::string& instruction)
@@ -35,8 +36,13 @@ bool LabelConfig::Virtual24(const std::string& instruction)
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x0078d290
 // Creates a label configuration (base members only)
 LabelConfig::LabelConfig()
 {
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x0078ef70
+// (public: virtual __thiscall WONAPI::LabelConfig::~LabelConfig(void)    [??1LabelConfig@WONAPI@@UAE@XZ])

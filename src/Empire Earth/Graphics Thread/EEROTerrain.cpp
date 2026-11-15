@@ -58,8 +58,8 @@ static_assert(sizeof(GEColor) == sizeof(EeGfxColor) && sizeof(GE3DPoint) == size
                   sizeof(GETextureCoordinate) == sizeof(EeGfxTexCoord),
               "GE mirrors");
 
-extern unsigned long& gTexturePixelDepth;
-extern unsigned long& gTextureMipLevelsToDrop;
+extern unsigned long& gTexturePixelDepth;    // 0x5308b4
+extern unsigned long& gTextureMipLevelsToDrop; // 0x530894 (provisional name)
 extern bool& gDrawClouds;                    // 0x5308d3 (the clouds are drawn; provisional name)
 extern bool& gTrilinearFilter;               // 0x5308da (the sky textures use mip filtering; provisional name)
 
@@ -68,39 +68,60 @@ static const unsigned long sCloudIndices[30] = {
     0, 1, 4, 4, 1, 5, 2, 0, 6, 6, 0, 4, 3, 2, 7, 7, 2, 6, 1, 3, 5, 5, 3, 7, 4, 5, 6, 6, 5, 7,
 };
 // 0x441408..0x441414 (the cloud layer's height, overhang, z and texture repeat): ee_gfx terrain.rs CLOUD_*
-const float kHighlightOpacity = 0.5f;
+const float kHighlightOpacity = 0.5f;       // 0x441418
 const float kEEROTerrainStarU = 6.0f;                  // 0x441428: original word 0000c040, verified
 
-const float kSkyRearClipping = 20000.0f;
+const float kSkyRearClipping = 20000.0f;    // 0x441b94
 // 0x441b98: the sky floor -10000.0f is a literal (fld; fst ... fstp keeps it on the x87 stack across both corners)
 
 // the brush highlight colour (0x5293e8) (provisional name)
 GEColor gBrushHighlightColor;
+// SYNTHETIC: EXE 0x51251f   (wrapper)
+// SYNTHETIC: EXE 0x512529   (ctor)
+// SYNTHETIC: EXE 0x512542   (registrar)
+// SYNTHETIC: EXE 0x51254e   (dtor)
 
 // 0x5293e0 (two floats) (provisional name; type inferred)
 GETextureCoordinate gU5293E0;
+// SYNTHETIC: EXE 0x51254f   (wrapper)
+// SYNTHETIC: EXE 0x512559   (ctor)
+// SYNTHETIC: EXE 0x51256a   (registrar)
+// SYNTHETIC: EXE 0x512576   (dtor)
 
 // the sky colours by time of day (0x5290b0) (provisional name)
 GEColor gSkyColors[68];
+// SYNTHETIC: EXE 0x512577   (wrapper)
+// SYNTHETIC: EXE 0x512581   (ctor)
+// SYNTHETIC: EXE 0x51259c   (registrar)
+// SYNTHETIC: EXE 0x5125a8   (dtor)
 
 // the map's tile runs as of the last frame, drawn as grid lines (0x5290a0) (provisional name)
 std::vector<RTSMapTileRun> gGridRuns;
+// SYNTHETIC: EXE 0x5125c3   (wrapper)
+// SYNTHETIC: EXE 0x5125cd   (ctor)
+// SYNTHETIC: EXE 0x5125e5   (registrar)
+// SYNTHETIC: EXE 0x5125f1   (dtor)
 
 GETexture* gAreaEffectTexture;
 GETexture* gCircleAreaEffectTexture;
-static GEModel* sSkyModel;
-static GEModel* sCloudModel;
-static GETexture* sCloudTexture;
-static GEModel* sOuterStarModel;
-static GEModel* sInnerStarModel;
-static GETexture* sStarTexture;
+static GEModel* sSkyModel;                  // 0x5293fc
+static GEModel* sCloudModel;                // 0x529400
+static GETexture* sCloudTexture;            // 0x529404
+static GEModel* sOuterStarModel;            // 0x529408
+static GEModel* sInnerStarModel;            // 0x52940c
+static GETexture* sStarTexture;             // 0x529410
 
+// FUNCTION: EXE 0x5125fb
 // Creates the terrain's render object with the terrain grid off
 EEROTerrain::EEROTerrain()
 {
     this->mGridMode = 0;
 }
 
+// SYNTHETIC: EXE 0x512611
+// (the scalar deleting destructor, emitted with the vtable; slot EEROTerrain+0x10)
+
+// FUNCTION: EXE 0x51262d
 // Destroys the terrain's render object
 EEROTerrain::~EEROTerrain()
 {
@@ -109,6 +130,7 @@ EEROTerrain::~EEROTerrain()
 static void UpdateSkyColors();
 static void UpdateCloudLayer();
 
+// FUNCTION: EXE 0x512638
 // Prepares the frame: updates the sky colours and models, the clouds (black fog colour on space maps instead),
 // the fog of war (all seen for see-all or the free camera) and copies the map's grid runs
 void EEROTerrain::FrameStarting()
@@ -130,6 +152,7 @@ void EEROTerrain::FrameStarting()
     EETakeTerrainSnapshot();   // port: what RenderScene draws from the map and the editor (ee/EERenderSnapshot.h)
 }
 
+// FUNCTION: EXE 0x5126ce
 // Creates the outer and inner star models (space maps' backdrop) and loads their texture (provisional name)
 static void CreateStarModels()
 {
@@ -209,6 +232,7 @@ static void CreateStarModels()
     sInnerStarModel->SetTexture(sStarTexture, gScreenIndex);
 }
 
+// FUNCTION: EXE 0x512bc4
 // Creates the cloud layer model (opaque inner square, transparent outer edge) and loads the cloud texture
 // (provisional name)
 static void CreateCloudModel()
@@ -293,6 +317,7 @@ static const float sSkyColorTable[68][3] = {
     {0.008f, 0.031f, 0.125f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f},
     {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.008f, 0.031f, 0.125f},
 };
+// FUNCTION: EXE 0x512e7f
 // Creates the sky dome model and its colour table, the star models, the clouds (when clouds are on) and
 // loads the area-effect textures (square and circle)
 void EEROTerrain::CreateSkyModel()
@@ -367,6 +392,7 @@ void EEROTerrain::CreateSkyModel()
     gCircleAreaEffectTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
 }
 
+// FUNCTION: EXE 0x5131a4
 // Draws the sky (stars on space maps, the inner layer only with clouds on; else sky and clouds), the terrain,
 // the editor brush highlight, the map's coloured rectangles (erasing faded ones), grid, lines and ground effects
 void EEROTerrain::RenderScene()
@@ -461,12 +487,14 @@ void EEROTerrain::RenderScene()
     gRasterizer->SetAlphaTestingRefValue(theAlphaRefValue, gScreenIndex);
 }
 
+// FUNCTION: EXE 0x5138a6
 // Steps the terrain grid mode forwards or backwards through 0..17, wrapping around
 void EEROTerrain::StepGridMode(bool inBackwards)
 {
     this->mGridMode = ee_gfx_terrain_grid_mode_step((int32_t)this->mGridMode, inBackwards);   // ee_gfx terrain.rs
 }
 
+// FUNCTION: EXE 0x5138d2
 // Releases the sky, cloud and star models and textures and the two area-effect textures
 void EEROTerrain::ReleaseSkyModels()
 {
@@ -496,6 +524,7 @@ void EEROTerrain::ReleaseSkyModels()
 
 // the band of each group of four sky vertices (0x441a04), the sky vertices (0x441a18) and the star vertices
 // (0x441ab8): ee_gfx terrain.rs SKY_BANDS, SKY_VERTICES and STAR_VERTICES
+// FUNCTION: EXE 0x51396f
 // Places the cloud layer over the map square and scrolls its texture by the environment's cloud offset
 // (kept in 0..1) (provisional name)
 static void UpdateCloudLayer()
@@ -518,6 +547,7 @@ static void UpdateCloudLayer()
             *reinterpret_cast<const GETextureCoordinate*>(&theLayer.coords[i]), i);
 }
 
+// FUNCTION: EXE 0x513ebd
 // Blends the sky colours for the environment's time of day (17 steps) into the sky dome and fog colour, and
 // stretches the sky dome and star models over the map square (provisional name)
 static void UpdateSkyColors()
@@ -548,14 +578,27 @@ static void UpdateSkyColors()
     sInnerStarModel->ComputeBoundingVolumes();
 }
 
+// the COMDATs closing the unit: the coloured rectangles' erase (vector<RTSColoredRectangle>::erase, its copy and the
+// element's implicit operator=) and RTSWorld::GetMap's refused copy
+// SYNTHETIC: EXE 0x5141c5
+// SYNTHETIC: EXE 0x514229
+// SYNTHETIC: EXE 0x514252
+// SYNTHETIC: EXE 0x51428f
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEROTerrain::FrameDone()
 {
 }
 
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEROTerrain::SceneStarting()
 {
 }
 
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEROTerrain::Virtual14(long)
 {
 }

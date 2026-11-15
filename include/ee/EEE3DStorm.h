@@ -17,14 +17,14 @@ template <class T> class U2DRectangle;
 
 // Free helpers in another unit (0x241c2d.. range; provisional names): the 8-way direction from (inX1, inY1) towards
 // (inX2, inY2) (UMArcTan2) and the tile inDistance steps from inTile in that direction.
-long EEGetTileDirection(long inX1, long inY1, long inX2, long inY2);
-void EEGetNextTile(const EETileCoordinate& inTile, EETileCoordinate& outTile, long inDirection, long inDistance);
+long EEGetTileDirection(long inX1, long inY1, long inX2, long inY2);  // 0x2451df
+void EEGetNextTile(const EETileCoordinate& inTile, EETileCoordinate& outTile, long inDirection, long inDistance);  // 0x248ecc
 
 class EEE3DStorm : public EEEffect3D {
 public:
     // 0xfb0c8 (no unit: the effect covers inTiles)
     EEE3DStorm(long inKind, const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inGraphicEffect);
-    EEE3DStorm(long inKind);
+    EEE3DStorm(long inKind);                // 0xfb191
     virtual ~EEE3DStorm();                  // +0x00 0xfb217 (??_G 0xfb175)
     // +0x24 (the rain's 0xf76da, the snow's 0xf9e42): copies the drops into the draw list, render queue 4
     virtual long Queue(EEEffectQueue* inQueues);

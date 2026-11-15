@@ -121,6 +121,7 @@
 // the shared empty byte string (the original references it at 0x1a4eb4; no other string has its contents)
 extern char gEmptyString[];
 
+// FUNCTION: EXE 0x5a4e99
 // Builds the unit tab's status panel (portrait, unit name, two status bars, nine attribute rows and the armor
 // title), all hidden, and wires them into its status box
 EEUIFSEUpgradePanel::EEUIFSEUpgradePanel(unsigned long& ioID, unsigned long& ioIndex,
@@ -224,6 +225,7 @@ EEUIFSEUpgradePanel::EEUIFSEUpgradePanel(unsigned long& ioID, unsigned long& ioI
     ioIndex++;
 }
 
+// FUNCTION: EXE 0x5a549d
 // Destroys the upgrade panel, deleting its status box and all of its controls
 EEUIFSEUpgradePanel::~EEUIFSEUpgradePanel()
 {
@@ -239,6 +241,7 @@ EEUIFSEUpgradePanel::~EEUIFSEUpgradePanel()
     }
 }
 
+// FUNCTION: EXE 0x5a551a
 // Fills the panel's status box with the given unit's details
 void EEUIFSEUpgradePanel::ShowUnit(EEUnit* inUnit)
 {

@@ -89,6 +89,7 @@
 #include "ee/EERandomMapClass.h"
 #include "ee/EEStartingResources.h"
 #include "ee/EEStringIDs.h"
+// FUNCTION: EXE 0x5304e4
 // Deletes the map, the scenario, effect, calamity and weather managers and every player, then resets the state
 void EEGameState::Clear()
 {
@@ -110,6 +111,7 @@ void EEGameState::Clear()
     this->Reset();
 }
 
+// FUNCTION: EXE 0x5305bf
 // Lets every restorable object repair its pointers with the loaded save's version
 void EEGameState::RepairRestorables()
 {
@@ -117,6 +119,7 @@ void EEGameState::RepairRestorables()
         FSRestorable*& theRestorable = this->mRestorables[i]; theRestorable->RepairPointers(this->mMajorVersion, this->mMinorVersion); }
 }
 
+// FUNCTION: EXE 0x5305fb
 // Resets the game state's settings to their defaults (normal speed and zoom, no map, managers, teams or
 // loaded players, a fresh checksum)
 void EEGameState::Init()
@@ -153,6 +156,7 @@ void EEGameState::Init()
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern long gDefaultTerrain;                // EETerrainTable.cpp
 
+// FUNCTION: EXE 0x5306f2
 // Builds a new game from the options: loads a saved game, scenario or campaign scenario (setting the error
 // message on failure), or creates the players, teams, managers and random map; returns whether it succeeded
 bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
@@ -442,6 +446,10 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
     return theResult;
 }
 
+// Compiler-generated: EECampaign's implicit dtor (theCampaign)
+// TEMPLATE: EXE 0x5317a9
+
+// FUNCTION: EXE 0x5317eb
 // Forgets the map, the managers and the player list without deleting them
 void EEGameState::Reset()
 {
@@ -453,6 +461,7 @@ void EEGameState::Reset()
     this->mCalamityHelper = NULL;
 }
 
+// FUNCTION: EXE 0x53181d
 // Replaces the calamity helper, resetting and deleting the old one
 void EEGameState::SetCalamityHelper(EEPCalamityHelper* inHelper)
 {
@@ -465,6 +474,7 @@ void EEGameState::SetCalamityHelper(EEPCalamityHelper* inHelper)
     this->mCalamityHelper = inHelper;
 }
 
+// FUNCTION: EXE 0x531854
 // Replaces the weather manager, deleting the old one
 void EEGameState::SetEnvironmentManager(EEEnvironmentManager* inManager)
 {
@@ -472,26 +482,38 @@ void EEGameState::SetEnvironmentManager(EEEnvironmentManager* inManager)
     this->mEnvironmentManager = inManager;
 }
 
+// RTSPlayer::SetColor (inline; out of line after Create, its first user here)
+// TEMPLATE: EXE 0x531872
+
+// FUNCTION: EXE 0x5318bd
 // Returns the colour of a player colour index (the default colour past the table's end)
 const GEColor& EEGetPlayerColor(unsigned long inIndex)
 {
     return inIndex < EEColorTable::sTable.size() ? EEColorTable::sTable[inIndex]->mColor : EEColorTable::sColor;
 }
 
+// FUNCTION: EXE 0x5318e6
 // Returns a starting resource level by index
 EEStartingResources* EEGetResourceLevel(long inIndex)
 {
     return EEStartingResources::sTable[inIndex];
 }
 
+// TEMPLATE: EXE 0x5318f4
+// TEMPLATE: EXE 0x531a5e
+// TEMPLATE: EXE 0x531a99
+
 #include "ee/EEVictoryCondition.h"
 #include "ee/EEVCWonder.h"
 
+// FUNCTION: EXE 0x531b02
 // Destroys the team, deleting its victory condition
 EETeam::~EETeam()
 {
     delete this->mVictoryCondition;
 }
+
+// TEMPLATE: EXE 0x531b22
 
 // Does nothing after a game is loaded (no address: empty, ICF-folded into 0x163d6f; EEGameStateLoader::LoadGame
 // 0x14a5ba calls it with the save's versions: `push hdr.mMinorVersion; mov ecx, [esi] (the EEGameState*); push
@@ -499,3 +521,6 @@ EETeam::~EETeam()
 void EEGameState::FinishLoad(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
 }
+
+// TEMPLATE: EXE 0x531b5f
+// ??_GESChecksumEntry@@QAEPAXI@Z

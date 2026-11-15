@@ -82,7 +82,9 @@ typedef huff_entropy_decoder * huff_entropy_ptr;
  * Initialize for a Huffman-compressed scan.
  */
 
+// FUNCTION: JPEG 0x1008cd78
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x80f370
 start_pass_huff_decoder (j_decompress_ptr cinfo)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
@@ -145,7 +147,9 @@ start_pass_huff_decoder (j_decompress_ptr cinfo)
  * Note this is also used by jdphuff.c.
  */
 
+// FUNCTION: JPEG 0x1008c8be
 GLOBAL(void)
+// FUNCTION: EXEIMG 0x80ee40
 jpeg_make_d_derived_tbl (j_decompress_ptr cinfo, boolean isDC, int tblno,
 			 d_derived_tbl ** pdtbl)
 {
@@ -288,7 +292,9 @@ jpeg_make_d_derived_tbl (j_decompress_ptr cinfo, boolean isDC, int tblno,
 #endif
 
 
+// FUNCTION: JPEG 0x1008cb5b
 GLOBAL(boolean)
+// FUNCTION: EXEIMG 0x80f120
 jpeg_fill_bit_buffer (bitread_working_state * state,
 		      register bit_buf_type get_buffer, register int bits_left,
 		      int nbits)
@@ -394,7 +400,9 @@ jpeg_fill_bit_buffer (bitread_working_state * state,
  * See jdhuff.h for info about usage.
  */
 
+// FUNCTION: JPEG 0x1008cc5b
 GLOBAL(int)
+// FUNCTION: EXEIMG 0x80f240
 jpeg_huff_decode (bitread_working_state * state,
 		  register bit_buf_type get_buffer, register int bits_left,
 		  d_derived_tbl * htbl, int min_bits)
@@ -464,7 +472,9 @@ static const int extend_offset[16] = /* entry n is (-1 << n) + 1 */
  * Returns FALSE if must suspend.
  */
 
+// FUNCTION: JPEG 0x1008d25c
 LOCAL(boolean)
+// FUNCTION: EXEIMG 0x80f900
 process_restart (j_decompress_ptr cinfo)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
@@ -513,7 +523,9 @@ process_restart (j_decompress_ptr cinfo)
  * this module, since we'll just re-assign them on the next call.)
  */
 
+// FUNCTION: JPEG 0x1008ceae
 METHODDEF(boolean)
+// FUNCTION: EXEIMG 0x80f4c0
 decode_mcu (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
@@ -631,7 +643,9 @@ decode_mcu (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
  * Module initialization routine for Huffman entropy decoding.
  */
 
+// FUNCTION: JPEG 0x1008cd3b
 GLOBAL(void)
+// FUNCTION: EXEIMG 0x80f330
 jinit_huff_decoder (j_decompress_ptr cinfo)
 {
   huff_entropy_ptr entropy;

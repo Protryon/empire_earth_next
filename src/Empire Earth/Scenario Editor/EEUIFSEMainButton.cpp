@@ -27,6 +27,7 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainButton.h"
 
+// FUNCTION: EXE 0x5a147f
 // Creates a 32x32 editor tab button whose normal and pressed images are cells of the button texture
 EEUIFSEMainButton::EEUIFSEMainButton(unsigned long inId, unsigned char inFlag, GETexture* inTexture,
                                      const GE2DPoint& inNormalCell, const GE2DPoint& inPressedCell,
@@ -80,6 +81,10 @@ EEUIFSEMainButton::EEUIFSEMainButton(unsigned long inId, unsigned char inFlag, G
     this->mFlag = inFlag;
 }
 
+// SYNTHETIC: EXE 0x5a17e0
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x5a17fc
 // Destroys the tab button, releasing its two bitmaps
 EEUIFSEMainButton::~EEUIFSEMainButton()
 {
@@ -87,6 +92,7 @@ EEUIFSEMainButton::~EEUIFSEMainButton()
     this->mPressedBitmap2->Dereference();
 }
 
+// FUNCTION: EXE 0x5a1827
 // Checks the tab button and selects its tab (posted through the user interface when there is one), showing it pressed
 void EEUIFSEMainButton::Check()
 {
@@ -99,6 +105,7 @@ void EEUIFSEMainButton::Check()
     this->SetNormalBitmap(this->mPressedBitmap2);
 }
 
+// FUNCTION: EXE 0x5a1885
 // Checks the tab button and selects its tab directly on the editor, showing it pressed
 void EEUIFSEMainButton::CheckDirect()
 {
@@ -108,6 +115,7 @@ void EEUIFSEMainButton::CheckDirect()
     this->SetNormalBitmap(this->mPressedBitmap2);
 }
 
+// FUNCTION: EXE 0x5a18ca
 // Unchecks the tab button and restores its normal image
 void EEUIFSEMainButton::UnCheck()
 {

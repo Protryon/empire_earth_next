@@ -20,6 +20,7 @@
 #include "lle/NEServer.h"
 #include "lle/NEMessageManager.h"
 
+// FUNCTION: LLE 0x100411fb
 // Creates the server's message manager: an empty ring of 50 sent messages, no clients, transfer IDs from 1
 NEMessageManager::NEMessageManager(NESynchronousServer* inServer)
 {
@@ -44,6 +45,7 @@ NEMessageManager::NEMessageManager(NESynchronousServer* inServer)
     ESVERIFY_AT(theResult == keseOK, 71);
 }
 
+// FUNCTION: LLE 0x100412eb
 // Destroys the manager, releasing the stored sent messages, transfer queues (not their transfers) and clients
 NEMessageManager::~NEMessageManager()
 {
@@ -62,6 +64,7 @@ NEMessageManager::~NEMessageManager()
     this->mClients.clear();
 }
 
+// FUNCTION: LLE 0x100413bd
 // Marks the file transfer with the given ID to be aborted on the next transfer pass
 void NEMessageManager::AbortXfer(unsigned long inXferID)
 {
@@ -81,6 +84,7 @@ void NEMessageManager::AbortXfer(unsigned long inXferID)
     this->mXfersLock->Leave();
 }
 
+// FUNCTION: LLE 0x10041451
 // Queues a file transfer to a registered slot and returns its new transfer ID; kErrorNotFound for an unknown slot
 long NEMessageManager::AddXfer(FSFileSpec& inFile, unsigned long inUserData, unsigned char inSlot, unsigned long& outXferID,
                                bool inFlag)
@@ -101,6 +105,7 @@ long NEMessageManager::AddXfer(FSFileSpec& inFile, unsigned long inUserData, uns
     return theResult;
 }
 
+// FUNCTION: LLE 0x100414ef
 // Creates a pending file transfer of a file to a slot, not yet opened
 NEMMXfer::NEMMXfer(FSFileSpec& inFileSpec, unsigned char inSlot, bool inFlag)
 {
@@ -113,6 +118,7 @@ NEMMXfer::NEMMXfer(FSFileSpec& inFileSpec, unsigned char inSlot, bool inFlag)
     this->mFlag = inFlag;
 }
 
+// FUNCTION: LLE 0x10041531
 // Returns the highest CPU load reported by any client
 unsigned short NEMessageManager::GetHighestCPU()
 {
@@ -124,6 +130,7 @@ unsigned short NEMessageManager::GetHighestCPU()
     return theHighest;
 }
 
+// FUNCTION: LLE 0x10041574
 // Returns the highest average response time of any client
 unsigned long NEMessageManager::GetHighestResponseTime()
 {
@@ -135,6 +142,7 @@ unsigned long NEMessageManager::GetHighestResponseTime()
     return theHighest;
 }
 
+// FUNCTION: LLE 0x100415b2
 // Returns the lowest communications tick any client has reached (0xfffffffe when there are no clients)
 unsigned long NEMessageManager::GetLowestCT()
 {
@@ -146,6 +154,7 @@ unsigned long NEMessageManager::GetLowestCT()
     return theLowest;
 }
 
+// FUNCTION: LLE 0x100415f2
 // Returns the stored sent message with a given number, or NULL once it has left the ring of the last 50
 NEMMSentMessage* NEMessageManager::GetSentMessage(unsigned long inMessageNumber)
 {
@@ -156,6 +165,7 @@ NEMMSentMessage* NEMessageManager::GetSentMessage(unsigned long inMessageNumber)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10041639
 // Returns the slot of the client with the highest average response time (0xff if none is above 0)
 unsigned char NEMessageManager::GetSlowestResponder()
 {
@@ -170,6 +180,7 @@ unsigned char NEMessageManager::GetSlowestResponder()
     return theSlowest;
 }
 
+// FUNCTION: LLE 0x1004167c
 // Handles a message the server sent itself: logs its own tick response, pause/unpause responses, else processes it
 void NEMessageManager::HandleSentMessage(NEMessage* inMessage)
 {
@@ -212,6 +223,7 @@ void NEMessageManager::HandleSentMessage(NEMessage* inMessage)
     }
 }
 
+// FUNCTION: LLE 0x10041791
 // Marks a slot as having answered the first stored message the response matches; can force the next tick
 long NEMessageManager::LogResponse(NEMessage* inMessage)
 {
@@ -234,6 +246,7 @@ long NEMessageManager::LogResponse(NEMessage* inMessage)
     return kErrorOK;
 }
 
+// FUNCTION: LLE 0x10041831
 // Records a client's response time to the last tick, its CPU load and lowest tick; averages every 10 responses
 void NEMessageManager::LogResponseTime(unsigned char inSlot, unsigned long inCT, unsigned short inCPU)
 {
@@ -264,6 +277,7 @@ void NEMessageManager::LogResponseTime(unsigned char inSlot, unsigned long inCT,
     theClients->second->mCPU = inCPU;
 }
 
+// FUNCTION: LLE 0x1004190e
 // Counts the slots that have not answered a sent message (correcting the stored count); 0 if it is gone
 unsigned char NEMessageManager::NumberOfOutstandingResponses(unsigned long inMessageNumber)
 {
@@ -285,6 +299,7 @@ unsigned char NEMessageManager::NumberOfOutstandingResponses(unsigned long inMes
     return theResult;
 }
 
+// FUNCTION: LLE 0x1004196a
 // Advances each slot's first file transfer one step (start, 1 KB block, end or abort); true if any were queued
 bool NEMessageManager::ProcessXfers()
 {
@@ -429,6 +444,7 @@ bool NEMessageManager::ProcessXfers()
     return theWorkDone;
 }
 
+// FUNCTION: LLE 0x10041ed1
 // Adds a client slot to every sent message, the client list and the transfers; 1 if it was already registered
 long NEMessageManager::RegisterSlot(unsigned char inSlot)
 {
@@ -458,6 +474,7 @@ long NEMessageManager::RegisterSlot(unsigned char inSlot)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10041fd5
 // Resends a stored message to every slot that has not answered it; -1 if it is no longer stored
 long NEMessageManager::Resend(unsigned long inMessageNumber)
 {
@@ -474,6 +491,7 @@ long NEMessageManager::Resend(unsigned long inMessageNumber)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10042036
 // Sends a message to every client (storing it first when guaranteed); returns its message number or 0xffffffff
 unsigned long NEMessageManager::Send(NEMessage* inMessage, bool inGuaranteed)
 {
@@ -497,6 +515,7 @@ unsigned long NEMessageManager::Send(NEMessage* inMessage, bool inGuaranteed)
     return theResult;
 }
 
+// FUNCTION: LLE 0x100420f3
 // Sends a message to one registered slot and stores it; returns the message number, the send error, or 0xffffffff
 unsigned long NEMessageManager::SendTo(NEMessage* inMessage, unsigned char inSlot, bool inGuaranteed)
 {
@@ -520,6 +539,7 @@ unsigned long NEMessageManager::SendTo(NEMessage* inMessage, unsigned char inSlo
     return theResult;
 }
 
+// FUNCTION: LLE 0x1004219b
 // Sends a message to all clients and makes the server wait for every answer; returns its message number
 unsigned long NEMessageManager::SendToAllAndWait(NEMessage* inMessage, unsigned long inTimeout,
                                                  unsigned long inRetries)
@@ -536,6 +556,7 @@ unsigned long NEMessageManager::SendToAllAndWait(NEMessage* inMessage, unsigned 
     return theResult;
 }
 
+// FUNCTION: LLE 0x1004220e
 // Sets every client's lowest communications tick
 void NEMessageManager::SetLowestCTs(unsigned long inCT)
 {
@@ -544,6 +565,7 @@ void NEMessageManager::SetLowestCTs(unsigned long inCT)
         theClients->second->mLowestCT = inCT;
 }
 
+// FUNCTION: LLE 0x10042246
 // Stores a sent message in the next ring entry, setting which slots still owe an answer; returns its number
 unsigned long NEMessageManager::StoreSentMessage(NEMessage* inMessage, unsigned char inSlot, bool inGuaranteed)
 {
@@ -577,6 +599,7 @@ unsigned long NEMessageManager::StoreSentMessage(NEMessage* inMessage, unsigned 
     return theResult;
 }
 
+// FUNCTION: LLE 0x10042365
 // Removes a client slot from the sent messages, the client list and the transfer queues and resets it
 void NEMessageManager::UnregisterSlot(unsigned char inSlot)
 {
@@ -615,6 +638,7 @@ void NEMessageManager::UnregisterSlot(unsigned char inSlot)
     this->mServer->ResetClientConnection(inSlot);
 }
 
+// FUNCTION: LLE 0x10042426
 // Returns the first slot that has not answered a sent message, or 0xff
 unsigned char NEMessageManager::WhoHasNotResponded(unsigned long inMessageNumber)
 {
@@ -631,6 +655,7 @@ unsigned char NEMessageManager::WhoHasNotResponded(unsigned long inMessageNumber
     return theResult;
 }
 
+// FUNCTION: LLE 0x10042471
 // Returns the next slot after a given one that has not answered a sent message, or 0xff
 unsigned char NEMessageManager::WhoHasNotRespondedNext(unsigned char inPrevious, unsigned long inMessageNumber)
 {
@@ -647,3 +672,158 @@ unsigned char NEMessageManager::WhoHasNotRespondedNext(unsigned char inPrevious,
     }
     return theResult;
 }
+
+// Compiler-generated for this unit (names in analysis/lle/names.txt):
+// SYNTHETIC: LLE 0x10040123
+// SYNTHETIC: LLE 0x10040127
+// SYNTHETIC: LLE 0x1004012b
+// SYNTHETIC: LLE 0x1004012f
+// SYNTHETIC: LLE 0x10040133
+// SYNTHETIC: LLE 0x10040137
+// SYNTHETIC: LLE 0x1004013b
+// SYNTHETIC: LLE 0x10040143
+// SYNTHETIC: LLE 0x1004014b
+// SYNTHETIC: LLE 0x10040155
+// SYNTHETIC: LLE 0x1004015d
+// SYNTHETIC: LLE 0x10040167
+// SYNTHETIC: LLE 0x100401c4
+// SYNTHETIC: LLE 0x1004021b
+// SYNTHETIC: LLE 0x1004027f
+// SYNTHETIC: LLE 0x1004028a
+// SYNTHETIC: LLE 0x10040291
+// SYNTHETIC: LLE 0x10040295
+// SYNTHETIC: LLE 0x100402aa
+// SYNTHETIC: LLE 0x100402b5
+// SYNTHETIC: LLE 0x100402cd
+// SYNTHETIC: LLE 0x100402e6
+// SYNTHETIC: LLE 0x100402e9
+// SYNTHETIC: LLE 0x100402f4
+// SYNTHETIC: LLE 0x100402f9
+// SYNTHETIC: LLE 0x100402fc
+// SYNTHETIC: LLE 0x1004030c
+// SYNTHETIC: LLE 0x1004031c
+// SYNTHETIC: LLE 0x10040331
+// SYNTHETIC: LLE 0x1004033c
+// SYNTHETIC: LLE 0x1004033f
+// SYNTHETIC: LLE 0x1004034a
+// SYNTHETIC: LLE 0x10040355
+// SYNTHETIC: LLE 0x10040369
+// SYNTHETIC: LLE 0x10040398
+// SYNTHETIC: LLE 0x100403a3
+// SYNTHETIC: LLE 0x100403c1
+// SYNTHETIC: LLE 0x100403c8
+// SYNTHETIC: LLE 0x100403cc
+// SYNTHETIC: LLE 0x100403d3
+// SYNTHETIC: LLE 0x100403da
+// SYNTHETIC: LLE 0x100403e1
+// SYNTHETIC: LLE 0x100403e8
+// SYNTHETIC: LLE 0x100403ef
+// SYNTHETIC: LLE 0x100403f7
+// SYNTHETIC: LLE 0x100403fe
+// SYNTHETIC: LLE 0x10040405
+// SYNTHETIC: LLE 0x1004040d
+// SYNTHETIC: LLE 0x10040414
+// SYNTHETIC: LLE 0x1004041b
+// SYNTHETIC: LLE 0x10040426
+// SYNTHETIC: LLE 0x10040436
+// SYNTHETIC: LLE 0x1004044e
+// SYNTHETIC: LLE 0x1004045f
+// SYNTHETIC: LLE 0x1004046a
+// SYNTHETIC: LLE 0x1004049f
+// SYNTHETIC: LLE 0x100404ac
+// SYNTHETIC: LLE 0x100404bb
+// SYNTHETIC: LLE 0x100404c8
+// SYNTHETIC: LLE 0x100404d5
+// SYNTHETIC: LLE 0x100404e2
+// SYNTHETIC: LLE 0x100404fa
+// SYNTHETIC: LLE 0x10040522
+// SYNTHETIC: LLE 0x1004052d
+// SYNTHETIC: LLE 0x10040535
+// SYNTHETIC: LLE 0x1004054d
+// SYNTHETIC: LLE 0x10040558
+// SYNTHETIC: LLE 0x10040560
+// SYNTHETIC: LLE 0x1004056b
+// SYNTHETIC: LLE 0x10040578
+// SYNTHETIC: LLE 0x10040583
+// SYNTHETIC: LLE 0x1004058a
+// SYNTHETIC: LLE 0x10040591
+// SYNTHETIC: LLE 0x10040a72
+// SYNTHETIC: LLE 0x10040ab6
+// SYNTHETIC: LLE 0x10040f57
+// SYNTHETIC: LLE 0x1004109c
+// SYNTHETIC: LLE 0x10041112
+// SYNTHETIC: LLE 0x10041175
+// SYNTHETIC: LLE 0x10041185
+// SYNTHETIC: LLE 0x10041195
+// SYNTHETIC: LLE 0x100411a5
+// SYNTHETIC: LLE 0x100411af
+// SYNTHETIC: LLE 0x100411cb
+// SYNTHETIC: LLE 0x100411e3
+// TEMPLATE: LLE 0x100424c7
+// TEMPLATE: LLE 0x100424f2
+// TEMPLATE: LLE 0x100425a8
+// TEMPLATE: LLE 0x10042856
+// TEMPLATE: LLE 0x10042881
+// TEMPLATE: LLE 0x10042895
+// TEMPLATE: LLE 0x100428cf
+// TEMPLATE: LLE 0x100428fa
+// TEMPLATE: LLE 0x100429b0
+// TEMPLATE: LLE 0x100429c4
+// TEMPLATE: LLE 0x100429f8
+// TEMPLATE: LLE 0x10042a34
+// TEMPLATE: LLE 0x10042ad8
+// TEMPLATE: LLE 0x10042b1f
+// TEMPLATE: LLE 0x10042c43
+// TEMPLATE: LLE 0x10042c77
+// TEMPLATE: LLE 0x10042c8b
+// TEMPLATE: LLE 0x10042cbf
+// TEMPLATE: LLE 0x10042d30
+// TEMPLATE: LLE 0x10042da1
+// TEMPLATE: LLE 0x10042e12
+// TEMPLATE: LLE 0x10042e4a
+// TEMPLATE: LLE 0x10042ebb
+// TEMPLATE: LLE 0x10042f1b
+// TEMPLATE: LLE 0x10042f50
+// TEMPLATE: LLE 0x10042f69
+// TEMPLATE: LLE 0x10042fda
+// TEMPLATE: LLE 0x1004303a
+// TEMPLATE: LLE 0x100431ce
+// TEMPLATE: LLE 0x1004323f
+// TEMPLATE: LLE 0x1004329f
+// TEMPLATE: LLE 0x100432d4
+// TEMPLATE: LLE 0x100433d4
+// TEMPLATE: LLE 0x10043406
+// TEMPLATE: LLE 0x1004343b
+// TEMPLATE: LLE 0x1004347c
+// TEMPLATE: LLE 0x100434b4
+// TEMPLATE: LLE 0x100434e6
+// TEMPLATE: LLE 0x10043518
+// TEMPLATE: LLE 0x10043541
+// TEMPLATE: LLE 0x100437ef
+// TEMPLATE: LLE 0x1004387e
+// TEMPLATE: LLE 0x100438b0
+// TEMPLATE: LLE 0x100438d9
+// TEMPLATE: LLE 0x1004395a
+// TEMPLATE: LLE 0x1004398c
+// TEMPLATE: LLE 0x100439ce
+// TEMPLATE: LLE 0x10043a12
+// TEMPLATE: LLE 0x10043cc8
+// TEMPLATE: LLE 0x10043d4b
+// TEMPLATE: LLE 0x10043d85
+// TEMPLATE: LLE 0x10043db4
+// TEMPLATE: LLE 0x10043df6
+// TEMPLATE: LLE 0x10043e3a
+// TEMPLATE: LLE 0x10043e72
+// TEMPLATE: LLE 0x10043eb5
+// TEMPLATE: LLE 0x10043ef8
+// TEMPLATE: LLE 0x10043f0b
+// TEMPLATE: LLE 0x10043f40
+// TEMPLATE: LLE 0x10043f66
+// TEMPLATE: LLE 0x10043f91
+// TEMPLATE: LLE 0x10044002
+// TEMPLATE: LLE 0x10044062
+// TEMPLATE: LLE 0x100440e7
+// TEMPLATE: LLE 0x10044119
+// TEMPLATE: LLE 0x1004437d
+// TEMPLATE: LLE 0x10044392
+// SYNTHETIC: LLE 0x1004103b

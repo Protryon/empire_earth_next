@@ -12,18 +12,24 @@
 #include "ee/EEDatabase.h"
 #include "ee/EEDbObject.h"
 
+// FUNCTION: EXE 0x4d6035
 // Creates an empty database with no record list
 EEDatabase::EEDatabase()
 {
     this->mObjects = NULL;
 }
 
+// SYNTHETIC: EXE 0x4d6042
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4d605e
 // Destroys the database, freeing its records
 EEDatabase::~EEDatabase()
 {
     this->Clear();
 }
 
+// FUNCTION: EXE 0x4d6069
 // Returns the record at an index, or NULL when out of range or nothing is loaded
 EEDbObject* EEDatabase::GetEntry(unsigned long inIndex)
 {
@@ -32,6 +38,7 @@ EEDbObject* EEDatabase::GetEntry(unsigned long inIndex)
     return NULL;
 }
 
+// FUNCTION: EXE 0x4d6094
 // Returns the number of records (0 when nothing is loaded)
 unsigned long EEDatabase::GetCount()
 {
@@ -40,6 +47,7 @@ unsigned long EEDatabase::GetCount()
     return 0;
 }
 
+// FUNCTION: EXE 0x4d60ae
 // Loads the database's records from a file, replacing any loaded ones; stops at the first failed record and
 // returns its error
 long EEDatabase::Load(FSFileSpec* inFile)
@@ -67,6 +75,7 @@ long EEDatabase::Load(FSFileSpec* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4d6179
 // Frees every record and the record list
 void EEDatabase::Clear()
 {
@@ -77,3 +86,6 @@ void EEDatabase::Clear()
     delete this->mObjects;
     this->mObjects = NULL;
 }
+
+// SYNTHETIC: EXE 0x4d61ce
+// (EEDbObject's scalar deleting destructor)

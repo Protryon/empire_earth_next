@@ -26,19 +26,26 @@
 //   object 0x9297e0  ctor UMemoryPool<EETUnitList>::UMemoryPool 0x121734  dtor (unguarded: a plain global) 0x1211b1
 // The tile-unit list nodes (provisional name).
 UMemoryPool<EETUnitList> gTileUnitListPool;
+// SYNTHETIC: EXE 0x521191   (wrapper)
+// SYNTHETIC: EXE 0x52119b   (ctor)
+// SYNTHETIC: EXE 0x5211a5   (registrar)
+// SYNTHETIC: EXE 0x5211b1   (dtor)
 
+// FUNCTION: EXE 0x5211c5
 // Destroys the tile, releasing every unit standing on it
 EETile::~EETile()
 {
     this->RemoveAllUnits();
 }
 
+// FUNCTION: EXE 0x5211e4
 // Records a building image (doppelganger) on the tile
 void EETile::AddDoppelganger(EEDoppelganger* inDoppelganger)
 {
     this->mDoppelgangers.push_back(inDoppelganger);
 }
 
+// FUNCTION: EXE 0x5211f4
 // Takes a unit list node from the pool for a unit (holding a reference to it) ahead of inNext; returns the node
 RTSTileUnitNode* EETile::AddUnit(EEUnit* inUnit, RTSTileUnitNode* inNext)
 {
@@ -49,6 +56,7 @@ RTSTileUnitNode* EETile::AddUnit(EEUnit* inUnit, RTSTileUnitNode* inNext)
     return theNode;
 }
 
+// FUNCTION: EXE 0x521212
 // Reports the tile unit list pool's usage statistics, then frees the pool
 void EETile::ReleaseUnitListPool()
 {
@@ -56,6 +64,7 @@ void EETile::ReleaseUnitListPool()
     gTileUnitListPool.Release();
 }
 
+// FUNCTION: EXE 0x52122a
 // Releases a unit list node's unit reference and returns the node to the pool
 void EETile::FreeUnitNode(RTSTileUnitNode* inNode)
 {
@@ -65,6 +74,7 @@ void EETile::FreeUnitNode(RTSTileUnitNode* inNode)
     gTileUnitListPool.Delete((EETUnitList*)inNode);
 }
 
+// FUNCTION: EXE 0x52124e
 // Returns the tile's base checksum plus the unit ids of its building images
 long EETile::GetChecksum(unsigned long inPlayerCount) const
 {
@@ -74,6 +84,7 @@ long EETile::GetChecksum(unsigned long inPlayerCount) const
     return RTSTile::GetChecksum(inPlayerCount) + theSum;
 }
 
+// FUNCTION: EXE 0x52128d
 // Reads the tile and its building images from the saved game; returns the image count's read result
 long EETile::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
                   unsigned long inPlayerCount)
@@ -91,6 +102,7 @@ long EETile::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
     return theResult;
 }
 
+// FUNCTION: EXE 0x5212ec
 // Writes the tile's building image unit ids, then its base state, to the out-of-sync dump
 void EETile::Dump(FILE* inFile, unsigned long inPlayerCount) const
 {
@@ -99,6 +111,7 @@ void EETile::Dump(FILE* inFile, unsigned long inPlayerCount) const
     RTSTile::Dump(inFile, inPlayerCount);
 }
 
+// FUNCTION: EXE 0x52133c
 // Removes a building image from the tile, if it is there
 void EETile::RemoveDoppelganger(EEDoppelganger* inDoppelganger)
 {
@@ -107,6 +120,7 @@ void EETile::RemoveDoppelganger(EEDoppelganger* inDoppelganger)
         this->mDoppelgangers.erase(theIterator);
 }
 
+// FUNCTION: EXE 0x52139e
 // Writes the tile and its valid building images that belong to this tile (or to none) to the saved game;
 // returns the first error
 // NEAR: inline budget: the original calls begin() + i out of line for the first three mU18[i], inlines the last
@@ -131,6 +145,7 @@ long EETile::Save(FSFile& outFile, unsigned long inPlayerCount)
     return theResult;
 }
 
+// FUNCTION: EXE 0x5214bf
 // Sets the tile's terrain type and its space flag; a tile below sea level becomes deep water when deep,
 // else shallow water unless three of its corners are dry
 // NEAR: register/slot allocation: the original reloads inLocation after the first UMFloor (asm) corner
@@ -160,8 +175,48 @@ void EETile::SetTerrainType(long inTerrainType, const EETileLocation& inLocation
     this->mTerrainType = inTerrainType;
 }
 
+// FUNCTION: EXE 0x5216f3
 // Sizes the tile unit list pool (chunk size and chunk limit)
 void EETile::SetUnitListPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks)
 {
     gTileUnitListPool.SetSize(inChunkSize, inMaxChunks, 1);
 }
+
+// TEMPLATE: EXE 0x521708
+// (vector<EEDoppelganger*>::push_back; the template COMDATs close the unit)
+
+// TEMPLATE: EXE 0x521734
+// (UMemoryPool<EETUnitList>::UMemoryPool)
+
+// SYNTHETIC: EXE 0x52176e
+// (UMemoryPool<EETUnitList>'s scalar deleting destructor)
+
+// TEMPLATE: EXE 0x521790
+// (UMemoryPool<EETUnitList>::Release)
+
+// TEMPLATE: EXE 0x5217f4
+// (UMemoryPool<EETUnitList>::Delete)
+
+// TEMPLATE: EXE 0x521857
+// (UMemoryPool<EETUnitList>::DumpStats)
+
+// TEMPLATE: EXE 0x5218ba
+// (UMemoryPool<EETUnitList>::New)
+
+// TEMPLATE: EXE 0x5219a9
+// (UMemoryPool<EETUnitList>::SetSize)
+
+// TEMPLATE: EXE 0x521ab6
+// (UMemoryPoolChunk<EETUnitList>::UMemoryPoolChunk)
+
+// SYNTHETIC: EXE 0x521b37
+// (EETUnitList's vector deleting destructor)
+
+// TEMPLATE: EXE 0x521ba7
+// (UMemoryPool<EETUnitList>::CountUsed)
+
+// TEMPLATE: EXE 0x521bdc
+// (UMemoryPool<EETUnitList>::AddChunk)
+
+// SYNTHETIC: EXE 0x521c4f
+// (RTSTUnitList's scalar deleting destructor)

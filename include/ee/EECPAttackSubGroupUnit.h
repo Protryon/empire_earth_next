@@ -84,15 +84,15 @@ public:
     virtual void Retreat();                 // +0x78 0x66295 (`Virtual1C();` as a tail jump)
     // non-virtual helpers the kinds call (provisional names): 0x65c2f dereferences mL48 and clears it and
     // +0x78; 0x65eb6 calls it, then mL48 = inUnit (referenced)
-    void ReleaseTarget();
-    void SetTarget(EEComplexUnit* inUnit);
+    void ReleaseTarget();                   // 0x65c2f
+    void SetTarget(EEComplexUnit* inUnit);  // 0x65eb6
     // 0x705f (`mov eax, [ecx+0x44]; ret`, called by the prophet analyzers; provisional name)
     EEComplexUnit* GetUnit() { return this->mUnit; }
     // (EECPAttackSubGroupUnit.cpp; provisional names)
     float GetToHit(EECPASTargetUnit* inTarget);   // 0x63aef (gToHitTable's chance against inTarget)
     bool IsDone();                          // 0x652e0 (mHasGroupFlee or mUnit dead; many sub group callers)
-    void ReleaseSubGroup();
-    void ReleaseUnit();
+    void ReleaseSubGroup();                 // 0x65d0c
+    void ReleaseUnit();                     // 0x65d22
     void SetUnit(EEComplexUnit* inUnit);    // 0x65ecc (references inUnit)
     bool TryCastCalamity();                 // 0x66066 (Virtual14 first: a prophet unit casts a calamity on a target)
 

@@ -27,38 +27,38 @@ public:
     // save key (the unit's `$E` chain 0x9c833, guard byte 0x4e5da0, object 0x4e5da8)
     static const UString sData;             // "EECPWallManager-Data"
 public:
-    EECPWallManager(EECPCivilizationManager* inManager);
+    EECPWallManager(EECPCivilizationManager* inManager);   // 0x9cc24
     virtual ~EECPWallManager();             // +0x00 0x9ccde
     // the units' wall gaps closed by gates (EEAIArea.cpp 0x2e585 / EEUGBuildRepair.cpp 0x21e4fb call it) (provisional
     // name)
-    void AddGates(EEComplexUnit* inUnit);
+    void AddGates(EEComplexUnit* inUnit);   // 0x9d437 (ret 4)
     // the wall sizes table (EEWorld.cpp 0x13883f) (provisional name)
-    static void ResetSizes();
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    void UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps);
-    void Reset();
-    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
-    void UnitAdded(EEComplexUnit* inUnit);
+    static void ResetSizes();               // 0x9ee89
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x9e59c
+    void UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps);  // 0x9ec12 (ret 4) (provisional name)
+    void Reset();                           // 0x9ecc6
+    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);   // 0x9eccb
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // 0x9eea6
+    void UnitAdded(EEComplexUnit* inUnit);  // 0x9f058 (ret 4)
     void UnitLost(EEComplexUnit* inUnit, bool inSwapped);  // 0x9f09d (ret 8; the body tests the argument as a byte: bool?)
-    void Update(unsigned long inTime);
+    void Update(unsigned long inTime);      // 0x9f244
 
     // the unit's helpers (provisional names)
-    bool IsPathBlocked(std::vector<U2DPoint<long> >& inTiles);
-    void AddWalls(EEComplexUnit* inUnit);
-    void BuildWall(U2DPoint<long>& inFrom, U2DPoint<long>& inTo, long inUnitClass, bool inBuildingPlannedWall);
-    bool IsRunClear(U2DPoint<long>& inFrom, U2DPoint<long>& inTo, bool inIgnoreResourceCenters, bool inSkipPathCheck);
-    void Clear();
-    void ClearRequest();
-    void StartNextWall();
+    bool IsPathBlocked(std::vector<U2DPoint<long> >& inTiles);  // 0x9cd0e (ret 4)
+    void AddWalls(EEComplexUnit* inUnit);   // 0x9cf2a (ret 4)
+    void BuildWall(U2DPoint<long>& inFrom, U2DPoint<long>& inTo, long inUnitClass, bool inBuildingPlannedWall);  // 0x9d05f (ret 0x10)
+    bool IsRunClear(U2DPoint<long>& inFrom, U2DPoint<long>& inTo, bool inIgnoreResourceCenters, bool inSkipPathCheck);  // 0x9d1e7 (ret 0x10)
+    void Clear();                           // 0x9d371
+    void ClearRequest();                    // 0x9d3f2
+    void StartNextWall();                   // 0x9d6cc
     void RequestPath();                     // port: a loaded plan's path asked for again (Update)
     EEComplexUnit* GetCenter(EEPlayer* inPlayer);   // 0x9d815 (ret 4; the player's town center, else its first unit)
-    bool FindGate(std::vector<U2DPoint<long> >& inTiles, long& outSide, long& outIndex);
-    bool PlanWall();
-    bool IsRequestDone();
-    bool IsPathUsable();
-    bool ChooseRun(std::vector<RTSMapTileRun>& inRuns, U2DPoint<long>& outFrom, U2DPoint<long>& outTo);
-    bool ChooseRunNearGates(std::vector<RTSMapTileRun>& inRuns, U2DPoint<long>& outFrom, U2DPoint<long>& outTo);
+    bool FindGate(std::vector<U2DPoint<long> >& inTiles, long& outSide, long& outIndex);   // 0x9d851 (ret 0xc)
+    bool PlanWall();                        // 0x9d9e9
+    bool IsRequestDone();                   // 0x9e58e
+    bool IsPathUsable();                    // 0x9e6fe
+    bool ChooseRun(std::vector<RTSMapTileRun>& inRuns, U2DPoint<long>& outFrom, U2DPoint<long>& outTo);  // 0x9e7fe (ret 0xc)
+    bool ChooseRunNearGates(std::vector<RTSMapTileRun>& inRuns, U2DPoint<long>& outFrom, U2DPoint<long>& outTo);  // 0x9e99b (ret 0xc)
 
     std::vector<EECPWMWall> mWalls;         // +0x04
     std::vector<EEUnitHandle<EEComplexUnit> > mGates;   // +0x14 (referenced; saved as unit ids; handles since R5a.4, the vector's order kept)

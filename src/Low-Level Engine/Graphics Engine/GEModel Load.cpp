@@ -39,6 +39,32 @@
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
+// Compiler-generated, continued:
+// SYNTHETIC: LLE 0x1001c294
+// SYNTHETIC: LLE 0x1001c29e
+// SYNTHETIC: LLE 0x1001c2ae
+// SYNTHETIC: LLE 0x1001c2ba
+// SYNTHETIC: LLE 0x1001c2c4
+// SYNTHETIC: LLE 0x1001c2ce
+// SYNTHETIC: LLE 0x1001c2de
+// SYNTHETIC: LLE 0x1001c2ea
+// SYNTHETIC: LLE 0x1001c2f4
+// SYNTHETIC: LLE 0x1001c2fe
+// SYNTHETIC: LLE 0x1001c30e
+// SYNTHETIC: LLE 0x1001c31a
+// SYNTHETIC: LLE 0x1001c324
+// SYNTHETIC: LLE 0x1001c32e
+// SYNTHETIC: LLE 0x1001c33e
+// SYNTHETIC: LLE 0x1001c34a
+// SYNTHETIC: LLE 0x1001c354
+// SYNTHETIC: LLE 0x1001c35e
+// SYNTHETIC: LLE 0x1001c36e
+// SYNTHETIC: LLE 0x1001c37a
+// SYNTHETIC: LLE 0x1001c384
+// SYNTHETIC: LLE 0x1001c38e
+// SYNTHETIC: LLE 0x1001c39e
+// SYNTHETIC: LLE 0x1001c3aa
+
 // Allocates the model's arrays from the counts (AllocateInternalData, as the counts chunk did) and stores the model
 // where the original's chunk readers stored it, then creates and fills the sub-models; returns the model's result
 // (a sub-model's is ignored, as the original's). A model whose counts the reader refused is left as constructed.
@@ -54,3 +80,10 @@ long GEModel::StoreLoaded(const EeGeCemModel* inModel, std::map<unsigned long, l
     }
     return ee_ge_mod_store_loaded(this->mRust, inModel, theShared.empty() ? NULL : &theShared[0], theShared.size());
 }
+
+// UList<GELODVertex*>/<GELODPolygon*>/<GELODMetaVertex*>::sNodePool init wrapper and atexit registrars (GELOD.h via
+// GEModel.h; the $D ctors are GEBoundingBox.cpp's COMDATs 0x10014ed4/0x10014efb/0x10014f22)
+// SYNTHETIC: LLE 0x1001ccf9
+// SYNTHETIC: LLE 0x1001cd17
+// SYNTHETIC: LLE 0x1001cd23
+// SYNTHETIC: LLE 0x1001cd2f

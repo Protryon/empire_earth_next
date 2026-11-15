@@ -12,7 +12,7 @@ struct EeScreensSeTrigger;
 
 class EESETSTrigger : public EESETSBaseObject {
 public:
-    EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);
+    EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);   // 0x19393b
     virtual ~EESETSTrigger();               // +0x00 0x195fde
     virtual void Sort();                    // +0x04 0x1961d4 (SortTriggers)
     virtual void MoveDown();                // +0x0c 0x1961df (MoveTriggerDown)

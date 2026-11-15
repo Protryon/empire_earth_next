@@ -106,17 +106,23 @@ long EECPASGLandTileFarther::DistanceSquared(const EETileCoordinate& inTile) con
 #include "ee/EECPIntelligence.h"
 #include "ee/EEMapDimensions.h"
 
+// FUNCTION: EXE 0x445ee9
 // Creates a land attack sub-group for the given attack group, with no transport and no avoided tiles
 EECPASGLand::EECPASGLand(EECPAttackGroup* inGroup, long inKind)
     : EECPAttackSubGroup(inGroup, inKind), mTransport(NULL), mTransportStage(0), mNextSubSectorCheckTime(0), mNoTransport(false)
 {
 }
 
+// SYNTHETIC: EXE 0x445f80
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x445f9c
 // Destroys the land sub-group (members only)
 EECPASGLand::~EECPASGLand()
 {
 }
 
+// FUNCTION: EXE 0x445fca
 // Marks a tile to avoid for the next 30 s (an already listed tile gets a fresh expiry)
 void EECPASGLand::AvoidTile(const EETileLocation& inTile)
 {
@@ -134,6 +140,7 @@ void EECPASGLand::AvoidTile(const EETileLocation& inTile)
     }
 }
 
+// FUNCTION: EXE 0x446065
 // Drops the transport unless the sub-group is in transit, then sets the new task
 void EECPASGLand::SetTask(const EECPAGTask& inTask)
 {
@@ -143,6 +150,7 @@ void EECPASGLand::SetTask(const EECPAGTask& inTask)
     EECPAttackSubGroup::SetTask(inTask);
 }
 
+// FUNCTION: EXE 0x446094
 // Orders a unit to attack only when it is not inside a transport or building
 void EECPASGLand::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUnit* inTarget, EETileCoordinate* inTile)
 {
@@ -150,6 +158,7 @@ void EECPASGLand::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUnit* inTa
         EECPAttackSubGroup::AttackWith(inUnit, inTarget, inTile);
 }
 
+// FUNCTION: EXE 0x4460b5
 // Releases the transport and requests a path from the group's position to the task (an off-map task tile is
 // replaced by the tile nearest the origin); with no position, goes in transit if it has a transport, else no-path
 void EECPASGLand::RequestPathToTask()
@@ -175,12 +184,14 @@ void EECPASGLand::RequestPathToTask()
     }
 }
 
+// FUNCTION: EXE 0x446178
 // Releases the transport
 void EECPASGLand::DropTransport()
 {
     this->ReleaseTransport();
 }
 
+// FUNCTION: EXE 0x44617d
 // True when no next sub-sector tile is set or a unit can attack a target on it or in its sub-sector; otherwise,
 // if that sub-sector is a wall, moves the tile to the wall tile nearest the group and returns whether it moved
 bool EECPASGLand::HasTargetsAtNextSubSector()
@@ -227,6 +238,7 @@ bool EECPASGLand::HasTargetsAtNextSubSector()
     return theResult;
 }
 
+// FUNCTION: EXE 0x446422
 // Returns true when the transport would leave no unit behind
 bool EECPASGLand::CanCarryAllUnits()
 {
@@ -235,6 +247,7 @@ bool EECPASGLand::CanCarryAllUnits()
     return theUnits.size() == 0;
 }
 
+// FUNCTION: EXE 0x44646c
 // Releases the transport, then shuts the sub-group down
 void EECPASGLand::Shutdown()
 {
@@ -242,12 +255,14 @@ void EECPASGLand::Shutdown()
     EECPAttackSubGroup::Shutdown();
 }
 
+// FUNCTION: EXE 0x44647d
 // Forgets every avoided tile
 void EECPASGLand::ClearAvoidedTiles()
 {
     this->mAvoidedTiles.clear();
 }
 
+// FUNCTION: EXE 0x446488
 // Clears the avoided tiles, lets go of the transport (ending its land link to this group if it points here and
 // dropping the reference) and clears the pickup and unload locations
 void EECPASGLand::ReleaseTransport()
@@ -266,6 +281,7 @@ void EECPASGLand::ReleaseTransport()
     this->ClearLocations();
 }
 
+// FUNCTION: EXE 0x4464e4
 // Clears the pickup and unload locations and the embark and landing tiles
 void EECPASGLand::ClearLocations()
 {
@@ -275,6 +291,7 @@ void EECPASGLand::ClearLocations()
     this->mEmbarkTile = EETileLocation();
 }
 
+// FUNCTION: EXE 0x446527
 // Resets the location to no area, no player and tile (0, 0)
 void EECPILocation::Clear()
 {
@@ -285,6 +302,7 @@ void EECPILocation::Clear()
     this->mTile.mY = 0;
 }
 
+// FUNCTION: EXE 0x446539
 // Returns true while the tile is avoided and its time has not run out; an expired entry is removed
 bool EECPASGLand::IsTileAvoided(const EETileLocation& inTile)
 {
@@ -303,6 +321,7 @@ bool EECPASGLand::IsTileAvoided(const EETileLocation& inTile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4465a5
 // Chooses where the transport unloads by its kind (sea: shore, air, space); returns whether the point changed
 // (false without a transport)
 bool EECPASGLand::ChooseUnloadPoint()
@@ -325,6 +344,7 @@ bool EECPASGLand::ChooseUnloadPoint()
     return theResult;
 }
 
+// FUNCTION: EXE 0x446605
 // Returns the danger ratio: the transport's while in transit (0 without one), else the base sub-group's
 float EECPASGLand::GetDangerRatio(long inArg1)
 {
@@ -340,6 +360,7 @@ float EECPASGLand::GetDangerRatio(long inArg1)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44665b
 // Returns the continent to land on: the given one when both IDs match and it is land (or unknown), else the
 // continent of the land tile nearest the landing tile (the task tile when no landing tile is set)
 EEAIContinent* EECPASGLand::GetTargetContinent(unsigned short inID, unsigned short inOtherID, long inArg3)
@@ -358,6 +379,7 @@ EEAIContinent* EECPASGLand::GetTargetContinent(unsigned short inID, unsigned sho
     return gContinentManager.GetContinentAt(theTile.mX, theTile.mY);
 }
 
+// FUNCTION: EXE 0x4466dd
 // Builds the terrain mask the sub-group may cross from its units' terrain flags (the intersection
 // over all units), plus walls and gates
 // NEAR: inlining and register allocation differ from the original
@@ -375,9 +397,10 @@ void EECPASGLand::BuildMoveMask()
 }
 
 static const float kASGLWeightMin = 0.02f;   // 0x43ad6c (unit-local consts, not the pooled literals)
-static const float kASGLWeightMax = 0.15f;
-static const float kASGLMixedChance = 0.8f;
+static const float kASGLWeightMax = 0.15f;   // 0x43ad70
+static const float kASGLMixedChance = 0.8f;  // 0x43ad74
 
+// FUNCTION: EXE 0x446776
 // Fills the route cost weights: across continents water and space are cheap (cliffs free from the Atomic age
 // with air-borne units); on one continent they are cheapened at random by epoch, boarding abilities and aggression
 // NEAR: the cost rules and the order of the random calls follow the original; the weight slot meanings
@@ -470,6 +493,7 @@ void EECPASGLand::GetPathCosts(void* inFrom, void* inTo, EECPASGWeights& outWeig
         outWeights.mValues[0] = 0.0f;
 }
 
+// FUNCTION: EXE 0x446c72
 // Moves the given units into another land sub-group, copying task, locations, transport tiles and settings;
 // other kinds use the base split; returns whether units moved
 bool EECPASGLand::SplitInto(EECPAttackSubGroup* inOther, std::vector<EEComplexUnit*>& inUnits)
@@ -537,6 +561,7 @@ bool EECPASGLand::SplitInto(EECPAttackSubGroup* inOther, std::vector<EEComplexUn
     return theResult;
 }
 
+// FUNCTION: EXE 0x446f78
 // Counts the units currently carried as cargo by their container
 long EECPASGLand::CountUnitsAboard()
 {
@@ -549,12 +574,14 @@ long EECPASGLand::CountUnitsAboard()
     return theCount;
 }
 
+// FUNCTION: EXE 0x446fc0
 // Returns true when the given unit is in this unit's cargo
 bool EEComplexUnit::HasCargo(EEComplexUnit* inCargo)
 {
     return std::find(this->mCargo.begin(), this->mCargo.end(), inCargo) != this->mCargo.end();
 }
 
+// FUNCTION: EXE 0x447015
 // Counts the units GetUnitsNotCarriable lists (those the transport would not pick up)
 long EECPASGLand::CountUnitsNotCarriable()
 {
@@ -563,6 +590,7 @@ long EECPASGLand::CountUnitsNotCarriable()
     return theUnits.size();
 }
 
+// FUNCTION: EXE 0x44705c
 // Sums the weight of the non-transport units per transport kind they can board (outA land, outB sea, outC air,
 // outD space); returns how many can board at least one kind
 long EECPASGLand::GetTransportNeeds(long& outA, long& outB, long& outC, long& outD)
@@ -590,6 +618,7 @@ long EECPASGLand::GetTransportNeeds(long& outA, long& outB, long& outC, long& ou
     return theCount;
 }
 
+// FUNCTION: EXE 0x447145
 // Takes the units the request delivered; when they stand on more than one continent, queues a split order
 bool EECPASGLand::TakeRequestedUnits()
 {
@@ -613,6 +642,7 @@ bool EECPASGLand::TakeRequestedUnits()
     return theResult;
 }
 
+// FUNCTION: EXE 0x447231
 // Picks units to split off: with a transport the units it cannot load (no fighters: GetUnitsNotCarriable); for
 // split kind 11 the units not aboard; else those left behind or the base choice; never every unit
 void EECPASGLand::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
@@ -651,6 +681,7 @@ void EECPASGLand::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
         outUnits.pop_back();
 }
 
+// FUNCTION: EXE 0x4473aa
 // Lists the units outside transports and not already boarding that the transport's class rejects (needs a
 // transport with fighting units and more than one own fighter); returns true when there are any
 bool EECPASGLand::GetUncarriableUnits(std::vector<EEComplexUnit*>& outUnits)
@@ -682,6 +713,7 @@ bool EECPASGLand::GetUncarriableUnits(std::vector<EEComplexUnit*>& outUnits)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44759b
 // Returns the distance to the transport sub-group, 0 without one
 float EECPASGLand::GetTransportDistance()
 {
@@ -691,30 +723,35 @@ float EECPASGLand::GetTransportDistance()
     return theResult;
 }
 
+// FUNCTION: EXE 0x4475cf
 // Returns the computer player's chokepoint-guard share (0 without one)
 float EECPASGLand::GetGuardChokepointPercentage()
 {
     return this->mPlayer2 != NULL ? this->mPlayer2->mGuardChokepointPercentage : 0;
 }
 
+// FUNCTION: EXE 0x4475e3
 // Returns the computer player's high-ground-guard share (0 without one)
 float EECPASGLand::GetGuardHighGroundPercentage()
 {
     return this->mPlayer2 != NULL ? this->mPlayer2->mGuardHighGroundPercentage : 0;
 }
 
+// FUNCTION: EXE 0x4475f7
 // Returns the computer player's continent-guard share (0 without one)
 float EECPASGLand::GetGuardContinentPercentage()
 {
     return this->mPlayer2 != NULL ? this->mPlayer2->mGuardContinentPercentage : 0;
 }
 
+// FUNCTION: EXE 0x44760b
 // Returns the computer player's land town-guard share (0 without one)
 float EECPASGLand::GetGuardTownPercentage()
 {
     return this->mPlayer2 != NULL ? this->mPlayer2->mGuardTownLandPercentage : 0;
 }
 
+// FUNCTION: EXE 0x44761f
 // Collects land targets in the bounds: walls go to the siege list (and the target list when clearing a sector
 // they are in or near); others to the target list, towers, gates and kind-4 tech nodes also to the siege list
 void EECPASGLand::CollectTargets(EEAIAStarBounds* inBounds, bool inIncludeEnemies)
@@ -764,6 +801,7 @@ void EECPASGLand::CollectTargets(EEAIAStarBounds* inBounds, bool inIncludeEnemie
     }
 }
 
+// FUNCTION: EXE 0x4478bd
 // True with no units, on the same continent, or when a unit can ride a sea/air transport there (air only if
 // cliffs cut it off, then type 17 must be buildable); water/space targets also need a unit able to move there
 bool EECPASGLand::CanReach(const EECPILocation* inLocation)
@@ -809,6 +847,7 @@ bool EECPASGLand::CanReach(const EECPILocation* inLocation)
     return theResult;
 }
 
+// FUNCTION: EXE 0x447aa0
 // For a wall, gate or obstacle sector: false when a living wall or gate on its tile belongs to an ally, or a
 // blocking land building to an enemy; true otherwise
 // NEAR: inlining and register allocation differ from the original
@@ -836,6 +875,7 @@ bool EECPASGLand::IsGatePassable(EEAIPathSubSector* inSector)
     return theResult;
 }
 
+// FUNCTION: EXE 0x447b93
 // For a wall, gate or obstacle sector: true when a living wall, a gate that will not let the player through, or
 // a finished blocking land building on its tile belongs to a non-ally
 // NEAR: inlining and register allocation differ from the original
@@ -867,6 +907,7 @@ bool EECPASGLand::IsGateBlocked(EEAIPathSubSector* inSector)
     return theResult;
 }
 
+// FUNCTION: EXE 0x447c96
 // Plans which units not aboard fit on each transport unit; returns true as soon as a fitting unit and its
 // transport are both standing still with no load order
 bool EECPASGLand::HasIdleUnitToLoad()
@@ -918,6 +959,7 @@ bool EECPASGLand::HasIdleUnitToLoad()
     return theResult;
 }
 
+// FUNCTION: EXE 0x447f58
 // Sets the load group's current load from the capacity its transport already uses
 void EECPAILoadGroup::ResetLoad()
 {
@@ -925,6 +967,7 @@ void EECPAILoadGroup::ResetLoad()
         this->mLoad = this->mTransport->GetUnitClass()->mTransportCapacity - this->mTransport->mCargoRoom;
 }
 
+// FUNCTION: EXE 0x447f72
 // Finds a free landing tile on the first continent's shore toward the second (shared regions, or the shore
 // next to it), nearest the given tile (outTile when both are the same); returns whether one was found
 bool EECPASGLand::FindCrossingTile(EEAIContinent* inFirst, EEAIContinent* inSecond,
@@ -973,6 +1016,7 @@ bool EECPASGLand::FindCrossingTile(EEAIContinent* inFirst, EEAIContinent* inSeco
     return theResult;
 }
 
+// FUNCTION: EXE 0x44820e
 // Appends the units that are not inside a container
 void EECPASGLand::GetUnitsNotAboard(std::vector<EEComplexUnit*>& outUnits)
 {
@@ -984,6 +1028,7 @@ void EECPASGLand::GetUnitsNotAboard(std::vector<EEComplexUnit*>& outUnits)
     }
 }
 
+// FUNCTION: EXE 0x448262
 // Lists the active units outside containers that this transport kind would not pick up: transports, units
 // unable to board it, off-map units, and units on water, cliff or map edge (air: on water); unknown kind: none
 // NEAR: inlining and register allocation differ from the original
@@ -1034,6 +1079,7 @@ void EECPASGLand::GetUnitsNotCarriable(std::vector<EEComplexUnit*>& outUnits)
     }
 }
 
+// FUNCTION: EXE 0x4483b7
 // Lists the units the transport rejects plus, when it has fighting units, those that do not fit in its units'
 // remaining capacity
 void EECPASGLand::GetUnitsLeftBehind(std::vector<EEComplexUnit*>& outUnits)
@@ -1082,6 +1128,7 @@ void EECPASGLand::GetUnitsLeftBehind(std::vector<EEComplexUnit*>& outUnits)
     }
 }
 
+// FUNCTION: EXE 0x44862a
 // Enters a land sub-group state and runs its entry action (idle: drop the transport and get a task; split,
 // request a path, take the next waypoint, start loading, unload at the chosen point); others go to the base
 void EECPASGLand::SetState(long inState, long inTime)
@@ -1161,12 +1208,14 @@ void EECPASGLand::SetState(long inState, long inTime)
     }
 }
 
+// FUNCTION: EXE 0x4488b6
 // Returns true when the location's tile is on the map
 bool EECPILocation::IsOnMap()
 {
     return gWorld.GetMap()->GetTileAtLocation(this->GetTile()) != NULL;
 }
 
+// FUNCTION: EXE 0x4488ce
 // Runs one step of the land sub-group's state machine: scans targets, updates units, tests the state's
 // conditions and switches state; the next update is in 2.5 s (0.5 s while requesting a path)
 void EECPASGLand::Update(long inTime)
@@ -1487,6 +1536,7 @@ void EECPASGLand::Update(long inTime)
     this->mNextUpdateTime = inTime + theDelay;
 }
 
+// FUNCTION: EXE 0x449387
 // True when the group may advance (no next sub-sector, already in it, no blocking wall/gate on the way); else
 // moves the next sub-sector tile onto the blocker and returns whether it is unseen or beyond the scan area
 // NEAR: the wall handling follows the original, including its one-past weight store below
@@ -1603,12 +1653,14 @@ bool EECPASGLand::AdvanceSubSector()
     return !theBounds.Contains(this->mNextSubSectorTile.GetX(), this->mNextSubSectorTile.GetY());
 }
 
+// FUNCTION: EXE 0x449b21
 // Returns true when the player has explored the tile (visibility above 1) or sees the whole map
 bool EETile::IsSeenBy(EEPlayer* inPlayer)
 {
     return this->GetVisibility(inPlayer->mPlayerID) > 1 || inPlayer->mSeesAll;
 }
 
+// FUNCTION: EXE 0x449b5d
 // At most every 5 s: true when the next sub-sector holds a wall/gate blocking the path to the next open
 // waypoint (or the task); between checks, true when a next sub-sector tile is set
 // NEAR: the wall handling follows the original, including its one-past weight store below
@@ -1697,6 +1749,7 @@ bool EECPASGLand::CheckNextSubSector(long inTime)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44a0db
 // Returns true when the tile is on the map, not deep water, cliff or space, holds no blocking or collidable
 // unit and is not avoided
 // NEAR: inlining and register allocation differ from the original
@@ -1727,6 +1780,7 @@ bool EECPASGLand::CanTransportLandAt(const EETileLocation& inTile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44a186
 // Loads the sub-group, pickup/unload locations, transport ID and stage, path flag and transport tiles (newer
 // saves add the avoided tiles); returns the first read error; a pending path resumes travel
 long EECPASGLand::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -1803,6 +1857,7 @@ long EECPASGLand::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
     return theResult;
 }
 
+// FUNCTION: EXE 0x44a3a9
 // Shares the units outside transports among the transports by capacity and gives each a load goal; the rest
 // walk to the last rendezvous and are split off; returns whether a load goal was given
 bool EECPASGLand::BoardTransports(std::vector<EEComplexUnit*>* inTransports)
@@ -1881,6 +1936,7 @@ bool EECPASGLand::BoardTransports(std::vector<EEComplexUnit*>* inTransports)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44a81c
 // Drops the transport and sets the new destination
 void EECPASGLand::SetDestination(const EECPILocation& inLocation)
 {
@@ -1888,6 +1944,7 @@ void EECPASGLand::SetDestination(const EECPILocation& inLocation)
     EECPAttackSubGroup::SetDestination(inLocation);
 }
 
+// FUNCTION: EXE 0x44a836
 // Sets the unload point to the free landing tile nearest the transport (on an adjacent land continent, or its
 // own when on land) and redirects the transport's cargo; returns whether one was found
 bool EECPASGLand::ChooseNearestUnloadPoint(bool inWater)
@@ -1934,6 +1991,7 @@ bool EECPASGLand::ChooseNearestUnloadPoint(bool inWater)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44aa22
 // When the unload tile is unusable, picks an air drop on the task continent (a free random point or an enemy
 // farm, else the nearest free shore or closest point; else retargets the task); returns whether it changed
 bool EECPASGLand::ChooseAirUnloadPoint()
@@ -2029,6 +2087,7 @@ bool EECPASGLand::ChooseAirUnloadPoint()
     return theTile.GetX() != theOld.GetX() || theTile.GetY() != theOld.GetY();
 }
 
+// FUNCTION: EXE 0x44afce
 // Picks the shore tile where the transport unloads: the nearest one when in danger, else a crossing on the target
 // continent; an unusable tile calls cover and retargets the task; returns whether the tile changed
 // The unit scan walks the transport's units (original 0x44b14f: GetNumUnits/GetUnitAt on [ebp-8]), not ours
@@ -2119,12 +2178,14 @@ bool EECPASGLand::ChooseShoreUnloadPoint(bool inWater)
     return theTile.mX != theOld.mX || theTile.mY != theOld.mY;
 }
 
+// FUNCTION: EXE 0x44b3bc
 // Picks the space transport's unload point with the shore rules in water mode
 bool EECPASGLand::ChooseSpaceUnloadPoint()
 {
     return this->ChooseShoreUnloadPoint(1);
 }
 
+// FUNCTION: EXE 0x44b3c7
 // Requests a new route: opens the terrain the cost weights allow (water, space, cliff, forest, walls, gates),
 // clears the old path and asks the path manager with a land route-planner modifier
 void EECPASGLand::RequestPath(void* inFrom, void* inTo)
@@ -2163,6 +2224,7 @@ void EECPASGLand::RequestPath(void* inFrom, void* inTo)
     theModifier->Dereference();
 }
 
+// FUNCTION: EXE 0x44b53d
 // Drops land steps from the path (after a friendly gate, or up to 7 in a row for wonder or location attacks);
 // at the first impassable continent, requests a transport, sets embark/landing tiles and cuts the path there
 void EECPASGLand::PrunePath()
@@ -2267,6 +2329,7 @@ void EECPASGLand::PrunePath()
         this->ChooseUnloadPoint();
 }
 
+// FUNCTION: EXE 0x44b971
 // Tells the transport to start loading
 void EECPASGLand::StartTransportLoading()
 {
@@ -2275,6 +2338,7 @@ void EECPASGLand::StartTransportLoading()
     }
 }
 
+// FUNCTION: EXE 0x44b981
 // Sets the pickup tile and asks the group for a transport; with one, splits off the units it would not take
 // and returns true, or deactivates the task when it would take none; without one, deactivates the task
 bool EECPASGLand::RequestTransport(const EETileLocation& inTile)
@@ -2302,6 +2366,7 @@ bool EECPASGLand::RequestTransport(const EETileLocation& inTile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44ba29
 // Restores the sub-group and its locations after loading and turns the saved transport ID back into a
 // referenced transport (NULL if it is gone)
 long EECPASGLand::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -2326,6 +2391,7 @@ long EECPASGLand::Restore(unsigned long inMajorVersion, unsigned long inMinorVer
     return theResult;
 }
 
+// FUNCTION: EXE 0x44bab9
 // Writes the sub-group, pickup/unload locations, transport ID and stage, path-pending flag, transport tiles
 // and avoided tiles; returns the first write error
 long EECPASGLand::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -2369,12 +2435,14 @@ long EECPASGLand::Save(unsigned long inMajorVersion, unsigned long inMinorVersio
     return theResult;
 }
 
+// FUNCTION: EXE 0x44bc40
 // Returns true when there is no path request or it is not done yet
 bool EECPAttackSubGroup::IsPathPending()
 {
     return this->mPathRequest == NULL || !this->mPathRequest->mIsDone;
 }
 
+// FUNCTION: EXE 0x44bc57
 // Replaces the transport (releasing the old one) and references the new one
 void EECPASGLand::SetTransport(EECPASGTransport* inTransport)
 {
@@ -2386,6 +2454,7 @@ void EECPASGLand::SetTransport(EECPASGTransport* inTransport)
         dynamic_cast<EECPAttackSubGroup*>(inTransport)->Reference();
 }
 
+// FUNCTION: EXE 0x44bc95
 // For an active territory task with no path pending: true when within 8 tiles of it (or approaching with no
 // landing tile), the task player has influence there and it is on the group's main continent
 bool EECPASGLand::HasReachedTerritory(long inTime)
@@ -2421,6 +2490,7 @@ bool EECPASGLand::HasReachedTerritory(long inTime)
 
 static const float kASGLReadyRatio = 0.7f;   // 0x43ad68 (a unit-local const: not the pooled 0.7f)
 
+// FUNCTION: EXE 0x44bd80
 // Returns true when the group's units are settled (under 7 waypoints left, idle or waiting on an obstacle): at least
 // 70% of them in groups of more than 4, otherwise all of them
 bool EECPASGLand::AreUnitsSettled()
@@ -2440,6 +2510,7 @@ bool EECPASGLand::AreUnitsSettled()
     return theReady == this->mUnits.size() ? true : false;
 }
 
+// FUNCTION: EXE 0x44be6e
 // Checks task arrival as the base sub-group does and drops the transport once the group has arrived
 bool EECPASGLand::CheckTaskArrival(long inTime)
 {
@@ -2450,6 +2521,7 @@ bool EECPASGLand::CheckTaskArrival(long inTime)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44be92
 // Evaluates a state-machine condition for a land group (path ready, units aboard, transport status, unload point,
 // units settled, next sub-sector ...); other conditions go to the base sub-group
 bool EECPASGLand::TestCondition(long inEvent, long inTime)
@@ -2537,6 +2609,7 @@ bool EECPASGLand::TestCondition(long inEvent, long inTime)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44c169
 // Returns true when a unit of the group's transport carries cargo, has no waypoints and has no goal or is
 // reacquiring it
 // (mTransport read into a local before the dynamic_cast: the original loads ecx before the pushes)
@@ -2558,6 +2631,19 @@ bool EECPASGLand::AreTransportUnitsWaiting()
     return theFound;
 }
 
+// FUNCTION: EXE 0x44c1f1
+// Removes the last tile of a tile list (std::vector pop_back)
+
+// FUNCTION: EXE 0x44c225
+// Returns the last unit of a unit list (std::vector back)
+
+// FUNCTION: EXE 0x44c22c
+// Appends an order to an attack group's order queue (std::deque push_back)
+
+// FUNCTION: EXE 0x44c2b8
+// Sets all 15 path-cost weights to one value (EECPASGWeights::Fill)
+
+// FUNCTION: EXE 0x44c2c8
 // Keeps each of the 17 flags only where the other flag set has it too
 void EECPASGFlags::And(const EECPASGFlags& inOther)
 {
@@ -2566,17 +2652,193 @@ void EECPASGFlags::And(const EECPASGFlags& inOther)
     }
 }
 
+// FUNCTION: EXE 0x44c2ee
+// Returns the path point at an index (std::deque operator[])
+
+// FUNCTION: EXE 0x44c310
+// Returns the last path point (std::deque back)
+
+// FUNCTION: EXE 0x44c32f
+// Erases a range of path points (std::deque erase)
+
+// FUNCTION: EXE 0x44c3d8
+// Resizes the avoided-tile list, filling new entries with defaults (std::vector resize)
+
+// FUNCTION: EXE 0x44c3f3
+// Appends an avoided tile to the list (std::vector push_back)
+
+// FUNCTION: EXE 0x44c41f
+// Empties the avoided-tile list (std::vector clear)
+
+// FUNCTION: EXE 0x44c45a
+// Destroys a map of sub-group unit lists keyed by continent id (std::map tree destructor)
+
+// FUNCTION: EXE 0x44c485
+// Returns the last transport load group (std::vector back)
+
+// FUNCTION: EXE 0x44c48c
+// Appends a transport load group to a list (std::vector push_back)
+
+// FUNCTION: EXE 0x44c4b8
+// Reserves room in a list of weighted choices (std::vector<std::pair<long, float> > reserve)
+
+// FUNCTION: EXE 0x44c564
+// Appends a weighted choice to a list (std::vector<std::pair<long, float> > push_back)
+
+// FUNCTION: EXE 0x44c590
+// Erases one tile from a tile list (std::vector erase)
+
+// FUNCTION: EXE 0x44c5f4
+// Grows the block map of an attack group's order queue (std::deque _Growmap)
+
+// FUNCTION: EXE 0x44c700
+// Returns the path point a path iterator refers to (std::deque iterator operator*)
+
+// FUNCTION: EXE 0x44c734
+// Resizes the avoided-tile list, filling new entries with a given value (std::vector resize)
+
+// FUNCTION: EXE 0x44c7e8
+// Inserts one avoided tile before a position (std::vector insert)
+
+// FUNCTION: EXE 0x44c842
+// Erases a range of tiles from a tile list (std::vector erase)
+
+// FUNCTION: EXE 0x44c886
+// Erases a range of entries from a map of sub-group unit lists (std::map erase)
+
+// FUNCTION: EXE 0x44c8f7
+// Inserts one transport load group before a position (std::vector insert)
+
+// FUNCTION: EXE 0x44c951
+// Destroys every transport load group in a list and frees its storage (std::vector _Tidy)
+
+// FUNCTION: EXE 0x44c989
+// Inserts n copies of an avoided tile before a position (std::vector insert)
+
+// FUNCTION: EXE 0x44cc4f
+// Frees a subtree of a map of sub-group unit lists (std::map _Erase)
+
+// FUNCTION: EXE 0x44cc81
+// Inserts n copies of a transport load group before a position (std::vector insert)
+
+// FUNCTION: EXE 0x44cf67
+// Copy-constructs a list of 32-bit values (std::vector<unsigned long> copy constructor, a shared body)
+
+// FUNCTION: EXE 0x44cfae
+// Copy-constructs n avoided tiles into raw storage (std::vector _Ufill)
+
+// FUNCTION: EXE 0x44cfd5
+// Copy-constructs n transport load groups into raw storage (std::vector _Ufill)
+
+// FUNCTION: EXE 0x44cffc
+// Collects the units in the bounds that pass the land target filter, dropping duplicates when a multi-tile unit
+// was accepted and uniqueness was asked for; returns the count
+// EECollectASGTargets<EECPALandTargetFilter> (ee/EECPAreaTargetCollector.h), emitted by CollectTargets above
+
+// FUNCTION: EXE 0x44d1a5
+// Sorts a tile list farthest tile first (std::sort with EECPASGLandTileFarther)
+
+// FUNCTION: EXE 0x44d28b
+// Copy-constructs a tile point (U2DPoint<long> copy constructor)
+
+// FUNCTION: EXE 0x44d29e
+// Shuffles a list of weighted choices with the AI random generator (EEAIRandomShuffle)
+
+// FUNCTION: EXE 0x44d2c5
+// Copies a range of path points backwards (std::copy_backward on deque iterators)
+
+// FUNCTION: EXE 0x44d308
+// Copies a range of path points (std::copy on deque iterators)
+
+// FUNCTION: EXE 0x44d34b
+// Copies a range of avoided tiles (std::copy)
+
+// FUNCTION: EXE 0x44d37b
+// Copy-constructs a range of avoided tiles into raw storage (std::vector _Ucopy)
+
+// FUNCTION: EXE 0x44d3a3
+// Assigns one value to a range of avoided tiles (std::fill)
+
+// FUNCTION: EXE 0x44d3cb
+// Copy-constructs a range of transport load groups into raw storage (std::vector _Ucopy)
+
+// FUNCTION: EXE 0x44d3f3
+// Assigns one value to a range of transport load groups (std::fill)
+
+// FUNCTION: EXE 0x44d423
+// Copies a range of transport load groups backwards (std::copy_backward)
+
+// FUNCTION: EXE 0x44d45b
+// Copy-constructs one avoided tile in place (std::_Construct)
+
+// FUNCTION: EXE 0x44d47f
+// Copy-constructs one transport load group in place (std::_Construct)
+
+// FUNCTION: EXE 0x44d4a4
+// Insertion-sorts a tile list farthest first (std::_Insertion_sort with EECPASGLandTileFarther)
+
+// FUNCTION: EXE 0x44d4d7
+// Quick-sorts a tile list farthest first, falling back to a heap sort past the depth limit (std::_Sort)
+
+// FUNCTION: EXE 0x44d5e4
+// Insertion-sorts the rest of a partly sorted tile list without a bounds check (std::_Unguarded_insertion_sort)
+
+// FUNCTION: EXE 0x44d62e
+// Shuffles a list of weighted choices with the AI random generator (std::random_shuffle)
+
+// FUNCTION: EXE 0x44d660
+// Insertion-sorts a tile list farthest first (std::_Insertion_sort_1)
+
+// FUNCTION: EXE 0x44d72e
+// Arranges a tile list into a heap with the farthest tile on top (std::make_heap)
+
+// FUNCTION: EXE 0x44d772
+// Sorts a tile heap farthest first (std::sort_heap)
+
+// FUNCTION: EXE 0x44d7bf
+// Partitions a tile list around a median-of-three pivot for the farthest-first sort (std::_Unguarded_partition)
+
+// FUNCTION: EXE 0x44d914
+// Moves one tile back to its farthest-first position without a bounds check (std::_Unguarded_insert)
+
+// FUNCTION: EXE 0x44d95c
+// Shuffles a list of weighted choices, swapping each with a random earlier entry (std::_Random_shuffle)
+
+// FUNCTION: EXE 0x44d9b3
+// Builds a farthest-first heap over a tile list (std::_Make_heap)
+
+// FUNCTION: EXE 0x44da18
+// Moves the top tile of a tile heap to the end (std::pop_heap)
+
+// FUNCTION: EXE 0x44da4b
+// Sifts a tile down a farthest-first heap (std::_Adjust_heap)
+
+// FUNCTION: EXE 0x44daf6
+// Pops the top tile of a tile heap (std::_Pop_heap_0)
+
+// FUNCTION: EXE 0x44db6e
+// Sifts a tile up a farthest-first heap (std::_Push_heap)
+
+// FUNCTION: EXE 0x44dbe3
+// Moves the top tile of a tile heap into a given slot and re-heaps the rest (std::_Pop_heap)
+
+// ICF-FOLDED: EXE 0x67c0b4
 // Returns false
+// (no address of its own: folded into the shared `xor al, al; ret` body the vtable slot points at)
 bool EECPASGLand::Virtual214()
 {
     return false;
 }
 
+// ICF-FOLDED: EXE 0x67c0b4
+// (no address of its own: folded into the shared `xor al, al; ret` body the vtable slot points at)
 bool EECPASGLand::Virtual240()
 {
     return false;
 }
 
+// ICF-FOLDED: EXE 0x67c0b4
+// (no address of its own: folded into the shared `xor al, al; ret` body the vtable slot points at)
 bool EECPASGLand::Virtual244()
 {
     return false;

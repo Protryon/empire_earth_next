@@ -23,7 +23,7 @@ template <class T> class U2DPoint; typedef U2DPoint<long> EETileCoordinate;
 // (gWorld.mEffectManager, +0xb1c = the address of gEffectManager below). Layout.
 class EEEffectManager : public FSRestorable {
 public:
-    EEEffectManager();
+    EEEffectManager();                      // 0x10552f
     // 0x1074c9: hands the tile area to the +0x20 object's slot +0x50 (EESEAPaintElevation::Virtual4)
     // (provisional name)
     void ElevationChanged(long inLeft, long inTop, long inRight, long inBottom);
@@ -51,7 +51,7 @@ public:
     // 0x106596: an effect placed on a line (EEE3DTeleport 0xfbb22 passes a GE3DLine local: its position and a vertical
     // direction; EEE3DMultiEffect's second ctor 0xf42c3 calls it and is created by it) (provisional name)
     long CreateLineEffect(GE3DLine& inLine, EEGraphicEffect* inEffect, EEEffectHandle* outHandle);
-    long DestroyEffect(EEEffectHandle inHandle);
+    long DestroyEffect(EEEffectHandle inHandle);      // 0x1068c6
     // 0x10667c: an effect drawn from inFrom to inTo (the plague's kind 0x23) (provisional name)
     long CreateEffectBetween(GE3DPoint& inFrom, GE3DPoint& inTo, EEGraphicEffect* inEffect, EEEffectHandle* outHandle);
     // 0x105e21: an effect from inFrom to inTo (the plague's kind 0x40) (provisional name)
@@ -83,7 +83,7 @@ public:
     EEGraphicalGoalManager mGoals;          // +0x24 (ctor 0x10779d; sizeof 0x10)
 };
 
-extern EEEffectManager*& gEffectManager;
+extern EEEffectManager*& gEffectManager;     // 0x53185c
 
 // TEST ONLY (EE-SIM --effect-sweep; tools/sim_capture.py --profile effects): every swept 3D effect kind made in the
 // game's world at its end, stepped, saved and loaded (EEEffectManager.cpp)
