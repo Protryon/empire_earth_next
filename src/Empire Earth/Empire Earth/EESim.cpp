@@ -779,7 +779,7 @@ void SetUpLobby()
         const std::string& theName = theEngines[(size_t)(s - 1) % theEngines.size()];
         long theChoice = EECPChoiceByName(theName);
         if (theChoice < 0) {
-            std::string theKnown = EECPClassicAI() != NULL ? "classic, classic_cpp, random" : "classic, random";
+            std::string theKnown = "classic, random";
             for (const EECPAIEntry& e : EECPAIManifest())
                 theKnown += ", " + e.mID;
             Fail("--engine: '" + theName + "' is no engine (" + theKnown + (EECPAIManifest().empty() ? "" : ", next") + ")");

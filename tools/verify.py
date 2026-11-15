@@ -65,6 +65,9 @@ def include_paths(src=None):
     if src is not None and "Platform" in pathlib.Path(src).parts and "Common" in pathlib.Path(src).parts:
         flags.append(f"/clang:--embed-dir={TOOLCHAIN / 'fonts'}")
         wgpu.append(str(ROOT / "src" / "ThirdParty" / "stb"))
+    # the built-in general MIDI set (#embed in src/Low-Level Engine/Sound Engine/SEGeneralMIDI.c; EE.sf2 next to it)
+    if src is not None and pathlib.Path(src).name == "SEGeneralMIDI.c":
+        flags.append(f"/clang:--embed-dir={ROOT / 'src' / 'Low-Level Engine' / 'Sound Engine'}")
     # the window layer's SDL3 headers (tools/xbuild.py sdl3), for its implementation only
     if src is not None and "Platform" in pathlib.Path(src).parts and "SDL" in pathlib.Path(src).parts:
         wgpu.append(str(ee.sdl3_dir() / "include"))

@@ -442,7 +442,7 @@ static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECo
     // released without {gather = true}) went onto no list at all, and the engine never moved or counted it again: in
     // a boom game 18 of 33 citizens were on no list, so the food list stayed short, more went hunting (30 on food
     // against 19 wanted) and the mines got nobody. It goes onto its resource's list (hunting: food), else the idle one
-    if (theCategory == kUnitCategoryLandCitizen && EECPNextEngine(inPlayer)) {
+    if (theCategory == kUnitCategoryLandCitizen) {
         EEUGGather* theWork = dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal());
         EEUGAttackUnit* theHunt = dynamic_cast<EEUGAttackUnit*>(inUnit->GetLoadGoal());
         long theResource = theWork != NULL && theWork->mResource != NULL ? (long)theWork->mResource->GetResourceType()

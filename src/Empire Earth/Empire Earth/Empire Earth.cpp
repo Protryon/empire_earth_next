@@ -661,20 +661,12 @@ void EEAttackPlayers(long inPlayer, unsigned char inFlag)
             }
         }
         long j;
-        // port: a script seat (the next engine) gets the order as an event; its C++ combat manager is not run
-        for (j = theEnemies.size() - 1; j >= 0; j--) {
-            if (EECPEngine(theEnemies[j]) == kEECPEngineNext)
-                EECPUnitsOnAttackPlayer(theEnemies[j], (long)thePlayer->mPlayerID, false);
-            else
-                theEnemies[j]->mCombatManager->AttackPlayer(thePlayer);
-        }
+        // port: every computer player's Lua AI gets the order as an event (the original's combat managers took it)
+        for (j = theEnemies.size() - 1; j >= 0; j--)
+            EECPUnitsOnAttackPlayer(theEnemies[j], (long)thePlayer->mPlayerID, false);
         if (inFlag)
-            for (j = theAllies.size() - 1; j >= 0; j--) {
-                if (EECPEngine(theAllies[j]) == kEECPEngineNext)
-                    EECPUnitsOnAttackPlayer(theAllies[j], (long)thePlayer->mPlayerID, true);
-                else
-                    theAllies[j]->mCombatManager->DefendPlayer(thePlayer);
-            }
+            for (j = theAllies.size() - 1; j >= 0; j--)
+                EECPUnitsOnAttackPlayer(theAllies[j], (long)thePlayer->mPlayerID, true);
     }
 }
 

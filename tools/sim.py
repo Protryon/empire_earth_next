@@ -11,10 +11,9 @@ harness stages it (tools/harness/exe_boot.py stage_tree). A stage is kept and re
 
   python -I tools/sim.py [--data open|DIR] [--slot NAME] [--exe EXE] -- [EE-SIM options]
   python -I tools/sim.py -- --seed 3 --ai 2 --difficulty Hard --game-seconds 2700 --report r.json --ai-trace --trace t.txt
-  python -I tools/sim.py -- --seed 3 --engine classic,classic_cpp --report r.json
+  python -I tools/sim.py -- --seed 3 --engine classic,boom --report r.json
 
---engine LIST sets the computer seats' engines (classic: the manifest's "classic" AI, classic_lua; classic_cpp: the C++
-classic; random; an AI's id from Data/ai/ais.json such as boom; or next for its first AI; docs/AI_LUA_PLAN.md S0 and
+--engine LIST sets the computer seats' engines (classic: the manifest's "classic" AI, classic_lua; random; an AI's id from Data/ai/ais.json such as boom; or next for its first AI; docs/AI_LUA_PLAN.md S0 and
 3.3) through the lobby's engine boxes: one for every seat, or a comma list by seat (seat 1 is player 2), taken in
 turn.
 

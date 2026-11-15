@@ -108,8 +108,8 @@ def main():
             info = players.get(p, {})
             who = info.get("kind", "?")
             if who == "computer":
-                # engine: the AI's id, e.g. boom or classic_lua, or classic_cpp for the C++ classic (ee/EECPEngine.h;
-                # older logs: classic for the C++, next, or none: classic)
+                # engine: the AI's id, e.g. boom or classic_lua, none for a seat without one (ee/EECPEngine.h;
+                # older logs: classic or classic_cpp for the deleted C++ classic, next)
                 who += (f" {info.get('personality', '-')} cheats={info.get('cheats', '-')}"
                         f" engine={info.get('engine', 'classic')}")
             reached = ", ".join(f"e{e} {t / 60000:.1f}m" for e, t in sorted(epochs[p].items())) or "none"
