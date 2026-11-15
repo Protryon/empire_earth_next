@@ -221,10 +221,11 @@ def chat_check(g):
     time.sleep(1)
     capture = None
     try:
-        capture = str(fixture_driver.capture_frame(g, 'chat'))
+        fixture_driver.capture_frame(g, 'chat')
+        capture = 'chat'   # (the frame is saved under the run's directory by its name)
     except RuntimeError as error:
         g.note(f'CAPTURE chat skipped: {error}')
-    g.note('CHAT LINE shown (the fixture's chat command)')
+    g.note('CHAT LINE shown (the fixture chat command)')
     return dict(seq=seq, capture=capture)
 
 
