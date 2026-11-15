@@ -111,6 +111,14 @@ end
 -- the military being made at the own buildings: the item in production and the queue behind it (GatherUnits' last
 -- loop, CountRequest per queued military class)
 function M.military_in_production(view)
+    -- (once a step: a late game's 300 buildings read for every request and the standing army's count passed the
+    -- step's instruction budget at 83 minutes)
+    return R.memo("military_in_production", function()
+        return M.military_in_production_now(view)
+    end)
+end
+
+function M.military_in_production_now(view)
     local n = 0
     local ids = ai.units{category = "building", built = true}
     if #ids == 0 then
