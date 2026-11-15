@@ -339,6 +339,51 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CL_PLAYER = 121;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_CL_APPEND = 122;
 
+/// -> the timer's `Poll()`.
+constexpr static const uint32_t EE_SCREENS_CHL_POLL = 40;
+
+/// -> the timer's time left.
+constexpr static const uint32_t EE_SCREENS_CHL_TIME_LEFT = 41;
+
+/// The timer stopped.
+constexpr static const uint32_t EE_SCREENS_CHL_STOP = 42;
+
+/// (delay) the timer's delay set and the timer started.
+constexpr static const uint32_t EE_SCREENS_CHL_START = 43;
+
+/// The drawn name and message copied from the name and message.
+constexpr static const uint32_t EE_SCREENS_CHL_COPY_TEXTS = 44;
+
+/// (text) -> its text's length; f[0..4] its extent, f[4..6] its location.
+constexpr static const uint32_t EE_SCREENS_CHL_TEXT = 45;
+
+/// (text) its location set to f[0..2].
+constexpr static const uint32_t EE_SCREENS_CHL_LOCATE = 46;
+
+/// (colour, name: `GEColor*`, `UWideString*`) the name's text and colour set.
+constexpr static const uint32_t EE_SCREENS_CHL_SET_NAME = 47;
+
+/// (message: `UWideString*`, width) -> where the message is cut to fit the width in the message's font.
+constexpr static const uint32_t EE_SCREENS_CHL_CUT = 48;
+
+/// (message, cut) the message's text set: the message's first `cut` characters, or all of it for -1.
+constexpr static const uint32_t EE_SCREENS_CHL_SET_MESSAGE = 49;
+
+/// (message) -> its length.
+constexpr static const uint32_t EE_SCREENS_CHL_LENGTH = 50;
+
+/// (text) -> the form's clipped draw of the text in the rectangle f[0..4].
+constexpr static const uint32_t EE_SCREENS_CHL_DRAW = 51;
+
+/// The texts of [`EE_SCREENS_CHL_TEXT`], [`EE_SCREENS_CHL_LOCATE`] and [`EE_SCREENS_CHL_DRAW`].
+constexpr static const int64_t EE_SCREENS_CHL_NAME = 0;
+
+constexpr static const int64_t EE_SCREENS_CHL_MESSAGE = 1;
+
+constexpr static const int64_t EE_SCREENS_CHL_DRAWN_NAME = 2;
+
+constexpr static const int64_t EE_SCREENS_CHL_DRAWN_MESSAGE = 3;
+
 constexpr static const uint32_t EE_SCREENS_CB_SHOW_CHANGE_NAME = 1793;
 
 constexpr static const uint32_t EE_SCREENS_CB_ACCEPT_CHANGE_NAME = 1794;
@@ -560,6 +605,47 @@ constexpr static const uint32_t EE_SCREENS_PANEL_TECH = 1;
 
 /// [`EeScreensPanelButton`]: the stop command on the first action button.
 constexpr static const uint32_t EE_SCREENS_PANEL_STOP = 2;
+
+/// The facing arrow drawn at f[1..4] turned by f[0], over everything (the rasterizer's state restored after).
+constexpr static const uint32_t EE_SCREENS_CU_DRAW_ARROW = 70;
+
+/// The ground point under the mouse at f[0..2] at the height f[2] -> f[0..3].
+constexpr static const uint32_t EE_SCREENS_CU_GROUND = 71;
+
+/// The unit or tile under the point f[0..2] -> whether there is one; f[2..5] (in: the point to keep) its map point.
+constexpr static const uint32_t EE_SCREENS_CU_POINT_AT = 72;
+
+/// -> f[0..2] the centre of the selected group's bounds.
+constexpr static const uint32_t EE_SCREENS_CU_GROUP_CENTER = 73;
+
+/// (modifiers, flags `EE_SCREENS_CU_EXECUTE_*`) the click action's `Execute(f[0], f[1], ..., f[2], ...)`.
+constexpr static const uint32_t EE_SCREENS_CU_EXECUTE = 74;
+
+/// -> the selected group's unit count.
+constexpr static const uint32_t EE_SCREENS_CU_GROUP_COUNT = 75;
+
+/// (i) -> the group's unit i's class's category.
+constexpr static const uint32_t EE_SCREENS_CU_CATEGORY = 76;
+
+/// `ee_screens_command_units`' members (`hud_ctl_ffi.rs`).
+constexpr static const uint32_t EE_SCREENS_CU_DO_INIT = 0;
+
+constexpr static const uint32_t EE_SCREENS_CU_DO_COPY_DATA = 1;
+
+constexpr static const uint32_t EE_SCREENS_CU_DO_DRAW = 2;
+
+constexpr static const uint32_t EE_SCREENS_CU_DO_MOUSE_MOVE = 3;
+
+constexpr static const uint32_t EE_SCREENS_CU_DO_MOUSE_R_UP = 4;
+
+constexpr static const uint32_t EE_SCREENS_CU_DO_START = 5;
+
+/// [`EE_SCREENS_CU_EXECUTE`]'s flags: a unit or tile was hit, a facing is set, the facing was dragged.
+constexpr static const int64_t EE_SCREENS_CU_EXECUTE_HIT = 1;
+
+constexpr static const int64_t EE_SCREENS_CU_EXECUTE_FACING = 2;
+
+constexpr static const int64_t EE_SCREENS_CU_EXECUTE_DRAGGED = 4;
 
 /// Whether the mouse is over no control, or over the command units control.
 constexpr static const uint32_t EE_SCREENS_CURSOR_OP_MOUSE_OK = 1;
@@ -3247,6 +3333,86 @@ constexpr static const uint32_t EE_SCREENS_HK_F_C_PREVIOUS_PART = 256;
 
 constexpr static const uint32_t EE_SCREENS_HK_F_C_GOAL = 512;
 
+/// (dirty) `SetDirty`.
+constexpr static const uint32_t EE_SCREENS_HC_SET_DIRTY = 0;
+
+/// (mode) `SetDisplayMode` (the virtual).
+constexpr static const uint32_t EE_SCREENS_HC_SET_DISPLAY_MODE = 1;
+
+/// `SetRectangle(f[0..4])` (the virtual).
+constexpr static const uint32_t EE_SCREENS_HC_SET_RECTANGLE = 2;
+
+/// `SetBgRectangle(f[0..4])`.
+constexpr static const uint32_t EE_SCREENS_HC_SET_BG_RECTANGLE = 3;
+
+/// `SetBgOpacity(f[0])`.
+constexpr static const uint32_t EE_SCREENS_HC_SET_BG_OPACITY = 4;
+
+/// -> `UIControl::CopyData()`.
+constexpr static const uint32_t EE_SCREENS_HC_COPY_BASE = 5;
+
+/// -> `UIControl::DrawPolygons()`.
+constexpr static const uint32_t EE_SCREENS_HC_DRAW_BASE = 6;
+
+/// -> `UIControl::DrawTextA()`.
+constexpr static const uint32_t EE_SCREENS_HC_TEXT_BASE = 7;
+
+/// -> `UIControl::MouseLButtonDoublePressed()`.
+constexpr static const uint32_t EE_SCREENS_HC_DOUBLE_BASE = 8;
+
+/// `CaptureMouse()`.
+constexpr static const uint32_t EE_SCREENS_HC_CAPTURE_MOUSE = 9;
+
+/// `CaptureKeyboard()`.
+constexpr static const uint32_t EE_SCREENS_HC_CAPTURE_KEYBOARD = 10;
+
+/// `ReleaseCapturedMouse()`.
+constexpr static const uint32_t EE_SCREENS_HC_RELEASE_MOUSE = 11;
+
+/// `ReleaseCapturedKeyboard()`.
+constexpr static const uint32_t EE_SCREENS_HC_RELEASE_KEYBOARD = 12;
+
+/// `UpdateMouse(f[0..2])` (calls the virtual `MouseMove` back).
+constexpr static const uint32_t EE_SCREENS_HC_UPDATE_MOUSE = 13;
+
+/// -> f[0..4] `GetRectangle()`.
+constexpr static const uint32_t EE_SCREENS_HC_RECT = 14;
+
+/// -> f[0..4] `GetCopiedDrawRectangle()`.
+constexpr static const uint32_t EE_SCREENS_HC_COPIED_RECT = 15;
+
+/// -> `GetDisplayMode()`.
+constexpr static const uint32_t EE_SCREENS_HC_DISPLAY_MODE = 16;
+
+/// -> the keyboard's modifier state.
+constexpr static const uint32_t EE_SCREENS_HC_MODIFIERS = 17;
+
+/// -> f[0..4] the game view's rectangle (`gViewport`).
+constexpr static const uint32_t EE_SCREENS_HC_VIEW_RECT = 18;
+
+/// The mouse's bounds set to f[0..4].
+constexpr static const uint32_t EE_SCREENS_HC_MOUSE_BOUNDS = 19;
+
+/// The mouse's bounds set to the game window.
+constexpr static const uint32_t EE_SCREENS_HC_MOUSE_BOUNDS_WINDOW = 20;
+
+/// The form's `RedrawIntersectControls(f[0..4])`.
+constexpr static const uint32_t EE_SCREENS_HC_FORM_REDRAW = 21;
+
+/// The manager's `AddDirtyRectangle(f[0..4], form)`.
+constexpr static const uint32_t EE_SCREENS_HC_ADD_DIRTY = 22;
+
+/// -> whether the game view's rectangle contains the control's mouse location.
+constexpr static const uint32_t EE_SCREENS_HC_VIEW_HAS_MOUSE = 23;
+
+/// -> the game window's width.
+constexpr static const uint32_t EE_SCREENS_HC_WINDOW_WIDTH = 24;
+
+/// `kDisplayModeHidden`, `kDisplayModeShown`.
+constexpr static const int64_t EE_SCREENS_HC_HIDDEN = 0;
+
+constexpr static const int64_t EE_SCREENS_HC_SHOWN = 1;
+
 /// -> the local player's selected group's unit count (-1: no group).
 constexpr static const uint32_t EE_SCREENS_IB_OP_GROUP_COUNT = 0;
 
@@ -5072,6 +5238,12 @@ constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_EPOCH_TITLE = 4;
 /// Whether the world has a current player.
 constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_HAS_PLAYER = 5;
 
+/// (bar, f[0..4]) the bar's rectangle set, its colour green.
+constexpr static const uint32_t EE_SCREENS_PING_BAR = 32;
+
+/// (bar) -> the rasterizer's draw of the bar.
+constexpr static const uint32_t EE_SCREENS_PING_DRAW = 33;
+
 /// -> the portrait's level | its first bar shown << 32 | its second << 33.
 constexpr static const uint32_t EE_SCREENS_PT_OP_STATE = 0;
 
@@ -5860,6 +6032,40 @@ constexpr static const uint32_t EE_SCREENS_TEXT_MESSAGE_CLOSE_CAMPAIGN = 92;
 constexpr static const uint32_t SC_FORM_INTRO = 19;
 
 constexpr static const uint32_t SC_FORM_SELECT = 33;
+
+/// The eight lines set from f[0..32] (start x, y, end x, y each) and drawn -> the draw's result.
+constexpr static const uint32_t EE_SCREENS_SU_DRAW_LINES = 60;
+
+/// -> the unit under the mouse (referenced; 0: none).
+constexpr static const uint32_t EE_SCREENS_SU_PICK = 61;
+
+/// (unit) -> whether it is alive and the local player's.
+constexpr static const uint32_t EE_SCREENS_SU_OWN_LIVE = 62;
+
+/// (unit, modifiers) the lasso selects the unit's type in the game view.
+constexpr static const uint32_t EE_SCREENS_SU_LASSO_TYPE = 63;
+
+/// (unit) dereferenced.
+constexpr static const uint32_t EE_SCREENS_SU_DEREF = 64;
+
+/// (modifiers) the lasso selects every unit in the box f[0..4].
+constexpr static const uint32_t EE_SCREENS_SU_LASSO_BOX = 65;
+
+/// (modifiers) the click action selects at the mouse.
+constexpr static const uint32_t EE_SCREENS_SU_CLICK = 66;
+
+/// `ee_screens_select_units`' members (`hud_ctl_ffi.rs`).
+constexpr static const uint32_t EE_SCREENS_SU_DO_COPY_DATA = 0;
+
+constexpr static const uint32_t EE_SCREENS_SU_DO_DRAW = 1;
+
+constexpr static const uint32_t EE_SCREENS_SU_DO_DOUBLE_CLICK = 2;
+
+constexpr static const uint32_t EE_SCREENS_SU_DO_MOUSE_L_UP = 3;
+
+constexpr static const uint32_t EE_SCREENS_SU_DO_MOUSE_MOVE = 4;
+
+constexpr static const uint32_t EE_SCREENS_SU_DO_START = 5;
 
 /// `GetGraphicsQuality`'s answer when no preset matches: Custom.
 constexpr static const unsigned long EE_SCREENS_QUALITY_CUSTOM = 5;
@@ -7699,6 +7905,74 @@ struct EeScreensPanelButton {
   unsigned long control;
 };
 
+/// `EEUICPing`'s members (its protected base) but the bars.
+struct EeScreensPingFields {
+  /// The lit bars less one (`SetPing`'s quality times 5).
+  uint32_t mNumBars;
+};
+
+/// `GERectangle` in its member order (the records' rectangles are read as `GERectangle`s by the C++).
+struct EeScreensRect {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
+/// `EEUICChatLine`'s members (its protected base) but the texts and the timer.
+struct EeScreensChatLineFields {
+  /// The copied draw rectangle moved down by the shadow offset.
+  EeScreensRect mTextRectangle;
+  /// The table's background opacity.
+  float mOpacity;
+  uint32_t mShadowOffset;
+  bool mShowing;
+};
+
+/// `GE2DPoint`.
+struct EeScreensPoint {
+  float x;
+  float y;
+};
+
+/// `EEUICSelectUnits`' members (its protected base) but the lines and the actions.
+struct EeScreensSelectUnitsFields {
+  /// The box as of the last `CopyData`, clipped to the game view.
+  EeScreensRect mRA0;
+  /// The press (rounded).
+  EeScreensPoint mDragStart;
+  /// The mouse (rounded, clamped to the game view).
+  EeScreensPoint mDragEnd;
+  /// The drag went far enough from the press.
+  bool mDragging;
+  /// The box is drawn.
+  bool mD1;
+};
+
+/// `GE3DPoint`.
+struct EeScreensPoint3 {
+  float x;
+  float y;
+  float z;
+};
+
+/// `EEUICCommandUnits`' members (its protected base) but the click action, the model and the texture.
+struct EeScreensCommandUnitsFields {
+  /// The press (rounded).
+  EeScreensPoint mDownLocation;
+  /// The map point under the press.
+  EeScreensPoint3 mPosition;
+  float mFacing;
+  /// `mFacing` as of the last `CopyData`.
+  float mDrawnFacing;
+  /// A selected unit takes a facing.
+  bool mCanFace;
+  /// The drag went past the threshold (or the release set a facing).
+  bool mHasFacing;
+  /// `mHasFacing` as of the last `CopyData`.
+  bool mDrawnHasFacing;
+};
+
 /// A lobby slot (`EEGameOptionsPlayer`) but its name.
 struct EeScreensLobbyPlayerRecord {
   unsigned long kind;
@@ -8652,6 +8926,50 @@ uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
                                            bool idle_workers,
                                            bool idle_military,
                                            bool select_all);
+
+extern int64_t ee_screenscpp_hud_ctl(void *ctl, uint32_t op, int64_t a, int64_t b, float *f);
+
+/// `EEUICPing`'s constructor part: the bars placed from the location (x, y).
+void ee_screens_ping_init(EeScreensPingFields *rec, void *ctl, float x, float y);
+
+/// `EEUICPing::DrawPolygons`.
+int64_t ee_screens_ping_draw(EeScreensPingFields *rec, void *ctl);
+
+/// `EEUICPing::SetPing`.
+void ee_screens_ping_set(EeScreensPingFields *rec, void *ctl, float value);
+
+/// `EEUICChatLine`'s constructor part.
+void ee_screens_chat_line_init(EeScreensChatLineFields *rec, float opacity);
+
+/// `EEUICChatLine::CopyData`.
+int64_t ee_screens_chat_line_copy_data(EeScreensChatLineFields *rec, void *ctl);
+
+/// `EEUICChatLine::Display(colour, name, message, time)` (the colour a `GEColor*`, the texts `UWideString*`s).
+uint32_t ee_screens_chat_line_display(void *ctl,
+                                      const void *color,
+                                      const void *name,
+                                      const void *message,
+                                      uint32_t time);
+
+/// `EEUICChatLine::DrawPolygons`.
+int64_t ee_screens_chat_line_draw(EeScreensChatLineFields *rec, void *ctl);
+
+/// `EEUICChatLine::DrawTextA`.
+int64_t ee_screens_chat_line_draw_text(EeScreensChatLineFields *rec, void *ctl);
+
+/// `EEUICSelectUnits`' members: `EE_SCREENS_SU_DO_*` with the mouse location (x, y) where one is taken.
+int64_t ee_screens_select_units(EeScreensSelectUnitsFields *rec,
+                                void *ctl,
+                                uint32_t which,
+                                float x,
+                                float y);
+
+/// `EEUICCommandUnits`' members: `EE_SCREENS_CU_DO_*` with the mouse location (x, y) where one is taken.
+int64_t ee_screens_command_units(EeScreensCommandUnitsFields *rec,
+                                 void *ctl,
+                                 uint32_t which,
+                                 float x,
+                                 float y);
 
 /// The state of a bar `width` x `height`; `icon` (four floats: left, top, right, bottom) gets one icon's rectangle.
 void *ee_screens_icon_bar_new(float width,

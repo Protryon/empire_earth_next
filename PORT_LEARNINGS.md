@@ -22165,3 +22165,90 @@ headers, combo buttons, check boxes, radio circles, frames, the stretched dialog
   PlatNativeImage, PlatGUIFont), the resource configs (ComponentConfig and its subclasses: the census first), the
   remaining images (Image.cpp's ProgramImage::Draw and RawImage1's layout, the decoders), the WON skin's compositions
   (WONMSSkin's constructor, WONSkin's factories), the widgets' remains (Component, ComponentTraversal, WrappedText).
+
+## R6: the game screens, twenty-ninth round: four HUD controls whole on Rust records over one shared host (ee_screens hud_ctl.rs, ping.rs, chat_line.rs, select_units.rs, command_units.rs; branch rust-screens29, 2026-11-14)
+
+The first round on the toolkit's controls as Rust records (ui round 19): the game's own `UIControl` subclasses can now
+keep their members as records too. Four of the eight direct subclasses moved whole; the other four (the portrait, the
+icon bar, the mini map, the editor's paint control) already had their logic in Rust over their own hosts (rounds 27,
+22) or belong to the editor lane.
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 869cb6ac | `EEUICPing`, `EEUICChatLine`, `EEUICSelectUnits`, `EEUICCommandUnits` whole on records; `EEUIRustControl` and its host (new) | +415 -757, net -342 |
+| 6bca6957 | thirteen HUD units' include lines they compile without (the icon bar, portrait, improvement, mini map, main group, status box, status button, status bar, colour, saved group, attribute, error log, main game form) | +0 -470, net -470 |
+
+Count (round 22's `count.sh`, `build/sc29`: User Interface Thread without the unit utilities, UI Events,
+`include/ee/EEUI*.h`): 19,815 at the branch's start (00754e4f) -> 19,003 (-812). Short of the 1,500 asked: the four
+controls are mostly calls into C++ objects (texts, timers, lines, the arrow's model and the viewport), which stay
+host ops.
+
+- **The pattern.** `EEUIRustControl` (`include/ee/EEUIRustControl.h`, `User Interface Thread/EEUIRustControl.cpp`, new)
+  sits between `UIControl` and a game control whose logic is Rust. It holds the inert mouse, tab and keyboard slots
+  the four controls shared (each header had them) and the one host, `ee_screenscpp_hud_ctl(control, op, a, b, f)`:
+  ops 0..24 are any control's (`EEUIRustControl::HostOp`: `SetDirty`, `SetDisplayMode`, `SetRectangle`, the background,
+  the base's `CopyData`/`DrawPolygons`/`DrawTextA`/double click, the captures, `UpdateMouse`, the rectangles, the
+  modifiers, the game view, the mouse bounds, the form's redraw and the manager's dirty rectangle); the others go to
+  the class's virtual `RustOp` (the C++ objects it owns). Each class is `EEUIRustControl, protected EeScreens*Fields`:
+  the record's fields keep the members' names, so the scenario editor's subclasses (`EESEUICCommandUnits` reads
+  `mFacing`, `mCanFace`, `mHasFacing`; `EESEUICTriggerSelectUnits` reads `mDragging`, `mD1`, `mLasso`, `mClick`) compile
+  unchanged except the two points the editor's release passed as `GE2DPoint`s (`GetDragStart()`/`GetDragEnd()` now).
+  The C++ objects (texts, the timer, rhombi, lines, the arrow's model and texture, the click and lasso actions) stay
+  C++ members; the constructors keep their `new`s and table reads; every other member is a one-line forwarder.
+  Records are reached by address (`hud_ctl::Rec`) and read afresh around each op: `UpdateMouse` re-enters the
+  control's `MouseMove` from inside `StartSelection`/`StartCommand`. The constructors value-initialise the record
+  (the original left `mDrawnFacing`/`mDrawnHasFacing` and the chat line's text rectangle unset until the first
+  `CopyData`).
+- **What moved.** The ping meter's bars' placement, draw and lit count; the chat line's snapshot (texts side by side
+  under the shadow offset, the fading background), `Display` (the cut to fit, the timer), its draws; the box
+  selection's snapshot clipped to the view, its lines, the double click, the release, the drag and the start (the
+  box geometry stays `ee_gfx` `select.rs`, now called from Rust); the right-drag command's snapshot, arrow draw,
+  facing drag (`um_arctan2`, the squared 2%-of-the-window threshold), release (the group centre's facing) and start
+  (the 18 categories that take a facing, `lrintf` of the press). `CreateModel` and `LoadTexture` folded into the
+  constructor as tables and loops (the same calls in the same order).
+- **The golden** (`build/sc29/drv`): the four units cut from 00754e4f (namespace `O`, classes renamed) against the new
+  headers, bodies and host in one driver over a fake world (`fake.h`); each case one control, 1-25 calls, the
+  destructor; the world rolled before each call from the case's stream (the mouse in and out of the view, half the
+  moves near the last press and a quarter repeating the last move, modifiers, timers running out, picked units
+  dead/alive/foreign, groups of 0-6 units of any category, points hit or missed and written or not, perspective and
+  orthographic views); objects made in zeroed memory (the original's unset members). Every effect traced, the members
+  digested after each call. Seeds 2-4 x 10,000 and 7 x 2,000: 0 differences. Host mutations: 32 of 32 caught (three needed the world widened, see Lessons).
+  `golden_hud_ctl.txt` (400 cases, 5,053 calls, 1.2 MB) is the new side's outermost ops and records, replayed by the
+  four modules' `replays_the_golden` (a nested call's ops are the host's: after `S`, the replay loads the record from
+  the golden); 26 of 26 Rust mutations fail it (`build/sc29/drv/rmutate.py`).
+- **Lessons.** (1) A random world rarely reaches thresholds and equalities: the window-width mutation and the
+  unchanged-drag-end mutation survived until moves near the last press and repeated moves were added; a cut-off of
+  0 needed the fake's cut to answer 0 sometimes. (2) Members the original leaves unset differ between sides in a
+  driver: allocate both in zeroed memory. (3) cbindgen exports `pub(crate) const`s: two `HIDDEN`/`SHOWN` landed in
+  `ee_rust_common.h` against `ee_ui`'s; prefix every constant. (4) `#define protected public` lets the driver digest
+  both sides' members without accessors. (5) A unit whose logic left keeps the include block of the old code; a greedy
+  trim (`build/sc29/mininc.py`, each include dropped when the unit still compiles) took 204 of 287 lines off these
+  five units.
+- **Behaviour.** None intended. The records start zeroed where the original's members were unset until the first
+  `CopyData` (a draw before the first snapshot drew nothing either way in practice).
+- **What runs it.** The chat lines on every message shown in a game (the tour shows none unless a chat or a game
+  message arrives); the box selection and the right-drag command on every press in the game view (the orders game's
+  box selection and orders); the ping meter in the multiplayer lobby only (the LAN game's lobby). EE-SIM builds no
+  form: the oracle and the editor gate are unchanged by construction. **Only a person reaches**: the double click's
+  type selection, the right drag's facing arrow (its draw), the editor's rotate and trigger selection.
+- **The include trim (commit 2).** `mininc.py` over the thirteen HUD units whose logic earlier rounds moved: 470 lines,
+  each unit compiling after every single drop (the exe module's flags, `compile1.py`). `EEUIFMGStatusButton` and
+  `EEUIFMainGame` kept most of theirs (their hosts still call deep into the world). The POSIX build was not run: a
+  header only POSIX needs would show there first (none of the dropped ones is platform-specific).
+- **Gates.** Both commits were built and gated together on one tree (the first commit's tree alone was not rebuilt
+  after the trim): the build `--sim` 0/0 (EE-AOC, EE-SIM), the oracle identical on seeds 2-3, the editor gate PASS
+  (5,560 lines), the Rust gate's clippy failed once (`assign_op_pattern` on the text rectangle's bottom, written as
+  the original's `offset + bottom`: `+=` gives the same bits) and rustfmt reordered imports, both fixed before the
+  commit. On the result merged with `rust` (ccf6714a; no conflict; `rust_build.py header` and `rust_includes.py`
+  changed nothing): the build `--sim` 0/0, the test profile 0/0, the oracle identical on seeds 2-7, the editor gate PASS
+  (6,823 lines: rust's merged rounds), the Rust gate PASS. Harness (the lock held, the merged test profile):
+  `--exercise tour --play-seconds 60` `RESULT PASS tour`, `gx_errors` {}; `--exercise random-game --play-seconds 60
+  --orders --box-select` `BOX SELECT PASS` (4 steps, the add grew the group), `ORDERS PASS` (gather, repair,
+  repair-queued, move; patrol and attack-ground skipped), `RESULT PASS random-game`, `gx_errors` {}; `--exercise
+  random-game --play-seconds 30 --scroll-check --zoom-captures 50 100 200` `SCROLL CHECK PASS`, `RESULT PASS
+  random-game`. The box selection and the right-click orders ran through `select_units.rs` and `command_units.rs`
+  there. No simulation code changed: no capture profile ran.
+- **Left.** The portrait and the icon bar onto `EEUIRustControl` (their own hosts duplicate a dozen of its ops); the
+  mini map (its `CopyData` marshalling); the HUD's button subclasses (`EEUIFMGStatusButton`, `EEUIFMGStatusBox`,
+  `EEUIFMGStatusBar`, the saved-group, colour, wall and gate buttons, the five `EEUIFMGG*`): they are `UIButton`s, so
+  they want a `UIButton` counterpart of `EEUIRustControl`; the last events (~1.7k).
