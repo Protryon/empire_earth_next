@@ -22866,3 +22866,153 @@ The area screen (`EESETSArea`, 484 lines: its mouse drawing is world and input c
 gate needs a way to give an area a rectangle first), the condition and effect controls' constructors
 (`EESETSCComboBox.cpp`, `EESETSEComboBox.cpp`: about 30 controls each, a table for the shared maker with three new
 kinds), the editor form (`EEUIFScenarioEditor`, 1,495 lines; accessors first), the unit tab's small control classes.
+
+## R4.3, fourteenth part: DX7Screen, DX7Surface and DX7Movie whole in Rust; the Draw units folded, the renderer plug-in boundary collapsed (ee_dx7 scrobj.rs, surfobj.rs, movobj.rs; branch rust-ge14, 2026-11-14)
+
+The round took the measure of round 13 at its word (address markers stay while a file exists, so only whole files and
+whole bodies cut lines) and deleted files: every unit of the DX7 plug-in but DX7Rasterizer.cpp, DX7Trampolines.cpp and
+GX.cpp is gone.
+
+| Commit | What | Net C++ (src + include, include/rust excluded) |
+|---|---|---|
+| cf65e7e2 | DX7Screen and DX7Surface whole in Rust; DX7Screen.cpp, DX7Surface.cpp deleted | +166 -758, net -592 |
+| 195070d8 | the three Draw units folded into DX7Rasterizer.cpp and deleted | +295 -703, net -408 |
+| c5c0b6c9 | the renderer plug-in boundary collapsed; DX7HRTnLDisplay.cpp deleted | +25 -259, net -234 |
+| 49d35af9 | DX7Movie whole in Rust; DX7Movie.cpp deleted | +138 -368, net -230 |
+
+Round total: net -1,464. The Graphics Engine directory: 10,134 -> 8,752 lines; the DX7 plug-in's units 2,694 -> 1,355
+(DX7Rasterizer.cpp, DX7Trampolines.cpp, GX.cpp), its headers 506 -> 425.
+
+- **The screen** (`EeDx7Screen`): the modes (a `Vec` the `GetMode`/`GetCurrentMode` references point into), the desktop
+  rectangle (a `GERectangle` in memory: bottom, left, right, top), the name (a C++ `UString*` the host makes and frees),
+  the device, the monitor, the current mode and the seven flags; the statics `sScreens`, `sScreensCaptured` and
+  `sFirstCaptureWasAttachedToDesktop` are Rust statics. The constructor is two calls (`ee_dx7sc_new`, then
+  `ee_dx7sc_start` once the C++ holds the object: the probe creates surfaces and a window through the host). The object
+  implements round 9's `ScreenHost` itself (`ScreenRef`, a raw pointer re-read per call), so `screen.rs`'s algorithms
+  run unchanged; the probe's `Capture`/`Release` call the object's own methods (they were the class's virtuals).
+  `CreateAWindow` stays C++ (the platform window calls; the probe reaches it through the host).
+- **The surface** (`EeDx7Surface`): the description (the `GetSurfaceDescription` reference and the getters point into
+  it), the attached surfaces, the transparency colour (white: `GEColor()` is 1, 1, 1 — the golden caught a first draft
+  that started black), the GX surface, the parent, the lock's memory and pitch, the lock flags. The logical size stays
+  in the `GESurface` base (the shell passes it to `ee_dx7sf_logical_size`; the host's `SurfaceMetrics` reads it for
+  another surface). The bilinear copies call `ee_ge::pixel` directly: `filter_ffi.rs` and the `ee_dx7cpp_unpack_*`
+  trampolines are gone. `screen_ffi.rs` and `surface_ffi.rs` are gone.
+- **One host for both** (`EeDx7ObjOp`, 12 operations, DX7Trampolines.cpp): the name, `new DX7Surface`, a surface's object
+  (`static_cast<DX7Surface*>(s)->mDX7`), references, a surface's size and metrics, the probe window, the platform window,
+  the window events. The shells' getters are one-line inlines in the headers.
+- **The Draw units** held only the draws' forwarders, the `ee_dx7cpp_*` reads of GE objects the Rust draws ask for and the
+  text draw's job; they moved to DX7Rasterizer.cpp unchanged (the renderer lane's interfaces are untouched).
+- **The plug-in boundary**: the T&L renderer was linked into the game and found through the PIM table as a 'rast' module.
+  `GEInitialize` now takes `DX7TnLRasterizer()` (DX7Rasterizer.cpp) and adds it when it activates and finds a screen
+  (the plug-in's `PIMIsValid`: activate, count the screens, deactivate, in that order); `RasterizerWrapper`, the module
+  walk and the plug-in's entry table are gone; PIMModule's table keeps the mixer and the random maps. The harness's
+  mangled names (`DX7Rasterizer::ShowScene`, `ActivateScreen`) are unchanged.
+- **The movie** (`EeDx7Movie`): three threads reach it (the game: render, stop, the getters; the playback thread: the play
+  loop and pl_mpeg's callbacks; the mixer's device thread: the sound pull). The original's `volatile bool`s are
+  `AtomicBool`s; the frame buffer and rectangles are used under `mFrameAccess` and the ring under `mSoundAccess` as the
+  original did (`UnsafeCell`s, never a reference across a host call). The thread's parameter, pl_mpeg's user data and the
+  mixer's context are the Rust object (the C++ `mDX7` is written after the constructor returns, when the thread may
+  already run). The playback thread copies the host and the stopped event before its dereference (the original read the
+  movie after it, a use after free when the game had already let the movie go). pl_mpeg's queries and the clock are
+  called from Rust (`MovieSys`; the decode callbacks need `plm_frame_t` and stay C++); `GEPackBGRXRow`'s row loop is Rust
+  (`pack_bgrx_row`; RTSGraphics still uses the C++ inline). The host has 32 operations (`EeDx7MovieOp`).
+- **The goldens** (scratch, `build/ge14/gsc` and `build/ge14/gmv`: `build.py orig|cur|mut`, the fakes, the drivers,
+  `mutate.py`): the base commit's units and headers (unmodified, with the base's ee_dx7/ee_ge from a `git archive`) or the
+  worktree's shells (DX7Trampolines.cpp's parts), with the real GX.cpp, over traced fakes.
+  - Screens and surfaces: every `gx_*` the objects reach (random display modes always including the probe's 800 x 600 x
+    16, caps, display mode, cooperative levels, surface creation with pixel buffers, attachments, blits, flips and locks
+    answering still-drawing, lost, busy or failed, colour keys, render scales, Direct3D and devices, texture formats), the
+    platform window, the cursor, window events, a reference counter that registers every surface (serials, a traced
+    deletion). Sequences of up to three screens, captures and releases on two windows, surfaces of every type (flip
+    chains, mip chains, Z buffers with both preference orders), attach/detach, clears, copies, bilinear copies (the target's
+    pixels hashed), flips, locks, text locks, transparency, logical sizes, mode changes, windows; each step followed by
+    every screen's and surface's state through the getters. 20,000 sequences identical (sha256 of the digests
+    bbcad3db...). A first run differed on one sequence: a bilinear copy from a zero-width mip level reads outside the
+    surface in both (the driver now skips empty surfaces). 22 of 24 mutations caught; the two that change nothing touch
+    state no getter reads (the lock flag, a destroyed surface's text lock).
+  - The movie: the thread system (sections, events, a thread the driver runs when it chooses), pl_mpeg (random sizes,
+    streams, sample rates and ends; each decode calls the video and audio callbacks and may render, pull the mixer or stop
+    a looping movie, as the game and the device thread would), the mixer, the active rasterizer's screen and target, the
+    surfaces (the frame buffer's pixels hashed), the clock, the floating-point modes. 20,000 sequences identical (sha256
+    aad4a44e...); 14 of 15 mutations caught, plus a hang ("finished never set": the play loop never ends); the one that
+    changes nothing sets the source rectangle after a failed frame buffer (nothing reads it).
+
+  | Mutation of the Rust (2,000 sequences) | Sequences that change |
+  |---|---|
+  | transparency starts black | 1,970 |
+  | back buffers released | 978 |
+  | attach takes no reference | 2,000 (crash) |
+  | detach keeps the reference | 1,737 |
+  | clear ignores the logical scale | 7 |
+  | copy uses the source metrics for the target | 12 |
+  | filter always 16-bit | 53 |
+  | filter reports the target unlock | 1,993 |
+  | allocated size skips attachments | 1,255 |
+  | lock forgets the pitch | 672 |
+  | unlock always clears | 0 (no getter reads the lock flag) |
+  | transparency key with alpha 0 | 232 |
+  | explicit logical size ignored | 106 |
+  | logical shift ignored | 179 |
+  | text unlock on destroy skipped | 0 (the surface is gone) |
+  | screen list keeps deleted screens | 2,000 |
+  | capture state not written back | 2,000 |
+  | release keeps full screen | 1,995 |
+  | set mode never records | 50 |
+  | desktop width and height swapped | 1,989 |
+  | no 32-bit probe | 2,000 |
+  | filter caps swapped | 791 |
+  | capture always windowed | 1,992 |
+  | device not released | 2,000 |
+  | movie: no reference taken / stopped not cleared / not just started / priority 1 | 2,000 each |
+  | movie: rectangle ignored | 237 |
+  | movie: source set on failure | 0 (no reader) |
+  | movie: source rows swapped | 2,000 (crash) |
+  | movie: ready never set / frame ready not signalled | 818 each |
+  | movie: 1-5-5-5 rows as 5-6-5 | 208 |
+  | movie: frame buffer not released | 1,018 |
+  | movie: copy without a reference | 462 |
+  | movie: stop does not wait | 704 |
+  | movie: events destroyed in the other order | 2,000 |
+  | movie: finished never set | hang |
+
+- **Cargo**: the three objects are generic over `Gx`/`Host` (screen, surface) and `MovieSys` (movie), their FFI in a
+  `cfg(not(test))` module: `scrobj_tests.rs` (11 tests over the recorder and a test host of boxed surfaces with reference
+  counts) and `movobj_tests.rs` (7: the constructor's order, a missing file, a whole playback, the render, the frame
+  packing per format, the sound under its section). And a cargo replay of the screen and surface driver
+  (`scrobj_replay.rs`, commit 8d950830): its sequences over the Rust objects with its fakes ported (a `Gx` that answers
+  and traces as the driver's `gx_*` under GX.cpp and `RawGx` did, the shells' host operations, the numbering reference
+  counter, the platform window); sequences 1..300 give the C++ driver's digests over the unmodified units
+  (`golden_scrobj.txt`). Two things had to change in the scratch driver first: every random draw in its own statement
+  (C++ leaves the order of function arguments and `|` operands unspecified: clang-cl's order is not a contract a port can
+  copy), and the floats printed as bits (`%g` against Rust's shortest form). The replay's first digest differed although
+  every trace line matched: the driver's FNV basis had lost its last digit (1469598103934665603); the replay uses the
+  driver's constant. The screen tests take one lock (the screen list and the capture statics are process-wide) and reset
+  the capture statics. The movie driver is not replayed (its thread system and pl_mpeg fakes are C++).
+- **Behaviour changes** (undefined paths only): the probe's mode read past the modes when no 800 x 600 x 16 mode exists
+  reads zeros (the original read past the vector); a screen's or surface's index past its vectors panics (the original
+  indexed past them); a surface's memory address and pitch, and a screen's current mode, start zero (unset in the
+  original); the playback thread no longer reads the movie after its dereference.
+- **What runs it**: EE-SIM makes no rasterizer and plays no movie; the screens, surfaces and the plug-in collapse run only in
+  the game. Under the harness lock, on the branch before the merge: the tour (`fixture_game.py --exercise tour
+  --play-seconds 60 --seed 2 --zoom-captures 50 100`) `RESULT PASS tour` (view 83.2% lit), its captures compared with the
+  pre-round exe's run of the same command: the random map setup, single player and the four settings tabs 0 differing
+  pixels, the main menu and the closed settings 209 (the animated corner), the game views equal by eye (terrain, town
+  center, units, HUD text, mini map; the pixels differ as round 13's did); the legacy debugger tour (`game_session.py
+  --exercise tour --input-check --play-seconds 120`) `STOP <windowed session complete> reached`, its menus against the
+  lead's latest legacy run: single player and the windowed frame 0 differing pixels, the main menu 486 (the corner); the
+  LAN game `RESULT PASS lan-game` (PT host 2,933, joiner 2,952). Movies are exercised by no harness run (the goldens and
+  the unit tests only): the lead should watch an intro movie once.
+- **Gates.** Each code commit: build `--sim` 0/0 (EE-AOC 1,019, 1,015, 1,015 and 1,014 inputs), the oracle on seeds 2-3
+  identical, the Rust gate PASS. The merge of `rust` (42af0588, 86 commits, round 13 among them) was automatic: no
+  conflict, the generated headers current after `rust_build.py header`, `rust_includes.py` changed nothing. On the merged
+  tree: both builds 0/0 (EE-AOC 986 inputs), the oracle identical on seeds 2-7, the Rust gate PASS (again after the replay
+  commit), the captures at seeds 2-3: effects PASS (6 digests), oracle and late FAIL on UUTL alone (`seed 2 UUTL 27224`,
+  `seed 3 UUTL 33490`/`33548`): the rust head's own EE-SIM (the lead's build of 42af0588) gives the same two oracle
+  digests, so the unit utilities' UUTL golden does not match the merged `rust` as it is, independently of this round
+  (for the lead); the tour `RESULT PASS tour` (render checks ok, 83.5% lit; the views and menus checked by eye) and the
+  random game with orders and the scroll check `RESULT PASS random-game` (gather, repair, repair queued and move done,
+  patrol and attack-ground skipped; `SCROLL CHECK PASS`, the edge scroll included this time).
+- **Left in the plug-in**: DX7Rasterizer.cpp (852 lines: the forwarders, the draws' reads of GE objects, the rasterizer's
+  host, about 300 address markers), DX7Trampolines.cpp (366: the vertex arrays' shells, the screen, surface and movie
+  shells and hosts, the layout pins) and GX.cpp (137: the GX shims the splash screen and `tools/gx_test`/`sdl_test` call).
+
