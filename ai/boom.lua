@@ -576,6 +576,34 @@ function M.step(view, memory)
         if BO.OPT.cit_grow and BO.CIT_GROW[phase] ~= nil and BO.CIT_GROW[phase] > plan.citizens_max then
             plan.citizens_max = BO.CIT_GROW[phase]
         end
+        -- (BO.OPT.raid_towers: the towers stood at 7-9 against the Lua classic's 40-70-soldier attacks as against the
+        -- C++'s 5-7) from the Stone Age, one more tower per RAID_TOWER_PER raiders of the largest raid met in the claim
+        -- range in the last RAID_TOWER_MS, up to RAID_TOWER_MOST
+        if BO.OPT.raid_towers and phase ~= "pre" then
+            local r = (view.claim_range or 30) + 5
+            for _, cl in ipairs(D.clusters()) do
+                local dx, dy = cl.x - view.town_x, cl.y - view.town_y
+                if dx * dx + dy * dy <= r * r and (memory.raid_big == nil or cl.n >= memory.raid_big.n
+                        or view.time - memory.raid_big.t > BO.RAID_TOWER_MS) then
+                    memory.raid_big = {n = cl.n, t = view.time}
+                end
+            end
+            local big = memory.raid_big
+            if big ~= nil and view.time - big.t <= BO.RAID_TOWER_MS then
+                local add = big.n // BO.RAID_TOWER_PER
+                local t = math.min((plan.towers or 0) + add, BO.RAID_TOWER_MOST)
+                if t > (plan.towers or 0) then
+                    if (memory.raid_towers_said or 0) ~= t then
+                        memory.raid_towers_said = t
+                        print(string.format("raid towers want=%d raid=%d plan=%d", t, big.n, plan.towers or 0))
+                    end
+                    plan.towers = t
+                    if plan.towers_saving ~= nil then
+                        plan.towers_saving = math.max(plan.towers_saving, t)
+                    end
+                end
+            end
+        end
         if BO.OPT.cit_parity and phase ~= "pre" and phase ~= "stone_start" then
             local want = math.min(memory.cit_seen + BO.CIT_PARITY_MARGIN, BO.CIT_PARITY_MOST)
             if want > plan.citizens_max then
