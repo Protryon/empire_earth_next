@@ -19,11 +19,14 @@ public:
         return theResult;
     }
     bool GetShouldUpdate() const { return ee_input_mouse_should_update(Rust()); }
-    void Refresh();
+    // reads the buffered mouse events: motion, wheel, button presses and releases, double presses
+    void Refresh() { ee_input_mouse_refresh_now(Rust()); }
     void RefreshXY() { ee_input_mouse_refresh_xy(Rust()); }
-    void Resume();
+    // takes the mouse for the game (the window's pointer in relative mode) and rereads its state
+    void Resume() { ee_input_mouse_resume_window(Rust()); }
     void SetUseBufferedMovement(bool inUse) { ee_input_mouse_set_use_buffered_movement(Rust(), inUse); }
-    void Suspend();
+    // releases the mouse (the pointer leaves relative mode)
+    void Suspend() { ee_input_mouse_suspend_window(Rust()); }
 private:
     ISMouse() = delete;
     ~ISMouse() = delete;

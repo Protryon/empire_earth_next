@@ -60,8 +60,7 @@
 #include "ee/EECPAttackSubGroup.h"
 #include "ee/EEAIAStarPathGraphGoal.h"
 #include "ee/EEAIPathSector.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEAIPathSubSector.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
@@ -485,7 +484,7 @@ bool EEAIGPGModifierComputerPlayerWallPlanner::IsGateOpen(EEAIPathSubSector* inS
 {
     U2DSparseArrayPointContainer& theTiles = inSector->mTiles;
     bool theBlocked = false;
-    EEUCGate* theGateClass = NULL;
+    EEUnitClass* theGateClass = NULL;
     EEPlayer* thePlayer = gWorld.mPlayers[inPlayerID];
     EEComplexUnit* theGate = NULL;
     for (long i = theTiles.Size() - 1; i >= 0 && !theBlocked; i--) {
@@ -497,7 +496,7 @@ bool EEAIGPGModifierComputerPlayerWallPlanner::IsGateOpen(EEAIPathSubSector* inS
             if (!theUnit || theUnit->GetUnitClass()->mCategory != kUnitCategoryGate)
                 continue;
             theGate = theUnit->mComplexUnit;
-            theGateClass = dynamic_cast<EEUCGate*>(theGate->GetUnitClass());
+            theGateClass = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theGate->GetUnitClass());
             break;
         }
         if (!theGate || theGate->mHitPoints <= 0) {
@@ -516,14 +515,14 @@ bool EEAIGPGModifierComputerPlayerWallPlanner::IsGateOpen(EEAIPathSubSector* inS
 // FUNCTION: EXE 0x410745
 // Returns whether a gate part is an end part (last, with a part before it) or the middle part
 // (EEUCGate::IsSidePart: out of line after its first user Virtual10)
-bool EEUCGate::IsSidePart(EEComplexUnit* inGate)
+bool EEUnitClass::IsSidePart(EEComplexUnit* inGate)
 {
     return inGate->mNextPart == NULL && inGate->mPreviousPart != NULL || this->IsMiddlePart(inGate);
 }
 
 // FUNCTION: EXE 0x41076f
 // Returns whether a gate part is second to last with a part before it (the middle of a three-part gate)
-bool EEUCGate::IsMiddlePart(EEComplexUnit* inGate)
+bool EEUnitClass::IsMiddlePart(EEComplexUnit* inGate)
 {
     return inGate->mNextPart != NULL && inGate->mNextPart->mNextPart == NULL && inGate->mPreviousPart != NULL;
 }

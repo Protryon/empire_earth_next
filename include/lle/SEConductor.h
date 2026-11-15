@@ -11,19 +11,10 @@ class SEScore;
 
 class LLE_API SEConductor {
 public:
-    unsigned long GetChannelGroupCount();
     unsigned long GetConductorState() const;
-    unsigned long GetIntensity() const;
-    const char* GetMusicFolder() const;     // valid until the next SetMusicFolder
-    unsigned long GetReverbState() const;
     float GetVolume() const;
-    // the events (0 segment aborted, 1 almost ended, 2 ended, 3 started, 4 music started, 5 music stopped): kept for
-    // the interface; dmusic reports none, and the game registers no callback
-    void SetNotificationCallback(unsigned long inEvent, void (*inCallback)(SEConductor&, long));
 
-    long GetCurrentlyPlayingScore();
     SEScore* GetScore(long inID) const;
-    long GetScoreID(SEScore* inScore) const;
     long LoadScore(const UWideString& inName, long& outID);
     long Play(long inID);
     long Queue(long inID);

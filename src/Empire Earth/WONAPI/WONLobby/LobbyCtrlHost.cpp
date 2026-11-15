@@ -75,7 +75,7 @@ void GameUserListItem::Paint(Graphics& inGraphics,ListArea* inArea)
         return;
     case 1:
         if(this->mClient->IsReady())
-            inGraphics.DrawImage(::GameUserListCtrl_Ready_Image.get(),0,(this->mHeight-this->mImage->mHeight)/2);
+            inGraphics.DrawImage(LOBBY_IMAGE(GameUserListCtrl_Ready_Image).get(),0,(this->mHeight-this->mImage->mHeight)/2);
         return;
     case 2:
         inGraphics.SetFont(this->mFont.get());
@@ -164,15 +164,15 @@ static const GUIString& CtlString(intptr_t inString)
 {
     typedef EeWonLobbyCtlString S;
     switch ((S)inString) {
-    case S::Ready: return ::GameStagingCtrl_Ready_String;
-    case S::NotReady: return ::GameStagingCtrl_NotReady_String;
-    case S::StartGame: return ::GameStagingCtrl_StartGame_String;
-    case S::LeaveGame: return ::GameStagingCtrl_LeaveGame_String;
-    case S::DissolveGame: return ::GameStagingCtrl_DissolveGame_String;
-    case S::Ban: return ::GameUserListCtrl_Ban_String;
-    case S::Kick: return ::GameUserListCtrl_Kick_String;
-    case S::CheckingAddress: return ::LobbyOptions_CheckingAddress_String;
-    case S::AddressUnavailable: return ::LobbyOptions_AddressUnavailable_String;
+    case S::Ready: return LOBBY_STRING(GameStagingCtrl_Ready_String);
+    case S::NotReady: return LOBBY_STRING(GameStagingCtrl_NotReady_String);
+    case S::StartGame: return LOBBY_STRING(GameStagingCtrl_StartGame_String);
+    case S::LeaveGame: return LOBBY_STRING(GameStagingCtrl_LeaveGame_String);
+    case S::DissolveGame: return LOBBY_STRING(GameStagingCtrl_DissolveGame_String);
+    case S::Ban: return LOBBY_STRING(GameUserListCtrl_Ban_String);
+    case S::Kick: return LOBBY_STRING(GameUserListCtrl_Kick_String);
+    case S::CheckingAddress: return LOBBY_STRING(LobbyOptions_CheckingAddress_String);
+    case S::AddressUnavailable: return LOBBY_STRING(LobbyOptions_AddressUnavailable_String);
     }
     return gEmptyGUIString;
 }
@@ -181,18 +181,18 @@ static const SmartPtr<Image>& CtlImage(intptr_t inImage)
 {
     typedef EeWonLobbyCtlImage I;
     switch ((I)inImage) {
-    case I::Ignored: return ::UserListCtrl_Ignored_Image;
-    case I::Blocked: return ::UserListCtrl_Blocked_Image;
-    case I::Muted: return ::UserListCtrl_Muted_Image;
-    case I::Away: return ::UserListCtrl_Away_Image;
-    case I::Admin: return ::UserListCtrl_Admin_Image;
-    case I::Moderator: return ::UserListCtrl_Moderator_Image;
-    case I::Captain: return ::UserListCtrl_Captain_Image;
-    case I::Firewall: return ::LobbyGlobal_Firewall_Image;
-    case I::Searching: return ::LobbyGlobal_Searching_Image;
+    case I::Ignored: return LOBBY_IMAGE(UserListCtrl_Ignored_Image);
+    case I::Blocked: return LOBBY_IMAGE(UserListCtrl_Blocked_Image);
+    case I::Muted: return LOBBY_IMAGE(UserListCtrl_Muted_Image);
+    case I::Away: return LOBBY_IMAGE(UserListCtrl_Away_Image);
+    case I::Admin: return LOBBY_IMAGE(UserListCtrl_Admin_Image);
+    case I::Moderator: return LOBBY_IMAGE(UserListCtrl_Moderator_Image);
+    case I::Captain: return LOBBY_IMAGE(UserListCtrl_Captain_Image);
+    case I::Firewall: return LOBBY_IMAGE(LobbyGlobal_Firewall_Image);
+    case I::Searching: return LOBBY_IMAGE(LobbyGlobal_Searching_Image);
     case I::Normal: break;
     }
-    return ::UserListCtrl_Normal_Image;
+    return LOBBY_IMAGE(UserListCtrl_Normal_Image);
 }
 
 static bool ClientIs(LobbyClient* inClient, intptr_t inTest)
@@ -373,10 +373,10 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::ResetFilters: LobbyResetFilters(); return 0;
     case Op::CurrentScreen: return (intptr_t)LobbyGetCurrentScreen();
     case Op::BroadcastDown: aComp->BroadcastEventDown(new LobbyEvent((int)b)); return 0;
-    case Op::MusicResume: ::LobbyGlobal_LobbyMusic_Sound->Resume(); return 0;
-    case Op::MusicStop: ::LobbyGlobal_LobbyMusic_Sound->Stop(); return 0;
-    case Op::ClickSoundMute: ::LobbyGlobal_ButtonClick_Sound->SetMuted(a != 0); return 0;
-    case Op::LogonSoundStop: ::LobbyGlobal_SierraLogon_Sound->Stop(); return 0;
+    case Op::MusicResume: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Resume(); return 0;
+    case Op::MusicStop: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop(); return 0;
+    case Op::ClickSoundMute: LOBBY_SOUND(LobbyGlobal_ButtonClick_Sound)->SetMuted(a != 0); return 0;
+    case Op::LogonSoundStop: LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop(); return 0;
     case Op::RemoveLanName: LobbyRemoveLanName(); return 0;
     case Op::OnLoginScreen: return LobbyOnLoginScreen() ? 1 : 0;
     case Op::OnLanScreen: return LobbyOnLanScreen() ? 1 : 0;
@@ -401,19 +401,8 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     }
     case Op::FillMapTypes: EELobbyFillMapTypeCombo(aCombo); return 0;
     case Op::ComboHasSel: return aCombo->mListArea->GetSelItem() != NULL ? 1 : 0;
-    case Op::GameOption: return (intptr_t)static_cast<EELobbyGame*>(aGame)->GetOption((int)b);
-    case Op::GameSetOption: static_cast<EELobbyGame*>(aGame)->SetOption((int)b, (unsigned long)c); return 0;
-    case Op::GameChangeOption:
-        static_cast<EELobbyGame*>(aGame)->ChangeOption((int)b, (unsigned long)(long)c, true);
-        return 0;
-    case Op::GameSendState: static_cast<EELobbyGame*>(aGame)->SendGameState(); return 0;
-    case Op::GameHasFile: return static_cast<EELobbyGame*>(aGame)->HasGameFile() ? 1 : 0;
-    case Op::LabelSetGameFile:
-        aLabel->SetText(static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(b))->GetGameFileName());
-        return 0;
-    case Op::GameSlot: return (intptr_t)static_cast<EELobbyGame*>(aGame)->GetPlayerSlot((int)b);
-    case Op::SlotState: return reinterpret_cast<EELobbyPlayerSlot*>(a)->Option(0);
-    case Op::SlotSetOpen: reinterpret_cast<EELobbyPlayerSlot*>(a)->SetOpen(); return 0;
+    case Op::GameRust: return (intptr_t) static_cast<EELobbyGame*>(aGame)->mRust;
+    case Op::LabelSetName: aLabel->SetText(EELobbyStr(b)); return 0;
     case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;
     case Op::EventParam: return static_cast<EELobbySyncOptionEvent*>(anEvent)->mParam;
     case Op::ChooseSavedGame: {
@@ -428,24 +417,20 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
         return theResult;
     }
     // EELobbyPlayerOptionsCtrl
-    case Op::SlotOption: return reinterpret_cast<EELobbyPlayerSlot*>(a)->Option((int)b);
-    case Op::ComboSetSlotName: aCombo->SetText(reinterpret_cast<EELobbyPlayerSlot*>(b)->GetName()); return 0;
+    case Op::ComboSetName: aCombo->SetText(EELobbyStr(b)); return 0;
     case Op::ComboSetTextColor: aCombo->mEdit->mTextColor = (unsigned long)b; return 0;
     case Op::MyPlayerReady: return GetMyLobbyPlayer()->GetReady() ? 1 : 0;
     case Op::MyPlayer: return (intptr_t) static_cast<EELobbyPlayer*>(GetMyLobbyPlayer());
     case Op::PlayerSlot: return reinterpret_cast<EELobbyPlayer*>(a)->GetSlot();
     case Op::ClientPlayer: return (intptr_t)(EELobbyPlayer*)aClient->GetPlayer().mPtr;
     case Op::ColorSetColor: reinterpret_cast<EELobbyColorButton*>(a)->SetColor((int)b); return 0;
-    case Op::ColorGetColor: return reinterpret_cast<EELobbyColorButton*>(a)->mColor;
+    case Op::ColorGetColor: return reinterpret_cast<EELobbyColorButton*>(a)->GetColor();
     case Op::LabelSetPercent: {
         char theBuffer[50];
         sprintf(theBuffer, "%d", (int)b);
-        aLabel->SetText(LobbyFormatString(gEELobbyPlayerOptionsCtrl_TransferPercent, theBuffer));
+        aLabel->SetText(LobbyFormatString(EE_LOBBY_STRING(gEELobbyPlayerOptionsCtrl_TransferPercent), theBuffer));
         return 0;
     }
-    case Op::GameChangePlayerOption:
-        static_cast<EELobbyGame*>(aGame)->ChangePlayerOption((int)b, (int)(c & 0xff), (unsigned char)(c >> 8));
-        return 0;
     }
     return 0;
 }

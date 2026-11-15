@@ -3,8 +3,11 @@
 // Replaces EEE3DCommandConfirmation.cpp, EEE2DShockwave.cpp, EEE2DImpact.cpp (but EETagPointList::Scale, below),
 // EEE2DImpactBlood.cpp, EEE2DMuzzleFlash.cpp, EEE2DLightning.cpp, EEE2DPlasmaPulse.cpp, EEE2DPulseWave.cpp,
 // EEE2DWaterRipple.cpp, EEE2DFireTrail.cpp, EEE2DExplosion.cpp, EEE2DFire.cpp, EEE2DExhaustTrail.cpp, EEE2DSmokePlume.cpp
-// EEE2DSmokeMuzzleBlast.cpp, EEE2DWinterBreath.cpp, EEE2DLinearProjectile.cpp and EEE2DVortex.cpp.
+// EEE2DSmokeMuzzleBlast.cpp, EEE2DWinterBreath.cpp, EEE2DLinearProjectile.cpp and EEE2DVortex.cpp; since the
+// twenty-first round EEE2DMarchingIcons.cpp, EEE2DLightGlow.cpp, EEE2DBattlefieldAmbient.cpp (its decal placement
+// helpers kept below) and EEE2DParticle.cpp (the pool kept below).
 #include <windows.h>
+#include <string.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -52,13 +55,33 @@
 #include "ee/EEE3DRust.h"
 #include "ee/EEE2DRust.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EEAEManager.h"
+#include "ee/EEEffectManager.h"
+#include "ee/EEEffectKindIDs.h"
+#include "ee/EEE2DBattlefieldAmbient.h"
+#include "lle/GE3DLine.h"
+#include "lle/UMemoryPool.h"
 #include "rust/ee_combat.h"
 
 namespace {
+// a unit's tile's centre on the terrain (EEE2DLightGlow::SetUp 0xe2067 and PlaceGlows 0xe266f without a complex unit)
+GE3DPoint EETileCentre(EEUnit* inUnit)
+{
+    GE3DPoint thePosition;
+    thePosition.SetX(inUnit->mUnitClass->mTileSize * 0.5f + inUnit->mTileX);
+    thePosition.SetY(inUnit->mUnitClass->mTileSize * 0.5f + inUnit->mTileY);
+    thePosition.SetZ(gWorld.GetMap()->mTerrainMesh.GetMeshZ(thePosition.GetX(), thePosition.GetY()));
+    return thePosition;
+}
+
 // the world's answers for one call
 struct Ask2D {
     EEE2DRust* mEffect;
     EEEffectQueue* mQueues;
+    // the light glow's: the unit's light tags, its frame and its scaled location while the call places the glows
+    EETagPointList* mTags;
+    unsigned long mFrame;
+    GETransformation mLocation;
     static EEE2DRust* E(void* inAsk) { return static_cast<Ask2D*>(inAsk)->mEffect; }
     static int32_t BaseQueue(void* inAsk)
     {
@@ -331,6 +354,157 @@ struct Ask2D {
         EEOrbital* theOrbital = E(inAsk)->mGraphicObject->GetOrbital(inIndex);
         return EeGfxOrbital{theOrbital->mModel, theOrbital->mSpeed, theOrbital->mAngle};
     }
+    // the marching icons' (EEE2DMarchingIcons::IsIconShown 0xe3cdf, Virtual5C 0xe3d8e, Step 0xe41ef, DrawPass6 0xe3e92)
+    static EeGfxIconUnit IconUnit(void* inAsk)
+    {
+        EeGfxIconUnit theFacts = {};
+        EEUnit* theUnit = E(inAsk)->mUnit;
+        if (!theUnit)
+            return theFacts;
+        theFacts.has_unit = true;
+        theFacts.land_building = theUnit->mUnitClass->IsLandBuilding();
+        theFacts.tile_size = theUnit->mUnitClass->mTileSize;
+        if (theUnit->mPlayer) {
+            theFacts.has_player = true;
+            theFacts.player = (uint32_t)theUnit->mPlayer->mPlayerID;
+            theFacts.x = theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetX();
+            theFacts.y = theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetY();
+        }
+        return theFacts;
+    }
+    static bool AreaEffect(void* inAsk, int32_t inKind, float inX, float inY, uint32_t inPlayer)
+    {
+        return gAEManager.HasEffect(inKind, inX, inY, inPlayer, false, &E(inAsk)->mUnit->mComplexUnit->mAreaEffects);
+    }
+    static int32_t AreaEffects(void* inAsk) { return (int32_t)E(inAsk)->mUnit->mComplexUnit->mNumAreaEffects; }
+    static void SetAreaEffects(void* inAsk, int32_t inCount)
+    {
+        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
+        theUnit->mNumAreaEffects = inCount;
+        if (inCount == 0)
+            theUnit->FnE123D();
+    }
+    // the unit's type is in its player's active group; a town centre or capitol also with 0x23 or 0x29 there
+    static bool IconsSelected(void* inAsk)
+    {
+        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
+        unsigned long theType = theUnit->mUnitClass->mUnitType;
+        EESelectedGroup* theGroup = theUnit->mPlayer->mActiveGroup;
+        bool theSelected = theGroup ? theGroup->HasUnitType(theType) : false;
+        if (theGroup != NULL && (theType == kUnitTypeTownCenter || theType == kUnitTypeCapitol)) {
+            if (theGroup->HasUnitType(0x23) || theGroup->HasUnitType(0x29))
+                theSelected = true;
+        }
+        return theSelected;
+    }
+    static bool IconsOwner(void* inAsk)
+    {
+        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
+        return theUnit->mPlayer == gWorld.GetCurrentPlayer() && theUnit->mIsBuilt;
+    }
+    static uint32_t GhostUnits(void*) { return (uint32_t)gWorld.GetNumGhostUnits(); }
+    static EeGfx2DPoint GroundPoint(void*, EeGe3DPoint inAt)
+    {
+        EeGfx2DPoint thePoint = {};
+        EEMap* theMap = gWorld.mMap;
+        GE3DPoint theLocation(inAt.x, inAt.y, inAt.z);
+        GE3DPoint theGround;
+        if (!theMap->GetTile(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY())))
+            return thePoint;
+        theMap->GetGroundPoint(theLocation, theGround);
+        thePoint.has = true;
+        thePoint.point = EeGe3DPoint{theGround.mX, theGround.mY, theGround.mZ};
+        return thePoint;
+    }
+    // the light glow's (EEE2DLightGlow::SetUp 0xe2067, Step 0xe25dc, PlaceGlows 0xe266f): the unit's light tags at its
+    // animation (the first without a complex unit), kept for their names and points
+    static EeGfxGlowSetUp GlowSetUp(void* inAsk)
+    {
+        EEUnit* theUnit = E(inAsk)->mUnit;
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        EETagPointList* theTags;
+        GE3DPoint thePosition;
+        if (theComplex != NULL) {
+            theTags = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 0xd);
+            const GETransformation& theLocation = theComplex->mPhysicalModel.GetLocation();
+            thePosition = GE3DPoint(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
+        } else {
+            theTags = theUnit->GetModel()->GetTagPoints(0, 0xd);
+            thePosition = EETileCentre(theUnit);
+        }
+        static_cast<Ask2D*>(inAsk)->mTags = theTags;
+        EeGfxGlowSetUp theSetUp = {theTags != NULL ? (uint32_t)theTags->GetNumTagPoints() : 0u,
+                                   EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ}};
+        return theSetUp;
+    }
+    static uint32_t GlowTagName(void* inAsk, uint32_t inIndex, uint8_t* outName, uint32_t inCapacity)
+    {
+        EETagPoint* thePoint = static_cast<Ask2D*>(inAsk)->mTags->mPoints[inIndex];
+        UString theName = thePoint->mModel->GetTagPointName(thePoint->mIndex);
+        uint32_t theLength = (uint32_t)theName.GetLength();
+        memcpy(outName, (const char*)theName, theLength < inCapacity ? theLength : inCapacity);
+        return theLength;
+    }
+    // the placing's unit: hidden for another player's cloaked unit or an unfinished land building
+    static EeGfxGlowPlace GlowPlace(void* inAsk)
+    {
+        Ask2D* theAsk = static_cast<Ask2D*>(inAsk);
+        EEUnit* theUnit = E(inAsk)->mUnit;
+        EeGfxGlowPlace thePlace = {true, false, {}};
+        EETagPointList* theTags;
+        float theScale;
+        GE3DPoint thePosition;
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        if (theComplex != NULL) {
+            bool theCloaked = theComplex->mIsCloakable ? theComplex->mIsCloaked : false;
+            if (theCloaked && gWorld.GetCurrentPlayer() != theComplex->mPlayer)
+                thePlace.show = false;
+            if (theComplex->mUnitClass->IsLandBuilding() && !theComplex->mIsBuilt)
+                thePlace.show = false;
+            theTags = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 0xd);
+            theScale = theComplex->mPhysicalModel.GetScale();
+            theAsk->mFrame = theComplex->mPhysicalModel.GetFrame();
+            theAsk->mLocation = theComplex->mPhysicalModel.GetLocation();
+            thePosition = GE3DPoint(theAsk->mLocation.GetX(), theAsk->mLocation.GetY(), theAsk->mLocation.GetZ());
+        } else {
+            EEUnitClassUpgrade* theStats = theUnit->mStats;
+            theTags = theUnit->GetModel()->GetTagPoints(0, 0xd);
+            theScale = theStats->mScale;
+            theAsk->mFrame = 0;
+            thePosition = EETileCentre(theUnit);
+            theAsk->mLocation.MakeIdentity();
+            theAsk->mLocation.SetX(thePosition.GetX());
+            theAsk->mLocation.SetY(thePosition.GetY());
+            theAsk->mLocation.SetZ(thePosition.GetZ());
+        }
+        if (theTags != NULL)
+            EETagPointList::Scale(theAsk->mLocation, theScale);
+        theAsk->mTags = theTags;
+        thePlace.has_tags = theTags != NULL;
+        thePlace.position = EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ};
+        return thePlace;
+    }
+    static EeGe3DPoint GlowPoint(void* inAsk, uint32_t inIndex)
+    {
+        Ask2D* theAsk = static_cast<Ask2D*>(inAsk);
+        GE3DPoint thePoint;
+        theAsk->mTags->mPoints[inIndex]->GetPoint(theAsk->mFrame, theAsk->mLocation, thePoint);
+        return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
+    }
+    static EeGfxGlowArea GlowArea(void* inAsk)
+    {
+        GETerrainMesh& theMesh = gWorld.GetMap()->mTerrainMesh;
+        unsigned long theX, theY, theWidth, theHeight;
+        theMesh.GetTerrainVisibleBottomLeftIndices(theX, theY);
+        theMesh.GetTerrainVisibleTileDimensions(theWidth, theHeight);
+        EEUnit* theUnit = E(inAsk)->mUnit;
+        return EeGfxGlowArea{(uint32_t)theX, (uint32_t)theY, (uint32_t)theWidth, (uint32_t)theHeight,
+                             (int32_t)theUnit->mTileX, (int32_t)theUnit->mTileY};
+    }
+    static uint32_t GlowRows(void*) { return (uint32_t)gWorld.GetMap()->mTerrainMesh.GetNumVisibleTileRows(); }
+    // the particle's (EEE2DParticle::Update 0xe4c31, Step 0xe520d)
+    static EeGfxParticleTick ParticleTick(void* inAsk) { return EEParticleTick(E(inAsk)->mGraphicEffect, E(inAsk)->mPosition); }
+    static EeGfxParticleGround ParticleGround(void*) { return EEParticleGround(); }
 };
 
 // the unit's mouth through the transformation, with the offsets of the cavalry archer, chariot archer, bronze spear
@@ -362,8 +536,9 @@ GE3DPoint EEMouthPoint(EEUnit* inUnit, const GETransformation& inTransformation)
 // others' 0x4e8df8
 GEModel* EE2DModel(long inKind)
 {
-    return inKind == 0x12 || inKind == 0x41 || inKind == 0x2f || inKind == 0x22 || inKind == 0x31 ? gU4E8DF4
-                                                                                                  : gEffect2DModel;
+    return inKind == 0x12 || inKind == 0x41 || inKind == 0x2f || inKind == 0x22 || inKind == 0x31 || inKind == 0x32
+               ? gU4E8DF4
+               : gEffect2DModel;
 }
 }
 
@@ -392,10 +567,25 @@ EEE2DRust::EEE2DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKi
     this->Call(EeGfxEffect3DOp::Create);
 }
 
+// the light glow on a unit, keeping it when asked (EEE2DLightGlow 0xe1a7a)
+EEE2DRust::EEE2DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind, KeepsUnit inKeepsUnit)
+    : EEEffect2D(inUnit, inGraphicEffect, EE2DModel(inKind), inKind, inKeepsUnit.mValue)
+{
+    this->Call(EeGfxEffect3DOp::Create);
+}
+
 // at a point (EEE2DShockwave 0xe61e2, EEE2DImpact 0xe10af, ...): the point for Rust in the record's sprite.start
 EEE2DRust::EEE2DRust(const GE3DPoint& inPosition, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect2D(0, inGraphicEffect, EE2DModel(inKind), inKind, false)
 {
+    // the battlefield decal (0xde74f): its size and corners on the terrain (hidden and over off the map or not level)
+    if (inKind == 0x32) {
+        EeGfxAmbientNew theNew = {inGraphicEffect->GetStartSize(), inGraphicEffect->GetSize(),
+                                  (int32_t)inGraphicEffect->mIntParam1, inGraphicEffect->mFlag1};
+        EeGfxParticleGround theGround = EEParticleGround();
+        ee_gfx_effect_ambient_new(this->mRecord, reinterpret_cast<const EeGe3DPoint*>(&inPosition), &theNew, &theGround);
+        return;
+    }
     this->mRecord->sprite.start = EeGe3DPoint{inPosition.mX, inPosition.mY, inPosition.mZ};
     this->Call(EeGfxEffect3DOp::CreateAt);
 }
@@ -492,6 +682,128 @@ EEE2DRust::EEE2DRust(long inKind)
 {
 }
 
+// the pooled 2D particle (EEE2DParticle, kind 0x2e): the pool's objects are made cleared with no references
+// (0xe47b1), taken by NewParticle (0xe489b, 0xe49c7, 0xe4a4a, 0xe4adf) and given back by LastDereference (0xe4f32)
+UMemoryPool<EEE2DRust> EEE2DRust::sParticlePool;
+
+EEE2DRust::EEE2DRust()
+    : EEEffect2D(0, 0x2e, false)
+{
+    this->Reinit(NULL, false);
+    this->ClearParticle();
+    this->mReferenceCount = 0;
+}
+
+bool EEE2DRust::SetParticlePoolSize(unsigned long inChunkSize, unsigned long inMaxChunks)
+{
+    return EEE2DRust::sParticlePool.SetSize(inChunkSize, inMaxChunks, 1);
+}
+
+void EEE2DRust::ReleaseParticlePool()
+{
+    EEE2DRust::sParticlePool.DumpStats(false);
+    EEE2DRust::sParticlePool.Release();
+}
+
+// Clear (0xe4be3): the particle's motion, age, look and timing to zero, with no graphic
+void EEE2DRust::ClearParticle()
+{
+    ee_gfx_effect_particle_clear(this->mRecord);
+    this->mGraphicObject = NULL;
+}
+
+// a particle from the pool for loading (0xe4adf)
+EEE2DRust* EEE2DRust::NewParticle()
+{
+    EEE2DRust* theParticle = EEE2DRust::sParticlePool.New();
+    if (theParticle->mReferenceCount == 0)
+        theParticle->mReferenceCount = 1;
+    theParticle->Reinit(gEffect2DModel, false);
+    theParticle->ClearParticle();
+    return theParticle;
+}
+
+// a particle from the pool for a unit's or no unit's effect
+EEE2DRust* EEE2DRust::TakeParticle(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect)
+{
+    EEE2DRust* theParticle = EEE2DRust::sParticlePool.New();
+    if (theParticle->mReferenceCount == 0)
+        theParticle->mReferenceCount = 1;
+    theParticle->Reinit(inUnit, inGraphicEffect, gEffect2DModel, false);
+    theParticle->ClearParticle();
+    return theParticle;
+}
+
+// its start at a point, moving along inVelocity when given, for its graphic effect's duration from now
+EEE2DRust* EEE2DRust::StartParticle(const GE3DPoint& inPosition, const GEVector* inVelocity)
+{
+    this->SetPosition(inPosition);
+    *reinterpret_cast<GE3DPoint*>(&this->mRecord->particle.draw_position) = inPosition;
+    if (inVelocity)
+        this->mRecord->particle.velocity = EeGe3DPoint{inVelocity->GetX(), inVelocity->GetY(), inVelocity->GetZ()};
+    this->mRecord->particle.last_time = gPhysics->GetGameClock();
+    this->mRecord->particle.duration = this->mGraphicEffect->mDuration;
+    return this;
+}
+
+// at the unit, or its tile's centre on the ground (0 off the map) (0xe489b)
+EEE2DRust* EEE2DRust::NewParticle(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect)
+{
+    EEE2DRust* theParticle = EEE2DRust::TakeParticle(inUnit, inGraphicEffect);
+    GE3DPoint theLocation;
+    EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
+    if (theComplexUnit) {
+        const GETransformation& theTransformation = theComplexUnit->mPhysicalModel.GetLocation();
+        theLocation.SetX(theTransformation.GetX());
+        theLocation.SetY(theTransformation.GetY());
+        theLocation.SetZ(theTransformation.GetZ());
+    } else {
+        theLocation.SetX(inUnit->mUnitClass->GetTileSize() * 0.5f + inUnit->mTileX);
+        theLocation.SetY(inUnit->mUnitClass->GetTileSize() * 0.5f + inUnit->mTileY);
+        if (gWorld.GetMap()->mTerrainMesh.GetIsValidTile(inUnit->mTileX, inUnit->mTileY))
+            theLocation.SetZ(gWorld.GetMap()->mTerrainMesh.GetMeshZ(theLocation.GetX(), theLocation.GetY()));
+        else
+            theLocation.SetZ(0.0f);
+    }
+    return theParticle->StartParticle(theLocation, NULL);
+}
+
+// at a point (0xe49c7)
+EEE2DRust* EEE2DRust::NewParticle(const GE3DPoint& inPosition, EEGraphicEffect* inGraphicEffect)
+{
+    return EEE2DRust::TakeParticle(NULL, inGraphicEffect)->StartParticle(inPosition, NULL);
+}
+
+// at the line's start with its direction as velocity (0xe4a4a)
+EEE2DRust* EEE2DRust::NewParticle(const GE3DLine& inLine, EEGraphicEffect* inGraphicEffect)
+{
+    EEE2DRust* theParticle = EEE2DRust::TakeParticle(NULL, inGraphicEffect);
+    GEVector theDirection = inLine.GetDirection();
+    return theParticle->StartParticle(inLine.GetStart(), &theDirection);
+}
+
+// the particle unloads its graphic (0xe4b2b); the others keep it to the destructor
+void EEE2DRust::ReleaseResources()
+{
+    if (this->mKind == 0x2e && this->mGraphicObject) {
+        this->mGraphicObject->UnloadMedia();
+        this->mGraphicObject = NULL;
+    }
+    EEEffect2D::ReleaseResources();
+}
+
+// the particle goes back to the pool (0xe4f32); the others are dereferenced
+void EEE2DRust::LastDereference()
+{
+    if (this->mKind != 0x2e) {
+        EEEffect2D::LastDereference();
+        return;
+    }
+    this->ReleaseResources();
+    this->mReferenceCount = 0;
+    EEE2DRust::sParticlePool.Delete(this);
+}
+
 // stops the sound and unloads the kept graphic object's media
 EEE2DRust::~EEE2DRust()
 {
@@ -519,7 +831,11 @@ long EEE2DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask2D::Wind, Ask2D::CreateParts, Ask2D::PartCount, Ask2D::Part, Ask2D::SetPart,
                                  Ask2D::PartFrames, Ask2D::PartTexture, Ask2D::PartsSnapshot, Ask2D::PartFollow,
                                  Ask2D::MaxHitPoints, Ask2D::UnitPoint, Ask2D::ObjectModel, Ask2D::OrbitalCount,
-                                 Ask2D::Orbital};
+                                 Ask2D::Orbital, Ask2D::IconUnit, Ask2D::AreaEffect, Ask2D::AreaEffects,
+                                 Ask2D::SetAreaEffects, Ask2D::IconsSelected, Ask2D::IconsOwner, Ask2D::GhostUnits,
+                                 Ask2D::GroundPoint, Ask2D::GlowSetUp, Ask2D::GlowTagName, Ask2D::GlowPlace,
+                                 Ask2D::GlowPoint, Ask2D::GlowArea, Ask2D::GlowRows, Ask2D::ParticleTick,
+                                 Ask2D::ParticleGround};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect2d_file(inOp, this->mRecord, inFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
@@ -534,6 +850,13 @@ long EEE2DRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
 {
     if (this->mKind == 0x41)
         return this->Call(EeGfxEffect3DOp::Load);
+    // the damage controller's children's handles and, from 0.249 on, its finished flag (EEEDamagedEffect::Load
+    // 0x1020e2; the base's result ignored)
+    if (this->mKind == 0x3e) {
+        EEEffect2D::Load(inMajorVersion, inMinorVersion, inFile);
+        EeGfxEffectFile theFile = EEEffectFile(inFile);
+        return ee_gfx_effect_load_damaged(this->mRecord, &theFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
+    }
     // the explosion has no state of its own: the base's result (EEE2DExplosion::Load)
     if (this->mKind == 4)
         return EEEffect2D::Load(inMajorVersion, inMinorVersion, inFile);
@@ -542,22 +865,234 @@ long EEE2DRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
     return this->Call(EeGfxEffect3DOp::Load, NULL, &theFile, inMajorVersion, inMinorVersion);
 }
 
+// the light glow sets itself up again after the base's (EEE2DLightGlow::RepairPointers 0xe25a1)
 long EEE2DRust::RepairPointers()
 {
     if (this->mKind == 0x41)
         return this->Call(EeGfxEffect3DOp::Repair);
-    return EEEffect2D::RepairPointers();
+    long theResult = EEEffect2D::RepairPointers();
+    if (this->mKind == 0xd && theResult == 0)
+        theResult = this->SetUp();
+    return theResult;
 }
 
 long EEE2DRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     if (this->mKind == 0x41)
         return this->Call(EeGfxEffect3DOp::Save);
+    // the damage controller's (EEEDamagedEffect::Save 0x1021a2; the base's result ignored)
+    if (this->mKind == 0x3e) {
+        EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
+        EeGfxEffectFile theFile = EEEffectFile(outFile);
+        return ee_gfx_effect_save_damaged(this->mRecord, &theFile, this->mGraphicEffect->mLinkedEffect2 != NULL);
+    }
     if (this->mKind == 4)
         return EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
-    EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
+    // the particle is saved where it was drawn (EEE2DParticle::Save 0xe517c)
+    GE3DPoint& theDrawn = *reinterpret_cast<GE3DPoint*>(&this->mRecord->particle.draw_position);
+    if (this->mKind == 0x2e && this->mPosition != theDrawn)
+        this->SetPosition(theDrawn);
+    long theBase = EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
+    // the marching icons stop at the base's error (0xe4182)
+    if ((this->mKind == 0xf || this->mKind == 0x10) && theBase != 0)
+        return theBase;
     EeGfxEffectFile theFile = EEEffectFile(outFile);
     return this->Call(EeGfxEffect3DOp::Save, NULL, &theFile);
+}
+
+// The world the damage controller's Rust tick calls into: its children made and destroyed (from the deleted
+// EEEDamagedEffect.cpp)
+namespace {
+struct EEDamagedHost {
+    static EEE2DRust& Self(void* inContext) { return *static_cast<EEE2DRust*>(inContext); }
+    static uint32_t Create(void* inContext, bool inSecondary, uint32_t inIndex)
+    {
+        EEE2DRust& theEffect = Self(inContext);
+        EEEffectHandle theHandle;
+        EEGraphicEffect* theLinked = inSecondary ? theEffect.GetGraphicEffect()->GetLinkedEffect2()
+                                                 : theEffect.GetGraphicEffect()->GetLinkedEffect1();
+        gWorld.GetEffectManager()->CreateUnitEffect(theEffect.GetUnit(), theLinked, &theHandle, 0, inIndex, 0);
+        return theHandle.mValue;
+    }
+    static void Destroy(void*, uint32_t inHandle)
+    {
+        EEEffectHandle theHandle = {inHandle};
+        gWorld.GetEffectManager()->DestroyEffect(theHandle);
+    }
+};
+}
+
+// The damage controller (0x3e; EEEDamagedEffect::Step, 0x10225c): one child damage effect (plus its secondary) per
+// damage tag point, more as the unit's health drops; all hidden on a cloaked enemy unit; once finished destroys them
+// and returns 7 (the counts and the children's handles are ee_gfx effect_state.rs's). The others: Rust's
+long EEE2DRust::Step()
+{
+    if (this->mKind != 0x3e)
+        return this->Call(EeGfxEffect3DOp::Step);
+    EeGfxDamagedTick theTick = {};
+    EEGraphicEffect* theEffect = this->GetGraphicEffect();
+    theTick.has_linked2 = theEffect->GetLinkedEffect2() != NULL;
+    theTick.param2 = theEffect->GetParam2();
+    EEUnit* theUnit = this->mUnit;
+    if (theUnit && !this->mRecord->damaged.finished) {
+        theTick.has_unit = true;
+        if (theUnit->mTileNode) {
+            while (theUnit->mComplexUnit->mPreviousPart)
+                theUnit = theUnit->mComplexUnit->mPreviousPart;
+        }
+        EETagPointList* theList;
+        if (theUnit->mTileNode)
+            theList = theUnit->GetModel()->GetTagPoints(theUnit->mComplexUnit->GetAnimation(),
+                                                        theEffect->GetLinkedEffect1()->mTagPointKind);
+        else
+            theList = theUnit->GetModel()->GetTagPoints(0, theEffect->GetLinkedEffect1()->mTagPointKind);
+        theTick.tag_count = theList ? (uint32_t)theList->GetNumTagPoints() : 1;
+        theTick.hit_points = (int32_t)theUnit->GetHitPoints();
+        theTick.max_hit_points = (int32_t)theUnit->GetStats()->GetMaxHitPoints();
+        if (theUnit->GetTileNode()) {
+            EEComplexUnit* theComplexUnit = theUnit->GetComplexUnit();
+            if (theComplexUnit->GetIsCloaked() && !gWorld.GetCurrentPlayer()->IsAlly(theComplexUnit->GetPlayer()))
+                theTick.hidden = true;
+        }
+    }
+    EeGfxDamagedHost theHost = {this, EEDamagedHost::Create, EEDamagedHost::Destroy};
+    return ee_gfx_effect_damaged_step(this->mRecord, &theTick, &theHost);
+}
+
+// The battlefield decals' placement (from the deleted EEE2DBattlefieldAmbient.cpp, 0xde374..0xde6e9): the physics
+// models' and the units' shell holes and blood stains
+static EEGraphicEffect* AmbientPickVariant(EEGraphicEffect* inEffect);
+static bool AmbientRollChance(EEGraphicEffect* inEffect);
+static EeGfxEffectAmbient* AmbientFindNear(unsigned long inType, GE3DPoint& inLocation);
+static bool AmbientScatter(EEGraphicEffect* inEffect, GE3DPoint& ioLocation);
+
+// NEAR: register choice (the original keeps the effect in edi, &mL68 in esi and the ambient in ebx, reloading
+// inLocation; ours gives the variant a parameter slot)
+// FUNCTION: EXE 0x4de374
+// Places up to N shell-hole decals of the unit's class around a point (ambient effects on); stops on a failed roll
+// The first one renews a decal already on that spot instead, unless its scatter roll moves it
+void EEPlaceImpactDecal(EEComplexUnit* inUnit, GE3DPoint& inLocation)
+{
+    long i;
+    EEGraphicEffect* theVariant;
+    GE3DPoint theLocation = inLocation;
+    EEGraphicEffect* theEffect;
+    if (!gAmbientEffectsEnabled || (theEffect = inUnit->mUnitClass->mShellHoleEffect) == 0)
+        return;
+    theLocation.SetZ(theLocation.GetZ() + 0.005f);
+    for (i = 0; i < theEffect->mIntParam2; i++) {
+        theVariant = AmbientPickVariant(theEffect);
+        if (!AmbientRollChance(theVariant))
+            return;
+        if (i == 0) {
+            EeGfxEffectAmbient* theAmbient = AmbientFindNear(0, theLocation);
+            if (theAmbient && !AmbientScatter(theVariant, theLocation)) {
+                theAmbient->age = 0.0f;
+                continue;
+            }
+        } else {
+            theLocation.SetX(EEEffect::GetRandomSpread(theEffect->GetParam5(), inLocation.GetX()));
+            theLocation.SetY(EEEffect::GetRandomSpread(theEffect->GetParam5(), inLocation.GetY()));
+            theLocation.SetZ(gWorld.mMap->GetHeight(theLocation) + 0.005f);
+        }
+        gEffectManager->CreatePlacedEffect(theLocation, theVariant, NULL);
+    }
+}
+
+// FUNCTION: EXE 0x4de4a9
+// Places the unit class's blood-stain decal under the unit if ambient effects and blood are on and its roll passes
+// (moved forward along the heading for giraffes and horses)
+void EEPlaceTrackDecal(EEComplexUnit* inUnit)
+{
+    GE3DPoint theLocation;
+    EEGraphicEffect* theEffect;
+    if (!gAmbientEffectsEnabled || !gDrawBlood || (theEffect = inUnit->mUnitClass->mBloodStainEffect) == 0)
+        return;
+    EEGraphicEffect* theVariant = AmbientPickVariant(theEffect);
+    if (!AmbientRollChance(theVariant))
+        return;
+    inUnit->GetPosition(theLocation);
+    unsigned long theType = inUnit->mUnitClass->mUnitType;
+    if (theType == kUnitTypeResGiraffe || theType == kUnitTypeResHorse) {
+        const GETransformation& theTransformation = inUnit->mPhysicalModel.GetLocation();
+        float theAngle = UMArcTan2(theTransformation.mMatrix[1][0], theTransformation.mMatrix[0][0]);
+        float theDistance = 0.4f;
+        if (theType == kUnitTypeResHorse) {
+            theDistance = 0.3f;
+            theAngle -= 0.7853982f;
+        }
+        theLocation.SetX(theLocation.GetX() + UMCos(theAngle) * theDistance);
+        theLocation.SetY(theLocation.GetY() + UMCos(1.5707964f - theAngle) * theDistance);
+    }
+    theLocation.SetZ(theLocation.GetZ() + 0.005f);
+    gEffectManager->CreatePlacedEffect(theLocation, theVariant, NULL);
+}
+
+// FUNCTION: EXE 0x4de5ca
+// Returns the first battlefield decal of the given type within 0.05 tiles of a point, or NULL
+// NEAR: registers only
+static EeGfxEffectAmbient* AmbientFindNear(unsigned long inType, GE3DPoint& inLocation)
+{
+    EEEffect* theEffect = gEffectManager->First();
+    while (theEffect) {
+        if (theEffect->mKind == kEffect2DBattlefieldAmbient) {
+            EeGfxEffectAmbient& theAmbient = theEffect->mRecord->ambient;
+            if (theAmbient.kind == inType) {
+                GE3DPoint theOffset = inLocation;
+                theOffset -= *reinterpret_cast<const GE3DPoint*>(&theAmbient.center);
+                if (theOffset.GetX() < 0.05 && theOffset.GetX() > -0.05 &&
+                    theOffset.GetY() < 0.05 && theOffset.GetY() > -0.05)
+                    return &theAmbient;
+            }
+        }
+        theEffect = gEffectManager->Next(theEffect);
+    }
+    return NULL;
+}
+
+// FUNCTION: EXE 0x4de66d
+// Rolls the effect's chance (parameter 2); always succeeds when it is 1 or more
+static bool AmbientRollChance(EEGraphicEffect* inEffect)
+{
+    if (inEffect->GetParam2() >= 1.0f)
+        return true;
+    float theChance = inEffect->GetParam2();
+    return EEEffect::GetRandom() <= theChance;
+}
+
+// FUNCTION: EXE 0x4de6a1
+// Picks the effect or one of its up to three linked variants, each equally likely
+static EEGraphicEffect* AmbientPickVariant(EEGraphicEffect* inEffect)
+{
+    long theCount;
+    if (inEffect->mLinkedEffect3)
+        theCount = 4;
+    else if (inEffect->mLinkedEffect2)
+        theCount = 3;
+    else if (inEffect->mLinkedEffect1)
+        theCount = 2;
+    else
+        return inEffect;
+    switch (GetEffectRandomLong(1, theCount)) {
+    case 2:
+        return inEffect->mLinkedEffect1;
+    case 3:
+        return inEffect->mLinkedEffect2;
+    case 4:
+        return inEffect->mLinkedEffect3;
+    }
+    return inEffect;
+}
+
+// FUNCTION: EXE 0x4de6e9
+// With the effect's scatter chance (parameter 3), moves the point randomly within parameter 4; returns whether it moved
+static bool AmbientScatter(EEGraphicEffect* inEffect, GE3DPoint& ioLocation)
+{
+    if (EEEffect::GetRandom() >= inEffect->GetParam3())
+        return false;
+    ioLocation.SetX(ioLocation.GetX() + inEffect->GetParam4() * (0.5f - EEEffect::GetRandom()));
+    ioLocation.SetY(ioLocation.GetY() + inEffect->GetParam4() * (0.5f - EEEffect::GetRandom()));
+    return true;
 }
 
 // FUNCTION: EXE 0x4e1814

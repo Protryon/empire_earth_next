@@ -1335,26 +1335,28 @@ public:
 
 // the root of the lobby's components (runs the popups and modal dialogs; RTTI WONAPI::RootContainer; its base
 // Container)
-// BackgroundGrabber (0x38 bytes); RootContainer keeps a pointer to it.
-// 0x33613f/0x336148 store the 64-bit order at +0x30/+0x34; +0x2c..0x2f is padding.
+// BackgroundGrabber (0x38 bytes in the original); RootContainer keeps a pointer to it. R6 WON round 37: the Rust grabber
+// (rust/crates/ee_won/src/grabobj.rs) holds the captured image's place, its clip, the flags, the translucent colour and
+// level and the capture's order (the original's static counter), and runs every method; the C++ keeps the background
+// image and the debug window (BackgroundGrabber.cpp is the host). The root container reads it with ee_won_grab_read.
 class BackgroundGrabber {
 public:
     SmartPtr<NativeImage> mBGImage; //00
-    int mImageX,mImageY; //04/08
-    WONRectangle mClipRect; //0c..1b
-    bool mNeedPutBG,mHaveBG; //1c/1d
-    int mTranslucentColor,mTranslucentLevel; //20/24
     SmartPtr<Window> mDebugWindow; //28
-    unsigned __int64 mImageOrder; // at +0x30, 64-bit counter value
-    static unsigned __int64 mImageOrderCounter; // 0x5662e0/0x5662e4
+    EeWonGrabber* mRust;
     BackgroundGrabber(); // 0x336000
-    void PrePaint(Component*,Graphics&); //336070
-    void Paint(Component*,Graphics&); //3360f0
-    void SetTranslucentColor(int,int); //3360d0
-    void Clear(); // 0x336060, clears both flags
-    void SizeChanged(Component*); // 0x2fa500 (empty, ret 4)
-    void Invalidate(Component*); // 0x336680: sets need-put-BG when the background is grabbed
-    bool NeedDrawBG() const { return this->mHaveBG && this->mNeedPutBG; }
+    ~BackgroundGrabber();
+    void PrePaint(Component* c,Graphics& g) { this->GCall(EeWonGrabCall::PrePaint,(intptr_t)c,(intptr_t)&g); } //336070
+    void Paint(Component* c,Graphics& g) { this->GCall(EeWonGrabCall::Paint,(intptr_t)c,(intptr_t)&g); } //3360f0
+    void SetTranslucentColor(int c,int l) { this->GCall(EeWonGrabCall::SetTranslucentColor,c,l); } //3360d0
+    void Clear() { this->GCall(EeWonGrabCall::Clear); } // 0x336060, clears both flags
+    void SizeChanged(Component* c) { this->GCall(EeWonGrabCall::SizeChanged,(intptr_t)c); } // 0x2fa500 (empty, ret 4)
+    void Invalidate(Component* c) { this->GCall(EeWonGrabCall::Invalidate,(intptr_t)c); } // 0x336680: sets need-put-BG when grabbed
+    bool NeedDrawBG() const { return this->GCall(EeWonGrabCall::NeedDrawBG)!=0; }
+private:
+    BackgroundGrabber(const BackgroundGrabber&);
+    BackgroundGrabber& operator=(const BackgroundGrabber&);
+    intptr_t GCall(EeWonGrabCall c,intptr_t a=0,intptr_t b=0) const { return ee_won_grab_call(this->mRust,c,a,b); }
 };
 // RootContainer (R6 WON round 29): the Rust RootContainer (rust/crates/ee_won/src/rootobj.rs) holds the invalid
 // rectangle, the queued backgrounds (their images held), the cursor's component and the window drag; the virtuals and

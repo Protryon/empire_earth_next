@@ -346,11 +346,15 @@ impl ServerHost for Replay {
     fn msg_flag(&self, m: Msg, f: MsgFlag) -> bool {
         self.num(format!("s17 m{m} {}", f as u32)) != 0
     }
-    fn msg_get(&self, m: Msg, f: MsgField) -> u32 {
-        self.num(format!("s18 m{m} {}", f as u32)) as u32
+    fn msg_slot(&self, m: Msg) -> u8 {
+        self.num(format!("s37 m{m}")) as u8
     }
-    fn msg_new(&self, kind: NewMsg, a: u32, b: u32, c: u32) -> Msg {
-        id(&self.op(format!("s19 {} {a} {b} {c}", kind as u32)))
+    fn msg_get(&self, m: Msg, i: u32) -> u32 {
+        self.num(format!("s18 m{m} {i}")) as u32
+    }
+    fn msg_new(&self, message_type: u8, values: &[u32]) -> Msg {
+        let v: String = values.iter().map(|v| format!(" {v}")).collect();
+        id(&self.op(format!("s19 {message_type}{v}")))
     }
     fn msg_tick_response_input(&self, m: Msg, i: u32, out: &mut Msg) -> i32 {
         let a = self.op(format!("s20 m{m} {i}"));
@@ -623,5 +627,5 @@ fn the_record_reaches_the_lockstep_paths() {
     assert!(s.iter().any(|l| l.starts_with("op s21 ")), "no input went with a tick");
     assert!(s.iter().any(|l| l.starts_with("op s22 ")), "no send-to-all-and-wait went");
     assert!(s.iter().any(|l| l.starts_with("op s20 ")), "no client input was replayed");
-    assert!(s.iter().any(|l| l.starts_with("op s19 6 ")), "no tick was made");
+    assert!(s.iter().any(|l| l.starts_with("op s19 38 ")), "no tick was made");
 }

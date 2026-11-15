@@ -95,6 +95,11 @@ fn next_ts() -> i32 {
     })
 }
 
+/// ee_util's shutdown list: `ee_sound_initialize` is not part of the golden.
+#[no_mangle]
+extern "C" fn ee_util_register_shutdown(_function: unsafe extern "C" fn(bool)) -> std::ffi::c_long {
+    0
+}
 #[no_mangle]
 extern "C" fn ee_ts_section_new() -> *mut c_void {
     let id = next_ts();

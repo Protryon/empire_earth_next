@@ -1399,14 +1399,14 @@ namespace WONAPI {
 GUIString LobbyGame::GetStatusString(short status)
 {
     switch(ee_won_model_status_text(status)) {
-    case 0: return ::LobbyGameStatus_Success_String;
-    case 1: return ::LobbyGameStatus_GameFull_String;
-    case 2: return ::LobbyGameStatus_GameInProgress_String;
-    case 3: return ::LobbyGameStatus_UnpackFailure_String;
-    case 4: return ::LobbyGameStatus_NotInvited_String;
-    case 5: return ::LobbyGameStatus_CaptainRejectedYou_String;
-    case 6: return ::LobbyGameStatus_InvalidPassword_String;
-    case 7: return ::LobbyGameStatus_DuplicateName_String;
+    case 0: return LOBBY_STRING(LobbyGameStatus_Success_String);
+    case 1: return LOBBY_STRING(LobbyGameStatus_GameFull_String);
+    case 2: return LOBBY_STRING(LobbyGameStatus_GameInProgress_String);
+    case 3: return LOBBY_STRING(LobbyGameStatus_UnpackFailure_String);
+    case 4: return LOBBY_STRING(LobbyGameStatus_NotInvited_String);
+    case 5: return LOBBY_STRING(LobbyGameStatus_CaptainRejectedYou_String);
+    case 6: return LOBBY_STRING(LobbyGameStatus_InvalidPassword_String);
+    case 7: return LOBBY_STRING(LobbyGameStatus_DuplicateName_String);
     }
     GUIString custom=this->GetStatusStringHook(status);
     if(custom.length()!=0) return custom;

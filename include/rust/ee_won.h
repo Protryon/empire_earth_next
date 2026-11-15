@@ -327,6 +327,8 @@ constexpr static const uint32_t EE_WON_DIR_UF_UNIQUE_DISPLAY_NAME = 1;
 /// `DIR_UF_SERVRETURNADDR`
 constexpr static const uint32_t EE_WON_DIR_UF_SERV_RETURN_ADDR = 16;
 
+constexpr static const int32_t CHOOSER_SIZE = 120;
+
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
 
@@ -467,6 +469,11 @@ constexpr static const int32_t EE_WON_FWOP_HAS_PUBLIC = 4;
 
 /// the public address's host, set with port 0 (`ee_won_hostop_num`)
 constexpr static const int32_t EE_WON_FWOP_PUBLIC_HOST = 5;
+
+/// `ComponentFlag_DebugBG` and `ComponentFlag_Translucent` (WONComponentFlags.h; the C++ asserts them).
+constexpr static const ptrdiff_t EE_WON_GRAB_FLAG_DEBUG_BG = 131072;
+
+constexpr static const ptrdiff_t EE_WON_GRAB_FLAG_TRANSLUCENT = 512;
 
 /// BrowserComponentConfig::GetPredefinedComponent(name) in BrowserComponentConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_GETPREDEFINEDCOMPONENT_NAME = 0;
@@ -1764,6 +1771,9 @@ constexpr static const int32_t EE_WON_REQOP_VERSION_TO = 31;
 
 constexpr static const int32_t EE_WON_REQOP_VERSION_URL = 32;
 
+/// The number of rows (`gLobbyResources`' size).
+constexpr static const size_t EE_WON_LOBBYRES_COUNT = 469;
+
 /// How many op types have a completion slot (`mCompletions[61]`).
 constexpr static const size_t EE_WON_ROUTE_COMPLETIONS = 61;
 
@@ -2371,6 +2381,13 @@ constexpr static const int32_t EE_WON_SMART_ACT_BAN = 6;
 
 /// `BanClientByCDKeyId(group, on, seconds, text, value, NULL)`
 constexpr static const int32_t EE_WON_SMART_ACT_BAN_CDKEY = 7;
+
+/// `SurfaceFormat`.
+constexpr static const int32_t EE_WON_SURFACE_32 = 0;
+
+constexpr static const int32_t EE_WON_SURFACE_555 = 1;
+
+constexpr static const int32_t EE_WON_SURFACE_565 = 2;
 
 /// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
 constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
@@ -3180,6 +3197,10 @@ enum class EeWonGuiOp : uint32_t {
   WbFont,
   /// `Button::CopyAttributes((Button*)a)`.
   WbBaseCopy,
+  /// a layout's call (`a` an `EeWonSkinLay`; `b`, `c`, `d` its arguments).
+  SkinLay = 620,
+  /// a grabber's call out (`a` an `EeWonGrab`; `b`, `c`, `d` its arguments).
+  Grab = 621,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -3645,6 +3666,97 @@ enum class EeWonDlgLogicCall : uint32_t {
   Field,
 };
 
+/// The two objects.
+enum class EeWonEeColorKind : uint32_t {
+  Button = 0,
+  Chooser = 1,
+};
+
+/// The host's ops (`a`..`f` as documented; `self` the C++ object the Rust object belongs to).
+enum class EeWonEeColorOp : uint32_t {
+  /// `((Component*)a)->Invalidate()`.
+  Invalidate = 1,
+  /// `((Component*)a)->Width()`.
+  Width,
+  /// `((Component*)a)->Height()`.
+  Height,
+  /// `((Button*)a)->IsDisabled()` (0 or 1).
+  IsDisabled,
+  /// `((Button*)a)->IsPressed()` (0 or 1).
+  IsPressed,
+  /// `((Component*)a)->Component::Paint(*(Graphics*)b)`.
+  BasePaint,
+  /// `((Graphics*)a)->SetColor(b)` (0x00rrggbb).
+  SetColor,
+  /// `((Graphics*)a)->SetSysColor(StandardColor_MenuBack)`.
+  SetMenuBackColor,
+  /// `((Graphics*)a)->FillRect(b, c, d, e)`.
+  FillRect,
+  /// `((Graphics*)a)->DrawRect(b, c, d, e)`.
+  DrawRect,
+  /// `LobbyDraw3DFrame(*(Graphics*)a, b, c, d, e, f != 0)`.
+  Draw3DFrame,
+  /// `LobbyDrawFrame(*(Graphics*)a, b, c, d, e, f != 0)`.
+  DrawFrame,
+  /// `new EELobbyColorChooser` with a reference added (the button's `SmartPtr`).
+  ChooserNew,
+  /// `((EELobbyColorChooser*)a)->mRust`: the chooser's Rust object.
+  ChooserRust,
+  /// `((Component*)a)->SetDesiredSize(b, c)`.
+  SetDesiredSize,
+  /// `((Component*)a)->AddListener(new ComponentListenerComp((Component*)b))`.
+  AddListener,
+  /// `((Component*)a)->mParent`.
+  Parent,
+  /// `((Component*)a)->GetRoot()->ClosePopup((Component*)b)`.
+  ClosePopup,
+  /// `((Component*)a)->LocalToRoot(*(int*)b, *(int*)c)`.
+  LocalToRoot,
+  /// `PopupParams p((Component*)b, 0x23e7, (Component*)a, c, d); p.mAvoidRect.height = a->Height();
+  /// p.mAvoidRect.y = d - a->Height(); p.mInputComponent = a; a->GetRoot()->OpenPopup(p)`.
+  OpenPopup,
+  /// `((Component*)a)->FireEvent(100064, false)` (the player rows' colour change).
+  FireColorChanged,
+  /// `((Button*)a)->Button::HandleComponentEvent((ComponentEvent*)b)`.
+  BaseEvent,
+  /// `((Component*)a)->Component::AddedToParent()`.
+  BaseAddedToParent,
+  /// `((Component*)a)->Component::MouseExit()`.
+  BaseMouseExit,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `((EELobbyGame*)a)->mRust`: the game's Rust object.
+  GameRust,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+};
+
+/// The inward calls (the classes' methods and virtuals).
+enum class EeWonEeColorCall : uint32_t {
+  /// Button: `SetColor(a)` (0 or 1: whether it changed).
+  SetColor = 1,
+  /// Button: `mColor`.
+  GetColor,
+  /// Both: `Paint(*(Graphics*)a)`.
+  Paint,
+  /// Button: `HandleActivate()` (0).
+  Activate,
+  /// Button: `HandleComponentEvent(a)`, `b` 1 for an end of popup.
+  Event,
+  /// Chooser: `AddedToParent()`.
+  AddedToParent,
+  /// Chooser: `MouseMove(a, b)`.
+  MouseMove,
+  /// Chooser: `MouseDown(a, b, c)`.
+  MouseDown,
+  /// Chooser: `MouseExit()`.
+  MouseExit,
+  /// Chooser: a member: 0 `mHover`, 1 `mSelected`, 2..17 `mTaken[a - 2]`; Button: 0 `mChooser`.
+  Field,
+  /// Chooser: `mSelected = a`.
+  SetSelected,
+};
+
 /// The host's ops. `a`..`d` as documented; a read answers `isize::MIN` when it threw.
 enum class EeWonEeGameOp : uint32_t {
   /// `a->AddRef()` (a `SmartPtr`'s reference: a client, a player, the file transfer, a `GUIStringData`).
@@ -3885,6 +3997,385 @@ enum class EeWonEeGameCall : uint32_t {
   SlotPlayer,
 };
 
+/// The host's ops (`a`..`f` as documented).
+enum class EeWonEeGlueOp : uint32_t {
+  /// `GetMyLobbyGame()`.
+  MyGame = 1,
+  /// `((EELobbyGame*)a)->mRust`.
+  GameRust,
+  /// `((LobbyGame*)a)->GetIsHost()` (0 or 1).
+  GameIsHost,
+  /// `((ServerDetailsItem*)a)->mGame.get()`.
+  ItemGame,
+  /// `((LobbyRustDialog*)a)->mLobbyDlg`.
+  DialogRust,
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `((Graphics*)a)->SetColor(b)`.
+  SetColor,
+  /// `((Graphics*)a)->DrawString(text, d, e)`.
+  DrawText,
+  /// `g->mFont->GetStringWidth(text, 0, text.length())` of the Graphics `a`.
+  TextWidth,
+  /// `((Graphics*)a)->mFont->GetHeight()`.
+  FontHeight,
+  /// `((MultiListArea*)a)->mFont->GetHeight()`.
+  ListFontHeight,
+  /// `text.findNoCase(*(const GUIString*)d, 0)`.
+  TextFind,
+  /// `textA.CompareNoCase(textB)` (text A: kind `a`, value `b`; text B: kind `c`, value `d`).
+  TextCompareNoCase,
+  /// `GUIStringData* a`'s length (`mLength`); `b` non-NULL: its units copied to the `uint32_t*` `b`.
+  StringUnits,
+  /// The column `a` (0 "Epoch", 1 "MapType") of `ServerListCtrl::GetColumnInfo`: its paint, compare and filter
+  /// functions set to the host's.
+  SetColumnHandlers,
+  /// The game, player, server details item and config factories set.
+  SetFactories,
+  /// `EELobbyResource_Init(NULL)`, the five component allocators added to it, `EELobbyAddResources` and
+  /// `LobbyAddComponentLoader` (the component getter).
+  AddResources,
+  /// `LobbyAddGameOption(a ? "MapType" : "Epoch", text, true)`.
+  AddGameOption,
+  /// `EERMGetNumberOfGenerators()`.
+  NumMapTypes,
+  /// `EEGetPlayerColor(a)`'s red, green and blue into the `float[3]` `b`.
+  PlayerColor,
+  /// `LobbySetProductName(L"EEAOC", NULL)`.
+  SetProductName,
+  /// `((ComboBox*)a)->Clear(true)`.
+  ComboClear,
+  /// `((ComboBox*)a)->AddString(EELobbyToGUIString(EERMGetGeneratorDisplayName(b)))`.
+  ComboAddMapType,
+  /// `SafeGetComponent(a, ptr, b ? "EELobbyConnectDialog" : "EELobbyFileDialog", __FILE__, 329 or 328)` into a
+  /// local `SmartPtr`: the dialog with a reference added.
+  FindDialog,
+  /// `EELobbyClose()`.
+  LobbyClose,
+  /// `EELobbyResource_Destroy()`.
+  ResourceDestroy,
+  /// `GetLobbyConfig()`.
+  Config,
+  /// `((EELobbyConfig*)a)->mFileTransferPort`.
+  ConfigPort,
+  /// `LobbySetGameInProgress(a)`.
+  SetGameInProgress,
+  /// `LobbyLeaveGame(a != 0)`.
+  LeaveGame,
+  /// `LobbyIAmCaptain()` (0 or 1).
+  IAmCaptain,
+  /// `GetLobbyWindow()`.
+  LobbyWindow,
+  /// `((WindowManager*)a)->PostEvent(new UserEvent(send connect status, b), true)`.
+  PostSendConnectStatus,
+  /// A saved game's record (an `EEPSaveGameHeader`, an `EEGameOptions`, an `FSFileSpec` set to the file `a`).
+  SaveNew,
+  /// `spec.Open(1) == keseOK` (0 or 1).
+  SaveOpen,
+  /// `spec.GetLength(length)` (from 0).
+  SaveLength,
+  /// `spec.Close()`.
+  SaveClose,
+  /// The header's save versions set and `LoadFromFile(spec) == keseOK` (0 or 1).
+  SaveLoadHeader,
+  /// `header.mChecksum`.
+  SaveChecksum,
+  /// `options = header.mGameOptions`; the options' address.
+  SaveOptions,
+  /// The record freed.
+  SaveFree,
+  /// `LobbyMessageBox(gEELobbyInterface_LoadGameError, gEELobbyInterface_ErrorReadingFile)`.
+  BoxReadError,
+  /// `LobbyMessageBox(gEELobbyInterface_LoadGameError, LobbyFormatString(gEELobbyInterface_PlayerNotInGame,
+  /// GUIString(a)))`.
+  BoxNotInGame,
+  /// `((const EEGameOptions*)a)->` field `b` (an `EeWonEeGlueField`).
+  OptionsField,
+  /// `((const EEGameOptions*)a)->mPlayers[b].` field `c`.
+  OptionsPlayer,
+  /// `EELobbyToGUIString(((const EEGameOptions*)a)->mPlayers[b].mName)`'s data with a reference added.
+  OptionsPlayerName,
+  /// `WONFile(a).GetFileName()`'s data with a reference added.
+  FileName,
+  /// `WONFile(a).GetSize()`.
+  FileSize,
+  /// `((LobbyClient*)a)->GetPlayer().mPtr`.
+  ClientPlayer,
+  /// `&gGamePreferences.GetSettings().mGameOptions`.
+  DefaultOptions,
+  /// `gGameOptions.mLock->WriteLock(); gGameOptions = gLobbyGameOptions; mIsMultiplayer = true; mCheatCodes =
+  /// false`.
+  OptionsBegin,
+  /// `gGameOptions.` field `a` `= b`.
+  OptionSet,
+  /// `gGameOptions.mMapType = EELobbyToWideString(GUIString(a))`.
+  OptionMapTypeName,
+  /// `gGameOptions.mMapType = EERMGetGeneratorName(a)`.
+  OptionMapTypeGenerator,
+  /// `gGameOptions.mLock->WriteUnlock()`.
+  OptionsEnd,
+  /// The player being made: a new `EEGameOptionsPlayer`.
+  PlayerNew,
+  /// Its field `a` `= b`.
+  PlayerSet,
+  /// Its `mType`.
+  PlayerType,
+  /// Its `mName = EELobbyToWideString(GUIString(a))`.
+  PlayerSetName,
+  /// `gGameOptions.mPlayers[a] = ` it.
+  PlayerCommit,
+  /// `*(EEGameOptionsPlayer*)a = ` it.
+  PlayerCopyTo,
+  /// `WONAPI::IPAddr::GetLocalHost()`.
+  LocalHost,
+  /// `LobbyGetNetAddresses(list, false)` into a new vector.
+  AddressesGet,
+  /// Its size.
+  AddressesCount,
+  /// Its entry `b`'s `mHandle`.
+  AddressHandle,
+  /// The vector freed.
+  AddressesFree,
+  /// `gNetworkAdapter = a`.
+  SetNetworkAdapter,
+  /// `((UIForm*)a)->GetControl(b)->SetDisplayMode(0)`.
+  FormHide,
+  /// `EEIsLobbyOpen()` (0 or 1).
+  IsLobbyOpen,
+  /// `EELobbyIsShown()` (0 or 1).
+  IsShown,
+  /// `EELobbyPostReturnFromGame()`.
+  PostReturnFromGame,
+  /// The UI manager's copy lock and the world's write lock released (`EELobbyActionLocksReleased`).
+  LocksRelease,
+  /// ... and taken back.
+  LocksRetake,
+  /// `LobbyRun()`.
+  LobbyRun,
+  /// `EELobbyPostAction(EELobbyStartHostedGame)`.
+  PostStartHostedGame,
+  /// `EELobbyShowGameScreen()`.
+  ShowGameScreen,
+  /// `LobbySuspend()`.
+  LobbySuspend,
+  /// `EELobbyHide()`.
+  Hide,
+  /// `EELobbyJoinGame()`.
+  JoinGame,
+  /// `EELobbyRunSierraUpdate()`.
+  SierraUpdate,
+  /// `delete gCommunications; gCommunications = NULL`.
+  DeleteCommunications,
+  /// `EELobbyShow(true)`.
+  Show,
+  /// `gUIManager->GetFormByID(30)`.
+  GameForm,
+  /// `gUIManager->GetCurrentForm()`.
+  CurrentForm,
+  /// `gUIManager->Pop()`.
+  PopForm,
+  /// `LobbyResume()`.
+  LobbyResume,
+  /// `LobbyMessageBox(RoutingLogic_GameDissolvedTitle_String, RoutingLogic_GameDissolvedDetails_String)`.
+  BoxDissolved,
+};
+
+/// The inward calls (`a`.. as documented).
+enum class EeWonEeGlueCall : uint32_t {
+  /// `EELobbyInit()`.
+  Init = 1,
+  /// `EELobbyServerDetailsItem::PaintDetailsHook(*(Graphics*)b)` of the item `a`.
+  PaintDetails,
+  /// `GetDetailsHeightHook((MultiListArea*)a)`.
+  DetailsHeight,
+  /// The epoch column's paint of the item `b` into the Graphics `a`.
+  EpochPaint,
+  /// The epoch column's order of the items `a` and `b`.
+  EpochCompare,
+  /// The epoch column's filter: whether the item `a` stays for the filter text `*(const GUIString*)b` (0 or 1).
+  EpochKeep,
+  MapTypePaint,
+  MapTypeCompare,
+  MapTypeKeep,
+  /// The component getter of the config `a` (the file and connect dialogs).
+  GetComponents,
+  /// `EELobbyShutdown()`.
+  Shutdown,
+  /// `EELobbyGetFileTransferPort()`.
+  FileTransferPort,
+  /// `EELobbyGetFileDialog()`.
+  FileDialog,
+  /// `EELobbyGetConnectDialog()`.
+  ConnectDialog,
+  /// `EELobbyRunConnectDialog()` (0 or 1).
+  RunConnectDialog,
+  /// `EELobbySetSlotConnected(a, b != 0)`.
+  SetSlotConnected,
+  /// `EELobbyCancelConnectDialog()`.
+  CancelConnectDialog,
+  /// `EELobbyPostConnectStatus(a != 0)`.
+  PostConnectStatus,
+  /// The posted send of the connect status `a`.
+  SendConnectStatus,
+  /// `EELobbyIsConnectDialogRunning()` (0 or 1).
+  IsConnectDialogRunning,
+  /// `EELobbyGetSavedGameInfo((const char*)a, *(uint32_t*)b, *(uint32_t*)c)` (0 or 1).
+  SavedGameInfo,
+  /// `EELobbyLoadSavedGame((const char*)a)` (0 or 1).
+  LoadSavedGame,
+  /// `EELobbyFillMapTypeCombo((ComboBox*)a)`: its op is the host's; the loop is here.
+  FillMapTypeCombo,
+  /// `EELobbySetDefaultGameOptions((EELobbyGame*)a)`.
+  SetDefaultGameOptions,
+  /// `EELobbyFillGameOptions(*(EEGameOptionsPlayer*)a)`.
+  FillGameOptions,
+  /// `EELobbySyncNetworkAdapter()`.
+  SyncNetworkAdapter,
+  /// `EELobbyGameDoneEvent::ProcessEvent((UIForm*)a)` with its count at the `int32_t*` `b`.
+  GameDone,
+  /// `EELobbyRunLoop()`.
+  RunLoop,
+  /// `EELobbyReturnFromGame()`.
+  ReturnFromGame,
+  /// `EESetQuitFlag()`.
+  SetQuitFlag,
+  /// a member: 0 the file dialog, 1 the connect dialog, 2 the closing flag, 3 the game-done flag.
+  Field,
+  /// The state forgotten without releases (the goldens' fresh start; the game never calls it).
+  Reset,
+};
+
+/// The two kinds.
+enum class EeWonEeSoundKind : uint32_t {
+  Music = 0,
+  Effect = 1,
+};
+
+/// The host's ops.
+enum class EeWonEeSoundOp : uint32_t {
+  /// `gUIManager != NULL` (0 or 1).
+  HasUiManager = 1,
+  /// `gUIManager->SetMusicVolume(gGamePreferences.mSettings.GetMusicVolume())`.
+  MusicVolumeOn,
+  /// `gUIManager->SetMusicVolume(0.0f)`.
+  MusicVolumeOff,
+  /// `gSoundManager != NULL` (0 or 1).
+  HasSoundManager,
+  /// `gSoundManager->Unload(a)`.
+  Unload,
+  /// `gSoundManager->Play(a, 1.0f, 0.0f, 1.0f, false, NULL)`: the instance.
+  Play,
+  /// `gSoundManager->Stop(a, false)`.
+  Stop,
+  /// `gSoundManager->Load(path, 0, 1)` (`a` the descriptor's path, a NUL-terminated `char*`): the sample.
+  Load,
+};
+
+/// The inward calls (the classes' virtuals).
+enum class EeWonEeSoundCall : uint32_t {
+  /// `PlayHook()`.
+  Play = 1,
+  /// `StopHook()`.
+  Stop,
+  /// `ResumeHook()` (the music's; an effect's is the base's empty one).
+  Resume,
+  /// a member: 0 `mSampleID`, 1 `mInstanceID`.
+  Field,
+};
+
+/// The host's ops (`obj` the transfer's shell or the send op's).
+enum class EeWonEeXferOp : uint32_t {
+  /// `EELobbyGetSavedGameInfo(a, *(uint32_t*)b, *(uint32_t*)c)` (`a` a NUL-terminated path).
+  SavedGameInfo = 1,
+  /// `(unsigned long)PlatTimeMilliseconds64()`.
+  Time,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `((EELobbyGame*)a)->UpdateTransferProgress(b, c)`.
+  GameProgress,
+  /// `((AsyncOp*)a)->Succeeded()` (0 or 1).
+  Succeeded,
+  /// `static_cast<SocketOp*>(a)->GetSocket()` (no reference).
+  OpSocket,
+  /// `static_cast<AcceptOp*>(a)->GetAcceptedSocket()` (no reference).
+  AcceptedSocket,
+  /// `static_cast<RecvChunkOp*>(a)->GetRecvOp()->GetBytesRead()`.
+  BytesRead,
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `((AsyncSocket*)a)->Kill()`.
+  Kill,
+  /// `new QueueSocket(0)` with a reference added.
+  NewSocket,
+  /// `((QueueSocket*)a)->Fn2B0D90(b, 0)`: the status.
+  Bind,
+  /// `((QueueSocket*)a)->Listen(1000)`: the status.
+  Listen,
+  /// `a->SetRepeatCompletion(completion(OnClientAccepted)); a->SetRepeatOp(new AcceptOp(NULL))`.
+  RepeatAccept,
+  /// `a->SetCloseCompletion(completion(OnClientClosed)); a->QueueOp(new SendFileOp(path b, c bytes), -1);
+  /// a->QueueOp(new CloseOp(NULL), -1)`.
+  QueueSend,
+  /// `this->mHost.IsValid()` (0 or 1).
+  HostValid,
+  /// `a->SetCloseCompletion(completion(OnClientClosed))`; a `RecvBytesOp(0, NULL)` with the completion
+  /// `OnFileReceived`, the file path (`b`, `c` bytes) and the progress completion `OnProgress` every 10000 bytes;
+  /// `a->QueueOp(new ConnectOp(this->mHost), -1); a->QueueOp(op, -1)`.
+  QueueDownload,
+  /// `PlatFOpen(a, "rb")` (`a` a NUL-terminated path): the `FILE*` or 0.
+  Open = 40,
+  /// `fread(b, 1, c, (FILE*)a)`: the count.
+  Read,
+  /// `fclose((FILE*)a)`.
+  Close,
+  /// `GetSocket()->WaitForWrite(TimeLeft())`.
+  WaitForWrite,
+  /// `GetSocket()->Send(a, b, (int*)c)`: the status.
+  Send,
+  /// `TimeLeft()`.
+  TimeLeft,
+};
+
+/// The transfer's inward calls.
+enum class EeWonEeXferCall : uint32_t {
+  /// `SetPath(a, b bytes)`.
+  SetPath = 1,
+  /// `SetFileInfo`'s size `a` and checksum `b` (the shell keeps the name).
+  SetFileInfo,
+  /// `IsFileHere()` (0 or 1).
+  IsFileHere,
+  /// `Serve(a)`: the status.
+  Serve,
+  /// `Stop()`.
+  Stop,
+  /// `CloseClients()`.
+  CloseClients,
+  /// `Download()`.
+  Download,
+  /// the completions' callbacks (`a` the op).
+  OnClientClosed,
+  OnClientAccepted,
+  OnProgress,
+  OnFileReceived,
+  /// a member: 0 `mLocalSize`, 1 `mLocalChecksum`, 2 `mSize`, 3 `mChecksum`, 4 `mLastProgressTime`,
+  /// 5 `mConnection`, 6 the number of clients, 7 `mPath`'s length.
+  Field,
+};
+
+/// The send op's inward calls.
+enum class EeWonEeXferSendCall : uint32_t {
+  /// `Start()`: the status.
+  Start = 1,
+  /// `Continue()`: the status.
+  Continue,
+  /// `CleanupHook()` (the file closed).
+  Cleanup,
+};
+
 /// What an ElGamal call computes into a sink.
 enum class EeWonElGamalOp : uint32_t {
   Encrypt = 0,
@@ -3911,6 +4402,24 @@ enum class EeWonStageRoute {
   Net = 2,
   /// Handled locally and handed to the network logic too (the host's broadcast).
   LocalAndNet = 3,
+};
+
+/// The inward calls (the C++ shell's methods; `a` the component, `b` the Graphics where they take them).
+enum class EeWonGrabCall : uint32_t {
+  /// `Clear()`.
+  Clear = 1,
+  /// `PrePaint((Component*)a, *(Graphics*)b)`.
+  PrePaint,
+  /// `Paint((Component*)a, *(Graphics*)b)`.
+  Paint,
+  /// `SetTranslucentColor(a, b)`.
+  SetTranslucentColor,
+  /// `Invalidate((Component*)a)`.
+  Invalidate,
+  /// `SizeChanged((Component*)a)` (nothing).
+  SizeChanged,
+  /// `NeedDrawBG()` (0 or 1).
+  NeedDrawBG,
 };
 
 /// What `ButtonUp` does.
@@ -4822,24 +5331,11 @@ enum class EeWonLobbyCtlOp : uint32_t {
   FillMapTypes,
   /// `((ComboBox*)a)->mListArea->GetSelItem() != NULL`.
   ComboHasSel,
-  /// `((EELobbyGame*)a)->GetOption(b)`.
-  GameOption,
-  /// `((EELobbyGame*)a)->SetOption(b, c)`.
-  GameSetOption,
-  /// `((EELobbyGame*)a)->ChangeOption(b, c, true)`.
-  GameChangeOption,
-  /// `((EELobbyGame*)a)->SendGameState()`.
-  GameSendState,
-  /// `((EELobbyGame*)a)->HasGameFile()` (0 or 1).
-  GameHasFile,
-  /// `((Label*)a)->SetText(((EELobbyGame*)b)->GetGameFileName())`.
-  LabelSetGameFile,
-  /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
-  GameSlot,
-  /// `((EELobbyPlayerSlot*)a)->mOptions[0]` (the slot's state).
-  SlotState,
-  /// `((EELobbyPlayerSlot*)a)->SetOpen()`.
-  SlotSetOpen,
+  /// `((EELobbyGame*)a)->mRust`: the game's Rust object, which this object calls directly (round 6: the game's
+  /// options, slots and changes were ops that bounced through the C++ forwarders).
+  GameRust,
+  /// `((Label*)a)->SetText(GUIString(b))` (`b` a `GUIStringData`, 0 the empty string).
+  LabelSetName,
   /// `LobbyIAmCaptain()` (0 or 1).
   IAmCaptain,
   /// `((EELobbySyncOptionEvent*)a)->mParam`.
@@ -4847,10 +5343,9 @@ enum class EeWonLobbyCtlOp : uint32_t {
   /// The saved game's choice: `EELobbyFn2988E9()`'s directory, `EELobbyGetFileDialog()`, its
   /// `ListFiles(dir, ".ees")` and `LobbyDoDialog`'s result (-1 without a dialog).
   ChooseSavedGame,
-  /// `((EELobbyPlayerSlot*)a)->mOptions[b]` (round 5: EELobbyPlayerOptionsCtrl).
-  SlotOption,
-  /// `((ComboBox*)a)->SetText(((EELobbyPlayerSlot*)b)->GetName())`.
-  ComboSetSlotName,
+  /// `((ComboBox*)a)->SetText(GUIString(b))` (`b` a `GUIStringData`, 0 the empty string; round 5:
+  /// EELobbyPlayerOptionsCtrl).
+  ComboSetName,
   /// `((ComboBox*)a)->mEdit->mTextColor = b`.
   ComboSetTextColor,
   /// `GetMyLobbyPlayer()->GetReady()` (0 or 1).
@@ -4867,8 +5362,6 @@ enum class EeWonLobbyCtlOp : uint32_t {
   ColorGetColor,
   /// `sprintf(buffer, "%d", b); ((Label*)a)->SetText(LobbyFormatString(TransferPercent, buffer))` (50 bytes).
   LabelSetPercent,
-  /// `((EELobbyGame*)a)->ChangePlayerOption(b, c & 0xff, c >> 8)` (the slot, the option, the value).
-  GameChangePlayerOption,
 };
 
 /// The inward calls.
@@ -4931,6 +5424,8 @@ enum class EeWonLobbyDlgKind : uint32_t {
   Credits = 14,
   /// EELobbyConnectDialog (round 5): the players' connection wait before a launch.
   Connect = 15,
+  /// EELobbyFileDialog (round 6): the game room's saved games, loaded or deleted.
+  File = 16,
 };
 
 /// The ops (`a`, `b`, `c` as documented; a control is a `Component*` this object holds).
@@ -5130,11 +5625,11 @@ enum class EeWonLobbyDlgOp : uint32_t {
   DefaultFontStringWidth,
   /// `((EELobbyGame*)a)->GetIsHost()` (0 or 1).
   GameIsHost,
-  /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
-  GameSlot,
-  /// `((EELobbyPlayerSlot*)a)->Option(0)` (the slot's state).
-  SlotState,
-  /// `((ListArea*)a)->InsertItem(new ConnectListItem(((EELobbyPlayerSlot*)b)->GetName(), image, c & 0xff), -1)`,
+  /// `((EELobbyGame*)a)->mRust`: the game's Rust object, which this object calls directly (round 6: the slots'
+  /// states were ops through the C++ slot views).
+  GameRust,
+  /// `((ListArea*)a)->InsertItem(new ConnectListItem(GUIString(b), image, c & 0xff), -1)` (`b` the slot's name, a
+  /// `GUIStringData`),
   /// the image `GameUserListCtrl_Ready_Image` for `c >> 8` 0, else `LobbyGlobal_Searching_Image`; 1 when that
   /// image is not the ready one.
   ConnectInsert,
@@ -5152,6 +5647,34 @@ enum class EeWonLobbyDlgOp : uint32_t {
   ConnectItemSetImage,
   /// `((ConnectListItem*)a)->mImage.mPtr != GameUserListCtrl_Ready_Image.mPtr` (0 or 1).
   ConnectItemNotReady,
+  /// `PlatFindFirst((const char*)a, &data)` into a new find record (the find and its data); NULL when nothing
+  /// was found (the record freed).
+  FindFirst,
+  /// `GUIString(data.mName).length()` of the find record `a`.
+  FindNameLength,
+  /// `GUIString theName(data.mName); theName.resize(c); ((ListArea*)a)->InsertString(theName, -1)` (`b` the
+  /// find record).
+  FileListInsert,
+  /// `PlatFindNext(find, &data) == PLAT_FILE_OK` of the find record `a` (0 or 1).
+  FindNext,
+  /// `PlatFindClose(find)` and the find record freed.
+  FindClose,
+  /// `static_cast<TextListItem*>(a)->mText.mData->GetString()`, NUL-terminated (valid until the next op).
+  ItemText,
+  /// `EELobbyLoadSavedGame((const char*)a)` (0 or 1).
+  LoadSavedGame,
+  /// `this->GetRoot()`.
+  Root,
+  /// `LobbyMessageBoxYesNo(gEELobbyFileDialog_DeleteTitle, gEELobbyFileDialog_DeleteDetails, true)`.
+  FileAskDelete,
+  /// `WONFile theFile((const char*)a); theFile.Delete(true)`.
+  FileDelete,
+  /// `((ListArea*)a)->RemoveItem((ListItem*)b)`.
+  ListRemove,
+  /// `((ListItemClickedEvent*)a)->mDoubleClick` (0 or 1).
+  EventDoubleClick,
+  /// `((ListItemClickedEvent*)a)->mButton`.
+  EventButton,
   /// `((ListArea*)a)->RefreshItem((ListItem*)b)`.
   ListRefresh,
 };
@@ -5219,6 +5742,8 @@ enum class EeWonLobbyDlgCall : uint32_t {
   ConnectEnd,
   /// EELobbyConnectDialog: `SetConnected(a, b != 0)`.
   ConnectSetConnected,
+  /// EELobbyFileDialog: `ListFiles(a, b)` (the directory and the extension, NUL-terminated).
+  FileListFiles,
 };
 
 /// A container's key kind (its comparator).
@@ -5709,6 +6234,481 @@ enum class EeWonResKind {
   Sound = 2,
 };
 
+/// The lobby's resources by name, in the table's order: `EeWonLobbyRes::X as usize` is the row of global `X`
+/// (the C++ keeps one slot per row, `gLobbyResources`, read through `LOBBY_STRING(X)` / `LOBBY_IMAGE(X)` /
+/// `LOBBY_SOUND(X)`: the original's 469 named globals and their ids).
+enum class EeWonLobbyRes : uint32_t {
+  LobbyGlobal_Cancel_String = 0,
+  LobbyGlobal_Lan_String,
+  LobbyGlobal_No_String,
+  LobbyGlobal_OK_String,
+  LobbyGlobal_Yes_String,
+  LobbyGlobal_QuickPlay_String,
+  LobbyGlobal_Searching_Image,
+  LobbyGlobal_Firewall_Image,
+  LobbyGlobal_ButtonClick_Sound,
+  LobbyGlobal_LobbyMusic_Sound,
+  LobbyGlobal_AllReady_Sound,
+  LobbyGlobal_AllNotReady_Sound,
+  LobbyGlobal_AskToJoinRecv_Sound,
+  LobbyGlobal_Error_Sound,
+  LobbyGlobal_FriendJoined_Sound,
+  LobbyGlobal_FriendLeft_Sound,
+  LobbyGlobal_InviteRecv_Sound,
+  LobbyGlobal_PlayerJoined_Sound,
+  LobbyGlobal_SierraLogon_Sound,
+  LobbyGlobal_WhisperRecv_Sound,
+  AccountLogic_InvalidCDKeyTitle_String,
+  AccountLogic_InvalidCDKeyDetails_String,
+  AddFriendDialog_StatusTitle_String,
+  AddFriendDialog_StatusDetails_String,
+  AdminActionDialog_Warn_String,
+  AdminActionDialog_Mute_String,
+  AdminActionDialog_UnMute_String,
+  AdminActionDialog_Kick_String,
+  AdminActionDialog_Ban_String,
+  AdminActionDialog_ExplanationOpt_String,
+  AdminActionDialog_ExplanationReq_String,
+  BadUserDialog_OneDay_String,
+  BadUserDialog_OneHour_String,
+  BadUserDialog_OneMinute_String,
+  BadUserDialog_OneSecond_String,
+  BadUserDialog_XDays_String,
+  BadUserDialog_XHours_String,
+  BadUserDialog_XMinutes_String,
+  BadUserDialog_XSeconds_String,
+  BadUserDialog_Infinite_String,
+  ChatCommandLogic_Whisper_String,
+  ChatCommandLogic_Block_String,
+  ChatCommandLogic_Emote_String,
+  ChatCommandLogic_Ignore_String,
+  ChatCommandLogic_Away_String,
+  ChatCommandLogic_Invite_String,
+  ChatCommandLogic_Uninvite_String,
+  ChatCommandLogic_Reply_String,
+  ChatCommandLogic_Clear_String,
+  ChatCommandLogic_Help_String,
+  ChatCommandLogic_ShowTeam_String,
+  ChatCommandLogic_Moderator_String,
+  ChatCommandLogic_ServerMute_String,
+  ChatCommandLogic_ServerBan_String,
+  ChatCommandLogic_Mute_String,
+  ChatCommandLogic_Ban_String,
+  ChatCommandLogic_Unmute_String,
+  ChatCommandLogic_ServerUnmute_String,
+  ChatCommandLogic_Unban_String,
+  ChatCommandLogic_ServerUnban_String,
+  ChatCommandLogic_Alert_String,
+  ChatCommandLogic_Warn_String,
+  ChatCommandLogic_HelpHeader_String,
+  ChatCommandLogic_HelpHelp_String,
+  ChatCommandLogic_ShowTeamHelp_String,
+  ChatCommandLogic_WhisperHelp_String,
+  ChatCommandLogic_BlockHelp_String,
+  ChatCommandLogic_IgnoreHelp_String,
+  ChatCommandLogic_ReplyHelp_String,
+  ChatCommandLogic_EmoteHelp_String,
+  ChatCommandLogic_AwayHelp_String,
+  ChatCommandLogic_ClearHelp_String,
+  ChatCommandLogic_InviteHelp_String,
+  ChatCommandLogic_UninviteHelp_String,
+  ChatCommandLogic_MuteHelp_String,
+  ChatCommandLogic_UnmuteHelp_String,
+  ChatCommandLogic_BanHelp_String,
+  ChatCommandLogic_UnbanHelp_String,
+  ChatCommandLogic_ModeratorHelp_String,
+  ChatCommandLogic_ServerMuteHelp_String,
+  ChatCommandLogic_ServerUnmuteHelp_String,
+  ChatCommandLogic_ServerBanHelp_String,
+  ChatCommandLogic_ServerUnbanHelp_String,
+  ChatCommandLogic_AlertHelp_String,
+  ChatCommandLogic_WarnHelp_String,
+  ChatCtrl_NormalChat_String,
+  ChatCtrl_Emote_String,
+  ChatCtrl_TeamChat_String,
+  ChatCtrl_TeamEmote_String,
+  ChatCtrl_YouWhisperToYourself_String,
+  ChatCtrl_YouWhisper_String,
+  ChatCtrl_SomeoneWhispersToYou_String,
+  ChatCtrl_YouWarnSomeone_String,
+  ChatCtrl_YouWarnYourself_String,
+  ChatCtrl_SomeoneWarnsYou_String,
+  ChatCtrl_SomeoneWarnsSomeone_String,
+  ChatCtrl_EnteringRoom_String,
+  ChatCtrl_LeavingRoom_String,
+  ChatCtrl_Disconnected_String,
+  ChatCtrl_YouWereKicked_String,
+  ChatCtrl_YouWereBannedMinute_String,
+  ChatCtrl_YouWereBannedMinutes_String,
+  ChatCtrl_YouWereBannedHour_String,
+  ChatCtrl_YouWereBannedHours_String,
+  ChatCtrl_YouWereBannedDay_String,
+  ChatCtrl_YouWereBannedDays_String,
+  ChatCtrl_YouWereBannedIndefinitely_String,
+  ChatCtrl_SomeoneWasKicked_String,
+  ChatCtrl_SomeoneWasBannedMinute_String,
+  ChatCtrl_SomeoneWasBannedMinutes_String,
+  ChatCtrl_SomeoneWasBannedHour_String,
+  ChatCtrl_SomeoneWasBannedHours_String,
+  ChatCtrl_SomeoneWasBannedDay_String,
+  ChatCtrl_SomeoneWasBannedDays_String,
+  ChatCtrl_SomeoneWasBannedIndefinitely_String,
+  ChatCtrl_YouWereUnmuted_String,
+  ChatCtrl_YouWereMutedMinute_String,
+  ChatCtrl_YouWereMutedMinutes_String,
+  ChatCtrl_YouWereMutedHour_String,
+  ChatCtrl_YouWereMutedHours_String,
+  ChatCtrl_YouWereMutedDay_String,
+  ChatCtrl_YouWereMutedDays_String,
+  ChatCtrl_YouWereMutedIndefinitely_String,
+  ChatCtrl_SomeoneWasUnmuted_String,
+  ChatCtrl_SomeoneWasMutedMinute_String,
+  ChatCtrl_SomeoneWasMutedMinutes_String,
+  ChatCtrl_SomeoneWasMutedHour_String,
+  ChatCtrl_SomeoneWasMutedHours_String,
+  ChatCtrl_SomeoneWasMutedDay_String,
+  ChatCtrl_SomeoneWasMutedDays_String,
+  ChatCtrl_SomeoneWasMutedIndefinitely_String,
+  ChatCtrl_ModeratorComment_String,
+  ChatCtrl_AlertComment_String,
+  ChatCtrl_ServerAlert_String,
+  ChatCtrl_ServerShutdownStartedMinute_String,
+  ChatCtrl_ServerShutdownStartedMinutes_String,
+  ChatCtrl_ServerShutdownStartedHour_String,
+  ChatCtrl_ServerShutdownStartedHours_String,
+  ChatCtrl_ServerShutdownStartedDay_String,
+  ChatCtrl_ServerShutdownStartedDays_String,
+  ChatCtrl_ServerShutdownAborted_String,
+  ChatCtrl_SomeoneInvitesYou_String,
+  ChatCtrl_SomeoneUninvitesYou_String,
+  ChatCtrl_YouInviteSomeone_String,
+  ChatCtrl_YouUninviteSomeone_String,
+  ChatCtrl_SomeoneInvitesYouExpl_String,
+  ChatCtrl_SomeoneUninvitesYouExpl_String,
+  ChatCtrl_YouInviteSomeoneExpl_String,
+  ChatCtrl_YouUninviteSomeoneExpl_String,
+  ChatCtrl_Accept_String,
+  ChatCtrl_Reject_String,
+  ChatCtrl_SomeoneAsksToJoin_String,
+  ChatCtrl_SomeoneAsksToJoinExpl_String,
+  ChatCtrl_ClientNotOnServer_String,
+  ChatCtrl_ClientInGame_String,
+  ChatCtrl_ClientInChat_String,
+  ChatCtrl_ClientInGameAndChat_String,
+  ChatCtrl_ClientIsAnonymous_String,
+  ChatCtrl_FriendIsChatting_String,
+  ChatCtrl_FriendIsInGameStaging_String,
+  ChatCtrl_FriendIsPlaying_String,
+  ChatCtrl_FriendIsOn_String,
+  ChatCtrl_FriendIsNotOnline_String,
+  ChatCtrl_PlayerKicked_String,
+  ChatCtrl_PlayerBanned_String,
+  ChatCtrl_FriendJoined_String,
+  ChatCtrl_FriendLeft_String,
+  ChatCtrl_TeamMemberJoined_String,
+  ChatCtrl_TeamMemberLeft_String,
+  ChatCtrl_TeamMembers_String,
+  ChatCtrl_IgnoreList_String,
+  ChooseNetworkAdapterDialog_Default_String,
+  ChooseNetworkAdapterDialog_Unknown_String,
+  ClientOptionsCtrl_Whisper_String,
+  ClientOptionsCtrl_Invite_String,
+  ClientOptionsCtrl_Uninvite_String,
+  ClientOptionsCtrl_AddToFriends_String,
+  ClientOptionsCtrl_RemoveFromFriends_String,
+  ClientOptionsCtrl_ClearAFK_String,
+  ClientOptionsCtrl_SetAFK_String,
+  ClientOptionsCtrl_Ignore_String,
+  ClientOptionsCtrl_Unignore_String,
+  ClientOptionsCtrl_Block_String,
+  ClientOptionsCtrl_Unblock_String,
+  ClientOptionsCtrl_Warn_String,
+  ClientOptionsCtrl_Mute_String,
+  ClientOptionsCtrl_UnMute_String,
+  ClientOptionsCtrl_Kick_String,
+  ClientOptionsCtrl_Ban_String,
+  DirectConnectionOptionsCtrl_Connect_String,
+  DirectConnectionOptionsCtrl_Refresh_String,
+  DirectConnectionOptionsCtrl_Remove_String,
+  FriendOptionsCtrl_Locate_String,
+  FriendOptionsCtrl_RefreshList_String,
+  FriendOptionsCtrl_RemoveFromFriends_String,
+  FriendsListCtrl_Unknown_Image,
+  FriendsListCtrl_NotFound_Image,
+  FriendsListCtrl_InChat_Image,
+  FriendsListCtrl_InGame_Image,
+  GameOptionsPopup_Join_String,
+  GameOptionsPopup_Ping_String,
+  GameOptionsPopup_QueryDetails_String,
+  GameOptionsPopup_HideDetails_String,
+  GameOptionsPopup_ShowDetails_String,
+  GameOptionsPopup_Remove_String,
+  GameStagingCtrl_Ready_String,
+  GameStagingCtrl_NotReady_String,
+  GameStagingCtrl_StartGame_String,
+  GameStagingCtrl_LeaveGame_String,
+  GameStagingCtrl_DissolveGame_String,
+  GameStagingLogic_KickedTitle_String,
+  GameStagingLogic_KickedDetails_String,
+  GameStagingLogic_BannedTitle_String,
+  GameStagingLogic_BannedDetails_String,
+  GameStagingLogic_ConnectWarningTitle1_String,
+  GameStagingLogic_ConnectWarningDetails1_String,
+  GameStagingLogic_ConnectWarningTitle2_String,
+  GameStagingLogic_ConnectWarningDetails2_String,
+  GameStagingLogic_ConnectWarningTitle3_String,
+  GameStagingLogic_ConnectWarningDetails3_String,
+  GameStagingLogic_NoPingReplyError_String,
+  GameStagingLogic_GettingGameInfoTitle_String,
+  GameStagingLogic_GettingGameInfoDetails_String,
+  GameStagingLogic_JoinGameErrorTitle_String,
+  GameStagingLogic_VerifyingPingTitle_String,
+  GameStagingLogic_VerifyingPingDetails_String,
+  GameStagingLogic_DissolveGame_String,
+  GameStagingLogic_DissolveGameConfirm_String,
+  GameStagingLogic_LeaveGame_String,
+  GameStagingLogic_LeaveGameConfirm_String,
+  GameStagingLogic_NoQuickPlayGameTitle_String,
+  GameStagingLogic_NoQuickPlayGameDetails_String,
+  GameUserListCtrl_Ban_String,
+  GameUserListCtrl_Kick_String,
+  GameUserListCtrl_Ready_Image,
+  InternetQuickPlay_Welcome_String,
+  InternetQuickPlay_UserWelcome_String,
+  JoinResponse_Joined_String,
+  JoinResponse_ServerFull_String,
+  JoinResponse_InviteOnly_String,
+  JoinResponse_AskToJoin_String,
+  JoinResponse_GameInProgress_String,
+  JoinResponse_InvalidPassword_String,
+  JoinResponse_NotOnLAN_String,
+  JoinResponse_Blocked_String,
+  JoinResponse_Unknown_String,
+  LANLogic_SocketBindError_String,
+  LANLogic_SocketListenError_String,
+  LANLogic_ConnectToGameTitle_String,
+  LANLogic_ConnectToGameDetails_String,
+  LANLogic_CheckingAddressTitle_String,
+  LANLogic_CheckingAddressDetails_String,
+  LANLogic_RegisterTitle_String,
+  LANLogic_RegisterDetails_String,
+  LANLogic_JoinFailure_String,
+  LANLogic_JoinReplyError_String,
+  LANLogic_InvalidSubnet_String,
+  LobbyContainer_InitStart_String,
+  LobbyContainer_InitFailed_String,
+  LobbyContainer_CheckingVersion_String,
+  LobbyContainer_QueryingServers_String,
+  LobbyContainer_NoConnection_String,
+  LobbyContainer_DNSLookupFailed_String,
+  LobbyContainer_DirLookupFailure_String,
+  LobbyContainer_VersionCheckFailure_String,
+  LobbyContainer_InitComplete_String,
+  LobbyContainer_NoServers_String,
+  LobbyContainer_AuthServers_String,
+  LobbyContainer_AccountServers_String,
+  LobbyContainer_VersionServers_String,
+  LobbyContainer_CreateAccountTitle_String,
+  LobbyContainer_CreateAccountDetails_String,
+  LobbyContainer_RetrievePasswordTitle_String,
+  LobbyContainer_RetrievePasswordDetails_String,
+  LobbyContainer_RetrieveUsernameTitle_String,
+  LobbyContainer_RetrieveUsernameDetails_String,
+  LobbyContainer_QueryAccountTitle_String,
+  LobbyContainer_QueryAccountDetails_String,
+  LobbyContainer_UpdateAccountTitle_String,
+  LobbyContainer_UpdateAccountDetails_String,
+  LobbyContainer_LoginTitle_String,
+  LobbyContainer_LoginDetails_String,
+  LobbyContainer_GettingRoomsTitle_String,
+  LobbyContainer_GettingRoomsDetails_String,
+  LobbyContainer_VersionOutOfDataTitle_String,
+  LobbyContainer_VersionOutOfDataDetails_String,
+  LobbyGameStatus_Success_String,
+  LobbyGameStatus_GameFull_String,
+  LobbyGameStatus_GameInProgress_String,
+  LobbyGameStatus_UnpackFailure_String,
+  LobbyGameStatus_NotInvited_String,
+  LobbyGameStatus_CaptainRejectedYou_String,
+  LobbyGameStatus_InvalidPassword_String,
+  LobbyGameStatus_DuplicateName_String,
+  LobbyOptions_DefaultName_String,
+  LobbyOptions_CheckingAddress_String,
+  LobbyOptions_AddressUnavailable_String,
+  RoomCtrl_QueryingServer_String,
+  RoomCtrl_Password_Image,
+  RoomLabelCtrl_LabelPrefix_String,
+  RoomLabelCtrl_LabelServer_String,
+  RoomLabelCtrl_LabelUser_String,
+  RoomLabelCtrl_LabelUsers_String,
+  RoomLabelCtrl_LabelDisconnected_String,
+  RoutingLogic_GetClientListTitle_String,
+  RoutingLogic_GetClientListDetails_String,
+  RoutingLogic_GetGroupListTitle_String,
+  RoutingLogic_GetGroupListDetails_String,
+  RoutingLogic_GameDissolvedTitle_String,
+  RoutingLogic_GameDissolvedDetails_String,
+  RoutingLogic_NoServersTitle_String,
+  RoutingLogic_NoServersDetails_String,
+  RoutingLogic_TooManyFriendsTitle_String,
+  RoutingLogic_TooManyFriendsDetails_String,
+  RoutingLogic_AlreadyJoinedTitle_String,
+  RoutingLogic_AlreadyInGame_String,
+  RoutingLogic_AlreadyInRoom_String,
+  RoutingLogic_JoinGroupTitle_String,
+  RoutingLogic_JoinGroupDetails_String,
+  RoutingLogic_ConnectTitle_String,
+  RoutingLogic_ConnectDetails_String,
+  RoutingLogic_RegisterTitle_String,
+  RoutingLogic_RegisterDetails_String,
+  RoutingLogic_QueryGroupsTitle_String,
+  RoutingLogic_QueryGroupsDetails_String,
+  RoutingLogic_CreateGroupTitle_String,
+  RoutingLogic_CreateGroupDetails_String,
+  RoutingLogic_GetBadUsersTitle_String,
+  RoutingLogic_GetBadUsersDetails_String,
+  RoutingLogic_DisconnectedTitle_String,
+  RoutingLogic_DisconnectedDetails_String,
+  RoutingLogic_AskingCaptainTitle_String,
+  RoutingLogic_AskingCaptainDetails_String,
+  RoutingLogic_CollectingPingsTitle_String,
+  RoutingLogic_CollectingPingsDetails_String,
+  RoutingLogic_GettingGameListTitle_String,
+  RoutingLogic_GettingGameListDetails_String,
+  RoutingLogic_MuteClientTitle_String,
+  RoutingLogic_UnmuteClientTitle_String,
+  RoutingLogic_BanClientTitle_String,
+  RoutingLogic_KickClientTitle_String,
+  RoutingLogic_ModerateDetails_String,
+  RoutingLogic_FriendNotFoundTitle_String,
+  RoutingLogic_FriendNotFoundDetails_String,
+  RoutingLogic_ClientNotFound_String,
+  RoutingLogic_ClientAmbiguous_String,
+  RoutingLogic_InvalidCommand_String,
+  RoutingLogic_RequireName_String,
+  RoutingLogic_BadTimeSpec_String,
+  RoutingLogic_Error_String,
+  RoutingLogic_NotCaptain_String,
+  ServerListCtrl_Pinging_String,
+  ServerListCtrl_PingFailed_String,
+  ServerListCtrl_Querying_String,
+  ServerListCtrl_QueryFailed_String,
+  ServerListCtrl_ListSummary_String,
+  ServerListCtrl_ListPingSummary_String,
+  ServerListCtrl_RefreshList_String,
+  ServerListCtrl_StopRefresh_String,
+  ServerListCtrl_NoFilter_String,
+  ServerListCtrl_AddRemove_String,
+  ServerListCtrl_Add_String,
+  ServerListCtrl_Remove_String,
+  ServerListCtrl_FullFilter_String,
+  ServerListCtrl_NotFullFilter_String,
+  ServerListCtrl_OpenFilter_String,
+  ServerListCtrl_PingFailed_Image,
+  ServerListCtrl_GameExpanded_Image,
+  ServerListCtrl_GameNotExpanded_Image,
+  ServerListCtrl_GameAreInvited_Image,
+  ServerListCtrl_GameNone_Image,
+  ServerListCtrl_GameAskToJoin_Image,
+  ServerListCtrl_GameHasPassword_Image,
+  ServerListCtrl_GameNotInvited_Image,
+  ServerListCtrl_GameInProgress_Image,
+  ServerListCtrl_SkillOpen_Image,
+  ServerListCtrl_SkillNovice_Image,
+  ServerListCtrl_SkillIntermediate_Image,
+  ServerListCtrl_SkillAdvanced_Image,
+  ServerListCtrl_SkillExpert_Image,
+  ServerOptionsCtrl_Connect_String,
+  ServerOptionsCtrl_RefreshServer_String,
+  ServerOptionsCtrl_HideDetails_String,
+  ServerOptionsCtrl_ShowDetails_String,
+  ServerOptionsCtrl_ResfreshList_String,
+  StagingLogic_DisconnectedTitle_String,
+  StagingLogic_DisconnectedDetails_String,
+  StagingLogic_BannedTitle_String,
+  StagingLogic_BannedDetails_String,
+  StagingLogic_KickedTitle_String,
+  StagingLogic_KickedDetails_String,
+  UserListCtrl_Ignore_String,
+  UserListCtrl_Unignore_String,
+  UserListCtrl_Normal_Image,
+  UserListCtrl_Away_Image,
+  UserListCtrl_Admin_Image,
+  UserListCtrl_Moderator_Image,
+  UserListCtrl_Captain_Image,
+  UserListCtrl_Muted_Image,
+  UserListCtrl_Ignored_Image,
+  UserListCtrl_Blocked_Image,
+  WONStatus_Success_String,
+  WONStatus_Killed_String,
+  WONStatus_TimedOut_String,
+  WONStatus_InvalidAddress_String,
+  WONStatus_GeneralFailure_String,
+  WONStatus_AuthFailure_String,
+  WONStatus_FTPFailure_String,
+  WONStatus_HTTPFailure_String,
+  WONStatus_MOTDFailure_String,
+  WONStatus_RoutingFailure_String,
+  WONStatus_GameSpyFailure_String,
+  WONStatus_DirFailure_String,
+  WONStatus_ChatFailure_String,
+  WONStatus_DatabaseFailure_String,
+  WONStatus_NotAllowed_String,
+  WONStatus_NotAuthorized_String,
+  WONStatus_BehindFirewall_String,
+  WONStatus_ExpiredCertificate_String,
+  WONStatus_InvalidCDKey_String,
+  WONStatus_CDKeyBanned_String,
+  WONStatus_CDKeyInUse_String,
+  WONStatus_CRCFailed_String,
+  WONStatus_UserExists_String,
+  WONStatus_UserNotFound_String,
+  WONStatus_BadPassword_String,
+  WONStatus_InvalidUserName_String,
+  WONStatus_BadCommunity_String,
+  WONStatus_NotInCommunity_String,
+  WONStatus_UserSeqInUse_String,
+  WONStatus_BlankNamesNotAllowed_String,
+  WONStatus_CaptainRejectedYou_String,
+  WONStatus_ClientAlreadyBanned_String,
+  WONStatus_ClientAlreadyInGroup_String,
+  WONStatus_ClientAlreadyMuted_String,
+  WONStatus_ClientBanned_String,
+  WONStatus_ClientDoesNotExist_String,
+  WONStatus_ClientNotBanned_String,
+  WONStatus_ClientNotInGroup_String,
+  WONStatus_ClientNotInvited_String,
+  WONStatus_ClientNotMuted_String,
+  WONStatus_ConnectFailure_String,
+  WONStatus_GroupAlreadyClaimed_String,
+  WONStatus_GroupAlreadyExists_String,
+  WONStatus_GroupClosed_String,
+  WONStatus_GroupDeleted_String,
+  WONStatus_GroupDoesNotExist_String,
+  WONStatus_GroupFull_String,
+  WONStatus_GuestNamesReserved_String,
+  WONStatus_InvalidPassword_String,
+  WONStatus_MustBeAdmin_String,
+  WONStatus_MustBeCaptain_String,
+  WONStatus_MustBeCaptainOrModerator_String,
+  WONStatus_MustBeModerator_String,
+  WONStatus_ServerFull_String,
+  WONStatus_GroupNameExceedsMaximum_String,
+  WONStatus_JoinCanceled_String,
+  WONStatus_Throttled_String,
+  WONStatus_KeyNotUsed_String,
+  WONStatus_EMailPasswordDuplication_String,
+  WONStatus_AccountCreateDisabled_String,
+  WONStatus_AgeNotOldEnough_String,
+  WONStatus_ItemHasDependencies_String,
+  WONStatus_OutOfDate_String,
+  WONStatus_OutOfDateNoUpdate_String,
+  WONStatus_ValidNotLatest_String,
+  WONStatus_DataAlreadyExists_String,
+  WONStatus_DBError_String,
+  WONStatus_ConnRefused_String,
+};
+
 /// The inward calls (the C++ shell's virtuals and methods).
 enum class EeWonRootCall : uint32_t {
   /// `Virtual08` (SizeChanged).
@@ -5834,6 +6834,32 @@ enum class EeWonScrollTextCall : uint32_t {
   Field,
 };
 
+/// Which method (`ee_won_skin_layout`'s `kind`).
+enum class EeWonSkinLayKind : uint32_t {
+  /// `MSComboBox::Virtual08` (after `ComboBox::Virtual08`).
+  MsCombo = 1,
+  /// `MSScrollContainer::Virtual08` (after `Container::Virtual08`).
+  MsScroll,
+  /// `MSListCtrl::Virtual08`: the scroll container's, then the header.
+  MsList,
+  /// `WONComboBox::GetDesiredSize` (the size out).
+  WonComboSize,
+  /// `WONComboBox::Virtual08` (after `ComboBox::Virtual08`).
+  WonCombo,
+  /// `WONScrollContainer::Virtual08` (after `Container::Virtual08`).
+  WonScroll,
+  /// `WONListCtrl::Virtual08`: the scroll container's, then the header.
+  WonList,
+  /// `WONListCtrl::SetStandarColumnHeader(a, *(const GUIString*)b, c)`.
+  WonListTextHeader,
+  /// `WONListCtrl::SetColumnHeader(a, (Component*)b, c)`.
+  WonListHeader,
+  /// `MSEtchedFrameGroup::GetDesiredSize` (the size out).
+  EtchedSize,
+  /// `WONSimpleButton::GetDesiredSize` (the size out).
+  SimpleButtonSize,
+};
+
 /// Which copy `ee_won_smart_get` makes.
 enum class EeWonSmartGet {
   /// `GetClient(a)`
@@ -5935,6 +6961,58 @@ enum class EeWonStagingCall : uint32_t {
   LeaveGame,
   NotifyStagingChange,
   NotifyPingChange,
+};
+
+/// A surface's field (`ee_won_surface_get`).
+enum class EeWonSurfaceField : uint32_t {
+  /// `GetSurfaceFormat()`.
+  Format = 1,
+  Width,
+  Height,
+  BytesPerRow,
+  PixelsPerRow,
+  /// `GetPixelSize()` (4 or 2).
+  PixelSize,
+  ClipX1,
+  ClipY1,
+  ClipX2,
+  ClipY2,
+  /// `GetColor()` (the pixel value: a 16-bit surface's converted colour).
+  Color,
+};
+
+/// A drawing method (`ee_won_surface_draw`; its arguments in the original's order).
+enum class EeWonSurfaceDraw : uint32_t {
+  /// `SetColor(a)`.
+  SetColor = 1,
+  /// `FillRect(a, b, c, d)`.
+  FillRect,
+  /// `DrawRect(a, b, c, d)`.
+  DrawRect,
+  /// `DrawHorzLine(a, b, c)` (x1, x2, y).
+  HorzLine,
+  /// `DrawVertLine(a, b, c)` (x, y1, y2).
+  VertLine,
+  /// `DrawLine(a, b, c, d)`.
+  Line,
+  /// `DrawCircle(a, b, c)`.
+  Circle,
+  /// `FillCircle(a, b, c)`.
+  FillCircle,
+  /// `DrawEllipse(a, b, c, d)`.
+  Ellipse,
+  /// `FillEllipse(a, b, c, d)`.
+  FillEllipse,
+  /// `DrawArc(a, b, c, d, e, f)`.
+  Arc,
+  /// `PutPixel(a, b)`.
+  PutPixel,
+  /// `SetPixel(a, b, c)`.
+  SetPixel,
+  /// `SetClipRect(a, b, c, d)`.
+  SetClipRect,
+  /// `ClearClipRect()`.
+  ClearClipRect,
 };
 
 /// The inward calls of the C++ `TabBar` shell.
@@ -6886,6 +7964,8 @@ enum class EeWonLobbyDlgEvent : uint32_t {
   ComboSelChanged = 3,
   /// `LobbyEvent_GotHTTPDocument` (round 3: a `GotHTTPDocumentEvent`, broadcast when a download finished)
   GotHttpDocument = 4,
+  /// `ComponentEvent_ListItemClicked` (round 6: a `ListItemClickedEvent`)
+  ListItemClicked = 5,
 };
 
 /// The button's and component's methods a skin button calls (`SkinBtn`).
@@ -7169,6 +8249,162 @@ enum class EeWonLobbyCtlPref : uint32_t {
   ConnectionSpeed,
 };
 
+/// The host's calls (`EeWonGuiOp::SkinLay`; `a` this, `b`, `c`, `d` its arguments; `k` the layout's kind).
+enum class EeWonSkinLay : uint32_t {
+  /// The receiver's part `c` (`EeWonSkinPart`) as the kind `b`'s class holds it.
+  Part = 1,
+  /// The receiver's field `c` (`EeWonSkinField`) as the kind `b`'s class holds it.
+  Field,
+  /// `mHeaderHeight = b`.
+  SetHeaderHeight,
+  /// `((Component*)b)->Width()`.
+  Width,
+  Height,
+  Left,
+  Top,
+  Right,
+  /// `IsVisible()` (0 or 1).
+  Visible,
+  /// `((Component*)b)->SetPosSize(r[0], r[1], r[2], r[3])` with `r` the four ints at `c`.
+  SetPosSize,
+  /// `((Component*)b)->GetDesiredSize(wh[0], wh[1])` with `wh` the two ints at `c`.
+  DesiredSize,
+  /// `((InputBox*)b)->SetLeftPad(c)`.
+  SetLeftPad,
+  /// `((ListArea*)b)->GetNumItems()`.
+  ListCount,
+  /// `((ListArea*)b)->GetTotalWidth()`.
+  ListTotalWidth,
+  /// `mHeader->SetColumn(b, *(const GUIString*)c, (int*)d)`.
+  SetColumn,
+  /// `mHeader->SetColumnItem(b, (Component*)c)`.
+  SetColumnItem,
+  /// `((MultiListArea*)GetScrollArea())->SetColumnWidth(b, c, false)`.
+  SetColumnWidth,
+  /// `mImages[b]`'s width and height into the two ints at `c` (0: no image, else 1).
+  Image,
+};
+
+/// A part of the receiver (`EeWonSkinLay::Part`): a `Component*`, 0 for none.
+enum class EeWonSkinPart : uint32_t {
+  /// A combo box's `mButton`.
+  Button = 1,
+  /// A combo box's `mEdit`.
+  Edit,
+  /// A combo box's `mListArea`.
+  ListArea,
+  /// A scroll container's `GetScrollArea()`.
+  ScrollArea,
+  /// `GetScrollbar(true)`.
+  VertBar,
+  /// `GetScrollbar(false)`.
+  HorzBar,
+  /// A list control's `mHeader`.
+  Header,
+  /// An etched group's `mLabel`.
+  Label,
+  /// An etched group's `mComponent`.
+  Contained,
+};
+
+/// A field of the receiver (`EeWonSkinLay::Field`).
+enum class EeWonSkinField : uint32_t {
+  DrawFrame = 1,
+  Draw3DFrame,
+  ButtonInFrame,
+  HeaderHeight,
+  /// `mFrame.mLeft` (the WON skin's frame).
+  FrameLeft,
+  FrameTop,
+  FrameRight,
+  FrameBottom,
+};
+
+/// The host's calls (`EeWonGuiOp::Grab`; the receiver the C++ `BackgroundGrabber*`; `b`, `c`, `d` the arguments).
+enum class EeWonGrab : uint32_t {
+  /// `((Component*)b)->LocalToRoot(p[0], p[1])` with `p` the two ints at `c`.
+  LocalToRoot = 1,
+  /// `((Graphics*)b)->DrawImage(mBGImage, c, d)`.
+  DrawImage,
+  /// `((Graphics*)b)->mClipRect` into the `EeWonRect4` at `c`.
+  Clip,
+  /// `((Component*)b)->Width()` and `Height()` into the two ints at `c`.
+  CompSize,
+  /// whether `mBGImage` is set (0 or 1), its `GetWidth()` and `GetHeight()` into the two ints at `c` when it is.
+  ImageSize,
+  /// `mBGImage = ((Component*)b)->GetRoot()->CreateImage(c, d)`.
+  NewImage,
+  /// `((Component*)b)->ComponentFlagSet(c)` (0 or 1).
+  FlagSet,
+  /// `mDebugWindow.get() != NULL` (0 or 1).
+  DebugExists,
+  /// the debug window made (`CreateNativeWindow()`, parent `((Component*)b)->GetRoot()`, style 0x40, created at
+  /// the background image's size).
+  DebugCreate,
+  /// the debug window shows the background image at the component's place on the screen (its root emptied, a new
+  /// ImageComponent of the image added, moved to the component's root point plus its window's screen corner).
+  DebugShow,
+  /// `mDebugWindow->mRoot->Invalidate()`.
+  DebugInvalidate,
+  /// the screen under the component: `x = y = 0`, `((Component*)b)->RootToChild(x, y)`,
+  /// `mBGImage->GetGraphics().DrawImage(b->GetRoot()->GetOffscreenImage(), x, y)`.
+  Capture,
+  /// `((Graphics*)b)->BlendSupported()` (0 or 1).
+  BlendSupported,
+  /// `g.SetColor(c); g.FillRectBlend(0, 0, w, h, alpha)` with `g` the Graphics `b` and `w`, `h`, `alpha` the
+  /// three ints at `d`.
+  Blend,
+  /// the background image's raw pixels tinted (`mBGImage->GetRaw()`, `ee_won_grab_tint(pixels, width * height,
+  /// c, d)`), then drawn: `((Graphics*)b)->DrawImage(raw, 0, 0)`.
+  Tint,
+};
+
+/// A field of `EEGameOptions` or of an `EEGameOptionsPlayer` the glue reads or writes.
+enum class EeWonEeGlueField : uint32_t {
+  LoadType = 0,
+  MapSize,
+  Resources,
+  EpochStart,
+  EpochEnd,
+  Variant,
+  Difficulty,
+  GameSpeed,
+  UnitLimit,
+  WondersForVictory,
+  RevealMap,
+  AllowCustomCivs,
+  LockTeams,
+  LockSpeed,
+  Victory,
+  /// read: `EERMFindGenerator(mMapType, index)`'s index (0 when not found)
+  MapTypeIndex,
+  Type,
+  LoadedType,
+  Slot,
+  Color,
+  Team,
+  StartingCitizens,
+  IsLocal,
+  IsReady,
+  B36,
+  /// read: `mName == ""` (0 or 1)
+  NameEmpty,
+};
+
+/// A text's kind (the `value` it goes with).
+enum class EeWonEeGlueText : uint32_t {
+  /// the empty string
+  Empty = 0,
+  /// `EELobbyResource_GetString(value)`
+  Resource = 1,
+  /// `sprintf("%ld", value)`
+  Number = 2,
+  /// `EELobbyToGUIString(EERMGetGeneratorDisplayName(value))`
+  MapType = 3,
+  /// the `GUIStringData*` `value` (0 the empty string)
+  Data = 4,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -7226,14 +8462,29 @@ struct EeWonDialog;
 /// DialogLogic's Rust half.
 struct EeWonDlgLogic;
 
+/// A colour button or a colour chooser.
+struct EeWonEeColor;
+
 /// The lobby game's Rust half.
 struct EeWonEeGame;
+
+/// One lobby sound.
+struct EeWonEeSound;
+
+/// One transfer.
+struct EeWonEeXfer;
+
+/// One send op: the path, the open file, the chunk and its read position.
+struct EeWonEeXferSend;
 
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
 
 /// `GetCertOp`'s state: the members and the session key.
 struct EeWonGetCert;
+
+/// The Rust BackgroundGrabber.
+struct EeWonGrabber;
 
 /// An op of the Rust op base, as the C++ `RustServerOp` holds it.
 struct EeWonHostOp;
@@ -7365,6 +8616,9 @@ struct EeWonSplitter;
 
 /// StagingLogic's state (the original's members 0x4c..0x54).
 struct EeWonStaging;
+
+/// The Rust surface.
+struct EeWonSurface;
 
 /// The Rust TreeItem.
 struct EeWonTNode;
@@ -7864,6 +9118,16 @@ using EeWonDlgLogicHostFn = ptrdiff_t(*)(void *logic,
                                          ptrdiff_t c,
                                          ptrdiff_t d);
 
+/// The host: `(object, op, a, b, c, d, e, f) -> result`.
+using EeWonEeColorHostFn = ptrdiff_t(*)(void *obj,
+                                        EeWonEeColorOp op,
+                                        ptrdiff_t a,
+                                        ptrdiff_t b,
+                                        ptrdiff_t c,
+                                        ptrdiff_t d,
+                                        ptrdiff_t e,
+                                        ptrdiff_t f);
+
 /// The host: `(game, op, a, b, c, d) -> result`.
 using EeWonEeGameHostFn = ptrdiff_t(*)(void *game,
                                        EeWonEeGameOp op,
@@ -7872,6 +9136,15 @@ using EeWonEeGameHostFn = ptrdiff_t(*)(void *game,
                                        ptrdiff_t c,
                                        ptrdiff_t d);
 
+/// The host: `(op, a, b, c, d, e, f) -> result`.
+using EeWonEeGlueHostFn = ptrdiff_t(*)(EeWonEeGlueOp op,
+                                       ptrdiff_t a,
+                                       ptrdiff_t b,
+                                       ptrdiff_t c,
+                                       ptrdiff_t d,
+                                       ptrdiff_t e,
+                                       ptrdiff_t f);
+
 /// A row for the C++: NUL-terminated texts; `new_section` when the section differs from the previous row's.
 struct EeWonEeResource {
   const char *section;
@@ -7879,6 +9152,16 @@ struct EeWonEeResource {
   const char *name;
   bool new_section;
 };
+
+/// The host: `(object, op, a) -> result` (`object` the C++ sound, or null for the decoder's load).
+using EeWonEeSoundHostFn = ptrdiff_t(*)(void *obj, EeWonEeSoundOp op, ptrdiff_t a);
+
+/// The host: `(object, op, a, b, c) -> result`.
+using EeWonEeXferHostFn = ptrdiff_t(*)(void *obj,
+                                       EeWonEeXferOp op,
+                                       ptrdiff_t a,
+                                       ptrdiff_t b,
+                                       ptrdiff_t c);
 
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
@@ -8063,6 +9346,25 @@ struct EeWonGetCertHooks {
   void (*clear_one_time)(void*, void*);
 };
 
+/// A rectangle (x, y, width, height).
+struct EeWonRect4 {
+  int32_t x;
+  int32_t y;
+  int32_t w;
+  int32_t h;
+};
+
+/// A grabber's drawing state (`RootGrabberRead`): whether it needs drawing (`NeedDrawBG`), its image order (as the
+/// map's `int` key), its image's place, its clip rectangle and its image.
+struct EeWonRootGrab {
+  int32_t need;
+  int32_t order;
+  int32_t x;
+  int32_t y;
+  EeWonRect4 clip;
+  ptrdiff_t image;
+};
+
 /// The C++ side of an expression: its StringParser and `GetIntValue` (which returns false after catching what
 /// the operand threw).
 struct EeWonExprHost {
@@ -8075,14 +9377,6 @@ struct EeWonExprHost {
 
 /// Whether item `i` (below the count) matches, read from the C++ list.
 using EeWonMatchOf = bool(*)(const void *ctx, size_t i);
-
-/// A rectangle (x, y, width, height).
-struct EeWonRect4 {
-  int32_t x;
-  int32_t y;
-  int32_t w;
-  int32_t h;
-};
 
 /// Whether tab `i` (any int) is disabled, as `TabBar::Disabled`.
 using EeWonDisabledOf = bool(*)(const void *ctx, int32_t i);
@@ -9375,6 +10669,13 @@ struct EeWonGameSummary {
   size_t rest;
 };
 
+/// A status's text: the resource string, and whether it is a general text formatted with the status's
+/// description.
+struct EeWonStatusLobbyText {
+  EeWonLobbyRes res;
+  bool general;
+};
+
 /// The constructor's parts (`ee_won_tab_init`): the bottom bar's Rust object, the four containers and the layout
 /// point, as `Component*`s.
 struct EeWonTabParts {
@@ -9436,17 +10737,6 @@ struct EeWonItemClick {
   bool up;
   int32_t x;
   int32_t y;
-};
-
-/// A grabber's drawing state (`RootGrabberRead`): whether it needs drawing (`NeedDrawBG`), its image order (as the
-/// map's `int` key), its image's place, its clip rectangle and its image.
-struct EeWonRootGrab {
-  int32_t need;
-  int32_t order;
-  int32_t x;
-  int32_t y;
-  EeWonRect4 clip;
-  ptrdiff_t image;
 };
 
 /// An input event's fields, as the C++ forwarder reads them (`KeyEvent`, `MouseEvent`, `SizeEvent`, `InputEvent`).
@@ -10738,6 +12028,34 @@ ptrdiff_t ee_won_dlglogic_call(const EeWonDlgLogic *obj,
                                ptrdiff_t d,
                                ptrdiff_t e);
 
+/// A new colour button or chooser for the C++ object `obj`.
+EeWonEeColor *ee_won_eecolor_new(void *obj, EeWonEeColorKind kind, EeWonEeColorHostFn host);
+
+/// Releases the button's chooser and frees the object.
+///
+/// # Safety
+/// `p` came from `ee_won_eecolor_new` (or is NULL) and is not used again.
+void ee_won_eecolor_free(EeWonEeColor *p);
+
+/// One inward call (`EeWonEeColorCall`).
+///
+/// # Safety
+/// `p` is live; a paint's `a` is a `Graphics*`.
+ptrdiff_t ee_won_eecolor_call(const EeWonEeColor *p,
+                              EeWonEeColorCall call,
+                              ptrdiff_t a,
+                              ptrdiff_t b,
+                              ptrdiff_t c);
+
+/// The palette's colour `i` (0..15).
+uint32_t ee_won_eecolor_palette(uint32_t i);
+
+/// Sets the palette from `n` colours (0x00rrggbb; at most 16 are read).
+///
+/// # Safety
+/// `colors` holds `n` values.
+void ee_won_eecolor_set_palette(const uint32_t *colors, uint32_t n);
+
 /// A new lobby game for the C++ `game` (EELobbyGame's constructor).
 EeWonEeGame *ee_won_eegame_new(void *game, EeWonEeGameHostFn host);
 
@@ -10761,6 +12079,15 @@ ptrdiff_t ee_won_eegame_call(const EeWonEeGame *p,
 /// EELobbyPlayer::IsTeammate's rule: team 0 (no team) has no teammates.
 bool ee_won_eegame_is_teammate(uint8_t mine, uint8_t theirs);
 
+/// Sets the glue's host (the C++ calls it once, before any other call).
+void ee_won_eeglue_set_host(EeWonEeGlueHostFn host);
+
+/// One inward call (`EeWonEeGlueCall`).
+///
+/// # Safety
+/// The call's pointer arguments as documented.
+ptrdiff_t ee_won_eeglue_call(EeWonEeGlueCall call, ptrdiff_t a, ptrdiff_t b, ptrdiff_t c);
+
 /// The number of game lobby strings.
 size_t ee_won_eeresource_count();
 
@@ -10769,6 +12096,72 @@ size_t ee_won_eeresource_count();
 /// # Safety
 /// `out` is writable.
 bool ee_won_eeresource_row(size_t index, EeWonEeResource *out);
+
+/// The row of a global's name (`EE_LOBBY_STRING`: the lobby's code names a string by its original global), -1 when
+/// the table has none.
+///
+/// # Safety
+/// `name` is NULL or a NUL-terminated string.
+ptrdiff_t ee_won_eeresource_find(const char *name);
+
+/// A new sound for the C++ object `obj` (an effect of sample `sample`; the music's is unused).
+EeWonEeSound *ee_won_eesound_new(void *obj,
+                                 EeWonEeSoundKind kind,
+                                 EeWonEeSoundHostFn host,
+                                 uint32_t sample);
+
+/// The C++ object's destructor: an effect's sample unloaded, the object freed.
+///
+/// # Safety
+/// `p` came from [`ee_won_eesound_new`] (or is null), not used after.
+void ee_won_eesound_free(EeWonEeSound *p);
+
+/// A virtual of the C++ object.
+///
+/// # Safety
+/// `p` is a live object of [`ee_won_eesound_new`].
+ptrdiff_t ee_won_eesound_call(const EeWonEeSound *p, EeWonEeSoundCall call, ptrdiff_t a);
+
+/// `EELobbySoundDecoder::Decode`'s load: the sample of `path` (a NUL-terminated `char*`), or -1 without a sound
+/// manager (no sound is made then).
+int64_t ee_won_eesound_load(EeWonEeSoundHostFn host,
+                            const uint8_t *path);
+
+/// A new transfer for the C++ shell `obj`.
+EeWonEeXfer *ee_won_eexfer_new(void *obj, EeWonEeXferHostFn host);
+
+/// The shell's destructor.
+///
+/// # Safety
+/// `p` came from [`ee_won_eexfer_new`] (or is null), not used after.
+void ee_won_eexfer_free(EeWonEeXfer *p);
+
+/// A method of the transfer.
+///
+/// # Safety
+/// `p` is a live transfer; the host's calls may come back into it (a completion run at once).
+ptrdiff_t ee_won_eexfer_call(const EeWonEeXfer *p, EeWonEeXferCall call, ptrdiff_t a, ptrdiff_t b);
+
+/// A new send op for the C++ shell `obj`, of the file at `path` (`len` bytes).
+///
+/// # Safety
+/// `path` holds `len` readable bytes (or `len` is 0).
+EeWonEeXferSend *ee_won_eexfer_send_new(void *obj,
+                                        EeWonEeXferHostFn host,
+                                        const uint8_t *path,
+                                        size_t len);
+
+/// The send op's destructor (the file is not closed: the op's cleanup does that).
+///
+/// # Safety
+/// `p` came from [`ee_won_eexfer_send_new`] (or is null), not used after.
+void ee_won_eexfer_send_free(EeWonEeXferSend *p);
+
+/// A virtual of the send op.
+///
+/// # Safety
+/// `p` is a live send op.
+int32_t ee_won_eexfer_send_call(const EeWonEeXferSend *p, EeWonEeXferSendCall call);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.
@@ -11958,6 +13351,31 @@ void ee_won_getcert_setup(EeWonGetCert *op,
                           size_t length,
                           void *block);
 
+/// A new grabber for the C++ `BackgroundGrabber` `me`.
+EeWonGrabber *ee_won_grab_new(void *me, EeWonGuiHostFn host);
+
+/// # Safety
+/// `g` is null or from `ee_won_grab_new`, not freed before.
+void ee_won_grab_free(EeWonGrabber *g);
+
+/// One of the shell's methods (`EeWonGrabCall`).
+///
+/// # Safety
+/// `g` is a live grabber.
+ptrdiff_t ee_won_grab_call(const EeWonGrabber *g, EeWonGrabCall c, ptrdiff_t a, ptrdiff_t b);
+
+/// The root container's read of the grabber's state into `q` (its `image` left as it was).
+///
+/// # Safety
+/// `g` is a live grabber, `q` points at an `EeWonRootGrab`.
+void ee_won_grab_read(const EeWonGrabber *g, EeWonRootGrab *q);
+
+/// The translucent pass over `n` pixels at `pixels` (`tint`).
+///
+/// # Safety
+/// `pixels` points at `n` pixels (or `n` is 0).
+void ee_won_grab_tint(uint32_t *pixels, size_t n, int32_t level, int32_t color);
+
 /// `parse_expression` through `host`: 0 with the value in `out`, else the `ExprError`.
 ///
 /// # Safety
@@ -12421,6 +13839,39 @@ uint32_t ee_won_gui_sel_foreground(uint32_t background,
                                    uint32_t foreground,
                                    int32_t mode,
                                    uint32_t original);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_image_component(bool has,
+                                       bool stretch,
+                                       bool tile,
+                                       int32_t image_width,
+                                       int32_t image_height,
+                                       int32_t width,
+                                       int32_t height,
+                                       EeWonDrawOp *out,
+                                       size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_rectangle(int32_t solid,
+                                 int32_t outline,
+                                 int32_t width,
+                                 int32_t height,
+                                 EeWonDrawOp *out,
+                                 size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_rectangle_3d(bool up,
+                                    int32_t thickness,
+                                    int32_t solid,
+                                    int32_t light,
+                                    int32_t dark,
+                                    int32_t width,
+                                    int32_t height,
+                                    EeWonDrawOp *out,
+                                    size_t cap);
 
 /// `move_cursor` over a `GUIString`'s units.
 ///
@@ -14122,6 +15573,37 @@ void ee_won_imgf_crop(const EeWonRawPixels *src,
                       int32_t y,
                       int32_t row_bytes,
                       int32_t height);
+
+/// `StretchImageFilter`'s pixel work over the plan's `n` operations at `ops` (`stretch_run`).
+///
+/// # Safety
+/// As `stretch_run`; `ops` points at `n` operations (or `n` is 0).
+void ee_won_imgf_stretch_run(const EeWonRawPixels *src,
+                             const EeWonRawPixels *dst,
+                             const EeWonDrawOp *ops,
+                             size_t n);
+
+/// RawImage32::GetNative's transparency pass (`mask32`).
+///
+/// # Safety
+/// As `mask32`.
+void ee_won_imgf_mask32(uint32_t *pixels,
+                        int32_t width,
+                        int32_t height,
+                        uint8_t *mask,
+                        int32_t pitch);
+
+/// RawImage8::GetNative's mask (`mask8`).
+///
+/// # Safety
+/// As `mask8`.
+void ee_won_imgf_mask8(const uint8_t *pixels,
+                       int32_t width,
+                       int32_t height,
+                       int32_t pixel_pitch,
+                       int32_t transparent,
+                       uint8_t *mask,
+                       int32_t pitch);
 
 /// A new Rust InputBox for the C++ `component`, its calls out through `host`.
 EeWonInput *ee_won_input_new(void *component, EeWonGuiHostFn host);
@@ -16048,6 +17530,9 @@ size_t ee_won_resource_count();
 /// `out` is writable.
 bool ee_won_resource_row(size_t index, EeWonResource *out);
 
+/// The kind of resource `res` (its row's).
+EeWonResKind ee_won_lobbyres_kind(EeWonLobbyRes res);
+
 /// A new Rust RootContainer for the C++ `component` over its container's Rust object `ct`, its calls out through
 /// `host`.
 ///
@@ -16684,6 +18169,19 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// # Safety
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
+
+/// `layout` for the C++ (`w`, `h` null for a layout that has no size out).
+///
+/// # Safety
+/// `me` is the component `host` serves; `w` and `h` are null or point at ints.
+void ee_won_skin_layout(EeWonSkinLayKind kind,
+                        void *me,
+                        EeWonGuiHostFn host,
+                        int32_t a,
+                        ptrdiff_t b,
+                        int32_t c,
+                        int32_t *w,
+                        int32_t *h);
 
 /// A new model: the ignore file's path (`path_len` bytes), the C++'s `wchar_t` size.
 ///
@@ -17414,6 +18912,9 @@ ptrdiff_t ee_won_staging_call(const EeWonStaging *staging,
                               ptrdiff_t c,
                               ptrdiff_t d);
 
+/// `GetWONStatusString`'s choice for `status`.
+EeWonStatusLobbyText ee_won_status_lobby_text(int32_t status);
+
 /// Upper-cases (`upper`) or lower-cases `length` bytes in place.
 ///
 /// # Safety
@@ -17458,6 +18959,96 @@ int32_t ee_won_compare_no_case32(const int32_t *a,
                                  size_t a_count,
                                  const int32_t *b,
                                  size_t b_count);
+
+/// `SurfaceBase::GetNewSurface(format)`: a new surface, or null for an unknown format.
+EeWonSurface *ee_won_surface_new(int32_t format);
+
+/// `GetNewSurface(gDefaultSurfaceFormat)`.
+EeWonSurface *ee_won_surface_new_default();
+
+/// `SetDefaultSurfaceFormat(format)`.
+void ee_won_surface_set_default_format(int32_t format);
+
+/// `SURFACE_32_TO_555` / `SURFACE_32_TO_565` (`SurfaceColorFrom32`).
+uint32_t ee_won_surface_color_from32(uint32_t c, int32_t format);
+
+/// `SURFACE_555_TO_32` / `SURFACE_565_TO_32`.
+uint32_t ee_won_surface_color_to32(uint32_t p, int32_t format);
+
+/// The surface's destruction (its pixels freed).
+///
+/// # Safety
+/// `s` is null or from `ee_won_surface_new` / `ee_won_surface_duplicate`, not freed before.
+void ee_won_surface_free(EeWonSurface *s);
+
+/// `Create(width, height)`.
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_create(EeWonSurface *s, int32_t width, int32_t height);
+
+/// `Free()`.
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_release(EeWonSurface *s);
+
+/// A field (`EeWonSurfaceField`).
+///
+/// # Safety
+/// `s` is a live surface.
+int32_t ee_won_surface_get(const EeWonSurface *s, EeWonSurfaceField f);
+
+/// `GetPixelsBase()`.
+///
+/// # Safety
+/// `s` is a live surface.
+void *ee_won_surface_pixels(EeWonSurface *s);
+
+/// A drawing method (`EeWonSurfaceDraw` with its arguments in the original's order).
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_draw(EeWonSurface *s,
+                         EeWonSurfaceDraw op,
+                         int32_t a,
+                         int32_t b,
+                         int32_t c,
+                         int32_t d,
+                         int32_t e,
+                         int32_t f);
+
+/// `GetPixel(x, y)`.
+///
+/// # Safety
+/// `s` is a live surface.
+uint32_t ee_won_surface_pixel(EeWonSurface *s, int32_t x, int32_t y);
+
+/// `CopySurface(src, mask, x, y, left, top, width, height)` (`mask` null: the copy without a mask).
+///
+/// # Safety
+/// `s` and `src` are live surfaces (possibly the same); `mask` is null or covers the source's rows.
+void ee_won_surface_copy(EeWonSurface *s,
+                         const EeWonSurface *src,
+                         const uint8_t *mask,
+                         int32_t x,
+                         int32_t y,
+                         int32_t left,
+                         int32_t top,
+                         int32_t width,
+                         int32_t height);
+
+/// `Duplicate()`: a new surface.
+///
+/// # Safety
+/// `s` is a live surface.
+EeWonSurface *ee_won_surface_duplicate(const EeWonSurface *s);
+
+/// The BITMAPINFO header's fields (`EeWonSurface::bitmap_info`) into `out` (eight ints).
+///
+/// # Safety
+/// `s` is a live surface, `out` points at eight ints.
+void ee_won_surface_bitmap_info(const EeWonSurface *s, int32_t *out);
 
 /// A new Rust TabBar for the C++ `component` over its container's Rust object `ct`, the bar of the control `ctrl`
 /// (NULL for none), its calls out through `host`.

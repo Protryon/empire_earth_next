@@ -180,7 +180,7 @@
 #include "ee/EESEAMouseClick.h"
 #include "lle/GEOrientation.h"
 #include "ee/EEGhostUnit.h"
-#include "ee/EEUCBuilding.h"
+#include "ee/EEUnitClassKinds.h"
 #include "lle/GE3DPlane.h"
 #include "lle/UIRadioButton.h"
 #include "ee/EEEffectManager.h"
@@ -219,6 +219,8 @@
 #include "ee/EESETSEffect.h"
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESETSEScenarioComboBox.h"
+#include "ee/EESETSEComboBox.h"
+#include "ee/EESETSUICBPlayer.h"
 #include "ee/EESEPlayerScreen.h"
 #include <typeinfo>
 #include <map>
@@ -923,13 +925,13 @@ UIControl* EditorControl(const std::string& inId)
 EESETSConditionControls* ConditionControls()
 {
     return static_cast<EESETSCondition*>(
-               gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition))->mControls;
+               gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition))->GetControls();
 }
 
 EESETSEffectControls* EffectControls()
 {
     return static_cast<EESETSEffect*>(
-               gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect))->mControls;
+               gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect))->GetControls();
 }
 
 // one control: its display mode, then a label's first line, a slider's value, a combo box's lines and selection
@@ -1334,8 +1336,8 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 EESEAMouseClick* a = new EESEAMouseClick;
                 unsigned long theID = c == "clear" ? 0 : UnitRef(w[1]);
                 EEMessage* m = c == "select" ? static_cast<EEMessage*>(new EEMRecord(kMessageSelectUnit, {theID}))
-                               : c == "toggle" ? static_cast<EEMessage*>(new EEMAddUnitToSelectedGroup(theID))
-                               : c == "add" ? static_cast<EEMessage*>(new EEMAlwaysAddUnitToSelectedGroup(theID))
+                               : c == "toggle" ? static_cast<EEMessage*>(new EEMRecord(kMessageAddUnitToSelectedGroup, {theID}))
+                               : c == "add" ? static_cast<EEMessage*>(new EEMRecord(kMessageAlwaysAddUnitToSelectedGroup, {theID}))
                                : static_cast<EEMessage*>(new EEMRecord(kMessageUnselectAllUnits));
                 a->SetMessage(m);
                 gUserInterface->PostAction(a);
@@ -1538,16 +1540,16 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             theCode = [=] {
                 EESETSCondition* theScreen = static_cast<EESETSCondition*>(
                     gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition));
-                theScreen->mTypeComboBox->SetCurrentSelection(L(1) - 2);
+                theScreen->GetTypeComboBox()->SetCurrentSelection(L(1) - 2);
                 theScreen->ChangeConditionType();
             };
         else if (c == "etype")   // etype TYPE ACTION: the effect's type combo box (types from 1), then its action combo
             theCode = [=] {
                 EESETSEffect* theScreen = static_cast<EESETSEffect*>(
                     gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect));
-                theScreen->mTypeComboBox->SetCurrentSelection(L(1) - 1);
+                theScreen->GetTypeComboBox()->SetCurrentSelection(L(1) - 1);
                 theScreen->ChangeEffectType();
-                theScreen->mControls->mComboBoxes[0]->SetCurrentSelection(L(2));
+                theScreen->GetControls()->mComboBoxes[0]->SetCurrentSelection(L(2));
                 theScreen->ChangeEffectAction();
             };
         else if (c == "ctl" && w.size() > 2 && (w[2] == "list" || w[2] == "combo"))
@@ -1595,6 +1597,100 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                         theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theSlider);
                 } else if (theRadio != NULL)
                     theRadio->Check();   // fires the checked event unless it was checked
+            };
+        else if (c == "ectl")
+            // ectl edit|edit2|text|edit48 INDEX TEXT | player|scen|ecombo INDEX LINE: an effect control's text typed
+            // ('_' a space) or its line set (the player picker's player, a scenario or effect combo box's line;
+            // no event: the next Store reads them)
+            theCode = [=] {
+                EESETSEffectControls* t = EffectControls();
+                size_t i = (size_t)L(2);
+                std::string theText = w.size() > 3 ? w[3] : std::string();
+                std::replace(theText.begin(), theText.end(), '_', ' ');
+                if (w[1] == "edit" || w[1] == "edit2" || w[1] == "text" || w[1] == "edit48") {
+                    UIEditBox* b = w[1] == "edit" ? t->mEditBoxes[i] : w[1] == "edit2" ? t->mEditBoxes2[i]
+                                   : w[1] == "text"                   ? t->mTextEditBox
+                                                                      : t->mEditBox48;
+                    b->SetText(UWideString(theText.c_str()));
+                } else if (w[1] == "player")
+                    t->mPlayers[i]->SetSelectedPlayer((unsigned long)L(3));
+                else if (w[1] == "scen")
+                    t->mScenarioComboBoxes[i]->SetCurrentSelection((unsigned long)L(3));
+                else
+                    static_cast<UIComboBox*>(t->mEffectComboBoxes[i])->SetCurrentSelection((unsigned long)L(3));
+            };
+        else if (c == "cctl")
+            // cctl edit|text INDEX TEXT | player|combo|scen INDEX LINE: a condition control's text typed ('_' a
+            // space) or its line set (no event: the next Store reads them)
+            theCode = [=] {
+                EESETSConditionControls* t = ConditionControls();
+                size_t i = (size_t)L(2);
+                std::string theText = w.size() > 3 ? w[3] : std::string();
+                std::replace(theText.begin(), theText.end(), '_', ' ');
+                if (w[1] == "edit" || w[1] == "text")
+                    (w[1] == "edit" ? t->mEditBoxes[i] : t->mTextEditBox)->SetText(UWideString(theText.c_str()));
+                else if (w[1] == "player")
+                    t->mPlayers[i]->SetSelectedPlayer((unsigned long)L(3));
+                else if (w[1] == "scen")
+                    t->mScenarioComboBoxes[i]->SetCurrentSelection((unsigned long)L(3));
+                else
+                    reinterpret_cast<UIComboBox*>(t->mComboBoxes[i])->SetCurrentSelection((unsigned long)L(3));
+            };
+        else if (c == "crefresh")   // the condition screen's RefreshControls (a condition combo box's change)
+            theCode = [=] {
+                gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition)->RefreshControls();
+            };
+        else if (c == "conditionstate")   // every condition: its numbers (EeScenarioConditionFields' words) and texts
+            theCode = [=, &theOutput] {
+                EEScenarioManager* m = gWorld.mScenarioManager;
+                for (unsigned long i = 0; i < m->mConditions.size(); i++) {
+                    EESMCondition* e = m->mConditions[i];
+                    const EeScenarioConditionFields& f = *e;
+                    unsigned char theBytes[sizeof(EeScenarioConditionFields)];
+                    memcpy(theBytes, &f, sizeof(theBytes));
+                    std::string s = "  condition " + Num(i) + " '" + (const char*)e->mName + "' n";
+                    char theWord[16];
+                    const size_t theWords = offsetof(EeScenarioConditionFields, mIsTriggerOn);   // then six bools
+                    for (size_t k = 0; k + 4 <= theWords; k += 4) {
+                        uint32_t v;
+                        memcpy(&v, theBytes + k, 4);
+                        snprintf(theWord, sizeof(theWord), " %lx", (unsigned long)v);
+                        s += theWord;
+                    }
+                    s += " b";
+                    for (size_t k = theWords; k < theWords + 6; k++)
+                        s += theBytes[k] ? "1" : "0";
+                    s += std::string(" text '") + (const char*)e->mText + "' chat '" + (const char*)e->mChatText + "'";
+                    theOutput.push_back(s);
+                }
+            };
+        else if (c == "erefresh")   // the effect screen's RefreshControls (an effect combo box's change: UpdateName)
+            theCode = [=] {
+                gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect)->RefreshControls();
+            };
+        else if (c == "effectstate")   // every effect: its numbers (EeScenarioEffectFields' words), texts and objects
+            theCode = [=, &theOutput] {
+                EEScenarioManager* m = gWorld.mScenarioManager;
+                for (unsigned long i = 0; i < m->mEffects.size(); i++) {
+                    EESMEffect* e = m->mEffects[i];
+                    const EeScenarioEffectFields& f = *e;
+                    unsigned char theBytes[sizeof(EeScenarioEffectFields)];
+                    memcpy(theBytes, &f, sizeof(theBytes));
+                    std::string s = "  effect " + Num(i) + " '" + (const char*)e->mName + "' n";
+                    char theWord[16];
+                    for (size_t k = 0; k + 4 <= sizeof(theBytes); k += 4) {
+                        uint32_t v;
+                        memcpy(&v, theBytes + k, 4);
+                        snprintf(theWord, sizeof(theWord), " %lx", (unsigned long)v);
+                        s += theWord;
+                    }
+                    s += std::string(" new '") + (const char*)e->mNewName + "' msg '" + (const char*)e->mMessage +
+                         "' file '" + (const char*)e->mFileName + "' desc '" + (const char*)e->mDescription + "' text '" +
+                         (const char*)e->mText + "' objects";
+                    for (unsigned long o : e->mObjects)
+                        s += " " + Num(o);
+                    theOutput.push_back(s);
+                }
             };
         else if (c == "ui")   // ui c|e: the condition's or effect's controls (display modes, labels, combos, sliders)
             theCode = [=, &theOutput] { ControlsDigest(w[1] == "c", theOutput); };
@@ -1748,7 +1844,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 EESETSAMouseClick* a = new EESETSAMouseClick;
                 unsigned long theID = UnitRef(w[2]);
                 a->SetMessage(w[1] == "select" ? static_cast<EEMessage*>(new EEMRecord(kMessageSelectUnit, {theID}))
-                                               : static_cast<EEMessage*>(new EEMAlwaysAddUnitToSelectedGroup(theID)));
+                                               : static_cast<EEMessage*>(new EEMRecord(kMessageAlwaysAddUnitToSelectedGroup, {theID})));
                 gUserInterface->PostAction(a);
                 a->Dereference();
             };

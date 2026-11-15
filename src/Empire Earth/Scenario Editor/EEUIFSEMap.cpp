@@ -83,7 +83,6 @@
 #include "ee/EESETSEScenarioComboBox.h"
 #include "ee/EESETSUICBPlayer.h"
 #include "ee/EESETSEffectControls.h"
-#include "ee/EESETSEffectType.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GE3DLine.h"
 #include "lle/GETransformation.h"

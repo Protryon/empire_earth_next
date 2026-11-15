@@ -325,6 +325,23 @@ pub fn status_string(status: i16) -> i32 {
     }
 }
 
+/// One inward call on the Rust game `handle` (an `EELobbyGame`'s `mRust`; 0 answers 0) from another Rust object:
+/// the direct path that replaced the C++ forwarders (R6 WONLobby round 6; `EELobbyGame::GetOption` and the others
+/// were `ee_won_eegame_call`). The reference lives for this call only: the game's calls out may re-enter.
+pub fn game_call(handle: isize, call: EeWonEeGameCall, a: isize, b: isize, c: isize) -> isize {
+    game_call4(handle, call, a, b, c, 0)
+}
+
+/// `game_call` with the fourth argument (SetGameFile's flag).
+pub fn game_call4(handle: isize, call: EeWonEeGameCall, a: isize, b: isize, c: isize, d: isize) -> isize {
+    let p = handle as *const EeWonEeGame;
+    if p.is_null() {
+        return 0;
+    }
+    // SAFETY: a live game's object (the caller's C++ game holds it); shared, as `ee_won_eegame_call`
+    unsafe { (*p).call(call, a, b, c, d) }
+}
+
 /// EELobbyPlayer::IsTeammate: team 0 (no team) has no teammates.
 pub fn is_teammate(mine: u8, theirs: u8) -> bool {
     mine != 0 && mine == theirs
@@ -1525,6 +1542,56 @@ pub extern "C" fn ee_won_eegame_is_teammate(mine: u8, theirs: u8) -> bool {
 #[cfg(test)]
 pub(crate) fn reset_types() {
     TYPES_INITIALIZED.store(false, Ordering::Relaxed);
+}
+
+/// For the other objects' tests: a real game over a test's op function (the direct path's other end).
+#[cfg(test)]
+pub(crate) mod testgame {
+    use super::*;
+    use std::sync::{Mutex, MutexGuard};
+
+    // The option types are read once per process (a static, as the original's): every test that makes a game holds
+    // this lock.
+    static TYPES: Mutex<()> = Mutex::new(());
+
+    pub fn lock() -> MutexGuard<'static, ()> {
+        TYPES.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// A game's op function: the op and its four arguments.
+    pub type GameOps = fn(EeWonEeGameOp, isize, isize, isize, isize) -> isize;
+
+    thread_local! {
+        static OPS: Cell<GameOps> = const { Cell::new(|_, _, _, _, _| 0) };
+    }
+
+    unsafe extern "C" fn host(_g: *mut c_void, op: EeWonEeGameOp, a: isize, b: isize, c: isize, d: isize) -> isize {
+        // the map types (twelve), read by a new game and not shown, as the C++ goldens answer them
+        if op == EeWonEeGameOp::NumMapTypes {
+            return 12;
+        }
+        let f = OPS.with(|h| h.get());
+        f(op, a, b, c, d)
+    }
+
+    /// A new game (C++ pointer 0x6000) whose ops go to `ops`; the caller holds `lock()`.
+    pub fn new(ops: GameOps) -> *mut EeWonEeGame {
+        OPS.with(|h| h.set(ops));
+        reset_types();
+        ee_won_eegame_new(0x6000 as *mut c_void, Some(host))
+    }
+
+    /// Sets the game's options and slots' raw options (`SetOption` and `SlotSetRawOption`, as a golden's set-up).
+    pub fn setup(g: *mut EeWonEeGame, options: &[(isize, isize)], slots: &[(isize, isize, isize)]) {
+        // SAFETY: a live game of `new`
+        let g = unsafe { &*g };
+        for &(o, v) in options {
+            g.call(EeWonEeGameCall::SetOption, o, v, 0, 0);
+        }
+        for &(s, o, v) in slots {
+            g.call(EeWonEeGameCall::SlotSetRawOption, s, o, v, 0);
+        }
+    }
 }
 
 #[cfg(test)]

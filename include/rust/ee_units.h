@@ -363,35 +363,109 @@ constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
 /// `kGoalGather` (`EEUnitGoal::mKind` of `EEUGGather`).
 constexpr static const int32_t EE_UNITS_GOAL_GATHER = 6;
 
-/// `mSlots.clear()`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_CLEAR = 301;
+/// the unit's class's `mWeight`
+constexpr static const int32_t EE_UNITS_ATC_WEIGHT = 1;
 
-/// a new airport (the original's local `theSlot`): its airport the id `io.i`, its queues empty
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_BEGIN = 302;
+/// the unit's class's `mTransportCapacity`
+constexpr static const int32_t EE_UNITS_ATC_TRANSPORT_CAPACITY = 2;
 
-/// the item `io.i` (a unit id) of kind `index` into the new airport's landings (kind 1) or takeoffs
-constexpr static const int32_t EE_UNITS_ATC_SAVE_ITEM_PUSH = 303;
+/// `unit->Reference()`
+constexpr static const int32_t EE_UNITS_ATC_REFERENCE = 3;
 
-/// `mSlots.push_back(theSlot)`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_PUSH = 304;
+/// `unit->Dereference()`
+constexpr static const int32_t EE_UNITS_ATC_DEREFERENCE = 4;
 
-/// the cargo total `index` (0 `mMaxCargo`, 1 `mUsedCargo`) into `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_CARGO = 305;
+/// `mIsClearanceGranted`, written only when it differs: = `io.a != 0`
+constexpr static const int32_t EE_UNITS_ATC_SET_CLEARANCE = 5;
 
-/// the cargo total `index` = `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SET_CARGO = 306;
+/// `mIsClearanceGranted`
+constexpr static const int32_t EE_UNITS_ATC_CLEARANCE = 6;
 
-/// `mSlots.size()` into `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_COUNT = 307;
+/// `mHitPoints`
+constexpr static const int32_t EE_UNITS_ATC_HIT_POINTS = 7;
 
-/// airport `index`'s unit id into `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_AIRPORT = 308;
+/// the airport's `mCargoRoom`
+constexpr static const int32_t EE_UNITS_ATC_CARGO_ROOM = 8;
 
-/// airport `index`'s queue `io.b` (0 the landings, 1 the takeoffs): its length into `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_QUEUE_COUNT = 309;
+/// whether `other` is in the airport `unit`'s `mCargo`
+constexpr static const int32_t EE_UNITS_ATC_IN_CARGO = 9;
 
-/// airport `index`'s queue `io.b`, item `io.i`: its unit's id into `io.i`, its kind into `io.f`'s bits
-constexpr static const int32_t EE_UNITS_ATC_SAVE_ITEM = 310;
+/// the unit's class's `mFamily`
+constexpr static const int32_t EE_UNITS_ATC_FAMILY = 10;
+
+/// `GetCommandType()`
+constexpr static const int32_t EE_UNITS_ATC_COMMAND_TYPE = 11;
+
+/// the airport `unit`'s exiting unit set to -1 when it is set and its passenger is the plane `other`
+constexpr static const int32_t EE_UNITS_ATC_RELEASE_EXITING = 12;
+
+/// `mTileX` into `io.a`, `mTileY` into `io.b`
+constexpr static const int32_t EE_UNITS_ATC_TILE = 13;
+
+/// the physical model's location: x, y, z into `io.p`
+constexpr static const int32_t EE_UNITS_ATC_LOCATION = 14;
+
+/// the unit's class's `mAirTrafficType`
+constexpr static const int32_t EE_UNITS_ATC_AIR_TRAFFIC_TYPE = 15;
+
+/// the unit's class's `GetCruiseAltitude()` into `io.f`
+constexpr static const int32_t EE_UNITS_ATC_CRUISE_ALTITUDE = 16;
+
+/// `mContainer != NULL`
+constexpr static const int32_t EE_UNITS_ATC_IN_CONTAINER = 17;
+
+/// `Kill(1, 0, 0)`
+constexpr static const int32_t EE_UNITS_ATC_KILL = 18;
+
+/// `SetHomeBase(other)`, `StartAction(kActionRequestLanding)`, the class's `ActionChanged(unit)`
+constexpr static const int32_t EE_UNITS_ATC_REROUTE = 19;
+
+/// the unit's class is an airplane or a planet spaceship (by category)
+constexpr static const int32_t EE_UNITS_ATC_IS_AIRCRAFT = 20;
+
+/// `mHomeBase`
+constexpr static const int32_t EE_UNITS_ATC_HOME_BASE = 21;
+
+/// `GetUnitID()`
+constexpr static const int32_t EE_UNITS_ATC_UNIT_ID = 22;
+
+/// the complex unit of id `io.a` in the world (`EEUnitCast<EEComplexUnit>(gWorld.GetUnit(id))`), or null
+constexpr static const int32_t EE_UNITS_ATC_RESOLVE = 23;
+
+/// the dump's line: the NUL-terminated text at `unit`
+constexpr static const int32_t EE_UNITS_ATC_DUMP_LINE = 24;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_ADD_CARGO_WEIGHT = 1;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_CARGO_WEIGHT = 2;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_ADD_AIRPORT = 3;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_QUEUE_REQUEST = 4;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_FREE_CARGO_WEIGHT = 5;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_FROM_TAKEOFF_QUEUES = 6;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_CLEAR_AIRPORT_QUEUE = 7;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_DUMP = 8;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_CHECKSUM = 9;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_QUEUE_LENGTH = 10;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_QUEUE_POSITION = 11;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_AIRPORT = 12;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_PLANE = 13;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REPAIR_POINTERS = 14;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_FIND_NEAREST_AIRPORT = 15;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_UPDATE = 16;
 
 /// `kGoalLoadTransport`, `kGoalLoadGarrison` (ee/EEUnitGoal.h)
 constexpr static const uint8_t GOAL_LOAD_TRANSPORT = 7;
@@ -477,6 +551,21 @@ constexpr static const int32_t EE_ACTION_DROPOFF_RESOURCE = 4011;
 
 /// `kActionUnloadTransport` (ee/EEUnitAction.h)
 constexpr static const int32_t EE_ACTION_UNLOAD_TRANSPORT = 12001;
+
+/// `EEFormation::Create(io.i)`; when made, the old formation dereferenced and the new one the group's
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_FORMATION_SET = 320;
+
+/// `mUnits.push_back(id io.i)` (the id in the pointer, as the original)
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_PUSH_ID = 321;
+
+/// the formation's `mType` into `io.i`, 8 without one
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_KIND = 322;
+
+/// `mUnits.size()` into `io.i`
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_COUNT = 323;
+
+/// `GetUnitAt(index)->mUnitID` into `io.i`
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_UNIT_ID = 324;
 
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
@@ -1870,6 +1959,61 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 /// The id of a unit that has none (`RTSUnit::Reset`'s 0xffffffff): its record is by object (`Store::unlisted`).
 constexpr static const uint32_t EE_UNIT_ID_UNLISTED = 4294967295;
 
+/// `kErrorBeyondEnd`: an area read short.
+constexpr static const int32_t EE_UNITS_TOWN_BEYOND_END = 10;
+
+/// `gWorld.mTownIDCounter` (`i`); [`EE_UNITS_TOWN_SET_COUNTER`] sets it.
+constexpr static const int32_t EE_UNITS_TOWN_COUNTER = 300;
+
+constexpr static const int32_t EE_UNITS_TOWN_SET_COUNTER = 301;
+
+/// `gWorld.mNumPlayers` (`i`).
+constexpr static const int32_t EE_UNITS_TOWN_PLAYERS = 302;
+
+/// The player's town slots (`mTowns.size()`, 0 for no player) as the result.
+constexpr static const int32_t EE_UNITS_TOWN_SLOTS = 303;
+
+/// The town in slot `index`: 0 for none, else 1 with its id, hull vertex count, counters, flags and continent.
+constexpr static const int32_t EE_UNITS_TOWN_GET = 304;
+
+/// Vertex `io.i` of the hull of the town in slot `index` (`x`, `y`).
+constexpr static const int32_t EE_UNITS_TOWN_HULL_POINT = 305;
+
+/// The area of the town in slot `index` as `EEWriteAreaBytes` writes it (`bytes`, `len`: the host's, valid until
+/// its next call).
+constexpr static const int32_t EE_UNITS_TOWN_AREA = 306;
+
+/// Reads `len` bytes into `bytes` (the result the read's; `io.i` the bytes read); [`EE_UNITS_TOWN_WRITE_BYTES`]
+/// writes them.
+constexpr static const int32_t EE_UNITS_TOWN_READ_BYTES = 307;
+
+constexpr static const int32_t EE_UNITS_TOWN_WRITE_BYTES = 308;
+
+/// Makes a town of the player with the id, area (`bytes`, `len`), continent, counters and flags: 1, or 0 when the
+/// area cannot be read (nothing kept).
+constexpr static const int32_t EE_UNITS_TOWN_MAKE = 309;
+
+/// Deletes the towns made so far (one could not be read).
+constexpr static const int32_t EE_UNITS_TOWN_MAKE_DISCARD = 310;
+
+/// Gives the towns made their serials, areas, ids and slots, in the order made.
+constexpr static const int32_t EE_UNITS_TOWN_MAKE_COMMIT = 311;
+
+/// Sets the town in slot `index`'s id, counters and flags.
+constexpr static const int32_t EE_UNITS_TOWN_SET_SAVED = 312;
+
+/// Rebuilds the player's towns by id from its slots.
+constexpr static const int32_t EE_UNITS_TOWN_REINDEX = 313;
+
+/// Puts the player's towns in the order of the slots `bytes` lists (`len` i32s).
+constexpr static const int32_t EE_UNITS_TOWN_REORDER = 314;
+
+/// A debug line (`bytes`, `len`).
+constexpr static const int32_t EE_UNITS_TOWN_DEBUG = 315;
+
+/// `ResetEEComplexUnit`'s heading of no initial contact (0x446db4).
+constexpr static const float EE_UNITS_NO_HEADING = -10000.0;
+
 /// a section (`index`: `EE_UNITS_UNIT_LOAD_SECTION_*`), the result; io.b = 1 when the held units' loop left for
 /// `LoadLateVersions`; io.i carries the original's `theValue` (the citizen queue, the cargo, the held units) or
 /// `theState` (the unit variables) in and out
@@ -2345,6 +2489,176 @@ constexpr static const int32_t EE_UNITS_UPD_DEPLETE_MINE = 60;
 /// every next part's `SetRottingAwayTime(a)`
 constexpr static const int32_t EE_UNITS_UPD_SET_PARTS_ROTTING = 61;
 
+/// `a` = whether the save has the part `HAS_*` (ee/EESaveGameFiles.h's predicates of the file's version)
+constexpr static const int32_t EE_UNITS_WORLD_HAS = 20;
+
+/// another system's part `PART_*` loaded (`b`: `EESaveHasTownAreas` for the towns); its result
+constexpr static const int32_t EE_UNITS_WORLD_PART_LOAD = 21;
+
+/// another system's part `PART_*` saved
+constexpr static const int32_t EE_UNITS_WORLD_PART_SAVE = 22;
+
+/// `EEAfterLoad` of [`ee_units_world_restore`] with the record at `a`
+constexpr static const int32_t EE_UNITS_WORLD_AFTER_LOAD = 23;
+
+/// `ESDebugOut` of the NUL-terminated text at `list`
+constexpr static const int32_t EE_UNITS_WORLD_DEBUG = 24;
+
+/// a unit's `mUnitID` (`a`: the unit)
+constexpr static const int32_t EE_UNITS_WORLD_UNIT_ID = 25;
+
+/// the world's unit chain (`gWorld.mUnits`, by `mTileNode->mNext`): its units
+constexpr static const int32_t EE_UNITS_WORLD_CHAIN = 30;
+
+/// `gWorld.GetUnit(a)`
+constexpr static const int32_t EE_UNITS_WORLD_UNIT = 31;
+
+/// the unit `a` is linked in the chain: a tile node, with a previous unit or the chain's first
+constexpr static const int32_t EE_UNITS_WORLD_IN_CHAIN = 32;
+
+/// the unit `a`'s `mTileX`
+constexpr static const int32_t EE_UNITS_WORLD_TILE_X = 33;
+
+/// `a->Link(b)`, `b` 0 for the chain's head (`&gWorld.mUnits`)
+constexpr static const int32_t EE_UNITS_WORLD_LINK = 34;
+
+/// the stepped units (`a` 0), the activation (1) or the deactivation queue (2): its units
+constexpr static const int32_t EE_UNITS_WORLD_STEP_LIST = 35;
+
+/// the complex unit of id `a` in the loaded game (`dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(a))`)
+constexpr static const int32_t EE_UNITS_WORLD_COMPLEX = 36;
+
+/// the unit `b` leaves list `a`: `Dereference`, for the stepped units a second one and `mActiveUnits.erase`
+constexpr static const int32_t EE_UNITS_WORLD_STEP_DROP = 37;
+
+/// the unit `b` joins list `a`: `Reference`, for the stepped units a second one and `mActiveUnits[id]`
+constexpr static const int32_t EE_UNITS_WORLD_STEP_ADD = 38;
+
+/// list `a` = the `cap` units at `list`
+constexpr static const int32_t EE_UNITS_WORLD_STEP_SET = 39;
+
+/// the continent manager's forests (null entries kept)
+constexpr static const int32_t EE_UNITS_WORLD_FORESTS = 40;
+
+/// the forest `a`'s `mNextRenewal`
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_RENEWAL = 41;
+
+/// the forest `a`'s tiles (`BuildPointList(.., 1)`), each `x | y << 32` as two 32-bit words
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_TILES = 42;
+
+/// `gContinentManager.GetForestAt(a, b)`
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_AT = 43;
+
+/// the forest `a`'s `mNextRenewal` = `b`
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_SET_RENEWAL = 44;
+
+/// the forest `a`'s `mTiles.Size()`
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_SIZE = 45;
+
+/// the computer players' schedule: `a` = `mNextPlayer`, `b` = `mNextUpdateTime`, the answer the players' count
+constexpr static const int32_t EE_UNITS_WORLD_AI_SCHEDULE = 46;
+
+/// the schedule = `a`, `b`
+constexpr static const int32_t EE_UNITS_WORLD_AI_SET_SCHEDULE = 47;
+
+/// the map's tile count (`mSize * mSize`, 0 without a map)
+constexpr static const int32_t EE_UNITS_WORLD_TILE_COUNT = 48;
+
+/// tile `a`'s unit nodes (`mUnits`, by `mNext`): each node's unit (0 for none); none for a NULL tile
+constexpr static const int32_t EE_UNITS_WORLD_TILE_UNITS = 49;
+
+/// tile `a`'s node `b` holds the unit at `list[0]`
+constexpr static const int32_t EE_UNITS_WORLD_TILE_SET = 50;
+
+/// the map regions' order (`ee_combat_regions_order`), the 32-bit words
+constexpr static const int32_t EE_UNITS_WORLD_REGION_ORDER = 51;
+
+/// `ee_combat_regions_restore` of region `a` with the `cap` ids at `list`
+constexpr static const int32_t EE_UNITS_WORLD_REGION_RESTORE = 52;
+
+/// the units the ghosts are saved for (`EESaveGhosts`' gathering): the complex ones first, `a` = their count
+constexpr static const int32_t EE_UNITS_WORLD_GHOSTS = 53;
+
+/// the ghost unit `a` (complex when `b`): `v` = its id, class type (-1 without a class), player (-1 without one),
+/// hit points, tile x, tile y, built flag, resource type; `a` = its resource amount; `m` its placement
+constexpr static const int32_t EE_UNITS_WORLD_GHOST_FIELDS = 54;
+
+/// `Dereference` of the unit `a` (a made ghost at the first tick)
+constexpr static const int32_t EE_UNITS_WORLD_DEREFERENCE = 55;
+
+/// `gWorld.mNumPlayers`
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_COUNT = 56;
+
+/// player `a`'s units (`mFirstUnit`, by `mNext`); none for a NULL player
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_UNITS = 57;
+
+/// player `a`'s `GetUnit(b)`
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_UNIT = 58;
+
+/// player `a`'s list = the `cap` units at `list` (`mPrevious`, `mNext`, `mFirstUnit`, `mLastUnit`)
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_SET_LIST = 59;
+
+/// player `a`'s bucket `b`'s first = the unit at `list[0]`
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_SET_BUCKET = 60;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_RUNNING_STATE = 1;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_REGION_ORDER = 2;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_EXPERIMENT_TIMERS = 3;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_TOWNS = 4;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_TOWN_AREAS = 5;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_GHOSTS = 6;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_GHOST_RESOURCES = 7;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_GOAL_GHOSTS = 8;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_CONTINENT_REGIONS = 9;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_RESOURCE_STATE = 10;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_PLAYER_UNIT_ORDER = 11;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_PATH_SEARCHES = 12;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_ACTIVE_GROUPS = 13;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_GRAPH_SEARCHES = 14;
+
+/// `gPathManager.LoadRunningState` / `SaveRunningState`
+constexpr static const int64_t EE_UNITS_WORLD_PART_PATH_RUNNING = 1;
+
+/// `EEAELoadRunningState` / `EEAESaveRunningState`
+constexpr static const int64_t EE_UNITS_WORLD_PART_AREA_EFFECTS = 2;
+
+/// `EECPLoadExperimentTimers` / `EECPSaveExperimentTimers`
+constexpr static const int64_t EE_UNITS_WORLD_PART_EXPERIMENT_TIMERS = 3;
+
+/// `EELoadTowns(file, b)` / `EESaveTowns`
+constexpr static const int64_t EE_UNITS_WORLD_PART_TOWNS = 4;
+
+/// `EELoadContinentRegions` / `EESaveContinentRegions`
+constexpr static const int64_t EE_UNITS_WORLD_PART_CONTINENT_REGIONS = 5;
+
+/// `EECPLoadResourceState` / `EECPSaveResourceState`
+constexpr static const int64_t EE_UNITS_WORLD_PART_RESOURCE_STATE = 6;
+
+/// `gPathManager.LoadSearches` / `SaveSearches`
+constexpr static const int64_t EE_UNITS_WORLD_PART_PATH_SEARCHES = 7;
+
+/// `EELoadActiveGroups` / `EESaveActiveGroups`
+constexpr static const int64_t EE_UNITS_WORLD_PART_ACTIVE_GROUPS = 8;
+
+/// `gPathManager.LoadGraphSearches` / `SaveGraphSearches`
+constexpr static const int64_t EE_UNITS_WORLD_PART_GRAPH_SEARCHES = 9;
+
+/// The class's state (`mSlots`, `mMaxCargo`, `mUsedCargo`).
+struct EeUnitsAtc;
+
 /// The C++ side of a unit's `Update` (`ctx`: the host's: the class and the unit).
 struct EeUnitsUpdateHost {
   void *ctx;
@@ -2457,6 +2771,18 @@ struct EeUnitsAnimateOut {
   uint32_t steps;
 };
 
+/// One host operation's values.
+struct EeUnitsAtcIo {
+  int64_t a;
+  int64_t b;
+  float f;
+  /// a location's x, y, z
+  float p[3];
+};
+
+/// The host: `(ctx, op, unit, other, io) -> the answer`.
+using EeUnitsAtcFn = int64_t(*)(void*, int32_t, void*, void*, EeUnitsAtcIo*);
+
 /// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
 struct EeUnitsPlayerSaveIo {
   int64_t i;
@@ -2466,6 +2792,9 @@ struct EeUnitsPlayerSaveIo {
 
 /// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
 using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
+
+/// A unit's id (`GetUnitID()`).
+using EeUnitsAtcUnitIdFn = unsigned long(*)(void*);
 
 /// One unit's plain state. Fields an object of its kind does not have (an `RTSUnit`'s hit points, an `EEUnit`'s
 /// built flag and goal) are 0 / -1.
@@ -3452,6 +3781,26 @@ struct EeUnitsTickHost {
   void (*step)(void *ctx, uint32_t index, uint32_t id);
 };
 
+/// One town as the host reads, writes or makes it.
+struct EeUnitsTownIo {
+  /// the file's primitives (player_save.rs's operations)
+  EeUnitsPlayerSaveIo prim;
+  long id;
+  uint32_t points;
+  /// mValue, mNumWalls, mL80, mNumWonders, mNumDocks, mNumAirports, mNumUnits, mReach
+  long counters[8];
+  uint8_t near_water;
+  uint8_t near_map_edge;
+  long continent;
+  long x;
+  long y;
+  uint8_t *bytes;
+  size_t len;
+};
+
+/// The host: `(ctx, op, player, index, io) -> result`.
+using EeUnitsTownFn = int32_t(*)(void*, int32_t, uint32_t, uint32_t, EeUnitsTownIo*);
+
 /// The unit's numbers for the tick.
 struct EeUnitsTurretsIn {
   /// true: the goal is an attack, heal or calamity goal and `target_x`, `target_y` its point; false: turn back
@@ -3479,6 +3828,56 @@ struct EeUnitsTurretPart {
   /// the unit's `mTurretAngles[i]`: the angle before the tick in, after it out
   float angle;
 };
+
+/// The values `ResetEEComplexUnit` reads off the world and the unit's class and stats (each as the original
+/// computed it: the class's for a unit with a class, the stats' for one with a class and a player).
+struct EeUnitsComplexResetIn {
+  /// `mF220`: a random heading (`gPhysics->mRandom.Generate() * 6.2831855f`, drawn by the C++) or 6.2831855f
+  float heading;
+  /// `GetStats()->mReloadTime`, or 0
+  long reload_time;
+  /// `GetStats()->mPowerRegeneration`, or 0
+  long power_regeneration;
+  /// `GetUnitClass()->mInitialGarrisonCount`, or 0
+  long garrison_count;
+  /// `GetUnitClass()->mIsCloakable` (false without a class)
+  bool cloakable;
+  /// `!GetUnitClass()->IsLandBuilding()` (false without a class)
+  bool paid_for;
+};
+
+/// The maxima `CopyFrom` scales by: the replaced unit's (`other_*`) and this unit's (`GetUpgrade(type)->m*`), and
+/// whether the camouflage power lets the cloakable flag come over (both classes in its unit set).
+struct EeUnitsComplexCopyIn {
+  long other_max_hit_points;
+  long max_hit_points;
+  long other_power;
+  long power;
+  long other_flight_time;
+  long flight_time;
+  long other_reload_time;
+  long reload_time;
+  bool copy_cloakable;
+};
+
+/// The values of `OutOfSynchDump` that are not in the records.
+struct EeUnitsComplexDumpIn {
+  unsigned long player_id;
+  long tile_x;
+  long tile_y;
+  /// `mAngularVelocity`'s yaw, pitch and roll
+  float angular_velocity[3];
+  size_t build_queue;
+  size_t citizen_build_queue;
+  long collision_tile[2];
+  long frame;
+  float projectile_start[3];
+  /// `mPhysicalModel.GetLocation()`'s matrix, by row
+  float location[4][4];
+};
+
+/// The dump's write: `ctx` and the text's bytes (no terminator).
+using EeUnitsDumpWriteFn = void(*)(void *ctx, const char *text, size_t len);
 
 /// What the constructor looks up outside the row: the C++ fills it before [`fill`].
 struct EeUnitsUnitClassFillIn {
@@ -3522,6 +3921,110 @@ struct EeUnitsFinishLoadIn {
   long garrison_capacity;
   /// `mStats->mPower`
   long power;
+};
+
+/// `EEGetSubTileSteps`' result: the first spot's offset in the tile, the step between spots, and how many spots.
+struct EeUnitsUuSteps {
+  float start_x;
+  float start_y;
+  float step_x;
+  float step_y;
+  int32_t count;
+};
+
+/// `EEOrientWallPiece`'s choice (0x24e3f4): a wall piece's frame set for a corner (1..12, else a plain piece), and
+/// the yaw its transformation turns to (`SetOrientationYPR(yaw, 0, 0)`), none for the corners that keep it.
+struct EeUnitsUuWallPiece {
+  int32_t frame_set;
+  uint8_t turns;
+  float yaw;
+};
+
+/// The camera's view of a sound's location (gathered by the C++ forwarder): whether the current player
+/// sees its tile, then (only then) `EEGetCameraPoint`'s screen point and depth, the camera's position
+/// (`gWorld.mTransformation`), `gViewport.GetYClippingPlane()` and the camera control's zoom.
+struct EeUnitsUuSoundView {
+  uint8_t seen;
+  float screen[3];
+  float depth;
+  float camera[3];
+  float y_clip;
+  float zoom;
+};
+
+/// A unit as the utilities read it: its object (`EEUnit*`, its records' addresses) and the pointer members and
+/// virtuals' answers the host reads once (`ee_units_uu_host_unit`). The records are null for a missing part (no
+/// complex unit, no class); `obj` 0 is no unit.
+struct EeUnitsUuUnit {
+  uint64_t obj;
+  const EeUnitsRtsUnitFields *rts;
+  const EeUnitsUnitFields *unit;
+  /// `mComplexUnit`'s record
+  const EeUnitsComplexUnitFields *cx;
+  /// `mUnitClass`'s record
+  const EeUnitsUnitClassFields *class_fields;
+  uint64_t class_obj;
+  uint64_t complex;
+  uint64_t player;
+  /// `mTile` (`EETile*`)
+  uint64_t tile;
+  /// the complex unit's `mActiveGroup`
+  uint64_t active_group;
+  /// `mPlayer->GetPlayerID()` (-1: no player)
+  int32_t player_id;
+  /// `mTileNode != NULL`
+  uint8_t on_map;
+  /// the class's `IsLandBuilding()`, `FliesOver()` (virtuals)
+  uint8_t land_building;
+  uint8_t flies_over;
+  /// the complex unit's location (`mPhysicalModel.GetLocation()`'s x, y, z)
+  float location[3];
+  /// the complex unit's `mStats->mMaxVelocity`, `mStats->mAttack`
+  float stats_max_velocity;
+  float stats_attack;
+  /// the complex unit's `mStats != NULL`; its current command's `mType` (0: none)
+  uint8_t has_stats;
+  int32_t command;
+};
+
+/// A unit class as the utilities read it: its record and its two virtuals' answers (`ee_units_uu_host_class`).
+struct EeUnitsUuClass {
+  uint64_t obj;
+  const EeUnitsUnitClassFields *fields;
+  uint8_t land_building;
+  uint8_t flies_over;
+};
+
+/// One host operation's values: numbers, a placement, and a list the host fills (up to `cap`, answering the full
+/// count) or reads (`cap` entries).
+struct EeUnitsWorldIo {
+  int64_t a;
+  int64_t b;
+  float f;
+  int64_t v[8];
+  float m[16];
+  uint64_t *list;
+  size_t cap;
+};
+
+/// The host: `(ctx, op, io) -> the answer`.
+using EeUnitsWorldFn = int64_t(*)(void*, int32_t, EeUnitsWorldIo*);
+
+/// A dead unit the living still hold, as saved (`EESavedGhost`).
+struct EeUnitsWorldGhost {
+  unsigned long id;
+  unsigned long unit_type;
+  unsigned long player;
+  long hit_points;
+  long tile_x;
+  long tile_y;
+  float placement[4][4];
+  /// 0.272: -1 before (the class's own)
+  unsigned long resource_type;
+  long resource_amount;
+  bool is_built;
+  /// 0.275: false for a simple unit; true before
+  bool is_complex;
 };
 
 /// A unit's fields the build/repair goal reads (`EE_UNITS_GOAL_HOST_BUILD_UNIT`; the complex unit's own only for
@@ -3611,17 +4114,70 @@ EeUnitsAIStepOut ee_units_ai_step(const EeUnitsAIHost *host,
 /// `input` and `out` are valid.
 void ee_units_animate(const EeUnitsAnimateIn *input, EeUnitsAnimateOut *out);
 
-/// `EEAirTrafficControl::Load` over the C++ parts in `f`.
-///
-/// # Safety
-/// `f` is valid with `ctx` for the call.
-int32_t ee_units_atc_load(void *ctx, EeUnitsPlayerSaveFn f);
+/// A new, empty air traffic control.
+EeUnitsAtc *ee_units_atc_new();
 
-/// `EEAirTrafficControl::Save`: as [`ee_units_atc_load`].
+/// The destructor's body over the host, then the state freed. Null does nothing.
 ///
 /// # Safety
-/// As [`ee_units_atc_load`].
-int32_t ee_units_atc_save(void *ctx, EeUnitsPlayerSaveFn f);
+/// `p` came from [`ee_units_atc_new`] and is not used again; `f` is valid with `ctx`.
+void ee_units_atc_free(EeUnitsAtc *p, void *ctx, EeUnitsAtcFn f);
+
+/// The maximum (0) or the used (1) air cargo.
+///
+/// # Safety
+/// `p` is a live state.
+long ee_units_atc_cargo(const EeUnitsAtc *p, int32_t which);
+
+/// The number of airports.
+///
+/// # Safety
+/// `p` is a live state.
+unsigned long ee_units_atc_slot_count(const EeUnitsAtc *p);
+
+/// Airport `index` (null past the end).
+///
+/// # Safety
+/// `p` is a live state.
+void *ee_units_atc_slot_airport(const EeUnitsAtc *p, unsigned long index);
+
+/// The class's methods by kind (the `EE_UNITS_ATC_CALL_*` values): `unit`, `other` and `value` their arguments.
+///
+/// # Safety
+/// `p` is a live state; `f` is valid with `ctx`.
+int64_t ee_units_atc_call(EeUnitsAtc *p,
+                          void *ctx,
+                          EeUnitsAtcFn f,
+                          int32_t call,
+                          void *unit,
+                          void *other,
+                          long value);
+
+/// `ReplaceUnits`: `count` (old, new) pairs at `olds` and `news`.
+///
+/// # Safety
+/// `p` is a live state; `f` is valid with `ctx`; `olds` and `news` hold `count` units each.
+void ee_units_atc_replace_units(EeUnitsAtc *p,
+                                void *ctx,
+                                EeUnitsAtcFn f,
+                                void *const *olds,
+                                void *const *news,
+                                size_t count);
+
+/// `EEAirTrafficControl::Load` into `p` over the file in `f`.
+///
+/// # Safety
+/// `p` is a live state; `f` is valid with `ctx` for the call.
+int32_t ee_units_atc_load(EeUnitsAtc *p, void *ctx, EeUnitsPlayerSaveFn f);
+
+/// `EEAirTrafficControl::Save` of `p` over the file in `f`; `unit_id` gives each unit's id.
+///
+/// # Safety
+/// As [`ee_units_atc_load`]; `unit_id` is valid for every unit listed.
+int32_t ee_units_atc_save(const EeUnitsAtc *p,
+                          void *ctx,
+                          EeUnitsPlayerSaveFn f,
+                          EeUnitsAtcUnitIdFn unit_id);
 
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);
@@ -4005,6 +4561,18 @@ uint32_t ee_units_goal_queue_check_unit(uint64_t unit,
 
 /// TEST ONLY: the mirrors held (the containers alive).
 uint32_t ee_units_goal_queue_count();
+
+/// `EEGroup::Load` over the group's parts and the file in `f`.
+///
+/// # Safety
+/// `f` is valid with `ctx` for the call.
+int32_t ee_units_group_load(void *ctx, EeUnitsPlayerSaveFn f);
+
+/// `EEGroup::Save`: as [`ee_units_group_load`].
+///
+/// # Safety
+/// As [`ee_units_group_load`].
+int32_t ee_units_group_save(void *ctx, EeUnitsPlayerSaveFn f);
 
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
@@ -4893,11 +5461,68 @@ float ee_units_step_cloak_fade(float opacity,
 /// `host` points to a valid table whose calls are valid for its `ctx`.
 uint32_t ee_units_update_units(const EeUnitsTickHost *host);
 
+/// `EESaveTowns` over the C++ host.
+///
+/// # Safety
+/// `f` is callable with `ctx` as [`EeUnitsTownFn`] documents.
+int32_t ee_units_towns_save(void *ctx, EeUnitsTownFn f);
+
+/// `EELoadTowns` over the C++ host: on success the towns are pending (returns the read result; `*pending` 1 when
+/// they are).
+///
+/// # Safety
+/// As [`ee_units_towns_save`]; `pending` writable.
+int32_t ee_units_towns_load(void *ctx,
+                            EeUnitsTownFn f,
+                            bool areas,
+                            uint8_t *pending);
+
+/// The loaded game's own towns from here on (the pending towns dropped).
+void ee_units_towns_clear();
+
+/// `EEMakeSavedTowns` (`apply` false) or `EEApplySavedTowns` (`apply` true) for one player over the C++ host.
+///
+/// # Safety
+/// As [`ee_units_towns_save`].
+bool ee_units_towns_repair(void *ctx,
+                           EeUnitsTownFn f,
+                           uint32_t player,
+                           bool apply);
+
 /// `TurnTurrets` / `TurnTurretsBack` for one unit (see [`turn_turrets`]).
 ///
 /// # Safety
 /// `input` is valid; `parts` holds `count` parts (NULL when `count` is 0).
 void ee_units_turn_turrets(const EeUnitsTurretsIn *input, EeUnitsTurretPart *parts, uint32_t count);
+
+/// `ResetEEComplexUnit`'s record members.
+///
+/// # Safety
+/// `cx` is the unit's live record; `input` readable.
+void ee_units_complex_reset(EeUnitsComplexUnitFields *cx, const EeUnitsComplexResetIn *input);
+
+/// `CopyFrom`'s record copies: `block` 0 [`copy_first`] (with `input`), 1 [`copy_second`], 2 [`copy_third`].
+///
+/// # Safety
+/// `cx` and `other` are two live units' records (not the same); `input` readable for block 0.
+void ee_units_complex_copy(uint32_t block,
+                           EeUnitsComplexUnitFields *cx,
+                           const EeUnitsComplexUnitFields *other,
+                           const EeUnitsComplexCopyIn *input);
+
+/// `OutOfSynchDump`'s lines of `part` (see [`dump`]) written through `write`.
+///
+/// # Safety
+/// The records are the unit's, its class's and its stats' live records; `d` readable; `write` callable with `ctx`.
+void ee_units_complex_dump(uint32_t part,
+                           const EeUnitsRtsUnitFields *rts,
+                           const EeUnitsUnitFields *unit,
+                           const EeUnitsComplexUnitFields *cx,
+                           const EeUnitsUnitClassFields *class_,
+                           const EeUnitsUnitClassUpgradeFields *stats,
+                           const EeUnitsComplexDumpIn *d,
+                           EeUnitsDumpWriteFn write,
+                           void *ctx);
 
 /// `EEUnitClass::EEUnitClass`'s plain stores: `out` (the class's record base) set from the db row `row`
 /// (an `EEUnitClassRecord`, ee/EEUnitClassRecord.h, the layout ee_data's generated record asserts).
@@ -4952,6 +5577,685 @@ bool ee_units_update(int32_t kind,
                      uint32_t id,
                      uint64_t object,
                      const EeUnitsUpdateHost *host);
+
+/// `EEGetSubTileSteps`.
+EeUnitsUuSteps ee_units_uu_sub_tile_steps(float size,
+                                          int32_t length,
+                                          int32_t dx,
+                                          int32_t dy,
+                                          uint8_t square);
+
+/// `EEGetSquareRing` (`out` replaced).
+///
+/// # Safety
+/// `out` is a live `std::vector<U2DPoint<long> >`.
+void ee_units_uu_square_ring(int32_t x, int32_t y, int32_t width, int32_t height, void *out);
+
+/// `EEGetSquareRingTiles` (`out` replaced).
+///
+/// # Safety
+/// As [`ee_units_uu_square_ring`].
+void ee_units_uu_square_ring_tiles(int32_t x, int32_t y, int32_t radius, void *out);
+
+/// `EEGetTilesInRadius` (appended to `io`).
+///
+/// # Safety
+/// As [`ee_units_uu_square_ring`].
+void ee_units_uu_tiles_in_radius(int32_t x,
+                                 int32_t y,
+                                 uint32_t radius,
+                                 uint8_t inclusive,
+                                 void *io);
+
+/// `EEGetTilesNearPoint` (appended to `io`).
+///
+/// # Safety
+/// As [`ee_units_uu_square_ring`].
+void ee_units_uu_tiles_near_point(float x, float y, float distance, void *io);
+
+/// `EEDropDiagonalCorners` (`which` 0) and `EEDropRepeatedTiles` (1) on `io`.
+///
+/// # Safety
+/// As [`ee_units_uu_square_ring`].
+void ee_units_uu_drop_tiles(int32_t which, void *io);
+
+/// `EETurnDirection`.
+int32_t ee_units_uu_turn_direction(int32_t direction, int32_t steps, uint8_t clockwise);
+
+/// `EEGetTileInDirection`.
+///
+/// # Safety
+/// `out` holds two `int32_t`s.
+void ee_units_uu_tile_in_direction(int32_t x,
+                                   int32_t y,
+                                   int32_t direction,
+                                   int32_t distance,
+                                   int32_t (*out)[2]);
+
+/// `EEMoveInDirection`.
+///
+/// # Safety
+/// `out` holds two floats.
+void ee_units_uu_move_in_direction(float x,
+                                   float y,
+                                   int32_t direction,
+                                   int32_t distance,
+                                   float (*out)[2]);
+
+/// `EEGetTileDirection`.
+int32_t ee_units_uu_tile_direction(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
+
+/// `EEGetSlotTile`.
+///
+/// # Safety
+/// `out` holds two `int32_t`s.
+void ee_units_uu_slot_tile(int32_t x, int32_t y, int32_t direction, int32_t (*out)[2]);
+
+/// `EEOrientWallPiece`'s frame set and yaw.
+EeUnitsUuWallPiece ee_units_uu_wall_piece(int32_t corner);
+
+/// `EEIsCornerBlocked`.
+uint8_t ee_units_uu_is_corner_blocked(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
+
+/// `EEGetBlockRing` (`io` cleared unless `append`).
+///
+/// # Safety
+/// As [`ee_units_uu_square_ring`].
+void ee_units_uu_block_ring(int32_t corners,
+                            int32_t x,
+                            int32_t y,
+                            int32_t width,
+                            int32_t height,
+                            void *io,
+                            uint8_t append);
+
+/// `EEGetRingCorners` (`out` replaced).
+///
+/// # Safety
+/// As [`ee_units_uu_square_ring`].
+void ee_units_uu_ring_corners(int32_t corners,
+                              int32_t x,
+                              int32_t y,
+                              int32_t width,
+                              int32_t height,
+                              void *out);
+
+/// `EERemoveEdgeTiles`.
+///
+/// # Safety
+/// As [`ee_units_uu_square_ring`].
+void ee_units_uu_remove_edge_tiles(void *io);
+
+/// `EEGetRingTiles` (`out` replaced).
+///
+/// # Safety
+/// As [`ee_units_uu_square_ring`].
+void ee_units_uu_ring_tiles(int32_t x,
+                            int32_t y,
+                            int32_t size,
+                            int32_t ring,
+                            int32_t corners,
+                            void *out);
+
+/// `EEGetSortedRingTiles` (`out` replaced).
+///
+/// # Safety
+/// As [`ee_units_uu_square_ring`]; `from` holds three floats.
+void ee_units_uu_sorted_ring_tiles(const float (*from)[3],
+                                   int32_t x,
+                                   int32_t y,
+                                   int32_t size,
+                                   int32_t range,
+                                   int32_t corners,
+                                   void *out);
+
+/// `EEGetUnitsOn` (`which` 0: appended to `io`), `EEGetUnitsOnTiles` (1); the number found (all of `io` for 1).
+///
+/// # Safety
+/// `tiles` a live tile vector, `io` a live `std::vector<EEUnit*>`.
+int32_t ee_units_uu_units_on(int32_t which,
+                             const void *tiles,
+                             void *io);
+
+/// `EEGetUnitsOfTypeOnTiles` (`player` given) and `EEGetWallUnitsOfTypeOnTiles` (`has_player` 0): appended to
+/// `io`; their number.
+///
+/// # Safety
+/// As [`ee_units_uu_units_on`].
+int32_t ee_units_uu_units_of_type_on_tiles(const void *tiles,
+                                           uint64_t player,
+                                           uint8_t has_player,
+                                           int32_t unit_type,
+                                           void *io);
+
+/// `EEGetTileUnitOfType` (`has_player` 0) and `EEGetWallAt`.
+uint64_t ee_units_uu_tile_unit_of_type(int32_t x,
+                                       int32_t y,
+                                       uint32_t unit_type,
+                                       uint64_t player,
+                                       uint8_t has_player);
+
+/// `EEGetPlayerUnitsOfType` (appended to `io`); their number.
+///
+/// # Safety
+/// `io` a live `std::vector<EEUnit*>`.
+int32_t ee_units_uu_player_units_of_type(int32_t unit_type, int32_t index, void *io);
+
+/// `EEGetFootprintTiles` (`which` 0), `EEGetResourceSpots` (1): into `io` as the C++ did.
+///
+/// # Safety
+/// `unit` a live unit, `io` a live tile vector.
+void ee_units_uu_unit_tiles(int32_t which, uint64_t unit, void *io);
+
+/// `EEGetFarmDropSites` (appended to `io`).
+///
+/// # Safety
+/// `unit` a live unit, `io` a live `std::vector<EEUnit*>`.
+uint8_t ee_units_uu_farm_drop_sites(uint64_t unit, void *io);
+
+/// `EEFindFreeFarm`.
+///
+/// # Safety
+/// `unit` a live unit, `ring` a live `int32_t`.
+uint64_t ee_units_uu_find_free_farm(uint64_t unit, uint8_t free_only, int32_t *ring);
+
+/// `EEGetWallLine` (`out` replaced).
+///
+/// # Safety
+/// As [`ee_units_uu_square_ring`].
+void ee_units_uu_wall_line(int32_t x1, int32_t y1, int32_t x2, int32_t y2, void *out);
+
+/// `EEExtendWallLine` (into `io`).
+///
+/// # Safety
+/// `tiles` and `io` live tile vectors, `player` a live player.
+int32_t ee_units_uu_extend_wall_line(const void *tiles,
+                                     uint64_t player,
+                                     uint32_t unit_type,
+                                     void *io);
+
+/// `EEPickWallPieces`: one piece per tile into `out`.
+///
+/// # Safety
+/// `tiles` a live tile vector; `out` holds as many `int32_t`s.
+void ee_units_uu_pick_wall_pieces(uint64_t map, const void *tiles, int32_t *out);
+
+/// `EEMakeWallJunctions`.
+///
+/// # Safety
+/// `units` holds `count` live complex units; `placed` a live tile vector.
+void ee_units_uu_make_wall_junctions(const uint64_t *units,
+                                     uint32_t count,
+                                     const void *placed,
+                                     uint64_t player,
+                                     uint64_t map);
+
+/// `EEGetTileUnitStanding`.
+int32_t ee_units_uu_tile_unit_standing(uint64_t unit,
+                                       uint64_t player,
+                                       int32_t unit_type,
+                                       uint8_t ignore_owner);
+
+/// `EEGetBlockingUnits` (`standing` 2) and `EEGetMovableTileUnits` (1): `out` replaced.
+///
+/// # Safety
+/// `out` a live `std::vector<EEUnit*>`; `tile` a live tile or 0.
+uint8_t ee_units_uu_tile_units_standing(uint64_t player,
+                                        int32_t unit_type,
+                                        uint64_t tile,
+                                        uint8_t ignore_owner,
+                                        int32_t standing,
+                                        void *out);
+
+/// `EEIsTileUnblocked`.
+uint8_t ee_units_uu_is_tile_unblocked(uint64_t player, int32_t unit_class, uint64_t tile);
+
+/// `EECanStandOn`.
+uint8_t ee_units_uu_can_stand_on(int32_t x, int32_t y, uint64_t unit);
+
+/// `EEFindPlaceOnTile`: `io` (the location, its z the caller's) gets the spot's x and y.
+///
+/// # Safety
+/// `io` holds three floats.
+uint8_t ee_units_uu_find_place_on_tile(uint64_t unit,
+                                       uint64_t unit_class,
+                                       int32_t x,
+                                       int32_t y,
+                                       int32_t size,
+                                       int32_t to_x,
+                                       int32_t to_y,
+                                       int32_t square,
+                                       float (*io)[3]);
+
+/// `EEGetTilesAround` (`out` replaced).
+///
+/// # Safety
+/// As [`ee_units_uu_square_ring`].
+void ee_units_uu_tiles_around(uint64_t unit,
+                              uint64_t target,
+                              int32_t x,
+                              int32_t y,
+                              int32_t size,
+                              int32_t range,
+                              int32_t corners,
+                              uint8_t virtual_call,
+                              void *out);
+
+/// `EEPickTileNear`: `io` as [`ee_units_uu_find_place_on_tile`]'s.
+///
+/// # Safety
+/// `tiles` a live tile vector; `io` holds three floats.
+uint8_t ee_units_uu_pick_tile_near(const void *tiles,
+                                   uint64_t unit,
+                                   uint64_t container,
+                                   uint8_t ignore_blocked_line,
+                                   float (*io)[3]);
+
+/// `EEFindPlacement`: `m` (a `GETransformation`'s matrix) is turned and moved to the place found.
+///
+/// # Safety
+/// `point` holds three floats, `m` sixteen.
+uint8_t ee_units_uu_find_placement(const float (*point)[3],
+                                   uint64_t unit,
+                                   uint64_t unit_class,
+                                   uint32_t x,
+                                   uint32_t y,
+                                   int32_t size,
+                                   int32_t rings,
+                                   uint8_t corners,
+                                   uint8_t include_center,
+                                   uint8_t face_point,
+                                   uint8_t linked,
+                                   float (*m)[4][4],
+                                   uint64_t target);
+
+/// `EEGetNearestFootprintTile`: the squared distance; the tile into `out`.
+///
+/// # Safety
+/// `point` holds three floats, `out` two `int32_t`s.
+float ee_units_uu_nearest_footprint_tile(uint64_t unit, const float (*point)[3], int32_t (*out)[2]);
+
+/// `EETurnAway`.
+int32_t ee_units_uu_turn_away(int32_t direction, int32_t spread);
+
+/// `EEJitterHeading`.
+float ee_units_uu_jitter_heading(float angle, float min, float max);
+
+/// `EECanPlaceUnitOnTile`: `flag` written as the C++ wrote it (only when the tile's blockers were asked).
+///
+/// # Safety
+/// `flag` a live byte.
+uint8_t ee_units_uu_can_place_unit_on_tile(uint64_t player,
+                                           uint64_t unit,
+                                           int32_t unit_type,
+                                           int32_t x,
+                                           int32_t y,
+                                           uint8_t skip_player_checks,
+                                           uint8_t ignore_owner,
+                                           uint8_t *flag);
+
+/// `EEBlockTakes` / `EEPlayerBlockTakes`.
+uint8_t ee_units_uu_block_takes(uint64_t player,
+                                int32_t unit_type,
+                                int32_t x,
+                                int32_t y,
+                                int32_t width,
+                                int32_t height,
+                                uint8_t ignore_owner);
+
+/// `EEAdjustNavalPath`'s smoothing: the kept points' indices into `kept` (room for `count`); their number.
+///
+/// # Safety
+/// `points` holds `count` (x, y) pairs, `kept` `count` indices.
+uint32_t ee_units_uu_naval_path(uint64_t unit,
+                                const float (*points)[2],
+                                uint32_t count,
+                                uint32_t *kept);
+
+/// `EEGetDockShipPlacement`: `m` (a `GETransformation`'s matrix) gets the place and yaw.
+///
+/// # Safety
+/// `point` holds three floats, `m` sixteen; `unit` a live unit.
+uint8_t ee_units_uu_dock_ship_placement(const float (*point)[3],
+                                        uint64_t unit_class,
+                                        uint64_t unit,
+                                        uint8_t face_point,
+                                        uint8_t facing_only,
+                                        float (*m)[4][4]);
+
+/// `EEFindOpenSpot` (0), `EEFindResourceSpot` (1), `EEFindNextFreeTile` (2), `EEGetWallSpot` (3): `io` (the
+/// location, its z the caller's) gets the spot.
+///
+/// # Safety
+/// `unit` and `target` live units; `io` holds three floats.
+uint8_t ee_units_uu_spot(int32_t which,
+                         uint64_t unit,
+                         uint64_t target,
+                         float (*io)[3]);
+
+/// `EEGetAttackPart`.
+uint64_t ee_units_uu_attack_part(uint64_t unit, uint64_t target);
+
+/// `EEGetSeabedDepth` (`which` 0) and `EEAdjustDiveDepth` (1): the point's new height.
+///
+/// # Safety
+/// `unit` is a live unit; `at` holds three floats.
+float ee_units_uu_seabed(int32_t which, uint64_t unit, const float (*at)[3]);
+
+/// `EEGetUnitTiles` (appended to `io`).
+///
+/// # Safety
+/// `unit` is a live unit; `io` a live tile vector.
+void ee_units_uu_unit_tiles_margin(uint64_t unit, float margin, void *io);
+
+/// `EEGetSelectionBounds` (`bounds`: left, top, right, bottom).
+///
+/// # Safety
+/// `units` is a live unit vector; `bounds` holds four floats.
+void ee_units_uu_selection_bounds(const void *units, float (*bounds)[4], int32_t filter);
+
+/// `EEGetUnitRadius` (`which` 0, two complex units) and `EEGetAngleFromNorth` (1, `from` and `to`).
+///
+/// # Safety
+/// The units are live; the points hold three floats when `which` is 1.
+float ee_units_uu_angle(int32_t which,
+                        uint64_t unit,
+                        uint64_t other,
+                        const float (*from)[3],
+                        const float (*to)[3]);
+
+/// `EEIsWithinReach` (`at` null) and `EEIsWithinReachOf`.
+///
+/// # Safety
+/// The units are live; `at` is null or holds three floats.
+uint8_t ee_units_uu_within_reach(uint64_t unit, uint64_t target, const float (*at)[3]);
+
+/// `EEIsFootprintVisibleTo`.
+uint8_t ee_units_uu_footprint_visible(uint64_t unit, uint64_t player);
+
+/// `EEGetEscapePoint` (`io` left alone without attackers).
+///
+/// # Safety
+/// `unit` is a live complex unit; `io` holds two floats.
+uint8_t ee_units_uu_escape_point(uint64_t unit, float (*io)[2]);
+
+/// `EEGetEnemiesAround` (`out` replaced).
+///
+/// # Safety
+/// `unit` is a live complex unit; `out` a live unit vector.
+void ee_units_uu_enemies_around(uint64_t unit, void *out);
+
+/// `EEAddToFootprintTiles` (`which` 0), `EERemoveFromFootprintTiles` (1), `EEAddBuildingRegion` (2),
+/// `EERemoveBuildingRegion` (3).
+void ee_units_uu_footprint(int32_t which,
+                           uint64_t unit);
+
+/// `EEStepAsideFromSite`.
+void ee_units_uu_step_aside(uint64_t unit,
+                            uint64_t class_,
+                            uint64_t player,
+                            int32_t x,
+                            int32_t y,
+                            uint8_t force);
+
+/// `EEBuildWall`.
+///
+/// # Safety
+/// `group` is a live active group; `pieces` a live unit vector.
+void ee_units_uu_build_wall(uint64_t group, const void *pieces);
+
+/// `EEPlanWall` (the new pieces appended to `out`).
+///
+/// # Safety
+/// `class` and `player` are live; `out` a live unit vector.
+void ee_units_uu_plan_wall(float start_x,
+                           float start_y,
+                           float end_x,
+                           float end_y,
+                           uint64_t class_,
+                           uint64_t player,
+                           uint8_t foundation,
+                           uint8_t skip_player_checks,
+                           void *out);
+
+/// `EEShapeWall` (its raised corners unused).
+void ee_units_uu_shape_wall(uint64_t complex, int32_t corner);
+
+/// `EEIsTileTopAbove` (`wall`: the wall found, 0 for none).
+///
+/// # Safety
+/// `wall` points to a u64.
+uint8_t ee_units_uu_tile_top_above(int32_t x,
+                                   int32_t y,
+                                   float height,
+                                   uint8_t bare,
+                                   uint64_t *wall);
+
+/// `EEIsLineBlocked` (`wall` written only when a tile was asked, `last`: the last free tile).
+///
+/// # Safety
+/// `wall` points to a u64, `written` to a byte, `last` to two ints.
+uint8_t ee_units_uu_line_blocked(int32_t x1,
+                                 int32_t y1,
+                                 int32_t x2,
+                                 int32_t y2,
+                                 uint64_t *wall,
+                                 uint8_t *written,
+                                 int32_t (*last)[2]);
+
+/// `EEGetPathLengthTo` (`tile` in and out).
+///
+/// # Safety
+/// `unit` is a live complex unit; `tile` holds two ints.
+float ee_units_uu_path_length_to(uint64_t unit, int32_t (*tile)[2], uint32_t limit, uint8_t walls);
+
+/// `EEComputeSoundParameters` (`out`: volume, pan, pitch) over the camera's view the caller gathered.
+///
+/// # Safety
+/// `view` points to a view; `location` holds three floats, `out` three.
+void ee_units_uu_sound_parameters(const EeUnitsUuSoundView *view,
+                                  float volume,
+                                  const float (*location)[3],
+                                  float (*out)[3]);
+
+/// `EEGetDopplerPitch`'s factor (`pitch` written unless silent or still).
+///
+/// # Safety
+/// `location` holds a matrix, `camera` three floats, `pitch` one.
+void ee_units_uu_doppler_pitch(float volume,
+                               float velocity,
+                               const float (*location)[4][4],
+                               const float (*camera)[3],
+                               float *pitch);
+
+/// `EEEditorCanPlace`.
+///
+/// # Safety
+/// `at` holds three floats.
+uint8_t ee_units_uu_editor_can_place(uint64_t player,
+                                     int32_t unit_type,
+                                     const float (*at)[3],
+                                     int32_t x,
+                                     int32_t y);
+
+/// `EEDepositLoad`.
+void ee_units_uu_deposit_load(uint64_t unit, uint64_t container);
+
+extern uint64_t ee_units_uu_host_map();
+
+extern uint64_t ee_units_uu_host_map_tile(uint64_t map, int32_t x, int32_t y);
+
+extern int32_t ee_units_uu_host_tile_terrain(uint64_t tile);
+
+extern float ee_units_uu_host_tile_height(uint64_t tile);
+
+extern uint32_t ee_units_uu_host_tile_units(uint64_t tile, uint64_t *out, uint32_t capacity);
+
+extern uint8_t ee_units_uu_host_is_edge_tile(int32_t x, int32_t y);
+
+extern int32_t ee_units_uu_host_raised_corners(uint64_t map, int32_t x, int32_t y);
+
+extern float ee_units_uu_host_mesh_z(uint64_t map, int32_t x, int32_t y);
+
+extern float ee_units_uu_host_mesh_ground(float x, float y);
+
+extern void ee_units_uu_host_unit(uint64_t obj, EeUnitsUuUnit *out);
+
+extern void ee_units_uu_host_class(uint64_t class_obj, int32_t unit_type, EeUnitsUuClass *out);
+
+extern void ee_units_uu_host_position(uint64_t obj, float *out);
+
+extern uint8_t ee_units_uu_host_passable_by(uint64_t obj, uint64_t by);
+
+extern uint8_t ee_units_uu_host_is_foundation(uint64_t obj);
+
+extern uint8_t ee_units_uu_host_can_move_on_terrain(uint64_t class_obj,
+                                                    uint64_t unit,
+                                                    int32_t terrain);
+
+extern int32_t ee_units_uu_host_passable_flags(uint64_t class_obj, uint64_t unit);
+
+extern uint32_t ee_units_uu_host_surrounding_tiles(uint64_t target,
+                                                   uint8_t virtual_call,
+                                                   int32_t (*out)[2],
+                                                   uint32_t capacity);
+
+extern uint64_t ee_units_uu_host_container_continent(uint64_t container, uint64_t unit);
+
+extern uint64_t ee_units_uu_host_continent(int32_t which, uint64_t a, uint64_t b, uint64_t c);
+
+extern uint32_t ee_units_uu_host_tile_line(int32_t x1,
+                                           int32_t y1,
+                                           int32_t x2,
+                                           int32_t y2,
+                                           uint8_t ends,
+                                           uint8_t thin,
+                                           int32_t (*out)[2],
+                                           uint32_t capacity);
+
+extern uint8_t ee_units_uu_host_reserved(uint64_t group, const float *point);
+
+extern void ee_units_uu_host_ground_point(const float *point, float *out);
+
+extern float ee_units_uu_host_terrain_tilt(const float *m, uint8_t roll);
+
+extern int32_t ee_units_uu_host_player(int32_t which, uint64_t player, int32_t value);
+
+extern uint32_t ee_units_uu_host_player_units(int32_t index, uint64_t *out, uint32_t capacity);
+
+extern uint64_t ee_units_uu_host_part(uint64_t complex, uint8_t next);
+
+extern int32_t ee_units_uu_host_facing_quarter(int32_t x, int32_t y);
+
+extern int32_t ee_units_uu_host_resource_users(uint64_t unit);
+
+extern int32_t ee_units_uu_host_random_long(int32_t min, int32_t max);
+
+extern float ee_units_uu_host_random_float(float min, float max);
+
+extern void ee_units_uu_host_location(uint64_t complex, float *out);
+
+extern void ee_units_uu_host_set_animation(uint64_t complex, int32_t animation);
+
+extern void ee_units_uu_host_set_transformation(uint64_t complex, const float *m);
+
+extern uint32_t ee_units_uu_host_tiles_len(const void *v);
+
+extern void ee_units_uu_host_tiles_get(const void *v, int32_t (*out)[2]);
+
+extern void ee_units_uu_host_tiles_set(void *v, const int32_t (*tiles)[2], uint32_t count);
+
+extern uint32_t ee_units_uu_host_units_len(const void *v);
+
+extern void ee_units_uu_host_units_get(const void *v, uint64_t *out);
+
+extern void ee_units_uu_host_units_set(void *v, const uint64_t *units, uint32_t count);
+
+extern uint8_t ee_units_uu_host_tile_test(int32_t which,
+                                          uint64_t tile,
+                                          uint64_t player,
+                                          int32_t x,
+                                          int32_t y);
+
+extern int32_t ee_units_uu_host_regions(int32_t which, int32_t x, int32_t y);
+
+extern int32_t ee_units_uu_host_goal_kind(uint64_t unit);
+
+extern float ee_units_uu_host_range(uint64_t unit);
+
+extern void ee_units_uu_host_center_offset(uint64_t complex, float *io);
+
+extern uint8_t ee_units_uu_host_tiles_test(int32_t which,
+                                           const int32_t (*tiles)[2],
+                                           uint32_t count,
+                                           int32_t kind);
+
+extern int32_t ee_units_uu_host_spot(int32_t which,
+                                     uint64_t unit,
+                                     int32_t x,
+                                     int32_t y,
+                                     float *out);
+
+extern uint64_t ee_units_uu_host_world(int32_t which,
+                                       uint64_t a,
+                                       uint64_t b,
+                                       uint64_t c,
+                                       int32_t x,
+                                       int32_t y,
+                                       float f);
+
+extern float ee_units_uu_host_world_f(int32_t which, uint64_t a, uint64_t b, float f);
+
+extern uint32_t ee_units_uu_host_units_near(const float *center,
+                                            float radius,
+                                            uint64_t *out,
+                                            uint32_t capacity);
+
+extern uint32_t ee_units_uu_host_region_units(int32_t x,
+                                              int32_t y,
+                                              uint64_t *out,
+                                              uint32_t capacity);
+
+extern uint8_t ee_units_uu_host_find_path(uint64_t unit,
+                                          const int32_t *from,
+                                          const int32_t *to,
+                                          const int32_t *bounds,
+                                          uint32_t limit,
+                                          uint8_t walls,
+                                          int32_t *first);
+
+/// `EEPWorldHelper::Load`'s running state over the host.
+///
+/// # Safety
+/// `f` is valid with `ctx` for the call.
+void ee_units_world_load_live(void *ctx, EeUnitsWorldFn f);
+
+/// `EEPWorldHelper::Save`'s running state over the host.
+///
+/// # Safety
+/// As [`ee_units_world_load_live`].
+void ee_units_world_save_live(void *ctx, EeUnitsWorldFn f);
+
+/// The part `pending` (an `EE_UNITS_WORLD_AFTER_LOAD`'s `a`) put back, then freed.
+///
+/// # Safety
+/// `pending` is an `EE_UNITS_WORLD_AFTER_LOAD` record not restored before; `f` is valid with `ctx`.
+void ee_units_world_restore(void *pending, void *ctx, EeUnitsWorldFn f);
+
+/// The loaded ghost of id `id` into `out`: false when no record has the id.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_units_world_ghost_find(unsigned long id, EeUnitsWorldGhost *out);
+
+/// A unit made from a loaded ghost (one reference, dropped at the first tick).
+void ee_units_world_ghost_made(void *unit);
+
+/// The made ghost unit whose id `unit_id` answers `id`, or null.
+///
+/// # Safety
+/// `unit_id` is valid for every made unit.
+void *ee_units_world_ghost_made_find(unsigned long id, unsigned long (*unit_id)(void*));
 
 }  // extern "C"
 

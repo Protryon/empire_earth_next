@@ -240,12 +240,17 @@ def platform_sources(target):
     return [impl / n for n in names] + [ROOT / "src" / "Platform" / "Common" / n for n in COMMON_IMPL]
 
 
-def run_program(target, exe, args=(), env=None, cwd=None):
+def run_program(target, exe, args=(), env=None, cwd=None, timeout=None):
+    """Runs a built test; with `timeout` (seconds) a program still running then is killed and counts as a failure."""
     if not target.native():
         print(f"{exe.name}: built for {target.name}; this machine cannot run it (not run)")
         return 0
     print(f"running {exe.name} {' '.join(args)}", flush=True)
-    r = subprocess.run([str(exe), *args], env=env, cwd=cwd)
+    try:
+        r = subprocess.run([str(exe), *args], env=env, cwd=cwd, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        print(f"{exe.name}: FAILED, still running after {timeout} s (killed)", flush=True)
+        return 1
     print(f"{exe.name}: exit {r.returncode}")
     return r.returncode
 
@@ -311,7 +316,7 @@ def cmd_fonttest(a):
 TCP_UNIT = ROOT / "src" / "Low-Level Engine" / "Network Engine" / "TCP Protocol" / "TCP Protocol.cpp"
 # the engine units the plug-in links with (tcp_test.cpp stands in for the rest)
 TCP_ENGINE_UNITS = [ROOT / "src" / "Low-Level Engine" / p for p in (
-    "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")]   # (TSEvent and
+    "Utilities/UString.cpp", "Utilities/UWideString.cpp")]   # (NEProtocol is ee_net's; TSEvent and
 # TSCriticalSection are header classes over ee_ts since the Thread System moved to Rust)
 
 
@@ -494,6 +499,24 @@ WON_TESTS = {
     # the Windows skin's drawing helpers and MS control paints as Rust plans (mspaint.rs) against the original
     # statements over a logged Graphics (golden: rust/crates/ee_won/src/golden_mspaint.txt)
     "won_mspaint_test": [],
+    # the software raster surface as a whole Rust object (surface.rs) against the WON SDK's Surface.cpp
+    # (golden: rust/crates/ee_won/src/golden_surface.txt)
+    "won_surface_test": [],
+    # the skins' layouts (skinlay.rs: the combo boxes', scroll containers' and list controls' Virtual08, the column
+    # headers, three desired sizes) against the original statements (golden: rust/crates/ee_won/src/golden_skinlay.txt)
+    "won_skinlay_test": [],
+    # BackgroundGrabber as a whole Rust object (grabobj.rs) against the original statements over a traced world
+    # (golden: rust/crates/ee_won/src/golden_grabobj.txt)
+    "won_grabobj_test": [],
+    # the image and rectangle components' paints as Rust plans (guidraw.rs image_component_paint, rectangle_paint,
+    # rectangle_3d_paint) against the original statements (golden: rust/crates/ee_won/src/golden_compaint.txt)
+    "won_compaint_test": [],
+    # StretchImageFilter's pixel work (imgfilter.rs stretch_run) against the original CopyRawImage and RawStretch over
+    # guidraw's plan (golden: rust/crates/ee_won/src/golden_stretchpx.txt)
+    "won_stretchpx_test": [],
+    # the raw images' transparency masks (imgfilter.rs mask32, mask8) against Image.cpp's GetNative loops
+    # (golden: rust/crates/ee_won/src/golden_imgmask.txt)
+    "won_imgmask_test": [],
     # the image filters' pixel loops (imgfilter.rs) against the original statements over stand-in raw images
     # (golden: rust/crates/ee_won/src/golden_imgfilter.txt)
     "won_imgfilter_test": [],
@@ -576,8 +599,18 @@ WON_TESTS = {
     "won_lobbyctl_test": [],
     # EELobbyGame and its player slots as one Rust object (golden: rust/crates/ee_won/src/golden_eegame.txt)
     "won_eegame_test": [],
-    # EELobbyConnectDialog as a lobby dialog kind (golden: rust/crates/ee_won/src/golden_eedlg.txt)
+    # EELobbyConnectDialog and EELobbyFileDialog as lobby dialog kinds (golden: rust/crates/ee_won/src/golden_eedlg.txt)
     "won_eedlg_test": [],
+    # EELobbyColorButton and its chooser as Rust objects (golden: rust/crates/ee_won/src/golden_eecolor.txt)
+    "won_eecolor_test": [],
+    # the EE lobby's glue (EELobbyInit, EELobbyMisc, EELobbyInterface's decisions) in Rust (golden:
+    # rust/crates/ee_won/src/golden_eeglue.txt)
+    "won_eeglue_test": [],
+    # GetWONStatusString's choice (statusstr.rs) against the original switch over every status
+    "won_statusstr_test": [],
+    # EELobbyFileTransfer, its SendFileOp and the EE lobby's sounds as Rust objects (golden:
+    # rust/crates/ee_won/src/golden_eexfer.txt)
+    "won_eexfer_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
@@ -813,12 +846,17 @@ def build_won_test(t, name, units, folder="won"):
     return exe
 
 
+# a WON test program still running after this long has hung: it is killed and fails, so the gate chain goes on
+WON_TEST_TIMEOUT = 20 * 60
+
+
 def cmd_wontest(a):
     t = Target(a.target)
     why = t.can_build()
     if why:
         sys.exit(f"{t.name}: {why}")
     result = 0
+    failed = []
     for name, units in WON_TESTS.items():
         if a.programs and name not in a.programs:
             continue
@@ -832,7 +870,12 @@ def cmd_wontest(a):
             # sharing one would see each other's
             scratch = exe.parent / "run"
             scratch.mkdir(exist_ok=True)
-            result |= run_program(t, exe, cwd=scratch)
+            code = run_program(t, exe, cwd=scratch, timeout=WON_TEST_TIMEOUT)
+            if code:
+                failed.append(name)
+            result |= code
+    if failed:
+        print(f"wontest: {len(failed)} failed: {' '.join(failed)}")
     return result
 
 
@@ -855,10 +898,10 @@ NET_TESTS = {
     "ne_server_test": [],
     # NEProtocol, NEConnection, NEServer over a stand-in plug-in (golden: tests/net/golden_protocol.txt, made by the
     # original units with the TCP shim's entry table)
-    # (the golden: built with NE_PROTOCOL_ORIG over tests/net/orig_p's NEProtocol.cpp and TCP Protocol.cpp instead
-    # of NEProtocol.cpp, `--print FILE`)
+    # (the golden: built with NE_PROTOCOL_ORIG over tests/net/orig_p's NEProtocol.cpp and TCP Protocol.cpp, `--print
+    # FILE`; since round 7 the class is ee_net's Rust, driven through tests/net/ne_protocol_members.h)
     "ne_protocol_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
-        "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
+        "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
     # the engine messages as their senders and the factory see them (golden: tests/net/golden_message.txt, made over
     # the original 28 classes)
     "ne_message_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
