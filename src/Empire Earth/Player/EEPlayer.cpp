@@ -216,7 +216,7 @@ static void EEPlayerCaptureState(EEPlayer* inPlayer)
     for (long b = 0; b < 9; b++)
         theFields.U32(theBools[b] ? 1 : 0);
     theFields.Into(theRecord);
-    for (long r = 0; r < 7; r++)
+    for (long r = 2; r < 7; r++)   // (0 and 1 are never set: whatever memory the player was made in)
         theRecord.I32((int32_t)inPlayer->mResourceCaps[r]);
     theRecord.I32((int32_t)inPlayer->mPopulationCount);
     theRecord.I32((int32_t)inPlayer->mEndOfGameCount);
