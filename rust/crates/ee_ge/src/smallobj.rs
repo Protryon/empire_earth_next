@@ -186,11 +186,13 @@ pub unsafe extern "C" fn ee_ge_mat_set_texture(p: *mut EeGeMat, texture: *mut c_
     // SAFETY: the caller's contract (no reference is held across a host call)
     unsafe {
         let host = (*p).host;
-        let Some(&old) = (&(*p).textures).get(screen as usize) else { return };
+        let textures: &Vec<usize> = &(*p).textures;
+        let Some(&old) = textures.get(screen as usize) else { return };
         if old != 0 {
             host.op(EeGeObjOp::TexDereference, old, 0, 0);
         }
-        (&mut (*p).textures)[screen as usize] = texture as usize;
+        let textures: &mut Vec<usize> = &mut (*p).textures;
+        textures[screen as usize] = texture as usize;
         if !texture.is_null() {
             host.op(EeGeObjOp::TexReference, texture as usize, 0, 0);
         }
@@ -204,7 +206,8 @@ pub unsafe extern "C" fn ee_ge_mat_set_texture(p: *mut EeGeMat, texture: *mut c_
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_mat_texture(p: *const EeGeMat, screen: c_ulong) -> *mut c_void {
     // SAFETY: the caller's contract
-    unsafe { (&(*p).textures).get(screen as usize).copied().unwrap_or(0) as *mut c_void }
+    let textures: &Vec<usize> = unsafe { &(*p).textures };
+    textures.get(screen as usize).copied().unwrap_or(0) as *mut c_void
 }
 
 /// `GetName()`: the C++ `UString`.
@@ -381,7 +384,8 @@ pub unsafe extern "C" fn ee_ge_font_new(
     unsafe {
         let name = host.op(EeGeObjOp::StrCopy, 0, name as isize, 0) as usize;
         let face = host.op(EeGeObjOp::StrText, name, 0, 0) as usize;
-        let flags = (style & 1) | (((style >> 1) & 1) << 1) | (((style >> 2) & 1) << 2) | ((quality == 2) as c_ulong) << 3;
+        let flags =
+            (style & 1) | (((style >> 1) & 1) << 1) | (((style >> 2) & 1) << 2) | ((quality == 2) as c_ulong) << 3;
         let height = (size as i32).wrapping_neg();
         let font = host.op(EeGeObjOp::PlatFontCreate, face, height as isize, flags as isize) as usize;
         let mut cell: c_long = 0;
