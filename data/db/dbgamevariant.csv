@@ -1,0 +1,7 @@
+#eedata dbgamevariant
+#format 3
+#rows 3
+row,id,label,mIndex,mFactor0,mSet0,mFactor1,mSet1,mFactor2,mSet2,mFactor3,mSet3,mFactor4,mSet4,mFactor5,mSet5,mFactor6,mSet6,mFactor7,mSet7,mFactor8,mSet8,mFactor9,mSet9,mDepositFactor,mEpochCostFactor,mWorkTimeFactor,mMoraleBonus,mNameID,mFirstEpochCostFactor,mSecondEpochCostFactor,mCostSetFactor,mCostSet,mEarthquakeDamageFactor,mSelectable
+0,scenarios,Scenarios,,0.0,walls_towers_1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,1.0,1.0,1.0,0,0,1.0,1.0,1.0,wonder,2.86,0
+1,tournament,Tournament,,-0.5,tournament_towers_only,-0.7,tournament_walls_only,-0.4,tournament_buildings_only,0.0,-1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,1.0,1.0,1.0,0,31255,0.2,0.5,1.2,towers,1.0,1
+2,standard,Standard,,0.0,walls_towers_1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,0.0,-1,1.0,2.64,1.66,2,31254,0.5,0.8,2.0,wonder,2.86,1

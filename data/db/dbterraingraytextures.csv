@@ -1,0 +1,63 @@
+#eedata dbterraingraytextures
+#format 3
+#rows 59
+row,id,mTextureName,mName,mID,mIndex,mColor[0],mColor[1],mColor[2]
+0,terraingraytextures_0,,,0,-1,-858993460,-858993460,-858993460
+1,grass_rough_x,textures\GWildGrass_1.sst,Grass Rough (x),2,1,130,190,50
+2,grass_tufts,textures\GrassTufts_1.sst,Grass Tufts,3,2,200,170,0
+3,delete_rock,textures\Rock_2.sst,(Delete) Rock,4,3,145,145,145
+4,desert,textures\SandyBeach_1.sst,Desert,5,4,255,225,60
+5,ice,textures\Ice_1.sst,Ice,6,5,200,200,240
+6,underwater,textures\Underwater_1.sst,Underwater,7,6,255,255,255
+7,delete_dark_cracked_mud_x,textures\BCrackedMud_1.sst,(Delete) Dark Cracked Mud (x),8,7,110,89,68
+8,marsh,textures\Marsh_1.sst,Marsh,9,8,135,135,135
+9,dry_leaves,textures\DriedLeaves_1.sst,Dry Leaves,10,9,200,142,67
+10,delete_stone_road,textures\Stoneroad_2.sst,(Delete) Stone Road,11,10,175,175,175
+11,beach,textures\SandyBeach_1.sst,Beach,12,11,230,230,230
+12,stonework_brick,textures\Bricks_1.sst,Stonework - Brick,13,12,137,86,72
+13,pavement,textures\Pavement_1.sst,Pavement,14,13,187,187,187
+14,asphalt,textures\Asphalt_1.sst,Asphalt,15,14,70,70,70
+15,white_x,textures\White_2.sst,White (x),16,15,255,255,255
+16,stonework_marble_tiles_2,textures\Plaza_1.sst,Stonework - Marble Tiles 2,17,16,165,165,165
+17,sand_medium,textures\RockySand_1.sst,Sand - Medium,18,17,230,200,40
+18,ocean_water,textures\Water_OceanB,Ocean Water,19,18,255,255,255
+19,cliff,textures\Cliff_1.sst,Cliff \,20,19,142,126,97
+20,cliff_2,textures\Cliff_2.sst,Cliff /,21,20,142,126,97
+21,grass,textures\BaseGrass_1.sst,Grass,22,21,130,190,50
+22,delete_flagstone,textures\Grass_6.sst,(Delete) Flagstone,23,22,255,255,255
+23,snow_tufts,textures\SnowTufts_1.sst,Snow - Tufts,24,23,215,255,215
+24,sand_cracked,textures\TCrackedMud_1.sst,Sand - Cracked,25,24,220,150,20
+25,pebbles_small,textures\Pebbles_1.sst,Pebbles Small,26,25,162,162,162
+26,sand_fine,textures\Finesand_1.sst,Sand - Fine,27,26,220,150,20
+27,grass_sparce,textures\Sparsegrass_1,Grass Sparce,28,27,180,200,30
+28,grass_overgrown,textures\overgrowngrass_1.sst,Grass - Overgrown,29,28,130,190,50
+29,grass_patches,textures\grasspatch_1.sst,Grass - Patches,30,29,130,190,50
+30,grass_tall,textures\Longgrass_1,Grass - Tall,32,30,130,220,50
+31,rock,textures\Rock_1.sst,Rock,33,31,145,145,145
+32,sand_coarse,textures\Stones_1.sst,Sand - Coarse,34,32,200,200,40
+33,snow,textures\Snow_1.sst,Snow,35,33,200,200,200
+34,snow_grass_patches,textures\Snowgrass_1.sst,Snow - Grass Patches,36,34,200,240,150
+35,snow_dirt_patches,textures\Snowdirt_1.sst,Snow - Dirt Patches,37,35,240,200,200
+36,stonework_marble_tiles,textures\Marbletiles_1.sst,Stonework - Marble Tiles,38,36,165,165,165
+37,stonework_mossy_stones,textures\Paleostones_1.sst,Stonework - Mossy Stones,39,37,150,220,50
+38,stonework_cobblestones,textures\Cobblestones_1.sst,Stonework - Cobblestones,40,38,165,165,165
+39,stonework_tech_plating,textures\Techplates_1.sst,Stonework - Tech Plating,41,39,185,185,185
+40,stonework_smooth_stones,textures\Smoothstones_1.sst,Stonework - Smooth Stones,42,40,165,165,165
+41,cliff_2_2,textures\Cliffwinter_1.sst,Cliff 2 \,43,41,142,126,97
+42,cliff_2_3,textures\Cliffwinter_2.sst,Cliff 2 /,44,42,142,126,97
+43,cliffrock,textures\Cliff_11.sst,CliffRock \,45,43,142,126,97
+44,cliffrock_2,textures\Cliff_12.sst,CliffRock /,46,44,142,126,97
+45,mars_ice_cliff,textures\mars_ice_cliff_1,Mars - Ice Cliff,47,45,200,200,200
+46,mars_polar_cap,textures\mars_polar_cap_1,Mars - Polar Cap,48,46,180,190,220
+47,mars_red_craters,textures\mars_red_craters_1,Mars - Red Craters,49,47,180,40,40
+48,mars_sand_dunes,textures\mars_sand_dunes_1,Mars - Sand Dunes,50,48,180,150,30
+49,mars_brown_craters,textures\mars_brown_craters_1,Mars - Brown Craters,51,49,180,180,100
+50,mars_glacier,textures\mars_glacier_1,Mars - Glacier,52,50,180,190,220
+51,mars_lava_flow,textures\mars_lava_flow_1,Mars - Lava Flow,53,51,200,150,150
+52,mars_orange_rocky,textures\mars_orange_rocky_1,Mars - Orange Rocky,54,52,200,200,100
+53,mars_red_rocky,textures\mars_red_rocky_1,Mars - Red Rocky,55,53,220,140,140
+54,mars_red_volcanic,textures\mars_red_volcanic_1,Mars - Red Volcanic,56,54,200,120,120
+55,mars_snow_glacier,textures\mars_snow_glacier_1,Mars - Snow Glacier,57,55,230,230,230
+56,mars_striations,textures\mars_striations_1,Mars - Striations,58,56,170,170,170
+57,mars_water,textures\mars_water_1,Mars - Water,59,57,100,100,240
+58,space,textures\space_1,Space,60,58,0,0,0

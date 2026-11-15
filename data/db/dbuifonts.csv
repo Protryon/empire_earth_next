@@ -1,0 +1,61 @@
+#eedata dbuifonts
+#format 3
+#rows 61
+row,id,mFontName,mStringID,mSize,mQuality,mBold,mItalic,mUnderline,mStyle10,mStyle08
+0,no_font,No Font,0,0,2,0,0,0,0,0
+1,arial_14,Arial 14,1,14,2,0,0,0,0,0
+2,arial_12,Arial 12,1,12,2,0,0,0,0,0
+3,arial_36,Arial 36,1,36,2,0,0,0,0,0
+4,times_new_roman14,Times New Roman14,2,14,2,0,0,0,0,0
+6,arial_18,Arial 18,1,18,2,0,0,0,0,0
+8,arial_24,Arial 24,1,24,2,0,0,0,0,0
+9,arial_16_bold,Arial 16 - Bold,1,16,2,1,0,0,0,0
+10,arial_16,Arial 16,1,16,2,0,0,0,0,0
+11,arial_22_bold,Arial 22 - Bold,1,22,2,1,0,0,0,0
+12,arial_10,Arial 10,1,10,2,0,0,0,0,0
+15,arial_12_underline,Arial 12 - Underline,1,12,2,0,0,1,0,0
+16,arial_12_bold,Arial 12- Bold,1,12,2,1,0,0,0,0
+17,times_new_roman36_bold,Times New Roman36-bold,2,36,2,1,0,0,0,0
+18,times_new_roman24_bold,Times New Roman24-bold,2,24,2,1,0,0,0,0
+19,courier_new_8,Courier New 8,3,8,2,0,0,0,0,0
+20,courier_new_10,Courier New 10,3,10,2,0,0,0,0,0
+21,courier_new_12,Courier New 12,3,12,2,0,0,0,0,0
+22,courier_new_14,Courier New 14,3,14,2,0,0,0,0,0
+23,tahoma_8,Tahoma 8,4,8,2,0,0,0,0,0
+24,tahoma_9,Tahoma 9,4,9,2,0,0,0,0,0
+25,tahoma_10,Tahoma 10,4,10,2,0,0,0,0,0
+26,tahoma_12,Tahoma 12,4,12,2,0,0,0,0,0
+27,tahoma_14,Tahoma 14,4,14,2,0,0,0,0,0
+28,tahoma_16,Tahoma 16,4,16,2,0,0,0,0,0
+29,tahoma_18,Tahoma 18,4,18,2,0,0,0,0,0
+30,tahoma_20,Tahoma 20,4,20,2,0,0,0,0,0
+31,tahoma_22,Tahoma 22,4,22,2,0,0,0,0,0
+32,tahoma_24,Tahoma 24,4,24,2,0,0,0,0,0
+33,tahoma_36,Tahoma 36,4,36,2,0,0,0,0,0
+34,tahoma_16_bold,Tahoma 16 - Bold,4,16,2,1,0,0,0,0
+35,tahoma_22_bold,Tahoma 22 - Bold,4,22,2,1,0,0,0,0
+36,tahoma_12_bold,Tahoma 12 - Bold,4,12,2,1,0,0,0,0
+37,tahoma_12_shadow,Tahoma 12 - Shadow,4,12,2,1,0,0,1,0
+38,tahoma_10_bold,Tahoma 10 - Bold,4,10,2,1,0,0,0,0
+39,courier_new_16_bold,Courier New 16 - Bold,3,16,2,1,0,0,0,0
+40,tahoma_20_bold,Tahoma 20 - Bold,4,20,2,1,0,0,0,0
+41,arial_8,Arial 8,1,8,2,1,0,0,0,0
+42,arial_6,Arial 6,1,6,2,0,0,0,0,0
+43,times_new_roman6,Times New Roman6,2,6,2,0,0,0,0,0
+44,tahoma_6,Tahoma 6,4,6,2,0,0,0,0,0
+45,tahoma_30,Tahoma 30,4,30,2,0,0,0,0,0
+46,times_new_roman16_bold,Times New Roman16-bold,2,16,2,1,0,0,0,0
+47,times_new_roman36_bold_shadow,Times New Roman36-bold/shadow,2,36,2,1,0,0,1,0
+48,tahoma_30_bold,Tahoma 30 - Bold,4,30,2,1,0,0,0,0
+49,tahoma_36_bold_shadow,Tahoma 36 - Bold/shadow,4,36,2,1,0,0,1,0
+50,tahoma_24_bold_shadow,Tahoma 24 - Bold/shadow,4,24,2,1,0,0,1,0
+51,tahoma_30_bold_shadow,Tahoma 30 - Bold/shadow,4,30,2,0,0,0,1,0
+52,tahoma_16_bold_shadow,Tahoma 16 - Bold/shadow,4,16,2,1,0,0,1,0
+53,tahoma_14_bold_shadow,Tahoma 14 - Bold/Shadow,4,14,2,1,0,0,1,0
+54,tahoma_12_bold_shadow,Tahoma 12 - Bold/Shadow,4,12,2,1,0,0,1,0
+55,tahoma_18_bold_shadow,Tahoma 18 - Bold/Shadow,4,18,2,1,0,0,1,0
+56,tahoma_20_bold_shadow,Tahoma 20 - Bold/Shadow,4,20,2,1,0,0,1,0
+57,tahoma_12_low_quality,Tahoma 12 - Low Quality,4,12,0,0,0,0,0,0
+58,tahoma_24_low_quality,Tahoma 24 - Low Quality,4,24,0,0,0,0,0,0
+59,tahoma_14_bold,Tahoma 14 - Bold,4,14,2,1,0,0,0,0
+60,tahoma_18_bold,Tahoma 18 - Bold,4,18,2,1,0,0,0,0

@@ -1,0 +1,25 @@
+#eedata dbuiformevents
+#format 3
+#rows 21
+row,id,label,mEventID,mOwnerID,mEventType
+0,uiformevents_0,,-1,3435973836,3435973836
+1,main_screen_open,Main Screen Open,1,main_menu_screen,0
+2,game_settings_open,Game Settings Open,2,game_settings_screen,0
+3,chat_form_open,Chat Form Open,3,chat_in_game_pop_up_dialog,0
+4,chat_form_close,Chat Form Close,4,chat_in_game_pop_up_dialog,1
+5,chat_mlb_pressed,Chat MLB Pressed,5,chat_in_game_pop_up_dialog,2
+6,chat_mrb_pressed,Chat MRB Pressed,6,chat_in_game_pop_up_dialog,8
+7,scenario_intro_open,Scenario Intro Open,7,scenario_intro_screen_briefing_screen,0
+8,wns_form_open,WNS Form Open,8,won_net_stat_screen,0
+9,ss_form_open,SS Form Open,9,splash_screen,0
+10,scenario_intro_close,Scenario Intro Close,10,scenario_intro_screen_briefing_screen,1
+11,single_player_load_open,Single Player Load Open,11,single_player_load_game_screen,0
+12,scenario_load_open,Scenario Load Open,12,scenario_load_screen,0
+13,pgs_open,PGS Open,13,post_game_summary_screen,0
+14,pgs_close,PGS Close,14,post_game_summary_screen,1
+15,ds_open,DS Open,15,diplomacy_screen,0
+16,ce_open,CE Open,16,campaign_editor_form,0
+17,ce_close,CE Close,17,campaign_editor_form,1
+18,chat_log_open,Chat Log Open,18,chat_log_form,0
+19,chat_log_mlb_pressed,Chat Log MLB Pressed,19,chat_log_form,2
+20,chat_log_mrb_pressed,Chat Log MRB Pressed,20,chat_log_form,8

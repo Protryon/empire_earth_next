@@ -1,0 +1,276 @@
+# civbuilder: Empire Earth: The Art of Conquest rules (tools/eedata/rules.py; the game: EERules.cpp). What each civilization builder attribute raises.
+# A key left out keeps the game's default (the value written here).
+eedata: civbuilder
+format: 3
+# An upgrade is a category (dbcivilization) and a level; the level is an attribute here, the category's
+# mLevels[level - 1] its value and bonus. applies: stats (C++ primitives) with a mode: share (the stat's own rule:
+# a share of the class's base value, the original's), add (+ value) or multiply (x (1 + value)); gather_time takes
+# a slot (0 .. 6); only_category / except_category limit an apply to unit classes of a category; power: a civ power.
+attributes:
+  - id: attack
+    level: 1
+    name: 29717
+    applies:
+      - stat: attack
+  - id: hit_points
+    level: 2
+    name: 29718
+    applies:
+      - stat: hit_points
+  - id: reload_time
+    level: 3
+    name: 29719
+    applies:
+      - stat: reload_time
+  - id: armor
+    level: 4
+    name: 29720
+    applies:
+      - stat: armor
+  - id: range
+    level: 5
+    name: 29721
+    applies:
+      - stat: range
+      - stat: line_of_sight
+  - id: speed
+    level: 6
+    name: 29722
+    applies:
+      - stat: speed
+  - id: flight_time
+    level: 7
+    name: 29723
+    applies:
+      - stat: flight_time
+  - id: area_effect
+    level: 8
+    name: 29724
+    applies:
+      - stat: area_effect
+  - id: gather_stone_gold
+    level: 9
+    name: 29725
+    applies:
+      - stat: gather_time
+        slot: 5
+        except_category: naval_citizen
+      - stat: gather_time
+        slot: 4
+        except_category: naval_citizen
+  - id: gather_slot_0
+    level: 10
+    name: 29726
+    applies:
+      - stat: gather_time
+        slot: 0
+  - id: gather_slot_2
+    level: 11
+    name: 29727
+    applies:
+      - stat: gather_time
+        slot: 2
+  - id: gather_slot_6
+    level: 12
+    name: 29728
+    applies:
+      - stat: gather_time
+        slot: 6
+  - id: gather_slot_1
+    level: 13
+    name: 29729
+    applies:
+      - stat: gather_time
+        slot: 1
+  - id: gather_slot_3
+    level: 14
+    name: 29730
+    applies:
+      - stat: gather_time
+        slot: 3
+  - id: build_time
+    level: 15
+    name: 29731
+    applies:
+      - stat: build_time
+  - id: conversion
+    level: 16
+    name: 29732
+    applies:
+      - stat: conversion
+  - id: fishing
+    level: 17
+    name: 29733
+    applies:
+      - stat: gather_time
+        slot: 4
+        only_category: naval_citizen
+  - id: repair_rate
+    level: 18
+    name: 29734
+    applies:
+      - stat: repair_rate
+  - id: area_effect_scale
+    level: 19
+    name: 29735
+    applies:
+      - stat: area_effect_scale
+  - id: high_ground
+    level: 20
+    name: 29736
+    applies:
+      - stat: high_ground
+  - id: population
+    level: 21
+    name: 29737
+    applies:
+      - stat: population
+  - id: cost
+    level: 23
+    name: 29739
+    applies:
+      - stat: cost
+  - id: flaming_arrows
+    level: 38
+    name: 32818
+    applies:
+      - stat: power
+        power: flaming_arrows
+  - id: slavery
+    level: 39
+    name: 32819
+    applies:
+      - stat: power
+        power: slavery
+  - id: priest_tower
+    level: 40
+    name: 32820
+    applies:
+      - stat: power
+        power: priest_tower
+  - id: crusaders
+    level: 41
+    name: 32821
+    applies:
+      - stat: power
+        power: crusaders
+  - id: fanaticism
+    level: 42
+    name: 32822
+    applies:
+      - stat: power
+        power: fanaticism
+  - id: emissaries
+    level: 43
+    name: 32823
+    applies:
+      - stat: power
+        power: emissaries
+  - id: exploration
+    level: 44
+    name: 32824
+    applies:
+      - stat: power
+        power: exploration
+  - id: insurance
+    level: 45
+    name: 32825
+    applies:
+      - stat: power
+        power: insurance
+  - id: metallurgy
+    level: 46
+    name: 32826
+    applies:
+      - stat: power
+        power: metallurgy
+  - id: advanced_mining
+    level: 47
+    name: 32827
+    applies:
+      - stat: power
+        power: advanced_mining
+  - id: pathfinding
+    level: 48
+    name: 32828
+    applies:
+      - stat: power
+        power: pathfinding
+  - id: camouflage
+    level: 49
+    name: 32829
+    applies:
+      - stat: power
+        power: camouflage
+  - id: bundeswehr
+    level: 50
+    name: 32830
+    applies:
+      - stat: power
+        power: bundeswehr
+  - id: sas
+    level: 51
+    name: 32831
+    applies:
+      - stat: power
+        power: sas
+  - id: paratroopers
+    level: 52
+    name: 32832
+    applies:
+      - stat: power
+        power: paratroopers
+  - id: market
+    level: 53
+    name: 32833
+    applies:
+      - stat: power
+        power: market
+  - id: cyber_ninja
+    level: 54
+    name: 32834
+    applies:
+      - stat: power
+        power: cyber_ninja
+  - id: missile_base
+    level: 55
+    name: 32835
+    applies:
+      - stat: power
+        power: missile_base
+  - id: cloaking
+    level: 56
+    name: 32836
+    applies:
+      - stat: power
+        power: cloaking
+  - id: adaptation
+    level: 57
+    name: 32837
+    applies:
+      - stat: power
+        power: adaptation
+  - id: expansionism
+    level: 58
+    name: 32838
+    applies:
+      - stat: power
+        power: expansionism
+  - id: conquistadors
+    level: 59
+    name: 32839
+    applies:
+      - stat: power
+        power: conquistadors
+  - id: just_in_time_manufacturing
+    level: 60
+    name: 32840
+    applies:
+      - stat: power
+        power: just_in_time_manufacturing
+powers_category:                   # the special powers category appended to dbcivilization's
+  id: special_powers               # (the keyed .civ files name its upgrades special_powers.<attribute>)
+  name: 32850
+  unit_set: civ_general_perplayer_dont_change_ever_cgc
+  cost: special_powers_category_cost.L
+  level_value: 0.01
