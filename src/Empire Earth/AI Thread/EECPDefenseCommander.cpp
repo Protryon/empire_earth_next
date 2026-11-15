@@ -526,8 +526,8 @@ bool EECPDefenseCommander::SendAid(EEPlayer* inPlayer, long inTownID, bool inCou
             theResult = false;
             EECPMilitaryAidPackage* thePackage = new EECPMilitaryAidPackage(this->mPlayer);
             thePackage->mTownID = inTownID;
-            thePackage->mLocation.mX = theTown->mHull.GetCenter().mX;
-            thePackage->mLocation.mY = theTown->mHull.GetCenter().mY;
+            thePackage->mLocation.mX = theTown->GetHullCenter().mX;
+            thePackage->mLocation.mY = theTown->GetHullCenter().mY;
             float theThreat = this->GetTownThreat(theTown, thePlayerID);
             thePackage->mThreat = theThreat;
             thePackage->mTarget = inPlayer;
@@ -623,9 +623,9 @@ bool EECPDefenseCommander::SendBestSubGroup(std::vector<EECPAttackSubGroup*>& in
                 theUnit->FindPosition(theTile, true, false);
                 if (theBest == NULL) {
                     theBest = theUnit;
-                    theBestDistance = theTile.DistanceToSquared(theTown->mHull.GetCenter());
+                    theBestDistance = theTile.DistanceToSquared(theTown->GetHullCenter());
                 } else {
-                    theDistance = theTile.DistanceToSquared(theTown->mHull.GetCenter());
+                    theDistance = theTile.DistanceToSquared(theTown->GetHullCenter());
                     if (theDistance < theBestDistance) {
                         theBest = theUnit;
                         theBestDistance = theDistance;
@@ -634,7 +634,7 @@ bool EECPDefenseCommander::SendBestSubGroup(std::vector<EECPAttackSubGroup*>& in
             }
         }
         if (theBest != NULL) {
-            theLocation.mSerial = theTown->mSerial;
+            theLocation.mSerial = theTown->GetSerial();
             theLocation.mType = kAIAreaTown;
             theResult = true;
             theLocation.mPlayer = theTown->mPlayer->GetPlayerID();
@@ -749,7 +749,7 @@ void EECPDefenseCommander::AidAllies()
         theTownID = this->FindThreatenedTown(theAlly, &thePackage, 0);
         if (theTownID == 0) {
             for (long j = theAlly->GetTownList().size() - 1; j >= 0; j--) {
-                if (theAlly->mTowns[j] == NULL || !((theAlly->mTowns[j])->mTiles.Size() > 2))
+                if (theAlly->mTowns[j] == NULL || !((theAlly->mTowns[j])->GetNumTiles() > 2))
                     continue;
                 long theID = (theAlly->mTowns[j])->GetTownID();
                 std::map<long, EECPMilitaryAidPackage*>::iterator theFound = this->mPackages.find(theID);
@@ -855,11 +855,11 @@ bool EECPDefenseCommander::CounterAttack(EECPMilitaryAidPackage* inPackage)
         EETown* theTown = theOwner->GetTownByID(theTownID);
         if (theTown != NULL) {
             if (theTown->mPlayer != this->mPlayer)
-                theTarget = this->mPlayer->GetNearestTown(theTown->mHull.GetCenter(), theArea);
+                theTarget = this->mPlayer->GetNearestTown(theTown->GetHullCenter(), theArea);
             else
                 theTarget = theTown;
             if (this->GetUnitAllowance() > 0) {
-                theLocation.mSerial = theTown->mSerial;
+                theLocation.mSerial = theTown->GetSerial();
                 theLocation.mType = kAIAreaTown;
                 theLocation.mPlayer = theTown->mPlayer->mPlayerID;
                 theLocation.ResetToArea();
@@ -1034,10 +1034,10 @@ float EECPDefenseCommander::ComputeTownThreat(EETown* inTown, long& outPlayerID,
             (theEnemies[j]).second += theArmy->mStrength;
             if (!(theArmy->mStrength > 0))
                 continue;
-            if (inTown->mHull.BoundedContains(theArmy->mHull.GetCenter())) {
+            if (inTown->HullContains(theArmy->GetHullCenter())) {
                 theSum += (long)(theArmy->mStrength * 2.0f);
                 if (inFill) {
-                    thePoint = inTown->mHull.GetClosestPoint(theArmy->mHull.GetCenter());   // the army's (was the stale point)
+                    thePoint = inTown->GetHullClosestPoint(theArmy->GetHullCenter());   // the army's (was the stale point)
                     it = ioMap->find(thePoint);
                     if (it != ioMap->end())
                         it->second.mEnemy += (long)(theArmy->mStrength * 1.5f);
@@ -1048,13 +1048,13 @@ float EECPDefenseCommander::ComputeTownThreat(EETown* inTown, long& outPlayerID,
                     }
                 }
             } else {
-                thePoint = inTown->mHull.GetClosestOutlinePoint(theArmy->mHull.GetCenter());
-                float theDistance = thePoint.DistanceToSquaredF(theArmy->mHull.GetCenter());
+                thePoint = inTown->GetHullClosestOutlinePoint(theArmy->GetHullCenter());
+                float theDistance = thePoint.DistanceToSquaredF(theArmy->GetHullCenter());
                 if (theDistance < theRange) {
                     long theValue = (long)(theDistance / theRange * theArmy->mStrength);
                     theSum += theValue + theArmy->mStrength;
                     if (inFill) {
-                        thePoint = inTown->mHull.GetClosestPoint(thePoint);
+                        thePoint = inTown->GetHullClosestPoint(thePoint);
                         it = ioMap->find(thePoint);
                         if (it != ioMap->end())
                             it->second.mEnemy += theValue;
@@ -1074,16 +1074,16 @@ float EECPDefenseCommander::ComputeTownThreat(EETown* inTown, long& outPlayerID,
             EECPIArmy* theArmy = theOwn->mArmies[k];
             if (!(theArmy->mStrength > 0))
                 continue;
-            if (inTown->mHull.BoundedContains(theArmy->mHull.GetCenter()))
+            if (inTown->HullContains(theArmy->GetHullCenter()))
                 theSum -= theArmy->mStrength;
             else {
-                thePoint = inTown->mHull.GetClosestOutlinePoint(theArmy->mHull.GetCenter());
-                float theDistance = thePoint.DistanceToSquaredF(theArmy->mHull.GetCenter());
+                thePoint = inTown->GetHullClosestOutlinePoint(theArmy->GetHullCenter());
+                float theDistance = thePoint.DistanceToSquaredF(theArmy->GetHullCenter());
                 if (theDistance < kDCOwnArmyRange) {
                     long theValue = (long)(theDistance * kDCOwnArmyFactor * theArmy->mStrength);
                     theSum -= theValue;
                     if (inFill) {
-                        thePoint = inTown->mHull.GetClosestPoint(thePoint);
+                        thePoint = inTown->GetHullClosestPoint(thePoint);
                         it = ioMap->find(thePoint);
                         if (it != ioMap->end())
                             it->second.mOwn += theValue;
@@ -1201,14 +1201,14 @@ long EECPDefenseCommander::FindThreatenedTown(EEPlayer* inPlayer, EECPMilitaryAi
         theResult = theBest->mTownID;
         ioPackage->mThreat = theBestThreat;
         ioPackage->mTownID = theResult;
-        ioPackage->mLocation = theBest->mHull.GetCenter();
+        ioPackage->mLocation = theBest->GetHullCenter();
     } else {
         if (theOthers.size() <= 0)
             return theResult;
         theResult = theOthers.front()->mTownID;
         ioPackage->mThreat = 0.0f;
         ioPackage->mTownID = theResult;
-        ioPackage->mLocation = theOthers.front()->mHull.GetCenter();
+        ioPackage->mLocation = theOthers.front()->GetHullCenter();
     }
     ioPackage->mPlayerID = thePlayerID;
     return theResult;
@@ -1422,7 +1422,7 @@ long EECPDefenseCommander::Save(unsigned long inMajorVersion, unsigned long inMi
         if (it->second->mTarget != NULL) {
             EETown* theTown = it->second->mTarget->GetTownByID(it->second->mTownID);
             if (theTown != NULL)
-                theValid = theTown->mTiles.Size() > 0;
+                theValid = theTown->GetNumTiles() > 0;
         }
         if (theResult == 0)
             theResult = outFile.Write(theValid);
@@ -1893,17 +1893,17 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
                 break;
         if (it != inSubGroup->mCommonMoveFlags.end() && gPhysics->GetRandom() < 0.8f) {
             EEAIContinent* theContinent = gContinentManager.mContinents[theContinentID];
-            if (theContinent && theContinent->mForestIDs.size() > 0) {
-                theForestIDs = theContinent->mForestIDs;
+            if (theContinent && theContinent->GetForestIDs().size() > 0) {
+                theForestIDs = theContinent->GetForestIDs();
                 for (i = theForestIDs.size() - 1; i >= 0; i--) {
                     EEAIForest* theForest = gContinentManager.mForests[theForestIDs[i]];
-                    if (theForest && (theForest->mHull.BoundedContains(theFrom.mTile) ||
+                    if (theForest && (theForest->HullContains(theFrom.mTile) ||
                                       theForest->GetClosestHullPoint(theFrom.mTile).DistanceToSquared(theFrom.mTile) <= 1225))
                         theForests.push_back(theForest);
                 }
                 if (theForests.size() != 0) {
                     long theIndex = gPhysics->GetRandom(0L, (long)theForests.size() - 1);
-                    theLocation.mSerial = (theForests[theIndex])->mSerial;
+                    theLocation.mSerial = (theForests[theIndex])->GetSerial();
                     theLocation.mType = kAIAreaForest;
                     theLocation.mTile = (theForests[theIndex])->GetRandomPoint();
                     theStep = "forest";
@@ -1921,16 +1921,16 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
             if (it != inSubGroup->mCommonMoveFlags.end() && gPhysics->GetRandom() < 0.45f) {
                 EEAIContinent* theContinent = gContinentManager.mContinents[theContinentID];
                 if (theContinent) {
-                    gContinentManager.GetAdjacentIDs(theContinentIDs, theContinent->mID);
+                    gContinentManager.GetAdjacentIDs(theContinentIDs, theContinent->GetID());
                     for (i = theContinentIDs.size() - 1; i >= 0; i--) {
                         EEAIContinent* theOther = gContinentManager.mContinents[theContinentIDs[i]];
-                        if (theOther && (theOther->mHull.BoundedContains(theFrom.mTile) ||
+                        if (theOther && (theOther->HullContains(theFrom.mTile) ||
                                          theOther->GetClosestHullPoint(theFrom.mTile).DistanceToSquared(theFrom.mTile) <= 1225))
                             theContinents.push_back(theOther);
                     }
                     if (theContinents.size() != 0) {
                         long theIndex = gPhysics->GetRandom(0L, (long)theContinents.size() - 1);
-                        theLocation.mSerial = (theContinents[theIndex])->mSerial;
+                        theLocation.mSerial = (theContinents[theIndex])->GetSerial();
                         theLocation.mType = 10;
                         theLocation.mTile = (theContinents[theIndex])->GetRandomPoint();
                         theStep = "adjacent";
@@ -1945,17 +1945,17 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
     }
     if (!outTask.mIsActive && gPhysics->GetRandom() < 0.35f) {
         EEAIContinent* theContinent = gContinentManager.mContinents[theContinentID];
-        if (theContinent && theContinent->mHillIDs.size() > 0) {
-            theHillIDs = theContinent->mHillIDs;
+        if (theContinent && theContinent->GetHillIDs().size() > 0) {
+            theHillIDs = theContinent->GetHillIDs();
             for (i = theHillIDs.size() - 1; i >= 0; i--) {
                 EEAIHill* theHill = gContinentManager.mHills[theHillIDs[i]];
-                if (theHill && (theHill->mHull.BoundedContains(theFrom.mTile) ||
+                if (theHill && (theHill->HullContains(theFrom.mTile) ||
                                 theHill->GetClosestHullPoint(theFrom.mTile).DistanceToSquared(theFrom.mTile) <= 1225))
                     theHills.push_back(theHill);
             }
             if (theHills.size() != 0) {
                 long theIndex = gPhysics->GetRandom(0L, (long)theHills.size() - 1);
-                theLocation.mSerial = (theHills[theIndex])->mSerial;
+                theLocation.mSerial = (theHills[theIndex])->GetSerial();
                 theLocation.mType = kAIAreaHill;
                 theLocation.mTile = (theHills[theIndex])->GetRandomPoint();
                 theStep = "hill";
@@ -1985,7 +1985,7 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
                     theChokePoints.push_back(theNearest->second);
             }
             long theIndex = gPhysics->GetRandom(0L, (long)theChokePoints.size() - 1);
-            theLocation.mSerial = (theChokePoints[theIndex])->mSerial;
+            theLocation.mSerial = (theChokePoints[theIndex])->GetSerial();
             theLocation.mType = kAIAreaChokePoint;
             theLocation.mTile = (theChokePoints[theIndex])->GetRandomPoint();
             theStep = "choke";
@@ -1997,7 +1997,7 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
             gContinentManager.GetChokePoints(theChokePoints, 0, true);
             if (theChokePoints.size() != 0) {
                 long theIndex = gPhysics->GetRandom(0L, (long)theChokePoints.size() - 1);
-                theLocation.mSerial = (theChokePoints[theIndex])->mSerial;
+                theLocation.mSerial = (theChokePoints[theIndex])->GetSerial();
                 theLocation.mType = kAIAreaChokePoint;
                 theLocation.mTile = (theChokePoints[theIndex])->GetRandomPoint();
                 theStep = "choke_any";
@@ -2017,7 +2017,7 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
                 if (thePending)
                     thePending->mSubGroupIDs.push_back(inSubGroup->mID);
                 inSubGroup->mMission = 3;
-                theLocation.mSerial = theTown->mSerial;
+                theLocation.mSerial = theTown->GetSerial();
                 theLocation.mType = kAIAreaTown;
                 theLocation.mTile = theTown->GetRandomPoint();
                 theStep = "town";
@@ -2035,7 +2035,7 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
     if (!outTask.mIsActive) {
         EEAIContinent* theContinent = gContinentManager.mContinents[theContinentID];
         if (theContinent) {
-            theLocation.mSerial = theContinent->mSerial;
+            theLocation.mSerial = theContinent->GetSerial();
             theLocation.mType = kAIAreaContinent;
             theLocation.mTile = theContinent->GetRandomPoint();
             outTask.mLocation = theLocation;

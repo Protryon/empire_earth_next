@@ -99,6 +99,7 @@ mod sys {
         pub fn PlatFindFirst(pattern: *const c_char, out: *mut PlatFindData) -> *mut c_void;
         pub fn PlatFindNext(find: *mut c_void, out: *mut PlatFindData) -> c_int;
         pub fn PlatFindClose(find: *mut c_void);
+        pub fn PlatGetCurrentDirectory(path: *mut c_char, size: u32) -> u32;
         pub fn fclose(stream: *mut c_void) -> c_int;
     }
 }
@@ -1005,6 +1006,66 @@ pub unsafe extern "C" fn ee_fs_spec_write(
 pub unsafe extern "C" fn ee_fs_spec_write_value(s: *const EeFsSpec, data: *const u8, size: c_ulong) -> c_long {
     let mut written: c_ulong = 0;
     ee_fs_spec_write(s, data, size, &mut written)
+}
+
+// ------------------------------------------------------------------------------------------- File System.cpp
+
+/// `FSGetVolumeAndDirectory`: the path's volume (its first two bytes, or a UNC `\\server` up to the next
+/// backslash) and directory (the rest, with a backslash added) into `out`'s volume and directory.
+///
+/// # Safety
+/// `in_path` is a live `UString` record, `out` a live spec.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_volume_and_directory(in_path: *const EeFsString, out: *mut EeFsSpec) {
+    let p = &*in_path;
+    let mut volume = EeFsString::with_capacity(256);
+    let mut directory = EeFsString::with_capacity(256);
+    assign_substring(&mut volume, p, 0, 2);
+    if !equals(&volume, b"\\\\") {
+        assign_substring(&mut directory, p, 2, p.length.wrapping_sub(2));
+    } else {
+        let offset = ee_ustring::ee_ustring_find(p.usc(), c"\\".as_ptr(), 1, 2, false);
+        assign_substring(&mut volume, p, 0, offset);
+        assign_substring(&mut directory, p, offset, p.length.wrapping_sub(offset));
+    }
+    ee_ustring_append_text(directory.us(), c"\\".as_ptr());
+    ee_ustring_assign((*out).volume.us(), volume.usc());
+    ee_ustring_assign((*out).directory.us(), directory.usc());
+    ee_ustring_free(volume.us());
+    ee_ustring_free(directory.us());
+}
+
+/// `FSInitialize`: the startup volume and directory (upper case) from the path, or from the current directory when
+/// the path is empty or not a directory.
+///
+/// # Safety
+/// `in_path` is a live `UString` record; `startup_volume`/`startup_directory` the live `gStartupVolume` and
+/// `gStartupDirectory`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_initialize(
+    in_path: *const EeFsString,
+    startup_volume: *mut EeFsString,
+    startup_directory: *mut EeFsString,
+) {
+    let mut current = [0u8; MAX_PATH as usize];
+    let mut spec = TempSpec::new();
+    ee_fs_spec_init(&mut spec.0, startup_volume, startup_directory);
+    let mut path = EeFsString::with_capacity(MAX_PATH);
+    let mut found = false;
+    if (*in_path).length > 0 {
+        ee_fs_volume_and_directory(in_path, &mut spec.0);
+        found = ee_fs_spec_is_directory(&spec.0);
+    }
+    if !found {
+        PlatGetCurrentDirectory(current.as_mut_ptr().cast(), MAX_PATH as u32);
+        ee_ustring_assign_text(path.us(), current.as_ptr().cast());
+        ee_fs_volume_and_directory(&path, &mut spec.0);
+    }
+    ee_ustring_assign((*startup_volume).us(), spec.0.volume.usc());
+    ee_ustring_assign((*startup_directory).us(), spec.0.directory.usc());
+    ee_ustring::ee_ustring_change_case((*startup_volume).us(), true);
+    ee_ustring::ee_ustring_change_case((*startup_directory).us(), true);
+    ee_ustring_free(path.us());
 }
 
 #[cfg(test)]

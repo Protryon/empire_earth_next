@@ -314,6 +314,10 @@ pub const EE_WON_HOST_CORE_QUEUE: i64 = 1;
 pub const EE_WON_HOST_CORE_OP: i64 = 2;
 /// a `SocketOp`'s `EeWonSocketOp`
 pub const EE_WON_HOST_CORE_SOCKET_OP: i64 = 3;
+/// a `RustServerOp`'s Rust op (`EeWonHostOp`)
+pub const EE_WON_HOST_CORE_HOSTOP: i64 = 4;
+/// a `ServerContext`'s server list
+pub const EE_WON_HOST_CORE_CONTEXT: i64 = 5;
 
 // Socket op kinds (`EE_WON_HOST_NEW_OP`'s num0):
 /// `ConnectOp(addr)`
@@ -410,7 +414,7 @@ pub(crate) trait Plan: Send + Sized + 'static {
     }
     /// a setter by number (the value as a number, bytes, an address or an object)
     fn set(_h: &Host<Self>, _which: i32, _value: &SetValue) {}
-    /// the C++ side's `ServerOp` members the op's constructor set: (`mLengthFieldSize`, `mMaxConnectTime`,
+    /// the `ServerOp` members the op's constructor sets (hostbase.rs): (`mLengthFieldSize`, `mMaxConnectTime`,
     /// `mMaxSendTime`, `mMaxRecvTime`)
     fn setup(&self) -> (u8, [u32; 3]) {
         (4, [60000; 3])
@@ -439,18 +443,22 @@ pub(crate) struct Host<P> {
     bind: Mutex<(EeWonHostFn, usize)>,
     /// bound by the game (`ee_won_hostop_bind_native`): the calls that need no C++ object are answered here
     /// (hostnative.rs), not sent
-    native: std::sync::atomic::AtomicBool,
+    is_native: std::sync::atomic::AtomicBool,
     /// the op's file (the C++ `RustServerOp::mFile` was), for its native file calls
     file: crate::hostnative::OpFile,
+    /// a natively bound op's own objects and `ServerOp`'s members (hostbase.rs)
+    pub(crate) native: crate::hostbase::Native,
 }
 
 impl<P: Plan> Host<P> {
     pub(crate) fn new(plan: P) -> Host<P> {
+        let base = crate::hostbase::ServerBase::new(plan.setup());
         Host {
             st: Mutex::new(plan),
             bind: Mutex::new((None, 0)),
-            native: std::sync::atomic::AtomicBool::new(false),
+            is_native: std::sync::atomic::AtomicBool::new(false),
             file: crate::hostnative::OpFile::default(),
+            native: crate::hostbase::Native { own: Mutex::default(), base: Mutex::new(Some(base)) },
         }
     }
 
@@ -474,8 +482,16 @@ impl<P: Plan> Host<P> {
         // a call may re-enter the op: never under its lock
         #[cfg(test)]
         assert!(self.st.try_lock().is_ok(), "a call under the op's lock (code {code})");
-        if self.native.load(std::sync::atomic::Ordering::Relaxed) {
+        if self.is_native.load(std::sync::atomic::Ordering::Relaxed) {
+            if let Some(r) = self.answer_own(code, obj, num, data, addr) {
+                return r;
+            }
             let core = |ctx: Obj| {
+                // NULL: the op's own (`mAuthContext`, hostbase.rs)
+                let ctx = if ctx.is_none() { self.base().auth_context } else { ctx };
+                if ctx.is_none() {
+                    return None;
+                }
                 let r = self.send(EE_WON_HOST_AUTH_CORE, [ctx, Obj::none(), Obj::none()], [0, 0], &[], [0; 6]);
                 // SAFETY: the C++ side's borrowed object (its AuthContext alive: the op or the caller holds it)
                 unsafe { crate::authobj::ctx_ref(r.obj.ptr() as *const crate::authobj::EeWonAuthCtx) }
@@ -486,7 +502,7 @@ impl<P: Plan> Host<P> {
                     Obj::none()
                 } else {
                     let n = i64::from(crate::peerop::EE_WON_PEEROP_SESSION);
-                    Obj(self.send(EE_WON_HOST_HOSTOP_NUM, [obj[0], Obj::none(), Obj::none()], [n, 0], &[], [0; 6]).num
+                    Obj(self.call(EE_WON_HOST_HOSTOP_NUM, [obj[0], Obj::none(), Obj::none()], [n, 0], &[], [0; 6]).num
                         as usize)
                 };
                 return crate::hostauth::op_session(code, session);
@@ -500,8 +516,15 @@ impl<P: Plan> Host<P> {
             if let Some(r) = crate::httpcache::answer(code, obj, num, data) {
                 return r;
             }
-            let send = |c: i32, o: [Obj; 3], n: [i64; 2], d: &[u8], a: [u8; 6]| self.send(c, o, n, d, a);
+            // (a blocking call's release of its C++ op answered here too)
+            let send = |c: i32, o: [Obj; 3], n: [i64; 2], d: &[u8], a: [u8; 6]| {
+                self.answer_refs(c, o).unwrap_or_else(|| self.send(c, o, n, d, a))
+            };
             if let Some(r) = crate::hostsock::answer(code, obj, num, data, addr, &send) {
+                return r;
+            }
+            // the C++ objects' references (after the Rust handles': certificates, sessions, cache entries)
+            if let Some(r) = self.answer_refs(code, obj) {
                 return r;
             }
         }
@@ -509,6 +532,11 @@ impl<P: Plan> Host<P> {
     }
 
     /// One call sent to the C++ side.
+    /// One call to the bound function, never answered here.
+    pub(crate) fn send_raw(&self, code: i32, obj: [Obj; 3], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply {
+        self.send(code, obj, num, data, addr)
+    }
+
     fn send(&self, code: i32, obj: [Obj; 3], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply {
         let (f, host) = *self.bind.lock().unwrap_or_else(|e| e.into_inner());
         let mut out: Option<Vec<u8>> = None;
@@ -796,7 +824,9 @@ impl<P: Plan> Host<P> {
 /// The type-erased op the C++ holds.
 trait HostDyn: Send + Sync {
     fn bind(&self, f: EeWonHostFn, host: *mut c_void);
-    fn set_native(&self);
+    fn set_native(&self, own: crate::hostbase::Own);
+    fn base_get(&self, which: i32) -> i64;
+    fn base_set(&self, which: i32, num: i64, obj: Obj);
     fn call(&self, code: i32, obj: [Obj; 3], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply;
     fn run(&self);
     fn callback(&self, id: i32, op: Obj) -> bool;
@@ -805,7 +835,6 @@ trait HostDyn: Send + Sync {
     fn bytes(&self, which: i32, index: i64) -> Option<Vec<u8>>;
     fn set(&self, which: i32, value: &SetValue);
     fn describe(&self) -> String;
-    fn setup(&self) -> (u8, [u32; 3]);
     fn release_all(&self);
     fn entities(&self, which: i32, index: i64) -> Vec<crate::dir::Entity>;
 }
@@ -814,8 +843,15 @@ impl<P: Plan> HostDyn for Host<P> {
     fn bind(&self, f: EeWonHostFn, host: *mut c_void) {
         *self.bind.lock().unwrap_or_else(|e| e.into_inner()) = (f, host as usize);
     }
-    fn set_native(&self) {
-        self.native.store(true, std::sync::atomic::Ordering::Relaxed);
+    fn set_native(&self, own: crate::hostbase::Own) {
+        *self.native.own.lock().unwrap_or_else(|e| e.into_inner()) = own;
+        self.is_native.store(true, std::sync::atomic::Ordering::Relaxed);
+    }
+    fn base_get(&self, which: i32) -> i64 {
+        Host::base_get(self, which)
+    }
+    fn base_set(&self, which: i32, num: i64, obj: Obj) {
+        Host::base_set(self, which, num, obj)
     }
     fn call(&self, code: i32, obj: [Obj; 3], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply {
         Host::call(self, code, obj, num, data, addr)
@@ -841,9 +877,6 @@ impl<P: Plan> HostDyn for Host<P> {
     fn describe(&self) -> String {
         self.st().describe()
     }
-    fn setup(&self) -> (u8, [u32; 3]) {
-        self.st().setup()
-    }
     fn entities(&self, which: i32, index: i64) -> Vec<crate::dir::Entity> {
         self.st().entities(which, index)
     }
@@ -852,6 +885,7 @@ impl<P: Plan> HostDyn for Host<P> {
         for o in objs {
             self.release(o);
         }
+        self.release_base();
     }
 }
 
@@ -872,6 +906,20 @@ impl EeWonHostOp {
     pub(crate) fn bytes(&self, which: i32, index: i64) -> Option<Vec<u8>> {
         self.op.bytes(which, index)
     }
+    pub(crate) fn set(&self, which: i32, value: &SetValue) {
+        self.op.set(which, value)
+    }
+    /// One call as the op makes its own.
+    #[cfg(test)]
+    pub(crate) fn call(&self, code: i32, obj: [Obj; 3], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply {
+        self.op.call(code, obj, num, data, addr)
+    }
+    pub(crate) fn base_get(&self, which: i32) -> i64 {
+        self.op.base_get(which)
+    }
+    pub(crate) fn base_set(&self, which: i32, num: i64, obj: Obj) {
+        self.op.base_set(which, num, obj)
+    }
 }
 
 /// Binds the C++ side's function (`host` its first argument) before any other call.
@@ -886,16 +934,26 @@ pub unsafe extern "C" fn ee_won_hostop_bind(op: *const EeWonHostOp, f: EeWonHost
 
 /// Binds the game's C++ side (`RustServerOp::HostCall`): as [`ee_won_hostop_bind`], and the calls that need no
 /// C++ object (the clock, `rand`, an address resolved, the op's file, the files it measures, the web proxy host) are
-/// answered in Rust (hostnative.rs) instead of sent.
+/// answered in Rust (hostnative.rs) instead of sent; so are the op's own calls (hostbase.rs: its status and the
+/// like, `ServerOp`'s members, the tracker, its completions, references), on its own objects: `self_op` (the
+/// `AsyncOp*`), its `EeWonAsyncOp` and its tracker.
 ///
 /// # Safety
-/// `op` is a live op.
+/// `op` is a live op; `self_op`, `self_obj` and `tracker` the C++ op's own, alive as long as it.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_hostop_bind_native(op: *const EeWonHostOp, f: EeWonHostFn, host: *mut c_void) {
+pub unsafe extern "C" fn ee_won_hostop_bind_native(
+    op: *const EeWonHostOp,
+    f: EeWonHostFn,
+    host: *mut c_void,
+    self_op: *mut c_void,
+    self_obj: *const crate::opobj::EeWonAsyncOp,
+    tracker: *const crate::opobj::EeWonOpTracker,
+) {
+    let own = crate::hostbase::Own { op: self_op as usize, obj: self_obj as usize, tracker: tracker as usize };
     // SAFETY: the caller's live op
     unsafe {
         (*op).op.bind(f, host);
-        (*op).op.set_native();
+        (*op).op.set_native(own);
     }
 }
 
@@ -1034,22 +1092,6 @@ pub unsafe extern "C" fn ee_won_hostop_set(
     let v = SetValue { num, data, addr: a, obj: Obj::of(obj) };
     // SAFETY: as above
     unsafe { (*op).op.set(which, &v) }
-}
-
-/// The C++ side's `ServerOp` members the op's constructor set (`RustServerOp`'s constructor reads them): the
-/// length field size and the connect, send and receive limits.
-///
-/// # Safety
-/// `op` is a live op; `lfs` is writable, `times` three writable values.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_hostop_setup(op: *const EeWonHostOp, lfs: *mut u8, times: *mut u32) {
-    // SAFETY: as above
-    let (l, t) = unsafe { (*op).op.setup() };
-    // SAFETY: the caller's out values
-    unsafe {
-        *lfs = l;
-        std::ptr::copy_nonoverlapping(t.as_ptr(), times, 3);
-    }
 }
 
 /// The members, one line (the drivers' form).

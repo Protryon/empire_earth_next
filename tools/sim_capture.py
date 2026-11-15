@@ -86,9 +86,10 @@ SetEpoch, AdvanceEpoch, SetNodeAvailable) were recorded from the C++ before thos
 CALI (every calamity class as Initialize left it: the base fields, the effects and sounds by table index, the functor,
 the class's own numbers; once, at the calamity game's first cast) and CALK (an active calamity's out-of-sync checksum,
 its Save's bytes and the state a fresh calamity loads from them, and the contagion manager's checksum, Save bytes and
-reload; every five game minutes and whenever a calamity's time alive crosses a multiple of five seconds) are the
-calamity profile's (ee/EECalamityCapture.h), recorded from the C++ before the classes' data, Initialize, media,
-Reset and the saves moved (calamities lane, round 1; golden for seeds 2-3).
+reload; every five game minutes, at each calamity's start and whenever a calamity's time alive crosses a multiple
+of five seconds) are the calamity profile's (ee/EECalamityCapture.h), recorded from the C++ before the classes' data,
+Initialize, media, Reset and the saves moved (calamities lane, round 1; golden for seeds 2-3; the starts' records
+from the unmodified C++ of round 2).
 GetBuildTime and NeedsUnitMedia, asked from the media loader's thread too, are TNMT: their records' order and count
 depend on timing, so TNMT has no golden (TNWK was recorded again without them from the unmodified C++).
 NM** are the game messages' records (ee/EEMessageCapture.h, R5b.4): NMIM every message the game's factory builds (the
@@ -163,7 +164,15 @@ PROFILES = {
     # a retail campaign scenario per seed (SCENARIOS; EE-SIM --scenario: the lobby's Play Scenario screen), the
     # scenario manager's triggers, conditions, objects, areas and effects (SM** records; no random map runs one)
     "scenario": ["--game-seconds", "1800", "--scenario", "{scenario}"],
+    # from the Atomic Age (WW I), every five game minutes every player makes aircraft (airport, carrier and its deck
+    # walk, navy yard), submarines, sea animals and spaceships and sends them at the next player (EE-SIM
+    # --unit-sweep: no other profile steps those physics models); the map by seed (UNIT_MAPS: water or space)
+    "units": ["--difficulty", "Hard", "--game-seconds", "1500", "--cheats", "all", "--ai", "3", "--lobby", "183=#9",
+              "--map-type", "{map}", "--unit-sweep"],
 }
+
+# the units profile's map by seed (seed 2 the first): water for the ships, space for the spaceships
+UNIT_MAPS = ["Continental", "Planets Small"]
 
 # the scenario profile's games by seed (seed 2 the first): (campaign archive, scenario) of the data tree's
 # Data/Campaigns, extracted once into build/sim_capture/scenarios (retail data: never committed)
@@ -211,7 +220,8 @@ def one(name, exe, seed, data, profile="oracle"):
     capture, trace, report = d / f"capture-{seed}.bin", d / f"trace-{seed}.txt", d / f"report-{seed}.json"
     capture.unlink(missing_ok=True)
     env = dict(os.environ, EE_SIM_CAPTURE=str(capture.resolve()))
-    args =[str(scenario_file(seed, data)) if v == "{scenario}" else v for v in PROFILES[profile]]
+    args = [str(scenario_file(seed, data)) if v == "{scenario}" else UNIT_MAPS[(seed - 2) % len(UNIT_MAPS)]
+            if v == "{map}" else v for v in PROFILES[profile]]
     r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "sim.py"), "--data", data, "--slot",
                         f"capture-{name}-{seed}", "--exe", str(exe), "--", "--seed", str(seed), *args,
                         "--report", str(report), "--ai-trace", "--trace", str(trace)], cwd=ROOT, capture_output=True,

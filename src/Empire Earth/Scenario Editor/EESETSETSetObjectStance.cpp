@@ -384,7 +384,7 @@ void EESETSETTrigger::UpdateName(EESMEffect* inEffect, EESETSEffectControls* inC
         gResource->GetString(theSelection + IDS_TRIGGER_SWITCH_STATE_FIRST, theType);
         theText = "<" + theName + " " + theType + ">";
         inEffect->mName = theText;
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->mNameEditBox->SetText(theText);
+        gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetNameEditBox()->SetText(theText);
     }
 }
 

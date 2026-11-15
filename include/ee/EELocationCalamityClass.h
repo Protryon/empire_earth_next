@@ -16,6 +16,10 @@ public:
                            EEUnit* inTargetUnit);
     // +0x4c (the last slot): the shared rule with the class's own fields (ee_tech calamity_cast.rs, calamity_class.rs)
     virtual bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);
+
+    // 0xb4e74 (the volcano's; EEUCBuilding calls it): a random location of a map tile between mMinimumRadius and
+    // mMaximumRadius around inCenter, at the tile's height
+    void GetRandomLocation(const GE3DPoint& inCenter, GE3DPoint& outLocation);
 };
 
 #endif

@@ -46,11 +46,11 @@ struct UITextLabelRust {
         case EeUiOp::StringAssign: *reinterpret_cast<UWideString*>(a) = *reinterpret_cast<const UWideString*>(b); break;
         case EeUiOp::TextSetBytes: reinterpret_cast<GEText*>(a)->SetText(UWideString(reinterpret_cast<const char*>(b))); break;
         case EeUiOp::TextFontHeight: return reinterpret_cast<GEText*>(a)->GetFont()->GetHeight();
-        case EeUiOp::DrawCountDecrement: l->mDrawCount--; break;
+        case EeUiOp::DrawCountDecrement: l->UIControl::DrawTextA(); break;
         case EeUiOp::SetBgRectangle: l->SetBgRectangle(UIObjHost::Rect(f)); break;
-        case EeUiOp::RedrawIntersect: l->mForm->RedrawIntersectControls(UIObjHost::Rect(f)); break;
+        case EeUiOp::RedrawIntersect: l->GetForm()->RedrawIntersectControls(UIObjHost::Rect(f)); break;
         case EeUiOp::CreateScrollBar:
-            return (intptr_t) new UIScrollBar(l->mId, GE2DPoint(f[0], f[1]), f[2], 1, l->mForm, l->mIndex,
+            return (intptr_t) new UIScrollBar(l->GetId(), GE2DPoint(f[0], f[1]), f[2], 1, l->GetForm(), l->GetIndex(),
                                               l->GetBorderThickness());
         case EeUiOp::BarSetRange: theBar->SetRange(0, (unsigned long)b); break;
         case EeUiOp::BarSetPageSize: theBar->SetPageSize((unsigned long)b); break;
@@ -98,7 +98,7 @@ UITextLabel::UITextLabel(const UWideString& inText, GEFont* inFont, unsigned lon
                          unsigned long inBorderThickness)
     : UIControl(kControlTypeTextLabel, inId, inRectangle, inForm, inIndex, inBorderThickness)
 {
-    this->mBorderType = 0;
+    this->SetBorderType(0);
     float f[4];
     UIObjHost::PutRect(f, inRectangle);
     this->mRust = ee_ui_label_new(this, UITextLabelRust::Op, f, inFont, inLabelType, inBorderThickness);

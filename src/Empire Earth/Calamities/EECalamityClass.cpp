@@ -27,6 +27,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEAreaEffect.h"
+#include "ee/EEAreaUtilities.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -40,25 +41,6 @@
 #include "ee/EEGlobalCalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
-#include "ee/EECCAreaEffect.h"
-#include "ee/EECCAEExtraDamage.h"
-#include "ee/EECCAEMindControl.h"
-#include "ee/EECCCloaking.h"
-#include "ee/EECCConscription.h"
-#include "ee/EECCDropObject.h"
-#include "ee/EECCEarthquake.h"
-#include "ee/EECCFire.h"
-#include "ee/EECCHurricane.h"
-#include "ee/EECCLeprosy.h"
-#include "ee/EECCLogicBomb.h"
-#include "ee/EECCMeteorStorm.h"
-#include "ee/EECCMorale.h"
-#include "ee/EECCPlague.h"
-#include "ee/EECCSpecialAttack.h"
-#include "ee/EECCSpecialLocation.h"
-#include "ee/EECCTeleport.h"
-#include "ee/EECCTimeWarp.h"
-#include "ee/EECCVolcano.h"
 
 static_assert(sizeof(EECalamityData) == sizeof(EeCalamityData), "the db record as ee_tech reads it");
 
@@ -143,30 +125,9 @@ void EECalamityClass::Initialize(EECalamityData* inData)
     EeCalamityClassMedia theMedia;
     this->GetMedia(theMedia);
     ee_calamity_class_fill(this, theData, &theMedia);
-    long theMode = this->mIsBlockedByImmunity ? 2 : 3;
-    switch (ee_calamity_class_functor_kind(inData->mClassEnum)) {
-    case EE_CALAMITY_FUNCTOR_AREA:
-        this->mFunctor = new EEAreaEffectFunctor(this->mGraphicEffect2, this->mGraphicEffect3, this->mDamageFactor,
-                                                 this->mSpreadTime, this->GetUnitSet(), theMode);
-        break;
-    case EE_CALAMITY_FUNCTOR_EXTRA_DAMAGE:
-        this->mFunctor = new EEAEExtraDamageFunctor(this->GetUnitSet(), theMode, this->mFunctorFlag);
-        break;
-    case EE_CALAMITY_FUNCTOR_MIND_CONTROL:
-        this->mFunctor = new EEAEMindControlFunctor(this->mGraphicEffect3, this->GetUnitSet(), theMode);
-        break;
-    case EE_CALAMITY_FUNCTOR_FIRE:
-        this->mFunctor = new EEFireFunctor(this->mGraphicEffect2, this->mBurn, this->mRadius, this->mChance, this->mDamage,
-                                           this->mSpreadTime, this->GetUnitSet(), theMode);
-        break;
-    case EE_CALAMITY_FUNCTOR_LEPROSY:
-        this->mFunctor = new EELeprosyFunctor(this->mDamage, this->mSpreadTime, this->GetUnitSet(), theMode);
-        break;
-    case EE_CALAMITY_FUNCTOR_PLAGUE:
-        this->mFunctor = new EEPlagueFunctor(this->mRadius, this->mChance, this->mDamage, this->mSpreadTime,
-                                             this->GetUnitSet(), theMode);
-        break;
-    }
+    uint32_t theKind = ee_calamity_class_functor_kind(inData->mClassEnum);
+    if (theKind != EE_CALAMITY_FUNCTOR_NONE)
+        this->mFunctor = new EEContagionFunctor(this, theKind);
 }
 
 // New (port): the class's effects (whether set, duration, size, delay) and sounds for the Rust tables
@@ -189,49 +150,15 @@ void EECalamityClass::GetMedia(EeCalamityClassMedia& outMedia)
         outMedia.present |= EE_CALAMITY_MEDIA_SECONDARY_SOUND;
 }
 
-namespace {
-
-// each class's own steps of its Rust Start/Stop (EeCalamityOp::ClassStep) and update (ee/EECalamityUpdate.h)
-void ClassSteps(long inClassEnum, EECalamityStepFn& outStart, EECalamityStepFn& outUpdate)
-{
-    outStart = NULL;
-    outUpdate = NULL;
-    switch (inClassEnum) {
-    case kCalamityEarthquake: outStart = &EECCEarthquake::StartStep; outUpdate = &EECCEarthquake::UpdateStep; break;
-    case kCalamityHurricane: outStart = &EECCHurricane::StartStep; outUpdate = &EECCHurricane::UpdateStep; break;
-    case kCalamityPlague: outStart = &EECCPlague::StartStep; break;
-    case kCalamityLeprosy: outStart = &EECCLeprosy::StartStep; outUpdate = &EECCLeprosy::UpdateStep; break;
-    case kCalamityVolcano: outStart = &EECCVolcano::StartStep; outUpdate = &EECCVolcano::UpdateStep; break;
-    case kCalamityFire: outStart = &EECCFire::StartStep; break;
-    case kCalamityMorale: outStart = &EECCMorale::StartStep; outUpdate = &EECCMorale::UpdateStep; break;
-    case kCalamityTimeWarp: outStart = &EECCTimeWarp::StartStep; outUpdate = &EECCTimeWarp::UpdateStep; break;
-    case kCalamityTeleport: outStart = &EECCTeleport::StartStep; outUpdate = &EECCTeleport::UpdateStep; break;
-    case kCalamityAreaEffect: outStart = &EECCAreaEffect::StartStep; outUpdate = &EECCAreaEffect::UpdateStep; break;
-    case kCalamityAEExtraDamage: outStart = &EECCAreaEffect::StartStep; outUpdate = &EECCAEExtraDamage::UpdateStep; break;
-    case kCalamitySpecialAttack: outUpdate = &EECCSpecialAttack::UpdateStep; break;
-    case kCalamityAEMindControl: outStart = &EECCAreaEffect::StartStep; outUpdate = &EECCAEMindControl::UpdateStep; break;
-    case kCalamityConscription: outStart = &EECCConscription::StartStep; break;
-    case kCalamityLogicBomb: outStart = &EECCLogicBomb::StartStep; outUpdate = &EECCLogicBomb::UpdateStep; break;
-    case kCalamityDropObject: outStart = &EECCDropObject::StartStep; break;
-    case kCalamityCloaking: outStart = &EECCCloaking::StartStep; break;
-    case kCalamityMeteorStorm: outUpdate = &EECCMeteorStorm::UpdateStep; break;
-    case kCalamitySpecialLocation: outUpdate = &EECCSpecialLocation::UpdateStep; break;
-    }
-}
-
-}   // namespace
-
 // The class's Start: its parameters and sounds (ee_tech calamity_class.rs run), the decisions in Rust (ee_tech
-// calamity_start.rs; ee/EECalamityUpdate.h), the world steps its StartStep's
+// calamity_start.rs; ee/EECalamityUpdate.h), the world steps the class's (EECalamityUpdate.cpp)
 bool EECalamityClass::Start(EECalamity* inCalamity)
 {
     EeCalamityClassMedia theMedia;
     this->GetMedia(theMedia);
     EeCalamityClassRun theRun = ee_calamity_class_run(this, &theMedia, EE_CALAMITY_RUN_START);
-    EECalamityStepFn theStart, theUpdate;
-    ClassSteps(this->mClassEnum, theStart, theUpdate);
     return EECalamityRunStart(this, inCalamity, theRun.params, (theRun.sounds & EE_CALAMITY_RUN_SOUND) ? this->mSound : NULL,
-                              (theRun.sounds & EE_CALAMITY_RUN_SECONDARY_SOUND) ? this->mSecondarySound : NULL, theStart);
+                              (theRun.sounds & EE_CALAMITY_RUN_SECONDARY_SOUND) ? this->mSecondarySound : NULL);
 }
 
 // The class's Stop (none for the classes whose Stop was empty), as Start
@@ -242,14 +169,12 @@ void EECalamityClass::Stop(EECalamity* inCalamity)
     EeCalamityClassRun theRun = ee_calamity_class_run(this, &theMedia, EE_CALAMITY_RUN_STOP);
     if (!theRun.runs)
         return;
-    EECalamityStepFn theStart, theUpdate;
-    ClassSteps(this->mClassEnum, theStart, theUpdate);
     EECalamityRunStop(this, inCalamity, theRun.params, (theRun.sounds & EE_CALAMITY_RUN_SOUND) ? this->mSound : NULL,
-                      (theRun.sounds & EE_CALAMITY_RUN_SECONDARY_SOUND) ? this->mSecondarySound : NULL, theStart);
+                      (theRun.sounds & EE_CALAMITY_RUN_SECONDARY_SOUND) ? this->mSecondarySound : NULL);
 }
 
 // The class's Update: its parameters (ee_tech calamity_class.rs run; the game variant's earthquake damage factor),
-// the update in Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h), the world steps its UpdateStep's; 7 once
+// the update in Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h), the class's world steps; 7 once
 // the calamity is over
 long EECalamityClass::Update(EECalamity* inCalamity, float inElapsedTime)
 {
@@ -257,11 +182,9 @@ long EECalamityClass::Update(EECalamity* inCalamity, float inElapsedTime)
     this->GetMedia(theMedia);
     theMedia.quake_damage_factor = EEGameVariant::GetGameVariant(::gWorld.mGameOptions.mVariant)->GetEarthquakeDamageFactor();
     EeCalamityClassRun theRun = ee_calamity_class_run(this, &theMedia, EE_CALAMITY_RUN_UPDATE);
-    EECalamityStepFn theStart, theUpdate;
-    ClassSteps(this->mClassEnum, theStart, theUpdate);
     return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theRun.params,
                                (theRun.sounds & EE_CALAMITY_RUN_SOUND) ? this->mSound : NULL,
-                               (theRun.sounds & EE_CALAMITY_RUN_SECONDARY_SOUND) ? this->mSecondarySound : NULL, theUpdate);
+                               (theRun.sounds & EE_CALAMITY_RUN_SECONDARY_SOUND) ? this->mSecondarySound : NULL);
 }
 
 // The class's Reset of a new calamity: its placeholders (ee_tech calamity_class.rs reset), the time warp's target
@@ -408,10 +331,23 @@ void EECalamityClass::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
     MediaSteps(this, EE_CALAMITY_MEDIA_LOAD, inPlayer, inIsOnDemand);
 }
 
-// ICF-FOLDED: EXE 0x6907a3
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
-void EECalamityClass::Place(class EEUnit *,unsigned long,unsigned long)
+// ICF-FOLDED: EXE 0x6907a3 (the base's empty body); EECCVolcano::Place 0xb5137
+// The volcano makes units step aside from its site at the tile; nothing for the other classes
+void EECalamityClass::Place(EEUnit* inUnit, unsigned long inX, unsigned long inY)
 {
+    if (this->mClassEnum != kCalamityVolcano)
+        return;
+    EETileCoordinate theTile(inX, inY);
+    EEStepAsideFromSite(NULL, gUnitClassTable[this->mUnitClassIndex], inUnit->mPlayer, theTile, 1);
+}
+
+// FUNCTION: EXE 0x4b0e20
+// Returns the game variant with the given index
+// Probably inline in the real header (an out-of-line COMDAT right after its first user, EECCEarthquake's Update);
+// defined here, with the earthquake's update parameters (Update above)
+EEGameVariant* EEGameVariant::GetGameVariant(long inIndex)
+{
+    return gGameVariants[inIndex];
 }
 
 // (the base's: every class's own, by tables keyed by its enum)

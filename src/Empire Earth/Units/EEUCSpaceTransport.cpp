@@ -118,12 +118,12 @@ bool EEUCSpaceTransport::CanUnloadAt(EEComplexUnit* inTransport, long inX, long 
                 // the base class decides; a continent of another kind keeps its answer
                 theResult = EEUCTransport::CanUnloadAt(inTransport, inX, inY);
                 if (theResult) {
-                    if (theFrom->mCategory == kContinentCategoryLand) {
-                        unsigned short theToID = theTo->mID;
-                        unsigned short theFromID = theFrom->mID;
+                    if (theFrom->GetCategory() == kContinentCategoryLand) {
+                        unsigned short theToID = theTo->GetID();
+                        unsigned short theFromID = theFrom->GetID();
                         theResult = this->ContinentsConnect(theFromID, theToID);
-                    } else if (theFrom->mCategory == kContinentCategorySpace)
-                        theResult = gContinentManager.mTileFlags[theFrom->mID * gContinentManager.mFlagsWidth + theTo->mID];
+                    } else if (theFrom->GetCategory() == kContinentCategorySpace)
+                        theResult = gContinentManager.mTileFlags[theFrom->GetID() * gContinentManager.mFlagsWidth + theTo->GetID()];
                 }
             }
         }
@@ -144,7 +144,7 @@ bool EEUCTransport::ContinentsConnect(unsigned short inFrom, unsigned short inTo
             EEAIContinent* theContinent = gContinentManager.mContinents[theIDs[i]];
             if (theContinent != NULL
                 && (theIDs[i] == inTo
-                    || (theContinent->mCategory != kContinentCategoryCliff
+                    || (theContinent->GetCategory() != kContinentCategoryCliff
                         && gContinentManager.mTileFlags[inTo * gContinentManager.mFlagsWidth + theIDs[i]] != 0)))
                 theResult = true;
             else

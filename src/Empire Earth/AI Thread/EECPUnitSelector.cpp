@@ -972,7 +972,7 @@ void EECPUnitSelector::ComputeDomainShares(EECPUnitSelectionGroup* inGroup)
                 calculate=false;
                 if(!player->GetTownList().empty()) {
                     EEAIContinent* continent=gContinentManager.GetContinentAt(inGroup->mTask.mLocation.mTile.GetX(),inGroup->mTask.mLocation.mTile.mY);
-                    if(continent->mID==player->mTowns.back()->mContinent && continent->mCategory!=kContinentCategorySpace) calculate=true;
+                    if(continent->GetID()==player->mTowns.back()->mContinent && continent->GetCategory()!=kContinentCategorySpace) calculate=true;
                 }
             }
             if(calculate) {

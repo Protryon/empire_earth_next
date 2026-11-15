@@ -2605,10 +2605,10 @@ static int LuaWaterSites(lua_State* L)
     EEAIContinent* theWater = theWaterID != 0 ? gContinentManager.GetContinentFromID(theWaterID) : NULL;
     EEAIContinent* theLand = gContinentManager.GetContinentAt(x, y);
     if (theWater == NULL || theLand == NULL
-        || !gContinentManager.mTileFlags[theWaterID * gContinentManager.mFlagsWidth + theLand->mID])
+        || !gContinentManager.mTileFlags[theWaterID * gContinentManager.mFlagsWidth + theLand->GetID()])
         return 1;
     std::vector<U2DPoint<long> > theShore;
-    theWater->GetShoreNextTo(theLand->mID, theShore);
+    theWater->GetShoreNextTo(theLand->GetID(), theShore);
     EECPUnitsCharge(L, (int64_t)theShore.size() * 9 * kCostScan);
     std::vector<U2DPoint<long> > theTiles;
     theTiles.reserve(theShore.size() * 9);
@@ -2841,9 +2841,9 @@ static int LuaArea(lua_State* L)
     if (theArea == NULL)
         return 0;
     lua_createtable(L, 0, 3);
-    EECPUnitsSetInt(L, "id", (long)theArea->mID);
-    EECPUnitsSetInt(L, "category", (long)theArea->mCategory);
-    EECPUnitsSetInt(L, "tiles", (long)theArea->mTiles.Size());
+    EECPUnitsSetInt(L, "id", (long)theArea->GetID());
+    EECPUnitsSetInt(L, "category", (long)theArea->GetCategory());
+    EECPUnitsSetInt(L, "tiles", (long)theArea->GetNumTiles());
     return 1;
 }
 
@@ -2867,14 +2867,14 @@ static int LuaForestPoint(lua_State* L)
         return 0;
     U2DPoint<long> theFrom(x, y);
     std::vector<EEAIForest*> theForests;
-    for (size_t i = 0; i < theLand->mForestIDs.size(); i++) {
-        unsigned short theID = theLand->mForestIDs[i];
+    for (size_t i = 0; i < theLand->GetForestIDs().size(); i++) {
+        unsigned short theID = theLand->GetForestIDs()[i];
         EEAIForest* theForest = theID < gContinentManager.mForests.size() ? gContinentManager.mForests[theID] : NULL;
-        if (theForest != NULL && (theForest->mHull.BoundedContains(theFrom)
+        if (theForest != NULL && (theForest->HullContains(theFrom)
                 || theForest->GetClosestHullPoint(theFrom).DistanceToSquared(theFrom) <= r * r))
             theForests.push_back(theForest);
     }
-    EECPUnitsCharge(L, (int64_t)theLand->mForestIDs.size() * kCostScan * 4);
+    EECPUnitsCharge(L, (int64_t)theLand->GetForestIDs().size() * kCostScan * 4);
     if (theForests.empty())
         return 0;
     long thePick = (long)(lua_tointeger(L, 4) % (lua_Integer)theForests.size());
@@ -2882,9 +2882,9 @@ static int LuaForestPoint(lua_State* L)
         thePick += (long)theForests.size();
     URandom theRandom((unsigned long)lua_tointeger(L, 5));
     EEAIForest* theForest = theForests[thePick];
-    if (!(theForest->mTiles.Size() > 0))
+    if (!(theForest->GetNumTiles() > 0))
         return 0;
-    U2DPoint<long> thePoint = theForest->mTiles.GetRandomPoint(theRandom);
+    U2DPoint<long> thePoint = theForest->GetTileSet().GetRandomPoint(theRandom);
     lua_pushinteger(L, (lua_Integer)thePoint.mX);
     lua_pushinteger(L, (lua_Integer)thePoint.mY);
     lua_pushinteger(L, (lua_Integer)theForests.size());
@@ -2909,24 +2909,24 @@ static int LuaHillPoint(lua_State* L)
         return 0;
     U2DPoint<long> theFrom(x, y);
     std::vector<EEAIHill*> theHills;
-    for (size_t i = 0; i < theLand->mHillIDs.size(); i++) {
-        unsigned short theID = theLand->mHillIDs[i];
+    for (size_t i = 0; i < theLand->GetHillIDs().size(); i++) {
+        unsigned short theID = theLand->GetHillIDs()[i];
         EEAIHill* theHill = theID < gContinentManager.mHills.size() ? gContinentManager.mHills[theID] : NULL;
-        if (theHill != NULL && (theHill->mHull.BoundedContains(theFrom)
+        if (theHill != NULL && (theHill->HullContains(theFrom)
                 || theHill->GetClosestHullPoint(theFrom).DistanceToSquared(theFrom) <= r * r))
             theHills.push_back(theHill);
     }
-    EECPUnitsCharge(L, (int64_t)theLand->mHillIDs.size() * kCostScan * 4);
+    EECPUnitsCharge(L, (int64_t)theLand->GetHillIDs().size() * kCostScan * 4);
     if (theHills.empty())
         return 0;
     long thePick = (long)(lua_tointeger(L, 4) % (lua_Integer)theHills.size());
     if (thePick < 0)
         thePick += (long)theHills.size();
     EEAIHill* theHill = theHills[thePick];
-    if (!(theHill->mTiles.Size() > 0))
+    if (!(theHill->GetNumTiles() > 0))
         return 0;
     URandom theRandom((unsigned long)lua_tointeger(L, 5));
-    U2DPoint<long> thePoint = theHill->mTiles.GetRandomPoint(theRandom);
+    U2DPoint<long> thePoint = theHill->GetTileSet().GetRandomPoint(theRandom);
     lua_pushinteger(L, (lua_Integer)thePoint.mX);
     lua_pushinteger(L, (lua_Integer)thePoint.mY);
     lua_pushinteger(L, (lua_Integer)theHills.size());
@@ -3074,7 +3074,7 @@ static int LuaChokePoint(lua_State* L)
     if (theLand == NULL)
         return 0;
     std::vector<EEAIChokePoint*> theChokePoints;
-    gContinentManager.GetChokePoints(theChokePoints, theLand->mID, false);
+    gContinentManager.GetChokePoints(theChokePoints, theLand->GetID(), false);
     EECPUnitsCharge(L, (int64_t)theChokePoints.size() * kCostScan * 4);
     long theTotal = (long)theChokePoints.size();
     if (theChokePoints.empty())
@@ -3096,10 +3096,10 @@ static int LuaChokePoint(lua_State* L)
     if (thePick < 0)
         thePick += (long)theChokePoints.size();
     EEAIChokePoint* theChoke = theChokePoints[thePick];
-    if (!(theChoke->mTiles.Size() > 0))
+    if (!(theChoke->GetNumTiles() > 0))
         return 0;
     URandom theRandom((unsigned long)lua_tointeger(L, 5));
-    U2DPoint<long> thePoint = theChoke->mTiles.GetRandomPoint(theRandom);
+    U2DPoint<long> thePoint = theChoke->GetTileSet().GetRandomPoint(theRandom);
     lua_pushinteger(L, (lua_Integer)thePoint.mX);
     lua_pushinteger(L, (lua_Integer)thePoint.mY);
     lua_pushinteger(L, (lua_Integer)theTotal);
@@ -3117,10 +3117,10 @@ static int LuaAreaPoint(lua_State* L)
     if (theID <= 0 || (size_t)theID >= gContinentManager.mContinents.size())
         return 0;
     EEAIContinent* theArea = gContinentManager.GetContinentByID((unsigned short)theID);
-    if (theArea == NULL || !(theArea->mTiles.Size() > 0))
+    if (theArea == NULL || !(theArea->GetNumTiles() > 0))
         return 0;
     URandom theRandom((unsigned long)lua_tointeger(L, 2));
-    U2DPoint<long> thePoint = theArea->mTiles.GetRandomPoint(theRandom);
+    U2DPoint<long> thePoint = theArea->GetTileSet().GetRandomPoint(theRandom);
     lua_pushinteger(L, (lua_Integer)thePoint.mX);
     lua_pushinteger(L, (lua_Integer)thePoint.mY);
     return 2;

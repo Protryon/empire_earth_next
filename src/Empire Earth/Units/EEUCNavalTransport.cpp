@@ -110,12 +110,12 @@ bool EEUCNavalTransport::CanUnloadAt(EEComplexUnit* inTransport, long inX, long 
                 // the base class decides; a continent of another kind keeps its answer
                 theResult = EEUCTransport::CanUnloadAt(inTransport, inX, inY);
                 if (theResult) {
-                    if (theFrom->mCategory == kContinentCategoryLand) {
-                        unsigned short theToID = theTo->mID;
-                        unsigned short theFromID = theFrom->mID;
+                    if (theFrom->GetCategory() == kContinentCategoryLand) {
+                        unsigned short theToID = theTo->GetID();
+                        unsigned short theFromID = theFrom->GetID();
                         theResult = this->ContinentsConnect(theFromID, theToID);
-                    } else if (theFrom->mCategory == kContinentCategoryWater)
-                        theResult = gContinentManager.mTileFlags[theFrom->mID * gContinentManager.mFlagsWidth + theTo->mID];
+                    } else if (theFrom->GetCategory() == kContinentCategoryWater)
+                        theResult = gContinentManager.mTileFlags[theFrom->GetID() * gContinentManager.mFlagsWidth + theTo->GetID()];
                 }
             }
         }

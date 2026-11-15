@@ -393,7 +393,7 @@ EETileCoordinate EEUnit::FindAreaTile(bool inFlag, long inRange)
     theTile.mX = this->mTileX;
     theTile.mY = this->mTileY;
     long theSize = this->mUnitClass->mTileSize;
-    if (theSize > 1 && (theContinent == NULL || theContinent->mCategory != inFlag)) {
+    if (theSize > 1 && (theContinent == NULL || theContinent->GetCategory() != inFlag)) {
         long theEndY = this->mTileY + theSize + inRange;
         long theEndX = this->mTileX + theSize + inRange;
         for (long theX = this->mTileX - inRange; theX < theEndX; theX++) {
@@ -402,7 +402,7 @@ EETileCoordinate EEUnit::FindAreaTile(bool inFlag, long inRange)
                     continue;
                 unsigned short theID = gContinentManager.GetContinentID(theX, theY);
                 EEAIContinent* theOther = theID ? gContinentManager.GetContinentByID(theID) : NULL;
-                if (theOther == NULL || theOther->mCategory != inFlag)
+                if (theOther == NULL || theOther->GetCategory() != inFlag)
                     continue;
                 theTile.mX = theX;
                 theTile.mY = theY;
@@ -835,8 +835,8 @@ void EEUnit::RegrowForest(EEComplexUnit* inUnit)
     EEAIForest* theForest = gContinentManager.GetForestAt(this);
     long theCount = 3;
     long theRadius = 3;
-    if (theForest == NULL || !(theForest->mNextRenewal <= gPhysics->mGameTime) ||
-        !(theForest->mTiles.Size() > 1))
+    if (theForest == NULL || !(theForest->GetNextRenewal() <= gPhysics->mGameTime) ||
+        !(theForest->GetNumTiles() > 1))
         return;
     if (inUnit != NULL &&
         (inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen || inUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen)) {
@@ -846,7 +846,7 @@ void EEUnit::RegrowForest(EEComplexUnit* inUnit)
     U2DPoint<long> theTile(this->mTileX, this->mTileY);
     theForest->RegrowTrees(theTile, theRadius, theCount);
     long theTime = gPhysics->mGameTime;
-    theForest->mNextRenewal = theTime + gPhysics->GetRandom(125000L, 275000L);
+    theForest->SetNextRenewal(theTime + gPhysics->GetRandom(125000L, 275000L));
 }
 
 // FUNCTION: EXE 0x62a4c3

@@ -55,7 +55,7 @@ long UIBitmap::CopyData()
         this->mCopiedBitmap->Dereference();
     if (this->mBitmap) {
         this->mCopiedBitmap = this->mBitmap;
-        this->mLocation = this->mRectangle.GetTopLeft();
+        this->mLocation = this->GetRectangle().GetTopLeft();
     } else
         this->mCopiedBitmap = NULL;
     if (this->mCopiedBitmap)

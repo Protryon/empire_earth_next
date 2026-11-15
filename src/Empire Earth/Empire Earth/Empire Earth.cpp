@@ -1795,7 +1795,7 @@ void EEEmptyShutdown(bool inShutdown)
 // (no direct caller: registered as a shutdown routine)
 void EEDeleteSoundManager(bool inShutdown)
 {
-    delete gSoundManager;
+    SESoundManager::Destroy(gSoundManager);
     gSoundManager = NULL;
     SESoundManager::DumpMemoryPoolInfo();
     SESoundManager::CleanupMemoryPoolAndDestroyCriticalSections();
@@ -2601,7 +2601,7 @@ bool EEInitializeSounds()
     sprintf(theMusicDirectory, "%s%s%s", (const char*)gStartupVolume, (const char*)gStartupDirectory, "Data\\Music\\");
     theResult = gConductor->GetConductor().SetMusicFolder(theMusicDirectory);
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x7a4, "theResult == keseOK");
-    gSoundManager = new SESoundManager(gDataPath, gConductor, 50, 0);
+    gSoundManager = SESoundManager::Create(gDataPath, gConductor, 50, 0);
     if (gSoundManager == NULL) ESVerify(__FILE__, 0x7a8, "gSoundManager");
     float theChannels = (float)gSoundManager->GetMaxChannels() * gGamePreferences.mSettings.GetMaxNumberOfSounds();
     unsigned long theMaximum = UMFloatToLong(theChannels);

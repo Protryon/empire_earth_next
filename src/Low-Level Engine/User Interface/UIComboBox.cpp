@@ -214,7 +214,7 @@ UIComboBox::UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vec
     UITextLabel* theLabel = NULL;
     UIEditBox* theEdit = NULL;
     UIControl* theTextBox;
-    theRectangle = Rust::R(ee_ui_combo_drop_rect(Rust::R(this->mRectangle), Rust::R(inRectangle)));
+    theRectangle = Rust::R(ee_ui_combo_drop_rect(Rust::R(this->GetRectangle()), Rust::R(inRectangle)));
     GEBitmap* theNormal = inForm->GetManager()->CreateBitmapForScaledControl(
         inForm->GetManager()->GetSBBitmapDownNormal(), theRectangle);
     GEBitmap* thePressed = inForm->GetManager()->CreateBitmapForScaledControl(
@@ -222,7 +222,7 @@ UIComboBox::UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vec
     UIButton* theDrop = new UIButton(this->GetId(), theNormal, NULL, thePressed, theRectangle, this->GetForm(), this->GetIndex(), 0);
     theNormal->Dereference();
     thePressed->Dereference();
-    GERectangle theTextRectangle = Rust::R(ee_ui_combo_text_rect(Rust::R(this->mRectangle), Rust::R(inRectangle), theDrop->GetWidth()));
+    GERectangle theTextRectangle = Rust::R(ee_ui_combo_text_rect(Rust::R(this->GetRectangle()), Rust::R(inRectangle), theDrop->GetWidth()));
     if (inTextBoxType == 1) {
         theLabel = new UITextLabel(theEmpty, inFont, this->GetId(), theTextRectangle, this->GetForm(), 0, this->GetIndex(),
                                    inBorderThickness);
@@ -234,7 +234,7 @@ UIComboBox::UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vec
     }
     UILBString* theList = new UILBString(
         this->GetId(), inData, inFont, true,
-        Rust::R(ee_ui_combo_list_rect(Rust::R(this->mRectangle), theTextBox->GetRectangle().GetBottom(), inMaxListBoxHeight)),
+        Rust::R(ee_ui_combo_list_rect(Rust::R(this->GetRectangle()), theTextBox->GetRectangle().GetBottom(), inMaxListBoxHeight)),
         this->GetForm(), this->GetIndex(), inBorderThickness);
     // the focus highlight takes the list's selection colour; the first line is selected when there is one
     theList->GetSelectedBackground()->GetColorPerVertex(theColor, theColor, theColor, theColor);

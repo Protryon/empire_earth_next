@@ -10,6 +10,8 @@
 //! - `codec`: plain values in, bytes out, and bytes in, member spans out;
 //! - `units`: `CompressUnits`/`DecompressUnits`;
 //! - `records`: the message types without a C++ class of their own (`EEMRecord`): layout, flags, labels;
+//! - `ne_records`: the engine messages as one data class (`NEMRecord`): layout, flags, responses, labels; the
+//!   factory's builders by type;
 //! - `execute`: the `Execute` bodies' decisions (the selection id check, the resources), with their C ABI;
 //! - `ffi`: the C ABI.
 
@@ -18,6 +20,7 @@ pub mod codec;
 pub mod engine;
 pub mod execute;
 pub mod ffi;
+pub mod ne_records;
 pub mod records;
 pub mod schema;
 pub mod units;
