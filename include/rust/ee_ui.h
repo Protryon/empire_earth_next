@@ -2979,6 +2979,14 @@ ptrdiff_t ee_ui_control_call(EeUiControlFields *rec,
                              ptrdiff_t b,
                              float *f);
 
+/// `UIBackground`'s constructor's step: the background `cpp` (the `UIBackground*` the forms hold; its record's own
+/// host object is the record) has the record `rec`.
+///
+/// # Safety
+/// `rec` is the live record of `cpp`.
+void ee_ui_direct_background(EeUiBackgroundFields *rec,
+                             void *cpp);
+
 /// A new Rust edit box for the C++ `edit` (its `UIControl` part constructed): `flags` bit 0 numbers only, bit 1
 /// multi-line, bit 2 a password box.
 ///

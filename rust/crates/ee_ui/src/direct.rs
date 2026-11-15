@@ -117,6 +117,16 @@ pub fn find(kind: Kind, cpp: *const c_void) -> *mut c_void {
     registry().by_cpp.get(&(cpp as usize, kind)).map_or(core::ptr::null_mut(), |&o| o as *mut c_void)
 }
 
+/// `UIBackground`'s constructor's step: the background `cpp` (the `UIBackground*` the forms hold; its record's own
+/// host object is the record) has the record `rec`.
+///
+/// # Safety
+/// `rec` is the live record of `cpp`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_direct_background(rec: *mut EeUiBackgroundFields, cpp: *mut c_void) {
+    put(Kind::Background, cpp, rec as *const c_void);
+}
+
 /// The manager a call on `form` uses: the form's (`GetManager()`), the game's for no form.
 pub fn manager_of(form: Cpp) -> Cpp {
     if form.is_null() {

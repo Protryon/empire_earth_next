@@ -749,7 +749,6 @@ pub unsafe extern "C" fn ee_ui_bg_init(
 ) {
     // SAFETY: the contract
     unsafe { Bg::new(rec).init(cpp, host, id, *layout, form, priority, visible) }
-    crate::direct::put(crate::direct::Kind::Background, cpp, rec as *const c_void);
 }
 
 /// `UITextureBackground`'s constructor: the texture's rectangle (four floats), description and NUL-terminated name.

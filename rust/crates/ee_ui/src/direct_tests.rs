@@ -77,3 +77,15 @@ fn texts() {
     // SAFETY: NULL
     assert!(unsafe { c_bytes(core::ptr::null()) }.is_empty());
 }
+
+#[test]
+fn a_background_is_found_by_its_cpp_pointer_not_its_record() {
+    // the record is a base of the C++ background at another address; the constructor names both
+    let (rec, cpp) = (0x7a00usize as *mut EeUiBackgroundFields, p(0x79f8));
+    // SAFETY: only recorded, never dereferenced
+    unsafe { ee_ui_direct_background(rec, cpp) };
+    assert_eq!(find(Kind::Background, cpp), rec as *mut c_void);
+    assert!(find(Kind::Background, rec as *const c_void).is_null());
+    forget(Kind::Background, rec as *const c_void);
+    assert!(find(Kind::Background, cpp).is_null());
+}
