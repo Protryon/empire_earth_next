@@ -890,6 +890,9 @@ enum class EeTechTreeOp : int32_t {
   BuildUnitClassInfo = 14,
 };
 
+/// The running state: the units' effects and the active list.
+struct EeAreaEffectRunning;
+
 /// The saved game's lists of a tree (`EETechTree`'s `mResearchedIDs`, `mObsoleteIDs`, `mScenEditorObsoletedIDs`,
 /// `mSavedSOLs`), applied by `ApplySavedState`.
 struct EeTechTreeSaved;
@@ -1003,6 +1006,27 @@ struct EeAreaEffectFields {
   long mCount;
   /// The morale from buildings' recount flag.
   bool mDirty;
+};
+
+/// One of a unit's own effects: its location and, for a morale from buildings, its recount flag and count.
+struct EeAreaEffectSavedOwn {
+  float mX;
+  float mY;
+  bool mIsMorale;
+  bool mDirty;
+  long mCount;
+};
+
+/// An effect as its owner unit's id (`-1`: none) and its index in the owner's own list (`-1`: not there).
+struct EeAreaEffectSavedRef {
+  unsigned long mOwner;
+  long mIndex;
+};
+
+/// The C++'s I/O callback: `call(ctx, op, value)`.
+struct EeCalamityIoFfi {
+  void *ctx;
+  long (*call)(void *ctx, uint32_t op, void *value);
 };
 
 /// A calamity class's numbers (`EECalamityClass` derives from it). The base members first, in their order.
@@ -1249,12 +1273,6 @@ struct EeCalamityFields {
   bool mInitialized;
   bool mHasTargetLocation;
   bool mHasTargetUnit;
-};
-
-/// The C++'s I/O callback: `call(ctx, op, value)`.
-struct EeCalamityIoFfi {
-  void *ctx;
-  long (*call)(void *ctx, uint32_t op, void *value);
 };
 
 /// A functor's numbers (the six classes' members, each under its C++ name; the plague's `mDamageTime` and the area
@@ -1816,6 +1834,79 @@ long ee_area_effect_checksum(const EeAreaEffectFields *e,
                              float location_x,
                              float location_y,
                              long unit_id);
+
+/// A new, empty running state (the C++ fills it, then saves and frees it).
+EeAreaEffectRunning *ee_area_effect_running_new();
+
+/// Frees a running state (NULL: nothing).
+///
+/// # Safety
+/// `r` is NULL or from [`ee_area_effect_running_new`] / [`ee_area_effect_running_load`], freed once.
+void ee_area_effect_running_free(EeAreaEffectRunning *r);
+
+/// A unit appended (its effects follow).
+///
+/// # Safety
+/// `r` valid.
+void ee_area_effect_running_add_unit(EeAreaEffectRunning *r, unsigned long id);
+
+/// One of the last unit's own effects appended.
+///
+/// # Safety
+/// `r` valid, with a unit.
+void ee_area_effect_running_add_own(EeAreaEffectRunning *r, EeAreaEffectSavedOwn own);
+
+/// An effect acting on the last unit appended (`active`: to the active list instead).
+///
+/// # Safety
+/// `r` valid (with a unit unless `active`).
+void ee_area_effect_running_add_ref(EeAreaEffectRunning *r,
+                                    EeAreaEffectSavedRef reference,
+                                    bool active);
+
+/// [`save`] of `r` over `io`.
+///
+/// # Safety
+/// `r` valid; `io`'s callback valid.
+void ee_area_effect_running_save(const EeAreaEffectRunning *r, EeCalamityIoFfi io);
+
+/// [`load`] over `io`: the result into `*result`, the state read (free it).
+///
+/// # Safety
+/// `result` valid; `io`'s callback valid.
+EeAreaEffectRunning *ee_area_effect_running_load(EeCalamityIoFfi io, long *result);
+
+/// The number of units (`unit` [`usize::MAX`]: of the active list's refs; else the unit's own effects into
+/// `*own` and its affecting refs into `*affecting`, its id returned).
+///
+/// # Safety
+/// `r` valid; `unit` below the count; `own` and `affecting` valid.
+unsigned long ee_area_effect_running_unit(const EeAreaEffectRunning *r,
+                                          size_t unit,
+                                          size_t *own,
+                                          size_t *affecting);
+
+/// The number of units saved (`active`: of the active list's refs).
+///
+/// # Safety
+/// `r` valid.
+size_t ee_area_effect_running_count(const EeAreaEffectRunning *r, bool active);
+
+/// Unit `unit`'s own effect `index`.
+///
+/// # Safety
+/// `r` valid; the indexes in range.
+EeAreaEffectSavedOwn ee_area_effect_running_own(const EeAreaEffectRunning *r,
+                                                size_t unit,
+                                                size_t index);
+
+/// Unit `unit`'s affecting ref `index` (`unit` [`usize::MAX`]: the active list's).
+///
+/// # Safety
+/// `r` valid; the indexes in range.
+EeAreaEffectSavedRef ee_area_effect_running_ref(const EeAreaEffectRunning *r,
+                                                size_t unit,
+                                                size_t index);
 
 /// [`get_mode`].
 uint32_t ee_calamity_class_get_mode(int32_t class_enum, uint32_t slot);

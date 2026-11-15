@@ -46,6 +46,7 @@
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEAECapture.h"
 #include <memory>
+#include <stdint.h>
 
 // The unit functors of the manager's passes (RTTI names; each > EEUUUnitFunctor, slot +0x04 only; their ??_G is
 // ICF-shared with EEPSuggestRecomputeAllAreaEffects's 0x16b555)
@@ -431,27 +432,29 @@ void RebuildAreaEffectRegionListFunctor::Apply(EEComplexUnit* inUnit)
 // and every unit's affecting list and the active list were empty until the next area-effect tick (up to 2 s: no
 // morale in the damage, no immunities, no cloaking). Saved: per unit, its own effects' location (and the
 // morale-from-buildings count), then the effects acting on it, each as its owner unit and index; then the active list
-// the same way. Put back at the loaded game's first tick (EEAfterLoad).
+// the same way (the record and its bytes: ee_tech area_effect_save.rs). Put back at the loaded game's first tick
+// (EEAfterLoad).
 namespace {
-struct EEAESavedRef {
-    unsigned long mOwner;                   // the owner unit's id ((unsigned long)-1: none)
-    long mIndex;                            // in the owner's mAreaEffects (-1: not there)
-};
-struct EEAESavedOwn {
-    float mX, mY;
-    bool mIsMorale;                         // an EEAEMoraleFromBuildings: mDirty, mCount
-    bool mDirty;
-    long mCount;
-};
-struct EEAESavedUnit {
-    unsigned long mID;
-    std::vector<EEAESavedOwn> mOwn;
-    std::vector<EEAESavedRef> mAffecting;
-};
-
-EEAESavedRef EEAERefOf(EEAreaEffect* inEffect)
+// FSFile's typed reads and writes for the Rust record (the calamities' I/O ops)
+long EEAEIoCall(void* inContext, uint32_t inOp, void* ioValue)
 {
-    EEAESavedRef theRef = {(unsigned long)-1, -1};
+    FSFile& theFile = *static_cast<FSFile*>(inContext);
+    switch (inOp) {
+    case EE_CALAMITY_IO_READ_ULONG: return theFile.Read(*static_cast<unsigned long*>(ioValue));
+    case EE_CALAMITY_IO_READ_LONG: return theFile.Read(*static_cast<long*>(ioValue));
+    case EE_CALAMITY_IO_READ_FLOAT: return theFile.Read(*static_cast<float*>(ioValue));
+    case EE_CALAMITY_IO_READ_BOOL: return theFile.Read(*static_cast<bool*>(ioValue));
+    case EE_CALAMITY_IO_WRITE_ULONG: return theFile.Write(*static_cast<const unsigned long*>(ioValue));
+    case EE_CALAMITY_IO_WRITE_LONG: return theFile.Write(*static_cast<const long*>(ioValue));
+    case EE_CALAMITY_IO_WRITE_FLOAT: return theFile.Write(*static_cast<const float*>(ioValue));
+    case EE_CALAMITY_IO_WRITE_BOOL: return theFile.Write(*static_cast<const bool*>(ioValue));
+    }
+    return 1;
+}
+
+EeAreaEffectSavedRef EEAERefOf(EEAreaEffect* inEffect)
+{
+    EeAreaEffectSavedRef theRef = {(unsigned long)-1, -1};
     EEComplexUnit* theOwner = inEffect->mUnit;
     if (theOwner == NULL)
         return theRef;
@@ -462,7 +465,7 @@ EEAESavedRef EEAERefOf(EEAreaEffect* inEffect)
     return theRef;
 }
 
-EEAreaEffect* EEAEEffectOf(const EEAESavedRef& inRef)
+EEAreaEffect* EEAEEffectOf(const EeAreaEffectSavedRef& inRef)
 {
     if (inRef.mIndex < 0)
         return NULL;
@@ -471,30 +474,6 @@ EEAreaEffect* EEAEEffectOf(const EEAESavedRef& inRef)
     if (theOwner == NULL || (size_t)inRef.mIndex >= theOwner->mAreaEffects.mItems.size())
         return NULL;
     return theOwner->mAreaEffects.mItems[inRef.mIndex];
-}
-
-void EEAEWriteRefs(FSFile& outFile, UReferenceContainer<EEAreaEffect*>& inList)
-{
-    outFile.Write((unsigned long)inList.mItems.size());
-    for (size_t i = 0; i < inList.mItems.size(); i++) {
-        EEAESavedRef theRef = EEAERefOf(inList.mItems[i]);
-        outFile.Write(theRef.mOwner);
-        outFile.Write(theRef.mIndex);
-    }
-}
-
-long EEAEReadRefs(FSFile& inFile, std::vector<EEAESavedRef>& outRefs)
-{
-    unsigned long theCount = 0;
-    long theResult = inFile.Read(theCount);
-    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-        EEAESavedRef theRef = {(unsigned long)-1, -1};
-        theResult = inFile.Read(theRef.mOwner);
-        if (theResult == 0)
-            theResult = inFile.Read(theRef.mIndex);
-        outRefs.push_back(theRef);
-    }
-    return theResult;
 }
 
 EEComplexUnit* EEAEComplexUnit(unsigned long inID)
@@ -506,96 +485,70 @@ EEComplexUnit* EEAEComplexUnit(unsigned long inID)
 
 void EEAESaveRunningState(FSFile& outFile)
 {
-    std::vector<EEComplexUnit*> theUnits;
+    EeAreaEffectRunning* theState = ee_area_effect_running_new();
     for (unsigned long p = 1; p < ::gWorld.mNumPlayers; p++) {
         EEPlayer* thePlayer = ::gWorld.mPlayers[p];
         if (thePlayer == NULL)
             continue;
         for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            EEComplexUnit* theComplex = theUnit->mComplexUnit;
-            if (theComplex != NULL && (theComplex->mAreaEffects.mItems.size() > 0 || theComplex->mAffectingAreaEffects.mItems.size() > 0))
-                theUnits.push_back(theComplex);
-        }
-    }
-    outFile.Write((unsigned long)theUnits.size());
-    for (size_t u = 0; u < theUnits.size(); u++) {
-        EEComplexUnit* theUnit = theUnits[u];
-        outFile.Write((unsigned long)theUnit->GetUnitID());
-        outFile.Write((unsigned long)theUnit->mAreaEffects.mItems.size());
-        for (size_t i = 0; i < theUnit->mAreaEffects.mItems.size(); i++) {
-            EEAreaEffect* theEffect = theUnit->mAreaEffects.mItems[i];
-            outFile.Write(theEffect->mLocation.mX);
-            outFile.Write(theEffect->mLocation.mY);
-            bool theIsMorale = theEffect->mKind == kAreaEffectMoraleFromBuildings;
-            outFile.Write(theIsMorale);
-            if (theIsMorale) {
-                outFile.Write(theEffect->mDirty);
-                outFile.Write(theEffect->mCount);
+            EEComplexUnit* u = theUnit->mComplexUnit;
+            if (u == NULL || (u->mAreaEffects.mItems.size() == 0 && u->mAffectingAreaEffects.mItems.size() == 0))
+                continue;
+            ee_area_effect_running_add_unit(theState, (unsigned long)u->GetUnitID());
+            for (size_t i = 0; i < u->mAreaEffects.mItems.size(); i++) {
+                EEAreaEffect* e = u->mAreaEffects.mItems[i];
+                bool theIsMorale = e->mKind == kAreaEffectMoraleFromBuildings;
+                EeAreaEffectSavedOwn theOwn = {e->mLocation.mX, e->mLocation.mY, theIsMorale, theIsMorale && e->mDirty,
+                                               theIsMorale ? e->mCount : 0};
+                ee_area_effect_running_add_own(theState, theOwn);
             }
+            for (size_t i = 0; i < u->mAffectingAreaEffects.mItems.size(); i++)
+                ee_area_effect_running_add_ref(theState, EEAERefOf(u->mAffectingAreaEffects.mItems[i]), false);
         }
-        EEAEWriteRefs(outFile, theUnit->mAffectingAreaEffects);
     }
-    EEAEWriteRefs(outFile, gAEManager.mEffects);
+    for (size_t i = 0; i < gAEManager.mEffects.mItems.size(); i++)
+        ee_area_effect_running_add_ref(theState, EEAERefOf(gAEManager.mEffects.mItems[i]), true);
+    EeCalamityIoFfi theIo = {&outFile, &EEAEIoCall};
+    ee_area_effect_running_save(theState, theIo);
+    ee_area_effect_running_free(theState);
 }
 
 long EEAELoadRunningState(FSFile& inFile)
 {
-    std::shared_ptr<std::vector<EEAESavedUnit> > theUnits = std::make_shared<std::vector<EEAESavedUnit> >();
-    std::shared_ptr<std::vector<EEAESavedRef> > theActive = std::make_shared<std::vector<EEAESavedRef> >();
-    unsigned long theCount = 0;
-    long theResult = inFile.Read(theCount);
-    for (unsigned long u = 0; u < theCount && theResult == 0; u++) {
-        EEAESavedUnit theUnit;
-        unsigned long theOwn = 0;
-        theResult = inFile.Read(theUnit.mID);
-        if (theResult == 0)
-            theResult = inFile.Read(theOwn);
-        for (unsigned long i = 0; i < theOwn && theResult == 0; i++) {
-            EEAESavedOwn theSaved = {0.0f, 0.0f, false, false, 0};
-            theResult = inFile.Read(theSaved.mX);
-            if (theResult == 0)
-                theResult = inFile.Read(theSaved.mY);
-            if (theResult == 0)
-                theResult = inFile.Read(theSaved.mIsMorale);
-            if (theResult == 0 && theSaved.mIsMorale && (theResult = inFile.Read(theSaved.mDirty)) == 0)
-                theResult = inFile.Read(theSaved.mCount);
-            theUnit.mOwn.push_back(theSaved);
-        }
-        if (theResult == 0)
-            theResult = EEAEReadRefs(inFile, theUnit.mAffecting);
-        theUnits->push_back(theUnit);
-    }
+    EeCalamityIoFfi theIo = {&inFile, &EEAEIoCall};
+    long theResult = 0;
+    std::shared_ptr<EeAreaEffectRunning> theState(ee_area_effect_running_load(theIo, &theResult),
+                                                  ee_area_effect_running_free);
     if (theResult == 0)
-        theResult = EEAEReadRefs(inFile, *theActive);
-    if (theResult == 0)
-        EEAfterLoad([theUnits, theActive]() {
+        EEAfterLoad([theState]() {
+            const EeAreaEffectRunning* s = theState.get();
             unsigned long theLost = 0;
-            for (size_t u = 0; u < theUnits->size(); u++) {
-                const EEAESavedUnit& theSaved = (*theUnits)[u];
-                EEComplexUnit* theUnit = EEAEComplexUnit(theSaved.mID);
-                if (theUnit == NULL || theUnit->mAreaEffects.mItems.size() != theSaved.mOwn.size()) {
+            size_t theUnits = ee_area_effect_running_count(s, false), theOwn = 0, theAffecting = 0;
+            for (size_t u = 0; u < theUnits; u++) {
+                EEComplexUnit* theUnit = EEAEComplexUnit(ee_area_effect_running_unit(s, u, &theOwn, &theAffecting));
+                if (theUnit == NULL || theUnit->mAreaEffects.mItems.size() != theOwn) {
                     theLost++;
                     continue;
                 }
-                for (size_t i = 0; i < theSaved.mOwn.size(); i++) {
+                for (size_t i = 0; i < theOwn; i++) {
+                    EeAreaEffectSavedOwn theSaved = ee_area_effect_running_own(s, u, i);
                     EEAreaEffect* theEffect = theUnit->mAreaEffects.mItems[i];
-                    theEffect->mLocation.mX = theSaved.mOwn[i].mX;
-                    theEffect->mLocation.mY = theSaved.mOwn[i].mY;
-                    if (theEffect->mKind == kAreaEffectMoraleFromBuildings && theSaved.mOwn[i].mIsMorale) {
-                        theEffect->mDirty = theSaved.mOwn[i].mDirty;
-                        theEffect->mCount = theSaved.mOwn[i].mCount;
+                    theEffect->mLocation.mX = theSaved.mX;
+                    theEffect->mLocation.mY = theSaved.mY;
+                    if (theEffect->mKind == kAreaEffectMoraleFromBuildings && theSaved.mIsMorale) {
+                        theEffect->mDirty = theSaved.mDirty;
+                        theEffect->mCount = theSaved.mCount;
                     }
                 }
             }
             // the effects acting on each unit (every list is empty after a load), in their saved order
-            for (size_t u = 0; u < theUnits->size(); u++) {
-                const EEAESavedUnit& theSaved = (*theUnits)[u];
-                EEComplexUnit* theUnit = EEAEComplexUnit(theSaved.mID);
+            for (size_t u = 0; u < theUnits; u++) {
+                EEComplexUnit* theUnit = EEAEComplexUnit(ee_area_effect_running_unit(s, u, &theOwn, &theAffecting));
                 if (theUnit == NULL)
                     continue;
                 theUnit->mAffectingAreaEffects.Clear();
-                for (size_t i = 0; i < theSaved.mAffecting.size(); i++) {
-                    EEAreaEffect* theEffect = EEAEEffectOf(theSaved.mAffecting[i]);
+                for (size_t i = 0; i < theAffecting; i++) {
+                    EEAreaEffect* theEffect = EEAEEffectOf(ee_area_effect_running_ref(s, u, i));
                     if (theEffect != NULL)
                         theUnit->mAffectingAreaEffects.Add(theEffect);
                     else
@@ -603,8 +556,8 @@ long EEAELoadRunningState(FSFile& inFile)
                 }
             }
             gAEManager.ClearEffects();
-            for (size_t i = 0; i < theActive->size(); i++) {
-                EEAreaEffect* theEffect = EEAEEffectOf((*theActive)[i]);
+            for (size_t i = 0; i < ee_area_effect_running_count(s, true); i++) {
+                EEAreaEffect* theEffect = EEAEEffectOf(ee_area_effect_running_ref(s, SIZE_MAX, i));
                 if (theEffect != NULL)
                     gAEManager.mEffects.Add(theEffect);
                 else
