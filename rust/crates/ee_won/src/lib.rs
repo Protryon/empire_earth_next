@@ -25,6 +25,7 @@ pub mod certhost;
 pub mod chat;
 pub mod chatobj;
 pub mod comboobj;
+pub mod compobj;
 pub mod config;
 pub mod configobj;
 pub mod cppcore;
@@ -159,6 +160,7 @@ pub mod stagingobj;
 pub mod status;
 pub mod statusstr;
 pub mod strcase;
+pub mod stretchobj;
 pub mod surface;
 pub mod tabobj;
 pub mod text;
@@ -176,6 +178,7 @@ pub mod wmcache;
 pub mod wmloop;
 pub mod wmobj;
 pub mod wonbtnobj;
+pub mod wrapobj;
 
 #[cfg(test)]
 mod buffer_golden;

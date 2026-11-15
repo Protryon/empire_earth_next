@@ -24329,3 +24329,167 @@ media strings' transfers) are a third of each moved unit.
 The editor form (`EEUIFScenarioEditor.cpp`, 1,495 lines; its members are read across 16 units: accessors first), the
 terrain tab (857, its lists draw textures), the tech list box (595), the load thread (385), the elevation tab, the
 terrain paint radios, the unit tab's small control classes, the moved screens' hosts.
+
+## R6 WON round 38: Component wholly in Rust; WrappedText and StretchImage as Rust objects; ImageComponent folded; the ComponentConfig census (ee_won compobj.rs, wrapobj.rs, stretchobj.rs; branch rust-r6-won38, 2026-11-14)
+
+Round 37 showed that deleting whole files pays and moving layouts behind hosts does not. This round deleted eight
+WONGUI units: the five Component units, WrappedText.cpp, StretchImage.cpp and ImageComponent.cpp.
+
+WON C++ (`wc -l` of every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`): 66,358 at the branch's start
+(f2e32d46) -> 65,318 before the merge of rust (net -1,040).
+
+### Component (ee_won compobj.rs)
+
+- **What it is.** The base class of every lobby control: position and size (guilayout's rules), dirty rectangles and
+  the invalid state, visibility and enabling, the focus (guifocus's rule), the timers, the events, the tool tip's
+  hover, the background grabber's hooks, the root container and window, and the extra data's cursor, listener and
+  colour scheme.
+- **The move.** Every method of Component.cpp, ComponentTraversal.cpp, ComponentDefaultHooks.cpp,
+  ComponentApiCompletion.cpp and ComponentResourceAdapters.cpp, and MSControlConstructors.cpp's `SetComponentFlags`,
+  is Rust. Those five files are deleted. Events are delivered now or queued, broadcast or bubbled to a listener, the
+  parent or the owner window's root.
+- **What the C++ keeps.** The class keeps its members, because 151 files read its bounds, flags and parent inline.
+  It also keeps its vtable. Each method is a one-line inline forwarder (`KCall`) to `ee_won_comp_call`.
+- **How the Rust works.** The Rust has no state. It reads and writes the members, makes the virtual calls and
+  calls the parent, window, event, listener and grabber through one host op, `Comp` (622; `EeWonComp`, 67 cases, in
+  ComponentLifetime.cpp). A nonvirtual method the original called is the Rust function, as the original's call
+  went to that one body.
+- **What stays C++.** The constructor, the extra data and the destructors, `AllocateExtraStuff`, and the four font
+  getters (`GetFont`, `GetDefaultFont`, `GetNamedFont`, `GetDefaultFontMod`: one-line window delegations over Rust's
+  `GetRoot`; `GetFontMod`'s decision is Rust). The empty virtual defaults are inline.
+- **`Window::CheckDoubleClick`** moved inline next to the other window forwarders.
+- **Behaviour change:** none. The tool tip's 500/5000 ms globals are constants (nothing wrote them).
+- **The golden** (`tests/won/won_compobj_test.cpp`, `xbuild.py wontest won_compobj_test`):
+  - The five units' statements are copied verbatim, each with the shell's one-line forwarder ahead under a flag,
+    over a world of traced stand-ins: 3-7 components in a tree (the first sometimes window 1's RootContainer), a
+    parent window, the default window, events with counted references, listeners, cursors, schemes and grabbers.
+  - Every virtual is a traced override that calls the base. The driver's host is ComponentLifetime.cpp's.
+  - 20,000 sequences of 40 calls, every member and the trace compared after each: 800,000 checks, identical.
+  - `golden_compobj.txt` (300 sequences) is replayed by cargo over the world rebuilt in Rust (an object's pointer
+    is its id).
+- **A world trap.** A first world let window 2's root be a component inside window 1's tree. BubbleEvent then went
+  round forever, in the original as in the port: an event on a parentless component climbs to window 1's parent's
+  root, back down into the same tree. The trace grew to gigabytes. The driver now picks the root outside that tree.
+
+### WrappedText (ee_won wrapobj.rs)
+
+- **The move.** The break list, width, height, maximum width and the wrap and centre settings are one Rust object.
+  The C++ keeps the text and the font (C++ objects).
+- **How the C++ drives it.** `CalcWrap` hands the text's units and WONDrawMeasure's font measure to
+  `ee_won_wrap_calc`. `SetWrap` and `SetMaxWidth` answer whether to rewrap. `Paint` runs the object's plan (guidraw's
+  `wrapped_text` over its own breaks). WrappedText.cpp is deleted; the constructors, `CalcWrap` and `Paint` are a
+  dozen lines in GuiHost.cpp.
+- **Corners kept.** The wrap gets the length as an unsigned short. The breaks are stored as unsigned shorts. The
+  height is (breaks + 1) * font height in the original's size_t arithmetic.
+- **The golden** (`won_wrapobj_test`): the original statements (CalcWrap over `ee_won_gui_wrap`, the paint over
+  `ee_won_gui_draw_wrapped_text`) against the shell over the object. Two random fonts; texts of letters, spaces,
+  CR, LF and units past 0xff; widths -5..120; paints. 20,000 sequences of 40 calls; width, height, every break and
+  every paint operation compared: 800,000 checks, identical. `golden_wrapobj.txt` is replayed by cargo.
+
+### StretchImage (ee_won stretchobj.rs) and ImageComponent
+
+- **StretchImage's move.** The four borders, tiling, skip-centre and the rebuild flag are the Rust object. A size
+  change marks the cache; the border and image setters do not, as the original's did not. The object also holds
+  the settings `CopyAttributes` copies and `Duplicate` keeps, and the paint's plan.
+- **What the C++ keeps.** The source and cached images and the Image base's size. `CalcImage` sets a
+  StretchImageFilter from the object. The filter's nine-piece copy (round 37's plan and pixel loops) and the paints
+  are in GuiHost.cpp. StretchImage.cpp is deleted, and StretchCenterImage's size and duplicate are inline.
+- **ImageComponent.** ImageComponent's, RectangleComponent's and RectangleComponent3D's remaining statements (the
+  image setters, which size the component to the image, the 10 x 10 default, the colours) are inline. Their paints
+  were round 37's Rust plans and now live in GuiHost.cpp. ImageComponent.cpp is deleted.
+  - These are plain C++ inlines, not a Rust move: what was left there was setters.
+- **The golden** (`won_stretchobj_test`): the original statements over stand-in images (a cached image is the filter
+  settings it was built from) against the shell. Three images; sizes including 70,000, past the Image's unsigned
+  short; copies, duplicates, GetNative, paints. 20,000 sequences of 60 calls, every image's state and the trace
+  compared: 1,200,000 checks, identical. `golden_stretchobj.txt` is replayed by cargo.
+
+### Mutations
+
+`build/r38/mutate.py` (round 37's, restoring the file's saved bytes): 26 mutations, each run against cargo's tests;
+7 of them were also rebuilt into their driver. 25 were caught by cargo at once (one, a new image not tiling vertically,
+first failed to apply after rustfmt rewrapped the constructor; rerun with the new text, caught). The one cargo missed (Contains with
+the right edge inclusive: the golden's points rarely land on an edge) got a unit test in its own commit, and that test
+catches it.
+
+| Module | Mutation | cargo | driver |
+|---|---|---|---|
+| compobj | MarkInvalid's state 1 | replay | - |
+| compobj | Invalidate not skipping a fully invalid component | replay | - |
+| compobj | Deliver without its hold when sent now | replay | fails (the run ends early: events freed under it) |
+| compobj | Bubble: the parent before the listener | replay | - |
+| compobj | the tip at elapsed > start | replay | - |
+| compobj | the tip at the mouse + 16 | replay | - |
+| compobj | RequestTimer on bit 1 | replay, unit test | 128,626 failures |
+| compobj | CheckGrabBG on Translucent only | replay | - |
+| compobj | SetEnabled without ChildStateChanged | replay | - |
+| compobj | LocalToRoot skipping the parents' x | replay | - |
+| compobj | Contains with the right edge inclusive | missed; unit test added | - |
+| compobj | AddedToParent ignoring the parent's root visibility | replay | 58,072 |
+| compobj | GetColorScheme: the window manager's before the parent's | replay | - |
+| compobj | GetFontMod keeping a size of 1 | replay | - |
+| wrapobj | the height without the +1 line | replay, unit test | 265,211 |
+| wrapobj | the unwrapped height 0 | replay, unit test | - |
+| wrapobj | SetWrap always rewrapping | unit test | - |
+| wrapobj | a maximum width of 0 wrapping | replay | - |
+| wrapobj | the breaks kept across rewraps | replay | 291,733 |
+| wrapobj | a new text centred | replay, unit test | - |
+| stretchobj | a size change not marking the cache | replay, unit test | 354,386 |
+| stretchobj | SetSize comparing the width only | replay | - |
+| stretchobj | CopyAttributes without skip-centre | replay, unit test | - |
+| stretchobj | a duplicate already built | replay, unit test | 384,639 |
+| stretchobj | a new image not tiling vertically | replay | - |
+| stretchobj | the paint's left and right swapped | replay | - |
+
+### The ComponentConfig census
+
+All 54 keyword handlers already take their keyword lists from Rust (guiconf.rs `TABLES` through
+`ee_won_gui_cfg_key`); what is left in C++ is each branch's reads and setter.
+
+| Kind | Handlers | Lines | Examples |
+|---|---|---|---|
+| Pure tables (typed reads then one setter) | 33 | ~446 | MSButton, the seven MS extras, MultiListArea, ColorScheme, TabCtrl, BrowserComponent, Dialog, the Scroll* trio, Label, Image, ImageButton, WONFrameComponent, Rectangle/Rect3D/ImageComponent/ScreenContainer, TreeArea, Scrollbar, StretchCenterImage |
+| Table shape with optional or repeated arguments | 12 | ~334 | WONButton, Splitter, TextArea, InputBox, ComboBox, WONListCtrl, ListArea, the WONFrameValue trio |
+| Not table-shaped (loops, child configs, globals) | 9 + HandleInstruction | ~453 | ComponentConfig itself, ContainerConfig, WONSkinConfig, StretchImageConfig, ImageFilterConfig, FontConfig, ButtonConfig, WONSimpleButtonConfig, WONScrollbarConfig |
+
+- **A table reader is not a pure parser.** `ReadInt` evaluates expressions through `guicfg` with callbacks to live
+  components, and `ReadFont`, `ReadImage`, `ReadSound` and `ReadComponent` look up resources. A Rust table reader
+  therefore needs a host for those reads and a typed component-reference check (`SafeConfigGetComponent`).
+- **Order to port.** MSComponentConfig.cpp, MSExtraConfig.cpp, ComponentLayoutConfigs.cpp, the Scroll* trio,
+  MultiListBoxConfig.cpp, SimpleComponentConfig.cpp, then the small ones. After that, extend the schema with
+  optional arguments and lists for the second group.
+- **A bug to leave behind.** `ButtonConfig::HandleButtonFlags` tests name index 5 twice: the second test can never
+  match. A port should not copy it.
+
+### Commits, gates, what only the lobby reaches, what is left
+
+| Commit | What | WON C++ (`wc -l`, src/Empire Earth/WONAPI + include/ee/wonapi) |
+|---|---|---|
+| cfc607bf | Component wholly in Rust (`compobj.rs`); five Component units deleted | +214 -775 (-561) |
+| e93b41eb | WrappedText and StretchImage as Rust objects (`wrapobj.rs`, `stretchobj.rs`); WrappedText.cpp, StretchImage.cpp, ImageComponent.cpp deleted | +189 -668 (-479) |
+| 1dac4aa6 | a Component unit test (the mutation the replay missed) | 0 |
+
+- **Each commit built on its own** (`build.py --sim` 0/0 for EE-AOC and EE-SIM) and passed the oracle on seeds 2-3.
+  The Rust gate passed at the second commit, after a clippy fix: `invalidate_rect` takes `&mut EeWonRect`, folded
+  into the first commit.
+- **The merge of rust** needed `rust/cbindgen.toml`'s export list joined (`EeWonComp`, `EeWonCompExtra` beside the
+  new names) and `include/rust/ee_won.h` regenerated. `rust_includes.py` added `rust/ee_won.h` to
+  WONLobbyStretchImage.h. On the merged tree: `build.py --sim` 0/0 (EE-AOC, EE-SIM), the test-profile build 0/0, the oracle identical on
+  seeds 2-7, the Rust gate PASS, `xbuild.py wontest` exit 0 (every WON program), `lan_game.py` RESULT PASS (PT host
+  2910, joiner 2910; no fault line in either game.log). The lobby captures (the create dialog, the LAN list, the
+  staging screen with its option combos, check boxes, colour buttons and skinned frames) look as before.
+- **What only the lobby reaches.** Every Component method runs for every lobby control on every frame (NeedsPaint,
+  Paint, PrePaint, Invalidate) and on every event. Every label's and button's text wraps through `wrapobj`, and every
+  skinned frame paints through `stretchobj`. EE-SIM and the goldens never draw: the LAN game and its captures are what
+  exercise them.
+- **A trap: an edit cut short.** The WrappedText header edit replaced up to the first `};`, which was the nested
+  `BreakInfo` struct's. The rest of the old class was left behind, and every unit including WONLobbyGUI.h failed.
+  The game build's log showed only each unit's last lines (incomplete `Image`); `clang_build.py --only` showed the
+  first error. Cut a class by its own closing line, not the first `};`.
+- **What is left of WONGUI** (round 36's measure, rerun: WONGUI's code lines 11,816 -> 11,263, its logic lines
+  5,313 -> 4,996):
+  - the resource configs (the census above);
+  - the platform layer (PlatWindowManager, PlatGraphics, PlatGUIWindow, PlatNativeImage, PlatGUIFont);
+  - the WON skin's compositions;
+  - Image.cpp (ProgramImage::Draw, RawImage1's layout);
+  - the decoders;
+  - the hosts.

@@ -263,6 +263,29 @@ constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 /// The sink's `which`: the text.
 constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
 
+/// `ComponentFlag_*` (WONComponentFlags.h; the C++ asserts them).
+constexpr static const int32_t EE_WON_COMP_FLAG_INVISIBLE = 1;
+
+constexpr static const int32_t EE_WON_COMP_FLAG_HAS_FOCUS = 16;
+
+constexpr static const int32_t EE_WON_COMP_FLAG_DISABLED = 128;
+
+constexpr static const int32_t EE_WON_COMP_FLAG_GRAB_BG = 256;
+
+constexpr static const int32_t EE_WON_COMP_FLAG_TRANSLUCENT = 512;
+
+constexpr static const int32_t EE_WON_COMP_FLAG_NO_INPUT = 2048;
+
+constexpr static const int32_t EE_WON_COMP_FLAG_WANT_TAB_FOCUS = 16384;
+
+/// The root-visible bit (no keyword; `IsRootVisible`).
+constexpr static const int32_t EE_WON_COMP_FLAG_ROOT_VISIBLE = 262144;
+
+/// `gComponentToolTipStartTime` and `gComponentToolTipEndTime` (ms; the original's globals, never written).
+constexpr static const uint32_t EE_WON_COMP_TIP_START = 500;
+
+constexpr static const uint32_t EE_WON_COMP_TIP_END = 5000;
+
 /// The reply kinds (`ee_won_db_reply`).
 constexpr static const int32_t EE_WON_DB_PROXY = 0;
 
@@ -3056,6 +3079,9 @@ enum class EeWonGuiOp : uint32_t {
   SkinLay = 620,
   /// a grabber's call out (`a` an `EeWonGrab`; `b`, `c`, `d` its arguments).
   Grab = 621,
+  /// a component's member, virtual method or service (`a` an `EeWonComp`; `b` the receiver, `c`, `d` its
+  /// arguments).
+  Comp = 622,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -3236,6 +3262,138 @@ enum class EeWonComboCall : uint32_t {
   GetField,
   /// the field `a` = `b`.
   SetField,
+};
+
+/// The inward calls: Component's methods (`a`, `b`, `c` the arguments; pointers as `intptr_t`).
+enum class EeWonCompCall : uint32_t {
+  /// `Virtual08()` (the size changed).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*(int*)a, *(int*)b)`: 20 x 20.
+  DesiredSize,
+  /// `NeedsPaint()` (0 or 1).
+  NeedsPaint,
+  /// `PrePaint(*(Graphics*)a)`.
+  PrePaint,
+  /// `Paint(*(Graphics*)a)`.
+  Paint,
+  /// `HitTest(a, b)` (0 or 1).
+  HitTest,
+  /// `MouseEnter(a, b)`.
+  MouseEnter,
+  /// `MouseExit()`.
+  MouseExit,
+  /// `MouseHover((unsigned long)a)`.
+  MouseHover,
+  /// `GotFocus()`.
+  GotFocus,
+  /// `LostFocus()`.
+  LostFocus,
+  /// `InvalidateRect(*(WONRectangle*)a)`.
+  InvalidateRect,
+  /// `Invalidate()`.
+  Invalidate,
+  /// `MarkInvalid()`.
+  MarkInvalid,
+  /// `AddedToParent()`.
+  AddedToParent,
+  /// `ClearGrabBG()`.
+  ClearGrabBG,
+  /// `SetCursor((Cursor*)a)`.
+  SetCursor,
+  /// `HandleComponentEvent((ComponentEvent*)a)`.
+  HandleEvent,
+  /// `HandleBroadcastEvent((ComponentEvent*)a)`.
+  HandleBroadcast,
+  /// `NotifyRootVisibility(a != 0)`.
+  NotifyRootVisibility,
+  /// `TabFocus(a != 0, b != 0)` (0 or 1).
+  TabFocus,
+  /// `EnableControlsById(*(const ControlIdSet*)a, b != 0)`.
+  EnableControlsById,
+  /// `SetEnabled(a != 0)`.
+  SetEnabled,
+  /// `SetVisible(a != 0)`.
+  SetVisible,
+  /// `SetColorScheme((ColorScheme*)a)`.
+  SetColorScheme,
+  /// `GetOwnColorScheme()`.
+  OwnColorScheme,
+  /// `GetColorScheme()`.
+  ColorScheme,
+  /// `SetPos(a, b)`.
+  SetPos,
+  /// `SetSize(a, b)`.
+  SetSize,
+  /// `SetSizeAtLeast(a, b)`.
+  SetSizeAtLeast,
+  /// `SetPosSize(a, b, p[0], p[1])` with `p` the two ints at `c`.
+  SetPosSize,
+  /// `FireBroadcastEvent((ComponentEvent*)a, b != 0)`.
+  FireBroadcast,
+  /// `BroadcastEventDown((ComponentEvent*)a)`.
+  BroadcastDown,
+  /// `DeliverEvent((ComponentEvent*)a, b != 0)`.
+  Deliver,
+  /// `AddListener((ComponentListener*)a)`.
+  AddListener,
+  /// `SetDesiredSize(a, b)`.
+  SetDesiredSize,
+  /// `FireEvent(a, b != 0)`.
+  FireEvent,
+  /// `IsRootVisible()` (0 or 1).
+  IsRootVisible,
+  /// `LocalToRoot(*(int*)a, *(int*)b)`.
+  LocalToRoot,
+  /// `BubbleEvent((ComponentEvent*)a)`.
+  Bubble,
+  /// `GetNextSibling(a != 0, b != 0)`.
+  NextSibling,
+  /// `WantFocus()` (0 or 1).
+  WantFocus,
+  /// `RootToChild(*(int*)a, *(int*)b)`.
+  RootToChild,
+  /// `GetMousePos(*(int*)a, *(int*)b)`.
+  MousePos,
+  /// `GetKeyMod()`.
+  KeyMod,
+  /// `CheckDoubleClick(a)` (0 or 1).
+  DoubleClick,
+  /// `Contains(a, b)` (0 or 1).
+  Contains,
+  /// `Intersects((Component*)a)` (0 or 1).
+  Intersects,
+  /// `GetDefaultCursor()`.
+  DefaultCursor,
+  /// `GetGrabBG()`.
+  GrabBG,
+  /// `CheckGrabBG()` (0 or 1).
+  CheckGrabBG,
+  /// `EnsureOnTopOf((Component*)a)`.
+  EnsureOnTopOf,
+  /// `SetDefaultCursor((Cursor*)a)`.
+  SetDefaultCursor,
+  /// `SetDesiredHeight(a)`.
+  SetDesiredHeight,
+  /// `SetDesiredWidth(a)`.
+  SetDesiredWidth,
+  /// `SetTranslucentColor(a, b)`.
+  SetTranslucentColor,
+  /// `SetComponentFlags(a, b != 0)`.
+  SetFlags,
+  /// `SubscribeToBroadcast(a != 0)`.
+  Subscribe,
+  /// `RequestTimer(a != 0)`.
+  RequestTimer,
+  /// `RequestFocus()`.
+  RequestFocus,
+  /// `GetRoot()`: the root container's window, else `Window::GetDefaultWindow()`.
+  Root,
+  /// `GetRootContainer()`.
+  RootContainer,
+  /// `GetRootWindow()`: the root container's window, else NULL.
+  RootWindow,
+  /// `GetFontMod((Font*)a, b, c)`.
+  FontMod,
 };
 
 /// What an upper-cased token is in a group.
@@ -7206,6 +7364,18 @@ enum class EeWonStagingCall : uint32_t {
   NotifyPingChange,
 };
 
+/// A setting (`ee_won_stretch_get`).
+enum class EeWonStretchField : uint32_t {
+  Left = 1,
+  Top,
+  Right,
+  Bottom,
+  TileHorz,
+  TileVert,
+  SkipCenter,
+  NeedRecalc,
+};
+
 /// A surface's field (`ee_won_surface_get`).
 enum class EeWonSurfaceField : uint32_t {
   /// `GetSurfaceFormat()`.
@@ -8602,6 +8772,166 @@ enum class EeWonGrab : uint32_t {
   Tint,
 };
 
+/// The host's calls (`EeWonGuiOp::Comp`; `b` the receiver, `c`, `d` the arguments; a component as `Component*`).
+enum class EeWonComp : uint32_t {
+  /// `mComponentBits`.
+  Bits = 1,
+  /// `mComponentBits = c`.
+  SetBits,
+  /// `mInvalidState` (a `char`).
+  Invalid,
+  /// `mInvalidState = c`.
+  SetInvalid,
+  /// `mTimerFlags` (a `char`).
+  Timer,
+  /// `mTimerFlags = c`.
+  SetTimer,
+  /// `mControlId`.
+  ControlId,
+  /// `mBounds` into the `EeWonRect` at `c`.
+  Bounds,
+  /// `mBounds.x = c; mBounds.y = d`.
+  SetXY,
+  /// `mBounds.height = d; mBounds.width = c`.
+  SetWH,
+  /// `mParent` (as a `Component*`, 0 for none).
+  Parent,
+  /// `mExtraStuff != NULL` (0 or 1).
+  HasExtra,
+  /// `AllocateExtraStuff()`.
+  AllocExtra,
+  /// a member of `mExtraStuff` (`c` an `EeWonCompExtra`; a pointer, or the tip flag 0 or 1).
+  Extra,
+  /// a member of `mExtraStuff` (`c` an `EeWonCompExtra`) = `d`; `GrabBG`: `new BackgroundGrabber`.
+  SetExtra,
+  /// `PositionChanged()`.
+  VPositionChanged,
+  /// `Virtual08()`.
+  VSizeChanged,
+  /// `GetDesiredSize(p[0], p[1])` with `p` the two ints at `c`.
+  VDesiredSize,
+  /// `HandleComponentEvent((ComponentEvent*)c)`.
+  VHandleEvent,
+  /// `HandleBroadcastEvent((ComponentEvent*)c)`.
+  VHandleBroadcast,
+  /// `InvalidateRect(*(WONRectangle*)c)`.
+  VInvalidateRect,
+  /// `Invalidate()`.
+  VInvalidate,
+  /// `MarkInvalid()`.
+  VMarkInvalid,
+  /// `GotFocus()`.
+  VGotFocus,
+  /// `LostFocus()`.
+  VLostFocus,
+  /// `NotifyRootVisibility(c != 0)`.
+  VNotifyRootVisibility,
+  /// `SetEnabled(c != 0)`.
+  VSetEnabled,
+  /// `EnabledChanged(c != 0)`.
+  VEnabledChanged,
+  /// `SetCursor((Cursor*)c)`.
+  VSetCursor,
+  /// `NextChild((Component*)c, d & 1, d & 2)`.
+  PNextChild,
+  /// `SetFocusChild((Component*)c)`.
+  PSetFocusChild,
+  /// `AddTimerChild((Component*)c)`.
+  PAddTimerChild,
+  /// `ChildStateChanged((Component*)c)`.
+  PChildStateChanged,
+  /// `ChildInvalidated((Component*)c)` (the result unused, as the original's).
+  PChildInvalidated,
+  /// `IsModal()` (0 or 1).
+  PIsModal,
+  /// `EnsureOnTopOf((Component*)c, (Component*)d)`.
+  PEnsureOnTopOf,
+  /// `dynamic_cast<RootContainer*>((Component*)b)` (0 when it is not one).
+  AsRoot,
+  /// `((RootContainer*)b)->mWindow`.
+  RootWin,
+  /// `((RootContainer*)b)->AddBG((BackgroundGrabber*)c)`.
+  RootAddBG,
+  /// `Window::GetDefaultWindow()`.
+  DefaultWindow,
+  /// `((Window*)b)->GetWindowState()`.
+  WState,
+  /// `((Window*)b)->mManager->BroadcastEvent((ComponentEvent*)c)`.
+  WBroadcast,
+  /// `((Window*)b)->QueueEvent((ComponentEvent*)c)`.
+  WQueue,
+  /// `((Window*)b)->GetParent()`.
+  WParent,
+  /// `((Window*)b)->mRoot.get()` (as a `Component*`).
+  WRoot,
+  /// `((Window*)b)->GetMouseX()` and `GetMouseY()` into the two ints at `c`.
+  WMouse,
+  /// `((Window*)b)->OpenPopup(PopupParams(p[0], PopupFlag_StandardTip, p[1], p[2], p[3]))` with `p` the four
+  /// `intptr_t`s at `c` (the tip, its owner, x, y).
+  WOpenTip,
+  /// `((Window*)b)->ClosePopup((Component*)c)`.
+  WClosePopup,
+  /// `((Window*)b)->GetKeyMod()`.
+  WKeyMod,
+  /// `((Window*)b)->CheckDoubleClick((MouseButton)c)` (0 or 1).
+  WDoubleClick,
+  /// `((Window*)b)->GetWindowManager()->SubscribeToBroadcast((Component*)c, d != 0)`.
+  WSubscribe,
+  /// `((Window*)b)->GetWindowManager()->mColorScheme.get()`.
+  WScheme,
+  /// the font `c` with style `p[0]` and, when `p[1]` is not 0, size `p[1]` (`p` the two ints at `d`), from
+  /// `((Window*)b)->GetFont(descriptor)` (its pointer, held by the window's cache as the original's was).
+  WFontMod,
+  /// `AddRef()` (a `SmartPtr` the method holds).
+  EvHold,
+  /// `Release()` (its end; the event is deleted at its last reference).
+  EvRelease,
+  /// `mBroadcast` (0 or 1).
+  EvBroadcast,
+  /// `mBroadcast = c != 0`.
+  EvSetBroadcast,
+  /// `mComponent`.
+  EvComp,
+  /// `SetComponent((Component*)c)`.
+  EvSetComp,
+  /// `new ComponentEvent((Component*)b, c)` (no reference yet).
+  EvNew,
+  /// `((ComponentListener*)b)->HandleComponentEvent((ComponentEvent*)c)`.
+  LHandle,
+  /// `((BackgroundGrabber*)b)->SizeChanged((Component*)c)`.
+  GSizeChanged,
+  /// `((BackgroundGrabber*)b)->PrePaint((Component*)c, *(Graphics*)d)`.
+  GPrePaint,
+  /// `((BackgroundGrabber*)b)->Paint((Component*)c, *(Graphics*)d)`.
+  GPaint,
+  /// `((BackgroundGrabber*)b)->Clear()`.
+  GClear,
+  /// `((BackgroundGrabber*)b)->Invalidate((Component*)c)`.
+  GInvalidate,
+  /// `((BackgroundGrabber*)b)->NeedDrawBG()` (0 or 1).
+  GNeedDrawBG,
+  /// `((BackgroundGrabber*)b)->SetTranslucentColor(c, d)`.
+  GTranslucent,
+  /// `((const ControlIdSet*)b)->find(c) != end()` (0 or 1).
+  IdIn,
+};
+
+/// A member of a component's extra data (`EeWonComp::Extra` / `SetExtra`).
+enum class EeWonCompExtra : uint32_t {
+  /// `mListener.get()`.
+  Listener = 1,
+  /// `mDefaultCursor.get()`.
+  Cursor,
+  /// `mColorScheme.get()`.
+  Scheme,
+  /// `mGrabBG` (set: a new one).
+  GrabBG,
+  /// `mToolTip.get()`.
+  ToolTip,
+  /// `mDontDoTip` (0 or 1).
+  DontDoTip,
+};
+
 /// A field of `EEGameOptions` or of an `EEGameOptionsPlayer` the glue reads or writes.
 enum class EeWonEeGlueField : uint32_t {
   LoadType = 0,
@@ -8866,6 +9196,9 @@ struct EeWonSplitter;
 /// StagingLogic's state (the original's members 0x4c..0x54).
 struct EeWonStaging;
 
+/// The Rust StretchImage.
+struct EeWonStretchImg;
+
 /// The Rust surface.
 struct EeWonSurface;
 
@@ -8916,6 +9249,9 @@ struct EeWonWm;
 
 /// The Rust WONButton.
 struct EeWonWonButton;
+
+/// The Rust WrappedText (the original's members but the text and font).
+struct EeWonWrapText;
 
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
@@ -11807,6 +12143,18 @@ ptrdiff_t ee_won_combo_call(const EeWonComboBox *combo,
                             ptrdiff_t a,
                             ptrdiff_t b,
                             ptrdiff_t c);
+
+/// One of Component's methods on the C++ component `me` (`EeWonCompCall`), its calls out through `host`.
+///
+/// # Safety
+/// `me` is a live C++ `Component*` and `host` answers `EeWonGuiOp::Comp` for it; pointer arguments are as the call
+/// documents them.
+ptrdiff_t ee_won_comp_call(void *me,
+                           EeWonGuiHostFn host,
+                           EeWonCompCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
 
 EeWonConfigLexer *ee_won_config_new();
 
@@ -19152,6 +19500,79 @@ int32_t ee_won_compare_no_case32(const int32_t *a,
                                  const int32_t *b,
                                  size_t b_count);
 
+/// A new StretchImage's settings (the constructor's borders).
+EeWonStretchImg *ee_won_stretch_new(int32_t left, int32_t top, int32_t right, int32_t bottom);
+
+/// `Duplicate()`'s settings for the copy.
+///
+/// # Safety
+/// `o` is live.
+EeWonStretchImg *ee_won_stretch_duplicate(const EeWonStretchImg *o);
+
+/// # Safety
+/// `o` is null or from `ee_won_stretch_new` / `ee_won_stretch_duplicate`, not freed before.
+void ee_won_stretch_free(EeWonStretchImg *o);
+
+/// `SetSize(width, height)` against the image's size: true when the C++ must store the new size.
+///
+/// # Safety
+/// `o` is live.
+bool ee_won_stretch_set_size(EeWonStretchImg *o,
+                             int32_t cur_w,
+                             int32_t cur_h,
+                             int32_t w,
+                             int32_t h);
+
+/// `SetBorders(left, top, right, bottom)` (the cache not marked, as the original's).
+///
+/// # Safety
+/// `o` is live.
+void ee_won_stretch_set_borders(EeWonStretchImg *o,
+                                int32_t left,
+                                int32_t top,
+                                int32_t right,
+                                int32_t bottom);
+
+/// `SetTile(horz, vert)`.
+///
+/// # Safety
+/// `o` is live.
+void ee_won_stretch_set_tile(EeWonStretchImg *o, bool horz, bool vert);
+
+/// `SetSkipCenter(skip)`.
+///
+/// # Safety
+/// `o` is live.
+void ee_won_stretch_set_skip(EeWonStretchImg *o, bool skip);
+
+/// The cache built (`CalcImage`'s end).
+///
+/// # Safety
+/// `o` is live.
+void ee_won_stretch_built(EeWonStretchImg *o);
+
+/// `CopyAttributes(from)`'s settings.
+///
+/// # Safety
+/// `o` and `from` are live.
+void ee_won_stretch_copy(EeWonStretchImg *o, const EeWonStretchImg *from);
+
+/// A setting.
+///
+/// # Safety
+/// `o` is live.
+int32_t ee_won_stretch_get(const EeWonStretchImg *o, EeWonStretchField f);
+
+/// `Paint`'s plan at the image's size: the first `cap` operations into `out`, their count returned.
+///
+/// # Safety
+/// `o` is live; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_stretch_paint(const EeWonStretchImg *o,
+                            int32_t width,
+                            int32_t height,
+                            EeWonDrawOp *out,
+                            size_t cap);
+
 /// `SurfaceBase::GetNewSurface(format)`: a new surface, or null for an unknown format.
 EeWonSurface *ee_won_surface_new(int32_t format);
 
@@ -19957,6 +20378,75 @@ void ee_won_wonbtn_set_state(const EeWonWonButton *btn,
 /// # Safety
 /// Both buttons are live and distinct (`Duplicate` copies onto a new button).
 void ee_won_wonbtn_copy(const EeWonWonButton *btn, const EeWonWonButton *from, void *from_comp);
+
+/// A new WrappedText's state (`Init()`).
+EeWonWrapText *ee_won_wrap_new();
+
+/// # Safety
+/// `o` is null or from `ee_won_wrap_new`, not freed before.
+void ee_won_wrap_free(EeWonWrapText *o);
+
+/// `CalcWrap()`: `text` holds `len` units of `wchar_size` bytes (or is NULL with 0), `m` measures them in the font.
+///
+/// # Safety
+/// `o` is live; `text` and `m` as described.
+void ee_won_wrap_calc(EeWonWrapText *o,
+                      bool has_font,
+                      const void *text,
+                      int32_t len,
+                      uint32_t wchar_size,
+                      const EeWonTextMeasure *m,
+                      int32_t font_height);
+
+/// `SetWrap(wrap)`: true when the C++ must rewrap.
+///
+/// # Safety
+/// `o` is live.
+bool ee_won_wrap_set_wrap(EeWonWrapText *o, bool wrap);
+
+/// `SetMaxWidth(width)`: true when the C++ must rewrap.
+///
+/// # Safety
+/// `o` is live.
+bool ee_won_wrap_set_max_width(EeWonWrapText *o, int32_t width);
+
+/// `SetCentered(centered)`.
+///
+/// # Safety
+/// `o` is live.
+void ee_won_wrap_set_centered(EeWonWrapText *o, bool centered);
+
+/// `mWidth`.
+///
+/// # Safety
+/// `o` is live.
+int32_t ee_won_wrap_width(const EeWonWrapText *o);
+
+/// `mHeight` (the C++ `GetHeight` answers the font's height when it is 0).
+///
+/// # Safety
+/// `o` is live.
+int32_t ee_won_wrap_height(const EeWonWrapText *o);
+
+/// The break list (`mBreakList`): the first `cap` into `out`, their count returned.
+///
+/// # Safety
+/// `o` is live; `out` has room for `cap` breaks (or is NULL).
+size_t ee_won_wrap_breaks(const EeWonWrapText *o, EeWonLineBreak *out, size_t cap);
+
+/// `Paint`'s plan for a text of `length` units in a font `font_height` high at (`x`, `y`): the first `cap`
+/// operations into `out`, their count returned.
+///
+/// # Safety
+/// `o` and `m` are live; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_wrap_paint(const EeWonWrapText *o,
+                         int32_t length,
+                         int32_t font_height,
+                         int32_t x,
+                         int32_t y,
+                         const EeWonTextMeasure *m,
+                         EeWonDrawOp *out,
+                         size_t cap);
 
 }  // extern "C"
 
