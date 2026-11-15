@@ -296,7 +296,7 @@ void EEUCTransport::FindLandingTile(EEComplexUnit* inTransport, U2DPoint<long>* 
             this->GetRingTiles(inUnloadTile->mX, inUnloadTile->mY, theTiles);
             for (std::vector<U2DPoint<long> >::iterator it = theTiles.begin(); it != theTiles.end(); it++) {
                 theTile = ::gWorld.mMap->GetTile(it->mX, it->mY);
-                unsigned short theID = theContinent->mID;
+                unsigned short theID = theContinent->GetID();
                 EEUnit* theArg5;
                 long theX, theY;
                 if (theTile == NULL || theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainCliff ||
@@ -391,7 +391,7 @@ void EEUCTransport::FindShoreTile(EEComplexUnit* inTransport, const EETileCoordi
                 theContainsFrom = false;
                 theBest = 0.0f;
                 for (long i = theTiles.size() - 1; i >= 0; i--) {
-                    unsigned short theID = theTo->mID;
+                    unsigned short theID = theTo->GetID();
                     if (!gContinentManager.IsNextToArea(theTiles[i].GetX(), theTiles[i].GetY(), theID))
                         continue;
                     EEUpdateBestUnloadTile(inTransport, theTiles[i], *inTarget, inRestrictTerrain, &theBest, outTile);
@@ -401,20 +401,20 @@ void EEUCTransport::FindShoreTile(EEComplexUnit* inTransport, const EETileCoordi
                 if (theContainsFrom)
                     EETestUnloadTile(inTransport, inFrom, *inTarget, inRestrictTerrain, outTile);
             }
-        } else if (gContinentManager.IsNextToArea(inDestination->GetX(), inDestination->GetY(), theTo->mID)) {
+        } else if (gContinentManager.IsNextToArea(inDestination->GetX(), inDestination->GetY(), theTo->GetID())) {
             *outTile = *inDestination;
         }
     } else if (theFromID != 0) {
         theTo->GetShoreInRegion(theFromID, theTiles, theKind);
         if (theTiles.size() != 0) {
             this->FindBestShoreTile(inTransport, inFrom, *inDestination, *inTarget, inRestrictTerrain, outTile);
-        } else if (gContinentManager.mTileFlags[theTo->mID + theFrom->mID * gContinentManager.mFlagsWidth]) {
+        } else if (gContinentManager.mTileFlags[theTo->GetID() + theFrom->GetID() * gContinentManager.mFlagsWidth]) {
             theFrom->GetShoreInRegion(theFromID, theTiles, theKind);
             if (theTiles.size() != 0) {
                 theContainsFrom = false;
                 theBest = 0.0f;
                 for (long i = theTiles.size() - 1; i >= 0; i--) {
-                    unsigned short theID = theTo->mID;
+                    unsigned short theID = theTo->GetID();
                     if (!gContinentManager.IsNextToArea(theTiles[i].GetX(), theTiles[i].GetY(), theID))
                         continue;
                     EEUpdateBestUnloadTile(inTransport, theTiles[i], *inTarget, inRestrictTerrain, &theBest, outTile);
@@ -430,7 +430,7 @@ void EEUCTransport::FindShoreTile(EEComplexUnit* inTransport, const EETileCoordi
                 theContainsFrom = false;
                 theBest = 0.0f;
                 for (long i = theTiles.size() - 1; i >= 0; i--) {
-                    unsigned short theID = theFrom->mID;
+                    unsigned short theID = theFrom->GetID();
                     if (!gContinentManager.IsNextToArea(theTiles[i].GetX(), theTiles[i].GetY(), theID))
                         continue;
                     EEUpdateBestUnloadTile(inTransport, theTiles[i], *inTarget, inRestrictTerrain, &theBest, outTile);
@@ -464,17 +464,17 @@ float EEUCTransport::FindBestShoreTile(EEComplexUnit* inTransport, const U2DPoin
     float theBest = 0.0f;
     outTile->SetXY(-10000, -10000);
     if (theFrom != NULL) {
-        if (theFromID != 0 && theTo->mCategory == kContinentCategoryLand) {
+        if (theFromID != 0 && theTo->GetCategory() == kContinentCategoryLand) {
             theTo->GetShoreInRegion(theFromID, theTiles, theKind);
-            theID = theTo->mID;
+            theID = theTo->GetID();
             if (theTiles.size() == 0 &&
-                gContinentManager.mTileFlags[theID + theFrom->mID * gContinentManager.mFlagsWidth]) {
+                gContinentManager.mTileFlags[theID + theFrom->GetID() * gContinentManager.mFlagsWidth]) {
                 theFrom->GetShoreInRegion(theFromID, theTiles, theKind);
                 if (theTiles.size() != 0) {
                     bool theContainsFrom = false;
                     theBest = 0.0f;
                     for (long i = theTiles.size() - 1; i >= 0; i--) {
-                        unsigned short theToAreaID = theTo->mID;
+                        unsigned short theToAreaID = theTo->GetID();
                         if (!gContinentManager.IsNextToArea(theTiles[i].GetX(), theTiles[i].GetY(), theToAreaID))
                             continue;
                         EEUpdateBestUnloadTile(inTransport, theTiles[i], inTarget, inRestrictTerrain, &theBest, outTile);
@@ -485,16 +485,16 @@ float EEUCTransport::FindBestShoreTile(EEComplexUnit* inTransport, const U2DPoin
                         EETestUnloadTile(inTransport, inFrom, inTarget, inRestrictTerrain, outTile);
                 }
             }
-        } else if (theToID != 0 && theFrom->mCategory == kContinentCategoryLand) {
+        } else if (theToID != 0 && theFrom->GetCategory() == kContinentCategoryLand) {
             theTo->GetShoreInRegion(theToID, theTiles, theKind);
-            theID = theTo->mID;
+            theID = theTo->GetID();
         } else {
             EEAIContinent* theSource = NULL;
-            if (theToID == 0 && theFrom->mCategory == kContinentCategoryLand) {
+            if (theToID == 0 && theFrom->GetCategory() == kContinentCategoryLand) {
                 theSource = theFrom;
-                theID = theTo == NULL ? 0 : theTo->mID;
+                theID = theTo == NULL ? 0 : theTo->GetID();
             } else if (theTo != NULL) {
-                theID = theFrom->mID;
+                theID = theFrom->GetID();
                 theSource = theTo;
             }
             if (theSource != NULL)

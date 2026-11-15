@@ -610,7 +610,7 @@ extern "C" int32_t ee_screenscpp_sep(uint32_t inOp, void* p, float* t, int32_t* 
         return 1;
     }
     case EE_SCREENS_SEP_UNDER_MOUSE:
-        return (int32_t)theEditor->GetUnitScreen()->mUnitUnderMouse;
+        return (int32_t)theEditor->GetUnitScreen()->GetUnitUnderMouse();
     case EE_SCREENS_SEP_BOARD: {
         EEUnit* theUnit = EESEPUnit(i[0]);
         if (theUnit == NULL)

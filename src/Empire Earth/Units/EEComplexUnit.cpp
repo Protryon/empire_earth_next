@@ -1977,7 +1977,7 @@ EETileCoordinate EEComplexUnit::FindAreaTile(bool inFlag, long inRange)
     long theSize = theUnit->mUnitClass->mTileSize;
     EETileCoordinate theResult;
     theResult = theUnit->GetTile();
-    if (theSize > 1 && (theContinent == NULL || theContinent->mCategory != inFlag)) {
+    if (theSize > 1 && (theContinent == NULL || theContinent->GetCategory() != inFlag)) {
         long theEndX = this->GetTileX() + theSize + inRange;
         long theEndY = this->GetTileY() + theSize + inRange;
         for (long x = this->GetTileX() - inRange; x < theEndX; x++) {
@@ -1986,7 +1986,7 @@ EETileCoordinate EEComplexUnit::FindAreaTile(bool inFlag, long inRange)
                     continue;
                 unsigned short theID = ::gContinentManager.GetContinentID(x, y);
                 EEAIContinent* theOther = theID != 0 ? ::gContinentManager.GetContinentByID(theID) : NULL;
-                if (theOther == NULL || theOther->mCategory != inFlag)
+                if (theOther == NULL || theOther->GetCategory() != inFlag)
                     continue;
                 theResult.mX = x;
                 theResult.mY = y;
@@ -2125,7 +2125,7 @@ EETown* EEComplexUnit::FindNearestTown()
             theResult = theTown;
             break;
         }
-        thePoint = theTown->mHull.GetClosestOutlinePoint(theTile);
+        thePoint = theTown->GetHullClosestOutlinePoint(theTile);
         long theDistance = theTile.DistanceToSquared(thePoint);
         if (theDistance < theBestDistance) {
             theResult = theTown;

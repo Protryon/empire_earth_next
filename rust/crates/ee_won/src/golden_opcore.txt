@@ -1,0 +1,110 @@
+listener port nonzero 1
+http get o0
+http get: status 100004 mode 1 left 0 timeout 4294967295 lfs 4 send 60000 recv 60000 connect 60000 auth 0 key 8 socket null tracker empty 1
+server context o1
+get dir o2
+get dir: status 100004 mode 1 left 0 timeout 4294967295 lfs 4 send 20000 recv 20000 connect 20000 auth 0 key 8 socket null tracker empty 1
+auth context o3
+get account o4
+get account: status 100004 mode 1 left 0 timeout 4294967295 lfs 4 send 20000 recv 20000 connect 20000 auth 1 key 8 socket null tracker empty 1
+auth core own 1 same as ctx 1 is ctx's 1
+peer socket o5
+peer auth o6 socket refs 2
+peer auth: status 100004 mode 1 left 0 timeout 4294967295 lfs 4 send 60000 recv 60000 connect 60000 auth 2 key 8 socket o5 tracker empty 1
+peer auth cert status 0
+peer auth server o7
+peer auth server: status 100004 mode 1 left 0 timeout 4294967295 lfs 4 send 60000 recv 60000 connect 60000 auth 0 key 8 socket o5 tracker empty 1
+get cert o8
+get cert: status 100004 mode 1 left 0 timeout 4294967295 lfs 4 send 20000 recv 20000 connect 20000 auth 0 key 8 socket null tracker empty 1
+detect firewall o9
+detect firewall: status 100004 mode 1 left 0 timeout 4294967295 lfs 2 send 20000 recv 4294967295 connect 20000 auth 0 key 8 socket null tracker empty 1
+auth core none 0
+max times 1000 2000 3000: status 100004 mode 1 left 0 timeout 4294967295 lfs 4 send 2000 recv 3000 connect 1000 auth 0 key 8 socket null tracker empty 1
+length field 2: status 100004 mode 1 left 0 timeout 4294967295 lfs 2 send 2000 recv 3000 connect 1000 auth 0 key 8 socket null tracker empty 1
+auth session: status 100004 mode 1 left 0 timeout 4294967295 lfs 2 send 2000 recv 3000 connect 1000 auth 1 key 8 socket null tracker empty 1
+ctx refs 6
+client key 16 on: status 100004 mode 1 left 0 timeout 4294967295 lfs 2 send 2000 recv 3000 connect 1000 auth 1 key 272 socket null tracker empty 1
+client key 24 off: status 100004 mode 1 left 0 timeout 4294967295 lfs 2 send 2000 recv 3000 connect 1000 auth 1 key 24 socket null tracker empty 1
+timeout 5000: status 100004 mode 1 left 0 timeout 5000 lfs 2 send 2000 recv 3000 connect 1000 auth 1 key 24 socket null tracker empty 1
+blocking forever: status 100004 mode 2 left -2 timeout 4294967295 lfs 2 send 2000 recv 3000 connect -2 auth 1 key 24 socket null tracker empty 1
+max times -1 7 0: status 100004 mode 2 left -2 timeout 4294967295 lfs 2 send 7 recv 0 connect -2 auth 1 key 24 socket null tracker empty 1
+async again: status 100004 mode 1 left 0 timeout 4294967295 lfs 2 send 7 recv 0 connect 4294967295 auth 1 key 24 socket null tracker empty 1
+auth core set 1
+auth none: status 100004 mode 1 left 0 timeout 4294967295 lfs 2 send 7 recv 0 connect 4294967295 auth 0 key 24 socket null tracker empty 1
+ctx refs 5
+new peer auth o10 refs 1 socket refs 4
+new peer auth: status 100004 mode 1 left 0 timeout 4294967295 lfs 4 send 2200 recv 3300 connect 1100 auth 3 key 8 socket o5 tracker empty 1
+new peer auth core is ctx's 1 cert status 0
+new peer auth no socket o11 refs 1
+new peer auth no socket: status 100004 mode 1 left 0 timeout 4294967295 lfs 4 send 2200 recv 3300 connect 1100 auth 3 key 8 socket null tracker empty 1
+socket refs after release 3
+refs 3
+add ref 4
+add ref 5
+release 4
+release 3
+completion o12 refs 1
+completed o0 refs 3 tag o1 refs after 1 completion refs 1
+completed o2 refs 3 tag o1
+other o13
+other host 15:6578616d706c652e696e76616c6964
+other remote path 11:2f6f746865722f70617468
+other local path 0:
+other last modified 0
+other modified 0
+other local path set 1
+other modified 1000000000
+other last modified 1000000000
+other modified missing 0
+other binary 0
+other close 0
+other modified zero 0
+peer cert status 0
+ctx addrs 18:3afd7f0000013afe7f0000013aff7f000001
+ctx addrs after failed 18:3afe7f0000013aff7f0000013afd7f000001
+ctx addrs after unknown 18:3afe7f0000013aff7f0000013afd7f000001
+empty ctx addrs 0:
+running o14
+running: status 100000 mode 1 left 0 timeout 20000 lfs 4 send 60000 recv 60000 connect 60000 auth 0 key 8 socket null tracker empty 0
+timer o15 refs 1 op refs 4
+tracked refs 2 op refs 4 tracker 2
+timer run status 100000
+timer done 100001 refs 1
+after tracked timer: status 100001 mode 1 left 0 timeout 20000 lfs 4 send 60000 recv 60000 connect 60000 auth 0 key 8 socket null tracker empty 1
+op refs 2 tracker 0
+running o16
+timer o17 refs 1 op refs 4
+timer done 100001 refs 1
+after own timer: status 100001 mode 1 left 0 timeout 20000 lfs 4 send 60000 recv 60000 connect 60000 auth 0 key 8 socket null tracker empty 1
+op refs 1
+running o18
+timer o19
+killed timer 100002 refs 1
+after killed timer: status 100002 mode 1 left 0 timeout 20000 lfs 4 send 60000 recv 60000 connect 60000 auth 0 key 8 socket null tracker empty 1
+running o20
+timer o21
+tracker 2 empty 0
+killed all: timer 100002 refs 1 tracker 0
+after kill all: status 100000 mode 1 left 0 timeout 20000 lfs 4 send 60000 recv 60000 connect 60000 auth 0 key 8 socket null tracker empty 1
+tracked again 1 refs 2
+tracked twice 1 refs 2
+base cleanup 0 refs 1
+after base cleanup: status 100000 mode 1 left 0 timeout 20000 lfs 4 send 60000 recv 60000 connect 60000 auth 0 key 8 socket null tracker empty 1
+finished status 777 pending completion 1
+finish completed o20 refs 5 tag null
+after finish: status 777 mode 1 left 0 timeout 20000 lfs 4 send 60000 recv 60000 connect 60000 auth 0 key 8 socket null tracker empty 1
+finished again status 777
+running o22
+connect 0
+accepted 1
+server o23 refs 2
+recv o24 refs 1 op refs 3
+repeat set: recv refs 3 status 100000 op refs 4
+after message: op 100000 recv 0 refs 1
+after close: op 100020 recv 0
+after repeat: status 100020 mode 1 left 0 timeout 20000 lfs 4 send 60000 recv 60000 connect 60000 auth 0 key 8 socket null tracker empty 1
+session o26 ops 0 queued o25 refs 1
+session ops 1 queued status 100000 refs 2
+session killed ops 0 queued status 100002
+peer socket refs at end 1 ctx refs 1
+done

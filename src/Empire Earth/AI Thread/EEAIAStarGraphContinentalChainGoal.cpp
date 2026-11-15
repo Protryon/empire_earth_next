@@ -68,7 +68,7 @@ void EEAIAStarGraphContinentalChainGoal::NumberChain()
         for (size_t i = 0; i < theObjects.size(); i++) {
             EEAIContinent* theContinent = static_cast<EEAIContinent*>(theObjects[i]);
             if (this->mKind < 7)
-                theContinent->mCounts[this->mKind] = theID;
+                theContinent->SetCount(this->mKind, theID);
         }
     }
 }
@@ -132,7 +132,7 @@ bool EEAIAStarGraphContinentalChainGoal::AcceptNeighbor(EEAIContinent* inNeighbo
 {
     bool theResult = inNeighbor == inFrom;
     if (!theResult)
-        theResult = this->mKinds[inNeighbor->mCategory];
+        theResult = this->mKinds[inNeighbor->GetCategory()];
     if (theResult == true)
         this->mCount++;
     return theResult;

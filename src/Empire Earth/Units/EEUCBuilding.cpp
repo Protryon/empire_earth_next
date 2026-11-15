@@ -278,8 +278,8 @@ long EEGetFacingQuarter(long inX, long inY)
     if (theMap->mTerrainMesh.GetIsSpaceMap())
         theContinent = gContinentManager.GetContinentAt(inX, inY);
     if (theContinent != NULL) {
-        theCenterX = theContinent->mHull.GetCenter().mX;
-        theCenterY = theContinent->mHull.GetCenter().mY;
+        theCenterX = theContinent->GetHullCenter().mX;
+        theCenterY = theContinent->GetHullCenter().mY;
         theMiddleX = (float)theCenterX;
         theMiddleY = (float)theCenterY;
     } else {

@@ -31,9 +31,30 @@ static void HookCompletionCall(void* inCompletion,void* inOp)
 static void HookOpAddRef(void* inOp) { static_cast<AsyncOp*>(inOp)->AddRef(); }
 static void HookOpRelease(void* inOp) { static_cast<AsyncOp*>(inOp)->Release(); }
 static void HookOpKill(void* inOp) { static_cast<AsyncOp*>(inOp)->Kill(true); }
+static void HookRefAdd(void* inObject) { static_cast<RefCount*>(inObject)->AddRef(); }
+static void HookRefRelease(void* inObject) { static_cast<RefCount*>(inObject)->Release(); }
+// a completion whose call is Rust's (ee_won opobj.rs EeWonCompletion): the tracker's and the op base's timers' and
+// repeating receives' (their C++ classes, TrackerCompletion and HostCompletion, are deleted)
+class RustCompletion : public CompletionBase<AsyncOpPtr> {
+    EeWonCompletion* mBody; // owned
+public:
+    explicit RustCompletion(EeWonCompletion* inBody) : mBody(inBody) {}
+    virtual ~RustCompletion() { ee_won_completion_free(this->mBody); }
+    virtual void Complete(AsyncOpPtr inOp) { ee_won_completion_run(this->mBody, inOp.get()); }
+};
+static void* HookNewCompletion(EeWonCompletion* inBody)
+{
+    return static_cast<CompletionBase<AsyncOpPtr>*>(new RustCompletion(inBody));
+}
+static bool HookCallback(void* inOp,void* inChild,int32_t inParam)
+{
+    return static_cast<AsyncOpWithTracker*>(static_cast<AsyncOp*>(inOp))->CallbackHook(static_cast<AsyncOp*>(inChild),
+                                                                                      inParam);
+}
 static const EeWonAsyncOpHooks kAsyncOpHooks={HookRun,HookCleanup,HookCoreQueue,HookTimerAdd,HookTimerRemove,
                                              HookCompletionAddRef,HookCompletionRelease,HookCompletionCall,
-                                             HookOpAddRef,HookOpRelease,HookOpKill};
+                                             HookOpAddRef,HookOpRelease,HookOpKill,HookRefAdd,HookRefRelease,
+                                             HookNewCompletion,HookCallback};
 const EeWonAsyncOpHooks* AsyncOpHooks() { return &kAsyncOpHooks; }
 
 // FUNCTION: WON 0x0069ef80

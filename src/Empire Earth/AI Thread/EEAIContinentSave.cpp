@@ -249,11 +249,11 @@ void WriteSparse(Writer& ioWriter, const U2DSparseArrayPointContainer& inSet)
 
 void WriteArea(Writer& ioWriter, const EEAIArea& inArea)
 {
-    ioWriter.U32(inArea.mSerial);
-    ioWriter.I32(inArea.mAreaType);
-    WriteSparse(ioWriter, inArea.mTiles);
-    inArea.mHull.PortWrite(ioWriter);
-    ioWriter.Rect(inArea.mBounds);
+    ioWriter.U32(inArea.GetSerial());
+    ioWriter.I32(inArea.GetAreaType());
+    WriteSparse(ioWriter, inArea.GetTileSet());
+    inArea.WriteHull(ioWriter);
+    ioWriter.Rect(inArea.GetBounds());
 }
 
 // a continent by its place in mContinents (-1: none or not listed)
@@ -372,20 +372,12 @@ void WriteRegions(Writer& ioWriter)
         if (theContinent == NULL)
             continue;
         WriteArea(ioWriter, *theContinent);
-        ioWriter.Points(theContinent->mShoreTiles);
-        ioWriter.Longs(theContinent->mChokePoints);
-        ioWriter.Shorts(theContinent->mForestIDs);
-        ioWriter.Shorts(theContinent->mPathAreaIDs);
-        ioWriter.Shorts(theContinent->mHillIDs);
-        ioWriter.Shorts(theContinent->mIDsBC);
-        ioWriter.Shorts(theContinent->mIDsCC);
-        ioWriter.Shorts(theContinent->mIDsDC);
-        ioWriter.Shorts(theContinent->mIDsEC);
-        WriteContinents(ioWriter, theContinent->mNeighbors);
+        theContinent->WriteLists(ioWriter);
+        WriteContinents(ioWriter, theContinent->GetNeighbors());
         for (long c = 0; c < 7; c++)
-            ioWriter.U16(theContinent->mCounts[c]);
-        ioWriter.U32(theContinent->mCategory);
-        ioWriter.U16(theContinent->mID);
+            ioWriter.U16(theContinent->GetCount(c));
+        ioWriter.U32(theContinent->GetCategory());
+        ioWriter.U16(theContinent->GetID());
     }
     // the hills
     ioWriter.U32((unsigned long)theManager.mHills.size());
@@ -395,8 +387,7 @@ void WriteRegions(Writer& ioWriter)
         if (theHill == NULL)
             continue;
         WriteArea(ioWriter, *theHill);
-        ioWriter.U16(theHill->mContinentID);
-        ioWriter.U16(theHill->mID);
+        theHill->WriteFields(ioWriter);
     }
     // the path areas
     ioWriter.U32((unsigned long)theManager.mPathAreas.size());
@@ -406,15 +397,7 @@ void WriteRegions(Writer& ioWriter)
         if (theArea == NULL)
             continue;
         WriteArea(ioWriter, *theArea);
-        ioWriter.Shorts(theArea->mSectorIDs);
-        ioWriter.U16(theArea->mContinentID);
-        ioWriter.U16(theArea->mID);
-        ioWriter.I32(theArea->mKind);
-        ioWriter.I32(theArea->mUnitID);
-        ioWriter.U16(theArea->mSurfaceRegionID);
-        ioWriter.U16(theArea->mWaterBodyID);
-        ioWriter.U16(theArea->mLandMassID);
-        ioWriter.U16(theArea->mSpaceRegionID);
+        theArea->WriteFields(ioWriter);
     }
     // the forests
     ioWriter.U32((unsigned long)theManager.mForests.size());
@@ -424,14 +407,7 @@ void WriteRegions(Writer& ioWriter)
         if (theForest == NULL)
             continue;
         WriteArea(ioWriter, *theForest);
-        ioWriter.I32(theForest->mResourceKind);
-        ioWriter.I32(theForest->mNumResources1);
-        ioWriter.I32(theForest->mNumResources2);
-        ioWriter.I32(theForest->mNumResources3);
-        ioWriter.I32(theForest->mL78);
-        ioWriter.U32(theForest->mNextRenewal);
-        ioWriter.U16(theForest->mContinentID);
-        ioWriter.U16(theForest->mID);
+        theForest->WriteFields(ioWriter);
     }
     // the choke points
     ioWriter.U32((unsigned long)theManager.mChokePoints.size());
@@ -441,9 +417,7 @@ void WriteRegions(Writer& ioWriter)
         if (theChokePoint == NULL)
             continue;
         WriteArea(ioWriter, *theChokePoint);
-        ioWriter.ULongs(theChokePoint->mAreaSerials);
-        ioWriter.I32(theChokePoint->mIndex);
-        ioWriter.U16(theChokePoint->mContinentID);
+        theChokePoint->WriteFields(ioWriter);
     }
     // the rectangle areas
     ioWriter.U32((unsigned long)theManager.mRectangleAreas.size());
@@ -453,13 +427,7 @@ void WriteRegions(Writer& ioWriter)
         if (theArea == NULL)
             continue;
         WriteArea(ioWriter, *theArea);
-        ioWriter.Rect(theArea->mRect);
-        ioWriter.I32(theArea->mScenarioAreaID);
-        ioWriter.I32(theArea->mNumLandTiles);
-        ioWriter.I32(theArea->mNumWaterTiles);
-        ioWriter.I32(theArea->mNumSpaceTiles);
-        ioWriter.U16(theArea->mContinentID);
-        ioWriter.U16(theArea->mID);
+        theArea->WriteFields(ioWriter);
     }
     // the sub sectors: every one listed by id or held by a sector, numbered from 1 in that order
     std::vector<const EEAIPathSubSector*> theSubSectors;
@@ -562,7 +530,7 @@ void WriteRegions(Writer& ioWriter)
         ioWriter.I32(theOwner);
         ioWriter.I32(theIndex);
         ioWriter.I32(thePlayer);
-        ioWriter.U32(theIt->second != NULL ? theIt->second->mSerial : 0);
+        ioWriter.U32(theIt->second != NULL ? theIt->second->GetSerial() : 0);
     }
 }
 
@@ -605,11 +573,11 @@ bool ReadArea(Reader& ioReader, EEAIArea& outArea)
 {
     unsigned long theSerial = 0;
     long theType = 0;
-    if (!ioReader.U32(theSerial) || !ioReader.I32(theType) || !ReadSparse(ioReader, outArea.mTiles)
-        || !outArea.mHull.PortRead(ioReader) || !ioReader.Rect(outArea.mBounds))
+    if (!ioReader.U32(theSerial) || !ioReader.I32(theType) || !ReadSparse(ioReader, outArea.GetTileSet())
+        || !outArea.ReadHull(ioReader) || !ioReader.Rect(outArea.GetBounds()))
         return false;
-    outArea.mSerial = theSerial;
-    outArea.mAreaType = theType;
+    outArea.SetSerial(theSerial);
+    outArea.SetAreaType(theType);
     return true;
 }
 
@@ -765,13 +733,9 @@ bool ReadRegions(Reader& ioReader)
         if (theManager.mContinents[i] == NULL)
             theManager.mContinents[i] = new EEAIContinent;
         EEAIContinent* theContinent = theManager.mContinents[i];
-        theContinent->mNeighbors.clear();
+        theContinent->ClearNeighbors();
         unsigned long theNeighborCount = 0, theCategory = 0;
-        if (!ReadArea(ioReader, *theContinent) || !ioReader.Points(theContinent->mShoreTiles)
-            || !ioReader.Longs(theContinent->mChokePoints) || !ioReader.Shorts(theContinent->mForestIDs)
-            || !ioReader.Shorts(theContinent->mPathAreaIDs) || !ioReader.Shorts(theContinent->mHillIDs)
-            || !ioReader.Shorts(theContinent->mIDsBC) || !ioReader.Shorts(theContinent->mIDsCC)
-            || !ioReader.Shorts(theContinent->mIDsDC) || !ioReader.Shorts(theContinent->mIDsEC)
+        if (!ReadArea(ioReader, *theContinent) || !theContinent->ReadLists(ioReader)
             || !ioReader.Count(theNeighborCount))
             return false;
         for (unsigned long n = 0; n < theNeighborCount; n++) {
@@ -783,45 +747,38 @@ bool ReadRegions(Reader& ioReader)
         for (long c = 0; c < 7; c++) {
             if (!ioReader.U16(theShort))
                 return false;
-            theContinent->mCounts[c] = theShort;
+            theContinent->SetCount(c, theShort);
         }
-        if (!ioReader.U32(theCategory) || !ioReader.U16(theContinent->mID))
+        unsigned short theID = 0;
+        if (!ioReader.U32(theCategory) || !ioReader.U16(theID))
             return false;
-        theContinent->mCategory = (unsigned char)theCategory;
+        theContinent->SetCategory((unsigned char)theCategory);
+        theContinent->SetID(theID);
     }
     for (unsigned long i = 0; i < theCount; i++)
         for (size_t n = 0; theManager.mContinents[i] != NULL && n < theNeighbors[i].size(); n++) {
             long theIndex = theNeighbors[i][n];
-            theManager.mContinents[i]->mNeighbors.push_back(theIndex >= 0 && (unsigned long)theIndex < theCount
+            theManager.mContinents[i]->AddNeighbor(theIndex >= 0 && (unsigned long)theIndex < theCount
                                                                 ? theManager.mContinents[theIndex] : NULL);
         }
     if (!ReadTable(ioReader, theManager.mHills, [&ioReader](EEAIHill& outHill) {
-            return ReadArea(ioReader, outHill) && ioReader.U16(outHill.mContinentID) && ioReader.U16(outHill.mID);
+            return ReadArea(ioReader, outHill) && outHill.ReadFields(ioReader);
         }, true))
         return false;
     if (!ReadTable(ioReader, theManager.mPathAreas, [&ioReader](EEAIPathArea& outArea) {
-            return ReadArea(ioReader, outArea) && ioReader.Shorts(outArea.mSectorIDs) && ioReader.U16(outArea.mContinentID)
-                && ioReader.U16(outArea.mID) && ioReader.I32(outArea.mKind) && ioReader.I32(outArea.mUnitID)
-                && ioReader.U16(outArea.mSurfaceRegionID) && ioReader.U16(outArea.mWaterBodyID)
-                && ioReader.U16(outArea.mLandMassID) && ioReader.U16(outArea.mSpaceRegionID);
+            return ReadArea(ioReader, outArea) && outArea.ReadFields(ioReader);
         }))
         return false;
     if (!ReadTable(ioReader, theManager.mForests, [&ioReader](EEAIForest& outForest) {
-            return ReadArea(ioReader, outForest) && ioReader.I32(outForest.mResourceKind)
-                && ioReader.I32(outForest.mNumResources1) && ioReader.I32(outForest.mNumResources2)
-                && ioReader.I32(outForest.mNumResources3) && ioReader.I32(outForest.mL78)
-                && ioReader.U32(outForest.mNextRenewal) && ioReader.U16(outForest.mContinentID) && ioReader.U16(outForest.mID);
+            return ReadArea(ioReader, outForest) && outForest.ReadFields(ioReader);
         }))
         return false;
     if (!ReadTable(ioReader, theManager.mChokePoints, [&ioReader](EEAIChokePoint& outChokePoint) {
-            return ReadArea(ioReader, outChokePoint) && ioReader.ULongs(outChokePoint.mAreaSerials)
-                && ioReader.I32(outChokePoint.mIndex) && ioReader.U16(outChokePoint.mContinentID);
+            return ReadArea(ioReader, outChokePoint) && outChokePoint.ReadFields(ioReader);
         }))
         return false;
     if (!ReadTable(ioReader, theManager.mRectangleAreas, [&ioReader](EEAIRectangleArea& outArea) {
-            return ReadArea(ioReader, outArea) && ioReader.Rect(outArea.mRect) && ioReader.I32(outArea.mScenarioAreaID)
-                && ioReader.I32(outArea.mNumLandTiles) && ioReader.I32(outArea.mNumWaterTiles)
-                && ioReader.I32(outArea.mNumSpaceTiles) && ioReader.U16(outArea.mContinentID) && ioReader.U16(outArea.mID);
+            return ReadArea(ioReader, outArea) && outArea.ReadFields(ioReader);
         }))
         return false;
     // the sectors: made first, their sub sectors filed once those are made
@@ -976,7 +933,7 @@ bool ReadRegions(Reader& ioReader)
             std::map<std::pair<long, long>, unsigned long>::iterator theIt =
                 theTowns.find(std::make_pair((long)p, thePlayer->mTowns[t]->mTownID));
             if (theIt != theTowns.end()) {
-                theTown->mSerial = theIt->second;
+                theTown->SetSerial(theIt->second);
                 theTowns.erase(theIt);
             } else
                 theUnmatched++;
@@ -989,7 +946,7 @@ bool ReadRegions(Reader& ioReader)
             std::map<std::pair<long, long>, unsigned long>::iterator theIt =
                 theHerds.find(std::make_pair((long)p, (long)thePlayer->mHerds[h]->mID));
             if (theIt != theHerds.end()) {
-                theHerd->mSerial = theIt->second;
+                theHerd->SetSerial(theIt->second);
                 theHerds.erase(theIt);
             } else
                 theUnmatched++;

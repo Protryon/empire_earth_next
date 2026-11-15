@@ -209,7 +209,7 @@ float EECPASGUProphetCalamityAnalyzerVolcano::ApplyChokePointBonus(float inScore
                 (*(theTiles.begin() + i)).mY = (*(theTargets.begin() + i))->mUnit->GetTileY();
             }
             theTile = U2DComputeCenterPoint(theTiles, false);
-            if (!theChokePoint->Contains(theTile) && !theChokePoint->mHull.BoundedContains(theTile))
+            if (!theChokePoint->Contains(theTile) && !theChokePoint->HullContains(theTile))
                 theTile = theChokePoint->GetClosestHullPoint(theTile);
             GE3DPoint theLocation(theTile.GetX() + 0.5f, theTile.GetY() + 0.5f, 0.0f);
             bool theAllowed = this->mCalamityClass->CanCastAt(this->mProphet->GetUnit(), theLocation, theTile.GetX(), theTile.GetY(), true, NULL) == 0;

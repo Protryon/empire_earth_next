@@ -1570,7 +1570,7 @@ EEAIContinent* EEUnitClass::GetContainerContinent(EEComplexUnit* inUnit, EECompl
         for (long i = theTiles.size() - 1; i >= 0 && !theFound; i--) {
             theContinent = gContinentManager.GetContinentAt(theTiles[i].GetX(), theTiles[i].GetY());
             EETile* theTile = gWorld.mMap->GetTileAtLocation(theTiles[i]);
-            if (theContinent != NULL && theTile != NULL && theContinent->mCategory == kContinentCategoryLand && theTile->mTerrainType != kTerrainCliff &&
+            if (theContinent != NULL && theTile != NULL && theContinent->GetCategory() == kContinentCategoryLand && theTile->mTerrainType != kTerrainCliff &&
                 (theTargetContinent == NULL || theContinent == theTargetContinent))
                 theFound = true;
             else

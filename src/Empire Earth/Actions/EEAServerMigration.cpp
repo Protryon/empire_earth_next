@@ -179,8 +179,8 @@ void EEAServerMigration::Virtual4()
             if (static_cast<NESynchronousClient*>(gCommunications)->Connect(theAddress, theService, theGameName) == 0) {
                 gCommunications->SetLastTickReceived(-2);
                 static_cast<NESynchronousClient*>(gCommunications)->SetMySendToSlot(kSlotNone);
-                NEMClientReconnectionRequest* theRequest = new NEMClientReconnectionRequest(
-                    gCommunications->GetNumberOfCTsProcessedInPhysics(), ::gWorld.mCurrentPlayer);
+                NEMessage* theRequest = new NEMRecord(kNetMessageClientReconnectionRequest,   // the tick, the player
+                    {gCommunications->GetNumberOfCTsProcessedInPhysics(), ::gWorld.mCurrentPlayer});
                 gCommunications->ProcessLocalUserInput(theRequest, kSlotNone);
             }
         }

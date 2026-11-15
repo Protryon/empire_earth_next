@@ -108,7 +108,6 @@ void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOption
     EEGameOptionsPlayer theOther;
     EEPSaveGameHeader theHeader;
     EEWonNetGameInfo theInfo;
-    NEMClientConnectionRequestResponse* theResponse;
     FSFileSpec* theFile;
     unsigned long theXferID;
     unsigned long theIndex;
@@ -120,20 +119,10 @@ void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOption
     this->StopPing();
     this->mSearchForSlotLock->Enter();
     if (inVersion != gGameVersion) {
-        theResponse = new NEMClientConnectionRequestResponse(kConnectionVersionMismatch, gGameVersion, inSlot, this->GetCurrentCommunicationsTick(),
-                                                             0xff);
-        theResponse->SetOriginatingSlot(kSlotServer);
-        this->SendMessageTo(inSlot, theResponse, true);
-        theResponse->Dereference();
-        this->UnregisterSlot(inSlot);
+        this->SendConnectionResponse(inSlot, kConnectionVersionMismatch, inSlot, 0xff, true);
         theOK = false;
     } else if (inChecksum != gBinaryChecksum) {
-        theResponse = new NEMClientConnectionRequestResponse(kConnectionBadChecksum, gGameVersion, inSlot, this->GetCurrentCommunicationsTick(),
-                                                             0xff);
-        theResponse->SetOriginatingSlot(kSlotServer);
-        this->SendMessageTo(inSlot, theResponse, true);
-        theResponse->Dereference();
-        this->UnregisterSlot(inSlot);
+        this->SendConnectionResponse(inSlot, kConnectionBadChecksum, inSlot, 0xff, true);
         theOK = false;
     }
     if (inSlot == kSlotServer) {
@@ -164,12 +153,7 @@ void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOption
         }
     }
     if (theOK == true && this->GetGameState() == kServerStateClosed) {
-        theResponse = new NEMClientConnectionRequestResponse(kConnectionGameInProgressAsSent, gGameVersion, inSlot,
-                                                             this->GetCurrentCommunicationsTick(), 0xff);
-        theResponse->SetOriginatingSlot(kSlotServer);
-        this->SendMessageTo(inSlot, theResponse, true);
-        theResponse->Dereference();
-        this->UnregisterSlot(inSlot);
+        this->SendConnectionResponse(inSlot, kConnectionGameInProgressAsSent, inSlot, 0xff, true);
         theOK = false;
     }
     if (!EEIsMultiplayerGame(true)) {
@@ -179,12 +163,7 @@ void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOption
             thePlayer = gGameOptions.mPlayers[i];
             if ((thePlayer.mType == 1 || thePlayer.mType == 2) && PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)thePlayer.mName),
                                                                           reinterpret_cast<const unsigned char*>((const char*)inPlayer.mName)) == 0) {
-                theResponse = new NEMClientConnectionRequestResponse(kConnectionNameInUse, gGameVersion, inSlot,
-                                                                     this->GetCurrentCommunicationsTick(), 0xff);
-                theResponse->SetOriginatingSlot(kSlotServer);
-                this->SendMessageTo(inSlot, theResponse, true);
-                theResponse->Dereference();
-                this->UnregisterSlot(inSlot);
+                this->SendConnectionResponse(inSlot, kConnectionNameInUse, inSlot, 0xff, true);
                 goto done;
             }
         }
@@ -197,14 +176,8 @@ void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOption
                     break;
                 }
             }
-            if (!theOK) {
-                theResponse = new NEMClientConnectionRequestResponse(kConnectionGameFull, gGameVersion, inSlot,
-                                                                     this->GetCurrentCommunicationsTick(), 0xff);
-                theResponse->SetOriginatingSlot(kSlotServer);
-                this->SendMessageTo(inSlot, theResponse, true);
-                theResponse->Dereference();
-                this->UnregisterSlot(inSlot);
-            }
+            if (!theOK)
+                this->SendConnectionResponse(inSlot, kConnectionGameFull, inSlot, 0xff, true);
         }
     }
     if (theOK == true) {
@@ -223,20 +196,10 @@ void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOption
                 break;
         }
         if (theIndex >= 16) {
-            theResponse = new NEMClientConnectionRequestResponse(kConnectionGameFull, gGameVersion, inSlot,
-                                                                 this->GetCurrentCommunicationsTick(), 0xff);
-            theResponse->SetOriginatingSlot(kSlotServer);
-            this->SendMessageTo(inSlot, theResponse, true);
-            this->UnregisterSlot(inSlot);
-            theResponse->Dereference();
+            this->SendConnectionResponse(inSlot, kConnectionGameFull, inSlot, 0xff, true);
             goto done;
         }
-        this->GetCurrentCommunicationsTick();
-        theResponse = new NEMClientConnectionRequestResponse(kConnectionAccepted, gGameVersion, inSlot, this->GetCurrentCommunicationsTick(),
-                                                             theIndex);
-        theResponse->SetOriginatingSlot(kSlotServer);
-        this->SendMessageTo(inSlot, theResponse, true);
-        theResponse->Dereference();
+        this->SendConnectionResponse(inSlot, kConnectionAccepted, inSlot, (unsigned char)theIndex, false);
         if (!EEIsMultiplayerGame(true)) {
             if (gGameOptions.mLoadType == 0) {
                 thePlayer.mType = inPlayer.mType;
@@ -272,9 +235,8 @@ void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOption
             }
         }
         this->RegisterSlot(this->GetSendToSlot((unsigned char)thePlayer.mSlot));
-        this->ProcessLocalUserInput(new NEMClientConnectionRequestResponse(kConnectionPlayerJoined, gGameVersion, inSlot,
-                                                                     this->GetCurrentCommunicationsTick(), theIndex),
-                              inSlot);
+        this->ProcessLocalUserInput(this->NewConnectionResponse(kConnectionPlayerJoined, inSlot, (unsigned char)theIndex),
+                                    inSlot);
         long theResult;
         if (gGameOptions.mLoadType == 2) {
             theResult = EEOpenSaveGameFile((const char*)gGameOptions.mMapType, "Saved Games\\", theFile);
@@ -313,8 +275,44 @@ done:
     this->UnlockSendCommunicationsTick();
 }
 
-// SYNTHETIC: EXE 0x4cb39a
-// (NEMClientConnectionRequestResponse's ??_G, after its first user)
+// New (LLE Network Engine round 6): the server's connection response: its error, the version, the send-to slot it
+// names, the current tick, the lobby slot
+NEMessage* EEServer::NewConnectionResponse(long inError, unsigned char inSendToSlot, unsigned char inUISlot)
+{
+    return new NEMRecord(kNetMessageClientConnectionRequestResponse,
+                         {inError, inUISlot, inSendToSlot, this->GetCurrentCommunicationsTick()}, {gGameVersion});
+}
+
+// New (round 6): the connection response sent to a slot from the server's (each sender's five statements), the slot
+// forgotten after it when inUnregister
+void EEServer::SendConnectionResponse(unsigned char inSlot, long inError, unsigned char inSendToSlot,
+                                      unsigned char inUISlot, bool inUnregister)
+{
+    NEMessage* theResponse = this->NewConnectionResponse(inError, inSendToSlot, inUISlot);
+    theResponse->SetOriginatingSlot(kSlotServer);
+    this->SendMessageTo(inSlot, theResponse, true);
+    theResponse->Dereference();
+    if (inUnregister)
+        this->UnregisterSlot(inSlot);
+}
+
+// New (round 6): a client's connection request (firewall flag, version, name, binary checksum): its player, its
+// firewall flag, then the request checked and answered (ProcessConnectionRequest); the request released
+void EEServer::TakeConnectionRequest(NEMRecord* inRequest)
+{
+    EEGameOptionsPlayer thePlayer;
+    thePlayer.mName = inRequest->GetString(2);
+    thePlayer.mTeam = 0;
+    thePlayer.mType = 1;
+    thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
+    thePlayer.mPing = 0.0f;
+    thePlayer.mIsReady = false;
+    this->mBehindFirewall.insert(std::map<unsigned char, bool>::value_type(inRequest->GetOriginatingSlot(),
+                                                                           inRequest->Get<bool>(0)));
+    this->ProcessConnectionRequest(inRequest->GetOriginatingSlot(), thePlayer, inRequest->GetString(1),
+                                   inRequest->Get<uint32_t>(3));
+    inRequest->Dereference();
+}
 
 // SYNTHETIC: EXE 0x4cb3cf
 // (EEWonNetGameInfo's implicit ctor, first used by ProcessConnectionRequest)
@@ -342,19 +340,11 @@ void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsE
             unsigned char theSendSlot = this->GetSendToSlot((unsigned char)i);
             if (theSendSlot == kSlotNone)
                 continue;
-            NEMClientConnectionRequestResponse* theResponse = new NEMClientConnectionRequestResponse(kConnectionHostGone,
-                gGameVersion, theSendSlot, this->GetCurrentCommunicationsTick(), 0xff);
-            theResponse->SetOriginatingSlot(kSlotServer);
-            this->SendMessageTo(theSendSlot, theResponse, true);
-            theResponse->Dereference();
-            this->UnregisterSlot(theSendSlot);
+            this->SendConnectionResponse(theSendSlot, kConnectionHostGone, theSendSlot, 0xff, true);
         }
-        if (inGameIsExiting == true)
-            this->ProcessLocalUserInput(new NEMClientConnectionRequestResponse(6, gGameVersion, kSlotServer,
-                                                                         this->GetCurrentCommunicationsTick(), 0xff), kSlotServer);
-        else
-            this->ProcessLocalUserInput(new NEMClientConnectionRequestResponse(kConnectionRemovedByHost, gGameVersion, kSlotServer,
-                                                                         this->GetCurrentCommunicationsTick(), 0xff), kSlotServer);
+        this->ProcessLocalUserInput(
+            this->NewConnectionResponse(inGameIsExiting == true ? 6 : kConnectionRemovedByHost, kSlotServer, 0xff),
+            kSlotServer);
     } else {
         this->mAttemptToRemovePlayerLock->Enter();
         for (i = 0; i < 16; i++) {
@@ -385,20 +375,10 @@ void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsE
                 gGameOptions.mPlayers[thePlayer.mSlot] = thePlayer;
                 gGameOptions.mLock->WriteUnlock();
             }
-            NEMClientConnectionRequestResponse* theResponse;
-            if (inGameIsExiting == true) {
-                theResponse = new NEMClientConnectionRequestResponse(6, gGameVersion, inSlot,
-                                                                     this->GetCurrentCommunicationsTick(), 0xff);
-                theResponse->SetOriginatingSlot(kSlotServer);
-                this->SendMessageTo(inSlot, theResponse, true);
-                theResponse->Dereference();
-            } else if (inWasBooted == true) {
-                theResponse = new NEMClientConnectionRequestResponse(kConnectionRemovedByHost, gGameVersion, inSlot,
-                                                                     this->GetCurrentCommunicationsTick(), 0xff);
-                theResponse->SetOriginatingSlot(kSlotServer);
-                this->SendMessageTo(inSlot, theResponse, true);
-                theResponse->Dereference();
-            }
+            if (inGameIsExiting == true)
+                this->SendConnectionResponse(inSlot, 6, inSlot, 0xff, false);
+            else if (inWasBooted == true)
+                this->SendConnectionResponse(inSlot, kConnectionRemovedByHost, inSlot, 0xff, false);
             if (this->GetGameState() == kServerStateClosed || this->GetGameState() == 2) {
                 EEMessage* theMessage;
                 switch (this->mLoadState) {
@@ -434,12 +414,7 @@ void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsE
 // Removes a client from its lobby slot (removed-by-host response), forgets its slot and resends the slot's info
 void EEServer::RefuseClient(EEGameOptionsPlayer& inPlayer)
 {
-    NEMClientConnectionRequestResponse* theResponse =
-        new NEMClientConnectionRequestResponse(kConnectionRemovedByHost, gGameVersion, kSlotNone, this->GetCurrentCommunicationsTick(), 0xff);
-    theResponse->SetOriginatingSlot(kSlotServer);
-    this->SendMessageTo(this->GetSendToSlot(inPlayer.mSlot), theResponse, true);
-    theResponse->Dereference();
-    this->UnregisterSlot(this->GetSendToSlot(inPlayer.mSlot));
+    this->SendConnectionResponse(this->GetSendToSlot(inPlayer.mSlot), kConnectionRemovedByHost, kSlotNone, 0xff, true);
     this->mSendToSlots.erase((unsigned char)inPlayer.mSlot);
     this->SendFullPlayerInformation(inPlayer.mSlot, inPlayer);
 }
@@ -594,7 +569,7 @@ void EEServer::ProcessSystemMessage(NEMessage* inMessage)
                 break;
         }
         if (i < 16) {
-            unsigned long theStart = static_cast<NEMPlayerConnectionCheckResponse*>(inMessage)->GetPingTimeStart();
+            unsigned long theStart = static_cast<NEMRecord*>(inMessage)->Get<uint32_t>(0);   // the ping's start
             unsigned long thePing = (TMGetTime() - theStart) / 2;
             float theQuality;
             if (thePing > 750)
@@ -614,19 +589,19 @@ void EEServer::ProcessSystemMessage(NEMessage* inMessage)
         this->mSearchForSlotLock->Leave();
         break;
     case kNetMessageCommunicationsTick: {
-        NEMCommunicationsTick* theTick = static_cast<NEMCommunicationsTick*>(inMessage);
+        // the tick, its PTs to perform, PTs per second, checksum and dump flags, the players' inputs
+        NEMRecord* theTick = static_cast<NEMRecord*>(inMessage);
         unsigned long theCount = theTick->GetNumberOfPlayerInputs();
-        unsigned char theTicksToPerform = theTick->GetPhysicsTicksToPerform();
+        unsigned char theTicksToPerform = theTick->Get<unsigned char>(1);
         for (i = 0; i < theCount; i++) {
             theTick->GetPlayerInput(i, theInput);
             if (theInput->GetForSpecificSlot() == kSlotNone || theInput->GetForSpecificSlot() == kSlotServer)
                 theNumInputs++;
         }
         if (theTicksToPerform != 0xff) {
-            unsigned char theTicksPerSecond = theTick->GetPhysicsTicksPerSecond();
-            NEMPhysicsTick* thePhysicsTick = new NEMPhysicsTick(theTicksToPerform, theNumInputs, theTicksPerSecond,
-                                                                theTick->GetGenerateChecksum(),
-                                                                theTick->GetDumpTheWorld());
+            NEMessage* thePhysicsTick = new NEMRecord(kNetMessagePhysicsTick,
+                                                      {theNumInputs, theTicksToPerform, theTick->Get<bool>(3),
+                                                       theTick->Get<bool>(4), theTick->Get<unsigned char>(2)});
             gPhysics->mServerMessageQueueLock->Enter();
             gPhysics->QueueServerMessage(thePhysicsTick);
             for (i = 0; i < theCount; i++) {
@@ -650,31 +625,19 @@ void EEServer::ProcessSystemMessage(NEMessage* inMessage)
         }
         break;
     }
-    case kNetMessageClientConnectionRequest: {
-        NEMClientConnectionRequest* theRequest = static_cast<NEMClientConnectionRequest*>(inMessage);
-        thePlayer.mName = theRequest->GetPlayerName();
-        thePlayer.mTeam = 0;
-        thePlayer.mType = 1;
-        thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-        thePlayer.mPing = 0.0f;
-        thePlayer.mIsReady = false;
-        this->mBehindFirewall.insert(std::map<unsigned char, bool>::value_type(inMessage->GetOriginatingSlot(),
-                                                                theRequest->GetIsBehindFirewall()));
-        this->ProcessConnectionRequest(inMessage->GetOriginatingSlot(), thePlayer, theRequest->GetVersion(),
-                                 theRequest->GetBinaryChecksum());
-        inMessage->Dereference();
+    case kNetMessageClientConnectionRequest:
+        this->TakeConnectionRequest(static_cast<NEMRecord*>(inMessage));
         break;
-    }
     case kNetMessageClientDisconnectionNotification: {
         EEAction* theAction = new EEARemovePlayer(inMessage->GetOriginatingSlot(),
-                                                  static_cast<NEMClientDisconnectionNotification*>(inMessage)->GetIsExiting());
+                                                  static_cast<NEMRecord*>(inMessage)->Get<bool>(0));   // exiting
         gUserInterface->PostAction(theAction);
         theAction->Dereference();
         inMessage->Dereference();
         break;
     }
     case kNetMessageClientReconnectionRequest:
-        gWorld.GetPlayer(static_cast<NEMClientReconnectionRequest*>(inMessage)->GetPlayerNumber())->mSlot =
+        gWorld.GetPlayer(static_cast<NEMRecord*>(inMessage)->Get<uint32_t>(1))->mSlot =   // the player number
             inMessage->GetOriginatingSlot();
         break;
     case kMessageNewEdictEnacted:
@@ -720,7 +683,7 @@ bool EEServer::FilterPlayerInput(NEMessage* inMessage)
     }
     case kNetMessageClientConnectionRequestResponse:
         if (inMessage->GetForSpecificSlot() == kSlotServer) {
-            long theError = static_cast<NEMClientConnectionRequestResponse*>(inMessage)->GetError();
+            long theError = static_cast<NEMRecord*>(inMessage)->Get<int32_t>(0);
             if (theError == kConnectionRemovedByHost || theError == 6) {
                 static_cast<NESynchronousServer*>(gCommunications)->StopPing();
                 static_cast<NESynchronousServer*>(gCommunications)->ResetXfer();
@@ -741,22 +704,10 @@ bool EEServer::FilterPlayerInput(NEMessage* inMessage)
         } else
             theResult = true;
         break;
-    case kNetMessageClientConnectionRequest: {
-        NEMClientConnectionRequest* theRequest = static_cast<NEMClientConnectionRequest*>(inMessage);
-        thePlayer.mName = theRequest->GetPlayerName();
-        thePlayer.mTeam = 0;
-        thePlayer.mType = 1;
-        thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-        thePlayer.mPing = 0.0f;
-        thePlayer.mIsReady = false;
-        this->mBehindFirewall.insert(std::map<unsigned char, bool>::value_type(inMessage->GetOriginatingSlot(),
-                                                                theRequest->GetIsBehindFirewall()));
-        this->ProcessConnectionRequest(inMessage->GetOriginatingSlot(), thePlayer, theRequest->GetVersion(),
-                                 theRequest->GetBinaryChecksum());
-        inMessage->Dereference();
+    case kNetMessageClientConnectionRequest:
+        this->TakeConnectionRequest(static_cast<NEMRecord*>(inMessage));
         theResult = false;
         break;
-    }
     }
     return theResult;
 }
@@ -890,12 +841,13 @@ void EEServer::HandleLobbyInput(NEMessage* inMessage)
         }
         break;
     case kNetMessageXferStatus: {
-        NEMXferStatus* theStatus = static_cast<NEMXferStatus*>(inMessage);
-        unsigned long theSlot = theStatus->GetClientSlot();
-        if (inMessage->GetOriginatingSlot() != kSlotServer && theStatus->GetStatusID() == 3) {
+        // the transfer's status: the client's slot, the percent done, the transfer's id, the status
+        NEMRecord* theStatus = static_cast<NEMRecord*>(inMessage);
+        unsigned long theSlot = theStatus->Get<unsigned char>(0);
+        if (inMessage->GetOriginatingSlot() != kSlotServer && theStatus->Get<unsigned char>(3) == 3) {
             gGameOptions.mLock->WriteLock();
             thePlayer = gGameOptions.mPlayers[theSlot];
-            unsigned long theXferID = theStatus->GetXferID();
+            unsigned long theXferID = theStatus->Get<uint32_t>(2);
             if (theXferID == 0xffff)
                 theXferID = thePlayer.mTransferID;
             this->AbortXfer(theXferID);
@@ -903,15 +855,15 @@ void EEServer::HandleLobbyInput(NEMessage* inMessage)
             gGameOptions.mPlayers[thePlayer.mSlot] = thePlayer;
             gGameOptions.mLock->WriteUnlock();
         }
-        if (theStatus->GetStatusID() == 4) {
+        if (theStatus->Get<unsigned char>(3) == 4) {
             gResource->GetString(IDS_FILE_TRANSFER_FAILED, theText);
             gUIManager->DisplayMessage(theText, true, NULL, NULL, true);
         }
-        gUserInterface->PostLobbyShowTransferProgress(theSlot, theStatus->GetPercentDone());
+        gUserInterface->PostLobbyShowTransferProgress(theSlot, theStatus->Get<unsigned char>(1));
         break;
     }
     case kNetMessageStartGame: {
-        gStartTime = static_cast<NEMStartGame*>(inMessage)->GetOffsetStartTime();
+        gStartTime = static_cast<NEMRecord*>(inMessage)->Get<uint32_t>(0);   // the offset start time
         long theSeed = gPhysics->GetRandom(0L, 0x7fffffffL);
         theSeed += gWorld.mNumPlayers;
         for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {
@@ -954,7 +906,7 @@ void EEServer::HandleLobbyInput(NEMessage* inMessage)
         break;
     }
     case kNetMessageClientConnectionRequestResponse:
-        if (static_cast<NEMClientConnectionRequestResponse*>(inMessage)->GetError() == kConnectionPlayerJoined) {
+        if (static_cast<NEMRecord*>(inMessage)->Get<int32_t>(0) == kConnectionPlayerJoined) {   // the error
             gUserInterface->PostLobbyUpdateForm();
             if (gWonNet != NULL)
                 gWonNet->PlayerJoined();
@@ -1151,11 +1103,9 @@ void EEServer::HandleXferStatus(unsigned char& inSlot, unsigned char& inPercentD
                             unsigned char& inStatusID)
 {
     unsigned char thePlayer = this->GetLobbySlot(inSlot);
-    this->ProcessLocalUserInput(new NEMXferStatus(thePlayer, inPercentDone, inXferID, inStatusID), kSlotNone);
+    this->ProcessLocalUserInput(new NEMRecord(kNetMessageXferStatus, {thePlayer, inPercentDone, inXferID, inStatusID}),
+                                kSlotNone);
 }
-
-// SYNTHETIC: EXE 0x4ccfbb
-// (NEMXferStatus's ??_G)
 
 // FUNCTION: EXE 0x4ccfe7
 // Records a slot's vote on the edict; once all have voted enacts it on a yes majority (ties fail) and resets the vote

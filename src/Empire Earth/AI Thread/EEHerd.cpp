@@ -161,7 +161,7 @@ bool EEHerd::AddUnit(EEComplexUnit* inUnit)
 {
     std::vector<U2DPoint<long> > theTiles;
     bool theResult = false;
-    if (this->mTiles.Size() != 0 || this->CanTake(inUnit, true)) {
+    if (this->GetNumTiles() != 0 || this->CanTake(inUnit, true)) {
         theResult = true;
         if (inUnit->GetGrowth() != 1.0f)
             this->mNumYoung++;
@@ -268,7 +268,7 @@ bool EEHerd::Chase()
         !(this->mTarget && this->mTarget->GetTileX() != -10000 && (long)this->mTarget->mWaypoints.size() > 1 && this->mTarget->GetHitPoints() > 0)) {
         this->ReleaseTarget();
         EEHerdUnitFilter theFilter(this->mContinent, false, true);
-        EEGetUnitsInRectangle(theContinent->mHull.GetBounds(), theTargets, theFilter, false);
+        EEGetUnitsInRectangle(theContinent->GetHullBounds(), theTargets, theFilter, false);
         if (theTargets.size() > 0) {
             this->mTarget = theTargets[gPhysics->GetRandomElementIndex(theTargets)];
             this->mTarget->mReferenceCount++;
@@ -365,7 +365,7 @@ bool EEHerd::Hunt()
     std::vector<EEComplexUnit*> theUnits;
     bool theResult = false;
     EEAIContinent* theContinent = gContinentManager.GetContinentByID(this->mContinent);
-    if (!theContinent || theContinent->mCategory != kContinentCategoryWater)
+    if (!theContinent || theContinent->GetCategory() != kContinentCategoryWater)
         return theResult;
     this->ReleaseTarget();
     this->GetPrey(this->mContinent, theUnits);
@@ -414,7 +414,7 @@ void EEHerd::Clear()
     this->mHuntTime = 0;
     this->mAnimalID = 0x3e8;
     this->mRadiusSquared = 0x169;
-    this->mAreaType = kAIAreaHerd;
+    this->SetAreaType(kAIAreaHerd);
     this->mIsActive = true;
 }
 
@@ -457,7 +457,7 @@ void EEHerd::Create(const std::vector<U2DPoint<long> >& inTiles)
         if (gLoadingSavedGame)
             goto done;
     }
-    this->mBounds2 = this->mHull.GetBounds();
+    this->mBounds2 = this->GetHullBounds();
     {
         long theMargin = gPhysics->GetRandom((this->mAnimal->GetMaxTerritoryMargin() - this->mAnimal->GetMinTerritoryMargin()) / 2, this->mAnimal->GetMaxTerritoryMargin());
         U2DPoint<long> theLeftTop = this->mBounds2.GetTopLeft();
@@ -608,7 +608,7 @@ void EEHerd::GetPrey(unsigned short inContinent, std::vector<EEComplexUnit*>& ou
     const std::vector<EEAIContinent*>& theContinents = gContinentManager.mContinents;
     EEAIContinent* theContinent = theContinents[this->mContinent];
     if (theContinent)
-        EEGetUnitsInRectangle(theContinent->mHull.GetBounds(), outUnits, theFilter, false);
+        EEGetUnitsInRectangle(theContinent->GetHullBounds(), outUnits, theFilter, false);
 }
 
 // FUNCTION: EXE 0x4a30b6
@@ -1084,7 +1084,7 @@ long EEHerd::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
     // port (0.254): the area's tiles, so a loaded herd keeps its area, territory and leader (Load, RepairPointers)
     if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
         std::vector<U2DPoint<long> > theTiles;
-        this->mTiles.BuildPointList(theTiles, 1);
+        this->GetTileSet().BuildPointList(theTiles, 1);
         theCount = theTiles.size();
         theResult = outFile.Write(theCount);
         for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
@@ -1135,11 +1135,11 @@ bool EEHerd::CanTake(EEComplexUnit* inUnit, bool inCheckRange)
     U2DPoint<long> theTile(inUnit->mTileX, inUnit->mTileY);
     bool theResult = false;
     if (inUnit->mPlayer == this->mPlayer && EEHerd::IsAnimalOnMap(inUnit) && this->mAnimalID == inUnit->mUnitClass->mAnimalID && this->mUnits.size() < this->mMaxUnits) {
-        theResult = this->mTiles.Size() == 0;
+        theResult = this->GetNumTiles() == 0;
         if (!theResult && inCheckRange == true) {
             unsigned short theID = gContinentManager.GetContinentID(theTile.mX, theTile.mY);
             if (theID == this->mContinent || this->mContinent == 0) {
-                theResult = this->mHull.BoundedContains(theTile);
+                theResult = this->HullContains(theTile);
                 if (!theResult) {
                     theClosest = this->GetClosestHullPoint(theTile);
                     theResult = theClosest.DistanceToSquared(theTile) <= this->mRadiusSquared;
@@ -1400,12 +1400,12 @@ U2DPoint<long> EEHerd::GetRandomPoint()
     EEMap* theMap = gWorld.mMap;
     if (theMap != NULL) {
         for (long i = 15; i >= 0 && !theFound; i--) {
-            theResult.mX = this->mHull.GetBounds().mLeft +
-                           gPhysics->GetRandom(0L, this->mHull.GetBounds().mRight - this->mHull.GetBounds().mLeft);
-            theResult.mY = this->mHull.GetBounds().mTop +
-                           gPhysics->GetRandom(0L, this->mHull.GetBounds().mBottom - this->mHull.GetBounds().mTop);
+            theResult.mX = this->GetHullBounds().mLeft +
+                           gPhysics->GetRandom(0L, this->GetHullBounds().mRight - this->GetHullBounds().mLeft);
+            theResult.mY = this->GetHullBounds().mTop +
+                           gPhysics->GetRandom(0L, this->GetHullBounds().mBottom - this->GetHullBounds().mTop);
             if (theMap->GetTileAtLocation(theResult))
-                theFound = this->mHull.BoundedContains(theResult);
+                theFound = this->HullContains(theResult);
         }
     }
     if (!theFound)

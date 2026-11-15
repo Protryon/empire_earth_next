@@ -298,7 +298,7 @@ void EECPAttackSubGroup::RequestUnits(std::vector<long>& inClasses, std::vector<
         this->mRequest = this->mGroup->mCommander->mPersonnel->NewContinentRequest(inClasses, inUnitIDs, inContinent);
     else {
         EECPPersonnel* thePersonnel = this->mGroup->mCommander->mPersonnel;
-        this->mRequest = thePersonnel->NewTownRequest(inClasses, inUnitIDs, inTownID, theTown->mHull.GetCenter());
+        this->mRequest = thePersonnel->NewTownRequest(inClasses, inUnitIDs, inTownID, theTown->GetHullCenter());
     }
     if (this->mRequest && this->mPlayer2->mCombatManager->mIsWonderRace)
         this->mRequest->mDeadline = gPhysics->mGameTime + 300000;
@@ -2411,9 +2411,9 @@ void EECPAttackSubGroup::ReturnToRallyPoint()
     if (i == 0 && this->mRallyPoint.mTile.mY == 0) {
         if (this->mUnits.size() <= 0 || this->mPlayer->GetNumTowns() <= 0)
             return;
-        this->mRallyPoint.mTile = this->mPlayer->mTowns.front()->mHull.GetCenter();
-        thePoint.mX = this->mPlayer->mTowns.front()->mHull.GetCenter().GetX() + 0.5f;
-        thePoint.mY = this->mPlayer->mTowns[0]->mHull.GetCenter().mY + 0.5f;
+        this->mRallyPoint.mTile = this->mPlayer->mTowns.front()->GetHullCenter();
+        thePoint.mX = this->mPlayer->mTowns.front()->GetHullCenter().GetX() + 0.5f;
+        thePoint.mY = this->mPlayer->mTowns[0]->GetHullCenter().mY + 0.5f;
     } else {
         thePoint.mX = i + 0.5f;
         thePoint.mY = this->mRallyPoint.mTile.mY + 0.5f;

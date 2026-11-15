@@ -5,26 +5,27 @@
 //! (`music`: `EEMusicManager`'s song changes, fades, intensity rules and timers); and the mixers' registry and the
 //! Sound Engine's start and shutdown decisions (`mixers`).
 //!
-//! C++ keeps the objects and their lifetimes: the instance nodes (pooled, intrusively reference counted, held by
-//! units, unit classes and effects), the samples (shared with the mixer plug-in), the sound path, the mixer, the
-//! scavenger thread and the manager's lock. Rust sees them as opaque handles through [`manager::Host`] and is called
-//! with the C++ lock held where the C++ held it.
+//! The objects are whole in Rust too (LLE lane round 6): the instance nodes and their pool, the samples and the
+//! scores (`objects`), the mixers with their plug-in entry points and registry (`mixerobj`), the conductor on dmusic
+//! (`conductorobj`) and the sound manager with its scavenger thread (`managerobj`); the C++ classes are data-less
+//! forwarders. What they reach outside the crate (the Thread System, dmusic, the platform, the plug-in module and the
+//! sound path) is in `sys`. The decisions see the objects through [`manager::Host`] and [`conductor::Host`].
 //!
 //! `golden_sound.txt` holds the C++ implementation's behaviour (scenario scripts over a fake mixer, and MSVC
 //! `std::sort` permutations), dumped by a throwaway driver before the C++ was replaced.
 
 pub mod conductor;
+pub mod conductorobj;
 pub mod manager;
+pub mod managerobj;
+pub mod mixerobj;
 pub mod mixers;
 pub mod msvc_sort;
 pub mod music;
+pub mod objects;
+/// cbindgen:ignore
+pub mod sys;
 
-#[cfg(not(test))]
-pub mod conductor_ffi;
-#[cfg(not(test))]
-pub mod ffi;
-#[cfg(not(test))]
-pub mod mixers_ffi;
 #[cfg(not(test))]
 pub mod music_ffi;
 
@@ -38,3 +39,5 @@ mod golden_conductor;
 mod golden_mixers;
 #[cfg(test)]
 mod golden_music;
+#[cfg(test)]
+mod golden_objects;
