@@ -16,6 +16,7 @@ local U = require("classic_lua.units")
 local G = require("lib.groups")
 local NAVY = require("lib.navy")
 local FERRY = require("classic_lua.ferry")
+local TAC = require("lib.tactics")   -- Age of AI's combat tactics, each off unless a variant turns it on (main.configure)
 local C = T.C
 
 local M = {}
@@ -141,13 +142,30 @@ local function own_ships()
     end)
 end
 
--- the free soldiers and warships (Personnel's pool: the engine holds them), {id -> record}, and a list in id order
-local function free_pool()
+-- lib.tactics POOL: the land soldiers in no group, held by the script in a defence group at home (role "pool"), an
+-- id set; nil when the tactic is off
+local function pool_set(memory)
+    if not TAC.opts.pool then
+        return nil
+    end
+    local g = G.role(army(memory), "pool")
+    local set = {}
+    for _, id in ipairs(g ~= nil and g.units or {}) do
+        set[id] = true
+    end
+    return set
+end
+
+-- the free soldiers and warships (Personnel's pool: the engine holds them; with lib.tactics POOL the pool group's
+-- too), {id -> record}, and a list in id order
+local function free_pool(memory)
     local pool, list = {}, {}
+    local ours = memory ~= nil and pool_set(memory) or nil
     for _, src in ipairs({own_military(), own_ships(), own_air()}) do
         for _, u in ipairs(src) do
             -- (an aircraft parked in its airport or carrier is free too)
-            if u.held == "engine" and (u.inside == nil or src == own_air()) and (cls(u.type).speed or 0) > 0 then
+            if (u.held == "engine" or (ours ~= nil and ours[u.id])) and (u.inside == nil or src == own_air())
+                    and (cls(u.type).speed or 0) > 0 then
                 pool[u.id] = u
                 list[#list + 1] = u
             end
@@ -1018,7 +1036,7 @@ end
 local function select_units(view, memory, kind, target, naval, domain)
     local b = memory.t.behavior
     local mem = army(memory)
-    local pool, list = free_pool()
+    local pool, list = free_pool(memory)
     local cands = {}
     for _, u in ipairs(list) do
         cands[#cands + 1] = {id = u.id, type = u.type}
@@ -1555,7 +1573,7 @@ end
 -- deadline drops the open slots (Cancel)
 local function fill_requests(view, memory)
     local mem = army(memory)
-    local pool, list = free_pool()
+    local pool, list = free_pool(memory)
     local used = {}
     for _, g in ipairs(G.all(mem)) do
         if g.slots ~= nil and #g.slots > 0 then
@@ -3867,9 +3885,82 @@ local function kill_for_military(view, memory)
     end
 end
 
+-- lib.tactics POOL: every 5 s the land soldiers the engine holds on the town's land (no explorer: explore.lua
+-- takes its own) go into the pool group, a defence at the town over the claim range; the group is made again when
+-- it died out
+local POOL_MS, POOL_MAX = 5000, 40   -- (at most POOL_MAX in the pool: a 100-unit defence group's targeting passed the
+                                     -- step's instruction budget; the rest stay the engine's)
+local function pool_step(view, memory)
+    local a = army(memory)
+    if not TAC.opts.pool or view.town_x < 0 or view.time - (a.pool_t or 0) < POOL_MS then
+        return
+    end
+    a.pool_t = view.time
+    local free = G.free_soldiers(view.town_x, view.town_y, 40)
+    local land = ai.tile(view.town_x, view.town_y)
+    land = land and land.continent or 0
+    local take = {}
+    if #free > 0 then
+        local cols = ai.get(free, {"x", "y"})
+        for k, id in ipairs(free) do
+            local t = cols.x[k] ~= nil and ai.tile(cols.x[k], cols.y[k]) or nil
+            if t ~= nil and (land == 0 or t.continent == land) then
+                take[#take + 1] = id
+            end
+        end
+    end
+    local g = G.role(a, "pool")
+    local r = math.max(view.claim_range or 0, GUARD_RADIUS)
+    if g == nil and #take > 0 then
+        while #take > POOL_MAX do
+            take[#take] = nil
+        end
+        g = G.create(a, {task = "defend", role = "pool", x = view.town_x, y = view.town_y, radius = r, target = 0})
+        g.mission = 1
+    end
+    if g ~= nil then
+        g.x, g.y, g.radius = view.town_x, view.town_y, r
+        local room = POOL_MAX - #g.units
+        while #take > math.max(room, 0) do
+            take[#take] = nil
+        end
+        if #take > 0 then
+            G.add(a, g, take)
+        end
+    end
+end
+
+-- explore.lua's draft with lib.tactics POOL: a pool soldier of the class, out of the pool (nil: none)
+function M.pool_take(memory, class)
+    local set = pool_set(memory)
+    if set == nil then
+        return nil
+    end
+    local g = G.role(army(memory), "pool")
+    if g == nil then
+        return nil
+    end
+    for _, id in ipairs(g.units) do
+        local u = ai.unit(id)
+        if u ~= nil and u.type == class and u.inside == nil then
+            local keep = {}
+            for _, o in ipairs(g.units) do
+                if o ~= id then
+                    keep[#keep + 1] = o
+                end
+            end
+            g.units = keep
+            g.aims[id] = nil
+            return id
+        end
+    end
+    return nil
+end
+
 function M.step(view, memory)
     local a = army(memory)
     G.init(a)
+    pool_step(view, memory)
     if memory.t.deathmatch and not a.built_up then
         a.built_up = true
         for _ = 1, 3 do
@@ -3909,11 +4000,35 @@ function M.step(view, memory)
             end
         end
     end
+    -- (lib.tactics: the units its tactics hold, and the leash and focus flags of the groups)
+    local tactics = TAC.any()
+    local function home()
+        return rally_point(view)
+    end
+    if tactics then
+        TAC.commit(memory, G.committed, view.time)
+        for _, g in ipairs(G.all(a)) do
+            TAC.flags(g, memory, home)
+        end
+    end
     -- (at most GROUPS_A_STEP groups a step, in turn: lib.groups' step_max; a deathmatch's groups passed the step's
     -- instruction budget)
     a.step_max = GROUPS_A_STEP
     a.step_used_k = GROUPS_USED_K
     G.step(view, a)
+    if tactics then
+        local all = G.all(a)
+        -- JUDGE's way home: a retreat (lib.groups: a forced move, then a defence there), the attack mission over (the
+        -- group's next task is a defence task, update_groups)
+        TAC.judge(memory, all, view.time, home, function(g, hx, hy)
+            g.mission, g.wonder_id, g.wonder_defend, g.goto_x, g.goto_y = 0, nil, nil, nil, nil
+            set_place(g, "retreat", hx, hy, 0, 0)
+            g.was_fighting = false
+        end)
+        TAC.siege(memory, all, view.time)
+        TAC.hurt(memory, all, view.time, home)
+        TAC.report(memory, view.time)
+    end
     -- (a waiting group whose last units died in the step keeps its slots)
     for _, g in ipairs(waiting) do
         if a.groups[g.id] == nil then

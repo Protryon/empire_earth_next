@@ -153,7 +153,8 @@ M.OVERRUN_PCT = 200        -- (OPT.overrun_spend) percent of the army's and towe
 M.RAID_TOWER_PER = 6       -- (OPT.raid_towers) raiders a tower
 M.RAID_TOWER_MOST = 16     -- (OPT.raid_towers) towers at most
 M.RAID_TOWER_MS = 600000   -- (OPT.raid_towers) a raid counts this long
-M.GROW_FLOOR = nil          -- (OPT.grow_always) citizens per age (1 Pre, 2 Stone, 3 Copper on) trained past the save; nil: the pop cap
+M.GROW_FLOOR = {50, 80, 120}   -- (OPT.grow_always) citizens per age (1 Pre, 2 Stone, 3 Copper on) trained past the
+                               -- save, as the Lua classic's worker floor (G4); nil: the pop cap (G1: the saves stalled)
 M.MINES_FREE_SITES = 6      -- (OPT.mines_free) gold and iron sites at most
 M.SAVE_BANK = 300          -- (OPT.save_retarget) a resource is banked past its cost by this much
 M.SAVE_FLOOR = {food = 18, wood = 10, gold = 12, stone = 6}   -- (OPT.save_retarget) the gatherers a donor keeps

@@ -19,6 +19,7 @@ local RS = require("classic_lua.research")
 local MIL = require("classic_lua.militia")
 local ARMY = require("classic_lua.army")
 local EXPLORE = require("classic_lua.explore")
+local TAC = require("lib.tactics")
 local C = T.C
 
 local M = {}
@@ -372,7 +373,18 @@ function M.micro(info, memory)
         memory.hits[#memory.hits + 1] = e
     end
     MIL.on_events(memory, list, now)
+    TAC.counterfire(memory, list, now)   -- (lib.tactics COUNTERFIRE: off unless configured)
     return nil
+end
+
+-- a variant's switches (a script of its own in ai/ais.json: return require("classic_lua.main").configure{...}):
+-- tactics = lib.tactics' options (Age of AI's combat tactics, all off by default; AI_RESEARCH §8.86)
+function M.configure(opts)
+    opts = opts or {}
+    if opts.tactics ~= nil then
+        TAC.configure(opts.tactics)
+    end
+    return M
 end
 
 return M
