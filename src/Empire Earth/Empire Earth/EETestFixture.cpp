@@ -289,7 +289,7 @@ void WriteTelemetry(FILE* outFile)
         EECameraControl& theCamera = gWorld.mCameraControl;
         GE3DPoint theFocus;
         theCamera.GetLocation(theCamera.mFraction, theFocus);
-        GE3DPoint theTarget = theCamera.mEndFocus;
+        GE3DPoint theTarget = theCamera.GetEndFocus();
         GETerrainMesh& theMesh = theMap->mTerrainMesh;
         bool theFocusValid = theMesh.GetIsValidPoint(UMFloorUnsigned(theFocus.GetX()), UMFloorUnsigned(theFocus.GetY()));
         bool theTargetValid = theMesh.GetIsValidPoint(UMFloorUnsigned(theTarget.GetX()), UMFloorUnsigned(theTarget.GetY()));

@@ -6,6 +6,112 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "ee_ge.h"
+
+/// No followed unit (`EEUnitHandle::kNone`).
+constexpr static const uint32_t EE_APP_CAMERA_NO_UNIT = 4294967295;
+
+/// The followed units' slots.
+constexpr static const uint32_t EE_APP_CAMERA_UNIT_A = 0;
+
+constexpr static const uint32_t EE_APP_CAMERA_UNIT_B = 1;
+
+/// The switches [`CameraHost::flags`] answers.
+constexpr static const uint32_t EE_APP_CAMERA_FREE = 1;
+
+constexpr static const uint32_t EE_APP_CAMERA_FAR_REAR = 2;
+
+constexpr static const uint32_t EE_APP_CAMERA_CINEMATIC = 4;
+
+constexpr static const uint32_t EE_APP_CAMERA_ORTHOGRAPHIC = 8;
+
+constexpr static const uint32_t EE_APP_CAMERA_HAS_MAP = 16;
+
+/// A unit's state bits ([`CameraHost::unit_state`]).
+constexpr static const uint32_t EE_APP_CAMERA_EXISTS = 1;
+
+/// `mHitPoints > 0`
+constexpr static const uint32_t EE_APP_CAMERA_ALIVE = 2;
+
+/// `mTileX != -10000 && GetTileY() != -10000`
+constexpr static const uint32_t EE_APP_CAMERA_ON_MAP = 4;
+
+/// What [`update`] leaves the C++ to do: nothing, the view (perspective), or the view with the orthographic
+/// rectangle's half size.
+constexpr static const int32_t EE_APP_CAMERA_UPDATE_DONE = 0;
+
+constexpr static const int32_t EE_APP_CAMERA_UPDATE_VIEW = 1;
+
+constexpr static const int32_t EE_APP_CAMERA_UPDATE_ORTHO = 2;
+
+/// slot -> id (`EE_APP_CAMERA_NO_UNIT` when the handle does not resolve)
+constexpr static const int32_t EE_APP_CAMERA_OP_UNIT = 1;
+
+/// slot, id: the slot's handle
+constexpr static const int32_t EE_APP_CAMERA_OP_SET_UNIT = 2;
+
+/// id: `Reference` / `Dereference`
+constexpr static const int32_t EE_APP_CAMERA_OP_REFERENCE = 3;
+
+constexpr static const int32_t EE_APP_CAMERA_OP_DEREFERENCE = 4;
+
+/// id -> id: the state bits (`EE_APP_CAMERA_EXISTS | ALIVE | ON_MAP`)
+constexpr static const int32_t EE_APP_CAMERA_OP_UNIT_STATE = 5;
+
+/// id -> id: the complex unit's container, else the unit
+constexpr static const int32_t EE_APP_CAMERA_OP_CONTAINER = 6;
+
+/// id -> point (`GetUnitPoint`)
+constexpr static const int32_t EE_APP_CAMERA_OP_UNIT_POINT = 7;
+
+/// id -> flag, t: a complex unit that does not face the camera, its physical model's location
+constexpr static const int32_t EE_APP_CAMERA_OP_UNIT_LOCATION = 8;
+
+/// id -> flag, x: following (complex, no cinematic), the velocity times the game speed
+constexpr static const int32_t EE_APP_CAMERA_OP_FOLLOW_RATE = 9;
+
+/// id -> flag: another player's unit the local player cannot see
+constexpr static const int32_t EE_APP_CAMERA_OP_HIDDEN = 10;
+
+/// -> id: the key count; id -> key; the keys cleared
+constexpr static const int32_t EE_APP_CAMERA_OP_KEY_COUNT = 11;
+
+constexpr static const int32_t EE_APP_CAMERA_OP_KEY = 12;
+
+constexpr static const int32_t EE_APP_CAMERA_OP_CLEAR_KEYS = 13;
+
+/// -> id: the switches (`EE_APP_CAMERA_FREE` ...)
+constexpr static const int32_t EE_APP_CAMERA_OP_FLAGS = 14;
+
+/// -> t: `gWorld.mTransformation`; -> x: `gWorld.mCameraYaw`
+constexpr static const int32_t EE_APP_CAMERA_OP_WORLD_TRANSFORMATION = 15;
+
+constexpr static const int32_t EE_APP_CAMERA_OP_WORLD_CAMERA_YAW = 16;
+
+/// x, y -> flag (`GetIsValidTile`/`GetIsValidPoint` after `UMFloorUnsigned`); x, y -> z (`GetMeshZ`)
+constexpr static const int32_t EE_APP_CAMERA_OP_VALID_TILE = 17;
+
+constexpr static const int32_t EE_APP_CAMERA_OP_VALID_POINT = 18;
+
+constexpr static const int32_t EE_APP_CAMERA_OP_MESH_Z = 19;
+
+/// -> planes
+constexpr static const int32_t EE_APP_CAMERA_OP_EDGE_PLANES = 20;
+
+/// x, y -> line (`GetScreenLine`); line -> flag, point (`GetLocationOnLine(.., true)`)
+constexpr static const int32_t EE_APP_CAMERA_OP_SCREEN_LINE = 21;
+
+constexpr static const int32_t EE_APP_CAMERA_OP_LOCATION_ON_LINE = 22;
+
+/// -> x, y, z: the viewport's x centre, y centre, half height; -> point: its camera; -> x: the front clipping
+constexpr static const int32_t EE_APP_CAMERA_OP_VIEWPORT = 23;
+
+constexpr static const int32_t EE_APP_CAMERA_OP_VIEWPORT_CAMERA = 24;
+
+constexpr static const int32_t EE_APP_CAMERA_OP_FRONT_CLIPPING = 25;
+
+/// x, y: the front and rear clipping distances
+constexpr static const int32_t EE_APP_CAMERA_OP_SET_CLIPPING = 26;
 
 /// the slot's name `UWideString::Load` / `Save` (index: the slot)
 constexpr static const int32_t EE_APP_OPTIONS_NAME_LOAD = 200;
@@ -77,6 +183,97 @@ constexpr static const int32_t EE_APP_SETTINGS_STRING_SET = 3;
 
 /// the member set to the defaults' member
 constexpr static const int32_t EE_APP_SETTINGS_STRING_DEFAULT = 4;
+
+/// `EECameraControl`'s plain members, in the class's order (the key list and the two unit handles stay C++).
+struct EeAppCameraFields {
+  /// the start orientations (slerped to `mQ04C`/`mQ05C`)
+  EeGeQuaternion mQ014;
+  EeGeQuaternion mQ024;
+  /// the start points (lerped to `mEndOffset`/`mEndFocus`)
+  EeGe3DPoint mStartOffset;
+  EeGe3DPoint mStartFocus;
+  /// the target key's orientations
+  EeGeQuaternion mQ04C;
+  EeGeQuaternion mQ05C;
+  EeGe3DPoint mEndOffset;
+  EeGe3DPoint mEndFocus;
+  EeGeTransformation mView;
+  /// x = -10000: none
+  EeGe3DPoint mTargetPoint;
+  float mFraction;
+  float mRate;
+  /// 0 (near) .. 1 (far), past 1 with the port's farther zoom
+  float mZoom;
+  /// the key's hold time
+  float mWait;
+  float mWaited;
+  float mTurnYaw;
+  float mTurnPitch;
+  /// 3: the free camera mode
+  long mMode;
+  long mPathIndex;
+  bool mChanged;
+  bool mIsFollowingUnitB;
+  /// a path plays
+  bool mLocked;
+  bool mB0FF;
+};
+
+/// The terrain mesh's four edge planes (ee_gfx camera.rs's `EeGfxEdgePlanes`, repeated so that the C header does not
+/// need ee_gfx's).
+struct EeAppCameraPlanes {
+  EeGe3DPlane front;
+  EeGe3DPlane back;
+  EeGe3DPlane left;
+  EeGe3DPlane right;
+};
+
+/// `EECameraKey`'s layout (ee/EECameraKey.h, 0xa4 bytes): the view and offset turns, the offset, the focus, the hold
+/// time, the speed (1 / duration) and the jump flag.
+struct EeAppCameraKey {
+  EeGeTransformation mT00;
+  EeGeTransformation mT40;
+  EeGe3DPoint mOffset;
+  EeGe3DPoint mFocus;
+  float mWait;
+  float mRate;
+  bool mChanged;
+};
+
+/// One host operation's arguments and answers.
+struct EeAppCameraIo {
+  /// a unit id (in and out), or a key's index
+  uint32_t id;
+  /// a followed unit's slot (`EE_APP_CAMERA_UNIT_A`/`B`)
+  uint32_t slot;
+  /// a query's yes or no; a unit's state bits, a key count, the switches in `id`
+  bool flag;
+  float x;
+  float y;
+  float z;
+  EeGe3DPoint point;
+  EeGeTransformation t;
+  EeGe3DLine line;
+  EeAppCameraPlanes planes;
+  EeAppCameraKey key;
+};
+
+/// The host: `(ctx, op, io)`.
+using EeAppCameraFn = int32_t(*)(void*, int32_t, EeAppCameraIo*);
+
+/// `MoveTo`'s arguments.
+struct EeAppCameraMove {
+  uint32_t unit_a;
+  EeGe3DPoint location_a;
+  bool flag_a;
+  float duration;
+  uint32_t unit_b;
+  EeGe3DPoint location_b;
+  bool flag_b;
+  float zoom;
+  float turn_yaw;
+  float turn_pitch;
+};
 
 /// `EEGameOptionsPlayer`'s plain members (its name stays a C++ `UWideString`), in the class's order.
 struct EeAppOptionsPlayerFields {
@@ -268,6 +465,242 @@ struct EeAppSettingsFields {
 using EeAppSettingsStringFn = uint32_t(*)(void*, int32_t, uint32_t, char*, uint32_t);
 
 extern "C" {
+
+/// `EECameraControl()`'s plain members.
+///
+/// # Safety
+/// `rec` is a live record.
+void ee_app_camera_default(EeAppCameraFields *rec);
+
+/// `GetOffset` (which 0) or `GetLocation` (1) at a step.
+///
+/// # Safety
+/// live records.
+void ee_app_camera_point(const EeAppCameraFields *rec,
+                         uint32_t which,
+                         float step,
+                         EeGe3DPoint *out);
+
+/// `GetViewTurn` (which 0) or `GetOffsetTurn` (1) at a step.
+///
+/// # Safety
+/// live records.
+void ee_app_camera_turn(const EeAppCameraFields *rec,
+                        uint32_t which,
+                        float step,
+                        EeGeTransformation *out);
+
+/// `SlerpViewTurn` (which 0) or `SlerpOffsetTurn` (1) at a step.
+///
+/// # Safety
+/// live records.
+void ee_app_camera_slerp(const EeAppCameraFields *rec,
+                         uint32_t which,
+                         float step,
+                         EeGeQuaternion *out);
+
+/// `KeepPose`.
+///
+/// # Safety
+/// `rec` is a live record.
+void ee_app_camera_keep_pose(EeAppCameraFields *rec);
+
+/// `SetChanged`.
+///
+/// # Safety
+/// `rec` is a live record.
+void ee_app_camera_set_changed(EeAppCameraFields *rec);
+
+/// `ResetPath`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_reset_path(EeAppCameraFields *rec, void *ctx, EeAppCameraFn call);
+
+/// `ClearUnitA`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_clear_unit_a(EeAppCameraFields *rec, void *ctx, EeAppCameraFn call);
+
+/// `ClearUnitB`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_clear_unit_b(EeAppCameraFields *rec, void *ctx, EeAppCameraFn call);
+
+/// `SetClippingDistances`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_set_clipping_distances(EeAppCameraFields *rec, void *ctx, EeAppCameraFn call);
+
+/// `NextKey`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_next_key(EeAppCameraFields *rec, void *ctx, EeAppCameraFn call);
+
+/// `StartPath`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_start_path(EeAppCameraFields *rec, void *ctx, EeAppCameraFn call);
+
+/// `BuildView(out, step)`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_build_view(EeAppCameraFields *rec,
+                              void *ctx,
+                              EeAppCameraFn call,
+                              float step,
+                              EeGeTransformation *out);
+
+/// `GetGroundPoint(line, out)`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_ground_point(EeAppCameraFields *rec,
+                                void *ctx,
+                                EeAppCameraFn call,
+                                const EeGe3DLine *line,
+                                EeGe3DPoint *out);
+
+/// `GetUnitTurn(unit, out)`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_unit_turn(EeAppCameraFields *rec,
+                             void *ctx,
+                             EeAppCameraFn call,
+                             uint32_t id,
+                             EeGeTransformation *out);
+
+/// `Revolve(angles)`: the yaw and the pitch.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_revolve(EeAppCameraFields *rec,
+                           void *ctx,
+                           EeAppCameraFn call,
+                           float yaw,
+                           float pitch);
+
+/// `Rotate(angles)`: the yaw and the pitch.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_rotate(EeAppCameraFields *rec,
+                          void *ctx,
+                          EeAppCameraFn call,
+                          float yaw,
+                          float pitch);
+
+/// `MoveTo`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_move_to(EeAppCameraFields *rec,
+                           void *ctx,
+                           EeAppCameraFn call,
+                           const EeAppCameraMove *m);
+
+/// `Scroll(dx, dy)`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_scroll(EeAppCameraFields *rec,
+                          void *ctx,
+                          EeAppCameraFn call,
+                          float dx,
+                          float dy);
+
+/// `GoTo(key)`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_go_to(EeAppCameraFields *rec,
+                         void *ctx,
+                         EeAppCameraFn call,
+                         const EeAppCameraKey *key);
+
+/// `SetOffset(point, immediate)`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_set_offset(EeAppCameraFields *rec,
+                              void *ctx,
+                              EeAppCameraFn call,
+                              const EeGe3DPoint *point,
+                              bool immediate);
+
+/// `SetViewTurn(t, immediate)`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_set_view_turn(EeAppCameraFields *rec,
+                                 void *ctx,
+                                 EeAppCameraFn call,
+                                 const EeGeTransformation *t,
+                                 bool immediate);
+
+/// `SetOffsetTurn(t, immediate)`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_set_offset_turn(EeAppCameraFields *rec,
+                                   void *ctx,
+                                   EeAppCameraFn call,
+                                   const EeGeTransformation *t,
+                                   bool immediate);
+
+/// `SetLocation(location, immediate, follow terrain)`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_set_location(EeAppCameraFields *rec,
+                                void *ctx,
+                                EeAppCameraFn call,
+                                const EeGe3DPoint *location,
+                                bool immediate,
+                                bool follow_terrain);
+
+/// `SetMode(mode)`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_set_mode(EeAppCameraFields *rec, void *ctx, EeAppCameraFn call, long mode);
+
+/// `SetZoom(zoom)`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_set_zoom(EeAppCameraFields *rec, void *ctx, EeAppCameraFn call, float zoom);
+
+/// `Follow(unit, face, duration, yaw, pitch)`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+void ee_app_camera_follow(EeAppCameraFields *rec,
+                          void *ctx,
+                          EeAppCameraFn call,
+                          uint32_t id,
+                          bool face,
+                          float duration,
+                          float yaw,
+                          float pitch);
+
+/// `Update(elapsed)`: what the C++ applies after it (`EE_APP_CAMERA_UPDATE_*`), the orthographic rectangle's half
+/// size in `ortho_size`.
+///
+/// # Safety
+/// `rec` is a live record, pointer arguments are live, and `call` answers for `ctx` throughout.
+int32_t ee_app_camera_update(EeAppCameraFields *rec,
+                             void *ctx,
+                             EeAppCameraFn call,
+                             float elapsed,
+                             float *ortho_size);
 
 /// `EEGameOptionsPlayer()`'s plain members.
 ///

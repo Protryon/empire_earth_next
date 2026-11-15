@@ -1373,7 +1373,7 @@ void EESMEffect::ScriptCamera()
                 // These camera APIs consume the original base-unit pointer, including its optional complex-unit link.
                 EEUnit* theUnit = gWorld.GetUnit(theUnits[j]);
                 EECameraKey theKey;
-                theKey.mOffset = theCamera.mEndOffset;
+                theKey.mOffset = theCamera.GetEndOffset();
                 theCamera.GetUnitPoint(theUnit,theKey.mFocus);
                 theCamera.GetUnitTurn(theUnit,theKey.mT40);
                 theKey.mWait = 0.0f;

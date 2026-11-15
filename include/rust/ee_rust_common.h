@@ -10,6 +10,14 @@
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 constexpr static const uint32_t EE_RUST_ABI_VERSION = 1;
 
+constexpr static const uint32_t RESOURCE_WOOD = 3;
+
+constexpr static const uint32_t RESOURCE_STONE = 4;
+
+constexpr static const uint32_t CATEGORY_LAND_CITIZEN = 6;
+
+constexpr static const uint32_t CATEGORY_NAVAL_CITIZEN = 22;
+
 constexpr static const uint8_t GOAL_ATTACK_GROUND = 3;
 
 constexpr static const uint32_t ALIGN_CENTER = 1;
@@ -25,14 +33,6 @@ constexpr static const int32_t NOT_OPEN = 4;
 constexpr static const int32_t FAILED = 9;
 
 constexpr static const int32_t END_OF_FILE = 18;
-
-constexpr static const uint32_t RESOURCE_WOOD = 3;
-
-constexpr static const uint32_t RESOURCE_STONE = 4;
-
-constexpr static const uint32_t CATEGORY_LAND_CITIZEN = 6;
-
-constexpr static const uint32_t CATEGORY_NAVAL_CITIZEN = 22;
 
 constexpr static const int64_t CATEGORY_PLANET_SPACESHIP = 34;
 

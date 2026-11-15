@@ -194,6 +194,8 @@ dependencies = [
 name = "ee_app"
 version = "0.1.0"
 dependencies = [
+ "ee_ge",
+ "ee_gfx",
  "ee_plat_core",
 ]
 
