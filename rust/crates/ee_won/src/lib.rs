@@ -182,6 +182,10 @@ pub mod wmloop;
 pub mod wmobj;
 pub mod wonbtnobj;
 pub mod wrapobj;
+pub mod authcpp;
+pub mod httpcpp;
+pub mod perftimer;
+pub mod routecpp;
 
 #[cfg(test)]
 mod buffer_golden;
