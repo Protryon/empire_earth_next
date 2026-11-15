@@ -71,9 +71,12 @@ end
 -- one explorer of a class kept: a free unit of it drafted, else one requested
 local function draft(view, memory, ex, class)
     local free = ai.units{type = class, held = "engine", idle = true}
+    local pooled = #free == 0 and require("classic_lua.army").pool_take(memory, class) or nil   -- (lib.tactics POOL)
     if #free > 0 then
         ex.ids[#ex.ids + 1] = free[1]
         ai.take({free[1]})
+    elseif pooled ~= nil then
+        ex.ids[#ex.ids + 1] = pooled
     elseif not U.is_requested(memory, class) and not U.in_production(view, class) then
         U.request(view, memory, class, 1)
         print(string.format("classic_lua explore.request %s", class))

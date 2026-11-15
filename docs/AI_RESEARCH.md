@@ -5610,6 +5610,128 @@ The water cells came without a fishing change. Both of these, tried with this ru
   Prehistoric, boats as the coast keeps them): Copper water 3-11-18, Dark water 7-15-10, without the reserve rule;
 - fog-free dock sites (ai.water_sites through the fog): no site is placeable until the coast is explored
   (EECanPlaceOnTile tests the player's visibility).
+### 8.86 Age of AI's combat tactics in our AIs: measured, ported as options, A/B tested (2026-11-15, EE-SIM)
+
+**The question** (the owner): are Age of AI's combat tactics worth copying into classic_lua and boom? First measure
+whether its tactics win fights, then port them one at a time behind options and A/B them.
+
+**Tools.** `tools/fight_stats.py` (TEST ONLY) reads a bench's traces: every unit a computer player loses (`cp
+unit.death`: soldiers, ships, a C++ seat's citizens; `next.death`: a script seat's citizens and boats) with the
+killer's player, class and kind, and the reports' strength samples. It prints kills against losses by unit class,
+and the fights: deaths between two players joined while each falls within 30 s and 16 tiles of the fight, 3 deaths at
+least; each judged by the odds at its start (strength a / (a + b), the army's hit points x attack, towers not
+counted) and by its place (whose town centre lies within 25 tiles). A side wins a fight when the other lost 1.5 times
+as many units.
+
+**The inventory.** Age of AI's combat, with what each tactic reads and orders. Everything runs through the per-unit
+interface; the force's targets are lib.groups', the same code classic_lua uses.
+
+| tactic (Age of AI module) | what it does, how it decides | queries / commands | classic_lua | boom |
+|---|---|---|---|---|
+| the force (army.lua, armies.c) | every land soldier is one lib.groups group at home (a station behind the tower nearest the front); pushes at the attack time only when it beats what it knows at the target by 130% (`ar_go_pct`); out, judged every 4 s, home when under 100% twice running (`ar_back_pct`) or bled (`ar_bleed_pct`) | ai.memory, ai.class, ai.route, ai.danger, ai.move{forced, formation}, G.retreat | groups by the C++ classic's plan; no go test, no retreat ("the Hard classic does not retreat either", ORIGIN); its free soldiers stay in the engine's continent groups | the guard at home (lib.guard), no attacks wired (plan.attack/raid never set) |
+| raid answer (army.lua) | a band of 3+ enemy fighters within 14 tiles of a building within 60 of home, seen twice: the force goes when it beats them by 100% | ai.seen, ai.units, ai.memory | defence packages over the town hull every 8 s (town_threat) | lib.guard: raids by D.clusters, engage at 80% odds |
+| muster (army.lua, defence.c) | an army in the base the soldiers and towers cannot fight: soldiers rally 18 tiles out, strike at 130% | ai.seen, ai.move | none | none |
+| leash (attack.c, lib.groups g.leash) | no target inside known defences (range + 6) unless the group's own place is in them | ai.memory{buildings} | not set | not set |
+| weak spot (attack.c) | a place covered by defences becomes the nearest uncovered known building within 60 tiles | ai.memory, ai.reach | none | none |
+| breach (attack.c) | a known wall on the way: through its segment outside the defences, the segment the group's focus | ai.memory | none | none |
+| siege + shelling (tactics.lua siege, siege_fire) | 2 + defences / 4 siege weapons (at most 4); every 2 s they shell the nearest outranged defence from a firing spot no other defence reaches | ai.memory, ai.class, ai.attack, ai.move{forced} | siege as ordinary members (a ram skips buildings while soldiers guard them) | none |
+| counter-fire (tactics.lua, micro) | own units hit from beyond their reach by a shooter (range 5+): soldiers within 24 join until 1.5x the fighters there, committed 45 s | events, ai.unit, ai.seen, ai.units, ai.get, ai.strength, ai.attack | none | none |
+| citizen militia (tactics.lua) | citizens (3 per enemy, 6 enemies) attack builders of a defence near them and, to the Bronze Age, attackers within 10, at 3x odds | events, ai.units{held}, ai.strength, ai.attack, ai.release | militia.lua at 1.5x (soldiers first, towers optional) | lib.defence at 3x, all on one raider |
+| tower bait (tactics.lua) | to the Bronze Age a citizen chased outside tower cover walks 1.5 tiles behind the nearest tower | ai.units{armed}, ai.seen, ai.move{forced} | flight to the nearest tower or the TC | flight to a refuge (tower/TC) |
+| bunkers, shelter (tactics.lua) | Fortresses hold hurt citizens, a soldier reserve at the cap, a citizen shelf | ai.load, ai.unload | settlements filled for upgrades only | none |
+| safety (safety.lua) | hurt spots mark sites dangerous 2 min; gatherers there sent home unless 150% held | events, ai.seen | militia.lua danger zones, flee | lib.defence flight and return |
+| skirmish, spotter (skirmish.lua) | ranged sorties at shooters' spots, retreat when chased, bait into the force | | none | none |
+| detachments (detach.lua) | mine raids, hit and run, riders' look | | none | none |
+| mass (mass.lua) | reinforcements gather and join as groups; wait while weaker; tether | | none | none |
+| fronts (fronts.lua) | front stations by the border's weight | | defence tasks: random forest/hill/choke point/town | the guard's post at the tower nearest the citizens |
+| fleet (fleet.lua) | warships massed under towers, strike at 1.25, damaged ships to docks | | lib.navy sea groups | N.fleet_step guards |
+| target choice (lib.groups fight) | by kind (soldier, ship, citizen, tower, building), then distance, a unit already aimed at counting 1.5 tiles further: fire spread | ai.seen, ai.attack | the same | lib.guard: nearest the citizens, then lowest HP, focus until 3x HP; hurt units under 35% back to the post |
+| kiting, formations, stances | none (formation only on the convoy home) | ai.move{formation} | none | none |
+
+**Measure first** (32 seeds, Small, Hard, balanced, no cheats; W-L-C by the scorecard's rule):
+
+| bench | result | the loser's losses | where the fights were | at even odds (40-60%) | in the field |
+|---|---|---|---|---|---|
+| Age of AI vs classic_lua, Prehistoric, 90 min | classic 27-1-4 | classic lost 4774 units, Age of AI 2978; Age of AI's towers made 2820 of its 4774 kills (59%) | 497 of 595 at Age of AI's home (it won 381-57 there) | Age of AI 81-16-17, nearly all under its towers | classic 22-17-3 |
+| the same, Middle Ages start, 60 min | classic 22-2-8 | Age of AI's towers 705 of its 863 kills; its army about 1 unit at 40 min | 126 of 174 at Age of AI's home | classic 7-4 | classic 18-4-1 (3.15 kills a loss) |
+| Age of AI vs boom, Prehistoric, 90 min | boom 8-1-23 | Age of AI lost 1967, boom 1560 | 158 of 247 at Age of AI's home, boom 70-58 there by Age of AI's count | boom 42-28-7 (1.57 kills a loss) | boom 30-14-2 (1.73) |
+
+**Verdict: Age of AI does not win fights on tactics.** It wins under its towers and at home; in the open both our AIs
+beat its force, and boom's guard (focus fire, hurt units back) beats it even at its home. Its own tactics barely fire:
+in the 32 Prehistoric games against the classic, 0 counter-fire sorties, 0 sieges shelling, 0 citizen militia and 0
+tower baits (the early epochs have no 5-tile shooters and few towers to bait to); the force answered raids 2387 times
+and went home "bled" 1534 times. **A port bug found:** `ar_bleed_pct = 0` ("0 upstream: off") sends the force home on
+the first hit point lost (army.lua: `hp * 100 < out_hp * (100 - ar_bleed_pct)`); not fixed here.
+
+**Where classic_lua's soldiers die.** 76% of its soldier losses to Age of AI (3069 of 4046) and 2099 of its 2548
+deaths to towers are units the trace attributes to a C++ attack commander group (the `sub=` field): its free soldiers
+(keep_standing_army's, the leftovers) are drafted by EECPPersonnel::DraftUnit into the C++ continent groups, which
+EECPNextUpdate ticks for every script seat (`mAttackCommander->Update`), and those walk into the enemy's towers. The
+Lua army's groups own only what they took (ai.take detaches a unit from the C++ commander). The classic's defence
+tasks also pick random forest, hill and choke points of the continent. So a Lua tactic on the Lua groups reaches only
+a quarter of the classic's fighting.
+
+**The port: `ai/lib/tactics.lua`** (Age of AI's attribution in the header), every option off by default;
+`classic_lua.main.configure{tactics = {...}}` turns them on for a variant (a test variant is an ais.json entry whose
+script is `return require("classic_lua.main").configure{tactics = {judge = true}}`). With none on, a test game's sim
+hash equals main's. Options: `judge` (out under 100% of the known enemy twice running: home), `go` (an attack whose
+place is under 130%: called off), `counterfire` (micro), `leash`, `weak_spot`, `siege` (shelling), `safe_post` (a
+defence post under known towers: home instead), `focus` (lib.groups g.focus: fire on a target the group already
+shoots while short of 3x its hit points, then the most hurt; not Age of AI's, boom's guard rule), `hurt` (a fighting
+soldier under 30% walks 6 tiles back, out for 15 s; Age of AI's warships' fall_back), `pool` (the free land soldiers
+held in a Lua defence group at the town, at most 40, instead of the C++ continent groups). The work a step is bounded
+(8 groups judged, 4 shooters a micro call, 12 hurt units, a new place looked at once).
+
+**A/B** (classic_t, the option on, seat 2, against classic_lua; Middle Ages start, 60 min, seeds 2-33; kills and losses
+are army units killed by the other player; citizens lost: the variant / the opponent):
+
+| option | W-L-C | army kills a loss | citizens lost | how often it acted |
+|---|---|---|---|---|
+| none (base) | 5-6-21 | 0.86 | 508 / 449 | |
+| pool | 5-13-14 | 1.59 | 467 / 336 | |
+| judge | 4-6-22 | 1.20 | 516 / 304 | 207 retreats |
+| go | 4-7-21 | 1.01 | 512 / 338 | 243 attacks called off |
+| safe_post | 5-6-21 | 0.88 | 517 / 453 | 32 posts moved |
+| counterfire | 6-9-17 | 1.09 | 370 / 416 | |
+| leash | 4-6-22 | 0.90 | 501 / 419 | |
+| weak_spot | 4-5-23 | 0.91 | 486 / 386 | 135 places moved |
+| siege | 5-6-21 | 0.85 | 517 / 443 | 7 shellings |
+| focus | 5-9-18 | 1.03 | 541 / 412 | |
+| hurt | 8-5-19 | 1.11 | 429 / 450 | 2100 pulled back |
+
+0 script errors, 0 budget hits in every cell. The mirror's noise is large: the base on seeds 34-65 went 12-3-17 for
+the same seat. The only cell past the base by 3 games, `hurt`, went 13-5-14 on seeds 34-65: 21-10-33 on 64 seeds
+against the base's 17-9-38, +3 games of W-L, inside the noise.
+
+**Against the C++ classic** (classic_t against classic_cpp, the same setup) the port wins nearly every game, so the
+exchange tells more than the W-L-C:
+
+| option | W-L-C | army lost / killed | citizens lost |
+|---|---|---|---|
+| none | 26-1-5 | 817 / 688 | 259 / 703 |
+| hurt | 26-1-5 | 752 / 615 | 253 / 617 |
+| counterfire | 27-2-3 | 728 / 661 | 283 / 640 |
+| pool | 27-2-3 | 391 / 447 | 225 / 225 |
+
+**A Prehistoric start, 90 minutes** (seeds 2-33, the mirror; the Lua attack groups go out from minute 65): none
+13-17-2 (2995 army lost, 3557 killed, 1980 / 1526 citizens lost); hurt 12-14-6 (2768 / 3497, 1926 / 1562).
+
+**Pool against Age of AI** (Prehistoric, 90 min, seeds 2-33, the seats of the first bench): 29-1-2 against the base's 27-1-4; the classic's army lost
+3006 against 4046, its army at 90 minutes 93.8 against 55.7, its citizens lost
+732 against 728. The first run, with no cap on the pool, had 9 budget hits in one game (seed 30, minute 80: a 100-unit
+defence group's targeting); the pool is capped at 40 since, 0 errors.
+
+**What it means.** The options that cut the variant's own losses (pool, judge, go, counterfire, hurt) trade them for
+the opponent's: the enemy loses fewer citizens (304-338 against 449 with judge, go, pool) because the armies that came
+home, or stayed home, no longer raid. The classic's economy, not its army's exchange, decides these games, and the
+suicidal C++ groups are also its raiders. None wins clearly on 64 seeds, so none is turned on. The nearest are `hurt` (+3 games of W-L on 64 mirror
+seeds, +2 on the 90-minute Prehistoric bench) and `pool`, which halves the army's losses against both opponents
+and wins the most against Age of AI, but loses the mirror 5-13-14: it is the one to try again if the classic's raids
+move to a Lua group of their own. Kept as options for
+the AIs that fight with their armies (the per-unit direction): lib.tactics is one module any script can configure.
+boom: its guard already focuses fire and pulls hurt units back (lib.guard), it has no attacks wired, and its fights
+against Age of AI are already won 1.57 to 1, so nothing was ported there.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
