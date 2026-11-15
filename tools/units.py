@@ -28,7 +28,9 @@ PLATFORM_UNITS = [
 DX7_TRAMPOLINES = ["Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Trampolines.cpp"]
 # the UI toolkit's C++ trampolines into Rust (ee_ui, docs/RUST_PLAN.md R6): the moved units' members live there
 UI_TRAMPOLINES = ["Low-Level Engine/User Interface/UITrampolines.cpp"]
-EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES,
+# the Graphics Engine's value types' out-of-line members, fifteen units folded into one (R4.3 part 16)
+GE_UNITS = ["Low-Level Engine/Graphics Engine/GEValues.cpp"]
+EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                "dx7hrtnl": DX7_TRAMPOLINES,
                "exe": ["Empire Earth/Database/EEDataTextFile.cpp", "Empire Earth/Database/EERules.cpp",
                        # the EE lobby glue's shells and hosts (R6 WONLobby round 6; ee_won eecolor.rs, eeglue.rs): the
