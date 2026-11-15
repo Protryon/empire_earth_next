@@ -113,7 +113,7 @@
 #include "ee/EEMusicManager.h"
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EECampaignProgress.h"
-#include "ee/EECBEditableCivilization.h"
+#include "ee/EECivilizationBuilder.h"
 #include "ee/EECivilization.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EEColorTable.h"
@@ -500,8 +500,7 @@ void EEWorld::Clear()
         gSoundManager->SetIsMuted(false);
     if (gWonNet != NULL)
         gWonNet->ClearGameList();
-    delete gEditableCivilization;
-    gEditableCivilization = NULL;
+    CivBuilderFreeCivilization();   // the edited civilization deleted (ee_screens civ_whole.rs)
     this->mClearing = false;
 }
 

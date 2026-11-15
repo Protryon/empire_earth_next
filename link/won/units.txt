@@ -30,11 +30,6 @@
 2f3070 2f3962 WONGUI/Button.cpp
 2f3a50 2f4888 WONGUI/ComboBox.cpp
 2f4890 2f4aeb WONGUI/ComponentLifetime.cpp
-2f49e0 2f5711 WONGUI/Component.cpp
-2f4af0 2f5b6c WONGUI/ComponentResourceAdapters.cpp
-2f4c20 2f52cd WONGUI/ComponentDefaultHooks.cpp
-2f4cc0 2f5b11 WONGUI/ComponentTraversal.cpp
-2f4e70 32b11b WONGUI/ComponentApiCompletion.cpp
 2f5560 3010e0 WONGUI/MSControlConstructors.cpp
 2f6100 2f62a1 WONGUI/ComponentLayoutAdapters.cpp
 2f6140 2f620f WONGUI/ChildLayoutRegistration.cpp
@@ -73,7 +68,6 @@
 3033a0 3199da WONGUI/WONControlSetup.cpp
 3040d0 304ded WONGUI/RootContainer.cpp
 305540 306a3c WONGUI/ControlLifetime.cpp
-306870 306e08 WONGUI/ImageComponent.cpp
 308280 3094c5 WONGUI/TabCtrl.cpp
 309880 3098cd WONGUI/PaletteLifetime.cpp
 30a800 30a803 WONGUI/ListItemDefaults.cpp
@@ -130,12 +124,10 @@
 349040 34910a WONGUI/Palette.cpp
 349300 349495 WONGUI/Rectangle.cpp
 3494e0 34953f WONGUI/SelectionColor.cpp
-349570 3555f5 WONGUI/StretchImage.cpp
 349f10 34a100 WONGUI/StringLocalize.cpp
 34a100 34a1b4 WONGUI/StringLocalizeCalls.cpp
 34a1c0 34a521 WONGUI/TextFormat.cpp
 34a530 34a560 WONGUI/SoundDecoder.cpp
-34a7c0 34af55 WONGUI/WrappedText.cpp
 355750 357d69 WONLobby/ChatCommandParser.cpp
 357d70 357e7f WONLobby/LobbyCompletion.cpp
 357f30 358de2 WONLobby/LobbyConfig.cpp

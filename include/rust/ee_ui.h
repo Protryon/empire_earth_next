@@ -915,6 +915,81 @@ enum class EeUiOp : uint32_t {
   BgtFileRead = 599,
   /// The file's `Close()`.
   BgtFileClose = 600,
+  /// Movie `a`'s `Reference()`.
+  MovieReference = 610,
+  /// Movie `a`'s `Stop()`.
+  MovieStop = 611,
+  /// Movie `a`'s `Dereference()`.
+  MovieRelease = 612,
+  /// *Pure*: movie `a`'s `GetIsPlaying()`.
+  MoviePlaying = 613,
+  /// Movie `a`'s `RenderFrame()` -> its result.
+  MovieRender = 614,
+  /// The event's virtual `InitializeEvent()` -> its result.
+  EvInitialize = 630,
+  /// The event's virtual `UninitializeEvent()` -> its result.
+  EvUninitialize = 631,
+  /// The owner `b` of kind `a` (0 `UIControlsTable::GetUIControlsTable(b)`, 1 manager `c`'s `GetFormByID(b)`).
+  EvOwner = 632,
+  /// Owner `b` (of kind `a`)'s `AddEvent` of the event id `c` and type `d`.
+  EvAdd = 633,
+  /// *Pure*: entity `a` is a button (`GetType() == kControlTypeButton`).
+  GrpIsButton = 640,
+  /// *Pure*: control `a`'s display mode is `kDisplayModeShown`.
+  GrpShown = 641,
+  /// *Pure*: control `a`'s form is its manager's current form.
+  GrpOnCurrentForm = 642,
+  /// The manager's `AddDirtyRectangle` of control `a`'s rectangle on its form.
+  GrpAddDirty = 643,
+  /// Control `a`'s `HideControl()`.
+  GrpHide = 644,
+  /// Control `a`'s `SetDirty(true)`.
+  GrpSetDirty = 645,
+  /// *Pure*: control `a`'s form's `GetTabbingOn()`.
+  GrpTabbing = 646,
+  /// *Pure*: control `a`'s form's tab stop is its index.
+  GrpIsTabStop = 647,
+  /// Control `a`'s form's `Tab()`.
+  GrpTab = 648,
+  /// Hot key `a`'s `SetEnabled(b != 0)`.
+  GrpSetEnabled = 649,
+  /// `DeleteAllEntries()`.
+  FlDeleteAll = 650,
+  /// Path `a`'s `GetDirectoryCount()`.
+  FlDirCount = 651,
+  /// Search `a`: path `b`'s directory `c` into its directory, then the directory's `GetFirstFile` -> its result.
+  FlDirFirst = 652,
+  /// Search `a`'s `GetNextFile` -> its result.
+  FlNext = 653,
+  /// Search `a`'s `GetFirstFile` again (the original's call after each directory; the result unused).
+  FlRewind = 654,
+  /// A new search (the original's `FSFileSpec` locals: the file and the directory) -> it.
+  FlSearchNew = 655,
+  /// `delete` search `a`.
+  FlSearchDelete = 656,
+  /// Search `a`'s file name's length in bytes.
+  FlNameLength = 657,
+  /// Search `a`'s file name copied into `b` (`c` bytes, NUL included).
+  FlNameCopy = 658,
+  /// `AppendLine(a)`: `a` NUL-terminated bytes.
+  FlAppend = 659,
+  /// `InsertLine(a, 0, UWSNoCaseAlphaSort())` (the combo box's list's): `a` NUL-terminated bytes.
+  FlInsertSorted = 660,
+  /// `GetCurrentSelection` -> its result, the selection's bits in `f[0]`.
+  FlSelection = 661,
+  /// Line `a`'s (`GetData(a)`) length in bytes.
+  FlLineLength = 662,
+  /// Line `a` copied into `b` (`c` bytes, NUL included).
+  FlLineCopy = 663,
+  /// Path `b`'s `FindFile(a)` (NUL-terminated bytes) and, when found, the file's `Delete()` (the file then
+  /// deleted) -> the delete's result, else the lookup's; `f[0]`'s bits 1 when found.
+  FlDeleteFile = 664,
+  /// `DeleteLine(a)`.
+  FlDeleteLine = 665,
+  /// Path `a`'s `Reference()`.
+  FlPathReference = 666,
+  /// Path `a`'s `Dereference()`.
+  FlPathRelease = 667,
 };
 
 /// The inward calls (each C++ class's methods forward here with their own call).
@@ -1368,6 +1443,30 @@ enum class EeUiEditCall : uint32_t {
   TabbedTo = 49,
 };
 
+/// UIEvent's inward calls on an event.
+enum class EeUiEventCall : uint32_t {
+  /// `Initialize()`: one more user, `InitializeEvent` on the first -> its result.
+  Initialize = 1,
+  /// `Uninitialize()`: one user less, `UninitializeEvent` when the last leaves -> its result.
+  Uninitialize = 2,
+};
+
+/// The inward calls.
+enum class EeUiFileListCall : uint32_t {
+  /// `AddValidExtension(a)`: `a` NUL-terminated bytes.
+  AddExtension = 1,
+  /// `CreateEntries(a)`: 0 appended, otherwise sorted (case-folded).
+  CreateEntries = 2,
+  /// `DeleteSelectedFile()` -> the lookup's or the delete's result.
+  DeleteSelected = 3,
+  /// `SetSearchPaths(a)`: the old path released, `a` referenced (NULL for none).
+  SetSearchPaths = 4,
+  /// `GetFilePath()`.
+  FilePath = 5,
+  /// The destructor's release of the path.
+  Release = 6,
+};
+
 /// The statics ([`ee_ui_font_tables`]).
 enum class EeUiFontsCall : uint32_t {
   /// `Create(file a, manager b)` -> the last read's result.
@@ -1516,6 +1615,24 @@ enum class EeUiFormCall : uint32_t {
   UseGdiForText = 92,
   DrawToolTipShadow = 93,
   SetDrawToolTipShadow = 94,
+};
+
+/// UIEntityGroup's inward calls.
+enum class EeUiEntityGroupCall : uint32_t {
+  /// `Disable()`: the count 1, the shown buttons on the current form hidden (tabbing past them), the hot keys off.
+  Disable = 1,
+  /// `Enable()`: the count 0, the buttons redrawn, the hot keys on.
+  Enable = 2,
+  /// `AddEntity(a)` -> `kErrorOK`.
+  Add = 3,
+  /// `RemoveEntity(a)` -> `kErrorOK`, or `kErrorNotFound` when `a` is not a member.
+  Remove = 4,
+  /// `GetEntity(a)` (NULL past the end).
+  Entity = 5,
+  /// `GetEntityCount()`.
+  Count = 6,
+  /// `GetIsEnabled()`: the count is 0.
+  IsEnabled = 7,
 };
 
 /// The inward calls (the C++ class's methods that forward here).
@@ -1818,6 +1935,36 @@ enum class EeUiManagerCall : uint32_t {
   Init = 60,
   /// The UI lock (`TSCriticalSection*`; the harness's bridge try-enters it).
   UiLock = 61,
+};
+
+/// UIBitmap's inward calls.
+enum class EeUiBitmapCall : uint32_t {
+  /// The constructor's part after `UIControl`'s: the bitmap `a` (referenced when not NULL), no copy.
+  Init = 1,
+  /// The destructor: the bitmap and its copy released.
+  Release = 2,
+  /// `CopyData()` -> the base's result.
+  CopyData = 3,
+  /// `DrawPolygons()` -> the last draw's result.
+  DrawPolygons = 4,
+  /// `DrawTextA()` -> the base's result.
+  DrawText = 5,
+  /// `SetBitmap(a)`: the old one released, `a` referenced (the original's: never NULL), the control dirty.
+  SetBitmap = 6,
+};
+
+/// UIMovie's inward calls.
+enum class EeUiMovieCall : uint32_t {
+  /// The constructor's part after `UIControl`'s: the movie `a`, referenced.
+  Init = 1,
+  /// The destructor: the movie stopped and released.
+  Release = 2,
+  /// `CopyData()` -> the base's result; the control stays dirty while the movie plays.
+  CopyData = 3,
+  /// `DrawPolygons()` -> the base's result.
+  DrawPolygons = 4,
+  /// `DrawTextA()`: the base's, then the movie's frame -> the render's result.
+  DrawText = 5,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -2189,6 +2336,12 @@ struct EeUiControlsTable;
 /// The Rust UIEditBox.
 struct EeUiEdit;
 
+/// The Rust UIEntityGroup.
+struct EeUiEntityGroup;
+
+/// The Rust file list (both classes'; `full_names` the combo box's).
+struct EeUiFileList;
+
 /// The Rust UIForm.
 struct EeUiForm;
 
@@ -2362,6 +2515,12 @@ struct EeUiControlFields {
   bool mAlwaysDirty;
 };
 
+/// `UIEvent`'s member (`include/lle/UIEvent.h`), the C++ class's private base.
+struct EeUiEventFields {
+  /// `Initialize`/`Uninitialize`'s nesting: the event is initialised while it is not 0.
+  unsigned long mInitializeCount;
+};
+
 /// `UIHotKey`'s members (`include/lle/UIHotKey.h`), the C++ class's base.
 struct EeUiHotKeyFields {
   /// The host of the calls out (its object is the record).
@@ -2381,6 +2540,26 @@ struct EeUiHotKeyFields {
   unsigned long mKeyCount;
   bool mEnabled;
   bool mAlwaysFire;
+};
+
+/// `UIBitmap`'s members (`include/lle/UIBitmap.h`), the C++ class's private base.
+struct EeUiBitmapFields {
+  /// The host of the calls out (its object is the record).
+  EeUiHostFn mBitmapHost;
+  /// The control's top left as of the last `CopyData` (x, y).
+  float mLocation[2];
+  /// The bitmap (`GEBitmap*`, referenced; NULL for none).
+  void *mBitmap;
+  /// The bitmap as of the last `CopyData` (referenced), drawn.
+  void *mCopiedBitmap;
+};
+
+/// `UIMovie`'s members (`include/lle/UIMovie.h`), the C++ class's private base.
+struct EeUiMovieFields {
+  /// The host of the calls out (its object is the record).
+  EeUiHostFn mMovieHost;
+  /// The movie (`GEMovie*`, referenced).
+  void *mMovie;
 };
 
 /// `GE2DPoint`: x, y.
@@ -2827,6 +3006,39 @@ ptrdiff_t ee_ui_edit_call(const EeUiEdit *edit,
                           ptrdiff_t d,
                           float *f);
 
+/// One of UIEvent's methods on an event's record ([`EeUiEventCall`]); the host's object is the record.
+///
+/// # Safety
+/// `rec` is a live record (a C++ event's base) for the call; the host's object is live.
+long ee_ui_event_call(EeUiEventFields *rec,
+                      EeUiHostFn host,
+                      EeUiEventCall call);
+
+/// `UIEvent::CreateControlEvents` (`kind` 0, no manager) and `CreateFormEvents` (`kind` 1): the host's object is the
+/// file.
+///
+/// # Safety
+/// `file` is the C++ caller's live file; the host answers the file's and owners' ops.
+long ee_ui_event_create(void *file,
+                        EeUiHostFn host,
+                        int kind,
+                        void *manager);
+
+/// A new Rust file list for the C++ list box or combo box `obj` (`full_names`: the combo box's).
+EeUiFileList *ee_ui_file_list_new(void *obj, EeUiHostFn host, bool full_names);
+
+/// The destructor: the path released, the object freed.
+///
+/// # Safety
+/// `list` came from `ee_ui_file_list_new` (or is NULL) and is not used again.
+void ee_ui_file_list_free(EeUiFileList *list);
+
+/// One of the file lists' methods ([`EeUiFileListCall`]).
+///
+/// # Safety
+/// `list` is live; `a` as [`EeUiFileList::call`].
+ptrdiff_t ee_ui_file_list_call(const EeUiFileList *list, EeUiFileListCall call, ptrdiff_t a);
+
 /// `UIFontTable`'s statics ([`EeUiFontsCall`]).
 ///
 /// # Safety
@@ -2874,6 +3086,23 @@ ptrdiff_t ee_ui_form_call(const EeUiForm *form,
                           ptrdiff_t a,
                           ptrdiff_t b,
                           float *f);
+
+/// A new Rust group for the C++ `group`.
+EeUiEntityGroup *ee_ui_entity_group_new(void *group, EeUiHostFn host);
+
+/// The destructor.
+///
+/// # Safety
+/// `group` came from `ee_ui_entity_group_new` (or is NULL) and is not used again.
+void ee_ui_entity_group_free(EeUiEntityGroup *group);
+
+/// One of UIEntityGroup's methods ([`EeUiEntityGroupCall`]).
+///
+/// # Safety
+/// `group` is live.
+ptrdiff_t ee_ui_entity_group_call(const EeUiEntityGroup *group,
+                                  EeUiEntityGroupCall call,
+                                  ptrdiff_t a);
 
 /// `UIHotKey()` over its record.
 ///
@@ -3012,6 +3241,21 @@ ptrdiff_t ee_ui_manager_call(const EeUiManager *manager,
 /// `UIManager::GetMouseWheelScrollAmount`'s step from the wheel's normalized value.
 long ee_ui_manager_wheel_scroll_amount(long value);
 
+/// One of UIBitmap's methods ([`EeUiBitmapCall`]); `host` is read by `Init` only.
+///
+/// # Safety
+/// As [`bitmap_call`].
+ptrdiff_t ee_ui_bitmap_call(EeUiBitmapFields *rec,
+                            EeUiHostFn host,
+                            EeUiBitmapCall call,
+                            ptrdiff_t a);
+
+/// One of UIMovie's methods ([`EeUiMovieCall`]); `host` is read by `Init` only.
+///
+/// # Safety
+/// As [`movie_call`].
+ptrdiff_t ee_ui_movie_call(EeUiMovieFields *rec, EeUiHostFn host, EeUiMovieCall call, ptrdiff_t a);
+
 /// The constructor's geometry ([`scrollbar::layout`]): the C++ needs the rectangle for `UIControl`'s constructor,
 /// before this object is made.
 EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at,
@@ -3125,27 +3369,6 @@ ptrdiff_t ee_ui_controls_table_call(const EeUiControlsTable *table,
 /// `SetupStringArray`'s count: the strings `begin..=end` (none unless `begin` is positive and `end` not before it).
 unsigned long ee_ui_controls_table_string_count(long begin,
                                                 long end);
-
-/// `UIEvent::CreateControlEvents` (`kind` 0, no manager) and `CreateFormEvents` (`kind` 1).
-long ee_ui_event_create(void *file, int kind, void *manager);
-
-/// `UIEvent::Initialize`.
-long ee_ui_event_initialize(unsigned long *count, void *event);
-
-/// `UIEvent::Uninitialize`.
-long ee_ui_event_uninitialize(unsigned long *count, void *event);
-
-/// `UIEntityGroup::Disable`'s loop (the C++ sets `mDisableCount` first).
-void ee_ui_group_disable(void *group);
-
-/// `UIEntityGroup::Enable`'s loop.
-void ee_ui_group_enable(void *group);
-
-/// `UILBString::UpdateTranslatedKey`'s search: the typed key (a C string) and `mCurrentSelection` -> the line to
-/// select, -1 when none starts with the key.
-long ee_ui_string_list_find(void *list,
-                            const char *key,
-                            unsigned long selection);
 
 /// `UIGraph::CopyData`'s rectangles for the control's `rect` (the texts set through the host).
 EeUiGraphLayout ee_ui_graph_copy_layout(void *graph,
@@ -3264,6 +3487,12 @@ void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigne
 /// `UIControl::UpdateMouse(*location)` (`location` a `GE2DPoint*`, handed back to `MouseMove`) -> its result.
 long ee_ui_control_update_mouse(void *control,
                                 const void *location);
+
+/// `UILBString::UpdateTranslatedKey`'s search: the typed key (a C string) and `mCurrentSelection` -> the line to
+/// select, -1 when none starts with the key.
+long ee_ui_string_list_find(void *list,
+                            const char *key,
+                            unsigned long selection);
 
 }  // extern "C"
 

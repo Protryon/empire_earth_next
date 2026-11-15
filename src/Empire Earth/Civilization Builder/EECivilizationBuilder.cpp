@@ -1,12 +1,15 @@
 // C:\EEX\Empire Earth\Civilization Builder\EECivilizationBuilder.cpp (file name inferred: no __FILE__ or RTTI).
-// 0x27efca..0x27fdfe, between EECBUIListBox.cpp and the civilization file unit at 0x27fdfe: its own
-// UString init chain (0x9654a8), then the civilization builder forms' helpers (form 7 the builder, 0xf the name
-// dialog, 0x10/0x11 the save/load dialogs, 0x23 the in-game civilization selection) and EEProcessTimerExpired.
-// Function names Fn<rva> are placeholders (by address). Unit flags: the exe module set.
+// 0x27efca..0x27fdfe: the civilization builder forms' helpers (form 7 the builder, 0xf the name dialog, 0x10/0x11
+// the save/load dialogs, 0x23 the in-game civilization selection) and EEProcessTimerExpired. The builder is Rust's
+// whole (ee_screens civ_whole.rs with civ_edit.rs, the edited civilization, and civ_list.rs, the list box): its
+// helpers, its state, the edited civilization, its files' writing, its open, close, buys, returns, loads, deletes and
+// accept. This unit keeps the entry points the game calls and the builder's host, ee_screenscpp_cb: one toolkit,
+// file or game call per op. Unit flags: the exe module set.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
 #include <list>
+#include <string>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -53,6 +56,10 @@
 #include "lle/UILBString.h"
 #include "lle/UIFormManager.h"
 #include "lle/UResourceFile.h"
+#include "lle/UIScrollBar.h"
+#include "lle/UIEditBox.h"
+#include "lle/UIBlinkingButton.h"
+#include "lle/UIFileListBox.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EECommunications.h"
@@ -61,557 +68,439 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMessage.h"
-
 #include "ee/EECBUIListBox.h"
-
 #include "ee/EECivilizationManager.h"
+#include "ee/EECivilization.h"
+#include "ee/EEGameOptions.h"
+#include "ee/EEAction.h"
+#include "ee/EEAResetAllPlayerInfo.h"
+#include "ee/EEGameSound.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/ee_screens.h"   // EE_SCREENS_PDCS_*: the civilization choice form's events (ee_screens civ_choice.rs)
-#include "lle/UIScrollBar.h"
-#include "lle/UIEditBox.h"
-#include "lle/UIBlinkingButton.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
-#include "lle/UIFileListBox.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUIFMainGame.h"
-#include "ee/EECBEditableCivilization.h"
-#include "ee/EEGameSound.h"
 #include "ee/EECivilizationBuilder.h"
 #include "ee/EEStringIDs.h"
-#include "ee/EEScenarioEditorIDs.h"
-extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
+#include "EEDataText.h"   // QuoteText: the keyed .civ text's name
+#include "rust/ee_screens.h"   // the builder (civ_whole.rs) and its host's ops (EE_SCREENS_CBW_*)
 
-// chain at 0x67efca (wrapper)
-//   object 0x9654a8  ctor __imp_??0UString@@QAE@XZ  dtor __imp_??1UString@@UAE@XZ
-// the last civilization file name saved (CivBuilderSaveAs; CivBuilderShowSaveDialog offers it in the save box) (provisional name)
-UString gLastCivilizationFile;
-// SYNTHETIC: EXE 0x67efca   (wrapper)
-// SYNTHETIC: EXE 0x67efd4   (ctor)
-// SYNTHETIC: EXE 0x67efdf   (registrar)
-// SYNTHETIC: EXE 0x67efeb   (dtor)
+// the civilization file being saved or loaded (EECBCivilizationFiles.cpp's file spec 0x565518: EELoadCivilization
+// shares it)
+extern FSFileSpec gU565518;
 
-// FUNCTION: EXE 0x67eff6
-// Accepts the change-name dialog: a non-empty typed name becomes the builder's title, then the dialog closes
-long CivBuilderAcceptName()
-{
-    UWideString theText;
-    long theResult = 3;
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilderNewCiv);
-    if (theForm == NULL)
-        return theResult;
-    UIControl* theControl = theForm->GetControlById(kCivBuilderIdNewCivNameTextField);
-    UIEditBox* theEdit = dynamic_cast<UIEditBox*>(theControl);
-    if (theEdit == NULL)
-        return theResult;
-    theText = theEdit->GetText(0);
-    if (!(theText == gEmptyString)) {
-        theResult = CivBuilderSetName(theText);
-        if (theResult == 0)
-            theResult = CivBuilderCloseForm();
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f08f
-// Finds the file list of the given load (0x11) or save (0x10) dialog; returns false for any other form
-bool CivBuilderGetFileList(UIForm* inForm, UIFileListBox** outList)
-{
-    bool theResult = false;
-    UIControl* theControl = NULL;
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilderLoadCiv);
-    if (theForm == inForm)
-        theControl = theForm->GetControlById(kCivBuilderIdLoadCivFileListBox);
-    else {
-        theForm = gUIManager->GetFormByID(kFormCivBuilderSaveCiv);
-        if (theForm == inForm)
-            theControl = theForm->GetControlById(kCivBuilderIdSaveCivFileListBox);
-    }
-    if (theControl != NULL) {
-        UIFileListBox* theList = dynamic_cast<UIFileListBox*>(theControl);
-        if (theList != NULL) {
-            *outList = theList;
-            theResult = true;
-        }
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f0f7
-// Returns the main game form's civilization builder button (control 5), or NULL
-UIBlinkingButton* CivBuilderGetMainGameButton()
-{
-    UIBlinkingButton* theResult = NULL;
-    UIForm* theForm = gUIManager->GetFormByID(kFormMainGame);
-    if (theForm != NULL) {
-        UIControl* theControl = theForm->GetControl(kMainGameCivSelectorBuilder);
-        if (theControl != NULL)
-            theResult = dynamic_cast<UIBlinkingButton*>(theControl);
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f134
-// Reads the civilization name from the builder's title label; returns 3 when the label is missing
-long CivBuilderGetName(UWideString& outName)
-{
-    UWideString theText;
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
-    long theResult = 3;
-    UIControl* theControl = theForm->GetControlById(kCivBuilderIdCivNameMainTitle);
-    UITextLabel* theLabel = dynamic_cast<UITextLabel*>(theControl);
-    if (theLabel != NULL) {
-        theText = theLabel->GetText(0);
-        outName = theText;
-        theResult = 0;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f1a9
-// Reads the text typed in the change-name dialog's edit box; returns 3 when it is missing
-long CivBuilderGetTypedName(UWideString& outText)
-{
-    UWideString theText;
-    long theResult = 3;
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilderNewCiv);
-    UIControl* theControl = theForm->GetControlById(kCivBuilderIdNewCivNameTextField);
-    UIEditBox* theEdit = dynamic_cast<UIEditBox*>(theControl);
-    if (theEdit != NULL) {
-        theText = theEdit->GetText(0);
-        outText = theText;
-        theResult = 0;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f221
-// Reads the file name typed in the save dialog's edit box; returns 3 when it is missing
-long CivBuilderGetTypedFileName(UWideString& outText)
-{
-    UWideString theText;
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilderSaveCiv);
-    long theResult = 3;
-    UIControl* theControl = theForm->GetControlById(kCivBuilderIdSaveCivNameTextField);
-    UIEditBox* theEdit = dynamic_cast<UIEditBox*>(theControl);
-    if (theEdit != NULL) {
-        theText = theEdit->GetText(0);
-        outText = theText;
-        theResult = 0;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f299
-// Reads the id, bonus and cost of the selected line in the available (0xcb, inBought true) or bought (0xcc)
-// upgrade list
-bool CivBuilderGetSelectedUpgrade(bool inBought, EECivUpgrade* outUpgrade, unsigned long* outBonus, unsigned long* outCost)
-{
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
-    bool theResult = false;
-    EECBUIListBox* theList;
-    if (inBought)
-        theList = CivBuilderGetUpgradeList(theForm, 0xcb);
-    else
-        theList = CivBuilderGetUpgradeList(theForm, 0xcc);
-    if (theList != NULL && theList->GetSelectedUpgrade(outUpgrade, outBonus, outCost) == 0)
-        theResult = true;
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f2e8
-// Hides the builder's points labels and accept-changes button; always returns 3
-long CivBuilderHidePoints()
-{
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
-    if (theForm != NULL) {
-        theForm->GetControlById(kCivBuilderIdCivPtsLeftLabel)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControlById(kCivBuilderIdCivPtsLeft)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControlById(kCivBuilderIdCivAcceptChangesButton)->SetDisplayMode(kDisplayModeHidden);
-    }
-    return 3;
-}
-
-// FUNCTION: EXE 0x67f340
-// Closes the current form
-long CivBuilderCloseForm()
-{
-    return gUserInterface->CloseForm(NULL);
-}
-
-// FUNCTION: EXE 0x67f34e
-// Fills both upgrade lists: 0xcc with the given upgrades, 0xcb with all others; both are selectable unless
-// the lists are locked (gB565566)
-// the original fills control 0xcc (vtable +0xc8) before 0xcb (+0xc4)
-long CivBuilderFillUpgradeLists(std::vector<EECivUpgrade>& inUpgrades)
-{
-    long theResult = 3;
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
-    if (theForm != NULL) {
-        UIControl* theControl = theForm->GetControlById(kSETerrainTerrainType);
-        EECBUIListBox* theList = dynamic_cast<EECBUIListBox*>(theControl);
-        theList->SetCivilizationUpgrades(inUpgrades);
-        theList->mSelectUpgradesOnly = gB565566 == false;
-        theControl = theForm->GetControlById(kSETerrainTerrainTypeLabel);
-        theList = dynamic_cast<EECBUIListBox*>(theControl);
-        theList->SetUpgradesExcept(inUpgrades);
-        theList->mSelectUpgradesOnly = gB565566 == false;
-        theResult = 0;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f3fc
-// Opens the civilization builder form
-long CivBuilderPushBuilderForm()
-{
-    return gUIManager->Push(gUIManager->GetFormByID(kFormCivBuilder));
-}
-
-// FUNCTION: EXE 0x67f418
-// Opens the form with the given id; returns 3 when it does not exist
-long CivBuilderPushForm(unsigned long inFormID)
-{
-    UIForm* theForm = gUIManager->GetFormByID(inFormID);
-    long theResult = 3;
-    if (theForm != NULL)
-        theResult = gUIManager->Push(theForm);
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f43f
-// Shows a name in the builder's title label; returns 3 when the label is missing
-long CivBuilderSetName(const UWideString& inName)
-{
-    UWideString theName(inName);
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
-    long theResult = 3;
-    UIControl* theControl = theForm->GetControlById(kCivBuilderIdCivNameMainTitle);
-    UITextLabel* theLabel = dynamic_cast<UITextLabel*>(theControl);
-    if (theLabel != NULL) {
-        theLabel->SetText(theName);
-        theResult = 0;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f4a9
-// Shows the points left (0 when negative) and the points spent (max - left) on the builder form
-long EEShowCivBuilderPoints(long inPointsLeft, long inMax)
-{
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
-    long theResult = 3;
-    if (theForm != NULL) {
-        UIControl* theControl = theForm->GetControlById(kSETerrainTerrainColorTypeLabel);
-        UITextLabel* theLabel = dynamic_cast<UITextLabel*>(theControl);
-        if (theLabel != NULL) {
-            theLabel->SetText(inMax - inPointsLeft);
-            theControl = theForm->GetControlById(kCivBuilderIdCivPtsLeft);
-            theLabel = dynamic_cast<UITextLabel*>(theControl);
-            if (theLabel != NULL) {
-                if (inPointsLeft < 0)
-                    theLabel->SetText(0);
-                else
-                    theLabel->SetText(inPointsLeft);
-                theResult = 0;
-            }
-        }
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f546
-// Lists the civilization files (Users\default\Civilizations\*.civ) in a file list box
-long CivBuilderFillFileList(UIFileListBox* inList)
-{
-    FSPath* thePath = new FSPath;
-    UString theDirectory;
-    UWideString theUnused;
-    FSFileSpec theSpec;
-    theSpec.SetVolume(gStartupVolume);
-    theDirectory = gU565488 + "\\" + gDefaultUserFolder + "\\" + gU565498 + "\\";
-    theSpec.SetDirectory(gStartupDirectory + theDirectory);
-    thePath->AddDirectory(theSpec, true);
-    inList->SetSearchPaths(thePath);
-    inList->AddValidExtension(gU565478);
-    inList->CreateEntries(1);
-    thePath->Dereference();
-    return 0;
-}
-
-// FUNCTION: EXE 0x67f6a4
-// Saves the civilization under the name typed in the save dialog and remembers that name
-long CivBuilderSaveAs()
-{
-    UWideString theName;
-    long theResult = CivBuilderGetTypedFileName(theName);
-    if (theResult == 0) {
-        theResult = CivBuilderSaveCivilization(UString(theName), false);
-        gLastCivilizationFile = theName;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f700
-// Opens the change-name dialog with the current name (or the default string 0x1b98) selected for editing
-long CivBuilderShowNameDialog()
-{
-    UWideString theText;
-    long theResult = CivBuilderPushForm(0xf);
-    if (theResult == 0) {
-        theResult = CivBuilderGetName(theText);
-        UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilderNewCiv);
-        UIControl* theControl = theForm->GetControlById(kCivBuilderIdNewCivNameTextField);
-        UIEditBox* theEdit = dynamic_cast<UIEditBox*>(theControl);
-        if (theText.GetLength() == 0)
-            gResource->GetString(IDS_CIVILIZATION_NAME, theText);
-        theEdit->SetText(theText);
-        theEdit->SelectText();
-        theForm->SetTabStop(theEdit->GetIndex());
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f7b1
-// Opens the load dialog with its civilization file list
-long CivBuilderShowLoadDialog()
-{
-    return CivBuilderShowFileDialog(0x11, 0x1a9);
-}
-
-// FUNCTION: EXE 0x67f7c0
-// Opens a dialog and fills its file list control with the civilization files
-long CivBuilderShowFileDialog(unsigned long inFormID, unsigned long inControl)
-{
-    UWideString theUnused;
-    long theResult = CivBuilderPushForm(inFormID);
-    if (theResult == 0) {
-        UIForm* theForm = gUIManager->GetFormByID(inFormID);
-        UIControl* theControl = theForm->GetControlById(inControl);
-        theResult = CivBuilderFillFileList(dynamic_cast<UIFileListBox*>(theControl));
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f824
-// Opens the save dialog with the last saved file name (or the civilization's name) in its edit box
-long CivBuilderShowSaveDialog()
-{
-    UWideString theText;
-    long theResult = CivBuilderShowFileDialog(0x10, 0x1a4);
-    if (theResult != 0)
-        return theResult;
-    if (gLastCivilizationFile != gEmptyString)
-        theText = (const char*)gLastCivilizationFile;
-    else
-        theResult = CivBuilderGetName(theText);
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilderSaveCiv);
-    UIControl* theControl = theForm->GetControlById(kCivBuilderIdSaveCivNameTextField);
-    UIEditBox* theEdit = dynamic_cast<UIEditBox*>(theControl);
-    theEdit->SetText(theText);
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f8c7
-// Returns the form's control with the given id as an upgrade list box, or NULL
-EECBUIListBox* CivBuilderGetUpgradeList(UIForm* inForm, unsigned long inControl)
-{
-    EECBUIListBox* theResult = NULL;
-    UIControl* theControl = inForm->GetControlById(inControl);
-    if (theControl != NULL)
-        theResult = dynamic_cast<EECBUIListBox*>(theControl);
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67f8f7
-// Returns the load dialog's civilization file list
-UIFileListBox* CivBuilderGetLoadFileList()
-{
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilderLoadCiv);
-    UIControl* theControl = theForm->GetControlById(kCivBuilderIdLoadCivFileListBox);
-    return dynamic_cast<UIFileListBox*>(theControl);
-}
-
-// FUNCTION: EXE 0x67f92a
-// Moves an upgrade (the selected line when 0) to the bought list or back, then reformats the lists
-// (on a buy only the source list is reformatted)
-bool CivBuilderMoveUpgrade(UIForm* inForm, bool inBuy, EECivUpgrade inUpgrade)
-{
-    UWideString theLine;
-    UWideString theName;
-    bool theResult = false;
-    unsigned long theFromID;
-    unsigned long theToID;
-    unsigned long theIndex;
-    long theFound;
-    if (inBuy) {
-        theFromID = 0xcb;
-        theToID = 0xcc;
-    } else {
-        theFromID = 0xcc;
-        theToID = 0xcb;
-    }
-    EECBUIListBox* theFrom = CivBuilderGetUpgradeList(inForm, theFromID);
-    EECBUIListBox* theTo = CivBuilderGetUpgradeList(inForm, theToID);
-    if (theFrom != NULL && theTo != NULL && theFrom != theTo) {
-        if (inUpgrade == 0)
-            theFound = theFrom->GetCurrentSelection(theIndex);
-        else
-            theFound = theFrom->FindUpgrade(inUpgrade, &theIndex);
-        if (theFound == 0) {
-            theLine = theFrom->GetData(theIndex);
-            if (EECBUIListBox::GetUpgradeName(theLine, theName)) {
-                theFrom->DeleteLine(theIndex);
-                theFrom->ResetSelection();
-                theTo->AddLine(theLine);
-            }
-        }
-        if (inBuy) {
-            theFrom->ReformatUpgrades(inBuy);
-        } else {
-            theFrom->ReformatUpgrades(false);
-            theTo->ReformatUpgrades(true);
-        }
-        theResult = true;
-    }
-    return theResult;
-}
+// ---- the entry points (the builder's Rust)
 
 // FUNCTION: EXE 0x67fa40
-// Handles the civilization timer: unless a builder form is up, opens the predefined-civilization selection once
-// (locking the choice), or the builder when custom civilizations are allowed
 long EEProcessTimerExpired()
 {
-    UIForm* theBuilder = gUIManager->GetFormByID(kFormCivBuilder);
-    UIForm* theForm = gUIManager->GetFormByID(kFormPredefinedCiv);
-    long theResult = 0;
-    if (gUIManager->GetCurrentForm() != theBuilder && gUIManager->GetCurrentForm() != theForm) {
-        if (!gAllowCustomCivs) {
-            if (!::gWorld.GetCurrentPlayer()->mCivilizationChosen) {
-                EESetCivBuilderButtonBlinking(false);
-                ::gWorld.GetCurrentPlayer()->mCivilizationChosen = true;
-                ::gWorld.GetCurrentPlayer()->mCivilizationLocked = true;
-                UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_PDCS_OPEN);
-                theForm->SetFormOpenEvent(theEvent);
-                theEvent->Dereference();
-                theEvent = EECreateScreenEvent(EE_SCREENS_PDCS_CLOSE);
-                theForm->SetFormCloseEvent(theEvent);
-                theEvent->Dereference();
-                gUIManager->Push(theForm);
-            }
-        } else {
-            theResult = CivBuilderEditCivilization();
-        }
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67fb5f
-// Clears the selection of the given upgrade list; returns 3 when it is missing
-long CivBuilderResetUpgradeSelection(UIForm* inForm, unsigned long inControl)
-{
-    EECBUIListBox* theList = CivBuilderGetUpgradeList(inForm, inControl);
-    if (theList != NULL) {
-        theList->ResetSelection();
-        return 0;
-    }
-    return 3;
-}
-
-// FUNCTION: EXE 0x67fb83
-// Clears the available upgrade list's (0xcb) selection
-long CivBuilderResetAvailableSelection(UIForm* inForm)
-{
-    return CivBuilderResetUpgradeSelection(inForm, 0xcb);
-}
-
-// FUNCTION: EXE 0x67fb94
-// Clears the bought upgrade list's (0xcc) selection
-long CivBuilderResetBoughtSelection(UIForm* inForm)
-{
-    return CivBuilderResetUpgradeSelection(inForm, 0xcc);
-}
-
-// FUNCTION: EXE 0x67fba5
-// Moves every upgrade in the bought list (0xcc) back to the available list; always returns true
-bool CivBuilderReturnAllUpgrades()
-{
-    std::vector<UWideString> theLines;
-    EECivUpgrade theUpgrade = 0;
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
-    theLines = CivBuilderGetUpgradeList(theForm, 0xcc)->GetDataArray();
-    for (std::vector<UWideString>::iterator i = theLines.begin(); i != theLines.end(); i++) {
-        if (EECBUIListBox::IsUpgradeLine(*i) && EECBUIListBox::GetUpgrade(*i, &theUpgrade))
-            CivBuilderMoveUpgrade(theForm, false, theUpgrade);
-    }
-    return true;
-}
-
-// FUNCTION: EXE 0x67fc30
-// Copies the save dialog's selected file name into its edit box
-long CivBuilderSaveNameSelected()
-{
-    UWideString theText;
-    unsigned long theIndex = 0;
-    long theResult = 3;
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilderSaveCiv);
-    UIControl* theControl = theForm->GetControlById(kCivBuilderIdSaveCivFileListBox);
-    UIFileListBox* theList = dynamic_cast<UIFileListBox*>(theControl);
-    if (theList != NULL) {
-        theResult = theList->GetCurrentSelection(theIndex);
-        if (theResult == 0) {
-            theText = theList->GetData(theIndex);
-            theControl = theForm->GetControlById(kCivBuilderIdSaveCivNameTextField);
-            UIEditBox* theEdit = dynamic_cast<UIEditBox*>(theControl);
-            theEdit->SetText(theText);
-        }
-    }
-    return theResult;
+    return ee_screens_cb_timer_expired();
 }
 
 // FUNCTION: EXE 0x67fcf0
-// Starts or stops the blinking of the main game's civilization builder button and its large alert
 long EESetCivBuilderButtonBlinking(bool inBlinking)
 {
-    gUIManager->mMainGameForm->mIsButtonBlinking = inBlinking;
-    UIBlinkingButton* theButton = CivBuilderGetMainGameButton();
-    if (theButton == NULL)
+    return ee_screens_cb_set_blinking(inBlinking);
+}
+
+// FUNCTION: EXE 0x680faf
+long CivBuilderEditCivilization()
+{
+    return ee_screens_cb_edit_civilization();
+}
+
+// FUNCTION: EXE 0x680ffd
+long CivBuilderCreateCivilization(EECivilization* inCivilization, bool inReload)
+{
+    return ee_screens_cb_create_civilization(inCivilization, inReload);
+}
+
+// FUNCTION: EXE 0x68015d
+long CivBuilderSaveCivilization(const UString& inName, bool inOverwrite)
+{
+    return ee_screens_cb_save_civilization(reinterpret_cast<const uint8_t*>((const char*)inName), strlen(inName),
+                                           inOverwrite);
+}
+
+// FUNCTION: EXE 0x680bb1
+void CivBuilderEditCurrentCivilization()
+{
+    ee_screens_cb_edit_current();
+}
+
+void CivBuilderFreeCivilization()
+{
+    ee_screens_cb_free_civilization();
+}
+
+// the questions' Yes (DisplayQuestion's callbacks): the file written over, the selected file deleted, the changes
+// accepted
+static void EECBAnswerWrite(UIForm* inForm)
+{
+    ee_screens_cb_answer(EE_SCREENS_CBW_ANSWER_WRITE, inForm);
+}
+
+static void EECBAnswerDelete(UIForm* inForm)
+{
+    ee_screens_cb_answer(EE_SCREENS_CBW_ANSWER_DELETE, inForm);
+}
+
+static void EECBAnswerAccept(UIForm* inForm)
+{
+    ee_screens_cb_answer(EE_SCREENS_CBW_ANSWER_ACCEPT, inForm);
+}
+
+// ---- the host
+
+static void EECBPut(EeScreensCbOut* outText, const char* inText)
+{
+    ee_screens_cb_out_text(outText, reinterpret_cast<const uint8_t*>(inText), strlen(inText));
+}
+
+static UIControl* EECBControl(int64_t inForm, int64_t inControl)
+{
+    UIForm* theForm = gUIManager->GetFormByID((unsigned long)inForm);
+    return theForm == NULL ? NULL : theForm->GetControlById((unsigned long)inControl);
+}
+
+static UIFileListBox* EECBFileList(void* inForm, int64_t inFormID, int64_t inControl)
+{
+    UIForm* theForm = inForm != NULL ? static_cast<UIForm*>(inForm) : gUIManager->GetFormByID((unsigned long)inFormID);
+    return theForm == NULL ? NULL : dynamic_cast<UIFileListBox*>(theForm->GetControlById((unsigned long)inControl));
+}
+
+static UIControl* EECBMainButton(int64_t inWhich)
+{
+    if (inWhich == 0) {
+        UIForm* theForm = gUIManager->GetFormByID(kFormMainGame);
+        return theForm == NULL ? NULL : dynamic_cast<UIBlinkingButton*>(theForm->GetControl(kMainGameCivSelectorBuilder));
+    }
+    return gUIManager->mMainGameForm->GetControl(kMainGameLargeCivBuilderAlert);
+}
+
+extern "C" int64_t ee_screenscpp_cb(uint32_t inOp, uintptr_t inP, int64_t inA, int64_t inB, int64_t inC,
+                                    const uint8_t* inText, size_t inLength, EeScreensCbOut* outText)
+{
+    std::string theBytes(reinterpret_cast<const char*>(inText), inText == NULL ? 0 : inLength);
+    UWideString theText(theBytes.c_str());
+    void* p = reinterpret_cast<void*>(inP);
+    if (inOp >= EE_SCREENS_CBW_L_COUNT && inOp <= EE_SCREENS_CBW_L_DRAW_END)
+        return EECBUIListBox::HostOp(inOp, static_cast<EECBUIListBox*>(p), inA, inB, inC, theText, outText);
+    EECivilization* theCiv = static_cast<EECivilization*>(p);
+    switch (inOp) {
+    case EE_SCREENS_CBW_FORM_EXISTS:
+        return gUIManager->GetFormByID((unsigned long)inA) != NULL;
+    case EE_SCREENS_CBW_EDIT_TEXT:
+    case EE_SCREENS_CBW_SET_EDIT_TEXT:
+    case EE_SCREENS_CBW_EDIT_SELECT: {
+        UIEditBox* theEdit = dynamic_cast<UIEditBox*>(EECBControl(inA, inB));
+        if (theEdit == NULL)
+            return 3;
+        if (inOp == EE_SCREENS_CBW_EDIT_TEXT)
+            EECBPut(outText, theEdit->GetText(0));
+        else if (inOp == EE_SCREENS_CBW_SET_EDIT_TEXT)
+            theEdit->SetText(theText);
+        else {
+            theEdit->SelectText();
+            gUIManager->GetFormByID((unsigned long)inA)->SetTabStop(theEdit->GetIndex());
+        }
         return 0;
-    theButton->SetIsBlinking(inBlinking);
-    gL5654B8 = 0;
-    UIBlinkingButton* theOther = static_cast<UIBlinkingButton*>(gUIManager->mMainGameForm->GetControl(kMainGameLargeCivBuilderAlert));
-    if (theOther == NULL)
+    }
+    case EE_SCREENS_CBW_LABEL_TEXT:
+    case EE_SCREENS_CBW_SET_LABEL_TEXT:
+    case EE_SCREENS_CBW_SET_LABEL_NUMBER: {
+        UITextLabel* theLabel = dynamic_cast<UITextLabel*>(EECBControl(inA, inB));
+        if (theLabel == NULL)
+            return 3;
+        if (inOp == EE_SCREENS_CBW_LABEL_TEXT)
+            EECBPut(outText, theLabel->GetText(0));
+        else if (inOp == EE_SCREENS_CBW_SET_LABEL_TEXT)
+            theLabel->SetText(theText);
+        else
+            theLabel->SetText((long)inC);
         return 0;
-    if (inBlinking)
-        theOther->SetDisplayMode(kDisplayModeShown);
-    else
-        theOther->SetDisplayMode(kDisplayModeHidden);
-    theOther->SetIsBlinking(inBlinking);
+    }
+    case EE_SCREENS_CBW_DISPLAY:
+    case EE_SCREENS_CBW_DISPLAY_INDEX: {
+        UIForm* theForm = gUIManager->GetFormByID((unsigned long)inA);
+        UIControl* theControl = theForm == NULL ? NULL
+                                : inOp == EE_SCREENS_CBW_DISPLAY ? theForm->GetControlById((unsigned long)inB)
+                                                                 : theForm->GetControl((unsigned long)inB);
+        if (theControl != NULL)
+            theControl->SetDisplayMode(inC ? kDisplayModeShown : kDisplayModeHidden);
+        return 0;
+    }
+    case EE_SCREENS_CBW_PUSH: {
+        UIForm* theForm = gUIManager->GetFormByID((unsigned long)inA);
+        return theForm == NULL ? 3 : gUIManager->Push(theForm);
+    }
+    case EE_SCREENS_CBW_CLOSE_FORM:
+        return gUserInterface->CloseForm(NULL);
+    case EE_SCREENS_CBW_CURRENT_IS:
+        return gUIManager->GetCurrentForm() == gUIManager->GetFormByID((unsigned long)inA);
+    case EE_SCREENS_CBW_FILE_LIST_FILL: {
+        // Users\default\Civilizations\*.civ
+        UIFileListBox* theList = EECBFileList(NULL, inA, inB);
+        FSPath* thePath = new FSPath;
+        FSFileSpec theSpec;
+        theSpec.SetVolume(gStartupVolume);
+        theSpec.SetDirectory(gStartupDirectory + "Users\\default\\Civilizations\\");
+        thePath->AddDirectory(theSpec, true);
+        theList->SetSearchPaths(thePath);
+        theList->AddValidExtension(UString(".civ"));
+        theList->CreateEntries(1);
+        thePath->Dereference();
+        return 0;
+    }
+    case EE_SCREENS_CBW_FILE_SELECTION: {
+        UIFileListBox* theList = EECBFileList(p, inA, inB);
+        if (theList == NULL)
+            return -1;
+        unsigned long theIndex = 0;
+        long theResult = theList->GetCurrentSelection(theIndex);
+        ee_screens_cb_out_value(outText, (int64_t)theIndex);
+        return theResult;
+    }
+    case EE_SCREENS_CBW_FILE_LINE:
+        EECBPut(outText, EECBFileList(p, inA, inB)->GetData((unsigned long)inC));
+        return 0;
+    case EE_SCREENS_CBW_FILE_DELETE:
+        return EECBFileList(NULL, inA, inB)->DeleteSelectedFile();
+    case EE_SCREENS_CBW_IS_FORM:
+        return static_cast<UIForm*>(p) == gUIManager->GetFormByID((unsigned long)inA);
+    case EE_SCREENS_CBW_LIST: {
+        EECBUIListBox* theList = dynamic_cast<EECBUIListBox*>(EECBControl(inA, inB));
+        return (int64_t)reinterpret_cast<uintptr_t>(theList);
+    }
+    case EE_SCREENS_CBW_FORM_EVENTS: {
+        UIForm* theForm = gUIManager->GetFormByID((unsigned long)inA);
+        UIEvent* theEvent = EECreateScreenEvent((unsigned long)inB);
+        theForm->SetFormOpenEvent(theEvent);
+        theEvent->Dereference();
+        theEvent = EECreateScreenEvent((unsigned long)inC);
+        theForm->SetFormCloseEvent(theEvent);
+        theEvent->Dereference();
+        return 0;
+    }
+    case EE_SCREENS_CBW_FORM_ID:
+        return static_cast<UIForm*>(p)->GetFormID();
+    case EE_SCREENS_CBW_STRING: {
+        UWideString theString;
+        long theResult = gResource->GetString(inA, theString);
+        EECBPut(outText, theString);
+        return theResult;
+    }
+    case EE_SCREENS_CBW_PERCENT: {
+        static UWideString sFormat;
+        UWideString theValue;
+        uint32_t theBits = (uint32_t)inA;
+        float theFloat;
+        memcpy(&theFloat, &theBits, sizeof(theFloat));
+        gResource->GetString(IDS_FORMAT_PERCENT_6_2G, sFormat);
+        sprintf(theValue, sFormat, theFloat);
+        EECBPut(outText, theValue);
+        return 0;
+    }
+    case EE_SCREENS_CBW_RESERVED: {
+        UString theName(theBytes.c_str());
+        for (unsigned long i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
+            if (PlatStrICmp(theName, gCivilizationManager.mCivilizations[i].mFileName) != 0)
+                continue;
+            UWideString theFormat;
+            UWideString theMessage;
+            gResource->GetString(IDS_FILE_NAME_YOU_SPECIFIED_IS_RESERVED, theFormat);
+            sprintf(theMessage, theFormat, (const char*)theName);
+            EECBPut(outText, theMessage);
+            return 1;
+        }
+        return 0;
+    }
+    case EE_SCREENS_CBW_LOOKUP_LEVEL: {
+        float theValue = 0.0f;
+        float theBonus = 0.0f;
+        bool theFound = gCivilizationManager.LookupLevel((EECivUpgrade)inA, &theValue, &theBonus);
+        uint32_t theBits[2];
+        memcpy(&theBits[0], &theValue, 4);
+        memcpy(&theBits[1], &theBonus, 4);
+        ee_screens_cb_out_value(outText, theBits[0]);
+        ee_screens_cb_out_value(outText, theBits[1]);
+        return theFound;
+    }
+    case EE_SCREENS_CBW_EXTRA_COST:
+        return gCivilizationManager.GetExtraCost((EECivUpgrade)inA);
+    case EE_SCREENS_CBW_CATEGORY_NAME_ID: {
+        long theID = 0;
+        bool theFound = gCivilizationManager.GetCategoryNameID((unsigned long)inA, &theID);
+        ee_screens_cb_out_value(outText, theID);
+        return theFound;
+    }
+    case EE_SCREENS_CBW_LEVEL_NAME_ID:
+        return EECivilizationManager::LevelNameID((unsigned long)inA);
+    case EE_SCREENS_CBW_IS_POWER_LEVEL:
+        return EECivilizationManager::IsPowerLevel((unsigned long)inA);
+    case EE_SCREENS_CBW_ALL_UPGRADES:
+        for (EECivUpgrade theUpgrade : gCivilizationManager.GetUpgrades())
+            ee_screens_cb_out_value(outText, theUpgrade);
+        return 0;
+    case EE_SCREENS_CBW_UPGRADE_KEY: {
+        std::string theKey;
+        bool theFound = gCivilizationManager.UpgradeKey((EECivUpgrade)inA, theKey);
+        EECBPut(outText, theKey.c_str());
+        return theFound;
+    }
+    case EE_SCREENS_CBW_QUOTE:
+        EECBPut(outText, EEDataText::QuoteText(theBytes).c_str());
+        return 0;
+    case EE_SCREENS_CBW_C_BASE_COST:
+        return theCiv->GetBaseCost((EECivUpgrade)inA);
+    case EE_SCREENS_CBW_C_EXTRA_COST:
+        return theCiv->GetExtraCost((EECivUpgrade)inA);
+    case EE_SCREENS_CBW_C_COMPUTE:
+        return theCiv->ComputeCost((long)inA, (long)inB, (long)inC);
+    case EE_SCREENS_CBW_C_COUNT:
+        return theCiv->CountInCategory((EECivUpgrade)inA, NULL);
+    case EE_SCREENS_CBW_C_AVAILABLE:
+        return theCiv->GetAvailablePoints();
+    case EE_SCREENS_CBW_C_UNCHANGED:
+        return theCiv->GetUnchanged();
+    case EE_SCREENS_CBW_C_MAX:
+        return theCiv->GetMaxPoints();
+    case EE_SCREENS_CBW_C_PURCHASED:
+        for (EECivUpgrade theUpgrade : theCiv->GetPurchasedUpgrades())
+            ee_screens_cb_out_value(outText, theUpgrade);
+        return 0;
+    case EE_SCREENS_CBW_C_NAME:
+        EECBPut(outText, theCiv->mName);
+        return 0;
+    case EE_SCREENS_CBW_REQUEST: {
+        // the name's bytes, then the upgrades (little-endian u32s)
+        UWideString theName(theBytes.substr(0, (size_t)inB).c_str());
+        std::vector<EECivUpgrade> theUpgrades;
+        for (size_t i = (size_t)inB; i + 4 <= theBytes.size(); i += 4) {
+            const unsigned char* q = reinterpret_cast<const unsigned char*>(theBytes.data()) + i;
+            theUpgrades.push_back((EECivUpgrade)(q[0] | q[1] << 8 | q[2] << 16 | (uint32_t)q[3] << 24));
+        }
+        unsigned char thePlayer = (unsigned char)inA;
+        NEMessage* theMessage = new EEMRecord(kMessageCivUpgradesRequested, {thePlayer, 0, theUpgrades, theName});
+        if (gCommunications->GetIsMultiplayerSession())
+            gCommunications->ProcessLocalUserInput(theMessage, kSlotServer);
+        else {
+            theMessage->Execute();
+            theMessage->Dereference();
+        }
+        return 0;
+    }
+    case EE_SCREENS_CBW_MULTIPLAYER:
+        return gCommunications->GetIsMultiplayerSession();
+    case EE_SCREENS_CBW_GAME_RESULT:
+        return gWorld.GetCurrentPlayer()->GetGameResult();
+    case EE_SCREENS_CBW_PAUSE:
+        return gWorld.PauseGame();
+    case EE_SCREENS_CBW_UNPAUSE:
+        return gWorld.UnpauseGame();
+    case EE_SCREENS_CBW_PLAYER_CIV: {
+        EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
+        return thePlayer == NULL ? 0 : (int64_t)reinterpret_cast<uintptr_t>(&thePlayer->mCivilization);
+    }
+    case EE_SCREENS_CBW_PLAYER_ID:
+        return (unsigned char)gWorld.mCurrentPlayer;
+    case EE_SCREENS_CBW_PLAYER_FLAG:
+        return inA == 0 ? gWorld.GetCurrentPlayer()->mCivilizationChosen : gWorld.GetCurrentPlayer()->mCivilizationLocked;
+    case EE_SCREENS_CBW_SET_PLAYER_FLAG:
+        (inA == 0 ? gWorld.GetCurrentPlayer()->mCivilizationChosen : gWorld.GetCurrentPlayer()->mCivilizationLocked) =
+            inB != 0;
+        return 0;
+    case EE_SCREENS_CBW_FREE_CAMERA:
+        return gFreeCamera;
+    case EE_SCREENS_CBW_CAN_BUY:
+        return gWorld.mGameOptions.CanBuyCivilization();
+    case EE_SCREENS_CBW_CAMPAIGN_NAME: {
+        UWideString theName;
+        bool theFound = gWorld.mGameOptions.GetCampaignMapName(theName);
+        if (theFound)
+            EECBPut(outText, theName);
+        return theFound;
+    }
+    case EE_SCREENS_CBW_CUSTOM_CIVS:
+        return gAllowCustomCivs;
+    case EE_SCREENS_CBW_SOUND_LOAD:
+        return (int64_t)gSoundManager->Load(UString(inA ? "sounds\\button2.wav" : "sounds\\button1.wav"), 0, 1);
+    case EE_SCREENS_CBW_SOUND_UNLOAD:
+        gSoundManager->Unload((unsigned long)inA);
+        return 0;
+    case EE_SCREENS_CBW_SOUND_PLAY:
+        gSoundManager->Play((unsigned long)inA, 1.0f, 0.0f, 1.0f, false, NULL);
+        return 0;
+    case EE_SCREENS_CBW_MESSAGE:
+        gUIManager->DisplayMessage(theText, 1, NULL, NULL, true);
+        return 0;
+    case EE_SCREENS_CBW_QUESTION:
+        gUIManager->DisplayQuestion(theText, 1, static_cast<UIForm*>(p),
+                                    inA == EE_SCREENS_CBW_ANSWER_WRITE    ? EECBAnswerWrite
+                                    : inA == EE_SCREENS_CBW_ANSWER_DELETE ? EECBAnswerDelete
+                                                                          : EECBAnswerAccept,
+                                    NULL);
+        return 0;
+    case EE_SCREENS_CBW_BLINK_FLAG:
+        gUIManager->mMainGameForm->mIsButtonBlinking = inA != 0;
+        return 0;
+    case EE_SCREENS_CBW_MAIN_BUTTON:
+        return EECBMainButton(inA) != NULL;
+    case EE_SCREENS_CBW_MAIN_BLINK:
+        static_cast<UIBlinkingButton*>(EECBMainButton(inA))->SetIsBlinking(inB != 0);
+        return 0;
+    case EE_SCREENS_CBW_MAIN_DISPLAY:
+        EECBMainButton(inA)->SetDisplayMode(inB ? kDisplayModeShown : kDisplayModeHidden);
+        return 0;
+    case EE_SCREENS_CBW_F_DIRECTORY:
+        gU565518.SetVolume(gStartupVolume);
+        gU565518.SetDirectory(UString(theBytes.c_str()));
+        return 0;
+    case EE_SCREENS_CBW_F_NAME:
+        gU565518.SetFile(UString(theBytes.c_str()));
+        return 0;
+    case EE_SCREENS_CBW_F_OPEN:
+        return gU565518.Open(inA ? kFileAccessWrite : kFileAccessRead);
+    case EE_SCREENS_CBW_F_CLOSE:
+        return gU565518.Close();
+    case EE_SCREENS_CBW_F_DELETE:
+        return gU565518.Delete();
+    case EE_SCREENS_CBW_F_CREATE:
+        return gU565518.Create();
+    case EE_SCREENS_CBW_F_WRITE: {
+        unsigned long theWritten = 0;
+        return gU565518.Write(theBytes.data(), (unsigned long)theBytes.size(), theWritten);
+    }
+    case EE_SCREENS_CBW_F_FILE:
+        EECBPut(outText, gU565518.GetFile());
+        return 0;
+    case EE_SCREENS_CBW_STARTUP_DIRECTORY:
+        EECBPut(outText, gStartupDirectory);
+        return 0;
+    case EE_SCREENS_CBW_RELOAD_PLAYERS: {
+        UString theFile(theBytes.c_str());
+        std::vector<unsigned long> thePlayers;
+        for (unsigned long i = 1; i < gWorld.mNumPlayers; i++)
+            if (gWorld.mPlayers[i]->mCivilizationFile + ".civ" == theFile)
+                thePlayers.push_back(i);
+        if (thePlayers.size() > 0) {
+            EEAResetAllPlayerInfo* theAction = new EEAResetAllPlayerInfo(thePlayers);
+            gUserInterface->PostAction(theAction);
+            theAction->Dereference();
+        }
+        return (int64_t)thePlayers.size();
+    }
+    case EE_SCREENS_CBW_LOAD_CIVILIZATION: {
+        // the game's file, else (into the same name and upgrades) the user's
+        UString theName(theBytes.c_str());
+        UWideString theCivName;
+        std::vector<EECivUpgrade> theUpgrades;
+        long theResult = EELoadCivilization(theName, EEGetCivilizationDirectory(false), theCivName, theUpgrades);
+        if (theResult != 0)
+            theResult = EELoadCivilization(theName, EEGetCivilizationDirectory(true), theCivName, theUpgrades);
+        EECBPut(outText, theCivName);
+        for (EECivUpgrade theUpgrade : theUpgrades)
+            ee_screens_cb_out_value(outText, theUpgrade);
+        return theResult;
+    }
+    }
     return 0;
-}
-
-// FUNCTION: EXE 0x67fd5a
-// Buys an upgrade, playing the button sound on success; returns 0xd when it cannot be moved
-long CivBuilderMoveToBought(EECivUpgrade inUpgrade)
-{
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
-    long theResult = 0xd;
-    if (CivBuilderMoveUpgrade(theForm, true, inUpgrade)) {
-        theResult = 0;
-        gSoundManager->Play(gU5654E4, 1.0f, 0.0f, 1.0f, false, NULL);
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x67fdab
-// Sells an upgrade back, playing the button sound on success; returns 0xd when it cannot be moved
-long CivBuilderMoveToAvailable(EECivUpgrade inUpgrade)
-{
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
-    long theResult = 0xd;
-    if (CivBuilderMoveUpgrade(theForm, false, inUpgrade)) {
-        gSoundManager->Play(gU5654E4, 1.0f, 0.0f, 1.0f, false, NULL);
-        theResult = 0;
-    }
-    return theResult;
 }

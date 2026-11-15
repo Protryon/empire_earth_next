@@ -875,6 +875,90 @@ pub enum EeUiOp {
     BgtFileRead = 599,
     /// The file's `Close()`.
     BgtFileClose = 600,
+
+    // ---- the movie control (R6 ui round 21, mediaobj.rs): on movie a
+    /// Movie `a`'s `Reference()`.
+    MovieReference = 610,
+    /// Movie `a`'s `Stop()`.
+    MovieStop = 611,
+    /// Movie `a`'s `Dereference()`.
+    MovieRelease = 612,
+    /// *Pure*: movie `a`'s `GetIsPlaying()`.
+    MoviePlaying = 613,
+    /// Movie `a`'s `RenderFrame()` -> its result.
+    MovieRender = 614,
+
+    // ---- the events (R6 ui round 21, eventobj.rs): on the event's record, or on the events file (with the
+    // background table's file ops, 597..600)
+    /// The event's virtual `InitializeEvent()` -> its result.
+    EvInitialize = 630,
+    /// The event's virtual `UninitializeEvent()` -> its result.
+    EvUninitialize = 631,
+    /// The owner `b` of kind `a` (0 `UIControlsTable::GetUIControlsTable(b)`, 1 manager `c`'s `GetFormByID(b)`).
+    EvOwner = 632,
+    /// Owner `b` (of kind `a`)'s `AddEvent` of the event id `c` and type `d`.
+    EvAdd = 633,
+
+    // ---- the entity groups (R6 ui round 21, groupobj.rs): on entity a
+    /// *Pure*: entity `a` is a button (`GetType() == kControlTypeButton`).
+    GrpIsButton = 640,
+    /// *Pure*: control `a`'s display mode is `kDisplayModeShown`.
+    GrpShown = 641,
+    /// *Pure*: control `a`'s form is its manager's current form.
+    GrpOnCurrentForm = 642,
+    /// The manager's `AddDirtyRectangle` of control `a`'s rectangle on its form.
+    GrpAddDirty = 643,
+    /// Control `a`'s `HideControl()`.
+    GrpHide = 644,
+    /// Control `a`'s `SetDirty(true)`.
+    GrpSetDirty = 645,
+    /// *Pure*: control `a`'s form's `GetTabbingOn()`.
+    GrpTabbing = 646,
+    /// *Pure*: control `a`'s form's tab stop is its index.
+    GrpIsTabStop = 647,
+    /// Control `a`'s form's `Tab()`.
+    GrpTab = 648,
+    /// Hot key `a`'s `SetEnabled(b != 0)`.
+    GrpSetEnabled = 649,
+
+    // ---- the file lists (R6 ui round 21, filelistobj.rs): on the list box or combo box
+    /// `DeleteAllEntries()`.
+    FlDeleteAll = 650,
+    /// Path `a`'s `GetDirectoryCount()`.
+    FlDirCount = 651,
+    /// Search `a`: path `b`'s directory `c` into its directory, then the directory's `GetFirstFile` -> its result.
+    FlDirFirst = 652,
+    /// Search `a`'s `GetNextFile` -> its result.
+    FlNext = 653,
+    /// Search `a`'s `GetFirstFile` again (the original's call after each directory; the result unused).
+    FlRewind = 654,
+    /// A new search (the original's `FSFileSpec` locals: the file and the directory) -> it.
+    FlSearchNew = 655,
+    /// `delete` search `a`.
+    FlSearchDelete = 656,
+    /// Search `a`'s file name's length in bytes.
+    FlNameLength = 657,
+    /// Search `a`'s file name copied into `b` (`c` bytes, NUL included).
+    FlNameCopy = 658,
+    /// `AppendLine(a)`: `a` NUL-terminated bytes.
+    FlAppend = 659,
+    /// `InsertLine(a, 0, UWSNoCaseAlphaSort())` (the combo box's list's): `a` NUL-terminated bytes.
+    FlInsertSorted = 660,
+    /// `GetCurrentSelection` -> its result, the selection's bits in `f[0]`.
+    FlSelection = 661,
+    /// Line `a`'s (`GetData(a)`) length in bytes.
+    FlLineLength = 662,
+    /// Line `a` copied into `b` (`c` bytes, NUL included).
+    FlLineCopy = 663,
+    /// Path `b`'s `FindFile(a)` (NUL-terminated bytes) and, when found, the file's `Delete()` (the file then
+    /// deleted) -> the delete's result, else the lookup's; `f[0]`'s bits 1 when found.
+    FlDeleteFile = 664,
+    /// `DeleteLine(a)`.
+    FlDeleteLine = 665,
+    /// Path `a`'s `Reference()`.
+    FlPathReference = 666,
+    /// Path `a`'s `Dereference()`.
+    FlPathRelease = 667,
 }
 
 impl EeUiOp {
@@ -1008,6 +1092,12 @@ impl EeUiOp {
                 | BgtTextureDepth
                 | BgtEntryAlpha
                 | BgtEntryFormId
+                | MoviePlaying
+                | GrpIsButton
+                | GrpShown
+                | GrpOnCurrentForm
+                | GrpTabbing
+                | GrpIsTabStop
         )
     }
 
