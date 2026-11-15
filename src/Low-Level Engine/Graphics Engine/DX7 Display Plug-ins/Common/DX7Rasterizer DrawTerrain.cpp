@@ -18,10 +18,7 @@
 #include "dx7/DX7StandardVertexArray.h"
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
-#include "dx7/DX7DrawSeam.h"
-
-// The D3D light indices in use (DX7Rasterizer.cpp).
-extern unsigned long gLightsInUse[8];
+#include "rust/ee_dx7.h"
 
 // The U2D key init chains:
 // SYNTHETIC: DX7HR 0x10004d1a
@@ -133,25 +130,6 @@ void ee_dx7cpp_mesh_water_color(void* inMesh, unsigned long inX, unsigned long i
     outColor[2] = theColor.GetBlue();
 }
 bool ee_dx7cpp_mesh_valid_tile(void* inMesh, unsigned long inX, unsigned long inY) { return static_cast<GETerrainMesh*>(inMesh)->GetIsValidTile(inX, inY); }
-bool ee_dx7cpp_light(void* inRasterizer, unsigned long inScreen, unsigned long inIndex, EeDx7LightData* outLight)
-{
-    if (gLightsInUse[inIndex] == 0)
-        return false;
-    GXLIGHT theLight;
-    DX7Access(inRasterizer)->mDX7ScreenStates[inScreen]->mDevice->GetLight(inIndex, &theLight);
-    outLight->light_type = theLight.dltType;
-    outLight->diffuse[0] = theLight.dcvDiffuse.r;
-    outLight->diffuse[1] = theLight.dcvDiffuse.g;
-    outLight->diffuse[2] = theLight.dcvDiffuse.b;
-    outLight->direction[0] = theLight.dvDirection.x;
-    outLight->direction[1] = theLight.dvDirection.y;
-    outLight->direction[2] = theLight.dvDirection.z;
-    return true;
-}
-float ee_dx7cpp_um_arctan(float inValue) { return UMArcTan(inValue); }
-float ee_dx7cpp_um_tan(float inAngle) { return UMTan(inAngle); }
-float ee_dx7cpp_um_sin(float inAngle) { return UMSin(inAngle); }
-float ee_dx7cpp_um_cos(float inAngle) { return UMCos(inAngle); }
 }
 
 // FUNCTION: DX7HR 0x10004e78
@@ -160,7 +138,6 @@ float ee_dx7cpp_um_cos(float inAngle) { return UMCos(inAngle); }
 long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->GetViewport(inScreen));
     std::vector<EeDx7MaterialView> theMaterials = DX7MaterialViewsOf(inMesh, false);
     std::vector<EeDx7MaterialMapEntry> theMap;
     std::vector<std::pair<GETexture*, unsigned long> > theSource;
@@ -169,8 +146,8 @@ long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inO
         EeDx7MaterialMapEntry theEntry = {theSource[i].first, theSource[i].second};
         theMap.push_back(theEntry);
     }
-    return ee_dx7r_draw_terrain(this, inScreen, DX7DrawState(this, inScreen), &theMesh, theMap.data(), theMap.size(), theMaterials.data(),
-                                theMaterials.size(), &theViewport, inOrthographic);
+    return ee_dx7r_draw_terrain(this->mDX7, inScreen, &theMesh, theMap.data(), theMap.size(), theMaterials.data(),
+                                theMaterials.size(), inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x10005b93
@@ -180,10 +157,8 @@ long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
                                   GETexture* inTexture, float inWidth, unsigned long inScreen, bool inOrthographic)
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->GetViewport(inScreen));
-    return ee_dx7r_draw_grid_lines(this, inScreen, DX7DrawState(this, inScreen), &theMesh,
-                                   reinterpret_cast<const long(*)[4]>(inLines.data()), inLines.size(), inTexture, inWidth, &theViewport,
-                                   inOrthographic);
+    return ee_dx7r_draw_grid_lines(this->mDX7, inScreen, &theMesh, reinterpret_cast<const long(*)[4]>(inLines.data()),
+                                   inLines.size(), inTexture, inWidth, inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x10006159
@@ -191,8 +166,7 @@ long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
 long DX7Rasterizer::DrawTerrainGrid(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->GetViewport(inScreen));
-    return ee_dx7r_draw_terrain_grid(this, inScreen, DX7DrawState(this, inScreen), &theMesh, &theViewport, inOrthographic);
+    return ee_dx7r_draw_terrain_grid(this->mDX7, inScreen, &theMesh, inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x100065d1
@@ -202,21 +176,9 @@ long DX7Rasterizer::DrawTerrainHighlight(GETerrainMesh& inMesh, const U2DRectang
                                          float inOpacity)
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->GetViewport(inScreen));
     const long theRect[4] = {inRectangle.mLeft, inRectangle.mTop, inRectangle.mRight, inRectangle.mBottom};
     const float theColor[3] = {inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()};
-    return ee_dx7r_draw_terrain_highlight(this, inScreen, DX7DrawState(this, inScreen), &theMesh, theRect, theColor, inOpacity,
-                                          &theViewport, inOrthographic);
-}
-
-// FUNCTION: DX7HR 0x10006c53
-// Draws a material's NULL-terminated polygon list (count in its last element) in batches, with fog-darkened vertex
-// colours; skips triangles whose vertices are all fully visible with no alpha
-long DX7Rasterizer::DrawTerrainMaterial(GEViewport* inViewport, std::vector<GETerrainMesh::GETMPolygon*>& inPolygons,
-                                        unsigned long inScreen)
-{
-    return ee_dx7r_draw_terrain_material(this, inScreen, DX7DrawState(this, inScreen),
-                                         reinterpret_cast<EeDx7TerrainPolygon**>(inPolygons.data()), inPolygons.size());
+    return ee_dx7r_draw_terrain_highlight(this->mDX7, inScreen, &theMesh, theRect, theColor, inOpacity, inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x10006f40
@@ -224,10 +186,8 @@ long DX7Rasterizer::DrawTerrainMaterial(GEViewport* inViewport, std::vector<GETe
 long DX7Rasterizer::DrawWater(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->GetViewport(inScreen));
     std::vector<EeDx7MaterialView> theMaterials = DX7MaterialViewsOf(inMesh, true);
-    return ee_dx7r_draw_water(this, inScreen, DX7DrawState(this, inScreen), &theMesh, theMaterials.data(), theMaterials.size(),
-                              &theViewport, inOrthographic);
+    return ee_dx7r_draw_water(this->mDX7, inScreen, &theMesh, theMaterials.data(), theMaterials.size(), inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x1000723b
@@ -236,13 +196,8 @@ long DX7Rasterizer::DrawWater(GETerrainMesh& inMesh, unsigned long inScreen, boo
 void DX7Rasterizer::Light(GETerrainMesh& inMesh, unsigned long inScreen)
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    const float theAmbient[3] = {this->GetComputedAmbientColor().GetRed(), this->GetComputedAmbientColor().GetGreen(),
-                                 this->GetComputedAmbientColor().GetBlue()};
-    ee_dx7r_light_terrain(this, inScreen, DX7DrawState(this, inScreen), &theMesh, theAmbient);
+    ee_dx7r_light_terrain(this->mDX7, inScreen, &theMesh);
 }
-
-// The water animation clock: advanced by every TransformToCamera that animates the water.
-static float sWaterTime = 0.0f;
 
 // FUNCTION: DX7HR 0x10007763
 // Moves the visible terrain and water vertices to camera space (animating the water waves) and sets their clip flags,
@@ -251,13 +206,10 @@ void DX7Rasterizer::TransformToCamera(GETerrainMesh& inMesh, GEViewport& inViewp
                                       bool inOrthographic)
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(inViewport);
     std::vector<EeDx7MaterialView> theTerrainMaterials = DX7MaterialViewsOf(inMesh, false);
     std::vector<EeDx7MaterialView> theWaterMaterials = DX7MaterialViewsOf(inMesh, true);
-    EeDx7WaterRipple theRipple;
-    this->GetWaterRippleEffect(theRipple.time_rate, theRipple.water_height, theRipple.terrain_height);
-    ee_dx7r_transform_to_camera(&theMesh, theTerrainMaterials.data(), theTerrainMaterials.size(), theWaterMaterials.data(),
-                                theWaterMaterials.size(), &theViewport, inScale, inWaterOnly, inOrthographic, theRipple, &sWaterTime);
+    ee_dx7r_transform_to_camera(this->mDX7, &theMesh, theTerrainMaterials.data(), theTerrainMaterials.size(),
+                                theWaterMaterials.data(), theWaterMaterials.size(), &inViewport, inScale, inWaterOnly, inOrthographic);
 }
 
 

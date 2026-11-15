@@ -158,6 +158,7 @@ mod sys {
         pub fn gx_device_set_transform(device: *mut c_void, state: u32, matrix: *const f32) -> c_long;
         pub fn gx_device_set_light(device: *mut c_void, index: c_ulong, light: *const GxLight) -> c_long;
         pub fn gx_device_light_enable(device: *mut c_void, index: c_ulong, enable: i32) -> c_long;
+        pub fn gx_device_get_light(device: *mut c_void, index: c_ulong, light: *mut GxLight) -> c_long;
 
         pub fn gx_direct_draw_enumerate(callback: EnumerateCallback, context: *mut c_void) -> c_long;
         pub fn gx_direct_draw_create(out: *mut *mut c_void) -> c_long;
@@ -278,6 +279,15 @@ impl RawDevice {
 }
 
 /// `PlatSleep(0)`.
+/// `GXDevice::GetLight`: the light's type, diffuse colour and direction (what the terrain lighting reads).
+pub fn device_light(device: H, index: u32) -> (c_ulong, [f32; 3], [f32; 3]) {
+    // SAFETY: zero is a valid GXLIGHT; the GX contract
+    let mut light: GxLight = unsafe { core::mem::zeroed() };
+    unsafe { gx_device_get_light(device, index as c_ulong, &mut light) };
+    let d = light.dcvDiffuse;
+    (light.dltType, [d[0], d[1], d[2]], light.dvDirection)
+}
+
 pub fn yield_now() {
     unsafe { PlatSleep(0) };
 }
