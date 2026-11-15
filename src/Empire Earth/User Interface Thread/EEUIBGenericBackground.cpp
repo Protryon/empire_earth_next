@@ -178,8 +178,8 @@ extern "C" void ee_screenscpp_frame_piece(void* inBackground, const EeScreensFra
 void EEUIBGenericBackground::Open()
 {
     UIBackground::Open();
-    this->mScaleX = (float)gGameWindow->GetWidth() / (float)this->mForm->GetDesignedWidth();
-    this->mScaleY = (float)gGameWindow->GetHeight() / (float)this->mForm->GetDesignedHeight();
+    this->mScaleX = (float)gGameWindow->GetWidth() / (float)this->GetForm()->GetDesignedWidth();
+    this->mScaleY = (float)gGameWindow->GetHeight() / (float)this->GetForm()->GetDesignedHeight();
 }
 
 // FUNCTION: EXE 0x6556d9
@@ -263,8 +263,8 @@ long EEUIBMapBackground::LoadBackground()
         theTextureDescription.mPixelDepth = gGamePreferences.mSettings.mGameBitDepth;
         theTextureDescription.mSurfaceVolatility = theCellDescription.mSurfaceVolatility;
         theTextureDescription.mIsTransparencyEnabled = theCellDescription.mIsTransparencyEnabled;
-        this->mTextureDescription = theTextureDescription;
-        this->mTextureRectangle = GERectangle(0.0f, 0.0f, (float)(theWidth - 1), (float)(theHeight - 1));
+        this->SetTextureDescription(theTextureDescription);
+        this->SetTextureRectangle(GERectangle(0.0f, 0.0f, (float)(theWidth - 1), (float)(theHeight - 1)));
         unsigned long theX = 0;
         for (unsigned long theColumn = 0; theColumn < theColumns; theColumn++, theX += 256) {
             unsigned long theY = 0;

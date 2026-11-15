@@ -79,6 +79,9 @@ pub struct EeUnitsUuUnit {
     /// the complex unit's `mStats->mMaxVelocity`, `mStats->mAttack`
     pub stats_max_velocity: f32,
     pub stats_attack: f32,
+    /// the complex unit's `mStats != NULL`; its current command's `mType` (0: none)
+    pub has_stats: u8,
+    pub command: i32,
 }
 
 impl Default for EeUnitsUuUnit {
@@ -101,6 +104,8 @@ impl Default for EeUnitsUuUnit {
             location: [0.0; 3],
             stats_max_velocity: 0.0,
             stats_attack: 0.0,
+            has_stats: 0,
+            command: 0,
         }
     }
 }
@@ -153,6 +158,11 @@ impl UuClassView {
     class_field!(outer, mOuterCollisionSphere, f32);
     class_field!(max_velocity, mMaxVelocity, f32);
     class_field!(overlap_unit_set, mOverlapUnitSet, i32);
+    class_field!(cruise_altitude, mCruiseAltitude, f32);
+    class_field!(is_complex, mIsComplex, i32);
+    class_field!(air_traffic_type, mAirTrafficType, i32);
+    class_field!(garrison_capacity, mGarrisonCapacity, i32);
+    class_field!(garrison_bonus, mGarrisonBonus, f32);
     class_flag!(is_wall, mIsWall);
     class_flag!(is_tower, mIsTower);
     class_flag!(is_tree, mIsTree);
@@ -208,6 +218,9 @@ impl UuView {
     fn cx(&self) -> &EeUnitsComplexUnitFields {
         // SAFETY: a non-null record of a live complex unit; the reference ends with the read that takes it
         unsafe { &*self.0.cx }
+    }
+    pub fn animation(&self) -> u32 {
+        self.cx().mAnimation as u32
     }
     pub fn water_state(&self) -> i32 {
         self.cx().mWaterState as i32

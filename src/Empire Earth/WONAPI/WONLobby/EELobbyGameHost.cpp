@@ -4,8 +4,10 @@
 // player names, every method and hook). This unit is the shell (the class's methods and virtual hooks forward; a hook
 // whose read threw throws ReadBufferException again for the lobby's handler), the slot view's methods, and the host:
 // each op the original's statements on a buffer, a client, a player, the file transfer, the lobby or a global, with
-// no decision. A read op catches the ReadBufferException it threw and answers INTPTR_MIN.
+// no decision. A read op catches the ReadBufferException it threw and answers INTPTR_MIN. The saved game's transfer
+// (EELobbyFileTransfer.cpp: the transfer and its SendFileOp) is ee_won's eexfer.rs; its shells and host are here too.
 #include <windows.h>
+#include "platform/PlatFile.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <string>
@@ -25,6 +27,112 @@
 
 using namespace WONAPI;
 
+
+// ---- the saved game's transfer (ee_won eexfer.rs): the shells, a completion running a callback on the window
+// thread (LobbyCompletion's), the host
+
+static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a, intptr_t b, intptr_t c);
+
+// the host's side of a saved game's transfer: sends the file over one client's socket (RTTI SendFileOp > SocketOp,
+// vtable 0x84c408)
+class SendFileOp : public SocketOp {
+public:
+    // FUNCTION: EXE 0x691463
+    SendFileOp(const std::string& inPath)
+        : SocketOp(NULL), mRust(ee_won_eexfer_send_new(this, EELobbyTransferHost,
+                                                       reinterpret_cast<const uint8_t*>(inPath.data()), inPath.size()))
+    {
+        this->SetWaitForEvent(1, true);
+    }
+    virtual ~SendFileOp() { ee_won_eexfer_send_free(this->mRust); }
+    // FUNCTION: EXE 0x6916b3
+    virtual void CleanupHook() { ee_won_eexfer_send_call(this->mRust, EeWonEeXferSendCall::Cleanup); }
+    // FUNCTION: EXE 0x6915d2
+    virtual WONStatus Start() { return ee_won_eexfer_send_call(this->mRust, EeWonEeXferSendCall::Start); }
+    // FUNCTION: EXE 0x691613
+    virtual WONStatus Continue() { return ee_won_eexfer_send_call(this->mRust, EeWonEeXferSendCall::Continue); }
+    EeWonEeXferSend* mRust;
+};
+
+// LobbyCompletion<EELobbyFileTransfer>: the callback runs on the window thread, the transfer held
+class EELobbyTransferCompletion : public LobbyCompletionBase {
+public:
+    EELobbyTransferCompletion(EELobbyFileTransfer* inTransfer, EeWonEeXferCall inCall)
+        : mTransfer(inTransfer), mCall(inCall) {}
+    virtual void Run(AsyncOp* inOp) { ee_won_eexfer_call(this->mTransfer->mRust, this->mCall, (intptr_t)inOp, 0); }
+    SmartPtr<EELobbyFileTransfer> mTransfer;
+    EeWonEeXferCall mCall;
+};
+
+// FUNCTION: EXE 0x6916b8
+EELobbyFileTransfer::EELobbyFileTransfer() : mRust(ee_won_eexfer_new(this, EELobbyTransferHost)) {}
+// FUNCTION: EXE 0x69175b
+EELobbyFileTransfer::~EELobbyFileTransfer() { ee_won_eexfer_free(this->mRust); }
+
+static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a, intptr_t b, intptr_t c)
+{
+    typedef EeWonEeXferOp Op;
+    EELobbyFileTransfer* aTransfer = static_cast<EELobbyFileTransfer*>(inObj);
+    SendFileOp* aSend = static_cast<SendFileOp*>(inObj);
+    AsyncOp* anOp = reinterpret_cast<AsyncOp*>(a);
+    QueueSocket* aSocket = static_cast<QueueSocket*>(reinterpret_cast<AsyncSocket*>(a));
+    switch (inOp) {
+    case Op::SavedGameInfo: {
+        unsigned long aSize = *reinterpret_cast<uint32_t*>(b), aChecksum = *reinterpret_cast<uint32_t*>(c);
+        EELobbyGetSavedGameInfo(reinterpret_cast<const char*>(a), aSize, aChecksum);
+        *reinterpret_cast<uint32_t*>(b) = (uint32_t)aSize;
+        *reinterpret_cast<uint32_t*>(c) = (uint32_t)aChecksum;
+        return 0;
+    }
+    case Op::Time: return (intptr_t)(uint32_t)(unsigned long)PlatTimeMilliseconds64();
+    case Op::MyGame: return (intptr_t)GetMyLobbyGame();
+    case Op::GameProgress:
+        static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(a))->UpdateTransferProgress((int)b, (int)c);
+        return 0;
+    case Op::Succeeded: return anOp->Succeeded() ? 1 : 0;
+    case Op::OpSocket: return (intptr_t) static_cast<SocketOp*>(anOp)->GetSocket();
+    case Op::AcceptedSocket: return (intptr_t) static_cast<AcceptOp*>(anOp)->GetAcceptedSocket();
+    case Op::BytesRead: return (intptr_t) static_cast<RecvChunkOp*>(anOp)->GetRecvOp()->GetBytesRead();
+    case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
+    case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
+    case Op::Kill: reinterpret_cast<AsyncSocket*>(a)->Kill(); return 0;
+    case Op::NewSocket: {
+        QueueSocket* aNew = new QueueSocket(0);
+        aNew->AddRef();
+        return (intptr_t) static_cast<AsyncSocket*>(aNew);
+    }
+    case Op::Bind: return aSocket->Fn2B0D90((unsigned short)b, 0);
+    case Op::Listen: return aSocket->Listen(1000);
+    case Op::RepeatAccept:
+        aSocket->SetRepeatCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnClientAccepted));
+        aSocket->SetRepeatOp(new AcceptOp(NULL));
+        return 0;
+    case Op::QueueSend:
+        aSocket->SetCloseCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnClientClosed));
+        aSocket->QueueOp(new SendFileOp(std::string(reinterpret_cast<const char*>(b), (size_t)c)), -1);
+        aSocket->QueueOp(new CloseOp(NULL), -1);
+        return 0;
+    case Op::HostValid: return aTransfer->mHost.IsValid() ? 1 : 0;
+    case Op::QueueDownload: {
+        aSocket->SetCloseCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnClientClosed));
+        SmartPtr<RecvBytesOp> theOp = new RecvBytesOp(0, NULL);
+        theOp->SetCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnFileReceived));
+        theOp->SetFilePath(std::string(reinterpret_cast<const char*>(b), (size_t)c));
+        theOp->SetProgressCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnProgress), 10000);
+        aSocket->QueueOp(new ConnectOp(aTransfer->mHost), -1);
+        aSocket->QueueOp(theOp.mPtr, -1);
+        return 0;
+    }
+    case Op::Open: return (intptr_t)PlatFOpen(reinterpret_cast<const char*>(a), "rb");
+    case Op::Read: return (intptr_t)fread(reinterpret_cast<void*>(b), 1, (size_t)c, reinterpret_cast<FILE*>(a));
+    case Op::Close: fclose(reinterpret_cast<FILE*>(a)); return 0;
+    case Op::WaitForWrite: aSend->GetSocket()->WaitForWrite(aSend->TimeLeft()); return 0;
+    case Op::Send:
+        return aSend->GetSocket()->Send(reinterpret_cast<const void*>(a), (unsigned long)b, reinterpret_cast<int*>(c));
+    case Op::TimeLeft: return (intptr_t)aSend->TimeLeft();
+    }
+    return 0;
+}
 
 typedef EeWonEeGameCall GC;
 
@@ -261,27 +369,29 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     }
     case Op::StringsEqual: return EELobbyStr(a) == EELobbyStr(b) ? 1 : 0;
     case Op::TransferNew: return (intptr_t) new EELobbyFileTransfer;
-    case Op::TransferSetFileInfo: aTransfer->SetFileInfo(EELobbyStr(b), (unsigned long)c, (unsigned long)d); return 0;
+    case Op::TransferSetFileInfo:
+        aTransfer->mName = EELobbyStr(b);
+        return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::SetFileInfo, (uint32_t)c, (uint32_t)d);
     case Op::TransferSetSavesPath: {
         GUIString thePath = EELobbyFn2988E9();
         thePath.append(aTransfer->mName);
-        aTransfer->SetPath(thePath);
-        return 0;
+        std::string aPath = thePath;
+        return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::SetPath, (intptr_t)aPath.data(), aPath.size());
     }
-    case Op::TransferServe: aTransfer->Serve((unsigned short)b); return 0;
+    case Op::TransferServe: ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Serve, (unsigned short)b, 0); return 0;
     case Op::TransferName: return (intptr_t)aTransfer->mName.mData.get();
-    case Op::TransferSize: return (intptr_t)(uint32_t)aTransfer->mSize;
-    case Op::TransferChecksum: return (intptr_t)(uint32_t)aTransfer->mChecksum;
+    case Op::TransferSize: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Field, 2, 0);
+    case Op::TransferChecksum: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Field, 3, 0);
     case Op::TransferSetHost: {
         IPAddr theAddress(aGame->GetAddress());
         theAddress.SetPort((unsigned short)b);
-        aTransfer->SetHost(theAddress);
+        aTransfer->mHost = theAddress;
         return 0;
     }
-    case Op::TransferStop: aTransfer->Stop(); return 0;
-    case Op::TransferCloseClients: aTransfer->CloseClients(); return 0;
-    case Op::TransferIsFileHere: return aTransfer->IsFileHere() ? 1 : 0;
-    case Op::TransferDownload: aTransfer->Download(); return 0;
+    case Op::TransferStop: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Stop, 0, 0);
+    case Op::TransferCloseClients: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::CloseClients, 0, 0);
+    case Op::TransferIsFileHere: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::IsFileHere, 0, 0);
+    case Op::TransferDownload: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Download, 0, 0);
     }
     return 0;
 }
