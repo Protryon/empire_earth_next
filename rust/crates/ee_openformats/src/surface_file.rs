@@ -4,7 +4,7 @@
 //!
 //! `GESurface` stays the C++ abstract class the renderer implements (`DX7Surface`); its image members are one-line
 //! forwarders. Every call the original made on another object is one host operation (`EeOfSurfOp`,
-//! `GESurface.cpp`'s `GESurfaceHost`): the surface's virtuals, the file's (an `FSFileSpec`, whose virtuals a memory
+//! `GETexture.cpp`'s `GESurfaceHost`): the surface's virtuals, the file's (an `FSFileSpec`, whose virtuals a memory
 //! file overrides) and libjpeg's (its structures stay C: a decoder or encoder is a handle the host owns). The C
 //! stream's own calls (`fseek`, `ftell`, `_getw`/`_putw`) are made here, on the `FILE*` the file's `FOpen` opened.
 

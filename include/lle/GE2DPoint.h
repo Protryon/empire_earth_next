@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Graphics Engine\GE2DPoint.h (RECONSTRUCTION). Requires <vector>.
 // port (R4.3, fifteenth part): GE2DPoint.cpp is gone: the component-wise members are inline here, the distances,
-// the side test and the interpolation forward to Rust from GE3DPoint.cpp (ee_ge point.rs).
+// the side test and the interpolation forward to Rust from GEValues.cpp (ee_ge point.rs).
 #ifndef LLE_GE2DPOINT_H
 #define LLE_GE2DPOINT_H
 

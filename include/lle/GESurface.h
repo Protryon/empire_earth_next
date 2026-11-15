@@ -68,7 +68,7 @@ public:
     // renderer draws the game's logical pixels into a larger texture); 1 for every other surface
     virtual float GetRenderScale() const { return 1.0f; }
 
-    // Image files (inType: GEImageFileType): Rust (ee_openformats surface_file.rs), GESurface.cpp forwards
+    // Image files (inType: GEImageFileType): Rust (ee_openformats surface_file.rs), GETexture.cpp forwards
     long Load(FSFileSpec& inFile, unsigned char inType);
     long Save(FSFileSpec& inFile, unsigned char inType);
     static long GetImageFileAttributes(FSFileSpec& inFile, unsigned char inType, unsigned long& outWidth,

@@ -5,7 +5,7 @@
 //! with its name and the problem (`ESVerify`).
 //!
 //! The path and its files stay C++ (`FSPath::FindFile`, an `FSFileSpec` whose virtuals a memory file overrides):
-//! every call on them is one host operation (`EeOfFileOp`, GEModelManager.cpp's `GEOpenFormatsHost`).
+//! every call on them is one host operation (`EeOfFileOp`, GEModel.cpp's `GEOpenFormatsHost`).
 
 use std::ffi::{c_char, c_long, c_ulong, c_void, CStr};
 
