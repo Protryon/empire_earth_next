@@ -1,9 +1,12 @@
 use super::*;
 
+/// A trigger: its numbers, name, description, condition and effect wrappers.
+type Trigger = (EeScenarioTriggerFields, &'static str, &'static str, Vec<[i32; 3]>, Vec<[i32; 3]>);
+
 /// A scenario as plain records.
 #[derive(Default)]
 struct Scenario {
-    triggers: Vec<(EeScenarioTriggerFields, &'static str, &'static str, Vec<[i32; 3]>, Vec<[i32; 3]>)>,
+    triggers: Vec<Trigger>,
     conditions: Vec<(EeScenarioConditionFields, &'static str)>,
     effects: Vec<(EeScenarioEffectFields, &'static str, Vec<i32>)>,
     objects: Vec<(EeScenarioObjectFields, &'static str)>,

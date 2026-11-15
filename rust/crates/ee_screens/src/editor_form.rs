@@ -1384,12 +1384,12 @@ pub fn trigger_report<R: ScenarioRecords + ?Sized>(r: &mut R) -> Vec<u8> {
         }
     }
 
-    for t in 0..n_triggers {
+    for (t, effects_of_t) in effects_of.iter().enumerate() {
         let Some(fields) = r.trigger(t) else { continue };
         if !fields.mIsLooping {
             continue;
         }
-        for w in &effects_of[t] {
+        for w in effects_of_t {
             let k = w[1] as u32 as usize;
             // a missing effect is listed as BAD EFFECT above
             let Some(e) = effects.get(k).copied().flatten() else { continue };
