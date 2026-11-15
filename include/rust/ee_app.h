@@ -8,6 +8,46 @@
 #include <stddef.h>
 #include "ee_ge.h"
 
+/// -> n: the sounds' count; slot -> sound: the slot's record
+constexpr static const int32_t EE_APP_AMBIENT_OP_SOUNDS = 1;
+
+constexpr static const int32_t EE_APP_AMBIENT_OP_SOUND = 2;
+
+/// -> volume: `mRandom.Generate()`
+constexpr static const int32_t EE_APP_AMBIENT_OP_RANDOM = 3;
+
+/// slot, volume, pan, pitch: `gSoundManager->Play` of the slot's sample
+constexpr static const int32_t EE_APP_AMBIENT_OP_PLAY = 4;
+
+/// slot -> flag: an instance plays
+constexpr static const int32_t EE_APP_AMBIENT_OP_HAS_INSTANCE = 5;
+
+/// slot, volume, pan, pitch, flag (looping): the instance started
+constexpr static const int32_t EE_APP_AMBIENT_OP_START = 6;
+
+/// slot, volume, pan, pitch: `SetSoundParameters`
+constexpr static const int32_t EE_APP_AMBIENT_OP_SET_PARAMETERS = 7;
+
+/// slot: `Stop(mInstance, true)`, the instance released
+constexpr static const int32_t EE_APP_AMBIENT_OP_STOP_INSTANCE = 8;
+
+/// slot -> flag: a sound object; has: loaded now, then n its loop flag (`LoadSound`)
+constexpr static const int32_t EE_APP_AMBIENT_OP_LOAD_SOUND = 9;
+
+/// slot: the media unloaded, the object forgotten
+constexpr static const int32_t EE_APP_AMBIENT_OP_UNLOAD_SOUND = 10;
+
+/// -> volume: the time of day; -> n: `TMGetTime()`; -> n: the visible tiles; -> volume: the water's, the space's share
+constexpr static const int32_t EE_APP_AMBIENT_OP_TIME_OF_DAY = 11;
+
+constexpr static const int32_t EE_APP_AMBIENT_OP_TIME = 12;
+
+constexpr static const int32_t EE_APP_AMBIENT_OP_VISIBLE_TILES = 13;
+
+constexpr static const int32_t EE_APP_AMBIENT_OP_VISIBLE_WATER = 14;
+
+constexpr static const int32_t EE_APP_AMBIENT_OP_VISIBLE_SPACE = 15;
+
 /// No followed unit (`EEUnitHandle::kNone`).
 constexpr static const uint32_t EE_APP_CAMERA_NO_UNIT = 4294967295;
 
@@ -183,6 +223,86 @@ constexpr static const int32_t EE_APP_SETTINGS_STRING_SET = 3;
 
 /// the member set to the defaults' member
 constexpr static const int32_t EE_APP_SETTINGS_STRING_DEFAULT = 4;
+
+/// `EEAmbientSoundManager`'s plain members (the analyzer, the generator and the sounds stay C++).
+struct EeAppAmbientFields {
+  /// the day phase: 1 night .. 4 dawn (see [`phase`])
+  long mState;
+  long mFrameCount;
+  long mNextUpdateFrame;
+  /// 10 frames
+  long mUpdateInterval;
+  bool mIsEnabled;
+  bool mIsPaused;
+};
+
+/// `EEAmbientSound`'s plain members (the sound object and the instance stay C++).
+struct EeAppAmbientSoundFields {
+  long mSoundID;
+  long mSoundIndex;
+  float mProbability;
+  float mVolume;
+  float mTargetVolume;
+  float mMaximumVolume;
+  float mStartVolume;
+  /// FadeIn multiplies the volume by it
+  float mFadeUp;
+  float mFadeDown;
+  float mPan;
+  float mPitch;
+  float mF38;
+  float mF3C;
+  /// ms
+  long mInterval;
+  long mNextTime;
+  bool mIsLooping;
+};
+
+/// The database record's fields `Init` copies (EEAmbientSoundRecord).
+struct EeAppAmbientRecord {
+  int32_t sound_id;
+  float maximum_volume;
+  float start_volume;
+  float fade_up;
+  float fade_down;
+  float probability;
+  int32_t interval_seconds;
+};
+
+/// The world analyzer's counts (`EEAmbientWorldAnalyzer`, after its vtable), in the class's order.
+struct EeAppAmbientCounts {
+  long mNumAirRaiders;
+  long mNumTrees;
+  long mNumCitizens;
+  long mNumAttackers;
+  long mNumFarms;
+  long mNumGoats;
+  long mNumEagles;
+  long mL20;
+  long mL24;
+  long mL28;
+  /// the first visible forest's resource kind (0: none yet)
+  long mForestType;
+};
+
+/// One host operation's arguments and answers.
+struct EeAppAmbientIo {
+  /// the sound's slot
+  uint32_t slot;
+  /// a count, a time
+  uint32_t n;
+  bool flag;
+  /// a second answer (`LoadSound`'s loop flag: `has` set when it was loaded now)
+  bool has;
+  float volume;
+  float pan;
+  float pitch;
+  /// the slot's record
+  EeAppAmbientSoundFields *sound;
+};
+
+/// The host: `(ctx, op, io)`.
+using EeAppAmbientFn = void(*)(void*, int32_t, EeAppAmbientIo*);
 
 /// `EECameraControl`'s plain members, in the class's order (the key list and the two unit handles stay C++).
 struct EeAppCameraFields {
@@ -465,6 +585,81 @@ struct EeAppSettingsFields {
 using EeAppSettingsStringFn = uint32_t(*)(void*, int32_t, uint32_t, char*, uint32_t);
 
 extern "C" {
+
+/// `EEAmbientSoundManager()`'s plain members.
+///
+/// # Safety
+/// `out` is a live record.
+void ee_app_ambient_default(EeAppAmbientFields *out);
+
+/// `EEAmbientSound()`'s plain members.
+///
+/// # Safety
+/// `out` is a live record.
+void ee_app_ambient_sound_default(EeAppAmbientSoundFields *out);
+
+/// `EEAmbientSound::Init(record)`.
+///
+/// # Safety
+/// live records.
+void ee_app_ambient_sound_init(EeAppAmbientSoundFields *out, const EeAppAmbientRecord *record);
+
+/// `EEAmbientWorldAnalyzer::Clear`.
+///
+/// # Safety
+/// `counts` is a live record.
+void ee_app_ambient_clear(EeAppAmbientCounts *counts);
+
+/// `Update`.
+///
+/// # Safety
+/// live records; `call` answers for `ctx` throughout.
+void ee_app_ambient_update(EeAppAmbientFields *manager,
+                           EeAppAmbientCounts *counts,
+                           void *ctx,
+                           EeAppAmbientFn call);
+
+/// `UpdateState(time of day, time)`.
+///
+/// # Safety
+/// as [`ee_app_ambient_update`]
+void ee_app_ambient_update_state(EeAppAmbientFields *manager,
+                                 EeAppAmbientCounts *counts,
+                                 void *ctx,
+                                 EeAppAmbientFn call,
+                                 float time_of_day,
+                                 int32_t time);
+
+/// `SetEnabled(enabled)`.
+///
+/// # Safety
+/// as [`ee_app_ambient_update`]
+void ee_app_ambient_set_enabled(EeAppAmbientFields *manager,
+                                EeAppAmbientCounts *counts,
+                                void *ctx,
+                                EeAppAmbientFn call,
+                                bool enabled);
+
+/// `StopSounds` (`pause`: then `Pause`'s flag).
+///
+/// # Safety
+/// as [`ee_app_ambient_update`]
+void ee_app_ambient_stop_sounds(EeAppAmbientFields *manager,
+                                EeAppAmbientCounts *counts,
+                                void *ctx,
+                                EeAppAmbientFn call,
+                                bool pause);
+
+/// `EEAmbientSound::PlayAtVolume(volume)` (0 or less: the sound stopped and silent).
+///
+/// # Safety
+/// as [`ee_app_ambient_update`]
+void ee_app_ambient_play_at_volume(EeAppAmbientFields *manager,
+                                   EeAppAmbientCounts *counts,
+                                   void *ctx,
+                                   EeAppAmbientFn call,
+                                   uint32_t slot,
+                                   float volume);
 
 /// `EECameraControl()`'s plain members.
 ///

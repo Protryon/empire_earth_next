@@ -57,7 +57,7 @@ use ee_tech as _;
 // the scenario manager's conditions, player choices and triggers (ee_scenario/src/ffi.rs), called by the C++
 // EESMCondition, EESMTrigger and EEScenarioManager over their host (Scenario Manager/EEScenarioHost.cpp)
 use ee_scenario as _;
-// the app and world lane's classes (ee_app/src/ffi.rs): the game options, called by EEGameOptions.cpp
+// the app and world lane's classes (ee_app): the game options, settings, camera and ambient sounds behind their C++ classes
 use ee_app as _;
 // the data layer's `extern "C"` API (ee_data/src/ffi.rs) reaches the staticlib through this dependency
 use ee_data as _;

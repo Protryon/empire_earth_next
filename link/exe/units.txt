@@ -173,7 +173,6 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 1240b3 1245bb RTS Engine/Map/RTSMiniMap.cpp
 1245bb 1248f6 RTS Engine/Map/RTSTile.cpp
 1248f6 124a88 RTS Engine/Map/RTSVisibleMap.cpp
-124a88 124ee2 Empire Earth/Empire Earth/EEAmbientSound.cpp
 124ee2 1273d7 Empire Earth/Empire Earth/EEAmbientSoundManager.cpp
 1273d7 127584 Empire Earth/Empire Earth/EECDKeyStrings.cpp
 127584 12a54a Empire Earth/Empire Earth/EECameraControl.cpp
