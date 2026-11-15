@@ -12,14 +12,14 @@ class FSFileSpec;
 
 class EEUnitBehavior {
 public:
-    EEUnitBehavior();                       // 0xdc930
+    EEUnitBehavior();
     virtual ~EEUnitBehavior();              // +0x00 0xdc96c (??_G 0xdc950)
     static long Load(FSFileSpec* inFile);   // 0xdc973 (records with a negative +0x68 stay NULL)
-    static void Unload();                   // 0xdca3d
+    static void Unload();
     bool CanMoveFreely(EEUnit* inUnit);     // 0xdca7d (by the unit class's +0x318 flag; provisional name)
     // cdecl COMDAT 0x1f5430, called out of line by EEComplexUnit::FinishLoad 0x1f353f (x2) and ResetEEComplexUnit
     // 0x1fac37
-    static EEUnitBehavior* Get(unsigned long inIndex) { return EEUnitBehavior::sTable[inIndex]; }  // 0x1f5430 (provisional name)
+    static EEUnitBehavior* Get(unsigned long inIndex) { return EEUnitBehavior::sTable[inIndex]; }
 
     bool mCanMoveFreely;                    // +0x04 (record +0x6c)
     bool mMeleeCanMoveFreely;               // +0x05 (record +0x73)

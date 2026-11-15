@@ -22,10 +22,10 @@ struct EEChatLogEntry {
 class EEUIECLEFormManager {
 public:
     static void AddEntry(const EEChatLogEntry& inEntry);   // 0x1d32bf (keeps the last 40)
-    static void Clear();                    // 0x1d3345
-    static unsigned long GetEntryCount();   // 0x1d3352
-    static long Load(unsigned long inVersion, unsigned long inSize, FSFile& inFile);   // 0x1d335b
-    static long Save(unsigned long inVersion, unsigned long inSize, FSFile& inFile);   // 0x1d3434
+    static void Clear();
+    static unsigned long GetEntryCount();
+    static long Load(unsigned long inVersion, unsigned long inSize, FSFile& inFile);
+    static long Save(unsigned long inVersion, unsigned long inSize, FSFile& inFile);
 };
 
 #endif

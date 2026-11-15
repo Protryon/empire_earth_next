@@ -13,7 +13,7 @@ struct EEStatisticsPoint;                   // ee/EEPlayer.h
 class EEUIPGSLineGraph : public UILineGraph {
 public:
     EEUIPGSLineGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-                     unsigned long inBorderThickness);   // 0x276442
+                     unsigned long inBorderThickness);
     // GetGraphAt is inline (its body 0x276485 sits between the ctor and ??_G, emitted with the vtable)
     // the overrides of UILineGraph's slots follow the dtor in EEUIPGSLineGraph.cpp
     virtual void AddGraphSeries(const std::vector<EEStatisticsPoint>& inPoints, unsigned long inGraph,

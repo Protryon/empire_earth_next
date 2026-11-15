@@ -277,18 +277,6 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
     return 0;
 }
 
-// FUNCTION: EXE 0x56fd6a
-// Prints the slider value times the scale plus the offset into the event's label (EESEESliderChange; ee_screens
-// editor_events.rs)
-
-// FUNCTION: EXE 0x56fdbf
-// Shows the event's controls while the check box is checked, else hides them (EESEECheckDisplay; editor_events.rs)
-
-// FUNCTION: EXE 0x56fe58
-// Refills the scenario combo box with area names (area control clicked) or object names and picks the first
-// (EESEEUseObjectArea; editor_events.rs)
-
-// FUNCTION: EXE 0x56fe85
 // Fills a scenario combo box with the area or object names and titles its label 'Area' or 'Object'
 void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas)
 {

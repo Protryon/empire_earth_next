@@ -82,56 +82,20 @@
 
 // the 3D lines (0x529050) and a name (0x529030): one guard byte (0x529048) (provisional names)
 std::vector<EERenderLine> gU529050;
-// SYNTHETIC: EXE 0x50aa88   (wrapper)
-// SYNTHETIC: EXE 0x50aa92   (ctor)
-// SYNTHETIC: EXE 0x50aaaa   (registrar)
-// SYNTHETIC: EXE 0x50aab6   (dtor)
 UWideString gU529030;
-// SYNTHETIC: EXE 0x50aad1   (wrapper)
-// SYNTHETIC: EXE 0x50aadb   (ctor)
-// SYNTHETIC: EXE 0x50aae6   (registrar)
-// SYNTHETIC: EXE 0x50aaf2   (dtor)
 
 // the unit picker and the environment: one guard byte (0x528d70)
 EEUnitPicker gUnitPicker(0x600);
-// SYNTHETIC: EXE 0x50ab0e   (wrapper)
-// SYNTHETIC: EXE 0x50ab18   (ctor)
-// SYNTHETIC: EXE 0x50ab28   (registrar)
-// SYNTHETIC: EXE 0x50ab34   (dtor)
 EERenderEnvironment gRenderEnvironment;
-// SYNTHETIC: EXE 0x50ab4f   (wrapper)
-// SYNTHETIC: EXE 0x50ab59   (ctor)
-// SYNTHETIC: EXE 0x50ab63   (registrar)
-// SYNTHETIC: EXE 0x50ab6f   (dtor)
 
 EERenderLists EERenderLists::sInstance;
-// SYNTHETIC: EXE 0x50ab8a   (wrapper)
-// SYNTHETIC: EXE 0x50ab94   (ctor)
-// SYNTHETIC: EXE 0x50ab9e   (registrar)
-// SYNTHETIC: EXE 0x50abaa   (dtor)
-// SYNTHETIC: EXE 0x50abc5
-// (EERenderLists' implicit dtor, emitted after its first user)
 
 EEEffectQueue gEffectQueues[5];
-// SYNTHETIC: EXE 0x50ac30   (wrapper)
-// SYNTHETIC: EXE 0x50ac3a   (ctor)
-// SYNTHETIC: EXE 0x50ac64   (registrar)
-// SYNTHETIC: EXE 0x50ac70   (dtor)
 
-// 0x4e9348 (17 colours; provisional name)
-GEColor gU4E9348[17];
-// SYNTHETIC: EXE 0x50ac9a   (wrapper)
-// SYNTHETIC: EXE 0x50aca4   (ctor)
-// SYNTHETIC: EXE 0x50acbf   (registrar)
-// SYNTHETIC: EXE 0x50accb   (dtor)
-
+// 0x4e9348 (17 colours) and its init chain: EEInitialiseScene's key frames, ee_gfx scene.rs initial_tables
 GEColor gU4E9338(1.0f, 1.0f, 1.0f);
 float gU4E9330;                            // 0x4e9330 (no init chain)
-// three per-time-of-day tables (17 entries, like gU4E9348; EEInitialiseScene fills them, Fn10C036 blends them)
-// (provisional names)
-float gU4E92EC[17];                         // 0x4e92ec
-float gU4E92A8[17];                         // 0x4e92a8
-float gU4E9264[17];                         // 0x4e9264
+// the three per-time-of-day tables (0x4e92ec, 0x4e92a8, 0x4e9264; 17 entries): ee_gfx scene.rs initial_tables
 // 0x4413ac: EEInitialiseScene's 0.549f is a literal (__real COMDAT; the fst chain of a literal, not a static const reload)
 // Fn10C036's constants (.rdata 0x441334..0x4413c4: the view band, the clocks' rates, the moon's hours, the fill share):
 // ee_gfx scene.rs
@@ -143,50 +107,18 @@ static uint32_t sU529094;                   // 0x529094 (the sway clock's last t
 static unsigned long sL52908C;              // 0x52908c (the frame counter; provisional name)
 EERenderUnit* gU529044;                     // 0x529044 (the picked enemy's render unit: FillUnit; EEROUnits.cpp reads it; provisional name)
 static const float kEERenderObject_F441350 = 0.35f;   // 0x441350 (the see-through opacity)
-// 0x44136c (0.5, the near fade's depth): ee_gfx view.rs NEAR_FADE_DEPTH
-// SYNTHETIC: EXE 0x50ace6   (wrapper)
 
-// SYNTHETIC: EXE 0x50acf0   (ctor)
-// SYNTHETIC: EXE 0x50ad09   (registrar)
-// SYNTHETIC: EXE 0x50ad15   (dtor)
-
-// 0x4e9240 (3 vectors; provisional name)
-GEVector gU4E9240[3];
-// SYNTHETIC: EXE 0x50ad16   (wrapper)
-// SYNTHETIC: EXE 0x50ad20   (ctor)
-// SYNTHETIC: EXE 0x50ad3b   (registrar)
-// SYNTHETIC: EXE 0x50ad47   (dtor)
-
+// 0x4e9240 (the three fill lights) and its init chain: ee_gfx scene.rs initial_tables
 std::vector<unsigned long> gU4E9230;
-// SYNTHETIC: EXE 0x50ad62   (wrapper)
-// SYNTHETIC: EXE 0x50ad6c   (ctor)
-// SYNTHETIC: EXE 0x50ad84   (registrar)
-// SYNTHETIC: EXE 0x50ad90   (dtor)
 
 GEColor gU4E9220(1.0f, 1.0f, 1.0f);
-// SYNTHETIC: EXE 0x50ad9a   (wrapper)
-// SYNTHETIC: EXE 0x50ada4   (ctor)
-// SYNTHETIC: EXE 0x50adbd   (registrar)
-// SYNTHETIC: EXE 0x50adc9   (dtor)
 
 GEVector gU4E9210;                         // 0x4e9210 (the sun direction: Fn10C036, SetTerrainLighting)
-// SYNTHETIC: EXE 0x50adca   (wrapper)
-// SYNTHETIC: EXE 0x50add4   (ctor)
-// SYNTHETIC: EXE 0x50aded   (registrar)
-// SYNTHETIC: EXE 0x50adf9   (dtor)
 
 GELight gU4E9198;
 unsigned long gU4E9190;                     // 0x4e9190 (gU4E9198's index in the rasterizer: AddLight/UpdateLight)
-// SYNTHETIC: EXE 0x50adfa   (wrapper)
-// SYNTHETIC: EXE 0x50ae04   (ctor)
-// SYNTHETIC: EXE 0x50ae0f   (registrar)
-// SYNTHETIC: EXE 0x50ae1b   (dtor)
 
 GEViewport gU4E8F08;
-// SYNTHETIC: EXE 0x50ae1c   (wrapper)
-// SYNTHETIC: EXE 0x50ae26   (ctor)
-// SYNTHETIC: EXE 0x50ae31   (registrar)
-// SYNTHETIC: EXE 0x50ae3d   (dtor)
 
 // the light fade (0x4be368 sLightFade, 0x4be36c its start, 0x529070.. its direction, rate and time) and the
 // letterbox (0x4be370 its direction, 0x4be378 its start, 0x52907c.. its rate and time, 0x529088 the bars to clear
@@ -202,31 +134,25 @@ static const char* sCliffTextures[13] = {
     "textures\\cliffedge_5"
 };
 // EEInitialiseScene's state (provisional names)
-static GEBitmap* sU529060;                  // 0x529060
+static GEBitmap* sU529060;
 static bool sSceneInitialised;              // 0x529064 (EEInitialiseScene ran)
 // the unit's other .bss globals (declared in ee/EERenderLists.h, ee/EEGraphics.h, ee/EmpireEarth.h; their address
 // neighbours and references are this unit's) (provisional names)
-bool gB529065;                              // 0x529065
-bool gB529066;                              // 0x529066
-bool gCameraFollowing;                      // 0x529067
-bool gB529068;                              // 0x529068
+bool gB529065;
+bool gB529066;
+bool gCameraFollowing;
+bool gB529068;
 
-// FUNCTION: EXE 0x50ae48
 // Creates a game render object
 EERenderObject::EERenderObject()
 {
 }
 
-// SYNTHETIC: EXE 0x50ae51
-// (the scalar deleting destructor, emitted with the vtable; slot EERenderObject+0x10)
-
-// FUNCTION: EXE 0x50ae6d
 // Destroys a render object (RTSRenderObject's inline destructor)
 RTSRenderObject::~RTSRenderObject()
 {
 }
 
-// FUNCTION: EXE 0x50ae74
 // Sets the light and time-of-day colour tables to their defaults and creates the shared bitmap, once per scene
 void EEInitialiseScene()
 {
@@ -240,120 +166,7 @@ void EEInitialiseScene()
     gU4E9338.SetRed(0.663f);
     gU4E9338.SetGreen(0.784f);
     gU4E9338.SetBlue(1.0f);
-    gU4E9348[0].SetRed(1.0f);
-    gU4E9348[0].SetGreen(0.4f);
-    gU4E9348[0].SetBlue(0.0f);
-    gU4E9348[1].SetRed(1.0f);
-    gU4E9348[1].SetGreen(1.0f);
-    gU4E9348[1].SetBlue(1.0f);
-    gU4E9348[2].SetRed(1.0f);
-    gU4E9348[2].SetGreen(1.0f);
-    gU4E9348[2].SetBlue(1.0f);
-    gU4E9348[3].SetRed(1.0f);
-    gU4E9348[3].SetGreen(1.0f);
-    gU4E9348[3].SetBlue(1.0f);
-    gU4E9348[4].SetRed(1.0f);
-    gU4E9348[4].SetGreen(1.0f);
-    gU4E9348[4].SetBlue(1.0f);
-    gU4E9348[5].SetRed(1.0f);
-    gU4E9348[5].SetGreen(1.0f);
-    gU4E9348[5].SetBlue(1.0f);
-    gU4E9348[6].SetRed(1.0f);
-    gU4E9348[6].SetGreen(1.0f);
-    gU4E9348[6].SetBlue(1.0f);
-    gU4E9348[7].SetRed(1.0f);
-    gU4E9348[7].SetGreen(1.0f);
-    gU4E9348[7].SetBlue(1.0f);
-    gU4E9348[8].SetRed(1.0f);
-    gU4E9348[8].SetGreen(0.4f);
-    gU4E9348[8].SetBlue(0.0f);
-    gU4E9348[9].SetRed(0.775f);
-    gU4E9348[9].SetGreen(0.475f);
-    gU4E9348[9].SetBlue(0.5f);
-    gU4E9348[10].SetRed(0.549f);
-    gU4E9348[10].SetGreen(0.549f);
-    gU4E9348[10].SetBlue(1.0f);
-    gU4E9348[11].SetRed(0.549f);
-    gU4E9348[11].SetGreen(0.549f);
-    gU4E9348[11].SetBlue(1.0f);
-    gU4E9348[12].SetRed(0.549f);
-    gU4E9348[12].SetGreen(0.549f);
-    gU4E9348[12].SetBlue(1.0f);
-    gU4E9348[13].SetRed(0.549f);
-    gU4E9348[13].SetGreen(0.549f);
-    gU4E9348[13].SetBlue(1.0f);
-    gU4E9348[14].SetRed(0.549f);
-    gU4E9348[14].SetGreen(0.549f);
-    gU4E9348[14].SetBlue(1.0f);
-    gU4E9348[15].SetRed(0.775f);
-    gU4E9348[15].SetGreen(0.475f);
-    gU4E9348[15].SetBlue(0.5f);
-    gU4E9348[16].SetRed(1.0f);
-    gU4E9348[16].SetGreen(0.4f);
-    gU4E9348[16].SetBlue(0.0f);
-    gU4E92EC[0] = 1.0f;
-    gU4E92EC[1] = 1.0f;
-    gU4E92EC[2] = 1.0f;
-    gU4E92EC[3] = 1.0f;
-    gU4E92EC[4] = 1.0f;
-    gU4E92EC[5] = 1.0f;
-    gU4E92EC[6] = 1.0f;
-    gU4E92EC[7] = 1.0f;
-    gU4E92EC[8] = 1.0f;
-    gU4E92EC[9] = 0.0f;
-    gU4E92EC[10] = 0.9f;
-    gU4E92EC[11] = 0.9f;
-    gU4E92EC[12] = 0.9f;
-    gU4E92EC[13] = 0.9f;
-    gU4E92EC[14] = 0.9f;
-    gU4E92EC[15] = 0.0f;
-    gU4E92EC[16] = 1.0f;
-    gU4E92A8[0] = 0.5f;
-    gU4E92A8[1] = 0.5f;
-    gU4E92A8[2] = 0.5f;
-    gU4E92A8[3] = 0.5f;
-    gU4E92A8[4] = 0.5f;
-    gU4E92A8[5] = 0.5f;
-    gU4E92A8[6] = 0.5f;
-    gU4E92A8[7] = 0.5f;
-    gU4E92A8[8] = 0.5f;
-    gU4E92A8[9] = 0.7f;
-    gU4E92A8[10] = 0.3f;
-    gU4E92A8[11] = 0.3f;
-    gU4E92A8[12] = 0.3f;
-    gU4E92A8[13] = 0.3f;
-    gU4E92A8[14] = 0.3f;
-    gU4E92A8[15] = 0.7f;
-    gU4E92A8[16] = 0.5f;
-    gU4E9264[0] = 0.7f;
-    gU4E9264[1] = 0.6f;
-    gU4E9264[2] = 0.6f;
-    gU4E9264[3] = 0.6f;
-    gU4E9264[4] = 0.6f;
-    gU4E9264[5] = 0.6f;
-    gU4E9264[6] = 0.6f;
-    gU4E9264[7] = 0.6f;
-    gU4E9264[8] = 0.6f;
-    gU4E9264[9] = 0.7f;
-    gU4E9264[10] = 0.7f;
-    gU4E9264[11] = 0.6f;
-    gU4E9264[12] = 0.6f;
-    gU4E9264[13] = 0.6f;
-    gU4E9264[14] = 0.6f;
-    gU4E9264[15] = 0.7f;
-    gU4E9264[16] = 0.7f;
-    gU4E9240[0].SetX(0.0f);
-    gU4E9240[0].SetY(0.0f);
-    gU4E9240[0].SetZ(-1.0f);
-    gU4E9240[1].SetX(1.0f);
-    gU4E9240[1].SetY(1.0f);
-    gU4E9240[1].SetZ(-1.0f);
-    gU4E9240[2].SetX(-1.0f);
-    gU4E9240[2].SetY(-1.0f);
-    gU4E9240[2].SetZ(-1.0f);
-    gU4E9240[0].Normalize();
-    gU4E9240[1].Normalize();
-    gU4E9240[2].Normalize();
+    // the key frames (gU4E9348, gU4E92EC, gU4E92A8, gU4E9264) and the fill lights (gU4E9240): ee_gfx scene.rs
     ee_gfx_scene_reset(&sSceneFade);
     gB529066 = false;
     gCameraFollowing = false;
@@ -367,25 +180,18 @@ void EEInitialiseScene()
     sU529060 = new GEBitmap;
 }
 
-// SYNTHETIC: EXE 0x50b301
-// (GEBitmap's local scalar deleting destructor, emitted for the `new GEBitmap` above)
-
-
-// FUNCTION: EXE 0x50b31e
 // Starts closing the letterbox bars over the given number of frames (at once for 0)
 void EEStartLetterboxOut(unsigned long inFrames)
 {
     ee_gfx_scene_start_letterbox(&sSceneFade, true, (uint32_t)inFrames, gF4BE374);
 }
 
-// FUNCTION: EXE 0x50b36a
 // Starts opening the letterbox bars over the given number of frames (at once for 0)
 void EEStartLetterboxIn(unsigned long inFrames)
 {
     ee_gfx_scene_start_letterbox(&sSceneFade, false, (uint32_t)inFrames, gF4BE374);
 }
 
-// FUNCTION: EXE 0x50b3b3
 // Returns whether a unit is drawn this frame: seen by the current player (or the free camera) and in the
 // view; a unit whose footprint spans several tiles counts once (ioDrawn)
 bool EERenderObject::IsUnitDrawn(EEUnit* inUnit, EETile* inTile, std::set<EEUnit*>& ioDrawn)
@@ -450,7 +256,6 @@ bool EERenderObject::IsUnitDrawn(EEUnit* inUnit, EETile* inTile, std::set<EEUnit
     return ee_gfx_capture_unit_drawn(&theFacts, &theHost);
 }
 
-// FUNCTION: EXE 0x50b7e1
 // Unloads the media of every pooled map object and empties the pool
 void UnloadRenderShadows(EERenderShadow* inObjects, unsigned long& ioCount)
 {
@@ -459,7 +264,6 @@ void UnloadRenderShadows(EERenderShadow* inObjects, unsigned long& ioCount)
     ioCount = 0;
 }
 
-// FUNCTION: EXE 0x50b80b
 // Unloads the media of every pooled render unit, resets its bars and turning parts, clears the pointed-at
 // unit and object, and empties the pool
 void UnloadRenderUnits(EERenderUnit* inUnits, unsigned long& ioCount)
@@ -482,7 +286,6 @@ void UnloadRenderUnits(EERenderUnit* inUnits, unsigned long& ioCount)
     ioCount = 0;
 }
 
-// FUNCTION: EXE 0x50b8ad
 // Empties the ghost render records from the back, unloading each one's media
 void UnloadGhostRecords()
 {
@@ -494,13 +297,6 @@ void UnloadGhostRecords()
     }
 }
 
-// SYNTHETIC: EXE 0x50b919
-// (EERenderUnitRecord's implicit operator=)
-
-// SYNTHETIC: EXE 0x50b983
-// (EERenderUnit's implicit operator=)
-
-// FUNCTION: EXE 0x50bba4
 // Queues a 50-segment ground circle of a radius around a location as 3D lines with the area-effect
 // texture (mode 2 only)
 void EERenderObject::DrawGroundCircle(const GETransformation& inLocation, float inRadius, long inMode)
@@ -527,7 +323,6 @@ void EERenderObject::DrawGroundCircle(const GETransformation& inLocation, float 
     }
 }
 
-// FUNCTION: EXE 0x50bdd2
 // Rebuilds the effect render queues: drops last frame's, then queues the effects of every map region
 // under a visible tile row
 void EERenderObject::QueueEffects()
@@ -584,7 +379,6 @@ void EERenderObject::QueueEffects()
     }
 }
 
-// FUNCTION: EXE 0x50c036
 // Updates the per-frame render state: grid animation, cloud and sky clocks, light fade, letterbox and
 // view zoom, camera and viewport, and the light colours on a time-of-day change
 // (the view zoom covers the letterbox and the UI backgrounds; light colours blend the 17 key frames)
@@ -656,16 +450,8 @@ void EERenderObject::Fn10C036()
         gRenderEnvironment.mTimeOfDay = theTimeOfDay;
         gRenderEnvironment.mTimeOfDayChanged = true;
         // the blend of the 17 key frames, the lit direction and the prelit colour: ee_gfx scene.rs
-        EeGfxDaylightTables theTables;
-        for (unsigned long i = 0; i < 17; i++) {
-            theTables.colors[i] = {gU4E9348[i].mRed, gU4E9348[i].mGreen, gU4E9348[i].mBlue};
-            theTables.light[i] = gU4E92EC[i];
-            theTables.ambient[i] = gU4E92A8[i];
-            theTables.unit_ambient[i] = gU4E9264[i];
-        }
+        EeGfxDaylightTables theTables = ee_gfx_scene_daylight_tables();
         theTables.ambient_color = {gU4E9338.mRed, gU4E9338.mGreen, gU4E9338.mBlue};
-        for (unsigned long i = 0; i < 3; i++)
-            theTables.fill[i] = {gU4E9240[i].mX, gU4E9240[i].mY, gU4E9240[i].mZ};
         theTables.sun = {gWorld.mSunDirection.mX, gWorld.mSunDirection.mY, gWorld.mSunDirection.mZ};
         theTables.moon = {gWorld.mMoonDirection.mX, gWorld.mMoonDirection.mY, gWorld.mMoonDirection.mZ};
         EeGfxDaylight theLight = ee_gfx_scene_daylight(&theTables, theTimeOfDay);
@@ -700,7 +486,6 @@ done:
     gB529066 = true;
 }
 
-// FUNCTION: EXE 0x50c952
 // Queues a render record for every ghost unit, when the ghost units changed
 void EERenderObject::FillGhostRecords()
 {
@@ -742,7 +527,6 @@ void EERenderObject::FillGhostRecords()
     gWorld.mGhostUnitsLock->Leave();
 }
 
-// FUNCTION: EXE 0x50cb62
 // Returns the ghost unit's model through its player's upgrade of its unit class
 // (inline in the real header)
 EEModel* EEGhostUnit::GetModel()
@@ -750,14 +534,12 @@ EEModel* EEGhostUnit::GetModel()
     return this->mPlayer->mUnitClassUpgrades[this->mUnitClass->GetUnitType()]->mModel;
 }
 
-// FUNCTION: EXE 0x50cb81
 // Returns the ghost unit's scale through its player's upgrade of its unit class
 float EEGhostUnit::GetScale()
 {
     return this->mPlayer->mUnitClassUpgrades[this->mUnitClass->GetUnitType()]->GetScale();
 }
 
-// FUNCTION: EXE 0x50cba3
 // Fills a render object for a map object (a class with mIsTree: trees, rocks ...) and files it by texture,
 // in the picker and in the shadow lists
 void EERenderObject::FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERenderShadowMap& ioMap,
@@ -821,7 +603,6 @@ void EERenderObject::FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERen
                                                                             outObject));
 }
 
-// FUNCTION: EXE 0x50cf98
 // Returns whether any unit on a tile is a map object (its class has mIsTree)
 bool GetTileHasTree(EETile* inTile)
 {
@@ -833,7 +614,6 @@ bool GetTileHasTree(EETile* inTile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x50cfbc
 // Fills a render object for a remembered map object on a tile the current player cannot see, when the
 // pool has room and the model is in the view
 void EERenderObject::FillDoppelgangerObject(EEDoppelganger* inDoppelganger, EERenderShadow* outObject, unsigned long& ioCount,
@@ -905,7 +685,6 @@ void EERenderObject::FillDoppelgangerObject(EEDoppelganger* inDoppelganger, EERe
 // (0x50d3ad FillUnit: defined after the space-cliff textures' chain below: it needs ee/EEUnitGoal.h, whose class static
 // renumbers that chain when included earlier)
 
-// FUNCTION: EXE 0x50e3c8
 // Fills a render unit for a remembered unit on a tile the current player cannot see, when the pool has
 // room and the model is in the view
 // Uses the remembered location (or the tile's centre on the ground), the class's orientation flag and the model;
@@ -994,16 +773,11 @@ void EERenderObject::FillDoppelgangerUnit(EEDoppelganger* inDoppelganger, EERend
 
 // the space-cliff textures (0x4e8ef0; loaded once by LoadCliffTextures, handed to the terrain mesh) (provisional name)
 std::vector<GETexture*> gU4E8EF0;
-// SYNTHETIC: EXE 0x50e899   (wrapper)
-// SYNTHETIC: EXE 0x50e8a3   (ctor)
-// SYNTHETIC: EXE 0x50e8bb   (registrar)
-// SYNTHETIC: EXE 0x50e8c7   (dtor)
 
 // FillUnit reads the goal's kind
 #include "ee/EEUnitGoal.h"
 #include "rust/ee_gfx.h"
 
-// FUNCTION: EXE 0x50d3ad
 // Fills a render unit for a unit and files it in the picker and the texture maps
 // (out of address order: see the note at 0x50d3ad above)
 // The class's fields, the team colour, the ring and shadow sizes, then for a complex unit its scale, flash colour,
@@ -1261,7 +1035,6 @@ static void LoadCliffTextures()
     }
 }
 
-// FUNCTION: EXE 0x50e8d1
 // Sets up the terrain pass: frame state, space-cliff textures, the visible terrain and its lighting, then
 // the camera transform (at most every 100 ms while the camera follows a unit)
 void EERenderObject::Fn10E8D1()
@@ -1290,10 +1063,6 @@ void EERenderObject::Fn10E8D1()
     gCameraFollowing = true;
 }
 
-// SYNTHETIC: EXE 0x50ea27
-// (LoadCliffTextures, the static function above)
-
-// FUNCTION: EXE 0x50eabe
 // Builds the frame's render lists: resets the pools, picks units, walks the visible tiles (units, map
 // objects, remembered ones) and the ghost units, and updates the music intensity and ambient sounds
 void EERenderObject::FillRenderLists()
@@ -1460,7 +1229,6 @@ void EERenderObject::FillRenderLists()
     }
 }
 
-// FUNCTION: EXE 0x50f239
 // Releases the scene: drops the effect queues' references, empties the render pools and lists, releases
 // the shared bitmap and resets the unit picker (only after EEInitialiseScene)
 void EEReleaseScene()
@@ -1496,21 +1264,18 @@ void EEReleaseScene()
     sSceneInitialised = false;
 }
 
-// FUNCTION: EXE 0x50f37d
 // Starts fading the lights up to full over the given number of frames (at once for 0)
 void EEStartLightFadeIn(unsigned long inFrames)
 {
     ee_gfx_scene_start_fade(&sSceneFade, false, (uint32_t)inFrames);
 }
 
-// FUNCTION: EXE 0x50f3c6
 // Starts fading the lights down to black over the given number of frames (at once for 0)
 void EEStartLightFadeOut(unsigned long inFrames)
 {
     ee_gfx_scene_start_fade(&sSceneFade, true, (uint32_t)inFrames);
 }
 
-// FUNCTION: EXE 0x50f412
 // Computes a unit's opacity this frame (see-through modes, its own fade, and buildings fading in front of
 // the near clipping plane); returns whether it is drawn translucent
 bool EERenderObject::GetUnitOpacity(EEUnit* inUnit, float& outOpacity)
@@ -1685,6 +1450,47 @@ static void* EERasterLoadTexture(const uint8_t* inName, const EeGfxTextureLoad* 
     theTexture->SetStageTextureAddressingMode(inLoad->addressing, -1);
     return theTexture;
 }
+
+// a unit model's frame textures (EEROUnits::DrawUnitModel 0x515cc7: past the frame count, frame 0 (0x115e53 jae))
+static void EERasterFrameTextures(void* inModel, void* inTexture)
+{
+    GEModel* theModel = static_cast<GEModel*>(inModel);
+    GETexture* theTexture = static_cast<GETexture*>(inTexture);
+    for (unsigned long theMaterial = 1; theMaterial < theModel->GetMaterialCount(); theMaterial++) {
+        if (theTexture == NULL)
+            continue;
+        GEMaterial* theFirst = theModel->GetMaterial(theMaterial);
+        theFirst->SetTexture(theFirst->GetTextureIndex() < theTexture->GetFrameCount()
+                                 ? theTexture->GetFrameTexture(theFirst->GetTextureIndex())
+                                 : theTexture->GetFrameTexture(0),
+                             gScreenIndex);
+        for (unsigned long theSub = 0; theSub < theModel->GetSubModelCount(); theSub++) {
+            GEModel* theSubModel = theModel->GetSubModel(theSub);
+            for (unsigned long j = 0; j < theSubModel->GetMaterialCount(); j++) {
+                GEMaterial* theOther = theSubModel->GetMaterial(j);
+                if (theOther->GetTextureIndex() < theTexture->GetFrameCount())
+                    theOther->SetTexture(theTexture->GetFrameTexture(theOther->GetTextureIndex()), gScreenIndex);
+            }
+        }
+    }
+}
+// a gate side's sub-model 0 placed against its internal offset (EEROUnits::DrawUnitModel); the transform set
+static EeGeTransformation EERasterSubModelOffset(void* inModel, float inScale)
+{
+    GEModel* theSubModel = static_cast<GEModel*>(inModel)->GetSubModel(0);
+    GETransformation theTransformation = theSubModel->GetGraphicsPostModelTransform();
+    theTransformation.SetPosition(theSubModel->GetInternalTransform(0).GetX() * inScale * -1.0f,
+                                  theSubModel->GetInternalTransform(0).GetY() * inScale * -1.0f,
+                                  theSubModel->GetInternalTransform(0).GetZ() * inScale * -1.0f);
+    theSubModel->SetGraphicsPostModelTransform(theTransformation);
+    return *reinterpret_cast<const EeGeTransformation*>(&theTransformation);
+}
+// EEROUnits.cpp's bars, placement lines and labels
+void EEROUnitsBarSet(uint32_t inWhich, const EeGeRectangle* inRect, const EeGfxColor* inColors);
+int32_t EEROUnitsBarDraw(uint32_t inWhich);
+int32_t EEROUnitsScreenLines(const EeGfxScreenLine* inLines, uint32_t inCount, float inStartU, float inEndU);
+void EEROUnitsLabel(const uint8_t* inText, float inX, float inY, EeGfxColor inColor, uint32_t inFont,
+                    const EeGeRectangle* inView, const EeGeRectangle* inStrip, float inBottom);
 
 // a beam model's vertices' points and texture coordinates (the tracer beam's stretch and its restore)
 static void EEBeamSetVertices(GEVertexArray* inVertices, const std::vector<EeGfxBeamVertex>& inValues)
@@ -1938,55 +1744,75 @@ const EeGfxRaster gEERustRaster = {
         theLine.SetOpacityPerVertex(inOpacity0, inOpacity1);
         return gRasterizer->Draw(&theLine, 1, gScreenIndex);
     },
+    // the terrain's and the units' render objects (ee_gfx ro_terrain.rs, ro_units.rs)
+    []() -> uint32_t { return gRasterizer->GetAlphaTesting(gScreenIndex); },
+    [](float inDistance) -> float {
+        float theOld = gU4E8F08.GetRearClippingDistance();
+        gU4E8F08.SetRearClippingDistance(inDistance);
+        return theOld;
+    },
+    [](void* inModel, bool inSorted) -> int32_t {
+        return gRasterizer->DrawSky(static_cast<GEModel*>(inModel), gScreenIndex, 1.0f, inSorted);
+    },
+    []() -> bool { return gRasterizer->GetScreen(gScreenIndex)->Get32BitTextureSupport(); },
+    []() -> bool { return gRasterizer->GetCanModulateTextureAlpha(gScreenIndex); },
+    [](float inValue) { gRasterizer->SetAmbientIntensity(inValue, gScreenIndex); },
+    []() {
+        GERFogAttributes theFog;
+        gRasterizer->GetFogAttributes(theFog, gScreenIndex);
+        return EeGfxFogAttributes{(uint32_t)theFog.mType, {theFog.mColor.mRed, theFog.mColor.mGreen, theFog.mColor.mBlue},
+                                  theFog.mStart, theFog.mEnd};
+    },
+    [](uint32_t inType) { gRasterizer->SetFogType(inType, gScreenIndex); },
+    [](EeGfxColor inColor) { gRasterizer->SetFogColor(GEColor(inColor.red, inColor.green, inColor.blue), gScreenIndex); },
+    [](float inStart, float inEnd) { gRasterizer->SetFogRange(inStart, inEnd, gScreenIndex); },
+    EERasterFrameTextures,
+    [](void* inObject, EeGfxColor inColor, uint32_t inPart) {
+        static_cast<EEGraphicObject*>(inObject)->SetGroupColor(GEColor(inColor.red, inColor.green, inColor.blue), inPart);
+    },
+    EERasterSubModelOffset,
+    EEROUnitsBarSet,
+    EEROUnitsBarDraw,
+    EEROUnitsScreenLines,
+    EEROUnitsLabel,
+    [](void* inTexture) { static_cast<GETexture*>(inTexture)->Dereference(); },
 };
 
-// FUNCTION: EXE 0x50f60f
 // Turns on linear fog in the fog colour dimmed by the light fade, ending at the rear clipping distance
 // (off in the orthographic view)
 void SetSceneFog() { ApplyLighting(EeGfxLighting::SceneFog); }
 
-// FUNCTION: EXE 0x50f6c7
 // Turns the fog off
 void SetFogOff() { ApplyLighting(EeGfxLighting::FogOff); }
 
-// FUNCTION: EXE 0x50f6de
 // Turns lighting off (no ambient light, no lights)
 void SetLightingOff() { ApplyLighting(EeGfxLighting::Off); }
 
-// FUNCTION: EXE 0x50f71c
 // Lights with the environment's prelit colour as ambient, dimmed by the light fade, and no lights
 void SetPrelitLighting() { ApplyLighting(EeGfxLighting::Prelit); }
 
-// FUNCTION: EXE 0x50f772
 // Lights with the environment's second ambient colour (the clouds'), dimmed by the light fade, and no lights
 void SetCloudLighting() { ApplyLighting(EeGfxLighting::Cloud); }
 
-// FUNCTION: EXE 0x50f7c8
 // Lights with white ambient light dimmed by the light fade, and no lights
 void SetWhiteLighting() { ApplyLighting(EeGfxLighting::White); }
 
-// FUNCTION: EXE 0x50f833
 // Sets the terrain lighting: the environment's terrain ambient light and the sun light, dimmed by the fade
 void SetTerrainLighting() { ApplyLighting(EeGfxLighting::Terrain); }
 
-// FUNCTION: EXE 0x50f8de
 // Sets the map objects' lighting: unit ambient and a flattened sun light when unit lighting is on, else the
 // prelit colour at a fixed intensity
 void SetMapObjectLighting() { ApplyLighting(EeGfxLighting::MapObject); }
 
-// FUNCTION: EXE 0x50fa01
 // Sets the units' lighting: unit ambient and the sun light when unit lighting is on, else the prelit colour
 void SetUnitLighting() { ApplyLighting(EeGfxLighting::Unit); }
 
-// FUNCTION: EXE 0x50fae8
 // Restores the units' lighting at full strength for a unit in view (not fogged)
 void RestoreUnitLighting() { ApplyLighting(EeGfxLighting::RestoreUnit); }
 
-// FUNCTION: EXE 0x50fb74
 // Halves the units' lighting for a fogged unit (the dim prelit colour without unit lighting)
 void DimUnitLighting() { ApplyLighting(EeGfxLighting::DimUnit); }
 
-// FUNCTION: EXE 0x50fc0c
 // Posts the game's render objects, the user interface's last, to the graphics thread
 void EEPostGraphicsAll()
 {
@@ -1999,7 +1825,6 @@ void EEPostGraphicsAll()
     gGraphics->PostPushRenderObject(gU56534C);
 }
 
-// FUNCTION: EXE 0x50fc7e
 // Posts the game's render objects without the user interface's to the graphics thread
 void EEResetGraphicsValues()
 {
@@ -2010,77 +1835,3 @@ void EEResetGraphicsValues()
     gGraphics->PostPushRenderObject(gU565354);
     gGraphics->PostPushRenderObject(gU565350);
 }
-
-// the template and inline COMDATs closing the unit (std containers, the inline ctors, the ICF-kept twins):
-// SYNTHETIC: EXE 0x50fcdf
-// SYNTHETIC: EXE 0x50fd0b
-// SYNTHETIC: EXE 0x50fd21
-// SYNTHETIC: EXE 0x50fd35
-// SYNTHETIC: EXE 0x50fd49
-// SYNTHETIC: EXE 0x50fd75
-// SYNTHETIC: EXE 0x50fda9
-// SYNTHETIC: EXE 0x50fdd5
-// SYNTHETIC: EXE 0x50fe01
-// SYNTHETIC: EXE 0x50fe2d
-// SYNTHETIC: EXE 0x50fe68
-// SYNTHETIC: EXE 0x50fe93
-// SYNTHETIC: EXE 0x50fea7
-// SYNTHETIC: EXE 0x50fed2
-// SYNTHETIC: EXE 0x50ff88
-// SYNTHETIC: EXE 0x50ffb3
-// SYNTHETIC: EXE 0x51005e
-// SYNTHETIC: EXE 0x5100bd
-// SYNTHETIC: EXE 0x51011a
-// SYNTHETIC: EXE 0x510196
-// SYNTHETIC: EXE 0x5101ad
-// SYNTHETIC: EXE 0x510207
-// SYNTHETIC: EXE 0x510270
-// SYNTHETIC: EXE 0x5102aa
-// SYNTHETIC: EXE 0x5102e2
-// SYNTHETIC: EXE 0x510303
-// SYNTHETIC: EXE 0x510374
-// SYNTHETIC: EXE 0x5103e5
-// SYNTHETIC: EXE 0x510456
-// SYNTHETIC: EXE 0x5106e5
-// SYNTHETIC: EXE 0x510702
-// SYNTHETIC: EXE 0x5109fe
-// SYNTHETIC: EXE 0x510a13
-// SYNTHETIC: EXE 0x510cf9
-// SYNTHETIC: EXE 0x510faf
-// SYNTHETIC: EXE 0x510fe9
-// SYNTHETIC: EXE 0x51101b
-// SYNTHETIC: EXE 0x51105c
-// SYNTHETIC: EXE 0x51108e
-// SYNTHETIC: EXE 0x5110d0
-// SYNTHETIC: EXE 0x511125
-// SYNTHETIC: EXE 0x511338
-// SYNTHETIC: EXE 0x51137f
-// SYNTHETIC: EXE 0x5113ad
-// SYNTHETIC: EXE 0x5113d4
-// SYNTHETIC: EXE 0x511405
-// SYNTHETIC: EXE 0x51143a
-// SYNTHETIC: EXE 0x51146e
-// SYNTHETIC: EXE 0x51148e
-// SYNTHETIC: EXE 0x5114bf
-// SYNTHETIC: EXE 0x5114e7
-// SYNTHETIC: EXE 0x511517
-// SYNTHETIC: EXE 0x51154f
-// SYNTHETIC: EXE 0x511580
-// SYNTHETIC: EXE 0x511592
-// SYNTHETIC: EXE 0x5115b7
-// SYNTHETIC: EXE 0x511709
-// SYNTHETIC: EXE 0x511722
-// SYNTHETIC: EXE 0x5117da
-// SYNTHETIC: EXE 0x5118e9
-// SYNTHETIC: EXE 0x511997
-// SYNTHETIC: EXE 0x5119ec
-// SYNTHETIC: EXE 0x511b00
-// SYNTHETIC: EXE 0x511b10
-// SYNTHETIC: EXE 0x511b3b
-// SYNTHETIC: EXE 0x511b66
-// SYNTHETIC: EXE 0x511bd7
-// SYNTHETIC: EXE 0x511c48
-// SYNTHETIC: EXE 0x511c82
-// SYNTHETIC: EXE 0x511cbd
-// SYNTHETIC: EXE 0x511cef
-// SYNTHETIC: EXE 0x511d21

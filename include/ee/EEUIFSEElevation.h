@@ -22,7 +22,7 @@ struct EeScreensSeElevation;
 class EEUIFSEElevation : public EEUIFSEMainGroup {
 public:
     EEUIFSEElevation(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes, unsigned long& ioIndex,
-                     EEUIFScenarioEditor* inForm, GEFont* inFont);   // 0x1a098e
+                     EEUIFScenarioEditor* inForm, GEFont* inFont);
     virtual ~EEUIFSEElevation();            // +0x00 0x1a1279 (??_G 0x1a125d)
     virtual void Update();                  // +0x04 0x1a12fb (the mouse over the view while the form is current)
     virtual void MouseMove(const GE2DPoint& inLocation);   // +0x24 0x1a1329 (the brush outline at the tile)

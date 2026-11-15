@@ -20,7 +20,6 @@
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAIAStarCapture.h"
 
-// FUNCTION: EXE 0x41b9b7
 // Creates an empty A* node storage with no grid, no lists and 53 hash buckets
 EEAIAStarStorage::EEAIAStarStorage()
     : mHookHasCurrent(false), mHookCurrentX(0), mHookCurrentY(0), mHookHasParent(false), mHookParentX(0),
@@ -35,10 +34,6 @@ EEAIAStarStorage::EEAIAStarStorage(EeAStarStorageKind inKind)
 {
 }
 
-// SYNTHETIC: EXE 0x41b9fc
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x41ba18
 // Destroys the storage
 EEAIAStarStorage::~EEAIAStarStorage()
 {
@@ -46,14 +41,12 @@ EEAIAStarStorage::~EEAIAStarStorage()
     this->mCore = NULL;
 }
 
-// FUNCTION: EXE 0x41bb52
 // Releases every node and forgets the found path
 void EEAIAStarStorage::ResetNodes()
 {
     ee_astar_reset_nodes(this->mCore);
 }
 
-// FUNCTION: EXE 0x41bc2a
 // Starts walking the found path and returns its first tile; false when there is no path
 bool EEAIAStarStorage::GetFirstPathTile(long& outX, long& outY)
 {
@@ -66,7 +59,6 @@ bool EEAIAStarStorage::GetFirstPathTile(long& outX, long& outY)
     return true;
 }
 
-// FUNCTION: EXE 0x41bcc3
 // Returns the next tile along the found path (towards the start); false and (0, 0) at its end
 bool EEAIAStarStorage::GetNextPathTile(long& outX, long& outY)
 {
@@ -78,7 +70,6 @@ bool EEAIAStarStorage::GetNextPathTile(long& outX, long& outY)
     return theResult;
 }
 
-// FUNCTION: EXE 0x41be27
 // Sets up the storage for an inWidth x inHeight search: releases old nodes, prepares the tile grid (the virtual
 // slot: a derived storage's own arrays too) and allocates empty open and closed hash tables; always returns true
 bool EEAIAStarStorage::Init(long inWidth, long inHeight)
@@ -91,7 +82,6 @@ bool EEAIAStarStorage::Init(long inWidth, long inHeight)
     return true;
 }
 
-// FUNCTION: EXE 0x41c491
 // Sizes the tile flag grid for the search and clears it, only the last search's bounds plus two when it can
 void EEAIAStarStorage::PrepareGrid(long inWidth, long inHeight)
 {
@@ -100,7 +90,6 @@ void EEAIAStarStorage::PrepareGrid(long inWidth, long inHeight)
     ee_astar_prepare_grid(this->mCore, inWidth, inHeight, EeAStarGridKind::Hashed, false);
 }
 
-// FUNCTION: EXE 0x41c586
 // Flags an on-grid tile as accepted or rejected in advance and grows the search bounds to include it
 void EEAIAStarStorage::MarkTile(unsigned long inX, unsigned long inY, bool inFlag)
 {

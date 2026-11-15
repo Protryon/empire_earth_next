@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONTimerThread.h"
+#include "ee/wonapi/WONRoutingDetectFirewallOp.h"
 #include <string.h>
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
@@ -136,6 +137,17 @@ static void* CoreObjectOf(void* inObject,EeWonCoreObject inKind)
         return static_cast<UDPManagerSendRecvOp*>(static_cast<AsyncOp*>(anObject))->GetUdpObject();
     case EeWonCoreObject::ServerConn:
         return static_cast<ServerConnection*>(static_cast<AsyncSocket*>(anObject))->GetConnObject();
+    case EeWonCoreObject::RouteOp: return static_cast<RoutingOp*>(static_cast<AsyncOp*>(anObject))->mRust;
+    case EeWonCoreObject::RouteConn:
+        return static_cast<RoutingConnection*>(static_cast<AsyncSocket*>(anObject))->GetRouteObject();
+    case EeWonCoreObject::AuthCtx: return const_cast<EeWonAuthCtx*>(static_cast<AuthContext*>(anObject)->Core());
+    case EeWonCoreObject::HostOp: return static_cast<RustServerOp*>(static_cast<AsyncOp*>(anObject))->GetRustOp();
+    case EeWonCoreObject::HttpConn: return static_cast<HTTPConnection*>(anObject)->GetConnObject();
+    case EeWonCoreObject::Lock: {
+        if (HTTPConnection* c=dynamic_cast<HTTPConnection*>(anObject)) return c->GetLock();
+        if (HTTPSession* s=dynamic_cast<HTTPSession*>(anObject)) return s->GetLock();
+        return NULL;
+    }
     }
     return NULL;
 }
@@ -273,6 +285,27 @@ static long CoreTransformCall(void* inTransform,void* inMessage,bool inSend)
     return inSend ? aTransform->Send(aMessage) : aTransform->Recv(aMessage);
 }
 static void CoreTransformFree(void* inTransform) { delete static_cast<MsgTransform*>(inTransform); }
+static void* CoreNewHttpConn() { return static_cast<RefCount*>(new HTTPConnection(NULL)); }
+// the routing classes' (ee_won routecpp.rs): a new op on a connection, the connection's two virtuals
+static RoutingConnection* RouteConn(void* inConn)
+{ return static_cast<RoutingConnection*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(inConn))); }
+static void* CoreNewRouteOp(void* inConn,int32_t inType)
+{
+    RoutingConnection* aConn=inConn!=NULL ? RouteConn(inConn) : NULL;
+    RoutingOp* anOp=inType==RoutingOp_DetectFirewall ? new RoutingDetectFirewallOp(aConn) : new RoutingOp(aConn,inType);
+    return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp));
+}
+static void* CoreRouteVirtual(void* inConn,int32_t inWhich,void* inOp,uint8_t inType)
+{
+    if(inWhich==0) {
+        RouteConn(inConn)->RoutingOpCompleteHook(static_cast<RoutingOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp))));
+        return NULL;
+    }
+    SmartPtr<RoutingOp> anOp=RouteConn(inConn)->GetUnsolicitedDerivedOp(inType);
+    if(anOp.get()==NULL) return NULL;
+    anOp->AddRef();
+    return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp.get()));
+}
 // leaves the socket thread if it was handed there
 void SocketOp::CleanupHook()
 {
@@ -332,36 +365,11 @@ static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletion
                                         CoreBindLocal,CoreBytesOf,CoreSocketOpContinue,CoreSocketOpStart,
                                         &SocketOp::HookAddToSocketThread,CoreBytesAdopt,CoreTransform,CoreFileOpen,
                                         CoreFileWrite,CoreFileClose,CoreFileSetTime,CoreProgress,CoreAccept,
-                                        CoreSocketHook,CoreTransformCall,CoreTransformFree};
+                                        CoreSocketHook,CoreTransformCall,CoreTransformFree,CoreNewRouteOp,
+                                        CoreRouteVirtual,CoreNewHttpConn};
 const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
 
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0069efe0
-// (public: virtual void * __thiscall WONAPI::AsyncOp::`scalar deleting destructor'(unsigned int)    [??_GAsyncOp@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x0069f070
-// (public: __thiscall WONAPI::CriticalSection::~CriticalSection(void)    [??1CriticalSection@WONAPI@@QAE@XZ])
-// TEMPLATE: WON 0x0069f2c0
-// (public: __thiscall WONAPI::AutoCrit::~AutoCrit(void)    [??1AutoCrit@WONAPI@@QAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006a8770
-// (public: class WONAPI::CompletionBase<class WONAPI::SmartPtr<class WONAPI::AsyncOp> > * __thiscall WONAPI::SmartPtr<class WONAPI::CompletionBase<class )
-// TEMPLATE: WON 0x006a8910
-// (public: class std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::AsyncOp> >,struct std::_Mmapk<unsign)
-// TEMPLATE: WON 0x006a8e00
-// (public: virtual __thiscall std::out_of_range::~out_of_range(void))
-// TEMPLATE: WON 0x006a8f10
-// (public: struct std::pair<class std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::AsyncOp> >,struct s)
-// TEMPLATE: WON 0x006a9490
-// (protected: class std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::AsyncOp> >,struct std::_Mmapk<uns)
-// TEMPLATE: WON 0x006a9790
-// (public: virtual __thiscall std::length_error::~length_error(void))
-// TEMPLATE: WON 0x006aa210
-// (void __cdecl std::_Construct(struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::AsyncOp> > *,struct std::pair<unsigned long co)
-// TEMPLATE: WON 0x00769eb0
-// (protected: class std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::AsyncOp> >,struct std::_Mmapk<uns)
 
 // ---- the C++ side of the Rust thread, timer thread and op container (ee_won thread.rs): their calls into the
 // objects they hold (Thread.cpp, TimerThread.cpp and AsyncOpContainer.cpp are deleted)

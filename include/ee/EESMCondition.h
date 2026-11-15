@@ -14,8 +14,8 @@
 // the numbers (mType .. mUsesPlayerAttribute) are EeScenarioConditionFields (ee_scenario fields.rs)
 class EESMCondition : public EeScenarioConditionFields {
 public:
-    EESMCondition();                        // 0x1ba89f
-    ~EESMCondition();                       // 0x1ba976
+    EESMCondition();
+    ~EESMCondition();
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x00 0x1bb154
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x14 0x1bb3b6
     // 0x1ba998: inValue against inTarget by the operator index (mOperator: <, <=, ==, >=, >) (provisional name)

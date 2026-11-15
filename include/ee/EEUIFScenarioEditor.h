@@ -54,7 +54,7 @@ public:
         kSlotExitAfterSave = 54
     };
     EEUIFScenarioEditor(UIManager* inManager);   // 0x19d615 (EEUIManager::CreateScenarioEditor news 0x2b8 bytes)
-    virtual ~EEUIFScenarioEditor();         // 0x19e3f7 (??_G 0x19e3db)
+    virtual ~EEUIFScenarioEditor();
     virtual long UpdateKeyboard();          // slot 0x2c 0x19fdc8
     virtual void Open();                    // slot 0x48 0x19f794
     virtual long DrawBackground(const GERectangle& inRectangle);   // slot 0x18 0x19f501
@@ -64,19 +64,19 @@ public:
 protected:
     virtual long DrawPolygons();            // slot 0x40 0x19f5b3 (UIForm's, protected)
 public:
-    void PostLoadEvent(UReferenceCounter* inObject);         // 0x19f77b
-    void PostShowLoadedObject(UReferenceCounter* inObject);  // 0x19fa3b
-    void LeaveTab();                        // 0x19f5b9
-    void EnterFullView();                   // 0x19fd43
-    void LeaveFullView();                   // 0x19fd91
+    void PostLoadEvent(UReferenceCounter* inObject);
+    void PostShowLoadedObject(UReferenceCounter* inObject);
+    void LeaveTab();
+    void EnterFullView();
+    void LeaveFullView();
     // 0x19f6e9: leaves the editor through the load thread (EESEATestScenario passes true, EESEAExitScenario false)
     void ExitEditor(bool inTestScenario);
     void RefreshCurrentGroup();             // 0x19fc97: the current group's Store (EESEAQuickSaveScenario)
     void ResumeCurrentGroup();              // 0x19f757: resumed, the current group's Load (after a quick save/load)
-    void ClearSelection();                  // 0x19fa54
+    void ClearSelection();
     void DeselectFirstUnit();               // 0x19fab9 (EESEADeleteUnit)
-    void SelectUnit(EEUnit* inUnit);        // 0x19e606
-    void DeselectUnit(EEUnit* inUnit);      // 0x19fb84
+    void SelectUnit(EEUnit* inUnit);
+    void DeselectUnit(EEUnit* inUnit);
     void SelectTab(unsigned char inFlag, long inTab);   // 0x19f615 (EEUIFSEMainButton::Check)
     void FnE123D();                         // (ICF-folded into 0xe123d: an empty body)
     // 0x17d597 (the brush group's rectangle; EESEAPaintArea; defined in EESETSArea.cpp)

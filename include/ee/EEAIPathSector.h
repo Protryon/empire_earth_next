@@ -16,7 +16,7 @@ class EEAIContinent;
 
 class EEAIPathSector {
 public:
-    EEAIPathSector();                       // 0x2bbd3
+    EEAIPathSector();
     virtual ~EEAIPathSector();              // +0x00 dtor 0x2bc4a (??_G 0x2bc2e)
     void AddNeighbor(EEAIContinent* inContinent);   // 0x2bc72: push_back unless present (std::find; the manager's 0x20b2e)
     void AddPathAreaID(unsigned short inID);   // 0x2bccf: unless present (binary_search), push_back + sort

@@ -89,38 +89,32 @@ extern FSFileSpec gU565518;
 
 // ---- the entry points (the builder's Rust)
 
-// FUNCTION: EXE 0x67fa40
 long EEProcessTimerExpired()
 {
     return ee_screens_cb_timer_expired();
 }
 
-// FUNCTION: EXE 0x67fcf0
 long EESetCivBuilderButtonBlinking(bool inBlinking)
 {
     return ee_screens_cb_set_blinking(inBlinking);
 }
 
-// FUNCTION: EXE 0x680faf
 long CivBuilderEditCivilization()
 {
     return ee_screens_cb_edit_civilization();
 }
 
-// FUNCTION: EXE 0x680ffd
 long CivBuilderCreateCivilization(EECivilization* inCivilization, bool inReload)
 {
     return ee_screens_cb_create_civilization(inCivilization, inReload);
 }
 
-// FUNCTION: EXE 0x68015d
 long CivBuilderSaveCivilization(const UString& inName, bool inOverwrite)
 {
     return ee_screens_cb_save_civilization(reinterpret_cast<const uint8_t*>((const char*)inName), strlen(inName),
                                            inOverwrite);
 }
 
-// FUNCTION: EXE 0x680bb1
 void CivBuilderEditCurrentCivilization()
 {
     ee_screens_cb_edit_current();
@@ -302,7 +296,7 @@ extern "C" int64_t ee_screenscpp_cb(uint32_t inOp, uintptr_t inP, int64_t inA, i
     case EE_SCREENS_CBW_RESERVED: {
         UString theName(theBytes.c_str());
         for (unsigned long i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
-            if (PlatStrICmp(theName, gCivilizationManager.mCivilizations[i].mFileName) != 0)
+            if (PlatStrICmp(theName, gCivilizationManager.GetCivilization(i).mFileName) != 0)
                 continue;
             UWideString theFormat;
             UWideString theMessage;

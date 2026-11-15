@@ -55,7 +55,6 @@
 #include "rust/ee_screens.h"
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 
-// FUNCTION: EXE 0x5a098e
 // Builds the elevation tab: the paint area, the hills / cliffs / cliff paths radio buttons, the titles,
 // the elevation and strength sliders and their value label (the strength slider starts hidden) (editor_elevation.rs)
 EEUIFSEElevation::EEUIFSEElevation(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes, unsigned long& ioIndex,
@@ -67,24 +66,18 @@ EEUIFSEElevation::EEUIFSEElevation(EEAScroll* inScroll, EEUIFSEBrushGroup* inBru
     ioIndex = theIndex;
 }
 
-// SYNTHETIC: EXE 0x5a125d
-// (EEUIFSEElevation's scalar deleting destructor)
-
-// FUNCTION: EXE 0x5a1279
 // Destroys the elevation tab, deleting its paint area, radio buttons, labels and sliders (editor_elevation.rs)
 EEUIFSEElevation::~EEUIFSEElevation()
 {
     ee_screens_seel_free(this->mRust);
 }
 
-// FUNCTION: EXE 0x5a12fb
 // Refreshes the brush highlight at the mouse position while the editor form is the current form
 void EEUIFSEElevation::Update()
 {
     ee_screens_seel_call(this->mRust, EE_SCREENS_SEEL_UPDATE, 0.0f, 0.0f);
 }
 
-// FUNCTION: EXE 0x5a1329
 // Shows the brush highlight on the tile under the mouse while it is inside the game view, else hides it
 void EEUIFSEElevation::MouseMove(const GE2DPoint& inLocation)
 {

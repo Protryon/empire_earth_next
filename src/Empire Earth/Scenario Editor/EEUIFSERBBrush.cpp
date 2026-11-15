@@ -22,7 +22,6 @@
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EEUIFSERBBrush.h"
 
-// FUNCTION: EXE 0x5a4c00
 // Creates a brush size radio button for the brush group
 EEUIFSERBBrush::EEUIFSERBBrush(EEUIFSEBrushGroup* inGroup, long inBrushSize, unsigned long inId,
                                const UWideString& inText, GEFont* inFont, const GE2DPoint& inPosition, UIForm* inForm,
@@ -34,13 +33,9 @@ EEUIFSERBBrush::EEUIFSERBBrush(EEUIFSEBrushGroup* inGroup, long inBrushSize, uns
     this->SetBgOpacity(0.4f);
 }
 
-// FUNCTION: EXE 0x5a4c83
 // Sets the brush group's brush size to this button's size, then checks the button
 void EEUIFSERBBrush::Check()
 {
     this->mGroup->mBrushSize = this->mBrushSize;
     UIRadioButton::Check();
 }
-
-// SYNTHETIC: EXE 0x5a4c98
-// (the scalar deleting destructor, emitted with the vtable)

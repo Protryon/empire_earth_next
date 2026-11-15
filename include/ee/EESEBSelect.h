@@ -9,7 +9,7 @@
 class EESEBSelect : public UIButton {
 public:
     EESEBSelect(unsigned long inId, const GE2DPoint& inLocation, UIForm* inForm, GEFont* inFont,
-                unsigned long inIndex);   // 0x172da4
+                unsigned long inIndex);
     virtual ~EESEBSelect() {}               // ??_G 0x172e64
     void Select();                          // 0x172f3b (moves the technologies between the two lists)
 protected:
@@ -23,7 +23,7 @@ public:
 class EESETab : public UIRadioButton {
 public:
     EESETab(unsigned long inId, const GE2DPoint& inLocation, GEFont* inFont, UIForm* inForm, unsigned long inIndex,
-            bool inIsChecked);   // 0x173060
+            bool inIsChecked);
     virtual ~EESETab() {}                   // ??_G 0x17318d
     virtual void Check();                   // slot 0x94 0x1731b0 (switches the player screen's page)
 };

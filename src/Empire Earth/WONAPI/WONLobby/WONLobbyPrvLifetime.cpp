@@ -23,11 +23,6 @@
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONCRC16.h"
 namespace WONAPI {
-// FUNCTION: WON 0x007630a0
 // Destroys the lobby's private state (members only)
 WONLobbyPrv::~WONLobbyPrv() {}
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x00769580
-// (public: class std::list<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::allocator<class std::basic_)

@@ -8,7 +8,7 @@
 namespace WONAPI {
 class RoomLabelCtrl : public Container {
 public:
-    RoomLabelCtrl(); // 0x7c32b0
+    RoomLabelCtrl();
     // Implicit destructor (0x7c33a0): it does not write its own vtable pointer.
     virtual void InitComponent(ComponentInit&);
     virtual void HandleComponentEvent(ComponentEvent*);
@@ -31,7 +31,7 @@ namespace WONAPI {
 // MSSeperator: 0x30 bytes, a Component with no members of its own.
 class MSSeperator : public Component {
 public:
-    MSSeperator(int=6); // 0x7006a0
+    MSSeperator(int=6);
     virtual void GetDesiredSize(int& width,int& height) { width=100; height=6; } // inline as in the SDK (0x700700)
     virtual void Paint(Graphics&); // 0x700720, slot 0x18
 };
@@ -58,17 +58,17 @@ class RootScreen : public Container {
 public:
     RootScreen(bool);
     virtual ~RootScreen(); // writes its own vtable pointer (0x7c3d2f); frees ten members, then the base
-    virtual void InitComponent(ComponentInit&); // 0x7c3f40
+    virtual void InitComponent(ComponentInit&);
     virtual void Virtual08(); // 0x7c46d0; slot 0x08 (SizeChanged)
-    virtual void HandleComponentEvent(ComponentEvent*); // 0x7c4ae0
-    bool OnDirectConnectTab(); // 0x7c3ec0
-    bool OnLanTab(); // 0x7c3f00
-    void EnterGameTab(bool); // 0x7c4880
-    void ShowLobbyTab(); // 0x7c4930
-    void HandleJoinedGame(); // 0x7c4950
-    void HandleLeftGame(); // 0x7c4980
-    void HandleEnteredScreen(); // 0x7c4990
-    void HandleTabCtrlTabSelected(ComponentEvent*); // 0x7c49d0
+    virtual void HandleComponentEvent(ComponentEvent*);
+    bool OnDirectConnectTab();
+    bool OnLanTab();
+    void EnterGameTab(bool);
+    void ShowLobbyTab();
+    void HandleJoinedGame();
+    void HandleLeftGame();
+    void HandleEnteredScreen();
+    void HandleTabCtrlTabSelected(ComponentEvent*);
     bool mIsLan; // 0x84
     SmartPtr<TabCtrl> mTabCtrl; // 0x88
     GUIString mDefaultTabName; // 0x8c
@@ -125,12 +125,12 @@ public:
 // 0x58 bytes; the ListItem base is 0x18 bytes with 14 vtable slots.
 class RoomListItem : public WONAPI::ListItem {
 public:
-    RoomListItem(WONAPI::LobbyServer*,bool); // 0x7c19a0
+    RoomListItem(WONAPI::LobbyServer*,bool);
     RoomListItem(WONAPI::LobbyGroup*,WONAPI::LobbyServer*); // 0x7c1c50: the group comes first
     // Implicit destructor (0x7c1b70): it does not write its own vtable pointer.
-    virtual void Paint(WONAPI::Graphics&,WONAPI::ListArea*);     // 0x7c20c0
-    virtual void CalcDimensions(WONAPI::ListArea*); // 0x7c1fd0
-    virtual int Compare(const WONAPI::ListItem*,WONAPI::ListArea*) const;   // 0x7c20a0
+    virtual void Paint(WONAPI::Graphics&,WONAPI::ListArea*);
+    virtual void CalcDimensions(WONAPI::ListArea*);
+    virtual int Compare(const WONAPI::ListItem*,WONAPI::ListArea*) const;
     void UpdateText(WONAPI::LobbyServer*,WONAPI::LobbyGroup*);
     int mColor; // 0x18
     bool mLoading; // 0x1c
@@ -160,39 +160,39 @@ public:
         SmartPtr<ComboBox> mFilterCombo; // 0x0c
         unsigned char mGameTypeFlags; // 0x10
         GUIString mColumnName; // 0x14
-        ColumnInfo(); // 0x7c5f80
-        ~ColumnInfo(); // 0x7c5ef0
+        ColumnInfo();
+        ~ColumnInfo();
     }; // 0x18 bytes
     typedef std::vector<ColumnInfo> ColumnInfoVector;
     typedef std::map<GUIString,ColumnInfo,GUIStringLessNoCase> ColumnMap;
     typedef std::list<ServerDetailsItem*> ServerDetailsList;
     typedef std::map<SmartPtr<LobbyGame>,SmartPtr<ServerDetailsItem> > ServerDetailsMap;
-    ServerListCtrl(); // 0x7c5c10
+    ServerListCtrl();
     virtual ~ServerListCtrl(); // 0x7c5d30; explicit: writes its own vtable pointer
-    virtual void InitComponent(ComponentInit&); // 0x7c6360
-    virtual bool TimerEvent(int); // 0x7c66d0
-    virtual void HandleComponentEvent(ComponentEvent*); // 0x7c80f0
-    void LoadFilterCombos(); // 0x7c6740
-    void FilterInProgressGames(ServerDetailsList&); // 0x7c6a70
-    void DoFilter(ServerDetailsList&); // 0x7c6ad0
-    bool FitsFilter(ServerDetailsItem*); // 0x7c6be0
-    void UpdateJoinButton(); // 0x7c6d00
-    void UpdateSummaryLabel(); // 0x7c6d50
-    void AddEntries(const ServerDetailsList&); // 0x7c6ff0
-    void AddFilteredEntries(bool,ServerDetailsList&); // 0x7c7090
-    void AddFilteredEntries_All(bool); // 0x7c7220
-    void AddFilteredEntries_List(bool); // 0x7c73c0
-    LobbyGame* GetSelGame(); // 0x7c7580
-    void HandleGameChanged(GameChangedEvent*); // 0x7c75a0
-    void HandleSyncGameList(SyncGameListEvent*); // 0x7c7870
-    void HandleComboTextChanged(Component*); // 0x7c7b30
-    void HandleComboSelChanged(ComboSelChangedEvent*); // 0x7c7dd0
-    bool HandleRefreshButton(); // 0x7c80c0
-    void HandleListItemClicked(ListItemClickedEvent*); // 0x7c7a50
+    virtual void InitComponent(ComponentInit&);
+    virtual bool TimerEvent(int);
+    virtual void HandleComponentEvent(ComponentEvent*);
+    void LoadFilterCombos();
+    void FilterInProgressGames(ServerDetailsList&);
+    void DoFilter(ServerDetailsList&);
+    bool FitsFilter(ServerDetailsItem*);
+    void UpdateJoinButton();
+    void UpdateSummaryLabel();
+    void AddEntries(const ServerDetailsList&);
+    void AddFilteredEntries(bool,ServerDetailsList&);
+    void AddFilteredEntries_All(bool);
+    void AddFilteredEntries_List(bool);
+    LobbyGame* GetSelGame();
+    void HandleGameChanged(GameChangedEvent*);
+    void HandleSyncGameList(SyncGameListEvent*);
+    void HandleComboTextChanged(Component*);
+    void HandleComboSelChanged(ComboSelChangedEvent*);
+    bool HandleRefreshButton();
+    void HandleListItemClicked(ListItemClickedEvent*);
     void SetNumColumns(int); // 0x7c8340; stores the count and resizes the column vector
-    static ColumnInfo* GetColumnInfo(const GUIString&); // 0x7c5ff0
-    static void InitColumnMap(); // 0x7c6050
-    static void AddDefaultFilters(const GUIString&,const GUIString&,bool); // 0x7c6340
+    static ColumnInfo* GetColumnInfo(const GUIString&);
+    static void InitColumnMap();
+    static void AddDefaultFilters(const GUIString&,const GUIString&,bool);
     ColumnInfoVector mColumnInfo; // 0x84..0x93
     void SetGameType(int inType) { this->mGameType=inType; }
     int mGameType; // 0x94
@@ -206,7 +206,7 @@ public:
     SmartPtr<Component> mRemoveButton; // 0xb4
     SmartPtr<Label> mSummaryLabel; // 0xb8
     ServerDetailsMap mServerDetailsMap; // 0xbc..0xc7
-    static ColumnMap mColumnMap; // 0x966b60
+    static ColumnMap mColumnMap;
 };
 }
 

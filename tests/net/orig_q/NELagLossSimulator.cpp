@@ -22,7 +22,6 @@ const float kLossPercentageScale = 99.0f;
 // Release-build trace: compiled out, but its argument is still evaluated (the label of a dropped message)
 inline void NELagLossTrace(const char* inLabel) {}
 
-// FUNCTION: LLE 0x1003d84c
 // Creates a network lag/loss simulator around receive and send callbacks, with lag and loss off
 NELagLossSimulator::NELagLossSimulator(void (*inReceiveCallbackFunction)(NEMessage*, void*),
                                        long (*inSendCallbackFunction)(NEMessage*, void*), void* inCallbackData)
@@ -50,7 +49,6 @@ NELagLossSimulator::NELagLossSimulator(void (*inReceiveCallbackFunction)(NEMessa
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mLaggedMessageListLock) == keseOK, 62);
 }
 
-// FUNCTION: LLE 0x1003d90c
 // Destroys the simulator, stopping its lag thread first (lagged messages are not delivered)
 NELagLossSimulator::~NELagLossSimulator()
 {
@@ -59,7 +57,6 @@ NELagLossSimulator::~NELagLossSimulator()
     TSScheduler::DestroyCriticalSection(this->mLaggedMessageListLock);
 }
 
-// FUNCTION: LLE 0x1003d92e
 // Turns on random receive lag between a minimum and maximum (ms) and starts the lag thread
 void NELagLossSimulator::EnableLag(unsigned long inMinimum, unsigned long inMaximum)
 {
@@ -75,7 +72,6 @@ void NELagLossSimulator::EnableLag(unsigned long inMinimum, unsigned long inMaxi
     this->mLagThread->SetName(UString("CommLagLoss"));
 }
 
-// FUNCTION: LLE 0x1003da15
 // Turns off receive lag: stops the lag thread (delivering the queued messages if inFlush) and frees its events
 void NELagLossSimulator::DisableLag(bool inFlush)
 {
@@ -98,7 +94,6 @@ void NELagLossSimulator::DisableLag(bool inFlush)
     this->mLagThread = NULL;
 }
 
-// FUNCTION: LLE 0x1003da83
 // Lag thread: delivers each queued message when its time is due; on exit optionally delivers the rest at once
 unsigned long NELagLossSimulator::LagThreadFunction(void* inArgument)
 {
@@ -168,7 +163,6 @@ unsigned long NELagLossSimulator::LagThreadFunction(void* inArgument)
     return 0;
 }
 
-// FUNCTION: LLE 0x1003dc58
 // Handles a received message: drops it by the receive loss chance, queues it with a random lag, or passes it on
 long NELagLossSimulator::Process(NEMessage* inMessage)
 {
@@ -203,7 +197,6 @@ long NELagLossSimulator::Process(NEMessage* inMessage)
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x1003dd87
 // Sends a message unless the send loss chance drops it; returns the send callback's result
 long NELagLossSimulator::Send(NEMessage* inMessage)
 {
@@ -217,219 +210,3 @@ long NELagLossSimulator::Send(NEMessage* inMessage)
     }
     return theResult;
 }
-
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// SYNTHETIC: LLE 0x1003bc2d
-// SYNTHETIC: LLE 0x1003bc65
-// SYNTHETIC: LLE 0x1003bc69
-// SYNTHETIC: LLE 0x1003bc73
-// SYNTHETIC: LLE 0x1003bca1
-// SYNTHETIC: LLE 0x1003bca6
-// SYNTHETIC: LLE 0x1003bcaa
-// SYNTHETIC: LLE 0x1003bcae
-// SYNTHETIC: LLE 0x1003bcb2
-// SYNTHETIC: LLE 0x1003bcbc
-// SYNTHETIC: LLE 0x1003bcc6
-// SYNTHETIC: LLE 0x1003bcf9
-// SYNTHETIC: LLE 0x1003bd20
-// SYNTHETIC: LLE 0x1003bd3e
-// SYNTHETIC: LLE 0x1003bd7f
-// SYNTHETIC: LLE 0x1003bdbe
-// SYNTHETIC: LLE 0x1003bdd7
-// SYNTHETIC: LLE 0x1003bddb
-// SYNTHETIC: LLE 0x1003bde1
-// SYNTHETIC: LLE 0x1003be0e
-// SYNTHETIC: LLE 0x1003be35
-// SYNTHETIC: LLE 0x1003beb0
-// SYNTHETIC: LLE 0x1003bed0
-// SYNTHETIC: LLE 0x1003beff
-// SYNTHETIC: LLE 0x1003bf05
-// SYNTHETIC: LLE 0x1003bf1d
-// SYNTHETIC: LLE 0x1003bf2f
-// SYNTHETIC: LLE 0x1003bf36
-// SYNTHETIC: LLE 0x1003bf93
-// SYNTHETIC: LLE 0x1003bfda
-// SYNTHETIC: LLE 0x1003bffb
-// SYNTHETIC: LLE 0x1003c001
-// SYNTHETIC: LLE 0x1003c040
-// SYNTHETIC: LLE 0x1003c079
-// SYNTHETIC: LLE 0x1003c0d4
-// SYNTHETIC: LLE 0x1003c132
-// SYNTHETIC: LLE 0x1003c171
-// SYNTHETIC: LLE 0x1003c18a
-// SYNTHETIC: LLE 0x1003c190
-// SYNTHETIC: LLE 0x1003c194
-// SYNTHETIC: LLE 0x1003c1d3
-// SYNTHETIC: LLE 0x1003c20c
-// SYNTHETIC: LLE 0x1003c288
-// SYNTHETIC: LLE 0x1003c2b1
-// SYNTHETIC: LLE 0x1003c2e0
-// SYNTHETIC: LLE 0x1003c2e6
-// SYNTHETIC: LLE 0x1003c307
-// SYNTHETIC: LLE 0x1003c322
-// SYNTHETIC: LLE 0x1003c34b
-// SYNTHETIC: LLE 0x1003c37a
-// SYNTHETIC: LLE 0x1003c380
-// SYNTHETIC: LLE 0x1003c3a1
-// SYNTHETIC: LLE 0x1003c3d1
-// SYNTHETIC: LLE 0x1003c400
-// SYNTHETIC: LLE 0x1003c406
-// SYNTHETIC: LLE 0x1003c42d
-// SYNTHETIC: LLE 0x1003c464
-// SYNTHETIC: LLE 0x1003c493
-// SYNTHETIC: LLE 0x1003c499
-// SYNTHETIC: LLE 0x1003c49d
-// SYNTHETIC: LLE 0x1003c4ca
-// SYNTHETIC: LLE 0x1003c4f1
-// SYNTHETIC: LLE 0x1003c543
-// SYNTHETIC: LLE 0x1003c563
-// SYNTHETIC: LLE 0x1003c592
-// SYNTHETIC: LLE 0x1003c598
-// SYNTHETIC: LLE 0x1003c5b0
-// SYNTHETIC: LLE 0x1003c5f1
-// SYNTHETIC: LLE 0x1003c63a
-// SYNTHETIC: LLE 0x1003c64d
-// SYNTHETIC: LLE 0x1003c674
-// SYNTHETIC: LLE 0x1003c695
-// SYNTHETIC: LLE 0x1003c6a0
-// SYNTHETIC: LLE 0x1003c6fb
-// SYNTHETIC: LLE 0x1003c737
-// SYNTHETIC: LLE 0x1003c75b
-// SYNTHETIC: LLE 0x1003c75f
-// SYNTHETIC: LLE 0x1003c763
-// SYNTHETIC: LLE 0x1003c767
-// SYNTHETIC: LLE 0x1003c76b
-// SYNTHETIC: LLE 0x1003c76f
-// SYNTHETIC: LLE 0x1003c775
-// SYNTHETIC: LLE 0x1003c7c0
-// SYNTHETIC: LLE 0x1003c7ff
-// SYNTHETIC: LLE 0x1003c859
-// SYNTHETIC: LLE 0x1003c886
-// SYNTHETIC: LLE 0x1003c8aa
-// SYNTHETIC: LLE 0x1003c8af
-// SYNTHETIC: LLE 0x1003c8b3
-// SYNTHETIC: LLE 0x1003c8b9
-// SYNTHETIC: LLE 0x1003c8bd
-// SYNTHETIC: LLE 0x1003c8fe
-// SYNTHETIC: LLE 0x1003c933
-// SYNTHETIC: LLE 0x1003c938
-// SYNTHETIC: LLE 0x1003c992
-// SYNTHETIC: LLE 0x1003c9bb
-// SYNTHETIC: LLE 0x1003c9ea
-// SYNTHETIC: LLE 0x1003c9f0
-// SYNTHETIC: LLE 0x1003c9fe
-// SYNTHETIC: LLE 0x1003ca25
-// SYNTHETIC: LLE 0x1003ca46
-// SYNTHETIC: LLE 0x1003ca6f
-// SYNTHETIC: LLE 0x1003ca9e
-// SYNTHETIC: LLE 0x1003caa4
-// SYNTHETIC: LLE 0x1003cac5
-// SYNTHETIC: LLE 0x1003cae0
-// SYNTHETIC: LLE 0x1003cb33
-// SYNTHETIC: LLE 0x1003cb83
-// SYNTHETIC: LLE 0x1003cbb2
-// SYNTHETIC: LLE 0x1003cbb6
-// SYNTHETIC: LLE 0x1003cbbc
-// SYNTHETIC: LLE 0x1003cbf5
-// SYNTHETIC: LLE 0x1003cc28
-// SYNTHETIC: LLE 0x1003cc51
-// SYNTHETIC: LLE 0x1003cc80
-// SYNTHETIC: LLE 0x1003cc86
-// SYNTHETIC: LLE 0x1003cca7
-// SYNTHETIC: LLE 0x1003ccd0
-// SYNTHETIC: LLE 0x1003ccff
-// SYNTHETIC: LLE 0x1003cd05
-// SYNTHETIC: LLE 0x1003cd26
-// SYNTHETIC: LLE 0x1003cd6c
-// SYNTHETIC: LLE 0x1003cd9b
-// SYNTHETIC: LLE 0x1003cd9f
-// SYNTHETIC: LLE 0x1003cda3
-// SYNTHETIC: LLE 0x1003cda7
-// SYNTHETIC: LLE 0x1003cdab
-// SYNTHETIC: LLE 0x1003cdb1
-// SYNTHETIC: LLE 0x1003cde4
-// SYNTHETIC: LLE 0x1003ce11
-// SYNTHETIC: LLE 0x1003ce31
-// SYNTHETIC: LLE 0x1003ce60
-// SYNTHETIC: LLE 0x1003ce66
-// SYNTHETIC: LLE 0x1003ce7e
-// SYNTHETIC: LLE 0x1003ced0
-// SYNTHETIC: LLE 0x1003cf01
-// SYNTHETIC: LLE 0x1003cf30
-// SYNTHETIC: LLE 0x1003cf36
-// SYNTHETIC: LLE 0x1003cf57
-// SYNTHETIC: LLE 0x1003cf88
-// SYNTHETIC: LLE 0x1003cfb7
-// SYNTHETIC: LLE 0x1003cfbd
-// SYNTHETIC: LLE 0x1003cfde
-// SYNTHETIC: LLE 0x1003cffe
-// SYNTHETIC: LLE 0x1003d02d
-// SYNTHETIC: LLE 0x1003d033
-// SYNTHETIC: LLE 0x1003d04b
-// SYNTHETIC: LLE 0x1003d06b
-// SYNTHETIC: LLE 0x1003d09a
-// SYNTHETIC: LLE 0x1003d0a0
-// SYNTHETIC: LLE 0x1003d0b8
-// SYNTHETIC: LLE 0x1003d0e1
-// SYNTHETIC: LLE 0x1003d110
-// SYNTHETIC: LLE 0x1003d116
-// SYNTHETIC: LLE 0x1003d13d
-// SYNTHETIC: LLE 0x1003d166
-// SYNTHETIC: LLE 0x1003d195
-// SYNTHETIC: LLE 0x1003d19b
-// SYNTHETIC: LLE 0x1003d1bc
-// SYNTHETIC: LLE 0x1003d1f4
-// SYNTHETIC: LLE 0x1003d223
-// SYNTHETIC: LLE 0x1003d229
-// SYNTHETIC: LLE 0x1003d250
-// SYNTHETIC: LLE 0x1003d271
-// SYNTHETIC: LLE 0x1003d2ab
-// SYNTHETIC: LLE 0x1003d2da
-// SYNTHETIC: LLE 0x1003d2e0
-// SYNTHETIC: LLE 0x1003d307
-// SYNTHETIC: LLE 0x1003d359
-// SYNTHETIC: LLE 0x1003d3c8
-// SYNTHETIC: LLE 0x1003d3f7
-// SYNTHETIC: LLE 0x1003d3fb
-// SYNTHETIC: LLE 0x1003d402
-// SYNTHETIC: LLE 0x1003d409
-// SYNTHETIC: LLE 0x1003d40f
-// SYNTHETIC: LLE 0x1003d453
-// SYNTHETIC: LLE 0x1003d49f
-// SYNTHETIC: LLE 0x1003d4f7
-// SYNTHETIC: LLE 0x1003d543
-// SYNTHETIC: LLE 0x1003d572
-// SYNTHETIC: LLE 0x1003d576
-// SYNTHETIC: LLE 0x1003d57a
-// SYNTHETIC: LLE 0x1003d580
-// SYNTHETIC: LLE 0x1003d584
-// SYNTHETIC: LLE 0x1003d5b7
-// SYNTHETIC: LLE 0x1003d5e4
-// SYNTHETIC: LLE 0x1003d5f8
-// SYNTHETIC: LLE 0x1003d5ff
-// SYNTHETIC: LLE 0x1003d604
-// SYNTHETIC: LLE 0x1003d609
-// SYNTHETIC: LLE 0x1003d617
-// SYNTHETIC: LLE 0x1003d625
-// SYNTHETIC: LLE 0x1003d63a
-// SYNTHETIC: LLE 0x1003d63e
-// SYNTHETIC: LLE 0x1003d642
-// SYNTHETIC: LLE 0x1003d653
-// SYNTHETIC: LLE 0x1003d65d
-// SYNTHETIC: LLE 0x1003d667
-// SYNTHETIC: LLE 0x1003d6f0
-// SYNTHETIC: LLE 0x1003d783
-// SYNTHETIC: LLE 0x1003d787
-// SYNTHETIC: LLE 0x1003d78b
-// SYNTHETIC: LLE 0x1003d78f
-// SYNTHETIC: LLE 0x1003d7a1
-// SYNTHETIC: LLE 0x1003d7a8
-// SYNTHETIC: LLE 0x1003d7af
-// SYNTHETIC: LLE 0x1003d7ba
-// SYNTHETIC: LLE 0x1003d803
-// SYNTHETIC: LLE 0x1003ddda
-// SYNTHETIC: LLE 0x1003de2a
-// SYNTHETIC: LLE 0x1003de66
-// SYNTHETIC: LLE 0x1003df0a
-// SYNTHETIC: LLE 0x1003dfb3
-// SYNTHETIC: LLE 0x1003dfdb

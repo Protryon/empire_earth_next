@@ -31,11 +31,6 @@
 #include "ee/EESETSEScenarioComboBox.h"
 #include "ee/EESETSCComboBox.h"
 
-// FUNCTION: EXE 0x57daa8
-// (EESETSConditionControls' constructor: ee_screens editor_controls.rs's table, made through the shared control
-// maker)
-
-// FUNCTION: EXE 0x57e291
 // Creates a trigger-screen combo box listing scenario items for the given screen and mode, 20 pixels high
 EESETSEScenarioComboBox::EESETSEScenarioComboBox(long inScreen, unsigned long inMode, unsigned long inId,
                                                  unsigned long inTextBoxType, std::vector<UWideString> inData,
@@ -49,10 +44,6 @@ EESETSEScenarioComboBox::EESETSEScenarioComboBox(long inScreen, unsigned long in
     this->mScreen = inScreen;
 }
 
-// SYNTHETIC: EXE 0x57e31a
-// (EESETSEScenarioComboBox's scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x57e33d
 // Creates a condition-page combo box of the given width, 20 pixels high
 EESETSCComboBox::EESETSCComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString>& inData,
                                  GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
@@ -63,13 +54,9 @@ EESETSCComboBox::EESETSCComboBox(unsigned long inId, unsigned long inTextBoxType
 {
 }
 
-// FUNCTION: EXE 0x57e3b5
 // Changes the selection and refreshes the condition page's controls and generated name
 void EESETSCComboBox::ChangeSelection()
 {
     UIComboBox::ChangeSelection();
     static_cast<EESETriggerScreen*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabTriggers))->GetScreen(kSETriggerScreenCondition)->RefreshControls();
 }
-
-// FUNCTION: EXE 0x57e3d7
-// (EESETSConditionControls' destructor: ee_screens editor_controls.rs, the controls deleted in its order)

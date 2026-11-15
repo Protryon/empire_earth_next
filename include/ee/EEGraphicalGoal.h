@@ -10,7 +10,7 @@ class EEGraphicalGoal {
 public:
     EEGraphicalGoal(long inType, long inPlayer);   // 0x107616 (inPlayer: the effect's mL20)
     virtual ~EEGraphicalGoal();             // 0x1076e3 (empty; called out of line for the vector temporaries)
-    void DestroyEffect();                   // 0x1076ea
+    void DestroyEffect();
     void Update();                          // 0x1076f9: moves the effect when mChanged
 
     GE3DPoint mFrom;                        // +0x04

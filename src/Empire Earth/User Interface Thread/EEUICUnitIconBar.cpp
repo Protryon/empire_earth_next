@@ -32,16 +32,14 @@
 #include "lle/UIControlsTable.h"
 #include "ee/EEUICUnitIconBar.h"
 
-#include "rust/ee_screens.h"   // ee_screens_icon_bar_* (ee_screens icon_bar.rs)
 
 static unsigned long sIconBarUpSound;           // 0x56458c (sound 0x208)
 static unsigned long sIconBarDownSound;         // 0x564590 (sound 0x207)
 
-// FUNCTION: EXE 0x659f7f
 // Creates the selected-units icon bar with its icon frame bitmap and click sounds (its state and icon rectangle:
 // ee_screens icon_bar.rs)
 EEUICUnitIconBar::EEUICUnitIconBar(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm)
-    : UIControl(kControlTypeCustom, inTable.GetID(), inRectangle, inForm, inTable.GetFormIndex(), 0), mIcon(new GEBitmap)
+    : EEUIRustControl(inTable.GetID(), inRectangle, inForm, inTable.GetFormIndex(), 0), mIcon(new GEBitmap)
 {
     float theIcon[4];
     this->mState = ee_screens_icon_bar_new(this->GetRectangle().GetWidth(), this->GetRectangle().GetHeight(), theIcon);
@@ -59,10 +57,6 @@ EEUICUnitIconBar::EEUICUnitIconBar(UIControlsTable& inTable, const GERectangle& 
     }
 }
 
-// SYNTHETIC: EXE 0x65a178
-// (the scalar deleting destructor, emitted with the vtable; slot EEUICUnitIconBar+0x0)
-
-// FUNCTION: EXE 0x65a194
 // Destroys the icon bar, unloading its sounds and releasing its bitmaps and buttons
 EEUICUnitIconBar::~EEUICUnitIconBar()
 {
@@ -77,15 +71,6 @@ EEUICUnitIconBar::~EEUICUnitIconBar()
     ee_screens_icon_bar_free(this->mState, this);
 }
 
-// FUNCTION: EXE 0x65a258
-// FUNCTION: EXE 0x65a32f
-// FUNCTION: EXE 0x65a954
-// FUNCTION: EXE 0x65a9e2
-// FUNCTION: EXE 0x65aa43
-// FUNCTION: EXE 0x65aa9b
-// FUNCTION: EXE 0x65ae44
-// FUNCTION: EXE 0x65afa5
-// FUNCTION: EXE 0x65b010
 // The snapshot, the drawing, the clicks and the refill from the selection (and the original's GetUnit,
 // GetIconIndex, GetUnitIDs): ee_screens icon_bar.rs over the host below
 long EEUICUnitIconBar::CopyData() { return ee_screens_icon_bar_copy_data(this->mState, this); }
@@ -95,15 +80,6 @@ long EEUICUnitIconBar::MouseRButtonUp() { return ee_screens_icon_bar_mouse_r_up(
 long EEUICUnitIconBar::MouseMove(const GE2DPoint& inLocation) { return ee_screens_icon_bar_mouse_move(this->mState, this); }
 void EEUICUnitIconBar::Update() { ee_screens_icon_bar_update(this->mState, this); }
 
-// FUNCTION: EXE 0x65ad92
-// Creates a scramble-aircraft message for a unit and a tile
-// (EEMScrambleAircraft::EEMScrambleAircraft(long, long, long), inline in EEMessage.h; emitted after its first user)
-
-// FUNCTION: EXE 0x65adcd
-// Creates a select-these-units message from a list of ids
-// (EEMSelectTheseUnits::EEMSelectTheseUnits(std::vector<long>&), inline in EEMessage.h; emitted after its first user)
-
-// FUNCTION: EXE 0x65ae3b
 // Captures the mouse on a right press (also the left press, ICF-folded)
 long EEUICUnitIconBar::MouseRButtonDown()
 {
@@ -111,37 +87,16 @@ long EEUICUnitIconBar::MouseRButtonDown()
     return 0;
 }
 
-long EEUICUnitIconBar::MouseLButtonDown()
+// The bar's own ops (icon_bar.rs EE_SCREENS_IB_OP_*, EEUIRustControl's host the toolkit's): units and buttons as
+// handles, ioF the op's floats
+int64_t EEUICUnitIconBar::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {
-    this->CaptureMouse();
-    return 0;
-}
-
-// FUNCTION: EXE 0x65af3d
-// Creates an immediate cargo unload message for a transport and a cargo unit
-// (EEMImmediateCargoUnload::EEMImmediateCargoUnload(long, long, bool), inline in EEMessage.h; emitted after its first user)
-
-// FUNCTION: EXE 0x65af78
-// Creates a remove-from-selection message for a unit
-// (EEMRemoveUnitFromSelectedGroup::EEMRemoveUnitFromSelectedGroup(long), inline in EEMessage.h; emitted after its first user)
-
-// FUNCTION: EXE 0x65b2a2
-// Appends a button to a vector (std::vector<EEButtonObject*>::push_back)
-// (std::vector<EEButtonObject*>::push_back, a template COMDAT closing the unit)
-
-// The bar's host (icon_bar.rs EE_SCREENS_IB_OP_*): units and buttons as handles, ioF the op's floats
-extern "C" int64_t ee_screenscpp_icon_bar(void* inBar, uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
-{
-    return EEUICUnitIconBar::HostOp(static_cast<EEUICUnitIconBar*>(inBar), inOp, inA, inB, ioF);
-}
-
-int64_t EEUICUnitIconBar::HostOp(EEUICUnitIconBar* inBar, uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
-{
+    EEUICUnitIconBar* inBar = this;
     EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
     EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(inA);
     EEButtonObject* theButton = reinterpret_cast<EEButtonObject*>(inA);
     NEMessage* theMessage = NULL;
-    switch (inOp) {
+    switch (inOp - EE_SCREENS_HC_CLASS) {
     case EE_SCREENS_IB_OP_GROUP_COUNT:
         return theGroup ? (int64_t)theGroup->GetNumUnits() : -1;
     case EE_SCREENS_IB_OP_GROUP_UNIT:
@@ -174,8 +129,8 @@ int64_t EEUICUnitIconBar::HostOp(EEUICUnitIconBar* inBar, uint32_t inOp, int64_t
         return (int64_t)theUnit->mStats->mButton;
     case EE_SCREENS_IB_OP_SELECT_THESE: {
         const int32_t* theIDs = reinterpret_cast<const int32_t*>(inA);
-        std::vector<int32_t> theList(theIDs, theIDs + inB);
-        theMessage = new EEMRecord(kMessageSelectTheseUnits, {theList});
+        std::vector<long> theList(theIDs, theIDs + inB);
+        theMessage = new EEMSelectTheseUnits(theList);
         break;
     }
     case EE_SCREENS_IB_OP_SELECT:
@@ -193,9 +148,6 @@ int64_t EEUICUnitIconBar::HostOp(EEUICUnitIconBar* inBar, uint32_t inOp, int64_t
     case EE_SCREENS_IB_OP_SOUND:
         gSoundManager->Play(inA == 0 ? sIconBarDownSound : sIconBarUpSound, 1.0f, 0.0f, 1.0f, false, NULL);
         break;
-    case EE_SCREENS_IB_OP_DIRTY:
-        inBar->SetDirty(true);
-        break;
     case EE_SCREENS_IB_OP_CTRL:
         return UIControl::ControlKeyPressed();
     case EE_SCREENS_IB_OP_SHIFT:
@@ -205,28 +157,12 @@ int64_t EEUICUnitIconBar::HostOp(EEUICUnitIconBar* inBar, uint32_t inOp, int64_t
         break;
     case EE_SCREENS_IB_OP_CONTAINS:
         return inBar->GetRectangle().Contains(inBar->GetMouseLocation());
-    case EE_SCREENS_IB_OP_RECT:
-    case EE_SCREENS_IB_OP_DRAW_RECT: {
-        GERectangle theRect = inOp == EE_SCREENS_IB_OP_RECT ? inBar->GetRectangle() : inBar->GetCopiedDrawRectangle();
-        ioF[0] = theRect.GetLeft();
-        ioF[1] = theRect.GetTop();
-        ioF[2] = theRect.GetRight();
-        ioF[3] = theRect.GetBottom();
-        break;
-    }
-    case EE_SCREENS_IB_OP_RELEASE_MOUSE:
-        inBar->ReleaseCapturedMouse();
-        break;
     case EE_SCREENS_IB_OP_ACQUIRE:
         theButton->Acquire();
         break;
     case EE_SCREENS_IB_OP_RELEASE:
         theButton->Release();
         break;
-    case EE_SCREENS_IB_OP_COPY_BASE:
-        return inBar->UIControl::CopyData();
-    case EE_SCREENS_IB_OP_DRAW_BASE:
-        return inBar->UIControl::DrawPolygons();
     case EE_SCREENS_IB_OP_ICON:
         inBar->mIcon->SetTexture(theButton->GetTexture(), inBar->GetScreenIndex());
         theButton->SetFaceBitmap(inBar->mIcon, GERectangle(ioF[2], ioF[3], ioF[4], ioF[5]), gScreenIndex);

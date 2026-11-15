@@ -61,7 +61,6 @@
 #include "ee/EEAction.h"
 #include "ee/EEAPlayerEvent.h"
 
-// FUNCTION: EXE 0x404352
 // Moves the camera to the source tile of the current player's next player event
 void EEAPlayerEvent::Virtual4()
 {
@@ -81,8 +80,6 @@ void EEAPlayerEvent::Virtual4()
     gCameraFollowing = false;
 }
 
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEAPlayerEvent::Virtual8()
 {
 }

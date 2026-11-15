@@ -12,17 +12,12 @@
 #include "ee/EEAIAStarTerrainStorage.h"
 #include "ee/EEAIAStarContinentStorage.h"
 
-// FUNCTION: EXE 0x415a47
 // Creates the continent search storage with no continent tile grid
 EEAIAStarContinentStorage::EEAIAStarContinentStorage()
     : mTiles60(NULL)
 {
 }
 
-// SYNTHETIC: EXE 0x415a5d
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x415a79
 // Destroys the storage, freeing its continent tile grid
 EEAIAStarContinentStorage::~EEAIAStarContinentStorage()
 {
@@ -30,7 +25,6 @@ EEAIAStarContinentStorage::~EEAIAStarContinentStorage()
 }
 
 // NEAR: as EEAIAStarPathSectorStorage::PrepareGrid 0x1b829 (the same shape; register choice of inWidth/inHeight)
-// FUNCTION: EXE 0x415a99
 // Sizes the continent tile, node and flag grids (reallocating on a size change) and clears the node and flag
 // grids, only the span covering the dirty bounds plus 1 when unchanged; then forgets the dirty bounds
 void EEAIAStarContinentStorage::PrepareGrid(long inWidth, long inHeight)

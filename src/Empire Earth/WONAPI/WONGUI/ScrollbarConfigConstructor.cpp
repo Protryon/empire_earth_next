@@ -13,7 +13,6 @@
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 #include "ee/wonapi/WONLobbyWONListConfig.h"
 namespace WONAPI {
-// FUNCTION: WON 0x00794900
 // Creates a scrollbar config (base container config only)
 ScrollbarConfig::ScrollbarConfig() {}
 }

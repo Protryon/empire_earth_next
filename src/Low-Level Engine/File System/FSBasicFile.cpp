@@ -13,7 +13,6 @@
 static EeFsSpec* Record(FSBasicFile* inFile) { return reinterpret_cast<EeFsSpec*>(inFile); }
 static const EeFsSpec* Record(const FSBasicFile* inFile) { return reinterpret_cast<const EeFsSpec*>(inFile); }
 
-// FUNCTION: LLE 0x10007af6
 // Creates a closed file spec with empty volume, directory and name, for reading
 FSBasicFile::FSBasicFile()
     : mVolume(256), mDirectory(256), mFile(256)
@@ -21,69 +20,58 @@ FSBasicFile::FSBasicFile()
     ee_fs_basic_init(Record(this));
 }
 
-// FUNCTION: LLE 0x10007b3a
 // Copies a file spec's volume, directory and name; the copy starts closed
 FSBasicFile::FSBasicFile(const FSBasicFile& inFile)
 {
     ee_fs_basic_init_copy(Record(this), Record(&inFile));
 }
 
-// FUNCTION: LLE 0x10007ba6
 // Deletes the file from disk; fails if it is open or its path is longer than PLAT_MAX_PATH
 long FSBasicFile::Delete()
 {
     return ee_fs_basic_delete(Record(this));
 }
 
-// FUNCTION: LLE 0x10007c46
 void FSBasicFile::GetFile(UString& outFile) const
 {
     outFile = this->mFile;
 }
 
-// FUNCTION: LLE 0x10007c56
 void FSBasicFile::GetDirectory(UString& outDirectory) const
 {
     outDirectory = this->mDirectory;
 }
 
-// FUNCTION: LLE 0x10007c66
 bool FSBasicFile::GetIsOpen() const
 {
     return this->mIsOpen;
 }
 
-// FUNCTION: LLE 0x10007c6a
 unsigned long FSBasicFile::GetVersion() const
 {
     return this->mVersion;
 }
 
-// FUNCTION: LLE 0x10007c6e
 void FSBasicFile::GetVolume(UString& outVolume) const
 {
     outVolume = this->mVolume;
 }
 
-// FUNCTION: LLE 0x10007c7e
 void FSBasicFile::SetDirectory(const UString& inDirectory)
 {
     this->mDirectory = inDirectory;
 }
 
-// FUNCTION: LLE 0x10007c8d
 void FSBasicFile::SetFile(const UString& inFile)
 {
     this->mFile = inFile;
 }
 
-// FUNCTION: LLE 0x10007c9c
 void FSBasicFile::SetVersion(unsigned long inVersion)
 {
     this->mVersion = inVersion;
 }
 
-// FUNCTION: LLE 0x10007ca6
 void FSBasicFile::SetVolume(const UString& inVolume)
 {
     this->mVolume = inVolume;

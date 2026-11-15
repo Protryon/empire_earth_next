@@ -13,25 +13,20 @@ class UIControl;
 class UIForm;
 class UWideString;
 
-// 0x26ddb7 / 0x26de3b (EEUIFMGStatusBox.cpp's range, before its last unit's __FILE__): the exchange buttons
-// 0x5dc..0x5e3: the resource (2, 3, 4, 6) and buy or sell; whether the current player can do it (provisional names)
-bool EEDecodeTradeButton(unsigned long inButton, long& outResource, bool& outSell);
-bool EECanAffordTrade(unsigned long inButton);
-
 struct EEUIFMGIconBitmap;   // EEUIFMGStatusBox.cpp (one loaded icon, 0x14 bytes)
 
 class EEUIFMGStatusBox {
 public:
-    EEUIFMGStatusBox(UIForm* inForm);    // 0x26ada8
+    EEUIFMGStatusBox(UIForm* inForm);
     ~EEUIFMGStatusBox();                    // (ICF-folded into the empty 0xe123d)
     void Fill(EEUnit* inUnit);              // 0x26b593 (the main group's new selection)
     void HideBackgrounds();                 // 0x26c470 (before the main group fills the controls in)
     void Refresh(EEUnit* inUnit);           // 0x26cbe1 (each update of the same selection)
-    void UpdateQueuedCounts(EEComplexUnit* inUnit, long inImprovement);  // 0x26dae7
+    void UpdateQueuedCounts(EEComplexUnit* inUnit, long inImprovement);
     // the rest of EEUIFMGStatusBox.cpp (provisional names; FillArmorAttributes, UpdateArmorTexts and GetAttributeText
     // are Rust's: ee_screens status_box.rs)
     static void LoadIcons();                // 0x26c4fe (the 50 icon bitmaps of the three unit improvement textures)
-    static void UnloadIcons();              // 0x26c8f4
+    static void UnloadIcons();
     static long ReloadIcons();              // 0x26dcd9 (ReloadTexture of the three textures)
     // 0x564ed8: the 50 loaded icons, a class static (its atexit dtor is guarded: bit of 0x564ed0)
     // (provisional name)

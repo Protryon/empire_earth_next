@@ -86,19 +86,6 @@ struct EESETSOUnitTypeNameLess {
     }
 };
 
-// FUNCTION: EXE 0x591759
-// Switches between pick-on-map and specification mode and refreshes the controls (inline; the ctor calls it)
-
-// FUNCTION: EXE 0x59176b
-// Creates the editor's mouse click selection action (EESEAMouseClick ctor, inline; the ctor calls it)
-
-// FUNCTION: EXE 0x59177d
-// Creates the editor's lasso selection action (EESEALasso ctor, inline; the ctor calls it)
-
-// SYNTHETIC: EXE 0x591795
-// (EESEALasso's scalar deleting destructor, ICF-shared with EESETSALasso's)
-
-// FUNCTION: EXE 0x5917b7
 // Selects a line of the unit list and always fires its selection-changed event (inFireEvent is ignored)
 void EESETSOUnitList::ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent, bool inScrollTo)
 {
@@ -106,10 +93,6 @@ void EESETSOUnitList::ChangeSelectionIndex(unsigned long inIndex, bool inFireEve
     this->FireTriggerEvent(kControlTriggerSelectionChanged);
 }
 
-// SYNTHETIC: EXE 0x5917db
-// (EESETSOUnitList's scalar deleting destructor)
-
-// FUNCTION: EXE 0x5917fe
 // Performs the editor's click selection, then refreshes the object page's unit list and name
 void EESETSAMouseClick::Virtual4()
 {
@@ -117,7 +100,6 @@ void EESETSAMouseClick::Virtual4()
     static_cast<EESETSObject*>(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
 }
 
-// FUNCTION: EXE 0x59181f
 // Performs the editor's lasso selection, then refreshes the object page's unit list and name
 void EESETSALasso::Virtual4()
 {
@@ -125,7 +107,6 @@ void EESETSALasso::Virtual4()
     static_cast<EESETSObject*>(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
 }
 
-// FUNCTION: EXE 0x591840
 // Creates an object page combo box, 20 pixels high
 EESETSAComboBox::EESETSAComboBox(unsigned long inID, unsigned long inTextBoxType, const std::vector<UWideString>& inStrings,
                                  GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inMaxListBoxHeight,
@@ -135,7 +116,6 @@ EESETSAComboBox::EESETSAComboBox(unsigned long inID, unsigned long inTextBoxType
 {
 }
 
-// FUNCTION: EXE 0x5918b8
 // Changes the selection, then refreshes the object page's generated name
 void EESETSAComboBox::ChangeSelection()
 {
@@ -143,7 +123,6 @@ void EESETSAComboBox::ChangeSelection()
     static_cast<EESETSObject*>(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
 }
 
-// FUNCTION: EXE 0x5918da
 // Accepts the typed count, stores the object page into its scenario object and refreshes the page
 void EESETSAEditBox::ProcessEnterKey()
 {
@@ -151,15 +130,6 @@ void EESETSAEditBox::ProcessEnterKey()
     gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject)->Store();
     static_cast<EESETSObject*>(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
 }
-
-// SYNTHETIC: EXE 0x591918
-// (EESETSAEditBox's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x591935
-// (EESETSObject's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x591951
-// (EESEAMouseClick's scalar deleting destructor, ICF-shared with EESETSAMouseClick's)
 
 // The object screen whole in Rust (ee_screens editor_object.rs): the constructor (0x58efb7), the destructor
 // (0x591973), Sort, MoveDown, MoveUp, Delete, ClearUnitList, Deactivate, Refresh, Duplicate, Activate (0x591d63),
@@ -169,7 +139,6 @@ void EESETSAEditBox::ProcessEnterKey()
 
 extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
 
-// FUNCTION: EXE 0x58efb7
 // Builds the trigger editor's object page: pick mode radios, count, owner, family, class and parent fields,
 // the selected unit list and the area, near, attribute, visible-by, state and selected-by filters (editor_object.rs)
 EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
@@ -180,7 +149,6 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
     ioIndex = theIndex;
 }
 
-// FUNCTION: EXE 0x591973
 // Destroys the object page, deleting its controls and releasing its click and lasso actions (editor_object.rs)
 EESETSObject::~EESETSObject()
 {
@@ -526,69 +494,3 @@ extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i,
     }
     return 0;
 }
-// FUNCTION: EXE 0x593014
-// Finds a unit action name by id (map<unsigned long, UString>::find)
-
-// FUNCTION: EXE 0x59304e
-// Returns the first action name entry whose id is not below a key (map<unsigned long, UString>::_Lbound)
-
-// FUNCTION: EXE 0x593077
-// Sorts the class list by name, class 0 (any class) first (std::sort with EESETSOUnitTypeNameLess)
-// (the sort's helpers follow: 0x593077..0x59370e)
-
-// FUNCTION: EXE 0x593134
-// Insertion-sorts a range of the class list by name (std::_Insertion_sort, EESETSOUnitTypeNameLess)
-
-// FUNCTION: EXE 0x59315d
-// Quicksorts a range of the class list by name, heap-sorting when too deep (std::_Sort, EESETSOUnitTypeNameLess)
-
-// FUNCTION: EXE 0x593230
-// Insertion-sorts the class list unguarded (std::_Unguarded_insertion_sort, EESETSOUnitTypeNameLess)
-
-// FUNCTION: EXE 0x593261
-// Insertion-sorts a range of the class list by name (std::_Insertion_sort_1, EESETSOUnitTypeNameLess)
-
-// FUNCTION: EXE 0x59330c
-// Compares two unit classes by name, class 0 always first (EESETSOUnitTypeNameLess; also true for 0 vs 0)
-
-// FUNCTION: EXE 0x5933a0
-// Makes a heap of a range of the class list (std::make_heap, EESETSOUnitTypeNameLess)
-
-// FUNCTION: EXE 0x5933da
-// Sorts a heap of the class list (std::sort_heap, EESETSOUnitTypeNameLess)
-
-// FUNCTION: EXE 0x59341b
-// Partitions a range of the class list around a median (std::_Unguarded_partition, EESETSOUnitTypeNameLess)
-
-// FUNCTION: EXE 0x59352c
-// Inserts one class into the sorted part before it (std::_Unguarded_insert, EESETSOUnitTypeNameLess)
-
-// FUNCTION: EXE 0x59355c
-// Makes a heap of a range of the class list (std::_Make_heap, EESETSOUnitTypeNameLess)
-
-// FUNCTION: EXE 0x5935a0
-// Moves the heap's top class to the end (std::pop_heap, EESETSOUnitTypeNameLess)
-
-// FUNCTION: EXE 0x5935c9
-// Sifts a class down the heap (std::_Adjust_heap, EESETSOUnitTypeNameLess)
-
-// FUNCTION: EXE 0x593636
-// Moves the heap's top class to the end (std::_Pop_heap_0, EESETSOUnitTypeNameLess)
-
-// FUNCTION: EXE 0x593689
-// Sifts a class up the heap (std::_Push_heap, EESETSOUnitTypeNameLess)
-
-// FUNCTION: EXE 0x5936da
-// Moves the heap's top class to a given slot and re-heaps (std::_Pop_heap, EESETSOUnitTypeNameLess)
-
-// SYNTHETIC: EXE 0x59370e
-// (UITriStateCheckBox's scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x5937ac
-// Destroys a list of strings (vector<UWideString>::~vector, a jump to _Tidy; the ctor calls it)
-
-// FUNCTION: EXE 0x5937b1
-// Copies a list of strings (vector<UWideString>::operator=)
-
-// FUNCTION: EXE 0x593925
-// Returns the number of strings in a vector<UWideString> (size(), called by operator=)

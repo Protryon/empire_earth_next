@@ -102,7 +102,6 @@ METHODDEF(void) finish_pass_gather JPP((j_compress_ptr cinfo));
  * just count the Huffman symbols used and generate Huffman code tables.
  */
 
-// FUNCTION: JPEG 0x10091b25
 METHODDEF(void)
 start_pass_huff (j_compress_ptr cinfo, boolean gather_statistics)
 {
@@ -176,7 +175,6 @@ start_pass_huff (j_compress_ptr cinfo, boolean gather_statistics)
  * Note this is also used by jcphuff.c.
  */
 
-// FUNCTION: JPEG 0x10091728
 GLOBAL(void)
 jpeg_make_c_derived_tbl (j_compress_ptr cinfo, boolean isDC, int tblno,
 			 c_derived_tbl ** pdtbl)
@@ -276,7 +274,6 @@ jpeg_make_c_derived_tbl (j_compress_ptr cinfo, boolean isDC, int tblno,
 	      { action; } }
 
 
-// FUNCTION: JPEG 0x10091fba
 LOCAL(boolean)
 dump_buffer (working_state * state)
 /* Empty the output buffer; return TRUE if successful, FALSE if must suspend */
@@ -301,7 +298,6 @@ dump_buffer (working_state * state)
  */
 
 INLINE
-// FUNCTION: JPEG 0x10091f17
 LOCAL(boolean)
 emit_bits (working_state * state, unsigned int code, int size)
 /* Emit some bits; return TRUE if successful, FALSE if must suspend */
@@ -340,7 +336,6 @@ emit_bits (working_state * state, unsigned int code, int size)
 }
 
 
-// FUNCTION: JPEG 0x1009204b
 LOCAL(boolean)
 flush_bits (working_state * state)
 {
@@ -354,7 +349,6 @@ flush_bits (working_state * state)
 
 /* Encode a single block's worth of coefficients */
 
-// FUNCTION: JPEG 0x10091da0
 LOCAL(boolean)
 encode_one_block (working_state * state, JCOEFPTR block, int last_dc_val,
 		  c_derived_tbl *dctbl, c_derived_tbl *actbl)
@@ -453,7 +447,6 @@ encode_one_block (working_state * state, JCOEFPTR block, int last_dc_val,
  * Emit a restart marker & resynchronize predictions.
  */
 
-// FUNCTION: JPEG 0x10091fde
 LOCAL(boolean)
 emit_restart (working_state * state, int restart_num)
 {
@@ -479,7 +472,6 @@ emit_restart (working_state * state, int restart_num)
  * Encode and output one MCU's worth of Huffman-compressed coefficients.
  */
 
-// FUNCTION: JPEG 0x10091c96
 METHODDEF(boolean)
 encode_mcu_huff (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
 {
@@ -537,7 +529,6 @@ encode_mcu_huff (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
  * Finish up at the end of a Huffman-compressed scan.
  */
 
-// FUNCTION: JPEG 0x1009206f
 METHODDEF(void)
 finish_pass_huff (j_compress_ptr cinfo)
 {
@@ -577,7 +568,6 @@ finish_pass_huff (j_compress_ptr cinfo)
 
 /* Process a single block's worth of coefficients */
 
-// FUNCTION: JPEG 0x10092191
 LOCAL(void)
 htest_one_block (j_compress_ptr cinfo, JCOEFPTR block, int last_dc_val,
 		 long dc_counts[], long ac_counts[])
@@ -651,7 +641,6 @@ htest_one_block (j_compress_ptr cinfo, JCOEFPTR block, int last_dc_val,
  * No data is actually output, so no suspension return is possible.
  */
 
-// FUNCTION: JPEG 0x100920de
 METHODDEF(boolean)
 encode_mcu_gather (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
 {
@@ -712,7 +701,6 @@ encode_mcu_gather (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
  * So the extra complexity of an optimal algorithm doesn't seem worthwhile.
  */
 
-// FUNCTION: JPEG 0x1009192d
 GLOBAL(void)
 jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
 {
@@ -854,7 +842,6 @@ jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
  * Finish up a statistics-gathering pass and create the new Huffman tables.
  */
 
-// FUNCTION: JPEG 0x10092258
 METHODDEF(void)
 finish_pass_gather (j_compress_ptr cinfo)
 {
@@ -900,7 +887,6 @@ finish_pass_gather (j_compress_ptr cinfo)
  * Module initialization routine for Huffman entropy encoding.
  */
 
-// FUNCTION: JPEG 0x10091aec
 GLOBAL(void)
 jinit_huff_encoder (j_compress_ptr cinfo)
 {

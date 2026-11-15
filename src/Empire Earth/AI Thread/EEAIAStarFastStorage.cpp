@@ -11,23 +11,17 @@
 #include "ee/EEAIAStarStorage.h"
 #include "ee/EEAIAStarFastStorage.h"
 
-// FUNCTION: EXE 0x415c36
 // Creates the A* storage of a node-map kind
 EEAIAStarFastStorage::EEAIAStarFastStorage(EeAStarStorageKind inKind)
     : EEAIAStarStorage(inKind)
 {
 }
 
-// SYNTHETIC: EXE 0x415c4c
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x415c68
 // Destroys the storage
 EEAIAStarFastStorage::~EEAIAStarFastStorage()
 {
 }
 
-// FUNCTION: EXE 0x415d1c
 // Sizes the node map and tile flags to the grid and clears both
 void EEAIAStarFastStorage::PrepareGrid(long inWidth, long inHeight)
 {

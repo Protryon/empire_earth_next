@@ -13,7 +13,7 @@ extern bool& gAllowCustomCivs;              // 0x531256 (a scenario game: the ti
 extern bool& gIsScenarioGame;               // 0x531259 (with gAllowCustomCivs: no premade-civilization check)
 
 long CivBuilderEditCivilization();          // 0x280faf (pauses, then opens the builder for the current player)
-long CivBuilderCreateCivilization(EECivilization* inCivilization, bool inReload);   // 0x280ffd
+long CivBuilderCreateCivilization(EECivilization* inCivilization, bool inReload);
 long CivBuilderSaveCivilization(const UString& inName, bool inOverwrite);  // 0x28015d (the edited civilization as inName)
 void CivBuilderEditCurrentCivilization();   // 0x280bb1 (the current player's civilization edited)
 void CivBuilderFreeCivilization();          // the edited civilization deleted (delete gEditableCivilization)

@@ -12,7 +12,7 @@
 
 class EECPASGAirTransport : public EECPASGAir, public EECPASGTransport {
 public:
-    EECPASGAirTransport(EECPAttackGroup* inGroup, long inKind);   // 0x440cd
+    EECPASGAirTransport(EECPAttackGroup* inGroup, long inKind);
     virtual ~EECPASGAirTransport();         // +0x00 (0x4410b)
     virtual void SetTask(const EECPAGTask& inTask);     // +0x14 0x44150
     // +0x1c 0xac98e (`ret 0xc`)

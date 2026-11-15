@@ -33,7 +33,6 @@ extern void free JPP((void *ptr));
  */
 
 GLOBAL(void *)
-// FUNCTION: EXEIMG 0x814110
 jpeg_get_small (j_common_ptr cinfo, size_t sizeofobject)
 {
   return (void *) malloc(sizeofobject);
@@ -79,7 +78,6 @@ jpeg_free_large (j_common_ptr cinfo, void FAR * object, size_t sizeofobject)
 #endif
 
 GLOBAL(long)
-// FUNCTION: EXEIMG 0x814120
 jpeg_mem_available (j_common_ptr cinfo, long min_bytes_needed,
 		    long max_bytes_needed, long already_allocated)
 {
@@ -96,7 +94,6 @@ jpeg_mem_available (j_common_ptr cinfo, long min_bytes_needed,
 
 
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x8141a0
 read_backing_store (j_common_ptr cinfo, backing_store_ptr info,
 		    void FAR * buffer_address,
 		    long file_offset, long byte_count)
@@ -110,7 +107,6 @@ read_backing_store (j_common_ptr cinfo, backing_store_ptr info,
 
 
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x814210
 write_backing_store (j_common_ptr cinfo, backing_store_ptr info,
 		     void FAR * buffer_address,
 		     long file_offset, long byte_count)
@@ -124,7 +120,6 @@ write_backing_store (j_common_ptr cinfo, backing_store_ptr info,
 
 
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x814280
 close_backing_store (j_common_ptr cinfo, backing_store_ptr info)
 {
   fclose(info->temp_file);
@@ -143,7 +138,6 @@ close_backing_store (j_common_ptr cinfo, backing_store_ptr info)
  */
 
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x814140
 jpeg_open_backing_store (j_common_ptr cinfo, backing_store_ptr info,
 			 long total_bytes_needed)
 {
@@ -161,14 +155,12 @@ jpeg_open_backing_store (j_common_ptr cinfo, backing_store_ptr info,
  */
 
 GLOBAL(long)
-// FUNCTION: EXEIMG 0x814290
 jpeg_mem_init (j_common_ptr cinfo)
 {
   return DEFAULT_MAX_MEM;	/* default for max_memory_to_use */
 }
 
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x8142a0
 jpeg_mem_term (j_common_ptr cinfo)
 {
   /* no work */

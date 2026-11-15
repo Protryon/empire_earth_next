@@ -6,8 +6,8 @@
 
 class EEFLooseLine : public EEFLine {
 public:
-    EEFLooseLine();                     // 0xddc73
-    virtual ~EEFLooseLine();             // 0xddcbb (??_G 0xddc9f)
+    EEFLooseLine();
+    virtual ~EEFLooseLine();
 };
 
 #endif

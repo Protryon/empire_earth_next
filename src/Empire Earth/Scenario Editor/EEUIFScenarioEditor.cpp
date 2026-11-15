@@ -90,21 +90,16 @@
 #include "ee/EESEAQuickSaveLoad.h"
 #include "rust/ee_screens.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
-extern unsigned long& gTexturePixelDepth;    // 0x5308b4
+extern unsigned long& gTexturePixelDepth;
 extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's fonts)
-extern GEFont* gU531934;                    // 0x531934
-extern GEFont* gU531938;                    // 0x531938
+extern GEFont* gU531934;
+extern GEFont* gU531938;
 extern RTSRenderObject* gU56534C;           // the game's base render object (EERenderObject.cpp)
 extern RTSRenderObject* gU56535C;           // the terrain render object (an EEROTerrain newed in Empire Earth.cpp)
 extern bool gSightUpdatesEnabled;
 extern GEViewport gViewport;
 void EEPostGraphicsAll();                   // EERenderObject.cpp: every render object
 void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (EEGhostUnit.cpp: the ghost at the mouse)
-
-// FUNCTION: EXE 0x59ccc0
-// The trigger-only save (Ctrl+S): the scenario's triggers to ScenarioTriggers.scn and a ScenarioTriggers.txt report
-// of every trigger, the unused effects, conditions, objects and areas and the slow looping triggers (RTTI
-// EEUIESaveScenarioTriggersOnly > UIEvent; an EESEERust over editor_form.rs)
 
 // TEST ONLY (tools/sim_editor.py `trigreport`): the trigger-only save as its hot key (Ctrl+S) runs it
 long EESETestSaveTriggersOnly(UIForm* inForm)
@@ -115,7 +110,6 @@ long EESETestSaveTriggersOnly(UIForm* inForm)
     return theResult;
 }
 
-// FUNCTION: EXE 0x59d615
 // Creates the editor form (id 1000, 15 control groups): button texture, edge scroll, mini map, player combo box,
 // labels, tab groups, tool bar, hide-UI check box, camera and trigger save/load and debug hot keys; map tab on
 // (editor_form.rs)
@@ -131,15 +125,6 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
     this->SetMusicFileName(theText);
 }
 
-// FUNCTION: EXE 0x59e17a .. 0x59e2a7, 0x59e32f .. 0x59e3b0
-// The form's events' scalar deleting destructors (the wheel zoom, the media dump, the hidden toggle, the zoom keys,
-// the mouse move keys, the camera's revolve and rotate, the new player, the home rotation, the trigger-only save
-// and load): screen events and EESEERusts now
-
-// SYNTHETIC: EXE 0x59e3db
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIFScenarioEditor+0x0)
-
-// FUNCTION: EXE 0x59e3f7
 // Destroys the editor form, releasing its events, textures and edge scroll and deleting its tabs and controls
 // (editor_form.rs)
 EEUIFScenarioEditor::~EEUIFScenarioEditor()
@@ -147,14 +132,12 @@ EEUIFScenarioEditor::~EEUIFScenarioEditor()
     ee_screens_sefm_free(this->mRust);
 }
 
-// FUNCTION: EXE 0x59e606
 // Adds a unit to the editor selection, showing the cargo panel for a placed carrier and the status of a lone unit
 void EEUIFScenarioEditor::SelectUnit(EEUnit* inUnit)
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SELECT_UNIT, 0, inUnit, NULL);
 }
 
-// FUNCTION: EXE 0x59e68a
 // Closes the editor form, restoring the game camera mode, the game render list and the full-window mouse bounds
 void EEUIFScenarioEditor::Close()
 {
@@ -169,7 +152,6 @@ void EEUIFScenarioEditor::Close()
     UIForm::Close();
 }
 
-// FUNCTION: EXE 0x59e72c
 // Prepares the frame: dirties the game view (unless full view) and mini map, moves the placement ghost, updates the
 // current tab group and the edge scroll (unless full view or a control holds the mouse) (editor_form.rs)
 long EEUIFScenarioEditor::CopyData()
@@ -178,34 +160,6 @@ long EEUIFScenarioEditor::CopyData()
     return UIForm::CopyData();
 }
 
-// FUNCTION: EXE 0x59e80f
-// Loads the bottom panel texture (scenpart) and the full-screen tab background (Scenfull) (CreateBackground: the
-// host's EE_SCREENS_SEFM_OP_BASICS)
-
-// SYNTHETIC: EXE 0x59e9de
-// (the scalar deleting destructor, emitted with the vtable; slot UIFullBackground+0x0)
-
-// FUNCTION: EXE 0x59e9fb
-// Creates the brush group, the undo and redo buttons and the seven tab groups (CreatePanels, editor_form.rs)
-
-// FUNCTION: EXE 0x59eba9
-// Creates the seven tab buttons along the bottom and the civilization builder button after them (CreateTabButtons,
-// editor_form.rs over sEditorTabs 0x4c46d0)
-
-// FUNCTION: EXE 0x59ef2f
-// Destroys and frees the open-civilization-builder event (scalar deleting destructor: a screen event now)
-
-// FUNCTION: EXE 0x59ef5a
-// Creates the panel group of a tab (CreateTabGroup: the host's EE_SCREENS_SEFM_OP_TAB_GROUP)
-
-// FUNCTION: EXE 0x59f0b1
-// Creates the six tool bar buttons and their events; the two quick buttons share one quick save/load action
-// (CreateToolbarButtons, editor_form.rs over sToolbarButtons 0x4c47b0)
-
-// FUNCTION: EXE 0x59f4df
-// Destroys and frees the quick save/load action (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x59f501
 // Draws the full-view background or the bottom panel, then the current tab group; returns the full view's result
 long EEUIFScenarioEditor::DrawBackground(const GERectangle& inRectangle)
 {
@@ -213,49 +167,42 @@ long EEUIFScenarioEditor::DrawBackground(const GERectangle& inRectangle)
     return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_DRAW_BACKGROUND, 0, NULL, theRectangle);
 }
 
-// FUNCTION: EXE 0x59f5b3
 // Draws the form's polygons (no editor additions)
 long EEUIFScenarioEditor::DrawPolygons()
 {
     return UIForm::DrawPolygons();
 }
 
-// FUNCTION: EXE 0x59f5b9
 // Leaves the current tab: hides the brush highlight, leaves its group (unless switching), disables its controls
 void EEUIFScenarioEditor::LeaveTab()
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_LEAVE_TAB, 0, NULL, NULL);
 }
 
-// FUNCTION: EXE 0x59f615
 // Switches to a tab: enters or leaves full view as needed, enables its controls, enters and loads its group
 void EEUIFScenarioEditor::SelectTab(unsigned char inFlag, long inTab)
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SELECT_TAB, (int32_t)(inFlag | (inTab << 8)), NULL, NULL);
 }
 
-// FUNCTION: EXE 0x59f6e9
 // Leaves the editor through the load thread, to test the scenario or to quit, back on the map tab; suspends the form
 void EEUIFScenarioEditor::ExitEditor(bool inTestScenario)
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_EXIT_EDITOR, inTestScenario ? 1 : 0, NULL, NULL);
 }
 
-// FUNCTION: EXE 0x59f757
 // Resumes the editor after a load and reloads the current tab group
 void EEUIFScenarioEditor::ResumeCurrentGroup()
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_RESUME_GROUP, 0, NULL, NULL);
 }
 
-// FUNCTION: EXE 0x59f77b
 // Suspends the editor and passes an event to the load thread, which posts it to the user interface
 void EEUIFScenarioEditor::PostLoadEvent(UReferenceCounter* inObject)
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_POST_LOAD_EVENT, 0, inObject, NULL);
 }
 
-// FUNCTION: EXE 0x59f794
 // Opens the editor: editor camera, backgrounds, paused music and ambient sound, editor game view and mini map,
 // enters the current tab; posts the exit action if a save asked to exit afterwards (editor_form.rs)
 void EEUIFScenarioEditor::Open()
@@ -263,42 +210,36 @@ void EEUIFScenarioEditor::Open()
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_OPEN, 0, NULL, NULL);
 }
 
-// FUNCTION: EXE 0x59fa3b
 // Suspends the editor and passes a loaded object to the load thread to show
 void EEUIFScenarioEditor::PostShowLoadedObject(UReferenceCounter* inObject)
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_POST_SHOW_LOADED, 0, inObject, NULL);
 }
 
-// FUNCTION: EXE 0x59fa54
 // Deselects every selected unit and hides the cargo panel and the unit status
 void EEUIFScenarioEditor::ClearSelection()
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_CLEAR_SELECTION, 0, NULL, NULL);
 }
 
-// FUNCTION: EXE 0x59fab9
 // Removes the first unit from the editor selection, updating the cargo panel and the unit status
 void EEUIFScenarioEditor::DeselectFirstUnit()
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_DESELECT_FIRST, 0, NULL, NULL);
 }
 
-// FUNCTION: EXE 0x59fb84
 // Removes a unit from the editor selection, updating the cargo panel, and the unit status if it was first
 void EEUIFScenarioEditor::DeselectUnit(EEUnit* inUnit)
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_DESELECT_UNIT, 0, inUnit, NULL);
 }
 
-// FUNCTION: EXE 0x59fc97
 // Makes the current tab group store its settings
 void EEUIFScenarioEditor::RefreshCurrentGroup()
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_STORE_GROUP, 0, NULL, NULL);
 }
 
-// FUNCTION: EXE 0x59fcb4
 // Sets the editor's game view rectangle and disables the current tab group while the UI is hidden
 void EEUIFScenarioEditor::SetGameView(const GERectangle& inRectangle, bool inIsUIHidden)
 {
@@ -306,7 +247,6 @@ void EEUIFScenarioEditor::SetGameView(const GERectangle& inRectangle, bool inIsU
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SET_GAME_VIEW, inIsUIHidden ? 1 : 0, NULL, theRectangle);
 }
 
-// FUNCTION: EXE 0x59fd09
 // Shows the given loading text in the top label, or hides the label for an empty text
 void EEUIFScenarioEditor::SetLoadText(const UWideString& inText)
 {
@@ -314,21 +254,18 @@ void EEUIFScenarioEditor::SetLoadText(const UWideString& inText)
                          const_cast<UWideString*>(&inText), NULL);
 }
 
-// FUNCTION: EXE 0x59fd43
 // Enters full view: resets the game render list to its base object, hides the mini map and redraws all controls
 void EEUIFScenarioEditor::EnterFullView()
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_ENTER_FULL_VIEW, 0, NULL, NULL);
 }
 
-// FUNCTION: EXE 0x59fd91
 // Leaves full view: restores the full game render list, shows the mini map and redraws all controls
 void EEUIFScenarioEditor::LeaveFullView()
 {
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_LEAVE_FULL_VIEW, 0, NULL, NULL);
 }
 
-// FUNCTION: EXE 0x59fdc8
 // Handles the editor keys (; quick save, / quick load, T / Shift+T grid mode, 1-8 and Alt+1-8 pick a player),
 // else the tab group's and the form's keys; nothing while suspended (editor_form.rs)
 long EEUIFScenarioEditor::UpdateKeyboard()
@@ -338,7 +275,6 @@ long EEUIFScenarioEditor::UpdateKeyboard()
     return UIForm::UpdateKeyboard();
 }
 
-// FUNCTION: EXE 0x5a0083
 // Passes the mouse to the current tab group unless a control captured it; does nothing while suspended
 long EEUIFScenarioEditor::UpdateMouse()
 {
@@ -347,15 +283,6 @@ long EEUIFScenarioEditor::UpdateMouse()
     return UIForm::UpdateMouse();
 }
 
-// FUNCTION: EXE 0x5a00c6, 0x5a0102, 0x5a013e
-// The quick save/load action's inline ctor and dtor out of line, and its base's scalar deleting destructor
-
-// FUNCTION: EXE 0x5a015a .. 0x5a02ea
-// The hide-UI, quick load and quick save events (EESEERusts) and the load, save, test and exit buttons' screen
-// events: their ctors and scalar deleting destructors
-
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
 void EEUIFScenarioEditor::FnE123D()
 {
 }

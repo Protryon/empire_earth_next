@@ -192,7 +192,6 @@ static EeMapEdges EEAIMapEdges(EEMap* inMap)
     return theEdges;
 }
 
-// FUNCTION: EXE 0x41ed2c
 // Returns the AI tile kind of inTile: 0 off the map; by continent category and shore flag (land 1/7..9, water 2/10/11,
 // space 15/10/11, map edge 6, cliff 3); on land 4 for live wood, 12/13/14 under a live blocking unit, wall or gate
 // (Rust: ee_astar tile_kind.rs over the tile's continent category, terrain, AI value and units)
@@ -208,7 +207,6 @@ long EEAIGetTileKind(const EETileLocation& inTile)
     return ee_astar_tile_kind(theKind, (int32_t)theTile->mTerrainType, (int32_t)theFlag, theUnits.data(), theUnits.size());
 }
 
-// FUNCTION: EXE 0x41eea9
 // Returns the id of the first live, finished blocking unit or gate on inTile (wood only if not used up), -1 if none
 // (Rust: ee_astar tile_kind.rs)
 long EEAIGetTileWallID(const EETileLocation& inTile)
@@ -223,7 +221,6 @@ long EEAIGetTileWallID(const EETileLocation& inTile)
 
 static void EEAIContinentsShutDown();
 
-// FUNCTION: EXE 0x41ef12
 // Resets the global continent manager, frees its tile grids (flags, continent ids, values, sub-sector ids) and the
 // A* node pool
 void EEAIContinentManager::Shutdown()
@@ -240,7 +237,6 @@ void EEAIContinentManager::Shutdown()
     EEAIContinentsShutDown();
     EEAIAStarStorage::FreeNodePool();
 }
-// FUNCTION: EXE 0x41ef6b
 // Creates an empty continent manager: no grids, every id and counter at 0
 EEAIContinentManager::EEAIContinentManager()
     : mTileValues(NULL), mContinentIDs(NULL), mPathSubSectorIDs(NULL), mTileFlags(NULL), mState(0), mLastSerial(0), mL118(0),
@@ -252,17 +248,12 @@ EEAIContinentManager::EEAIContinentManager()
     }
 }
 
-// SYNTHETIC: EXE 0x41f103
-// (EEAIContinentManager's scalar deleting destructor)
-
-// FUNCTION: EXE 0x41f11f
 // Destroys the continent manager by shutting down the global one (Shutdown)
 EEAIContinentManager::~EEAIContinentManager()
 {
     EEAIContinentManager::Shutdown();
 }
 
-// FUNCTION: EXE 0x41f1b8
 // Registers a choke point under its index, adds it to its continent's choke point list and to the area map
 void EEAIContinentManager::AddChokePoint(EEAIChokePoint* inChokePoint)
 {
@@ -274,7 +265,6 @@ void EEAIContinentManager::AddChokePoint(EEAIChokePoint* inChokePoint)
     this->AddArea(inChokePoint);
 }
 
-// FUNCTION: EXE 0x41f1f3
 // Sorts and dedups ioTiles, then queues each tile under its path sector's id in the pending sector tiles for Rebuild
 void EEAIContinentManager::AddSectorTiles(std::vector<U2DPoint<long> >& ioTiles)
 {
@@ -298,7 +288,6 @@ void EEAIContinentManager::AddSectorTiles(std::vector<U2DPoint<long> >& ioTiles)
     }
 }
 
-// FUNCTION: EXE 0x41f3a0
 // Registers a rectangle area under its id, updates its continents and adds it to the area map
 void EEAIContinentManager::AddRectangleArea(EEAIRectangleArea* inArea)
 {
@@ -308,7 +297,6 @@ void EEAIContinentManager::AddRectangleArea(EEAIRectangleArea* inArea)
     this->AddArea(inArea);
 }
 
-// FUNCTION: EXE 0x41f45a
 // Fills ioAreas (indexed x * size + y) with the path area of every tile of inMap, NULL off the grid or the map
 void EEAIContinentManager::GetPathAreas(EEMap* inMap, EEAIPathArea**& ioAreas)
 {
@@ -325,7 +313,6 @@ void EEAIContinentManager::GetPathAreas(EEMap* inMap, EEAIPathArea**& ioAreas)
     }
 }
 
-// FUNCTION: EXE 0x41f503
 // Deletes every continent, choke point, forest, hill, rectangle area, path area and sector, empties the area map,
 // pending sector tiles, shore lists and free ids, and zeroes every counter
 void EEAIContinentManager::Reset()
@@ -363,7 +350,6 @@ void EEAIContinentManager::Reset()
 
 static void EEAIChokePointsDeleted();
 
-// FUNCTION: EXE 0x41f5cb
 // Deletes every choke point and empties the list
 void EEAIContinentManager::DeleteChokePoints()
 {
@@ -371,7 +357,6 @@ void EEAIContinentManager::DeleteChokePoints()
     EEAIChokePointsDeleted();
 }
 
-// FUNCTION: EXE 0x41f5dd
 // Deletes every continent and zeroes the land, water and space tile counts
 void EEAIContinentManager::DeleteContinents()
 {
@@ -381,28 +366,24 @@ void EEAIContinentManager::DeleteContinents()
     this->mNumSpaceTiles = 0;
 }
 
-// FUNCTION: EXE 0x41f600
 // Deletes every forest
 void EEAIContinentManager::DeleteForests()
 {
     DeleteVectorContents(this->mForests);
 }
 
-// FUNCTION: EXE 0x41f60b
 // Deletes every hill
 void EEAIContinentManager::DeleteHills()
 {
     DeleteVectorContents(this->mHills);
 }
 
-// FUNCTION: EXE 0x41f619
 // Deletes every path area
 void EEAIContinentManager::DeletePathAreas()
 {
     DeleteVectorContents(this->mPathAreas);
 }
 
-// FUNCTION: EXE 0x41f624
 // Deletes every path sector and resets the sub-sector ids (last id, free list) and the sector grid information
 void EEAIContinentManager::DeletePathSectors()
 {
@@ -412,14 +393,12 @@ void EEAIContinentManager::DeletePathSectors()
     this->mRegionInformation.Reset();
 }
 
-// FUNCTION: EXE 0x41f651
 // Deletes every rectangle area
 void EEAIContinentManager::DeleteRectangleAreas()
 {
     DeleteVectorContents(this->mRectangleAreas);
 }
 
-// FUNCTION: EXE 0x41f65f
 // Returns 10 per wood resource unit on tile (inX, inY), 0 off the map
 long EEAIContinentManager::GetResourceWeight(long inX, long inY)
 {
@@ -434,7 +413,6 @@ long EEAIContinentManager::GetResourceWeight(long inX, long inY)
     return theResult;
 }
 
-// FUNCTION: EXE 0x41f6b1
 // Makes inSubSector and the sub-sector *inID neighbours both ways; with inAdd also records the diagonal link pair
 // inLink on each, without it drops their existing links
 void EEAIContinentManager::LinkSubSectors(std::vector<EEAIPathSubSector*>** inSubSectors, EEAIPathSubSector* inSubSector,
@@ -469,7 +447,6 @@ void EEAIContinentManager::LinkSubSectors(std::vector<EEAIPathSubSector*>** inSu
     }
 }
 
-// FUNCTION: EXE 0x41f813
 // Allocates a zeroed per-tile value grid (width x height), freeing the old one
 void EEAIContinentManager::AllocateTileValues()
 {
@@ -478,14 +455,12 @@ void EEAIContinentManager::AllocateTileValues()
     memset(this->mTileValues, 0, this->mHeight * this->mWidth * sizeof(long));
 }
 
-// FUNCTION: EXE 0x41f863
 // Resets the region checksum to 0
 void EEAIContinentManager::ClearChecksum()
 {
     this->mChecksum = 0;
 }
 
-// FUNCTION: EXE 0x41f86b
 // Builds the choke points of inMap with a search size by map size (4 on small maps up to 7 on huge ones; Rust:
 // ee_astar sectors.rs choke_passes), then drops those beside the map edge (PruneChokePoints)
 void EEAIContinentManager::Build(EEMap* inMap)
@@ -494,7 +469,6 @@ void EEAIContinentManager::Build(EEMap* inMap)
     this->PruneChokePoints();
 }
 
-// FUNCTION: EXE 0x41f8ae
 // Floods inMap into continents (one fill per tile not yet in one), registers them by id with fresh serials,
 // counts the land, water and space tiles, then builds the continent grid (CreateContinentGrid)
 void EEAIContinentManager::CreateContinents(EEMap* inMap)
@@ -538,7 +512,6 @@ void EEAIContinentManager::CreateContinents(EEMap* inMap)
     this->CreateContinentGrid(theMachine, inMap);
 }
 
-// FUNCTION: EXE 0x41fa5c
 // Builds the tile-to-continent id grid, the continent adjacency matrix and neighbour lists from the fill, collects
 // the shore tiles (also onto each continent), then sorts the shore lists and every continent's tiles
 // (Rust: ee_astar continent_grid.rs create_continent_grid over the fill's tiles, every tile's terrain and the
@@ -599,7 +572,6 @@ void EEAIContinentManager::CreateContinentGrid(EEAIContinentMachine& inMachine, 
     ee_astar_continent_grid_free(theGrid);
 }
 
-// FUNCTION: EXE 0x4201f7
 // Numbers the continent chains of kind inKind (which of water, cliff and space a chain may cross): one search from
 // every land continent without a chain id of that kind yet (inMap is not read)
 void EEAIContinentManager::NumberContinentChains(EEMap* inMap, unsigned long inKind)
@@ -632,7 +604,6 @@ void EEAIContinentManager::NumberContinentChains(EEMap* inMap, unsigned long inK
     }
 }
 
-// FUNCTION: EXE 0x42033f
 // Grows the hills of inMap: one fill from every non-cliff land tile at height level 4 or more not yet in a hill,
 // then registers each hill (serial, its continent, the area map)
 void EEAIContinentManager::CreateHills(EEMap* inMap)
@@ -676,7 +647,6 @@ void EEAIContinentManager::CreateHills(EEMap* inMap)
     }
 }
 
-// FUNCTION: EXE 0x4204ea
 // Assigns the inKind region ids (water body, land mass, space or surface region) to the path areas: one fill from
 // every matching tile whose area has no such id yet, then keeps the next id of that kind (Rust: ee_astar
 // path_area_kind.rs, the start test and the corner test of each tile)
@@ -739,7 +709,6 @@ void EEAIContinentManager::CreatePathAreaKind(EEMap* inMap, long inKind)
     theMachine.Reset();
 }
 
-// FUNCTION: EXE 0x4208cc
 // Grows the path areas and forests of inMap and registers them (serials, continents, area map), builds the path
 // sectors, then records each sub-sector's continent as a neighbour of its sector
 void EEAIContinentManager::CreatePathAreas(EEMap* inMap)
@@ -795,7 +764,6 @@ void EEAIContinentManager::CreatePathAreas(EEMap* inMap)
     }
 }
 
-// FUNCTION: EXE 0x420b48
 // Builds the path-sector grid of inMap (sector and region size by map size) and the sub-sectors (one fill per tile
 // not yet in one, kept inside its sector), files them with their path areas, then links them (LinkSubSectorGrid)
 void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStorage* inStorage)
@@ -907,7 +875,6 @@ void EEAIContinentManager::ApplySubSectorLinks(EeSubSectorLinks* inLinks)
     ee_astar_sub_sector_links_free(inLinks);
 }
 
-// FUNCTION: EXE 0x420ee1
 // Copies the fill's sub-sector ids into the id grid and links every pair of neighbouring sub-sectors; a diagonal
 // link carries the two corner sub-sectors when both are open (Rust: ee_astar sub_sector_links.rs walks the grid and
 // lists the LinkSubSectors calls; the id grid is filled first, the walk reads the fill's grid)
@@ -926,7 +893,6 @@ void EEAIContinentManager::LinkSubSectorGrid(EEAIPathSectorMachine& inMachine, E
     this->ApplySubSectorLinks(ee_astar_sub_sector_links(0, (int32_t)theWidth, 0, (int32_t)theHeight, &theCallbacks));
 }
 
-// FUNCTION: EXE 0x42124c
 // Creates one rectangle area per scenario area with a non-empty rectangle; the list is sized counting only anchored
 // areas, so an anchorless one is stored past its end
 void EEAIContinentManager::CreateScenarioAreas(EEMap* inMap)
@@ -983,7 +949,6 @@ void EEAIContinentManager::CreateScenarioAreas(EEMap* inMap)
     }
 }
 
-// FUNCTION: EXE 0x4215dc
 // After a partial rebuild: writes the new sub-sectors into the id grid, then re-links the sub-sectors of every tile
 // of the sectors in inSectors (grown by one tile on each side) (Rust: ee_astar sub_sector_links.rs walks each
 // sector's tiles through the manager's lookup and lists the LinkSubSectors calls; the C++ also wrote each tile's id
@@ -1059,7 +1024,6 @@ static void EEAIAreaNeighbours(EEAIContinentManager& inManager, EEMap* inMap, co
         outAreas[i] = EEAIAreaTileAt(inManager, inMap, inTile.mX + kOffsets[i][0], inTile.mY + kOffsets[i][1], outTiles[i]);
 }
 
-// FUNCTION: EXE 0x421a18
 // Returns the inKind region id (land mass, water body, space or surface region) of a fitting path area next to
 // inTile, 0 if none; land mass skips water, cliff..forest and map-edge areas unless of kind inAreaKind (Rust: ee_astar
 // repair.rs)
@@ -1079,7 +1043,6 @@ unsigned short EEAIContinentManager::GetAdjacentAreaID(long inKind, const EETile
     return theResult;
 }
 
-// FUNCTION: EXE 0x421e22
 // Lists the continents adjacent to continent inID, itself included; empty for an unknown id
 void EEAIContinentManager::GetConnectedIDs(std::vector<unsigned short>& outIDs, unsigned short inID)
 {
@@ -1090,7 +1053,6 @@ void EEAIContinentManager::GetConnectedIDs(std::vector<unsigned short>& outIDs, 
     outIDs.resize(ee_astar_adjacent_ids(this->mTileFlags, this->mFlagsWidth, inID, true, outIDs.data()));
 }
 
-// FUNCTION: EXE 0x421e80
 // Lists the continents adjacent to continent inID, itself excluded; empty for an unknown id
 void EEAIContinentManager::GetAdjacentIDs(std::vector<unsigned short>& outIDs, unsigned short inID)
 {
@@ -1101,7 +1063,6 @@ void EEAIContinentManager::GetAdjacentIDs(std::vector<unsigned short>& outIDs, u
     outIDs.resize(ee_astar_adjacent_ids(this->mTileFlags, this->mFlagsWidth, inID, false, outIDs.data()));
 }
 
-// FUNCTION: EXE 0x421ee2
 // Returns whether any tile of inTiles is a shore tile
 bool EEAIContinentManager::HasShoreTile(const std::vector<U2DPoint<long> >& inTiles) const
 {
@@ -1116,14 +1077,12 @@ bool EEAIContinentManager::HasShoreTile(const std::vector<U2DPoint<long> >& inTi
     return theResult;
 }
 
-// FUNCTION: EXE 0x421f13
 // Returns whether two units stand on the same continent
 bool EEAIContinentManager::InSameContinent(EEUnit* inFirst, EEUnit* inSecond)
 {
     return this->GetContinentID(inFirst->GetTileX(), inFirst->GetTileY()) == this->GetContinentID(inSecond->GetTileX(), inSecond->GetTileY());
 }
 
-// FUNCTION: EXE 0x421f5a
 // Returns the map tile's AI value (shore or wood value) at (inX, inY), 0 off the map
 long EEAIContinentManager::GetTileFlag(long inX, long inY)
 {
@@ -1131,7 +1090,6 @@ long EEAIContinentManager::GetTileFlag(long inX, long inY)
     return theTile ? theTile->mAIValue : 0;
 }
 
-// FUNCTION: EXE 0x421f97
 // Returns whether every tile of inTiles has the same inKind region id (true for an empty list)
 bool EEAIContinentManager::InSameArea(const std::vector<EETileCoordinate>& inTiles, long inKind)
 {
@@ -1149,14 +1107,12 @@ bool EEAIContinentManager::InSameArea(const std::vector<EETileCoordinate>& inTil
     return theResult;
 }
 
-// FUNCTION: EXE 0x421fe7
 // Returns whether inUnit can reach inTarget's tile (CanGetTo)
 bool EEAIContinentManager::CanGetToUnit(EEUnit* inUnit, EEUnit* inTarget)
 {
     return this->CanGetTo(inUnit, inTarget->GetTileX(), inTarget->GetTileY());
 }
 
-// FUNCTION: EXE 0x421fff
 // Returns whether inUnit can reach tile (inX, inY): same continent unless air-blocked, else by its complex unit:
 // planet ships always, aircraft by planet on space maps, ships by water body or space region
 bool EEAIContinentManager::CanGetTo(EEUnit* inUnit, long inX, long inY)
@@ -1235,7 +1191,6 @@ bool EEAIContinentManager::CanGetTo(EEUnit* inUnit, long inX, long inY)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4221c1
 // Returns the choke point at inUnit's tile, NULL if none
 EEAIChokePoint* EEAIContinentManager::GetChokePointAt(EEUnit* inUnit)
 {
@@ -1243,7 +1198,6 @@ EEAIChokePoint* EEAIContinentManager::GetChokePointAt(EEUnit* inUnit)
     return this->GetChokePointAt(theTile);
 }
 
-// FUNCTION: EXE 0x4221e2
 // Returns the choke point of inTile's land continent that contains inTile, NULL if none
 EEAIChokePoint* EEAIContinentManager::GetChokePointAt(const EETileLocation& inTile)
 {
@@ -1262,7 +1216,6 @@ EEAIChokePoint* EEAIContinentManager::GetChokePointAt(const EETileLocation& inTi
     return theChokePoint;
 }
 
-// FUNCTION: EXE 0x422255
 // Appends the choke points of continent inID (every choke point for id 0) to outChokePoints, cleared first if inClear
 void EEAIContinentManager::GetChokePoints(std::vector<EEAIChokePoint*>& outChokePoints, unsigned short inID, bool inClear)
 {
@@ -1285,7 +1238,6 @@ void EEAIContinentManager::GetChokePoints(std::vector<EEAIChokePoint*>& outChoke
     }
 }
 
-// FUNCTION: EXE 0x422320
 // Returns the closest point of the nearest land continent adjacent to inTile's non-land continent; inTile itself
 // on land, off the map or without such a neighbour
 EETileLocation EEAIContinentManager::GetNearestLandTile(const EETileLocation& inTile)
@@ -1317,7 +1269,6 @@ EETileLocation EEAIContinentManager::GetNearestLandTile(const EETileLocation& in
     return EETileLocation(theX, theY);
 }
 
-// FUNCTION: EXE 0x422443
 // Lists, sorted and once each, the continents adjacent to inFirst or inSecond (themselves included) that inScreen
 // accepts
 void EEAIContinentManager::GetAdjacentContinents(unsigned short inFirst, unsigned short inSecond,
@@ -1343,7 +1294,6 @@ void EEAIContinentManager::GetAdjacentContinents(unsigned short inFirst, unsigne
         outIDs.erase(theEnd, outIDs.end());
 }
 
-// FUNCTION: EXE 0x42260b
 // Returns in outPoint the center of continent inID's hull, (0, 0) for an unknown id
 void EEAIContinentManager::GetContinentCenter(unsigned short inID, U2DPoint<long>& outPoint)
 {
@@ -1355,7 +1305,6 @@ void EEAIContinentManager::GetContinentCenter(unsigned short inID, U2DPoint<long
         outPoint = theContinent->GetHullCenter();
 }
 
-// FUNCTION: EXE 0x422635
 // Lists the tiles of continent inID in outTiles (untouched for an unknown id)
 void EEAIContinentManager::GetContinentTiles(unsigned short inID, std::vector<U2DPoint<long> >& outTiles) const
 {
@@ -1364,7 +1313,6 @@ void EEAIContinentManager::GetContinentTiles(unsigned short inID, std::vector<U2
         theContinent->GetTileSet().BuildPointList(outTiles, 1);
 }
 
-// FUNCTION: EXE 0x422658
 // Returns the continent at inUnit's tile, NULL off the grid
 EEAIContinent* EEAIContinentManager::GetContinentAt(EEUnit* inUnit)
 {
@@ -1374,7 +1322,6 @@ EEAIContinent* EEAIContinentManager::GetContinentAt(EEUnit* inUnit)
     return NULL;
 }
 
-// FUNCTION: EXE 0x422680
 // Returns the id of the continent containing (inX, inY), searched through its path sector, 0 if none
 unsigned short EEAIContinentManager::FindContinentID(long inX, long inY) const
 {
@@ -1384,7 +1331,6 @@ unsigned short EEAIContinentManager::FindContinentID(long inX, long inY) const
     return theID;
 }
 
-// FUNCTION: EXE 0x42269f
 // Finds the continent containing (inX, inY) among its path sector's neighbouring continents, NULL if none
 EEAIContinent* EEAIContinentManager::FindContinent(long inX, long inY) const
 {
@@ -1405,7 +1351,6 @@ EEAIContinent* EEAIContinentManager::FindContinent(long inX, long inY) const
     return theResult;
 }
 
-// FUNCTION: EXE 0x422712
 // Returns the continent id at inUnit's tile, 0 off the grid
 unsigned short EEAIContinentManager::GetContinentID(EEUnit* inUnit)
 {
@@ -1417,7 +1362,6 @@ unsigned short EEAIContinentManager::GetContinentID(EEUnit* inUnit)
     return theID;
 }
 
-// FUNCTION: EXE 0x42273a
 // Returns the forest at inUnit's tile, NULL if none
 EEAIForest* EEAIContinentManager::GetForestAt(EEUnit* inUnit)
 {
@@ -1425,7 +1369,6 @@ EEAIForest* EEAIContinentManager::GetForestAt(EEUnit* inUnit)
     return this->GetForestAt(theTile);
 }
 
-// FUNCTION: EXE 0x42275b
 // Returns the forest of inTile's continent that contains inTile, NULL if none
 EEAIForest* EEAIContinentManager::GetForestAt(const EETileLocation& inTile)
 {
@@ -1444,7 +1387,6 @@ EEAIForest* EEAIContinentManager::GetForestAt(const EETileLocation& inTile)
     return theForest;
 }
 
-// FUNCTION: EXE 0x4227d0
 // Returns the hill of inTile's continent that contains inTile, NULL if none
 EEAIHill* EEAIContinentManager::GetHillAt(const EETileLocation& inTile)
 {
@@ -1463,7 +1405,6 @@ EEAIHill* EEAIContinentManager::GetHillAt(const EETileLocation& inTile)
     return theHill;
 }
 
-// FUNCTION: EXE 0x422848
 // Returns whether two continents are connected for inUnit's passable terrain (AreConnected; flags 0 without a unit)
 bool EEAIContinentManager::AreConnectedForUnit(EEUnit* inUnit, EEAIContinent* inFirst, EEAIContinent* inSecond)
 {
@@ -1473,7 +1414,6 @@ bool EEAIContinentManager::AreConnectedForUnit(EEUnit* inUnit, EEAIContinent* in
     return this->AreConnected(inFirst, inSecond, theFlags);
 }
 
-// FUNCTION: EXE 0x422872
 // Returns whether two continents are the same or share a non-zero chain id of the chain kind the passable-terrain
 // flags inFlags select (false for flags 0)
 bool EEAIContinentManager::AreConnected(EEAIContinent* inFirst, EEAIContinent* inSecond, long inFlags)
@@ -1489,7 +1429,6 @@ bool EEAIContinentManager::AreConnected(EEAIContinent* inFirst, EEAIContinent* i
     return theResult;
 }
 
-// FUNCTION: EXE 0x422952
 // Returns the id of the continent of category inKind (any for none) with the most tiles, 0 if there is none
 long EEAIContinentManager::GetLargestContinent(long inKind)
 {
@@ -1507,7 +1446,6 @@ long EEAIContinentManager::GetLargestContinent(long inKind)
     return theResult;
 }
 
-// FUNCTION: EXE 0x422a2f
 // Returns a free sub-sector id (last freed first) or the next new one
 unsigned short EEAIContinentManager::NewSubSectorID()
 {
@@ -1521,7 +1459,6 @@ unsigned short EEAIContinentManager::NewSubSectorID()
     return theID;
 }
 
-// FUNCTION: EXE 0x422a70
 // Returns a free path area id (last freed first) or the next new one
 unsigned short EEAIContinentManager::NewPathAreaID()
 {
@@ -1535,7 +1472,6 @@ unsigned short EEAIContinentManager::NewPathAreaID()
     return theID;
 }
 
-// FUNCTION: EXE 0x422ab8
 // Returns the path area at inUnit's tile
 EEAIPathArea* EEAIContinentManager::GetPathAreaAt(EEUnit* inUnit)
 {
@@ -1543,7 +1479,6 @@ EEAIPathArea* EEAIContinentManager::GetPathAreaAt(EEUnit* inUnit)
     return this->GetPathAreaAt(theTile);
 }
 
-// FUNCTION: EXE 0x422ad9
 // Returns the path area at inTile: its sub-sector's area when that is current, else found through the path sector
 // (through the continent while repairing); NULL off the map
 EEAIPathArea* EEAIContinentManager::GetPathAreaAt(const EETileLocation& inTile)
@@ -1568,7 +1503,6 @@ EEAIPathArea* EEAIContinentManager::GetPathAreaAt(const EETileLocation& inTile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x422b62
 // Returns the inKind region id (water body, land mass, space or surface region) at inUnit's tile
 unsigned short EEAIContinentManager::GetContinent(EEUnit* inUnit, long inKind)
 {
@@ -1578,7 +1512,6 @@ unsigned short EEAIContinentManager::GetContinent(EEUnit* inUnit, long inKind)
     return this->GetContinent(theTile, inKind);
 }
 
-// FUNCTION: EXE 0x422b86
 // Returns the inKind region id (water body, land mass, space or surface region) of inTile's path area, 0 if none
 unsigned short EEAIContinentManager::GetContinent(const EETileCoordinate& inTile, long inKind)
 {
@@ -1597,7 +1530,6 @@ unsigned short EEAIContinentManager::GetContinent(const EETileCoordinate& inTile
     return theResult;
 }
 
-// FUNCTION: EXE 0x422bd7
 // Returns the path sector at inUnit's tile
 EEAIPathSector* EEAIContinentManager::GetPathSector(EEUnit* inUnit)
 {
@@ -1607,7 +1539,6 @@ EEAIPathSector* EEAIContinentManager::GetPathSector(EEUnit* inUnit)
     return this->GetPathSector(theTile);
 }
 
-// FUNCTION: EXE 0x422bf8
 // Returns the path sector containing inTile, NULL off the grid
 EEAIPathSector* EEAIContinentManager::GetPathSector(const EETileCoordinate& inTile) const
 {
@@ -1618,14 +1549,12 @@ EEAIPathSector* EEAIContinentManager::GetPathSector(const EETileCoordinate& inTi
     return theResult;
 }
 
-// FUNCTION: EXE 0x422c51
 // Returns the path sub-sector at inUnit's tile
 EEAIPathSubSector* EEAIContinentManager::GetPathSubSectorAt(EEUnit* inUnit)
 {
     return this->GetPathSubSectorAt(inUnit->GetTileX(), inUnit->GetTileY());
 }
 
-// FUNCTION: EXE 0x422c65
 // Finds the sub-sector containing (inX, inY) among its path sector's sub-sectors, NULL if none
 EEAIPathSubSector* EEAIContinentManager::FindPathSubSector(long inX, long inY)
 {
@@ -1648,7 +1577,6 @@ EEAIPathSubSector* EEAIContinentManager::FindPathSubSector(long inX, long inY)
     return theResult;
 }
 
-// FUNCTION: EXE 0x422cd7
 // Returns the path sub-sector id at inUnit's tile, 0 off the grid
 unsigned short EEAIContinentManager::GetPathSubSectorID(EEUnit* inUnit)
 {
@@ -1660,7 +1588,6 @@ unsigned short EEAIContinentManager::GetPathSubSectorID(EEUnit* inUnit)
     return theID;
 }
 
-// FUNCTION: EXE 0x422cff
 // Returns the id of the sub-sector containing (inX, inY), found by search, 0 if none
 unsigned short EEAIContinentManager::FindPathSubSectorID(long inX, long inY)
 {
@@ -1670,7 +1597,6 @@ unsigned short EEAIContinentManager::FindPathSubSectorID(long inX, long inY)
     return theID;
 }
 
-// FUNCTION: EXE 0x422d1b
 // Returns a random area of type inKind whose hull center is on continent inContinent (any for 0), NULL if none
 EEAIArea* EEAIContinentManager::GetRandomArea(long inKind, URandom& inRandom, unsigned short inContinent)
 {
@@ -1689,7 +1615,6 @@ EEAIArea* EEAIContinentManager::GetRandomArea(long inKind, URandom& inRandom, un
     return theResult;
 }
 
-// FUNCTION: EXE 0x422dc8
 // Returns a random continent of category inKind (any but the map edge for none), NULL if none
 EEAIArea* EEAIContinentManager::GetRandomContinent(unsigned char inKind, URandom& inRandom)
 {
@@ -1708,7 +1633,6 @@ EEAIArea* EEAIContinentManager::GetRandomContinent(unsigned char inKind, URandom
     return theResult;
 }
 
-// FUNCTION: EXE 0x422eb4
 // Returns the rectangle area containing inTile, NULL if none
 EEAIRectangleArea* EEAIContinentManager::GetRectangleAreaAt(const EETileLocation& inTile)
 {
@@ -1723,7 +1647,6 @@ EEAIRectangleArea* EEAIContinentManager::GetRectangleAreaAt(const EETileLocation
     return theResult;
 }
 
-// FUNCTION: EXE 0x422f15
 // Returns the continent id under inUnit's tile, 0 without a unit or off the map
 unsigned short EEAIContinentManager::GetUnitContinentID(EEUnit* inUnit)
 {
@@ -1743,7 +1666,6 @@ static unsigned short EEAIContinentIDAt(void* inManager, int32_t inX, int32_t in
     return static_cast<const EEAIContinentManager*>(inManager)->GetContinentID(inX, inY);
 }
 
-// FUNCTION: EXE 0x422f5f
 // Returns whether tile (inX, inY) is on continent inID or on an adjacent continent with a neighbour tile on inID;
 // outTiles gets those neighbour tiles (Rust: ee_astar manager.rs, the ring of EEGetSquareRingTiles walked from its
 // last tile)
@@ -1774,7 +1696,6 @@ bool EEAIContinentManager::GetTilesNextTo(long inX, long inY, std::vector<U2DPoi
     return theResult;
 }
 
-// FUNCTION: EXE 0x42311c
 // Returns whether tile (inX, inY) is on or next to continent inID
 bool EEAIContinentManager::IsNextToArea(long inX, long inY, unsigned short inID)
 {
@@ -1782,7 +1703,6 @@ bool EEAIContinentManager::IsNextToArea(long inX, long inY, unsigned short inID)
     return this->GetTilesNextTo(inX, inY, theTiles, inID);
 }
 
-// FUNCTION: EXE 0x42315c
 // Returns whether every continent adjacent to inID is of category inKind
 bool EEAIContinentManager::AllNeighborsOfKind(unsigned short inID, unsigned char inKind)
 {
@@ -1800,7 +1720,6 @@ bool EEAIContinentManager::AllNeighborsOfKind(unsigned short inID, unsigned char
     return theResult;
 }
 
-// FUNCTION: EXE 0x4231d7
 // Computes the AI tile values (grid, and the map tile clamped to +-120); inWater: water and space tiles get 10 per
 // shore or ice-shore neighbour (negated, minus 10, on a shore tile); else land tiles get 10 per wood unit in 3x3
 // (Rust: ee_astar tile_values.rs over every tile's terrain, the shore lists and, for the land pass, every tile's
@@ -1849,7 +1768,6 @@ void EEAIContinentManager::UpdateTileValues(bool inWater)
     this->mIceShoreTiles.clear();
 }
 
-// FUNCTION: EXE 0x4236b5
 // Marks the manager as clearing, resets it, frees its grids and rebuilds the continents and hills of inMap
 void EEAIContinentManager::Clear(EEMap* inMap)
 {
@@ -1867,7 +1785,6 @@ void EEAIContinentManager::Clear(EEMap* inMap)
     this->CreateHills(inMap);
 }
 
-// FUNCTION: EXE 0x42372b
 // Re-files tile inTile after its AI kind changed: it joins the largest same-kind neighbouring area (merging the
 // others into it), its single neighbour's area or a new path area; sectors and sub-sectors follow the new id
 // (Rust: ee_astar repair.rs chooses from the eight neighbours; the areas, their tiles and the sectors stay here)
@@ -2039,7 +1956,6 @@ void EEAIContinentManager::RepairPathArea(const U2DPoint<long>& inTile)
     }
 }
 
-// FUNCTION: EXE 0x4245a5
 // Rebuilds the sub-sectors of one pending sector, re-links them, repairs the path areas of its changed tiles and
 // refiles the new sub-sectors; returns true when no sector is left pending
 bool EEAIContinentManager::Rebuild()
@@ -2135,7 +2051,6 @@ bool EEAIContinentManager::Rebuild()
     return this->mSectorTiles.size() == 0;
 }
 
-// FUNCTION: EXE 0x424a24
 // Builds the AI regions of inMap after Clear: tile values, path areas and sectors, choke points, the region ids,
 // scenario areas and the six chain kinds; frees the work grids (continent ids kept in large games)
 void EEAIContinentManager::BuildRegions(EEMap* inMap)
@@ -2169,7 +2084,6 @@ void EEAIContinentManager::BuildRegions(EEMap* inMap)
     this->mClearing = false;
 }
 
-// FUNCTION: EXE 0x424b31
 // Deletes each choke point beside a map-edge continent when all but at most one of its joined areas also touch
 // a map-edge continent
 // PruneChokePoints' questions to the objects (ee_astar manager.rs PruneHost)
@@ -2224,7 +2138,6 @@ static void EEAIPruneRemove(void* inContext, size_t inChoke)
     delete theChokePoint;
 }
 
-// FUNCTION: EXE 0x424cc0
 // Deletes the choke points that a map edge continent touches when their areas touch the map edge continents too
 // (Rust: ee_astar manager.rs prune_choke_points; the closest points it asks stay the areas' C++ geometry)
 void EEAIContinentManager::PruneChokePoints()
@@ -2243,7 +2156,6 @@ void EEAIContinentManager::PruneChokePoints()
                                 this->mChokePoints.size(), &theCallbacks);
 }
 
-// FUNCTION: EXE 0x424dcf
 // Removes inSector's sub-sectors: unlinks their neighbours, clears them from the list and id grid, frees their ids
 void EEAIContinentManager::RemoveSubSectors(EEAIPathSector* inSector)
 {
@@ -2274,7 +2186,6 @@ void EEAIContinentManager::RemoveSubSectors(EEAIPathSector* inSector)
         this->mFreeSubSectorIDs.insert(this->mFreeSubSectorIDs.end(), theIDs.begin(), theIDs.end());
 }
 
-// FUNCTION: EXE 0x424f70
 // Removes inArea from the area map; returns whether it was there
 bool EEAIContinentManager::RemoveArea(EEAIArea* inArea)
 {
@@ -2286,7 +2197,6 @@ bool EEAIContinentManager::RemoveArea(EEAIArea* inArea)
     return theResult;
 }
 
-// FUNCTION: EXE 0x424fb5
 // Drops inSector's pending rebuild tiles
 void EEAIContinentManager::RemoveSectorTiles(EEAIPathSector* inSector)
 {
@@ -2296,7 +2206,6 @@ void EEAIContinentManager::RemoveSectorTiles(EEAIPathSector* inSector)
 }
 
 // NEAR: the original calls RTSMap::GetTile out of line for the first five tiles (inline budget)
-// FUNCTION: EXE 0x425325
 // When no wood with resources is left on inUnit's tile: removes the tile from its forest, lowers the AI values of
 // its 3x3 block by 10 (not below 0) and deletes the forest once it is empty
 void EEAIContinentManager::RemoveForestTile(EEUnit* inUnit)
@@ -2392,7 +2301,6 @@ void EEAIContinentManager::RemoveForestTile(EEUnit* inUnit)
     delete theForest;
 }
 
-// FUNCTION: EXE 0x425606
 // Queues the footprint tiles of a finished blocking unit or gate for a sector rebuild and tells the path manager
 // (inNow: at once); skipped while clearing or before regions exist
 void EEAIContinentManager::UpdateWallUnit(EEComplexUnit* inUnit, bool inNow)
@@ -2407,14 +2315,12 @@ void EEAIContinentManager::UpdateWallUnit(EEComplexUnit* inUnit, bool inNow)
     gPathManager.SetRegionUpdates(true, inNow);
 }
 
-// FUNCTION: EXE 0x426f8d
 // Adds inArea to the area map under its serial
 void EEAIContinentManager::AddArea(EEAIArea* inArea)
 {
     this->mAreas.insert(std::map<unsigned long, EEAIArea*>::value_type(inArea->GetSerial(), inArea));
 }
 
-// FUNCTION: EXE 0x426fb3
 // Returns the area with serial inSerial, NULL if none
 EEAIArea* EEAIContinentManager::GetArea(unsigned long inSerial) const
 {
@@ -2425,188 +2331,12 @@ EEAIArea* EEAIContinentManager::GetArea(unsigned long inSerial) const
     return NULL;
 }
 
-// FUNCTION: EXE 0x426fdd
 // Returns the continent with id inID
 EEAIContinent* EEAIContinentManager::GetContinentByID(unsigned short inID) const
 {
     return this->mContinents[inID];
 }
 
-// Compiler-generated and inline-header code of this unit (names in analysis/exe/names.txt; unnamed ones are not
-// generated by the source yet: graph machine Run/expand steps 0x268be.., vector/_Tree members, EEAIForest ctor 0x29bcd):
-// TEMPLATE: EXE 0x4221b9
-// TEMPLATE: EXE 0x4221bd
-// TEMPLATE: EXE 0x42568e
-// TEMPLATE: EXE 0x425736
-// TEMPLATE: EXE 0x42576a
-// TEMPLATE: EXE 0x425795
-// TEMPLATE: EXE 0x4257c0
-// TEMPLATE: EXE 0x42587a
-// TEMPLATE: EXE 0x425b30
-// TEMPLATE: EXE 0x425b44
-// TEMPLATE: EXE 0x425b70
-// TEMPLATE: EXE 0x425b9c
-// TEMPLATE: EXE 0x425ba0
-// TEMPLATE: EXE 0x425bed
-// TEMPLATE: EXE 0x425c21
-// TEMPLATE: EXE 0x425c3e
-// TEMPLATE: EXE 0x425c55
-// TEMPLATE: EXE 0x425c91
-// TEMPLATE: EXE 0x425cc3
-// TEMPLATE: EXE 0x425cd9
-// TEMPLATE: EXE 0x425cec
-// TEMPLATE: EXE 0x425d08
-// TEMPLATE: EXE 0x425d24
-// TEMPLATE: EXE 0x425d71
-// TEMPLATE: EXE 0x425da5
-// TEMPLATE: EXE 0x425dbb
-// TEMPLATE: EXE 0x425e08
-// TEMPLATE: EXE 0x425e3c
-// TEMPLATE: EXE 0x425e52
-// TEMPLATE: EXE 0x425e9f
-// TEMPLATE: EXE 0x425ed3
-// TEMPLATE: EXE 0x425eff
-// TEMPLATE: EXE 0x425fbb
-// TEMPLATE: EXE 0x425fe7
-// TEMPLATE: EXE 0x426003
-// TEMPLATE: EXE 0x42601f
-// TEMPLATE: EXE 0x42603b
-// TEMPLATE: EXE 0x426057
-// TEMPLATE: EXE 0x426073
-// TEMPLATE: EXE 0x4260e4
-// TEMPLATE: EXE 0x426278
-// TEMPLATE: EXE 0x4262ba
-// TEMPLATE: EXE 0x4262ea
-// TEMPLATE: EXE 0x4262ef
-// TEMPLATE: EXE 0x42630c
-// TEMPLATE: EXE 0x426366
-// TEMPLATE: EXE 0x4263a0
-// TEMPLATE: EXE 0x4263cb
-// TEMPLATE: EXE 0x4263ef
-// TEMPLATE: EXE 0x42640c
-// TEMPLATE: EXE 0x426430
-// TEMPLATE: EXE 0x426452
-// TEMPLATE: EXE 0x42647b
-// TEMPLATE: EXE 0x426739
-// TEMPLATE: EXE 0x42676e
-// TEMPLATE: EXE 0x42679e
-// TEMPLATE: EXE 0x4267ce
-// TEMPLATE: EXE 0x4267fe
-// TEMPLATE: EXE 0x42682e
-// TEMPLATE: EXE 0x42685e
-// TEMPLATE: EXE 0x42688e
-// TEMPLATE: EXE 0x4268be
-// TEMPLATE: EXE 0x426941
-// TEMPLATE: EXE 0x426997
-// TEMPLATE: EXE 0x426a1a
-// TEMPLATE: EXE 0x426a9d
-// TEMPLATE: EXE 0x426b20
-// TEMPLATE: EXE 0x426b2a
-// TEMPLATE: EXE 0x426b84
-// TEMPLATE: EXE 0x426bcc
-// TEMPLATE: EXE 0x426c87
-// TEMPLATE: EXE 0x426cf3
-// TEMPLATE: EXE 0x426d1a
-// TEMPLATE: EXE 0x426d53
-// TEMPLATE: EXE 0x426d84
-// TEMPLATE: EXE 0x426dca
-// TEMPLATE: EXE 0x426e13
-// TEMPLATE: EXE 0x426e5c
-// TEMPLATE: EXE 0x426e7b
-// TEMPLATE: EXE 0x426ea4
-// TEMPLATE: EXE 0x426f15
-// TEMPLATE: EXE 0x426f46
-// TEMPLATE: EXE 0x426fed
-// TEMPLATE: EXE 0x427016
-// TEMPLATE: EXE 0x42708d
-// TEMPLATE: EXE 0x4273b9
-// TEMPLATE: EXE 0x4273c9
-// TEMPLATE: EXE 0x4273f1
-// TEMPLATE: EXE 0x427434
-// TEMPLATE: EXE 0x4274a3
-// TEMPLATE: EXE 0x4275eb
-// TEMPLATE: EXE 0x427604
-// TEMPLATE: EXE 0x427615
-// TEMPLATE: EXE 0x42768c
-// TEMPLATE: EXE 0x4279b8
-// TEMPLATE: EXE 0x427a2f
-// TEMPLATE: EXE 0x427d5b
-// TEMPLATE: EXE 0x427dd2
-// TEMPLATE: EXE 0x4280fe
-// TEMPLATE: EXE 0x42812f
-// TEMPLATE: EXE 0x42817c
-// TEMPLATE: EXE 0x4281b1
-// TEMPLATE: EXE 0x4281da
-// TEMPLATE: EXE 0x4282b3
-// TEMPLATE: EXE 0x4282f2
-// TEMPLATE: EXE 0x42832e
-// TEMPLATE: EXE 0x42837d
-// TEMPLATE: EXE 0x4285c1
-// TEMPLATE: EXE 0x4285e3
-// TEMPLATE: EXE 0x4288aa
-// TEMPLATE: EXE 0x4289be
-// TEMPLATE: EXE 0x428a34
-// TEMPLATE: EXE 0x428aa7
-// TEMPLATE: EXE 0x428b6d
-// TEMPLATE: EXE 0x428b87
-// TEMPLATE: EXE 0x428ba1
-// TEMPLATE: EXE 0x428cb5
-// TEMPLATE: EXE 0x428d2b
-// TEMPLATE: EXE 0x428e3f
-// TEMPLATE: EXE 0x428eb5
-// TEMPLATE: EXE 0x428fc9
-// TEMPLATE: EXE 0x42902c
-// TEMPLATE: EXE 0x4290a2
-// TEMPLATE: EXE 0x4290e2
-// TEMPLATE: EXE 0x429155
-// TEMPLATE: EXE 0x42921e
-// TEMPLATE: EXE 0x42925b
-// TEMPLATE: EXE 0x42929a
-// TEMPLATE: EXE 0x4293b0
-// TEMPLATE: EXE 0x4293f4
-// TEMPLATE: EXE 0x429436
-// TEMPLATE: EXE 0x42945f
-// TEMPLATE: EXE 0x4294a6
-// TEMPLATE: EXE 0x4294e0
-// TEMPLATE: EXE 0x42950b
-// TEMPLATE: EXE 0x429568
-// TEMPLATE: EXE 0x429591
-// TEMPLATE: EXE 0x4295b6
-// TEMPLATE: EXE 0x4295fd
-// TEMPLATE: EXE 0x42960e
-// TEMPLATE: EXE 0x4296b2
-// TEMPLATE: EXE 0x429720
-// TEMPLATE: EXE 0x42974f
-// TEMPLATE: EXE 0x4297bb
-// TEMPLATE: EXE 0x42980a
-// TEMPLATE: EXE 0x429812
-// TEMPLATE: EXE 0x42981a
-// TEMPLATE: EXE 0x429822
-// TEMPLATE: EXE 0x42982a
-// TEMPLATE: EXE 0x429832
-// TEMPLATE: EXE 0x429851
-// TEMPLATE: EXE 0x42987d
-// TEMPLATE: EXE 0x4298b8
-// TEMPLATE: EXE 0x4298d4
-// TEMPLATE: EXE 0x429910
-// TEMPLATE: EXE 0x42993c
-// TEMPLATE: EXE 0x429950
-// TEMPLATE: EXE 0x429994
-// TEMPLATE: EXE 0x4299f5
-// TEMPLATE: EXE 0x429a66
-// TEMPLATE: EXE 0x429a91
-// TEMPLATE: EXE 0x429ac3
-// TEMPLATE: EXE 0x429b05
-// TEMPLATE: EXE 0x429b3c
-// TEMPLATE: EXE 0x429b5d
-// TEMPLATE: EXE 0x429b7b
-// TEMPLATE: EXE 0x429ced
-// TEMPLATE: EXE 0x429d1b
-// TEMPLATE: EXE 0x429e67
-// TEMPLATE: EXE 0x429e92
-// TEMPLATE: EXE 0x429f03
-
-// FUNCTION: EXE 0x429bcd
 // Creates an empty forest: no resources, no continent, id 0
 // out of line (EEAIAStarPathAreaGoal::CreateAreas 0x17510 news it)
 EEAIForest::EEAIForest()
@@ -2617,7 +2347,6 @@ EEAIForest::EEAIForest()
 // 0x563bc8 (.bss) = gUnitClassTable[0x147] (0x563bc8 - 0x5636ac = 0x51c): the unit class RegrowTrees creates
 // (its vtable +0x30 is EEUnitClass::CreateUnit(x, y, player, bool, creator)); no store to it is known in the exe
 
-// FUNCTION: EXE 0x429c01
 // When inTile is in the forest, creates inCount units of type 0x147 at random forest tiles within inRadius of
 // inTile (11 tries each, else inTile) flagged as regrowing; returns whether inTile is in the forest
 // (EEUnit 0x22a3fd calls it)
@@ -2647,7 +2376,6 @@ bool EEAIForest::RegrowTrees(const U2DPoint<long>& inTile, long inRadius, long i
     return theResult;
 }
 
-// FUNCTION: EXE 0x429d69
 // Sets the forest's resource kind to the highest kind (1, 2, 3) with a positive count; unchanged when none has any
 void EEAIForest::UpdateResourceKind()
 {
@@ -2664,7 +2392,6 @@ void EEAIForest::UpdateResourceKind()
 
 long EEAIHasResourceUnit(EETile* inTile);   // 0x29ced (EEAIAStarPathAreaGoal.cpp declares it the same way)
 
-// FUNCTION: EXE 0x429e17
 // Removes inPoint from the forest and, if it was there, lowers the count of that tile's wood resource kind;
 // returns whether it was removed
 bool EEAIForest::RemoveTile(const U2DPoint<long>& inPoint)
@@ -2689,9 +2416,6 @@ bool EEAIForest::RemoveTile(const U2DPoint<long>& inPoint)
     }
     return theResult;
 }
-
-// SYNTHETIC: EXE 0x429f35
-// (EEAIForest's scalar deleting destructor: the inline dtor, then EEAIArea's)
 
 // an empty function called last by DeleteChokePoints (ICF-folded into 0xe123d; defined after its caller, so it is
 // called, not expanded: EEAIChokePoint.cpp's EEAIChokeDone shape) (provisional name)

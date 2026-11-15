@@ -52,7 +52,6 @@
 extern GEViewport gViewport;
 extern GEFont* gSeplScreenFont;   // the screen's font while a screen makes its controls (EESERBUnitTypes.cpp)
 
-// FUNCTION: EXE 0x57ccf3
 // Creates the area sub-screen: the red 'no area selected' label, the area selection mode combo and the center
 // camera button, in rectangle mode with no area drawn (editor_area.rs)
 EESETSArea::EESETSArea(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
@@ -63,10 +62,6 @@ EESETSArea::EESETSArea(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
     ioIndex = theIndex;
 }
 
-// SYNTHETIC: EXE 0x57d07f
-// (EESETSArea's scalar deleting destructor)
-
-// FUNCTION: EXE 0x57d09b
 // Destroys the area sub-screen's controls and releases a rectangle still being drawn (editor_area.rs)
 EESETSArea::~EESETSArea()
 {
@@ -96,7 +91,6 @@ void EESETSArea::New() { this->Call(EE_SCREENS_SEAR_NEW); }
 void EESETSArea::Show() { this->Call(EE_SCREENS_SEAR_SHOW); }
 void EESETSArea::SetAreaMode(bool inRectangle) { this->Call(EE_SCREENS_SEAR_SET_MODE, inRectangle ? 1 : 0); }
 
-// FUNCTION: EXE 0x57d6a9
 // Draws the area with the left button: drags a rectangle (mouse confined to the view) or sets the anchor point on
 // release, then highlights it (editor_area.rs)
 void EESETSArea::MouseMove(const GE2DPoint& inLocation)
@@ -104,7 +98,6 @@ void EESETSArea::MouseMove(const GE2DPoint& inLocation)
     ee_screens_sear_mouse_move(this->mRust, inLocation.GetX(), inLocation.GetY());
 }
 
-// FUNCTION: EXE 0x57d3aa
 // Returns the center of the drawn rectangle (or the anchor point in point mode), false if none (editor_area.rs)
 bool EESETSArea::GetCenter(GE2DPoint& outCenter)
 {
@@ -125,38 +118,18 @@ void EESETSArea::GetState(GERectangle& outRectangle, GE2DPoint& outPoint, unsign
     outPoint = GE2DPoint(thePoint[0], thePoint[1]);
 }
 
-// FUNCTION: EXE 0x57d3e6
 // Returns the names of the scenario's user areas (editor_area.rs)
 void EESETSArea::GetNames(std::vector<UWideString>& outNames)
 {
     ee_screens_sear_names(this->mRust, &outNames);
 }
 
-// FUNCTION: EXE 0x57d34c
-// Sets the area's rectangle and marks it as having one (EESMArea::SetRectangle, inline)
-
-// FUNCTION: EXE 0x57d381
-// Sets the area's anchor tile and marks it as having one (EESMArea::SetAnchor, inline)
-
-// FUNCTION: EXE 0x57d597
 // Sets the map rectangle the editor highlights
 // (defined in this unit: every caller calls it out of line)
 void EEUIFScenarioEditor::SetPaintArea(const GERectangle& inRectangle)
 {
     this->GetBrushGroup()->mRectangle = inRectangle;
 }
-
-// FUNCTION: EXE 0x57d991
-// (the rectangle drawing action's ctor: ee_screens editor_whole.rs, an EESEARust)
-
-// FUNCTION: EXE 0x57da08
-// Returns the scenario's area by index (EEScenarioManager::GetArea, inline)
-
-// SYNTHETIC: EXE 0x57da35
-// (EESETSBaseObject's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57da7d
-// (EESEECenterCameraOnArea's scalar deleting destructor)
 
 // ---- the sub-screen's host (editor_area.rs: the ops from 600)
 

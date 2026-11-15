@@ -15,7 +15,6 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
-// FUNCTION: WON 0x0078b4e0
 // Creates a stretch image config holding a new empty stretch image
 StretchImageConfig::StretchImageConfig()
 {
@@ -23,7 +22,6 @@ StretchImageConfig::StretchImageConfig()
     this->mImage=this->mStretchImage;
 }
 
-// FUNCTION: WON 0x0078b630
 // Reads SRC, TILE, BORDERS, SKIPCENTER and the EXPORT keys, which add copies with other images to the parent
 bool StretchImageConfig::Virtual24(const std::string& instruction)
 {
@@ -103,7 +101,6 @@ bool StretchImageConfig::Virtual24(const std::string& instruction)
     return true;
 }
 
-// FUNCTION: WON 0x0078bf90
 // Creates a stretch-center image config holding a new empty stretch-center image
 StretchCenterImageConfig::StretchCenterImageConfig()
 {
@@ -111,30 +108,4 @@ StretchCenterImageConfig::StretchCenterImageConfig()
     this->mImage=this->mStretchCenterImage;
 }
 
-// FUNCTION: WON 0x0078c0e0
-// Reads the STRETCHIMAGE and CENTERIMAGE keys; other keys go to the image config
-bool StretchCenterImageConfig::Virtual24(const std::string& instruction)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
-    if(aKeyIdx==0) this->mStretchCenterImage->SetStretchImage(this->ReadImage(false).get());
-    else if(aKeyIdx==1) this->mStretchCenterImage->SetCenterImage(this->ReadImage(false).get());
-    else return ImageConfig::Virtual24(instruction);
-    return true;
 }
-}
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0078b2d0
-// (public: virtual class WONAPI::Image * __thiscall WONAPI::ImageConfig::GetImage(void)    [?GetImage@ImageConfig@WONAPI@@UAEPAVImage@2@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0078b300
-// (public: virtual __thiscall WONAPI::ImageConfig::~ImageConfig(void)    [??1ImageConfig@WONAPI@@UAE@XZ])
-// TEMPLATE: WON 0x0078b5a0
-// (public: virtual void * __thiscall WONAPI::StretchImageConfig::`scalar deleting destructor'(unsigned int)    [??_GStretchImageConfig@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x0078b5c0
-// (public: virtual __thiscall WONAPI::StretchImageConfig::~StretchImageConfig(void)    [??1StretchImageConfig@WONAPI@@UAE@XZ])
-// TEMPLATE: WON 0x0078c050
-// (public: virtual void * __thiscall WONAPI::StretchCenterImageConfig::`scalar deleting destructor'(unsigned int)    [??_GStretchCenterImageConfig@WONAPI)
-// TEMPLATE: WON 0x0078c070
-// (public: virtual __thiscall WONAPI::StretchCenterImageConfig::~StretchCenterImageConfig(void)    [??1StretchCenterImageConfig@WONAPI@@UAE@XZ])

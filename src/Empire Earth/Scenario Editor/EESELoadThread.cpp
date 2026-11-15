@@ -71,7 +71,6 @@
 #include "ee/EEGhostUnit.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEStringIDs.h"
-// FUNCTION: EXE 0x572125
 // Starts the editor's loading thread at the given priority, waits until it runs and names it ScenEdit
 EESELoadThread::EESELoadThread(EEUIFScenarioEditor* inEditor, long inThreadPriority)
 {
@@ -88,16 +87,6 @@ EESELoadThread::EESELoadThread(EEUIFScenarioEditor* inEditor, long inThreadPrior
     this->mChangeLoadText = new EESEAChangeLoadText;
 }
 
-// FUNCTION: EXE 0x572226
-// Creates the loading text action (EESEAChangeLoadText ctor, inline; emitted out of line here)
-
-// FUNCTION: EXE 0x57224d
-// Runs the loading text action (EESEAChangeLoadText::Virtual4, inline in ee/EESEAChangeLoadText.h)
-
-// SYNTHETIC: EXE 0x572262
-// (EESEAChangeLoadText's scalar deleting destructor)
-
-// FUNCTION: EXE 0x572295
 // Destroys the loading thread: releases its text action, events and thread
 EESELoadThread::~EESELoadThread()
 {
@@ -108,7 +97,6 @@ EESELoadThread::~EESELoadThread()
     TSScheduler::DestroyThread(this->mThread);
 }
 
-// FUNCTION: EXE 0x5722c6
 // Loads a player's unit media and the first n epochs' technology media, showing 'Loading <epoch>' text
 void EESELoadThread::Handle406(unsigned long inPlayer, unsigned long inCount)
 {
@@ -136,7 +124,6 @@ void EESELoadThread::Handle406(unsigned long inPlayer, unsigned long inCount)
     this->mChangeLoadText->Post(UWideString(""));
 }
 
-// FUNCTION: EXE 0x572433
 // Loads (with 'Loading <terrain>' text) or unloads a terrain type and the media and buttons of its
 // unit classes for player 0
 void EESELoadThread::Handle408(unsigned long inTerrain, bool inUnload)
@@ -177,7 +164,6 @@ void EESELoadThread::Handle408(unsigned long inTerrain, bool inUnload)
     }
 }
 
-// FUNCTION: EXE 0x57263f
 // Loads a unit class's media for a player and creates its placement ghost at the mouse (rotated as in
 // the units tab unless it is a land building), then unloads the media again
 void EESELoadThread::Handle402(unsigned long inUnitClass, unsigned long inPlayer)
@@ -203,7 +189,6 @@ void EESELoadThread::Handle402(unsigned long inUnitClass, unsigned long inPlayer
     }
 }
 
-// FUNCTION: EXE 0x5727ae
 // Runs the loading thread: handles posted messages with 53-bit FPU precision until told to quit, then
 // deletes the thread object
 unsigned long EESELoadThread::Main(void* inThis)
@@ -229,7 +214,6 @@ unsigned long EESELoadThread::Main(void* inThis)
     return 0;
 }
 
-// FUNCTION: EXE 0x57285c
 // Dispatches a loading thread message: quit, ghost unit, epoch/terrain media, tech tree reload, scenario
 // test start, posted UI events and loaded objects
 void EESELoadThread::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
@@ -279,7 +263,6 @@ void EESELoadThread::HandleMessage(unsigned long inMessage, void* inParameter1, 
     }
 }
 
-// FUNCTION: EXE 0x572967
 // Reloads a player's tech tree under the world write lock and settles its pending and killed units
 void EESELoadThread::Handle403(unsigned long inPlayer, bool inFlag)
 {
@@ -293,21 +276,18 @@ void EESELoadThread::Handle403(unsigned long inPlayer, bool inFlag)
     gWorld.mLock->WriteUnlock();
 }
 
-// FUNCTION: EXE 0x5729bd
 // Asks the loading thread to start the scenario test and finish
 void EESELoadThread::Post404()
 {
     this->mThread->Post(0x404, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x5729d2
 // Asks the loading thread to leave the scenario editor and quit
 void EESELoadThread::Post401()
 {
     this->mThread->Post(kThreadMessageQuit, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x5729e7
 // Hands a UI event to the loading thread for posting (keeps a reference)
 void EESELoadThread::Post40B(UReferenceCounter* inObject)
 {
@@ -315,7 +295,6 @@ void EESELoadThread::Post40B(UReferenceCounter* inObject)
     this->mThread->Post(0x40b, inObject, NULL, true);
 }
 
-// FUNCTION: EXE 0x572a04
 // Hands a loaded object to the loading thread for display (keeps a reference)
 void EESELoadThread::Post40C(UReferenceCounter* inObject)
 {
@@ -323,56 +302,48 @@ void EESELoadThread::Post40C(UReferenceCounter* inObject)
     this->mThread->Post(0x40c, inObject, NULL, true);
 }
 
-// FUNCTION: EXE 0x572a21
 // Asks the loading thread to load a terrain type's media
 void EESELoadThread::Post408(void* inParameter)
 {
     this->mThread->Post(0x408, inParameter, NULL, true);
 }
 
-// FUNCTION: EXE 0x572a3a
 // Asks the loading thread to load a player's epoch media
 void EESELoadThread::Post406(void* inParameter1, void* inParameter2)
 {
     this->mThread->Post(0x406, inParameter1, inParameter2, true);
 }
 
-// ICF-FOLDED: EXE 0x51aa6c
 // Asks the loading thread to apply a player's start epoch (folded with RTSGraphics::PostSetRasterizer in the original)
 void EESELoadThread::Post407(void* inParameter1, void* inParameter2)
 {
     this->mThread->Post(0x407, inParameter1, inParameter2, true);
 }
 
-// FUNCTION: EXE 0x572a55
 // Asks the loading thread to reload a player's tech tree
 void EESELoadThread::Post403(void* inParameter, bool inFlag)
 {
     this->mThread->Post(0x403, inParameter, (void*)inFlag, true);
 }
 
-// FUNCTION: EXE 0x572a72
 // Asks the loading thread to create a unit class's placement ghost for a player
 void EESELoadThread::Post402(void* inParameter1, void* inParameter2)
 {
     this->mThread->Post(0x402, inParameter1, inParameter2, true);
 }
 
-// FUNCTION: EXE 0x572a8d
 // Asks the loading thread to start the scenario test (second variant) and finish
 void EESELoadThread::Post405()
 {
     this->mThread->Post(0x405, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x572aa2
 // Asks the loading thread to unload a terrain type's media
 void EESELoadThread::Post409(void* inParameter)
 {
     this->mThread->Post(0x409, inParameter, NULL, true);
 }
 
-// FUNCTION: EXE 0x572abb
 // Unloads a player's unit media and the first n epochs' technology media
 void EESELoadThread::Handle407(unsigned long inPlayer, unsigned long inCount)
 {

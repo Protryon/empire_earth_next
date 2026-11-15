@@ -36,7 +36,6 @@ void TagValueSink(void* inContext, const char* inValue)
 
 }   // namespace
 
-// FUNCTION: LLE 0x10004e29
 // Creates an archive with no file set and nothing mapped
 FSArchive::FSArchive()
 {
@@ -45,7 +44,6 @@ FSArchive::FSArchive()
     ee_fs_arch_init(Record(this));
 }
 
-// FUNCTION: LLE 0x10004e71
 // Creates an archive for the given archive file, not yet opened
 FSArchive::FSArchive(const FSFileSpec& inFile)
 {
@@ -59,14 +57,12 @@ FSArchive::FSArchive(const FSArchive& inArchive)
     ee_fs_arch_init_copy(Record(this), Record(&inArchive));
 }
 
-// FUNCTION: LLE 0x10004ec8
 // Destroys the archive, unmapping and closing it
 FSArchive::~FSArchive()
 {
     ee_fs_arch_finish(Record(this));
 }
 
-// FUNCTION: LLE 0x10004ef0
 // Closes the archive and takes over the other archive's file name (not its contents)
 FSArchive& FSArchive::operator=(const FSArchive& inArchive)
 {
@@ -74,13 +70,11 @@ FSArchive& FSArchive::operator=(const FSArchive& inArchive)
     return *this;
 }
 
-// FUNCTION: LLE 0x100051fe
 long FSArchive::Close()
 {
     return ee_fs_arch_close(Record(this));
 }
 
-// FUNCTION: LLE 0x10005429
 // Builds an archive from the files under a root matching a pattern, writes it, reopens it and checks the offsets
 long FSArchive::Create(const FSFileSpec& inRoot, const UString& inPattern, unsigned long inCompression, bool inRecursive)
 {
@@ -88,7 +82,6 @@ long FSArchive::Create(const FSFileSpec& inRoot, const UString& inPattern, unsig
                                   Text(&gStartupVolume), Text(&gStartupDirectory));
 }
 
-// FUNCTION: LLE 0x10005618
 // Builds an archive from a list of files under a root, writes it, reopens it and checks the offsets
 long FSArchive::Create(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression)
 {
@@ -98,7 +91,6 @@ long FSArchive::Create(const FSFileSpec& inRoot, std::vector<UString>& inFiles, 
     return ee_fs_arch_create_list(Record(this), Spec(&inRoot), theNames.data(), theNames.size(), inCompression);
 }
 
-// FUNCTION: LLE 0x10005801
 // Extracts every archived file below a destination directory, creating directories as needed
 long FSArchive::ExtractAll(const FSFileSpec& inDestination)
 {
@@ -106,7 +98,6 @@ long FSArchive::ExtractAll(const FSFileSpec& inDestination)
     return ee_fs_arch_extract_all(Record(this), Spec(&inDestination), Text(&gStartupVolume), Text(&gStartupDirectory));
 }
 
-// FUNCTION: LLE 0x10005a79
 // Finds a file by name (case-insensitive) and returns it decompressed as a memory file
 long FSArchive::FindFile(const UString& inName, FSMemoryFile*& outFile)
 {
@@ -121,14 +112,12 @@ long FSArchive::FindFile(const UString& inName, FSMemoryFile*& outFile)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10005b4d
 // Returns the value of a named archive tag, or kErrorNotFound
 long FSArchive::GetTag(const UWideString& inName, UWideString& outValue) const
 {
     return ee_fs_archive_get_tag(this->mTable, (const char*)inName, TagValueSink, &outValue);
 }
 
-// FUNCTION: LLE 0x10005b81
 // Lists archived files matching a '*' pattern
 long FSArchive::ListFiles(const UString& inPattern, std::set<UString>& outFiles, bool inClear)
 {
@@ -138,21 +127,18 @@ long FSArchive::ListFiles(const UString& inPattern, std::set<UString>& outFiles,
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10005c58
 // Opens the archive for reading: checks the header, reads the file and tag tables, maps the file into memory
 long FSArchive::Open()
 {
     return ee_fs_arch_open(Record(this));
 }
 
-// FUNCTION: LLE 0x100060c8
 // Closes the archive and points it at another archive file
 long FSArchive::SetArchive(const FSFileSpec& inFile)
 {
     return ee_fs_arch_set_archive(Record(this), Spec(&inFile));
 }
 
-// FUNCTION: LLE 0x1000612f
 // Sets a named tag's value; an empty value removes the tag
 long FSArchive::SetTag(const UWideString& inName, const UWideString& inValue)
 {

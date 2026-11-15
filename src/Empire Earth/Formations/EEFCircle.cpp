@@ -61,7 +61,6 @@
 const float kEEFCircleF64 = 0.5f;
 const float kCircleMinRadius = 0.5f;
 
-// FUNCTION: EXE 0x4dd160
 // Creates a ring formation with the given facing mode, spanning a full circle with a minimum radius of 0.5
 EEFCircle::EEFCircle(long inMode, long inType)
     : EEFormation(inType), mMode(inMode)
@@ -73,17 +72,12 @@ EEFCircle::EEFCircle(long inMode, long inType)
     this->mHalfArc = 3.14159265f;
 }
 
-// SYNTHETIC: EXE 0x4dd1a2
-// (the scalar deleting destructor; ICF-shared with EEFInwardCircle/EEFOutwardCircle/EEFWedge)
-
-// FUNCTION: EXE 0x4dd1be
 // Destroys the ring formation
 // (~EEFormation inline; ICF-shared with ~EEFWedge)
 EEFCircle::~EEFCircle()
 {
 }
 
-// FUNCTION: EXE 0x4dd1cc
 // Places the units evenly round a ring sized to their largest collision radius, each facing the formation
 // heading, the centre or outward by mode; a lone unit stands at the centre
 void EEFCircle::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots)
@@ -105,20 +99,3 @@ void EEFCircle::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormat
         EEFormationCaptureEnd(theRecord, inUnits, outSlots, theFirst);
     }
 }
-
-// The template COMDATs of Place (vector<EEFormationSlot>; names in analysis/exe/names.txt):
-// TEMPLATE: EXE 0x4dd45c
-// TEMPLATE: EXE 0x4dd488
-// TEMPLATE: EXE 0x4dd4e2
-// TEMPLATE: EXE 0x4dd799
-// TEMPLATE: EXE 0x4dd7b6
-
-// TEMPLATE: EXE 0x4dd7e2
-// (compiler-generated; name in analysis/exe/names.txt)
-
-// The inline COMDATs this unit emits as their first user (after the template COMDATs of Place):
-// NEAR: scheduling only (the original stores mL58 between the last two fldz stores; +0x48..+0x50 may be a GE3DPoint)
-// TEMPLATE: EXE 0x4dd7f8
-// (EEFormation::EEFormation(long), inline in EEFormation.h)
-// TEMPLATE: EXE 0x4dd83d
-// (EEFormation's scalar deleting destructor)
