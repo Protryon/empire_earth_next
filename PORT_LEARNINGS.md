@@ -23719,3 +23719,27 @@ host's operations (one per call kind) take back about half of what moved.
 - **Not moved.** EEWonNet.cpp (the game's side of WON: it calls SmartRoutingConnection, AsyncOp and the lobby's
   windows, which the WON lanes are moving; no WON file was touched). The thirteen C++ Execute bodies. EEMessage and
   EEMRecord as one class.
+- **Gates.** Per code commit: build `--sim` 0/0; `ee_session_test` equal to the golden; the oracle identical on seeds
+  2-3; the oracle capture at seeds 2-3 equal to golden_cpp.txt but UUTL (the same stale digests round 5 found on
+  `rust` itself, 78796ae3/6171a40b); EE-SIM with the Lua AI (`--engine next`, Small Hard, 1,200 s, seeds 2-3) equal
+  to the main checkout's EE-SIM in the AI trace (but the EE-AIPROF timing lines) and the checksum lines (1,372 each);
+  the Rust gate PASS (the session commit's first gate failed clippy's single-element loop, fixed before the commit).
+- **The merge of `rust`** (3114725d, 68 commits): golden_cpp*.txt and RUST_PLAN.md taken from `rust`; EEMessage.cpp's
+  three bodies round 5 had deleted kept deleted, and the host's lock/unlock reads the gate as
+  `EEUnitClassOfKind<EE_CLASS_KIND_GATE>` (EEUCGate went on `rust`); headers regenerated (`rust_build.py header`,
+  `rust_includes.py`: no change). The lead's RUST_PLAN history fix (fix_plan_history.sh) then rewrote the branch's
+  commits: the tree is byte-identical, the plan blob 81 KB. On the merged tree: build `--sim` 0/0 and the test-profile
+  build 0/0; the oracle identical on seeds 2-7; the captures at seeds 2-3 PASS (oracle 177 digests, late 178, space
+  179, calamity 195); the saveload matrix `--expect` PASS; nettest: msgmgr 20,000, queues 1,500, client 1,500, tune
+  20,000, server 1,500 sequences 0 differing, protocol and message equal; `ee_session_test` first differed: the
+  driver compared a deleted server's address with the new one's, and a new server reusing it dumped its state at
+  random; it compares a flag now, the golden re-recorded by the original units (44,289 lines), and the moved units
+  give it byte for byte; the Rust gate PASS. Under the harness lock: `lan_game.py` RESULT PASS lan-game (PT host
+  2933, joiner 2929); the Lua AI game (`--lobby 276=Boom --lobby 277=Boom`, Small Hard 32x, PT 40, seed 2) RESULT
+  PASS time-cap, alive [2, 3], units [5, 33, 33]; the tour RESULT PASS (render checks, F3); the legacy tour
+  (`game_session.py --exercise tour --seed 2`) STOP <windowed session complete>, the seed pin written (old 29593,
+  new 2); `--exercise random-game --box-select --orders`: PASS unseeded (the lead's command) and PASS with `--seed 2`
+  (gather, repair, repair-queued, move; box select 4 steps), but two runs failed: one with `--play-seconds 120`
+  (move: no mobile unit left) and one with `--seed 2` (gather: the scouted resource not picked from the view). The
+  seeded failure is the fixture's picker under load: the same seed passed on this build the next run and on `rust`'s
+  own test exe (built in a scratch worktree for the check); the 120 s variant was not repeated on `rust`.
