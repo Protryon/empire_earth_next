@@ -282,7 +282,7 @@ mod tests {
         let draw = x.calls.iter().position(|c| c.starts_with("batch draw")).unwrap();
         assert_eq!(x.calls[draw], "batch draw 1 2048 7");
         assert_eq!(x.calls[draw - 5], "alpharef 0.25");
-        assert_eq!(x.calls[draw + 1], "batch quad 1 0");
+        assert_eq!(x.calls[draw + 1..draw + 3], ["culling 0", "batch quad 1 0"]);
         assert_eq!(get(EE_GFX_BATCH_GROUND), Batch { texture: 7, alpha_ref: 0.75, count: 4 });
         flush_all(&mut x);
         end(&mut x);
