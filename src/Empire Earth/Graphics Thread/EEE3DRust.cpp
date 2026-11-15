@@ -55,8 +55,7 @@
 #include "ee/EEE3DRust.h"
 #include "ee/EEE2DRust.h"
 #include "ee/EECombatFormulas.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEGamePreferences.h"
@@ -440,7 +439,7 @@ struct Ask {
         EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
         if (theUnit->GetClass()->mCategory != kUnitCategoryGate)
             return false;
-        EEUCGate* theGate = dynamic_cast<EEUCGate*>(theUnit->GetClass());
+        EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->GetClass());
         EEComplexUnit* theFirst = theGate->GetPart(theUnit, 0);
         EEComplexUnit* theSecond = theGate->GetPart(theUnit, 4);
         GE3DPoint theFrom;
@@ -465,7 +464,7 @@ struct Ask {
                 continue;
             long theType = theOther->GetClass()->mUnitType;
             if (theType == kUnitTypeWallSpace
-                || (theType == kUnitTypeGateSpace && static_cast<EEUCGate*>(theOther->GetClass())->IsSidePart(theOther))) {
+                || (theType == kUnitTypeGateSpace && theOther->GetClass()->IsSidePart(theOther))) {
                 GE3DPoint thePosition;
                 theOther->GetPosition(thePosition);
                 *outZ = thePosition.GetZ();

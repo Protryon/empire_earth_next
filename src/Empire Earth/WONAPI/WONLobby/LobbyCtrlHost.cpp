@@ -75,7 +75,7 @@ void GameUserListItem::Paint(Graphics& inGraphics,ListArea* inArea)
         return;
     case 1:
         if(this->mClient->IsReady())
-            inGraphics.DrawImage(::GameUserListCtrl_Ready_Image.get(),0,(this->mHeight-this->mImage->mHeight)/2);
+            inGraphics.DrawImage(LOBBY_IMAGE(GameUserListCtrl_Ready_Image).get(),0,(this->mHeight-this->mImage->mHeight)/2);
         return;
     case 2:
         inGraphics.SetFont(this->mFont.get());
@@ -164,15 +164,15 @@ static const GUIString& CtlString(intptr_t inString)
 {
     typedef EeWonLobbyCtlString S;
     switch ((S)inString) {
-    case S::Ready: return ::GameStagingCtrl_Ready_String;
-    case S::NotReady: return ::GameStagingCtrl_NotReady_String;
-    case S::StartGame: return ::GameStagingCtrl_StartGame_String;
-    case S::LeaveGame: return ::GameStagingCtrl_LeaveGame_String;
-    case S::DissolveGame: return ::GameStagingCtrl_DissolveGame_String;
-    case S::Ban: return ::GameUserListCtrl_Ban_String;
-    case S::Kick: return ::GameUserListCtrl_Kick_String;
-    case S::CheckingAddress: return ::LobbyOptions_CheckingAddress_String;
-    case S::AddressUnavailable: return ::LobbyOptions_AddressUnavailable_String;
+    case S::Ready: return LOBBY_STRING(GameStagingCtrl_Ready_String);
+    case S::NotReady: return LOBBY_STRING(GameStagingCtrl_NotReady_String);
+    case S::StartGame: return LOBBY_STRING(GameStagingCtrl_StartGame_String);
+    case S::LeaveGame: return LOBBY_STRING(GameStagingCtrl_LeaveGame_String);
+    case S::DissolveGame: return LOBBY_STRING(GameStagingCtrl_DissolveGame_String);
+    case S::Ban: return LOBBY_STRING(GameUserListCtrl_Ban_String);
+    case S::Kick: return LOBBY_STRING(GameUserListCtrl_Kick_String);
+    case S::CheckingAddress: return LOBBY_STRING(LobbyOptions_CheckingAddress_String);
+    case S::AddressUnavailable: return LOBBY_STRING(LobbyOptions_AddressUnavailable_String);
     }
     return gEmptyGUIString;
 }
@@ -181,18 +181,18 @@ static const SmartPtr<Image>& CtlImage(intptr_t inImage)
 {
     typedef EeWonLobbyCtlImage I;
     switch ((I)inImage) {
-    case I::Ignored: return ::UserListCtrl_Ignored_Image;
-    case I::Blocked: return ::UserListCtrl_Blocked_Image;
-    case I::Muted: return ::UserListCtrl_Muted_Image;
-    case I::Away: return ::UserListCtrl_Away_Image;
-    case I::Admin: return ::UserListCtrl_Admin_Image;
-    case I::Moderator: return ::UserListCtrl_Moderator_Image;
-    case I::Captain: return ::UserListCtrl_Captain_Image;
-    case I::Firewall: return ::LobbyGlobal_Firewall_Image;
-    case I::Searching: return ::LobbyGlobal_Searching_Image;
+    case I::Ignored: return LOBBY_IMAGE(UserListCtrl_Ignored_Image);
+    case I::Blocked: return LOBBY_IMAGE(UserListCtrl_Blocked_Image);
+    case I::Muted: return LOBBY_IMAGE(UserListCtrl_Muted_Image);
+    case I::Away: return LOBBY_IMAGE(UserListCtrl_Away_Image);
+    case I::Admin: return LOBBY_IMAGE(UserListCtrl_Admin_Image);
+    case I::Moderator: return LOBBY_IMAGE(UserListCtrl_Moderator_Image);
+    case I::Captain: return LOBBY_IMAGE(UserListCtrl_Captain_Image);
+    case I::Firewall: return LOBBY_IMAGE(LobbyGlobal_Firewall_Image);
+    case I::Searching: return LOBBY_IMAGE(LobbyGlobal_Searching_Image);
     case I::Normal: break;
     }
-    return ::UserListCtrl_Normal_Image;
+    return LOBBY_IMAGE(UserListCtrl_Normal_Image);
 }
 
 static bool ClientIs(LobbyClient* inClient, intptr_t inTest)
@@ -373,10 +373,10 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::ResetFilters: LobbyResetFilters(); return 0;
     case Op::CurrentScreen: return (intptr_t)LobbyGetCurrentScreen();
     case Op::BroadcastDown: aComp->BroadcastEventDown(new LobbyEvent((int)b)); return 0;
-    case Op::MusicResume: ::LobbyGlobal_LobbyMusic_Sound->Resume(); return 0;
-    case Op::MusicStop: ::LobbyGlobal_LobbyMusic_Sound->Stop(); return 0;
-    case Op::ClickSoundMute: ::LobbyGlobal_ButtonClick_Sound->SetMuted(a != 0); return 0;
-    case Op::LogonSoundStop: ::LobbyGlobal_SierraLogon_Sound->Stop(); return 0;
+    case Op::MusicResume: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Resume(); return 0;
+    case Op::MusicStop: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop(); return 0;
+    case Op::ClickSoundMute: LOBBY_SOUND(LobbyGlobal_ButtonClick_Sound)->SetMuted(a != 0); return 0;
+    case Op::LogonSoundStop: LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop(); return 0;
     case Op::RemoveLanName: LobbyRemoveLanName(); return 0;
     case Op::OnLoginScreen: return LobbyOnLoginScreen() ? 1 : 0;
     case Op::OnLanScreen: return LobbyOnLanScreen() ? 1 : 0;

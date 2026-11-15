@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyCore.h"
+#include "rust/ee_won.h"
 
 namespace WONAPI {
 extern SmartPtr<Dialog> gLobbyFailureDialog;
@@ -30,7 +31,7 @@ void LobbyShutdown()
     LobbyLogout(false);
     gLobbyData->Destroy();
     LobbyRemoveEventHooks();
-    ::LobbyGlobal_LobbyMusic_Sound->Stop();
+    LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop();
     LobbyResource_UnloadResources();
     gLobbyData=NULL;
 }

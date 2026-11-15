@@ -35,7 +35,6 @@ UNITS = [
     ("lle", "Low-Level Engine/Graphics Engine/GERasterizer.cpp"),
     ("lle", "Low-Level Engine/Input System/Input System.cpp"),
     ("lle", "Low-Level Engine/Network Engine/NESynchronousServer.cpp"),
-    ("dx7hrtnl", "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Screen.cpp"),
     ("dx7hrtnl", "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Rasterizer.cpp"),
     ("exe", "Empire Earth/Empire Earth/Empire Earth.cpp"),
     ("exe", "Empire Earth/Empire Earth/EEWorld.cpp"),

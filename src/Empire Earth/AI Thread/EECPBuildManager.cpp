@@ -45,8 +45,7 @@
 #include "ee/EEAEManager.h"
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EECPUnitTileDistanceLess.h"
 #include "ee/EEUnitGoal.h"
@@ -1235,7 +1234,7 @@ bool EECPBuildManager::FindTowerSite(long inUnitClass, long inSize, EETileCoordi
             }
         }
         if (!theResult) {
-            EEUCGate* theGateClass = dynamic_cast<EEUCGate*>(gUnitClassTable[theGateType]);
+            EEUnitClass* theGateClass = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(gUnitClassTable[theGateType]);
             EEGetPlayerUnitsOfType(theGateType, thePlayerID, theGates);
             std::vector<EEUnit*>::iterator theGate;
             for (theGate = theGates.begin(); theGate != theGates.end();) {

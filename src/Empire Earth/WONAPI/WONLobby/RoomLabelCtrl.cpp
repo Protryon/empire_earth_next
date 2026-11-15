@@ -40,16 +40,16 @@ void RoomLabelCtrl::CalcLabel()
     GUIString aFormat;
     char aCount[33] = "";
     if(this->mRoom.empty())
-        aFormat = ::RoomLabelCtrl_LabelDisconnected_String;
+        aFormat = LOBBY_STRING(RoomLabelCtrl_LabelDisconnected_String);
     else
     {
-        if(this->mPrefix.length()!=0) aFormat.append(::RoomLabelCtrl_LabelPrefix_String);
-        if(this->mShowServer && this->mServer.length()!=0) aFormat.append(::RoomLabelCtrl_LabelServer_String);
+        if(this->mPrefix.length()!=0) aFormat.append(LOBBY_STRING(RoomLabelCtrl_LabelPrefix_String));
+        if(this->mShowServer && this->mServer.length()!=0) aFormat.append(LOBBY_STRING(RoomLabelCtrl_LabelServer_String));
         aFormat.append(this->mRoom);
         if(this->mUserCt>0)
         {
             sprintf(aCount,"%d",this->mUserCt);
-            const GUIString& aSuffix = this->mUserCt==1 ? ::RoomLabelCtrl_LabelUser_String : ::RoomLabelCtrl_LabelUsers_String;
+            const GUIString& aSuffix = this->mUserCt==1 ? LOBBY_STRING(RoomLabelCtrl_LabelUser_String) : LOBBY_STRING(RoomLabelCtrl_LabelUsers_String);
             aFormat.append(aSuffix);
         }
     }

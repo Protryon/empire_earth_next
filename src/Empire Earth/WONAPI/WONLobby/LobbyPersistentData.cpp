@@ -172,7 +172,7 @@ struct PersistGlobalLoad {
             d->SetFlag(LobbyPersistentData::kLobbySoundEffects, e->value != 0);
             d->SetFlag(LobbyPersistentData::kSavedLobbySoundEffects, e->value != 0);
             // the click sound is used without a null check, as the original did
-            ::LobbyGlobal_ButtonClick_Sound->SetMuted(!d->GetFlag(LobbyPersistentData::kLobbySoundEffects));
+            LOBBY_SOUND(LobbyGlobal_ButtonClick_Sound)->SetMuted(!d->GetFlag(LobbyPersistentData::kLobbySoundEffects));
             break;
         case EeWonPrefsEventKind::Music:
             d->SetFlag(LobbyPersistentData::kLobbyMusic, e->value != 0);
@@ -254,7 +254,7 @@ void LobbyPersistentData::SaveGlobalPrefs()
 // default LAN name for the LAN user, all sounds and confirmations on, broadcast port 8585
 void LobbyPersistentData::RestoreDefaults()
 {
-    std::string aQuickPlay = (std::string)::LobbyGlobal_QuickPlay_String, aLan = (std::string)::LobbyGlobal_Lan_String;
+    std::string aQuickPlay = (std::string)LOBBY_STRING(LobbyGlobal_QuickPlay_String), aLan = (std::string)LOBBY_STRING(LobbyGlobal_Lan_String);
     if (ee_won_lobbyprefs_restore_defaults(this->mPrefs, reinterpret_cast<const uint8_t*>(aQuickPlay.data()),
                                            aQuickPlay.length(), reinterpret_cast<const uint8_t*>(aLan.data()),
                                            aLan.length()))
@@ -744,7 +744,7 @@ namespace WONAPI {
 // lobby configuration turns that off
 GUIString LobbyPersistentData::GetDefaultLanName()
 {
-    GUIString aName = ::LobbyOptions_DefaultName_String;
+    GUIString aName = LOBBY_STRING(LobbyOptions_DefaultName_String);
     LobbyConfig* aConfig = GetLobbyConfig();
     if (aConfig != NULL && !aConfig->mAppendNumberToDefaultLanName)
         return aName;
