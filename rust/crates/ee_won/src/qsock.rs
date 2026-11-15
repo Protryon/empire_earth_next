@@ -545,18 +545,19 @@ impl Drop for EeWonQueueSocket {
 
 // ---- the C ABI
 
-/// A new queue object for the C++ `socket` (the hooks get it), on the socket's lock `lock`.
+/// A new queue object for the C++ `socket`, on the socket's lock `lock`; its calls are answered in Rust over the
+/// library's `core` table (cppcore.rs).
 ///
 /// # Safety
-/// `hooks` is a static table; `socket` and `lock` outlive the object.
+/// `core` is the library's static table; `socket` and `lock` outlive the object.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_queuesocket_new(
     socket: *mut c_void,
-    hooks: *const EeWonQueueSocketHooks,
+    core: *const crate::cppcore::EeWonCoreHooks,
     lock: *mut c_void,
 ) -> *mut EeWonQueueSocket {
-    // SAFETY: the caller's static table
-    Box::into_raw(Box::new(EeWonQueueSocket::new(socket, unsafe { &*hooks }, lock.cast())))
+    crate::cppcore::bind(core);
+    Box::into_raw(Box::new(EeWonQueueSocket::new(socket, &crate::cppcore::NATIVE_QUEUE, lock.cast())))
 }
 
 /// Frees the queue object (its references go).

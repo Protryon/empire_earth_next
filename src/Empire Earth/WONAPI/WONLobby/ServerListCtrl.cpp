@@ -187,7 +187,7 @@ void ServerDetailsItem::CalcDimensions(ListArea* inList)
     Font* aFont=inList->GetDefaultFont();
     this->CalcIcon();
     this->mSummaryHeight=static_cast<unsigned char>(aFont->GetHeight());
-    unsigned short imageHeight=::ServerListCtrl_GameExpanded_Image->mHeight;
+    unsigned short imageHeight=LOBBY_IMAGE(ServerListCtrl_GameExpanded_Image)->mHeight;
     if(imageHeight>this->mSummaryHeight)
         this->mSummaryHeight=static_cast<unsigned char>(imageHeight);
     this->mSummaryHeight+=2;
@@ -228,9 +228,9 @@ static void DrawServerImage(Graphics& g,Image* inImage,ServerDetailsItem* inItem
 void ServerDetailsItem::PaintIcon(Graphics& g,ServerDetailsItem* inItem,ServerListCtrl*)
 {
     if(inItem->mGame->GetShowDetails())
-        DrawServerImage(g,::ServerListCtrl_GameExpanded_Image.get(),inItem,15);
+        DrawServerImage(g,LOBBY_IMAGE(ServerListCtrl_GameExpanded_Image).get(),inItem,15);
     else
-        DrawServerImage(g,::ServerListCtrl_GameNotExpanded_Image.get(),inItem,15);
+        DrawServerImage(g,LOBBY_IMAGE(ServerListCtrl_GameNotExpanded_Image).get(),inItem,15);
     DrawServerImage(g,::LobbyResource_GetImage((LobbyResourceId)(inItem->mIconId)),inItem,0);
 }
 // FUNCTION: WON 0x007c58e0
@@ -260,11 +260,11 @@ void ServerDetailsItem::FilterNumPlayers(const GUIString& inFilter,ServerDetails
     bool aNotFull=false;
     bool aOpen=false;
     bool aFull=false;
-    int aPos=inFilter.findNoCase(::ServerListCtrl_NotFullFilter_String,0);
+    int aPos=inFilter.findNoCase(LOBBY_STRING(ServerListCtrl_NotFullFilter_String),0);
     if(aPos==0 || (aPos>0 && inFilter[aPos-1]==' ')) aNotFull=true;
-    aPos=inFilter.findNoCase(::ServerListCtrl_FullFilter_String,0);
+    aPos=inFilter.findNoCase(LOBBY_STRING(ServerListCtrl_FullFilter_String),0);
     if(aPos==0 || (aPos>0 && inFilter[aPos-1]==' ')) aFull=true;
-    aPos=inFilter.findNoCase(::ServerListCtrl_OpenFilter_String,0);
+    aPos=inFilter.findNoCase(LOBBY_STRING(ServerListCtrl_OpenFilter_String),0);
     if(aPos==0 || (aPos>0 && inFilter[aPos-1]==' ')) aOpen=true;
     if(aFull && aNotFull) { ioList.clear();return; }
     int aLower=-100000,aUpper=100000;
@@ -318,8 +318,8 @@ void ServerDetailsItem::Paint(Graphics& g,ListArea* inList)
         {
             g.SetFont(aList->mFont.get());
             g.SetSysColor(StandardColor_Text);
-            if(this->mGame->IsQueryingDetails()) g.DrawString(::ServerListCtrl_Querying_String,0,0);
-            else g.DrawString(::ServerListCtrl_QueryFailed_String,0,0);
+            if(this->mGame->IsQueryingDetails()) g.DrawString(LOBBY_STRING(ServerListCtrl_Querying_String),0,0);
+            else g.DrawString(LOBBY_STRING(ServerListCtrl_QueryFailed_String),0,0);
         }
         g.Translate(-aWidth,-this->mSummaryHeight);
         return;
@@ -635,14 +635,14 @@ void ServerListCtrl::UpdateSummaryLabel()
     if(LobbyGetNumPingsToDo()>0)
     {
         sprintf(aShownCount,"%d",LobbyGetNumPingsToDo());
-        this->mSummaryLabel->SetText(LobbyFormatString(::ServerListCtrl_ListPingSummary_String,aShownCount),true);
-        this->mRefreshButton->SetText(::ServerListCtrl_StopRefresh_String,true);
+        this->mSummaryLabel->SetText(LobbyFormatString(LOBBY_STRING(ServerListCtrl_ListPingSummary_String),aShownCount),true);
+        this->mRefreshButton->SetText(LOBBY_STRING(ServerListCtrl_StopRefresh_String),true);
     }
     else
     {
         sprintf(aShownCount,"%d",this->mList->GetNumItems());
-        this->mSummaryLabel->SetText(LobbyFormatString2(::ServerListCtrl_ListSummary_String,aShownCount,aTotalCount),true);
-        this->mRefreshButton->SetText(::ServerListCtrl_RefreshList_String,true);
+        this->mSummaryLabel->SetText(LobbyFormatString2(LOBBY_STRING(ServerListCtrl_ListSummary_String),aShownCount,aTotalCount),true);
+        this->mRefreshButton->SetText(LOBBY_STRING(ServerListCtrl_RefreshList_String),true);
     }
 }
 // FUNCTION: WON 0x007c6740
@@ -654,7 +654,7 @@ void ServerListCtrl::LoadFilterCombos()
         ComboBox* aCombo=it->mFilterCombo.get();
         if(aCombo==NULL) continue;
         aCombo->Clear(true);
-        aCombo->InsertItem(new TextListItem(::ServerListCtrl_NoFilter_String,this->mBoldFont.get()),-1);
+        aCombo->InsertItem(new TextListItem(LOBBY_STRING(ServerListCtrl_NoFilter_String),this->mBoldFont.get()),-1);
         aCombo->InsertItem(new FilterListItem(it->mColumnName,this->mBoldFont.get()),-1);
         LobbyOptionSet aFilters=LobbyGetFilterValues(it->mColumnName);
         for(size_t jt=0;jt<aFilters.size();++jt)
@@ -676,7 +676,7 @@ void ServerListCtrl::HandleComboTextChanged(Component* inComponent)
     if(aFilter==NULL) return;
     if(aText.length()==0)
     {
-        aFilter->mText=::ServerListCtrl_AddRemove_String;
+        aFilter->mText=LOBBY_STRING(ServerListCtrl_AddRemove_String);
         aFilter->mIsAdd=true;
         aFilter->mFilterText=GUIString("");
         aFilter->mSelPos=0;
@@ -697,8 +697,8 @@ void ServerListCtrl::HandleComboTextChanged(Component* inComponent)
     aFilter->mIsAdd=aPos>=aCount;
     aFilter->mFilterText=aText;
     GUIString aLabel;
-    if(aFilter->mIsAdd) aLabel=::ServerListCtrl_Add_String;
-    else aLabel=::ServerListCtrl_Remove_String;
+    if(aFilter->mIsAdd) aLabel=LOBBY_STRING(ServerListCtrl_Add_String);
+    else aLabel=LOBBY_STRING(ServerListCtrl_Remove_String);
     aLabel.append(aText);
     aLabel.append(GUIString(new GUIStringData("\")")));
     aFilter->mText=aLabel;

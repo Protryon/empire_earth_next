@@ -26,10 +26,8 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUCAirplane.h"
-#include "ee/EEUCBuilding.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUCGate.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
 #include "ee/EEDebugTrace.h"
@@ -1270,7 +1268,7 @@ void EESMEffect::FreezeUnits(bool inFlag)
                 theUnit->StartAction(kActionCircle);
                 theUnit->GetUnitClass()->ActionChanged(theUnit);
             } else if (theClass->GetCategory() == kUnitCategoryGate) {
-                EEUCGate* theGate = dynamic_cast<EEUCGate*>(theClass);
+                EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theClass);
                 theUnit->StartAction(kActionClosing);
                 theUnit->GetUnitClass()->ActionChanged(theUnit);
             } else if (!theClass->mIsWall) {
@@ -1642,7 +1640,7 @@ void EESMEffect::SetUnitsStance()
             break;
         case kSMStanceLocked:
         {
-            EEUCGate* theGate = dynamic_cast<EEUCGate*>(theUnit->GetUnitClass());
+            EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->GetUnitClass());
             if (theUnit->mIsLocked != true)
                 theUnit->mIsLocked = true;
             // a single-piece unit (a non-gate, or a gate created by a Create effect) has no second or fourth part
@@ -1656,7 +1654,7 @@ void EESMEffect::SetUnitsStance()
         }
         case kSMStanceUnlocked:
         {
-            EEUCGate* theGate = dynamic_cast<EEUCGate*>(theUnit->GetUnitClass());
+            EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->GetUnitClass());
             if (theUnit->mIsLocked)
                 theUnit->mIsLocked = false;
             // a single-piece unit (a non-gate, or a gate created by a Create effect) has no second or fourth part
@@ -1777,7 +1775,6 @@ void EESMEffect::ChangeAttribute()
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEWUnitsOffMapInfo.h"
 #include "ee/EEUnitCalamityClass.h"
-#include "ee/EEUCTransport.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
@@ -1997,7 +1994,7 @@ void EESMEffect::TaskUnitsToObject()
                     if (theUnit != theTarget)
                         theLoadUnits.push_back(theUnit);
                 }
-                dynamic_cast<EEUCTransport*>(theTarget->GetUnitClass())->FilterLoadable(&theLoadUnits, theTransport,
+                EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theTarget->GetUnitClass())->FilterLoadable(&theLoadUnits, theTransport,
                                                                                 &theRejected);
                 U2DPoint<long> theDestination;
                 if (theLoadUnits.size() > 0) {

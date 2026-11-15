@@ -2,7 +2,7 @@
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 //
 // 0x10038527..0x10038abf (the last GE unit: "Graphics Engine" sorts after "GEWindow"): the U2D point/rectangle key
-// chains, PIMModule's header-inline block, the rasterizer plug-in list, GEInitialize, the pixel-format packers and
+// chains, PIMModule's header-inline block (gone), the rasterizer plug-in list (gone), GEInitialize, the pixel-format packers and
 // the shutdown hook, then vector COMDATs and the UList template statics' init pairs.
 #include <windows.h>
 #include "platform/PlatFont.h"
@@ -22,7 +22,6 @@
 #include "lle/FSFileSpec.h"
 #include "lle/U2DPoint.h"
 #include "lle/U2DRectangle.h"
-#include "lle/PIMModule.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
@@ -41,72 +40,32 @@
 
 void GEShutdown(bool inForced);
 
-// A loaded rasterizer plug-in (RTTI .?AVRasterizerWrapper@@, vtable 0x980fc: only the deleting dtor).
-class RasterizerWrapper {
-public:
-    RasterizerWrapper(PIMModule* inModule);
-    virtual ~RasterizerWrapper() { this->mModule->Unload(); }
-
-    GERasterizer* (*mGetRasterizer)();      // +0x04 RPIMGetRasterizer
-    PIMModule* mModule;                     // +0x08
-};
-
 // (GEPixelFormat and sPixelFormats (0x100d9eb8), the shift and position of each channel per pixel format, are in
 // Rust: ee_ge pixel.rs; GEPackColor and GEUnpack* forward)
 
 HINSTANCE__* GEScreen::sInstance;           // 0x1012d948 (.bss after this unit's U2D keys)
-static std::vector<RasterizerWrapper*> sRasterizerWrappers;     // 0x1012d8d8
 
-// FUNCTION: LLE 0x100386f5
-// Deletes every loaded rasterizer plug-in wrapper (unloading its module) and empties the list
-static void DeleteRasterizerWrappers()
-{
-    for (unsigned long i = 0; i < sRasterizerWrappers.size(); i++)
-        delete sRasterizerWrappers[i];
-    sRasterizerWrappers.clear();
-}
+// The renderer linked into the game: the T&L DX7 rasterizer (DX7Rasterizer.cpp). The original loaded every 'rast'
+// plug-in DLL of the folder (sRasterizerWrappers, 0x1012d8d8, kept each module and its RPIMGetRasterizer); the plug-in
+// boundary is gone (R4.3 part 14), its PIMIsValid test stays.
+GERasterizer* DX7TnLRasterizer();
 
-// FUNCTION: LLE 0x10038731
-// Starts the graphics engine: registers the shutdown hook and loads every rasterizer plug-in ('rast') in a
-// folder; returns success when the folder runs out
+// Starts the graphics engine: registers the shutdown hook and adds the rasterizer when it activates and finds a screen
+// (the original's PIMIsValid: activate, count the screens, deactivate)
 long GEInitialize(FSFileSpec& inDirectory, HINSTANCE__* const inInstance)
 {
-    PIMModule* theModule;
-    RasterizerWrapper* theWrapper;
-    long theResult;
     URegisterShutdown(GEShutdown);
     PlatFontRegisterBuiltIn();   // the faces the fonts are made from (GDI's system fonts before)
     GEScreen::sInstance = inInstance;
     GERasterizer::ClearRasterizers();
-    DeleteRasterizerWrappers();
-    theResult = PIMModule::GetFirstModule(inDirectory, 'rast', theModule);
-    while (theResult == kErrorOK) {
-        theModule->GetName();
-        if (theModule->IsValid()) {
-            theWrapper = new RasterizerWrapper(theModule);
-            sRasterizerWrappers.push_back(theWrapper);
-            GERasterizer::AddRasterizer(theWrapper->mGetRasterizer());
-            theModule->GetName();
-        } else {
-            theModule->GetName();
-            theModule->Unload();
-        }
-        theResult = PIMModule::GetNextModule(theModule);
-    }
-    if (theResult == kErrorNoMoreFiles)
-        theResult = kErrorOK;
-    return theResult;
+    GERasterizer* theRasterizer = DX7TnLRasterizer();
+    bool theValid = theRasterizer->Activate() == kErrorOK && theRasterizer->GetScreenCount() > 0;
+    theRasterizer->Deactivate();
+    if (theValid)
+        GERasterizer::AddRasterizer(theRasterizer);
+    return kErrorOK;
 }
 
-// FUNCTION: LLE 0x100387f9
-// Wraps a rasterizer plug-in module, looking up its RPIMGetRasterizer entry point
-RasterizerWrapper::RasterizerWrapper(PIMModule* inModule)
-{
-    this->mModule = inModule;
-    this->mGetRasterizer = (GERasterizer* (*)())inModule->GetEntry("RPIMGetRasterizer");
-}
-
-// FUNCTION: LLE 0x10038860
 // Packs a color and alpha (0..1 floats) into a pixel of the given format
 unsigned long GEPackColor(unsigned long inFormat, const GEColor& inColor, float inAlpha)
 {
@@ -122,14 +81,12 @@ unsigned long GEPackColor(unsigned long inFormat, unsigned long inRed, unsigned 
 }
 
 // FUNCTION: LLE 0x1003896b
-// Shuts the graphics engine down: forgets the rasterizers and unloads their plug-ins
+// Shuts the graphics engine down: forgets the rasterizers
 void GEShutdown(bool inForced)
 {
     GERasterizer::ClearRasterizers();
-    DeleteRasterizerWrappers();
 }
 
-// FUNCTION: LLE 0x1003897a
 // Returns a pixel's red channel scaled to 8 bits for the given format
 unsigned char GEUnpackRed(unsigned long inFormat, unsigned long inColor)
 {

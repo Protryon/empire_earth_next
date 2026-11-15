@@ -89,6 +89,9 @@ pub mod uu_spots;
 #[cfg(test)]
 mod uu_tests;
 pub mod uu_tiles;
+pub mod uu_world;
+#[cfg(test)]
+mod uu_world_tests;
 pub mod world;
 pub mod world_save;
 

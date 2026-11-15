@@ -12,6 +12,7 @@
 #include "rust/ee_combat.h"
 #include "rust/ee_units.h"
 #include "ee/EEUnitKind.h"
+#include "ee/EEUnitUpdate.h"
 #include "ee/EEUCUpgradeTable.h"
 #include "lle/LowLevelEngine.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
@@ -84,42 +85,7 @@
 #include "ee/EEUnitClassRecord.h"
 #include "ee/EEDbObject.h"
 #include "ee/EEDatabase.h"
-#include "ee/EEUCAirAnimal.h"
-#include "ee/EEUCAirplane.h"
-#include "ee/EEUCAmbient.h"
-#include "ee/EEUCBasicCitizen.h"
-#include "ee/EEUCBasicPriest.h"
-#include "ee/EEUCBomb.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCBuildingPriest.h"
-#include "ee/EEUCFortress.h"
-#include "ee/EEUCGate.h"
-#include "ee/EEUCHelicopter.h"
-#include "ee/EEUCHelicopterPriest.h"
-#include "ee/EEUCHelicopterTransport.h"
-#include "ee/EEUCLand.h"
-#include "ee/EEUCLandCitizen.h"
-#include "ee/EEUCLandMilitaryHero.h"
-#include "ee/EEUCLandPriest.h"
-#include "ee/EEUCLandTransport.h"
-#include "ee/EEUCLandable.h"
-#include "ee/EEUCMiningBuilding.h"
-#include "ee/EEUCMissile.h"
-#include "ee/EEUCNaval.h"
-#include "ee/EEUCNavalBuilding.h"
-#include "ee/EEUCNavalCitizen.h"
-#include "ee/EEUCNavalPriest.h"
-#include "ee/EEUCNavalTransport.h"
-#include "ee/EEUCPlanetSpaceship.h"
-#include "ee/EEUCProjectile.h"
-#include "ee/EEUCResource.h"
-#include "ee/EEUCSeaAnimal.h"
-#include "ee/EEUCSpaceBuilding.h"
-#include "ee/EEUCSpaceTransport.h"
-#include "ee/EEUCSpaceship.h"
-#include "ee/EEUCSubmergedNaval.h"
-#include "ee/EEUCTorpedo.h"
-#include "ee/EEUCTransport.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEFOFindNewTargetInMeleeRange.h"
 #include "ee/EEMathInline.h"
 #include <algorithm>
@@ -288,68 +254,18 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
 // SYNTHETIC: EXE 0x6305d2
 // (the scalar deleting destructor, emitted with the vtable; slot EEUnitClass+0x0)
 
+// the class's effects as GetEffects' array (the members are contiguous: 29 pointers from mAttachedEffect)
+static const long kUnitClassEffectCount = 29;
+static_assert(offsetof(EEUnitClass, mBloodStainEffect) - offsetof(EEUnitClass, mAttachedEffect)
+                  == (kUnitClassEffectCount - 1) * sizeof(EEGraphicEffect*), "the class's effects are one array");
+
 // FUNCTION: EXE 0x6305ee
 // Destroys the unit class, releasing its graphic effects and its projectile, scaffolding, death and remains classes
 EEUnitClass::~EEUnitClass()
 {
-    if (this->mAttachedEffect != NULL)
-        this->mAttachedEffect->Dereference();
-    if (this->mDeathEffect != NULL)
-        this->mDeathEffect->Dereference();
-    if (this->mDamageEffect != NULL)
-        this->mDamageEffect->Dereference();
-    if (this->mHealEffect != NULL)
-        this->mHealEffect->Dereference();
-    if (this->mFireTrailEffect != NULL)
-        this->mFireTrailEffect->Dereference();
-    if (this->mTrailEffect != NULL)
-        this->mTrailEffect->Dereference();
-    if (this->mMuzzleFlashEffect != NULL)
-        this->mMuzzleFlashEffect->Dereference();
-    if (this->mRippleEffect != NULL)
-        this->mRippleEffect->Dereference();
-    if (this->mSplashEffect != NULL)
-        this->mSplashEffect->Dereference();
-    if (this->mImpactSparksEffect != NULL)
-        this->mImpactSparksEffect->Dereference();
-    if (this->mImpactBloodEffect != NULL)
-        this->mImpactBloodEffect->Dereference();
-    if (this->mEffect090 != NULL)
-        this->mEffect090->Dereference();
-    if (this->mCreationEffect != NULL)
-        this->mCreationEffect->Dereference();
-    if (this->mEffect098 != NULL)
-        this->mEffect098->Dereference();
-    if (this->mEffect09C != NULL)
-        this->mEffect09C->Dereference();
-    if (this->mEffect0A0 != NULL)
-        this->mEffect0A0->Dereference();
-    if (this->mEffect0A4 != NULL)
-        this->mEffect0A4->Dereference();
-    if (this->mEffect0A8 != NULL)
-        this->mEffect0A8->Dereference();
-    if (this->mSpecialAttackEffect != NULL)
-        this->mSpecialAttackEffect->Dereference();
-    if (this->mEffect0B0 != NULL)
-        this->mEffect0B0->Dereference();
-    if (this->mShotEffect != NULL)
-        this->mShotEffect->Dereference();
-    if (this->mLeprosyEffect != NULL)
-        this->mLeprosyEffect->Dereference();
-    if (this->mPlagueEffect != NULL)
-        this->mPlagueEffect->Dereference();
-    if (this->mPulseCannonEffect != NULL)
-        this->mPulseCannonEffect->Dereference();
-    if (this->mMoraleEffect != NULL)
-        this->mMoraleEffect->Dereference();
-    if (this->mBattleCryEffect != NULL)
-        this->mBattleCryEffect->Dereference();
-    if (this->mShellHoleEffect != NULL)
-        this->mShellHoleEffect->Dereference();
-    if (this->mEffect0D0 != NULL)
-        this->mEffect0D0->Dereference();
-    if (this->mBloodStainEffect != NULL)
-        this->mBloodStainEffect->Dereference();
+    for (long i = 0; i < kUnitClassEffectCount; i++)   // the 29 effects, in their order (+0x64..+0xd4)
+        if (this->GetEffects()[i] != NULL)
+            this->GetEffects()[i]->Dereference();
     this->mAIScript = NULL;
     if (this->mProjectileClass != NULL) {
         this->mProjectileClass->Dereference();
@@ -585,7 +501,7 @@ void EEUnitClass::GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags)
 
 // FUNCTION: EXE 0x631ad2
 // Computes the volume, pan and pitch of a sound played at the unit's position
-void EEUnitClass::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
+void EEUnitClass::BaseGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                             float* outPitch)
 {
     GE3DPoint theLocation;
@@ -914,7 +830,7 @@ EEUnit* EEUnitClass::CreateUnitAtPoint(EEPlayer* inPlayer, float inX, float inY,
 
 // FUNCTION: EXE 0x6327ff
 // Creates a unit of the class at a transformation for a player and adds it to the world (an airport gets its runways)
-EEUnit* EEUnitClass::CreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
+EEUnit* EEUnitClass::BaseCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
     GETransformation theTransformation(inTransformation);
     float theZ = 0.0f;
@@ -963,7 +879,7 @@ EEUnit* EEUnitClass::CreateUnitAt(GETransformation& inTransformation, long inPla
 
 // FUNCTION: EXE 0x6329f7
 // Creates a unit of the class at a tile for a player (yaw pi) and adds it to the world (an airport gets its runways)
-EEUnit* EEUnitClass::CreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
+EEUnit* EEUnitClass::BaseCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
     GETransformation theTransformation;
     EEMap* theMap = ::gWorld.mMap;
@@ -1497,7 +1413,7 @@ void EEUnitClass::CreateRipples(EEComplexUnit* inUnit)
 
 // FUNCTION: EXE 0x634965
 // Lists the ring of tiles around the unit's footprint (optionally with corners, appending or replacing)
-void EEUnitClass::GetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend)
+void EEUnitClass::BaseGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend)
 {
     if (!inAppend && outTiles.size() > 0)
         outTiles.clear();
@@ -1791,7 +1707,7 @@ void EEUnitClass::Heal(EEComplexUnit* inUnit)
 
 // FUNCTION: EXE 0x63511e
 // Sets up a new unit: full hit points, ammunition, behaviour, heal timer, standing still and idle
-void EEUnitClass::UnitCreated(EEComplexUnit* inUnit)
+void EEUnitClass::BaseUnitCreated(EEComplexUnit* inUnit)
 {
     inUnit->SetHealSearchTimer(this->mHealDelay);
     inUnit->SetHitPoints(inUnit->mStats->mMaxHitPoints);
@@ -1805,14 +1721,14 @@ void EEUnitClass::UnitCreated(EEComplexUnit* inUnit)
 
 // FUNCTION: EXE 0x6351ba
 // Gives a new simple unit its full hit points
-void EEUnitClass::SimpleUnitCreated(EEUnit* inUnit)
+void EEUnitClass::BaseSimpleUnitCreated(EEUnit* inUnit)
 {
     inUnit->SetHitPoints(inUnit->mStats->mMaxHitPoints);
 }
 
 // FUNCTION: EXE 0x6351cf
 // Adds a placed unit (not a path marker) to the map's unit region of its tile
-void EEUnitClass::AddToRegion(EEUnit* inUnit)
+void EEUnitClass::BaseAddToRegion(EEUnit* inUnit)
 {
     EEMap* theMap = ::gWorld.mMap;
     U2DPoint<long> theRegion(0, 0);
@@ -1826,7 +1742,7 @@ void EEUnitClass::AddToRegion(EEUnit* inUnit)
 
 // FUNCTION: EXE 0x63523c
 // Adds the unit to its tile's unit list
-void EEUnitClass::AddToTile(EEUnit* inUnit)
+void EEUnitClass::BaseAddToTile(EEUnit* inUnit)
 {
     RTSTile* theTile = inUnit->mTile;
     if (theTile != NULL)
@@ -1858,7 +1774,7 @@ void EEUnitClass::PathToward(EEComplexUnit* inUnit, GE3DPoint& inFrom, GE3DPoint
 
 // FUNCTION: EXE 0x6353bb
 // Returns whether the unit has reached its current waypoint, given the distance left
-bool EEUnitClass::HasArrived(EEComplexUnit* inUnit, float inValue)
+bool EEUnitClass::BaseHasArrived(EEComplexUnit* inUnit, float inValue)
 {
     GE3DPoint theLocation;
     bool theResult = false;
@@ -1937,7 +1853,7 @@ void EEUnitClass::LoadButtons(EEPlayer* inPlayer)
 
 // FUNCTION: EXE 0x6355e3
 // Loads the class's graphic effects and marks its related classes (projectile, death, farms, runways ...) for loading
-void EEUnitClass::LoadMedia(EEPlayer* inPlayer)
+void EEUnitClass::BaseLoadMedia(EEPlayer* inPlayer)
 {
     if (this->mUnitType == kUnitTypeAirport) {
         inPlayer->SetUnitClassMedia(0xf0, 0x7f);
@@ -1958,106 +1874,11 @@ void EEUnitClass::LoadMedia(EEPlayer* inPlayer)
         inPlayer->SetUnitClassMedia(this->mDeathSpawnClass->mUnitType, 0x7f);
     if (this->mRemainsClass != NULL)
         inPlayer->SetUnitClassMedia(this->mRemainsClass->mUnitType, 0x7f);
-    if (this->mAttachedEffect != NULL)
-        this->mAttachedEffect->Load(false);
-    if (this->mDeathEffect != NULL)
-        this->mDeathEffect->Load(false);
-    if (this->mDamageEffect != NULL)
-        this->mDamageEffect->Load(false);
-    if (this->mHealEffect != NULL)
-        this->mHealEffect->Load(false);
-    if (this->mFireTrailEffect != NULL)
-        this->mFireTrailEffect->Load(false);
-    if (this->mTrailEffect != NULL)
-        this->mTrailEffect->Load(false);
-    if (this->mMuzzleFlashEffect != NULL)
-        this->mMuzzleFlashEffect->Load(false);
-    if (this->mRippleEffect != NULL)
-        this->mRippleEffect->Load(false);
-    if (this->mSplashEffect != NULL)
-        this->mSplashEffect->Load(false);
-    if (this->mImpactSparksEffect != NULL)
-        this->mImpactSparksEffect->Load(false);
-    if (this->mImpactBloodEffect != NULL)
-        this->mImpactBloodEffect->Load(false);
-    if (this->mEffect090 != NULL)
-        this->mEffect090->Load(false);
-    if (this->mCreationEffect != NULL)
-        this->mCreationEffect->Load(false);
-    if (this->mEffect098 != NULL)
-        this->mEffect098->Load(false);
-    if (this->mEffect09C != NULL)
-        this->mEffect09C->Load(false);
-    if (this->mEffect0A0 != NULL)
-        this->mEffect0A0->Load(false);
-    if (this->mEffect0A4 != NULL)
-        this->mEffect0A4->Load(false);
-    if (this->mEffect0A8 != NULL)
-        this->mEffect0A8->Load(false);
-    if (this->mSpecialAttackEffect != NULL)
-        this->mSpecialAttackEffect->Load(false);
-    if (this->mEffect0B0 != NULL)
-        this->mEffect0B0->Load(false);
-    if (this->mShotEffect != NULL)
-        this->mShotEffect->Load(false);
-    if (this->mLeprosyEffect != NULL)
-        this->mLeprosyEffect->Load(false);
-    if (this->mPlagueEffect != NULL)
-        this->mPlagueEffect->Load(false);
-    if (this->mPulseCannonEffect != NULL)
-        this->mPulseCannonEffect->Load(false);
-    if (this->mMoraleEffect != NULL)
-        this->mMoraleEffect->Load(false);
-    if (this->mBattleCryEffect != NULL)
-        this->mBattleCryEffect->Load(false);
-    if (this->mShellHoleEffect != NULL)
-        this->mShellHoleEffect->Load(false);
-    if (this->mEffect0D0 != NULL)
-        this->mEffect0D0->Load(false);
-    if (this->mBloodStainEffect != NULL)
-        this->mBloodStainEffect->Load(false);
+    for (long i = 0; i < kUnitClassEffectCount; i++)   // the 29 effects, in their order (+0x64..+0xd4)
+        if (this->GetEffects()[i] != NULL)
+            this->GetEffects()[i]->Load(false);
     this->mIsMediaLoaded = true;
 }
-
-// The EEUC* ctors the class factory builds (inline, declared in the EEUC*.h headers; defined here, where their only
-// user is: an inline body in the headers would renumber every includer's `$E`, e.g. EEUGGather.cpp's chains).
-// Where the original's budget refused them, their out-of-line copies follow the factory (0x6361e3..0x6363ce).
-inline EEUCAirAnimal::EEUCAirAnimal(EEUnitClassRecord* inRecord) : EEUCAirplane(inRecord, gPhysicsModels[10]) {}
-inline EEUCAirplane::EEUCAirplane(EEUnitClassRecord* inRecord) : EEUCLandable(inRecord, 1) {}
-inline EEUCAirplane::EEUCAirplane(EEUnitClassRecord* inRecord, EEPhysicsModel* inModel) : EEUCLandable(inRecord, inModel) {}
-inline EEUCAmbient::EEUCAmbient(EEUnitClassRecord* inRecord) : EEUnitClass(0, inRecord, 0) {}
-inline EEUCBasicCitizen::EEUCBasicCitizen(EEUnitClassRecord* inRecord, int inIndex) : EEUnitClass(1, inRecord, gPhysicsModels[inIndex]) {}
-inline EEUCBomb::EEUCBomb(EEUnitClassRecord* inRecord) : EEUCProjectile(inRecord) {}
-inline EEUCBuilding::EEUCBuilding(EEUnitClassRecord* inRecord, EEPhysicsModel* inModel) : EEUnitClass(1, inRecord, inModel) {}
-inline EEUCBuildingPriest::EEUCBuildingPriest(EEUnitClassRecord* inRecord) : EEUCBuilding(inRecord, gPhysicsModels[8]) {}
-inline EEUCFortress::EEUCFortress(EEUnitClassRecord* inRecord) : EEUCLandTransport(inRecord, 8) {}
-inline EEUCGate::EEUCGate(EEUnitClassRecord* inRecord) : EEUCBuilding(inRecord, gPhysicsModels[8]) {}
-inline EEUCHelicopter::EEUCHelicopter(EEUnitClassRecord* inRecord) : EEUnitClass(1, inRecord, gPhysicsModels[2]) {}
-inline EEUCHelicopterPriest::EEUCHelicopterPriest(EEUnitClassRecord* inRecord) : EEUCBasicPriest(inRecord, gPhysicsModels[2]) {}
-inline EEUCHelicopterTransport::EEUCHelicopterTransport(EEUnitClassRecord* inRecord) : EEUCTransport(inRecord, 2) {}
-inline EEUCLand::EEUCLand(EEUnitClassRecord* inRecord) : EEUnitClass(1, inRecord, gPhysicsModels[0]) {}
-inline EEUCLandCitizen::EEUCLandCitizen(EEUnitClassRecord* inRecord) : EEUCBasicCitizen(inRecord, 0) {}
-inline EEUCLandMilitaryHero::EEUCLandMilitaryHero(EEUnitClassRecord* inRecord) : EEUCLand(inRecord) {}
-inline EEUCLandTransport::EEUCLandTransport(EEUnitClassRecord* inRecord) : EEUCTransport(inRecord, 0) {}
-inline EEUCLandTransport::EEUCLandTransport(EEUnitClassRecord* inRecord, int inIndex) : EEUCTransport(inRecord, inIndex) {}
-inline EEUCLandable::EEUCLandable(EEUnitClassRecord* inRecord, int inIndex) : EEUnitClass(1, inRecord, gPhysicsModels[inIndex]) {}
-inline EEUCLandable::EEUCLandable(EEUnitClassRecord* inRecord, EEPhysicsModel* inModel) : EEUnitClass(1, inRecord, inModel) {}
-inline EEUCMiningBuilding::EEUCMiningBuilding(EEUnitClassRecord* inRecord) : EEUCBuilding(inRecord, gPhysicsModels[0]) {}
-inline EEUCMissile::EEUCMissile(EEUnitClassRecord* inRecord) : EEUnitClass(1, inRecord, gPhysicsModels[7]) {}
-inline EEUCNaval::EEUCNaval(EEUnitClassRecord* inRecord) : EEUnitClass(1, inRecord, gPhysicsModels[4]) {}
-inline EEUCNavalBuilding::EEUCNavalBuilding(EEUnitClassRecord* inRecord) : EEUCBuilding(inRecord, gPhysicsModels[4]) {}
-inline EEUCNavalCitizen::EEUCNavalCitizen(EEUnitClassRecord* inRecord) : EEUCBasicCitizen(inRecord, 4) {}
-inline EEUCNavalTransport::EEUCNavalTransport(EEUnitClassRecord* inRecord) : EEUCTransport(inRecord, 4) {}
-inline EEUCPlanetSpaceship::EEUCPlanetSpaceship(EEUnitClassRecord* inRecord) : EEUCLandable(inRecord, 1) {}
-inline EEUCProjectile::EEUCProjectile(EEUnitClassRecord* inRecord) : EEUnitClass(1, inRecord, gPhysicsModels[6]) {}
-inline EEUCResource::EEUCResource(EEUnitClassRecord* inRecord) : EEUnitClass(0, inRecord, 0) {}
-inline EEUCSeaAnimal::EEUCSeaAnimal(EEUnitClassRecord* inRecord) : EEUCSubmergedNaval(inRecord, gPhysicsModels[9]) {}
-inline EEUCSpaceBuilding::EEUCSpaceBuilding(EEUnitClassRecord* inRecord) : EEUCBuilding(inRecord, gPhysicsModels[11]) {}
-inline EEUCSpaceTransport::EEUCSpaceTransport(EEUnitClassRecord* inRecord) : EEUCTransport(inRecord, 0xb) {}
-inline EEUCSpaceship::EEUCSpaceship(EEUnitClassRecord* inRecord) : EEUnitClass(1, inRecord, gPhysicsModels[11]) {}
-inline EEUCSubmergedNaval::EEUCSubmergedNaval(EEUnitClassRecord* inRecord, EEPhysicsModel* inModel) : EEUnitClass(1, inRecord, inModel) {}
-inline EEUCTorpedo::EEUCTorpedo(EEUnitClassRecord* inRecord) : EEUCMissile(inRecord) {}
-inline EEUCTransport::EEUCTransport(EEUnitClassRecord* inRecord, int inIndex) : EEUnitClass(1, inRecord, gPhysicsModels[inIndex]) {}
 
 // The order sUnitTypes is sorted in: the unit names (gResource strings of the classes' +0x260); its operator() is
 // emitted out of line among the std::sort COMDATs (0x63a19c) (provisional name)
@@ -2071,6 +1892,14 @@ struct EEUnitClassNameLess {
         return theName1 < theName2;
     }
 };
+
+// Each category's physics model (an index into gPhysicsModels; -1: an ambient or resource class, which is not complex
+// and has none): the EEUC* constructors' arguments (the land 0, airplane 1, helicopter 2, naval 4, submerged naval 5,
+// projectile 6, missile 7, building 8, sea animal 9, air animal 10 and space 11 models)
+static const signed char kCategoryPhysicsModels[0x23] = {
+    -1, -1, 8, 1, 4, 0, 0, 2, 0, 6, 5, 6, 7, 0, 4, 0,     // ambient .. land 15
+    0, 2, 4, 8, 7, 4, 4, 0, 0, 8, 2, 9, 10, 8, 8, 11,     // land transport .. spaceship
+    11, 11, 1};                                         // space building, space transport, planet spaceship
 
 // FUNCTION: EXE 0x6358b1
 // Builds every unit class from dbobjects by category, links the related classes and set flags, sorts sUnitTypes by
@@ -2103,142 +1932,14 @@ void EEUnitClass::CreateUnitClasses()
         EEUnitClassRecord* theRecord = (EEUnitClassRecord*)gDatabaseObjects.GetEntry(i)->mRecord;
         if (!theRecord->mIsEnabled || theRecord->mUnitType == -1)
             continue;
-        EEUnitClass* theClass;
-        switch (theRecord->mCategory) {
-        case kUnitCategoryAmbient:
-            theClass = new EEUCAmbient(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryResource:
-            theClass = new EEUCResource(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryBuilding:
-        case kUnitCategoryBuilding19:
-            theClass = new EEUCBuilding(theRecord, gPhysicsModels[8]);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryAirplane:
-            theClass = new EEUCAirplane(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryNaval:
-            theClass = new EEUCNaval(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryLand:
-        case kUnitCategoryLand8:
-        case kUnitCategoryLand15:
-            theClass = new EEUCLand(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryLandCitizen:
-            theClass = new EEUCLandCitizen(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryNavalCitizen:
-            theClass = new EEUCNavalCitizen(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryHelicopter:
-            theClass = new EEUCHelicopter(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryProjectile:
-            theClass = new EEUCProjectile(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryBomb:
-            theClass = new EEUCBomb(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryMissile:
-            theClass = new EEUCMissile(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryLandPriest:
-            theClass = new EEUCLandPriest(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryNavalPriest:
-            theClass = new EEUCNavalPriest(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryNavalBuilding:
-            theClass = new EEUCNavalBuilding(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryTorpedo:
-            theClass = new EEUCTorpedo(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategorySubmergedNaval:
-            theClass = new EEUCSubmergedNaval(theRecord, gPhysicsModels[5]);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryLandTransport:
-            theClass = new EEUCLandTransport(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryHelicopterTransport:
-            theClass = new EEUCHelicopterTransport(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryNavalTransport:
-            theClass = new EEUCNavalTransport(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryFortress:
-            theClass = new EEUCFortress(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryLandMilitaryHero:
-            theClass = new EEUCLandMilitaryHero(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryMiningBuilding:
-            theClass = new EEUCMiningBuilding(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryGate:
-            theClass = new EEUCGate(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryHelicopterPriest:
-            theClass = new EEUCHelicopterPriest(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategorySeaAnimal:
-            theClass = new EEUCSeaAnimal(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryAirAnimal:
-            theClass = new EEUCAirAnimal(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryBuildingPriest:
-            theClass = new EEUCBuildingPriest(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategorySpaceship:
-            theClass = new EEUCSpaceship(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategorySpaceTransport:
-            theClass = new EEUCSpaceTransport(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategorySpaceBuilding:
-            theClass = new EEUCSpaceBuilding(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        case kUnitCategoryPlanetSpaceship:
-            theClass = new EEUCPlanetSpaceship(theRecord);
-            theCounts[theRecord->mCategory]++;
-            break;
-        default:
-            theClass = NULL;
-            break;
+        // one EEUnitClass per record, of its category's kind (the EEUC* subclass the factory made until R5b.4 round
+        // 32), with that kind's physics model (its constructors' argument)
+        EEUnitClass* theClass = NULL;
+        unsigned long theCategory = theRecord->mCategory;
+        if (theCategory < 0x23 && EE_UNIT_CLASS_KINDS[theCategory] != 0) {
+            long theModel = kCategoryPhysicsModels[theCategory];
+            theClass = new EEUnitClass(theModel >= 0, theRecord, theModel >= 0 ? gPhysicsModels[theModel] : NULL);
+            theCounts[theCategory]++;
         }
         EEUnitClass::RegisterUnitClass(theClass);
         if (theClass != NULL)
@@ -2295,122 +1996,6 @@ void EEUnitClass::CreateUnitClasses()
     gDatabaseObjects.Clear();
     std::sort(EEUnitClass::sUnitTypes.begin(), EEUnitClass::sUnitTypes.end(), EEUnitClassNameLess());
 }
-
-// SYNTHETIC: EXE 0x636165
-// (the scalar deleting destructor, emitted with the vtable; slot EEUCAmbient+0x0, stores EEUCAmbient vtable)
-
-// FUNCTION: EXE 0x636187
-// Returns 2 for a resource class (EEUCResource::Virtual70)
-// (inline in ee/EEUCResource.h, emitted with the vtable; slot EEUCResource+0x70)
-
-// SYNTHETIC: EXE 0x63618b
-// (the scalar deleting destructor, emitted with the vtable; slot EEUCResource+0x0, stores EEUCResource vtable)
-
-// FUNCTION: EXE 0x6361ad
-// Returns whether a building can be picked: not a flare and not the volcano (EEUCBuilding::IsPickable)
-// (inline in ee/EEUCBuilding.h, emitted with the vtable; slot +0x60 of EEUCBuilding and its subclasses)
-
-// FUNCTION: EXE 0x6361c7
-// Returns whether a player may select the building: not a flare and not the volcano (EEUCBuilding::IsSelectable)
-// (inline in ee/EEUCBuilding.h, emitted with the vtable; slot +0x64 of EEUCBuilding and its subclasses)
-
-// FUNCTION: EXE 0x6361e3
-// Creates a building class from its database record and physics model (EEUCBuilding ctor, out of line)
-// (out-of-line copy of the inline ctor defined above CreateUnitClasses)
-
-// FUNCTION: EXE 0x636201
-// Returns 1 for a building class (EEUCBuilding::Virtual70)
-// (inline in ee/EEUCBuilding.h, emitted with the vtable; slot +0x70 of EEUCBuilding and its subclasses; folded
-// by ICF with EEGlobalCalamityClass::GetTargetKind, slot +0x14 of EECCCloaking and EECCLineOfSight)
-
-// FUNCTION: EXE 0x636205
-// Creates a landable (aircraft) class from its record with the physics model of the given index (EEUCLandable ctor)
-// (out-of-line copy of the inline ctor defined above CreateUnitClasses)
-
-// FUNCTION: EXE 0x63622a
-// Creates a landable (aircraft) class from its record and a given physics model (EEUCLandable ctor)
-// (out-of-line copy of the inline ctor defined above CreateUnitClasses)
-
-// SYNTHETIC: EXE 0x636248
-// (the scalar deleting destructor, emitted with the vtable; slot EEUCNaval+0x0, stores EEUCNaval vtable)
-
-// SYNTHETIC: EXE 0x63626a
-// (the scalar deleting destructor, emitted with the vtable; slot EEUCSpaceBuilding+0x0, slot EEUCBuildingPriest+0x0, slot EEUCGate+0x0, slot EEUCMiningBuilding+0x0, slot EEUCNavalBuilding+0x0, slot EEUCBuilding+0x0, stores EEUCBuilding vtable)
-
-// FUNCTION: EXE 0x63628c
-// Returns the string id 0x7c38 of the transport's unload-failed message
-// (inline in ee/EEUCTransport.h, emitted with the vtable; slot +0xec of EEUCTransport and its subclasses)
-
-// FUNCTION: EXE 0x636292
-// Returns whether the transport flies (its class has the air movement domain)
-// (inline in ee/EEUCTransport.h, emitted with the vtable; slot +0x5c of EEUCTransport, its subclasses and EEUCFortress)
-
-// FUNCTION: EXE 0x63629e
-// Creates a transport class from its record with the physics model of the given index (EEUCTransport ctor)
-// (out-of-line copy of the inline ctor defined above CreateUnitClasses)
-
-// FUNCTION: EXE 0x6362c3
-// Creates a land unit class from its record with the land physics model (EEUCLand ctor)
-// (out-of-line copy of the inline ctor defined above CreateUnitClasses)
-
-// FUNCTION: EXE 0x6362e3
-// Creates a citizen class from its record with the physics model of the given index (EEUCBasicCitizen ctor)
-// (out-of-line copy of the inline ctor defined above CreateUnitClasses)
-
-// SYNTHETIC: EXE 0x636308
-// (the scalar deleting destructor, emitted with the vtable; slot EEUCNavalCitizen+0x0, slot EEUCLandCitizen+0x0, slot EEUCBasicCitizen+0x0, stores EEUCBasicCitizen vtable)
-
-// FUNCTION: EXE 0x63632a
-// Creates a priest class from its record and a given physics model (EEUCBasicPriest ctor)
-// (out-of-line copy of the inline ctor in ee/EEUCBasicPriest.h)
-
-// SYNTHETIC: EXE 0x636348
-// (the scalar deleting destructor, emitted with the vtable; slot EEUCBomb+0x0, slot EEUCProjectile+0x0, stores EEUCProjectile vtable)
-
-// FUNCTION: EXE 0x63636a
-// Creates a missile class from its record with the missile physics model (EEUCMissile ctor)
-// (out-of-line copy of the inline ctor defined above CreateUnitClasses)
-
-// SYNTHETIC: EXE 0x63638a
-// (the scalar deleting destructor, emitted with the vtable; slot EEUCHelicopter+0x0, stores EEUCHelicopter vtable)
-
-// SYNTHETIC: EXE 0x6363ac
-// (the scalar deleting destructor, emitted with the vtable; slot EEUCTorpedo+0x0, slot EEUCMissile+0x0, stores EEUCMissile vtable)
-
-// FUNCTION: EXE 0x6363ce
-// Creates a submerged naval class from its record and a given physics model (EEUCSubmergedNaval ctor)
-// (out-of-line copy of the inline ctor defined above CreateUnitClasses)
-
-// SYNTHETIC: EXE 0x6363ec
-// (the scalar deleting destructor, emitted with the vtable; slot EEUCSeaAnimal+0x0, slot EEUCSubmergedNaval+0x0, stores EEUCSubmergedNaval vtable)
-
-// FUNCTION: EXE 0x63640e
-// Returns the string id 0x7c39 of the fortress's unload-failed message
-// (inline in ee/EEUCFortress.h, emitted with the vtable; slot EEUCFortress+0xec)
-
-// SYNTHETIC: EXE 0x636414
-// (the scalar deleting destructor, emitted with the vtable; slot EEUCLandMilitaryHero+0x0, slot EEUCLand+0x0, stores EEUCLand vtable)
-
-// FUNCTION: EXE 0x636436
-// Loads a building priest's media for a player as a priest's (EEUCBasicPriest::LoadMedia)
-// (EEUCBuildingPriest::LoadMedia: inline in ee/EEUCBuildingPriest.h, emitted with the vtable)
-
-// FUNCTION: EXE 0x636442
-// Unloads a building priest's media for a player as a priest's (EEUCBasicPriest::UnloadMedia)
-// (EEUCBuildingPriest::UnloadMedia: inline in ee/EEUCBuildingPriest.h, emitted with the vtable)
-
-// FUNCTION: EXE 0x63644e
-// Updates a building priest's effects as a building's (EEUCBuilding::UpdateEffects)
-// (EEUCBuildingPriest::UpdateEffects: inline in ee/EEUCBuildingPriest.h, emitted with the vtable)
-
-// SYNTHETIC: EXE 0x63645a
-// (the scalar deleting destructor, emitted with the vtable; slot EEUCSpaceship+0x0, stores EEUCSpaceship vtable)
-
-// SYNTHETIC: EXE 0x63647c
-// (the scalar deleting destructor, emitted with the vtable; slot EEUCSpaceTransport+0x0, slot EEUCFortress+0x0, slot EEUCNavalTransport+0x0, slot EEUCHelicopterTransport+0x0, slot EEUCLandTransport+0x0, slot EEUCTransport+0x0, stores EEUCTransport vtable)
-
-// SYNTHETIC: EXE 0x63649e
-// (the scalar deleting destructor, emitted with the vtable; slot EEUCPlanetSpaceship+0x0, slot EEUCAirAnimal+0x0, slot EEUCAirplane+0x0, slot EEUCLandable+0x0, stores EEUCLandable vtable)
 
 // FUNCTION: EXE 0x6364c0
 // Returns the class's AI script action for a key, or NULL when the class has no script or no such action
@@ -2617,7 +2202,7 @@ void EEUnitClass::RegisterUnitClass(EEUnitClass* inClass)
 // FUNCTION: EXE 0x636ac6
 // Removes a placed unit (not a path marker) from the map's unit region that holds its tile
 // NEAR: the original calls a vector remove helper 0x239ee2 (find + erase; a COMDAT of this unit)
-void EEUnitClass::RemoveFromRegion(EEUnit* inUnit)
+void EEUnitClass::BaseRemoveFromRegion(EEUnit* inUnit)
 {
     EEMap* theMap = ::gWorld.mMap;
     U2DPoint<long> theRegion(0, 0);
@@ -2641,7 +2226,7 @@ void EEUnitClass::ReleaseUnitClass(unsigned long inUnitType)
 
 // FUNCTION: EXE 0x636b55
 // Removes a unit from the tile it stands on, if any
-void EEUnitClass::RemoveFromTile(EEUnit* inUnit)
+void EEUnitClass::BaseRemoveFromTile(EEUnit* inUnit)
 {
     RTSTile* theTile = inUnit->mTile;
     if (theTile != NULL)
@@ -3158,7 +2743,7 @@ void EEUnitClass::UnloadButtons(EEPlayer* inPlayer)
 
 // FUNCTION: EXE 0x638432
 // Unloads a player's media for the classes this class spawns and for all its effects, and marks it unloaded
-void EEUnitClass::UnloadMedia(EEPlayer* inPlayer)
+void EEUnitClass::BaseUnloadMedia(EEPlayer* inPlayer)
 {
     if (this->mUnitType == kUnitTypeAirport) {
         inPlayer->UnloadUnitClassMedia(0xf0);
@@ -3179,64 +2764,9 @@ void EEUnitClass::UnloadMedia(EEPlayer* inPlayer)
         inPlayer->UnloadUnitClassMedia(this->mDeathSpawnClass->mUnitType);
     if (this->mRemainsClass != NULL)
         inPlayer->UnloadUnitClassMedia(this->mRemainsClass->mUnitType);
-    if (this->mAttachedEffect != NULL)
-        this->mAttachedEffect->Unload();
-    if (this->mDeathEffect != NULL)
-        this->mDeathEffect->Unload();
-    if (this->mDamageEffect != NULL)
-        this->mDamageEffect->Unload();
-    if (this->mHealEffect != NULL)
-        this->mHealEffect->Unload();
-    if (this->mFireTrailEffect != NULL)
-        this->mFireTrailEffect->Unload();
-    if (this->mTrailEffect != NULL)
-        this->mTrailEffect->Unload();
-    if (this->mMuzzleFlashEffect != NULL)
-        this->mMuzzleFlashEffect->Unload();
-    if (this->mRippleEffect != NULL)
-        this->mRippleEffect->Unload();
-    if (this->mSplashEffect != NULL)
-        this->mSplashEffect->Unload();
-    if (this->mImpactSparksEffect != NULL)
-        this->mImpactSparksEffect->Unload();
-    if (this->mImpactBloodEffect != NULL)
-        this->mImpactBloodEffect->Unload();
-    if (this->mEffect090 != NULL)
-        this->mEffect090->Unload();
-    if (this->mCreationEffect != NULL)
-        this->mCreationEffect->Unload();
-    if (this->mEffect098 != NULL)
-        this->mEffect098->Unload();
-    if (this->mEffect09C != NULL)
-        this->mEffect09C->Unload();
-    if (this->mEffect0A0 != NULL)
-        this->mEffect0A0->Unload();
-    if (this->mEffect0A4 != NULL)
-        this->mEffect0A4->Unload();
-    if (this->mEffect0A8 != NULL)
-        this->mEffect0A8->Unload();
-    if (this->mSpecialAttackEffect != NULL)
-        this->mSpecialAttackEffect->Unload();
-    if (this->mEffect0B0 != NULL)
-        this->mEffect0B0->Unload();
-    if (this->mShotEffect != NULL)
-        this->mShotEffect->Unload();
-    if (this->mLeprosyEffect != NULL)
-        this->mLeprosyEffect->Unload();
-    if (this->mPlagueEffect != NULL)
-        this->mPlagueEffect->Unload();
-    if (this->mPulseCannonEffect != NULL)
-        this->mPulseCannonEffect->Unload();
-    if (this->mMoraleEffect != NULL)
-        this->mMoraleEffect->Unload();
-    if (this->mBattleCryEffect != NULL)
-        this->mBattleCryEffect->Unload();
-    if (this->mShellHoleEffect != NULL)
-        this->mShellHoleEffect->Unload();
-    if (this->mEffect0D0 != NULL)
-        this->mEffect0D0->Unload();
-    if (this->mBloodStainEffect != NULL)
-        this->mBloodStainEffect->Unload();
+    for (long i = 0; i < kUnitClassEffectCount; i++)   // the 29 effects, in their order (+0x64..+0xd4)
+        if (this->GetEffects()[i] != NULL)
+            this->GetEffects()[i]->Unload();
     this->mIsMediaLoaded = false;
 }
 
@@ -3791,119 +3321,9 @@ void EEUnitClass::Regenerate(EEComplexUnit* inUnit)
     inUnit->SetRegenerationTimer(theOut.timer);
 }
 
-// TEMPLATE: EXE 0x639e2d
-// std::vector<GE3DPoint>::pop_back (FindPath)
-
-// TEMPLATE: EXE 0x639e61
-// std::vector<GE3DPoint>::erase(iterator) (pop_back)
-
-// FUNCTION: EXE 0x639ec5
-// Destroys a melee-range target screen and frees it when asked (scalar deleting destructor)
-// (emitted with the vtable; folded by ICF with the other target screens' scalar deleting destructors)
-
-// TEMPLATE: EXE 0x639ee2
-// ?Remove@?$RTSRegion@PAVEEComplexUnit@@@@QAEXABQAVEEComplexUnit@@@Z
-
-// TEMPLATE: EXE 0x639f15
-
-// TEMPLATE: EXE 0x639fd2
-
-// TEMPLATE: EXE 0x639ffb
-
-// TEMPLATE: EXE 0x63a0ce
-
-// TEMPLATE: EXE 0x63a0ff
-
-// FUNCTION: EXE 0x63a19c
-// Returns whether the first unit type's name sorts before the second's (EEUnitClassNameLess, for std::sort)
-
-// TEMPLATE: EXE 0x63a21c
-
-// TEMPLATE: EXE 0x63a256
-
-// TEMPLATE: EXE 0x63a297
-
-// TEMPLATE: EXE 0x63a3b7
-
-// TEMPLATE: EXE 0x63a3ea
-
-// TEMPLATE: EXE 0x63a42e
-
-// TEMPLATE: EXE 0x63a457
-
-// TEMPLATE: EXE 0x63a4c5
-
-// TEMPLATE: EXE 0x63a518
-
-// TEMPLATE: EXE 0x63a567
-
-// FUNCTION: EXE 0x63a59b
-// Returns the model of a turret part
-// (EEGraphicObject::GetTurretPartModel: inline in ee/EEGraphicObject.h)
-
-// FUNCTION: EXE 0x63a5ad
-// Returns the transformation of a turret part
-// (EEGraphicObject::GetTurretPartTransformation: inline in ee/EEGraphicObject.h)
-
-// ICF-FOLDED: EXE 0x6907a3
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
-void EEUnitClass::AdjustPath(class EEComplexUnit *,class std::vector<class GE3DPoint,class std::allocator<class GE3DPoint> > &,bool)
-{
-}
-
-// ICF-FOLDED: EXE 0x556dd8
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
-void EEUnitClass::BadlyHurt(class EEUnit *)
-{
-}
-
-// ICF-FOLDED: EXE 0x4ac9f3
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-bool EEUnitClass::CanAttackMove()
-{
-    return false;
-}
-
-// ICF-FOLDED: EXE 0x6907a3
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
-void EEUnitClass::CargoAdded(class EEComplexUnit *,class EEComplexUnit *,bool)
-{
-}
-
-// ICF-FOLDED: EXE 0x4ac9c8
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
-void EEUnitClass::CargoRemoved(class EEComplexUnit *,class EEComplexUnit *)
-{
-}
-
-// ICF-FOLDED: EXE 0x4ac9c8
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
-void EEUnitClass::CargoUnloaded(class EEComplexUnit *,class EEComplexUnit *)
-{
-}
-
-// ICF-FOLDED: EXE 0x4ac9f3
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-bool EEUnitClass::FliesOver()
-{
-    return false;
-}
-
 // ICF-FOLDED: EXE 0x557269
 // (no address of its own: folded into the shared `ret` body of EECCAreaEffect::Reset)
 void EEUnitClass::UpdateDone(class EEComplexUnit *)
-{
-}
-
-// ICF-FOLDED: EXE 0x4ac9c8
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
-void EEUnitClass::GateReplaced(class EEUnit *,class EEUnit *)
-{
-}
-
-// ICF-FOLDED: EXE 0x556dd8
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
-void EEUnitClass::GroundLocation(class GE3DPoint &)
 {
 }
 
@@ -3913,67 +3333,7 @@ void EEUnitClass::GroundLocation(class GE3DPoint &)
 // (no address of its own: the same body as EEUnitClass::ActionChanged, which ICF kept: a call of it)
 void EEUnitClass::HandleActionChanged(EEComplexUnit* inUnit)
 {
-    this->EEUnitClass::ActionChanged(inUnit);
-}
-
-// ICF-FOLDED: EXE 0x4ac9f3
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-bool EEUnitClass::IsBuilding()
-{
-    return false;
-}
-
-// ICF-FOLDED: EXE 0x4ac9f3
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-bool EEUnitClass::IsLandBuilding()
-{
-    return false;
-}
-
-// ICF-FOLDED: EXE 0x69059d
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-bool EEUnitClass::IsPartLeftOut(class EEComplexUnit *)
-{
-    return false;
-}
-
-// ICF-FOLDED: EXE 0x418aa9
-// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
-bool EEUnitClass::IsPickable()
-{
-    return true;
-}
-
-// ICF-FOLDED: EXE 0x620a18
-// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
-bool EEUnitClass::IsSelectable(class EEUnit *)
-{
-    return true;
-}
-
-// ICF-FOLDED: EXE 0x4792bc
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-bool EEUnitClass::LaunchProjectile(class EEComplexUnit *,class GE3DPoint const &)
-{
-    return false;
-}
-
-// ICF-FOLDED: EXE 0x6907a3
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
-void EEUnitClass::LocationToTile(class GE3DPoint const &,long &,long &)
-{
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
-void EEUnitClass::Update(class EEComplexUnit *)
-{
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
-void EEUnitClass::UpdateEffects(class EEComplexUnit *)
-{
+    EEUnitClassActionChanged(EE_UNITS_ACTION_BASE, this, inUnit);
 }
 
 // ICF-FOLDED: EXE 0x69059d
@@ -3987,19 +3347,4 @@ bool EEUnitClass::Virtual4C(unsigned long)
 // (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEUnitClass::Virtual50(unsigned long)
 {
-}
-
-// ICF-FOLDED: EXE 0x5ad67e
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-long EEUnitClass::Virtual70()
-{
-    return 0;
-}
-
-// ICF-FOLDED: EXE 0x616d8d
-// Returns the class's population cost (mWeight)
-// (no address of its own: the same body as EEUCLandPriest::GetPopulationCost, which ICF kept)
-long EEUnitClass::GetPopulationCost()
-{
-    return this->mWeight;
 }

@@ -73,7 +73,7 @@ bool InitLogic::SetError(int inError, const GUIString& inDescription)
     this->mErrors = anErrors.errors;
     if (this->mErrors != 0) {
         bool allowIgnore = anErrors.allow_ignore;
-        LobbyBroadcastEvent(new LoginInitStatusEvent(::LobbyContainer_InitFailed_String, inDescription, allowIgnore, 3), true);
+        LobbyBroadcastEvent(new LoginInitStatusEvent(LOBBY_STRING(LobbyContainer_InitFailed_String), inDescription, allowIgnore, 3), true);
         return true;
     }
     return false;
@@ -90,7 +90,7 @@ void InitLogic::Start(bool inRetry)
     LobbyConfig* config = GetLobbyConfig();
     if (config != NULL && config->mCheckForInternet &&
         ee_won_init_no_internet(true, AsyncSocket::HasInternetConnection())) {
-        if (this->SetError(1, ::LobbyContainer_NoConnection_String))
+        if (this->SetError(1, LOBBY_STRING(LobbyContainer_NoConnection_String)))
             return;
     }
     if (!inRetry) {
@@ -125,11 +125,11 @@ void InitLogic::Init()
     LoginControlIds anIds;
     anIds.Add(200001,200002,200003);
     aRoot->EnableControlsById(anIds, false);
-    ::LobbyGlobal_LobbyMusic_Sound->SetLooping(true);
+    LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->SetLooping(true);
     if(LobbyGetLobbyMusic())
-        ::LobbyGlobal_LobbyMusic_Sound->Play();
+        LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Play();
     else
-        ::LobbyGlobal_LobbyMusic_Sound->Stop();
+        LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop();
     this->Start(false);
 }
 
@@ -188,7 +188,7 @@ void InitLogic::DNSCompletion(AsyncOp* inOp)
         this->StartHTTPDocuments();
         this->StartDirectoryQuery();
     } else {
-        this->SetError(2, ::LobbyContainer_DNSLookupFailed_String);
+        this->SetError(2, LOBBY_STRING(LobbyContainer_DNSLookupFailed_String));
     }
 }
 }
@@ -361,18 +361,18 @@ void InitLogic::DirectoryCompletion(AsyncOp* inOp)
         int errors = ee_won_init_missing_servers(auth->GetNumAddresses(), account->GetNumAddresses(),
                                                  versions->GetNumAddresses());
         if (errors & 8)
-            names.append(::LobbyContainer_AuthServers_String);
+            names.append(LOBBY_STRING(LobbyContainer_AuthServers_String));
         if (errors & 4) {
             if (names.length() != 0)
                 names.append(GUIString(", "));
-            names.append(::LobbyContainer_AccountServers_String);
+            names.append(LOBBY_STRING(LobbyContainer_AccountServers_String));
         }
         if (errors & 0x10) {
             if (names.length() != 0)
                 names.append(GUIString(", "));
-            names.append(::LobbyContainer_VersionServers_String);
+            names.append(LOBBY_STRING(LobbyContainer_VersionServers_String));
         }
-        GUIString description(::LobbyContainer_NoServers_String);
+        GUIString description(LOBBY_STRING(LobbyContainer_NoServers_String));
         description.append(names);
         if (this->SetError(errors,description))
             return;
@@ -381,7 +381,7 @@ void InitLogic::DirectoryCompletion(AsyncOp* inOp)
     this->StartFirewallTest();
     }
     else {
-        GUIString description = LobbyFormatString(::LobbyContainer_DirLookupFailure_String,GetWONStatusString(status));
+        GUIString description = LobbyFormatString(LOBBY_STRING(LobbyContainer_DirLookupFailure_String),GetWONStatusString(status));
         this->SetError(0x20,description);
     }
 }
@@ -406,14 +406,14 @@ void InitLogic::VersionCompletion(AsyncOp* inOp)
             if (versions != NULL)
                 versions->NotifyFailed(static_cast<RustServerOp*>(inOp)->GetCurAddr());
         }
-        GUIString description = LobbyFormatString(::LobbyContainer_VersionCheckFailure_String,GetWONStatusString(status));
+        GUIString description = LobbyFormatString(LOBBY_STRING(LobbyContainer_VersionCheckFailure_String),GetWONStatusString(status));
         this->SetError(0x40,description);
         return;
     }
     LoginControlIds ids;
     ids.Add(200001,200002,200003);
     root->EnableControlsById(ids,true);
-    LobbyBroadcastEvent(new LoginInitStatusEvent(::LobbyContainer_InitComplete_String,gEmptyGUIString,false,2),true);
+    LobbyBroadcastEvent(new LoginInitStatusEvent(LOBBY_STRING(LobbyContainer_InitComplete_String),gEmptyGUIString,false,2),true);
 }
 }
 
@@ -475,7 +475,7 @@ void InitLogic::StartDNSTest()
     LobbyConfig* config = GetLobbyConfig();
     if (config == NULL || config->mDirServers.empty())
         return;
-    LobbyBroadcastEvent(new LoginInitStatusEvent(::LobbyContainer_InitStart_String, gEmptyGUIString, false, 1), true);
+    LobbyBroadcastEvent(new LoginInitStatusEvent(LOBBY_STRING(LobbyContainer_InitStart_String), gEmptyGUIString, false, 1), true);
     SmartPtr<DNSTestOp> op = new DNSTestOp(config->mDirServers.front());
     this->RunTrackedOp(op.get(), new LogicCompletion<InitLogic>(&InitLogic::DNSCompletion, this), 0);
 }
@@ -513,7 +513,7 @@ void InitLogic::StartDirectoryQuery()
     ServerContext* context = LobbyGetDirServers();
     if (context == NULL)
         return;
-    LobbyBroadcastEvent(new LoginInitStatusEvent(::LobbyContainer_QueryingServers_String, gEmptyGUIString, false, 0), true);
+    LobbyBroadcastEvent(new LoginInitStatusEvent(LOBBY_STRING(LobbyContainer_QueryingServers_String), gEmptyGUIString, false, 0), true);
     std::wstring paths[4] = { L"/TitanServers/Auth", L"/TitanServers/DBProxy", L"/TitanServers/Firewall" };
     LobbyConfig* config = GetLobbyConfig();
     if (config != NULL)
@@ -532,7 +532,7 @@ void InitLogic::StartVersionCheck()
     LobbyConfig* config = GetLobbyConfig();
     if (versions == NULL || config == NULL)
         return;
-    LobbyBroadcastEvent(new LoginInitStatusEvent(::LobbyContainer_CheckingVersion_String,gEmptyGUIString,false,0),true);
+    LobbyBroadcastEvent(new LoginInitStatusEvent(LOBBY_STRING(LobbyContainer_CheckingVersion_String),gEmptyGUIString,false,0),true);
     // CheckValidVersionOp: a Rust op (ee_won reqops.rs) with the product, config and version
     const std::string& aProduct = config->mProductName;
     const std::string& aConfig = config->mLanguage;
