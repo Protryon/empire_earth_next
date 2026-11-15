@@ -525,6 +525,7 @@ pub unsafe extern "C" fn ee_ui_control_init(
     let r = crate::obj::buf_rect(&unsafe { read_buf(rect) });
     // SAFETY: the contract
     unsafe { Ctl::new(rec) }.init(cpp, host, control_type, id, r, form, index, border_thickness);
+    crate::direct::put(crate::direct::Kind::Control, cpp, rec as *const c_void);
 }
 
 /// The destructor's part: the trigger events released and the map freed (the C++ deletes the rhombi).
@@ -533,6 +534,7 @@ pub unsafe extern "C" fn ee_ui_control_init(
 /// `rec` is a live record [`ee_ui_control_init`] set up.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_control_release(rec: *mut EeUiControlFields) {
+    crate::direct::forget(crate::direct::Kind::Control, rec as *const c_void);
     // SAFETY: the contract
     unsafe { Ctl::new(rec) }.release();
 }

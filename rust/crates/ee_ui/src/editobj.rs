@@ -998,7 +998,11 @@ pub unsafe extern "C" fn ee_ui_edit_new(
     flags: u32,
     border: c_ulong,
 ) -> *mut EeUiEdit {
-    Box::into_raw(Box::new(EeUiEdit::new(Host { obj: edit, f: host }, font as isize, max_chars, flags, border)))
+    crate::direct::made(
+        crate::direct::Kind::Edit,
+        edit,
+        Box::into_raw(Box::new(EeUiEdit::new(Host { obj: edit, f: host }, font as isize, max_chars, flags, border))),
+    )
 }
 
 /// The destructor: deletes the polls, lines, texts and scroll bar and frees the object.
@@ -1007,6 +1011,7 @@ pub unsafe extern "C" fn ee_ui_edit_new(
 /// `edit` came from `ee_ui_edit_new` (or is NULL) and is not used again.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_edit_free(edit: *mut EeUiEdit) {
+    crate::direct::forget(crate::direct::Kind::Edit, edit as *const core::ffi::c_void);
     if edit.is_null() {
         return;
     }

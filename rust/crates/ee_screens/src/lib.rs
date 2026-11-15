@@ -223,6 +223,7 @@ pub mod menus;
 // imports the C++ host's toolkit and game calls (UI Events/EEScreens.cpp), absent from a test binary
 #[cfg(not(test))]
 mod menus_ffi;
+// the screens' toolkit ops on the toolkit's Rust objects (ee_ui direct.rs), before menus_ffi's C++ hop
 pub mod mini_map;
 #[cfg(not(test))]
 mod mini_map_ffi;
@@ -261,6 +262,7 @@ mod status_box_ffi;
 pub mod status_button;
 #[cfg(not(test))]
 mod status_button_ffi;
+mod toolkit;
 pub mod ui_game;
 #[cfg(not(test))]
 mod ui_game_ffi;

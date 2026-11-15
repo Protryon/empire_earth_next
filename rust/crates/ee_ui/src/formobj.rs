@@ -1773,7 +1773,18 @@ pub extern "C" fn ee_ui_form_new(
     id: c_ulong,
     gdi: bool,
 ) -> *mut EeUiForm {
-    Box::into_raw(Box::new(EeUiForm::new(Host { obj: form, f: host }, controls, groups, manager as isize, id, gdi)))
+    crate::direct::made(
+        crate::direct::Kind::Form,
+        form,
+        Box::into_raw(Box::new(EeUiForm::new(
+            Host { obj: form, f: host },
+            controls,
+            groups,
+            manager as isize,
+            id,
+            gdi,
+        ))),
+    )
 }
 
 /// A new Rust form from the database record `data` (a `UIDbDataForms*`) and its lower-cased music file name.
@@ -1793,7 +1804,11 @@ pub unsafe extern "C" fn ee_ui_form_new_db(
     let d = unsafe { &*(data as *const DbForm) };
     // SAFETY: the contract
     let music = unsafe { core::ffi::CStr::from_ptr(music) }.to_bytes_with_nul();
-    Box::into_raw(Box::new(EeUiForm::new_db(Host { obj: form, f: host }, manager as isize, d, music, gdi)))
+    crate::direct::made(
+        crate::direct::Kind::Form,
+        form,
+        Box::into_raw(Box::new(EeUiForm::new_db(Host { obj: form, f: host }, manager as isize, d, music, gdi))),
+    )
 }
 
 /// The destructor: the events, hot keys, groups, backgrounds, database controls, poll, form manager and lock
@@ -1803,6 +1818,7 @@ pub unsafe extern "C" fn ee_ui_form_new_db(
 /// `form` came from `ee_ui_form_new`/`_new_db` (or is NULL) and is not used again.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_form_free(form: *mut EeUiForm) {
+    crate::direct::forget(crate::direct::Kind::Form, form as *const core::ffi::c_void);
     if form.is_null() {
         return;
     }

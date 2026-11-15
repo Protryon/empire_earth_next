@@ -10,6 +10,11 @@ publish.workspace = true
 [lib]
 crate-type = ["rlib"]
 
+[features]
+# leaves out the imports of the C++ toolkit (as a test binary does): for the tests of a crate that calls the toolkit's
+# objects (ee_screens toolkit.rs over direct.rs)
+no_cpp = []
+
 [dependencies]
 ee_plat_core = { path = "../ee_plat_core" }
 # the blinking button's fade: UMSin, the Graphics Engine's table cosine

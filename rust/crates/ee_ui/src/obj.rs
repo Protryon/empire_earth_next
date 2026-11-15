@@ -771,6 +771,9 @@ pub enum EeUiOp {
     CtlAddEvent = 532,
     /// The string table's `GetString(b, *(UWideString*)a)`.
     CtlHelpString = 533,
+    /// The virtual `TabbedTo()` (the direct path's, `direct.rs`; `ReleaseMouse`, `SetDisplayMode` and `SetBgOpacity`
+    /// are its other virtuals on the record's host).
+    CtlTabbedTo = 534,
 
     // ---- the backgrounds (R6 ui round 20, bgobj.rs): on the background's C++ object; a bitmap or texture is its
     // address; the wide ops (`is_wide`) pass twelve floats

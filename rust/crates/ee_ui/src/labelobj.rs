@@ -945,7 +945,11 @@ pub unsafe extern "C" fn ee_ui_label_new(
 ) -> *mut EeUiLabel {
     // SAFETY: the contract
     let r = crate::obj::buf_rect(&unsafe { read_buf(f) });
-    Box::into_raw(Box::new(EeUiLabel::new(Host { obj: label, f: host }, r, font as isize, label_type, border)))
+    crate::direct::made(
+        crate::direct::Kind::Label,
+        label,
+        Box::into_raw(Box::new(EeUiLabel::new(Host { obj: label, f: host }, r, font as isize, label_type, border))),
+    )
 }
 
 /// The destructor: deletes the lines, the scroll bar, the texts (and a scrolling label's polls) and frees the
@@ -955,6 +959,7 @@ pub unsafe extern "C" fn ee_ui_label_new(
 /// `label` came from `ee_ui_label_new` (or is NULL) and is not used again.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_label_free(label: *mut EeUiLabel) {
+    crate::direct::forget(crate::direct::Kind::Label, label as *const core::ffi::c_void);
     if label.is_null() {
         return;
     }

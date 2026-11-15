@@ -820,6 +820,9 @@ enum class EeUiOp : uint32_t {
   CtlAddEvent = 532,
   /// The string table's `GetString(b, *(UWideString*)a)`.
   CtlHelpString = 533,
+  /// The virtual `TabbedTo()` (the direct path's, `direct.rs`; `ReleaseMouse`, `SetDisplayMode` and `SetBgOpacity`
+  /// are its other virtuals on the record's host).
+  CtlTabbedTo = 534,
   /// The form's `AddBackground(this)`.
   BgAdd = 540,
   /// *Pure*: the manager's window's `GetWidth()` (a 0) or `GetHeight()` (a 1).

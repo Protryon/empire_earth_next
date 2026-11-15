@@ -94,6 +94,11 @@ intptr_t UIControl::HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b,
     case EeUiOp::SetDirty: c->SetDirty(a != 0); break;
     case EeUiOp::FormCtlSetDirty: reinterpret_cast<UIControl*>(a)->SetDirty(b != 0); break;
     case EeUiOp::VirtSetLocation: c->SetLocation(GE2DPoint(f[0], f[1])); break;
+    // the direct path's virtuals (ee_ui direct.rs: the game's Rust on a control, an override running)
+    case EeUiOp::SetDisplayMode: c->SetDisplayMode((unsigned long)a); break;
+    case EeUiOp::ReleaseMouse: c->ReleaseCapturedMouse(); break;
+    case EeUiOp::SetBgOpacity: c->SetBgOpacity(f[0]); break;
+    case EeUiOp::CtlTabbedTo: c->TabbedTo(); break;
     case EeUiOp::FormEventCall: {
         UIEvent* theEvent = reinterpret_cast<UIEvent*>(a);
         if (b == 0)

@@ -639,17 +639,21 @@ pub unsafe extern "C" fn ee_ui_combo_new(
 ) -> *mut EeUiCombo {
     // SAFETY: the contract
     let c = unsafe { [*color, *color.add(1), *color.add(2)] };
-    Box::into_raw(Box::new(EeUiCombo::new(
-        Host { obj: combo, f: host },
-        label as isize,
-        drop as isize,
-        list as isize,
-        edit as isize,
-        text_box_type,
-        max_list_box_height,
-        selection,
-        c,
-    )))
+    crate::direct::made(
+        crate::direct::Kind::Combo,
+        combo,
+        Box::into_raw(Box::new(EeUiCombo::new(
+            Host { obj: combo, f: host },
+            label as isize,
+            drop as isize,
+            list as isize,
+            edit as isize,
+            text_box_type,
+            max_list_box_height,
+            selection,
+            c,
+        ))),
+    )
 }
 
 /// The destructor: deletes the parts and the focus highlight and frees the object.
@@ -658,6 +662,7 @@ pub unsafe extern "C" fn ee_ui_combo_new(
 /// `combo` came from `ee_ui_combo_new` (or is NULL) and is not used again.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_combo_free(combo: *mut EeUiCombo) {
+    crate::direct::forget(crate::direct::Kind::Combo, combo as *const core::ffi::c_void);
     if combo.is_null() {
         return;
     }
