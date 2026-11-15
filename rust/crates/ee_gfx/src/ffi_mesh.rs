@@ -40,7 +40,7 @@ pub struct EeGfxFarmTerrain {
     pub mesh_z: unsafe extern "C" fn(context: *mut c_void, x: f32, y: f32) -> f32,
 }
 
-struct CppFarmTerrain(EeGfxFarmTerrain);
+pub(crate) struct CppFarmTerrain(pub(crate) EeGfxFarmTerrain);
 
 impl FarmTerrain for CppFarmTerrain {
     fn z(&mut self, x: u32, y: u32) -> f32 {

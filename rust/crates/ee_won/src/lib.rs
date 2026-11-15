@@ -42,6 +42,8 @@ pub mod eecolor;
 pub mod eegame;
 pub mod eeglue;
 pub mod eeresource;
+pub mod eesound;
+pub mod eexfer;
 pub mod elgamal;
 pub mod ffi;
 pub mod ffi_lan;
@@ -154,6 +156,7 @@ pub mod staging;
 pub mod stagingobj;
 /// cbindgen:ignore
 pub mod status;
+pub mod statusstr;
 pub mod strcase;
 pub mod surface;
 pub mod tabobj;

@@ -159,8 +159,7 @@ intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intpt
     case EeUiOp::FormHotKeyTemp: {
         UIHotKey* theHotKey = new UIHotKey;
         theHotKey->mForm = theForm;
-        gISKeyboard->GetEntity((unsigned long)a, theHotKey->mKey);
-        theHotKey->CalculateKeyCount();
+        theHotKey->SetKey((unsigned long)a);
         return (intptr_t)theHotKey;
     }
     case EeUiOp::FormHotKeySetModifier: theKey->SetModifier((unsigned long)b, (unsigned char)c); return 0;

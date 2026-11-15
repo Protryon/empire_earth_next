@@ -1771,6 +1771,9 @@ constexpr static const int32_t EE_WON_REQOP_VERSION_TO = 31;
 
 constexpr static const int32_t EE_WON_REQOP_VERSION_URL = 32;
 
+/// The number of rows (`gLobbyResources`' size).
+constexpr static const size_t EE_WON_LOBBYRES_COUNT = 469;
+
 /// How many op types have a completion slot (`mCompletions[61]`).
 constexpr static const size_t EE_WON_ROUTE_COMPLETIONS = 61;
 
@@ -4095,6 +4098,135 @@ enum class EeWonEeGlueCall : uint32_t {
   Reset,
 };
 
+/// The two kinds.
+enum class EeWonEeSoundKind : uint32_t {
+  Music = 0,
+  Effect = 1,
+};
+
+/// The host's ops.
+enum class EeWonEeSoundOp : uint32_t {
+  /// `gUIManager != NULL` (0 or 1).
+  HasUiManager = 1,
+  /// `gUIManager->SetMusicVolume(gGamePreferences.mSettings.GetMusicVolume())`.
+  MusicVolumeOn,
+  /// `gUIManager->SetMusicVolume(0.0f)`.
+  MusicVolumeOff,
+  /// `gSoundManager != NULL` (0 or 1).
+  HasSoundManager,
+  /// `gSoundManager->Unload(a)`.
+  Unload,
+  /// `gSoundManager->Play(a, 1.0f, 0.0f, 1.0f, false, NULL)`: the instance.
+  Play,
+  /// `gSoundManager->Stop(a, false)`.
+  Stop,
+  /// `gSoundManager->Load(path, 0, 1)` (`a` the descriptor's path, a NUL-terminated `char*`): the sample.
+  Load,
+};
+
+/// The inward calls (the classes' virtuals).
+enum class EeWonEeSoundCall : uint32_t {
+  /// `PlayHook()`.
+  Play = 1,
+  /// `StopHook()`.
+  Stop,
+  /// `ResumeHook()` (the music's; an effect's is the base's empty one).
+  Resume,
+  /// a member: 0 `mSampleID`, 1 `mInstanceID`.
+  Field,
+};
+
+/// The host's ops (`obj` the transfer's shell or the send op's).
+enum class EeWonEeXferOp : uint32_t {
+  /// `EELobbyGetSavedGameInfo(a, *(uint32_t*)b, *(uint32_t*)c)` (`a` a NUL-terminated path).
+  SavedGameInfo = 1,
+  /// `(unsigned long)PlatTimeMilliseconds64()`.
+  Time,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `((EELobbyGame*)a)->UpdateTransferProgress(b, c)`.
+  GameProgress,
+  /// `((AsyncOp*)a)->Succeeded()` (0 or 1).
+  Succeeded,
+  /// `static_cast<SocketOp*>(a)->GetSocket()` (no reference).
+  OpSocket,
+  /// `static_cast<AcceptOp*>(a)->GetAcceptedSocket()` (no reference).
+  AcceptedSocket,
+  /// `static_cast<RecvChunkOp*>(a)->GetRecvOp()->GetBytesRead()`.
+  BytesRead,
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `((AsyncSocket*)a)->Kill()`.
+  Kill,
+  /// `new QueueSocket(0)` with a reference added.
+  NewSocket,
+  /// `((QueueSocket*)a)->Fn2B0D90(b, 0)`: the status.
+  Bind,
+  /// `((QueueSocket*)a)->Listen(1000)`: the status.
+  Listen,
+  /// `a->SetRepeatCompletion(completion(OnClientAccepted)); a->SetRepeatOp(new AcceptOp(NULL))`.
+  RepeatAccept,
+  /// `a->SetCloseCompletion(completion(OnClientClosed)); a->QueueOp(new SendFileOp(path b, c bytes), -1);
+  /// a->QueueOp(new CloseOp(NULL), -1)`.
+  QueueSend,
+  /// `this->mHost.IsValid()` (0 or 1).
+  HostValid,
+  /// `a->SetCloseCompletion(completion(OnClientClosed))`; a `RecvBytesOp(0, NULL)` with the completion
+  /// `OnFileReceived`, the file path (`b`, `c` bytes) and the progress completion `OnProgress` every 10000 bytes;
+  /// `a->QueueOp(new ConnectOp(this->mHost), -1); a->QueueOp(op, -1)`.
+  QueueDownload,
+  /// `PlatFOpen(a, "rb")` (`a` a NUL-terminated path): the `FILE*` or 0.
+  Open = 40,
+  /// `fread(b, 1, c, (FILE*)a)`: the count.
+  Read,
+  /// `fclose((FILE*)a)`.
+  Close,
+  /// `GetSocket()->WaitForWrite(TimeLeft())`.
+  WaitForWrite,
+  /// `GetSocket()->Send(a, b, (int*)c)`: the status.
+  Send,
+  /// `TimeLeft()`.
+  TimeLeft,
+};
+
+/// The transfer's inward calls.
+enum class EeWonEeXferCall : uint32_t {
+  /// `SetPath(a, b bytes)`.
+  SetPath = 1,
+  /// `SetFileInfo`'s size `a` and checksum `b` (the shell keeps the name).
+  SetFileInfo,
+  /// `IsFileHere()` (0 or 1).
+  IsFileHere,
+  /// `Serve(a)`: the status.
+  Serve,
+  /// `Stop()`.
+  Stop,
+  /// `CloseClients()`.
+  CloseClients,
+  /// `Download()`.
+  Download,
+  /// the completions' callbacks (`a` the op).
+  OnClientClosed,
+  OnClientAccepted,
+  OnProgress,
+  OnFileReceived,
+  /// a member: 0 `mLocalSize`, 1 `mLocalChecksum`, 2 `mSize`, 3 `mChecksum`, 4 `mLastProgressTime`,
+  /// 5 `mConnection`, 6 the number of clients, 7 `mPath`'s length.
+  Field,
+};
+
+/// The send op's inward calls.
+enum class EeWonEeXferSendCall : uint32_t {
+  /// `Start()`: the status.
+  Start = 1,
+  /// `Continue()`: the status.
+  Continue,
+  /// `CleanupHook()` (the file closed).
+  Cleanup,
+};
+
 /// What an ElGamal call computes into a sink.
 enum class EeWonElGamalOp : uint32_t {
   Encrypt = 0,
@@ -5989,6 +6121,481 @@ enum class EeWonResKind {
   Sound = 2,
 };
 
+/// The lobby's resources by name, in the table's order: `EeWonLobbyRes::X as usize` is the row of global `X`
+/// (the C++ keeps one slot per row, `gLobbyResources`, read through `LOBBY_STRING(X)` / `LOBBY_IMAGE(X)` /
+/// `LOBBY_SOUND(X)`: the original's 469 named globals and their ids).
+enum class EeWonLobbyRes : uint32_t {
+  LobbyGlobal_Cancel_String = 0,
+  LobbyGlobal_Lan_String,
+  LobbyGlobal_No_String,
+  LobbyGlobal_OK_String,
+  LobbyGlobal_Yes_String,
+  LobbyGlobal_QuickPlay_String,
+  LobbyGlobal_Searching_Image,
+  LobbyGlobal_Firewall_Image,
+  LobbyGlobal_ButtonClick_Sound,
+  LobbyGlobal_LobbyMusic_Sound,
+  LobbyGlobal_AllReady_Sound,
+  LobbyGlobal_AllNotReady_Sound,
+  LobbyGlobal_AskToJoinRecv_Sound,
+  LobbyGlobal_Error_Sound,
+  LobbyGlobal_FriendJoined_Sound,
+  LobbyGlobal_FriendLeft_Sound,
+  LobbyGlobal_InviteRecv_Sound,
+  LobbyGlobal_PlayerJoined_Sound,
+  LobbyGlobal_SierraLogon_Sound,
+  LobbyGlobal_WhisperRecv_Sound,
+  AccountLogic_InvalidCDKeyTitle_String,
+  AccountLogic_InvalidCDKeyDetails_String,
+  AddFriendDialog_StatusTitle_String,
+  AddFriendDialog_StatusDetails_String,
+  AdminActionDialog_Warn_String,
+  AdminActionDialog_Mute_String,
+  AdminActionDialog_UnMute_String,
+  AdminActionDialog_Kick_String,
+  AdminActionDialog_Ban_String,
+  AdminActionDialog_ExplanationOpt_String,
+  AdminActionDialog_ExplanationReq_String,
+  BadUserDialog_OneDay_String,
+  BadUserDialog_OneHour_String,
+  BadUserDialog_OneMinute_String,
+  BadUserDialog_OneSecond_String,
+  BadUserDialog_XDays_String,
+  BadUserDialog_XHours_String,
+  BadUserDialog_XMinutes_String,
+  BadUserDialog_XSeconds_String,
+  BadUserDialog_Infinite_String,
+  ChatCommandLogic_Whisper_String,
+  ChatCommandLogic_Block_String,
+  ChatCommandLogic_Emote_String,
+  ChatCommandLogic_Ignore_String,
+  ChatCommandLogic_Away_String,
+  ChatCommandLogic_Invite_String,
+  ChatCommandLogic_Uninvite_String,
+  ChatCommandLogic_Reply_String,
+  ChatCommandLogic_Clear_String,
+  ChatCommandLogic_Help_String,
+  ChatCommandLogic_ShowTeam_String,
+  ChatCommandLogic_Moderator_String,
+  ChatCommandLogic_ServerMute_String,
+  ChatCommandLogic_ServerBan_String,
+  ChatCommandLogic_Mute_String,
+  ChatCommandLogic_Ban_String,
+  ChatCommandLogic_Unmute_String,
+  ChatCommandLogic_ServerUnmute_String,
+  ChatCommandLogic_Unban_String,
+  ChatCommandLogic_ServerUnban_String,
+  ChatCommandLogic_Alert_String,
+  ChatCommandLogic_Warn_String,
+  ChatCommandLogic_HelpHeader_String,
+  ChatCommandLogic_HelpHelp_String,
+  ChatCommandLogic_ShowTeamHelp_String,
+  ChatCommandLogic_WhisperHelp_String,
+  ChatCommandLogic_BlockHelp_String,
+  ChatCommandLogic_IgnoreHelp_String,
+  ChatCommandLogic_ReplyHelp_String,
+  ChatCommandLogic_EmoteHelp_String,
+  ChatCommandLogic_AwayHelp_String,
+  ChatCommandLogic_ClearHelp_String,
+  ChatCommandLogic_InviteHelp_String,
+  ChatCommandLogic_UninviteHelp_String,
+  ChatCommandLogic_MuteHelp_String,
+  ChatCommandLogic_UnmuteHelp_String,
+  ChatCommandLogic_BanHelp_String,
+  ChatCommandLogic_UnbanHelp_String,
+  ChatCommandLogic_ModeratorHelp_String,
+  ChatCommandLogic_ServerMuteHelp_String,
+  ChatCommandLogic_ServerUnmuteHelp_String,
+  ChatCommandLogic_ServerBanHelp_String,
+  ChatCommandLogic_ServerUnbanHelp_String,
+  ChatCommandLogic_AlertHelp_String,
+  ChatCommandLogic_WarnHelp_String,
+  ChatCtrl_NormalChat_String,
+  ChatCtrl_Emote_String,
+  ChatCtrl_TeamChat_String,
+  ChatCtrl_TeamEmote_String,
+  ChatCtrl_YouWhisperToYourself_String,
+  ChatCtrl_YouWhisper_String,
+  ChatCtrl_SomeoneWhispersToYou_String,
+  ChatCtrl_YouWarnSomeone_String,
+  ChatCtrl_YouWarnYourself_String,
+  ChatCtrl_SomeoneWarnsYou_String,
+  ChatCtrl_SomeoneWarnsSomeone_String,
+  ChatCtrl_EnteringRoom_String,
+  ChatCtrl_LeavingRoom_String,
+  ChatCtrl_Disconnected_String,
+  ChatCtrl_YouWereKicked_String,
+  ChatCtrl_YouWereBannedMinute_String,
+  ChatCtrl_YouWereBannedMinutes_String,
+  ChatCtrl_YouWereBannedHour_String,
+  ChatCtrl_YouWereBannedHours_String,
+  ChatCtrl_YouWereBannedDay_String,
+  ChatCtrl_YouWereBannedDays_String,
+  ChatCtrl_YouWereBannedIndefinitely_String,
+  ChatCtrl_SomeoneWasKicked_String,
+  ChatCtrl_SomeoneWasBannedMinute_String,
+  ChatCtrl_SomeoneWasBannedMinutes_String,
+  ChatCtrl_SomeoneWasBannedHour_String,
+  ChatCtrl_SomeoneWasBannedHours_String,
+  ChatCtrl_SomeoneWasBannedDay_String,
+  ChatCtrl_SomeoneWasBannedDays_String,
+  ChatCtrl_SomeoneWasBannedIndefinitely_String,
+  ChatCtrl_YouWereUnmuted_String,
+  ChatCtrl_YouWereMutedMinute_String,
+  ChatCtrl_YouWereMutedMinutes_String,
+  ChatCtrl_YouWereMutedHour_String,
+  ChatCtrl_YouWereMutedHours_String,
+  ChatCtrl_YouWereMutedDay_String,
+  ChatCtrl_YouWereMutedDays_String,
+  ChatCtrl_YouWereMutedIndefinitely_String,
+  ChatCtrl_SomeoneWasUnmuted_String,
+  ChatCtrl_SomeoneWasMutedMinute_String,
+  ChatCtrl_SomeoneWasMutedMinutes_String,
+  ChatCtrl_SomeoneWasMutedHour_String,
+  ChatCtrl_SomeoneWasMutedHours_String,
+  ChatCtrl_SomeoneWasMutedDay_String,
+  ChatCtrl_SomeoneWasMutedDays_String,
+  ChatCtrl_SomeoneWasMutedIndefinitely_String,
+  ChatCtrl_ModeratorComment_String,
+  ChatCtrl_AlertComment_String,
+  ChatCtrl_ServerAlert_String,
+  ChatCtrl_ServerShutdownStartedMinute_String,
+  ChatCtrl_ServerShutdownStartedMinutes_String,
+  ChatCtrl_ServerShutdownStartedHour_String,
+  ChatCtrl_ServerShutdownStartedHours_String,
+  ChatCtrl_ServerShutdownStartedDay_String,
+  ChatCtrl_ServerShutdownStartedDays_String,
+  ChatCtrl_ServerShutdownAborted_String,
+  ChatCtrl_SomeoneInvitesYou_String,
+  ChatCtrl_SomeoneUninvitesYou_String,
+  ChatCtrl_YouInviteSomeone_String,
+  ChatCtrl_YouUninviteSomeone_String,
+  ChatCtrl_SomeoneInvitesYouExpl_String,
+  ChatCtrl_SomeoneUninvitesYouExpl_String,
+  ChatCtrl_YouInviteSomeoneExpl_String,
+  ChatCtrl_YouUninviteSomeoneExpl_String,
+  ChatCtrl_Accept_String,
+  ChatCtrl_Reject_String,
+  ChatCtrl_SomeoneAsksToJoin_String,
+  ChatCtrl_SomeoneAsksToJoinExpl_String,
+  ChatCtrl_ClientNotOnServer_String,
+  ChatCtrl_ClientInGame_String,
+  ChatCtrl_ClientInChat_String,
+  ChatCtrl_ClientInGameAndChat_String,
+  ChatCtrl_ClientIsAnonymous_String,
+  ChatCtrl_FriendIsChatting_String,
+  ChatCtrl_FriendIsInGameStaging_String,
+  ChatCtrl_FriendIsPlaying_String,
+  ChatCtrl_FriendIsOn_String,
+  ChatCtrl_FriendIsNotOnline_String,
+  ChatCtrl_PlayerKicked_String,
+  ChatCtrl_PlayerBanned_String,
+  ChatCtrl_FriendJoined_String,
+  ChatCtrl_FriendLeft_String,
+  ChatCtrl_TeamMemberJoined_String,
+  ChatCtrl_TeamMemberLeft_String,
+  ChatCtrl_TeamMembers_String,
+  ChatCtrl_IgnoreList_String,
+  ChooseNetworkAdapterDialog_Default_String,
+  ChooseNetworkAdapterDialog_Unknown_String,
+  ClientOptionsCtrl_Whisper_String,
+  ClientOptionsCtrl_Invite_String,
+  ClientOptionsCtrl_Uninvite_String,
+  ClientOptionsCtrl_AddToFriends_String,
+  ClientOptionsCtrl_RemoveFromFriends_String,
+  ClientOptionsCtrl_ClearAFK_String,
+  ClientOptionsCtrl_SetAFK_String,
+  ClientOptionsCtrl_Ignore_String,
+  ClientOptionsCtrl_Unignore_String,
+  ClientOptionsCtrl_Block_String,
+  ClientOptionsCtrl_Unblock_String,
+  ClientOptionsCtrl_Warn_String,
+  ClientOptionsCtrl_Mute_String,
+  ClientOptionsCtrl_UnMute_String,
+  ClientOptionsCtrl_Kick_String,
+  ClientOptionsCtrl_Ban_String,
+  DirectConnectionOptionsCtrl_Connect_String,
+  DirectConnectionOptionsCtrl_Refresh_String,
+  DirectConnectionOptionsCtrl_Remove_String,
+  FriendOptionsCtrl_Locate_String,
+  FriendOptionsCtrl_RefreshList_String,
+  FriendOptionsCtrl_RemoveFromFriends_String,
+  FriendsListCtrl_Unknown_Image,
+  FriendsListCtrl_NotFound_Image,
+  FriendsListCtrl_InChat_Image,
+  FriendsListCtrl_InGame_Image,
+  GameOptionsPopup_Join_String,
+  GameOptionsPopup_Ping_String,
+  GameOptionsPopup_QueryDetails_String,
+  GameOptionsPopup_HideDetails_String,
+  GameOptionsPopup_ShowDetails_String,
+  GameOptionsPopup_Remove_String,
+  GameStagingCtrl_Ready_String,
+  GameStagingCtrl_NotReady_String,
+  GameStagingCtrl_StartGame_String,
+  GameStagingCtrl_LeaveGame_String,
+  GameStagingCtrl_DissolveGame_String,
+  GameStagingLogic_KickedTitle_String,
+  GameStagingLogic_KickedDetails_String,
+  GameStagingLogic_BannedTitle_String,
+  GameStagingLogic_BannedDetails_String,
+  GameStagingLogic_ConnectWarningTitle1_String,
+  GameStagingLogic_ConnectWarningDetails1_String,
+  GameStagingLogic_ConnectWarningTitle2_String,
+  GameStagingLogic_ConnectWarningDetails2_String,
+  GameStagingLogic_ConnectWarningTitle3_String,
+  GameStagingLogic_ConnectWarningDetails3_String,
+  GameStagingLogic_NoPingReplyError_String,
+  GameStagingLogic_GettingGameInfoTitle_String,
+  GameStagingLogic_GettingGameInfoDetails_String,
+  GameStagingLogic_JoinGameErrorTitle_String,
+  GameStagingLogic_VerifyingPingTitle_String,
+  GameStagingLogic_VerifyingPingDetails_String,
+  GameStagingLogic_DissolveGame_String,
+  GameStagingLogic_DissolveGameConfirm_String,
+  GameStagingLogic_LeaveGame_String,
+  GameStagingLogic_LeaveGameConfirm_String,
+  GameStagingLogic_NoQuickPlayGameTitle_String,
+  GameStagingLogic_NoQuickPlayGameDetails_String,
+  GameUserListCtrl_Ban_String,
+  GameUserListCtrl_Kick_String,
+  GameUserListCtrl_Ready_Image,
+  InternetQuickPlay_Welcome_String,
+  InternetQuickPlay_UserWelcome_String,
+  JoinResponse_Joined_String,
+  JoinResponse_ServerFull_String,
+  JoinResponse_InviteOnly_String,
+  JoinResponse_AskToJoin_String,
+  JoinResponse_GameInProgress_String,
+  JoinResponse_InvalidPassword_String,
+  JoinResponse_NotOnLAN_String,
+  JoinResponse_Blocked_String,
+  JoinResponse_Unknown_String,
+  LANLogic_SocketBindError_String,
+  LANLogic_SocketListenError_String,
+  LANLogic_ConnectToGameTitle_String,
+  LANLogic_ConnectToGameDetails_String,
+  LANLogic_CheckingAddressTitle_String,
+  LANLogic_CheckingAddressDetails_String,
+  LANLogic_RegisterTitle_String,
+  LANLogic_RegisterDetails_String,
+  LANLogic_JoinFailure_String,
+  LANLogic_JoinReplyError_String,
+  LANLogic_InvalidSubnet_String,
+  LobbyContainer_InitStart_String,
+  LobbyContainer_InitFailed_String,
+  LobbyContainer_CheckingVersion_String,
+  LobbyContainer_QueryingServers_String,
+  LobbyContainer_NoConnection_String,
+  LobbyContainer_DNSLookupFailed_String,
+  LobbyContainer_DirLookupFailure_String,
+  LobbyContainer_VersionCheckFailure_String,
+  LobbyContainer_InitComplete_String,
+  LobbyContainer_NoServers_String,
+  LobbyContainer_AuthServers_String,
+  LobbyContainer_AccountServers_String,
+  LobbyContainer_VersionServers_String,
+  LobbyContainer_CreateAccountTitle_String,
+  LobbyContainer_CreateAccountDetails_String,
+  LobbyContainer_RetrievePasswordTitle_String,
+  LobbyContainer_RetrievePasswordDetails_String,
+  LobbyContainer_RetrieveUsernameTitle_String,
+  LobbyContainer_RetrieveUsernameDetails_String,
+  LobbyContainer_QueryAccountTitle_String,
+  LobbyContainer_QueryAccountDetails_String,
+  LobbyContainer_UpdateAccountTitle_String,
+  LobbyContainer_UpdateAccountDetails_String,
+  LobbyContainer_LoginTitle_String,
+  LobbyContainer_LoginDetails_String,
+  LobbyContainer_GettingRoomsTitle_String,
+  LobbyContainer_GettingRoomsDetails_String,
+  LobbyContainer_VersionOutOfDataTitle_String,
+  LobbyContainer_VersionOutOfDataDetails_String,
+  LobbyGameStatus_Success_String,
+  LobbyGameStatus_GameFull_String,
+  LobbyGameStatus_GameInProgress_String,
+  LobbyGameStatus_UnpackFailure_String,
+  LobbyGameStatus_NotInvited_String,
+  LobbyGameStatus_CaptainRejectedYou_String,
+  LobbyGameStatus_InvalidPassword_String,
+  LobbyGameStatus_DuplicateName_String,
+  LobbyOptions_DefaultName_String,
+  LobbyOptions_CheckingAddress_String,
+  LobbyOptions_AddressUnavailable_String,
+  RoomCtrl_QueryingServer_String,
+  RoomCtrl_Password_Image,
+  RoomLabelCtrl_LabelPrefix_String,
+  RoomLabelCtrl_LabelServer_String,
+  RoomLabelCtrl_LabelUser_String,
+  RoomLabelCtrl_LabelUsers_String,
+  RoomLabelCtrl_LabelDisconnected_String,
+  RoutingLogic_GetClientListTitle_String,
+  RoutingLogic_GetClientListDetails_String,
+  RoutingLogic_GetGroupListTitle_String,
+  RoutingLogic_GetGroupListDetails_String,
+  RoutingLogic_GameDissolvedTitle_String,
+  RoutingLogic_GameDissolvedDetails_String,
+  RoutingLogic_NoServersTitle_String,
+  RoutingLogic_NoServersDetails_String,
+  RoutingLogic_TooManyFriendsTitle_String,
+  RoutingLogic_TooManyFriendsDetails_String,
+  RoutingLogic_AlreadyJoinedTitle_String,
+  RoutingLogic_AlreadyInGame_String,
+  RoutingLogic_AlreadyInRoom_String,
+  RoutingLogic_JoinGroupTitle_String,
+  RoutingLogic_JoinGroupDetails_String,
+  RoutingLogic_ConnectTitle_String,
+  RoutingLogic_ConnectDetails_String,
+  RoutingLogic_RegisterTitle_String,
+  RoutingLogic_RegisterDetails_String,
+  RoutingLogic_QueryGroupsTitle_String,
+  RoutingLogic_QueryGroupsDetails_String,
+  RoutingLogic_CreateGroupTitle_String,
+  RoutingLogic_CreateGroupDetails_String,
+  RoutingLogic_GetBadUsersTitle_String,
+  RoutingLogic_GetBadUsersDetails_String,
+  RoutingLogic_DisconnectedTitle_String,
+  RoutingLogic_DisconnectedDetails_String,
+  RoutingLogic_AskingCaptainTitle_String,
+  RoutingLogic_AskingCaptainDetails_String,
+  RoutingLogic_CollectingPingsTitle_String,
+  RoutingLogic_CollectingPingsDetails_String,
+  RoutingLogic_GettingGameListTitle_String,
+  RoutingLogic_GettingGameListDetails_String,
+  RoutingLogic_MuteClientTitle_String,
+  RoutingLogic_UnmuteClientTitle_String,
+  RoutingLogic_BanClientTitle_String,
+  RoutingLogic_KickClientTitle_String,
+  RoutingLogic_ModerateDetails_String,
+  RoutingLogic_FriendNotFoundTitle_String,
+  RoutingLogic_FriendNotFoundDetails_String,
+  RoutingLogic_ClientNotFound_String,
+  RoutingLogic_ClientAmbiguous_String,
+  RoutingLogic_InvalidCommand_String,
+  RoutingLogic_RequireName_String,
+  RoutingLogic_BadTimeSpec_String,
+  RoutingLogic_Error_String,
+  RoutingLogic_NotCaptain_String,
+  ServerListCtrl_Pinging_String,
+  ServerListCtrl_PingFailed_String,
+  ServerListCtrl_Querying_String,
+  ServerListCtrl_QueryFailed_String,
+  ServerListCtrl_ListSummary_String,
+  ServerListCtrl_ListPingSummary_String,
+  ServerListCtrl_RefreshList_String,
+  ServerListCtrl_StopRefresh_String,
+  ServerListCtrl_NoFilter_String,
+  ServerListCtrl_AddRemove_String,
+  ServerListCtrl_Add_String,
+  ServerListCtrl_Remove_String,
+  ServerListCtrl_FullFilter_String,
+  ServerListCtrl_NotFullFilter_String,
+  ServerListCtrl_OpenFilter_String,
+  ServerListCtrl_PingFailed_Image,
+  ServerListCtrl_GameExpanded_Image,
+  ServerListCtrl_GameNotExpanded_Image,
+  ServerListCtrl_GameAreInvited_Image,
+  ServerListCtrl_GameNone_Image,
+  ServerListCtrl_GameAskToJoin_Image,
+  ServerListCtrl_GameHasPassword_Image,
+  ServerListCtrl_GameNotInvited_Image,
+  ServerListCtrl_GameInProgress_Image,
+  ServerListCtrl_SkillOpen_Image,
+  ServerListCtrl_SkillNovice_Image,
+  ServerListCtrl_SkillIntermediate_Image,
+  ServerListCtrl_SkillAdvanced_Image,
+  ServerListCtrl_SkillExpert_Image,
+  ServerOptionsCtrl_Connect_String,
+  ServerOptionsCtrl_RefreshServer_String,
+  ServerOptionsCtrl_HideDetails_String,
+  ServerOptionsCtrl_ShowDetails_String,
+  ServerOptionsCtrl_ResfreshList_String,
+  StagingLogic_DisconnectedTitle_String,
+  StagingLogic_DisconnectedDetails_String,
+  StagingLogic_BannedTitle_String,
+  StagingLogic_BannedDetails_String,
+  StagingLogic_KickedTitle_String,
+  StagingLogic_KickedDetails_String,
+  UserListCtrl_Ignore_String,
+  UserListCtrl_Unignore_String,
+  UserListCtrl_Normal_Image,
+  UserListCtrl_Away_Image,
+  UserListCtrl_Admin_Image,
+  UserListCtrl_Moderator_Image,
+  UserListCtrl_Captain_Image,
+  UserListCtrl_Muted_Image,
+  UserListCtrl_Ignored_Image,
+  UserListCtrl_Blocked_Image,
+  WONStatus_Success_String,
+  WONStatus_Killed_String,
+  WONStatus_TimedOut_String,
+  WONStatus_InvalidAddress_String,
+  WONStatus_GeneralFailure_String,
+  WONStatus_AuthFailure_String,
+  WONStatus_FTPFailure_String,
+  WONStatus_HTTPFailure_String,
+  WONStatus_MOTDFailure_String,
+  WONStatus_RoutingFailure_String,
+  WONStatus_GameSpyFailure_String,
+  WONStatus_DirFailure_String,
+  WONStatus_ChatFailure_String,
+  WONStatus_DatabaseFailure_String,
+  WONStatus_NotAllowed_String,
+  WONStatus_NotAuthorized_String,
+  WONStatus_BehindFirewall_String,
+  WONStatus_ExpiredCertificate_String,
+  WONStatus_InvalidCDKey_String,
+  WONStatus_CDKeyBanned_String,
+  WONStatus_CDKeyInUse_String,
+  WONStatus_CRCFailed_String,
+  WONStatus_UserExists_String,
+  WONStatus_UserNotFound_String,
+  WONStatus_BadPassword_String,
+  WONStatus_InvalidUserName_String,
+  WONStatus_BadCommunity_String,
+  WONStatus_NotInCommunity_String,
+  WONStatus_UserSeqInUse_String,
+  WONStatus_BlankNamesNotAllowed_String,
+  WONStatus_CaptainRejectedYou_String,
+  WONStatus_ClientAlreadyBanned_String,
+  WONStatus_ClientAlreadyInGroup_String,
+  WONStatus_ClientAlreadyMuted_String,
+  WONStatus_ClientBanned_String,
+  WONStatus_ClientDoesNotExist_String,
+  WONStatus_ClientNotBanned_String,
+  WONStatus_ClientNotInGroup_String,
+  WONStatus_ClientNotInvited_String,
+  WONStatus_ClientNotMuted_String,
+  WONStatus_ConnectFailure_String,
+  WONStatus_GroupAlreadyClaimed_String,
+  WONStatus_GroupAlreadyExists_String,
+  WONStatus_GroupClosed_String,
+  WONStatus_GroupDeleted_String,
+  WONStatus_GroupDoesNotExist_String,
+  WONStatus_GroupFull_String,
+  WONStatus_GuestNamesReserved_String,
+  WONStatus_InvalidPassword_String,
+  WONStatus_MustBeAdmin_String,
+  WONStatus_MustBeCaptain_String,
+  WONStatus_MustBeCaptainOrModerator_String,
+  WONStatus_MustBeModerator_String,
+  WONStatus_ServerFull_String,
+  WONStatus_GroupNameExceedsMaximum_String,
+  WONStatus_JoinCanceled_String,
+  WONStatus_Throttled_String,
+  WONStatus_KeyNotUsed_String,
+  WONStatus_EMailPasswordDuplication_String,
+  WONStatus_AccountCreateDisabled_String,
+  WONStatus_AgeNotOldEnough_String,
+  WONStatus_ItemHasDependencies_String,
+  WONStatus_OutOfDate_String,
+  WONStatus_OutOfDateNoUpdate_String,
+  WONStatus_ValidNotLatest_String,
+  WONStatus_DataAlreadyExists_String,
+  WONStatus_DBError_String,
+  WONStatus_ConnRefused_String,
+};
+
 /// The inward calls (the C++ shell's virtuals and methods).
 enum class EeWonRootCall : uint32_t {
   /// `Virtual08` (SizeChanged).
@@ -7748,6 +8355,15 @@ struct EeWonEeColor;
 /// The lobby game's Rust half.
 struct EeWonEeGame;
 
+/// One lobby sound.
+struct EeWonEeSound;
+
+/// One transfer.
+struct EeWonEeXfer;
+
+/// One send op: the path, the open file, the chunk and its read position.
+struct EeWonEeXferSend;
+
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
 
@@ -8349,6 +8965,16 @@ struct EeWonEeResource {
   const char *name;
   bool new_section;
 };
+
+/// The host: `(object, op, a) -> result` (`object` the C++ sound, or null for the decoder's load).
+using EeWonEeSoundHostFn = ptrdiff_t(*)(void *obj, EeWonEeSoundOp op, ptrdiff_t a);
+
+/// The host: `(object, op, a, b, c) -> result`.
+using EeWonEeXferHostFn = ptrdiff_t(*)(void *obj,
+                                       EeWonEeXferOp op,
+                                       ptrdiff_t a,
+                                       ptrdiff_t b,
+                                       ptrdiff_t c);
 
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
@@ -9922,6 +10548,13 @@ struct EeWonGameSummary {
   size_t rest;
 };
 
+/// A status's text: the resource string, and whether it is a general text formatted with the status's
+/// description.
+struct EeWonStatusLobbyText {
+  EeWonLobbyRes res;
+  bool general;
+};
+
 /// The constructor's parts (`ee_won_tab_init`): the bottom bar's Rust object, the four containers and the layout
 /// point, as `Component*`s.
 struct EeWonTabParts {
@@ -11338,6 +11971,65 @@ bool ee_won_eeresource_row(size_t index, EeWonEeResource *out);
 /// # Safety
 /// `name` is NULL or a NUL-terminated string.
 ptrdiff_t ee_won_eeresource_find(const char *name);
+
+/// A new sound for the C++ object `obj` (an effect of sample `sample`; the music's is unused).
+EeWonEeSound *ee_won_eesound_new(void *obj,
+                                 EeWonEeSoundKind kind,
+                                 EeWonEeSoundHostFn host,
+                                 uint32_t sample);
+
+/// The C++ object's destructor: an effect's sample unloaded, the object freed.
+///
+/// # Safety
+/// `p` came from [`ee_won_eesound_new`] (or is null), not used after.
+void ee_won_eesound_free(EeWonEeSound *p);
+
+/// A virtual of the C++ object.
+///
+/// # Safety
+/// `p` is a live object of [`ee_won_eesound_new`].
+ptrdiff_t ee_won_eesound_call(const EeWonEeSound *p, EeWonEeSoundCall call, ptrdiff_t a);
+
+/// `EELobbySoundDecoder::Decode`'s load: the sample of `path` (a NUL-terminated `char*`), or -1 without a sound
+/// manager (no sound is made then).
+int64_t ee_won_eesound_load(EeWonEeSoundHostFn host,
+                            const uint8_t *path);
+
+/// A new transfer for the C++ shell `obj`.
+EeWonEeXfer *ee_won_eexfer_new(void *obj, EeWonEeXferHostFn host);
+
+/// The shell's destructor.
+///
+/// # Safety
+/// `p` came from [`ee_won_eexfer_new`] (or is null), not used after.
+void ee_won_eexfer_free(EeWonEeXfer *p);
+
+/// A method of the transfer.
+///
+/// # Safety
+/// `p` is a live transfer; the host's calls may come back into it (a completion run at once).
+ptrdiff_t ee_won_eexfer_call(const EeWonEeXfer *p, EeWonEeXferCall call, ptrdiff_t a, ptrdiff_t b);
+
+/// A new send op for the C++ shell `obj`, of the file at `path` (`len` bytes).
+///
+/// # Safety
+/// `path` holds `len` readable bytes (or `len` is 0).
+EeWonEeXferSend *ee_won_eexfer_send_new(void *obj,
+                                        EeWonEeXferHostFn host,
+                                        const uint8_t *path,
+                                        size_t len);
+
+/// The send op's destructor (the file is not closed: the op's cleanup does that).
+///
+/// # Safety
+/// `p` came from [`ee_won_eexfer_send_new`] (or is null), not used after.
+void ee_won_eexfer_send_free(EeWonEeXferSend *p);
+
+/// A virtual of the send op.
+///
+/// # Safety
+/// `p` is a live send op.
+int32_t ee_won_eexfer_send_call(const EeWonEeXferSend *p, EeWonEeXferSendCall call);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.
@@ -16667,6 +17359,9 @@ size_t ee_won_resource_count();
 /// `out` is writable.
 bool ee_won_resource_row(size_t index, EeWonResource *out);
 
+/// The kind of resource `res` (its row's).
+EeWonResKind ee_won_lobbyres_kind(EeWonLobbyRes res);
+
 /// A new Rust RootContainer for the C++ `component` over its container's Rust object `ct`, its calls out through
 /// `host`.
 ///
@@ -18000,6 +18695,9 @@ ptrdiff_t ee_won_staging_call(const EeWonStaging *staging,
                               void *b,
                               ptrdiff_t c,
                               ptrdiff_t d);
+
+/// `GetWONStatusString`'s choice for `status`.
+EeWonStatusLobbyText ee_won_status_lobby_text(int32_t status);
 
 /// Upper-cases (`upper`) or lower-cases `length` bytes in place.
 ///
