@@ -236,13 +236,6 @@ pub fn set_points(points: &[EeHullPoint], is_sorted: bool) -> (Vec<EeHullPoint>,
     (outline, shape)
 }
 
-/// `U2DPolygon<long>::Sort` (slot 13): sorted (`operator<`, duplicates kept) and Graham's scan of three or more.
-pub fn sort(points: &[EeHullPoint]) -> Vec<EeHullPoint> {
-    let mut pairs: Vec<HullPoint<c_long>> = points.iter().map(|p| p.pair()).collect();
-    hull::sort_points(&mut pairs);
-    hull::graham(&pairs).into_iter().map(EeHullPoint::of).collect()
-}
-
 /// `U2DPolygon<long>::ComputeCenter` (slot 12, the exe's): the `float` mean, summed from the last point, truncated.
 pub fn center(points: &[EeHullPoint]) -> EeHullPoint {
     let count = points.len() as f32;
@@ -403,13 +396,6 @@ mod tests {
         let rows = scan_lines(&outline);
         assert_eq!(rows, vec![(1, 1, 3), (2, 1, 3), (3, 1, 3)]);
         assert!(scan_lines(&[]).is_empty());
-    }
-
-    #[test]
-    fn sort_keeps_duplicates_for_the_scan() {
-        // (0, 0) twice: the scan's tie-break deletes the copy with the lower index
-        assert_eq!(sort(&[p(0, 1), p(0, 0), p(0, 0)]), vec![p(0, 0), p(0, 1)]);
-        assert_eq!(sort(&[p(0, 1), p(0, 0)]), vec![p(0, 0), p(0, 1)]);
     }
 
     /// The C++'s Graham angle sort for at most 32 points (MSVC's `std::sort` is its insertion sort there), with the

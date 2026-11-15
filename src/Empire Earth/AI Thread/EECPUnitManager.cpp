@@ -475,7 +475,7 @@ EEComplexUnit* EECPUnitManager::FindBuilder(GE2DPoint& inLocation, long inUnitCl
                 if (!theSame) {
                     if (EECPIsSiteClass(inUnitClass) || inUnitClass == this->mManager->GetTowerClass()) {
                         long theSize = gUnitClassTable[inUnitClass]->mTileSize;
-                        theTiles = gContinentManager.GetContinentAt(theUnit->GetTileX(), theUnit->GetTileY())->mShoreTiles;
+                        theTiles = gContinentManager.GetContinentAt(theUnit->GetTileX(), theUnit->GetTileY())->GetShoreTiles();
                         for (unsigned long x = theTile.mX; x < theTile.mX + theSize && !theSame; x++)
                             for (unsigned long y = theTile.GetY(); y < theTile.GetY() + theSize && !theSame; y++)
                                 theSame = std::find(theTiles.begin(), theTiles.end(), U2DPoint<long>(x, y)) != theTiles.end();
@@ -1001,7 +1001,7 @@ bool EECPUnitManager::StartProduction(EECPUMRequest& inRequest, long& outMade)
         if (inRequest.mContinent != 0) {
             for (i = 0; i < theUnits.size(); i++) {
                 EEAIContinent* theContinent = gContinentManager.GetContinentAt(theUnits[i]);
-                if (theContinent && theContinent->mID == inRequest.mContinent)
+                if (theContinent && theContinent->GetID() == inRequest.mContinent)
                     theCandidates.push_back(theUnits[i]);
             }
         }
@@ -1016,7 +1016,7 @@ bool EECPUnitManager::StartProduction(EECPUMRequest& inRequest, long& outMade)
         for (i = 0; i < theUnits.size(); i++) {
             EEAIContinent* theContinent = gContinentManager.GetContinentAt(theUnits[i]);
             if (theContinent)
-                theCounts[theContinent->mID] = theCounts[theContinent->mID] + 1;
+                theCounts[theContinent->GetID()] = theCounts[theContinent->GetID()] + 1;
         }
         unsigned short theBest = 0;
         unsigned long theMost = 0;
@@ -1029,7 +1029,7 @@ bool EECPUnitManager::StartProduction(EECPUMRequest& inRequest, long& outMade)
         }
         for (i = 0; i < theUnits.size(); i++) {
             EEAIContinent* theContinent = gContinentManager.GetContinentAt(theUnits[i]);
-            if (theContinent && theContinent->mID == theBest)
+            if (theContinent && theContinent->GetID() == theBest)
                 theCandidates.push_back(theUnits[i]);
         }
     }

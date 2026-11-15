@@ -103,38 +103,12 @@ a543d a5589 Empire Earth/AI Thread/EEHumanPlayer.cpp
 a5589 a5c31 Empire Earth/AI Thread/EEInfluenceTable.cpp
 a5c31 abbaf Empire Earth/AI Thread/EEPathManager.cpp
 abbaf ac7b9 Empire Earth/AI Thread/EETown.cpp
-ac7b9 ac891 Empire Earth/Calamities/EEAEExtraDamageFunctor.cpp
-ac891 ac991 Empire Earth/Calamities/EEAEMindControlFunctor.cpp
-ac991 acb75 Empire Earth/Calamities/EEAreaEffectFunctor.cpp
 acb75 adcd9 Empire Earth/Calamities/EECalamity.cpp
 adcd9 adf97 Empire Earth/Calamities/EECalamityClass.cpp
 adf97 aebb7 Empire Earth/Calamities/EECalamityManager.cpp
-aebb7 aef4c Empire Earth/Calamities/EECCAEExtraDamage.cpp
-aef4c af1ce Empire Earth/Calamities/EECCAEMindControl.cpp
-af1ce af8c0 Empire Earth/Calamities/EECCAreaEffect.cpp
-af8c0 afdd3 Empire Earth/Calamities/EECCCloaking.cpp
-afdd3 afef9 Empire Earth/Calamities/EECCConscription.cpp
-afef9 b037f Empire Earth/Calamities/EECCDropObject.cpp
-b037f b0e2e Empire Earth/Calamities/EECCEarthquake.cpp
-b0e2e b114a Empire Earth/Calamities/EECCFire.cpp
-b114a b18e2 Empire Earth/Calamities/EECCHurricane.cpp
-b18e2 b1f4f Empire Earth/Calamities/EECCLeprosy.cpp
-b1f4f b2034 Empire Earth/Calamities/EECCLineOfSight.cpp
-b2034 b2634 Empire Earth/Calamities/EECCLogicBomb.cpp
-b2634 b2ba3 Empire Earth/Calamities/EECCMeteorStorm.cpp
-b2ba3 b2f31 Empire Earth/Calamities/EECCMorale.cpp
-b2f31 b3217 Empire Earth/Calamities/EECCPlague.cpp
-b3217 b338d Empire Earth/Calamities/EECCSpecialAttack.cpp
-b338d b3494 Empire Earth/Calamities/EECCSpecialLocation.cpp
-b3494 b3ade Empire Earth/Calamities/EECCTeleport.cpp
-b3ade b4634 Empire Earth/Calamities/EECCTimeWarp.cpp
-b4634 b5b7d Empire Earth/Calamities/EECCVolcano.cpp
 b5b7d b662f Empire Earth/Calamities/EEContagionHelper.cpp
 b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
-b6bd1 b6e58 Empire Earth/Calamities/EEFireFunctor.cpp
-b6e58 b6f21 Empire Earth/Calamities/EELeprosyFunctor.cpp
 b6f21 b6fb1 Empire Earth/Calamities/EELocationCalamityClass.cpp
-b6fb1 b70cc Empire Earth/Calamities/EEPlagueFunctor.cpp
 b70cc b71b5 Empire Earth/Calamities/EEUnitCalamityClass.cpp
 0b71b5 0b8cda Empire Earth/Communications/EEClient.cpp
 0b8cda 0ca90f Empire Earth/Communications/EEMessage.cpp

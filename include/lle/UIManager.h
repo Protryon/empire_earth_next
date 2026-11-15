@@ -22,6 +22,7 @@ class SESMInstanceNode;
 class SESoundManager;
 class UIBackground;
 class UIBackgroundTable;
+class TSCriticalSection;
 class UIControl;
 class UIControlsTable;
 class UIForm;
@@ -101,6 +102,7 @@ public:
     UIForm* GetFormByID(unsigned long inID) const;
     unsigned long GetFormCount() const;
     UIForm* GetStackedForm(unsigned long inIndex) const;   // port (test fixture)
+    TSCriticalSection* GetUILock() const;                  // port (the harness's bridge: the lock UpdateUI holds)
     GEBitmap* GetDragBarBitmap() const;
     GESurface* GetDrawingSurface() const;
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe reads __imp_sLMouseButton inline (0x17d6a9, 37 sites)

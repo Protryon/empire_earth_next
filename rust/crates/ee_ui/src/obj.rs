@@ -739,6 +739,38 @@ pub enum EeUiOp {
     FontNew = 504,
     /// Font `a`'s `Dereference()`.
     FontRelease = 505,
+
+    // ---- UIControl's record (R6 ui round 19, controlobj.rs): on the control's C++ object; the rhombus ops take 0 the
+    // background, 1 its copy; the record also uses SetDirty, RhombusSetRect, RhombusCopy, RhombusSetOpacity,
+    // RhombusSetColor, VirtSetLocation, TabStop, TabbingOn, FormSurfaces, FormCtlSetDirty and FormEventCall
+    /// *Pure*: the form's `GetControl(a)`.
+    CtlFormControl = 520,
+    /// *Pure*: the form's `GetControl(a)`'s left button flag.
+    CtlSlotLeftDown = 521,
+    /// *Pure*: the form's `GetControl(a)`'s right button flag.
+    CtlSlotRightDown = 522,
+    /// *Pure*: the form's `GetEntityGroupById(a)->GetIsEnabled()`.
+    CtlGroupEnabled = 523,
+    /// *Pure*: the manager's `GetCurrentForm()`.
+    CtlCurrentForm = 524,
+    /// *Pure*: the form's `GetKeyboardCaptured()`.
+    CtlKeyboardCaptured = 525,
+    /// *Pure*: the form's `GetMouseCaptured()`.
+    CtlMouseCaptured = 526,
+    /// The form's `SetKeyboardCaptured(control a)`.
+    CtlSetKeyboardCaptured = 527,
+    /// The form's `SetMouseCaptured(control a)`.
+    CtlSetMouseCaptured = 528,
+    /// The virtual `HideControl()`.
+    CtlHide = 529,
+    /// The manager's `AddDirtyRectangle(f, the form)`.
+    CtlAddDirty = 530,
+    /// The form's `Tab()`.
+    CtlTab = 531,
+    /// The manager's `AddEventToTrigger(event a, the form, this)`.
+    CtlAddEvent = 532,
+    /// The string table's `GetString(b, *(UWideString*)a)`.
+    CtlHelpString = 533,
 }
 
 impl EeUiOp {
@@ -845,6 +877,13 @@ impl EeUiOp {
                 | TblFontHeight
                 | TblFontHasBitmap
                 | TblStringLength
+                | CtlFormControl
+                | CtlSlotLeftDown
+                | CtlSlotRightDown
+                | CtlGroupEnabled
+                | CtlCurrentForm
+                | CtlKeyboardCaptured
+                | CtlMouseCaptured
         )
     }
 }

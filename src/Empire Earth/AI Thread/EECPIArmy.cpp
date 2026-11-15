@@ -56,7 +56,7 @@ EECPIArmy::EECPIArmy()
     this->mL7C = 0;
     this->mB84 = false;
     this->mL74 = 0;
-    this->mAreaType = kAIAreaArmy;
+    this->SetAreaType(kAIAreaArmy);
     this->mJoinDistanceSq = 0x90;
 }
 
@@ -73,15 +73,15 @@ void EECPIArmy::AddUnit(EEComplexUnit* inUnit)
     if (theUnit == NULL || theUnit->mTileX == -10000)   // the tile used (was the contained unit's own, -10000)
         return;
     theTile.SetXY(theUnit->GetTileX(), theUnit->GetTileY());
-    if (this->mTiles.Size() > 0)
-        this->mBounds.Extend(theTile);
+    if (this->GetNumTiles() > 0)
+        this->GetBounds().Extend(theTile);
     else {
-        this->mBounds.mTop = theTile.mY;
-        this->mBounds.mLeft = theTile.mX;
-        this->mBounds.mBottom = theTile.mY;
-        this->mBounds.mRight = theTile.mX;
+        this->GetBounds().mTop = theTile.mY;
+        this->GetBounds().mLeft = theTile.mX;
+        this->GetBounds().mBottom = theTile.mY;
+        this->GetBounds().mRight = theTile.mX;
     }
-    this->mTiles.Insert(U2DPoint<long>(theUnit->mTileX, theUnit->mTileY));
+    this->GetTileSet().Insert(U2DPoint<long>(theUnit->mTileX, theUnit->mTileY));
     this->mStrength += inUnit->mUnitClass->mInfluence;   // the unit's own strength (the container only lends its tile)
 }
 
@@ -90,9 +90,9 @@ void EECPIArmy::AddUnit(EEComplexUnit* inUnit)
 void EECPIArmy::Merge(EECPIArmy* inOther)
 {
     std::vector<U2DPoint<long> > thePoints;
-    inOther->mTiles.BuildPointList(thePoints, 1);
+    inOther->GetTileSet().BuildPointList(thePoints, 1);
     for (long i = thePoints.size() - 1; i >= 0; i--)
-        this->mTiles.Insert(thePoints[i]);
+        this->GetTileSet().Insert(thePoints[i]);
     this->mStrength += inOther->mStrength;
     this->mL7C += inOther->mL7C;
 }
@@ -113,11 +113,11 @@ bool EECPIArmy::IsNear(EEComplexUnit* inUnit)
         unsigned short theID = gContinentManager.GetContinentID(inUnit);
         if (theID != this->mContinentID && this->mContinentID != 0)
             theResult = false;
-        else if (this->mTiles.Size() > 0) {
+        else if (this->GetNumTiles() > 0) {
             theTile.SetXY(inUnit->GetTileX(), inUnit->GetTileY());
-            theResult = this->mBounds.Contains(theTile);
+            theResult = this->GetBounds().Contains(theTile);
             if (!theResult) {
-                theClosest = this->mBounds.GetClosestPoint(theTile);
+                theClosest = this->GetBounds().GetClosestPoint(theTile);
                 theResult = theClosest.DistanceToSquared(theTile) <= this->mJoinDistanceSq;
             }
         } else

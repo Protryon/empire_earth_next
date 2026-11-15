@@ -30,6 +30,7 @@
 #include "platform/PlatSocket.h"
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
+#include "won_blocking.h"
 
 using namespace WONAPI;
 
@@ -95,21 +96,32 @@ static std::map<const void*, IPAddr> sPeerAddr;
 static int sPeerMade, sPeerFreed;
 static int sListenPort;
 
-namespace WONAPI {
-ServerOp::ServerOp()
+// the stand-in's ServerOp members (the real ones are the Rust op's since net round 24): the socket and the auth
+// context with a reference each, released as the original's members were (the context, then the socket)
+struct StandinMembers {
+    SmartPtr<BlockingSocket> mSocket;
+    SmartPtr<AuthContext> mAuthContext;
+    AuthType mAuthType = AUTH_TYPE_NONE;
+};
+static std::map<const void*, StandinMembers> sPeerMembers;
+// the original BlockingSocket::Connect's statements (a connect op run blocking)
+static WONStatus StandinConnect(BlockingSocket* inSocket, const IPAddr& inAddr, unsigned long inTimeout)
 {
-    this->mAuthType = AUTH_TYPE_NONE;
-    this->mLengthFieldSize = 4;
-    this->mClientKeySize = 8;
-    this->mUseClientKey = false;
-    this->mMaxConnectTime = 60000;
-    this->mMaxSendTime = 60000;
-    this->mMaxRecvTime = 60000;
+    SmartPtr<ConnectOp> anOp = new ConnectOp(inAddr, inSocket);
+    anOp->RunBlock(inTimeout);
+    return anOp->GetStatus();
 }
+namespace WONAPI {
 RustServerOp::RustServerOp(EeWonHostOp* inRustOp) : mRustOp(inRustOp) {}
 RustServerOp::~RustServerOp()
 {
+    StandinMembers aMembers;
     PlatMutexLock(sLinesLock);
+    std::map<const void*, StandinMembers>::iterator aMember = sPeerMembers.find(this);
+    if (aMember != sPeerMembers.end()) {
+        aMembers = aMember->second;
+        sPeerMembers.erase(aMember);
+    }
     sPeerAddr.erase(this);
     sPeerFreed++;
     PlatMutexUnlock(sLinesLock);
@@ -120,12 +132,13 @@ void RustServerOp::RunHook()
     IPAddr anAddr = sPeerAddr[this];
     bool aPending = anAddr.GetPort() == 0;
     Log(std::string("peerauth run ") + (aPending ? "pending" : (anAddr.GetPort() == sListenPort ? "listener" : "other"))
-        + " type " + N(this->mAuthType) + " context " + (this->mAuthContext.get() != NULL ? "set" : "null")
+        + " type " + N(sPeerMembers[this].mAuthType) + " context "
+        + (sPeerMembers[this].mAuthContext.get() != NULL ? "set" : "null")
         + " mode " + N(this->GetMode()) + " timeout " + N((long)this->GetTimeout()) + " socket "
-        + (this->mSocket.get() != NULL ? "set" : "null"));
+        + (sPeerMembers[this].mSocket.get() != NULL ? "set" : "null"));
     if (aPending)
         return;
-    WONStatus aStatus = this->mSocket->Connect(anAddr, 5000);
+    WONStatus aStatus = StandinConnect(sPeerMembers[this].mSocket.get(), anAddr, 5000);
     Log("peerauth connect " + St(aStatus));
     this->Finish(aStatus);
 }
@@ -135,10 +148,10 @@ PeerAuthOp::PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType in
                        bool inUseAuth2)
     : RustServerOp(NULL)
 {
-    this->mSocket = inSocket;
-    this->mAuthContext = inContext;
-    this->mAuthType = inType;
     PlatMutexLock(sLinesLock);
+    sPeerMembers[this].mSocket = inSocket;
+    sPeerMembers[this].mAuthContext = inContext;
+    sPeerMembers[this].mAuthType = inType;
     sPeerAddr[this] = inAddr;
     sPeerMade++;
     PlatMutexUnlock(sLinesLock);
@@ -255,7 +268,7 @@ struct Server {
             aMsg[i] = (char)((aLength >> (8 * i)) & 0xff);
         aMsg += inText;
         Log(std::string("peer send ") + inText + " "
-            + St(this->Peer()->SendMsg(Bytes(aMsg.data(), (unsigned long)aMsg.size()), 5000)));
+            + St(WonBlocking::SendMsg(this->Peer(), Bytes(aMsg.data(), (unsigned long)aMsg.size()), 5000)));
     }
 };
 
@@ -465,7 +478,7 @@ static void Push(Server& s, const char* inName, const unsigned char* inBytes, si
     aMsg[1] = (char)((aLength >> 8) & 0xff);
     aMsg.append(reinterpret_cast<const char*>(inBytes), inLength);
     Log(std::string("server ") + inName + " "
-        + St(s.Peer()->SendMsg(Bytes(aMsg.data(), (unsigned long)aMsg.size()), 5000)));
+        + St(WonBlocking::SendMsg(s.Peer(), Bytes(aMsg.data(), (unsigned long)aMsg.size()), 5000)));
 }
 #define PUSH(s, name, ...) do { static const unsigned char b_[] = {__VA_ARGS__}; Push(s, name, b_, sizeof(b_)); } while (0)
 

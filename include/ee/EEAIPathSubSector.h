@@ -42,6 +42,7 @@ public:
     // the graph machine's view (EEAIAStarGraphMachine<.., EEAIPathSubSector>; 0xaad6c's count is the ICF COMDAT
     // 0x196dff, 0xab6c1 takes the node tile from mSector +0x40/+0x44) (provisional names)
     unsigned long GetNumNeighbors() const { return this->mNeighbors.size(); }
+    const std::vector<EEAIPathSubSector*>& GetNeighbors() const { return this->mNeighbors; }   // the graph machine's view
     U2DPoint<long> GetGraphLocation() const;
     bool IsNeighbor(EEAIPathSubSector* inOther)
     {

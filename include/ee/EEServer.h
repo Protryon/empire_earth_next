@@ -52,6 +52,13 @@ public:
     void ProcessConnectionRequest(unsigned char inSlot, const EEGameOptionsPlayer& inPlayer,
                                   const UWideString& inVersion, unsigned long inChecksum);
     void RefuseClient(EEGameOptionsPlayer& inPlayer);  // 0xcb850 (the lobby's opened/closed slot 0x1db1ce)
+    // New (LLE Network Engine round 6): the server's connection response (its error, the send-to slot it names, the
+    // lobby slot, 0xff for none); sent to a slot from the server's, the slot forgotten after it when inUnregister; a
+    // client's connection request taken (ProcessSystemMessage and FilterPlayerInput took it alike)
+    NEMessage* NewConnectionResponse(long inError, unsigned char inSendToSlot, unsigned char inUISlot);
+    void SendConnectionResponse(unsigned char inSlot, long inError, unsigned char inSendToSlot, unsigned char inUISlot,
+                                bool inUnregister);
+    void TakeConnectionRequest(NEMRecord* inRequest);
     unsigned char GetSendToSlot(unsigned char inPlayer);  // 0xcbc02 (mU214's value for inPlayer, 0xff if none)
     unsigned char GetLobbySlot(unsigned char inValue);  // 0xcbc35 (the key whose mU214 value is inValue, 0 if none)
     void HandleLobbyInput(NEMessage* inMessage);  // 0xcc34e (ProcessSystemMessage)

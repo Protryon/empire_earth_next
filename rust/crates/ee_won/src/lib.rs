@@ -74,6 +74,7 @@ pub mod guitree;
 pub mod guiwin;
 pub mod guiwrap;
 pub mod hostauth;
+pub mod hostbase;
 pub mod hostnative;
 pub mod hostop;
 pub mod hostsock;

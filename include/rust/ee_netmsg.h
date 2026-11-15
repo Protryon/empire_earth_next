@@ -445,6 +445,33 @@ constexpr static const uint8_t EE_NETMSG_KIND_ENGINE = 1;
 /// the types every `EEMessage` class takes (`EEMEndCinematic`'s 0x9d too, which the factory does not build).
 constexpr static const uint8_t EE_NETMSG_KIND_GAME = 2;
 
+/// `GetCountsTowardsPlayerInputThrottle` answers true (the base's answer; 20 types say no).
+constexpr static const uint8_t EE_NETMSG_NE_THROTTLE = 1;
+
+/// `GetCanSendWhilePaused` answers true.
+constexpr static const uint8_t EE_NETMSG_NE_PAUSED = 2;
+
+/// No response rule, no send-to-all-and-wait member.
+constexpr static const uint8_t EE_NETMSG_NE_NONE = 255;
+
+/// No such member.
+constexpr static const uint8_t EE_NETMSG_NE_FIELD_NONE = 0;
+
+/// An integer (U8, U16, I32, U32): a sender's value is truncated to its size.
+constexpr static const uint8_t EE_NETMSG_NE_FIELD_INTEGER = 1;
+
+/// A `bool`: a sender's value is stored as value != 0.
+constexpr static const uint8_t EE_NETMSG_NE_FIELD_BOOL = 2;
+
+/// A string: `offset` is its ordinal among the type's strings.
+constexpr static const uint8_t EE_NETMSG_NE_FIELD_STRING = 3;
+
+/// The players' inputs (the list).
+constexpr static const uint8_t EE_NETMSG_NE_FIELD_INPUTS = 4;
+
+/// A fixed block of bytes (the transfer's data): a sender copies it in.
+constexpr static const uint8_t EE_NETMSG_NE_FIELD_BLOCK = 5;
+
 /// `GetCanSendWhilePaused` answers true.
 constexpr static const uint8_t EE_NETMSG_RECORD_PAUSED = 1;
 
@@ -499,6 +526,35 @@ struct EeNetMsgSlot {
 
 /// Builds one nested input from the bytes at `data`: its `ExportSize`, or 0 when no message has its type.
 using EeNetMsgBuildInput = uint32_t(*)(void *context, const uint8_t *data);
+
+/// One engine type: everything the C++ class answered beyond its members.
+struct EeNetMsgNeType {
+  /// the codec class (`EE_NETMSG_NE_*`), `u32::MAX` for a type the engine does not build
+  uint32_t class_id;
+  /// the members on the wire (the codec's slots after the header)
+  uint32_t wire_fields;
+  /// the record's members: the wire's, then the ones that never travel
+  uint32_t fields;
+  /// the fixed members' bytes (the record's size)
+  uint32_t record_size;
+  /// `EE_NETMSG_NE_THROTTLE`, `EE_NETMSG_NE_PAUSED`
+  uint8_t flags;
+  /// the send-to-all-and-wait id's member (`Get/SetSendToAllAndWaitMessageID`), or `EE_NETMSG_NE_NONE`
+  uint8_t s2aw_field;
+  /// `IsResponse`: the response's type (0: none), this message's member and the response's that must be equal
+  uint8_t response_type;
+  uint8_t response_mine;
+  uint8_t response_theirs;
+  /// `GetMessageLabel`: a static C string
+  const char *label;
+};
+
+/// A record member: its kind (`EE_NETMSG_NE_FIELD_*`), its offset in the record (a string's ordinal) and its size.
+struct EeNetMsgNeField {
+  uint8_t kind;
+  uint32_t offset;
+  uint32_t size;
+};
 
 /// A record member: its kind (`EE_NETMSG_RECORD_FIELD_*`, NONE past the last member), its offset in the record and
 /// its size.
@@ -632,6 +688,26 @@ size_t ee_netmsg_decompress_units(const uint8_t *buffer,
                                   uint8_t size,
                                   int32_t *out,
                                   size_t capacity);
+
+/// What an engine message type is: its codec class, member counts, record size, flags, send-to-all-and-wait member,
+/// response rule, label (`class_id` = `u32::MAX` for a type the engine does not build).
+EeNetMsgNeType ee_netmsg_ne_type(uint8_t message_type);
+
+/// Member `index` (0 = the first after the header) of an engine type's record; NONE past the last.
+EeNetMsgNeField ee_netmsg_ne_field(uint8_t message_type, uint32_t index);
+
+/// Registers `builder` (NULL: none) for the types `first..=last` (`NEMessage::RegisterKnownMessages` 0x20..0x3c,
+/// `EEMessage::RegisterKnownMessages` 0x41..0xfd).
+void ee_netmsg_register_builder(uint8_t first,
+                                uint8_t last,
+                                void *(*builder)(uint8_t *data));
+
+/// `NEMessage::ConvertMemoryToMessage`: the message the builder registered for the type at `data[1]` makes, or NULL
+/// when no builder is registered for it.
+///
+/// # Safety
+/// `data` holds a received message; the registered builder is safe to call with it.
+void *ee_netmsg_build(uint8_t *data);
 
 /// The codec class of a record message type, or `u32::MAX` for a type with a class of its own (or none).
 uint32_t ee_netmsg_record_class(uint8_t message_type);

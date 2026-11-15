@@ -258,7 +258,7 @@ bool EECPAttackGroup::PlaceInSubGroup(EEComplexUnit* inUnit)
                     }
                     theNeedTarget = theTown == NULL;
                     if (theTown) {
-                        theLocation.mSerial = theTown->mSerial;
+                        theLocation.mSerial = theTown->GetSerial();
                         theLocation.mType = kAIAreaTown;
                         theLocation.mTile = theTown->GetRandomPoint();
                         theTask.mLocation = theLocation;
@@ -282,7 +282,7 @@ bool EECPAttackGroup::PlaceInSubGroup(EEComplexUnit* inUnit)
                      theIt != theByDistance.end() && theCount < 4; theIt++, theCount++)
                     theChokePoints.push_back(theIt->second);
                 EEAIRandomShuffle(theChokePoints.begin(), theChokePoints.end());
-                theLocation.mSerial = theChokePoints.front()->mSerial;
+                theLocation.mSerial = theChokePoints.front()->GetSerial();
                 theLocation.mType = kAIAreaChokePoint;
                 theLocation.mTile = theChokePoints.front()->GetRandomPoint();
                 theTask.mLocation = theLocation;
@@ -294,7 +294,7 @@ bool EECPAttackGroup::PlaceInSubGroup(EEComplexUnit* inUnit)
         if (theNeedTarget) {
             EEAIContinent* theContinent = gContinentManager.mContinents[theContinentID];
             if (theContinent) {
-                theLocation.mSerial = theContinent->mSerial;
+                theLocation.mSerial = theContinent->GetSerial();
                 theLocation.mType = kAIAreaContinent;
                 theLocation.mTile = theContinent->GetRandomPoint();
                 theTask.mLocation = theLocation;
@@ -366,7 +366,7 @@ void EECPAttackGroup::AssignLandTask(EECPAttackSubGroup* inSubGroup)
         EEAIContinent* theContinent = gContinentManager.GetContinentByID(this->mContinentID);
         // test the continent found, not the id again: the id may no longer name a continent
         if (theContinent != NULL) {
-            theTarget.mSerial = theContinent->mSerial;
+            theTarget.mSerial = theContinent->GetSerial();
             theTarget.mType = kAIAreaContinent;
             theTarget.mTile = theContinent->GetRandomPoint();
             theTask.mLocation = theTarget;
@@ -431,8 +431,8 @@ void EECPAttackGroup::AssignSeaTask(EECPAttackSubGroup* inSubGroup)
                     if (--i < 0)
                         goto ranged;
                     theContinent = gContinentManager.GetContinentFromID(*(theIDs.begin() + i));
-                } while (!theContinent || theContinent->mCategory != kContinentCategoryWater);
-                theFile->GetUnits(theUnits, theContinent->mID, true);
+                } while (!theContinent || theContinent->GetCategory() != kContinentCategoryWater);
+                theFile->GetUnits(theUnits, theContinent->GetID(), true);
                 if (theUnits.size() > 0) {
                     unsigned long theIndex = gPhysics->GetRandom(0L, theUnits.size() - 1);
                     if (theIndex < theUnits.size()) {
@@ -460,8 +460,8 @@ ranged:
         if (!theFound) {
             EEAIContinent* theContinent = gContinentManager.GetContinentByID(theID);
             if (theContinent) {
-                if (theContinent->mCategory == kContinentCategoryWater) {
-                    theTarget.mSerial = theContinent->mSerial;
+                if (theContinent->GetCategory() == kContinentCategoryWater) {
+                    theTarget.mSerial = theContinent->GetSerial();
                     theTarget.mType = kAIAreaContinent;
                     theTarget.mTile = theContinent->GetRandomPoint();
                     theTask.mType = kAGTaskLocation;
@@ -471,8 +471,8 @@ ranged:
                     gContinentManager.GetConnectedIDs(theIDs, theID);
                     for (long i = theIDs.size() - 1; i >= 0; i--) {
                         EEAIContinent* theOther = gContinentManager.GetContinentByID(theIDs[i]);
-                        if (theOther && theOther->mCategory == kContinentCategoryWater) {
-                            theTarget.mSerial = theOther->mSerial;
+                        if (theOther && theOther->GetCategory() == kContinentCategoryWater) {
+                            theTarget.mSerial = theOther->GetSerial();
                             theTarget.mType = kAIAreaContinent;
                             theTarget.mTile = theOther->GetRandomPoint();
                             theTask.mType = kAGTaskLocation;
@@ -1587,7 +1587,7 @@ bool EEAIFOContinentScreenContinentsShareAdjacentOceanContinentID::Test(unsigned
         const std::vector<EEAIContinent*>& theContinents = gContinentManager.mContinents;
         EEAIContinent* theContinent = theContinents[inID];
         unsigned char theKind = this->mOcean ? 4 : 2;
-        if (theContinent && theContinent->mCategory == theKind) {
+        if (theContinent && theContinent->GetCategory() == theKind) {
             theResult = gContinentManager.mTileFlags[this->mContinent1 * gContinentManager.mFlagsWidth + inID];
             if (theResult)
                 theResult = gContinentManager.mTileFlags[this->mContinent2 * gContinentManager.mFlagsWidth + inID];

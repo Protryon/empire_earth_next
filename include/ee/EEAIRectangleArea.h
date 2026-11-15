@@ -20,6 +20,39 @@ public:
 
     // EECPCombatManager 0x47306c walks mRect's tiles (x mLeft..mRight, y mTop..mBottom) when the count for
     // its argument (+0x7c / +0x80 / +0x84) is positive, unless mW88 is the continent asked for. (provisional names)
+    // New (port): the members behind accessors (R5b.1 blocker (b))
+    const U2DRectangle<long>& GetRect() const { return this->mRect; }
+    void SetRect(const U2DRectangle<long>& inRect) { this->mRect = inRect; }
+    long GetScenarioAreaID() const { return this->mScenarioAreaID; }
+    void SetScenarioAreaID(long inID) { this->mScenarioAreaID = inID; }
+    long GetNumLandTiles() const { return this->mNumLandTiles; }
+    long GetNumWaterTiles() const { return this->mNumWaterTiles; }
+    long GetNumSpaceTiles() const { return this->mNumSpaceTiles; }
+    void SetNumLandTiles(long inCount) { this->mNumLandTiles = inCount; }
+    void SetNumWaterTiles(long inCount) { this->mNumWaterTiles = inCount; }
+    void SetNumSpaceTiles(long inCount) { this->mNumSpaceTiles = inCount; }
+    unsigned short GetContinentID() const { return this->mContinentID; }
+    unsigned short GetID() const { return this->mID; }
+    void SetID(unsigned short inID) { this->mID = inID; }
+    // the members in a saved game (EEAIContinentSave.cpp's writer and reader), in this order
+    template <class W> void WriteFields(W& ioWriter) const
+    {
+        ioWriter.Rect(this->mRect);
+        ioWriter.I32(this->mScenarioAreaID);
+        ioWriter.I32(this->mNumLandTiles);
+        ioWriter.I32(this->mNumWaterTiles);
+        ioWriter.I32(this->mNumSpaceTiles);
+        ioWriter.U16(this->mContinentID);
+        ioWriter.U16(this->mID);
+    }
+    template <class R> bool ReadFields(R& ioReader)
+    {
+        return ioReader.Rect(this->mRect) && ioReader.I32(this->mScenarioAreaID) && ioReader.I32(this->mNumLandTiles)
+            && ioReader.I32(this->mNumWaterTiles) && ioReader.I32(this->mNumSpaceTiles) && ioReader.U16(this->mContinentID)
+            && ioReader.U16(this->mID);
+    }
+
+private:
     U2DRectangle<long> mRect;               // +0x68
     long mScenarioAreaID;                   // +0x78 (not read there)
     long mNumLandTiles;                     // +0x7c
