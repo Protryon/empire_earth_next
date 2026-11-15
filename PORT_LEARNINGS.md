@@ -2111,3 +2111,17 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Fix**: a model without both lists, with no source points, or with fewer target points than source points, gets no
   vents (Step returns early). The vents are cosmetic and draw from the effects' own random generator, so the
   simulation does not change.
+
+## A volcano's boulder every physics tick (player report, 2026-11-15)
+
+- **Symptom**: a summoned volcano (the prophets' calamity) threw boulders without pause. EE-SIM `--volcano 60:1`
+  (seed 2): 14-28 boulders per game second, 805 in 50 s, which wiped out the target player's town.
+- **Cause**: a "fix" of an original dead test. EEUnitClass::LaunchShot ended with "idle if the class's category is
+  0x16e" (the Volcano unit type; no category is that large), which never passed. Testing the unit type instead
+  (8fdb8c62) idled the volcano after every launch, and its unit AI (`volcano.tai`: Idle -> ChooseRandomVolcanoTarget
+  -> AttackLocation -> ReadyToFireAgain -> Idle) then took a new target and fired again at once, skipping the
+  ReadyToFireAgain wait for the 2 s reload. FireShot does not check the reload timer itself.
+- **Fix**: the dead test is left out, as the original effectively ran: the script returns the volcano to Idle once
+  the reload is done. The same run: 23 boulders in 50 s (one per reload, about 2.2 s).
+- **Lesson**: before making an original dead branch live, check what the state machine around it already does; the
+  original's behaviour is the one the data was tuned for.
