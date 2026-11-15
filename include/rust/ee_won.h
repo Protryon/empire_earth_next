@@ -6973,6 +6973,18 @@ enum class EeWonCoreObject {
   UdpSendRecv = 6,
   /// a `ServerConnection*`'s [`EeWonServerConn`]
   ServerConn = 7,
+  /// a `RoutingOp*`'s [`EeWonRouteOp`](crate::routeop::EeWonRouteOp)
+  RouteOp = 8,
+  /// a `RoutingConnection*`'s [`EeWonRouteConn`](crate::routeconn::EeWonRouteConn)
+  RouteConn = 9,
+  /// an `AuthContext*`'s [`EeWonAuthCtx`](crate::authobj::EeWonAuthCtx)
+  AuthCtx = 10,
+  /// a `RustServerOp*`'s [`EeWonHostOp`](crate::hostop::EeWonHostOp)
+  HostOp = 11,
+  /// an `HTTPConnection*`'s [`EeWonHttpConn`](crate::httpengine::EeWonHttpConn)
+  HttpConn = 12,
+  /// an `HTTPConnection*`'s or `HTTPSession*`'s lock (its `CriticalSection`'s platform mutex)
+  Lock = 13,
 };
 
 /// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
@@ -9957,6 +9969,7 @@ struct EeWonRouteConn;
 struct EeWonRouteLogic;
 
 /// A routing op, as the C++ `RoutingOp` holds it.
+/// The second field is the C++ `RoutingConnection*` it was made on (borrowed; 0 for none).
 struct EeWonRouteOp;
 
 /// The Rust ScrollArea.
@@ -11710,6 +11723,13 @@ struct EeWonCoreHooks {
   long (*transform_call)(void *transform, void *message, bool send);
   /// `delete transform`
   EeWonCoreFn transform_free;
+  /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
+  void *(*new_route_op)(void *conn, int32_t ty);
+  /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
+  /// `GetUnsolicitedDerivedOp(type)` (1: the new op with one reference for the caller, or null)
+  void *(*route_virtual)(void *conn, int32_t which, void *op, uint8_t message_type);
+  /// `new HTTPConnection(NULL)`
+  void *(*new_http_conn)();
 };
 
 /// A C++ call on one object (an op, a completion or the socket).
