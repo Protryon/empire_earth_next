@@ -1188,60 +1188,14 @@ bool EEComplexUnit::UpdateHidden()
         if (!::gWorld.mInCinematic) {
             if ((this->mHiddenFlags & kHiddenFlagMoved) == kHiddenFlagMoved) {
                 EEMap* theMap = ::gWorld.mMap;
-                EETile* theTile = theMap->GetTile(this->GetTileX(), this->GetTileY());
                 unsigned char thePhase = ((gPhysics->mGameTime + 2) / 1000) % 3;
-                {
-                    for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                        EEUnit* theUnit = theNode->mUnit;
-                        if (theUnit == this || !theUnit->GetUnitClass()->mIsObstacle)
-                            continue;
-                        theUnit->mHiddenFlags |= kHiddenFlagHidden;
-                        theUnit->mHiddenFlags ^= (theUnit->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
-                        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-                        if (theComplex == NULL)
-                            continue;
-                        while ((theComplex = theComplex->mNextPart) != 0) {
-                            theComplex->mHiddenFlags |= kHiddenFlagHidden;
-                            theComplex->mHiddenFlags ^= (theComplex->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
-                        }
-                    }
-                }
-                theTile = theMap->GetTile(this->GetTileX(), this->GetTileY() - 1);
-                if (theTile != NULL) {
-                    for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                        EEUnit* theUnit = theNode->mUnit;
-                        if (theUnit == this || !theUnit->GetUnitClass()->mIsObstacle)
-                            continue;
-                        theUnit->mHiddenFlags |= kHiddenFlagHidden;
-                        theUnit->mHiddenFlags ^= (theUnit->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
-                        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-                        if (theComplex == NULL)
-                            continue;
-                        while ((theComplex = theComplex->mNextPart) != 0) {
-                            theComplex->mHiddenFlags |= kHiddenFlagHidden;
-                            theComplex->mHiddenFlags ^= (theComplex->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
-                        }
-                    }
-                }
-                theTile = theMap->GetTile(this->GetTileX() + 1, this->GetTileY() - 1);
-                if (theTile != NULL) {
-                    for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                        EEUnit* theUnit = theNode->mUnit;
-                        if (theUnit == this || !theUnit->GetUnitClass()->mIsObstacle)
-                            continue;
-                        theUnit->mHiddenFlags |= kHiddenFlagHidden;
-                        theUnit->mHiddenFlags ^= (theUnit->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
-                        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-                        if (theComplex == NULL)
-                            continue;
-                        while ((theComplex = theComplex->mNextPart) != 0) {
-                            theComplex->mHiddenFlags |= kHiddenFlagHidden;
-                            theComplex->mHiddenFlags ^= (theComplex->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
-                        }
-                    }
-                }
-                theTile = theMap->GetTile(this->GetTileX() + 1, this->GetTileY());
-                if (theTile != NULL) {
+                // the obstacles on its tile and the tiles north, north-east and east of it are hidden behind it (the
+                // original's four copies of one walk; its own tile, first, is never NULL)
+                static const long kHideSteps[4][2] = {{0, 0}, {0, -1}, {1, -1}, {1, 0}};
+                for (long k = 0; k < 4; k++) {
+                    EETile* theTile = theMap->GetTile(this->GetTileX() + kHideSteps[k][0], this->GetTileY() + kHideSteps[k][1]);
+                    if (theTile == NULL)
+                        continue;
                     for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
                         EEUnit* theUnit = theNode->mUnit;
                         if (theUnit == this || !theUnit->GetUnitClass()->mIsObstacle)
