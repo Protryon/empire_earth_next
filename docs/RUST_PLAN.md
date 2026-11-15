@@ -58,6 +58,10 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | **R5b.4 game messages** | **Started** (`ee_netmsg`): [progress/r5b4-game-messages.md](progress/r5b4-game-messages.md) |
 | **R5b.5 scenario manager and triggers** | **Started** (`ee_scenario`): [progress/r5b5-scenario-manager-and-triggers.md](progress/r5b5-scenario-manager-and-triggers.md) |
 | **R6 scenario editor screens** | **Started** (`ee_screens`): [progress/r6-scenario-editor-screens.md](progress/r6-scenario-editor-screens.md) |
+| **R6 civilization builder** | **Started** (`ee_screens`): [progress/r6-civilization-builder.md](progress/r6-civilization-builder.md) |
+| **R6 game screens B** | **Started** (`ee_screens`): [progress/r6-game-screens-b.md](progress/r6-game-screens-b.md) |
+| **R6 actions** | **Started**: [progress/r6-actions.md](progress/r6-actions.md) |
+| **R6 app and world** | **Started**: [progress/r6-app-and-world.md](progress/r6-app-and-world.md) |
 | **R5a.3 the renderer reads a snapshot** | **Done for units, players, the map and the camera**: [progress/r5a3-the-renderer-reads-a-snapshot.md](progress/r5a3-the-renderer-reads-a-snapshot.md) |
 | Merge of main 79be8619 (the Lua AI) | Done: [progress/merge-of-main-79be8619-the-lua-ai.md](progress/merge-of-main-79be8619-the-lua-ai.md) |
 | **R5a.8 the AI host (Lua) and bindings** | **Started** (`ee_ai`): [progress/r5a8-the-ai-host-lua-and-bindings.md](progress/r5a8-the-ai-host-lua-and-bindings.md) |
