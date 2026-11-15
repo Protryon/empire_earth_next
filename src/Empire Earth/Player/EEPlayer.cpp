@@ -124,8 +124,8 @@ static const float kTributeFee = 0.4f;
 static const unsigned long sPlayerEffects[3] = {271, 274, 275};
 
 // TEST ONLY: the player capture (tools/sim_capture.py; the player lane, round 1). PLST: each player's state at every
-// UpdatePlayer (the statistics, the events, the queued improvements and the plain members as FNV-1a 64 digests, then
-// the resources and counts); PLEC: the economy and improvement decisions (the outermost call on the thread that runs
+// UpdatePlayer (the statistics but series 0x14 and 0x15, which the local player's reports set by the wall clock, the
+// events, the queued improvements and the plain members as FNV-1a 64 digests, then the resources and counts); PLEC: the economy and improvement decisions (the outermost call on the thread that runs
 // UpdatePlayer: its kind, player, arguments, result, the reason's length, the resources and population after)
 #include "ee/EESimCapture.h"
 #include "ee/EETechCapture.h"
@@ -175,6 +175,8 @@ static void EEPlayerCaptureState(EEPlayer* inPlayer)
     EEPlayerDigest theStats;
     theStats.U32((uint32_t)inPlayer->mSavedGroups.mEndTime);
     for (unsigned long s = 0; s < 31; s++) {
+        if (s == 0x14 || s == 0x15)
+            continue;   // the local player's reports (EEPhysics::ReportStatistics: by the wall clock)
         EEStatisticsSeries theSeries = inPlayer->mSavedGroups.GetSeries(s);
         theStats.U32((uint32_t)theSeries.mMaxValue);
         theStats.U32(theSeries.mKeepHistory ? 1 : 0);
