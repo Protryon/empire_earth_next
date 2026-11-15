@@ -5791,7 +5791,9 @@ Results (32 seeds, port won-lost-close; Bronze = the port's seats that reached t
 | Stone Age land, 60 min | 14-9-9 | 9-6-17 |
 
 The whole cost kept always (not only behind) paid the advance in 26 games of the reproduction but cost the standard
-bench 18-6-8, so it is kept only while an enemy is ahead: the owner's case. Determinism identical; 0 script errors.
+bench 18-6-8, so it was first kept only while an enemy is ahead: the owner's case. Determinism identical; 0 script
+errors. The owner then chose the whole cost kept always (2026-11-15), the faster epochs over the standard bench's
+result; a choice to reopen later.
 
 ### 8.9 Next
 
