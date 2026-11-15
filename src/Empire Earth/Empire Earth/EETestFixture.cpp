@@ -28,7 +28,8 @@
 //     path, judged unit by unit once its message executed: see EETestFixtureOrders.cpp, or
 //     "<seq> key <form> <dik> <ms>", a key (its DIK_* scan code) pressed, held ms milliseconds and released as the
 //     platform's key events deliver them (ISHandleEvent: the arrow keys' scroll and the zoom hot keys), or
-//     "<seq> wheel <form> <0|1> <n>", n notches of the mouse wheel (0 away from the user, 1 towards) 100 ms apart),
+//     "<seq> wheel <form> <0|1> <n>", n notches of the mouse wheel (0 away from the user, 1 towards) 100 ms apart, or
+//     "<seq> cast <form> <enum> <offset>", a calamity cast by the local player at the camera's focus: see CastRun),
 //     through the controls' own methods (the events go to the application's UI queue, as a player's input does),
 //     once per sequence number, only while <form> is on top; the verdict goes to stderr ("TEST UI ...").
 #include <windows.h>
@@ -143,6 +144,10 @@
 #include "ee/wonapi/WONLobbyCore.h"
 #include "lle/TSReadWriteLock.h"
 #include "ee/EEUnit.h"
+#include "lle/USingleton.h"
+#include "ee/EECalamity.h"
+#include "ee/EECalamityClass.h"
+#include "ee/EECalamityManager.h"
 #include "ee/EEUnitClassIDs.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEAMouseClick.h"
@@ -875,6 +880,102 @@ const char* BoxStart(unsigned long inSeq, const char* inLine, UIForm* inForm)
 
 }   // namespace (the box selection)
 
+namespace {   // the calamity casts (TEST ONLY)
+
+// The local player's living units' first, the caster
+EEUnit* CastCaster()
+{
+    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
+    for (EEUnit* theUnit = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; theUnit != NULL;
+         theUnit = static_cast<EEUnit*>(theUnit->mNext))
+        if (theUnit->mComplexUnit != NULL && theUnit->mHitPoints > 0)
+            return theUnit;
+    return NULL;
+}
+
+// The other players' living unit nearest a tile (a unit calamity's target), NULL for none
+EEUnit* CastTarget(long inX, long inY)
+{
+    EEUnit* theBest = NULL;
+    long theBestDistance = 0;
+    for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(p);
+        if (thePlayer == NULL || thePlayer == gWorld.GetCurrentPlayer())
+            continue;
+        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            long dx = theUnit->mTileX - inX, dy = theUnit->mTileY - inY;
+            if (theUnit->mComplexUnit != NULL && theUnit->mHitPoints > 0 && (theBest == NULL || dx * dx + dy * dy < theBestDistance)) {
+                theBest = theUnit;
+                theBestDistance = dx * dx + dy * dy;
+            }
+        }
+    }
+    return theBest;
+}
+
+// "<seq> cast <form> <enum> <offset>": the local player casts the calamity class of that EECalamityEnum (3 earthquake,
+// 4 hurricane, 9 volcano, 24 meteor storm, ...) at the camera's focus tile moved <offset> tiles east (a unit kind: at
+// the other players' unit nearest it; a global kind: everywhere). TEST ONLY: straight into the calamity manager under
+// the world's write lock, as EE-SIM --calamities does (no game message casts a power without a caster that has it and
+// its cost), on a thread of its own (never under the UI lock). It prints "TEST UI cast <enum> <result> at <x> <y>",
+// then every second while a calamity of that class lives "TEST UI calamity <enum> alive <ms>", and
+// "TEST UI calamity <enum> ended" (or "... timeout" after 90 s).
+void CastRun(unsigned long inEnum, long inOffset)
+{
+    EECalamityManager* theManager = EECalamityManager::GetInstance();
+    const char* theResult = "no-class";
+    long x = 0, y = 0;
+    gWorld.mLock->WriteLock();
+    for (unsigned long theRow = 0; theManager != NULL && theRow < theManager->GetCalamityClassCount(); theRow++) {
+        EECalamityClass* theClass = theManager->GetCalamityClass(theRow);
+        if (theClass == NULL || (unsigned long)theClass->mClassEnum != inEnum)
+            continue;
+        EEUnit* theCaster = CastCaster();
+        if (theCaster == NULL || gWorld.GetMap() == NULL) {
+            theResult = "no-caster";
+            break;
+        }
+        GE3DPoint theFocus;
+        gWorld.mCameraControl.GetLocation(gWorld.mCameraControl.mFraction, theFocus);
+        x = (long)theFocus.GetX() + inOffset;
+        y = (long)theFocus.GetY();
+        unsigned long thePlayer = gWorld.GetCurrentPlayer()->mPlayerID;
+        bool theCast = false;
+        long theKind = theClass->GetTargetKind();
+        if (theKind == 3) {
+            EEUnit* theTarget = CastTarget(x, y);
+            theCast = theTarget != NULL && theManager->CreateUnitCalamity(theRow, theCaster->mUnitID, theTarget->mUnitID, thePlayer);
+        } else if (theKind == 2) {
+            theCast = theManager->CreateLocationCalamity(theRow, theCaster->mUnitID, x, y, thePlayer);
+        } else {
+            theCast = theManager->CreateGlobalCalamity(theRow, theCaster->mUnitID, thePlayer);
+        }
+        theResult = theCast ? "cast" : "refused";
+        break;
+    }
+    gWorld.mLock->WriteUnlock();
+    fprintf(stderr, "TEST UI cast %lu %s at %ld %ld\n", inEnum, theResult, x, y);
+    if (strcmp(theResult, "cast") != 0)
+        return;
+    for (int k = 0; k < 90; k++) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        long theAlive = -1;
+        gWorld.mLock->ReadLock();
+        for (size_t i = 0; i < theManager->mCalamities.size(); i++)
+            if ((unsigned long)theManager->mCalamities[i]->mClass->mClassEnum == inEnum)
+                theAlive = (long)theManager->mCalamities[i]->GetTimeAlive();
+        gWorld.mLock->ReadUnlock();
+        if (theAlive < 0) {
+            fprintf(stderr, "TEST UI calamity %lu ended\n", inEnum);
+            return;
+        }
+        fprintf(stderr, "TEST UI calamity %lu alive %ld\n", inEnum, theAlive);
+    }
+    fprintf(stderr, "TEST UI calamity %lu timeout\n", inEnum);
+}
+
+}   // namespace (the calamity casts)
+
 void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFormID)
 {
     FILE* theCommand = fopen((inDirectory + "/test.command").c_str(), "r");
@@ -980,6 +1081,11 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
         theVerdict = "wheeled";
     } else if (!strcmp(theOp, "boxselect") && a == inFormID) {
         theVerdict = BoxStart(theSeq, theLine, inForm);
+    } else if (!strcmp(theOp, "cast") && theFields >= 5 && a == inFormID && b > 0 && c < 1000) {
+        unsigned long theEnum = b;
+        long theOffset = (long)c;
+        std::thread([theEnum, theOffset]() { CastRun(theEnum, theOffset); }).detach();
+        theVerdict = "cast-started";
     } else if (!strcmp(theOp, "order") && a == inFormID) {
         theVerdict = EETestOrderStart(theSeq, b);
     } else if (theControl && !strcmp(theOp, "lselect") && theFields >= 5) {

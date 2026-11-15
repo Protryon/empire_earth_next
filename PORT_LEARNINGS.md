@@ -22656,3 +22656,317 @@ The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l
   `UIIMECandidate` (its strings, texts and rhombi; about 100 lines); `UIBitmap`, `UIMovie` (GE call sequences);
   `UILBString` and `UIListBox<T>`'s lines; `UIFileListBox`/`UIFileComboBox` (the directory search); `UIEvent`,
   `UIEntityGroup`; the game's eight direct `UIControl` subclasses and `UIGraph`/`UILineGraph` (screens lane).
+
+## Calamities lane, round 3: the eight area-effect classes as one Rust record over a host; the running state's save in Rust; a fixture command that casts calamities (ee_tech area_effect.rs, area_effect_save.rs; branch rust-calamities3, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 64209ed3 | AETP/AEFX capture records (TEST ONLY), golden from the unmodified C++ | +211 (test code) |
+| 7341ef18 | the eight `EEAE*` kinds as one `EEAreaEffect` over `EeAreaEffectFields`, the template over `EeAreaEffectTemplateFields`, their bodies in Rust over the host `EEAEHost` | +403 -1017, net -614 |
+| 566d984e | the running state's record and bytes in Rust (`area_effect_save.rs`) | +63 -110, net -47 |
+| de5622e5 | the fixture's cast command and `fixture_game.py --cast` (TEST ONLY) | +105 -1 (test code) |
+
+The round's C++: net -661 for the moves (-614, -47); the test code adds +316 (the capture +211, the cast command
++105). The area effects went from 2,067 lines (8 units, 9 headers) to 1,617 with the 208-line test capture (4 units,
+5 headers): 5 units and 5 headers fewer. The cluster is smaller than the round size the lead asked for (1,500+): all of
+it moved that could without the units' lists becoming ids.
+
+**The measure.** The area effects (Civilization Builder's `EEAreaEffect`, `EEAreaEffectTemplate`, `EEAEManager` and
+the kinds `EEAECloaking`, `EEAEEconomy(FromUnits)`, `EEAEHealing`, `EEAEMorale`, `EEAEMoraleFromBuildings`,
+`EEAEMoraleFromMilitaryHeroes` and the two inline immunities) were 2,067 lines in 8 units and 9 headers. The kinds
+differed only in a handful of slot bodies (strength, `Modify`, `Covers`, `AppliedTo`/`RemovedFrom`, `Tick`,
+`MarkDirty`/`Recount`, `IsImmunity`) and one class's three members.
+
+- **One class, one record.** `EEAreaEffect` derives from `UReferenceCounter` and `EeAreaEffectFields` (the template's
+  kind, the player, the morale from buildings' cap, count and flag); the slots are plain members (no subclass is
+  left to override them) that call `ee_area_effect_*` with an `EEAEHost`: the effect and the unit the slot was given.
+  `CreateAreaEffect` makes one for any known kind; `EECPResourceCenter`'s two `dynamic_cast<EEAEMoraleFromBuildings*>`
+  are a test of `mKind` (one line each). The template derives from `EeAreaEffectTemplateFields` (its `GEColor` is
+  three floats; nobody read it); `Load`/`Unload` and the unused +0x2c/+0x34 slots lost their `virtual`.
+- **The host.** Twenty ops: the unit set, the tech node's kind, the players' relation (same, allied, at war: one
+  answer, the tests are Rust), built, repairable, the position, a tile's continent, the carrier's planet, hit points
+  and their maximum, the cinematic flag, `SetHitPoints`, the cloak and uncloak steps, the owner's scale, hit points,
+  leadership and garrison bonus, and the morale buildings' count (the two collector predicates stay C++). The Rust
+  keeps each original's order and short-circuits: the base `Covers` reads the scale first (it is an argument), the
+  cloaking's after the position; the healing tests `IsRepairable` before anything; `Recount` rounds the radius before
+  its dirty test; `IsWithin` asks the second continent only when the first is not 0.
+- **Arithmetic kept.** The economy's `GetRate` is the Windows `min(max(0, b), 10)` (`Modify` clamps it again to
+  10, then to 0, as the original's nested conditional did); its strength `(long)(rate * 10)` is `ftol`, the heal
+  `lrintf(level * (elapsed * 0.001))`, the morale `value - lrintf(value * (level / 10.0f))`, the checksum sums the
+  location's bits as `long` (wrapping), the recount's tile `ftol` and its rectangle one larger to the right and bottom
+  unless the location sits in its tile's middle half.
+- **The running state** (port, 0.256): the save's units, own effects and refs are an `EeAreaEffectRunning` built by
+  the C++ walk and written by Rust through the calamities' typed I/O ops (`FSFile`'s own encodings); the load reads
+  one (each partly read unit or ref kept, the reads stopped at the first error, as before) and the after-load fix-up
+  reads it back by index.
+- **Golden first.** AETP (every template as `Init` left it) and AEFX (after each area-effect tick: per unit with own or
+  affecting effects its id, hit points and cloak flags; each own effect's kind, player, location, checksum, strength,
+  radius, scale, immunity, the three modifiers of 1000, the morale count, `Covers` of its own unit; each affecting
+  effect as owner and index; the active list; the running state's save bytes) were recorded from the unmodified C++
+  at seeds 2-3 of the oracle, late, space and calamity profiles (1,350 AEFX, 50 AETP per game).
+- **The cast command** (TEST ONLY, `EETestFixture.cpp`): `"<seq> cast <form> <enum> <offset>"` casts the calamity
+  class of an `EECalamityEnum` as the local player at the camera's focus (a unit kind at the other players' nearest
+  unit, a global kind everywhere), straight into the calamity manager under the world's write lock on a thread of its
+  own (never under the UI lock), and reports "TEST UI cast", then "TEST UI calamity <enum> alive <ms>" each second
+  until it ends. `fixture_game.py --cast a,b,...` (`fixture_driver.cast_calamities`) captures each before and every
+  `--capture-every` seconds; a calamity that is refused or never ages fails the run.
+- **The cast tour** (test profile, `fixture_game.py --exercise random-game --cast ...`, frames read): the earthquake
+  draws its cracks across the ground from the cast point and shakes the camera (the view shifts between frames),
+  lives 70 s; the hurricane's swirl stands on the ground at the cast point and turns, 79 s; the meteor storm's
+  meteors fall with trails, burst into fire and leave craters, killing citizens (27 s); the volcano rises, erupts
+  (smoke column, lava bombs, fires, craters) and destroyed the town centre in the first run ("You have been
+  Defeated!"), after which the physics stopped and a calamity cast later never aged: the driver now fails a calamity
+  that does not age, and the volcano goes last. A calamity cast into unexplored ground is not drawn (run 2's meteor
+  storm 8 tiles east: no meteor on screen, though it lived 29 s). Runs: build/fixture_game/cast1 (earthquake,
+  hurricane, volcano; meteor never aged), cast2 (all four, offset 8), cast3 (meteor and volcano, offset 3).
+- **Coverage.** AEFX at seed 2 saw healing, morale, both immunities, morale from buildings and cloaking (the
+  calamity profile's cloaking calamity) with their modifiers and Covers; the morale from military heroes and the
+  economy from units appear in no profile's game: their strength, level and modifier bodies are unit-tested only.
+- **Tests.** area_effect_tests.rs 9, area_effect_save.rs 3 (ee_tech 110 in all).
+- **Gates.** Commit 1 (on the unmodified code): build `--sim` 0/0, the four profiles' captures at seeds 2-3 PASS
+  with every other tag equal (AETP/AEFX recorded). Commit 2: build `--sim` 0/0; captures at seeds 2-3: oracle (175
+  digests), calamity (193), late (176), space (177) PASS; oracle 2-3 identical. Commit 3: the same four captures PASS
+  (AEFX holds the save bytes), oracle 2-3 identical, the saveload `oracle,calamity` 4/4 each with `--expect` PASS;
+  ee_tech tests 110, clippy and rustfmt clean. Commit 4: the test profile 0/0, the harness self test ALL PASS (a first
+  run under load failed the fixture's zoom key-out check once: 0.9 -> 0.9; passed on the rerun), the cast tours
+  above. Merged with `rust` fffdedf4 (no conflict; headers current, no include to narrow): build `--sim` 0/0; the
+  test profile 0/0; oracle seeds 2-7 identical to `ref`; captures at seeds 2-3: oracle (175 digests), late (176),
+  space (177), calamity (193), scenario (22) PASS; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900
+  --expect tools/saveload_expect.txt`) PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4,
+  highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust gate PASS;
+  the cast tour on the merged test profile (build/fixture_game/castm: earthquake, hurricane, meteor storm, volcano,
+  offset 3) PASS, every calamity drawn, no GX error.
+- **Not moved** (docs/progress/r5b-calamities.md): the contagion helper's unit list as ids (the round's third item:
+  not started), the area effects' owner unit and the units' two lists (C++ pointers), the tick's unit functor
+  passes, `CollectEffects` and `FindEffect` (C++ loops over C++ lists).
+- **Other lanes' files**: `EECPResourceCenter.cpp` (AI Thread): the two `dynamic_cast<EEAEMoraleFromBuildings*>` as
+  kind tests, one line each, and its include; `EETestFixture.cpp` and the harness drivers (the cast command).
+
+## R4.3, thirteenth part: DX7Rasterizer whole in Rust; the terrain draws over the mesh's Rust object (ee_dx7 rastobj.rs, draw_ffi.rs; branch rust-ge13, 2026-11-14)
+
+The first round on the DX7 plug-in's classes (RUST_PLAN R4.2 had left them C++: the classes, the lifetimes,
+`Set3DMode`'s composition, the PIM table). The measure first: `src/Low-Level Engine/Graphics Engine` was 11,058 lines,
+of which the census counts 4,252 as code; most of the rest are the address markers (`// FUNCTION:`, `SYNTHETIC`,
+`TEMPLATE`: GEBoundingBox.cpp alone has 367 of its 497), which a file keeps while it exists. So the round took the
+moves that delete files or whole function bodies: the DX7 plug-in's 3,588 lines (Common 3,159) were its largest pile.
+
+| Commit | What | Net C++ (src + include, include/rust excluded) |
+|---|---|---|
+| 06d6bf52 | DX7Rasterizer whole in Rust (`rastobj.rs`); DX7TnLRasterizer.cpp/.h and DX7DrawSeam.cpp/.h deleted | +200 -1,044, net -844 |
+| c8c5192c | the vertex arrays read and write GEColor/GE3DPoint/GEVector/GETextureCoordinate in place | +28 -139, net -111 |
+| 6a8feaff | the terrain draws read the mesh's Rust object; GETerrainMesh's DX7-only accessors deleted | +14 -174, net -160 |
+
+Round total: net -1,115 (short of the 1,500 the rules ask: see "Left"). The Graphics Engine directory: 11,058 ->
+10,134 lines; the DX7 plug-in's units 3,588 -> 2,694, its headers 646 -> 506.
+
+- **The rasterizer object** (`EeDx7Rasterizer`): the per-screen DX7 records (`ScreenState`, boxed: a draw holds its
+  address for one call), the debug colour, the T&L flavour, the base's object (`GERasterizer::mRust`, read and written
+  directly through `ee_ge::rastobj`'s functions: the screen records, colours, culling, the drawing lock, the ripple, the
+  visibility tests), the activation in progress; the statics `gLightsInUse` and `sWaterTime` are Rust statics. Every
+  method of DX7Rasterizer.cpp is Rust: the enumeration (`ActivateRasterizer`), `AddValidScreen`, `ActivateScreen` /
+  `ActivateRenderingSurface` with their commit and the forced defaults (each setter called directly, in the original's
+  order), `ActivateTheScreen`, `Deactivate`, the scene, clears, memory and card flags, the lights, `Set2DMode`,
+  `Set3DMode` (the y/z swap composed with the camera inverse in Rust: `raster::view_and_projection`), `SetRenderTarget`,
+  `SetViewport`, the thirteen cached setters, the ambient and fog colours, culling, `SetTexture` and `ShowScene`'s
+  statistics. Every call on another C++ object is one host operation (`EeDx7RastOp`, 30: screens, surfaces, textures,
+  the manager, the window, the light, the lock, the clock, the verify; `DX7RasterizerHost`, a friend struct). No
+  reference to the object lives across a host call (a texture's `Promote` or a screen's `CreateSurface` may re-enter).
+- **The class** keeps its vtable (the game calls it through `GERasterizer`; the harness hooks `ShowScene` and
+  `ActivateScreen` by their mangled names, unchanged) and one member, `mDX7`. Its own four virtuals (`GetIsScreenValid`,
+  `CreateVertexBuffers`, `DrawTerrainMaterial`, `GetVideoMemory`) and the protected `LockVB`/`Set2DMode`/`Set3DMode`/
+  `UnlockVB` are gone (only Rust called them); the five overrides that only called the base (`SetDisplayNoTextureMode`,
+  `SetDisplayOverdrawMode`, `SetFogType`, `SetFogValue`, `SetWaitForVSync`) are gone (the base's virtuals run).
+  `DX7TnLRasterizer` overrode three virtuals with the T&L flavour of the same Rust functions: the class is gone and
+  DX7HRTnLDisplay.cpp makes `DX7Rasterizer(gName, true)`; `link/dx7hrtnl/units.txt` lost its unit.
+- **The draws** (`draw_ffi.rs`) take the rasterizer's object: the lock, the modes, the texture, the vertex buffer, the
+  triangle count, the base's visibility tests and pixel size, the viewport info (built from the record's `GeViewport`:
+  `DX7ViewportInfoOf` is Rust), the device lights (`gx_device_get_light`) and the UM trig (`ee_ge::um`) are Rust calls;
+  DX7DrawSeam.cpp/.h are deleted. The terrain draws, `Light` and `TransformToCamera` take the mesh's `EeGeTerrainMesh`
+  (`GETerrainMesh::GetRust`) and build the views, materials, material map and point reads from `ee_ge::tmobj`; the
+  record pins (`EeGeTmRenderVertex`/`RenderVertex`, `EeGeTmPolygon`/`TerrainPolygon`) moved to Rust const asserts, and
+  the fifteen GETerrainMesh accessors only the plug-in read (round 11's census additions) are deleted.
+- **The golden** (scratch, `build/ge13/golden`: `build.py orig|cur|mut`, `driver_dx7.cpp`, `fake_dx7.h`, `mutate.py`):
+  DX7Rasterizer.cpp, DX7TnLRasterizer.cpp and their headers of the base commit (unmodified, with the base's ee_dx7/ee_ge
+  from a `git archive`) or the worktree's shell, with GERasterizer.cpp and the real GX.cpp, over traced fakes: every
+  `gx_*` function (the C++ GX shims and Rust's direct calls meet there; enumeration, caps, device and vertex-buffer
+  creation, identifiers, video memory, still-drawing and lost-surface results), screens with random modes and
+  full-screen flags, surfaces with flip chains, textures with stage settings and frame surfaces, managers, windows,
+  lights; `operator new` zero-fills (the original's `new DX7RScreenState` left fields unset). Random sequences of up to
+  three rasterizers (HAL and T&L) made, activated, screen-activated (windowed and full screen, Z buffers),
+  rendering-surface activations that may fail, deactivated and deleted; every setter with forced and repeated values,
+  textures (changed or not, NULL), scenes, clears, lights, viewports, presentations, memory, creations; each step
+  followed by every rasterizer's state through the public accessors and the fakes' reference counts. 20,000
+  sequences identical (sha256 of the digests 5021f41c...). The driver had to avoid three crashes the original has on
+  paths the game never takes: a failed primary, flip chain or Z buffer in `ActivateScreen` (it dereferences them; the
+  Z buffer's attach result overwrites a failed back buffer's), a windowed screen without a back buffer (a NULL
+  `dynamic_cast` dereferenced), and `ActivateRenderingSurface` reading mode `count` after a failed search (a fixed
+  record past the modes in the fake).
+
+  | Mutation of the Rust | Sequences of 2,000 that change |
+  |---|---|
+  | defaults leave the blend source cached | 0 (equivalent: the DX7 record's caches are seeded stale) |
+  | defaults shade flat | 561 |
+  | texture changes not counted | 18 |
+  | texture not promoted | 734 |
+  | previous texture kept | 1,997 |
+  | render target not referenced | 1,997 |
+  | activation forgets the window | 2,000 (crash) |
+  | deactivate keeps the lights | 1,991 |
+  | deactivate keeps the screens | 713 |
+  | culling sent when unchanged | 16 |
+  | the clock read every frame | 1,997 |
+  | the flip never waits | 231 |
+  | fog colour equal ignores blue | 0 (the driver's fog colours never differ in blue alone) |
+  | ambient sends the set colour | 129 |
+  | always the T&L device | 1,997 |
+  | total and free swapped | 526 |
+  | card flags swapped | 866 |
+  | a new screen's viewport unchanged | 0 (only a draw's `Set2DMode` reads it; the driver draws nothing) |
+  | depth range swapped | 631 |
+  | the secondary not referenced | 945 |
+
+  No cargo replay of the driver this round (the rasterizer object calls `RawGx`, compiled out of `cargo test`); the
+  Rust tests cover `view_and_projection` and the existing raster/state goldens.
+- **Behaviour changes** (undefined paths only): a new screen's DX7 record starts zeroed (the original's was unset until
+  `ActivateTheScreen`); the rasterizer's destructor frees its records (the original's vector freed only the pointers);
+  a screen index past the records dereferences NULL (the original indexed past the vector); copying a rasterizer is
+  deleted. The terrain material map is read up to the material count (the original's C++ wrapper read the map's
+  length, past its buffers if the map were longer).
+- **What runs it: the tour.** EE-SIM makes no rasterizer and draws nothing: the oracle only shows these commits do not
+  touch the simulation. The draw paths, the activation, the setters and the terrain views run only in the game:
+  under the harness lock the tour (`fixture_game.py --exercise tour --play-seconds 60 --seed 2 --zoom-captures 50 100`)
+  `RESULT PASS tour` (render checks ok, view 83.2% lit, as round 12's 83.3%), its captures compared with the
+  pre-round exe's run of the same command: the menus pixel-equal (random map setup, single player, the four settings
+  tabs: 0 differing pixels; the main menu and the closed settings 226, its animated corner), the game views equal by
+  eye (terrain, the town center and units, the HUD, text, the mini map; the pixel counts differ because the two runs
+  captured at different game times). The random game with orders and the scroll check (`--exercise random-game
+  --play-seconds 30 --orders --scroll-check --zoom-captures 50 200`): every order done (gather, repair, repair queued,
+  move; patrol and attack-ground skipped, no button / unit), render checks ok (89.8% lit), and `SCROLL CHECK FAIL edge`
+  (the camera moved 0.041 at the screen edges) — the pre-round exe fails the same check the same way on this machine
+  today, so it is not this round's. Not exercised by either: water (no water in view), the terrain grid and highlight
+  draws, the 3D line, movies, the rendering surface activation, a lost device; the legacy debugger tour (menu
+  bmpdiff), the LAN game and the POSIX builds were not run.
+- **Gates.** Each commit: build `--sim` 0/0; the oracle on seeds 2-3 identical; the Rust gate PASS (after the first
+  commit and on the final tree). The `rust` branch (fffdedf4) was already an ancestor of the branch: nothing to merge.
+  On the final tree: build `--sim` 0/0 (EE-AOC 1,021 inputs), the test profile 0/0, the oracle identical on seeds 2-7,
+  the Rust gate PASS, the captures at seeds 2-3 PASS (oracle 171, late 172, effects 6 digests).
+- **Left.** The round is short of 1,500 net lines because the Graphics Engine's lines are mostly address markers a
+  remaining file keeps, and the remaining C++ of the plug-in is thin glue per class:
+  - `DX7Screen` and `DX7Surface` (Common, 345 + 285 lines, about 180 + 210 of code): fields, the attached-surface
+    vector, the screen list and the window creation over the Rust algorithms; whole objects would need their own
+    golden (the screen's enumeration and the surfaces' locks over the same GX fakes).
+  - `DX7Movie` (310): threads, events, the mixer and pl_mpeg as about 45 trampolines.
+  - the Draw units' seams over `GEModel`, `GEMaterial`, `GEText`/`GEFont`, `GEBitmap`, `GELine`/`GEPoint`/`GERhombus`
+    (the model and bitmap are Rust objects; reading them directly needs their objects at the call, as the mesh now).
+  - DX7Rasterizer.cpp keeps its forwarders and 300 address markers; the three Draw units theirs.
+
+## R6: the scenario editor screens, round 5: the condition types and the condition and effect screens whole in Rust; the editor gate drives every condition type, the screens' list buttons and texts, and the AI attribute's float slider (ee_screens editor_conditions.rs, editor_subscreens.rs; branch rust-editor5, 2026-11-14)
+
+### The generic host, a template now
+
+Round 4's host addressed `EESETSEffectControls` by array and index. The condition types (`EESETSConditionType` and its
+seven `EESETSCT*` classes, `EESETSConditionType.cpp`, 888 lines) do the same over `EESETSConditionControls`, a smaller
+set of the same arrays (5 labels, 2 edit boxes, the chat box, 3 combo boxes, 4 scenario combo boxes, 3 check boxes,
+2 player pickers, 2 radios, one slider; no effect combo boxes, second edit boxes or list boxes). So the host's body
+became one template, `SeetOp<C>` (EESETSEffect.cpp), over overloads that resolve an array and index on either
+controls class (`SeetControl`, `SeetCombo`, `SeetEdit`, `SeetSlider`: the condition controls' one slider is index
+0, `SeetList`: none); `ee_screenscpp_seet` and its twin `ee_screenscpp_sect` keep only what differs, the entry
+(`EESMEffect` or `EESMCondition`): its texts, objects, list and controls. On the Rust side `Fx` is generic over the
+entry's numbers (`Fx<H, F = EeScenarioEffectFields>`; `Cx<H>` is `Fx<H, EeScenarioConditionFields>`), so every
+helper (`label`, `radio`, `player_name`, `rename`) serves both. New shared ops: a check display event's controls
+(`EESEEPushControl`), an event processed on a control (the player attribute type's Load), a technology's plain name,
+a combo box's list font, the technology list with the condition types' filter (no unit-making node).
+
+### The moves
+
+- **The condition types** (`editor_conditions.rs`, `ConditionTypes`): every Store, Hide, Load and Show of the seven
+  types; the research type's list built on its first Show (the original's per-object `mTechnologies`, sorted by name
+  in the host as the effect types' list); the player attribute type's 67 attributes (the resources, "Variable0".."9",
+  each resource sent and received, the statistics with the two that read the last statistic's name, the settings) and
+  its radio buttons' event. `EESETSConditionType.cpp` and its header deleted.
+- **The condition and effect screens** (`editor_subscreens.rs`, `ConditionScreen`, `EffectScreen`): the
+  constructors (the controls through the host, the title and the type combo box through the shared maker), the
+  destructors in the originals' orders, ChangeConditionType, ChangeEffectType, ChangeEffectAction, the list buttons
+  (Sort, MoveDown, MoveUp, Delete, Duplicate, New), Activate, Store, Hide, Load, Show, RefreshControls (the
+  condition's `<...>` names), GetNames. The effect screen owns its `EffectTypes`; their events still carry their
+  address (`EeScreensSeEffects` is `repr(transparent)` over it). The classes keep one `mRust` and forward; the gate
+  reads the controls and the type combo box through accessors (their own commit, first). The screens use two hosts:
+  the shared maker's (`ee_screenscpp_sepl`, by handle) and the types' (by array, the entry, the scenario's lists, the
+  trigger tab's boxes, the player tab's count).
+
+### The gate (three commits, TEST ONLY, each recorded on the unmodified classes, twice identical, old lines unchanged)
+
+- The condition types: `cctl` (a condition control's text or line set, no event), `crefresh`, `conditionstate`
+  (each condition's words, its six flags, text and chat text: the six bools read by name, the struct's two padding
+  bytes left out). Each type on the first of two new conditions: picked, the controls dumped (group 12), values set
+  (the game type's check boxes and slider through their events, the player attribute's radio), renamed, stored and
+  loaded back; the second's type switch through Load; the sub-tab left and entered. 11,673 -> 12,526 (with the slider
+  tail below).
+- Round 4's zero-diff mutation (the AI attribute's float slider modifier): the slider dragged on attributes of scale 1
+  and 100. Recorded on the pre-move effect types too: a scratch worktree of 69f7795f (the commit before round 4's
+  move) under build/, its own `EE_ORIG_SRC_ROOT`, ran 69f7795f's script plus this tail; the current build ran the
+  same script: identical (11,885 lines), including an `-nan(ind)` label the original also prints (the slider event
+  fires with the previous attribute's modifier before the new one is set).
+- The screens' own slots: a name and a description typed and stored, New, Duplicate, Up, Down, Sort, Delete on the
+  condition and effect sub-tabs with the lists, selections and entries after each, the trigger tab's controls, the
+  effect sub-tab left and entered. 12,526 -> 12,723.
+
+Both moves passed the gate on their first run.
+
+### Mutations of the Rust against the editor gate (build/ed5/mut.py; each built and run)
+
+| Mutation | Diff lines |
+|---|---|
+| game Store: a minimum above the maximum no longer raises it | 18 |
+| research Show: the unit-making technologies listed too | 96 |
+| player attribute Load: the radio button's event not processed | 4 |
+| diplomacy Hide: the "towards" label keeps its centre alignment | **0**: not equivalent; the next type shown in the script (game) centres that label again, and no step shows a type that leaves it as it finds it |
+| chat Show: no Enter event on the chat box | **0**: not equivalent; no step presses Enter in it (a person's Enter stores the entry) |
+| condition screen Activate: an object type kept | **0**: not equivalent; the gate's first entry into the sub-tab is followed by a Load that switches the type before any dump |
+| condition screen RefreshControls: the chat text unquoted | 16 |
+| effect screen Load: the no-effect type shown once, not twice | **0**: equivalent (its Show hides the same six controls) |
+| effect screen Delete: the type not hidden after | **0**: not equivalent in general; in the script every delete is followed by the trigger tab's Load of the next entry, which hides and shows again (a delete leaving no entry would leave the controls up) |
+
+Round 4's zero-diff mutation (the AI attribute's float slider modifier) is now reached by the slider tail (the
+scale-100 attribute prints 0.5 for 50; that mutant was not re-run this round).
+
+### Behaviour
+
+None intended. On undefined paths: a Store or Load of an entry the scenario manager does not have does nothing (the
+originals dereference it); a type switch or action change with no selected entry shows the type without loading it
+(the original loads NULL); the type combo box with no selection reads as its first line (the original's `0`
+initialiser); the effect screen's Load with a type combo box that will not take the type does not show it (the
+original compares an unset local); the research type's Store with no selection keeps the technology.
+
+### Only a person reaches
+
+The controls' look (EE-SIM draws nothing); picking a line of a condition combo box by the mouse
+(`EESETSCComboBox::ChangeSelection`: the gate calls RefreshControls directly); the always-true condition type
+(user conditions are never always true: its Show and Hide are reached by no list); closing the editor (the
+destructors). No tour opens the editor.
+
+### Gates
+
+| Gate | Per move | Merged with rust (fffdedf4) |
+|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same |
+| `tools/sim_editor.py` | PASS 12,526 (condition types), 12,723 (screens), each on the first run | PASS 12,723 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | the condition types' run failed rustfmt only (fixed before the commit); the screens' PASS (3,456 tests) | PASS (3,474 tests) |
+| `build.py --test-profile windowed-software` | | EE-AOC 0 unresolved, 0 duplicates |
+| captures | not run: no simulation code changed | |
+
+The merge of rust needed only PORT_LEARNINGS (both sides' sections kept); headers current, no duplicate constant
+of ee_screens' across crates.
+
+C++ lines (src and include/ee, include/rust aside): the condition types +180 -1,063 (net -883; EESETSConditionType.cpp
+and its header deleted), the accessors +9 -5, the screens +168 -466 (net -298): net **-1,177** over the round, short
+of the 1,500 aimed at. The scratch worktree's staging root `C:/EEX-trig-ed5wt` (outside the worktree) is left for
+the lead to delete.
+
+### Left
+
+The area screen (`EESETSArea`, 484 lines: its mouse drawing is world and input calls, only a person reaches it; the
+gate needs a way to give an area a rectangle first), the condition and effect controls' constructors
+(`EESETSCComboBox.cpp`, `EESETSEComboBox.cpp`: about 30 controls each, a table for the shared maker with three new
+kinds), the editor form (`EEUIFScenarioEditor`, 1,495 lines; accessors first), the unit tab's small control classes.

@@ -1,7 +1,6 @@
-//! `extern "C"` for the scenario editor's effect types whole in Rust (`editor_effects.rs`): the object the effect
-//! screen (`EESETSEffect`) holds in place of its seven `EESETSEffectType`s, made, called and freed by it, and the
-//! effect types' own events (`EESEERust`'s military group, dialogue and AI attribute kinds). The one host is
-//! `ee_screenscpp_seet` (`Scenario Editor/EESETSEffect.cpp`).
+//! `extern "C"` for the scenario editor's effect types whole in Rust (`editor_effects.rs`): their own events
+//! (`EESEERust`'s military group, dialogue and AI attribute kinds; the effect screen, `editor_subscreens_ffi.rs`, owns
+//! the types). The one host is `ee_screenscpp_seet` (`Scenario Editor/EESETSEffect.cpp`).
 
 use core::ffi::c_void;
 
@@ -28,73 +27,18 @@ impl SeplHost for Host {
     }
 }
 
-/// The effect types (opaque to C++).
+/// The effect types (opaque to C++; the effect screen's `EffectTypes`, whose address their events carry).
+#[repr(transparent)]
 pub struct EeScreensSeEffects(EffectTypes);
 
-fn fx(
-    h: &mut Host,
-    me: *const EeScreensSeEffects,
-    controls: *mut c_void,
-    effect: *mut c_void,
-    fields: *mut c_void,
-) -> Fx<'_, Host> {
+fn fx(h: &mut Host, me: *const EeScreensSeEffects, controls: *mut c_void) -> Fx<'_, Host> {
     Fx {
         h,
         controls: controls as usize,
-        effect: effect as usize,
-        fields: fields as *mut EeScenarioEffectFields,
+        effect: 0,
+        fields: core::ptr::null_mut::<EeScenarioEffectFields>(),
         me: me as usize,
     }
-}
-
-/// The effect types' constructors (`EESETSEffect`'s `new`s): their events made. Freed by `ee_screens_seet_free`.
-///
-/// # Safety
-/// `controls` is the effect screen's `EESETSEffectControls`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_seet_new(controls: *mut c_void) -> *mut EeScreensSeEffects {
-    let mut h = Host;
-    let mut c = fx(&mut h, core::ptr::null(), controls, core::ptr::null_mut(), core::ptr::null_mut());
-    Box::into_raw(Box::new(EeScreensSeEffects(EffectTypes::new(&mut c))))
-}
-
-/// The destructors: the events released, the object freed.
-///
-/// # Safety
-/// `types` comes from `ee_screens_seet_new` (or is NULL) and is not used again.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_seet_free(types: *mut EeScreensSeEffects, controls: *mut c_void) {
-    if types.is_null() {
-        return;
-    }
-    let b = unsafe { Box::from_raw(types) };
-    let mut h = Host;
-    let mut c = fx(&mut h, types, controls, core::ptr::null_mut(), core::ptr::null_mut());
-    b.0.destroy(&mut c);
-}
-
-/// The effect type `ty`'s (`kSMEffect*`) slot `slot` (`EE_SCREENS_SEET_CHANGE_ACTION` ...) over the controls and,
-/// for the slots that take one, the effect (`EESMEffect*`) and its numbers (its `EeScenarioEffectFields`).
-///
-/// # Safety
-/// `types` comes from `ee_screens_seet_new` (or is NULL); `fields` is `effect`'s numbers when the slot reads them.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_seet_call(
-    types: *const EeScreensSeEffects,
-    ty: u32,
-    slot: u32,
-    controls: *mut c_void,
-    effect: *mut c_void,
-    fields: *mut c_void,
-) {
-    if types.is_null() {
-        return;
-    }
-    // shared: a host call can come back into the types (a combo box's event)
-    let t = unsafe { &(*types).0 };
-    let mut h = Host;
-    let mut c = fx(&mut h, types, controls, effect, fields);
-    t.call(&mut c, ty, slot);
 }
 
 /// The effect types' events (`EESEERust`, made by `EE_SCREENS_SEET_EV_OBJECTS` with these types and the controls):
@@ -102,7 +46,7 @@ pub unsafe extern "C" fn ee_screens_seet_call(
 /// dialogue's camera scroll speed shown, 2 the AI attribute's ranges shown (`b`: the attribute combo box's line).
 ///
 /// # Safety
-/// `types` comes from `ee_screens_seet_new` (or is NULL); `controls` are the effect screen's.
+/// `types` are an effect screen's types (`ee_screens_sefx_new`; or NULL); `controls` are its controls.
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_seet_event(
     types: *const EeScreensSeEffects,
@@ -116,7 +60,7 @@ pub unsafe extern "C" fn ee_screens_seet_event(
     }
     let t = unsafe { &(*types).0 };
     let mut h = Host;
-    let mut c = fx(&mut h, types, controls, core::ptr::null_mut(), core::ptr::null_mut());
+    let mut c = fx(&mut h, types, controls);
     match what {
         0 => t.ai.move_object(&mut c, a != 0, b),
         1 => crate::editor_effects_more::show_camera_scroll_speed(&mut c),

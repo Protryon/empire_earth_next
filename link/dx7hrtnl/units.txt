@@ -6,5 +6,4 @@
 09217 0d144 Common/DX7Rasterizer.cpp
 0d144 0e818 Common/DX7Screen.cpp
 0ed72 0fd16 Common/DX7Surface.cpp
-0fd16 10512 DX7HRTnLDisplay/DX7TnLRasterizer.cpp
 10512 10512 GX/GX.cpp

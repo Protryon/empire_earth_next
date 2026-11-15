@@ -129,6 +129,12 @@ scenario plays a retail campaign scenario per seed (SCENARIOS, extracted from th
 build/sim_capture/scenarios; EE-SIM --scenario); its golden file lists only the SM tags (recorded from the C++
 scenario manager before its logic moved); its USCK stops the game on a mismatch like every profile's (a scenario's
 path points, on the map in no list, are the store's unlisted records: R5b.4's fourteenth round).
+AETP and AEFX are the area effects' records (ee/EEAECapture.h; every profile): AETP every area-effect template as Init
+left it (once), AEFX after every area-effect tick each unit's own effects (kind, location, checksum, strength, radius,
+scale, immunity, the three modifiers of a probe value, the morale count, the Covers of its own unit), the effects
+acting on it as owner and index, its hit points and cloaking, the active list and the running state's save bytes.
+Their golden lines come from the C++ of the eight area-effect classes before they became one (calamities lane, round
+3; seeds 2-3 of the oracle, late, space and calamity profiles).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """
