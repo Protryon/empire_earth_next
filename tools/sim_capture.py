@@ -175,6 +175,11 @@ PROFILES = {
     # --unit-sweep: no other profile steps those physics models); the map by seed (UNIT_MAPS: water or space)
     "units": ["--difficulty", "Hard", "--game-seconds", "1500", "--cheats", "all", "--ai", "3", "--lobby", "183=#9",
               "--map-type", "{map}", "--unit-sweep"],
+    # a small islands map from the Middle Ages to 90 game minutes, three computer players with the original's cheats:
+    # from about 50 minutes their invasions load transports, meet them at the shore and unload on the other islands
+    # (the transports' searches and tests: no other profile loads a transport)
+    "transport": ["--difficulty", "Hard", "--game-seconds", "5400", "--cheats", "all", "--ai", "3", "--lobby", "183=#5",
+                  "--map-type", "Small Islands"],
 }
 
 # the units profile's map by seed (seed 2 the first): water for the ships, space for the spaceships
