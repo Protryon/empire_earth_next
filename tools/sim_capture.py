@@ -122,7 +122,8 @@ tile, arrival, animation, hit points, orientation, height). Its golden lines com
 the oracle, late, space and calamity profiles, before the models moved to Rust).
 SM** are the scenario manager's records (ee/EEScenarioCapture.h, R5b.5): SMCE every trigger condition's test, SMTE
 every trigger's evaluation, SMOB every scenario object's, SMCP the player choices and SMAR the area queries outside an
-object's evaluation, SMEX every effect run, SMUP each trigger round. No random map has a trigger, so --profile
+object's evaluation, SMEX every effect run, SMEW the world after it (the effect's objects' units, the players, the
+manager; R5b.5's eighth round), SMUP each trigger round. No random map has a trigger, so --profile
 scenario plays a retail campaign scenario per seed (SCENARIOS, extracted from the data tree's campaign archives into
 build/sim_capture/scenarios; EE-SIM --scenario); its golden file lists only the SM tags (recorded from the C++
 scenario manager before its logic moved); its USCK stops the game on a mismatch like every profile's (a scenario's
