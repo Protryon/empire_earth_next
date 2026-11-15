@@ -1896,6 +1896,61 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 /// The id of a unit that has none (`RTSUnit::Reset`'s 0xffffffff): its record is by object (`Store::unlisted`).
 constexpr static const uint32_t EE_UNIT_ID_UNLISTED = 4294967295;
 
+/// `kErrorBeyondEnd`: an area read short.
+constexpr static const int32_t EE_UNITS_TOWN_BEYOND_END = 10;
+
+/// `gWorld.mTownIDCounter` (`i`); [`EE_UNITS_TOWN_SET_COUNTER`] sets it.
+constexpr static const int32_t EE_UNITS_TOWN_COUNTER = 300;
+
+constexpr static const int32_t EE_UNITS_TOWN_SET_COUNTER = 301;
+
+/// `gWorld.mNumPlayers` (`i`).
+constexpr static const int32_t EE_UNITS_TOWN_PLAYERS = 302;
+
+/// The player's town slots (`mTowns.size()`, 0 for no player) as the result.
+constexpr static const int32_t EE_UNITS_TOWN_SLOTS = 303;
+
+/// The town in slot `index`: 0 for none, else 1 with its id, hull vertex count, counters, flags and continent.
+constexpr static const int32_t EE_UNITS_TOWN_GET = 304;
+
+/// Vertex `io.i` of the hull of the town in slot `index` (`x`, `y`).
+constexpr static const int32_t EE_UNITS_TOWN_HULL_POINT = 305;
+
+/// The area of the town in slot `index` as `EEWriteAreaBytes` writes it (`bytes`, `len`: the host's, valid until
+/// its next call).
+constexpr static const int32_t EE_UNITS_TOWN_AREA = 306;
+
+/// Reads `len` bytes into `bytes` (the result the read's; `io.i` the bytes read); [`EE_UNITS_TOWN_WRITE_BYTES`]
+/// writes them.
+constexpr static const int32_t EE_UNITS_TOWN_READ_BYTES = 307;
+
+constexpr static const int32_t EE_UNITS_TOWN_WRITE_BYTES = 308;
+
+/// Makes a town of the player with the id, area (`bytes`, `len`), continent, counters and flags: 1, or 0 when the
+/// area cannot be read (nothing kept).
+constexpr static const int32_t EE_UNITS_TOWN_MAKE = 309;
+
+/// Deletes the towns made so far (one could not be read).
+constexpr static const int32_t EE_UNITS_TOWN_MAKE_DISCARD = 310;
+
+/// Gives the towns made their serials, areas, ids and slots, in the order made.
+constexpr static const int32_t EE_UNITS_TOWN_MAKE_COMMIT = 311;
+
+/// Sets the town in slot `index`'s id, counters and flags.
+constexpr static const int32_t EE_UNITS_TOWN_SET_SAVED = 312;
+
+/// Rebuilds the player's towns by id from its slots.
+constexpr static const int32_t EE_UNITS_TOWN_REINDEX = 313;
+
+/// Puts the player's towns in the order of the slots `bytes` lists (`len` i32s).
+constexpr static const int32_t EE_UNITS_TOWN_REORDER = 314;
+
+/// A debug line (`bytes`, `len`).
+constexpr static const int32_t EE_UNITS_TOWN_DEBUG = 315;
+
+/// `ResetEEComplexUnit`'s heading of no initial contact (0x446db4).
+constexpr static const float EE_UNITS_NO_HEADING = -10000.0;
+
 /// a section (`index`: `EE_UNITS_UNIT_LOAD_SECTION_*`), the result; io.b = 1 when the held units' loop left for
 /// `LoadLateVersions`; io.i carries the original's `theValue` (the citizen queue, the cargo, the held units) or
 /// `theState` (the unit variables) in and out
@@ -3646,6 +3701,26 @@ struct EeUnitsTickHost {
   void (*step)(void *ctx, uint32_t index, uint32_t id);
 };
 
+/// One town as the host reads, writes or makes it.
+struct EeUnitsTownIo {
+  /// the file's primitives (player_save.rs's operations)
+  EeUnitsPlayerSaveIo prim;
+  long id;
+  uint32_t points;
+  /// mValue, mNumWalls, mL80, mNumWonders, mNumDocks, mNumAirports, mNumUnits, mReach
+  long counters[8];
+  uint8_t near_water;
+  uint8_t near_map_edge;
+  long continent;
+  long x;
+  long y;
+  uint8_t *bytes;
+  size_t len;
+};
+
+/// The host: `(ctx, op, player, index, io) -> result`.
+using EeUnitsTownFn = int32_t(*)(void*, int32_t, uint32_t, uint32_t, EeUnitsTownIo*);
+
 /// The unit's numbers for the tick.
 struct EeUnitsTurretsIn {
   /// true: the goal is an attack, heal or calamity goal and `target_x`, `target_y` its point; false: turn back
@@ -3673,6 +3748,56 @@ struct EeUnitsTurretPart {
   /// the unit's `mTurretAngles[i]`: the angle before the tick in, after it out
   float angle;
 };
+
+/// The values `ResetEEComplexUnit` reads off the world and the unit's class and stats (each as the original
+/// computed it: the class's for a unit with a class, the stats' for one with a class and a player).
+struct EeUnitsComplexResetIn {
+  /// `mF220`: a random heading (`gPhysics->mRandom.Generate() * 6.2831855f`, drawn by the C++) or 6.2831855f
+  float heading;
+  /// `GetStats()->mReloadTime`, or 0
+  long reload_time;
+  /// `GetStats()->mPowerRegeneration`, or 0
+  long power_regeneration;
+  /// `GetUnitClass()->mInitialGarrisonCount`, or 0
+  long garrison_count;
+  /// `GetUnitClass()->mIsCloakable` (false without a class)
+  bool cloakable;
+  /// `!GetUnitClass()->IsLandBuilding()` (false without a class)
+  bool paid_for;
+};
+
+/// The maxima `CopyFrom` scales by: the replaced unit's (`other_*`) and this unit's (`GetUpgrade(type)->m*`), and
+/// whether the camouflage power lets the cloakable flag come over (both classes in its unit set).
+struct EeUnitsComplexCopyIn {
+  long other_max_hit_points;
+  long max_hit_points;
+  long other_power;
+  long power;
+  long other_flight_time;
+  long flight_time;
+  long other_reload_time;
+  long reload_time;
+  bool copy_cloakable;
+};
+
+/// The values of `OutOfSynchDump` that are not in the records.
+struct EeUnitsComplexDumpIn {
+  unsigned long player_id;
+  long tile_x;
+  long tile_y;
+  /// `mAngularVelocity`'s yaw, pitch and roll
+  float angular_velocity[3];
+  size_t build_queue;
+  size_t citizen_build_queue;
+  long collision_tile[2];
+  long frame;
+  float projectile_start[3];
+  /// `mPhysicalModel.GetLocation()`'s matrix, by row
+  float location[4][4];
+};
+
+/// The dump's write: `ctx` and the text's bytes (no terminator).
+using EeUnitsDumpWriteFn = void(*)(void *ctx, const char *text, size_t len);
 
 /// What the constructor looks up outside the row: the C++ fills it before [`fill`].
 struct EeUnitsUnitClassFillIn {
@@ -5149,11 +5274,68 @@ float ee_units_step_cloak_fade(float opacity,
 /// `host` points to a valid table whose calls are valid for its `ctx`.
 uint32_t ee_units_update_units(const EeUnitsTickHost *host);
 
+/// `EESaveTowns` over the C++ host.
+///
+/// # Safety
+/// `f` is callable with `ctx` as [`EeUnitsTownFn`] documents.
+int32_t ee_units_towns_save(void *ctx, EeUnitsTownFn f);
+
+/// `EELoadTowns` over the C++ host: on success the towns are pending (returns the read result; `*pending` 1 when
+/// they are).
+///
+/// # Safety
+/// As [`ee_units_towns_save`]; `pending` writable.
+int32_t ee_units_towns_load(void *ctx,
+                            EeUnitsTownFn f,
+                            bool areas,
+                            uint8_t *pending);
+
+/// The loaded game's own towns from here on (the pending towns dropped).
+void ee_units_towns_clear();
+
+/// `EEMakeSavedTowns` (`apply` false) or `EEApplySavedTowns` (`apply` true) for one player over the C++ host.
+///
+/// # Safety
+/// As [`ee_units_towns_save`].
+bool ee_units_towns_repair(void *ctx,
+                           EeUnitsTownFn f,
+                           uint32_t player,
+                           bool apply);
+
 /// `TurnTurrets` / `TurnTurretsBack` for one unit (see [`turn_turrets`]).
 ///
 /// # Safety
 /// `input` is valid; `parts` holds `count` parts (NULL when `count` is 0).
 void ee_units_turn_turrets(const EeUnitsTurretsIn *input, EeUnitsTurretPart *parts, uint32_t count);
+
+/// `ResetEEComplexUnit`'s record members.
+///
+/// # Safety
+/// `cx` is the unit's live record; `input` readable.
+void ee_units_complex_reset(EeUnitsComplexUnitFields *cx, const EeUnitsComplexResetIn *input);
+
+/// `CopyFrom`'s record copies: `block` 0 [`copy_first`] (with `input`), 1 [`copy_second`], 2 [`copy_third`].
+///
+/// # Safety
+/// `cx` and `other` are two live units' records (not the same); `input` readable for block 0.
+void ee_units_complex_copy(uint32_t block,
+                           EeUnitsComplexUnitFields *cx,
+                           const EeUnitsComplexUnitFields *other,
+                           const EeUnitsComplexCopyIn *input);
+
+/// `OutOfSynchDump`'s lines of `part` (see [`dump`]) written through `write`.
+///
+/// # Safety
+/// The records are the unit's, its class's and its stats' live records; `d` readable; `write` callable with `ctx`.
+void ee_units_complex_dump(uint32_t part,
+                           const EeUnitsRtsUnitFields *rts,
+                           const EeUnitsUnitFields *unit,
+                           const EeUnitsComplexUnitFields *cx,
+                           const EeUnitsUnitClassFields *class_,
+                           const EeUnitsUnitClassUpgradeFields *stats,
+                           const EeUnitsComplexDumpIn *d,
+                           EeUnitsDumpWriteFn write,
+                           void *ctx);
 
 /// `EEUnitClass::EEUnitClass`'s plain stores: `out` (the class's record base) set from the db row `row`
 /// (an `EEUnitClassRecord`, ee/EEUnitClassRecord.h, the layout ee_data's generated record asserts).
