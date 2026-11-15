@@ -110,6 +110,8 @@
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EESEUICTriggerSelectUnits.h"
 #include "ee/EESETSOUnitList.h"
+#include "ee/EESETSCComboBox.h"
+#include "ee/EESETSEComboBox.h"
 #include "ee/EESETSAComboBox.h"
 #include "ee/EESETSAEditBox.h"
 #include "ee/EESERBUnitTypes.h"
@@ -519,14 +521,16 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
     case EE_SCREENS_SEPL_SLIDER: {
         UISlider* t = new UISlider(c.id, theRect, 0, inForm, c.index, 2);
         if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
-        if (c.flags & EE_SCREENS_SEPL_RANGE_FIRST) {
+        if (c.flags & EE_SCREENS_SEPL_NO_RANGE) {   // the condition and effect screens' sliders
+            if (c.extra[2] != 0) t->SetPageSize(c.extra[2]);
+        } else if (c.flags & EE_SCREENS_SEPL_RANGE_FIRST) {
             t->SetRange(c.extra[0], c.extra[1]);
             t->SetPageSize(c.extra[2]);
         } else {
             t->SetPageSize(c.extra[2]);
             t->SetRange(c.extra[0], c.extra[1]);
         }
-        if (c.extra[3] != INT32_MIN) t->SetCurrentRangeValue(c.extra[3]);
+        if (c.extra[3] != INT32_MIN && !(c.flags & EE_SCREENS_SEPL_NO_RANGE)) t->SetCurrentRangeValue(c.extra[3]);
         theControl = t;
         break;
     }
@@ -628,6 +632,14 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
             t = new EESETSEScenarioComboBox(c.number, c.string, c.id, 1, theLines, theFont, theLocation, c.w, 400,
                                             inForm, c.index, 0, theBorder);
             break;
+        case EE_SCREENS_SEPL_COMBO_CONDITION:
+            t = new EESETSCComboBox(c.id, 1, theLines, theFont, theLocation, (unsigned long)c.w, 400, inForm, c.index, 0,
+                                    theBorder);
+            break;
+        case EE_SCREENS_SEPL_COMBO_EFFECT:
+            t = new EESETSEComboBox(c.id, 1, theLines, theFont, theLocation, (unsigned long)c.w, 400, inForm, c.index, 0,
+                                    theBorder);
+            break;
         default:
             t = new UIComboBox(c.id, 1, theLines, theFont, theRect, 400, inForm, c.index, 0, theBorder);
             break;
@@ -660,6 +672,8 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
         std::vector<UWideString> theNone;
         UILBString* t = c.extra[0] == EE_SCREENS_SEPL_LIST_PLAIN
                             ? new UILBString(c.id, theNone, theFont, false, theRect, inForm, c.index, 3)
+                            : c.extra[0] == EE_SCREENS_SEPL_LIST_EFFECT
+                            ? new UILBString(c.id, theNone, theFont, true, theRect, inForm, c.index, 2)
                             : c.extra[0] == EE_SCREENS_SEPL_LIST_OBJECT
                             ? new EESETSOUnitList(c.id, theNone, theFont, false, theLocation, c.w, (unsigned long)c.h,
                                                   inForm, c.index, 3)

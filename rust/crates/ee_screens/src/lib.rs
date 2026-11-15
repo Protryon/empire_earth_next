@@ -146,6 +146,7 @@ pub mod editor_actions;
 #[cfg(not(test))]
 mod editor_actions_ffi;
 pub mod editor_conditions;
+pub mod editor_controls;
 pub mod editor_effects;
 #[cfg(not(test))]
 mod editor_effects_ffi;

@@ -1077,6 +1077,26 @@ constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_UNITS = 79;
 
 constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS = 80;
 
+/// `EESETSEffectControls::mEditBox48` (the effect controls' fourth edit box; index 0).
+constexpr static const uint32_t EE_SCREENS_SEET_A_EDIT48 = 12;
+
+/// The control slot i0, i1 (array, index) of the controls p0: its handle into p2's first word, or (i2 = 1) set to
+/// the handle p2.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SLOT = 94;
+
+/// The maker's combo box kinds of the two screens (`EeScreensSeplCtl::extra[0]` of an `EE_SCREENS_SEPL_LIST_COMBO`):
+/// `EESETSCComboBox` (its selection renames the condition), `EESETSEComboBox` (the effect's).
+constexpr static const int32_t EE_SCREENS_SEPL_COMBO_CONDITION = 5;
+
+constexpr static const int32_t EE_SCREENS_SEPL_COMBO_EFFECT = 6;
+
+/// The maker's list kind (`EeScreensSeplCtl::extra[0]` of an `EE_SCREENS_SEPL_UNIT_LIST`): a `UILBString` with the
+/// constructor's flag set and a border of 2 (the effect controls' two lists).
+constexpr static const int32_t EE_SCREENS_SEPL_LIST_EFFECT = 4;
+
+/// `EeScreensSeplCtl::flags`: a slider without a range (only its page size `extra[2]`, when not 0).
+constexpr static const uint32_t EE_SCREENS_SEPL_NO_RANGE = 32;
+
 constexpr static const uint32_t EE_SCREENS_SEET_A_LABEL = 0;
 
 constexpr static const uint32_t EE_SCREENS_SEET_A_CHECK = 1;

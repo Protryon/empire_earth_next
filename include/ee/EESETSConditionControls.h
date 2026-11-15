@@ -21,8 +21,8 @@ extern GEFont* gU531930;                    // 0x531930 (the chat text edit box'
 
 class EESETSConditionControls {
 public:
-    EESETSConditionControls(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);   // 0x17daa8
-    ~EESETSConditionControls();             // 0x17e3d7
+    // the constructor (0x17daa8) and destructor (0x17e3d7) are ee_screens editor_controls.rs's tables: the members
+    // made, stored (EE_SCREENS_SEET_OP_SLOT) and deleted there; the class is made empty and deleted after them
 
     UITextLabel* mLabels[5];                // +0x00
     UIEditBox* mEditBoxes[2];               // +0x14
