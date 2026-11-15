@@ -31,6 +31,7 @@ static bool sVerbose = false;   // --verbose: each trace line to stderr as it is
 #include "orig_q/NELagLossSimulator.cpp"
 #include "orig_q/NERecordPlayback.cpp"
 #include "rust/ee_net.h"
+#include "ne_tcp_host.h"
 
 // URandom's out-of-line members, as GEBitmap.cpp defines them
 void (*gURandomTraceHook)(URandom* inRandom) = NULL;
