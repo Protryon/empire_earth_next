@@ -179,9 +179,9 @@ pub mod winobj;
 pub mod wire;
 pub mod wmcache;
 pub mod wmloop;
-pub mod wonfile;
 pub mod wmobj;
 pub mod wonbtnobj;
+pub mod wonfile;
 
 #[cfg(test)]
 mod buffer_golden;

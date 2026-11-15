@@ -154,7 +154,10 @@ mod tests {
 
     #[test]
     fn the_names_are_the_originals() {
-        assert_eq!(crate::regkey::config_block(crate::regkey::ROOT_BLOCK, KEY_TOOLS_AUTH), b"won.Software.Sierra.MPTools.Auth");
+        assert_eq!(
+            crate::regkey::config_block(crate::regkey::ROOT_BLOCK, KEY_TOOLS_AUTH),
+            b"won.Software.Sierra.MPTools.Auth"
+        );
         assert_eq!(crate::regkey::config_name(VALUE_AUTHSERVERPORT), b"AuthServerPort");
     }
 

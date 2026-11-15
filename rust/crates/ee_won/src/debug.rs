@@ -109,8 +109,14 @@ mod tests {
 
     #[test]
     fn dump_text_brackets_the_trace() {
-        assert_eq!(dump_text("T", "a\nb"), "\n\n*** Begin WONDebug StackTrace T ***\na\nb\n*** End WONDebug StackTrace T ***\n");
-        assert_eq!(dump_text("T", "x\n"), "\n\n*** Begin WONDebug StackTrace T ***\nx\n*** End WONDebug StackTrace T ***\n");
+        assert_eq!(
+            dump_text("T", "a\nb"),
+            "\n\n*** Begin WONDebug StackTrace T ***\na\nb\n*** End WONDebug StackTrace T ***\n"
+        );
+        assert_eq!(
+            dump_text("T", "x\n"),
+            "\n\n*** Begin WONDebug StackTrace T ***\nx\n*** End WONDebug StackTrace T ***\n"
+        );
     }
 
     #[test]

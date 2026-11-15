@@ -247,7 +247,12 @@ impl EeWonRegKey {
         let block = c_text(block);
         let key = key.map(c_text);
         // SAFETY: C strings (or NULL for the whole block)
-        unsafe { ee_plat_core::config::PlatConfigDelete(block.as_ptr(), key.as_ref().map_or(std::ptr::null(), |k| k.as_ptr())) != 0 }
+        unsafe {
+            ee_plat_core::config::PlatConfigDelete(
+                block.as_ptr(),
+                key.as_ref().map_or(std::ptr::null(), |k| k.as_ptr()),
+            ) != 0
+        }
     }
 
     /// `DeleteSubKey(name)`.
@@ -280,7 +285,9 @@ impl EeWonRegKey {
                     let t = c_text(t);
                     ee_plat_core::config::PlatConfigSetString(block.as_ptr(), key.as_ptr(), t.as_ptr()) != 0
                 }
-                RegValue::Dword(n) => ee_plat_core::config::PlatConfigSetInt(block.as_ptr(), key.as_ptr(), n as i32) != 0,
+                RegValue::Dword(n) => {
+                    ee_plat_core::config::PlatConfigSetInt(block.as_ptr(), key.as_ptr(), n as i32) != 0
+                }
                 RegValue::Binary(b) => {
                     let t = c_text(&binary_text(b));
                     ee_plat_core::config::PlatConfigSetString(block.as_ptr(), key.as_ptr(), t.as_ptr()) != 0

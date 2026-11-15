@@ -294,7 +294,8 @@ impl EeWonFile {
 /// `path` (when not NULL) holds `length` bytes.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_file_new(path: *const u8, length: usize) -> *mut EeWonFile {
-    let p = if path.is_null() { current_directory().unwrap_or_default() } else { unsafe { bytes(path, length) }.to_vec() };
+    let p =
+        if path.is_null() { current_directory().unwrap_or_default() } else { unsafe { bytes(path, length) }.to_vec() };
     Box::into_raw(Box::new(EeWonFile::new(&p)))
 }
 
@@ -314,7 +315,7 @@ pub unsafe extern "C" fn ee_won_file_clone(f: *const EeWonFile) -> *mut EeWonFil
 /// Both are live files.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_file_assign(to: *mut EeWonFile, from: *const EeWonFile) {
-    if to as *const EeWonFile != from {
+    if !std::ptr::eq(to, from) {
         // SAFETY: the contract
         unsafe { *to = (*from).clone() };
     }
@@ -410,7 +411,13 @@ pub const EE_WON_FILE_NORMALIZE: i32 = 13;
 /// # Safety
 /// `f` is a live file; `data` holds `length` bytes (NULL for none).
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_file_op(f: *mut EeWonFile, which: i32, value: i64, data: *const u8, length: usize) -> i64 {
+pub unsafe extern "C" fn ee_won_file_op(
+    f: *mut EeWonFile,
+    which: i32,
+    value: i64,
+    data: *const u8,
+    length: usize,
+) -> i64 {
     // SAFETY: the contract
     let f = unsafe { &mut *f };
     match which {
