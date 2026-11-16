@@ -25908,3 +25908,81 @@ words different.
 - **For the next round.** The unit bookkeeping's counts over one unit-info host (PLST pins every count: population,
   end-of-game, vital buildings, capitols, heroes, teleporters); `SetDiplomaticStance`'s decisions; the wonder powers
   once EEWorld.cpp reads `mWonderPowers` through an accessor; the class media's eleven forwarders.
+
+## The player lane, round 2: the unit bookkeeping, the wonders, the share bonus, the diplomacy, the towns and herds, ApplyImprovement in Rust; the resource words 0 and 1 zeroed (ee_units player_units.rs, player_diplomacy.rs, player_areas.rs; branch rust-player2, 2026-11-15)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 36b6c15e | the resource words 0 and 1 zeroed by `Reset` (a deliberate change, the owner's) | +1 -1 (a comment) |
+| 4f20cb1e | the unit bookkeeping, the wonders, the share bonus (EEWorld.cpp's two bodies) and the diplomacy (player_units.rs, player_diplomacy.rs) | +224 -556, net -332 |
+| e98ead9c | the class-media forwarders folded over one lookup (C++ only) | +17 -43, net -26 |
+| 128a339b | the towns and herds as decisions (player_areas.rs) | +125 -184, net -59 |
+| a837dddc | `ApplyImprovement` and `UpdateFreeUnitPower` (player_units.rs) | +38 -96, net -58 |
+| 08aed011 | (merge) `rust` 1c108108.. (PORT_LEARNINGS: both sides; cbindgen.toml: rust's export list plus `EeUnitsPlayerUnit`; headers current; no marker lines to strip) | |
+| f4b770a8 | the unit record keeps the container's address only (the scenario profile's load faulted) | +2 -1, net +1 |
+
+The round's C++: net -474 (no marker lines in these files any more; EEPlayer.cpp 3,926 -> 3,600 lines). Short of the 1,500 aim: what is left in
+EEPlayer.cpp is mostly calls on C++ objects (groups, towns, tiles, the tech tree) where a Rust body saves only the
+loops; see "Left".
+
+- **The resource words 0 and 1** (the owner's decision after round 1's finding): `EEPlayer::GetChecksum` sums all
+  seven `mResourceCaps`, and `Reset` set only 2..6, so the sync checksum carried two words of whatever memory the
+  player was made in (a LAN game compares checksums between machines). `ee_units_player_reset` (player_tick.rs) now
+  zeroes all seven. Nothing else writes 0 or 1 (the resources are 2..6), and saves write all seven, so a save made
+  from now on holds zeros there. Measured: the oracle seeds 2-7 identical to `ref`, the oracle capture profile at
+  seeds 2-3 PASS (183 digests; PLST records 2..6 only), so no reference changed: in these runs nothing read the two
+  words but the checksum, which neither the oracle nor the captures compare. The saveload matrix on the merged tree: `saveload expect: PASS`, the expect file's rows unchanged (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4).
+- **The unit bookkeeping** (player_units.rs): one host operation fills a record of a unit (`EeUnitsPlayerUnit`: its
+  class's members, its own, its complex unit's), taken again at each statement that reads it after a host call, so
+  every read is the original's at its place. `AddUnit`, `UnitPlaced`, `UnitTaken`, `UnitCompleted` keep their call
+  order (TCST, PLEC and the oracle pin the economy's and the AI's view of it; PLST every count). `UnitPlaced`,
+  `SuggestRecomputeAllAreaEffects` and `WonderStarted` stay virtual calls through the host (the computer player
+  overrides them). **A load hazard** (found by the scenario profile on the merged tree, fixed in f4b770a8): the
+  record first followed the complex unit's `mContainer` to its class; `RTSPlayer::Load` adds the loaded units
+  (`AddPendingUnits` -> `AddUnit`) while `mContainer` still holds the saved id (RepairPointers comes later), and the
+  original `AddUnit` never read it, so the read faulted. The record now holds the container's address only and the
+  recounts ask its category by their own operation, where the original read it. A host record filled ahead of the
+  original's reads must not follow a pointer the original did not follow at that point. A cbindgen lesson: a `#[repr(C)]` record no exported function names is not emitted; the C++ then
+  parsed `EeUnitsPlayerUnit& u` as something else and every `u.` failed ("member reference base type
+  'EeUnitsPlayerFn'"): such a record goes into cbindgen.toml's `[export] include`.
+- **The wonders**: `mWonderTypeCounts` and `mWonderPowers` are the Rust `EeUnitsPlayerWonders` (`mWonderState`, made
+  by both constructors, freed by the destructor). EEWorld.cpp read `mWonderPowers` only in `ApplyShareBonus` and
+  `RemoveShareBonus`: both bodies (75 lines each) are now one line each over `EEPlayerShareBonus` (EEPlayer.cpp: every
+  player's records into `ee_units_player_share_bonus`). The world lane owns EEWorld.cpp: these two bodies are the
+  only change there. The balance is computed before any change (the original changed `mShareBonus` inside the walk,
+  but nothing in the walk reads it).
+- **The diplomacy** (player_diplomacy.rs): `SetDiplomaticStance`'s two paths (a mutual alliance formed, one broken)
+  over host operations on players by address (0 this one); the stance is read fresh at each test, as the original's
+  reference to `mEnemies[...]` was. The tile sight functions (`AddSharedSight` and the rest) stay C++: they run per
+  tile on the hot path of every unit's sight.
+- **The towns and herds** (player_areas.rs): which town or herd a unit joins (`AddUnitToHerd`'s random pick is the
+  host's `GetRandom` at its place), the merges, the removals, the assignments; the merge of one town, the new areas
+  and the patrol goals' repointing stay C++ (host operations), as the towns and herds are C++ objects.
+- **ApplyImprovement, UpdateFreeUnitPower**: the rescales' float expressions as the original's
+  (`(float)value / old * new`, `cvttss2si`; the hit points through `UMCeil` and back through a float), the free
+  citizen's draw per producer tried.
+- **A tar pitfall**: restoring a source file from a tar (to split one working tree into commits) keeps its old
+  mtime, and cargo then reuses the old library: the link failed with the new extern unresolved. Touch restored
+  files before building.
+- **Defined where the original was not** (no gate reaches them): a missing tech node, unit set or complex unit
+  where the original dereferenced it (no change instead of a crash); a wonder power taken that the list does not
+  hold (nothing erased; `erase(end())` before); a sight sharer removed that is not listed.
+- **Coverage.** Every random-map game runs the bookkeeping (each unit made, finished, killed), the towns and herds,
+  the AI's improvements (`ApplyImprovement`) and `RebuildTeams`' stances (gaia's, already war: the early return).
+  A wonder power, the share bonus and a stance that changes need a wonder or a diplomacy change: the late, space and
+  calamity profiles reach wonders; a formed alliance only a scenario, a lobby team game or the diplomacy screen
+  (tour or LAN). The slavery power's free citizen needs that civilization power.
+- **Behaviour:** none but the resource words (the oracle identical; PLST, PLEC and every other tag equal to the
+  goldens).
+- **Gates.** Per piece: build `--sim` 0/0, oracle seeds 2-3 identical to `ref`, the Rust tests and clippy; the
+  resource words' commit: oracle 2-7 identical, the oracle capture profile PASS (183); the bookkeeping's and the
+  improvement's states: captures at seeds 2-3 oracle 183, late 184, space 185, calamity 201 PASS (PLST and PLEC
+  among them). On the merged tree with the fix: build `--sim` 0/0 (851/852 inputs), the test profile 0/0; oracle
+  seeds 2-7 identical to `ref`; captures at seeds 2-3 oracle 191, late 192, space 193, calamity 209, units 195,
+  scenario 33 digests PASS (the scenario profile failed before the fix: the load fault above); the saveload matrix
+  `saveload expect: PASS`; the Rust gate PASS (4,042 tests, clippy, rustfmt, headers); sim_bench seed 2 classic and Lua (`--ai-scripts ai`) games rc 0, time-cap; under the harness lock (one session, the test-profile exe) `RESULT PASS tour` (render and F3 input checks ok) and `RESULT PASS lan-game` (PT host 2767, joiner 2770).
+- **Left.** The lookups (`GetNearestTown`, `GetTownOf`, `GetNearestArea`, `GetTownByID`, `GetPatrolGroup`,
+  `GetOffMapInfo`, `GetActiveGroupOf`, `GetNearestConstructionSite`); the selection (tour only); `RepairPointers`
+  and its id lists; `ClearFootprint`, `RefreshUpgrades`; `EEWorld::RecordStatistics` (the post-game scores: about 280
+  lines of decisions over the statistics with random draws, reached only at `EEWorld::Clear`: it needs a capture
+  of its records first); EEWorld's teams (the world lane's).
