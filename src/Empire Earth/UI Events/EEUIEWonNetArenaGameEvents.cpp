@@ -60,6 +60,7 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEWonNet.h"
+#include "ee/wonapi/WONRouting.h" // AuthContext (WONAuthContext.h)
 #include "ee/EEUICWonNetGamesBox.h"
 #include "ee/EEWonNetAvailableGameFormManager.h"
 #include "ee/EEUIEWonNetArenaGameEvents.h"

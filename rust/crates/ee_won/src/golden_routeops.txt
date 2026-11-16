@@ -341,6 +341,16 @@ hook type 12 WS_Success
 logic create completed type 12 WS_Success
  group=400 parent=65535 "MyGame" pw="secret" maxp=0 jf=1 gf=4 af=0 leave=1
 created group 400
+== create killed
+server got create killed 30:03070dffff040047006f006e00650000000000010000000000000000ffff
+create killed completed type 12 WS_Killed
+ group=410 parent=65535 "Gone" pw="" maxp=0 jf=1 gf=0 af=0 leave=1
+hook type 12 WS_Killed
+server got the leave 5:03072b9a01
+hook type 35 WS_Success
+default completed type 35 WS_Success
+ group=410
+killed create status WS_Killed group 410
 == logic join retry
 server got logic join 21:03072a90010500770072006f006e00670000000000
 hook type 34 WS_RoutingServG2_InvalidPassword

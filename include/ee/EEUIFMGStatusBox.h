@@ -13,11 +13,6 @@ class UIControl;
 class UIForm;
 class UWideString;
 
-// 0x26ddb7 / 0x26de3b (EEUIFMGStatusBox.cpp's range, before its last unit's __FILE__): the exchange buttons
-// 0x5dc..0x5e3: the resource (2, 3, 4, 6) and buy or sell; whether the current player can do it (provisional names)
-bool EEDecodeTradeButton(unsigned long inButton, long& outResource, bool& outSell);
-bool EECanAffordTrade(unsigned long inButton);
-
 struct EEUIFMGIconBitmap;   // EEUIFMGStatusBox.cpp (one loaded icon, 0x14 bytes)
 
 class EEUIFMGStatusBox {

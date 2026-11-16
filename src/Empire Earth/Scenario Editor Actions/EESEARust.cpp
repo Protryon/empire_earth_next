@@ -487,7 +487,7 @@ extern "C" int32_t ee_screenscpp_sew(uint32_t inOp, void* p, int32_t* i, float* 
         return 1;
     }
     case EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE:
-        static_cast<EESEUnit*>(theEditor->mTabGroups[kEditorTabUnits])->SelectUnitType(GE2DPoint(0.0f, 0.0f));
+        static_cast<EESEUnit*>(theEditor->GetTabGroup(kEditorTabUnits))->SelectUnitType(GE2DPoint(0.0f, 0.0f));
         break;
     }
     return 0;
@@ -796,7 +796,7 @@ extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA
     case EE_SCREENS_SEU_SELECTED_COUNT:
         return theEditor->GetSelectedUnitCount();
     case EE_SCREENS_SEU_SELECTED:
-        return (uintptr_t)(EEUnit*)theEditor->mSelectedUnits[(unsigned long)inA];
+        return (uintptr_t)(EEUnit*)theEditor->GetSelectedUnit((unsigned long)inA);
     case EE_SCREENS_SEU_FIRST_SELECTED:
         return (uintptr_t)theEditor->GetFirstSelectedUnit();
     case EE_SCREENS_SEU_CLEAR:
@@ -812,7 +812,7 @@ extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA
         theEditor->DeselectUnit(theUnit);
         return 0;
     case EE_SCREENS_SEU_UPDATE_SELECTION:
-        static_cast<EESEUnit*>(theEditor->mTabGroups[kEditorTabUnits])->UpdateSelection();
+        static_cast<EESEUnit*>(theEditor->GetTabGroup(kEditorTabUnits))->UpdateSelection();
         return 0;
     case EE_SCREENS_SEU_UNIT:
         return (uintptr_t)gWorld.GetUnit((unsigned long)inA);

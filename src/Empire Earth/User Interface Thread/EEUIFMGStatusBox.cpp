@@ -35,8 +35,6 @@
 #include "ee/EEUIFMGStatusBar.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEStringIDs.h"
-#include "rust/ee_screens.h"   // ee_screens_status_box_*: the status box over its host (ee_screens status_box.rs)
-long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);  // 0x23cc42 (EEMessage.cpp's)
 extern bool& gUsingCarbon;  // Existing EERandomMapClass global; selected-unit resource icon variant
 extern unsigned long& gTexturePixelDepth;
 
@@ -509,51 +507,6 @@ long EEUIFMGStatusBox::ReloadIcons()
         theResult = gTextureManager->ReloadTexture(UString("textures\\unit improvements_02"), theDescription);
         if (theResult == 0)
             theResult = gTextureManager->ReloadTexture(UString("textures\\unit upgrades_03"), theDescription);
-    }
-    return theResult;
-}
-
-// Decodes a market button (0x5dc..0x5e3) into its resource and whether it sells; false for other buttons
-bool EEDecodeTradeButton(unsigned long inButton, long& outResource, bool& outSell)
-{
-    if (inButton < 0x5dc || inButton > 0x5e3)
-        return false;
-    outSell = inButton > 0x5df;
-    switch (inButton - 0x5dc) {
-    case 0:
-    case 4:
-        outResource = 2;
-        break;
-    case 1:
-    case 5:
-        outResource = 3;
-        break;
-    case 2:
-    case 6:
-        outResource = 4;
-        break;
-    case 3:
-    case 7:
-        outResource = 6;
-        break;
-    }
-    return true;
-}
-
-// Tells whether the local player can make a market trade: 100 of the resource to sell, or the gold price to buy
-// the cost first, then the current player re-read for the comparison
-bool EECanAffordTrade(unsigned long inButton)
-{
-    long theResource;
-    bool theSell;
-    EEDecodeTradeButton(inButton, theResource, theSell);
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    bool theResult;
-    if (theSell)
-        theResult = thePlayer->mResourceCaps[theResource] >= 100;
-    else {
-        long theCost = EEGetTradePrice(thePlayer, theResource, 0);
-        theResult = gWorld.GetCurrentPlayer()->mResourceCaps[kResourceGold] >= theCost;
     }
     return theResult;
 }

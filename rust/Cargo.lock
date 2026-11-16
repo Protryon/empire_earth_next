@@ -445,7 +445,9 @@ dependencies = [
 name = "ee_tech"
 version = "0.1.0"
 dependencies = [
+ "ee_data",
  "ee_ge",
+ "ee_plat_core",
 ]
 
 [[package]]

@@ -211,6 +211,9 @@ pub enum SeeKind {
         combo_id: i32,
         area_id: u32,
     },
+    /// the trigger-only save (Ctrl+S, once `EEUIESaveScenarioTriggersOnly`): run by the editor form's host
+    /// (`editor_form.rs`), not by `process_in`
+    SaveTriggersOnly,
 }
 
 impl SeeKind {
@@ -233,6 +236,7 @@ impl SeeKind {
             EE_SCREENS_SEE_SORT_UNIT_LIST => SeeKind::SortUnitList,
             EE_SCREENS_SEE_START_EPOCH => SeeKind::StartEpoch { end_combo: object },
             EE_SCREENS_SEE_UNIT_LIMIT => SeeKind::UnitLimit { label: 0, format: vec![0], scale: 0.0, offset: 0.0 },
+            crate::editor_form::EE_SCREENS_SEE_SAVE_TRIGGERS_ONLY => SeeKind::SaveTriggersOnly,
             EE_SCREENS_SEE_QUICK_LOAD | EE_SCREENS_SEE_QUICK_SAVE => {
                 call(h, EE_SCREENS_SEE_OP_REFERENCE, object, [0; 2], [0.0; 4]);
                 if kind == EE_SCREENS_SEE_QUICK_LOAD {
@@ -435,6 +439,8 @@ impl SeeKind {
                 );
                 0
             }
+            // the editor form's host runs it (`ee_screens_see_process`)
+            SeeKind::SaveTriggersOnly => 0,
         }
     }
 

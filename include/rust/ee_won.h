@@ -2377,6 +2377,107 @@ constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 37;
 /// The last of round 33's fields (`EeWonWmField::PopupFront`; the goldens' first state line).
 constexpr static const int32_t EE_WON_WM_FIELD_POPUP_LAST = 22;
 
+/// `CreateGroup(group, name, password, max players, group flags, join flags, async flags)`
+constexpr static const int32_t EE_WON_RTQ_CREATE_GROUP = 0;
+
+/// `JoinGroup(group, password, comment, join flags, member flags)`
+constexpr static const int32_t EE_WON_RTQ_JOIN_GROUP = 1;
+
+/// `BanClient(group, on, seconds, explanation, client id)`; by WON id; by CD key id
+constexpr static const int32_t EE_WON_RTQ_BAN = 2;
+
+constexpr static const int32_t EE_WON_RTQ_BAN_WON_ID = 3;
+
+constexpr static const int32_t EE_WON_RTQ_BAN_CDKEY_ID = 4;
+
+/// `MuteClient(group, on, seconds, explanation, client id)`; by WON id; by CD key id
+constexpr static const int32_t EE_WON_RTQ_MUTE = 5;
+
+constexpr static const int32_t EE_WON_RTQ_MUTE_WON_ID = 6;
+
+constexpr static const int32_t EE_WON_RTQ_MUTE_CDKEY_ID = 7;
+
+/// `Register(name, password, reconnect id, async flags, register flags, client flags)`
+constexpr static const int32_t EE_WON_RTQ_REGISTER = 8;
+
+/// `GetClientList()`, `GetClientListEx()`
+constexpr static const int32_t EE_WON_RTQ_CLIENT_LIST = 9;
+
+constexpr static const int32_t EE_WON_RTQ_CLIENT_LIST_EX = 10;
+
+/// `GetGroupList(flags)`
+constexpr static const int32_t EE_WON_RTQ_GROUP_LIST = 11;
+
+/// `GetMembersOfGroup(group)`
+constexpr static const int32_t EE_WON_RTQ_MEMBERS = 12;
+
+/// `LeaveGroup(group)`
+constexpr static const int32_t EE_WON_RTQ_LEAVE = 13;
+
+/// `CancelJoinGroup(group, leave)`
+constexpr static const int32_t EE_WON_RTQ_CANCEL_JOIN = 14;
+
+/// `AcceptClient(group, client, on, explanation)`, `InviteClient(...)`
+constexpr static const int32_t EE_WON_RTQ_ACCEPT = 15;
+
+constexpr static const int32_t EE_WON_RTQ_INVITE = 16;
+
+/// `SetGroupFlags(group, mask, flags, async mask, async flags)`
+constexpr static const int32_t EE_WON_RTQ_SET_GROUP_FLAGS = 17;
+
+/// `SendServerAlert(text)`; `SendServerAlertWithRecipientList(text, recipients)` (nothing for none)
+constexpr static const int32_t EE_WON_RTQ_ALERT = 18;
+
+constexpr static const int32_t EE_WON_RTQ_ALERT_TO = 19;
+
+/// `StartServerShutdown(text, seconds)`, `AbortServerShutdown()`
+constexpr static const int32_t EE_WON_RTQ_START_SHUTDOWN = 20;
+
+constexpr static const int32_t EE_WON_RTQ_ABORT_SHUTDOWN = 21;
+
+/// `SetClientFlags(mask, flags, async mask, async flags)` (the mask cut to 16 bits)
+constexpr static const int32_t EE_WON_RTQ_SET_CLIENT_FLAGS = 22;
+
+/// `SendChatTo(text, flags, recipients)` (`SendChat`: one recipient)
+constexpr static const int32_t EE_WON_RTQ_CHAT = 23;
+
+/// `SendData(data, flags, recipients)`
+constexpr static const int32_t EE_WON_RTQ_DATA = 24;
+
+/// `BecomeModerator(on)`
+constexpr static const int32_t EE_WON_RTQ_MODERATOR = 25;
+
+/// `CreateDataObject(flags, link, type, name, data)`
+constexpr static const int32_t EE_WON_RTQ_CREATE_DATA = 26;
+
+/// `ReplaceDataObject(link, type, name)`: the delete request
+constexpr static const int32_t EE_WON_RTQ_DELETE_DATA = 27;
+
+/// `ModifyDataObject(link, type, name, offset, insert, data)`
+constexpr static const int32_t EE_WON_RTQ_MODIFY_DATA = 28;
+
+/// `ReadDataObject` / `SubscribeDataObject` / `GetClientCDKeyIdList`: (subscribe, link, type, flags)
+constexpr static const int32_t EE_WON_RTQ_READ_DATA = 29;
+
+/// `UnsubscribeDataObject(link, type, flags)`
+constexpr static const int32_t EE_WON_RTQ_UNSUBSCRIBE_DATA = 30;
+
+/// `DisconnectClient()`
+constexpr static const int32_t EE_WON_RTQ_DISCONNECT = 31;
+
+/// `SetGroupName(group, name)`, `SetGroupMaxPlayers(group, max)`, `RelinquishCaptaincy(group, new captain)`
+constexpr static const int32_t EE_WON_RTQ_SET_GROUP_NAME = 32;
+
+constexpr static const int32_t EE_WON_RTQ_SET_GROUP_MAX_PLAYERS = 33;
+
+constexpr static const int32_t EE_WON_RTQ_RELINQUISH = 34;
+
+/// `DetectFirewall(listen port, longest connect wait, listen)` (a `RoutingDetectFirewallOp`)
+constexpr static const int32_t EE_WON_RTQ_DETECT_FIREWALL = 35;
+
+/// `GetBadUserList(list type, group, flags)`
+constexpr static const int32_t EE_WON_RTQ_BAD_USERS = 36;
+
 /// The op codes. `a`..`d` are integers or pointers as each says.
 enum class EeWonGuiOp : uint32_t {
   /// the field `a` (`EeWonGuiField`).
@@ -3186,6 +3287,56 @@ enum class EeWonBtnStatic : uint32_t {
   Default,
   /// `mDialogDefaultButton.get()`.
   DialogDefault,
+};
+
+/// A read the host makes into its frame.
+enum class EeWonCfgRead : int32_t {
+  /// `ReadInt()` (an expression) into the ints.
+  Int = 0,
+  /// `ReadBool()` into the ints.
+  Bool = 1,
+  /// `ReadColor()` into the ints.
+  Color = 2,
+  /// `ReadChar()` into the ints.
+  Char = 3,
+  /// `ReadVertAlign()` into the ints.
+  VertAlign = 4,
+  /// `ReadHorzAlign()` into the ints.
+  HorzAlign = 5,
+  /// `ReadString(false)` into the strings.
+  Str = 6,
+  /// `ReadFlag(&on)` (on starting true): the flag into the strings, on into the ints.
+  Flag = 7,
+  /// `ReadFont()` into the fonts.
+  Font = 8,
+  /// `ReadImage(false)` into the images.
+  Image = 9,
+  /// `ReadSound()`.
+  Sound = 10,
+  /// `ReadBackground()`.
+  Background = 11,
+  /// `ReadSelectionColor()`.
+  SelColor = 12,
+  /// `ReadComponent()` into the components.
+  Comp = 13,
+  /// `SafeConfigGetComponent<Container*>(ReadComponent(),"Container")` into the components.
+  Container = 14,
+  /// The same as a Button.
+  Button = 15,
+  /// The same as a Scroller.
+  Scroller = 16,
+  /// The same as a MultiListArea.
+  MultiListArea = 17,
+  /// `dynamic_cast<ScrollArea*>(ReadComponent())`, "Expecting ScrollArea" when it is not one.
+  ScrollArea = 18,
+  /// WONFrameValueConfig's frame value (an image, one or four borders).
+  Frame = 19,
+  /// `ReadCursor()`.
+  Cursor = 20,
+  /// `ReadDirection()` into the ints.
+  Direction = 21,
+  /// `ReadStandardCursor()` into the ints.
+  StdCursor = 22,
 };
 
 /// A number of the parser.
@@ -6269,6 +6420,319 @@ enum class EeWonMenuCall : uint32_t {
   MouseUpCount,
 };
 
+/// A model object's class.
+enum class EeWonModelKind : uint32_t {
+  Player = 0,
+  Client,
+  ClientList,
+  Friend,
+  Group,
+  Game,
+  GameList,
+  Server,
+  ServerList,
+};
+
+/// The C++ the model calls (WONLobby/LobbyModelHost.cpp's `ModelHost`).
+enum class EeWonModelOp : uint32_t {
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef = 0,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `new LobbyClient` (held).
+  NewClient,
+  /// `new LobbyClientList` (held).
+  NewClientList,
+  /// `new LobbyGroup` (held).
+  NewGroup,
+  /// `new LobbyServer` (held).
+  NewServer,
+  /// `LobbyGame::CreateGame(a)` (held).
+  NewGame,
+  /// `LobbyPlayer::CreatePlayer()` (held).
+  NewPlayer,
+  /// `((LobbyClient*)a)->ReadRoutingInfo((RoutingClientInfo*)b)`.
+  ClientReadRouting,
+  /// `((LobbyGroup*)a)->ReadRoutingInfo((RoutingGroupInfo*)b, (LobbyClientList*)c)`.
+  GroupReadRouting,
+  /// `LobbyIsNameIgnored(GUIString((GUIStringData*)a))`.
+  NameIgnored,
+  /// `LobbyIsCDKeyBlocked(a)`.
+  CdKeyBlocked,
+  /// `LobbyFindFriend(a)`.
+  FindFriend,
+  /// `((LobbyPlayer*)a)->IsTeammate((LobbyPlayer*)b)` (the virtual).
+  PlayerIsTeammate,
+  /// `((LobbyGame*)a)->CopyFromHook((LobbyGame*)b)`.
+  GameCopyFromHook,
+  /// `((LobbyGame*)a)->HandleHostGameHook((LobbyClient*)b)`.
+  GameHostHook,
+  /// `((LobbyGame*)a)->HandlePlayerLeftHook((LobbyClient*)b, (LobbyPlayer*)c)`.
+  GamePlayerLeftHook,
+  /// `((LobbyGame*)a)->GetJoinStatusHook()`.
+  GameJoinStatusHook,
+  /// `((LobbyGame*)a)->CanStartGameHook()`.
+  GameCanStartHook,
+  /// `((RoutingConnection*)a)->QueueClose(-1)`.
+  ConnectionClose,
+};
+
+/// A member read by [`ee_won_model_get`] and written by [`ee_won_model_set`]. Numbers are the member's value; a
+/// text is its `GUIStringData*` (read: no reference added; written: the object takes one); an object is its
+/// pointer (the same); an address is its `const EeWonIpAddr*` (read: borrowed; written: copied).
+enum class EeWonModelField : uint32_t {
+  PlayerPing = 0,
+  PlayerReady,
+  ClientName = 10,
+  ClientId,
+  ClientFlags,
+  ClientWonUserId,
+  ClientCdKeyId,
+  ClientChatMemberFlags,
+  ClientGameMemberFlags,
+  ClientChatGroupId,
+  ClientGameGroupId,
+  ClientIgnored,
+  ClientBlocked,
+  ClientIsFriend,
+  ClientGameCaptain,
+  ClientChatCaptain,
+  ClientInvited,
+  ClientPlayer,
+  FriendName = 40,
+  FriendUserId,
+  FriendAddress,
+  FriendLocation,
+  FriendLastSearch,
+  FriendFlags,
+  FriendLastLocate,
+  FriendSearchStart,
+  FriendAnonymous,
+  GroupName = 60,
+  GroupId,
+  GroupCaptainId,
+  GroupNumClients,
+  GroupMaxClients,
+  GroupFlags,
+  GroupClients,
+  GameName = 80,
+  GamePassword,
+  GameHasPassword,
+  GameInviteOnly,
+  GameAskToJoin,
+  GameInProgress,
+  GameInvited,
+  GameIsHost,
+  GameShowDetails,
+  GameHaveDetails,
+  GamePingReplied,
+  GameLastSeen,
+  GameFiltered,
+  GameNumPlayers,
+  GameOpenSlots,
+  GameType,
+  GameSkill,
+  GameClients,
+  GameAddress,
+  GameCaptainId,
+  GameGroupId,
+  GamePing,
+  GameListType = 120,
+  ServerName = 130,
+  ServerAddress,
+  ServerNumChat,
+  ServerNumClients,
+  ServerLastPing,
+  ServerQuerying,
+  ServerClients,
+  ServerConnection,
+  ServerMyClientId,
+};
+
+/// A method ([`ee_won_model_call`]); `a`..`c` as each says. "Held" results carry a reference the caller gives
+/// back (a `SmartPtr` return).
+enum class EeWonModelCall : uint32_t {
+  /// `IsSameTeam((LobbyPlayer*)a)`.
+  PlayerIsSameTeam = 0,
+  /// `ClearGroup(a, b)`.
+  ClientClearGroup = 10,
+  ClientInChat,
+  ClientInGame,
+  /// `ReadRoutingInfo`'s stores: the name `a` (a `GUIStringData*`), then `(const intptr_t*)b`: the flags, the id,
+  /// the user id, the CD key id.
+  ClientSetRouting,
+  ClientUpdateIgnore,
+  ClientAnonymous,
+  /// `IsMuted(a)`.
+  ClientMuted,
+  ClientAway,
+  ClientAdmin,
+  ClientModerator,
+  /// `IsCaptain(a)`.
+  ClientIsCaptain,
+  /// `SetCaptain(a, b)`.
+  ClientSetCaptain,
+  ClientHasPlayer,
+  ClientIsReady,
+  ClientPing,
+  /// `IsTeammate((LobbyClient*)a)`.
+  ClientIsTeammate,
+  /// `SetGroupId(a, b)`.
+  ClientSetGroupId,
+  /// `SetMemberFlags(a, b)`.
+  ClientSetMemberFlags,
+  ListClear = 40,
+  /// `SyncClients`: `c` routing records, their ids at `(const uint16_t*)a`, their `RoutingClientInfo*`s at
+  /// `(const intptr_t*)b`, in the map's order.
+  ListSync,
+  ListUpdateIgnore,
+  /// `AddClient((LobbyClient*)a)`.
+  ListAdd,
+  /// `FindClient(a)`.
+  ListFind,
+  /// `RemoveClient(a)`: held.
+  ListRemove,
+  /// `FindClientByWONId(a)`.
+  ListFindByWonId,
+  ListClearInvited,
+  ListCount,
+  /// `ClientAt(a)`.
+  ListAt,
+  /// `LobbyClientIterator::HasMore` over the cursor `(EeWonModelCursor*)a`.
+  ListIterHasMore,
+  /// `LobbyClientIterator::Next` over the cursor `a`.
+  ListIterNext,
+  /// `LobbyClientSetIterator::HasMore` over the cursor `a`.
+  ListSetHasMore,
+  /// `LobbyClientSetIterator::Next((LobbyClient**)b)` over the cursor `a`: the player.
+  ListSetNext,
+  /// `SetLocation(*(const EeWonIpAddr*)a, (GUIStringData*)b, c)`.
+  FriendSetLocation = 70,
+  /// `ClearLocation()` (`d`: the empty string's data).
+  FriendClearLocation,
+  /// `SetStatusFromClient((LobbyClient*)a)`.
+  FriendSetStatusFromClient,
+  /// `StartLocate(a)`.
+  FriendStartLocate,
+  /// `EndLocate(a)`.
+  FriendEndLocate,
+  /// `ReadRoutingInfo`'s stores: the name `a`, then `(const intptr_t*)b`: id, current count, flags, captain,
+  /// capacity.
+  GroupSetRouting = 80,
+  /// `SetMembers`: `c` members, `(const uint16_t*)a` their ids and `(const uint8_t*)b` their flags in the map's
+  /// order, over the client list given by `GroupSetMembersList` first.
+  GroupSetMembers,
+  /// The client list `SetMembers` looks the members up in (`(LobbyClientList*)a`; NULL: none).
+  GroupSetMembersList,
+  /// `AddClient((LobbyClient*)a, b)`.
+  GroupAdd,
+  /// `RemoveClient(a)`: held.
+  GroupRemove,
+  /// `SetCaptain(a, (LobbyClient**)b)`.
+  GroupSetCaptain,
+  GroupCaptain,
+  /// `FindClient(a)`.
+  GroupFind,
+  /// The room's kind: bit 0 password, 1 ask to join, 2 invite only, 3 chat, 4 public chat.
+  GroupKind,
+  /// `CopyFrom((LobbyGame*)a)`.
+  GameCopyFrom = 100,
+  /// `FindClient(a)`.
+  GameFindClient,
+  /// `MatchesRoomSpec(a)`.
+  GameMatchesRoomSpec,
+  GamePinging,
+  GameQuerying,
+  /// `RemoveClient((LobbyClient*)a)`.
+  GameRemoveClient,
+  GameIsFull,
+  GameJoinStatus,
+  GameClearPlayers,
+  /// `IsSameGame((LobbyGame*)a)`.
+  GameIsSameGame,
+  /// `ReadGroup((LobbyGroup*)a)`.
+  GameReadGroup,
+  /// `HandleHostGame((LobbyClient*)a)`.
+  GameHandleHost,
+  GameAllReady,
+  GameCanStart,
+  /// `ReadSummary`'s stores: `(const EeWonGameSummary*)a`'s fields `read` names, the name `b` (a
+  /// `GUIStringData*`, with bit 4).
+  GameStoreSummary,
+  GameListClear = 130,
+  /// `AddGame((LobbyGame*)a)`.
+  GameListAdd,
+  /// `GetOrCreateGame(a, (bool*)b)` (by id).
+  GameListGetOrCreateId,
+  /// `GetOrCreateGame(*(const EeWonIpAddr*)a, (bool*)b)`.
+  GameListGetOrCreateAddr,
+  /// `GetGame(a)` (by id).
+  GameListGetId,
+  /// `GetGame(*(const EeWonIpAddr*)a)`.
+  GameListGetAddr,
+  /// `RemoveGame(a)` (by id): held.
+  GameListRemoveId,
+  /// `RemoveGame(*(const EeWonIpAddr*)a)`: held.
+  GameListRemoveAddr,
+  GameListRewind,
+  GameListHasMore,
+  GameListNext,
+  GameListIsEmpty,
+  /// `RemoveStaleGames(a)` at the time `b` (`time(NULL)`).
+  GameListRemoveStale,
+  /// `HasAddress`: `b` bytes at `(const char*)a`.
+  ServerHasAddress = 150,
+  /// `SyncClients` (as `ListSync`, then the clients' ignore states).
+  ServerSyncClients,
+  ServerUpdateFriends,
+  /// `ClearFriendLocations` at the time `a` (`d`: the empty string's data).
+  ServerClearFriendLocations,
+  /// `SyncGroups`: `c & 0xffffffff` rooms, ids at `a`, `RoutingGroupInfo*`s at `b`; `c >> 32`: update the clients.
+  ServerSyncGroups,
+  /// `AddClient((RoutingClientInfo*)a)`.
+  ServerAddClient,
+  /// `AddClientToGroup((LobbyClient*)a, b, (LobbyGroup*)c)`.
+  ServerAddClientToGroup,
+  /// `AddGroup((RoutingGroupInfo*)a)`.
+  ServerAddGroup,
+  /// `RemoveGroup(a)`: held.
+  ServerRemoveGroup,
+  /// `RemoveClient(a)`: held.
+  ServerRemoveClient,
+  /// `RemoveClientFromGroup(a, (LobbyGroup*)b)`: held.
+  ServerRemoveClientFromGroup,
+  /// `GetClient(a)`.
+  ServerGetClient,
+  /// `FindClientByWONId(a)`.
+  ServerFindByWonId,
+  ServerMyClient,
+  /// `GetGroup(a)`.
+  ServerGroup,
+  ServerNumClientsNow,
+  ServerConnected,
+  ServerClearGroups,
+  ServerGroupCount,
+  /// `GroupAt(a)`.
+  ServerGroupAt,
+  /// `ReadDirEntity`'s population (`_C`): `a`.
+  ServerSetListed,
+  /// `ReadDirEntity`'s address names (`_L`): the set cleared.
+  ServerAddressesClear,
+  /// One address name: `b` bytes at `a`.
+  ServerAddressAdd,
+  /// `Disconnect()` at the time `a` (`d`: the empty string's data).
+  ServerDisconnect,
+  /// `UpdateFromDirectory`'s entry: the server at `*(const EeWonIpAddr*)a`, made when new.
+  ServerListInsert = 190,
+  /// `FindServer(*(const EeWonIpAddr*)a)`.
+  ServerListFind,
+  ServerListCount,
+  /// `ServerAt(a)`.
+  ServerListAt,
+  /// `AddressAt(a)`: a borrowed `const EeWonIpAddr*`.
+  ServerListAddressAt,
+};
+
 /// The inward calls (the C++ shell's virtuals and methods).
 enum class EeWonMsBtnCall : uint32_t {
   /// `Virtual08` (SizeChanged).
@@ -6610,6 +7074,18 @@ enum class EeWonCoreObject {
   UdpSendRecv = 6,
   /// a `ServerConnection*`'s [`EeWonServerConn`]
   ServerConn = 7,
+  /// a `RoutingOp*`'s [`EeWonRouteOp`](crate::routeop::EeWonRouteOp)
+  RouteOp = 8,
+  /// a `RoutingConnection*`'s [`EeWonRouteConn`](crate::routeconn::EeWonRouteConn)
+  RouteConn = 9,
+  /// an `AuthContext*`'s [`EeWonAuthCtx`](crate::authobj::EeWonAuthCtx)
+  AuthCtx = 10,
+  /// a `RustServerOp*`'s [`EeWonHostOp`](crate::hostop::EeWonHostOp)
+  HostOp = 11,
+  /// an `HTTPConnection*`'s [`EeWonHttpConn`](crate::httpengine::EeWonHttpConn)
+  HttpConn = 12,
+  /// an `HTTPConnection*`'s or `HTTPSession*`'s lock (its `CriticalSection`'s platform mutex)
+  Lock = 13,
 };
 
 /// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
@@ -7143,6 +7619,430 @@ enum class EeWonRootCall : uint32_t {
   AddBG,
   /// the field `a` (`EeWonRootField`).
   GetField,
+};
+
+/// The host's ops. `a`..`e` are pointers or integers as each op says; `L` is the shell (`RoutingLogic*`).
+enum class EeWonRouteLogicOp : uint32_t {
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef = 1,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `delete (GUIString*)a`.
+  TextFree,
+  /// `((GUIString*)a)->length()`.
+  TextLength,
+  /// a list `a` the host made (`kind` b: 1 data objects, 2 directory entities, 3 a client iterator) deleted.
+  ListFree,
+  /// `L->mKilled`.
+  Killed = 10,
+  /// `(int)((AsyncOp*)a)->GetStatus()`.
+  OpStatus,
+  /// `((AsyncOp*)a)->IsKilled()`.
+  OpKilled,
+  /// `((AsyncOp*)a)->Kill(true)`.
+  OpKill,
+  /// `((AsyncOp*)a)->Finish(WS_Success)`.
+  OpFinish,
+  /// `new AsyncOp`, held.
+  AsyncOpNew,
+  /// `L->RunOp((AsyncOp*)a, NULL, 0)`.
+  RunOp,
+  /// `LobbyRunOpWithStatus((AsyncOp*)a, LOBBY_STRING(b), LOBBY_STRING(c), d & 0xff, d >> 8)`.
+  RunWithStatus,
+  /// `time(NULL)`.
+  Now,
+  /// `WONTickCount()`.
+  Tick,
+  /// `GetLobbyWindow()->GetLastInputTick()`.
+  LastInputTick,
+  /// `LobbyBroadcastLobbyEvent(a, true)`.
+  BroadcastLobby,
+  /// a setting: 1 chat sounds, 2 staging sounds, 3 lobby sounds, 4 auto-ping games, 5 lobby music, 6 anonymous
+  /// to friends, 7 filter dirty words, 8 on the Internet screen, 9 the user cancelled the last status op.
+  Pref,
+  /// `LobbyPlaySound(LOBBY_SOUND(a).get())`.
+  Sound,
+  /// `LobbyMessageBox(LOBBY_STRING(a), LOBBY_STRING(b))`.
+  MessageBox,
+  /// `LobbyDoErrorDialog(LOBBY_STRING(a), (WONStatus)b)`.
+  ErrorDialog,
+  /// `LobbyDoYesNoDialog(LOBBY_STRING(a), LOBBY_STRING(b), true)`.
+  YesNo,
+  /// `GetLobbyConfig() != NULL`.
+  HasConfig,
+  /// `GetLobbyConfig()->mPingCeiling`, or -1 without a config.
+  ConfigPingCeiling,
+  /// `GetLobbyAuthContext()`.
+  AuthContext,
+  /// `((AuthContext*)a)->SetDoAutoRefresh(false)`.
+  AuthStopRefresh,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `GetMyLobbyClient()`.
+  MyClient,
+  /// `LobbyGetChatCommandParser()`.
+  Parser,
+  /// a lobby call: 1 `LobbyKillPings(NULL)`, 2 `LobbyGameDisconnected(b != 0)`, 3 `LobbyLeaveGame(b != 0)`
+  /// (its result), 4 `LobbyShowLobbyTab()`, 5 `LobbyHostGame()`, 6 `LobbyGetNumPingsToDo()`, 7 `LobbyLogout(false)`,
+  /// 8 `LobbyShowInternetScreen()`.
+  Lobby,
+  /// `LobbyHandleStagingMessage(((RoutingOp*)a)->GetData().get(), (LobbyClient*)b)`.
+  HandleStaging,
+  /// `LobbyClientLeftGame((LobbyClient*)a)`.
+  ClientLeftGame,
+  /// `LobbyClientKicked((LobbyClient*)a, b != 0)`.
+  ClientKicked,
+  /// `LobbyKickClient((LobbyClient*)a, b != 0)`.
+  KickClient,
+  /// `LobbyPingGame((LobbyGame*)a, false)`.
+  PingGame,
+  /// `LobbyJoinGame((LobbyGame*)a)`.
+  JoinGame,
+  /// `LobbySetClientBlocked((LobbyClient*)a, b != 0, 4)`.
+  SetBlocked,
+  /// `LobbySetClientIgnored((LobbyClient*)a, b != 0, 4)`.
+  SetIgnored,
+  /// `LobbySetLastRoom(((LobbyServer*)a)->GetName(), ((LobbyGroup*)b)->GetName())`.
+  SetLastRoom,
+  /// `LobbyGetReconnectId(((LobbyServer*)a)->GetAddress())`.
+  ReconnectId,
+  /// `LobbySetReconnectId(((LobbyServer*)a)->GetAddress(), b)`.
+  SetReconnectId,
+  /// `new ClientOptionsPopup` held by a `SmartPtr`, `Init(a, b, c)`, `LobbyOpenPopup(it, PopupFlag_StandardPopup,
+  /// -1, -1)`.
+  ClientOptions,
+  /// `new FriendOptionsPopup`, `Init(a, b)`, opened as `ClientOptions`.
+  FriendOptions,
+  /// a server's (`a`) value: 0 `GetClients().get()`, 1 `GetConnection().get()`, 2 `GetMyClient()`, 3
+  /// `GetMyClientId()`, 4 `GetName() == LobbyGetLastServerName()`, 5 `GetNumClients()`, 6
+  /// `HasAddress(GetLobbyConfig()->mLanguage)`, 7 `IsConnected()`, 8 `GetGroupCount()`, 9
+  /// `GetQueryingGroups()`, 10 `GetLastPing()`.
+  ServerNum = 50,
+  /// `((LobbyServer*)a)->FindClientByWONId(b)`.
+  ServerFindByWonId,
+  /// `((LobbyServer*)a)->GetGroup(b)`.
+  ServerGroup,
+  /// `((LobbyServer*)a)->GetClient(b)`.
+  ServerClient,
+  /// `((LobbyServer*)a)->GroupAt(b)`.
+  ServerGroupAt,
+  /// `((LobbyServer*)a)->AddClientToGroup((LobbyClient*)b, (unsigned char)c, (LobbyGroup*)d)`.
+  ServerAddClientToGroup,
+  /// `((LobbyServer*)a)->AddGroup(((RoutingOp*)b)->GetGroupInfo().get())`.
+  ServerAddGroup,
+  /// `((LobbyServer*)a)->AddClient(((RoutingOp*)b)->GetClientInfo().get())`.
+  ServerAddClient,
+  /// `((LobbyServer*)a)->RemoveGroup(b)`, held.
+  ServerRemoveGroup,
+  /// `((LobbyServer*)a)->RemoveClient(b)`, held.
+  ServerRemoveClient,
+  /// `((LobbyServer*)a)->RemoveClientFromGroup(b, (LobbyGroup*)c)`, held.
+  ServerRemoveClientFromGroup,
+  /// a server's (`a`) call: 1 `Disconnect()`, 2 `GetClients()->ClearInvited()`, 3 `UpdateFriends()`, 4
+  /// `ClearGroups()`, 5 `SetQueryingGroups(c != 0)`, 6 `SetLastPing(c)`, 7 `SetMyClientId(c)`, 8
+  /// `SetConnection((RoutingConnection*)c)`.
+  ServerDo,
+  /// `RoutingClientMap m; ((RoutingOp*)b)->GetClients(m); ((LobbyServer*)a)->SyncClients(m)`.
+  ServerSyncClients,
+  /// `RoutingGroupMap m; ((RoutingOp*)b)->GetGroups(m); ((LobbyServer*)a)->SyncGroups(m, c != 0)`.
+  ServerSyncGroups,
+  /// `((LobbyFriend*)a)->GetAddress() == ((LobbyServer*)b)->GetAddress()`.
+  FriendAtServer,
+  /// `L->mServerList`'s: 0 `GetCount()`, 1 `IsEmpty()`.
+  ListNum,
+  /// `L->mServerList->ServerAt(a)`.
+  ListAt,
+  /// `L->mServerList->AddressAt(a) == ((LobbyServer*)b)->GetAddress()`.
+  ListAddressIs,
+  /// a group's (`a`) value: 0 `GetId()`, 1 `IsGameGroup()`, 2 `IsPublicChatGroup()`, 3 `GetNumClients()`, 4
+  /// `IsPasswordProtected()`, 5 `IsAskToJoin()`, 6 `GetCaptainId()`, 7 `GetName().length()`, 8
+  /// `GetName() == LobbyGetLastRoomName()`, 9 `GetClients().get()`.
+  GroupNum,
+  /// `((LobbyGroup*)a)->FindClient(b)`.
+  GroupFindClient,
+  /// `((LobbyGroup*)a)->SetCaptain(b, (LobbyClient**)c)`.
+  GroupSetCaptain,
+  /// a client's (`a`) value: 0 `GetClientId()`, 1 `GetWONUserId()`, 2 `IsFriend()`, 3 `IsAnonymous()`, 4
+  /// `IsIgnored()`, 5 `IsBlocked()`, 6 `IsInChatGroup()`, 7 `GetChatGroupId()`, 8 `IsInGameGroup()`, 9
+  /// `GetGameGroupId()`, 10 `IsAway()`, 11 `IsModerator()`, 12 `IsAdmin()`, 13 `GetCDKeyId()`.
+  ClientNum,
+  /// a client's (`a`) call: 1 `SetMemberFlags((unsigned char)c, d != 0)`, 2 `SetClientFlags(c)`, 3
+  /// `SetIsFriend(c != 0)`, 4 `SetInvited(c != 0)`.
+  ClientDo,
+  /// `((LobbyClient*)a)->IsTeammate((LobbyClient*)b)`.
+  ClientIsTeammate,
+  /// a friend's (`a`) value: 0 `GetFlags()`, 1 `GetLastLocate()`, 2 `GetUserId()`, 3 `GetAnonymous()`, 4
+  /// `GetLastSearch()`, 5 `GetSearchStart()`.
+  FriendNum,
+  /// a friend's (`a`) call: 1 `SetAnonymous(c != 0)`, 2 `SetStatusFromClient((LobbyClient*)c)`, 3
+  /// `SetLocation(server c's address, its name, d)`, 4 `ClearLocation()`, 5 `StartLocate(c)`, 6
+  /// `SetLastSearch(c)`, 7 `EndLocate(c)`.
+  FriendDo,
+  /// `LobbyFindFriend(a)`.
+  FindFriend,
+  /// `LobbyAddFriend(((LobbyClient*)a)->GetName(), ((LobbyClient*)a)->GetWONUserId())`.
+  AddFriendOfClient,
+  /// `LobbyAddFriend(*(GUIString*)a, b)`.
+  AddFriendNamed,
+  /// `LobbyRemoveFriend(a)`.
+  RemoveFriend,
+  /// `LobbyGetFriendCount()`.
+  FriendCount,
+  /// `LobbyGetFriendAt(a)`.
+  FriendAt,
+  /// a game's (`a`) value: 0 `GetAskToJoin()`, 1 `GetInviteOnly()`, 2 `GetGameType()`, 3 `GetGroupId()`, 4
+  /// `GetIsHost()`, 5 `GetIsFiltered()`, 6 `GetHasPassword()`, 7 `CanJoin()`, 8 `GetPing()`, 9 `GetSkill()`.
+  GameNum,
+  /// a game's (`a`) call: 1 `SetGroupId(c)`, 2 `SetClients((LobbyClientList*)c)`, 3 `SetInvited(c != 0)`, 4
+  /// `ReadGroup((LobbyGroup*)c)`.
+  GameDo,
+  /// `((LobbyGame*)a)->ReadSummaryBuffer(((RoutingOp*)b)->GetData().get())`.
+  GameReadSummary,
+  /// `new GUIString(((LobbyGame*)a)->GetName())` (b 0) or its `GetPassword()` (b 1).
+  GameText,
+  /// `LobbyGame::CreateGame(LobbyGameType_Internet)`, held.
+  GameCreate,
+  /// `L->mGameList`'s call: 1 `Clear()`, 2 `Rewind()`, 3 `HasMore()`, 4 `Next()`, 5 `GetGame(b)`, 6
+  /// `AddGame((LobbyGame*)b)`, 7 `RemoveGame(b)` (held), 8 `GetOrCreateGame(b, (bool*)c)`.
+  GameList,
+  /// `((RoutingOp*)a)->Num(b)`.
+  RNum = 100,
+  /// `((RoutingOp*)a)->SetNum(b, c)`.
+  RSetNum,
+  /// `((RoutingOp*)a)->SetText(b, text c)`.
+  RSetText,
+  /// `((RoutingOp*)a)->DataType() == L->mGameDataType`.
+  RIsGameData,
+  /// `((RoutingOp*)a)->Recipients()`'s front, or -1 when empty.
+  RRecipient,
+  /// `((RoutingOp*)a)->mConnection.get()`.
+  RConnection,
+  /// `new RoutingOp((RoutingConnection*)a, (RoutingOpType)b)`, held.
+  RNew,
+  /// `((RoutingOp*)a)->GetDataObjects(list)` into a new list (held: `ListFree` kind 1); its size.
+  RDataObjects,
+  /// the data object `b` of list `a`: its `mLinkId`.
+  DataObjectLink,
+  /// `((LobbyGame*)a)->ReadSummaryBuffer(list b's object c's mData.get())`.
+  GameReadDataObject,
+  /// `(intptr_t)static_cast<RefCount*>(((SocketOp*)a)->GetSocket())`.
+  OpSocket,
+  /// `new RoutingConnection`, held.
+  ConnNew,
+  /// a connection's (`a`) call: 1 `SetAuth((AuthContext*)b, AUTH_TYPE_PERSISTENT)`, 2 the twenty notification
+  /// completions (`SetOpCompletion(type, new RoutingOpCompletion(code, L))`), 3 `SetCloseCompletion(new
+  /// LogicCompletion<RoutingLogic>(&RoutingLogic::ConnectionClosed, L))`, 4 `SubscribeDataObject(0xffff,
+  /// L->mGameDataType, false, new RoutingOpCompletion(21, L))`, 5 `IsConnected()`, 6 `AbortServerShutdown(NULL)`,
+  /// 7 `BecomeModerator(b != 0, NULL)`, 8 `LeaveGroup(b, NULL)`, 9 `CancelJoinGroup(b, true, NULL)`, 10
+  /// `ReplaceDataObject(b, L->mGameDataType, gEmptyWideString, NULL)`.
+  ConnDo,
+  /// `((RoutingConnection*)a)->SendData((const ByteBuffer*)b, 0, c, NULL)`.
+  ConnSendData,
+  /// `WriteBuffer w(0, true); ((LobbyGame*)b)->WriteSummary(w); ((RoutingConnection*)a)->CreateDataObject(true,
+  /// c, L->mGameDataType, gEmptyWideString, w.ToByteBuffer(true).get(), NULL)`.
+  ConnAdvertise,
+  /// `((RoutingConnection*)a)->SetClientFlags(b, c, d, e, NULL)`.
+  ConnSetClientFlags,
+  /// `((RoutingConnection*)a)->SetGroupFlags(b, c, d, 0, 0, NULL)`.
+  ConnSetGroupFlags,
+  /// `((RoutingConnection*)a)->BanClient(b & 0xffff, b >> 16 != 0, c, text d, e, NULL)`.
+  ConnBan,
+  /// `((RoutingConnection*)a)->MuteClient(b & 0xffff, b >> 16 != 0, c, text d, e, NULL)`.
+  ConnMute,
+  /// `((RoutingConnection*)a)->BanClientByWONId(b, false, 0, std::wstring(gEmptyWideString), c, NULL)`.
+  ConnBanByWonId,
+  /// `((RoutingConnection*)a)->MuteClientByWONId(b, false, 0, std::wstring(gEmptyWideString), c, NULL)`.
+  ConnMuteByWonId,
+  /// `((RoutingConnection*)a)->AcceptClient(b, c, d != 0, gEmptyWideString, NULL)`.
+  ConnAccept,
+  /// `((RoutingConnection*)a)->InviteClient(b, c, d != 0, text e, NULL)`.
+  ConnInvite,
+  /// `((RoutingConnection*)a)->SendChat(text b, c, d, NULL)`.
+  ConnSendChat,
+  /// `((RoutingConnection*)a)->SendChatTo(text b, c, the d ids at e (uint16_t), NULL)`.
+  ConnSendChatTo,
+  /// `((RoutingConnection*)a)->SendServerAlert(text b, NULL)`.
+  ConnAlert,
+  /// `((RoutingConnection*)a)->StartServerShutdown(text b, c, NULL)`.
+  ConnStartShutdown,
+  /// `new ServerConnectionConnectOp((RoutingConnection*)a, ((LobbyServer*)b)->GetAddress())`, held.
+  ConnectOpNew,
+  /// the parser's (`a`) value: 0 `GetRoomFlags()`, 1 `GetCommand()`, 2 `GetDuration()`, 3 `GetTarget()`, 4
+  /// `GetClients()`.
+  ParserNum = 140,
+  /// `new GUIString(((ChatCommandParser*)a)->GetText())`.
+  ParserText,
+  /// `((ChatCommandParser*)a)->SetInput(((LobbyClient*)b)->GetName())`.
+  ParserSetInput,
+  /// `new LobbyClientIterator((LobbyClientList*)a)` (held: `ListFree` kind 3).
+  IterNew,
+  /// the iterator's `HasMore()`.
+  IterHasMore,
+  /// the iterator's `Next()`.
+  IterNext,
+  /// an event's (`a`) member: 1 the accept's `mClient.get()`, 2 its `mAccepted`, 3 the friend action's
+  /// `mFriend.get()`, 4 its `mAction`, 5 its `mValue`, 6 the jump's `mGroupId`, 7 Quick Play's `mGameType`, 8 the
+  /// client action's `GetRoomSpec()`, 9 its `GetClient()`, 10 its `GetAction()`, 11 the join room's `mGroupId`, 12
+  /// the join friend's room `mFriend.get()`, 13 `mComponent`.
+  EventNum,
+  /// `L->GetServer(event a's mAddress)` (a create room, join room or query server groups event).
+  EventServer,
+  /// `((LobbyServer*)b)->GetAddress() == ((JumpToRoomEvent*)a)->mAddress`.
+  EventAddressIs,
+  /// `((LobbyGame*)a)->GetName() == ((JumpToRoomEvent*)b)->mRoomName`.
+  GameNameIsEvent,
+  /// the friend's (`a`) `GetAddress().IsValid()`.
+  FriendAddressValid,
+  /// `L->GetServer(((LobbyFriend*)a)->GetAddress())`.
+  FriendServer,
+  /// `LobbyDoDialog(dialog a)` (1 add friend, 2 admin action, 3 bad user, 4 create room, 5 password, 6 room).
+  DialogDo,
+  /// dialog a's `Reset`: create room `Reset(b != 0)`, password `Reset()`, admin action `Reset(b, (LobbyClient*)c)`,
+  /// add friend `Reset()`.
+  DialogReset,
+  /// a dialog's text, new: 1 the create room's `GetRoomName()`, 2 its `GetPassword()`, 3 the password's
+  /// `GetPassword()`, 4 the admin action's `GetExplanation()`, 5 the add friend's `GetName()`.
+  DialogText,
+  /// a dialog's value: 1 the admin action's `GetApplyToServer()`, 2 its `GetNumSeconds()`, 3 the room dialog's
+  /// `GetParent() != NULL`.
+  DialogNum,
+  /// `GetLobbyWindow()->EndDialog(-1, NULL, L->mRoomDialog.get())`.
+  RoomDialogEnd,
+  /// `RoutingBadUserList l; ((RoutingOp*)a)->GetBadUsers(l); L->mBadUserDialog->SetUserList(l, b != 0)`.
+  BadUserSet,
+  /// `L->mBadUserDialog->GetIds(ids)`, each pushed to sink `a` by `ee_won_routelogic_push`.
+  BadUserIds,
+  /// `ClientChangedEvent((LobbyClient*)a, b, c)`.
+  EvClientChanged = 170,
+  /// `GroupChangedEvent((LobbyGroup*)a, (LobbyServer*)b, c)`.
+  EvGroupChanged,
+  /// `FriendChangedEvent((LobbyFriend*)a, b)`.
+  EvFriendChanged,
+  /// `AnnounceFriendEvent((LobbyFriend*)a, b, c)`.
+  EvAnnounceFriend,
+  /// `AnnounceClientLocationEvent((LobbyClient*)a, chat group b's name, game group c's name (empty for NULL), d)`.
+  EvAnnounceClient,
+  /// `GameChangedEvent((LobbyGame*)a, b)`.
+  EvGameChanged,
+  /// `GroupInvitationEvent(4, game a's name, its group id, (LobbyClient*)b, c != 0, op d's comment, false)`.
+  EvInvitationRecv,
+  /// `GroupInvitationEvent(4, group a's name, its id, (LobbyClient*)b, c != 0, text d, true)`.
+  EvInvitationSent,
+  /// `GroupJoinAttemptEvent(6, (LobbyClient*)a, op b's comment)`.
+  EvJoinAttempt,
+  /// `RecvChatEvent(a, b, (LobbyClient*)c, op d's text, (LobbyClient*)e)`.
+  EvRecvChat,
+  /// `AlertEvent(4, a, a == 1 ? op b's time : 0, op b's text)`.
+  EvAlert,
+  /// `ClientModeratedEvent((LobbyClient*)a, b, the name of c (a group when d & 0x100, else a server), d & 0xff,
+  /// op e's time, true, op e's comment)`.
+  EvModerated,
+  /// `LeftRoomEvent(a, b != 0, c != 0)`.
+  EvLeftRoom,
+  /// `SyncGameListEvent(L->mGameList.get())`.
+  EvSyncGameList,
+  /// `JoinedRoomEvent(server a's name, group b's name, c, server a's my client id, group b's clients)`.
+  EvJoinedRoom,
+  /// `ServerChangedEvent((LobbyServer*)a, b)`.
+  EvServerChanged,
+  /// `SetChatInputEvent(2, client a's name, b, false)`.
+  EvSetChatInput,
+  /// `LobbySendEventTo(new ChatCommandErrorEvent(LOBBY_STRING(RoutingLogic_NotCaptain_String)), (Component*)a)`.
+  EvNotCaptain,
+  /// `LobbyGetUDPManager()`.
+  UdpManager = 200,
+  /// `new RoutingGetUserStatusOp(L->mServerList->AddressAt(a), (UDPManager*)b)`, held.
+  StatusOpNew,
+  /// `((RoutingGetUserStatusOp*)a)->AddWONUserId(b)`.
+  StatusOpAddId,
+  /// `((RoutingGetUserStatusOp*)a)->SetFriendStatusMap(the c ids at b, each 0)`.
+  StatusOpSetMap,
+  /// `L->RunOp((AsyncOp*)a, new LogicCompletion<RoutingLogic>(&RoutingLogic::GetUserStatusComplete, L), 10000)`.
+  StatusOpRun,
+  /// `L->mServerList->FindServer(((RoutingGetUserStatusOp*)a)->GetDestAddr())`.
+  StatusOpServer,
+  /// `((RoutingGetUserStatusOp*)a)->GetFriendStatusMap()`, each pair pushed to sink `b` (id, status).
+  StatusOpMap,
+  /// `LobbyGetAccountServers()`.
+  AccountServers,
+  /// the add-friend lookup: `GetUserIdFromNameOp` of text `b` on servers `a`, run behind its status box; its user
+  /// id (its status in `*(int*)c`).
+  UserIdLookup,
+  /// `LobbyGetServerList()`.
+  LobbyServerList,
+  /// `((LobbyServerList*)a)->FindServer(((RustServerOp*)b)->GetAddr())`.
+  ServerListFind,
+  /// a connection-less group list op over `RustServerOp` b's replies, its groups into server a
+  /// (`SyncGroups(m, false)`).
+  SyncGroupsOfQuery,
+  /// `RustServerOp::NewGroupListReq(server a's address, 0x29)` run tracked with
+  /// `LogicCompletion<RoutingLogic>(&RoutingLogic::QueryServerGroupsDone, L)`.
+  GroupQueryRun,
+  /// `LobbyGetRoomDirServers()`, held.
+  RoomDirServers,
+  /// `RustServerOp::NewGetDir(context a, config's mProductDirectory, 0x04000622, {"_C", "_L"})`, held, run behind
+  /// the getting-rooms status box.
+  DirOpRun,
+  /// op `a`'s `GetEntities(EE_WON_REQOP_DIR_LIST)` as a new list (held: `ListFree` kind 2); 1 if empty.
+  DirEntities,
+  /// `((ServerContext*)a)->NotifyFailed(((RustServerOp*)b)->GetCurAddr())`.
+  DirNotifyFailed,
+  /// `L->mServerList->UpdateFromDirectory(list a)`.
+  DirUpdate,
+};
+
+/// The calls into the object (`ee_won_routelogic_call`).
+enum class EeWonRouteLogicCall : uint32_t {
+  /// `HostGame((LobbyGame*)a)`: 0 or 1.
+  HostGame = 1,
+  /// `JoinGame((LobbyGame*)a)`.
+  JoinGame,
+  /// `GetClientList()`.
+  ClientList,
+  /// `GetMyClient()`.
+  MyClient,
+  /// `SendToCaptain(a)`.
+  SendToCaptain,
+  /// `BroadcastToGame(a)`.
+  BroadcastToGame,
+  /// `SendToClient((LobbyClient*)a, b)`.
+  SendToClient,
+  /// `AdvertiseGame((LobbyGame*)a)`.
+  Advertise,
+  /// `RemoveGameAdvertisement`.
+  RemoveAdvertisement,
+  /// `KickClient((LobbyClient*)a, b != 0)`.
+  KickClient,
+  /// `SetGameInProgress(a != 0)`.
+  SetGameInProgress,
+  /// `Reset()` (the idle check).
+  Reset,
+  /// `LeaveGame`.
+  LeaveGame,
+  /// `Suspend()`.
+  Suspend,
+  /// `Resume()`.
+  Resume,
+  /// `Logout()`.
+  Logout,
+  /// `EnterInternetScreen(a != 0)`.
+  EnterInternet,
+  /// `HandleControlEvent`: a 1 change room, 2 add friend, 3 anonymous check, 4 dirty-word check, 5 refresh
+  /// friends, 6 refresh the game list.
+  Control,
+  /// `HandleComponentEvent((ComponentEvent*)a)` of type `b`.
+  Event,
+  /// a routing notification `a` (1..21, `RoutingOpCompletion`'s code) on op `b`.
+  Notify,
+  /// `GetUserStatusComplete((AsyncOp*)a)`.
+  UserStatusDone,
+  /// `QueryServerGroupsDone((AsyncOp*)a)`.
+  GroupsDone,
+  /// `ConnectionClosed((AsyncOp*)a)`.
+  ConnectionClosed,
+  /// a member: 0 the current server, 1 the chat room, 2 the pending server, 3 the game room, 4 the wait op, 5
+  /// suppress idle, 6 idle, 7 have the game list, 8 want to be moderator, 9 the last server refresh.
+  Field,
 };
 
 /// The inward calls (the C++ shells' virtuals and methods).
@@ -9127,6 +10027,9 @@ struct EeWonMRow;
 /// The Rust PopupMenu.
 struct EeWonMenu;
 
+/// One model object (see the module).
+struct EeWonModel;
+
 /// The Rust MSButtonBase.
 struct EeWonMsButton;
 
@@ -9163,7 +10066,11 @@ struct EeWonRoot;
 /// `RoutingConnection`'s op list, completions and steps.
 struct EeWonRouteConn;
 
+/// The Internet lobby's logic.
+struct EeWonRouteLogic;
+
 /// A routing op, as the C++ `RoutingOp` holds it.
+/// The second field is the C++ `RoutingConnection*` it was made on (borrowed; 0 for none).
 struct EeWonRouteOp;
 
 /// The Rust ScrollArea.
@@ -9259,7 +10166,6 @@ struct EeWonWriteBuffer;
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
 
-/// The server list.
 struct EeWonServerList;
 
 /// A member handed over.
@@ -9352,6 +10258,28 @@ struct EeWonCacheEntry {
   int64_t last_access;
   const uint8_t *strings[4];
   size_t lengths[4];
+};
+
+/// The host: the C++ config's reads, its frame and its setters. Every callback that can throw catches and keeps
+/// the exception and answers false.
+struct EeWonCfgTabHost {
+  void *ctx;
+  /// A read into the frame.
+  bool (*read)(void *ctx, EeWonCfgRead kind);
+  /// `EnsureComma()`.
+  bool (*comma)(void *ctx);
+  /// `EndOfString()` (it skips whitespace).
+  bool (*end)(void *ctx);
+  /// The frame's string `slot`: its units (`mText`), their count and size.
+  const void *(*text)(void *ctx, int32_t slot, uint16_t *len, uint32_t *unit);
+  /// A value into the frame's ints.
+  void (*push)(void *ctx, int32_t value);
+  /// The setter `table << 8 | n` over the frame.
+  bool (*apply)(void *ctx, int32_t setter);
+  /// Keep a ConfigObjectException of `len` bytes of `msg`, then the frame's string `slot` narrowed (none if < 0).
+  void (*fail)(void *ctx, const uint8_t *msg, size_t len, int32_t slot);
+  /// Empty the frame.
+  void (*clear)(void *ctx);
 };
 
 /// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
@@ -10653,6 +11581,18 @@ struct EeWonMemberReady {
   bool ready;
 };
 
+/// The host: `ModelHost(op, a, b, c)`.
+using EeWonModelHost = ptrdiff_t(*)(EeWonModelOp op, ptrdiff_t a, ptrdiff_t b, ptrdiff_t c);
+
+/// A walk over a client list as the original's map iterator walked (`LobbyClientIterator`,
+/// `LobbyClientSetIterator`): the next client after the last one returned.
+struct EeWonModelCursor {
+  bool started;
+  /// the set iterator's: a client with a player is found and not yet returned
+  bool ready;
+  uint16_t last;
+};
+
 /// One paint's inputs: the kind, the state bits (`EE_WON_MSPAINT_*`), the size and the kind's arguments.
 struct EeWonMsPaint {
   EeWonMsPaintKind kind;
@@ -10884,6 +11824,13 @@ struct EeWonCoreHooks {
   long (*transform_call)(void *transform, void *message, bool send);
   /// `delete transform`
   EeWonCoreFn transform_free;
+  /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
+  void *(*new_route_op)(void *conn, int32_t ty);
+  /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
+  /// `GetUnsolicitedDerivedOp(type)` (1: the new op with one reference for the caller, or null)
+  void *(*route_virtual)(void *conn, int32_t which, void *op, uint8_t message_type);
+  /// `new HTTPConnection(NULL)`
+  void *(*new_http_conn)();
 };
 
 /// A C++ call on one object (an op, a completion or the socket).
@@ -10940,6 +11887,14 @@ struct EeWonRouteConnHooks {
   void (*server_close_hook)(void *conn);
   void (*server_kill_hook)(void *conn);
 };
+
+using EeWonRouteLogicHostFn = ptrdiff_t(*)(void *obj,
+                                           EeWonRouteLogicOp op,
+                                           ptrdiff_t a,
+                                           ptrdiff_t b,
+                                           ptrdiff_t c,
+                                           ptrdiff_t d,
+                                           ptrdiff_t e);
 
 /// A request's fields from the C++ (strings as UTF-16 LE bytes).
 struct EeWonRouteRequest {
@@ -11987,6 +12942,19 @@ void ee_won_cachemap_write(const char *path,
 /// (`EE_WON_REQHOST_CONTEXT`, the auth context's) are set after the bind.
 EeWonHostOp *ee_won_hostop_getcert();
 
+/// The handler of `table` for the instruction `key` (`len` bytes): -1 when the handler does not hold the key (the
+/// caller asks its base), 0 when it was handled, 1 when it threw (the host holds the exception).
+///
+/// # Safety
+/// `host` is valid and its callbacks do not unwind; `key` holds `len` bytes (or is NULL with 0).
+int32_t ee_won_cfg_tab_run(const EeWonCfgTabHost *host,
+                           int32_t table,
+                           const uint8_t *key,
+                           size_t len);
+
+/// Whether `table` is one of the reader's handlers, for the drivers.
+bool ee_won_cfg_tab_has(int32_t table);
+
 /// `GetCommandName`.
 const char *ee_won_chat_command_name(int32_t command);
 
@@ -12644,6 +13612,9 @@ uint32_t ee_won_eecolor_palette(uint32_t i);
 void ee_won_eecolor_set_palette(const uint32_t *colors, uint32_t n);
 
 /// A new lobby game for the C++ `game` (EELobbyGame's constructor).
+/// As `ee_won_eegame_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonEeGame *ee_won_eegame_new_model(void *game, EeWonEeGameHostFn host);
+
 EeWonEeGame *ee_won_eegame_new(void *game, EeWonEeGameHostFn host);
 
 /// Releases the slots' members, the transfer and the names (the destructor's order) and frees the object.
@@ -16446,6 +17417,9 @@ bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
 int32_t ee_won_lanlogic_direct_event(bool existed);
 
 /// A new LanLogic state for the C++ shell `logic`, calling out through `host`.
+/// As `ee_won_lan_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonLan *ee_won_lan_new_model(void *logic, EeWonLobbyHostFn host);
+
 EeWonLan *ee_won_lan_new(void *logic, EeWonLobbyHostFn host);
 
 /// # Safety
@@ -16538,6 +17512,11 @@ const EeWonLobbyCtlSlot *ee_won_lobbyctl_slot(uint32_t index);
 uint32_t ee_won_lobbyctl_slot_count();
 
 /// A new control object for the C++ `ctl` of `kind`.
+/// As `ee_won_lobbyctl_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonLobbyCtl *ee_won_lobbyctl_new_model(void *ctl,
+                                         EeWonLobbyCtlKind kind,
+                                         EeWonLobbyCtlHostFn host);
+
 EeWonLobbyCtl *ee_won_lobbyctl_new(void *ctl, EeWonLobbyCtlKind kind, EeWonLobbyCtlHostFn host);
 
 /// Releases the members (reverse member order) and frees the object.
@@ -16726,6 +17705,11 @@ const void *ee_won_lobbymap_key_text(const EeWonLobbyMap *m,
                                      size_t *count);
 
 /// A new popup object for the C++ `popup` of `kind`.
+/// As `ee_won_lobbypopup_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonLobbyPopup *ee_won_lobbypopup_new_model(void *popup,
+                                             EeWonLobbyPopupKind kind,
+                                             EeWonLobbyPopupHostFn host);
+
 EeWonLobbyPopup *ee_won_lobbypopup_new(void *popup,
                                        EeWonLobbyPopupKind kind,
                                        EeWonLobbyPopupHostFn host);
@@ -16905,6 +17889,50 @@ int32_t ee_won_model_dir_object(const uint8_t *kind,
                                 const uint8_t *data,
                                 size_t data_length,
                                 uint16_t *out_count);
+
+/// A new model object for the shell (its constructor's members); `empty` is the empty string's `GUIStringData`.
+///
+/// # Safety
+/// `shell` is the C++ object whose first member will hold the result; `host` answers the ops.
+EeWonModel *ee_won_model_new(void *shell,
+                             EeWonModelKind kind,
+                             EeWonModelHost host,
+                             void *empty);
+
+/// Frees a model object (its references given back in reverse member order, after it is gone).
+///
+/// # Safety
+/// `m` came from `ee_won_model_new` and is freed once.
+void ee_won_model_free(EeWonModel *m);
+
+/// A walk's `Rewind` (`LobbyClientIterator`, `LobbyClientSetIterator`): from the first client again.
+///
+/// # Safety
+/// `c` is a live cursor.
+void ee_won_model_cursor_reset(EeWonModelCursor *c);
+
+/// A member (see [`EeWonModelField`]).
+///
+/// # Safety
+/// `m` is live.
+ptrdiff_t ee_won_model_get(const EeWonModel *m, EeWonModelField f);
+
+/// Sets a member (see [`EeWonModelField`]).
+///
+/// # Safety
+/// `m` is live; an address is a live value.
+void ee_won_model_set(const EeWonModel *m, EeWonModelField f, ptrdiff_t v);
+
+/// A method (see [`EeWonModelCall`]); `empty` (`d`) is the empty string's data where a method resets a name.
+///
+/// # Safety
+/// `m` is live; the arguments are what each call says.
+ptrdiff_t ee_won_model_call(const EeWonModel *m,
+                            EeWonModelCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c,
+                            ptrdiff_t d);
 
 /// A new Rust MSButtonBase for the C++ `component`, its calls out through `host`.
 EeWonMsButton *ee_won_msbtn_new(void *component, EeWonGuiHostFn host);
@@ -18196,6 +19224,33 @@ void ee_won_routeconn_close_hook(const EeWonRouteConn *r);
 /// As `ee_won_routeconn_set_completion`.
 void ee_won_routeconn_kill_hook(const EeWonRouteConn *r);
 
+/// As `ee_won_routelogic_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonRouteLogic *ee_won_routelogic_new_model(void *obj, EeWonRouteLogicHostFn host);
+
+/// A new logic for the shell `obj` (the members as the constructor sets them).
+EeWonRouteLogic *ee_won_routelogic_new(void *obj, EeWonRouteLogicHostFn host);
+
+/// Frees a logic, giving back the references it holds.
+///
+/// # Safety
+/// `p` is NULL or from `ee_won_routelogic_new`, not used again.
+void ee_won_routelogic_free(EeWonRouteLogic *p);
+
+/// One of the logic's methods (`EeWonRouteLogicCall`).
+///
+/// # Safety
+/// `p` is from `ee_won_routelogic_new`; the arguments are what the call says.
+ptrdiff_t ee_won_routelogic_call(const EeWonRouteLogic *p,
+                                 EeWonRouteLogicCall call,
+                                 ptrdiff_t a,
+                                 ptrdiff_t b);
+
+/// Pushes a number to a sink an op was given (`BadUserIds`, `StatusOpMap`).
+///
+/// # Safety
+/// `sink` is the pointer the op was given.
+void ee_won_routelogic_push(void *sink, uint64_t value);
+
 /// A request's message into `sink`.
 ///
 /// # Safety
@@ -19435,6 +20490,9 @@ void ee_won_game_read_summary(const uint8_t *bytes,
                               void *context);
 
 /// A new StagingLogic state for the C++ shell `logic`, calling out through `host`.
+/// As `ee_won_staging_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonStaging *ee_won_staging_new_model(void *logic, EeWonLobbyHostFn host);
+
 EeWonStaging *ee_won_staging_new(void *logic, EeWonLobbyHostFn host);
 
 /// # Safety
@@ -20447,6 +21505,101 @@ size_t ee_won_wrap_paint(const EeWonWrapText *o,
                          const EeWonTextMeasure *m,
                          EeWonDrawOp *out,
                          size_t cap);
+
+/// A new auth context object for the C++ `AuthContext*` `ctx` with its login secret file (`len` bytes), its calls
+/// over the core table and the certificate op's maker; one reference.
+///
+/// # Safety
+/// `core` is the library's static table; `ctx` outlives the object's use of it; `secret_file` holds `len` bytes.
+const EeWonAuthCtx *ee_won_authctx_new_core(void *ctx,
+                                            const EeWonCoreHooks *core,
+                                            void *(*new_cert_op)(void *context),
+                                            const uint8_t *secret_file,
+                                            size_t len);
+
+/// A new connection object for the C++ `HTTPConnection*` `conn`, its calls over the core table.
+///
+/// # Safety
+/// `core` is the library's static table; `conn` outlives the object.
+EeWonHttpConn *ee_won_http_conn_new_core(void *conn, const EeWonCoreHooks *core);
+
+/// A new session object for the C++ `HTTPSession*` `session`, its calls over the core table.
+///
+/// # Safety
+/// As `ee_won_http_conn_new_core`.
+EeWonHttpSession *ee_won_http_session_new_core(void *session, const EeWonCoreHooks *core);
+
+/// `PerfTimer::GetCountedTime()`.
+double ee_won_perf_counted_time();
+
+/// `PerfTimer::GetElapsedTime()`.
+double ee_won_perf_elapsed_time();
+
+/// `PerfTimer::GetPercentTime()`.
+double ee_won_perf_percent_time();
+
+/// `PerfTimer::GlobalStart()`.
+void ee_won_perf_global_start();
+
+/// `PerfTimer::GlobalStop()`.
+void ee_won_perf_global_stop();
+
+/// `PerfTimer::Start()` of a timer (`named`: it has a name; `running`: its `mStarted`).
+///
+/// # Safety
+/// `running` is the timer's flag.
+void ee_won_perf_start(bool named, bool *running);
+
+/// `PerfTimer::Stop()` of a timer.
+///
+/// # Safety
+/// As `ee_won_perf_start`.
+void ee_won_perf_stop(bool named, bool *running);
+
+/// A request helper of a kind (`EE_WON_RTQ_*`) on the connection `conn` (a `RoutingConnection*`), its `count`
+/// values in the helper's parameter order (`num` a number or a buffer's presence; `data` / `len` a text's UTF-16
+/// little-endian units, a data type, a buffer's bytes, the recipients as 16-bit little-endian ids), with the
+/// completion (or null).
+///
+/// # Safety
+/// `conn` is a live connection; `values` holds `count` values whose bytes are valid for the call.
+void ee_won_routeconn_request(void *conn,
+                              int32_t kind,
+                              const EeWonAdminValue *values,
+                              size_t count,
+                              void *completion);
+
+/// A new routing op of a type (`RoutingOpType`) on the connection `conn` (borrowed: the C++ op holds its reference;
+/// the Rust op sends on it and leaves a group on it).
+EeWonRouteOp *ee_won_routeop_new_on(int32_t ty,
+                                    void *conn);
+
+/// `RoutingOp::SendRequest`'s base: the op's message (when it sends one) after the connection's length field,
+/// queued on the connection as a `SendMsgOp`; the op `cpp` added to the connection's list when it waits for a reply.
+///
+/// # Safety
+/// `op` is the live Rust op of the C++ op `cpp` (a `RoutingOp*` as its `RefCount*`).
+void ee_won_routeop_send(EeWonRouteOp *op,
+                         void *cpp);
+
+/// A new routing connection object for the C++ `conn`, on the socket's lock, its calls over the core table.
+///
+/// # Safety
+/// `core` is the library's static table; `conn` and `lock` outlive the object.
+EeWonRouteConn *ee_won_routeconn_new_core(void *conn,
+                                          const EeWonCoreHooks *core,
+                                          void *lock);
+
+/// `SmartRoutingConnection::HandleInput(input, group)`: the model's reading of a chat line (`len` `wchar_t`s), the
+/// request it makes sent on the connection `conn`; whether the line was taken. The caller holds the socket's lock.
+///
+/// # Safety
+/// `r` is the connection's model; `conn` the live connection; `text` holds `len` `wchar_t`s.
+bool ee_won_smart_handle_input(EeWonSmartRoute *r,
+                               void *conn,
+                               const void *text,
+                               size_t len,
+                               int32_t group);
 
 }  // extern "C"
 
