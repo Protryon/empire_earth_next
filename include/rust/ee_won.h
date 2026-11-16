@@ -13144,6 +13144,54 @@ void ee_won_cachemap_write_memory(int32_t version,
                                   EeWonByteSink sink,
                                   void *sink_context);
 
+/// `LoadFromRegistry`'s read: the product's value as bytes to `sink` (false when the key or value is missing, not
+/// hex, or empty: `QueryBinary` other than 0).
+///
+/// # Safety
+/// `path` is a C string or NULL; `product` holds `product_len` bytes; `sink` is valid with `context`.
+bool ee_won_cdkey_registry_read(int32_t root,
+                                const char *path,
+                                const uint8_t *product,
+                                size_t product_len,
+                                EeWonByteSink sink,
+                                void *context);
+
+/// `SaveToRegistry`'s write: the encrypted bytes as the product's value (false when the key does not open or the
+/// value is not set).
+///
+/// # Safety
+/// `path` is a C string or NULL; `product` and `data` hold their lengths.
+bool ee_won_cdkey_registry_write(int32_t root,
+                                 const char *path,
+                                 const uint8_t *product,
+                                 size_t product_len,
+                                 const uint8_t *data,
+                                 size_t data_len);
+
+/// `ClearFromRegistry`: the product's value deleted.
+///
+/// # Safety
+/// `path` is a C string or NULL; `product` holds `product_len` bytes.
+void ee_won_cdkey_registry_clear(int32_t root,
+                                 const char *path,
+                                 const uint8_t *product,
+                                 size_t product_len);
+
+/// `SaveToFile`'s write: the encrypted bytes through `PlatFOpen(path, "wb")` (false when it does not open or the
+/// write is short; the file is closed either way).
+///
+/// # Safety
+/// `path` is a C string; `data` holds `data_len` bytes.
+bool ee_won_cdkey_file_write(const char *path,
+                             const uint8_t *data,
+                             size_t data_len);
+
+/// `LoadFromFile`'s read: up to 2,048 bytes of the file to `sink` (false when it does not open).
+///
+/// # Safety
+/// `path` is a C string; `sink` is valid with `context`.
+bool ee_won_cdkey_file_read(const char *path, EeWonByteSink sink, void *context);
+
 /// A new `GetCertOp`: its auth context (`EE_WON_GETCERT_AUTH_CONTEXT`) and its server context
 /// (`EE_WON_REQHOST_CONTEXT`, the auth context's) are set after the bind.
 EeWonHostOp *ee_won_hostop_getcert();
@@ -13521,6 +13569,27 @@ void ee_won_cfg_include_path(const uint8_t *path,
 
 /// Sets the maker of a Rust op's C++ op.
 void ee_won_core_set_new_host_op(EeWonNewHostOp maker);
+
+/// `socket->AddMsgTransform(transform)` for a C++ transform: `call(transform, ByteBufferPtr*, send)` runs its
+/// `Send` or `Recv`, `free(transform)` deletes it; the socket owns it.
+///
+/// # Safety
+/// `socket` is a live `AsyncSocket*` (its `RefCount*`); `transform` lives until `free`.
+void ee_won_core_add_transform(void *socket,
+                               void *transform,
+                               long (*call)(void *object, void *message, bool send),
+                               void (*free)(void *object));
+
+/// `ServerConnectionConnectOp::RunHook` (2ac2f0): the connection's connect completion finishes the op with the
+/// connect's status while it is pending (`StaticConnectCompletion` 2ac240 / `ConnectCompletion` 2ac2d0, a
+/// `ParamCompletion` holding the op), then `ConnectAsync(*address, timeout)`.
+///
+/// # Safety
+/// `conn` is a live `ServerConnection*`, `op` the live op (its `RefCount*`), `address` its `IPAddr*`.
+void ee_won_servconn_connect_op_run(void *conn,
+                                    void *op,
+                                    const void *address,
+                                    uint32_t timeout);
 
 /// A new Rust Container for the C++ `component`, its calls out through `host`; the wheel goes to the focus child
 /// when `wheel_to_focus` (the class default).
@@ -19393,6 +19462,13 @@ bool ee_won_regkey_child(EeWonRegKey *parent,
                          const uint8_t *name,
                          size_t length);
 
+/// An op derived from `ServerRequestOp` on the base: the round 7/8 Rust op (`ee_won_reqop_*`'s constructors), taken.
+/// Its server context or address are set after the bind (`EE_WON_REQHOST_CONTEXT`, `EE_WON_REQHOST_ADDR`).
+///
+/// # Safety
+/// `op` came from a Rust op constructor and is not used after.
+EeWonHostOp *ee_won_hostop_request(EeWonReqOp *op);
+
 /// `GetDirOp(context, path, flags)` with its data types (C strings).
 ///
 /// # Safety
@@ -19458,13 +19534,6 @@ EeWonReqOp *ee_won_reqmake_create_account(const void *user,
 
 /// A routing server's group list request with its flags.
 EeWonReqOp *ee_won_reqmake_group_list(uint8_t flags);
-
-/// An op derived from `ServerRequestOp` on the base: the round 7/8 Rust op (`ee_won_reqop_*`'s constructors), taken.
-/// Its server context or address are set after the bind (`EE_WON_REQHOST_CONTEXT`, `EE_WON_REQHOST_ADDR`).
-///
-/// # Safety
-/// `op` came from a Rust op constructor and is not used after.
-EeWonHostOp *ee_won_hostop_request(EeWonReqOp *op);
 
 /// Frees an op.
 ///
