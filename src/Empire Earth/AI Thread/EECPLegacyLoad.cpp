@@ -1,10 +1,10 @@
 // New (port; the merge of main's stages 5 and 6): the readers that step over the deleted C++ classic AI's blocks of a
-// computer player in a retail file (save versions 0.232 to 0.250: the campaigns' scenarios). main deleted the
-// combat, civilization and exploration managers (and EEComputerPlayer::Load reads its own, shorter block), so a
-// scenario with a computer player read off its end and did not load. These read every field the managers' Load read
-// at those versions, in order, into nothing; the town centre tile (the build manager's) goes to the placement. The
-// combat manager's attack groups and the defence commander's aid packages are not stepped over: a file that holds
-// one fails as before (the campaigns' scenarios, saved before their game started, hold none).
+// computer player in a retail file (save versions 0.229 to 0.250: the campaigns' scenarios; the Learning Campaign's
+// are 0.231, 0.248 and 0.249 files). main deleted the combat, civilization and exploration managers (and
+// EEComputerPlayer::Load reads its own, shorter block), so a scenario with a computer player read off its end and did
+// not load. These read every field the managers' Load read at those versions, in order, into nothing, the attack
+// commander's groups (their sub groups by kind, the sub groups' units, the orders; "the return" holds one) and the
+// defence commander's aid packages included; the town centre tile (the build manager's) goes to the placement.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/FSFile.h"
@@ -49,13 +49,20 @@ bool At(unsigned long inMajor, unsigned long inMinor, unsigned long inVersion)
     return inMajor > 0 || inMinor >= inVersion;
 }
 
-// EECPILocation::Load and EECPAGTask::Load
-long SkipTask(FSFile& inFile)
+// EECPILocation::Load: tile, area serial, area type, player
+long SkipLocation(FSFile& inFile)
 {
-    long theResult = SkipTile(inFile);   // the location: tile, area serial, area type, player
+    long theResult = SkipTile(inFile);
     if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);
     if (theResult == kErrorOK) theResult = Skip<long>(inFile);
     if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);
+    return theResult;
+}
+
+// EECPILocation::Load and EECPAGTask::Load
+long SkipTask(FSFile& inFile)
+{
+    long theResult = SkipLocation(inFile);
     if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);   // the task: unit id, player id
     if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);
     if (theResult == kErrorOK) theResult = Skip<float>(inFile);           // aggression, type, mode, active, B31
@@ -114,7 +121,18 @@ long SkipDefense(FSFile& inFile, unsigned long inMajor, unsigned long inMinor)
         theResult = SkipList(inFile, [&]() {
             bool theValid = false;
             long r = inFile.Read(theValid);
-            return r == kErrorOK && theValid ? (long)kErrorFailed : r;   // an aid package: not stepped over
+            if (r != kErrorOK || !theValid)
+                return r;
+            // an aid package (EECPMilitaryAidPackage::Load from 0.212; its result was not checked): the sub group
+            // ids, the town's tile, target id, threat, town id, state, next update time, attacker id, next send time
+            r = SkipList(inFile, [&]() { return Skip<unsigned long>(inFile); });
+            if (r == kErrorOK) r = SkipTile(inFile);
+            if (r == kErrorOK) r = Skip<unsigned long>(inFile);
+            if (r == kErrorOK) r = Skip<float>(inFile);
+            if (r == kErrorOK) r = Skip<long>(inFile);
+            if (r == kErrorOK) r = Skip<long>(inFile);
+            for (int t = 0; t < 3 && r == kErrorOK; t++) r = Skip<unsigned long>(inFile);
+            return r;
         });
     if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);   // next aid time
     if (theResult == kErrorOK)
@@ -122,6 +140,123 @@ long SkipDefense(FSFile& inFile, unsigned long inMajor, unsigned long inMinor)
     if (theResult == kErrorOK && At(inMajor, inMinor, 0xd0)) theResult = Skip<unsigned long>(inFile);   // naval
     if (theResult == kErrorOK && At(inMajor, inMinor, 0xed)) theResult = Skip<unsigned long>(inFile);   // space
     if (theResult == kErrorOK && At(inMajor, inMinor, 0xf0)) theResult = Skip<unsigned long>(inFile);   // special
+    return theResult;
+}
+
+// EECPAttackSubGroupUnit::Load (every unit kind's: no kind overrides it): its location, unit and target ids,
+// retarget time, importance, important, needs orders, out of fight, kind, F6C, aggression, courage, F68, escort id,
+// state, post attack mode
+long SkipSubGroupUnit(FSFile& inFile)
+{
+    long theResult = SkipLocation(inFile);
+    if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<bool>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<bool>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<bool>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<long>(inFile);
+    for (int f = 0; f < 4 && theResult == kErrorOK; f++) theResult = Skip<float>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<long>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<long>(inFile);
+    return theResult;
+}
+
+// EECPAttackSubGroup::Load: the units (kind, unit; as the original, a unit's read error is not reported: the reads
+// after it fail instead), the path (tile, sector kind), the area, next waypoint, rally point, task, the request id and
+// the plain fields
+long SkipSubGroup(FSFile& inFile)
+{
+    unsigned long theCount = 0;
+    if (inFile.Read(theCount) == kErrorOK) {
+        for (unsigned long i = 0; i < theCount; i++) {
+            long theKind = 0;
+            if (inFile.Read(theKind) == kErrorOK)
+                SkipSubGroupUnit(inFile);
+        }
+    }
+    long theResult = SkipList(inFile, [&]() {
+        long r = SkipTile(inFile);
+        return r == kErrorOK ? Skip<long>(inFile) : r;
+    });
+    for (int e = 0; e < 4 && theResult == kErrorOK; e++) theResult = Skip<long>(inFile);   // the area's edges
+    if (theResult == kErrorOK) theResult = SkipLocation(inFile);
+    if (theResult == kErrorOK) theResult = SkipLocation(inFile);
+    if (theResult == kErrorOK) theResult = SkipTask(inFile);
+    if (theResult == kErrorOK) theResult = Skip<long>(inFile);            // the request id, scan range, aggression
+    if (theResult == kErrorOK) theResult = Skip<long>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<float>(inFile);
+    for (int t = 0; t < 8 && theResult == kErrorOK; t++)                  // id, the times and counters (U1B0, U1B4, U1BC)
+        theResult = Skip<unsigned long>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<long>(inFile);            // splits, state, kind
+    if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<long>(inFile);
+    for (int b = 0; b < 4 && theResult == kErrorOK; b++) theResult = Skip<bool>(inFile);   // B1E0-B1E2, out of fight
+    if (theResult == kErrorOK) theResult = Skip<long>(inFile);            // mission, split kind
+    if (theResult == kErrorOK) theResult = Skip<long>(inFile);
+    return theResult;
+}
+
+// EECPASGLand::Load's own part (from 0.227): pickup and unload locations, transport id, transport stage, a flag, the
+// embark and landing tiles, the avoided tiles (tile, time)
+long SkipLandSubGroup(FSFile& inFile)
+{
+    long theResult = SkipLocation(inFile);
+    if (theResult == kErrorOK) theResult = SkipLocation(inFile);
+    if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<long>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<bool>(inFile);
+    if (theResult == kErrorOK) theResult = SkipTile(inFile);
+    if (theResult == kErrorOK) theResult = SkipTile(inFile);
+    if (theResult == kErrorOK)
+        theResult = SkipList(inFile, [&]() {
+            long r = SkipTile(inFile);
+            return r == kErrorOK ? Skip<unsigned long>(inFile) : r;
+        });
+    return theResult;
+}
+
+// EECPAttackGroup::Load: the task, the sub groups by kind (EECPASGLand and the helicopter: the land part; the sea,
+// air, submarine, spaceship and space fighter: the base only; the three transports: the base, then the transport's
+// land id and cargo stage), the orders, id, continent, finished
+long SkipAttackGroup(FSFile& inFile)
+{
+    long theResult = SkipTask(inFile);
+    if (theResult == kErrorOK)
+        theResult = SkipList(inFile, [&]() {
+            long theKind = 0;
+            long r = inFile.Read(theKind);
+            if (r != kErrorOK)
+                return r;
+            switch (theKind) {
+            case 0: case 5: case 8:   // land, helicopter
+                r = SkipSubGroup(inFile);
+                return r == kErrorOK ? SkipLandSubGroup(inFile) : r;
+            case 1: case 7: case 2: case 6: case 9: case 11:   // sea, air, submarine, spaceship, space fighter
+                return SkipSubGroup(inFile);
+            case 3: case 4: case 10:   // the sea, air and space transports
+                r = SkipSubGroup(inFile);
+                if (r == kErrorOK) r = Skip<unsigned long>(inFile);
+                return r == kErrorOK ? Skip<long>(inFile) : r;
+            default:   // no sub group of that kind (the original dereferenced a null one)
+                return (long)kErrorFailed;
+            }
+        });
+    if (theResult == kErrorOK)
+        theResult = SkipList(inFile, [&]() {   // EECPAGOrder::Load: location, sub group ids, unit id, L28, type, state, active, split
+            long r = SkipLocation(inFile);
+            for (int f = 0; f < 3 && r == kErrorOK; f++) r = Skip<unsigned long>(inFile);
+            if (r == kErrorOK) r = Skip<long>(inFile);
+            if (r == kErrorOK) r = Skip<long>(inFile);
+            if (r == kErrorOK) r = Skip<unsigned long>(inFile);
+            if (r == kErrorOK) r = Skip<bool>(inFile);
+            return r == kErrorOK ? Skip<long>(inFile) : r;
+        });
+    if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<unsigned short>(inFile);
+    if (theResult == kErrorOK) theResult = Skip<bool>(inFile);
     return theResult;
 }
 
@@ -145,13 +280,9 @@ long EECPSkipLegacyCombatManager(FSFile& inFile, unsigned long inMajor, unsigned
     if (!At(inMajor, inMinor, 0xe4))
         return kErrorFailed;
     long theResult = SkipPersonnel(inFile, inMajor, inMinor);
-    if (theResult == kErrorOK) {   // the attack commander: its groups (none stepped over), L28
-        unsigned long theGroups = 0;
-        theResult = inFile.Read(theGroups);
-        if (theResult == kErrorOK && theGroups != 0)
-            theResult = kErrorFailed;
-        if (theResult == kErrorOK) theResult = Skip<long>(inFile);
-    }
+    if (theResult == kErrorOK)   // the attack commander (EECPAttackCommander::Load): its groups, L28
+        theResult = SkipList(inFile, [&]() { return SkipAttackGroup(inFile); });
+    if (theResult == kErrorOK) theResult = Skip<long>(inFile);
     if (theResult == kErrorOK) theResult = SkipDefense(inFile, inMajor, inMinor);
     if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);   // next group and sub group ids
     if (theResult == kErrorOK) theResult = Skip<unsigned long>(inFile);

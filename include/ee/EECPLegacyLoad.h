@@ -1,5 +1,5 @@
 // New (port): the readers that step over the deleted C++ classic AI's manager blocks of a computer player in a retail
-// file (save versions 0.232 to 0.250; src/Empire Earth/AI Thread/EECPLegacyLoad.cpp). Requires lle/FSFile.h,
+// file (save versions 0.229 to 0.250; src/Empire Earth/AI Thread/EECPLegacyLoad.cpp). Requires lle/FSFile.h,
 // lle/U2DPoint.h.
 #ifndef EE_EECPLEGACYLOAD_H
 #define EE_EECPLEGACYLOAD_H
