@@ -1313,7 +1313,6 @@ bool ImageConfig::Virtual24(const std::string& inInstruction)
 
 // R6 WON round 40: ContainerConfig's instructions and its layout handlers as they were, copied verbatim from de9ba76a
 // by build/r40/gen_cfgcont.py (HandleLayout, HandleNewLayoutPoint and HandleNoOverlapLayout stay C++: the world's)
-// FUNCTION: WON 0x00788840
 // Reads a comma-separated list of components and adds each to the container
 bool ContainerConfig::HandleAdd()
 {
@@ -1330,7 +1329,6 @@ bool ContainerConfig::HandleAdd()
 
 	return true;
 }
-// FUNCTION: WON 0x00788870
 // Reads a comma-separated list of layout points and adds each to the container
 bool ContainerConfig::HandleAddLayoutPoint()
 {
@@ -1347,7 +1345,6 @@ bool ContainerConfig::HandleAddLayoutPoint()
 
 	return true;
 }
-// FUNCTION: WON 0x00789c80
 // Handles the container config instructions (ADD, LAYOUT and its variants, layout ids, tab focus,
 // child-only input); other instructions go to the base config
 bool ContainerConfig::Virtual24(const std::string& theInstruction)
@@ -1412,7 +1409,6 @@ bool ContainerConfig::Virtual24(const std::string& theInstruction)
 
 	return true;
 }
-// FUNCTION: WON 0x00788e20
 // Reads a component list into a layout that gives them the same width and/or height
 bool ContainerConfig::HandleSameSizeLayout(bool sameWidth, bool sameHeight)
 {	
@@ -1431,7 +1427,6 @@ bool ContainerConfig::HandleSameSizeLayout(bool sameWidth, bool sameHeight)
 	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
 	return true;
 }
-// FUNCTION: WON 0x00788f30
 // Reads a reference component and a component list into a layout that centres them on it
 bool ContainerConfig::HandleCenterLayout(bool horz, bool vert)
 {
@@ -1447,7 +1442,6 @@ bool ContainerConfig::HandleCenterLayout(bool horz, bool vert)
 	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
 	return true;
 }
-// FUNCTION: WON 0x00789080
 // Reads a component, a padding and a component list into a clear-right layout
 bool ContainerConfig::HandleClearRightLayout()
 {
@@ -1468,7 +1462,6 @@ bool ContainerConfig::HandleClearRightLayout()
 	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
 	return true;
 }
-// FUNCTION: WON 0x00789280
 // Reads a bounding component, two paddings and a component list into a layout that spaces them evenly
 bool ContainerConfig::HandleSpaceEvenlyLayout(bool horz)
 {
@@ -1490,7 +1483,6 @@ bool ContainerConfig::HandleSpaceEvenlyLayout(bool horz)
 	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
 	return true;
 }
-// FUNCTION: WON 0x00789860
 // Reads a size-at-least layout (target, paddings, components); it is added under the default layout id
 bool ContainerConfig::HandleSizeAtLeastLayout()
 {

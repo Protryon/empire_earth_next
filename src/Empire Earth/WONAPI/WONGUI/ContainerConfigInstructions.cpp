@@ -21,7 +21,6 @@
 // The LAYOUT rule's instruction names and its offsets' rule are ee_won's guilayout module
 // (rust/crates/ee_won/src/guilayout.rs).
 namespace WONAPI {
-// FUNCTION: WON 0x007888b0
 // Reads a layout rule (target, instruction names, reference, up to four offsets) and adds it to the container;
 // chain and repeat forms reuse the previous rule's instructions and reference
 bool ContainerConfig::HandleLayout(bool chain, bool repeat)
@@ -97,7 +96,6 @@ bool ContainerConfig::HandleLayout(bool chain, bool repeat)
 
 	return true;
 }
-// FUNCTION: WON 0x007894b0
 // Reads a no-overlap layout (target, sides, reference, paddings, more components); it is added
 // under the default layout id, not the current one
 bool ContainerConfig::HandleNoOverlapLayout()
