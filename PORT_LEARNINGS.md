@@ -24828,9 +24828,32 @@ counted as savings): `build/wn27/measure.sh`.
 - **The Bash tool rewrites backslashes in heredocs** (`\\` became `\`, `\0` a NUL byte in a Rust test): scripts
   with backslashes go through files written whole; and a Python edit that opens a file `'wb'` and then fails writing
   (a `str` for bytes) leaves it empty: tools/xbuild.py was truncated once and restored from HEAD.
-- **Mutations** (each driver must fail): see the table.
 - **Behaviour.** WONDebug's dump (only with a stack file name, which nothing sets); otherwise none on defined paths.
 - **Reach.** RegKey: the LAN lobby's UseLocalIP (LobbyConfig) and the CD key store (AuthContext); WONFile and
   FileReader/Writer: the lobby's saved settings and pictures, the HTTP cache; StringParser: the lobby's config files
   and chat commands; CRC16 / MD5: the lobby's saved data and hashes. These run in the LAN game. RegAuth: nothing (WON
   SDK, no caller). ServerContext: the Internet path's request ops. DNSTestOp: the LAN lobby's host lookup.
+- **Mutations** (7, each its own driver or test run, the file restored after): a value of the wrong type read as
+  missing (won_regkey_test), NormalizePath keeping the directory cache (won_path_test), the community not written
+  and the default port 0 (won_regauth_test), a nested list without its `)` accepted (won_parse_test), wide strings
+  read a byte a unit (won_file_test), no stack file name kept (debug.rs's test): all caught.
+- **Net C++** (markers stripped on both sides, `build/wn27/measure.sh` against 234be381): 2bf89ca4 before 4,728
+  lines, after 3,120: net -1,608 (raw, markers counted: +382 / -2,174). Units deleted (14): WONDebug, RegKey,
+  WONFile, FileReader, FileReaderWideStrings, FileWriter, StringParser, StringParserCollections, StringParserLists,
+  CRC16, MD5, DNSTestOp, ServerContext, RegAuth.
+- **The markers.** The lead's first instruction was to strip before merging rust; I did (a commit of its own), then
+  merged rust 03ab5fe8: every content conflict (WONRouting.h, the four WONLobby headers, AuthContext.cpp,
+  RoutingOp.cpp, SmartRoutingConnection.cpp) was checked to be marker-only on rust's side (the merge base stripped
+  equals rust's file) and took this branch's side; the units this branch deletes stayed deleted. `strip_markers.py
+  --check` reports nothing on the merged tree.
+
+### Gates
+
+| Gate | per commit | Merged with rust (90cc61e3, rust 03ab5fe8) |
+|---|---|---|
+| `build.py -j 3 --sim` | 2bf89ca4: 0 / 0 | 0 / 0 |
+| oracle against the main checkout's `ref` | 2bf89ca4: seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | clippy's ptr_eq and rustfmt fixed in 367a3379 | PASS (the first merge, with rust c80a1b00: ee_fs's `golden_spec_replays` once under load) |
+| `build.py --test-profile windowed-software` | (with the merge) | 0 / 0 |
+| `xbuild.py wontest` | the programs linking the changed units: exit 0 | all 128 programs exit 0 |
+| `lan_game.py` (harness lock) | (with the merge) | `RESULT PASS lan-game PT host=3639 joiner=3639` |
