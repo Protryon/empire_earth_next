@@ -8,16 +8,16 @@ digest blank
   selection
   paint area 0,0,0,0
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=3544 dc350d2af458c0e2
-  chunk 3 result=0 bytes=28 671c80a12d36f7b1
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=3544 c387bfaced59ead1
+  chunk 3 result=0 bytes=28 bc10b5f16f761626
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=9611 bc35ecdec2b87021
+  chunk 7 result=0 bytes=9628 e21d7a26d342d0db
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 8 tab 2
 step 9 terrain 20 32 45 38 40             # ice
 step 10 terrain 22 42 50 47 46             # dark cracked mud
@@ -65,16 +65,16 @@ digest terrain
   selection
   paint area 0,0,0,0
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=3671 0ebcadd52b06c731
-  chunk 3 result=0 bytes=28 671c80a12d36f7b1
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=3671 cb739f5bb658fb08
+  chunk 3 result=0 bytes=28 bc10b5f16f761626
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=9616 1d9ebed767e753e0
+  chunk 7 result=0 bytes=9633 1e643e6f21b15852
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 14 tab 1
 step 15 elevation raise 3 34 52 38 48
 step 16 elevation hills 2 48 52 52 48
@@ -121,16 +121,16 @@ digest elevation
   selection
   paint area 0,0,0,0
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=4036 3b7cce10fdfc9734
-  chunk 3 result=0 bytes=28 671c80a12d36f7b1
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=4036 8a8bd1d64278c5f3
+  chunk 3 result=0 bytes=28 bc10b5f16f761626
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=9616 1d9ebed767e753e0
+  chunk 7 result=0 bytes=9633 1e643e6f21b15852
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 19 tab 3
 step 20 place 1 32 40.5 40.5 0             # citizen
 step 21 place 1 32 41.5 40.5 1.5
@@ -184,16 +184,16 @@ digest place
   selection
   paint area 0,0,0,0
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=4036 3b7cce10fdfc9734
-  chunk 3 result=0 bytes=28 671c80a12d36f7b1
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=4036 8a8bd1d64278c5f3
+  chunk 3 result=0 bytes=28 bc10b5f16f761626
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=9653 cc268f79ee3414ba
+  chunk 7 result=0 bytes=9670 7147bd125e067245
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 26 select @40,40
 step 27 add @41,40
 step 28 rotate 0.75
@@ -244,16 +244,16 @@ digest rotate
   selection 16777216 16777217
   paint area 0,0,0,0
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=4036 3b7cce10fdfc9734
-  chunk 3 result=0 bytes=28 671c80a12d36f7b1
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=4036 8a8bd1d64278c5f3
+  chunk 3 result=0 bytes=28 bc10b5f16f761626
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=9653 cc268f79ee3414ba
+  chunk 7 result=0 bytes=9670 7147bd125e067245
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 30 toggle @41,40
 step 31 delete 1 group
 step 32 digest delete
@@ -302,16 +302,16 @@ digest delete
   selection
   paint area 0,0,0,0
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=4036 3b7cce10fdfc9734
-  chunk 3 result=0 bytes=28 671c80a12d36f7b1
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=4036 8a8bd1d64278c5f3
+  chunk 3 result=0 bytes=28 bc10b5f16f761626
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=9645 f9f57958622cdb8d
+  chunk 7 result=0 bytes=9663 c9ac9acd28ad2394
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 33 pickup @44,38
 step 34 putdown 39 43 2.0
 step 35 digest move
@@ -360,16 +360,16 @@ digest move
   selection
   paint area 0,0,0,0
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=4036 3b7cce10fdfc9734
-  chunk 3 result=0 bytes=28 671c80a12d36f7b1
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=4036 8a8bd1d64278c5f3
+  chunk 3 result=0 bytes=28 bc10b5f16f761626
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=9646 e8df6258ee3c9096
+  chunk 7 result=0 bytes=9664 310aab96ef5c395f
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 36 delete @46,34
 step 37 wall 1 3085 33 44 33 38            # palisade
 step 38 gate 1 3087 33 41 2                # along the wall (direction 2: y)
@@ -425,16 +425,16 @@ digest wall
   selection
   paint area 0,0,0,0
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=4036 3b7cce10fdfc9734
-  chunk 3 result=0 bytes=28 671c80a12d36f7b1
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=4036 8a8bd1d64278c5f3
+  chunk 3 result=0 bytes=28 bc10b5f16f761626
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=9772 cf340f958fcdd72b
+  chunk 7 result=0 bytes=9789 2d815915c512d96d
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 40 tab 2
 step 41 bulldoze 30 36 33 33
 step 42 digest bulldoze
@@ -473,16 +473,16 @@ digest bulldoze
   selection
   paint area 0,0,0,0
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=4036 3b7cce10fdfc9734
-  chunk 3 result=0 bytes=28 671c80a12d36f7b1
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=4036 8a8bd1d64278c5f3
+  chunk 3 result=0 bytes=28 bc10b5f16f761626
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=9826 baeb2f35e7c161a1
+  chunk 7 result=0 bytes=9843 fd5ecbc040074b7f
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 43 area 35 36 41 44
 step 44 digest area
 digest area
@@ -520,30 +520,30 @@ digest area
   selection
   paint area 35,36,41,44
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=4036 3b7cce10fdfc9734
-  chunk 3 result=0 bytes=28 671c80a12d36f7b1
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=4036 8a8bd1d64278c5f3
+  chunk 3 result=0 bytes=28 bc10b5f16f761626
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=9826 baeb2f35e7c161a1
+  chunk 7 result=0 bytes=9843 fd5ecbc040074b7f
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 45 quicksave gate
 step 46 savefile gate
 savefile gate
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=4036 3b7cce10fdfc9734
-  chunk 3 result=0 bytes=28 671c80a12d36f7b1
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=4036 8a8bd1d64278c5f3
+  chunk 3 result=0 bytes=28 bc10b5f16f761626
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=9826 baeb2f35e7c161a1
+  chunk 7 result=0 bytes=9843 fd5ecbc040074b7f
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
   rest 0
 step 47 random 0 0
 step 48 digest random
@@ -876,16 +876,16 @@ digest random
   selection
   paint area 35,36,41,44
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=29833 7e4ce3c56322507e
-  chunk 3 result=0 bytes=28 2405de4f601a8cc6
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=29833 141c351b550405a7
+  chunk 3 result=0 bytes=28 78be625451ecd3f5
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=29774 0284b18ab1144adc
+  chunk 7 result=0 bytes=29804 60aa48b47ab1a28b
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 50 tab 0
 step 51 elevfile ridge 64 48 40 4 12 150   # width height, water cutoff and depth, land height and cutoff
   elevation file ridge listed
@@ -898,16 +898,16 @@ digest elevation-file
   selection
   paint area 35,36,41,44
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=9166 61214f198c53a22b
-  chunk 3 result=0 bytes=28 e4823ff383b9ee4b
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=9166 9e45efcf9b8aa014
+  chunk 3 result=0 bytes=28 60240e839d800bf4
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=15778 7b46383a80f183d4
+  chunk 7 result=0 bytes=15806 cae7077b0265a62d
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 54 elevfile -
 step 55 tab 3
 step 56 ghost 1 37 38 42 0                 # house: snapped to its tiles
@@ -943,16 +943,16 @@ digest ghost-place
   selection 16777238
   paint area 35,36,41,44
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=9166 61214f198c53a22b
-  chunk 3 result=0 bytes=28 e4823ff383b9ee4b
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=9166 9e45efcf9b8aa014
+  chunk 3 result=0 bytes=28 60240e839d800bf4
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=15814 9d9eb0ac159538c0
+  chunk 7 result=0 bytes=15842 3d67f78e45446fc5
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 67 pickup @36,36                      # the clubman
 step 68 ghostat 40 46
   ghosts 20@40,46+
@@ -976,16 +976,16 @@ digest drop
   selection 16777238
   paint area 35,36,41,44
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=9166 61214f198c53a22b
-  chunk 3 result=0 bytes=28 e4823ff383b9ee4b
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=9166 9e45efcf9b8aa014
+  chunk 3 result=0 bytes=28 60240e839d800bf4
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=15815 99fef390a7abb6cb
+  chunk 7 result=0 bytes=15843 aec0bd938a027693
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 74 pickup @38,42                      # the house, then the move cancelled
 step 75 cancelmove
 step 76 digest cancel
@@ -1001,16 +1001,16 @@ digest cancel
   selection 16777238
   paint area 35,36,41,44
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=9166 61214f198c53a22b
-  chunk 3 result=0 bytes=28 e4823ff383b9ee4b
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=9166 9e45efcf9b8aa014
+  chunk 3 result=0 bytes=28 60240e839d800bf4
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=15815 99fef390a7abb6cb
+  chunk 7 result=0 bytes=15843 aec0bd938a027693
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 78 check 0x12 0                       # UI shown: the framed view
 step 79 view
   view 225,0,1024,606 hidden=0
@@ -1021,16 +1021,16 @@ step 82 click quicksave
 step 83 editorsave
 editorsave
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 c31a106f43d230c3
-  chunk 4 result=0 bytes=9166 61214f198c53a22b
-  chunk 3 result=0 bytes=28 e4823ff383b9ee4b
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 5b4377cb66173d48
+  chunk 4 result=0 bytes=9166 9e45efcf9b8aa014
+  chunk 3 result=0 bytes=28 60240e839d800bf4
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=15815 99fef390a7abb6cb
+  chunk 7 result=0 bytes=15843 aec0bd938a027693
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
   rest 0
 step 86 tab 4
 step 87 view
@@ -13418,16 +13418,16 @@ digest mapseed
   selection
   paint area 7,9,7,9
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 93de3bb20e218862
-  chunk 4 result=0 bytes=20219 7a5f0b40f0759e21
-  chunk 3 result=0 bytes=28 2cd79ce8453fa701
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 892a4e9e293709e9
+  chunk 4 result=0 bytes=20219 6ee470868b1a9890
+  chunk 3 result=0 bytes=28 d6d6ad898881484a
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=14738 4e12f043dc6ed3e6
+  chunk 7 result=0 bytes=14766 e93f31af35fe7b37
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 1386 radio 0x6e
 step 1387 form 0 999 1
   c12 UITextLabel id=0x66 ix=12 g=1 r=130,616,204,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Width'
@@ -13516,16 +13516,16 @@ digest mapblank
   selection
   paint area 7,9,7,9
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 f016d0d0bae0457a
-  chunk 4 result=0 bytes=5965 f4075a310a0a2a18
-  chunk 3 result=0 bytes=28 fb925ea025315919
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 6033abaf011667ed
+  chunk 4 result=0 bytes=5965 42006131c6bd2a25
+  chunk 3 result=0 bytes=28 1da6737918c68c56
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=10064 4df654db5ce94952
+  chunk 7 result=0 bytes=10091 a628f7d7897e4315
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 1402 radio 0x6f
 step 1403 buttonup 0x65
 step 1404 seed
@@ -13915,16 +13915,16 @@ digest maprandom
   selection
   paint area 7,9,7,9
   chunk 1 result=0 (differs by run)
-  chunk 2 result=0 bytes=20 e948f0193364b71f
-  chunk 4 result=0 bytes=25482 8e18cdbfc745d2cd
-  chunk 3 result=0 bytes=28 a5f3eecafd3b34c6
-  chunk 6 result=0 bytes=42 c7923714addb95ff
-  chunk 10 result=0 bytes=28 37d14bc14d50aba3
+  chunk 2 result=0 bytes=20 67a7aa7eec205564
+  chunk 4 result=0 bytes=25482 4863b63b87307c36
+  chunk 3 result=0 bytes=28 430d32e7d73a1889
+  chunk 6 result=0 bytes=42 5be1830867d94f68
+  chunk 10 result=0 bytes=28 638363893ddab1c8
   chunk 12 result=0 (differs by run)
   chunk 5 result=0 (differs by run)
-  chunk 7 result=0 bytes=12946 2427dd702a228aae
+  chunk 7 result=0 bytes=12974 e2ce5284a7e20c4d
   chunk 8 result=0 (differs by run)
-  chunk 11 result=0 bytes=28 55a48fdf251932d2
+  chunk 11 result=0 bytes=28 45b01f6b66122a99
 step 1407 tab 3
 step 1408 tab 0
 step 1409 form 0 999 1
