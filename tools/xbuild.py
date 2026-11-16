@@ -77,7 +77,7 @@ class Target:
 
     @property
     def posix(self):
-        return self.os in ("linux", "macos")
+        return self.os in ("linux", "macos", "android")
 
     @property
     def exe_suffix(self):
@@ -103,6 +103,8 @@ class Target:
     def clang(self, cxx=True):
         if self.os == "windows":
             return str(ee.CLANG)
+        if self.os == "android":
+            return str(NDK / "bin" / ("clang++.exe" if cxx else "clang.exe"))
         env = os.environ.get("CXX" if cxx else "CC")
         if env:
             return env
@@ -118,6 +120,8 @@ class Target:
             if root:
                 f += [f"--sysroot={root}"]
             return f
+        if self.os == "android":
+            return [f"--target=aarch64-linux-android{ANDROID_API}", f"--sysroot={NDK / 'sysroot'}", "-fPIC"]
         if self.os == "macos":
             arch = "arm64" if self.arch == "arm64" else "x86_64"
             f = ["-arch", arch, "-mmacosx-version-min=" + ("11.0" if arch == "arm64" else "10.15")]
@@ -142,6 +146,8 @@ class Target:
         """'' when this machine can build for the target, else why not."""
         if self.os == "windows":
             return "" if IS_WINDOWS else "Windows builds run on Windows only"
+        if self.os == "android":
+            return "" if (NDK / "bin" / "clang.exe").exists() else f"no NDK at {NDK}"
         if self.os == "macos" and not IS_MACOS:
             return "macOS builds need the Xcode SDK: they run on macOS (CI: macos-latest)"
         if self.os == "linux" and not IS_LINUX and not (TC / "sysroot" / "debian_bullseye_amd64").exists():
@@ -159,7 +165,9 @@ def host_target_name():
     return f"linux-{arch}"
 
 
-TARGETS = ["windows-x86_64", "linux-x86_64", "macos-arm64", "macos-x86_64"]
+TARGETS = ["windows-x86_64", "linux-x86_64", "macos-arm64", "macos-x86_64", "android-arm64"]
+NDK = TC / "android-ndk-r27c" / "toolchains" / "llvm" / "prebuilt" / "windows-x86_64"   # tools/fetch_android.py (todo)
+ANDROID_API = 26
 
 
 def run(cmd, env=None, cwd=None, quiet=False):
@@ -442,7 +450,7 @@ def cmake_exe():
 
 
 def ninja_exe():
-    for c in (os.environ.get("EE_NINJA"), shutil.which("ninja"),
+    for c in (os.environ.get("EE_NINJA"), shutil.which("ninja"), str(TC / "pytools" / "bin" / "ninja.exe"),
               os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\WinGet\Links\ninja.exe")):
         if c and pathlib.Path(c).exists():
             return c
@@ -506,6 +514,10 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
                  "-DSDL_PIPEWIRE=OFF", "-DSDL_PULSEAUDIO=OFF", "-DSDL_ALSA=OFF", "-DSDL_JACK=OFF",
                  "-DSDL_SNDIO=OFF", "-DSDL_DBUS=OFF", "-DSDL_IBUS=OFF", "-DSDL_LIBUDEV=OFF",
                  "-DSDL_KMSDRM=OFF", "-DSDL_OPENGL=ON", "-DSDL_VULKAN=ON"]
+    elif t.os == "android":
+        args += [f"-DCMAKE_TOOLCHAIN_FILE={(NDK.parents[3] / 'build' / 'cmake' / 'android.toolchain.cmake').as_posix()}",
+                 "-DANDROID_ABI=arm64-v8a", f"-DANDROID_PLATFORM=android-{ANDROID_API}", "-DANDROID_STL=c++_static",
+                 "-DSDL_OPENGLES=ON", "-DSDL_VULKAN=ON"]
     elif t.os == "macos":
         args += [f"-DCMAKE_OSX_ARCHITECTURES={'arm64' if t.arch == 'arm64' else 'x86_64'}",
                  "-DCMAKE_OSX_DEPLOYMENT_TARGET=" + ("11.0" if t.arch == "arm64" else "10.15")]
@@ -532,6 +544,9 @@ def sdl_libs(t):
             sys.exit(f"{lib} is missing: python -I tools/xbuild.py sdl3 --target {t.name}")
     if t.os == "linux":
         return [lib, "-ldl", "-lm", "-lpthread", "-lrt"]
+    if t.os == "android":
+        # whole archive: SDL's JNI entry points (SDLActivity's native methods) are referenced only from Java
+        return ["-Wl,--whole-archive", lib, "-Wl,--no-whole-archive", "-llog", "-landroid", "-lGLESv2", "-lEGL", "-ldl", "-lm"]
     return [lib, "-framework", "Cocoa", "-framework", "IOKit", "-framework", "CoreVideo", "-framework", "Metal",
             "-framework", "QuartzCore", "-framework", "Carbon", "-framework", "ForceFeedback",
             "-framework", "GameController", "-framework", "CoreHaptics", "-framework", "UniformTypeIdentifiers",
@@ -541,7 +556,7 @@ def sdl_libs(t):
 
 def wgpu_dir(t):
     name = {"windows-x86_64": "x86_64", "linux-x86_64": "linux-x86_64", "macos-arm64": "macos-aarch64",
-            "macos-x86_64": "macos-x86_64"}[t.name]
+            "macos-x86_64": "macos-x86_64", "android-arm64": "android-aarch64"}[t.name]
     d = TC / "wgpu" / name
     lib = d / "lib" / ("wgpu_native.lib" if t.os == "windows" else "libwgpu_native.a")
     if not lib.exists():
@@ -657,8 +672,9 @@ def cmd_census(a):
     inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
            ROOT / "src" / "ThirdParty" / "stb",
            *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
-    if (TC / "wgpu" / ("linux-x86_64" if t.os == "linux" else "macos-aarch64") / "include").exists():
-        inc.append(TC / "wgpu" / ("linux-x86_64" if t.os == "linux" else "macos-aarch64") / "include")
+    wgpu_inc = TC / "wgpu" / {"linux": "linux-x86_64", "android": "x86_64"}.get(t.os, "macos-aarch64") / "include"
+    if wgpu_inc.exists():   # android: the Windows pin's headers (the C API is the same on every target)
+        inc.append(wgpu_inc)
     if (TC / "src" / f"SDL3-{SDL_VERSION}" / "include").exists():   # the window layer (src/Platform/SDL)
         inc.append(TC / "src" / f"SDL3-{SDL_VERSION}" / "include")
     if (TC / "fonts").exists():   # the built-in fonts for compilers without #embed
@@ -960,6 +976,8 @@ def cmd_game(a):
     for s in platform_sources(t):
         if pathlib.Path(s).resolve() not in have:
             jobs.append(("platform", s, ""))
+    if t.os == "android":   # SDL_main entry, data root and the JNI input bridge of the touch-controls overlay
+        jobs.append(("platform", ROOT / "src" / "Platform" / "SDL" / "PlatAndroid.cpp", ""))
     # the image libraries' libjpeg is the engine's (as build.py links it); the image units go into an archive
     jobs = [j for j in jobs if not (j[0] == "exeimg" and units.rel_src(j[1]).parts[1] == "libjpeg")]
     inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
@@ -1005,8 +1023,13 @@ def cmd_game(a):
     libs = [archive, *sdl_libs(t), wlib]
     if t.os == "linux":
         libs += ["-ldl", "-lm", "-lpthread"]
+    elif t.os == "android":
+        libs += ["-llog", "-landroid", "-ldl", "-lm"]
     else:
         libs += ["-framework", "Metal", "-framework", "QuartzCore", "-framework", "Foundation"]
+    if t.os == "android":   # a shared library the SDL activity loads (libmain.so), libc++ linked in
+        exe = out / "libmain.so"
+        libs = ["-shared", "-static-libstdc++", "-Wl,-z,max-page-size=16384", *libs]
     run([t.clang(), *t.link_flags(), *san, "-o", exe, f"@{rsp}", *libs])
     print(f"built {exe} ({exe.stat().st_size // 1024} KB) in {time.time() - t0:.0f} s")
     # ee-sim: the same exe under the name that starts the headless simulation (EE-SIM.exe's driver, EESim.cpp; the

@@ -270,6 +270,11 @@ static unsigned long PIMGetType()
 // Returns whether the mixer works: activates and deactivates it once
 static bool PIMIsValid()
 {
+#ifdef __ANDROID__
+    // port (Android): opening an AAudio stream and closing it at once races its callback thread (SIGABRT, "pure
+    // virtual function called"); the null backend always opens, so the mixer is always usable
+    return true;
+#endif
     if (SPIMActivateMixer() != kSPIMOK)
         return false;
     SPIMDeactivateMixer();
@@ -286,6 +291,9 @@ extern "C" long SPIMActivateMixer()
     ma_backend theBackends[] = { ma_backend_wasapi, ma_backend_dsound, ma_backend_winmm, ma_backend_null };
 #elif defined(__APPLE__)
     ma_backend theBackends[] = { ma_backend_coreaudio, ma_backend_null };
+#elif defined(__ANDROID__)
+    // port (Android): without this the Linux list below ended on the null backend: no sound at all
+    ma_backend theBackends[] = { ma_backend_aaudio, ma_backend_opensl, ma_backend_null };
 #else
     ma_backend theBackends[] = { ma_backend_pulseaudio, ma_backend_alsa, ma_backend_null };
 #endif
@@ -321,8 +329,10 @@ extern "C" long SPIMActivateMixer()
         if (ma_device_init(&gContext, &theConfig, &gDevice) == MA_SUCCESS) {
             if (ma_device_start(&gDevice) == MA_SUCCESS)
                 theOpen = true;
-            else
+            else {
+                ma_device_stop(&gDevice);
                 ma_device_uninit(&gDevice);
+            }
         }
         if (!theOpen)
             ma_context_uninit(&gContext);
@@ -355,6 +365,7 @@ extern "C" long SPIMDeactivateMixer()
     if (!gActive)
         return kSPIMOK;
     SPIMDestroyChannels();
+    ma_device_stop(&gDevice);   // port: stop (and wait for the callback) before closing; AAudio crashed without it
     ma_device_uninit(&gDevice);
     ma_context_uninit(&gContext);
     gMaximumChannelCount = 0;

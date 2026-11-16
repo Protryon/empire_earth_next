@@ -1,0 +1,390 @@
+{
+  "schemaVersion": 1,
+  "id": "empire-earth\/landscape",
+  "gameId": "empire-earth",
+  "name": "Landscape profile",
+  "orientation": "landscape",
+  "revision": 1,
+  "updatedAtEpochMs": 1794818604390,
+  "grid": {
+    "unitDp": 8,
+    "snap": true
+  },
+  "ui": {
+    "globalScale": 1,
+    "globalOpacity": 1,
+    "haptics": false
+  },
+  "runtime": {
+    "cursorMode": "relative",
+    "pointerSensitivity": 1,
+    "pointerAcceleration": 0.3499999940395355,
+    "pointerAccelEnabled": true,
+    "gyroEnabled": false,
+    "gyroSensitivity": 1,
+    "releaseAllOnPause": true,
+    "pointerRatioY": 1,
+    "gyroScaleX": 1,
+    "gyroScaleY": 1,
+    "gyroInvertX": true,
+    "gyroInvertY": true,
+    "gyroDeadzone": 0.029999999329447746,
+    "gyroSmoothing": 0.30000001192092896,
+    "gyroAxis": "pitch"
+  },
+  "widgets": [
+    {
+      "id": "button-1",
+      "type": "button",
+      "name": "LMB",
+      "z": 1,
+      "locked": false,
+      "visible": true,
+      "alpha": 1,
+      "geometry": {
+        "ax": "center",
+        "ay": "center",
+        "x": 214.5454559326172,
+        "y": 187.63636779785156,
+        "w": 248,
+        "h": 160
+      },
+      "style": {
+        "shape": "box",
+        "label": "LMB"
+      },
+      "behavior": {
+        "holdMode": "normal",
+        "dragLook": false
+      },
+      "bindings": {
+        "press": {
+          "kind": "mouseButton",
+          "mouseButton": "LEFT"
+        }
+      },
+      "meta": {}
+    },
+    {
+      "id": "button-2",
+      "type": "button",
+      "name": "RMB",
+      "z": 2,
+      "locked": false,
+      "visible": true,
+      "alpha": 1,
+      "geometry": {
+        "ax": "center",
+        "ay": "center",
+        "x": -225.5,
+        "y": 131.60000610351562,
+        "w": 208,
+        "h": 184
+      },
+      "style": {
+        "shape": "box",
+        "label": "RMB"
+      },
+      "behavior": {
+        "holdMode": "normal",
+        "dragLook": false
+      },
+      "bindings": {
+        "press": {
+          "kind": "mouseButton",
+          "mouseButton": "RIGHT"
+        }
+      },
+      "meta": {}
+    },
+    {
+      "id": "modifier-4",
+      "type": "modifier",
+      "name": "CTRL",
+      "z": 4,
+      "locked": false,
+      "visible": true,
+      "alpha": 1,
+      "geometry": {
+        "ax": "center",
+        "ay": "center",
+        "x": -145.5,
+        "y": -52.400001525878906,
+        "w": 120,
+        "h": 120
+      },
+      "style": {
+        "shape": "box",
+        "label": "CTRL"
+      },
+      "behavior": {
+        "holdMode": "hold",
+        "dragLook": false
+      },
+      "bindings": {
+        "press": {
+          "kind": "key",
+          "key": "Left Ctrl"
+        }
+      },
+      "meta": {}
+    },
+    {
+      "id": "button-7",
+      "type": "button",
+      "name": "Keyboard",
+      "z": 7,
+      "locked": false,
+      "visible": true,
+      "alpha": 1,
+      "geometry": {
+        "ax": "center",
+        "ay": "center",
+        "x": 6.545454502105713,
+        "y": -164.36363220214844,
+        "w": 72,
+        "h": 48
+      },
+      "style": {
+        "shape": "box",
+        "label": "KBD"
+      },
+      "behavior": {
+        "holdMode": "normal",
+        "dragLook": false
+      },
+      "bindings": {
+        "press": {
+          "kind": "keyboard"
+        }
+      },
+      "meta": {}
+    },
+    {
+      "id": "modifier-5",
+      "type": "modifier",
+      "name": "SHIFT",
+      "z": 8,
+      "locked": false,
+      "visible": true,
+      "alpha": 1,
+      "geometry": {
+        "ax": "center",
+        "ay": "center",
+        "x": -289.5,
+        "y": -116.4000015258789,
+        "w": 120,
+        "h": 120
+      },
+      "style": {
+        "shape": "box",
+        "label": "SHIFT"
+      },
+      "behavior": {
+        "holdMode": "hold",
+        "dragLook": false
+      },
+      "bindings": {
+        "press": {
+          "kind": "key",
+          "key": "Left Shift"
+        }
+      },
+      "meta": {}
+    },
+    {
+      "id": "button-6",
+      "type": "button",
+      "name": "F3",
+      "z": 9,
+      "locked": false,
+      "visible": true,
+      "alpha": 1,
+      "geometry": {
+        "ax": "center",
+        "ay": "center",
+        "x": -57.45454406738281,
+        "y": -164.36363220214844,
+        "w": 48,
+        "h": 48
+      },
+      "style": {
+        "shape": "box",
+        "label": "F3"
+      },
+      "behavior": {
+        "holdMode": "normal",
+        "dragLook": false
+      },
+      "bindings": {
+        "press": {
+          "kind": "key",
+          "key": "F3"
+        }
+      },
+      "meta": {}
+    },
+    {
+      "id": "button-8",
+      "type": "button",
+      "name": "F11",
+      "z": 10,
+      "locked": false,
+      "visible": true,
+      "alpha": 1,
+      "geometry": {
+        "ax": "center",
+        "ay": "center",
+        "x": 70.54545593261719,
+        "y": -164.36363220214844,
+        "w": 56,
+        "h": 48
+      },
+      "style": {
+        "shape": "box",
+        "label": "F11"
+      },
+      "behavior": {
+        "holdMode": "normal",
+        "dragLook": false
+      },
+      "bindings": {
+        "press": {
+          "kind": "key",
+          "key": "F11"
+        }
+      },
+      "meta": {}
+    },
+    {
+      "id": "button-9",
+      "type": "button",
+      "name": "Escape (menu \/ cancel)",
+      "z": 11,
+      "locked": false,
+      "visible": true,
+      "alpha": 1,
+      "geometry": {
+        "ax": "center",
+        "ay": "center",
+        "x": 294.5454406738281,
+        "y": -164.36363220214844,
+        "w": 72,
+        "h": 72
+      },
+      "style": {
+        "shape": "box",
+        "label": "ESC"
+      },
+      "behavior": {
+        "holdMode": "normal",
+        "dragLook": false
+      },
+      "bindings": {
+        "press": {
+          "kind": "key",
+          "key": "Escape"
+        }
+      },
+      "meta": {}
+    },
+    {
+      "id": "button-10",
+      "type": "button",
+      "name": "Delete",
+      "z": 12,
+      "locked": false,
+      "visible": true,
+      "alpha": 1,
+      "geometry": {
+        "ax": "center",
+        "ay": "center",
+        "x": 222.5454559326172,
+        "y": -164.36363220214844,
+        "w": 72,
+        "h": 72
+      },
+      "style": {
+        "shape": "box",
+        "label": "Delete"
+      },
+      "behavior": {
+        "holdMode": "normal",
+        "dragLook": false
+      },
+      "bindings": {
+        "press": {
+          "kind": "key",
+          "key": "Delete"
+        }
+      },
+      "meta": {}
+    },
+    {
+      "id": "button-11",
+      "type": "button",
+      "name": "Tab",
+      "z": 13,
+      "locked": false,
+      "visible": true,
+      "alpha": 1,
+      "geometry": {
+        "ax": "center",
+        "ay": "center",
+        "x": 150.5454559326172,
+        "y": -156.36363220214844,
+        "w": 72,
+        "h": 64
+      },
+      "style": {
+        "shape": "box",
+        "label": "Tab"
+      },
+      "behavior": {
+        "holdMode": "normal",
+        "dragLook": false
+      },
+      "bindings": {
+        "press": {
+          "kind": "key",
+          "key": "Tab"
+        }
+      },
+      "meta": {}
+    },
+    {
+      "id": "button-12",
+      "type": "button",
+      "name": "F",
+      "z": 14,
+      "locked": false,
+      "visible": true,
+      "alpha": 1,
+      "geometry": {
+        "ax": "center",
+        "ay": "center",
+        "x": -161.4545440673828,
+        "y": -164.36363220214844,
+        "w": 64,
+        "h": 64
+      },
+      "style": {
+        "shape": "box",
+        "label": "F"
+      },
+      "behavior": {
+        "holdMode": "normal",
+        "dragLook": false
+      },
+      "bindings": {
+        "press": {
+          "kind": "key",
+          "key": "F"
+        }
+      },
+      "meta": {}
+    }
+  ],
+  "macros": [],
+  "meta": {}
+}

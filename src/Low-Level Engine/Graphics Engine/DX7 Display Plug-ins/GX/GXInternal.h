@@ -53,9 +53,13 @@ struct GXCore {
     WGPURenderPipeline mPassPipeline = NULL;
     unsigned long long mSerial = 1;     // the open encoder's number (resources record the serial that used them)
 
-    // rings written with wgpuQueueWriteBuffer: offsets restart after each submit
+    // rings: offsets restart after each submit. Ring() copies into a CPU shadow of each ring, and Submit() writes
+    // each shadow's used part with one wgpuQueueWriteBuffer before the commands that read it (a queue write per draw
+    // made thousands of staging buffers and copies a frame, which kept the Android GPU driver's thread busy)
     WGPUBuffer mVertexRing = NULL, mIndexRing = NULL, mUniformRing = NULL;
     unsigned long mVertexOffset = 0, mIndexOffset = 0, mUniformOffset = 0;
+    std::vector<unsigned char> mVertexShadow, mIndexShadow, mUniformShadow;
+    void FlushRings();
     static const unsigned long kVertexRingSize = 16u << 20, kIndexRingSize = 4u << 20, kUniformRingSize = 8u << 20;
 
     // shared objects

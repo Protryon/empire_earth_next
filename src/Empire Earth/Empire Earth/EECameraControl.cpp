@@ -513,6 +513,10 @@ float EECameraControl::GetPitch(float inZoom, long inMode)
     GEVector theUp(0.0f, 1.0f, 0.0f);
     GEVector theRotated;
     float theResult = 0.0f;
+#ifdef __ANDROID__
+    if (inMode == 0 || inMode == 1)
+        return kCameraDegreesToRadians * -35.0f;   // port (Android): a steady 35 degree pitch at every zoom
+#endif
     if ((inMode == 0 || inMode == 1) && inZoom > 1.0f)
         inZoom = 1.0f;   // port: zoomed out past the original's farthest, the pitch stays there
     if (inMode == 0)
@@ -1131,7 +1135,19 @@ theUpdate:
         gViewport.SetOrthographicRectangle(theRectangle);
     }
     gWorld.SetCameraTransformation(this->mView);
+#ifdef __ANDROID__
+    {
+        // port (Android): the original 30 degree horizontal view on a wide phone shows too little height and
+        // makes players sick. Keep the view a 0.80 rad horizontal field gives on a 1920x1080 screen: the same
+        // vertical field, the horizontal one widened to this screen's shape (2340x1080: about 0.95 rad).
+        float theHalfWidth = gViewport.GetHalfWidth();
+        float theHalfHeight = gViewport.GetHalfHeight();
+        float theAspect = theHalfHeight > 0.0f ? theHalfWidth / theHalfHeight : 1920.0f / 1080.0f;
+        gViewport.SetFieldOfView(2.0f * atanf(tanf(0.80f * 0.5f) * (1080.0f / 1920.0f) * theAspect));
+    }
+#else
     gViewport.SetFieldOfView(sCameraFieldOfView);
+#endif
     this->SetClippingDistances();
     if (gMiniMap != NULL)
         gMiniMap->RefreshView();

@@ -191,6 +191,9 @@ built and run with `--smoke-test` under Xvfb + lavapipe and on Metal, and withou
 data not found" message). On macOS (arm64, Metal) the game runs with the data bundle: menus, the lobby and AI games
 (PORT_LEARNINGS.md "The POSIX game with real data"). Linux with real data is not tried yet.
 
+**Android (arm64)**: `python -I tools/xbuild.py game --target android-arm64` and `tools/android_apk.py` build an APK with an
+on-screen, editable touch-controls overlay; see [docs/ANDROID.md](docs/ANDROID.md).
+
 `tools/harness/posix_game.py` drives the POSIX game the way the Windows harness does (the menus, the lobby, an AI
 game, telemetry and, on macOS, window captures), through a UI fixture the game carries (on only with `EE_TEST_UI`):
 

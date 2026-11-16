@@ -19,6 +19,8 @@
 #define MA_ENABLE_COREAUDIO     // macOS (the mixer tries the backends of its own platform; see Mixer.cpp)
 #define MA_ENABLE_PULSEAUDIO    // Linux
 #define MA_ENABLE_ALSA
+#define MA_ENABLE_AAUDIO        // Android (8.0+), OpenSL ES as the fallback
+#define MA_ENABLE_OPENSL
 #define MA_ENABLE_NULL
 
 #include "miniaudio/miniaudio.h"

@@ -21,6 +21,9 @@ std::recursive_mutex& GXLock()
     return sLock;
 }
 
+#ifdef __ANDROID__
+#include <android/native_window.h>
+#endif
 void GXLog(const char* inFormat, ...)
 {
     char theText[1024];
@@ -382,9 +385,22 @@ void GXCore::BeginPass(GXSurfaceData* inTarget, GXSurfaceData* inDepth)
     inTarget->mUsedSerial = this->mSerial;
 }
 
+void GXCore::FlushRings()
+{
+    // the used part of each ring's shadow, one write each (queue writes land before the next submit's commands)
+    if (this->mVertexOffset)
+        wgpuQueueWriteBuffer(this->mQueue, this->mVertexRing, 0, &this->mVertexShadow[0], (this->mVertexOffset + 3) & ~3u);
+    if (this->mIndexOffset)
+        wgpuQueueWriteBuffer(this->mQueue, this->mIndexRing, 0, &this->mIndexShadow[0], (this->mIndexOffset + 3) & ~3u);
+    if (this->mUniformOffset)
+        wgpuQueueWriteBuffer(this->mQueue, this->mUniformRing, 0, &this->mUniformShadow[0],
+                             (this->mUniformOffset + 3) & ~3u);
+}
+
 void GXCore::Submit()
 {
     this->EndPass();
+    this->FlushRings();
     if (this->mEncoder) {
         WGPUCommandBuffer theCommands = wgpuCommandEncoderFinish(this->mEncoder, NULL);
         wgpuQueueSubmit(this->mQueue, 1, &theCommands);
@@ -509,13 +525,15 @@ unsigned long GXCore::Ring(WGPUBuffer inRing, unsigned long& ioOffset, unsigned 
         this->Submit();
         theOffset = 0;
     }
-    if (thePadded == inBytes)
-        wgpuQueueWriteBuffer(this->mQueue, inRing, theOffset, inData, inBytes);
-    else {
-        std::vector<unsigned char> theCopy(thePadded, 0);
-        memcpy(&theCopy[0], inData, inBytes);
-        wgpuQueueWriteBuffer(this->mQueue, inRing, theOffset, &theCopy[0], thePadded);
-    }
+    // into the ring's CPU shadow; Submit (FlushRings) writes it to the GPU ring
+    std::vector<unsigned char>& theShadow = inRing == this->mVertexRing ? this->mVertexShadow
+                                            : inRing == this->mIndexRing ? this->mIndexShadow
+                                                                         : this->mUniformShadow;
+    if (theShadow.size() < inSize)
+        theShadow.resize(inSize);
+    memcpy(&theShadow[theOffset], inData, inBytes);
+    if (thePadded != inBytes)
+        memset(&theShadow[theOffset + inBytes], 0, thePadded - inBytes);
     ioOffset = theOffset + thePadded;
     return theOffset;
 }
@@ -1096,6 +1114,34 @@ void GXSurfaceData::Present(GXSurfaceData* inSource, bool inWait)
         sLastWidth = inSource->mWidth;
         sLastHeight = inSource->mHeight;
     }
+#ifdef __ANDROID__
+    {   // port: Android destroys and recreates the window on rotation and when the activity restarts; a surface kept
+        // over the old ANativeWindow makes wgpu panic in configure. The window is looked up again on every present.
+        PlatNativeWindow theNow = {};
+        if (!PlatWindowGetNative(this->mWindow, &theNow) || !theNow.mWindow) {
+            if (this->mSwapChain) {
+                wgpuSurfaceRelease(this->mSwapChain);
+                this->mSwapChain = NULL;
+                this->mSwapWidth = this->mSwapHeight = 0;
+            }
+            return;
+        }
+        if (theNow.mWindow != this->mNative.mWindow) {
+            if (this->mSwapChain) {
+                wgpuSurfaceRelease(this->mSwapChain);
+                this->mSwapChain = NULL;
+            }
+            this->mSwapWidth = this->mSwapHeight = 0;
+            this->mNative = theNow;
+        }
+        int32_t theWindowWidth = ANativeWindow_getWidth((ANativeWindow*)theNow.mWindow);
+        int32_t theWindowHeight = ANativeWindow_getHeight((ANativeWindow*)theNow.mWindow);
+        if (theWindowWidth <= 0 || theWindowHeight <= 0)
+            return;
+        theClient.right = theWindowWidth;
+        theClient.bottom = theWindowHeight;
+    }
+#endif
     inSource->ForGPURead();
     static const bool sCheck = getenv("EE_GX_CHECK_PRESENT") != NULL;
     if (sCheck && inSource->mCPUValid && inSource->mMemory) {
@@ -1153,6 +1199,14 @@ void GXSurfaceData::Present(GXSurfaceData* inSource, bool inWait)
             theMetal.layer = n.mWindow;
             theDescriptor.nextInChain = &theMetal.chain;
             break;
+        case PLAT_NATIVE_ANDROID: {
+            static WGPUSurfaceSourceAndroidNativeWindow sAndroid;
+            sAndroid = {};
+            sAndroid.chain.sType = WGPUSType_SurfaceSourceAndroidNativeWindow;
+            sAndroid.window = n.mWindow;
+            theDescriptor.nextInChain = &sAndroid.chain;
+            break;
+        }
         default:
             return;
         }
@@ -1167,17 +1221,29 @@ void GXSurfaceData::Present(GXSurfaceData* inSource, bool inWait)
         for (size_t i = 0; i < theCaps.presentModeCount; i++)
             if (theCaps.presentModes[i] == WGPUPresentMode_Immediate || theCaps.presentModes[i] == WGPUPresentMode_Mailbox)
                 theMode = theCaps.presentModes[i];
-        if (this->mSwapFormat == WGPUTextureFormat_Undefined && theCaps.formatCount)
-            this->mSwapFormat = theCaps.formats[0];
         wgpuSurfaceCapabilitiesFreeMembers(theCaps);
     }
     if (this->mSwapFormat == WGPUTextureFormat_Undefined) {
+        // port: the game's colours are already gamma encoded, so the swap chain must be a plain (UNORM) format. An sRGB
+        // one encodes them a second time: washed out, grey blacks. Android's Vulkan surfaces offer RGBA8 (often the
+        // sRGB variant first) and no BGRA8, so prefer BGRA8Unorm, then RGBA8Unorm, then any non-sRGB format.
         WGPUSurfaceCapabilities theCaps = {};
         wgpuSurfaceGetCapabilities(this->mSwapChain, theCore.mAdapter, &theCaps);
         this->mSwapFormat = theCaps.formatCount ? theCaps.formats[0] : WGPUTextureFormat_BGRA8Unorm;
-        for (size_t i = 0; i < theCaps.formatCount; i++)
-            if (theCaps.formats[i] == WGPUTextureFormat_BGRA8Unorm)
-                this->mSwapFormat = WGPUTextureFormat_BGRA8Unorm;
+        int theRank = 3;   // 0 BGRA8Unorm, 1 RGBA8Unorm, 2 another non-sRGB format, 3 sRGB
+        for (size_t i = 0; i < theCaps.formatCount; i++) {
+            WGPUTextureFormat theFormat = theCaps.formats[i];
+            int theThis = theFormat == WGPUTextureFormat_BGRA8Unorm ? 0
+                : theFormat == WGPUTextureFormat_RGBA8Unorm         ? 1
+                : (theFormat == WGPUTextureFormat_BGRA8UnormSrgb || theFormat == WGPUTextureFormat_RGBA8UnormSrgb ||
+                   theFormat == WGPUTextureFormat_BC1RGBAUnormSrgb) ? 3
+                                                                    : 2;
+            if (theThis < theRank) {
+                theRank = theThis;
+                this->mSwapFormat = theFormat;
+            }
+        }
+        GXLog("GX: swap chain format %d (of %d offered)", (int)this->mSwapFormat, (int)theCaps.formatCount);
         wgpuSurfaceCapabilitiesFreeMembers(theCaps);
     }
     if ((unsigned long)theClient.right != this->mSwapWidth || (unsigned long)theClient.bottom != this->mSwapHeight ||
@@ -1225,6 +1291,7 @@ void GXSurfaceData::Present(GXSurfaceData* inSource, bool inWait)
              theLinear, theOffset);
     theCore.Submit();
     wgpuSurfacePresent(this->mSwapChain);
+    wgpuDevicePoll(theCore.mDevice, 0, NULL);   // port: lets wgpu free released textures and buffers (the UI makes a texture per text draw)
     if (sFrameLimit > 0) {   // port: at most sFrameLimit frames a second
         static std::chrono::steady_clock::time_point sNext;
         std::chrono::steady_clock::time_point theNow = std::chrono::steady_clock::now();
@@ -1686,13 +1753,30 @@ GXRESULT GXSurface::DrawText(const RECT& inBounds, TextCallback inDraw, void* in
             theAny = theBits[i] != 0;
         if (!theAny)
             return GX_OK;
-        GXSurfaceData* theText = new GXSurfaceData;
-        theText->mWidth = theWidth;
-        theText->mHeight = theHeight;
-        GXPIXELFORMAT theFormat = {sizeof(GXPIXELFORMAT), GXPF_RGB | GXPF_ALPHAPIXELS, 0, 32, 0xff0000, 0xff00, 0xff,
-                                   0xff000000};
-        theText->mPixelFormat = theFormat;
-        theText->mFormat.Set(theFormat);
+        // port: the temporary texture of a text draw is pooled by size (the UI draws thousands of texts a second; a
+        // texture each made the GPU memory balloon on the phone). An entry is reused only after a submit: its earlier
+        // blit is still in the open command encoder, and a rewrite now would change what that blit draws.
+        struct TextEntry { GXSurfaceData* mSurface; unsigned long mWidth, mHeight; unsigned long long mSerial; };
+        static std::vector<TextEntry> sTextPool;
+        GXCore& theTextCore = GXGetCore();
+        GXSurfaceData* theText = NULL;
+        size_t theEntry = 0;
+        for (; theEntry < sTextPool.size(); theEntry++)
+            if (sTextPool[theEntry].mWidth == (unsigned long)theWidth && sTextPool[theEntry].mHeight == (unsigned long)theHeight &&
+                sTextPool[theEntry].mSerial != theTextCore.mSerial) {
+                theText = sTextPool[theEntry].mSurface;
+                break;
+            }
+        bool thePooled = theText != NULL;
+        if (!theText) {
+            theText = new GXSurfaceData;
+            theText->mWidth = theWidth;
+            theText->mHeight = theHeight;
+            GXPIXELFORMAT theFormat = {sizeof(GXPIXELFORMAT), GXPF_RGB | GXPF_ALPHAPIXELS, 0, 32, 0xff0000, 0xff00, 0xff,
+                                       0xff000000};
+            theText->mPixelFormat = theFormat;
+            theText->mFormat.Set(theFormat);
+        }
         theText->mMemory = &theBits[0];
         theText->mPitch = theWidth * 4;
         theText->mGPUValid = false;
@@ -1700,6 +1784,15 @@ GXRESULT GXSurface::DrawText(const RECT& inBounds, TextCallback inDraw, void* in
         RECT theSource = {0, 0, theWidth, theHeight};
         GXBlit(theTarget, theBounds, theText, &theSource, kGXBlitPremultiplied, NULL, 0.0f, false);
         theText->mMemory = NULL;
+        if (thePooled) {
+            sTextPool[theEntry].mSerial = theTextCore.mSerial;
+            return GX_OK;
+        }
+        if (sTextPool.size() < 512) {
+            TextEntry theNew = {theText, (unsigned long)theWidth, (unsigned long)theHeight, theTextCore.mSerial};
+            sTextPool.push_back(theNew);
+            return GX_OK;
+        }
         for (std::map<unsigned long, WGPUBindGroup>::iterator i = theText->mGroups.begin(); i != theText->mGroups.end(); ++i)
             wgpuBindGroupRelease(i->second);
         wgpuTextureViewRelease(theText->mTargetView);

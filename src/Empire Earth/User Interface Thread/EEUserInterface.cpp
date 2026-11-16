@@ -1785,9 +1785,11 @@ void EEUserInterface::HandleEvent(const PlatInputEvent& inEvent)
         if (gGamePreferences.mSettings.mMuteInBackground)   // port
             SPIMSetMuted(true);
         // port: a windowed game stays on screen in the background (the original's full screen minimised)
+#ifndef __ANDROID__   // Android: the editor's dialogs take focus; minimising would send the player to the home screen
         if (gUserInterface != NULL && !gUserInterface->mIsQuitting && gGameWindow != NULL &&
             gGamePreferences.mSettings.GetFullScreen())
             PlatWindowMinimize(gGameWindow->GetOSRepresentation());   // CloseWindow
+#endif
         if (gISKeyboard != NULL)
             gISKeyboard->Suspend();
         if (gISMouse != NULL)
