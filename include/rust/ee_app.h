@@ -153,6 +153,56 @@ constexpr static const int32_t EE_APP_CAMERA_OP_FRONT_CLIPPING = 25;
 /// x, y: the front and rear clipping distances
 constexpr static const int32_t EE_APP_CAMERA_OP_SET_CLIPPING = 26;
 
+/// id -> text, len: the string resource
+constexpr static const int32_t EE_APP_CHEAT_OP_STRING = 1;
+
+/// -> flag: a multiplayer session; -> flag: cheats enabled; -> n: the player count
+constexpr static const int32_t EE_APP_CHEAT_OP_MULTIPLAYER = 2;
+
+constexpr static const int32_t EE_APP_CHEAT_OP_CHEATS_ENABLED = 3;
+
+constexpr static const int32_t EE_APP_CHEAT_OP_PLAYERS = 4;
+
+/// text, len: a chat log line
+constexpr static const int32_t EE_APP_CHEAT_OP_CHAT = 5;
+
+/// x, y: "goto"; n: "find"
+constexpr static const int32_t EE_APP_CHEAT_OP_GOTO = 6;
+
+constexpr static const int32_t EE_APP_CHEAT_OP_FIND = 7;
+
+/// id (the action below), n (the player), a, b: a cheat's work
+constexpr static const int32_t EE_APP_CHEAT_OP_ACTION = 8;
+
+/// a: all (else the local player's selection and viewed unit are spared)
+constexpr static const uint32_t EE_APP_CHEAT_KILL = 1;
+
+constexpr static const uint32_t EE_APP_CHEAT_EXPLORE = 2;
+
+constexpr static const uint32_t EE_APP_CHEAT_MAKE_VISIBLE = 3;
+
+constexpr static const uint32_t EE_APP_CHEAT_RESEARCH_ALL = 4;
+
+/// a: the epoch
+constexpr static const uint32_t EE_APP_CHEAT_ADVANCE_EPOCH = 5;
+
+constexpr static const uint32_t EE_APP_CHEAT_RESTORE_POWER = 6;
+
+constexpr static const uint32_t EE_APP_CHEAT_HEAL = 7;
+
+constexpr static const uint32_t EE_APP_CHEAT_REFUEL = 8;
+
+constexpr static const uint32_t EE_APP_CHEAT_TOGGLE_INSTANT_BUILD = 9;
+
+/// a: the game ends as a victory when the player is the local one (else as a defeat)
+constexpr static const uint32_t EE_APP_CHEAT_END_GAME = 10;
+
+/// a: the resource, b: the amount
+constexpr static const uint32_t EE_APP_CHEAT_ADD_RESOURCE = 11;
+
+/// a: the resource
+constexpr static const uint32_t EE_APP_CHEAT_CLEAR_RESOURCE = 12;
+
 /// the slot's name `UWideString::Load` / `Save` (index: the slot)
 constexpr static const int32_t EE_APP_OPTIONS_NAME_LOAD = 200;
 
@@ -281,6 +331,9 @@ constexpr static const int32_t EE_APP_SETTINGS_STRING_SET = 3;
 
 /// the member set to the defaults' member
 constexpr static const int32_t EE_APP_SETTINGS_STRING_DEFAULT = 4;
+
+/// The cheat table (`mCodes`, `mIsSinglePlayerOnly`).
+struct EeAppCheats;
 
 /// The mini map's Rust half.
 struct EeAppMiniMap;
@@ -455,6 +508,26 @@ struct EeAppCameraMove {
   float turn_yaw;
   float turn_pitch;
 };
+
+/// One host operation's arguments and answers.
+struct EeAppCheatIo {
+  /// `STRING`'s resource id; `ACTION`'s action
+  uint32_t id;
+  bool flag;
+  /// the player count; a player; a unit id
+  unsigned long n;
+  float x;
+  float y;
+  /// an action's numbers
+  long a;
+  long b;
+  /// a text's bytes (`STRING`'s answer lives until the next call)
+  const uint8_t *text;
+  size_t len;
+};
+
+/// The host: `(ctx, op, io)`.
+using EeAppCheatFn = void(*)(void*, int32_t, EeAppCheatIo*);
 
 /// `EEGameOptionsPlayer`'s plain members (its name stays a C++ `UWideString`), in the class's order.
 struct EeAppOptionsPlayerFields {
@@ -1063,6 +1136,39 @@ int32_t ee_app_camera_update(EeAppCameraFields *rec,
                              EeAppCameraFn call,
                              float elapsed,
                              float *ortho_size);
+
+/// `Init`: the table from the string resources.
+///
+/// # Safety
+/// `call` and `ctx` are live for the call.
+EeAppCheats *ee_app_cheats_new(EeAppCheatFn call, void *ctx);
+
+/// # Safety
+/// `p` came from [`ee_app_cheats_new`] (or is null) and is not used again.
+void ee_app_cheats_free(EeAppCheats *p);
+
+/// `ParseCheatCode(text)`: `code` and (when the line ends in a number) `parameter`.
+///
+/// # Safety
+/// `p` is live, `text` holds `len` bytes, the outputs are live; `call` and `ctx` are live for the call.
+void ee_app_cheats_parse(const EeAppCheats *p,
+                         EeAppCheatFn call,
+                         void *ctx,
+                         const uint8_t *text,
+                         size_t len,
+                         long *code,
+                         long *parameter);
+
+/// `ApplyCheatCode(code, player, parameter)`.
+///
+/// # Safety
+/// `p` is live; `call` and `ctx` are live for the call.
+void ee_app_cheats_apply(const EeAppCheats *p,
+                         EeAppCheatFn call,
+                         void *ctx,
+                         long code,
+                         long player,
+                         long parameter);
 
 /// `EEGameOptionsPlayer()`'s plain members.
 ///

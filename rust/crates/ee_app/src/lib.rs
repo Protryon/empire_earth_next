@@ -13,6 +13,7 @@
 //!   ([`map_ffi`]: its C ABI; it reads and edits the terrain mesh itself).
 //! - [`minimap`]: `EEMiniMap`'s cells (sight counts, building and unit dots, the unit layer's pixels), the terrain
 //!   pixels' colours and the redraw's walk ([`minimap_ffi`]: its C ABI, the object the C++ class owns).
+//! - [`cheats`]: `EECheatCodes`' table, chat line parse, lookup, list and dispatch ([`cheats_ffi`]: its C ABI).
 //! - [`save_io`]: a saved game's primitives over a host callback (`EESavePrimitive`'s operations).
 //! - [`ffi`]: the C ABI the C++ classes call.
 
@@ -20,6 +21,8 @@ pub mod ambient;
 pub mod ambient_ffi;
 pub mod camera;
 pub mod camera_ffi;
+pub mod cheats;
+pub mod cheats_ffi;
 pub mod ffi;
 pub mod game_options;
 pub mod map;
@@ -34,6 +37,8 @@ pub mod settings_ffi;
 mod ambient_tests;
 #[cfg(test)]
 mod camera_tests;
+#[cfg(test)]
+mod cheats_tests;
 #[cfg(test)]
 mod game_options_tests;
 #[cfg(test)]
