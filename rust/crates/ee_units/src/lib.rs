@@ -32,6 +32,8 @@ pub mod atc_save;
 pub mod boarding;
 pub mod build;
 pub mod calamity;
+pub mod citizen;
+pub mod citizen_host;
 pub mod cls_air;
 pub mod cls_building;
 pub mod cls_condition;

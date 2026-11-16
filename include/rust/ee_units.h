@@ -701,6 +701,99 @@ constexpr static const uint8_t GOAL_LOAD_GARRISON = 12;
 /// `kGoalBuildRepair`
 constexpr static const uint8_t GOAL_BUILD_REPAIR = 4;
 
+/// unit `a` into `io.unit`
+constexpr static const int32_t EE_UNITS_CZ_UNIT = 1;
+
+/// `gUnitClassTable[v0]->GetTileSize()`
+constexpr static const int32_t EE_UNITS_CZ_CLASS_TILE_SIZE = 2;
+
+/// `gMapWidth` into `v0`, `gMapHeight` into `v1`
+constexpr static const int32_t EE_UNITS_CZ_MAP_SIZE = 3;
+
+/// `EEGetSquareRingTiles(v0, v1, v2, tiles)` (pushed)
+constexpr static const int32_t EE_UNITS_CZ_SQUARE_RING_TILES = 4;
+
+/// `EEGetSideTiles(v0, v1, v2, tiles)` from `io.tiles` (the result pushed)
+constexpr static const int32_t EE_UNITS_CZ_SIDE_TILES = 5;
+
+/// `EEGetRingCorners(v0, v1, v2, v3, v4, tiles)` from `io.tiles`
+constexpr static const int32_t EE_UNITS_CZ_RING_CORNERS = 6;
+
+/// `EEGetSquareRing(v0, v1, v2, v3, tiles)` from `io.tiles`
+constexpr static const int32_t EE_UNITS_CZ_SQUARE_RING = 7;
+
+/// `EEAIRandomShuffle` over `io.tiles`
+constexpr static const int32_t EE_UNITS_CZ_SHUFFLE = 8;
+
+/// `gContinentManager.GetContinent(U2DPoint(v0, v1), kAIPathLandMass)`
+constexpr static const int32_t EE_UNITS_CZ_TILE_CONTINENT = 9;
+
+/// `gContinentManager.GetContinent(unit a, kAIPathLandMass)`
+constexpr static const int32_t EE_UNITS_CZ_UNIT_CONTINENT = 10;
+
+/// `EEBlockTakes(a, v0, v1, v2, v3, v3, 0)`
+constexpr static const int32_t EE_UNITS_CZ_BLOCK_TAKES = 11;
+
+/// `gWorld.mMap->GetTile(v0, v1)`
+constexpr static const int32_t EE_UNITS_CZ_TILE = 12;
+
+/// tile `a`'s units (pushed)
+constexpr static const int32_t EE_UNITS_CZ_TILE_UNITS = 13;
+
+/// tile `a`'s `mTerrainType`
+constexpr static const int32_t EE_UNITS_CZ_TERRAIN = 14;
+
+/// tile `a`'s `GetHeight()` into `f[0]`
+constexpr static const int32_t EE_UNITS_CZ_HEIGHT = 15;
+
+/// unit `a`'s `CanGather(b, v0, v1, false, false)`
+constexpr static const int32_t EE_UNITS_CZ_CAN_GATHER = 16;
+
+/// `gContinentManager.CanGetToUnit(a, b)`
+constexpr static const int32_t EE_UNITS_CZ_CAN_GET_TO_UNIT = 17;
+
+/// unit `a`'s `mComplexUnit->DistanceSquared2D(GE2DPoint(f[0], f[1]))` into `f[0]`
+constexpr static const int32_t EE_UNITS_CZ_DISTANCE_2D = 18;
+
+/// unit `a`'s `GetTileDistanceSquared(b)` into `f[0]`
+constexpr static const int32_t EE_UNITS_CZ_TILE_DISTANCE = 19;
+
+/// `gContinentManager.GetPathAreaIDAt(EETileLocation(v0, v1))`
+constexpr static const int32_t EE_UNITS_CZ_PATH_AREA = 20;
+
+/// gather goal `a`'s `GetGatherStorage()`
+constexpr static const int32_t EE_UNITS_CZ_GATHER_STORAGE = 21;
+
+/// gather goal `a`'s `GetGatherResource()`
+constexpr static const int32_t EE_UNITS_CZ_GATHER_RESOURCE = 22;
+
+/// gather goal `a`'s `IsGathering()`
+constexpr static const int32_t EE_UNITS_CZ_IS_GATHERING = 23;
+
+/// build goal `a`'s `GetBuildTargetClass()->mIsWall`
+constexpr static const int32_t EE_UNITS_CZ_BUILD_IS_WALL = 24;
+
+/// build goal `a`'s `GetBuildTargetType()`
+constexpr static const int32_t EE_UNITS_CZ_BUILD_TYPE = 25;
+
+/// `EEGetFarmDropSites(a, sites)` (pushed)
+constexpr static const int32_t EE_UNITS_CZ_FARM_DROP_SITES = 26;
+
+/// complex unit `a`'s `CanTake(b, v0)`
+constexpr static const int32_t EE_UNITS_CZ_CAN_TAKE = 27;
+
+/// unit `a`'s `SetResourceAmount(0)`, `SetResourceType(v0)`
+constexpr static const int32_t EE_UNITS_CZ_EMPTY_LOAD = 28;
+
+/// unit `a`'s `DistanceSquaredToUnit(b)` into `f[0]`
+constexpr static const int32_t EE_UNITS_CZ_DISTANCE_TO_UNIT = 29;
+
+/// unit `a`'s `DistanceSquaredTo(b)` into `f[0]`
+constexpr static const int32_t EE_UNITS_CZ_DISTANCE_TO = 30;
+
+/// player `a`'s units from `mFirstUnit` (pushed)
+constexpr static const int32_t EE_UNITS_CZ_PLAYER_UNITS = 31;
+
 /// unit `a`'s `mActiveGoal` (`c` 0) or `mGoalState` (`c` 1)
 constexpr static const int32_t EE_UNITS_COND_GOAL = 1;
 
@@ -3317,6 +3410,9 @@ struct EeUnitsAtc;
 /// The list a host operation fills (pushed one pair at a time).
 struct EeUnitsClsListHandle;
 
+/// The lists a host operation fills.
+struct EeUnitsCzList;
+
 /// The C++ side of a unit's `Update` (`ctx`: the host's: the class and the unit).
 struct EeUnitsUpdateHost {
   void *ctx;
@@ -3533,6 +3629,50 @@ using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSa
 
 /// A unit's id (`GetUnitID()`).
 using EeUnitsAtcUnitIdFn = unsigned long(*)(void*);
+
+/// A unit as the bodies read it (`ee_units_cz_host`'s `EE_UNITS_CZ_UNIT`).
+struct EeUnitsCzUnit {
+  uint64_t obj;
+  /// `mUnitClass`, `mComplexUnit`, `mPlayer`, `mGoalState` (a complex unit's)
+  uint64_t class_obj;
+  uint64_t complex;
+  uint64_t player;
+  uint64_t goal_state;
+  /// the goal's `mKind` (-1: none)
+  int32_t goal_kind;
+  int32_t tile_x;
+  int32_t tile_y;
+  int32_t hit_points;
+  uint32_t resource_type;
+  /// `mTileNode != NULL`; a complex unit's `mIsDisabled`, `mIsBuilt`, `IsFoundation()`
+  uint8_t on_map;
+  uint8_t disabled;
+  uint8_t built;
+  uint8_t foundation;
+  uint32_t category;
+  uint32_t unit_type;
+  uint32_t family;
+  int32_t tile_size;
+  /// `IsDropSite()`
+  uint8_t drop_site;
+};
+
+/// The tile pairs the unit utilities return (`U2DPoint<long>`).
+using CzTile = int32_t[2];
+
+/// One host operation's values.
+struct EeUnitsCzIo {
+  /// up to five integer arguments
+  int64_t v[5];
+  /// a point in or out
+  float f[3];
+  EeUnitsCzUnit unit;
+  /// the tiles an operation starts from (`tiles_len` of them)
+  const CzTile *tiles;
+  size_t tiles_len;
+  /// the list the operation pushes onto (`ee_units_cz_push_tile`, `ee_units_cz_push_unit`)
+  void *list;
+};
 
 /// One host operation's values.
 struct EeUnitsClsIo {
@@ -5004,6 +5144,58 @@ int32_t ee_units_atc_save(const EeUnitsAtc *p,
                           void *ctx,
                           EeUnitsPlayerSaveFn f,
                           EeUnitsAtcUnitIdFn unit_id);
+
+extern int64_t ee_units_cz_host(int32_t op, uint64_t a, uint64_t b, EeUnitsCzIo *io);
+
+/// Pushes a tile onto a host operation's list.
+///
+/// # Safety
+/// `list` is the `EeUnitsCzIo::list` of a running operation.
+void ee_units_cz_push_tile(EeUnitsCzList *list, int32_t x, int32_t y);
+
+/// Pushes a unit onto a host operation's list.
+///
+/// # Safety
+/// As [`ee_units_cz_push_tile`].
+void ee_units_cz_push_unit(EeUnitsCzList *list, uint64_t unit);
+
+/// `EEUnitClass::FindWoodSite(unit, unit type, out)`: 1 and the tile in `out` when found.
+///
+/// # Safety
+/// `out` is two floats.
+uint8_t ee_units_cz_find_wood_site(uint64_t unit, int32_t unit_type, float (*out)[2]);
+
+/// `EEUnitClass::FindResourceOfKind` of a class of `category` (its `mCategory`); `taken` the `count` units of
+/// `ioUnits`.
+///
+/// # Safety
+/// `taken` is `count` units (or null for none).
+uint64_t ee_units_cz_find_resource_of_kind(uint32_t category,
+                                           uint64_t unit,
+                                           uint64_t center,
+                                           uint64_t wanted,
+                                           int32_t range,
+                                           uint32_t kind,
+                                           const uint64_t *taken,
+                                           size_t count,
+                                           uint8_t farms);
+
+/// `EEUnitClass::FindStorage(unit, any storage)`.
+uint64_t ee_units_cz_find_storage(uint64_t unit, uint8_t any_storage);
+
+/// `EEUnitClass::FindGatherPoint(unit, x, y, size x, size y, out)`.
+///
+/// # Safety
+/// `out` is three floats.
+void ee_units_cz_find_gather_point(uint64_t unit,
+                                   uint32_t x,
+                                   uint32_t y,
+                                   int32_t size_x,
+                                   int32_t size_y,
+                                   float (*out)[3]);
+
+/// `EEUnitClass::HasGatherPoint(unit, resource)`.
+uint8_t ee_units_cz_has_gather_point(uint64_t unit, uint64_t resource);
 
 extern int64_t ee_units_cls_host(int32_t op,
                                  uint64_t a,

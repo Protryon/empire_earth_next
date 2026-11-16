@@ -1173,7 +1173,6 @@ public:
     EEUnit* FindStorage(EEComplexUnit* inUnit, bool inAnyStorage);
     bool HasGatherPoint(EEComplexUnit* inUnit, EEUnit* inResource);
     void FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY, long inSizeX, long inSizeY, GE3DPoint& outLocation);
-    bool IsTileHeld(EETile* inTile);
     bool FindWoodSite(EEComplexUnit* inUnit, long inUnitType, U2DPoint<float>& outLocation);
     EEUnit* FindResourceOfKind(EEComplexUnit* inUnit, EEUnit* inCenter, EEUnit* inResource, long inRange, unsigned long inKind, std::vector<EEUnit*>* ioUnits, bool inFarms);
     void BasicPriestLoadMedia(EEPlayer* inPlayer);
