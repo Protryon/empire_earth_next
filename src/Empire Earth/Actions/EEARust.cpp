@@ -49,7 +49,6 @@
 #include "ee/EEPPlayerEvent.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EESEAChangeLoadText.h"
 #include "ee/EESELoadThread.h"
 #include "ee/EESaveLoad.h"
 #include "ee/EEHumanPlayer.h"
@@ -77,7 +76,11 @@ static_assert(kEEAChat == EE_SCREENS_GA_CHAT && kEEABoot == EE_SCREENS_GA_BOOT &
                   kEEAResetPlayers == EE_SCREENS_GA_RESET_PLAYERS && kEEASaveGame == EE_SCREENS_GA_SAVE_GAME &&
                   kEEAScroll == EE_SCREENS_GA_SCROLL && kEEAMigration == EE_SCREENS_GA_MIGRATION &&
                   kEEAUpgrade == EE_SCREENS_GA_UPGRADE && kEEAPause == EE_SCREENS_GA_PAUSE &&
-                  kEEAQuick == EE_SCREENS_GA_QUICK && kEEAEditorQuick == EE_SCREENS_GA_EDITOR_QUICK,
+                  kEEAQuick == EE_SCREENS_GA_QUICK && kEEAEditorQuick == EE_SCREENS_GA_EDITOR_QUICK &&
+                  kEEAEditorClick == EE_SCREENS_GA_EDITOR_CLICK && kEEAEditorLasso == EE_SCREENS_GA_EDITOR_LASSO &&
+                  kEEATriggerClick == EE_SCREENS_GA_TRIGGER_CLICK && kEEATriggerLasso == EE_SCREENS_GA_TRIGGER_LASSO &&
+                  kEEALoadText == EE_SCREENS_GA_LOAD_TEXT && kEEAEditorPaint == EE_SCREENS_GA_EDITOR_PAINT &&
+                  kEEAEditorWhole == EE_SCREENS_GA_EDITOR_WHOLE,
               "ee/EEARust.h's kinds are game_actions.rs's");
 static_assert(kMessageSelectUnit == EE_SCREENS_GA_MSG_SELECT_UNIT && kMessageAddUnitToSelectedGroup == EE_SCREENS_GA_MSG_ADD_UNIT &&
                   kMessageUnselectAllUnits == EE_SCREENS_GA_MSG_UNSELECT_ALL && kMessageAttackUnit == EE_SCREENS_GA_MSG_ATTACK &&
@@ -496,6 +499,9 @@ static void QuickSaveSpec(FSFileSpec& outFile, const UString& inName)
     outFile.SetFile(inName);
 }
 
+// the trigger tab's object screen's UpdateSelection (Scenario Editor Actions/EESEARust.cpp)
+void EESEAObjectSelection();
+
 static int64_t EditorOp(EEARust* a, void* p, int64_t* i, float* f)
 {
     switch (i[0]) {
@@ -575,6 +581,8 @@ static int64_t EditorOp(EEARust* a, void* p, int64_t* i, float* f)
         return 0;
     case EE_SCREENS_GA_E_RESUME_GROUP: gUIManager->mScenarioEditorForm->ResumeCurrentGroup(); return 0;
     case EE_SCREENS_GA_E_DELETE_FILE: delete static_cast<FSMemoryFile*>(p); return 0;
+    case EE_SCREENS_GA_E_OBJECT_SELECTION: EESEAObjectSelection(); return 0;
+    case EE_SCREENS_GA_E_LOAD_TEXT: gUIManager->mScenarioEditorForm->SetLoadText(a->mText); return 0;
     }
     return 0;
 }
@@ -762,6 +770,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
         return 0;
     case EE_SCREENS_GA_OP_NET: return NetOp(a, i);
     case EE_SCREENS_GA_OP_EDITOR: return EditorOp(a, p, i, f);
+    case EE_SCREENS_GA_OP_ACTION: return (intptr_t) static_cast<EEAction*>(a);
     }
     return 0;
 }

@@ -75,10 +75,11 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Empire Earth/EESimEditor.cpp",
                        # TEST ONLY: its civilization builder steps (the "cb" command; tools/sim_editor/civbuilder.txt)
                        "Empire Earth/Empire Earth/EESimCivBuilder.cpp",
-                       # the host of the scenario editor's actions whole in Rust: the paints' ranges
-                       # 0x1a830a..0x1a9112 (ee/EESEAPaint.h's EESEAPaintRust; ee_screens editor_actions.rs), the
-                       # deletion's 0x1a6b45..0x1a7331 (an EESEARust kind), the lasso's and the click's
-                       # 0x1a7358..0x1a75e0 (their bodies inline over Rust: ee/EESEALasso.h, ee/EESEAMouseClick.h)
+                       # the hosts of the scenario editor's actions whole in Rust (EEARust kinds, ee/EEARust.h): the
+                       # paints' ranges 0x1a830a..0x1a9112 (EESEAPaintRust; ee_screens editor_actions.rs), the
+                       # deletion's 0x1a6b45..0x1a7331, the lasso's and the click's 0x1a7358..0x1a75e0; the editor's
+                       # command control's 0x197261..0x197393 (the trigger tab's selection control's 0x197393..0x19764b
+                       # is EEUICSelectUnits' Rust: ee/EESEUICTriggerSelectUnits.h)
                        "Empire Earth/Scenario Editor Actions/EESEARust.cpp",
                        # the host of the game's actions whole in Rust (ee/EEARust.h; ee_screens game_actions.rs): the
                        # Actions units' ranges 0x1000..0x52f3 but EEAWonNet's, EEAQuickSaveLoad's 0x1a5529..0x1a5881

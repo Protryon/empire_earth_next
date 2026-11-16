@@ -64,7 +64,7 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EESEAChangeLoadText.h"
+#include "ee/EEARust.h"
 #include "ee/EESELoadThread.h"
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"

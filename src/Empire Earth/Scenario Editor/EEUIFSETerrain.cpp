@@ -84,11 +84,10 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EEUIFSEPaint.h"
-#include "ee/EESEAPaint.h"
+#include "ee/EEARust.h"
 #include "lle/UIBitmap.h"
 #include "ee/EEUIFSETerrain.h"
 
-#include "ee/EESEAChangeLoadText.h"
 #include "ee/EESELoadThread.h"
 #include "lle/UResourceFile.h"
 #include "ee/EETerrainColorTable.h"

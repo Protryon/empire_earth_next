@@ -208,8 +208,6 @@ ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 18efb7 19393b Empire Earth/Scenario Editor/EESETSObject.cpp
 19393b 196ebe Empire Earth/Scenario Editor/EESETSTrigger.cpp
 196ebe 197261 Empire Earth/Scenario Editor/EESETSUICBPlayer.cpp
-197261 197393 Empire Earth/Scenario Editor/EESEUICCommandUnits.cpp
-197393 19764b Empire Earth/Scenario Editor/EESEUICTriggerSelectUnits.cpp
 19764b 199afd Empire Earth/Scenario Editor/EESEUITechListBox.cpp
 199afd 19cc39 Empire Earth/Scenario Editor/EESEUnit.cpp
 19cc39 1a0315 Empire Earth/Scenario Editor/EEUIFScenarioEditor.cpp

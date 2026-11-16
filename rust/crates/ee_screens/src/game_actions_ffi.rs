@@ -5,9 +5,11 @@
 
 use core::ffi::c_void;
 
-use crate::game_actions::{EeScreensGaFields, EeScreensGaValue, Ga, GaHost};
+use crate::game_actions::{EeScreensGaFields, EeScreensGaValue, Ga, GaEditorCall, GaHost};
 
 /// cbindgen:ignore
+// (the record's editor parts are pointers to Rust boxes C++ never looks into)
+#[allow(improper_ctypes)]
 mod sys {
     use core::ffi::c_void;
 
@@ -27,6 +29,29 @@ impl GaHost for Host {
     }
     fn record(&mut self, kind: u32, values: &[EeScreensGaValue]) -> usize {
         unsafe { sys::ee_screenscpp_ga_record(kind, values.as_ptr(), values.len() as u32) as usize }
+    }
+    fn editor_call(&mut self, call: GaEditorCall) -> i64 {
+        use crate::editor_actions_ffi as sea;
+        use crate::editor_whole_ffi as sew;
+        match call {
+            GaEditorCall::Click(message) => sea::ee_screens_seu_click(message as *mut c_void),
+            GaEditorCall::ClickExecute { action, rotating } => {
+                sea::ee_screens_seu_click_execute(action as *mut c_void, u8::from(rotating))
+            }
+            GaEditorCall::Lasso(message) => sea::ee_screens_seu_lasso_message(message as *mut c_void),
+            GaEditorCall::LassoInRectangle { action, rectangle } => {
+                sea::ee_screens_seu_lasso_in_rectangle(action as *mut c_void, rectangle as *const c_void)
+            }
+            // SAFETY (these): the record's paint and action are the editor modules' boxes, live until their free
+            GaEditorCall::PaintRun(paint) => unsafe { sea::ee_screens_sea_paint_run(paint) },
+            GaEditorCall::PaintSetArea(paint, [l, t, r, b]) => {
+                return i64::from(unsafe { sea::ee_screens_sea_paint_set_area(paint, l, t, r, b) })
+            }
+            GaEditorCall::PaintFree(paint) => unsafe { sea::ee_screens_sea_paint_free(paint) },
+            GaEditorCall::WholeRun(action) => unsafe { sew::ee_screens_sew_run(action) },
+            GaEditorCall::WholeFree(action) => unsafe { sew::ee_screens_sew_free(action) },
+        }
+        0
     }
 }
 
@@ -180,6 +205,30 @@ pub unsafe extern "C" fn ee_screens_ga_set_unit(r: *mut EeScreensGaFields, unit:
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_ga_scroll_update(r: *mut EeScreensGaFields, x: f32, y: f32) -> bool {
     unsafe { with(r, |g| g.scroll_update((x, y))) }
+}
+
+/// The lasso's `SelectInRectangle` (`rect` a `GERectangle*`; the editor's lassos).
+///
+/// # Safety
+/// As `ee_screens_ga_init`; `rect` lives for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_ga_select_in_rectangle(r: *mut EeScreensGaFields, rect: *const c_void) {
+    unsafe { with(r, |g| g.select_in_rectangle(rect as usize)) }
+}
+
+/// The editor paint's `SetArea` (left, top, right, bottom, in tiles): whether it queued the area.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_ga_paint_set_area(
+    r: *mut EeScreensGaFields,
+    left: i32,
+    top: i32,
+    right: i32,
+    bottom: i32,
+) -> bool {
+    unsafe { with(r, |g| g.paint_set_area([left, top, right, bottom])) }
 }
 
 /// The improvement's constructor: the unit (an `EEUnit*`) referenced and held, the action posted.

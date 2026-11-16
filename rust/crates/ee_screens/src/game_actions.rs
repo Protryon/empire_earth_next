@@ -44,6 +44,22 @@ pub const EE_SCREENS_GA_UPGRADE: u32 = 16;
 pub const EE_SCREENS_GA_PAUSE: u32 = 17;
 pub const EE_SCREENS_GA_QUICK: u32 = 18;
 pub const EE_SCREENS_GA_EDITOR_QUICK: u32 = 19;
+// the scenario editor's (round 2: the classes of `Scenario Editor Actions`, run by `editor_actions.rs` and
+// `editor_whole.rs` over their own hosts)
+/// `EESEAMouseClick`: the editor's click (its message applied to the editor's selection; `Execute` a deselection).
+pub const EE_SCREENS_GA_EDITOR_CLICK: u32 = 20;
+/// `EESEALasso`: the editor's lasso (its message applied; `SelectInRectangle` a deselection).
+pub const EE_SCREENS_GA_EDITOR_LASSO: u32 = 21;
+/// `EESETSAMouseClick`: the editor's click, then the trigger tab's object screen refreshed.
+pub const EE_SCREENS_GA_TRIGGER_CLICK: u32 = 22;
+/// `EESETSALasso`: the editor's lasso, then the trigger tab's object screen refreshed.
+pub const EE_SCREENS_GA_TRIGGER_LASSO: u32 = 23;
+/// `EESEAChangeLoadText`: the editor form's load text set to `mText`.
+pub const EE_SCREENS_GA_LOAD_TEXT: u32 = 24;
+/// `EESEAPaintRust`: the paints (`mPaint`).
+pub const EE_SCREENS_GA_EDITOR_PAINT: u32 = 25;
+/// `EESEARust`: the editor's whole actions (`mAction`).
+pub const EE_SCREENS_GA_EDITOR_WHOLE: u32 = 26;
 
 /// An action's plain members (the C++ class's second base; the names are the original members').
 #[repr(C)]
@@ -57,6 +73,10 @@ pub struct EeScreensGaFields {
     pub mCalamityClass: *mut c_void,
     /// The quick save's memory file (`FSMemoryFile*`, the host's).
     pub mFile: *mut c_void,
+    /// The editor paint's record (`EESEAPaintRust`'s: `editor_actions.rs`).
+    pub mPaint: *mut crate::editor_actions::EeScreensSeaPaint,
+    /// The editor's whole action (`EESEARust`'s: `editor_whole.rs`).
+    pub mAction: *mut crate::editor_whole::EeScreensSewAction,
     /// The build's and the calamity's technology.
     pub mTechnology: i32,
     pub mTargetID: i32,
@@ -114,6 +134,8 @@ impl EeScreensGaFields {
             mMessage: core::ptr::null_mut(),
             mCalamityClass: core::ptr::null_mut(),
             mFile: core::ptr::null_mut(),
+            mPaint: core::ptr::null_mut(),
+            mAction: core::ptr::null_mut(),
             mTechnology: 0,
             mTargetID: 0,
             mCasterID: 0,
@@ -239,6 +261,8 @@ pub const EE_SCREENS_GA_OP_SCROLL: u32 = 29;
 pub const EE_SCREENS_GA_OP_NET: u32 = 30;
 /// The scenario editor and the saved games (i0 `EE_SCREENS_GA_E_*`, i1.. the arguments).
 pub const EE_SCREENS_GA_OP_EDITOR: u32 = 31;
+/// -> the action itself (its `EEAction*`: the editor's selection posts it).
+pub const EE_SCREENS_GA_OP_ACTION: u32 = 32;
 
 // a unit's members
 pub const EE_SCREENS_GA_U_ID: i64 = 0;
@@ -512,6 +536,10 @@ pub const EE_SCREENS_GA_E_UNMUTE: i64 = 16;
 pub const EE_SCREENS_GA_E_RESUME_GROUP: i64 = 17;
 /// The memory file `p` deleted.
 pub const EE_SCREENS_GA_E_DELETE_FILE: i64 = 18;
+/// The trigger tab's object screen's `UpdateSelection`.
+pub const EE_SCREENS_GA_E_OBJECT_SELECTION: i64 = 19;
+/// The editor form's `SetLoadText(mText)`.
+pub const EE_SCREENS_GA_E_LOAD_TEXT: i64 = 20;
 
 // ---- the original's constants (static_assert-ed in the host) ----
 pub const EE_SCREENS_GA_MSG_SELECT_UNIT: u32 = 0x48;
@@ -582,6 +610,48 @@ pub trait GaHost {
     fn op(&mut self, op: u32, r: *mut EeScreensGaFields, p: usize, i: &mut [i64; 8], f: &mut [f32; 8]) -> i64;
     /// A record message (`new EEMRecord(kind, {values})`).
     fn record(&mut self, kind: u32, values: &[EeScreensGaValue]) -> usize;
+    /// The editor kinds' calls into the editor's actions (`editor_actions.rs`, `editor_whole.rs`, over their own
+    /// hosts): the answer of [`GaEditorCall::PaintSetArea`], else 0. (The round-1 golden reaches none.)
+    fn editor_call(&mut self, call: GaEditorCall) -> i64 {
+        let _ = call;
+        0
+    }
+}
+
+/// An editor kind's call into the editor's actions (`GaHost::editor_call`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum GaEditorCall {
+    /// `apply_click` of the message (an `EEMessage*`; released by it).
+    Click(usize),
+    /// `click_execute` for the action (an `EEAction*`), while rotating or not.
+    ClickExecute {
+        action: usize,
+        rotating: bool,
+    },
+    /// `apply_lasso` of the message (an `EEMSelectUnits*`) over its rectangle.
+    Lasso(usize),
+    /// `lasso_in_rectangle` for the action (an `EEAction*`) over the rectangle (a `GERectangle*`).
+    LassoInRectangle {
+        action: usize,
+        rectangle: usize,
+    },
+    /// The paint's run, its area (left, top, right, bottom: 1 when queued) and its release.
+    PaintRun(*mut crate::editor_actions::EeScreensSeaPaint),
+    PaintSetArea(*mut crate::editor_actions::EeScreensSeaPaint, [i32; 4]),
+    PaintFree(*mut crate::editor_actions::EeScreensSeaPaint),
+    /// The whole action's run and its release.
+    WholeRun(*mut crate::editor_whole::EeScreensSewAction),
+    WholeFree(*mut crate::editor_whole::EeScreensSewAction),
+}
+
+/// The editor's click kinds.
+fn is_editor_click(kind: u32) -> bool {
+    kind == EE_SCREENS_GA_EDITOR_CLICK || kind == EE_SCREENS_GA_TRIGGER_CLICK
+}
+
+/// The editor's lasso kinds.
+fn is_editor_lasso(kind: u32) -> bool {
+    kind == EE_SCREENS_GA_EDITOR_LASSO || kind == EE_SCREENS_GA_TRIGGER_LASSO
 }
 
 /// An action's record and the host.
@@ -769,6 +839,14 @@ impl<'a, H: GaHost> Ga<'a, H> {
             self.editor(EE_SCREENS_GA_E_DELETE_FILE, r.mFile as usize, 0);
             self.set(|r| r.mFile = core::ptr::null_mut());
         }
+        if !r.mPaint.is_null() {
+            self.h.editor_call(GaEditorCall::PaintFree(r.mPaint));
+            self.set(|r| r.mPaint = core::ptr::null_mut());
+        }
+        if !r.mAction.is_null() {
+            self.h.editor_call(GaEditorCall::WholeFree(r.mAction));
+            self.set(|r| r.mAction = core::ptr::null_mut());
+        }
     }
 
     /// `Virtual4`: the kind's run.
@@ -818,8 +896,58 @@ impl<'a, H: GaHost> Ga<'a, H> {
             EE_SCREENS_GA_UPGRADE => self.upgrade(),
             EE_SCREENS_GA_PAUSE => self.pause(),
             EE_SCREENS_GA_QUICK | EE_SCREENS_GA_EDITOR_QUICK => self.quick(),
+            kind @ (EE_SCREENS_GA_EDITOR_CLICK
+            | EE_SCREENS_GA_TRIGGER_CLICK
+            | EE_SCREENS_GA_EDITOR_LASSO
+            | EE_SCREENS_GA_TRIGGER_LASSO) => self.editor_selection(kind),
+            EE_SCREENS_GA_LOAD_TEXT => {
+                self.editor(EE_SCREENS_GA_E_LOAD_TEXT, 0, 0);
+            }
+            EE_SCREENS_GA_EDITOR_PAINT => {
+                let paint = self.get().mPaint;
+                if !paint.is_null() {
+                    self.h.editor_call(GaEditorCall::PaintRun(paint));
+                }
+            }
+            EE_SCREENS_GA_EDITOR_WHOLE => {
+                let action = self.get().mAction;
+                if !action.is_null() {
+                    self.h.editor_call(GaEditorCall::WholeRun(action));
+                }
+            }
             _ => {}
         }
+    }
+
+    /// The editor's click and lasso (`EESEAMouseClick`, `EESEALasso` and the trigger tab's `EESETSA*`): the queued
+    /// message applied to the editor's selection and dropped; the trigger tab's then refresh its object screen (with
+    /// or without a message).
+    fn editor_selection(&mut self, kind: u32) {
+        let message = self.get().mMessage;
+        if !message.is_null() {
+            let message = message as usize;
+            let call = if is_editor_click(kind) { GaEditorCall::Click(message) } else { GaEditorCall::Lasso(message) };
+            self.h.editor_call(call);
+            self.set(|r| r.mMessage = core::ptr::null_mut());
+        }
+        if kind == EE_SCREENS_GA_TRIGGER_CLICK || kind == EE_SCREENS_GA_TRIGGER_LASSO {
+            self.editor(EE_SCREENS_GA_E_OBJECT_SELECTION, 0, 0);
+        }
+    }
+
+    /// The lasso's `SelectInRectangle` (a `GERectangle*`): the editor's deselects the selected units in it and posts
+    /// itself; the game's does nothing.
+    pub fn select_in_rectangle(&mut self, rectangle: usize) {
+        if is_editor_lasso(self.get().mKind) {
+            let action = self.op(EE_SCREENS_GA_OP_ACTION, 0, &[]) as usize;
+            self.h.editor_call(GaEditorCall::LassoInRectangle { action, rectangle });
+        }
+    }
+
+    /// The paint's `SetArea`: whether it queued the area (no paint record: no).
+    pub fn paint_set_area(&mut self, area: [i32; 4]) -> bool {
+        let paint = self.get().mPaint;
+        !paint.is_null() && self.h.editor_call(GaEditorCall::PaintSetArea(paint, area)) != 0
     }
 
     /// `EEAAddChatMessage`: the line appended to the lobby's chat box, scrolled to the end when it was there already
@@ -1014,6 +1142,12 @@ impl<'a, H: GaHost> Ga<'a, H> {
         facing: f32,
         force: bool,
     ) {
+        if is_editor_click(self.get().mKind) {
+            // the editor's: a selected unit under the mouse toggled off, empty ground clears the selection
+            let action = self.op(EE_SCREENS_GA_OP_ACTION, 0, &[]) as usize;
+            self.h.editor_call(GaEditorCall::ClickExecute { action, rotating });
+            return;
+        }
         let player = self.player(EE_SCREENS_GA_P_PTR, 0) as usize;
         let kind_flags = self.group(EE_SCREENS_GA_G_KIND_FLAGS, 0, 0) as u32;
         let count = self.group(EE_SCREENS_GA_G_COUNT, 0, 0);

@@ -6,8 +6,8 @@
 use core::ffi::c_void;
 
 use crate::editor_actions::{
-    apply_click, apply_lasso, click_execute, lasso_in_rectangle, lasso_select, rotate_selection, SePaint, SePaintKind,
-    SeaHost, SeuHost, EE_SCREENS_SEU_MESSAGE_RECTANGLE,
+    apply_click, apply_lasso, click_execute, lasso_in_rectangle, lasso_select, rotate_selection, EeScreensSeaPaint,
+    SePaint, SePaintKind, SeaHost, SeuHost, EE_SCREENS_SEU_MESSAGE_RECTANGLE,
 };
 
 /// cbindgen:ignore
@@ -58,9 +58,6 @@ impl SeaHost for Host {
         unsafe { sys::ee_screenscpp_sea_remove(unit as *mut c_void) }
     }
 }
-
-/// A paint action's record (opaque to C++).
-pub struct EeScreensSeaPaint(SePaint);
 
 /// `code` over the record taken out of its box: no Rust reference into the box lives across the host's calls into
 /// the world.

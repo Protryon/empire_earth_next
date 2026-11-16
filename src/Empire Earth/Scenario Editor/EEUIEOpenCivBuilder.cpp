@@ -67,7 +67,7 @@
 #include "ee/EEUIFSEMainButton.h"
 #include "ee/EEAction.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EESEAChangeLoadText.h"
+#include "ee/EEARust.h"
 #include "ee/EESELoadThread.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"

@@ -1,7 +1,16 @@
 use super::*;
-use crate::hud_ctl::replay::{cases, f, flag, hex_f, rect, Replay};
+use crate::hud_ctl::replay::{cases, editor_cases, f, flag, hex_f, rect, Case, Replay};
 
 fn digest(r: &EeScreensSelectUnitsFields) -> String {
+    let base = digest_base(r);
+    if r.mTrigger {
+        format!("{base} 1 {}", flag(r.mRightButton))
+    } else {
+        base
+    }
+}
+
+fn digest_base(r: &EeScreensSelectUnitsFields) -> String {
     format!(
         "{} {} {} {} {} {} {}",
         rect(&r.mRA0),
@@ -23,6 +32,9 @@ fn load(s: &str) -> EeScreensSelectUnitsFields {
         mDragEnd: EeScreensPoint { x: hex_f(v[6]), y: hex_f(v[7]) },
         mDragging: v[8] == "1",
         mD1: v[9] == "1",
+        // (the trigger tab's golden: its two flags after the original's ten)
+        mTrigger: v.get(10) == Some(&"1"),
+        mRightButton: v.get(11) == Some(&"1"),
     }
 }
 
@@ -30,9 +42,21 @@ fn load(s: &str) -> EeScreensSelectUnitsFields {
 fn replays_the_golden() {
     let all = cases(2);
     assert!(all.len() > 50, "{} selection cases", all.len());
+    assert!(replay(&all, false) > 300);
+}
+
+#[test]
+fn replays_the_trigger_tabs_golden() {
+    let all = editor_cases(5);
+    assert!(all.len() > 50, "{} trigger selection cases", all.len());
+    assert!(replay(&all, true) > 300);
+}
+
+/// The cases replayed (`trigger`: the trigger tab's control) -> the calls.
+fn replay(all: &[Case], trigger: bool) -> usize {
     let mut calls = 0;
     for (n, case) in all.iter().enumerate() {
-        let mut fields = EeScreensSelectUnitsFields::default();
+        let mut fields = EeScreensSelectUnitsFields { mTrigger: trigger, ..Default::default() };
         assert_eq!(digest(&fields), case.init.record, "case {n} init");
         for (i, call) in case.calls.iter().enumerate() {
             let ctx = format!("case {n} call {i} {:?}", call.what);
@@ -51,6 +75,8 @@ fn replays_the_golden() {
                 }
                 "U" => mouse_l_up(&rec, &mut h),
                 "B" => double_click(&rec, &mut h),
+                "P" => r_down(&rec, &mut h),
+                "Q" => r_up(&rec, &mut h),
                 "C" => copy_data(&rec, &mut h),
                 _ => draw(&rec, &mut h),
             };
@@ -63,5 +89,5 @@ fn replays_the_golden() {
             calls += 1;
         }
     }
-    assert!(calls > 300);
+    calls
 }

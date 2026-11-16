@@ -156,3 +156,129 @@ fn replays_the_golden() {
     let calls = crate::game_actions_golden::replay(crate::game_actions_golden::GOLDEN);
     assert!(calls > 2000, "{calls} calls");
 }
+
+/// A host logging the editor kinds' calls besides the ops (the action answers 0xac7).
+struct EditorScript {
+    log: Vec<String>,
+    calls: Vec<GaEditorCall>,
+    queued: i64,
+}
+
+impl GaHost for EditorScript {
+    fn op(&mut self, op: u32, _r: *mut EeScreensGaFields, p: usize, i: &mut [i64; 8], _f: &mut [f32; 8]) -> i64 {
+        self.log.push(format!("{op} {p:#x} {:?}", &i[..2]));
+        if op == EE_SCREENS_GA_OP_ACTION {
+            0xac7
+        } else {
+            0
+        }
+    }
+    fn record(&mut self, _kind: u32, _values: &[EeScreensGaValue]) -> usize {
+        panic!("the editor kinds make no record message")
+    }
+    fn editor_call(&mut self, call: GaEditorCall) -> i64 {
+        self.calls.push(call);
+        if matches!(call, GaEditorCall::PaintSetArea(..)) {
+            self.queued
+        } else {
+            0
+        }
+    }
+}
+
+fn editor_script() -> EditorScript {
+    EditorScript { log: Vec::new(), calls: Vec::new(), queued: 0 }
+}
+
+#[test]
+fn the_editor_clicks_and_lassos_apply_their_message_and_the_trigger_tabs_refresh() {
+    let refresh = format!("{EE_SCREENS_GA_OP_EDITOR} 0x0 [{EE_SCREENS_GA_E_OBJECT_SELECTION}, 0]");
+    for (kind, trigger) in [
+        (EE_SCREENS_GA_EDITOR_CLICK, false),
+        (EE_SCREENS_GA_TRIGGER_CLICK, true),
+        (EE_SCREENS_GA_EDITOR_LASSO, false),
+        (EE_SCREENS_GA_TRIGGER_LASSO, true),
+    ] {
+        let click = kind == EE_SCREENS_GA_EDITOR_CLICK || kind == EE_SCREENS_GA_TRIGGER_CLICK;
+        // no message: nothing applied (the trigger tab's still refresh)
+        let mut r = EeScreensGaFields::zeroed(kind);
+        let mut h = editor_script();
+        unsafe { Ga::new(&mut r, &mut h) }.run();
+        assert!(h.calls.is_empty(), "kind {kind}");
+        assert_eq!(h.log, if trigger { vec![refresh.clone()] } else { vec![] }, "kind {kind}");
+        // a message: applied once, dropped, then the refresh
+        r.mMessage = 0x4400 as *mut core::ffi::c_void;
+        let mut h = editor_script();
+        unsafe { Ga::new(&mut r, &mut h) }.run();
+        let want = if click { GaEditorCall::Click(0x4400) } else { GaEditorCall::Lasso(0x4400) };
+        assert_eq!(h.calls, vec![want], "kind {kind}");
+        assert!(r.mMessage.is_null());
+        assert_eq!(h.log, if trigger { vec![refresh.clone()] } else { vec![] }, "kind {kind}");
+        // the game's click and lasso never reach the editor
+        let mut h = editor_script();
+        unsafe { Ga::new(&mut r, &mut h) }.select_in_rectangle(0x99);
+        if click {
+            assert!(h.calls.is_empty());
+        } else {
+            assert_eq!(h.calls, vec![GaEditorCall::LassoInRectangle { action: 0xac7, rectangle: 0x99 }]);
+        }
+    }
+    let mut r = EeScreensGaFields::zeroed(EE_SCREENS_GA_LASSO);
+    let mut h = editor_script();
+    unsafe { Ga::new(&mut r, &mut h) }.select_in_rectangle(0x99);
+    assert!(h.calls.is_empty() && h.log.is_empty());
+}
+
+#[test]
+fn the_editor_clicks_execute_is_the_editors_deselection() {
+    for (kind, rotating) in [(EE_SCREENS_GA_EDITOR_CLICK, false), (EE_SCREENS_GA_TRIGGER_CLICK, true)] {
+        let mut r = EeScreensGaFields::zeroed(kind);
+        let mut h = editor_script();
+        unsafe { Ga::new(&mut r, &mut h) }.click_execute(1.0, 2.0, true, 1, rotating, 0.5, false);
+        assert_eq!(h.calls, vec![GaEditorCall::ClickExecute { action: 0xac7, rotating }]);
+        assert_eq!(h.log, vec![format!("{EE_SCREENS_GA_OP_ACTION} 0x0 [0, 0]")]);
+    }
+}
+
+#[test]
+fn the_load_text_the_paint_and_the_whole_action_run_their_parts() {
+    let mut r = EeScreensGaFields::zeroed(EE_SCREENS_GA_LOAD_TEXT);
+    let mut h = editor_script();
+    unsafe { Ga::new(&mut r, &mut h) }.run();
+    assert_eq!(h.log, vec![format!("{EE_SCREENS_GA_OP_EDITOR} 0x0 [{EE_SCREENS_GA_E_LOAD_TEXT}, 0]")]);
+    // the paint: its record run, its area asked, freed once
+    let paint = 0x5500 as *mut crate::editor_actions::EeScreensSeaPaint;
+    let mut r = EeScreensGaFields::zeroed(EE_SCREENS_GA_EDITOR_PAINT);
+    let mut h = editor_script();
+    assert!(!unsafe { Ga::new(&mut r, &mut h) }.paint_set_area([1, 2, 3, 4]), "no record, no area");
+    unsafe { Ga::new(&mut r, &mut h) }.run();
+    assert!(h.calls.is_empty());
+    r.mPaint = paint;
+    h.queued = 1;
+    assert!(unsafe { Ga::new(&mut r, &mut h) }.paint_set_area([1, 2, 3, 4]));
+    h.queued = 0;
+    assert!(!unsafe { Ga::new(&mut r, &mut h) }.paint_set_area([0, 0, 0, 0]));
+    unsafe { Ga::new(&mut r, &mut h) }.run();
+    unsafe { Ga::new(&mut r, &mut h) }.free();
+    unsafe { Ga::new(&mut r, &mut h) }.free();
+    assert_eq!(
+        h.calls,
+        vec![
+            GaEditorCall::PaintSetArea(paint, [1, 2, 3, 4]),
+            GaEditorCall::PaintSetArea(paint, [0, 0, 0, 0]),
+            GaEditorCall::PaintRun(paint),
+            GaEditorCall::PaintFree(paint),
+        ]
+    );
+    assert!(r.mPaint.is_null());
+    // the whole action
+    let action = 0x6600 as *mut crate::editor_whole::EeScreensSewAction;
+    let mut r = EeScreensGaFields::zeroed(EE_SCREENS_GA_EDITOR_WHOLE);
+    let mut h = editor_script();
+    unsafe { Ga::new(&mut r, &mut h) }.run();
+    r.mAction = action;
+    unsafe { Ga::new(&mut r, &mut h) }.run();
+    unsafe { Ga::new(&mut r, &mut h) }.free();
+    assert_eq!(h.calls, vec![GaEditorCall::WholeRun(action), GaEditorCall::WholeFree(action)]);
+    assert!(r.mAction.is_null() && h.log.is_empty());
+}

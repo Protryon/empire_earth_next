@@ -46,7 +46,6 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEARust.h"
 #include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EESEAPaint.h"
 #include "ee/EEGraphics.h"
 #include "GEWindow.h"
 #include "lle/GETextureManager.h"

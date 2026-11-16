@@ -80,6 +80,21 @@ int64_t EEUICSelectUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float*
         this->mLasso->SelectUnits(GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]), (long)inA, kAnyUnitType, 0);
         break;
     case EE_SCREENS_SU_CLICK: this->mClick->SelectAtMouse((unsigned long)inA); break;
+    // the trigger tab's (EESEUICTriggerSelectUnits)
+    case EE_SCREENS_SU_HAS_COMPLEX: return theUnit->mComplexUnit != NULL;
+    case EE_SCREENS_SU_POINT_AT: {
+        GE3DPoint thePoint;
+        EETile* theLocation;
+        EEPointUnitOrTile(this->GetMouseLocation(), theLocation, thePoint, false);
+        ioF[0] = thePoint.GetX();
+        ioF[1] = thePoint.GetY();
+        break;
+    }
+    case EE_SCREENS_SU_LASSO_IN_RECT:
+        this->mLasso->SelectInRectangle(GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]), (long)inA);
+        break;
+    case EE_SCREENS_SU_CLICK_EXECUTE: this->mClick->Execute(ioF[0], ioF[1], true, 1, false, 0.0f, false); break;
+    case EE_SCREENS_SU_L_DOWN: return this->MouseLButtonDown();
     }
     return 0;
 }

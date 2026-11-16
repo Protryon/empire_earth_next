@@ -267,6 +267,9 @@ pub enum SewKind {
     },
 }
 
+/// An `EESEARust`'s action (opaque to C++; the action's record holds it: `game_actions.rs`).
+pub struct EeScreensSewAction(pub SewAction);
+
 /// An action: its kind and its `EESEARust` (the object posted).
 #[derive(Clone, Debug, PartialEq)]
 pub struct SewAction {

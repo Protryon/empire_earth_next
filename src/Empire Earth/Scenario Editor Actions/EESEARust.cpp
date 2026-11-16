@@ -82,8 +82,6 @@
 #include "ee/EERandomMapGenerators.h"
 #include "lle/URandom.h"
 #include "ee/EEAreaUtilities.h"
-#include "ee/EESEAPaint.h"
-#include "ee/EESEAPaint.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEPaint.h"
@@ -113,6 +111,55 @@
 #include "ee/EEUnitPicker.h"
 #include "lle/GERectangle.h"
 #include "ee/EESEARust.h"
+#include "lle/UICheckBox.h"
+#include "ee/EESETSBaseObject.h"
+#include "ee/EESETriggerScreen.h"
+#include "ee/EESETSObject.h"
+#include "ee/EEUIRustControl.h"
+#include "ee/EEUICCommandUnits.h"
+#include "ee/EESEUICCommandUnits.h"
+
+// ------------------------------------------------------------------------------------------------ the classes' parts
+// The editor kinds' C++ (ee/EEARust.h): the trigger tab's click and lasso refresh the object screen after their
+// selection (EEARust's host op EE_SCREENS_GA_E_OBJECT_SELECTION); the load text's post from the load thread
+void EESEAObjectSelection()
+{
+    static_cast<EESETSObject*>(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))
+        ->UpdateSelection();
+}
+
+void EESEAChangeLoadText::Post(const UWideString& inText)
+{
+    this->mText = inText;
+    gUserInterface->PostAction(this);
+}
+
+// The editor's right-drag control (EESEUICCommandUnits.cpp 0x197261..0x197393, its overrides ee_screens
+// command_units.rs's editor path): its rotation action, and the rotation's and the deletion's ops
+EESEUICCommandUnits::EESEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex,
+                                         EEAMouseClick* inListener)
+    : EEUICCommandUnits(inForm, inId, inIndex, inListener)
+{
+    this->mEditor = true;
+    this->mRotateAction = new EESEARust(kSEARotate);
+}
+
+EESEUICCommandUnits::~EESEUICCommandUnits()
+{
+    this->mRotateAction->Dereference();
+}
+
+int64_t EESEUICCommandUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
+{
+    EEUnit* theUnit = reinterpret_cast<EEUnit*>(inA);
+    switch (inOp) {
+    case EE_SCREENS_CU_ROTATE: ee_screens_sew_rotate(this->mRotateAction->mAction, ioF[0]); return 0;
+    case EE_SCREENS_CU_PICK: return (int64_t)gUnitPicker.PickUnit(gMouse->mPosition, 0);
+    case EE_SCREENS_CU_DELETE: (new EESEARust(kSEADeleteUnit, NULL, theUnit->mUnitID))->Dereference(); return 0;
+    case EE_SCREENS_CU_UNIT_RELEASE: theUnit->Dereference(); return 0;
+    }
+    return EEUICCommandUnits::RustOp(inOp, inA, inB, ioF);
+}
 
 // ------------------------------------------------------------------------------------------------ the host
 // The paint actions' world-edit host (ee_screens editor_actions.rs: EE_SCREENS_SEA_*): the terrain, elevation and

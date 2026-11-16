@@ -1,9 +1,10 @@
 // The game's actions whole in Rust (ee_screens game_actions.rs; port addition, no original address): one EEAction
 // over a Rust record (EeScreensGaFields, its second base: the members keep the original names) whose kind picks the
-// original class's behaviour, run over one host (Actions/EEARust.cpp). The original classes (Actions/EEA*.cpp, the
-// quick save/load of Scenario Editor Actions) are the one-line constructors below; their users keep the names, the
-// members and the calls. The C++ objects (the strings, the poll, the mini map's point, the scroll's edges) stay
-// members here, read by the host.
+// original class's behaviour, run over one host (Actions/EEARust.cpp). The original classes (Actions/EEA*.cpp and
+// every class of Scenario Editor Actions: the editor's click, lasso, load text, paints and whole actions, whose kinds
+// run ee_screens editor_actions.rs and editor_whole.rs over their hosts in Scenario Editor Actions/EESEARust.cpp) are
+// the one-line constructors below; their users keep the names, the members and the calls. The C++ objects (the
+// strings, the poll, the mini map's point, the scroll's edges) stay members here, read by the host.
 #ifndef EE_EEARUST_H
 #define EE_EEARUST_H
 
@@ -23,7 +24,9 @@ class EECalamityClass;
 enum {
     kEEAChat = 1, kEEABoot, kEEABuild, kEEACalamity, kEEACenterCamera, kEEAJoin, kEEALasso, kEEAMiniMap, kEEAMouseClick,
     kEEAPlayerEvent, kEEARemovePlayer, kEEAResetPlayers, kEEASaveGame, kEEAScroll, kEEAMigration, kEEAUpgrade, kEEAPause,
-    kEEAQuick, kEEAEditorQuick
+    kEEAQuick, kEEAEditorQuick,
+    // the scenario editor's
+    kEEAEditorClick, kEEAEditorLasso, kEEATriggerClick, kEEATriggerLasso, kEEALoadText, kEEAEditorPaint, kEEAEditorWhole
 };
 
 class EEARust : public EEAction, public EeScreensGaFields {
@@ -36,14 +39,17 @@ public:
     virtual ~EEARust() { ee_screens_ga_free(this); }
     virtual void Virtual4() { ee_screens_ga_run(this); }
     virtual void Virtual8() {}
-    // the mouse click's order for a right click at a world point (the editor's EESEAMouseClick overrides it)
+    // the mouse click's order for a right click at a world point (the editor's: a deselection at the mouse)
     virtual void Execute(float inX, float inY, bool inMove, unsigned long inModifiers, bool inIsRotating, float inFacing,
                          bool inForceMove)
     {
         ee_screens_ga_click_execute(this, inX, inY, inMove, (uint32_t)inModifiers, inIsRotating, inFacing, inForceMove);
     }
-    // the lasso's (the editor's EESEALasso overrides it)
-    virtual void SelectInRectangle(const GERectangle& inRectangle, long inArg2) {}
+    // the lasso's: the editor's deselect the selected units inside the rectangle and post the action (inArg2 unused)
+    virtual void SelectInRectangle(const GERectangle& inRectangle, long inArg2)
+    {
+        ee_screens_ga_select_in_rectangle(this, &inRectangle);
+    }
     // the mouse click's plain click (inModifiers & 1: add to the selection)
     void SelectAtMouse(unsigned long inModifiers) { ee_screens_ga_select_at_mouse(this, (uint32_t)inModifiers); }
     void SetMessage(EEMessage* inMessage) { this->mMessage = inMessage; }
@@ -131,7 +137,7 @@ public:
 };
 class EEALasso : public EEARust {
 public:
-    EEALasso() : EEARust(kEEALasso) {}
+    EEALasso(uint32_t inKind = kEEALasso) : EEARust(inKind) {}
 };
 class EEAMiniMap : public EEARust {
 public:
@@ -139,7 +145,7 @@ public:
 };
 class EEAMouseClick : public EEARust {
 public:
-    EEAMouseClick() : EEARust(kEEAMouseClick) {}
+    EEAMouseClick(uint32_t inKind = kEEAMouseClick) : EEARust(inKind) {}
 };
 class EEAPlayerEvent : public EEARust {
 public:
@@ -198,6 +204,63 @@ public:
 class EESEAQuickSaveLoad : public EEAQuickSaveLoad {
 public:
     EESEAQuickSaveLoad(const UString& inName) : EEAQuickSaveLoad(inName, kEEAEditorQuick) {}
+};
+
+// The scenario editor's (Scenario Editor Actions). The click and lasso apply their message to the editor's
+// selection and refresh the unit tab (the trigger tab's then their object screen); the click's Execute toggles a
+// selected unit under the mouse off or clears the selection on empty ground (not while rotating), the lasso's
+// SelectInRectangle deselects the selected units inside the rectangle; both post themselves
+class EESEAMouseClick : public EEAMouseClick {
+public:
+    EESEAMouseClick(uint32_t inKind = kEEAEditorClick) : EEAMouseClick(inKind) {}
+};
+class EESETSAMouseClick : public EESEAMouseClick {
+public:
+    EESETSAMouseClick() : EESEAMouseClick(kEEATriggerClick) {}
+};
+class EESEALasso : public EEALasso {
+public:
+    EESEALasso(uint32_t inKind = kEEAEditorLasso) : EEALasso(inKind) {}
+};
+class EESETSALasso : public EESEALasso {
+public:
+    EESETSALasso() : EESEALasso(kEEATriggerLasso) {}
+};
+// the load thread's text (mText) shown in the editor form; Post sets it and posts the action (EESELoadThread)
+class EESEAChangeLoadText : public EEARust {
+public:
+    EESEAChangeLoadText() : EEARust(kEEALoadText) {}
+    void Post(const UWideString& inText);
+};
+// The paints (kSEAPaintTerrain: a the EETerrainTable index, b the texture (the table entry's mL68); kSEAPaintElevation:
+// a the level (a char); kSEAPaintBulldozer): Virtual4 paints each queued area, SetArea queues one when the paint
+// changes anything there (the terrain's: any tile on the map; the elevation's: any point off the level's height; the
+// bulldozer's: always) and says whether it did (ee_screens editor_actions.rs; the record mPaint)
+enum { kSEAPaintTerrain = 0, kSEAPaintElevation = 1, kSEAPaintBulldozer = 2 };   // EE_SCREENS_SEA_PAINT_*
+class EESEAPaint : public EEARust {
+public:
+    EESEAPaint() : EEARust(kEEAEditorPaint) {}
+    bool SetArea(long inLeft, long inTop, long inRight, long inBottom)
+    {
+        return ee_screens_ga_paint_set_area(this, (int32_t)inLeft, (int32_t)inTop, (int32_t)inRight, (int32_t)inBottom);
+    }
+};
+class EESEAPaintRust : public EESEAPaint {
+public:
+    EESEAPaintRust(uint32_t inKind, int32_t inA = 0, int32_t inB = 0) { this->mPaint = ee_screens_sea_paint_new(inKind, inA, inB); }
+};
+// the editor's whole actions (ee/EESEARust.h's kSEA* kinds; ee_screens editor_whole.rs, the record mAction): the save,
+// test, exit and quick save, the tech lists' move, the rotation, the trigger area's rectangle, the blank and random
+// maps, the wall, gate and unit placements, the move and the deletion; the kinds that posted themselves when made
+// post when made
+class EESEARust : public EEARust {
+public:
+    EESEARust(uint32_t inKind, void* inObject = 0, int32_t inA = 0, int32_t inB = 0, int32_t inC = 0, int32_t inD = 0)
+        : EEARust(kEEAEditorWhole)
+    {
+        this->mAction = ee_screens_sew_new(static_cast<EEAction*>(this), inKind, inObject, inA, inB, inC, inD);
+        ee_screens_sew_begin(this->mAction);
+    }
 };
 
 // the mini map's pixel-to-map transformation (EEUIMiniMap sets it)

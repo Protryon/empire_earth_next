@@ -938,6 +938,18 @@ constexpr static const uint32_t EE_SCREENS_CU_GROUP_COUNT = 75;
 /// (i) -> the group's unit i's class's category.
 constexpr static const uint32_t EE_SCREENS_CU_CATEGORY = 76;
 
+/// The editor's: its rotation action posted with the facing f[0] (`EESEARotateUnits::Rotate`).
+constexpr static const uint32_t EE_SCREENS_CU_ROTATE = 77;
+
+/// The editor's: -> the unit under the mouse (`EEUnit*`, referenced; 0 for none).
+constexpr static const uint32_t EE_SCREENS_CU_PICK = 78;
+
+/// The editor's: (unit) its deletion (`EESEADeleteUnit` of its id: posted when it exists).
+constexpr static const uint32_t EE_SCREENS_CU_DELETE = 79;
+
+/// The editor's: (unit) released.
+constexpr static const uint32_t EE_SCREENS_CU_UNIT_RELEASE = 82;
+
 /// `ee_screens_command_units`' members (`hud_ctl_ffi.rs`).
 constexpr static const uint32_t EE_SCREENS_CU_DO_INIT = 0;
 
@@ -3959,6 +3971,27 @@ constexpr static const uint32_t EE_SCREENS_GA_QUICK = 18;
 
 constexpr static const uint32_t EE_SCREENS_GA_EDITOR_QUICK = 19;
 
+/// `EESEAMouseClick`: the editor's click (its message applied to the editor's selection; `Execute` a deselection).
+constexpr static const uint32_t EE_SCREENS_GA_EDITOR_CLICK = 20;
+
+/// `EESEALasso`: the editor's lasso (its message applied; `SelectInRectangle` a deselection).
+constexpr static const uint32_t EE_SCREENS_GA_EDITOR_LASSO = 21;
+
+/// `EESETSAMouseClick`: the editor's click, then the trigger tab's object screen refreshed.
+constexpr static const uint32_t EE_SCREENS_GA_TRIGGER_CLICK = 22;
+
+/// `EESETSALasso`: the editor's lasso, then the trigger tab's object screen refreshed.
+constexpr static const uint32_t EE_SCREENS_GA_TRIGGER_LASSO = 23;
+
+/// `EESEAChangeLoadText`: the editor form's load text set to `mText`.
+constexpr static const uint32_t EE_SCREENS_GA_LOAD_TEXT = 24;
+
+/// `EESEAPaintRust`: the paints (`mPaint`).
+constexpr static const uint32_t EE_SCREENS_GA_EDITOR_PAINT = 25;
+
+/// `EESEARust`: the editor's whole actions (`mAction`).
+constexpr static const uint32_t EE_SCREENS_GA_EDITOR_WHOLE = 26;
+
 constexpr static const uint32_t EE_SCREENS_GA_VALUE_INT = 0;
 
 constexpr static const uint32_t EE_SCREENS_GA_VALUE_FLOAT = 1;
@@ -4057,6 +4090,9 @@ constexpr static const uint32_t EE_SCREENS_GA_OP_NET = 30;
 
 /// The scenario editor and the saved games (i0 `EE_SCREENS_GA_E_*`, i1.. the arguments).
 constexpr static const uint32_t EE_SCREENS_GA_OP_EDITOR = 31;
+
+/// -> the action itself (its `EEAction*`: the editor's selection posts it).
+constexpr static const uint32_t EE_SCREENS_GA_OP_ACTION = 32;
 
 constexpr static const int64_t EE_SCREENS_GA_U_ID = 0;
 
@@ -4456,6 +4492,12 @@ constexpr static const int64_t EE_SCREENS_GA_E_RESUME_GROUP = 17;
 
 /// The memory file `p` deleted.
 constexpr static const int64_t EE_SCREENS_GA_E_DELETE_FILE = 18;
+
+/// The trigger tab's object screen's `UpdateSelection`.
+constexpr static const int64_t EE_SCREENS_GA_E_OBJECT_SELECTION = 19;
+
+/// The editor form's `SetLoadText(mText)`.
+constexpr static const int64_t EE_SCREENS_GA_E_LOAD_TEXT = 20;
 
 constexpr static const uint32_t EE_SCREENS_GA_MSG_SELECT_UNIT = 72;
 
@@ -7594,6 +7636,21 @@ constexpr static const uint32_t EE_SCREENS_SU_LASSO_BOX = 65;
 /// (modifiers) the click action selects at the mouse.
 constexpr static const uint32_t EE_SCREENS_SU_CLICK = 66;
 
+/// The trigger tab's: (unit) -> whether it is part of a complex unit.
+constexpr static const uint32_t EE_SCREENS_SU_HAS_COMPLEX = 67;
+
+/// The trigger tab's: the unit or tile under the control's mouse location -> f[0..2] its map point (x, y).
+constexpr static const uint32_t EE_SCREENS_SU_POINT_AT = 68;
+
+/// The trigger tab's: (flag) the lasso's `SelectInRectangle` over f[0..4].
+constexpr static const uint32_t EE_SCREENS_SU_LASSO_IN_RECT = 69;
+
+/// The trigger tab's: the click action's `Execute(f[0], f[1], true, 1, false, 0, false)`.
+constexpr static const uint32_t EE_SCREENS_SU_CLICK_EXECUTE = 80;
+
+/// The trigger tab's: -> the control's `MouseLButtonDown()`.
+constexpr static const uint32_t EE_SCREENS_SU_L_DOWN = 81;
+
 /// `ee_screens_select_units`' members (`hud_ctl_ffi.rs`).
 constexpr static const uint32_t EE_SCREENS_SU_DO_COPY_DATA = 0;
 
@@ -7606,6 +7663,10 @@ constexpr static const uint32_t EE_SCREENS_SU_DO_MOUSE_L_UP = 3;
 constexpr static const uint32_t EE_SCREENS_SU_DO_MOUSE_MOVE = 4;
 
 constexpr static const uint32_t EE_SCREENS_SU_DO_START = 5;
+
+constexpr static const uint32_t EE_SCREENS_SU_DO_R_DOWN = 6;
+
+constexpr static const uint32_t EE_SCREENS_SU_DO_R_UP = 7;
 
 /// `GetGraphicsQuality`'s answer when no preset matches: Custom.
 constexpr static const unsigned long EE_SCREENS_QUALITY_CUSTOM = 5;
@@ -9388,13 +9449,13 @@ struct EeScreensSeTriggerTab;
 /// The unit tab (opaque to C++).
 struct EeScreensSeUnit;
 
-/// A paint action's record (opaque to C++).
+/// A paint action's record (opaque to C++; the action's record holds it: `game_actions.rs`).
 struct EeScreensSeaPaint;
 
 /// An `EESEERust`'s event (opaque to C++).
 struct EeScreensSeeEvent;
 
-/// An `EESEARust`'s action (opaque to C++).
+/// An `EESEARust`'s action (opaque to C++; the action's record holds it: `game_actions.rs`).
 struct EeScreensSewAction;
 
 /// The unit hack's record (opaque to C++).
@@ -9476,6 +9537,10 @@ struct EeScreensGaFields {
   void *mCalamityClass;
   /// The quick save's memory file (`FSMemoryFile*`, the host's).
   void *mFile;
+  /// The editor paint's record (`EESEAPaintRust`'s: `editor_actions.rs`).
+  EeScreensSeaPaint *mPaint;
+  /// The editor's whole action (`EESEARust`'s: `editor_whole.rs`).
+  EeScreensSewAction *mAction;
   /// The build's and the calamity's technology.
   int32_t mTechnology;
   int32_t mTargetID;
@@ -9567,6 +9632,10 @@ struct EeScreensSelectUnitsFields {
   bool mDragging;
   /// The box is drawn.
   bool mD1;
+  /// The trigger tab's control (`EESEUICTriggerSelectUnits`; port addition: the subclass's overrides are this).
+  bool mTrigger;
+  /// The trigger tab's: the right button is down (its press and release drive the left's).
+  bool mRightButton;
 };
 
 /// `GE3DPoint`.
@@ -9591,6 +9660,8 @@ struct EeScreensCommandUnitsFields {
   bool mHasFacing;
   /// `mHasFacing` as of the last `CopyData`.
   bool mDrawnHasFacing;
+  /// The scenario editor's control (`EESEUICCommandUnits`; port addition: the subclass's overrides are this).
+  bool mEditor;
 };
 
 /// A lobby slot (`EEGameOptionsPlayer`) but its name.
@@ -10891,6 +10962,22 @@ void ee_screens_ga_set_unit(EeScreensGaFields *r, void *unit);
 /// # Safety
 /// As `ee_screens_ga_init`.
 bool ee_screens_ga_scroll_update(EeScreensGaFields *r, float x, float y);
+
+/// The lasso's `SelectInRectangle` (`rect` a `GERectangle*`; the editor's lassos).
+///
+/// # Safety
+/// As `ee_screens_ga_init`; `rect` lives for the call.
+void ee_screens_ga_select_in_rectangle(EeScreensGaFields *r, const void *rect);
+
+/// The editor paint's `SetArea` (left, top, right, bottom, in tiles): whether it queued the area.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+bool ee_screens_ga_paint_set_area(EeScreensGaFields *r,
+                                  int32_t left,
+                                  int32_t top,
+                                  int32_t right,
+                                  int32_t bottom);
 
 /// The improvement's constructor: the unit (an `EEUnit*`) referenced and held, the action posted.
 ///
