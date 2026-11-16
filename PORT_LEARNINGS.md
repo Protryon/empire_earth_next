@@ -25814,3 +25814,61 @@ bloated RUST_PLAN.md (the hashes stayed).
 read by many lanes, so a move keeps them and takes the bodies over a view); `FillCivilizationList` (a UI list: to
 `civ_whole.rs`); the builder host's remaining ops. Net C++ of the round is -683, short of the 1,500 aim: the hosts
 (21 + 12 ops) and the forwarders the callers keep cost back about half of what moved.
+
+## R6 data, round 1: the language strings as a Rust table; the .rmv reader whole in Rust (ee_util strings.rs, ee_rmap rmv.rs; branch rust-data1, 2026-11-15)
+
+The civilization builder lane widened to the data side. Two whole units left C++: the generated language string
+table and the random map script reader.
+
+- **The language strings.** `tools/lang_strings.py` now writes `rust/crates/ee_util/src/language_strings.rs` (a
+  sorted `[(u16, &str); 3773]`, each literal UTF-8 with a closing `\0` so the C++ takes the pointer as a C string, the
+  file ASCII through `\u{..}` escapes) instead of `LanguageStrings.cpp`; `UResourceFile` asks
+  `ee_util_resource_string(id)` (null when missing) and `ee_util_resource_strings_language()`. A unit test pins the
+  table to an FNV-1a digest of the deleted C++ table, decoded from its C literals; `build.py` still compares
+  `Language.rc` with rc.exe's string tables. The text stays compiled in: no data-tree or release change.
+  `EEStringIDs.h` (the ids) stays a C++ header.
+- **The `.rmv` reader** (`Unit10.cpp`, 1,706 lines) is `ee_rmap::rmv`. Its shape: the reader writes the map's scalar
+  settings in place through `EeRmapScriptScalars`, a field-for-field twin of `EERandomMap`'s POD block from `mMapSize`
+  (+0x260) to `mIsSpaceMap` (+0x3f8) with `c_long`/`c_ulong` for the build's `long` (so it holds on LP64 too;
+  `Default.cpp` static_asserts a dozen offsets across the type changes), writes `mKindSpacing` in place, and returns
+  the lists a script builds as twins of the C++ records (`RMAssign` copies them with one `vector::assign` each). The
+  host (`Default.cpp`) reads the files (`FSFileSpec` + `PlatFOpen(.., "r")` + `fread`: the same text-mode bytes the
+  original's `fgets` saw) and draws from the map's own `URandomIntegers`/`URandom`, so the draws are the C++'s.
+  - Kept exactly: `fgets`' 511-byte chunks cut at a NUL, `UString::NestedTokenize`/`Tokenize` (ee_ustring's own
+    functions, now a dependency of ee_rmap), `std::map::insert` (a second `#define` of a name is ignored), the flat
+    `#if` tokenizing (brackets are separators there), `sscanf("%ld")` as a 32-bit long (decimal only: `Infinity`,
+    defined as `0xFFFFFFFF`, reads 0 as an integer), `sscanf("%f")` as the UCRT's (decimal, hex, inf, nan),
+    `(long)float` as cvttss2si (`0x80000000` out of range), a failed list entry as `0xbaadf00d`.
+  - **The golden caught one thing: an uninitialized field.** A script feature's `mIndex` was never written by the C++
+    reader (a stack record); the rmap gate's digest hashed it, so the golden held stack bytes (0xca7, 0x1000). The
+    Rust writes 0, and nothing reads the field for script features (only herds, which the generator fills). The dump
+    now skips `mIndex` when `!mIsHerd`, as it already skipped `EERMObject::mType` off trees, and both goldens were
+    re-recorded with the masked digest from the C++ reader (the HEAD units compiled from `git show`): the unmasked
+    run of that build had matched `golden_cpp.txt` 2088/2088 first.
+  - **Malformed lines** the C++ read past a vector's end on (an attribute or `#define` with no value, an empty
+    expression, a `TerrainRegion` with fewer than three values, a negative or too large resource kind in
+    `ResourcePerPlayer`/`ResourceTerrainTexture`/`ResourcePlacementLimit`) now read nothing. The `gReportErrors`
+    diagnostics and the attribute/keyword handler hooks were never set in the game and are gone.
+  - The C++ appended to the map's lists; the Rust replaces them. The game always reads into a fresh `EERandomMap`
+    (`CreateRandomMap` news one, `InitializeValues` clears the features), so nothing changes there.
+- **The rmap gate had rotted.** `tools/rmap_gate` still compiled `U2DFractal.cpp` (gone: ee_util) and stubbed
+  `TSCriticalSection`/`TSThread` members and the `Plat*` string calls that are now inline forwarders or Rust; its
+  `FSFileSpec.cpp` forwards to ee_fs, which the stub library lacked, so every map crashed. `ee_rmap_gatelib` now links
+  ee_fs and ee_ts (no wgpu), the stubs keep only what nothing defines. `rmap_dump --script-only` digests the map right
+  after `SetRandomMapValues`: `rmap_gate.py check --reader` (`golden_reader.txt`, 2,088 maps, 40 s) is the reader's
+  own gate. `EE_RMAP_TRACE=<file>` writes every dumped value, one per line, to find a differing field by `diff`.
+- **Gates** on the tree merged with rust (8540d10a and 1c108108): both builds 0/0 (850 inputs: Unit10.cpp and
+  LanguageStrings.cpp gone); the oracle seeds 2-7 identical; the captures at seeds 2-3 PASS in all five profiles
+  (oracle 187, late 188, space 189, calamity 205, scenario 33 digests); the saveload matrix `--expect` PASS; the civ
+  gate PASS (3,913 lines); the editor gate PASS (14,260 lines; its first run differed in one line, the terrain tab's
+  "Loading Terrain Ambients - Aquatic" label of the editor's load thread, a real thread: timing on a loaded machine,
+  equal on the rerun); the rmap gate 2088/2088 and `--reader` 2088/2088; the Rust gate PASS (3,992 tests; after regenerating
+  `ee_won.h`: rust's 1c108108 reordered ee_won's modules and left the header stale); the tour PASS (view
+  83.7% lit, F3 ok). Only the tour draws the language strings' callers (every menu label), and it passed.
+- **`eedata check` fails on rust itself**, before any table is read: `struct UIDbDataBackgrounds not found`.
+  `tools/eedata/overlay.py` names `include/lle/UIBackgroundTable.h` as the record's source, and UI round 20
+  (c8fa8ef6) moved the record to Rust (ee_ui `background_table.rs`), so `specgen.py` finds no C++ struct. Nothing in
+  this round touched a table; the fix is the data gate learning the record from somewhere that still has it (a
+  C-syntax copy for the spec generator, or reading the Rust struct), a decision for the lead.
+- **No data-release change.** The language strings stay compiled into the exe (now from Rust); the `.rmv` scripts are
+  read as before. Nothing was published.
