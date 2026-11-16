@@ -685,7 +685,13 @@ unsafe extern "C" fn n_udp_socket_bind(s: *mut c_void, port: i32) -> c_long {
 unsafe extern "C" fn n_udp_socket_repeat(s: *mut c_void, m: *mut c_void, size: i32) {
     let Some(q) = queue(s) else { return };
     q.set_repeat_completion(manager_completion(m));
-    q.set_repeat_op(new_socket_op(EeWonCoreSocketOp::RecvFrom, null_mut(), null_mut(), std::ptr::null(), u32::from(size as u16)));
+    q.set_repeat_op(new_socket_op(
+        EeWonCoreSocketOp::RecvFrom,
+        null_mut(),
+        null_mut(),
+        std::ptr::null(),
+        u32::from(size as u16),
+    ));
 }
 unsafe extern "C" fn n_udp_socket_send(s: *mut c_void, b: *mut c_void, a: *const EeWonIpAddr) {
     let Some(q) = queue(s) else { return };
@@ -917,13 +923,17 @@ unsafe extern "C" fn n_file_set_time(p: *const u8, n: usize, t: i64) {
 }
 pass!(n_progress, progress, (o: *mut c_void, c: *mut c_void));
 pass!(n_accept, accept, (s: *mut c_void, out: *mut *mut c_void) -> c_long, WS_NONE as c_long);
-/// `delete transform`: a crypt transform's session reference given back (`~CryptTransform`)
+/// `delete transform`: a crypt transform's session reference given back (`~CryptTransform`), a C++ one deleted
 unsafe extern "C" fn n_transform_free(t: *mut c_void) {
-    if !t.is_null() {
-        // SAFETY: a transform `add_crypt` made, freed once
-        let c = unsafe { Box::from_raw(t as *mut CryptTransform) };
+    if t.is_null() {
+        return;
+    }
+    // SAFETY: a transform `add_crypt` or `ee_won_core_add_transform` made, freed once
+    match *unsafe { Box::from_raw(t as *mut CoreTransform) } {
         // SAFETY: the session's reference the transform held
-        unsafe { crate::hostauth::ee_won_session_release(c.session) };
+        CoreTransform::Crypt(session) => unsafe { crate::hostauth::ee_won_session_release(session) },
+        // SAFETY: the C++ transform's own deletion
+        CoreTransform::Cpp { object, free, .. } => unsafe { free(object) },
     }
 }
 unsafe extern "C" fn n_socket_object(s: *mut c_void) -> *mut EeWonAsyncSocket {
@@ -944,10 +954,16 @@ unsafe extern "C" fn n_close_hook(s: *mut c_void) {
 unsafe extern "C" fn n_kill_hook(s: *mut c_void) {
     socket_hook(s, 2)
 }
-/// `CryptTransform` (8 bytes in the original, ServerOp.cpp's `Crypt` until net round 29): a session handle the
-/// transform holds a reference to; its `Send` encrypts, its `Recv` decrypts.
-struct CryptTransform {
-    session: *mut c_void,
+/// A socket's message transform: `CryptTransform` (8 bytes in the original, ServerOp.cpp's `Crypt` until net round
+/// 29: a session handle it holds a reference to; its `Send` encrypts, its `Recv` decrypts), or a C++ `MsgTransform`
+/// (the drivers' own: its virtual `Send` / `Recv` and its deletion through `call` and `free`).
+enum CoreTransform {
+    Crypt(*mut c_void),
+    Cpp {
+        object: *mut c_void,
+        call: unsafe extern "C" fn(object: *mut c_void, message: *mut c_void, send: bool) -> c_long,
+        free: unsafe extern "C" fn(object: *mut c_void),
+    },
 }
 
 /// `socket->AddMsgTransform(new CryptTransform(session))`: the socket owns the transform.
@@ -955,14 +971,37 @@ pub(crate) fn add_crypt(socket_obj: *mut c_void, session: *mut c_void) {
     let Some(s) = socket(socket_obj) else { return };
     // SAFETY: a live session handle (the caller's)
     unsafe { crate::hostauth::ee_won_session_hold(session) };
-    s.add_transform(Box::into_raw(Box::new(CryptTransform { session })) as *mut c_void);
+    s.add_transform(Box::into_raw(Box::new(CoreTransform::Crypt(session))) as *mut c_void);
+}
+
+/// `socket->AddMsgTransform(transform)` for a C++ transform: `call(transform, ByteBufferPtr*, send)` runs its
+/// `Send` or `Recv`, `free(transform)` deletes it; the socket owns it.
+///
+/// # Safety
+/// `socket` is a live `AsyncSocket*` (its `RefCount*`); `transform` lives until `free`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_core_add_transform(
+    socket: *mut c_void,
+    transform: *mut c_void,
+    call: unsafe extern "C" fn(object: *mut c_void, message: *mut c_void, send: bool) -> c_long,
+    free: unsafe extern "C" fn(object: *mut c_void),
+) {
+    if let Some(s) = self::socket(socket) {
+        s.add_transform(Box::into_raw(Box::new(CoreTransform::Cpp { object: transform, call, free })) as *mut c_void);
+    }
 }
 
 /// The session's `Encrypt` (send) or `Decrypt` (receive) on the message in `*m` (a `ByteBufferPtr`: its one
 /// pointer, a reference held), replaced when the session made a new one.
 fn transform_call(t: *mut c_void, m: *mut c_void, send: bool) -> c_long {
-    // SAFETY: a transform `add_crypt` made; `m` the socket's `ByteBufferPtr*`, alive during the call
-    let (c, slot) = unsafe { (&*(t as *const CryptTransform), &mut *(m as *mut *mut c_void)) };
+    // SAFETY: a transform `add_crypt` or `ee_won_core_add_transform` made
+    let session = match unsafe { &*(t as *const CoreTransform) } {
+        CoreTransform::Crypt(session) => *session,
+        // SAFETY: the C++ transform and the socket's message
+        CoreTransform::Cpp { object, call, .. } => return unsafe { call(*object, m, send) },
+    };
+    // SAFETY: `m` the socket's `ByteBufferPtr*`, alive during the call
+    let slot = unsafe { &mut *(m as *mut *mut c_void) };
     // SAFETY: the message's live buffer
     let b = unsafe { n_bytes_of(*slot) };
     let (data, len) = if b.is_null() {
@@ -976,7 +1015,7 @@ fn transform_call(t: *mut c_void, m: *mut c_void, send: bool) -> c_long {
     // SAFETY: the bytes above; the sink below takes `out`
     let st = unsafe {
         crate::hostauth::ee_won_session_crypt(
-            c.session,
+            session,
             !send,
             data.cast(),
             len,
@@ -1093,6 +1132,39 @@ fn conn_completion(conn: *mut c_void, keep_alive: bool) -> *mut c_void {
             };
         }
     })
+}
+/// `ServerConnectionConnectOp::RunHook` (2ac2f0): the connection's connect completion finishes the op with the
+/// connect's status while it is pending (`StaticConnectCompletion` 2ac240 / `ConnectCompletion` 2ac2d0, a
+/// `ParamCompletion` holding the op), then `ConnectAsync(*address, timeout)`.
+///
+/// # Safety
+/// `conn` is a live `ServerConnection*`, `op` the live op (its `RefCount*`), `address` its `IPAddr*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_servconn_connect_op_run(
+    conn: *mut c_void,
+    op: *mut c_void,
+    address: *const c_void,
+    timeout: u32,
+) {
+    let c = servconn(conn);
+    if c.is_null() {
+        return;
+    }
+    let held = hold(op);
+    let done = completion(move |o| {
+        let _param = hold(held.get());
+        let _op = hold(o);
+        if let Some(me) = self::op(held.get()) {
+            if me.status() == WS_PENDING {
+                me.finish(self::op(o).map_or(WS_NONE, EeWonAsyncOp::status));
+            }
+        }
+    });
+    // SAFETY: the connection's live Rust object; it takes the completion's reference
+    unsafe {
+        (*c).set_connect_completion(done);
+        (*c).connect_async(address, timeout as i32 as c_long);
+    }
 }
 unsafe extern "C" fn n_route_connect(conn: *mut c_void, o: *mut c_void) {
     // SAFETY: a live op; it takes the completion's reference

@@ -1507,16 +1507,19 @@ private:
     EeWonServerConn* mConn;
 };
 
+// connects a server connection to an address, finishing with the connect's status (2abfc0; its run and completion
+// are Rust's: ee_won cppcore.rs ee_won_servconn_connect_op_run)
 class ServerConnectionConnectOp : public AsyncOp {
 public:
-    static void StaticConnectCompletion(AsyncOpPtr,SmartPtr<RefCount>); //2ac240
-    void ConnectCompletion(AsyncOp*); //2ac2d0
-    ServerConnectionConnectOp(ServerConnection*, const IPAddr&); //2abfc0/ret8
-    virtual void RunHook();   //2ac2f0 RunHook
-    virtual void CleanupHook(); //2ac380 CleanupHook
-    // Destructor stays implicit: ordinary2ac1a0 has NOown-vptr store.
+    ServerConnectionConnectOp(ServerConnection* inConnection, const IPAddr& inAddr) : mConnection(inConnection), mAddr(inAddr) {}
+    virtual void RunHook() //2ac2f0
+    {
+        ee_won_servconn_connect_op_run(static_cast<RefCount*>(this->mConnection.get()), static_cast<RefCount*>(this),
+                                       &this->mAddr, (uint32_t)this->GetTimeout());
+    }
+    virtual void CleanupHook() { this->mConnection->SetConnectCompletion(NULL); } //2ac380
     SmartPtr<ServerConnection> mConnection; //44
-    IPAddr mAddr; //48..6f, sizeof70, IPAddr 0x28
+    IPAddr mAddr; //48
 };
 
 // The op list, the completions and the reply dispatch are a Rust object since net round 16

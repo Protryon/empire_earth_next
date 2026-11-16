@@ -74,7 +74,8 @@ pub unsafe extern "C" fn ee_won_reqmake_get_dir(
     type_count: i32,
 ) -> *mut EeWonReqOp {
     // SAFETY: the caller's text
-    let mut m = Members::default().n(i64::from(flags)).w(&unsafe { wide(path, path_len, wchar) }).n(i64::from(type_count));
+    let mut m =
+        Members::default().n(i64::from(flags)).w(&unsafe { wide(path, path_len, wchar) }).n(i64::from(type_count));
     for i in 0..type_count.max(0) as usize {
         // SAFETY: the caller's C strings
         m = m.s(unsafe { CStr::from_ptr(*types.add(i)) }.to_bytes());
@@ -119,7 +120,8 @@ pub unsafe extern "C" fn ee_won_reqmake_get_service(
     addr_len: usize,
 ) -> *mut EeWonReqOp {
     // SAFETY: the caller's texts and bytes
-    let (p, n, a) = unsafe { (wide(path, path_len, wchar), wide(name, name_len, wchar), crate::ffi::bytes(addr, addr_len)) };
+    let (p, n, a) =
+        unsafe { (wide(path, path_len, wchar), wide(name, name_len, wchar), crate::ffi::bytes(addr, addr_len)) };
     op(EE_WON_REQOPS_DIR_SERVICE, Members::default().n(0x0600_0822).w(&p).w(&n).n(1).s(a).n(0))
 }
 
@@ -165,7 +167,9 @@ pub unsafe extern "C" fn ee_won_reqmake_create_account(
     year: u16,
 ) -> *mut EeWonReqOp {
     // SAFETY: the caller's texts and bytes
-    let (u, p, e) = unsafe { (wide(user, user_len, wchar), wide(password, password_len, wchar), crate::ffi::bytes(email, email_len)) };
+    let (u, p, e) = unsafe {
+        (wide(user, user_len, wchar), wide(password, password_len, wchar), crate::ffi::bytes(email, email_len))
+    };
     let m = Members::default().w(&u).w(&p).s(e).n(1).n(1).n(i64::from(newsletter));
     op(EE_WON_REQOPS_CREATE_ACCOUNT, m.n(i64::from(month)).n(i64::from(day)).n(i64::from(year)).n(0).n(0).s(&[]))
 }
@@ -208,10 +212,30 @@ mod tests {
             [
                 ee_won_reqmake_get_dir(0x10, path.as_ptr().cast(), path.len(), 2, types.as_ptr(), 1),
                 ee_won_reqmake_get_multi_dir(0x10, [path.as_ptr().cast()].as_ptr(), [path.len()].as_ptr(), 1, 2),
-                ee_won_reqmake_get_service(path.as_ptr().cast(), 4, path.as_ptr().cast(), 4, 2, b"\x01\x02".as_ptr(), 2),
+                ee_won_reqmake_get_service(
+                    path.as_ptr().cast(),
+                    4,
+                    path.as_ptr().cast(),
+                    4,
+                    2,
+                    b"\x01\x02".as_ptr(),
+                    2,
+                ),
                 ee_won_reqmake_get_account(),
                 ee_won_reqmake_update_account(path.as_ptr().cast(), 4, 2, b"e@x".as_ptr(), 3),
-                ee_won_reqmake_create_account(path.as_ptr().cast(), 4, path.as_ptr().cast(), 4, 2, b"e".as_ptr(), 1, true, 1, 2, 1990),
+                ee_won_reqmake_create_account(
+                    path.as_ptr().cast(),
+                    4,
+                    path.as_ptr().cast(),
+                    4,
+                    2,
+                    b"e".as_ptr(),
+                    1,
+                    true,
+                    1,
+                    2,
+                    1990,
+                ),
                 ee_won_reqmake_group_list(3),
             ]
         };

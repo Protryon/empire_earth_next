@@ -126,7 +126,13 @@ impl<P: Plan> Host<P> {
                     // `CopyMaxTimes(this)`
                     for which in EE_WON_HOSTBASE_MAX_CONNECT..=EE_WON_HOSTBASE_MAX_RECV {
                         // SAFETY: the new op's own Rust op
-                        unsafe { (*h).base_set(which, i64::from(b.times[(which - EE_WON_HOSTBASE_MAX_CONNECT) as usize]), Obj::none()) };
+                        unsafe {
+                            (*h).base_set(
+                                which,
+                                i64::from(b.times[(which - EE_WON_HOSTBASE_MAX_CONNECT) as usize]),
+                                Obj::none(),
+                            )
+                        };
                     }
                 }
                 owned(op)
@@ -135,7 +141,9 @@ impl<P: Plan> Host<P> {
                 let cut = (n[0].max(0) as usize).min(data.len());
                 let (host, path) = data.split_at(cut);
                 // SAFETY: the two parts
-                let op = unsafe { crate::httpget::ee_won_httpget_open(host.as_ptr(), host.len(), path.as_ptr(), path.len()) };
+                let op = unsafe {
+                    crate::httpget::ee_won_httpget_open(host.as_ptr(), host.len(), path.as_ptr(), path.len())
+                };
                 owned(cppcore::new_host_op(op))
             }
             EE_WON_HOST_ADD_CRYPT => {
