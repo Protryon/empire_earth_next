@@ -25976,8 +25976,15 @@ read by many lanes, so a move keeps them and takes the bodies over a view); `Fil
   golden, as before) and UUTL, the unit utilities' per-tick record. UUTL's calls of EEUpdateUnitTile (kind 81) differ
   by a few per run (seed 2 oracle: 169,596 against 169,602 by tick 40,000; first differing ticks 802 and 509), all on
   the physics thread (callers ee_units_pm_host_update_tile and EEUnitClass::ProjectileLaunchProjectile), while every
-  other tag (PMST, the combat, the goals) is equal. Under the C++ classic UUTL was stable run to run. The capture
-  goldens were therefore not re-recorded in this merge.
+  other tag (PMST, the combat, the goals) is equal. Under the C++ classic UUTL was stable run to run.
+- **UUTL's cause, and the fix.** A per-call log of two runs of the same seed (tick and kind of every noted call)
+  differed only in kind 82, EEComputeSoundParameters: its callers (EEGameUtilities' animation sounds) ask it only
+  while the sound node of the previous frame is still alive (GetSampleID, GetIsLooping), and the sound manager's
+  scavenger thread frees a node when the mixer has played it out, in real time. So the call count followed the audio,
+  never the game (no game state reads a sound node: not a desync). UUTL now leaves kind 82 out (EEUUNote,
+  kUUSoundParameters); the oracle captures at seeds 2-3 then gave the same digests twice, UUTL and TNMT included. It
+  showed only after the merge, presumably through main's mixer change (a channel now plays from its start, so the
+  animation sounds live their whole length).
 - **Lesson.** In this shell a heredoc's backslash sequences reach Python already turned into control characters
   (a printed backslash-n became a line break inside a C string, a backslash at a line's end joined two lines): edit
   such text with the editor tool, not a heredoc script.

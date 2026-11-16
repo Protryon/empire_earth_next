@@ -183,6 +183,11 @@ static uint32_t UUPairs(const std::vector<U2DPoint<long> >& inTiles, int32_t (*o
 // utility on its thread folds its kind, inputs and outputs (units as ids, floats as bits, tile lists whole) into the
 // physics tick's FNV-1a 64; the record (the tick, the calls, the digest) is written when a later tick's first call
 // comes. Nothing is noted unless the capture runs. Its golden came from the C++ utilities (tools/sim_capture.py).
+// EEComputeSoundParameters (kind 82) is left out: its callers ask it only while a sound node is still playing
+// (EEGameUtilities' animation sounds: GetSampleID/GetIsLooping of the node the sound manager's scavenger thread frees
+// when the mixer is done with it), so its call count follows the audio device's real-time progress, not the game
+// (PORT_LEARNINGS "main merge: the gates on the Lua AI"). Its own nested calls stay unnoted, as before.
+static const uint32_t kUUSoundParameters = 82;
 static thread_local int sUUDepth = 0;
 static std::mutex sUUMutex;
 static uint64_t sUUDigest = 0xcbf29ce484222325ull;
@@ -193,7 +198,8 @@ class EEUUNote;
 static thread_local EEUUNote* sUUCurrent = NULL;   // the thread's recording outermost note (the events' target)
 class EEUUNote {
 public:
-    explicit EEUUNote(uint32_t inKind) : mOn(++sUUDepth == 1 && EESimCaptureRecord::Active()), mKind(inKind)
+    explicit EEUUNote(uint32_t inKind)
+        : mOn(++sUUDepth == 1 && inKind != kUUSoundParameters && EESimCaptureRecord::Active()), mKind(inKind)
     {
         this->I(inKind);
         if (this->mOn)
