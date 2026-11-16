@@ -3,6 +3,10 @@ seed 2 CBGO 1 bd3c23d2850c3ff0
 seed 2 CVAP 14 53b37d774b0b669a
 seed 2 CVLD 23 8ce405cb26e036d8
 seed 2 CVMG 1 084351fe743f6eeb
+seed 2 MAPC 1 b3e9f3f1f6117890
+seed 2 MAPP 27886 fd6ef894aa6aaa49
+seed 2 MMPX 2 3d22c36c3d6d8279
+seed 2 MMSN 30 7b0f4fe27fef3ab1
 seed 2 SMAR 12 d7a9a8f45718f2bc
 seed 2 SMCE 137334 a30d9b9a67fd4e89
 seed 2 SMCP 6324 03d60847695ef28c
@@ -20,6 +24,10 @@ seed 3 CBGO 1 5099da0435eb72ed
 seed 3 CVAP 98 cdbe2ce5e5edc886
 seed 3 CVLD 23 8ce405cb26e036d8
 seed 3 CVMG 1 084351fe743f6eeb
+seed 3 MAPC 1 12d9d6609ef55b5e
+seed 3 MAPP 395142 57635c06a7bf9fc0
+seed 3 MMPX 2 7ff952d38ad6e15d
+seed 3 MMSN 30 a5895971b1ed642f
 seed 3 SMAR 124 0ccfafc637aa73b5
 seed 3 SMCE 69295 92ba39e9d240c38b
 seed 3 SMCP 5583 edb37eb5ae5fab66

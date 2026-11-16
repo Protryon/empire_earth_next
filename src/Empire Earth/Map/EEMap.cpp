@@ -41,6 +41,7 @@
 #include "ee/EETerrainColorTable.h"
 #include "ee/EEPersistentTag.h"
 #include "ee/EEUnitRegions.h"
+#include "ee/EEAppCapture.h"
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 extern long gFirstCliffTerrain;             // 0x4e86e8 (EETerrainTable.cpp)
@@ -158,6 +159,7 @@ void EEMap::PlaceUnitOnGround(EEUnit* inUnit)
 // when below sea level, else its terrain's colour set
 void EEMap::UpdateWater(long inX, long inY)
 {
+    EEAppMapScope theScope(this, kAppMapUpdateWater, inX, inY, 0, 0, 0, 0, inX - 1, inX, inY - 1, inY);   // MAPC (TEST ONLY)
     GETerrainMesh& theMesh = this->mTerrainMesh;
     for (long y = inY - 1; y <= inY; y++) {
         for (long x = inX - 1; x <= inX; x++) {
@@ -197,6 +199,7 @@ void EEMap::UpdateWater(long inX, long inY)
 // (the original assigned the terrain mesh to itself here, a no-op; the mesh is a Rust object now and is not copied)
 void EEMap::CreateMap(long inWidth, long inHeight, unsigned long inPlayerCount)
 {
+    EEAppMapScope theScope(this, kAppMapCreateMap, inWidth, inHeight, (long)inPlayerCount, 0, 0, 0, 1, 0, 0, 0);   // MAPC (TEST ONLY)
     this->Create(inWidth, inHeight, inPlayerCount, true);
     ee_combat_regions_free(this->mUnitRegions);
     delete this->mEffectRegions;
@@ -259,12 +262,14 @@ void EEMap::RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius
             }
         }
     }
+    EEAppCaptureSight(1, inPlayer, inX, inY, inRadius, inShared);   // MAPS (TEST ONLY)
 }
 
 // Sums the tile and corner-height checksums of the next 64 x 64 window and advances the window;
 // past the right edge the cursor moves to the start of the next band
 long EEMap::ComputeChecksum()
 {
+    unsigned long theCursor = this->mChecksumCursor;   // MAPK (TEST ONLY)
     unsigned long theStartX = this->mChecksumCursor % this->mSize;
     unsigned long theStartY = this->mChecksumCursor / this->mSize;
     long theChecksum = 0;
@@ -288,6 +293,7 @@ long EEMap::ComputeChecksum()
         if (this->mChecksumCursor >= (unsigned long)(this->mSize * this->mSize))
             this->mChecksumCursor = 0;
     }
+    EEAppCaptureChecksum(theCursor, theChecksum, this->mChecksumCursor);   // MAPK (TEST ONLY)
     return theChecksum;
 }
 
@@ -360,7 +366,9 @@ float EEMap::GetTerrainPitch(const GETransformation& inLocation)
     inLocation.Apply(theOffset, theDirection);
     theBack += theDirection;
     this->GetGroundPoint(theBack, theBackGround);
-    return UMArcCos((theFrontGround.GetZ() - theBackGround.GetZ()) * kSlopeScale) - 1.5707964f;
+    float thePitch = UMArcCos((theFrontGround.GetZ() - theBackGround.GetZ()) * kSlopeScale) - 1.5707964f;
+    EEAppCaptureSlope(0, inLocation, thePitch);   // MAPP (TEST ONLY)
+    return thePitch;
 }
 
 // Returns the ground's roll under a location, from the ground heights 0.65 to either side of it
@@ -379,7 +387,9 @@ float EEMap::GetTerrainRoll(const GETransformation& inLocation)
     inLocation.Apply(theOffset, theDirection);
     theBack += theDirection;
     this->GetGroundPoint(theBack, theBackGround);
-    return UMArcCos((theFrontGround.GetZ() - theBackGround.GetZ()) * kSlopeScale) - 1.5707964f;
+    float theRoll = UMArcCos((theFrontGround.GetZ() - theBackGround.GetZ()) * kSlopeScale) - 1.5707964f;
+    EEAppCaptureSlope(1, inLocation, theRoll);   // MAPP (TEST ONLY)
+    return theRoll;
 }
 
 // Returns the tile hit by the ray through a screen point, optionally stopping at the water surface
@@ -577,11 +587,14 @@ void EEMap::AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, b
             }
         }
     }
+    EEAppCaptureSight(0, inPlayer, inX, inY, inRadius, inShared);   // MAPS (TEST ONLY)
 }
 
 // Paints a rectangle of tiles with a terrain, then recolours its vertices with the given colour type
 void EEMap::PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff)
 {
+    EEAppMapScope theScope(this, kAppMapPaintTerrainRect, inLeft, inRight, inTop, inBottom, inTerrain, inCliff, inLeft,
+                           inRight, inBottom, inTop);   // MAPC (TEST ONLY)
     EETerrainTable* theTerrain = EETerrainTable::Get(inTerrain);
     for (long y = inTop; y >= inBottom; y--) {
         for (long x = inLeft; x <= inRight; x++) {
@@ -599,6 +612,7 @@ void EEMap::PaintTerrainRect(long inLeft, long inRight, long inTop, long inBotto
 // Sets a tile's terrain type and paints it and its lower-left neighbours' textures with the terrain
 void EEMap::PaintTerrain(long inX, long inY, long inTerrain)
 {
+    EEAppMapScope theScope(this, kAppMapPaintTerrain, inX, inY, inTerrain, 0, 0, 0, inX - 1, inX, inY - 1, inY);   // MAPC (TEST ONLY)
     EETerrainTable* theTerrain = EETerrainTable::Get(inTerrain);
     EEMapTile* theTile = this->GetTile(inX, inY);
     if (theTile) {
@@ -620,6 +634,8 @@ void EEMap::PaintTerrain(long inX, long inY, long inTerrain)
 // Gives the vertices of a tile rectangle that are not under water a colour type's colour set
 void EEMap::SetCliffColorSets(long inLeft, long inRight, long inTop, long inBottom, long inCliff)
 {
+    EEAppMapScope theScope(this, kAppMapSetCliffColorSets, inLeft, inRight, inTop, inBottom, inCliff, 0, inLeft, inRight,
+                           inBottom, inTop);   // MAPC (TEST ONLY)
     EETerrainTypeTable* theCliff = EETerrainTypeTable::Get(inCliff);
     for (long y = inTop; y >= inBottom; y--) {
         for (long x = inLeft; x <= inRight; x++) {
@@ -661,6 +677,8 @@ void EEMap::SetCliffColorSets(long inLeft, long inRight, long inTop, long inBott
 // then makes tiles with three or more cliff neighbours cliffs too
 void EEMap::UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop)
 {
+    EEAppMapScope theScope(this, kAppMapUpdateCliffs, inLeft, inRight, inBottom, inTop, 0, 0, inLeft - 1, inRight,
+                           inBottom - 1, inTop);   // MAPC (TEST ONLY)
     long theRandomTerrains[32][32];
     URandomIntegers theRandom;
     GEVector theFacingY(0.0f, -1.0f, 1.0f);
@@ -755,6 +773,8 @@ void EEMap::UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop)
 // Turns cliff tiles in a rectangle that are no longer steep back into the map's base terrain
 void EEMap::RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop)
 {
+    EEAppMapScope theScope(this, kAppMapRemoveFlatCliffs, (long)inLeft, (long)inRight, (long)inBottom, (long)inTop, 0, 0,
+                           (long)inLeft - 1, (long)inRight, (long)inBottom - 1, (long)inTop);   // MAPC (TEST ONLY)
     GEVector theFacingX(1.0f, 0.0f, 0.5f);
     GEVector theFacingY(0.0f, -1.0f, 0.5f);
     float theFlat = this->GetF1955F4() * 1.5f;
@@ -850,6 +870,7 @@ void EEMap::SetCliffTexture(long inCliffTexture)
     if (inCliffTexture < 0 || (unsigned long)inCliffTexture >= EETerrainTable::GetNumCliffTerrains() ||
         EETerrainTable::sCliffTable[inCliffTexture] == NULL)
         inCliffTexture = gFirstCliffTerrain;
+    EEAppMapScope theScope(this, kAppMapSetCliffTexture, inCliffTexture, 0, 0, 0, 0, 0, 1, 0, 0, 0);   // MAPC (TEST ONLY)
     this->mU19565C = inCliffTexture;
     this->UpdateCliffs(0, this->mSize, 0, this->mSize);
 }

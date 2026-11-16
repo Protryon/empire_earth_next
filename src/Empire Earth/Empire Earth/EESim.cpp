@@ -167,6 +167,7 @@
 #include "ee/EERules.h"
 #include "ee/EECPTrace.h"
 #include "ee/EESimCapture.h"
+#include "ee/EEAppCapture.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEMap.h"
 #include "ee/RTSRegionTable.h"
@@ -470,6 +471,7 @@ struct Options {
     bool mMissileSweep = false;                          // --missile-sweep (TEST ONLY; the capture's missile game)
     bool mEffectSweep = false;                           // --effect-sweep (TEST ONLY; the capture's effects game)
     bool mUnitSweep = false;                             // --unit-sweep (TEST ONLY; the capture's units game)
+    bool mAppSweep = false;                              // --app-sweep (TEST ONLY; the capture's app game)
     long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
     std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
     std::string mLoadSave;                               // --load-save FILE ("" a new game from the lobby)
@@ -1092,6 +1094,22 @@ void AfterTick()
     if (sOptions.mUnitSweep && theTime >= sNextUnitSweepMs) {
         sNextUnitSweepMs += 300000;
         EEPhysicsUnitSweep(sUnitSweeps++);
+    }
+    // TEST ONLY: the mini map's cells every game minute (MMSN); --app-sweep's cheat lines at five game minutes and
+    // storms at ten (ee/EEAppCapture.h)
+    static long sNextMiniMapMs = 60000;
+    if (EESimCaptureRecord::Active() && theTime >= sNextMiniMapMs) {
+        sNextMiniMapMs += 60000;
+        EEAppCaptureMiniMapSnapshot();
+    }
+    static int sAppSweeps = 0;
+    if (sOptions.mAppSweep && sAppSweeps == 0 && theTime >= 300000) {
+        sAppSweeps = 1;
+        EEAppCaptureCheatSweep();
+    }
+    if (sOptions.mAppSweep && sAppSweeps == 1 && theTime >= 600000) {
+        sAppSweeps = 2;
+        EEAppCaptureStormSweep();
     }
     if (theTime >= sNextSampleMs) {
         Sample s = TakeSample();
@@ -1912,6 +1930,8 @@ const char* kUsage =
     "                         missile class (the capture's missile game: CBMA, CBMH and the impact tests)\n"
     "  --unit-sweep           TEST ONLY: every five game minutes every player gets aircraft, ships under water,\n"
     "                         sea animals and spaceships sent at the next player (the capture's units game)\n"
+    "  --app-sweep            TEST ONLY: with EE_SIM_CAPTURE, cheat lines at five game minutes (CHET, CHEF, CHLS) and\n"
+    "                         one storm of each kind at ten (STRM; the capture's app game, ee/EEAppCapture.h)\n"
     "  --effect-sweep         TEST ONLY: with EE_SIM_CAPTURE, only the end of the game records: every swept 3D effect\n"
     "                         kind made, stepped, saved and loaded (the capture's effects game: EFSW, EFST, EFMU)\n"
     "  --editor-script FILE   TEST ONLY: instead of a game, the scenario editor (main menu -> Editors -> Scenario\n"
@@ -2111,6 +2131,8 @@ int EESimMain(int argc, char** argv)
             sOptions.mMissileSweep = true;
         else if (a == "--unit-sweep")
             sOptions.mUnitSweep = true;
+        else if (a == "--app-sweep")
+            sOptions.mAppSweep = true;
         else if (a == "--effect-sweep") {
             sOptions.mEffectSweep = true;
             EESimCaptureRecord::Hold(true);   // only the end sweep records (FinishGame)

@@ -48,6 +48,7 @@
 #include "lle/GERenderState.h"
 #include "rust/ee_ge.h"   // ee_gfx minimap.rs (RUST_PLAN R4.4)
 #include "rust/ee_gfx.h"
+#include "ee/EEAppCapture.h"
 
 extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 extern bool& gOrthographicView;              // 0x5308e2 (orthographic camera; EEGraphics)
@@ -506,6 +507,21 @@ void EEMiniMap::RedrawCell(long inX, long inY)
         this->mPixels[this->mPixelsPerRow * inY + inX] = theNode->mData.mColor;
 }
 
+// New (port): one cell's sight count, unit layer pixel and dots in list order (the capture's read,
+// ee/EEAppCapture.h)
+void EEMiniMap::GetCell(long inIndex, unsigned short& outCount, unsigned short& outPixel,
+                        std::vector<MMPlayerUnit>& outDots, std::vector<MMMapUnit>& outUnits) const
+{
+    outCount = this->mU1015C[inIndex];
+    outPixel = this->mPixels != NULL ? this->mPixels[this->mPixelsPerRow * (inIndex & 0x3f) + (inIndex >> 6)] : 0;
+    outDots.clear();
+    outUnits.clear();
+    for (UListNode<EEMiniMapDot>* theNode = this->mPlayerUnits[inIndex].mHead; theNode; theNode = theNode->mNext)
+        outDots.push_back(theNode->mData);
+    for (UListNode<EEMiniMapUnitDot>* theNode = this->mMapUnits[inIndex].mHead; theNode; theNode = theNode->mNext)
+        outUnits.push_back(theNode->mData);
+}
+
 // Recomputes the camera's view trapezoid on the mini map (camera tilted 30 degrees, at least height 5),
 // shortening its sides to the width of its near edge (at least 32)
 // (the trapezoid: ee_gfx minimap.rs)
@@ -593,6 +609,7 @@ void EEMiniMap::RedrawPixels(long inLeft, long inRight, long inBottom, long inTo
             *thePixel = (unsigned short)GEPackColor(kPixelFormatR5G6B5, theColor, 1.0f);
         }
     }
+    EEAppCaptureMiniMapPixels(inLeft, inRight, inBottom, inTop, theBits, thePitch);   // MMPX (TEST ONLY)
     this->mTerrainTexture->GetSurface()->Unlock();
 }
 

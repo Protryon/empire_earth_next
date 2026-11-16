@@ -72,6 +72,7 @@
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEStormModifiers.h"
 #include "ee/EEStormType.h"
+#include "ee/EEAppCapture.h"
 
 // Constructs the storm's "Storm-Data" key at startup and destroys it at exit (wrapper, constructor, registrar,
 // destructor)
@@ -599,4 +600,5 @@ void EEEMStorm::Step(unsigned long inTime)
         this->Grow();
     else if (this->mIntensity > this->mTargetIntensity)
         this->Shrink();
+    EEAppCaptureStorm(*this, 1, inTime);   // STRM (TEST ONLY)
 }

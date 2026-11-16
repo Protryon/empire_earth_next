@@ -75,6 +75,7 @@
 #include "ee/EECommunications.h"
 #include "ee/EECheatCodes.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEAppCapture.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // Creates the cheat code table from the string resources
@@ -127,6 +128,7 @@ void EECheatCodes::ListCheatCodes()
     gResource->GetString(IDS_ATM, theE);
     theLine = theA + "     " + theB + "     " + theC + "     " + theD + "     " + theE;
     gUserInterface->AddChatLogEntry(theTitle + theLine, 0);
+    EEAppCaptureCheatList(theTitle + theLine);   // CHLS (TEST ONLY)
     gResource->GetString(IDS_BOSTON_FOOD_SUCKS, theA);
     gResource->GetString(IDS_YOU_SAID_WOOD, theB);
     gResource->GetString(IDS_ATM, theC);
@@ -134,6 +136,7 @@ void EECheatCodes::ListCheatCodes()
     gResource->GetString(IDS_CREATINE, theE);
     theLine = theA + "     " + theB + "     " + theC + "     " + theD + "     " + theE;
     gUserInterface->AddChatLogEntry(theTitle + theLine, 0);
+    EEAppCaptureCheatList(theTitle + theLine);   // CHLS (TEST ONLY)
     // the third and fourth lines have four codes: clear the slot they do not set (they used to repeat the line
     // before's first or last code)
     theA = gEmptyString;
@@ -143,6 +146,7 @@ void EECheatCodes::ListCheatCodes()
     gResource->GetString(IDS_BOSTON_RENT, theE);
     theLine = theA + "     " + theB + "     " + theC + "     " + theD + "     " + theE;
     gUserInterface->AddChatLogEntry(theTitle + theLine, 0);
+    EEAppCaptureCheatList(theTitle + theLine);   // CHLS (TEST ONLY)
     gResource->GetString(IDS_UH_SMOKE, theA);
     gResource->GetString(IDS_SLIMFAST, theB);
     gResource->GetString(IDS_MINE_YOUR_OWN_BUSINESS, theC);
@@ -150,6 +154,7 @@ void EECheatCodes::ListCheatCodes()
     theE = gEmptyString;
     theLine = theA + "     " + theB + "     " + theC + "     " + theD + "     " + theE;
     gUserInterface->AddChatLogEntry(theTitle + theLine, 0);
+    EEAppCaptureCheatList(theTitle + theLine);   // CHLS (TEST ONLY)
     gResource->GetString(IDS_BIG_DIG, theA);
     gResource->GetString(IDS_MY_NAME_IS_METHOS, theB);
     gResource->GetString(IDS_QUOTABLE_PATELLA, theC);
@@ -157,6 +162,7 @@ void EECheatCodes::ListCheatCodes()
     theE = gEmptyString;
     theLine = theA + "     " + theB + "     " + theC + "     " + theD + "     " + theE;
     gUserInterface->AddChatLogEntry(theTitle + theLine, 0);
+    EEAppCaptureCheatList(theTitle + theLine);   // CHLS (TEST ONLY)
     gResource->GetString(IDS_I_HAVE_POWER, theA);
     gResource->GetString(IDS_COFFEE_TRAIN, theB);
     gResource->GetString(IDS_AHHHCOOL, theC);
@@ -164,6 +170,7 @@ void EECheatCodes::ListCheatCodes()
     theE = gEmptyString;
     theLine = theA + "     " + theB + "     " + theC + "     " + theD + "     " + theE;
     gUserInterface->AddChatLogEntry(theTitle + theLine, 0);
+    EEAppCaptureCheatList(theTitle + theLine);   // CHLS (TEST ONLY)
 }
 
 // Runs a cheat code for a player (when cheats are enabled): resources, reveal/explore, epochs, instant build,

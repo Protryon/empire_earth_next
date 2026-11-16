@@ -4,6 +4,7 @@
 #define EE_EEMINIMAP_H
 
 #include <list>
+#include <vector>
 #include "lle/UList.h"
 
 class GEScreen;
@@ -110,6 +111,10 @@ struct MMMapUnit {
     void Recolor();                         // 0x11fa55 (the dots take the players' current colours)
     void RedrawCell(long inX, long inY);    // 0x11fb2a (one cell's pixel)
     void RedrawPixels(long inLeft, long inRight, long inBottom, long inTop);  // 0x1202f2 (the terrain texture's pixels)
+    // New (port): cell inIndex's sight count, unit layer pixel and dots in list order (the capture's read,
+    // ee/EEAppCapture.h)
+    void GetCell(long inIndex, unsigned short& outCount, unsigned short& outPixel, std::vector<MMPlayerUnit>& outDots,
+                 std::vector<MMMapUnit>& outUnits) const;
 
     // +0x0015c / +0x0815c: UList<EEMiniMapDot>[0x1000] / UList<EEMiniMapUnitDot>[0x1000] in the original (the dots
     // per 0x40 x 0x40 cell; EEMiniMap's ctor/dtor loops; the lists' template statics renumber every includer's
