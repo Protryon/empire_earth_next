@@ -391,7 +391,9 @@ def expect_check(path, outcomes, out=sys.stdout):
         got = outcomes.get(n, {}).get((seed, t))
         if got is None:
             continue   # not in this run
-        worse = got == "-" or (got != "END" and (want == "END" or int(got) < int(want)))
+        # "-": no save at that time (the game ended before it); a line that expects "-" accepts it
+        worse = (got == "-" and want != "-") or (got not in ("END", "-") and want != "-"
+                                                 and (want == "END" or int(got) < int(want)))
         better = got != want and not worse
         if worse or better:
             print(f"expect {n} seed {seed} {t} s: {want} -> {got}" + (" WORSE" if worse else " (better: update the file)"),
