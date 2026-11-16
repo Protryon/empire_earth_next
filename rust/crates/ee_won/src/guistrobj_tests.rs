@@ -161,8 +161,12 @@ fn golden_replay() {
                 s[i].free();
                 s[i] = x;
             }
-            "reserve" => drop(op(EeWonGstrOp::Reserve, &mut s[i], std::ptr::null(), a, bb, 0)),
-            "resize" => drop(op(EeWonGstrOp::Resize, &mut s[i], std::ptr::null(), a, bb, 0)),
+            "reserve" => {
+                op(EeWonGstrOp::Reserve, &mut s[i], std::ptr::null(), a, bb, 0);
+            }
+            "resize" => {
+                op(EeWonGstrOp::Resize, &mut s[i], std::ptr::null(), a, bb, 0);
+            }
             "wstr" => {
                 let u: Vec<u16> = WIDE[a as usize].encode_utf16().collect();
                 op(EeWonGstrOp::AssignUnits, &mut s[i], u.as_ptr().cast(), bb, 0, 0);
@@ -171,7 +175,9 @@ fn golden_replay() {
                 let t = NARROW[a as usize];
                 op(EeWonGstrOp::AssignNarrow, &mut s[i], t.as_ptr().cast(), bb, 0, 0);
             }
-            "fill" => drop(op(EeWonGstrOp::Fill, &mut s[i], std::ptr::null(), a, bb, c)),
+            "fill" => {
+                op(EeWonGstrOp::Fill, &mut s[i], std::ptr::null(), a, bb, c);
+            }
             "assign" | "append" | "insert" => {
                 let k = match f[1] {
                     "assign" => EeWonGstrOp::Assign,
@@ -182,8 +188,12 @@ fn golden_replay() {
                 // SAFETY: live blocks (`other` may be `me`)
                 unsafe { ee_won_gstr(k, me, other, a, bb, 0, WS as u32) };
             }
-            "appendc" => drop(op(EeWonGstrOp::AppendUnit, &mut s[i], std::ptr::null(), a, 0, 0)),
-            "erase" => drop(op(EeWonGstrOp::Erase, &mut s[i], std::ptr::null(), a, bb, 0)),
+            "appendc" => {
+                op(EeWonGstrOp::AppendUnit, &mut s[i], std::ptr::null(), a, 0, 0);
+            }
+            "erase" => {
+                op(EeWonGstrOp::Erase, &mut s[i], std::ptr::null(), a, bb, 0);
+            }
             "setat" => assert_eq!(op(EeWonGstrOp::SetAt, &mut s[i], std::ptr::null(), a, bb, 0), c, "{line}"),
             "substr" => {}
             other => panic!("unknown edit {other}"),

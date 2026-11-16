@@ -167,23 +167,49 @@ fn golden_replay() {
         // SAFETY: a live world
         unsafe {
             match f[1] {
-                "setcolor" => drop(call(p, C::SetColor, [a[6], 0, 0, 0, 0, 0, 0], std::ptr::null())),
-                "stdcolor" => r = call(p, C::StandardColor, [a[2] & 15, 0, 0, 0, 0, 0, 0], std::ptr::null()),
-                "syscolor" => drop(call(p, C::SetSysColor, [a[2] & 15, 0, 0, 0, 0, 0, 0], std::ptr::null())),
-                "translate" => drop(call(p, C::Translate, [a[0] / 3, a[1] / 3, 0, 0, 0, 0, 0], std::ptr::null())),
-                "pixel" => drop(call(p, C::SetPixel, a, std::ptr::null())),
-                "image" => drop(call(p, C::DrawImage, a, image(a[2] & 1))),
-                "imagepart" => drop(call(p, C::DrawImagePart, a, image(2))),
-                "line" => drop(call(p, C::DrawLine, a, std::ptr::null())),
-                "rect" => drop(call(p, C::DrawRect, a, std::ptr::null())),
-                "fill" => drop(call(p, C::FillRect, [a[0], a[1], a[2] / 4, a[3] / 4, 0, 0, 0], std::ptr::null())),
-                "blend" => drop(call(p, C::FillRectBlend, a, std::ptr::null())),
-                "dotted" => {
-                    drop(call(p, C::DrawDottedRect, [a[0], a[1], a[2] / 2, a[3] / 2, 0, 0, 0], std::ptr::null()))
+                "setcolor" => {
+                    call(p, C::SetColor, [a[6], 0, 0, 0, 0, 0, 0], std::ptr::null());
                 }
-                "ellipse" => drop(call(p, C::DrawEllipse, a, std::ptr::null())),
-                "fillellipse" => drop(call(p, C::FillEllipse, a, std::ptr::null())),
-                "arc" => drop(call(p, C::DrawArc, a, std::ptr::null())),
+                "stdcolor" => r = call(p, C::StandardColor, [a[2] & 15, 0, 0, 0, 0, 0, 0], std::ptr::null()),
+                "syscolor" => {
+                    call(p, C::SetSysColor, [a[2] & 15, 0, 0, 0, 0, 0, 0], std::ptr::null());
+                }
+                "translate" => {
+                    call(p, C::Translate, [a[0] / 3, a[1] / 3, 0, 0, 0, 0, 0], std::ptr::null());
+                }
+                "pixel" => {
+                    call(p, C::SetPixel, a, std::ptr::null());
+                }
+                "image" => {
+                    call(p, C::DrawImage, a, image(a[2] & 1));
+                }
+                "imagepart" => {
+                    call(p, C::DrawImagePart, a, image(2));
+                }
+                "line" => {
+                    call(p, C::DrawLine, a, std::ptr::null());
+                }
+                "rect" => {
+                    call(p, C::DrawRect, a, std::ptr::null());
+                }
+                "fill" => {
+                    call(p, C::FillRect, [a[0], a[1], a[2] / 4, a[3] / 4, 0, 0, 0], std::ptr::null());
+                }
+                "blend" => {
+                    call(p, C::FillRectBlend, a, std::ptr::null());
+                }
+                "dotted" => {
+                    call(p, C::DrawDottedRect, [a[0], a[1], a[2] / 2, a[3] / 2, 0, 0, 0], std::ptr::null());
+                }
+                "ellipse" => {
+                    call(p, C::DrawEllipse, a, std::ptr::null());
+                }
+                "fillellipse" => {
+                    call(p, C::FillEllipse, a, std::ptr::null());
+                }
+                "arc" => {
+                    call(p, C::DrawArc, a, std::ptr::null());
+                }
                 "string" => {
                     if (*p).font.is_some() {
                         let len = if a[2] & 1 == 0 { 2 } else { 5 };
@@ -195,9 +221,15 @@ fn golden_replay() {
                         call(p, C::DrawStringPart, [a[3] & 3, a[4] & 7, a[0], a[1], 0, 0, 0], text(a[2]));
                     }
                 }
-                "perform" => drop(call(p, C::PerformClip, a, std::ptr::null())),
-                "push" => drop(call(p, C::PushClip, a, std::ptr::null())),
-                "pop" => drop(call(p, C::PopClip, a, std::ptr::null())),
+                "perform" => {
+                    call(p, C::PerformClip, a, std::ptr::null());
+                }
+                "push" => {
+                    call(p, C::PushClip, a, std::ptr::null());
+                }
+                "pop" => {
+                    call(p, C::PopClip, a, std::ptr::null());
+                }
                 "scheme" => (*p).scheme = if a[2] & 3 == 0 { None } else { Some(scheme((a[2] & 1) as u32)) },
                 "font" => {
                     // Graphics::SetFont (C++): the font prepared when it changes
