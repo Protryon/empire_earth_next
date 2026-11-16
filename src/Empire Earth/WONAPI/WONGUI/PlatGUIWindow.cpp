@@ -42,23 +42,35 @@ SmartPtr<Font> PlatGUIWindow::PlatformGetFont(const FontDescriptor& inDescriptor
     return new PlatGUIFont(this->mDisplayContext.get(), inDescriptor);
 }
 
+// The fields the Rust manager reads (platwm.rs EeWonPlatWinInfo)
+void PlatGUIWindow::GetInfo(EeWonPlatWinInfo& outInfo)
+{
+    outInfo.x = this->mX;
+    outInfo.y = this->mY;
+    outInfo.width = this->mWidth;
+    outInfo.height = this->mHeight;
+    outInfo.visible = this->mVisible;
+    outInfo.top_most = this->mTopMost;
+    outInfo.registered = this->mRegistered;
+    outInfo.popup = this->IsPopup();
+    outInfo.fills = this->FillsSurface();
+    outInfo.frame = this->HasFrame();
+    outInfo.open = this->GetWindowState() == WindowState_Open;
+    outInfo.minimize_on_alt_tab = this->mMinimizeOnAltTab;
+    outInfo.forward_keys = this->mForwardKeyMsgToParent;
+}
+
+// Inside the classic frame and caption of a framed window, else the window rectangle (platwm.rs client_rect)
 void PlatGUIWindow::GetClientRect(WONRectangle& outRect)
 {
-    if (this->HasFrame()) {
-        outRect.x = this->mX + kFrameBorder;
-        outRect.y = this->mY + kFrameBorder + kFrameCaption;
-        outRect.width = this->mWidth - 2 * kFrameBorder;
-        outRect.height = this->mHeight - 2 * kFrameBorder - kFrameCaption;
-        if (outRect.width < 0)
-            outRect.width = 0;
-        if (outRect.height < 0)
-            outRect.height = 0;
-    } else {
-        outRect.x = this->mX;
-        outRect.y = this->mY;
-        outRect.width = this->mWidth;
-        outRect.height = this->mHeight;
-    }
+    EeWonPlatWinInfo theInfo;
+    this->GetInfo(theInfo);
+    int r[4];
+    ee_won_plat_client_rect(&theInfo, r);
+    outRect.x = r[0];
+    outRect.y = r[1];
+    outRect.width = r[2];
+    outRect.height = r[3];
 }
 
 // Opens the window: its rectangle in the surface, the root sized to its client area, a display context, an

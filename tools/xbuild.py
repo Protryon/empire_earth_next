@@ -529,6 +529,19 @@ WON_TESTS = {
     # the image filters' pixel loops (imgfilter.rs) against the original statements over stand-in raw images
     # (golden: rust/crates/ee_won/src/golden_imgfilter.txt)
     "won_imgfilter_test": [],
+    # PlatGraphics' hooks (platgfx.rs) against their original statements on copies of one real surface, at every
+    # pixel scale (golden: rust/crates/ee_won/src/golden_platgfx.txt)
+    "won_platgfx_test": [],
+    # PlatNativeImage's pixel work (platimg.rs: draws, scaled draws, raw copies, the raw images' native images, the
+    # texture pack's copies, the hand cursor) against the original statements over one stand-in world (golden:
+    # rust/crates/ee_won/src/golden_platimg.txt)
+    "won_platimg_test": [],
+    # PlatGUIFont as a Rust object (platfont.rs) against its original statements on the platform fonts (golden-free:
+    # the Rust tests check the font over the same face)
+    "won_platfont_test": [],
+    # PlatWindowManager as a Rust object (platwm.rs) against its original statements over one stand-in world of
+    # windows and the platform's window system
+    "won_platwm_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],

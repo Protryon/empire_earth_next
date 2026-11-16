@@ -39,8 +39,6 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONSurface.h"
 
-struct PlatFont;
-
 namespace WONAPI {
 
 class PlatGUIWindow;
@@ -58,7 +56,7 @@ public:
     // The surface's pixels per logical pixel (>= 1; the frame is the surface's size times it, rounded:
     // PlatGUIPixels). Any thread, as SetSurfaceSize. Windows repaint at the new scale.
     void SetPixelScale(float inScale);
-    float GetPixelScale() const { return this->mPixelScale; }
+    float GetPixelScale() const;
     // Where the game shows the frame in its window, as fractions of the window's client area (left, top, width,
     // height): the pointer is mapped back through it (ScaleToSurface). Before the first call: the surface scaled
     // uniformly to fit, centred. Any thread.
@@ -84,58 +82,30 @@ public:
     virtual void GetScreenRect(WONRectangle& outRect);
     virtual void GetSystemColorScheme();
 
-    // ---- backend (PlatGUIWindow)
-    void AddPlatWindow(PlatGUIWindow* inWindow);
-    void RemovePlatWindow(PlatGUIWindow* inWindow);
-    void BringToFront(PlatGUIWindow* inWindow);
-    void SetFocusWindow(PlatGUIWindow* inWindow);
-    void SetCaptureWindow(PlatGUIWindow* inWindow) { this->mCaptureWindow = inWindow; }
-    PlatGUIWindow* GetCaptureWindow() { return this->mCaptureWindow; }
-    PlatGUIWindow* GetFocusWindow() { return this->mPlatFocusWindow; }
+    // ---- backend (PlatGUIWindow; the Rust manager's, platwm.rs)
+    void AddPlatWindow(PlatGUIWindow* inWindow) { this->Call(EeWonPlatWmCall::Add, (intptr_t)inWindow); }
+    void RemovePlatWindow(PlatGUIWindow* inWindow) { this->Call(EeWonPlatWmCall::Remove, (intptr_t)inWindow); }
+    void BringToFront(PlatGUIWindow* inWindow) { this->Call(EeWonPlatWmCall::BringToFront, (intptr_t)inWindow); }
+    void SetFocusWindow(PlatGUIWindow* inWindow) { this->Call(EeWonPlatWmCall::SetFocus, (intptr_t)inWindow); }
+    void SetCaptureWindow(PlatGUIWindow* inWindow) { this->Call(EeWonPlatWmCall::SetCapture, (intptr_t)inWindow); }
+    PlatGUIWindow* GetCaptureWindow() { return (PlatGUIWindow*)this->Call(EeWonPlatWmCall::Capture); }
+    PlatGUIWindow* GetFocusWindow() { return (PlatGUIWindow*)this->Call(EeWonPlatWmCall::Focus); }
     // the topmost visible window whose window rectangle holds the surface point (WindowFromPoint)
-    PlatGUIWindow* WindowFromPoint(int inX, int inY);
-    bool GetMousePosition(int& outX, int& outY) { outX = this->mMouseX; outY = this->mMouseY; return this->mHaveMouse; }
-    void SetDirty() { this->mDirty = true; }
-    int GetSurfaceWidth() const { return this->mSurfaceWidth; }
-    int GetSurfaceHeight() const { return this->mSurfaceHeight; }
-    PlatWindow* GetPlatWindow() { return this->mPlatWindow; }
-    const PlatFont* GetCaptionFont();
+    PlatGUIWindow* WindowFromPoint(int inX, int inY) { return (PlatGUIWindow*)this->Call(EeWonPlatWmCall::WindowFromPoint, inX, inY); }
+    bool GetMousePosition(int& outX, int& outY) { return ee_won_plat_wm_mouse(this->mRust, &outX, &outY); }
+    void SetDirty() { this->Call(EeWonPlatWmCall::SetDirty); }
+    int GetSurfaceWidth() const { return (int)this->Call(EeWonPlatWmCall::SurfaceWidth); }
+    int GetSurfaceHeight() const { return (int)this->Call(EeWonPlatWmCall::SurfaceHeight); }
+    PlatWindow* GetPlatWindow() { return (PlatWindow*)this->Call(EeWonPlatWmCall::PlatWindow); }
     // paints every window whose root is invalid, then composites when anything changed
-    void PaintAndComposite();
+    void PaintAndComposite() { this->Call(EeWonPlatWmCall::PaintAndComposite); }
 
 protected:
-    void ApplySurfaceSize(int inWidth, int inHeight);
-    void ApplyPixelScale(float inScale);
     void HandlePlatEvent(const PlatInputEvent& inEvent);
-    void HandleMouse(const PlatInputEvent& inEvent);
-    void HandleKey(const PlatInputEvent& inEvent);
-    void Composite();
-    void ScaleToSurface(const PlatInputEvent& inEvent, int& ioX, int& ioY);
+    intptr_t Call(EeWonPlatWmCall inCall, intptr_t a = 0, intptr_t b = 0) const;
 
-    PlatMutex* mFrameMutex;                     // the frame, its size and serial, the pending surface size
-    std::vector<uint32_t> mFrame;
-    int mFrameWidth, mFrameHeight;              // pixels
-    int mFrameLogicalWidth, mFrameLogicalHeight;
-    uint32_t mFrameSerial;
-    int mPendingWidth, mPendingHeight;          // a SetSurfaceSize from another thread (0: none)
-    float mPendingScale;                        // a SetPixelScale from another thread (0: none)
-    float mPixelScale;                          // the frame's and the windows' images' pixels per surface pixel
-    float mPresentRect[4];                      // SetPresentRect's (under the frame lock; width 0: none)
-    int mSurfaceWidth, mSurfaceHeight;
-    volatile int32_t mWakePending;             // Signals since the loop last ran (PlatAtomicIncrement)
+    EeWonPlatWm* mRust;                         // the manager (platwm.rs)
     EventForwardFunc mEventForward;
-    std::vector<PlatGUIWindow*> mZOrder;        // bottom to top
-    PlatGUIWindow* mPlatFocusWindow;            // the window with the keyboard focus (WM_SETFOCUS's)
-    PlatGUIWindow* mCaptureWindow;
-    PlatGUIWindow* mDragWindow;                 // a framed window dragged by its caption
-    int mDragOffsetX, mDragOffsetY;
-    bool mAppActive;                            // the game window has the system's focus
-    bool mDirty;                                // composite at the next opportunity
-    int mMouseX, mMouseY;                       // the pointer in surface pixels
-    bool mHaveMouse;
-    PlatWindow* mPlatWindow;                    // the game window (from its events)
-    uint32_t mLastProcessTick;
-    PlatFont* mCaptionFont;
 };
 
 // A WONAPI window on the lobby surface (MSWindow's replacement; CreateNativeWindow makes one).
@@ -167,6 +137,7 @@ public:
     bool FillsSurface() const { return this->GetParent() == NULL; }
     bool HasFrame() const { return this->GetParent() != NULL && !(this->GetStyle() & 0x20); }
     void GetClientRect(WONRectangle& outRect);
+    void GetInfo(EeWonPlatWinInfo& outInfo);    // the fields the Rust manager reads
     void FollowSurface();                       // a window that fills the surface takes its new size
     void FollowPixelScale();                    // a new offscreen image at the manager's pixel scale, repainted
     void OnPaint();                             // repaints an invalid root into the offscreen image
@@ -209,13 +180,12 @@ public:
     virtual void DrawArcHook(int x, int y, int width, int height, int inStartAngle, int inArcAngle);
     virtual void ClearClipRectHook();
     virtual void SetClipRectHook(int x, int y, int width, int height);
-    SurfaceBase* PrepareSurface();          // the surface with the current colour, NULL when there is none
     SurfaceBase* mSurface;                  // the context's, borrowed
     float mScale;                           // the context's pixel scale (1: GDI's results, pixel for pixel)
 protected:
-    int PX(int v) const;                    // a logical coordinate -> the surface's pixels
-    void FillLogicalRect(SurfaceBase* inSurface, int x, int y, int width, int height);   // pixels covering it
-    void ScaledLine(SurfaceBase* inSurface, int x1, int y1, int x2, int y2);   // a line one logical pixel wide
+    // the hook inOp (EeWonPlatGfx) of ee_won's platgfx.rs on the surface, the scale and the colour
+    DWORD Hook(int inOp, int a = 0, int b = 0, int c = 0, int d = 0, int e = 0, int f = 0);
+    void Polygon(POINT* inPoints, int inCount, bool inFill);
 };
 
 // a logical coordinate or size at a pixel scale (the one rounding every part of the backend and the game uses)
@@ -231,6 +201,11 @@ public:
     virtual ~PlatNativeMask();
     bool IsTransparent(int x, int y) const
     { return (this->mBits[(size_t)y * this->mBytesPerRow + (x >> 3)] & (0x80 >> (x & 7))) != 0; }
+    EeWonPlatMask Rust() const
+    {
+        EeWonPlatMask m = {this->mBits.data(), this->mWidth, this->mHeight, this->mBytesPerRow};
+        return m;
+    }
     int mWidth, mHeight, mBytesPerRow;
     std::vector<unsigned char> mBits;
 };
@@ -252,8 +227,6 @@ public:
     int GetPixelWidth() { return this->mSurface->GetWidth(); }
     int GetPixelHeight() { return this->mSurface->GetHeight(); }
     float GetScale() const { return this->mScale; }
-    // Draw onto a surface of another pixel scale (or both scaled): logical rectangle, resampled
-    void DrawScaled(SurfaceBase* inDest, float inDestScale, int x, int y, int left, int top, int width, int height);
     SmartPtr<SurfaceBase> mSurface;
     float mScale;
 };
@@ -302,11 +275,7 @@ public:
     virtual int GetHeight();
     virtual int GetAscent();
     virtual int GetDescent();
-    const PlatFont* FontForScale(float inScale);   // mFont rasterised at its size times inScale
-    PlatFont* mFont;
-    PlatFont* mScaledFont;                  // the last FontForScale's (owned)
-    float mScaledFontScale;
-    int mHeight, mAscent, mDescent;
+    EeWonPlatFont* mRust;                   // the font (platfont.rs)
 };
 
 // wide text (GUIString) -> UTF-8 bytes (decision D6)
