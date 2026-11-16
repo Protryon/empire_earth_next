@@ -84,11 +84,31 @@ function M.coast_boats_wanted_now(view, memory)
     if tx == nil then
         return 0
     end
+    -- New (AI_RESEARCH 8.97): on island and planets maps the fish within 30 tiles of a built dock count too (a second
+    -- dock at fresh fishing grounds, island_dock below)
+    local docks = {}
+    if F().water_map(memory) then
+        for _, id in ipairs(ai.units{type = C.dock, built = true}) do
+            local d = R.unit(id)
+            if d ~= nil then
+                docks[#docks + 1] = d
+            end
+        end
+    end
     local n = 0
     for _, id in ipairs(rm.fish) do
         local u = R.unit(id)
-        if u ~= nil and (u.amount or 0) > 0 and R.d2(u.x, u.y, tx, ty) <= 900 then
-            n = n + 1
+        if u ~= nil and (u.amount or 0) > 0 then
+            local ok = R.d2(u.x, u.y, tx, ty) <= 900
+            for k = 1, #docks do
+                if ok then
+                    break
+                end
+                ok = R.d2(u.x, u.y, docks[k].x, docks[k].y) <= 900
+            end
+            if ok then
+                n = n + 1
+            end
         end
     end
     local max = p.forage_patches and 32 or 8
@@ -1012,6 +1032,207 @@ local function dock_check(view, memory)
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
+-- New (AI_RESEARCH 8.97): the island food. On Large Islands the food fell from about 114 a minute (40-60 min) to 59
+-- (75-90 min): the forage bushes of the small island run out at 60-80 minutes, the granary (whose foundations are the
+-- farms) waited for the building counts' rotation (a median 78 minutes, 20 after the Copper Age), the boats were
+-- requested only while idle citizens were being assigned and then waited behind the epoch's reserve (a town had a dock
+-- and no boat all game; units.lua can_afford now pays the island's boats, granary and farms from the stock), a dock
+-- stood with its first boat queued for 50 minutes, and the coast's boats counted only the fish within 30 tiles of the
+-- town, so the boats worked the fish by the first dock out and then sailed 20-30 tiles to the next. On island and
+-- planets maps, every 30 s from the Stone Age:
+--  - a stuck dock replaced (island_stuck_docks below);
+--  - the boats: with a dock built and fish to work (fishes), one more boat requested while the boats (every fishing
+--    class), requested or being made, are fewer than the coast's boats wanted (EECPRMRequestBoats' count);
+--  - a second dock: while the fish within FISH_NEAR tiles of the docks hold less than FISH_LOW, a dock at the
+--    nearest placeable site of the town's land within 8 tiles of the explored fish with the most food left within
+--    FISH_NEAR of it (FISH_RICH at least, more than FISH_NEAR tiles from every dock), DOCKS_MAX docks at most;
+--  - the granary: from the epoch of the farms, with no granary (built or not) and none queued, when the forage
+--    bushes left on the town's land hold less than BUSH_LOW food.
+-- DEVIATION (fog): the fish and bushes are the explored ones.
+local ISLAND_FOOD_MS = 30000
+local FISH_NEAR, FISH_LOW, FISH_RICH, DOCKS_MAX, BUSH_LOW = 12, 1500, 1800, 3, 3000
+
+local function fishing_boats()
+    local n = 0
+    for _, c in ipairs({"s02_fishing_boat_stone", "s04_fishing_boat_bronze", "s11_fishing_boat_modern"}) do
+        n = n + #ai.units{type = c}
+    end
+    return n
+end
+
+local function island_boats(view, memory)
+    if #ai.units{type = C.dock, built = true} == 0 or not fishes(view, memory) then
+        return
+    end
+    local boat = T.fishing_boat_class(view.epoch)
+    local um = U().state(memory)
+    local wanted = M.coast_boats_wanted(view, memory)
+    if (um.waiting[boat] or 0) == 0 and not U().in_production(view, boat) and fishing_boats() < wanted then
+        U().request(view, memory, boat, 1)
+    end
+end
+
+local function island_dock(view, memory)
+    local docks = {}
+    for _, id in ipairs(ai.units{type = C.dock}) do
+        local u = R.unit(id)
+        if u ~= nil then
+            docks[#docks + 1] = u
+        end
+    end
+    if #docks == 0 or #docks >= DOCKS_MAX or B().is_queued(memory, C.dock) then
+        return
+    end
+    for _, d in ipairs(docks) do
+        if not d.built then
+            return
+        end
+    end
+    local fish = {}
+    for _, id in ipairs(R.state(memory).fish) do
+        local u = R.unit(id)
+        if u ~= nil and (u.amount or 0) > 0 then
+            fish[#fish + 1] = u
+        end
+    end
+    local near, r2 = 0, FISH_NEAR * FISH_NEAR
+    for _, u in ipairs(fish) do
+        for _, d in ipairs(docks) do
+            if R.d2(u.x, u.y, d.x, d.y) <= r2 then
+                near = near + u.amount
+                break
+            end
+        end
+    end
+    if near >= FISH_LOW then
+        return
+    end
+    -- the fish with the most food within FISH_NEAR of it, away from the docks (ties: the lower id)
+    local best, bs
+    for _, u in ipairs(fish) do
+        local free = true
+        for _, d in ipairs(docks) do
+            if R.d2(u.x, u.y, d.x, d.y) <= r2 then
+                free = false
+                break
+            end
+        end
+        if free then
+            local sum = 0
+            for _, v in ipairs(fish) do
+                if R.d2(u.x, u.y, v.x, v.y) <= r2 then
+                    sum = sum + v.amount
+                end
+            end
+            if sum >= FISH_RICH and (bs == nil or sum > bs or (sum == bs and u.id < best.id)) then
+                best, bs = u, sum
+            end
+        end
+    end
+    if best == nil then
+        return
+    end
+    local tx, ty = R.town(view)
+    for _, s in ipairs(ai.water_sites(best.x, best.y, {max = 16})) do
+        local x, y = s[1], s[2]
+        if R.d2(x, y, best.x, best.y) > 64 then
+            break
+        end
+        local apart = true
+        for _, d in ipairs(docks) do
+            if R.d2(x, y, d.x, d.y) <= 75 then
+                apart = false
+            end
+        end
+        if apart and tx ~= nil and ai.reach(tx, ty, x, y) and ai.can_place(C.dock, x, y) and not R.enemy_near(x, y)
+                and not B().stalled_site(view, memory, C.dock, x, y) then
+            B().queue(view, memory, C.dock, true, false, x, y)
+            print(string.format("classic_lua dock.fish queue at=%d,%d fish=%d near=%d", x, y, bs, near))
+            return
+        end
+    end
+end
+
+local function island_granary(view, memory)
+    if R.state(memory).uses_fishing or #ai.units{type = C.granary} > 0 or B().is_queued(memory, C.granary) then
+        return
+    end
+    local farm = memory.civ ~= nil and memory.civ.farm_type or C.farm
+    local tech = U().class_tech(view, farm)
+    if tech == nil or tech.obsolete or not tech.available or view.epoch < tech.epoch then
+        return
+    end
+    local tx, ty = R.town(view)
+    if tx == nil then
+        return
+    end
+    local left = 0
+    for _, id in ipairs(ai.resources{kind = "food"}) do
+        local u = R.unit(id)
+        if u ~= nil and u.type == C.forage_bush and (u.amount or 0) > 0 and ai.reach(tx, ty, u.x, u.y) then
+            left = left + u.amount
+            if left >= BUSH_LOW then
+                return
+            end
+        end
+    end
+    B().queue(view, memory, C.granary, false, true)
+    print(string.format("classic_lua granary.island queue bushes=%d", left))
+end
+
+-- a dock that has been making a unit for DOCK_STUCK_MS while no unit of that category came out (a fishing boat takes
+-- 30 s) cannot let its ships out (a Large Islands dock stood on a shore whose water the new ship could not reach, its
+-- boat queued for 50 minutes): it is deleted and its site never used again (build.lua's stalls, forever);
+-- dock_check and island_dock build the next
+local DOCK_STUCK_MS = 300000
+
+local function island_stuck_docks(view, memory)
+    local rm = R.state(memory)
+    rm.dock_prod = rm.dock_prod or {}
+    local seen = {}
+    local tree = U().tree(view)
+    for _, id in ipairs(ai.units{type = C.dock, built = true}) do
+        local u = R.unit(id)
+        local t = u ~= nil and u.producing ~= nil and tree.byId[u.producing] or nil
+        if t ~= nil and t.makes ~= nil then
+            seen[id] = true
+            -- (by the class's category: a unit made is upgraded at once to the epoch's class of it)
+            local k = ai.class(t.makes)
+            local made = #ai.units{category = k ~= nil and k.category or "ship"}
+            local p = rm.dock_prod[id]
+            if p == nil or p.item ~= u.producing or made ~= p.made then
+                rm.dock_prod[id] = {item = u.producing, made = made, t = view.time}
+            elseif view.time - p.t >= DOCK_STUCK_MS then
+                rm.dock_prod[id] = nil
+                B().forbid_site(memory, C.dock, u.x, u.y)
+                ai.delete({id})
+                print(string.format("classic_lua dock.stuck at=%d,%d item=%s", u.x, u.y, t.makes))
+            end
+        end
+    end
+    for _, id in ipairs(ai.keys(rm.dock_prod)) do
+        if not seen[id] then
+            rm.dock_prod[id] = nil
+        end
+    end
+end
+
+local function island_food(view, memory)
+    local rm = R.state(memory)
+    if view.time < (rm.next_island_food or 0) then
+        return
+    end
+    rm.next_island_food = view.time + ISLAND_FOOD_MS
+    if view.epoch < 1 or not F().water_map(memory) then
+        return
+    end
+    island_stuck_docks(view, memory)
+    island_boats(view, memory)
+    island_dock(view, memory)
+    island_granary(view, memory)
+end
+
+-- ---------------------------------------------------------------------------------------------------------------
 -- Update
 
 function M.update(view, memory)
@@ -1026,6 +1247,7 @@ function M.update(view, memory)
     end
     R.spend_income(view, memory)
     dock_check(view, memory)
+    island_food(view, memory)
     F().step(view, memory)
     settlement_for(view, memory)
     if view.time >= rm.next_wanted then
