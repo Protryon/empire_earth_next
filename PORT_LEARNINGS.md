@@ -25124,6 +25124,20 @@ deleted); four include-block conflicts (`EEScreens.cpp`, `EEUIBGenericBackground
 had it only through the two includes round 1 kept); `PORT_LEARNINGS.md` (rust's, then round 1's and this section);
 the `mod toolkit` comment that git's merge separated from its line. Headers current, nothing to narrow.
 
+The second merge of `rust` (8620ad42: the address markers deleted, the Graphics Engine's round 16): conflicts only
+on `EECampaignEditorBehavior.cpp`/`.h` (kept deleted) and PORT_LEARNINGS.md (rust's, then this lane's two
+sections); `tools/strip_markers.py` then changed nothing (no marker lines in this lane's changes); headers current,
+nothing to narrow. On it: build `--sim` 0/0 (EE-AOC 877, EE-SIM 878 inputs), the test-profile build 0/0, the oracle
+seeds 2-7 identical, the editor gate PASS 14,049, the civilization builder gate PASS 3,913 (it failed once right
+after the oracle: the civilization choice's list was dumped filled and its "Please wait" label hidden, the expected
+dump has them before the fill; two reruns PASS: a timing-dependent dump, not this lane's ops), Rust tests 3,888 pass
+(`ee_gfx` `effect_storm::snow_drifts_spins_and_waits_for_its_last_flake` and the `ee_gx` GPU lag test failed in the
+full run under load and pass alone and in their crates' runs), clippy and rustfmt clean; the fixture tour `RESULT
+PASS tour` (F3 ok), the orders game `RESULT PASS random-game` (box select and orders PASS), the LAN game `RESULT PASS
+lan-game` (PT host 2912, joiner 2902), the legacy tour STOP reached with its menus equal to round 1's but the build
+label (its first run's F3 check read `paused False` three times; the rerun `False -> True -> False: ok`, as the
+fixture tour's).
+
 ### Behaviour
 
 None intended. Where the C++ crashed on a control the form lacks (an unchecked `static_cast` on NULL) the direct
