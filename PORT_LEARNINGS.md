@@ -25872,3 +25872,67 @@ table and the random map script reader.
   C-syntax copy for the spec generator, or reading the Rust struct), a decision for the lead.
 - **No data-release change.** The language strings stay compiled into the exe (now from Rust); the `.rmv` scripts are
   read as before. Nothing was published.
+
+## R6 data, round 2: the data gate reads Rust records, the random map's game passes, the db table records
+
+Branch `rust-data2` (from round 1's d0fa7dea; origin/rust had not moved since 1c108108).
+
+- **`eedata check` failed on rust: five records, not one.** UI rounds had moved `UIDbControl`,
+  `UIDbDataBackgrounds`, `UIDbDataEvents`, `UIDbDataFonts` and `UIDbDataHotKeys` into ee_ui; `specgen.py` stopped at
+  the first missing C struct (`UIDbDataBackgrounds`), and `UIEvent.cpp` (named by the overlay) no longer existed. The
+  spec generator now reads a record from its Rust definition: `overlay.RUST_STRUCTS` names the `#[repr(C)]` struct
+  in the `STRUCT_SOURCES` file. The parser maps a snake_case field to `mCamelCase` (an `id` word as `ID`) or keeps a
+  field already named as the member (`mAnimalID`, `_gapF4`); a scalar `u8` is a one-byte bool (a Rust `bool` cannot
+  hold any byte the file may carry), a `u8`/`c_char` array is `char[N]`; the size is the struct's
+  `assert!(size_of::<T>() == N)`. Comparing every field (name, offset, type, count, class) with the old specs.json
+  showed the text layouts unchanged; two names of fields the text does not carry follow the Rust
+  (`mUnusedDbRecordID`, the background record's tail `mPad`). `census.py` skips the Rust records (clang cannot rename
+  a Rust field). Reading the generated `include/rust` header was the other option; the Rust source is the definition
+  (cbindgen drops structs nothing exported names, and the header has no size assert).
+- **The game's random map passes are Rust (ee_rmap `game.rs`).** The state stays the C++'s `EERandomMapData`
+  (the generator PIMs' struct, `std::vector<std::vector<T>>` grids): the passes reach the grids through their row
+  pointers, no copy, and the lists (players, features, walls, unit names, terrains, regions, objects, forests,
+  animals) through flat copies (`ee/EERandomMapView.h`, a template over the struct's two names so `rmap_dump` builds
+  the same view). The map, the mesh, the tables and unit creation are 24 callbacks (`EeRmapGameHost`). `mTiles` is
+  `unsigned long`: on LP64 that is 64-bit, so the rows are `c_ulong` and the values go through 32 bits.
+  - The two random streams: the passes draw from copies of the seeds and store them back after the pass; nothing
+    the host calls during a pass draws from `mData`'s streams (unit creation uses the game's), so the order is the
+    C++'s. `gURandomTraceHook` does not see these draws (it is EE-SIM's physics-stream trace).
+  - cbindgen writes the callback parameter names into the header: one called `class` broke every C++ includer of
+    `ee_rmap.h` ("declaration of anonymous class must be a definition"). A Rust name that is a C++ keyword is fine
+    in Rust and fatal in the header.
+  - C++ undefined behaviour made defined: a feature or wall naming a unit type past the unit names is skipped (the C++
+    read past the vector; `rmap_dump` already skipped it), `EERMArePlayersConnected` with no players no longer reads
+    `mPlayers[0]` (`size() - 1` wrapped), a grid cell off the grid panics instead of reading past it. The mesh pass's
+    unused loads of the global water terrain's colour type are gone.
+  - The C++ host is ~250 lines; EERandomMap.cpp went from 1,370 to 858 lines plus the 171-line view header.
+  - **Gate coverage**: `rmap_dump` mirrored the water points, the claims and the rings in C++ copies; it now runs the
+    Rust passes over its map shape (`DumpHost`) and the matrix stayed 2,088/2,088. Its smoothing copy lacks the
+    game's second loop (the straddling corners), so it keeps that copy: the smoothing, the mesh heights, the painting,
+    the start units, the walls and the resource objects are covered by the oracle and the captures only (random map
+    games).
+- **The rmap gate rotted again**: R4.3 part 16 folded the engine's value units into `GEValues.cpp`; the gate's
+  unit list still named `GE3DLine.cpp`, `GE2DPoint.cpp`, `GE3DPoint.cpp`, `GETransformation.cpp`.
+- **The db table records are Rust (ee_data `tables.rs`).** dbanimals, dbunitbehavior, dbweapontohit,
+  dbstartingresources, dbupgrade, dbcolortable, dbaiunittargeting, dbterraintype, dbgamevariant: the record struct
+  (the spec generator's source now), the copy into the class's plain members (`EeData*Fields`, the class's public
+  base, named as the members, so every reader compiles unchanged) and the constructor's values. The C++ keeps the
+  objects, their vectors, the media loads and the table statics; `ee/EEDbRecords.h` holds the loaders' common read
+  (open, count, each record's bytes to the copy, close; a failed read still hands the buffer on and the last status
+  is returned, as before). `EEUCUpgradeFactor` is a typedef of `EeDataUpgradeFactor`.
+  - ee_data's functions reach the header only through files cbindgen is handed (`xtask`: `ffi.rs`, now also
+    `tables.rs`): ee_data is not in `extra_bindings`.
+  - The upgrade copy keeps the original's slip: factor 12's offset is the repair flag (compared with 1), factor 13
+    keeps its default.
+- **Data release**: no table, rules document or text form changed (eedata check: every table text -> db -> text
+  identical, every game-read value equals retail; cppgate PASS). `open_data.json`'s converter hash covers
+  `tools/eedata/*.py` and `specs.json`, so the harness will rebuild a tree made before this round; the db part's
+  content is the same.
+- **Gates** on the final tree (origin/rust had not moved past 1c108108: no merge was needed): both builds 0/0 (850
+  inputs); the oracle seeds 2-7 identical; the captures at seeds 2-3 PASS in all five profiles (oracle 187, late
+  188, space 189, calamity 205, scenario 33 digests); the saveload matrix `--expect` PASS; `eedata check` PASS and
+  `cppgate` PASS; the rmap gate 2088/2088 and `--reader` 2088/2088; the editor gate PASS (14,260 lines) and the civ
+  gate PASS (3,913 lines); the Rust gate PASS (`ee_won`'s `the_palette_is_the_originals_until_the_game_sets_it`
+  failed once under load in an earlier run and passed alone and in the final run); the tour PASS (view 83.7% lit,
+  F3 ok). The tour is the only gate that loads the tables' media (the animals' graphics and sounds) and draws the
+  random map's painted terrain.
