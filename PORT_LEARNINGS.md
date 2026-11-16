@@ -25933,3 +25933,211 @@ objects the same way (about 25 cases). The hosts' remaining cases are C++ calls 
 The merges of rust: at the start (marker conflicts in five files: this branch's side taken, then
 `tools/strip_markers.py` as its own commit; PORT_LEARNINGS.md both sides' sections kept); at the end PORT_LEARNINGS.md
 rust's copy (it has this lane's rounds 9 and 10); `rust_build.py header` reordered include/rust/ee_won.h.
+
+## R6 WONGUI B round 1: GUIStringData's buffer and Graphics whole in Rust; the widget core's forwarders and defaults folded into its classes; the measure (ee_won guistrobj.rs, gfxobj.rs; branch rust-wonguib1, 2026-11-15)
+
+The second WONGUI lane's first round: the widget core (WindowManager, Window, Container, Graphics, the shared host
+GuiHost.cpp, the MS controls' unit, SkinnedContainers.cpp, ComponentLifetime.cpp, the GUIString data and their class
+code in WONLobbyGUI.h). The first WONGUI lane (round 40) keeps the configs, the platform layer and the images.
+
+WON C++ (`wc -l` of every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`): 47,862 at the branch's start
+(6d0c36ca) -> 46,772 before the merge of rust (net -1,090).
+
+### The measure
+
+`build/gb1/measure.py` sorts each owned unit's lines: comments, includes, braces, host cases (lines inside a host
+switch), one-line forwarders, the rest. At the start the owned units held 3,260 lines:
+
+| Unit | Lines | Host cases | Forwarders | Other code | Comments, includes, braces, blank |
+|---|---|---|---|---|---|
+| GuiHost.cpp | 1,082 | 447 | 54 | 229 | 352 |
+| WindowManager.cpp | 570 | 138 | 38 | 129 | 265 |
+| Graphics.cpp | 269 | 0 | 0 | 116 | 153 |
+| Window.cpp | 262 | 58 | 29 | 73 | 102 |
+| Container.cpp | 204 | 124 | 3 | 14 | 63 |
+| MSControlConstructors.cpp | 201 | 0 | 2 | 81 | 118 |
+| SkinnedContainers.cpp | 172 | 53 | 3 | 39 | 77 |
+| ComponentLifetime.cpp | 159 | 87 | 1 | 32 | 39 |
+| GUIStringData*.cpp, the singleton, the slice adapters | 341 | 0 | 15 | 96 | 230 |
+
+- **What it says.** The widget core's classes were already Rust objects: Container (round 26), Window (round 32),
+  WindowManager (rounds 33-34) and Component (round 38). Only three pieces of logic were still C++: Graphics,
+  GUIStringData's buffer and the colour scheme's defaults.
+- **The rest is shims.** 907 lines are host cases. Each reads or writes a C++ member, calls a virtual the lobby's
+  subclasses override, or touches a C++ object (fonts, images, events, GUIStrings). About 500 lines are forwarders.
+- **Lines freed per move** (each commit's WON count):
+  - GUIStringData's buffer whole: -288.
+  - Graphics whole: -150.
+  - WindowManager's and Window's forwarders inline: -300.
+  - The empty platform defaults, RunDialog, ScreenContainer and ComponentListenerComp folded: -145.
+  - The six MS control units into one, and the events' Deliver methods inline: -64 and -35.
+  - GuiHost.cpp's repeated cases: -53.
+  - WONRectangle folded: -32.
+  - MSControlConstructors.cpp as one unit: -23.
+- **Why not 1,500.** The rest needs the C++ members to become Rust (Component's bounds, flags, ids and parent first,
+  read inline at ~100 WON sites). The hosts' member cases in every module would then go. The drivers' worlds serve
+  those members from ids (`tests/won/won_ct_world.h`), so the worlds must hold real memory before that move.
+
+### GUIStringData's buffer (ee_won guistrobj.rs)
+
+- **What it is.** The shared, reference-counted text of every lobby string: the constructors' fills, `Reserve`
+  (room for the terminator, doubled when growing, the old text and terminator copied), `resize`, the wide and narrow
+  assignments, `Fill`, `assign`, both `append`s, `erase`, `insert`, `setAt` and the free.
+- **The move.** Every edit is a Rust function on the class's three members as one block (`EeWonGuiStrBuf`: text,
+  length, capacity; the layout is static_asserted in GUIStringSingleton.cpp). The block stays the C++ members because
+  100+ readers read `mText` and `mLength` inline. The buffer is Rust's allocation, its real size kept in front of it:
+  `mCapacity` is the original's `unsigned short` and wraps past 65,535 units.
+- **The C++ left.** The class is inline in WONLobbyResource.h over guistrobj.rs (edits) and guistring.rs (reads).
+  GUIStringData.cpp, GUIStringDataMutations.cpp, GUIStringDataResize.cpp, GUIStringDataSearch.cpp and
+  GUIStringSliceAdapters.cpp are deleted; `gEmptyGUIString` moved to GUIStringSingleton.cpp.
+- **Corners kept.** The length and capacity wrap as `unsigned short`. Reserve compares the capacity as an int. The
+  other string of `assign` and `append` is read after this one's resize, so an edit with itself sees its own
+  terminator and new buffer, as the original did.
+- **Not kept.** The original's undefined behaviour is cut to the allocation: a copy or terminator past the end
+  (reached by a wrapped length or capacity, an insert into itself, or an erase of a negative length). The original's
+  uninitialised units are zero (a new allocation is zeroed).
+- **The golden** (`tests/won/won_guistrobj_test.cpp`, `xbuild.py wontest won_guistrobj_test`):
+  - The original statements are copied verbatim as `OrigData`, the `new wchar_t[n]` value-initialised so its
+    uninitialised units read as the port's zeroed ones.
+  - They run against the real GUIStringData over 20,000 random sequences of 40 edits on three strings, the edits kept
+    inside the original's defined behaviour.
+  - Length, capacity and every unit to the terminator of all three strings compared after each edit: 2,453,300 checks,
+    identical. `golden_guistrobj.txt` (the first 300 sequences, 12,900 lines) is replayed by cargo.
+- **A driver trap.** The first run crashed: an insert of a string into itself is a heap overflow in the original (its
+  memmove moves by the other's length, which is the new length). The driver now inserts another string.
+
+### Graphics (ee_won gfxobj.rs)
+
+- **What it is.** The drawing context every lobby paint goes through: the translated primitives, the colour (a
+  scheme reference 0x80000000 + 0..16 resolved through the colour scheme, the hook told only of a change), the
+  scheme's colours, the clip stack (pushed relative to the origin; the clip is the intersection of the stack, none
+  when empty) and the base hooks' loops (a rectangle as four lines, a dotted rectangle as every other pixel in the
+  colour read at each pixel, a fill as a line per row).
+- **The move.** Every method is Rust. The translation, colour and clip rectangle are a block of members the Rust edits
+  in place (`EeWonGfxState`). The block stays C++ because PlatGraphics, ProgramImage and BackgroundGrabber read those
+  members inline, and they are the other lane's files. The clip stack is the Rust object (`EeWonGfx`), replacing the
+  `std::list`.
+- **The C++ left.** The hooks, the images' draws and the font's draw are one host function in Graphics.cpp; the methods
+  are one-line forwarders there (won_image_test defines four of them as stand-ins, so they stay out of line). The
+  constructor, destructor, Attach and SetFont stay C++ (C++ objects).
+- **No reference across a hook.** The Rust holds the members and the stack as raw pointers and reads or writes them
+  between hooks only: a hook may call back into the same Graphics.
+- **The golden** (`won_gfxobj_test`):
+  - Graphics.cpp's statements are copied as `OrigGraphics`. Both it and the port run under the same traced hooks
+    (the base rectangle hooks not overridden, so theirs run) and the same images and fonts.
+  - 20,000 sequences of 40 calls: every method, scheme changes (a scheme colour referring to itself, one to another),
+    font changes, pushes and pops.
+  - The trace of hook, image and font calls and the state compared after each call: 800,000 checks, identical.
+    `golden_gfxobj.txt` (12,000 calls) is replayed by cargo over a Rust world whose base hooks call `BaseRect`,
+    `BaseFillRect` and `BaseDottedRect`.
+  - The driver also checks WindowManager::InitColorScheme's 17 statements against wmobj.rs's table
+    (`ee_won_wm_standard_colors`, which the C++ now fills the scheme from).
+
+### The folds (no statement changes)
+
+- **WindowManager and Window.** 36 WindowManager methods and 21 Window methods were each one call into the Rust
+  manager or window; they are inline in WONLobbyGUI.h. WindowManager.cpp keeps the hosts, the constructor, the
+  colour scheme, the decoders' and fonts' C++ objects, DoPopup and AdjustPopupPosition. The two font mods share one
+  helper.
+- **The defaults and small classes.** The empty platform defaults of Window and WindowManager, RunDialog,
+  ScreenContainer, ComponentListenerComp's forward, the events' Deliver methods (ComponentEvent, InputEvent,
+  MouseEvent, KeyEvent, DoPopupEvent) and WONRectangle are in their class declarations. Window::QueueEvent (it reads
+  the event) moved to Window.cpp. Deleted: WindowBaseDefaults.cpp, WindowManagerBaseDefaults.cpp,
+  WindowDialogCall.cpp, ControlLifetime.cpp, ScreenSelectionState.cpp, ComponentListener.cpp, ComponentEvent.cpp and
+  Rectangle.cpp.
+- **The MS controls' unit.** MSControlConstructors.cpp was three original units concatenated; it is one unit now,
+  with the six MS control units (MS3DFrame, MSArrowButton, MSButton, MSTabButton, MSCheckbox, MSRadioButton: paints
+  over mspaint.rs and msbtnobj.rs, MSTabButton's size, the box sizes and painters) moved in.
+- **GuiHost.cpp.** The size reads seven component hosts answered alike and the plain draw are ComponentOp's
+  (`WONDrawPlain`). The list header falls back to ContainerOp, whose child cases it repeated. No op changes meaning:
+  the header's Rust sends none of ContainerOp's other cases (checked in multiobj.rs).
+
+### Mutations
+
+`build/gb1/mutate.py` (the file's saved bytes restored after each): 21 mutations, each run against cargo's tests of its module; 8 were also rebuilt into
+their driver (the driver rebuilt per mutation, each rebuild checked). 18 were caught by cargo at once.
+
+| # | Module | Mutation | cargo | driver |
+|---|---|---|---|---|
+| 0 | guistrobj | Reserve not doubling when growing | caught | 676,628 failures |
+| 1 | guistrobj | Reserve not copying the terminator | missed (equivalent) | - |
+| 2 | guistrobj | resize without its terminator | caught | 596,819 |
+| 3 | guistrobj | erase: a length of 0 not the rest | caught | - |
+| 4 | guistrobj | erase: nothing at the length | missed (equivalent) | - |
+| 5 | guistrobj | insert: nothing at the length | caught | 450,453 |
+| 6 | guistrobj | setAt at the length | caught | - |
+| 7 | guistrobj | Fill one short | caught | - |
+| 8 | guistrobj | assign reading the other before the resizes | caught | 29,714 |
+| 9 | guistrobj | the capacity one short | caught | - |
+| 10 | gfxobj | SetColor hooking an unchanged colour | caught | 2,188 |
+| 11 | gfxobj | scheme references only to 15 | caught | - |
+| 12 | gfxobj | Translate moving x only | caught | - |
+| 13 | gfxobj | the no-clip rectangle one short | caught | - |
+| 14 | gfxobj | PushClipRect untranslated | caught | 100,845 |
+| 15 | gfxobj | the rectangle's right edge reversed | caught | - |
+| 16 | gfxobj | the dotted rectangle's sides solid | caught | 29,159 |
+| 17 | gfxobj | the fill's rows one short | caught | - |
+| 18 | gfxobj | DrawString taking x as its offset | caught | - |
+| 19 | gfxobj | GetStandardColor 1 without a scheme | caught | - |
+| 20 | wmobj | a standard colour off by one | missed; unit test added, caught | 1 |
+
+- **Two equivalent mutants.** No test can catch them in this port:
+  - Not copying the terminator: a new allocation is zeroed, and a defined text's terminator is 0.
+  - Erasing at the length: it erases nothing, and its resize to the same length rewrites the same terminator.
+- **One mutation cargo missed.** The colour table had no unit test; one was added in its own commit, and it catches
+  the mutation.
+- **A driver crash, once.** The first rebuild for mutation 20 ended in an access violation (0xC0000005) with no result
+  line. It was rerun twice over the same mutation, and both runs ended normally with the one failure. The unmutated
+  driver ran clean in every run before and after, including the final wontest.
+
+### Commits, gates, what only the lobby reaches, what is left
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 88f5600d | GUIStringData's buffer in Rust (`guistrobj.rs`); five units deleted | +91 -379 (-288) |
+| 67fd1588 | Graphics in Rust (`gfxobj.rs`) | +99 -249 (-150) |
+| 04c405fa | the new tests: no drop of a Copy result (clippy) | 0 |
+| 06e5164b | WindowManager's and Window's forwarders inline; InitColorScheme's table (`wmobj.rs`) | +97 -397 (-300) |
+| 2107a890 | GuiHost.cpp's repeated cases into its fallbacks | +13 -66 (-53) |
+| 15a54cbf | WONRectangle inline (Rectangle.cpp folded) | +10 -42 (-32) |
+| c3429484 | MSControlConstructors.cpp as one unit | +7 -30 (-23) |
+| 786a1072 | the platform defaults, RunDialog, ScreenContainer, ComponentListenerComp inline; six units folded | +38 -183 (-145) |
+| cdd11e3c | a unit test for the colour table (the mutation cargo missed) | 0 |
+| 2b3f4318 | the six MS control units into MSControlConstructors.cpp | +65 -129 (-64) |
+| c480f5e2 | the events' constructors and Deliver inline (ComponentEvent.cpp folded) | +11 -46 (-35) |
+| 2faf917c | strip_markers on the round's tree (13 trailing addresses this round's inline methods carried) | 0 |
+
+- **Moved to Rust vs folded.** Of the -1,090: -438 is code that moved into Rust (GUIStringData's buffer, Graphics) and
+  -652 is C++ shims folded or deduplicated (forwarders inline, empty defaults inline, units joined, host cases shared).
+- **Builds per batch.** The code commits were built in four batches: the two moves; the forwarders, hosts, rectangle,
+  MS unit and colour table; the defaults' fold; the MS units and events. Each batch was `build.py --sim` 0/0 (EE-AOC,
+  EE-SIM) and the oracle on seeds 2-3, identical. A commit inside a batch was not built alone. The Rust gate's first
+  run failed on clippy (the tests' `drop` of a Copy result), fixed in 04c405fa.
+- **The merge of rust.** `origin/rust` had not moved since the branch's start (1c108108): the merge was "already up to
+  date". strip_markers found the 13 trailing addresses above.
+- **On the final tree** (the merge a no-op):
+  - `build.py --sim` 0/0 (EE-AOC, EE-SIM, 833 / 834 inputs) and the test-profile build 0/0.
+  - The oracle identical on seeds 2-7.
+  - The Rust gate PASS.
+  - `xbuild.py wontest`: exit 0, 133 programs (won_guistrobj_test and won_gfxobj_test identical again, the unmutated gfx driver
+    clean).
+  - `lan_game.py` RESULT PASS (PT host 2856, joiner 2860). The pre-round exe's run, the same day, was PASS at
+    2850 / 2856.
+- **The capture comparison** (`build/gb1/capcmp.py`: each lobby capture of the two runs by pixel, and the difference
+  images by eye):
+  - The LAN screen, the host's staging screen and the ready staging screen are identical.
+  - The create dialog differs by 15 pixels: the input box's caret, blinking.
+  - The lobby's first screen (both ends), the joiner's LAN screen and its LAN list differ by 298 pixels per capture:
+    the mouse pointer, at another place. The host's first screen differs by 596 (the pointer at two places).
+  - The joiner's staging screen differs by 312: the pointer and the chat box's caret.
+  - The in-game frames differ everywhere, as two games' views do.
+- **Behaviour changes:** none in the game's terms. The buffers' uninitialised units are zero; the original's undefined
+  copies (wrapped lengths and capacities, an insert into itself) are cut to the allocation.
+- **What only the lobby reaches.** Every lobby text is a GUIStringData: every label, list item, chat line, input and
+  config string goes through guistrobj.rs. Every lobby paint goes through Graphics: the translations, clips and
+  colours of every control. EE-SIM and the oracle never draw a lobby and make few GUIStrings. The LAN game and its
+  captures are what exercise them, and they are where a mistake would show.
+- **What is left** (`docs/progress/r6-won-gui-b.md`). The owned units are hosts now (2,477 lines). They shrink when the
+  C++ members they read become Rust. First is Component's members, read inline at ~100 WON sites; the drivers' worlds
+  serve those members from ids, so the worlds must hold real memory before that move. After that: the window's font
+  map, the MS controls' constructors as msbtnobj init kinds, and SkinnedContainers' two paints.
