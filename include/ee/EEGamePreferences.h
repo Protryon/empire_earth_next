@@ -7,15 +7,16 @@
 
 // Requires ee/EEGameOptions.h (and lle/UString.h, lle/UWideString.h).
 #include "lle/UConfig.h"
+#include "rust/ee_app.h"
 
-// The preference values (sizeof 0x5e0): the ctor 0x1324f8 (the defaults) and the dtor
-// 0x132466 are out of line in Empire Earth's preferences unit; the copy ctor is implicit (the game settings unit's
+// The preference values (sizeof 0x5e0 in the original): the ctor 0x1324f8 (the defaults: ee_app settings.rs) and the
+// dtor 0x132466 are out of line in Empire Earth's preferences unit; the copy ctor is implicit (the game settings unit's
 // COMDAT 0x1d720d copies every member: EEGameOptions' copy ctor, 7 UWideString and 8 UString copy ctors, 42 dword and
 // 32 byte moves). The settings events pass it by value. Member types from the ctor's stores (fld vs mov), names from
 // the registry keys of the save 0x135943 where it writes the member, else by offset (provisional name). Several members
 // are
 // also declared as separate globals by other units (the addresses in the comments): they are these members.
-class EEGameSettings {
+class EEGameSettings : public EeAppSettingsFields {
 public:
     EEGameSettings();
     ~EEGameSettings();
@@ -48,95 +49,8 @@ public:
     UString mLastGameFile;                  // +0x4e8 0x5307f4: gLoadSavedGameName
     UString mLastScenarioFile;              // +0x4f8 0x530804: gLoadScenarioName
     UString mWonNetPassword;                // +0x508 "WonNet Password" (encrypted)
-    float mMouseSensitivity;                // +0x518 "Mouse Sensitivity"
-    float mSideScrollSpeed;                 // +0x51c "Side Scroll Speed"
-    float mGrabScrollSpeed;                 // +0x520 "Grab Scroll Speed"
-    float mSoundVolume;                     // +0x524 "Sound Volume"
-    float mMusicVolume;                     // +0x528 "Music Volume"
-    float mMaxNumberOfSounds;               // +0x52c
-    float mUnitScaleFactor;                 // +0x530
-    float mZoomLock;                        // +0x534
-    long mZoomStyle;                        // +0x538
-    long mL53C;                             // +0x53c
-    long mL540;                             // +0x540
-    long mScreenMode;                       // +0x544
-    long mButtonMIPLevelsToDrop;            // +0x548
-    long mL54C;                             // +0x54c
-    long mL550;                             // +0x550
-    long mL554;                             // +0x554
-    long mL558;                             // +0x558
-    long mL55C;                             // +0x55c
-    long mL560;                             // +0x560
-    long mComputerPlayerDifficultyLevel;    // +0x564 0x530870: gDifficultyLevel
-    long mGameBitDepth;                     // +0x568 "Game Bit Depth"
-    unsigned long mGameWindowHeight;        // +0x56c "Game Window Height" (unsigned: Empire Earth.cpp 0x140251's fild qword)
-    unsigned long mGameWindowWidth;         // +0x570 "Game Window Width"
-    long mCTSendIntervalStepUp;             // +0x574
-    long mCTSendIntervalStepDown;           // +0x578
-    long mMaxPTsPerSecond;                  // +0x57c "Max PTs per Second"
-    long mMinPTsPerSecond;                  // +0x580 "Min PTs per Second"
-    long mMaxCTSendInterval;                // +0x584
-    long mMIPLevelsToDrop;                  // +0x588
-    long mModelDetail;                      // +0x58c
-    long mEffectDetail;                     // +0x590
-    long mNetworkAdapter;                   // +0x594 "Network Adapter"; 0x5308a0: gU5308A0
-    unsigned long mPTRateTuningThreshold;   // +0x598 "PT Rate Tuning Threshold (percent)" (EEServer: fild qword)
-    long mScreenID;                         // +0x59c "Screen ID"; 0x5308a8: gScreenIndex
-    long mStartingKeyboardLayout;           // +0x5a0
-    long mTerrainMIPLevelsToDrop;           // +0x5a4
-    long mTextureBitDepth;                  // +0x5a8 "Texture Bit Depth"
-    unsigned long mNumberOfAutoSaves;       // +0x5ac "Number Of AutoSaves" (EEPhysics 0x151d1f: jbe)
-    unsigned long mAutoSaveInMilliseconds;  // +0x5b0 "AutoSave In Milliseconds"
-    long mLastOpenPostGameStatsPage;        // +0x5b4
-    long mL5B8;                             // +0x5b8
-    long mL5BC;                             // +0x5bc
-    bool mB5C0;                             // +0x5c0
-    bool mZoomEnabled;                      // +0x5c1 what include/ee/EmpireEarth.h calls gZoomEnabled (0x5308cd)
-    bool mB5C2;                             // +0x5c2
-    bool mAnimationSmoothing;               // +0x5c3
-    bool mB5C4;                             // +0x5c4
-    bool mB5C5;                             // +0x5c5
-    bool mB5C6;                             // +0x5c6
-    bool mDisplayClouds;                    // +0x5c7
-    bool mDisplayShadows;                   // +0x5c8
-    bool mDisplayBattlefieldAmbients;       // +0x5c9
-    bool mB5CA;                             // +0x5ca
-    bool mB5CB;                             // +0x5cb
-    bool mB5CC;                             // +0x5cc
-    bool mEnableAnimalHerds;                // +0x5cd
-    bool mTrilinearFilter;                  // +0x5ce
-    bool mFullScreen;                       // +0x5cf (show the start screen: EEStartScreen::Start/Stop)
-    bool mReverbEnabled;                    // +0x5d0 "Reverb Enabled"
-    bool mWaitForVSync;                     // +0x5d1 "Wait for VSync"
-    bool mAmbientSounds;                    // +0x5d2 "Ambient Sounds"
-    bool mShowBlood;                        // +0x5d3
-    bool mMusicEnabled;                     // +0x5d4
-    bool mRightHandMouseOrientation;        // +0x5d5
-    bool mB5D6;                             // +0x5d6
-    bool mUnitLighting;                     // +0x5d7
-    bool mUseAreaEffectOverlays;            // +0x5d8
-    bool mUseCandidateWindow;               // +0x5d9
-    bool mDisplayWeatherEffects;            // +0x5da
-    bool mDebugOOSHandling;                 // +0x5db
-    bool mTakeJPGScreenshots;               // +0x5dc
-    bool mAntiAliasing;                     // +0x5dd
-    bool mTakeEndGameScreenshots;           // +0x5de
-    bool mShowAutoWaypoints;                // +0x5df
-    // port (not in the original's 0x5e0 bytes): "Texture Resolution" 0 (the original textures), 2 or 4 (the
-    // Data/Textures-4x pack, drawn at half size for 2); EESetTextureResolution applies it
-    long mTextureResolution;
-    // port: the modern display and audio settings (config.yaml; EEApplyPortSettings applies them)
-    long mUIScale;                          // "UI Scale" percent; 0 Auto (ee_gx gx_auto_ui_scale): the game size is the display's
-    long mRenderResolution;                 // "Render Resolution" percent of the display's pixels (50..100)
-    long mWindowMode;                       // "Window Mode" 0 full screen (borderless), 1 windowed
-    long mFrameRateLimit;                   // "Frame Rate Limit" 0 v-sync, -1 unlimited, else frames a second
-    long mTextureFiltering;                 // "Texture Filtering" 0 bilinear, 1 trilinear, 2 anisotropic
-    long mBrightness;                       // "Brightness" percent (100 unchanged)
-    long mMasterVolume;                     // "Master Volume" percent
-    bool mMuteInBackground;                 // "Mute in Background"
-    long mMaximumZoomOut;                   // "Maximum Zoom Out" percent of the original's farthest (100..300)
-    long mGameLog;                          // "Game Log": 1 writes Logs/game-*.log for every game (ee/EEGameLog.h)
-    char mAudioDevice[128];                 // "Audio Device" (empty: the system's default)
+    // the plain members (mMouseSensitivity .. mAudioDevice, the original's +0x518 .. +0x5df and the port's) are
+    // EeAppSettingsFields, the base (rust/ee_app.h; ee_app settings.rs: their names, types, order and defaults)
 };
 
 // port: makes the texture manager load the world's textures at inResolution (0, 2 or 4: EEGameSettings::

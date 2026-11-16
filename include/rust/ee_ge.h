@@ -873,6 +873,45 @@ struct EeGeVertexArray;
 /// The window.
 struct EeGeWin;
 
+/// `GEQuaternion` (sizeof 0x10).
+struct EeGeQuaternion {
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+/// `GE3DPoint` (sizeof 0xc).
+struct EeGe3DPoint {
+  float x;
+  float y;
+  float z;
+};
+
+/// `GETransformation` (sizeof 0x40): row-major 4x4, the translation in column 3.
+struct EeGeTransformation {
+  float m[4][4];
+};
+
+/// `GEVector` (sizeof 0xc).
+struct EeGeVector {
+  float x;
+  float y;
+  float z;
+};
+
+/// `GE3DLine` (sizeof 0x18): start, direction.
+struct EeGe3DLine {
+  EeGe3DPoint start;
+  EeGeVector direction;
+};
+
+/// `GE3DPlane` (sizeof 0x18): a point on the plane, the normal.
+struct EeGe3DPlane {
+  EeGe3DPoint point;
+  EeGeVector normal;
+};
+
 /// The host: `owner` is the C++ bitmap of the object calling.
 using EeGeBmpHostFn = ptrdiff_t(*)(void *owner, EeGeBmpOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
@@ -899,53 +938,14 @@ using EeGeFbHostFn = ptrdiff_t(*)(void *owner, EeGeFbOp op, void *obj, ptrdiff_t
 /// Receives one point of an interpolation (`std::vector::push_back` on the C++ side).
 using EeGePush2D = void(*)(void *context, const EeGe2DPoint *point);
 
-/// `GE3DPoint` (sizeof 0xc).
-struct EeGe3DPoint {
-  float x;
-  float y;
-  float z;
-};
-
 /// Receives one point of a 3D interpolation.
 using EeGePush3D = void(*)(void *context, const EeGe3DPoint *point);
-
-/// `GEVector` (sizeof 0xc).
-struct EeGeVector {
-  float x;
-  float y;
-  float z;
-};
-
-/// `GE3DLine` (sizeof 0x18): start, direction.
-struct EeGe3DLine {
-  EeGe3DPoint start;
-  EeGeVector direction;
-};
-
-/// `GE3DPlane` (sizeof 0x18): a point on the plane, the normal.
-struct EeGe3DPlane {
-  EeGe3DPoint point;
-  EeGeVector normal;
-};
-
-/// `GETransformation` (sizeof 0x40): row-major 4x4, the translation in column 3.
-struct EeGeTransformation {
-  float m[4][4];
-};
 
 /// `GEOrientation` (sizeof 0xc).
 struct EeGeOrientation {
   float yaw;
   float pitch;
   float roll;
-};
-
-/// `GEQuaternion` (sizeof 0x10).
-struct EeGeQuaternion {
-  float x;
-  float y;
-  float z;
-  float w;
 };
 
 /// `GEBoundingBox` (sizeof 0x24): the two corners, then width (x), height (z) and depth (y).

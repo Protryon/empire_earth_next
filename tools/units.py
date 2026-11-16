@@ -84,6 +84,10 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
                        "Empire Earth/Scenario Editor Actions/EESEARust.cpp",
                        # TEST ONLY: the simulation capture of the Rust leaves' gates (EE_SIM_CAPTURE; tools/sim_capture.py)
                        "Empire Earth/Empire Earth/EESimCapture.cpp",
+                       # TEST ONLY: the app and world lane's capture records (ee/EEAppCapture.h: CAMU)
+                       "Empire Earth/Empire Earth/EEAppCapture.cpp",
+                       # TEST ONLY: its map, mini map, cheat and storm records and the --app-sweep (MAPS ... STRM)
+                       "Empire Earth/Empire Earth/EEAppCaptureWorld.cpp",
                        # TEST ONLY: the tech tree's, events' and calamities' capture records (ee/EETechCapture.h)
                        "Empire Earth/Tech Tree/EETechCapture.cpp",
                        # TEST ONLY: the units sweep of EE-SIM --unit-sweep (the capture's units profile)

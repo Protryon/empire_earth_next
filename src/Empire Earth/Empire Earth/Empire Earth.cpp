@@ -1504,8 +1504,6 @@ void EEGraphicsShutdown(bool inShutdown)
 void EEReleaseGamePools(bool inShutdown)
 {
     EEComplexUnit::ReleasePool();
-    UList<EEMiniMapDot>::sNodePool.DumpStats(false);
-    UList<EEMiniMapUnitDot>::sNodePool.DumpStats(false);
     UList<EEComplexUnit*>::sNodePool.DumpStats(false);
 }
 

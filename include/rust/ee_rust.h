@@ -5,6 +5,7 @@
 #define EE_RUST_H
 
 #include "ee_ai.h"
+#include "ee_app.h"
 #include "ee_astar.h"
 #include "ee_codec.h"
 #include "ee_combat.h"

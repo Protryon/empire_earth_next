@@ -3,63 +3,30 @@
 // the camera (ctor, ??_G, dtor, the key list, the height clamp, the clipping planes, the interpolation helpers, the
 // follow/zoom/scroll movers, the per-frame update), the vector<EECameraKey> COMDATs and EEIsSeen. The unnamed
 // 0x1273d7 unit ends at 0x127584, EECheatCodes.cpp starts at 0x12a54a. Names are provisional.
+//
+// The camera is whole in Rust (rust/crates/ee_app camera.rs, app and world lane round 1): its plain members are the
+// record EeAppCameraFields the class derives from, every body is Rust over the host below (the followed units' handles,
+// the key list, the units, the terrain mesh, the viewport and the world's switches). This unit keeps the host, the
+// forwarders, Update's tail (the view to the world and the viewport, the mini map) and EEIsSeen.
 #include <windows.h>
-#include <mbstring.h>
-#include <algorithm>
-#include <math.h>
 #include <vector>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
-#include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
-#include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
-#include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/SESample.h"
-#include "lle/SESMInstanceNode.h"
-#include "lle/SESoundManager.h"
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
-#include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
-#include "lle/UIButton.h"
-#include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
-#include "lle/GELine.h"
-#include "lle/UITextLabel.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GETransformation.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GE3DLine.h"
+#include "lle/GE3DPlane.h"
 #include "lle/GEPhysicalModel.h"
 #include "lle/GEQuaternion.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GEModel.h"
 #include "lle/GEBoundingBox.h"
+#include "lle/GERectangle.h"
 
 #include "ee/EmpireEarth.h"
-#include "ee/EEUserInterface.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEGraphics.h"
 #include "ee/EECameraKey.h"
@@ -69,55 +36,16 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEUnit.h"
 #include "ee/EEAreaUtilities.h"
-#include "rust/ee_ge.h"
-#include "rust/ee_gfx.h"
+#include "rust/ee_app.h"
+#include "ee/EEAppCapture.h"
 
-// The camera's math is Rust (rust/crates/ee_gfx camera.rs, docs/RUST_PLAN.md R4.4): the pitch, the interpolation, the
-// move's speed, the view, the height clamp, the clipping distances, the edge clip, the scroll direction and clamp,
-// the update's step and the orthographic view. This class keeps its members, key list, followed units and the
-// viewport and world calls; the GE value classes pass as their #[repr(C)] mirrors (the same storage, GERustMath.h).
+// the GE value classes and their Rust mirrors share their storage (GERustMath.h)
+static_assert(sizeof(GE3DPoint) == sizeof(EeGe3DPoint) && sizeof(GETransformation) == sizeof(EeGeTransformation) &&
+                  sizeof(GE3DLine) == sizeof(EeGe3DLine) && sizeof(GEQuaternion) == sizeof(EeGeQuaternion) &&
+                  sizeof(EECameraKey) == sizeof(EeAppCameraKey) && offsetof(EECameraKey, mChanged) == offsetof(EeAppCameraKey, mChanged),
+              "GE mirrors");
 template <class R, class T> static inline const R* EECameraRust(const T& inValue) { return reinterpret_cast<const R*>(&inValue); }
 template <class R, class T> static inline R* EECameraRust(T& inValue) { return reinterpret_cast<R*>(&inValue); }
-#define EE_CAM_P(x) EECameraRust<EeGe3DPoint>(x)
-#define EE_CAM_T(x) EECameraRust<EeGeTransformation>(x)
-#define EE_CAM_L(x) EECameraRust<EeGe3DLine>(x)
-static_assert(sizeof(GE3DPoint) == sizeof(EeGe3DPoint) && sizeof(GETransformation) == sizeof(EeGeTransformation) &&
-              sizeof(GE3DLine) == sizeof(EeGe3DLine) && sizeof(GE3DPlane) == sizeof(EeGe3DPlane) &&
-              sizeof(GEQuaternion) == sizeof(EeGeQuaternion) && sizeof(GEVector) == sizeof(EeGeVector), "GE mirrors");
-
-// the terrain mesh's queries for the Rust (the context is the mesh)
-static bool EECameraValidTile(void* inMesh, float inX, float inY)
-{
-    return static_cast<GETerrainMesh*>(inMesh)->GetIsValidTile(UMFloorUnsigned(inX), UMFloorUnsigned(inY));
-}
-static bool EECameraValidPoint(void* inMesh, float inX, float inY)
-{
-    return static_cast<GETerrainMesh*>(inMesh)->GetIsValidPoint(UMFloorUnsigned(inX), UMFloorUnsigned(inY));
-}
-static float EECameraMeshZ(void* inMesh, float inX, float inY)
-{
-    return static_cast<GETerrainMesh*>(inMesh)->GetMeshZ(inX, inY);
-}
-static EeGfxGround EECameraGround(GETerrainMesh& inMesh)
-{
-    EeGfxGround theGround;
-    theGround.context = &inMesh;
-    theGround.valid_tile = EECameraValidTile;
-    theGround.valid_point = EECameraValidPoint;
-    theGround.mesh_z = EECameraMeshZ;
-    return theGround;
-}
-static EeGfxEdgePlanes EECameraEdgePlanes(const GETerrainMesh& inMesh)
-{
-    EeGfxEdgePlanes thePlanes;
-    thePlanes.front = *EECameraRust<EeGe3DPlane>(inMesh.GetFrontPlane());
-    thePlanes.back = *EECameraRust<EeGe3DPlane>(inMesh.GetBackPlane());
-    thePlanes.left = *EECameraRust<EeGe3DPlane>(inMesh.GetLeftPlane());
-    thePlanes.right = *EECameraRust<EeGe3DPlane>(inMesh.GetRightPlane());
-    return thePlanes;
-}
-// whether the height clamp keeps the camera at least 0.4 high (no followed unit, no free camera, no path playing)
-#define EE_CAM_PLAIN (this->mUnitA == NULL && this->mUnitB == NULL && !gFreeCamera && !this->mLocked)
 
 // Constructs the game version string "2002.8.17.v1.00" and registers its destructor to run at exit
 UWideString gGameVersion("2002.8.17.v1.00");
@@ -125,43 +53,108 @@ UWideString gGameVersion("2002.8.17.v1.00");
 extern bool& gFarRearClipping;               // 0x5308d2 (set: the far rear clipping distance; provisional name)
 extern bool& gInCinematic;                   // 0x5318e0 (set: scrolling keeps the free camera mode; provisional name)
 
-// the camera's limits (unit-local .rdata 0x441e48..0x441eb8, before the vtable; provisional names)
-static const float kCameraMinimumHeightFree = 0.1f;
-static const float kCameraMinimumHeight = 0.4f;
-static const float kCameraDegreesToRadians = 0.017453292f;
-static const float kCameraDefaultYaw = 0.7853982f;
-static const float kCameraZoomHeight = 0.1f;
-static const float kCameraZoomHeightFree = 0.0f;
-static const float kCameraZoomDistance = -20.5f;
-static const float kCameraZoomDistanceFree = -42.0f;
-
 // port: the farthest zoom (1.0 in the original; the camera's distance grows linearly past it, its pitch stays at the
 // farthest), from config.yaml's camera: maximum_zoom_out (EEPreferences)
 float gCameraMaxZoom = 2.0f;
 
-// The pitch limits (0x5275ce..0x527650: -5 and -35 degrees, the free camera's 0 and -35), the rear clipping tilt (25
-// degrees, 0x527624) and range (0x52763c), the move speeds, the orthographic view's constants and the clipping
-// distances are rust/crates/ee_gfx camera.rs's.
+// The limits (0x441e48..0x441eb8), the pitch limits, the clipping distances and the move speeds are Rust's (ee_app
+// camera.rs, ee_gfx camera.rs).
 // Initialises the camera's field of view (30 degrees)
-static float sCameraFieldOfView = kCameraDegreesToRadians * 30.0f;
+static float sCameraFieldOfView = 0.017453292f * 30.0f;
+
+// the unit of an id (NULL for none or a unit that no longer resolves)
+static EEUnit* EECameraUnit(uint32_t inID)
+{
+    EEUnit* theUnit;
+    EEUnitHandleResolve(inID, theUnit);
+    return theUnit;
+}
+
+// The camera's host (ee_app camera_ffi.rs): the context is the camera
+static int32_t EECameraHost(void* inContext, int32_t inOp, EeAppCameraIo* io)
+{
+    EECameraControl* theCamera = static_cast<EECameraControl*>(inContext);
+    EEUnitHandle<EEUnit>& theSlot = io->slot == EE_APP_CAMERA_UNIT_A ? theCamera->mUnitA : theCamera->mUnitB;
+    EEUnit* theUnit = inOp >= EE_APP_CAMERA_OP_REFERENCE && inOp <= EE_APP_CAMERA_OP_HIDDEN ? EECameraUnit(io->id) : NULL;
+    EEComplexUnit* theComplex = theUnit != NULL ? theUnit->mComplexUnit : NULL;
+    GETerrainMesh* theMesh = gWorld.GetMap() != NULL ? &gWorld.GetMap()->mTerrainMesh : NULL;
+    switch (inOp) {
+    case EE_APP_CAMERA_OP_UNIT: io->id = theSlot.Get() != NULL ? theSlot.GetSavedID() : (uint32_t)EE_APP_CAMERA_NO_UNIT; break;
+    case EE_APP_CAMERA_OP_SET_UNIT: theSlot = EEUnitHandle<EEUnit>::FromSavedID(io->id); break;
+    case EE_APP_CAMERA_OP_REFERENCE: theUnit->Reference(); break;
+    case EE_APP_CAMERA_OP_DEREFERENCE: theUnit->Dereference(); break;
+    case EE_APP_CAMERA_OP_UNIT_STATE:
+        io->id = theUnit == NULL ? 0
+                                 : EE_APP_CAMERA_EXISTS | (theUnit->mHitPoints > 0 ? EE_APP_CAMERA_ALIVE : 0) |
+                                       (theUnit->mTileX != -10000 && theUnit->GetTileY() != -10000 ? EE_APP_CAMERA_ON_MAP : 0);
+        break;
+    case EE_APP_CAMERA_OP_CONTAINER:
+        if (theComplex != NULL && theComplex->mContainer != NULL)
+            io->id = EEUnitHandleID(theComplex->mContainer);
+        break;
+    case EE_APP_CAMERA_OP_UNIT_POINT: theCamera->GetUnitPoint(theUnit, *EECameraRust<GE3DPoint>(io->point)); break;
+    case EE_APP_CAMERA_OP_UNIT_LOCATION:
+        io->flag = theComplex != NULL && !theUnit->mUnitClass->mFacesCamera;
+        if (io->flag)
+            *EECameraRust<GETransformation>(io->t) = theComplex->mPhysicalModel.GetLocation();
+        break;
+    case EE_APP_CAMERA_OP_FOLLOW_RATE:
+        io->flag = theComplex != NULL && !gInCinematic;
+        if (io->flag)
+            io->x = theComplex->GetVelocity() * gWorld.GetGameSpeed();
+        break;
+    case EE_APP_CAMERA_OP_HIDDEN: io->flag = theUnit != NULL && theUnit->mPlayer != gWorld.GetCurrentPlayer() && !EEIsSeen(theUnit); break;
+    case EE_APP_CAMERA_OP_KEY_COUNT: io->id = (uint32_t)theCamera->mKeys.size(); break;
+    case EE_APP_CAMERA_OP_KEY: *EECameraRust<EECameraKey>(io->key) = theCamera->mKeys[io->id]; break;
+    case EE_APP_CAMERA_OP_CLEAR_KEYS: theCamera->mKeys.clear(); break;
+    case EE_APP_CAMERA_OP_FLAGS:
+        io->id = (gFreeCamera ? EE_APP_CAMERA_FREE : 0) | (gFarRearClipping ? EE_APP_CAMERA_FAR_REAR : 0) |
+                 (gInCinematic ? EE_APP_CAMERA_CINEMATIC : 0) | (gOrthographicView ? EE_APP_CAMERA_ORTHOGRAPHIC : 0) |
+                 (gWorld.mMap != NULL ? EE_APP_CAMERA_HAS_MAP : 0);
+        break;
+    case EE_APP_CAMERA_OP_WORLD_TRANSFORMATION: *EECameraRust<GETransformation>(io->t) = gWorld.mTransformation; break;
+    case EE_APP_CAMERA_OP_WORLD_CAMERA_YAW: io->x = gWorld.mCameraYaw; break;
+    case EE_APP_CAMERA_OP_VALID_TILE: io->flag = theMesh->GetIsValidTile(UMFloorUnsigned(io->x), UMFloorUnsigned(io->y)); break;
+    case EE_APP_CAMERA_OP_VALID_POINT: io->flag = theMesh->GetIsValidPoint(UMFloorUnsigned(io->x), UMFloorUnsigned(io->y)); break;
+    case EE_APP_CAMERA_OP_MESH_Z: io->z = theMesh->GetMeshZ(io->x, io->y); break;
+    case EE_APP_CAMERA_OP_EDGE_PLANES:
+        io->planes.front = *EECameraRust<EeGe3DPlane>(theMesh->GetFrontPlane());
+        io->planes.back = *EECameraRust<EeGe3DPlane>(theMesh->GetBackPlane());
+        io->planes.left = *EECameraRust<EeGe3DPlane>(theMesh->GetLeftPlane());
+        io->planes.right = *EECameraRust<EeGe3DPlane>(theMesh->GetRightPlane());
+        break;
+    case EE_APP_CAMERA_OP_SCREEN_LINE: gWorld.GetMap()->GetScreenLine(GE2DPoint(io->x, io->y), *EECameraRust<GE3DLine>(io->line)); break;
+    case EE_APP_CAMERA_OP_LOCATION_ON_LINE:
+        io->flag = gWorld.mMap->GetLocationOnLine(*EECameraRust<GE3DLine>(io->line), *EECameraRust<GE3DPoint>(io->point), true) != NULL;
+        break;
+    case EE_APP_CAMERA_OP_VIEWPORT:
+        io->x = gViewport.GetXCenter();
+        io->y = gViewport.GetYCenter();
+        io->z = gViewport.GetHalfHeight();
+        break;
+    case EE_APP_CAMERA_OP_VIEWPORT_CAMERA:
+        io->point.x = gViewport.GetCamera().GetX();
+        io->point.y = gViewport.GetCamera().GetY();
+        io->point.z = gViewport.GetCamera().GetZ();
+        break;
+    case EE_APP_CAMERA_OP_FRONT_CLIPPING: io->x = gViewport.GetFrontClippingDistance(); break;
+    case EE_APP_CAMERA_OP_SET_CLIPPING:
+        gViewport.SetFrontClippingDistance(io->x);
+        gViewport.SetRearClippingDistance(io->y);
+        break;
+    }
+    return 0;
+}
+static uint32_t EECameraID(EEUnit* inUnit)
+{
+    return inUnit != NULL ? EEUnitHandleID(inUnit) : (uint32_t)EE_APP_CAMERA_NO_UNIT;
+}
+#define EE_CAMERA_HOST this, this, EECameraHost
 
 // Creates the camera controller with no followed unit or target point, mode 0, zoom 0.5 and no path
 EECameraControl::EECameraControl()
 {
-    this->mUnitA = NULL;
-    this->mUnitB = NULL;
-    this->mTargetPoint = GE3DPoint(-10000.0f, 0.0f, 0.0f);
-    this->mPathIndex = -1;
-    this->mMode = 0;
-    this->mFraction = 0.0f;
-    this->mChanged = false;
-    this->mIsFollowingUnitB = false;
-    this->mRate = 0.0f;
-    this->mLocked = false;
-    this->mZoom = 0.5f;
-    this->mWaited = 0.0f;
-    this->mTurnPitch = 0.0f;
-    this->mTurnYaw = 0.0f;
+    ee_app_camera_default(this);
 }
 
 // Destroys the camera controller (members only)
@@ -169,139 +162,63 @@ EECameraControl::~EECameraControl()
 {
 }
 
-// Drops the camera path's keys and unlocks the camera
-void EECameraControl::ResetPath()
-{
-    this->mKeys.clear();
-    this->mLocked = false;
-    this->mWaited = 0.0f;
-}
+void EECameraControl::ResetPath() { ee_app_camera_reset_path(EE_CAMERA_HOST); }
 
 // Appends a key to the camera path; returns 0, or 5 while a path plays (camera locked)
 long EECameraControl::AddKey(const EECameraKey& inKey)
 {
-    if (!this->mLocked) {
-        this->mKeys.push_back(inKey);
-        return 0;
-    }
-    return 5;
+    if (this->mLocked)
+        return 5;
+    this->mKeys.push_back(inKey);
+    return 0;
 }
 
-// Sets the viewport's front and rear clipping distances from the view rays through the screen's top, centre and bottom
-// (fixed ones in the orthographic view). The original's EECameraRayDistance (0x527c09) built each ray twice, once for
-// the rear and once for the front limit; EEMap::GetScreenLine reads only the viewport, which changes after all six,
-// so each ray is built once here and the Rust measures it twice.
-void EECameraControl::SetClippingDistances()
-{
-    EeGfxCameraRays theRays;
-    GE3DPoint theCamera;
-    bool thePerspective = !gOrthographicView;
-    if (thePerspective) {
-        GE2DPoint theTop(gViewport.GetXCenter(), gViewport.GetYCenter() + gViewport.GetHalfHeight());
-        GE2DPoint theCenter(gViewport.GetXCenter(), gViewport.GetYCenter());
-        GE2DPoint theBottom(gViewport.GetXCenter(), gViewport.GetYCenter() - gViewport.GetHalfHeight());
-        gWorld.GetMap()->GetScreenLine(theCenter, *reinterpret_cast<GE3DLine*>(&theRays.center));
-        gWorld.GetMap()->GetScreenLine(theTop, *reinterpret_cast<GE3DLine*>(&theRays.top));
-        gWorld.GetMap()->GetScreenLine(theBottom, *reinterpret_cast<GE3DLine*>(&theRays.bottom));
-        theCamera.SetX(gViewport.GetCamera().GetX());
-        theCamera.SetY(gViewport.GetCamera().GetY());
-        theCamera.SetZ(gViewport.GetCamera().GetZ());
-    }
-    EeGfxClipping theClipping = ee_gfx_camera_clipping(thePerspective ? &theRays : NULL, EE_CAM_P(theCamera),
-                                                       (int32_t)this->mMode, this->mZoom, gFreeCamera, gFarRearClipping);
-    gViewport.SetFrontClippingDistance(theClipping.front);
-    gViewport.SetRearClippingDistance(theClipping.rear);
-}
+// (the original's EECameraRayDistance 0x527c09 built each ray twice; the Rust builds it once and measures it twice)
+void EECameraControl::SetClippingDistances() { ee_app_camera_set_clipping_distances(EE_CAMERA_HOST); }
 
-// Copies one camera key into another
-void EECameraControl::CopyKey(const EECameraKey& inKey, EECameraKey& outKey)
-{
-    outKey = inKey;
-}
+void EECameraControl::CopyKey(const EECameraKey& inKey, EECameraKey& outKey) { outKey = inKey; }
 
-// Moves to the camera path's next key and locks the camera, or ends the path after the last key
-void EECameraControl::NextKey()
-{
-    this->mPathIndex++;
-    if (this->mPathIndex < (long)this->mKeys.size()) {
-        this->GoTo(this->mKeys[this->mPathIndex]);
-        this->mLocked = true;
-        return;
-    }
-    this->ResetPath();
-}
+void EECameraControl::NextKey() { ee_app_camera_next_key(EE_CAMERA_HOST); }
 
-// Builds the camera view at a point of the current move from the interpolated offset, turns and focus, kept above
-// ground
 void EECameraControl::BuildView(GETransformation& outTransformation, float inStep)
 {
-    EeGfxCameraPose thePose;
-    thePose.view_start = *EECameraRust<EeGeQuaternion>(this->mQ014);
-    thePose.view_end = *EECameraRust<EeGeQuaternion>(this->mQ04C);
-    thePose.offset_start = *EECameraRust<EeGeQuaternion>(this->mQ024);
-    thePose.offset_end = *EECameraRust<EeGeQuaternion>(this->mQ05C);
-    thePose.start_offset = *EE_CAM_P(this->mStartOffset);
-    thePose.end_offset = *EE_CAM_P(this->mEndOffset);
-    thePose.start_focus = *EE_CAM_P(this->mStartFocus);
-    thePose.end_focus = *EE_CAM_P(this->mEndFocus);
-    GETerrainMesh& theMesh = gWorld.GetMap()->mTerrainMesh;
-    ee_gfx_camera_build_view(&thePose, inStep, (int32_t)this->mMode, gViewport.GetFrontClippingDistance(), EE_CAM_PLAIN,
-                             EECameraGround(theMesh), EE_CAM_T(outTransformation));
+    ee_app_camera_build_view(EE_CAMERA_HOST, inStep, EECameraRust<EeGeTransformation>(outTransformation));
 }
 
-// Returns the camera offset interpolated between the move's start and end
-void EECameraControl::GetOffset(float inStep, GE3DPoint& outPoint)
-{
-    ee_gfx_camera_lerp(EE_CAM_P(this->mStartOffset), EE_CAM_P(this->mEndOffset), inStep, EE_CAM_P(outPoint));
-}
+void EECameraControl::GetOffset(float inStep, GE3DPoint& outPoint) { ee_app_camera_point(this, 0, inStep, EECameraRust<EeGe3DPoint>(outPoint)); }
 
-// Returns the view turn interpolated between the move's start and end (quaternion slerp)
 void EECameraControl::SlerpViewTurn(float inStep, GEQuaternion& outQuaternion)
 {
-    this->mQ014.Slerp(this->mQ04C, inStep, outQuaternion);
+    ee_app_camera_slerp(this, 0, inStep, EECameraRust<EeGeQuaternion>(outQuaternion));
 }
 
-// Returns the interpolated view turn as a transformation
 void EECameraControl::GetViewTurn(float inStep, GETransformation& outTransformation)
 {
-    GEQuaternion theQuaternion;
-    this->mQ014.Slerp(this->mQ04C, inStep, theQuaternion);
-    theQuaternion.ConvertTo(outTransformation);
+    ee_app_camera_turn(this, 0, inStep, EECameraRust<EeGeTransformation>(outTransformation));
 }
 
-// Returns the offset turn interpolated between the move's start and end (quaternion slerp)
 void EECameraControl::SlerpOffsetTurn(float inStep, GEQuaternion& outQuaternion)
 {
-    this->mQ024.Slerp(this->mQ05C, inStep, outQuaternion);
+    ee_app_camera_slerp(this, 1, inStep, EECameraRust<EeGeQuaternion>(outQuaternion));
 }
 
-// Returns the interpolated offset turn as a transformation
 void EECameraControl::GetOffsetTurn(float inStep, GETransformation& outTransformation)
 {
-    GEQuaternion theQuaternion;
-    this->mQ024.Slerp(this->mQ05C, inStep, theQuaternion);
-    theQuaternion.ConvertTo(outTransformation);
+    ee_app_camera_turn(this, 1, inStep, EECameraRust<EeGeTransformation>(outTransformation));
 }
 
-// Returns the camera focus interpolated between the move's start and end
 void EECameraControl::GetLocation(float inStep, GE3DPoint& outLocation)
 {
-    ee_gfx_camera_lerp(EE_CAM_P(this->mStartFocus), EE_CAM_P(this->mEndFocus), inStep, EE_CAM_P(outLocation));
+    ee_app_camera_point(this, 1, inStep, EECameraRust<EeGe3DPoint>(outLocation));
 }
 
-// Returns a scroll line's end clipped to the map edges, at terrain height when the camera is close or the point is
-// below ground, else at the minimum height
 void EECameraControl::GetGroundPoint(const GE3DLine& inLine, GE3DPoint& outPoint)
 {
-    GE3DPoint theStart;
-    GETerrainMesh& theMesh = gWorld.GetMap()->mTerrainMesh;
-    EeGfxEdgePlanes thePlanes = EECameraEdgePlanes(theMesh);
-    this->GetOffset(this->mFraction, theStart);
-    ee_gfx_camera_ground_point(EE_CAM_L(inLine), &thePlanes, EE_CAM_P(theStart), (int32_t)this->mMode,
-                               EECameraGround(theMesh), EE_CAM_P(outPoint));
+    ee_app_camera_ground_point(EE_CAMERA_HOST, EECameraRust<EeGe3DLine>(inLine), EECameraRust<EeGe3DPoint>(outPoint));
 }
 
 // Returns the point the camera focuses on for a unit: its model centre at camera-focus height, else its tile centre
+// (the host's EE_APP_CAMERA_OP_UNIT_POINT)
 void EECameraControl::GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint)
 {
     GE3DPoint theOffset;
@@ -321,571 +238,107 @@ void EECameraControl::GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint)
     }
 }
 
-// Returns the camera turn for following a unit (its heading plus the follow turn and zoom pitch), else the current
-// offset turn
 void EECameraControl::GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation)
 {
-    EEComplexUnit* theUnit = inUnit->mComplexUnit;
-    float thePitch = EECameraControl::GetPitch(this->mZoom, this->mMode);
-    if (theUnit != NULL && !inUnit->mUnitClass->mFacesCamera) {
-        GETransformation theLocation(false);
-        theLocation = theUnit->mPhysicalModel.GetLocation();
-        theLocation.SetPosition(0.0f, 0.0f, 0.0f);
-        theLocation.Rotate(this->mTurnYaw, this->mTurnPitch, 0.0f);
-        GETransformation thePitchTransformation;
-        thePitchTransformation.SetOrientationYPR(0.0f, thePitch, 0.0f);
-        theLocation.Apply(thePitchTransformation, outTransformation);
-    } else
-        this->mQ05C.ConvertTo(outTransformation);
+    ee_app_camera_unit_turn(EE_CAMERA_HOST, EECameraID(inUnit), EECameraRust<EeGeTransformation>(outTransformation));
 }
 
-// Returns the camera pitch for a zoom in a camera mode (linear, curved, the world camera's own pitch, or free camera)
 float EECameraControl::GetPitch(float inZoom, long inMode)
 {
-    return ee_gfx_camera_pitch(inZoom, (int32_t)inMode, EE_CAM_T(gWorld.mTransformation));
+    return ee_gfx_camera_pitch(inZoom, (int32_t)inMode, EECameraRust<EeGeTransformation>(gWorld.mTransformation));
 }
 
-// Starts playing the camera path from its first key, dropping followed units (not while a path plays)
-void EECameraControl::StartPath()
-{
-    if (this->mLocked)
-        return;
-    this->ClearUnitA();
-    this->ClearUnitB();
-    this->mPathIndex = -1;
-    this->NextKey();
-}
+void EECameraControl::StartPath() { ee_app_camera_start_path(EE_CAMERA_HOST); }
 
-// Turns the camera's view turn by yaw and pitch angles as a new move
-void EECameraControl::Revolve(const GE3DPoint& inAngles)
-{
-    GETransformation theTransformation;
-    GETransformation theRevolve;
-    EECameraKey theKey;
-    if (this->mLocked)
-        return;
-    GETransformation theRotation(false);
-    GETransformation theResult(false);
-    this->mQ04C.ConvertTo(theRotation);
-    theTransformation.SetOrientationYPR(inAngles.GetX(), 0.0f, 0.0f);
-    theRevolve.SetOrientationYPR(0.0f, inAngles.GetY(), 0.0f);
-    theRotation.Apply(theRevolve, theResult);
-    theTransformation.Apply(theResult, theKey.mT00);
-    this->mQ05C.ConvertTo(theKey.mT40);
-    theKey.mOffset = this->mEndOffset;
-    theKey.mFocus = this->mEndFocus;
-    theKey.mWait = 0.0f;
-    theKey.mRate = 1.0f;
-    theKey.mChanged = this->mChanged;
-    this->GoTo(theKey);
-}
+void EECameraControl::Revolve(const GE3DPoint& inAngles) { ee_app_camera_revolve(EE_CAMERA_HOST, inAngles.GetX(), inAngles.GetY()); }
 
 // Creates a camera key (members only)
 EECameraKey::EECameraKey()
 {
 }
 
-// Turns the camera's offset turn by yaw and pitch angles as a new move
-void EECameraControl::Rotate(const GE3DPoint& inAngles)
-{
-    GETransformation theTransformation;
-    GETransformation theRevolve;
-    EECameraKey theKey;
-    if (this->mLocked)
-        return;
-    GETransformation theRotation(false);
-    GETransformation theResult(false);
-    this->mQ05C.ConvertTo(theRotation);
-    theTransformation.SetOrientationYPR(inAngles.GetX(), 0.0f, 0.0f);
-    theRevolve.SetOrientationYPR(0.0f, inAngles.GetY(), 0.0f);
-    theRotation.Apply(theRevolve, theResult);
-    theTransformation.Apply(theResult, theKey.mT40);
-    this->mQ04C.ConvertTo(theKey.mT00);
-    theKey.mOffset = this->mEndOffset;
-    theKey.mFocus = this->mEndFocus;
-    theKey.mWait = 0.0f;
-    theKey.mRate = 1.0f;
-    theKey.mChanged = this->mChanged;
-    this->GoTo(theKey);
-}
+void EECameraControl::Rotate(const GE3DPoint& inAngles) { ee_app_camera_rotate(EE_CAMERA_HOST, inAngles.GetX(), inAngles.GetY()); }
 
-static const float kCameraFollowRise = -0.1f;
-
-// Starts a camera move that focuses on a unit or point and faces another unit or point, optionally following them,
-// with a zoom, a duration and a follow turn
 void EECameraControl::MoveTo(EEUnit* inUnitA, GE3DPoint inLocationA, bool inFlagA, float inDuration,
                                EEUnit* inUnitB, GE3DPoint inLocationB, bool inFlagB, float inZoom, float inTurnYaw,
                                float inTurnPitch)
 {
-    GEVector theDirection;
-    GE3DPoint theTarget = inLocationB;
-    EEUnit* theUnitA = inUnitA;
-    EEUnit* theUnitB = inUnitB;
-    bool theTurn = false;
-    EECameraKey theKey;
-    if (inUnitA == NULL || inUnitA->mHitPoints <= 0 || inUnitA->mTileX == -10000 || inUnitA->GetTileY() == -10000)
-        theUnitA = NULL;
-    if (inUnitB == NULL || inUnitB->mHitPoints <= 0 || inUnitB->mTileX == -10000 || inUnitB->GetTileY() == -10000)
-        theUnitB = NULL;
-    if (this->mLocked)
-        return;
-    this->mTurnYaw = inTurnYaw;
-    this->mTurnPitch = inTurnPitch;
-    theKey.mOffset = this->mEndOffset;
-    theKey.mFocus = this->mEndFocus;
-    theTarget.SetX(-10000.0f);
-    this->mQ05C.ConvertTo(theKey.mT40);
-    float theHeight;
-    if (inZoom >= -1.0f) {
-        float theZoom = inZoom;
-        if (inZoom < 0.0f)
-            theZoom = 0.0f;
-        float theFar;
-        if (this->mMode != 3 && !gFreeCamera && !gFarRearClipping)
-            theFar = kCameraZoomDistance;
-        else
-            theFar = kCameraZoomDistanceFree;
-        if (this->mMode != 3 && !gFreeCamera)
-            theHeight = kCameraZoomHeight;
-        else
-            theHeight = kCameraZoomHeightFree;
-        theKey.mOffset.SetY((theFar - theHeight) * theZoom + theHeight);
-    }
-    if (theUnitA != NULL) {
-        if (this->mUnitA != NULL)
-            this->ClearUnitA();
-        if (inZoom >= -1.0f)
-            this->mZoom = inZoom;
-        if (theUnitA->mComplexUnit != NULL && theUnitA->mComplexUnit->mContainer != NULL)
-            theUnitA = theUnitA->mComplexUnit->mContainer;
-        if (theUnitA != NULL && theUnitA->mTileX != -10000 && theUnitA->GetTileY() != -10000) {
-            if (inFlagA) {
-                theUnitA->Reference();
-                this->mUnitA = theUnitA;
-            }
-            this->GetUnitPoint(theUnitA, theKey.mFocus);
-            if (this->mMode == 3 || gFreeCamera)
-                theKey.mFocus.SetZ(theKey.mFocus.GetZ() + theKey.mOffset.GetY() * kCameraFollowRise);
-        }
-    } else {
-        if (inLocationA.GetX() != -10000.0f) {
-            if (this->mUnitA != NULL)
-                this->ClearUnitA();
-            theKey.mFocus = inLocationA;
-        }
-    }
-    if (theUnitB != NULL) {
-        if (this->mUnitB != NULL)
-            this->ClearUnitB();
-        if (inZoom >= -1.0f)
-            this->mZoom = inZoom;
-        if (theUnitB->mComplexUnit != NULL && theUnitB->mComplexUnit->mContainer != NULL)
-            theUnitB = theUnitB->mComplexUnit->mContainer;
-        if (theUnitB != NULL && theUnitB->mTileX != -10000 && theUnitB->GetTileY() != -10000) {
-            if (inFlagB) {
-                if (this->mUnitB != theUnitB) {
-                    theUnitB->Reference();
-                    this->mUnitB = theUnitB;
-                }
-                this->mIsFollowingUnitB = true;
-            } else
-                this->mIsFollowingUnitB = false;
-            this->GetUnitPoint(theUnitB, theTarget);
-        }
-    } else {
-        if (inLocationB.GetX() != -10000.0f) {
-            if (this->mUnitB != NULL)
-                this->ClearUnitB();
-            theTarget = inLocationB;
-            if (inFlagB)
-                this->mTargetPoint = inLocationB;
-        }
-    }
-    if (theTarget.GetX() != -10000.0f) {
-        if (theUnitA != NULL && theUnitA == theUnitB)
-            this->GetUnitTurn(theUnitB, theKey.mT40);
-        else {
-            if (inLocationA.GetX() != -10000.0f && inLocationB.GetX() != -10000.0f) {
-                if (this->mMode == 2 || inZoom < -1.0f)
-                    goto theDone;
-                if (this->mMode == 3 || gFreeCamera)
-                    theKey.mFocus.SetZ(theKey.mFocus.GetZ() + theKey.mOffset.GetY() * kCameraFollowRise);
-                this->mZoom = inZoom;
-                float thePitch = EECameraControl::GetPitch(inZoom, this->mMode);
-                theKey.mT40.SetOrientationYPR(kCameraDefaultYaw, thePitch, 0.0f);
-            }
-            theTurn = true;
-        }
-    } else {
-        if (this->mMode != 2 && inZoom >= -1.0f) {
-            float thePitch = EECameraControl::GetPitch(inZoom, this->mMode);
-            if (this->mTurnYaw == 0.0f)
-                theKey.mT40.SetOrientationYPR(kCameraDefaultYaw, thePitch, 0.0f);
-            else
-                theKey.mT40.SetOrientationYPR(gWorld.mCameraYaw, thePitch, 0.0f);
-        }
-    }
-theDone:
-    theKey.mT00.MakeIdentity();
-    theKey.mWait = 0.0f;
-    if (inDuration != 0.0f)
-        theKey.mRate = 1.0f / inDuration;
-    else
-        theKey.mRate = 0.0f;
-    if (inDuration == 0.0f)
-        theKey.mChanged = true;
-    else
-        theKey.mChanged = false;
-    this->GoTo(theKey);
-    if (theTurn) {
-        GETransformation theCamera(false);
-        theCamera = this->mView;
-        theDirection.SetX(theTarget.GetX() - theKey.mFocus.mX);
-        theDirection.SetY(theTarget.GetY() - theKey.mFocus.mY);
-        theDirection.SetZ(theTarget.GetZ() - theKey.mFocus.mZ);
-        theDirection.Normalize();
-        theKey.mT40.SetOrientationYPR(UMArcTan2(-theDirection.GetX(), theDirection.GetY()),
-                                      UMArcCos(-theDirection.GetZ()) - 1.5707964f, 0.0f);
-        this->GoTo(theKey);
-    }
+    EeAppCameraMove theMove = {EECameraID(inUnitA), *EECameraRust<EeGe3DPoint>(inLocationA), inFlagA, inDuration,
+                               EECameraID(inUnitB), *EECameraRust<EeGe3DPoint>(inLocationB), inFlagB, inZoom, inTurnYaw,
+                               inTurnPitch};
+    ee_app_camera_move_to(EE_CAMERA_HOST, &theMove);
 }
 
-// Scrolls the camera focus over the ground by a screen delta scaled by the zoom, kept inside the map edges; leaves the
-// free camera mode outside cinematics
-void EECameraControl::Scroll(float inDX, float inDY)
-{
-    GE2DPoint theCenter(gViewport.GetXCenter(), gViewport.GetYCenter() + gViewport.GetHalfHeight());
-    GE3DPoint theGround;
-    GE3DPoint theTarget;
-    GE3DPoint theStart;
-    GE3DLine theLine;
-    float theScale = this->mZoom + 0.5f;   // the zoom before a mode switch below resets it
-    GEVector theDirection;
-    EECameraKey theKey;
-    EEMap* theMap = gWorld.mMap;
-    float theMinimum = this->mMode != 3 ? kCameraMinimumHeight : kCameraMinimumHeightFree;
-    float thePitch = EECameraControl::GetPitch(this->mZoom, this->mMode);
-    if (this->mLocked)
-        return;
-    this->ClearUnitA();
-    this->ClearUnitB();
-    this->mTurnYaw = 0.0f;
-    this->mTurnPitch = 0.0f;
-    if (!gInCinematic && this->mMode == 3) {
-        this->SetMode(0);
-        this->ResetZoom();
-    }
-    EeGeVector theRustDirection = ee_gfx_camera_scroll_direction(EE_CAM_T(this->mView), inDX, inDY, theScale);
-    theDirection = *reinterpret_cast<GEVector*>(&theRustDirection);
-    this->GetLocation(this->mFraction, theTarget);
-    theLine.SetStart(theTarget);
-    theLine.SetDirection(theDirection);
-    this->GetGroundPoint(theLine, theTarget);
-    this->GetOffset(this->mFraction, theStart);
-    if (ee_gfx_camera_scroll_is_near(EE_CAM_P(theStart))) {
-        theMap->GetScreenLine(theCenter, theLine);
-        if (theMap->GetLocationOnLine(theLine, theGround, true) != NULL) {
-            theGround.SetZ(theGround.GetZ() + theMinimum);
-            if (theGround.GetZ() > theTarget.GetZ())
-                theTarget.SetZ(theGround.GetZ());
-        }
-    }
-    if (theMap != NULL) {
-        EeGfxEdgePlanes thePlanes = EECameraEdgePlanes(theMap->mTerrainMesh);
-        ee_gfx_camera_clamp_to_map(EE_CAM_P(theTarget), &thePlanes);
-    }
-    theKey.mFocus = theTarget;
-    if (this->mMode != 2) {
-        theKey.mT40.SetOrientationYPR(kCameraDefaultYaw, thePitch, 0.0f);
-        this->mChanged = true;
-    } else
-        this->mQ05C.ConvertTo(theKey.mT40);
-    this->mQ04C.ConvertTo(theKey.mT00);
-    theKey.mOffset = this->mEndOffset;
-    theKey.mWait = 0.0f;
-    theKey.mRate = 1.0f;
-    theKey.mChanged = this->mChanged;
-    this->GoTo(theKey);
-    this->mStartFocus.SetX(this->mEndFocus.GetX());
-    this->mStartFocus.SetY(this->mEndFocus.GetY());
-}
+void EECameraControl::Scroll(float inDX, float inDY) { ee_app_camera_scroll(EE_CAMERA_HOST, inDX, inDY); }
 
-// Resets the camera zoom to 1
-void EECameraControl::ResetZoom()
-{
-    this->SetZoom(1.0f);
-}
+void EECameraControl::ResetZoom() { this->SetZoom(1.0f); }
 
-// Starts the move from the current pose to a camera key, with its speed from the distances or the followed unit's
-// velocity
-void EECameraControl::GoTo(const EECameraKey& inKey)
-{
-    EECameraKey theKey;
-    float theSpeed;
-    bool theFollowing;
-    if (this->mUnitA != NULL && this->mUnitA->mComplexUnit != NULL && !gInCinematic)
-        theFollowing = true;
-    else
-        theFollowing = false;
-    this->CopyKey(inKey, theKey);
-    this->KeepPose();
-    this->mQ04C.ConvertFrom(theKey.mT00);
-    this->mQ05C.ConvertFrom(theKey.mT40);
-    this->mEndOffset = theKey.mOffset;
-    this->mEndFocus = theKey.mFocus;
-    this->mWait = theKey.mWait;
-    this->mChanged = theKey.mChanged;
-    // the followed unit's speed is read only when following (as the original did)
-    float theFollowRate = theFollowing ? this->mUnitA->mComplexUnit->GetVelocity() * gWorld.GetGameSpeed() : 0.0f;
-    EeGfxCameraGoTo theGoTo = ee_gfx_camera_go_to(EE_CAM_P(this->mStartOffset), EE_CAM_P(this->mEndOffset),
-                                                  EE_CAM_P(this->mStartFocus), EE_CAM_P(this->mEndFocus), theKey.mRate,
-                                                  theFollowing, theFollowRate);
-    if (theGoTo.snap_offset)
-        this->mStartOffset = this->mEndOffset;
-    if (theGoTo.snap_focus)
-        this->mStartFocus = this->mEndFocus;
-    theSpeed = theGoTo.speed;
-theDone:
-    this->mFraction = 0.0f;
-    this->mRate = theSpeed;
-    this->mWaited = 0.0f;
-}
+void EECameraControl::GoTo(const EECameraKey& inKey) { ee_app_camera_go_to(EE_CAMERA_HOST, EECameraRust<EeAppCameraKey>(inKey)); }
 
-// Moves the camera offset to a point as a new move (at once when inFlag), dropping followed units
 void EECameraControl::SetOffset(const GE3DPoint& inPoint, bool inFlag)
 {
-    EECameraKey theKey;
-    if (this->mLocked)
-        return;
-    this->ClearUnitA();
-    this->ClearUnitB();
-    theKey.mOffset = inPoint;
-    this->mQ04C.ConvertTo(theKey.mT00);
-    this->mQ05C.ConvertTo(theKey.mT40);
-    theKey.mFocus = this->mEndFocus;
-    theKey.mWait = 0.0f;
-    theKey.mRate = 1.0f;
-    theKey.mChanged = this->mChanged;
-    this->GoTo(theKey);
-    if (inFlag)
-        this->mStartOffset = this->mEndOffset;
+    ee_app_camera_set_offset(EE_CAMERA_HOST, EECameraRust<EeGe3DPoint>(inPoint), inFlag);
 }
 
-// Turns the camera view to a transformation as a new move (at once when inFlag), dropping followed units
 void EECameraControl::SetViewTurn(const GETransformation& inTransformation, bool inFlag)
 {
-    EECameraKey theKey;
-    if (this->mLocked)
-        return;
-    this->ClearUnitA();
-    this->ClearUnitB();
-    theKey.mT00 = inTransformation;
-    this->mQ05C.ConvertTo(theKey.mT40);
-    theKey.mOffset = this->mEndOffset;
-    theKey.mFocus = this->mEndFocus;
-    theKey.mWait = 0.0f;
-    theKey.mRate = 1.0f;
-    theKey.mChanged = this->mChanged;
-    this->GoTo(theKey);
-    if (inFlag)
-        this->mQ014 = this->mQ04C;
+    ee_app_camera_set_view_turn(EE_CAMERA_HOST, EECameraRust<EeGeTransformation>(inTransformation), inFlag);
 }
 
-// Turns the camera offset to a transformation as a new move (at once when inFlag), dropping followed units
 void EECameraControl::SetOffsetTurn(const GETransformation& inTransformation, bool inFlag)
 {
-    EECameraKey theKey;
-    if (this->mLocked)
-        return;
-    this->ClearUnitA();
-    this->ClearUnitB();
-    theKey.mT40 = inTransformation;
-    this->mQ04C.ConvertTo(theKey.mT00);
-    theKey.mOffset = this->mEndOffset;
-    theKey.mFocus = this->mEndFocus;
-    theKey.mWait = 0.0f;
-    theKey.mRate = 1.0f;
-    theKey.mChanged = this->mChanged;
-    this->GoTo(theKey);
-    if (inFlag)
-        this->mQ024 = this->mQ05C;
+    ee_app_camera_set_offset_turn(EE_CAMERA_HOST, EECameraRust<EeGeTransformation>(inTransformation), inFlag);
 }
 
-// Makes the camera's current interpolated pose the start of the next move
-void EECameraControl::KeepPose()
-{
-    GE3DPoint thePoint;
-    GEQuaternion theQuaternion;
-    this->SlerpViewTurn(this->mFraction, theQuaternion);
-    this->mQ014 = theQuaternion;
-    this->SlerpOffsetTurn(this->mFraction, theQuaternion);
-    this->mQ024 = theQuaternion;
-    this->GetOffset(this->mFraction, thePoint);
-    this->mStartOffset = thePoint;
-    this->GetLocation(this->mFraction, thePoint);
-    this->mStartFocus = thePoint;
-}
+void EECameraControl::KeepPose() { ee_app_camera_keep_pose(this); }
 
-// Moves the camera focus to a location (on the terrain when inFollowTerrain) as a new move, at once when inIsImmediate
 void EECameraControl::SetLocation(const GE3DPoint& inLocation, bool inIsImmediate, bool inFollowTerrain)
 {
-    GE3DPoint theLocation = inLocation;
-    EECameraKey theKey;
-    GETerrainMesh& theMesh = gWorld.GetMap()->mTerrainMesh;
-    float theMinimum = this->mMode != 3 ? kCameraMinimumHeight : kCameraMinimumHeightFree;
-    if (this->mLocked)
-        return;
-    this->ClearUnitA();
-    this->ClearUnitB();
-    unsigned long theX = UMFloorUnsigned(theLocation.GetX());
-    unsigned long theY = UMFloorUnsigned(theLocation.GetY());
-    if (!gOrthographicView && inFollowTerrain) {
-        if (theMesh.GetIsValidTile(theX, theY)) {
-            theLocation.SetZ(theMesh.GetMeshZ(theLocation.GetX(), theLocation.GetY()) + theMinimum);
-            if (theLocation.GetZ() < 0.0f && !gFreeCamera)
-                theLocation.SetZ(theMinimum);
-
-        } else {
-            theLocation.SetZ(theMinimum);
-        }
-    }
-
-    theKey.mFocus = theLocation;
-    this->mQ04C.ConvertTo(theKey.mT00);
-    this->mQ05C.ConvertTo(theKey.mT40);
-    theKey.mOffset = this->mEndOffset;
-    theKey.mWait = 0.0f;
-    theKey.mRate = 1.0f;
-    theKey.mChanged = this->mChanged;
-    this->GoTo(theKey);
-    if (inIsImmediate)
-        this->mStartFocus = this->mEndFocus;
+    ee_app_camera_set_location(EE_CAMERA_HOST, EECameraRust<EeGe3DPoint>(inLocation), inIsImmediate, inFollowTerrain);
 }
 
-// Sets the camera mode and reapplies the zoom
-void EECameraControl::SetMode(long inMode)
-{
-    this->mMode = inMode;
-    this->SetZoom(this->mZoom);
-}
+void EECameraControl::SetMode(long inMode) { ee_app_camera_set_mode(EE_CAMERA_HOST, inMode); }
 
-// Makes the camera jump to its target on the next update, unless a path plays
-void EECameraControl::SetChanged()
-{
-    if (!this->mLocked)
-        this->mChanged = true;
-}
+void EECameraControl::SetChanged() { ee_app_camera_set_changed(this); }
 
-// Stops following the focused unit, releasing it
-void EECameraControl::ClearUnitA()
-{
-    if (this->mUnitA != NULL) {
-        this->mUnitA->Dereference();
-        this->mUnitA = NULL;
-    }
-}
+void EECameraControl::ClearUnitA() { ee_app_camera_clear_unit_a(EE_CAMERA_HOST); }
 
-// Stops facing the target unit or point, releasing the unit
-void EECameraControl::ClearUnitB()
-{
-    if (this->mUnitB != NULL) {
-        this->mUnitB->Dereference();
-        this->mUnitB = NULL;
-    }
-    this->mIsFollowingUnitB = false;
-    this->mTargetPoint.SetX(-10000.0f);
-}
+void EECameraControl::ClearUnitB() { ee_app_camera_clear_unit_b(EE_CAMERA_HOST); }
 
-static const float kCameraUpdateZoom = -1.1f;
-
-// Advances the camera each frame: drops followed units that died or went out of sight, steps the move or path and
-// applies the view, clipping distances and orthographic size to the viewport
+// Advances the camera each frame (ee_app camera.rs update), then applies the view, the orthographic size, the
+// clipping distances and the field of view to the viewport and refreshes the mini map's view
 void EECameraControl::Update(float inElapsedTime)
 {
-    GE3DPoint thePoint;
-    GE3DPoint theNoLocation(-10000.0f, 0.0f, 0.0f);
-    GERectangle theRectangle(-1.0f, -1.0f, 1.0f, 1.0f);
-    EEUnit* theUnit = this->mUnitA;
-    if (theUnit != NULL &&
-        (theUnit->mHitPoints <= 0 || theUnit->mTileX == -10000 || theUnit->GetTileY() == -10000 ||
-         (this->mMode != 3 && theUnit->mPlayer != gWorld.GetCurrentPlayer() && !EEIsSeen(theUnit))))
-        this->ClearUnitA();
-    theUnit = this->mUnitB;
-    if (theUnit != NULL &&
-        (theUnit->mHitPoints <= 0 || theUnit->mTileX == -10000 || theUnit->GetTileY() == -10000 ||
-         (this->mMode != 3 && theUnit->mPlayer != gWorld.GetCurrentPlayer() && !EEIsSeen(theUnit))))
-        this->ClearUnitB();
-    if (this->mUnitA != NULL || this->mUnitB != NULL || this->mTargetPoint.GetX() != -10000.0f) {
-        this->MoveTo(this->mUnitA, theNoLocation, this->mUnitA != NULL, this->mChanged ? 0.0f : 1.0f, this->mUnitB, this->mTargetPoint,
-                 this->mTargetPoint.GetX() == -10000.0f && this->mUnitB == NULL ? 0 : 1, kCameraUpdateZoom, this->mTurnYaw, this->mTurnPitch);
+    EEAppCaptureCamera(*this, 0, inElapsedTime);   // CAMU (TEST ONLY)
+    float theSize = 0.0f;
+    int32_t theAction = ee_app_camera_update(EE_CAMERA_HOST, inElapsedTime, &theSize);
+    if (theAction != EE_APP_CAMERA_UPDATE_DONE) {
+        if (theAction == EE_APP_CAMERA_UPDATE_ORTHO) {
+            GERectangle theRectangle(-1.0f, -1.0f, 1.0f, 1.0f);
+            theRectangle.SetLeft(-theSize);
+            theRectangle.SetTop(-theSize);
+            theRectangle.SetRight(theSize);
+            theRectangle.SetBottom(theSize);
+            gViewport.SetOrthographicRectangle(theRectangle);
+        }
+        gWorld.SetCameraTransformation(*EECameraRust<GETransformation>(this->mView));
+        gViewport.SetFieldOfView(sCameraFieldOfView);
+        this->SetClippingDistances();
+        if (gMiniMap != NULL)
+            gMiniMap->RefreshView();
+        gB529066 = false;
+        gCameraFollowing = false;
+        gB529068 = false;
     }
-    if (gWorld.mMap == NULL)
-        return;
-    EeGfxCameraStep theStep;
-    theStep.fraction = this->mFraction;
-    theStep.rate = this->mRate;
-    theStep.wait = this->mWait;
-    theStep.waited = this->mWaited;
-    theStep.changed = this->mChanged;
-    theStep.locked = this->mLocked;
-    int32_t theAction = ee_gfx_camera_step(&theStep, inElapsedTime);
-    this->mFraction = theStep.fraction;
-    this->mWaited = theStep.waited;
-    this->mChanged = theStep.changed;
-    if (theAction == 1) {
-        this->NextKey();
-        return;
-    }
-    if (theAction == 0)
-        return;
-    if (!gOrthographicView)
-        this->BuildView(this->mView, this->mFraction);
-    else {
-        this->GetLocation(this->mFraction, thePoint);
-        GE3DPoint theOffset;
-        this->GetOffset(this->mFraction, theOffset);
-        EeGfxOrthoView theView = ee_gfx_camera_ortho_view(EE_CAM_P(thePoint), theOffset.GetY());
-        this->mView = *reinterpret_cast<GETransformation*>(&theView.view);
-        theRectangle.SetLeft(-theView.size);
-        theRectangle.SetTop(-theView.size);
-        theRectangle.SetRight(theView.size);
-        theRectangle.SetBottom(theView.size);
-        gViewport.SetOrthographicRectangle(theRectangle);
-    }
-    gWorld.SetCameraTransformation(this->mView);
-    gViewport.SetFieldOfView(sCameraFieldOfView);
-    this->SetClippingDistances();
-    if (gMiniMap != NULL)
-        gMiniMap->RefreshView();
-    gB529066 = false;
-    gCameraFollowing = false;
-    gB529068 = false;
+    EEAppCaptureCamera(*this, 1, inElapsedTime);   // CAMU (TEST ONLY)
 }
 
-// Starts following a unit (and facing it when inFlag), unless it is a foreign unit the local player cannot see
 void EECameraControl::Follow(EEUnit* inUnit, bool inFlag, float inDuration, float inTurnYaw, float inTurnPitch)
 {
-    GE3DPoint theNoLocation(-10000.0f, 0.0f, 0.0f);
-    if (inUnit != NULL && inUnit->mPlayer != gWorld.GetCurrentPlayer() && !EEIsSeen(inUnit))
-        return;
-    this->ClearUnitA();
-    this->ClearUnitB();
-    this->mTurnYaw = inTurnYaw;
-    this->mTurnPitch = inTurnPitch;
-    this->MoveTo(inUnit, theNoLocation, true, inDuration, inFlag ? inUnit : NULL, theNoLocation, inFlag, this->mZoom, inTurnYaw, inTurnPitch);
+    ee_app_camera_follow(EE_CAMERA_HOST, EECameraID(inUnit), inFlag, inDuration, inTurnYaw, inTurnPitch);
 }
 
-// Sets the camera zoom and re-aims at the current focus and target over 0.3 s (not while a path plays)
-void EECameraControl::SetZoom(float inZoom)
-{
-    GE3DPoint theNoLocation(-10000.0f, 0.0f, 0.0f);
-    EECameraKey theKey;
-    if (this->mLocked)
-        return;
-    this->mZoom = inZoom;
-    this->MoveTo(this->mUnitA, theNoLocation, this->mUnitA != NULL, 0.3f, this->mUnitB, this->mTargetPoint, this->mTargetPoint.GetX() == -10000.0f && this->mUnitB == NULL ? 0 : 1,
-             inZoom, this->mTurnYaw, this->mTurnPitch);
-}
+void EECameraControl::SetZoom(float inZoom) { ee_app_camera_set_zoom(EE_CAMERA_HOST, inZoom); }
 
 // Returns whether the local player can see a unit
 bool EEIsSeen(EEUnit* inUnit)

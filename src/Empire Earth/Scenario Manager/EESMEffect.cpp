@@ -1443,7 +1443,7 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
         long theStepDuration = (long)a[1];
         EEUnit* theUnit = SMEUnit(a[0]);
         EECameraKey theKey;
-        theKey.mOffset = theCamera.mEndOffset;
+        theKey.mOffset = theCamera.GetEndOffset();
         theCamera.GetUnitPoint(theUnit, theKey.mFocus);
         theCamera.GetUnitTurn(theUnit, theKey.mT40);
         theKey.mWait = 0.0f;

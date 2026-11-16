@@ -70,6 +70,8 @@
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEStormModifiers.h"
 #include "ee/EEStormType.h"
+#include "ee/EEAppCapture.h"
+#include "rust/ee_app.h"
 
 // Constructs the storm's "Storm-Data" key at startup and destroys it at exit (wrapper, constructor, registrar,
 // destructor)
@@ -84,132 +86,47 @@ GEColor gStormColorLight(0.679f, 0.726f, 0.8f);
 // Constructs the dark storm colour at startup and registers its destructor
 GEColor gStormColorDark(0.273f, 0.343f, 0.457f);
 
+// whether a route step's sectors' centres share an axis (the planners' straight step)
+static bool EEStormStraight(EEAIPathSubSector* inFrom, EEAIPathSubSector* inTo)
+{
+    return inFrom->mSector->mCenter.mX == inTo->mSector->mCenter.mX ||
+           inFrom->mSector->mCenter.mY == inTo->mSector->mCenter.mY;
+}
+
 // Returns the cost of a snow storm's route step: cheap over cliffs and hills, dear over forest, shallows and the
-// map edge
+// map edge (ee_app storm.rs)
 long EEAIGPGModifierStormRoutePlannerSnow::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
 {
     EEAIPathSubSector* theFrom = static_cast<EEAIPathSubSector*>(inFrom->mObject);
-    long theCost;
-    if (theFrom->mSector != inTo->mSector)
-        theCost = theFrom->mSector->mCenter.mX == inTo->mSector->mCenter.mX || theFrom->mSector->mCenter.mY == inTo->mSector->mCenter.mY ?
-            10 : 14;
-    else
-        theCost = 1;
-    switch (inTo->mKind) {
-    case kAITileLand:
-        theCost += 2;
-        if (gContinentManager.GetHillAt(inTo->mLocation) != NULL)
-            theCost = 1;
-        break;
-    case kAITileCliff:
-        theCost = 1;
-        break;
-    case kAITileForest:
-    case kAITileShallows:
-        theCost += 20;
-        break;
-    case kAITileMapEdge:
-        theCost += 500;
-        break;
-    case kAITileWall:
-    case kAITileGate:
-        theCost += 5;
-        if (gContinentManager.GetHillAt(inTo->mLocation) != NULL)
-            theCost = 1;
-        break;
-    default:
-        theCost += 100;
-        break;
-    }
-    return theCost;
+    long theKind = inTo->mKind;
+    bool theHill = (theKind == kAITileLand || theKind == kAITileWall || theKind == kAITileGate) &&
+                   gContinentManager.GetHillAt(inTo->mLocation) != NULL;
+    return ee_app_storm_route_cost(true, theFrom->mSector != inTo->mSector, EEStormStraight(theFrom, inTo), theKind,
+                                   theHill);
 }
 
 // Returns the cost of a rain storm's route step: cheap along shores, dear over water, cliffs and the map edge
+// (ee_app storm.rs)
 long EEAIGPGModifierStormRoutePlannerRain::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
 {
     EEAIPathSubSector* theFrom = static_cast<EEAIPathSubSector*>(inFrom->mObject);
-    long theCost;
-    if (theFrom->mSector != inTo->mSector)
-        theCost = theFrom->mSector->mCenter.mX == inTo->mSector->mCenter.mX || theFrom->mSector->mCenter.mY == inTo->mSector->mCenter.mY ?
-            10 : 14;
-    else
-        theCost = 1;
-    switch (inTo->mKind) {
-    case kAITileWater:
-    case kAITileShallows:
-        theCost += 20;
-        break;
-    case kAITileCliff:
-        theCost += 20;
-        break;
-    case kAITileMapEdge:
-    case kAITileSpace:
-        theCost += 500;
-        break;
-    case kAITileShallowsShore:
-    case kAITileShallowsNearShore:
-    case kAITileShore:
-    case kAITileNearShore:
-        theCost = 1;
-        break;
-    default:
-        theCost += 100;
-        break;
-    }
-    return theCost;
+    return ee_app_storm_route_cost(false, theFrom->mSector != inTo->mSector, EEStormStraight(theFrom, inTo), inTo->mKind,
+                                   false);
 }
 
-// Returns the name of a storm type ("Rain", "Snow", "Hurricane", ...), or "Type Not defined"
+// Returns the name of a storm type ("Rain", "Snow", "Hurricane", ...), or "Type Not defined" (ee_app storm.rs)
 UWideString EEEMStorm::GetTypeName(long inType)
 {
-    UWideString theName;
-    switch (inType) {
-    case kStormUnknown:
-        theName += "Unknown";
-        break;
-    case kStormRain:
-        theName += "Rain";
-        break;
-    case kStormSnow:
-        theName += "Snow";
-        break;
-    case kStormHurricane:
-        theName += "Hurricane";
-        break;
-    case kStormBlizzard:
-        theName += "Blizzard";
-        break;
-    case kStormPlaceHolder1:
-        theName += "PlaceHolder1";
-        break;
-    case kStormPlaceHolder2:
-        theName += "PlaceHolder2";
-        break;
-    case kStormPlaceHolder3:
-        theName += "PlaceHolder3";
-        break;
-    case kStormPlaceHolder4:
-        theName += "PlaceHolder4";
-        break;
-    default:
-        theName = "Type Not defined";
-        break;
-    }
-    return theName;
+    return UWideString(ee_app_storm_type_name(inType));
 }
 
 // Creates a storm of a type for the environment manager at full intensity; any known type starts at once
 EEEMStorm::EEEMStorm(long inType, EEEnvironmentManager* inManager)
-    : mManager(inManager), mTargetIntensity(1.0f), mIntensity(1.0f)
+    : mManager(inManager)
 {
+    ee_app_storm_init(this, inType);
     this->mStorm = NULL;
     this->mRequest = NULL;
-    this->mStep = 0.02f;
-    this->mType = inType;
-    this->mState = 1;
-    this->mNextMoveTime = 0;
-    this->mIsSevere = inType == kStormHurricane || inType == kStormBlizzard;
-    this->mEndTime = 0xffffffff;
     this->mName = EEEMStorm::GetTypeName(inType);
     if (inType != kStormUnknown)
         this->Begin();
@@ -289,6 +206,7 @@ void EEEMStorm::Begin()
     this->mStorm->mRecord->storm.sustained = true;
     theShaper->Dereference();
     this->RequestRoute();
+    this->mState = 2;
 }
 
 // Creates the storm shaper with no steps and a near radius of 8 tiles
@@ -341,26 +259,6 @@ bool EEAIBPGModifierStormShaper::CanEnter(EETile* inTile, long inX, long inY, bo
     EeAStarViewCallbacks theCallbacks = theView.Callbacks();
     EeAStarStorm theStorm = this->StormState();
     return ee_astar_mod_storm_can_enter(&theCallbacks, &theStorm, inX, inY);
-}
-
-// Raises the storm's intensity one step toward the target (from nothing straight to 0.15)
-void EEEMStorm::Grow()
-{
-    float theIntensity = (this->mIntensity != 0.0f ? this->mStep * this->mIntensity : 0.15f) + this->mIntensity;
-    if (theIntensity > this->mTargetIntensity)
-        theIntensity = this->mTargetIntensity;
-    this->SetIntensity(theIntensity);
-}
-
-// Lowers the storm's intensity one step toward the target, ending it at 0.005 or below
-void EEEMStorm::Shrink()
-{
-    float theIntensity = this->mIntensity - this->mStep * this->mIntensity;
-    if (theIntensity < this->mTargetIntensity)
-        theIntensity = this->mTargetIntensity;
-    if (theIntensity <= 0.005f)
-        theIntensity = 0.0f;
-    this->SetIntensity(theIntensity);
 }
 
 // Returns whether the storm is over (no weather effect, or finished)
@@ -440,16 +338,14 @@ void EEEMStorm::RequestRoute()
         break;
     }
     this->mRequest = gPathManager.RequestPath(0, this->mStart, this->mGoal, &theFlags, 1, 500, thePlanner, 0);
-    this->mState = 2;
     if (thePlanner != NULL)
         thePlanner->Dereference();
 }
 
-// Takes the finished route (reversed, to pop from the back) and starts moving
+// Takes the finished route (reversed, to pop from the back); the step then moves (state 3)
 void EEEMStorm::TakePath()
 {
     this->mPath = this->mRequest->mPath;
-    this->mState = 3;
     std::reverse(this->mPath.begin(), this->mPath.end());
     this->mRequest->Dereference();
     this->mRequest = NULL;
@@ -481,25 +377,6 @@ long EEEMStorm::Save(unsigned long inMajorVersion, unsigned long inMinorVersion,
     return 0;
 }
 
-// Sets the storm's intensity, also on its weather effect
-void EEEMStorm::SetIntensity(float inIntensity)
-{
-    this->mIntensity = inIntensity;
-    if (this->mStorm != NULL)
-        this->mStorm->mRecord->storm.intensity = inIntensity;
-}
-
-// Sets the storm's target intensity, clamped to 0..2
-void EEEMStorm::SetTargetIntensity(float inIntensity)
-{
-    if (inIntensity <= 2.0f) {
-        if (inIntensity < 0.0f)
-            inIntensity = 0.0f;
-    } else
-        inIntensity = 2.0f;
-    this->mTargetIntensity = inIntensity;
-}
-
 // Cancels the storm's route request and ends its weather effect
 void EEEMStorm::Release()
 {
@@ -516,85 +393,62 @@ void EEEMStorm::Release()
     this->mStorm = NULL;
 }
 
-// the storm's day (unit-local .rdata before EEEMStorm's vtable) and its longest stay (after the planners' vtables)
-static const float kStormNoon = 12.0f;
-static const float kStormDay = 24.0f;
-static const float kStormMaximumStay = 45000.0f;
+// New (port): the step's host (ee_app storm.rs; no operation touches the storm's EeAppStormFields)
+static void EEEMStormHostOp(void* inContext, int32_t inOp, EeAppStormIo* io)
+{
+    EEEMStorm* theStorm = static_cast<EEEMStorm*>(inContext);
+    switch (inOp) {
+    case EE_APP_STORM_OP_REQUEST:
+        io->flag = theStorm->mRequest != NULL;
+        io->done = io->flag && theStorm->mRequest->mIsDone;
+        break;
+    case EE_APP_STORM_OP_TAKE_PATH:
+        theStorm->TakePath();
+        break;
+    case EE_APP_STORM_OP_REQUEST_ROUTE:
+        theStorm->RequestRoute();
+        break;
+    case EE_APP_STORM_OP_PATH_LEN:
+        io->n = (long)theStorm->mPath.size();
+        break;
+    case EE_APP_STORM_OP_DISTANCE:
+        io->n = theStorm->mStorm->GetCenterPoint().DistanceToSquared(io->flag ? theStorm->mGoal : theStorm->mPath.back());
+        break;
+    case EE_APP_STORM_OP_POP_PATH:
+        theStorm->mPath.pop_back();
+        break;
+    case EE_APP_STORM_OP_MOVE:
+        theStorm->mStorm->Move(io->flag ? theStorm->mGoal : theStorm->mPath.back(), theStorm->mArea);
+        break;
+    case EE_APP_STORM_OP_TILE_COUNT:
+        io->n = (long)theStorm->mStorm->GetTileCount();
+        break;
+    case EE_APP_STORM_OP_END_EFFECT:
+        theStorm->mStorm->mRecord->storm.elapsed = theStorm->mStorm->mRecord->storm.duration;
+        break;
+    case EE_APP_STORM_OP_SET_INTENSITY:
+        if (theStorm->mStorm != NULL)
+            theStorm->mStorm->mRecord->storm.intensity = io->f;
+        break;
+    case EE_APP_STORM_OP_GAME_SPEED:
+        io->f = gWorld.GetGameSpeed();
+        break;
+    case EE_APP_STORM_OP_RANDOM_RANGE:
+        io->f = gPhysics->GetRandom(io->f, io->g);
+        break;
+    case EE_APP_STORM_OP_RANDOM:
+        io->f = gPhysics->mRandom.Generate();
+        break;
+    case EE_APP_STORM_OP_RESET_COLOR:
+        theStorm->mManager->mC18 = gStormColor;
+        break;
+    }
+}
 
 // Advances the storm: follows its route to the goal, lingers, then dies away (also at its end time) and fades its
-// intensity; the target is always 0.4 (the hour is fixed at 10)
+// intensity; the target is always 0.4 (the hour is fixed at 10) (ee_app storm.rs, over the host above)
 void EEEMStorm::Step(unsigned long inTime)
 {
-    float theHour = 10.0f;
-    float theIntensity = 0.4f;
-    if (theHour > kStormNoon) {
-        if (theHour < kStormDay) {
-            float theFraction = theHour / kStormDay;
-            theIntensity = (this->mType == kStormBlizzard || this->mType == kStormHurricane ? 2.0f : 1.0f) * theFraction;
-        } else
-            theIntensity = this->mType == kStormBlizzard || this->mType == kStormHurricane ? 2.0f : 1.0f;
-    }
-    switch (this->mState) {
-    case 2:
-        if (this->mRequest != NULL) {
-            if (this->mRequest->mIsDone)
-                this->TakePath();
-        } else
-            this->mState = 3;
-        break;
-    case 3:
-        if (this->mNextMoveTime <= inTime) {
-            if (this->mPath.size() != 0) {
-                if (this->mStorm->GetCenterPoint().DistanceToSquared(this->mPath.back()) <= 9)
-                    this->mPath.pop_back();
-                if (this->mPath.size() != 0)
-                    this->mStorm->Move(this->mPath.back(), this->mArea);
-                else
-                    this->mStorm->Move(this->mGoal, this->mArea);
-            }
-            if (this->mStorm->GetCenterPoint().DistanceToSquared(this->mGoal) <= 9) {
-                this->mState = 7;
-                this->mNextMoveTime = UMFloatToLong(gWorld.GetGameSpeed() * gPhysics->GetRandom(15000.0f, kStormMaximumStay))
-                          + inTime;
-            } else {
-                if (gPhysics->mRandom.Generate() <= 0.25f)
-                    this->mState = 4;
-                this->mNextMoveTime = UMFloatToLong(gWorld.GetGameSpeed() * 15000.0f) + inTime;
-            }
-        }
-        if (this->mStorm->GetTileCount() < 45)
-            this->mState = 5;
-        break;
-    case 4:
-        if (gPhysics->mRandom.Generate() <= 0.4f)
-            this->mState = 3;
-        this->mNextMoveTime = UMFloatToLong(gWorld.GetGameSpeed() * 15000.0f) + inTime;
-        break;
-    case 5:
-        theIntensity = 0.0f;
-        this->mState = 6;
-        break;
-    case 6:
-        theIntensity = 0.0f;
-        this->mStorm->mRecord->storm.elapsed = this->mStorm->mRecord->storm.duration;
-        break;
-    case 7:
-        if (this->mNextMoveTime <= inTime)
-            this->mState = 5;
-        break;
-    case 8:
-        this->RequestRoute();
-        this->mState = 2;
-        break;
-    }
-    if (this->mEndTime <= inTime) {
-        if (this->mType == kStormRain || this->mType == kStormHurricane)
-            this->mManager->mC18 = gStormColor;
-        this->mState = 5;
-    }
-    this->SetTargetIntensity(theIntensity);
-    if (this->mIntensity < this->mTargetIntensity)
-        this->Grow();
-    else if (this->mIntensity > this->mTargetIntensity)
-        this->Shrink();
+    ee_app_storm_step(this, &EEEMStormHostOp, this, inTime);
+    EEAppCaptureStorm(*this, 1, inTime);   // STRM (TEST ONLY)
 }

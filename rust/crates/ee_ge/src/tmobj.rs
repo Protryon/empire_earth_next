@@ -382,7 +382,12 @@ impl EeGeTerrainMesh {
         }));
         // SAFETY: `p` is live; each host call is a statement of its own
         unsafe {
-            let seed = Self::op(p, EeGeTmOp::Time, 0, 0, 0) as c_ulong;
+            // TEST ONLY: a fixed colour fractal under the simulation capture (EE_SIM_CAPTURE: the app lane's MAPC and MMPX)
+            let seed = if std::env::var_os("EE_SIM_CAPTURE").is_some() {
+                1
+            } else {
+                Self::op(p, EeGeTmOp::Time, 0, 0, 0) as c_ulong
+            };
             tm(p).fractal_seed = seed;
             let fractal = Self::op(p, EeGeTmOp::FractalNew, 0, seed as isize, 0) as usize;
             tm(p).fractal = fractal;
