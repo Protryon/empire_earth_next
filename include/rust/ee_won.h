@@ -2656,6 +2656,10 @@ enum class EeWonCoreObject {
   HttpConn = 12,
   /// an `HTTPConnection*`'s or `HTTPSession*`'s lock (its `CriticalSection`'s platform mutex)
   Lock = 13,
+  /// an `HTTPSession*`'s [`EeWonHttpSession`](crate::httpengine::EeWonHttpSession)
+  HttpSession = 14,
+  /// a `ServerContext*`'s [`ServerList`](crate::servctx::ServerList)
+  Context = 15,
 };
 
 /// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
@@ -2672,6 +2676,14 @@ enum class EeWonCoreSocketOp {
   RecvMsg = 4,
   /// `new SendMsgOp(bytes, socket)`
   SendMsg = 5,
+  /// `new ConnectOp(addr, socket)`
+  Connect = 6,
+  /// `new SendBytesOp(bytes, socket)`
+  SendBytes = 7,
+  /// `new RecvBytesOp(size, socket)`
+  RecvBytes = 8,
+  /// `new RecvCRMsgOp(socket)`
+  RecvCrMsg = 9,
 };
 
 /// The op codes. `a`..`d` are integers or pointers as each says.
@@ -10361,7 +10373,7 @@ struct EeWonCoreHooks {
   EeWonCoreFn ref_release;
   /// `completion->Complete(op)` (the C++ makes the `AsyncOpPtr`)
   void (*completion_call)(void *completion, void *op);
-  /// the object's Rust object of that kind (null for a null object)
+  /// the object's Rust object of that kind (null for a null object or one not of the kind's class)
   void *(*object_of)(void *object, EeWonCoreObject kind);
   /// a socket op's virtual `Duplicate()` (a new op, or null)
   void *(*socketop_duplicate)(void *op);
@@ -10374,9 +10386,9 @@ struct EeWonCoreHooks {
                          void *socket,
                          void *bytes,
                          const EeWonIpAddr *addr,
-                         uint16_t size);
-  /// `new QueueSocket(type)`
-  void *(*new_queue_socket)(int32_t kind);
+                         uint32_t size);
+  /// `new QueueSocket(type)`, or `new BlockingSocket(type)` (the ops' own sockets)
+  void *(*new_queue_socket)(int32_t kind, bool blocking);
   /// `new UDPManagerRecvOp` (from `addr`; any sender for null)
   void *(*new_udp_recv_op)(const EeWonIpAddr *addr);
   /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
@@ -10398,22 +10410,12 @@ struct EeWonCoreHooks {
   /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
   /// result's
   long (*transform)(void *socket, void **message, bool send);
-  /// a receive op's target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`,
-  /// `fclose`, the modify time (`utime`)
-  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
-  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
-  int32_t (*file_close)(void *file);
-  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
   /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
   void (*progress)(void *op, void *completion);
   /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
   long (*accept)(void *socket, void **out);
   /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
   void (*socket_hook)(void *socket, int32_t which);
-  /// a transform's virtual `Send` (`send`) or `Recv` on the message (a `ByteBufferPtr*`)
-  long (*transform_call)(void *transform, void *message, bool send);
-  /// `delete transform`
-  EeWonCoreFn transform_free;
   /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
   void *(*new_route_op)(void *conn, int32_t ty);
   /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
@@ -17014,6 +17016,20 @@ int64_t ee_won_hostop_base_get(const EeWonHostOp *op, int32_t which);
 /// `op` is a live, natively bound op; `obj` NULL or a live `RefCount*`.
 void ee_won_hostop_base(const EeWonHostOp *op, int32_t which, int64_t num, void *obj);
 
+/// `WONAPICoreEx::SetDefaultFileDirectory` (a separator appended when missing), or the core's directory cleared
+/// (a new or deleted core: NULL).
+///
+/// # Safety
+/// `dir` holds `len` bytes, or is NULL.
+void ee_won_api_set_file_directory(const uint8_t *dir,
+                                   size_t len);
+
+/// `WONAPICore::GetDefaultFileDirectory()`'s bytes to `sink`.
+///
+/// # Safety
+/// `sink` is valid with `context`.
+void ee_won_api_file_directory(EeWonByteSink sink, void *context);
+
 /// `HTTPGetOp`'s constructors' proxy file read (`dir`: `WONAPICore::GetDefaultFileDirectory()`, `len` bytes).
 ///
 /// # Safety
@@ -17027,7 +17043,8 @@ void ee_won_http_proxy_read(const uint8_t *dir,
 /// `op` is a live op.
 void ee_won_hostop_bind(const EeWonHostOp *op, EeWonHostFn f, void *host);
 
-/// Binds the game's C++ side (`RustServerOp::HostCall`): as [`ee_won_hostop_bind`], and the calls that need no
+/// Binds the game's C++ side: as [`ee_won_hostop_bind`] (the game binds no function: the C++ objects' calls are
+/// answered over the core table, hostcore.rs; a driver's stand-in still sees them), and the calls that need no
 /// C++ object (the clock, `rand`, an address resolved, the op's file, the files it measures, the web proxy host) are
 /// answered in Rust (hostnative.rs) instead of sent; so are the op's own calls (hostbase.rs: its status and the
 /// like, `ServerOp`'s members, the tracker, its completions, references), on its own objects: `self_op` (the
@@ -17347,6 +17364,22 @@ EeWonHostOp *ee_won_httpget_new(const uint8_t *host,
 /// # Safety
 /// `url` holds `len` bytes.
 EeWonHostOp *ee_won_httpget_new_url(const uint8_t *url, size_t len);
+
+/// `RustServerOp::NewHttpGet(host, path)`'s Rust op: [`ee_won_httpget_new`], then the web proxy file read once per
+/// process from the WON directory (`HTTPGetOp::ReadProxyHostFile(false)` as its constructors ran it).
+///
+/// # Safety
+/// As [`ee_won_httpget_new`].
+EeWonHostOp *ee_won_httpget_open(const uint8_t *host,
+                                 size_t host_len,
+                                 const uint8_t *path,
+                                 size_t path_len);
+
+/// `RustServerOp::NewHttpGet(url)`'s Rust op, as [`ee_won_httpget_open`].
+///
+/// # Safety
+/// `url` holds `len` bytes.
+EeWonHostOp *ee_won_httpget_open_url(const uint8_t *url, size_t len);
 
 /// `ScaleImageFilter::CheckSize` over the filter's fields (`w`, `h` written back).
 ///
@@ -19359,6 +19392,72 @@ bool ee_won_regkey_child(EeWonRegKey *parent,
                          bool delete_,
                          const uint8_t *name,
                          size_t length);
+
+/// `GetDirOp(context, path, flags)` with its data types (C strings).
+///
+/// # Safety
+/// `path` holds `path_len` characters of `wchar` bytes; `types` holds `type_count` C strings (or is NULL for 0).
+EeWonReqOp *ee_won_reqmake_get_dir(uint32_t flags,
+                                   const void *path,
+                                   size_t path_len,
+                                   uint32_t wchar,
+                                   const char *const *types,
+                                   int32_t type_count);
+
+/// `GetMultiDirOp(context, flags)` with each path (`GetMultiDirOp::AddPath`: the op's flags, no data types).
+///
+/// # Safety
+/// `paths` and `lengths` hold `count` entries; each path `lengths[i]` characters of `wchar` bytes.
+EeWonReqOp *ee_won_reqmake_get_multi_dir(uint32_t flags,
+                                         const void *const *paths,
+                                         const size_t *lengths,
+                                         int32_t count,
+                                         uint32_t wchar);
+
+/// `GetServiceOp(context, path, name, netaddr)` (`Init`'s flags: the services, their display names, data objects,
+/// names and addresses).
+///
+/// # Safety
+/// `path` and `name` hold their counts of `wchar`-byte characters; `addr` holds `addr_len` bytes.
+EeWonReqOp *ee_won_reqmake_get_service(const void *path,
+                                       size_t path_len,
+                                       const void *name,
+                                       size_t name_len,
+                                       uint32_t wchar,
+                                       const uint8_t *addr,
+                                       size_t addr_len);
+
+/// `GetAccountOp` with an empty profile.
+EeWonReqOp *ee_won_reqmake_get_account();
+
+/// `UpdateAccountOp(password, email)` with an empty profile.
+///
+/// # Safety
+/// `password` holds `password_len` characters of `wchar` bytes; `email` holds `email_len` bytes.
+EeWonReqOp *ee_won_reqmake_update_account(const void *password,
+                                          size_t password_len,
+                                          uint32_t wchar,
+                                          const uint8_t *email,
+                                          size_t email_len);
+
+/// `CreateAccountOp(user, password, email)` with the lobby's profile: newsletter 1 and the birth date.
+///
+/// # Safety
+/// `user` and `password` hold their counts of `wchar`-byte characters; `email` holds `email_len` bytes.
+EeWonReqOp *ee_won_reqmake_create_account(const void *user,
+                                          size_t user_len,
+                                          const void *password,
+                                          size_t password_len,
+                                          uint32_t wchar,
+                                          const uint8_t *email,
+                                          size_t email_len,
+                                          bool newsletter,
+                                          uint8_t month,
+                                          uint8_t day,
+                                          uint16_t year);
+
+/// A routing server's group list request with its flags.
+EeWonReqOp *ee_won_reqmake_group_list(uint8_t flags);
 
 /// An op derived from `ServerRequestOp` on the base: the round 7/8 Rust op (`ee_won_reqop_*`'s constructors), taken.
 /// Its server context or address are set after the bind (`EE_WON_REQHOST_CONTEXT`, `EE_WON_REQHOST_ADDR`).

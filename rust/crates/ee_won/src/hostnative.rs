@@ -36,6 +36,7 @@ mod sys {
         pub fn PlatTimeMilliseconds64() -> u64;
         // the CRT
         pub fn fclose(file: *mut c_void) -> c_int;
+        pub fn fwrite(data: *const c_void, size: usize, count: usize, file: *mut c_void) -> usize;
         pub fn fread(data: *mut c_void, size: usize, count: usize, file: *mut c_void) -> usize;
         pub fn fgetc(file: *mut c_void) -> c_int;
         pub fn rand() -> c_int;
@@ -56,6 +57,45 @@ fn c_path(data: &[u8]) -> CString {
     let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
     // no NUL left in the slice
     CString::new(&data[..end]).unwrap_or_default()
+}
+
+/// `PlatFOpen(path, mode)` (null when it does not open).
+pub(crate) fn plat_fopen(path: &[u8], mode: &std::ffi::CStr) -> *mut c_void {
+    let p = c_path(path);
+    // SAFETY: C strings
+    unsafe { sys::PlatFOpen(p.as_ptr(), mode.as_ptr()) }
+}
+
+/// `fwrite(data, 1, length, file)`.
+///
+/// # Safety
+/// `file` is an open `FILE*`.
+pub(crate) unsafe fn fwrite(file: *mut c_void, data: &[u8]) -> usize {
+    // SAFETY: the caller's open file; the bytes
+    unsafe { sys::fwrite(data.as_ptr().cast(), 1, data.len(), file) }
+}
+
+/// `fclose(file)`.
+///
+/// # Safety
+/// `file` is an open `FILE*`, closed once.
+pub(crate) unsafe fn fclose(file: *mut c_void) -> i32 {
+    // SAFETY: the caller's contract
+    unsafe { sys::fclose(file) }
+}
+
+/// `utime(path, {time, time})`: the file's access and modify times (the path as given; nothing when it fails).
+pub(crate) fn set_file_time(path: &[u8], time: i64) {
+    let end = path.iter().position(|&b| b == 0).unwrap_or(path.len());
+    let Ok(name) = std::str::from_utf8(&path[..end]) else { return };
+    let t = if time >= 0 {
+        std::time::UNIX_EPOCH + std::time::Duration::from_secs(time as u64)
+    } else {
+        std::time::UNIX_EPOCH - std::time::Duration::from_secs(time.unsigned_abs())
+    };
+    if let Ok(f) = std::fs::OpenOptions::new().write(true).open(name) {
+        let _ = f.set_times(std::fs::FileTimes::new().set_accessed(t).set_modified(t));
+    }
 }
 
 /// `time(NULL)`.
@@ -220,6 +260,59 @@ pub(crate) fn read_proxy_file(dir: &[u8]) {
         line.truncate(end);
     }
     proxy.1 = line;
+}
+
+/// `WONAPICore`'s `mFileDirectory` (the core instance's; empty: none set, or no core).
+static FILE_DIRECTORY: Mutex<Vec<u8>> = Mutex::new(Vec::new());
+/// The data root, found once (`GetDefaultFileDirectory`'s static).
+static DATA_ROOT: Mutex<Vec<u8>> = Mutex::new(Vec::new());
+
+/// `WONAPICore::GetDefaultFileDirectory()`: the directory set on the core, else the data root (the original
+/// returned "" there: files relative to the current directory, which is the game's data root; named explicitly
+/// here, so every WON file has an absolute path).
+pub(crate) fn file_directory() -> Vec<u8> {
+    let d = FILE_DIRECTORY.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    if !d.is_empty() {
+        return d;
+    }
+    let mut root = DATA_ROOT.lock().unwrap_or_else(|e| e.into_inner());
+    if root.is_empty() {
+        let mut buf = [0u8; 1024];
+        // SAFETY: the buffer and its size
+        let n = unsafe { ee_plat_core::path::PlatPathGetDataRoot(buf.as_mut_ptr().cast(), buf.len() as u32) };
+        if n != 0 {
+            let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
+            *root = buf[..end].to_vec();
+        }
+    }
+    root.clone()
+}
+
+/// `WONAPICoreEx::SetDefaultFileDirectory` (a separator appended when missing), or the core's directory cleared
+/// (a new or deleted core: NULL).
+///
+/// # Safety
+/// `dir` holds `len` bytes, or is NULL.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_api_set_file_directory(dir: *const u8, len: usize) {
+    // SAFETY: the caller's bytes
+    let mut d = unsafe { crate::ffi::bytes(dir, len) }.to_vec();
+    if let Some(&last) = d.last() {
+        if last != b'\\' && last != b'/' {
+            d.push(b'/');
+        }
+    }
+    *FILE_DIRECTORY.lock().unwrap_or_else(|e| e.into_inner()) = d;
+}
+
+/// `WONAPICore::GetDefaultFileDirectory()`'s bytes to `sink`.
+///
+/// # Safety
+/// `sink` is valid with `context`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_api_file_directory(sink: crate::ffi::EeWonByteSink, context: *mut c_void) {
+    // SAFETY: the caller's sink
+    unsafe { crate::ffi::give(sink, context, &file_directory()) };
 }
 
 /// The op's file (a `FILE*`, 0: none), closed when the op goes.

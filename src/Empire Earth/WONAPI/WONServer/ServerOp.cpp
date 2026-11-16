@@ -1,5 +1,5 @@
-// RustServerOp: an op of the Rust op base (ee_won hostop.rs) with ServerOp's members (hostbase.rs), the calls that
-// stay C++ (new objects, an object's Rust object) answered on the C++ objects
+// RustServerOp: an op of the Rust op base (ee_won hostop.rs) with ServerOp's members (hostbase.rs); its calls on C++
+// objects are answered over the core table (hostcore.rs: HostCall is gone, net round 29)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -18,30 +18,8 @@
 #include "ee/wonapi/WONLobbyGUI.h" // WONAPICore::GetDefaultFileDirectory
 namespace WONAPI {
 namespace {
-RefCount* Obj(void* inObj) { return static_cast<RefCount*>(inObj); }
-BlockingSocket* Sock(void* inObj) { return inObj ? static_cast<BlockingSocket*>(Obj(inObj)) : NULL; }
-AsyncOp* Op(void* inObj) { return static_cast<AsyncOp*>(Obj(inObj)); }
-void* Out(RefCount* inObj) { inObj->AddRef(); return inObj; } // a new object: the Rust op's reference
-IPAddr Addr(const EeWonHostCall* c) { IPAddr a; a.SetSixByte(c->addr); return a; }
-ByteBufferPtr Buf(const EeWonHostCall* c) { return new ByteBuffer(c->data, (unsigned long)c->len, false); }
-SocketOp* NewSocketOp(const EeWonHostCall* c)
-{
-    AsyncSocket* s = Sock(c->obj[0]);
-    switch (c->num[0]) {
-    case EE_WON_HOST_OP_CONNECT: return new ConnectOp(Addr(c), s);
-    case EE_WON_HOST_OP_SEND_BYTES: return new SendBytesOp(Buf(c), s);
-    case EE_WON_HOST_OP_SEND_BYTES_TO: return new SendBytesToOp(Buf(c), Addr(c), s);
-    case EE_WON_HOST_OP_SEND_MSG: return new SendMsgOp(Buf(c), s);
-    case EE_WON_HOST_OP_RECV_BYTES: return new RecvBytesOp((unsigned long)c->num[1], s);
-    case EE_WON_HOST_OP_RECV_MSG: return new RecvMsgOp(s);
-    case EE_WON_HOST_OP_RECV_CR_MSG: return new RecvCRMsgOp(s);
-    default: return new RecvBytesFromOp((unsigned short)c->num[1], s);
-    }
-}
-}
-
-namespace {
-// the Rust objects' maker of a Rust op's C++ op (ee_won cppcore.rs new_host_op: GameSpySupport's service lookup)
+// the Rust objects' maker of a Rust op's C++ op (ee_won cppcore.rs new_host_op: the peer auth and HTTP get ops
+// a Rust op makes, GameSpySupport's service lookup)
 void* NewHostOp(EeWonHostOp* inOp) { return static_cast<RefCount*>(static_cast<AsyncOp*>(new RustServerOp(inOp))); }
 struct HostOpMaker {
     HostOpMaker() { ee_won_core_set_new_host_op(NewHostOp); }
@@ -52,7 +30,7 @@ RustServerOp::RustServerOp(EeWonHostOp* inRustOp) : mRustOp(inRustOp)
     // the calls that need no C++ object (the clock, rand, an address, the op's file, the files it measures, the web
     // proxy host: ee_won hostnative.rs) and the op's own (its status and the like, ServerOp's members, the tracker,
     // its completions, references: hostbase.rs) are the Rust op's
-    ee_won_hostop_bind_native(inRustOp, RustServerOp::HostCall, this, static_cast<AsyncOp*>(this), this->GetOpObject(),
+    ee_won_hostop_bind_native(inRustOp, NULL, this, static_cast<AsyncOp*>(this), this->GetOpObject(),
                               this->mTracker.GetTrackerObject());
 }
 // Sets the connect, send and receive time limits
@@ -123,18 +101,6 @@ PeerAuthOp::PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType in
     this->SetAuthType(inType, inContext);
     this->SetSocket(inSocket);
 }
-// The session's Encrypt (send) or Decrypt (receive): the message replaced when the Rust side made a new one
-WONStatus CryptTransform::Crypt(bool inDecrypt, ByteBufferPtr& ioMessage)
-{
-    ByteBufferPtr anOut;
-    bool replaced = false;
-    WONStatus aStatus = (WONStatus)ee_won_session_crypt(this->mSession, inDecrypt,
-                                                        reinterpret_cast<const uint8_t*>(ioMessage->data()),
-                                                        ioMessage->length(), WonByteBufferSink, &anOut, &replaced);
-    if (replaced)
-        ioMessage = anOut;
-    return aStatus;
-}
 // A server-side peer auth op for an auth context and an accepted socket (ee_won peerop.rs)
 PeerAuthServerOp::PeerAuthServerOp(AuthContext* inContext, BlockingSocket* inSocket)
     : RustServerOp(ee_won_hostop_peerauth_server())
@@ -187,72 +153,37 @@ std::string RustServerOp::GetBytes(int inWhich, long long inIndex) const
     ee_won_hostop_bytes(this->mRustOp, inWhich, inIndex, StrSink, &aBytes);
     return aBytes;
 }
-namespace {
-// a Rust request op's members in its kind's order (ee_won_reqops_new)
-struct ReqMembers {
-    std::list<std::string> mKeep;
-    std::vector<EeWonAdminValue> mValues;
-    ReqMembers& N(long long inNum)
-    {
-        EeWonAdminValue v = {static_cast<int64_t>(inNum), NULL, 0};
-        this->mValues.push_back(v);
-        return *this;
-    }
-    ReqMembers& S(const std::string& inBytes)
-    {
-        this->mKeep.push_back(inBytes);
-        EeWonAdminValue v = {0, reinterpret_cast<const uint8_t*>(this->mKeep.back().data()), this->mKeep.back().size()};
-        this->mValues.push_back(v);
-        return *this;
-    }
-    ReqMembers& W(const std::wstring& inText)
-    {
-        std::string b;
-        WideAppendUtf16LE(b, inText);
-        return this->S(b);
-    }
-    // an empty profile (no newsletters, birth date or custom action)
-    ReqMembers& Profile() { return this->N(0).N(0).N(0).N(0).N(0).N(0).S(std::string()); }
-    EeWonReqOp* Make(int inKind) { return ee_won_reqops_new(inKind, this->mValues.empty() ? NULL : &this->mValues[0], this->mValues.size()); }
-};
-}
+// the requests' members are Rust's (ee_won reqmake.rs); wide texts as wchar_t units of their size
+#define EE_WON_WIDE(t) (t).data(), (t).size()
 RustServerOp* RustServerOp::NewGetDir(ServerContext* inContext, const std::wstring& inPath, DWORD inFlags,
                                       const char* const* inTypes, int inTypeCount)
 {
-    ReqMembers m;
-    m.N(inFlags).W(inPath).N(inTypeCount);
-    for (int i = 0; i < inTypeCount; i++) m.S(inTypes[i]);
-    return NewRequest(m.Make(EE_WON_REQOPS_DIR_GET), inContext);
+    return NewRequest(ee_won_reqmake_get_dir(inFlags, EE_WON_WIDE(inPath), sizeof(wchar_t), inTypes, inTypeCount), inContext);
 }
 RustServerOp* RustServerOp::NewGetMultiDir(ServerContext* inContext, DWORD inFlags, const std::wstring* inPaths, int inCount)
 {
-    // GetMultiDirOp::AddPath: each path with the op's flags and (no) data types
-    ReqMembers m;
-    m.N(inCount);
-    for (int i = 0; i < inCount; i++) m.N(inFlags).W(inPaths[i]).N(0);
-    return NewRequest(m.Make(EE_WON_REQOPS_DIR_MULTI), inContext);
+    std::vector<const void*> aPaths(inCount + 1);
+    std::vector<size_t> aLengths(inCount + 1);
+    for (int i = 0; i < inCount; i++) { aPaths[i] = inPaths[i].data(); aLengths[i] = inPaths[i].size(); }
+    return NewRequest(ee_won_reqmake_get_multi_dir(inFlags, &aPaths[0], &aLengths[0], inCount, sizeof(wchar_t)), inContext);
 }
 RustServerOp* RustServerOp::NewGetService(ServerContext* inContext, const std::wstring& inPath, const std::wstring& inName,
                                           const std::string& inNetAddr)
 {
-    // GetServiceOp::Init's flags: the services, their display names, data objects, names and addresses
-    ReqMembers m;
-    m.N(0x06000822).W(inPath).W(inName).N(1).S(inNetAddr).N(0);
-    return NewRequest(m.Make(EE_WON_REQOPS_DIR_SERVICE), inContext);
+    return NewRequest(ee_won_reqmake_get_service(EE_WON_WIDE(inPath), EE_WON_WIDE(inName), sizeof(wchar_t),
+                                                 WonBytes(inNetAddr), inNetAddr.size()), inContext);
 }
 RustServerOp* RustServerOp::NewGetAccount(ServerContext* inContext, AuthContext* inAuth)
 {
-    ReqMembers m;
-    RustServerOp* anOp = NewRequest(m.Profile().Make(EE_WON_REQOPS_ACCOUNT_GET), inContext);
+    RustServerOp* anOp = NewRequest(ee_won_reqmake_get_account(), inContext);
     anOp->SetAuthType(AUTH_TYPE_SESSION, inAuth);
     return anOp;
 }
 RustServerOp* RustServerOp::NewUpdateAccount(ServerContext* inContext, AuthContext* inAuth, const std::wstring& inPassword,
                                              const std::string& inEmail)
 {
-    ReqMembers m;
-    m.W(inPassword).S(inEmail).Profile();
-    RustServerOp* anOp = NewRequest(m.Make(EE_WON_REQOPS_ACCOUNT_UPDATE), inContext);
+    RustServerOp* anOp = NewRequest(ee_won_reqmake_update_account(EE_WON_WIDE(inPassword), sizeof(wchar_t),
+                                                                  WonBytes(inEmail), inEmail.size()), inContext);
     anOp->SetAuthType(AUTH_TYPE_SESSION, inAuth);
     return anOp;
 }
@@ -261,37 +192,22 @@ RustServerOp* RustServerOp::NewCreateAccount(ServerContext* inContext, const std
                                              bool inNewsletter, unsigned char inMonth, unsigned char inDay,
                                              unsigned short inYear)
 {
-    // the lobby's profile: newsletter 1 and the birth date
-    ReqMembers m;
-    m.W(inUserName).W(inPassword).S(inEmail).N(1).N(1).N(inNewsletter).N(inMonth).N(inDay).N(inYear).N(0).N(0);
-    return NewRequest(m.S(std::string()).Make(EE_WON_REQOPS_CREATE_ACCOUNT), inContext);
+    return NewRequest(ee_won_reqmake_create_account(EE_WON_WIDE(inUserName), EE_WON_WIDE(inPassword), sizeof(wchar_t),
+                                                    WonBytes(inEmail), inEmail.size(), inNewsletter, inMonth, inDay,
+                                                    inYear), inContext);
 }
 RustServerOp* RustServerOp::NewGroupListReq(const IPAddr& inAddr, unsigned char inFlags)
 {
-    ReqMembers m;
-    return NewRequest(m.N(inFlags).Make(EE_WON_REQOPS_GROUP_LIST), inAddr);
-}
-namespace {
-// HTTPGetOp::ReadProxyHostFile(false) as its constructors ran it: _wonwebproxy.txt in the WON directory, its first
-// line, once per process (ee_won hostnative.rs)
-void ReadHttpProxyFile()
-{
-    const std::string& aDir = WONAPICore::GetDefaultFileDirectory();
-    ee_won_http_proxy_read(reinterpret_cast<const uint8_t*>(aDir.data()), aDir.size());
-}
+    return NewRequest(ee_won_reqmake_group_list(inFlags), inAddr);
 }
 RustServerOp* RustServerOp::NewHttpGet(const std::string& inHost, const std::string& inPath)
 {
-    RustServerOp* anOp = new RustServerOp(ee_won_httpget_new(reinterpret_cast<const uint8_t*>(inHost.data()), inHost.size(),
-                                                             reinterpret_cast<const uint8_t*>(inPath.data()), inPath.size()));
-    ReadHttpProxyFile();
-    return anOp;
+    return new RustServerOp(ee_won_httpget_open(reinterpret_cast<const uint8_t*>(inHost.data()), inHost.size(),
+                                                reinterpret_cast<const uint8_t*>(inPath.data()), inPath.size()));
 }
 RustServerOp* RustServerOp::NewHttpGet(const std::string& inURL)
 {
-    RustServerOp* anOp = new RustServerOp(ee_won_httpget_new_url(reinterpret_cast<const uint8_t*>(inURL.data()), inURL.size()));
-    ReadHttpProxyFile();
-    return anOp;
+    return new RustServerOp(ee_won_httpget_open_url(reinterpret_cast<const uint8_t*>(inURL.data()), inURL.size()));
 }
 void RustServerOp::SetBytes(int inWhich, const std::string& inBytes)
 {
@@ -300,7 +216,7 @@ void RustServerOp::SetBytes(int inWhich, const std::string& inBytes)
 }
 BlockingSocket* RustServerOp::GetHttpSocket() const
 {
-    BlockingSocket* aSocket = Sock(reinterpret_cast<void*>((intptr_t)this->GetNum(EE_WON_HTTPGET_SOCKET)));
+    BlockingSocket* aSocket = static_cast<BlockingSocket*>(reinterpret_cast<RefCount*>((intptr_t)this->GetNum(EE_WON_HTTPGET_SOCKET)));
     if (aSocket == NULL || !aSocket->IsConnected()) return NULL;
     return aSocket;
 }
@@ -323,64 +239,12 @@ RustServerOp* RustServerOp::NewHttpDocument(const std::string& inProduct, int in
 }
 RustServerOp::~RustServerOp()
 {
-    ee_won_hostop_free(this->mRustOp); // its objects released through HostCall, its file closed
+    ee_won_hostop_free(this->mRustOp); // its objects released, its file closed
 }
 void RustServerOp::RunHook() { ee_won_hostop_run(this->mRustOp); }
 void RustServerOp::CleanupHook() { ee_won_hostop_cleanup(this->mRustOp); }
 bool RustServerOp::CallbackHook(AsyncOp* inOp, int inParam)
 {
     return ee_won_hostop_callback(this->mRustOp, inParam, inOp);
-}
-void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
-{
-    RustServerOp* o = static_cast<RustServerOp*>(inOp);
-    void* o0 = c->obj[0];
-    long long n0 = c->num[0];
-    switch (c->code) {
-    // new objects (one reference the Rust op owns)
-    case EE_WON_HOST_NEW_SOCKET: c->out_obj = Out(new BlockingSocket(n0 ? AsyncSocket::UDP : AsyncSocket::TCP)); break;
-    case EE_WON_HOST_NEW_OP: c->out_obj = Out(NewSocketOp(c)); break;
-    case EE_WON_HOST_PEER_NEW_LIGHT: c->out_obj = Out(new AsyncOp); break; // a plain op (a timer: its completion Rust's)
-    case EE_WON_HOST_NEW_PEER_AUTH: {
-        PeerAuthOp* anOp = new PeerAuthOp(Addr(c), o->GetAuthContext(), o->GetAuthType(), Sock(o0), n0 != 0);
-        anOp->CopyMaxTimes(o);
-        c->out_obj = Out(anOp);
-        break;
-    }
-    case EE_WON_HOST_NEW_HTTP_GET: {
-        std::string aTarget(reinterpret_cast<const char*>(c->data), c->len);
-        c->out_obj = Out(NewHttpGet(aTarget.substr(0, (size_t)n0), aTarget.substr((size_t)n0)));
-        break;
-    }
-    // C++ objects the Rust op drives: a session's transform, an HTTP session's queue
-    case EE_WON_HOST_ADD_CRYPT:
-        Sock(o0)->AddMsgTransform(new CryptTransform(c->obj[1]));
-        break;
-    case EE_WON_HOST_SESSION_ADD:
-        static_cast<HTTPSession*>(Obj(o0))->AddOp(static_cast<RustServerOp*>(Op(c->obj[1])));
-        break;
-    // an object's Rust object: an auth context's (ee_won hostauth.rs), and by kind a socket's, a queue socket's, an
-    // op's, a socket op's, a Rust op's, a server context's list (hostsock.rs, hostbase.rs), or NULL
-    case EE_WON_HOST_AUTH_CORE:
-        c->out_obj = o0 != NULL ? const_cast<EeWonAuthCtx*>(static_cast<AuthContext*>(Obj(o0))->Core()) : NULL;
-        break;
-    case EE_WON_HOST_SOCK_CORE: {
-        RefCount* r = o0 != NULL ? Obj(o0) : o;
-        AsyncSocket* s = dynamic_cast<AsyncSocket*>(r);
-        QueueSocket* q = dynamic_cast<QueueSocket*>(r);
-        SocketOp* so = dynamic_cast<SocketOp*>(r);
-        AsyncOp* op = dynamic_cast<AsyncOp*>(r);
-        RustServerOp* h = dynamic_cast<RustServerOp*>(r);
-        ServerContext* x = dynamic_cast<ServerContext*>(r);
-        c->out_obj = n0 == EE_WON_HOST_CORE_SOCKET ? (s != NULL ? (void*)s->GetSocketObject() : NULL)
-                     : n0 == EE_WON_HOST_CORE_QUEUE ? (q != NULL ? (void*)q->GetQueueObject() : NULL)
-                     : n0 == EE_WON_HOST_CORE_OP ? (op != NULL ? (void*)op->GetOpObject() : NULL)
-                     : n0 == EE_WON_HOST_CORE_HOSTOP ? (h != NULL ? (void*)h->GetRustOp() : NULL)
-                     : n0 == EE_WON_HOST_CORE_CONTEXT ? (x != NULL ? (void*)x->GetListObject() : NULL)
-                     : (so != NULL ? (void*)so->GetSocketOpObject() : NULL);
-        break;
-    }
-    default: break;
-    }
 }
 }

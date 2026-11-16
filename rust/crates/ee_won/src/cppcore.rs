@@ -77,6 +77,10 @@ pub enum EeWonCoreObject {
     HttpConn = 12,
     /// an `HTTPConnection*`'s or `HTTPSession*`'s lock (its `CriticalSection`'s platform mutex)
     Lock = 13,
+    /// an `HTTPSession*`'s [`EeWonHttpSession`](crate::httpengine::EeWonHttpSession)
+    HttpSession = 14,
+    /// a `ServerContext*`'s [`ServerList`](crate::servctx::ServerList)
+    Context = 15,
 }
 
 /// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
@@ -95,6 +99,14 @@ pub enum EeWonCoreSocketOp {
     RecvMsg = 4,
     /// `new SendMsgOp(bytes, socket)`
     SendMsg = 5,
+    /// `new ConnectOp(addr, socket)`
+    Connect = 6,
+    /// `new SendBytesOp(bytes, socket)`
+    SendBytes = 7,
+    /// `new RecvBytesOp(size, socket)`
+    RecvBytes = 8,
+    /// `new RecvCRMsgOp(socket)`
+    RecvCrMsg = 9,
 }
 
 /// The C++ calls of the whole library (AsyncOp.cpp's one table). Every object crosses as its `RefCount*`; a `new`
@@ -107,7 +119,7 @@ pub struct EeWonCoreHooks {
     pub ref_release: EeWonCoreFn,
     /// `completion->Complete(op)` (the C++ makes the `AsyncOpPtr`)
     pub completion_call: Option<unsafe extern "C" fn(completion: *mut c_void, op: *mut c_void)>,
-    /// the object's Rust object of that kind (null for a null object)
+    /// the object's Rust object of that kind (null for a null object or one not of the kind's class)
     pub object_of: Option<unsafe extern "C" fn(object: *mut c_void, kind: EeWonCoreObject) -> *mut c_void>,
     /// a socket op's virtual `Duplicate()` (a new op, or null)
     pub socketop_duplicate: Option<unsafe extern "C" fn(op: *mut c_void) -> *mut c_void>,
@@ -122,11 +134,11 @@ pub struct EeWonCoreHooks {
             socket: *mut c_void,
             bytes: *mut c_void,
             addr: *const EeWonIpAddr,
-            size: u16,
+            size: u32,
         ) -> *mut c_void,
     >,
-    /// `new QueueSocket(type)`
-    pub new_queue_socket: Option<unsafe extern "C" fn(kind: i32) -> *mut c_void>,
+    /// `new QueueSocket(type)`, or `new BlockingSocket(type)` (the ops' own sockets)
+    pub new_queue_socket: Option<unsafe extern "C" fn(kind: i32, blocking: bool) -> *mut c_void>,
     /// `new UDPManagerRecvOp` (from `addr`; any sender for null)
     pub new_udp_recv_op: Option<unsafe extern "C" fn(addr: *const EeWonIpAddr) -> *mut c_void>,
     /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
@@ -149,24 +161,12 @@ pub struct EeWonCoreHooks {
     /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
     /// result's
     pub transform: Option<unsafe extern "C" fn(socket: *mut c_void, message: *mut *mut c_void, send: bool) -> c_long>,
-    /// a receive op's target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`,
-    /// `fclose`, the modify time (`utime`)
-    pub file_open:
-        Option<unsafe extern "C" fn(path: *const u8, length: usize, binary: bool, append: bool) -> *mut c_void>,
-    pub file_write: Option<unsafe extern "C" fn(file: *mut c_void, data: *const u8, length: usize) -> usize>,
-    pub file_close: Option<unsafe extern "C" fn(file: *mut c_void) -> i32>,
-    pub file_set_time: Option<unsafe extern "C" fn(path: *const u8, length: usize, time: i64)>,
     /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
     pub progress: Option<unsafe extern "C" fn(op: *mut c_void, completion: *mut c_void)>,
     /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
     pub accept: Option<unsafe extern "C" fn(socket: *mut c_void, out: *mut *mut c_void) -> c_long>,
     /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
     pub socket_hook: Option<unsafe extern "C" fn(socket: *mut c_void, which: i32)>,
-    /// a transform's virtual `Send` (`send`) or `Recv` on the message (a `ByteBufferPtr*`)
-    pub transform_call:
-        Option<unsafe extern "C" fn(transform: *mut c_void, message: *mut c_void, send: bool) -> c_long>,
-    /// `delete transform`
-    pub transform_free: EeWonCoreFn,
     /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
     pub new_route_op: Option<unsafe extern "C" fn(conn: *mut c_void, ty: i32) -> *mut c_void>,
     /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
@@ -288,14 +288,31 @@ pub(crate) fn new_socket_op(
     socket: *mut c_void,
     bytes: *mut c_void,
     addr: *const EeWonIpAddr,
-    size: u16,
+    size: u32,
 ) -> *mut c_void {
     // SAFETY: the table's contract
     core().and_then(|c| c.new_socket_op).map_or(null_mut(), |h| unsafe { h(kind, socket, bytes, addr, size) })
 }
 fn new_queue_socket() -> *mut c_void {
+    new_socket(1, false)
+}
+/// `new QueueSocket(kind)` or `new BlockingSocket(kind)` (no reference yet)
+pub(crate) fn new_socket(kind: i32, blocking: bool) -> *mut c_void {
     // SAFETY: the table's contract
-    core().and_then(|c| c.new_queue_socket).map_or(null_mut(), |h| unsafe { h(1) })
+    core().and_then(|c| c.new_queue_socket).map_or(null_mut(), |h| unsafe { h(kind, blocking) })
+}
+/// `new AsyncOp` (no reference yet)
+pub(crate) fn new_plain_op() -> *mut c_void {
+    // SAFETY: the table's contract
+    core().and_then(|c| c.new_op).map_or(null_mut(), |h| unsafe { h() })
+}
+/// A new `ByteBuffer` adopting the bytes, with one reference.
+///
+/// # Safety
+/// `b` is a new buffer the C++ takes.
+pub(crate) unsafe fn bytes_adopt(b: *mut EeWonByteBuffer) -> *mut c_void {
+    // SAFETY: the caller's contract
+    unsafe { n_bytes_adopt(b) }
 }
 fn new_udp_recv_op(addr: *const EeWonIpAddr) -> *mut c_void {
     // SAFETY: the table's contract
@@ -668,7 +685,7 @@ unsafe extern "C" fn n_udp_socket_bind(s: *mut c_void, port: i32) -> c_long {
 unsafe extern "C" fn n_udp_socket_repeat(s: *mut c_void, m: *mut c_void, size: i32) {
     let Some(q) = queue(s) else { return };
     q.set_repeat_completion(manager_completion(m));
-    q.set_repeat_op(new_socket_op(EeWonCoreSocketOp::RecvFrom, null_mut(), null_mut(), std::ptr::null(), size as u16));
+    q.set_repeat_op(new_socket_op(EeWonCoreSocketOp::RecvFrom, null_mut(), null_mut(), std::ptr::null(), u32::from(size as u16)));
 }
 unsafe extern "C" fn n_udp_socket_send(s: *mut c_void, b: *mut c_void, a: *const EeWonIpAddr) {
     let Some(q) = queue(s) else { return };
@@ -875,13 +892,40 @@ pass!(n_so_thread_add, socket_thread_add, (o: *mut c_void));
 pass!(n_bytes_of, bytes_of, (b: *mut c_void) -> *const EeWonByteBuffer, std::ptr::null());
 pass!(n_bytes_adopt, bytes_adopt, (b: *mut EeWonByteBuffer) -> *mut c_void, null_mut());
 pass!(n_transform, transform, (s: *mut c_void, m: *mut *mut c_void, send: bool) -> c_long, WS_NONE as c_long);
-pass!(n_file_open, file_open, (p: *const u8, n: usize, binary: bool, append: bool) -> *mut c_void, null_mut());
-pass!(n_file_write, file_write, (f: *mut c_void, d: *const u8, n: usize) -> usize, 0);
-pass!(n_file_close, file_close, (f: *mut c_void) -> i32, -1);
-pass!(n_file_set_time, file_set_time, (p: *const u8, n: usize, t: i64));
+// a receive op's target file (the deleted CoreFileOpen / Write / Close / SetTime of AsyncOp.cpp)
+unsafe extern "C" fn n_file_open(p: *const u8, n: usize, binary: bool, append: bool) -> *mut c_void {
+    let mode = match (binary, append) {
+        (true, true) => c"a+b",
+        (true, false) => c"wb",
+        (false, true) => c"a+",
+        (false, false) => c"w",
+    };
+    // SAFETY: the caller's bytes
+    crate::hostnative::plat_fopen(unsafe { crate::ffi::bytes(p, n) }, mode)
+}
+unsafe extern "C" fn n_file_write(f: *mut c_void, d: *const u8, n: usize) -> usize {
+    // SAFETY: the caller's open file and bytes
+    unsafe { crate::hostnative::fwrite(f, crate::ffi::bytes(d, n)) }
+}
+unsafe extern "C" fn n_file_close(f: *mut c_void) -> i32 {
+    // SAFETY: the caller's open file, closed once
+    unsafe { crate::hostnative::fclose(f) }
+}
+unsafe extern "C" fn n_file_set_time(p: *const u8, n: usize, t: i64) {
+    // SAFETY: the caller's bytes
+    crate::hostnative::set_file_time(unsafe { crate::ffi::bytes(p, n) }, t);
+}
 pass!(n_progress, progress, (o: *mut c_void, c: *mut c_void));
 pass!(n_accept, accept, (s: *mut c_void, out: *mut *mut c_void) -> c_long, WS_NONE as c_long);
-pass!(n_transform_free, transform_free, (t: *mut c_void));
+/// `delete transform`: a crypt transform's session reference given back (`~CryptTransform`)
+unsafe extern "C" fn n_transform_free(t: *mut c_void) {
+    if !t.is_null() {
+        // SAFETY: a transform `add_crypt` made, freed once
+        let c = unsafe { Box::from_raw(t as *mut CryptTransform) };
+        // SAFETY: the session's reference the transform held
+        unsafe { crate::hostauth::ee_won_session_release(c.session) };
+    }
+}
 unsafe extern "C" fn n_socket_object(s: *mut c_void) -> *mut EeWonAsyncSocket {
     object_of(s, EeWonCoreObject::Socket).cast()
 }
@@ -900,9 +944,57 @@ unsafe extern "C" fn n_close_hook(s: *mut c_void) {
 unsafe extern "C" fn n_kill_hook(s: *mut c_void) {
     socket_hook(s, 2)
 }
+/// `CryptTransform` (8 bytes in the original, ServerOp.cpp's `Crypt` until net round 29): a session handle the
+/// transform holds a reference to; its `Send` encrypts, its `Recv` decrypts.
+struct CryptTransform {
+    session: *mut c_void,
+}
+
+/// `socket->AddMsgTransform(new CryptTransform(session))`: the socket owns the transform.
+pub(crate) fn add_crypt(socket_obj: *mut c_void, session: *mut c_void) {
+    let Some(s) = socket(socket_obj) else { return };
+    // SAFETY: a live session handle (the caller's)
+    unsafe { crate::hostauth::ee_won_session_hold(session) };
+    s.add_transform(Box::into_raw(Box::new(CryptTransform { session })) as *mut c_void);
+}
+
+/// The session's `Encrypt` (send) or `Decrypt` (receive) on the message in `*m` (a `ByteBufferPtr`: its one
+/// pointer, a reference held), replaced when the session made a new one.
 fn transform_call(t: *mut c_void, m: *mut c_void, send: bool) -> c_long {
-    // SAFETY: the table's contract: a live transform and message
-    core().and_then(|c| c.transform_call).map_or(WS_NONE as c_long, |h| unsafe { h(t, m, send) })
+    // SAFETY: a transform `add_crypt` made; `m` the socket's `ByteBufferPtr*`, alive during the call
+    let (c, slot) = unsafe { (&*(t as *const CryptTransform), &mut *(m as *mut *mut c_void)) };
+    // SAFETY: the message's live buffer
+    let b = unsafe { n_bytes_of(*slot) };
+    let (data, len) = if b.is_null() {
+        (std::ptr::null(), 0)
+    } else {
+        // SAFETY: the buffer's bytes, alive while the message is held
+        unsafe { (ee_won_bytes_data(b), ee_won_bytes_length(b) as usize) }
+    };
+    let mut out: Option<Vec<u8>> = None;
+    let mut replaced = false;
+    // SAFETY: the bytes above; the sink below takes `out`
+    let st = unsafe {
+        crate::hostauth::ee_won_session_crypt(
+            c.session,
+            !send,
+            data.cast(),
+            len,
+            collect_bytes,
+            &mut out as *mut Option<Vec<u8>> as *mut c_void,
+            &mut replaced,
+        )
+    };
+    if let (true, Some(o)) = (replaced, out) {
+        // SAFETY: a new buffer with one reference replaces the old one, whose reference goes back
+        let new = unsafe { n_bytes_adopt(ee_won_bytes_copy(o.as_ptr(), o.len() as _)) };
+        ref_release(std::mem::replace(slot, new));
+    }
+    st as c_long
+}
+unsafe extern "C" fn collect_bytes(context: *mut c_void, data: *const u8, length: usize) {
+    // SAFETY: `transform_call`'s `Option<Vec<u8>>`; the session's bytes
+    unsafe { *(context as *mut Option<Vec<u8>>) = Some(crate::ffi::bytes(data, length).to_vec()) };
 }
 unsafe extern "C" fn n_transform_send(t: *mut c_void, m: *mut c_void) -> c_long {
     transform_call(t, m, true)

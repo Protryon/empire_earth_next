@@ -153,13 +153,7 @@ inline void AsyncOp::SetContainer(AsyncOpContainer* inContainer)
 }
 
 class SocketOp;
-class MsgTransform {
-public:
-    // Empty virtual dtor (WON SDK); the 32-byte deleting dtor 2ad880 stores the own vtable 44ca2c
-    virtual ~MsgTransform() {}
-    virtual WONStatus Send(ByteBufferPtr&) { return 0; } //VT+4=2ad870, ret4
-    virtual WONStatus Recv(ByteBufferPtr&) { return 0; } //VT+8=2ad870, ret4
-};
+// (MsgTransform, 2ad880, and its one class, CryptTransform, are Rust's since net round 29: ee_won cppcore.rs)
 
 // WON SDK NetStats: static functions only. The counters are Rust's (rust/crates/ee_won/src/netstats.rs)
 class NetStats
@@ -246,7 +240,6 @@ public:
     bool IsConnected() { return ee_won_asyncsocket_is_connected(this->mSock); }
     // a copy taken under the lock (the original returned a reference to the member)
     IPAddr GetDestAddr() { return IPAddr::FromValue(ee_won_asyncsocket_dest_addr(this->mSock)); }
-    void AddMsgTransform(MsgTransform* inTransform) { ee_won_asyncsocket_add_transform(this->mSock, inTransform); } // owned
     void WaitForRead(unsigned long);
     void ClosePrv() { ee_won_asyncsocket_close_handle(this->mSock); } // a hard close if it would block
     // Winsock's numbering; would-block and in-progress are WS_TimedOut, any other recorded
@@ -789,6 +782,7 @@ public:
     void KillAll() { ee_won_http_session_kill_all(this->mImpl); } //2d2bc0: every connection's requests killed
     int GetNumOps() { return ee_won_http_session_num_ops(this->mImpl); }
     PlatMutex* GetLock() const { return this->mDataCrit.mCrit; }
+    EeWonHttpSession* GetSessionObject() const { return this->mImpl; }
 private:
     CriticalSection mDataCrit;              //08..20
     EeWonHttpSession* mImpl;                //20..2c, owned
@@ -1141,9 +1135,9 @@ protected:
 
 // An op of the Rust op base (rust/crates/ee_won/src/hostop.rs): its members and steps are the Rust op's
 // (MultiPingOp: ee_won_multiping_new, FilePushOp: ee_won_filepush_new, FTPGetOp: ee_won_ftpget_new and _new_url;
-// the ops derived from ServerRequestOp: NewRequest over reqhost.rs); this class runs its hooks there and answers
-// its calls on the C++ objects (ServerOp.cpp's HostCall). Results and setters by number: ee_won_hostop_num,
-// ee_won_hostop_bytes, ee_won_hostop_set.
+// the ops derived from ServerRequestOp: NewRequest over reqhost.rs); this class runs its hooks there, and its calls
+// on the C++ objects are answered over the core table (hostcore.rs). Results and setters by number:
+// ee_won_hostop_num, ee_won_hostop_bytes, ee_won_hostop_set.
 class RustServerOp : public ServerOp {
 public:
     explicit RustServerOp(EeWonHostOp* inRustOp); // takes the op; its length field and time limits, no auth
@@ -1205,8 +1199,6 @@ public:
     virtual void RunHook();
     virtual void CleanupHook();
     virtual bool CallbackHook(AsyncOp* inOp, int inParam);
-    // the Rust op's calls (EeWonHostCall) that stay the C++ side's
-    static void HostCall(void* inOp, EeWonHostCall* inCall);
 protected:
     virtual ~RustServerOp();
 private:
@@ -1223,21 +1215,8 @@ inline void HTTPConnection::QueueOp(RustServerOp* inOp, int inId)
 inline void HTTPSession::AddOp(RustServerOp* inOp)
 { ee_won_http_session_add_op(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
 
-// AuthSession (0x10cc bytes in the original: type, length field size, id, sequence numbers, the by-value Blowfish
-// and the last use) is an ee_won handle (rust/crates/ee_won/src/hostauth.rs over peerauth.rs's session, round 22):
+// AuthSession (0x10cc bytes in the original) is an ee_won handle (hostauth.rs over peerauth.rs's session, round 22):
 // the peer auth op that makes it, the auth context's session cache and the sockets' transforms hold it.
-// CryptTransform: 8 bytes; new 8 at 2ad6d7, VT44ca1c, SDK CryptTransform.h. Holds a reference to the session handle
-// only; its Encrypt / Decrypt are Rust's.
-class CryptTransform : public MsgTransform {
-    void* mSession; //04, size08; an ee_won session handle (one reference)
-public:
-    explicit CryptTransform(void* inSession) : mSession(inSession) { ee_won_session_hold(inSession); } //inline
-    virtual ~CryptTransform() { ee_won_session_release(this->mSession); } //2ad8e0
-    virtual WONStatus Send(ByteBufferPtr& inMessage) { return this->Crypt(false, inMessage); } //2ad8b0
-    virtual WONStatus Recv(ByteBufferPtr& inMessage) { return this->Crypt(true, inMessage); } //2ad8a0
-private:
-    WONStatus Crypt(bool inDecrypt, ByteBufferPtr& ioMessage); // ServerOp.cpp
-};
 
 
 // The directory server's entity replies: the reading is ee_won's (dir.rs); a list of what it read as DirEntity
