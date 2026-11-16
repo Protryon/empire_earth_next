@@ -4077,7 +4077,7 @@ pub mod records {
         pub attribute_1: u8,
         pub attribute_2: u8,
         pub attribute_3: u8,
-        pub pad_0_x_131: [u8; 3],
+        pub pad: [u8; 3],
     }
     const _: () = assert!(core::mem::size_of::<UIDbDataBackgrounds>() == 308);
     const _: () = assert!(core::mem::offset_of!(UIDbDataBackgrounds, name) == 0);
@@ -4112,7 +4112,7 @@ pub mod records {
     const _: () = assert!(core::mem::offset_of!(UIDbDataBackgrounds, attribute_1) == 302);
     const _: () = assert!(core::mem::offset_of!(UIDbDataBackgrounds, attribute_2) == 303);
     const _: () = assert!(core::mem::offset_of!(UIDbDataBackgrounds, attribute_3) == 304);
-    const _: () = assert!(core::mem::offset_of!(UIDbDataBackgrounds, pad_0_x_131) == 305);
+    const _: () = assert!(core::mem::offset_of!(UIDbDataBackgrounds, pad) == 305);
 
     #[derive(Clone, Copy)]
     #[allow(non_camel_case_types, dead_code)]

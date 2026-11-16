@@ -1,6 +1,6 @@
 """The field census (eedata.py census): every read of every db record member in the sources.
 
-Renames every member of every record struct (the structs in overlay.STRUCT_SOURCES) to <name>__P in its source,
+Renames every member of every C++ record struct (overlay.STRUCT_SOURCES less overlay.RUST_STRUCTS) to <name>__P in its source,
 compiles every unit of every module syntax-only (clang-cl /Zs), and collects clang's "no member named X in Y"
 errors: one per use site. The sources are restored afterwards, also on failure (do not edit or build the checkout
 while it runs).
@@ -58,7 +58,8 @@ def sites(jobs=2):
     import verify
     files = collections.defaultdict(list)
     for sname, src in overlay.STRUCT_SOURCES.items():
-        files[src].append(sname)
+        if sname not in overlay.RUST_STRUCTS:   # the C++ compiler cannot census a Rust record (run() skips them)
+            files[src].append(sname)
     orig = {}
     try:
         for src, snames in files.items():
@@ -99,6 +100,9 @@ def run(a, spec):
     rows = []
     for sname, st in spec['structs'].items():
         if st['source'] is None:
+            continue
+        if sname in overlay.RUST_STRUCTS:
+            print(f'{sname}: defined in Rust ({st["source"]}): its readers are not censused')
             continue
         for f in st['fields']:
             if f['cls'] == 'pad':

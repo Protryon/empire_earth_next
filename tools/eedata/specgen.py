@@ -1,7 +1,7 @@
 """Generate the table specs (specs.json) from the record structs in the sources plus overlay.py.
 
-Each struct is parsed from its source file (STRUCT_SOURCES) with MSVC x86 natural alignment; its size is checked
-against the source's static_assert (or COMMENT_SIZES). Every byte of a record gets a field of one class:
+Each struct is parsed from its source file (STRUCT_SOURCES: a C++ struct, or the Rust struct overlay.RUST_STRUCTS names)
+with MSVC x86 natural alignment; its size is checked against the source's static_assert (or COMMENT_SIZES). Every byte of a record gets a field of one class:
 
   named   a member the game reads: exported to the text under its source name
   label   the row's name where the game never reads it (a member called mLabel): exported as the text-only
@@ -35,6 +35,10 @@ TYPES = {'char': ('s8', 1), 'signed char': ('s8', 1), 'unsigned char': ('u8', 1)
          'int': ('s32', 4), 'unsigned int': ('u32', 4), 'float': ('f32', 4), 'EECalamityKind': ('s32', 4),
          'int32': ('s32', 4), 'int32_t': ('s32', 4), 'uint32_t': ('u32', 4), 'int16_t': ('s16', 2), 'uint16_t': ('u16', 2), 'uint8_t': ('u8', 1), 'int8_t': ('s8', 1), 'EECivilizationUpgradeValue': ('pair_f32', 8), 'WORD': ('u16', 2),
          'DWORD': ('u32', 4), 'BYTE': ('u8', 1)}
+RUST_TYPES = {'char': 's8', 'bool': 'bool', 'i8': 's8', 'u8': 'u8', 'i16': 's16', 'u16': 'u16', 'i32': 's32',
+              'u32': 'u32', 'f32': 'f32', 'c_char': 's8', 'c_short': 's16', 'c_ushort': 'u16', 'c_int': 's32',
+              'c_uint': 'u32'}
+RUST_FIELD = re.compile(r'^pub\s+(\w+)\s*:\s*(?:\[\s*(\w+)\s*;\s*([^\]]+)\]|(\w+))\s*,\s*(?://.*)?$')
 SIZES = {'s8': 1, 'u8': 1, 'bool': 1, 's16': 2, 'u16': 2, 's32': 4, 'u32': 4, 'f32': 4, 'pair_f32': 8, 'str': 1,
          'raw': 1, 'pad': 1}
 EXPORTED = ('named', 'label')
@@ -63,8 +67,74 @@ def _body(text, name):
     return text[i:j - 1]
 
 
+def _rust_member(field):
+    """A Rust record field's name -> the record member name the text and the C++ use: mCamelCase, an `id` word as
+    `ID` (form_id -> mFormID, id -> mID)."""
+    return 'm' + ''.join('ID' if w == 'id' else w[:1].upper() + w[1:] for w in field.split('_'))
+
+
+def _rust_fields(name):
+    """source_fields for a record defined in Rust (overlay.RUST_STRUCTS): a `#[repr(C)]` struct of `pub` fields.
+
+    Rust types: i8/u8/i16/u16/i32/u32/f32 and the c_* integers; a scalar `u8` is a one-byte bool (a Rust `bool`
+    cannot hold any byte the file may carry, so the records declare their flags `u8`); `[u8; N]` or `[c_char; N]`
+    is char[N] (text when the game reads it, bytes when not); other arrays `[T; N]`. `///` lines above a field are
+    its comment."""
+    rname = overlay.RUST_STRUCTS[name]
+    text = (ROOT / overlay.STRUCT_SOURCES[name]).read_text(encoding='utf-8')
+    m = re.search(r'#\[repr\(C\)\](?:\s*#\[[^\]]*\])*\s*pub\s+struct\s+' + rname + r'\s*\{', text)
+    if not m:
+        raise SystemExit(f'struct {name} not found (Rust struct {rname} in {overlay.STRUCT_SOURCES[name]})')
+    body = text[m.end():text.index('\n}', m.end())]
+    out, doc = [], []
+    for ln in body.split('\n'):
+        s = ln.strip()
+        if s.startswith('///'):
+            doc.append(s[3:].strip())
+            continue
+        if not s or s.startswith('//') or s.startswith('#['):
+            continue
+        fm = RUST_FIELD.match(s)
+        if not fm:
+            raise SystemExit(f'{name}: cannot read the Rust field {s!r}')
+        n, elem, cnt, scalar = fm.groups()
+        if scalar:
+            t = 'bool' if scalar == 'u8' else scalar
+            if t not in RUST_TYPES:
+                raise SystemExit(f'{name}.{n}: unknown Rust type {scalar}')
+            out.append((RUST_TYPES[t], _rust_member(n), 1, ' '.join(doc)))
+        else:
+            t = 'char' if elem in ('u8', 'c_char', 'i8') else elem
+            if t not in RUST_TYPES:
+                raise SystemExit(f'{name}.{n}: unknown Rust type {elem}')
+            out.append((RUST_TYPES[t], _rust_member(n), _eval_size(cnt), ' '.join(doc)))
+        doc = []
+    return out
+
+
+def _layout(entries):
+    """[(code, name, count, comment)] -> ([(offset, type, name, count, comment)] with pad entries, size): x86
+    natural alignment."""
+    out, off, maxal = [], 0, 1
+    for code, n, cnt, cmt in entries:
+        sz = SIZES[code]
+        al = 4 if code == 'pair_f32' else sz
+        maxal = max(maxal, al)
+        if off % al:
+            out.append((off, 'pad', None, al - off % al, 'alignment padding'))
+            off += al - off % al
+        out.append((off, code, n, cnt, cmt))
+        off += sz * cnt
+    if off % maxal:
+        out.append((off, 'pad', None, maxal - off % maxal, 'tail padding'))
+        off += maxal - off % maxal
+    return out, off
+
+
 def source_fields(name):
     """[(offset, type, source name, count, comment)] of a source struct, x86 natural layout, with pad entries."""
+    if name in overlay.RUST_STRUCTS:
+        return _layout(_rust_fields(name))
     text = (ROOT / overlay.STRUCT_SOURCES[name]).read_text(encoding='latin-1')
     out, off, maxal, depth = [], 0, 1, 0
     for ln in _body(text, name).split('\n'):
@@ -100,6 +170,10 @@ def source_fields(name):
 
 def static_assert_size(name):
     text = (ROOT / overlay.STRUCT_SOURCES[name]).read_text(encoding='latin-1')
+    if name in overlay.RUST_STRUCTS:
+        m = re.search(r'assert!\(\s*(?:core|std)::mem::size_of::<' + overlay.RUST_STRUCTS[name] +
+                      r'>\(\)\s*==\s*(0x[0-9a-fA-F]+|\d+)\s*\)', text)
+        return (int(m.group(1), 0), 'static_assert') if m else (None, None)
     m = re.search(r'static_assert\s*\(\s*sizeof\s*\(\s*' + name + r'\s*\)\s*==\s*(0x[0-9a-fA-F]+|\d+)', text)
     if m:
         return int(m.group(1), 0), 'static_assert'

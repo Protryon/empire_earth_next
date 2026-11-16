@@ -10090,7 +10090,7 @@
   "UIDbDataBackgrounds": {
    "name": "UIDbDataBackgrounds",
    "size": 308,
-   "source": "include/lle/UIBackgroundTable.h",
+   "source": "rust/crates/ee_ui/src/background_table.rs",
    "size_check": [
     308,
     "static_assert"
@@ -10103,7 +10103,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x000 an empty name leaves the slot NULL"
+     "comment": ""
     },
     {
      "name": "mTextureFile",
@@ -10112,7 +10112,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x064"
+     "comment": ""
     },
     {
      "name": "mTopOffset",
@@ -10121,7 +10121,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0c8"
+     "comment": ""
     },
     {
      "name": "mBottomOffset",
@@ -10130,7 +10130,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0cc"
+     "comment": ""
     },
     {
      "name": "mLeftOffset",
@@ -10139,7 +10139,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0d0"
+     "comment": ""
     },
     {
      "name": "mRightOffset",
@@ -10148,7 +10148,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0d4"
+     "comment": ""
     },
     {
      "name": "mTileWidthPercent",
@@ -10157,7 +10157,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0d8"
+     "comment": ""
     },
     {
      "name": "mTileHeightPercent",
@@ -10166,7 +10166,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0dc"
+     "comment": ""
     },
     {
      "name": "mOpacity",
@@ -10175,7 +10175,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0e0"
+     "comment": ""
     },
     {
      "name": "mID",
@@ -10184,7 +10184,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0e4"
+     "comment": ""
     },
     {
      "name": "mBackgroundID",
@@ -10193,7 +10193,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0e8"
+     "comment": ""
     },
     {
      "name": "mFormID",
@@ -10202,7 +10202,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0ec"
+     "comment": ""
     },
     {
      "name": "mTextureTop",
@@ -10211,7 +10211,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0f0"
+     "comment": ""
     },
     {
      "name": "mTextureLeft",
@@ -10220,7 +10220,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0f4"
+     "comment": ""
     },
     {
      "name": "mTextureBottom",
@@ -10229,7 +10229,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0f8"
+     "comment": ""
     },
     {
      "name": "mTextureRight",
@@ -10238,7 +10238,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0fc"
+     "comment": ""
     },
     {
      "name": "mBackgroundType",
@@ -10247,7 +10247,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x100"
+     "comment": ""
     },
     {
      "name": "mTopOffsetType",
@@ -10256,7 +10256,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x104"
+     "comment": ""
     },
     {
      "name": "mBottomOffsetType",
@@ -10265,7 +10265,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x108"
+     "comment": ""
     },
     {
      "name": "mLeftOffsetType",
@@ -10274,7 +10274,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x10c"
+     "comment": ""
     },
     {
      "name": "mRightOffsetType",
@@ -10283,7 +10283,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x110"
+     "comment": ""
     },
     {
      "name": "mNumCols",
@@ -10292,7 +10292,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x114"
+     "comment": ""
     },
     {
      "name": "mNumRows",
@@ -10301,7 +10301,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x118"
+     "comment": ""
     },
     {
      "name": "mDrawPriority",
@@ -10310,7 +10310,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x11c at least 1"
+     "comment": ""
     },
     {
      "name": "mRed",
@@ -10319,7 +10319,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x120 0..255"
+     "comment": ""
     },
     {
      "name": "mGreen",
@@ -10328,7 +10328,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x124"
+     "comment": ""
     },
     {
      "name": "mBlue",
@@ -10337,7 +10337,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x128"
+     "comment": ""
     },
     {
      "name": "mVisible",
@@ -10346,7 +10346,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x12c"
+     "comment": ""
     },
     {
      "name": "mHasAlpha",
@@ -10355,7 +10355,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x12d"
+     "comment": ""
     },
     {
      "name": "mAttribute1",
@@ -10364,7 +10364,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x12e"
+     "comment": ""
     },
     {
      "name": "mAttribute2",
@@ -10373,7 +10373,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x12f"
+     "comment": ""
     },
     {
      "name": "mAttribute3",
@@ -10382,16 +10382,16 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x130"
+     "comment": ""
     },
     {
-     "name": "pad_0x131",
-     "member": "pad_0x131",
+     "name": "mPad",
+     "member": "mPad",
      "off": 305,
      "type": "pad",
      "count": 3,
      "cls": "pad",
-     "comment": "tail padding"
+     "comment": ""
     }
    ],
    "defaults": {}
@@ -10399,7 +10399,7 @@
   "UIDbDataEvents": {
    "name": "UIDbDataEvents",
    "size": 116,
-   "source": "src/Low-Level Engine/User Interface/UIEvent.cpp",
+   "source": "rust/crates/ee_ui/src/event.rs",
    "size_check": [
     116,
     "static_assert"
@@ -10412,7 +10412,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": ""
     },
     {
      "name": "mUnusedDatabaseID",
@@ -10421,7 +10421,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x064 the database row id (not read)"
+     "comment": ""
     },
     {
      "name": "mEventID",
@@ -10430,7 +10430,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68 negative: no event"
+     "comment": ""
     },
     {
      "name": "mOwnerID",
@@ -10439,7 +10439,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c control table index / form ID"
+     "comment": ""
     },
     {
      "name": "mEventType",
@@ -10448,7 +10448,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70"
+     "comment": ""
     }
    ],
    "defaults": {}
@@ -10456,7 +10456,7 @@
   "UIDbControl": {
    "name": "UIDbControl",
    "size": 860,
-   "source": "src/Low-Level Engine/User Interface/UIControlsTable.cpp",
+   "source": "rust/crates/ee_ui/src/controls_table.rs",
    "size_check": [
     860,
     "static_assert"
@@ -10469,7 +10469,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000"
+     "comment": ""
     },
     {
      "name": "mNormalFileName",
@@ -10478,7 +10478,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x064"
+     "comment": ""
     },
     {
      "name": "mPressedFileName",
@@ -10487,7 +10487,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x0c8"
+     "comment": ""
     },
     {
      "name": "mFocusedFileName",
@@ -10496,7 +10496,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x12c"
+     "comment": ""
     },
     {
      "name": "mButtonDownSound",
@@ -10505,7 +10505,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x190"
+     "comment": ""
     },
     {
      "name": "mButtonUpSound",
@@ -10514,7 +10514,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x1f4"
+     "comment": ""
     },
     {
      "name": "mBackgroundOpacity",
@@ -10523,7 +10523,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x258"
+     "comment": ""
     },
     {
      "name": "mTextBoxOpacity",
@@ -10532,7 +10532,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x25c"
+     "comment": ""
     },
     {
      "name": "mScrollBarBgOpacity",
@@ -10541,7 +10541,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x260"
+     "comment": ""
     },
     {
      "name": "mUnused1",
@@ -10550,7 +10550,7 @@
      "type": "raw",
      "count": 20,
      "cls": "unused",
-     "comment": "+0x264"
+     "comment": ""
     },
     {
      "name": "mLeftOffset",
@@ -10559,7 +10559,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x278"
+     "comment": ""
     },
     {
      "name": "mRightOffset",
@@ -10568,7 +10568,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x27c"
+     "comment": ""
     },
     {
      "name": "mBottomOffset",
@@ -10577,7 +10577,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x280"
+     "comment": ""
     },
     {
      "name": "mTopOffset",
@@ -10586,16 +10586,16 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x284"
+     "comment": ""
     },
     {
-     "name": "mUnusedDbRecordId",
-     "member": "mUnusedDbRecordId",
+     "name": "mUnusedDbRecordID",
+     "member": "mUnusedDbRecordID",
      "off": 648,
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x288"
+     "comment": ""
     },
     {
      "name": "mID",
@@ -10604,7 +10604,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x28c"
+     "comment": ""
     },
     {
      "name": "mFormID",
@@ -10613,7 +10613,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x290"
+     "comment": ""
     },
     {
      "name": "mGroup",
@@ -10622,7 +10622,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x294"
+     "comment": ""
     },
     {
      "name": "mControlType",
@@ -10631,7 +10631,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x298"
+     "comment": ""
     },
     {
      "name": "mFormIndex",
@@ -10640,7 +10640,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x29c"
+     "comment": ""
     },
     {
      "name": "mBorderThickness",
@@ -10649,7 +10649,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2a0"
+     "comment": ""
     },
     {
      "name": "mLeftOffsetType",
@@ -10658,7 +10658,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2a4"
+     "comment": ""
     },
     {
      "name": "mRightOffsetType",
@@ -10667,7 +10667,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2a8"
+     "comment": ""
     },
     {
      "name": "mTopOffsetType",
@@ -10676,7 +10676,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2ac"
+     "comment": ""
     },
     {
      "name": "mBottomOffsetType",
@@ -10685,7 +10685,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2b0"
+     "comment": ""
     },
     {
      "name": "mBackgroundRed",
@@ -10694,7 +10694,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2b4"
+     "comment": ""
     },
     {
      "name": "mBackgroundGreen",
@@ -10703,7 +10703,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2b8"
+     "comment": ""
     },
     {
      "name": "mBackgroundBlue",
@@ -10712,7 +10712,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2bc"
+     "comment": ""
     },
     {
      "name": "mStringTableBegin",
@@ -10721,7 +10721,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2c0"
+     "comment": ""
     },
     {
      "name": "mStringTableEnd",
@@ -10730,7 +10730,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2c4"
+     "comment": ""
     },
     {
      "name": "mFontTableIndex",
@@ -10739,7 +10739,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2c8"
+     "comment": ""
     },
     {
      "name": "mTextForegroundRed",
@@ -10748,7 +10748,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2cc"
+     "comment": ""
     },
     {
      "name": "mTextForegroundGreen",
@@ -10757,7 +10757,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2d0"
+     "comment": ""
     },
     {
      "name": "mTextForegroundBlue",
@@ -10766,7 +10766,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2d4"
+     "comment": ""
     },
     {
      "name": "mTextAlignment",
@@ -10775,7 +10775,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2d8"
+     "comment": ""
     },
     {
      "name": "mNormalLeft",
@@ -10784,7 +10784,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2dc"
+     "comment": ""
     },
     {
      "name": "mNormalRight",
@@ -10793,7 +10793,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2e0"
+     "comment": ""
     },
     {
      "name": "mNormalTop",
@@ -10802,7 +10802,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2e4"
+     "comment": ""
     },
     {
      "name": "mNormalBottom",
@@ -10811,7 +10811,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2e8"
+     "comment": ""
     },
     {
      "name": "mPressedLeft",
@@ -10820,7 +10820,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2ec"
+     "comment": ""
     },
     {
      "name": "mPressedRight",
@@ -10829,7 +10829,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2f0"
+     "comment": ""
     },
     {
      "name": "mPressedTop",
@@ -10838,7 +10838,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2f4"
+     "comment": ""
     },
     {
      "name": "mPressedBottom",
@@ -10847,7 +10847,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2f8"
+     "comment": ""
     },
     {
      "name": "mFocusedLeft",
@@ -10856,7 +10856,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2fc"
+     "comment": ""
     },
     {
      "name": "mFocusedRight",
@@ -10865,7 +10865,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x300"
+     "comment": ""
     },
     {
      "name": "mFocusedTop",
@@ -10874,7 +10874,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x304"
+     "comment": ""
     },
     {
      "name": "mFocusedBottom",
@@ -10883,7 +10883,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x308"
+     "comment": ""
     },
     {
      "name": "mMaxChars",
@@ -10892,7 +10892,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x30c"
+     "comment": ""
     },
     {
      "name": "mSelectedListBoxRed",
@@ -10901,7 +10901,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x310"
+     "comment": ""
     },
     {
      "name": "mSelectedListBoxGreen",
@@ -10910,7 +10910,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x314"
+     "comment": ""
     },
     {
      "name": "mSelectedListBoxBlue",
@@ -10919,7 +10919,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x318"
+     "comment": ""
     },
     {
      "name": "mStartCurrentSelection",
@@ -10928,7 +10928,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x31c"
+     "comment": ""
     },
     {
      "name": "mFocusedLineRed",
@@ -10937,7 +10937,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x320"
+     "comment": ""
     },
     {
      "name": "mFocusedLineGreen",
@@ -10946,7 +10946,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x324"
+     "comment": ""
     },
     {
      "name": "mFocusedLineBlue",
@@ -10955,7 +10955,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x328"
+     "comment": ""
     },
     {
      "name": "mStartRange",
@@ -10964,7 +10964,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x32c"
+     "comment": ""
     },
     {
      "name": "mEndRange",
@@ -10973,7 +10973,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x330"
+     "comment": ""
     },
     {
      "name": "mCurrentRange",
@@ -10982,7 +10982,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x334"
+     "comment": ""
     },
     {
      "name": "mPageSize",
@@ -10991,7 +10991,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x338"
+     "comment": ""
     },
     {
      "name": "mStringTableID",
@@ -11000,7 +11000,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x33c"
+     "comment": ""
     },
     {
      "name": "mBlinkRate",
@@ -11009,7 +11009,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x340"
+     "comment": ""
     },
     {
      "name": "mUnused2",
@@ -11018,7 +11018,7 @@
      "type": "raw",
      "count": 12,
      "cls": "unused",
-     "comment": "+0x344"
+     "comment": ""
     },
     {
      "name": "mIsVisible",
@@ -11027,7 +11027,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x350"
+     "comment": ""
     },
     {
      "name": "mStartChecked",
@@ -11036,7 +11036,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x351"
+     "comment": ""
     },
     {
      "name": "mListBoxAlwaysDirty",
@@ -11045,7 +11045,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x352"
+     "comment": ""
     },
     {
      "name": "mSortListBox",
@@ -11054,7 +11054,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x353"
+     "comment": ""
     },
     {
      "name": "mFocusedHasAlpha",
@@ -11063,7 +11063,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x354"
+     "comment": ""
     },
     {
      "name": "mPressedHasAlpha",
@@ -11072,7 +11072,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x355"
+     "comment": ""
     },
     {
      "name": "mNormalHasAlpha",
@@ -11081,7 +11081,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x356"
+     "comment": ""
     },
     {
      "name": "mAlwaysDirty",
@@ -11090,7 +11090,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x357"
+     "comment": ""
     },
     {
      "name": "mFitRectToText",
@@ -11099,7 +11099,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x358"
+     "comment": ""
     },
     {
      "name": "mScaleToControl",
@@ -11108,7 +11108,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x359"
+     "comment": ""
     },
     {
      "name": "mLoopMovie",
@@ -11117,7 +11117,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x35a"
+     "comment": ""
     },
     {
      "name": "pad_0x35b",
@@ -11134,7 +11134,7 @@
   "UIDbDataFonts": {
    "name": "UIDbDataFonts",
    "size": 128,
-   "source": "src/Low-Level Engine/User Interface/UIFontTable.cpp",
+   "source": "rust/crates/ee_ui/src/font.rs",
    "size_check": [
     128,
     "static_assert"
@@ -11147,7 +11147,7 @@
      "type": "str",
      "count": 108,
      "cls": "named",
-     "comment": "+0x00 empty: no font"
+     "comment": "Empty: no font."
     },
     {
      "name": "mStringID",
@@ -11156,7 +11156,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c face name in the string table"
+     "comment": "The face name's string-table ID."
     },
     {
      "name": "mSize",
@@ -11165,7 +11165,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70"
+     "comment": ""
     },
     {
      "name": "mQuality",
@@ -11174,7 +11174,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x74"
+     "comment": ""
     },
     {
      "name": "mBold",
@@ -11183,7 +11183,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78 style bit 0x01"
+     "comment": ""
     },
     {
      "name": "mItalic",
@@ -11192,7 +11192,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x79 style bit 0x02"
+     "comment": ""
     },
     {
      "name": "mUnderline",
@@ -11201,7 +11201,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7a style bit 0x04"
+     "comment": ""
     },
     {
      "name": "mStyle10",
@@ -11210,7 +11210,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7b style bit 0x10"
+     "comment": ""
     },
     {
      "name": "mStyle08",
@@ -11219,7 +11219,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c style bit 0x08"
+     "comment": ""
     },
     {
      "name": "mPad",
@@ -11446,7 +11446,7 @@
   "UIDbDataHotKeys": {
    "name": "UIDbDataHotKeys",
    "size": 124,
-   "source": "src/Low-Level Engine/User Interface/UIHotKey.cpp",
+   "source": "rust/crates/ee_ui/src/hotkey.rs",
    "size_check": [
     124,
     "static_assert"
@@ -11459,7 +11459,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x00"
+     "comment": ""
     },
     {
      "name": "mID",
@@ -11468,7 +11468,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x04 negative: no hot key"
+     "comment": "Negative: no hot key in this slot."
     },
     {
      "name": "label",
@@ -11477,7 +11477,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x08"
+     "comment": ""
     },
     {
      "name": "mModifiers",
@@ -11486,7 +11486,7 @@
      "type": "u32",
      "count": 3,
      "cls": "named",
-     "comment": "+0x6c DIK_* codes, 0x7fff: none"
+     "comment": "`DIK_*` codes, [`KEY_NONE`]: none."
     },
     {
      "name": "mKey",
@@ -11495,7 +11495,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78"
+     "comment": ""
     }
    ],
    "defaults": {}

@@ -36,17 +36,28 @@ STRUCT_SOURCES = {
     'EEGameVariantData': 'include/ee/EEGameVariant.h',
     'EEStartingResourcesRecord': 'src/Empire Earth/Database/EEStartingResources.cpp',
     'EEAmbientSoundRecord': 'include/ee/EEAmbientSound.h',
-    'UIDbControl': 'src/Low-Level Engine/User Interface/UIControlsTable.cpp',
-    'UIDbDataBackgrounds': 'include/lle/UIBackgroundTable.h',
+    'UIDbControl': 'rust/crates/ee_ui/src/controls_table.rs',
+    'UIDbDataBackgrounds': 'rust/crates/ee_ui/src/background_table.rs',
     'UIDbDataForms': 'include/lle/UIForm.h',
-    'UIDbDataEvents': 'src/Low-Level Engine/User Interface/UIEvent.cpp',
-    'UIDbDataFonts': 'src/Low-Level Engine/User Interface/UIFontTable.cpp',
-    'UIDbDataHotKeys': 'src/Low-Level Engine/User Interface/UIHotKey.cpp',
+    'UIDbDataEvents': 'rust/crates/ee_ui/src/event.rs',
+    'UIDbDataFonts': 'rust/crates/ee_ui/src/font.rs',
+    'UIDbDataHotKeys': 'rust/crates/ee_ui/src/hotkey.rs',
 }
 
-# Sizes for the two structs whose source states the size in a comment instead of a static_assert
-# (EEUnitClassRecord.h: "EEDbObject::mRecord, 0x7a8 bytes"; UIControlsTable.cpp: "0x35c bytes each").
-COMMENT_SIZES = {'EEUnitClassRecord': 0x7a8, 'UIDbControl': 0x35c}
+# Records whose definition is Rust (the record's name -> the `#[repr(C)]` struct in its STRUCT_SOURCES file): specgen
+# reads the Rust struct (field names to mCamelCase, `id` as ID; a scalar u8 is a one-byte bool, a u8/c_char array
+# char[N]) and its `assert!(size_of::<T>() == N)`.
+RUST_STRUCTS = {
+    'UIDbControl': 'DbControl',
+    'UIDbDataBackgrounds': 'DbBackground',
+    'UIDbDataEvents': 'DbEvent',
+    'UIDbDataFonts': 'DbFont',
+    'UIDbDataHotKeys': 'DbHotKey',
+}
+
+# Sizes for the struct whose source states the size in a comment instead of a static_assert
+# (EEUnitClassRecord.h: "EEDbObject::mRecord, 0x7a8 bytes").
+COMMENT_SIZES = {'EEUnitClassRecord': 0x7a8}
 
 # Records with no source struct (loaded field by field). Fields: (name, type, count, class).
 VIRTUAL_STRUCTS = {
