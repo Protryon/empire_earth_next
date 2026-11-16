@@ -62,6 +62,9 @@
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEGameVariant.h"           // the wonder powers' hit point factors (EEPlayerHost)
 #include "ee/EEUnitUtilities.h"
+#include "ee/EESoundObject.h"
+#include "ee/EEGameSound.h"
+#include "lle/SESoundManager.h"
 #include "ee/EEUGRust.h"                // the towns' patrol goals (EEPlayerHost)
 #include "lle/UIEvent.h"
 #include "lle/UIForm.h"
@@ -633,6 +636,39 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
             theOther->AddSightSharer(thePlayer);
         else
             theOther->RemoveSightSharer(thePlayer);
+        return 0;
+    // ApplyImprovement's and UpdateFreeUnitPower's (ee_units player_units.rs)
+    case EE_UNITS_PLAYER_UPGRADE_VALUES: {
+        EEUnitClassUpgrade* theUpgrade = theClass != NULL ? thePlayer->mUnitClassUpgrades[(size_t)a[0]] : NULL;
+        if (theUpgrade == NULL)
+            return 0;
+        int64_t theValues[4] = {theClass->mFlightTime, theUpgrade->mFlightTime, theUpgrade->mPower, theUpgrade->mMaxHitPoints};
+        memcpy(a, theValues, sizeof theValues);
+        return 1;
+    }
+    case EE_UNITS_PLAYER_CHANGE_LEVEL: thePlayer->mUnitClassUpgrades[(size_t)a[0]]->ChangeLevel((long)a[1], (long)a[2]); return 0;
+    case EE_UNITS_PLAYER_COMPLEX_SIGHT:
+        if (a[1] != 0)
+            theUnit->GetComplexUnit()->SightOnHere();
+        else
+            theUnit->GetComplexUnit()->SightOffHere();
+        return 0;
+    case EE_UNITS_PLAYER_COMPLEX_VALUES:
+        a[0] = theComplex->mFlightTime;
+        a[1] = theComplex->mPower;
+        return 0;
+    case EE_UNITS_PLAYER_SET_VALUE:
+        if (a[2] == 0)
+            theComplex->SetFlightTime((long)a[1]);
+        else if (a[2] == 1)
+            theComplex->SetPower((long)a[1]);
+        else
+            theUnit->SetHitPoints((long)a[1]);
+        return 0;
+    case EE_UNITS_PLAYER_GENERATE: io->f[0] = gPhysics->mRandom.Generate(); return 0;
+    case EE_UNITS_PLAYER_PRODUCE: return theUnit->GetUnitClass()->ProduceUnit(theUnit->GetComplexUnit(), gUnitClassTable[(size_t)a[1]], false);
+    case EE_UNITS_PLAYER_SLAVERY_SOUND:
+        gSoundManager->Play(EESoundObject::Get(kSoundSlavery)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
         return 0;
     case EE_UNITS_PLAYER_HEALED_SET: thePlayer->mHealedUnitSet = a[1] != 0 ? gUnitSetManager.GetSet((long)a[0]) : NULL; return 0;
     case EE_UNITS_PLAYER_AT: return (int64_t)reinterpret_cast<uintptr_t>((uint64_t)a[0] < gWorld.mNumPlayers ? gWorld.mPlayers[a[0]] : NULL);
@@ -1710,41 +1746,12 @@ void EEPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
         this->mCombatState = 2;
 }
 
-#include "ee/EESoundObject.h"
-#include "ee/EEGameSound.h"
-#include "lle/SESoundManager.h"
 
 // Under civ power 0x27, periodically makes a free unit (class 0x20 or 0x1e0) at a town center or capitol,
 // playing a sound for the local player and lengthening the interval each time
 void EEPlayer::UpdateFreeUnitPower()
 {
-    bool theCreated = false;
-    if (!gCivPowersManager.HasPower(this, kCivPowerSlavery) || !(++this->mFreeUnitCounter >= this->mFreeUnitInterval))
-        return;
-    EEUnit* theUnit = this->mFirstUnit;
-    while (theUnit != NULL && !theCreated) {
-        if (theUnit->GetUnitClass()->mUnitType == kUnitTypeCapitol) {
-            EEUnitClass* theClass = gPhysics->mRandom.Generate() >= 0.5f ? gUnitClassTable[kUnitTypeCitizen] : gUnitClassTable[kUnitTypeFemaleCitizen];
-            theCreated = theUnit->GetUnitClass()->ProduceUnit(theUnit->GetComplexUnit(), theClass, false);
-        }
-        theUnit = static_cast<EEUnit*>(theUnit->mNext);
-    }
-    theUnit = this->mFirstUnit;
-    while (theUnit != NULL && !theCreated) {
-        if (theUnit->GetUnitClass()->mUnitType == kUnitTypeTownCenter) {
-            EEUnitClass* theClass = gPhysics->mRandom.Generate() >= 0.5f ? gUnitClassTable[kUnitTypeCitizen] : gUnitClassTable[kUnitTypeFemaleCitizen];
-            theCreated = theUnit->GetUnitClass()->ProduceUnit(theUnit->GetComplexUnit(), theClass, false);
-        }
-        theUnit = static_cast<EEUnit*>(theUnit->mNext);
-    }
-    if (theCreated != true)
-        return;
-    this->mFreeUnitCounter = 0;
-    if (::gWorld.GetCurrentPlayer() == this) {
-        EESoundObject* theSound = EESoundObject::Get(kSoundSlavery);
-        gSoundManager->Play(theSound->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-    }
-    this->mFreeUnitInterval++;
+    EEPlayerUnits(this, 12);
 }
 
 // Advances the player to the next epoch
@@ -3225,72 +3232,7 @@ void EEPlayer::UpdateAirTraffic()
 void EEPlayer::ApplyImprovement(long inUnitType, long inImprovement, bool inFlag)
 {
     EEPlayerEconScope theScope;
-    [&]() {
-        EEUnitClass* theClass = gUnitClassTable[inUnitType];
-        EEUnitClassUpgrade* theUpgrade = this->mUnitClassUpgrades[inUnitType];
-        long theOldValue = 0;
-        if (theClass == NULL || theUpgrade == NULL)
-            return;
-        bool theUpdate = true;
-        switch (inImprovement) {
-        case 8:
-            theOldValue = theClass->mFlightTime > 0 ? theUpgrade->mFlightTime : theUpgrade->mPower;
-            break;
-        case 9:
-            theOldValue = theUpgrade->mMaxHitPoints;
-            break;
-        case 11: {
-            for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-                if (theUnit->GetUnitClass()->mUnitType == inUnitType)
-                    theUnit->GetComplexUnit()->SightOffHere();
-            break;
-        }
-        default:
-            theUpdate = false;
-            break;
-        }
-        theUpgrade->ChangeLevel(inImprovement, inFlag ? -1 : 1);
-        if (theUpdate != true)
-            return;
-        switch (inImprovement) {
-        case 8:
-            if (theOldValue != 0) {
-                if (theClass->mFlightTime > 0) {
-                    for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-                        if (theUnit->GetUnitClass()->mUnitType == inUnitType) {
-                            EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-                            theComplex->SetFlightTime((long)((float)theComplex->mFlightTime / theOldValue * theUpgrade->mFlightTime));
-                        }
-                    }
-                } else {
-                    for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-                        if (theUnit->GetUnitClass()->mUnitType == inUnitType) {
-                            EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-                            theComplex->SetPower((long)((float)theComplex->mPower / theOldValue * theUpgrade->mPower));
-                        }
-                    }
-                }
-            }
-            break;
-        case 9:
-            if (theOldValue != 0) {
-                for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-                    if (theUnit->GetUnitClass()->mUnitType != inUnitType || !(theUnit->mHitPoints > 0) ||
-                        (theUnit->GetComplexUnit() != NULL && theUnit->GetComplexUnit()->mIsBuilt != true))
-                        continue;
-                    float theScaled = (float)theUnit->mHitPoints / theOldValue * theUpgrade->mMaxHitPoints;
-                    float theHitPoints = (float)UMCeil(theScaled);
-                    theUnit->SetHitPoints((long)theHitPoints);
-                }
-            }
-            break;
-        case 11:
-            for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-                if (theUnit->GetUnitClass()->mUnitType == inUnitType)
-                    theUnit->GetComplexUnit()->SightOnHere();
-            break;
-        }
-    }();
+    ee_units_player_apply_improvement(EEPlayerRefs(this), inUnitType, inImprovement, inFlag);
     theScope.Record(this, 22, 0, {inUnitType, inImprovement, inFlag});
 }
 

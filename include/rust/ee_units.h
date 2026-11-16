@@ -1612,6 +1612,32 @@ constexpr static const int32_t EE_UNITS_PLAYER_ID = 70;
 /// `gWorld.mPlayers[i[0]]` (0: none)
 constexpr static const int32_t EE_UNITS_PLAYER_AT = 83;
 
+/// unit type `i[0]`'s class and upgrade (the result 1 when both are there) into `i`: the class's `mFlightTime`, the
+/// upgrade's `mFlightTime`, `mPower`, `mMaxHitPoints`
+constexpr static const int32_t EE_UNITS_PLAYER_UPGRADE_VALUES = 103;
+
+/// unit type `i[0]`'s upgrade's `ChangeLevel(i[1], i[2])`
+constexpr static const int32_t EE_UNITS_PLAYER_CHANGE_LEVEL = 104;
+
+/// unit `i[0]`'s complex unit's `SightOnHere()` (`i[1]` 1) or `SightOffHere()`
+constexpr static const int32_t EE_UNITS_PLAYER_COMPLEX_SIGHT = 105;
+
+/// complex unit `i[0]`'s `mFlightTime` (`i[0]`) and `mPower` (`i[1]`)
+constexpr static const int32_t EE_UNITS_PLAYER_COMPLEX_VALUES = 106;
+
+/// complex unit `i[0]`'s `SetFlightTime(i[1])` (`i[2]` 0) or `SetPower(i[1])` (1); unit `i[0]`'s `SetHitPoints(i[1])`
+/// (2)
+constexpr static const int32_t EE_UNITS_PLAYER_SET_VALUE = 107;
+
+/// `gPhysics->mRandom.Generate()` into `f[0]`
+constexpr static const int32_t EE_UNITS_PLAYER_GENERATE = 108;
+
+/// unit `i[0]`'s class's `ProduceUnit(its complex unit, gUnitClassTable[i[1]], false)` (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_PRODUCE = 109;
+
+/// the slavery power's sound (`kSoundSlavery`)
+constexpr static const int32_t EE_UNITS_PLAYER_SLAVERY_SOUND = 110;
+
 /// `EE_UNITS_PLAYER_STATE`'s bits: `gLoadingSavedGame`, `gGameScreenActive`, `gWorldClearing`,
 /// `UShutdownInProgress()`, `gWorld.mVictoryEnabled`, `gUserInterface != NULL`
 constexpr static const int64_t EE_UNITS_PLAYER_STATE_LOADING = 1;
@@ -6143,10 +6169,19 @@ void ee_units_player_update(void *ctx,
 /// `rec` points to the record.
 void ee_units_player_reset(EeUnitsPlayerSaved *rec, uint32_t player_id, uint32_t part);
 
+/// `EEPlayer::ApplyImprovement(unit_type, improvement, lower)` (see [`Player::apply_improvement`]).
+///
+/// # Safety
+/// As player.rs's `with`.
+void ee_units_player_apply_improvement(const EeUnitsPlayerRefs *refs,
+                                       long unit_type,
+                                       long improvement,
+                                       bool lower);
+
 /// The unit bookkeeping on `unit` (`a`, `b` the flags): `what` 0 `AddUnit(unit, a keep id)`, 1 `UnitPlaced`, 2
 /// `UnitTaken(unit, a swapped)`, 3 `UnitCompleted`, 4 `RecountPopulation`, 5 `RecountHeroesAndTeleporters`, 6
 /// `GetTotalPopulation(a, b)`, 7 `AddWonder(unit, a loading)`, 8 `RemoveWonder`, 9 `AddWonderPower`, 10
-/// `RemoveWonderPower`, 11 `GetNumHeroes(a, b)` (the result: the count asked, else 0).
+/// `RemoveWonderPower`, 11 `GetNumHeroes(a, b)`, 12 `UpdateFreeUnitPower` (the result: the count asked, else 0).
 ///
 /// # Safety
 /// As player.rs's `with`; the record's wonder state is live.

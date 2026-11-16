@@ -177,6 +177,24 @@ pub const EE_UNITS_PLAYER_HEALED_SET: i32 = 69;
 pub const EE_UNITS_PLAYER_ID: i32 = 70;
 /// `gWorld.mPlayers[i[0]]` (0: none)
 pub const EE_UNITS_PLAYER_AT: i32 = 83;
+/// unit type `i[0]`'s class and upgrade (the result 1 when both are there) into `i`: the class's `mFlightTime`, the
+/// upgrade's `mFlightTime`, `mPower`, `mMaxHitPoints`
+pub const EE_UNITS_PLAYER_UPGRADE_VALUES: i32 = 103;
+/// unit type `i[0]`'s upgrade's `ChangeLevel(i[1], i[2])`
+pub const EE_UNITS_PLAYER_CHANGE_LEVEL: i32 = 104;
+/// unit `i[0]`'s complex unit's `SightOnHere()` (`i[1]` 1) or `SightOffHere()`
+pub const EE_UNITS_PLAYER_COMPLEX_SIGHT: i32 = 105;
+/// complex unit `i[0]`'s `mFlightTime` (`i[0]`) and `mPower` (`i[1]`)
+pub const EE_UNITS_PLAYER_COMPLEX_VALUES: i32 = 106;
+/// complex unit `i[0]`'s `SetFlightTime(i[1])` (`i[2]` 0) or `SetPower(i[1])` (1); unit `i[0]`'s `SetHitPoints(i[1])`
+/// (2)
+pub const EE_UNITS_PLAYER_SET_VALUE: i32 = 107;
+/// `gPhysics->mRandom.Generate()` into `f[0]`
+pub const EE_UNITS_PLAYER_GENERATE: i32 = 108;
+/// unit `i[0]`'s class's `ProduceUnit(its complex unit, gUnitClassTable[i[1]], false)` (the result)
+pub const EE_UNITS_PLAYER_PRODUCE: i32 = 109;
+/// the slavery power's sound (`kSoundSlavery`)
+pub const EE_UNITS_PLAYER_SLAVERY_SOUND: i32 = 110;
 
 /// `EE_UNITS_PLAYER_STATE`'s bits: `gLoadingSavedGame`, `gGameScreenActive`, `gWorldClearing`,
 /// `UShutdownInProgress()`, `gWorld.mVictoryEnabled`, `gUserInterface != NULL`
@@ -202,8 +220,12 @@ const TECH_SETTLEMENT: i64 = 1028;
 const TECH_TOWN_CENTER: i64 = 1025;
 const TECH_CAPITOL: i64 = 1053;
 const TECH_NONE: c_long = 100_000;
-/// `kCivPowerExploration`
+/// `kCivPowerExploration`, `kCivPowerSlavery`
 const POWER_EXPLORATION: i64 = 0x2c;
+const POWER_SLAVERY: i64 = 0x27;
+/// `kUnitTypeCitizen`, `kUnitTypeFemaleCitizen`
+const TYPE_CITIZEN: i64 = 0x20;
+const TYPE_FEMALE_CITIZEN: i64 = 0x1e0;
 /// a tech node's kind: a wonder
 const NODE_KIND_WONDER: c_long = 4;
 /// a tile x off the map
@@ -733,6 +755,125 @@ impl<'a, H: PlayerHost + ?Sized> Player<'a, H> {
     }
 }
 
+impl<'a, H: PlayerHost + ?Sized> Player<'a, H> {
+    /// the player's units of unit type `unit_type`, in list order (taken before the walk's calls: none of them adds
+    /// or removes a unit)
+    fn units_of(&mut self, unit_type: c_ulong) -> Vec<(i64, EeUnitsPlayerUnit)> {
+        let mut units = Vec::new();
+        let mut x = self.h.ask(EE_UNITS_PLAYER_NEXT_UNIT, &[0]);
+        while x != 0 {
+            let u = self.unit(x);
+            if u.unit_type == unit_type {
+                units.push((x, u));
+            }
+            x = self.h.ask(EE_UNITS_PLAYER_NEXT_UNIT, &[x]);
+        }
+        units
+    }
+    fn complex_sight(&mut self, unit_type: c_ulong, on: bool) {
+        for (x, u) in self.units_of(unit_type) {
+            if u.complex != 0 {
+                self.h.ask(EE_UNITS_PLAYER_COMPLEX_SIGHT, &[x, i64::from(on)]);
+            }
+        }
+    }
+    fn upgrade_values(&mut self, unit_type: c_long) -> Option<[c_long; 4]> {
+        let (found, io) = self.h.info(EE_UNITS_PLAYER_UPGRADE_VALUES, &[unit_type as i64]);
+        (found != 0).then(|| [io.i[0] as c_long, io.i[1] as c_long, io.i[2] as c_long, io.i[3] as c_long])
+    }
+
+    /// `EEPlayer::ApplyImprovement`: unit type `unit_type`'s upgrade one level up (`lower`: down) in `improvement`,
+    /// its units rescaled to the new values: 8 the flight time (a class that flies) or the power, 9 the built units'
+    /// hit points (rounded up), 11 the sight (off before the change, on after).
+    pub fn apply_improvement(&mut self, unit_type: c_long, improvement: c_long, lower: bool) {
+        let Some([class_flight, flight, power, hit_points]) = self.upgrade_values(unit_type) else { return };
+        let ty = unit_type as c_ulong;
+        let mut old: c_long = 0;
+        let update = match improvement {
+            8 => {
+                old = if class_flight > 0 { flight } else { power };
+                true
+            }
+            9 => {
+                old = hit_points;
+                true
+            }
+            11 => {
+                self.complex_sight(ty, false);
+                true
+            }
+            _ => false,
+        };
+        self.h.ask(EE_UNITS_PLAYER_CHANGE_LEVEL, &[unit_type as i64, improvement as i64, if lower { -1 } else { 1 }]);
+        if !update {
+            return;
+        }
+        let [class_flight, flight, power, hit_points] = self.upgrade_values(unit_type).unwrap_or_default();
+        match improvement {
+            8 if old != 0 => {
+                let (new, what) = if class_flight > 0 { (flight, 0) } else { (power, 1) };
+                for (_, u) in self.units_of(ty) {
+                    if u.complex == 0 {
+                        continue;
+                    }
+                    let (_, io) = self.h.info(EE_UNITS_PLAYER_COMPLEX_VALUES, &[u.complex as i64]);
+                    let scaled = trunc_long(io.i[what] as c_long as f32 / old as f32 * new as f32);
+                    self.h.ask(EE_UNITS_PLAYER_SET_VALUE, &[u.complex as i64, scaled as i64, what as i64]);
+                }
+            }
+            9 if old != 0 => {
+                for (x, _) in self.units_of(ty) {
+                    let u = self.unit(x);
+                    if u.hit_points <= 0 || (u.complex != 0 && !u.built) {
+                        continue;
+                    }
+                    let scaled = u.hit_points as f32 / old as f32 * hit_points as f32;
+                    let value = trunc_long(crate::load::um_ceil(scaled) as f32);
+                    self.h.ask(EE_UNITS_PLAYER_SET_VALUE, &[x, value as i64, 2]);
+                }
+            }
+            11 => self.complex_sight(ty, true),
+            _ => {}
+        }
+    }
+
+    /// `EEPlayer::UpdateFreeUnitPower`: with the slavery power, every `mFreeUnitInterval` calls a free citizen (male
+    /// or female by a draw per producer tried) at the first capitol that makes one, else the first town center; the
+    /// local player hears it and the interval grows by one.
+    pub fn update_free_unit_power(&mut self) {
+        if self.h.ask(EE_UNITS_PLAYER_CIV_POWER, &[POWER_SLAVERY]) == 0 {
+            return;
+        }
+        let due = self.saved_mut(|s| {
+            s.mFreeUnitCounter = s.mFreeUnitCounter.wrapping_add(1);
+            s.mFreeUnitCounter >= s.mFreeUnitInterval
+        });
+        if !due {
+            return;
+        }
+        let mut created = false;
+        for producer in [TYPE_CAPITOL, TYPE_TOWN_CENTER] {
+            let mut x = self.h.ask(EE_UNITS_PLAYER_NEXT_UNIT, &[0]);
+            while x != 0 && !created {
+                if self.unit(x).unit_type == producer {
+                    let (_, io) = self.h.info(EE_UNITS_PLAYER_GENERATE, &[]);
+                    let class = if io.f[0] >= 0.5 { TYPE_CITIZEN } else { TYPE_FEMALE_CITIZEN };
+                    created = self.h.ask(EE_UNITS_PLAYER_PRODUCE, &[x, class]) != 0;
+                }
+                x = self.h.ask(EE_UNITS_PLAYER_NEXT_UNIT, &[x]);
+            }
+        }
+        if !created {
+            return;
+        }
+        self.saved_mut(|s| s.mFreeUnitCounter = 0);
+        if self.h.ask(crate::player::EE_UNITS_PLAYER_IS_LOCAL, &[]) != 0 {
+            self.h.ask(EE_UNITS_PLAYER_SLAVERY_SOUND, &[]);
+        }
+        self.saved_mut(|s| s.mFreeUnitInterval = s.mFreeUnitInterval.wrapping_add(1));
+    }
+}
+
 /// One player as the share bonus sees it: whether it holds power 4 and its stances.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ShareView {
@@ -791,10 +932,25 @@ pub fn share_change(balance: i32, remove: bool, bonus: f32, bonus2: f32, limit: 
 }
 
 // ---- the C ABI
+/// `EEPlayer::ApplyImprovement(unit_type, improvement, lower)` (see [`Player::apply_improvement`]).
+///
+/// # Safety
+/// As player.rs's `with`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_player_apply_improvement(
+    refs: *const EeUnitsPlayerRefs,
+    unit_type: c_long,
+    improvement: c_long,
+    lower: bool,
+) {
+    // SAFETY: the caller's contract
+    unsafe { with(refs, |p| p.apply_improvement(unit_type, improvement, lower)) }
+}
+
 /// The unit bookkeeping on `unit` (`a`, `b` the flags): `what` 0 `AddUnit(unit, a keep id)`, 1 `UnitPlaced`, 2
 /// `UnitTaken(unit, a swapped)`, 3 `UnitCompleted`, 4 `RecountPopulation`, 5 `RecountHeroesAndTeleporters`, 6
 /// `GetTotalPopulation(a, b)`, 7 `AddWonder(unit, a loading)`, 8 `RemoveWonder`, 9 `AddWonderPower`, 10
-/// `RemoveWonderPower`, 11 `GetNumHeroes(a, b)` (the result: the count asked, else 0).
+/// `RemoveWonderPower`, 11 `GetNumHeroes(a, b)`, 12 `UpdateFreeUnitPower` (the result: the count asked, else 0).
 ///
 /// # Safety
 /// As player.rs's `with`; the record's wonder state is live.
@@ -822,7 +978,8 @@ pub unsafe extern "C" fn ee_units_player_units(
                 8 => p.remove_wonder(x),
                 9 => p.add_wonder_power(x),
                 10 => p.remove_wonder_power(x),
-                _ => return p.num_heroes(a, b),
+                11 => return p.num_heroes(a, b),
+                _ => p.update_free_unit_power(),
             }
             0
         })

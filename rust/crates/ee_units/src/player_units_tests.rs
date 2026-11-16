@@ -1,5 +1,7 @@
 use super::*;
-use crate::player::{EeUnitsPlayerIo, EE_UNITS_PLAYER_CLASS, EE_UNITS_PLAYER_NODE, EE_UNITS_PLAYER_NODE_INFO};
+use crate::player::{
+    EeUnitsPlayerIo, EE_UNITS_PLAYER_CLASS, EE_UNITS_PLAYER_IS_LOCAL, EE_UNITS_PLAYER_NODE, EE_UNITS_PLAYER_NODE_INFO,
+};
 use crate::player_stats::EeUnitsPlayerStats;
 
 /// A player's world: its units by address (1..), their order, the tech nodes (id -> node kind, made class), the
@@ -20,6 +22,13 @@ struct World {
     queue: Vec<c_long>,
     pending: Vec<c_long>,
     log: Vec<String>,
+    /// the upgrade's values before and after its level change, the complex units' flight time and power, the draws
+    /// and the producers' answers
+    upgrade: Option<[c_long; 4]>,
+    changed: Option<[c_long; 4]>,
+    values: (c_long, c_long),
+    draws: Vec<f32>,
+    produces: Vec<bool>,
 }
 
 impl PlayerHost for World {
@@ -78,6 +87,34 @@ impl PlayerHost for World {
                 0
             }
             EE_UNITS_PLAYER_DEAD_STATISTIC => 7,
+            EE_UNITS_PLAYER_UPGRADE_VALUES => match self.upgrade {
+                Some(v) => {
+                    for (k, x) in v.iter().enumerate() {
+                        io.i[k] = *x as i64;
+                    }
+                    1
+                }
+                None => 0,
+            },
+            EE_UNITS_PLAYER_COMPLEX_VALUES => {
+                io.i[0] = self.values.0 as i64;
+                io.i[1] = self.values.1 as i64;
+                0
+            }
+            EE_UNITS_PLAYER_GENERATE => {
+                io.f[0] = self.draws.remove(0);
+                0
+            }
+            EE_UNITS_PLAYER_PRODUCE => {
+                self.log.push(format!("{op} {} {}", a[0], a[1]));
+                i64::from(self.produces.remove(0))
+            }
+            EE_UNITS_PLAYER_IS_LOCAL => 1,
+            EE_UNITS_PLAYER_SET_VALUE | EE_UNITS_PLAYER_CHANGE_LEVEL => {
+                self.log.push(format!("{op} {} {} {}", a[0], a[1], a[2]));
+                self.upgrade = if op == EE_UNITS_PLAYER_CHANGE_LEVEL { self.changed } else { self.upgrade };
+                0
+            }
             _ => {
                 self.log.push(format!("{op} {} {}", a[0], a[1]));
                 0
@@ -455,4 +492,68 @@ fn the_share_bonus_entry_changes_every_present_player() {
     assert_eq!((a.fields.mShareBonus, b.fields.mShareBonus), (1, 0));
     // SAFETY: a's state is live
     assert_eq!(unsafe { ee_units_wonders_count(&*a.wonders, 4) }, 1);
+}
+
+#[test]
+fn an_improvement_rescales_the_units_of_its_type() {
+    let mut w =
+        World { upgrade: Some([0, 0, 40, 100]), changed: Some([0, 0, 50, 120]), values: (0, 30), ..Default::default() };
+    let mut a = complex(1, unit(0x90));
+    a.hit_points = 50;
+    a.built = true;
+    let mut unbuilt = complex(2, unit(0x90));
+    unbuilt.hit_points = 50;
+    let other = complex(3, unit(0x91));
+    w.units = vec![a, unbuilt, other];
+    w.order = vec![1, 2, 3];
+    let mut r = Records::new();
+    r.run(&mut w, |p| p.apply_improvement(0x90, 9, false));
+    // 50 / 100 * 120 = 60; the unbuilt unit keeps its hit points
+    assert_eq!(w.log, ["104 144 9 1", "107 1 60 2"]);
+    // the power (a class that does not fly): 30 / 40 * 50 = 37.5, truncated
+    w.log.clear();
+    w.upgrade = Some([0, 0, 40, 100]);
+    r.run(&mut w, |p| p.apply_improvement(0x90, 8, true));
+    assert_eq!(w.log, ["104 144 8 -1", "107 1 37 1", "107 2 37 1"]);
+    // the sight: off before, on after; another improvement only changes the level
+    w.log.clear();
+    r.run(&mut w, |p| {
+        p.apply_improvement(0x90, 11, false);
+        p.apply_improvement(0x90, 3, false);
+    });
+    assert_eq!(w.log, ["105 1 0", "105 2 0", "104 144 11 1", "105 1 1", "105 2 1", "104 144 3 1"]);
+    // no upgrade: nothing
+    w.log.clear();
+    w.upgrade = None;
+    r.run(&mut w, |p| p.apply_improvement(0x90, 9, false));
+    assert!(w.log.is_empty());
+}
+
+#[test]
+fn the_slavery_power_makes_a_citizen_every_interval() {
+    let mut w = World { draws: vec![0.7, 0.2], produces: vec![false, true], ..Default::default() };
+    w.units = vec![unit(TYPE_TOWN_CENTER), unit(TYPE_CAPITOL)];
+    w.order = vec![1, 2];
+    let mut r = Records::new();
+    r.saved.mFreeUnitInterval = 2;
+    // without the power nothing counts
+    r.run(&mut w, |p| p.update_free_unit_power());
+    assert_eq!(r.saved.mFreeUnitCounter, 0);
+    struct Slavery(World);
+    impl PlayerHost for Slavery {
+        fn call(&mut self, op: i32, io: &mut EeUnitsPlayerIo) -> i64 {
+            if op == EE_UNITS_PLAYER_CIV_POWER {
+                return i64::from(io.i[0] == POWER_SLAVERY);
+            }
+            self.0.call(op, io)
+        }
+    }
+    let mut h = Slavery(w);
+    let mut p = Player { h: &mut h, saved: &mut *r.saved, fields: &mut *r.fields, stats: &r.stats };
+    p.update_free_unit_power();
+    p.update_free_unit_power();
+    // the capitol first (a male citizen: refused), then the town center (a female one)
+    assert_eq!(r.saved.mFreeUnitCounter, 0);
+    assert_eq!(r.saved.mFreeUnitInterval, 3);
+    assert_eq!(h.0.log, ["109 2 32", "109 1 480", "110 0 0"]);
 }
