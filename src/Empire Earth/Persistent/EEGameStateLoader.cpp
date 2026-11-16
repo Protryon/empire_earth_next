@@ -300,6 +300,8 @@ bool EEGameStateLoader::LoadGame(FSFile& inHeaderFile, FSFile& inFile)
     if (!theResult) {
         EEReportLoadFailure("Load game file is corrupt.", false, NULL);
         this->mState->Clear();
+        // port: the failed load's teardown done (EE-SIM ends its wait for the game with it: a clean failure)
+        ESDebugOut("EE load failure: Load game file is corrupt.\n");
     }
     this->mState->mIsLoadedGame = theResult;
     this->mState->WriteUnlock();
