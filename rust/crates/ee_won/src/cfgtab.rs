@@ -74,6 +74,10 @@ pub enum EeWonCfgRead {
     LayoutPoint = 23,
     /// `ReadString(true)` (a word: it stops at whitespace) into the strings' first slot, alone.
     Word = 24,
+    /// `ReadRawImage()` into the frame's raw image.
+    RawImage = 25,
+    /// `ReadRawString(false)` into the raw strings.
+    RawStr = 26,
 }
 
 /// The host: the C++ config's reads, its frame and its setters. Every callback that can throw catches and keeps
@@ -401,6 +405,13 @@ static PROGRAMS: &[(i32, &[&[Op]])] = &[
     ]),
     // ImageConfig: SRC SIZE
     (EE_WON_CFG_KEYS_IMAGECONFIG_VIRTUAL24_ININSTRUCTION, &[&[IMG, S(0)], &[I, C, I, S(1)]]),
+    // StretchImageConfig: SRC TILE BORDERS SKIPCENTER MULTIEXPORT MULTICROPEXPORT EXPORT (round 41)
+    (EE_WON_CFG_KEYS_STRETCHIMAGECONFIG_VIRTUAL24_INSTRUCTION, &[
+        &[R(Rd::RawImage), S(0)], &[B, C, B, S(1)], &[I, C, I, C, I, C, I, S(2), Je(END), C, B, C, B, S(1)], &[B, S(3)],
+        &[F(4)], &[F(5)], &[STR, C, S(8), R(Rd::RawImage), S(7)],
+    ]),
+    // ImageFilterConfig: SRC FILTER DUPLICATE MULTIHORZCROP EXPORT (round 41)
+    (EE_WON_CFG_KEYS_IMAGEFILTERCONFIG_VIRTUAL24_ININSTRUCTION, &[&[R(Rd::RawImage), S(0)], &[F(6)], &[S(2)], &[F(8)], &[F(7)]]),
     // StretchCenterImageConfig: STRETCHIMAGE CENTERIMAGE
     (EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION, &[&[IMG, S(0)], &[IMG, S(1)]]),
 ];
@@ -413,8 +424,17 @@ static PROGRAMS: &[(i32, &[&[Op]])] = &[
 // did), 28 adds the rule (Container::Fn2F6140) and keeps it as the config's state, 29 makes the no-overlap layout.
 
 type Native = fn(i32, &mut dyn CfgHost) -> bool;
-static NATIVE: [Native; 4] =
-    [|t, h| layout(t, h, false, false), |t, h| layout(t, h, true, false), |t, h| layout(t, h, false, true), no_overlap];
+static NATIVE: [Native; 9] = [
+    |t, h| layout(t, h, false, false),
+    |t, h| layout(t, h, true, false),
+    |t, h| layout(t, h, false, true),
+    no_overlap,
+    crate::cfgimg::stretch_multi_export,
+    crate::cfgimg::stretch_multi_crop,
+    crate::cfgimg::filter_key,
+    crate::cfgimg::filter_export,
+    crate::cfgimg::filter_multi_crop,
+];
 
 /// The LAYOUT keywords (guilayout's), NUL-terminated.
 const LAYOUT_NAMES: [&[u8]; 15] = [

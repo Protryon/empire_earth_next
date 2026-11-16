@@ -1634,3 +1634,181 @@ bool ContainerConfig::HandleNewLayoutPoint()
     }
     return true;
 }
+
+// ---- R6 WON round 41: StretchImageConfig's and ImageFilterConfig's instructions (copied from StretchImageConfig.cpp
+// and ImageConfig.cpp before the round)
+// Reads SRC, TILE, BORDERS, SKIPCENTER and the EXPORT keys, which add copies with other images to the parent
+bool StretchImageConfig::Virtual24(const std::string& instruction)
+{
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_STRETCHIMAGECONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0) {
+        this->mStretchImage->SetImage(this->ReadRawImage().get());
+    }
+    else if(aKeyIdx==1) {
+        bool horz=this->ReadBool();this->EnsureComma();
+        bool vert=this->ReadBool();
+        this->mStretchImage->SetTile(horz,vert);
+    }
+    else if(aKeyIdx==2) {
+        int left=this->ReadInt();this->EnsureComma();
+        int top=this->ReadInt();this->EnsureComma();
+        int right=this->ReadInt();this->EnsureComma();
+        this->mStretchImage->SetBorders(left,top,right,this->ReadInt());
+        if(!this->EndOfString()) {
+            this->EnsureComma();
+            bool horz=this->ReadBool();this->EnsureComma();
+            bool vert=this->ReadBool();
+            this->mStretchImage->SetTile(horz,vert);
+        }
+    }
+    else if(aKeyIdx==3) {
+        this->mStretchImage->SetSkipCenter(this->ReadBool());
+    }
+    else if(aKeyIdx==4) {
+        int count=this->ReadInt();this->EnsureComma();
+        std::string imagePrefix=this->ReadRawString(false);this->EnsureComma();
+        std::string configPrefix=this->ReadRawString(false);
+        int offset=0;
+        if(!this->EndOfString()) {
+            this->EnsureComma();
+            offset=this->ReadInt()-1;
+        }
+        for(int i=0;i<count;++i) {
+            char imageName[512],configName[512];
+            sprintf(imageName,"%s%d",imagePrefix.c_str(),i+1+offset);
+            sprintf(configName,"%s%d",configPrefix.c_str(),i+1);
+            SmartPtr<RawImage> image=this->GetRawImageFromStr(imageName);
+            SmartPtr<StretchImageConfig> child=new StretchImageConfig;
+            child->mStretchImage->CopyAttributes(this->mStretchImage);
+            child->mStretchImage->SetImage(image.get());
+            ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
+            parent->AddChildToConfigMap(configName,child.get());
+        }
+    }
+    else if(aKeyIdx==5) {
+        int count=this->ReadInt();this->EnsureComma();
+        SmartPtr<RawImage> image=this->ReadRawImage();this->EnsureComma();
+        std::string configPrefix=this->ReadRawString(false);
+        int width=image->GetWidth()/count;
+        SmartPtr<CropImageFilter> crop=new CropImageFilter;
+        crop->SetSize(width,image->GetHeight());
+        for(int i=0;i<count;i++) {
+            crop->SetPos(i*width,0);
+            char configName[512];
+            sprintf(configName,"%s%d",configPrefix.c_str(),i+1);
+            SmartPtr<RawImage> cropped=crop->Filter(image.get());
+            SmartPtr<StretchImageConfig> child=new StretchImageConfig;
+            child->mStretchImage->CopyAttributes(this->mStretchImage);
+            child->mStretchImage->SetImage(cropped.get());
+            ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
+            parent->AddChildToConfigMap(configName,child.get());
+        }
+    }
+    else if(aKeyIdx==6) {
+        GUIString name=this->ReadString(false);this->EnsureComma();
+        SmartPtr<StretchImageConfig> child=new StretchImageConfig;
+        child->mStretchImage->CopyAttributes(this->mStretchImage);
+        child->mStretchImage->SetImage(this->ReadRawImage().get());
+        ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
+        parent->AddChildToConfigMap(name,child.get());
+    }
+    else return ImageConfig::Virtual24(instruction);
+    return true;
+}
+
+// Reads a filter spec (SCALEPERCENT, SCALEABS, TINT, CROP, PIXELTRANS) and returns the filtered copy of
+// the raw image; an empty pointer for an unknown filter name
+SmartPtr<RawImage> ImageFilterConfig::HandleFilter()
+{
+    SmartPtr<ImageFilter> filter;
+    GUIString name=this->ReadString(false);
+    this->EnsureComma();
+    const int aNameIdx_name=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_IMAGEFILTERCONFIG_HANDLEFILTER_NAME,name.mData->mText,name.mData->mLength,sizeof(wchar_t));
+    if(aNameIdx_name==0)
+    {
+        int width=this->ReadInt(),height=width;
+        if(!this->EndOfString())
+        {
+            this->EnsureComma();
+            height=this->ReadInt();
+        }
+        SmartPtr<ScaleImageFilter> scale=new ScaleImageFilter(0);
+        scale->SetPercentSize(width,height);
+        filter=scale.get();
+    }
+    else if(aNameIdx_name==1)
+    {
+        int width=this->ReadInt();
+        this->EnsureComma();
+        int height=this->ReadInt();
+        filter=new ScaleImageFilter(width,height);
+    }
+    else if(aNameIdx_name==2)
+    {
+        int red=this->ReadInt();
+        this->EnsureComma();
+        int green=this->ReadInt();
+        this->EnsureComma();
+        int blue=this->ReadInt();
+        filter=new TintImageFilter(red,green,blue);
+    }
+    else if(aNameIdx_name==3)
+    {
+        int x=this->ReadInt();
+        this->EnsureComma();
+        int y=this->ReadInt();
+        this->EnsureComma();
+        int width=this->ReadInt();
+        this->EnsureComma();
+        int height=this->ReadInt();
+        filter=new CropImageFilter(x,y,width,height);
+    }
+    else if(aNameIdx_name==4)
+        filter=new TransparentImageFilter(this->ReadColor());
+    if(filter.get()!=NULL) return filter->Filter(this->mRawImage.get());
+    return SmartPtr<RawImage>();
+}
+
+// Handles the image filter keys SRC, FILTER, DUPLICATE, MULTIHORZCROP (splits the image into numbered
+// horizontal crops added to the parent) and EXPORT; passes other keys to the image configuration
+bool ImageFilterConfig::Virtual24(const std::string& inInstruction)
+{
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGEFILTERCONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
+    SmartPtr<RawImage> anImage;
+    if(aKeyIdx==0) this->SetRawImage(this->ReadRawImage().get());
+    else if(aKeyIdx==1) this->SetRawImage(this->HandleFilter().get());
+    else if(aKeyIdx==2)
+        this->SetRawImage(static_cast<RawImage*>(this->mRawImage->Duplicate().get()));
+    else if(aKeyIdx==3)
+    {
+        int count=this->ReadInt();
+        this->EnsureComma();
+        std::string prefix=this->ReadString(false);
+        int width=this->mRawImage->GetWidth()/count;
+        SmartPtr<CropImageFilter> crop=new CropImageFilter;
+        crop->SetSize(width,this->mRawImage->GetHeight());
+        for(int i=0;i<count;i++)
+        {
+            crop->SetPos(i*width,0);
+            SmartPtr<RawImage> image=crop->Filter(this->mRawImage.get());
+            char name[512];
+            sprintf(name,"%s%d",prefix.c_str(),i+1);
+            SmartPtr<ImageFilterConfig> config=new ImageFilterConfig;
+            config->SetRawImage(image.get());
+            ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
+            parent->AddChildToConfigMap(GUIString(name),config.get());
+        }
+    }
+    else if(aKeyIdx==4)
+    {
+        GUIString name=this->ReadString(false);
+        this->EnsureComma();
+        SmartPtr<ImageFilterConfig> config=new ImageFilterConfig;
+        config->SetRawImage(this->HandleFilter().get());
+        ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
+        parent->AddChildToConfigMap(name,config.get());
+    }
+    else return ImageConfig::Virtual24(inInstruction);
+    return true;
+}
+

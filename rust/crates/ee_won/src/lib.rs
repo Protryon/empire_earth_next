@@ -23,6 +23,7 @@ pub mod cachemap;
 pub mod cdkey;
 pub mod cert;
 pub mod certhost;
+pub mod cfgimg;
 pub mod cfgtab;
 pub mod chat;
 pub mod chatobj;

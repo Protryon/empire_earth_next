@@ -17,7 +17,23 @@ template<class X> struct SmartPtr {
 struct Obj { int id; Obj(int i) : id(i) {} virtual ~Obj() {} };
 struct Font : Obj { Font(int i) : Obj(i) {} };
 struct Image : Obj { Image(int i) : Obj(i) {} void SetSize(int w, int h); };
-struct StretchImage : Image { StretchImage(int i) : Image(i) {} };
+struct RawImage : Image {
+    int w, h;
+    RawImage(int i, int ww, int hh) : Image(i), w(ww), h(hh) {}
+    // a width divided by a count of 0 (the original's crash) is -999 here, the same on both sides
+    struct Num { int v; operator int() const { return v; } Num operator/(int d) const { return Num{d ? v / d : -999}; } };
+    Num GetWidth() { return Num{w}; }
+    int GetHeight() { return h; }
+    SmartPtr<RawImage> Duplicate();
+};
+struct StretchImage : Image {
+    StretchImage(int i) : Image(i) {}
+    void SetImage(RawImage* r);
+    void SetTile(bool a, bool b);
+    void SetBorders(int a, int b, int c, int d);
+    void SetSkipCenter(bool a);
+    void CopyAttributes(StretchImage* s);
+};
 struct Sound : Obj { Sound(int i) : Obj(i) {} };
 struct Background { int id; Background() : id(-1) {} };
 struct SelectionColor { int id; SelectionColor() : id(-1) {} };
@@ -155,6 +171,37 @@ struct SkinMap {
     std::string n;
     SkinSlot operator[](const GUIString& k) { SkinSlot s; s.n = n + "[" + (std::string)k + "]"; return s; }
 };
+// the image configs' raw images and filters (R6 WON round 41): every one made, copied and filtered is traced
+static int sNextRaw;
+SmartPtr<RawImage> RawImage::Duplicate() { RawImage* r = new RawImage(sNextRaw++, w, h); tr("raw#" + P((long long)id) + ".Duplicate -> #" + P((long long)r->id)); return r; }
+void StretchImage::SetImage(RawImage* r) { tr("stretch#" + P((long long)id) + ".SetImage(" + P(r) + ")"); }
+void StretchImage::SetTile(bool a, bool b) { tr("stretch#" + P((long long)id) + ".SetTile(" + P(a) + "," + P(b) + ")"); }
+void StretchImage::SetBorders(int a, int b, int c, int d) { tr("stretch#" + P((long long)id) + ".SetBorders(" + Args(a, b, c, d) + ")"); }
+void StretchImage::SetSkipCenter(bool a) { tr("stretch#" + P((long long)id) + ".SetSkipCenter(" + P(a) + ")"); }
+void StretchImage::CopyAttributes(StretchImage* s) { tr("stretch#" + P((long long)id) + ".CopyAttributes(#" + P((long long)s->id) + ")"); }
+struct ImageFilter : Obj {
+    std::string d;
+    explicit ImageFilter(const std::string& s) : Obj(0), d(s) {}
+    SmartPtr<RawImage> Filter(RawImage* r)
+    {
+        RawImage* o = r ? new RawImage(sNextRaw++, r->w / 2 + 1, r->h / 2 + 1) : NULL;
+        tr("filter " + d + "(" + P(r) + ") -> " + P(o)); return o;
+    }
+};
+struct ScaleImageFilter : ImageFilter {
+    explicit ScaleImageFilter(int) : ImageFilter("Scale0") {}
+    ScaleImageFilter(int w, int h) : ImageFilter("Scale(" + Args(w, h) + ")") {}
+    void SetPercentSize(int w, int h) { d = "ScalePercent(" + Args(w, h) + ")"; }
+};
+struct TintImageFilter : ImageFilter { TintImageFilter(int r, int g, int b) : ImageFilter("Tint(" + Args(r, g, b) + ")") {} };
+struct TransparentImageFilter : ImageFilter { explicit TransparentImageFilter(DWORD c) : ImageFilter("Transparent(" + P((long long)c) + ")") {} };
+struct CropImageFilter : ImageFilter {
+    int x = 0, y = 0, w = 0, h = 0;
+    CropImageFilter() : ImageFilter("Crop") {}
+    CropImageFilter(int a, int b, int c, int e) : ImageFilter("Crop(" + Args(a, b, c, e) + ")") {}
+    void SetSize(int a, int b) { w = a; h = b; d = "Crop(" + Args(x, y, w, h) + ")"; }
+    void SetPos(int a, int b) { x = a; y = b; d = "Crop(" + Args(x, y, w, h) + ")"; }
+};
 void Image::SetSize(int w, int h) { tr("image#" + P((long long)id) + ".SetSize(" + P((long long)w) + "," + P((long long)h) + ")"); }
 struct WindowManager {
     static WindowManager* GetDefaultWindowManager() { static WindowManager w; return &w; }
@@ -199,6 +246,25 @@ struct ComponentConfig {
     void SetComponent(Component* c) { mComponent = c; }
     bool mHasSetWidth = false, mHasSetHeight = false;
     bool HandleModify() { tr("HandleModify"); return mText.size() % 2 == 0; }
+    ComponentConfig* GetParentObject();
+    void AddChildToConfigMap(const GUIString& name, ComponentConfig* c);
+    SmartPtr<RawImage> ReadRawImage()
+    {
+        std::string t = Take("ReadRawImage");
+        RawImage* r = new RawImage(1000 + Hash(t) % 1000, 3 + Hash(t) % 60, 2 + Hash(t) % 40);
+        tr("ReadRawImage " + P(r)); return r;
+    }
+    SmartPtr<RawImage> GetRawImageFromStr(const std::string& n)
+    {
+        tr("GetRawImageFromStr \"" + n + "\"");
+        if (n.find('!') != std::string::npos) throw ConfigObjectException("bad image " + n);
+        return new RawImage(2000 + Hash(n) % 1000, 4 + Hash(n) % 30, 4);
+    }
+    GUIString ReadRawString(bool)
+    {
+        std::string t = Take("ReadRawString");
+        tr("ReadRawString \"" + t + "\""); return GUIString(t.c_str());
+    }
     bool HandleMapComponent() { tr("HandleMapComponent"); return true; }
     void SetDesiredSizeIfNecessary() { tr("SetDesiredSizeIfNecessary"); }
     SmartPtr<Cursor> ReadCursor() { Cursor* c = new Cursor(Hash(Take("ReadCursor"))); tr("ReadCursor " + P(c)); return c; }
@@ -311,6 +377,31 @@ struct ContainerConfig : ComponentConfig {
     bool HandleLayout(bool chain = false, bool repeat = false); bool HandleNewLayoutPoint(); bool HandleNoOverlapLayout();
 };
 struct ImageConfig : ComponentConfig { V24; SmartPtr<Image> mImage = new Image(77); };
+static int sNextStretch;
+struct StretchImageConfig : ImageConfig {
+    V24; StretchImage* mStretchImage;
+    StretchImageConfig() { mStretchImage = new StretchImage(sNextStretch++); mImage = mStretchImage; }
+};
+struct ImageFilterConfig : ImageConfig {
+    V24; SmartPtr<RawImage> mRawImage = new RawImage(99, 40, 20); bool mImageIsRawImage = false;
+    SmartPtr<RawImage> HandleFilter();
+    // (a filter that made no image leaves an empty one here: the original's next use of it would crash)
+    void SetRawImage(RawImage* r)
+    {
+        static RawImage sEmpty(0, 0, 0);
+        tr("SetRawImage(" + P(r) + ")"); mRawImage = r ? r : &sEmpty; mImage = r; mImageIsRawImage = true;
+    }
+};
+// the configs' parent: the children added to its map
+static ComponentConfig sParentConfig;
+ComponentConfig* ComponentConfig::GetParentObject() { return &sParentConfig; }
+void ComponentConfig::AddChildToConfigMap(const GUIString& name, ComponentConfig* c)
+{
+    std::string what = "config";
+    if (StretchImageConfig* s = dynamic_cast<StretchImageConfig*>(c)) what = "stretch#" + P((long long)s->mStretchImage->id);
+    else if (ImageFilterConfig* f = dynamic_cast<ImageFilterConfig*>(c)) what = "filter " + P(f->mRawImage.get());
+    tr("parent.AddChildToConfigMap(" + P(name) + "," + what + ")");
+}
 struct ButtonConfig : ComponentConfig { V24; Component* mButton = gComp; void HandleButtonFlags(); void HandleFitText() { tr("HandleFitText"); } };
 struct ScrollAreaConfig : ContainerConfig { V24; Component* mScrollArea = gComp; };
 struct ScrollerConfig : ContainerConfig { V24; Component* mScroller = gComp; };
@@ -375,7 +466,8 @@ struct WONSkinConfig : ComponentConfig { V24; bool ReadVert(); void HandleButton
     X(ImageButtonConfig) X(LabelConfig) X(ListAreaConfig) X(InputBoxConfig) X(TextAreaConfig) X(TreeAreaConfig) \
     X(WONSimpleButtonConfig) X(WONButtonConfig) X(SplitterConfig) X(WONScrollbarConfig) X(WONHeaderControlConfig) \
     X(WONListCtrlConfig) X(WONFrameComponentConfig) X(WONComboBoxConfig) X(WONTabCtrlConfig) X(WONScrollContainerConfig) \
-    X(ScrollAreaConfig) X(ScrollerConfig) X(ScrollbarScrollerConfig) X(StretchCenterImageConfig) X(ComponentConfig) X(ContainerConfig) X(WONSkinConfig) X(FontConfig) X(ImageConfig)
+    X(ScrollAreaConfig) X(ScrollerConfig) X(ScrollbarScrollerConfig) X(StretchCenterImageConfig) X(ComponentConfig) X(ContainerConfig) X(WONSkinConfig) X(FontConfig) X(ImageConfig) \
+    X(StretchImageConfig) X(ImageFilterConfig)
 static ComponentConfig* MakeConfig(int i)
 {
     int n = 0;
@@ -388,7 +480,7 @@ static ComponentConfig* MakeConfig(int i)
 // and state.
 static std::string RunSeq(int i, const std::vector<std::pair<std::string, std::string>>& steps)
 {
-    sTrace.clear(); sComps.clear(); sNextComp = 1000; sNextLayout = 1; sNextPoint = 0;
+    sTrace.clear(); sComps.clear(); sNextComp = 1000; sNextLayout = 1; sNextPoint = 0; sNextRaw = 3000; sNextStretch = 500;
     gComp = new Component(1); gComp->mEdit = new Component(2);
     ComponentConfig* c = MakeConfig(i);
     for (const auto& s : steps) {

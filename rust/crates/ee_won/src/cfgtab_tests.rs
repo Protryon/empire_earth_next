@@ -256,9 +256,10 @@ fn unknown_keys_and_tables() {
     assert!(program(EE_WON_CFG_KEYS_LABELCONFIG_VIRTUAL24_INSTRUCTION, b"TEXT").is_some());
     assert!(program(EE_WON_CFG_KEYS_LABELCONFIG_VIRTUAL24_INSTRUCTION, b"text").is_none());
     assert!(program(EE_WON_CFG_KEYS_LABELCONFIG_VIRTUAL24_INSTRUCTION, b"MODIFY").is_none());
-    // a key table the reader does not run (StretchImageConfig's)
-    assert!(program(EE_WON_CFG_KEYS_STRETCHIMAGECONFIG_VIRTUAL24_INSTRUCTION, b"SRC").is_none());
-    assert!(!ee_won_cfg_tab_has(EE_WON_CFG_KEYS_STRETCHIMAGECONFIG_VIRTUAL24_INSTRUCTION));
+    // a key table the reader does not run (ImageConfig's named values)
+    assert!(program(EE_WON_CFG_KEYS_IMAGECONFIG_GETNAMEDVALUE_INNAME, b"WIDTH").is_none());
+    assert!(!ee_won_cfg_tab_has(EE_WON_CFG_KEYS_IMAGECONFIG_GETNAMEDVALUE_INNAME));
+    assert!(ee_won_cfg_tab_has(EE_WON_CFG_KEYS_STRETCHIMAGECONFIG_VIRTUAL24_INSTRUCTION));
     assert!(ee_won_cfg_tab_has(EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION));
     assert!(ee_won_cfg_tab_has(EE_WON_CFG_KEYS_WONBUTTONCONFIG_VIRTUAL24_THEINSTRUCTION));
 }
@@ -275,7 +276,7 @@ fn every_handler_holds_a_program_per_key() {
             }
         }
     }
-    assert_eq!(PROGRAMS.len(), 50);
+    assert_eq!(PROGRAMS.len(), 52);
 }
 
 #[test]

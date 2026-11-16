@@ -222,6 +222,27 @@ int main(int argc, char** argv)
             if (print) Shell::RunSeq(cfg, steps);
             else CompareSeq(cfg, steps);
         }
+        // the image configs' instructions (round 41): StretchImageConfig (50) and ImageFilterConfig (51)
+        const char* stretchKeys[] = {"SRC", "TILE", "BORDERS", "SKIPCENTER", "MULTIEXPORT", "MULTICROPEXPORT", "EXPORT"};
+        const char* filterKeys[] = {"SRC", "FILTER", "DUPLICATE", "MULTIHORZCROP", "EXPORT"};
+        const char* filters[] = {"SCALEPERCENT", "scaleabs", "TINT", "Crop", "PIXELTRANS", "BLUR", "!f"};
+        std::vector<std::string> imgTokens = {"img", "a", "0", "1", "2", "3", "-1", "true", "false", "!x", "pre", "x!y", ""};
+        for (int r = 0; r < (print ? 200 : 4000); r++) {
+            Steps steps;
+            bool stretch = Rand(2) != 0;
+            for (int s = 0, n = 1 + (int)Rand(3); s < n; s++) {
+                std::string key = stretch ? stretchKeys[Rand(7)] : filterKeys[Rand(5)], value;
+                int parts = (int)Rand(7);
+                for (int i = 0; i < parts; i++) {
+                    if (i) value += Rand(10) ? ", " : " ";
+                    bool name = (i == 0 && key == "FILTER") || (i == 1 && key == "EXPORT" && !stretch);
+                    value += name && Rand(4) ? filters[Rand(7)] : imgTokens[Rand((unsigned)imgTokens.size())];
+                }
+                steps.push_back({key, value});
+            }
+            if (print) Shell::RunSeq(stretch ? 50 : 51, steps);
+            else CompareSeq(stretch ? 50 : 51, steps);
+        }
         if (!print) printf("sequences: %d checks in all, %d mismatches\n", sChecks, sFailures);
     }
     if (print) { fputs(Shell::sGold.c_str(), stdout); return 0; }

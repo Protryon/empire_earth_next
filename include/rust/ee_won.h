@@ -3394,6 +3394,10 @@ enum class EeWonCfgRead : int32_t {
   LayoutPoint = 23,
   /// `ReadString(true)` (a word: it stops at whitespace) into the strings' first slot, alone.
   Word = 24,
+  /// `ReadRawImage()` into the frame's raw image.
+  RawImage = 25,
+  /// `ReadRawString(false)` into the raw strings.
+  RawStr = 26,
 };
 
 /// A number of the parser.

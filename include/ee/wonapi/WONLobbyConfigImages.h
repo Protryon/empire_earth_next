@@ -104,7 +104,6 @@ public:
     virtual bool Virtual24(const std::string&); //38c780
     virtual Image* GetImage(); //38cc80 slot38
     virtual RawImage* GetRawImage() { return this->mRawImage.get(); } // slot 0x3c, at 0x0078c280
-    SmartPtr<RawImage> HandleFilter(); //38c340
     void SetRawImage(RawImage*); //38c6e0
     SmartPtr<RawImage> mRawImage; //7c
     bool mImageIsRawImage; //80 naturalpad, total84
