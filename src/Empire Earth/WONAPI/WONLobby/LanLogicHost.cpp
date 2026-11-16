@@ -300,6 +300,11 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         auth->SetDoAutoRefresh(true);
         return true;
     }
+    case EeWonLobbyOp::LanDiscoveryTake: {
+        const ByteBuffer* aBytes = static_cast<RecvBytesFromOp*>(op)->GetBytes().get();
+        if (aBytes != NULL) ee_won_lobby_sink(inB, reinterpret_cast<const uint8_t*>(aBytes->data()), aBytes->length());
+        return 0;
+    }
     case EeWonLobbyOp::LanAcceptedSocket:
         if (op->GetStatus() != WS_Success || op->IsKilled()) return 0;
         return (intptr_t)static_cast<LobbyLanSocket*>(static_cast<AcceptOp*>(op)->GetAcceptedSocket());
