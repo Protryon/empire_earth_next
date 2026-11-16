@@ -25814,3 +25814,54 @@ bloated RUST_PLAN.md (the hashes stayed).
 read by many lanes, so a move keeps them and takes the bodies over a view); `FillCivilizationList` (a UI list: to
 `civ_whole.rs`); the builder host's remaining ops. Net C++ of the round is -683, short of the 1,500 aim: the hosts
 (21 + 12 ops) and the forwarders the callers keep cost back about half of what moved.
+
+## Harness and gate flakes under load: wait for the condition, never a fixed time (branch rust-flakes1, 2026-11-15)
+
+Six checks failed now and then on rust's own build and passed on a rerun. Each was a fixed sleep or a one-shot
+action racing the game's own threads; the fixes are in the test tooling and the TEST ONLY fixture code
+(EETestFixture.cpp, on only with EE_TEST_UI; EESimEditor.cpp, EE-SIM's scripted editor). No game code changed.
+
+- **Edge scroll moved one 0.041 step.** The fixture's `pointer` set gMouse once. The game moves its pointer on its
+  own events (a platform mouse move adds its motion in `RTSMouse::Update`, the window's activation centres it), so
+  under load the pointer left the edge after one scroll update. Fix: `pointer <form> <x> <y> <ms>` holds the
+  position for ms. A fixture thread puts it back every 2 ms under `gMouse->mInputLock` until the time runs out or a
+  pointer, lclick, boxselect or order command moves it. stderr reports `TEST UI pointer hold seq N done: K
+  corrections`. `fixture_driver.edge` holds for the check's time plus 2 s. The stand-in scrolls for one step only
+  without a hold, so the self test checks that the driver asks for one.
+- **The AI game's lobby saw empty player-type combos** (`slot 0 human: index 0 outside []`). The combos exist when
+  the form opens, but their lines arrive with the local server's updates. Fix: `lobby_settled` waits until every
+  wanted combo has lines and none has changed for 1 s (60 s limit, and the error names the empty combos);
+  `Game.select` waits up to 30 s for its value to resolve.
+- **F3 input check paused 0 -> 0 -> 0.** The key's down and up were posted 0.3 s apart, and a loaded UI thread
+  missed the press. Fix: hold the key down until the telemetry shows the pause change (up to 5 s), then release it
+  (and wait up to 15 s more).
+- **The legacy tour's crash in EETestCommsRefresh.** The bridge calls it on the render thread before each present.
+  It read `gCommunications` with no lock while a UI action replaced the object (EEAJoinOrHostAGame: delete the
+  client, new server), so a present in that window read a freed object. Fix: take the UI copy lock
+  (`GetUILock()->TryEnter()`, as the bridge's ui_test does, since a UI event can hold it while waiting for the render
+  thread) and keep the last values when it is busy. Every action and UI event runs under that lock. Deletes on other
+  threads (the lobby glue, EEServer's become-client message) are not covered; the tour does not reach them.
+- **The editor gate's load-thread line** (`formstate` after `tab 2`: `'Loading Terrain Ambients - Aquatic'` or
+  hidden). The editor's load thread posts its texts as actions: one `EESEAChangeLoadText` object, its text
+  overwritten and the object posted again for each text. `FormState` drained the load thread from inside its step,
+  so the actions posted meanwhile queued behind the step. Which text it read depended on how many had run. Fix: the
+  driver drains the load thread before it queues `formstate` (as it already did for form/players/unittab), so every
+  text action runs first and the label reads the final state (hidden).
+- **The civilization builder gate's choice list, and more of the editor gate.** A step ended when its marker had
+  passed through the action queue three times and then the UI thread's message queue once. A control's trigger
+  event (a list's selection, a question's Yes, a check box) is processed by the next UI update, and what that posts
+  (`PostEvent`: the choice form's load of the selected civilization, the delete after Yes, the hide-UI box's view)
+  reached the message queue after the step's end. The next step's dump therefore read the state before or after
+  them, depending on when the update came. The expected files had recorded the "before" states: statistics empty
+  with "Please wait..." shown, `file cbgate2` still present after the delete's Yes, the view before the hide-UI
+  box's change, and the trigger tab's check boxes shown. Three runs of the editor gate gave three different outputs.
+  Fix: the step's end (`EESimEditorDone`) makes one more round through the action queue before it wakes the driver,
+  so every event a step's trigger events post is processed first. expected.txt and civbuilder_expected.txt now hold
+  the settled states. For the editor lane: settled, `check 0x12 0` (the "UI shown" comment) reads `hidden=1` and
+  `check 0x12 1` reads `hidden=0`, which suggests SetChecked on that box toggles rather than sets. The old expected
+  hid this because it read one step late.
+- **The self test's probe** stopped on `NESynchronousCommunications has no member mLastTickReceived`. The class holds
+  only its Rust handle now, and the probe read the members by layout offset. It now reads a stand-in of the
+  fixture's mirror `gEETestComms`, which game_session.py already passes. The self test's layout cache had hidden the
+  break here: it is now regenerated when a header under include/ is newer than the cache. The stand-in also retries
+  a frame.request that the driver still holds open (WinError 32 on its unlink).
