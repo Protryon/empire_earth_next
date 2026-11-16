@@ -703,15 +703,19 @@ local function scout_step(g, recs, cx, cy, view)
     ai.move(g.units, nx, ny, {forced = true})
 end
 
--- the enemy's gather spot last seen with no known tower near, else its town (view.enemies)
-local function enemy_place(view, mem, player, not_x, not_y)
+-- the enemy's gather spot last seen with no known tower near, else its town (view.enemies). `from` {x, y}: only the
+-- places a walk from there reaches (a raid landed on an island: g.same_land)
+local function enemy_place(view, mem, player, not_x, not_y, from)
+    local function ok(x, y)
+        return from == nil or ai.reach(from[1], from[2], x, y)
+    end
     local spots = (mem.gspots or {})[player]
     if spots ~= nil then
         local best = nil
         for _, k in ipairs(ai.keys(spots)) do
             local s = spots[k]
             if not (near(s.x, s.y, not_x, not_y, M.ARRIVE)) and not tower_near(s.x, s.y, M.TOWER_AVOID)
-                    and (best == nil or s.t > best.t) then
+                    and (best == nil or s.t > best.t) and ok(s.x, s.y) then
                 best = s
             end
         end
@@ -720,7 +724,8 @@ local function enemy_place(view, mem, player, not_x, not_y)
         end
     end
     for _, e in ipairs(view.enemies or {}) do
-        if e.player == player and e.town_x >= 0 and not near(e.town_x, e.town_y, not_x, not_y, M.ARRIVE) then
+        if e.player == player and e.town_x >= 0 and not near(e.town_x, e.town_y, not_x, not_y, M.ARRIVE)
+                and ok(e.town_x, e.town_y) then
             return e.town_x, e.town_y
         end
     end
@@ -912,7 +917,7 @@ local function group_step(g, view, mem)
     if g.x < 0 or near(cx, cy, g.x, g.y, M.ARRIVE) then
         local nx, ny = nil, nil
         if g.task == "raid" then
-            nx, ny = enemy_place(view, mem, g.target, g.x, g.y)
+            nx, ny = enemy_place(view, mem, g.target, g.x, g.y, g.same_land and {cx, cy} or nil)
         else
             -- the target's nearest unit seen within 30 tiles, else its town as last seen
             local f = {enemy = true, near = {cx, cy, 30}}
