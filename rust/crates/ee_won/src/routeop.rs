@@ -1124,7 +1124,8 @@ impl RouteOp {
 // ---- the C ABI
 
 /// A routing op, as the C++ `RoutingOp` holds it.
-pub struct EeWonRouteOp(pub RouteOp);
+/// The second field is the C++ `RoutingConnection*` it was made on (borrowed; 0 for none).
+pub struct EeWonRouteOp(pub RouteOp, pub usize);
 
 /// A record copied out (`ee_won_routeop_records`): the fields of its kind are set; texts are UTF-16 units and the
 /// pointers are valid only during the sink's call.
@@ -1239,7 +1240,7 @@ unsafe fn op_mut<'a>(op: *mut EeWonRouteOp) -> &'a mut RouteOp {
 /// A new op of a type (`RoutingOpType`) with its constructor's members.
 #[no_mangle]
 pub extern "C" fn ee_won_routeop_new(ty: i32) -> *mut EeWonRouteOp {
-    Box::into_raw(Box::new(EeWonRouteOp(RouteOp::new(ty))))
+    Box::into_raw(Box::new(EeWonRouteOp(RouteOp::new(ty), 0)))
 }
 
 /// Frees an op.

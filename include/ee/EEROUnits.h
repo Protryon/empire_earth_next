@@ -17,23 +17,6 @@ public:
     static void LoadMedia();                // 0x116a97 (0x13fccb calls it; asserts) (provisional name)
     static void ReleaseMedia();
 
-private:
-    // the passes (thiscall; Virtual08 passes `this`; provisional names)
-    void DrawSelectionRings();              // 0x114526 the selection rings (class flag bit 0)
-    void DrawRings();                       // 0x11461b the rings of mUnits0
-    void DrawBar(EERenderUnit* inUnit, const GEColor& inColor, const GEColor& inBackColor, float inFraction,
-                  long inRow);              // 0x1147f8 one bar of a unit
-    void DrawPlacement(EERenderUnitRecord& inRecord);  // 0x114cbc a placed building's model and footprint grid
-    void DrawSelection();                   // 0x115488 the selection models and rings
-    void DrawObjectModel(GETransformation& ioTransformation, EERenderShadow* inObject);  // 0x115674 an object's model
-    void DrawObjectBars(EERenderShadow* inObject);  // 0x1157b6 an object's bars
-    void DrawObjectModels(EERenderShadowMap& inObjects);  // 0x115a50 the objects' models
-    void DrawObjectSelection();             // 0x115b63 the objects' selection models
-    long DrawUnitBars(EERenderUnit* inUnit);  // 0x115c3a a unit's bars (returns their height)
-    void DrawUnitModel(EERenderUnit* inUnit);  // 0x115cc7 a unit's model
-    void DrawUnitModels(EERenderUnitMap& inUnits);  // 0x116299 the units' models
-    void DrawBars();                        // 0x116500 the bars
-    void DrawLabels(EERenderUnit* inUnits, unsigned long inCount);  // 0x116692 the units' labels
 };
 
 

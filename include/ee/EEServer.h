@@ -70,6 +70,8 @@ public:
     void SendFullPlayerInformation(unsigned char inPlayer, EEGameOptionsPlayer& inOptions);  // 0xcd144 (RefuseClient)
     void SendPingStat(unsigned char inPlayer, float inPing);  // 0xcd1dc (ProcessSystemMessage: a ping statistic)
 
+    friend class EESessionAccess;   // EEServer.cpp's session host: the engine's protected sends
+
     // Layout from the ctor 0xca90f (the locks are named by its asserts). Other names are provisional.
     TSCriticalSection* mAttemptToRemovePlayerLock;   // +0x208
     TSCriticalSection* mSearchForSlotLock;  // +0x20c
@@ -102,6 +104,12 @@ public:
 class NEProtocol;
 // 0x296c89 (User Interface Thread; provisional name): the local address to publish (the protocol's, or WON's)
 UWideString& EEGetLocalAddress(NEProtocol* inProtocol, unsigned long inAdapter);
+
+// New (game messages round 6): the server's (inServer) or client's member inWhat (EE_NETMSG_SESS_DO_*: ee_netmsg
+// session.rs) over EEServer.cpp's host; a join request's player and version for EE_NETMSG_SESS_DO_CONNECTION_REQUEST
+long long EESession(NESynchronousCommunications* inComms, bool inServer, uint32_t inWhat, long long a = 0, long long b = 0,
+                    long long c = 0, long long d = 0, const EEGameOptionsPlayer* inPlayer = NULL,
+                    const UWideString* inVersion = NULL);
 
 // 0x4bb878 (.data; EEServer.cpp's; also read by the lobby): the default colour of each player slot
 // {0, 1, 4, 9, 2, 15, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15} (provisional name)

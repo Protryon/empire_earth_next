@@ -7,7 +7,7 @@
 
 use std::ffi::c_void;
 
-use ee_ge::types::{Ge3DPoint, GeTransformation};
+use ee_ge::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeTransformation};
 
 use crate::effects::EeGfxColor;
 use crate::lighting::EeGfxLighting;
@@ -253,6 +253,77 @@ pub struct EeGfxRaster {
     /// a `GELine` from (`x0`, `y0`) to (`x1`, `y1`) on the screen, its opacity `opacity0` to `opacity1`
     /// (`SetOpacityPerVertex`), drawn (`Draw(&line, 1, screen)`); the draw's result
     pub screen_line: extern "C" fn(x0: f32, y0: f32, x1: f32, y1: f32, opacity0: f32, opacity1: f32) -> i32,
+
+    /// `GetAlphaTesting`
+    pub get_alpha_testing: extern "C" fn() -> u32,
+    /// the main viewport's rear clipping distance set to `distance` (`gU4E8F08.SetRearClippingDistance`; not set on the
+    /// rasterizer); the old one
+    pub rear_clipping: extern "C" fn(distance: f32) -> f32,
+    /// `DrawSky(model, screen, 1.0f, sorted)`
+    pub draw_sky: extern "C" fn(model: EeGfxModel, sorted: bool) -> i32,
+    /// the screen's `Get32BitTextureSupport`
+    pub texture_32bit: extern "C" fn() -> bool,
+    /// `GetCanModulateTextureAlpha`
+    pub can_modulate_alpha: extern "C" fn() -> bool,
+    /// `SetAmbientIntensity(value)`
+    pub set_ambient_intensity: extern "C" fn(value: f32),
+    /// `GetFogAttributes`
+    pub get_fog_attributes: extern "C" fn() -> EeGfxFogAttributes,
+    /// `SetFogType`, `SetFogColor`, `SetFogRange`
+    pub set_fog_type: extern "C" fn(kind: u32),
+    pub set_fog_color: extern "C" fn(color: EeGfxColor),
+    pub set_fog_range: extern "C" fn(start: f32, end: f32),
+    /// a unit model's frame textures (`EEROUnits::DrawUnitModel`, 0x515cc7): each material past the first takes
+    /// `texture`'s frame by its texture index (frame 0 past the count) and then every sub-model's materials theirs
+    /// (within the count); nothing for a null texture
+    pub frame_textures: extern "C" fn(model: EeGfxModel, texture: EeGfxModel),
+    /// a graphic object's (`EEGraphicObject*`) `SetGroupColor(color, part)`
+    pub group_color: extern "C" fn(object: EeGfxModel, color: EeGfxColor, part: u32),
+    /// sub-model 0's post-model transform placed at its internal transform's position times `-scale` (a gate's side);
+    /// that transform
+    pub sub_model_offset: extern "C" fn(model: EeGfxModel, scale: f32) -> GeTransformation,
+    /// the bar rhombus `which` (0 the fill, 1 its back): its rectangle (null: kept) and four vertex colours
+    /// (`SetColorPerVertex`; null: kept)
+    pub bar_set: extern "C" fn(which: u32, rect: *const GeRectangle, colors: *const EeGfxColor),
+    /// the bar rhombus `which` drawn (`Draw(rhombus, screen)`)
+    pub bar_draw: extern "C" fn(which: u32) -> i32,
+    /// `count` (at most 64) screen lines in the line texture from u `start_u` to `end_u`, drawn as one batch
+    pub screen_lines: extern "C" fn(lines: *const EeGfxScreenLine, count: u32, start_u: f32, end_u: f32) -> i32,
+    /// a unit's label (`EEROUnits::DrawLabels`, 0x516692): a transparent centred `GEText` in the labels' font (`font`:
+    /// 0 the default, 1 Tahoma 12, 2 Tahoma 16) and `color`, its text the NUL-terminated UTF-8 `text`, at (`x`, `y`),
+    /// drawn clipped by the targets `label_targets` gives for its height (none under the free camera): the main game
+    /// form's `view` and `strip`, or the scenario editor's `view`
+    pub label: extern "C" fn(
+        text: *const u8,
+        x: f32,
+        y: f32,
+        color: EeGfxColor,
+        font: u32,
+        view: *const GeRectangle,
+        strip: *const GeRectangle,
+        bottom: f32,
+    ),
+    /// a texture's `Dereference` (`GETexture*`)
+    pub texture_dereference: extern "C" fn(texture: EeGfxModel),
+}
+
+/// The rasterizer's fog (`GERFogAttributes`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxFogAttributes {
+    pub kind: u32,
+    pub color: EeGfxColor,
+    pub start: f32,
+    pub end: f32,
+}
+
+/// One screen line of a batch (`screen_lines`): its colour and ends.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxScreenLine {
+    pub color: EeGfxColor,
+    pub start: Ge2DPoint,
+    pub end: Ge2DPoint,
 }
 
 /// The rasterizer as the draws call it.
@@ -356,6 +427,37 @@ pub trait Raster {
     fn texture_wrap(&mut self, texture: EeGfxModel);
     fn load_texture(&mut self, name: &str, load: &EeGfxTextureLoad) -> EeGfxModel;
     fn screen_line(&mut self, from: (f32, f32), to: (f32, f32), opacity0: f32, opacity1: f32) -> i32;
+
+    fn get_alpha_testing(&mut self) -> u32;
+    fn rear_clipping(&mut self, distance: f32) -> f32;
+    fn draw_sky(&mut self, model: EeGfxModel, sorted: bool) -> i32;
+    fn texture_32bit(&mut self) -> bool;
+    fn can_modulate_alpha(&mut self) -> bool;
+    fn set_ambient_intensity(&mut self, value: f32);
+    fn get_fog_attributes(&mut self) -> EeGfxFogAttributes;
+    fn set_fog_type(&mut self, kind: u32);
+    fn set_fog_color(&mut self, color: EeGfxColor);
+    fn set_fog_range(&mut self, start: f32, end: f32);
+    fn frame_textures(&mut self, model: EeGfxModel, texture: EeGfxModel);
+    fn group_color(&mut self, object: EeGfxModel, color: EeGfxColor, part: u32);
+    fn sub_model_offset(&mut self, model: EeGfxModel, scale: f32) -> GeTransformation;
+    fn bar_set(&mut self, which: u32, rect: Option<&GeRectangle>, colors: Option<&[EeGfxColor; 4]>);
+    fn bar_draw(&mut self, which: u32) -> i32;
+    fn screen_lines(&mut self, lines: &[EeGfxScreenLine], start_u: f32, end_u: f32) -> i32;
+    /// `text` without a NUL
+    #[allow(clippy::too_many_arguments)]
+    fn label(
+        &mut self,
+        text: &[u8],
+        x: f32,
+        y: f32,
+        color: EeGfxColor,
+        font: u32,
+        view: &GeRectangle,
+        strip: &GeRectangle,
+        bottom: f32,
+    );
+    fn texture_dereference(&mut self, texture: EeGfxModel);
 }
 
 impl Raster for &EeGfxRaster {
@@ -597,6 +699,76 @@ impl Raster for &EeGfxRaster {
     fn screen_line(&mut self, from: (f32, f32), to: (f32, f32), opacity0: f32, opacity1: f32) -> i32 {
         (self.screen_line)(from.0, from.1, to.0, to.1, opacity0, opacity1)
     }
+
+    fn get_alpha_testing(&mut self) -> u32 {
+        (self.get_alpha_testing)()
+    }
+    fn rear_clipping(&mut self, distance: f32) -> f32 {
+        (self.rear_clipping)(distance)
+    }
+    fn draw_sky(&mut self, model: EeGfxModel, sorted: bool) -> i32 {
+        (self.draw_sky)(model, sorted)
+    }
+    fn texture_32bit(&mut self) -> bool {
+        (self.texture_32bit)()
+    }
+    fn can_modulate_alpha(&mut self) -> bool {
+        (self.can_modulate_alpha)()
+    }
+    fn set_ambient_intensity(&mut self, value: f32) {
+        (self.set_ambient_intensity)(value)
+    }
+    fn get_fog_attributes(&mut self) -> EeGfxFogAttributes {
+        (self.get_fog_attributes)()
+    }
+    fn set_fog_type(&mut self, kind: u32) {
+        (self.set_fog_type)(kind)
+    }
+    fn set_fog_color(&mut self, color: EeGfxColor) {
+        (self.set_fog_color)(color)
+    }
+    fn set_fog_range(&mut self, start: f32, end: f32) {
+        (self.set_fog_range)(start, end)
+    }
+    fn frame_textures(&mut self, model: EeGfxModel, texture: EeGfxModel) {
+        (self.frame_textures)(model, texture)
+    }
+    fn group_color(&mut self, object: EeGfxModel, color: EeGfxColor, part: u32) {
+        (self.group_color)(object, color, part)
+    }
+    fn sub_model_offset(&mut self, model: EeGfxModel, scale: f32) -> GeTransformation {
+        (self.sub_model_offset)(model, scale)
+    }
+    fn bar_set(&mut self, which: u32, rect: Option<&GeRectangle>, colors: Option<&[EeGfxColor; 4]>) {
+        let r = rect.map_or(std::ptr::null(), |r| r as *const GeRectangle);
+        let c = colors.map_or(std::ptr::null(), |c| c.as_ptr());
+        (self.bar_set)(which, r, c)
+    }
+    fn bar_draw(&mut self, which: u32) -> i32 {
+        (self.bar_draw)(which)
+    }
+    fn screen_lines(&mut self, lines: &[EeGfxScreenLine], start_u: f32, end_u: f32) -> i32 {
+        (self.screen_lines)(lines.as_ptr(), lines.len() as u32, start_u, end_u)
+    }
+    fn label(
+        &mut self,
+        text: &[u8],
+        x: f32,
+        y: f32,
+        color: EeGfxColor,
+        font: u32,
+        view: &GeRectangle,
+        strip: &GeRectangle,
+        bottom: f32,
+    ) {
+        let mut bytes = Vec::with_capacity(text.len() + 1);
+        bytes.extend_from_slice(text);
+        bytes.push(0);
+        (self.label)(bytes.as_ptr(), x, y, color, font, view, strip, bottom)
+    }
+    fn texture_dereference(&mut self, texture: EeGfxModel) {
+        (self.texture_dereference)(texture)
+    }
 }
 
 /// A rasterizer that logs every call (the tests').
@@ -615,6 +787,13 @@ pub struct LogRaster {
     pub alpha_ref: f32,
     /// the models made (`create_model`, `create_sub_model`): their handles are 1-based indices
     pub models: Vec<LogModel>,
+    /// what `get_alpha_testing`, `texture_32bit`, `can_modulate_alpha`, `get_fog_attributes` answer
+    pub alpha_testing: u32,
+    pub texture_32bit: bool,
+    pub can_modulate: bool,
+    pub fog_attributes: EeGfxFogAttributes,
+    /// the rear clipping distance `rear_clipping` sets
+    pub rear: f32,
 }
 
 /// A model the log rasterizer made: its vertex array 0's points, normals and opacities, its triangles, sub-models.
@@ -938,5 +1117,81 @@ impl Raster for LogRaster {
     fn screen_line(&mut self, from: (f32, f32), to: (f32, f32), opacity0: f32, opacity1: f32) -> i32 {
         self.calls.push(format!("line {} {} {} {} {opacity0} {opacity1}", from.0, from.1, to.0, to.1));
         0
+    }
+
+    fn get_alpha_testing(&mut self) -> u32 {
+        self.alpha_testing
+    }
+    fn rear_clipping(&mut self, distance: f32) -> f32 {
+        self.calls.push(format!("rear {distance}"));
+        std::mem::replace(&mut self.rear, distance)
+    }
+    fn draw_sky(&mut self, model: EeGfxModel, sorted: bool) -> i32 {
+        self.calls.push(format!("sky {} {sorted}", model as usize));
+        0
+    }
+    fn texture_32bit(&mut self) -> bool {
+        self.texture_32bit
+    }
+    fn can_modulate_alpha(&mut self) -> bool {
+        self.can_modulate
+    }
+    fn set_ambient_intensity(&mut self, value: f32) {
+        self.calls.push(format!("ambient intensity {value}"));
+    }
+    fn get_fog_attributes(&mut self) -> EeGfxFogAttributes {
+        self.fog_attributes
+    }
+    fn set_fog_type(&mut self, kind: u32) {
+        self.calls.push(format!("fog type {kind}"));
+    }
+    fn set_fog_color(&mut self, c: EeGfxColor) {
+        self.calls.push(format!("fog color {} {} {}", c.red, c.green, c.blue));
+    }
+    fn set_fog_range(&mut self, start: f32, end: f32) {
+        self.calls.push(format!("fog range {start} {end}"));
+    }
+    fn frame_textures(&mut self, model: EeGfxModel, texture: EeGfxModel) {
+        self.calls.push(format!("frame textures {} {}", model as usize, texture as usize));
+    }
+    fn group_color(&mut self, object: EeGfxModel, c: EeGfxColor, part: u32) {
+        self.calls.push(format!("group {} {} {} {} {part}", object as usize, c.red, c.green, c.blue));
+    }
+    fn sub_model_offset(&mut self, model: EeGfxModel, scale: f32) -> GeTransformation {
+        self.calls.push(format!("offset {} {scale}", model as usize));
+        GeTransformation::IDENTITY
+    }
+    fn bar_set(&mut self, which: u32, rect: Option<&GeRectangle>, colors: Option<&[EeGfxColor; 4]>) {
+        if let Some(r) = rect {
+            self.calls.push(format!("bar {which} rect {} {} {} {}", r.left, r.top, r.right, r.bottom));
+        }
+        if let Some(c) = colors {
+            self.calls.push(format!("bar {which} colors {} {} {}", c[0].green, c[1].green, c[2].green));
+        }
+    }
+    fn bar_draw(&mut self, which: u32) -> i32 {
+        self.calls.push(format!("bar {which} draw"));
+        0
+    }
+    fn screen_lines(&mut self, lines: &[EeGfxScreenLine], start_u: f32, end_u: f32) -> i32 {
+        self.calls.push(format!("lines {} {start_u} {end_u}", lines.len()));
+        0
+    }
+    fn label(
+        &mut self,
+        text: &[u8],
+        x: f32,
+        y: f32,
+        c: EeGfxColor,
+        font: u32,
+        _view: &GeRectangle,
+        _strip: &GeRectangle,
+        bottom: f32,
+    ) {
+        let t = String::from_utf8_lossy(text);
+        self.calls.push(format!("label {t} {x} {y} {} {font} {bottom}", c.red));
+    }
+    fn texture_dereference(&mut self, texture: EeGfxModel) {
+        self.calls.push(format!("texture dereference {}", texture as usize));
     }
 }

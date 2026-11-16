@@ -6,7 +6,7 @@ namespace WONAPI {
 // The explicit constructor (0x00795720) calls the base and installs the vtable 0x00852710.
 class TabCtrlConfig : public ContainerConfig {
 public:
-    TabCtrlConfig(); // at 0x00795720; leaves +0x98 untouched
+    TabCtrlConfig() {} // at 0x00795720; leaves +0x98 untouched
     static ComponentConfig* CfgFactory(); // at 0x0079add0
     static Component* CompFactory(); // at 0x0079ad70
     virtual bool Virtual24(const std::string&); //395740

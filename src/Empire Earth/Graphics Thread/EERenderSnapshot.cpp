@@ -80,8 +80,8 @@ void EETakeTerrainSnapshot()
     }
     gRenderSnapshot.mBrushHighlightShown = false;
     if (gUIManager->mScenarioEditorForm != NULL) {
-        const GERectangle& theRectangle = gUIManager->mScenarioEditorForm->mBrushGroup->mRectangle;
-        if (gUIManager->mScenarioEditorForm->mBrushGroup->mIsHighlightShown) {
+        const GERectangle& theRectangle = gUIManager->mScenarioEditorForm->GetBrushGroup()->mRectangle;
+        if (gUIManager->mScenarioEditorForm->GetBrushGroup()->mIsHighlightShown) {
             gRenderSnapshot.mBrushHighlightShown = true;
             gRenderSnapshot.mBrushTiles.mLeft = UMFloor(theRectangle.GetLeft());
             gRenderSnapshot.mBrushTiles.mTop = UMFloor(theRectangle.GetTop());

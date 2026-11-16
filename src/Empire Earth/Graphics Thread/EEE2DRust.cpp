@@ -175,7 +175,7 @@ struct Ask2D {
     static float TerrainZ(void*, float inX, float inY) { return gWorld.GetMap()->mTerrainMesh.GetMeshZ(inX, inY); }
     static void* CommandTexture(void*, uint32_t inIndex)
     {
-        return inIndex == 0 ? sTexture4E0 : inIndex == 1 ? sTexture4E4 : sTexture4E8;
+        return ee_gfx_ro_units_command_texture(inIndex);   // ee_gfx ro_units.rs (0 unit, 1 path, 2 click)
     }
     // a random one of the unit's tag points of inKind (the unit itself without any) (EEE2DShockwave::SetUp, 0xe6259)
     static EeGe3DPoint SpawnPoint(void* inAsk, uint32_t inKind)

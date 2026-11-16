@@ -44,31 +44,6 @@ bool BrowserComponentConfig::GetPredefinedComponent(const std::string& name,Comp
     else return ContainerConfig::GetPredefinedComponent(name,config,component);
     return true;
 }
-// Handles the TRANSPARENT, SCROLLER and FONTSIZE instructions; throws on an unknown font size name
-// In the original TRANSPARENT takes no boolean argument and there is no BACKGROUND instruction
-bool BrowserComponentConfig::Virtual24(const std::string& instruction)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
-    if(aKeyIdx==0)
-        this->mBrowserComponent->SetTransparent(true);
-    else if(aKeyIdx==1)
-        this->mBrowserComponent->SetScroller(SafeConfigGetComponent<Scroller*>(this->ReadComponent(),"Scroller"));
-    else if(aKeyIdx==2)
-    {
-        HTMLFontSize size;
-        GUIString value=this->ReadString(false);
-        const int aNameIdx_value=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_BROWSERCOMPONENTCONFIG_VIRTUAL24_VALUE,value.mData->mText,value.mData->mLength,sizeof(wchar_t));
-        if(aNameIdx_value==0) size=HTMLFontSize_Smallest;
-        else if(aNameIdx_value==1) size=HTMLFontSize_Small;
-        else if(aNameIdx_value==2) size=HTMLFontSize_Medium;
-        else if(aNameIdx_value==3) size=HTMLFontSize_Large;
-        else if(aNameIdx_value==4) size=HTMLFontSize_Largest;
-        else throw ConfigObjectException("Invalid font size: "+std::string(value));
-        this->mBrowserComponent->SetFontSize(size);
-    }
-    else return ContainerConfig::Virtual24(instruction);
-    return true;
-}
 // Registers the BrowserComponent type with its config and component factories
 void BrowserComponentConfig::Init(ResourceConfigTable* table)
 {

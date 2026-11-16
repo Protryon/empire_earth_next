@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "ee_data.h"
 
 /// `kAreaEffectHealing` (ee/EEAreaEffectKindIDs.h).
 constexpr static const long EE_AREA_EFFECT_HEALING = 1;
@@ -256,6 +257,143 @@ constexpr static const uint32_t EE_CALAMITY_EFFECT1 = 8;
 
 /// The class has its second graphic effect.
 constexpr static const uint32_t EE_CALAMITY_EFFECT2 = 16;
+
+/// The host's operations (`EeTechCivCall::op`): whether unit set `a` exists
+constexpr static const uint32_t EE_TECH_CIV_OP_SET_EXISTS = 1;
+
+/// `EEUnitClassCount()`
+constexpr static const uint32_t EE_TECH_CIV_OP_CLASS_COUNT = 2;
+
+/// `a` the set, `b` the unit type: whether the set holds it
+constexpr static const uint32_t EE_TECH_CIV_OP_SET_CONTAINS = 3;
+
+/// the player's upgrade of unit type `a` and its class: `value` 1 with `stats` filled, 0 without a class or upgrade
+constexpr static const uint32_t EE_TECH_CIV_OP_CLASS = 4;
+
+/// `gWorld.GetGameVariant()->GetFactor(a)` into `real`
+constexpr static const uint32_t EE_TECH_CIV_OP_VARIANT_FACTOR = 5;
+
+/// `EEUpgradeHitPoints(the player's upgrade of a, a, real, the player)`
+constexpr static const uint32_t EE_TECH_CIV_OP_HIT_POINTS = 6;
+
+/// the player's units of type `a`: `SightOffHere` (`b` 0) or `SightOnHere` (`b` 1)
+constexpr static const uint32_t EE_TECH_CIV_OP_SIGHT = 7;
+
+/// a player field (`a`: [`EE_TECH_CIV_FIELD_CONVERSION`] ..) into `real` / `value`
+constexpr static const uint32_t EE_TECH_CIV_OP_GET_FIELD = 8;
+
+/// a player field set from `real` / `b`
+constexpr static const uint32_t EE_TECH_CIV_OP_SET_FIELD = 9;
+
+/// `GetPopulationLimit(0)` into `value`
+constexpr static const uint32_t EE_TECH_CIV_OP_POPULATION_LIMIT = 10;
+
+/// `SuggestRecomputeAllAreaEffects()`, then `mSelectedGroup->ShowSelectionAreas()`
+constexpr static const uint32_t EE_TECH_CIV_OP_AREA_EFFECTS = 11;
+
+/// `GetTechTree()->Research(a, NULL)`
+constexpr static const uint32_t EE_TECH_CIV_OP_RESEARCH = 12;
+
+/// node `a`: `value` -1 without one, else whether it is researched
+constexpr static const uint32_t EE_TECH_CIV_OP_NODE_RESEARCHED = 13;
+
+/// node `a`'s `ResearchNode(NULL)` (when there is one)
+constexpr static const uint32_t EE_TECH_CIV_OP_RESEARCH_NODE = 14;
+
+/// `EESoundObject::Get(a)`: its media loaded and added to the player's
+constexpr static const uint32_t EE_TECH_CIV_OP_LOAD_SOUND = 15;
+
+/// `EEGraphicEffect::Get(a)`: likewise
+constexpr static const uint32_t EE_TECH_CIV_OP_LOAD_EFFECT = 16;
+
+/// `PulseSight(false, real, a)`
+constexpr static const uint32_t EE_TECH_CIV_OP_PULSE_SIGHT = 17;
+
+/// `mMiningLimit = a`
+constexpr static const uint32_t EE_TECH_CIV_OP_MINING_LIMIT = 18;
+
+/// `EnableCamouflagePower()`
+constexpr static const uint32_t EE_TECH_CIV_OP_CAMOUFLAGE = 19;
+
+/// node `a` allowed (`b` 1) or disallowed and obsolete (`b` 0)
+constexpr static const uint32_t EE_TECH_CIV_OP_ALLOW_TECH = 20;
+
+/// the stat `b` ([`EE_TECH_CIV_STAT_ATTACK`] ..) of the player's upgrade of unit type `a` written from `stats`
+constexpr static const uint32_t EE_TECH_CIV_OP_PUT = 21;
+
+/// The player fields of [`EE_TECH_CIV_OP_GET_FIELD`]: `mConversionFactor`, `mHighGroundBonus` (floats),
+/// `mShareBonus` (a long).
+constexpr static const int32_t EE_TECH_CIV_FIELD_CONVERSION = 0;
+
+constexpr static const int32_t EE_TECH_CIV_FIELD_HIGH_GROUND = 1;
+
+constexpr static const int32_t EE_TECH_CIV_FIELD_SHARE_BONUS = 2;
+
+/// The stats [`EE_TECH_CIV_OP_PUT`] writes: the upgrade's `mAttack`, `mReloadTime`, `mArmor` (all six), the range
+/// (`SetRange`), `mLineOfSight`, the speed (`SetMaxVelocity`), `mFlightTime`, `mAreaEffect`, `mGatherTimes` (all
+/// seven), `mBuildTimeScale`, `mRepairRate`, `mAreaEffectScale`, `mCostScale`.
+constexpr static const int64_t EE_TECH_CIV_STAT_ATTACK = 0;
+
+constexpr static const int64_t EE_TECH_CIV_STAT_RELOAD_TIME = 1;
+
+constexpr static const int64_t EE_TECH_CIV_STAT_ARMOR = 2;
+
+constexpr static const int64_t EE_TECH_CIV_STAT_RANGE = 3;
+
+constexpr static const int64_t EE_TECH_CIV_STAT_LINE_OF_SIGHT = 4;
+
+constexpr static const int64_t EE_TECH_CIV_STAT_SPEED = 5;
+
+constexpr static const int64_t EE_TECH_CIV_STAT_FLIGHT_TIME = 6;
+
+constexpr static const int64_t EE_TECH_CIV_STAT_AREA_EFFECT = 7;
+
+constexpr static const int64_t EE_TECH_CIV_STAT_GATHER_TIMES = 8;
+
+constexpr static const int64_t EE_TECH_CIV_STAT_BUILD_TIME = 9;
+
+constexpr static const int64_t EE_TECH_CIV_STAT_REPAIR_RATE = 10;
+
+constexpr static const int64_t EE_TECH_CIV_STAT_AREA_EFFECT_SCALE = 11;
+
+constexpr static const int64_t EE_TECH_CIV_STAT_COST = 12;
+
+/// `EEApplyCivilizationFile`'s steps: `EELoadCivilization` from the game's (`a` 0) or the user's (`a` 1)
+/// directory into the host's name and upgrades (`value` its result)
+constexpr static const uint32_t EE_TECH_CIVF_OP_LOAD = 1;
+
+/// the host's name (`text`, `characters`) and upgrades (`upgrades`, `count`) as they are now
+constexpr static const uint32_t EE_TECH_CIVF_OP_STATE = 2;
+
+/// the host's name from string `a` (`gResource->GetString`)
+constexpr static const uint32_t EE_TECH_CIVF_OP_NAME_STRING = 3;
+
+/// the player's civilization emptied: no upgrades, every point, then none, the host's name
+constexpr static const uint32_t EE_TECH_CIVF_OP_CIV_RESET = 4;
+
+/// upgrade `a` bought for free: its cost added to the points (`CanAfford`, `SetPointsAndMax`), then `Buy`
+constexpr static const uint32_t EE_TECH_CIVF_OP_CIV_BUY_FREE = 5;
+
+/// `SetPoints(0)`
+constexpr static const uint32_t EE_TECH_CIVF_OP_CIV_DONE = 6;
+
+/// `EECBRequestUpgrades`' steps: `gWorld.mGameOptions.CanBuyCivilization()`
+constexpr static const uint32_t EE_TECH_CIVF_OP_CAN_BUY = 7;
+
+/// the player's `mCivUpgradesPurchased`
+constexpr static const uint32_t EE_TECH_CIVF_OP_PURCHASED = 8;
+
+/// any civilization is valid: `gAllowCustomCivs`, a scenario game, the scenario editor
+constexpr static const uint32_t EE_TECH_CIVF_OP_ANY_CIV = 9;
+
+/// `mCivilization.CanAffordAll(the request's upgrades)`
+constexpr static const uint32_t EE_TECH_CIVF_OP_CAN_AFFORD_ALL = 10;
+
+/// the request granted (`EEMCivUpgradesPurchased` with name id `a`: sent in multiplayer, else executed)
+constexpr static const uint32_t EE_TECH_CIVF_OP_GRANT = 11;
+
+/// the request refused: the chat line naming the civilization, then the random draw
+constexpr static const uint32_t EE_TECH_CIVF_OP_REFUSE = 12;
 
 /// [`EeContagionParams::flags`]: the functor skips the spread (`SkipsSpread()`: it updates its units instead).
 constexpr static const uint32_t EE_CONTAGION_SKIPS_SPREAD = 1;
@@ -1275,6 +1413,147 @@ struct EeCalamityFields {
   bool mHasTargetUnit;
 };
 
+/// One level of a category: its value and bonus (`EECivilizationUpgradeValue`).
+struct EeTechCivLevel {
+  float mValue;
+  float mBonus;
+};
+
+/// A category row of dbcivilization (`EECivilizationCategoryEntry`, 600 bytes).
+struct EeTechCivCategory {
+  int32_t mDatabaseID;
+  int32_t mIndex;
+  /// the category name (the game never reads it)
+  char mLabel[100];
+  int32_t mNameID;
+  /// the extra cost per pick of the category
+  int32_t mCost;
+  int32_t mUnitSet;
+  EeTechCivLevel mLevels[60];
+};
+
+/// An upgrade id: (category << 16) | level (ee/EECivUpgrade.h).
+using EeTechCivUpgrade = uint32_t;
+
+/// A premade civilization (`EECivilizationEntry`, 120 bytes).
+struct EeTechCivEntry {
+  int32_t mUnusedDatabaseID;
+  int32_t mIndex;
+  /// the civilization's file (NUL-terminated)
+  char mFileName[100];
+  /// the file's checksum: its name's characters, its legacy upgrade ids and their count
+  int32_t mChecksum;
+  int32_t mNameID;
+  int32_t mEraNameID;
+};
+
+/// A civilization power (`EECivPower`, 152 bytes).
+struct EeTechCivPower {
+  char mLabel[100];
+  int32_t mUnusedDatabaseID;
+  int32_t mID;
+  /// the powers' category's level bonus
+  float mBonus;
+  int32_t mUnitSet;
+  int32_t mTechnology;
+  int32_t mMiningLimit;
+  int32_t mChance;
+  int32_t mUnused1;
+  float mAmount;
+  int32_t mUnused2;
+  int32_t mUnused3;
+  int32_t mUnused4;
+  int32_t mUnitType;
+};
+
+/// A class upgrade's stats a level changes (`up_*`; the C++ `long`s as i64) and its class's base values (`class_*`).
+struct EeTechCivStats {
+  float up_attack;
+  int64_t up_reload_time;
+  float up_armor[6];
+  float up_range;
+  float up_line_of_sight;
+  float up_max_velocity;
+  int64_t up_flight_time;
+  float up_area_effect;
+  int64_t up_gather_times[7];
+  float up_build_time_scale;
+  int64_t up_repair_rate;
+  float up_area_effect_scale;
+  float up_cost_scale;
+  int64_t class_attack;
+  int64_t class_reload_time;
+  int64_t class_armor[6];
+  float class_range;
+  float class_line_of_sight;
+  float class_max_velocity;
+  int64_t class_flight_time;
+  float class_area_effect;
+  int64_t class_gather_times[7];
+  int64_t class_repair_rate;
+  float class_area_effect_scale;
+  /// the class's `mCategory` as the C++ `long`
+  int64_t class_category;
+};
+
+/// One host call: `player` the player's index (`gWorld.mPlayers`); `stats` what [`EE_TECH_CIV_OP_PUT`] writes.
+struct EeTechCivCall {
+  uint32_t op;
+  int32_t player;
+  int64_t a;
+  int64_t b;
+  float real;
+  EeTechCivStats stats;
+};
+
+/// The host's answer.
+struct EeTechCivReply {
+  int64_t value;
+  float real;
+  EeTechCivStats stats;
+};
+
+/// The C++ host: a callback.
+struct EeTechCivHost {
+  void *ctx;
+  void (*call)(void *ctx, const EeTechCivCall *call, EeTechCivReply *reply);
+};
+
+/// What [`read_file`] gave, for the C++: the result, the name (when set) and the error (when any) as owned bytes
+/// the C++ frees with [`ee_tech_civ_file_free`], the upgrades.
+struct EeTechCivFileRead {
+  int32_t result;
+  bool has_name;
+  uint8_t *name;
+  size_t name_length;
+  uint8_t *error;
+  size_t error_length;
+  EeTechCivUpgrade *upgrades;
+  size_t count;
+};
+
+/// A host call.
+struct EeTechCivFileCall {
+  uint32_t op;
+  int64_t a;
+};
+
+/// The host's answer: a value, and for [`EE_TECH_CIVF_OP_STATE`] the name and the upgrades (the host's, live until
+/// its next step).
+struct EeTechCivFileReply {
+  int64_t value;
+  const char *text;
+  uint32_t characters;
+  const EeTechCivUpgrade *upgrades;
+  size_t count;
+};
+
+/// The C++ host: a callback.
+struct EeTechCivFileHost {
+  void *ctx;
+  void (*call)(void *ctx, const EeTechCivFileCall *call, EeTechCivFileReply *reply);
+};
+
 /// A functor's numbers (the six classes' members, each under its C++ name; the plague's `mDamageTime` and the area
 /// effects' `mUpdateTime` are `mSpreadTime`, the area effects' unit set `mValue` is `mUnitSet`, the extra damage's
 /// flag `mFlag`). Its effects are C++ members of `EEContagionFunctor`.
@@ -1993,6 +2272,182 @@ long ee_calamity_record_load(EeCalamityFields *fields, EeCalamityIoFfi io);
 /// # Safety
 /// `fields` valid for reads; `io`'s callback valid.
 long ee_calamity_record_save(const EeCalamityFields *fields, EeCalamityIoFfi io);
+
+/// Binds the game's rules ([`bind_rules`]).
+///
+/// # Safety
+/// As [`bind_rules`].
+void ee_tech_civ_bind_rules(const EeDataRules *rules);
+
+/// `EECivilizationManager::Load` over the table's bytes ([`CivTables::load`]).
+///
+/// # Safety
+/// `data` names `size` readable bytes or is null.
+int32_t ee_tech_civ_load(const uint8_t *data, size_t size, int32_t powers_cost);
+
+/// `LoadPremadeCivilizations` over the table's bytes.
+///
+/// # Safety
+/// As [`ee_tech_civ_load`].
+int32_t ee_tech_civ_load_premade(const uint8_t *data, size_t size);
+
+/// `EECivPowersManager::Load` over the table's bytes.
+///
+/// # Safety
+/// As [`ee_tech_civ_load`].
+int32_t ee_tech_civ_load_powers(const uint8_t *data, size_t size);
+
+/// `mCategoryCount`
+uint32_t ee_tech_civ_category_count();
+
+/// `GetCategory`: the record in place, null past the categories (written only by the loads).
+EeTechCivCategory *ee_tech_civ_category(uint32_t category);
+
+/// A category's id (dbcivilization's row id through civbuilder.yaml; empty without one or past the categories)
+/// through `out(ctx, bytes, length)`.
+///
+/// # Safety
+/// `out` is callable with `ctx`.
+void ee_tech_civ_category_id(uint32_t category,
+                             void *ctx,
+                             void (*out)(void *ctx, const uint8_t *bytes, size_t length));
+
+/// `GetExtraCost`
+int32_t ee_tech_civ_extra_cost(EeTechCivUpgrade upgrade);
+
+/// `CountInCategory`: the upgrades of `list` in `upgrade`'s category.
+///
+/// # Safety
+/// `list` names `count` upgrades or is null.
+int32_t ee_tech_civ_count_in_category(EeTechCivUpgrade upgrade,
+                                      const EeTechCivUpgrade *list,
+                                      size_t count);
+
+/// `GetCategoryLevel`: false for an unknown category; the outputs may be null.
+///
+/// # Safety
+/// `value` and `bonus` are writable or null.
+bool ee_tech_civ_category_level(uint32_t category, uint32_t index, float *value, float *bonus);
+
+/// `GetLevelCount`
+uint32_t ee_tech_civ_level_count(uint32_t category);
+
+/// `GetUpgrades`: every upgrade, through `push(ctx, upgrade)` in order.
+///
+/// # Safety
+/// `push` is callable with `ctx`; it must not call back into the civilization tables' loads.
+void ee_tech_civ_upgrades(void *ctx, void (*push)(void *ctx, EeTechCivUpgrade upgrade));
+
+/// `MakePowerUpgrade`
+EeTechCivUpgrade ee_tech_civ_power_upgrade(uint32_t index);
+
+/// `LevelNameID`
+int32_t ee_tech_civ_level_name_id(uint32_t level);
+
+/// `IsPowerLevel`
+bool ee_tech_civ_is_power_level(uint32_t level);
+
+/// `PowerLevel`
+uint32_t ee_tech_civ_power_level(uint32_t power_id);
+
+/// `FromLegacy`
+EeTechCivUpgrade ee_tech_civ_from_legacy(uint32_t legacy);
+
+/// `ToLegacy`
+///
+/// # Safety
+/// `legacy` is writable.
+bool ee_tech_civ_to_legacy(EeTechCivUpgrade upgrade, uint32_t *legacy);
+
+/// `UpgradeKey`: the key's bytes through `out(ctx, bytes, length)`; false without one.
+///
+/// # Safety
+/// `out` is callable with `ctx`.
+bool ee_tech_civ_upgrade_key(EeTechCivUpgrade upgrade, void *ctx, void (*out)(void *ctx,
+                                                                              const uint8_t *bytes,
+                                                                              size_t length));
+
+/// `FindUpgradeKey`
+///
+/// # Safety
+/// `key` names `length` readable bytes or is null; `upgrade` is writable.
+bool ee_tech_civ_find_upgrade_key(const uint8_t *key, size_t length, EeTechCivUpgrade *upgrade);
+
+/// `MatchesPremadeCivilization` ([`CivTables::matches_premade`]): `file` the file's name (C string), `name` the
+/// civilization's name (C string, `characters` its `GetLength()`).
+///
+/// # Safety
+/// The strings are NUL-terminated or null; `upgrades` names `count` upgrades or is null; `name_id` is writable.
+bool ee_tech_civ_matches_premade(const char *file,
+                                 const char *name,
+                                 uint32_t characters,
+                                 const EeTechCivUpgrade *upgrades,
+                                 size_t count,
+                                 int32_t *name_id);
+
+/// The number of premade civilizations (`GetNumCivilizations`).
+uint32_t ee_tech_civ_civilization_count();
+
+/// A premade civilization in place (sorted by index); null past them.
+const EeTechCivEntry *ee_tech_civ_civilization(uint32_t index);
+
+/// The number of eras (`mEraNameIDs`).
+uint32_t ee_tech_civ_era_count();
+
+/// An era's name id (0 past them).
+int32_t ee_tech_civ_era(uint32_t index);
+
+/// The number of power records (`mPowers.size()`).
+uint32_t ee_tech_civ_power_count();
+
+/// `GetPower`: a copy of the record (zero when none) and whether it is the id's.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_tech_civ_power(int32_t id, EeTechCivPower *out);
+
+/// `GetPowerRecord`: the record of a power id in place (the original indexed without a check; null past the
+/// records).
+EeTechCivPower *ee_tech_civ_power_record(int32_t id);
+
+/// `HasPower` over the player's purchased upgrades.
+///
+/// # Safety
+/// `purchased` names `count` upgrades or is null.
+bool ee_tech_civ_has_power(const EeTechCivUpgrade *purchased, size_t count, int32_t id);
+
+/// `ApplyUpgrade` over the C++ host ([`apply_upgrade`]).
+///
+/// # Safety
+/// `host` names a live host whose callback answers every op.
+bool ee_tech_civ_apply_upgrade(EeTechCivHost *host, EeTechCivUpgrade upgrade, int32_t player);
+
+/// `EELoadCivilization`'s bytes ([`read_file`]): `file` the file's name (`<name>.civ`, NUL-terminated).
+///
+/// # Safety
+/// `data` names `size` readable bytes or is null; `file` is NUL-terminated; `out` is writable.
+void ee_tech_civ_read_file(const uint8_t *data,
+                           size_t size,
+                           const char *file,
+                           EeTechCivFileRead *out);
+
+/// Frees what [`ee_tech_civ_read_file`] gave.
+///
+/// # Safety
+/// `read` came from [`ee_tech_civ_read_file`], once.
+void ee_tech_civ_file_free(EeTechCivFileRead *read);
+
+/// `EEApplyCivilizationFile` over the C++ host ([`apply_file`]).
+///
+/// # Safety
+/// `host` names a live host; `file` is NUL-terminated.
+int32_t ee_tech_civ_apply_file(EeTechCivFileHost *host, const char *file);
+
+/// `EECBRequestUpgrades` over the C++ host ([`request_upgrades`]).
+///
+/// # Safety
+/// `host` names a live host.
+bool ee_tech_civ_request_upgrades(EeTechCivFileHost *host);
 
 /// [`init`] into `*out`.
 ///
