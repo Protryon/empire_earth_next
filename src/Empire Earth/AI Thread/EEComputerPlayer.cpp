@@ -68,6 +68,7 @@
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 #include "ee/EECPExperimentTimers.h"
+#include "ee/EECPLegacyLoad.h"
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);
 
@@ -1037,11 +1038,20 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
     // port: the merge of main's stages 5 and 6 (save 0.281): the computer player's block without the C++ managers'
     // timers and intelligence files (0.269, 0.271), the next engine's state block main's version 6; an older save
     // does not load
-    if (theResult == kErrorOK && !EESaveHasLuaOnlyComputers(inMajorVersion, inMinorVersion))
+    // A retail file (to 0.250: the campaigns' scenarios) holds the deleted C++ managers' blocks in the original's layout:
+    // stepped over (ee/EECPLegacyLoad.h), the build manager's town centre tile kept as the placement's. A port save of
+    // 0.251-0.280 holds them with the port's additions and does not load
+    bool theLegacy = inMajorVersion == 0 && inMinorVersion <= kEECPLegacyLastVersion;
+    if (theResult == kErrorOK && !theLegacy && !EESaveHasLuaOnlyComputers(inMajorVersion, inMinorVersion))
         return kErrorFailed;
     if (theResult == kErrorOK)
-        theResult = this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
-    if (theResult == kErrorOK)
+        theResult = theLegacy ? EECPSkipLegacyCombatManager(inFile, inMajorVersion, inMinorVersion)
+                              : this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
+    if (theResult == kErrorOK && theLegacy) {
+        theResult = EECPSkipLegacyCivilizationManager(inFile, inMajorVersion, inMinorVersion, this->mPlacement->mTownCenterTile);
+        if (theResult == kErrorOK)
+            theResult = EECPSkipLegacyExplorationManager(inFile, inMajorVersion, inMinorVersion);
+    } else if (theResult == kErrorOK)
         theResult = this->mPlacement->Load(inFile);   // (stage 6: the managers' block is the town centre tile)
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mLBD4);
