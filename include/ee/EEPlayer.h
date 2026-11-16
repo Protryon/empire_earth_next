@@ -988,7 +988,6 @@ public:
     std::vector<EEHerd*> mHerds;            // +0x7dc
     std::vector<EEUnit*> mStrandedUnits;    // +0x7ec (AddStrandedUnit pushes a referenced unit unless std::find has it)
     std::vector<EEMedia*> mLoadedMedia;     // +0x7fc (AddLoadedMedia pushes the loaded media: push_back 0x16c8e1)
-    std::map<long, long> mWonderTypeCounts;  // +0x80c (node 0x18: an 8-byte value; dtor 0x95e70)
     std::map<long, EETown*> mTownsByID;  // +0x818 (dtor 0x16c938; find 0x16c94c)
     std::vector<UString> mMediaWarnings;    // +0x824 (the ctor's _Buy 0x88ba6 / the dtor's _Tidy 0x665e4 are vector<UString>'s)
     std::vector<EEPlayer*> mSightSharers;   // +0x834 (0x1627b9 push_backs `this`: vector<EEPlayer*>'s push_back 0x44e8f)
@@ -1007,7 +1006,6 @@ public:
     std::vector<long> mConstructionSiteIDs;  // +0x8b8
     std::vector<unsigned long> mLoadedUnitIDs;    // +0x8c8 (HasLoadedUnitID: std::find; element type inferred)
     std::vector<long> mSoundLoadedClasses;  // +0x8d8
-    std::vector<long> mWonderPowers;        // +0x8e8
     UReferenceContainer<EEComplexUnit*>* mWonders;       // +0x8f8 (Reset news one: vtable 0x4429d8)
     std::vector<long> mWonderIDs;           // +0x8fc
     EEPPlayerEventList mEvents;             // +0x918 (RTTI EEPPlayerEventList, ctor 0x16e5b9; provisional name)
@@ -1033,4 +1031,9 @@ public:
     long GetMiningLimit() const { return this->mMiningLimit; }  // inline (EEUGBuildRepair::GatherNearBuilding)
 };
 
+
+// EEWorld::ApplyShareBonus (false) and RemoveShareBonus (true): the share bonus of every player by its wonder powers and
+// stances (ee_units player_units.rs; EEPlayer.cpp). The player lane, round 2: EEPlayer's mWonderTypeCounts and
+// mWonderPowers are its Rust wonder state (mWonderState)
+void EEPlayerShareBonus(bool inRemove);
 #endif

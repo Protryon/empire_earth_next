@@ -1098,6 +1098,42 @@ constexpr static const int32_t EE_UNITS_PLAYER_UPDATE_JIT = 23;
 /// `PayImprovement(gUnitClassTable[i[0]], i[1])` (virtual)
 constexpr static const int32_t EE_UNITS_PLAYER_PAY_IMPROVEMENT = 24;
 
+/// player `i[0]`'s id (`i[0]`), `mSaveVisMap` (`i[1]`) and stance toward player `i[1]` (`i[2]`)
+constexpr static const int32_t EE_UNITS_PLAYER_VIEW = 71;
+
+/// every unit of player `i[0]` (`i[2]` 1: its land buildings only) `SightOnHere()` (`i[1]` 1) or `SightOffHere()`
+constexpr static const int32_t EE_UNITS_PLAYER_UNITS_SIGHT = 72;
+
+/// player `i[0]`'s events `ShowEvents` (`i[1]` 1) or `HideEvents`
+constexpr static const int32_t EE_UNITS_PLAYER_EVENTS_SIGHT = 73;
+
+/// player `i[0]`'s allies: player `i[1]` pushed (`i[2]` 1) or removed (`RemoveAlly`)
+constexpr static const int32_t EE_UNITS_PLAYER_ALLY = 74;
+
+/// `EEUnitStorePlayerTable(this)` (the store's diplomacy table)
+constexpr static const int32_t EE_UNITS_PLAYER_STORE_TABLE = 75;
+
+/// `ResetWonderTimers(i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_RESET_WONDER_TIMERS = 76;
+
+/// `mSightSharers`: player `i[0]` pushed (`i[1]` 1) or erased
+constexpr static const int32_t EE_UNITS_PLAYER_SHARERS = 77;
+
+/// whether the viewed unit (`mViewedUnit`) is player `i[0]`'s
+constexpr static const int32_t EE_UNITS_PLAYER_VIEWED_OF = 78;
+
+/// `UpdateSelection(NULL, true)`
+constexpr static const int32_t EE_UNITS_PLAYER_UNVIEW = 79;
+
+/// whether player `i[0]` is the local player (`gWorld.GetCurrentPlayer()`)
+constexpr static const int32_t EE_UNITS_PLAYER_IS_CURRENT = 80;
+
+/// the local player's `RefreshTerrainVisibility()`
+constexpr static const int32_t EE_UNITS_PLAYER_REFRESH_TERRAIN = 81;
+
+/// `gMiniMap->Redraw()` when there is one
+constexpr static const int32_t EE_UNITS_PLAYER_MINIMAP_REDRAW = 82;
+
 /// the sight at the event's location on for the player (`AddSharedSightAt`), and the local player's mini-map cell and
 /// terrain tile when it sees the player's sight
 constexpr static const int32_t EE_UNITS_EVENTS_SHOW = 1;
@@ -1367,6 +1403,162 @@ constexpr static const int32_t EE_UNITS_PLAYER_TICK_UNIT_SET_HIT_POINTS = 22;
 
 /// `kPlayerHealInterval` (ms)
 constexpr static const float EE_UNITS_PLAYER_HEAL_INTERVAL = 10000.0;
+
+/// unit `i[0]`'s [`EeUnitsPlayerUnit`] into the record at `i[1]`
+constexpr static const int32_t EE_UNITS_PLAYER_UNIT_INFO = 25;
+
+/// the unit after `i[0]` in the player's list (`mFirstUnit` for 0; the result: the unit, 0 at the end)
+constexpr static const int32_t EE_UNITS_PLAYER_NEXT_UNIT = 26;
+
+/// `GetNextComplexUnit(i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_NEXT_COMPLEX = 27;
+
+/// the game's state as bits (`EE_UNITS_PLAYER_STATE_*`)
+constexpr static const int32_t EE_UNITS_PLAYER_STATE = 28;
+
+/// `RTSPlayer::AddUnit(i[0], i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_RTS_ADD_UNIT = 29;
+
+/// `gWorld.ActivateUnit(i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_ACTIVATE = 30;
+
+/// node `i[0]`'s `mIsAvailable` (the member, not the virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_NODE_IS_AVAILABLE = 31;
+
+/// `mTechnologies->SetNodeAvailable(i[0], i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_SET_NODE_AVAILABLE = 32;
+
+/// `mTechnologies->Research(i[0], NULL)`
+constexpr static const int32_t EE_UNITS_PLAYER_RESEARCH = 33;
+
+/// `gWorld.mNumPlayers`
+constexpr static const int32_t EE_UNITS_PLAYER_NUM_PLAYERS = 34;
+
+/// `UnitPlaced(i[0])` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_UNIT_PLACED = 35;
+
+/// `GetTechTree()->Get(kTechCitizen)->Contains(i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_CITIZEN_CONTAINS = 36;
+
+/// technology `i[0]`'s node's `GetIsObsolete()` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_TECH_OBSOLETE = 37;
+
+/// technology `i[0]`'s node's `mIsAllowed = i[1]`
+constexpr static const int32_t EE_UNITS_PLAYER_TECH_ALLOW = 38;
+
+/// `gPhysics->GetUnitSwapKind(i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_SWAP_KIND = 39;
+
+/// `EEAddDeadUnitStatistic(i[0])` (the series, 0: none)
+constexpr static const int32_t EE_UNITS_PLAYER_DEAD_STATISTIC = 40;
+
+/// `mSavedGroups.Reset(i[0], i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_STATS_RESET = 41;
+
+/// unit `i[0]`'s `IsFoundation()` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_FOUNDATION = 42;
+
+/// `AddUnitToTown(i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_ADD_TO_TOWN = 43;
+
+/// `AddUnitToHerd(i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_ADD_TO_HERD = 44;
+
+/// `gCivPowersManager.HasPower(this, i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_CIV_POWER = 45;
+
+/// the exploration power's pulse: `PulseSight(true, its amount, unit i[0]'s id)`
+constexpr static const int32_t EE_UNITS_PLAYER_PULSE_EXPLORATION = 46;
+
+/// `gContinentManager.UpdateWallUnit(i[0], i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_UPDATE_WALL = 47;
+
+/// `EEGameLogUnitLost(this, i[0])` (the game log)
+constexpr static const int32_t EE_UNITS_PLAYER_LOG_LOST = 48;
+
+/// unit `i[0]`'s `GetTechTreeNode()`
+constexpr static const int32_t EE_UNITS_PLAYER_UNIT_NODE = 49;
+
+/// `RemoveUnitFromTown(i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_REMOVE_FROM_TOWN = 50;
+
+/// `RemoveUnitFromHerd(i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_REMOVE_FROM_HERD = 51;
+
+/// `RemoveConstructionSite(i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_REMOVE_SITE = 52;
+
+/// `SuggestRecomputeAllAreaEffects()` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_RECOMPUTE_AREAS = 53;
+
+/// a tree's end: its `mResourceAmount` to 0 (when not 0), then `gContinentManager.RemoveForestTile(i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_REMOVE_FOREST = 54;
+
+/// `EnableCamouflagePower()` (`i[0]` 1) or `DisableCamouflagePower()`
+constexpr static const int32_t EE_UNITS_PLAYER_CAMOUFLAGE = 55;
+
+/// `i[0]->mPlayer->AddWonder(i[0], false)` (the unit's owner)
+constexpr static const int32_t EE_UNITS_PLAYER_OWNER_ADD_WONDER = 56;
+
+/// `gWorld.mPlayers[i[0]]->WonderStarted(i[1])` (virtual) unless that player is this one
+constexpr static const int32_t EE_UNITS_PLAYER_WONDER_STARTED = 57;
+
+/// `ClearFootprint(i[0])`
+constexpr static const int32_t EE_UNITS_PLAYER_CLEAR_FOOTPRINT = 58;
+
+/// complex unit `i[0]`'s build queue entry `i[1]`'s technology
+constexpr static const int32_t EE_UNITS_PLAYER_BUILD_QUEUE_TECH = 59;
+
+/// `mPendingUnits.size()`
+constexpr static const int32_t EE_UNITS_PLAYER_PENDING_COUNT = 60;
+
+/// pending unit `i[0]`'s class's `GetPopulationCost()`
+constexpr static const int32_t EE_UNITS_PLAYER_PENDING_POPULATION = 61;
+
+/// the wonder list: `i[1]` 1 `mWonders->Add(i[0])`, its timer (`mCloaked`) at the game time, statistic 0x10 up;
+/// 0 `mWonders->Remove(i[0])`, its timer 0, statistic 0x10 down
+constexpr static const int32_t EE_UNITS_PLAYER_WONDER_LIST = 62;
+
+/// upgrade slot `i[0]`'s unit type (-1: no upgrade, -2: past the last slot)
+constexpr static const int32_t EE_UNITS_PLAYER_UPGRADE_TYPE = 63;
+
+/// `gUnitSetManager.GetSet(i[0])->Contains(i[1])` (0 without the set)
+constexpr static const int32_t EE_UNITS_PLAYER_SET_CONTAINS = 64;
+
+/// unit type `i[0]`'s game variant factor into `f[0]`, the world's wonder hit point bonus into `f[1]`
+constexpr static const int32_t EE_UNITS_PLAYER_WONDER_FACTORS = 65;
+
+/// `EEUpgradeHitPoints(upgrade slot i[0], its unit type, f[0], this)`
+constexpr static const int32_t EE_UNITS_PLAYER_UPGRADE_HIT_POINTS = 66;
+
+/// `gWorld.RemoveShareBonus()` (`i[0]` 1) or `gWorld.ApplyShareBonus()`
+constexpr static const int32_t EE_UNITS_PLAYER_SHARE_BONUS = 67;
+
+/// player `i[0]`'s (an `EEPlayer*`) `AddSightSharer(this)` (`i[1]` 1) or `RemoveSightSharer(this)`
+constexpr static const int32_t EE_UNITS_PLAYER_SIGHT_SHARER = 68;
+
+/// `mHealedUnitSet = gUnitSetManager.GetSet(i[0])` (`i[1]` 1) or NULL
+constexpr static const int32_t EE_UNITS_PLAYER_HEALED_SET = 69;
+
+/// `mPlayerID`
+constexpr static const int32_t EE_UNITS_PLAYER_ID = 70;
+
+/// `gWorld.mPlayers[i[0]]` (0: none)
+constexpr static const int32_t EE_UNITS_PLAYER_AT = 83;
+
+/// `EE_UNITS_PLAYER_STATE`'s bits: `gLoadingSavedGame`, `gGameScreenActive`, `gWorldClearing`,
+/// `UShutdownInProgress()`, `gWorld.mVictoryEnabled`, `gUserInterface != NULL`
+constexpr static const int64_t EE_UNITS_PLAYER_STATE_LOADING = 1;
+
+constexpr static const int64_t EE_UNITS_PLAYER_STATE_GAME_SCREEN = 2;
+
+constexpr static const int64_t EE_UNITS_PLAYER_STATE_CLEARING = 4;
+
+constexpr static const int64_t EE_UNITS_PLAYER_STATE_SHUTDOWN = 8;
+
+constexpr static const int64_t EE_UNITS_PLAYER_STATE_VICTORY = 16;
+
+constexpr static const int64_t EE_UNITS_PLAYER_STATE_INTERFACE = 32;
 
 /// The player ids (`gWorld.mPlayers`, `mEnemies`: 17 entries).
 constexpr static const size_t EE_UNITS_PLAYER_COUNT = 17;
@@ -2912,6 +3104,10 @@ struct EeUnitsPlayerEvents;
 /// The 31 series (the C++ `mStats`).
 struct EeUnitsPlayerStats;
 
+/// The wonders' Rust state: the count of the player's wonders per unit type (`mWonderTypeCounts`) and the powers
+/// they grant, in the order granted (`mWonderPowers`: a power once per wonder type that grants it).
+struct EeUnitsPlayerWonders;
+
 /// The queued improvements: per unit type the running timer (`first`) and the improvements in order.
 struct EeUnitsQueued;
 
@@ -3935,6 +4131,8 @@ struct EeUnitsPlayerFields {
   bool mJITManufacturing;
   /// the queued improvements (made by the constructors, freed by the destructor)
   EeUnitsQueued *mQueued;
+  /// the wonders' types and powers (player_units.rs; made by the constructors, freed by the destructor)
+  EeUnitsPlayerWonders *mWonderState;
 };
 
 /// What a call needs: the player (the host's context), the host, the records and the statistics.
@@ -4434,6 +4632,42 @@ struct EeUnitsBuildUnit {
   bool land_building;
   /// the complex unit's `mAnimation` (the gathering)
   int32_t animation;
+};
+
+/// One unit as the bookkeeping reads it (`EE_UNITS_PLAYER_UNIT_INFO`): its class's members, its own, and its
+/// complex unit's (zeros without one).
+struct EeUnitsPlayerUnit {
+  /// `GetComplexUnit()` (0: none)
+  uint64_t complex;
+  /// the class (`mUnitClass`): `mUnitType`, `mTechnology`, `GetPopulationCost()`, `mCategory`, `mAIKind`,
+  /// `mWonderBonus`, `mWonderUnitSet`
+  unsigned long unit_type;
+  long technology;
+  long population;
+  unsigned long category;
+  unsigned long ai_kind;
+  long wonder_bonus;
+  long wonder_unit_set;
+  /// the class's `IsLandBuilding()`, `mIsVital`, `mIsInactive`, `mBlocksTile`, `mIsWall`, `mIsTree`
+  bool land_building;
+  bool vital;
+  bool inactive;
+  bool blocks_tile;
+  bool wall;
+  bool tree;
+  /// the unit's `mTileNode != NULL`
+  bool on_tile;
+  /// the complex unit's `mIsBuilt` and `mPreviousPart == NULL`
+  bool built;
+  bool first_part;
+  /// the unit's `mHitPoints`, `mTileX`, `mResourceAmount`
+  long hit_points;
+  long tile_x;
+  long resource_amount;
+  /// the complex unit's container's class category (-1: no container), `mCurrentResearch`, `GetBuildQueueSize()`
+  long container_category;
+  long current_research;
+  long build_queue;
 };
 
 extern "C" {
@@ -5646,6 +5880,17 @@ void ee_units_player_fields_reset(EeUnitsPlayerFields *r,
 /// `queued` is live.
 uint64_t ee_units_queued_digest(const EeUnitsQueued *queued);
 
+/// The diplomacy on player `other` (an `EEPlayer*`): `what` 0 `SetDiplomaticStance(other, stance, map)` (`flag`:
+/// a map), 1 `AddSightSharer(other)`, 2 `RemoveSightSharer(other)`, 3 `SetSharedLOS(flag)`.
+///
+/// # Safety
+/// As player.rs's `with`; the record's wonder state is live.
+void ee_units_player_diplomacy(const EeUnitsPlayerRefs *refs,
+                               uint32_t what,
+                               void *other,
+                               unsigned long stance,
+                               bool flag);
+
 /// A new, empty list.
 EeUnitsPlayerEvents *ee_units_events_new();
 
@@ -5822,6 +6067,46 @@ void ee_units_player_update(void *ctx,
 /// # Safety
 /// `rec` points to the record.
 void ee_units_player_reset(EeUnitsPlayerSaved *rec, uint32_t player_id, uint32_t part);
+
+/// The unit bookkeeping on `unit` (`a`, `b` the flags): `what` 0 `AddUnit(unit, a keep id)`, 1 `UnitPlaced`, 2
+/// `UnitTaken(unit, a swapped)`, 3 `UnitCompleted`, 4 `RecountPopulation`, 5 `RecountHeroesAndTeleporters`, 6
+/// `GetTotalPopulation(a, b)`, 7 `AddWonder(unit, a loading)`, 8 `RemoveWonder`, 9 `AddWonderPower`, 10
+/// `RemoveWonderPower`, 11 `GetNumHeroes(a, b)` (the result: the count asked, else 0).
+///
+/// # Safety
+/// As player.rs's `with`; the record's wonder state is live.
+long ee_units_player_units(const EeUnitsPlayerRefs *refs,
+                           uint32_t what,
+                           void *unit,
+                           bool a,
+                           bool b);
+
+/// `EEWorld::ApplyShareBonus` (`remove` false) and `RemoveShareBonus`: each player from 1 of the `count` in
+/// `players` (by id; a null `fields` for no player) has its `mShareBonus` changed by its balance
+/// ([`share_balance`], [`share_change`]).
+///
+/// # Safety
+/// `players` holds `count` entries whose records (and the wonder states of the present ones) are live.
+void ee_units_player_share_bonus(const EeUnitsPlayerRefs *players,
+                                 uint32_t count,
+                                 bool remove,
+                                 float bonus,
+                                 float bonus2,
+                                 long limit);
+
+/// A new, empty wonder state (the constructors').
+EeUnitsPlayerWonders *ee_units_wonders_new();
+
+/// # Safety
+/// `wonders` came from [`ee_units_wonders_new`] (or is null) and is not used after.
+void ee_units_wonders_free(EeUnitsPlayerWonders *wonders);
+
+/// Whether the player holds wonder power `power` (`std::find` over `mWonderPowers`; SetDiplomaticStance's test).
+///
+/// # Safety
+/// `wonders` is live.
+uint32_t ee_units_wonders_count(const EeUnitsPlayerWonders *wonders,
+                                long power);
 
 /// A player's table: its id and its 17 stances (`enemies` has 17 words).
 ///

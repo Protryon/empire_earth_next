@@ -87,6 +87,8 @@ pub struct EeUnitsPlayerFields {
     pub mJITManufacturing: bool,
     /// the queued improvements (made by the constructors, freed by the destructor)
     pub mQueued: *mut EeUnitsQueued,
+    /// the wonders' types and powers (player_units.rs; made by the constructors, freed by the destructor)
+    pub mWonderState: *mut crate::player_units::EeUnitsPlayerWonders,
 }
 
 impl Default for EeUnitsPlayerFields {
@@ -119,6 +121,7 @@ impl Default for EeUnitsPlayerFields {
             mShiftMode: false,
             mJITManufacturing: false,
             mQueued: std::ptr::null_mut(),
+            mWonderState: std::ptr::null_mut(),
         }
     }
 }
@@ -260,24 +263,25 @@ pub fn trunc_long(v: f32) -> c_long {
 
 /// A node's data (`EE_UNITS_PLAYER_NODE_INFO`).
 #[derive(Clone, Copy, Debug, Default)]
-struct Node {
+pub(crate) struct Node {
     makes_unit: bool,
-    unit_class: i64,
+    pub(crate) unit_class: i64,
     cost_resource: c_long,
     required_statistic: c_long,
     required_value: c_long,
+    pub(crate) kind: c_long,
     unit_classes: i64,
     researched: bool,
 }
 
 /// A unit class (`EE_UNITS_PLAYER_CLASS`).
 #[derive(Clone, Copy, Debug, Default)]
-struct Class {
+pub(crate) struct Class {
     tech: c_long,
     weight: i64,
     population: c_long,
     teleporter: bool,
-    hero: bool,
+    pub(crate) hero: bool,
     improvements: bool,
 }
 
@@ -316,10 +320,10 @@ impl<'a, H: PlayerHost + ?Sized> Player<'a, H> {
         unsafe { &mut *(*self.fields).mQueued }
     }
 
-    fn node(&mut self, tech: c_long) -> i64 {
+    pub(crate) fn node(&mut self, tech: c_long) -> i64 {
         self.h.ask(EE_UNITS_PLAYER_NODE, &[tech as i64])
     }
-    fn node_info(&mut self, node: i64) -> Node {
+    pub(crate) fn node_info(&mut self, node: i64) -> Node {
         let (_, io) = self.h.info(EE_UNITS_PLAYER_NODE_INFO, &[node]);
         Node {
             makes_unit: io.i[0] != 0,
@@ -327,11 +331,12 @@ impl<'a, H: PlayerHost + ?Sized> Player<'a, H> {
             cost_resource: io.i[2] as c_long,
             required_statistic: io.i[3] as c_long,
             required_value: io.i[4] as c_long,
+            kind: io.i[5] as c_long,
             unit_classes: io.i[6],
             researched: io.i[7] != 0,
         }
     }
-    fn class(&mut self, unit_type: i64) -> Option<Class> {
+    pub(crate) fn class(&mut self, unit_type: i64) -> Option<Class> {
         let (found, io) = self.h.info(EE_UNITS_PLAYER_CLASS, &[unit_type]);
         (found != 0).then_some(Class {
             tech: io.i[0] as c_long,
@@ -904,7 +909,7 @@ pub struct EeUnitsPlayerRefs {
     pub stats: *const EeUnitsPlayerStats,
 }
 
-struct FnHost {
+pub(crate) struct FnHost {
     player: *mut c_void,
     f: EeUnitsPlayerFn,
 }
@@ -920,7 +925,7 @@ impl PlayerHost for FnHost {
 ///
 /// # Safety
 /// `refs` and its pointers are live for the call; the host handles every operation.
-unsafe fn with<R>(refs: *const EeUnitsPlayerRefs, body: impl FnOnce(&mut Player<FnHost>) -> R) -> R {
+pub(crate) unsafe fn with<R>(refs: *const EeUnitsPlayerRefs, body: impl FnOnce(&mut Player<FnHost>) -> R) -> R {
     // SAFETY: the caller's contract
     let r = unsafe { *refs };
     let mut h = FnHost { player: r.player, f: r.host };

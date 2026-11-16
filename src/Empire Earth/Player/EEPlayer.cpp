@@ -60,6 +60,8 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EETeam.h"
 #include "ee/EEUUUnitFunctor.h"
+#include "ee/EEGameVariant.h"           // the wonder powers' hit point factors (EEPlayerHost)
+#include "ee/EEUnitUtilities.h"
 #include "lle/UIEvent.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
@@ -329,6 +331,7 @@ EEPlayer::EEPlayer(const UWideString& inName, unsigned long inPlayerID)
     this->mViewedUnit = NULL;
     this->mSelectedViewedUnit = NULL;
     this->mQueued = ee_units_queued_new();
+    this->mWonderState = ee_units_wonders_new();
     this->Reset();
     this->mTechnologies->SetPlayerIndex(inPlayerID);
     this->mTechnologies->SetPlayer(this);
@@ -344,6 +347,7 @@ EEPlayer::EEPlayer()
     this->mViewedUnit = NULL;
     this->mSelectedViewedUnit = NULL;
     this->mQueued = ee_units_queued_new();
+    this->mWonderState = ee_units_wonders_new();
     this->Reset();
     this->mComputerPlayer = NULL;
     this->mHumanPlayer = NULL;
@@ -410,11 +414,18 @@ EEPlayer::~EEPlayer()
     delete this->mConstructionSites;
     this->UnloadPlayerEffects();
     ee_units_queued_free(this->mQueued);
+    ee_units_wonders_free(this->mWonderState);
 }
 
 // Destroys the civilization (members only)
 EECivilization::~EECivilization()
 {
+}
+
+// a unit as the Rust player's operations take it: its RTSUnit address (0: none)
+static int64_t EEPlayerUnitArg(RTSUnit* inUnit)
+{
+    return (int64_t)reinterpret_cast<uintptr_t>(inUnit);
 }
 
 // port (the player lane, round 1): the economy and the improvements are Rust (ee_units player.rs) over this host; the
@@ -426,6 +437,9 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
     int64_t* a = io->i;
     EETechTreeNode* theNode = reinterpret_cast<EETechTreeNode*>(a[0]);
     EEUnitClass* theClass = (uint64_t)a[0] < gUnitClassTable.size() ? gUnitClassTable[(size_t)a[0]] : NULL;
+    EEUnit* theUnit = static_cast<EEUnit*>(reinterpret_cast<RTSUnit*>(a[0]));   // the units' operations: an RTSUnit address
+    EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(reinterpret_cast<RTSUnit*>(a[0]));
+    EEPlayer* theOther = a[0] != 0 ? reinterpret_cast<EEPlayer*>(a[0]) : thePlayer;   // the diplomacy's: 0 this player
     switch (inOp) {
     case EE_UNITS_PLAYER_NODE: return (int64_t)reinterpret_cast<uintptr_t>(thePlayer->mTechnologies->Get((long)a[0]));
     case EE_UNITS_PLAYER_NODE_INFO: {
@@ -492,6 +506,175 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
     case EE_UNITS_PLAYER_IS_LOCAL: return thePlayer == gWorld.GetCurrentPlayer();
     case EE_UNITS_PLAYER_UPDATE_JIT: gUserInterface->UpdateJITManufacturing(); return 0;
     case EE_UNITS_PLAYER_PAY_IMPROVEMENT: thePlayer->PayImprovement(theClass, (long)a[1]); return 0;
+    // the unit bookkeeping and the wonders (ee_units player_units.rs): the units as RTSUnit addresses
+    case EE_UNITS_PLAYER_UNIT_INFO: {
+        EEUnitClass* c = theUnit->mUnitClass;
+        EEComplexUnit* x = theUnit->GetComplexUnit();
+        EeUnitsPlayerUnit& u = *reinterpret_cast<EeUnitsPlayerUnit*>(a[1]);
+        u.complex = EEPlayerUnitArg(x);
+        u.unit_type = c->mUnitType;
+        u.technology = c->mTechnology;
+        u.population = c->GetPopulationCost();
+        u.category = c->mCategory;
+        u.ai_kind = c->mAIKind;
+        u.wonder_bonus = c->mWonderBonus;
+        u.wonder_unit_set = c->mWonderUnitSet;
+        u.land_building = c->IsLandBuilding();
+        u.vital = c->mIsVital;
+        u.inactive = c->mIsInactive;
+        u.blocks_tile = c->mBlocksTile;
+        u.wall = c->mIsWall;
+        u.tree = c->mIsTree;
+        u.on_tile = theUnit->mTileNode != NULL;
+        u.built = x != NULL && x->mIsBuilt;
+        u.first_part = x != NULL && x->mPreviousPart == NULL;
+        u.hit_points = theUnit->mHitPoints;
+        u.tile_x = theUnit->mTileX;
+        u.resource_amount = theUnit->mResourceAmount;
+        u.container_category = x != NULL && x->mContainer != NULL ? (long)x->mContainer->mUnitClass->mCategory : -1;
+        u.current_research = x != NULL ? x->mCurrentResearch : 0;
+        u.build_queue = x != NULL ? (long)x->GetBuildQueueSize() : 0;
+        return 0;
+    }
+    case EE_UNITS_PLAYER_NEXT_UNIT: return EEPlayerUnitArg(theUnit == NULL ? thePlayer->mFirstUnit : static_cast<EEUnit*>(theUnit->mNext));
+    case EE_UNITS_PLAYER_NEXT_COMPLEX: return EEPlayerUnitArg(thePlayer->GetNextComplexUnit(theUnit));
+    case EE_UNITS_PLAYER_STATE:
+        return (gLoadingSavedGame ? 1 : 0) | (gGameScreenActive ? 2 : 0) | (gWorldClearing ? 4 : 0) | (UShutdownInProgress() ? 8 : 0)
+               | (gWorld.mVictoryEnabled ? 16 : 0) | (gUserInterface != NULL ? 32 : 0);
+    case EE_UNITS_PLAYER_RTS_ADD_UNIT: thePlayer->RTSPlayer::AddUnit(theUnit, a[1] != 0); return 0;
+    case EE_UNITS_PLAYER_ACTIVATE: gWorld.ActivateUnit(theComplex); return 0;
+    case EE_UNITS_PLAYER_NODE_IS_AVAILABLE: return theNode->mIsAvailable;
+    case EE_UNITS_PLAYER_SET_NODE_AVAILABLE: thePlayer->mTechnologies->SetNodeAvailable((long)a[0], a[1] != 0); return 0;
+    case EE_UNITS_PLAYER_RESEARCH: thePlayer->mTechnologies->Research((long)a[0], NULL); return 0;
+    case EE_UNITS_PLAYER_NUM_PLAYERS: return gWorld.mNumPlayers;
+    case EE_UNITS_PLAYER_ID: return thePlayer->mPlayerID;
+    case EE_UNITS_PLAYER_UNIT_PLACED: thePlayer->UnitPlaced(theComplex); return 0;
+    case EE_UNITS_PLAYER_CITIZEN_CONTAINS: return thePlayer->GetTechTree()->Get(kTechCitizen)->Contains((long)a[0]);
+    case EE_UNITS_PLAYER_TECH_OBSOLETE: return thePlayer->mTechnologies->Get((long)a[0]) != NULL && thePlayer->mTechnologies->Get((long)a[0])->GetIsObsolete();
+    case EE_UNITS_PLAYER_TECH_ALLOW:
+        if (thePlayer->mTechnologies->Get((long)a[0]) != NULL)
+            thePlayer->mTechnologies->Get((long)a[0])->mIsAllowed = a[1] != 0;
+        return 0;
+    case EE_UNITS_PLAYER_SWAP_KIND: return gPhysics->GetUnitSwapKind(theComplex);
+    case EE_UNITS_PLAYER_DEAD_STATISTIC: return EEAddDeadUnitStatistic(theComplex);
+    case EE_UNITS_PLAYER_STATS_RESET: thePlayer->mSavedGroups.Reset((long)a[0], (long)a[1]); return 0;
+    case EE_UNITS_PLAYER_FOUNDATION: return theComplex->IsFoundation();
+    case EE_UNITS_PLAYER_ADD_TO_TOWN: return thePlayer->AddUnitToTown(theComplex);
+    case EE_UNITS_PLAYER_ADD_TO_HERD: return thePlayer->AddUnitToHerd(theComplex);
+    case EE_UNITS_PLAYER_CIV_POWER: return gCivPowersManager.HasPower(thePlayer, (long)a[0]);
+    case EE_UNITS_PLAYER_PULSE_EXPLORATION: {
+        EECivPower thePower;
+        gCivPowersManager.GetPower(kCivPowerExploration, thePower);
+        thePlayer->PulseSight(true, thePower.mAmount, theUnit->mUnitID);
+        return 0;
+    }
+    case EE_UNITS_PLAYER_UPDATE_WALL: gContinentManager.UpdateWallUnit(theComplex, a[1] != 0); return 0;
+    case EE_UNITS_PLAYER_LOG_LOST: EEGameLogUnitLost(thePlayer, theComplex); return 0;   // port: the game log (ee/EEGameLog.h)
+    case EE_UNITS_PLAYER_UNIT_NODE: return (int64_t)reinterpret_cast<uintptr_t>(theUnit->GetTechTreeNode());
+    case EE_UNITS_PLAYER_REMOVE_FROM_TOWN: thePlayer->RemoveUnitFromTown(theComplex); return 0;
+    case EE_UNITS_PLAYER_REMOVE_FROM_HERD: thePlayer->RemoveUnitFromHerd(theComplex); return 0;
+    case EE_UNITS_PLAYER_REMOVE_SITE: thePlayer->RemoveConstructionSite(theComplex); return 0;
+    case EE_UNITS_PLAYER_RECOMPUTE_AREAS: thePlayer->SuggestRecomputeAllAreaEffects(); return 0;
+    case EE_UNITS_PLAYER_REMOVE_FOREST:
+        if (theUnit->mResourceAmount != 0)
+            theUnit->mResourceAmount = 0;
+        gContinentManager.RemoveForestTile(theUnit);
+        return 0;
+    case EE_UNITS_PLAYER_CAMOUFLAGE:
+        if (a[0] != 0)
+            thePlayer->EnableCamouflagePower();
+        else
+            thePlayer->DisableCamouflagePower();
+        return 0;
+    case EE_UNITS_PLAYER_OWNER_ADD_WONDER: theComplex->mPlayer->AddWonder(theComplex, false); return 0;
+    case EE_UNITS_PLAYER_WONDER_STARTED:
+        if (gWorld.mPlayers[a[0]] != thePlayer)
+            gWorld.mPlayers[a[0]]->WonderStarted(static_cast<EEComplexUnit*>(reinterpret_cast<RTSUnit*>(a[1])));
+        return 0;
+    case EE_UNITS_PLAYER_CLEAR_FOOTPRINT: thePlayer->ClearFootprint(theComplex); return 0;
+    case EE_UNITS_PLAYER_BUILD_QUEUE_TECH: return theComplex->mBuildQueue[(size_t)a[1]].mTechnology;
+    case EE_UNITS_PLAYER_PENDING_COUNT: return thePlayer->mPendingUnits.size();
+    case EE_UNITS_PLAYER_PENDING_POPULATION: return dynamic_cast<EEUnit*>(thePlayer->mPendingUnits[(size_t)a[0]])->GetUnitClass()->GetPopulationCost();
+    case EE_UNITS_PLAYER_WONDER_LIST:
+        if (a[1] != 0) {
+            thePlayer->mWonders->Add(theComplex);
+            theComplex->mCloaked = gPhysics->mGameTime;
+            thePlayer->mSavedGroups.Reset(0x10, 1);
+        } else {
+            thePlayer->mWonders->Remove(theComplex);
+            theComplex->mCloaked = 0;
+            thePlayer->mSavedGroups.Lower(0x10, 1);
+        }
+        return 0;
+    case EE_UNITS_PLAYER_UPGRADE_TYPE:
+        if ((uint64_t)a[0] >= thePlayer->mUnitClassUpgrades.size())
+            return -2;
+        return thePlayer->mUnitClassUpgrades[(size_t)a[0]] != NULL ? (int64_t)thePlayer->mUnitClassUpgrades[(size_t)a[0]]->mUnitClass->GetUnitType() : -1;
+    case EE_UNITS_PLAYER_SET_CONTAINS: return gUnitSetManager.GetSet((long)a[0]) != NULL && gUnitSetManager.GetSet((long)a[0])->Contains((long)a[1]);
+    case EE_UNITS_PLAYER_WONDER_FACTORS:
+        io->f[0] = gWorld.GetGameVariant()->GetFactor((long)a[0]);
+        io->f[1] = gWorldTable.GetFloatValue(kWorldWonderHitPointBonus);
+        return 0;
+    case EE_UNITS_PLAYER_UPGRADE_HIT_POINTS: EEUpgradeHitPoints(thePlayer->mUnitClassUpgrades[(size_t)a[0]], thePlayer->mUnitClassUpgrades[(size_t)a[0]]->mUnitClass->GetUnitType(), io->f[0], thePlayer); return 0;
+    case EE_UNITS_PLAYER_SHARE_BONUS:
+        if (a[0] != 0)
+            gWorld.RemoveShareBonus();
+        else
+            gWorld.ApplyShareBonus();
+        return 0;
+    case EE_UNITS_PLAYER_SIGHT_SHARER:
+        if (a[1] != 0)
+            theOther->AddSightSharer(thePlayer);
+        else
+            theOther->RemoveSightSharer(thePlayer);
+        return 0;
+    case EE_UNITS_PLAYER_HEALED_SET: thePlayer->mHealedUnitSet = a[1] != 0 ? gUnitSetManager.GetSet((long)a[0]) : NULL; return 0;
+    case EE_UNITS_PLAYER_AT: return (int64_t)reinterpret_cast<uintptr_t>((uint64_t)a[0] < gWorld.mNumPlayers ? gWorld.mPlayers[a[0]] : NULL);
+    // the diplomacy and the shared sight (ee_units player_diplomacy.rs): the players as EEPlayer addresses, 0 this one
+    case EE_UNITS_PLAYER_VIEW:
+        a[2] = theOther->mEnemies[a[1]];
+        a[0] = theOther->mPlayerID;
+        a[1] = theOther->mSaveVisMap;
+        return 0;
+    case EE_UNITS_PLAYER_UNITS_SIGHT:
+        for (RTSUnit* u = theOther->mFirstUnit; u != NULL; u = u->mNext)
+            if (a[2] == 0 || static_cast<EEUnit*>(u)->mUnitClass->IsLandBuilding()) {
+                if (a[1] != 0)
+                    u->SightOnHere();
+                else
+                    u->SightOffHere();
+            }
+        return 0;
+    case EE_UNITS_PLAYER_EVENTS_SIGHT:
+        if (a[1] != 0)
+            theOther->mEvents.ShowEvents(theOther);
+        else
+            theOther->mEvents.HideEvents(theOther);
+        return 0;
+    case EE_UNITS_PLAYER_ALLY: {
+        EEPlayer* theAlly = a[1] != 0 ? reinterpret_cast<EEPlayer*>(a[1]) : thePlayer;
+        if (a[2] != 0)
+            theOther->mAllies.push_back(theAlly);
+        else
+            theOther->RemoveAlly(theAlly);
+        return 0;
+    }
+    case EE_UNITS_PLAYER_STORE_TABLE: EEUnitStorePlayerTable(thePlayer); return 0;   // New (R5b.4): the store's diplomacy table
+    case EE_UNITS_PLAYER_RESET_WONDER_TIMERS: thePlayer->ResetWonderTimers(theOther); return 0;
+    case EE_UNITS_PLAYER_SHARERS:
+        if (a[1] != 0)
+            thePlayer->mSightSharers.push_back(theOther);
+        else if (std::find(thePlayer->mSightSharers.begin(), thePlayer->mSightSharers.end(), theOther) != thePlayer->mSightSharers.end())
+            thePlayer->mSightSharers.erase(std::find(thePlayer->mSightSharers.begin(), thePlayer->mSightSharers.end(), theOther));
+        return 0;
+    case EE_UNITS_PLAYER_VIEWED_OF: return thePlayer->mViewedUnit != NULL && thePlayer->mViewedUnit->mPlayer == theOther;
+    case EE_UNITS_PLAYER_UNVIEW: thePlayer->UpdateSelection(NULL, true); return 0;
+    case EE_UNITS_PLAYER_IS_CURRENT: return theOther == gWorld.GetCurrentPlayer();
+    case EE_UNITS_PLAYER_REFRESH_TERRAIN: gWorld.GetCurrentPlayer()->RefreshTerrainVisibility(); return 0;
+    case EE_UNITS_PLAYER_MINIMAP_REDRAW:
+        if (gMiniMap != NULL)
+            gMiniMap->Redraw();
+        return 0;
     }
     return 0;
 }
@@ -509,6 +692,24 @@ struct EEPlayerRefs : EeUnitsPlayerRefs {
     }
     operator const EeUnitsPlayerRefs*() const { return this; }
 };
+
+// the unit bookkeeping and the wonders (ee_units player_units.rs ee_units_player_units)
+static long EEPlayerUnits(const EEPlayer* inPlayer, uint32_t inWhat, RTSUnit* inUnit = NULL, bool inFlag = false, bool inFlag2 = false)
+{
+    return ee_units_player_units(EEPlayerRefs(inPlayer), inWhat, inUnit, inFlag, inFlag2);
+}
+
+// EEWorld::ApplyShareBonus (inRemove false) and RemoveShareBonus over every player's records (ee_units player_units.rs)
+void EEPlayerShareBonus(bool inRemove)
+{
+    std::vector<EeUnitsPlayerRefs> theRefs(gWorld.mNumPlayers);   // (no player: zeros)
+    for (unsigned long i = 0; i < gWorld.mNumPlayers; i++)
+        if (gWorld.mPlayers[i] != NULL)
+            theRefs[i] = EEPlayerRefs(gWorld.mPlayers[i]);
+    if (!theRefs.empty())
+        ee_units_player_share_bonus(&theRefs[0], (uint32_t)theRefs.size(), inRemove, gWorldTable.GetFloatValue(kWorldWonderPopulationBonus),
+                                    gWorldTable.GetFloatValue2(kWorldWonderPopulationBonus), gWorld.mPlayerPopulationLimit);
+}
 
 // the improvement decisions (ee_units player.rs ee_units_player_improvement)
 static long EEPlayerImprovement(const EEPlayer* inPlayer, uint32_t inWhat, unsigned long inUnitType, long inImprovement, bool inFlag = false,
@@ -550,16 +751,7 @@ void EEPlayer::AddPatrolGroup(EEPPatrolGroup* inGroup)
 // Starts sharing the player's sight with another player, refreshing its land buildings' sight around the change
 void EEPlayer::AddSightSharer(EEPlayer* inPlayer)
 {
-    EEUnit* theUnit;
-    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (theUnit->mUnitClass->IsLandBuilding())
-            theUnit->SightOffHere();
-    }
-    this->mSightSharers.push_back(inPlayer);
-    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (theUnit->mUnitClass->IsLandBuilding())
-            theUnit->SightOnHere();
-    }
+    ee_units_player_diplomacy(EEPlayerRefs(this), 1, inPlayer, 0, false);
 }
 
 // Toggles units in the selection: adds built units not yet selected and removes the rest;
@@ -667,42 +859,7 @@ void EEPlayer::AddUnitToRepatrol(EEComplexUnit* inUnit)
 // built), counts vital units, unlocks the capitol technologies on the first capitol and records statistics
 void EEPlayer::AddUnit(RTSUnit* inUnit, bool inKeepID)
 {
-    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
-    EEComplexUnit* theComplexUnit = theUnit->GetComplexUnit();
-    this->mPopulationCount += theUnit->mUnitClass->GetPopulationCost();
-    RTSPlayer::AddUnit(inUnit, inKeepID);
-    if (theComplexUnit != NULL && (!theComplexUnit->mUnitClass->mIsInactive || theComplexUnit->mHitPoints <= 0)
-        && theComplexUnit->mPreviousPart == NULL && theComplexUnit->mTileX != -10000)
-        gWorld.ActivateUnit(theComplexUnit);
-    EETechTreeNode* theNode = this->mTechnologies->Get(theUnit->mUnitClass->mTechnology);
-    bool theWasUnavailable = theNode != NULL && !theNode->mIsAvailable;
-    this->mTechnologies->SetNodeAvailable(theUnit->mUnitClass->mTechnology, true);
-    if (theUnit->GetComplexUnit() != NULL && theUnit->GetComplexUnit()->mIsBuilt && gWorld.mNumPlayers > 0)
-        this->mTechnologies->Research(theUnit->mUnitClass->mTechnology, NULL);
-    if (theWasUnavailable)
-        this->mTechnologies->SetNodeAvailable(theUnit->mUnitClass->mTechnology, false);
-    this->UnitPlaced(theUnit);
-    if (!theUnit->mUnitClass->IsLandBuilding() && theUnit->mUnitClass->mIsVital
-        && (theUnit->GetComplexUnit() == NULL || theUnit->GetComplexUnit()->mPreviousPart == NULL))
-        this->mEndOfGameCount++;
-    if (this->GetTechTree()->Get(kTechCitizen)->Contains(theUnit->mUnitClass->GetUnitType())) {
-        this->mNumCapitols++;
-        if (this->mNumCapitols == 1 && !UShutdownInProgress()) {
-            gUserInterface->UpdateJITManufacturing();
-            if (this->GetTechTree()->Get(kTechSettlement)->GetIsObsolete()) {
-                this->GetTechTree()->Get(kTechTownCenter)->mIsAllowed = true;
-            } else {
-                this->GetTechTree()->Get(kTechSettlement)->mIsAllowed = true;
-                this->GetTechTree()->Get(kTechTownCenter)->mIsAllowed = false;
-            }
-            this->GetTechTree()->Get(kTechCapitol)->mIsAllowed = false;
-        }
-    }
-    if (theUnit->GetComplexUnit() == NULL || gPhysics->GetUnitSwapKind(theUnit->GetComplexUnit()) == 3)
-        return;
-    long theSeries = EEAddDeadUnitStatistic(theUnit);
-    if (theSeries != 0)
-        this->mSavedGroups.Reset(theSeries, 1);
+    EEPlayerUnits(this, 0, inUnit, inKeepID);
 }
 
 // Records a unit leaving the map with its tile and the current game time
@@ -834,39 +991,13 @@ void EEPlayer::AddConstructionSite(EEComplexUnit* inUnit)
 // Records a wonder (starting its timer unless told not to); the first wonder of a type grants its wonder power
 void EEPlayer::AddWonder(EEComplexUnit* inUnit, bool inIsLoading)
 {
-    if (!inIsLoading) {
-        this->mWonders->Add(inUnit);
-        inUnit->mCloaked = gPhysics->mGameTime;
-        this->mSavedGroups.Reset(0x10, 1);
-    }
-    if (this->mWonderTypeCounts.find(inUnit->mUnitClass->mUnitType) == this->mWonderTypeCounts.end()) {
-        this->mWonderTypeCounts[inUnit->mUnitClass->mUnitType] = 1;
-        this->AddWonderPower(inUnit);
-    } else
-        this->mWonderTypeCounts[inUnit->mUnitClass->mUnitType]++;
+    EEPlayerUnits(this, 7, inUnit, inIsLoading);
 }
 
 // Recounts the population, the vital units that keep the player alive and the vital buildings
 void EEPlayer::RecountPopulation()
 {
-    long thePopulation = 0;
-    long theCount = 0;
-    long theOtherCount = 0;
-    EEComplexUnit* theUnit = NULL;
-    while ((theUnit = this->GetNextComplexUnit(theUnit)) != NULL) {
-        if (!(theUnit->mHitPoints > 0))
-            continue;
-        if (theUnit->mContainer == NULL || theUnit->mContainer->mUnitClass->mCategory != kUnitCategoryFortress)
-            thePopulation += theUnit->mUnitClass->GetPopulationCost();
-        if (theUnit->mUnitClass->mIsVital && theUnit->mPreviousPart == NULL
-            && (!theUnit->mUnitClass->IsLandBuilding() || theUnit->mIsBuilt == true))
-            theCount++;
-        if (theUnit->mUnitClass->IsLandBuilding() && theUnit->mUnitClass->mIsVital)
-            theOtherCount++;
-    }
-    this->mPopulationCount = thePopulation;
-    this->mEndOfGameCount = theCount;
-    this->mNumVitalBuildings = theOtherCount;
+    EEPlayerUnits(this, 4);
 }
 
 // Whether an improvement can be bought counting the queue (ee_units player.rs can_buy); else the reason text
@@ -1055,38 +1186,7 @@ void EEPlayer::ClearUnitsToRepatrol()
 // buildings, applies the civ-power sight pulse, and updates area effects, construction sites, towns and walls
 void EEPlayer::UnitCompleted(EEComplexUnit* inUnit)
 {
-    EECivPower thePower;
-    EETechTreeNode* theNode = this->mTechnologies->Get(inUnit->GetUnitClass()->mTechnology);
-    if (theNode != NULL && theNode->mData->mKind == 4) {
-        inUnit->mPlayer->AddWonder(inUnit, false);
-        if (gWorld.mVictoryEnabled) {
-            for (unsigned long i = 0; i < gWorld.mNumPlayers; i++)
-                if (gWorld.mPlayers[i] != this)
-                    gWorld.mPlayers[i]->WonderStarted(inUnit);
-        }
-    }
-    if (inUnit->GetUnitClass()->IsLandBuilding() && inUnit->mPreviousPart == NULL && inUnit->GetUnitClass()->mIsVital)
-        this->mEndOfGameCount++;
-    if (inUnit->GetUnitClass()->IsLandBuilding() && inUnit->GetUnitClass()->mIsVital) {
-        this->mNumVitalBuildings++;
-        if (this->mNumVitalBuildings == 1)
-            this->EnableCamouflagePower();
-    }
-    if (gCivPowersManager.HasPower(this, kCivPowerExploration) &&
-        (inUnit->GetUnitClass()->mUnitType == kUnitTypeTownCenter || inUnit->GetUnitClass()->mUnitType == kUnitTypeCapitol)) {
-        gCivPowersManager.GetPower(kCivPowerExploration, thePower);
-        this->PulseSight(true, thePower.mAmount, inUnit->mUnitID);
-    }
-    this->ClearFootprint(inUnit);
-    if (inUnit->GetUnitClass()->mUnitType == kUnitTypeHouse)
-        this->SuggestRecomputeAllAreaEffects();
-    if (inUnit->GetUnitClass()->mIsWall)
-        this->RemoveConstructionSite(inUnit);
-    if (gLoadingSavedGame || !gGameScreenActive)
-        return;
-    this->AddUnitToTown(inUnit);
-    if (inUnit->GetUnitClass()->mBlocksTile || inUnit->GetUnitClass()->mCategory == kUnitCategoryGate)
-        gContinentManager.UpdateWallUnit(inUnit, inUnit->GetUnitClass()->mCategory == kUnitCategoryGate);
+    EEPlayerUnits(this, 3, inUnit);
 }
 
 // Moves the improvement queue of one unit type to another
@@ -1099,15 +1199,7 @@ void EEPlayer::MoveQueuedImprovements(unsigned long inFrom, unsigned long inTo)
 long EEPlayer::GetNumHeroes(bool inFirst, bool inSecond)
 {
     EEPlayerEconScope theScope;
-    long theCaptured = [&]() -> long {
-        long theResult = 0;
-        if (inFirst)
-            theResult = this->mNumHeroes;
-        if (inSecond)
-            theResult += this->mNumHeroesInProduction;
-        return theResult;
-    }();
-    return theScope.Record(this, 21, theCaptured, {inFirst, inSecond});
+    return theScope.Record(this, 21, EEPlayerUnits(this, 11, NULL, inFirst, inSecond), {inFirst, inSecond});
 }
 
 // Clears every goal queue of a complex unit leaving the player
@@ -1297,54 +1389,11 @@ EEUnit* EEPlayer::GetNearestConstructionSite(EEComplexUnit* inUnit)
     return theResult;
 }
 
-#include "ee/EEGameVariant.h"
-#include "ee/EEUnitUtilities.h"
-
 // Grants a wonder's power by its bonus kind: area conversion, a hit-point bonus for a unit set, the
 // share bonus, sight of enemies, or healing of a unit set
 void EEPlayer::AddWonderPower(EEComplexUnit* inUnit)
 {
-    switch (inUnit->mUnitClass->mWonderBonus) {
-    case 1:
-        this->mWonderPowers.push_back(1);
-        this->mAreaConversion = true;
-        break;
-    case 2: {
-        this->mWonderPowers.push_back(2);
-        EEUnitSet* theSet = gUnitSetManager.GetSet(inUnit->mUnitClass->mWonderUnitSet);
-        for (unsigned long i = 0; i < this->mUnitClassUpgrades.size(); i++) {
-            if (this->GetUpgrade(i) == NULL || !theSet->Contains(this->GetUpgrade(i)->GetUnitClass()->GetUnitType()))
-                continue;
-            long theType = this->GetUpgrade(i)->mUnitClass->GetUnitType();
-            float theFactor = gWorld.GetGameVariant()->GetFactor(theType);
-            float theAmount = gWorldTable.GetFloatValue(kWorldWonderHitPointBonus);
-            EEUpgradeHitPoints(this->mUnitClassUpgrades[i], this->mUnitClassUpgrades[i]->mUnitClass->GetUnitType(),
-                       (theFactor + 1.0f) * theAmount, this);
-        }
-        break;
-    }
-    case 3:
-        this->mWonderPowers.push_back(3);
-        break;
-    case 4:
-        gWorld.RemoveShareBonus();
-        this->mWonderPowers.push_back(4);
-        gWorld.ApplyShareBonus();
-        break;
-    case 5: {
-        this->mWonderPowers.push_back(5);
-        for (unsigned long thePlayer = 1; thePlayer < gWorld.mNumPlayers; thePlayer++)
-            if (thePlayer != this->GetPlayerID() && gWorld.mPlayers[thePlayer] != NULL && this->mEnemies[thePlayer] == 1)
-                gWorld.mPlayers[thePlayer]->AddSightSharer(this);
-        break;
-    }
-    case 6:
-        this->mHealsUnits = true;
-        this->mHealTimer = kPlayerHealInterval;
-        this->mHealedUnitSet = gUnitSetManager.GetSet(inUnit->mUnitClass->mWonderUnitSet);
-        this->mWonderPowers.push_back(6);
-        break;
-    }
+    EEPlayerUnits(this, 9, inUnit);
 }
 
 // Returns the running, or else pending, command group holding a unit; NULL when none
@@ -1538,22 +1587,7 @@ EEPPatrolGroup* EEPlayer::GetPatrolGroup(unsigned long inID)
 long EEPlayer::GetTotalPopulation(bool inFirst, bool inSecond)
 {
     EEPlayerEconScope theScope;
-    long theCaptured = [&]() -> long {
-        long theResult = this->mPopulationCount;
-        if (inFirst) {
-            for (unsigned long i = 0; i < this->mPendingUnits.size(); i++)
-                theResult += dynamic_cast<EEUnit*>(this->mPendingUnits[i])->GetUnitClass()->GetPopulationCost();
-        }
-        if (!inSecond)
-            return theResult;
-        for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            if (theUnit->GetComplexUnit() != NULL && theUnit->GetComplexUnit()->GetContainer() != NULL
-                && theUnit->GetComplexUnit()->GetContainer()->GetUnitClass()->GetCategory() == kUnitCategoryFortress)
-                theResult += theUnit->GetUnitClass()->GetPopulationCost();
-        }
-        return theResult;
-    }();
-    return theScope.Record(this, 19, theCaptured, {inFirst, inSecond});
+    return theScope.Record(this, 19, EEPlayerUnits(this, 6, NULL, inFirst, inSecond), {inFirst, inSecond});
 }
 
 // Returns the player's population limit: the game's limit plus the player's bonuses
@@ -2308,16 +2342,7 @@ bool EEPlayer::RemoveLoadedMedia(EEMedia* inMedia)
 // Stops sharing the player's building sight with another player, refreshing every land building's sight
 void EEPlayer::RemoveSightSharer(EEPlayer* inPlayer)
 {
-    EEUnit* theUnit;
-    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (theUnit->mUnitClass->IsLandBuilding())
-            theUnit->SightOffHere();
-    }
-    this->mSightSharers.erase(std::find(this->mSightSharers.begin(), this->mSightSharers.end(), inPlayer));
-    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (theUnit->mUnitClass->IsLandBuilding())
-            theUnit->SightOnHere();
-    }
+    ee_units_player_diplomacy(EEPlayerRefs(this), 2, inPlayer, 0, false);
 }
 
 // Finishes running groups left without units, then releases and drops every finished group
@@ -2372,46 +2397,7 @@ void EEPlayer::RemoveUnitFromSelectedGroup(long inUnitID)
 // Takes away the power of a lost wonder (conversion, hit-point bonus, shared bonus, enemy sight, healing ...)
 void EEPlayer::RemoveWonderPower(EEComplexUnit* inUnit)
 {
-    switch (inUnit->mUnitClass->mWonderBonus) {
-    case 1:
-        this->mWonderPowers.erase(std::find(this->mWonderPowers.begin(), this->mWonderPowers.end(), (long)1));
-        this->mAreaConversion = false;
-        break;
-    case 2: {
-        this->mWonderPowers.erase(std::find(this->mWonderPowers.begin(), this->mWonderPowers.end(), (long)2));
-        EEUnitSet* theSet = gUnitSetManager.GetSet(inUnit->mUnitClass->mWonderUnitSet);
-        for (unsigned long i = 0; i < this->mUnitClassUpgrades.size(); i++) {
-            if (this->mUnitClassUpgrades[i] == NULL || !theSet->Contains(this->mUnitClassUpgrades[i]->mUnitClass->mUnitType))
-                continue;
-            long theType = this->mUnitClassUpgrades[i]->mUnitClass->mUnitType;
-            float theFactor = EEGameVariant::GetGameVariant(gWorld.mGameOptions.GetVariant())->GetFactor(theType);
-            float theAmount = gWorldTable.GetFloatValue(kWorldWonderHitPointBonus);
-            EEUpgradeHitPoints(this->mUnitClassUpgrades[i], this->mUnitClassUpgrades[i]->mUnitClass->GetUnitType(),
-                       -((theFactor + 1.0f) * theAmount), this);
-        }
-        break;
-    }
-    case 3:
-        this->mWonderPowers.erase(std::find(this->mWonderPowers.begin(), this->mWonderPowers.end(), (long)3));
-        break;
-    case 4:
-        gWorld.RemoveShareBonus();
-        this->mWonderPowers.erase(std::find(this->mWonderPowers.begin(), this->mWonderPowers.end(), (long)4));
-        gWorld.ApplyShareBonus();
-        break;
-    case 5: {
-        this->mWonderPowers.erase(std::find(this->mWonderPowers.begin(), this->mWonderPowers.end(), (long)5));
-        for (unsigned long thePlayer = 1; thePlayer < gWorld.mNumPlayers; thePlayer++)
-            if (thePlayer != this->mPlayerID && gWorld.mPlayers[thePlayer] != NULL && this->mEnemies[thePlayer] == 1)
-                gWorld.mPlayers[thePlayer]->RemoveSightSharer(this);
-        break;
-    }
-    case 6:
-        this->mHealsUnits = false;
-        this->mHealedUnitSet = NULL;
-        this->mWonderPowers.erase(std::find(this->mWonderPowers.begin(), this->mWonderPowers.end(), (long)6));
-        break;
-    }
+    EEPlayerUnits(this, 10, inUnit);
 }
 
 // Removes an animal from its herds, deleting any herd left with no tiles
@@ -2500,14 +2486,7 @@ void EEPlayer::RemoveConstructionSite(EEComplexUnit* inUnit)
 // Removes a wonder from the player; when the last of its type goes, its wonder power is taken away
 void EEPlayer::RemoveWonder(EEComplexUnit* inUnit)
 {
-    this->mWonders->Remove(inUnit);
-    inUnit->mCloaked = 0;
-    this->mSavedGroups.Lower(0x10, 1);
-    this->mWonderTypeCounts[inUnit->mUnitClass->mUnitType]--;
-    if (this->mWonderTypeCounts[inUnit->mUnitClass->mUnitType] == 0) {
-        this->RemoveWonderPower(inUnit);
-        this->mWonderTypeCounts.erase(inUnit->mUnitClass->mUnitType);
-    }
+    EEPlayerUnits(this, 8, inUnit);
 }
 
 // Lets every unit of the player finish loading; returns 0
@@ -3079,71 +3058,7 @@ void EEPlayer::SetCivilizationPoints(long inEpoch)
 // Changes the player's stance toward another player, forming or breaking the alliance and its shared sight
 void EEPlayer::SetDiplomaticStance(EEPlayer* inOther, long inStance, EEMap* inMap)
 {
-    EEPlayer* theCurrentPlayer = gWorld.GetCurrentPlayer();
-    unsigned long& theStance = this->mEnemies[inOther->mPlayerID];
-    if (theStance == inStance)
-        return;
-    if (this->mSaveVisMap == true && inOther->mSaveVisMap == true) {
-        if (inStance == 0) {
-            if (inMap != NULL) {
-                for (unsigned long i = 0; i < this->mWonderPowers.size(); i++)
-                    if (this->mWonderPowers[i] == 5)
-                        inOther->RemoveSightSharer(this);
-                if (inOther->mEnemies[this->mPlayerID] == 0) {
-                    this->ResetWonderTimers(inOther);
-                    RTSUnit* theUnit; for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                        theUnit->SightOffHere();
-                    this->mEvents.HideEvents(this);
-                    for (theUnit = inOther->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                        theUnit->SightOffHere();
-                    inOther->mEvents.HideEvents(inOther);
-                    EEPlayer* thePlayer = inOther;
-                    this->mAllies.push_back(thePlayer);
-                    thePlayer = this;
-                    inOther->mAllies.push_back(thePlayer);
-                    theStance = 0;
-                    EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
-                    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                        theUnit->SightOnHere();
-                    this->mEvents.ShowEvents(this);
-                    for (theUnit = inOther->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                        theUnit->SightOnHere();
-                    inOther->mEvents.ShowEvents(inOther);
-                }
-            } else {
-                EEPlayer* thePlayer = inOther;
-                this->mAllies.push_back(thePlayer);
-            }
-        } else if (theStance == 0) {
-            for (unsigned long j = 0; j < this->mWonderPowers.size(); j++)
-                if (this->mWonderPowers[j] == 5)
-                    inOther->AddSightSharer(this);
-            if (inOther->mEnemies[this->mPlayerID] == 0) {
-                RTSUnit* theUnit; for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                    theUnit->SightOffHere();
-                for (theUnit = inOther->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                    theUnit->SightOffHere();
-                this->RemoveAlly(inOther);
-                inOther->RemoveAlly(this);
-                theStance = inStance;
-                EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
-                for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                    theUnit->SightOnHere();
-                for (theUnit = inOther->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                    theUnit->SightOnHere();
-                if (this->mViewedUnit != NULL && this->mViewedUnit->mPlayer == inOther)
-                    this->UpdateSelection(NULL, true);
-            }
-        }
-    }
-    if (inOther == theCurrentPlayer || this == theCurrentPlayer)
-        theCurrentPlayer->RefreshTerrainVisibility();
-    theStance = inStance;
-    EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
-    gWorld.RemoveShareBonus();
-    gWorld.ApplyShareBonus();
-    if (gMiniMap != NULL)
-        gMiniMap->Redraw();
+    ee_units_player_diplomacy(EEPlayerRefs(this), 0, inOther, (unsigned long)inStance, inMap != NULL);
 }
 
 // Sets the player's current epoch in its tech tree
@@ -3183,16 +3098,7 @@ void EEPlayer::SetHackUnitClass(long inUnitClass)
 // Turns the player's shared line of sight on or off, recomputing all its units' sight and events
 void EEPlayer::SetSharedLOS(bool inFlag, EEMap* inArg)
 {
-    if (this->mSharedLOS == inFlag)
-        return;
-    EEUnit* theUnit;
-    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        theUnit->SightOffHere();
-    this->mEvents.HideEvents(this);
-    this->mSharedLOS = inFlag;
-    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        theUnit->SightOnHere();
-    this->mEvents.ShowEvents(this);
+    ee_units_player_diplomacy(EEPlayerRefs(this), 3, NULL, 0, inFlag);
 }
 
 // Copies the player's visibility of every tile into the terrain mesh
@@ -3401,25 +3307,7 @@ void EEPlayer::ApplyImprovement(long inUnitType, long inImprovement, bool inFlag
 // Registers a unit placed in the game: wonder/teleporter counts, town, herd, sight power, walls
 void EEPlayer::UnitPlaced(EEComplexUnit* inUnit)
 {
-    EECivPower thePower;
-    if (gLoadingSavedGame || !gGameScreenActive)
-        return;
-    if (inUnit->GetComplexUnit() != NULL) {
-        if (inUnit->mUnitClass->mAIKind == kAIKindHero)
-            this->mNumHeroes++;
-        if (inUnit->mUnitClass->mUnitType == kUnitTypeTeleporter)
-            this->mNumTeleporters++;
-        if (!inUnit->IsFoundation())
-            this->AddUnitToTown(inUnit->GetComplexUnit());
-        this->AddUnitToHerd(inUnit->GetComplexUnit());
-        if (gCivPowersManager.HasPower(this, kCivPowerExploration) &&
-            (inUnit->mUnitClass->mUnitType == kUnitTypeTownCenter || inUnit->mUnitClass->mUnitType == kUnitTypeCapitol)) {
-            gCivPowersManager.GetPower(kCivPowerExploration, thePower);
-            this->PulseSight(true, thePower.mAmount, inUnit->mUnitID);
-        }
-    }
-    if (!inUnit->IsFoundation() && (inUnit->mUnitClass->mBlocksTile || inUnit->mUnitClass->mCategory == kUnitCategoryGate))
-        gContinentManager.UpdateWallUnit(inUnit, false);
+    EEPlayerUnits(this, 1, inUnit);
 }
 
 // Unregisters a unit leaving the player: counts, wonders, town, herd, construction site, heroes, capitol, walls/forest
@@ -3427,52 +3315,7 @@ void EEPlayer::UnitPlaced(EEComplexUnit* inUnit)
 // capitol technology and blocks the JIT-manufacturing ones
 void EEPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
 {
-    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
-    if (!inSwapped)
-        EEGameLogUnitLost(this, theUnit);   // port: the game log (ee/EEGameLog.h)
-    this->mPopulationCount -= theUnit->mUnitClass->GetPopulationCost();
-    if (!theUnit->mUnitClass->IsLandBuilding() || theUnit->GetComplexUnit() == NULL || theUnit->GetComplexUnit()->mIsBuilt) {
-        if (theUnit->mUnitClass->mIsVital
-            && (theUnit->GetComplexUnit() == NULL
-                || theUnit->GetComplexUnit()->mPreviousPart == NULL
-                   && (!theUnit->mUnitClass->IsLandBuilding() || theUnit->GetComplexUnit()->mIsBuilt)))
-            this->mEndOfGameCount--;
-        EETechTreeNode* theNode = theUnit->GetTechTreeNode();
-        if (theNode != NULL && theNode->mData->mKind == 4)
-            this->RemoveWonder(theUnit->GetComplexUnit());
-        if (theUnit->mUnitClass->IsLandBuilding() && theUnit->mUnitClass->mIsVital) {
-            if (--this->mNumVitalBuildings == 0)
-                this->DisableCamouflagePower();
-        }
-    }
-    if (theUnit->GetComplexUnit() != NULL && !gWorldClearing)
-        this->RemoveUnitFromTown(theUnit->GetComplexUnit());
-    if (theUnit->GetComplexUnit() != NULL)
-        this->RemoveUnitFromHerd(theUnit->GetComplexUnit());
-    if (theUnit->GetComplexUnit() != NULL && theUnit->GetComplexUnit()->mUnitClass->mAIKind == kAIKindHero && this->mNumHeroes > 0)
-        this->mNumHeroes--;
-    if (theUnit->mUnitClass->mUnitType == kUnitTypeTeleporter)
-        this->mNumTeleporters--;
-    if (theUnit->mUnitClass->mIsWall && theUnit->mTileNode != NULL && !theUnit->GetComplexUnit()->mIsBuilt)
-        this->RemoveConstructionSite(theUnit->GetComplexUnit());
-    if (this->GetTechTree()->Get(kTechCitizen)->Contains(theUnit->mUnitClass->GetUnitType())) {
-        if (--this->mNumCapitols == 0) {
-            if (gUserInterface != NULL)
-                gUserInterface->UpdateJITManufacturing();
-            this->mTechnologies->Get(kTechCapitol)->mIsAllowed = true;
-            if (this->GetTechTree()->Get(kTechSettlement)->GetIsObsolete()) this->GetTechTree()->Get(kTechTownCenter)->mIsAllowed = false; else this->GetTechTree()->Get(kTechSettlement)->mIsAllowed = false;
-        }
-    }
-    if (theUnit->mUnitClass->mUnitType == kUnitTypeHouse)
-        this->SuggestRecomputeAllAreaEffects();
-    if (!(!gWorldClearing && (theUnit->mUnitClass->mBlocksTile || theUnit->mUnitClass->mCategory == kUnitCategoryGate)))
-        return;
-    gContinentManager.UpdateWallUnit(theUnit, true);
-    if (!theUnit->mUnitClass->mIsTree || !gGameScreenActive)
-        return;
-    if (theUnit->mResourceAmount != 0)
-        theUnit->mResourceAmount = 0;
-    gContinentManager.RemoveForestTile(theUnit);
+    EEPlayerUnits(this, 2, inUnit, inSwapped);
 }
 
 #include "ee/EEUnitGoal.h"
@@ -3748,34 +3591,7 @@ void EEPlayer::ApplyMapRestrictions()
 // Recounts the player's living heroes, heroes being researched or queued, and teleporters
 void EEPlayer::RecountHeroesAndTeleporters()
 {
-    this->mNumHeroes = 0;
-    this->mNumHeroesInProduction = 0;
-    this->mNumTeleporters = 0;
-    for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-        if (theComplex == NULL || !(theComplex->mHitPoints > 0))
-            continue;
-        if (theComplex->mUnitClass->mAIKind == kAIKindHero)
-            this->mNumHeroes++;
-        if (theUnit->mUnitClass->mUnitType == kUnitTypeTeleporter)
-            this->mNumTeleporters++;
-        if (theComplex->mCurrentResearch != kTechNone) {
-            EETechTreeNode* theNode = this->mTechnologies->Get(theComplex->mCurrentResearch);
-            if (theNode != NULL) {
-                long theType = theNode->mData->mUnitClass;
-                if (theType > 0 && gUnitClassTable[theType] != NULL && gUnitClassTable[theType]->mAIKind == kAIKindHero)
-                    this->mNumHeroesInProduction++;
-            }
-        }
-        for (long i = theComplex->GetBuildQueueSize() - 1; i >= 0; i--) {
-            EETechTreeNode* theNode = this->mTechnologies->Get(theComplex->mBuildQueue[i].mTechnology);
-            if (theNode == NULL)
-                continue;
-            long theType = theNode->mData->mUnitClass;
-            if (theType > 0 && gUnitClassTable[theType] != NULL && gUnitClassTable[theType]->mAIKind == kAIKindHero)
-                this->mNumHeroesInProduction++;
-        }
-    }
+    EEPlayerUnits(this, 5);
 }
 
 // With the Camouflage civ power, sets the cloak timer of each idle unit (command 5000)
