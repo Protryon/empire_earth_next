@@ -218,9 +218,13 @@ pub(crate) fn zeroed_world(count: usize) -> TestWorld {
     TestWorld(w)
 }
 
+/// A filled world's block maker.
+#[cfg(test)]
+type FillFn = fn(isize) -> EeWonCompMembers;
+
 #[cfg(test)]
 thread_local! {
-    static FILL: Cell<Option<fn(isize) -> EeWonCompMembers>> = const { Cell::new(None) };
+    static FILL: Cell<Option<FillFn>> = const { Cell::new(None) };
     static SCRATCH: std::cell::UnsafeCell<EeWonCompMembers> = std::cell::UnsafeCell::new(EeWonCompMembers::default());
 }
 
@@ -249,7 +253,7 @@ impl Drop for FilledWorld {
 }
 
 #[cfg(test)]
-pub(crate) fn filled_world(f: fn(isize) -> EeWonCompMembers) -> FilledWorld {
+pub(crate) fn filled_world(f: FillFn) -> FilledWorld {
     FILL.with(|x| x.set(Some(f)));
     ee_won_comp_members_resolver(Some(fill_resolve));
     FilledWorld
