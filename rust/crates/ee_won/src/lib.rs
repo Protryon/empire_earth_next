@@ -60,6 +60,7 @@ pub mod ftp;
 pub mod ftpop;
 pub mod fwhost;
 pub mod fwop;
+pub mod gamespy;
 pub mod getcert;
 pub mod grabobj;
 pub mod guicfg;

@@ -40,6 +40,13 @@ SocketOp* NewSocketOp(const EeWonHostCall* c)
 }
 }
 
+namespace {
+// the Rust objects' maker of a Rust op's C++ op (ee_won cppcore.rs new_host_op: GameSpySupport's service lookup)
+void* NewHostOp(EeWonHostOp* inOp) { return static_cast<RefCount*>(static_cast<AsyncOp*>(new RustServerOp(inOp))); }
+struct HostOpMaker {
+    HostOpMaker() { ee_won_core_set_new_host_op(NewHostOp); }
+} sHostOpMaker;
+}
 RustServerOp::RustServerOp(EeWonHostOp* inRustOp) : mRustOp(inRustOp)
 {
     // the calls that need no C++ object (the clock, rand, an address, the op's file, the files it measures, the web

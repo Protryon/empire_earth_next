@@ -177,6 +177,31 @@ pub struct EeWonCoreHooks {
     pub new_http_conn: Option<unsafe extern "C" fn() -> *mut c_void>,
 }
 
+/// `new RustServerOp(op)`: the C++ op of a Rust op on the op base (it takes `op`; no reference yet). ServerOp.cpp
+/// sets it at start-up ([`ee_won_core_set_new_host_op`]): a program without the class has none.
+pub type EeWonNewHostOp = Option<unsafe extern "C" fn(op: *mut crate::hostop::EeWonHostOp) -> *mut c_void>;
+static NEW_HOST_OP: Mutex<EeWonNewHostOp> = Mutex::new(None);
+
+/// Sets the maker of a Rust op's C++ op.
+#[no_mangle]
+pub extern "C" fn ee_won_core_set_new_host_op(maker: EeWonNewHostOp) {
+    *NEW_HOST_OP.lock().unwrap_or_else(|e| e.into_inner()) = maker;
+}
+
+/// A new C++ op for the Rust op, which it takes (null without a maker: the Rust op is freed).
+pub(crate) fn new_host_op(op: *mut crate::hostop::EeWonHostOp) -> *mut c_void {
+    let maker = *NEW_HOST_OP.lock().unwrap_or_else(|e| e.into_inner());
+    match maker {
+        // SAFETY: the maker's contract: it takes the op
+        Some(h) => unsafe { h(op) },
+        None => {
+            // SAFETY: the op's box, not taken
+            unsafe { crate::hostop::ee_won_hostop_free(op) };
+            null_mut()
+        }
+    }
+}
+
 // SAFETY: a static table of functions and one function address
 unsafe impl Sync for EeWonCoreHooks {}
 // SAFETY: as Sync

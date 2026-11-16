@@ -800,6 +800,10 @@ WON_TESTS["won_opcore_test"] = WON_TESTS["won_serverop_test"]
 # rust/crates/ee_won/src/golden_httpsession.txt, recorded over HTTPEngine.cpp before its hooks moved into Rust in
 # net round 26: httpcpp.rs); the same units as won_serverop_test
 WON_TESTS["won_httpsession_test"] = WON_TESTS["won_serverop_test"]
+# GameSpySupport and the GameSpy Query & Reporting SDK over 127.0.0.1 with a master server stand-in (golden:
+# rust/crates/ee_won/src/golden_gamespy.txt, recorded over GameSpySupport.cpp, gqueryreporting.c and nonport.c before
+# they moved into ee_won gamespy.rs in net round 28); the same units as won_serverop_test (the service lookup's op)
+WON_TESTS["won_gamespy_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]

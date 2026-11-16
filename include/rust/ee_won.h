@@ -496,6 +496,45 @@ constexpr static const int32_t EE_WON_FWOP_HAS_PUBLIC = 4;
 /// the public address's host, set with port 0 (`ee_won_hostop_num`)
 constexpr static const int32_t EE_WON_FWOP_PUBLIC_HOST = 5;
 
+/// `qr_init`'s errors (the SDK's `E_GOA_*`).
+constexpr static const int32_t E_GOA_WSOCKERROR = 1;
+
+constexpr static const int32_t E_GOA_BINDERROR = 2;
+
+constexpr static const int32_t E_GOA_DNSERROR = 3;
+
+constexpr static const int32_t E_GOA_CONNERROR = 4;
+
+/// `NUM_PORTS_TO_TRY`: the ports `qr_init` scans from its base port.
+constexpr static const int32_t NUM_PORTS_TO_TRY = 100;
+
+/// `BUF_SIZE`: a callback's buffer
+constexpr static const size_t BUF_SIZE = 1400;
+
+/// `GameSpyQueryType`'s maps: 0 the basic keys, 1 info, 2 rules, 3 players.
+constexpr static const size_t EE_WON_GAMESPY_MAPS = 4;
+
+/// `EE_WON_GAMESPY_*`: [`ee_won_gamespy_op`]'s calls.
+constexpr static const int32_t EE_WON_GAMESPY_SHUTDOWN = 0;
+
+constexpr static const int32_t EE_WON_GAMESPY_PUMP = 1;
+
+/// the number: the time in ms
+constexpr static const int32_t EE_WON_GAMESPY_SET_AUTO_PUMP = 2;
+
+constexpr static const int32_t EE_WON_GAMESPY_IS_AUTO_PUMPING = 3;
+
+constexpr static const int32_t EE_WON_GAMESPY_STATUS = 4;
+
+constexpr static const int32_t EE_WON_GAMESPY_GAMESPY_STATUS = 5;
+
+constexpr static const int32_t EE_WON_GAMESPY_LOCK = 6;
+
+constexpr static const int32_t EE_WON_GAMESPY_UNLOCK = 7;
+
+/// the number: the map
+constexpr static const int32_t EE_WON_GAMESPY_ERASE_ALL = 8;
+
 /// `ComponentFlag_DebugBG` and `ComponentFlag_Translucent` (WONComponentFlags.h; the C++ asserts them).
 constexpr static const ptrdiff_t EE_WON_GRAB_FLAG_DEBUG_BG = 131072;
 
@@ -9278,6 +9317,9 @@ struct EeWonFile;
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
 
+/// `GameSpySupport` (the C++ class a `RefCount` shim holding this).
+struct EeWonGameSpy;
+
 /// `GetCertOp`'s state: the members and the session key.
 struct EeWonGetCert;
 
@@ -9713,6 +9755,10 @@ struct EeWonConfigState {
 
 /// Receives a saved state; valid only during the call.
 using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
+
+/// `new RustServerOp(op)`: the C++ op of a Rust op on the op base (it takes `op`; no reference yet). ServerOp.cpp
+/// sets it at start-up ([`ee_won_core_set_new_host_op`]): a program without the class has none.
+using EeWonNewHostOp = void*(*)(EeWonHostOp *op);
 
 /// Bytes handed over by the C++ (`present` false: a NULL buffer).
 struct EeWonDirBytes {
@@ -12599,6 +12645,9 @@ void ee_won_cfg_include_path(const uint8_t *path,
                              EeWonByteSink sink,
                              void *context);
 
+/// Sets the maker of a Rust op's C++ op.
+void ee_won_core_set_new_host_op(EeWonNewHostOp maker);
+
 /// A new Rust Container for the C++ `component`, its calls out through `host`; the wheel goes to the focus child
 /// when `wheel_to_focus` (the class default).
 EeWonContainer *ee_won_ct_new(void *component,
@@ -14068,6 +14117,61 @@ bool ee_won_fwop_wait_for_connect(const EeWonFirewallOp *op);
 /// # Safety
 /// `op` is valid.
 bool ee_won_fwop_use_udp(const EeWonFirewallOp *op);
+
+/// A new instance: C strings for the name, version and key; the shim (`GameSpySupport*`), its directory servers
+/// (`ServerContext*`, a reference taken) and the library's core table (bound).
+///
+/// # Safety
+/// The strings are NUL-ended; the objects live C++ objects (the shim owns the result).
+EeWonGameSpy *ee_won_gamespy_new(const char *name,
+                                 const char *version,
+                                 const char *secret_key,
+                                 void *shim,
+                                 void *dirs,
+                                 const EeWonCoreHooks *core);
+
+/// # Safety
+/// `g` from [`ee_won_gamespy_new`], freed once.
+void ee_won_gamespy_free(EeWonGameSpy *g);
+
+/// `Startup(addr)`: the address's `GetHostString(true)` and port.
+///
+/// # Safety
+/// `g` live; `host` holds `length` bytes.
+int32_t ee_won_gamespy_startup(const EeWonGameSpy *g,
+                               const uint8_t *host,
+                               size_t length,
+                               uint16_t port);
+
+/// The calls without arguments but a number ([`EE_WON_GAMESPY_SHUTDOWN`] ..): their result (0 for none).
+///
+/// # Safety
+/// `g` live.
+int64_t ee_won_gamespy_op(const EeWonGameSpy *g,
+                          int32_t which,
+                          int64_t num);
+
+/// `SetKeyValue(type, key, value)` (C strings); a NULL value erases the key and returns whether it was there
+/// (`EraseKeyValue`); `SetGameMode(value)` for a NULL key.
+///
+/// # Safety
+/// `g` live; the strings NUL-ended or NULL.
+bool ee_won_gamespy_set(const EeWonGameSpy *g,
+                        int32_t kind,
+                        const char *key,
+                        const char *value);
+
+/// `GetKeyValue(type, key)`: the value's C string, valid until the key changes, or NULL.
+///
+/// # Safety
+/// `g` live; `key` NUL-ended.
+const char *ee_won_gamespy_get(const EeWonGameSpy *g, int32_t kind, const char *key);
+
+/// `qr_hostname`: the master server's host the next start-up resolves (a test's stand-in).
+///
+/// # Safety
+/// `host` NUL-ended.
+void ee_won_gamespy_set_master_host(const char *host);
 
 /// `GetCertOp(context)`: the op keeps a reference to `context` (taken here).
 ///

@@ -1,0 +1,77 @@
+new status 100004 gamespy 0 autopump 0
+basic gamename 'eetest' gamever '1.00' info hostname (null)
+erase epoch 1 again 0 none 0
+info gamemode 'openwaiting' rules epoch (null) players player_1 'Al'
+startup 0
+started status 0 gamespy 0 autopump 0
+a first heartbeat \heartbeat\A\gamename\eetest
+a first heartbeat \heartbeat\A\gamename\eetest\statechanged\
+port A 1
+query A '\basic\' reply \gamename\eetest\gamever\1.00\final\\queryid\2.1
+query A '\info\' reply \gamemode\openwaiting\hostname\Test Host\mapname\Earth\numplayers\2\final\\queryid\3.1
+query A '\rules\' reply \difficulty\hard\epoch\7\final\\queryid\4.1
+query A '\players\' reply \player_0\Bob\player_1\Al\final\\queryid\5.1
+query A '\status\' reply len 164 fnv 8001c07b \gamename\eetest\gamever\1.00\gamemode\openwaiting\hostname\ ... yer_0\Bob\player_1\Al\final\\queryid\6.1
+query A '\packets\' reply \gamename\eetest\gamever\1.00\queryid\7.1
+query A '\packets\' reply \gamemode\openwaiting\hostname\Test Host\mapname\Earth\numplayers\2\queryid\7.2
+query A '\packets\' reply \difficulty\hard\epoch\7\queryid\7.3
+query A '\packets\' reply \player_0\Bob\player_1\Al\final\\queryid\7.4
+query A '\echo\hello world\' reply \echo\hello world\final\\queryid\8.1
+query A '\secure\abcdef\' reply \validate\5/5YpGJM\final\\queryid\9.1
+query A '\basic\\secure\0123456789\' reply \gamename\eetest\gamever\1.00\validate\PVNKPgsgEboz6QAA\final\\queryid\10.1
+query A '\info\\echo\x\' reply \gamemode\openwaiting\hostname\Test Host\mapname\Earth\numplayers\2\echo\x\final\\queryid\11.1
+query A '\nothing\' reply \final\\queryid\12.1
+query A '' reply \final\\queryid\13.1
+query A '\basic' reply \final\\queryid\14.1
+query A '\status\\secure\' reply len 165 fnv 3a77eca3 \gamename\eetest\gamever\1.00\gamemode\openwaiting\hostname\ ... er_0\Bob\player_1\Al\final\\queryid\15.1
+query A '\players\\basic\\rules\' reply \gamename\eetest\gamever\1.00\difficulty\hard\epoch\7\player_0\Bob\player_1\Al\final\\queryid\16.1
+query A '\echo\a<00>b\\basi' reply \echo\a\final\\queryid\17.1
+query A '\secure\vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\' reply len 202 fnv 8768d56d \validate\+UcX4v1+s/BYOFWOcIqK/yir9N6T1LBAUXWKBm8FK6Te+wGP8w ... owC45T4brxPc/0rjOU8A\final\\queryid\18.1
+query A '\basic\\secure\wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww\' no reply
+query A 'len 255 fnv 042b7b2a \echo\eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee ... eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\' reply len 274 fnv 3d4fcf6a \echo\eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee ... eeeeeeeeeeeeeeeeeeee\final\\queryid\20.1
+two queries reply \gamename\eetest\gamever\1.00\final\\queryid\21.1
+two queries reply \difficulty\hard\epoch\7\final\\queryid\22.1
+query A '\info\' reply len 1357 fnv af59ff34 \gamemode\openwaiting\hostname\Test Host\long1\LLLLLLLLLLLLL ... MMMMMMMMMMMMMMMMMMMMMMMMMMM\queryid\23.1
+query A '\info\' reply \mapname\Earth\numplayers\2\final\\queryid\23.2
+query A '\status\' reply \gamename\eetest\gamever\1.00\queryid\24.1
+query A '\status\' reply len 1357 fnv 1dcb4584 \gamemode\openwaiting\hostname\Test Host\long1\LLLLLLLLLLLLL ... MMMMMMMMMMMMMMMMMMMMMMMMMMM\queryid\24.2
+query A '\status\' reply \mapname\Earth\numplayers\2\difficulty\hard\epoch\7\player_0\Bob\player_1\Al\final\\queryid\24.3
+query A '\packets\' reply \gamename\eetest\gamever\1.00\queryid\25.1
+query A '\packets\' reply len 1357 fnv 84a7aa6b \gamemode\openwaiting\hostname\Test Host\long1\LLLLLLLLLLLLL ... MMMMMMMMMMMMMMMMMMMMMMMMMMM\queryid\25.2
+query A '\packets\' reply \mapname\Earth\numplayers\2\queryid\25.3
+query A '\packets\' reply \difficulty\hard\epoch\7\queryid\25.4
+query A '\packets\' reply \player_0\Bob\player_1\Al\final\\queryid\25.5
+query A '\status\' reply \gamename\eetest\gamever\1.00\queryid\26.1
+query A '\status\' reply len 1358 fnv 130e6587 \gamemode\openwaiting\hostname\Test Host\mapname\Earth\numpl ... PPP\difficulty\hard\epoch\7\queryid\26.2
+query A '\status\' reply \player_0\Bob\player_1\Al\final\\queryid\26.3
+query A '\players\' reply \player_0\Bob\player_1\Al\final\\queryid\27.1
+query A '\rules\' reply len 1020 fnv 487fcf8d \k1\aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ... aaaaaaaaaaaaaaaaaaaa\final\\queryid\28.1
+query A '\rules\' reply len 1012 fnv 1dee1e35 \k1\aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ... aaaaaaaaaaaaaaaaaaaaaaaaaaa\queryid\29.1
+query A '\rules\' reply len 420 fnv 9bf83184 \k2\bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb ... bbbbbbbbbbbbbbbbbbbb\final\\queryid\29.2
+rules k1 (null)
+autopump 20 status 0 gamespy 0 autopump 1
+autopumped reply \gamename\eetest\gamever\1.00\final\\queryid\30.1
+autopump 0 status 0 gamespy 0 autopump 0
+no autopump no reply
+pumped reply \difficulty\easy\final\\queryid\31.1
+a quiet no heartbeat
+b startup 0
+b started status 0 gamespy 0 autopump 0
+b first heartbeat \heartbeat\A+1\gamename\eetest2
+b first heartbeat \heartbeat\A+1\gamename\eetest2\statechanged\
+query A+1 '\basic\\info\' reply \gamename\eetest2\gamever\2.00\gamemode\closedplaying\hostname\Second\final\\queryid\2.1
+query A '\basic\' reply \gamename\eetest\gamever\1.00\final\\queryid\32.1
+f startup 100106
+f started status 100106 gamespy 2 autopump 0
+f first heartbeat \heartbeat\A+1\gamename\eetest2\statechanged\
+query A+1 '\info\' reply \gamemode\closedplaying\hostname\Second\final\\queryid\3.1
+query A '\info\' no reply
+f quiet no heartbeat
+a shut down status 0 gamespy 0 autopump 0
+a shutdown heartbeat \heartbeat\A\gamename\eetest\statechanged\
+info gamemode 'exiting'
+query A '\info\' reply \gamemode\exiting\hostname\Test Host\mapname\Earth\numplayers\2\final\\queryid\33.1
+query A '\info\' reply \gamemode\exiting\hostname\Test Host\mapname\Earth\numplayers\2\final\\queryid\34.1
+b shutdown heartbeat \heartbeat\A+1\gamename\eetest2\statechanged\
+f shutdown heartbeat \heartbeat\A+1\gamename\eetest2\statechanged\
+done

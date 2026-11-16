@@ -55,6 +55,19 @@ impl ReLock {
         }
         ReGuard(self)
     }
+
+    /// `CriticalSection::Enter` without a scope (`GameSpySupport::LockKeyValues`), ended by [`leave`](Self::leave).
+    pub(crate) fn enter(&self) {
+        std::mem::forget(self.lock());
+    }
+
+    /// `CriticalSection::Leave`: one hold of this thread's ended (none when this thread holds it not).
+    pub(crate) fn leave(&self) {
+        let mine = lock(&self.state).0 == Some(std::thread::current().id());
+        if mine {
+            drop(ReGuard(self));
+        }
+    }
 }
 
 impl Drop for ReGuard<'_> {
