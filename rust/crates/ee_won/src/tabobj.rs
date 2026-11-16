@@ -12,6 +12,7 @@
 //! virtual the original called on a component (the pages', the buttons', its own RemoveChild and Virtual08) goes
 //! through the C++ object, so the subclasses' overrides run. The bar calls its control's Rust object directly.
 
+use crate::compmem as mem;
 use std::cell::{Cell, RefCell};
 use std::ffi::c_void;
 
@@ -53,19 +54,19 @@ impl EeWonTabOut {
         self.comp as isize
     }
     fn bits(&self, c: isize) -> isize {
-        self.op(Op::CtBits, c, 0, 0, 0)
+        mem::bits(c) as u32 as isize
     }
     fn left(&self, c: isize) -> i32 {
-        self.op(Op::ChildLeft, c, 0, 0, 0) as i32
+        mem::left(c)
     }
     fn top(&self, c: isize) -> i32 {
-        self.op(Op::ChildTop, c, 0, 0, 0) as i32
+        mem::top(c)
     }
     fn width(&self, c: isize) -> i32 {
-        self.op(Op::ChildWidth, c, 0, 0, 0) as i32
+        mem::width(c)
     }
     fn height(&self, c: isize) -> i32 {
-        self.op(Op::ChildHeight, c, 0, 0, 0) as i32
+        mem::height(c)
     }
     fn set_pos(&self, c: isize, x: i32, y: i32) {
         self.op(Op::ChildSetPos, c, x as isize, y as isize, 0);
@@ -148,12 +149,12 @@ impl EeWonTabBar {
         if cur == 0 {
             -1
         } else {
-            self.o.op(Op::ChildControlId, cur, 0, 0, 0) as i32
+            mem::control_id(cur)
         }
     }
 
     pub fn position_tab(&self, tab: isize) {
-        let id = self.o.op(Op::ChildControlId, tab, 0, 0, 0) as i32;
+        let id = mem::control_id(tab);
         let n = self.count();
         let prev_right = if id > 0 && id as usize <= n {
             let prev = self.tab(id as usize - 1);
@@ -199,7 +200,7 @@ impl EeWonTabBar {
             o.op(Op::ButtonSetCheck, self.cur_tab(), 0, 0, 0);
             // the selected tab read again after the uncheck (as the original)
             let cur = self.cur_tab();
-            if o.op(Op::CtParentOf, cur, 0, 0, 0) != o.me() {
+            if mem::parent(cur) != o.me() {
                 let at = (self.count() as i32).wrapping_sub(old).wrapping_sub(1);
                 o.ct().add_child_ex(self.cur_tab(), at);
                 self.position_tab(self.cur_tab());
@@ -276,7 +277,7 @@ impl EeWonTabBar {
         let mut i = 0;
         while i < self.count() {
             let b = self.tab(i);
-            if o.op(Op::CtParentOf, b, 0, 0, 0) != o.me() {
+            if mem::parent(b) != o.me() {
                 o.ct().add_child_ex(b, (self.count() - i - 1) as i32);
             }
             self.position_tab(b);

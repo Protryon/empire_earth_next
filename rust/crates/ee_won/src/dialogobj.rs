@@ -9,6 +9,7 @@
 //! virtual the original called on itself (Invalidate, InvalidateRect) and every call on the parent, the window, the
 //! default button and the event goes through the C++ object.
 
+use crate::compmem as mem;
 use std::cell::RefCell;
 use std::ffi::c_void;
 
@@ -118,7 +119,7 @@ impl EeWonDialog {
         self.comp as isize
     }
     fn flag(&self, c: isize, f: isize) -> bool {
-        self.op(Op::CtBits, c, 0, 0, 0) & f != 0
+        mem::bits(c) as u32 as isize & f != 0
     }
 
     pub fn set_default_button(&self, button: isize) {
@@ -196,13 +197,12 @@ impl EeWonDialog {
         // the original clamps against GetRootContainer(), where the newer SDK uses GetParent()
         let root = self.op(Op::CtRoot, 0, 0, 0, 0);
         let me = self.me();
-        let (left, top) = (self.op(Op::ChildLeft, me, 0, 0, 0) as i32, self.op(Op::ChildTop, me, 0, 0, 0) as i32);
-        let (w, h) = (self.op(Op::ChildWidth, me, 0, 0, 0) as i32, self.op(Op::ChildHeight, me, 0, 0, 0) as i32);
+        let (left, top) = (mem::left(me), mem::top(me));
+        let (w, h) = (mem::width(me), mem::height(me));
         let mut nx = left.wrapping_add(x.wrapping_sub(drag_x));
         let mut ny = top.wrapping_add(y.wrapping_sub(drag_y));
         if keep {
-            let (rw, rh) =
-                (self.op(Op::ChildWidth, root, 0, 0, 0) as i32, self.op(Op::ChildHeight, root, 0, 0, 0) as i32);
+            let (rw, rh) = (mem::width(root), mem::height(root));
             if nx.wrapping_add(w) > rw {
                 nx = rw.wrapping_sub(w);
             }

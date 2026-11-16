@@ -14,6 +14,7 @@
 //! popup set and the modal component (never read or written after the constructor). The overrides that only called
 //! the container's (FindChildAt, ChildInvalidated, MouseEnter) are gone: the container's own run.
 
+use crate::compmem as mem;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::ffi::c_void;
@@ -210,12 +211,7 @@ impl EeWonRoot {
     pub fn size_changed(&self) {
         self.ct().size_changed();
         let me = self.me();
-        let r = EeWonRect {
-            x: self.op(Op::ChildLeft, me, 0, 0, 0) as i32,
-            y: self.op(Op::ChildTop, me, 0, 0, 0) as i32,
-            width: self.op(Op::ChildWidth, me, 0, 0, 0) as i32,
-            height: self.op(Op::ChildHeight, me, 0, 0, 0) as i32,
-        };
+        let r = EeWonRect { x: mem::left(me), y: mem::top(me), width: mem::width(me), height: mem::height(me) };
         self.st.borrow_mut().invalid = r;
     }
 
@@ -260,7 +256,7 @@ impl EeWonRoot {
         self.op(Op::ChildInvalidate, self.cursor_component(), 0, 0, 0);
         self.op(Op::ChildSetPos, self.cursor_component(), x as isize, y as isize, 0);
         let c = self.cursor_component();
-        let (w, h) = (self.op(Op::ChildWidth, c, 0, 0, 0) as i32, self.op(Op::ChildHeight, c, 0, 0, 0) as i32);
+        let (w, h) = (mem::width(c), mem::height(c));
         self.invalidate_rect(EeWonRect { x, y, width: w, height: h });
     }
 
@@ -285,7 +281,7 @@ impl EeWonRoot {
             return;
         }
         let me = self.me();
-        let (left, top) = (self.op(Op::ChildLeft, me, 0, 0, 0) as i32, self.op(Op::ChildTop, me, 0, 0, 0) as i32);
+        let (left, top) = (mem::left(me), mem::top(me));
         let Some((nx, ny)) = guievent::drag_place(left, top, x, y, dx, dy) else {
             return;
         };
@@ -308,7 +304,7 @@ impl EeWonRoot {
         if mouse == 0 {
             return;
         }
-        let drags = self.op(Op::CtBits, mouse, 0, 0, 0) & FLAG_PARENT_DRAG != 0;
+        let drags = mem::bits(mouse) as u32 as isize & FLAG_PARENT_DRAG != 0;
         if !guievent::drag_starts(button, allow, drags) {
             return;
         }
@@ -359,7 +355,7 @@ impl EeWonRoot {
         if comp == 0 {
             return;
         }
-        if self.op(Op::CtParentOf, comp, 0, 0, 0) != 0 {
+        if mem::parent(comp) != 0 {
             self.op(Op::CtDetach, comp, 0, 0, 0);
             let bg = self.op(Op::CtGrabBG, comp, 0, 0, 0);
             if bg != 0 {

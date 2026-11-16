@@ -335,11 +335,13 @@ public:
     int Height() { return this->mBounds.Height(); }
     int Right() { return this->mBounds.Right(); }
     int Bottom() { return this->mBounds.Bottom(); }
-    Container* GetParent() { return this->mParent; } // inline, at +0x08
-    Container* mParent;                     // +0x08 (SetEnabled notifies it through its slot +0xbc)
-    std::list<SmartPtr<Component> >::iterator mChildListItr; // +0x0c, child-list node iterator
+    Container* GetParent() { return this->mParent; }
+    // the members, mParent .. mExtraStuff, are laid out as the Rust block compobj and the Rust objects read and
+    // write in place (ee_won compmem.rs EeWonCompMembers; ComponentLifetime.cpp asserts the offsets). The
+    // original's mChildListItr (the node in the parent's list) went with the list (the Rust container's)
+    Container* mParent;                     // (SetEnabled notifies it through its slot +0xbc)
 protected:
-    WONRectangle mBounds; // at +0x10..0x1f, embedded rectangle (16 bytes)
+    WONRectangle mBounds;
 public:
     int mComponentBits; //20, full DWORD flags (int: the tests compile to shr n; test 1); bit80 disabled
     int mControlId;                         // +0x24 (the component events' id)

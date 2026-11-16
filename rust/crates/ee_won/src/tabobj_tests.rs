@@ -29,6 +29,7 @@ fn dangling() -> *mut c_void {
 
 #[test]
 fn the_constructor_state_the_fields_and_copied_attributes() {
+    let _w = crate::compmem::zeroed_world(16);
     let bar = EeWonTabBar::new(dangling(), Some(counting_host), std::ptr::null(), std::ptr::null());
     let other_bar = EeWonTabBar::new(dangling(), Some(counting_host), std::ptr::null(), std::ptr::null());
     let ct = crate::ctobj::EeWonContainer::new(3 as *mut c_void, Some(counting_host), false);

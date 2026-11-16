@@ -9,13 +9,11 @@ use super::*;
 
 // ---- a mock world: components 1..=8 with bounds, flags, parents, timer flags and references; every op logged
 
+/// a component: its members' block (ctobj reads it through the table `world` registers), then its references
+#[repr(C)]
 #[derive(Default, Clone)]
 struct Comp {
-    bounds: [i32; 4],
-    bits: isize,
-    parent: isize,
-    timer: isize,
-    focus_id: isize,
+    m: crate::compmem::EeWonCompMembers,
     refs: i32,
 }
 
@@ -33,24 +31,10 @@ unsafe extern "C" fn mock_host(comp: *mut c_void, op: Op, a: isize, b: isize, c:
     let me = comp as isize;
     MOCK.with(|m| {
         let mut m = m.borrow_mut();
-        let w = |m: &Mock, i: isize| m.comps[i as usize].clone();
         match op {
-            Op::CtBits => return w(&m, a).bits,
-            Op::CtParentOf => return w(&m, a).parent,
-            Op::CtTimerFlags => return w(&m, a).timer,
-            Op::CtFocusId => return w(&m, a).focus_id,
-            Op::ChildLeft => return w(&m, a).bounds[0] as isize,
-            Op::ChildTop => return w(&m, a).bounds[1] as isize,
-            Op::ChildWidth => return w(&m, a).bounds[2] as isize,
-            Op::ChildHeight => return w(&m, a).bounds[3] as isize,
-            Op::CtContains => {
-                let r = w(&m, a).bounds;
-                let (x, y) = (b as i32, c as i32);
-                return (x >= r[0] && x < r[0] + r[2] && y >= r[1] && y < r[1] + r[3]) as isize;
-            }
-            Op::CtSetParent => m.comps[a as usize].parent = if b != 0 { me } else { 0 },
-            Op::CtSetFocusId => m.comps[a as usize].focus_id = b,
-            Op::CtSetTimerFlags => m.comps[me as usize].timer = a,
+            Op::CtSetParent => m.comps[a as usize].m.parent = if b != 0 { me } else { 0 },
+            Op::CtSetFocusId => m.comps[a as usize].m.focus_id = b as u8,
+            Op::CtSetTimerFlags => m.comps[me as usize].m.timer = a as i8,
             Op::ChildHold => m.comps[a as usize].refs += 1,
             Op::ChildRelease => m.comps[a as usize].refs -= 1,
             Op::CtChild if b == V::HitTest as isize => return 1,
@@ -68,14 +52,16 @@ fn world(n: usize) {
         let mut m = m.borrow_mut();
         m.comps = vec![Comp::default(); n + 1];
         for i in 1..=n {
-            m.comps[i].bounds = [i as i32 * 10, 0, 10, 10];
+            m.comps[i].m.bounds = crate::guilayout::EeWonRect::new(i as i32 * 10, 0, 10, 10);
         }
+        let p = m.comps.as_mut_ptr() as *mut crate::compmem::EeWonCompMembers;
+        crate::compmem::ee_won_comp_members_table(p, 0, n as isize + 1, std::mem::size_of::<Comp>());
         m.log.clear();
     });
 }
 
 fn set_bits(i: usize, bits: isize) {
-    MOCK.with(|m| m.borrow_mut().comps[i].bits = bits);
+    MOCK.with(|m| m.borrow_mut().comps[i].m.bits = bits as i32);
 }
 
 fn refs(i: usize) -> i32 {
@@ -133,15 +119,15 @@ fn timer_children_go_when_they_stop_wanting_ticks() {
     let t = ct();
     for i in [2, 3, 4] {
         t.add_child(i);
-        MOCK.with(|m| m.borrow_mut().comps[i as usize].timer = 2);
+        MOCK.with(|m| m.borrow_mut().comps[i as usize].m.timer = 2);
         t.add_timer_child(i);
     }
-    assert_eq!(MOCK.with(|m| m.borrow().comps[1].timer), 1);
+    assert_eq!(MOCK.with(|m| m.borrow().comps[1].m.timer), 1);
     // 3 answers its tick (odd), 2 and 4 do not: they are dropped and asked to stop
     assert!(t.timer_event(5));
     assert_eq!(t.st.borrow().timers.iter().copied().collect::<Vec<_>>(), vec![3]);
     assert_eq!(refs(2), 1);
-    MOCK.with(|m| m.borrow_mut().comps[3].timer = 0);
+    MOCK.with(|m| m.borrow_mut().comps[3].m.timer = 0);
     assert!(!t.timer_event(5));
     assert!(t.st.borrow().timers.is_empty());
     t.destroy();
@@ -194,18 +180,22 @@ const CTS: usize = 7;
 /// the most components a golden's world has (the tab control's: nineteen)
 const COMPS: usize = 24;
 
+/// A component of the world, laid out as compmem's block (the Rust objects read it through the table the replay
+/// registers): the C++ world's `World`.
+#[repr(C)]
 #[derive(Default, Clone, Copy)]
 pub(crate) struct W {
+    pub(crate) parent: isize,
     pub(crate) x: i32,
     pub(crate) y: i32,
     pub(crate) w: i32,
     pub(crate) h: i32,
     pub(crate) bits: u32,
-    pub(crate) parent: isize,
-    pub(crate) timer: i32,
-    pub(crate) invalid: i32,
-    pub(crate) focus_id: i32,
     pub(crate) control_id: i32,
+    pub(crate) focus_id: u8,
+    pub(crate) invalid: i8,
+    pub(crate) timer: i8,
+    pub(crate) extra: isize,
 }
 
 #[derive(Default)]
@@ -290,8 +280,8 @@ fn apply_set(n: &[i64]) {
         let v = n[2];
         match n[1] {
             0 => w.bits = v as u32,
-            1 => w.invalid = v as i32,
-            2 => w.timer = v as i32,
+            1 => w.invalid = v as i8,
+            2 => w.timer = v as i8,
             3 => w.x = v as i32,
             4 => w.y = v as i32,
             5 => w.w = v as i32,
@@ -417,27 +407,6 @@ pub(crate) unsafe extern "C" fn replay_host(
         return r;
     }
     match op {
-        Op::CtBits => return w(a).bits as isize,
-        Op::CtParentOf => return w(a).parent,
-        Op::CtTimerFlags => return w(a).timer as isize,
-        Op::CtInvalidState => return w(a).invalid as isize,
-        Op::CtFocusId => return w(a).focus_id as isize,
-        Op::ChildLeft => return w(a).x as isize,
-        Op::ChildTop => return w(a).y as isize,
-        Op::ChildWidth => return w(a).w as isize,
-        Op::ChildHeight => return w(a).h as isize,
-        Op::ChildControlId => return w(a).control_id as isize,
-        Op::CtContains => {
-            let q = w(a);
-            let (x, y) = (b as i32, c as i32);
-            return (x >= q.x && x < q.x.wrapping_add(q.w) && y >= q.y && y < q.y.wrapping_add(q.h)) as isize;
-        }
-        Op::CtIntersects => {
-            let (p, q) = (w(a), w(b));
-            let r1 = crate::guilayout::EeWonRect { x: p.x, y: p.y, width: p.w, height: p.h };
-            let r2 = crate::guilayout::EeWonRect { x: q.x, y: q.y, width: q.w, height: q.h };
-            return crate::guilayout::intersects(r1, r2) as isize;
-        }
         Op::CtGrabBG => return if w(a).bits & 0x100 != 0 { 0x9000 + a } else { 0 },
         Op::CtOwnScheme => return if a % 3 == 0 { 0xA000 + a } else { 0 },
         Op::CtScheme => return with(|r| r.scheme),
@@ -499,9 +468,9 @@ pub(crate) unsafe extern "C" fn replay_host(
     }
     with(|r| match op {
         Op::CtSetParent => r.w[a as usize].parent = if b != 0 { me } else { 0 },
-        Op::CtSetFocusId => r.w[a as usize].focus_id = b as i32,
-        Op::CtSetInvalidState => r.w[a as usize].invalid = b as i32,
-        Op::CtSetTimerFlags => r.w[me as usize].timer = a as i32,
+        Op::CtSetFocusId => r.w[a as usize].focus_id = b as u8,
+        Op::CtSetInvalidState => r.w[a as usize].invalid = b as i8,
+        Op::CtSetTimerFlags => r.w[me as usize].timer = a as i8,
         Op::ChildSetFlags => {
             let q = &mut r.w[a as usize];
             q.bits = if c != 0 { q.bits | b as u32 } else { q.bits & !(b as u32) };
@@ -531,6 +500,8 @@ pub(crate) fn replay_with(seq: &[&'static str], ext: Option<Ext>) -> Option<Stri
     EXT.with(|e| e.set(ext));
     REPLAY.with(|r| {
         *r.borrow_mut() = Some(Replay { lines: seq.to_vec(), scheme: 0xB000, ..Replay::default() });
+        let p = r.borrow_mut().as_mut().map_or(std::ptr::null_mut(), |q| q.w.as_mut_ptr());
+        crate::compmem::ee_won_comp_members_table(p as *mut _, 0, COMPS as isize, std::mem::size_of::<W>());
     });
     while with(|r| r.at < r.lines.len() && r.failure.is_none()) {
         let l = next_line();
@@ -545,10 +516,11 @@ pub(crate) fn replay_with(seq: &[&'static str], ext: Option<Ext>) -> Option<Stri
                     h: n[4] as i32,
                     bits: n[5] as u32,
                     parent: 0,
-                    timer: n[6] as i32,
-                    invalid: n[7] as i32,
+                    timer: n[6] as i8,
+                    invalid: n[7] as i8,
                     focus_id: 0,
                     control_id: n[8] as i32,
+                    extra: 0,
                 }
             }),
             "env" => apply_env(&n),

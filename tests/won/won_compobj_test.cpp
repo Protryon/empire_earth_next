@@ -236,6 +236,11 @@ public:
     char mTimerFlags;
     ComponentExtra* mExtraStuff;
 };
+// the members compobj reads and writes in place: compmem.rs's block, at its offset (this RefCount's two ints)
+static_assert(offsetof(Component, mParent) == EE_WON_COMP_MEMBERS_AT && offsetof(Component, mBounds) == EE_WON_COMP_MEMBERS_AT + offsetof(EeWonCompMembers, bounds) &&
+              offsetof(Component, mComponentBits) == EE_WON_COMP_MEMBERS_AT + offsetof(EeWonCompMembers, bits) &&
+              offsetof(Component, mTimerFlags) == EE_WON_COMP_MEMBERS_AT + offsetof(EeWonCompMembers, timer) &&
+              offsetof(Component, mExtraStuff) == EE_WON_COMP_MEMBERS_AT + offsetof(EeWonCompMembers, extra), "compmem.rs's block");
 class Container : public Component {
 public:
     bool mModal;
@@ -819,18 +824,6 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
     if (op != EeWonGuiOp::Comp)
         return 0;
     switch ((KK)k) {
-    case KK::Bits: return t->mComponentBits;
-    case KK::SetBits: t->mComponentBits = (int)c; return 0;
-    case KK::Invalid: return t->mInvalidState;
-    case KK::SetInvalid: t->mInvalidState = (char)c; return 0;
-    case KK::Timer: return t->mTimerFlags;
-    case KK::SetTimer: t->mTimerFlags = (char)c; return 0;
-    case KK::ControlId: return t->mControlId;
-    case KK::Bounds: *(WONRectangle*)c = t->mBounds; return 0;
-    case KK::SetXY: t->mBounds.x = (int)c; t->mBounds.y = (int)d; return 0;
-    case KK::SetWH: t->mBounds.height = (int)d; t->mBounds.width = (int)c; return 0;
-    case KK::Parent: return (intptr_t)(Component*)t->mParent;
-    case KK::HasExtra: return t->mExtraStuff != NULL;
     case KK::AllocExtra: t->AllocateExtraStuff(); return 0;
     case KK::Extra: case KK::SetExtra: {
         ComponentExtra* x = t->mExtraStuff;

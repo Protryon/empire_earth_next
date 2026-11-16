@@ -40,6 +40,7 @@ fn log() -> Vec<(u32, isize, isize, isize)> {
 #[test]
 fn the_constructor_state_and_the_radio_focus() {
     let _s = serial();
+    let _w = crate::compmem::zeroed_world(16);
     let me = 7usize as *mut c_void;
     let b = EeWonButton::new(me, Some(counting_host));
     type F = EeWonBtnField;
@@ -95,17 +96,18 @@ fn the_default_buttons_hold_and_repaint() {
 #[test]
 fn a_click_toggles_the_check_and_fires_the_event() {
     let _s = serial();
+    let _w = crate::compmem::zeroed_world(16);
     let b = EeWonButton::new(4usize as *mut c_void, Some(counting_host));
     log();
     b.click();
     assert_eq!(b.field(EeWonBtnField::Flags as i32), 0x4);
     let ops: Vec<u32> = log().iter().map(|x| x.0).collect();
-    assert_eq!(ops, vec![Op::CtBits as u32, Op::Invalidate as u32, Op::BtnHandleActivate as u32, Op::FireEvent as u32]);
+    assert_eq!(ops, vec![Op::Invalidate as u32, Op::BtnHandleActivate as u32, Op::FireEvent as u32]);
     // no activation: nothing
     b.set_button_flags(0x200, true);
     log();
     b.click();
-    assert_eq!(log().len(), 1);
+    assert!(log().is_empty());
     assert_eq!(b.field(EeWonBtnField::Flags as i32), 0x204);
 }
 

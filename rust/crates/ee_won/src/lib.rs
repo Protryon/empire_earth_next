@@ -27,6 +27,7 @@ pub mod cfgtab;
 pub mod chat;
 pub mod chatobj;
 pub mod comboobj;
+pub mod compmem;
 pub mod compobj;
 pub mod config;
 pub mod configobj;

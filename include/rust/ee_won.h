@@ -263,6 +263,9 @@ constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 /// The sink's `which`: the text.
 constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
 
+/// The block's offset in a C++ `Component` (RefCount's vtable pointer and its 32-bit count, padded).
+constexpr static const size_t EE_WON_COMP_MEMBERS_AT = 16;
+
 /// `ComponentFlag_*` (WONComponentFlags.h; the C++ asserts them).
 constexpr static const int32_t EE_WON_COMP_FLAG_INVISIBLE = 1;
 
@@ -9853,32 +9856,8 @@ enum class EeWonGrab : uint32_t {
 
 /// The host's calls (`EeWonGuiOp::Comp`; `b` the receiver, `c`, `d` the arguments; a component as `Component*`).
 enum class EeWonComp : uint32_t {
-  /// `mComponentBits`.
-  Bits = 1,
-  /// `mComponentBits = c`.
-  SetBits,
-  /// `mInvalidState` (a `char`).
-  Invalid,
-  /// `mInvalidState = c`.
-  SetInvalid,
-  /// `mTimerFlags` (a `char`).
-  Timer,
-  /// `mTimerFlags = c`.
-  SetTimer,
-  /// `mControlId`.
-  ControlId,
-  /// `mBounds` into the `EeWonRect` at `c`.
-  Bounds,
-  /// `mBounds.x = c; mBounds.y = d`.
-  SetXY,
-  /// `mBounds.height = d; mBounds.width = c`.
-  SetWH,
-  /// `mParent` (as a `Component*`, 0 for none).
-  Parent,
-  /// `mExtraStuff != NULL` (0 or 1).
-  HasExtra,
   /// `AllocateExtraStuff()`.
-  AllocExtra,
+  AllocExtra = 1,
   /// a member of `mExtraStuff` (`c` an `EeWonCompExtra`; a pointer, or the tip flag 0 or 1).
   Extra,
   /// a member of `mExtraStuff` (`c` an `EeWonCompExtra`) = `d`; `GrabBG`: `new BackgroundGrabber`.
@@ -10563,6 +10542,37 @@ struct EeWonChatOutcome {
 /// Receives a text the parse set (`which`: `EE_WON_CHAT_TARGET_NAME` or `EE_WON_CHAT_TEXT`).
 using EeWonChatSink = void(*)(void *context, int32_t which, const uint32_t *units, size_t count);
 
+/// A `WONRectangle` (x, y, width, height).
+struct EeWonRect {
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+};
+
+/// Component's members, in their C++ order (`mParent` .. `mExtraStuff`).
+struct EeWonCompMembers {
+  /// `mParent` (a `Container*`, which is its `Component*`: Container's only base), 0 for none.
+  ptrdiff_t parent;
+  /// `mBounds`.
+  EeWonRect bounds;
+  /// `mComponentBits`.
+  int32_t bits;
+  /// `mControlId`.
+  int32_t control_id;
+  /// `mFocusId` (`unsigned char`).
+  uint8_t focus_id;
+  /// `mInvalidState` (`char`).
+  int8_t invalid;
+  /// `mTimerFlags` (`char`).
+  int8_t timer;
+  /// `mExtraStuff` (owned by the C++; the Rust tests only whether it is made).
+  ptrdiff_t extra;
+};
+
+/// A world's own lookup of a component's block (`ee_won_comp_members_resolver`).
+using EeWonCompResolveFn = EeWonCompMembers*(*)(ptrdiff_t c);
+
 /// `FileReader`'s state: the file, or the memory buffer (owned when read into memory), its length and position.
 /// `memory_mode` is the original's flag: set by a memory open and by `length()` once it measured the file.
 struct EeWonFileReader {
@@ -11043,14 +11053,6 @@ struct EeWonGetCertHooks {
 
 /// The host: the hook on the C++ Graphics `g` with up to seven ints at `args` and an object `p`; its answer.
 using EeWonGfxHost = uint32_t(*)(void *g, EeWonGfxHook hook, const int32_t *args, const void *p);
-
-/// A `WONRectangle` (x, y, width, height).
-struct EeWonRect {
-  int32_t x;
-  int32_t y;
-  int32_t width;
-  int32_t height;
-};
 
 /// The C++ Graphics' translation, colour and clip rectangle (`mTransX`, `mTransY`, `mColor`, `mClipRect`, in that
 /// order).
@@ -13324,6 +13326,18 @@ ptrdiff_t ee_won_combo_call(const EeWonComboBox *combo,
                             ptrdiff_t a,
                             ptrdiff_t b,
                             ptrdiff_t c);
+
+/// A world's components by id (drivers and tests): the ids `first..first + count` resolve to the blocks at
+/// `base + (id - first) * stride`. `base` NULL removes the table.
+void ee_won_comp_members_table(EeWonCompMembers *base,
+                               ptrdiff_t first,
+                               ptrdiff_t count,
+                               size_t stride);
+
+/// A world whose components live in a map (drivers and tests): `f` answers a component's block, an id outside a
+/// registered table. A world whose Rust objects only read the members may answer a block filled from its own state
+/// at each call (the block is read at once, before any other call). NULL removes it.
+void ee_won_comp_members_resolver(EeWonCompResolveFn f);
 
 /// One of Component's methods on the C++ component `me` (`EeWonCompCall`), its calls out through `host`.
 ///
