@@ -25988,3 +25988,21 @@ read by many lanes, so a move keeps them and takes the bodies over a view); `Fil
 - **Lesson.** In this shell a heredoc's backslash sequences reach Python already turned into control characters
   (a printed backslash-n became a line break inside a C string, a backslash at a line's end joined two lines): edit
   such text with the editor tool, not a heredoc script.
+- **The re-baseline (all on this tree, each run twice and equal).** The oracle `ref` (seeds 2-7: 5,728, 5,292,
+  6,057, 7,812, 7,750 and 6,053 EE-AI lines), saveload_expect.txt (oracle 4/4 END; the other settings as the file
+  says; calamity seed 2 ends at 1083 s, so its 1900 s row is "-", which expect_check now accepts), and the capture
+  goldens of seven profiles (oracle 564 digests, calamity 597, late 572, space 570, missile 66, effects 18, units 510),
+  each golden keeping the tags it gated before, TNMT left out. Tags that no longer record anywhere under the Lua AI
+  (the C++ classic was their only caller): calamity CBFS, CBFT, CNTN and EVAT; late and space CBCN; units CALC,
+  CALS, CALT, CALU, CALW (the computers cast no calamity now) and CONT. Some seeds lost CBAD, CBFS, CBFT, CBPU, EVUN.
+- **The scenario profile's campaign scenarios: a real regression of the merge, fixed.** They are save version 0.250
+  files with computer players, and main's EEComputerPlayer::Load (stage 5 phase 4) reads main's own shorter block:
+  an empty combat manager block and the placement's tile in place of the original's combat, civilization and
+  exploration managers. The read ran off the block's end (result 18), and the failed load then faulted in the effect
+  manager's teardown on an effect whose unit was still a saved id (EEEffect::~EEEffect, mUnit 0x1000002). main has
+  the same code; its gates never load a campaign. EECPLegacyLoad.cpp now steps over the original's blocks of a
+  0.232-0.250 file field by field (every Load of the deleted managers at those versions, read into nothing; the
+  build manager's town centre tile kept as the placement's). 17 of the 18 Art of Conquest campaign scenarios load
+  and play again, the profile's six among them. "The return" holds one attack group, whose polymorphic sub groups
+  are not stepped over: it still fails. The eight Learning Campaign scenarios failed before the merge as well
+  (EE-SIM exits 2).
