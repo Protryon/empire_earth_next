@@ -357,6 +357,232 @@ constexpr static const int32_t EE_UNITS_ACT_INITIAL_ATTACK_HEIGHT = 293;
 
 constexpr static const int32_t EE_UNITS_ACT_CONTACT_HERE = 294;
 
+/// group `a`'s state into `io.group`
+constexpr static const int32_t EE_UNITS_AG_GROUP = 1;
+
+/// group `a`'s `GetUnit(c)`
+constexpr static const int32_t EE_UNITS_AG_GROUP_UNIT = 2;
+
+/// group `a`'s `RemoveUnit(b)`
+constexpr static const int32_t EE_UNITS_AG_REMOVE = 3;
+
+/// group `a`'s `Finish()`
+constexpr static const int32_t EE_UNITS_AG_FINISH = 4;
+
+/// group `a`'s `mMovesTogether = true`
+constexpr static const int32_t EE_UNITS_AG_MOVES_TOGETHER = 5;
+
+/// group `a`'s `RequestAllPaths()`
+constexpr static const int32_t EE_UNITS_AG_REQUEST_ALL = 6;
+
+/// group `a`'s `RequestPaths(units)`: the `c` units at `io.list`
+constexpr static const int32_t EE_UNITS_AG_REQUEST_PATHS = 7;
+
+/// `EESendGroupCommand(a, b, a's player id, c, 0)`
+constexpr static const int32_t EE_UNITS_AG_SEND = 8;
+
+/// group `a`'s formation: centre `io.p`, heading `io.f` when `c`, then `Arrange` (slots pushed: unit, position,
+/// heading)
+constexpr static const int32_t EE_UNITS_AG_ARRANGE = 9;
+
+/// `new EEActiveGroup(a's mPlayer)`
+constexpr static const int32_t EE_UNITS_AG_NEW_GROUP = 10;
+
+/// group `a`'s `Add(b)`
+constexpr static const int32_t EE_UNITS_AG_ADD = 11;
+
+/// group `a`'s `SetFormation(b's mFormation)`
+constexpr static const int32_t EE_UNITS_AG_SET_FORMATION = 12;
+
+/// group `b` launched from `a` (ag.rs `AgHost::launch`): goal `io.a`, target `io.b`, action `io.c`, command
+/// `io.d`, queued `c`
+constexpr static const int32_t EE_UNITS_AG_LAUNCH = 13;
+
+/// group `a`'s `mDestinations` (pushed: id, point)
+constexpr static const int32_t EE_UNITS_AG_DESTINATIONS = 14;
+
+/// `gWorld.GetUnit(c)`'s inner collision sphere into `io.f` (0: no unit)
+constexpr static const int32_t EE_UNITS_AG_WORLD_SPHERE = 15;
+
+/// `ee_combat_regions_size(gWorld.mMap->mUnitRegions)`
+constexpr static const int32_t EE_UNITS_AG_REGIONS_SIZE = 16;
+
+/// the world table's group speed cap factor into `io.f`
+constexpr static const int32_t EE_UNITS_AG_CAP_FACTOR = 17;
+
+/// group `a`'s 17 values `mSpeed .. mCapFactor` from `io.list`
+constexpr static const int32_t EE_UNITS_AG_SET_VALUES = 18;
+
+/// unit `a` into `io.unit`
+constexpr static const int32_t EE_UNITS_AG_UNIT = 20;
+
+/// unit `a`'s `GetQueuedGoal(c)`
+constexpr static const int32_t EE_UNITS_AG_QUEUED_GOAL = 21;
+
+/// unit `a`'s `ClearGoalQueue(c)`
+constexpr static const int32_t EE_UNITS_AG_CLEAR_QUEUE = 22;
+
+/// unit `a`'s `ClearGoals(c)`
+constexpr static const int32_t EE_UNITS_AG_CLEAR_GOALS = 23;
+
+/// unit `a`'s `QueueGoal(b, c)`
+constexpr static const int32_t EE_UNITS_AG_QUEUE_GOAL = 24;
+
+/// unit `a`'s `SetGoal(b, 0, c)`
+constexpr static const int32_t EE_UNITS_AG_SET_GOAL = 25;
+
+/// unit `a`'s `mGoalQueues[c].Add(b)`, `RefreshGoals()`, `RefreshActiveGoal()`
+constexpr static const int32_t EE_UNITS_AG_QUEUE_ADD = 26;
+
+/// unit `a`'s `mGoalQueues[1].AddTime(1)`
+constexpr static const int32_t EE_UNITS_AG_ADD_TIME = 27;
+
+/// unit `a`'s `StartAction(c)`, then its class's `ActionChanged(a)`
+constexpr static const int32_t EE_UNITS_AG_ACT = 28;
+
+/// unit `a`'s `QueueSquadronGoals(b, c & 1)` (`c & 2`) or `SetSquadronGoals(b, c & 1)`
+constexpr static const int32_t EE_UNITS_AG_SQUADRON = 29;
+
+/// unit `a`'s `SetGatheredResource(NULL)`
+constexpr static const int32_t EE_UNITS_AG_CLEAR_GATHERED = 30;
+
+/// unit `a`'s `mIsSpecialAttack = c`
+constexpr static const int32_t EE_UNITS_AG_SET_SPECIAL = 31;
+
+/// unit `a`'s `mFormationSlot = c` (unless -1), `mFormationRank = d`
+constexpr static const int32_t EE_UNITS_AG_SET_PLACE = 32;
+
+/// unit `a`'s `CanTake(b, c)`
+constexpr static const int32_t EE_UNITS_AG_CAN_TAKE = 33;
+
+/// unit `a`'s `GetNearestFootprintTile(b, &io.a, &io.b)`
+constexpr static const int32_t EE_UNITS_AG_FOOTPRINT = 34;
+
+/// `gWorld.mMap->GetTile(c, d) != NULL`
+constexpr static const int32_t EE_UNITS_AG_HAS_TILE = 35;
+
+/// the tile at `io.p` (`UMFloorUnsigned`): 1 and its height in `io.f`, terrain in `io.a`; 0 for none
+constexpr static const int32_t EE_UNITS_AG_TILE_AT = 36;
+
+/// `gContinentManager.CanGetTo(a, c, d)`
+constexpr static const int32_t EE_UNITS_AG_CAN_GET_TO = 37;
+
+/// `EECanConvert(a, b, flag)`, the flag in and out in `io.a`
+constexpr static const int32_t EE_UNITS_AG_CAN_CONVERT = 38;
+
+/// unit `a`'s `CanAttackClass(b)`
+constexpr static const int32_t EE_UNITS_AG_CAN_ATTACK_CLASS = 39;
+
+/// class `a`'s `FindAction(c) != NULL`
+constexpr static const int32_t EE_UNITS_AG_HAS_ACTION = 40;
+
+/// unit `a`'s `GetCommandType()`
+constexpr static const int32_t EE_UNITS_AG_COMMAND_TYPE = 41;
+
+/// unit `a`'s `GetComplexUnit()->GetNumCargoUnits()`
+constexpr static const int32_t EE_UNITS_AG_NUM_CARGO = 42;
+
+/// unit `a`'s `GetPosition(io.p)`
+constexpr static const int32_t EE_UNITS_AG_POSITION = 43;
+
+/// `EEGetAngleFromNorth(&io.p, &io.q)` into `io.f`
+constexpr static const int32_t EE_UNITS_AG_ANGLE = 44;
+
+/// the units of tile (c, d) (pushed)
+constexpr static const int32_t EE_UNITS_AG_TILE_UNITS = 45;
+
+/// unit `a`'s `IsPassableBy(b)`
+constexpr static const int32_t EE_UNITS_AG_PASSABLE = 46;
+
+/// `EEIsSeenBy(a, player b, true)`
+constexpr static const int32_t EE_UNITS_AG_SEEN_BY = 47;
+
+/// `EECanPriestConvert(a, b)`
+constexpr static const int32_t EE_UNITS_AG_PRIEST_CONVERT = 48;
+
+/// unit `a`'s `GetPower() >= calamity b's GetCost() && node c's Contains(its type)`
+constexpr static const int32_t EE_UNITS_AG_CAN_CAST = 49;
+
+/// unit `a`'s `Reference()`
+constexpr static const int32_t EE_UNITS_AG_REFERENCE = 50;
+
+/// unit `a`'s `Dereference()`
+constexpr static const int32_t EE_UNITS_AG_DEREFERENCE = 51;
+
+/// `U2DRectangle<float>` (top `io.p[0]`, left `io.p[1]`, bottom `io.p[2]`, right `io.q[0]`)'s
+/// `GetClosestPoint((io.q[1], io.q[2]))` into `io.p[0]`, `io.p[1]`
+constexpr static const int32_t EE_UNITS_AG_RECT_CLOSEST = 52;
+
+/// goal `a`'s `mKind` (-1: none)
+constexpr static const int32_t EE_UNITS_AG_GOAL_KIND = 60;
+
+/// goal `a`'s `Clone()`
+constexpr static const int32_t EE_UNITS_AG_CLONE = 61;
+
+/// `delete` goal `a`
+constexpr static const int32_t EE_UNITS_AG_DELETE = 62;
+
+/// location goal `a`'s `GetB1C()` (`io.a`), `GetIsForcedMove()` (`io.b`), `GetShouldFace()` (`io.c`), `GetYaw()`
+/// (`io.f`)
+constexpr static const int32_t EE_UNITS_AG_LOCATION_FIELDS = 63;
+
+/// goal `a`'s `GetB1C()`
+constexpr static const int32_t EE_UNITS_AG_GOAL_B1C = 64;
+
+/// goal `a`'s `GetGoalLocation(io.p)`
+constexpr static const int32_t EE_UNITS_AG_GOAL_LOCATION = 65;
+
+/// `EEUGRust::NewLocation(&io.p, a & 1, a & 2, a & 4, io.f, a & 8, io.b)` (`a` is `io.a`)
+constexpr static const int32_t EE_UNITS_AG_NEW_LOCATION = 66;
+
+/// `EEUGRust::NewUnloadTransport(a, c, d, true)`
+constexpr static const int32_t EE_UNITS_AG_NEW_UNLOAD = 67;
+
+/// unload goal `a`'s `CanUnloadAtDestination()`
+constexpr static const int32_t EE_UNITS_AG_CAN_UNLOAD_DEST = 68;
+
+/// unload goal `a`'s `GetUnloadTransport(&io.a, &io.b)`
+constexpr static const int32_t EE_UNITS_AG_UNLOAD_DEST = 69;
+
+/// goal `a`'s `mB1D = true`
+constexpr static const int32_t EE_UNITS_AG_SET_B1D = 70;
+
+/// location goal `a`'s `SetGroupPathState(0)`
+constexpr static const int32_t EE_UNITS_AG_CLEAR_PATH_STATE = 71;
+
+/// gather goal `a`'s `GetGatherStorage()`
+constexpr static const int32_t EE_UNITS_AG_GATHER_STORAGE = 72;
+
+/// gather goal `a`'s `GetGatherResource()`
+constexpr static const int32_t EE_UNITS_AG_GATHER_RESOURCE = 73;
+
+/// gather goal `a`'s `SetGatherStorage(b)`
+constexpr static const int32_t EE_UNITS_AG_SET_GATHER_STORAGE = 74;
+
+/// attack goal `a`'s `GetAttackTarget()`
+constexpr static const int32_t EE_UNITS_AG_ATTACK_TARGET = 75;
+
+/// attack goal `a`'s `IsConvertAttack()`
+constexpr static const int32_t EE_UNITS_AG_IS_CONVERT_ATTACK = 76;
+
+/// attack goal `a`'s `SetAttacker(NULL)`
+constexpr static const int32_t EE_UNITS_AG_CLEAR_ATTACKER = 77;
+
+/// heal goal `a`'s `GetHealTarget()`
+constexpr static const int32_t EE_UNITS_AG_HEAL_TARGET = 78;
+
+/// heal goal `a`'s `Suits(b)`
+constexpr static const int32_t EE_UNITS_AG_SUITS = 79;
+
+/// explore goal `a`'s `SetExploreTile(c, d)`
+constexpr static const int32_t EE_UNITS_AG_SET_EXPLORE_TILE = 80;
+
+/// patrol goal `a`'s `GetPatrolTarget()`, else `GetPatrolGroup()->GetLast()`
+constexpr static const int32_t EE_UNITS_AG_PATROL_POINT = 81;
+
+/// `EEUGRust::NewAttackUnit(a, b, true, false)`
+constexpr static const int32_t EE_UNITS_AG_NEW_ATTACK_UNIT = 82;
+
 /// `kActionIdle` (the idle action's id).
 constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
 
@@ -3031,6 +3257,9 @@ constexpr static const int64_t EE_UNITS_WORLD_PART_ACTIVE_GROUPS = 8;
 /// `gPathManager.LoadGraphSearches` / `SaveGraphSearches`
 constexpr static const int64_t EE_UNITS_WORLD_PART_GRAPH_SEARCHES = 9;
 
+/// The list a host operation fills.
+struct EeUnitsAgListHandle;
+
 /// The class's state (`mSlots`, `mMaxCargo`, `mUsedCargo`).
 struct EeUnitsAtc;
 
@@ -3042,6 +3271,86 @@ struct EeUnitsUpdateHost {
   void *ctx;
   int64_t (*read)(void *ctx, int32_t code);
   int64_t (*act)(void *ctx, int32_t code, int64_t a, int64_t b);
+};
+
+/// A unit as the bodies read it: its members, its class's and its stats' (`ee_units_ag_host`'s `EE_UNITS_AG_UNIT`
+/// fills it from the objects at the moment of the read).
+struct EeUnitsAgUnit {
+  uint64_t obj;
+  /// `mUnitClass`, `mComplexUnit`, `mPlayer`, `mGoalState` (complex units), `mContainer` (complex units)
+  uint64_t class_obj;
+  uint64_t complex;
+  uint64_t player;
+  uint64_t goal_state;
+  uint64_t container;
+  int32_t tile_x;
+  int32_t tile_y;
+  int32_t hit_points;
+  int32_t resource_amount;
+  uint32_t resource_type;
+  int32_t power;
+  uint32_t formation_slot;
+  /// `mVelocity`; `mPhysicalModel.GetLocation()`; `mTile->GetHeight()` (0 without a tile)
+  float velocity;
+  float location[3];
+  float tile_height;
+  uint8_t is_valid;
+  uint8_t commandable;
+  uint8_t is_built;
+  uint8_t detached;
+  uint32_t category;
+  uint32_t unit_type;
+  uint32_t ai_kind;
+  uint32_t family;
+  int32_t tile_size;
+  int32_t air_traffic_type;
+  float class_max_velocity;
+  float inner_sphere;
+  uint8_t can_attack_ground;
+  uint8_t paratrooper_bomber;
+  uint8_t can_patrol;
+  uint8_t has_special_attack;
+  /// `IsPriest()`, `IsCrusader()`, `IsTransport()`
+  uint8_t is_priest;
+  uint8_t is_crusader;
+  uint8_t is_transport;
+  float max_velocity;
+  float acceleration;
+  float max_angular_velocity;
+  float angular_acceleration;
+  float range;
+  float line_of_sight;
+  float attack;
+};
+
+/// The group's state as the bodies read it.
+struct EeUnitsAgGroup {
+  uint64_t goal;
+  /// the goal's `mKind` (-1: no goal)
+  int32_t goal_kind;
+  int32_t action;
+  uint32_t count;
+  float speed;
+  uint8_t queued;
+  uint8_t moves_together;
+  uint8_t special_attack;
+};
+
+/// One host operation's values.
+struct EeUnitsAgIo {
+  int64_t a;
+  int64_t b;
+  int64_t c;
+  int64_t d;
+  float f;
+  /// a point's x, y, z
+  float p[3];
+  /// a second point
+  float q[3];
+  EeUnitsAgUnit unit;
+  EeUnitsAgGroup group;
+  /// the list the operation pushes onto (`ee_units_ag_push`), or the values it reads
+  void *list;
 };
 
 /// What `AIStep` did (the USST words): the path (1 the gather goal restarted its action, 2 no command, 3 an idle
@@ -4495,6 +4804,55 @@ bool ee_units_action_changed(int32_t kind,
                              uint32_t id,
                              uint64_t object,
                              const EeUnitsUpdateHost *host);
+
+extern int64_t ee_units_ag_host(int32_t op,
+                                uint64_t a,
+                                uint64_t b,
+                                int64_t c,
+                                int64_t d,
+                                EeUnitsAgIo *io);
+
+/// Pushes an item onto a host operation's list.
+///
+/// # Safety
+/// `list` is the `EeUnitsAgIo::list` of a running operation that pushes; `p` is three floats.
+void ee_units_ag_push(EeUnitsAgListHandle *list, uint64_t obj, const float (*p)[3], float w);
+
+/// `EEActiveGroup::Plan`.
+void ee_units_ag_plan(uint64_t group);
+
+/// `EEActiveGroup::LayOutFormation`.
+void ee_units_ag_lay_out_formation(uint64_t group);
+
+/// `EEActiveGroup::ComputeValues`.
+void ee_units_ag_compute_values(uint64_t group);
+
+/// `EEActiveGroup::KeepAttackers`.
+void ee_units_ag_keep_attackers(uint64_t group);
+
+/// `EEActiveGroup::KeepMobileUnits`.
+void ee_units_ag_keep_mobile(uint64_t group);
+
+/// `EEActiveGroup::SpreadAroundUnit(target, x, y)`.
+void ee_units_ag_spread_around_unit(uint64_t group, uint64_t target, int32_t x, int32_t y);
+
+/// `EEActiveGroup::SpreadAroundResource(target)`.
+void ee_units_ag_spread_around_resource(uint64_t group, uint64_t target);
+
+/// `EEActiveGroup::SpreadAroundTile(x, y)` (`for_unload` 0) and `SpreadForUnload(x, y)` (1).
+void ee_units_ag_spread_around_tile(uint64_t group, int32_t x, int32_t y, uint8_t for_unload);
+
+/// `EEActiveGroup::SplitCalamityCasters(calamity, node, target)`.
+void ee_units_ag_split_calamity_casters(uint64_t group,
+                                        uint64_t calamity,
+                                        uint64_t node,
+                                        uint64_t target);
+
+/// `EEActiveGroup::IsReserved(point)` (`which` 0) and `IsCellTaken(point)` (1).
+///
+/// # Safety
+/// `point` is three floats.
+uint8_t ee_units_ag_reserved(uint64_t group, const float (*point)[3], uint8_t which);
 
 /// `EEComplexUnit::AIStep` over the store and the host's calls.
 ///

@@ -23,6 +23,8 @@
 //! the units on tiles, the wall lines, the placement tests) are `uu_tiles` (the pure geometry) and `uu` over its host.
 
 pub mod actions;
+pub mod ag;
+pub mod ag_host;
 pub mod ai;
 pub mod animate;
 pub mod atc;
