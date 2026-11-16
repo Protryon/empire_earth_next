@@ -61,6 +61,7 @@ pub mod ftpop;
 pub mod fwhost;
 pub mod fwop;
 pub mod getcert;
+pub mod gfxobj;
 pub mod grabobj;
 pub mod guicfg;
 pub mod guiconf;

@@ -1491,13 +1491,17 @@ public:
     void PushClipRect(int, int, int, int);
     void PopClipRect();
     SmartPtr<DisplayContext> mDisplayContext; //04
-    int mTransX, mTransY; //08,0c
+    // R6 WONGUI B round 1: the methods are ee_won's gfxobj.rs. The translation, colour and clip rectangle are the block
+    // of members it edits in place (EeWonGfxState: the original's +08, +0c, +14, +24; checked in Graphics.cpp), the
+    // clip stack (+18) its object
+    int mTransX, mTransY;
+    DWORD mColor;
+    WONRectangle mClipRect;
     SmartPtr<Font> mFont; //10
-    DWORD mColor; //14
-    typedef std::list<WONRectangle> ClipStack;
-    ClipStack mClipStack; //18..23
-    WONRectangle mClipRect; //24..33
     ColorScheme* mColorScheme; //34, borrowed
+    EeWonGfx* mGfx; // the clip stack, owned
+private:
+    DWORD GCall(EeWonGfxCall c, int a = 0, int b = 0, int cc = 0, int d = 0, int e = 0, int f = 0, int g = 0, const void* p = NULL);
 };
 
 // 0x2fdcd0 / 0x2fddf0 (cdecl): a 3D frame (inPressed: sunken) and a flat frame (provisional names)
