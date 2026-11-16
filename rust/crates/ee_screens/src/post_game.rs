@@ -776,7 +776,8 @@ fn open<H: PostGameHost + ?Sized>(h: &mut H, state: &Mutex<PostGame>) {
     hide_bars(h);
     build_graphs(h, &mut s);
     let history = h.history();
-    let players = history.records.wrapping_sub(1) as usize;
+    // (no records before the game's end: none, where `records - 1` wrapped and the resize aborted)
+    let players = history.records.saturating_sub(1) as usize;
     s.reports.resize(players, PlayerReport::default());
     let mut humans: u32 = 0;
     let mut others: u32 = 0;
