@@ -2667,13 +2667,13 @@ enum class EeWonGuiOp : uint32_t {
   ChildSetPosSize,
   /// `a->IsVisible()` (0 or 1).
   ChildIsVisible,
-  /// `a->Width()`.
+  /// `a->Width()` (multiobj, splitobj; the others read compmem's block).
   ChildWidth,
-  /// `a->Height()`.
+  /// `a->Height()` (splitobj; the others read compmem's block).
   ChildHeight,
-  /// `a->Left()`.
+  /// `a->Left()` (multiobj, splitobj; the others read compmem's block).
   ChildLeft,
-  /// `a->Top()`.
+  /// `a->Top()` (splitobj; the others read compmem's block).
   ChildTop,
   /// `a->AddRef()` (a `SmartPtr` the Rust object keeps).
   ChildHold,
@@ -2824,7 +2824,7 @@ enum class EeWonGuiOp : uint32_t {
   MultiOf,
   /// `RemoveChild(a)`.
   RemoveChild,
-  /// `a->mControlId`.
+  /// `a->mControlId` (multiobj; the others read compmem's block).
   ChildControlId,
   /// `a->mControlId = b`.
   ChildSetControlId,
@@ -2975,19 +2975,19 @@ enum class EeWonGuiOp : uint32_t {
   CtCursorRelease,
   /// `((Graphics*)a)->mColorScheme = (ColorScheme*)b`.
   CtSetScheme,
-  /// `a->mComponentBits`.
+  /// `a->mComponentBits` (the Rust reads compmem's block: only the drivers' original statements send it).
   CtBits = 430,
-  /// `a->mParent`.
+  /// `a->mParent` (the Rust reads compmem's block: only the drivers' original statements send it).
   CtParentOf,
-  /// `a->mTimerFlags`.
+  /// `a->mTimerFlags` (the Rust reads compmem's block: only the drivers' original statements send it).
   CtTimerFlags,
-  /// `a->mInvalidState`.
+  /// `a->mInvalidState` (the Rust reads compmem's block: only the drivers' original statements send it).
   CtInvalidState,
-  /// `a->mFocusId`.
+  /// `a->mFocusId` (the Rust reads compmem's block: only the drivers' original statements send it).
   CtFocusId,
-  /// `a->Contains(b, c)` (0 or 1).
+  /// `a->Contains(b, c)` (0 or 1) (the Rust reads compmem's block: only the drivers' original statements send it).
   CtContains,
-  /// `a->Intersects((Component*)b)` (0 or 1).
+  /// `a->Intersects((Component*)b)` (0 or 1) (the Rust reads compmem's block: only the drivers' original statements send it).
   CtIntersects,
   /// `a->GetGrabBG()`.
   CtGrabBG,
@@ -3138,7 +3138,7 @@ enum class EeWonGuiOp : uint32_t {
   BtnHasClickSound,
   /// `mClickSound->Play()`.
   BtnPlayClick,
-  /// `a->mParent` (a `Component*`; a pure read).
+  /// `a->mParent` (a `Component*`; a pure read) (the Rust reads compmem's block: only the drivers' original statements send it).
   LayParentOf = 560,
   /// `a->SetSizeAtLeast(b, c)`.
   LaySetSizeAtLeast,
@@ -9752,16 +9752,9 @@ enum class EeWonSkinLay : uint32_t {
   Field,
   /// `mHeaderHeight = b`.
   SetHeaderHeight,
-  /// `((Component*)b)->Width()`.
-  Width,
-  Height,
-  Left,
-  Top,
-  Right,
-  /// `IsVisible()` (0 or 1).
-  Visible,
-  /// `((Component*)b)->SetPosSize(r[0], r[1], r[2], r[3])` with `r` the four ints at `c`.
-  SetPosSize,
+  /// `((Component*)b)->SetPosSize(r[0], r[1], r[2], r[3])` with `r` the four ints at `c` (the bounds and
+  /// visibility the layouts read are compmem's block).
+  SetPosSize = 10,
   /// `((Component*)b)->GetDesiredSize(wh[0], wh[1])` with `wh` the two ints at `c`.
   DesiredSize,
   /// `((InputBox*)b)->SetLeftPad(c)`.
@@ -10110,6 +10103,9 @@ struct EeWonEeXferSend;
 
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
+
+/// The window's fonts.
+struct EeWonFontMap;
 
 /// `GetCertOp`'s state: the members and the session key.
 struct EeWonGetCert;
@@ -14784,6 +14780,42 @@ void ee_won_init_cross_promotion(const uint8_t *doc,
                                  EeWonByteSink link,
                                  EeWonByteSink image,
                                  void *context);
+
+/// A new, empty font map.
+EeWonFontMap *ee_won_fontmap_new();
+
+/// Frees the map (its fonts already popped and released by the C++).
+///
+/// # Safety
+/// `m` is a map from `ee_won_fontmap_new` (or NULL), not used after.
+void ee_won_fontmap_free(EeWonFontMap *m);
+
+/// `GetFont`'s lookup of the descriptor (`face` its `n` bytes): its font, or 0 (the entry is made).
+///
+/// # Safety
+/// `m` is a live map; `face` points at `n` bytes (or is NULL with `n` 0).
+size_t ee_won_fontmap_lookup(EeWonFontMap *m,
+                             const uint8_t *face,
+                             size_t n,
+                             int32_t style,
+                             int32_t size);
+
+/// Stores the descriptor's font; returns the one it replaces (for the C++ to release).
+///
+/// # Safety
+/// As `ee_won_fontmap_lookup`.
+size_t ee_won_fontmap_store(EeWonFontMap *m,
+                            const uint8_t *face,
+                            size_t n,
+                            int32_t style,
+                            int32_t size,
+                            size_t font);
+
+/// Removes the first entry: its font (0 for NULL), or -1 when the map is empty.
+///
+/// # Safety
+/// `m` is a live map.
+ptrdiff_t ee_won_fontmap_pop(EeWonFontMap *m);
 
 /// The URL's ranges: [user, password, host, path] as (start, end), -1 for one not set.
 ///

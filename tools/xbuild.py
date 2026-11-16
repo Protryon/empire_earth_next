@@ -761,6 +761,8 @@ WON_TESTS = {
     "won_guistrobj_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # Graphics: the original's statements against gfxobj.rs under traced hooks (golden: rust/crates/ee_won/src/golden_gfxobj.txt)
     "won_gfxobj_test": [WON_SRC / "WONGUI" / f for f in ("Graphics.cpp", "GUIStringSingleton.cpp")],
+    # Window::GetFont's font cache: the original's std::map statements against fontmap.rs (no units)
+    "won_fontmap_test": [],
     # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won/src/golden_cfgobj.txt)
     "won_cfgobj_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigObject.cpp", "ConfigValue.cpp", "ConfigParser.cpp",
                                                              "ConfigToken.cpp")],

@@ -107,18 +107,26 @@ Window::~Window()
 {
 }
 
-// Returns the cached font for a descriptor, creating it through the platform on first use
+// Returns the cached font for a descriptor, creating it through the platform on first use (a NULL platform font
+// is asked again at the next call; the map holds one reference to each font)
 SmartPtr<Font> Window::GetFont(const FontDescriptor &theDescriptor)
 {
-	std::map<FontDescriptor,SmartPtr<Font> >::iterator anItr = this->mFontMap.insert(std::map<FontDescriptor,SmartPtr<Font> >::value_type(theDescriptor, NULL)).first;
-	SmartPtr<Font> aFont = anItr->second;
-	if(aFont.get()==NULL)
+	const std::string& f = theDescriptor.mFace;
+	Font* aFont = (Font*)ee_won_fontmap_lookup(this->mFontMap.p, (const uint8_t*)f.data(), f.size(), theDescriptor.mStyle, theDescriptor.mSize);
+	if(aFont==NULL)
 	{
-		aFont = this->PlatformGetFont(theDescriptor);
-		anItr->second = aFont;
+		SmartPtr<Font> aNew = this->PlatformGetFont(theDescriptor);
+		aFont = aNew.get();
+		if(aFont!=NULL) aFont->AddRef();
+		ee_won_fontmap_store(this->mFontMap.p, (const uint8_t*)f.data(), f.size(), theDescriptor.mStyle, theDescriptor.mSize, (uintptr_t)aFont);
 	}
-
 	return aFont;
+}
+Window::FontMap::~FontMap()
+{
+	for(intptr_t aFont; (aFont = ee_won_fontmap_pop(this->p)) >= 0; )
+		if(aFont!=0) ((Font*)aFont)->Release();
+	ee_won_fontmap_free(this->p);
 }
 
 // Sets the window title, updating the platform window when open

@@ -1800,7 +1800,9 @@ public:
     SmartPtr<NativeIcon> mIcon; // +98
     GUIString mTitle; // +9c
     SmartPtr<RootContainer> mRoot; // +a4
-    std::map<FontDescriptor, SmartPtr<Font> > mFontMap; // +a8
+    // GetFont's cache (+a8; ee_won fontmap.rs): each font held once; released where the map member was destroyed
+    struct FontMap { EeWonFontMap* p; FontMap() : p(ee_won_fontmap_new()) {} ~FontMap(); };
+    FontMap mFontMap;
     SmartPtr<Font> mDefaultFont; // +b4
 };
 

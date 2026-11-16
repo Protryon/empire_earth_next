@@ -57,6 +57,7 @@ pub mod ffi_parse;
 pub mod file;
 pub mod filepush;
 pub mod flow;
+pub mod fontmap;
 pub mod ftp;
 pub mod ftpop;
 pub mod fwhost;
