@@ -25905,3 +25905,73 @@ its markers stripped (not counted). Deleted: `EEEffect2D.cpp`,
 - **Not moved:** the effects' hosts (`EEEffectHost.cpp`, ~2.1k lines: the world reads the Rust effects ask for,
   tag points, units, the map, sounds), the manager's capture sweep (test code), `EERenderObject.cpp`, the frame,
   picker, goal manager and mouse.
+
+## R4.4, twenty-sixth round: the goal markers, the picker's walks and the pointer's frame in Rust (ee_gfx goal_markers.rs, pick_walk.rs, mouse_frame.rs; branch rust-gfx32, 2026-11-15)
+
+C++ (`src/Empire Earth/Graphics Thread/*.cpp`, `src/RTS Engine/Graphics/*.cpp`, `include/ee`): the round's diff +322
+-758 (net -436); Graphics Thread `.cpp` 7,782 -> 7,449 lines, `RTS Engine/Graphics` 1,049 -> 992. Deleted:
+`include/ee/EEGraphicalGoal.h`.
+
+| Commit | What | C++ (.cpp/.h) |
+|---|---|---|
+| 55d05c09 | the goal markers whole in Rust (`goal_markers.rs`) | -155 .cpp, -27 .h |
+| 91957189 | the picker's walks (`pick_walk.rs`) over the entries in place and ee_ge's model table | -157 .cpp, -8 .h |
+| 9fcd713f | the pointer's frame whole in Rust (`mouse_frame.rs`) | -77 .cpp, -12 .h |
+
+- **The measure.** The frame, picker, goal manager and mouse were 2,032 lines (`RTSGraphics.cpp` 539, `RTSMouse.cpp`
+  399, `RTSMousePointer.cpp` 111, `EEUnitPicker.cpp` 525, `EEGraphicalGoalManager.cpp` 375, `EEMouse.cpp` 67, and
+  their headers). What moved is the state and the walks; what stays is a call into another C++ object per line:
+  the graphics thread's loop and messages (`TSThread`, the rasterizer, movies, the conductor's volume, the render
+  objects' virtuals), `RenderLobby` (the lobby's frame lock, a surface's creation, `GEPackBGRXRow` per row), the
+  pointer files' loading (`FSFileSpec`, the texture pack) and the pointer thread's loop. A Rust frame over a host of
+  those calls adds about as many lines as it frees: not moved. `EERenderObject.cpp`'s fill, re-measured: the render
+  snapshot (R5a.3) holds the camera, the terrain mesh and the coloured rectangles, not the units, so a Rust fill
+  "over the snapshot" needs the units copied into it first (more C++); `FillUnit`, `FillObject`, the doppelgangers and
+  the ghost records each read 20-40 fields of `EEUnit`, its class, upgrade, player and model, then call
+  `LoadMedia`, the picker and the texture maps. The units' Rust bases (`EeUnitsUnitFields` and the class records)
+  sit at C++ base offsets Rust cannot compute without a host per object: no gain this round. `EEEffectHost.cpp`'s
+  `Ask` members are the same pattern (a field or two of a unit through its class, stats or model, then a C++ call):
+  no answer there is a plain read of a Rust record.
+- **The goal markers** (`goal_markers.rs`). `EEGraphicalGoalManager` holds an `EeGfxGoalMarkers*` (the original's
+  map of maps of `EEGraphicalGoal` by value, a `BTreeMap` of `BTreeMap`s of `GoalMarker` walked in key order);
+  `Rebuild` (the unit kinds, the seven marker types per queue, the airport's spacing, the ground points, the target
+  carried from one goal to the next as the original's variable was), `AddGoal`, `TrimGoals`, `Update` and the
+  destructor's walk are Rust. `EEGoalOps` answers `EeGfxGoalHost` (the player, the selected units, their goals and
+  targets, the map's ground, the markers' effects made, moved and destroyed through `gEffectManager`).
+  - **Behaviour change:** a marker whose effect was not made (its graphic effect above the detail setting) has handle
+    0; the original's `mEffect` was never written then (the temporary's uninitialised member, copied into the
+    vector), so `GetEffect` could find and move an unrelated effect.
+  - **Trap (cbindgen):** a module `const` is exported even when private: `GOAL_LOAD_GARRISON` here and in ee_units
+    became a common constant and was dropped from `ee_units.h`. Every const in the module is `EE_GFX_MARKER_...`.
+- **The picker's walks** (`pick_walk.rs`). `FindUnit` (the ray, the bounding then exact tests at the pick scales,
+  the pixel size, the ranking, the carrier), `PickUnits` with `PickUnitsOfType`, `PickUnitsInRectangle` and the
+  frustum test `GetIsEntryInView` / `GetIsModelInView` are Rust, over the entries in place (`EeGfxPickEntry`, the
+  `#[repr(C)]` mirror of `EEUnitPickerEntry`, size and id offset asserted) and the model table
+  `GEModel.cpp` fills for ee_ge's line walk (`GEPhysicalModelTable()`, one line added there; the GE lane merged `GEPhysicalModel.cpp` into it on `rust`, the accessor moved with it in the merge; the line test
+  is `ee_ge_physical_line_walk` itself, as `GEPhysicalModel::Intersects` calls it). The C++ keeps the entries'
+  filling (`AddUnit`), the lock, the frustum's planes and `EEPickOps` (the units' facts, the pixel size, the
+  carriers, the result vector). `EEUnitPickerHit` and ten of pick.rs's FFI wrappers are gone.
+- **The pointer's frame** (`mouse_frame.rs`). `RTSMouse` holds an `EeGfxMouseFrame*`: the 24 pointer slots (the
+  engine's ten, `EEMouse`'s fourteen after them; `GetPointerSurface` is one function, `EEMouse`'s override gone),
+  both save-under records and their swap, the drawn position, the frame's pointer, the in-frame and just-loaded
+  flags; `BeginFrame` (the shift mode's composition in slot 9), `SaveUnder`, `Draw`, `RestoreUnder`, `EndFrame`
+  (moved from `EEGraphics.cpp`) and both `Release`s are one Rust call each over a surface table. The loads fill the
+  slots in place (`RTSMouseSlot`). The members other units set (position, bounds, pointer, overlay, shift mode,
+  freeze) stay.
+- **Golden drivers** (`build/gx32/drv/`): `make_r26a.py` (the goal markers: the original unit and headers of 1a8a67bc
+  against the new unit over the Rust, one mock world of players, selections, goal queues, targets and ground, one
+  mock effect manager printing every effect call with floats as bits; 8 seeds of 300-600 ticks, 5,650-11,109 lines
+  each, identical; every marker type made); `make_r26b.py` (the picker: the original functions of 1a8a67bc over
+  that commit's FFI against the new host and walks, both over one mock world, mock models with frames, materials,
+  four LODs and sub-models through one physical model table, and a mock frustum; 6 seeds of 300 rounds of 6 picks
+  and 4 box or lasso selections, 3,301 lines each, identical; 71-100 picks hit and 195-305 selections non-empty per
+  seed); `make_r26c.py` (the pointer: the original members of 1a8a67bc against the new forwarders, mock surfaces
+  printing every copy with rectangles as bits, reference and dereference; both threads' sequences, the shift mode,
+  reloads and releases; 6 seeds of 800 frames, 1,566-1,677 copies each, identical). The old picker driver links a
+  Rust library built with the old `ffi.rs` (the removed wrappers over the unchanged pick.rs).
+  - **Trap (driver):** the mock models first had three LODs while `view_lod` picks up to the fourth: both versions
+    read past the material's arrays and walked billions of polygons (a hang, not a difference).
+- **Gates.** Gates per piece (one combined run before the commits, the three pieces built together): `build.py --sim` 0/0, the oracle at seeds 2-3 identical, the effects capture at seeds 2-7 PASS (18 digests), the calamity capture at seeds 2-3 PASS (197), the Rust gate's tests PASS (3,892) and clippy PASS with rustfmt failing on the new modules (formatted before the commits). On the result merged with `origin/rust` 1c108108 (8bcb9e86): `strip_markers.py --check` nothing to change, both builds 0/0, the oracle identical on seeds 2-7, the oracle, late and calamity captures at seeds 2-3 PASS (187, 188, 205 digests), the effects capture at seeds 2-7 PASS (18), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS, the Rust gate PASS (4,002 tests; clippy, rustfmt, header; its first run failed one ee_won test, `eecolor::tests::the_palette_is_the_originals_until_the_game_sets_it`, under load with two harness sessions running, which passed alone and on the rerun); the tour `RESULT PASS tour` with both exes, the orders game with box select: the first run `RESULT FAIL` (a desert start with no resource in view: the gather scouted, then both clicks on the target gave no message, the fixture's known `no-message` after a scout, PORT_LEARNINGS "R5b.4, tenth round"; the box select before it PASS, 4 steps), then the orders game alone and with box select `RESULT PASS random-game` (box select PASS 4 steps; gather, repair, queued repair, move), round 25's exe with box select and orders PASS as well. The frames (the tour at seed 7, `--pt-rate 40`, zoom captures 100 40 20; round 25's merged test exe against this round's merged one, one after the other under the harness lock): no GX errors in either; the menus equal but for 211 pixels of the main menu (the version text); the gameplay frame and each zoom the same scene (the start's town centre, citizens, shadows, the mini map), 49-71% of the pixels differing, half to two thirds of those by under 16 levels (the time of day's light, the citizens' poses).
+- **Only a person or a tour reaches:** the pointer's drawing (every frame, both threads), the box selection's and
+  the lasso's frustum test, the goal markers' effects (the selected units' queued goals; the orders game's shifted
+  orders make them), the picks of every click.
