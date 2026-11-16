@@ -3,13 +3,16 @@
 //!
 //! As `prim.rs`: the C++ classes stay the types the models, the UI and the renderer use; their only member is the
 //! object and their methods are one-line forwarders. A material and a font keep their `UReferenceCounter` base (the
-//! count stays C++). Every call the originals made on another object (the `UString`s and `UWideString`s they held by
-//! value, the textures, fonts and font bitmaps they referenced, the platform's fonts and windows) is one operation of
-//! one host (`EeGeObjOp`, `GEObjectHost` in GEBitmap.cpp), in the original's order. The text extent is
+//! count stays C++). The calls the originals made on other objects are one host's operations (`EeGeObjOp`,
+//! `GEObjectHost` in GEBitmap.cpp), in the original's order, where they cross into C++: making and deleting the
+//! `UString`s and `UWideString`s they held by value, releasing the textures, fonts and font bitmaps they referenced
+//! (a release may delete), the platform's fonts and windows. The strings' reads, assignments and comparisons, the
+//! references taken and a font's object are read in place (`cppobj.rs`, R4.3 part 17). The text extent is
 //! `font_ffi.rs`'s.
 
-use std::ffi::{c_char, c_long, c_ulong, c_void};
+use std::ffi::{c_long, c_ulong, c_void};
 
+use crate::cppobj;
 use crate::font_ffi::{ee_ge_text_extent, GeTextOps};
 use crate::types::{Ge2DPoint, GeRectangle};
 
@@ -23,34 +26,14 @@ pub enum EeGeObjOp {
     StrCopy,
     /// `delete obj` (a `UString`).
     StrDelete,
-    /// `*obj = *a` (`UString`s).
-    StrAssign,
-    /// `obj->SizeOf()` (a `UString`).
-    StrSizeOf,
-    /// `*obj == *a` (`UString`s) -> 0 or 1.
-    StrEqual,
-    /// `(const char*)*obj` (a `UString`).
-    StrText,
     /// `new UWideString(a)` (a capacity in characters) -> the string.
     WStrNew,
     /// `delete obj` (a `UWideString`).
     WStrDelete,
-    /// `*obj = *a` (`UWideString`s).
-    WStrAssign,
-    /// `(const char*)*obj` (a `UWideString`).
-    WStrText,
-    /// `obj->GetLength()` (a `UWideString`: characters).
-    WStrLength,
-    /// `obj->Reference()` (a `GETexture`).
-    TexReference,
     /// `obj->Dereference()` (a `GETexture`: its own).
     TexDereference,
-    /// `obj->Reference()` (a `UReferenceCounter`: a font, a font bitmap).
-    RefReference,
     /// `obj->Dereference()` (a `UReferenceCounter`).
     RefDereference,
-    /// A `GEFont`'s object (this module's `EeGeFont`).
-    FontObj,
     /// `PlatFontCreate(obj, a, b & 1, (b >> 1) & 1, (b >> 2) & 1, (b >> 3) & 1)` (face, height, bold, italic,
     /// underline, antialiased) -> the font or NULL.
     PlatFontCreate,
@@ -194,7 +177,7 @@ pub unsafe extern "C" fn ee_ge_mat_set_texture(p: *mut EeGeMat, texture: *mut c_
         let textures: &mut Vec<usize> = &mut (*p).textures;
         textures[screen as usize] = texture as usize;
         if !texture.is_null() {
-            host.op(EeGeObjOp::TexReference, texture as usize, 0, 0);
+            cppobj::reference(texture as usize);
         }
     }
 }
@@ -227,10 +210,7 @@ pub unsafe extern "C" fn ee_ge_mat_name(p: *const EeGeMat) -> *mut c_void {
 #[no_mangle]
 pub unsafe extern "C" fn ee_ge_mat_set_name(p: *mut EeGeMat, name: *const c_void) {
     // SAFETY: the caller's contract
-    unsafe {
-        let (host, own) = ((*p).host, (*p).name);
-        host.op(EeGeObjOp::StrAssign, own, name as isize, 0);
-    }
+    unsafe { cppobj::str_assign((*p).name, name as usize) }
 }
 
 /// `GetColor()`: the colour inside the object (`GEColor`'s layout).
@@ -317,12 +297,12 @@ pub unsafe extern "C" fn ee_ge_mat_size_of(
     ulong: usize,
 ) -> c_ulong {
     // SAFETY: the caller's contract
-    let (host, name, screens, lods) = unsafe {
+    let (name, screens, lods) = unsafe {
         let m = &*p;
-        (m.host, m.name, m.textures.len(), m.polygon_starts.len())
+        (m.name, m.textures.len(), m.polygon_starts.len())
     };
     // SAFETY: the material's own string
-    let name_size = unsafe { host.op(EeGeObjOp::StrSizeOf, name, 0, 0) } as c_ulong;
+    let name_size = unsafe { cppobj::str_size_of(name) };
     crate::texture_ffi::ee_ge_material_size_of(
         object,
         string,
@@ -383,7 +363,7 @@ pub unsafe extern "C" fn ee_ge_font_new(
     // SAFETY: the host's contract; each call is a statement of its own
     unsafe {
         let name = host.op(EeGeObjOp::StrCopy, 0, name as isize, 0) as usize;
-        let face = host.op(EeGeObjOp::StrText, name, 0, 0) as usize;
+        let face = cppobj::str_text(name) as usize;
         let flags =
             (style & 1) | (((style >> 1) & 1) << 1) | (((style >> 2) & 1) << 2) | ((quality == 2) as c_ulong) << 3;
         let height = (size as i32).wrapping_neg();
@@ -427,12 +407,12 @@ pub unsafe extern "C" fn ee_ge_font_compare(
     size: c_ulong,
 ) -> bool {
     // SAFETY: the caller's contract
-    let (host, own, q, st, si) = unsafe {
+    let (own, q, st, si) = unsafe {
         let f = &*p;
-        (f.host, f.name, f.quality, f.style, f.size)
+        (f.name, f.quality, f.style, f.size)
     };
     // SAFETY: the font's own string
-    q == quality && st == style && si == size && unsafe { host.op(EeGeObjOp::StrEqual, own, name as isize, 0) } != 0
+    q == quality && st == style && si == size && unsafe { cppobj::str_equal(own, name as usize) }
 }
 
 /// `SetFontBitmap(bitmap)`: stored and referenced (the old one is kept referenced, as the original did).
@@ -444,8 +424,7 @@ pub unsafe extern "C" fn ee_ge_font_set_bitmap(p: *mut EeGeFont, bitmap: *mut c_
     // SAFETY: the caller's contract
     unsafe {
         (*p).bitmap = bitmap as usize;
-        let host = (*p).host;
-        host.op(EeGeObjOp::RefReference, bitmap as usize, 0, 0);
+        cppobj::reference(bitmap as usize);
     }
 }
 
@@ -523,7 +502,7 @@ pub unsafe extern "C" fn ee_ge_text_new(host: EeGeObjHostFn, owner: *mut c_void,
     // SAFETY: the host's contract
     unsafe {
         let text = host.op(EeGeObjOp::WStrNew, 0, 0x100, 0) as usize;
-        host.op(EeGeObjOp::RefReference, font as usize, 0, 0);
+        cppobj::reference(font as usize);
         Box::into_raw(Box::new(EeGeText {
             host,
             location: Ge2DPoint::default(),
@@ -562,15 +541,14 @@ unsafe fn compute_extent(p: *mut EeGeText) {
     // SAFETY: the caller's contract; no reference is held across a host call
     unsafe {
         let (host, font, text) = ((*p).host, (*p).font, (*p).text);
-        let object = host.op(EeGeObjOp::FontObj, font, 0, 0) as *const EeGeFont;
-        let os = (*object).font;
+        let os = (*cppobj::counted::<EeGeFont>(font)).font;
         if os == 0 {
             return;
         }
         let height = host.op(EeGeObjOp::PlatFontHeight, os, 0, 0) as i32;
         let ops = host.op(EeGeObjOp::TextOps, 0, 0, 0) as *const GeTextOps;
-        let bytes = host.op(EeGeObjOp::WStrText, text, 0, 0) as *const c_char;
-        let characters = host.op(EeGeObjOp::WStrLength, text, 0, 0) as c_ulong;
+        let bytes = cppobj::wstr_text(text);
+        let characters = cppobj::wstr_length(text);
         let mut extent = GeRectangle::default();
         ee_ge_text_extent(ops, os as *const c_void, bytes, characters, height, &mut extent);
         (*p).extent = extent;
@@ -589,10 +567,10 @@ pub unsafe extern "C" fn ee_ge_text_assign(p: *mut EeGeText, from: *const EeGeTe
         let host = (*p).host;
         host.op(EeGeObjOp::RefDereference, (*p).font, 0, 0);
         (*p).font = (*from).font;
-        host.op(EeGeObjOp::RefReference, (*p).font, 0, 0);
+        cppobj::reference((*p).font);
         (*p).transparent = (*from).transparent;
         (*p).alignment = (*from).alignment;
-        host.op(EeGeObjOp::WStrAssign, (*p).text, (*from).text as isize, 0);
+        cppobj::wstr_assign((*p).text, (*from).text);
         (*p).extent = (*from).extent;
         (*p).foreground = (*from).foreground;
         (*p).background = (*from).background;
@@ -611,7 +589,7 @@ pub unsafe extern "C" fn ee_ge_text_set_font(p: *mut EeGeText, font: *mut c_void
         let host = (*p).host;
         host.op(EeGeObjOp::RefDereference, (*p).font, 0, 0);
         (*p).font = font as usize;
-        host.op(EeGeObjOp::RefReference, font as usize, 0, 0);
+        cppobj::reference(font as usize);
         compute_extent(p);
     }
 }
@@ -624,8 +602,7 @@ pub unsafe extern "C" fn ee_ge_text_set_font(p: *mut EeGeText, font: *mut c_void
 pub unsafe extern "C" fn ee_ge_text_set_text(p: *mut EeGeText, text: *const c_void) {
     // SAFETY: the caller's contract
     unsafe {
-        let (host, own) = ((*p).host, (*p).text);
-        host.op(EeGeObjOp::WStrAssign, own, text as isize, 0);
+        cppobj::wstr_assign((*p).text, text as usize);
         compute_extent(p);
     }
 }

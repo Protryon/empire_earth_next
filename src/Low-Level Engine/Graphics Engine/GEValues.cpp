@@ -970,24 +970,75 @@ long GETextureCoordinate::Save(FSFileSpec& inFile)
 
 // ---- GEVertexArray (GEVertexArray.cpp, folded here in R4.3 part 16)
 
-// Creates the abstract vertex array (the rasterizer plug-ins implement it)
-GEVertexArray::GEVertexArray()
-{
-}
+// The vertex array over its Rust array (ee_ge vertarr.rs; the renderer's two classes merged in R4.3 part 17); a
+// subclass with its own storage has neither
+static_assert(sizeof(GEColor) == 3 * sizeof(float) && sizeof(GE3DPoint) == 3 * sizeof(float) &&
+              sizeof(GEVector) == 3 * sizeof(float) && sizeof(GETextureCoordinate) == 2 * sizeof(float), "vertarr.rs");
+static float* GEFloats(const void* inValue) { return reinterpret_cast<float*>(const_cast<void*>(inValue)); }
 
-// Destroys the abstract vertex array
+GEVertexArray::GEVertexArray() : mVertices(NULL), mRust(NULL) {}
+GEVertexArray::GEVertexArray(unsigned long inType, unsigned long inCount)
+    : mRust(ee_ge_va_new(inType, inCount)) { this->mVertices = ee_ge_va_vertices(this->mRust); }
 GEVertexArray::~GEVertexArray()
 {
+    if (this->mRust)
+        ee_ge_va_destroy(this->mRust);
 }
+void GEVertexArray::CopyFrom(const GEVertexArray& inArray) { ee_ge_va_copy_from(this->mRust, inArray.mRust); }
+void GEVertexArray::GetColor(GEColor& outColor, unsigned long inIndex) const { ee_ge_va_get(this->mRust, EeGeVaField::Color, inIndex, GEFloats(&outColor)); }
+void GEVertexArray::GetNormal(GEVector& outNormal, unsigned long inIndex) const { ee_ge_va_get(this->mRust, EeGeVaField::Normal, inIndex, GEFloats(&outNormal)); }
+float GEVertexArray::GetOpacity(unsigned long inIndex) const
+{
+    float theOpacity;
+    ee_ge_va_get(this->mRust, EeGeVaField::Opacity, inIndex, &theOpacity);
+    return theOpacity;
+}
+void GEVertexArray::GetPoint(GE3DPoint& outPoint, unsigned long inIndex) const { ee_ge_va_get(this->mRust, EeGeVaField::Point, inIndex, GEFloats(&outPoint)); }
+unsigned long GEVertexArray::GetSize() const { return ee_ge_va_size(this->mRust, false); }
+void GEVertexArray::GetTextureCoordinate(GETextureCoordinate& outCoordinate, unsigned long inIndex) const
+{
+    ee_ge_va_get(this->mRust, EeGeVaField::Uv, inIndex, GEFloats(&outCoordinate));
+}
+unsigned long GEVertexArray::GetType() const { return ee_ge_va_type(this->mRust); }
+void GEVertexArray::SetColor(const GEColor& inColor, unsigned long inIndex) { ee_ge_va_set(this->mRust, EeGeVaField::Color, inIndex, GEFloats(&inColor)); }
+void GEVertexArray::SetNormal(const GEVector& inNormal, unsigned long inIndex) { ee_ge_va_set(this->mRust, EeGeVaField::Normal, inIndex, GEFloats(&inNormal)); }
+void GEVertexArray::SetOpacity(float inOpacity, unsigned long inIndex) { ee_ge_va_set(this->mRust, EeGeVaField::Opacity, inIndex, &inOpacity); }
+void GEVertexArray::SetPoint(const GE3DPoint& inPoint, unsigned long inIndex) { ee_ge_va_set(this->mRust, EeGeVaField::Point, inIndex, GEFloats(&inPoint)); }
+void GEVertexArray::SetTextureCoordinate(const GETextureCoordinate& inCoordinate, unsigned long inIndex)
+{
+    ee_ge_va_set(this->mRust, EeGeVaField::Uv, inIndex, GEFloats(&inCoordinate));
+}
+void GEVertexArray::SetVertex(const GEColor& inColor, const GE3DPoint& inPoint, const GEVector& inNormal,
+                              const GETextureCoordinate& inCoordinate, float inOpacity, unsigned long inIndex)
+{
+    ee_ge_va_set_vertex(this->mRust, GEFloats(&inColor), GEFloats(&inPoint), GEFloats(&inNormal), GEFloats(&inCoordinate),
+                        inOpacity, inIndex);
+}
+unsigned long GEVertexArray::SizeOf() const { return ee_ge_va_size(this->mRust, true); }
 
 // ---- GEPolygonArray (GEPolygonArray.cpp, folded here in R4.3 part 16)
 
-// Creates the polygon array base (nothing to set up)
-GEPolygonArray::GEPolygonArray()
+// The polygon array over its Rust array (ee_ge vertarr.rs; the renderer's DX7PolygonArray merged in R4.3 part 17)
+GEPolygonArray::GEPolygonArray(unsigned long inCount) : mRust(ee_ge_pa_new(inCount)) { this->mIndices = ee_ge_pa_indices(this->mRust); }
+unsigned long GEPolygonArray::GetSize() const { return ee_ge_pa_size(this->mRust, false); }
+unsigned long GEPolygonArray::GetVertexIndex1(unsigned long inPolygon) const { return ee_ge_pa_index(this->mRust, inPolygon, 0); }
+unsigned long GEPolygonArray::GetVertexIndex2(unsigned long inPolygon) const { return ee_ge_pa_index(this->mRust, inPolygon, 1); }
+unsigned long GEPolygonArray::GetVertexIndex3(unsigned long inPolygon) const { return ee_ge_pa_index(this->mRust, inPolygon, 2); }
+void GEPolygonArray::SetVertexIndex1(unsigned long inPolygon, unsigned long inIndex) { ee_ge_pa_set_index(this->mRust, inPolygon, 0, inIndex); }
+void GEPolygonArray::SetVertexIndex2(unsigned long inPolygon, unsigned long inIndex) { ee_ge_pa_set_index(this->mRust, inPolygon, 1, inIndex); }
+void GEPolygonArray::SetVertexIndex3(unsigned long inPolygon, unsigned long inIndex) { ee_ge_pa_set_index(this->mRust, inPolygon, 2, inIndex); }
+void GEPolygonArray::SetVertexIndices(unsigned long inPolygon, unsigned long inIndex1, unsigned long inIndex2, unsigned long inIndex3)
 {
+    ee_ge_pa_set_index(this->mRust, inPolygon, 0, inIndex1);
+    ee_ge_pa_set_index(this->mRust, inPolygon, 1, inIndex2);
+    ee_ge_pa_set_index(this->mRust, inPolygon, 2, inIndex3);
 }
+unsigned long GEPolygonArray::SizeOf() const { return ee_ge_pa_size(this->mRust, true); }
 
-// Destroys the polygon array base (nothing to free)
+// A subclass with its own storage
+GEPolygonArray::GEPolygonArray() : mIndices(NULL), mRust(NULL) {}
 GEPolygonArray::~GEPolygonArray()
 {
+    if (this->mRust)
+        ee_ge_pa_destroy(this->mRust);
 }

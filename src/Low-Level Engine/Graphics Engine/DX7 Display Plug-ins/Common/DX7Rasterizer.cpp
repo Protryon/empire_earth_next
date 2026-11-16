@@ -11,12 +11,10 @@
 #include <float.h>
 
 #include "dx7/DX7Rasterizer.h"
-#include "dx7/DX7PolygonArray.h"
-#include "dx7/DX7StandardVertexArray.h"
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
 #include "dx7/DX7Movie.h"
-#include "dx7/DX7StdColorVertexArray.h"
+#include "lle/GEPolygonArray.h"
 #include "rust/ee_dx7.h"
 #include "lle/TSCriticalSection.h"
 #include "platform/PlatFont.h"
@@ -144,6 +142,7 @@ struct DX7RasterizerHost {
     }
 };
 
+
 static_assert(sizeof(GEVideoMode) == sizeof(EeDx7VideoMode) && sizeof(GESurfaceDescription) == sizeof(EeDx7SurfaceDescription),
               "ee_dx7/src/screen.rs VideoMode, api.rs SurfaceDescription");
 
@@ -266,10 +265,10 @@ GEMovie* DX7Rasterizer::CreateMovie(const FSFileSpec& inFile, unsigned long inSc
 }
 
 // FUNCTION: DX7HR 0x1000aa3e
-// Creates a polygon array of the given size
+// Creates a polygon array of the given size (16-bit indices: the renderer's DX7PolygonArray, now GEPolygonArray's)
 GEPolygonArray* DX7Rasterizer::CreatePolygonArray(unsigned long inCount)
 {
-    return new DX7PolygonArray(inCount);
+    return new GEPolygonArray(inCount);
 }
 
 // FUNCTION: DX7HR 0x1000aa5c
@@ -280,12 +279,11 @@ long DX7Rasterizer::CreateTextureHandle(GETexture* inTexture)
 }
 
 // FUNCTION: DX7HR 0x1000aa61
-// Creates a vertex array of type 0 (standard) or 1 (coloured); null for any other type
+// Creates a vertex array of type 0 (standard: the renderer's DX7StandardVertexArray) or 1 (coloured:
+// DX7StdColorVertexArray), both GEVertexArray's now; null for any other type
 GEVertexArray* DX7Rasterizer::CreateVertexArray(unsigned long inType, unsigned long inCount)
 {
-    if (inType == 0)
-        return new DX7StandardVertexArray(inCount);
-    return inType == 1 ? new DX7StdColorVertexArray(inCount) : NULL;
+    return inType <= 1 ? new GEVertexArray(inType, inCount) : NULL;
 }
 
 long DX7Rasterizer::DemoteTexture(GETexture* inTexture)
@@ -427,8 +425,8 @@ long DX7Rasterizer::UpdateLight(unsigned long inIndex, GELight& inLight, unsigne
     return ee_dx7r_update_light(this->mDX7, inIndex, &inLight, inScreen);
 }
 
-// ---- the draws (the four Draw units of the original, deleted in R4.3 part 14): the 2D draws are Rust (ee_dx7 draw2d.rs),
-// the ee_dx7cpp_* below read the GE objects for it
+// ---- the draws (the four Draw units of the original, deleted in R4.3 part 14): Rust (ee_dx7 draw2d.rs, draw_model.rs,
+// draw_terrain.rs), which reads the GE objects in place (ee_ge cppobj.rs, R4.3 part 17)
 long DX7Rasterizer::Draw(GEBitmap* inBitmap, unsigned long inScreen)
 {
     return ee_dx7r_draw_bitmap(this->mDX7, inScreen, inBitmap->GetRust());
@@ -453,59 +451,6 @@ long DX7Rasterizer::Draw(GERhombus* inRhombus, unsigned long inScreen)
 static_assert(sizeof(GELine) == sizeof(void*) && sizeof(GEPoint) == sizeof(void*) && sizeof(GERhombus) == sizeof(void*),
               "ee_ge prim.rs");
 
-extern "C" {
-Dx7StdColorVertex* ee_dx7cpp_color_vertices(void* inArray)
-{
-    return reinterpret_cast<Dx7StdColorVertex*>(static_cast<DX7StdColorVertexArray*>(static_cast<GEVertexArray*>(inArray))->mVertices);
-}
-void ee_dx7cpp_texture_frame(void* inTexture, float* outSize, float* outCorner)
-{
-    GETexture* theTexture = static_cast<GETexture*>(inTexture);
-    *outSize = theTexture->GetFrameUVSize();
-    outCorner[0] = theTexture->GetFrameTopLeftCorner().GetU();
-    outCorner[1] = theTexture->GetFrameTopLeftCorner().GetV();
-}
-int32_t ee_dx7cpp_text_measure(const void* inFont, const char* inText, uint32_t inLength) { return PlatFontMeasure(static_cast<const PlatFont*>(inFont), inText, inLength); }
-const void* ee_dx7cpp_text_scaled(const void* inFont, float inScale) { return PlatFontScaled(static_cast<const PlatFont*>(inFont), inScale); }
-int32_t ee_dx7cpp_font_height(const void* inFont)
-{
-    PlatFontMetrics theMetrics;
-    PlatFontGetMetrics(static_cast<const PlatFont*>(inFont), &theMetrics);
-    return theMetrics.mHeight;
-}
-void ee_dx7cpp_text_draw(const void* inFont, const char* inText, uint32_t inLength, int32_t inX, int32_t inY, uint32_t inColor, int inOpaque,
-                         uint32_t inBackground, const int32_t* inClip, const void* inTarget)
-{
-    PlatFontRect theClip = {inClip[0], inClip[1], inClip[2], inClip[3]};
-    PlatFontDraw(static_cast<const PlatFont*>(inFont), inText, inLength, inX, inY, inColor, inOpaque, inBackground, &theClip,
-                 static_cast<const PlatFontTarget*>(inTarget));
-}
-}
-
-// One text draw's plain inputs (Rust: draw2d.rs TextInfo). The layout and the draws are in Rust.
-static EeDx7TextInfo DX7TextInfoOf(GEText* inText)
-{
-    GEFont* theFont = inText->GetFont();
-    EeDx7TextInfo theInfo;
-    theInfo.font = theFont->GetOSFont();
-    theInfo.text = inText->GetText();
-    // the text's bytes, as PlatFontMeasure/PlatFontDraw take it (GetLength counts characters: under UTF-8, decision
-    // D6, a multi-byte character made it short, and the text lost its last characters)
-    theInfo.length = inText->GetText().GetTCHARLength();
-    theInfo.x = inText->GetLocation().GetX();
-    theInfo.y = inText->GetLocation().GetY();
-    theInfo.alignment = inText->GetAlignment();
-    theInfo.transparent = inText->GetIsTransparent();
-    theInfo.shadow_font = (theFont->GetFontStyle() & kFontStyleShadow) != 0;
-    theInfo.foreground[0] = inText->GetFgColor().GetRed();
-    theInfo.foreground[1] = inText->GetFgColor().GetGreen();
-    theInfo.foreground[2] = inText->GetFgColor().GetBlue();
-    theInfo.background[0] = inText->GetBgColor().GetRed();
-    theInfo.background[1] = inText->GetBgColor().GetGreen();
-    theInfo.background[2] = inText->GetBgColor().GetBlue();
-    return theInfo;
-}
-
 static_assert(sizeof(EeDx7TextRect) == sizeof(RECT), "ee_dx7/src/draw2d.rs TextRect");
 
 // One text draw (GDI in the original): a GXSurface::DrawText callback; the target covers the surface from
@@ -521,8 +466,7 @@ static bool DX7DrawTextPlat(const PlatFontTarget& inTarget, long inOriginX, long
     DX7TextJob* theJob = static_cast<DX7TextJob*>(inJob);
     GEFont* theFont = theJob->mText->GetFont();
     theFont->Reference();
-    EeDx7TextInfo theInfo = DX7TextInfoOf(theJob->mText);
-    if (!ee_dx7r_text_draw(&theInfo, reinterpret_cast<const EeDx7TextRect*>(theJob->mClip), inOriginX, inOriginY,
+    if (!ee_dx7r_text_draw(theJob->mText, reinterpret_cast<const EeDx7TextRect*>(theJob->mClip), inOriginX, inOriginY,
                            inTarget.mWidth, inTarget.mHeight, inTarget.mScale, &inTarget))
         theJob->mResult = kErrorNativeError;
     theFont->Dereference();
@@ -535,9 +479,8 @@ static long DX7DrawText(GEText* inText, const RECT* inClip, GESurface* inTarget)
 {
     DX7TextJob theJob = {inText, inClip, kErrorOK};
     GXSurface* theSurface = *static_cast<DX7Surface*>(inTarget);
-    EeDx7TextInfo theInfo = DX7TextInfoOf(inText);
     EeDx7TextRect theBounds;
-    ee_dx7r_text_bounds(&theInfo, reinterpret_cast<const EeDx7TextRect*>(inClip), &theBounds);
+    ee_dx7r_text_bounds(inText, reinterpret_cast<const EeDx7TextRect*>(inClip), &theBounds);
     RECT theRect;
     memcpy(&theRect, &theBounds, sizeof(RECT));
     if (theSurface->DrawText(theRect, DX7DrawTextPlat, &theJob) != GX_OK && theJob.mResult == kErrorOK)
@@ -565,66 +508,14 @@ long DX7Rasterizer::Draw(GEText* inText, const GERectangle& inRectangle, GESurfa
 }
 
 // The model draws are Rust (ee_dx7 draw_model.rs; the original's CopyStd*/CopyAndSmooth* are its blend_*/white_copy, the
-// transform stack a call parameter); the ee_dx7cpp_* below read the GE objects for it.
-
-extern "C" {
-void ee_dx7cpp_model_info(void* inModel, EeDx7ModelInfo* outInfo)
-{
-    GEModel* theModel = static_cast<GEModel*>(inModel);
-    outInfo->material_count = theModel->GetMaterialCount();
-    outInfo->lod_count = theModel->GetLODCount();
-    outInfo->sub_model_count = theModel->GetSubModelCount();
-    outInfo->current_frame = theModel->GetGraphicsCurrentFrame();
-    outInfo->next_frame = theModel->GetGraphicsNextFrame();
-    outInfo->vertex_type = theModel->GetVertexArray(0)->GetType();
-    outInfo->scale = theModel->GetGraphicsScale();
-    outInfo->opacity = theModel->GetModelOpacity();
-    outInfo->fraction = theModel->GetFractionalFramePosition();
-    const GETransformation& theTransform = theModel->GetGraphicsTransform();
-    for (int r = 0; r < 4; r++)
-        for (int c = 0; c < 4; c++)
-            outInfo->transform[r][c] = theTransform.GetElement(r, c);
-}
-
-void ee_dx7cpp_material_info(void* inModel, unsigned long inScreen, unsigned long inIndex, unsigned long inLOD, EeDx7MaterialInfo* outInfo)
-{
-    GEMaterial* theMaterial = static_cast<GEModel*>(inModel)->GetMaterial(inIndex);
-    outInfo->texture = theMaterial->GetTexture(inScreen);
-    outInfo->polygon_start = theMaterial->GetPolygonStartingIndex(inLOD);
-    outInfo->polygon_length = theMaterial->GetPolygonRangeLength(inLOD);
-    outInfo->vertex_start = theMaterial->GetVertexStartingIndex();
-    outInfo->vertex_length = theMaterial->GetVertexRangeLength();
-    outInfo->opacity = theMaterial->GetOpacity();
-    outInfo->color[0] = theMaterial->GetColor().GetRed();
-    outInfo->color[1] = theMaterial->GetColor().GetGreen();
-    outInfo->color[2] = theMaterial->GetColor().GetBlue();
-}
-
-const unsigned short* ee_dx7cpp_polygon_indices(void* inModel, unsigned long inLOD)
-{
-    return static_cast<DX7PolygonArray*>(static_cast<GEModel*>(inModel)->GetPolygonArray(inLOD))->mIndices;
-}
-
-const void* ee_dx7cpp_frame_vertices(void* inModel, unsigned long inFrame, unsigned long inVertexType)
-{
-    GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(inFrame);
-    if (inVertexType == 0)
-        return static_cast<DX7StandardVertexArray*>(theArray)->mVertices;
-    return static_cast<DX7StdColorVertexArray*>(theArray)->mVertices;
-}
-
-void* ee_dx7cpp_sub_model(void* inModel, unsigned long inIndex) { return static_cast<GEModel*>(inModel)->GetSubModel(inIndex); }
-}
+// transform stack a call parameter).
 
 // Draws an indexed triangle list with an identity world transform and D3D clipping on; counts the triangles drawn
 long DX7Rasterizer::Draw(GEPolygonArray& inPolygons, unsigned long inCount, GEVertexArray& inVertices,
                          unsigned long inVertexCount, GETexture* inTexture, unsigned long inScreen, bool inSorted)
 {
-    unsigned long theType = inVertices.GetType();
-    const void* theVertices = theType == 1 ? static_cast<const void*>(((DX7StdColorVertexArray&)inVertices).mVertices)
-                                           : static_cast<const void*>(((DX7StandardVertexArray&)inVertices).mVertices);
-    return ee_dx7r_draw_polygon_array(this->mDX7, inScreen, ((DX7PolygonArray&)inPolygons).mIndices,
-                                      inCount, theType, theVertices, inVertexCount, inTexture);
+    return ee_dx7r_draw_polygon_array(this->mDX7, inScreen, inPolygons.GetIndices(), inCount, inVertices.GetType(),
+                                      inVertices.GetVertices(), inVertexCount, inTexture);
 }
 
 // Draws a model and its sub-models under the drawing lock (the float argument becomes the level-of-detail divisor)

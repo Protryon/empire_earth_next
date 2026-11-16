@@ -299,31 +299,12 @@ enum class EeGeModOp : uint32_t {
   MaterialNew,
   /// `obj->UReferenceCounter::Dereference()`.
   MaterialDereference,
-  /// `obj->SetTexture((GETexture*)a, b)`.
-  MaterialSetTexture,
-  /// `obj->GetPolygonRangeLength(a)`.
-  MaterialRangeLength,
-  /// `obj->GetPolygonStartingIndex(a)`.
-  MaterialStart,
-  /// `obj->GetVertexStartingIndex()`.
-  MaterialVertexStart,
   /// `obj->SizeOf()`.
   MaterialSizeOf,
-  /// `obj->SetName(UString(a's b bytes))`.
-  MaterialSetName,
-  /// `c` 0: `obj->SetTextureIndex(a)`; 1: `SetPolygonStartingIndex(a, b)`; 2: `SetPolygonRangeLength(a, b)`;
-  /// 3: `SetVertexStartingIndex(a)`; 4: `SetVertexRangeLength(a)`.
-  MaterialSetValue,
   /// `new GEModel((GEModelManager*)obj)`.
   ModelNew,
-  /// The Rust object of model `obj`.
-  ModelObj,
-  /// `obj->Reference()`.
-  ModelReference,
   /// `obj->UReferenceCounter::Dereference()`.
   ModelBaseDereference,
-  /// `obj->mReferenceCount`.
-  ModelRefCount,
   /// `((GEModelManager*)obj)->RemoveModel((GEModel*)a)`.
   ManagerRemove,
   /// `new UString`.
@@ -334,18 +315,6 @@ enum class EeGeModOp : uint32_t {
   StrArrayNew,
   /// `delete[] (UString*)obj`.
   StrArrayDelete,
-  /// `&((UString*)obj)[a]`.
-  StrAt,
-  /// `*(UString*)obj = *(const UString*)a`.
-  StrAssign,
-  /// `*(UString*)obj = UString(a's b bytes)`.
-  StrSetBytes,
-  /// `obj->GetLength()`.
-  StrLength,
-  /// `obj->SizeOf()`.
-  StrSizeOf,
-  /// `((const char*)*obj)[0]`.
-  StrFirst,
   /// `((GETextureManager*)obj)->LoadTexture(*(const UString*)a, *(const GETextureDescription*)b)`.
   TexLoad,
   /// `obj->SetStageMinFilterMode(a, b)`.
@@ -573,34 +542,14 @@ enum class EeGeObjOp : uint32_t {
   StrCopy,
   /// `delete obj` (a `UString`).
   StrDelete,
-  /// `*obj = *a` (`UString`s).
-  StrAssign,
-  /// `obj->SizeOf()` (a `UString`).
-  StrSizeOf,
-  /// `*obj == *a` (`UString`s) -> 0 or 1.
-  StrEqual,
-  /// `(const char*)*obj` (a `UString`).
-  StrText,
   /// `new UWideString(a)` (a capacity in characters) -> the string.
   WStrNew,
   /// `delete obj` (a `UWideString`).
   WStrDelete,
-  /// `*obj = *a` (`UWideString`s).
-  WStrAssign,
-  /// `(const char*)*obj` (a `UWideString`).
-  WStrText,
-  /// `obj->GetLength()` (a `UWideString`: characters).
-  WStrLength,
-  /// `obj->Reference()` (a `GETexture`).
-  TexReference,
   /// `obj->Dereference()` (a `GETexture`: its own).
   TexDereference,
-  /// `obj->Reference()` (a `UReferenceCounter`: a font, a font bitmap).
-  RefReference,
   /// `obj->Dereference()` (a `UReferenceCounter`).
   RefDereference,
-  /// A `GEFont`'s object (this module's `EeGeFont`).
-  FontObj,
   /// `PlatFontCreate(obj, a, b & 1, (b >> 1) & 1, (b >> 2) & 1, (b >> 3) & 1)` (face, height, bold, italic,
   /// underline, antialiased) -> the font or NULL.
   PlatFontCreate,
@@ -835,6 +784,15 @@ enum class EeGeTmVal : uint32_t {
   VisibleSpacePercentage,
 };
 
+/// A vertex field of `ee_ge_va_get` / `ee_ge_va_set` (three floats, two for `Uv`, one for `Opacity`).
+enum class EeGeVaField : uint32_t {
+  Color = 1,
+  Normal,
+  Opacity,
+  Point,
+  Uv,
+};
+
 /// A texture's field (`EeGeManOp::TexGet` / `TexSet`'s `a`).
 enum class EeGeTexField : uint32_t {
   /// `mIsFromTexturePack` (0 or 1).
@@ -888,6 +846,9 @@ struct EeGeModel;
 /// The model manager.
 struct EeGeModelManager;
 
+/// A `GEPolygonArray`'s Rust array.
+struct EeGePolygonArray;
+
 /// The primitive.
 struct EeGePrim;
 
@@ -905,6 +866,9 @@ struct EeGeTexture;
 
 /// The texture manager.
 struct EeGeTextureManager;
+
+/// A `GEVertexArray`'s Rust array: type 0 standard (`GXVERTEX`), 1 coloured (`GXVERTEX_STD_COLOR`).
+struct EeGeVertexArray;
 
 /// The window.
 struct EeGeWin;
@@ -2372,6 +2336,25 @@ bool ee_ge_physical_model_walk(const EeGePhysicalModels *table,
                                unsigned long other_frame,
                                unsigned long lod);
 
+/// The game's table: the models' reads in place (their Rust objects, `modobj.rs` and `smallobj.rs`), with the C++'s
+/// triangle read (the vertex and polygon arrays' virtuals) and the exact retry (a placed model of its own).
+///
+/// # Safety
+/// `out` is a table to fill.
+void ee_ge_physical_models(void (*triangle)(const void*,
+                                            unsigned long,
+                                            unsigned long,
+                                            unsigned long,
+                                            unsigned long,
+                                            EeGe3DPoint*),
+                           bool (*retry_line)(const void*,
+                                              const EeGeTransformation*,
+                                              unsigned long,
+                                              float,
+                                              const EeGe3DLine*,
+                                              unsigned long),
+                           EeGePhysicalModels *out);
+
 /// The default constructors (`GELine()`, `GEPoint()`, `GERhombus()`).
 ///
 /// # Safety
@@ -3646,6 +3629,101 @@ long ee_ge_fields_io(float *const *fields,
 /// # Safety
 /// `out` and `v` are valid (they may be the same viewport).
 void ee_ge_viewport_copy(EeGeViewport *out, const EeGeViewport *v);
+
+/// `new GEVertexArray(type, count)`: type 1 coloured, any other standard (the rasterizer makes only 0 and 1).
+EeGeVertexArray *ee_ge_va_new(uint32_t kind,
+                              uint32_t size);
+
+/// # Safety
+/// `a` is from `ee_ge_va_new` and not used again.
+void ee_ge_va_destroy(EeGeVertexArray *a);
+
+/// The vertex memory (GX and the draws read it in place).
+///
+/// # Safety
+/// `a` is live.
+void *ee_ge_va_vertices(EeGeVertexArray *a);
+
+/// `GetType()`.
+///
+/// # Safety
+/// `a` is live.
+unsigned long ee_ge_va_type(const EeGeVertexArray *a);
+
+/// `GetSize()`, or with `size_of` `SizeOf()`.
+///
+/// # Safety
+/// `a` is live.
+unsigned long ee_ge_va_size(const EeGeVertexArray *a, bool size_of);
+
+/// `CopyFrom(b)`: as many vertices as both hold (the original cast `b` to its own class: arrays of two types
+/// copy nothing here, where the original misread the other's vertices).
+///
+/// # Safety
+/// Both are live.
+void ee_ge_va_copy_from(EeGeVertexArray *a,
+                        const EeGeVertexArray *b);
+
+/// `Get<field>(out, index)` into `out` (its floats).
+///
+/// # Safety
+/// `a` is live, `index` one of its vertices; `out` holds the field's floats.
+void ee_ge_va_get(const EeGeVertexArray *a, EeGeVaField field, uint32_t index, float *out);
+
+/// `Set<field>(value, index)` from `value` (its floats); a standard array ignores colour and opacity.
+///
+/// # Safety
+/// `a` is live, `index` one of its vertices; `value` holds the field's floats.
+void ee_ge_va_set(EeGeVertexArray *a,
+                  EeGeVaField field,
+                  uint32_t index,
+                  const float *value);
+
+/// `SetVertex(colour, point, normal, uv, opacity, index)` (three, three, three and two floats).
+///
+/// # Safety
+/// `a` is live, `index` one of its vertices; the pointers hold their floats.
+void ee_ge_va_set_vertex(EeGeVertexArray *a,
+                         const float *c,
+                         const float *p,
+                         const float *n,
+                         const float *uv,
+                         float opacity,
+                         uint32_t index);
+
+/// `new GEPolygonArray(count)`.
+EeGePolygonArray *ee_ge_pa_new(uint32_t size);
+
+/// # Safety
+/// `p` is from `ee_ge_pa_new` and not used again.
+void ee_ge_pa_destroy(EeGePolygonArray *p);
+
+/// The 16-bit index memory (GX and the draws read it in place).
+///
+/// # Safety
+/// `p` is live.
+uint16_t *ee_ge_pa_indices(EeGePolygonArray *p);
+
+/// `GetSize()`, or with `size_of` `SizeOf()`.
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_pa_size(const EeGePolygonArray *p, bool size_of);
+
+/// `GetVertexIndex{corner + 1}(polygon)`.
+///
+/// # Safety
+/// `p` is live; `polygon` one of its triangles.
+unsigned long ee_ge_pa_index(const EeGePolygonArray *p, uint32_t polygon, uint32_t corner);
+
+/// `SetVertexIndex{corner + 1}(polygon, index)` (16 bits kept).
+///
+/// # Safety
+/// `p` is live; `polygon` one of its triangles.
+void ee_ge_pa_set_index(EeGePolygonArray *p,
+                        uint32_t polygon,
+                        uint32_t corner,
+                        unsigned long index);
 
 /// `GEViewport()`.
 ///

@@ -11,7 +11,10 @@
 
 use std::ffi::{c_ulong, c_void};
 
+use crate::cppobj;
+use crate::modobj::{ee_ge_mod_get, ee_ge_mod_polygon_count, ee_ge_mod_ptr, EeGeModPtr, EeGeModVal, EeGeModel};
 use crate::physical::{line_hits_triangle, triangle_box};
+use crate::smallobj::{ee_ge_mat_get, EeGeMat, EeGeMatField};
 use crate::types::{Ge3DLine, Ge3DPoint, GeBoundingBox, GeTransformation};
 use crate::um::lrintf;
 
@@ -580,6 +583,113 @@ pub unsafe extern "C" fn ee_ge_physical_model_walk(
             lod,
         )
     }
+}
+
+// ---- the game's table: the models read in place (R4.3 part 17)
+
+/// The model's Rust object (`GEModel*` handles: `cppobj.rs`).
+///
+/// # Safety
+/// `model` is a live `GEModel`.
+unsafe fn model_obj(model: *const c_void) -> *mut EeGeModel {
+    // SAFETY: the caller's contract
+    unsafe { cppobj::counted(model as usize) }
+}
+
+/// Element `i` of one of the model's arrays (the header's inline indexing).
+///
+/// # Safety
+/// `model` is live and its array holds an `i`.
+unsafe fn element<T: Copy>(model: *const c_void, which: EeGeModPtr, i: c_ulong) -> T {
+    // SAFETY: the caller's contract
+    unsafe { *(ee_ge_mod_ptr(model_obj(model), which) as *const T).add(i as usize) }
+}
+
+unsafe extern "C" fn pm_has_parent(model: *const c_void) -> bool {
+    // SAFETY: a live model (`GetParentModel() != NULL`)
+    unsafe { ee_ge_mod_get(model_obj(model), EeGeModVal::Parent) != 0 }
+}
+unsafe extern "C" fn pm_internal_transform(model: *const c_void, frame: c_ulong, out: *mut GeTransformation) {
+    // SAFETY: a live model (`GetInternalTransform(frame)`)
+    unsafe { *out = element(model, EeGeModPtr::InternalTransforms, frame) }
+}
+unsafe extern "C" fn pm_center(model: *const c_void, out: *mut Ge3DPoint) {
+    // SAFETY: a live model (`GetCenterPoint()`)
+    unsafe { *out = element(model, EeGeModPtr::Center, 0) }
+}
+unsafe extern "C" fn pm_radius(model: *const c_void, frame: c_ulong) -> f32 {
+    // SAFETY: a live model (`GetBoundingRadius(frame)`)
+    unsafe { element(model, EeGeModPtr::BoundingRadii, frame) }
+}
+unsafe extern "C" fn pm_box(model: *const c_void, frame: c_ulong, out: *mut GeBoundingBox) {
+    // SAFETY: a live model (`GetBoundingBox(frame)`)
+    unsafe { *out = element(model, EeGeModPtr::BoundingBoxes, frame) }
+}
+unsafe extern "C" fn pm_material_count(model: *const c_void) -> c_ulong {
+    // SAFETY: a live model
+    unsafe { ee_ge_mod_get(model_obj(model), EeGeModVal::MaterialCount) as c_ulong }
+}
+unsafe extern "C" fn pm_material(model: *const c_void, index: c_ulong, lod: c_ulong, out: *mut GePhysicalMaterial) {
+    // SAFETY: a live model and one of its materials (`GetMaterial(index)` and its accessors)
+    unsafe {
+        let m: *mut EeGeMat = cppobj::counted(element::<usize>(model, EeGeModPtr::Materials, index));
+        (*out).vertex_start = ee_ge_mat_get(m, EeGeMatField::VertexStart, 0);
+        (*out).polygon_start = ee_ge_mat_get(m, EeGeMatField::PolygonStart, lod);
+        (*out).polygon_length = ee_ge_mat_get(m, EeGeMatField::PolygonLength, lod);
+    }
+}
+unsafe extern "C" fn pm_sub_model_count(model: *const c_void) -> c_ulong {
+    // SAFETY: a live model
+    unsafe { ee_ge_mod_get(model_obj(model), EeGeModVal::SubModelCount) as c_ulong }
+}
+unsafe extern "C" fn pm_sub_model(model: *const c_void, index: c_ulong) -> *const c_void {
+    // SAFETY: a live model (`GetSubModel(index)`)
+    unsafe { element::<usize>(model, EeGeModPtr::SubModels, index) as *const c_void }
+}
+unsafe extern "C" fn pm_lod_count(model: *const c_void) -> c_ulong {
+    // SAFETY: a live model
+    unsafe { ee_ge_mod_get(model_obj(model), EeGeModVal::LodCount) as c_ulong }
+}
+unsafe extern "C" fn pm_polygon_count(model: *const c_void, lod: c_ulong) -> c_ulong {
+    // SAFETY: a live model (`GetPolygonCount(lod)`)
+    unsafe { ee_ge_mod_polygon_count(model_obj(model), lod) }
+}
+
+/// The game's table: the models' reads in place (their Rust objects, `modobj.rs` and `smallobj.rs`), with the C++'s
+/// triangle read (the vertex and polygon arrays' virtuals) and the exact retry (a placed model of its own).
+///
+/// # Safety
+/// `out` is a table to fill.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_physical_models(
+    triangle: unsafe extern "C" fn(*const c_void, c_ulong, c_ulong, c_ulong, c_ulong, *mut Ge3DPoint),
+    retry_line: unsafe extern "C" fn(
+        *const c_void,
+        *const GeTransformation,
+        c_ulong,
+        f32,
+        *const Ge3DLine,
+        c_ulong,
+    ) -> bool,
+    out: *mut EeGePhysicalModels,
+) {
+    let table = EeGePhysicalModels {
+        has_parent: pm_has_parent,
+        internal_transform: pm_internal_transform,
+        center: pm_center,
+        radius: pm_radius,
+        bbox: pm_box,
+        material_count: pm_material_count,
+        material: pm_material,
+        triangle,
+        sub_model_count: pm_sub_model_count,
+        sub_model: pm_sub_model,
+        lod_count: pm_lod_count,
+        polygon_count: pm_polygon_count,
+        retry_line,
+    };
+    // SAFETY: `out` is the C++'s table to fill
+    unsafe { out.write(table) };
 }
 
 #[cfg(test)]

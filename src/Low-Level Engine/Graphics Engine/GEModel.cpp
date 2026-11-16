@@ -89,15 +89,9 @@
 // SYNTHETIC: LLE 0x1001eca9
 // SYNTHETIC: LLE 0x1001ecb5
 
-// A UString from Rust's bytes (no NUL inside)
-static UString GEModelString(const char* inData, size_t inLength)
-{
-    std::vector<char> theText(inData, inData + inLength);
-    theText.push_back(0);
-    return UString(&theText[0]);
-}
-
-// The calls the model makes on other objects (EeGeModOp), in the original's statements
+// The calls the model makes on other objects (EeGeModOp), in the original's statements; the materials, the
+// strings' records, the references taken and the sub-models' objects are read in place (ee_ge cppobj.rs)
+static_assert(sizeof(GEModel) == 3 * sizeof(void*), "ee_ge cppobj.rs CppCounted (the others: GEBitmap.cpp)");
 intptr_t GEModel::Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
     GEVertexArray* theVertices = (GEVertexArray*)inObj;
@@ -169,44 +163,13 @@ intptr_t GEModel::Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, i
     case EeGeModOp::MaterialDereference:
         theMaterial->UReferenceCounter::Dereference();
         return 0;
-    case EeGeModOp::MaterialSetTexture:
-        theMaterial->SetTexture((GETexture*)a, (unsigned long)b);
-        return 0;
-    case EeGeModOp::MaterialRangeLength:
-        return (intptr_t)theMaterial->GetPolygonRangeLength((unsigned long)a);
-    case EeGeModOp::MaterialStart:
-        return (intptr_t)theMaterial->GetPolygonStartingIndex((unsigned long)a);
-    case EeGeModOp::MaterialVertexStart:
-        return (intptr_t)theMaterial->GetVertexStartingIndex();
     case EeGeModOp::MaterialSizeOf:
         return (intptr_t)theMaterial->SizeOf();
-    case EeGeModOp::MaterialSetName:
-        theMaterial->SetName(GEModelString((const char*)a, (size_t)b));
-        return 0;
-    case EeGeModOp::MaterialSetValue:
-        if (c == 0)
-            theMaterial->SetTextureIndex((unsigned long)a);
-        else if (c == 1)
-            theMaterial->SetPolygonStartingIndex((unsigned long)a, (unsigned long)b);
-        else if (c == 2)
-            theMaterial->SetPolygonRangeLength((unsigned long)a, (unsigned long)b);
-        else if (c == 3)
-            theMaterial->SetVertexStartingIndex((unsigned long)a);
-        else
-            theMaterial->SetVertexRangeLength((unsigned long)a);
-        return 0;
     case EeGeModOp::ModelNew:
         return (intptr_t)new GEModel((GEModelManager*)inObj);
-    case EeGeModOp::ModelObj:
-        return (intptr_t)theModel->mRust;
-    case EeGeModOp::ModelReference:
-        theModel->Reference();
-        return 0;
     case EeGeModOp::ModelBaseDereference:
         theModel->UReferenceCounter::Dereference();
         return 0;
-    case EeGeModOp::ModelRefCount:
-        return (intptr_t)theModel->mReferenceCount;
     case EeGeModOp::ManagerRemove:
         ((GEModelManager*)inObj)->RemoveModel((GEModel*)a);
         return 0;
@@ -220,20 +183,6 @@ intptr_t GEModel::Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, i
     case EeGeModOp::StrArrayDelete:
         delete[] theString;
         return 0;
-    case EeGeModOp::StrAt:
-        return (intptr_t)&theString[a];
-    case EeGeModOp::StrAssign:
-        *theString = *(const UString*)a;
-        return 0;
-    case EeGeModOp::StrSetBytes:
-        *theString = GEModelString((const char*)a, (size_t)b);
-        return 0;
-    case EeGeModOp::StrLength:
-        return (intptr_t)theString->GetLength();
-    case EeGeModOp::StrSizeOf:
-        return (intptr_t)theString->SizeOf();
-    case EeGeModOp::StrFirst:
-        return (intptr_t)((const char*)*theString)[0];
     case EeGeModOp::TexLoad:
         return (intptr_t)((GETextureManager*)inObj)->LoadTexture(*(const UString*)a, *(const GETextureDescription*)b);
     case EeGeModOp::TexMinFilter:
@@ -563,30 +512,15 @@ void GEModelManager::SetModelPath(FSPath* inPath)
 // kLODFraction (0x10097b78) and ComputeTriangleBox (0x10021ebc), the model against model walk's, are Rust
 // (ee_ge physical_walk.rs, physical.rs)
 
-// The walks read the models through this table (ee_ge physical_walk.rs, EeGePhysicalModels): the handles are the
-// GEModel* the walks were given, the arrays behind GEVertexArray's and GEPolygonArray's virtuals stay C++, and the
-// index arithmetic (a polygon's vertex index plus the material's first vertex) is the C++'s unsigned long.
+// The walks read the models through a table (ee_ge physical_walk.rs, EeGePhysicalModels): the handles are the GEModel*
+// the walks were given, read in place (R4.3 part 17: their Rust objects, ee_ge_physical_models), but for the two calls
+// that stay C++: a triangle's corners behind GEVertexArray's and GEPolygonArray's virtuals (the index arithmetic, a
+// polygon's vertex index plus the material's first vertex, is the C++'s unsigned long) and the exact retry.
 namespace {
-const GEModel* PMModel(const void* inModel) { return static_cast<const GEModel*>(inModel); }
-bool PMHasParent(const void* inModel) { return PMModel(inModel)->GetParentModel() != NULL; }
-void PMInternalTransform(const void* inModel, unsigned long inFrame, EeGeTransformation* outTransform)
-    { *outTransform = *GERust(PMModel(inModel)->GetInternalTransform(inFrame)); }
-void PMCenter(const void* inModel, EeGe3DPoint* outPoint) { *outPoint = *GERust(PMModel(inModel)->GetCenterPoint()); }
-float PMRadius(const void* inModel, unsigned long inFrame) { return PMModel(inModel)->GetBoundingRadius(inFrame); }
-void PMBox(const void* inModel, unsigned long inFrame, EeGeBoundingBox* outBox)
-    { *outBox = *GERust(PMModel(inModel)->GetBoundingBox(inFrame)); }
-unsigned long PMMaterialCount(const void* inModel) { return PMModel(inModel)->GetMaterialCount(); }
-void PMMaterial(const void* inModel, unsigned long inIndex, unsigned long inLOD, EeGePhysicalMaterial* outMaterial)
-{
-    GEMaterial* theMaterial = PMModel(inModel)->GetMaterial(inIndex);
-    outMaterial->vertex_start = theMaterial->GetVertexStartingIndex();
-    outMaterial->polygon_start = theMaterial->GetPolygonStartingIndex(inLOD);
-    outMaterial->polygon_length = theMaterial->GetPolygonRangeLength(inLOD);
-}
 void PMTriangle(const void* inModel, unsigned long inFrame, unsigned long inLOD, unsigned long inPolygon,
                 unsigned long inVertexStart, EeGe3DPoint* outPoints)
 {
-    GEModel* theModel = const_cast<GEModel*>(PMModel(inModel));
+    GEModel* theModel = const_cast<GEModel*>(static_cast<const GEModel*>(inModel));
     GEVertexArray* theVertices = theModel->GetVertexArray(inFrame);
     GEPolygonArray* thePolygons = theModel->GetPolygonArray(inLOD);
     GE3DPoint thePoint;
@@ -597,23 +531,23 @@ void PMTriangle(const void* inModel, unsigned long inFrame, unsigned long inLOD,
     theVertices->GetPoint(thePoint, thePolygons->GetVertexIndex3(inPolygon) + inVertexStart);
     outPoints[2] = *GERust(thePoint);
 }
-unsigned long PMSubModelCount(const void* inModel) { return PMModel(inModel)->GetSubModelCount(); }
-const void* PMSubModel(const void* inModel, unsigned long inIndex) { return PMModel(inModel)->GetSubModel(inIndex); }
-unsigned long PMLODCount(const void* inModel) { return PMModel(inModel)->GetLODCount(); }
-unsigned long PMPolygonCount(const void* inModel, unsigned long inLOD) { return PMModel(inModel)->GetPolygonCount(inLOD); }
 // the scaled walk's exact retry: a placed model of its own (it references and releases the model)
 bool PMRetryLine(const void* inModel, const EeGeTransformation* inLocation, unsigned long inFrame, float inScale,
                  const EeGe3DLine* inLine, unsigned long inLOD)
 {
     float theDistance;
-    GEPhysicalModel theModel(const_cast<GEModel*>(PMModel(inModel)),
+    GEPhysicalModel theModel(const_cast<GEModel*>(static_cast<const GEModel*>(inModel)),
                              *reinterpret_cast<const GETransformation*>(inLocation), inScale);
     theModel.SetFrame(inFrame);
     return theModel.Intersects(*reinterpret_cast<const GE3DLine*>(inLine), inLOD, theDistance, true);
 }
-const EeGePhysicalModels kPMModels = { PMHasParent, PMInternalTransform, PMCenter, PMRadius, PMBox, PMMaterialCount,
-                                       PMMaterial, PMTriangle, PMSubModelCount, PMSubModel, PMLODCount, PMPolygonCount,
-                                       PMRetryLine };
+EeGePhysicalModels PMTable()
+{
+    EeGePhysicalModels theTable;
+    ee_ge_physical_models(PMTriangle, PMRetryLine, &theTable);
+    return theTable;
+}
+const EeGePhysicalModels kPMModels = PMTable();
 }   // namespace
 
 // Places a model in the world at a location and scale, holding a reference to it, at frame 0

@@ -1,6 +1,10 @@
-//! The vertex layouts, the colour packing and the arrays (the C++ `DX7StandardVertexArray`, `DX7StdColorVertexArray`
-//! and `DX7PolygonArray`, which remain as trampolines). The layouts are the GPU's: `Dx7Vertex` is `GXVERTEX`
-//! (stride 0x20), `Dx7StdColorVertex` is `GXVERTEX_STD_COLOR` (stride 0x24).
+//! The vertex layouts, the colour packing and the arrays: the C++ `GEVertexArray` (type 0 [`StandardVertexArray`],
+//! type 1 [`StdColorVertexArray`]) and `GEPolygonArray` ([`PolygonArray`]), whose objects these are. The layouts are
+//! the GPU's: `Dx7Vertex` is `GXVERTEX` (stride 0x20), `Dx7StdColorVertex` is `GXVERTEX_STD_COLOR` (stride 0x24).
+//! Moved from ee_dx7 in R4.3 part 17, when the renderer's DX7StandardVertexArray, DX7StdColorVertexArray and
+//! DX7PolygonArray trampolines were merged into the two GE classes (ee_dx7 re-exports this module as `vertex`).
+
+use std::ffi::{c_ulong, c_void};
 
 /// `GXVERTEX`: position, normal, one texture coordinate.
 #[repr(C)]
@@ -300,6 +304,244 @@ impl PolygonArray {
     /// `SizeOf`: the index buffer plus 12 bytes.
     pub fn size_of(&self) -> u32 {
         (self.indices.len() as u32).wrapping_mul(2).wrapping_add(12)
+    }
+}
+
+// ---- the C++ GEVertexArray's and GEPolygonArray's object (R4.3 part 17: the renderer's DX7StandardVertexArray,
+// DX7StdColorVertexArray and DX7PolygonArray trampolines merged into the two GE classes)
+
+/// A `GEVertexArray`'s Rust array: type 0 standard (`GXVERTEX`), 1 coloured (`GXVERTEX_STD_COLOR`).
+pub enum EeGeVertexArray {
+    Standard(StandardVertexArray),
+    Color(StdColorVertexArray),
+}
+
+/// A `GEPolygonArray`'s Rust array.
+pub struct EeGePolygonArray(pub PolygonArray);
+
+/// A vertex field of `ee_ge_va_get` / `ee_ge_va_set` (three floats, two for `Uv`, one for `Opacity`).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeGeVaField {
+    Color = 1,
+    Normal,
+    Opacity,
+    Point,
+    Uv,
+}
+
+/// `new GEVertexArray(type, count)`: type 1 coloured, any other standard (the rasterizer makes only 0 and 1).
+#[no_mangle]
+pub extern "C" fn ee_ge_va_new(kind: u32, size: u32) -> *mut EeGeVertexArray {
+    Box::into_raw(Box::new(if kind == 1 {
+        EeGeVertexArray::Color(StdColorVertexArray::new(size))
+    } else {
+        EeGeVertexArray::Standard(StandardVertexArray::new(size))
+    }))
+}
+
+/// # Safety
+/// `a` is from `ee_ge_va_new` and not used again.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_va_destroy(a: *mut EeGeVertexArray) {
+    // SAFETY: the caller's contract
+    drop(unsafe { Box::from_raw(a) });
+}
+
+/// The vertex memory (GX and the draws read it in place).
+///
+/// # Safety
+/// `a` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_va_vertices(a: *mut EeGeVertexArray) -> *mut c_void {
+    // SAFETY: the caller's contract
+    match unsafe { &mut *a } {
+        EeGeVertexArray::Standard(v) => v.as_mut_ptr() as *mut c_void,
+        EeGeVertexArray::Color(v) => v.as_mut_ptr() as *mut c_void,
+    }
+}
+
+/// `GetType()`.
+///
+/// # Safety
+/// `a` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_va_type(a: *const EeGeVertexArray) -> c_ulong {
+    // SAFETY: the caller's contract
+    match unsafe { &*a } {
+        EeGeVertexArray::Standard(_) => 0,
+        EeGeVertexArray::Color(_) => 1,
+    }
+}
+
+/// `GetSize()`, or with `size_of` `SizeOf()`.
+///
+/// # Safety
+/// `a` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_va_size(a: *const EeGeVertexArray, size_of: bool) -> c_ulong {
+    // SAFETY: the caller's contract
+    let n = match unsafe { &*a } {
+        EeGeVertexArray::Standard(v) => {
+            if size_of {
+                v.size_of()
+            } else {
+                v.len()
+            }
+        }
+        EeGeVertexArray::Color(v) => {
+            if size_of {
+                v.size_of()
+            } else {
+                v.len()
+            }
+        }
+    };
+    n as c_ulong
+}
+
+/// `CopyFrom(b)`: as many vertices as both hold (the original cast `b` to its own class: arrays of two types
+/// copy nothing here, where the original misread the other's vertices).
+///
+/// # Safety
+/// Both are live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_va_copy_from(a: *mut EeGeVertexArray, b: *const EeGeVertexArray) {
+    // SAFETY: the caller's contract
+    match unsafe { (&mut *a, &*b) } {
+        (EeGeVertexArray::Standard(x), EeGeVertexArray::Standard(y)) => x.copy_from(y),
+        (EeGeVertexArray::Color(x), EeGeVertexArray::Color(y)) => x.copy_from(y),
+        _ => {}
+    }
+}
+
+/// `Get<field>(out, index)` into `out` (its floats).
+///
+/// # Safety
+/// `a` is live, `index` one of its vertices; `out` holds the field's floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_va_get(a: *const EeGeVertexArray, field: EeGeVaField, index: u32, out: *mut f32) {
+    // SAFETY: the caller's contract
+    let a = unsafe { &*a };
+    let values: Vec<f32> = match (a, field) {
+        (EeGeVertexArray::Standard(v), EeGeVaField::Color) => v.color(index).to_vec(),
+        (EeGeVertexArray::Color(v), EeGeVaField::Color) => v.color(index).to_vec(),
+        (EeGeVertexArray::Standard(v), EeGeVaField::Normal) => v.normal(index).to_vec(),
+        (EeGeVertexArray::Color(v), EeGeVaField::Normal) => v.normal(index).to_vec(),
+        (EeGeVertexArray::Standard(v), EeGeVaField::Opacity) => vec![v.opacity(index)],
+        (EeGeVertexArray::Color(v), EeGeVaField::Opacity) => vec![v.opacity(index)],
+        (EeGeVertexArray::Standard(v), EeGeVaField::Point) => v.point(index).to_vec(),
+        (EeGeVertexArray::Color(v), EeGeVaField::Point) => v.point(index).to_vec(),
+        (EeGeVertexArray::Standard(v), EeGeVaField::Uv) => v.texture_coordinate(index).to_vec(),
+        (EeGeVertexArray::Color(v), EeGeVaField::Uv) => v.texture_coordinate(index).to_vec(),
+    };
+    // SAFETY: `out` holds the field's floats
+    unsafe { std::ptr::copy_nonoverlapping(values.as_ptr(), out, values.len()) };
+}
+
+/// `Set<field>(value, index)` from `value` (its floats); a standard array ignores colour and opacity.
+///
+/// # Safety
+/// `a` is live, `index` one of its vertices; `value` holds the field's floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_va_set(a: *mut EeGeVertexArray, field: EeGeVaField, index: u32, value: *const f32) {
+    // SAFETY: the caller's contract
+    unsafe {
+        let v3 = || [*value, *value.add(1), *value.add(2)];
+        let v2 = || [*value, *value.add(1)];
+        match (&mut *a, field) {
+            (EeGeVertexArray::Standard(_), EeGeVaField::Color | EeGeVaField::Opacity) => {}
+            (EeGeVertexArray::Color(v), EeGeVaField::Color) => v.set_color(v3(), index),
+            (EeGeVertexArray::Color(v), EeGeVaField::Opacity) => v.set_opacity(*value, index),
+            (EeGeVertexArray::Standard(v), EeGeVaField::Normal) => v.set_normal(v3(), index),
+            (EeGeVertexArray::Color(v), EeGeVaField::Normal) => v.set_normal(v3(), index),
+            (EeGeVertexArray::Standard(v), EeGeVaField::Point) => v.set_point(v3(), index),
+            (EeGeVertexArray::Color(v), EeGeVaField::Point) => v.set_point(v3(), index),
+            (EeGeVertexArray::Standard(v), EeGeVaField::Uv) => v.set_texture_coordinate(v2(), index),
+            (EeGeVertexArray::Color(v), EeGeVaField::Uv) => v.set_texture_coordinate(v2(), index),
+        }
+    }
+}
+
+/// `SetVertex(colour, point, normal, uv, opacity, index)` (three, three, three and two floats).
+///
+/// # Safety
+/// `a` is live, `index` one of its vertices; the pointers hold their floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_va_set_vertex(
+    a: *mut EeGeVertexArray,
+    c: *const f32,
+    p: *const f32,
+    n: *const f32,
+    uv: *const f32,
+    opacity: f32,
+    index: u32,
+) {
+    // SAFETY: the caller's contract
+    unsafe {
+        let v3 = |q: *const f32| [*q, *q.add(1), *q.add(2)];
+        match &mut *a {
+            EeGeVertexArray::Standard(v) => v.set_vertex(v3(p), v3(n), [*uv, *uv.add(1)], index),
+            EeGeVertexArray::Color(v) => v.set_vertex(v3(c), v3(p), v3(n), [*uv, *uv.add(1)], opacity, index),
+        }
+    }
+}
+
+/// `new GEPolygonArray(count)`.
+#[no_mangle]
+pub extern "C" fn ee_ge_pa_new(size: u32) -> *mut EeGePolygonArray {
+    Box::into_raw(Box::new(EeGePolygonArray(PolygonArray::new(size))))
+}
+
+/// # Safety
+/// `p` is from `ee_ge_pa_new` and not used again.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_pa_destroy(p: *mut EeGePolygonArray) {
+    // SAFETY: the caller's contract
+    drop(unsafe { Box::from_raw(p) });
+}
+
+/// The 16-bit index memory (GX and the draws read it in place).
+///
+/// # Safety
+/// `p` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_pa_indices(p: *mut EeGePolygonArray) -> *mut u16 {
+    // SAFETY: the caller's contract
+    unsafe { (*p).0.as_mut_ptr() }
+}
+
+/// `GetSize()`, or with `size_of` `SizeOf()`.
+///
+/// # Safety
+/// `p` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_pa_size(p: *const EeGePolygonArray, size_of: bool) -> c_ulong {
+    // SAFETY: the caller's contract
+    let p = unsafe { &(*p).0 };
+    (if size_of { p.size_of() } else { p.size() }) as c_ulong
+}
+
+/// `GetVertexIndex{corner + 1}(polygon)`.
+///
+/// # Safety
+/// `p` is live; `polygon` one of its triangles.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_pa_index(p: *const EeGePolygonArray, polygon: u32, corner: u32) -> c_ulong {
+    // SAFETY: the caller's contract
+    unsafe { (*p).0.vertex_index(polygon, corner) as c_ulong }
+}
+
+/// `SetVertexIndex{corner + 1}(polygon, index)` (16 bits kept).
+///
+/// # Safety
+/// `p` is live; `polygon` one of its triangles.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_pa_set_index(p: *mut EeGePolygonArray, polygon: u32, corner: u32, index: c_ulong) {
+    // SAFETY: the caller's contract
+    #[allow(clippy::unnecessary_cast)] // c_ulong is u64 on LP64
+    unsafe {
+        (*p).0.set_vertex_index(polygon, corner, index as u32)
     }
 }
 

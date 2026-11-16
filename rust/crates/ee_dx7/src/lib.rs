@@ -18,11 +18,11 @@ pub mod scrobj;
 pub mod state;
 pub mod surface;
 pub mod surfobj;
-pub mod vertex;
+/// the vertex layouts and arrays (ee_ge vertarr.rs since R4.3 part 17)
+pub use ee_ge::vertarr as vertex;
 
 #[cfg(not(test))]
 mod draw_ffi;
-mod ffi;
 #[cfg(not(test))]
 pub mod gx;
 #[cfg(not(test))]
