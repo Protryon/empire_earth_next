@@ -26123,3 +26123,162 @@ reaches the menus, settings and lobby ops; the LAN game the multiplayer lobby's.
   let the list and combo text ops (about 80 lines) move.
 - `UIGraph`/`UILineGraph`/`EEUIPGSLineGraph` as one Rust object, with the post-game summary's ops; the UI thread's
   small decisions into `ui_game.rs`.
+
+## R6: game screens B, round 3: UIGraph, UILineGraph and EEUIPGSLineGraph as one Rust object; the summary's graphs, the event group, the list and combo lines and the controls' plain ops on the direct path (ee_ui graphobj.rs, ee_screens toolkit.rs; branch rust-screensb3, 2026-11-15)
+
+The brief: round 2's measure showed what blocks `EEScreens.cpp`'s toolkit cases (C++ objects no Rust object stood
+for). Unblock them and move, aiming at 1,500 net C++ lines: a Rust line store for the list boxes, the three graph
+classes as one Rust object, the event and hot key group over a C++ event helper, the UI thread's small decisions,
+then the game calls on plain records.
+
+### The measure (lines freed, before the work)
+
+`build/sb3/measure.py` (round 2's) on the merged tree: `EEScreens.cpp` 3,389 lines; toolkit-only ops 59 labels /
+233 lines, toolkit ops on the game 35 / 141, toolkit texts 28 / 107, game calls 282 / 1,195, game texts 94 / 527.
+Outside the host, the graph classes were 714 lines (`UIGraph.cpp` 363, `UILineGraph.cpp` 110,
+`EEUIPGSLineGraph.cpp` 94, their headers 147), the summary's graph cases about 75 and `EEPGSFormManager`'s nine
+graphs. So the graph object was the one piece large enough to matter; the rest are tens of lines each.
+
+### What moved
+
+- **The graph, whole** (`ee_ui graphobj.rs`, 495 lines; `lle/UIGraph.h` 47 and `UIGraph.cpp` 101 the shell).
+  `UIGraph` (abstract), `UILineGraph` and the summary's `EEUIPGSLineGraph` were three classes for one control; the
+  only callers were the controls table (a line graph no form uses: the data has no type-30 control), the UI
+  manager (the summary's, type 1016) and the host. They are one C++ class with a kind (`EeUiGraphKind::Line`:
+  values `"%.2f"`; `PostGame`: values through a format the game gives, `ee_screens_pgs_format`, and 39 stored
+  graphs) and one Rust object holding every member: the seven `GEText`s by address, the rectangles, zoom and flags,
+  the shown graph and its copy for drawing, and the stored graphs. A graph is a `UiGraph` (`ee_util`'s
+  `EeUtilGraph` plus the three strings `UGraph` kept in C++). The arithmetic stays `graph.rs`'s (its golden
+  unchanged); the calls out go through the host as the C++'s did, a stack `GELine` becoming `LineCreate` ..
+  `LineDelete` (two new ops: `LineSetOpacity`, `DrawBorder`). `UILineGraph.cpp/.h`, `EEUIPGSLineGraph.cpp/.h` and
+  `graph_ffi.rs` (the ten `ee_uicpp_graph_*` callbacks) are gone; `EEPGSFormManager`'s nine `UGraph`s too (its 8
+  read ones live in the graph as stored graphs 31..38, the host's numbering 32..39 kept; the ninth was never read).
+- **The summary's graph ops** (`toolkit.rs pgs_op`): series enable, show, clear, prune, the series register
+  (`sPgsSeries`, now a Rust static), `AddSeries`, the axes, the six range/point reads, the three label texts, and
+  `GAME_PGS_COMBINE` (`CombineGraph` of 0x0e with 0x0d, recoloured by the records' colours through
+  `ee_screenscpp_pgs_record`). `GAME_PGS_NEW_MANAGER` resets the register and the form manager's graphs in Rust,
+  then lets the C++ make the manager. `GAME_PGS_ADD_SERIES` stays a C++ case (it reads the statistics' points) over
+  one new shell method, `UIGraph::AddGraphSeries(points, count, graph, colour)`.
+- **The event group** (`toolkit.rs event_group`) over one C++ helper, `ee_screenscpp_event(op, event, code)`: new
+  `EEScreenEvent` (NULL for code 0), `Reference`, `Dereference`. Open, close and trigger events, the trigger on the
+  event's form, the three hot key ops (`UIForm::AddHotKey`'s three record calls transcribed; the settings' hot key
+  passes its event as the just-unpressed one, the chat's and the options menu's as just-pressed), the keyboard
+  event (two forms), the camera grab's saved mouse move event (its slots now Rust's; `EEReleaseGrabScroll`'s
+  release moved with them into `ee_screens_camera_grab_reset`), `AddEventToTrigger`.
+- **The list and combo boxes' lines** through each list box's own per-type host: `UIListBoxRust<T>::Op` gained
+  `ListLineCount`, `ListLineText` and `ListAppendText` (with `if constexpr` for `UIListBox<UWideString>`; nothing
+  for the game's other line types), `ListDeleteAll` (the virtual) and `ListSelection`; list boxes and status bars
+  are registered for the direct path, and a combo box names its drop-down list. Moved: the list selects and clears
+  (settings, campaign editor, custom campaign, the save/load forms), the counts and selections, the combo boxes'
+  selection, count, delete, append (dirty, list append, reopen, as `UIComboBox::AppendLine`) and insert, the list
+  and combo line texts, the civilization choice's `GetHasSelection`.
+- **The controls' plain ops** (`control_ops`): the summary's rectangle read, background opacity (set and get),
+  dirty, background colour (also the diplomacy form's), designed size, the status bar test, existence and index,
+  the status bars' opacity, range and colour, the splash screen's bar value. `UIControl::HostOp` gained
+  `SetBgColor` and `GetBgOpacity` (the virtual and the rhombus read).
+
+### Why the lines stayed in the C++ vector
+
+The brief asked for a Rust line store for `UIListBox<UWideString>`. The template hands out `const T&` and
+`const std::vector<T>&` (`GetData`, `GetDataArray`, `Begin`, `End`, the subclasses' `mData[...]` and
+`mCopyLineArray`), and 15 call sites in four lanes' files (the civilization builder's list writes lines in place,
+the error log's `SetLine`, the editor's `GetDataArray` copies and `InsertLine` predicates, `Sort`'s `std::sort`)
+take those references. A Rust store would have to hold the lines in `UWideString`'s C++ layout (its vtable pointer
+included) for those references to stay valid, or every one of those sites would change. The direct path needs
+only the operations, so the round put them on the list's own per-type host instead: the moved cases free the same
+lines, the template keeps its interface for every T, and nothing reinterprets Rust memory as C++ objects.
+
+### Goldens and checks
+
+- **The graph**: `build/sb3/gr_driver.cpp` transcribes the unmodified `UIGraph.cpp`, `UILineGraph.cpp` and
+  `EEUIPGSLineGraph.cpp` onto the world (`build/ui21`'s `world.h`: their `GEText`, `GELine` and `UIControl` calls as
+  the host ops, the arithmetic through the base library `lib_orig.lib` and its `ee_uicpp_graph_*` callbacks, the
+  `UGraph` record over `ee_util`) and runs random sequences: a line graph or the summary's (with a test format),
+  fonts, colours, labels and series of the shown or a stored graph, `ShowGraph`, enable flags, the axis flags,
+  `CopyData`, both draws, zoom in and out, tabbing; the world's control rectangle and border, the texts' extents
+  and colours. `golden_graphobj.txt` (1.6 MB) is seed 1's first 36 sequences plus the C runtime's `"%.2f"` of 1,961
+  floats (ties at two places such as 0.125 -> "0.12", 0.375 -> "0.38": round half to even on the exact value;
+  `-0.00`, `nan`, `-nan(ind)`, `inf`, 3.4e38 written out, random bits) against `format_2f`. The replay passes;
+  seeds 1 and 2 over 300 sequences each (13 MB, not committed; `EE_GRAPHOBJ_TRACE=<file>` and `--ignored`) check
+  121,147 and 118,761 lines. Mutations (`build/sb3/mutate.py` over the cargo replay): 13 of 14 caught; the one
+  missed reads the grid colour from the x label's text instead of the title's, which the world colours alike.
+- **The lists, events and control ops** are the C++ cases transcribed onto the direct path, the same inward calls
+  and host ops; unit tests (`toolkit_tests.rs`: the event helper's make/release sequence, a registered list box's
+  lines, selection and append through a recording host) and the in-game lookup check below.
+- **The lookup check** (`EE_DIRECT_CHECK=<file>`): every lookup of a C++ pointer logs `found` or `MISSING` with its
+  kind under the screens' op that made it. Round 2's background bug was a lookup keyed by the wrong pointer, which
+  shows as a `MISSING` of a non-NULL pointer of the kind the op expects.
+
+### The post-game summary step (tried, reverted)
+
+The brief asked for a TEST ONLY fixture step that opens the summary after a short game. The fixture's new
+`postgame` command opened it over the running game. The first run aborted in `post_game.rs open()`: with no
+statistics records, `records - 1` wrapped and the reports' `resize` asked for 4,294,967,295 records (fixed:
+`saturating_sub`). The second ran the summary's graph ops on the Rust graph (the series register, the combine, the
+axes, `ShowGraph`; the lookup check found the form and the graph every time) and then faulted in
+`ee_screenscpp_pgs_record`: the summary reads the statistics' current record, which the game writes at its end.
+A capture needs a game played to its end, so the step was reverted; the graph's draws are a person's (or a future
+fixture's that ends a game) to see.
+
+### Commits
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 8cc54ec0 | `ee_won.h` regenerated after the merge of rust (its header was not current) | 0 |
+| de70eaaa | the graph object; the summary's graph ops; the event group | -738 |
+| 0c5a140d | the list and combo lines, the controls' plain ops, the status bars; the lookup check | -102 |
+| 35135baa, 7c24a8d3 | TEST ONLY: the fixture's `postgame` command, `fixture_game.py --postgame` (and its four fields) | +4 |
+| 172e80a8 | `post_game.rs`: no records -> no players (the resize of `records - 1` aborted) | 0 |
+| d4ec1e30 | the postgame step reverted (see above) | -4 |
+
+Net C++ for the round: -840 (`EEScreens.cpp` 3,389 -> 3,119, the graph units 714 -> 166 with the shell,
+`EEPGSFormManager.h` 40 -> 18, `UIListBox.h` +18, `UIControl.cpp` +2). Short of the 1,500 asked: the measure's
+toolkit cases were about 480 lines, of which this round took about 270 plus the 613 of the graph classes; what is
+left of the host is the game's.
+
+### Gates
+
+All on the final tree: the merge of `rust` at the round's start (6c8e6866, 71 commits; one conflict, PORT_LEARNINGS.md:
+rust's sections, then this lane's; `strip_markers.py` changed nothing; `ee_won.h` regenerated). `rust` had no newer
+commits at the end, so there was nothing more to merge.
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | per commit 0/0; final EE-AOC 849, EE-SIM 850 inputs, 0/0 |
+| `build.py -j 3 --test-profile windowed-software` | 0/0 |
+| oracle | seeds 2-3 identical per commit; seeds 2-7 identical on the final tree (and 2-3 after the post_game fix) |
+| `tools/sim_editor.py` | PASS 14,260 (one run under the test build's load failed at step 1453: the loading label caught mid-load, `load=1` vs `load=0`, 196 s against 99 s; reruns PASS) |
+| `tools/sim_editor.py --civbuilder` | PASS 3,913 |
+| Rust gate | PASS: 4,008 tests, clippy, rustfmt, headers current |
+| harness self test | 42 parts PASS; the in-process probe stops at `NESynchronousCommunications has no member mLastTickReceived` (a layout another lane changed; not this round's) |
+| fixture tour | `RESULT PASS tour` (F3 ok) on the final tree; the earlier runs with the post-game step: see above |
+| orders game | `BOX SELECT PASS`, `ORDERS PASS` (gather, repair, repair-queued, move), `RESULT PASS random-game` |
+| LAN game | `RESULT PASS lan-game` (PT host 2976, joiner 2976) |
+| legacy tour | `STOP <windowed session complete> reached`, F3 ok; **menu bmpdiff** against round 2's final run: every menu capture identical but the build label (222 pixels at 41..68, 3..12 on the main menu and settings-closed); the state dumps differ only in the pid and the code addresses |
+| lookup check | tour 6,645 lookups, LAN 152: 0 MISSING; the tour reached 40 of the moved ops (among them 94 triggers, 3 open events, 4 hot keys, the trigger on the event's form, the lobby's keyboard event, the list selects and clears, 611 combo appends, 89 list appends, the combo lines, the combo line text), the LAN game the splash screen's bar value and the summary-numbered rectangle and bar ops |
+
+### Behaviour
+
+- None intended in a working game. Where the C++ crashed (a control or text the form lacks, a series index past
+  the end, `CopyData` before `SetFont`) the Rust does nothing and answers 0.
+- The summary's form manager's graphs live in its line graph, reset when the manager is made (the C++ made fresh
+  graphs with each manager): the same graphs at every read.
+- The summary opened with no statistics records (only the reverted TEST ONLY step did) shows no players instead
+  of aborting on a wrapped `records - 1`; it still faults further on (`record(current_record)`), as the C++ did.
+
+### Shared files
+
+`ee_ui` (the parked toolkit lane's): `graphobj.rs` (new), `direct.rs` (the graph, list and status bar kinds,
+`list_call`, `list_op`, `list_line`, `combo_list`, `status_call`, `with_graph`, the lookup check), `listobj.rs` and
+`statusobj.rs` (registration), `comboobj.rs` (`list_cpp`), `obj.rs` (`LineSetOpacity`, `DrawBorder`, five list
+ops), `graph_ffi.rs` deleted; `lle/UIGraph.h`, `UIGraph.cpp`, `lle/UIListBox.h` (the five ops in
+`UIListBoxRust<T>::Op`), `UIControl.cpp` (`HostOp`: `SetBgColor`, `GetBgOpacity`), `UIControlsTable.cpp` (`new
+UIGraph`). `ee_util` (the LLE lane's): `EeUtilSeries::color`, `set_color`, `enabled`, `EeUtilGraph::combine`. The
+editor lane's `EESETSUICBPlayer.cpp`: one include line. The HUD lane's and app-and-world lane's files are untouched.
+
+### What only a person reaches
+
+The post-game summary at a real game's end (the graphs drawn: `graphobj.rs`'s draws run only there; the summary's
+graph ops ran in the reverted fixture step's two runs, 0 lookups missing, before its record read faulted), the campaign editor's lists and combo box, the custom
+campaign's list, the camera grab (middle button drag), the in-game options' and chat's hot keys, the diplomacy
+form's colours, the civilization choice's selection.
