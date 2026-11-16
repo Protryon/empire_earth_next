@@ -176,6 +176,46 @@ constexpr static const uint32_t EE_APP_OPTIONS_MAP_NAME = 2;
 /// The sixteen slots.
 constexpr static const uint32_t EE_APP_OPTIONS_SLOTS = 16;
 
+/// `kTerrainCliff`: the terrain type `UpdateCliffs` gives a steep tile.
+constexpr static const long TERRAIN_CLIFF = 9;
+
+/// x, y -> flag: `GetTile(x, y) != NULL`
+constexpr static const int32_t EE_APP_MAP_OP_TILE = 1;
+
+/// x, y -> a: the tile's terrain type; x, y, a: `SetTerrainType(a)`
+constexpr static const int32_t EE_APP_MAP_OP_TERRAIN_TYPE = 2;
+
+constexpr static const int32_t EE_APP_MAP_OP_SET_TERRAIN_TYPE = 3;
+
+/// x, y, a, flag: `SetTileTerrain(x, y, a, flag)`
+constexpr static const int32_t EE_APP_MAP_OP_SET_TILE_TERRAIN = 4;
+
+/// a -> a, b, c: `EETerrainTable::Get(a)`'s texture set, terrain type and colour type
+constexpr static const int32_t EE_APP_MAP_OP_TERRAIN = 5;
+
+/// a -> a: `EETerrainTypeTable::Get(a)->mColorSetID`
+constexpr static const int32_t EE_APP_MAP_OP_COLOR_SET = 6;
+
+/// a -> a, b: `EETerrainTable::sCliffTable[a]`'s first and last terrains
+constexpr static const int32_t EE_APP_MAP_OP_CLIFF = 7;
+
+/// x, y -> a: the tile's `GetChecksum(players)`
+constexpr static const int32_t EE_APP_MAP_OP_TILE_CHECKSUM = 8;
+
+/// -> flag: `gSightUpdatesEnabled`; flag (shared) -> flag: the local player sees through the player's sight
+constexpr static const int32_t EE_APP_MAP_OP_SIGHT_ENABLED = 9;
+
+constexpr static const int32_t EE_APP_MAP_OP_LOCAL_SEES = 10;
+
+/// f -> tiles, a: `EEGetTilesNearPoint`
+constexpr static const int32_t EE_APP_MAP_OP_TILES_NEAR = 11;
+
+/// x, y, flag (add), a (shared): the player's sight at the tile
+constexpr static const int32_t EE_APP_MAP_OP_SIGHT_AT = 12;
+
+/// x, y, flag (on): `gMiniMap->CountCellOn/Off`
+constexpr static const int32_t EE_APP_MAP_OP_COUNT_CELL = 13;
+
 constexpr static const int32_t EE_APP_SAVE_READ_ULONG = 1;
 
 constexpr static const int32_t EE_APP_SAVE_READ_LONG = 2;
@@ -476,6 +516,47 @@ struct EeAppSaveIo {
 
 /// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0).
 using EeAppSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeAppSaveIo*);
+
+/// One host operation's arguments and answers.
+struct EeAppMapIo {
+  long x;
+  long y;
+  long a;
+  long b;
+  long c;
+  bool flag;
+  /// the point and radius of `TILES_NEAR`
+  float f[3];
+  /// `TILES_NEAR`'s answer: `a` tiles of two `long`s (the C++ keeps them until its next call)
+  const long *tiles;
+};
+
+/// The host: `(ctx, op, io)`.
+using EeAppMapFn = void(*)(void*, int32_t, EeAppMapIo*);
+
+/// The map's numbers the bodies read (`RTSMap`'s and `EEMap`'s plain members, names kept).
+struct EeAppMapDims {
+  /// `mSize`: the square's side in tiles
+  long size;
+  /// `mL195610` and `mL195614`: the diamond's two side lengths
+  long l195610;
+  long l195614;
+  /// `mF1955F4`: the tile height (`GetF1955F4`)
+  float f1955f4;
+  /// `mU195650`: the base terrain; `mU19565C`: the cliff terrain
+  long base_terrain;
+  long cliff_terrain;
+  /// `mU19561C`: the player count
+  unsigned long players;
+};
+
+/// A call's host: the callback and its context, the mesh (`EeGeTerrainMesh`) and the map's numbers.
+struct EeAppMapHost {
+  EeAppMapFn call;
+  void *ctx;
+  void *mesh;
+  EeAppMapDims dims;
+};
 
 /// `EEGameSettings`' plain members (the game options and the strings stay C++), in the class's order.
 struct EeAppSettingsFields {
@@ -947,6 +1028,39 @@ int32_t ee_app_options_save(const EeAppOptionsFields *options,
                             uint32_t count,
                             void *ctx,
                             EeAppSaveFn call);
+
+/// The map's bodies by entry (`what`): 0 `UpdateWater(a, b)`, 1 `CreateMap`'s fill, 2 `UpdateCliffs(a, b, c, d)`,
+/// 3 `RemoveFlatCliffs(a, b, c, d)`, 4 `PaintTerrain(a, b, c)`, 5 `PaintTerrainRect(a, b, c, d, e, f)`,
+/// 6 `SetCliffColorSets(a, b, c, d, e)`.
+///
+/// # Safety
+/// `host` is a live record whose callback, context and mesh stay live for the call.
+void ee_app_map_edit(const EeAppMapHost *host,
+                     uint32_t what,
+                     const long *args);
+
+/// `AddSight` (`add`) / `RemoveSight` of the player the context names.
+///
+/// # Safety
+/// As [`ee_app_map_edit`].
+void ee_app_map_sight(const EeAppMapHost *host,
+                      float x,
+                      float y,
+                      float radius,
+                      bool shared,
+                      bool add);
+
+/// `ComputeChecksum`: the window's sum; `cursor` advanced.
+///
+/// # Safety
+/// As [`ee_app_map_edit`]; `cursor` is live.
+long ee_app_map_checksum(const EeAppMapHost *host, unsigned long *cursor);
+
+/// `GetTileCount`.
+///
+/// # Safety
+/// `dims` is a live record.
+unsigned long ee_app_map_tile_count(const EeAppMapDims *dims);
 
 /// `EEGameSettings()`'s plain members.
 ///

@@ -42,6 +42,7 @@
 #include "ee/EEPersistentTag.h"
 #include "ee/EEUnitRegions.h"
 #include "ee/EEAppCapture.h"
+#include "rust/ee_app.h"
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 extern long gFirstCliffTerrain;             // 0x4e86e8 (EETerrainTable.cpp)
@@ -51,9 +52,109 @@ void EEGetTilesNearPoint(const GE3DPoint& inCenter, float inRadius, std::vector<
 
 // unit-local constants (.rdata next to EEMap's vtables)
 const float kMapTileSize = 0.40824828f;     // 0x441ce8 (RTSMap's ctor argument; provisional name)
-const float kChecksumScale = -1000.0f;      // 0x441cf4 (ComputeChecksum)
 const float kSlopeScale = -0.76923078f;     // 0x441cf8 (GetTerrainPitch / GetTerrainRoll)
-const float kCliffNormalTolerance = 0.075f; // 0x441cfc (UpdateCliffs)
+
+// New (port): the sight, the cliffs, the painting, the water colours, the checksum and the tile count are ee_app
+// map.rs over this host (the tiles, the terrain tables, the players' sight, the mini map; the mesh it reads itself)
+struct EEMapHostContext {
+    EEMap* mMap;
+    EEPlayer* mPlayer;                      // the sight's player
+    std::vector<EETileCoordinate> mTiles;   // TILES_NEAR's answer
+};
+
+static void EEMapHostOp(void* inContext, int32_t inOp, EeAppMapIo* io)
+{
+    EEMapHostContext& theContext = *static_cast<EEMapHostContext*>(inContext);
+    EEMap* theMap = theContext.mMap;
+    EEPlayer* thePlayer = theContext.mPlayer;
+    switch (inOp) {
+    case EE_APP_MAP_OP_TILE:
+        io->flag = theMap->GetTile(io->x, io->y) != NULL;
+        break;
+    case EE_APP_MAP_OP_TERRAIN_TYPE:
+        io->a = theMap->GetTile(io->x, io->y)->mTerrainType;
+        break;
+    case EE_APP_MAP_OP_SET_TERRAIN_TYPE: {
+        EETileLocation theLocation(io->x, io->y);
+        theMap->GetTile(io->x, io->y)->SetTerrainType(io->a, theLocation, theMap);
+        break;
+    }
+    case EE_APP_MAP_OP_SET_TILE_TERRAIN:
+        theMap->SetTileTerrain(io->x, io->y, io->a, io->flag);
+        break;
+    case EE_APP_MAP_OP_TERRAIN: {
+        EETerrainTable* theTerrain = EETerrainTable::Get(io->a);
+        io->a = theTerrain->mTextureSetID;
+        io->b = theTerrain->mTerrainType;
+        io->c = theTerrain->mColorType;
+        break;
+    }
+    case EE_APP_MAP_OP_COLOR_SET:
+        io->a = EETerrainTypeTable::Get(io->a)->mColorSetID;
+        break;
+    case EE_APP_MAP_OP_CLIFF:
+        io->b = EETerrainTable::sCliffTable[io->a]->mLastTerrain;
+        io->a = EETerrainTable::sCliffTable[io->a]->mFirstTerrain;
+        break;
+    case EE_APP_MAP_OP_TILE_CHECKSUM:
+        io->a = theMap->GetTile(io->x, io->y)->GetChecksum(theMap->mU19561C);
+        break;
+    case EE_APP_MAP_OP_SIGHT_ENABLED:
+        io->flag = gSightUpdatesEnabled == true;
+        break;
+    case EE_APP_MAP_OP_LOCAL_SEES: {
+        EEPlayer* theLocal = ::gWorld.mPlayers[::gWorld.mCurrentPlayer];
+        io->flag = theLocal == thePlayer ||
+                   (io->flag && theLocal->IsAlliedWith(thePlayer) && theLocal->mSharedLOS && thePlayer->mSharedLOS);
+        break;
+    }
+    case EE_APP_MAP_OP_TILES_NEAR:
+        theContext.mTiles.clear();
+        EEGetTilesNearPoint(GE3DPoint(io->f[0], io->f[1], 0.0f), io->f[2], theContext.mTiles);
+        io->tiles = theContext.mTiles.empty() ? NULL : &theContext.mTiles[0].mX;
+        io->a = (long)theContext.mTiles.size();
+        break;
+    case EE_APP_MAP_OP_SIGHT_AT: {
+        EETileCoordinate theTile(io->x, io->y);
+        if (io->a != 0 && io->flag)
+            thePlayer->AddSharedSightAt(theTile);
+        else if (io->a != 0)
+            thePlayer->RemoveSharedSightAt(theTile);
+        else if (io->flag)
+            thePlayer->AddOwnSightAt(theTile);
+        else
+            thePlayer->RemoveOwnSightAt(theTile);
+        break;
+    }
+    case EE_APP_MAP_OP_COUNT_CELL:
+        if (io->flag)
+            gMiniMap->CountCellOn(io->x, io->y);
+        else
+            gMiniMap->CountCellOff(io->x, io->y);
+        break;
+    }
+}
+
+static EeAppMapDims EEMapDims(EEMap* inMap)
+{
+    return {inMap->mSize, inMap->mL195610, inMap->mL195614, inMap->mF1955F4, (long)inMap->mU195650,
+            (long)inMap->mU19565C, inMap->mU19561C};
+}
+
+static EeAppMapHost EEMapHost(EEMap* inMap, EEMapHostContext& inContext)
+{
+    return {&EEMapHostOp, &inContext, inMap->mTerrainMesh.GetRust(), EEMapDims(inMap)};
+}
+
+// one of the map's edits (ee_app_map_edit's entries)
+static void EEMapEdit(EEMap* inMap, uint32_t inWhat, long inA = 0, long inB = 0, long inC = 0, long inD = 0,
+                      long inE = 0, long inF = 0)
+{
+    EEMapHostContext theContext = {inMap, NULL, {}};
+    EeAppMapHost theHost = EEMapHost(inMap, theContext);
+    long theArgs[6] = {inA, inB, inC, inD, inE, inF};
+    ee_app_map_edit(&theHost, inWhat, theArgs);
+}
 
 // Creates an empty map on the default terrain
 EEMap::EEMap()
@@ -156,47 +257,15 @@ void EEMap::PlaceUnitOnGround(EEUnit* inUnit)
 }
 
 // Refreshes the terrain type of the four tiles around a vertex, then gives the vertex the water colour set
-// when below sea level, else its terrain's colour set
+// when below sea level, else its terrain's colour set (ee_app map.rs)
 void EEMap::UpdateWater(long inX, long inY)
 {
     EEAppMapScope theScope(this, kAppMapUpdateWater, inX, inY, 0, 0, 0, 0, inX - 1, inX, inY - 1, inY);   // MAPC (TEST ONLY)
-    GETerrainMesh& theMesh = this->mTerrainMesh;
-    for (long y = inY - 1; y <= inY; y++) {
-        for (long x = inX - 1; x <= inX; x++) {
-            EEMapTile* theTile = this->GetTile(x, y);
-            if (theTile) {
-                EETileLocation theLocation(x, y);
-                theTile->SetTerrainType(EETerrainTable::Get(theMesh.GetTextureSetID(x, y))->mTerrainType, theLocation,
-                                        this);
-            }
-        }
-    }
-    long theX = inX;
-    long theY = inY;
-    if (!theMesh.GetIsValidTile(inX, inY)) {
-        if (inY > this->mL195614 && inX > this->mL195614) {
-            theX = inX - 1;
-            theY = inY - 1;
-        } else if (inX > this->mL195610 && inY <= this->mL195614)
-            theX = inX - 1;
-        else if (inY > this->mL195610 && inX <= this->mL195614)
-            theY = inY - 1;
-    }
-    if (theMesh.GetZ(inX, inY) < 0.0f)
-        theMesh.SetWaterColorSet(inX, inY);
-    else {
-        long theTextureSet;
-        if (theMesh.GetIsValidTile(theX - 1, theY - 1))
-            theTextureSet = theMesh.GetTextureSetID(theX - 1, theY - 1);
-        else
-            theTextureSet = theMesh.GetTextureSetID(theX, theY);
-        theMesh.SetColorSet(inX, inY,
-                                 EETerrainTypeTable::Get(EETerrainTable::Get(theTextureSet)->mColorType)->mColorSetID);
-    }
+    EEMapEdit(this, 0, inX, inY);
 }
 
-// Builds a new map of the given size: fresh unit and effect region tables, every tile on the base terrain
-// (the original assigned the terrain mesh to itself here, a no-op; the mesh is a Rust object now and is not copied)
+// Builds a new map of the given size: fresh unit and effect region tables, every tile on the base terrain (the fill:
+// ee_app map.rs). The original assigned the terrain mesh to itself here, a no-op; the mesh is a Rust object now.
 void EEMap::CreateMap(long inWidth, long inHeight, unsigned long inPlayerCount)
 {
     EEAppMapScope theScope(this, kAppMapCreateMap, inWidth, inHeight, (long)inPlayerCount, 0, 0, 0, 1, 0, 0, 0);   // MAPC (TEST ONLY)
@@ -205,21 +274,7 @@ void EEMap::CreateMap(long inWidth, long inHeight, unsigned long inPlayerCount)
     delete this->mEffectRegions;
     this->mUnitRegions = ee_combat_regions_new((uint32_t)UMCeilUnsigned((float)this->mSize / 3L), 3);
     this->mEffectRegions = new EEEffectsTable(this, 10);
-    unsigned long theCount = this->mSize + 1;
-    long theTextureSet = EETerrainTable::Get(this->mU195650)->mTextureSetID;
-    long theTerrainType = EETerrainTable::Get(this->mU195650)->mTerrainType;
-    unsigned long theColorSet = EETerrainTypeTable::Get(EETerrainTable::Get(this->mU195650)->mColorType)->mColorSetID;
-    for (unsigned long x = 0; x < theCount; x++) {
-        for (unsigned long y = 0; y < theCount; y++) {
-            if (this->mTerrainMesh.GetIsValidPoint(x, y))
-                this->mTerrainMesh.SetColorSet(x, y, theColorSet);
-            if (!this->mTerrainMesh.GetIsValidTile(x, y))
-                continue;
-            this->SetTileTerrain(x, y, theTextureSet, false);
-            EETileLocation theLocation(x, y);
-            this->GetTile(x, y)->SetTerrainType(theTerrainType, theLocation, this);
-        }
-    }
+    EEMapEdit(this, 1);
 }
 
 // Creates an empty map for loading
@@ -228,71 +283,24 @@ FSPersistent* EEMap::CreateDefault() const
     return new EEMap;
 }
 
-// Takes a player's own or shared sight away from the mesh-flagged tiles within a radius; if the local
-// player sees through it, updates the mini map and terrain visibility counts too
-// NEAR: the original calls the tile vector's begin() and _Ptrit::operator+ out of line for each theTiles[i]
-// (inline budget); ours expands them
+// Takes a player's own or shared sight away from the mesh-flagged tiles within a radius; if the local player sees
+// through it, updates the mini map and terrain visibility counts too (ee_app map.rs)
 void EEMap::RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared)
 {
-    std::vector<EETileCoordinate> theTiles;
-    GETerrainMesh* theMesh = &::gWorld.mMap->mTerrainMesh;
-    if (gSightUpdatesEnabled == true) {
-        bool theVisible;
-        if (inShared) {
-            if (::gWorld.mPlayers[::gWorld.mCurrentPlayer] == inPlayer
-                || (::gWorld.mPlayers[::gWorld.mCurrentPlayer]->IsAlliedWith(inPlayer)
-                    && ::gWorld.mPlayers[::gWorld.mCurrentPlayer]->mSharedLOS && inPlayer->mSharedLOS))
-                theVisible = true;
-            else
-                theVisible = false;
-        } else
-            theVisible = ::gWorld.mPlayers[::gWorld.mCurrentPlayer] == inPlayer;
-        EEGetTilesNearPoint(GE3DPoint(inX, inY, 0.0f), inRadius, theTiles);
-        for (unsigned long i = 0, theCount = theTiles.size(); i < theCount; i++) {
-            if (!this->mTerrainMesh.GetIsValidTile(theTiles[i].GetX(), theTiles[i].GetY())
-                || !this->mTerrainMesh.GetIsWaterTile(theTiles[i].GetX(), theTiles[i].GetY()))
-                continue;
-            if (inShared == true)
-                inPlayer->RemoveSharedSightAt(theTiles[i]);
-            else
-                inPlayer->RemoveOwnSightAt(theTiles[i]);
-            if (theVisible) {
-                gMiniMap->CountCellOff(theTiles[i].GetX(), theTiles[i].GetY());
-                theMesh->DereferenceTile(theTiles[i].GetX(), theTiles[i].GetY());
-            }
-        }
-    }
+    EEMapHostContext theContext = {this, inPlayer, {}};
+    EeAppMapHost theHost = EEMapHost(this, theContext);
+    ee_app_map_sight(&theHost, inX, inY, inRadius, inShared, false);
     EEAppCaptureSight(1, inPlayer, inX, inY, inRadius, inShared);   // MAPS (TEST ONLY)
 }
 
-// Sums the tile and corner-height checksums of the next 64 x 64 window and advances the window;
-// past the right edge the cursor moves to the start of the next band
+// Sums the tile and corner-height checksums of the next 64 x 64 window and advances the window; past the right
+// edge the cursor moves to the start of the next band (ee_app map.rs)
 long EEMap::ComputeChecksum()
 {
     unsigned long theCursor = this->mChecksumCursor;   // MAPK (TEST ONLY)
-    unsigned long theStartX = this->mChecksumCursor % this->mSize;
-    unsigned long theStartY = this->mChecksumCursor / this->mSize;
-    long theChecksum = 0;
-    unsigned long theEndX = theStartX + 0x40;
-    unsigned long theEndY = theStartY + 0x40;
-    for (unsigned long y = theStartY; y < theEndY; y++) {
-        for (unsigned long x = theStartX; x < theEndX; x++) {
-            EEMapTile* theTile = this->GetTile(x, y);
-            if (!theTile)
-                continue;
-            theChecksum += theTile->GetChecksum(this->mU19561C);
-            theChecksum += (long)(this->mTerrainMesh.GetZ(x, y + 1) * 1000.0f) - (long)(this->mTerrainMesh.GetZ(x + 1, y + 1) * kChecksumScale) -
-                           (long)(this->mTerrainMesh.GetZ(x, y) * kChecksumScale) - (long)(this->mTerrainMesh.GetZ(x + 1, y) * kChecksumScale);
-        }
-    }
-    if (theEndX < (unsigned long)this->mSize)
-        this->mChecksumCursor += 0x40;
-    else {
-        // the next band starts at the beginning of row theEndY
-        this->mChecksumCursor = theEndY * this->mSize;
-        if (this->mChecksumCursor >= (unsigned long)(this->mSize * this->mSize))
-            this->mChecksumCursor = 0;
-    }
+    EEMapHostContext theContext = {this, NULL, {}};
+    EeAppMapHost theHost = EEMapHost(this, theContext);
+    long theChecksum = ee_app_map_checksum(&theHost, &this->mChecksumCursor);
     EEAppCaptureChecksum(theCursor, theChecksum, this->mChecksumCursor);   // MAPK (TEST ONLY)
     return theChecksum;
 }
@@ -553,262 +561,54 @@ void EEMap::DumpOutOfSynch(FILE* inFile)
     }
 }
 
-// Gives a player own or shared sight of the mesh-flagged tiles within a radius; if the local player sees
-// through it, updates the mini map and terrain visibility counts too
-// NEAR: the original calls the tile vector's begin() and _Ptrit::operator+ out of line for each theTiles[i]
-// (inline budget); ours expands them
+// Gives a player own or shared sight of the mesh-flagged tiles within a radius; if the local player sees through
+// it, updates the mini map and terrain visibility counts too (ee_app map.rs)
 void EEMap::AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared)
 {
-    std::vector<EETileCoordinate> theTiles;
-    GETerrainMesh* theMesh = &::gWorld.mMap->mTerrainMesh;
-    if (gSightUpdatesEnabled == true) {
-        bool theVisible;
-        if (inShared) {
-            if (::gWorld.mPlayers[::gWorld.mCurrentPlayer] == inPlayer
-                || (::gWorld.mPlayers[::gWorld.mCurrentPlayer]->IsAlliedWith(inPlayer)
-                    && ::gWorld.mPlayers[::gWorld.mCurrentPlayer]->mSharedLOS && inPlayer->mSharedLOS))
-                theVisible = true;
-            else
-                theVisible = false;
-        } else
-            theVisible = ::gWorld.mPlayers[::gWorld.mCurrentPlayer] == inPlayer;
-        EEGetTilesNearPoint(GE3DPoint(inX, inY, 0.0f), inRadius, theTiles);
-        for (unsigned long i = 0, theCount = theTiles.size(); i < theCount; i++) {
-            if (!this->mTerrainMesh.GetIsValidTile(theTiles[i].GetX(), theTiles[i].GetY())
-                || !this->mTerrainMesh.GetIsWaterTile(theTiles[i].GetX(), theTiles[i].GetY()))
-                continue;
-            if (inShared == true)
-                inPlayer->AddSharedSightAt(theTiles[i]);
-            else
-                inPlayer->AddOwnSightAt(theTiles[i]);
-            if (theVisible) {
-                gMiniMap->CountCellOn(theTiles[i].GetX(), theTiles[i].GetY());
-                theMesh->ReferenceTile(theTiles[i].GetX(), theTiles[i].GetY());
-            }
-        }
-    }
+    EEMapHostContext theContext = {this, inPlayer, {}};
+    EeAppMapHost theHost = EEMapHost(this, theContext);
+    ee_app_map_sight(&theHost, inX, inY, inRadius, inShared, true);
     EEAppCaptureSight(0, inPlayer, inX, inY, inRadius, inShared);   // MAPS (TEST ONLY)
 }
 
-// Paints a rectangle of tiles with a terrain, then recolours its vertices with the given colour type
+// Paints a rectangle of tiles with a terrain, then recolours its vertices with the given colour type (ee_app map.rs)
 void EEMap::PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff)
 {
     EEAppMapScope theScope(this, kAppMapPaintTerrainRect, inLeft, inRight, inTop, inBottom, inTerrain, inCliff, inLeft,
                            inRight, inBottom, inTop);   // MAPC (TEST ONLY)
-    EETerrainTable* theTerrain = EETerrainTable::Get(inTerrain);
-    for (long y = inTop; y >= inBottom; y--) {
-        for (long x = inLeft; x <= inRight; x++) {
-            EEMapTile* theTile = this->GetTile(x, y);
-            if (theTile) {
-                this->SetTileTerrain(x, y, theTerrain->mTextureSetID, true);
-                EETileLocation theLocation(x, y);
-                theTile->SetTerrainType(theTerrain->mTerrainType, theLocation, this);
-            }
-        }
-    }
-    this->SetCliffColorSets(inLeft, inRight, inTop, inBottom, inCliff);
+    EEMapEdit(this, 5, inLeft, inRight, inTop, inBottom, inTerrain, inCliff);
 }
 
-// Sets a tile's terrain type and paints it and its lower-left neighbours' textures with the terrain
+// Sets a tile's terrain type and paints it and its lower-left neighbours' textures with the terrain (ee_app map.rs)
 void EEMap::PaintTerrain(long inX, long inY, long inTerrain)
 {
     EEAppMapScope theScope(this, kAppMapPaintTerrain, inX, inY, inTerrain, 0, 0, 0, inX - 1, inX, inY - 1, inY);   // MAPC (TEST ONLY)
-    EETerrainTable* theTerrain = EETerrainTable::Get(inTerrain);
-    EEMapTile* theTile = this->GetTile(inX, inY);
-    if (theTile) {
-        EETileLocation theLocation(inX, inY);
-        theTile->SetTerrainType(theTerrain->mTerrainType, theLocation, this);
-        long theLeft;
-        long x;
-        theLeft = inX - 1;
-        for (x = inX - 1; x < inX + 1; x++) {
-            for (long y = inY - 1; y < inY + 1; y++) {
-                if (this->GetTile(x, y))
-                    this->SetTileTerrain(x, y, theTerrain->mTextureSetID, true);
-            }
-        }
-        this->SetCliffColorSets(theLeft, inX, inY, inY - 1, theTerrain->mColorType);
-    }
+    EEMapEdit(this, 4, inX, inY, inTerrain);
 }
 
-// Gives the vertices of a tile rectangle that are not under water a colour type's colour set
+// Gives the vertices of a tile rectangle that are not under water a colour type's colour set (ee_app map.rs)
 void EEMap::SetCliffColorSets(long inLeft, long inRight, long inTop, long inBottom, long inCliff)
 {
     EEAppMapScope theScope(this, kAppMapSetCliffColorSets, inLeft, inRight, inTop, inBottom, inCliff, 0, inLeft, inRight,
                            inBottom, inTop);   // MAPC (TEST ONLY)
-    EETerrainTypeTable* theCliff = EETerrainTypeTable::Get(inCliff);
-    for (long y = inTop; y >= inBottom; y--) {
-        for (long x = inLeft; x <= inRight; x++) {
-            if (!this->GetTile(x, y))
-                continue;
-            for (unsigned long i = 0; i < 4; i++) {
-                if (y == inBottom) {
-                    if (x == inLeft) {
-                        if (i != 1)
-                            continue;
-                    } else if (i == 2 || i == 3)
-                        continue;
-                } else if (x == inLeft && (i == 0 || i == 2))
-                    continue;
-                switch (i) {
-                case 0:
-                    if (!(-this->GetF1955F4() > this->mTerrainMesh.GetZ(x, y + 1)))
-                        this->mTerrainMesh.SetColorSet(x, y + 1, theCliff->mColorSetID);
-                    break;
-                case 1:
-                    if (!(-this->GetF1955F4() > this->mTerrainMesh.GetZ(x + 1, y + 1)))
-                        this->mTerrainMesh.SetColorSet(x + 1, y + 1, theCliff->mColorSetID);
-                    break;
-                case 2:
-                    if (!(-this->GetF1955F4() > this->mTerrainMesh.GetZ(x, y)))
-                        this->mTerrainMesh.SetColorSet(x, y, theCliff->mColorSetID);
-                    break;
-                case 3:
-                    if (!(-this->GetF1955F4() > this->mTerrainMesh.GetZ(x + 1, y)))
-                        this->mTerrainMesh.SetColorSet(x + 1, y, theCliff->mColorSetID);
-                    break;
-                }
-            }
-        }
-    }
+    EEMapEdit(this, 6, inLeft, inRight, inTop, inBottom, inCliff);
 }
 
-// Marks steep tiles in a rectangle as cliffs, texturing them from the cliff terrain by slope direction,
-// then makes tiles with three or more cliff neighbours cliffs too
+// Marks steep tiles in a rectangle as cliffs, texturing them from the cliff terrain by slope direction, then makes
+// tiles with three or more cliff neighbours cliffs too (ee_app map.rs)
 void EEMap::UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop)
 {
     EEAppMapScope theScope(this, kAppMapUpdateCliffs, inLeft, inRight, inBottom, inTop, 0, 0, inLeft - 1, inRight,
                            inBottom - 1, inTop);   // MAPC (TEST ONLY)
-    long theRandomTerrains[32][32];
-    URandomIntegers theRandom;
-    GEVector theFacingY(0.0f, -1.0f, 1.0f);
-    GEVector theFacingX(1.0f, 0.0f, 1.0f);
-    float theCliffHeight = this->GetF1955F4() * 1.5f - 0.0001f;
-    theFacingY.Normalize();
-    theFacingX.Normalize();
-    theRandom.SetSeed(0);
-    EECliffTerrainTable* theCliff = EETerrainTable::sCliffTable[this->mU19565C];
-    long* theEntry = &theRandomTerrains[0][0];
-    for (long i = 0; i < 32; i++) {
-        for (long j = 0; j < 32; j++)
-            *theEntry++ = theRandom.Generate(0, theCliff->mLastTerrain - theCliff->mFirstTerrain) + theCliff->mFirstTerrain;
-    }
-    for (unsigned long x = inLeft; x < (unsigned long)inRight; x++) {
-        for (unsigned long y = inBottom; y < (unsigned long)inTop; y++) {
-            EEMapTile* theTile = this->GetTile(x, y);
-            if (!theTile)
-                continue;
-            float theMin = this->mTerrainMesh.GetZ(x, y);
-            float theMax = theMin;
-            float theZ = this->mTerrainMesh.GetZ(x, y + 1);
-            if (theZ < theMin)
-                theMin = theZ;
-            if (theZ > theMax)
-                theMax = theZ;
-            theZ = this->mTerrainMesh.GetZ(x + 1, y);
-            if (theZ < theMin)
-                theMin = theZ;
-            if (theZ > theMax)
-                theMax = theZ;
-            theZ = this->mTerrainMesh.GetZ(x + 1, y + 1);
-            if (theZ < theMin)
-                theMin = theZ;
-            if (theZ > theMax)
-                theMax = theZ;
-            if (theMax >= this->GetF1955F4() && theMax - theMin >= theCliffHeight) {
-                EETileLocation theLocation(x, y);
-                theTile->SetTerrainType(kTerrainCliff, theLocation, this);
-                for (long tx = x - 1; tx < (long)x + 1; tx++) {
-                    for (long ty = y - 1; ty < (long)y + 1; ty++) {
-                        if (!this->GetTile(tx, ty))
-                            continue;
-                        GEVector theNormal = *this->mTerrainMesh.GetVertexNormal(tx, ty);
-                        theNormal += *this->mTerrainMesh.GetVertexNormal(tx + 1, ty);
-                        theNormal += *this->mTerrainMesh.GetVertexNormal(tx, ty + 1);
-                        theNormal += *this->mTerrainMesh.GetVertexNormal(tx + 1, ty + 1);
-                        theNormal.Scale(0.25f, theNormal);
-                        long theTerrain;
-                        if (1.0f - theFacingY.DotProduct(theNormal) < kCliffNormalTolerance)
-                            theTerrain = theCliff->mFirstTerrain;
-                        else if (1.0f - theFacingX.DotProduct(theNormal) < kCliffNormalTolerance)
-                            theTerrain = theCliff->mLastTerrain;
-                        else
-                            theTerrain = theRandomTerrains[tx % 32][ty % 32];
-                        this->SetTileTerrain(tx, ty, EETerrainTable::Get(theTerrain)->mTextureSetID, true);
-                    }
-                }
-                this->SetCliffColorSets(x - 1, x, y, y - 1, EETerrainTable::Get(theCliff->mFirstTerrain)->mColorType);
-            }
-        }
-    }
-    for (unsigned long x2 = inLeft; x2 < (unsigned long)inRight; x2++) {
-        for (unsigned long y2 = inBottom; y2 < (unsigned long)inTop; y2++) {
-            EEMapTile* theTile = this->GetTile(x2, y2);
-            if (!theTile || theTile->mTerrainType == kTerrainCliff)
-                continue;
-            unsigned long theCount = 0;
-            bool theSpace = this->mTerrainMesh.GetIsSpaceTile(x2, y2);
-            for (unsigned long n = 0; n < 4; n++) {
-                unsigned long nx = x2 - (n & 1);
-                unsigned long ny = y2 - (n >> 1);
-                if (this->GetTile(nx, ny)) {
-                    unsigned long theID = this->mTerrainMesh.GetTextureSetID(nx, ny);
-                    for (long k = theCliff->mFirstTerrain; k <= theCliff->mLastTerrain; k++) {
-                        if (EETerrainTable::Get(k)->mTextureSetID == (long)theID) {
-                            theCount++;
-                            break;
-                        }
-                    }
-                } else if (!theSpace)
-                    theCount++;
-            }
-            if (theCount >= 3) {
-                EETileLocation theLocation(x2, y2);
-                theTile->SetTerrainType(kTerrainCliff, theLocation, this);
-            }
-        }
-    }
+    EEMapEdit(this, 2, inLeft, inRight, inBottom, inTop);
 }
 
-// Turns cliff tiles in a rectangle that are no longer steep back into the map's base terrain
+// Turns cliff tiles in a rectangle that are no longer steep back into the map's base terrain (ee_app map.rs)
 void EEMap::RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop)
 {
     EEAppMapScope theScope(this, kAppMapRemoveFlatCliffs, (long)inLeft, (long)inRight, (long)inBottom, (long)inTop, 0, 0,
                            (long)inLeft - 1, (long)inRight, (long)inBottom - 1, (long)inTop);   // MAPC (TEST ONLY)
-    GEVector theFacingX(1.0f, 0.0f, 0.5f);
-    GEVector theFacingY(0.0f, -1.0f, 0.5f);
-    float theFlat = this->GetF1955F4() * 1.5f;
-    theFacingY.Normalize();
-    theFacingX.Normalize();
-    for (unsigned long x = inLeft; x < inRight; x++) {
-        for (unsigned long y = inBottom; y < inTop; y++) {
-            EEMapTile* theTile = this->GetTile(x, y);
-            if (!theTile)
-                continue;
-            float theMin = this->mTerrainMesh.GetZ(x, y);
-            float theMax = theMin;
-            float theZ = this->mTerrainMesh.GetZ(x, y + 1);
-            if (theZ < theMin)
-                theMin = theZ;
-            if (theZ > theMax)
-                theMax = theZ;
-            theZ = this->mTerrainMesh.GetZ(x + 1, y);
-            if (theZ < theMin)
-                theMin = theZ;
-            if (theZ > theMax)
-                theMax = theZ;
-            theZ = this->mTerrainMesh.GetZ(x + 1, y + 1);
-            if (theZ < theMin)
-                theMin = theZ;
-            if (theZ > theMax)
-                theMax = theZ;
-            if (!(theMax - theMin < theFlat) || theTile->mTerrainType != kTerrainCliff)
-                continue;
-            this->PaintTerrain(x, y, this->mU195650);
-            EETileLocation theLocation(x, y);
-            theTile->SetTerrainType(EETerrainTable::Get(this->mU195650)->mTerrainType, theLocation, this);
-        }
-    }
+    EEMapEdit(this, 3, (long)inLeft, (long)inRight, (long)inBottom, (long)inTop);
 }
 
 // Registers every terrain's texture set and every terrain type's colour set with the terrain mesh, then
@@ -884,14 +684,11 @@ void EEMap::SetTileTerrain(long inX, long inY, long inTextureSet, bool inUnload)
     this->mTerrainMesh.SetTextureSet(inX, inY, EETerrainTable::Get(inTextureSet)->mTextureSetID);
 }
 
-// Returns the number of tiles: the square map minus its two cut-off corner triangles
+// Returns the number of tiles: the square map minus its two cut-off corner triangles (ee_app map.rs)
 unsigned long EEMap::GetTileCount()
 {
-    long theWidth = this->mL195614 - 1;
-    long theHeight = this->mL195610 - 1;
-    long theSize = this->mSize;
-    return theSize * theSize - 2 * ((long)((theHeight + 1) * theHeight * 0.5f)
-                                    + (long)((theWidth + 1) * theWidth * 0.5f));
+    EeAppMapDims theDims = EEMapDims(this);
+    return ee_app_map_tile_count(&theDims);
 }
 
 // Returns whether the other player is this player or neither of the two is at war with the other

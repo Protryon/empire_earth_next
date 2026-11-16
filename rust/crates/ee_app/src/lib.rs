@@ -9,6 +9,8 @@
 //!   a host ([`camera_ffi`]: its C ABI).
 //! - [`ambient`]: the ambient sounds whole (`EEAmbientSoundManager`, `EEAmbientSound`, the world analyzer's counts):
 //!   records the C++ classes derive from, every decision over a host ([`ambient_ffi`]: its C ABI).
+//! - [`map`]: `EEMap`'s sight, cliffs, terrain painting, water colours, checksum and tile count over a host
+//!   ([`map_ffi`]: its C ABI; it reads and edits the terrain mesh itself).
 //! - [`save_io`]: a saved game's primitives over a host callback (`EESavePrimitive`'s operations).
 //! - [`ffi`]: the C ABI the C++ classes call.
 
@@ -18,6 +20,8 @@ pub mod camera;
 pub mod camera_ffi;
 pub mod ffi;
 pub mod game_options;
+pub mod map;
+pub mod map_ffi;
 pub mod save_io;
 pub mod settings;
 pub mod settings_ffi;
@@ -28,5 +32,7 @@ mod ambient_tests;
 mod camera_tests;
 #[cfg(test)]
 mod game_options_tests;
+#[cfg(test)]
+mod map_tests;
 #[cfg(test)]
 mod settings_tests;

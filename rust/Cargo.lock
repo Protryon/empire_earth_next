@@ -197,6 +197,7 @@ dependencies = [
  "ee_ge",
  "ee_gfx",
  "ee_plat_core",
+ "ee_random",
 ]
 
 [[package]]
