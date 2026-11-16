@@ -584,9 +584,7 @@ WON_TESTS = {
     # the resource configs' table reader (cfgtab.rs) against the 45 handlers' original statements over the shipped
     # resource files and random instructions (golden: rust/crates/ee_won/src/golden_cfgtab.txt)
     "won_cfgtab_test": "won_guiconf_test",
-    "won_guiconf_test": [WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
-                                                         "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
-                                                         "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
+    "won_guiconf_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # WONGUI's config readers' integer expressions and operand names, the original's statements against ee_won's
     # guicfg module (the port's exception-carrying wrapper included)
     "won_guicfg_test": [],
@@ -754,15 +752,13 @@ WON_TESTS = {
     "won_regkey_test": [WON_SRC / "WONCommon" / "RegKey.cpp"],
     # the lobby's chat command parser (golden: rust/crates/ee_won/src/golden_chat.txt)
     "won_chat_test": [*[WON_SRC / "WONLobby" / f for f in ("ChatCommandParser.cpp",)],
-                      *[WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
-                                                       "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
-                                                       "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
+                      *[WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
                       *[WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
                                                            "StringParserLists.cpp", "StringUtil.cpp")]],
     # WONGUI's GUIStringData (golden: rust/crates/ee_won/src/golden_guistring.txt)
-    "won_guistring_test": [WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
-                                                           "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
-                                                           "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
+    "won_guistring_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    # GUIStringData's buffer: the original's edits against guistrobj.rs (golden: rust/crates/ee_won/src/golden_guistrobj.txt)
+    "won_guistrobj_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won/src/golden_cfgobj.txt)
     "won_cfgobj_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigObject.cpp", "ConfigValue.cpp", "ConfigParser.cpp",
                                                              "ConfigToken.cpp")],

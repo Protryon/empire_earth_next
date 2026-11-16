@@ -34,7 +34,6 @@
 2f7990 2f7d69 WONGUI/DialogBehavior.cpp
 2f7d70 2f7f66 WONGUI/ImageButton.cpp
 2f84b0 306b01 WONGUI/ScreenSelectionState.cpp
-2f8b90 339d15 WONGUI/GUIStringSliceAdapters.cpp
 2fa2c0 2fa478 WONGUI/TextListItem.cpp
 2fa480 2fda7a WONGUI/ComponentListItemAdapters.cpp
 2fa510 300777 WONGUI/MenuSeparator.cpp
@@ -94,9 +93,6 @@
 326a20 326a35 WONGUI/FontDefaults.cpp
 326ad0 32742b WONGUI/Graphics.cpp
 3272f0 32b105 WONGUI/WindowBaseDefaults.cpp
-327460 327d90 WONGUI/GUIStringDataMutations.cpp
-327980 328402 WONGUI/GUIStringData.cpp
-328410 328447 WONGUI/GUIStringDataSearch.cpp
 328450 3284f9 WONGUI/GUIStringSingleton.cpp
 328540 32b0f0 WONGUI/PopupValueAdapters.cpp
 3285a0 3285c9 WONGUI/ImageDrawEntire.cpp

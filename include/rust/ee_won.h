@@ -4616,6 +4616,75 @@ enum class EeWonStageRoute {
   LocalAndNet = 3,
 };
 
+/// A virtual the Rust calls on the C++ object (`args` its ints, `p` its object).
+enum class EeWonGfxHook {
+  ClearClipRect,
+  /// (x, y, width, height)
+  SetClipRect,
+  /// (x, y, colour)
+  SetPixel,
+  SetColor,
+  /// (x1, y1, x2, y2)
+  DrawLine,
+  /// (x, y, width, height): the virtual (the base's is `GfxCall::BaseRect`)
+  DrawRect,
+  FillRect,
+  DrawDottedRect,
+  DrawEllipse,
+  FillEllipse,
+  /// (x, y, width, height, start, arc)
+  DrawArc,
+  /// (x, y, width, height, amount)
+  FillRectBlend,
+  /// `p` the Image: `DrawEntire(context, x, y)`
+  ImageEntire,
+  /// `p` the Image: `Draw(context, x, y, left, top, width, height)`
+  ImagePart,
+  /// `p` the GUIString: the font's `DrawString(context, text, offset, length, x, y)`
+  String,
+};
+
+/// The method `ee_won_gfx_call` runs (`a` its ints, `p` its object).
+enum class EeWonGfxCall {
+  /// `SetColor(a0)`
+  SetColor,
+  /// `GetStandardColor(a0)`: the scheme's colour, 0 without a scheme
+  StandardColor,
+  /// `SetSysColor(a0)`
+  SetSysColor,
+  /// `Translate(a0, a1)`
+  Translate,
+  /// `SetPixel(x, y, colour)`
+  SetPixel,
+  /// `DrawImage(p, x, y)`
+  DrawImage,
+  /// `DrawImage(p, x, y, left, top, width, height)`
+  DrawImagePart,
+  DrawLine,
+  DrawRect,
+  FillRect,
+  /// `FillRectBlend(x, y, width, height, amount)`
+  FillRectBlend,
+  DrawDottedRect,
+  DrawEllipse,
+  FillEllipse,
+  DrawArc,
+  /// `DrawString(p, x, y)` with `a2` the text's length (the whole text)
+  DrawString,
+  /// `DrawString(p, offset, length, x, y)`
+  DrawStringPart,
+  PerformClip,
+  /// `PushClipRect(x, y, width, height)`
+  PushClip,
+  PopClip,
+  /// Graphics' own `DrawRectHook`: four lines to the far edges
+  BaseRect,
+  /// Graphics' own `DrawDottedRectHook`: every other pixel of the four edges in the current colour
+  BaseDottedRect,
+  /// Graphics' own `FillRectHook`: a line per row
+  BaseFillRect,
+};
+
 /// The inward calls (the C++ shell's methods; `a` the component, `b` the Graphics where they take them).
 enum class EeWonGrabCall : uint32_t {
   /// `Clear()`.
@@ -4692,6 +4761,41 @@ enum class EeWonGuiStringOp {
   FindNoCase,
   FindOneOf,
   RFind,
+};
+
+/// The edit `ee_won_gstr` runs (each the original's method; `a`, `b`, `c` its arguments, `other` its other string
+/// or its units).
+enum class EeWonGstrOp {
+  /// `GUIStringData(unsigned short a)`: room for `a` units, empty.
+  NewCapacity,
+  /// The copy constructor: `other`'s text and terminator.
+  NewCopy,
+  /// `GUIStringData(other, a, b)`: `b` units of `other` from `a`.
+  NewSub,
+  /// `Reserve(a, b != 0)`.
+  Reserve,
+  /// `resize(a, b != 0)`.
+  Resize,
+  /// `AssignWStr(other, a)`: `a` units at `other` (wchar_t*).
+  AssignUnits,
+  /// `AssignStr(other, a)`: `a` bytes of UTF-8 at `other` (char*).
+  AssignNarrow,
+  /// `Fill(a, b, c)`: units `b..b+c` set to `a`, the length `b + c`.
+  Fill,
+  /// `assign(other, a, b)`.
+  Assign,
+  /// `append(a)`: one unit.
+  AppendUnit,
+  /// `append(other, a, b)`.
+  Append,
+  /// `erase(a, b)`.
+  Erase,
+  /// `insert(a, other)`.
+  Insert,
+  /// `setAt(a, b)`: answers `b`.
+  SetAt,
+  /// The destructor: the buffer freed.
+  Free,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
@@ -10031,6 +10135,9 @@ struct EeWonFirewallOp;
 /// `GetCertOp`'s state: the members and the session key.
 struct EeWonGetCert;
 
+/// The clip stack (`mClipStack`).
+struct EeWonGfx;
+
 /// The Rust BackgroundGrabber.
 struct EeWonGrabber;
 
@@ -10934,6 +11041,26 @@ struct EeWonGetCertHooks {
   void (*clear_one_time)(void*, void*);
 };
 
+/// The host: the hook on the C++ Graphics `g` with up to seven ints at `args` and an object `p`; its answer.
+using EeWonGfxHost = uint32_t(*)(void *g, EeWonGfxHook hook, const int32_t *args, const void *p);
+
+/// A `WONRectangle` (x, y, width, height).
+struct EeWonRect {
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+};
+
+/// The C++ Graphics' translation, colour and clip rectangle (`mTransX`, `mTransY`, `mColor`, `mClipRect`, in that
+/// order).
+struct EeWonGfxState {
+  int32_t trans_x;
+  int32_t trans_y;
+  uint32_t color;
+  EeWonRect clip;
+};
+
 /// A rectangle (x, y, width, height).
 struct EeWonRect4 {
   int32_t x;
@@ -11232,14 +11359,6 @@ struct EeWonBlink {
   bool changed;
 };
 
-/// A `WONRectangle` (x, y, width, height).
-struct EeWonRect {
-  int32_t x;
-  int32_t y;
-  int32_t width;
-  int32_t height;
-};
-
 /// A child layout instruction (`ChildLayoutInstruction`): its flags and the four offsets.
 struct EeWonChildLayout {
   int32_t flags;
@@ -11328,6 +11447,14 @@ struct EeWonScrollArea {
   int32_t view_y;
   int32_t view_width;
   int32_t view_height;
+};
+
+/// The C++ `GUIStringData`'s members as one block (`mText`, `mLength`, `mCapacity`, in that order).
+struct EeWonGuiStrBuf {
+  /// `wchar_t* mText`: units of `wchar_size` bytes, NULL before the first reservation.
+  void *text;
+  uint16_t length;
+  uint16_t capacity;
 };
 
 /// A line's vertical metrics (`TextLine`'s height, baseline and descent).
@@ -14995,6 +15122,28 @@ void ee_won_getcert_setup(EeWonGetCert *op,
                           size_t length,
                           void *block);
 
+/// A new Graphics' clip stack (empty).
+EeWonGfx *ee_won_gfx_new();
+
+/// # Safety
+/// `o` is null or from `ee_won_gfx_new`, not freed before.
+void ee_won_gfx_free(EeWonGfx *o);
+
+/// One Graphics method on the C++ object `g` (its members `st`, its clip stack `o`, its scheme's 17 colours at
+/// `scheme` or NULL): `a` holds seven ints, `p` the image or text; the host calls `g`'s hooks.
+///
+/// # Safety
+/// `g` is live for the host; `o`, `st` and `a` are live (seven ints); `scheme` is NULL or 17 colours. The host may
+/// call back into Graphics on another object only.
+uint32_t ee_won_gfx_call(void *g,
+                         EeWonGfxHost host,
+                         EeWonGfx *o,
+                         EeWonGfxState *st,
+                         const uint32_t *scheme,
+                         EeWonGfxCall call,
+                         const int32_t *a,
+                         const void *p);
+
 /// A new grabber for the C++ `BackgroundGrabber` `me`.
 EeWonGrabber *ee_won_grab_new(void *me, EeWonGuiHostFn host);
 
@@ -16407,6 +16556,21 @@ void ee_won_guistring_widen(const uint8_t *narrow,
                             uint32_t wchar_size,
                             EeWonWideSink sink,
                             void *context);
+
+/// One of GUIStringData's edits on `b` (the C++ object's members); `other` is the other string's members
+/// (`NewCopy`, `NewSub`, `Assign`, `Append`, `Insert`), `wchar_t` units (`AssignUnits`) or UTF-8 bytes
+/// (`AssignNarrow`); answers `SetAt`'s character, else 0.
+///
+/// # Safety
+/// `b` is a live block whose `text` is NULL or this module's (for the `New*` ops: writable room, unread);
+/// `other` as the op needs it, live for the call (it may be `b` itself for `Assign`, `Append` and `Insert`).
+int32_t ee_won_gstr(EeWonGstrOp op,
+                    EeWonGuiStrBuf *b,
+                    const void *other,
+                    int32_t a,
+                    int32_t bb,
+                    int32_t c,
+                    uint32_t wchar_size);
 
 /// `add_seg_metrics` on the line and the total height in place.
 ///

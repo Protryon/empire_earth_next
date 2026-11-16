@@ -76,6 +76,7 @@ pub mod guimenu;
 pub mod guimulti;
 pub mod guiscroll;
 pub mod guistring;
+pub mod guistrobj;
 pub mod guitext;
 pub mod guitree;
 pub mod guiwin;
