@@ -121,6 +121,7 @@ pub mod minimap;
 pub mod models;
 pub mod mouse;
 pub mod pick;
+pub mod pick_walk;
 pub mod quake;
 pub mod raster;
 pub mod ro_terrain;

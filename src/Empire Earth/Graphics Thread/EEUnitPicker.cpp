@@ -51,13 +51,12 @@
 
 // The picker's decisions are ee_gfx pick.rs (RUST_PLAN R4.4): the ray, the tolerances, the pick scales and the large
 // test, the hits' ranking, GetUnitPickPriority, AddUnit's admission, the frustum's sphere and vertex tests (its named
-// consts, .rdata 0x441c28.., are there). The C++ keeps the entries, the model tests, the lock and the world; the GE
-// value classes and the hits pass as their #[repr(C)] mirrors.
+// consts, .rdata 0x441c28.., are there); its walks pick_walk.rs's (R4.4, twenty-sixth round: FindUnit, PickUnits with
+// PickUnitsOfType, PickUnitsInRectangle, GetIsEntryInView and GetIsModelInView, over the entries in place). The C++
+// keeps the entries' filling, the lock, the frustum's planes and the world; the GE value classes pass as their
+// #[repr(C)] mirrors.
 static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GE3DPoint) == sizeof(EeGe3DPoint) &&
               sizeof(GE3DPlane) == sizeof(EeGe3DPlane) && sizeof(GEViewport) == sizeof(EeGeViewport), "GE mirrors");
-static_assert(sizeof(EEUnitPickerHit) == sizeof(EeGfxPickHit) && offsetof(EEUnitPickerHit, mIndex) == offsetof(EeGfxPickHit, index) &&
-              offsetof(EEUnitPickerHit, mExact) == offsetof(EeGfxPickHit, exact) &&
-              offsetof(EEUnitPickerHit, mLarge) == offsetof(EeGfxPickHit, large), "EEUnitPickerHit");
 
 // Creates the water's render object
 EEROWater::EEROWater()
@@ -166,139 +165,6 @@ bool EEUnitPicker::Contains(EEUnit* inUnit)
     return theFound;
 }
 
-static bool GetIsEntryInView(const EEUnitPickerEntry& inEntry, std::vector<GE3DPlane>& inPlanes);
-
-// Adds the ids of a player's living pickable units of a type inside a screen rectangle (a part's carrier
-// instead); without a type, its units, or failing those one building
-void EEUnitPicker::PickUnitsOfType(const GERectangle& inRectangle, EEPlayer* inPlayer, long inType,
-                                   std::vector<unsigned long>& outUnitIDs)
-{
-    std::vector<unsigned long> theUnits;
-    std::vector<unsigned long> theOthers;
-    std::vector<GE3DPlane> thePlanes;
-    this->mLock->Enter();
-    if (this->mCount > 0) {
-        this->mViewport.GetFrustrumWorldPlanes(inRectangle, thePlanes, gOrthographicView);
-        for (long i = this->mCount - 1; i >= 0; i--) {
-            EEUnit* theEntryUnit = this->GetEntryUnit(i);   // port: ids (R5a.3)
-            if (theEntryUnit == NULL)
-                continue;
-            EEComplexUnit* theUnit = theEntryUnit->GetComplexUnit();
-            if (theUnit == NULL || !theUnit->mUnitClass->IsPickable() || !(theUnit->mHitPoints > 0) ||
-                theUnit->mUnitClass->mCategory == kUnitCategoryProjectile || theUnit->mUnitClass->mCategory == kUnitCategoryBomb ||
-                (theUnit->mUnitClass->mCategory == kUnitCategoryMissile && theUnit->mUnitClass->mUnitType != kUnitTypeCpICBM) ||
-                theUnit->mUnitClass->mCategory == kUnitCategoryTorpedo ||
-                (inPlayer != NULL && theUnit->mPlayer != inPlayer) ||
-                (inType != 0 && theUnit->mUnitClass->mUnitType != inType) ||
-                !GetIsEntryInView(this->mEntries[i], thePlanes))
-                continue;
-            while (theUnit->mPreviousPart != NULL)
-                theUnit = theUnit->mPreviousPart;
-            unsigned long theID;
-            if (!theUnit->mUnitClass->IsLandBuilding()) {
-                theID = theUnit->mUnitID;
-                theUnits.push_back(theID);
-            } else {
-                theID = theUnit->mUnitID;
-                theOthers.push_back(theID);
-            }
-        }
-    }
-    this->mLock->Leave();
-    if (inType == 0) {
-        if (theUnits.size() != 0) {
-            for (unsigned long i = 0; i < theUnits.size(); i++)
-                outUnitIDs.push_back(theUnits[i]);
-        } else if (theOthers.size() > 0) {
-            outUnitIDs.push_back(theOthers[0]);
-        }
-    } else {
-        unsigned long i;
-        for (i = 0; i < theUnits.size(); i++)
-            outUnitIDs.push_back(theUnits[i]);
-        for (i = 0; i < theOthers.size(); i++)
-            outUnitIDs.push_back(theOthers[i]);
-    }
-}
-
-static bool GetIsModelInView(GEModel* inModel, const GETransformation& inTransformation, unsigned long inFrame,
-                     unsigned long inLOD, std::vector<GE3DPlane>& inPlanes);
-
-// Returns whether an entry's model lies inside the side planes 2..5 of a selection frustum (bounding sphere
-// first, then the vertices)
-static bool GetIsEntryInView(const EEUnitPickerEntry& inEntry, std::vector<GE3DPlane>& inPlanes)
-{
-    GE3DPoint theCenter;
-    float theScale = inEntry.GetScale();
-    GEModel* theModel = inEntry.GetModel();
-    unsigned long theFrame = inEntry.GetFrame();
-    bool theResult = true;
-    GETransformation theTransformation(false);
-    bool theBelow[4];
-    const EeGe3DPlane* thePlanes = reinterpret_cast<const EeGe3DPlane*>(inPlanes.data());
-    ee_gfx_pick_entry_transform(reinterpret_cast<const EeGeTransformation*>(&inEntry.GetLocation()),
-                                reinterpret_cast<const EeGeTransformation*>(&theModel->GetInternalTransform(theFrame)),
-                                theScale, reinterpret_cast<EeGeTransformation*>(&theTransformation));
-    theTransformation.Apply(theModel->GetCenterPoint(), theCenter);
-    const EeGe3DPoint* theRustCenter = reinterpret_cast<const EeGe3DPoint*>(&theCenter);
-    if (ee_gfx_pick_sphere_below(theRustCenter, thePlanes, theBelow) != 0) {
-        float theRadius = theModel->GetBoundingRadius(theFrame) * theScale;
-        if (ee_gfx_pick_sphere_outside(theRustCenter, thePlanes, theBelow, theRadius) == 0) {
-            unsigned long theLOD = ee_gfx_pick_view_lod((uint32_t)theModel->GetLODCount());
-            theResult = GetIsModelInView(theModel, theTransformation, theFrame, theLOD, inPlanes);
-        } else {
-            theResult = false;
-        }
-    }
-    return theResult;
-}
-
-// Returns whether a vertex of a model (or of a sub model) is on or above every side plane 2..5
-static bool GetIsModelInView(GEModel* inModel, const GETransformation& inTransformation, unsigned long inFrame,
-                     unsigned long inLOD, std::vector<GE3DPlane>& inPlanes)
-{
-    GETransformation theTransformation(false);
-    GE3DPoint thePoint;
-    GE3DPoint theWorldPoint;
-    unsigned long i;
-    const EeGe3DPlane* thePlanes = reinterpret_cast<const EeGe3DPlane*>(inPlanes.data());
-    if (inModel->GetParentModel() == NULL)
-        theTransformation = inTransformation;
-    else
-        inTransformation.Apply(inModel->GetInternalTransform(inFrame), theTransformation);
-    unsigned long theCount = inModel->GetMaterialCount();
-    bool theInside = false;
-    for (i = 0; i < theCount && !theInside; i++) {
-        GEMaterial* theMaterial = inModel->GetMaterial(i);
-        unsigned long theVertexStart = theMaterial->GetVertexStartingIndex();
-        unsigned long theEnd = theMaterial->GetPolygonRangeLength(inLOD) + theMaterial->GetPolygonStartingIndex(inLOD);
-        for (unsigned long j = theMaterial->GetPolygonStartingIndex(inLOD); j < theEnd && !theInside; j++) {
-            inModel->GetVertexArray(inFrame)->GetPoint(thePoint,
-                inModel->GetPolygonArray(inLOD)->GetVertexIndex1(j) + theVertexStart);
-            theTransformation.Apply(thePoint, theWorldPoint);
-            theInside = ee_gfx_pick_point_in_view(thePlanes, reinterpret_cast<const EeGe3DPoint*>(&theWorldPoint));
-            if (theInside)
-                continue;
-            inModel->GetVertexArray(inFrame)->GetPoint(thePoint,
-                inModel->GetPolygonArray(inLOD)->GetVertexIndex2(j) + theVertexStart);
-            theTransformation.Apply(thePoint, theWorldPoint);
-            theInside = ee_gfx_pick_point_in_view(thePlanes, reinterpret_cast<const EeGe3DPoint*>(&theWorldPoint));
-            if (theInside)
-                continue;
-            inModel->GetVertexArray(inFrame)->GetPoint(thePoint,
-                inModel->GetPolygonArray(inLOD)->GetVertexIndex3(j) + theVertexStart);
-            theTransformation.Apply(thePoint, theWorldPoint);
-            theInside = ee_gfx_pick_point_in_view(thePlanes, reinterpret_cast<const EeGe3DPoint*>(&theWorldPoint));
-        }
-    }
-    if (!theInside) {
-        theCount = inModel->GetSubModelCount();
-        for (i = 0; i < theCount && !theInside; i++)
-            theInside = GetIsModelInView(inModel->GetSubModel(i), theTransformation, inFrame, inLOD, inPlanes);
-    }
-    return theInside;
-}
-
 // port (R5a.3): an entry's unit by its id; NULL once the unit has left the world (the original's reference kept it)
 EEUnit* EEUnitPicker::GetEntryUnit(unsigned long inIndex)
 {
@@ -326,77 +192,90 @@ EEUnit* EEUnitPicker::PickUnitUnreferenced(const GE2DPoint& inPoint, long inPref
     return theResult;
 }
 
-// the current player's selection holds a unit (FindUnit's choice asks it only with both an exact and a bounding hit)
-static bool EEPickGroupNonEmpty(void*)
-{
-    return gWorld.GetCurrentPlayer()->mSelectedGroup->GetNumUnits() != 0;
-}
+// The picker's walks (ee_gfx pick_walk.rs: FindUnit, the box selection and its frustum test over the entries in
+// place and GEPhysicalModel.cpp's model table) ask these (EeGfxPickHost; the context: the picker)
+const EeGePhysicalModels* GEPhysicalModelTable();
+static_assert(sizeof(EEUnitPickerEntry) == sizeof(EeGfxPickEntry) && offsetof(EEUnitPickerEntry, mUnitID) == offsetof(EeGfxPickEntry, unit_id),
+              "EEUnitPickerEntry");
+struct EEPickOps {
+    static EEUnitPicker* P(void* inPicker) { return static_cast<EEUnitPicker*>(inPicker); }
+    static void* Unit(void* inPicker, uint32_t inIndex) { return P(inPicker)->GetEntryUnit(inIndex); }
+    static EeGfxPickFindUnit FindFacts(void*, void* inUnit)
+    {
+        EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
+        EeGfxPickFindUnit theFacts;
+        theFacts.facts.complex = theUnit->GetComplexUnit() != NULL;
+        theFacts.facts.gaia = theUnit->mPlayer == gWorld.mPlayers[0];
+        theFacts.facts.wall = theUnit->mUnitClass->mIsWall;
+        theFacts.facts.hit_points = (int32_t)theUnit->mHitPoints;
+        theFacts.facts.family = (uint32_t)theUnit->mUnitClass->mFamily;
+        theFacts.facts.category = (uint32_t)theUnit->mUnitClass->mCategory;
+        theFacts.facts.resource_type = (uint32_t)theUnit->mResourceType;
+        theFacts.facts.resource_amount = (int32_t)theUnit->mResourceAmount;
+        theFacts.tile_x = (int32_t)theUnit->GetTileX();
+        return theFacts;
+    }
+    static bool Ask(void*, void* inUnit, uint32_t inQuestion) { return EEPickAsk(inUnit, inQuestion); }
+    static bool GroupNonEmpty(void*) { return gWorld.GetCurrentPlayer()->mSelectedGroup->GetNumUnits() != 0; }
+    static float PixelSize(void* inPicker, uint32_t inIndex)
+    {
+        return gRasterizer->GetPixelSize(P(inPicker)->mEntries[inIndex], P(inPicker)->mViewport, P(inPicker)->mOrthographic);
+    }
+    // a part's outermost carrier
+    static EEUnit* Outer(EEUnit* inUnit)
+    {
+        EEComplexUnit* theCarrier = inUnit->GetComplexUnit();
+        if (theCarrier == NULL)
+            return inUnit;
+        while (theCarrier->mPreviousPart != NULL)
+            theCarrier = theCarrier->mPreviousPart;
+        return theCarrier;
+    }
+    static void* Carrier(void*, void* inUnit) { return Outer(static_cast<EEUnit*>(inUnit)); }
+    static EeGfxPickBoxUnit BoxFacts(void*, void* inUnit)
+    {
+        EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
+        EEUnitClass* theClass = theUnit->mUnitClass;
+        EEUnit* theOuter = Outer(theUnit);
+        return EeGfxPickBoxUnit{theUnit->GetComplexUnit() != NULL, theClass->IsPickable(), theUnit->mHitPoints > 0,
+                                (uint32_t)theClass->mCategory, (uint32_t)theClass->mUnitType, theUnit->mPlayer,
+                                (uint32_t)theOuter->mUnitID, theOuter->mUnitClass->IsLandBuilding()};
+    }
+    static void Push(void*, void* outIDs, uint32_t inID) { static_cast<std::vector<unsigned long>*>(outIDs)->push_back(inID); }
+};
+static const EeGfxPickHost kPickHost = {NULL, EEPickOps::Unit, EEPickOps::FindFacts, EEPickOps::Ask,
+                                        EEPickOps::GroupNonEmpty, EEPickOps::PixelSize, EEPickOps::Carrier,
+                                        EEPickOps::BoxFacts, EEPickOps::Push};
 
-// PickUnit's search, under mLock (port: split from PickUnit, R5a.3)
+// PickUnit's search, under mLock (port: split from PickUnit, R5a.3; ee_gfx pick_walk.rs)
 EEUnit* EEUnitPicker::FindUnit(const GE2DPoint& inPoint, long inPreferResources)
 {
-    EeGfxPickRay theRay;
-    GE3DLine theLine;
-    std::vector<EEUnitPickerHit> theHits;
-    EEUnitPickerHit theHit;
-    EEUnit* theResult = NULL;
-    const EeGeViewport* theViewport = reinterpret_cast<const EeGeViewport*>(&this->mViewport);
-    EeGfxPickTolerances theTolerances = ee_gfx_pick_tolerances(theViewport, gFreeCamera, (uint32_t)gGameWindowWidth);
-    unsigned long theBest = this->mCount;
-    float theSavedScale = 1.0f;
-    float theDistance;
-    long i;
-    if (this->mCount != 0) {
-        ee_gfx_pick_ray(theViewport, this->mOrthographic, reinterpret_cast<const EeGe2DPoint*>(&inPoint), &theRay);
-        theLine.Define(*reinterpret_cast<const GE3DPoint*>(&theRay.front), *reinterpret_cast<const GE3DPoint*>(&theRay.rear));
-        for (i = this->mCount - 1; i >= 0; i--) {
-            EEUnit* theEntryUnit = this->GetEntryUnit(i);   // port: ids (R5a.3)
-            if (theEntryUnit == NULL)
-                continue;
-            theSavedScale = this->mEntries[i].GetScale();
-            long theKind = GetUnitPickPriority(theEntryUnit, false);
-            this->mEntries[i].SetScale(ee_gfx_pick_scale((int32_t)theKind, theSavedScale));
-            if (theEntryUnit->GetTileX() != -10000 &&
-                this->mEntries[i].Intersects(theLine, 1, theHit.mDistance, false)) {
-                theHit.mIndex = i;
-                theHit.mPriority = GetUnitPickPriority(theEntryUnit, inPreferResources != 0);
-                theHit.mExact = false;
-                theHit.mLarge = false;
-                theHit.mKind = theKind;
-                theHits.push_back(theHit);
-            }
-            this->mEntries[i].SetScale(theSavedScale);
-        }
-        for (i = theHits.size() - 1; i >= 0; i--) {
-            if (theHits[i].mKind == 2) {
-                theSavedScale = this->mEntries[theHits[i].mIndex].GetScale();
-                this->mEntries[theHits[i].mIndex].SetScale(ee_gfx_pick_scale(2, theSavedScale));   // the tree's scale
-            }
-            if (this->mEntries[theHits[i].mIndex].Intersects(theLine, 2, theDistance, false)) {
-                theHits[i].mDistance = theDistance;
-                theHits[i].mExact = true;
-            } else {
-                float thePixels = gRasterizer->GetPixelSize(this->mEntries[theHits[i].mIndex], this->mViewport, this->mOrthographic);
-                theHits[i].mLarge = ee_gfx_pick_is_large(thePixels, theTolerances.pixel, (int32_t)theHits[i].mKind);
-            }
-            if (theHits[i].mKind == 2)
-                this->mEntries[theHits[i].mIndex].SetScale(theSavedScale);
-        }
-        ptrdiff_t theChoice = ee_gfx_pick_best(reinterpret_cast<const EeGfxPickHit*>(theHits.data()), theHits.size(),
-                                               theTolerances.tolerance, this->mShowHiddenUnits != 0, NULL,
-                                               EEPickGroupNonEmpty);
-        if (theChoice >= 0)
-            theBest = (unsigned long)theChoice;
-        if (theBest < this->mCount) {
-            theResult = this->GetEntryUnit(theHits[theBest].mIndex);
-            if (theResult->GetComplexUnit() != NULL) {
-                for (EEComplexUnit* theCarrier = theResult->GetComplexUnit()->mPreviousPart; theCarrier != NULL;
-                     theCarrier = theCarrier->GetComplexUnit()->mPreviousPart)
-                    theResult = theCarrier;
-            }
-        }
-    }
-    return theResult;
+    EeGfxPickHost theHost = kPickHost;
+    theHost.context = this;
+    EeGfxPickView theView = {*reinterpret_cast<const EeGeViewport*>(&this->mViewport), this->mOrthographic,
+                             this->mShowHiddenUnits != 0, gFreeCamera, (uint32_t)gGameWindowWidth};
+    return static_cast<EEUnit*>(ee_gfx_pick_find_unit(&theHost, GEPhysicalModelTable(),
+                                                      reinterpret_cast<EeGfxPickEntry*>(this->mEntries),
+                                                      (uint32_t)this->mCount, &theView,
+                                                      reinterpret_cast<const EeGe2DPoint*>(&inPoint),
+                                                      inPreferResources != 0));
+}
+
+// The box selections' walk (ee_gfx pick_walk.rs) under mLock: the frustum of inRectangle's planes, then the entries
+void EEUnitPicker::PickBox(const GERectangle& inRectangle, bool inAll, EEPlayer* inPlayer, long inType,
+                           std::vector<unsigned long>& outUnitIDs)
+{
+    std::vector<GE3DPlane> thePlanes;
+    EeGfxPickHost theHost = kPickHost;
+    theHost.context = this;
+    this->mLock->Enter();
+    outUnitIDs.clear();
+    if (this->mCount > 0)
+        this->mViewport.GetFrustrumWorldPlanes(inRectangle, thePlanes, gOrthographicView);
+    ee_gfx_pick_box(&theHost, GEPhysicalModelTable(), reinterpret_cast<EeGfxPickEntry*>(this->mEntries),
+                    (uint32_t)this->mCount, this->mCount > 0 ? reinterpret_cast<const EeGe3DPlane*>(thePlanes.data()) : NULL,
+                    inAll, inPlayer, (uint32_t)inType, &outUnitIDs);
+    this->mLock->Leave();
 }
 
 // Returns the ids of the pickable units of a type (citizens of either sex for the citizen types) inside
@@ -404,35 +283,7 @@ EEUnit* EEUnitPicker::FindUnit(const GE2DPoint& inPoint, long inPreferResources)
 void EEUnitPicker::PickUnitsInRectangle(const GERectangle& inRectangle, long inType,
                                         std::vector<unsigned long>& outUnitIDs)
 {
-    std::vector<GE3DPlane> thePlanes;
-    this->mLock->Enter();
-    outUnitIDs.clear();
-    if (this->mCount > 0) {
-        this->mViewport.GetFrustrumWorldPlanes(inRectangle, thePlanes, gOrthographicView);
-        for (long i = this->mCount - 1; i >= 0; i--) {
-            EEUnit* theUnit = this->GetEntryUnit(i);   // port: ids (R5a.3)
-            if (theUnit == NULL)
-                continue;
-            if (!theUnit->mUnitClass->IsPickable())
-                continue;
-            EEUnitClass* theClass = theUnit->mUnitClass;
-            if (theClass->mCategory == kUnitCategoryProjectile || theClass->mCategory == kUnitCategoryBomb ||
-                (theClass->mCategory == kUnitCategoryMissile && theClass->mUnitType != kUnitTypeCpICBM) ||
-                (inType != 0 && theClass->mUnitType != inType && (inType != 0x20 || theClass->mUnitType != kUnitTypeFemaleCitizen) &&
-                 (inType != 0x1e0 || theClass->mUnitType != kUnitTypeCitizen)) ||
-                !GetIsEntryInView(this->mEntries[i], thePlanes))
-                continue;
-            EEComplexUnit* theCarrier = theUnit->GetComplexUnit();
-            if (theCarrier != NULL) {
-                while (theCarrier->mPreviousPart != NULL)
-                    theCarrier = theCarrier->mPreviousPart;
-                theUnit = theCarrier;
-            }
-            unsigned long theID = theUnit->mUnitID;
-            outUnitIDs.push_back(theID);
-        }
-    }
-    this->mLock->Leave();
+    this->PickBox(inRectangle, true, NULL, inType, outUnitIDs);
 }
 
 // Returns the ids of a player's units of a type inside a screen rectangle (male and female citizens for
@@ -440,16 +291,7 @@ void EEUnitPicker::PickUnitsInRectangle(const GERectangle& inRectangle, long inT
 void EEUnitPicker::PickUnits(const GERectangle& inRectangle, EEPlayer* inPlayer, long inType,
                              std::vector<unsigned long>& outUnitIDs)
 {
-    this->mLock->Enter();
-    outUnitIDs.clear();
-    if (inType == 0x20 || inType == 0x1e0) {
-        this->PickUnitsOfType(inRectangle, inPlayer, kUnitTypeCitizen, outUnitIDs);
-        this->PickUnitsOfType(inRectangle, inPlayer, kUnitTypeFemaleCitizen, outUnitIDs);
-    } else {
-        this->PickUnitsOfType(inRectangle, inPlayer, inType, outUnitIDs);
-    }
-
-    this->mLock->Leave();
+    this->PickBox(inRectangle, false, inPlayer, inType, outUnitIDs);
 }
 
 // Empties the picker (port, R5a.3: ids, nothing to release; the original dereferenced every
