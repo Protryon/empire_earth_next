@@ -152,7 +152,8 @@ Before merging or pushing any code change, all of these are required:
      Pass: `RESULT PASS tour`;
    - a seeded 2-AI Hard Small game to the time cap (`--time-factor 32 --pt-rate 40`). Pass:
      `RESULT PASS ai-game outcome time-cap` with both AI players alive (`alive_computers [2, 3]`; units
-     e.g. `[0, 30, 34]`, player 1 being the idle human). Unit counts vary a little between runs.
+     e.g. `[4, 43, 43]`, player 1 being the idle human) and both running the lobby's Classic, classic_lua
+     (`engines ['classic_lua', 'classic_lua']`, `--engine-check`). Unit counts vary a little between runs.
    - a LAN game between two instances through the WON lobby (`tools/harness/lan_game.py`: host creates, the joiner
      finds and joins it, both play 60 s). Pass: `RESULT PASS lan-game`.
    - The PT at the cap is the driver's poll (once a real second, about 1,300 PTs at 32 x), not the game: compare it
