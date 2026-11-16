@@ -24855,3 +24855,33 @@ are GEBitmap.cpp, GEModel.cpp, GERasterizer.cpp, GETexture.cpp and GEValues.cpp.
 - **What only the game exercises**: the texts, fonts and windows exist only in a running game (EE-SIM draws no UI);
   materials are made by every model load (the store gate covers them). The tour is the texts' and windows' gate.
 - **Gates on the tree merged with `rust`** (c80a1b00, local `rust`): `build.py --sim` and `--test-profile windowed-software` 0/0 (878/879 inputs); sim oracle seeds 2-7 identical; captures at seeds 2-3: oracle 179 and late 180 digests equal (4 without a golden each), effects 6 equal; store gate PASS (25,140 lines, before the merge); Rust gate PASS (3,876 tests; after a clippy and rustfmt fix to smallobj.rs, 26af197f, rerun with the relink and oracle seeds 2-3). Per commit: build 0/0 and oracle seeds 2-3 identical for each, the Rust gate after the first (its one failure, `ee_gx`'s `device_dropped_bind_groups_stay_bounded_when_the_gpu_lags`, a timing test under load, passed alone), the effects capture after the fold. Harness: the tour `RESULT PASS tour` (83.6% lit, render checks ok); the legacy tour `STOP <windowed session complete> reached`, F3 input check ok; the orders game `ORDERS PASS` (gather, repair, repair-queued, move) with the edge scroll check failing as it does on this machine (0.041); the LAN game `RESULT PASS lan-game`. Against round 15's merged tour (same seed): the settings tabs and single player equal; the main menu and closed settings 168 pixels (the animated corner); the random map setup 598 pixels, all in a 42 x 40 box that is the game's mouse pointer at another position; the game views differ run to run as before; the HUD by eye as before (the orders game's captures: the resource bar's texts, the age label, the mini map).
+
+## Harness slots: several live sessions at once (branch rust-harness-slots, 2026-11-15)
+
+- **What two sessions collide on.** The single-instance mutex (`MadDocSoftwarePresentsEmpireEarthExpansion`; the
+  second game exits 0 at once); the TCP protocol's 33334/33335 (the local server binds them in single player too: a
+  taken pair leaves the server unpublished and the random-map screen crashes, "The gates' intermittent failures");
+  the WON lobby's LAN broadcast port 8585, bound with address reuse since the LAN game ("Three things kept two
+  instances apart"), so every lobby on the machine receives every host's summaries and a joiner's list shows other
+  runs' games (`join_game` takes the first one), and the lobby port 8888 (the host's TCP listen socket: a second host
+  fails to bind); the stage `build/fixture_game/stage` (exe, `config.yaml`, `Logs/`, `_wonlobbypersistent.dat`) when
+  two runs share a worktree; the evidence directories, named by the start second. Not shared: window lookups and
+  captures (by process id), input (posted to the game's window or sent through its fixture: the edge scroll's
+  pointer is the fixture's, not the system cursor), the fixture directory (the run's own `ui/`).
+- **The slot.** `tools/harness/slot.py run -- CMD` takes the first free `<main checkout>/build/harness.slot.K` (mkdir;
+  owner.json with the pid and its start time, so a reused pid is not mistaken for the holder; a stale lock is renamed
+  away before it is deleted, so two takers cannot both remove it) and runs CMD with `EE_HARNESS_SLOT=K` in a job
+  object with kill-on-close: a holder killed hard (an agent's tool timeout) takes the game with it, and its slot is
+  then stale by pid. Slot K: `EE_TEST_INSTANCE=s<K>`, `EE_TEST_PORT_OFFSET=16 (K + 1)` (offset 0 stays for unslotted
+  runs and the legacy `--instance` numbering matches: `--instance K+1`), `stage-s<K>`, `<time>-s<K>`.
+- **The game side (TEST ONLY).** `EETestFixtureConfigure` sets `gPlatSimPortOffset` from `EE_TEST_PORT_OFFSET`, as
+  EE-SIM's `--port-offset`; `LobbyTestPortOffset()` (`gPlatSimPortOffset` when positive: EE-SIM's -1 "any port" is
+  0 there) moves the broadcast port in `LobbyGetLanBroadcastPort` (the setter subtracts it, so the LAN port dialog
+  round-trips) and the lobby port in `LobbyBindUDPPort`, which every later reader of `mLobbyPort` (the listen
+  socket, the advertised address, the firewall test) follows. A LAN game's two ends use ONE offset: the joiner
+  computes the host's game port from its own offset. The host's game name is `lantest<K>`, checked at the join.
+- **Measured (4 sessions at once, 12 cores shared with other lanes' builds):** tours with `--input-check` 7/7 PASS
+  (F3 ok in each), LAN games 3/3 PASS, two LAN games at once each listed exactly one game (their own) and played;
+  `random-game --box-select --orders --scroll-check` 0/2 concurrent (once the play frame equal to the gameplay
+  frame, once the edge scroll moving 0.041 tile in its 1.5 s hold) and 1/1 alone; `gates.sh` in slot 0 GATES PASS. The fixed-time holds of the
+  scroll check are what load breaks; the tour's checks wait on telemetry and held up.
