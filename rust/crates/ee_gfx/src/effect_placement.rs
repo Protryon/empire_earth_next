@@ -9,6 +9,7 @@
 use std::ffi::c_void;
 
 use ee_ge::types::Ge3DPoint;
+use ee_ge::um::{um_arctan2, um_cos};
 
 use crate::effect_state::{self, EeGfxEffectRecord};
 
@@ -171,14 +172,15 @@ pub fn track<H: DecalHost>(h: &mut H, effect: *mut c_void, position: &Ge3DPoint,
     }
     let mut at = *position;
     if kind == EE_GFX_TRACK_GIRAFFE || kind == EE_GFX_TRACK_HORSE {
-        let mut angle = m10.atan2(m00);
+        // the game's lookup-table trigonometry (UMArcTan2, UMCos), never std's: std's differ by ulps
+        let mut angle = um_arctan2(m10, m00);
         let mut distance = 0.4f32;
         if kind == EE_GFX_TRACK_HORSE {
             distance = 0.3;
             angle -= 0.785_398_2;
         }
-        at.x += angle.cos() * distance;
-        at.y += (1.570_796_4 - angle).cos() * distance;
+        at.x += um_cos(angle) * distance;
+        at.y += um_cos(1.570_796_4 - angle) * distance;
     }
     at.z += 0.005;
     h.place(variant, &at);
