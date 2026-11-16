@@ -65,6 +65,7 @@ EEGameSettings::~EEGameSettings()
 EEGameSettings::EEGameSettings()
 {
     ee_app_settings_default(this);
+    this->mFullScreen = true;   // (also Rust's default) the test profile's windowed overlay patches this line (tools/build.py)
     this->mHostGameName = "";
     this->mPlayerName = "";
     this->mSierraUserID = "";
@@ -211,6 +212,8 @@ long EEGamePreferences::Load()
     // the texture resolution (0, 2 or 4), the blood, the settings that are not stored and the port's switches
     if (ee_app_settings_after_load(&this->mSettings, &theDefaults, !this->IsNotKorean()))
         this->mConfig.SetValue("graphics", "texture_resolution", this->mSettings.mTextureResolution);
+    // (also after_load's) full screen is window mode 0; the test profile's windowed overlay patches this line
+    this->mSettings.mFullScreen = this->mSettings.mWindowMode == 0;
     this->mSettings.mRasterizerName = theDefaults.mRasterizerName;
     this->mSettings.mSierraUserID = theDefaults.mSierraUserID;
     this->mSettings.mSierraGameName = theDefaults.mSierraGameName;
