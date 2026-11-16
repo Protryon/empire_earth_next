@@ -1686,7 +1686,10 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 gWorld.ClearGhostUnits();
                 gWorld.mGhostUnitsLock->Leave();
             };
-        else if (c == "check")   // check ID 0|1
+        // check ID 0|1: SetChecked, which fires the box's checked or unchecked event. The hide-UI box (0x12) shows
+        // the UI while checked: EESEEHideUI posts the check state as EESEEChangeViewport's flag, which calls
+        // SetGameView(view, flag == false), so checked -> GetIsUIHidden() false (the original's 0x5af4c1, 0x5af55a)
+        else if (c == "check")
             theCode = [=] {
                 UIControl* theBox = EditorControl(w[1]);
                 static_cast<UICheckBox*>(theBox)->SetChecked(L(2) != 0);

@@ -1011,10 +1011,10 @@ digest cancel
   chunk 7 result=0 bytes=15815 1f61b99cacebce48
   chunk 8 result=0 (differs by run)
   chunk 11 result=0 bytes=28 c68d714d6c92ada7
-step 78 check 0x12 0                       # UI shown: the framed view
+step 78 check 0x12 0                       # unchecked: the UI hidden (the box shows the UI while checked, as the original); no views before tab 4
 step 79 view
   view 0,0,0,0 hidden=1
-step 80 check 0x12 1                       # UI hidden: the full view
+step 80 check 0x12 1                       # checked: the UI shown
 step 81 view
   view 0,0,0,0 hidden=0
 step 82 click quicksave
@@ -1035,7 +1035,7 @@ editorsave
 step 86 tab 4
 step 87 view
   view 0,0,1024,447 hidden=0
-step 88 check 0x12 0
+step 88 check 0x12 0                       # unchecked: the full view, the UI hidden
 step 89 view
   view 0,0,1024,606 hidden=1
 step 90 trigger 4                          # an area and an object: the effects' area/object lists
@@ -12817,7 +12817,7 @@ step 1306 areastate
   area 2 mode=0 rect=1 10,12,20,30 anchor=0 0,0 '<Area0>' ''
   area 3 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
   area 4 mode=0 rect=1 5,6,15,16 anchor=1 8,8 '<Area2>' ''
-step 1307 check 0x12 1                       # the UI hidden: the mode switch leaves the label and button
+step 1307 check 0x12 1                       # checked: the UI shown, so the mode switch sets the label and button
 step 1308 combo 0x898 0
 step 1309 areastate
   areascreen flags=7 rect=5,6,15,16 point=8,8 center=10.000000,11.000000 highlight=1 paint=5,6,15,16
