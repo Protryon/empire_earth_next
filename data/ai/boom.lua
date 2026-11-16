@@ -2007,4 +2007,4 @@ function M.micro(info, memory)
     return nil
 end
 
-return M
+return require("lib.verbs").wrap(M)

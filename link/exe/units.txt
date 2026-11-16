@@ -48,14 +48,8 @@
 2c79f 2cc87 Empire Earth/AI Thread/EEAIRectangleArea.cpp
 2cc87 2ce2e Empire Earth/AI Thread/EEArtificialIntelligence.cpp
 2ce2e 412b1 Empire Earth/AI Thread/EEComputerPlayer.cpp
-66af0 6e8d4 Empire Earth/AI Thread/EECPBuildManager.cpp
-6e8d4 71c7f Empire Earth/AI Thread/EECPCivilizationManager.cpp
 71c7f 77084 Empire Earth/AI Thread/EECPCombatManager.cpp
-89fc4 8bbbf Empire Earth/AI Thread/EECPResearchManager.cpp
 8bbbf 8e702 Empire Earth/AI Thread/EECPResourceCenter.cpp
-8e702 9350f Empire Earth/AI Thread/EECPResourceManager.cpp
-9350f 979ff Empire Earth/AI Thread/EECPUnitManager.cpp
-9c833 a1910 Empire Earth/AI Thread/EECPWallManager.cpp
 a1910 a543d Empire Earth/AI Thread/EEHerd.cpp
 a543d a5589 Empire Earth/AI Thread/EEHumanPlayer.cpp
 a5589 a5c31 Empire Earth/AI Thread/EEInfluenceTable.cpp

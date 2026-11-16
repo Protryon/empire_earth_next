@@ -151,8 +151,8 @@ It uses no registry and no other settings store; when its directory is not writa
 configuration directory (`%APPDATA%\Empire Earth AoC`, `~/.config/empire-earth-aoc`, `~/Library/Application
 Support/Empire Earth AoC`).
 
-The exe comes with its `.map` and `.pdb`. Sources are staged under `C:\EEX\` before they are compiled (env
-`EE_ORIG_SRC_ROOT` moves it). A full build takes about two minutes on a 12-core machine.
+The exe comes with its `.map` and `.pdb`. Sources are staged under `build/eex` in the checkout before they
+are compiled (the compiler names them `C:\EEX\...` in `__FILE__`, as the original build tree did). A full build takes about two minutes on a 12-core machine.
 
 The movies need converting once: `python -I tools/convert_movies.py <game directory>` (needs ffmpeg) writes an
 `.mpg` next to every `.bik` (`make_play_dir.py --movies` does it for a play directory).

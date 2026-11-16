@@ -23,8 +23,8 @@ python -I tools/clang_build.py [-j N] [module ...]                 # compile cen
 - Requirements: LLVM, the VS 2022 Build Tools C++ workload (MSVC STL, UCRT, Windows SDK), Python 3.12 and 7-Zip.
   The harness also needs MSYS2 `mingw-w64-x86_64-gcc` and pip `pefile capstone`. See README.md.
 - A full build takes about 2 minutes. A link must report `0 unresolved, 0 duplicates`.
-- Sources are staged under `C:\EEX\` before compiling. `EE_ORIG_SRC_ROOT` moves the staging root. Use a separate
-  root per worktree when two builds run at once.
+- Sources are staged under the checkout's `build/eex` before compiling, so every worktree has its own; `__FILE__`
+  still reads `C:\EEX\...`. Don't set `EE_ORIG_SRC_ROOT` (it moves the staging root), and never stage into `C:\`.
 - New units without an original address go into `units.EXTRA_UNITS` (`tools/units.py`, per module).
 - Linux/macOS: `python -I tools/fetch_posix.py wgpu sdl3 fonts`, then `python -I tools/xbuild.py game -j 8`.
   - `xbuild.py test` runs the platform tests (`tests/platform`).

@@ -100,8 +100,6 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEArtificialIntelligence.h"
 #include "ee/EEPPatrolGroup.h"
-#include "ee/EECPCivilizationManager.h"
-#include "ee/EECPWallManager.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EEGameSound.h"
@@ -457,7 +455,6 @@ void EEWorld::Clear()
     this->mUpdateUnits.clear();
     this->mActiveUnits.clear();
     EEPPatrolGroup::ResetIDs();
-    EECPWallManager::ResetSizes();
     gCollisionDetectionUnit = 2000;
     delete this->mCalamityHelper;
     this->mCalamityHelper = NULL;

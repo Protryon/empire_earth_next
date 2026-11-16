@@ -40,7 +40,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + MUSIC_UNITS,
                        # the computer-player decision trace and cheat switches (docs/AI_RESEARCH.md stage 0)
                        "Empire Earth/AI Thread/EECPTrace.cpp",
                        # the next computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; ee/EECPNext.h)
-                       "Empire Earth/AI Thread/EECPNext.cpp", "Empire Earth/AI Thread/EECPNextTactics.cpp",
+                       "Empire Earth/AI Thread/EECPNext.cpp", "Empire Earth/AI Thread/EECPPlacement.cpp",
+                       "Empire Earth/AI Thread/EECPReflexes.cpp",
                        "Empire Earth/AI Thread/EECPNextView.cpp",
                        # its army: the groups (docs/AI_LUA_PLAN.md §5, stage S4)
                        "Empire Earth/AI Thread/EECPNextArmy.cpp",

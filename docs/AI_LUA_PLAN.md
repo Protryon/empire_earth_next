@@ -8,7 +8,8 @@ The original AI stays in the tree and playable. The new one is a swap, chosen pe
 
 **Status (2026-11-15, stage 5):** the owner had the C++ classic's decision code deleted (AI_RESEARCH §8.90). Every
 computer player runs a Lua AI; the lobby's Classic is classic_lua. What follows is the plan as it was written: its
-"classic engine", EECPNextTest.cpp and the C++ attack commander no longer exist.
+"classic engine", EECPNextTest.cpp and the C++ attack commander no longer exist. Stage 6 (AI_RESEARCH §8.92, docs/AI_LUA_VERBS.md): the
+economy verbs are data/ai/lib/verbs.lua's, and the C++ managers and the group verbs are deleted.
 
 Read with:
 - docs/AI_RESEARCH.md: §2 is the original AI, §4 the design options (this is option B), §8 the experiments;
