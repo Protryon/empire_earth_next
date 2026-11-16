@@ -645,13 +645,18 @@ WON_TESTS = {
     # rust/crates/ee_won/src/golden_modelobj.txt)
     "won_modelobj_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
-    # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
-    "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
-                                                          "ImageDecoder.cpp")],
+    # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 and libjpeg 6b decoders; both are
+    # ee_won's imgdec.rs now, R6 WON round 41)
+    "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
                        *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
-                                                            "WONFile.cpp", "StringUtil.cpp")],
-                       *[ROOT / "src" / "ThirdParty" / "libjpeg" / l.split()[2]
-                         for l in (ROOT / "link" / "jpeg" / "units.txt").read_text().splitlines() if l.strip()]],
+                                                            "WONFile.cpp", "StringUtil.cpp")]],
+    # JPGDecoder: the original's statements on libjpeg 6b (tests/won/won_jpeg_orig.h) against ee_won's jpeg.rs over
+    # libjpeg's own compressed pictures, the lobby's, and their corruptions (golden: rust/crates/ee_won/src/golden_jpeg.txt)
+    "won_jpeg_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
+                      *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                           "WONFile.cpp", "StringUtil.cpp")],
+                      *[ROOT / "src" / "ThirdParty" / "libjpeg" / l.split()[2]
+                        for l in (ROOT / "link" / "jpeg" / "units.txt").read_text().splitlines() if l.strip()]],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)

@@ -220,8 +220,6 @@
 3c19a0 3c32a8 WONLobby/RoomCtrl.cpp
 3c3c00 3c4b66 WONLobby/RootScreen.cpp
 3c9d20 3ca5ce WONLobby/UpdateAccountCtrl.cpp
-3d24e0 3d2a20 WONGUI/PNGDecoder.cpp
-3d2a20 3d2fa0 WONGUI/JPGDecoder.cpp
 3d5e20 3d768d WONCrypt/Blowfish.cpp
 3d7b50 3d8e07 WONCrypt/ElGamal.cpp
 3d9350 3da50d WONCrypt/MD5Digest.cpp

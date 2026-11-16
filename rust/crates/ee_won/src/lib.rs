@@ -91,11 +91,13 @@ pub mod httpcpp;
 pub mod httpdoc;
 pub mod httpengine;
 pub mod httpget;
+pub mod imgdec;
 pub mod imgfilter;
 pub mod inputobj;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod ipobj;
+pub mod jpeg;
 pub mod labelobj;
 pub mod lan;
 pub mod lanlogic;

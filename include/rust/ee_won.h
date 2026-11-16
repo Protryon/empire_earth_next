@@ -4701,6 +4701,32 @@ enum class EeWonGuiStringOp {
   RFind,
 };
 
+/// The decoders.
+enum class EeWonImgKind : int32_t {
+  Png = 0,
+  Jpg = 1,
+};
+
+/// The multi-decoder's calls (`ee_won_img_dec`).
+enum class EeWonImgDecCall : int32_t {
+  /// `AddDecoder((ImageDecoder*)a, extension b of c bytes)`.
+  Add = 0,
+  /// `SetCurExtension(b of c bytes)`.
+  SetExtension = 1,
+  /// The decoder for the current extension (0: none).
+  Find = 2,
+  /// The map's size.
+  Count = 3,
+  /// The map's entry a's decoder.
+  Entry = 4,
+  /// The map's entry a's decoder becomes the decoder b (Duplicate's copy), which the set now owns.
+  SetEntry = 5,
+  /// The set's size.
+  OwnedCount = 6,
+  /// The set's member a (in address order).
+  Owned = 7,
+};
+
 /// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
 enum class EeWonInputCall : uint32_t {
   /// `Virtual08` (SizeChanged).
@@ -10096,6 +10122,10 @@ struct EeWonHttpConn;
 /// length; a host equal but for case finds the first one's connection).
 struct EeWonHttpSession;
 
+/// MultiImageDecoder's state: the decoders by extension (a map ordered and matched without case: the first
+/// spelling of a key stays), the decoders it owns (a set by address) and the current extension.
+struct EeWonImgDec;
+
 /// The Rust InputBox.
 struct EeWonInput;
 
@@ -11593,6 +11623,15 @@ struct EeWonHttpSessionHooks {
   int (*conn_num_ops)(void*);
 };
 
+/// A decoded image: its size, its transparency flag, and its ARGB pixels (rows top first) until taken.
+struct EeWonImgRaw {
+  int32_t width;
+  int32_t height;
+  bool transparent;
+  /// A `Box<Vec<u32>>`.
+  void *pixels;
+};
+
 /// One raw image's pixels: `kind` 0 (1-bit), 1 (8-bit) or 2 (32-bit), its size and its row pitch in bytes.
 struct EeWonRawPixels {
   int32_t kind;
@@ -12498,6 +12537,9 @@ struct EeWonWmPopup {
   int32_t y;
   EeWonRect4 avoid;
 };
+
+/// jutils.c `jpeg_natural_order`, with its 16 extra entries for a corrupt run past the end.
+constexpr static const size_t NATURAL_ORDER[80] = { 0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, };
 
 /// The classic Windows colours (the "Windows Classic" scheme of the time) the colour scheme takes in place of
 /// GetSysColor's, as 0xRRGGBB, in StandardColor order of `GetSystemColorScheme` (3DDarkShadow, 3DFace, 3DHilight,
@@ -17269,6 +17311,38 @@ EeWonHostOp *ee_won_httpget_new(const uint8_t *host,
 /// # Safety
 /// `url` holds `len` bytes.
 EeWonHostOp *ee_won_httpget_new_url(const uint8_t *url, size_t len);
+
+/// `DoGetAttrib` -> true with the size in `wh`; `thrown` the FileReader status the C++ throws (0: none).
+bool ee_won_img_attrib(EeWonImgKind kind,
+                       EeWonFileReader *reader,
+                       int32_t (*wh)[2],
+                       int32_t *thrown);
+
+/// `DoDecodeRaw` -> true with the image in `out` (its pixels for `ee_won_img_take`), false for NULL; `thrown` the
+/// FileReader status the C++ throws (0: none).
+bool ee_won_img_decode(EeWonImgKind kind,
+                       EeWonFileReader *reader,
+                       EeWonImgRaw *out,
+                       int32_t *thrown);
+
+/// The decoded pixels into the new image's `width * height` pixels, and freed.
+///
+/// # Safety
+/// `out` came from `ee_won_img_decode`; `dst` holds its pixels.
+void ee_won_img_take(EeWonImgRaw *out, uint32_t *dst);
+
+EeWonImgDec *ee_won_img_dec_new();
+
+/// # Safety
+/// `d` came from `ee_won_img_dec_new` (or `ee_won_img_dec_copy`), freed once.
+void ee_won_img_dec_free(EeWonImgDec *d);
+
+/// A new multi-decoder with `d`'s map (Duplicate: its entries are then replaced one by one).
+EeWonImgDec *ee_won_img_dec_copy(const EeWonImgDec *d);
+
+/// # Safety
+/// `b` holds `c` bytes when the call reads them.
+size_t ee_won_img_dec(EeWonImgDec *d, EeWonImgDecCall call, size_t a, const uint8_t *b, size_t c);
 
 /// `ScaleImageFilter::CheckSize` over the filter's fields (`w`, `h` written back).
 ///
