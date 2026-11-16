@@ -1,23 +1,8 @@
-// JPEG image decoder on the engine's libjpeg 6b (src/ThirdParty/libjpeg), reading through a FileReader
-// UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
-#include <windows.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <string>
-#include <list>
-#include <map>
-#include <vector>
-#include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONLobbyPersistence.h"
-#include "ee/wonapi/WONLobbyImageDecoder.h"
+// The original JPGDecoder.cpp's decode on libjpeg 6b (copied from 77ca42f2a, R6 WON round 41): its source manager,
+// error manager and the two methods as free functions over a FileReader, for tests/won/won_jpeg_test.cpp.
 namespace WONJPG { extern "C" {
-#include "../../../ThirdParty/libjpeg/jpeglib.h"
-#include "../../../ThirdParty/libjpeg/jerror.h"
+#include "../../src/ThirdParty/libjpeg/jpeglib.h"
+#include "../../src/ThirdParty/libjpeg/jerror.h"
 struct my_error_mgr { jpeg_error_mgr pub; jmp_buf setjmp_buffer; };
 typedef my_error_mgr* my_error_ptr;
 struct my_source_mgr {
@@ -91,22 +76,9 @@ void jpeg_filereader_src(j_decompress_ptr cinfo,WONAPI::FileReader* reader)
     source->pub.next_input_byte=NULL;
 }
 }}
-using namespace WONJPG;
-namespace WONAPI {
-// Registers one JPEG decoder with a multi-decoder for the jpg, jpe, jpeg and pjpeg extensions
-void JPGDecoder::Add(MultiImageDecoder* decoder)
-{
-    JPGDecoder* jpg=new JPGDecoder;
-    decoder->AddDecoder(jpg,"jpg");
-    decoder->AddDecoder(jpg,"jpe");
-    decoder->AddDecoder(jpg,"jpeg");
-    decoder->AddDecoder(jpg,"pjpeg");
-}
-// Creates a new JPEG decoder
-ImageDecoder* JPGDecoder::Duplicate() { return new JPGDecoder; }
 
-// Reads the JPEG header to get the image size; false on a libjpeg error
-bool JPGDecoder::DoGetAttrib(ImageAttributes& attributes)
+using namespace WONJPG;
+static bool OrigGetAttrib(WONAPI::FileReader* mFileReader,WONAPI::ImageAttributes& attributes)
 {
     jpeg_decompress_struct cinfo;
     my_error_mgr error;
@@ -117,7 +89,7 @@ bool JPGDecoder::DoGetAttrib(ImageAttributes& attributes)
         return false;
     }
     jpeg_create_decompress(&cinfo);
-    jpeg_filereader_src(&cinfo,this->mFileReader);
+    jpeg_filereader_src(&cinfo,mFileReader);
     (void)jpeg_read_header(&cinfo,TRUE);
     (void)jpeg_start_decompress(&cinfo);
     attributes.mWidth=cinfo.output_width;
@@ -126,9 +98,7 @@ bool JPGDecoder::DoGetAttrib(ImageAttributes& attributes)
     return true;
 }
 
-// Decodes the JPEG into a 32-bit raw image (greyscale expanded to RGB); NULL on a libjpeg error, leaking any
-// image already allocated
-SmartPtr<RawImage> JPGDecoder::DoDecodeRaw()
+static WONAPI::SmartPtr<WONAPI::RawImage> OrigDecodeRaw(WONAPI::FileReader* mFileReader)
 {
     jpeg_decompress_struct cinfo;
     my_error_mgr error;
@@ -139,14 +109,14 @@ SmartPtr<RawImage> JPGDecoder::DoDecodeRaw()
         return NULL;
     }
     jpeg_create_decompress(&cinfo);
-    jpeg_filereader_src(&cinfo,this->mFileReader);
+    jpeg_filereader_src(&cinfo,mFileReader);
     (void)jpeg_read_header(&cinfo,TRUE);
     (void)jpeg_start_decompress(&cinfo);
     int stride=cinfo.output_width*cinfo.output_components;
     JSAMPARRAY rows=(*cinfo.mem->alloc_sarray)(reinterpret_cast<j_common_ptr>(&cinfo),JPOOL_IMAGE,stride,1);
     int width=cinfo.output_width,height=cinfo.output_height;
     // Allocates the RawImage32 directly (not through CreateRawImage32)
-    SmartPtr<RawImage32> image=new RawImage32(width,height);
+    WONAPI::SmartPtr<WONAPI::RawImage32> image=new WONAPI::RawImage32(width,height);
     image->StartRowTraversal(0);
     while(cinfo.output_scanline<cinfo.output_height) {
         (void)jpeg_read_scanlines(&cinfo,rows,1);
@@ -169,5 +139,4 @@ SmartPtr<RawImage> JPGDecoder::DoDecodeRaw()
     (void)jpeg_finish_decompress(&cinfo);
     jpeg_destroy_decompress(&cinfo);
     return image.get();
-}
 }

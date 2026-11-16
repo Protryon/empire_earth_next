@@ -529,6 +529,22 @@ WON_TESTS = {
     # the image filters' pixel loops (imgfilter.rs) against the original statements over stand-in raw images
     # (golden: rust/crates/ee_won/src/golden_imgfilter.txt)
     "won_imgfilter_test": [],
+    # PlatGraphics' hooks (platgfx.rs) against their original statements on copies of one real surface, at every
+    # pixel scale (golden: rust/crates/ee_won/src/golden_platgfx.txt)
+    "won_platgfx_test": [],
+    # PlatNativeImage's pixel work (platimg.rs: draws, scaled draws, raw copies, the raw images' native images, the
+    # texture pack's copies, the hand cursor) against the original statements over one stand-in world (golden:
+    # rust/crates/ee_won/src/golden_platimg.txt)
+    "won_platimg_test": [],
+    # PlatGUIFont as a Rust object (platfont.rs) against its original statements on the platform fonts (golden-free:
+    # the Rust tests check the font over the same face)
+    "won_platfont_test": [],
+    # PlatWindowManager as a Rust object (platwm.rs) against its original statements over one stand-in world of
+    # windows and the platform's window system
+    "won_platwm_test": [],
+    # PlatGUIWindow as a Rust object (platwin.rs) against its original statements over one stand-in world of the
+    # Window base, its root and events, the platform manager and the cursors
+    "won_platwin_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
@@ -632,13 +648,18 @@ WON_TESTS = {
     # rust/crates/ee_won/src/golden_modelobj.txt)
     "won_modelobj_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
-    # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
-    "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
-                                                          "ImageDecoder.cpp")],
+    # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 and libjpeg 6b decoders; both are
+    # ee_won's imgdec.rs now, R6 WON round 41)
+    "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
                        *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
-                                                            "WONFile.cpp", "StringUtil.cpp")],
-                       *[ROOT / "src" / "ThirdParty" / "libjpeg" / l.split()[2]
-                         for l in (ROOT / "link" / "jpeg" / "units.txt").read_text().splitlines() if l.strip()]],
+                                                            "WONFile.cpp", "StringUtil.cpp")]],
+    # JPGDecoder: the original's statements on libjpeg 6b (tests/won/won_jpeg_orig.h) against ee_won's jpeg.rs over
+    # libjpeg's own compressed pictures, the lobby's, and their corruptions (golden: rust/crates/ee_won/src/golden_jpeg.txt)
+    "won_jpeg_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
+                      *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                           "WONFile.cpp", "StringUtil.cpp")],
+                      *[ROOT / "src" / "ThirdParty" / "libjpeg" / l.split()[2]
+                        for l in (ROOT / "link" / "jpeg" / "units.txt").read_text().splitlines() if l.strip()]],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)

@@ -5,8 +5,9 @@
 // throws is caught and kept; ComponentConfig::RunTable rethrows it after the Rust returns.
 struct CfgTabFrame {
     ComponentConfig* mConfig; std::exception_ptr mError;
-    int i[8]; int ni; GUIString s[2]; int ns; SmartPtr<Font> f[1]; int nf; SmartPtr<Image> m[1]; int nm;
-    Component* c[2]; int nc; SmartPtr<Sound> snd; Background bg; SelectionColor sel; WONFrame fr; SmartPtr<Cursor> cur;
+    int i[12]; int ni; GUIString s[2]; int ns; SmartPtr<Font> f[1]; int nf; SmartPtr<Image> m[1]; int nm;
+    Component* c[2]; int nc; SmartPtr<ChildLayoutInstructionBase> lay; SmartPtr<Sound> snd; Background bg; SelectionColor sel; WONFrame fr; SmartPtr<Cursor> cur;
+    SmartPtr<RawImage> raw; std::string rs[2]; int nrs; SmartPtr<ComponentConfig> child;
 };
 // WONFrameValueConfig's frame value: a stretch image alone (its own borders), or an image and one border or four
 static WONFrame CfgReadFrame(ComponentConfig* config)
@@ -26,7 +27,7 @@ static WONFrame CfgReadFrame(ComponentConfig* config)
 static void CfgTabClear(void* p)
 {
     CfgTabFrame& a=*static_cast<CfgTabFrame*>(p);
-    a.ni=a.ns=a.nf=a.nm=a.nc=0; a.f[0]=NULL; a.m[0]=NULL;
+    a.ni=a.ns=a.nf=a.nm=a.nc=a.nrs=0; a.f[0]=NULL; a.m[0]=NULL; a.lay=NULL; a.raw=NULL;
 }
 static bool CfgTabRead(void* p,EeWonCfgRead inKind)
 {
@@ -61,6 +62,10 @@ static bool CfgTabRead(void* p,EeWonCfgRead inKind)
         case EeWonCfgRead::Cursor: a.cur=cfg->ReadCursor(); break;
         case EeWonCfgRead::Direction: a.i[a.ni++]=cfg->ReadDirection(); break;
         case EeWonCfgRead::StdCursor: a.i[a.ni++]=cfg->ReadStandardCursor(); break;
+        case EeWonCfgRead::LayoutPoint: a.c[a.nc++]=SafeConfigGetComponent<LayoutPoint*>(cfg->ReadComponent(),"LayoutPoint"); break;
+        case EeWonCfgRead::Word: a.s[0]=cfg->ReadString(true); a.ns=1; break;
+        case EeWonCfgRead::RawImage: a.raw=cfg->ReadRawImage(); break;
+        case EeWonCfgRead::RawStr: a.rs[a.nrs++]=cfg->ReadRawString(false); break;
         }
         return true;
     } catch(...) { a.mError=std::current_exception(); return false; }
@@ -78,6 +83,7 @@ static const void* CfgTabText(void* p,int32_t inSlot,uint16_t* outLen,uint32_t* 
     return s.mData->mText;
 }
 static void CfgTabPush(void* p,int32_t inValue) { CfgTabFrame& a=*static_cast<CfgTabFrame*>(p); a.i[a.ni++]=inValue; }
+static int32_t CfgTabPeek(void* p,int32_t inSlot) { return static_cast<CfgTabFrame*>(p)->i[inSlot]; }
 static void CfgTabFail(void* p,const uint8_t* inMsg,uintptr_t inLen,int32_t inSlot)
 {
     CfgTabFrame& a=*static_cast<CfgTabFrame*>(p);
@@ -110,8 +116,26 @@ enum {
     kScroller=EE_WON_CFG_KEYS_SCROLLERCONFIG_VIRTUAL24_INSTRUCTION, kSBScroller=EE_WON_CFG_KEYS_SCROLLBARSCROLLERCONFIG_VIRTUAL24_INSTRUCTION,
     kStretchCenter=EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION,
     kComponent=EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY, kSkin=EE_WON_CFG_KEYS_WONSKINCONFIG_VIRTUAL24_THEINSTRUCTION,
-    kFont=EE_WON_CFG_KEYS_FONTCONFIG_VIRTUAL24_INSTRUCTION, kImage=EE_WON_CFG_KEYS_IMAGECONFIG_VIRTUAL24_ININSTRUCTION
+    kFont=EE_WON_CFG_KEYS_FONTCONFIG_VIRTUAL24_INSTRUCTION, kImage=EE_WON_CFG_KEYS_IMAGECONFIG_VIRTUAL24_ININSTRUCTION,
+    kContainer=EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION,
+    kStretchImage=EE_WON_CFG_KEYS_STRETCHIMAGECONFIG_VIRTUAL24_INSTRUCTION, kImageFilter=EE_WON_CFG_KEYS_IMAGEFILTERCONFIG_VIRTUAL24_ININSTRUCTION
 };
+// a stretch image config's child: its stretch attributes (CfgStretchChild), then the image, under the name in the parent
+static StretchImageConfig* CfgStretchChild(StretchImageConfig* k)
+{
+    StretchImageConfig* child=new StretchImageConfig; child->mStretchImage->CopyAttributes(k->mStretchImage); return child;
+}
+static void CfgStretchAdd(StretchImageConfig* k,const GUIString& name,StretchImageConfig* child,RawImage* image)
+{
+    SmartPtr<StretchImageConfig> keep=child; child->mStretchImage->SetImage(image);
+    static_cast<ComponentConfig*>(k->GetParentObject())->AddChildToConfigMap(name,child);
+}
+// an image filter config's child: the image, under the name in the parent
+static void CfgFilterChild(ImageFilterConfig* k,const GUIString& name,RawImage* image)
+{
+    SmartPtr<ImageFilterConfig> child=new ImageFilterConfig; child->SetRawImage(image);
+    static_cast<ComponentConfig*>(k->GetParentObject())->AddChildToConfigMap(name,child.get());
+}
 #define EE_CFG_SET(t,n) case (t)<<8|(n):
 #define EE_CFG(T) static_cast<T*>(a.mConfig)
 // The setters, as each handler called them on its typed component (bools read as 0/1).
@@ -376,6 +400,76 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     EE_CFG_SET(kImage,0) EE_CFG(ImageConfig)->mImage=a.m[0]; break;
     EE_CFG_SET(kImage,1) EE_CFG(ImageConfig)->mImage->SetSize(i[0],i[1]); break;
     default: break;
+    // ContainerConfig: the components and layouts read so far taken as each is used (c[--nc], i[--ni]); the
+    // layout made by the instruction is the frame's until the container holds it
+    EE_CFG_SET(kContainer,0) EE_CFG(ContainerConfig)->mContainer->AddChild(c[--a.nc]); break;
+    EE_CFG_SET(kContainer,1) EE_CFG(ContainerConfig)->mContainer->AddLayoutPoint(static_cast<LayoutPoint*>(c[--a.nc])); break;
+    EE_CFG_SET(kContainer,2) { // NEWLAYOUTPOINT's name: a layout point, its config registered under the name
+        ContainerConfig* k=EE_CFG(ContainerConfig); SmartPtr<ComponentConfig> config=new ComponentConfig; SmartPtr<LayoutPoint> point=new LayoutPoint;
+        config->SetComponent(point.get()); config->mParent=k; k->mConfigMap[s[--a.ns]]=config; k->mContainer->AddLayoutPoint(point.get());
+    } break;
+    EE_CFG_SET(kContainer,4) EE_CFG(ContainerConfig)->mCurLayoutId=i[0]; break;
+    EE_CFG_SET(kContainer,5) { int anId=i[--a.ni]; EE_CFG(ContainerConfig)->mContainer->EnableLayoutInstructions(anId,i[0]!=0); } break;
+    EE_CFG_SET(kContainer,6) EE_CFG(ContainerConfig)->mContainer->Relayout(); break;
+    EE_CFG_SET(kContainer,9) a.lay=new SameSizeLayout(true,true); break;
+    EE_CFG_SET(kContainer,10) a.lay=new SameSizeLayout(true,false); break;
+    EE_CFG_SET(kContainer,11) a.lay=new SameSizeLayout(false,true); break;
+    EE_CFG_SET(kContainer,12) a.lay=new CenterLayout(c[--a.nc],true,true); break;
+    EE_CFG_SET(kContainer,13) a.lay=new CenterLayout(c[--a.nc],true,false); break;
+    EE_CFG_SET(kContainer,14) a.lay=new CenterLayout(c[--a.nc],false,true); break;
+    EE_CFG_SET(kContainer,15) a.lay=new SpaceEvenlyLayout(c[--a.nc],i[0],i[1],true); a.ni=0; break;
+    EE_CFG_SET(kContainer,16) a.lay=new SpaceEvenlyLayout(c[--a.nc],i[0],i[1],false); a.ni=0; break;
+    EE_CFG_SET(kContainer,17) a.lay=new ClearRightLayout(c[--a.nc],i[0]); a.ni=0; break;
+    EE_CFG_SET(kContainer,19) a.lay=new SizeAtLeastLayout(c[--a.nc],i[0],i[1]); a.ni=0; break;
+    EE_CFG_SET(kContainer,20) a.lay->AddComponent(c[--a.nc]); break;
+    EE_CFG_SET(kContainer,21) EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get(),EE_CFG(ContainerConfig)->mCurLayoutId); break;
+    EE_CFG_SET(kContainer,22) EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get()); break;
+    EE_CFG_SET(kContainer,23) EE_CFG(ContainerConfig)->mContainer->SetIsolateTabFocus(i[0]!=0); break;
+    EE_CFG_SET(kContainer,24) EE_CFG(ContainerConfig)->mContainer->SetOnlyChildInput(i[0]!=0); break;
+    // the LAYOUT family's state (cfgtab.rs layout): the previous rule's instructions and offsets, its reference, the
+    // offsets read, the rule added (the frame's last six ints: instructions, offsets, which component stays the reference)
+    EE_CFG_SET(kContainer,25) { ContainerConfig* k=EE_CFG(ContainerConfig); a.i[a.ni++]=k->mLayoutInstruction; for(int j=0;j<4;j++) a.i[a.ni++]=k->mLayoutParams[j]; } break;
+    EE_CFG_SET(kContainer,26) { ContainerConfig* k=EE_CFG(ContainerConfig); if(k->mLayoutRef==NULL) throw ConfigObjectException("Invalid LayoutChain"); a.c[a.nc++]=k->mLayoutRef; } break;
+    EE_CFG_SET(kContainer,27) for(int j=0;j<4;j++) EE_CFG(ContainerConfig)->mLayoutParams[j]=i[a.ni-4+j]; break;
+    EE_CFG_SET(kContainer,28) {
+        ContainerConfig* k=EE_CFG(ContainerConfig); const int* v=i+a.ni-6;
+        for(int j=0;j<4;j++) k->mLayoutParams[j]=v[1+j];
+        k->mContainer->Fn2F6140(c[0],v[0],c[1],v[1],v[2],v[3],v[4],k->mCurLayoutId); k->mLayoutRef=c[v[5]]; k->mLayoutInstruction=v[0];
+    } break;
+    EE_CFG_SET(kContainer,29) a.lay=new NoOverlapLayout(c[0],i[2],c[1],i[0],i[1]); a.nc=0; break;
+    // StretchImageConfig (round 41; cfgimg.rs): the exports' children by number or column
+    EE_CFG_SET(kStretchImage,0) EE_CFG(StretchImageConfig)->mStretchImage->SetImage(a.raw.get()); break;
+    EE_CFG_SET(kStretchImage,1) EE_CFG(StretchImageConfig)->mStretchImage->SetTile(i[a.ni-2]!=0,i[a.ni-1]!=0); break;
+    EE_CFG_SET(kStretchImage,2) EE_CFG(StretchImageConfig)->mStretchImage->SetBorders(i[0],i[1],i[2],i[3]); break;
+    EE_CFG_SET(kStretchImage,3) EE_CFG(StretchImageConfig)->mStretchImage->SetSkipCenter(i[0]!=0); break;
+    EE_CFG_SET(kStretchImage,4) {
+        char image[512],config[512]; sprintf(image,"%s%d",a.rs[0].c_str(),i[a.ni-2]); sprintf(config,"%s%d",a.rs[1].c_str(),i[a.ni-1]); a.ni-=2;
+        StretchImageConfig* k=EE_CFG(StretchImageConfig); SmartPtr<RawImage> raw=k->GetRawImageFromStr(image); CfgStretchAdd(k,config,CfgStretchChild(k),raw.get());
+    } break;
+    EE_CFG_SET(kStretchImage,5) a.i[a.ni++]=a.raw->GetWidth()/i[0]; break;
+    EE_CFG_SET(kStretchImage,6) {
+        int n=i[--a.ni]; SmartPtr<CropImageFilter> crop=new CropImageFilter; crop->SetSize(i[1],a.raw->GetHeight()); crop->SetPos(n*i[1],0);
+        char config[512]; sprintf(config,"%s%d",a.rs[0].c_str(),n+1); SmartPtr<RawImage> cut=crop->Filter(a.raw.get());
+        CfgStretchAdd(EE_CFG(StretchImageConfig),config,CfgStretchChild(EE_CFG(StretchImageConfig)),cut.get());
+    } break;
+    EE_CFG_SET(kStretchImage,7) CfgStretchAdd(EE_CFG(StretchImageConfig),s[0],static_cast<StretchImageConfig*>(a.child.get()),a.raw.get()); break;
+    EE_CFG_SET(kStretchImage,8) a.child=CfgStretchChild(EE_CFG(StretchImageConfig)); break;
+    // ImageFilterConfig (round 41; cfgimg.rs): the raw image, its copy, the filters by name, the crops' and export's children
+    EE_CFG_SET(kImageFilter,0) EE_CFG(ImageFilterConfig)->SetRawImage(a.raw.get()); break;
+    EE_CFG_SET(kImageFilter,2) EE_CFG(ImageFilterConfig)->SetRawImage(static_cast<RawImage*>(EE_CFG(ImageFilterConfig)->mRawImage->Duplicate().get())); break;
+    EE_CFG_SET(kImageFilter,3) a.i[a.ni++]=EE_CFG(ImageFilterConfig)->mRawImage->GetWidth()/i[0]; break;
+    EE_CFG_SET(kImageFilter,4) {
+        ImageFilterConfig* k=EE_CFG(ImageFilterConfig); int n=i[--a.ni]; SmartPtr<CropImageFilter> crop=new CropImageFilter;
+        crop->SetSize(i[1],k->mRawImage->GetHeight()); crop->SetPos(n*i[1],0); SmartPtr<RawImage> image=crop->Filter(k->mRawImage.get());
+        char name[512]; sprintf(name,"%s%d",((std::string)s[0]).c_str(),n+1); CfgFilterChild(k,GUIString(name),image.get());
+    } break;
+    EE_CFG_SET(kImageFilter,5) CfgFilterChild(EE_CFG(ImageFilterConfig),s[0],a.raw.get()); break;
+    EE_CFG_SET(kImageFilter,10) { SmartPtr<ScaleImageFilter> f=new ScaleImageFilter(0); f->SetPercentSize(i[a.ni-2],i[a.ni-1]); a.raw=f->Filter(EE_CFG(ImageFilterConfig)->mRawImage.get()); } break;
+    EE_CFG_SET(kImageFilter,11) a.raw=SmartPtr<ImageFilter>(new ScaleImageFilter(i[a.ni-2],i[a.ni-1]))->Filter(EE_CFG(ImageFilterConfig)->mRawImage.get()); break;
+    EE_CFG_SET(kImageFilter,12) a.raw=SmartPtr<ImageFilter>(new TintImageFilter(i[a.ni-3],i[a.ni-2],i[a.ni-1]))->Filter(EE_CFG(ImageFilterConfig)->mRawImage.get()); break;
+    EE_CFG_SET(kImageFilter,13) a.raw=SmartPtr<ImageFilter>(new CropImageFilter(i[a.ni-4],i[a.ni-3],i[a.ni-2],i[a.ni-1]))->Filter(EE_CFG(ImageFilterConfig)->mRawImage.get()); break;
+    EE_CFG_SET(kImageFilter,14) a.raw=SmartPtr<ImageFilter>(new TransparentImageFilter((DWORD)i[a.ni-1]))->Filter(EE_CFG(ImageFilterConfig)->mRawImage.get()); break;
+    EE_CFG_SET(kImageFilter,15) a.raw=NULL; break;
     }
 }
 #undef EE_CFG_SET
@@ -389,8 +483,8 @@ static bool CfgTabApply(void* p,int32_t inSetter)
 // base; a read's or setter's exception is rethrown here.
 bool ComponentConfig::RunTable(int inTable,const std::string& inKey)
 {
-    CfgTabFrame aFrame; aFrame.mConfig=this; aFrame.ni=aFrame.ns=aFrame.nf=aFrame.nm=aFrame.nc=0;
-    EeWonCfgTabHost aHost={&aFrame,CfgTabRead,CfgTabComma,CfgTabEnd,CfgTabText,CfgTabPush,CfgTabApply,CfgTabFail,CfgTabClear};
+    CfgTabFrame aFrame; aFrame.mConfig=this; aFrame.ni=aFrame.ns=aFrame.nf=aFrame.nm=aFrame.nc=aFrame.nrs=0;
+    EeWonCfgTabHost aHost={&aFrame,CfgTabRead,CfgTabComma,CfgTabEnd,CfgTabText,CfgTabPush,CfgTabApply,CfgTabFail,CfgTabClear,CfgTabPeek};
     int aResult=ee_won_cfg_tab_run(&aHost,inTable,(const uint8_t*)inKey.data(),inKey.size());
     if(aResult==1) std::rethrow_exception(aFrame.mError);
     return aResult==0;
@@ -452,8 +546,11 @@ EE_CFG_V24(WONFrameComponentConfig,kWFrame,ComponentConfig)
 EE_CFG_V24(WONComboBoxConfig,kWCombo,ComboBoxConfig)
 EE_CFG_V24(WONTabCtrlConfig,kWTabCtrl,TabCtrlConfig)
 EE_CFG_V24(WONScrollContainerConfig,kWScrollCont,ScrollbarScrollerConfig)
+EE_CFG_V24(ContainerConfig,kContainer,ComponentConfig)
 EE_CFG_V24(ScrollAreaConfig,kScrollArea,ContainerConfig)
 EE_CFG_V24(ScrollerConfig,kScroller,ContainerConfig)
 EE_CFG_V24(ScrollbarScrollerConfig,kSBScroller,ScrollerConfig)
 EE_CFG_V24(StretchCenterImageConfig,kStretchCenter,ImageConfig)
+EE_CFG_V24(StretchImageConfig,kStretchImage,ImageConfig)
+EE_CFG_V24(ImageFilterConfig,kImageFilter,ImageConfig)
 #undef EE_CFG_V24

@@ -172,9 +172,6 @@
 387fb0 38831b WONGUI/ValueConfigConstructors.cpp
 388000 3885cf WONGUI/ComponentLayoutConfigs.cpp
 3885d0 388834 WONGUI/ContainerConfigGroups.cpp
-388840 389f75 WONGUI/ContainerConfigInstructions.cpp
-388e20 3899cd WONGUI/ContainerConfigLayouts.cpp
-389a70 389c7b WONGUI/ContainerConfigPoints.cpp
 38a080 38aa36 WONGUI/FontConfig.cpp
 38aa60 38ac87 WONGUI/ComponentConfigLookup.cpp
 38adf0 38cd5c WONGUI/ImageConfig.cpp
@@ -221,8 +218,6 @@
 3c19a0 3c32a8 WONLobby/RoomCtrl.cpp
 3c3c00 3c4b66 WONLobby/RootScreen.cpp
 3c9d20 3ca5ce WONLobby/UpdateAccountCtrl.cpp
-3d24e0 3d2a20 WONGUI/PNGDecoder.cpp
-3d2a20 3d2fa0 WONGUI/JPGDecoder.cpp
 3d5e20 3d768d WONCrypt/Blowfish.cpp
 3d7b50 3d8e07 WONCrypt/ElGamal.cpp
 3d9350 3da50d WONCrypt/MD5Digest.cpp

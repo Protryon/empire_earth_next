@@ -1,10 +1,8 @@
-// ImageDecoder (8 bytes) and MultiImageDecoder (0x34 bytes).
+// ImageDecoder (8 bytes) and MultiImageDecoder (the original's 0x34 bytes: its map, set and extension are ee_won's
+// imgdec.rs EeWonImgDec now, R6 WON round 41).
 #ifndef EE_WONAPI_WONLOBBYIMAGEDECODER_H
 #define EE_WONAPI_WONLOBBYIMAGEDECODER_H
-#include <set>
-#include <map>
-#include <string>
-#include "ee/wonapi/WONStringCompare.h"
+#include "rust/ee_won.h"
 namespace WONAPI {
 class FileReader;
 class DisplayContext;
@@ -31,14 +29,17 @@ public:
     bool GetImageAttributes(const char*,ImageAttributes&); //347b70
     bool GetImageAttributes(FileReader&,ImageAttributes&); //347be0
     virtual ImageDecoder* Duplicate()=0; //slot14
+protected:
+    // the decoder inKind (EeWonImgKind) on mFileReader, through imgdec.rs
+    bool RustAttrib(int inKind,ImageAttributes& outAttributes);
+    SmartPtr<RawImage> RustDecodeRaw(int inKind);
 };
 class MultiImageDecoder : public ImageDecoder {
 protected:
-    typedef std::set<ImageDecoder*> DecoderSet;
-    typedef std::map<std::string,ImageDecoder*,StringLessNoCase> DecoderMap;
-    DecoderSet mDecoderSet; //08..13, sole ownership set
-    DecoderMap mDecoderMap; //14..1f, borrowed decoder pointers
-    std::string mCurExtension; // the original's 0x24..0x33, after its animation pointer (+0x20; no animation now)
+    EeWonImgDec* mRust; // the decoders by extension, the set it owns, the current extension (imgdec.rs)
+    uintptr_t Call(EeWonImgDecCall inCall,uintptr_t a=0,const char* b=NULL,size_t c=0);
+    MultiImageDecoder(const MultiImageDecoder&);
+    MultiImageDecoder& operator=(const MultiImageDecoder&);
     virtual SmartPtr<NativeImage> DoDecode(DisplayContext*); //00 3484e0
     virtual SmartPtr<RawImage> DoDecodeRaw(); //04 348670
     virtual bool DoGetAttrib(ImageAttributes&); //08 3487f0
@@ -46,7 +47,7 @@ public:
     MultiImageDecoder(); //347c50
     virtual ~MultiImageDecoder(); // slot 0x0c; complete 0x00747eb0, deleting 0x00747d20
     void AddDecoder(ImageDecoder*,const char*); // at 0x00748080; takes ownership
-    void SetCurExtension(const char* s) { this->mCurExtension=s; } // inline
+    void SetCurExtension(const char* s); // inline in the original
     void SetFileName(const char*); //348270
     SmartPtr<NativeImage> Decode(DisplayContext*,const char*); //348450
     SmartPtr<RawImage> DecodeRaw(const char*); //348490

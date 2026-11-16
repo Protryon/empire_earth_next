@@ -524,8 +524,10 @@ dependencies = [
 name = "ee_won"
 version = "0.1.0"
 dependencies = [
+ "ee_openformats",
  "ee_plat_core",
  "ee_plat_sys",
+ "ee_plat_ui",
 ]
 
 [[package]]

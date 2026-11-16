@@ -17,6 +17,7 @@
 #include "ee/wonapi/WONLobbyControlConfig.h"
 #include "ee/wonapi/WONLobbyComboBoxConfig.h"
 #include "ee/wonapi/WONLobbyConfig.h"
+#include "ee/wonapi/WONLobbyLayout.h"
 #include "ee/wonapi/WONLobbyConfigImages.h"
 #include "ee/wonapi/WONLobbyImageButton.h"
 #include "ee/wonapi/WONLobbyMSConfig.h"

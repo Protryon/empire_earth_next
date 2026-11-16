@@ -1654,6 +1654,11 @@ constexpr static const int32_t EE_WON_PEEROP_GET_CERT_STATUS = 2;
 /// the server's: the client's certificate's `VerifyPermissions(0, index, 0)`
 constexpr static const int32_t EE_WON_PEEROP_CLIENT_PERMITS = 3;
 
+/// The classic dialog frame: a 3-pixel border and an 18-pixel caption.
+constexpr static const int32_t FRAME_BORDER = 3;
+
+constexpr static const int32_t FRAME_CAPTION = 18;
+
 /// `GetDirOp`: the query's flags, path (UTF-16 LE), data type count and each type
 constexpr static const int32_t EE_WON_REQOPS_DIR_GET = 7;
 
@@ -3385,6 +3390,14 @@ enum class EeWonCfgRead : int32_t {
   Direction = 21,
   /// `ReadStandardCursor()` into the ints.
   StdCursor = 22,
+  /// `SafeConfigGetComponent<LayoutPoint*>(ReadComponent(),"LayoutPoint")` into the components.
+  LayoutPoint = 23,
+  /// `ReadString(true)` (a word: it stops at whitespace) into the strings' first slot, alone.
+  Word = 24,
+  /// `ReadRawImage()` into the frame's raw image.
+  RawImage = 25,
+  /// `ReadRawString(false)` into the raw strings.
+  RawStr = 26,
 };
 
 /// A number of the parser.
@@ -4692,6 +4705,32 @@ enum class EeWonGuiStringOp {
   FindNoCase,
   FindOneOf,
   RFind,
+};
+
+/// The decoders.
+enum class EeWonImgKind : int32_t {
+  Png = 0,
+  Jpg = 1,
+};
+
+/// The multi-decoder's calls (`ee_won_img_dec`).
+enum class EeWonImgDecCall : int32_t {
+  /// `AddDecoder((ImageDecoder*)a, extension b of c bytes)`.
+  Add = 0,
+  /// `SetCurExtension(b of c bytes)`.
+  SetExtension = 1,
+  /// The decoder for the current extension (0: none).
+  Find = 2,
+  /// The map's size.
+  Count = 3,
+  /// The map's entry a's decoder.
+  Entry = 4,
+  /// The map's entry a's decoder becomes the decoder b (Duplicate's copy), which the set now owns.
+  SetEntry = 5,
+  /// The set's size.
+  OwnedCount = 6,
+  /// The set's member a (in address order).
+  Owned = 7,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
@@ -7069,6 +7108,225 @@ enum class EeWonPrefsEventKind {
   OptionsBegin,
   OptionName,
   OptionValue,
+};
+
+/// A hook (`ee_won_plat_gfx`; its arguments in the hook's order).
+enum class EeWonPlatGfx : uint32_t {
+  /// `GetPixelHook(a, b)`: the pixel as a COLORREF (0x00BBGGRR).
+  GetPixel = 1,
+  /// `SetPixelHook(a, b, c)`.
+  SetPixel,
+  /// `DrawLineHook(a, b, c, d)`.
+  Line,
+  /// `DrawRectHook(a, b, c, d)`.
+  Rect,
+  /// `FillRectHook(a, b, c, d)`.
+  FillRect,
+  /// `FillRectBlendHook(a, b, c, d, e)`.
+  FillRectBlend,
+  /// `DrawEllipseHook(a, b, c, d)`.
+  Ellipse,
+  /// `FillEllipseHook(a, b, c, d)`.
+  FillEllipse,
+  /// `DrawArcHook(a, b, c, d, e, f)`.
+  Arc,
+  /// `ClearClipRectHook()`.
+  ClearClip,
+  /// `SetClipRectHook(a, b, c, d)`.
+  SetClip,
+};
+
+/// What the window asks of its C++ shell (`me`).
+enum class EeWonPlatWinOp : int32_t {
+  /// The window has a PlatWindowManager (`GetPlatManager() != NULL`).
+  HasWm = 0,
+  /// The manager's `Call(a, b, c)`.
+  Wm = 1,
+  /// `GetMousePosition(x, y)` into `a` (two ints) -> whether the pointer is over the surface.
+  Mouse = 2,
+  /// `FillsSurface()`.
+  Fills = 3,
+  /// `HasFrame()`.
+  Frame = 4,
+  /// `IsPopup()`.
+  Popup = 5,
+  /// `GetWindowState() == WindowState_Open`.
+  Open = 6,
+  /// `GetStyle()`.
+  Style = 7,
+  /// `Window::Create(WONRectangle(a..d))`, the display context and the offscreen image of the root's size.
+  WindowCreate = 8,
+  /// `Center(a)`.
+  Center = 9,
+  /// `SetIsShowing(a)`.
+  Showing = 10,
+  /// `PlatformShow(a)` (the virtual call).
+  Show = 11,
+  /// `QueueEvent(new SizeEvent(a, b, c, d))`.
+  QueueSize = 12,
+  /// `QueueEvent(new InputEvent(InputEvent_MouseExit))`.
+  QueueExit = 13,
+  /// `QueueEvent(new MouseEvent(p[0] .. p[4]))`, `a` five ints.
+  QueueMouse = 14,
+  /// `InvalidateRoot()`.
+  InvalidateRoot = 15,
+  /// `IsMouseInClientArea()`.
+  MouseIn = 16,
+  /// `mRoot->Contains(a, b)`.
+  RootContains = 17,
+  /// The root repainted into the offscreen image when it is invalid and there is one -> whether it was.
+  Paint = 18,
+  /// The parent when it is a PlatGUIWindow and visible, else 0.
+  ParentVisible = 19,
+  /// `Window::PlatformClose()`.
+  WindowClose = 20,
+  /// `Window::TimerEvent(a)`.
+  WindowTimer = 21,
+  /// The cursor `a` when it is a PlatCursor: the system pointer shown and the cursor applied.
+  ApplyCursor = 22,
+  /// Whether the manager's popup window does not want the mouse and is the window `a`.
+  PopupHit = 23,
+  /// `PlatCursorShow(a)`.
+  CursorShow = 24,
+  /// `PlatWindowMinimize((PlatWindow*)a)`.
+  PlatMinimize = 25,
+};
+
+/// The window's calls (`ee_won_plat_win`).
+enum class EeWonPlatWinCall : int32_t {
+  /// The destructor's: off the manager when registered.
+  Destroy = 0,
+  /// `Create(rect a)` (four ints).
+  Create = 1,
+  FollowSurface = 2,
+  /// `SetPosSize(a, b, c, d)`.
+  SetPosSize = 3,
+  /// `GetRect(out a, b)` (four ints; b: the client area).
+  GetRect = 4,
+  SetTitle = 5,
+  /// `PlatformSetCursor(a)`.
+  SetCursor = 6,
+  /// `PlatformShowNativeCursor(a)`.
+  ShowNativeCursor = 7,
+  /// `PlatformShow(a)`.
+  Show = 8,
+  /// `PlatformMinimize(a)`.
+  Minimize = 9,
+  /// `PlatformSetTopMost(a)`.
+  SetTopMost = 10,
+  Close = 11,
+  SetFocus = 12,
+  /// `PlatformSetMouseCapture(a)`.
+  SetCapture = 13,
+  IsVisible = 14,
+  /// `TimerEvent(a)`.
+  Timer = 15,
+  /// `OnPaint()`.
+  Paint = 16,
+  /// `QueueMouse(a: five ints)`.
+  QueueMouse = 17,
+  /// The fields the manager reads into `a` (EeWonPlatWinInfo).
+  Info = 18,
+  /// `mRegistered = a`.
+  SetRegistered = 19,
+  /// `SetMinimizeOnAltTab(a)`.
+  SetMinimizeOnAltTab = 20,
+  /// `SetForwardKeyMsgToParent(a)`.
+  SetForwardKeys = 21,
+};
+
+/// The host's calls (the receiver the C++ `PlatWindowManager*`; a window is a `PlatGUIWindow*`).
+enum class EeWonPlatWmOp : uint32_t {
+  /// `PlatCurrentThreadId() == WindowManager::GetThreadId()` (0 or 1).
+  IsUiThread = 1,
+  /// the window `a`'s fields into the `EeWonPlatWinInfo` at `b`.
+  Info,
+  /// `a->mRegistered = b != 0`.
+  SetRegistered,
+  /// `a->FollowSurface()`.
+  FollowSurface,
+  /// `a->FollowPixelScale()`.
+  FollowPixelScale,
+  /// `a->QueueEvent(new InputEvent(t))`, `t` GotFocus (b 0), LostFocus (1), MouseExit (2).
+  QueueInput,
+  /// `a->QueueEvent(new KeyEvent(t, c, d))`, `t` KeyDown (b 0), KeyUp (1), KeyChar (2).
+  QueueKey,
+  /// `a->QueueMouse(t, p[0], p[1], p[2], p[3])` with `p` the four ints at `c`, `t` MouseMove (b 0), MouseDown (1),
+  /// MouseDoubleClick (2), MouseUp (3), MouseWheel (4).
+  QueueMouse,
+  /// `dynamic_cast<PlatGUIWindow*>(a->GetParent())`.
+  Parent,
+  /// the window `a` held (a `SmartPtr<Window>`'s AddRef) / let go.
+  Hold,
+  Release,
+  /// `a->Close()`.
+  Close,
+  /// `a->ClosePopup(NULL)`.
+  ClosePopup,
+  /// `NotModalWindow(a)` (0 or 1).
+  NotModal,
+  /// `a->PlatformSetFocus()`.
+  SetFocus,
+  /// `a->SetPosSize(b, c, -1, -1)`.
+  SetPosSize,
+  /// `a->OnPaint()`.
+  Paint,
+  /// the window `a`'s title: its wide characters (the count into the int at `b`), valid until the next call.
+  Title,
+  /// the window `a`'s offscreen image's surface (`dynamic_cast<PlatNativeImage*>`), null when it has none.
+  Offscreen,
+  /// `PlatModifiers()`.
+  Modifiers,
+  /// `PlatWindowGetClientSize((PlatWindow*)a, &p[0], &p[1])` with `p` the two ints at `b`.
+  ClientSize,
+  /// `PlatWindowMinimize((PlatWindow*)a)`.
+  Minimize,
+  /// `PlatWindowWake()`.
+  Wake,
+};
+
+/// The manager's calls (`ee_won_plat_wm`; `a`, `b` their arguments, a window as a `PlatGUIWindow*`).
+enum class EeWonPlatWmCall : uint32_t {
+  /// `SetSurfaceSize(a, b)`.
+  SetSurfaceSize = 1,
+  /// `Signal()`.
+  Signal,
+  /// GetNextEvent's start: the timeout.
+  BeginPass,
+  /// GetNextEvent after the wait.
+  EndWait,
+  /// `AddPlatWindow(a)`.
+  Add,
+  /// `RemovePlatWindow(a)`.
+  Remove,
+  /// `BringToFront(a)`.
+  BringToFront,
+  /// `SetFocusWindow(a)`.
+  SetFocus,
+  /// `SetCaptureWindow(a)`.
+  SetCapture,
+  /// `GetCaptureWindow()`.
+  Capture,
+  /// `GetFocusWindow()`.
+  Focus,
+  /// `WindowFromPoint(a, b)`.
+  WindowFromPoint,
+  /// `SetDirty()`.
+  SetDirty,
+  /// `GetSurfaceWidth()`.
+  SurfaceWidth,
+  /// `GetSurfaceHeight()`.
+  SurfaceHeight,
+  /// `GetPlatWindow()`.
+  PlatWindow,
+  /// `PaintAndComposite()`.
+  PaintAndComposite,
+  /// `UnlockFrame()`.
+  UnlockFrame,
+  /// the classic scheme's colour `a` (0..14), -1 past it.
+  Classic,
+  /// the destructor's: every window in the z order unregistered, the order emptied.
+  UnregisterAll,
 };
 
 /// A flag of the saved settings (the C++ `LobbyPersistentData::Flag`).
@@ -9969,6 +10227,10 @@ struct EeWonHttpConn;
 /// length; a host equal but for case finds the first one's connection).
 struct EeWonHttpSession;
 
+/// MultiImageDecoder's state: the decoders by extension (a map ordered and matched without case: the first
+/// spelling of a key stays), the decoders it owns (a set by address) and the current extension.
+struct EeWonImgDec;
+
 /// The Rust InputBox.
 struct EeWonInput;
 
@@ -10050,6 +10312,18 @@ struct EeWonPeerAuth;
 /// `PingGameOp`'s members: the request id, the ping time (0xffff: no reply yet), the reply's flags (the request's
 /// until a reply), the retries and the reply's bytes after its flags.
 struct EeWonPingOp;
+
+/// One pointer shape.
+struct EeWonPlatCursor;
+
+/// The Rust PlatGUIFont.
+struct EeWonPlatFont;
+
+/// The window's own state.
+struct EeWonPlatWin;
+
+/// The Rust PlatWindowManager.
+struct EeWonPlatWm;
 
 /// An account's profile: newsletter subscriptions, a custom action and a birth date.
 struct EeWonProfile;
@@ -10353,6 +10627,8 @@ struct EeWonCfgTabHost {
   void (*fail)(void *ctx, const uint8_t *msg, size_t len, int32_t slot);
   /// Empty the frame.
   void (*clear)(void *ctx);
+  /// The frame's int `slot` (a value a read or a setter put there).
+  int32_t (*peek)(void *ctx, int32_t slot);
 };
 
 /// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
@@ -11460,6 +11736,15 @@ struct EeWonHttpSessionHooks {
   int (*conn_num_ops)(void*);
 };
 
+/// A decoded image: its size, its transparency flag, and its ARGB pixels (rows top first) until taken.
+struct EeWonImgRaw {
+  int32_t width;
+  int32_t height;
+  bool transparent;
+  /// A `Box<Vec<u32>>`.
+  void *pixels;
+};
+
 /// One raw image's pixels: `kind` 0 (1-bit), 1 (8-bit) or 2 (32-bit), its size and its row pitch in bytes.
 struct EeWonRawPixels {
   int32_t kind;
@@ -11832,6 +12117,71 @@ struct EeWonPrefsEvent {
 
 /// Receives each event of a read in order.
 using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
+
+/// The platform's cursor calls (platform/PlatWindow.h), as the C++ shell hands them: PlatCursorSetSystem,
+/// PlatCursorCreate, PlatCursorSet, PlatCursorDestroy.
+struct EeWonPlatCursorFns {
+  void (*set_system)(uint32_t cursor);
+  void *(*create)(const uint32_t *bgra, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y);
+  void (*set)(void *cursor);
+  void (*destroy)(void *cursor);
+};
+
+/// A 1-bit mask (`PlatNativeMask`: RawImage1's rows, MSB first, rows padded to 4 bytes); a set bit is a transparent
+/// pixel.
+struct EeWonPlatMask {
+  const uint8_t *bits;
+  int32_t width;
+  int32_t height;
+  int32_t bytes_per_row;
+};
+
+using EeWonPlatWinHost = ptrdiff_t(*)(void *me,
+                                      EeWonPlatWinOp op,
+                                      ptrdiff_t a,
+                                      ptrdiff_t b,
+                                      ptrdiff_t c,
+                                      ptrdiff_t d);
+
+/// The host: `(manager, op, a, b, c, d) -> result`.
+using EeWonPlatWmHost = ptrdiff_t(*)(void *me,
+                                     EeWonPlatWmOp op,
+                                     ptrdiff_t a,
+                                     ptrdiff_t b,
+                                     ptrdiff_t c,
+                                     ptrdiff_t d);
+
+/// `PlatInputEvent` (platform/PlatWindow.h): its header and its union's bytes.
+struct EeWonPlatEvent {
+  uint32_t kind;
+  uint32_t time;
+  void *window;
+  /// The union: mKey (scan code, virtual key, modifiers, repeat), mMouse (x, y, dx, dy, button, clicks, wheel,
+  /// modifiers), mText (64 bytes, cursor, length), mSize.
+  uint32_t data[18];
+};
+
+/// A window's fields the manager reads (`Info`).
+struct EeWonPlatWinInfo {
+  /// The window rectangle in surface pixels (frame included).
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  bool visible;
+  bool top_most;
+  bool registered;
+  /// `IsPopup()`.
+  bool popup;
+  /// `FillsSurface()` (no parent).
+  bool fills;
+  /// `HasFrame()`.
+  bool frame;
+  /// `GetWindowState() == WindowState_Open`.
+  bool open;
+  bool minimize_on_alt_tab;
+  bool forward_keys;
+};
 
 /// A C++ call on one object (an op, a completion or the socket).
 using EeWonQueueFn = void(*)(void *object);
@@ -12316,6 +12666,15 @@ struct EeWonWmPopup {
   int32_t y;
   EeWonRect4 avoid;
 };
+
+/// jutils.c `jpeg_natural_order`, with its 16 extra entries for a corrupt run past the end.
+constexpr static const size_t NATURAL_ORDER[80] = { 0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, };
+
+/// The classic Windows colours (the "Windows Classic" scheme of the time) the colour scheme takes in place of
+/// GetSysColor's, as 0xRRGGBB, in StandardColor order of `GetSystemColorScheme` (3DDarkShadow, 3DFace, 3DHilight,
+/// 3DShadow, Scrollbar, ButtonText, GrayText, Hilight, HilightText, ToolTipBack, ToolTipText, MenuBack, MenuText,
+/// Back, Text: the window frame's, as MSWindowManager did).
+constexpr static const uint32_t CLASSIC[15] = { 4210752, 13947080, 16777215, 8421504, 13947080, 0, 8421504, 664682, 16777215, 16777185, 0, 13947080, 0, 16777215, 0, };
 
 extern "C" {
 
@@ -17082,6 +17441,38 @@ EeWonHostOp *ee_won_httpget_new(const uint8_t *host,
 /// `url` holds `len` bytes.
 EeWonHostOp *ee_won_httpget_new_url(const uint8_t *url, size_t len);
 
+/// `DoGetAttrib` -> true with the size in `wh`; `thrown` the FileReader status the C++ throws (0: none).
+bool ee_won_img_attrib(EeWonImgKind kind,
+                       EeWonFileReader *reader,
+                       int32_t (*wh)[2],
+                       int32_t *thrown);
+
+/// `DoDecodeRaw` -> true with the image in `out` (its pixels for `ee_won_img_take`), false for NULL; `thrown` the
+/// FileReader status the C++ throws (0: none).
+bool ee_won_img_decode(EeWonImgKind kind,
+                       EeWonFileReader *reader,
+                       EeWonImgRaw *out,
+                       int32_t *thrown);
+
+/// The decoded pixels into the new image's `width * height` pixels, and freed.
+///
+/// # Safety
+/// `out` came from `ee_won_img_decode`; `dst` holds its pixels.
+void ee_won_img_take(EeWonImgRaw *out, uint32_t *dst);
+
+EeWonImgDec *ee_won_img_dec_new();
+
+/// # Safety
+/// `d` came from `ee_won_img_dec_new` (or `ee_won_img_dec_copy`), freed once.
+void ee_won_img_dec_free(EeWonImgDec *d);
+
+/// A new multi-decoder with `d`'s map (Duplicate: its entries are then replaced one by one).
+EeWonImgDec *ee_won_img_dec_copy(const EeWonImgDec *d);
+
+/// # Safety
+/// `b` holds `c` bytes when the call reads them.
+size_t ee_won_img_dec(EeWonImgDec *d, EeWonImgDecCall call, size_t a, const uint8_t *b, size_t c);
+
 /// `ScaleImageFilter::CheckSize` over the filter's fields (`w`, `h` written back).
 ///
 /// # Safety
@@ -18711,6 +19102,256 @@ void ee_won_prefs_prune_lan_names(const int64_t *times, size_t count, bool *drop
 int64_t ee_won_prefs_recent_lan_name(const int64_t *times, size_t count);
 
 uint16_t ee_won_prefs_default_lan_number(uint32_t host);
+
+/// A system cursor (`PlatSystemCursor`).
+EeWonPlatCursor *ee_won_plat_cursor_system(const EeWonPlatCursorFns *fns, uint32_t cursor);
+
+/// A cursor of `width` x `height` pixels (copied) with its hot spot.
+///
+/// # Safety
+/// `pixels` holds `width * height` values (or is NULL with a size of 0).
+EeWonPlatCursor *ee_won_plat_cursor_pixels(const EeWonPlatCursorFns *fns,
+                                           const uint32_t *pixels,
+                                           int32_t width,
+                                           int32_t height,
+                                           int32_t hot_x,
+                                           int32_t hot_y);
+
+/// # Safety
+/// `c` came from a constructor above, freed once.
+void ee_won_plat_cursor_free(EeWonPlatCursor *c);
+
+/// `PlatCursor::Apply`.
+void ee_won_plat_cursor_apply(EeWonPlatCursor *c);
+
+/// `new PlatGUIFont(context, descriptor)`'s font: `face` the descriptor's face (NUL-terminated).
+///
+/// # Safety
+/// `face` is NUL-terminated (or null: no face).
+EeWonPlatFont *ee_won_plat_font_new(const char *face, int32_t size, int32_t style);
+
+/// The font's destruction (its platform fonts with it).
+///
+/// # Safety
+/// `f` is null or from `ee_won_plat_font_new`, not freed before.
+void ee_won_plat_font_free(EeWonPlatFont *f);
+
+/// `GetHeight()` (0), `GetAscent()` (1), `GetDescent()` (2).
+///
+/// # Safety
+/// `f` is a live font.
+int32_t ee_won_plat_font_metric(const EeWonPlatFont *f, int32_t which);
+
+/// `GetStringWidth(text, offset, length)` over the `len` units at `text` (the offset applied by the caller).
+///
+/// # Safety
+/// `f` is a live font; `text` holds `len` units.
+int32_t ee_won_plat_font_width(const EeWonPlatFont *f,
+                               const void *text,
+                               uint16_t len);
+
+/// `DrawString(context, text, offset, length, x, y)` once the context is known: the text drawn into the context's
+/// surface `s` (null: none) at its pixel scale in `color` (the Graphics' colour without its top byte, 0 without
+/// one); the underline to draw into `line` (x1, y, x2) and true when the font is underlined and `graphics`.
+///
+/// # Safety
+/// `f` is a live font; `s` null or a live surface; `text` holds `len` units; `line` holds three ints.
+bool ee_won_plat_font_draw(EeWonPlatFont *f,
+                           EeWonSurface *s,
+                           float scale,
+                           bool graphics,
+                           uint32_t color,
+                           const void *text,
+                           uint16_t len,
+                           int32_t x,
+                           int32_t y,
+                           int32_t *line);
+
+/// A `PlatGraphics` hook on the surface `s` (null: the graphics has none) at pixel scale `scale`, with Graphics'
+/// colour `color`; GetPixel's answer (0 for the others).
+///
+/// # Safety
+/// `s` is null or a live surface no one else uses during the call.
+uint32_t ee_won_plat_gfx(EeWonSurface *s,
+                         float scale,
+                         uint32_t color,
+                         EeWonPlatGfx op,
+                         int32_t a,
+                         int32_t b,
+                         int32_t c,
+                         int32_t d,
+                         int32_t e,
+                         int32_t f);
+
+/// `DrawPolygonHook` (`fill` false) or `FillPolygonHook` over `count` points, `xy` their x and y in turn.
+///
+/// # Safety
+/// `s` as `ee_won_plat_gfx`; `xy` holds `2 * count` ints (or count <= 0).
+void ee_won_plat_gfx_polygon(EeWonSurface *s,
+                             float scale,
+                             uint32_t color,
+                             bool fill,
+                             const int32_t *xy,
+                             int32_t count);
+
+/// `PlatNativeImage::Draw(context, x, y, left, top, width, height)` once the context has a surface `dst` (of pixel
+/// scale `dst_scale`): the image `src` (scale `src_scale`, logical `src_w` x `src_h`, mask `mask` or null).
+///
+/// # Safety
+/// `dst` and `src` are live surfaces (they may be the same one); `mask` as `mask_of`.
+void ee_won_plat_img_draw(EeWonSurface *dst,
+                          float dst_scale,
+                          EeWonSurface *src,
+                          float src_scale,
+                          int32_t src_w,
+                          int32_t src_h,
+                          const EeWonPlatMask *mask,
+                          int32_t x,
+                          int32_t y,
+                          int32_t left,
+                          int32_t top,
+                          int32_t width,
+                          int32_t height);
+
+/// `PlatNativeImage::GetRaw`'s pixels into `out` (`width * height` of them): `src` at `scale`, logical
+/// `width` x `height`, mask `mask` or null.
+///
+/// # Safety
+/// `src` is a live surface; `out` holds `width * height` pixels; `mask` as `mask_of`.
+void ee_won_plat_img_raw(EeWonSurface *src,
+                         float scale,
+                         int32_t width,
+                         int32_t height,
+                         const EeWonPlatMask *mask,
+                         uint32_t *out);
+
+/// A raw image's native image into the new image's surface `dst` (`from_raw`); `palette` holds `colors` colours.
+///
+/// # Safety
+/// `src` describes a live raw image (its `pitch` the row bytes of a 1- or 8-bit one); `palette` null or `colors`
+/// long; `dst` a live surface.
+void ee_won_plat_img_from_raw(const EeWonRawPixels *src,
+                              const uint32_t *palette,
+                              int32_t colors,
+                              int32_t transparent,
+                              EeWonSurface *dst);
+
+/// The pack's file name `which` (0, 1) for `path` (NUL-terminated) into `out` (`cap` bytes, NUL-terminated):
+/// its length, or -1 when there is none (another path, or the .png name is the first).
+///
+/// # Safety
+/// `path` is NUL-terminated; `out` holds `cap` bytes.
+int32_t ee_won_plat_pack_name(const uint8_t *path,
+                              int32_t which,
+                              uint8_t *out,
+                              size_t cap);
+
+/// `pack_factor` and `pack_scale`: the copy's scale (0: not a pack copy) and box into `*out_box`.
+///
+/// # Safety
+/// `out_box` is valid.
+int32_t ee_won_plat_pack_fit(int32_t raw_w,
+                             int32_t raw_h,
+                             int32_t w,
+                             int32_t h,
+                             int32_t shift,
+                             int32_t *out_box);
+
+/// `pack_reduce` from the pack copy's surface `from` into the new image's surface `to`.
+///
+/// # Safety
+/// `from`, `to` live distinct surfaces; `mask` as `mask_of`.
+void ee_won_plat_pack_reduce(EeWonSurface *from,
+                             EeWonSurface *to,
+                             int32_t w,
+                             int32_t h,
+                             int32_t scale,
+                             int32_t b,
+                             const EeWonPlatMask *mask);
+
+/// The WON hand cursor's 1,024 pixels into `out`.
+///
+/// # Safety
+/// `out` holds 1,024 pixels.
+void ee_won_plat_hand_cursor(uint32_t *out);
+
+/// A new window for the shell `me` and its host.
+EeWonPlatWin *ee_won_plat_win_new(void *me, EeWonPlatWinHost host);
+
+/// # Safety
+/// `w` came from `ee_won_plat_win_new`, freed once (after its Destroy call).
+void ee_won_plat_win_free(EeWonPlatWin *w);
+
+/// One of the window's calls (`EeWonPlatWinCall`, its arguments as each says).
+///
+/// # Safety
+/// `w` is a live window; the pointers a call reads or writes are valid.
+ptrdiff_t ee_won_plat_win(EeWonPlatWin *w,
+                          EeWonPlatWinCall c,
+                          ptrdiff_t a,
+                          ptrdiff_t b,
+                          ptrdiff_t cc,
+                          ptrdiff_t d);
+
+/// A new manager for the C++ `me` and its host.
+EeWonPlatWm *ee_won_plat_wm_new(void *me, EeWonPlatWmHost host);
+
+/// The manager's destruction.
+///
+/// # Safety
+/// `m` is null or from `ee_won_plat_wm_new`, not freed before.
+void ee_won_plat_wm_free(EeWonPlatWm *m);
+
+/// A call (`EeWonPlatWmCall`).
+///
+/// # Safety
+/// `m` is a live manager; a window argument is a live window (or null where the call takes one).
+ptrdiff_t ee_won_plat_wm(const EeWonPlatWm *m, EeWonPlatWmCall call, ptrdiff_t a, ptrdiff_t b);
+
+/// `SetPixelScale(scale)`.
+///
+/// # Safety
+/// `m` is a live manager.
+void ee_won_plat_wm_set_scale(const EeWonPlatWm *m, float scale);
+
+/// `GetPixelScale()`.
+///
+/// # Safety
+/// `m` is a live manager.
+float ee_won_plat_wm_scale(const EeWonPlatWm *m);
+
+/// `SetPresentRect(l, t, w, h)`.
+///
+/// # Safety
+/// `m` is a live manager.
+void ee_won_plat_wm_present(const EeWonPlatWm *m, float l, float t, float w, float h);
+
+/// `LockFrame(...)`: `out` gets the pixels' address and then width, height, pitch, logical width, logical height,
+/// serial in `ints` (six).
+///
+/// # Safety
+/// `m` is a live manager; `pixels` writable, `ints` six writable ints.
+bool ee_won_plat_wm_lock_frame(const EeWonPlatWm *m,
+                               const uint32_t **pixels,
+                               uint32_t *ints);
+
+/// HandlePlatEvent's translation: true when the event goes on to the game's forward function.
+///
+/// # Safety
+/// `m` is a live manager; `e` a `PlatInputEvent`.
+bool ee_won_plat_wm_event(const EeWonPlatWm *m, const EeWonPlatEvent *e);
+
+/// `GetMousePosition(x, y)`.
+///
+/// # Safety
+/// `m` is a live manager; `x`, `y` writable.
+bool ee_won_plat_wm_mouse(const EeWonPlatWm *m, int32_t *x, int32_t *y);
+
+/// `PlatGUIWindow::GetClientRect` of the window's fields at `i` into the four ints at `out`.
+///
+/// # Safety
+/// `i` is readable, `out` four writable ints.
+void ee_won_plat_client_rect(const EeWonPlatWinInfo *i, int32_t *out);
 
 /// The constructor's state (see [`EeWonLobbyPrefs::new`]).
 EeWonLobbyPrefs *ee_won_lobbyprefs_new();

@@ -12,6 +12,7 @@ enum Ev {
     Apply(i32, bool),
     Fail(i32, Vec<u8>),
     Clear,
+    Peek(i32, i32),
 }
 
 fn unhex(s: &str, width: usize) -> Vec<u32> {
@@ -45,6 +46,10 @@ fn parse_ev(e: &str) -> Ev {
             Ev::Fail(s.parse().unwrap(), unhex(m, 4).into_iter().map(|u| u as u8).collect())
         }
         "x" => Ev::Clear,
+        "k" => {
+            let (s, v) = rest.split_once('=').unwrap();
+            Ev::Peek(s.parse().unwrap(), v.parse().unwrap())
+        }
         _ => panic!("event {e}"),
     }
 }
@@ -117,6 +122,26 @@ impl CfgHost for Replay {
     fn clear(&mut self) {
         assert_eq!(self.next(), Ev::Clear);
     }
+    fn int(&mut self, slot: i32) -> i32 {
+        match self.next() {
+            Ev::Peek(s, v) if s == slot => v,
+            e => panic!("expected peek {slot}, got {e:?}"),
+        }
+    }
+    fn keyword(&mut self, slot: i32, names: &[&[u8]]) -> i32 {
+        let u = self.text(slot);
+        keyword_of(&u, names)
+    }
+}
+
+fn keyword_of(units: &[u32], names: &[&[u8]]) -> i32 {
+    names
+        .iter()
+        .position(|n| {
+            let narrow = crate::guistring::widen(&n[..n.len() - 1], 4);
+            crate::guistring::compare_no_case_narrow(units, 0, &narrow, &CChat) == 0
+        })
+        .map_or(-1, |i| i as i32)
 }
 
 fn replay_line(line: &str) {
@@ -160,6 +185,7 @@ struct Script {
     throw_read: Option<usize>,
     reads: usize,
     fail_apply: bool,
+    ints: Vec<i32>,
 }
 
 impl CfgHost for Script {
@@ -206,6 +232,15 @@ impl CfgHost for Script {
     fn clear(&mut self) {
         self.log.push("x".into());
     }
+    fn int(&mut self, slot: i32) -> i32 {
+        self.log.push(format!("k{slot}"));
+        self.ints.get(slot as usize).copied().unwrap_or(0)
+    }
+    fn keyword(&mut self, _slot: i32, names: &[&[u8]]) -> i32 {
+        let s = self.texts.remove(0);
+        let u: Vec<u32> = s.chars().map(u32::from).collect();
+        keyword_of(&u, names)
+    }
 }
 
 fn go(table: i32, key: &str, h: &mut Script) -> Result<(), ()> {
@@ -221,9 +256,11 @@ fn unknown_keys_and_tables() {
     assert!(program(EE_WON_CFG_KEYS_LABELCONFIG_VIRTUAL24_INSTRUCTION, b"TEXT").is_some());
     assert!(program(EE_WON_CFG_KEYS_LABELCONFIG_VIRTUAL24_INSTRUCTION, b"text").is_none());
     assert!(program(EE_WON_CFG_KEYS_LABELCONFIG_VIRTUAL24_INSTRUCTION, b"MODIFY").is_none());
-    // a key table the reader does not run (ContainerConfig's)
-    assert!(program(EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION, b"ADD").is_none());
-    assert!(!ee_won_cfg_tab_has(EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION));
+    // a key table the reader does not run (ImageConfig's named values)
+    assert!(program(EE_WON_CFG_KEYS_IMAGECONFIG_GETNAMEDVALUE_INNAME, b"WIDTH").is_none());
+    assert!(!ee_won_cfg_tab_has(EE_WON_CFG_KEYS_IMAGECONFIG_GETNAMEDVALUE_INNAME));
+    assert!(ee_won_cfg_tab_has(EE_WON_CFG_KEYS_STRETCHIMAGECONFIG_VIRTUAL24_INSTRUCTION));
+    assert!(ee_won_cfg_tab_has(EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION));
     assert!(ee_won_cfg_tab_has(EE_WON_CFG_KEYS_WONBUTTONCONFIG_VIRTUAL24_THEINSTRUCTION));
 }
 
@@ -239,7 +276,7 @@ fn every_handler_holds_a_program_per_key() {
             }
         }
     }
-    assert_eq!(PROGRAMS.len(), 49);
+    assert_eq!(PROGRAMS.len(), 52);
 }
 
 #[test]
@@ -405,4 +442,44 @@ fn font_styles_add_and_remove_and_mark_the_font_each_turn() {
     let mut h = Script { texts: vec!["Huge"], ..Default::default() };
     assert!(go(t, "STYLE", &mut h).is_err());
     assert_eq!(h.log.last().unwrap(), "f0:Unknown font style: ");
+}
+
+/// ContainerConfig's program `i` run over a script.
+fn container(i: usize, h: &mut Script) -> bool {
+    let t = EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION;
+    let (_, progs) = PROGRAMS.iter().find(|(k, _)| *k == t).unwrap();
+    run(t, progs[i], h)
+}
+
+#[test]
+fn container_lists_and_layouts() {
+    let t = EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION;
+    let a = |n: i32| format!("a{t}:{n}");
+    // ADD: two components, the end after the second
+    let mut h = Script { ends: vec![false, true], ..Default::default() };
+    assert!(container(0, &mut h));
+    assert_eq!(h.log, vec!["x", "rComp", &a(0), "e", "c", "rComp", &a(0), "e"]);
+    // ENABLELAYOUT: on, then ids until the end
+    let mut h = Script { ends: vec![false, true], ..Default::default() };
+    assert!(container(5, &mut h));
+    assert_eq!(h.log, vec!["x", "rBool", "c", "rInt", &a(5), "e", "c", "rInt", &a(5), "e"]);
+    // a space-evenly layout with no components: the box, two pads, the layout, at once to the container
+    let mut h = Script { ends: vec![true], ..Default::default() };
+    assert!(container(16, &mut h));
+    assert_eq!(h.log, vec!["x", "rComp", "c", "rInt", "c", "rInt", "c", &a(16), "e", &a(21)]);
+    // a centre layout: the box first, then `, component` pairs
+    let mut h = Script { ends: vec![false, true], ..Default::default() };
+    assert!(container(13, &mut h));
+    assert_eq!(h.log, vec!["x", "rComp", &a(13), "e", "c", "rComp", &a(20), "e", &a(21)]);
+    // the size-at-least layout goes under the default id (setter 22), the same-size ones under the current (21)
+    let mut h = Script { ends: vec![true], ..Default::default() };
+    assert!(container(19, &mut h));
+    assert_eq!(h.log.last().unwrap(), &a(22));
+    let mut h = Script { ends: vec![true], ..Default::default() };
+    assert!(container(10, &mut h));
+    assert_eq!(h.log, vec!["x", &a(10), "rComp", &a(20), "e", &a(21)]);
+    // a throwing read stops the layout before the container holds it
+    let mut h = Script { ends: vec![false], throw_read: Some(2), ..Default::default() };
+    assert!(!container(17, &mut h));
+    assert!(!h.log.contains(&a(21)));
 }

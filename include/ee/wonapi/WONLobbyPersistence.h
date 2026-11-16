@@ -43,8 +43,8 @@ public:
     bool EndOfFile();
 private:
     void Init(); // 0x6a0ce0 (zeroes the six fields)
-    void Check(int inStatus); // throws FileReaderException for a failed status
 public:
+    void Check(int inStatus); // throws FileReaderException for a failed status (the decoders' Rust reads, too)
     ~FileReader();
     bool Open(const char* inPath);
     void Close();
