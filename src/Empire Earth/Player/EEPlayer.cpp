@@ -1059,13 +1059,17 @@ void EEPlayer::FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile)
 // EESETSETFreezeObject, EESETSETObjectCreate +0x8, +0x10; EESETSETPVisibility, EESETSETPCameraFadeOut,
 // EESETSETPCameraFadeIn, EESETSETPlayerVictory +0x8; EEUnit+0x3c, +0x44, +0x68)
 
+// the class forwarders' upgrade of a unit class: NULL past the classes or without one
+static EEUnitStats* EEPlayerClassStats(EEPlayer* inPlayer, unsigned long inUnitClass)
+{
+    return inUnitClass < EEUnitClassCount() ? inPlayer->mUnitClassUpgrades[inUnitClass] : NULL;
+}
+
 // For a human player whose unit class has its button loaded, releases one button's media
 // and acquires the other's
 void EEPlayer::SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* inFirst, EEButtonObject* inSecond)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
+    EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass);
     if (theStats == NULL || !(theStats->mButtonLoadCount > 0) || this->IsHuman() != true)
         return;
     if (inFirst != NULL)
@@ -1077,60 +1081,42 @@ void EEPlayer::SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* i
 // Sets one of a unit class's acknowledgement sounds for the player
 void EEPlayer::SetClassAcknowledgeSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->SetAcknowledgeSound(inSound, inIndex);
 }
 
 // Sets a unit class's creation sound for the player
 void EEPlayer::SetClassCreationSound(unsigned long inUnitClass, EESoundObject* inSound)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->SetCreationSound(inSound);
 }
 
 // Sets a unit class's death sound for the player
 void EEPlayer::SetClassDeathSound(unsigned long inUnitClass, EESoundObject* inSound)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->SetDeathSound(inSound);
 }
 
 // Sets a unit class's model for the player
 void EEPlayer::SetClassModel(unsigned long inUnitClass, EEModel* inModel)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->SetModel(inModel);
 }
 
 // Sets a unit class's button for the player
 void EEPlayer::SetClassButton(unsigned long inUnitClass, EEButtonObject* inButton)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->SetButton(inButton);
 }
 
 // Sets one of a unit class's selection sounds for the player
 void EEPlayer::SetClassSelectionSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->SetSelectionSound(inSound, inIndex);
 }
 
@@ -2085,20 +2071,14 @@ void EEPlayer::LoadAllClassMedia()
 // Loads the command buttons of one unit class for the player, if the class index is valid
 void EEPlayer::LoadUnitClassButtons(long inUnitClass)
 {
-    if ((unsigned long)inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->LoadButtons(this);
 }
 
 // Loads the media of one unit class for the player, if the class index is valid
 void EEPlayer::SetUnitClassMedia(long inUnitClass, long inMediaFlags)
 {
-    if ((unsigned long)inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->LoadMedia(this, inMediaFlags);
 }
 
@@ -3207,20 +3187,14 @@ void EEPlayer::UnloadAllClassMedia()
 // Unloads the command buttons of one unit class for the player, if the class index is valid
 void EEPlayer::UnloadUnitClassButtons(long inUnitClass)
 {
-    if ((unsigned long)inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->UnloadButtons(this);
 }
 
 // Unloads the media of one unit class for the player, if the class index is valid
 void EEPlayer::UnloadUnitClassMedia(long inUnitClass)
 {
-    if ((unsigned long)inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->UnloadMedia(this);
 }
 
