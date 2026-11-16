@@ -88,23 +88,6 @@ void StagingLogic::HandleMessageBuffer(const ByteBuffer* inMessage, LobbyClient*
 
 // ---- the calls out
 
-static const GUIString* const kTexts[][2] = {
-    {&LOBBY_STRING(RoutingLogic_GameDissolvedTitle_String), &LOBBY_STRING(RoutingLogic_GameDissolvedDetails_String)},
-    {&LOBBY_STRING(RoutingLogic_AlreadyJoinedTitle_String), &LOBBY_STRING(RoutingLogic_AlreadyInGame_String)},
-    {&LOBBY_STRING(GameStagingLogic_JoinGameErrorTitle_String), &LOBBY_STRING(GameStagingLogic_NoPingReplyError_String)},
-    {&LOBBY_STRING(StagingLogic_DisconnectedTitle_String), &LOBBY_STRING(StagingLogic_DisconnectedDetails_String)},
-    {&LOBBY_STRING(StagingLogic_BannedTitle_String), &LOBBY_STRING(StagingLogic_BannedDetails_String)},
-    {&LOBBY_STRING(StagingLogic_KickedTitle_String), &LOBBY_STRING(StagingLogic_KickedDetails_String)},
-    {&LOBBY_STRING(GameStagingLogic_ConnectWarningTitle1_String), &LOBBY_STRING(GameStagingLogic_ConnectWarningDetails1_String)},
-    {&LOBBY_STRING(GameStagingLogic_ConnectWarningTitle2_String), &LOBBY_STRING(GameStagingLogic_ConnectWarningDetails2_String)},
-    {&LOBBY_STRING(GameStagingLogic_ConnectWarningTitle3_String), &LOBBY_STRING(GameStagingLogic_ConnectWarningDetails3_String)},
-    {&LOBBY_STRING(GameStagingLogic_DissolveGame_String), &LOBBY_STRING(GameStagingLogic_DissolveGameConfirm_String)},
-    {&LOBBY_STRING(GameStagingLogic_LeaveGame_String), &LOBBY_STRING(GameStagingLogic_LeaveGameConfirm_String)},
-    {&LOBBY_STRING(GameStagingLogic_VerifyingPingTitle_String), &LOBBY_STRING(GameStagingLogic_VerifyingPingDetails_String)},
-    {&LOBBY_STRING(GameStagingLogic_GettingGameInfoTitle_String), &LOBBY_STRING(GameStagingLogic_GettingGameInfoDetails_String)},
-    {&LOBBY_STRING(GameStagingLogic_JoinGameErrorTitle_String), &LOBBY_STRING(LobbyGameStatus_InvalidPassword_String)},
-    {&LOBBY_STRING(LANLogic_RegisterTitle_String), &LOBBY_STRING(LANLogic_InvalidSubnet_String)},
-};
 
 static void AppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
 {
@@ -135,7 +118,9 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     LobbyClient* cl = static_cast<LobbyClient*>(inA);
     LobbyClient* clB = static_cast<LobbyClient*>(inB);
     ReadBuffer* buf = static_cast<ReadBuffer*>(inB);
-    const GUIString* const* aText = inC >= 0 && inC < (intptr_t)(sizeof(kTexts) / sizeof(kTexts[0])) ? kTexts[inC] : kTexts[0];
+    // a box's or status wait's texts: the title's and the details' resource rows (lobbyhost.rs `lobby_text`)
+    const GUIString& aTitle = gLobbyResources[inC & 0xffff].mString;
+    const GUIString& aDetails = gLobbyResources[(inC >> 16) & 0xffff].mString;
     ByteBufferPtr aHold;
     switch (inOp) {
     // StagingLogic's members
@@ -146,8 +131,8 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     case EeWonLobbyOp::StJoinOpNew: st->mJoinOp = new AsyncOp; return 0;
     case EeWonLobbyOp::StJoinOpFinish: if (st->mJoinOp.get() != NULL) st->mJoinOp->Finish(WS_Success); return 0;
     case EeWonLobbyOp::StJoinOpRun:
-        aText = kTexts[(int)EeWonLobbyText::GettingGameInfo];
-        LobbyRunOpWithStatus(st->mJoinOp.get(), *aText[0], *aText[1], 1, 0);
+        LobbyRunOpWithStatus(st->mJoinOp.get(), LOBBY_STRING(GameStagingLogic_GettingGameInfoTitle_String),
+                             LOBBY_STRING(GameStagingLogic_GettingGameInfoDetails_String), 1, 0);
         st->mJoinOp = NULL;
         return 0;
     case EeWonLobbyOp::StJoinOpKill:
@@ -299,18 +284,14 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     case EeWonLobbyOp::EventAction: return static_cast<GameActionEvent*>(inA)->mAction;
     // the lobby
     case EeWonLobbyOp::BroadcastLobbyEvent: LobbyBroadcastLobbyEvent((int)inC, true); return 0;
-    case EeWonLobbyOp::MessageBox: LobbyMessageBox(*aText[0], *aText[1]); return 0;
-    case EeWonLobbyOp::YesNo: return LobbyDoYesNoDialog(*aText[0], *aText[1], true);
+    case EeWonLobbyOp::MessageBox: LobbyMessageBox(aTitle, aDetails); return 0;
+    case EeWonLobbyOp::YesNo: return LobbyDoYesNoDialog(aTitle, aDetails, true);
     case EeWonLobbyOp::RunWaitOp: {
         SmartPtr<AsyncOp> anOp = new AsyncOp;
-        LobbyRunOpWithStatus(anOp.get(), *aText[0], *aText[1], (int)inD, 500);
+        LobbyRunOpWithStatus(anOp.get(), aTitle, aDetails, (int)inD, 500);
         return anOp->IsKilled();
     }
-    case EeWonLobbyOp::PlaySound:
-        LobbyPlaySound(inC == (intptr_t)EeWonLobbySound::PlayerJoined ? LOBBY_SOUND(LobbyGlobal_PlayerJoined_Sound).get()
-                       : inC == (intptr_t)EeWonLobbySound::AllReady ? LOBBY_SOUND(LobbyGlobal_AllReady_Sound).get()
-                       : LOBBY_SOUND(LobbyGlobal_AllNotReady_Sound).get());
-        return 0;
+    case EeWonLobbyOp::PlaySound: LobbyPlaySound(gLobbyResources[inC].mSound.get()); return 0; // a resource row
     case EeWonLobbyOp::StagingSoundEffects: return LobbyGetStagingSoundEffects();
     case EeWonLobbyOp::ShowConfirmations: return LobbyGetShowConfirmations();
     case EeWonLobbyOp::FirewallTestDone: return LobbyIsFirewallTestDone();

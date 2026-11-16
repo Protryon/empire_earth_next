@@ -498,9 +498,16 @@ impl Host {
     /// The pointers are the C++ objects' and pass through: Rust never dereferences them.
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn op(&self, op: EeWonLobbyOp, a: *mut c_void, b: *mut c_void, c: isize, d: isize) -> isize {
+        let mut c = c;
         if self.model {
             if let Some(r) = crate::modelobj::lobby_op(op, a as isize, b as isize, c) {
                 return r;
+            }
+            // the game's host takes the texts and sounds as resource rows (the golden's, their codes)
+            match op {
+                EeWonLobbyOp::MessageBox | EeWonLobbyOp::YesNo | EeWonLobbyOp::RunWaitOp => c = lobby_text(c),
+                EeWonLobbyOp::PlaySound => c = lobby_sound(c),
+                _ => {}
             }
         }
         match self.call {
@@ -530,6 +537,62 @@ impl Host {
     /// An op on a message (and a client in `b`).
     pub fn msg(&self, op: EeWonLobbyOp, m: Msg, client: *mut c_void) -> isize {
         self.op(op, m.buffer, client, m.data as isize, m.length as isize)
+    }
+}
+
+/// A text code's resource rows (`EeWonLobbyText`): the title's, the details' `<< 16`; an unknown code is the first.
+pub fn lobby_text(code: isize) -> isize {
+    use crate::resource::EeWonLobbyRes as R;
+    const TEXTS: [(R, R); 15] = [
+        (R::RoutingLogic_GameDissolvedTitle_String, R::RoutingLogic_GameDissolvedDetails_String),
+        (R::RoutingLogic_AlreadyJoinedTitle_String, R::RoutingLogic_AlreadyInGame_String),
+        (R::GameStagingLogic_JoinGameErrorTitle_String, R::GameStagingLogic_NoPingReplyError_String),
+        (R::StagingLogic_DisconnectedTitle_String, R::StagingLogic_DisconnectedDetails_String),
+        (R::StagingLogic_BannedTitle_String, R::StagingLogic_BannedDetails_String),
+        (R::StagingLogic_KickedTitle_String, R::StagingLogic_KickedDetails_String),
+        (R::GameStagingLogic_ConnectWarningTitle1_String, R::GameStagingLogic_ConnectWarningDetails1_String),
+        (R::GameStagingLogic_ConnectWarningTitle2_String, R::GameStagingLogic_ConnectWarningDetails2_String),
+        (R::GameStagingLogic_ConnectWarningTitle3_String, R::GameStagingLogic_ConnectWarningDetails3_String),
+        (R::GameStagingLogic_DissolveGame_String, R::GameStagingLogic_DissolveGameConfirm_String),
+        (R::GameStagingLogic_LeaveGame_String, R::GameStagingLogic_LeaveGameConfirm_String),
+        (R::GameStagingLogic_VerifyingPingTitle_String, R::GameStagingLogic_VerifyingPingDetails_String),
+        (R::GameStagingLogic_GettingGameInfoTitle_String, R::GameStagingLogic_GettingGameInfoDetails_String),
+        (R::GameStagingLogic_JoinGameErrorTitle_String, R::LobbyGameStatus_InvalidPassword_String),
+        (R::LANLogic_RegisterTitle_String, R::LANLogic_InvalidSubnet_String),
+    ];
+    let (title, details) = TEXTS[if (0..15).contains(&code) { code as usize } else { 0 }];
+    title as isize | (details as isize) << 16
+}
+
+/// `lobby_text` for the C++ (`won_lanmodel_test` checks it against LobbyLogicHost.cpp's table as it was).
+#[no_mangle]
+pub extern "C" fn ee_won_lobby_text(code: isize) -> isize {
+    lobby_text(code)
+}
+
+/// A sound code's resource row (`EeWonLobbySound`; an unknown code is the last).
+pub fn lobby_sound(code: isize) -> isize {
+    use crate::resource::EeWonLobbyRes as R;
+    (match code {
+        0 => R::LobbyGlobal_PlayerJoined_Sound,
+        1 => R::LobbyGlobal_AllReady_Sound,
+        _ => R::LobbyGlobal_AllNotReady_Sound,
+    }) as isize
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::resource::EeWonLobbyRes as R;
+
+    #[test]
+    fn the_texts_are_their_resource_rows() {
+        let wrong = lobby_text(EeWonLobbyText::WrongPassword as isize);
+        assert_eq!(wrong & 0xffff, R::GameStagingLogic_JoinGameErrorTitle_String as isize);
+        assert_eq!(wrong >> 16, R::LobbyGameStatus_InvalidPassword_String as isize);
+        assert_eq!(lobby_text(99), lobby_text(0));
+        assert_eq!(lobby_sound(EeWonLobbySound::AllReady as isize), R::LobbyGlobal_AllReady_Sound as isize);
+        assert!((R::LobbyGlobal_AllNotReady_Sound as isize) < 0x10000);
     }
 }
 

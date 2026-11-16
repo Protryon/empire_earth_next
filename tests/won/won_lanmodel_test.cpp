@@ -372,6 +372,31 @@ static intptr_t Host(void* inLogic, Op op, void* a, void* b, intptr_t c, intptr_
 }
 static intptr_t T(Op op, void* a = NULL, void* b = NULL, intptr_t c = 0, intptr_t d = 0) { return Host(P(0x52), op, a, b, c, d); }
 
+// LobbyLogicHost.cpp's kTexts as it was (the title's and the details' resource rows by text code)
+typedef EeWonLobbyRes LR;
+static const LR kTexts[][2] = {
+    {LR::RoutingLogic_GameDissolvedTitle_String, LR::RoutingLogic_GameDissolvedDetails_String},
+    {LR::RoutingLogic_AlreadyJoinedTitle_String, LR::RoutingLogic_AlreadyInGame_String},
+    {LR::GameStagingLogic_JoinGameErrorTitle_String, LR::GameStagingLogic_NoPingReplyError_String},
+    {LR::StagingLogic_DisconnectedTitle_String, LR::StagingLogic_DisconnectedDetails_String},
+    {LR::StagingLogic_BannedTitle_String, LR::StagingLogic_BannedDetails_String},
+    {LR::StagingLogic_KickedTitle_String, LR::StagingLogic_KickedDetails_String},
+    {LR::GameStagingLogic_ConnectWarningTitle1_String, LR::GameStagingLogic_ConnectWarningDetails1_String},
+    {LR::GameStagingLogic_ConnectWarningTitle2_String, LR::GameStagingLogic_ConnectWarningDetails2_String},
+    {LR::GameStagingLogic_ConnectWarningTitle3_String, LR::GameStagingLogic_ConnectWarningDetails3_String},
+    {LR::GameStagingLogic_DissolveGame_String, LR::GameStagingLogic_DissolveGameConfirm_String},
+    {LR::GameStagingLogic_LeaveGame_String, LR::GameStagingLogic_LeaveGameConfirm_String},
+    {LR::GameStagingLogic_VerifyingPingTitle_String, LR::GameStagingLogic_VerifyingPingDetails_String},
+    {LR::GameStagingLogic_GettingGameInfoTitle_String, LR::GameStagingLogic_GettingGameInfoDetails_String},
+    {LR::GameStagingLogic_JoinGameErrorTitle_String, LR::LobbyGameStatus_InvalidPassword_String},
+    {LR::LANLogic_RegisterTitle_String, LR::LANLogic_InvalidSubnet_String},
+};
+static intptr_t TextRows(intptr_t inCode)
+{
+    const LR* aText = inCode >= 0 && inCode < (intptr_t)(sizeof(kTexts) / sizeof(kTexts[0])) ? kTexts[inCode] : kTexts[0];
+    return (intptr_t)aText[0] | (intptr_t)aText[1] << 16;
+}
+
 // ---- the golden's world: LanLogicHost.cpp's cases on the shell's members, as they were
 
 struct RefLan {
@@ -632,6 +657,8 @@ struct RefLan {
             return true;
         }
         case Op::LanShowClientOptions: outResult = T(Op::LanClientOptions, a, mMyClient, c); return true;
+        // the texts as the game's host takes them (LobbyLogicHost.cpp's table as it was)
+        case Op::MessageBox: case Op::YesNo: case Op::RunWaitOp: outResult = Host(P(0x52), op, a, b, TextRows(c), d); return true;
         // the model's values (the game's object answers them in modelobj.rs)
         case Op::ClientId: outResult = Get(ar, MF::ClientId); return true;
         case Op::GameType: outResult = Get(ar, MF::GameType); return true;
@@ -806,6 +833,7 @@ static std::vector<std::string> Sequence(int inSeq, bool inSubject)
 int main(int argc, char** argv)
 {
     const int kSequences = 20000;
+    for (intptr_t i = -1; i < 17; i++) CHECK(ee_won_lobby_text(i) == TextRows(i));
     size_t aLines = 0;
     std::set<std::string> aSeen;
     bool aVerbose = argc > 1 && strcmp(argv[1], "--verbose") == 0;

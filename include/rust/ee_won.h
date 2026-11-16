@@ -17435,6 +17435,9 @@ ptrdiff_t ee_won_lobbydlg_call(const EeWonLobbyDlg *dlg,
                                ptrdiff_t b,
                                ptrdiff_t c);
 
+/// `lobby_text` for the C++ (`won_lanmodel_test` checks it against LobbyLogicHost.cpp's table as it was).
+ptrdiff_t ee_won_lobby_text(ptrdiff_t code);
+
 /// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
 ///
 /// # Safety
