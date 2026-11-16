@@ -389,6 +389,22 @@ local function refresh_lists(view, vs)
             vs.builder[b] = nil
         end
     end
+    -- a citizen whose goal is done goes onto the idle list (UnitGoalDone -> AddIdleGatherer): its resource counts one
+    -- fewer at once, so the next assignment sends another there
+    local listed = {}
+    for k = 2, #LISTS do
+        for _, id in ipairs(vs.lists[LISTS[k]]) do
+            listed[#listed + 1] = id
+        end
+    end
+    if #listed > 0 then
+        local cols = RAW.get(listed, {"action", "inside"})
+        for k, id in ipairs(listed) do
+            if cols.action[k] == "idle" and cols.inside[k] == nil then
+                list(vs, id, "idle")
+            end
+        end
+    end
     S.citizens, S.boats = {}, {}
     for _, id in ipairs(ids) do
         if not vs.sh[id] then
