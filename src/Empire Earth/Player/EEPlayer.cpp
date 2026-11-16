@@ -540,11 +540,12 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         u.hit_points = theUnit->mHitPoints;
         u.tile_x = theUnit->mTileX;
         u.resource_amount = theUnit->mResourceAmount;
-        u.container_category = x != NULL && x->mContainer != NULL ? (long)x->mContainer->mUnitClass->mCategory : -1;
+        u.container = EEPlayerUnitArg(x != NULL ? x->mContainer : NULL);   // (not followed: a loading unit's is an id)
         u.current_research = x != NULL ? x->mCurrentResearch : 0;
         u.build_queue = x != NULL ? (long)x->GetBuildQueueSize() : 0;
         return 0;
     }
+    case EE_UNITS_PLAYER_CONTAINER_CATEGORY: return theComplex->mUnitClass->mCategory;
     case EE_UNITS_PLAYER_NEXT_UNIT: return EEPlayerUnitArg(theUnit == NULL ? thePlayer->mFirstUnit : static_cast<EEUnit*>(theUnit->mNext));
     case EE_UNITS_PLAYER_NEXT_COMPLEX: return EEPlayerUnitArg(thePlayer->GetNextComplexUnit(theUnit));
     case EE_UNITS_PLAYER_STATE:

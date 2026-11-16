@@ -75,8 +75,9 @@ pub struct EeUnitsPlayerUnit {
     pub hit_points: c_long,
     pub tile_x: c_long,
     pub resource_amount: c_long,
-    /// the complex unit's container's class category (-1: no container), `mCurrentResearch`, `GetBuildQueueSize()`
-    pub container_category: c_long,
+    /// the complex unit's container (`mContainer`, not followed: a unit being loaded holds its saved id there),
+    /// `mCurrentResearch`, `GetBuildQueueSize()`
+    pub container: u64,
     pub current_research: c_long,
     pub build_queue: c_long,
 }
@@ -177,6 +178,8 @@ pub const EE_UNITS_PLAYER_HEALED_SET: i32 = 69;
 pub const EE_UNITS_PLAYER_ID: i32 = 70;
 /// `gWorld.mPlayers[i[0]]` (0: none)
 pub const EE_UNITS_PLAYER_AT: i32 = 83;
+/// container `i[0]`'s class's `mCategory`
+pub const EE_UNITS_PLAYER_CONTAINER_CATEGORY: i32 = 111;
 /// unit type `i[0]`'s class and upgrade (the result 1 when both are there) into `i`: the class's `mFlightTime`, the
 /// upgrade's `mFlightTime`, `mPower`, `mMaxHitPoints`
 pub const EE_UNITS_PLAYER_UPGRADE_VALUES: i32 = 103;
@@ -237,6 +240,9 @@ impl<'a, H: PlayerHost + ?Sized> Player<'a, H> {
         let mut u = EeUnitsPlayerUnit::default();
         self.h.ask(EE_UNITS_PLAYER_UNIT_INFO, &[unit, &mut u as *mut EeUnitsPlayerUnit as i64]);
         u
+    }
+    fn container_category(&mut self, container: u64) -> c_long {
+        self.h.ask(EE_UNITS_PLAYER_CONTAINER_CATEGORY, &[container as i64]) as c_long
     }
     fn state(&mut self, bit: i64) -> bool {
         self.h.ask(EE_UNITS_PLAYER_STATE, &[]) & bit != 0
@@ -501,7 +507,7 @@ impl<'a, H: PlayerHost + ?Sized> Player<'a, H> {
         while x != 0 {
             let u = self.unit(x);
             if u.hit_points > 0 {
-                if u.container_category != CATEGORY_FORTRESS {
+                if u.container == 0 || self.container_category(u.container) != CATEGORY_FORTRESS {
                     population = population.wrapping_add(u.population);
                 }
                 if u.vital && u.first_part && (!u.land_building || u.built) {
@@ -583,7 +589,7 @@ impl<'a, H: PlayerHost + ?Sized> Player<'a, H> {
         let mut x = self.h.ask(EE_UNITS_PLAYER_NEXT_UNIT, &[0]);
         while x != 0 {
             let u = self.unit(x);
-            if u.complex != 0 && u.container_category == CATEGORY_FORTRESS {
+            if u.complex != 0 && u.container != 0 && self.container_category(u.container) == CATEGORY_FORTRESS {
                 result = result.wrapping_add(u.population);
             }
             x = self.h.ask(EE_UNITS_PLAYER_NEXT_UNIT, &[x]);

@@ -1612,6 +1612,9 @@ constexpr static const int32_t EE_UNITS_PLAYER_ID = 70;
 /// `gWorld.mPlayers[i[0]]` (0: none)
 constexpr static const int32_t EE_UNITS_PLAYER_AT = 83;
 
+/// container `i[0]`'s class's `mCategory`
+constexpr static const int32_t EE_UNITS_PLAYER_CONTAINER_CATEGORY = 111;
+
 /// unit type `i[0]`'s class and upgrade (the result 1 when both are there) into `i`: the class's `mFlightTime`, the
 /// upgrade's `mFlightTime`, `mPower`, `mMaxHitPoints`
 constexpr static const int32_t EE_UNITS_PLAYER_UPGRADE_VALUES = 103;
@@ -4756,8 +4759,9 @@ struct EeUnitsPlayerUnit {
   long hit_points;
   long tile_x;
   long resource_amount;
-  /// the complex unit's container's class category (-1: no container), `mCurrentResearch`, `GetBuildQueueSize()`
-  long container_category;
+  /// the complex unit's container (`mContainer`, not followed: a unit being loaded holds its saved id there),
+  /// `mCurrentResearch`, `GetBuildQueueSize()`
+  uint64_t container;
   long current_research;
   long build_queue;
 };

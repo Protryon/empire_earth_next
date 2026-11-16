@@ -179,12 +179,7 @@ fn leaving_units_drop_the_emptied_areas() {
 
 #[test]
 fn the_assignments_take_the_units_no_area_holds() {
-    let unit = |complex: u64, land: bool| EeUnitsPlayerUnit {
-        complex,
-        land_building: land,
-        container_category: -1,
-        ..Default::default()
-    };
+    let unit = |complex: u64, land: bool| EeUnitsPlayerUnit { complex, land_building: land, ..Default::default() };
     let mut w = World {
         units: vec![unit(1, true), unit(2, true), unit(3, false), unit(0, true)],
         towns: vec![100],

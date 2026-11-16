@@ -87,6 +87,7 @@ impl PlayerHost for World {
                 0
             }
             EE_UNITS_PLAYER_DEAD_STATISTIC => 7,
+            EE_UNITS_PLAYER_CONTAINER_CATEGORY => i64::from(a[0] == 99) * CATEGORY_FORTRESS as i64,
             EE_UNITS_PLAYER_UPGRADE_VALUES => match self.upgrade {
                 Some(v) => {
                     for (k, x) in v.iter().enumerate() {
@@ -124,14 +125,7 @@ impl PlayerHost for World {
 }
 
 fn unit(unit_type: c_ulong) -> EeUnitsPlayerUnit {
-    EeUnitsPlayerUnit {
-        complex: 0,
-        unit_type,
-        population: 1,
-        hit_points: 10,
-        container_category: -1,
-        ..Default::default()
-    }
+    EeUnitsPlayerUnit { complex: 0, unit_type, population: 1, hit_points: 10, ..Default::default() }
 }
 
 /// the unit at address `n` with itself as its complex unit
@@ -336,7 +330,7 @@ fn recounts_walk_the_living_units() {
     a.current_research = 700;
     a.build_queue = 2;
     let mut b = complex(2, unit(0x30));
-    b.container_category = CATEGORY_FORTRESS;
+    b.container = 99;
     b.vital = true;
     b.land_building = true;
     b.built = true;

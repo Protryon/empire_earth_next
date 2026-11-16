@@ -263,7 +263,7 @@ impl<'a, H: PlayerHost + ?Sized> Player<'a, H> {
             let c = u.complex as i64;
             if c != 0 {
                 let cu = self.complex_of(c);
-                if cu.land_building && cu.container_category == -1 {
+                if cu.land_building && cu.container == 0 {
                     let tile = self.tile_of(EE_UNITS_PLAYER_ASSIGN_TILE, x);
                     if tile.0 != OFF_MAP {
                         let mut found = false;
