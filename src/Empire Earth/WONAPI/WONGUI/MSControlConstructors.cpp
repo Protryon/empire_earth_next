@@ -1,5 +1,5 @@
 // Constructors and destructors of the Windows-style controls, and helpers they inline (file name inferred; three of
-// the original's units, their include lists joined)
+// the original's units, their include lists joined) and the MS controls' paints (six more units, R6 WONGUI B round 1)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -20,6 +20,7 @@
 #include "ee/wonapi/WONLobbyMSMessageBox.h"
 #include "ee/wonapi/WONLobbyMSPainters.h"
 #include "ee/wonapi/WONLobbyMSBorderPainters.h"
+#include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
 // Creates an arrow button pointing the given way that repeats while held (emitted at 0x006ff0c0)
 MSArrowButton::MSArrowButton(Direction direction)
@@ -175,4 +176,67 @@ MSScrollThumb::~MSScrollThumb() {}
 MSScrollThumb::MSScrollThumb() {}
 // Creates an etched frame that ignores input
 MSEtchedFrame::MSEtchedFrame() { this->SetComponentFlags(ComponentFlag_NoInput,true); }
+// ---- MS3DFrame (was MS3DFrame.cpp)
+// Draws the frame raised or sunken in one of three styles (3D, flat lobby frame, three-line); other
+// types draw nothing
+void MS3DFrame::Paint(Graphics& g) {
+    Component::Paint(g);
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::Frame3DComponent,this->Width(),this->Height(),this->mIsUp?0:EE_WON_MSPAINT_PRESSED,this->mType));
+}
+// ---- MSArrowButton (was MSArrowButton.cpp)
+// Draws the arrow button: face, frame and arrow, shifted one pixel while pressed and greyed when disabled
+void MSArrowButton::Paint(Graphics& g) {
+    Component::Paint(g);
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::ArrowButton,this->Width(),this->Height(),
+                              (this->IsPressed()?EE_WON_MSPAINT_PRESSED:0)|(this->IsDisabled()?EE_WON_MSPAINT_DISABLED:0),this->mDirection));
+}
+// ---- MSButton (was MSButton.cpp)
+// Paints a Windows push button: face, a dark outline when it is the default button, a raised or pressed frame, and
+// the text shifted one pixel while pressed (mspaint.rs Button)
+void MSButton::Paint(Graphics& g) {
+    Component::Paint(g);
+    uint32_t f=(this->IsPressed()?EE_WON_MSPAINT_PRESSED:0)|(this->IsTransparent()?EE_WON_MSPAINT_TRANSPARENT:0)|
+               (this->IsDefaultButton()?EE_WON_MSPAINT_DEFAULT:0)|(this->mUseFrame2?EE_WON_MSPAINT_FRAME2:0);
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::Button,this->Width(),this->Height(),f),this);
+}
+// ---- MSTabButton (was MSTabButton.cpp)
+// Returns the button's text size plus 16 pixels of width and 5 plus the lowered amount of height
+void MSTabButton::GetDesiredSize(int& width,int& height) {
+    MSButtonBase::GetDesiredSize(width,height);
+    width+=16;
+    height+=5+this->mLowerAmount;
+}
+// Paints a tab: the tab outline, then the button text (mspaint.rs TabButton)
+void MSTabButton::Paint(Graphics& g) {
+    Component::Paint(g);
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::TabButton,this->Width(),this->Height()),this);
+}
+// ---- MSCheckbox (was MSCheckbox.cpp)
+// Check box size and the replaceable function that paints the box
+int MSCheckbox::mCheckboxWidth=13;
+int MSCheckbox::mCheckboxHeight=13;
+MSCheckbox::CheckboxPainterFunc MSCheckbox::CheckboxPainter=MSCheckbox::DefaultCheckboxPainterFunc;
+// Paints the default check box square, pressed and checked as the button's flags say
+void MSCheckbox::DefaultCheckboxPainterFunc(Graphics& g,MSCheckbox* button) {
+    MSGraphicsUtil::DrawCheck(g,0,0,MSCheckbox::mCheckboxWidth,MSCheckbox::mCheckboxHeight,button->IsPressed(),button->IsChecked());
+}
+// Paints the check box: face, the box aligned vertically and drawn by the painter function, then the text (the Rust
+// button's box paint, msbtnobj.rs)
+void MSCheckbox::Paint(Graphics& g) {
+    this->MCall(EeWonMsBtnCall::BoxPaint,(intptr_t)EeWonMsBox::Checkbox,(intptr_t)&g,MSCheckbox::mCheckboxHeight);
+}
+// ---- MSRadioButton (was MSRadioButton.cpp)
+// Radio circle size (13 x 13) and the replaceable radio painter
+int MSRadioButton::mRadioWidth=13;
+int MSRadioButton::mRadioHeight=13;
+MSRadioButton::RadioPainterFunc MSRadioButton::RadioPainter=MSRadioButton::DefaultRadioPainterFunc;
+// Draws the standard radio circle, pressed (flag 0x20) and checked (flag 4) as the button's flags say
+void MSRadioButton::DefaultRadioPainterFunc(Graphics& g,MSRadioButton* button) {
+    MSGraphicsUtil::DrawRadio(g,0,0,MSRadioButton::mRadioWidth,MSRadioButton::mRadioHeight,button->IsPressed(),button->IsChecked());
+}
+// Paints the radio button: face background unless transparent, the radio circle aligned vertically between the
+// text pads and drawn by the painter function, then the button text (the Rust button's box paint, msbtnobj.rs)
+void MSRadioButton::Paint(Graphics& g) {
+    this->MCall(EeWonMsBtnCall::BoxPaint,(intptr_t)EeWonMsBox::Radio,(intptr_t)&g,MSRadioButton::mRadioHeight);
+}
 }
