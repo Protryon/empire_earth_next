@@ -34,6 +34,7 @@
 #include "ee/EEHerd.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EECPASGFlags.h"
+#include "ee/EEAreaUtilities.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUIManager.h"
