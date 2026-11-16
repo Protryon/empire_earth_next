@@ -452,3 +452,18 @@ sets | ",
     REPLAY.with(|r| *r.borrow_mut() = None);
     assert!(r.is_err());
 }
+
+#[test]
+fn the_standard_colours_are_init_color_schemes() {
+    // WindowManager::InitColorScheme's 17 SetStandardColor statements, in StandardColor order
+    let mut c = [0u32; 17];
+    // SAFETY: room for 17
+    unsafe { super::ee_won_wm_standard_colors(c.as_mut_ptr()) };
+    assert_eq!(
+        c,
+        [
+            0x000000, 0xD0D0D0, 0xFFFFFF, 0x848484, 0xDEDEDE, 0x000000, 0x848484, 0x08246B, 0xFFFFFF, 0xFFFFDD,
+            0x000000, 0xD0D0D0, 0, 0xFFFFFF, 0x000000, 0x0000FF, 0xFF0000
+        ]
+    );
+}
