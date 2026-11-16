@@ -235,7 +235,7 @@ POSTGAME = 25   # kFormPostGameSummary
 def postgame(g):
     """TEST ONLY: the post-game summary opened over the game (the fixture's postgame command), each of its graph
     pages shown and captured (the time line, then the graph button's next two graphs)."""
-    seq = g.command(f'postgame {GAME}')
+    seq = g.command(f'postgame {GAME} 0')
     g.wait(lambda s: s['command'] >= seq and s['form'] == POSTGAME, 'the post-game summary', 60)
     time.sleep(2)
     out = {}
