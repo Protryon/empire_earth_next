@@ -199,6 +199,28 @@ unsafe fn sl<'a>(p: *const u8, n: usize) -> &'a [u8] {
     }
 }
 
+/// [`read_map`] over an open reader, each entry handed to `put` (valid during the call), the reader closed.
+unsafe fn read_with(
+    r: &mut EeWonFileReader,
+    version: i32,
+    put: unsafe extern "C" fn(*mut c_void, *const EeWonCacheEntry),
+    context: *mut c_void,
+) {
+    read_map(r, version, &mut |e: Entry| {
+        let parts = [&e.remote, &e.file_name, &e.file_type, &e.etag];
+        let raw = EeWonCacheEntry {
+            id: e.id,
+            valid: e.valid,
+            expiration: i64::from(e.expiration),
+            last_access: i64::from(e.last_access),
+            strings: parts.map(|s| s.as_ptr()),
+            lengths: parts.map(|s| s.len()),
+        };
+        unsafe { put(context, &raw) };
+    });
+    r.close();
+}
+
 /// `ReadCacheMap`'s file: opened (nothing when it cannot be), read with [`read_map`], each entry handed to `put`
 /// (valid during the call), closed.
 ///
@@ -212,22 +234,27 @@ pub unsafe extern "C" fn ee_won_cachemap_read(
     context: *mut c_void,
 ) {
     let mut r = EeWonFileReader::new();
-    if !unsafe { r.open(path) } {
-        return;
+    if unsafe { r.open(path) } {
+        unsafe { read_with(&mut r, version, put, context) };
     }
-    read_map(&mut r, version, &mut |e: Entry| {
-        let parts = [&e.remote, &e.file_name, &e.file_type, &e.etag];
-        let raw = EeWonCacheEntry {
-            id: e.id,
-            valid: e.valid,
-            expiration: i64::from(e.expiration),
-            last_access: i64::from(e.last_access),
-            strings: parts.map(|s| s.as_ptr()),
-            lengths: parts.map(|s| s.len()),
-        };
-        unsafe { put(context, &raw) };
-    });
-    r.close();
+}
+
+/// As [`ee_won_cachemap_read`], the file's bytes read from memory by the same reader (its memory mode): the
+/// driver's cases that need no disk (won_cachemap_test: the file opens made it I/O bound).
+///
+/// # Safety
+/// `data` holds `length` bytes; `put` as `ee_won_cachemap_read`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_cachemap_read_memory(
+    data: *const u8,
+    length: usize,
+    version: i32,
+    put: unsafe extern "C" fn(*mut c_void, *const EeWonCacheEntry),
+    context: *mut c_void,
+) {
+    let mut r = EeWonFileReader::new();
+    r.open_memory(data, length as c_ulong);
+    unsafe { read_with(&mut r, version, put, context) };
 }
 
 /// `WriteCacheMap`'s file: opened for writing (nothing when it cannot be), written with [`write_map`] (the entries
@@ -250,6 +277,20 @@ pub unsafe extern "C" fn ee_won_cachemap_write(
     if !unsafe { w.open(path) } {
         return;
     }
+    unsafe { write_with(&mut w, version, now, entries, count, delete, context) };
+    w.close();
+}
+
+/// [`write_map`] of the C entries into `w`.
+unsafe fn write_with(
+    w: &mut dyn Dst,
+    version: i32,
+    now: i64,
+    entries: *const EeWonCacheEntry,
+    count: usize,
+    delete: unsafe extern "C" fn(*mut c_void, usize),
+    context: *mut c_void,
+) {
     let raw =
         if entries.is_null() || count == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(entries, count) } };
     let outs: Vec<Out> = raw
@@ -262,8 +303,54 @@ pub unsafe extern "C" fn ee_won_cachemap_write(
             strings: [0, 1, 2, 3].map(|k| unsafe { sl(e.strings[k], e.lengths[k]) }),
         })
         .collect();
-    write_map(&mut w, version, now, &outs, &mut |i| unsafe { delete(context, i) });
-    w.close();
+    write_map(w, version, now, &outs, &mut |i| unsafe { delete(context, i) });
+}
+
+/// The file's bytes in memory as a `FileWriter` leaves them (a write at a position overwrites, past the end grows).
+struct Memory {
+    data: Vec<u8>,
+    at: usize,
+}
+
+impl Dst for Memory {
+    fn write(&mut self, d: &[u8]) -> Result<(), i32> {
+        let end = self.at + d.len();
+        if end > self.data.len() {
+            self.data.resize(end, 0);
+        }
+        self.data[self.at..end].copy_from_slice(d);
+        self.at = end;
+        Ok(())
+    }
+    fn pos(&self) -> c_ulong {
+        self.at as c_ulong
+    }
+    fn set_pos(&mut self, pos: c_ulong) -> Result<(), i32> {
+        self.at = pos as usize;
+        Ok(())
+    }
+}
+
+/// As [`ee_won_cachemap_write`], the file's bytes given to `sink` instead of a file (the driver's cases that need no
+/// disk).
+///
+/// # Safety
+/// As `ee_won_cachemap_write`; `sink` is callable with `sink_context` during the call.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_won_cachemap_write_memory(
+    version: i32,
+    now: i64,
+    entries: *const EeWonCacheEntry,
+    count: usize,
+    delete: unsafe extern "C" fn(*mut c_void, usize),
+    context: *mut c_void,
+    sink: crate::ffi::EeWonByteSink,
+    sink_context: *mut c_void,
+) {
+    let mut m = Memory { data: Vec::new(), at: 0 };
+    unsafe { write_with(&mut m, version, now, entries, count, delete, context) };
+    unsafe { crate::ffi::give(sink, sink_context, &m.data) };
 }
 
 #[cfg(test)]

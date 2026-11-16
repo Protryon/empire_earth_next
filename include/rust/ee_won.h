@@ -13103,6 +13103,17 @@ void ee_won_cachemap_read(const char *path,
                           void (*put)(void*, const EeWonCacheEntry*),
                           void *context);
 
+/// As [`ee_won_cachemap_read`], the file's bytes read from memory by the same reader (its memory mode): the
+/// driver's cases that need no disk (won_cachemap_test: the file opens made it I/O bound).
+///
+/// # Safety
+/// `data` holds `length` bytes; `put` as `ee_won_cachemap_read`.
+void ee_won_cachemap_read_memory(const uint8_t *data,
+                                 size_t length,
+                                 int32_t version,
+                                 void (*put)(void*, const EeWonCacheEntry*),
+                                 void *context);
+
 /// `WriteCacheMap`'s file: opened for writing (nothing when it cannot be), written with [`write_map`] (the entries
 /// in the id map's order, `delete` called with an index for each one not kept), closed.
 ///
@@ -13116,6 +13127,20 @@ void ee_won_cachemap_write(const char *path,
                            size_t count,
                            void (*delete_)(void*, size_t),
                            void *context);
+
+/// As [`ee_won_cachemap_write`], the file's bytes given to `sink` instead of a file (the driver's cases that need no
+/// disk).
+///
+/// # Safety
+/// As `ee_won_cachemap_write`; `sink` is callable with `sink_context` during the call.
+void ee_won_cachemap_write_memory(int32_t version,
+                                  int64_t now,
+                                  const EeWonCacheEntry *entries,
+                                  size_t count,
+                                  void (*delete_)(void*, size_t),
+                                  void *context,
+                                  EeWonByteSink sink,
+                                  void *sink_context);
 
 /// A new `GetCertOp`: its auth context (`EE_WON_GETCERT_AUTH_CONTEXT`) and its server context
 /// (`EE_WON_REQHOST_CONTEXT`, the auth context's) are set after the bind.

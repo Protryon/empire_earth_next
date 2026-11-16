@@ -3,7 +3,10 @@
 // FileWriter) against tests/won/won_cachemap_glue.h over ee_won's cachemap module. Generated caches are
 // written by both into two files (the bytes and the deletions compared), then generated files (written ones, cut at
 // random lengths, mutated, another version, missing) are read by both (the maps compared). The exit code is the
-// number of failed checks.
+// number of failed checks. One case in ten goes through the disk on both sides (the files written, the cut files
+// written back and read by path, a missing file); in the others the original still writes its file (its FileWriter
+// has only a file) but the port writes to memory and both read the bytes from memory by the same FileReader: the
+// 48,000 file opens made the program I/O bound (over wontest's 20 minutes on a loaded machine).
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -101,14 +104,17 @@ static void WriteToFile(SEntry& o, FileWriter& inWriter)
     inWriter.WriteString(o.mFileType, 2);
     inWriter.WriteString(o.mEntityTag, 2);
 }
-static void ReadCacheMap(SCache& o, long gHTTPCacheVersion)
+// (inMemory: the file's bytes read from memory by the same FileReader, for the cases the disk need not see)
+static void ReadCacheMap(SCache& o, long gHTTPCacheVersion, const std::string* inMemory = NULL)
 {
     o.mCacheIdMap.clear();
     o.mCacheLocationMap.clear();
     o.mNextFreeId = 1;
     FileReader reader;
     std::string path = o.mCachePath + "cachemap.dat";
-    if (!reader.Open(path.c_str())) return;
+    if (inMemory != NULL)
+        reader.Open(inMemory->data(), (unsigned long)inMemory->length());
+    else if (!reader.Open(path.c_str())) return;
     try {
         if (reader.ReadLong() != gHTTPCacheVersion) return;
         int count = reader.ReadLong();
@@ -181,8 +187,10 @@ static string RandText()
     }
 }
 
+static int sCase;
 static void Case(const string& dirA, const string& dirB)
 {
+    const bool disk = sCase++ % 10 == 0;
     const long kVersion = 1;
     time_t now = 1700000000 + Pick(1000000);
     SCache a;
@@ -211,8 +219,14 @@ static void Case(const string& dirA, const string& dirB)
     b.mCachePath = dirB;
     long ver = Pick(10) ? kVersion : (long)Pick(5);
     Orig::WriteCacheMap(a, ver, now);
-    HttpCacheMsg<SCache, SEntry>::Write(b, ver, now);
-    string fa = ReadAll(dirA + "cachemap.dat"), fb = ReadAll(dirB + "cachemap.dat");
+    string fa = ReadAll(dirA + "cachemap.dat"), fb;
+    if (disk) {
+        HttpCacheMsg<SCache, SEntry>::Write(b, ver, now);
+        fb = ReadAll(dirB + "cachemap.dat");
+    } else {
+        HttpCacheMsg<SCache, SEntry>::Write(b, ver, now, &fb);
+        if (fa == "*") fb = "*"; // (a directory that does not exist: neither opens, nothing written)
+    }
     CHECK(fa == fb);
     CHECK(a.mLog == b.mLog);
     // the read side: the file as written, cut, mutated, missing
@@ -225,7 +239,8 @@ static void Case(const string& dirA, const string& dirB)
     default: break;
     }
     bool missing = Pick(15) == 0;
-    if (missing) {
+    if (!disk) {
+    } else if (missing) {
         remove((dirA + "cachemap.dat").c_str());
         remove((dirB + "cachemap.dat").c_str());
     } else {
@@ -237,8 +252,13 @@ static void Case(const string& dirA, const string& dirB)
     rb.mCachePath = dirB;
     ra.mNextFreeId = rb.mNextFreeId = 9;
     long rver = Pick(8) ? kVersion : (long)Pick(3);
-    Orig::ReadCacheMap(ra, rver);
-    HttpCacheMsg<SCache, SEntry>::Read(rb, rver);
+    if (disk) {
+        Orig::ReadCacheMap(ra, rver);
+        HttpCacheMsg<SCache, SEntry>::Read(rb, rver);
+    } else {
+        Orig::ReadCacheMap(ra, rver, &f);
+        HttpCacheMsg<SCache, SEntry>::ReadMemory(rb, rver, f);
+    }
     // the local paths differ by the directory only
     string da = ra.Dump(), db = rb.Dump();
     for (size_t p; (p = da.find(dirA)) != string::npos;) da.replace(p, dirA.size(), "<dir>");
@@ -254,7 +274,8 @@ int main(int argc, char** argv)
     CreateDirectoryA("cache_a", NULL);
     CreateDirectoryA("cache_b", NULL);
     for (int i = 0; i < 6000; i++) Case("cache_a/", "cache_b/");
-    // a directory that does not exist: neither opens
+    // a directory that does not exist: neither opens (on the disk path)
+    sCase = 0;
     Case("no_such_dir/", "no_such_dir_b/");
     remove("cache_a/cachemap.dat");
     remove("cache_b/cachemap.dat");
