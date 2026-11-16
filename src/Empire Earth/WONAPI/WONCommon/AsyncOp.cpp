@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONTimerThread.h"
+#include "ee/wonapi/WONRoutingDetectFirewallOp.h"
 #include <string.h>
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
@@ -136,6 +137,17 @@ static void* CoreObjectOf(void* inObject,EeWonCoreObject inKind)
         return static_cast<UDPManagerSendRecvOp*>(static_cast<AsyncOp*>(anObject))->GetUdpObject();
     case EeWonCoreObject::ServerConn:
         return static_cast<ServerConnection*>(static_cast<AsyncSocket*>(anObject))->GetConnObject();
+    case EeWonCoreObject::RouteOp: return static_cast<RoutingOp*>(static_cast<AsyncOp*>(anObject))->mRust;
+    case EeWonCoreObject::RouteConn:
+        return static_cast<RoutingConnection*>(static_cast<AsyncSocket*>(anObject))->GetRouteObject();
+    case EeWonCoreObject::AuthCtx: return const_cast<EeWonAuthCtx*>(static_cast<AuthContext*>(anObject)->Core());
+    case EeWonCoreObject::HostOp: return static_cast<RustServerOp*>(static_cast<AsyncOp*>(anObject))->GetRustOp();
+    case EeWonCoreObject::HttpConn: return static_cast<HTTPConnection*>(anObject)->GetConnObject();
+    case EeWonCoreObject::Lock: {
+        if (HTTPConnection* c=dynamic_cast<HTTPConnection*>(anObject)) return c->GetLock();
+        if (HTTPSession* s=dynamic_cast<HTTPSession*>(anObject)) return s->GetLock();
+        return NULL;
+    }
     }
     return NULL;
 }
@@ -273,6 +285,27 @@ static long CoreTransformCall(void* inTransform,void* inMessage,bool inSend)
     return inSend ? aTransform->Send(aMessage) : aTransform->Recv(aMessage);
 }
 static void CoreTransformFree(void* inTransform) { delete static_cast<MsgTransform*>(inTransform); }
+static void* CoreNewHttpConn() { return static_cast<RefCount*>(new HTTPConnection(NULL)); }
+// the routing classes' (ee_won routecpp.rs): a new op on a connection, the connection's two virtuals
+static RoutingConnection* RouteConn(void* inConn)
+{ return static_cast<RoutingConnection*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(inConn))); }
+static void* CoreNewRouteOp(void* inConn,int32_t inType)
+{
+    RoutingConnection* aConn=inConn!=NULL ? RouteConn(inConn) : NULL;
+    RoutingOp* anOp=inType==RoutingOp_DetectFirewall ? new RoutingDetectFirewallOp(aConn) : new RoutingOp(aConn,inType);
+    return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp));
+}
+static void* CoreRouteVirtual(void* inConn,int32_t inWhich,void* inOp,uint8_t inType)
+{
+    if(inWhich==0) {
+        RouteConn(inConn)->RoutingOpCompleteHook(static_cast<RoutingOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp))));
+        return NULL;
+    }
+    SmartPtr<RoutingOp> anOp=RouteConn(inConn)->GetUnsolicitedDerivedOp(inType);
+    if(anOp.get()==NULL) return NULL;
+    anOp->AddRef();
+    return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp.get()));
+}
 // leaves the socket thread if it was handed there
 void SocketOp::CleanupHook()
 {
@@ -332,7 +365,8 @@ static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletion
                                         CoreBindLocal,CoreBytesOf,CoreSocketOpContinue,CoreSocketOpStart,
                                         &SocketOp::HookAddToSocketThread,CoreBytesAdopt,CoreTransform,CoreFileOpen,
                                         CoreFileWrite,CoreFileClose,CoreFileSetTime,CoreProgress,CoreAccept,
-                                        CoreSocketHook,CoreTransformCall,CoreTransformFree};
+                                        CoreSocketHook,CoreTransformCall,CoreTransformFree,CoreNewRouteOp,
+                                        CoreRouteVirtual,CoreNewHttpConn};
 const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
 
 }

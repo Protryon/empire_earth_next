@@ -328,6 +328,9 @@ pub unsafe extern "C" fn ee_screens_see_process(
     }
     // a copy: no Rust reference into the box across the host's calls (the post may run other events)
     let e = unsafe { (*event).0.clone() };
+    if e == SeeKind::SaveTriggersOnly {
+        return crate::editor_form_ffi::save_triggers();
+    }
     e.process_in(&mut Host, form as usize, entity as usize)
 }
 

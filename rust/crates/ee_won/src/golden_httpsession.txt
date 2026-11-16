@@ -1,0 +1,36 @@
+session ops 0
+one added: session ops 1
+server accept one WS_Success
+server one line "GET /one HTTP/1.1"
+server one line "Host: 127.0.0.1:PORT"
+server one line "Connection: Keep-Alive"
+server one line ""
+server one answered WS_Success
+completed one WS_Success
+one: status WS_Success http 200 length 5 content "hello" close 0 resume 0 send only 0 recv only 1 socket 1
+session ops 0
+server two line "GET /two HTTP/1.1"
+server two line "Host: 127.0.0.1:PORT"
+server two line "Connection: Keep-Alive"
+server two line ""
+server two answered WS_Success
+completed two WS_Success
+two: status WS_Success http 200 length 3 content "bye" close 0 resume 0 send only 0 recv only 1 socket 0
+server accept three WS_Success
+server three line "GET /three HTTP/1.1"
+server three line "Host: 127.0.0.1:PORT"
+server three line "Connection: Keep-Alive"
+server three line ""
+server three answered WS_Success
+three: status WS_Pending http 404 length 0 content "" close 0 resume 0 send only 0 recv only 1 socket 1
+server four line "GET /four HTTP/1.1"
+server four line "Host: 127.0.0.1:PORT"
+server four line "Connection: Keep-Alive"
+server four line ""
+queued: session ops 3
+completed four WS_Killed
+completed five WS_Killed
+four: status WS_Killed http 0 length 0 content "" close 0 resume 0 send only 0 recv only 1 socket 0
+five: status WS_Killed http 0 length 0 content "" close 0 resume 0 send only 0 recv only 1 socket 0
+killed: session ops 0
+done

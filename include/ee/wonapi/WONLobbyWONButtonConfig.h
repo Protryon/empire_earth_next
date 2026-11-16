@@ -9,19 +9,16 @@ public:
     static ComponentConfig* CfgFactory(); // at 0x007969c0
     virtual bool Virtual24(const std::string&); // slot 0x24, at 0x007974e0
     virtual void SetComponent(Component*); // at 0x00796a20 (shared body)
-protected:
+public: // (the table reader's setters read the members)
     WONSimpleButton* mButton; //7c
-    void HandleButtonState(); //3971c0
-    void HandleButtonStates(); //3973f0
 };
 class WONButtonConfig : public ButtonConfig {
 public:
     static ComponentConfig* CfgFactory(); // at 0x00796a30
     virtual bool Virtual24(const std::string&); // slot 0x24, at 0x00797aa0
     virtual void SetComponent(Component*); // at 0x00796a20 (shared body)
-protected:
+public: // (the table reader's setters read the members)
     WONButton* mButton; //7c
-    void HandleSetButtonState(); //397740
 };
 }
 // The original's file-static skin at 0x00966af0 (declaration only).

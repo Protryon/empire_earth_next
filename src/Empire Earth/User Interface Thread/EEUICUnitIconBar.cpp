@@ -129,7 +129,7 @@ int64_t EEUICUnitIconBar::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float*
         return (int64_t)theUnit->mStats->mButton;
     case EE_SCREENS_IB_OP_SELECT_THESE: {
         const int32_t* theIDs = reinterpret_cast<const int32_t*>(inA);
-        std::vector<int32_t> theList(theIDs, theIDs + inB);
+        std::vector<long> theList(theIDs, theIDs + inB);
         theMessage = new EEMRecord(kMessageSelectTheseUnits, {theList});
         break;
     }

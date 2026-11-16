@@ -1184,6 +1184,28 @@ static void Requests(RoutingConnection* c)
         Log("created group " + N(op->GetGroupId()));
     }
     {
+        // a create op killed before its join status: the status leaves the group it made (CheckLeaveGroup, net
+        // round 26: the leave request is the Rust side's since)
+        Log("== create killed");
+        SmartPtr<RouteDone> d = new RouteDone("create killed");
+        SmartPtr<RoutingOp> op = new RoutingOp(c, RoutingOp_CreateGroup);
+        op->SetText(EE_WON_RTT_NAME, L"Gone");
+        op->SetNum(EE_WON_RTF_JOIN_FLAGS, 1);
+        op->SetNum(EE_WON_RTF_LEAVE_ON_CANCEL, 1);
+        op->SetCompletion(d);
+        op->RunAsync(-1);
+        sServer.Expect("create killed");
+        sServer.Send("create reply", Msg(12).S(0).S(410).W2("Gone"));
+        PumpFor(100);
+        op->Kill(true);
+        PumpRoute(d, 1);
+        sServer.Send("join status", Msg(41).S(0));
+        sServer.Expect("the leave");
+        sServer.Send("leave status", Status(0));
+        PumpFor(100);
+        Log("killed create status " + St(op->GetStatus()) + " group " + N(op->GetGroupId()));
+    }
+    {
         Log("== logic join retry");
         SmartPtr<RouteDone> d = new RouteDone("logic join");
         SmartPtr<RoutingOp> op = new RoutingOp(c, RoutingOp_JoinGroup);

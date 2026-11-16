@@ -6,7 +6,7 @@ use super::*;
 use crate::opobj::{ee_won_completion_free, ee_won_completion_run, EeWonAsyncOpHooks};
 use std::sync::Mutex;
 
-static LOCK: Mutex<()> = Mutex::new(());
+pub(crate) static LOCK: Mutex<()> = Mutex::new(());
 static LOG: Mutex<Vec<String>> = Mutex::new(Vec::new());
 /// (C++ object, Rust object, kind)
 static OBJECTS: Mutex<Vec<(usize, usize, i32)>> = Mutex::new(Vec::new());
@@ -69,6 +69,9 @@ static CORE_STUB: EeWonCoreHooks = EeWonCoreHooks {
     socket_hook: None,
     transform_call: None,
     transform_free: None,
+    new_route_op: None,
+    route_virtual: None,
+    new_http_conn: None,
 };
 
 static OP_HOOKS: EeWonAsyncOpHooks = EeWonAsyncOpHooks {

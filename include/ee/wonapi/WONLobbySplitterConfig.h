@@ -41,11 +41,9 @@ public:
     static ComponentConfig* CfgFactory(); // at 0x0079b410
     static Component* CompFactory(); // at 0x0079b3b0
     virtual void SetComponent(Component*); // at 0x0078f960
-protected:
+public: // (the table reader's setters read the members)
     virtual bool Virtual24(const std::string&); // at 0x00795450
     Splitter* mSplitter; //98
-    Splitter::QuadrantPosition ReadQuadrant(); //394ed0
-    Splitter::SplitterType ReadSplitterType(); //3951b0
 };
 }
 #endif

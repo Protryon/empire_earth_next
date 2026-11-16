@@ -8,32 +8,21 @@
 // stay C++ classes (controls the form owns) whose slots call into it. This unit is the tab's host
 // (ee_screenscpp_semp): the controls only the tab makes and the world it reads and posts to.
 #include <windows.h>
-#include <algorithm>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
-#include "lle/FSFileSpec.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIEntityGroup.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIEditBox.h"
 #include "lle/UIListBox.h"
 #include "lle/UILBString.h"
-#include "lle/UIComboBox.h"
 #include "lle/UIFileComboBox.h"
 #include "lle/UResourceFile.h"
 #include "lle/UIRadioButton.h"
-#include "lle/URandom.h"
-#include <vector>
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
 #include "ee/EEUserInterface.h"

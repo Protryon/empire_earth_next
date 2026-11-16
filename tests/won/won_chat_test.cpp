@@ -41,26 +41,18 @@ LobbyResourceSlot gLobbyResources[EE_WON_LOBBYRES_COUNT];
 
 wchar_t gEmptyWideString[2];
 
-// LobbyModel.cpp's client and client list, the parts the parser uses (copied: that unit links the whole lobby; the
-// list's clients are the Rust container since round 17)
+// the lobby model's shells' base (LobbyModelHost.cpp's, which links the whole lobby): the client and the client
+// list are Rust objects since R6 WONLobby round 10 (modelobj.rs); the parser's calls need only the references
 namespace WONAPI {
-LobbyClient::LobbyClient() : mName(GetEmptyGUIStringData())
+static intptr_t ChatModelHost(EeWonModelOp inOp, intptr_t a, intptr_t, intptr_t)
 {
-    this->mClientId = 0xffff;
-    this->mClientFlags = 0;
-    this->mIsGameCaptain = false;
-    this->mIsChatCaptain = false;
+    if (inOp == EeWonModelOp::AddRef) reinterpret_cast<RefCount*>(a)->AddRef();
+    else if (inOp == EeWonModelOp::Release) reinterpret_cast<RefCount*>(a)->Release();
+    return 0;
 }
-LobbyClient::~LobbyClient() {}
-bool LobbyClient::IsAdmin() { return (this->mClientFlags & 0x20) ? true : false; }
-bool LobbyClient::IsModerator() { return (this->mClientFlags & 1) ? true : false; }
-bool LobbyClient::IsCaptain(bool inGame) { return inGame ? this->mIsGameCaptain : this->mIsChatCaptain; }
-LobbyClientList::LobbyClientList() : mClients(EeWonLobbyKeyKind::Unsigned) {}
-LobbyClientList::~LobbyClientList() {}
-void LobbyClientList::AddClient(LobbyClient* inClient) { this->mClients.Set(inClient->GetClientId(), inClient); }
-// LobbyModel.cpp's (the clients' captain flags are private since round 19)
-void LobbyClient::SetCaptain(bool inCaptain, bool inGame) { if (inGame) this->mIsGameCaptain = inCaptain; else this->mIsChatCaptain = inCaptain; }
-LobbyClient* LobbyClientList::FindClient(unsigned short inId) { return this->mClients.Get(inId); }
+LobbyModelObject::LobbyModelObject(EeWonModelKind inKind)
+    : mModel(ee_won_model_new(this, inKind, ChatModelHost, GetEmptyGUIStringData())) {}
+LobbyModelObject::~LobbyModelObject() { ee_won_model_free(this->mModel); }
 }
 
 static std::vector<std::string> sLines;

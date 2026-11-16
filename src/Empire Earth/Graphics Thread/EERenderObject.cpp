@@ -92,16 +92,10 @@ EERenderLists EERenderLists::sInstance;
 
 EEEffectQueue gEffectQueues[5];
 
-// 0x4e9348 (17 colours; provisional name)
-GEColor gU4E9348[17];
-
+// 0x4e9348 (17 colours) and its init chain: EEInitialiseScene's key frames, ee_gfx scene.rs initial_tables
 GEColor gU4E9338(1.0f, 1.0f, 1.0f);
 float gU4E9330;                            // 0x4e9330 (no init chain)
-// three per-time-of-day tables (17 entries, like gU4E9348; EEInitialiseScene fills them, Fn10C036 blends them)
-// (provisional names)
-float gU4E92EC[17];
-float gU4E92A8[17];
-float gU4E9264[17];
+// the three per-time-of-day tables (0x4e92ec, 0x4e92a8, 0x4e9264; 17 entries): ee_gfx scene.rs initial_tables
 // 0x4413ac: EEInitialiseScene's 0.549f is a literal (__real COMDAT; the fst chain of a literal, not a static const reload)
 // Fn10C036's constants (.rdata 0x441334..0x4413c4: the view band, the clocks' rates, the moon's hours, the fill share):
 // ee_gfx scene.rs
@@ -114,9 +108,7 @@ static unsigned long sL52908C;              // 0x52908c (the frame counter; prov
 EERenderUnit* gU529044;                     // 0x529044 (the picked enemy's render unit: FillUnit; EEROUnits.cpp reads it; provisional name)
 static const float kEERenderObject_F441350 = 0.35f;   // 0x441350 (the see-through opacity)
 
-// 0x4e9240 (3 vectors; provisional name)
-GEVector gU4E9240[3];
-
+// 0x4e9240 (the three fill lights) and its init chain: ee_gfx scene.rs initial_tables
 std::vector<unsigned long> gU4E9230;
 
 GEColor gU4E9220(1.0f, 1.0f, 1.0f);
@@ -174,120 +166,7 @@ void EEInitialiseScene()
     gU4E9338.SetRed(0.663f);
     gU4E9338.SetGreen(0.784f);
     gU4E9338.SetBlue(1.0f);
-    gU4E9348[0].SetRed(1.0f);
-    gU4E9348[0].SetGreen(0.4f);
-    gU4E9348[0].SetBlue(0.0f);
-    gU4E9348[1].SetRed(1.0f);
-    gU4E9348[1].SetGreen(1.0f);
-    gU4E9348[1].SetBlue(1.0f);
-    gU4E9348[2].SetRed(1.0f);
-    gU4E9348[2].SetGreen(1.0f);
-    gU4E9348[2].SetBlue(1.0f);
-    gU4E9348[3].SetRed(1.0f);
-    gU4E9348[3].SetGreen(1.0f);
-    gU4E9348[3].SetBlue(1.0f);
-    gU4E9348[4].SetRed(1.0f);
-    gU4E9348[4].SetGreen(1.0f);
-    gU4E9348[4].SetBlue(1.0f);
-    gU4E9348[5].SetRed(1.0f);
-    gU4E9348[5].SetGreen(1.0f);
-    gU4E9348[5].SetBlue(1.0f);
-    gU4E9348[6].SetRed(1.0f);
-    gU4E9348[6].SetGreen(1.0f);
-    gU4E9348[6].SetBlue(1.0f);
-    gU4E9348[7].SetRed(1.0f);
-    gU4E9348[7].SetGreen(1.0f);
-    gU4E9348[7].SetBlue(1.0f);
-    gU4E9348[8].SetRed(1.0f);
-    gU4E9348[8].SetGreen(0.4f);
-    gU4E9348[8].SetBlue(0.0f);
-    gU4E9348[9].SetRed(0.775f);
-    gU4E9348[9].SetGreen(0.475f);
-    gU4E9348[9].SetBlue(0.5f);
-    gU4E9348[10].SetRed(0.549f);
-    gU4E9348[10].SetGreen(0.549f);
-    gU4E9348[10].SetBlue(1.0f);
-    gU4E9348[11].SetRed(0.549f);
-    gU4E9348[11].SetGreen(0.549f);
-    gU4E9348[11].SetBlue(1.0f);
-    gU4E9348[12].SetRed(0.549f);
-    gU4E9348[12].SetGreen(0.549f);
-    gU4E9348[12].SetBlue(1.0f);
-    gU4E9348[13].SetRed(0.549f);
-    gU4E9348[13].SetGreen(0.549f);
-    gU4E9348[13].SetBlue(1.0f);
-    gU4E9348[14].SetRed(0.549f);
-    gU4E9348[14].SetGreen(0.549f);
-    gU4E9348[14].SetBlue(1.0f);
-    gU4E9348[15].SetRed(0.775f);
-    gU4E9348[15].SetGreen(0.475f);
-    gU4E9348[15].SetBlue(0.5f);
-    gU4E9348[16].SetRed(1.0f);
-    gU4E9348[16].SetGreen(0.4f);
-    gU4E9348[16].SetBlue(0.0f);
-    gU4E92EC[0] = 1.0f;
-    gU4E92EC[1] = 1.0f;
-    gU4E92EC[2] = 1.0f;
-    gU4E92EC[3] = 1.0f;
-    gU4E92EC[4] = 1.0f;
-    gU4E92EC[5] = 1.0f;
-    gU4E92EC[6] = 1.0f;
-    gU4E92EC[7] = 1.0f;
-    gU4E92EC[8] = 1.0f;
-    gU4E92EC[9] = 0.0f;
-    gU4E92EC[10] = 0.9f;
-    gU4E92EC[11] = 0.9f;
-    gU4E92EC[12] = 0.9f;
-    gU4E92EC[13] = 0.9f;
-    gU4E92EC[14] = 0.9f;
-    gU4E92EC[15] = 0.0f;
-    gU4E92EC[16] = 1.0f;
-    gU4E92A8[0] = 0.5f;
-    gU4E92A8[1] = 0.5f;
-    gU4E92A8[2] = 0.5f;
-    gU4E92A8[3] = 0.5f;
-    gU4E92A8[4] = 0.5f;
-    gU4E92A8[5] = 0.5f;
-    gU4E92A8[6] = 0.5f;
-    gU4E92A8[7] = 0.5f;
-    gU4E92A8[8] = 0.5f;
-    gU4E92A8[9] = 0.7f;
-    gU4E92A8[10] = 0.3f;
-    gU4E92A8[11] = 0.3f;
-    gU4E92A8[12] = 0.3f;
-    gU4E92A8[13] = 0.3f;
-    gU4E92A8[14] = 0.3f;
-    gU4E92A8[15] = 0.7f;
-    gU4E92A8[16] = 0.5f;
-    gU4E9264[0] = 0.7f;
-    gU4E9264[1] = 0.6f;
-    gU4E9264[2] = 0.6f;
-    gU4E9264[3] = 0.6f;
-    gU4E9264[4] = 0.6f;
-    gU4E9264[5] = 0.6f;
-    gU4E9264[6] = 0.6f;
-    gU4E9264[7] = 0.6f;
-    gU4E9264[8] = 0.6f;
-    gU4E9264[9] = 0.7f;
-    gU4E9264[10] = 0.7f;
-    gU4E9264[11] = 0.6f;
-    gU4E9264[12] = 0.6f;
-    gU4E9264[13] = 0.6f;
-    gU4E9264[14] = 0.6f;
-    gU4E9264[15] = 0.7f;
-    gU4E9264[16] = 0.7f;
-    gU4E9240[0].SetX(0.0f);
-    gU4E9240[0].SetY(0.0f);
-    gU4E9240[0].SetZ(-1.0f);
-    gU4E9240[1].SetX(1.0f);
-    gU4E9240[1].SetY(1.0f);
-    gU4E9240[1].SetZ(-1.0f);
-    gU4E9240[2].SetX(-1.0f);
-    gU4E9240[2].SetY(-1.0f);
-    gU4E9240[2].SetZ(-1.0f);
-    gU4E9240[0].Normalize();
-    gU4E9240[1].Normalize();
-    gU4E9240[2].Normalize();
+    // the key frames (gU4E9348, gU4E92EC, gU4E92A8, gU4E9264) and the fill lights (gU4E9240): ee_gfx scene.rs
     ee_gfx_scene_reset(&sSceneFade);
     gB529066 = false;
     gCameraFollowing = false;
@@ -571,16 +450,8 @@ void EERenderObject::Fn10C036()
         gRenderEnvironment.mTimeOfDay = theTimeOfDay;
         gRenderEnvironment.mTimeOfDayChanged = true;
         // the blend of the 17 key frames, the lit direction and the prelit colour: ee_gfx scene.rs
-        EeGfxDaylightTables theTables;
-        for (unsigned long i = 0; i < 17; i++) {
-            theTables.colors[i] = {gU4E9348[i].mRed, gU4E9348[i].mGreen, gU4E9348[i].mBlue};
-            theTables.light[i] = gU4E92EC[i];
-            theTables.ambient[i] = gU4E92A8[i];
-            theTables.unit_ambient[i] = gU4E9264[i];
-        }
+        EeGfxDaylightTables theTables = ee_gfx_scene_daylight_tables();
         theTables.ambient_color = {gU4E9338.mRed, gU4E9338.mGreen, gU4E9338.mBlue};
-        for (unsigned long i = 0; i < 3; i++)
-            theTables.fill[i] = {gU4E9240[i].mX, gU4E9240[i].mY, gU4E9240[i].mZ};
         theTables.sun = {gWorld.mSunDirection.mX, gWorld.mSunDirection.mY, gWorld.mSunDirection.mZ};
         theTables.moon = {gWorld.mMoonDirection.mX, gWorld.mMoonDirection.mY, gWorld.mMoonDirection.mZ};
         EeGfxDaylight theLight = ee_gfx_scene_daylight(&theTables, theTimeOfDay);
@@ -1580,6 +1451,47 @@ static void* EERasterLoadTexture(const uint8_t* inName, const EeGfxTextureLoad* 
     return theTexture;
 }
 
+// a unit model's frame textures (EEROUnits::DrawUnitModel 0x515cc7: past the frame count, frame 0 (0x115e53 jae))
+static void EERasterFrameTextures(void* inModel, void* inTexture)
+{
+    GEModel* theModel = static_cast<GEModel*>(inModel);
+    GETexture* theTexture = static_cast<GETexture*>(inTexture);
+    for (unsigned long theMaterial = 1; theMaterial < theModel->GetMaterialCount(); theMaterial++) {
+        if (theTexture == NULL)
+            continue;
+        GEMaterial* theFirst = theModel->GetMaterial(theMaterial);
+        theFirst->SetTexture(theFirst->GetTextureIndex() < theTexture->GetFrameCount()
+                                 ? theTexture->GetFrameTexture(theFirst->GetTextureIndex())
+                                 : theTexture->GetFrameTexture(0),
+                             gScreenIndex);
+        for (unsigned long theSub = 0; theSub < theModel->GetSubModelCount(); theSub++) {
+            GEModel* theSubModel = theModel->GetSubModel(theSub);
+            for (unsigned long j = 0; j < theSubModel->GetMaterialCount(); j++) {
+                GEMaterial* theOther = theSubModel->GetMaterial(j);
+                if (theOther->GetTextureIndex() < theTexture->GetFrameCount())
+                    theOther->SetTexture(theTexture->GetFrameTexture(theOther->GetTextureIndex()), gScreenIndex);
+            }
+        }
+    }
+}
+// a gate side's sub-model 0 placed against its internal offset (EEROUnits::DrawUnitModel); the transform set
+static EeGeTransformation EERasterSubModelOffset(void* inModel, float inScale)
+{
+    GEModel* theSubModel = static_cast<GEModel*>(inModel)->GetSubModel(0);
+    GETransformation theTransformation = theSubModel->GetGraphicsPostModelTransform();
+    theTransformation.SetPosition(theSubModel->GetInternalTransform(0).GetX() * inScale * -1.0f,
+                                  theSubModel->GetInternalTransform(0).GetY() * inScale * -1.0f,
+                                  theSubModel->GetInternalTransform(0).GetZ() * inScale * -1.0f);
+    theSubModel->SetGraphicsPostModelTransform(theTransformation);
+    return *reinterpret_cast<const EeGeTransformation*>(&theTransformation);
+}
+// EEROUnits.cpp's bars, placement lines and labels
+void EEROUnitsBarSet(uint32_t inWhich, const EeGeRectangle* inRect, const EeGfxColor* inColors);
+int32_t EEROUnitsBarDraw(uint32_t inWhich);
+int32_t EEROUnitsScreenLines(const EeGfxScreenLine* inLines, uint32_t inCount, float inStartU, float inEndU);
+void EEROUnitsLabel(const uint8_t* inText, float inX, float inY, EeGfxColor inColor, uint32_t inFont,
+                    const EeGeRectangle* inView, const EeGeRectangle* inStrip, float inBottom);
+
 // a beam model's vertices' points and texture coordinates (the tracer beam's stretch and its restore)
 static void EEBeamSetVertices(GEVertexArray* inVertices, const std::vector<EeGfxBeamVertex>& inValues)
 {
@@ -1832,6 +1744,38 @@ const EeGfxRaster gEERustRaster = {
         theLine.SetOpacityPerVertex(inOpacity0, inOpacity1);
         return gRasterizer->Draw(&theLine, 1, gScreenIndex);
     },
+    // the terrain's and the units' render objects (ee_gfx ro_terrain.rs, ro_units.rs)
+    []() -> uint32_t { return gRasterizer->GetAlphaTesting(gScreenIndex); },
+    [](float inDistance) -> float {
+        float theOld = gU4E8F08.GetRearClippingDistance();
+        gU4E8F08.SetRearClippingDistance(inDistance);
+        return theOld;
+    },
+    [](void* inModel, bool inSorted) -> int32_t {
+        return gRasterizer->DrawSky(static_cast<GEModel*>(inModel), gScreenIndex, 1.0f, inSorted);
+    },
+    []() -> bool { return gRasterizer->GetScreen(gScreenIndex)->Get32BitTextureSupport(); },
+    []() -> bool { return gRasterizer->GetCanModulateTextureAlpha(gScreenIndex); },
+    [](float inValue) { gRasterizer->SetAmbientIntensity(inValue, gScreenIndex); },
+    []() {
+        GERFogAttributes theFog;
+        gRasterizer->GetFogAttributes(theFog, gScreenIndex);
+        return EeGfxFogAttributes{(uint32_t)theFog.mType, {theFog.mColor.mRed, theFog.mColor.mGreen, theFog.mColor.mBlue},
+                                  theFog.mStart, theFog.mEnd};
+    },
+    [](uint32_t inType) { gRasterizer->SetFogType(inType, gScreenIndex); },
+    [](EeGfxColor inColor) { gRasterizer->SetFogColor(GEColor(inColor.red, inColor.green, inColor.blue), gScreenIndex); },
+    [](float inStart, float inEnd) { gRasterizer->SetFogRange(inStart, inEnd, gScreenIndex); },
+    EERasterFrameTextures,
+    [](void* inObject, EeGfxColor inColor, uint32_t inPart) {
+        static_cast<EEGraphicObject*>(inObject)->SetGroupColor(GEColor(inColor.red, inColor.green, inColor.blue), inPart);
+    },
+    EERasterSubModelOffset,
+    EEROUnitsBarSet,
+    EEROUnitsBarDraw,
+    EEROUnitsScreenLines,
+    EEROUnitsLabel,
+    [](void* inTexture) { static_cast<GETexture*>(inTexture)->Dereference(); },
 };
 
 // Turns on linear fog in the fog colour dimmed by the light fade, ending at the rear clipping distance
