@@ -7132,6 +7132,105 @@ enum class EeWonPlatGfx : uint32_t {
   SetClip,
 };
 
+/// What the window asks of its C++ shell (`me`).
+enum class EeWonPlatWinOp : int32_t {
+  /// The window has a PlatWindowManager (`GetPlatManager() != NULL`).
+  HasWm = 0,
+  /// The manager's `Call(a, b, c)`.
+  Wm = 1,
+  /// `GetMousePosition(x, y)` into `a` (two ints) -> whether the pointer is over the surface.
+  Mouse = 2,
+  /// `FillsSurface()`.
+  Fills = 3,
+  /// `HasFrame()`.
+  Frame = 4,
+  /// `IsPopup()`.
+  Popup = 5,
+  /// `GetWindowState() == WindowState_Open`.
+  Open = 6,
+  /// `GetStyle()`.
+  Style = 7,
+  /// `Window::Create(WONRectangle(a..d))`, the display context and the offscreen image of the root's size.
+  WindowCreate = 8,
+  /// `Center(a)`.
+  Center = 9,
+  /// `SetIsShowing(a)`.
+  Showing = 10,
+  /// `PlatformShow(a)` (the virtual call).
+  Show = 11,
+  /// `QueueEvent(new SizeEvent(a, b, c, d))`.
+  QueueSize = 12,
+  /// `QueueEvent(new InputEvent(InputEvent_MouseExit))`.
+  QueueExit = 13,
+  /// `QueueEvent(new MouseEvent(p[0] .. p[4]))`, `a` five ints.
+  QueueMouse = 14,
+  /// `InvalidateRoot()`.
+  InvalidateRoot = 15,
+  /// `IsMouseInClientArea()`.
+  MouseIn = 16,
+  /// `mRoot->Contains(a, b)`.
+  RootContains = 17,
+  /// The root repainted into the offscreen image when it is invalid and there is one -> whether it was.
+  Paint = 18,
+  /// The parent when it is a PlatGUIWindow and visible, else 0.
+  ParentVisible = 19,
+  /// `Window::PlatformClose()`.
+  WindowClose = 20,
+  /// `Window::TimerEvent(a)`.
+  WindowTimer = 21,
+  /// The cursor `a` when it is a PlatCursor: the system pointer shown and the cursor applied.
+  ApplyCursor = 22,
+  /// Whether the manager's popup window does not want the mouse and is the window `a`.
+  PopupHit = 23,
+  /// `PlatCursorShow(a)`.
+  CursorShow = 24,
+  /// `PlatWindowMinimize((PlatWindow*)a)`.
+  PlatMinimize = 25,
+};
+
+/// The window's calls (`ee_won_plat_win`).
+enum class EeWonPlatWinCall : int32_t {
+  /// The destructor's: off the manager when registered.
+  Destroy = 0,
+  /// `Create(rect a)` (four ints).
+  Create = 1,
+  FollowSurface = 2,
+  /// `SetPosSize(a, b, c, d)`.
+  SetPosSize = 3,
+  /// `GetRect(out a, b)` (four ints; b: the client area).
+  GetRect = 4,
+  SetTitle = 5,
+  /// `PlatformSetCursor(a)`.
+  SetCursor = 6,
+  /// `PlatformShowNativeCursor(a)`.
+  ShowNativeCursor = 7,
+  /// `PlatformShow(a)`.
+  Show = 8,
+  /// `PlatformMinimize(a)`.
+  Minimize = 9,
+  /// `PlatformSetTopMost(a)`.
+  SetTopMost = 10,
+  Close = 11,
+  SetFocus = 12,
+  /// `PlatformSetMouseCapture(a)`.
+  SetCapture = 13,
+  IsVisible = 14,
+  /// `TimerEvent(a)`.
+  Timer = 15,
+  /// `OnPaint()`.
+  Paint = 16,
+  /// `QueueMouse(a: five ints)`.
+  QueueMouse = 17,
+  /// The fields the manager reads into `a` (EeWonPlatWinInfo).
+  Info = 18,
+  /// `mRegistered = a`.
+  SetRegistered = 19,
+  /// `SetMinimizeOnAltTab(a)`.
+  SetMinimizeOnAltTab = 20,
+  /// `SetForwardKeyMsgToParent(a)`.
+  SetForwardKeys = 21,
+};
+
 /// The host's calls (the receiver the C++ `PlatWindowManager*`; a window is a `PlatGUIWindow*`).
 enum class EeWonPlatWmOp : uint32_t {
   /// `PlatCurrentThreadId() == WindowManager::GetThreadId()` (0 or 1).
@@ -10210,8 +10309,14 @@ struct EeWonPeerAuth;
 /// until a reply), the retries and the reply's bytes after its flags.
 struct EeWonPingOp;
 
+/// One pointer shape.
+struct EeWonPlatCursor;
+
 /// The Rust PlatGUIFont.
 struct EeWonPlatFont;
+
+/// The window's own state.
+struct EeWonPlatWin;
 
 /// The Rust PlatWindowManager.
 struct EeWonPlatWm;
@@ -12009,6 +12114,15 @@ struct EeWonPrefsEvent {
 /// Receives each event of a read in order.
 using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
 
+/// The platform's cursor calls (platform/PlatWindow.h), as the C++ shell hands them: PlatCursorSetSystem,
+/// PlatCursorCreate, PlatCursorSet, PlatCursorDestroy.
+struct EeWonPlatCursorFns {
+  void (*set_system)(uint32_t cursor);
+  void *(*create)(const uint32_t *bgra, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y);
+  void (*set)(void *cursor);
+  void (*destroy)(void *cursor);
+};
+
 /// A 1-bit mask (`PlatNativeMask`: RawImage1's rows, MSB first, rows padded to 4 bytes); a set bit is a transparent
 /// pixel.
 struct EeWonPlatMask {
@@ -12017,6 +12131,13 @@ struct EeWonPlatMask {
   int32_t height;
   int32_t bytes_per_row;
 };
+
+using EeWonPlatWinHost = ptrdiff_t(*)(void *me,
+                                      EeWonPlatWinOp op,
+                                      ptrdiff_t a,
+                                      ptrdiff_t b,
+                                      ptrdiff_t c,
+                                      ptrdiff_t d);
 
 /// The host: `(manager, op, a, b, c, d) -> result`.
 using EeWonPlatWmHost = ptrdiff_t(*)(void *me,
@@ -18978,6 +19099,27 @@ int64_t ee_won_prefs_recent_lan_name(const int64_t *times, size_t count);
 
 uint16_t ee_won_prefs_default_lan_number(uint32_t host);
 
+/// A system cursor (`PlatSystemCursor`).
+EeWonPlatCursor *ee_won_plat_cursor_system(const EeWonPlatCursorFns *fns, uint32_t cursor);
+
+/// A cursor of `width` x `height` pixels (copied) with its hot spot.
+///
+/// # Safety
+/// `pixels` holds `width * height` values (or is NULL with a size of 0).
+EeWonPlatCursor *ee_won_plat_cursor_pixels(const EeWonPlatCursorFns *fns,
+                                           const uint32_t *pixels,
+                                           int32_t width,
+                                           int32_t height,
+                                           int32_t hot_x,
+                                           int32_t hot_y);
+
+/// # Safety
+/// `c` came from a constructor above, freed once.
+void ee_won_plat_cursor_free(EeWonPlatCursor *c);
+
+/// `PlatCursor::Apply`.
+void ee_won_plat_cursor_apply(EeWonPlatCursor *c);
+
 /// `new PlatGUIFont(context, descriptor)`'s font: `face` the descriptor's face (NUL-terminated).
 ///
 /// # Safety
@@ -19128,6 +19270,24 @@ void ee_won_plat_pack_reduce(EeWonSurface *from,
 /// # Safety
 /// `out` holds 1,024 pixels.
 void ee_won_plat_hand_cursor(uint32_t *out);
+
+/// A new window for the shell `me` and its host.
+EeWonPlatWin *ee_won_plat_win_new(void *me, EeWonPlatWinHost host);
+
+/// # Safety
+/// `w` came from `ee_won_plat_win_new`, freed once (after its Destroy call).
+void ee_won_plat_win_free(EeWonPlatWin *w);
+
+/// One of the window's calls (`EeWonPlatWinCall`, its arguments as each says).
+///
+/// # Safety
+/// `w` is a live window; the pointers a call reads or writes are valid.
+ptrdiff_t ee_won_plat_win(EeWonPlatWin *w,
+                          EeWonPlatWinCall c,
+                          ptrdiff_t a,
+                          ptrdiff_t b,
+                          ptrdiff_t cc,
+                          ptrdiff_t d);
 
 /// A new manager for the C++ `me` and its host.
 EeWonPlatWm *ee_won_plat_wm_new(void *me, EeWonPlatWmHost host);

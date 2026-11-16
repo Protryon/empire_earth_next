@@ -236,38 +236,7 @@ SmartPtr<NativeImage> RawImage1::GetNative(DisplayContext* context)
     return NativeOfRaw(context, 0, this->mImageData, this->mBytesPerRow, this->mWidth, this->mHeight, NULL, -1);
 }
 
-// ---- cursors
-
-static PlatCursor* gAppliedCursor = NULL;   // the cursor last made the pointer's shape
-
-PlatCursor::PlatCursor(PlatSystemCursor inSystem)
-    : mIsSystem(true), mSystem(inSystem), mWidth(0), mHeight(0), mHotX(0), mHotY(0), mHandle(NULL), mFailed(false) {}
-
-PlatCursor::PlatCursor(const uint32_t* inPixels, int inWidth, int inHeight, int inHotX, int inHotY)
-    : mIsSystem(false), mSystem(PLAT_CURSOR_ARROW), mPixels(inPixels, inPixels + inWidth * inHeight), mWidth(inWidth),
-      mHeight(inHeight), mHotX(inHotX), mHotY(inHotY), mHandle(NULL), mFailed(false) {}
-
-PlatCursor::~PlatCursor()
-{
-    if (gAppliedCursor == this) {
-        PlatCursorSet(NULL);
-        gAppliedCursor = NULL;
-    }
-    if (this->mHandle != NULL)
-        PlatCursorDestroy(this->mHandle);
-}
-
-void PlatCursor::Apply()
-{
-    if (!this->mIsSystem && this->mHandle == NULL && !this->mFailed) {
-        this->mHandle = PlatCursorCreate(this->mPixels.data(), this->mWidth, this->mHeight, this->mHotX, this->mHotY);
-        this->mFailed = this->mHandle == NULL;
-    }
-    if (this->mHandle != NULL)
-        PlatCursorSet(this->mHandle);
-    else
-        PlatCursorSetSystem(this->mIsSystem ? this->mSystem : PLAT_CURSOR_HAND);
-    gAppliedCursor = this;
-}
+const EeWonPlatCursorFns PlatCursor::kFns = {(void (*)(uint32_t))PlatCursorSetSystem, PlatCursorCreate, PlatCursorSet,
+                                             PlatCursorDestroy};
 
 } // namespace WONAPI

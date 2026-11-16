@@ -38,7 +38,7 @@ static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t 
     switch (inOp) {
     case Op::IsUiThread: return PlatCurrentThreadId() == WindowManager::GetThreadId();
     case Op::Info: w->GetInfo(*(EeWonPlatWinInfo*)b); return 0;
-    case Op::SetRegistered: w->mRegistered = b != 0; return 0;
+    case Op::SetRegistered: w->Rust(EeWonPlatWinCall::SetRegistered, b != 0); return 0;
     case Op::FollowSurface: w->FollowSurface(); return 0;
     case Op::FollowPixelScale: w->FollowPixelScale(); return 0;
     case Op::QueueInput: w->QueueEvent(new InputEvent(kInputTypes[b])); return 0;

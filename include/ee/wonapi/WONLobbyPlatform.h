@@ -100,9 +100,10 @@ public:
     // paints every window whose root is invalid, then composites when anything changed
     void PaintAndComposite() { this->Call(EeWonPlatWmCall::PaintAndComposite); }
 
+    intptr_t Call(EeWonPlatWmCall inCall, intptr_t a = 0, intptr_t b = 0) const;
+
 protected:
     void HandlePlatEvent(const PlatInputEvent& inEvent);
-    intptr_t Call(EeWonPlatWmCall inCall, intptr_t a = 0, intptr_t b = 0) const;
 
     EeWonPlatWm* mRust;                         // the manager (platwm.rs)
     EventForwardFunc mEventForward;
@@ -131,8 +132,8 @@ public:
     virtual void PlatformSetMouseCapture(bool inOn);
     virtual bool PlatformIsVisible();
 
-    void SetMinimizeOnAltTab(bool inMinimize) { this->mMinimizeOnAltTab = inMinimize; }
-    void SetForwardKeyMsgToParent(bool inForward) { this->mForwardKeyMsgToParent = inForward; }
+    void SetMinimizeOnAltTab(bool inMinimize) { this->Rust(EeWonPlatWinCall::SetMinimizeOnAltTab, inMinimize); }
+    void SetForwardKeyMsgToParent(bool inForward) { this->Rust(EeWonPlatWinCall::SetForwardKeys, inForward); }
     // the window fills the surface (no parent): no frame, the surface's size, never moved
     bool FillsSurface() const { return this->GetParent() == NULL; }
     bool HasFrame() const { return this->GetParent() != NULL && !(this->GetStyle() & 0x20); }
@@ -144,12 +145,9 @@ public:
     void QueueMouse(int inType, int inSurfaceX, int inSurfaceY, int inMod, int inButtonOrAmount);
     PlatWindowManager* GetPlatManager();
 
-    int mX, mY, mWidth, mHeight;                // the window rectangle in surface pixels (frame included)
-    bool mVisible;
-    bool mTopMost;
-    bool mRegistered;
-    bool mMinimizeOnAltTab;
-    bool mForwardKeyMsgToParent;
+    // the window (platwin.rs: its rectangle in surface pixels, frame included, and its flags) and its calls
+    EeWonPlatWin* mRust;
+    intptr_t Rust(EeWonPlatWinCall inCall, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0, intptr_t d = 0);
 };
 
 // The factory the WONAPI code uses where the original said `new MSWindow`.
@@ -245,21 +243,19 @@ public:
     SmartPtr<NativeImage> mImage;
 };
 
-// a pointer shape: one of the system's, or pixels (0xAARRGGBB) made into a platform cursor on first use
+// a pointer shape: one of the system's, or pixels (0xAARRGGBB) made into a platform cursor on first use (ee_won's
+// platcursor.rs, R6 WON round 41)
 class PlatCursor : public Cursor {
 protected:
-    virtual ~PlatCursor();
+    virtual ~PlatCursor() { ee_won_plat_cursor_free(this->mRust); }
 public:
-    explicit PlatCursor(PlatSystemCursor inSystem);
-    PlatCursor(const uint32_t* inPixels, int inWidth, int inHeight, int inHotX, int inHotY);
+    explicit PlatCursor(PlatSystemCursor inSystem) : mRust(ee_won_plat_cursor_system(&kFns, (uint32_t)inSystem)) {}
+    PlatCursor(const uint32_t* inPixels, int inWidth, int inHeight, int inHotX, int inHotY)
+        : mRust(ee_won_plat_cursor_pixels(&kFns, inPixels, inWidth, inHeight, inHotX, inHotY)) {}
+    static const EeWonPlatCursorFns kFns;   // the platform's cursor calls (PlatNativeImage.cpp)
     virtual Cursor* GetNative() { return this; }
-    void Apply();                           // makes it the pointer's shape (UI thread)
-    bool mIsSystem;
-    PlatSystemCursor mSystem;
-    std::vector<uint32_t> mPixels;
-    int mWidth, mHeight, mHotX, mHotY;
-    void* mHandle;                          // PlatCursorCreate's
-    bool mFailed;
+    void Apply() { ee_won_plat_cursor_apply(this->mRust); }   // makes it the pointer's shape (UI thread)
+    EeWonPlatCursor* mRust;
 };
 
 // a font on platform/PlatFont.h (MSFont's replacement)
