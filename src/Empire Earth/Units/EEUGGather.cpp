@@ -36,8 +36,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEUCNavalCitizen.h"
 #include "ee/EEComputerPlayer.h"
-#include "ee/EECPCivilizationManager.h"
-#include "ee/EECPResourceManager.h"
 #include "ee/EEAIContinentManager.h"
 
 const UString EEUGGather::sData("EEUGGather-Data");
@@ -325,9 +323,10 @@ void EEUGGather::FindStorage(EEComplexUnit* inUnit)
     unsigned long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
     inUnit->ReleaseFireEffect();
     if ((theCommand == kActionFindStorage || theCommand == kActionFindNewStorage) && !inUnit->mPlayer->IsHuman()) {
-        bool theFree = !inUnit->mPlayer->mComputerPlayer->mCivilizationManager->mResourceManager->BuildSettlementFor(inUnit);
-        if (!theFree)
-            return;
+        // (the resource manager's BuildSettlementFor: it only cleared the computer player's selection; stage 6)
+        EESelectedGroup* theGroup = inUnit->mPlayer->mComputerPlayer != NULL ? inUnit->mPlayer->mComputerPlayer->mActiveGroup : NULL;
+        if (theGroup != NULL && theGroup->GetNumUnits() > 0)
+            theGroup->Clear();
     }
     EEUCBasicCitizen* theClass = dynamic_cast<EEUCBasicCitizen*>(inUnit->GetUnitClass());
     EEUnit* theStorage = theClass->FindStorage(inUnit, (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionFindNewStorage);

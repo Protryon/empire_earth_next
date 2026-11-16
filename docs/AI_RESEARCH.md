@@ -5912,6 +5912,62 @@ loses less (as §8.86's pool row showed).
 (§8.31) stay as history. The `aggressive` personality in `aipersonalities.yaml` is the classic's and stays. The group
 verbs that only Rush used no longer need a Lua port before EECPNextArmy can go.
 
+### 8.92 Stage 6: the economy verbs in Lua, the C++ managers deleted (2026-11-15, EE-SIM)
+
+**The owner's goal:** the AI economy off C++. classic_lua already gave only unit-level commands. Boom and Age of AI
+still returned the coarse verbs (gather, claim, release, claim_range, build, fish, train, reserve, research,
+improve, advance), and the C++ managers carried them out (docs/AI_LUA_VERBS.md has the inventory).
+
+**Built:** data/ai/lib/verbs.lua carries the eleven verbs out on the per-unit commands, as the managers did:
+- the gatherer lists and AssignGatherers' order every 10 s;
+- the build queue every 3 s, with the placement rules through `ai.place`;
+- the production FIFOs and the research queue;
+- the reserve as its own check, and the repairs every 31 s.
+
+`verbs.wrap(M)` runs the runners first, fills the view fields the managers filled and merges the results in order.
+It holds the citizens and boats, and shows the script the held states the C++ runners gave.
+
+Then the managers were deleted: unit, build (all but the placement), resource (all but the reflexes), research,
+civilization and wall managers, EECPNextTactics.cpp, the group verbs (only Rush and test_opening called them,
+§8.91), about 10,800 lines of C++ against 1,700 added. The 2,400 lines of Lua replace them.
+
+**Three bugs the bench found:**
+- The old `EEUGBuildRepair::Abandon` hook killed and refunded a foundation whose builder had left: with every citizen
+  held, any builder a script took lost its foundation. The same tower was placed 24 times; Bronze came 6 minutes
+  late. It went with the managers.
+- A citizen whose goal ended stayed on its resource's list, so food looked staffed: Boom's Copper food income was
+  230 a minute against 320. Now it goes onto the idle list at once, as UnitGoalDone did.
+- `record.gathers` is what a citizen carries, not what it works; the lists now use the target's kind.
+
+**Bench** (32 seeds, Small, Hard, cheats none, 90 minutes, against classic_lua; "before": the pre-deletion exe with
+the C++ verbs and the same merged scripts; W-L-close by the scorecard):
+
+| | Boom before | Boom after | Age of AI before | Age of AI after |
+|---|---|---|---|---|
+| W-L-close | 4-10-18 | 2-10-20 | 2-27-3 | 4-23-5 |
+| Stone Age (reached, median) | 32, 21.4 m | 32, 20.9 m | 30, 47.9 m | 32, 40.1 m |
+| Copper Age | 29, 48.6 m | 30, 48.9 m | 18, 61.9 m | 25, 59.2 m |
+| Bronze Age | 26, 63.5 m | 27, 66.1 m | 0 | 0 |
+| Iron Age | 13, 80.5 m | 12, 79.6 m | | |
+| citizens / army at 40 min | 92.3 / 8.0 | 94.7 / 8.8 | 61.9 / 12.1 | 65.5 / 11.3 |
+| citizens lost | 22.6 | 20.5 | 57.0 | 66.1 |
+
+The 4-AI cell (Boom, Age of AI and two classic_lua, Small, 16 seeds, 60 minutes):
+
+| | before | after |
+|---|---|---|
+| Boom Copper Age | 8/16 | 11/16 |
+| Age of AI Stone Age | 3/16 | 9/16 |
+| classic_lua Copper Age | 12/32 | 11/32 |
+
+Determinism (seed 2, `--repeat 2`, boom vs classic and ageofai vs classic): identical. Script errors: 0 for Boom; 21
+for Age of AI, all in one game (econ.lua front_spot divided by 0 for a town at the map's centre: its own bug, fixed,
+the seed rerun clean). classic_lua plays on the new exe too: the deleted hook no longer kills its abandoned
+foundations either.
+
+**Open:** the reflexes (militia, danger zones, naval flight) are still C++ decision code (AI_LUA_VERBS.md §5);
+FindSite's finders are C++ placement searches behind `ai.place`, a candidate for a Lua port.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

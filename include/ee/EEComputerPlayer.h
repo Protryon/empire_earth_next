@@ -8,8 +8,8 @@
 
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
 class EECPCombatManager;                    // ee/EECPCombatManager.h
-class EECPCivilizationManager;              // ee/EECPCivilizationManager.h
-class EECPResourceCenter;                   // ee/EECPCivilizationManager.h
+class EECPPlacement;                        // ee/EECPPlacement.h
+class EECPResourceCenter;                   // ee/EECPResourceCenter.h
 class EEAIFOUnitSelectionScreener;          // ee/EECPUnitSelector.h
 class EEAIFOUnitsToKillScoringBase;         // ee/EEAIFOUnitsToKillScoringBase.h
 
@@ -182,8 +182,11 @@ public:
     std::vector<EEComplexUnit*> mUnitsToKill;  // +0xbb0 (ChooseUnitsToKill push_backs the units it kills; the dtor dereferences each)
     EECPCombatManager* GetCombatManager() const { return this->mCombatManager; }
     EECPCombatManager* mCombatManager;      // +0xbc0 (EEAttackPlayers 0x13f5e9) (provisional name)
-    EECPCivilizationManager* GetCivilizationManager() const { return this->mCivilizationManager; }
-    EECPCivilizationManager* mCivilizationManager;   // +0xbc4 (EECPUnitSelector 0x97a34: its +0x3c build manager) (provisional name)
+    // stage 6 (docs/AI_LUA_VERBS.md): the original civilization manager (+0xbc4) and its unit, build, resource,
+    // research and wall managers are gone (the Lua verbs, data/ai/lib/verbs.lua); what the engine and the helper
+    // queries still need: the placement searches (with the town centre tile) and the reflexes' danger zones
+    EECPPlacement* mPlacement;
+    std::vector<std::pair<U2DPoint<long>, unsigned long> > mDangerZones;   // (tile, game ms) EECPReflexes.cpp
     // (+0xbc8..+0xbd0: the diplomacy, exploration and player interaction managers, deleted in stage 5)
     unsigned long mLBD4;   // (unsigned: Load)
     unsigned long GetDifficulty() const { return this->mDifficulty; }
@@ -511,24 +514,8 @@ enum EECPManagerKind {
     kCPManagerMoraleBuildings = 9,  // CanEnableManager case 9 uses mEnableStockBuild; EnableManagers case 9 sets EECPCivilizationManager::mMoraleBuildingsEnabled (QueueMoraleBuilding timer) (provisional name)
 };
 
-// New (docs/AI_RESEARCH.md §8.7): the epoch advance the player's research manager has queued and not yet started
-// (kTechNone: none); without the free-epochs cheat its cost is reserved
+// the epoch advance one of the player's buildings researches or has queued (kTechNone: none)
 long EECPPendingEpoch(EEComputerPlayer* inPlayer);
 
-// New (docs/AI_RESEARCH.md §8.8): the epoch pressure, the elapsed share of the epoch timer's span (dbcpbehavior rows
-// 28/29, the mean of the range times the difficulty's modifier): 0 when the timer starts, 1 when it is due (the
-// original's only advance time); a paid advance is asked for from the personality's epoch_pressure start, and its
-// reserve grows from nothing there to the whole cost at its full (aipersonalities.yaml; tall low, wide high).
-float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime);
-// the current epoch's schedule in minutes (0: the epoch timer): epoch_pressure.stone_span in the Prehistoric, the
-// experiments span20/span25/span30 after it (docs/AI_RESEARCH.md §8.28); and the game time its schedule counts from
-float EECPScheduleSpan(EEComputerPlayer* inPlayer);
-unsigned long EECPScheduleStart(EEComputerPlayer* inPlayer, unsigned long inTime);
-// the experiment "safedash" (docs/AI_RESEARCH.md §8.29): the epoch pressure added while the town is safe (0: none)
-float EECPPressureBonus(EEComputerPlayer* inPlayer);
-// The boom opening (the experiments "boom25": until 25 workers or 12 game minutes, "boom35": 35 or 15): citizens skip the
-// epoch reserve and the standing army waits
-bool EECPBooming(EEComputerPlayer* inPlayer);
-unsigned long EECPEpochTimerSpan(EEComputerPlayer* inPlayer);   // ms
 
 #endif
