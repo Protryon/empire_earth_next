@@ -231,7 +231,6 @@ fn mutations(seed: u32, b: &[u8], tails: &[usize]) -> Vec<(String, Vec<u8>)> {
     out
 }
 
-/// What `EECPNextLoadState`'s decode leaves in a state: the block's fields, and below version 2 the state's own army.
 // ---- EENU
 
 /// A per-unit state as the C++ containers keep it.

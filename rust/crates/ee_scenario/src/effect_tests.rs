@@ -447,4 +447,3 @@ fn dialogue_goes_to_the_current_player_and_an_empty_box_to_the_others() {
     execute(&mut w, &e, true);
     assert_eq!(w.calls(), vec!["57", "58 1", "59"]);
 }
-

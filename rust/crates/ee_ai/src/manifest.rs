@@ -152,9 +152,7 @@ pub fn read(text: &[u8], path: &[u8], script_exists: &mut dyn FnMut(&[u8]) -> bo
         if problem.is_empty() && !id_ok(&ai.id) {
             problem = cat(&[b"id '", &ai.id, b"' must be 1 to 64 of a-z, 0-9 and _"]);
         }
-        if problem.is_empty()
-            && (ai.id == b"classic" || ai.id == b"random" || ai.id == b"next" || ai.id == b"none")
-        {
+        if problem.is_empty() && (ai.id == b"classic" || ai.id == b"random" || ai.id == b"next" || ai.id == b"none") {
             problem = cat(&[b"id '", &ai.id, b"' is reserved (classic, random, next, none)"]);
         }
         if problem.is_empty() && m.entries.iter().any(|o| o.id == ai.id) {

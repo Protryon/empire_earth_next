@@ -366,7 +366,8 @@ mod tests {
     #[test]
     fn caps_drop_but_read() {
         let mut s = sample();
-        s.results = (0..5).map(|k| OrderResult { verb: vec![b'a'; k], count: k as i32, ..Default::default() }).collect();
+        s.results =
+            (0..5).map(|k| OrderResult { verb: vec![b'a'; k], count: k as i32, ..Default::default() }).collect();
         let d = decode(&encode(&s), 3).unwrap();
         assert_eq!(d.results.len(), 3);
         assert_eq!(d.results[2].count, 2);
