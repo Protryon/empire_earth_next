@@ -580,22 +580,6 @@ pub fn lobby_sound(code: isize) -> isize {
     }) as isize
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::resource::EeWonLobbyRes as R;
-
-    #[test]
-    fn the_texts_are_their_resource_rows() {
-        let wrong = lobby_text(EeWonLobbyText::WrongPassword as isize);
-        assert_eq!(wrong & 0xffff, R::GameStagingLogic_JoinGameErrorTitle_String as isize);
-        assert_eq!(wrong >> 16, R::LobbyGameStatus_InvalidPassword_String as isize);
-        assert_eq!(lobby_text(99), lobby_text(0));
-        assert_eq!(lobby_sound(EeWonLobbySound::AllReady as isize), R::LobbyGlobal_AllReady_Sound as isize);
-        assert!((R::LobbyGlobal_AllNotReady_Sound as isize) < 0x10000);
-    }
-}
-
 /// A game reference the Rust side holds (the original's local `SmartPtr<LobbyGame>`), given back when dropped.
 pub struct HeldGame {
     host: Host,
@@ -627,4 +611,20 @@ pub unsafe extern "C" fn ee_won_lobby_sink(sink: *mut c_void, bytes: *const u8, 
     }
     // SAFETY: the contract
     unsafe { (*(sink as *mut Vec<u8>)).extend_from_slice(std::slice::from_raw_parts(bytes, length)) };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::resource::EeWonLobbyRes as R;
+
+    #[test]
+    fn the_texts_are_their_resource_rows() {
+        let wrong = lobby_text(EeWonLobbyText::WrongPassword as isize);
+        assert_eq!(wrong & 0xffff, R::GameStagingLogic_JoinGameErrorTitle_String as isize);
+        assert_eq!(wrong >> 16, R::LobbyGameStatus_InvalidPassword_String as isize);
+        assert_eq!(lobby_text(99), lobby_text(0));
+        assert_eq!(lobby_sound(EeWonLobbySound::AllReady as isize), R::LobbyGlobal_AllReady_Sound as isize);
+        assert!((R::LobbyGlobal_AllNotReady_Sound as isize) < 0x10000);
+    }
 }
