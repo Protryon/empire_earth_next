@@ -14171,7 +14171,7 @@ step 1451 formstate
   groups 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0
 step 1452 tab 2
 step 1453 formstate
-  form tab=2 eg=3 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=1 hl=1 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767 fg=0.996078,0.968627,0.12549 tr=1 fh=11 'Loading Terrain Ambients - Aquatic' lines=1 'Loading Terrain Ambients - Aquatic'
+  form tab=2 eg=3 on=1 cargo=0 sel=[] b=00 sw=0 sus=0 hid=0 exit=0 mini=1 help=0 load=0 hl=1 view=0,25,1382,783 panel=0,606,1023,767 edges=0,0,1225,767
   groups 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0
 step 1454 tab 5
 step 1455 formstate

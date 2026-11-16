@@ -2124,7 +2124,11 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             outError = inScript + ":" + std::to_string(k + 1) + ": unknown command " + c;
             return 2;
         }
-        if (c == "form" || c == "players" || c == "unittab")
+        // the load thread drained before the step is queued: its texts reach the UI thread as actions
+        // (EESEAChangeLoadText, one object posted again with each text), so a sync inside the step (FormState's) leaves
+        // the ones posted meanwhile queued behind the step, and the load text read was whichever ran first (the
+        // editor gate's flake under load); drained here, every one runs before the step
+        if (c == "form" || c == "players" || c == "unittab" || c == "formstate")
             SyncLoadThread();
         size_t theBefore = theOutput.size();
         if (!RunStep(theCode)) {
