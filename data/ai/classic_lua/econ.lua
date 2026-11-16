@@ -1200,7 +1200,9 @@ local function island_stuck_docks(view, memory)
             local k = ai.class(t.makes)
             local made = #ai.units{category = k ~= nil and k.category or "ship"}
             local p = rm.dock_prod[id]
-            if p == nil or p.item ~= u.producing or made ~= p.made then
+            -- (at the population cap the engine holds the unit back: no fault of the dock's)
+            local full = view.population + 2 >= view.population_cap
+            if p == nil or p.item ~= u.producing or made ~= p.made or full then
                 rm.dock_prod[id] = {item = u.producing, made = made, t = view.time}
             elseif view.time - p.t >= DOCK_STUCK_MS then
                 rm.dock_prod[id] = nil
