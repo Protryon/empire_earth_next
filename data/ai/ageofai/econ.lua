@@ -700,6 +700,9 @@ end
 
 -- a tower spot at the front: the slots defence_distance tiles out, 3 tiles apart across the front, then one ring in
 local function front_spot(view, mem, tower, fx, fy, len)
+    if len == nil or len <= 0 then
+        return nil   -- (no front: M.front's 1, 0, 0 when the town stands at the map's centre)
+    end
     local tx, ty = view.town_x, view.town_y
     local d = S.defence_distance
     local px, py = -fy, fx
