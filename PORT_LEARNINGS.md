@@ -25871,3 +25871,24 @@ markers were already stripped on both sides): `git diff --numstat 0cd8d3cd -- sr
   drivers' stand-ins need only RustServerOp's constructor, destructor and three hooks, which can stay in a small
   ServerOp.cpp, and the nine cases free about 25 lines net once the C++ makers they need are counted; the crypt
   transform as a Rust variant needs C++ helpers for the `ByteBufferPtr*` it replaces (no net saving).
+- **won_cachemap_test** (the lead's item: about 23 minutes on a loaded machine, over wontest's 20-minute limit,
+  because each of its 6,001 cases opened files eight times): one case in ten keeps the disk on both sides (writes,
+  the cut files written back and read by path, a missing file, the missing directory); in the others the original
+  still writes its file (FileWriter has only a file) but the port writes to memory (`ee_won_cachemap_write_memory`:
+  `write_map` over a byte vector that behaves as the file writer) and both read the bytes from memory through the
+  same FileReader (the original's statements over its memory `Open`, as won_persist_test's fix did;
+  `ee_won_cachemap_read_memory`). The same 18,003 checks in 1 min 43 s here; a memory writer flipping a byte gives
+  5,400 failures.
+- **The merge** (origin/rust 1c108108): PORT_LEARNINGS conflicted (both sides appended: rust's copy and this
+  section) and include/rust/ee_won.h (regenerated); `strip_markers.py` found nothing to strip.
+
+### Gates
+
+| Gate | per commit | Merged with rust (origin/rust 1c108108) |
+|---|---|---|
+| `build.py -j 3 --sim` | c8c71bc9, after WONCrypt: 0 / 0 | 0 / 0 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical (both) | seeds 2-7 identical |
+| `rust_build.py gate` | PASS (after clippy's fixes) | ee_input's tests died once with STATUS_HEAP_CORRUPTION (passed three runs alone); PASS on the rerun with the cachemap change |
+| `build.py --test-profile windowed-software` | (with the merge) | 0 / 0 |
+| `xbuild.py wontest` | the programs linking the changed units: exit 0 | all 132 programs exit 0 |
+| `lan_game.py` (harness lock) | (with the merge) | `RESULT PASS lan-game PT host=2750 joiner=2771` |
