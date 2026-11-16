@@ -9,7 +9,7 @@ protected:
     PopupParams mParams; //10..3b, full2c POD containing borrowed raw pointers
 public:
     DoPopupEvent(const PopupParams& params) : mParams(params) {}
-    virtual void Deliver(); //32b650 originalexternal, forwards params to mWindow->OpenPopup
+    virtual void Deliver() { this->mWindow->OpenPopup(this->mParams); } //32b650
 };
 }
 #endif

@@ -1898,19 +1898,19 @@ public:
 class InputEvent : public WindowEventBase {
 public:
     InputEvent(int type) : WindowEventBase(type) {}
-    virtual void Deliver(); //32b520
+    virtual void Deliver() { this->mWindow->HandleInputEvent(this); } //32b520: to its window
 };
 class MouseEvent : public InputEvent {
 public:
     MouseEvent(int type,int x,int y,int mod,int button=0)
       : InputEvent(type),mx(x),my(y),mKeyMod(mod),mButtonOrAmount(button) {}
-    virtual void Deliver(); //32b630
+    virtual void Deliver() { this->mWindow->HandleMouseEvent(this); } //32b630
     int mx,my,mKeyMod,mButtonOrAmount; //10,14,18,1c
 };
 class KeyEvent : public InputEvent {
 public:
     KeyEvent(int type,int key,int mod) : InputEvent(type),mKey(key),mKeyMod(mod) {}
-    virtual void Deliver(); //32b640
+    virtual void Deliver() { this->mWindow->HandleKeyEvent(this); } //32b640
     int mKey,mKeyMod; //10,14
 };
 class SizeEvent : public InputEvent {
@@ -1922,10 +1922,13 @@ public:
 
 class ComponentEvent : public WindowEventBase {
 public:
-    ComponentEvent(Component* inComponent, int inType);
-    virtual void Deliver();
-    void SetComponent(Component* inComponent);
-    int GetControlId() const;
+    // an event of the given type for a component (not a broadcast)
+    ComponentEvent(Component* c, int t) : mComponentRef(c), mType(t), mComponent(c) { this->mBroadcast = false; }
+    // broadcast through the window manager, or bubbled up from the component
+    virtual void Deliver()
+    { if (this->mBroadcast) this->mWindow->mManager->BroadcastEvent(this); else this->mComponent->BubbleEvent(this); }
+    void SetComponent(Component* c) { this->mComponent = c; this->mComponentRef = c; } // retargets the event
+    int GetControlId() const { return this->mComponent->mControlId; }
     SmartPtr<Component> mComponentRef;      // +0x10
     int mType;                              // +0x14
     bool mBroadcast;                        // +0x18
