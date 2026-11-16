@@ -154,7 +154,6 @@ ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 16100f 161825 RTS Engine/Physics/RTSPhysics.cpp
 161825 16d346 Empire Earth/Player/EEPlayer.cpp
 16d346 16e1a2 Empire Earth/Player/EEPlayerStatistics.cpp
-16e1a2 16e5b9 Empire Earth/Player/EEPPlayerEvent.cpp
 16e5b9 16ef03 Empire Earth/Player/EEPPlayerEventList.cpp
 16ef03 16f892 RTS Engine/Player/RTSPlayer.cpp
 16f892 16ff5f Empire Earth/Scenario Editor/EESEEvents.cpp

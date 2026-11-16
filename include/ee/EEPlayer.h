@@ -19,6 +19,8 @@ class FSFile;
 // unsigned short's two, shared by the player's, the physics', the map's and the units' hosts; EEPlayer.cpp); -1 for
 // another operation
 int32_t EESavePrimitive(FSFile& inFile, int32_t inOp, EeUnitsPlayerSaveIo* io);
+// the same as a Rust host callback on an FSFile* context (the statistics', events' and queued improvements' saves)
+int32_t EESaveFilePrimitive(void* inFile, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io);
 inline bool EESaveIsPrimitive(int32_t inOp)
 {
     return (inOp >= EE_UNITS_PLAYER_SAVE_READ_ULONG && inOp <= EE_UNITS_PLAYER_SAVE_WRITE_BOOL) ||
@@ -36,8 +38,8 @@ struct EEGroupCluster;                      // ee/EEGroupCluster.h
 struct EECPASGFlags;                        // ee/EECPAttackSubGroup.h
 class EEUnitGoal;
 class EEPPatrolGroup;
-class EEPPlayerEvent;
 class SESMInstanceNode;                     // lle/SESMInstanceNode.h (EEPPlayerEventList::mSound)
+class EESoundObject;
 class EEComputerPlayer;
 class EEHumanPlayer;
 class EEUnit;
@@ -65,52 +67,36 @@ class EEMap;
 class UIHotKey;
 template <class T> class U2DPoint;           // AddEvent / GetMouseChild take a U2DPoint<long>
 
-// A player's event list (RTTI EEPPlayerEventList, vtable 0x442b54; ctor 0x16e5b9; sizeof 0x3c; provisional names)
+// A player's event list (RTTI EEPPlayerEventList, vtable 0x442b54): the alerts at a map location (1 under attack, 2 a
+// garrison's message, 3 a flare).
+// port (the player lane, round 1): the events (EEPPlayerEvent's members) and every decision on them are a Rust object
+// (mList: ee_units player_events.rs); the C++ keeps the alert sounds and answers the world's parts (Host)
 class EEPPlayerEventList {
 public:
-    EEPPlayerEventList();
-    // 0x16e702 (EEMSendFlare: (tile, 3, the sender, -1, true)) (provisional name)
-    void AddEvent(const U2DPoint<long>& inTile, long inType, EEPlayer* inPlayer, long inTextID, bool inForceNew);
-    // 0x16e72e: an event at inTile seen from inFrom (EEUCBasicPriest::UpdateConversion: the conversion, type 1); both points are
-    // passed straight to EEPPlayerEvent's ctor (U2DPoint<long>, was pair<long, int>) (provisional name)
-    void AddPlayerEvent(const U2DPoint<long>& inTile, const U2DPoint<long>& inFrom, long inType, EEPlayer* inPlayer, long inTextID, bool inForceNew);
+    EEPPlayerEventList();                   // the alert sounds loaded
     virtual ~EEPPlayerEventList();
-    // 0x16e94e: the next event (mNextIndex cycles over mEvents; EEAPlayerEvent::Virtual4 0x4352 reads its tile)
-    // (provisional name)
-    EEPPlayerEvent* GetNextEvent();
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x16e9a3, ret12/status
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // 0x16eda4 (EEPlayer::Save; provisional name)
-    long RepairEvents(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion);  // 0x16ed0c (EEPlayer::RepairPointers)
-    void TickEvents(EEPlayer* inPlayer, float inElapsed);  // 0x16ee6d (EEPlayer::UpdatePlayer: gPhysics->mF98; provisional name)
-    void ShowEvents(EEPlayer* inPlayer);    // 0x16e90a (EEPlayer::SetSharedLOS, after the units; provisional name)
-    void HideEvents(EEPlayer* inPlayer);    // 0x16ecb8 (EEPlayer::SetSharedLOS, before; provisional name)
-    void Clear(EEPlayer* inPlayer);         // 0x16e8bc (EEPlayer::Reset, the dtor, 0x16828c; provisional name)
-    // EEPPlayerEventList.cpp's own members (provisional names)
-    void ReleaseSound();                    // 0x16e689: dereferences mSound, clears it
-    // 0x16e6ad: new EEPPlayerEvent, reactivated for inPlayer, pushed at the front
-    EEPPlayerEvent* MakeEvent(const U2DPoint<long>& inTile, const U2DPoint<long>& inFrom, long inType, EEPlayer* inPlayer,
-                                float inDuration, long inTextID);
-    void TrimEvents(EEPlayer* inPlayer);    // 0x16e85c: drops expired events from the back while more than 15
-    void LoadSounds();                      // 0x16ea2a: sounds 0x18d, 0x86, 8, 0x7d0, 0x7d0 (counted uses)
-    void Announce(EEPlayer* inPlayer, EEPPlayerEvent* inEvent);   // 0x16eaa8: the local player's sound + mini-map ping
-    void SetSound(SESMInstanceNode* inSound);   // 0x16ebb1 (referenced)
-    void Ping(EEPPlayerEvent* inEvent);     // 0x16ebcb: the mini-map ping at the event's source
-    void ShowText(EEPPlayerEvent* inEvent); // 0x16ec18: the event's string (mL1C) into the chat log
-    // 0x16ec61: erases and deletes one event (deactivating it first when inDeactivate)
-    void RemoveEvent(std::deque<EEPPlayerEvent*>::iterator inWhere, EEPlayer* inPlayer, bool inDeactivate);
-    void StopPing(EEPlayer* inPlayer);      // 0x16ee0b: the local player's mini-map ping off
-    void UnloadSounds();
+    // an event at inTile (EEMSendFlare: (tile, 3, the sender, -1, true)); AddPlayerEvent's with inFrom, the location
+    // whose sight an attack shares (EEUCBasicPriest::UpdateConversion: the conversion, type 1)
+    void AddEvent(const U2DPoint<long>& inTile, long inType, EEPlayer* inPlayer, long inTextID, bool inForceNew);
+    void AddPlayerEvent(const U2DPoint<long>& inTile, const U2DPoint<long>& inFrom, long inType, EEPlayer* inPlayer, long inTextID, bool inForceNew);
+    bool GetNextEventSource(U2DPoint<long>& outSource);   // the next event's source (EEAPlayerEvent); false without one
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    long RepairEvents(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion)
+    {
+        this->Call(inPlayer, EE_UNITS_EVENTS_REPAIR, 0.0f);
+        return 0;
+    }
+    void TickEvents(EEPlayer* inPlayer, float inElapsed) { this->Call(inPlayer, EE_UNITS_EVENTS_TICK, inElapsed); }
+    void ShowEvents(EEPlayer* inPlayer) { this->Call(inPlayer, EE_UNITS_EVENTS_SHOW_ALL, 0.0f); }   // around a sight change
+    void HideEvents(EEPlayer* inPlayer) { this->Call(inPlayer, EE_UNITS_EVENTS_HIDE_ALL, 0.0f); }
+    void Clear(EEPlayer* inPlayer) { this->Call(inPlayer, EE_UNITS_EVENTS_CLEAR, 0.0f); }   // (NULL: no world call)
+    void Call(EEPlayer* inPlayer, uint32_t inWhat, float inElapsed);
+    static int32_t Host(void* inList, void* inPlayer, int32_t inOp, const EeUnitsPlayerEvent* inEvent);
 
-    std::deque<EEPPlayerEvent*> mEvents;    // +0x04 (ee/EEPPlayerEvent.h)
-    float mPingTimeLeft;                    // +0x18 (= 0; the ping time left: 10000, 20000 for type 3)
-    EEPPlayerEvent* mCurrent;               // +0x1c (compared with and set to events: 0x16e81f, 0x16e994)
-    SESMInstanceNode* mSound;               // +0x20 (referenced: 0x16ebb1 inc [+4]; 0x16e689 Dereference)
-    EESoundObject* mGarrisonSound;          // +0x24 (sound 0x86: type 2)
-    EESoundObject* mSound28;                // +0x28 (sound 0x7d0)
-    EESoundObject* mFlareSound;             // +0x2c (sound 8: type 3)
-    EESoundObject* mUnderAttackSound;       // +0x30 (sound 0x18d: type 1)
-    EESoundObject* mSound34;                // +0x34 (sound 0x7d0)
-    unsigned long mNextIndex;               // +0x38 (GetNextEvent: unsigned compare with 15)
+    EeUnitsPlayerEvents* mList;             // the events (Rust)
+    SESMInstanceNode* mSound;               // the alert playing (referenced)
+    EESoundObject* mSounds[5];              // under attack, garrison, flare, 0x7d0 twice (loaded with the list)
 };
 
 // A group of units (RTTI EEGroup > UReferenceCounter; EEGroup.cpp around 0x205ee4)
@@ -542,64 +528,62 @@ public:
 typedef EETechTree EETechnologyTable;
 extern EETechTree gTechTree;                // 0x52fd98 (Empire Earth.cpp: the database's tree)
 
-// One point of a player's statistics series (provisional names; 8 bytes). Not EETileCoordinate (trivial ctor)
-// nor U2DPoint<long> (operator= 0x4d28b copies +0 first): the inline default ctor zeroes both (0x16d4c6 `and [ebp-8],0;
-// and [ebp-4],0`; resize's default argument pushes 0, 0) and operator= 0x16d389 is out of line in
-// EEPlayerStatistics.cpp (before its first user) and copies +4 first. Both unsigned long: Load/Save use FSFile's
-// unsigned long Read/Write (+0x5c/+0x94) for each field; +0 compares unsigned (jb/jae/jbe).
+// One point of a player's statistics series (8 bytes on Windows; the layout of ee_units' EeUnitsStatPoint, which
+// GetSeries copies into)
 struct EEStatisticsPoint {
     EEStatisticsPoint() : mValue(0), mTime(0) {}
-    EEStatisticsPoint& operator=(const EEStatisticsPoint& inPoint);
-    unsigned long mValue;                   // +0x00 (Set's inValue; the series' mU10 keeps the maximum)
-    unsigned long mTime;                    // +0x04 (Set: gPhysics->mLD0; the post-game graph's x)
+    unsigned long mValue;                   // +0x00 (Set's value; the series keeps the maximum)
+    unsigned long mTime;                    // +0x04 (the game time: the post-game graph's x)
 };
 
-// One statistics series of a player (provisional name; sizeof 0x18; 31 of them in EEPlayerStatistics): the
-// player-statistics ctor builds each with the vector's `_Buy(0)` and then 0x16dd12 (+0x10 = 0, +0x14 = false).
+// One statistics series of a player, a copy GetSeries makes (the series themselves are Rust's)
 struct EEStatisticsSeries {
-    // inline: the ctor 0x16d453 and CompactEpochHistory's local build the vector (`_Buy(0)`) and call Reset
-    EEStatisticsSeries() { this->Reset(); }
-    EEStatisticsSeries& operator=(const EEStatisticsSeries& inSeries);
-    // inline, refused (COMDAT 0x16dd12 in EEPlayerStatistics.cpp's template tail)
-    void Reset() { this->mPoints.clear(); this->mPoints.resize(1); this->mMaxValue = 0; this->mKeepHistory = false; }
-
-    std::vector<EEStatisticsPoint> mPoints;  // +0x00 the points (Reset leaves one zero point)
-    unsigned long mMaxValue;                // +0x10 the largest value pushed (GetValue)
-    bool mKeepHistory;                      // +0x14 false: Set replaces the last point (pop_back) before push_back
+    EEStatisticsSeries() : mPoints(1), mMaxValue(0), mKeepHistory(false) {}
+    std::vector<EEStatisticsPoint> mPoints;  // the points
+    unsigned long mMaxValue;                // the largest value pushed (GetValue)
+    bool mKeepHistory;                      // false: Set replaces the last point
 };
 
-// What the player holds at +0x4a8: RTTI EEPlayerStatistics (vtable 0x442080; ctor 0x16d453, ??_G 0x13d3e3, dtor
-// 0x16d498, Load 0x16d76c, Save 0x16d86b; sizeof 0x304). Was EEPlayerSavedGroups (renamed to the RTTI name;
-// names.txt 16d507/16d545 edited in place; the old spelling stays as a typedef).
+// What the player holds at +0x4a8: RTTI EEPlayerStatistics (vtable 0x442080). Was EEPlayerSavedGroups (the old
+// spelling stays as a typedef).
+// port (the player lane, round 1): the 31 series are a Rust object (mStats: ee_units player_stats.rs) with every
+// body (Set's point, Reset/Lower, the readers, the copy, CompactEpochHistory, Load/Save); the name and the end time
+// stay C++ members
 class EEPlayerStatistics {
 public:
-    EEPlayerStatistics();
-    virtual ~EEPlayerStatistics();          // +0x00 (??_G 0x13d3e3)
-    static const UString sKey;              // "EEPlayerStatistics-" (chain 0x16d346..0x16d36d, guard 0x531eb0)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x16d76c
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x08 0x16d86b
-    // 0x16d507: the hot-key group events call it with (0x14, true) before they send their message (provisional name)
-    void Reset(long inSeries, long inAmount);
-    void Lower(long inSeries, long inAmount);      // 0x16d4c6 (EEPlayer::RemoveWonder: the logic bomb's unit leaves; provisional name) // the second argument is added as a dword
-    void Set(long inIndex, long inValue);   // 0x16d545 (EEMReportStatistics::Execute; provisional name)
-    unsigned long GetValue(unsigned long inSeries);       // 0x16d5fd: mSeries[n].mU10 (post-game summary; provisional name)
-    unsigned long GetLastValue(unsigned long inSeries);   // 0x16d60b: the last point's first dword, else 0 (provisional name)
-    unsigned long CountIncreases(unsigned long inSeries); // 0x16d63a: points whose x rises (provisional name)
-    void Clear();                           // 0x16d718 (the name cleared, the series reset; EEPlayer::Reset; provisional name)
-    // 0x16d409: Clear, mU004, mU300, then the 31 series (EEWorld::RecordStatistics; EEStatisticsRecord::operator=
-    // 0x13e451 calls it first)
-    EEPlayerStatistics& operator=(const EEPlayerStatistics& inStatistics);
-    void CompactEpochHistory();             // 0x16d95a (EEWorld::RecordStatistics; provisional name)
-    // inline (COMDAT 0x16ce29 among EEPlayer.cpp's template tail: `ret 0x14`, a UWideString by value; provisional name)
+    EEPlayerStatistics() : mStats(ee_units_stats_new()), mEndTime(0) {}
+    EEPlayerStatistics(const EEPlayerStatistics& inOther) : mName(inOther.mName), mStats(ee_units_stats_new()), mEndTime(inOther.mEndTime)
+    {
+        ee_units_stats_copy(this->mStats, inOther.mStats);
+    }
+    virtual ~EEPlayerStatistics() { ee_units_stats_free(this->mStats); }
+    static const UString sKey;              // "EEPlayerStatistics-"
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    // the series raised (the hot-key group events: (0x14, true)) or lowered by an amount, or set to a value
+    void Reset(long inSeries, long inAmount) { this->Record(1, inSeries, inAmount); }
+    void Lower(long inSeries, long inAmount) { this->Record(2, inSeries, inAmount); }
+    void Set(long inIndex, long inValue) { this->Record(0, inIndex, inValue); }
+    // the series' largest value, last value (0 without one), the points whose next one is larger
+    unsigned long GetValue(unsigned long inSeries) { return ee_units_stats_value(this->mStats, inSeries, 0); }
+    unsigned long GetLastValue(unsigned long inSeries) { return ee_units_stats_value(this->mStats, inSeries, 1); }
+    unsigned long CountIncreases(unsigned long inSeries) { return ee_units_stats_value(this->mStats, inSeries, 2); }
+    void Clear() { this->mName = UWideString(); this->mEndTime = 0; ee_units_stats_clear(this->mStats); }
+    EEPlayerStatistics& operator=(const EEPlayerStatistics& inStatistics)
+    {
+        this->mName = inStatistics.mName;
+        this->mEndTime = inStatistics.mEndTime;
+        ee_units_stats_copy(this->mStats, inStatistics.mStats);
+        return *this;
+    }
+    void CompactEpochHistory() { ee_units_stats_compact(this->mStats); }   // EEWorld::RecordStatistics
     void SetName(UWideString inName) { this->mName = inName; }
-    // inline, by value: the post-game summary copies a whole series (vector copy + both fields) into a temporary,
-    // uses its points and destroys it (0x1e4826, 0x1e4a0b). Defined in ee/EEStatisticsRecord.h: an in-class body
-    // instantiates vector<EEStatisticsPoint>'s copy ctor in every includer (provisional name)
-    EEStatisticsSeries GetSeries(unsigned long inSeries);
+    EEStatisticsSeries GetSeries(unsigned long inSeries);   // a copy (the post-game summary, the scores)
+    void Record(uint32_t inOp, long inSeries, long inValue);   // Set's gate and the game time, then Rust's op
 
-    UWideString mName;                      // +0x004 (saved)
-    EEStatisticsSeries mSeries[31];         // +0x018 (a loop of 31 in the ctor)
-    unsigned long mEndTime;                 // +0x300 (saved)
+    UWideString mName;                      // (saved)
+    EeUnitsPlayerStats* mStats;             // the 31 series (Rust)
+    unsigned long mEndTime;                 // (saved)
 };
 typedef EEPlayerStatistics EEPlayerSavedGroups;
 
@@ -697,8 +681,11 @@ public:
 
 // port (R5b.4): the saved numbers (mScenarioVariables, mEnemies, mTributes, mResourceCaps, mPopLimit, ... the 24
 // fields EEPlayer::Load and Save read and write as plain values) are the Rust record EeUnitsPlayerSaved
-// (ee_units player_save.rs) this class derives from, with their C++ names and types; the offsets below omit them
-class EEPlayer : public RTSPlayer, public EeUnitsPlayerSaved {
+// (ee_units player_save.rs) this class derives from, with their C++ names and types; the offsets below omit them.
+// port (the player lane, round 1): the other plain members (mHackUnitClass .. mJITManufacturing, mNumTeleporters) are
+// the Rust record EeUnitsPlayerFields (ee_units player.rs; their names and types kept), with the queued improvements
+// (mQueued, Rust's); the economy's and the improvements' bodies are Rust over EEPlayer.cpp's host
+class EEPlayer : public RTSPlayer, public EeUnitsPlayerSaved, public EeUnitsPlayerFields {
 public:
     // out of line in EEPlayer.cpp (EEHumanPlayer's ctors call them; its ??_G calls the dtor)
     EEPlayer();
@@ -870,18 +857,8 @@ public:
     // inline (out-of-line COMDATs after their first users in EEUICPortrait.cpp: 0x258cb8 / 0x2594e8): the improvement
     // being researched for inUnitType (0x10: none) and its progress (0.0 when absent; read as a float by 0x2594e8:
     // mQueuedImprovements's first is really a float) (provisional names)
-    long GetResearchedImprovement(unsigned long inUnitType)
-    {
-        if (this->mQueuedImprovements.find(inUnitType) != this->mQueuedImprovements.end())
-            return this->mQueuedImprovements.find(inUnitType)->second.second[0];
-        return 0x10;
-    }
-    float GetImprovementProgress(unsigned long inUnitType)
-    {
-        if (this->mQueuedImprovements.find(inUnitType) != this->mQueuedImprovements.end())
-            return (*this->mQueuedImprovements.find(inUnitType)).second.first;
-        return 0.0f;
-    }
+    long GetResearchedImprovement(unsigned long inUnitType) { return (long)ee_units_queued_op(this->mQueued, 2, inUnitType, 0); }
+    float GetImprovementProgress(unsigned long inUnitType) { return ee_units_queued_timer(this->mQueued, inUnitType); }
     void RestartTowns();                    // 0x1680e4 (each town's UpdateNearWater; EEWorld::StartGame)
     void RegisterTowns();                   // 0x16513d (the towns re-registered with gContinentManager)
     void RegisterHerds();                   // 0x1650dc (player 0 before a scenario starts; provisional name)
@@ -1011,7 +988,6 @@ public:
     std::vector<EEHerd*> mHerds;            // +0x7dc
     std::vector<EEUnit*> mStrandedUnits;    // +0x7ec (AddStrandedUnit pushes a referenced unit unless std::find has it)
     std::vector<EEMedia*> mLoadedMedia;     // +0x7fc (AddLoadedMedia pushes the loaded media: push_back 0x16c8e1)
-    std::map<long, long> mWonderTypeCounts;  // +0x80c (node 0x18: an 8-byte value; dtor 0x95e70)
     std::map<long, EETown*> mTownsByID;  // +0x818 (dtor 0x16c938; find 0x16c94c)
     std::vector<UString> mMediaWarnings;    // +0x824 (the ctor's _Buy 0x88ba6 / the dtor's _Tidy 0x665e4 are vector<UString>'s)
     std::vector<EEPlayer*> mSightSharers;   // +0x834 (0x1627b9 push_backs `this`: vector<EEPlayer*>'s push_back 0x44e8f)
@@ -1030,12 +1006,8 @@ public:
     std::vector<long> mConstructionSiteIDs;  // +0x8b8
     std::vector<unsigned long> mLoadedUnitIDs;    // +0x8c8 (HasLoadedUnitID: std::find; element type inferred)
     std::vector<long> mSoundLoadedClasses;  // +0x8d8
-    std::vector<long> mWonderPowers;        // +0x8e8
     UReferenceContainer<EEComplexUnit*>* mWonders;       // +0x8f8 (Reset news one: vtable 0x4429d8)
     std::vector<long> mWonderIDs;           // +0x8fc
-    // +0x90c (node 0x28: per unit type (unsigned: `jb` in find 0x16ccf6) a long and the improvements queued
-    // (CountQueuedImprovements counts them from index 1; copy 0x16d323); types inferred; ctor 0x16d077)
-    std::map<unsigned long, std::pair<float, std::vector<unsigned long> > > mQueuedImprovements;  // (float: Save Write slot 0x7c, ComputeLoadDistance; FSSaveVector<unsigned long>)
     EEPPlayerEventList mEvents;             // +0x918 (RTTI EEPPlayerEventList, ctor 0x16e5b9; provisional name)
     EEGroup* mGroups[20];                   // +0x954 the saved (hot-key) groups, indexed by a byte (EEMSavedGroupClear
                                             // 0xc5117); Reset calls each one's slot +0x24
@@ -1055,33 +1027,13 @@ public:
     EETechnologyTable* mTechnologies;       // +0x9cc (provisional name; conscription 0xafe3b; Reset: new 0x554 bytes)
     RTSUnit* mViewedUnit;                   // +0x9d0 (Reset dereferences it)
     RTSUnit* mSelectedViewedUnit;           // +0x9d4 (a referenced unit: SetSelectedViewedUnit swaps it)
-    unsigned long mHackUnitClass;           // +0xa24 (kNoUnitClass: none (the original: 0x367); a gUnitClassTable index, compared unsigned: EEMLoadUnitData)
-    float mConversionFactor;                // +0xa2c (= 1)
-    float mTributeFee;                      // +0xa30 (the tribute fee: the diplomacy form loads it with fld)
-    long mMaxStartingCitizens;              // +0xa64
-    long mDamageFrom[17];                   // +0xa68 (a loop of 17 with the bytes at +0xb30)
-    long mNumAttacks;                       // +0xaac
-    long mLastAcknowledgementTime;          // +0xad8
-    long mLastAcknowledgedGroup;            // +0xadc
     long GetHeroLimit() const { return this->mHeroLimit; }
-    long mHeroLimit;                        // +0xae0
-    long GetMiningLimit() const { return this->mMiningLimit; }  // inline (EEUGBuildRepair::GatherNearBuilding 0x61ed5e: loaded into a temp before the GetResourceUsers call)
-    long mMiningLimit;                      // +0xae4
-    long mLAF0;                             // +0xaf0
-    long mShareBonus;                       // +0xb20
-    long mPopulationLimitBonus;             // +0xb24
-    long mNumHeroes;                        // +0xb28
-    long mNumHeroesInProduction;            // +0xb2c
-    bool mAreaConversion;                   // +0xb41
-    bool mBB42;                             // +0xb42
-    bool mBB44;                             // +0xb44
-    bool mInstantBuild;                     // +0xb45
-    bool mHealsUnits;                       // +0xb46
-    bool mBehindFirewall;                   // +0xb47
-    bool mEarthquakeShaken;                 // +0xb4c (EECalamityManager::Update clears it for players 1..)
-    bool mShiftMode;                        // +0xb4d EEMEnterShiftMode/EEMExitShiftMode (provisional name)
-    bool mJITManufacturing;                 // +0xb4e
-    long mNumTeleporters;                   // +0xb7c
+    long GetMiningLimit() const { return this->mMiningLimit; }  // inline (EEUGBuildRepair::GatherNearBuilding)
 };
 
+
+// EEWorld::ApplyShareBonus (false) and RemoveShareBonus (true): the share bonus of every player by its wonder powers and
+// stances (ee_units player_units.rs; EEPlayer.cpp). The player lane, round 2: EEPlayer's mWonderTypeCounts and
+// mWonderPowers are its Rust wonder state (mWonderState)
+void EEPlayerShareBonus(bool inRemove);
 #endif

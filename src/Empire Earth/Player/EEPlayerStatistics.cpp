@@ -40,110 +40,40 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 // the class key
 const UString EEPlayerStatistics::sKey("EEPlayerStatistics-");
 
-// Copies a statistics point (time and value)
-EEStatisticsPoint& EEStatisticsPoint::operator=(const EEStatisticsPoint& inPoint)
+// Set's gate (a shutdown, a saved game loading, the scenario editor outside the game screen) and the game time, then
+// the series' op (ee_units player_stats.rs: 0 Set, 1 raised, 2 lowered)
+void EEPlayerStatistics::Record(uint32_t inOp, long inSeries, long inValue)
 {
-    this->mTime = inPoint.mTime;
-    this->mValue = inPoint.mValue;
-    return *this;
+    uint32_t theFlags = UShutdownInProgress() ? EE_UNITS_STATS_SHUTDOWN
+                        : gLoadingSavedGame ? EE_UNITS_STATS_LOADING
+                        : gUIManager->mInScenarioEditor && !gGameScreenActive ? EE_UNITS_STATS_EDITOR : 0;
+    ee_units_stats_set(this->mStats, inOp, inSeries, inValue, gPhysics != NULL ? gPhysics->mGameTime : 0, theFlags);
 }
 
-// Copies a statistics series: its maximum, history flag and points
-EEStatisticsSeries& EEStatisticsSeries::operator=(const EEStatisticsSeries& inSeries)
+EEStatisticsSeries EEPlayerStatistics::GetSeries(unsigned long inSeries)
 {
-    this->Reset();
-    this->mMaxValue = inSeries.mMaxValue;
-    this->mKeepHistory = inSeries.mKeepHistory;
-    this->mPoints.resize(inSeries.mPoints.size());
-    for (unsigned long i = 0; i < inSeries.mPoints.size(); i++)
-        this->mPoints[i] = inSeries.mPoints[i];
-    return *this;
+    EEStatisticsSeries theSeries;
+    theSeries.mPoints.resize(ee_units_stats_value(this->mStats, inSeries, 3));
+    if (!theSeries.mPoints.empty())
+        ee_units_stats_points(this->mStats, inSeries, reinterpret_cast<EeUnitsStatPoint*>(&theSeries.mPoints[0]),
+                              theSeries.mPoints.size());
+    theSeries.mMaxValue = ee_units_stats_value(this->mStats, inSeries, 0);
+    theSeries.mKeepHistory = ee_units_stats_value(this->mStats, inSeries, 4) != 0;
+    return theSeries;
 }
 
-// Copies a player's statistics: name, end time and all 31 series
-EEPlayerStatistics& EEPlayerStatistics::operator=(const EEPlayerStatistics& inStatistics)
+// Reads the statistics from the saved game: the name, then Rust's (the end time, each series' maximum and points)
+long EEPlayerStatistics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    this->Clear();
-    this->mName = inStatistics.mName;
-    this->mEndTime = inStatistics.mEndTime;
-    for (long i = 0; i < 31; i++)
-        this->mSeries[i] = inStatistics.mSeries[i];
-    return *this;
+    long theResult = this->mName.Load(inFile);
+    return theResult != 0 ? theResult : ee_units_stats_load(this->mStats, &inFile, &EESaveFilePrimitive, &this->mEndTime);
 }
 
-// Creates empty player statistics
-EEPlayerStatistics::EEPlayerStatistics()
+// Writes the statistics to the saved game: the name, then Rust's (the end time, each series)
+long EEPlayerStatistics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    this->Clear();
-}
-
-// Destroys the player statistics
-EEPlayerStatistics::~EEPlayerStatistics()
-{
-}
-
-// Lowers a series by an amount, unless that would take it below zero
-void EEPlayerStatistics::Lower(long inSeries, long inAmount)
-{
-    EEStatisticsPoint thePoint;
-    thePoint = this->mSeries[inSeries].mPoints.back();
-    if (thePoint.mValue >= (unsigned long)inAmount)
-        this->Set(inSeries, thePoint.mValue - inAmount);
-}
-
-// Raises a series by an amount
-void EEPlayerStatistics::Reset(long inSeries, long inAmount)
-{
-    EEStatisticsPoint thePoint;
-    thePoint = this->mSeries[inSeries].mPoints.back();
-    this->Set(inSeries, thePoint.mValue + inAmount);
-}
-
-// Records a new value of a series at the current game time (replacing the last point unless the series keeps
-// history); skipped while loading a saved game and, in the scenario editor, for most series
-void EEPlayerStatistics::Set(long inIndex, long inValue)
-{
-    EEStatisticsPoint thePoint;
-    if (UShutdownInProgress())
-        return;
-    bool theRecord = !gUIManager->mInScenarioEditor || gGameScreenActive || inIndex == 12 || inIndex == 13 || inIndex == 14 ||
-                     inIndex == 16 || inIndex == 19 || inIndex == 15;
-    if (gLoadingSavedGame || !theRecord)
-        return;
-    if (!this->mSeries[inIndex].mKeepHistory)
-        this->mSeries[inIndex].mPoints.pop_back();
-    thePoint.mValue = inValue;
-    thePoint.mTime = gPhysics->mGameTime;
-    if ((unsigned long)inValue > this->mSeries[inIndex].mMaxValue)
-        this->mSeries[inIndex].mMaxValue = inValue;
-    this->mSeries[inIndex].mPoints.push_back(thePoint);
-}
-
-// Returns the highest value a series reached
-unsigned long EEPlayerStatistics::GetValue(unsigned long inSeries)
-{
-    return this->mSeries[inSeries].mMaxValue;
-}
-
-// Returns a series' latest value (0 when empty)
-unsigned long EEPlayerStatistics::GetLastValue(unsigned long inSeries)
-{
-    unsigned long theValue = 0;
-    if (this->mSeries[inSeries].mPoints.size() > 0)
-        theValue = this->mSeries[inSeries].mPoints.back().mValue;
-    return theValue;
-}
-
-// Counts how often a series went up between consecutive points
-unsigned long EEPlayerStatistics::CountIncreases(unsigned long inSeries)
-{
-    unsigned long theCount = 0;
-    unsigned long theSize = this->mSeries[inSeries].mPoints.size();
-    for (unsigned long i = 0; i < theSize; i++) {
-        if (i < theSize - 1 && this->mSeries[inSeries].mPoints[i].mValue < this->mSeries[inSeries].mPoints[i + 1].mValue)
-            theCount++;
-    }
-    return theCount;
+    long theResult = this->mName.Save(outFile);
+    return theResult != 0 ? theResult : ee_units_stats_save(this->mStats, &outFile, &EESaveFilePrimitive, this->mEndTime);
 }
 
 // Returns the statistics series a dead unit counts in: 14 citizens, 15 heroes, 13 other moving units, 0 none
@@ -163,112 +93,6 @@ long EEAddDeadUnitStatistic(EEComplexUnit* inUnit)
             theSeries = 13;
     }
     return theSeries;
-}
-
-// Clears the statistics; series 12..16 keep their history
-void EEPlayerStatistics::Clear()
-{
-    this->mName = gEmptyString;
-    this->mEndTime = 0;
-    for (long i = 0; i < 31; i++)
-        this->mSeries[i].Reset();
-    this->mSeries[13].mKeepHistory = true;
-    this->mSeries[14].mKeepHistory = true;
-    this->mSeries[15].mKeepHistory = true;
-    this->mSeries[16].mKeepHistory = true;
-    this->mSeries[12].mKeepHistory = true;
-}
-
-// Reads the statistics from the saved game: name, end time, each series' maximum and points (the saved
-// history flag is read and dropped)
-long EEPlayerStatistics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    unsigned long theCount = 0;
-    unsigned long thePoints = 0;
-    long theResult = this->mName.Load(inFile);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mEndTime);
-    if (theResult == 0)
-        theResult = inFile.Read(theCount);
-    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-        theResult = inFile.Read(this->mSeries[i].mMaxValue);
-        if (theResult == 0) {
-            bool theFlag;
-            theResult = inFile.Read(theFlag);
-        }
-        if (theResult == 0)
-            theResult = inFile.Read(thePoints);
-        if (theResult == 0)
-            this->mSeries[i].mPoints.resize(thePoints);
-        for (unsigned long p = 0; p < thePoints && theResult == 0; p++) {
-            theResult = inFile.Read(this->mSeries[i].mPoints[p].mValue);
-            if (theResult == 0)
-                theResult = inFile.Read(this->mSeries[i].mPoints[p].mTime);
-        }
-    }
-    return theResult;
-}
-
-// Writes the statistics to the saved game: name, end time, each series' maximum, history flag and points
-long EEPlayerStatistics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    long theResult = this->mName.Save(outFile);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mEndTime);
-    if (theResult == 0) {
-        unsigned long theCount = 31;
-        theResult = outFile.Write(theCount);
-    }
-    for (unsigned long i = 0; i < 31 && theResult == 0; i++) {
-        theResult = outFile.Write(this->mSeries[i].mMaxValue);
-        if (theResult == 0)
-            theResult = outFile.Write(this->mSeries[i].mKeepHistory);
-        if (theResult == 0) {
-            unsigned long thePoints = this->mSeries[i].mPoints.size();
-            theResult = outFile.Write(thePoints);
-        }
-        for (unsigned long p = 0; p < this->mSeries[i].mPoints.size() && theResult == 0; p++) {
-            theResult = outFile.Write(this->mSeries[i].mPoints[p].mValue);
-            if (theResult == 0)
-                theResult = outFile.Write(this->mSeries[i].mPoints[p].mTime);
-        }
-    }
-    return theResult;
-}
-
-// Removes repeated and zero points from the epoch series (12), keeping its changes
-// a point is kept when its value is non-zero and differs from the next one's (the last one when it differs from the
-// kept series' last value)
-void EEPlayerStatistics::CompactEpochHistory()
-{
-    EEStatisticsSeries theSeries;
-    EEStatisticsPoint thePoint;
-    EEStatisticsPoint theNext;
-    for (unsigned long i = 0; i < 31; i++) {
-        if (i != 12 || this->mSeries[12].mPoints.size() <= 1)
-            continue;
-        theSeries.Reset();
-        theSeries.mKeepHistory = this->mSeries[12].mKeepHistory;
-        for (unsigned long j = 0; j < this->mSeries[12].mPoints.size(); j++) {
-            thePoint = this->mSeries[12].mPoints[j];
-            if (j == this->mSeries[12].mPoints.size() - 1) {
-                // (an empty kept series keeps the last point)
-                if (theSeries.mPoints.size() > 0 && theSeries.mPoints.back().mValue == thePoint.mValue)
-                    continue;
-            } else {
-                theNext = this->mSeries[12].mPoints[j + 1];
-                if (thePoint.mValue == 0 || theNext.mValue == thePoint.mValue)
-                    continue;
-            }
-            if (theSeries.mPoints.size() > 1 && theSeries.mPoints.back().mTime == thePoint.mTime &&
-                theSeries.mPoints.back().mTime == 0)
-                theSeries.mPoints.pop_back();
-            theSeries.mPoints.push_back(thePoint);
-            if (thePoint.mValue > theSeries.mMaxValue)
-                theSeries.mMaxValue = thePoint.mValue;
-        }
-        this->mSeries[12] = theSeries;
-    }
 }
 
 // Clears a player's end-of-game record: white, not local or human, no slot, zero scores and resources

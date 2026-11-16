@@ -6,8 +6,9 @@
 //! the end of a herd in state 0xb, the air traffic and the events (one operation), the queued improvements' timers
 //! (each entry's count down, the instant build's cap, the improvement applied when it runs out, the next one
 //! started or the entry erased) and the wonders' healing (the timer in the record, the heal amount from the world
-//! table and the epoch, each healed unit's hit points capped at its maximum). The map of queued improvements and
-//! its iterator stay C++: the host walks it in key order as the original did and erases where it erased.
+//! table and the epoch, each healed unit's hit points capped at its maximum). The queued improvements are the
+//! record's Rust queue (player.rs), walked here in key order; the improvement applied and `AdvanceImprovement` are
+//! host calls.
 //!
 //! [`reset`] sets the record's fields as `Reset` did, in two parts around the events' clear (the trade, refunds and
 //! vital buildings were zeroed after it).
@@ -17,9 +18,14 @@
 //! draw.
 
 #![allow(non_snake_case)]
+// `c_ulong` is 32 bits on Windows and 64 elsewhere
+#![allow(clippy::unnecessary_cast)]
 
 use std::ffi::c_void;
+use std::ops::Bound::{Excluded, Unbounded};
 use std::os::raw::c_ulong;
+
+use crate::player::EeUnitsPlayerFields;
 
 use crate::player_save::{EeUnitsPlayerSaveIo, EeUnitsPlayerSaved};
 
@@ -43,25 +49,12 @@ pub const EE_UNITS_PLAYER_TICK_HERD_STATE: i32 = 6;
 pub const EE_UNITS_PLAYER_TICK_HERD_KILL: i32 = 7;
 /// `UpdateAirTraffic()`, then `mEvents.TickEvents(this, gPhysics->mTickTime)`
 pub const EE_UNITS_PLAYER_TICK_AIR_AND_EVENTS: i32 = 8;
-/// the walk of `mQueuedImprovements`: to its first entry; the result 1 with the key in `io.i` and the float in
-/// `io.f`, 0 at the end
-pub const EE_UNITS_PLAYER_TICK_QUEUED_FIRST: i32 = 9;
-/// to the next entry (as FIRST)
-pub const EE_UNITS_PLAYER_TICK_QUEUED_NEXT: i32 = 10;
-/// the current entry erased, to the one after it (as FIRST)
-pub const EE_UNITS_PLAYER_TICK_QUEUED_ERASE: i32 = 11;
-/// the current entry's float `= io.f`
-pub const EE_UNITS_PLAYER_TICK_QUEUED_SET: i32 = 12;
 /// `gPhysics->GetTickTime()` into `io.f`
 pub const EE_UNITS_PLAYER_TICK_TICK_TIME: i32 = 13;
-/// `mInstantBuild` (the result)
-pub const EE_UNITS_PLAYER_TICK_INSTANT_BUILD: i32 = 14;
-/// `ApplyImprovement(key, the list's front, false)`, the front erased, the float 0
+/// `ApplyImprovement(io.i, index, false)` (the queue's first improvement of unit type `io.i`)
 pub const EE_UNITS_PLAYER_TICK_QUEUED_APPLY: i32 = 15;
 /// `AdvanceImprovement(io.i)` (the result)
 pub const EE_UNITS_PLAYER_TICK_QUEUED_ADVANCE: i32 = 16;
-/// `mHealsUnits` (the result)
-pub const EE_UNITS_PLAYER_TICK_HEALS_UNITS: i32 = 17;
 /// `gPhysics->mTickTimeMs` into `io.i`
 pub const EE_UNITS_PLAYER_TICK_TICK_MS: i32 = 18;
 /// the heal's numbers by `index`: 0 `kWorldWonderHealAmount`, 1 the tech tree's `mCurrentEpoch`, 2
@@ -89,11 +82,6 @@ pub trait PlayerTickHost {
         let mut io = EeUnitsPlayerSaveIo::default();
         self.call(op, index, &mut io);
         io
-    }
-    /// One step of the queued improvements' walk: the entry (key, float), or None at the end.
-    fn queued(&mut self, op: i32) -> Option<(i64, f32)> {
-        let mut io = EeUnitsPlayerSaveIo::default();
-        (self.call(op, 0, &mut io) != 0).then_some((io.i, io.f))
     }
 }
 
@@ -143,39 +131,71 @@ fn tick_herds<H: PlayerTickHost + ?Sized>(h: &mut H) {
     }
 }
 
-/// The queued improvements in key order: a running timer counts down by the tick (capped at 1 with instant build)
-/// and when it runs out the list's first improvement is applied; then an entry whose queue `AdvanceImprovement`
-/// finds empty is erased.
-fn tick_queued<H: PlayerTickHost + ?Sized>(h: &mut H) {
-    let mut entry = h.queued(EE_UNITS_PLAYER_TICK_QUEUED_FIRST);
-    while let Some((key, timer)) = entry {
+/// The queued improvements in key order (the record's Rust queue): a running timer counts down by the tick (capped
+/// at 1 with instant build) and when it runs out the list's first improvement is applied (dropped, the timer 0);
+/// then an entry whose queue `AdvanceImprovement` finds empty is erased. The walk goes on to the next key after each
+/// host call, so the C++ (`ApplyImprovement`, the virtual `AdvanceImprovement`: player.rs) may use the queue.
+///
+/// # Safety
+/// `fields` is the player's record with its queue for the call.
+unsafe fn tick_queued<H: PlayerTickHost + ?Sized>(h: &mut H, fields: *mut EeUnitsPlayerFields) {
+    // SAFETY: the caller's contract; each access takes the queue again (no reference across a host call)
+    let queued = unsafe { (*fields).mQueued };
+    let mut cursor: Option<c_ulong> = None;
+    loop {
+        // SAFETY: as above
+        let next = unsafe {
+            let q = &*queued;
+            match cursor {
+                None => q.map.iter().next(),
+                Some(k) => q.map.range((Excluded(k), Unbounded)).next(),
+            }
+            .map(|(k, e)| (*k, e.0))
+        };
+        let Some((key, timer)) = next else { break };
+        cursor = Some(key);
         if timer != 0.0 {
             let mut timer = timer - h.query(EE_UNITS_PLAYER_TICK_TICK_TIME, 0).f;
-            if h.op(EE_UNITS_PLAYER_TICK_INSTANT_BUILD, 0) != 0 && timer > 1.0 {
+            // SAFETY: as above
+            if unsafe { (*fields).mInstantBuild } && timer > 1.0 {
                 timer = 1.0;
             }
-            let mut io = EeUnitsPlayerSaveIo { f: timer, ..Default::default() };
-            h.call(EE_UNITS_PLAYER_TICK_QUEUED_SET, 0, &mut io);
+            // SAFETY: as above
+            let front = unsafe {
+                (*queued).entry(key).0 = timer;
+                (*queued).entry(key).1.first().copied()
+            };
             if timer > 0.0 {
-                entry = h.queued(EE_UNITS_PLAYER_TICK_QUEUED_NEXT);
                 continue;
             }
-            h.op(EE_UNITS_PLAYER_TICK_QUEUED_APPLY, 0);
+            if let Some(front) = front {
+                let mut io = EeUnitsPlayerSaveIo { i: key as i64, ..Default::default() };
+                h.call(EE_UNITS_PLAYER_TICK_QUEUED_APPLY, front as u32, &mut io);
+            }
+            // SAFETY: as above
+            if let Some(e) = unsafe { (*queued).map.get_mut(&key) } {
+                if front.is_some() && !e.1.is_empty() {
+                    e.1.remove(0);
+                }
+                e.0 = 0.0;
+            }
         }
-        let mut io = EeUnitsPlayerSaveIo { i: key, ..Default::default() };
-        let erase = h.call(EE_UNITS_PLAYER_TICK_QUEUED_ADVANCE, 0, &mut io) != 0;
-        entry = h.queued(if erase { EE_UNITS_PLAYER_TICK_QUEUED_ERASE } else { EE_UNITS_PLAYER_TICK_QUEUED_NEXT });
+        let mut io = EeUnitsPlayerSaveIo { i: key as i64, ..Default::default() };
+        if h.call(EE_UNITS_PLAYER_TICK_QUEUED_ADVANCE, 0, &mut io) != 0 {
+            // SAFETY: as above
+            unsafe { (*queued).map.remove(&key) };
+        }
     }
 }
 
 /// The wonders' healing: when the heal timer runs out, every living unit of a healed type gains the heal amount up
 /// to its maximum, and the timer restarts.
-fn tick_heal<H: PlayerTickHost + ?Sized>(h: &mut H, timer: &HealTimer) {
+fn tick_heal<H: PlayerTickHost + ?Sized>(h: &mut H, timer: &HealTimer, heals: bool) {
     let mut ticks = h.query(EE_UNITS_PLAYER_TICK_TICK_MS, 0).i as i32;
     if ticks <= 0 {
         ticks = 0;
     }
-    if h.op(EE_UNITS_PLAYER_TICK_HEALS_UNITS, 0) == 0 {
+    if !heals {
         return;
     }
     let mut time = timer.get() - ticks as f32;
@@ -212,16 +232,24 @@ fn tick_heal<H: PlayerTickHost + ?Sized>(h: &mut H, timer: &HealTimer) {
     timer.set(time);
 }
 
-/// `UpdatePlayer` over the host and the player's record.
+/// `UpdatePlayer` over the host and the player's records.
 ///
 /// # Safety
-/// `rec` points to the player's record for the whole call, written meanwhile only by the C++ the host runs.
-pub unsafe fn update_player<H: PlayerTickHost + ?Sized>(h: &mut H, rec: *mut EeUnitsPlayerSaved) {
+/// `rec` and `fields` point to the player's records (with its queue) for the whole call, written meanwhile only by
+/// the C++ the host runs.
+pub unsafe fn update_player<H: PlayerTickHost + ?Sized>(
+    h: &mut H,
+    rec: *mut EeUnitsPlayerSaved,
+    fields: *mut EeUnitsPlayerFields,
+) {
     h.op(EE_UNITS_PLAYER_TICK_VALIDATE, 0);
     tick_herds(h);
     h.op(EE_UNITS_PLAYER_TICK_AIR_AND_EVENTS, 0);
-    tick_queued(h);
-    tick_heal(h, &HealTimer(rec));
+    // SAFETY: the caller's contract
+    unsafe { tick_queued(h, fields) };
+    // SAFETY: as above (a field read)
+    let heals = unsafe { (*fields).mHealsUnits };
+    tick_heal(h, &HealTimer(rec), heals);
 }
 
 /// `Reset`'s fields of the record: part 0 those set before the events' clear (`player_id` makes `mEnemies`: every
@@ -233,9 +261,9 @@ pub fn reset(r: &mut EeUnitsPlayerSaved, player_id: u32, part: u32) {
         r.mNumVitalBuildings = 0;
         return;
     }
-    for cap in &mut r.mResourceCaps[2..7] {
-        *cap = 0;
-    }
+    // port (the player lane, round 2; a deliberate change): all seven words, where the original set 2..6 and left 0
+    // and 1 (never written) holding the memory the player was made in, which `EEPlayer::GetChecksum` sums
+    r.mResourceCaps = [0; 7];
     for (player, enemy) in r.mEnemies.iter_mut().enumerate() {
         *enemy = c_ulong::from(player_id != player as u32);
     }
@@ -281,9 +309,10 @@ pub unsafe extern "C" fn ee_units_player_update(
     ctx: *mut c_void,
     f: EeUnitsPlayerTickFn,
     rec: *mut EeUnitsPlayerSaved,
+    fields: *mut EeUnitsPlayerFields,
 ) {
     // SAFETY: the caller's contract
-    unsafe { update_player(&mut FnHost { ctx, f }, rec) };
+    unsafe { update_player(&mut FnHost { ctx, f }, rec, fields) };
 }
 
 /// `EEPlayer::Reset`'s fields of the record (see [`reset`]).

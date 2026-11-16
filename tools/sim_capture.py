@@ -14,6 +14,12 @@ from a capture of the C++ leaves before they were deleted: a later build whose g
 the same records, so `check` gates the whole path (the inputs the game hands a leaf and its outputs), and `replay`
 gates the Rust leaves alone over the C++ capture, even after the game has changed.
 
+PLST is each player's state at every EEPlayer::UpdatePlayer (the statistics but series 0x14 and 0x15, which the local
+player's reports set by the wall clock, the events, queued improvements and plain members as FNV-1a 64 digests, the
+resources 2..6 and counts), PLEC each economy and improvement decision (CanProduce,
+the CanAfford family, Pay, the improvements' queue and costs: the outermost call on the simulation thread, its
+arguments, result and the resources after); their golden lines (seeds 2-3 of the oracle, late, space and calamity
+profiles) come from the C++ player before its members and bodies moved (the player lane, round 1).
 EFMU is the effect manager's state after every Update (EEEffectManager.cpp: the last handle, the sizes and an
 FNV-1a 64 of the index, the list and the destruction queue); its golden lines come from the C++ manager (R4.4, sixth
 round; the missile profile's golden does not list it).

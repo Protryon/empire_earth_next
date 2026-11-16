@@ -49,7 +49,6 @@
 #include "lle/GETransformation.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EETileLocation.h"
-#include "ee/EEPPlayerEvent.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
@@ -65,10 +64,9 @@
 void EEAPlayerEvent::Virtual4()
 {
     GE3DPoint theLocation;
-    EEPPlayerEvent* theEvent = ::gWorld.GetCurrentPlayer()->mEvents.GetNextEvent();
-    if (!theEvent)
+    EETileLocation theSource;
+    if (!::gWorld.GetCurrentPlayer()->mEvents.GetNextEventSource(theSource))   // (ee_units player_events.rs)
         return;
-    EETileLocation theSource = theEvent->mSource;
     if (theSource.GetX() == -10000 || theSource.GetY() == -10000)
         return;
     float theTileX = theSource.GetX() + 0.5f;

@@ -60,6 +60,12 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EETeam.h"
 #include "ee/EEUUUnitFunctor.h"
+#include "ee/EEGameVariant.h"           // the wonder powers' hit point factors (EEPlayerHost)
+#include "ee/EEUnitUtilities.h"
+#include "ee/EESoundObject.h"
+#include "ee/EEGameSound.h"
+#include "lle/SESoundManager.h"
+#include "ee/EEUGRust.h"                // the towns' patrol goals (EEPlayerHost)
 #include "lle/UIEvent.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
@@ -116,12 +122,129 @@ struct EEPDereferencer {
 // (provisional name)
 static const float kPlayerHealInterval = EE_UNITS_PLAYER_HEAL_INTERVAL;   // (ee_units player_tick.rs)
 
-// the default tribute fee (0x4429bc, the unit's .rdata just before sPlayerEffects; ResetTechTree loads it as a dword)
-// (provisional name)
-static const float kTributeFee = 0.4f;
-
 // the effects every player loads (0x4429c0) (provisional name)
 static const unsigned long sPlayerEffects[3] = {271, 274, 275};
+
+// TEST ONLY: the player capture (tools/sim_capture.py; the player lane, round 1). PLST: each player's state at every
+// UpdatePlayer (the statistics but series 0x14 and 0x15, which the local player's reports set by the wall clock, the
+// events, the queued improvements and the plain members as FNV-1a 64 digests, then the resources and counts); PLEC: the economy and improvement decisions (the outermost call on the thread that runs
+// UpdatePlayer: its kind, player, arguments, result, the reason's length, the resources and population after)
+#include "ee/EESimCapture.h"
+#include "ee/EETechCapture.h"
+#include "ee/EEStatisticsHistory.h"
+#include "ee/EEStatisticsRecord.h"
+#include "platform/PlatThread.h"
+#include <cstring>
+#include <initializer_list>
+
+static uint32_t sPlayerCaptureThread = 0;
+static thread_local int sPlayerCaptureDepth = 0;
+
+struct EEPlayerDigest {
+    uint64_t mHash = 0xcbf29ce484222325ull;
+    void Bytes(const void* inData, size_t inSize)
+    {
+        const unsigned char* theBytes = (const unsigned char*)inData;
+        for (size_t i = 0; i < inSize; i++)
+            this->mHash = (this->mHash ^ theBytes[i]) * 0x100000001b3ull;
+    }
+    void U32(uint32_t inValue) { this->Bytes(&inValue, 4); }
+    void F32(float inValue) { this->Bytes(&inValue, 4); }
+    void Into(EESimCaptureRecord& ioRecord) { ioRecord.U32((uint32_t)this->mHash); ioRecord.U32((uint32_t)(this->mHash >> 32)); }
+};
+
+static int32_t EEPlayerFloatBits(float inValue)
+{
+    int32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
+static int32_t EEPlayerNodeID(EETechTreeNode* inNode)
+{
+    return inNode != NULL && inNode->mData != NULL ? (int32_t)inNode->mData->mID : -1;
+}
+
+static void EEPlayerCaptureState(EEPlayer* inPlayer)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    sPlayerCaptureThread = PlatCurrentThreadId();
+    EESimCaptureRecord theRecord(EECaptureTag("PLST"));
+    theRecord.I32((int32_t)inPlayer->mPlayerID);
+    theRecord.U32(gPhysics != NULL ? (uint32_t)gPhysics->mGameTime : 0);
+    EEPlayerDigest theStats;
+    theStats.U32((uint32_t)inPlayer->mSavedGroups.mEndTime);
+    for (unsigned long s = 0; s < 31; s++) {
+        if (s == 0x14 || s == 0x15)
+            continue;   // the local player's reports (EEPhysics::ReportStatistics: by the wall clock)
+        EEStatisticsSeries theSeries = inPlayer->mSavedGroups.GetSeries(s);
+        theStats.U32((uint32_t)theSeries.mMaxValue);
+        theStats.U32(theSeries.mKeepHistory ? 1 : 0);
+        theStats.U32((uint32_t)theSeries.mPoints.size());
+        for (size_t p = 0; p < theSeries.mPoints.size(); p++) {
+            theStats.U32((uint32_t)theSeries.mPoints[p].mValue);
+            theStats.U32((uint32_t)theSeries.mPoints[p].mTime);
+        }
+    }
+    theStats.Into(theRecord);
+    EEPlayerDigest theEvents;
+    theEvents.mHash = ee_units_events_digest(inPlayer->mEvents.mList);
+    theEvents.Into(theRecord);
+    EEPlayerDigest theQueued;
+    theQueued.mHash = ee_units_queued_digest(inPlayer->mQueued);
+    theQueued.Into(theRecord);
+    EEPlayerDigest theFields;
+    theFields.U32((uint32_t)inPlayer->mHackUnitClass);
+    theFields.F32(inPlayer->mConversionFactor);
+    theFields.F32(inPlayer->mTributeFee);
+    theFields.U32((uint32_t)inPlayer->mMaxStartingCitizens);
+    for (long d = 0; d < 17; d++)
+        theFields.U32((uint32_t)inPlayer->mDamageFrom[d]);
+    long theLongs[] = {inPlayer->mNumAttacks, inPlayer->mHeroLimit, inPlayer->mMiningLimit, inPlayer->mLAF0, inPlayer->mShareBonus,
+                       inPlayer->mPopulationLimitBonus, inPlayer->mNumHeroes, inPlayer->mNumHeroesInProduction, inPlayer->mNumTeleporters};
+    for (long l = 0; l < 9; l++)
+        theFields.U32((uint32_t)theLongs[l]);
+    bool theBools[] = {inPlayer->mAreaConversion, inPlayer->mBB42, inPlayer->mBB44, inPlayer->mInstantBuild, inPlayer->mHealsUnits,
+                       inPlayer->mBehindFirewall, inPlayer->mEarthquakeShaken, inPlayer->mShiftMode, inPlayer->mJITManufacturing};
+    for (long b = 0; b < 9; b++)
+        theFields.U32(theBools[b] ? 1 : 0);
+    theFields.Into(theRecord);
+    for (long r = 2; r < 7; r++)   // (0 and 1 are never set but by Reset, to 0: kept out as recorded)
+        theRecord.I32((int32_t)inPlayer->mResourceCaps[r]);
+    theRecord.I32((int32_t)inPlayer->mPopulationCount);
+    theRecord.I32((int32_t)inPlayer->mEndOfGameCount);
+    theRecord.I32((int32_t)inPlayer->mNumVitalBuildings);
+    theRecord.I32((int32_t)inPlayer->mNumCapitols);
+    theRecord.I32((int32_t)inPlayer->mPopLimit);
+    theRecord.Commit();
+}
+
+// one decision's scope: the outermost on the simulation thread records it
+struct EEPlayerEconScope {
+    bool mOuter;
+    EEPlayerEconScope() : mOuter(sPlayerCaptureDepth++ == 0) {}
+    ~EEPlayerEconScope() { sPlayerCaptureDepth--; }
+    template <class R> R Record(const EEPlayer* inPlayer, int32_t inKind, R inResult, std::initializer_list<int64_t> inArgs,
+                                const UWideString* inText = NULL)
+    {
+        if (!this->mOuter || !EESimCaptureRecord::Active() || sPlayerCaptureThread == 0
+            || PlatCurrentThreadId() != sPlayerCaptureThread)
+            return inResult;
+        EESimCaptureRecord theRecord(EECaptureTag("PLEC"));
+        theRecord.I32(inKind);
+        theRecord.I32((int32_t)inPlayer->mPlayerID);
+        for (std::initializer_list<int64_t>::const_iterator a = inArgs.begin(); a != inArgs.end(); ++a)
+            theRecord.I32((int32_t)*a);
+        theRecord.I32((int32_t)inResult);
+        theRecord.I32(inText != NULL ? (int32_t)inText->GetLength() : -1);
+        for (long r = 2; r < 7; r++)
+            theRecord.I32((int32_t)inPlayer->mResourceCaps[r]);
+        theRecord.I32((int32_t)inPlayer->mPopulationCount);
+        theRecord.Commit();
+        return inResult;
+    }
+};
 
 // Creates an off-map record with no unit, time or reason
 EEWUnitsOffMapInfo::EEWUnitsOffMapInfo()
@@ -211,6 +334,8 @@ EEPlayer::EEPlayer(const UWideString& inName, unsigned long inPlayerID)
 {
     this->mViewedUnit = NULL;
     this->mSelectedViewedUnit = NULL;
+    this->mQueued = ee_units_queued_new();
+    this->mWonderState = ee_units_wonders_new();
     this->Reset();
     this->mTechnologies->SetPlayerIndex(inPlayerID);
     this->mTechnologies->SetPlayer(this);
@@ -225,6 +350,8 @@ EEPlayer::EEPlayer()
 {
     this->mViewedUnit = NULL;
     this->mSelectedViewedUnit = NULL;
+    this->mQueued = ee_units_queued_new();
+    this->mWonderState = ee_units_wonders_new();
     this->Reset();
     this->mComputerPlayer = NULL;
     this->mHumanPlayer = NULL;
@@ -290,6 +417,8 @@ EEPlayer::~EEPlayer()
     delete this->mWonders;
     delete this->mConstructionSites;
     this->UnloadPlayerEffects();
+    ee_units_queued_free(this->mQueued);
+    ee_units_wonders_free(this->mWonderState);
 }
 
 // Destroys the civilization (members only)
@@ -297,20 +426,460 @@ EECivilization::~EECivilization()
 {
 }
 
-// Queues an improvement for a unit type (at the front or back) if it can be bought, paying for it
-// unless told not to
-// NEAR: frame layout; the original keeps inUnitType in eax and the class in edi, ours spills it ([ebp-4])
+// a unit as the Rust player's operations take it: its RTSUnit address (0: none)
+static int64_t EEPlayerUnitArg(RTSUnit* inUnit)
+{
+    return (int64_t)reinterpret_cast<uintptr_t>(inUnit);
+}
+
+static EEComplexUnit* EEPlayerUnitAt(int64_t inUnit)
+{
+    return static_cast<EEComplexUnit*>(reinterpret_cast<RTSUnit*>(inUnit));
+}
+
+// port (the player lane, round 1): the economy and the improvements are Rust (ee_units player.rs) over this host; the
+// player's members after the saved record are the Rust record EeUnitsPlayerFields, the queued improvements its
+// queue (mQueued)
+static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
+{
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
+    int64_t* a = io->i;
+    EETechTreeNode* theNode = reinterpret_cast<EETechTreeNode*>(a[0]);
+    EEUnitClass* theClass = (uint64_t)a[0] < gUnitClassTable.size() ? gUnitClassTable[(size_t)a[0]] : NULL;
+    EEUnit* theUnit = static_cast<EEUnit*>(reinterpret_cast<RTSUnit*>(a[0]));   // the units' operations: an RTSUnit address
+    EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(reinterpret_cast<RTSUnit*>(a[0]));
+    EEPlayer* theOther = a[0] != 0 ? reinterpret_cast<EEPlayer*>(a[0]) : thePlayer;   // the diplomacy's: 0 this player
+    switch (inOp) {
+    case EE_UNITS_PLAYER_NODE: return (int64_t)reinterpret_cast<uintptr_t>(thePlayer->mTechnologies->Get((long)a[0]));
+    case EE_UNITS_PLAYER_NODE_INFO: {
+        RTSTechTreeNodeData* d = theNode->mData;
+        int64_t theInfo[8] = {d->mMakesUnit, d->mUnitClass, d->mCostResource, d->mRequiredStatistic, d->mRequiredStatisticValue,
+                              d->mKind, (int64_t)theNode->GetNumUnitClasses(), theNode->mIsResearched};
+        memcpy(a, theInfo, sizeof theInfo);
+        return 0;
+    }
+    case EE_UNITS_PLAYER_NODE_AVAILABLE: return theNode->GetIsAvailable();
+    case EE_UNITS_PLAYER_NODE_UNIT_CLASS: return theNode->GetUnitClass((unsigned long)a[1]);
+    case EE_UNITS_PLAYER_NODE_COST: return theNode->GetCost((long)a[1], (long)a[2], 1.0f);
+    case EE_UNITS_PLAYER_SCALE_COST: return thePlayer->ScaleCost((long)a[0]);
+    case EE_UNITS_PLAYER_METALLURGY: return gCivPowersManager.HasPower(thePlayer, kCivPowerMetallurgy);
+    case EE_UNITS_PLAYER_TAKE: thePlayer->TakeResource((long)a[0], (long)a[1]); return 0;
+    case EE_UNITS_PLAYER_ADD: thePlayer->AddResource((long)a[0], (long)a[1]); return 0;
+    case EE_UNITS_PLAYER_CLASS: {
+        if (theClass == NULL)
+            return 0;
+        int64_t theInfo[6] = {theClass->mTechnology, theClass->mWeight, theClass->GetPopulationCost(), theClass->mUnitType == kUnitTypeTeleporter,
+                              theClass->mAIKind == kAIKindHero, theClass->mImprovements != NULL};
+        memcpy(a, theInfo, sizeof theInfo);
+        return 1;
+    }
+    case EE_UNITS_PLAYER_EXTRA_POPULATION: return thePlayer->GetExtraPopulation((long)a[0]);
+    case EE_UNITS_PLAYER_POPULATION_LIMIT: return thePlayer->GetPopulationLimit(0);
+    case EE_UNITS_PLAYER_HERO_COUNT: return thePlayer->GetHeroCount(a[0] != 0, a[1] != 0);
+    case EE_UNITS_PLAYER_SCENARIO: return gWorld.mGameOptions.mIsScenarioGame;
+    case EE_UNITS_PLAYER_CAN_AFFORD: return thePlayer->CanAfford(theNode, (long)a[1], (long)a[2]);
+    case EE_UNITS_PLAYER_REASON: {
+        static const long kReasons[7] = {0, IDS_YOU_HAVE_ALREADY_BUILT_MAXIMUM, IDS_YOU_HAVE_REACHED_YOUR_POP_LIMIT, IDS_UNIT_EXCEEDS_POP_LIMIT,
+                                         IDS_NOT_ENOUGH_RESOURCES_FOR_CONSTRUCTION, IDS_NOT_ENOUGH_RESOURCES_TO_RESEARCH_THIS_TECHNOLOGY,
+                                         IDS_MAXIMUM_NUMBER_OF_IMPROVEMENTS_HAVE_BEEN};
+        gResource->GetString(kReasons[a[1]], *reinterpret_cast<UWideString*>(a[0]));
+        return 0;
+    }
+    case EE_UNITS_PLAYER_STATS_LOWER: thePlayer->mSavedGroups.Lower((long)a[0], (long)a[1]); return 0;
+    case EE_UNITS_PLAYER_IMPROVEMENT:
+    case EE_UNITS_PLAYER_IMPROVEMENT_COST:
+    case EE_UNITS_PLAYER_LEVEL: {
+        EEUnitClassImprovementTable* theTable = theClass != NULL ? theClass->mImprovements : NULL;
+        EEUnitClassUpgrade* theUpgrade = theClass != NULL ? thePlayer->mUnitClassUpgrades[(size_t)a[0]] : NULL;
+        long theImprovement = (long)a[1];
+        if (inOp == EE_UNITS_PLAYER_IMPROVEMENT) {
+            io->f[0] = theImprovement == 12 || theTable == NULL ? 0.0f : theTable->mEntries[theImprovement].mStepFactor;
+            io->f[1] = theTable != NULL ? theTable->mEntries[theImprovement].mCostFactor : 0.0f;
+        }
+        if (theUpgrade == NULL)
+            return 0;
+        EEUnitClassImprovement& theUp = theUpgrade->mImprovement;
+        if (inOp == EE_UNITS_PLAYER_IMPROVEMENT_COST)
+            return theUp.GetCost(theImprovement);
+        a[0] = theUp.GetLevel(theImprovement);
+        if (inOp == EE_UNITS_PLAYER_LEVEL)
+            return 1;
+        int64_t theInfo[6] = {theUp.CanUpgrade(theUpgrade->mUnitClass, theImprovement) == true, theUp.GetCost(theImprovement), theUp.mTotalCost,
+                              theUp.GetLevel(theImprovement), theTable != NULL ? theTable->GetMaxLevel() : 0,
+                              gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax)};
+        memcpy(a, theInfo, sizeof theInfo);
+        return 1;
+    }
+    case EE_UNITS_PLAYER_IMPROVEMENT_TIME:
+        return a[1] ? (long)gWorldTable.GetLongValue2(EEWorldImprovementTime(a[0])) : (long)gWorldTable.GetLongValue(EEWorldImprovementTime(a[0]));
+    case EE_UNITS_PLAYER_IS_LOCAL: return thePlayer == gWorld.GetCurrentPlayer();
+    case EE_UNITS_PLAYER_UPDATE_JIT: gUserInterface->UpdateJITManufacturing(); return 0;
+    case EE_UNITS_PLAYER_PAY_IMPROVEMENT: thePlayer->PayImprovement(theClass, (long)a[1]); return 0;
+    // the unit bookkeeping and the wonders (ee_units player_units.rs): the units as RTSUnit addresses
+    case EE_UNITS_PLAYER_UNIT_INFO: {
+        EEUnitClass* c = theUnit->mUnitClass;
+        EEComplexUnit* x = theUnit->GetComplexUnit();
+        EeUnitsPlayerUnit& u = *reinterpret_cast<EeUnitsPlayerUnit*>(a[1]);
+        u.complex = EEPlayerUnitArg(x);
+        u.unit_type = c->mUnitType;
+        u.technology = c->mTechnology;
+        u.population = c->GetPopulationCost();
+        u.category = c->mCategory;
+        u.ai_kind = c->mAIKind;
+        u.wonder_bonus = c->mWonderBonus;
+        u.wonder_unit_set = c->mWonderUnitSet;
+        u.land_building = c->IsLandBuilding();
+        u.vital = c->mIsVital;
+        u.inactive = c->mIsInactive;
+        u.blocks_tile = c->mBlocksTile;
+        u.wall = c->mIsWall;
+        u.tree = c->mIsTree;
+        u.on_tile = theUnit->mTileNode != NULL;
+        u.built = x != NULL && x->mIsBuilt;
+        u.first_part = x != NULL && x->mPreviousPart == NULL;
+        u.hit_points = theUnit->mHitPoints;
+        u.tile_x = theUnit->mTileX;
+        u.resource_amount = theUnit->mResourceAmount;
+        u.container = EEPlayerUnitArg(x != NULL ? x->mContainer : NULL);   // (not followed: a loading unit's is an id)
+        u.current_research = x != NULL ? x->mCurrentResearch : 0;
+        u.build_queue = x != NULL ? (long)x->GetBuildQueueSize() : 0;
+        return 0;
+    }
+    case EE_UNITS_PLAYER_CONTAINER_CATEGORY: return theComplex->mUnitClass->mCategory;
+    case EE_UNITS_PLAYER_NEXT_UNIT: return EEPlayerUnitArg(theUnit == NULL ? thePlayer->mFirstUnit : static_cast<EEUnit*>(theUnit->mNext));
+    case EE_UNITS_PLAYER_NEXT_COMPLEX: return EEPlayerUnitArg(thePlayer->GetNextComplexUnit(theUnit));
+    case EE_UNITS_PLAYER_STATE:
+        return (gLoadingSavedGame ? 1 : 0) | (gGameScreenActive ? 2 : 0) | (gWorldClearing ? 4 : 0) | (UShutdownInProgress() ? 8 : 0)
+               | (gWorld.mVictoryEnabled ? 16 : 0) | (gUserInterface != NULL ? 32 : 0);
+    case EE_UNITS_PLAYER_RTS_ADD_UNIT: thePlayer->RTSPlayer::AddUnit(theUnit, a[1] != 0); return 0;
+    case EE_UNITS_PLAYER_ACTIVATE: gWorld.ActivateUnit(theComplex); return 0;
+    case EE_UNITS_PLAYER_NODE_IS_AVAILABLE: return theNode->mIsAvailable;
+    case EE_UNITS_PLAYER_SET_NODE_AVAILABLE: thePlayer->mTechnologies->SetNodeAvailable((long)a[0], a[1] != 0); return 0;
+    case EE_UNITS_PLAYER_RESEARCH: thePlayer->mTechnologies->Research((long)a[0], NULL); return 0;
+    case EE_UNITS_PLAYER_NUM_PLAYERS: return gWorld.mNumPlayers;
+    case EE_UNITS_PLAYER_ID: return thePlayer->mPlayerID;
+    case EE_UNITS_PLAYER_UNIT_PLACED: thePlayer->UnitPlaced(theComplex); return 0;
+    case EE_UNITS_PLAYER_CITIZEN_CONTAINS: return thePlayer->GetTechTree()->Get(kTechCitizen)->Contains((long)a[0]);
+    case EE_UNITS_PLAYER_TECH_OBSOLETE: return thePlayer->mTechnologies->Get((long)a[0]) != NULL && thePlayer->mTechnologies->Get((long)a[0])->GetIsObsolete();
+    case EE_UNITS_PLAYER_TECH_ALLOW:
+        if (thePlayer->mTechnologies->Get((long)a[0]) != NULL)
+            thePlayer->mTechnologies->Get((long)a[0])->mIsAllowed = a[1] != 0;
+        return 0;
+    case EE_UNITS_PLAYER_SWAP_KIND: return gPhysics->GetUnitSwapKind(theComplex);
+    case EE_UNITS_PLAYER_DEAD_STATISTIC: return EEAddDeadUnitStatistic(theComplex);
+    case EE_UNITS_PLAYER_STATS_RESET: thePlayer->mSavedGroups.Reset((long)a[0], (long)a[1]); return 0;
+    case EE_UNITS_PLAYER_FOUNDATION: return theComplex->IsFoundation();
+    case EE_UNITS_PLAYER_ADD_TO_TOWN: return thePlayer->AddUnitToTown(theComplex);
+    case EE_UNITS_PLAYER_ADD_TO_HERD: return thePlayer->AddUnitToHerd(theComplex);
+    case EE_UNITS_PLAYER_CIV_POWER: return gCivPowersManager.HasPower(thePlayer, (long)a[0]);
+    case EE_UNITS_PLAYER_PULSE_EXPLORATION: {
+        EECivPower thePower;
+        gCivPowersManager.GetPower(kCivPowerExploration, thePower);
+        thePlayer->PulseSight(true, thePower.mAmount, theUnit->mUnitID);
+        return 0;
+    }
+    case EE_UNITS_PLAYER_UPDATE_WALL: gContinentManager.UpdateWallUnit(theComplex, a[1] != 0); return 0;
+    case EE_UNITS_PLAYER_LOG_LOST: EEGameLogUnitLost(thePlayer, theComplex); return 0;   // port: the game log (ee/EEGameLog.h)
+    case EE_UNITS_PLAYER_UNIT_NODE: return (int64_t)reinterpret_cast<uintptr_t>(theUnit->GetTechTreeNode());
+    case EE_UNITS_PLAYER_REMOVE_FROM_TOWN: thePlayer->RemoveUnitFromTown(theComplex); return 0;
+    case EE_UNITS_PLAYER_REMOVE_FROM_HERD: thePlayer->RemoveUnitFromHerd(theComplex); return 0;
+    case EE_UNITS_PLAYER_REMOVE_SITE: thePlayer->RemoveConstructionSite(theComplex); return 0;
+    case EE_UNITS_PLAYER_RECOMPUTE_AREAS: thePlayer->SuggestRecomputeAllAreaEffects(); return 0;
+    case EE_UNITS_PLAYER_REMOVE_FOREST:
+        if (theUnit->mResourceAmount != 0)
+            theUnit->mResourceAmount = 0;
+        gContinentManager.RemoveForestTile(theUnit);
+        return 0;
+    case EE_UNITS_PLAYER_CAMOUFLAGE:
+        if (a[0] != 0)
+            thePlayer->EnableCamouflagePower();
+        else
+            thePlayer->DisableCamouflagePower();
+        return 0;
+    case EE_UNITS_PLAYER_OWNER_ADD_WONDER: theComplex->mPlayer->AddWonder(theComplex, false); return 0;
+    case EE_UNITS_PLAYER_WONDER_STARTED:
+        if (gWorld.mPlayers[a[0]] != thePlayer)
+            gWorld.mPlayers[a[0]]->WonderStarted(static_cast<EEComplexUnit*>(reinterpret_cast<RTSUnit*>(a[1])));
+        return 0;
+    case EE_UNITS_PLAYER_CLEAR_FOOTPRINT: thePlayer->ClearFootprint(theComplex); return 0;
+    case EE_UNITS_PLAYER_BUILD_QUEUE_TECH: return theComplex->mBuildQueue[(size_t)a[1]].mTechnology;
+    case EE_UNITS_PLAYER_PENDING_COUNT: return thePlayer->mPendingUnits.size();
+    case EE_UNITS_PLAYER_PENDING_POPULATION: return dynamic_cast<EEUnit*>(thePlayer->mPendingUnits[(size_t)a[0]])->GetUnitClass()->GetPopulationCost();
+    case EE_UNITS_PLAYER_WONDER_LIST:
+        if (a[1] != 0) {
+            thePlayer->mWonders->Add(theComplex);
+            theComplex->mCloaked = gPhysics->mGameTime;
+            thePlayer->mSavedGroups.Reset(0x10, 1);
+        } else {
+            thePlayer->mWonders->Remove(theComplex);
+            theComplex->mCloaked = 0;
+            thePlayer->mSavedGroups.Lower(0x10, 1);
+        }
+        return 0;
+    case EE_UNITS_PLAYER_UPGRADE_TYPE:
+        if ((uint64_t)a[0] >= thePlayer->mUnitClassUpgrades.size())
+            return -2;
+        return thePlayer->mUnitClassUpgrades[(size_t)a[0]] != NULL ? (int64_t)thePlayer->mUnitClassUpgrades[(size_t)a[0]]->mUnitClass->GetUnitType() : -1;
+    case EE_UNITS_PLAYER_SET_CONTAINS: return gUnitSetManager.GetSet((long)a[0]) != NULL && gUnitSetManager.GetSet((long)a[0])->Contains((long)a[1]);
+    case EE_UNITS_PLAYER_WONDER_FACTORS:
+        io->f[0] = gWorld.GetGameVariant()->GetFactor((long)a[0]);
+        io->f[1] = gWorldTable.GetFloatValue(kWorldWonderHitPointBonus);
+        return 0;
+    case EE_UNITS_PLAYER_UPGRADE_HIT_POINTS: EEUpgradeHitPoints(thePlayer->mUnitClassUpgrades[(size_t)a[0]], thePlayer->mUnitClassUpgrades[(size_t)a[0]]->mUnitClass->GetUnitType(), io->f[0], thePlayer); return 0;
+    case EE_UNITS_PLAYER_SHARE_BONUS:
+        if (a[0] != 0)
+            gWorld.RemoveShareBonus();
+        else
+            gWorld.ApplyShareBonus();
+        return 0;
+    case EE_UNITS_PLAYER_SIGHT_SHARER:
+        if (a[1] != 0)
+            theOther->AddSightSharer(thePlayer);
+        else
+            theOther->RemoveSightSharer(thePlayer);
+        return 0;
+    // ApplyImprovement's and UpdateFreeUnitPower's (ee_units player_units.rs)
+    case EE_UNITS_PLAYER_UPGRADE_VALUES: {
+        EEUnitClassUpgrade* theUpgrade = theClass != NULL ? thePlayer->mUnitClassUpgrades[(size_t)a[0]] : NULL;
+        if (theUpgrade == NULL)
+            return 0;
+        int64_t theValues[4] = {theClass->mFlightTime, theUpgrade->mFlightTime, theUpgrade->mPower, theUpgrade->mMaxHitPoints};
+        memcpy(a, theValues, sizeof theValues);
+        return 1;
+    }
+    case EE_UNITS_PLAYER_CHANGE_LEVEL: thePlayer->mUnitClassUpgrades[(size_t)a[0]]->ChangeLevel((long)a[1], (long)a[2]); return 0;
+    case EE_UNITS_PLAYER_COMPLEX_SIGHT:
+        if (a[1] != 0)
+            theUnit->GetComplexUnit()->SightOnHere();
+        else
+            theUnit->GetComplexUnit()->SightOffHere();
+        return 0;
+    case EE_UNITS_PLAYER_COMPLEX_VALUES:
+        a[0] = theComplex->mFlightTime;
+        a[1] = theComplex->mPower;
+        return 0;
+    case EE_UNITS_PLAYER_SET_VALUE:
+        if (a[2] == 0)
+            theComplex->SetFlightTime((long)a[1]);
+        else if (a[2] == 1)
+            theComplex->SetPower((long)a[1]);
+        else
+            theUnit->SetHitPoints((long)a[1]);
+        return 0;
+    case EE_UNITS_PLAYER_GENERATE: io->f[0] = gPhysics->mRandom.Generate(); return 0;
+    case EE_UNITS_PLAYER_PRODUCE: return theUnit->GetUnitClass()->ProduceUnit(theUnit->GetComplexUnit(), gUnitClassTable[(size_t)a[1]], false);
+    case EE_UNITS_PLAYER_SLAVERY_SOUND:
+        gSoundManager->Play(EESoundObject::Get(kSoundSlavery)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
+        return 0;
+    case EE_UNITS_PLAYER_HEALED_SET: thePlayer->mHealedUnitSet = a[1] != 0 ? gUnitSetManager.GetSet((long)a[0]) : NULL; return 0;
+    case EE_UNITS_PLAYER_AT: return (int64_t)reinterpret_cast<uintptr_t>((uint64_t)a[0] < gWorld.mNumPlayers ? gWorld.mPlayers[a[0]] : NULL);
+    // the diplomacy and the shared sight (ee_units player_diplomacy.rs): the players as EEPlayer addresses, 0 this one
+    case EE_UNITS_PLAYER_VIEW:
+        a[2] = theOther->mEnemies[a[1]];
+        a[0] = theOther->mPlayerID;
+        a[1] = theOther->mSaveVisMap;
+        return 0;
+    case EE_UNITS_PLAYER_UNITS_SIGHT:
+        for (RTSUnit* u = theOther->mFirstUnit; u != NULL; u = u->mNext)
+            if (a[2] == 0 || static_cast<EEUnit*>(u)->mUnitClass->IsLandBuilding()) {
+                if (a[1] != 0)
+                    u->SightOnHere();
+                else
+                    u->SightOffHere();
+            }
+        return 0;
+    case EE_UNITS_PLAYER_EVENTS_SIGHT:
+        if (a[1] != 0)
+            theOther->mEvents.ShowEvents(theOther);
+        else
+            theOther->mEvents.HideEvents(theOther);
+        return 0;
+    case EE_UNITS_PLAYER_ALLY: {
+        EEPlayer* theAlly = a[1] != 0 ? reinterpret_cast<EEPlayer*>(a[1]) : thePlayer;
+        if (a[2] != 0)
+            theOther->mAllies.push_back(theAlly);
+        else
+            theOther->RemoveAlly(theAlly);
+        return 0;
+    }
+    case EE_UNITS_PLAYER_STORE_TABLE: EEUnitStorePlayerTable(thePlayer); return 0;   // New (R5b.4): the store's diplomacy table
+    case EE_UNITS_PLAYER_RESET_WONDER_TIMERS: thePlayer->ResetWonderTimers(theOther); return 0;
+    case EE_UNITS_PLAYER_SHARERS:
+        if (a[1] != 0)
+            thePlayer->mSightSharers.push_back(theOther);
+        else if (std::find(thePlayer->mSightSharers.begin(), thePlayer->mSightSharers.end(), theOther) != thePlayer->mSightSharers.end())
+            thePlayer->mSightSharers.erase(std::find(thePlayer->mSightSharers.begin(), thePlayer->mSightSharers.end(), theOther));
+        return 0;
+    case EE_UNITS_PLAYER_VIEWED_OF: return thePlayer->mViewedUnit != NULL && thePlayer->mViewedUnit->mPlayer == theOther;
+    case EE_UNITS_PLAYER_UNVIEW: thePlayer->UpdateSelection(NULL, true); return 0;
+    case EE_UNITS_PLAYER_IS_CURRENT: return theOther == gWorld.GetCurrentPlayer();
+    case EE_UNITS_PLAYER_REFRESH_TERRAIN: gWorld.GetCurrentPlayer()->RefreshTerrainVisibility(); return 0;
+    case EE_UNITS_PLAYER_MINIMAP_REDRAW:
+        if (gMiniMap != NULL)
+            gMiniMap->Redraw();
+        return 0;
+    // the towns and herds (ee_units player_areas.rs): list a[0] (0 the towns, 1 the herds), the areas and units by address
+    case EE_UNITS_PLAYER_AREA_COUNT: return a[0] == 0 ? thePlayer->mTowns.size() : thePlayer->mHerds.size();
+    case EE_UNITS_PLAYER_AREA_AT:
+        return a[0] == 0 ? (int64_t)reinterpret_cast<uintptr_t>(thePlayer->mTowns[(size_t)a[1]])
+                         : (int64_t)reinterpret_cast<uintptr_t>(thePlayer->mHerds[(size_t)a[1]]);
+    case EE_UNITS_PLAYER_TOWN_UNIT: return EETown::IsTownUnit(theUnit);
+    case EE_UNITS_PLAYER_HERD_ANIMAL: return EEHerd::IsAnimalOnMap(theUnit);
+    case EE_UNITS_PLAYER_AREA_CAN_TAKE:
+        return a[0] == 0 ? reinterpret_cast<EETown*>(a[1])->CanTake(EEPlayerUnitAt(a[2])) : reinterpret_cast<EEHerd*>(a[1])->CanTake(EEPlayerUnitAt(a[2]), true);
+    case EE_UNITS_PLAYER_HERD_HAS: return reinterpret_cast<EEHerd*>(a[0])->HasUnit(EEPlayerUnitAt(a[1]));
+    case EE_UNITS_PLAYER_AREA_ADD:
+        return a[0] == 0 ? reinterpret_cast<EETown*>(a[1])->AddUnit(EEPlayerUnitAt(a[2])) : reinterpret_cast<EEHerd*>(a[1])->AddUnit(EEPlayerUnitAt(a[2]));
+    case EE_UNITS_PLAYER_AREA_NEW: {
+        EEComplexUnit* theNew = EEPlayerUnitAt(a[1]);
+        bool theResult;
+        if (a[0] == 0) {
+            EETown* theTown = new EETown(thePlayer, ++gWorld.mTownIDCounter);
+            theTown->SetSerial(++gContinentManager.mLastSerial);
+            gContinentManager.AddArea(theTown);
+            theResult = theTown->AddUnit(theNew);
+            if (theResult) {
+                thePlayer->mTownsByID.insert(std::pair<long, EETown*>(theTown->mTownID, theTown));
+                thePlayer->mTowns.push_back(theTown);
+            } else
+                delete theTown;
+        } else {
+            EEHerd* theHerd = new EEHerd(thePlayer, theNew->mUnitClass->mAnimalID, ++gWorld.mHerdIDCounter);
+            theHerd->SetSerial(++gContinentManager.mLastSerial);
+            gContinentManager.AddArea(theHerd);
+            theResult = theHerd->AddUnit(theNew);
+            if (theResult)
+                thePlayer->mHerds.push_back(theHerd);
+            else
+                delete theHerd;
+        }
+        return theResult;
+    }
+    case EE_UNITS_PLAYER_HOLDER: return EEPlayerUnitArg(theComplex->mHolder);
+    case EE_UNITS_PLAYER_RANDOM: return gPhysics->GetRandom((long)a[0], (long)a[1]);
+    case EE_UNITS_PLAYER_AREA_TILES: return a[0] == 0 ? reinterpret_cast<EETown*>(a[1])->GetNumTiles() : reinterpret_cast<EEHerd*>(a[1])->GetNumTiles();
+    case EE_UNITS_PLAYER_AREA_REMOVE_UNIT:
+        if (a[0] == 0)
+            reinterpret_cast<EETown*>(a[1])->RemoveUnit(EEPlayerUnitAt(a[2]));
+        else
+            reinterpret_cast<EEHerd*>(a[1])->RemoveUnit(EEPlayerUnitAt(a[2]));
+        return 0;
+    case EE_UNITS_PLAYER_AREA_DROP:
+        if (a[0] == 0) {
+            EETown* theTown = thePlayer->mTowns[(size_t)a[1]];
+            gContinentManager.RemoveArea(theTown);
+            thePlayer->mTowns.erase(thePlayer->mTowns.begin() + (size_t)a[1]);
+            delete theTown;
+        } else {
+            EEHerd* theHerd = thePlayer->mHerds[(size_t)a[1]];
+            gContinentManager.RemoveArea(theHerd);
+            thePlayer->mHerds.erase(thePlayer->mHerds.begin() + (size_t)a[1]);
+            delete theHerd;
+        }
+        return 0;
+    case EE_UNITS_PLAYER_TOWN_MERGE: {
+        EETown* theTown = reinterpret_cast<EETown*>(a[0]);
+        EETown* theOld = reinterpret_cast<EETown*>(a[1]);
+        theTown->Merge(theOld);
+        gContinentManager.RemoveArea(theOld);
+        std::vector<EETown*>::iterator theIterator = std::find(thePlayer->mTowns.begin(), thePlayer->mTowns.end(), theOld);
+        if (theIterator == thePlayer->mTowns.end())
+            return 0;
+        thePlayer->RemoveTownID(theOld->mTownID);
+        thePlayer->mTowns.erase(theIterator);
+        EEPPatrolGroup* theGroup = theOld->mPatrolGroup;
+        if (theGroup != NULL) {
+            EEComplexUnit* thePoint;
+            while ((thePoint = theGroup->GetLast()) != NULL) {
+                theGroup->RemoveUnit(thePoint);
+                thePoint->SetPatrolGroup(NULL);
+                thePoint->Kill(true, false, false);
+                thePoint->mPlayer->KillUnit(thePoint, false);
+            }
+            theGroup->Reference();
+        }
+        delete theOld;
+        return (int64_t)reinterpret_cast<uintptr_t>(theGroup);
+    }
+    case EE_UNITS_PLAYER_TOWN_REPATROL: {
+        EETown* theTown = reinterpret_cast<EETown*>(a[0]);
+        EEPPatrolGroup* const* theOld = reinterpret_cast<EEPPatrolGroup* const*>(a[1]);   // (addresses as int64_t: 64-bit pointers)
+        if (theTown->mPatrolGroup == NULL)
+            return 0;
+        for (EEUnit* u = thePlayer->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext)) {
+            EEUGRust* theGoal = u->GetComplexUnit() != NULL ? EEPatrolGoalCast(u->GetComplexUnit()->mGoalState) : NULL;
+            if (theGoal != NULL && theGoal->GetPatrolGroup() != NULL && std::find(theOld, theOld + a[2], theGoal->GetPatrolGroup()) != theOld + a[2])
+                theGoal->SetPatrolGroup(theTown->mPatrolGroup);
+        }
+        std::for_each(theOld, theOld + a[2], EEPDereferencer());
+        return 0;
+    }
+    case EE_UNITS_PLAYER_TOWN_CONTAINS: return reinterpret_cast<EETown*>(a[0])->Contains(U2DPoint<long>((long)a[1], (long)a[2]));
+    case EE_UNITS_PLAYER_AREA_TILE: {
+        U2DPoint<long> theTile = theComplex->FindAreaTile(true, 1);
+        a[0] = theTile.mX;
+        a[1] = theTile.mY;
+        return 0;
+    }
+    case EE_UNITS_PLAYER_ASSIGN_TILE: {
+        EEComplexUnit* theBuilding = theUnit->GetComplexUnit();
+        a[0] = theBuilding->mTileX != -10000 ? theUnit->mTileX : UMFloor(theBuilding->mLastMapPosition.GetX());
+        a[1] = theBuilding->mTileX != -10000 ? theUnit->mTileY : UMFloor(theBuilding->mLastMapPosition.GetY());
+        return 0;
+    }
+    case EE_UNITS_PLAYER_TOWN_PATROL:
+        if (reinterpret_cast<EETown*>(a[0])->mPatrolGroup == NULL)
+            reinterpret_cast<EETown*>(a[0])->RefreshPatrolGroup();
+        return 0;
+    }
+    return 0;
+}
+
+// the Rust player's view of a player (ee_units player.rs)
+struct EEPlayerRefs : EeUnitsPlayerRefs {
+    EEPlayerRefs(const EEPlayer* inPlayer)
+    {
+        EEPlayer* thePlayer = const_cast<EEPlayer*>(inPlayer);
+        this->player = thePlayer;
+        this->host = &EEPlayerHost;
+        this->saved = thePlayer;
+        this->fields = thePlayer;
+        this->stats = thePlayer->mSavedGroups.mStats;
+    }
+    operator const EeUnitsPlayerRefs*() const { return this; }
+};
+
+// the unit bookkeeping and the wonders (ee_units player_units.rs ee_units_player_units)
+static long EEPlayerUnits(const EEPlayer* inPlayer, uint32_t inWhat, RTSUnit* inUnit = NULL, bool inFlag = false, bool inFlag2 = false)
+{
+    return ee_units_player_units(EEPlayerRefs(inPlayer), inWhat, inUnit, inFlag, inFlag2);
+}
+
+// EEWorld::ApplyShareBonus (inRemove false) and RemoveShareBonus over every player's records (ee_units player_units.rs)
+void EEPlayerShareBonus(bool inRemove)
+{
+    std::vector<EeUnitsPlayerRefs> theRefs(gWorld.mNumPlayers);   // (no player: zeros)
+    for (unsigned long i = 0; i < gWorld.mNumPlayers; i++)
+        if (gWorld.mPlayers[i] != NULL)
+            theRefs[i] = EEPlayerRefs(gWorld.mPlayers[i]);
+    if (!theRefs.empty())
+        ee_units_player_share_bonus(&theRefs[0], (uint32_t)theRefs.size(), inRemove, gWorldTable.GetFloatValue(kWorldWonderPopulationBonus),
+                                    gWorldTable.GetFloatValue2(kWorldWonderPopulationBonus), gWorld.mPlayerPopulationLimit);
+}
+
+// the improvement decisions (ee_units player.rs ee_units_player_improvement)
+static long EEPlayerImprovement(const EEPlayer* inPlayer, uint32_t inWhat, unsigned long inUnitType, long inImprovement, bool inFlag = false,
+                                bool inFlag2 = false, float inFraction = 0.0f, UWideString* outReason = NULL)
+{
+    return ee_units_player_improvement(EEPlayerRefs(inPlayer), inWhat, inUnitType, inImprovement, inFlag, inFlag2, inFraction, outReason);
+}
+
+// Queues an improvement (front or back) when it can be bought, paying unless told not to (ee_units player.rs)
 void EEPlayer::QueueImprovement(unsigned long inUnitType, unsigned long inImprovement, bool inFront, bool inAlreadyPaid)
 {
-    EEUnitClass* theClass = gUnitClassTable[inUnitType];
-    if (theClass == NULL || !this->CanBuy(inUnitType, inImprovement, NULL))
-        return;
-    if (!inAlreadyPaid)
-        this->PayImprovement(theClass, inImprovement);
-    if (!inFront)
-        this->mQueuedImprovements[inUnitType].second.push_back(inImprovement);
-    else
-        this->mQueuedImprovements[inUnitType].second.insert(this->mQueuedImprovements[inUnitType].second.begin(), inImprovement);
+    EEPlayerEconScope theScope;
+    EEPlayerImprovement(this, 5, inUnitType, (long)inImprovement, inFront, inAlreadyPaid);
+    theScope.Record(this, 16, 0, {(int32_t)inUnitType, (int32_t)inImprovement, inFront, inAlreadyPaid});
 }
 
 // Records a media item as loaded by the player (ignores NULL)
@@ -338,16 +907,7 @@ void EEPlayer::AddPatrolGroup(EEPPatrolGroup* inGroup)
 // Starts sharing the player's sight with another player, refreshing its land buildings' sight around the change
 void EEPlayer::AddSightSharer(EEPlayer* inPlayer)
 {
-    EEUnit* theUnit;
-    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (theUnit->mUnitClass->IsLandBuilding())
-            theUnit->SightOffHere();
-    }
-    this->mSightSharers.push_back(inPlayer);
-    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (theUnit->mUnitClass->IsLandBuilding())
-            theUnit->SightOnHere();
-    }
+    ee_units_player_diplomacy(EEPlayerRefs(this), 1, inPlayer, 0, false);
 }
 
 // Toggles units in the selection: adds built units not yet selected and removes the rest;
@@ -374,33 +934,21 @@ void EEPlayer::AddAndRemoveUnitsFromSelectedGroup(std::vector<long>& inUnitIDs)
         EEPlayForLocalPlayer(this, theLastUnit->mStats->GetSelectionSound(-1));
 }
 
-// Refunds a fraction of a technology's cost in each resource
+// Refunds a fraction of a technology's cost in each resource (ee_units player.rs)
 void EEPlayer::RefundTechnology(EETechnology* inTechnology, long inUnitType, float inFraction)
 {
-    for (unsigned long i = 2; i < 7; i++) {
-        long theAmount = this->ScaleCost(inTechnology->GetCost(i, inUnitType, 1.0f)) * inFraction;
-        this->AddResource(i, theAmount);
-    }
+    EEPlayerEconScope theScope;
+    ee_units_player_cost(EEPlayerRefs(this), 5, inTechnology, inUnitType, 0, inFraction, NULL);
+    theScope.Record(this, 8, 0, {EEPlayerNodeID(inTechnology), inUnitType, EEPlayerFloatBits(inFraction)});
 }
 
-// Refunds a fraction of the cost of a unit class's improvement at its current (queued) level
+// Refunds a fraction of a unit class improvement's cost at its queued level (ee_units player.rs)
 void EEPlayer::RefundImprovement(EEUnitClass* inClass, long inImprovement, float inFraction)
 {
-    long theTechnology = gUnitClassTable[inClass->mUnitType] ? gUnitClassTable[inClass->mUnitType]->mTechnology : 100000;
-    if (inClass == NULL || theTechnology == kTechNone)
-        return;
-    EETechTreeNode* theNode = this->mTechnologies->Get(theTechnology);
-    if (theNode == NULL || inClass->mImprovements == NULL)
-        return;
-    long theType = inClass->GetUnitType();
-    long theLevel;
-    float theFactor = inClass->mImprovements->mEntries[inImprovement].mCostFactor;
-    float theScale = this->GetImprovementLevel(theType, inImprovement) * theFactor;
-    for (unsigned long i = 2; i < 7; i++) {
-        long theCost = theNode->GetCost(i, 0, 1.0f) * theScale + 0.0001f;
-        long theAmount = this->ScaleCost(theCost) * inFraction;
-        this->AddResource(i, theAmount);
-    }
+    EEPlayerEconScope theScope;
+    if (inClass != NULL)
+        EEPlayerImprovement(this, 9, inClass->mUnitType, inImprovement, false, false, inFraction);
+    theScope.Record(this, 9, 0, {inClass != NULL ? (int32_t)inClass->mUnitType : -1, inImprovement, EEPlayerFloatBits(inFraction)});
 }
 
 // Selects a unit by ID, starting a new selection when adding a unit of a player other than the selected one
@@ -467,42 +1015,7 @@ void EEPlayer::AddUnitToRepatrol(EEComplexUnit* inUnit)
 // built), counts vital units, unlocks the capitol technologies on the first capitol and records statistics
 void EEPlayer::AddUnit(RTSUnit* inUnit, bool inKeepID)
 {
-    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
-    EEComplexUnit* theComplexUnit = theUnit->GetComplexUnit();
-    this->mPopulationCount += theUnit->mUnitClass->GetPopulationCost();
-    RTSPlayer::AddUnit(inUnit, inKeepID);
-    if (theComplexUnit != NULL && (!theComplexUnit->mUnitClass->mIsInactive || theComplexUnit->mHitPoints <= 0)
-        && theComplexUnit->mPreviousPart == NULL && theComplexUnit->mTileX != -10000)
-        gWorld.ActivateUnit(theComplexUnit);
-    EETechTreeNode* theNode = this->mTechnologies->Get(theUnit->mUnitClass->mTechnology);
-    bool theWasUnavailable = theNode != NULL && !theNode->mIsAvailable;
-    this->mTechnologies->SetNodeAvailable(theUnit->mUnitClass->mTechnology, true);
-    if (theUnit->GetComplexUnit() != NULL && theUnit->GetComplexUnit()->mIsBuilt && gWorld.mNumPlayers > 0)
-        this->mTechnologies->Research(theUnit->mUnitClass->mTechnology, NULL);
-    if (theWasUnavailable)
-        this->mTechnologies->SetNodeAvailable(theUnit->mUnitClass->mTechnology, false);
-    this->UnitPlaced(theUnit);
-    if (!theUnit->mUnitClass->IsLandBuilding() && theUnit->mUnitClass->mIsVital
-        && (theUnit->GetComplexUnit() == NULL || theUnit->GetComplexUnit()->mPreviousPart == NULL))
-        this->mEndOfGameCount++;
-    if (this->GetTechTree()->Get(kTechCitizen)->Contains(theUnit->mUnitClass->GetUnitType())) {
-        this->mNumCapitols++;
-        if (this->mNumCapitols == 1 && !UShutdownInProgress()) {
-            gUserInterface->UpdateJITManufacturing();
-            if (this->GetTechTree()->Get(kTechSettlement)->GetIsObsolete()) {
-                this->GetTechTree()->Get(kTechTownCenter)->mIsAllowed = true;
-            } else {
-                this->GetTechTree()->Get(kTechSettlement)->mIsAllowed = true;
-                this->GetTechTree()->Get(kTechTownCenter)->mIsAllowed = false;
-            }
-            this->GetTechTree()->Get(kTechCapitol)->mIsAllowed = false;
-        }
-    }
-    if (theUnit->GetComplexUnit() == NULL || gPhysics->GetUnitSwapKind(theUnit->GetComplexUnit()) == 3)
-        return;
-    long theSeries = EEAddDeadUnitStatistic(theUnit);
-    if (theSeries != 0)
-        this->mSavedGroups.Reset(theSeries, 1);
+    EEPlayerUnits(this, 0, inUnit, inKeepID);
 }
 
 // Records a unit leaving the map with its tile and the current game time
@@ -522,44 +1035,7 @@ void EEPlayer::AddOffMapUnit(RTSUnit* inUnit)
 // several); returns false when it is no herd animal or no herd took it
 bool EEPlayer::AddUnitToHerd(EEComplexUnit* inUnit)
 {
-    std::vector<EEHerd*> theHerds;
-    long theAnimal = inUnit->mUnitClass->mAnimalID;
-    bool theResult = false;
-    if (EEHerd::IsAnimalOnMap(inUnit)) {
-        theResult = true;
-        for (long i = this->mHerds.size() - 1; i >= 0; i--) {
-            if (this->mHerds[i]->CanTake(inUnit, true))
-                theHerds.push_back(this->mHerds[i]);
-            if (this->mHerds[i]->HasUnit(inUnit))
-                return theResult;
-        }
-        EEHerd* theHerd;
-        if (theHerds.size() == 0) {
-            theHerd = new EEHerd(this, theAnimal, ++gWorld.mHerdIDCounter);
-            theHerd->SetSerial(++gContinentManager.mLastSerial);
-            gContinentManager.AddArea(theHerd);
-            theResult = theHerd->AddUnit(inUnit);
-            if (theResult)
-                this->mHerds.push_back(theHerd);
-            else
-                delete theHerd;
-        } else if (theHerds.size() != 1) {
-            long theIndex = -1;
-            if (inUnit->mHolder != NULL) {
-                for (theIndex = theHerds.size() - 1; theIndex >= 0; theIndex--)
-                    if (theHerds[theIndex]->HasUnit(inUnit->mHolder))
-                        break;
-            }
-            if (theIndex == -1)
-                theIndex = gPhysics->GetRandom(0L, (long)theHerds.size() - 1);
-            theHerd = *(theHerds.begin() + theIndex);
-            theResult = theHerd->AddUnit(inUnit);
-        } else {
-            theHerd = *theHerds.begin();
-            theResult = theHerd->AddUnit(inUnit);
-        }
-    }
-    return theResult;
+    return ee_units_player_areas(EEPlayerRefs(this), 1, static_cast<RTSUnit*>(inUnit));
 }
 
 // Adds a unit to the stranded list once, keeping a reference to it
@@ -634,170 +1110,54 @@ void EEPlayer::AddConstructionSite(EEComplexUnit* inUnit)
 // Records a wonder (starting its timer unless told not to); the first wonder of a type grants its wonder power
 void EEPlayer::AddWonder(EEComplexUnit* inUnit, bool inIsLoading)
 {
-    if (!inIsLoading) {
-        this->mWonders->Add(inUnit);
-        inUnit->mCloaked = gPhysics->mGameTime;
-        this->mSavedGroups.Reset(0x10, 1);
-    }
-    if (this->mWonderTypeCounts.find(inUnit->mUnitClass->mUnitType) == this->mWonderTypeCounts.end()) {
-        this->mWonderTypeCounts[inUnit->mUnitClass->mUnitType] = 1;
-        this->AddWonderPower(inUnit);
-    } else
-        this->mWonderTypeCounts[inUnit->mUnitClass->mUnitType]++;
+    EEPlayerUnits(this, 7, inUnit, inIsLoading);
 }
 
 // Recounts the population, the vital units that keep the player alive and the vital buildings
 void EEPlayer::RecountPopulation()
 {
-    long thePopulation = 0;
-    long theCount = 0;
-    long theOtherCount = 0;
-    EEComplexUnit* theUnit = NULL;
-    while ((theUnit = this->GetNextComplexUnit(theUnit)) != NULL) {
-        if (!(theUnit->mHitPoints > 0))
-            continue;
-        if (theUnit->mContainer == NULL || theUnit->mContainer->mUnitClass->mCategory != kUnitCategoryFortress)
-            thePopulation += theUnit->mUnitClass->GetPopulationCost();
-        if (theUnit->mUnitClass->mIsVital && theUnit->mPreviousPart == NULL
-            && (!theUnit->mUnitClass->IsLandBuilding() || theUnit->mIsBuilt == true))
-            theCount++;
-        if (theUnit->mUnitClass->IsLandBuilding() && theUnit->mUnitClass->mIsVital)
-            theOtherCount++;
-    }
-    this->mPopulationCount = thePopulation;
-    this->mEndOfGameCount = theCount;
-    this->mNumVitalBuildings = theOtherCount;
+    EEPlayerUnits(this, 4);
 }
 
-// Returns whether an improvement for a unit type can be bought: allowed, within the improvement limits
-// counting the queue, and affordable; otherwise sets the reason text
+// Whether an improvement can be bought counting the queue (ee_units player.rs can_buy); else the reason text
 bool EEPlayer::CanBuy(long inUnitType, long inImprovement, UWideString* outText)
 {
-    bool theResult = false;
-    EEUnitClass* theClass = gUnitClassTable[inUnitType];
-    long theTechnology = theClass != NULL ? theClass->mTechnology : 100000;
-    if (theClass != NULL && theTechnology != kTechNone) {
-        EEUnitClassImprovementTable* theTable = theClass->mImprovements;
-        EEUnitClassUpgrade* theUpgrade = this->mUnitClassUpgrades[inUnitType];
-        EEUnitClassImprovement* theImprovement = &theUpgrade->mImprovement;
-        if ((inImprovement == 12 ? 0.0f : theTable->mEntries[inImprovement].mStepFactor) > 0.0f &&
-            theImprovement->CanUpgrade(theUpgrade->mUnitClass, inImprovement) == true) {
-            long theQueued = theImprovement->mTotalCost;
-            std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theIterator = this->mQueuedImprovements.find(inUnitType);
-            if (theIterator != this->mQueuedImprovements.end()) {
-                const std::vector<unsigned long>& theQueue = this->mQueuedImprovements[inUnitType].second;
-                for (unsigned long i = 0; i < theQueue.size(); i++)
-                    theQueued += theImprovement->GetCost(theQueue[i]);
-            }
-            if ((unsigned long)(theImprovement->GetCost(inImprovement) + theQueued) <=
-                (unsigned long)gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax) &&
-                this->GetImprovementLevel(inUnitType, inImprovement) <= theTable->GetMaxLevel()) {
-                float theScale = theTable->mEntries[inImprovement].mCostFactor;
-                long theLevel = this->GetImprovementLevel(inUnitType, inImprovement);
-                theResult = this->CanAffordTechnology(theTechnology, theLevel * theScale, outText);
-            } else if (outText != NULL)
-                gResource->GetString(IDS_MAXIMUM_NUMBER_OF_IMPROVEMENTS_HAVE_BEEN, *outText);
-        }
-    }
-    return theResult;
+    EEPlayerEconScope theScope;
+    return theScope.Record(this, 10, EEPlayerImprovement(this, 3, inUnitType, inImprovement, false, false, 0.0f, outText) != 0, {inUnitType, inImprovement, outText != NULL}, outText);
 }
 
 // Returns whether the player can produce a unit type (cost and wonder limits included); sets the reason
 bool EEPlayer::CanProduceUnitType(long inUnitType, long inArg, UWideString* outReason)
 {
-    long theTechnology = gUnitClassTable[inUnitType] ? gUnitClassTable[inUnitType]->mTechnology : 100000;
-    if (theTechnology != kTechNone)
-        return this->CanProduce(theTechnology, inArg, 1, true, 3, outReason);
-    return false;
+    EEPlayerEconScope theScope;
+    bool theCaptured = [&]() -> bool {
+        long theTechnology = gUnitClassTable[inUnitType] ? gUnitClassTable[inUnitType]->mTechnology : 100000;
+        if (theTechnology != kTechNone)
+            return this->CanProduce(theTechnology, inArg, 1, true, 3, outReason);
+        return false;
+    }();
+    return theScope.Record(this, 20, theCaptured, {inUnitType, inArg, outReason != NULL}, outReason);
 }
 
-// Returns whether a technology or unit can be produced: population, teleporter and wonder limits, cost
-// (optional) and a researched producer class; sets the reason text when not
+// Whether a technology or unit can be produced (ee_units player.rs can_produce); sets the reason text when not
 bool EEPlayer::CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason)
 {
-    EETechTreeNode* theNode = this->mTechnologies->Get(inTechnology);
-    bool theAllowed = false;
-    if (theNode != NULL && theNode->GetIsAvailable()) {
-        theAllowed = true;
-        if (theNode->mData->mMakesUnit) {
-            EEUnitClass* theClass = gUnitClassTable[theNode->mData->mUnitClass];
-            if (theClass != NULL) {
-                if (theClass->mWeight == 0
-                    || theClass->GetPopulationCost() + this->mPopulationCount <= this->GetExtraPopulation(theNode->mData->mUnitClass) + this->GetPopulationLimit(0)
-                    || (this->mPopulationCount == this->GetPopulationLimit(0) - 1
-                        && theClass->GetPopulationCost() + this->mPopulationCount <= this->GetExtraPopulation(theNode->mData->mUnitClass) + this->GetPopulationLimit(0))) {
-                    theAllowed = true;
-                    if (theClass->mUnitType == kUnitTypeTeleporter) {
-                        theAllowed = this->mNumTeleporters < 1;
-                        if (!theAllowed && outReason != NULL)
-                            gResource->GetString(IDS_YOU_HAVE_ALREADY_BUILT_MAXIMUM, *outReason);
-                    }
-                    if (theAllowed == true && theClass->mAIKind == kAIKindHero && !gWorld.mGameOptions.mIsScenarioGame && inWonderMode != 0) {
-                        if (inWonderMode == 3)
-                            theAllowed = this->GetHeroCount(true, true) < this->mHeroLimit;
-                        else if (inWonderMode == 1)
-                            theAllowed = this->GetHeroCount(false, true) < this->mHeroLimit;
-                        else if (inWonderMode == 2)
-                            theAllowed = this->GetHeroCount(true, false) < this->mHeroLimit;
-                        if (!theAllowed && outReason != NULL)
-                            gResource->GetString(IDS_YOU_HAVE_REACHED_YOUR_POP_LIMIT, *outReason);
-                    }
-                } else {
-                    theAllowed = false;
-                    if (outReason != NULL)
-                        gResource->GetString(IDS_UNIT_EXCEEDS_POP_LIMIT, *outReason);
-                }
-            }
-        }
-        if (inCheckCost == true && theAllowed) {
-            theAllowed = this->CanAfford(theNode, inUnitClass, inCount);
-            if (!theAllowed && outReason != NULL) {
-                if (theNode->mData->mMakesUnit)
-                    gResource->GetString(IDS_NOT_ENOUGH_RESOURCES_FOR_CONSTRUCTION, *outReason);
-                else
-                    gResource->GetString(IDS_NOT_ENOUGH_RESOURCES_TO_RESEARCH_THIS_TECHNOLOGY, *outReason);
-            }
-        }
-        if (theAllowed) {
-            theAllowed = theNode->GetNumUnitClasses() > 0;
-            for (long i = theNode->GetNumUnitClasses() - 1; i >= 0 && !theAllowed; i--) {
-                EEUnitClass* theClass = gUnitClassTable[theNode->GetUnitClass(i)];
-                long theTechnology = theClass != NULL ? theClass->mTechnology : 100000;
-                EETechTreeNode* theClassNode = this->mTechnologies->Get(theTechnology);
-                theAllowed = theClassNode != NULL ? theClassNode->mIsResearched : false;
-            }
-        }
-    }
-    return theAllowed;
+    EEPlayerEconScope theScope;
+    return theScope.Record(this, 1, ee_units_player_can_produce(EEPlayerRefs(this), inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, outReason), {inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, outReason != NULL}, outReason);
 }
 
-// Returns whether a unit type's improvement is allowed and within the improvement limits, ignoring the queue
+// Whether an improvement is allowed and within the limits, ignoring the queue (ee_units player.rs)
 bool EEPlayer::CanImprove(long inUnitType, long inImprovement, UWideString* outReason)
 {
-    bool theResult = false;
-    EEUnitClass* theClass = gUnitClassTable[inUnitType];
-    long theTechnology = theClass != NULL ? theClass->mTechnology : 100000;
-    if (theClass != NULL && theTechnology != kTechNone) {
-        EEUnitClassUpgrade* theUpgrade = this->mUnitClassUpgrades[inUnitType];
-        long theQueued = theUpgrade->mImprovement.mTotalCost;
-        EEUnitClassImprovementTable* theTable = theClass->mImprovements;
-        if ((inImprovement != 12 ? theTable->mEntries[inImprovement].mStepFactor : 0.0f) > 0.0f
-            && theUpgrade->mImprovement.CanUpgrade(theUpgrade->mUnitClass, inImprovement) == true
-            && theUpgrade->mImprovement.GetCost(inImprovement) + theQueued <= gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax)
-            && theUpgrade->mImprovement.GetLevel(inImprovement) <= theTable->GetMaxLevel())
-            theResult = true;
-    }
-    return theResult;
+    EEPlayerEconScope theScope;
+    return theScope.Record(this, 11, EEPlayerImprovement(this, 2, inUnitType, inImprovement) != 0, {inUnitType, inImprovement, outReason != NULL}, outReason);
 }
 
-// Returns whether the player can afford a technology at a cost scale; sets the reason text when not
+// Whether the player can afford a technology at a cost scale (ee_units player.rs); sets the reason text when not
 bool EEPlayer::CanAffordTechnology(long inTechnology, float inScale, UWideString* outReason)
 {
-    EETechTreeNode* theNode = this->mTechnologies->Get(inTechnology);
-    bool theResult = this->CanAffordScaled(theNode, 0, inScale, 1);
-    if (!theResult && outReason != NULL)
-        gResource->GetString(IDS_NOT_ENOUGH_RESOURCES_FOR_CONSTRUCTION, *outReason);
-    return theResult;
+    EEPlayerEconScope theScope;
+    return theScope.Record(this, 5, ee_units_player_cost(EEPlayerRefs(this), 3, NULL, inTechnology, 0, inScale, outReason), {inTechnology, EEPlayerFloatBits(inScale), outReason != NULL}, outReason);
 }
 
 
@@ -818,13 +1178,17 @@ void EEPlayer::FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile)
 // EESETSETFreezeObject, EESETSETObjectCreate +0x8, +0x10; EESETSETPVisibility, EESETSETPCameraFadeOut,
 // EESETSETPCameraFadeIn, EESETSETPlayerVictory +0x8; EEUnit+0x3c, +0x44, +0x68)
 
+// the class forwarders' upgrade of a unit class: NULL past the classes or without one
+static EEUnitStats* EEPlayerClassStats(EEPlayer* inPlayer, unsigned long inUnitClass)
+{
+    return inUnitClass < EEUnitClassCount() ? inPlayer->mUnitClassUpgrades[inUnitClass] : NULL;
+}
+
 // For a human player whose unit class has its button loaded, releases one button's media
 // and acquires the other's
 void EEPlayer::SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* inFirst, EEButtonObject* inSecond)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
+    EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass);
     if (theStats == NULL || !(theStats->mButtonLoadCount > 0) || this->IsHuman() != true)
         return;
     if (inFirst != NULL)
@@ -836,60 +1200,42 @@ void EEPlayer::SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* i
 // Sets one of a unit class's acknowledgement sounds for the player
 void EEPlayer::SetClassAcknowledgeSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->SetAcknowledgeSound(inSound, inIndex);
 }
 
 // Sets a unit class's creation sound for the player
 void EEPlayer::SetClassCreationSound(unsigned long inUnitClass, EESoundObject* inSound)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->SetCreationSound(inSound);
 }
 
 // Sets a unit class's death sound for the player
 void EEPlayer::SetClassDeathSound(unsigned long inUnitClass, EESoundObject* inSound)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->SetDeathSound(inSound);
 }
 
 // Sets a unit class's model for the player
 void EEPlayer::SetClassModel(unsigned long inUnitClass, EEModel* inModel)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->SetModel(inModel);
 }
 
 // Sets a unit class's button for the player
 void EEPlayer::SetClassButton(unsigned long inUnitClass, EEButtonObject* inButton)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->SetButton(inButton);
 }
 
 // Sets one of a unit class's selection sounds for the player
 void EEPlayer::SetClassSelectionSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex)
 {
-    if (inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->SetSelectionSound(inSound, inIndex);
 }
 
@@ -911,11 +1257,9 @@ void EEPlayer::ClearTowns()
 }
 
 // Drops every queued improvement of a unit type
-// NEAR: esi/edi swapped (end() and the map pointer); tried: end() first, an end local, an early return
 void EEPlayer::EraseQueuedImprovements(unsigned long inUnitType)
 {
-    if (this->mQueuedImprovements.find(inUnitType) != this->mQueuedImprovements.end())
-        this->mQueuedImprovements.erase(this->mQueuedImprovements.find(inUnitType));
+    ee_units_queued_op(this->mQueued, 0, inUnitType, 0);
 }
 
 // Drops the pending command groups, then releases the pending units as the base player does
@@ -947,59 +1291,20 @@ void EEPlayer::ClearUnitsToRepatrol()
 // buildings, applies the civ-power sight pulse, and updates area effects, construction sites, towns and walls
 void EEPlayer::UnitCompleted(EEComplexUnit* inUnit)
 {
-    EECivPower thePower;
-    EETechTreeNode* theNode = this->mTechnologies->Get(inUnit->GetUnitClass()->mTechnology);
-    if (theNode != NULL && theNode->mData->mKind == 4) {
-        inUnit->mPlayer->AddWonder(inUnit, false);
-        if (gWorld.mVictoryEnabled) {
-            for (unsigned long i = 0; i < gWorld.mNumPlayers; i++)
-                if (gWorld.mPlayers[i] != this)
-                    gWorld.mPlayers[i]->WonderStarted(inUnit);
-        }
-    }
-    if (inUnit->GetUnitClass()->IsLandBuilding() && inUnit->mPreviousPart == NULL && inUnit->GetUnitClass()->mIsVital)
-        this->mEndOfGameCount++;
-    if (inUnit->GetUnitClass()->IsLandBuilding() && inUnit->GetUnitClass()->mIsVital) {
-        this->mNumVitalBuildings++;
-        if (this->mNumVitalBuildings == 1)
-            this->EnableCamouflagePower();
-    }
-    if (gCivPowersManager.HasPower(this, kCivPowerExploration) &&
-        (inUnit->GetUnitClass()->mUnitType == kUnitTypeTownCenter || inUnit->GetUnitClass()->mUnitType == kUnitTypeCapitol)) {
-        gCivPowersManager.GetPower(kCivPowerExploration, thePower);
-        this->PulseSight(true, thePower.mAmount, inUnit->mUnitID);
-    }
-    this->ClearFootprint(inUnit);
-    if (inUnit->GetUnitClass()->mUnitType == kUnitTypeHouse)
-        this->SuggestRecomputeAllAreaEffects();
-    if (inUnit->GetUnitClass()->mIsWall)
-        this->RemoveConstructionSite(inUnit);
-    if (gLoadingSavedGame || !gGameScreenActive)
-        return;
-    this->AddUnitToTown(inUnit);
-    if (inUnit->GetUnitClass()->mBlocksTile || inUnit->GetUnitClass()->mCategory == kUnitCategoryGate)
-        gContinentManager.UpdateWallUnit(inUnit, inUnit->GetUnitClass()->mCategory == kUnitCategoryGate);
+    EEPlayerUnits(this, 3, inUnit);
 }
 
 // Moves the improvement queue of one unit type to another
 void EEPlayer::MoveQueuedImprovements(unsigned long inFrom, unsigned long inTo)
 {
-    if (this->mQueuedImprovements.find(inFrom) == this->mQueuedImprovements.end())
-        return;
-    this->mQueuedImprovements[inTo].first = this->mQueuedImprovements[inFrom].first;
-    this->mQueuedImprovements[inTo].second = this->mQueuedImprovements[inFrom].second;
-    this->mQueuedImprovements.erase(this->mQueuedImprovements.find(inFrom));
+    ee_units_queued_op(this->mQueued, 1, inFrom, inTo);
 }
 
 // Returns the number of living heroes and/or heroes in production
 long EEPlayer::GetNumHeroes(bool inFirst, bool inSecond)
 {
-    long theResult = 0;
-    if (inFirst)
-        theResult = this->mNumHeroes;
-    if (inSecond)
-        theResult += this->mNumHeroesInProduction;
-    return theResult;
+    EEPlayerEconScope theScope;
+    return theScope.Record(this, 21, EEPlayerUnits(this, 11, NULL, inFirst, inSecond), {inFirst, inSecond});
 }
 
 // Clears every goal queue of a complex unit leaving the player
@@ -1074,54 +1379,14 @@ void EEPlayer::NoticeForeignUnit(EEUnit* inUnit)
 // Puts every herd animal of the player that is in no herd into one
 void EEPlayer::AssignHerds()
 {
-    std::vector<EEComplexUnit*> theUnits;
-    for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-        bool theFound = false;
-        if (theComplex == NULL || !EEHerd::IsAnimalOnMap(theComplex))
-            continue;
-        for (long i = this->mHerds.size() - 1; i >= 0 && !theFound; i--)
-            theFound = this->mHerds[i]->HasUnit(theComplex);
-        if (!theFound)
-            theUnits.push_back(theComplex);
-    }
-    for (long j = theUnits.size() - 1; j >= 0; j--)
-        this->AddUnitToHerd(theUnits[j]);
+    ee_units_player_areas(EEPlayerRefs(this), 5, NULL);
 }
 
 // Adds every land building outside the player's towns to a town, then gives each town without
 // a patrol group one
 void EEPlayer::AssignTowns()
 {
-    std::vector<EEComplexUnit*> theUnits;
-    U2DPoint<long> theTile;
-    for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-        bool theFound = false;
-        if (theComplex == NULL || !theComplex->mUnitClass->IsLandBuilding() || theComplex->mContainer != NULL)
-            continue;
-        if (theComplex->mTileX != -10000) {
-            theTile.mX = theUnit->mTileX;
-            theTile.mY = theUnit->mTileY;
-        } else {
-            long theTileY = UMFloor(theComplex->mLastMapPosition.GetY());
-            long theTileX = UMFloor(theComplex->mLastMapPosition.GetX());
-            theTile.mX = theTileX;
-            theTile.mY = theTileY;
-        }
-        if (theTile.mX == -10000)
-            continue;
-        for (long i = this->mTowns.size() - 1; i >= 0 && !theFound; i--)
-            theFound = this->mTowns[i]->Contains(theTile);
-        if (!theFound)
-            theUnits.push_back(theComplex);
-    }
-    for (long j = theUnits.size() - 1; j >= 0; j--)
-        this->AddUnitToTown(theUnits[j]);
-    for (long k = this->mTowns.size() - 1; k >= 0; k--) {
-        if (this->mTowns[k] != NULL && this->mTowns[k]->mPatrolGroup == NULL)
-            (*(this->mTowns.begin() + k))->RefreshPatrolGroup();
-    }
+    ee_units_player_areas(EEPlayerRefs(this), 4, NULL);
 }
 
 // Executes a selection message against the player's network selection, keeping its local
@@ -1189,54 +1454,11 @@ EEUnit* EEPlayer::GetNearestConstructionSite(EEComplexUnit* inUnit)
     return theResult;
 }
 
-#include "ee/EEGameVariant.h"
-#include "ee/EEUnitUtilities.h"
-
 // Grants a wonder's power by its bonus kind: area conversion, a hit-point bonus for a unit set, the
 // share bonus, sight of enemies, or healing of a unit set
 void EEPlayer::AddWonderPower(EEComplexUnit* inUnit)
 {
-    switch (inUnit->mUnitClass->mWonderBonus) {
-    case 1:
-        this->mWonderPowers.push_back(1);
-        this->mAreaConversion = true;
-        break;
-    case 2: {
-        this->mWonderPowers.push_back(2);
-        EEUnitSet* theSet = gUnitSetManager.GetSet(inUnit->mUnitClass->mWonderUnitSet);
-        for (unsigned long i = 0; i < this->mUnitClassUpgrades.size(); i++) {
-            if (this->GetUpgrade(i) == NULL || !theSet->Contains(this->GetUpgrade(i)->GetUnitClass()->GetUnitType()))
-                continue;
-            long theType = this->GetUpgrade(i)->mUnitClass->GetUnitType();
-            float theFactor = gWorld.GetGameVariant()->GetFactor(theType);
-            float theAmount = gWorldTable.GetFloatValue(kWorldWonderHitPointBonus);
-            EEUpgradeHitPoints(this->mUnitClassUpgrades[i], this->mUnitClassUpgrades[i]->mUnitClass->GetUnitType(),
-                       (theFactor + 1.0f) * theAmount, this);
-        }
-        break;
-    }
-    case 3:
-        this->mWonderPowers.push_back(3);
-        break;
-    case 4:
-        gWorld.RemoveShareBonus();
-        this->mWonderPowers.push_back(4);
-        gWorld.ApplyShareBonus();
-        break;
-    case 5: {
-        this->mWonderPowers.push_back(5);
-        for (unsigned long thePlayer = 1; thePlayer < gWorld.mNumPlayers; thePlayer++)
-            if (thePlayer != this->GetPlayerID() && gWorld.mPlayers[thePlayer] != NULL && this->mEnemies[thePlayer] == 1)
-                gWorld.mPlayers[thePlayer]->AddSightSharer(this);
-        break;
-    }
-    case 6:
-        this->mHealsUnits = true;
-        this->mHealTimer = kPlayerHealInterval;
-        this->mHealedUnitSet = gUnitSetManager.GetSet(inUnit->mUnitClass->mWonderUnitSet);
-        this->mWonderPowers.push_back(6);
-        break;
-    }
+    EEPlayerUnits(this, 9, inUnit);
 }
 
 // Returns the running, or else pending, command group holding a unit; NULL when none
@@ -1263,9 +1485,13 @@ EEGroup* EEPlayer::GetActiveGroupOf(EEComplexUnit* inUnit)
 // Returns whether the player can afford to repair a number of a unit's hit points (cost relative to its maximum)
 bool EEPlayer::CanAffordRepair(EEUnit* inUnit, EEUnit* inOther, unsigned long inValue)
 {
-    unsigned long theMaximum = inUnit->mStats->mMaxHitPoints;
-    EETechTreeNode* theNode = this->GetTechTree()->Get(inUnit->mUnitClass->GetTechnology());
-    return this->CanAffordScaled(theNode, inOther->mUnitClass->GetUnitType(), (float)inValue / theMaximum, 1);
+    EEPlayerEconScope theScope;
+    bool theCaptured = [&]() -> bool {
+        unsigned long theMaximum = inUnit->mStats->mMaxHitPoints;
+        EETechTreeNode* theNode = this->GetTechTree()->Get(inUnit->mUnitClass->GetTechnology());
+        return this->CanAffordScaled(theNode, inOther->mUnitClass->GetUnitType(), (float)inValue / theMaximum, 1);
+    }();
+    return theScope.Record(this, 18, theCaptured, {(int32_t)inUnit->mUnitClass->mUnitType, (int32_t)inOther->mUnitClass->mUnitType, (int32_t)inValue});
 }
 
 // Adds the player's resources, population and tech tree to the sync checksum
@@ -1345,62 +1571,25 @@ void EEPlayer::GetHerdsOfType(std::vector<EEHerd*>& outHerds, long inUnitType)
     }
 }
 
-// Returns a unit type's level in an improvement counting the queued ones; -1 for an unknown class
+// A unit type's level in an improvement counting the queued ones; -1 without an upgrade (ee_units player.rs)
 long EEPlayer::GetImprovementLevel(unsigned long inUnitType, long inImprovement) const
 {
-    long theLevel = -1;
-    if (this->mUnitClassUpgrades[inUnitType] != NULL) {
-        EEUnitClassUpgrade* theUpgrade = this->mUnitClassUpgrades[inUnitType];
-        theLevel = theUpgrade->mImprovement.GetLevel(inImprovement);
-        std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::const_iterator theIterator = this->mQueuedImprovements.find(inUnitType);
-        if (theIterator != this->mQueuedImprovements.end()) {
-            const std::vector<unsigned long>& theQueue = theIterator->second.second;
-            for (unsigned long i = 0; i < theQueue.size(); i++)
-                if (theQueue[i] == inImprovement)
-                    theLevel++;
-        }
-    }
-    return theLevel;
+    EEPlayerEconScope theScope;
+    return theScope.Record(this, 13, EEPlayerImprovement(this, 0, inUnitType, inImprovement), {(int32_t)inUnitType, inImprovement});
 }
 
-// Counts a unit type's queued improvements of a kind, skipping the first queue entry
+// A unit type's queued improvements of a kind past the first (ee_units player.rs)
 long EEPlayer::CountQueuedImprovements(unsigned long inUnitType, long inImprovement) const
 {
-    long theCount = 0;
-    if (this->mUnitClassUpgrades[inUnitType] != NULL) {
-        std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::const_iterator theIterator = this->mQueuedImprovements.find(inUnitType);
-        if (theIterator != this->mQueuedImprovements.end()) {
-            const std::vector<unsigned long>& theQueue = (*theIterator).second.second;
-            for (unsigned long i = 1; i < theQueue.size(); i++)
-                if (theQueue[i] == inImprovement)
-                    theCount++;
-        }
-    }
-    return theCount;
+    EEPlayerEconScope theScope;
+    return theScope.Record(this, 14, EEPlayerImprovement(this, 1, inUnitType, inImprovement), {(int32_t)inUnitType, inImprovement});
 }
 
-// Returns whether a unit type's improvement has reached its limits, counting the queued improvements
-// NEAR: register choice; mUnitClassUpgrades[] through the out-of-line _Ptrit::operator+ 0x80ad in the original
+// Whether an improvement has reached its limits counting the queue (ee_units player.rs)
 bool EEPlayer::IsImprovementMaxed(unsigned long inUnitType, long inImprovement)
 {
-    bool theResult = true;
-    EEUnitClass* theClass = gUnitClassTable[inUnitType];
-    long theTechnology = theClass != NULL ? theClass->mTechnology : 100000;
-    if (theClass != NULL && theTechnology != kTechNone) {
-        EEUnitClassImprovementTable* theTable = theClass->mImprovements;
-        EEUnitClassUpgrade* theUpgrade = this->GetUpgrade(inUnitType);
-        long theQueued = theUpgrade->mImprovement.mTotalCost;
-        std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theIterator = this->mQueuedImprovements.find(inUnitType);
-        if (theIterator != this->mQueuedImprovements.end()) {
-            const std::vector<unsigned long>& theQueue = (*theIterator).second.second;
-            for (unsigned long i = 0; i < theQueue.size(); i++)
-                theQueued += theUpgrade->mImprovement.GetCost(theQueue[i]);
-        }
-        if (theUpgrade->mImprovement.GetCost(inImprovement) + theQueued <= gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax)
-            && this->GetImprovementLevel(inUnitType, inImprovement) <= theTable->GetMaxLevel())
-            theResult = false;
-    }
-    return theResult;
+    EEPlayerEconScope theScope;
+    return theScope.Record(this, 12, EEPlayerImprovement(this, 4, inUnitType, inImprovement) != 0, {(int32_t)inUnitType, inImprovement});
 }
 
 // Returns the terrain kinds the player's citizens can cross, as passability flags 1/2/4/8
@@ -1462,19 +1651,8 @@ EEPPatrolGroup* EEPlayer::GetPatrolGroup(unsigned long inID)
 // Returns the population, optionally adding the pending units and the units inside category-0x1d containers
 long EEPlayer::GetTotalPopulation(bool inFirst, bool inSecond)
 {
-    long theResult = this->mPopulationCount;
-    if (inFirst) {
-        for (unsigned long i = 0; i < this->mPendingUnits.size(); i++)
-            theResult += dynamic_cast<EEUnit*>(this->mPendingUnits[i])->GetUnitClass()->GetPopulationCost();
-    }
-    if (!inSecond)
-        return theResult;
-    for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (theUnit->GetComplexUnit() != NULL && theUnit->GetComplexUnit()->GetContainer() != NULL
-            && theUnit->GetComplexUnit()->GetContainer()->GetUnitClass()->GetCategory() == kUnitCategoryFortress)
-            theResult += theUnit->GetUnitClass()->GetPopulationCost();
-    }
-    return theResult;
+    EEPlayerEconScope theScope;
+    return theScope.Record(this, 19, EEPlayerUnits(this, 6, NULL, inFirst, inSecond), {inFirst, inSecond});
 }
 
 // Returns the player's population limit: the game's limit plus the player's bonuses
@@ -1483,51 +1661,18 @@ long EEPlayer::GetPopulationLimit(long inArg)
     return this->mPopulationLimitBonus + this->mShareBonus + gWorld.mPlayerPopulationLimit;
 }
 
-// Returns whether one resource alone (the node's cost resource or any of the five) covers
-// the cost, and the required statistic is reached
-// NEAR: the original keeps the result in the arg-1 slot byte (+0xb) and loads mResourceCaps[k] before the call
+// Whether one resource covers the cost and the required statistic is reached (ee_units player.rs)
 bool EEPlayer::CanAffordSingleResource(EETechTreeNode* inNode, long inUnitClass, long inCount)
 {
-    bool theResult = false;
-    long theResource = inNode->mData->mCostResource;
-    if (theResource != 0 && inNode->mData->mRequiredStatisticValue != 0) {
-        if (theResource != 1 && this->mResourceCaps[theResource] >= this->ScaleCost(inNode->GetCost(theResource, inUnitClass, 1.0f)) * inCount)
-            theResult = true;
-        else {
-            for (unsigned long i = 2; i < 7 && !theResult; i++) {
-                long theAmount = this->mResourceCaps[i];
-                theResult = theAmount >= this->ScaleCost(inNode->GetCost(i, inUnitClass, 1.0f)) * inCount;
-                if (theResult || (i != 6 && i != 5) || !gCivPowersManager.HasPower(this, kCivPowerMetallurgy))
-                    continue;
-                long theCost = this->ScaleCost((long)(inNode->GetCost(kResourceIron, inUnitClass, 1.0f) + 0.0001f)) * inCount;
-                theCost += this->ScaleCost((long)(inNode->GetCost(kResourceGold, inUnitClass, 1.0f) + 0.0001f)) * inCount;
-                if (this->mResourceCaps[kResourceIron] + this->mResourceCaps[kResourceGold] >= theCost)
-                    theResult = true;
-            }
-        }
-        if (theResult == true) {
-            if (this->mSavedGroups.GetLastValue(inNode->mData->mRequiredStatistic) < inNode->mData->mRequiredStatisticValue)
-                theResult = false;
-        }
-    }
-    return theResult;
+    EEPlayerEconScope theScope;
+    return theScope.Record(this, 4, ee_units_player_cost(EEPlayerRefs(this), 1, inNode, inUnitClass, inCount, 0.0f, NULL), {EEPlayerNodeID(inNode), inUnitClass, inCount});
 }
 
-// Returns whether the player has every resource for a scaled cost (civ power 0x2e pools resources 5 and 6)
+// Whether every resource covers a scaled cost, metallurgy pooling iron and gold (ee_units player.rs)
 bool EEPlayer::CanAffordScaled(EETechTreeNode* inNode, long inUnitClass, float inScale, long inCount)
 {
-    bool theResult = true;
-    for (unsigned long i = 2; i < 7 && theResult; i++) {
-        long theAmount = this->mResourceCaps[i];
-        theResult = theAmount >= this->ScaleCost((long)(inNode->GetCost(i, inUnitClass, 1.0f) * inScale + 0.0001f)) * inCount;
-        if (theResult || (i != 6 && i != 5) || !gCivPowersManager.HasPower(this, kCivPowerMetallurgy))
-            continue;
-        long theCost = this->ScaleCost((long)(inNode->GetCost(kResourceIron, inUnitClass, 1.0f) * inScale + 0.0001f)) * inCount;
-        theCost += this->ScaleCost((long)(inNode->GetCost(kResourceGold, inUnitClass, 1.0f) * inScale + 0.0001f)) * inCount;
-        if (this->mResourceCaps[kResourceIron] + this->mResourceCaps[kResourceGold] >= theCost)
-            theResult = true;
-    }
-    return theResult;
+    EEPlayerEconScope theScope;
+    return theScope.Record(this, 3, ee_units_player_cost(EEPlayerRefs(this), 0, inNode, inUnitClass, inCount, inScale, NULL), {EEPlayerNodeID(inNode), inUnitClass, EEPlayerFloatBits(inScale), inCount});
 }
 
 // Returns the index of the team holding the player (0 when none)
@@ -1584,13 +1729,11 @@ unsigned long EEPlayer::GetNumWonderUnits() const
     return this->mWonders->GetSize();
 }
 
-// Returns whether the player can afford a technology in all resources or, failing that, from a single one
+// Whether the player can afford a technology in all resources or else from a single one (ee_units player.rs)
 bool EEPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCount)
 {
-    bool theResult = this->CanAffordScaled(inTechnology, inUnitType, 1.0f, inCount);
-    if (!theResult)
-        theResult = this->CanAffordSingleResource(inTechnology, inUnitType, inCount);   // was (inTechnology, inCount, 1)
-    return theResult;
+    EEPlayerEconScope theScope;
+    return theScope.Record(this, 2, ee_units_player_cost(EEPlayerRefs(this), 2, inTechnology, inUnitType, inCount, 1.0f, NULL), {EEPlayerNodeID(inTechnology), inUnitType, inCount});
 }
 
 // Adds damage taken from a player to its tally and enters combat when that player is an enemy
@@ -1604,41 +1747,12 @@ void EEPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
         this->mCombatState = 2;
 }
 
-#include "ee/EESoundObject.h"
-#include "ee/EEGameSound.h"
-#include "lle/SESoundManager.h"
 
 // Under civ power 0x27, periodically makes a free unit (class 0x20 or 0x1e0) at a town center or capitol,
 // playing a sound for the local player and lengthening the interval each time
 void EEPlayer::UpdateFreeUnitPower()
 {
-    bool theCreated = false;
-    if (!gCivPowersManager.HasPower(this, kCivPowerSlavery) || !(++this->mFreeUnitCounter >= this->mFreeUnitInterval))
-        return;
-    EEUnit* theUnit = this->mFirstUnit;
-    while (theUnit != NULL && !theCreated) {
-        if (theUnit->GetUnitClass()->mUnitType == kUnitTypeCapitol) {
-            EEUnitClass* theClass = gPhysics->mRandom.Generate() >= 0.5f ? gUnitClassTable[kUnitTypeCitizen] : gUnitClassTable[kUnitTypeFemaleCitizen];
-            theCreated = theUnit->GetUnitClass()->ProduceUnit(theUnit->GetComplexUnit(), theClass, false);
-        }
-        theUnit = static_cast<EEUnit*>(theUnit->mNext);
-    }
-    theUnit = this->mFirstUnit;
-    while (theUnit != NULL && !theCreated) {
-        if (theUnit->GetUnitClass()->mUnitType == kUnitTypeTownCenter) {
-            EEUnitClass* theClass = gPhysics->mRandom.Generate() >= 0.5f ? gUnitClassTable[kUnitTypeCitizen] : gUnitClassTable[kUnitTypeFemaleCitizen];
-            theCreated = theUnit->GetUnitClass()->ProduceUnit(theUnit->GetComplexUnit(), theClass, false);
-        }
-        theUnit = static_cast<EEUnit*>(theUnit->mNext);
-    }
-    if (theCreated != true)
-        return;
-    this->mFreeUnitCounter = 0;
-    if (::gWorld.GetCurrentPlayer() == this) {
-        EESoundObject* theSound = EESoundObject::Get(kSoundSlavery);
-        gSoundManager->Play(theSound->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-    }
-    this->mFreeUnitInterval++;
+    EEPlayerUnits(this, 12);
 }
 
 // Advances the player to the next epoch
@@ -1687,33 +1801,9 @@ void EEPlayer::Reset()
     *this->mTechnologies = gTechTree;
     for (long theAirport = 0; theAirport < 4; theAirport++)
         mAirTraffic[theAirport] = new EEAirTrafficControl(this);
-    this->mConversionFactor = 1.0f;
-    this->mNumHeroes = 0;
-    this->mHeroLimit = 1;
-    this->mNumHeroesInProduction = 0;
-    this->mTributeFee = kTributeFee;
-    this->mShareBonus = 0;
-    this->mPopulationLimitBonus = 0;
-    this->mBB44 = false;
-    this->mInstantBuild = false;
-    this->mJITManufacturing = false;
-    this->mLAF0 = 0;
-    this->mHealsUnits = false;
+    ee_units_player_fields_reset(this, gWorldTable.GetLongValue(kWorldStartingCitizensDefault),
+                                 gWorldTable.GetLongValue(kWorldGatherersPerResourceMax));   // (ee_units player.rs)
     this->mHealedUnitSet = NULL;
-    this->mMaxStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-    this->mMiningLimit = gWorldTable.GetLongValue(kWorldGatherersPerResourceMax);
-    this->mAreaConversion = false;
-    this->mBehindFirewall = false;
-    this->mBB42 = false;
-    this->mShiftMode = false;
-    this->mLastAcknowledgementTime = 0;
-    this->mLastAcknowledgedGroup = 0;
-    this->mEarthquakeShaken = false;
-    this->mNumTeleporters = 0;
-    for (unsigned long theOther = 0; theOther <= 16; theOther++)
-        this->mDamageFrom[theOther] = 0;
-    this->mNumAttacks = 0;
-    this->mHackUnitClass = kNoUnitClass;
     this->mEvents.Clear(this);
     ee_units_player_reset(static_cast<EeUnitsPlayerSaved*>(this), (uint32_t)this->mPlayerID, 1);
     this->LoadPlayerEffects();
@@ -1773,7 +1863,7 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
 long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     EEPlayerSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, NULL};
-    return ee_units_player_load(&theContext, &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this),
+    return ee_units_player_load(&theContext, &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this), this->mQueued,
                                 (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
@@ -1837,6 +1927,11 @@ int32_t EESavePrimitive(FSFile& theFile, int32_t inOp, EeUnitsPlayerSaveIo* io)
     }
     }
     return -1;
+}
+
+int32_t EESaveFilePrimitive(void* inFile, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+{
+    return EESavePrimitive(*static_cast<FSFile*>(inFile), inOp, io);
 }
 
 static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
@@ -1916,15 +2011,6 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
         return thePlayer->mGroups[inIndex]->Load(theMajor, theMinor, theFile);
     case EE_UNITS_PLAYER_SAVE_CIVFILE_LOAD:
         return thePlayer->mCivilizationFile.Load(theFile);
-    case EE_UNITS_PLAYER_SAVE_QUEUED_FLOAT:
-        io->f = thePlayer->mQueuedImprovements[(unsigned long)io->i].first;
-        return kErrorOK;
-    case EE_UNITS_PLAYER_SAVE_QUEUED_SET_FLOAT:
-        thePlayer->mQueuedImprovements[(unsigned long)io->i].first = io->f;
-        return kErrorOK;
-    case EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_LOAD:
-        return FSLoadVector(theFile, thePlayer->mQueuedImprovements[(unsigned long)io->i].second,
-                            UString("Queued Improvements"));
     case EE_UNITS_PLAYER_SAVE_CONSTRUCTION_PUSH:
         thePlayer->mConstructionSiteIDs.push_back((long)io->i);
         return kErrorOK;
@@ -1991,20 +2077,6 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
         return thePlayer->mGroups[inIndex]->Save(theMajor, theMinor, theFile);
     case EE_UNITS_PLAYER_SAVE_CIVFILE_SAVE:
         return thePlayer->mCivilizationFile.Save(theFile);
-    case EE_UNITS_PLAYER_SAVE_QUEUED_COUNT:
-        io->i = (int64_t)thePlayer->mQueuedImprovements.size();
-        return kErrorOK;
-    case EE_UNITS_PLAYER_SAVE_QUEUED_ENTRY:
-    case EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_SAVE: {
-        std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theEntry =
-            thePlayer->mQueuedImprovements.begin();
-        std::advance(theEntry, inIndex);
-        if (inOp == EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_SAVE)
-            return FSSaveVector(theFile, theEntry->second.second, UString("Queued Improvements"));
-        io->i = (int64_t)theEntry->first;
-        io->f = theEntry->second.first;
-        return kErrorOK;
-    }
     case EE_UNITS_PLAYER_SAVE_CONSTRUCTION_COUNT:
         io->i = (int64_t)thePlayer->mConstructionSites->GetSize();
         return kErrorOK;
@@ -2049,91 +2121,69 @@ void EEPlayer::LoadAllClassMedia()
 // Loads the command buttons of one unit class for the player, if the class index is valid
 void EEPlayer::LoadUnitClassButtons(long inUnitClass)
 {
-    if ((unsigned long)inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->LoadButtons(this);
 }
 
 // Loads the media of one unit class for the player, if the class index is valid
 void EEPlayer::SetUnitClassMedia(long inUnitClass, long inMediaFlags)
 {
-    if ((unsigned long)inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->LoadMedia(this, inMediaFlags);
 }
 
-// Reads one unit from a saved game and creates it on the player; a type/kind mismatch loads into a discarded unit
-// whose ID is kept in the loaded-ID list; returns the read status
+// LoadUnit's and SaveUnit's C++ parts (ee_units player_save.rs load_unit, save_unit): the file's primitives, the
+// class's fit, the loads, the saved unit's kind and its Save
+struct EEPlayerUnitContext {
+    EEPlayer* mPlayer;
+    FSFile* mFile;
+    RTSUnit* mUnit;
+    unsigned long mMajorVersion;
+    unsigned long mMinorVersion;
+};
+
+static int32_t EEPlayerUnitOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+{
+    EEPlayerUnitContext& c = *static_cast<EEPlayerUnitContext*>(inContext);
+    if (EESaveIsPrimitive(inOp))
+        return EESavePrimitive(*c.mFile, inOp, io);
+    EEUnitClass* theClass = (uint64_t)io->i < gUnitClassTable.size() ? gUnitClassTable[(size_t)io->i] : NULL;
+    bool theComplex = io->b != 0;
+    EEUnit* theUnit = static_cast<EEUnit*>(c.mUnit);
+    long theResult;
+    switch (inOp) {
+    case EE_UNITS_PLAYER_SAVE_UNIT_FITS:
+        return theClass != NULL && ((theClass->mUnitType != kUnitTypePathPoint && theClass->mIsComplex == 0 && !theComplex)
+                                    || ((theClass->mUnitType == kUnitTypePathPoint || theClass->mIsComplex == 1) && theComplex));
+    case EE_UNITS_PLAYER_SAVE_UNIT_LOAD:
+        theUnit = theClass->CreateUnitAtTile(c.mPlayer, -10000, -10000, NULL, 3.1415927f);
+        theResult = theUnit->Load(c.mMajorVersion, c.mMinorVersion, *c.mFile);
+        if (theUnit->mIsQueuedForDelete)
+            c.mPlayer->KillUnit(theUnit, true);
+        return theResult;
+    case EE_UNITS_PLAYER_SAVE_UNIT_STANDIN:   // (a unit of no class of this kind: its id kept, the unit dropped)
+        theUnit = theComplex ? EEComplexUnit::Create() : EEUnit::Create();
+        theResult = theUnit->Load(c.mMajorVersion, c.mMinorVersion, *c.mFile);
+        c.mPlayer->mLoadedUnitIDs.push_back(theUnit->GetUnitID());
+        theUnit->RepairPointers(c.mMajorVersion, c.mMinorVersion);
+        theUnit->Clear();
+        theUnit->Dereference();
+        return theResult;
+    case EE_UNITS_PLAYER_SAVE_UNIT_KIND:
+        io->i = theUnit->mUnitClass->mUnitType;
+        io->b = theUnit->mUnitClass->mUnitType == kUnitTypePathPoint;
+        return theUnit->mComplexUnit != NULL;
+    case EE_UNITS_PLAYER_SAVE_UNIT_SAVE:
+        return theUnit->Save(c.mMajorVersion, c.mMinorVersion, *c.mFile);
+    }
+    return 0;
+}
+
+// Reads one unit from a saved game and creates it on the player (ee_units player_save.rs load_unit)
 long EEPlayer::LoadUnit(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    unsigned long theType = 0;
-    bool theComplex = false;
-    bool theHasData = true;
-    long theResult;
-    EEUnitClass* theClass;
-    EEUnit* theUnit;
-    if (inMajorVersion == 0 && inMinorVersion < 0xdf) {
-        theResult = inFile.Read(theType);
-        if (theResult != kErrorOK)
-            goto LoadComplete;
-        theResult = inFile.Read(theComplex);
-        if (theResult != kErrorOK)
-            goto LoadComplete;
-        theClass = gUnitClassTable[theType];
-        if (theClass != NULL && ((theClass->mUnitType != kUnitTypePathPoint && theClass->mIsComplex == 0 && !theComplex)
-            || ((theClass->mUnitType == kUnitTypePathPoint || theClass->mIsComplex == 1) && theComplex))) {
-            theUnit = theClass->CreateUnitAtTile(this, -10000, -10000, NULL, 3.1415927f);
-            theResult = theUnit->Load(0, inMinorVersion, inFile);
-            if (theUnit->mIsQueuedForDelete)
-                this->KillUnit(theUnit, true);
-            goto LoadComplete;
-        }
-        if (theComplex)
-            theUnit = EEComplexUnit::Create();
-        else
-            theUnit = EEUnit::Create();
-        theResult = theUnit->Load(0, inMinorVersion, inFile);
-        this->mLoadedUnitIDs.push_back(theUnit->GetUnitID());
-        theUnit->RepairPointers(0, inMinorVersion);
-        theUnit->Clear();
-        theUnit->Dereference();
-        goto LoadComplete;
-    } else {
-        theResult = inFile.Read(theType);
-        if (theResult != kErrorOK)
-            goto LoadComplete;
-        theResult = inFile.Read(theHasData);
-        if (!theHasData || theResult != kErrorOK)
-            goto LoadComplete;
-        theResult = inFile.Read(theComplex);
-        if (theResult != kErrorOK)
-            goto LoadComplete;
-        theClass = gUnitClassTable[theType];
-        if (theClass != NULL && ((theClass->mUnitType != kUnitTypePathPoint && theClass->mIsComplex == 0 && !theComplex)
-            || ((theClass->mUnitType == kUnitTypePathPoint || theClass->mIsComplex == 1) && theComplex))) {
-            theUnit = theClass->CreateUnitAtTile(this, -10000, -10000, NULL, 3.1415927f);
-            theResult = theUnit->Load(inMajorVersion, inMinorVersion, inFile);
-            if (theUnit->mIsQueuedForDelete)
-                this->KillUnit(theUnit, true);
-            goto LoadComplete;
-        }
-        if (theComplex)
-            theUnit = EEComplexUnit::Create();
-        else
-            theUnit = EEUnit::Create();
-        theResult = theUnit->Load(inMajorVersion, inMinorVersion, inFile);
-        this->mLoadedUnitIDs.push_back(theUnit->GetUnitID());
-        theUnit->RepairPointers(inMajorVersion, inMinorVersion);
-        theUnit->Clear();
-        theUnit->Dereference();
-        goto LoadComplete;
-    }
-LoadComplete:
-    return theResult;
+    EEPlayerUnitContext theContext = {this, &inFile, NULL, inMajorVersion, inMinorVersion};
+    return ee_units_player_unit(&theContext, &EEPlayerUnitOperation, false, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // Returns the player's name
@@ -2322,16 +2372,7 @@ bool EEPlayer::RemoveLoadedMedia(EEMedia* inMedia)
 // Stops sharing the player's building sight with another player, refreshing every land building's sight
 void EEPlayer::RemoveSightSharer(EEPlayer* inPlayer)
 {
-    EEUnit* theUnit;
-    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (theUnit->mUnitClass->IsLandBuilding())
-            theUnit->SightOffHere();
-    }
-    this->mSightSharers.erase(std::find(this->mSightSharers.begin(), this->mSightSharers.end(), inPlayer));
-    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (theUnit->mUnitClass->IsLandBuilding())
-            theUnit->SightOnHere();
-    }
+    ee_units_player_diplomacy(EEPlayerRefs(this), 2, inPlayer, 0, false);
 }
 
 // Finishes running groups left without units, then releases and drops every finished group
@@ -2359,31 +2400,12 @@ void EEPlayer::RemovalsDone()
     this->mFinishedGroups.clear();
 }
 
-// Cancels a queued improvement of a unit class (inFlag: never the one in progress) and refunds its cost
+// Cancels and refunds a queued improvement (inFlag: never the running one) (ee_units player.rs)
 void EEPlayer::RemoveQueuedImprovement(long inUnitType, long inImprovement, bool inFlag)
 {
-    std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theIterator = this->mQueuedImprovements.find(inUnitType);
-    if (theIterator == this->mQueuedImprovements.end())
-        return;
-    std::vector<unsigned long>& theQueue = (*theIterator).second.second;
-    std::vector<unsigned long>::iterator theImprovement;
-    if (inFlag == true) {
-        if (theQueue.size() > 1)
-            theImprovement = std::find(theQueue.begin() + 1, theQueue.end(), inImprovement);
-        else
-            theImprovement = theQueue.end();
-    } else {
-        theImprovement = std::find(theQueue.begin(), theQueue.end(), inImprovement);
-    }
-    if (theImprovement == theQueue.end())
-        return;
-    bool theWasHead = theImprovement == theQueue.begin();   // the one in progress (was: the map's first entry)
-    theQueue.erase(theImprovement);
-    this->RefundImprovement(gUnitClassTable[inUnitType], inImprovement, 1.0f);
-    if (theWasHead)
-        this->mQueuedImprovements[inUnitType].first = 0.0f;
-    if (theQueue.size() == 0)
-        this->mQueuedImprovements.erase(theIterator);
+    EEPlayerEconScope theScope;
+    EEPlayerImprovement(this, 6, inUnitType, inImprovement, inFlag);
+    theScope.Record(this, 17, 0, {inUnitType, inImprovement, inFlag});
 }
 
 // Removes a patrol group from the player and releases it
@@ -2405,64 +2427,13 @@ void EEPlayer::RemoveUnitFromSelectedGroup(long inUnitID)
 // Takes away the power of a lost wonder (conversion, hit-point bonus, shared bonus, enemy sight, healing ...)
 void EEPlayer::RemoveWonderPower(EEComplexUnit* inUnit)
 {
-    switch (inUnit->mUnitClass->mWonderBonus) {
-    case 1:
-        this->mWonderPowers.erase(std::find(this->mWonderPowers.begin(), this->mWonderPowers.end(), (long)1));
-        this->mAreaConversion = false;
-        break;
-    case 2: {
-        this->mWonderPowers.erase(std::find(this->mWonderPowers.begin(), this->mWonderPowers.end(), (long)2));
-        EEUnitSet* theSet = gUnitSetManager.GetSet(inUnit->mUnitClass->mWonderUnitSet);
-        for (unsigned long i = 0; i < this->mUnitClassUpgrades.size(); i++) {
-            if (this->mUnitClassUpgrades[i] == NULL || !theSet->Contains(this->mUnitClassUpgrades[i]->mUnitClass->mUnitType))
-                continue;
-            long theType = this->mUnitClassUpgrades[i]->mUnitClass->mUnitType;
-            float theFactor = EEGameVariant::GetGameVariant(gWorld.mGameOptions.GetVariant())->GetFactor(theType);
-            float theAmount = gWorldTable.GetFloatValue(kWorldWonderHitPointBonus);
-            EEUpgradeHitPoints(this->mUnitClassUpgrades[i], this->mUnitClassUpgrades[i]->mUnitClass->GetUnitType(),
-                       -((theFactor + 1.0f) * theAmount), this);
-        }
-        break;
-    }
-    case 3:
-        this->mWonderPowers.erase(std::find(this->mWonderPowers.begin(), this->mWonderPowers.end(), (long)3));
-        break;
-    case 4:
-        gWorld.RemoveShareBonus();
-        this->mWonderPowers.erase(std::find(this->mWonderPowers.begin(), this->mWonderPowers.end(), (long)4));
-        gWorld.ApplyShareBonus();
-        break;
-    case 5: {
-        this->mWonderPowers.erase(std::find(this->mWonderPowers.begin(), this->mWonderPowers.end(), (long)5));
-        for (unsigned long thePlayer = 1; thePlayer < gWorld.mNumPlayers; thePlayer++)
-            if (thePlayer != this->mPlayerID && gWorld.mPlayers[thePlayer] != NULL && this->mEnemies[thePlayer] == 1)
-                gWorld.mPlayers[thePlayer]->RemoveSightSharer(this);
-        break;
-    }
-    case 6:
-        this->mHealsUnits = false;
-        this->mHealedUnitSet = NULL;
-        this->mWonderPowers.erase(std::find(this->mWonderPowers.begin(), this->mWonderPowers.end(), (long)6));
-        break;
-    }
+    EEPlayerUnits(this, 10, inUnit);
 }
 
 // Removes an animal from its herds, deleting any herd left with no tiles
 void EEPlayer::RemoveUnitFromHerd(EEComplexUnit* inUnit)
 {
-    if (!EEHerd::IsAnimalOnMap(inUnit))
-        return;
-    for (long i = this->mHerds.size() - 1; i >= 0; i--) {
-        EEHerd* theHerd = this->mHerds[i];
-        if (!theHerd->HasUnit(inUnit))
-            continue;
-        theHerd->RemoveUnit(inUnit);
-        if (theHerd->GetNumTiles() != 0)
-            continue;
-        gContinentManager.RemoveArea(theHerd);
-        this->mHerds.erase(this->mHerds.begin() + i);
-        delete theHerd;
-    }
+    ee_units_player_areas(EEPlayerRefs(this), 3, static_cast<RTSUnit*>(inUnit));
 }
 
 // Takes a unit being removed off its tile, its region and the influence map
@@ -2507,21 +2478,7 @@ void EEPlayer::DeselectUnit(EEUnit* inUnit)
 // Removes a town building from the towns containing it, deleting any town left with no tiles
 void EEPlayer::RemoveUnitFromTown(EEComplexUnit* inUnit)
 {
-    U2DPoint<long> theTile;
-    if (!EETown::IsTownUnit(inUnit))
-        return;
-    theTile = inUnit->FindAreaTile(true, 1);
-    for (long i = this->mTowns.size() - 1; i >= 0; i--) {
-        EETown* theTown = this->mTowns[i];
-        if (!theTown->Contains(theTile))
-            continue;
-        theTown->RemoveUnit(inUnit);
-        if (theTown->GetNumTiles() != 0)
-            continue;
-        gContinentManager.RemoveArea(theTown);
-        this->mTowns.erase(this->mTowns.begin() + i);
-        delete theTown;
-    }
+    ee_units_player_areas(EEPlayerRefs(this), 2, static_cast<RTSUnit*>(inUnit));
 }
 
 // Removes a unit from the player's construction sites
@@ -2533,14 +2490,7 @@ void EEPlayer::RemoveConstructionSite(EEComplexUnit* inUnit)
 // Removes a wonder from the player; when the last of its type goes, its wonder power is taken away
 void EEPlayer::RemoveWonder(EEComplexUnit* inUnit)
 {
-    this->mWonders->Remove(inUnit);
-    inUnit->mCloaked = 0;
-    this->mSavedGroups.Lower(0x10, 1);
-    this->mWonderTypeCounts[inUnit->mUnitClass->mUnitType]--;
-    if (this->mWonderTypeCounts[inUnit->mUnitClass->mUnitType] == 0) {
-        this->RemoveWonderPower(inUnit);
-        this->mWonderTypeCounts.erase(inUnit->mUnitClass->mUnitType);
-    }
+    EEPlayerUnits(this, 8, inUnit);
 }
 
 // Lets every unit of the player finish loading; returns 0
@@ -2742,9 +2692,6 @@ bool EEPlayer::AdoptTownPatrol(EETown* inTown)
 // (the GetAvailablePoints test is != 0 here; the original compares unsigned, jbe)
 long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
-    std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theIterator;
-    std::vector<unsigned long> theImprovements;
-    std::vector<long> theUnused;
     long theResult;
     unsigned long i;
     this->mCivilization.Reapply(this, inFirst, inSecond);
@@ -2790,18 +2737,7 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
         this->mHerds[theHerd]->RepairPointers(inFirst, inSecond);
     this->RegisterHerds();
     theResult = this->mEvents.RepairEvents(this, inFirst, inSecond);
-    theIterator = this->mQueuedImprovements.begin();
-    while (theIterator != this->mQueuedImprovements.end()) {
-        theImprovements.clear();
-        theImprovements = (*theIterator).second.second;
-        (*theIterator).second.second.clear();
-        for (unsigned long k = 0; k < theImprovements.size(); k++)
-            this->QueueImprovement((*theIterator).first, theImprovements[k], false, true);
-        if ((*theIterator).second.second.size() > 0)
-            theIterator++;
-        else
-            theIterator = this->mQueuedImprovements.erase(theIterator);
-    }
+    EEPlayerImprovement(this, 10, 0, 0);   // the queued improvements queued again (ee_units player.rs requeue)
     this->mSelectedGroup->CopySelection(this->mActiveGroup);
     this->GetTechTree()->Get(kTechCapitol)->mIsAllowed = this->mNumCapitols == 0;
     if (this->GetTechTree()->Get(kTechSettlement)->GetIsObsolete())
@@ -2841,36 +2777,11 @@ void EEPlayer::EpochReached(long inEpoch)
     (void)inEpoch;
 }
 
-// Starts the timer of a unit class's next queued improvement if it can be done; returns true when its queue is empty
+// Starts the next queued improvement's timer; true when the queue is empty (ee_units player.rs advance)
 bool EEPlayer::AdvanceImprovement(unsigned long inUnitType)
 {
-    bool theResult = false;
-
-    if (this->mQueuedImprovements.find(inUnitType) != this->mQueuedImprovements.end()) {
-        EEUnitClass* theClass = gUnitClassTable[inUnitType];
-        if (theClass != NULL && this->mQueuedImprovements[inUnitType].second.size() > 0) {
-            long theImprovement = *this->mQueuedImprovements[inUnitType].second.begin();
-            if (this->CanImprove(theClass->GetUnitType(), theImprovement, NULL) == true) {
-            if (this->mInstantBuild) {
-                this->mQueuedImprovements[inUnitType].first = 1.0f;
-            } else {
-                EEUnitClassUpgrade* theUpgrade = this->mUnitClassUpgrades[inUnitType];
-                if (theUpgrade->mImprovement.GetLevel(theImprovement) != 1) {
-                    float theTime = (long)gWorldTable.GetLongValue2(EEWorldImprovementTime(theImprovement));
-                    this->mQueuedImprovements[inUnitType].first = theTime;
-                } else {
-                    float theTime = (long)gWorldTable.GetLongValue(EEWorldImprovementTime(theImprovement));
-                    this->mQueuedImprovements[inUnitType].first = theTime;
-                }
-            }
-            if (this == gWorld.GetCurrentPlayer())
-                gUserInterface->UpdateJITManufacturing();
-            }
-        } else {
-            theResult = true;
-        }
-    }
-    return theResult;
+    EEPlayerEconScope theScope;
+    return theScope.Record(this, 15, EEPlayerImprovement(this, 7, inUnitType, 0) != 0, {(int32_t)inUnitType});
 }
 
 // Resets the player's tech tree to the global one and clears the population bonus and tribute fee
@@ -2881,7 +2792,7 @@ void EEPlayer::ResetTechTree()
     this->mTechnologies->SetPlayer(this);
     this->mBB44 = false;
     this->mPopulationLimitBonus = 0;
-    this->mTributeFee = kTributeFee;
+    this->mTributeFee = EE_UNITS_PLAYER_TRIBUTE_FEE;
 }
 
 #include "lle/FSMemoryFile.h"
@@ -2992,32 +2903,16 @@ void EEPlayer::PulseSight(bool inByID, float inSight, long inID)
 long EEPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     EEPlayerSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL};
-    return ee_units_player_save(&theContext, &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this),
+    return ee_units_player_save(&theContext, &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this), this->mQueued,
                                 (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
-// Writes one unit's type, kind and data to a saved game (type 0xdf only as a type); returns the write status
+// Writes one unit's type, kind and data to a saved game (ee_units player_save.rs save_unit; path points saved as units
+// from 0.254)
 long EEPlayer::SaveUnit(RTSUnit* inUnit, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    bool theIsUnit = true;
-    bool theIsComplex;
-    EEComplexUnit* theComplexUnit = static_cast<EEUnit*>(inUnit)->mComplexUnit;
-    EEUnitClass* theClass = static_cast<EEUnit*>(inUnit)->mUnitClass;
-    unsigned long theType = theClass->mUnitType;
-    long theResult = outFile.Write(theType);
-    if (theResult != kErrorOK)
-        return theResult;
-    // port (0.254): path points are saved as units too (the original wrote only their type and made the towns'
-    // patrol points again at load: other units, other ids)
-    theIsUnit = theClass->mUnitType != kUnitTypePathPoint || EESaveHasLiveState(inMajorVersion, inMinorVersion);
-    theResult = outFile.Write(theIsUnit);
-    if (!theIsUnit)
-        return theResult;
-    theIsComplex = theComplexUnit != NULL;
-    theResult = outFile.Write(theIsComplex);
-    if (theResult == kErrorOK)
-        theResult = inUnit->Save(inMajorVersion, inMinorVersion, outFile);
-    return theResult;
+    EEPlayerUnitContext theContext = {this, &outFile, inUnit, inMajorVersion, inMinorVersion};
+    return ee_units_player_unit(&theContext, &EEPlayerUnitOperation, true, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // Selects the unit with the given ID (optionally clearing the selection), playing its sound for own units
@@ -3162,71 +3057,7 @@ void EEPlayer::SetCivilizationPoints(long inEpoch)
 // Changes the player's stance toward another player, forming or breaking the alliance and its shared sight
 void EEPlayer::SetDiplomaticStance(EEPlayer* inOther, long inStance, EEMap* inMap)
 {
-    EEPlayer* theCurrentPlayer = gWorld.GetCurrentPlayer();
-    unsigned long& theStance = this->mEnemies[inOther->mPlayerID];
-    if (theStance == inStance)
-        return;
-    if (this->mSaveVisMap == true && inOther->mSaveVisMap == true) {
-        if (inStance == 0) {
-            if (inMap != NULL) {
-                for (unsigned long i = 0; i < this->mWonderPowers.size(); i++)
-                    if (this->mWonderPowers[i] == 5)
-                        inOther->RemoveSightSharer(this);
-                if (inOther->mEnemies[this->mPlayerID] == 0) {
-                    this->ResetWonderTimers(inOther);
-                    RTSUnit* theUnit; for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                        theUnit->SightOffHere();
-                    this->mEvents.HideEvents(this);
-                    for (theUnit = inOther->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                        theUnit->SightOffHere();
-                    inOther->mEvents.HideEvents(inOther);
-                    EEPlayer* thePlayer = inOther;
-                    this->mAllies.push_back(thePlayer);
-                    thePlayer = this;
-                    inOther->mAllies.push_back(thePlayer);
-                    theStance = 0;
-                    EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
-                    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                        theUnit->SightOnHere();
-                    this->mEvents.ShowEvents(this);
-                    for (theUnit = inOther->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                        theUnit->SightOnHere();
-                    inOther->mEvents.ShowEvents(inOther);
-                }
-            } else {
-                EEPlayer* thePlayer = inOther;
-                this->mAllies.push_back(thePlayer);
-            }
-        } else if (theStance == 0) {
-            for (unsigned long j = 0; j < this->mWonderPowers.size(); j++)
-                if (this->mWonderPowers[j] == 5)
-                    inOther->AddSightSharer(this);
-            if (inOther->mEnemies[this->mPlayerID] == 0) {
-                RTSUnit* theUnit; for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                    theUnit->SightOffHere();
-                for (theUnit = inOther->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                    theUnit->SightOffHere();
-                this->RemoveAlly(inOther);
-                inOther->RemoveAlly(this);
-                theStance = inStance;
-                EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
-                for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                    theUnit->SightOnHere();
-                for (theUnit = inOther->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext)
-                    theUnit->SightOnHere();
-                if (this->mViewedUnit != NULL && this->mViewedUnit->mPlayer == inOther)
-                    this->UpdateSelection(NULL, true);
-            }
-        }
-    }
-    if (inOther == theCurrentPlayer || this == theCurrentPlayer)
-        theCurrentPlayer->RefreshTerrainVisibility();
-    theStance = inStance;
-    EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
-    gWorld.RemoveShareBonus();
-    gWorld.ApplyShareBonus();
-    if (gMiniMap != NULL)
-        gMiniMap->Redraw();
+    ee_units_player_diplomacy(EEPlayerRefs(this), 0, inOther, (unsigned long)inStance, inMap != NULL);
 }
 
 // Sets the player's current epoch in its tech tree
@@ -3266,16 +3097,7 @@ void EEPlayer::SetHackUnitClass(long inUnitClass)
 // Turns the player's shared line of sight on or off, recomputing all its units' sight and events
 void EEPlayer::SetSharedLOS(bool inFlag, EEMap* inArg)
 {
-    if (this->mSharedLOS == inFlag)
-        return;
-    EEUnit* theUnit;
-    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        theUnit->SightOffHere();
-    this->mEvents.HideEvents(this);
-    this->mSharedLOS = inFlag;
-    for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-        theUnit->SightOnHere();
-    this->mEvents.ShowEvents(this);
+    ee_units_player_diplomacy(EEPlayerRefs(this), 3, NULL, 0, inFlag);
 }
 
 // Copies the player's visibility of every tile into the terrain mesh
@@ -3334,110 +3156,21 @@ void EEPlayer::TakeResource(long inIndex, long inAmount)
     this->mResourceCaps[inIndex] -= inAmount;
 }
 
-// Pays a technology's cost (scaled by inFraction); with civ power 0x2e resources 5 and 6 can cover each other
+// Pays a technology's cost scaled by inFraction (ee_units player.rs pay)
 void EEPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction)
 {
-    unsigned long i; bool theInsufficient = false;
-    if (this->CanAffordSingleResource(inTechnology, inUnitType, 1) == true) {
-        if (inTechnology->mData->mCostResource == 1) {
-            for (i = 2; i < 7; i++) {
-                long theCost = this->ScaleCost((long)(inTechnology->GetCost(i, inUnitType, 1.0f) * inFraction));
-                if (this->mResourceCaps[i] >= theCost) {   // the first resource that covers it, as CanAffordSingleResource (was <=)
-                    this->TakeResource(i, theCost);
-                    break;
-                }
-            }
-        } else {
-            long theCost = this->ScaleCost((long)(inTechnology->GetCost(inTechnology->mData->mCostResource, inUnitType, 1.0f) * inFraction));
-            unsigned long theResource = inTechnology->mData->mCostResource;
-            if (theCost > this->mResourceCaps[theResource]) {
-                if ((theResource == 5 || theResource == 6) && this->mResourceCaps[kResourceGold] + this->mResourceCaps[kResourceIron] >= theCost
-                    && gCivPowersManager.HasPower(this, kCivPowerMetallurgy)) {
-                    if (this->mResourceCaps[kResourceGold] >= this->mResourceCaps[kResourceIron]) {
-                        this->TakeResource(kResourceGold, theCost - this->mResourceCaps[kResourceIron]);
-                        this->TakeResource(kResourceIron, this->mResourceCaps[kResourceIron]);
-                    } else {
-                        this->TakeResource(kResourceIron, theCost - this->mResourceCaps[kResourceGold]);
-                        this->TakeResource(kResourceGold, this->mResourceCaps[kResourceGold]);
-                    }
-                }
-            } else
-                this->TakeResource(theResource, theCost);
-        }
-        this->mSavedGroups.Lower(inTechnology->mData->mRequiredStatistic, inTechnology->mData->mRequiredStatisticValue);
-    } else {
-        bool theOnlyInterchangeable = true;
-        for (i = 2; i < 7; i++) {
-            long theCost = this->ScaleCost((long)(inTechnology->GetCost(i, inUnitType, 1.0f) * inFraction));
-            if (!(theCost > this->mResourceCaps[i]))
-                continue;
-            theInsufficient = true;
-            if (i != 6 && i != 5) {
-                theOnlyInterchangeable = false;
-                break;
-            }
-        }
-        if (theInsufficient) {
-            if (theOnlyInterchangeable && gCivPowersManager.HasPower(this, kCivPowerMetallurgy)) {
-                long theFood = this->ScaleCost((long)(inTechnology->GetCost(kResourceGold, inUnitType, 1.0f) * inFraction));
-                long theWood = this->ScaleCost((long)(inTechnology->GetCost(kResourceIron, inUnitType, 1.0f) * inFraction));
-                long theCost = theFood + theWood;
-                if (this->mResourceCaps[kResourceGold] + this->mResourceCaps[kResourceIron] >= theCost) {
-                    if (this->mResourceCaps[kResourceGold] >= this->mResourceCaps[kResourceIron]) {
-                        this->TakeResource(kResourceGold, theCost - this->mResourceCaps[kResourceIron]);
-                        this->TakeResource(kResourceIron, this->mResourceCaps[kResourceIron]);
-                    } else {
-                        this->TakeResource(kResourceIron, theCost - this->mResourceCaps[kResourceGold]);
-                        this->TakeResource(kResourceGold, this->mResourceCaps[kResourceGold]);
-                    }
-                    for (i = 2; i < 7; i++) {
-                        if (i != 5 && i != 6) {
-                            long theOtherCost = this->ScaleCost((long)(inTechnology->GetCost(i, inUnitType, 1.0f) * inFraction));
-                            this->TakeResource(i, theOtherCost);
-                        }
-                    }
-                }
-            }
-        } else {
-            for (i = 2; i < 7; i++) {
-                long theCost = this->ScaleCost((long)(inTechnology->GetCost(i, inUnitType, 1.0f) * inFraction));
-                if (theCost > this->mResourceCaps[i])
-                    return;
-                this->TakeResource(i, theCost);
-            }
-        }
-    }
+    EEPlayerEconScope theScope;
+    ee_units_player_cost(EEPlayerRefs(this), 4, inTechnology, inUnitType, 0, inFraction, NULL);
+    theScope.Record(this, 6, 0, {EEPlayerNodeID(inTechnology), inUnitType, EEPlayerFloatBits(inFraction)});
 }
 
-// Pays the cost of a unit class improvement at its current level, resources 5 and 6 covering each other
+// Pays a unit class improvement at its queued level (ee_units player.rs pay_improvement)
 void EEPlayer::PayImprovement(EEUnitClass* inClass, long inImprovement)
 {
-    if (inClass == NULL)
-        return;
-    EEUnitClass* theClass = gUnitClassTable[inClass->mUnitType];
-    long theTechnology = theClass != NULL ? theClass->mTechnology : 100000;
-    if (theTechnology == kTechNone)
-        return;
-    EETechTreeNode* theNode = this->mTechnologies->Get(theTechnology);
-    if (theNode == NULL || inClass->mImprovements == NULL)
-        return;
-    unsigned long theType = inClass->mUnitType;
-    float theScale = inClass->mImprovements->mEntries[inImprovement].mCostFactor;
-    theScale *= this->GetImprovementLevel(theType, inImprovement);
-    for (unsigned long i = 2; i < 7; i++) {
-        long theCost = this->ScaleCost((long)(theNode->GetCost(i, 0, 1.0f) * theScale + 0.0001f));
-        if (this->mResourceCaps[i] - theCost < 0) {
-            if (i == 6) {
-                this->TakeResource(kResourceGold, theCost - this->mResourceCaps[kResourceIron]);
-                this->TakeResource(i, this->mResourceCaps[kResourceIron]);
-            } else if (i == 5) {
-                this->TakeResource(kResourceIron, theCost - this->mResourceCaps[kResourceGold]);
-                this->TakeResource(i, this->mResourceCaps[kResourceGold]);
-            }
-        } else {
-            this->TakeResource(i, theCost);
-        }
-    }
+    EEPlayerEconScope theScope;
+    if (inClass != NULL)
+        EEPlayerImprovement(this, 8, inClass->mUnitType, inImprovement);
+    theScope.Record(this, 7, 0, {inClass != NULL ? (int32_t)inClass->mUnitType : -1, inImprovement});
 }
 
 // VirtualBC's functor (RTTI EEPSuggestRecomputeAllAreaEffects; vtable 0x442b08: the shared ??_G 0x16b555, its
@@ -3473,20 +3206,14 @@ void EEPlayer::UnloadAllClassMedia()
 // Unloads the command buttons of one unit class for the player, if the class index is valid
 void EEPlayer::UnloadUnitClassButtons(long inUnitClass)
 {
-    if ((unsigned long)inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->UnloadButtons(this);
 }
 
 // Unloads the media of one unit class for the player, if the class index is valid
 void EEPlayer::UnloadUnitClassMedia(long inUnitClass)
 {
-    if ((unsigned long)inUnitClass >= EEUnitClassCount())
-        return;
-    EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
-    if (theStats != NULL)
+    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
         theStats->UnloadMedia(this);
 }
 
@@ -3500,94 +3227,15 @@ void EEPlayer::UpdateAirTraffic()
 // Raises (or with inFlag lowers) a unit class improvement and rescales existing units' power, hit points or sight
 void EEPlayer::ApplyImprovement(long inUnitType, long inImprovement, bool inFlag)
 {
-    EEUnitClass* theClass = gUnitClassTable[inUnitType];
-    EEUnitClassUpgrade* theUpgrade = this->mUnitClassUpgrades[inUnitType];
-    long theOldValue = 0;
-    if (theClass == NULL || theUpgrade == NULL)
-        return;
-    bool theUpdate = true;
-    switch (inImprovement) {
-    case 8:
-        theOldValue = theClass->mFlightTime > 0 ? theUpgrade->mFlightTime : theUpgrade->mPower;
-        break;
-    case 9:
-        theOldValue = theUpgrade->mMaxHitPoints;
-        break;
-    case 11: {
-        for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-            if (theUnit->GetUnitClass()->mUnitType == inUnitType)
-                theUnit->GetComplexUnit()->SightOffHere();
-        break;
-    }
-    default:
-        theUpdate = false;
-        break;
-    }
-    theUpgrade->ChangeLevel(inImprovement, inFlag ? -1 : 1);
-    if (theUpdate != true)
-        return;
-    switch (inImprovement) {
-    case 8:
-        if (theOldValue != 0) {
-            if (theClass->mFlightTime > 0) {
-                for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-                    if (theUnit->GetUnitClass()->mUnitType == inUnitType) {
-                        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-                        theComplex->SetFlightTime((long)((float)theComplex->mFlightTime / theOldValue * theUpgrade->mFlightTime));
-                    }
-                }
-            } else {
-                for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-                    if (theUnit->GetUnitClass()->mUnitType == inUnitType) {
-                        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-                        theComplex->SetPower((long)((float)theComplex->mPower / theOldValue * theUpgrade->mPower));
-                    }
-                }
-            }
-        }
-        break;
-    case 9:
-        if (theOldValue != 0) {
-            for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-                if (theUnit->GetUnitClass()->mUnitType != inUnitType || !(theUnit->mHitPoints > 0) ||
-                    (theUnit->GetComplexUnit() != NULL && theUnit->GetComplexUnit()->mIsBuilt != true))
-                    continue;
-                float theScaled = (float)theUnit->mHitPoints / theOldValue * theUpgrade->mMaxHitPoints;
-                float theHitPoints = (float)UMCeil(theScaled);
-                theUnit->SetHitPoints((long)theHitPoints);
-            }
-        }
-        break;
-    case 11:
-        for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
-            if (theUnit->GetUnitClass()->mUnitType == inUnitType)
-                theUnit->GetComplexUnit()->SightOnHere();
-        break;
-    }
+    EEPlayerEconScope theScope;
+    ee_units_player_apply_improvement(EEPlayerRefs(this), inUnitType, inImprovement, inFlag);
+    theScope.Record(this, 22, 0, {inUnitType, inImprovement, inFlag});
 }
 
 // Registers a unit placed in the game: wonder/teleporter counts, town, herd, sight power, walls
 void EEPlayer::UnitPlaced(EEComplexUnit* inUnit)
 {
-    EECivPower thePower;
-    if (gLoadingSavedGame || !gGameScreenActive)
-        return;
-    if (inUnit->GetComplexUnit() != NULL) {
-        if (inUnit->mUnitClass->mAIKind == kAIKindHero)
-            this->mNumHeroes++;
-        if (inUnit->mUnitClass->mUnitType == kUnitTypeTeleporter)
-            this->mNumTeleporters++;
-        if (!inUnit->IsFoundation())
-            this->AddUnitToTown(inUnit->GetComplexUnit());
-        this->AddUnitToHerd(inUnit->GetComplexUnit());
-        if (gCivPowersManager.HasPower(this, kCivPowerExploration) &&
-            (inUnit->mUnitClass->mUnitType == kUnitTypeTownCenter || inUnit->mUnitClass->mUnitType == kUnitTypeCapitol)) {
-            gCivPowersManager.GetPower(kCivPowerExploration, thePower);
-            this->PulseSight(true, thePower.mAmount, inUnit->mUnitID);
-        }
-    }
-    if (!inUnit->IsFoundation() && (inUnit->mUnitClass->mBlocksTile || inUnit->mUnitClass->mCategory == kUnitCategoryGate))
-        gContinentManager.UpdateWallUnit(inUnit, false);
+    EEPlayerUnits(this, 1, inUnit);
 }
 
 // Unregisters a unit leaving the player: counts, wonders, town, herd, construction site, heroes, capitol, walls/forest
@@ -3595,52 +3243,7 @@ void EEPlayer::UnitPlaced(EEComplexUnit* inUnit)
 // capitol technology and blocks the JIT-manufacturing ones
 void EEPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
 {
-    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
-    if (!inSwapped)
-        EEGameLogUnitLost(this, theUnit);   // port: the game log (ee/EEGameLog.h)
-    this->mPopulationCount -= theUnit->mUnitClass->GetPopulationCost();
-    if (!theUnit->mUnitClass->IsLandBuilding() || theUnit->GetComplexUnit() == NULL || theUnit->GetComplexUnit()->mIsBuilt) {
-        if (theUnit->mUnitClass->mIsVital
-            && (theUnit->GetComplexUnit() == NULL
-                || theUnit->GetComplexUnit()->mPreviousPart == NULL
-                   && (!theUnit->mUnitClass->IsLandBuilding() || theUnit->GetComplexUnit()->mIsBuilt)))
-            this->mEndOfGameCount--;
-        EETechTreeNode* theNode = theUnit->GetTechTreeNode();
-        if (theNode != NULL && theNode->mData->mKind == 4)
-            this->RemoveWonder(theUnit->GetComplexUnit());
-        if (theUnit->mUnitClass->IsLandBuilding() && theUnit->mUnitClass->mIsVital) {
-            if (--this->mNumVitalBuildings == 0)
-                this->DisableCamouflagePower();
-        }
-    }
-    if (theUnit->GetComplexUnit() != NULL && !gWorldClearing)
-        this->RemoveUnitFromTown(theUnit->GetComplexUnit());
-    if (theUnit->GetComplexUnit() != NULL)
-        this->RemoveUnitFromHerd(theUnit->GetComplexUnit());
-    if (theUnit->GetComplexUnit() != NULL && theUnit->GetComplexUnit()->mUnitClass->mAIKind == kAIKindHero && this->mNumHeroes > 0)
-        this->mNumHeroes--;
-    if (theUnit->mUnitClass->mUnitType == kUnitTypeTeleporter)
-        this->mNumTeleporters--;
-    if (theUnit->mUnitClass->mIsWall && theUnit->mTileNode != NULL && !theUnit->GetComplexUnit()->mIsBuilt)
-        this->RemoveConstructionSite(theUnit->GetComplexUnit());
-    if (this->GetTechTree()->Get(kTechCitizen)->Contains(theUnit->mUnitClass->GetUnitType())) {
-        if (--this->mNumCapitols == 0) {
-            if (gUserInterface != NULL)
-                gUserInterface->UpdateJITManufacturing();
-            this->mTechnologies->Get(kTechCapitol)->mIsAllowed = true;
-            if (this->GetTechTree()->Get(kTechSettlement)->GetIsObsolete()) this->GetTechTree()->Get(kTechTownCenter)->mIsAllowed = false; else this->GetTechTree()->Get(kTechSettlement)->mIsAllowed = false;
-        }
-    }
-    if (theUnit->mUnitClass->mUnitType == kUnitTypeHouse)
-        this->SuggestRecomputeAllAreaEffects();
-    if (!(!gWorldClearing && (theUnit->mUnitClass->mBlocksTile || theUnit->mUnitClass->mCategory == kUnitCategoryGate)))
-        return;
-    gContinentManager.UpdateWallUnit(theUnit, true);
-    if (!theUnit->mUnitClass->mIsTree || !gGameScreenActive)
-        return;
-    if (theUnit->mResourceAmount != 0)
-        theUnit->mResourceAmount = 0;
-    gContinentManager.RemoveForestTile(theUnit);
+    EEPlayerUnits(this, 2, inUnit, inSwapped);
 }
 
 #include "ee/EEUnitGoal.h"
@@ -3669,88 +3272,13 @@ void EEPlayer::UnselectAllUnits()
     this->mActiveGroup->Clear();
 }
 
-#include "ee/EEUGRust.h"
 #include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
 // Adds a town building to a town: a new one, the only fitting one, or the largest fitting one after merging
 // the others into it (their patrols move over); returns whether it was added
 bool EEPlayer::AddUnitToTown(EEComplexUnit* inUnit)
 {
-    std::vector<EEPPatrolGroup*> theOldGroups;
-    std::vector<EETown*> theTowns;
-    bool theResult = false;
-    if (EETown::IsTownUnit(inUnit)) {
-        inUnit->FindAreaTile(true, 1);
-        for (long i = this->mTowns.size() - 1; i >= 0; i--)
-            if (this->mTowns[i]->CanTake(inUnit))
-                theTowns.push_back(this->mTowns[i]);
-        if (theTowns.size() == 0) {
-            EETown* theTown = new EETown(this, ++gWorld.mTownIDCounter);
-            theTown->SetSerial(++gContinentManager.mLastSerial);
-            gContinentManager.AddArea(theTown);
-            theResult = theTown->AddUnit(inUnit);
-            if (theResult) {
-                this->mTownsByID.insert(std::pair<long, EETown*>(theTown->mTownID, theTown));
-                this->mTowns.push_back(theTown);
-            } else
-                delete theTown;
-        } else if (theTowns.size() == 1) {
-            EETown* theTown = *theTowns.begin();
-            theResult = theTown->AddUnit(inUnit);
-        } else {
-            EETown* theTown = theTowns.back();
-            long theSize = theTown->GetNumTiles();
-            for (long j = theTowns.size() - 2; j >= 0; j--) {
-                if (theSize < theTowns[j]->GetNumTiles()) {
-                    theTown = theTowns[j];
-                    theSize = theTown->GetNumTiles();
-                }
-            }
-            for (long k = theTowns.size() - 1; k >= 0; k--) {
-                if (theTowns[k] == theTown)
-                    continue;
-                theTown->Merge(theTowns[k]);
-                gContinentManager.RemoveArea(theTowns[k]);
-                std::vector<EETown*>::iterator theIterator =
-                    std::find(this->mTowns.begin(), this->mTowns.end(), theTowns[k]);
-                if (theIterator != this->mTowns.end()) {
-                    EETown* theOldTown = *theIterator;
-                    this->RemoveTownID(theOldTown->mTownID);
-                    this->mTowns.erase(theIterator);
-                    EEPPatrolGroup* theGroup = theOldTown->mPatrolGroup;
-                    if (theGroup != NULL) {
-                        EEComplexUnit* theUnit;
-                        while ((theUnit = theGroup->GetLast()) != NULL) {
-                            theGroup->RemoveUnit(theUnit);
-                            theUnit->SetPatrolGroup(NULL);
-                            theUnit->Kill(true, false, false);
-                            theUnit->mPlayer->KillUnit(theUnit, false);
-                        }
-                        theGroup->Reference();
-                        theOldGroups.push_back(theGroup);
-                    }
-                    delete theOldTown;
-                }
-                theTowns[k] = NULL;
-            }
-            theResult = theTown->AddUnit(inUnit);
-            if (theTown->mPatrolGroup != NULL && theOldGroups.size() > 0) {
-                for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-                    if (theUnit->GetComplexUnit() == NULL)
-                        continue;
-                    EEUGRust* theGoal = EEPatrolGoalCast(theUnit->GetComplexUnit()->mGoalState);
-                    if (theGoal == NULL)
-                        continue;
-                    EEPPatrolGroup* theGroup = theGoal->GetPatrolGroup();
-                    if (theGroup != NULL &&
-                        std::find(theOldGroups.begin(), theOldGroups.end(), theGroup) != theOldGroups.end())
-                        theGoal->SetPatrolGroup(theTown->mPatrolGroup);
-                }
-                std::for_each(theOldGroups.begin(), theOldGroups.end(), EEPDereferencer());
-            }
-        }
-    }
-    return theResult;
+    return ee_units_player_areas(EEPlayerRefs(this), 0, static_cast<RTSUnit*>(inUnit));
 }
 
 // Sends each enabled unit waiting to repatrol to the nearest point of its nearest town's patrol, then clears the list
@@ -3790,21 +3318,10 @@ void EEPlayer::RefreshTownGroups()
     }
 }
 
-// The context of UpdatePlayer's operations: the player and the queued improvements' walk
+// The context of UpdatePlayer's operations: the player
 struct EEPlayerTickContext {
     EEPlayer* mPlayer;
-    std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator mQueued;
 };
-
-// The walk's entry: its key and float, or 0 at the end
-static int32_t EEPlayerQueuedEntry(EEPlayerTickContext& inContext, EeUnitsPlayerSaveIo* io)
-{
-    if (inContext.mQueued == inContext.mPlayer->mQueuedImprovements.end())
-        return 0;
-    io->i = (int64_t)(*inContext.mQueued).first;
-    io->f = (*inContext.mQueued).second.first;
-    return 1;
-}
 
 // The C++ parts of the player's tick (ee_units player_tick.rs): the groups, herds, air traffic, events, the queued
 // improvements' map and the units, by operation
@@ -3847,32 +3364,14 @@ static int32_t EEPlayerTickOperation(void* inContext, int32_t inOp, uint32_t inI
         thePlayer->UpdateAirTraffic();
         thePlayer->mEvents.TickEvents(thePlayer, gPhysics->mTickTime);
         return 0;
-    case EE_UNITS_PLAYER_TICK_QUEUED_FIRST:
-        theContext.mQueued = thePlayer->mQueuedImprovements.begin();
-        return EEPlayerQueuedEntry(theContext, io);
-    case EE_UNITS_PLAYER_TICK_QUEUED_NEXT:
-        theContext.mQueued++;
-        return EEPlayerQueuedEntry(theContext, io);
-    case EE_UNITS_PLAYER_TICK_QUEUED_ERASE:
-        theContext.mQueued = thePlayer->mQueuedImprovements.erase(theContext.mQueued);
-        return EEPlayerQueuedEntry(theContext, io);
-    case EE_UNITS_PLAYER_TICK_QUEUED_SET:
-        (*theContext.mQueued).second.first = io->f;
-        return 0;
     case EE_UNITS_PLAYER_TICK_TICK_TIME:
         io->f = gPhysics->GetTickTime();
         return 0;
-    case EE_UNITS_PLAYER_TICK_INSTANT_BUILD:
-        return thePlayer->mInstantBuild ? 1 : 0;
     case EE_UNITS_PLAYER_TICK_QUEUED_APPLY:
-        thePlayer->ApplyImprovement((*theContext.mQueued).first, (*theContext.mQueued).second.second.front(), false);
-        (*theContext.mQueued).second.second.erase((*theContext.mQueued).second.second.begin());
-        (*theContext.mQueued).second.first = 0.0f;
+        thePlayer->ApplyImprovement((long)io->i, (long)inIndex, false);
         return 0;
     case EE_UNITS_PLAYER_TICK_QUEUED_ADVANCE:
         return thePlayer->AdvanceImprovement((unsigned long)io->i) ? 1 : 0;
-    case EE_UNITS_PLAYER_TICK_HEALS_UNITS:
-        return thePlayer->mHealsUnits == true ? 1 : 0;
     case EE_UNITS_PLAYER_TICK_TICK_MS:
         io->i = (int64_t)gPhysics->mTickTimeMs;
         return 0;
@@ -3904,10 +3403,9 @@ static int32_t EEPlayerTickOperation(void* inContext, int32_t inOp, uint32_t inI
 // record this class derives from and EEPlayerTickOperation's parts
 void EEPlayer::UpdatePlayer()
 {
-    EEPlayerTickContext theContext;
-    theContext.mPlayer = this;
-    theContext.mQueued = this->mQueuedImprovements.end();
-    ee_units_player_update(&theContext, &EEPlayerTickOperation, static_cast<EeUnitsPlayerSaved*>(this));
+    EEPlayerCaptureState(this);   // TEST ONLY (PLST)
+    EEPlayerTickContext theContext = {this};
+    ee_units_player_update(&theContext, &EEPlayerTickOperation, static_cast<EeUnitsPlayerSaved*>(this), this);
 }
 
 // Restarts the timers of both players' wonders at the current game time
@@ -3946,34 +3444,7 @@ void EEPlayer::ApplyMapRestrictions()
 // Recounts the player's living heroes, heroes being researched or queued, and teleporters
 void EEPlayer::RecountHeroesAndTeleporters()
 {
-    this->mNumHeroes = 0;
-    this->mNumHeroesInProduction = 0;
-    this->mNumTeleporters = 0;
-    for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-        if (theComplex == NULL || !(theComplex->mHitPoints > 0))
-            continue;
-        if (theComplex->mUnitClass->mAIKind == kAIKindHero)
-            this->mNumHeroes++;
-        if (theUnit->mUnitClass->mUnitType == kUnitTypeTeleporter)
-            this->mNumTeleporters++;
-        if (theComplex->mCurrentResearch != kTechNone) {
-            EETechTreeNode* theNode = this->mTechnologies->Get(theComplex->mCurrentResearch);
-            if (theNode != NULL) {
-                long theType = theNode->mData->mUnitClass;
-                if (theType > 0 && gUnitClassTable[theType] != NULL && gUnitClassTable[theType]->mAIKind == kAIKindHero)
-                    this->mNumHeroesInProduction++;
-            }
-        }
-        for (long i = theComplex->GetBuildQueueSize() - 1; i >= 0; i--) {
-            EETechTreeNode* theNode = this->mTechnologies->Get(theComplex->mBuildQueue[i].mTechnology);
-            if (theNode == NULL)
-                continue;
-            long theType = theNode->mData->mUnitClass;
-            if (theType > 0 && gUnitClassTable[theType] != NULL && gUnitClassTable[theType]->mAIKind == kAIKindHero)
-                this->mNumHeroesInProduction++;
-        }
-    }
+    EEPlayerUnits(this, 5);
 }
 
 // With the Camouflage civ power, sets the cloak timer of each idle unit (command 5000)
