@@ -1226,6 +1226,10 @@ LONG CALLBACK FixtureFault(EXCEPTION_POINTERS* inInfo)
 //   EE_TEST_TIME_FACTOR=F (or N/D, or a decimal): the harness clock (platform/PlatSim.h PlatSimSetTimeFactor);
 //   EE_TEST_SEED=S: the start seed (gPlatSimSeed: EEMStartLoading::Execute takes it instead of the lobby's);
 //   EE_TEST_NO_HUMAN_DEFEAT=1: the idle local human is never taken out or defeated (gPlatSimNoHumanDefeat);
+//   EE_TEST_PORT_OFFSET=N (0..4095): the harness slot's port offset (tools/harness/slot.py): the TCP protocol's
+//     ports 33334/33335 (gPlatSimPortOffset, as EE-SIM's --port-offset) and the WON lobby's LAN broadcast and lobby
+//     ports (LobbyTestPortOffset) move by N, so that sessions in other slots bind other ports and never see this
+//     one's LAN games (EE_TEST_INSTANCE names the single-instance mutex: Empire Earth.cpp EECreateInstanceMutex);
 // and the debug output goes to stderr ("debugstring <text>": PlatDebugSetHandler).
 // Each one taken is announced on stderr ("TEST UI ..."); a malformed one stops the game (a run must not go on
 // believing it is accelerated or seeded when it is not).
@@ -1274,6 +1278,17 @@ void EETestFixtureConfigure()
     if (const char* theFlag = getenv("EE_TEST_NO_HUMAN_DEFEAT")) {
         gPlatSimNoHumanDefeat = atoi(theFlag) != 0;
         fprintf(stderr, "TEST UI no human defeat %d\n", gPlatSimNoHumanDefeat);
+    }
+    if (const char* theOffset = getenv("EE_TEST_PORT_OFFSET")) {
+        char* theEnd = NULL;
+        long theValue = strtol(theOffset, &theEnd, 10);
+        if (!*theOffset || *theEnd || theValue < 0 || theValue > 4095) {
+            fprintf(stderr, "TEST UI EE_TEST_PORT_OFFSET=%s is not a port offset in 0..4095\n", theOffset);
+            exit(3);
+        }
+        gPlatSimPortOffset = (int)theValue;
+        fprintf(stderr, "TEST UI port offset %ld (TCP %ld/%ld, LAN broadcast %ld, lobby %ld)\n", theValue,
+                33334 + theValue, 33335 + theValue, 8585 + theValue, 8888 + theValue);
     }
 }
 

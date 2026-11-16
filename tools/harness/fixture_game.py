@@ -12,7 +12,7 @@ fixture_driver.py's, shared with posix_game.py.
          --max-game-seconds 600 --time-factor 32 --no-render --seed 2 --pt-rate 40
   python -I tools/harness/fixture_game.py --exercise random-game --play-seconds 20 --scroll-check \\
          --zoom-captures 50 100 200
-  options: [--exe EXE] [--data TREE] [--out DIR] [--timeout S] [--config block.key=VALUE ...]
+  options: [--exe EXE] [--data TREE] [--out DIR] [--timeout S] [--config block.key=VALUE ...] [--slot K]
 
   menu         the main menu reached and its frame captured
   tour         as game_session.py's tour: main menu, the settings form's video/audio/interface tabs and Cancel, single
@@ -42,7 +42,10 @@ Data: --data TREE stages that unified open data tree (tools/open_data.py); else 
 EE_HARNESS_OPEN_DATA names, as exe_boot.py), built when missing. The game reads only the open forms (RUST_PLAN D9):
 there is no binary tree. The stage is build/fixture_game/stage (the exe and the tree as hard links; the game's data
 root is the exe's directory), with a fresh config.yaml holding the run's pins.
-Evidence: --out (default build/fixture_game/<time>): game.log (the game's output), ui/, the frames (<name>.bmp),
+Slot: --slot K (else EE_HARNESS_SLOT, which `tools/harness/slot.py run` sets) runs beside other sessions: the stage
+build/fixture_game/stage-s<K>, the evidence <time>-s<K>, the mutex EE_TEST_INSTANCE=s<K> and the game's TCP and WON
+lobby ports moved by 16 * (K + 1) (EE_TEST_PORT_OFFSET); see slot.py.
+Evidence: --out (default build/fixture_game/<time>[-s<K>]): game.log (the game's output), ui/, the frames (<name>.bmp),
 rendering.json, samples.json, the game log (game-*.log), summary.json; the last line printed is
 "RESULT PASS|FAIL <exercise> ..." (an ai-game adds outcome, final PT and per-player units). Exit 0 on PASS.
 """
@@ -59,11 +62,24 @@ ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 import config_yaml
 import fixture_driver
+import slot as harness_slot
 from ai_game import GAME, LOBBY, VISIBLE_SLOTS
 from fixture_driver import MAIN, SETTINGS, SINGLE, WINDOWS
 
 STAGE = ROOT / 'build' / 'fixture_game' / 'stage'
 EXE = 'EE-AOC.exe' if WINDOWS else 'ee-aoc'
+
+
+def use_slot(a):
+    """a.slot (--slot, else EE_HARNESS_SLOT) -> this run's stage (STAGE) and default evidence directory (a.out)."""
+    global STAGE
+    a.slot = harness_slot.current(a.slot)
+    STAGE = ROOT / 'build' / 'fixture_game' / ('stage' + harness_slot.suffix(a.slot))
+    if a.out is None:
+        a.out = str(ROOT / 'build' / a.out_kind / (time.strftime('%Y%m%d-%H%M%S') + harness_slot.suffix(a.slot)))
+    if a.slot is not None:
+        print(f'slot: {a.slot} (stage {STAGE.name}, mutex {harness_slot.instance_name(a.slot)}, port offset '
+              f'{harness_slot.port_offset(a.slot)})', flush=True)
 
 
 def data_tree(a):
@@ -113,8 +129,8 @@ def stage(a, tree):
 class Game(fixture_driver.Game):
     """The staged exe under the fixture; captures are window captures on Windows (fixture_driver.capture_frame)."""
 
-    def __init__(self, a, out):
-        env = dict(os.environ)
+    def __init__(self, a, out, label=None):
+        env = harness_slot.game_env(os.environ, getattr(a, 'slot', None), label)
         for name in ('EE_TEST_TIME_FACTOR', 'EE_TEST_SEED', 'EE_TEST_NO_HUMAN_DEFEAT', 'EE_GX_NULL3D', 'EE_CONFIG',
                      'EE_DATA_ROOT'):
             env.pop(name, None)   # only this run's switches
@@ -137,11 +153,14 @@ def switches_taken(g, a):
     asked for was not taken."""
     log = g.game_output()
     taken = [line for line in log.splitlines() if line.startswith('TEST UI ') and
-             line.split()[2] in ('clock', 'seed', 'no', 'fixture')]
+             line.split()[2] in ('clock', 'seed', 'no', 'fixture', 'port')]
     if a.time_factor and not any(line.startswith('TEST UI clock factor') for line in taken):
         raise RuntimeError('the game did not take EE_TEST_TIME_FACTOR')
     if a.seed is not None and f'TEST UI seed {a.seed}' not in taken:
         raise RuntimeError('the game did not take EE_TEST_SEED')
+    offset = harness_slot.port_offset(getattr(a, 'slot', None))
+    if offset and not any(line.startswith(f'TEST UI port offset {offset} ') for line in taken):
+        raise RuntimeError('the game did not take EE_TEST_PORT_OFFSET (an exe older than the harness slots?)')
     return taken
 
 
@@ -412,7 +431,8 @@ def main():
                     help='the game (default: the test-profile build)')
     ap.add_argument('--data', help='the unified open data tree to stage (default: build/open_data/tree)')
     ap.add_argument('--tree', choices=['open'], help='(kept for old command lines: open is the only tree)')
-    ap.add_argument('--out', default=str(ROOT / 'build' / 'fixture_game' / time.strftime('%Y%m%d-%H%M%S')))
+    ap.add_argument('--out', help='the evidence directory (default build/fixture_game/<time>[-s<K>])')
+    ap.add_argument('--slot', type=int, help='the harness slot (default EE_HARNESS_SLOT; tools/harness/slot.py)')
     ap.add_argument('--exercise', choices=['menu', 'tour', 'random-game', 'ai-game'], default='tour')
     ap.add_argument('--timeout', type=float, default=1800, help='wall seconds the whole run may take')
     ap.add_argument('--config', action='append', default=[], help='block.key=VALUE in the fresh config.yaml')
@@ -472,6 +492,8 @@ def main():
     a.exe = a.exe.resolve()
     if not a.exe.exists():
         ap.error(f'{a.exe} does not exist: python -I build.py --test-profile windowed-software')
+    a.out_kind = 'fixture_game'
+    use_slot(a)
     return 0 if run(a)['result'] == 'PASS' else 1
 
 

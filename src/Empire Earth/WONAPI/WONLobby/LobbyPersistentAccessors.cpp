@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyCore.h"
+#include "platform/PlatSim.h"
 namespace WONAPI {
 // Makes the given saved user (or the LAN user for NULL) current and loads that user's preferences
 void LobbySetCurrentUser(LobbyUserInfo* user)
@@ -185,12 +186,19 @@ unsigned short LobbyGetConnectionSpeed()
     return 50;
 }
 
-// Returns the LAN broadcast port (8585 without lobby data)
+// TEST ONLY: the harness slot's port offset: the game's TCP port offset when the UI fixture set one (EETestFixture.cpp,
+// EE_TEST_PORT_OFFSET), else 0 (EE-SIM's "any port" -1 included)
+unsigned short LobbyTestPortOffset()
+{
+    return gPlatSimPortOffset > 0 && gPlatSimPortOffset < 4096 ? (unsigned short)gPlatSimPortOffset : 0;
+}
+
+// Returns the LAN broadcast port (8585 without lobby data), moved by the harness slot's offset (TEST ONLY)
 unsigned short LobbyGetLanBroadcastPort()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL) return data->GetLanBroadcastPort();
-    return 8585;
+    if(data!=NULL) return (unsigned short)(data->GetLanBroadcastPort() + LobbyTestPortOffset());
+    return (unsigned short)(8585 + LobbyTestPortOffset());
 }
 
 // Returns the saved network adapter's IPv4 address (0 for the default)

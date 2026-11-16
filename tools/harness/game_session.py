@@ -125,6 +125,9 @@ def main():
                     help='TEST ONLY (round 39): parallel instance K (1..32): stage build/boot/windowed_{o,f,r}_K, logs '
                          'build/boot/windowed_*_K.session.*, the harness bypasses the single-instance mutex (logged; image '
                          'unpatched); the stage has its own config.yaml')
+    ap.add_argument('--slot',type=int,
+                    help='TEST ONLY: the harness slot K (default EE_HARNESS_SLOT; tools/harness/slot.py run sets it): '
+                         'runs as --instance K+1 (its ports +16*(K+1), as slot K of the fixture drivers)')
     ap.add_argument('--registry-managed-by-batch',action='store_true',
                     help='TEST ONLY (round 39, with --instance): run from tools/harness/game_batch.py (no effect: the game '
                          'uses no registry; every stage has its own config.yaml)')
@@ -133,6 +136,10 @@ def main():
     a=ap.parse_args()
     if a.seed is not None and not 0<=a.seed<=0xffffffff:ap.error('--seed must fit in 32 bits')
     if a.pt_rate is not None and not 1<=a.pt_rate<=1000:ap.error('--pt-rate out of range')
+    import slot as harness_slot
+    try:a.slot=harness_slot.current(a.slot)
+    except ValueError as error:ap.error(str(error))
+    if a.instance is None and a.slot is not None:a.instance=harness_slot.legacy_instance(a.slot)
     if a.instance is not None and not 1<=a.instance<=32:ap.error('--instance must be 1..32')
     if a.registry_managed_by_batch and a.instance is None:ap.error('--registry-managed-by-batch requires --instance')
     import hbuild

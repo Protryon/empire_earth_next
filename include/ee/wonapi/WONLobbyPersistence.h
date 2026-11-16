@@ -139,7 +139,10 @@ bool LobbyGetAutoPingGames(); // 0x61
 bool LobbyGetShowGamesInProgress(); // 0x62
 bool LobbyGetAnonymousToFriends(); // 0x63
 unsigned short LobbyGetConnectionSpeed(); // 0x64 (0x7bee7b masks it to 16 bits); 50
-unsigned short LobbyGetLanBroadcastPort(); // 0x66; 8585
+unsigned short LobbyGetLanBroadcastPort(); // 0x66; 8585 (+ LobbyTestPortOffset)
+// TEST ONLY: the harness slot's port offset (EE_TEST_PORT_OFFSET under EE_TEST_UI, through gPlatSimPortOffset; 0
+// otherwise): added to the LAN broadcast port and the lobby port, so that LAN games in two slots never meet
+unsigned short LobbyTestPortOffset();
 long LobbyGetNetworkAdapter(); // 0x70 (a numeric IPv4 address, copied from 0x965f40)
 void LobbySetLanBroadcastPort(unsigned short); // 0x66
 void LobbySetFilterDirtyWords(bool); // 0x54 (sets the user dirty flag 0x7d only on a change)

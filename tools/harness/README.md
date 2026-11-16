@@ -22,7 +22,8 @@ hook. What it reads:
 The switches are environment variables the fixture takes only with `EE_TEST_UI` (`EETestFixtureConfigure`, first
 in `EERun`): `EE_TEST_TIME_FACTOR` (the harness clock: `PlatSimSetTimeFactor`, `platform/PlatSim.h`; the platform
 layer's clocks run F x real time and its sleeps, timers and wait timeouts 1/F, replacing the time shim),
-`EE_TEST_SEED` (`gPlatSimSeed`, as `--seed`), `EE_TEST_NO_HUMAN_DEFEAT`; `--no-render` is GX's `EE_GX_NULL3D`.
+`EE_TEST_SEED` (`gPlatSimSeed`, as `--seed`), `EE_TEST_NO_HUMAN_DEFEAT`, `EE_TEST_INSTANCE` (the single-instance
+mutex's name) and `EE_TEST_PORT_OFFSET` (the harness slot's ports, below); `--no-render` is GX's `EE_GX_NULL3D`.
 
 ```
 python -I tools/harness/fixture_game.py --exercise tour --input-check --play-seconds 120 [--data TREE]
@@ -36,6 +37,38 @@ debugger path: the guards (registry writes, files outside the stage, non-loopbac
 (a crash ends the process and fails the run; a message box fails it), the RNG trace, `--instance`, the human driver
 and the differential tools. `posix_game.py` is the same core with macOS captures. `tools/gates.sh --legacy` still
 runs the debugger path below.
+
+### Harness slots: several sessions at once
+
+Up to N live sessions (default 3: `EE_HARNESS_SLOTS`) run on this machine at once, each in its own **slot**, shared by
+every worktree: the lock directories `<main checkout>/build/harness.slot.K` (`slot.py`). Take one for every session
+(a fixture run, a LAN game, `gates.sh`, a legacy `game_session.py`) with
+
+```
+python -I tools/harness/slot.py run --owner <branch> -- python -I tools/harness/fixture_game.py --exercise tour ... --data TREE
+python -I tools/harness/slot.py status
+```
+
+`run` waits for the first free slot, runs the command with `EE_HARNESS_SLOT=K` (in a job object: the game dies with
+it), releases the slot and returns the command's exit code. A slot whose holder process is gone (owner.json: pid and
+its start time) is stale and taken over; while the old single lock `build/harness.lock` exists it counts as one slot
+held. `tools/gates.sh` takes a slot itself when `EE_HARNESS_SLOT` is unset. What a session in slot K keeps apart
+(`--slot K` on the drivers overrides the variable; unslotted runs keep the old names and ports, so only one of those
+at a time):
+
+| Shared resource | Slot K |
+|---|---|
+| the single-instance mutex `MadDocSoftwarePresentsEmpireEarthExpansion` | `EE_TEST_INSTANCE=s<K>` (`lan_game.py`: `s<K>-host`, `s<K>-joiner`) |
+| the TCP protocol's ports 33334/33335 (bound by the local server in single player too) | + 16 (K + 1) (`EE_TEST_PORT_OFFSET` -> `gPlatSimPortOffset`) |
+| the WON lobby's LAN broadcast port 8585 (bound with address reuse: every lobby on it sees every LAN game) and lobby port 8888 (the host's listen socket) | + 16 (K + 1) (`LobbyTestPortOffset`), so a slot's LAN list shows only its own games; the default game name is `lantest<K>`, checked at the join |
+| the stage (exe, data links, `config.yaml`, `Logs/`, `_wonlobbypersistent.dat`) | `build/fixture_game/stage-s<K>` |
+| the evidence directories (named by the start second) | `build/fixture_game/<time>-s<K>`, `build/lan_game/<time>-s<K>` |
+| legacy `game_session.py` | `--instance K+1` (its stage `windowed_f_<K+1>`, the debugger's mutex bypass and port offset, the same 16 (K + 1)) |
+
+Not shared: window lookups and captures go by the game's process id, input is posted to its window or sent through
+its fixture, and the fixture directory is the run's own. A LAN game's two ends share one slot (one stage, one port
+offset: the joiner reaches the host's game port by its own offset). The timing checks (F3 pause, scrolling, the
+orders) wait on the game's telemetry, but a loaded machine still slows them: keep N at 3.
 
 The rest of this file is the debugger harness (`game_session.py`), which depends on the build's record layout and
 mangled names.
