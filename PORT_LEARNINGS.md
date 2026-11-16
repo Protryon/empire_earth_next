@@ -26141,3 +26141,142 @@ their driver (the driver rebuilt per mutation, each rebuild checked). 18 were ca
   C++ members they read become Rust. First is Component's members, read inline at ~100 WON sites; the drivers' worlds
   serve those members from ids, so the worlds must hold real memory before that move. After that: the window's font
   map, the MS controls' constructors as msbtnobj init kinds, and SkinnedContainers' two paints.
+
+## R6 WONGUI B round 2: Component's members as a Rust block; the drivers' worlds serve real memory; the window's font cache (ee_won compmem.rs, fontmap.rs; branch rust-wonguib2, 2026-11-15)
+
+The second WONGUI lane's second round, from round 1's head (e1ed5f93). WON C++ (`wc -l` of every file under
+`src/Empire Earth/WONAPI` and `include/ee/wonapi`, as round 1): 46,767 at round 1's head -> 46,750 (net -17). The round's target was
+1,500; it is not reached, and the measure says why (below).
+
+### Component's members (ee_won compmem.rs)
+
+- **The block.** `EeWonCompMembers`: `mParent`, `mBounds`, `mComponentBits`, `mControlId`, `mFocusId`,
+  `mInvalidState`, `mTimerFlags`, `mExtraStuff`, in that order, at `EE_WON_COMP_MEMBERS_AT` (16: RefCount's vtable
+  pointer and 32-bit count, padded) from a `Component*`. The C++ keeps the members by name: the ~300 lobby sites that
+  read them inline are unchanged. ComponentLifetime.cpp asserts each member's offset against the block's (inside the
+  host function, a friend, because `mBounds` is protected; `-Winvalid-offsetof` silenced there: the class is not
+  standard layout, the offsets are still fixed on the three ABIs).
+- **The original's `mChildListItr`** (the node in the parent's `std::list`) was unused since the container's children
+  became Rust (round 26); it is gone, so the block follows `mParent` directly.
+- **Who reads it.** compobj reads and writes every member in place (its 12 `EeWonComp` member ops gone). ctobj,
+  dialogobj, rootobj, tabobj, btnobj, comboobj, barobj, layoutobj and skinlay read the bounds, flags, parent, timer
+  flags, invalid state, focus and control ids there. Each accessor reads or writes one field and returns: no reference
+  into a block lives across a call (a virtual the C++ runs may change any member).
+- **Host cases gone:** ComponentLifetime.cpp 12, Container.cpp 12, Button.cpp 4, ChildLayouts.cpp 5,
+  SkinnedContainers.cpp 6. The op enum keeps `CtBits` .. `CtIntersects`, `ChildLeft` .. `ChildControlId` and
+  `LayParentOf`: the drivers' original statements still send them to their worlds (multiobj and splitobj still send
+  the Child* reads, below).
+
+### The drivers' worlds serve real memory
+
+A world names its components by small ids, not addresses, so `compmem::at` resolves an id first:
+- **An id table** (`ee_won_comp_members_table(base, first, count, stride)`): ids `first..first + count` are the blocks
+  at `base + (id - first) * stride`. `tests/won/won_ct_world.h`'s `World` is laid out as the block followed by the
+  world's reference count (static_asserted), and `InitWorld` registers `sW`: the six drivers over it (ctobj,
+  dialogobj, tabobj, btnobj, comboobj, rootobj) read and write the very memory the Rust reads. The members took their
+  original types there (`mTimerFlags` and `mInvalidState` `signed char`, `mFocusId` `unsigned char`; they were `int`).
+- **A resolver** (`ee_won_comp_members_resolver(f)`) for a world whose components live in a `std::map` (barobj,
+  scrollerobj, layoutobj) or are stand-in objects (skinlay's `Comp`): `f` fills one block from the world's state at
+  each read. That is exact for these objects because they only read members (their writes are `SetPos` and the like,
+  host ops), and the accessor copies the block at once.
+- **The compobj driver's** stand-in `Component` already had the real layout (its RefCount is two ints); it asserts the
+  offsets now, and its world's member cases are gone with the game's.
+- **Both are per thread** (thread-locals: cargo runs tests on several threads). The Rust tests use the same two
+  (`compmem::zeroed_world` for the unit tests with fake ids, `filled_world` for the map worlds, an id table in the
+  ct replay and compobj's world); the guards unregister on drop, so a later test on the thread cannot read a freed
+  table. Unit tests that used a dangling or small fake component pointer crashed (0xC0000005) until they had a world.
+- **Goldens unchanged.** The pure reads were never traced (the worlds answered them before the trace), so every
+  golden replays as it was. The member *writes* the ct cluster makes (`CtSetParent`, `CtSetFocusId`,
+  `CtSetInvalidState`, `CtSetTimerFlags`, `ChildSetFlags`) are traced "op" lines: moving them changed the trace at
+  once (`golden "op 407 ..." , rust "op 158 ..."`), so they stay host ops this round.
+
+### The window's font cache (ee_won fontmap.rs)
+
+- `Window::GetFont`'s `std::map<FontDescriptor, SmartPtr<Font>>` is `EeWonFontMap`: a sorted vector keyed as
+  `FontDescriptor::operator<` (Font.cpp) orders: the size, then the style, then the face by `StringCompareNoCase`
+  (strcase.rs). The original inserted `(descriptor, NULL)` first and filled a NULL entry from `PlatformGetFont`: a
+  NULL platform font is asked again at the next lookup; the port keeps that.
+- The map holds one reference per font (the C++ adds it when it stores one). `Window::FontMap`'s destructor, at the
+  old member's place, releases them in key order (the `std::map`'s destruction order was its tree's: only the order
+  the fonts are freed in differs).
+- **The golden** (`won_fontmap_test`, no units): GetFont's original statements over the copied operator< against the
+  port, 20,000 sequences of up to 60 lookups (faces in mixed case, styles, sizes, the platform answering NULL one time
+  in five): the font returned, the platform's call count and every font's reference count after each lookup, the set
+  of fonts each map releases at the end. 649,849 checks, identical.
+
+### Mutations
+
+`build/gb2/mutate.py` (the file's bytes restored after each), each against cargo's tests of its module, some also
+rebuilt into their driver:
+
+| # | Module | Mutation | cargo | driver |
+|---|---|---|---|---|
+| 0 | compmem | `Left()` answering the top | caught | won_ctobj_test: 18,752 failures |
+| 1 | compmem | `Contains` taking the right edge in | caught | - |
+| 2 | compmem | `IsVisible` inverted | caught | won_skinlay_test: 102,963 failures |
+| 3 | compmem | `SetWH` swapping width and height | caught | won_compobj_test: 570,251 failures |
+| 4 | compmem | the timer flags written with bit 4 set | caught | - |
+| 5 | ctobj | the flags read without the disabled bit | caught | won_ctobj_test: 4,489 failures |
+| 6 | tabobj | its `Top` answering the left | caught | - |
+| 7 | fontmap | the key without the style | caught | won_fontmap_test: 484,392 failures |
+| 8 | fontmap | the face compared with case | caught | won_fontmap_test: 313,567 failures |
+| 9 | fontmap | the fonts released from the end | caught | missed (by design: the driver compares the released set) |
+
+All ten were caught by cargo. Mutation 9 changes only the release order, which the driver does not compare (the
+`std::map`'s order is its tree's, not the port's key order); the unit test `the_entries_are_in_the_descriptors_order`
+catches it.
+
+### The measure: why 1,500 lines were not there
+
+- **The member block frees few lines by its nature.** The ~300 WON sites that read the members are the lobby's own
+  C++ classes reading their own members, and they still do (the block *is* their members). What goes is the host
+  cases through which a Rust object read a member: 39 lines in the five hosts.
+- **The rest of the owned units** (2,460 lines) are hosts of calls that are not member reads: the virtuals the lobby
+  overrides, C++ objects (fonts, images, events, GUIStrings, SmartPtrs) and Component methods on another component.
+- **The next big piece** is that last kind: ~230 case lines (GuiHost.cpp, the lobby hosts, ComponentLifetime.cpp,
+  Button.cpp, WONButton.cpp ...) call a Component method (`SetPos`, `SetSize`, `SetVisible`, `SetEnabled`,
+  `Invalidate`, `RequestFocus`, `FireEvent` ...) that is compobj's Rust already. A Rust object could call compobj
+  itself, given one registered component host. Every module's golden traces those ops and would be regenerated, its
+  world answering compobj's host calls instead.
+- **Not done:** the MS constructors as msbtnobj init kinds (~15 lines) and SkinnedContainers' two paints into
+  skinlay.rs (their logic is guidraw.rs already; what is left reads C++ frames and images). Both were left for the
+  verification of the member block.
+
+### Commits, gates
+
+| Commit | What | WON C++ (git numstat) |
+|---|---|---|
+| 39d6144d | Component's members as a Rust block (`compmem.rs`); compobj, ctobj, the dialog, root, tab bar, button, combo box, scrollbar and layout objects read it; the worlds serve real blocks | +16 -37 (-21) |
+| c64b8a63 | the skins' layouts read their parts' bounds and visibility from the block | +1 -7 (-6) |
+| 22ca533e | the window's font cache in Rust (`fontmap.rs`), driver `won_fontmap_test` | +18 -8 (+10) |
+| 0b2f1eb7 | compmem: the filled world's function type named (clippy `type_complexity`, the gate's first run) | 0 |
+
+- **Builds per batch.** The member block (one commit) was built and gated alone: `build.py --sim` 0/0, the oracle
+  on seeds 2-3 identical, the ten drivers over the changed worlds identical. The skin layouts and the font cache were
+  built together (0/0, oracle 2-3 identical, won_skinlay_test and won_fontmap_test identical).
+- **The merge of rust.** `origin/rust` had not moved since round 1 (1c108108): nothing to merge. strip_markers found
+  nothing.
+- **On the final tree:**
+  - `build.py --sim` 0/0 (EE-AOC 833 inputs, EE-SIM 834) and the test-profile build 0/0.
+  - The oracle identical on seeds 2-7.
+  - The Rust gate PASS (4,005 tests; its first run failed on clippy's `type_complexity` in compmem's test code, fixed
+    in 0b2f1eb7).
+  - `xbuild.py wontest`: exit 0, 134 programs (the new won_fontmap_test among them; won_cachemap_test within its
+    timeout this time).
+  - `lan_game.py` RESULT PASS (PT host 2757, joiner 2756). Round 1's test-profile exe (built from e1ed5f93 in a
+    worktree under build/), the same hour: PASS at 2700 / 2699.
+- **The capture comparison** (`build/gb1/capcmp.py`, round 1's exe against this round's):
+  - The LAN screens, the LAN list, the lobby's first screens, the create dialog and the host's staging screen are
+    identical (0 pixels).
+  - The ready staging screen and the joiner's staging screen differ by 15 pixels: one 1 x 15 column, a text caret.
+  - The in-game frames differ everywhere, as two games' views do.
+- **Behaviour changes:** none in the game's terms. The window's fonts are released in key order at its destruction
+  (the `std::map`'s was its tree's).
+- **What only the lobby reaches.** Every lobby control's bounds, flags and parent are read through the block now
+  (containers, dialogs, the root, tab bars, buttons, combo boxes, scrollbars, layouts, the skins' layouts), and every
+  lobby font goes through the Rust cache. EE-SIM and the oracle never make a lobby; the LAN game and its captures are
+  what exercise them.
+- **What is left** (`docs/progress/r6-won-gui-b.md`): Component's methods called directly from Rust (~230 host case
+  lines, every module's golden regenerated), the ct cluster's member writes (their goldens need a world-state line),
+  the traced member reads (multiobj, splitobj, the skin buttons, wmobj, winobj, dlglogic, lobbyctl), the MS
+  constructors as init kinds and SkinnedContainers' paints.

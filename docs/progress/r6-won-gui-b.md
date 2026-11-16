@@ -9,30 +9,44 @@ GUIString data and the class code in `include/ee/wonapi/WONLobbyGUI.h` that belo
 (`r6-won-the-rest.md`) owns the configs and resource readers, the platform layer (Plat*) and the images, filters and
 decoders.
 
-**Round 1 (branch `rust-wonguib1`, from WONLobby round 11's head 6d0c36ca).** The measure first (`build/gb1/measure.py`:
-each owned unit's lines by kind): the widget core was already Rust objects (Container round 26, Window round 32,
-WindowManager rounds 33-34, Component round 38); what was left was 3,260 lines in the owned units, of which 907 host
-cases (each a C++ member, virtual or object the Rust reaches), ~500 one-line forwarders, ~400 includes and comments,
-and the logic of three classes that had not moved (Graphics, GUIStringData's buffer, the colour scheme's defaults).
-Moved: GUIStringData's buffer whole (`guistrobj.rs`; four units and the slice adapters deleted), Graphics whole
-(`gfxobj.rs`: translation, colour, scheme references, the clip stack, the base hooks), InitColorScheme's table
-(`wmobj.rs`); folded: WindowManager's and Window's forwarders and empty platform defaults, RunDialog, ScreenContainer,
-ComponentListenerComp, the events' Deliver methods and WONRectangle into their class declarations (eight units gone),
-GuiHost.cpp's repeated cases into its fallbacks, the six MS control units into MSControlConstructors.cpp. Drivers:
-`won_guistrobj_test` (20,000 sequences, 2,453,300 checks), `won_gfxobj_test` (20,000 sequences, 800,000 checks, and
-InitColorScheme's statements), both identical on their first good run, their goldens replayed by cargo; mutations in
-PORT_LEARNINGS. WON C++ (wc -l, src/Empire Earth/WONAPI + include/ee/wonapi) 47,862 -> 46,772 (-1,090: -438 in the two
-moves' commits, -652 in the folds', InitColorScheme's table among them); `lan_game.py` RESULT PASS, the lobby captures identical but for the mouse pointer and
-the text carets (PORT_LEARNINGS "R6 WONGUI B round 1").
+**Round 1 (branch `rust-wonguib1`).** GUIStringData's buffer (`guistrobj.rs`) and Graphics (`gfxobj.rs`) whole in
+Rust, InitColorScheme's table (`wmobj.rs`), the widget core's forwarders, empty defaults and small classes folded into
+their declarations (eight units gone), the six MS control units into one. WON C++ 47,862 -> 46,772 (-1,090).
 
-**What is left, and why 1,500 lines a round is not there without a change of method.** The owned units are now
-mostly hosts: each case reads or writes a C++ member, calls a virtual the lobby's subclasses override, or touches a
-C++ object (fonts, images, events, GUIStrings, SmartPtrs). They go only when those members become Rust: Component's
-members (bounds, flags, ids, parent: ~100 WON sites read them inline) into the Rust component, which would let every
-module's host drop its member reads (Container.cpp's CtBits, CtParentOf, Child*; WindowManager.cpp's WmComp;
-SkinnedContainers' SkinLay reads; GuiHost's Child* cases). The drivers' worlds model components as ids with their
-members served by the host (`tests/won/won_ct_world.h`), so that change needs the worlds to hold real memory first.
-Next, in order: Component's members as a Rust block (the GUIStringData method: the C++ keeps the layout, the Rust
-edits it in place; the worlds first), then the hosts' member cases fall; the window's font map (`Window::GetFont`);
-the MS controls' constructors as msbtnobj init kinds (the lead's "table"); SkinnedContainers' two paints into
-skinlay.rs.
+**Round 2 (branch `rust-wonguib2`, from round 1's head e1ed5f93).**
+- **Component's members as a Rust block** (`compmem.rs`, `EeWonCompMembers`): the C++ keeps `mParent` ..
+  `mExtraStuff` by name, laid out as the block at `EE_WON_COMP_MEMBERS_AT` (16; ComponentLifetime.cpp asserts every
+  offset); the original's unused `mChildListItr` is gone. compobj reads and writes them in place; ctobj, dialogobj,
+  rootobj, tabobj, btnobj, comboobj, barobj, layoutobj and skinlay read them. Host cases gone: ComponentLifetime.cpp
+  12, Container.cpp 12, Button.cpp 4, ChildLayouts.cpp 5, SkinnedContainers.cpp 6.
+- **The drivers' worlds serve real blocks**: `tests/won/won_ct_world.h`'s components are the blocks (an id table,
+  `ee_won_comp_members_table`); the map worlds (barobj, scrollerobj, layoutobj, skinlay) fill a block from their state
+  at each read (`ee_won_comp_members_resolver`); the compobj driver's stand-in Component has the real layout. The Rust
+  tests do the same (`compmem::zeroed_world`, `filled_world`).
+- **The window's font cache** (`fontmap.rs`): Window::GetFont's map; driver `won_fontmap_test`.
+- WON C++ (wc -l, as round 1): 46,767 at round 1's head -> 46,750 (-17 net: the member block -27, the font cache
+  +10). The round is far below its 1,500-line target, for the reason below.
+
+**Why the member block frees so few lines.** The ~300 WON sites that read the members inline are the lobby's own C++
+classes; they keep reading the same memory (the block is their members), so they do not change. What the block
+removes is the host cases through which a *Rust* object read a member, and those were few: 39 lines across the five
+hosts above. The rest of the owned units' 2,460 lines are hosts of calls that are not member reads: the virtuals the
+lobby's subclasses override, C++ objects (fonts, images, events, GUIStrings, SmartPtrs), and Component methods called
+on another component (`ChildSetPos`, `ChildSetVisible`, `ChildInvalidate`, ...).
+
+**What is left, in order of lines freed:**
+1. **Component's methods called directly from Rust** (~230 case lines across GuiHost.cpp, the lobby hosts,
+   ComponentLifetime.cpp, Button.cpp, WONButton.cpp, ...): compobj is Rust, so a Rust object could call
+   `Comp::set_pos` etc. itself, given one registered component host (`ee_won_guicpp_comp_call`). Every module's golden
+   traces those ops ("op ChildSetPos ...") and would be regenerated with its driver; the drivers' worlds would need the
+   comp host's calls (VPositionChanged, VSizeChanged, ...).
+2. **The member writes** the ct cluster still makes through the host (`CtSetParent`, `CtSetFocusId`,
+   `CtSetInvalidState`, `CtSetTimerFlags`, `ChildSetFlags`: 5 lines in Container.cpp): the goldens trace them; the
+   drivers' traces need a world-state line per call before they can go.
+3. **The traced member reads**: multiobj's and splitobj's Child* reads, the skin buttons' `SkinBtn` IsDisabled /
+   HasFocus / Parent / SetGrabBG / SetWantFocus (MSButtonBase.cpp, WONButton.cpp), the `Get Width/Height` field reads
+   (GuiHost.cpp, MSButtonBase.cpp, WONButton.cpp), wmobj's, winobj's, dlglogic's and lobbyctl's own member ops: their
+   goldens answer them from the trace, so each needs its golden regenerated with the world's members in it.
+4. Not done this round: the MS controls' constructors as msbtnobj init kinds (~15 lines: each constructor is two to
+   five setter calls, most already Rust fields) and SkinnedContainers' two paints into skinlay.rs (their logic is
+   already guidraw.rs; what is left is reading the frame and image slots, C++ objects).
