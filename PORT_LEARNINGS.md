@@ -24389,3 +24389,99 @@ files and the LAN game are what exercise them.
   would need a C++ interpreter nearly the size of the statements (25 typed slots, a dozen op kinds);
 - Image.cpp (object constructors and the raw images' layouts) and the decoders (JPG on libjpeg);
 - the hosts.
+
+## R6 WON round 40: the platform layer's drawing, images, fonts and window manager in Rust, ContainerConfig through the table reader (ee_won platgfx.rs, platimg.rs, platfont.rs, platwm.rs, cfgtab.rs; branch rust-r6-won40, 2026-11-15)
+
+The lobby's backend on the platform layer (WONLobbyPlatform.h) became Rust: the graphics context's hooks, the native
+images' pixel work, the fonts, the window manager. ContainerConfig's list and layout instructions became programs of
+round 39's table reader.
+
+WON C++ (`wc -l` of every .cpp, .h and .inl under `src/Empire Earth/WONAPI` and `include/ee/wonapi`): 55,324 at the
+branch's start (de9ba76a) -> 53,940 before the merge of rust (net -1,384). The address markers are not in this count's
+difference (the strip ran after the merge, as its own commit).
+
+### The platform layer
+
+- **PlatGraphics (platgfx.rs).** Every hook (pixels read and set, lines, framed and filled rectangles, the blend,
+  polygons and filled polygons, ellipses, arcs, the clip) on the Rust surface itself (`EeWonSurface`, round 37): the
+  C++ hands the surface (`SurfaceBase::GetRust()`, new), the scale and Graphics' colour to `ee_won_plat_gfx`. The
+  scaled line keeps the original's float steps (f32, the same operations in order); the polygon fill its doubles and
+  sort. A NaN-safe clamp: clippy's `manual_clamp` is allowed where the original's two tests are kept.
+- **PlatNativeImage (platimg.rs).** The draw (the source rectangle clipped to the image, the destination clip, GDI's
+  SRCAND/SRCPAINT mask rule), the scaled draw with its taps (bilinear, the mask's logical pixels, the nearest pixel
+  when every tap is masked), GetRaw, the raw images' native images (32-bit, 8-bit through the palette, 1-bit), the
+  texture pack's names, fit and 2x2 reduction with the original's mask, and the WON hand cursor's planes. The C++
+  keeps the objects (surfaces, masks, the new images, the decoder and file reads of the pack). One difference: an
+  image drawn onto its own surface reads a copy of its pixels (the original's overlapping memcpy was undefined; no
+  caller does it).
+- **PlatGUIFont (platfont.rs, a whole Rust object).** The descriptor's face, size and style, the platform font
+  (ee_plat_ui's `PlatFont`, called as Rust: ee_won now depends on ee_plat_ui), its metrics, the copy at a surface's
+  pixel scale (smoothed, the last kept), the widths and the draw within the surface's clip. The underline is drawn by
+  the shell with the context's Graphics (`DrawLineHook`), the Rust answering the line.
+- **PlatWindowManager (platwm.rs, a whole Rust object).** The surface's size and scale (from any thread: pending
+  until the next pass), the present rectangle, the frame with its serial and lock (held from LockFrame to
+  UnlockFrame across calls: a flag under a mutex with a condition), the wake count, the windows' z order, focus,
+  capture and drag, the pointer, the dirty flag, the caption font; the event translation, drawing order, hit test,
+  the focus rules when a window goes, and the compositor (each framed window's classic frame and caption, then the
+  offscreen images). The shell keeps the base class, the standard cursors, the platform event wait and a host of 23
+  ops (`EeWonPlatWmOp`: a window's fields as one `EeWonPlatWinInfo`, its events, Close, ClosePopup, SetPosSize,
+  OnPaint, the title, the offscreen surface, the platform's modifiers, client size, minimize, wake). PlatInputEvent
+  is read as `EeWonPlatEvent` (a static_assert on its size). No borrow is held across a host call: a window taking
+  the focus raises itself and moves the focus through the manager again, and the loops re-read the z order by index
+  as the original did. The 50 ms timeout is computed from the Rust clock (the same platform clock).
+- **PlatGUIWindow** keeps its methods (Window glue); its client rectangle is platwm.rs's, and `GetInfo` gives the
+  manager its fields.
+
+### ContainerConfig (cfgtab.rs)
+
+ADD, ADDLAYOUTPOINT, LAYOUTID, ENABLELAYOUT, RELAYOUT, the same-size, centre, space-evenly, clear-right and
+size-at-least layouts, ISOLATETABFOCUS and ONLYCHILDINPUT are programs; LAYOUT, LAYOUTCHAIN, LAYOUTREPEAT,
+NEWLAYOUTPOINT and NOOVERLAPLAYOUT call their C++ handlers through setters (their reads are stateful: the previous
+rule's reference and instructions, the layout keywords). The loops need no frame clear: a setter takes the component
+or int it uses (`c[--nc]`, `i[--ni]`), and the layout an instruction makes is the frame's (`lay`) until the
+container holds it, so a read that throws drops it as the original's SmartPtr did. One new read
+(`LayoutPoint`). ContainerConfigLayouts.cpp is deleted (NoOverlap moved to ContainerConfigInstructions.cpp);
+ChildLayoutInstructionBase::AddComponent is public (the reader adds to the layout it made).
+
+### The drivers
+
+| Driver | What | Result |
+|---|---|---|
+| won_platgfx_test | the hooks' statements (copied from de9ba76a) vs the forwarders, on copies of one real surface: 30,000 sequences of 40 hooks at scales 1..4 | 1,200,000 checks identical; golden 300 sequences replayed by cargo |
+| won_platimg_test | PlatNativeImage.cpp's statements vs the port's over one world: 60,000 draws, 20,000 raw copies, 30,000 native images, 20,000 pack copies (2,998 made a new image), the hand cursor | 130,001 checks identical; golden replayed by cargo (inputs by seed) |
+| won_platfont_test | PlatGUIFont.cpp's statements vs the shell, on ee_plat_ui's test face: 6,000 fonts x 12 calls (metrics, widths, draws at scales, underlines) | 72,000 calls identical |
+| won_platwm_test | PlatWindowManager.cpp's statements (and the class, GetClientRect) vs the shell and host, over a world of windows behaving as PlatGUIWindow's methods and the window system: 2,000 worlds x 60 operations | 434,952 trace lines identical (every call on a window, its events, the platform calls, focus, capture, every window, the frame's hash) |
+| won_cfgtab_test | as round 39, with ContainerConfig a config and the base of the container configs | 109,250 checks over the shipped resource files (the reader held 34,191 keys) + 359,250 random, identical; golden 37,869 runs replayed |
+
+The first platwm run crashed in the driver's world (the manager pointer cleared before the destructor's window
+closes) and showed a timing-only difference (the event loop's sleep length, from two clocks): the sleep is not
+traced. The ambiguity of the world's window-system stand-ins with the real ones came from argument-dependent lookup
+on `PlatWindow*` and `PlatInputEvent*`: the driver renames them with macros.
+
+### Mutations
+
+`build/r40/mutate.py`: 20 mutations of the four modules against cargo; 16 caught at once (the goldens, the unit
+tests); the four missed (the underline's mod at descent 3, the scaled font's smoothing, Escape's control character,
+the double click's parity) got unit tests and are caught now. Four were also rebuilt into the drivers (checking each rebuild): the polygon fill's
+rounding (won_platgfx_test 68,610 mismatches), the mask's OR (won_platimg_test 44), the underline at descent 3
+(won_platfont_test 343 fonts) and Escape's character (won_platwm_test 53 worlds).
+
+### What only the lobby reaches
+
+Every lobby pixel goes through these: the graphics hooks, the image draws (scaled ones at the game's pixel scale),
+the fonts, the compositor and the event translation. EE-SIM never runs the lobby; the drivers and the LAN game are
+what exercise them. The LAN game's lobby captures before (round 39's
+test-profile exe) and after (this branch) were compared by pixel: the LAN screen, the list, the joiner's and the
+ready host's staging screens are identical; the create dialog and the host's staging screen differ in one 1 x 15
+column (the input box's caret, blinking); the lobby's first screen in 596 pixels (the pointer drawn at another
+place). The lobby window was 1226 x 768 for a 1024 x 768 surface, so the scaled draws, fonts and compositor were the
+ones drawn. By eye the same.
+
+### What is left of WONGUI
+
+- PlatGUIWindow's glue (Create, the show/focus/close calls on Window), the cursors (PlatCursor), Image.cpp and the
+  decoders (JPG on libjpeg);
+- the configs with stateful reads: ContainerConfig's LAYOUT family and NOOVERLAPLAYOUT, NEWLAYOUTPOINT,
+  StretchImageConfig's exports (sprintf'd names, child configs), ImageFilterConfig's filters, the GetNamedValue /
+  GetPredefinedComponent handlers;
+- the WON skin's compositions; the hosts.
