@@ -25032,3 +25032,97 @@ host's operations (one per call kind) take back about half of what moved.
   (move: no mobile unit left) and one with `--seed 2` (gather: the scouted resource not picked from the view). The
   seeded failure is the fixture's picker under load: the same seed passed on this build the next run and on `rust`'s
   own test exe (built in a scratch worktree for the check); the 120 s variant was not repeated on `rust`.
+
+## The player lane, round 1: the statistics and the events whole in Rust; the economy, the improvements and EEPlayer's other members in Rust over one host (ee_units player_stats.rs, player_events.rs, player.rs; branch rust-player1, 2026-11-15)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| eb9ddc82 | TEST ONLY: the PLST and PLEC captures (the decisions wrapped as lambdas over their unchanged bodies) | +643 -408, net +235 |
+| 83b74e5b | TEST ONLY: their golden lines (seeds 2-3, oracle, late, space, calamity) | 0 |
+| e3dac741 | the statistics whole in Rust (player_stats.rs) | +78 -249, net -171 (33 marker lines more) |
+| 2e7a4f1d | TEST ONLY: PLST without the series 0x14/0x15 (wall clock) | +4 -2 |
+| 4f5cbf3c | the events whole in Rust (player_events.rs); EEPPlayerEvent.cpp/.h gone | +113 -594, net -481 (36 marker lines more) |
+| 4dd41572 | TEST ONLY: PLST records the resources 2..6 (0/1 never set) | 0 |
+| 49e91c7d | the economy, the improvements, the queue and the other members in Rust (player.rs) | +160 -585, net -425 |
+| 09fd6a19 | TEST ONLY: the PLST golden recorded again from the unmodified C++ with both fixes | 0 |
+| ecd800fe | LoadUnit/SaveUnit in Rust (player_save.rs) | +52 -83, net -31 |
+| 7164fc8a, 76d72051 | the markers stripped before the merge, reverted (the lead's corrected order) | 0 |
+| 14f9b668 | (merge) `rust` 03ab5fe8 | |
+| 23f1d5ea | the markers stripped on the merged tree (9 files: this lane's and game messages round 6's) | markers only |
+
+The round's C++ (marker lines not counted): the moves net -1,108; with the TEST ONLY capture (+237, of which about
+170 lines stay: the capture block and the decisions' one-line scopes) net -871. Short of the 1,500 aim: see the census.
+
+**The census** (EEPlayer.cpp 4,512 lines, 204 functions; EEPPlayerEventList.cpp 394, EEPlayerStatistics.cpp 358,
+EEPPlayerEvent.cpp 202). Already Rust before the round: the saved numbers (`EeUnitsPlayerSaved`) with `Load`/`Save`,
+`UpdatePlayer`, `RTSPlayer`'s record, the towns' save. Of the rest, by what the bodies are:
+- *decisions over plain data* (the moves): the statistics' series (every reader is an accessor: GetValue,
+  GetLastValue, CountIncreases, GetSeries' copy for the post-game summary and EEWorld's scores); the event list (only
+  `EEAPlayerEvent` read an event: its source); the economy (CanProduce, the CanAfford family, Pay, the refunds) and
+  the improvements (the queue `mQueuedImprovements` was read only by EEPlayer and its two portrait inlines); the
+  plain members after the saved record (read by name everywhere: the classic AI reads mNumHeroes, mHeroLimit,
+  mMiningLimit, mTributeFee, mPopulationLimitBonus, mBB44, ...).
+- *world calls with a test or two* (left): the unit bookkeeping (AddUnit, UnitPlaced, UnitTaken, UnitCompleted, the
+  recounts: one world read per condition), the towns and herds, the selection (the groups are C++ objects), the
+  sight sharing and SetDiplomaticStance, the wonder powers (`mWonderPowers` is iterated by EEWorld.cpp), the class
+  media, RepairPointers.
+- *what pinned them*: the oracle (checksums every tick: the resources, the population), TCST (every node GetCost
+  with its arguments and result, in order: the economy's call order), USCK (the store's diplomacy table). Nothing
+  pinned the statistics, the events or the decisions' results directly: PLST and PLEC were recorded first.
+
+**The captures** (TEST ONLY, EEPlayer.cpp): PLST, each player's state at every `UpdatePlayer` (FNV-1a 64 digests of
+the statistics, the events with the current one's index, the queue, the plain members; the resources and counts);
+PLEC, each economy or improvement decision that is the outermost on the thread that runs `UpdatePlayer` (its kind,
+arguments, result, the reason's length, the resources and population after). The decisions were wrapped as lambdas
+(`theScope.Record(this, kind, [&]{ original body }(), {args})`), so the original bodies ran unchanged inside.
+Two things made the first PLST golden unusable, found when the first move did not match it:
+- `EEPhysics::ReportStatistics` sets the local player's series 0x14 and 0x15 by the wall clock (`TMGetTime`, a
+  `srand(TMGetTime())` period): their points' times differ between runs. PLST leaves those two series out.
+- `mResourceCaps[0]` and `[1]` are never written (Reset sets 2..6): they hold whatever memory the player was made in.
+  PLST records 2..6. **For the lead:** `EEPlayer::GetChecksum` sums all seven, so the sync checksum carries those two
+  garbage words (the oracle does not compare that sum; a LAN game compares checksums between two machines). Not
+  changed here (it is the original's).
+The golden was then recorded again from the unmodified C++ (83b74e5b, the captures' commit, with both fixes, built in
+a worktree under build/) at seeds 2-3 of the oracle, late, space and calamity profiles. A one-seed comparison of every
+PLST record (the digests and the plain words side by side) found the two causes: every digest equal, only the two
+words different.
+
+- **The statistics** (player_stats.rs): `EEPlayerStatistics` keeps its name and end time (EEWorld writes mEndTime)
+  and holds `mStats`; the class's copy constructor and `operator=` copy the Rust object (EEStatisticsRecord's vector
+  copies records). `Set`'s gate is the C++'s (a shutdown, a saved game loading, the editor outside the game screen,
+  read in the original's order) and passes the game time. `GetSeries` builds the value type from the Rust points
+  (`EEStatisticsPoint` is the layout of `EeUnitsStatPoint`). A count past 31 in a save reads into a scratch series (the
+  original wrote past its array, into `mEndTime`).
+- **The events** (player_events.rs): `EEPPlayerEvent` is gone; the list holds `mList`, its five alert sounds (now an
+  array: the same load and unload order) and the playing one. `mCurrent` was a pointer the original compared with a
+  deleted event's address (`AddPlayerEvent` drops the expired old event, then compares): a serial number compares the
+  same way. The world's parts are one host: the attack event's sight at its location and the local view of it
+  (`AddSharedSightAt`, the mini-map cell, the terrain tile), the local player, the playing sound, the alert, the
+  ping, the chat text. `EEAPlayerEvent` (Actions) asks `GetNextEventSource`.
+- **The economy and the improvements** (player.rs): `EEPlayer` derives from `EeUnitsPlayerFields` too (the 33 plain
+  members after the saved record, by name, and `mQueued`), so no reader changed. The decisions are the C++ bodies in
+  their order over `EEPlayerHost` (24 operations). The virtuals the computer player overrides are host calls, so its
+  `ScaleCost` (the cheats' modifier), `TakeResource`, `AddResource` (the game log), `CanAfford`, the population
+  virtuals and `PayImprovement` run as before; the node's `GetCost` is called in the original's count and order (TCST
+  equal). The float expressions are the original's (`(float)cost * scale + 0.0001f`, then `cvttss2si`), `Pay`'s
+  without the epsilon. `CanProduce`'s producer loop never runs (its condition is `!allowed` right after `allowed =
+  count > 0`): kept as written. The tick walks the Rust queue by key (the next key after each host call, so
+  `ApplyImprovement` and the virtual `AdvanceImprovement` may use the queue); the save's queue operations are
+  answered in Rust (`FSLoadVector`/`FSSaveVector`'s words); `RepairPointers`' requeue is Rust.
+- **LoadUnit/SaveUnit** (player_save.rs): the original's two load bodies by era were one sequence (the earlier era's
+  `Load(0, ...)` is its major), now Rust over the save's primitives and five unit operations.
+
+- **Coverage.** Every random-map game runs the statistics (the scores' series, the explored tiles, the tributes), the
+  events (attacks, garrisons, flares: the AI attacks), the economy (every AI build and research asks CanProduce and
+  pays), the improvements (the AI's and the tick's), PLST and PLEC at every tick and call. The saveload matrix runs
+  the statistics', events', queue's and units' Load/Save. Tour only: the events' sound, ping and chat text (the local
+  player's), the portrait's improvement progress, the reason texts (the command buttons' tooltips).
+- **Behaviour:** none (the oracle identical; PLST, PLEC and every other capture tag equal to their goldens; the matrix
+  equal to its expect file). Defined where the original was not (none reached by the games): a node, class or
+  upgrade missing where the original dereferenced it answers "cannot"; the portrait's improvement of an empty queue
+  is 0x10; the last value of a statistics series without points is 0; a save's coordinates and counts read from a
+  short file start at 0 (the original's were uninitialised).
+- **Gates.** Per piece: build `--sim` 0/0 and oracle seeds 2-3 identical to `ref` after each of the statistics, the events, the economy and LoadUnit; the economy's commit (which holds the two before it) at seeds 2-3: PLST and PLEC equal to the re-recorded golden in the oracle, late, space and calamity profiles (every other tag PASS); the Rust tests and clippy per piece. On the result merged with rust (03ab5fe8) and stripped: build `--sim` 0/0 (869/870 inputs); the test profile links 0/0; oracle seeds 2-7 identical to `ref`; captures at seeds 2-3: oracle 183, late 184, space 185, calamity 201, scenario 27, units 195 digests PASS; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) `saveload expect: PASS` with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust gate PASS (3,934 tests, clippy, rustfmt, headers); sim_bench seed 2 classic and Lua (`--ai-scripts ai`) games rc 0, time-cap; under the harness lock (the test-profile exe) `RESULT PASS tour` and `RESULT PASS lan-game` (one lock for both sessions).
+- **For the next round.** The unit bookkeeping's counts over one unit-info host (PLST pins every count: population,
+  end-of-game, vital buildings, capitols, heroes, teleporters); `SetDiplomaticStance`'s decisions; the wonder powers
+  once EEWorld.cpp reads `mWonderPowers` through an accessor; the class media's eleven forwarders.
