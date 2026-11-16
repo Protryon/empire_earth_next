@@ -164,6 +164,11 @@ public:
     EeGfxEffectRecord* mRecord = ee_gfx_effect_record_new(0);
     EEUnit* mUnit;                          // +0x08 (referenced; RTSUnit::Dereference in the dtor; saved as its id)
     EEGraphicEffect* mGraphicEffect;        // +0x0c (referenced; Load/Unload)
+    // New (port): set while the effect's unit pointers hold Load's saved unit ids (mUnit, the marching line's ends),
+    // cleared by RepairPointers. A load that fails before the repair (a corrupt save, a scenario this build cannot
+    // read) tears its effects down with the ids in place: the destructors and ReleaseResources then drop the ids
+    // instead of dereferencing them (the original's destructor dereferenced the id and faulted)
+    bool mUnitIsSavedID = false;
     // (+0x10 / +0x14: the manager's list links, now its Rust store's: ee_gfx effect_store.rs)
     int32_t& mKind = mRecord->kind;         // +0x18 (ctor argument; the fire functor tests 0x3e = EEEDamagedEffect)
     EEEffectHandle& mHandle = *reinterpret_cast<EEEffectHandle*>(&mRecord->handle);   // +0x1c (= kNoEffectHandle)

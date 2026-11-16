@@ -1208,9 +1208,11 @@ EEE3DRust::~EEE3DRust()
     }
     if (this->mTarget != NULL && this->mTarget != (EEUnit*)-1)
         this->mTarget->Dereference();
-    if (this->mFromUnit)   // the marching line's units (not referenced by a repair: as the original)
+    // the marching line's units (not referenced by a repair: as the original); still saved ids after a load that
+    // failed before the repair (mUnitIsSavedID): no units
+    if (this->mFromUnit && !this->mUnitIsSavedID)
         this->mFromUnit->Dereference();
-    if (this->mToUnit)
+    if (this->mToUnit && !this->mUnitIsSavedID)
         this->mToUnit->Dereference();
     if (this->mVolcanoModel)   // the original dereferenced it without a test
         this->mVolcanoModel->Dereference();
@@ -1346,6 +1348,9 @@ long EEE3DRust::RepairPointers()
             this->mFromUnit = static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(this->mFromUnit)));
         if (USavedID(this->mToUnit) > 0)
             this->mToUnit = static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(this->mToUnit)));
+    } else if (this->mKind == 0x2d) {   // port: a failed repair drops the effect; its ends are ids, not units
+        this->mFromUnit = NULL;
+        this->mToUnit = NULL;
     }
     return theResult != 0 ? theResult : this->Call(EeGfxEffect3DOp::Repair);
 }

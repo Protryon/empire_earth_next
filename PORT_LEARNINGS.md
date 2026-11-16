@@ -26006,3 +26006,41 @@ read by many lanes, so a move keeps them and takes the bodies over a view); `Fil
   and play again, the profile's six among them. "The return" holds one attack group, whose polymorphic sub groups
   are not stepped over: it still fails. The eight Learning Campaign scenarios failed before the merge as well
   (EE-SIM exits 2).
+
+## Campaign scenarios: the Learning Campaign, the attack groups, a failed load's teardown (2026-11-16)
+
+- **The regression.** After the merge of main the legacy harness's scenario step (`game_session.py --exercise
+  ai-game --campaign learning`, "The Basics") faulted at the scenario intro's Start in EEEffect::~EEEffect. Two
+  causes, one after the other.
+- **The load.** The Learning Campaign's scenarios are save versions 0.231 (The Basics, Advancement and Improvement,
+  Food Gathering and Economy, Specialized Buildings, Heroes and Combat Skills), 0.248 (Combat and Defense, Priests
+  and Prophets) and 0.249 (Building Up); the Art of Conquest ones are all 0.250. Stage 5 kept only the original's
+  last computer player block (from 0.232) and refused the rest, so the five 0.231 files failed. The original's
+  0.229-0.231 block (its seventh) is the last one without the four fields LF14, LF1C, LF18, LF20, and the deleted
+  managers' Loads read the same at 0.229-0.250 (their version tests are at 0xd0, 0xd4, 0xdc, 0xde, 0xe3, 0xe4,
+  0xea, 0xed, 0xf0), so EEComputerPlayer::Load now takes 0.229 on and reads those four from 0.232. EECPLegacyLoad
+  also steps over the attack commander's groups (the group's task, its sub groups by kind: land and helicopter
+  with the land part, sea/air/submarine/spaceship/space fighter the base, the three transports the base and the
+  transport part; each sub group's units, path, area, locations, task and fields; the orders; id, continent,
+  finished) and the defence commander's aid packages: "The return" holds one attack group.
+- **How to find a block's layout.** The deleted classes are in git: `git show <pre-merge rust>:<file>` of every
+  manager's Load (here f4244b22b), and `diff` of two of EEComputerPlayer::Load's version blocks with the
+  indentation stripped (`sed 's/^ *//'`) shows exactly which fields a block lacks.
+- **The Learning Campaign never ran in EE-SIM.** `--scenario` goes through the multiplayer lobby's Play Scenario
+  screen, which refuses a single-player file with "This is not a valid multiplayer scenario file." (an EEUIFError
+  of form id -1: EE-SIM's wait for the lobby timed out, exit 2, before the merge as well). EE-SIM `--campaign
+  learning --scenario-index K` plays them through the campaign screens as the harness does (the Learn to Play
+  button's screen code is EE_SCREENS_PC_LEARNING on the single-player form, not EE_SCREENS_SP_LEARNING). A wait's
+  timeout now names the top form's class.
+- **The teardown.** The effects chunk loads before the players, and an effect's unit is a saved id until
+  RepairPointers, so any load that failed in a player went to EEGameState::Clear with effects whose ~EEEffect
+  dereferenced an id (the original's did too). EEEffect::mUnitIsSavedID (set by Load, cleared by RepairPointers)
+  makes the destructors and ReleaseResources drop the id; the marching line's two ends likewise, and a failed
+  marching line repair clears them. The failed load keeps the original's path ("Load game file is corrupt.", the
+  state cleared); its end is logged as "EE load failure: ...", which EE-SIM's wait for the game turns into a clean
+  error ("load failed: ...", exit 2).
+- **The check.** `tools/scenario_check.py` extracts every campaign scenario from the data tree, plays the 18 Art of
+  Conquest ones with --scenario and the eight Learning ones with --campaign (120 s each), and a corrupt copy of
+  the first Roman scenario (its players chunk cut to half and stored raw): the build before the fix faults in
+  ~EEEffect, the fixed one exits with "load failed: Load game file is corrupt.". "Building Up" has one computer:
+  EE-SIM's last-computer-standing rule ends it after 1.7 s, which counts as played.

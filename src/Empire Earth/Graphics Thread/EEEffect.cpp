@@ -184,10 +184,10 @@ EEEffect::~EEEffect()
         if (theList != NULL)
             theList->Remove(theEffect);
     }
-    if (this->mUnit != NULL) {
+    if (this->mUnit != NULL && !this->mUnitIsSavedID)   // (a failed load's effect: the id is no unit)
         this->mUnit->Dereference();
-        this->mUnit = NULL;
-    }
+    this->mUnit = NULL;
+    this->mUnitIsSavedID = false;
     ee_gfx_effect_record_free(this->mRecord);
     this->mRecord = NULL;
 }
@@ -325,10 +325,10 @@ void EEEffect::ReleaseResources()
         if (theList != NULL)
             theList->Remove(theEffect);
     }
-    if (this->mUnit != NULL) {
+    if (this->mUnit != NULL && !this->mUnitIsSavedID)
         this->mUnit->Dereference();
-        this->mUnit = NULL;
-    }
+    this->mUnit = NULL;
+    this->mUnitIsSavedID = false;
     this->mTileX = -1;
     this->mTileY = -1;
 }
@@ -413,6 +413,7 @@ void EEEffect::Reinit(bool inKeepsUnit)
 void EEEffect::Init()
 {
     this->mUnit = NULL;
+    this->mUnitIsSavedID = false;
     this->mGraphicEffect = NULL;
     ee_gfx_effect_init(this->mRecord);
 }
@@ -432,6 +433,7 @@ long EEEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
     }
     if (theLoaded.has_unit)
         this->mUnit = reinterpret_cast<EEUnit*>((uintptr_t)theLoaded.unit_id);
+    this->mUnitIsSavedID = true;   // (until RepairPointers: the subclasses' saved unit ids too)
     return theResult;
 }
 
@@ -612,6 +614,7 @@ void FlushEffectBatches()
 long EEEffect::RepairPointers()
 {
     long theResult = 0;
+    this->mUnitIsSavedID = false;
     if (USavedID(this->mUnit) == 0xffffffff)
         this->mUnit = NULL;
     else {
