@@ -301,3 +301,28 @@ fn cursors_minimize_close_and_mouse_events() {
     free(w);
     assert_eq!(world.log, ["wm Remove me"]);
 }
+
+#[test]
+fn focus_moves_and_exits_at_the_edges() {
+    let mut world = World { has_wm: true, open: true, style: 0x22, mouse_in: true, ..World::default() };
+    let w = win(&mut world);
+    create(w, [0, 0, 50, 40]);
+    // a popup takes the focus without being raised
+    world.popup = true;
+    world.log.clear();
+    run(w, EeWonPlatWinCall::SetFocus, 0, 0, 0, 0);
+    assert_eq!(world.log, ["wm SetFocus me"]);
+    // a move down only queues the move
+    world.popup = false;
+    world.log.clear();
+    run(w, EeWonPlatWinCall::SetPosSize, 0, 5, -1, -1);
+    assert_eq!(world.log, ["size 0,5,-1,-1", "wm SetDirty 0"]);
+    // over this window but outside its root: the exit, whatever the popup is
+    world.mouse = Some((500, 500));
+    world.hit = me_ptr();
+    world.popup_hit = true;
+    world.log.clear();
+    run(w, EeWonPlatWinCall::Timer, 2, 0, 0, 0);
+    assert_eq!(world.log, ["Window::TimerEvent 2", "exit"]);
+    free(w);
+}

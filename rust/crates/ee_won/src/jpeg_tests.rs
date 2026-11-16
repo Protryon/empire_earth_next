@@ -220,3 +220,99 @@ fn png_attributes_read_to_the_first_idat() {
     // not a PNG
     assert_eq!(crate::imgdec::png_attributes(&mut reader(b"GIF89a")), Err(Stop::Fail));
 }
+
+#[test]
+fn restarts_resync_as_libjpeg_does() {
+    // (the marker found, the restart expected) -> the marker left unread after the resync, the next expected
+    // restart: the expected one is read; one of the next two is left for later; a prior one or an invalid marker is
+    // skipped for the next marker; one too far away is taken as the expected one
+    for (found, rest, desired, left) in [
+        (0xd0, &[][..], 0, 0),
+        (0xd1, &[][..], 0, 0xd1),
+        (0xd2, &[][..], 0, 0xd2),
+        (0xd5, &[][..], 0, 0),
+        (0xd7, &[0xff, 0xd0][..], 0, 0),
+        (0xc4, &[][..], 3, 0xc4),
+        (0x02, &[0xff, 0xd9][..], 0, 0xd9),
+    ] {
+        let mut b = vec![0xff, found];
+        b.extend_from_slice(rest);
+        let mut input = SliceInput { data: &b, pos: 0 };
+        let mut d = Dec::new(&mut input);
+        d.start_of_file = false;
+        d.next_restart_num = desired;
+        d.restart().unwrap();
+        assert_eq!((d.unread_marker, d.next_restart_num), (left, (desired + 1) & 7), "marker {found:x}");
+    }
+}
+
+#[test]
+fn png_attributes_want_a_chunk_and_its_crc() {
+    // a chunk of 6 bytes with only 8 left: its CRC is not all there, so no attributes (no skip past the end)
+    let mut png = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13];
+    png.extend_from_slice(b"IHDR");
+    png.extend_from_slice(&[0, 0, 0, 9, 0, 0, 0, 9, 8, 6, 0, 0, 0, 1, 2, 3, 4]);
+    png.extend_from_slice(&[0, 0, 0, 6]);
+    png.extend_from_slice(b"zTXt");
+    png.extend_from_slice(&[1, 2, 3, 4, 5, 6, 7, 8]);
+    assert_eq!(crate::imgdec::png_attributes(&mut reader(&png)), Err(Stop::Fail));
+}
+
+/// A PNG of `w` x `h` RGBA (colour type 6) or RGB (2) pixels in stored zlib blocks.
+fn png_of(w: u32, h: u32, rgba: bool) -> Vec<u8> {
+    fn crc(b: &[u8]) -> u32 {
+        let mut c = !0u32;
+        for &v in b {
+            c ^= v as u32;
+            for _ in 0..8 {
+                c = if c & 1 != 0 { 0xedb8_8320 ^ (c >> 1) } else { c >> 1 };
+            }
+        }
+        !c
+    }
+    fn chunk(o: &mut Vec<u8>, kind: &[u8], d: &[u8]) {
+        o.extend_from_slice(&(d.len() as u32).to_be_bytes());
+        let mut c = kind.to_vec();
+        c.extend_from_slice(d);
+        o.extend_from_slice(&c);
+        o.extend_from_slice(&crc(&c).to_be_bytes());
+    }
+    let n = if rgba { 4 } else { 3 };
+    let mut raw = Vec::new();
+    for y in 0..h {
+        raw.push(0);
+        for x in 0..w * n {
+            raw.push((x * 31 + y * 7) as u8);
+        }
+    }
+    let (mut a, mut b) = (1u32, 0u32);
+    for &v in &raw {
+        a = (a + v as u32) % 65521;
+        b = (b + a) % 65521;
+    }
+    let mut z = vec![0x78, 0x01, 1];
+    z.extend_from_slice(&(raw.len() as u16).to_le_bytes());
+    z.extend_from_slice(&(!(raw.len() as u16)).to_le_bytes());
+    z.extend_from_slice(&raw);
+    z.extend_from_slice(&((b << 16) | a).to_be_bytes());
+    let mut o = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
+    let mut ihdr = Vec::new();
+    ihdr.extend_from_slice(&w.to_be_bytes());
+    ihdr.extend_from_slice(&h.to_be_bytes());
+    ihdr.extend_from_slice(&[8, if rgba { 6 } else { 2 }, 0, 0, 0]);
+    chunk(&mut o, b"IHDR", &ihdr);
+    chunk(&mut o, b"IDAT", &z);
+    chunk(&mut o, b"IEND", &[]);
+    o
+}
+
+#[test]
+fn png_decodes_argb_and_is_transparent_only_with_alpha() {
+    let (w, h, t, px) = crate::imgdec::png_decode(&mut reader(&png_of(3, 2, true))).unwrap();
+    assert_eq!((w, h, t, px.len()), (3, 2, true, 6));
+    // the first pixel's R, G, B, A are 0, 31, 62, 93: 0xAARRGGBB
+    assert_eq!(px[0], 0x5d00_1f3e);
+    let (_, _, t, px) = crate::imgdec::png_decode(&mut reader(&png_of(2, 2, false))).unwrap();
+    assert!(!t);
+    assert_eq!(px[0] >> 24, 0xff);
+}
