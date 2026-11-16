@@ -679,7 +679,7 @@ std::string CameraText()
     theCamera.GetLocation(theCamera.mFraction, theFocus);
     char theText[96];
     snprintf(theText, sizeof(theText), "camera %.2f,%.2f target %.2f,%.2f", theFocus.GetX(), theFocus.GetY(),
-             theCamera.mEndFocus.GetX(), theCamera.mEndFocus.GetY());
+             theCamera.GetEndFocus().GetX(), theCamera.GetEndFocus().GetY());
     return theText;
 }
 
@@ -945,7 +945,7 @@ bool CameraAt(long inX, long inY)
     theCamera.GetLocation(theCamera.mFraction, theFocus);
     float theX = (float)inX + 0.5f, theY = (float)inY + 0.5f;
     return fabsf(theFocus.GetX() - theX) < 0.05f && fabsf(theFocus.GetY() - theY) < 0.05f
-        && fabsf(theCamera.mEndFocus.GetX() - theX) < 0.05f && fabsf(theCamera.mEndFocus.GetY() - theY) < 0.05f;
+        && fabsf(theCamera.GetEndFocus().GetX() - theX) < 0.05f && fabsf(theCamera.GetEndFocus().GetY() - theY) < 0.05f;
 }
 
 // the camera centred on tile (inX, inY) (EEACenterCamera, as the mini map's click does), then the plan chosen from the
