@@ -25814,3 +25814,110 @@ bloated RUST_PLAN.md (the hashes stayed).
 read by many lanes, so a move keeps them and takes the bodies over a view); `FillCivilizationList` (a UI list: to
 `civ_whole.rs`); the builder host's remaining ops. Net C++ of the round is -683, short of the 1,500 aim: the hosts
 (21 + 12 ops) and the forwarders the callers keep cost back about half of what moved.
+
+## R6: the scenario editor screens, round 8: the terrain tab whole in Rust, the brush group's controls and square, the editor's first harness session (ee_screens editor_terrain.rs, editor_brush.rs; branch rust-editor8, 2026-11-15)
+
+### The measure first
+
+What the 35 units (11.9k lines; 10.7k without the address markers `tools/strip_markers.py` deletes) still hold, read
+unit by unit (stripped):
+
+- **Hosts** (the world calls of the screens already in Rust, one switch each): EESERBUnitTypes.cpp (the shared maker
+  and `_sepl`), EESEUnit.cpp (`_seun`, 320 lines of switch), EESETSEffect.cpp, EESETSObject.cpp, EESETSTrigger.cpp,
+  EESETriggerScreen.cpp, EESETSArea.cpp, EESEInstructions.cpp, EEUIFSEMap.cpp, EEUIFSEElevation.cpp,
+  EEUIFScenarioEditor.cpp, EESEEvents.cpp (`ee_screenscpp_se`), EEUIFSETRBPaintType.cpp (`_see`; plus the dialog
+  message's Load/Save, the parked scenario manager's). Their cases are statements; a decision in them is a cast.
+- **Include lists**: the units round 7 did not trim still carry 18 .. 153 include lines (about 1,600 in 22 units).
+- **Decisions left**: the terrain tab (its constructor's filtering and colour sets, Enter's preview rule, the
+  selection and the load thread's posts, the paint action's choice, the colour corners: moved), the brush group
+  (moved), the tech list box's `Fill` / `Rebuild` / `CopyData` (about 135 lines; `Rebuild` sorts with `std::sort`
+  over four name predicates: ties would change order under another sort, and the lines' "%ld: " texts need a new
+  text kind), the paint areas' mouse (EEUIFSEPaint, EEUIFSEPaintElevation: about 200 lines of tile and brush math
+  over world picks), the unit tab's small classes (EEUIFSEBRotation's step and angle table, the unit list's sorted
+  insert, the cargo list's), the trigger tab's combo boxes' right-click menus (EESESCComboBox, EESETSTrigger: about
+  90 lines each), EESETSUICBPlayer, EESEBSelect, EESEIAExport, the load thread (its dispatch; the handlers are world
+  calls).
+- **What a move frees**: the terrain tab's 289 lines of bodies became 17 lines of forwarders and a 200-line host:
+  -42 lines stripped. The brush group -44. The editor's remaining C++ is mostly what a host keeps; a whole class
+  costs about as much host as it frees.
+
+### The gate first (TEST ONLY, recorded on the unmodified classes: two runs identical, the 14,260 old lines unchanged)
+
+- `terrainstate`: the tab's terrains' and colour types' table ids in order (through five accessors the tab got for
+  the gate), the selected terrain, the type list's lines (name, preview or not, colour set) and selection, the colour
+  list's sets (size, first colour) and selection, the preview bitmap's texture and corner colours, the radios, the
+  five controls' display modes, the paint area's centring, the brush group's size, highlight and rectangle.
+- `terrainpick` / `terraincolor LINE` (a list line clicked: its event fires), `terrainpaint L T R B` (the paint
+  area's `CreatePaintAction`, posted over an area: the world digest shows the paint), `terrainmouse X Y|update`,
+  `brushhl X Y CENTRED` (`SetHighlight`), `techfill ID FIRST LAST` and `techstate` (the tech lists' ids, lines and
+  `CopyData`'s marks). The block runs at the end of the script, so no old step number moves. 14,260 -> 14,448.
+
+### The moves
+
+- **The terrain tab** (`editor_terrain.rs`): the in-editor colour types and terrains (the host sorts the terrains with
+  the original's `std::sort` over the localized names; Rust keeps the pointers, ids and colour types), each terrain's
+  colour set (the colour type's table compared by pointer, as the original), the radios, titles, lists, paint area
+  and bitmap in the original's order and indices (the mountains radio added first, the terrain radio after the paint
+  area), `Enter`'s preview rule, `Leave`, `SelectTerrain`'s load and unload posts, both lists' events, the corner
+  colours (0, (n - 2) / 3, n - third - 1, n - 1), `CreatePaintAction`'s choice (a colour type used as a list line,
+  id 0 past the list's end). The type list's event fires the colour list's while it runs, so every member takes
+  `&self` and the selected terrain is an atomic.
+- The lists' draws (`DrawPolygons`, `CopyData`, `DrawTextA`) and the three C++ event classes stay; the colour
+  list's event now holds the tab (the original found its bitmap by id).
+- **Hosts shared**: the terrain tab's Rust host routes an op to its range's host: the mouse (905) and the
+  highlight (906) are the elevation tab's, the highlight taking a mode (the terrain tab's map point, centred by the
+  bulldozer radio); a control by id is the map tab's (515); the radio check, display and delete the shared ops.
+- **The brush group** (`editor_brush.rs`): the title on the shared maker, the five `EEUIFSERBBrush` radios one under
+  the other (the tiny one added to groups 2 and 3 last, as the original), `SetHighlight`'s square (truncated toward
+  zero; centred: shifted half a tile, one tile larger to the top left). The group stays a C++ record: the paint
+  areas, tabs and form read its fields. The constructor sets the screen font for the maker and puts the old one back.
+- **The includes**: the 22 units round 7 left untrimmed lost 977 of 1,656 include lines (`build/ed7/trim2.py`, about
+  2,000 compiles, 6 hours).
+
+### Traps
+
+- `SeplYellow` is in EESERBUnitTypes.cpp's anonymous namespace: a declaration elsewhere links to nothing (the link's
+  only unresolved symbol). The terrain host has its own.
+- A list's `GetNumLines` is protected in `UIListBox<T>`: the gate reads `GetLineCount`.
+- The editor form has no form id: the fixture prints UIForm's -1 as 4294967295 (Windows) or 2^64 - 1 (LP64).
+
+### Mutations (build/ed8/mut.py; each built and run through the editor gate)
+
+| Mutation | Diff lines |
+|---|---|
+| terrain: the line's colour set not selected on a type change | 16 |
+| terrain: the third corner off by one past three colours | 20 |
+| terrain: the bulldozer leaves the paint area centred | 24 |
+| terrain: `Check` hides the controls on the terrain radio too | 20 |
+| terrain: `Enter` without the ambient-only rule (every line its preview) | **0** |
+| terrain: a colour type past the list paints id 1, not 0 | **0** |
+| brush: the centred square not one larger to the left | 18 |
+| brush: the radios not added to group 3 | 10 |
+
+The two 0-diff mutations: the gate prints only whether a line has a texture (an ambient-only terrain's button and
+its preview are both textures), and every paint the script makes has a colour selected. Both rules are in the Rust
+unit tests (`enter_sets_the_previews_and_loads_the_selection`, `paint_action_follows_the_radios_and_lists`).
+
+### Behaviour
+
+None intended. On undefined paths: an empty terrain list leaves the colour list's selection at line 0 (the original
+read the first terrain line of an empty vector); a type list selection past the terrains makes no paint action.
+
+### Only a person reaches
+
+The lists' draws (EE-SIM draws nothing), the paint areas' mouse (the press, drag and release over the view), the
+brush radios' clicks (the gate checks them), the terrain tab's frame. The editor's first frame and its destructor:
+the harness step below.
+
+### The editor harness step (TEST ONLY)
+
+`fixture_game.py --exercise editor`: the fixture's new `clickevent FORM CODE` clicks the control whose button-up
+event is a screen event (the main menu's Editors 0x901, the editors' Scenario Editor 0x902), the editor form's first
+frame is captured (and run through `check_rendering`), `screenevent FORM 0x242d` answers the exit question's "exit
+without saving", and the run waits for a menu with the game alive (the form's destructor ran). Not run this round: the session needs the test-profile build of the merged tree, which was still building at the hand-off. The lead should run it under the harness lock.
+
+### Gates
+
+Per move (the terrain tab, the brush group): `build.py --sim` 0/0 for EE-AOC and EE-SIM; the editor gate PASS 14,448 on the first run of each; oracle seeds 2-3 identical; the Rust gate PASS (3,879 tests; the terrain run first failed rustfmt, and the formatted code went into its commit). Merged with rust (03ab5fe8): a conflict in EEUIFSETerrain.cpp, marker lines only on rust's side, resolved to the branch's side; then the strip and the include trim. The final chain on the merged tree (build, editor and civ builder gates, oracle 2-7, Rust gate, test-profile build) was still running at the hand-off: its log is build/ed8/final.log.
+
+C++ lines with the markers aside: the gate +134 (TEST ONLY), the terrain tab -42, the brush group -44, the fixture's editor exercise +21 (TEST ONLY), the includes -977.
