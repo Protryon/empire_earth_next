@@ -679,8 +679,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // EESaveHasUnitsLuaState)
 // 281 the merge of main's stages 5 and 6: the computer players without the C++ managers' timers and intelligence files,
 // main's next engine state block (EESaveHasLuaOnlyComputers)
+// 282 the players' tech nodes that are not allowed (EESaveHasTechAllowed)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 281;
+const unsigned long kSaveGameMinorVersion = 282;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"

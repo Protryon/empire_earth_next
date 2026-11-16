@@ -204,6 +204,13 @@ inline bool EESaveHasLuaOnlyComputers(unsigned long inMajorVersion, unsigned lon
 {
     return inMajorVersion > 0 || inMinorVersion >= 281;
 }
+// port: from 0.282 a save holds each player's tech nodes that are not allowed (EETechTreeNode::mIsAllowed false: a
+// one-off technology queued or researched; EEPWorldHelper.cpp EESaveTechAllowed, after the graph searches): a load
+// allowed every node again, and a researched one-off technology could be researched a second time
+inline bool EESaveHasTechAllowed(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 282;
+}
 class FSFile;
 void EESaveActiveGroups(FSFile& outFile);
 long EELoadActiveGroups(FSFile& inFile);   // the groups back at the loaded game's first tick (EEAfterLoad)

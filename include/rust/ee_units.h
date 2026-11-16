@@ -2743,6 +2743,8 @@ constexpr static const int64_t EE_UNITS_WORLD_HAS_ACTIVE_GROUPS = 13;
 
 constexpr static const int64_t EE_UNITS_WORLD_HAS_GRAPH_SEARCHES = 14;
 
+constexpr static const int64_t EE_UNITS_WORLD_HAS_TECH_ALLOWED = 15;
+
 /// `gPathManager.LoadRunningState` / `SaveRunningState`
 constexpr static const int64_t EE_UNITS_WORLD_PART_PATH_RUNNING = 1;
 
@@ -2769,6 +2771,9 @@ constexpr static const int64_t EE_UNITS_WORLD_PART_ACTIVE_GROUPS = 8;
 
 /// `gPathManager.LoadGraphSearches` / `SaveGraphSearches`
 constexpr static const int64_t EE_UNITS_WORLD_PART_GRAPH_SEARCHES = 9;
+
+/// `EELoadTechAllowed` / `EESaveTechAllowed` (the players' tech nodes not allowed, from 0.282)
+constexpr static const int64_t EE_UNITS_WORLD_PART_TECH_ALLOWED = 10;
 
 /// The class's state (`mSlots`, `mMaxCargo`, `mUsedCargo`).
 struct EeUnitsAtc;
