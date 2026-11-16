@@ -232,9 +232,6 @@
 3c9d20 3ca5ce WONLobby/UpdateAccountCtrl.cpp
 3d24e0 3d2a20 WONGUI/PNGDecoder.cpp
 3d2a20 3d2fa0 WONGUI/JPGDecoder.cpp
-3d5e20 3d768d WONCrypt/Blowfish.cpp
-3d7b50 3d8e07 WONCrypt/ElGamal.cpp
-3d9350 3da50d WONCrypt/MD5Digest.cpp
 3db150 3dc3ef WONLobby/AccountLogic.cpp
 3dc3f0 3dd0f5 WONLobby/DialogLogic.cpp
 3dd100 3dfb83 WONLobby/InitLogic.cpp
