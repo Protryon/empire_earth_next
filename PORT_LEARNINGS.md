@@ -25909,3 +25909,113 @@ ones drawn. By eye the same.
   StretchImageConfig's exports (sprintf'd names, child configs), ImageFilterConfig's filters, the GetNamedValue /
   GetPredefinedComponent handlers;
 - the WON skin's compositions; the hosts.
+
+## R6 WON round 41: the image decoders, PlatGUIWindow, PlatCursor and the stateful configs in Rust (ee_won jpeg.rs, imgdec.rs, platwin.rs, platcursor.rs, cfgimg.rs; branch rust-r6-won41, 2026-11-15)
+
+The image decoders became Rust (the JPEG decode is libjpeg 6b's, written out), the lobby's window and cursors
+became whole Rust objects, and the configs whose reads depend on state (ContainerConfig's LAYOUT family,
+NOOVERLAPLAYOUT, NEWLAYOUTPOINT, StretchImageConfig's and ImageFilterConfig's instructions) became handlers of the
+table reader.
+
+WON C++ (`wc -l` of every .cpp, .h and .inl under `src/Empire Earth/WONAPI` and `include/ee/wonapi`): 45,401 at the branch's start (77ca42f2a, round 40 after its marker strip) -> 44,691 (net -710: the
+decoders -223, the LAYOUT family -159, the window and cursor -210, the image configs -118). The round's target was
+1,500; what is left of WONGUI below is mostly in files the other lane holds or small object work.
+
+### The image decoders (imgdec.rs, jpeg.rs)
+
+- **JPEG (jpeg.rs).** JPGDecoder decoded on the engine's libjpeg 6b; the port decodes as that library does with
+  JPGDecoder's settings, statement for statement where it decides a pixel: the marker reader (SOI, SOF0/1/2/9/10,
+  DHT, DQT, DRI, SOS, the JFIF APP0 and Adobe APP14 markers, the skipped segments, the restart markers and
+  `jpeg_resync_to_restart`), the colour space choice, the frame checks and block geometry, the Huffman tables
+  (`jpeg_make_d_derived_tbl`'s checks and lookahead), the sequential and progressive entropy decoders with the
+  25-bit bit buffer, the zero fill past a marker and the insufficient-data rule (an MCU after the data ran out stays
+  zero until a restart), the quantization tables latched at a component's first scan, the slow integer IDCT with its
+  zero column and row shortcuts in 32-bit arithmetic (the Windows build's `long`), the range limit table, block
+  smoothing of a progressive file that ends early, the fancy h2v1/h2v2 and plain and integral upsamplers with the
+  main controller's context rows (row 0 above the top, the last real row below the bottom), and the YCbCr, YCCK and
+  null colour converters. JPGDecoder's source manager is kept too: 4 KB reads, the fake end of image after the data,
+  a fatal error on an empty file, and a skip past the buffer through `SkipBytes`, whose throw comes back as a status
+  the C++ throws (FileReader::Check is public now). One deliberate difference: a two-component JPEG fails (the
+  original read three samples a pixel from libjpeg's row of two, past its end).
+- **PNG (imgdec.rs).** The attributes read (signature, IHDR, chunks up to the first IDAT) and the decode (ee_won now
+  depends on ee_openformats for `png_to_picture`, round 18's reader).
+- **MultiImageDecoder.** Its map (ordered and matched without case, the first spelling of a key kept), the set it
+  owns (by address) and the current extension are `EeWonImgDec`; the C++ keeps the decoder objects, their virtual
+  calls and `Duplicate`'s copies. JPGDecoder.cpp and PNGDecoder.cpp are deleted; ImageDecoder.cpp holds the shells.
+
+### PlatGUIWindow and PlatCursor (platwin.rs, platcursor.rs)
+
+- **PlatGUIWindow** is a whole Rust object: the rectangle (frame included), the flags, the client rectangle
+  (platwm.rs `client_rect`), Create (the surface size for a window that fills it, the frame around a 0x40 client
+  rectangle, the centring, the first show), FollowSurface, SetPosSize with its size and move events, GetRect,
+  show and hide (the focus to a visible parent), focus, capture, minimize, top-most, close, the cursor while the
+  pointer is inside or the window holds the capture, the timer's mouse-exit check (the popup that does not want the
+  mouse), the paint's dirty mark, the mouse events in client coordinates, the manager's fields (GetInfo) and the
+  destructor's unregistering. The shell keeps the Window base, FollowPixelScale (its new offscreen image is C++
+  object work) and a 26-op host (`EeWonPlatWinOp`); the manager is called through its shell's `Call` (public now),
+  and the platform's pointer and minimize through the host too, so the driver's world sees every call. No Rust
+  reference to the window lives across a call out: each method reads and writes the fields through the raw pointer
+  (a show raises the window through the manager, which reads the window's fields through GetInfo again).
+- **PlatCursor** is a whole Rust object: the system cursor or the pixels made into a platform cursor on first use
+  (a failed make is not tried again: the hand shows), the cursor last applied (a destroyed applied cursor restores
+  the default first). The platform's four cursor calls are handed in by the shell (`EeWonPlatCursorFns`): a direct
+  `extern "C"` call to ee_plat_sdl's exports pulled SDL into every WON test driver's link.
+
+### The stateful configs (cfgtab.rs, cfgimg.rs)
+
+The table reader gained handlers written out in Rust (`Op::F`, `NATIVE`), two host callbacks (`peek`: a frame
+int's value; the keyword match over one text fetch) and four reads (`Word`: ReadString(true) into the first string
+slot alone; `RawImage`; `RawStr`; the frame's raw image, raw strings and a child config).
+
+- **ContainerConfig**: LAYOUT, CHAINLAYOUT, REPEATLAYOUT and NOOVERLAPLAYOUT are natives; the config's state stays
+  its members (mLayoutRef, mLayoutInstruction, mLayoutParams), read and written by setters: 25 the previous rule's
+  instructions and offsets into the frame, 26 the reference (throwing "Invalid LayoutChain"), 27 the offsets read
+  before a throw (the original assigned them one by one), 28 the rule added (Fn2F6140) and kept, 29 the no-overlap
+  layout. NEWLAYOUTPOINT is a program. ContainerConfigInstructions.cpp and ContainerConfigPoints.cpp are deleted;
+  their three declarations stay in WONLobbyGUI.h (the other lane's file, not edited).
+- **StretchImageConfig** (SRC, TILE, BORDERS, SKIPCENTER, MULTIEXPORT, MULTICROPEXPORT, EXPORT) and
+  **ImageFilterConfig** (SRC, FILTER with HandleFilter's five filters, DUPLICATE, MULTIHORZCROP, EXPORT): programs and
+  natives; the setters make the children (CfgStretchChild before the image is read, as the original copied the
+  attributes first), the crops and the filters. HandleFilter's declaration is gone from WONLobbyConfigImages.h.
+
+### The drivers
+
+| Driver | What | Result |
+|---|---|---|
+| won_jpeg_test | JPGDecoder.cpp's statements on libjpeg (won_jpeg_orig.h) vs the port: libjpeg's own compressed pictures (grey, YCbCr, RGB by Adobe or ids, CMYK, YCCK; every sampling 1..4 within 10 blocks; qualities 1..100 with 16-bit tables; restarts; optimized tables; progressive and non-interleaved scans; 1..300 pixels), the lobby's 7 JPEGs, and corruptions of each (cut, flipped, markers dropped in, a segment past the end, garbled scan data) | 10,056 cases identical (attributes, NULL or pixels, the thrown text); golden 400 cases replayed by cargo |
+| won_image_test | the lobby's pictures and every PNG colour type against round 18's libpng/libjpeg golden | 125 identical |
+| won_platwin_test | PlatGUIWindow.cpp's statements (won_platwin_orig.h) vs the shell over platwin.rs, one world of the Window base, root, manager and cursors: 20,000 worlds x 50 operations | 2,049,122 trace lines identical |
+| won_cfgtab_test | as round 40, with the LAYOUT family and the image configs: the resource files on 52 configs, 5,000 random instructions, 6,000 container sequences (the layout state carried) and 4,000 image config sequences | 113,620 checks over the resource files + 270,000 random and sequence checks: 383,620 identical; golden replayed by cargo |
+
+The first image-config run showed 17 mismatches, all StretchImageConfig EXPORT: the original copies the stretch
+attributes into the new child before reading its image; the port read first. The child is made by its own setter
+now. The first container sequences used the wrong keys (CHAINLAYOUT and REPEATLAYOUT are the names): they reached
+the base and compared nothing; fixed before counting.
+
+### Mutations
+
+`build/r41/mutate.py`: 20 mutations of jpeg.rs, imgdec.rs, platwin.rs, platcursor.rs, cfgtab.rs and cfgimg.rs;
+14 caught by cargo at once (the goldens, the unit tests). The six missed (the restart resync taking any restart
+marker, the PNG chunk bound without its CRC, the PNG transparency flag, the timer's popup test without `hit != me`,
+a move in y alone, a popup's focus raising it) got unit tests and are caught now. Four were also rebuilt into the
+drivers: the IDCT's z5 constant (won_jpeg_test 4,860 failures), the restart resync (642), the frame's caption
+(won_platwin_test 2,161 worlds) and LAYOUT's zeroed offsets (won_cfgtab_test 89 mismatches).
+
+### What only the lobby reaches
+
+The decoders run on every lobby picture (the JPEG backgrounds, banners and logo; the PNG controls); the window and
+cursor on every lobby window, event and pointer change; the configs on the lobby's resource files. EE-SIM never
+runs them; the drivers and the LAN game do. The LAN game passes (host PT 2,760, joiner 2,760). Its lobby captures with this
+branch's test-profile exe and round 40's were compared by pixel: the lobby's first screen, the LAN screen, the
+create dialog, the host's and joiner's staging screens and the LAN list are identical on both sides; the ready host's
+staging screen differs in one 1 x 15 column (the input box's caret, blinking). The in-game frames differ everywhere
+(another moment of another game) and are not lobby pictures. The lobby window was 1226 x 768 for a 1024 x 768
+surface, so the scaled draws ran; the JPEG backgrounds went through jpeg.rs.
+
+### What is left of WONGUI
+
+- Image.cpp's raw images (their pixel buffers and row walks; the classes are declared in WONLobbyGUI.h, the other
+  lane's file), ProgramImage, ImagePiece, DelayLoadImage, Palette, Cursor.cpp's standard cursors;
+- ImageConfig::GetNamedValue and the GetNamedValue / GetPredefinedComponent handlers (an out-parameter frame);
+- the WON skin's compositions (looked at again and left, as round 39 found: a recipe table would need an
+  interpreter nearly the statements' size); the hosts.
