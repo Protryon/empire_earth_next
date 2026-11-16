@@ -1,3 +1,4 @@
+#include "rust/ee_won.h"
 // The stand-in world of won_platwm_test.cpp, included once in each of its two namespaces (Orig: PlatWindowManager.cpp's
 // statements as they were, won_platwm_orig.h; Port: the shell and host over ee_won's platwm.rs, won_platwm_port.h):
 // the WONAPI window, event, colour scheme and image classes with the members the manager reads, windows that behave

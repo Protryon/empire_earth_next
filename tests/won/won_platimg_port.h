@@ -1,3 +1,4 @@
+#include "rust/ee_won.h"
 // PlatNativeImage.cpp's statements after the port (R6 WON round 40: the forwarders to ee_won's platimg.rs), copied from
 // the working tree by build/r40/gen_platimg.py; won_platimg_test.cpp compiles them over its stand-ins.
 

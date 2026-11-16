@@ -1,3 +1,4 @@
+#include "rust/ee_won.h"
 // PlatWindowManager.cpp's statements after the port (R6 WON round 40: the shell and host over ee_won's platwm.rs),
 
 // copied from the working tree by build/r40/gen_platwm.py (the constructor without its cursors), with the class and
