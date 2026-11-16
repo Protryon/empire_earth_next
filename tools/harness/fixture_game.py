@@ -229,30 +229,6 @@ def chat_check(g):
     return dict(seq=seq, capture=capture)
 
 
-POSTGAME = 25   # kFormPostGameSummary
-
-
-def postgame(g):
-    """TEST ONLY: the post-game summary opened over the game (the fixture's postgame command), each of its graph
-    pages shown and captured (the time line, then the graph button's next two graphs)."""
-    seq = g.command(f'postgame {GAME} 0')
-    g.wait(lambda s: s['command'] >= seq and s['form'] == POSTGAME, 'the post-game summary', 60)
-    time.sleep(2)
-    out = {}
-    for name, control in (('postgame-summary', None), ('postgame-timeline', 35), ('postgame-next', 42),
-                          ('postgame-next2', 42)):
-        if control is not None:
-            seq = g.command(f'click {POSTGAME} {control}')
-            g.wait(lambda s, seq=seq: s['command'] >= seq, f'the summary click {control}', 30)
-            time.sleep(2)
-        try:
-            out[name] = str(fixture_driver.capture_frame(g, name))
-        except RuntimeError as error:
-            g.note(f'CAPTURE {name} skipped: {error}')
-    g.note(f'POSTGAME PASS: {len(out)} captures')
-    return out
-
-
 def tour(g, a, summary):
     results = summary['milestones']
     if a.exercise == 'tour':
@@ -303,8 +279,6 @@ def tour(g, a, summary):
         summary['scroll_check'] = fixture_driver.scroll_check(g, GAME)
     if a.zoom_captures:
         summary['zoom_captures'] = fixture_driver.zoom_captures(g, GAME, a.zoom_captures)
-    if a.postgame:
-        summary['postgame'] = postgame(g)
     if a.cast:
         summary['casts'] = fixture_driver.cast_calamities(g, GAME, a.cast, a.cast_offset, a.capture_every,
                                                           a.cast_captures)
@@ -424,8 +398,6 @@ def main():
     ap.add_argument('--config', action='append', default=[], help='block.key=VALUE in the fresh config.yaml')
     ap.add_argument('--play-seconds', type=float, default=None, help='wall seconds of play after the start')
     ap.add_argument('--input-check', action='store_true', help='tour/random-game with --play-seconds: F3 twice')
-    ap.add_argument('--postgame', action='store_true',
-                    help='tour/random-game (TEST ONLY): the post-game summary opened over the game, its graphs captured')
     ap.add_argument('--box-select', action='store_true',
                     help='tour/random-game: box selections in the game view (select, add with Shift, a dead unit)')
     ap.add_argument('--orders', action='store_true',
