@@ -5,6 +5,8 @@
 #ifndef EE_EEAUTOPATHREQUEST_H
 #define EE_EEAUTOPATHREQUEST_H
 
+#include "ee/EECPASGFlags.h"
+
 #include <vector>
 #include <functional>
 #include "ee/EETileCoordinate.h"
@@ -39,6 +41,6 @@ long EELoadAutoPathRequest(FSFile& inFile, EEAutoPathRequest*& outRequest);
 // (one reference, the owner's), or NULL when the search could not be rebuilt (the owner asks again). inSubGroup (or
 // NULL) is the owner the search's route planner points at; it is referenced until then
 class EECPAttackSubGroup;
-void EEAwaitAutoPathRequest(long inRequestID, EECPAttackSubGroup* inSubGroup, std::function<void(EEAutoPathRequest*)> inAttach);
+void EEAwaitAutoPathRequest(long inRequestID, std::function<void(EEAutoPathRequest*)> inAttach);
 
 #endif

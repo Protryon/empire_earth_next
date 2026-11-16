@@ -511,6 +511,10 @@ struct Ask {
         Ask* theAsk = static_cast<Ask*>(inAsk);
         if (theAsk->mVentFrom == NULL || theAsk->mVentTo == NULL)
             return 0;
+        // ... nor on one with fewer aims than vents (main fc6130210: EE-SIM faulted reading past the aims in Space
+        // Age games on Planets Earth)
+        if (theAsk->mVentTo->GetNumTagPoints() < theAsk->mVentFrom->GetNumTagPoints())
+            return 0;
         return (uint32_t)theAsk->mVentFrom->GetNumTagPoints();
     }
     // a jet's vent's and aim's offsets (EEE3DDamageVentPart::Aim, 0xeb4e9)

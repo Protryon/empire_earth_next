@@ -120,11 +120,11 @@ OPEN_DATA = ROOT / "build" / "open_data"
 
 def data_tree(kind="open"):
     """The unified data tree the runs stage (tools/open_data.py: both installs' data.ssa and loose data in one Data
-    folder, db text, glTF, PNG; the game needs neither an archive nor the original game, and reads only these open
-    forms, RUST_PLAN D9): build/open_data/tree, or the tree EE_HARNESS_OPEN_DATA names when that is a directory.
-    Built once when missing. kind: "open" (the only one; the binary tree is retired)."""
+    folder; the game needs neither an archive nor the original game): db text, glTF, PNG (build/open_data/tree, or
+    the tree EE_HARNESS_OPEN_DATA names when that is a directory). Built once when missing. kind: "open", the only
+    one (the game reads only the text db tables: there is no binary tree)."""
     if kind != "open":
-        raise ValueError(f"data tree {kind!r}: the game reads only the open tree (the binary tree is retired)")
+        raise ValueError(f"data tree {kind!r}: the only tree is 'open' (the game reads only the text db tables)")
     env = os.environ.get("EE_HARNESS_OPEN_DATA")
     if env and env not in ("1", "yes") and pathlib.Path(env).is_dir():
         tree = pathlib.Path(env)
@@ -145,12 +145,15 @@ def data_tree(kind="open"):
         if r.returncode:
             raise RuntimeError(f"open_data build failed:\n{r.stdout}{r.stderr}")
     elif tree.parent == OPEN_DATA:
-        # the next engine's scripts (the repository's ai/): a changed script refreshes Data/ai, no rebuild
+        # the repository's data/ai (the scripts) and data/db (the tables): a change refreshes Data/ai or Data/db in
+        # place, no rebuild
         sys.path.insert(0, str(ROOT / "tools"))
         import open_data
-        if json.loads((tree / "open_data.json").read_text()).get("ai") != open_data.scripts_hash():
-            print(f"data: {tree}: refreshing Data/ai (tools/open_data.py ai)", flush=True)
-            open_data.refresh_scripts(tree)
+        stale = open_data.tree_stale(tree)
+        if stale:
+            print(f"data: {tree}: refreshing {', '.join('Data/' + x for x in stale)} (tools/open_data.py sync)",
+                  flush=True)
+            open_data.sync(tree)
     return tree
 
 
@@ -227,9 +230,18 @@ def stage(name, build, data=True, silent_audio=True):
         rdp_modes.build_proxy(d)
         print('display: RDP mode-list proxy staged (DDRDP.dll)', flush=True)
     if data:
-        c = data_tree()
+        kind = "open"
+        c = data_tree(kind)
         stage_tree(c, d)
-        print(f"data: the unified open data tree {c} ({json.loads((c / 'open_data.json').read_text())['files']} files)",
+        if kind == "open" and c.parent != OPEN_DATA:
+            # a tree of someone else's (EE_HARNESS_OPEN_DATA): the stage gets this checkout's data/db and data/ai, so
+            # a run never plays a stale Data/db (our own trees are synced by data_tree)
+            sys.path.insert(0, str(ROOT / "tools"))
+            import open_data
+            open_data.refresh_scripts(d)
+            open_data.refresh_db(d)
+            print(f"data: Data/ai and Data/db from the checkout's data/ai and data/db", flush=True)
+        print(f"data: the unified {kind} data tree {c} ({json.loads((c / 'open_data.json').read_text())['files']} files)",
               flush=True)
     return d
 

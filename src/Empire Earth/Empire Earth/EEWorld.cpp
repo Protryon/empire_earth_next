@@ -73,7 +73,7 @@
 #include "ee/EEHumanPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EECPILocation.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EETeam.h"
 #include "ee/EEVictoryCondition.h"
 #include "ee/EEVCWonder.h"
@@ -103,8 +103,6 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEArtificialIntelligence.h"
 #include "ee/EEPPatrolGroup.h"
-#include "ee/EECPCivilizationManager.h"
-#include "ee/EECPWallManager.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EEGameSound.h"
@@ -477,7 +475,6 @@ void EEWorld::Clear()
     EEUnitOrderClear();   // New (R5b.4): the Rust list of the stepped units follows (ee/EEUnitStore.h)
     this->mActiveUnits.clear();
     EEPPatrolGroup::ResetIDs();
-    EECPWallManager::ResetSizes();
     gCollisionDetectionUnit = 2000;
     delete this->mCalamityHelper;
     this->mCalamityHelper = NULL;
@@ -917,12 +914,8 @@ void EEWorld::StartGame(EEGameState* inState, bool inLocked)
     gUserInterface->SetLoadProgress(kWorldLoadProgress18);
     this->ClearContinents();
     // port (save version 0.263): a loaded game's continent manager is the saved one (made in place of BuildRegions,
-    // below); its computer players' locations keep their saved areas until the first tick (ee/EECPILocation.h)
+    // below)
     bool theSavedRegions = theLoaded && EEContinentRegionsPending();
-    if (theSavedRegions) {
-        gLoadKeepsLocations = true;
-        EEAfterLoad([]() { gLoadKeepsLocations = false; });
-    }
     gUserInterface->SetLoadProgress(kWorldLoadProgress19);
     this->CreateMiniMap(inState);
     gUserInterface->SetLoadProgress(kWorldLoadProgress20);

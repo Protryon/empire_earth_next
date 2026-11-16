@@ -174,6 +174,30 @@ public:
     static unsigned long GetCount() { return EETerrainTypeTable::sTable.size(); }
 };
 
+// db\dbrandommap's record (docs/DATA_FORMATS.md 3.38; the text form dbrandommap.csv, tools/eedata): a terrain band
+// of a random map's terrain group. EERandomMapTable::Load reads the records and drops them: nothing in the game reads
+// a field (the text keeps the retail values; overlay.UNREAD_TABLES).
+struct EERandomMapRecord {
+    int32_t mID;                            // +0x00 4..71, unique
+    int32_t mGroup;                         // +0x04 1..10: two or three rows per group
+    char mName[100];                        // +0x08 the terrain's name ("Grass Tufts", "Snow", "StoneWork")
+    int32_t mElevationLow;                  // +0x6c -10, -2, 0
+    int32_t mElevationHigh;                 // +0x70 -4, -3, -1, 20
+    int32_t mTerrain[4];                    // +0x74 four equal dbterrain ids (2..71)
+};
+static_assert(sizeof(EERandomMapRecord) == 0x84, "on-disk record: 132 bytes on every target");
+
+// db\dbterraingraytextures's record (docs/DATA_FORMATS.md 3.39; the text form dbterraingraytextures.csv, after its
+// lead string, the texture file name): a terrain's grey texture. No Art of Conquest code opens the table (only the key
+// kDbTerrainGrayTexturesFile exists); the text keeps the retail values (overlay.UNREAD_TABLES).
+struct EETerrainGrayTextureRecord {
+    char mName[100];                        // +0x00 "Grass Rough (x)" ... "Space"
+    int32_t mID;                            // +0x64 2..60
+    int32_t mIndex;                         // +0x68 -1 (row 0) .. 58
+    int32_t mColor[3];                      // +0x6c red, green, blue (0..255), like dbterrain's colour
+};
+static_assert(sizeof(EETerrainGrayTextureRecord) == 120, "on-disk record: 120 bytes on every target");
+
 // RTTI EERandomMapTable (vtable 0x43f7b8; ctor 0xda407, ??_G 0xda550). Inline dtor.
 class EERandomMapTable {
 public:

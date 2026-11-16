@@ -114,8 +114,11 @@ def run_dump(exe, db, textdir, tmp, out, golden):
     print('--- content dump: binary .dat vs text (ids resolved), through the game\'s code', flush=True)
     dat = tmp / 'dat'
     dat.mkdir()
-    for n, b in db.items():
-        (dat / f'{n}.dat').write_bytes(b)
+    import binfmt
+    import specgen
+    spec = specgen.load()
+    for n, b in db.items():   # dbrandommap without the group count only its retail file has (the text has none)
+        (dat / f'{n}.dat').write_bytes(binfmt.without_retail_header(n, b, spec))
     a, b = out / 'dump_dat.json', out / 'dump_text.json'
     if subprocess.run([str(exe), '--dump-dat', str(dat), str(a)]).returncode or \
             subprocess.run([str(exe), '--dump-text', str(textdir), str(b)]).returncode:

@@ -81,6 +81,8 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EEGraphics.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EECPCombatManager.h"
+#include "ee/EECPEngine.h"
+#include "ee/EECPNextUnits.h"
 
 // chain at 0x53e967 (wrapper)
 UString gU530BE0("B7B226DDB7B226DDBCD9344624C93DE6C4A90DD4B7B20375");
@@ -450,11 +452,12 @@ void EEAttackPlayers(long inPlayer, unsigned char inFlag)
             }
         }
         long j;
+        // port: every computer player's Lua AI gets the order as an event (the original's combat managers took it)
         for (j = theEnemies.size() - 1; j >= 0; j--)
-            theEnemies[j]->mCombatManager->AttackPlayer(thePlayer);
+            EECPUnitsOnAttackPlayer(theEnemies[j], (long)thePlayer->mPlayerID, false);
         if (inFlag)
             for (j = theAllies.size() - 1; j >= 0; j--)
-                theAllies[j]->mCombatManager->DefendPlayer(thePlayer);
+                EECPUnitsOnAttackPlayer(theAllies[j], (long)thePlayer->mPlayerID, true);
     }
 }
 
@@ -674,8 +677,10 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 279 the players' active groups (EESaveHasActiveGroups)
 // 280 the per-unit Lua interface's state after the next engine's, EEPPlayerHelper, ee/EECPNextUnits.h (main's 254,
 // EESaveHasUnitsLuaState)
+// 281 the merge of main's stages 5 and 6: the computer players without the C++ managers' timers and intelligence files,
+// main's next engine state block (EESaveHasLuaOnlyComputers)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 280;
+const unsigned long kSaveGameMinorVersion = 281;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
@@ -1494,8 +1499,7 @@ void EEGraphicsShutdown(bool inShutdown)
     gModelManager = NULL;
 }
 
-#include "ee/EECPILocation.h"
-#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EEMiniMap.h"
 
 // Releases the particle and complex unit pools and logs the list node pools' statistics
@@ -1509,10 +1513,9 @@ void EEReleaseGamePools(bool inShutdown)
     UList<EEComplexUnit*>::sNodePool.DumpStats(false);
 }
 
-// Releases the attack target, tile unit list and doppelganger pools
+// Releases the tile unit list and doppelganger pools (the attack target pool went with the attack sub groups, stage 5)
 void EEReleaseUnitPools()
 {
-    EECPAttackSubGroup::ReleaseTargetPool();
     EETile::ReleaseUnitListPool();
     gDoppelgangerManager.Release();
 }

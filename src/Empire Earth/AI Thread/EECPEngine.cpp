@@ -172,6 +172,7 @@ static std::vector<EECPAIEntry> EECPAIReadManifest()
         theAI.mRandom = e.random;
         theAI.mSeesAll = e.sees_all;
         theAI.mFillsGarrison = e.fills_garrison;
+        theAI.mClassic = e.classic;
         theAIs.push_back(theAI);
     }
     bool theListed = ee_ai_manifest_listed(theRead);
@@ -192,6 +193,15 @@ const std::vector<EECPAIEntry>& EECPAIManifest()
     return sAIs;
 }
 
+// the manifest's "classic" AI (the first marked): the lobby's Classic plays it (docs/AI_LUA_UNITS.md §11)
+const EECPAIEntry* EECPClassicAI()
+{
+    for (const EECPAIEntry& a : EECPAIManifest())
+        if (a.mClassic)
+            return &a;
+    return NULL;
+}
+
 unsigned long EECPEngineChoiceCount()
 {
     return kEECPChoiceFirstAI + (unsigned long)EECPAIManifest().size();
@@ -200,6 +210,8 @@ unsigned long EECPEngineChoiceCount()
 const EECPAIEntry* EECPAIByChoice(unsigned long inChoice)
 {
     const std::vector<EECPAIEntry>& theAIs = EECPAIManifest();
+    if (inChoice == kEECPChoiceClassic)
+        return EECPClassicAI();
     if (inChoice < kEECPChoiceFirstAI || inChoice - kEECPChoiceFirstAI >= theAIs.size())
         return NULL;
     return &theAIs[inChoice - kEECPChoiceFirstAI];
@@ -224,6 +236,16 @@ long EECPChoiceByName(const std::string& inName)
     for (const EECPAIEntry& a : theAIs)
         theIDs.push_back(EECPAIBytes(a.mID));
     return (long)ee_ai_choice_by_name(EECPAIBytes(inName), theIDs.data(), theIDs.size());
+}
+
+std::string EECPChoiceName(unsigned long inChoice)
+{
+    if (inChoice == kEECPChoiceRandom)
+        return "random";
+    if (inChoice == kEECPChoiceClassic)
+        return "classic";
+    const EECPAIEntry* theAI = EECPAIByChoice(inChoice);
+    return theAI != NULL ? theAI->mID : "classic";
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -335,21 +357,16 @@ bool EECPEngineFillsGarrison(const EEComputerPlayer* inPlayer)
 
 std::string EECPEngineName(const EEComputerPlayer* inPlayer)
 {
-    if (EECPEngine(inPlayer) != kEECPEngineNext)
-        return "classic";
     std::string theAI = EECPEngineAI(inPlayer);
-    return theAI.empty() ? "next" : theAI;
+    return theAI.empty() ? "none" : theAI;
 }
 
 void EECPEngineSet(EEComputerPlayer* inPlayer, unsigned long inChoice)
 {
+    // no AI (a manifest without a "classic" AI): the seat stands idle (EECPNextPrepare logs it)
     const EECPAIEntry* theAI = EECPAIByChoice(inChoice);
-    if (theAI == NULL) {
-        inPlayer->mEngine = kEECPEngineClassic;
-        return;
-    }
     inPlayer->mEngine = kEECPEngineNext;
-    EECPNextGetState(inPlayer)->mAI = theAI->mID;
+    EECPNextGetState(inPlayer)->mAI = theAI != NULL ? theAI->mID : std::string("none");
 }
 
 // EE_AI_ENGINE (TEST ONLY): the choices in turn by player id from player 1 (empty: unset)

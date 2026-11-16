@@ -1,0 +1,50 @@
+#eedata dbareaeffect
+#format 3
+#rows 50
+row,id,mName,mID,mKind,mShape,mGraphicEffect,mUnitSet,mMode,mGraphicEffect18,mMedia,mMaxLevel,mLevel,mRadius,mRed,mGreen,mBlue,mAlpha
+0,none,None (don't delete!!!!),,0,0,none,0,0,none,0,0,0,0.0,0.0,0.0,0.0,0.0
+1,hospital_rate_2,Hospital Rate 2,,1,1,hospital_healing_effect_emitter,hospital_healing_1,2,none,0,0,2,2.0,0.98,0.0,0.0,0.14
+2,tc_econ_bonus_rng_6,TC Econ Bonus Rng 6,,7,1,economy_bonus_emitter,area_effect_town_center,2,none,0,0,0,6.0,0.0,1.0,0.0,0.14
+3,hero_morale_flying,Hero Morale Flying,,6,2,none,flying_units,2,none,unit_morale_level,0,0,12.0,1.0,1.0,1.0,0.14
+4,tc_morale_bonus_rng_10,TC Morale Bonus Rng 10,,5,1,none,people_morale_1,2,none,unit_morale_level,2,0,10.0,1.0,1.0,1.0,0.14
+5,helicopter_repair,Helicopter repair,,1,1,hospital_healing_effect_emitter,helicopters_balloons_1,2,none,0,0,3,4.0,0.98,0.0,0.0,0.14
+6,hero_morale_rng_3,Hero Morale Rng 3,,6,2,none,people_morale_1,2,none,unit_morale_level,2,0,7.0,1.0,1.0,1.0,0.14
+7,tower_morale_capitol,Tower Morale - Capitol,,2,1,none,towers,1,none,0,5,5,10.0,0.0,0.0,0.0,0.0
+8,temple_range_8,Temple Range 8,,3,1,temple_immunity_emitter,all_units,2,none,0,0,0,8.0,0.98,1.0,0.53,0.14
+9,university_range_8,University Range 8,,4,1,none,all_units,2,none,0,0,0,8.0,0.98,1.0,0.53,0.14
+10,mech_healing,Mech Healing,,1,2,hospital_healing_effect_emitter,cybers,2,none,unit_morale_level,0,10,4.0,0.98,0.0,0.0,0.14
+11,medic_healing,Medic Healing,,1,2,none,medic_healing_1,2,none,unit_morale_level,0,4,4.0,0.98,0.0,0.0,0.14
+12,capitol_econ_bonus_rng_6,Capitol Econ Bonus Rng 6,,7,1,economy_bonus_emitter,area_effect_capitol,2,none,0,0,0,6.0,0.0,1.0,0.0,0.14
+14,capitol_morale_bonus_rng_10,Capitol Morale Bonus Rng 10,,5,1,none,people_morale_1,2,none,0,4,0,10.0,1.0,1.0,1.0,0.14
+17,temple_range_9,Temple Range 9,,3,1,temple_immunity_emitter,all_units,2,none,0,0,0,9.0,0.98,1.0,0.53,0.14
+18,temple_range_10,Temple Range 10,,3,1,temple_immunity_emitter,all_units,2,none,0,0,0,10.0,0.98,1.0,0.53,0.14
+19,temple_range_11,Temple Range 11,,3,1,temple_immunity_emitter,all_units,2,none,0,0,0,11.0,0.98,1.0,0.53,0.14
+20,temple_range_12,Temple Range 12,,3,1,temple_immunity_emitter,all_units,2,none,0,0,0,12.0,0.98,1.0,0.53,0.14
+21,university_range_9,University Range 9,,4,1,none,all_units,2,none,0,0,0,9.0,0.98,1.0,0.53,0.14
+22,university_range_10,University Range 10,,4,1,none,all_units,2,none,0,0,0,10.0,0.98,1.0,0.53,0.14
+23,university_range_11,University Range 11,,4,1,none,all_units,2,none,0,0,0,11.0,0.98,1.0,0.53,0.14
+24,university_range_12,University Range 12,,4,1,none,all_units,2,none,0,0,0,12.0,0.98,1.0,0.53,0.14
+25,university_range_13,University Range 13,,4,1,none,all_units,2,none,0,0,0,13.0,0.98,1.0,0.53,0.14
+26,hospital_rate_3,Hospital Rate 3,,1,1,hospital_healing_effect_emitter,hospital_healing_1,2,none,0,0,3,3.0,0.98,0.0,0.0,0.14
+27,hospital_rate_4,Hospital Rate 4,,1,1,hospital_healing_effect_emitter,hospital_healing_1,2,none,0,0,4,5.0,0.98,0.0,0.0,0.14
+28,hospital_rate_5,Hospital Rate 5,,1,1,hospital_healing_effect_emitter,hospital_healing_1,2,none,0,0,5,7.0,0.98,0.0,0.0,0.14
+29,hospital_rate_7,Hospital Rate 7,,1,1,hospital_healing_effect_emitter,hospital_healing_1,2,none,0,0,7,9.0,0.98,0.0,0.0,0.14
+31,hero_self_healing,Hero Self Healing,,1,2,hospital_healing_effect_emitter,heroes,1,none,0,0,1,1.0,0.98,0.0,0.0,0.14
+32,dock_healing_1_rng_6,Dock Healing 1 (Rng 6),,1,1,hospital_healing_effect_emitter,dock_repair,2,none,0,0,1,6.0,0.98,0.0,0.0,0.14
+33,naval_yard_healing_1_rng_6,Naval Yard Healing 1 (Rng 6),,1,1,hospital_healing_effect_emitter,naval_yard_repair_1,2,none,0,0,10,6.0,0.98,0.0,0.0,0.14
+34,mech_morale,Mech Morale,,6,2,none,people_morale_3,2,none,unit_morale_level,0,0,4.0,1.0,1.0,1.0,0.14
+35,mech_self_healing,Mech Self Healing,,1,2,hospital_healing_effect_emitter,cyber_achillies,1,none,0,0,10,1.0,1.0,0.0,0.0,0.14
+36,priest_healing,Priest Healing,,1,2,hospital_healing_effect_emitter,medic_healing_1,2,none,0,0,10,2.0,0.98,0.0,0.0,0.14
+37,hero_morale_rng_4,Hero Morale Rng 4,,6,2,none,people_morale_1,2,none,unit_morale_level,2,0,7.0,1.0,1.0,1.0,0.14
+38,cloaking_rng_2,Cloaking Rng 2,,8,2,none,area_effect_cloakable_units_1,2,none,0,2,0,3.0,0.98,1.0,0.53,0.14
+39,ship_morale,Ship Morale,,6,2,none,all_ships,2,none,unit_morale_level,0,0,6.0,1.0,1.0,1.0,0.14
+40,dock_healing_2_rng_6,Dock Healing 2 (Rng 6),,1,1,hospital_healing_effect_emitter,dock_repair,2,none,0,0,2,6.0,0.98,0.0,0.0,0.14
+41,dock_healing_3_rng_6,Dock Healing 3 (Rng 6),,1,1,hospital_healing_effect_emitter,dock_repair,2,none,0,0,5,6.0,0.98,0.0,0.0,0.14
+42,dock_healing_4_rng_6,Dock Healing 4 (Rng 6),,1,1,hospital_healing_effect_emitter,dock_repair,2,none,0,0,9,6.0,0.98,0.0,0.0,0.14
+43,naval_yard_healing_2_rng_6,Naval Yard Healing 2 (Rng 6),,1,1,hospital_healing_effect_emitter,naval_yard_repair_1,2,none,0,0,10,6.0,0.98,0.0,0.0,0.0
+44,tower_morale_tc,Tower Morale - TC,,2,1,none,towers,1,none,0,5,5,10.0,0.0,0.0,0.0,0.0
+45,space_dock_healing_1,Space Dock Healing 1,,1,1,hospital_healing_effect_emitter,space_dock_repair,2,none,0,0,30,9.0,0.98,0.0,0.0,0.14
+46,cloaking_from_capitol,Cloaking from Capitol,,8,1,none,all_units,2,none,0,0,0,10.0,0.0,0.0,0.0,0.0
+47,space_dock_healing_2,Space Dock Healing 2,,1,1,hospital_healing_effect_emitter,space_dock_repair,2,none,0,0,40,10.0,0.98,0.0,0.0,0.14
+48,space_wonder_morale,Space Wonder Morale,,2,1,none,spaceships,1,none,0,3,3,-1.0,0.0,0.0,0.0,0.0
+49,hero_morale_small_ring,Hero Morale Small Ring,,6,2,none,people_morale_1,2,none,unit_morale_level,2,0,2.0,1.0,1.0,1.0,0.14

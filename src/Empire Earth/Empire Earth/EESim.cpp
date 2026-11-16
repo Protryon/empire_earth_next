@@ -200,6 +200,9 @@ void EEPhysicsUnitSweep(long inCall);      // the units sweep (Physics Thread/EE
 #include "ee/EECalamityManager.h"
 #include "ee/EESimEditor.h"
 #include "ee/EEUIFScenarioEditor.h"
+#include "ee/EECalamityManager.h"
+#include "ee/EECalamityClass.h"
+#include "lle/USingleton.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
 #include "rust/ee_combat.h"
@@ -458,6 +461,7 @@ struct Options {
     double mWallTimeout = 3600;
     long mPTRate = 40;
     bool mNoHumanDefeat = true;
+    bool mHumanOut = true;                               // --keep-human: off
     std::string mReport;                                 // the JSON report ("-": stdout)
     std::string mTrace;                                  // the EE-AI lines ("" stdout)
     std::string mLog;                                    // every debug string
@@ -477,6 +481,10 @@ struct Options {
     std::string mEditorScript;                           // --editor-script FILE ("" a game, not the editor)
     std::string mEditorOut;                              // --editor-out FILE (the script's steps; "" stdout)
     bool mQuiet = false;
+    long mFlareMs = -1;                                  // --flare SECONDS:PLAYER (TEST ONLY): -1 none
+    unsigned long mFlarePlayer = 0;
+    long mVolcanoMs = -1;                                // --volcano SECONDS:PLAYER (TEST ONLY): -1 none
+    unsigned long mVolcanoPlayer = 0;
 };
 
 Options sOptions;
@@ -578,6 +586,11 @@ struct PlayerSample {
     long mCitizens = 0;
     long mArmy = 0;             // live units that are neither citizens nor buildings (priests and heroes too)
     long mBuildings = 0;
+    long mNaval = 0;            // of the army: warships, submarines and naval transports
+    long mAir = 0;              // of the army: planes, helicopters and helicopter transports
+    long mTowers = 0;           // of the buildings: the towers and space turrets
+    long mWalls = 0;            // of the buildings: wall pieces and gates (EEUnitClass::mIsWall, not mIsTower: the towers are walls too)
+    long mWonders = 0;          // EEPlayer::GetNumWonderUnits
     long mStrength = 0;         // the army's hit points x attack, summed (soldiers, ships, heroes)
     long mValue = 0;            // the cost of every live unit and building, all resources summed
     long mResources[5] = {0, 0, 0, 0, 0};
@@ -634,6 +647,7 @@ Sample TakeSample()
         p.mPopulation = thePlayer->mPopulationCount;
         p.mVictoryUnits = thePlayer->mEndOfGameCount;
         p.mResult = thePlayer->mGameResult;
+        p.mWonders = (long)thePlayer->GetNumWonderUnits();
         for (long r = 0; r < 5; r++)
             p.mResources[r] = thePlayer->mResourceCaps[kResourceFood + r];
         for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
@@ -645,10 +659,21 @@ Sample TakeSample()
                 continue;   // the AI's path points (ambient units), resources, shots
             if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
                 p.mCitizens++;
-            else if (IsBuildingCategory(theCategory))
+            else if (IsBuildingCategory(theCategory)) {
                 p.mBuildings++;
-            else {
+                unsigned long theFamily = theUnit->mUnitClass->GetFamily();
+                if (theFamily == kUnitFamilyTowers || theFamily == kUnitFamilyTowerSpaceTurret)
+                    p.mTowers++;
+                if (theUnit->mUnitClass->mIsWall && !theUnit->mUnitClass->mIsTower)
+                    p.mWalls++;
+            } else {
                 p.mArmy++;
+                if (theCategory == kUnitCategoryNaval || theCategory == kUnitCategorySubmergedNaval
+                    || theCategory == kUnitCategoryNavalTransport)
+                    p.mNaval++;
+                else if (theCategory == kUnitCategoryAirplane || theCategory == kUnitCategoryHelicopter
+                    || theCategory == kUnitCategoryHelicopterTransport)
+                    p.mAir++;
                 if (theUnit->mStats != NULL)
                     p.mStrength += (long)(theUnit->mHitPoints * theUnit->mStats->mAttack);
             }
@@ -1111,6 +1136,76 @@ void AfterTick()
             Note("game s %ld PT %lu:%s", theTime / 1000, s.mPT, theLine.c_str());
         }
     }
+    // --flare (TEST ONLY): once, the idle human's flare at the player's first building, told to the human's allies as
+    // EEMSendFlare::Execute tells them (EEPlayer::FlareReceived): the AIs' answer to an ally's flare, which no
+    // computer sends
+    if (sOptions.mFlareMs >= 0 && theTime >= sOptions.mFlareMs) {
+        sOptions.mFlareMs = -1;
+        EEPlayer* theHuman = gWorld.GetCurrentPlayer();
+        EEPlayer* theTarget = sOptions.mFlarePlayer < theCount ? gWorld.GetPlayer(sOptions.mFlarePlayer) : NULL;
+        EEUnit* theSpot = NULL;
+        for (EEUnit* u = theTarget != NULL ? theTarget->mFirstUnit : NULL; u != NULL && theSpot == NULL;
+             u = static_cast<EEUnit*>(u->mNext))
+            if (u->mComplexUnit != NULL && u->mHitPoints > 0 && u->mUnitClass->IsBuilding())
+                theSpot = u;
+        if (theHuman != NULL && theSpot != NULL) {
+            U2DPoint<long> theTile(theSpot->GetTileX(), theSpot->GetTileY());
+            std::vector<EEPlayer*> theAllies = theHuman->mAllies;
+            for (EEPlayer* a : theAllies)
+                a->FlareReceived(theHuman, theTile);
+            Note("FLARE at %ld,%ld (player %lu) to %lu allies at game ms %ld", theTile.mX, theTile.mY,
+                 sOptions.mFlarePlayer, (unsigned long)theAllies.size(), theTime);
+        } else
+            Note("FLARE: no building of player %lu", sOptions.mFlarePlayer);
+    }
+    // --volcano (TEST ONLY): once, a volcano (the calamity class 9, no caster) cast 6 tiles off the player's first
+    // building for that player; then every game second the volcano projectiles (boulders) launched in it
+    {
+        static long sVolcanoCastMs = -1;
+        static long sVolcanoSecond = 0;
+        static unsigned long sVolcanoShots = 0, sVolcanoTotal = 0;
+        static std::vector<unsigned long> sVolcanoSeen;
+        if (sOptions.mVolcanoMs >= 0 && theTime >= sOptions.mVolcanoMs) {
+            sOptions.mVolcanoMs = -1;
+            EEPlayer* theTarget = sOptions.mVolcanoPlayer < theCount ? gWorld.GetPlayer(sOptions.mVolcanoPlayer) : NULL;
+            EEUnit* theSpot = NULL;
+            for (EEUnit* u = theTarget != NULL ? theTarget->mFirstUnit : NULL; u != NULL && theSpot == NULL;
+                 u = static_cast<EEUnit*>(u->mNext))
+                if (u->mComplexUnit != NULL && u->mHitPoints > 0 && u->mUnitClass->IsBuilding())
+                    theSpot = u;
+            if (theSpot != NULL) {
+                long theX = theSpot->GetTileX() + 6, theY = theSpot->GetTileY() + 6;
+                bool theCast = USingleton<EECalamityManager>::GetInstance()->CreateLocationCalamity(
+                    9, 0xffffffffUL, theX, theY, sOptions.mVolcanoPlayer);
+                Note("VOLCANO cast %d at %ld,%ld (player %lu) at game ms %ld", theCast ? 1 : 0, theX, theY,
+                     sOptions.mVolcanoPlayer, theTime);
+                sVolcanoCastMs = theTime;
+                sVolcanoSecond = theTime / 1000;
+            } else
+                Note("VOLCANO: no building of player %lu", sOptions.mVolcanoPlayer);
+        }
+        if (sVolcanoCastMs >= 0) {
+            for (unsigned long i = 0; i < theCount; i++) {
+                EEPlayer* thePlayer = gWorld.GetPlayer(i);
+                for (EEUnit* u = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; u != NULL;
+                     u = static_cast<EEUnit*>(u->mNext))
+                    if (u->mUnitClass->GetUnitType() == kUnitTypeVolcanoProjectile &&
+                        std::find(sVolcanoSeen.begin(), sVolcanoSeen.end(), u->GetUnitID()) == sVolcanoSeen.end()) {
+                        sVolcanoSeen.push_back(u->GetUnitID());
+                        sVolcanoShots++;
+                        sVolcanoTotal++;
+                    }
+            }
+            if (theTime / 1000 > sVolcanoSecond) {
+                Note("VOLCANO s %ld: %lu boulders launched (total %lu)", sVolcanoSecond - sVolcanoCastMs / 1000,
+                     sVolcanoShots, sVolcanoTotal);
+                sVolcanoSecond = theTime / 1000;
+                sVolcanoShots = 0;
+                if (sVolcanoSeen.size() > 100000)
+                    sVolcanoSeen.clear();
+            }
+        }
+    }
     // the end of the run (tools/harness/ai_game.py's rules)
     if (gPhysics->mGameOver) {
         FinishGame("game-end");
@@ -1421,7 +1516,8 @@ void WriteReport(int inCode, const std::string& inError)
     j += "  \"setup\": {\"seed\": " + std::to_string(sOptions.mSeed) + ", \"computers\": " +
          std::to_string(sOptions.mComputers) + ", \"game_seconds\": " + std::to_string((long)sOptions.mGameSeconds) +
          ", \"pt_rate\": " + std::to_string(sOptions.mPTRate) + ", \"no_human_defeat\": " +
-         (sOptions.mNoHumanDefeat ? "true" : "false") + ", \"cheats\": " +
+         (sOptions.mNoHumanDefeat ? "true" : "false") + ", \"human_out\": " +
+         (sOptions.mHumanOut ? "true" : "false") + ", \"cheats\": " +
          JsonString(sOptions.mCheats.empty() ? "all" : sOptions.mCheats) + ", \"personality\": " +
          JsonString(sOptions.mPersonality) + ", \"engine\": " +
          JsonString(sOptions.mEngine.empty() ? "classic" : sOptions.mEngine) + ", \"sets\": [";
@@ -1474,13 +1570,15 @@ void WriteReport(int inCode, const std::string& inError)
         std::string o = "[";
         for (size_t k = 0; k < s.mPlayers.size(); k++) {
             const PlayerSample& p = s.mPlayers[k];
-            char b[512];
+            char b[768];
             snprintf(b, sizeof(b),
                      "%s{\"index\": %lu, \"human\": %s, \"result\": %lu, \"epoch\": %ld, \"population\": %ld, "
                      "\"victory_units\": %ld, \"citizens\": %ld, \"army\": %ld, \"buildings\": %ld, "
+                     "\"naval\": %ld, \"air\": %ld, \"towers\": %ld, \"walls\": %ld, \"wonders\": %ld, "
                      "\"strength\": %ld, \"value\": %ld, \"resources\": {\"food\": %ld, \"wood\": %ld, \"stone\": %ld, \"gold\": %ld, \"iron\": %ld}}",
                      k ? ", " : "", p.mIndex, p.mHuman ? "true" : "false", p.mResult, p.mEpoch, p.mPopulation,
-                     p.mVictoryUnits, p.mCitizens, p.mArmy, p.mBuildings, p.mStrength, p.mValue, p.mResources[0], p.mResources[1],
+                     p.mVictoryUnits, p.mCitizens, p.mArmy, p.mBuildings,
+                     p.mNaval, p.mAir, p.mTowers, p.mWalls, p.mWonders, p.mStrength, p.mValue, p.mResources[0], p.mResources[1],
                      p.mResources[2], p.mResources[3], p.mResources[4]);
             o += b;
         }
@@ -1812,6 +1910,20 @@ void Drive()
             EEPlayer* theHuman = gWorld.GetCurrentPlayer();
             theHuman->mCivilizationChosen = true;
             theHuman->mCivilizationLocked = true;
+            // (the idle human out of the fighting from the start: the computers' attack choice prefers a human, and the
+            // classic's early raids went to this seat, which never fights back, in 60 of 64 games against boom from
+            // minute 4. Allied both ways with every computer it is no AI's enemy (the classic's and the Lua view's
+            // target lists skip allies); the computers stay at war with each other. An observer seat, or its units
+            // removed, ends the single-player game at once. --keep-human: the old seat)
+            if (sOptions.mHumanOut) {
+                for (unsigned long i = 1; i < gWorld.GetNumPlayers(); i++) {
+                    EEPlayer* theOther = gWorld.GetPlayer(i);
+                    if (theOther == NULL || theOther == theHuman)
+                        continue;
+                    theHuman->SetDiplomaticStance(theOther, 0, gWorld.GetMap());
+                    theOther->SetDiplomaticStance(theHuman, 0, gWorld.GetMap());
+                }
+            }
             sResults.assign(gWorld.GetNumPlayers(), 0);
             gWorld.mLock->WriteUnlock();
         }
@@ -1878,6 +1990,12 @@ const char* kUsage =
     "  --wall-timeout S       give up after this wall time (default 3600)\n"
     "  --pt-rate N            Min = Max PTs per Second (default 40, the harness's pin)\n"
     "  --human-defeat         let the idle human be defeated (default: kept in, the harness's --no-human-defeat)\n"
+    "  --flare SECONDS:PLAYER the idle human flares at the player's first building at that game time (TEST ONLY:\n"
+    "                         its allies, the computers, answer it as an ally's flare)\n"
+    "  --volcano SECONDS:PLAYER a volcano cast 6 tiles off the player's first building at that game time; logs the\n"
+    "                         boulders launched every game second (TEST ONLY)\n"
+    "  --keep-human           keep the idle human at war (default: allied with every computer from the start, so no\n"
+    "                         computer attacks it)\n"
     "  --cheats SETS          EE_AI_CHEATS (e.g. none, all, none/all)\n"
     "  --personality NAMES    EE_AI_PERSONALITY (e.g. balanced)\n"
     "  --engine LIST          the computer seats' engine through the lobby's engine boxes: classic, random, an AI's\n"
@@ -2076,6 +2194,28 @@ int EESimMain(int argc, char** argv)
             sOptions.mNoHumanDefeat = false;
         else if (a == "--no-human-defeat")
             sOptions.mNoHumanDefeat = true;
+        else if (a == "--keep-human")
+            sOptions.mHumanOut = false;
+        else if (a == "--flare") {
+            std::string v = value();
+            size_t c = v.find(':');
+            if (c == std::string::npos) {
+                fprintf(stderr, "EE-SIM: --flare SECONDS:PLAYER\n");
+                return 64;
+            }
+            sOptions.mFlareMs = (long)(atof(v.substr(0, c).c_str()) * 1000);
+            sOptions.mFlarePlayer = (unsigned long)atol(v.substr(c + 1).c_str());
+        }
+        else if (a == "--volcano") {
+            std::string v = value();
+            size_t c = v.find(':');
+            if (c == std::string::npos) {
+                fprintf(stderr, "EE-SIM: --volcano SECONDS:PLAYER\n");
+                return 64;
+            }
+            sOptions.mVolcanoMs = (long)(atof(v.substr(0, c).c_str()) * 1000);
+            sOptions.mVolcanoPlayer = (unsigned long)atol(v.substr(c + 1).c_str());
+        }
         else if (a == "--cheats")
             sOptions.mCheats = value();
         else if (a == "--personality")

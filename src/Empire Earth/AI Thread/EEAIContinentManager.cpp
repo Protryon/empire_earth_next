@@ -25,6 +25,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 #include "lle/USingleton.h"
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -44,9 +45,6 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
-#include "ee/EECPILocation.h"
-#include "ee/EECPAGTask.h"
-#include "ee/EECPUnitSelector.h"
 #include <EEAIFunctionObjects.h>
 
 #include "ee/EEAIPathArea.h"
@@ -75,7 +73,6 @@
 #include "ee/EEPathManager.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EESMArea.h"
-#include "ee/EECPIntelligence.h"
 #include "ee/EEAIAStarMachine.h"
 #include "ee/EEAIAStarMachineSteps.h"
 #include "ee/EEDebugTrace.h"

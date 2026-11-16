@@ -189,6 +189,7 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         const EECPNextSite& s = inView.sites[k];
         EECPLuaValue e = EECPLuaValue::NewMap();
         e.Set("index", EECPNextInt(s.index + 1));   // its place in view.sites: claim{site = index}
+        e.Set("id", EECPNextInt(s.id));
         if (s.resource >= 0 && s.resource < kNextResources)
             e.Set("resource", EECPLuaValue::Str(kNextResourceNames[s.resource]));   // nil: nothing left
         e.Set("units", EECPNextInt(s.units));
@@ -212,6 +213,12 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         static const char* const kBlocked[6] = {"", "unexplored", "enemy_near", "danger", "area", "tower"};
         if (s.blocked > 0 && s.blocked <= kNextBlockedTower)   // why the gatherer finders would pass it over (nil: they would not)
             e.Set("blocked", EECPLuaValue::Str(kBlocked[s.blocked]));
+        if (k < inView.site_units.size()) {   // its resource units with some left (the Lua verbs' finders)
+            EECPLuaValue theIds = EECPLuaValue::NewArray();
+            for (unsigned long u = 0; u < inView.site_units[k].size(); u++)
+                theIds.Push(EECPNextInt(inView.site_units[k][u]));
+            e.Set("ids", std::move(theIds));
+        }
         theSites.Push(std::move(e));
     }
     v.Set("sites", std::move(theSites));
@@ -302,29 +309,6 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         theEvents.Push(std::move(e));
     }
     v.Set("events", std::move(theEvents));
-    EECPLuaValue theGroups = EECPLuaValue::NewArray();
-    for (unsigned long k = 0; k < inView.groups.size(); k++) {
-        const EECPNextGroupView& g = inView.groups[k];
-        EECPLuaValue e = EECPLuaValue::NewMap();
-        e.Set("id", EECPNextInt(g.id));
-        e.Set("task", EECPLuaValue::Str(EECPNextTaskName(g.task)));
-        e.Set("state", EECPLuaValue::Str(EECPNextGroupStateName(g.state)));
-        e.Set("units", EECPNextInt(g.units));
-        e.Set("strength", EECPNextInt(g.strength));
-        e.Set("x", EECPNextInt(g.x));
-        e.Set("y", EECPNextInt(g.y));
-        e.Set("target", EECPNextInt(g.target));
-        e.Set("tx", EECPNextInt(g.tx));
-        e.Set("ty", EECPNextInt(g.ty));
-        e.Set("enemy_count", EECPNextInt(g.enemy_count));
-        e.Set("enemy_strength", EECPNextInt(g.enemy_strength));
-        e.Set("targets", EECPNextInt(g.targets));
-        e.Set("started", EECPNextInt(g.started));
-        e.Set("lost", EECPNextInt(g.lost));
-        e.Set("created", EECPNextInt(g.created));
-        theGroups.Push(std::move(e));
-    }
-    v.Set("groups", std::move(theGroups));
     v.Set("free_soldiers", EECPNextInt(inView.free_soldiers));
     v.Set("free_strength", EECPNextInt(inView.free_strength));
     // §8.35: the game near the town, the hunters, the worked forest edge
@@ -346,8 +330,6 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         e.Set("code", EECPLuaValue::Str(EECPNextCodeName(inResults[k].mCode)));
         e.Set("reason", EECPLuaValue::Str(EECPNextResultReasonName(inResults[k].mReason)));
         e.Set("count", EECPNextInt(inResults[k].mCount));
-        if (inResults[k].mGroup != 0)
-            e.Set("group", EECPNextInt(inResults[k].mGroup));   // the group verbs
         theResults.Push(std::move(e));
     }
     v.Set("results", std::move(theResults));
@@ -471,136 +453,10 @@ static EECPNextResult EECPNextRunOrder(EEComputerPlayer* inPlayer, const EECPLua
     outVerb = theVerb->AsString();
     const std::string& v = outVerb;
     EECPNextOrderReader r(inOrder);
-    if (v == "gather") {
-        std::string theResource = r.Str("resource", "", true);
-        long n = r.Int("n", 0, true);
-        std::string thePrefer = r.Str("prefer", "patch");
-        long theExact = r.Int("exact", -1);
-        long theGranaryFarms = r.Int("granary_farms", -2);   // (-2: unchanged; -1: the engine's rule)
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        long theIndex = EECPNextResourceIndex(theResource);
-        long thePreferKind = thePrefer == "patch" ? kNextPreferPatch : thePrefer == "hunt" ? kNextPreferHunt : -1;
-        if (theIndex < 0 || thePreferKind < 0)
-            return EECPNextRefuse(inPlayer, v, theIndex < 0 ? "resource " + theResource : "prefer " + thePrefer);
-        return EECPNextGather(inPlayer, theIndex, n, thePreferKind, theExact, theGranaryFarms);
-    }
-    if (v == "claim" || v == "release") {
-        long theSite = r.Int("site", 0, true);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return v == "claim" ? EECPNextClaim(inPlayer, theSite - 1) : EECPNextRelease(inPlayer, theSite - 1);
-    }
-    if (v == "claim_range") {
-        long theRange = r.Int("range", 0, true);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return EECPNextClaimRange(inPlayer, theRange);
-    }
-    if (v == "build") {
-        std::string theType = r.Str("type", "", true);
-        std::string theNear = r.Str("near", "town");
-        long theNearKind = theNear == "town" ? kNextNearTown : theNear == "site" ? kNextNearSite : theNear == "tile" ? kNextNearTile : -1;
-        long a1 = 0, a2 = 0;
-        if (theNearKind == kNextNearSite)
-            a1 = r.Int("site", 0, true) - 1;
-        else if (theNearKind == kNextNearTile) {
-            a1 = r.Int("x", 0, true);
-            a2 = r.Int("y", 0, true);
-        }
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        if (theNearKind < 0)
-            return EECPNextRefuse(inPlayer, v, "near " + theNear);
-        long theClass = EECPNextClassByName(theType);
-        if (theClass < 0)
-            return EECPNextRefuse(inPlayer, v, "unknown type " + theType);
-        return EECPNextBuild(inPlayer, theClass, theNearKind, a1, a2);
-    }
-    if (v == "fish") {
-        long theBoats = r.Int("boats", 0, true);
-        long theDocks = r.Int("docks", 1);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return EECPNextFish(inPlayer, theBoats, theDocks);
-    }
-    if (v == "train") {
-        std::string theType = r.Str("type", "", true);
-        long n = r.Int("n", 0, true);
-        long theTown = r.Int("town", 0);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        long theClass = EECPNextClassByName(theType);
-        if (theClass < 0)
-            return EECPNextRefuse(inPlayer, v, "unknown type " + theType);
-        return EECPNextTrain(inPlayer, theClass, n, theTown);
-    }
-    if (v == "reserve") {
-        long theAmounts[kNextResources];
-        for (long i = 0; i < kNextResources; i++)
-            theAmounts[i] = r.Int(kNextResourceNames[i], 0);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return EECPNextReserve(inPlayer, theAmounts[0], theAmounts[1], theAmounts[2], theAmounts[3], theAmounts[4]);
-    }
-    if (v == "research") {
-        std::string theTech = r.Str("tech", "", true);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        long theID = EECPNextTechByName(theTech);
-        if (theID < 0)
-            return EECPNextRefuse(inPlayer, v, "unknown tech " + theTech);
-        return EECPNextResearch(inPlayer, theID);
-    }
-    if (v == "improve") {
-        // {verb="improve", type="b_guard_tower_paleo", what="range"} (§8.35); what: attack, hit_points, range, speed
-        std::string theType = r.Str("type", "", true);
-        std::string theWhat = r.Str("what", "", true);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        long theClass = EECPNextClassByName(theType);
-        if (theClass < 0)
-            return EECPNextRefuse(inPlayer, v, "unknown type " + theType);
-        long theKind = theWhat == "range" ? kImprovementRange : theWhat == "attack" ? kImprovementAttack
-            : theWhat == "hit_points" ? kImprovementHitPoints : theWhat == "speed" ? kImprovementSpeed : -1;
-        if (theKind < 0)
-            return EECPNextRefuse(inPlayer, v, "what " + theWhat);
-        return EECPNextImprove(inPlayer, theClass, theKind);
-    }
-    if (v == "advance") {
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return EECPNextAdvance(inPlayer);
-    }
-    if (v == "attack" || v == "raid" || v == "defend" || v == "scout") {
-        // {verb=, n=, group=, from=, classes={...}, player= (attack, raid), x=, y=, radius= (defend)}
-        EECPNextGroupOrder theOrder;
-        theOrder.mGroup = r.Int("group", 0);
-        theOrder.mFrom = r.Int("from", 0);
-        theOrder.mCount = r.Int("n", 0, theOrder.mGroup == 0);
-        theOrder.mClasses = r.Classes("classes");
-        theOrder.mPlayer = v == "attack" || v == "raid" ? r.Int("player", 0) : 0;
-        theOrder.mX = r.Int("x", -1);
-        theOrder.mY = r.Int("y", -1);
-        theOrder.mRadius = v == "defend" ? r.Int("radius", 0) : 0;
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        long theTask = v == "attack" ? kNextTaskAttack : v == "raid" ? kNextTaskRaid : v == "defend" ? kNextTaskDefend : kNextTaskScout;
-        return EECPNextGroupTask(inPlayer, theTask, theOrder);
-    }
-    if (v == "retreat" || v == "regroup") {
-        long theGroup = r.Int("group", 0, v == "regroup");
-        long x = r.Int("x", -1), y = r.Int("y", -1);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return v == "retreat" ? EECPNextRetreat(inPlayer, theGroup, x, y) : EECPNextRegroup(inPlayer, theGroup, x, y);
-    }
-    if (v == "disband") {
-        long theGroup = r.Int("group", 0, true);
-        if (!r.Done())
-            return EECPNextRefuse(inPlayer, v, r.mProblem);
-        return EECPNextDisband(inPlayer, theGroup);
-    }
+    // (stage 6: gather, claim, release, claim_range, build, fish, train, reserve, research, improve and advance are
+    // data/ai/lib/verbs.lua's; an AI that sends them here without it gets "unknown verb")
+    // (stage 6: the group verbs attack, raid, defend, scout, retreat, regroup and disband are gone with EECPNextArmy's
+    // groups; no AI calls them)
     std::string theUnknown = outVerb;
     outVerb = "?";
     return EECPNextRefuse(inPlayer, outVerb, "unknown verb " + theUnknown);
@@ -768,7 +624,6 @@ static void EECPNextRunOrders(EEComputerPlayer* inPlayer, EECPNextState* inState
         theEntry.mCode = theResult.mCode;
         theEntry.mReason = theResult.mReason;
         theEntry.mCount = theResult.mCount;
-        theEntry.mGroup = theResult.mGroup;
         inState->mResults.push_back(theEntry);
     }
 }
@@ -777,13 +632,14 @@ static void EECPNextShadowStep(EEComputerPlayer* inPlayer, EECPNextState* s, con
     const EECPLuaValue& inOrders);
 
 // the script a seat runs (a new game; a loaded one has its saved script): EE_AI_NEXT_SCRIPT's (TEST ONLY), else its
-// AI's in the manifest (ee/EECPEngine.h) -> "" none
+// AI's in the manifest (ee/EECPEngine.h) -> "" none. A seat given no AI (a scenario's computer player, an old saved
+// game's) plays the manifest's "classic" AI.
 static std::string EECPNextChooseScript(EEComputerPlayer* inPlayer, EECPNextState* inState)
 {
     std::string theScript = EECPNextScriptOverride(inPlayer);
     if (theScript.empty()) {
         if (inState->mAI.empty())
-            inState->mAI = "boom";   // a seat given the next engine without an AI (none of today's paths)
+            inState->mAI = EECPClassicAI() != NULL ? EECPClassicAI()->mID : std::string("none");
         const EECPAIEntry* theAI = EECPAIByID(inState->mAI);
         if (theAI != NULL)
             theScript = theAI->mScript;
@@ -798,21 +654,20 @@ bool EECPNextPrepare(EEComputerPlayer* inPlayer)
     if (theState->mScript.empty()) {
         theState->mScript = EECPNextChooseScript(inPlayer, theState);
         if (theState->mScript.empty()) {
-            EECPEngineLog("p%lu: the AI '%s' is not in Data/ai/ais.json: the seat plays classic", inPlayer->mPlayerID,
+            EECPEngineLog("p%lu: the AI '%s' is not in Data/ai/ais.json: the seat stands idle", inPlayer->mPlayerID,
                           theState->mAI.c_str());
+            theState->mFailed = true;
             return false;
         }
-        if (theState->mScript == "c++")
-            EE_CP_TRACE(inPlayer, "next.script", "name=c++ (TEST ONLY: the C++ test opening)");
     }
-    if (theState->mScript == "c++" || theState->mLua != NULL || theState->mFailed)
+    if (theState->mLua != NULL || theState->mFailed)
         return true;
     if (!EECPNextOpen(inPlayer, theState)) {
         // the script does not load (a missing module, a syntax or top-level error: the next.error line says which):
-        // the seat plays the classic engine instead of standing idle. Safe here: the first tick, before either
-        // engine has made a decision (EEComputerPlayer::Update's start block runs the same for both)
-        EECPEngineLog("p%lu: the AI '%s' (script %s) did not load: the seat plays classic", inPlayer->mPlayerID,
+        // the seat stands idle (there is no other engine to fall back to since stage 5)
+        EECPEngineLog("p%lu: the AI '%s' (script %s) did not load: the seat stands idle", inPlayer->mPlayerID,
                       theState->mAI.c_str(), theState->mScript.c_str());
+        theState->mFailed = true;
         return false;
     }
     return true;
@@ -828,12 +683,6 @@ void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView
             EECPNextError(inPlayer, "load", kEECPLuaNoFile, "the AI '" + theState->mAI + "' is not in Data/ai/ais.json");
             return;
         }
-        if (theState->mScript == "c++")
-            EE_CP_TRACE(inPlayer, "next.script", "name=c++ (TEST ONLY: the C++ test opening)");
-    }
-    if (theState->mScript == "c++") {
-        EECPNextTestStep(inPlayer, inView);
-        return;
     }
     if (theState->mFailed)
         return;
@@ -862,11 +711,9 @@ void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView
 
 // ---------------------------------------------------------------------------------------------------------------
 // The save (EEPPlayerHelper, from version 0.252): little-endian int32 fields, strings as a uint32 length and bytes.
-//   "EENS", uint32 version 6 (1: the same without the army block below; 3 adds the gather safety's spots and scan
-//     time; 4 the site walkers; 5 the granary_farms setting, gather(granary_farms = n); 6 gather(exact = n)'s)
-//   the tactics' state: claim range, reserve[5], food preference, land food gatherers, epoch, epoch start, next repair
-//     time, income totals[5], the income ring[60][5], its step count; per player id 0..63: seen army, seen strength,
-//     last seen, seen town x, y; the events (count, then kind, type, count each); the C++ test opening's memory (4)
+//   "EENS", uint32 version 6 (stage 6: only this version loads; the economy verbs' state is the script's memory)
+//   the state: epoch, epoch start, income totals[5], the income ring[60][5], its step count; per player id 0..63: seen
+//     army, seen strength, last seen, seen town x, y; the events (count, then kind, type, count each)
 //   the strategy: the script name; started, failed (one byte each); the last step's results (count, then verb, code,
 //     reason, count each); the Lua memory bytes (EECPLuaState::SaveMemory; length 0: no Lua state)
 // Not saved (rebuilt): the Lua state itself (the modules run again from scratch), the view, the class name tables.
@@ -902,13 +749,9 @@ static bool EECPNextMemoryBytes(EEComputerPlayer* inPlayer, EECPNextState* s, st
     return true;
 }
 
-// version 2 (S4): the army after the Lua memory: the next group id; the groups (count, then id, task, state, target,
-// x, y, radius, created, state time, way x, y, time, started, lost, the units (count, then id and aim each), the
-// skips (count, then each)); the gather spots and the towers (count, then player, x, y, time, unit each); per player
-// id 0..63: citizens seen, army x, y; the last step's results' group ids (count, then each). Version 3: the gather
-// safety's memory (the enemy soldiers seen lately, as the spots; the time of its last scan). Version 4 (save 0.274):
-// the walkers sent to see a site (Â§8.36), as the spots: a load without them sent a new walker at its first step
-// where the running game's walker still stood there.
+// after the Lua memory: the gather spots and the towers (count, then player, x, y, time, unit each); per player id
+// 0..63: citizens seen, army x, y; then the gather safety's memory (the enemy soldiers seen lately, as the spots; the
+// time of its last scan)
 static void EECPNextSpotsOut(const std::vector<EECPNextSpot>& inSpots, std::vector<EeAiNextSpot>& outSpots)
 {
     outSpots.clear();
@@ -936,14 +779,8 @@ static void EECPNextSpotsIn(const EeAiNextSpot* inSpots, size_t inCount, std::ve
 static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMemory, std::string& outBytes)
 {
     std::unique_ptr<EeAiNextSave> v(new EeAiNextSave());   // (value-initialized: every field 0)
-    v->claim_range = (int32_t)s->mClaimRange;
-    for (long i = 0; i < kNextResources; i++)
-        v->reserve[i] = (int32_t)s->mReserve[i];
-    v->food_prefer = (int32_t)s->mFoodPrefer;
-    v->food_land = (int32_t)s->mFoodLand;
     v->epoch = (int32_t)s->mEpoch;
     v->epoch_start = (uint32_t)s->mEpochStart;
-    v->next_repair_time = (uint32_t)s->mNextRepairTime;
     for (long i = 0; i < kNextResources; i++)
         v->income_total[i] = (int32_t)s->mIncomeTotal[i];
     for (long k = 0; k < 60; k++)
@@ -967,57 +804,22 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
     }
     v->events = theEvents.data();
     v->event_count = theEvents.size();
-    v->test[0] = (int32_t)s->mTest.mLastClaim;
-    v->test[1] = (int32_t)s->mTest.mDefended;
-    v->test[2] = (int32_t)s->mTest.mAttacked;
-    v->test[3] = (int32_t)s->mTest.mStep;
     v->script = EECPNextBytes(s->mScript);
     v->started = s->mStarted;
     v->failed = s->mFailed;
     std::vector<EeAiNextResult> theResults;
     for (unsigned long k = 0; k < s->mResults.size(); k++) {
         const EECPNextOrderResult& r = s->mResults[k];
-        EeAiNextResult theResult = {EECPNextBytes(r.mVerb), (int32_t)r.mCode, (int32_t)r.mReason, (int32_t)r.mCount,
-            (int32_t)r.mGroup};
+        EeAiNextResult theResult = {EECPNextBytes(r.mVerb), (int32_t)r.mCode, (int32_t)r.mReason, (int32_t)r.mCount};
         theResults.push_back(theResult);
     }
     v->results = theResults.data();
     v->result_count = theResults.size();
     v->memory = EECPNextBytes(inMemory);
-    v->next_group = (int32_t)s->mNextGroup;
-    std::vector<std::vector<int32_t> > theLists(3 * s->mGroups.size());   // per group: its units, aims, skips
-    std::vector<EeAiNextGroup> theGroups;
-    for (unsigned long g = 0; g < s->mGroups.size(); g++) {
-        const EECPNextGroup& theGroup = s->mGroups[g];
-        const long theFields[] = {theGroup.mID, theGroup.mTask, theGroup.mState, theGroup.mTarget, theGroup.mX, theGroup.mY,
-            theGroup.mRadius, theGroup.mCreated, theGroup.mStateTime, theGroup.mWayX, theGroup.mWayY, theGroup.mWayTime,
-            theGroup.mStarted, theGroup.mLost};
-        EeAiNextGroup theOut = {};
-        for (unsigned long f = 0; f < sizeof(theFields) / sizeof(theFields[0]); f++)
-            theOut.fields[f] = (int32_t)theFields[f];
-        std::vector<int32_t>& theUnits = theLists[3 * g];
-        std::vector<int32_t>& theAims = theLists[3 * g + 1];
-        std::vector<int32_t>& theSkips = theLists[3 * g + 2];
-        for (unsigned long k = 0; k < theGroup.mUnits.size(); k++) {
-            theUnits.push_back((int32_t)theGroup.mUnits[k]);
-            theAims.push_back((int32_t)theGroup.mAims[k]);
-        }
-        for (unsigned long k = 0; k < theGroup.mSkips.size(); k++)
-            theSkips.push_back((int32_t)theGroup.mSkips[k]);
-        theOut.units = theUnits.data();
-        theOut.aims = theAims.data();
-        theOut.unit_count = theUnits.size();
-        theOut.skips = theSkips.data();
-        theOut.skip_count = theSkips.size();
-        theGroups.push_back(theOut);
-    }
-    v->groups = theGroups.data();
-    v->group_count = theGroups.size();
-    std::vector<EeAiNextSpot> theSpots, theTowers, theThreats, theExplore;
+    std::vector<EeAiNextSpot> theSpots, theTowers, theThreats;
     EECPNextSpotsOut(s->mSpots, theSpots);
     EECPNextSpotsOut(s->mTowers, theTowers);
     EECPNextSpotsOut(s->mThreats, theThreats);
-    EECPNextSpotsOut(s->mExplore, theExplore);
     v->spots = theSpots.data();
     v->spot_count = theSpots.size();
     v->towers = theTowers.data();
@@ -1025,32 +827,21 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
     v->threats = theThreats.data();
     v->threat_count = theThreats.size();
     v->threats_time = (int32_t)s->mThreatsTime;
-    v->explore = theExplore.data();
-    v->explore_count = theExplore.size();
-    v->granary_farms = (int32_t)s->mGranaryFarms;   // (version 5)
-    v->exact = (int32_t)s->mExact;   // (version 6)
     size_t theLength = ee_ai_next_save_encode(v.get(), NULL, 0);
-    outBytes.assign(theLength, '\0');
+    outBytes.assign(theLength, ' ');
     ee_ai_next_save_encode(v.get(), (uint8_t*)&outBytes[0], theLength);
 }
 
-// the state from its bytes (false: not a block of versions 1-6, or bytes left over; the state is then as it was);
-// the Lua memory goes to mRestoreBytes, restored at the first step. A version 1 block has no army (the state keeps
-// its own), below version 3 no gather safety's memory, below 4 no walkers, below 5 no granary_farms (-1), below 6 no exact (0)
+// the state from its bytes (false: not a version 6 block, or bytes left over; the state is then as it was); the Lua
+// memory goes to mRestoreBytes, restored at the first step
 static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
 {
     EeAiNextDecoded* theDecoded = ee_ai_next_save_decode((const uint8_t*)inBytes.data(), inBytes.size(), kNextMaxOrders);
     if (theDecoded == NULL)
         return false;
     const EeAiNextSave& v = *ee_ai_next_decoded_view(theDecoded);
-    s->mClaimRange = v.claim_range;
-    for (long i = 0; i < kNextResources; i++)
-        s->mReserve[i] = v.reserve[i];
-    s->mFoodPrefer = v.food_prefer;
-    s->mFoodLand = v.food_land;
     s->mEpoch = v.epoch;
     s->mEpochStart = (unsigned long)v.epoch_start;
-    s->mNextRepairTime = (unsigned long)v.next_repair_time;
     for (long i = 0; i < kNextResources; i++)
         s->mIncomeTotal[i] = v.income_total[i];
     for (long k = 0; k < 60; k++)
@@ -1063,6 +854,9 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
         s->mLastSeen[p] = (unsigned long)v.last_seen[p];
         s->mSeenTownX[p] = v.seen_town_x[p];
         s->mSeenTownY[p] = v.seen_town_y[p];
+        s->mSeenCitizens[p] = v.seen_citizens[p];
+        s->mArmyX[p] = v.army_x[p];
+        s->mArmyY[p] = v.army_y[p];
     }
     s->mEvents.clear();
     for (size_t k = 0; k < v.event_count; k++) {
@@ -1072,10 +866,6 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
         theEvent.count = v.events[k].count;
         s->mEvents.push_back(theEvent);
     }
-    s->mTest.mLastClaim = v.test[0];
-    s->mTest.mDefended = v.test[1];
-    s->mTest.mAttacked = v.test[2];
-    s->mTest.mStep = v.test[3];
     s->mScript = EECPNextText(v.script);
     s->mStarted = v.started;
     s->mFailed = v.failed;
@@ -1086,42 +876,13 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
         theEntry.mCode = v.results[k].code;
         theEntry.mReason = v.results[k].reason;
         theEntry.mCount = v.results[k].count;
-        theEntry.mGroup = v.results[k].group;   // (a version 1 block: 0)
         s->mResults.push_back(theEntry);
     }
     std::string theMemory = EECPNextText(v.memory);
-    if (v.version >= 2) {
-        s->mNextGroup = v.next_group;
-        s->mGroups.clear();
-        for (size_t g = 0; g < v.group_count; g++) {
-            const EeAiNextGroup& theIn = v.groups[g];
-            EECPNextGroup theGroup;
-            long* const theFields[] = {&theGroup.mID, &theGroup.mTask, &theGroup.mState, &theGroup.mTarget, &theGroup.mX,
-                &theGroup.mY, &theGroup.mRadius, &theGroup.mCreated, &theGroup.mStateTime, &theGroup.mWayX, &theGroup.mWayY,
-                &theGroup.mWayTime, &theGroup.mStarted, &theGroup.mLost};
-            for (unsigned long f = 0; f < sizeof(theFields) / sizeof(theFields[0]); f++)
-                *theFields[f] = theIn.fields[f];
-            for (size_t k = 0; k < theIn.unit_count; k++) {
-                theGroup.mUnits.push_back(theIn.units[k]);
-                theGroup.mAims.push_back(theIn.aims[k]);
-            }
-            for (size_t k = 0; k < theIn.skip_count; k++)
-                theGroup.mSkips.push_back(theIn.skips[k]);
-            s->mGroups.push_back(theGroup);
-        }
-        EECPNextSpotsIn(v.spots, v.spot_count, s->mSpots);
-        EECPNextSpotsIn(v.towers, v.tower_count, s->mTowers);
-        for (long p = 0; p < 64; p++) {
-            s->mSeenCitizens[p] = v.seen_citizens[p];
-            s->mArmyX[p] = v.army_x[p];
-            s->mArmyY[p] = v.army_y[p];
-        }
-    }
+    EECPNextSpotsIn(v.spots, v.spot_count, s->mSpots);
+    EECPNextSpotsIn(v.towers, v.tower_count, s->mTowers);
     EECPNextSpotsIn(v.threats, v.threat_count, s->mThreats);
-    s->mThreatsTime = v.threats_time;   // (below version 3: -1)
-    EECPNextSpotsIn(v.explore, v.explore_count, s->mExplore);
-    s->mGranaryFarms = v.granary_farms;   // (below version 5: -1, the engine's rule)
-    s->mExact = v.exact;   // (below version 6: 0)
+    s->mThreatsTime = v.threats_time;
     ee_ai_next_decoded_free(theDecoded);
     delete s->mLua;
     s->mLua = NULL;
@@ -1158,7 +919,7 @@ static void EECPNextSaveCheck(EEComputerPlayer* inPlayer, EECPNextState* s, cons
     bool theRestored = false;
     delete s->mShadow;
     s->mShadow = NULL;
-    if (theDecoded && theCopy.mRestore && theCopy.mScript != "c++") {
+    if (theDecoded && theCopy.mRestore) {
         EECPLuaConfig theConfig;
         theConfig.mRead = EECPNextReadScript;   // no print: the live state prints
         theConfig.mCheckMemory = true;

@@ -1630,6 +1630,32 @@
    "id_names": [
     "@world"
    ]
+  },
+  "dbrandommap": {
+   "struct": "EERandomMapRecord",
+   "container": "count",
+   "format": "csv",
+   "retail_header": 4,
+   "hole": {},
+   "key": "row",
+   "refs": {},
+   "id_names": [
+    "mName"
+   ]
+  },
+  "dbterraingraytextures": {
+   "struct": "EETerrainGrayTextureRecord",
+   "container": "lead",
+   "format": "csv",
+   "lead": [
+    "mTextureName"
+   ],
+   "hole": {},
+   "key": "row",
+   "refs": {},
+   "id_names": [
+    "mName"
+   ]
   }
  },
  "row_names": {
@@ -12159,6 +12185,120 @@
      "count": 4,
      "cls": "unused",
      "comment": "+0x18 (entry 31: 1, entry 48: 0x50200; otherwise 0)"
+    }
+   ],
+   "defaults": {}
+  },
+  "EERandomMapRecord": {
+   "name": "EERandomMapRecord",
+   "size": 132,
+   "source": "include/ee/EEDatabaseTables.h",
+   "size_check": [
+    132,
+    "static_assert"
+   ],
+   "fields": [
+    {
+     "name": "mID",
+     "member": "mID",
+     "off": 0,
+     "type": "s32",
+     "count": 1,
+     "cls": "named",
+     "comment": "+0x00 4..71, unique"
+    },
+    {
+     "name": "mGroup",
+     "member": "mGroup",
+     "off": 4,
+     "type": "s32",
+     "count": 1,
+     "cls": "named",
+     "comment": "+0x04 1..10: two or three rows per group"
+    },
+    {
+     "name": "mName",
+     "member": "mName",
+     "off": 8,
+     "type": "str",
+     "count": 100,
+     "cls": "named",
+     "comment": "+0x08 the terrain's name (\"Grass Tufts\", \"Snow\", \"StoneWork\")"
+    },
+    {
+     "name": "mElevationLow",
+     "member": "mElevationLow",
+     "off": 108,
+     "type": "s32",
+     "count": 1,
+     "cls": "named",
+     "comment": "+0x6c -10, -2, 0"
+    },
+    {
+     "name": "mElevationHigh",
+     "member": "mElevationHigh",
+     "off": 112,
+     "type": "s32",
+     "count": 1,
+     "cls": "named",
+     "comment": "+0x70 -4, -3, -1, 20"
+    },
+    {
+     "name": "mTerrain",
+     "member": "mTerrain",
+     "off": 116,
+     "type": "s32",
+     "count": 4,
+     "cls": "named",
+     "comment": "+0x74 four equal dbterrain ids (2..71)"
+    }
+   ],
+   "defaults": {}
+  },
+  "EETerrainGrayTextureRecord": {
+   "name": "EETerrainGrayTextureRecord",
+   "size": 120,
+   "source": "include/ee/EEDatabaseTables.h",
+   "size_check": [
+    120,
+    "static_assert"
+   ],
+   "fields": [
+    {
+     "name": "mName",
+     "member": "mName",
+     "off": 0,
+     "type": "str",
+     "count": 100,
+     "cls": "named",
+     "comment": "+0x00 \"Grass Rough (x)\" ... \"Space\""
+    },
+    {
+     "name": "mID",
+     "member": "mID",
+     "off": 100,
+     "type": "s32",
+     "count": 1,
+     "cls": "named",
+     "comment": "+0x64 2..60"
+    },
+    {
+     "name": "mIndex",
+     "member": "mIndex",
+     "off": 104,
+     "type": "s32",
+     "count": 1,
+     "cls": "named",
+     "comment": "+0x68 -1 (row 0) .. 58"
+    },
+    {
+     "name": "mColor",
+     "member": "mColor",
+     "off": 108,
+     "type": "s32",
+     "count": 3,
+     "cls": "named",
+     "comment": "+0x6c red, green, blue (0..255), like dbterrain's colour"
     }
    ],
    "defaults": {}

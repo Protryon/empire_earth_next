@@ -36,8 +36,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEAreaUtilities.h"
-#include "ee/EECPILocation.h"
-#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EEAIAStarStorage.h"
 #include "ee/EETileCoordinate.h"
 #include "ee/EEGroupCluster.h"
@@ -1823,7 +1822,7 @@ EEActiveGroup* EERestoreActiveGroup(EEPlayer* inPlayer, EESavedActiveGroup& g)
             continue;
         // its graph search: the restored request takes the loaded copy's place, else the request is dropped
         theGroup->Reference();
-        EEAwaitAutoPathRequest(thePath->mRequestID, NULL, [theGroup, theKey](EEAutoPathRequest* inRequest) {
+        EEAwaitAutoPathRequest(thePath->mRequestID, [theGroup, theKey](EEAutoPathRequest* inRequest) {
             std::map<long, EEGroupPathRequest*>::iterator it = theGroup->mPathRequests.find(theKey);
             if (it != theGroup->mPathRequests.end()) {
                 if (inRequest != NULL) {

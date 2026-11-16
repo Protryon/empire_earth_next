@@ -1,0 +1,42 @@
+#eedata dbuiforms
+#format 3
+#rows 40
+row,id,label,mMusicFile,mFormID,mControlCount,mControlGroupCount,mLeftOffset,mRightOffset,mBottomOffset,mTopOffset,mDesignedWidth,mDesignedHeight,mHelpTextTimeDelay,mLeftOffsetType,mRightOffsetType,mTopOffsetType,mBottomOffsetType,mTabbingOn,mUseToolTips,mUseExclusiveCoords
+2,test_form,Test form,sounds\G7_99.mp3,,50,3,0.2503129,0.75093865,0.5008347,0.15859766,800,600,600,4,4,4,4,1,1,0
+3,in_game_scenario_save_game_screen,In Game Scenario & Save Game Screen,none,,10,1,0.0,0.0,0.0,0.0,800,600,0,0,3,0,3,1,0,0
+4,in_game_scenario_load_game_screen,In Game Scenario & Load Game Screen,none,,8,1,0.0,0.0,0.0,0.0,800,600,0,0,3,0,3,1,0,0
+5,game_settings_screen,Game Settings Screen,sounds\EEIntro.mp3,,112,4,0.0,0.0,0.0,0.0,1024,768,1000,0,3,0,3,1,1,0
+6,single_player_menu,Single Player Menu,sounds\EEIntro.mp3,,10,1,0.0,0.0,0.0,0.0,1024,768,1600,0,3,0,3,1,1,0
+7,civbuilder_main_form,CivBuilder Main Form,none,,21,1,0.0,0.0,0.0,0.0,800,600,800,0,3,0,3,0,1,0
+8,play_campaign_form,Play Campaign Form,sounds\EEIntro.mp3,,11,1,0.0,0.0,0.0,0.0,1024,768,0,0,3,0,3,1,0,0
+9,game_tools_menu,Game Tools Menu,sounds\EEIntro.mp3,,7,1,0.0,0.0,0.0,0.0,1024,768,800,0,3,0,3,1,1,0
+10,choose_campaign_screen,Choose Campaign Screen,sounds\EEIntro.mp3,,8,1,0.0,0.0,0.0,0.0,1024,768,0,0,3,0,3,0,0,0
+11,scott_main_game_form,Scott Main Game Form,none,,300,11,0.0,0.0,0.0,0.0,1600,1200,0,0,3,0,3,0,1,1
+12,main_menu_screen,Main Menu Screen,sounds\EEIntro.mp3,,10,1,0.0,0.0,0.0,0.0,1024,768,2000,0,3,0,3,1,1,0
+13,single_player_load_game_screen,Single Player Load Game Screen,sounds\EEIntro.mp3,,8,1,0.0,0.0,0.0,0.0,800,600,0,0,3,0,3,1,0,0
+14,campaign_screen,Campaign Screen,sounds\EEIntro.mp3,,6,1,0.0,0.0,0.0,0.0,1024,768,0,0,3,0,3,1,0,0
+15,civbuilder_new_civilization_form,CivBuilder New Civilization Form,none,,5,1,0.2503129,0.74968714,0.66611016,0.3338898,800,600,800,4,4,4,4,0,1,0
+16,civbuilder_save_civilization_form,CivBuilder Save Civilization Form,none,,9,1,0.2503129,0.74968714,0.74958265,0.25041735,800,600,800,4,4,4,4,0,1,0
+17,civbuilder_load_civilization_form,CivBuilder Load Civilization Form,none,,6,1,0.2503129,0.74968714,0.74958265,0.25041735,800,600,800,4,4,4,4,0,1,0
+18,chat_in_game_pop_up_dialog,Chat In Game pop-up dialog,none,,6,1,0.23028786,0.76971215,0.72621036,0.6327212,800,600,0,4,4,4,4,0,0,0
+19,scenario_intro_screen_briefing_screen,Scenario Intro Screen(Briefing Screen),none,,10,1,0.0,1.0,1.0,0.0,800,600,800,4,4,4,4,1,1,0
+20,scenario_load_screen,Scenario Load Screen,sounds\EEIntro.mp3,,6,1,0.0,1.0,1.0,0.0,800,600,0,4,4,4,4,1,0,0
+21,won_net_stat_screen,WON.net Stat Screen,none,,24,1,0.0,1.0,1.0,0.0,1024,768,0,4,4,4,4,0,0,0
+22,ds_debug_sound_screen,DS Debug Sound Screen,none,,31,1,0.23779725,0.76220274,0.76627713,0.23372287,800,600,0,4,4,4,4,0,0,0
+23,splash_screen,Splash Screen,none,,52,1,0.0,0.0,0.0,0.0,1024,768,0,0,3,0,3,0,0,1
+24,campaign_editor_form,Campaign Editor Form,sounds\EEIntro.mp3,,50,3,0.0,0.0,0.0,0.0,1024,768,999,0,3,0,3,0,1,0
+25,post_game_summary_screen,Post Game Summary Screen,sounds\Arthurian.mp3,,2200,8,0.0,0.0,0.0,0.0,1024,768,800,0,3,0,3,0,1,0
+26,multi_single_setup_screen_lobby,Multi/Single Setup Screen(Lobby),sounds\EEIntro.mp3,,275,5,0.0,0.0,0.0,0.0,1024,768,1000,0,3,0,3,0,1,0
+27,diplomacy_screen,Diplomacy Screen,none,,200,1,0.04398827,0.95796674,0.84745765,0.06518905,1024,768,999,4,4,4,4,0,1,0
+28,in_game_options_form,In-game Options form,none,,13,1,0.2252816,0.77597,0.5175292,0.08347245,800,600,1000,4,4,4,4,0,1,0
+29,chat_log_form,Chat Log Form,none,,4,1,0.10012516,0.9011264,0.6761269,0.08347245,800,600,0,4,4,4,4,1,0,0
+30,multiplayer_menu_form,Multiplayer Menu Form,sounds\EEIntro.mp3,,30,4,0.0,0.0,0.0,0.0,1024,768,1600,0,3,0,3,1,1,0
+31,available_rooms_sierra_form,Available Rooms (Sierra) Form,sounds\EEIntro.mp3,,18,1,0.0,0.0,0.0,0.0,1024,768,999,0,3,0,3,1,1,0
+32,available_games_sierra_form,Available Games (Sierra) Form,sounds\EEIntro.mp3,,41,3,0.0,0.0,0.0,0.0,1024,768,999,0,3,0,3,1,1,0
+33,campaign_scenario_select_form,Campaign Scenario Select Form,sounds\EEIntro.mp3,,13,2,0.0,0.0,0.0,0.0,1024,768,0,0,3,0,3,0,0,0
+34,choose_custom_campaign_form,Choose Custom Campaign Form,sounds\EEIntro.mp3,,7,1,0.10012516,0.9011264,0.6761269,0.08347245,800,600,0,4,4,4,4,1,0,0
+35,predefined_civ_form,Predefined Civ Form,none,,6,1,0.0,1.0,1.0,0.0,800,600,0,4,4,4,4,1,0,0
+36,create_sierra_account_form,Create Sierra Account Form,sounds\EEIntro.mp3,,20,1,0.2503129,0.75093865,0.8013356,0.15859766,800,600,0,4,4,4,4,1,0,0
+37,update_sierra_account_form,Update Sierra Account Form,sounds\EEIntro.mp3,,11,1,0.2503129,0.75093865,0.5843072,0.15859766,800,600,0,4,4,4,4,1,0,0
+38,select_server_form,Select Server Form,sounds\EEIntro.mp3,,5,1,0.2503129,0.75093865,0.6677796,0.15859766,800,600,0,4,4,4,4,1,0,0
+39,demo_outro_form,Demo Outro Form,sounds\Arthurian.mp3,,22,4,0.0,1.0,1.0,0.0,1024,768,0,4,4,4,4,0,0,0

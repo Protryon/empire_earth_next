@@ -118,8 +118,15 @@ impl Host for Dm<'_> {
     fn set_performance_volume(&mut self, amplitude: f32) {
         unsafe { sys::DmPerformance_setVolume(self.c.performance.load(Ordering::SeqCst), amplitude) }
     }
-    fn set_groove_level(&mut self, level: i8) {
-        unsafe { sys::DmPerformance_setMasterGrooveLevel(self.c.performance.load(Ordering::SeqCst), level) }
+    fn set_groove_level(&mut self, level: u8) {
+        unsafe { sys::DmPerformance_setGrooveLevel(self.c.performance.load(Ordering::SeqCst), level) }
+    }
+    fn stop_all(&mut self, lookahead_ms: u32) {
+        unsafe { sys::DmPerformance_stop(self.c.performance.load(Ordering::SeqCst), lookahead_ms) }
+    }
+    fn set_reverb(&mut self, enabled: bool, gain: f32, mix: f32, time: f32, hf_ratio: f32) {
+        let p = self.c.performance.load(Ordering::SeqCst);
+        unsafe { sys::DmPerformance_setReverb(p, enabled as i32, gain, mix, time, hf_ratio) }
     }
 }
 
@@ -188,7 +195,8 @@ unsafe extern "C" fn render(conductor: *mut c_void, frames: *mut f32, count: c_u
 }
 
 /// dmusic's loader: a score file (segment, style or DLS bank) from the music folder in a `malloc`'d buffer (dmusic
-/// frees it); NULL when it cannot be opened (`length` untouched then).
+/// frees it); NULL when it cannot be opened (`length` untouched then). A `gm.dls` the folder lacks is the general
+/// MIDI set built into the program (`SEGeneralMIDI.c`: EE.sf2; main 32b4344f4: the original took the system's).
 unsafe extern "C" fn resolve(conductor: *mut c_void, file: *const c_char, length: *mut usize) -> *mut c_void {
     let c = unsafe { &*(conductor as *const EeSoundConductor) };
     let folder = unsafe { &(*c.inner.get()).folder };
@@ -205,7 +213,17 @@ unsafe extern "C" fn resolve(conductor: *mut c_void, file: *const c_char, length
     unsafe {
         let stream = sys::PlatFOpen(path.as_ptr() as *const c_char, c"rb".as_ptr());
         if stream.is_null() {
-            return null_mut();
+            if !file.eq_ignore_ascii_case(b"gm.dls") {
+                return null_mut();
+            }
+            let mut n = 0usize;
+            let set = sys::SEGeneralMIDISet(&mut n);
+            let copy = sys::malloc(n);
+            if !copy.is_null() {
+                std::ptr::copy_nonoverlapping(set, copy.cast::<u8>(), n);
+            }
+            *length = if copy.is_null() { 0 } else { n };
+            return copy;
         }
         sys::fseek(stream, 0, 2);
         let n = sys::ftell(stream);
@@ -344,14 +362,28 @@ pub unsafe extern "C" fn ee_sound_conductor_music_folder(c: *const EeSoundConduc
     unsafe { (*(*c).inner.get()).folder.as_ptr() as *const c_char }
 }
 
-/// `SetReverb`: only the state is kept (dmusic's synthesizer has no reverb).
+/// `SetReverb`: on (1) or off, in the style last set; while stopped only the state is kept.
 ///
 /// # Safety
 /// `c` is a live conductor.
 #[no_mangle]
 pub unsafe extern "C" fn ee_sound_conductor_set_reverb(c: *const EeSoundConductor, reverb: u32) -> i32 {
-    unsafe { &*c }.with(|_, _, f| f.reverb_state = reverb);
-    0
+    unsafe { &*c }.with(|_, h, f| Conductor::set_reverb(h, f, reverb))
+}
+
+/// `SetReverbStyle(gain, hf_ratio, mix, time)`: kept and applied in the reverb's current state.
+///
+/// # Safety
+/// `c` is a live conductor.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sound_conductor_set_reverb_style(
+    c: *const EeSoundConductor,
+    gain: f32,
+    hf_ratio: f32,
+    mix: f32,
+    time: f32,
+) -> i32 {
+    unsafe { &*c }.with(|_, h, f| Conductor::set_reverb_style(h, f, gain, hf_ratio, mix, time))
 }
 
 /// `SetVolume`.

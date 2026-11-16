@@ -1,4 +1,4 @@
-"""Compile helpers: stage a unit under its build path (C:\\EEX, as the original build tree), its include list, its
+"""Compile helpers: stage a unit under its build path (build/eex; C:\\EEX in __FILE__, as the original build tree), its include list, its
 // UNIT-FLAGS, and a COFF object reader."""
 import os
 import pathlib
@@ -8,7 +8,7 @@ import subprocess
 import sys
 import time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from ee import LINK_DIR, EEX_INCLUDE_DIRS, ORIG_SRC_ROOT, ROOT, TOOLCHAIN, modern_dirs
+from ee import FILE_PREFIX, LINK_DIR, EEX_INCLUDE_DIRS, ORIG_SRC_ROOT, ROOT, TOOLCHAIN, modern_dirs
 DEFINES = "-DWIN32 -DNDEBUG -D_WINDOWS"
 
 
@@ -16,7 +16,7 @@ THIRD_PARTY = ROOT / "src" / "ThirdParty"
 
 
 def stage_source(src):
-    """The path a unit compiles from: the game's units are copied under C:\\EEX (with their sibling headers);
+    """The path a unit compiles from: the game's units are copied under ORIG_SRC_ROOT (build/eex; with their sibling headers);
     third-party libraries compile in place (their own relative includes)."""
     src = pathlib.Path(src).resolve()
     if src.is_relative_to(THIRD_PARTY):
@@ -52,6 +52,8 @@ def include_paths(src=None):
         for f in sorted((ROOT / "src" / d).glob("*.h")):
             _stage_write(dst / f.name, f.read_bytes())
         flags.append(f"/I{dst}")   # absolute: a drive-relative \eex\... breaks when the build runs from another drive
+    # __FILE__ names the staged unit as the original build tree did (C:\EEX\...), wherever the checkout is
+    flags.append(f"/clang:-fmacro-prefix-map={ORIG_SRC_ROOT}={FILE_PREFIX}")
     msvc, sdk, _, _ = modern_dirs()
     incdir = pathlib.Path(os.environ.get("EE_INCLUDE", str(ROOT / "include")))
     dx7 = pathlib.Path(os.environ.get("EE_DX7SDK", str(TOOLCHAIN / "dx7sdk" / "include")))
@@ -61,6 +63,9 @@ def include_paths(src=None):
     # the built-in fonts (#embed in src/Platform/Common/PlatFontData.c; tools/fetch_posix.py fonts)
     if src is not None and "Platform" in pathlib.Path(src).parts and "Common" in pathlib.Path(src).parts:
         flags.append(f"/clang:--embed-dir={TOOLCHAIN / 'fonts'}")
+    # the built-in general MIDI set (#embed in src/Low-Level Engine/Sound Engine/SEGeneralMIDI.c; EE.sf2 next to it)
+    if src is not None and pathlib.Path(src).name == "SEGeneralMIDI.c":
+        flags.append(f"/clang:--embed-dir={ROOT / 'src' / 'Low-Level Engine' / 'Sound Engine'}")
     # the window layer's SDL3 headers (tools/xbuild.py sdl3), for its implementation only
     if src is not None and "Platform" in pathlib.Path(src).parts and "SDL" in pathlib.Path(src).parts:
         wgpu.append(str(ee.sdl3_dir() / "include"))

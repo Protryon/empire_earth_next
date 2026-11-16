@@ -44,8 +44,7 @@
 #include "ee/EEAIContinentManager.h"
 
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EECPILocation.h"
-#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPASGFlags.h"
 
 // Creates an empty path sub-sector with no sector, ids 0, kind none and no owner
 EEAIPathSubSector::EEAIPathSubSector()

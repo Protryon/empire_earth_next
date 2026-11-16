@@ -22,6 +22,7 @@
 #include "lle/FSFile.h"
 #include "lle/USingleton.h"
 
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -38,10 +39,8 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIAStarStorage.h"
-#include "ee/EECPCivilizationManager.h"
-#include "ee/EECPBuildManager.h"
+#include "ee/EECPPlacement.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EECPIntelligence.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEAIRandom.h"
 #include "ee/EECPResourceCenter.h"
@@ -215,7 +214,7 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
     U2DPoint<long> theUnitCenter;
     std::vector<U2DPoint<long> > theTiles;
     std::vector<EEUnit*> theUnits;
-    EECPBuildManager* theBuildManager = this->mPlayer->mCivilizationManager->mBuildManager;
+    EECPPlacement* theBuildManager = this->mPlayer->mPlacement;
     long theRange = this->mPlayer->mDropOffDistance;
     long theSize = gUnitClassTable[inUnitClass]->GetTileSize();
     bool theFound = false;
@@ -228,7 +227,7 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
     unsigned short theContinent;
     std::vector<U2DPoint<long> >::iterator it;
     unsigned long i;
-    if ((inUnitClass == this->mPlayer->mCivilizationManager->GetTowerClass() || inUnitClass == kUnitTypePriestTower) && this->mUnit != NULL) {
+    if ((inUnitClass == EECPTowerClass(this->mPlayer) || inUnitClass == kUnitTypePriestTower) && this->mUnit != NULL) {
         float theFactor = this->mPlayer->mUnitClassUpgrades[inUnitClass]->mRange;
         float theRadius = this->mPlayer->mTowerSpacing * theFactor;
         float theRadiusSquared = theRadius * theRadius;

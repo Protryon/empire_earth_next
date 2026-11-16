@@ -199,7 +199,6 @@ static void GatherGhosts(std::vector<EEComplexUnit*>& outDead, std::vector<EEUni
             outDead.push_back(theAttacker);
         }
     }
-    EECPOutOfWorldGatherers(outDead);
     for (unsigned long p = 0; p < gWorld.mNumPlayers; p++) {
         EEPlayer* thePlayer = gWorld.mPlayers[p];
         for (EEUnit* theUnit = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {

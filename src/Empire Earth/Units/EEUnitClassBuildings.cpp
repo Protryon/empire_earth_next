@@ -75,7 +75,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEGhostUnit.h"
-#include "ee/EECPIntelligence.h"
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEGraphicObject.h"

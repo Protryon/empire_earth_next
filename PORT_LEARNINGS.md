@@ -9475,7 +9475,7 @@ and creates and destroys effects; drawn only: `Queue`, `PrepareQueue`, `DrawPass
   walk the site's footprint tiles and dereference `GetTile(x, y)`, which is NULL for a tile off the map. A granary
   the Age of AI port placed through the human's build message (`ai.build`, placement by `EECanPlaceOnTile`) at an
   island's edge had such a footprint (Small Islands seed 11 at 49 min, deterministic: `python -I
-  tools/sim_bench.py --name x --seeds 11 --data open --ai-scripts ai --engine ageofai,classic --maps "Small
+  tools/sim_bench.py --name x --seeds 11 --data open --ai-scripts data/ai --engine ageofai,classic --maps "Small
   Islands" --game-seconds 5400`; `EE-SIM FAULT c0000005` in the run's err.txt, the frames resolved against the
   .map). A human's build order runs the same code. The three functions skip a NULL tile now (and `EEStepAsideFromSite`
   a unit that is not valid, has no tile or no stats; `BeginRepair` clears no footprint for a site not placed yet).
@@ -9494,7 +9494,7 @@ and creates and destroys effects; drawn only: `Queue`, `PrepareQueue`, `DrawPass
   `EECPUnitsReadFilter` reads the `type` field with `EECPUnitsClassArg`, which turns a table into "unknown": the filter
   then matches nothing. Boom's first second-town-centre rule counted its town centres as 0 that way and filled one
   settlement after another (5 citizens each) every 20 s.
-  `ai/ageofai/econ.lua` (`ai.units{type = TOWN_TYPES, built = true}`) has the same pattern and finds no town.
+  `data/ai/ageofai/econ.lua` (`ai.units{type = TOWN_TYPES, built = true}`) has the same pattern and finds no town.
   Fixed since: the filters take a list of names (AI_LUA_UNITS §11, `tests/ai_units/types.lua`).
 - **A town centre filled from a settlement uses its citizens up.** `ai.garrison(ids, settlement)` with the
   settlement's garrison capacity (5) makes it a town centre. Releasing the citizens right after the order (as the
@@ -9532,7 +9532,7 @@ and creates and destroys effects; drawn only: `Queue`, `PrepareQueue`, `DrawPass
   were not counted), and a second raid nearby called the first raid's militia off at its own odds; the militia now
   counts the citizens already fighting the raid nearest them.
 
-## The classic computer player in Lua (2026-11-10, ai/classic_lua/ORIGIN, docs/AI_RESEARCH.md §8.39)
+## The classic computer player in Lua (2026-11-10, data/ai/classic_lua/ORIGIN, docs/AI_RESEARCH.md §8.39)
 
 - **A script's gatherers are invisible to `ai.resource`'s `workers`.** `EECPNextAssigned` counts the classic resource
   manager's gatherer lists, and `AddGatherer` keeps every unit a script holds off them: the port's finder saw 0
@@ -9561,7 +9561,7 @@ and creates and destroys effects; drawn only: `Queue`, `PrepareQueue`, `DrawPass
 - **Editing a script that a running bench reads, or the shell script that runs it, spoils the bench.** `--ai-scripts
   ai` reads the checkout's scripts at each game's start, so an edit mid-bench mixes versions; and bash reads a script
   as it runs, so rewriting the bench's own shell script made the old shell run garbage once sim_bench returned (it
-  truncated the log). Benches here run from a copy of `ai/` taken at the start (`build/aisnap/<name>`).
+  truncated the log). Benches here run from a copy of `data/ai` taken at the start (`build/aisnap/<name>`).
 - **lib.groups drops an empty group in its step, so a sub-group waiting for Personnel's units vanished.** The
   classic's sub-group lives through WaitForUnits with no units and open request slots; a lib.groups group with no
   units is deleted ("group gone") on the next G.step. army.lua parks the empty waiting groups out of the table for
@@ -25814,3 +25814,131 @@ bloated RUST_PLAN.md (the hashes stayed).
 read by many lanes, so a move keeps them and takes the bodies over a view); `FillCivilizationList` (a UI list: to
 `civ_whole.rs`); the builder host's remaining ops. Net C++ of the round is -683, short of the 1,500 aim: the hosts
 (21 + 12 ops) and the forwarders the callers keep cost back about half of what moved.
+
+## A damage vent without tag points (Space Age on Planets Earth, 2026-11-13)
+
+- **Symptom**: EE-SIM faulted (c0000005) in EEE3DDamageVent::Step in 2 of 4 Space Age games on Planets Earth, about
+  13 game minutes in, with the old and the new classic_lua scripts alike: a graphics effect, not the computer player.
+- **Cause**: Step read the model's vent tag points (kinds 5 and 0x38) without checking them. A damaged unit whose
+  model has no such points (a NULL list), or fewer target points than source points, was read through the missing
+  list. The 32-bit original either never met such a model or survived the read.
+- **Fix**: a model without both lists, with no source points, or with fewer target points than source points, gets no
+  vents (Step returns early). The vents are cosmetic and draw from the effects' own random generator, so the
+  simulation does not change.
+
+## A volcano's boulder every physics tick (player report, 2026-11-15)
+
+- **Symptom**: a summoned volcano (the prophets' calamity) threw boulders without pause. EE-SIM `--volcano 60:1`
+  (seed 2): 14-28 boulders per game second, 805 in 50 s, which wiped out the target player's town.
+- **Cause**: a "fix" of an original dead test. EEUnitClass::LaunchShot ended with "idle if the class's category is
+  0x16e" (the Volcano unit type; no category is that large), which never passed. Testing the unit type instead
+  (8fdb8c62) idled the volcano after every launch, and its unit AI (`volcano.tai`: Idle -> ChooseRandomVolcanoTarget
+  -> AttackLocation -> ReadyToFireAgain -> Idle) then took a new target and fired again at once, skipping the
+  ReadyToFireAgain wait for the 2 s reload. FireShot does not check the reload timer itself.
+- **Fix**: the dead test is left out, as the original effectively ran: the script returns the volcano to Idle once
+  the reload is done. The same run: 23 boulders in 50 s (one per reload, about 2.2 s).
+- **Lesson**: before making an original dead branch live, check what the state machine around it already does; the
+  original's behaviour is the one the data was tuned for.
+
+## The db tables in git (2026-11-15)
+
+- **Change**: the converted tables and the rules documents are committed as `data/db` (the game's `Data/db`) and
+  the scripts moved from `ai/` to `data/ai` (`Data/ai`); a tree copies both (`open_data.py build`, `sync`), and
+  `eedata.py check` (d) compares `data/db` with a fresh conversion of retail, file by file.
+- **Two tables had no text form**: dbrandommap.dat and dbterraingraytextures.dat were copied as binaries, with
+  three retail leftovers in the same folder (`copy of dbgamevariant.dat`, the original converter's
+  `converteroutput.log` and `converterverification.log`, 0.5 MB; nothing reads them, now left out). Both tables
+  got text forms. dbrandommap's retail file starts with a u32 group count (10) before the record count (29); the
+  original loader read the group count as the record count and so ten records four bytes off, all thrown away. The
+  text compiles without the extra word (overlay `retail_header`), so the loader reads the 29 records in step; the
+  Python side recognises the retail form by its length (8 + 29 x 132 bytes).
+- **Tables nothing reads**: the census rule (every field the text carries has a reader) would leave such a table's
+  text empty and lose the retail values; `overlay.UNREAD_TABLES` exempts the two.
+- **Data folder**: `data/` is the game's whole `Data` folder: `data/db` and `data/ai` tracked, the media
+  gitignored and unpacked into it by `tools/fetch_data.py` from the media releases (a home-made git LFS). The old
+  fetch deleted its whole output folder for a new media release, which would have taken the tracked folders with
+  it; it now records each part's files in `data/.fetched.json` and removes only those, never anything under
+  `data/db` or `data/ai`. The game needs a root *holding* `Data` (and writes Logs and config.yaml there): a root at
+  the repository would put those files into it, so `build/data-root/Data` is a link to `data/` (a junction on
+  Windows: no privileges needed; the name `Data` exactly, so no case lookup is needed on Linux, although PlatPath's
+  per-component case-insensitive fallback would find `data` too). `open_data.py`'s refresh functions never write
+  through such a link (they would delete the tracked files and copy them onto themselves).
+- **No binary tables in the game**: with the text committed, the game's .dat path (EEDbFindFile's fallback to the
+  .dat, the binary tree's `*.ids` row names, the binary branch of the content dump) is gone, with `open_data.py build
+  --binary`, `tree-binary` and the gates' binary runs. A table whose text is missing stops the game with its name.
+  The retail .dat files are still read by tools/eedata (the conversion, `check`'s retail values, cppgate's dump of
+  the retail bytes through EEDataDump).
+
+## The music as the original plays it (dmusic patches, PR #1, 2026-11-15)
+
+- **A clock rounded per call makes the tempo depend on the block size.** dmusic advanced its music time by whole
+  ticks in every `renderPcm` call, so the tempo depended on how many frames the device asked for (at 48 kHz: 10 %
+  slow in 128-frame blocks, 1 to 2.6 % fast in 512-frame ones). Carry the fraction of a tick from call to call
+  (`time_carry`). Anything that converts audio frames to a coarser unit per callback has this bug.
+- **A DLS bank is MSB, LSB and a drum flag.** dmusic compared the band's bank LSB alone, so no preset matched and
+  every instrument of the eight songs played as preset 0. The band patch holds MSB in bits 16-22, LSB in 8-14 and
+  the drum flag in bit 31; a DLS bank has MSB in 8-14, LSB in 0-6, the flag in 31.
+- **Equal times in a heap have no order.** A note's end and the next note's start on the same key at the same tick
+  came out in either order, and about half the time the note-off cut the new note (every other measure of a loop
+  silent). The comparator now puts the note-off first.
+- **miniaudio kept a start position Miles reset.** The sound manager gives every looping sound a random offset
+  before it plays the channel; `AIL_start_sample` started from 0 anyway, the new mixer kept the offset, so the
+  menu theme and every ambient loop began at a random point. `SPIMPlayChannel` now starts from 0. Port a library's
+  call semantics, not just its signatures.
+- **A library's lock must cover every path that touches its state.** dmusic rendered the last part of each block
+  outside the performance's lock (safe upstream, where only the render thread changed the synthesizer). The new
+  `DmPerformance_stop` and the master volume (which now shifts the sounding voices) changed TSF voices from the
+  game's thread meanwhile, and `tsf_note_on` reallocates its voice array when it runs out: a use after free on the
+  render thread, and a volume change applied twice when two threads applied it at once. The whole block now renders
+  under the lock, `setVolume`/`playSegment`/`playTransition` take it, and each collection's voices are allocated
+  once (`tsf_set_max_voices`).
+- **Keep parsing out of the audio callback.** The first band to use a collection converted it inside `renderPcm`
+  (879 KB for the built-in general MIDI set). The loader now builds each collection's synthesizer when it loads,
+  and `playSegment` creates the fonts as copies (`tsf_copy`, shared samples) before the play is queued.
+- **Size delay lines from the rate.** The reverb's fixed 4096- and 1024-frame buffers held its delays only up to
+  about 54 kHz, and the mixer opens the device at its own rate (88.2, 96 and 192 kHz exist). Powers of two from
+  the rate, never below the old sizes, leave the output at 48 kHz and below bit-identical.
+
+## Stage 5: the C++ AI's decision code deleted (2026-11-15, docs/AI_RESEARCH.md §8.90)
+
+- **What went**: the lobby's Classic (C++) (`classic_cpp`), EECPNextTest.cpp, EEComputerPlayer's classic tick
+  (EnableManagers, the expansion, attack and catch-up timers, KeepStandingArmy, the classic CanAfford), every
+  EECPNextEngine gate, and the combat tree: 42 units and 54 headers (attack commander, groups, sub groups and their
+  units, defence commander, military aid, personnel, intelligence, unit selector, exploration, diplomacy and player
+  interaction managers), about 35,600 lines in all.
+- **What the rest of the game still needed** from those units: EECPASGFlags/EECPASGWeights (the path finder;
+  ee/EECPASGFlags.h), the favourite-type screeners and EEGetSquareRingTiles' declaration (ee/EEAIFOUnitScreeners.h),
+  ten engine helpers the original emitted out of line in the combat units after their first user there
+  (EEComplexUnit::HasCargo, GetMaxVelocity, EETile::IsSeenBy, kHeightEpsilon, ...: EECPEngineHelpers.cpp), and the
+  retire cheat (now in EEComputerPlayer.cpp). The link's unresolved list found the helpers; the compile errors the
+  rest.
+- **A seat without a loadable AI stands idle** (it used to fall back to the C++ classic); a scenario's computer player
+  plays the manifest's "classic" AI.
+- **Saved games** from before the deletion do not load (the combat and exploration managers' save blocks are gone;
+  save compatibility is not a goal).
+- **Benches beside other agents' benches**: with sim_bench's default `--port-base 2000`, EE-SIM runs crashed before
+  the game (rc 0xC0000005, no report) while other agents' games ran on the same TCP ports. Give each concurrent bench
+  its own `--port-base` (e.g. 13000, 21000, 31000).
+
+## Stage 6: the economy verbs in Lua, the managers deleted (2026-11-15, docs/AI_LUA_VERBS.md, docs/AI_RESEARCH.md §8.92)
+
+- **A foundation from `ai.build` is not on the map until its builder reaches it** (`pending` in its record; `ai.units`
+  and the C++ view leave it out). A verbs library that counts buildings for the script must count its own pending
+  foundations, and those it placed after the view was built, or the script orders the same building again.
+- **The old `EEUGBuildRepair::Abandon` hook killed and refunded a computer player's foundation** when its builder
+  left it and the build manager found no engine-held citizen to replace it (`BuildingAbandoned`). Once the Lua verbs
+  held every citizen, the hook killed every foundation whose builder a script had taken. The same tower was placed 24
+  times, and the Bronze Age came 6 minutes later. With the managers gone the hook does nothing, and the library sends
+  a builder again every 3 s.
+- **`record.gathers` is what a citizen carries, not what its goal works.** A citizen sent from food to gold still
+  says "food" until its first trip. Use its target's `kind`, and food for a farm or game.
+- **The held state the script sees:** the library holds the seat's citizens and boats in the engine, so it stands in
+  front of `ai.take`, `ai.release`, `ai.units{held}`, `ai.unit().held` and `ai.get{held}`. Its own citizens look like
+  the engine's to the script, and a builder on its way to a pending foundation looks held, so that boom's own modules
+  do not take it.
+- **A Python edit of a source file on Windows must keep its line endings** (`open(..., newline='')`, both ways). The
+  repository stores every file byte for byte (`.gitattributes: * -text`). A text-mode read and write turned 6 files
+  into CRLF and a 13,000-line diff.
+- **Units the deleted units emitted:** `EEComplexUnit::IsResearchQueued` (EECPUnitManager.cpp's range),
+  `EEUnit::IsPathMarker` (EECPCivilizationManager.cpp's) and `RTSMapTileRun`'s two members (EECPWallManager.cpp's)
+  moved to EECPEngineHelpers.cpp. The link names them as unresolved when they are missing.

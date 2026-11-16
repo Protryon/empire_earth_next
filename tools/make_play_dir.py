@@ -6,14 +6,13 @@ converted for the build's player.
 
 OUT gets:
   - EE-AOC.exe (default: build/clang/exe/EE-AOC.exe; --exe for another);
-  - the game data: Data (one loose tree: db tables as text, models as glTF, textures and pictures as PNG, the rest
-    as shipped), Users, WONLobby.cfg and zzWONVersion.cfg, from --data: a tree made by `tools/open_data.py build` or
-    the bundle made by `tools/open_data.py pack` (default: build/open_data/tree, built from the two installs when
-    missing). --data repeats, each copied over the ones before: the media, 4x textures and db parts of the releases,
-    or the folder tools/fetch_data.py unzipped them into. No data.ssa and nothing of the original Empire Earth's
-    install is needed or referenced. The game reads only the open forms (RUST_PLAN D9): a binary form an older
-    release still carries (a db .dat file, a .cem, .sst or .tga) is left out of OUT, and a tree made with the
-    retired --binary option is refused;
+  - the game data: Data (one loose tree: db tables as text, models as glTF, textures as PNG, the rest as shipped),
+    Users, WONLobby.cfg and zzWONVersion.cfg, from --data: a tree made by `tools/open_data.py build` or the bundle
+    made by `tools/open_data.py pack` (default: build/open_data/tree, built from the two installs when missing);
+    Data/db and Data/ai always from this checkout's data/db and data/ai.
+    --data repeats, each copied over the ones before: the media, 4x textures and db parts of the releases, or the
+    folder tools/fetch_data.py unzipped them into. No
+    data.ssa and nothing of the original Empire Earth's install is needed or referenced;
   - Data/Movies: every Bink movie (.bik) found in the --movies directories (an extracted retail disc, an installation
     that has Data\\Movies) converted to MPEG-1 (.mpg, tools/convert_movies.py, needs ffmpeg). Encodes are cached in
     build/play_cache/movies (keyed by file name and size), so a second play directory costs a copy. The build plays
@@ -64,8 +63,7 @@ def copy_data(data, out):
     made = out / "open_data.json"
     info = json.loads(made.read_text(encoding="utf-8")) if made.exists() else {}
     if info.get("binary"):
-        sys.exit(f"{data}: a --binary tree (the binary forms): the game reads only the open forms; "
-                 f"use a tree made by tools/open_data.py build")
+        sys.exit("data: a --binary tree: the game reads only the text db tables now (python -I tools/open_data.py build)")
     return info
 
 
@@ -138,7 +136,8 @@ def main():
     ap.add_argument("out", type=pathlib.Path)
     ap.add_argument("--exe", type=pathlib.Path)
     ap.add_argument("--data", type=pathlib.Path, action="append",
-                    help="the unified data: a tools/open_data.py tree or bundle (default build/open_data/tree); "
+                    help="the unified data: a tools/open_data.py tree or bundle (default build/open_data/tree, "
+                         "else build/data-root when tools/fetch_data.py filled data/); "
                          "repeatable, each over the ones before")
     ap.add_argument("--movies", type=pathlib.Path, action="append", default=[],
                     help="a directory with .bik movies (repeatable)")
@@ -149,8 +148,11 @@ def main():
     exe = a.posix_exe or a.exe or ROOT / "build" / "clang" / "exe" / "EE-AOC.exe"
     if not exe.exists():
         sys.exit(f"{exe} does not exist: build it first (python -I build.py)")
-    datas = a.data or [TREE]
-    if a.data is None and not (TREE / "open_data.json").exists():
+    sys.path.insert(0, str(ROOT / "tools"))
+    import open_data   # noqa: E402
+    fetched = open_data.fetched_root()
+    datas = a.data or [TREE if (TREE / "open_data.json").exists() or fetched is None else fetched]
+    if a.data is None and datas == [TREE] and not (TREE / "open_data.json").exists():
         print(f"data: building {TREE} from the installs (tools/open_data.py build)", flush=True)
         r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "open_data.py"), "build", str(TREE), "--force"])
         if r.returncode:
@@ -172,6 +174,10 @@ def main():
         print(f"game data from {data}", flush=True)
         info = copy_data(data, out) or info
     drop_binary_forms(out)
+    # the exe's own tables and scripts: this checkout's, whatever the data brought (a release lags)
+    open_data.refresh_scripts(out)
+    open_data.refresh_db(out)
+    print("Data/db and Data/ai from this checkout's data/db and data/ai", flush=True)
     if a.posix_exe:
         posix_files(exe, out)
     else:

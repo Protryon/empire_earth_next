@@ -2,7 +2,7 @@
 
 An implementation spec (2026-11-09). The owner skipped the review: every open point below is decided (§10 lists
 the choices). **Stage 1** is L0-L3 of §8 (the primitives, beside the old verbs). **Stage 2** (L4, the coarse verbs
-into `ai/lib`) goes only as far as boom needs. After stage 1 the main target is a Lua port of Age of AI on this
+into `data/ai/lib`) goes only as far as boom needs. After stage 1 the main target is a Lua port of Age of AI on this
 API (§8, L5-L6 first: per-unit army control, the danger map and danger-aware routes, garrisons and the capitol
 upgrades, transports and landings, the navy), then a classic-like Lua AI.
 
@@ -10,7 +10,7 @@ upgrades, transports and landings, the navy), then a classic-like Lua AI.
 player has: it can look at single units and give them the orders a human gives ("send unit 7 to attack unit 9").
 C++ keeps the engine, plus the searches that are too expensive for a script, offered as helper functions.
 
-Today's coarse verbs (`gather`, `claim`, `build near=`, `fish`, the army groups) become a Lua library, `ai/lib`,
+Today's coarse verbs (`gather`, `claim`, `build near=`, `fish`, the army groups) become a Lua library, `data/ai/lib`,
 built on the new primitives. Boom keeps working, and a modder can write against either layer.
 
 **Rules that do not change:**
@@ -32,7 +32,7 @@ Read with:
 
 ```
                 Lua   ai/<personality>.lua         plans: boom, rush, balanced, mods
-                Lua   ai/lib/*.lua                 today's verbs re-made: gather, claim, build near=, fish, groups,
+                Lua   data/ai/lib/*.lua                 today's verbs re-made: gather, claim, build near=, fish, groups,
                                                    raid, retreat, scout; the economy planner
    ---------- the primitives (this document) -----------------------------------------------------------
                 C++   queries   ai.units{...}, ai.unit(id), ai.seen{...}, ai.resources{...}, ai.tile(x, y) ...
@@ -96,7 +96,7 @@ Read with:
 | Order functions | C++, new (extracted from `EEM*::Execute`) | one function per human order, on a unit list | one rule set for humans and AIs |
 | Helpers | C++, new or extracted from the managers | site search, reachability, route with danger, danger/influence maps, nearest drop site, enemy memory, capacity counts | map-wide scans and searches: 10-1000 times cheaper in C++, and a script cannot do them within the budget |
 | Primitives | the Lua bindings (`EECPLuaUnits.cpp`, new) | the queries, commands and helpers as Lua functions; fog filters; charging; trace lines | the contract, shaped like C (integers, ids, arrays) so that mlua binds it unchanged |
-| Library | `ai/lib/*.lua` | today's verbs and their state machines (gather split, claims, build near=, fish, groups, raid, retreat, scout), the economy planner | policy belongs in Lua, where modders can change it |
+| Library | `data/ai/lib/*.lua` | today's verbs and their state machines (gather split, claims, build near=, fish, groups, raid, retreat, scout), the economy planner | policy belongs in Lua, where modders can change it |
 | Scripts | `ai/<name>.lua` | personalities | |
 
 **What stays in C++ and why:**
@@ -215,7 +215,7 @@ Names are proposals. Every call takes integers, strings and tables of them.
 - the per-category counts;
 - `events` (§5).
 
-`sites[]`, `soldiers[]`, `threats[]` and `groups[]` move into `ai/lib`, built from the queries. `sites[]` may stay a
+`sites[]`, `soldiers[]`, `threats[]` and `groups[]` move into `data/ai/lib`, built from the queries. `sites[]` may stay a
 C++ summary if its cost says so (§8, L4).
 
 ### 2.3 Fields of a unit record
@@ -535,6 +535,10 @@ open question: is rebuilding enough?
 - `swapped` `{old, new}` (UnitsSwapped :5016);
 - `converted` `{unit, to}` (a unit lost to a priest; a unit gained is `trained` with `at = 0`);
 - `enemy_seen` `{player, x, y, count}` (the first sight of a player's units in a 20 s window);
+- `flare` `{player, x, y}` (an ally's flare, EEComputerPlayer::FlareReceived; the classic's CombatManager::Attack at the
+  tile);
+- `attack_player` / `defend_player` `{player}` (the attack-players order, EEAttackPlayers: a player's call that the
+  computers at war with it attack it, its allies defend it; the classic's AttackPlayer / DefendPlayer);
 - `research_done` `{tech}`;
 - `epoch` `{epoch}`;
 - today's `unit_lost`, `production_lost`, `advance_lost`, `no_site`, `group_wants`, until their verbs go.
@@ -637,13 +641,13 @@ Where it is cheap (L0), it is.
 | **L1, queries** | §2: `ai.units`, `ai.unit`, `ai.get`, `ai.seen`, `ai.memory`, `ai.resources`, `ai.resource`, `ai.tile`, `ai.class`, `ai.players`, `ai.map`; the enemy memory; the new events | a probe script (`ai/test/probe.lua`) whose counts equal the view's (citizens, gatherers, soldiers, buildings, sites) every step for 1 hour; a fog probe: `ai.seen` never returns a unit whose tile `IsSeenBy` is false (a C++ check at each call, TEST ONLY); twice-run traces identical; charges logged; boom's bench unchanged (it does not call them yet) | nothing | 5-7 days |
 | **L2, commands** | §3.3 for land units: move, attack, attack_ground, patrol, explore, gather, dropoff, build, repair, garrison, train, research, cancel, stance, stop, delete, rally, take, release, reflex | **micro test scripts** in EE-SIM (a normal start; the test seat skips the economy and is given its units by the `EE_AI_TEST_UNITS` TEST ONLY spawn at 2 minutes): (a) kiting: 8 archers against 8 clubmen, archers that step back when a melee unit is within 2 tiles kill more and lose fewer than archers left on aggressive stance, over 10 seeds; (b) a raid of 6 that attacks citizens and retreats home when soldiers come, losing under half; (c) a build of each class through `ai.build` + `ai.find_site` placed and finished. Plus twice-run identity and the save check (`EE_AI_SAVE_CHECK`, the held set and the memory the same after a restore) | nothing | 5-7 days |
 | **L3, micro step** | `micro` (§5), its budget and limits | the kiting test (a) re-run with the kiting in `micro`: better than at 1 Hz; the cost in the trace under 5% of a game second with 4 seats | nothing | 2-3 days |
-| **L4, the economy verbs to ai/lib** | one at a time, each `lib/verbs/<verb>.lua` with the same order table as today (`{verb = "build", ...}`), so boom does not change. Order: `train` / `research` / `advance` / `reserve` / `improve` (simple; the reserve becomes the lib's check before `ai.train`); `build` (`ai.find_site`, the unsafe test, the builders by `ai.units{category = "citizen", near = ...}`); `fish`; `claim` / `release` / `claim_range` and `gather` (the largest: the gatherer split, the capacity counts, idle pickup, hunting near home; `sites[]` built in Lua or kept as a C++ summary, whichever the bench says). The runner for the ported verb is switched off (`ai.runners`) when the lib takes over | **bench parity per verb** (lib vs C++), then the owner's next playtest on the lib build | per verb once its parity holds: `EECPNextTrain`, `Research`, `Advance`, `Reserve` + `EECPNextCanAfford`; `EECPNextBuild` and its site code (moved into `ai.find_site`); `EECPNextFish`; `EECPNextGather`, `Claim`, `Release`, `ClaimRange`, the next-only gates in EECPResourceManager / EECPBuildManager / EECPUnitManager / EECPResearchManager (AI_LUA_PLAN §2.1 "Classic-only gates") | 2-3 weeks |
+| **L4, the economy verbs to data/ai/lib** | one at a time, each `lib/verbs/<verb>.lua` with the same order table as today (`{verb = "build", ...}`), so boom does not change. Order: `train` / `research` / `advance` / `reserve` / `improve` (simple; the reserve becomes the lib's check before `ai.train`); `build` (`ai.find_site`, the unsafe test, the builders by `ai.units{category = "citizen", near = ...}`); `fish`; `claim` / `release` / `claim_range` and `gather` (the largest: the gatherer split, the capacity counts, idle pickup, hunting near home; `sites[]` built in Lua or kept as a C++ summary, whichever the bench says). The runner for the ported verb is switched off (`ai.runners`) when the lib takes over | **bench parity per verb** (lib vs C++), then the owner's next playtest on the lib build | per verb once its parity holds: `EECPNextTrain`, `Research`, `Advance`, `Reserve` + `EECPNextCanAfford`; `EECPNextBuild` and its site code (moved into `ai.find_site`); `EECPNextFish`; `EECPNextGather`, `Claim`, `Release`, `ClaimRange`, the next-only gates in EECPResourceManager / EECPBuildManager / EECPUnitManager / EECPResearchManager (AI_LUA_PLAN §2.1 "Classic-only gates") | 2-3 weeks |
 | **L5, the army** | `lib/army.lua` takes EECPNextArmy's groups: forming, legs, targets (soldiers, citizens, towers, buildings), raid flight, retreat, defend, scout, the scouting memory's use; the danger layers and `ai.route` (§4.3-4.4); melee never against warships (§8.35) | bench parity for boom (defend + scout) and rush/balanced (the S4 matrix, AI_RESEARCH §8.31: rush beats a pure boom as often as before ± 1 se); the raid test (b) with `ai.route` loses fewer citizens than without | `EECPNextArmy.cpp` (1,636 lines), `EECPNextDefend` / `Attack` / `Raid` / `Scout` / `Retreat` / `Regroup` / `Disband`; the attack commander's update for next seats | 1-2 weeks |
 | **L6, navy and transports** | warships (guard, hunt, escort, flee), fishing boats under threat, transports and landings in lib, on `ai.load` / `ai.unload` / `ai.shore` / `ai.reach`; the engine's own unload bugs fixed in C++ where found (Age of AI's unload retry and idle-unload-shore hooks were engine fixes) | an island map bench (2 AIs, Islands Small): the next seat lands on the other island and builds there in 10/10 seeds; boats sunk per game no worse than today | the naval flee reflex for next seats; `EECPNextSeenWarships` (in lib) | 2-3 weeks |
 | **L7, the runners off** | every runner off for next seats; `EECPNextUpdate` reduces to: the bookkeeping, the event flush, the memory/danger update, `step` / `micro` | bench parity with L6; the full gates with a next seat (AI_LUA_PLAN §6) | the next engine's calls into `UnitManager` / `ResourceManager` / `BuildManager` / `ResearchManager::Update`, `RepairBuildings` (lib), `EECPNextTactics.cpp`, most of `EECPNextView.cpp` (the summary view stays), the classic-only gates that only the next engine needed | 3-5 days |
 
 **Order after stage 1** (the owner, 2026-11-09): the Age of AI port is the main target. L5 and L6 come before L4,
-and L4 is done only as far as boom needs it to keep working. Then come the Age of AI port (`ai/ageofai/`, pinned to
+and L4 is done only as far as boom needs it to keep working. Then come the Age of AI port (`data/ai/ageofai/`, pinned to
 an upstream commit) and a classic-like Lua AI.
 
 The C++ test opening (`EECPNextTest.cpp`, the S2 reference) is deleted at L4, together with the first verb it
@@ -803,7 +807,7 @@ foundation's id, which the script holds), `repair`, `garrison`, `load`, `unload`
   `EECanPlaceOnTile` takes the class. With `safe`, only a tile where the threat is 0.
 - **Commands:** `heal`, `rally` (a tile or a unit), `cancel`, `improve(unit, n)`, `formation`, `pack`, `dropoff`,
   `farm` and `cast`, each through its human message.
-- **`ai/lib/units.lua`:** `STANCE`, `d2`, `alive`, `centre`, `nearest`, `move_route`.
+- **`data/ai/lib/units.lua`:** `STANCE`, `d2`, `alive`, `centre`, `nearest`, `move_route`.
 - **The helpers test** (`tests/ai_units/helpers.lua`, seeds 2-5):
   - a mark of 50 twelve tiles out, between the town and a point 24 tiles out: the straight route (`avoid = 0`, cost
     60) crosses it, and the `avoid = 8` route goes round it (cost 68-76). In 3 seeds the highest danger on the
@@ -813,7 +817,7 @@ foundation's id, which the script holds), `repair`, `garrison`, `load`, `unload`
     later in all 4 seeds;
   - two runs of each seed give identical traces.
 - **Boom after the batch:** seeds 2-9 as above. The traces are identical to main's but for one line: the AI folder
-  hash (`EE-AI engine ... folder hash`) changed, because `ai/lib/units.lua` is new.
+  hash (`EE-AI engine ... folder hash`) changed, because `data/ai/lib/units.lua` is new.
 
 **The second batch of helpers (2026-11-09, the Age of AI port's needs):**
 - `ai.path_len(x1, y1, x2, y2, {sea})` -> tiles along the cell A* without danger (the straight distance at least),
@@ -831,7 +835,7 @@ foundation's id, which the script holds), `repair`, `garrison`, `load`, `unload`
   the land), the town centre as the drop site 12 tiles off, a shore in one seed within 30 rings, a grid point, the
   influence at the town 1200-1300.
 
-**Stage L5 as built (2026-11-09): `ai/lib/groups.lua`.** EECPNextArmy's groups as Lua data on the primitives:
+**Stage L5 as built (2026-11-09): `data/ai/lib/groups.lua`.** EECPNextArmy's groups as Lua data on the primitives:
 `G.create{task, role, x, y, radius, target}`, `G.add` / `G.recruit` (free soldiers: `ai.units{category = "soldier",
 held = "engine"}`, nearest a tile first, or out of another group), `G.disband` (released to the engine), `G.step`
 (every group: the dead dropped, forming at the nearest soldier for 20 s, legs of 14 tiles given again after 4 tiles
@@ -846,7 +850,7 @@ rush and balanced until those are ported (the deletion the table above names is 
   33.7 / 43.6, army 5.3 / 11.6 against 5.3 / 11.8, citizens at the end 49.3 against 50.6, no defeats, no script
   errors.
 
-**The Age of AI port** (2026-11-09): `ai/ageofai/` (GPL-3.0, pinned in `UPSTREAM` to upstream 0ac6495 with a per-file
+**The Age of AI port** (2026-11-09): `data/ai/ageofai/` (GPL-3.0, pinned in `UPSTREAM` to upstream 0ac6495 with a per-file
 map), `ais.json` entry `ageofai` ("Age of AI", random false). The economy runs on the coarse verbs, as upstream
 steered the game's managers (the budget's accounts and the worker targets by shortfall and rate, the citizens by
 epoch and the mines' places, drop sites before gathering, the core towers then the fronts' and outposts', the
@@ -857,7 +861,7 @@ pushes at the attack time at 130% of the enemy known at the target along `ai.rou
 §8.37 has the bench. Not ported: the navy, landings, other islands, towns, siege, counterfire, garrison upgrades,
 diplomacy (UPSTREAM lists them).
 
-**L6, the navy in Lua (2026-11-09): `ai/lib/navy.lua`.** `N.transports()`, `N.dock_sea()`, `N.plan(target, soldiers,
+**L6, the navy in Lua (2026-11-09): `data/ai/lib/navy.lua`.** `N.transports()`, `N.dock_sea()`, `N.plan(target, soldiers,
 transports)` (the site: the shore of the target's land mass on the dock's sea nearest a known enemy building, the
 least dangerous of nine; the boarding shore nearest the soldiers and the water in front of both, `ai.shore`), and
 `N.landing_step(L)`: board (the transports to the boarding water, the soldiers loaded in shares with `ai.load`,
@@ -870,7 +874,7 @@ bugs (upstream's retries) are not touched yet: the step re-orders the unload ins
 `navy.lua` uses it (a landing at the attack time when the force at home beats the beach by 1.4, transports and a
 warship or two from the account).
 
-**The port's tactics (2026-11-09): `ai/ageofai/tactics.lua`.** The siege controller (2 + a quarter of the known
+**The port's tactics (2026-11-09): `data/ai/ageofai/tactics.lua`.** The siege controller (2 + a quarter of the known
 enemy defences, at most 4, from a Siege Factory from the Bronze Age, a 10-minute pause after 3 lost in 10 minutes),
 the settlement upgrades (every 20 s up to 10 spare citizens - idle, or wood cutters over 5000 wood - into the drop
 site with the most metal mines within reach, a Settlement first, through `ai.garrison`; the record's new
@@ -917,7 +921,7 @@ that resource, so the runners count it where it works. Without the option (as be
 them, on the idle list, and a released gatherer was on no list until its resource ran out. `lib.defence` sends the
 citizens that fled a raid back to their spot this way (AI_RESEARCH §8.41).
 
-**The classic port's queries (2026-11-10, `ai/classic_lua/`, its ORIGIN map):** what the classic computer player reads
+**The classic port's queries (2026-11-10, `data/ai/classic_lua/`, its ORIGIN map):** what the classic computer player reads
 from data, so that a script can make its decisions with the same numbers:
 - `ai.tuning()` -> `difficulty` (0 easy .. 2 hard), `deathmatch`, `all_managers` (the resource setting 5),
   `epoch_start` / `epoch_end`, the map's `island` / `planets` / `waterless` / `space`, `population_limit` (the game's;
@@ -925,7 +929,7 @@ from data, so that a script can make its decisions with the same numbers:
   popband, catchup, retire: whether each is on for the seat); `personality` (aipersonalities.yaml as EECPPersonality
   picks it, with EE_AI_PERSONALITY and the TEST ONLY EE_AI_EXP switches folded in); `behavior` (every dbcpbehavior
   value EEComputerPlayer::Init copies, by a snake_case name, plus the population cap weights, the epoch advance scale
-  and the mining limit). Floats are thousandths, under keys ending in `_k`.
+  the mining limit and the carrier fighters to keep, `carrier_fighters_easy`..`_hard` and `carrier_fighters_dm_*`). Floats are thousandths, under keys ending in `_k`.
 - `ai.techs{epoch = n, id = tech}` -> the tech tree's nodes of epochs n..0 (the current epoch by default), latest
   epoch first as GetEpochNodeIDs collects them: `id`, `name`, `epoch`, `kind`, `makes` (the class), `counts_toward_epoch`,
   `researched`, `available`, `obsolete`, `obsolete_epoch`, `producers` (class names), `plain_producer` (a producer that
@@ -951,6 +955,32 @@ from data, so that a script can make its decisions with the same numbers:
   builder waiting for its foundation's site to clear while another unit holds it: the classic's FindStalledBuilder), and
   `crosses_forest` / `crosses_cliff` (the terrain a mobile unit can cross: EEUnitClass::GetTerrainFlags, the classic
   sub-group's common move flags).
+- `ai.can_hurt(attacker_type, target_type)` -> whether the attacker's weapon hurts the target's family (the damage
+  table, combat.yaml, which a human reads too; EECPAttackSubGroupUnit::CanAttack without the ignored targets): the
+  classic air sub-group's targets and prejudices.
+- The class record has `flight_time` (an aircraft's fuel in ms; 0: no limit) and an own unit's record `base` (the
+  airport or carrier an aircraft returns to): the classic air sub-group's reach (EECPASGAir::CanReach, flight seconds
+  x speed x 0.9 from the base).
+- The `attack_player` / `defend_player` events (§ events above) reach a script seat in place of the C++ combat
+  manager's AttackPlayer / DefendPlayer, and another player's wonder no longer runs the C++ RespondToUnit for a script
+  seat (its C++ combat manager is not run; classic_lua answers from `ai.wonders`).
+- `ai.wonders()` -> `{victory, to_win, players = {{player, team, count}}, list = {{id, player, team, type, built, x,
+  y}}}`: the wonders as the game announces them and the wonder countdown shows them; a wonder's tile only where the
+  player has explored it (or with `sees_all`). The classic's wonder race (EECPCombatManager::RespondToUnit,
+  UpdateWonderRace).
+- The class record has `planet_spaceship` (category 0x22: the classic's space fighter sub-group; the other space
+  units take its spaceship sub-group). `ai.attack` takes a missile base holding its ICBM (the ICBM's family): the
+  base launches it, as a human's attack order does (the classic's ICBM).
+- `lib.groups`: a group with `can_hurt = true` gives its units only targets their weapons hurt (the classic's
+  submarines).
+- `ai.wall_path(unit, x1, y1, x2, y2)` -> `{{x, y}, ...}`: the tile path an own unit would take from (x1, y1) to
+  (x2, y2) inside the box of the two tiles, as the classic wall planner refines each step of its way
+  (EEPathManager::FindPath with EEAIGPGModifierComputerPlayerWallPather); empty when there is none.
+- `ai.wall_route(enemy, x1, y1, x2, y2)` -> handle, and `ai.wall_route_result(handle)` -> nil while it runs, the
+  tiles `{{x, y}, ...}` when done (empty: no way), false for a handle not held: the classic wall planner's way from
+  the enemy's centre to the own town, the path manager's request on its coarse graph with the wall planner modifier
+  (the enemy's influence costs) and a citizen's terrain (EECPWallManager::StartNextWall). Asynchronous: the request
+  runs over the next game ticks. One at a time per player; not saved (a loaded game forgets it).
 - `ai.wall_line(x1, y1, x2, y2)` -> `{{x, y}, ...}`: the tiles a wall from (x1, y1) to (x2, y2) lays, in order
   (EEGetWallLine).
 - `ai.wall_stretches(x1, y1, x2, y2)` -> blocked, `{{ax, ay, bx, by, len, level}, ...}`: the classic wall planner's
@@ -984,7 +1014,7 @@ from data, so that a script can make its decisions with the same numbers:
   `ai.choke_point(x, y, nearest, pick, seed)` -> x, y, n: a random point of one of the choke points (EEAIChokePoint)
   of the land mass at (x, y) - of the `nearest` ones to the tile when nearest > 0, else of all n (the defence ladder's
   choke point).
-- **The classic's information cheat, `sees_all`.** A manifest entry (ai/ais.json) may declare `"sees_all": true`;
+- **The classic's information cheat, `sees_all`.** A manifest entry (data/ai/ais.json) may declare `"sees_all": true`;
   only `classic_lua` does. The seat's trace start line then ends in `sees_all=1`, and `ai.tuning()` has
   `sees_all = true`. It changes one query: `ai.enemy_near(x, y)` -> whether armed enemy units stand near the tile.
   With `sees_all` it is the C++ classic's EECPBuildManager::HasEnemyNear, which reads every player's units through
@@ -995,6 +1025,11 @@ from data, so that a script can make its decisions with the same numbers:
   otherwise: `ai.seen` is the fog-honest count). `ai.player_file(player)` -> `{gatherers, types = {[class] = n},
   military = {land, sea, air, space}, strength = {...}}`: the classic's intelligence file of a player
   (EECPIntelligencePlayerFile: every unit, seen or not); only with `sees_all`. No other query reads through the fog.
+- **The lobby's Classic, `classic`.** A manifest entry may declare `"classic": true` (classic_lua does, the first so
+  marked counts). The lobby's Classic (choice 0, every new seat's default, saves and network fallbacks included) then
+  plays that AI; in EE-SIM and sim_bench `--engine classic` is the marked AI. Random keeps its pool: Classic (the marked
+  AI) and the AIs marked `random`. Stage 5 (AI_RESEARCH §8.90) deleted the C++ classic and its choice "Classic (C++)"
+  (`classic_cpp`): a seat without a loadable AI stands idle (`engine=none` when the manifest marks no classic AI).
 - **The classic's garrison cheat, `fills_garrison`.** The C++ classic's FillGarrison sends the idle citizens into a
   settlement (or a town centre) it upgrades and tops the rest of the garrison up with no citizens
   (EEComplexUnit::AddGarrison): a settlement becomes a town centre for a few citizens, and the classic trains its
@@ -1006,7 +1041,7 @@ from data, so that a script can make its decisions with the same numbers:
 **The `type` filter as a list (2026-11-10, boom-econ):** `ai.units`, `ai.seen`, `ai.resources` and `ai.memory` take
 `type = {"b_town_center", "b_capitol", ...}` (class names or ids, at most 16) as §2.2 says: a unit of any of them
 passes; unknown names are left out, and a list of none known matches nothing (as an unknown single name). Before, a
-table read as an unknown class and matched nothing (boom counted 0 town centres; `ai/ageofai/econ.lua`'s town list
+table read as an unknown class and matched nothing (boom counted 0 town centres; `data/ai/ageofai/econ.lua`'s town list
 found no town). `tests/ai_units/types.lua` checks that a list's ids are the union of its names' ids.
 
 **The released citizen at work, and exact gatherer counts (2026-11-11, boom-econ, AI_RESEARCH §8.51):**
@@ -1045,7 +1080,7 @@ frigates asks the reserve for it (`memory.priority_spend`, AI_RESEARCH §8.50).
   gate on an Islands map is in AI_RESEARCH §8.37 once run).
 
 **Gates:**
-- **Boom unchanged.** sim_bench seeds 2-9 (Small, Hard, `--engine boom,classic`, 2700 game s, `--ai-scripts ai`,
+- **Boom unchanged.** sim_bench seeds 2-9 (Small, Hard, `--engine boom,classic`, 2700 game s, `--ai-scripts data/ai`,
   open data): `ai_trace.py compare` against main's build gives identical traces for all 8 seeds (3738, 3589, 3674,
   3632, 3371, 3464, 3382 and 3416 lines).
 - **The micro tests** (`tests/ai_units/`; `--ai-scripts tests/ai_units --env EE_AI_TEST_SPAWN=1 --env-vary

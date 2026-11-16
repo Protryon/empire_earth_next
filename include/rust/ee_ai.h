@@ -38,20 +38,9 @@ struct EeAiNextResult {
   int32_t code;
   int32_t reason;
   int32_t count;
-  int32_t group;
 };
 
-/// A group in a next state's view (`aims` as many as `units`).
-struct EeAiNextGroup {
-  int32_t fields[14];
-  const int32_t *units;
-  const int32_t *aims;
-  size_t unit_count;
-  const int32_t *skips;
-  size_t skip_count;
-};
-
-/// An enemy place the army remembers (a gather spot, a tower, a threat, a walker's site).
+/// An enemy place the army remembers (a gather spot, a tower, a threat).
 struct EeAiNextSpot {
   int32_t player;
   int32_t x;
@@ -60,17 +49,11 @@ struct EeAiNextSpot {
   int32_t unit;
 };
 
-/// The next engine's state as the save block holds it (next_save.rs; `version` set by a decode, not read by the
-/// encode). `income_ring` is [60][5] by step, then resource.
+/// The next engine's state as the save block holds it (next_save.rs). `income_ring` is [60][5] by step, then
+/// resource.
 struct EeAiNextSave {
-  int32_t version;
-  int32_t claim_range;
-  int32_t reserve[5];
-  int32_t food_prefer;
-  int32_t food_land;
   int32_t epoch;
   uint32_t epoch_start;
-  uint32_t next_repair_time;
   int32_t income_total[5];
   int32_t income_ring[300];
   int32_t income_steps;
@@ -81,16 +64,12 @@ struct EeAiNextSave {
   int32_t seen_town_y[64];
   const EeAiNextEvent *events;
   size_t event_count;
-  int32_t test[4];
   EeAiBytes script;
   bool started;
   bool failed;
   const EeAiNextResult *results;
   size_t result_count;
   EeAiBytes memory;
-  int32_t next_group;
-  const EeAiNextGroup *groups;
-  size_t group_count;
   const EeAiNextSpot *spots;
   size_t spot_count;
   const EeAiNextSpot *towers;
@@ -101,10 +80,6 @@ struct EeAiNextSave {
   const EeAiNextSpot *threats;
   size_t threat_count;
   int32_t threats_time;
-  const EeAiNextSpot *explore;
-  size_t explore_count;
-  int32_t granary_farms;
-  int32_t exact;
 };
 
 /// A pending event.
@@ -186,6 +161,7 @@ struct EeAiManifestEntry {
   bool random;
   bool sees_all;
   bool fills_garrison;
+  bool classic;
 };
 
 /// A table key across the C ABI (`EECPLuaKey`).

@@ -38,6 +38,12 @@ struct EeConductorFields {
   int32_t playing_id;
   uint32_t intensity;
   uint32_t channel_group_count;
+  /// The reverb's style (`SetReverbStyle`; main 32b4344f4/d0ab75f5d): input gain and mix in dB, decay time in ms,
+  /// high-frequency decay ratio.
+  float reverb_gain;
+  float reverb_mix;
+  float reverb_time;
+  float reverb_hf_ratio;
 };
 
 /// `SEMixerStart` (Sound Engine's `SEInitializeMixers`): the directory, the window and the module being walked.
@@ -135,11 +141,21 @@ int32_t ee_sound_conductor_set_music_folder(const EeSoundConductor *c, const cha
 /// `c` is a live conductor.
 const char *ee_sound_conductor_music_folder(const EeSoundConductor *c);
 
-/// `SetReverb`: only the state is kept (dmusic's synthesizer has no reverb).
+/// `SetReverb`: on (1) or off, in the style last set; while stopped only the state is kept.
 ///
 /// # Safety
 /// `c` is a live conductor.
 int32_t ee_sound_conductor_set_reverb(const EeSoundConductor *c, uint32_t reverb);
+
+/// `SetReverbStyle(gain, hf_ratio, mix, time)`: kept and applied in the reverb's current state.
+///
+/// # Safety
+/// `c` is a live conductor.
+int32_t ee_sound_conductor_set_reverb_style(const EeSoundConductor *c,
+                                            float gain,
+                                            float hf_ratio,
+                                            float mix,
+                                            float time);
 
 /// `SetVolume`.
 ///

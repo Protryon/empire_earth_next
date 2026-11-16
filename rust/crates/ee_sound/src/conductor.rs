@@ -33,6 +33,12 @@ pub struct ConductorFields {
     pub playing_id: i32,
     pub intensity: u32,
     pub channel_group_count: u32,
+    /// The reverb's style (`SetReverbStyle`; main 32b4344f4/d0ab75f5d): input gain and mix in dB, decay time in ms,
+    /// high-frequency decay ratio.
+    pub reverb_gain: f32,
+    pub reverb_mix: f32,
+    pub reverb_time: f32,
+    pub reverb_hf_ratio: f32,
 }
 
 impl ConductorFields {
@@ -46,6 +52,10 @@ impl ConductorFields {
             playing_id: -1,
             intensity: 0,
             channel_group_count: 1000,
+            reverb_gain: 0.0,
+            reverb_mix: -10.0,
+            reverb_time: 1000.0,
+            reverb_hf_ratio: 0.001,
         }
     }
 }
@@ -119,8 +129,12 @@ pub trait Host {
     fn play_transition(&mut self, s: Score, pattern: Embellishment) -> bool;
     /// `DmPerformance_setVolume`.
     fn set_performance_volume(&mut self, amplitude: f32);
-    /// `DmPerformance_setMasterGrooveLevel`.
-    fn set_groove_level(&mut self, level: i8);
+    /// `DmPerformance_setGrooveLevel`.
+    fn set_groove_level(&mut self, level: u8);
+    /// `DmPerformance_stop(lookahead_ms)`: what is due within the look-ahead still sounds, then every note is released.
+    fn stop_all(&mut self, lookahead_ms: u32);
+    /// `DmPerformance_setReverb(enabled, gain, mix, time, hf_ratio)`.
+    fn set_reverb(&mut self, enabled: bool, gain: f32, mix: f32, time: f32, hf_ratio: f32);
 }
 
 /// One entry of the score table (`SEConductorScore`).
@@ -236,10 +250,36 @@ impl Conductor {
         if intensity != f.intensity || immediate {
             f.intensity = intensity;
             if f.state == 1 {
-                h.set_groove_level(intensity as i8);
+                h.set_groove_level(intensity as u8);
             }
         }
         OK
+    }
+
+    /// `SetReverb`: on (1) or off, in the style last set; while stopped only the state is kept (for the start).
+    pub fn set_reverb(h: &mut impl Host, f: &mut ConductorFields, reverb: u32) -> i32 {
+        f.reverb_state = reverb;
+        if f.state == 1 {
+            h.set_reverb(reverb == 1, f.reverb_gain, f.reverb_mix, f.reverb_time, f.reverb_hf_ratio);
+        }
+        OK
+    }
+
+    /// `SetReverbStyle(gain, hf_ratio, mix, time)`: each song's own style, applied in the reverb's current state.
+    pub fn set_reverb_style(
+        h: &mut impl Host,
+        f: &mut ConductorFields,
+        gain: f32,
+        hf_ratio: f32,
+        mix: f32,
+        time: f32,
+    ) -> i32 {
+        f.reverb_gain = gain;
+        f.reverb_hf_ratio = hf_ratio;
+        f.reverb_mix = mix;
+        f.reverb_time = time;
+        let r = f.reverb_state;
+        Self::set_reverb(h, f, r)
     }
 
     /// `InitializeConductor`: 1 when it could not start; a failed reload stops the reloading (the conductor stays
@@ -255,6 +295,8 @@ impl Conductor {
         Self::set_volume(h, f, v);
         let i = f.intensity;
         Self::set_intensity(h, f, i, true);
+        let r = f.reverb_state;
+        Self::set_reverb(h, f, r);
         let mut result = OK;
         let mut k = 0;
         while k < self.scores.len() && result == OK {
@@ -327,16 +369,14 @@ impl Conductor {
         }
     }
 
-    /// `Stop`: silence now (the playing id is cleared even when dmusic fails).
+    /// `Stop`: while running, what is due within the next 100 ms still sounds (a score started just before plays
+    /// its first notes), then every note is released (main d0ab75f5d).
     pub fn stop(h: &mut impl Host, f: &mut ConductorFields) -> i32 {
-        let mut r = OK;
         if f.state == 1 {
-            if !h.play(None, Timing::Instant) {
-                r = DM_ERROR;
-            }
+            h.stop_all(100);
             f.playing_id = -1;
         }
-        r
+        OK
     }
 
     /// `TransitionTo(id, command, flags)`: the command's pattern into the score at the next measure, or into

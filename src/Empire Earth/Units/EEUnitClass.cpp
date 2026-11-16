@@ -66,8 +66,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 #include "ee/EEAIContinent.h"
-#include "ee/EECPILocation.h"
-#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
@@ -1212,9 +1211,8 @@ void EEUnitClass::PlayCreationEffect(EEUnit* inUnit)
         gEffectManager->CreateUnitEffect(inUnit, this->mCreationEffect, NULL, 0, 0, 0);
 }
 
-// Launches a projectile (or carried cargo) from the unit's weapon tag point toward the target or ground point; the
-// volcano idles after each launch (new: the launch transform, its tile and the special attack's choices are
-// ee_combat's launch_shot)
+// Launches a projectile (or carried cargo) from the unit's weapon tag point toward the target or ground point (new:
+// the launch transform, its tile and the special attack's choices are ee_combat's launch_shot)
 void EEUnitClass::LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& inLocation, EEComplexUnit* inCargo)
 {
     GE3DPoint thePosition;
@@ -1288,8 +1286,11 @@ void EEUnitClass::LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint&
     theCreated->GetComplexUnit()->SetVelocity(inUnit->GetVelocity());
     theCreated->GetComplexUnit()->SetHeight(inUnit->mPhysicalModel.GetLocation().GetZ());
     theClass->LaunchProjectile(theCreated->GetComplexUnit(), inLocation);
-    if (inUnit->GetUnitClass()->GetUnitType() == kUnitTypeVolcano)   // the unit type (was the category, which never is 0x16e)
-        inUnit->StartAction(kActionIdle);
+    // The original ended with "if the class's category is 0x16e (the Volcano unit type), idle": no category is that
+    // large, so it never passed. Testing the unit type instead (8fdb8c62) idled the volcano after every launch, and its
+    // idle state (volcano.tai: ChooseRandomVolcanoTarget) fired again at once, skipping AttackLocation's
+    // ReadyToFireAgain wait: a boulder every physics tick instead of one per reload (2 s). The dead test is left out:
+    // volcano.tai returns to Idle once the reload is done.
 }
 
 // Moves the unit away from its pursuer to the first standable spot of eight directions (Gaia animals only 1-2 tiles);

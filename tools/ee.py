@@ -4,7 +4,11 @@ import pathlib
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LINK_DIR = ROOT / "link"
 TOOLCHAIN = pathlib.Path(os.environ.get("EE_TOOLCHAIN", ROOT / "toolchain"))   # downloaded headers (DX7 SDK)
-ORIG_SRC_ROOT = pathlib.Path(os.environ.get("EE_ORIG_SRC_ROOT", r"C:\EEX"))   # where units are staged to compile
+# where units are staged to compile: inside this checkout (build/eex), so every worktree has its own and nothing is
+# written outside the checkout; the compiler still names them C:\EEX\... in __FILE__ (FILE_PREFIX, verify.py), as
+# the original build tree did, so the asserts read the same from any checkout
+ORIG_SRC_ROOT = pathlib.Path(os.environ.get("EE_ORIG_SRC_ROOT", ROOT / "build" / "eex")).resolve()
+FILE_PREFIX = r"C:\EEX"
 MODULE_SRC = {
     "tcp": "Low-Level Engine/Network Engine/TCP Protocol",
     "mixer": "Low-Level Engine/Sound Engine/Mixer",

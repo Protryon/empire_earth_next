@@ -38,7 +38,6 @@ wait 5 600000 -> 3
 time -> 1966561
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> none
 set stop
 call epoch 1
@@ -103,7 +102,6 @@ wait 5 600000 -> 3
 time -> 1881877
 random_song 1 -> M1
 load M1 -> 3
-volume 00000000
 get_score 3 -> none
 set stop
 wait 5 600000 -> 1
@@ -154,7 +152,6 @@ wait 5 600000 -> 3
 time -> 2723085
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -515,7 +512,6 @@ wait 5 330000 -> 3
 time -> 1561855
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -541,7 +537,6 @@ wait 5 393278 -> 3
 time -> 1885613
 random_song 0 -> M2
 load M2 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 393278 -> -1
@@ -550,7 +545,6 @@ wait 5 393278 -> 3
 time -> 2193953
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -596,7 +590,6 @@ time -> 2558532
 stop
 wait 5 343919 -> 3
 time -> 2561868
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -639,7 +632,6 @@ wait 5 420000 -> 1
 time -> 2569775
 wait 5 420000 -> 3
 time -> 2588303
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 1 0
@@ -675,7 +667,6 @@ wait 5 390555 -> 3
 time -> 3356538
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 1 0
@@ -800,7 +791,6 @@ time -> 5243827
 intensity 0 0
 wait 5 293380 -> 3
 time -> 5244896
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -1284,7 +1274,6 @@ wait 5 600000 -> 3
 time -> 441374
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -1349,7 +1338,6 @@ call intensity 1
 set intensity
 wait 5 300000 -> 3
 time -> 1232226
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 3 0
@@ -1368,7 +1356,6 @@ time -> 1245641
 intensity 1 0
 wait 5 375237 -> 3
 time -> 1252294
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 1 0
@@ -1434,7 +1421,6 @@ wait 5 314805 -> 3
 time -> 2429625
 random_song 0 -> M3
 load M3 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 314805 -> 2
@@ -1450,7 +1436,6 @@ wait 5 314805 -> 3
 time -> 2858989
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 3 0
@@ -1490,7 +1475,6 @@ wait 5 600000 -> 3
 time -> 97925
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -1521,7 +1505,6 @@ wait 5 313790 -> 3
 time -> 126310
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -1544,7 +1527,6 @@ time -> 131155
 stop
 wait 5 415155 -> 3
 time -> 131243
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 3 0
@@ -1577,7 +1559,6 @@ wait 5 373682 -> 3
 time -> 149528
 random_song 1 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 3 0
@@ -1691,7 +1672,6 @@ wait 5 329933 -> -1
 time -> 1815775
 wait 5 329933 -> 3
 time -> 1815818
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 329933 -> 4
@@ -1738,7 +1718,6 @@ wait 5 329933 -> 3
 time -> 2595117
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 1 0
@@ -1767,7 +1746,6 @@ wait 5 304229 -> 3
 time -> 2959026
 random_song 0 -> M2
 load M2 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 1 0
@@ -1789,7 +1767,6 @@ time -> 2970097
 intensity 1 0
 wait 5 365796 -> 3
 time -> 2971267
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 1 0
@@ -1825,7 +1802,6 @@ wait 5 600000 -> 3
 time -> 703221
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> none
 set stop
 call intensity 3
@@ -1836,7 +1812,6 @@ wait 5 600000 -> 3
 time -> 732045
 random_song 0 -> M2
 load M2 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 0 0
@@ -1929,7 +1904,6 @@ wait 5 383794 -> 3
 time -> 1080397
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -1969,14 +1943,12 @@ wait 5 385670 -> 3
 time -> 1503017
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> none
 set stop
 wait 5 385670 -> 3
 time -> 1508846
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 2 0
@@ -2420,7 +2392,6 @@ wait 5 600000 -> 3
 time -> 908905
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 3 0
@@ -2478,7 +2449,6 @@ wait 5 400462 -> 3
 time -> 1350844
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 1 0
@@ -2536,7 +2506,6 @@ wait 5 420000 -> 3
 time -> 32968
 random_song 2 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -2583,7 +2552,6 @@ wait 5 355397 -> 1
 time -> 472104
 wait 5 355397 -> 3
 time -> 477208
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -2623,7 +2591,6 @@ wait 5 324293 -> 3
 time -> 514240
 random_song 1 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -2684,7 +2651,6 @@ time -> 1551486
 stop
 wait 5 95544 -> 3
 time -> 1558959
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -2742,7 +2708,6 @@ wait 5 420000 -> 3
 time -> 2332993
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 1 0
@@ -2779,7 +2744,6 @@ wait 5 389514 -> 3
 time -> 2750860
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 1 0
@@ -2818,7 +2782,6 @@ wait 5 420000 -> -1
 time -> 3500579
 wait 5 420000 -> 3
 time -> 3505969
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 1 0
@@ -2894,7 +2857,6 @@ wait 5 600000 -> 3
 time -> 820539
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -2921,7 +2883,6 @@ time -> 1231162
 stop
 wait 5 415299 -> 3
 time -> 1231259
-volume 00000000
 get_score 14 -> none
 set stop
 wait 5 415299 -> -2
@@ -2941,7 +2902,6 @@ call intensity 3
 set intensity
 wait 5 415299 -> 3
 time -> 1240632
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 1 0
@@ -3164,7 +3124,6 @@ time -> 1430083
 intensity 0 0
 wait 5 314178 -> 3
 time -> 1435728
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -3219,7 +3178,6 @@ call intensity 0
 set intensity
 wait 5 300000 -> 3
 time -> 1823055
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 2 0
@@ -3252,7 +3210,6 @@ wait 5 377323 -> 3
 time -> 2608046
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -3282,7 +3239,6 @@ wait 5 398614 -> -1
 time -> 3373071
 wait 5 398614 -> 3
 time -> 3373071
-volume 00000000
 get_score 13 -> none
 set stop
 wait 5 398614 -> 4
@@ -3773,7 +3729,6 @@ wait 5 600000 -> 3
 time -> 253809
 random_song 0 -> M3
 load M3 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 0 0
@@ -3804,7 +3759,6 @@ wait 5 301310 -> 3
 time -> 1375338
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 3 0
@@ -4117,14 +4071,12 @@ wait 5 600000 -> 3
 time -> 475357
 random_song 0 -> M1
 load M1 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 600000 -> 3
 time -> 475357
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> none
 set stop
 wait 5 600000 -> 2
@@ -4293,7 +4245,6 @@ wait 5 409178 -> 3
 time -> 2775645
 random_song 2 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -4323,7 +4274,6 @@ wait 5 600000 -> 3
 time -> 1126983
 random_song 2 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -4387,7 +4337,6 @@ wait 5 413030 -> 3
 time -> 1848236
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -4418,7 +4367,6 @@ wait 5 379476 -> 3
 time -> 1887816
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -4441,7 +4389,6 @@ set intensity
 call player 0
 wait 5 358666 -> 3
 time -> 2629167
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -4465,7 +4412,6 @@ time -> 2652261
 last_error
 wait 5 385836 -> 3
 time -> 3023099
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 2 0
@@ -4569,7 +4515,6 @@ wait 5 600000 -> 3
 time -> 1614147
 random_song 2 -> M3
 load M3 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 2 0
@@ -4624,7 +4569,6 @@ wait 5 367745 -> 3
 time -> 2058369
 random_song 3 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -4675,7 +4619,6 @@ wait 5 316717 -> 3
 time -> 2770162
 random_song 1 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -4759,7 +4702,6 @@ wait 5 277683 -> 3
 time -> 3543929
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -4843,7 +4785,6 @@ wait 5 600000 -> 3
 time -> 778041
 random_song 2 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -4871,7 +4812,6 @@ wait 5 301822 -> 3
 time -> 803916
 random_song 2 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> none
 set stop
 wait 5 301822 -> 4
@@ -4891,7 +4831,6 @@ wait 5 301822 -> 3
 time -> 1205170
 random_song 2 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 3 0
@@ -4934,7 +4873,6 @@ wait 5 600000 -> 3
 time -> 750095
 random_song 3 -> M4
 load M4 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 0 0
@@ -4976,7 +4914,6 @@ wait 5 372997 -> 3
 time -> 770807
 random_song 3 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 2 0
@@ -5021,7 +4958,6 @@ wait 5 299672 -> 3
 time -> 1580050
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 2 0
@@ -5101,7 +5037,6 @@ wait 5 600000 -> 3
 time -> 1191827
 random_song 3 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -5133,7 +5068,6 @@ time -> 1212857
 intensity 0 0
 wait 5 306870 -> 3
 time -> 1231957
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -5158,7 +5092,6 @@ time -> 1257773
 stop
 wait 5 313825 -> 3
 time -> 1262811
-volume 00000000
 get_score 11 -> none
 set stop
 wait 5 313825 -> 2
@@ -5187,7 +5120,6 @@ wait 5 600000 -> 3
 time -> 260626
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -5250,7 +5182,6 @@ wait 5 370623 -> 3
 time -> 935495
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -5351,7 +5282,6 @@ wait 5 420000 -> 3
 time -> 2600736
 random_song 0 -> M2
 load M2 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 420000 -> 2
@@ -5547,7 +5477,6 @@ wait 5 600000 -> 3
 time -> 1029757
 random_song 1 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> none
 set stop
 wait 5 600000 -> -1
@@ -5566,7 +5495,6 @@ wait 5 600000 -> 3
 time -> 1053923
 random_song 3 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -5598,7 +5526,6 @@ wait 5 327959 -> 3
 time -> 1415885
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -5657,7 +5584,6 @@ wait 5 323848 -> -1
 time -> 1499797
 wait 5 323848 -> 3
 time -> 1848905
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 2 0
@@ -5721,7 +5647,6 @@ wait 5 411851 -> 3
 time -> 1952196
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 3 0
@@ -5802,7 +5727,6 @@ wait 5 600000 -> 3
 time -> 947563
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 1 0
@@ -5820,7 +5744,6 @@ call intensity 2
 set intensity
 wait 5 330000 -> 3
 time -> 1306781
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 1 0
@@ -5866,7 +5789,6 @@ wait 5 384744 -> 3
 time -> 2419590
 random_song 2 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -5926,7 +5848,6 @@ wait 5 4810 -> 3
 time -> 3982440
 random_song 2 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -5994,7 +5915,6 @@ time -> 4759500
 stop
 wait 5 337489 -> 3
 time -> 5072906
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -6033,7 +5953,6 @@ time -> 5113649
 call player 2
 wait 5 300935 -> 3
 time -> 5118038
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -6062,7 +5981,6 @@ wait 5 293063 -> 3
 time -> 5138006
 random_song 1 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 2 0
@@ -6094,7 +6012,6 @@ wait 5 346520 -> 3
 time -> 5575135
 random_song 3 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -7149,7 +7066,6 @@ time -> 1197722
 intensity 0 0
 wait 5 345557 -> 3
 time -> 1502376
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -7189,7 +7105,6 @@ wait 5 81413 -> 3
 time -> 1851133
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 2 0
@@ -7241,7 +7156,6 @@ wait 5 360000 -> 3
 time -> 1889314
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 2 0
@@ -7900,7 +7814,6 @@ wait 5 600000 -> 3
 time -> 1259688
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -7953,7 +7866,6 @@ wait 5 399354 -> 3
 time -> 1617234
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -7975,7 +7887,6 @@ wait 5 365057 -> 3
 time -> 1636473
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -8016,7 +7927,6 @@ wait 5 600000 -> 3
 time -> 1108538
 random_song 2 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -8076,7 +7986,6 @@ stop
 call epoch 2
 wait 5 342295 -> 3
 time -> 2204543
-volume 00000000
 get_score 14 -> none
 set stop
 call player 2
@@ -8090,7 +7999,6 @@ wait 5 342295 -> -1
 time -> 2209671
 wait 5 342295 -> 3
 time -> 2226309
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -8132,7 +8040,6 @@ wait 5 600000 -> 3
 time -> 935881
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -8155,7 +8062,6 @@ wait 5 420000 -> 3
 time -> 1350212
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -8221,7 +8127,6 @@ wait 5 382968 -> 3
 time -> 2543525
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -8233,7 +8138,6 @@ time -> 2906856
 stop
 wait 5 303805 -> 3
 time -> 2912568
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -8267,7 +8171,6 @@ wait 5 362824 -> 3
 time -> 2939142
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -8293,7 +8196,6 @@ wait 5 420000 -> 3
 time -> 3791621
 random_song 2 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -8357,7 +8259,6 @@ wait 5 600000 -> 3
 time -> 538588
 random_song 2 -> M3
 load M3 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 0 0
@@ -8417,20 +8318,17 @@ intensity 1 0
 call epoch 2
 wait 5 311885 -> 3
 time -> 607812
-volume 00000000
 get_score -1 -> none
 set stop
 call player 0
 wait 5 311885 -> 3
 time -> 613470
-volume 00000000
 get_score -1 -> none
 set stop
 call epoch 0
 call epoch 0
 wait 5 311885 -> 3
 time -> 632220
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 311885 -> 4
@@ -8448,7 +8346,6 @@ wait 5 311885 -> 3
 time -> 642354
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 1 0
@@ -8572,7 +8469,6 @@ wait 5 330000 -> 3
 time -> 1483698
 random_song 2 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 1 0
@@ -8596,7 +8492,6 @@ time -> 1867134
 intensity 2 0
 wait 5 342066 -> 3
 time -> 1875162
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 2 0
@@ -8682,7 +8577,6 @@ time -> 614468
 intensity 0 0
 wait 5 360000 -> 3
 time -> 614468
-volume 00000000
 get_score 14 -> none
 set stop
 wait 5 360000 -> -1
@@ -8872,7 +8766,6 @@ wait 5 600000 -> 3
 time -> 1449412
 random_song 0 -> M1
 load M1 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 600000 -> 4
@@ -8894,7 +8787,6 @@ wait 5 600000 -> 3
 time -> 1816188
 random_song 3 -> M1
 load M1 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 2 0
@@ -8922,7 +8814,6 @@ wait 5 373643 -> 3
 time -> 2143148
 random_song 3 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 2 0
@@ -8941,7 +8832,6 @@ call epoch 0
 call epoch 3
 wait 5 316382 -> 3
 time -> 2484640
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 2 0
@@ -8972,7 +8862,6 @@ wait 5 330000 -> -1
 time -> 2869150
 wait 5 330000 -> 3
 time -> 2869221
-volume 00000000
 get_score 11 -> none
 set stop
 wait 5 330000 -> 4
@@ -9005,7 +8894,6 @@ wait 5 330000 -> 3
 time -> 3326051
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 1 0
@@ -9059,7 +8947,6 @@ call intensity 0
 set intensity
 wait 5 408803 -> 3
 time -> 4451957
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -9119,7 +9006,6 @@ wait 5 333273 -> 3
 time -> 4503281
 random_song 1 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -9163,7 +9049,6 @@ wait 5 600000 -> 3
 time -> 288547
 random_song 2 -> M2
 load M2 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 0 0
@@ -9225,7 +9110,6 @@ stop
 call player 1
 wait 5 379762 -> 3
 time -> 1027396
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 1 0
@@ -9246,7 +9130,6 @@ wait 5 393172 -> 3
 time -> 1037313
 random_song 0 -> M1
 load M1 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 393172 -> 2
@@ -9293,7 +9176,6 @@ wait 5 393172 -> 3
 time -> 1421694
 random_song 0 -> M3
 load M3 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 393172 -> 1
@@ -9303,7 +9185,6 @@ wait 5 393172 -> 3
 time -> 1427220
 random_song 0 -> M1
 load M1 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 call epoch 2
@@ -9311,7 +9192,6 @@ wait 5 393172 -> 3
 time -> 1431686
 random_song 0 -> M4
 load M4 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 3 0
@@ -9459,7 +9339,6 @@ wait 5 376254 -> 3
 time -> 3730931
 random_song 3 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 2 0
@@ -9589,7 +9468,6 @@ wait 5 322426 -> 3
 time -> 2304546
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> none
 set stop
 call player 2
@@ -9601,7 +9479,6 @@ wait 5 322426 -> 3
 time -> 2315826
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 3 0
@@ -9774,7 +9651,6 @@ wait 5 600000 -> 3
 time -> 837293
 random_song 2 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 2 0
@@ -9793,7 +9669,6 @@ time -> 852679
 call epoch 1
 wait 5 397970 -> 3
 time -> 858646
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 2 0
@@ -10123,7 +9998,6 @@ wait 5 329977 -> 3
 time -> 2107613
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 1 0
@@ -10149,7 +10023,6 @@ time -> 2138151
 intensity 2 0
 wait 5 357619 -> 3
 time -> 2155939
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 2 0
@@ -10171,7 +10044,6 @@ wait 5 330000 -> 3
 time -> 2161937
 random_song 0 -> M1
 load M1 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 2 0
@@ -10232,7 +10104,6 @@ wait 5 370053 -> 3
 time -> 2519676
 random_song 2 -> M1
 load M1 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 370053 -> 2
@@ -10253,7 +10124,6 @@ wait 5 370053 -> 3
 time -> 2529940
 random_song 3 -> M3
 load M3 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 call player 1
@@ -10261,7 +10131,6 @@ wait 5 370053 -> 3
 time -> 2874936
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> none
 set stop
 wait 5 370053 -> -1
@@ -10288,14 +10157,12 @@ wait 5 370053 -> 3
 time -> 3687271
 random_song 0 -> M2
 load M2 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 370053 -> 3
 time -> 3692560
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> none
 set stop
 wait 5 370053 -> 2
@@ -10316,7 +10183,6 @@ wait 5 370053 -> 3
 time -> 3695946
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 3 0
@@ -10443,7 +10309,6 @@ time -> 645209
 stop
 wait 5 359949 -> 3
 time -> 656638
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 1 0
@@ -10525,7 +10390,6 @@ wait 5 282845 -> 3
 time -> 1446304
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 3 0
@@ -10550,7 +10414,6 @@ wait 5 309190 -> 3
 time -> 1451105
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -10579,7 +10442,6 @@ wait 5 318562 -> 3
 time -> 1463608
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -10851,7 +10713,6 @@ wait 5 371644 -> 3
 time -> 4635187
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -10896,7 +10757,6 @@ intensity 2 0
 call player 1
 wait 5 391162 -> 3
 time -> 4747211
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 2 0
@@ -10943,7 +10803,6 @@ time -> 961990
 last_error
 wait 5 389333 -> 3
 time -> 967859
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -10976,7 +10835,6 @@ call intensity 3
 set intensity
 wait 5 10877 -> 3
 time -> 1327237
-volume 00000000
 get_score 14 -> none
 set stop
 wait 5 10877 -> 2
@@ -10997,7 +10855,6 @@ wait 5 10877 -> 3
 time -> 2096185
 random_song 0 -> M2
 load M2 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 10877 -> 1
@@ -11057,7 +10914,6 @@ wait 5 10877 -> 3
 time -> 2576524
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 2 0
@@ -11100,7 +10956,6 @@ wait 5 313589 -> 3
 time -> 2629921
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 3 0
@@ -11331,7 +11186,6 @@ wait 5 320180 -> 3
 time -> 3022714
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> none
 set stop
 call epoch 3
@@ -11339,7 +11193,6 @@ wait 5 320180 -> 3
 time -> 3022802
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -11356,7 +11209,6 @@ time -> 3438462
 last_error
 wait 5 402872 -> 3
 time -> 3438462
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -11413,7 +11265,6 @@ wait 5 364393 -> 3
 time -> 3819282
 random_song 0 -> M1
 load M1 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 1 0
@@ -11504,7 +11355,6 @@ time -> 1356608
 stop
 wait 5 283677 -> 3
 time -> 1362452
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 283677 -> 2
@@ -11520,7 +11370,6 @@ call epoch 3
 call epoch 3
 wait 5 283677 -> 3
 time -> 1375936
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 283677 -> 2
@@ -11531,7 +11380,6 @@ time -> 1713506
 intensity 0 0
 wait 5 283677 -> 3
 time -> 1717602
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 283677 -> 4
@@ -11548,7 +11396,6 @@ wait 5 283677 -> 3
 time -> 1758763
 random_song 3 -> M3
 load M3 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 283677 -> -1
@@ -11563,7 +11410,6 @@ wait 5 283677 -> 3
 time -> 1788345
 random_song 3 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -11599,7 +11445,6 @@ wait 5 342403 -> 3
 time -> 1792974
 random_song 2 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -11652,7 +11497,6 @@ wait 5 13642 -> 3
 time -> 2585075
 random_song 3 -> M1
 load M1 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 call epoch 1
@@ -11666,7 +11510,6 @@ wait 5 13642 -> 3
 time -> 2960917
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> none
 set stop
 call player 1
@@ -11690,7 +11533,6 @@ wait 5 13642 -> 3
 time -> 3317981
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 2 0
@@ -11719,7 +11561,6 @@ call intensity 0
 set intensity
 wait 5 322398 -> 3
 time -> 3687365
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 2 0
@@ -12464,7 +12305,6 @@ call intensity 0
 set intensity
 wait 5 352535 -> 3
 time -> 1650058
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -12527,7 +12367,6 @@ wait 5 600000 -> 3
 time -> 1293390
 random_song 0 -> M4
 load M4 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 3 0
@@ -12558,7 +12397,6 @@ wait 5 307012 -> 3
 time -> 2060158
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 1 0
@@ -12588,7 +12426,6 @@ wait 5 354012 -> 3
 time -> 2101466
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 3 0
@@ -12627,7 +12464,6 @@ wait 5 321485 -> 3
 time -> 2493494
 random_song 2 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -12698,7 +12534,6 @@ wait 5 600000 -> 3
 time -> 1245879
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 3 0
@@ -12749,7 +12584,6 @@ time -> 2425939
 stop
 wait 5 357755 -> 3
 time -> 2425947
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -12767,7 +12601,6 @@ wait 5 300000 -> 3
 time -> 2458174
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> none
 set stop
 call player 1
@@ -12777,7 +12610,6 @@ wait 5 300000 -> 3
 time -> 2845019
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -12852,7 +12684,6 @@ time -> 3266579
 intensity 0 0
 wait 5 352920 -> 3
 time -> 3266579
-volume 00000000
 get_score 12 -> none
 set stop
 wait 5 352920 -> 1
@@ -12881,7 +12712,6 @@ wait 5 352920 -> 3
 time -> 4140926
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -12898,7 +12728,6 @@ call intensity 1
 set intensity
 wait 5 25717 -> 3
 time -> 4469804
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -12928,7 +12757,6 @@ wait 5 348404 -> 3
 time -> 4496231
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -12956,7 +12784,6 @@ call player 2
 call epoch 2
 wait 5 327296 -> 3
 time -> 4534771
-volume 00000000
 get_score 11 -> none
 set stop
 call intensity 1
@@ -13316,7 +13143,6 @@ wait 5 385224 -> 3
 time -> 1740640
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 0 0
@@ -13392,7 +13218,6 @@ wait 5 420000 -> 3
 time -> 2619029
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 1 0
@@ -13466,7 +13291,6 @@ wait 5 420000 -> 3
 time -> 3416777
 random_song 0 -> M4
 load M4 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 2 0
@@ -13485,7 +13309,6 @@ call intensity 0
 set intensity
 wait 5 357252 -> 3
 time -> 3428186
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 2 0
@@ -13569,7 +13392,6 @@ time -> 852602
 call player 0
 wait 5 339578 -> 3
 time -> 861777
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -13622,14 +13444,12 @@ wait 5 371235 -> 3
 time -> 1653170
 random_song 0 -> M4
 load M4 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 371235 -> 3
 time -> 1665729
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 1 0
@@ -13641,7 +13461,6 @@ time -> 1665729
 stop
 wait 5 352437 -> 3
 time -> 1665729
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 1 0
@@ -13718,7 +13537,6 @@ wait 5 324138 -> 3
 time -> 1436964
 random_song 2 -> M1
 load M1 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 324138 -> 4
@@ -13736,7 +13554,6 @@ wait 5 324138 -> 3
 time -> 1451385
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -13833,7 +13650,6 @@ wait 5 420000 -> 3
 time -> 684130
 random_song 0 -> M3
 load M3 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 1 0
@@ -13880,7 +13696,6 @@ wait 5 600000 -> 3
 time -> 601552
 random_song 3 -> M1
 load M1 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 0 0
@@ -14026,7 +13841,6 @@ wait 5 600000 -> 3
 time -> 644488
 random_song 0 -> M1
 load M1 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 call intensity 3
@@ -14053,7 +13867,6 @@ wait 5 600000 -> 3
 time -> 605076
 random_song 2 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -14076,7 +13889,6 @@ wait 5 420000 -> 3
 time -> 1383481
 random_song 2 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -14134,7 +13946,6 @@ wait 5 333275 -> 3
 time -> 1817418
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 3 0
@@ -14174,7 +13985,6 @@ wait 5 600000 -> 3
 time -> 1113085
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -14201,7 +14011,6 @@ wait 5 300000 -> 3
 time -> 1551060
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -14287,7 +14096,6 @@ wait 5 600000 -> 3
 time -> 929646
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -14362,7 +14170,6 @@ time -> 1762532
 stop
 wait 5 5790 -> 3
 time -> 1762532
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 1 0
@@ -14397,7 +14204,6 @@ wait 5 384970 -> 3
 time -> 1785910
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 1 0
@@ -14475,7 +14281,6 @@ wait 5 350006 -> 3
 time -> 2660399
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 2 0
@@ -14932,7 +14737,6 @@ wait 5 600000 -> 3
 time -> 1299044
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -15021,12 +14825,10 @@ time -> 2167929
 last_error
 wait 5 255895 -> 3
 time -> 2180708
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 255895 -> 3
 time -> 2194416
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 255895 -> 2
@@ -15039,7 +14841,6 @@ set intensity
 call epoch 3
 wait 5 255895 -> 3
 time -> 2219693
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 255895 -> 2
@@ -15056,12 +14857,10 @@ wait 5 255895 -> -1
 time -> 2902173
 wait 5 255895 -> 3
 time -> 3216802
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 255895 -> 3
 time -> 3216802
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 255895 -> -1
@@ -15071,7 +14870,6 @@ call intensity 2
 set intensity
 wait 5 255895 -> 3
 time -> 3222029
-volume 00000000
 get_score -1 -> none
 set stop
 call intensity 3
@@ -15081,13 +14879,11 @@ time -> 3222077
 intensity 3 0
 wait 5 255895 -> 3
 time -> 3241885
-volume 00000000
 get_score -1 -> none
 set stop
 call player 2
 wait 5 255895 -> 3
 time -> 3246685
-volume 00000000
 get_score -1 -> none
 set stop
 call intensity 1
@@ -15103,7 +14899,6 @@ time -> 3633024
 last_error
 wait 5 255895 -> 3
 time -> 3633024
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 255895 -> 2
@@ -15123,14 +14918,12 @@ intensity 3 0
 call player 0
 wait 5 255895 -> 3
 time -> 4060940
-volume 00000000
 get_score -1 -> none
 set stop
 call intensity 1
 set intensity
 wait 5 255895 -> 3
 time -> 4063925
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 255895 -> 2
@@ -15152,7 +14945,6 @@ wait 5 255895 -> -1
 time -> 4108669
 wait 5 255895 -> 3
 time -> 4108707
-volume 00000000
 get_score -1 -> none
 set stop
 call intensity 2
@@ -15195,7 +14987,6 @@ wait 5 255895 -> 1
 time -> 4570310
 wait 5 255895 -> 3
 time -> 4575755
-volume 00000000
 get_score -1 -> none
 set stop
 call intensity 2
@@ -15247,7 +15038,6 @@ wait 5 600000 -> 3
 time -> 1126782
 random_song 2 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -15307,7 +15097,6 @@ wait 5 415835 -> 3
 time -> 1502865
 random_song 2 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -15399,7 +15188,6 @@ wait 5 44866 -> 3
 time -> 2301782
 random_song 2 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 3 0
@@ -15459,7 +15247,6 @@ call intensity 0
 set intensity
 wait 5 386781 -> 3
 time -> 3063455
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 3 0
@@ -15578,7 +15365,6 @@ wait 5 359987 -> 3
 time -> 853784
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 2 0
@@ -15626,7 +15412,6 @@ wait 5 73447 -> 3
 time -> 2012308
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 0 0
@@ -15725,7 +15510,6 @@ wait 5 388440 -> -1
 time -> 2761636
 wait 5 388440 -> 3
 time -> 2764517
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 3 0
@@ -15776,7 +15560,6 @@ call intensity 0
 set intensity
 wait 5 420000 -> 3
 time -> 3562101
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 3 0
@@ -15810,7 +15593,6 @@ wait 5 296925 -> 3
 time -> 4231400
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 3 0
@@ -15910,7 +15692,6 @@ wait 5 311745 -> 3
 time -> 2150520
 random_song 0 -> M2
 load M2 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 311745 -> -1
@@ -15927,14 +15708,12 @@ wait 5 311745 -> 3
 time -> 2997714
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> none
 set stop
 wait 5 311745 -> 3
 time -> 3017612
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -15988,7 +15767,6 @@ time -> 3846641
 stop
 wait 5 420000 -> 3
 time -> 3850787
-volume 00000000
 get_score 11 -> none
 set stop
 wait 5 420000 -> 1
@@ -16004,7 +15782,6 @@ time -> 3876799
 intensity 0 0
 wait 5 420000 -> 3
 time -> 3880801
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -16027,7 +15804,6 @@ time -> 4301370
 stop
 wait 5 338246 -> 3
 time -> 4658657
-volume 00000000
 get_score 11 -> none
 set stop
 wait 5 338246 -> 2
@@ -16075,7 +15851,6 @@ wait 5 600000 -> 3
 time -> 648303
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -16089,7 +15864,6 @@ time -> 650309
 stop
 wait 5 357081 -> 3
 time -> 662686
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -16137,7 +15911,6 @@ time -> 1036718
 stop
 wait 5 409180 -> 3
 time -> 1040719
-volume 00000000
 get_score -1 -> none
 set stop
 call intensity 3
@@ -16167,7 +15940,6 @@ wait 5 409180 -> 3
 time -> 1468412
 random_song 0 -> M1
 load M1 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 409180 -> 2
@@ -16826,7 +16598,6 @@ wait 5 600000 -> 3
 time -> 650309
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -16856,7 +16627,6 @@ time -> 691154
 intensity 1 0
 wait 5 294088 -> 3
 time -> 696542
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 1 0
@@ -16946,7 +16716,6 @@ time -> 1870152
 stop
 wait 5 381805 -> 3
 time -> 1873534
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 1 0
@@ -16974,7 +16743,6 @@ stop
 call player 1
 wait 5 359585 -> 3
 time -> 1908189
-volume 00000000
 get_score 3 -> none
 set stop
 wait 5 359585 -> -1
@@ -16990,7 +16758,6 @@ time -> 1931757
 call epoch 1
 wait 5 359585 -> 3
 time -> 1931818
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 0 0
@@ -17003,7 +16770,6 @@ time -> 1931818
 stop
 wait 5 332746 -> 3
 time -> 1934797
-volume 00000000
 get_score 3 -> none
 set stop
 call intensity 3
@@ -17015,7 +16781,6 @@ call epoch 3
 call player 1
 wait 5 332746 -> 3
 time -> 1945603
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 0 0
@@ -17038,7 +16803,6 @@ wait 5 330000 -> 3
 time -> 1993436
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -17082,7 +16846,6 @@ wait 5 290375 -> 3
 time -> 2756053
 random_song 0 -> M3
 load M3 -> 3
-volume 00000000
 get_score 3 -> S
 repeat S3 100000
 intensity 1 0
@@ -17126,7 +16889,6 @@ wait 5 340437 -> 3
 time -> 4457657
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> S
 repeat S12 100000
 intensity 1 0
@@ -17183,7 +16945,6 @@ wait 5 600000 -> 3
 time -> 1400568
 random_song 2 -> M2
 load M2 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 call intensity 0
@@ -17197,7 +16958,6 @@ wait 5 600000 -> 3
 time -> 1420439
 random_song 2 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -17251,7 +17011,6 @@ wait 5 600000 -> 3
 time -> 889625
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -17302,7 +17061,6 @@ time -> 3130183
 stop
 wait 5 338546 -> 3
 time -> 3130183
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 3 0
@@ -17354,7 +17112,6 @@ wait 5 600000 -> 3
 time -> 638709
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> none
 set stop
 call intensity 1
@@ -17363,7 +17120,6 @@ wait 5 600000 -> 3
 time -> 643786
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> none
 set stop
 wait 5 600000 -> -1
@@ -17378,7 +17134,6 @@ wait 5 600000 -> 3
 time -> 669533
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 2 0
@@ -17403,7 +17158,6 @@ call intensity 3
 set intensity
 wait 5 394557 -> 3
 time -> 1402397
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 2 0
@@ -17441,7 +17195,6 @@ wait 5 600000 -> 3
 time -> 1171310
 random_song 0 -> M2
 load M2 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 600000 -> -1
@@ -17452,7 +17205,6 @@ wait 5 600000 -> 3
 time -> 1179315
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> none
 set stop
 call intensity 0
@@ -17461,7 +17213,6 @@ wait 5 600000 -> 3
 time -> 1185470
 random_song 0 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -17477,7 +17228,6 @@ call intensity 0
 set intensity
 wait 5 391559 -> 3
 time -> 1209749
-volume 00000000
 get_score 11 -> none
 set stop
 call intensity 1
@@ -17636,7 +17386,6 @@ wait 5 353282 -> 3
 time -> 2375982
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> none
 set stop
 wait 5 353282 -> 2
@@ -17651,7 +17400,6 @@ wait 5 353282 -> 3
 time -> 2385208
 random_song 0 -> M2
 load M2 -> 12
-volume 00000000
 get_score 12 -> none
 set stop
 call intensity 2
@@ -17671,7 +17419,6 @@ wait 5 353282 -> 3
 time -> 2397793
 random_song 0 -> M4
 load M4 -> -1
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 353282 -> 1
@@ -17697,7 +17444,6 @@ wait 5 353282 -> 3
 time -> 2429395
 random_song 2 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 2 0
@@ -17738,7 +17484,6 @@ wait 5 377984 -> 3
 time -> 2850214
 random_song 1 -> M2
 load M2 -> 3
-volume 00000000
 get_score 3 -> none
 set stop
 wait 5 377984 -> -2
@@ -17752,7 +17497,6 @@ wait 5 377984 -> 3
 time -> 3238617
 random_song 1 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -17799,7 +17543,6 @@ wait 5 344650 -> 3
 time -> 3259649
 random_song 0 -> M4
 load M4 -> 14
-volume 00000000
 get_score 14 -> S
 repeat S14 100000
 intensity 3 0
@@ -17858,7 +17601,6 @@ wait 5 323374 -> 3
 time -> 1988448
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 0 0
@@ -18145,7 +17887,6 @@ call player 1
 call player 2
 wait 5 360000 -> 3
 time -> 1391207
-volume 00000000
 get_score -1 -> none
 set stop
 call intensity 1
@@ -18155,7 +17896,6 @@ time -> 1391258
 intensity 1 0
 wait 5 360000 -> 3
 time -> 1391304
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 360000 -> 2
@@ -18166,7 +17906,6 @@ time -> 1733360
 intensity 1 0
 wait 5 360000 -> 3
 time -> 1735959
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 360000 -> 2
@@ -18181,27 +17920,22 @@ wait 5 360000 -> 1
 time -> 1754587
 wait 5 360000 -> 3
 time -> 1761975
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 360000 -> 3
 time -> 1780071
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 360000 -> 3
 time -> 1780071
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 360000 -> 3
 time -> 1780071
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 360000 -> 3
 time -> 1784722
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 360000 -> 1
@@ -18215,7 +17949,6 @@ wait 5 360000 -> -1
 time -> 1796115
 wait 5 360000 -> 3
 time -> 1796152
-volume 00000000
 get_score -1 -> none
 set stop
 call epoch 1
@@ -18226,7 +17959,6 @@ set intensity
 call epoch 2
 wait 5 360000 -> 3
 time -> 1796223
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 360000 -> 2
@@ -18234,13 +17966,11 @@ time -> 1801609
 intensity 2 0
 wait 5 360000 -> 3
 time -> 2169302
-volume 00000000
 get_score -1 -> none
 set stop
 call epoch 1
 wait 5 360000 -> 3
 time -> 2529704
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 360000 -> -2
@@ -18250,14 +17980,12 @@ wait 5 360000 -> -1
 time -> 3325556
 wait 5 360000 -> 3
 time -> 3330154
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 360000 -> 1
 time -> 3330154
 wait 5 360000 -> 3
 time -> 3334619
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 360000 -> -2
@@ -18281,7 +18009,6 @@ time -> 3785506
 intensity 2 0
 wait 5 360000 -> 3
 time -> 3789512
-volume 00000000
 get_score -1 -> none
 set stop
 wait 5 360000 -> 4
@@ -18530,7 +18257,6 @@ wait 5 600000 -> 3
 time -> 1629944
 random_song 2 -> M1
 load M1 -> 11
-volume 00000000
 get_score 11 -> S
 repeat S11 100000
 intensity 0 0
@@ -18755,7 +18481,6 @@ wait 5 297925 -> 3
 time -> 2020881
 random_song 0 -> M3
 load M3 -> 13
-volume 00000000
 get_score 13 -> S
 repeat S13 100000
 intensity 1 0

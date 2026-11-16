@@ -77,6 +77,17 @@ class _Reader:
         return self.p == len(self.d)
 
 
+def without_retail_header(name, data, spec):
+    """A db file without the leading bytes only the retail file has (overlay.TABLES retail_header: dbrandommap's
+    group count), recognised by the length: exactly that many bytes more than the count and its records."""
+    tspec = spec['tables'][name]
+    hdr = tspec.get('retail_header', 0)
+    size = spec['structs'][tspec['struct']]['size']
+    if hdr and len(data) >= hdr + 4 and len(data) == hdr + 4 + size * struct.unpack_from('<I', data, hdr)[0]:
+        return data[hdr:]
+    return data
+
+
 def parse(name, data, spec):
     """bytes of one db file -> Table (holes not yet detected: every row is a Row)."""
     tspec = spec['tables'][name]
@@ -86,6 +97,7 @@ def parse(name, data, spec):
     t = Table(name)
     signed = tspec.get('list', ('', 's32'))[1] == 's32'
     if kind == 'count':
+        r.p = len(data) - len(without_retail_header(name, data, spec))
         t.rows = [Row(r.take(size)) for _ in range(r.u32())]
     elif kind == 'lead':
         k = lead_count(tspec)

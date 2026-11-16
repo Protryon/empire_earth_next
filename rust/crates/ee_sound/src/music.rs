@@ -258,7 +258,12 @@ pub fn do_start(h: &mut impl Host) {
             }
         }
     }
-    h.set_volume(0.0);
+    // main 1d59ccb6c: silenced only for a fade-in; a song started while a load holds the music muted
+    // (MuteForSaveLoad) is not faded in, and setting 0 there left every later song silent once the load had put the
+    // volume back (an original-game bug)
+    if fade {
+        h.set_volume(0.0);
+    }
     let song = h.music();
     if play_song(h, song, fade) {
         let r = h.random();

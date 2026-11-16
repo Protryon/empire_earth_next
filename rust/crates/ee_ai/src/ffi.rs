@@ -7,7 +7,7 @@ use std::ffi::{c_char, c_void};
 
 use crate::manifest::{self, Manifest};
 use crate::names::{self, Names};
-use crate::next_save::{self, EeAiNextEvent, EeAiNextSpot, Group, NextSave, OrderResult, RESOURCES, RING};
+use crate::next_save::{self, EeAiNextEvent, EeAiNextSpot, NextSave, OrderResult, RESOURCES, RING};
 use crate::seat;
 use crate::units_save::{self, EeAiUnitsEvent, EeAiUnitsLimits, EeAiUnitsMark, EeAiUnitsRemembered, UnitsSave};
 
@@ -58,34 +58,15 @@ pub struct EeAiNextResult {
     pub code: i32,
     pub reason: i32,
     pub count: i32,
-    pub group: i32,
 }
 
-/// A group in a next state's view (`aims` as many as `units`).
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct EeAiNextGroup {
-    pub fields: [i32; 14],
-    pub units: *const i32,
-    pub aims: *const i32,
-    pub unit_count: usize,
-    pub skips: *const i32,
-    pub skip_count: usize,
-}
-
-/// The next engine's state as the save block holds it (next_save.rs; `version` set by a decode, not read by the
-/// encode). `income_ring` is [60][5] by step, then resource.
+/// The next engine's state as the save block holds it (next_save.rs). `income_ring` is [60][5] by step, then
+/// resource.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct EeAiNextSave {
-    pub version: i32,
-    pub claim_range: i32,
-    pub reserve: [i32; 5],
-    pub food_prefer: i32,
-    pub food_land: i32,
     pub epoch: i32,
     pub epoch_start: u32,
-    pub next_repair_time: u32,
     pub income_total: [i32; 5],
     pub income_ring: [i32; 300],
     pub income_steps: i32,
@@ -96,16 +77,12 @@ pub struct EeAiNextSave {
     pub seen_town_y: [i32; 64],
     pub events: *const EeAiNextEvent,
     pub event_count: usize,
-    pub test: [i32; 4],
     pub script: EeAiBytes,
     pub started: bool,
     pub failed: bool,
     pub results: *const EeAiNextResult,
     pub result_count: usize,
     pub memory: EeAiBytes,
-    pub next_group: i32,
-    pub groups: *const EeAiNextGroup,
-    pub group_count: usize,
     pub spots: *const EeAiNextSpot,
     pub spot_count: usize,
     pub towers: *const EeAiNextSpot,
@@ -116,10 +93,6 @@ pub struct EeAiNextSave {
     pub threats: *const EeAiNextSpot,
     pub threat_count: usize,
     pub threats_time: i32,
-    pub explore: *const EeAiNextSpot,
-    pub explore_count: usize,
-    pub granary_farms: i32,
-    pub exact: i32,
 }
 
 /// Safety: every pointer of `v` points to its count of values.
@@ -129,14 +102,8 @@ unsafe fn next_from_view(v: &EeAiNextSave) -> NextSave {
         step.copy_from_slice(&v.income_ring[k * RESOURCES..(k + 1) * RESOURCES]);
     }
     NextSave {
-        version: v.version,
-        claim_range: v.claim_range,
-        reserve: v.reserve,
-        food_prefer: v.food_prefer,
-        food_land: v.food_land,
         epoch: v.epoch,
         epoch_start: v.epoch_start,
-        next_repair_time: v.next_repair_time,
         income_total: v.income_total,
         income_ring: ring,
         income_steps: v.income_steps,
@@ -146,31 +113,14 @@ unsafe fn next_from_view(v: &EeAiNextSave) -> NextSave {
         seen_town_x: v.seen_town_x,
         seen_town_y: v.seen_town_y,
         events: slice(v.events, v.event_count).to_vec(),
-        test: v.test,
         script: v.script.get().to_vec(),
         started: v.started,
         failed: v.failed,
         results: slice(v.results, v.result_count)
             .iter()
-            .map(|r| OrderResult {
-                verb: r.verb.get().to_vec(),
-                code: r.code,
-                reason: r.reason,
-                count: r.count,
-                group: r.group,
-            })
+            .map(|r| OrderResult { verb: r.verb.get().to_vec(), code: r.code, reason: r.reason, count: r.count })
             .collect(),
         memory: v.memory.get().to_vec(),
-        next_group: v.next_group,
-        groups: slice(v.groups, v.group_count)
-            .iter()
-            .map(|g| Group {
-                fields: g.fields,
-                units: slice(g.units, g.unit_count).to_vec(),
-                aims: slice(g.aims, g.unit_count).to_vec(),
-                skips: slice(g.skips, g.skip_count).to_vec(),
-            })
-            .collect(),
         spots: slice(v.spots, v.spot_count).to_vec(),
         towers: slice(v.towers, v.tower_count).to_vec(),
         seen_citizens: v.seen_citizens,
@@ -178,9 +128,6 @@ unsafe fn next_from_view(v: &EeAiNextSave) -> NextSave {
         army_y: v.army_y,
         threats: slice(v.threats, v.threat_count).to_vec(),
         threats_time: v.threats_time,
-        explore: slice(v.explore, v.explore_count).to_vec(),
-        granary_farms: v.granary_farms,
-        exact: v.exact,
     }
 }
 
@@ -188,7 +135,6 @@ unsafe fn next_from_view(v: &EeAiNextSave) -> NextSave {
 pub struct EeAiNextDecoded {
     state: NextSave,
     results: Vec<EeAiNextResult>,
-    groups: Vec<EeAiNextGroup>,
     view: EeAiNextSave,
 }
 
@@ -196,7 +142,6 @@ fn next_decoded(state: NextSave) -> Box<EeAiNextDecoded> {
     let mut d = Box::new(EeAiNextDecoded {
         state,
         results: Vec::new(),
-        groups: Vec::new(),
         // SAFETY: a record of integers, bools and pointers, all zero is a valid value (filled below)
         view: unsafe { std::mem::zeroed() },
     });
@@ -204,39 +149,15 @@ fn next_decoded(state: NextSave) -> Box<EeAiNextDecoded> {
     let results: Vec<EeAiNextResult> = s
         .results
         .iter()
-        .map(|r| EeAiNextResult {
-            verb: EeAiBytes::of(&r.verb),
-            code: r.code,
-            reason: r.reason,
-            count: r.count,
-            group: r.group,
-        })
-        .collect();
-    let groups: Vec<EeAiNextGroup> = s
-        .groups
-        .iter()
-        .map(|g| EeAiNextGroup {
-            fields: g.fields,
-            units: g.units.as_ptr(),
-            aims: g.aims.as_ptr(),
-            unit_count: g.units.len(),
-            skips: g.skips.as_ptr(),
-            skip_count: g.skips.len(),
-        })
+        .map(|r| EeAiNextResult { verb: EeAiBytes::of(&r.verb), code: r.code, reason: r.reason, count: r.count })
         .collect();
     let mut ring = [0; RING * RESOURCES];
     for (k, step) in s.income_ring.iter().enumerate() {
         ring[k * RESOURCES..(k + 1) * RESOURCES].copy_from_slice(step);
     }
     let view = EeAiNextSave {
-        version: s.version,
-        claim_range: s.claim_range,
-        reserve: s.reserve,
-        food_prefer: s.food_prefer,
-        food_land: s.food_land,
         epoch: s.epoch,
         epoch_start: s.epoch_start,
-        next_repair_time: s.next_repair_time,
         income_total: s.income_total,
         income_ring: ring,
         income_steps: s.income_steps,
@@ -247,16 +168,12 @@ fn next_decoded(state: NextSave) -> Box<EeAiNextDecoded> {
         seen_town_y: s.seen_town_y,
         events: s.events.as_ptr(),
         event_count: s.events.len(),
-        test: s.test,
         script: EeAiBytes::of(&s.script),
         started: s.started,
         failed: s.failed,
         results: results.as_ptr(),
         result_count: results.len(),
         memory: EeAiBytes::of(&s.memory),
-        next_group: s.next_group,
-        groups: groups.as_ptr(),
-        group_count: groups.len(),
         spots: s.spots.as_ptr(),
         spot_count: s.spots.len(),
         towers: s.towers.as_ptr(),
@@ -267,14 +184,9 @@ fn next_decoded(state: NextSave) -> Box<EeAiNextDecoded> {
         threats: s.threats.as_ptr(),
         threat_count: s.threats.len(),
         threats_time: s.threats_time,
-        explore: s.explore.as_ptr(),
-        explore_count: s.explore.len(),
-        granary_farms: s.granary_farms,
-        exact: s.exact,
     };
-    // the vectors' buffers do not move when the vectors move into the box
+    // the vector's buffer does not move when the vector moves into the box
     d.results = results;
-    d.groups = groups;
     d.view = view;
     d
 }
@@ -465,6 +377,7 @@ pub struct EeAiManifestEntry {
     pub random: bool,
     pub sees_all: bool,
     pub fills_garrison: bool,
+    pub classic: bool,
 }
 
 /// A manifest read: its entries and log lines.
@@ -516,6 +429,7 @@ pub unsafe extern "C" fn ee_ai_manifest_entry(m: *const EeAiManifest, k: usize, 
         random: e.random,
         sees_all: e.sees_all,
         fills_garrison: e.fills_garrison,
+        classic: e.classic,
     };
     true
 }
@@ -686,14 +600,13 @@ pub unsafe extern "C" fn ee_ai_names_free(t: *mut EeAiNames) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::next_save::GROUP_FIELDS;
 
     #[test]
     fn next_view_round_trip() {
-        let mut s = NextSave { claim_range: 30, threats_time: 5, granary_farms: 3, exact: 2, ..NextSave::default() };
+        let mut s = NextSave { epoch: 4, threats_time: 5, ..NextSave::default() };
         s.income_ring[59][4] = 77;
-        s.groups.push(Group { fields: [1; GROUP_FIELDS], units: vec![4, 5], aims: vec![0, 6], skips: vec![] });
-        s.results.push(OrderResult { verb: b"build".to_vec(), code: 2, reason: 3, count: 0, group: 0 });
+        s.towers.push(EeAiNextSpot { player: 1, x: 2, y: 3, time: 4, unit: 5 });
+        s.results.push(OrderResult { verb: b"build".to_vec(), code: 2, reason: 3, count: 0 });
         let bytes = next_save::encode(&s);
         unsafe {
             let d = ee_ai_next_save_decode(bytes.as_ptr(), bytes.len(), 200);

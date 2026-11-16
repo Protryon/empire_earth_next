@@ -101,9 +101,7 @@ void EESMEffect::Reset()
 #include "ee/EECPCombatManager.h"
 #include "ee/EETown.h"
 #include "ee/EECPUnitRequirement.h"
-#include "ee/EECPCombatStrategy.h"
-#include "ee/EECPAttackCommander.h"
-#include "ee/EECPIntelligence.h"
+#include "ee/EECPEngine.h"
 
 // Copies another effect's settings, texts and object list
 void EESMEffect::Copy(const EESMEffect& inEffect)
@@ -291,8 +289,6 @@ long EESMEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_scenario_effect_save(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
-#include "ee/EECPCivilizationManager.h"
-
 #include "ee/EESMAIFields.h"
 
 namespace {
@@ -313,7 +309,7 @@ struct EESMBuildingFields {
 const EESMBuildingFields kSMBuildings[] = {EE_SM_AI_BUILDINGS(EE_SM_BUILDING)};
 #undef EE_SM_BUILDING
 
-// one store of Set AI Variable on a computer player; a building count also into the civilization manager's copy
+// one store of Set AI Variable on a computer player
 // (the original's 34 inline setters, COMDATs 0x1c1ca9..0x1c24c8)
 void EESMStoreAI(EEComputerPlayer* inPlayer, const EeScenarioAiWrite& inWrite)
 {
@@ -328,10 +324,8 @@ void EESMStoreAI(EEComputerPlayer* inPlayer, const EeScenarioAiWrite& inWrite)
     case EE_SCENARIO_AI_KIND_UNITS_PER: {
         const EESMBuildingFields& theBuilding = kSMBuildings[inWrite.field];
         bool theMax = inWrite.kind == EE_SCENARIO_AI_KIND_MAX_COUNT;
+        // (the original also mirrored it into the civilization manager's building counts, gone in main's stage 6)
         inPlayer->*(theMax ? theBuilding.mMax : theBuilding.mUnitsPer) = inWrite.long_value;
-        EECPCivilizationManager* theManager = inPlayer->mCivilizationManager;
-        if (theManager != NULL)
-            (theMax ? theManager->mMaxCounts : theManager->mUnitsPer)[theBuilding.mUnitType] = inWrite.long_value;
         break;
     }
     case EE_SCENARIO_AI_KIND_CALL:
@@ -375,11 +369,6 @@ struct EESMEffectRun : EESMHostContext {
     UWideString mText;
     GE3DPoint mEnd;
     GE3DPoint mStart;
-    EECPILocation mLocation;
-    EECPAGTask mTask;
-    EECPCombatStrategy mStrategy;
-    EECPUnitRequirement mRequirement;
-    std::vector<long> mUnitIDs;
     EEActiveGroup* mGroup;
     EEUGRust* mGoal;
     std::vector<EEComplexUnit*> mLoad;
@@ -667,122 +656,7 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
     EESMEffect* theEffect = inRun->mEffect;
     EEActiveGroup* theGroup = inRun->mGroup;
     switch (inOp) {
-    case EE_SCENARIO_WORLD_AI_TOWN: {
-        EEComputerPlayer* thePlayer = SMEComputer(a[0]);
-        EETown* theTown = thePlayer->mTowns.size() != 0 ? thePlayer->mTowns[0] : NULL;
-        return theTown != NULL ? (int64_t)(uint32_t)theTown->GetSerial() : -1;
-    }
-    case EE_SCENARIO_WORLD_AI_LARGEST_CONTINENT: {
-        EEAIContinent* theContinent = gContinentManager.GetContinentByID(
-            (unsigned short)gContinentManager.GetLargestContinent((long)a[0]));
-        return theContinent != NULL ? (int64_t)(uint32_t)theContinent->GetSerial() : -1;
-    }
-    case EE_SCENARIO_WORLD_EFFECT_OBJECT_COUNT: return (int64_t)theEffect->mObjects.size();
-    case EE_SCENARIO_WORLD_EFFECT_OBJECT_AT: return (int64_t)(uint32_t)theEffect->mObjects[(size_t)a[0]];
-    case EE_SCENARIO_WORLD_AI_STRATEGY:
-        inRun->mStrategy.Reset();
-        inRun->mStrategy.mKind = (long)a[0];
-        inRun->mStrategy.mAddFavorites = a[1] != 0;
-        return 0;
-    case EE_SCENARIO_WORLD_AI_REQUIREMENT_CLEAR: inRun->mRequirement.Clear(); return 0;
-    case EE_SCENARIO_WORLD_AI_ANY_COUNT:
-        inRun->mStrategy.mNumUnits = 0;
-        inRun->mStrategy.mNumRemaining = 0;
-        return 0;
-    case EE_SCENARIO_WORLD_AI_COUNT:
-        inRun->mRequirement.mNumLeft = (long)a[0];
-        inRun->mRequirement.mNumWanted = (long)a[0];
-        if (a[1] != 0) {
-            inRun->mStrategy.mNumUnits += (long)a[0];
-            inRun->mStrategy.mNumRemaining = inRun->mStrategy.mNumUnits;
-        }
-        return 0;
-    case EE_SCENARIO_WORLD_AI_REQUIREMENT_SET:
-        switch (a[0]) {
-        case 0: inRun->mRequirement.mUnitClass = (long)a[1]; break;
-        case 1: inRun->mRequirement.mFamily = (long)a[1]; break;
-        case 2: inRun->mRequirement.mUnitKind = (long)a[1]; break;
-        case 3: inRun->mRequirement.mUnitClass = SMEComputer(a[1])->mFavoriteLandType; break;
-        }
-        return 0;
-    case EE_SCENARIO_WORLD_AI_REQUIREMENT_PUSH:
-        inRun->mRequirement.mKind = kRequirementAlreadyDefined;
-        inRun->mStrategy.mRequirements.push_back(inRun->mRequirement);
-        return 0;
-    case EE_SCENARIO_WORLD_AI_CREATE_GROUP: {
-        EECPCombatManager* theCombat = SMEComputer(a[0])->mCombatManager;
-        if (theCombat->IsValidTask(inRun->mTask, inRun->mStrategy, inRun->mUnitIDs))
-            theCombat->mAttackCommander->CreateGroupFromStrategy(inRun->mTask, inRun->mStrategy, inRun->mUnitIDs);
-        return 0;
-    }
-    case EE_SCENARIO_WORLD_AI_TASK_COMBAT: inRun->mTask.mMode = kAGModeCombat; return 0;
-    case EE_SCENARIO_WORLD_AI_AREA_RECTANGLE: {
-        EESMArea* theArea = gWorld.mScenarioManager->GetArea((unsigned long)a[0]);
-        for (long j = (long)gContinentManager.mRectangleAreas.size() - 1; j >= 0; --j) {
-            EEAIRectangleArea* theRectangle = gContinentManager.mRectangleAreas[j];
-            if (theRectangle != NULL && theRectangle->GetScenarioAreaID() == theArea->mID)
-                return (int64_t)(uint32_t)theRectangle->GetSerial();
-        }
-        return -1;
-    }
-    case EE_SCENARIO_WORLD_AI_AREA_CONTINENT: {
-        EESMArea* theArea = gWorld.mScenarioManager->GetArea((unsigned long)a[0]);
-        if (theArea->mAnchor.mX >= 0 && theArea->mAnchor.mY >= 0) {
-            EEAIContinent* theContinent = gContinentManager.GetContinentAt(theArea->mAnchor.mX, theArea->mAnchor.mY);
-            if (theContinent != NULL)
-                return (int64_t)(uint32_t)theContinent->GetSerial();
-        }
-        return -1;
-    }
-    case EE_SCENARIO_WORLD_AI_TASK_UNIT: inRun->mTask.SetUnit(EEUnitCast<EEComplexUnit>(SMEUnit(a[0]))); return 0;
-    case EE_SCENARIO_WORLD_AI_LOCATION_AREA:
-        inRun->mLocation.mSerial = (unsigned long)a[0];
-        inRun->mLocation.mType = (long)a[1];
-        inRun->mLocation.ResetToArea();
-        inRun->mTask.mLocation = inRun->mLocation;
-        return 0;
-    case EE_SCENARIO_WORLD_AI_RANDOM_ENEMY: {
-        EEComputerPlayer* thePlayer = SMEComputer(a[0]);
-        EEPlayer* theEnemy = thePlayer->mCombatManager->mIntelligence->GetRandomEnemy(thePlayer);
-        return theEnemy != NULL ? (int64_t)theEnemy->mPlayerID : -1;
-    }
-    case EE_SCENARIO_WORLD_AI_LOCATION_UNIT: {
-        EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(SMEUnit(a[0]));
-        if (theUnit->mContainer != NULL)
-            inRun->mLocation.mTile = EETileLocation(theUnit->mContainer->GetTileX(), theUnit->mContainer->GetTileY());
-        else
-            inRun->mLocation.mTile = EETileLocation(theUnit->GetTileX(), theUnit->GetTileY());
-        inRun->mTask.mLocation = inRun->mLocation;
-        return 0;
-    }
-    case EE_SCENARIO_WORLD_AI_TASK_PLAYER: inRun->mTask.mPlayer = SMEPlayer(a[0]); return 0;
-    case EE_SCENARIO_WORLD_AI_TASK_TYPE:
-        inRun->mTask.mIsActive = true;
-        inRun->mTask.mType = a[0] == 0 ? kAGTaskLocation : a[0] == 1 ? kAGTaskTerritory : kAGTaskUnit;
-        return 0;
-    case EE_SCENARIO_WORLD_AI_TASK_UNIT_ENEMY: {
-        EEPlayer* thePlayer = SMEPlayer(a[0]);
-        EEComplexUnit* theUnit = inRun->mTask.mUnit;
-        return theUnit != NULL && theUnit->mPlayer != thePlayer && thePlayer->mEnemies[theUnit->mPlayer->mPlayerID] != 0;
-    }
-    case EE_SCENARIO_WORLD_AI_IDS_PUSH_OBJECT: {
-        EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject((unsigned long)a[0]);
-        for (unsigned long u = 0; u < theObject->mUnits.size(); u++)
-            inRun->mUnitIDs.push_back(theObject->mUnits[u]);
-        return 0;
-    }
-    case EE_SCENARIO_WORLD_AI_IDS_COUNT: return (int64_t)inRun->mUnitIDs.size();
-    case EE_SCENARIO_WORLD_AI_IDS_AT: return (int64_t)(uint32_t)inRun->mUnitIDs[(size_t)a[0]];
-    case EE_SCENARIO_WORLD_AI_IDS_ERASE: inRun->mUnitIDs.erase(inRun->mUnitIDs.begin() + (size_t)a[0]); return 0;
-    case EE_SCENARIO_WORLD_AI_IS_MILITARY: return SMEComputer(a[0])->mCombatManager->IsMilitaryUnit(SMEComplex(a[1]));
-    case EE_SCENARIO_WORLD_AI_ATTACH: SMEComplex(a[0])->mIsDetachedFromAI = false; return 0;
-    case EE_SCENARIO_WORLD_AI_VALID_TARGET:
-        return SMEComputer(a[0])->mCombatManager->IsValidTarget((unsigned long)a[1], (unsigned long)a[2], a[3] != 0);
-    case EE_SCENARIO_WORLD_AI_ADD_ATTACK: SMEComputer(a[0])->mCombatManager->AddAttackTask((unsigned long)a[1], (unsigned long)a[2]); return 0;
-    case EE_SCENARIO_WORLD_AI_ADD_DEFEND: SMEComputer(a[0])->mCombatManager->AddDefendTask((unsigned long)a[1], (unsigned long)a[2]); return 0;
-    case EE_SCENARIO_WORLD_AI_DROP_AREA: SMEComputer(a[0])->mCombatManager->DropAreaTask((unsigned long)a[1], false); return 0;
-    case EE_SCENARIO_WORLD_AI_DROP_UNIT: SMEComputer(a[0])->mCombatManager->DropUnitTask((unsigned long)a[1], true); return 0;
-
+    // (the AI military effects' calls went with the C++ attack groups in main's stage 5: ee_scenario effect_ai.rs)
     case EE_SCENARIO_WORLD_TASK_PREPARE: {
         EEUnit* theUnit = SMEUnit(a[0]);
         EEComplexUnit* theComplex = theUnit->GetComplexUnit();

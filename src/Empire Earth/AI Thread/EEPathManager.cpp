@@ -58,8 +58,7 @@
 #include "ee/EEAIAStarPathfindingGoalBase.h"
 #include "ee/EEAIAStarPathfindingGoal.h"
 #include "ee/EEAIAStarBoundedPathGoal.h"
-#include "ee/EECPILocation.h"
-#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EEAIPathGoalModifiers.h"
 #include "ee/EEStormModifiers.h"
 #include "ee/EEAutoPathRequest.h"
@@ -2105,7 +2104,6 @@ struct EESavedGraphSearch {
 };
 
 struct EEAwaitedRequest {
-    EECPAttackSubGroup* mSubGroup;          // referenced until the resolve
     std::function<void(EEAutoPathRequest*)> mAttach;
 };
 
@@ -2131,43 +2129,13 @@ long EEGraphModifierKindOf(EEAIGraphPathGoalModifierBase* inModifier)
         return kGraphModifierEnemyAvoidance;
     if (theType == typeid(EEAIGPGModifierComputerPlayerWallPlanner))
         return kGraphModifierWallPlanner;
-    if (theType == typeid(EEAIGPGModifierLandAttackSubGroupRoutePlanner))
-        return kGraphModifierLand;
-    if (theType == typeid(EEAIGPGModifierLandWallAvoider))
-        return kGraphModifierLandWallAvoider;
-    if (theType == typeid(EEAIGPGModifierSeaRoutePlanner))
-        return kGraphModifierSea;
-    if (theType == typeid(EEAIGPGModifierHelicopterAttackSubGroupRoutePlanner))
-        return kGraphModifierHelicopter;
-    if (theType == typeid(EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner))
-        return kGraphModifierAirplane;
-    if (theType == typeid(EEAIGPGModifierSpaceRoutePlanner))
-        return kGraphModifierSpace;
+    // (the kinds land to space were the attack sub groups' route planners, deleted with the C++ combat tree in
+    // main's stage 5: their numbers stay unused)
     if (theType == typeid(EEAIGPGModifierStormRoutePlannerRain))
         return kGraphModifierStormRain;
     if (theType == typeid(EEAIGPGModifierStormRoutePlannerSnow))
         return kGraphModifierStormSnow;
     return -1;
-}
-
-// the modifier's sub group (NULL for the kinds without one)
-EECPAttackSubGroup* EEGraphModifierSubGroup(EEAIGraphPathGoalModifierBase* inModifier, long inKind)
-{
-    switch (inKind) {
-    case kGraphModifierLand:
-    case kGraphModifierLandWallAvoider:
-        return static_cast<EEAIGPGModifierLandAttackSubGroupRoutePlanner*>(inModifier)->mSubGroup;
-    case kGraphModifierSea:
-        return static_cast<EEAIGPGModifierSeaRoutePlanner*>(inModifier)->mSubGroup;
-    case kGraphModifierHelicopter:
-        return static_cast<EEAIGPGModifierHelicopterAttackSubGroupRoutePlanner*>(inModifier)->mSubGroup;
-    case kGraphModifierAirplane:
-        return static_cast<EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner*>(inModifier)->mSubGroup;
-    case kGraphModifierSpace:
-        return static_cast<EEAIGPGModifierSpaceRoutePlanner*>(inModifier)->mSubGroup;
-    default:
-        return NULL;
-    }
 }
 
 // whether SaveGraphSearches can write the node's search (the load can rebuild every part of it)
@@ -2179,11 +2147,6 @@ bool EEGraphSearchSavable(EEPathManagerNode* inNode)
     EEAIAStarPathGraphGoal& theGoal = theMachine->mGoal;
     long theKind = EEGraphModifierKindOf(theGoal.mModifier);
     if (theKind < 0)
-        return false;
-    EECPAttackSubGroup* theSubGroup = EEGraphModifierSubGroup(theGoal.mModifier, theKind);
-    if (theSubGroup != NULL && (inNode->mRequest == NULL || theSubGroup->mPathRequest != inNode->mRequest))
-        return false;   // a sub group other than the request's owner: the load could not find it
-    if (theKind >= kGraphModifierLand && theKind <= kGraphModifierSpace && theSubGroup == NULL)
         return false;
     if (theMachine->mNodeCount != (long)gContinentManager.mPathSubSectors.size() + 1)
         return false;
@@ -2202,8 +2165,8 @@ EEAIPathSubSector* EESubSectorOf(long inID)
     return gContinentManager.mPathSubSectors[inID];
 }
 
-// the saved modifier, NULL when it needs a sub group and has none (the caller's reference)
-EEAIGraphPathGoalModifierBase* EENewGraphModifier(const EESavedGraphSearch& s, EECPAttackSubGroup* inSubGroup)
+// the saved modifier, NULL for a kind that cannot be rebuilt (the caller's reference)
+EEAIGraphPathGoalModifierBase* EENewGraphModifier(const EESavedGraphSearch& s)
 {
     EEAIGPGModiferUseInfluenceCostsBase* theInfluence = NULL;
     EEAIGraphPathGoalModifierBase* theResult = NULL;
@@ -2219,37 +2182,7 @@ EEAIGraphPathGoalModifierBase* EENewGraphModifier(const EESavedGraphSearch& s, E
     case kGraphModifierStormSnow:
         return new EEAIGPGModifierStormRoutePlannerSnow;
     default:
-        if (inSubGroup == NULL || !s.mModifierSubGroup)
-            return NULL;
-        switch (s.mModifierKind) {
-        case kGraphModifierLand:
-        case kGraphModifierLandWallAvoider: {
-            EEAIGPGModifierLandAttackSubGroupRoutePlanner* theLand =
-                s.mModifierKind == kGraphModifierLand
-                    ? new EEAIGPGModifierLandAttackSubGroupRoutePlanner(inSubGroup, s.mContinent1, s.mContinent2, s.mAnyContinent, s.mWeights)
-                    : new EEAIGPGModifierLandWallAvoider(inSubGroup, s.mWeights);
-            theLand->mContinent1 = s.mContinent1;
-            theLand->mContinent2 = s.mContinent2;
-            theLand->mAnyContinent = s.mAnyContinent;
-            theLand->mAvoidFriendlyBlockers = s.mAvoidFriendlyBlockers;
-            theResult = theInfluence = theLand;
-            break;
-        }
-        case kGraphModifierSea:
-            theResult = theInfluence = new EEAIGPGModifierSeaRoutePlanner(s.mModifierPlayerID, inSubGroup, s.mWeights);
-            break;
-        case kGraphModifierHelicopter:
-            theResult = theInfluence = new EEAIGPGModifierHelicopterAttackSubGroupRoutePlanner(inSubGroup, s.mWeights);
-            break;
-        case kGraphModifierAirplane:
-            theResult = theInfluence = new EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner(inSubGroup, s.mWeights);
-            break;
-        case kGraphModifierSpace:
-            theResult = theInfluence = new EEAIGPGModifierSpaceRoutePlanner(s.mModifierPlayerID, inSubGroup, s.mWeights);
-            break;
-        default:
-            return NULL;
-        }
+        return NULL;   // (the deleted sub groups' route planners)
     }
     if (theInfluence != NULL) {   // the members as saved (the ctors take some of them from the sub group's now)
         theInfluence->mWeights = s.mWeights;
@@ -2277,7 +2210,6 @@ void EEResolveGraphSearches()
         s.mRequest = NULL;
         std::map<long, EEAwaitedRequest>::iterator theOwner =
             theRequest != NULL ? theAwaited.find(theRequest->mRequestID) : theAwaited.end();
-        EECPAttackSubGroup* theSubGroup = theOwner != theAwaited.end() ? theOwner->second.mSubGroup : NULL;
         EEComplexUnit* theUnit = s.mUnitID == -1 ? NULL
             : dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(s.mUnitID)));
         EEComplexUnit* theGoalUnit = s.mGoalUnitID == -1 ? NULL
@@ -2287,7 +2219,7 @@ void EEResolveGraphSearches()
             && (s.mFromID == -1 || EESubSectorOf(s.mFromID) != NULL) && (s.mToID == -1 || EESubSectorOf(s.mToID) != NULL);
         EEAIGraphPathGoalModifierBase* theModifier = NULL;
         if (theOK && s.mModifierKind != kGraphModifierNone) {
-            theModifier = EENewGraphModifier(s, theSubGroup);
+            theModifier = EENewGraphModifier(s);
             theOK = theModifier != NULL;
         }
         EEGraphPathMachine* theMachine = NULL;
@@ -2351,8 +2283,6 @@ void EEResolveGraphSearches()
         if (theRequest != NULL) {
             if (theOK && theOwner != theAwaited.end()) {
                 theOwner->second.mAttach(theRequest);   // the owner takes the load's reference
-                if (theOwner->second.mSubGroup != NULL)
-                    theOwner->second.mSubGroup->Dereference();
                 theAwaited.erase(theOwner);
             } else
                 theRequest->Dereference();   // the node's own reference keeps it (none: freed)
@@ -2361,8 +2291,6 @@ void EEResolveGraphSearches()
     theManager.mAutoPaths.insert(theManager.mAutoPaths.begin(), theRestored.begin(), theRestored.end());
     for (std::map<long, EEAwaitedRequest>::iterator it = theAwaited.begin(); it != theAwaited.end(); it++) {
         it->second.mAttach(NULL);   // the owner's fallback: it asks again
-        if (it->second.mSubGroup != NULL)
-            it->second.mSubGroup->Dereference();
     }
 }
 
@@ -2375,18 +2303,14 @@ void EEQueueGraphResolve()
 }
 }   // namespace
 
-void EEAwaitAutoPathRequest(long inRequestID, EECPAttackSubGroup* inSubGroup, std::function<void(EEAutoPathRequest*)> inAttach)
+void EEAwaitAutoPathRequest(long inRequestID, std::function<void(EEAutoPathRequest*)> inAttach)
 {
-    if (inSubGroup != NULL)
-        inSubGroup->Reference();
     std::map<long, EEAwaitedRequest>::iterator it = sAwaitedRequests.find(inRequestID);
     if (it != sAwaitedRequests.end()) {   // (ids are unique: a second owner of one asks again)
         it->second.mAttach(NULL);
-        if (it->second.mSubGroup != NULL)
-            it->second.mSubGroup->Dereference();
         sAwaitedRequests.erase(it);
     }
-    EEAwaitedRequest theOwner = {inSubGroup, inAttach};
+    EEAwaitedRequest theOwner = {inAttach};
     sAwaitedRequests[inRequestID] = theOwner;
     EEQueueGraphResolve();
 }
@@ -2453,14 +2377,12 @@ void EEPathManager::SaveGraphSearches(FSFile& outFile)
                 outFile.Write(theInfluence->mWeights.mValues[w]);
             outFile.Write(theInfluence->mPlayerID);
             outFile.Write(theInfluence->mEnemyID);
-            bool theLand = theKind == kGraphModifierLand || theKind == kGraphModifierLandWallAvoider;
-            EEAIGPGModifierLandAttackSubGroupRoutePlanner* theLandModifier =
-                theLand ? static_cast<EEAIGPGModifierLandAttackSubGroupRoutePlanner*>(theGoal.mModifier) : NULL;
-            outFile.Write(theLand ? theLandModifier->mContinent1 : (unsigned short)0);
-            outFile.Write(theLand ? theLandModifier->mContinent2 : (unsigned short)0);
-            outFile.Write(theLand && theLandModifier->mAnyContinent);
-            outFile.Write(theLand && theLandModifier->mAvoidFriendlyBlockers);
-            outFile.Write(EEGraphModifierSubGroup(theGoal.mModifier, theKind) != NULL);
+            // (the land route planners' continents and flags and the sub group owner: none since main's stage 5)
+            outFile.Write((unsigned short)0);
+            outFile.Write((unsigned short)0);
+            outFile.Write(false);
+            outFile.Write(false);
+            outFile.Write(false);
         }
         std::vector<unsigned char> theBytes(ee_astar_graph_save(theMachine->mCore, NULL, 0));
         ee_astar_graph_save(theMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());

@@ -34,21 +34,11 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EECPCivilizationManager.h"
-#include "ee/EECPUnitManager.h"
-#include "ee/EECPBuildManager.h"
-#include "ee/EECPResearchManager.h"
-#include "ee/EECPResourceManager.h"
+#include "ee/EECPPlacement.h"
 #include "ee/EECPResourceCenter.h"
 #include "ee/EECPCombatManager.h"
-#include "ee/EECPAttackCommander.h"
-#include "ee/EECPILocation.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EECPASTargetUnit.h"
-#include "ee/EECPAttackSubGroup.h"
-#include "ee/EECPAttackGroup.h"
-#include "ee/EEAutoPathRequest.h"
-#include "ee/EECPAGTask.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitAction.h"
@@ -71,7 +61,6 @@ bool gCPTraceOn = false;
 bool gCPTraceHashOn = false;
 const char* gCPTraceManager = "-";
 
-void EECPRMDumpFoodCapacity(EECPResourceManager* inManager, FILE* inFile);   // EECPResourceManager.cpp (TEST ONLY)
 static bool sInitialized = false;
 static std::vector<std::string> sExperiments;   // EE_AI_EXP (TEST ONLY): ",a,b," per player in turn
 static std::vector<bool> sDemandSplit;     // EE_AI_DEMAND (TEST ONLY): overrides economy.demand_split, per player in turn ('/' between)
@@ -274,36 +263,9 @@ bool EECPPrehistoricPeaceOn(const EEComputerPlayer* inPlayer)
     return EECPRuleOn(inPlayer, !EECPPersonality(inPlayer).mPrehistoricAttacks, "prepeace", "noprepeace");
 }
 
-// port: saved from 0.265 (ee/EECPExperimentTimers.h EECPSaveResourceState)
-static long (&sClaimSteps)[64] = gCPExperimentTimers.mClaimSteps;
-static unsigned long (&sClaimLast)[64] = gCPExperimentTimers.mClaimLast;
-
 long EECPClaimRange(const EEComputerPlayer* inPlayer)
 {
-    if (EECPNextEngine(inPlayer))
-        return EECPNextClaimRangeOf(inPlayer);   // the next engine: its claim_range (ee/EECPNext.h)
-    unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
-    if (gPhysics->mGameTime < sClaimLast[theID])
-        sClaimSteps[theID] = 0, sClaimLast[theID] = 0;   // a new game (the clock started over)
-    long theRange = kEECPClaimRange + sClaimSteps[theID] * kEECPClaimRangeStep;
-    return theRange < kEECPClaimRangeMax ? theRange : kEECPClaimRangeMax;
-}
-
-void EECPClaimExpand(const EEComputerPlayer* inPlayer)
-{
-    if (EECPNextEngine(inPlayer))
-        return;   // the next engine's strategy sets the range (claim_range)
-    unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
-    unsigned long theNow = gPhysics->mGameTime;
-    if (theNow < sClaimLast[theID])
-        sClaimSteps[theID] = 0, sClaimLast[theID] = 0;
-    if (sClaimLast[theID] != 0 && theNow - sClaimLast[theID] < 120000)
-        return;
-    if (EECPClaimRange(inPlayer) >= kEECPClaimRangeMax)
-        return;
-    sClaimSteps[theID]++;
-    sClaimLast[theID] = theNow;
-    EE_CP_TRACE(const_cast<EEComputerPlayer*>(inPlayer), "claim.expand", "range=%ld", EECPClaimRange(inPlayer));
+    return kEECPClaimRange;   // (stage 6: the strategy's claim range is the Lua verbs', data/ai/lib/verbs.lua)
 }
 
 bool EECPClaimRangeOn(const EEComputerPlayer* inPlayer)
@@ -424,8 +386,7 @@ static void EECPTraceSoldierLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
     EEComplexUnit* c = inUnit->mComplexUnit;
     long theX = inUnit->mTileX, theY = inUnit->mTileY;
     long theTown = -1;
-    U2DPoint<long> theCenter = inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mBuildManager != NULL
-        ? inPlayer->mCivilizationManager->mBuildManager->mTownCenterTile : U2DPoint<long>(-10000, -10000);
+    U2DPoint<long> theCenter = inPlayer->mPlacement != NULL ? inPlayer->mPlacement->mTownCenterTile : U2DPoint<long>(-10000, -10000);
     if (theCenter.mX != -10000 && theX != -10000) {
         long theDX = theX - theCenter.mX, theDY = theY - theCenter.mY;
         theTown = (long)sqrt((double)(theDX * theDX + theDY * theDY));
@@ -473,27 +434,10 @@ static void EECPTraceSoldierLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
             }
         }
     }
-    // the classic's sub-group holding it (EECPAttackCommander::FindHolder, read only): its id and mission, its task
-    // (type:mode) and that task's distance; the group's task (type:mode) - which of the classic's groups it served
+    // (the C++ classic's sub-group holding it: always -1 since stage 5 deleted the attack commander; the fields stay
+    // for the trace's readers)
     long theGroup = -1, theMission = -1, theTaskType = -1, theTaskMode = -1, theTaskDistance = -1;
     long theGroupType = -1, theGroupMode = -1;
-    if (inPlayer->mCombatManager != NULL && inPlayer->mCombatManager->mAttackCommander != NULL) {
-        EECPAttackSubGroup* theHolder = inPlayer->mCombatManager->mAttackCommander->FindHolder(inUnit);
-        if (theHolder != NULL) {
-            theGroup = (long)theHolder->mID;
-            theMission = theHolder->mMission;
-            theTaskType = theHolder->mTask.mIsActive ? theHolder->mTask.mType : -1;
-            theTaskMode = theHolder->mTask.mMode;
-            if (theHolder->mTask.mIsActive && theX != -10000) {
-                long theDX = theHolder->mTask.mLocation.mTile.mX - theX, theDY = theHolder->mTask.mLocation.mTile.mY - theY;
-                theTaskDistance = (long)sqrt((double)(theDX * theDX + theDY * theDY));
-            }
-            if (theHolder->mGroup != NULL) {
-                theGroupType = theHolder->mGroup->mTask.mType;
-                theGroupMode = theHolder->mGroup->mTask.mMode;
-            }
-        }
-    }
     EECPTraceScope theScope("cp");
     EE_CP_TRACE(inPlayer, "unit.death", "unit=%s x=%ld y=%ld d=%ld goal=%s killer=%ld:%s:%c kd=%ld kgoal=%s:%c sub=%ld:%ld:%ld:%ld:%ld grp=%ld:%ld",
         EECPNextClassName(inUnit->mUnitClass->mUnitType).c_str(), theX, theY, theTown, theGoal, theKillerPlayer,
@@ -514,8 +458,7 @@ void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
         sLost[theID][0]++;
         EEComplexUnit* theKiller = inUnit->mComplexUnit->mLastAttacker;
         sLostBy[theID][theKiller == NULL ? 2 : theKiller->mPlayer != NULL && theKiller->mPlayer->mPlayerID != 0 ? 0 : 1]++;
-        U2DPoint<long> theCenter = inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mBuildManager != NULL
-            ? inPlayer->mCivilizationManager->mBuildManager->mTownCenterTile : U2DPoint<long>(-10000, -10000);
+        U2DPoint<long> theCenter = inPlayer->mPlacement != NULL ? inPlayer->mPlacement->mTownCenterTile : U2DPoint<long>(-10000, -10000);
         if (theCenter.mX != -10000) {
             long theDX = inUnit->mTileX - theCenter.mX, theDY = inUnit->mTileY - theCenter.mY;
             long theSquared = theDX * theDX + theDY * theDY;
@@ -628,9 +571,13 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
         } else
             theOther++;
     }
-    std::vector<EEComplexUnit*> theFree;   // the citizens the build manager may take (idle or gathering)
-    if (inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mUnitManager != NULL)
-        inPlayer->mCivilizationManager->mUnitManager->GetIdleCitizens(theFree);
+    std::vector<EEComplexUnit*> theFree;   // the citizens idle or gathering
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        EEComplexUnit* c = theUnit->mComplexUnit;
+        if (c != NULL && theUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen && theUnit->mHitPoints > 0 && c->mTileX != -10000
+            && (c->mActiveGoal == NULL || c->mActiveGoal->mKind == kGoalGather))
+            theFree.push_back(c);
+    }
     long theEpoch = inPlayer->mTechnologies != NULL ? inPlayer->mTechnologies->mCurrentEpoch : -1;
     const char* theSaved = gCPTraceManager;
     gCPTraceManager = "cp";
@@ -648,8 +595,7 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
         theGatherers[kResourceGold], theGatherers[kResourceIron], theGatherers[0], theBuildings, theUnfinished, theOther);
     // the resource manager's model: the gatherers it wants per resource, the ones it has listed, and its needs
     // ledger (queued costs earned minus what was gathered or started; UpdateWantedGatherers splits by it)
-    if (inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mResourceManager != NULL) {
-        EECPResourceManager* theRM = inPlayer->mCivilizationManager->mResourceManager;
+    {
         // the resource units the player's resource centers hold, by resource, and the gatherers they take
         // (mMiningLimit per unit); "centers" the resource centers
         unsigned long theSites[kResourceIron + 1] = {0};
@@ -661,12 +607,9 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
                     theSites[theType]++;
             }
         }
-        EECPTraceOut(inPlayer, "sites", "units=%lu/%lu/%lu/%lu/%lu limit=%ld centers=%lu wanted_citizens=%ld workers=%lu in_production=%ld",
+        EECPTraceOut(inPlayer, "sites", "units=%lu/%lu/%lu/%lu/%lu limit=%ld centers=%lu",
             theSites[kResourceFood], theSites[kResourceWood], theSites[kResourceStone], theSites[kResourceGold],
-            theSites[kResourceIron], inPlayer->mMiningLimit, (unsigned long)inPlayer->GetNumResourceCenters(),
-            inPlayer->mCivilizationManager->mUnitManager != NULL ? inPlayer->mCivilizationManager->mUnitManager->GetWantedCitizens() : -1L,
-            inPlayer->mCivilizationManager->mUnitManager != NULL ? inPlayer->mCivilizationManager->mUnitManager->GetNumWorkers() : 0UL,
-            inPlayer->mCivilizationManager->mUnitManager != NULL ? (long)inPlayer->mCivilizationManager->mUnitManager->mNumInProduction : -1L);
+            theSites[kResourceIron], inPlayer->mMiningLimit, (unsigned long)inPlayer->GetNumResourceCenters());
         // the mean distance from each gatherer's resource to the nearest built drop site that takes it, by resource, and
         // how many are past the drop-off distance (where BuildSettlementFor asks for a settlement); the drop sites
         double theTrip[kResourceIron + 1] = {0};
@@ -742,45 +685,6 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
         EECPTraceOut(inPlayer, "builders", "unbuilt=%ld built=%ld act build=%ld repair=%ld move=%ld other=%ld cls=%ld other_action=%ld other_hp=%ld",
             theBuilders[0], theBuilders[1], theBuilders[2], theBuilders[3], theBuilders[4], theBuilders[5], theBuildClass,
             theOtherAction, theOtherHealth);
-        // the pending unit requests other than citizens: class, count, affordable now, built producers, room
-        if (inPlayer->mCivilizationManager->mUnitManager != NULL && inPlayer->mTechnologies != NULL) {
-            EECPUnitManager* theUM = inPlayer->mCivilizationManager->mUnitManager;
-            char theList[200];
-            theList[0] = '\0';
-            size_t theUsed = 0;
-            long theShown = 0;
-            for (long e = 0; e < EEEpochCount() && theShown < 4; e++)
-                for (unsigned long k = 0; k < theUM->mRequests[e].size() && theShown < 4; k++) {
-                    const EECPUMRequest& theRequest = theUM->mRequests[e][k];
-                    long theClass = (long)theRequest.mUnitClass;
-                    if (theClass == kUnitTypeCitizen || theClass == kUnitTypeFemaleCitizen || gUnitClassTable[theClass] == NULL)
-                        continue;
-                    EETechTreeNode* theNode = inPlayer->mTechnologies->Get(gUnitClassTable[theClass]->mTechnology);
-                    long theProducers = 0;
-                    if (theNode != NULL)
-                        for (unsigned long u = 0; u < theNode->GetNumUnitClasses(); u++) {
-                            std::deque<EEComplexUnit*>* theBuilt = theUM->GetUnits(theNode->GetUnitClass(u));
-                            if (theBuilt != NULL && gUnitClassTable[theNode->GetUnitClass(u)]->IsBuilding())
-                                for (unsigned long b = 0; b < theBuilt->size(); b++)
-                                    theProducers += (*theBuilt)[b]->mIsBuilt ? 1 : 0;
-                        }
-                    int theAfford = theNode != NULL && inPlayer->CanAfford(theNode, theClass, 1) ? 1 : 0;
-                    int n = snprintf(theList + theUsed, sizeof(theList) - theUsed, " %ld:%lu:%d:%ld", theClass,
-                        (unsigned long)theRequest.mCount, theAfford, theProducers);
-                    if (n > 0 && theUsed + n < sizeof(theList))
-                        theUsed += n;
-                    theShown++;
-                }
-            long theRoom = inPlayer->GetPopulationLimit(0) - theUM->mNumInProduction - inPlayer->GetTotalPopulation(true, false);
-            EECPTraceOut(inPlayer, "pending", "room=%ld cls:n:afford:producers%s", theRoom, theList);
-        }
-        EECPTraceOut(inPlayer, "econ", "want=%lu/%lu/%lu/%lu/%lu listed=%lu/%lu/%lu/%lu/%lu/%lu need=%ld/%ld/%ld/%ld/%ld",
-            theRM->mWantedGatherers[2], theRM->mWantedGatherers[3], theRM->mWantedGatherers[4],
-            theRM->mWantedGatherers[5], theRM->mWantedGatherers[6], (unsigned long)theRM->mGatherers[2].size(),
-            (unsigned long)theRM->mGatherers[3].size(), (unsigned long)theRM->mGatherers[4].size(),
-            (unsigned long)theRM->mGatherers[5].size(), (unsigned long)theRM->mGatherers[6].size(),
-            (unsigned long)theRM->mGatherers[0].size(), theRM->mNeeds[2], theRM->mNeeds[3], theRM->mNeeds[4],
-            theRM->mNeeds[5], theRM->mNeeds[6]);
     }
     gCPTraceManager = theSaved;
 }
@@ -831,115 +735,20 @@ void EECPOutOfSynchDump(FILE* inFile)
         EEComputerPlayer* theCP = thePlayer->mComputerPlayer;
         if (theCP != NULL) {
             fprintf(inFile, " popcap=%ld", (long)theCP->mPopulationCap);
-            if (EECPCivilizationManager* theCiv = theCP->mCivilizationManager) {
-                fprintf(inFile, " epochadv=%lu", (unsigned long)theCiv->mNextEpochAdvanceTime);
-                // the epoch advance's guards (AttemptEpochAdvance's caller): advancing, scheduled, requested, the
-                // later-epoch requests of the build, research and unit managers, behind a human
-                fprintf(inFile, " advflags=%d%d%d", theCiv->mAdvancingEpoch ? 1 : 0, theCiv->mScheduleEpochAdvance ? 1 : 0,
-                        theCiv->mEpochResearchRequested ? 1 : 0);
-                if (theCiv->mBuildManager != NULL && theCiv->mResearchManager != NULL && theCiv->mUnitManager != NULL)
-                    fprintf(inFile, " later=%d%d%d%d", theCiv->mBuildManager->HasLaterEpochRequests() ? 1 : 0,
-                            theCiv->mResearchManager->HasLaterEpochIDs() ? 1 : 0,
-                            theCiv->mUnitManager->HasLaterEpochRequests() ? 1 : 0, theCiv->IsBehindInEpoch() ? 1 : 0);
-                if (theCiv->mResearchManager != NULL) {   // the research queues up to the manager's epoch
-                    fprintf(inFile, " rq=");
-                    for (long e = 0; e <= theCiv->mResearchManager->mEpoch && e < EEEpochCount(); e++) {
-                        fprintf(inFile, "%s", e ? "|" : "");
-                        for (size_t k = 0; k < theCiv->mResearchManager->mEpochIDs[e].size(); k++)
-                            fprintf(inFile, "%s%ld", k ? "," : "", theCiv->mResearchManager->mEpochIDs[e][k]);
-                    }
-                }
-                if (theCiv->mBuildManager != NULL) {
-                    fprintf(inFile, " queues=");
-                    for (long e = 0; e < EEEpochCount(); e++)
-                        fprintf(inFile, "%s%lu", e ? "," : "", (unsigned long)theCiv->mBuildManager->mQueues[e].size());
-                }
-                if (theCiv->mUnitManager != NULL)
-                    fprintf(inFile, " waiting=%lu", (unsigned long)theCiv->mUnitManager->mNumWaiting);
-                if (theCiv->mResourceManager != NULL) {   // each resource's gatherers: filed/wanted
-                    fprintf(inFile, " gath=");
-                    for (int r = 0; r < 7; r++)
-                        fprintf(inFile, "%s%zu/%lu", r ? "," : "", theCiv->mResourceManager->mGatherers[r].size(),
-                                (unsigned long)theCiv->mResourceManager->mWantedGatherers[r]);
-                    fprintf(inFile, " cap=");   // GetGatherCapacity's parts and the resource centers (active, units)
-                    for (long r = 2; r < 7; r++)
-                        fprintf(inFile, "%s%lu", r > 2 ? "," : "", (unsigned long)theCiv->mResourceManager->GetGatherCapacity(r));
-                    EECPRMDumpFoodCapacity(theCiv->mResourceManager, inFile);
-                    fprintf(inFile, " rc=");
-                    for (unsigned long k = 0; k < theCP->GetNumResourceCenters(); k++) {
-                        EECPResourceCenter* theCenter = theCP->GetResourceCenter(k);
-                        fprintf(inFile, "%s%lu:%d:%zu", k ? "," : "", theCenter->GetUnit() != NULL ? theCenter->GetUnit()->mUnitID : 0UL,
-                                theCenter->mIsActive ? 1 : 0, theCenter->mUnits.size());
-                    }
-                }
-                if (theCiv->mResourceManager != NULL)   // the claim range and the danger zones (save 0.265)
-                    fprintf(inFile, " claim=%ld/%lu danger=%zu", EECPClaimRange(theCP), (unsigned long)sClaimLast[theCP->mPlayerID < 64 ? theCP->mPlayerID : 63],
-                            theCiv->mResourceManager->mDangerZones.size());
-                if (theCiv->mUnitManager != NULL && theCiv->mResourceManager != NULL)   // the demand's first tier's inputs
-                    fprintf(inFile, " wantcit=%ld workers=%lu gathercap=%lu",
-                            (long)theCiv->mUnitManager->GetWantedCitizens(), (unsigned long)theCiv->mUnitManager->GetNumWorkers(),
-                            (unsigned long)theCiv->mResourceManager->GetGatherCapacity());
+            // (main's stages 5 and 6: the C++ managers, their queues, timers and attack groups are gone; the Lua AIs'
+            // state is their scripts' memory)
+            if (theCP->mPlacement != NULL)
+                fprintf(inFile, " town=%ld,%ld", (long)theCP->mPlacement->mTownCenterTile.mX,
+                        (long)theCP->mPlacement->mTownCenterTile.mY);
+            fprintf(inFile, " danger=%zu rc=", theCP->mDangerZones.size());
+            for (unsigned long k = 0; k < theCP->GetNumResourceCenters(); k++) {
+                EECPResourceCenter* theCenter = theCP->GetResourceCenter(k);
+                fprintf(inFile, "%s%lu:%d:%zu", k ? "," : "", theCenter->GetUnit() != NULL ? theCenter->GetUnit()->mUnitID : 0UL,
+                        theCenter->mIsActive ? 1 : 0, theCenter->mUnits.size());
             }
-            if (theCP->mCombatManager != NULL && theCP->mCombatManager->mAttackCommander != NULL)
-                fprintf(inFile, " attackgroups=%lu", (unsigned long)theCP->mCombatManager->mAttackCommander->mGroups.size());
-            fprintf(inFile, " started=%d enableset=%d regroup=%d nextenable=%lu nextpop=%ld nextexp=%lu nextattack=%lu lastdamaged=%ld",
-                    theCP->mIsStarted ? 1 : 0, theCP->mIsEnableTimeSet ? 1 : 0, theCP->mRegroupPending ? 1 : 0,
-                    (unsigned long)theCP->mNextEnableTime, (long)theCP->mNextPopulationTime, (unsigned long)theCP->mNextExpansionTime,
-                    (unsigned long)theCP->mNextAttackTime, (long)theCP->mLastDamagedTime);
-            // EnableManagers' other inputs
-            fprintf(inFile, " combat=%lu damaged=%d/%d attacks=%ld", (unsigned long)theCP->mCombatState,
-                    theCP->mBuildingDamaged ? 1 : 0, theCP->mCitizenDamaged ? 1 : 0, (long)theCP->mNumAttacks);
-            {   // the managers' timers (save 0.269)
-                unsigned long theTimers[kEECPManagerTimers];
-                theCP->GetManagerTimers(theTimers);
-                fprintf(inFile, " timers=");
-                for (long t = 0; t < kEECPManagerTimers; t++)
-                    fprintf(inFile, "%s%lu", t ? "," : "", theTimers[t]);
-            }
+            fprintf(inFile, " started=%d", theCP->mIsStarted ? 1 : 0);
         }
         fprintf(inFile, "\n");
-        // TEST ONLY (EE-SIM's state dumps): each attack sub group's state, timers, targets and path request
-        if (theCP != NULL && theCP->mCombatManager != NULL && theCP->mCombatManager->mAttackCommander != NULL) {
-            EECPAttackCommander* theCommander = theCP->mCombatManager->mAttackCommander;
-            for (size_t g = 0; g < theCommander->mGroups.size(); g++) {
-                EECPAttackGroup* theGroup = theCommander->mGroups[g];
-                for (size_t s = 0; theGroup != NULL && s < theGroup->mSubGroups.size(); s++) {
-                    EECPAttackSubGroup* theSub = theGroup->mSubGroups[s];
-                    fprintf(inFile, "ASG %lu g%zu s%zu id=%lu kind=%ld state=%lu scan=%lu upd=%lu b0=%lu b4=%lu follow=%lu bc=%lu task=%lu pos=%lu gather=%lu splits=%ld split=%ld units=%zu path=%zu u08=%zu u14=%zu ae=%d shore=%d req=%s targets=",
-                            (unsigned long)thePlayer->mPlayerID, g, s, (unsigned long)theSub->mID, (long)theSub->mKind,
-                            (unsigned long)theSub->mState, (unsigned long)theSub->mNextScanTime,
-                            (unsigned long)theSub->mNextUpdateTime, (unsigned long)theSub->mU1B0, (unsigned long)theSub->mU1B4,
-                            (unsigned long)theSub->mNextFollowTime, (unsigned long)theSub->mU1BC,
-                            (unsigned long)theSub->mNextTaskCheckTime, (unsigned long)theSub->mNextPositionTime,
-                            (unsigned long)theSub->mGatherDeadline, (long)theSub->mNumSplits, (long)theSub->mSplitKind,
-                            theSub->mUnits.size(), theSub->mPath.size(), theSub->mU08.size(), theSub->mU14.size(),
-                            theSub->mHasAreaEffect ? 1 : 0, theSub->mCanAttackShore ? 1 : 0,
-                            theSub->mPathRequest == NULL ? "none" : (theSub->mPathRequest->mIsDone ? "done" : "busy"));
-                    for (size_t t = 0; t < theSub->mTargets.size(); t++)
-                        fprintf(inFile, "%ld/%ld/%ld,", (long)theSub->mTargets[t]->mUnitID,
-                                (long)theSub->mTargets[t]->mNumNearbyTargets, (long)theSub->mTargets[t]->mNumAttackers);
-                    fprintf(inFile, " siege=");
-                    for (size_t t = 0; t < theSub->mSiegeTargets.size(); t++)
-                        fprintf(inFile, "%ld,", (long)theSub->mSiegeTargets[t]->mUnitID);
-                    fprintf(inFile, " task=%ld/%d/%ld,%ld/%lu/%ld nwp=%ld,%ld",
-                            (long)theSub->mTask.mType, theSub->mTask.mIsActive ? 1 : 0,
-                            (long)theSub->mTask.mLocation.mTile.mX, (long)theSub->mTask.mLocation.mTile.mY,
-                            theSub->mTask.mUnit != NULL ? (unsigned long)theSub->mTask.mUnit->mUnitID : 0UL,
-                            theSub->mTask.mPlayer != NULL ? (long)theSub->mTask.mPlayer->mPlayerID : -1L,
-                            (long)theSub->mNextWaypoint.mTile.mX, (long)theSub->mNextWaypoint.mTile.mY);
-                    fprintf(inFile, " area=%ld/%lu/%d", (long)theSub->mTask.mLocation.mType,
-                            (unsigned long)theSub->mTask.mLocation.mSerial,
-                            theSub->mTask.mLocation.mSerial != 0 && gContinentManager.GetArea(theSub->mTask.mLocation.mSerial) != NULL ? 1 : 0);
-                    {   // what a refresh (EECPILocation::Update, on a copy) would make of the task's area; its player
-                        EECPILocation theCopy(theSub->mTask.mLocation);
-                        theCopy.Update();
-                        fprintf(inFile, " refresh=%ld/%lu player=%lu", (long)theCopy.mType, (unsigned long)theCopy.mSerial,
-                                (unsigned long)theSub->mTask.mLocation.mPlayer);
-                    }
-                    fprintf(inFile, "\n");
-                }
-            }
-        }
     }
 }
 
@@ -960,16 +769,9 @@ unsigned long EECPOutOfSynchChecksum()
         EEComputerPlayer* theCP = thePlayer->mComputerPlayer;
         if (theCP != NULL) {
             theSum = theSum * 31 + (unsigned long)theCP->mPopulationCap;
-            if (EECPCivilizationManager* theCiv = theCP->mCivilizationManager) {
-                theSum = theSum * 31 + theCiv->mNextEpochAdvanceTime;
-                if (theCiv->mBuildManager != NULL)
-                    for (long e = 0; e < EEEpochCount(); e++)
-                        theSum = theSum * 31 + (unsigned long)theCiv->mBuildManager->mQueues[e].size();
-                if (theCiv->mUnitManager != NULL)
-                    theSum = theSum * 31 + (unsigned long)theCiv->mUnitManager->mNumWaiting;
-            }
-            if (theCP->mCombatManager != NULL && theCP->mCombatManager->mAttackCommander != NULL)
-                theSum = theSum * 31 + (unsigned long)theCP->mCombatManager->mAttackCommander->mGroups.size();
+            if (theCP->mPlacement != NULL)   // (stage 6: the managers' queues are the Lua verbs', in the script's memory)
+                theSum = theSum * 31 + (unsigned long)(theCP->mPlacement->mTownCenterTile.mX * 1024 + theCP->mPlacement->mTownCenterTile.mY);
+            theSum = theSum * 31 + (unsigned long)theCP->mDangerZones.size();
         }
         theChecksum += theSum * (thePlayer->mPlayerID + 1);
     }

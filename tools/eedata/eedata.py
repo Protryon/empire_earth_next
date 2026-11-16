@@ -6,10 +6,11 @@
   python -I tools/eedata/eedata.py import TEXTDIR OUT [TABLE ...]   text -> OUT/<table>.dat
   python -I tools/eedata/eedata.py install [--ssa PATH] GAMEDIR
                                     write the text tables into GAMEDIR/Data/db of a game install COPY (for tests)
-  python -I tools/eedata/eedata.py check [--ssa PATH | --db DIR] [--text DIR]
+  python -I tools/eedata/eedata.py check [--ssa PATH | --db DIR] [--text DIR] [--tree-db DIR]
                                     the gates: (a) text -> db -> text round trip of every table, (b) every value
                                     the game reads equals retail, (c) record sizes vs the sources' static_asserts,
-                                    specs up to date
+                                    specs up to date, (d) the committed data/db (or --tree-db) equals this
+                                    conversion of retail file for file, every difference listed
   python -I tools/eedata/eedata.py holes [--ssa PATH | --db DIR]   print the retail hole rows' values (overlay.HOLES)
   python -I tools/eedata/eedata.py census [-j N]                  list every read of every record member (compiles
                                     every unit syntax-only; slow): the evidence for the unused fields
@@ -23,7 +24,8 @@
                                     tests: extra.py)
   python -I tools/eedata/eedata.py doc epochs TEXTDIR [OUT.md]   a readable table of epochs.yaml (docgen.py)
 
-Game data is never written into the repository. --ssa defaults to $EE_DATA_SSA, else the AoC install's
+Retail game data is never written into the repository; its text tables are, as data/db (tools/open_data.py
+db-regen; check (d) keeps the two equal). --ssa defaults to $EE_DATA_SSA, else the AoC install's
 Data/data.ssa. The text carries only what the game reads: fields nothing reads are left out (the importer writes
 zero or the spec's default), empty database rows (holes) are left out (the importer writes the table's hole record),
 and junk bytes (after a string's NUL, padding, the converter's 0xCC fill) are gone. The files therefore differ from
@@ -183,6 +185,7 @@ def main():
     p = sub.add_parser('check')
     src(p)
     p.add_argument('--text', help='also write the exported text here (outside the repo)')
+    p.add_argument('--tree-db', help='the committed text tables to compare (default: the repository\'s data/db)')
     p = sub.add_parser('specs')
     p.add_argument('--check', action='store_true')
     p = sub.add_parser('cppgen')

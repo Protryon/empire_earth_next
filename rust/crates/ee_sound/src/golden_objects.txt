@@ -62,7 +62,7 @@ getmixer 1 : = 0 1 2
 use 1 : E2 L2 deactivate activate = 0 1 1
 m0 cfolder 0 : E1 L1 = 0 -
 use 1 : E2 L2 deactivate activate = 0 1 1
-m1 cstate 2 : E2 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 getseg:z.sgt=99:- musicsrc1 L2 = 1
+m1 cstate 2 : E2 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:z.sgt=99:- musicsrc1 L2 = 1
 m0 cplaying : E1 L1 = -1
 m0 cscore 0 : E1 L1 = null
 m1 cscore 0 : E2 L2 = null
@@ -123,16 +123,16 @@ samples : = 0
 seq 1
 init 4 2 1100 : module0/2 cs+18 init1 isvalid module1/2 cs+19 init1 isvalid module2/2 = 3 2
 use0 : activate = 0
-m0 cstate 2 : E18 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L18 = 0
+m0 cstate 2 : E18 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L18 = 0
 moviesrc 1 : moviesrc0 = -
 m1 ctrans 0 2 1 : E19 L19 = 0
 m0 cload a.sgt : E18 getseg:a.sgt=99:- L18 = 1 -7
 use -1 : E18 musicsrc0 dmperf-4 dmloader-3 L18 deactivate = 0 1 0
-m0 cstate 1 : E18 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L18 = 0
+m0 cstate 1 : E18 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L18 = 0
 m0 cget : = 1 0 3f800000 1 1000
 m1 cgroups 3 : E19 L19 = 0 3
 use 0 : activate = 0 1 1
-m0 creverb 0 : E18 L18 = 0 1
+m0 creverb 0 : E18 reverb0/00000000/c1200000/447a0000/3a83126f L18 = 0 1
 mixer 1 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 1 1 22050
 moviesrc 1 : moviesrc0 = -
 m0 cscore -1 : E18 L18 = null
@@ -146,7 +146,7 @@ newmgr 2 1 1 : cs+20 cs+21 ev+22m ev+23m th+24/0/0 name24=SoundScavngr E21 L21 =
 load s3.wav 1 1 : E21 find:s3.wav E20 L20 loadwave:s3.wav>S1 L21 = 0
 m1 cget : = 0 0 3f800000 1 8
 failnext 4 : = -
-m1 cstate 1 : E19 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L19 = 0
+m1 cstate 1 : E19 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L19 = 0
 maxch 3 : E21 L21 E21 destroy create3 L21 = 0 1
 total 3 : E21 L21 = 0
 getn 7 : = -1 0 0 00000000 00000000 -1
@@ -156,14 +156,14 @@ m1 cget : = 1 0 3f800000 1 8
 use 0 : E19 musicsrc0 dmperf-8 dmloader-7 L19 deactivate = 9 0 1
 m1 cstate 0 : E19 L19 = 0
 delmgr : set23 wait22/4294967295 th-24 ev-22 ev-23 cs-21/0 delwave:S1 E20 L20 stopall destroy = -
-m0 cstate 2 : E18 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=23 musicsrc1 L18 = 0
+m0 cstate 2 : E18 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=23 reverb0/00000000/c1200000/447a0000/3a83126f musicsrc1 L18 = 0
 use 1 : E19 L19 deactivate activate = 0 1 1
 m0 cgroups 9 : E18 L18 = 5 1000
 use 0 : E19 L19 deactivate activate = 0 1 1
 use 1 : E18 musicsrc0 dmperf-10 dmloader-9 L18 deactivate activate = 0 1 1
 m0 creverb 2 : E18 L18 = 0 0
 m0 cplaying : E18 L18 = -1
-m0 cstate 2 : E18 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=23 musicsrc1 L18 = 0
+m0 cstate 2 : E18 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=23 reverb0/00000000/c1200000/447a0000/3a83126f musicsrc1 L18 = 0
 newmgr 2 3 1 : cs+25 cs+26 ev+27m ev+28m th+29/0/0 name29=SoundScavngr E26 L26 = 3 1 2
 ptime -200 : = -
 m1 cget : = 0 0 3f800000 1 8
@@ -299,11 +299,11 @@ shutdown : E30 L30 deactivate unload cs-30/0 unload cs-31/0 unload cs-32/0 = 0 0
 samples : = 0
 seq 3
 init 8 1 1011 : module0/1 cs+38 init1 isvalid module1/1 = 3 1
-m0 cstate 1 : E38 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L38 = 0
+m0 cstate 1 : E38 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L38 = 0
 m0 cplay 2 : E38 L38 = 0
 use 0 : activate = 0 1 1
 use -1 : E38 musicsrc0 dmperf-14 dmloader-13 L38 deactivate = 0 1 0
-m0 cstate 2 : E38 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L38 = 0
+m0 cstate 2 : E38 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L38 = 0
 m0 cscore 1 : E38 L38 = null
 m0 cload f.sgt : E38 getseg:f.sgt=99:- L38 = 1 -7
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 1 1 22050
@@ -510,7 +510,7 @@ scav 0 tt0 : fpp=10000 E55 L55 any57/1/1000>-1 E55 busy0 stopch0 setoff:S16=0 st
 load s2.wav 1 2 : E55 find:s2.wav E54 L54 loadwave:s2.wav>S19 E54 L54 dup:S19>S20 L55 = 3
 stop 3 1 : E55 L55 = 0
 m0 cint 42 1 : E46 L46 = 0
-m1 cstate 2 : E48 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 getseg:z.sgt=99:- musicsrc1 L48 = 1
+m1 cstate 2 : E48 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:z.sgt=99:- musicsrc1 L48 = 1
 getn 1 : E55 L55 E55 L55 E55 L55 E55 L55 E55 L55 E55 L55 = 2 1 0 00000000 00000000 2
 left 2 : E55 L55 = 0
 set3 1 3f000000 3e99999a 3f400000 : E55 L55 = 0
@@ -999,7 +999,7 @@ refcopy 5 7 : = -
 loadfail 0 : = -
 idn 2 : = -1 -1
 use 0 : E99 L99 deactivate activate = 0 1 1
-m1 cstate 2 : E100 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 musicsrc1 L100 = 0
+m1 cstate 2 : E100 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L100 = 0
 busy 6665465060045566566500566605400055040555054050665460656465400065 : = -
 moviesrc 1 : moviesrc0 = -
 use 0 : E99 L99 deactivate activate = 0 1 1
@@ -1018,10 +1018,10 @@ cfolder0 : E111 L111 = 0
 m0 crate 44100 : = -
 m0 cplay 3 : E111 L111 = 0
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 1 1 44100
-m0 cstate 2 : E111 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 musicsrc1 L111 = 0
-m0 creverb 1 : E111 L111 = 0 1
+m0 cstate 2 : E111 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L111 = 0
+m0 creverb 1 : E111 reverb1/00000000/c1200000/447a0000/3a83126f L111 = 0 1
 m0 cvol 00000000 : E111 dmvol=00000000 L111 = 0
-m0 cstate 2 : E111 rate dmloader1 resolver dmperf44100 dmvol=00000000 groove=0 musicsrc1 L111 = 0
+m0 cstate 2 : E111 rate dmloader1 resolver dmperf44100 dmvol=00000000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L111 = 0
 m0 cint 118 0 : E111 groove=118 L111 = 0
 use 0 : activate = 0 1 1
 m0 ctrans 4 0 0 : E111 playseg0/4 L111 = 0
@@ -1046,7 +1046,7 @@ moviesrc 0 : moviesrc0 = -
 m0 cplaying : E111 L111 = -1
 use 0 : E111 musicsrc0 dmperf-24 dmloader-23 L111 deactivate activate = 0 1 1
 m0 cstop : E111 L111 = 0
-m0 cstate 1 : E111 rate dmloader1 resolver dmperf44100 dmvol=00000000 groove=118 musicsrc1 L111 = 0
+m0 cstate 1 : E111 rate dmloader1 resolver dmperf44100 dmvol=00000000 groove=118 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L111 = 0
 m0 cplay 2 : E111 L111 = 0
 getmixer 0 : = 0 1 1
 getmixer 2 : = 10 2 1
@@ -1328,14 +1328,14 @@ use0 : activate = 0
 cfolder0 : E148 L148 = 0
 use -1 : E148 L148 deactivate = 0 1 0
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 0 1 22050
-m0 cstate 2 : E148 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L148 = 0
+m0 cstate 2 : E148 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L148 = 0
 getmixer 1 : = 10 2 1
 m0 cqueue 4 : E148 L148 = 0
 pool 1 : = -
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 0 1 22050
 m0 cstyle : = 0
 m0 cfail 1 0 0 : = -
-m0 cstate 2 : E148 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L148 = 0
+m0 cstate 2 : E148 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L148 = 0
 m0 cload c.sgt : E148 getseg:c.sgt=5:C_C__ L148 = 0 0
 moviesrc 0 : moviesrc0 = -
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 0 1 22050
@@ -1350,7 +1350,7 @@ m0 cload a.sgt : E148 getseg:a.sgt=3:AAA L148 = 0 1
 m0 cstate 1 : E148 L148 = 0
 m0 cget : = 1 0 3f800000 1 1000
 pool 3 : = -
-m0 creverb 0 : E148 L148 = 0 1
+m0 creverb 0 : E148 reverb0/00000000/c1200000/447a0000/3a83126f L148 = 0 1
 getmixer 2 : = 10 2 1
 moviesrc 0 : moviesrc0 = -
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 0 1 22050
@@ -1388,7 +1388,7 @@ m0 cload z.sgt : E148 L148 = 0 2
 play 1 3f800000 3ba3d70a 40000000 0 : E151 L151 = -1
 unload 0 : E151 L151 = 0
 playn 3 1 bf800000 1 : E151 L151 = 0 -9
-m0 cstate 1 : E148 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 getseg:c.sgt=5:C_C__ getseg:a.sgt=3:AAA getseg:z.sgt=99:- musicsrc1 L148 = 1
+m0 cstate 1 : E148 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb0/00000000/c1200000/447a0000/3a83126f getseg:c.sgt=5:C_C__ getseg:a.sgt=3:AAA getseg:z.sgt=99:- musicsrc1 L148 = 1
 stop 1000 1 : E151 L151 = 0
 stop 5 0 : E151 L151 = 0
 busy 6060044544064066504466650456060054054045500554464564566054564455 : = -
@@ -1433,7 +1433,7 @@ seq 18
 init 4 2 1001 : module0/2 cs+155 init0 isvalid module1/2 cs+156 init0 isvalid unload cs-156/0 module2/2 = 3 1
 use0 : activate = 0
 cfolder0 : E155 L155 = 0
-m0 cstate 1 : E155 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L155 = 0
+m0 cstate 1 : E155 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L155 = 0
 moviesrc 0 : moviesrc0 = -
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 0 1 22050
 use 0 : E155 musicsrc0 dmperf-38 dmloader-37 L155 deactivate activate = 0 1 1
@@ -1480,7 +1480,7 @@ misc : E158 L158 delay maxch mixahead latency88 = 0 4 32 7 5 1
 oneshot 2 2 : E158 L158 = 0
 busy 6055050404046544456550454554055600464654655046646444504456455566 : = -
 busy 0460000055004600500005505460600405000050555406060650660655064045 : = -
-m0 cstate 1 : E155 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=51 getseg:a.sgt=3:AAA musicsrc1 L155 = 0
+m0 cstate 1 : E155 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=51 reverb1/00000000/c1200000/447a0000/3a83126f getseg:a.sgt=3:AAA musicsrc1 L155 = 0
 moviesrc 0 : moviesrc0 = -
 pct 1 00000000 : E158 L158 = 1
 maxmix 4 : = -
@@ -1590,7 +1590,7 @@ scav 1 0 : fpp=10000 E167 L167 any169/1/1000>0 clr169 set168 = 0 1
 dump : S54[s2.wav,1036,3f800000,00000000,3f800000,-1,6000,3000,8,22056,0] S55[s2.wav,1036,3f800000,00000000,3f800000,-1,6000,3000,8,22056,0] S56[s2.wav,1036,3f800000,00000000,3f800000,-1,6000,3000,8,22056,0] E167 L167 = 7 33
 m0 cfolder 2 : E163 L163 = 0 @
 play 3 3ba3d70a 3c23d70a bf800000 0 : E167 L167 = -1
-m0 cstate 2 : E163 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 getseg:c.sgt=5:C_C__ musicsrc1 L163 = 0
+m0 cstate 2 : E163 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:c.sgt=5:C_C__ musicsrc1 L163 = 0
 busy 5405665505445540444664500455445546560456405054444440540645005454 : = -
 master 3e800000 : mastervol=3e800000 getvol = 0 3e800000
 play 4 3f400000 00000000 3f000000 0 : E167 L167 = -1
@@ -1836,7 +1836,7 @@ m0 cload b.sgt : E184 L184 = 0 1
 m0 crender : = none
 m1 cscoreid0 : E186 L186 = -1
 moviesrc 0 : moviesrc0 = -
-m1 cstate 2 : E186 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L186 = 0
+m1 cstate 2 : E186 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L186 = 0
 m1 cfolder 0 : E186 L186 = 0 -
 m1 cplaying : E186 L186 = -1
 m1 crender : render8/6 = 3f000000
@@ -2650,7 +2650,7 @@ seq 39
 init 8 3 1111 : module0/3 cs+249 init1 isvalid module1/3 cs+250 init1 isvalid module2/3 cs+251 init1 isvalid module3/3 = 3 3
 use0 : activate = 0
 cfolder0 : E249 L249 = 0
-m1 cstate 1 : E250 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L250 = 0
+m1 cstate 1 : E250 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L250 = 0
 m0 ctrans 0 3 1 : E249 L249 = 0
 m0 ctrans 4 1 0 : E249 L249 = 0
 m0 cstop : E249 L249 = 0
@@ -2677,7 +2677,7 @@ load a8.wav 1 3 : E253 find:a8.wav E252 L252 loadwave:a8.wav>S77 E252 L252 dup:S
 ptime -200 : = -
 m2 cvol 40000000 : E251 L251 = 0
 m1 cstyle : = 0
-m2 cstate 1 : E251 rate dmloader1 resolver dmperf22050 dmvol=400e26f6 groove=0 musicsrc1 L251 = 0
+m2 cstate 1 : E251 rate dmloader1 resolver dmperf22050 dmvol=400e26f6 groove=0 reverb0/00000000/c1200000/447a0000/3a83126f musicsrc1 L251 = 0
 m2 cstyle : = 0
 pct 3 3f800000 : E253 L253 = 8
 unload 3 : E253 L253 = 9
@@ -2976,7 +2976,7 @@ rate 0 : E283 L283 = 0
 use 0 : E281 L281 deactivate activate = 0 1 1
 stopn 5 1 : = 0
 maxch 6 : E283 L283 E283 destroy create6 L283 = 0 8
-m0 cstate 2 : E281 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 getseg:a.sgt=3:AAA getseg:b.sgt=2:BB musicsrc1 L281 = 0
+m0 cstate 2 : E281 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb0/00000000/c1200000/447a0000/3a83126f getseg:a.sgt=3:AAA getseg:b.sgt=2:BB musicsrc1 L281 = 0
 scav 1 0 : fpp=10000 E283 L283 any285/1/1000>0 clr285 set284 = 0 1
 rate 0 : E283 L283 = 0
 m0 cscore 1 : E281 L281 E281 L281 getrep54 setrep54=2000 getrep54 = 1 0 0 2000 0
@@ -3054,7 +3054,7 @@ stop -1 0 : = 0
 busy 5506400406004506560500050600506455655650006060004660660066605400 : = -
 play -1 3c23d70a 3f800000 3f000000 0 : E291 L291 = -1
 scav 1 tt0 : fpp=10000 E291 L291 any293/1/1000>-1 E291 L291 sleep1 E291 L291 any293/1/1000>-1 E291 L291 sleep1 E291 L291 any293/1/1000>0 clr293 set292 = 0 1
-m1 cstate 2 : E289 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L289 = 0
+m1 cstate 2 : E289 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L289 = 0
 scav 0 tt0 : fpp=10000 E291 L291 any293/1/1000>-1 E291 L291 sleep1 E291 L291 any293/1/1000>-1 E291 L291 sleep1 E291 L291 any293/1/1000>0 clr293 set292 = 0 0
 load s3.wav 0 0 : E291 L291 = -1
 get 2 : E291 L291 E291 L291 E291 L291 E291 L291 E291 L291 E291 L291 E291 L291 E291 L291 = 0 0 00000000 3f800000 3f800000 -1 0 0
@@ -3218,7 +3218,7 @@ set1 0 3c23d70a 00000000 3e800000 : E303 L303 = 0
 play 0 3fc00000 3fc00000 3f400000 1 : E303 stopch0 stopch4294967295 setch0:S108 stopch0 stopch4294967295 setch0:S109 loop:S109=1 setoff:S109=4 vol:S109=3fc00000 pan:S109=3fc00000 pitch:S109=3f400000 playch0 L303 E303 L303 = 0
 vol 0 : E303 L303 = 3fc00000
 busy 5605046056655060605655500450506540054040440405054066500654000050 : = -
-m0 cstate 2 : E295 rate dmloader1 resolver dmperf22050 dmvol=00000000 groove=0 musicsrc1 L295 = 0
+m0 cstate 2 : E295 rate dmloader1 resolver dmperf22050 dmvol=00000000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L295 = 0
 failnext 0 : = -
 moviesrc 1 : moviesrc0 = -
 loadfail 1 : = -
@@ -3490,7 +3490,7 @@ getn 4 : = -1 0 0 00000000 00000000 -1
 playn 5 1 3e99999a 0 : E317 L317 = 0 -9
 m0 cstyle : = 0
 m0 crender : = none
-m0 cstate 1 : E315 rate dmloader1 resolver dmperf44100 dmvol=00000000 groove=0 getseg:f.sgt=99:- musicsrc1 L315 = 1
+m0 cstate 1 : E315 rate dmloader1 resolver dmperf44100 dmvol=00000000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:f.sgt=99:- musicsrc1 L315 = 1
 set1 1 3e99999a 3f800000 00000000 : E317 L317 = 0
 idn 1 : = -1 -1
 m0 cscore 1 : E315 L315 = null
@@ -3521,7 +3521,7 @@ scav 0 f0 : fpp=10000 E317 L317 any319/1/1000>-2 E317 L317 any319/1/1000>0 clr31
 m0 cstyle : = 0
 stopn 1 1 : = 0
 play 1 3c23d70a bf000000 00000000 0 : E317 L317 = -1
-m0 cstate 2 : E315 rate dmloader1 resolver dmperf44100 dmvol=00000000 groove=0 getseg:f.sgt=4:Fail musicsrc1 L315 = 1
+m0 cstate 2 : E315 rate dmloader1 resolver dmperf44100 dmvol=00000000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:f.sgt=4:Fail musicsrc1 L315 = 1
 scav 0 0 : fpp=10000 E317 L317 any319/1/1000>0 clr319 set318 = 0 0
 play 4 bf000000 3fc00000 bf000000 0 : E317 L317 = -1
 pool 5 : = -
@@ -3799,7 +3799,7 @@ load b4.wav 1 3 : E334 L334 = -1
 setpath 2 : = 1 1 1
 load s2.wav 0 1 : E334 L334 = -1
 get 2 : E334 L334 E334 L334 E334 L334 E334 L334 E334 L334 E334 L334 E334 L334 E334 L334 = 0 0 00000000 3f800000 3f800000 -1 0 0
-m0 cstate 1 : E332 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 getseg:a.sgt=3:AAA musicsrc1 L332 = 0
+m0 cstate 1 : E332 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:a.sgt=3:AAA musicsrc1 L332 = 0
 playn 3 2 3e99999a 1 : E334 L334 = 0 -9
 ptime 800 : = -
 scav 0 t0 : fpp=10000 E334 L334 any336/1/1000>-1 E334 L334 sleep1 E334 L334 any336/1/1000>0 clr336 set335 = 0 0
@@ -3885,7 +3885,7 @@ deref 0 : = -
 failnext 0 : = -
 failnext 8 : = -
 m1 cscore 2 : E340 L340 = null
-m1 cstate 1 : E340 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=10 getseg:a.sgt=99:- musicsrc1 L340 = 1
+m1 cstate 1 : E340 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=10 reverb0/00000000/c1200000/447a0000/3a83126f getseg:a.sgt=99:- musicsrc1 L340 = 1
 set2 1 3e800000 3e99999a 3fc00000 : E342 L342 = 0
 pct 5 3dcccccd : E342 L342 = 1
 vol 2 : E342 L342 = 3f800000
@@ -3933,7 +3933,7 @@ samples : = 0
 seq 59
 init 4 2 0111 : module0/2 cs+347 init1 isvalid unload cs-347/0 module1/2 cs+348 init1 isvalid module2/2 = 3 1
 cfolder0 : E348 L348 = 0
-m0 cstate 1 : E348 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L348 = 0
+m0 cstate 1 : E348 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L348 = 0
 moviesrc 0 : moviesrc0 = -
 use -1 : = 0 1 0
 m0 cstate 1 : E348 L348 = 0
@@ -3946,7 +3946,7 @@ m0 cscoreid0 : E348 L348 = -1
 getmixer 3 : = 10 2 1
 use 0 : E348 L348 deactivate activate = 0 1 1
 m0 crender : = none
-m0 cstate 1 : E348 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L348 = 0
+m0 cstate 1 : E348 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L348 = 0
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 1 1 22050
 getmixer 3 : = 10 2 1
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 1 1 22050
@@ -4351,7 +4351,7 @@ init 8 3 1111 : module0/3 cs+385 init0 isvalid module1/3 cs+386 init0 isvalid mo
 getmixer 3 : = 10 2 3
 getmixer 2 : = 0 1 3
 m2 cload f.sgt : E387 L387 = 0 0
-m0 cstate 2 : E385 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L385 = 0
+m0 cstate 2 : E385 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L385 = 0
 m0 cscoreid0 : E385 L385 = -1
 m1 cload a.sgt : E386 L386 = 0 0
 m0 cplaying : E385 L385 = -1
@@ -4545,7 +4545,7 @@ m0 cgroups 1001 : E417 L417 = 0 1000
 use 0 : activate = 0 1 1
 m1 cstyle : = 0
 m1 cgroups 11 : E418 L418 = 0 11
-m0 cstate 1 : E417 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L417 = 0
+m0 cstate 1 : E417 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L417 = 0
 m1 cget : = 0 0 3f800000 1 11
 m1 ctrans 1 5 1 : E418 L418 = 0
 m1 cunload 2 : E418 L418 = 3
@@ -4635,7 +4635,7 @@ setn1 6 3c23d70a 3f800000 00000000 : E428 L428 = 0
 stopn 5 1 : = 0
 m0 creverb 2 : E425 L425 = 0 1
 setn0 1 3e800000 00000000 3e800000 : E428 L428 = 0
-m0 cstate 2 : E425 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L425 = 0
+m0 cstate 2 : E425 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb0/00000000/c1200000/447a0000/3a83126f musicsrc1 L425 = 0
 setn1 2 3e99999a 3fc00000 3c23d70a : E428 L428 = 0
 load s7.wav 1 4 : E428 L428 = -1
 delmgr : set430 wait429/4294967295 th-431 ev-429 ev-430 cs-428/0 stopall destroy = -
@@ -4905,7 +4905,7 @@ m2 cplay -1 : E448 L448 = 0
 getmixer 2 : = 0 1 3
 m1 cstate 0 : E447 L447 = 0
 m1 cvol 3f800000 : E447 L447 = 0
-m1 cstate 2 : E447 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L447 = 0
+m1 cstate 2 : E447 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L447 = 0
 m0 cscore 3 : E446 L446 = null
 m1 cload a.sgt : E447 getseg:a.sgt=99:- L447 = 1 -7
 moviesrc 1 : moviesrc0 = -
@@ -4915,8 +4915,8 @@ use 1 : activate = 0 1 1
 m0 ctrans 0 6 2 : E446 L446 = 0
 m2 cscore 4 : E448 L448 = null
 use 0 : E447 musicsrc0 dmperf-80 dmloader-79 L447 deactivate activate = 0 1 1
-m2 cstate 2 : E448 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L448 = 0
-m1 cstate 1 : E447 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L447 = 0
+m2 cstate 2 : E448 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L448 = 0
+m1 cstate 1 : E447 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L447 = 0
 pool 4 : = -
 mixer 2 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 1 1 22050
 moviesrc 1 : moviesrc0 = -
@@ -4933,7 +4933,7 @@ failnext 1 : = -
 moviesrc 1 : moviesrc0 = -
 maxmix 4 : = -
 busy 0655000065005506540066005050054056640540000600000505400005006464 : = -
-m0 cstate 2 : E446 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=43 musicsrc1 L446 = 0
+m0 cstate 2 : E446 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=43 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L446 = 0
 stopos : E450 L450 = 0
 m2 cscoreid0 : E448 L448 = -1
 prio 5 2 : E450 L450 = -1
@@ -4999,7 +4999,7 @@ m0 cplaying : E454 L454 = -1
 m0 cload b.sgt : E454 L454 = 0 0
 m0 cload a.sgt : E454 L454 = 0 1
 m0 ctrans 1 0 2 : E454 L454 = 0
-m0 cstate 2 : E454 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 getseg:b.sgt=99:- musicsrc1 L454 = 1
+m0 cstate 2 : E454 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:b.sgt=99:- musicsrc1 L454 = 1
 newmgr 4 0 0 : cs+456 chcount cs+457 ev+458m ev+459m th+460/0/0 name460=SoundScavngr E457 L457 = 8 2 1
 use 1 : E454 musicsrc0 dmperf-88 dmloader-87 L454 deactivate activate = 0 1 1
 scav 0 f0 : fpp=10000 E457 L457 any459/1/1000>-2 E457 L457 any459/1/1000>0 clr459 set458 = 0 0
@@ -5231,7 +5231,7 @@ load s1.wav 0 2 : E476 find:s1.wav E475 L475 loadwave:s1.wav>S182 E475 L475 dup:
 failnext 7 : = -
 m0 cunload 2 : E474 L474 = 3
 total 1 : E476 L476 = 0
-m0 cstate 2 : E474 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 musicsrc1 L474 = 0
+m0 cstate 2 : E474 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L474 = 0
 setpath 0 : = 2 1 1
 stop 2 1 : E476 L476 = 0
 use 0 : E474 musicsrc0 dmperf-90 dmloader-89 L474 deactivate = 9 1 1
@@ -5349,7 +5349,7 @@ m2 cscore 0 : E482 L482 = null
 load s1.wav 1 3 : E484 L484 = -1
 getref 1 4 : E484 L484 = 0
 m0 cfolder 2 : E480 L480 = 0 @
-m1 cstate 1 : E481 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L481 = 0
+m1 cstate 1 : E481 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb0/00000000/c1200000/447a0000/3a83126f musicsrc1 L481 = 0
 unload -1 : E484 L484 = 9
 mixer 2 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 1 1 22050
 pct 5 00000000 : E484 L484 = 1
@@ -5455,7 +5455,7 @@ m0 cint 9 0 : E488 L488 = 0
 use 0 : activate = 0 1 1
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 1 1 22050
 newmgr 1 0 0 : cs+490 chcount cs+491 ev+492m ev+493m th+494/0/0 name494=SoundScavngr E491 L491 = 8 2 1
-m0 cstate 2 : E488 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=9 musicsrc1 L488 = 0
+m0 cstate 2 : E488 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=9 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L488 = 0
 vol 0 : E491 L491 = 3f800000
 getn 0 : = -1 0 0 00000000 00000000 -1
 set1 -1 bf000000 40000000 40000000 : E491 L491 = 0
@@ -5744,7 +5744,7 @@ use 0 : E529 L529 deactivate activate = 0 1 1
 newmgr 1 7 2 : cs+530 cs+531 ev+532m ev+533m th+534/0/0 name534=SoundScavngr E531 L531 = 7 1 1
 playn 5 3 3fc00000 1 : E531 L531 = 0 -9
 play 2 40000000 3ba3d70a bf000000 1 : E531 L531 = -1
-m0 cstate 1 : E527 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 musicsrc1 L527 = 0
+m0 cstate 1 : E527 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L527 = 0
 play 1 3e800000 3f400000 40000000 0 : E531 L531 = -1
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 1 1 44100
 m1 cvol 3ba3d70a : E528 L528 = 0
@@ -5853,7 +5853,7 @@ pct 3 3dcccccd : E549 L549 = 1
 maxch 1 : E549 L549 E549 destroy create1 L549 = 0 4
 moviesrc 0 : moviesrc0 = -
 left 2 : E549 L549 = 0
-m0 cstate 1 : E545 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L545 = 0
+m0 cstate 1 : E545 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb0/00000000/c1200000/447a0000/3a83126f musicsrc1 L545 = 0
 load s2.wav 1 3 : E549 L549 = -1
 load a8.wav 1 1 : E549 L549 = -1
 mixer 1 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 0 1 22050
@@ -5995,7 +5995,7 @@ use 0 : E575 L575 deactivate activate = 0 1 1
 failnext 0 : = -
 oneshot 1 5 : E577 L577 = 0
 setn2 2 40000000 3f800000 3fc00000 : E577 L577 = 0
-m0 cstate 1 : E575 rate dmloader1 resolver dmperf22050 dmvol=00000000 groove=0 musicsrc1 L575 = 0
+m0 cstate 1 : E575 rate dmloader1 resolver dmperf22050 dmvol=00000000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L575 = 0
 dump : E577 L577 = 4 107
 m0 cgroups 12 : E575 L575 = 5 9
 deref 4 : = -
@@ -6644,7 +6644,7 @@ mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 1 1 22050
 moviesrc 1 : moviesrc0 = -
 m1 cload b.sgt : E632 L632 = 0 0
 m1 cplaying : E632 L632 = -1
-m1 cstate 2 : E632 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 getseg:b.sgt=99:- musicsrc1 L632 = 1
+m1 cstate 2 : E632 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:b.sgt=99:- musicsrc1 L632 = 1
 m1 cload c.sgt : E632 getseg:c.sgt=99:- L632 = 1 -7
 use 0 : E630 L630 deactivate activate = 0 1 1
 newmgr 3 2 0 : cs+638 cs+639 ev+640m ev+641m th+642/0/0 name642=SoundScavngr E639 L639 = 2 2 1
@@ -6802,7 +6802,7 @@ init 4 2 1011 : shutdown-registered module0/2 cs+644 init1 isvalid module1/2 cs+
 use0 : activate = 0
 cfolder0 : E644 L644 = 0
 moviesrc 0 : moviesrc0 = -
-m0 cstate 1 : E644 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L644 = 0
+m0 cstate 1 : E644 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L644 = 0
 m0 cload a.sgt : E644 getseg:a.sgt=3:AAA L644 = 0 0
 m0 crate 44100 : = -
 use 0 : E644 musicsrc0 seg-105 dmperf-104 dmloader-103 L644 deactivate activate = 0 1 1
@@ -7089,7 +7089,7 @@ samples : = 0
 seq 119
 init 8 3 1011 : module0/3 cs+677 init1 isvalid module1/3 cs+678 init1 isvalid unload cs-678/0 module2/3 cs+679 init1 isvalid module3/3 = 3 2
 use0 : activate = 0
-m0 cstate 2 : E677 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L677 = 0
+m0 cstate 2 : E677 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L677 = 0
 moviesrc 0 : moviesrc0 = -
 m0 ctrans 4 1 2 : E677 playseg0/4 L677 = 0
 m0 crender : render8/6 = 3f000000
@@ -7133,7 +7133,7 @@ busy 0056500005640055045044406050005506650500455500500506000460006600 : = -
 maxmix 32 : = -
 setn2 3 3ba3d70a 3ba3d70a 3f800000 : E681 L681 = 0
 getn 7 : = -1 0 0 00000000 00000000 -1
-m1 cstate 1 : E679 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L679 = 0
+m1 cstate 1 : E679 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb0/00000000/c1200000/447a0000/3a83126f musicsrc1 L679 = 0
 maxch 9 : E681 L681 E681 stopch0 setoff:S218=0 destroy create9 L681 = 0 8
 oneshot 1 -1 : E681 L681 = 0
 load b4.wav 0 1 : E681 find:b4.wav E680 L680 loadwave:b4.wav>S221 L681 = 1
@@ -7205,7 +7205,7 @@ playn 4 0 3e800000 0 : E689 L689 = 0 -9
 playn 6 2 40000000 1 : E689 L689 = 0 -9
 left -1 : E689 L689 = 0
 getref -1 5 : = 0
-m0 cstate 2 : E685 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L685 = 0
+m0 cstate 2 : E685 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L685 = 0
 maxmix 4 : = -
 getmixer 0 : = 0 1 2
 m1 cscore -1 : E686 L686 = null
@@ -7363,7 +7363,7 @@ seq 123
 init 8 3 0100 : module0/3 cs+706 init1 isvalid unload cs-706/0 module1/3 cs+707 init1 isvalid module2/3 cs+708 init1 isvalid unload cs-708/0 module3/3 = 3 1
 cfolder0 : E707 L707 = 0
 use 0 : activate = 0 1 1
-m0 cstate 2 : E707 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L707 = 0
+m0 cstate 2 : E707 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L707 = 0
 newmgr 2 0 0 : cs+709 chcount cs+710 ev+711m ev+712m th+713/0/0 name713=SoundScavngr E710 L710 = 8 2 1
 m0 cscore 2 : E707 L707 = null
 busy 6000404000054646405056556604400500044606004040440460500006000066 : = -
@@ -7385,7 +7385,7 @@ setn3 7 bf000000 bf800000 3ba3d70a : = 0
 oneshot -1 1000 : E710 L710 = 0
 deref 3 : = -
 loadfail 0 : = -
-m0 creverb 2 : E707 L707 = 0 1
+m0 creverb 2 : E707 reverb0/00000000/c1200000/447a0000/3a83126f L707 = 0 1
 loadfail 1 : = -
 playn 6 6 00000000 1 : E710 L710 = 0 -9
 idn 6 : = -1 -1
@@ -7415,7 +7415,7 @@ m0 crender : = none
 m0 cfail 1 0 0 : = -
 rate 1000 : E710 L710 = 0
 load s2.wav 1 2 : E710 find:s2.wav E709 L709 loadwave:s2.wav>S241 E709 L709 dup:S241>S242 L710 = 3
-m0 cstate 2 : E707 rate dmloader1 resolver dmperf22050 dmvol=3fcc2593 groove=0 musicsrc1 L707 = 0
+m0 cstate 2 : E707 rate dmloader1 resolver dmperf22050 dmvol=3fcc2593 groove=0 reverb0/00000000/c1200000/447a0000/3a83126f musicsrc1 L707 = 0
 m0 cplaying : E707 L707 = -1
 getmixer 3 : = 10 2 1
 maxch 9 : E710 L710 E710 destroy create9 L710 = 0 8
@@ -7433,7 +7433,7 @@ seq 124
 init 8 1 1111 : module0/1 cs+714 init0 isvalid module1/1 = 3 1
 cfolder0 : E714 L714 = 0
 m0 cscore -1 : E714 L714 = null
-m0 cstate 2 : E714 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L714 = 0
+m0 cstate 2 : E714 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L714 = 0
 use 0 : activate = 0 1 1
 m0 cload a.sgt : E714 getseg:a.sgt=3:AAA L714 = 0 0
 use 0 : E714 musicsrc0 seg-119 dmperf-118 dmloader-117 L714 deactivate activate = 0 1 1
@@ -7462,7 +7462,7 @@ vol 0 : E721 L721 = 3f800000
 busy 0066655500055060505644406654646450665065656646056545505600455446 : = -
 stop 1000 0 : E721 L721 = 0
 idn 5 : = -1 -1
-m0 cstate 2 : E714 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 getseg:a.sgt=3:AAA musicsrc1 L714 = 0
+m0 cstate 2 : E714 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:a.sgt=3:AAA musicsrc1 L714 = 0
 m0 ctrans 0 2 2 : E714 trans122/4/4 L714 = 0
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 1 1 22050
 misc : E721 L721 delay maxch mixahead latency68 = 0 4 4 7 3 1
@@ -7483,7 +7483,7 @@ deref 3 : = -
 misc : E721 L721 delay maxch mixahead latency29 = 0 4 4 7 3 1
 getref 0 6 : E721 L721 = 0
 misc : E721 L721 delay maxch mixahead latency95 = 0 4 4 7 3 1
-m0 cstate 2 : E714 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 getseg:a.sgt=3:AAA musicsrc1 L714 = 0
+m0 cstate 2 : E714 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:a.sgt=3:AAA musicsrc1 L714 = 0
 setpath 1 : = 1 2 1
 m0 cscore 4 : E714 L714 = null
 load m6.wav 0 4 : E721 find:m6.wav L721 = -1
@@ -7555,7 +7555,7 @@ play 0 3f400000 3c23d70a 3e800000 0 : E727 L727 = -1
 refcopy 3 7 : = -
 play 0 3ba3d70a 3f800000 3f400000 0 : E727 L727 = -1
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 1 1 22050
-m0 cstate 1 : E725 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L725 = 0
+m0 cstate 1 : E725 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L725 = 0
 play 0 3f800000 3e99999a 3e800000 0 : E727 L727 = -1
 m0 cstyle : = 0
 playn 2 1 00000000 1 : E727 L727 = 0 -9
@@ -7585,8 +7585,8 @@ scav 0 0 : fpp=10000 E727 L727 any729/1/1000>0 clr729 set728 = 0 0
 maxmix 4 : = -
 play 2 3fc00000 3e99999a 3f800000 0 : E727 L727 = -1
 getn 4 : = -1 0 0 00000000 00000000 -1
-m0 creverb 1 : E725 L725 = 0 1
-m0 cstate 2 : E725 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L725 = 0
+m0 creverb 1 : E725 reverb1/00000000/c1200000/447a0000/3a83126f L725 = 0 1
+m0 cstate 2 : E725 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L725 = 0
 failnext 12 : = -
 deref 4 : = -
 use 0 : E725 musicsrc0 dmperf-129 dmloader-128 L725 deactivate = 9 1 1
@@ -7952,7 +7952,7 @@ mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 1 1 22050
 m0 cscoreid0 : E761 L761 = -1
 moviesrc 0 : moviesrc0 = -
 getmixer 2 : = 10 2 1
-m0 cstate 1 : E761 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L761 = 0
+m0 cstate 1 : E761 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L761 = 0
 newmgr 3 8 1 : cs+762 cs+763 ev+764m ev+765m th+766/0/0 name766=SoundScavngr E763 L763 = 8 1 2
 maxch 3 : E763 L763 E763 destroy create3 L763 = 0 8
 master 3f000000 : mastervol=3f000000 getvol = 0 3f000000
@@ -7969,14 +7969,14 @@ get 1000 : E763 L763 E763 L763 E763 L763 E763 L763 E763 L763 E763 L763 E763 L763
 left 5 : E763 L763 = 0
 m0 cscore 0 : E761 L761 E761 L761 getrep132 setrep132=3000 getrep132 = 0 0 0 3000 0
 play 0 3fc00000 3fc00000 3ba3d70a 0 : E763 stopch0 stopch4294967295 setch0:S273 loop:S273=0 vol:S273=3fc00000 pan:S273=3fc00000 pitch:S273=3ba3d70a playch0 L763 E763 L763 = 0
-m0 cstate 2 : E761 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 getseg:a.sgt=3:AAA musicsrc1 L761 = 0
+m0 cstate 2 : E761 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:a.sgt=3:AAA musicsrc1 L761 = 0
 getn 6 : = -1 0 0 00000000 00000000 -1
 refcopy 2 1 : = -
 ptime -200 : = -
 stop 0 1 : E763 loop:S273=0 L763 = 0
 m0 cscoreid0 : E761 L761 = -1
 stop 0 0 : E763 stopch0 setoff:S273=0 L763 = 0
-m0 creverb 0 : E761 L761 = 0 1
+m0 creverb 0 : E761 reverb0/00000000/c1200000/447a0000/3a83126f L761 = 0 1
 prio 2 4 : E763 L763 = 0
 play 2 3f800000 3f000000 3e99999a 1 : E763 L763 = -1
 setpath 1 : = 1 2 1
@@ -8223,7 +8223,7 @@ m0 cplay 1 : E775 L775 = 0
 stop 1 1 : E777 L777 = 0
 load s3.wav 3 1 : E777 L777 = -1
 m0 cload a.sgt : E775 L775 = 0 0
-m0 cstate 1 : E775 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=44 getseg:a.sgt=3:AAA musicsrc1 L775 = 0
+m0 cstate 1 : E775 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=44 reverb0/00000000/c1200000/447a0000/3a83126f getseg:a.sgt=3:AAA musicsrc1 L775 = 0
 m0 ctrans 0 4 0 : E775 trans138/5/4 L775 = 0
 stop 0 1 : E777 L777 = 0
 play 2 3e99999a 3f400000 bf000000 0 : E777 L777 = -1
@@ -8325,7 +8325,7 @@ m0 ctrans 1 4 1 : E786 L786 = 0
 m0 ctrans 0 3 0 : E786 L786 = 0
 moviesrc 0 : moviesrc0 = -
 moviesrc 0 : moviesrc0 = -
-m0 cstate 1 : E786 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 musicsrc1 L786 = 0
+m0 cstate 1 : E786 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L786 = 0
 m0 cget : = 1 0 3f800000 1 1000
 m0 cplaying : E786 L786 = -1
 m0 cstate 0 : E786 musicsrc0 dmperf-140 dmloader-139 L786 = 0
@@ -8389,7 +8389,7 @@ m0 cplaying : E793 L793 = -1
 master 3f800000 : mastervol=3f800000 getvol = 0 3f800000
 getmixer 3 : = 10 2 1
 unload 0 : E795 L795 = 9
-m0 cstate 2 : E793 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 getseg:c.sgt=5:C_C__ musicsrc1 L793 = 0
+m0 cstate 2 : E793 rate dmloader1 resolver dmperf22050 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:c.sgt=5:C_C__ musicsrc1 L793 = 0
 busy 6560044505460644440445555465546000440054664546065000056055004605 : = -
 setpath 0 : = 2 1 1
 use 0 : E793 musicsrc0 seg-143 dmperf-142 dmloader-141 L793 deactivate activate = 0 1 1
@@ -8708,7 +8708,7 @@ pct 5 00000000 : E844 L844 = 1
 delmgr : set846 wait845/4294967295 th-847 ev-845 ev-846 cs-844/0 stopall destroy = -
 m0 crate 44100 : = -
 use 0 : E841 L841 deactivate activate = 0 1 1
-m1 cstate 2 : E841 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 musicsrc1 L841 = 0
+m1 cstate 2 : E841 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L841 = 0
 m0 cscoreid0 : E840 L840 = -1
 m0 cplaying : E840 L840 = -1
 m0 creverb 1 : E840 L840 = 0 1
@@ -8726,7 +8726,7 @@ m0 cplay 0 : E840 L840 = 0
 getmixer 0 : = 0 1 2
 moviesrc 1 : moviesrc0 = -
 m1 cplaying : E841 L841 = -1
-m0 cstate 2 : E840 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=44 musicsrc1 L840 = 0
+m0 cstate 2 : E840 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=44 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L840 = 0
 m0 cscore 0 : E840 L840 = null
 use 0 : E840 musicsrc0 dmperf-147 dmloader-146 L840 deactivate activate = 0 1 1
 m1 cqueue 0 : E841 L841 = 0
@@ -8738,7 +8738,7 @@ use 0 : E841 L841 deactivate activate = 0 1 1
 mixer 0 : cpu ds getname isvalid msg5 rate = 3e800000 0 FakeMixer 0 1 44100
 m1 cstate 0 : E841 L841 = 0
 m1 cstop : E841 L841 = 0
-m1 cstate 2 : E841 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 musicsrc1 L841 = 0
+m1 cstate 2 : E841 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L841 = 0
 m1 cscore 0 : E841 L841 = null
 use 0 : E840 L840 deactivate activate = 0 1 1
 getmixer 0 : = 0 1 2
@@ -8748,7 +8748,7 @@ m0 cload f.sgt : E840 L840 = 0 2
 getmixer 3 : = 10 2 2
 moviesrc 1 : moviesrc0 = -
 m0 cload a.sgt : E840 L840 = 0 3
-m1 cstop : E841 playseg0/1 L841 = 0
+m1 cstop : E841 dmstop100 L841 = 0
 getmixer 1 : = 0 1 2
 m0 creverb 0 : E840 L840 = 0 1
 pool 1 : = -
@@ -8766,7 +8766,7 @@ getn 0 : = -1 0 0 00000000 00000000 -1
 load s5.wav 2 2 : E854 find:s5.wav E853 L853 loadwave:s5.wav>S306 E853 L853 dup:S306>S307 L854 = 1
 unload 0 : E854 delwave:S303 E853 L853 delwave:S304 E853 L853 delwave:S305 E853 L853 L854 = 0
 scav 0 t0 : fpp=10000 E854 L854 any856/1/1000>-1 E854 L854 sleep1 E854 L854 any856/1/1000>0 clr856 set855 = 0 0
-m1 cstate 2 : E841 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 musicsrc1 L841 = 0
+m1 cstate 2 : E841 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L841 = 0
 ptime 800 : = -
 getref 1000 5 : E854 L854 = 0
 oneshot 1 1000 : E854 L854 = 0
@@ -8830,7 +8830,7 @@ scav 0 f0 : fpp=10000 E862 L862 any864/1/1000>-2 E862 L862 any864/1/1000>0 clr86
 busy 6460000640000500005050604650000405054006665004050040004400000000 : = -
 master 3f800000 : mastervol=3f800000 getvol = 0 3f800000
 stop 1 0 : E862 stopch1 setoff:S309=0 L862 = 0
-m1 cstate 1 : E860 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 musicsrc1 L860 = 0
+m1 cstate 1 : E860 rate dmloader1 resolver dmperf44100 dmvol=3f800000 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f musicsrc1 L860 = 0
 stop 2 0 : E862 L862 = 0
 pct 5 00000000 : E862 L862 = 1
 use 0 : E859 L859 deactivate activate = 0 1 1
@@ -8900,7 +8900,7 @@ scav 0 0 : fpp=10000 E874 L874 any876/1/1000>0 clr876 set875 = 0 0
 m0 cfolder 1 : E866 L866 = 0 x
 stopn 4 0 : = 0
 moviesrc 0 : moviesrc0 = -
-m1 cstate 2 : E867 rate dmloader1 resolver dmperf22050 dmvol=3ee68375 groove=0 getseg:b.sgt=99:- musicsrc1 L867 = 1
+m1 cstate 2 : E867 rate dmloader1 resolver dmperf22050 dmvol=3ee68375 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:b.sgt=99:- musicsrc1 L867 = 1
 load s2.wav 0 1 : E874 find:s2.wav E873 L873 loadwave:s2.wav>S311 L874 = 0
 scav 1 0 : fpp=10000 E874 L874 any876/1/1000>0 clr876 set875 = 0 1
 m1 cplaying : E867 L867 = -1
@@ -8973,7 +8973,7 @@ setn0 3 3f400000 3f000000 3e99999a : E879 L879 = 0
 m1 cscore 0 : E867 L867 = null
 stop 1 0 : E879 L879 = 0
 use 0 : E866 L866 deactivate activate = 0 1 1
-m1 cstate 2 : E867 rate dmloader1 resolver dmperf22050 dmvol=3f37d297 groove=0 getseg:b.sgt=99:- musicsrc1 L867 = 1
+m1 cstate 2 : E867 rate dmloader1 resolver dmperf22050 dmvol=3f37d297 groove=0 reverb1/00000000/c1200000/447a0000/3a83126f getseg:b.sgt=99:- musicsrc1 L867 = 1
 stopn 0 1 : = 0
 use 1 : E866 L866 deactivate activate = 0 1 1
 oneshot 1 1 : E879 L879 = 0

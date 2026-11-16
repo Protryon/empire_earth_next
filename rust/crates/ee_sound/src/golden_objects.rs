@@ -680,8 +680,22 @@ extern "C" fn DmPerformance_setVolume(_p: *mut c_void, v: f32) {
     t(format!("dmvol={}", bits(v)));
 }
 #[no_mangle]
-extern "C" fn DmPerformance_setMasterGrooveLevel(_p: *mut c_void, level: i8) {
+extern "C" fn DmPerformance_setGrooveLevel(_p: *mut c_void, level: u8) {
     t(format!("groove={level}"));
+}
+#[no_mangle]
+extern "C" fn DmPerformance_stop(_p: *mut c_void, lookahead_ms: u32) {
+    t(format!("dmstop{lookahead_ms}"));
+}
+#[no_mangle]
+extern "C" fn DmPerformance_setReverb(_p: *mut c_void, enabled: c_int, gain: f32, mix: f32, time: f32, hf: f32) {
+    t(format!("reverb{enabled}/{}/{}/{}/{}", bits(gain), bits(mix), bits(time), bits(hf)));
+}
+/// The built-in general MIDI set (SEGeneralMIDI.c): four bytes here.
+#[no_mangle]
+extern "C" fn SEGeneralMIDISet(length: *mut usize) -> *const u8 {
+    unsafe { *length = 4 };
+    b"RIFF".as_ptr()
 }
 #[no_mangle]
 unsafe extern "C" fn DmPerformance_renderPcm(

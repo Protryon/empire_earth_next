@@ -18,6 +18,8 @@ pub struct Entry {
     pub random: bool,
     pub sees_all: bool,
     pub fills_garrison: bool,
+    /// "classic": the lobby's Classic plays the first AI so marked (main 2b23546eb; docs/AI_LUA_UNITS.md section 11)
+    pub classic: bool,
 }
 
 /// What a read gives: the entries kept and the log lines, in order. `listed`: the document had its "ais" array (the
@@ -132,7 +134,7 @@ pub fn read(text: &[u8], path: &[u8], script_exists: &mut dyn FnMut(&[u8]) -> bo
                     };
                     *slot = s.clone();
                 }
-                b"random" | b"sees_all" | b"fills_garrison" => {
+                b"random" | b"sees_all" | b"fills_garrison" | b"classic" => {
                     let Value::Bool(b) = v else {
                         problem = cat(&[key, b" must be true or false"]);
                         break;
@@ -140,7 +142,8 @@ pub fn read(text: &[u8], path: &[u8], script_exists: &mut dyn FnMut(&[u8]) -> bo
                     match key {
                         b"random" => ai.random = *b,
                         b"sees_all" => ai.sees_all = *b,
-                        _ => ai.fills_garrison = *b,
+                        b"fills_garrison" => ai.fills_garrison = *b,
+                        _ => ai.classic = *b,
                     }
                 }
                 _ => m.log.push(cat(&[&where_, b": unknown key \"", cs(key), b"\" ignored"])),
@@ -149,8 +152,10 @@ pub fn read(text: &[u8], path: &[u8], script_exists: &mut dyn FnMut(&[u8]) -> bo
         if problem.is_empty() && !id_ok(&ai.id) {
             problem = cat(&[b"id '", &ai.id, b"' must be 1 to 64 of a-z, 0-9 and _"]);
         }
-        if problem.is_empty() && (ai.id == b"classic" || ai.id == b"random" || ai.id == b"next") {
-            problem = cat(&[b"id '", &ai.id, b"' is reserved (classic, random, next)"]);
+        if problem.is_empty()
+            && (ai.id == b"classic" || ai.id == b"random" || ai.id == b"next" || ai.id == b"none")
+        {
+            problem = cat(&[b"id '", &ai.id, b"' is reserved (classic, random, next, none)"]);
         }
         if problem.is_empty() && m.entries.iter().any(|o| o.id == ai.id) {
             problem = cat(&[b"id '", &ai.id, b"' is listed twice"]);
@@ -209,7 +214,7 @@ mod tests {
         let log: Vec<String> = m.log.iter().map(|l| String::from_utf8_lossy(l).into_owned()).collect();
         assert_eq!(log[0], "Data\\ai\\ais.json: ais[0]: unknown key \"x\" ignored");
         assert_eq!(log[1], "Data\\ai\\ais.json: ais[1]: id 'Bad' must be 1 to 64 of a-z, 0-9 and _: skipped");
-        assert_eq!(log[2], "Data\\ai\\ais.json: ais[2]: id 'next' is reserved (classic, random, next): skipped");
+        assert_eq!(log[2], "Data\\ai\\ais.json: ais[2]: id 'next' is reserved (classic, random, next, none): skipped");
         assert_eq!(log[3], "Data\\ai\\ais.json: ais[3]: id 'boom' is listed twice: skipped");
         assert!(
             log[4].ends_with("is not a module name (letters, digits and _, in segments separated by dots): skipped")

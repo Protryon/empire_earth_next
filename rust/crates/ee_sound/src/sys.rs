@@ -72,7 +72,11 @@ extern "C" {
         timing: c_int,
     ) -> c_int;
     pub fn DmPerformance_setVolume(performance: *mut c_void, volume: f32);
-    pub fn DmPerformance_setMasterGrooveLevel(performance: *mut c_void, level: i8);
+    pub fn DmPerformance_setGrooveLevel(performance: *mut c_void, level: u8);
+    pub fn DmPerformance_stop(performance: *mut c_void, lookahead_ms: u32);
+    pub fn DmPerformance_setReverb(performance: *mut c_void, enabled: c_int, gain: f32, mix: f32, time: f32, hf: f32);
+    /// The general MIDI set built into the program (SEGeneralMIDI.c: EE.sf2) and its length.
+    pub fn SEGeneralMIDISet(length: *mut usize) -> *const u8;
     pub fn DmPerformance_renderPcm(
         performance: *mut c_void,
         buffer: *mut c_void,

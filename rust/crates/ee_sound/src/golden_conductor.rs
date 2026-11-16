@@ -123,8 +123,14 @@ impl Host for Fake {
     fn set_performance_volume(&mut self, amplitude: f32) {
         writeln!(self.out, "dm volume {:08x}", amplitude.to_bits()).unwrap();
     }
-    fn set_groove_level(&mut self, level: i8) {
+    fn set_groove_level(&mut self, level: u8) {
         writeln!(self.out, "dm groove {level}").unwrap();
+    }
+    fn stop_all(&mut self, lookahead_ms: u32) {
+        writeln!(self.out, "dm stop {lookahead_ms}").unwrap();
+    }
+    fn set_reverb(&mut self, enabled: bool, gain: f32, mix: f32, time: f32, hf_ratio: f32) {
+        writeln!(self.out, "dm reverb {} {gain} {mix} {time} {hf_ratio}", enabled as u8).unwrap();
     }
 }
 

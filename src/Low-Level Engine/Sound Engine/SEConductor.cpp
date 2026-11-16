@@ -30,8 +30,9 @@ long SEConductor::SetIntensity(unsigned long inIntensity, bool inImmediate) { re
 // the folder without the name's last character (the trailing separator)
 long SEConductor::SetMusicFolder(const UWideString& inFolder) { return ee_sound_conductor_set_music_folder(RUST, (const char*)inFolder); }
 long SEConductor::SetReverb(unsigned long inReverb) { return ee_sound_conductor_set_reverb(RUST, (uint32_t)inReverb); }
-// the original set the DirectMusic port's Waves reverb; dmusic's synthesizer has none
-long SEConductor::SetReverbStyle(float inGain, float inHighFreqRTRatio, float inMix, float inTime) { return kErrorOK; }
+// each song's reverb style (input gain and mix in dB, decay time in ms, high-frequency decay ratio), applied in the
+// reverb's current state
+long SEConductor::SetReverbStyle(float inGain, float inHighFreqRTRatio, float inMix, float inTime) { return ee_sound_conductor_set_reverb_style(RUST, inGain, inHighFreqRTRatio, inMix, inTime); }
 long SEConductor::SetVolume(float inVolume) { return ee_sound_conductor_set_volume(RUST, inVolume); }
 long SEConductor::Stop() { return ee_sound_conductor_stop(RUST); }
 long SEConductor::TransitionTo(long inID, unsigned long inCommand, unsigned long inFlags)

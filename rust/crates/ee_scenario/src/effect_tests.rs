@@ -3,7 +3,6 @@
 use std::collections::BTreeMap;
 
 use super::*;
-use crate::effect_ai::*;
 use crate::fields::{effect_defaults, EeScenarioObjectFields};
 use crate::placement::EE_SCENARIO_READ_OBJECT_UNIT_COUNT;
 use crate::task::*;
@@ -48,8 +47,6 @@ struct World {
     answers: BTreeMap<u32, i64>,
     tiles: Vec<(i32, i32)>,
     group: Vec<i64>,
-    effect_objects: Vec<i64>,
-    ids: Vec<i64>,
 }
 
 impl World {
@@ -140,14 +137,6 @@ impl Host for World {
             EE_SCENARIO_WORLD_GROUP_COUNT => return self.group.len() as i64,
             EE_SCENARIO_WORLD_GROUP_UNIT => return self.group[a[0] as usize],
             EE_SCENARIO_WORLD_GROUP_FIRST => return self.group.first().copied().unwrap_or(-1),
-            EE_SCENARIO_WORLD_EFFECT_OBJECT_COUNT => return self.effect_objects.len() as i64,
-            EE_SCENARIO_WORLD_EFFECT_OBJECT_AT => return self.effect_objects[a[0] as usize],
-            EE_SCENARIO_WORLD_AI_IDS_PUSH_OBJECT => self.ids.extend(self.objects[&(a[0] as i32)].1.clone()),
-            EE_SCENARIO_WORLD_AI_IDS_COUNT => return self.ids.len() as i64,
-            EE_SCENARIO_WORLD_AI_IDS_AT => return self.ids[a[0] as usize],
-            EE_SCENARIO_WORLD_AI_IDS_ERASE => {
-                self.ids.remove(a[0] as usize);
-            }
             _ => {}
         }
         let args: Vec<String> = a.iter().rev().skip_while(|&&v| v == 0).map(|v| v.to_string()).collect();
@@ -381,39 +370,18 @@ fn task_area_with_no_tiles_does_nothing_more() {
 }
 
 #[test]
-fn create_ai_military_group_keeps_its_target_across_players() {
-    let mut w = World::new(4).object(5, &[30]).unit(30, living(1, 3, 3)).object(6, &[]);
-    w.effect_objects = vec![6];
-    w.answers.insert(EE_SCENARIO_WORLD_PLAYER_IS_COMPUTER, 1);
-    w.objects.get_mut(&6).unwrap().0.mMinCount = 2;
-    w.objects.get_mut(&6).unwrap().0.mMaxCount = 1;
-    w.objects.get_mut(&6).unwrap().0.mFamily = 0x20;
-    let mut e = effect(6);
-    e.mAIAction = 1;
-    e.mPlayer = 4; // computers 2 and 3, the last first
-    e.mTargetObject = 5;
-    e.mIsAttack = true;
-    execute(&mut w, &e, false);
-    assert_eq!(of(&w, EE_SCENARIO_WORLD_AI_TASK_PLAYER), vec!["117 1", "117 1"]);
-    assert_eq!(of(&w, EE_SCENARIO_WORLD_AI_TASK_TYPE), vec!["118", "118"]);
-    assert_eq!(of(&w, EE_SCENARIO_WORLD_AI_REQUIREMENT_SET), vec!["107 1 17", "107 1 17"]);
-    assert_eq!(of(&w, EE_SCENARIO_WORLD_AI_CREATE_GROUP), vec!["109 3", "109 2"]);
-    assert!(w.log.contains(&"random 1 2".to_string()));
-}
-
-#[test]
-fn modify_ai_target_drops_the_area_without_a_unit() {
-    let mut w = World::new(4);
-    w.answers.insert(EE_SCENARIO_WORLD_PLAYER_IS_COMPUTER, 1);
-    w.answers.insert(EE_SCENARIO_WORLD_AREA_STATE, 0);
-    w.answers.insert(EE_SCENARIO_WORLD_AI_AREA_RECTANGLE, 77);
-    let mut e = effect(6);
-    e.mAIAction = 0;
-    e.mPlayer = 8;
-    e.mTargetObject = 50;
-    e.mIsAddTarget = false;
-    execute(&mut w, &e, false);
-    assert_eq!(of(&w, EE_SCENARIO_WORLD_AI_DROP_AREA), vec!["129 2 77"]);
+fn the_ai_military_effects_do_nothing() {
+    // main's stage 5 deleted the C++ attack groups these effects raised and aimed
+    for action in 0..3 {
+        let mut w = World::new(4).object(5, &[30]).unit(30, living(1, 3, 3));
+        w.answers.insert(EE_SCENARIO_WORLD_PLAYER_IS_COMPUTER, 1);
+        let mut e = effect(6);
+        e.mAIAction = action;
+        e.mPlayer = 4;
+        e.mTargetObject = 5;
+        execute(&mut w, &e, false);
+        assert!(w.calls().is_empty(), "action {action}: {:?}", w.calls());
+    }
 }
 
 #[test]
@@ -480,22 +448,3 @@ fn dialogue_goes_to_the_current_player_and_an_empty_box_to_the_others() {
     assert_eq!(w.calls(), vec!["57", "58 1", "59"]);
 }
 
-#[test]
-fn build_objects_task_takes_the_town_else_a_continent() {
-    let mut w = World::new(4);
-    w.answers.insert(EE_SCENARIO_WORLD_AI_TOWN, 7);
-    w.answers.insert(EE_SCENARIO_WORLD_AI_RANDOM_ENEMY, 3);
-    assert!(crate::effect_ai::build_task(&mut w, 2));
-    assert_eq!(w.calls(), ["100 2", "114 7 5", "115 2", "117 3", "118"]);
-    let mut w = World::new(4);
-    w.answers.insert(EE_SCENARIO_WORLD_AI_TOWN, -1);
-    w.answers.insert(EE_SCENARIO_WORLD_AI_LARGEST_CONTINENT, 4);
-    w.answers.insert(EE_SCENARIO_WORLD_AI_RANDOM_ENEMY, -1);
-    assert!(crate::effect_ai::build_task(&mut w, 2));
-    assert_eq!(w.calls(), ["100 2", "185 1", "114 4 1", "115 2", "117", "118"]);
-    let mut w = World::new(4);
-    w.answers.insert(EE_SCENARIO_WORLD_AI_TOWN, -1);
-    w.answers.insert(EE_SCENARIO_WORLD_AI_LARGEST_CONTINENT, -1);
-    assert!(!crate::effect_ai::build_task(&mut w, 2));
-    assert_eq!(w.calls(), ["100 2", "185 1", "185"]);
-}

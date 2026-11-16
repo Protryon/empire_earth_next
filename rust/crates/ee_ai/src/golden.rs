@@ -16,7 +16,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::manifest;
 use crate::names::{self, Names};
-use crate::next_save::{self, EeAiNextEvent, EeAiNextSpot, Group, NextSave, OrderResult};
+use crate::next_save;
 use crate::seat;
 use crate::units_save::{self, EeAiUnitsEvent, EeAiUnitsLimits, EeAiUnitsMark, EeAiUnitsRemembered, UnitsSave};
 
@@ -82,17 +82,6 @@ impl Gen {
                 } else {
                     b'a' + (c % 26) as u8
                 }
-            })
-            .collect()
-    }
-    fn spots(&mut self, n: u32) -> Vec<EeAiNextSpot> {
-        (0..n)
-            .map(|_| EeAiNextSpot {
-                player: self.val(),
-                x: self.val(),
-                y: self.val(),
-                time: self.val(),
-                unit: self.val(),
             })
             .collect()
     }
@@ -196,88 +185,12 @@ fn class_and_tech_names() {
 }
 
 // ---- EENS
+// The `nens` lines of golden_ai.txt are the C++ block of the rust branch's 78035043 (versions 1-6 with the C++ army
+// groups and the economy verbs' state). Main's stage 6 (the economy verbs in Lua, the C++ groups deleted) wrote a new
+// version 6 without them, which next_save.rs now follows (its own tests check the layout); the old lines are kept
+// as the record of what the driver printed and are no longer replayed.
 
-fn gen_next(seed: u32, big: bool) -> NextSave {
-    let mut g = Gen::new(seed);
-    let mut s = NextSave { claim_range: g.val(), ..NextSave::default() };
-    for v in s.reserve.iter_mut() {
-        *v = g.val();
-    }
-    s.food_prefer = g.val();
-    s.food_land = g.val();
-    s.epoch = g.val();
-    s.epoch_start = g.val() as u32;
-    s.next_repair_time = g.val() as u32;
-    for v in s.income_total.iter_mut() {
-        *v = g.val();
-    }
-    for step in s.income_ring.iter_mut() {
-        for v in step.iter_mut() {
-            *v = g.val();
-        }
-    }
-    s.income_steps = g.val();
-    for p in 0..64 {
-        s.seen_army[p] = g.val();
-        s.seen_strength[p] = g.val();
-        s.last_seen[p] = g.val() as u32;
-        s.seen_town_x[p] = g.val();
-        s.seen_town_y[p] = g.val();
-    }
-    let n = if big { 260 } else { g.count(6) };
-    s.events = (0..n).map(|_| EeAiNextEvent { kind: g.val(), unit_type: g.val(), count: g.val() }).collect();
-    for v in s.test.iter_mut() {
-        *v = g.val();
-    }
-    s.script = g.str(12, false);
-    s.started = g.next() & 1 != 0;
-    s.failed = g.next() & 1 != 0;
-    let n = if big { 205 } else { g.count(4) };
-    s.results = (0..n)
-        .map(|_| OrderResult { verb: g.str(8, false), code: g.val(), reason: g.val(), count: g.val(), group: g.val() })
-        .collect();
-    s.memory = g.str(if big { 3000 } else { 300 }, true);
-    s.next_group = g.val();
-    let n = if big { 1002 } else { g.count(3) };
-    for _ in 0..n {
-        let mut group = Group::default();
-        for f in group.fields.iter_mut() {
-            *f = g.val();
-        }
-        for _ in 0..g.count(4) {
-            group.units.push(g.val());
-            group.aims.push(g.val());
-        }
-        for _ in 0..g.count(2) {
-            group.skips.push(g.val());
-        }
-        s.groups.push(group);
-    }
-    let n = if big { 2050 } else { g.count(4) };
-    s.spots = g.spots(n);
-    let n = g.count(3);
-    s.towers = g.spots(n);
-    for p in 0..64 {
-        s.seen_citizens[p] = g.val();
-        s.army_x[p] = g.val();
-        s.army_y[p] = g.val();
-    }
-    let n = g.count(3);
-    s.threats = g.spots(n);
-    s.threats_time = g.val();
-    let n = g.count(3);
-    s.explore = g.spots(n);
-    s
-}
-
-/// A version 6 block as the driver's version 4 (the C++ the golden was printed by): the same bytes without the last
-/// two fields (granary_farms, from the merge of main daf9dadb, -1 on a version 4 decode; exact, 0).
-fn as_v4(mut b: Vec<u8>) -> Vec<u8> {
-    assert_eq!(b[4], 6);
-    b.truncate(b.len() - 8);
-    b[4] = 4;
-    b
-}
+// ---- the changed blocks (the EENU replay's)
 
 fn put_le(b: &mut [u8], at: usize, v: u32) {
     b[at..at + 4].copy_from_slice(&v.to_le_bytes());
@@ -319,53 +232,6 @@ fn mutations(seed: u32, b: &[u8], tails: &[usize]) -> Vec<(String, Vec<u8>)> {
 }
 
 /// What `EECPNextLoadState`'s decode leaves in a state: the block's fields, and below version 2 the state's own army.
-fn next_apply(target: &NextSave, d: &NextSave) -> NextSave {
-    let mut s = d.clone();
-    if d.version < 2 {
-        s.next_group = target.next_group;
-        s.groups = target.groups.clone();
-        s.spots = target.spots.clone();
-        s.towers = target.towers.clone();
-        s.seen_citizens = target.seen_citizens;
-        s.army_x = target.army_x;
-        s.army_y = target.army_y;
-    }
-    s
-}
-
-#[test]
-fn next_state_block() {
-    let mut got = Vec::new();
-    for seed in 1..=60u32 {
-        let s = gen_next(seed, seed % 10 == 9);
-        let b = as_v4(next_save::encode(&s));
-        got.push(format!("nens enc {seed} {} {:016x}", b.len(), fnv64(&b)));
-        if seed <= 3 {
-            got.push(format!("nens hex {seed} {}", hex(&b)));
-        }
-        let mut army = Vec::new();
-        next_save::encode_army(&s, &mut army);
-        let tails = [4 + 20 * s.explore.len(), 4 + 20 * s.threats.len() + 4, army.len()];
-        for (name, m) in mutations(seed, &b, &tails) {
-            let target = gen_next(seed + 1000, false);
-            match next_save::decode(&m, 200) {
-                None => got.push(format!("nens dec {seed} {name} 0")),
-                Some(d) => {
-                    assert_eq!((d.granary_farms, d.exact), (-1, 0));
-                    let again = as_v4(next_save::encode(&next_apply(&target, &d)));
-                    got.push(format!(
-                        "nens dec {seed} {name} 1 {} 1 {} {:016x}",
-                        !d.memory.is_empty() as i32,
-                        again.len(),
-                        fnv64(&again)
-                    ));
-                }
-            }
-        }
-    }
-    check("nens", &got);
-}
-
 // ---- EENU
 
 /// A per-unit state as the C++ containers keep it.

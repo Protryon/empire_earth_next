@@ -265,12 +265,17 @@ crate can replace.
    (`include/miniaudio/`, options in `ee_miniaudio.h`, implementation `src/ThirdParty/miniaudio/miniaudio.c`).
    `Mss32.dll`, the Miles headers and `redist\win32` are gone, and so is the harness's silent mixer (the null device
    serves).
-3. **Music: GothicKit/dmusic** (done). Vendored at `src/ThirdParty/dmusic` (MIT; commit b73b270, with two additions:
-   `DmSegment_setRepeats`, `DmPerformance_setMasterGrooveLevel`; see its README). `SEConductor`/`SEScore` are
+3. **Music: GothicKit/dmusic** (done). Vendored at `src/ThirdParty/dmusic` (MIT; commit b73b270, with the changes
+   its README lists, each marked "(EE patch)" in the source: the repeat count and the groove level the game sets,
+   instrument selection by the whole bank, the volume curves, the reverb, the stop, the pattern choice, note timing
+   and a clock that keeps the tempo whatever the size of the blocks rendered). `SEConductor`/`SEScore` are
    rewritten on it with their public interface unchanged; the performance renders at the mixer's rate into its
-   device thread (`SPIMGetOutputRate`, `SPIMSetMusicSource`). Not carried over: motifs (dmusic has none; the game
-   never plays them), notifications (the game registers none), reverb (TinySoundFont has none), end-and-intro
-   transitions (dmusic plays the end pattern). The DirectMusic COM code, its GUIDs and `dmusici.h` are gone.
+   device thread (`SPIMGetOutputRate`, `SPIMSetMusicSource`). The general MIDI instruments six of the songs play
+   are not in the game's files (the original took them from the system's collection): they are built into the
+   program (`EE.sf2`, embedded by `SEGeneralMIDI.c`), and a `gm.dls` in the music folder takes their place. Not
+   carried over: motifs (dmusic has none; the game never plays them), notifications (the game registers none),
+   end-and-intro transitions (dmusic plays the end pattern). The DirectMusic COM code, its GUIDs and `dmusici.h` are
+   gone.
 4. **Movies: pl_mpeg** (done). pl_mpeg (MIT, commit c871f2b) is vendored (`include/pl_mpeg/`,
    `src/ThirdParty/pl_mpeg/pl_mpeg.c`). `DX7Movie` decodes on its thread at pl_mpeg's clock, converts frames into
    the back buffer's pixel format, and its sound goes through a ring into the mixer (`SPIMSetMovieSource`,

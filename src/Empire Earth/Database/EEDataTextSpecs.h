@@ -43,6 +43,8 @@ enum EEDTRecordSize {
     kEEDTSize_EEUCUpgradeRecord = 240,
     kEEDTSize_EEToHitRecord = 132,
     kEEDTSize_EEWorldTableEntry = 28,
+    kEEDTSize_EERandomMapRecord = 132,
+    kEEDTSize_EETerrainGrayTextureRecord = 120,
 };
 
 #endif

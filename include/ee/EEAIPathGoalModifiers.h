@@ -10,8 +10,9 @@
 #ifndef EE_EEAIPATHGOALMODIFIERS_H
 #define EE_EEAIPATHGOALMODIFIERS_H
 
+#include "ee/EECPASGFlags.h"
+
 class EEComplexUnit;
-class EECPAttackSubGroup;
 
 // RTTI EEAIBPGModifierEnemyIsAttackableByUnit (vtable 0x439c00: ??_G 0xfbc8, 0xfcdf, 0xfce5, 0xfc6e; sizeof 0x2c): the
 // bounded search ends at the first node within mUnit's range of the goal
@@ -72,73 +73,7 @@ public:
     virtual bool IsGateOpen(EEAIPathSubSector* inSector, unsigned long inPlayerID);
 };
 
-// RTTI EEAIGPGModifierLandAttackSubGroupRoutePlanner (vtable 0x439c70: +0x04 0x10074, +0x08 0x10465; sizeof 0x5c)
-class EEAIGPGModifierLandAttackSubGroupRoutePlanner : public EEAIGPGModiferUseInfluenceCostsBase {
-public:
-    EEAIGPGModifierLandAttackSubGroupRoutePlanner(EECPAttackSubGroup* inSubGroup, unsigned short inContinent1,
-                                                  unsigned short inContinent2, bool inAnyContinent,
-                                                  const EECPASGWeights& inWeights);
-    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
-    virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
-
-    EECPAttackSubGroup* mSubGroup;          // +0x50
-    unsigned short mContinent1;             // +0x54
-    unsigned short mContinent2;             // +0x56
-    bool mAnyContinent;                     // +0x58
-    bool mAvoidFriendlyBlockers;            // +0x59 (= true)
-};
-
-// RTTI EEAIGPGModifierLandWallAvoider, vtable0x43afd4, allocation0x5c.
-// Original49387/49b5d construct the actual parent with zero continents and false;
-// no additional fields. Cost0x45d71 lives in the Helicopter original TU.
-class EEAIGPGModifierLandWallAvoider : public EEAIGPGModifierLandAttackSubGroupRoutePlanner {
-public:
-    EEAIGPGModifierLandWallAvoider(EECPAttackSubGroup* inSubGroup, const EECPASGWeights& inWeights)
-        : EEAIGPGModifierLandAttackSubGroupRoutePlanner(inSubGroup, 0, 0, false, inWeights) {}
-    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
-};
-
-// RTTI EEAIGPGModifierSeaRoutePlanner / HelicopterAttackSubGroupRoutePlanner / AirplaneAttackSubGroupRoutePlanner /
-// SpaceRoutePlanner (vtables 0x439ca4 / 0x439cb8 / 0x439ccc / 0x439ce0; sizeof 0x54); the slots are ICF-shared:
-// +0x04 0x10a20 (the airplane's 0x10985), +0x08 0x10aa1
-class EEAIGPGModifierSeaRoutePlanner : public EEAIGPGModiferUseInfluenceCostsBase {
-public:
-    EEAIGPGModifierSeaRoutePlanner(unsigned long inPlayerID, EECPAttackSubGroup* inSubGroup,
-                                   const EECPASGWeights& inWeights);
-    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
-    virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
-
-    EECPAttackSubGroup* mSubGroup;          // +0x50
-};
-
-class EEAIGPGModifierHelicopterAttackSubGroupRoutePlanner : public EEAIGPGModiferUseInfluenceCostsBase {
-public:
-    EEAIGPGModifierHelicopterAttackSubGroupRoutePlanner(EECPAttackSubGroup* inSubGroup,
-                                                        const EECPASGWeights& inWeights);
-    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
-    virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
-
-    EECPAttackSubGroup* mSubGroup;          // +0x50
-};
-
-class EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner : public EEAIGPGModiferUseInfluenceCostsBase {
-public:
-    EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner(EECPAttackSubGroup* inSubGroup,
-                                                      const EECPASGWeights& inWeights);
-    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
-    virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
-
-    EECPAttackSubGroup* mSubGroup;          // +0x50
-};
-
-class EEAIGPGModifierSpaceRoutePlanner : public EEAIGPGModiferUseInfluenceCostsBase {
-public:
-    EEAIGPGModifierSpaceRoutePlanner(unsigned long inPlayerID, EECPAttackSubGroup* inSubGroup,
-                                     const EECPASGWeights& inWeights);
-    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
-    virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
-
-    EECPAttackSubGroup* mSubGroup;          // +0x50
-};
+// (the attack sub groups' route planners, land, wall avoider, sea, helicopter, airplane and space, went with the C++
+// combat tree in stage 5, docs/AI_RESEARCH.md §8.90)
 
 #endif

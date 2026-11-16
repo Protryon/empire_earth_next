@@ -10,23 +10,15 @@
 
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
 class EECPCombatManager;                    // ee/EECPCombatManager.h
-class EECPCivilizationManager;              // ee/EECPCivilizationManager.h
-class EECPPlayerInteractionManager;         // ee/EECPPlayerInteractionManager.h
-class EECPDiplomacyManager;                 // ee/EECPDiplomacyManager.h
-class EECPExplorationManager;               // ee/EECPExplorationManager.h
-class EECPResourceCenter;                   // ee/EECPCivilizationManager.h
+class EECPPlacement;                        // ee/EECPPlacement.h
+class EECPResourceCenter;                   // ee/EECPResourceCenter.h
 class EEAIFOUnitSelectionScreener;          // ee/EECPUnitSelector.h
 class EEAIFOUnitsToKillScoringBase;         // ee/EEAIFOUnitsToKillScoringBase.h
-
-// port (0.269): the managers' timers a save holds after the computer player's running values (EESaveHasManagerTimers):
-// the attack commander's drop time, the exploration time, the personnel's update time, the builder check, the raid check
-const long kEECPManagerTimers = 5;
 
 class EEComputerPlayer : public EEPlayer {
 public:
     static const UString sData;             // 0x4e5c70 "EEComputerPlayer-Data" (chain 0x2ce2e; guard 0x4e5c68 bit 1) (provisional name)
     static const UString sCPUOnlyFlag;      // 0x4e5c58 "EEComputerPlayer-CPU Only Flag" (chain 0x2ce71; bit 2) (provisional name)
-    bool CanEnableManager(long inKind, long inResource);  // 0x3eeca, signed resource threshold, ret8/AL
     EEComputerPlayer();                     // 0x2d03d (EEPPlayerHelper's CreatePlayer)
     virtual ~EEComputerPlayer();            // +0x00 (??_G 0x2d021, dtor 0x2d0bb)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x18 0x2fd50 (no /Og)
@@ -53,14 +45,11 @@ public:
     // per-difficulty (mDifficulty 0/1/2) scales: a member in percent times 0.01, else 1 (provisional names)
     float GetAttackDelayModifier();         // 0x2eafc (+0xd40/+0xd44)
     float GetAttackFrequencyModifier();     // 0x2eb26 (+0xd24/+0xd28)
-    float GetAttackGroupModifier();         // 0x2eb50 (+0xd68/+0xd70/+0xd6c)
     float GetUnitCostModifier();            // 0x2eb7c (+0xd80/+0xd84/+0xbec)
     float GetDMAttackFrequencyModifier();   // 0x2eba8 (+0xcac/+0xcb0/+0xcb4)
     float GetDMInitialAttackModifier();     // 0x2ebd9 (+0xcb8/+0xcbc/+0xcc0)
-    bool RunsEveryManager();                         // 0x2ec67 (the resources option is 5)
     float GetPopLimitAdjustment();          // 0x2ec74 (+0xe2c/+0xe34/+0xe30)
     unsigned long GetIslandExpansionTimer();  // 0x2ed01 (+0xf08/+0xf0c/+0xf10, else 60000)
-    bool IsAttackDue(unsigned long inTime);  // 0x2ed2f (mCanAttack and inTime >= mNextAttackTime)
     virtual void Clear();                   // +0x1c 0x3cf73 (resets the centers, the exploration and combat managers)
     virtual void EpochMediaLoaded(long inEpoch);  // +0x88 0x3c992
     virtual void FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile);  // same EEPlayer slot, 0x3ce2e
@@ -75,12 +64,10 @@ public:
     void ChooseFavoriteSpaceType();
     void Regroup();                         // 0x2e2a3 (Attacked when there is no resource center)
     void EnterEpoch(long inEpoch);          // 0x3c9c5 (GetMaxWidth: a new epoch)
-    void UpdateGroups();
-    void EnableManagers(unsigned long inTime);  // 0x2d334 (Update) (provisional name)
+    void UpdateGroups();                    // 0x3f3f1
     void SetNextAttackTime(unsigned long inTime);  // 0x3d4cd (Update) (provisional name)
     void ChooseCivilization();              // 0x3ca49 (Update, unless gGameOptions.mLoadType) (provisional name)
-    void FlagGroup();                       // 0x2e6ae (Update at mNextExpansionTime) (provisional name)
-    void GetObjectsToGroup(std::vector<EEUnit*>& outUnits, long& outCount);
+    void GetObjectsToGroup(std::vector<EEUnit*>& outUnits, long& outCount);  // 0x2edff (ret 8) (provisional name)
     virtual void EpochReached(long inEpoch);  // +0xa4 0x3d45d
     virtual void UnitStranded(EEComplexUnit* inUnit);  // +0xac 0x3ed48
     virtual void Pay(EETechnology* inTechnology, long inUnitType, float inFraction);   // +0xb4 0x3ed98 (epochs: free)
@@ -92,22 +79,14 @@ public:
     virtual void EpochMediaUnloaded(long inEpoch);  // +0xcc 0x3f142
     virtual bool AvoidsEnemies(EEComplexUnit* inUnit);  // +0xd0 0x3f73e (a citizen, or a transport holding only citizens)
     virtual void WonderStarted(EEComplexUnit* inUnit);  // +0xd4 0x3f7ba
-    void SetEnableTime(long inTime);        // 0x3d492: mNextEnableTime = mEnableInterval seconds after inTime, mIsEnableTimeSet (provisional name)
-    void SetNextExpansionTime(unsigned long inTime);  // 0x3d61a: mNextExpansionTime = inTime + the per-difficulty seconds (provisional name)
     void SetActive(bool inActive);          // 0x3ec42 (sets mActive, telling the unit manager) (provisional name)
-    void GetManagerTimers(unsigned long* outTimers) const;   // port (0.269): kEECPManagerTimers values, the save's order
-    void SetManagerTimers(const unsigned long* inTimers);
     void SetCitizenPercentage(float inValue);  // 0x3ec89 (mCitizenPercentage, mIsCitizenPercentageSet) (provisional name)
     void SetDMAttackFrequencyModifier(float inValue);  // 0x3ec9d (mDMAttackFrequencyModifierEasy/mDMAttackFrequencyModifierMedium/mDMAttackFrequencyModifierHard by difficulty) (provisional name)
     void SetDMInitialAttackModifier(float inValue);  // 0x3ecd6 (mDMInitialAttackModifierEasy/mDMInitialAttackModifierMedium/mDMInitialAttackModifierHard) (provisional name)
     void SetIslandExpansionTimer(unsigned long inValue);  // 0x3ed0f (mIslandExpansionTimerEasy/mIslandExpansionTimerMedium/mIslandExpansionTimerHard) (provisional name)
-    unsigned long GetBuildableTypes(long inCategory, std::vector<long>& outTypes);  // 0x2ed85 (ret 8): the buildable classes of a category (provisional name)
     virtual void RefreshResourceCenters();  // +0xdc 0x3ce56 (the computer player's own slot; EEUserInterface 0x276b97)
-    void CatchUpEpoch(EEPlayer* inPlayer);  // 0x2f064 (EEPlayer::EpochReached calls it for each computer player; provisional name)
     void Update(unsigned long inTime);      // 0x3f175 (gArtificialIntelligence's round robin; provisional name)
     // 0x2eca0: 1.0, or +0xe44/+0xe48 times a constant depending on +0xbd8 (0 or 2) (provisional name)
-    float GetResearchFrequencyModifier();
-    void KeepStandingArmy();                // new: the personality's standing army (docs/AI_RESEARCH.md §8.13)
     float GetEpochFrequencyModifier();      // 0x2ec0a (EECPCivilizationManager::SetNextEpochAdvanceTime scales by it) (provisional name)
     // inline (SetNextEpochAdvanceTime 0x70b43 loads both into registers before its fild spills) (provisional name)
     // inline (its COMDAT 0x68849 sits in EECPBuildManager.cpp's range; the civilization manager calls it out of line)
@@ -115,7 +94,6 @@ public:
     unsigned long GetNumResourceCenters() { return this->mResourceCenters.size(); }
     EECPResourceCenter* GetResourceCenter(unsigned long inIndex);   // 0x2ef5e (ret 4: mResourceCenters[inIndex]) (provisional name)
     unsigned short GetObjectRegion(EEComplexUnit* inUnit);  // 0x2e9e7 (ret 4): a path area id for inUnit (EECPWallManager::Update) (provisional name)
-    EECPResourceCenter* GetResourceCenterOf(EEUnit* inUnit);  // 0x2ef6e (ret 4): the resource center holding inUnit (provisional name)
     void SetNextIslandExpansionTime();      // 0x3d652 (EECPResourceManager 0x8ecfd) (provisional name)
     long GetEpochFrequencyMax() const { return this->mEpochFrequencyMax; }
     long GetEpochFrequencyMin() const { return this->mEpochFrequencyMin; }
@@ -154,7 +132,6 @@ public:
     bool IsIslandExpansionDue();            // 0x2ed4b: the map flag 1/4 and gPhysics time >= mNextIslandExpansionTime (EECPResourceManager::AssignGatherers) (provisional name)
     void WorkOutPopulation();               // 0x2d1c7 (EECPDefenseCommander 0x78148) (provisional name)
     // 0x2e851 (ret 8): deletes inScorer.mCount own units by its scores (EECPDefenseCommander) (provisional name)
-    long ChooseUnitsToKill(EEAIFOUnitsToKillScoringBase& inScorer, bool inKill);  // (returns the count: eax)
     // 0x2db6d (ret 8): fills ioMap with the classes inScreener accepts (EECPUnitSelector::GatherCandidates)
     // (provisional name)
     void GetScreenedTypesByLine(std::map<long, std::vector<long>*>& ioMap, EEAIFOUnitSelectionScreener& inScreener);
@@ -173,14 +150,12 @@ public:
     std::vector<EEUnitHandle<EEComplexUnit> > mUnitsToKill;  // +0xbb0 (ChooseUnitsToKill push_backs the units it kills, referenced; the dtor dereferences each; handles since R5a.4)
     EECPCombatManager* GetCombatManager() const { return this->mCombatManager; }
     EECPCombatManager* mCombatManager;      // +0xbc0 (EEAttackPlayers 0x13f5e9) (provisional name)
-    EECPCivilizationManager* GetCivilizationManager() const { return this->mCivilizationManager; }
-    EECPCivilizationManager* mCivilizationManager;   // +0xbc4 (EECPUnitSelector 0x97a34: its +0x3c build manager) (provisional name)
-    EECPDiplomacyManager* GetDiplomacyManager() const { return this->mDiplomacyManager; }
-    EECPDiplomacyManager* mDiplomacyManager;   // +0xbc8 (new 8: Init 0x2f1c8; deleted in the dtor) (provisional name)
-    EECPExplorationManager* GetExplorationManager() const { return this->mExplorationManager; }
-    EECPExplorationManager* mExplorationManager;   // +0xbcc (new 0x30: Init; Load calls its +0x08) (provisional name)
-    EECPPlayerInteractionManager* GetInteractionManager() const { return this->mInteractionManager; }
-    EECPPlayerInteractionManager* mInteractionManager;   // +0xbd0 (new 0x2c; EECPCombatManager 0x472f39 calls SendChat on it) (provisional name)
+    // stage 6 (docs/AI_LUA_VERBS.md): the original civilization manager (+0xbc4) and its unit, build, resource,
+    // research and wall managers are gone (the Lua verbs, data/ai/lib/verbs.lua); what the engine and the helper
+    // queries still need: the placement searches (with the town centre tile) and the reflexes' danger zones
+    EECPPlacement* mPlacement;
+    std::vector<std::pair<U2DPoint<long>, unsigned long> > mDangerZones;   // (tile, game ms) EECPReflexes.cpp
+    // (+0xbc8..+0xbd0: the diplomacy, exploration and player interaction managers, deleted in stage 5)
     unsigned long mLBD4;   // (unsigned: Load)
     unsigned long GetDifficulty() const { return this->mDifficulty; }
     unsigned long mDifficulty;                       // +0xbd8 0 or 2 (GetResearchFrequencyModifier; CheckBuildingCounts picks +0xe14/+0xe24/+0xe1c by it) (provisional name; unsigned: Load)
@@ -479,9 +454,9 @@ public:
     bool mRegroupPending;
     bool GetAttackStarted() const { return this->mAttackStarted; }
     bool mAttackStarted;
-    // port: the engine (ee/EECPEngine.h: kEECPEngineClassic or kEECPEngineNext; EEGameState::Create sets it from
-    // the lobby, EEPPlayerHelper saves it), in the padding
-    unsigned char mEngine = 0;
+    // port: the engine (ee/EECPEngine.h: always kEECPEngineNext since the C++ classic's decisions were deleted, stage
+    // 5; EEGameState::Create sets the AI from the lobby, EEPPlayerHelper saves it), in the padding
+    unsigned char mEngine = 1;
     char _gapF57[0xf58 - 0xf57];
     struct EECPNextState* mNextState;       // new: the next engine's state (ee/EECPNext.h; NULL for the classic engine)
     struct EECPUnitsState* mUnitsState;     // new: the per-unit Lua interface's state (ee/EECPNextUnits.h; NULL until used)
@@ -507,25 +482,9 @@ enum EECPManagerKind {
     kCPManagerMoraleBuildings = 9,  // CanEnableManager case 9 uses mEnableStockBuild; EnableManagers case 9 sets EECPCivilizationManager::mMoraleBuildingsEnabled (QueueMoraleBuilding timer) (provisional name)
 };
 
-// New (docs/AI_RESEARCH.md §8.7): the epoch advance the player's research manager has queued and not yet started
-// (kTechNone: none); without the free-epochs cheat its cost is reserved
+// the epoch advance one of the player's buildings researches or has queued (kTechNone: none)
 long EECPPendingEpoch(EEComputerPlayer* inPlayer);
 
-// New (docs/AI_RESEARCH.md §8.8): the epoch pressure, the elapsed share of the epoch timer's span (dbcpbehavior rows
-// 28/29, the mean of the range times the difficulty's modifier): 0 when the timer starts, 1 when it is due (the
-// original's only advance time); a paid advance is asked for from the personality's epoch_pressure start, and its
-// reserve grows from nothing there to the whole cost at its full (aipersonalities.yaml; tall low, wide high).
-float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime);
-// the current epoch's schedule in minutes (0: the epoch timer): epoch_pressure.stone_span in the Prehistoric, the
-// experiments span20/span25/span30 after it (docs/AI_RESEARCH.md §8.28); and the game time its schedule counts from
-float EECPScheduleSpan(EEComputerPlayer* inPlayer);
-unsigned long EECPScheduleStart(EEComputerPlayer* inPlayer, unsigned long inTime);
-// the experiment "safedash" (docs/AI_RESEARCH.md §8.29): the epoch pressure added while the town is safe (0: none)
-float EECPPressureBonus(EEComputerPlayer* inPlayer);
-// The boom opening (the experiments "boom25": until 25 workers or 12 game minutes, "boom35": 35 or 15): citizens skip the
-// epoch reserve and the standing army waits
-bool EECPBooming(EEComputerPlayer* inPlayer);
-unsigned long EECPEpochTimerSpan(EEComputerPlayer* inPlayer);   // ms
 
 // port: true while EEWorld::CreatePlayers repairs a loaded game's players (EEComputerPlayer::RestoreManagers)
 extern bool gDeferComputerPlayerRestore;

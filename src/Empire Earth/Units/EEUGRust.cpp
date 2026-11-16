@@ -41,8 +41,8 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EETileLocation.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EECPILocation.h"
-#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPASGFlags.h"
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIPathArea.h"
@@ -52,7 +52,6 @@
 #include "ee/EEAutoPathRequest.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
-#include "ee/EECPIntelligence.h"
 #include "ee/EEMapDimensions.h"
 #include "ee/EEEvent.h"
 #include "ee/EmpireEarth.h"
@@ -71,14 +70,10 @@
 #include "ee/EEGameVariant.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EERules.h"
-#include "ee/EECPResourceManager.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIForest.h"
 #include "ee/EEComputerPlayer.h"
-#include "ee/EECPCivilizationManager.h"
-#include "ee/EECPWallManager.h"
-#include "ee/EECPBuildManager.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
@@ -1070,8 +1065,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             if (theTarget->mUnitClass->GetUnitType() == kUnitTypeWallSpace
                 && thePlayer->mTechnologies->Get(kTechWallSpace)->GetIsAvailable())
                 EECreateSpaceWallEnergyWall(theTarget);
-            if (thePlayer->mComputerPlayer != NULL)
-                thePlayer->mComputerPlayer->mCivilizationManager->mWallManager->AddGates(theTarget);
             if (thePlayer == ::gWorld.GetCurrentPlayer()) {
                 EESoundObject* theSound = theTarget->mStats->mCreationSound;
                 if (theSound != NULL)
@@ -1132,8 +1125,8 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             return 0;
         }
     case EE_UNITS_GOAL_HOST_ABANDON_BUILDING:
-        theComplex->mPlayer->mComputerPlayer->mCivilizationManager->mBuildManager->BuildingAbandoned(
-            ObjectOf<EEComplexUnit>(inB));
+        // (main's stage 6: the C++ build manager is gone; the Lua verbs send builders to the foundations left without
+        // one, data/ai/lib/verbs.lua)
         return 0;
     case EE_UNITS_GOAL_HOST_HALT:
         theComplex->SetCurrentPhysicsAction((long)ioArgs->i[0]);
@@ -1260,10 +1253,12 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             unsigned long theCommand = theComplex->mCommand ? theComplex->mCommand->mType : 0;
             theComplex->ReleaseFireEffect();
             if ((theCommand == kActionFindStorage || theCommand == kActionFindNewStorage) && !theComplex->mPlayer->IsHuman()) {
-                bool theFree =
-                    !theComplex->mPlayer->mComputerPlayer->mCivilizationManager->mResourceManager->BuildSettlementFor(theComplex);
-                if (!theFree)
-                    return -1;
+                // (the resource manager's BuildSettlementFor: it only cleared the computer player's selection; main's
+                // stage 6)
+                EEComputerPlayer* theCP = theComplex->mPlayer->mComputerPlayer;
+                EESelectedGroup* theGroup = theCP != NULL ? theCP->mActiveGroup : NULL;
+                if (theGroup != NULL && theGroup->GetNumUnits() > 0)
+                    theGroup->Clear();
             }
             EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(theComplex->GetUnitClass());
             return Handle(theClass->FindStorage(theComplex, (theComplex->mCommand ? theComplex->mCommand->mType : 0) == kActionFindNewStorage));

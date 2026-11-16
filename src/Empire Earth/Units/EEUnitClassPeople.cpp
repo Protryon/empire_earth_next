@@ -48,7 +48,7 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EERules.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EECPIntelligence.h"
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEE2DBattlefieldAmbient.h"
 #include "ee/EESoundObject.h"

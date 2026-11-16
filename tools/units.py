@@ -30,7 +30,9 @@ DX7_TRAMPOLINES = ["Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common
 UI_TRAMPOLINES = ["Low-Level Engine/User Interface/UITrampolines.cpp"]
 # the Graphics Engine's value types' out-of-line members, fifteen units folded into one (R4.3 part 16)
 GE_UNITS = ["Low-Level Engine/Graphics Engine/GEValues.cpp"]
-EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
+# the general MIDI instruments of the music, built in (EE.sf2 next to the unit)
+MUSIC_UNITS = ["Low-Level Engine/Sound Engine/SEGeneralMIDI.c"]
+EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
                "dx7hrtnl": DX7_TRAMPOLINES,
                "exe": ["Empire Earth/Database/EEDataTextFile.cpp", "Empire Earth/Database/EERules.cpp",
                        # the EE lobby glue's shells and hosts (R6 WONLobby round 6; ee_won eecolor.rs, eeglue.rs): the
@@ -43,14 +45,15 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                        # the computer-player decision trace and cheat switches (docs/AI_RESEARCH.md stage 0)
                        "Empire Earth/AI Thread/EECPTrace.cpp",
                        # the next computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; ee/EECPNext.h)
-                       "Empire Earth/AI Thread/EECPNext.cpp", "Empire Earth/AI Thread/EECPNextTactics.cpp",
+                       "Empire Earth/AI Thread/EECPNext.cpp", "Empire Earth/AI Thread/EECPPlacement.cpp",
+                       "Empire Earth/AI Thread/EECPReflexes.cpp",
                        "Empire Earth/AI Thread/EECPNextView.cpp",
                        # its army: the groups (docs/AI_LUA_PLAN.md §5, stage S4)
                        "Empire Earth/AI Thread/EECPNextArmy.cpp",
-                       # TEST ONLY: the next engine's C++ test opening (stage S1's proof of the verbs)
-                       "Empire Earth/AI Thread/EECPNextTest.cpp",
                        # the computer player's engine per seat: classic or next (docs/AI_LUA_PLAN.md S0)
                        "Empire Earth/AI Thread/EECPEngine.cpp",
+                       # engine helpers that lived in the combat units stage 5 deleted (docs/AI_RESEARCH.md §8.90)
+                       "Empire Earth/AI Thread/EECPEngineHelpers.cpp",
                        # the computer player's Lua runtime: the strategy scripts' sandbox (docs/AI_LUA_PLAN.md §3)
                        "Empire Earth/AI Thread/EECPLua.cpp",
                        # the next engine's strategy: the personality's Lua script behind the verbs (§3.2)

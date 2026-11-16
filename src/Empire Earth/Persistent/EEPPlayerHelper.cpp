@@ -117,14 +117,15 @@ long EEPPlayerHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                                 theResult = kErrorFailed;
                             else
                                 theResult = thePlayer->Load(inMajorVersion, inMinorVersion, inFile);
-                            // port: a computer player's engine from version 0.251 (ee/EECPEngine.h; older: classic),
-                            // and from 0.253 the next engine's AI id after it (a uint32 length, then the bytes;
-                            // before, the next engine played boom). An AI the manifest no longer lists fails the load.
+                            // port: a computer player's engine from version 0.251 (ee/EECPEngine.h), and from 0.253
+                            // the next engine's AI id after it (a uint32 length, then the bytes; before, the next
+                            // engine played boom). An AI the manifest no longer lists fails the load. A seat saved
+                            // with the deleted C++ classic (or before 0.251) plays the manifest's "classic" AI.
                             if (theResult == kErrorOK && theType == 1 && thePlayer->mComputerPlayer != NULL
                                 && (inMajorVersion > 0 || inMinorVersion >= 251)) {
                                 unsigned char theEngine = kEECPEngineClassic;
                                 theResult = inFile.Read(theEngine);
-                                thePlayer->mComputerPlayer->mEngine = kEECPEngineClassic;
+                                thePlayer->mComputerPlayer->mEngine = kEECPEngineNext;
                                 if (theResult == kErrorOK && theEngine == kEECPEngineNext) {
                                     std::string theAI = "boom";
                                     if (inMajorVersion > 0 || inMinorVersion >= 253) {
@@ -140,14 +141,13 @@ long EEPPlayerHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                                                 theResult = kErrorFailed;
                                         }
                                     }
-                                    if (theResult == kErrorOK && EECPAIByID(theAI) == NULL) {
+                                    if (theResult == kErrorOK && theAI != "none" && EECPAIByID(theAI) == NULL) {
                                         EECPEngineLog("the saved game's player %lu plays the AI '%s', which "
                                                       "Data/ai/ais.json does not list: the game cannot be loaded",
                                                       thePlayer->mPlayerID, theAI.c_str());
                                         theResult = kErrorFailed;
                                     }
                                     if (theResult == kErrorOK) {
-                                        thePlayer->mComputerPlayer->mEngine = kEECPEngineNext;
                                         EECPNextGetState(thePlayer->mComputerPlayer)->mAI = theAI;
                                     }
                                 }
@@ -264,7 +264,7 @@ long EEPPlayerHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVe
             // port: the next engine's AI id (Load: from 0.253)
             std::string theAI = EECPEngineAI(thePlayer->mComputerPlayer);
             if (theAI.empty())
-                theAI = "boom";
+                theAI = EECPClassicAI() != NULL ? EECPClassicAI()->mID : std::string("none");
             unsigned long theLength = (unsigned long)theAI.size();
             unsigned long theWritten = 0;
             theResult = outFile.Write(theLength);

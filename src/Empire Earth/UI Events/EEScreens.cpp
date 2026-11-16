@@ -2767,7 +2767,7 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
         break;
     case EE_SCREENS_TEXT_LE_ENGINE: {
         // an engine choice (ee/EECPEngine.h): the strings Classic and Random, an AI's manifest name
-        const EECPAIEntry* theAI = EECPAIByChoice(inArg);
+        const EECPAIEntry* theAI = inArg == kEECPChoiceClassic ? NULL : EECPAIByChoice(inArg);
         if (theAI != NULL)
             theText = UWideString(theAI->mName.c_str());
         else

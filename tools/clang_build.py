@@ -11,7 +11,7 @@ The units, their order and their defines come from link/<module>/units.txt and t
     <out>/x64_census.tsv (default out build/clang-census);
   - a unit's `// UNIT-FLAGS:` line adds its defines to the module flags (its VC6 code-generation switches are
     ignored).
-Every unit is staged under C:\\EEX (tools/verify.py) before it is compiled.
+Every unit is staged under build/eex (tools/verify.py) before it is compiled.
 
 Objects go to <out>/obj/<module>/<unit>.obj (default out: build/clang). A failed unit's diagnostics go to
 <out>/log/<module>/<unit>.log; the summary ranks the most frequent errors (names masked). The full build

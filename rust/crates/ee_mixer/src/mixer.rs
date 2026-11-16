@@ -253,9 +253,9 @@ impl<H: SampleHost> Mixer<H> {
         if c.playing {
             return CHANNEL_BUSY;
         }
-        if c.data.as_ref().is_some_and(|d| c.position >= f64::from(d.frames)) {
-            c.position = 0.0;
-        }
+        // from its beginning, whatever position was set before (as Miles' AIL_start_sample: the random offset
+        // SESoundManager gives a looping sound never took effect in the original; main c48163f5e)
+        c.position = 0.0;
         c.playing = true;
         OK
     }

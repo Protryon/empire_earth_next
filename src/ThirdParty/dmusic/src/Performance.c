@@ -28,7 +28,8 @@ DmResult DmPerformance_create(DmPerformance** slf, uint32_t rate) {
 	new->reference_count = 1;
 	new->tempo = DmInt_DEFAULT_TEMPO;
 	new->groove = 1;
-	new->groove_master = 0;
+	new->groove_base = 1;
+	new->time_carry = 0.0;
 	new->time_signature.beats_per_measure = 4;
 	new->time_signature.beat = 4;
 	new->time_signature.grids_per_beat = 2;
@@ -84,6 +85,7 @@ void DmPerformance_release(DmPerformance* slf) {
 	DmStyle_release(slf->style);
 	DmBand_release(slf->band);
 	DmSynth_free(&slf->synth);
+	DmReverb_free(slf->reverb);
 	Dm_free(slf);
 }
 
@@ -124,8 +126,6 @@ DmResult DmPerformance_playSegment(DmPerformance* slf, DmSegment* sgt, DmTiming 
 		return DmResult_INVALID_ARGUMENT;
 	}
 
-	uint32_t offset = Dm_getBoundaryOffset(slf, timing);
-
 	DmMessage msg;
 	msg.time = 0;
 	msg.type = DmMessage_SEGMENT;
@@ -133,9 +133,27 @@ DmResult DmPerformance_playSegment(DmPerformance* slf, DmSegment* sgt, DmTiming 
 	msg.segment.loop = 0;
 
 	if (mtx_lock(&slf->lock) != thrd_success) {
+		DmSegment_release(sgt);
 		return DmResult_MUTEX_ERROR;
 	}
 
+	// (EE patch) The fonts of the segment's bands and of its styles' bands are created here, on the caller's thread,
+	// not when the band change is rendered (each a copy of its collection's synthesizer, built when it was loaded)
+	if (sgt != NULL) {
+		for (size_t i = 0; i < sgt->messages.length; ++i) {
+			DmMessage* m = &sgt->messages.data[i];
+			if (m->type == DmMessage_BAND && m->band.band != NULL) {
+				(void) DmSynth_prepareFonts(&slf->synth, m->band.band);
+			} else if (m->type == DmMessage_STYLE && m->style.style != NULL) {
+				for (size_t b = 0; b < m->style.style->bands.length; ++b) {
+					(void) DmSynth_prepareFonts(&slf->synth, m->style.style->bands.data[b]);
+				}
+			}
+		}
+	}
+
+	// (EE patch) The boundary is taken from the time under the lock (the render thread advances it)
+	uint32_t offset = Dm_getBoundaryOffset(slf, timing);
 	DmMessageQueue_add(&slf->control_queue, &msg, offset, DmQueueConflict_REPLACE);
 
 	(void) mtx_unlock(&slf->lock);
@@ -378,14 +396,28 @@ static DmResult DmPattern_generateNoteMessages(DmPart* part,
 			offset += Dm_randRange(note.time_range);
 		}
 
-		uint32_t duration = note.duration;
+		// (EE patch) The duration's and the velocity's random ranges vary the duration and the velocity; upstream added
+		// both to the start time.
+		int32_t duration = (int32_t) note.duration;
 		if (note.duration_range != 0) {
-			offset += Dm_randRange(note.duration_range);
+			duration += Dm_randRange(note.duration_range);
+		}
+		if (duration < 1) {
+			duration = 1;
 		}
 
-		uint32_t velocity = note.velocity;
+		int32_t velocity = (int32_t) note.velocity;
 		if (note.velocity_range != 0) {
-			offset += Dm_randRange(note.velocity_range);
+			velocity += Dm_randRange(note.velocity_range);
+		}
+		velocity = clamp_s32(velocity, 1, 127);
+
+		// (EE patch) A note placed before its pattern's start (a negative time offset: Pawns.sgt's opening tam-tam is one
+		// tick early) plays at the start, as the original plays it; upstream added the negative offset unsigned, and at
+		// time 0 the sum wrapped past the end of time: the segment's first such notes never sounded.
+		int64_t start = (int64_t) time + (int32_t) offset;
+		if (start < 0) {
+			start = 0;
 		}
 
 		DmMessage msg;
@@ -397,7 +429,7 @@ static DmResult DmPattern_generateNoteMessages(DmPart* part,
 		msg.note.velocity = (uint8_t) velocity;
 		msg.note.channel = channel;
 
-		DmResult rv = DmMessageQueue_add(out, &msg, time + offset, DmQueueConflict_APPEND);
+		DmResult rv = DmMessageQueue_add(out, &msg, (uint32_t) start, DmQueueConflict_APPEND);
 		if (rv != DmResult_SUCCESS) {
 			return rv;
 		}
@@ -405,7 +437,7 @@ static DmResult DmPattern_generateNoteMessages(DmPart* part,
 		msg.note.on = false;
 		msg.note.note = (uint8_t) midi;
 
-		rv = DmMessageQueue_add(out, &msg, time + offset + duration, DmQueueConflict_APPEND);
+		rv = DmMessageQueue_add(out, &msg, (uint32_t) start + (uint32_t) duration, DmQueueConflict_APPEND);
 		if (rv != DmResult_SUCCESS) {
 			return rv;
 		}
@@ -642,7 +674,7 @@ static DmResult DmPerformance_playPattern(DmPerformance* slf, DmPattern* pttn) {
 	DmMessage msg;
 	msg.type = DmMessage_COMMAND;
 	msg.command.command = DmCommand_GROOVE;
-	msg.command.groove_level = slf->groove;
+	msg.command.groove_level = slf->groove_base;   // (EE patch: the track's level; the master level is added once, below)
 	msg.command.groove_range = slf->groove_range;
 	msg.command.repeat_mode = DmPatternSelect_RANDOM;
 	msg.command.beat = 0;
@@ -662,7 +694,12 @@ static DmResult DmPerformance_playPattern(DmPerformance* slf, DmPattern* pttn) {
 
 static void DmPerformance_handleCommandMessage(DmPerformance* slf, DmMessage_Command* msg) {
 	if (msg->command == DmCommand_GROOVE) {
-		slf->groove = msg->groove_level;
+		// (EE patch) The effective level is the command's own plus the master level, each time from the command's: the
+		// next pattern's command (scheduled in DmPerformance_playPattern) carries the track's level, not the effective
+		// one, else the master level was added once per pattern and the level climbed (Pawns.sgt: 2, 3, 4, 5 ... into
+		// ever denser patterns, then none).
+		slf->groove_base = msg->groove_level;
+		slf->groove = (uint8_t) clamp_s32((int32_t) msg->groove_level + slf->groove_master, 0, 100);
 		slf->groove_range = msg->groove_range;
 
 		// Randomize the groove level
@@ -674,8 +711,14 @@ static void DmPerformance_handleCommandMessage(DmPerformance* slf, DmMessage_Com
 		Dm_report(DmLogLevel_WARN, "DmPerformance: Command message with command %d not implemented", msg->command);
 	}
 
-	int32_t level = clamp_s32((int32_t) slf->groove + slf->groove_master, 1, 100);
-	DmPattern* pttn = DmStyle_getRandomPattern(slf->style, (uint32_t) level, msg->command);
+	// (EE patch) The measures left before the song ends or starts over: the pattern is chosen to fit them.
+	uint32_t measures_left = UINT32_MAX;
+	if (slf->segment != NULL) {
+		uint32_t end = slf->segment_start + slf->segment->length;
+		measures_left = end > slf->time ? (end - slf->time) / Dm_getMeasureLength(slf->time_signature) : 0;
+	}
+
+	DmPattern* pttn = DmStyle_getRandomPattern(slf->style, slf->groove, msg->command, measures_left);
 	if (pttn == NULL) {
 		Dm_report(DmLogLevel_INFO, "DmPerformance: No suitable pattern found. Silence ensues ...", msg->command);
 		return;
@@ -885,6 +928,7 @@ DmResult DmPerformance_renderPcm(DmPerformance* slf, void* buf, size_t len, DmRe
 	}
 
 	uint8_t const channels = opts & DmRender_STEREO ? 2 : 1;
+	void* const start = buf;   // (EE patch: the reverb runs over the whole block once it is rendered)
 
 	DmMessage msg_ctrl;
 	DmMessage msg_midi;
@@ -914,9 +958,20 @@ DmResult DmPerformance_renderPcm(DmPerformance* slf, void* buf, size_t len, DmRe
 		DmMessage msg;
 		DmMessage_copy(ok_ctrl ? &msg_ctrl : &msg_midi, &msg, -1);
 
+		// (EE patch) The clock: time_carry is the music time already rendered beyond slf->time (negative: owed), in
+		// ticks with their fraction, kept from call to call. Upstream rounded the time to whole ticks in every call,
+		// so the tempo depended on the size of the blocks asked for (2.5 % fast at 100 BPM in 512-frame blocks at
+		// 48 kHz). The message is reached after the samples its time still needs; slf->time lands on it exactly.
+		double ticks_per_sample = Dm_getTicksPerSample(slf->time_signature, slf->tempo, slf->sample_rate) / channels;
 		uint32_t time_offset = (uint32_t) max_s32((int) msg.time - (int) slf->time, 0);
-		uint32_t offset_samples =
-		    Dm_getSampleCountForDuration(time_offset, slf->time_signature, slf->tempo, slf->sample_rate, channels);
+		double needed = ((double) time_offset - slf->time_carry) / ticks_per_sample;
+
+		// (EE patch) Compared as a double first: a message further ahead than the block (in a long silence, or at a slow
+		// tempo, past 2^32 samples) does not fit a uint32_t, and that conversion is undefined (x86 and arm64 differ)
+		if (needed >= (double) (len - sample) + 1.0) {   // (the same test as below: floor(needed) > len - sample)
+			break;
+		}
+		uint32_t offset_samples = needed > 0.0 ? (uint32_t) needed : 0;
 
 		if (offset_samples > len - sample) {
 			// The next message does not fall into this render call (i.e. it happens after the number of
@@ -928,11 +983,6 @@ DmResult DmPerformance_renderPcm(DmPerformance* slf, void* buf, size_t len, DmRe
 		// same number of samples for each channel.
 		if ((opts & DmRender_STEREO)) {
 			offset_samples += offset_samples % 2;
-			time_offset = Dm_getDurationForSampleCount(offset_samples,
-			                                           slf->time_signature,
-			                                           slf->tempo,
-			                                           slf->sample_rate,
-			                                           channels);
 		}
 
 		// Render the samples from now until the message occurs and advance the buffer pointer
@@ -944,6 +994,7 @@ DmResult DmPerformance_renderPcm(DmPerformance* slf, void* buf, size_t len, DmRe
 
 		sample += offset_samples;
 		slf->time += time_offset;
+		slf->time_carry += ticks_per_sample * offset_samples - (double) time_offset;
 
 		// Handle the next message
 		if (ok_ctrl) {
@@ -956,15 +1007,69 @@ DmResult DmPerformance_renderPcm(DmPerformance* slf, void* buf, size_t len, DmRe
 		DmMessage_free(&msg);
 	}
 
-	(void) mtx_unlock(&slf->lock);
+	// (EE patch) The rest of the block is rendered and the clock advanced with the lock still held: the synthesizer
+	// and the time are also changed from the game's threads (DmPerformance_stop, setVolume, playSegment's fonts).
+	// Upstream rendered the remaining samples unlocked, so a stop's note-ons and releases (and its font creation) ran
+	// while tsf_render read the same voices, and a voice array grown by tsf_note_on was freed under the renderer.
 
 	// Render the remaining samples
 	uint32_t remaining_samples = (uint32_t) (len - sample);
 	(void) DmSynth_render(&slf->synth, buf, remaining_samples, opts);
-	slf->time +=
-	    Dm_getDurationForSampleCount(remaining_samples, slf->time_signature, slf->tempo, slf->sample_rate, channels);
+	// (EE patch) The clock (above): the whole ticks of what was rendered go to the time, the fraction is carried
+	double rendered = Dm_getTicksPerSample(slf->time_signature, slf->tempo, slf->sample_rate) / channels * remaining_samples +
+	                  slf->time_carry;
+	uint32_t whole = rendered > 0.0 ? (uint32_t) rendered : 0;
+	slf->time += whole;
+	slf->time_carry = rendered - (double) whole;
 
+	// (EE patch) The original's synth reverb over the finished stereo mix, in place, on 16-bit samples as the original
+	// runs it (a float mix goes through 16 bits: full scale 1.0 = 32768, clamped as the original's mix is).
+	if (opts & DmRender_STEREO) {
+		if (slf->reverb_on && slf->reverb != NULL) {
+			size_t frames = len / 2;
+			if (opts & DmRender_FLOAT) {
+				float* f = (float*) start;
+				int16_t tmp[2048];
+				for (size_t at = 0; at < frames; at += 1024) {
+					size_t n = frames - at < 1024 ? frames - at : 1024;
+					for (size_t i = 0; i < 2 * n; ++i) {
+						float v = f[2 * at + i] * 32768.0f;
+						tmp[i] = (int16_t) (v > 32767.0f ? 32767.0f : v < -32768.0f ? -32768.0f : v);
+					}
+					DmReverb_processStereo(slf->reverb, tmp, n);
+					for (size_t i = 0; i < 2 * n; ++i) {
+						f[2 * at + i] = (float) tmp[i] / 32768.0f;
+					}
+				}
+			} else {
+				DmReverb_processStereo(slf->reverb, (int16_t*) start, frames);
+			}
+		}
+	}
+
+	(void) mtx_unlock(&slf->lock);
 	return DmResult_SUCCESS;
+}
+
+void DmPerformance_setReverb(DmPerformance* slf, int enabled, float gain_in_db, float mix_db, float time_ms, float hf_ratio) {
+	if (slf == NULL) {
+		return;
+	}
+
+	if (mtx_lock(&slf->lock) != thrd_success) {
+		return;
+	}
+
+	if (enabled && slf->reverb == NULL) {
+		slf->reverb = DmReverb_create((float) slf->sample_rate);
+	}
+
+	if (slf->reverb != NULL) {
+		DmReverb_set(slf->reverb, gain_in_db, mix_db, time_ms, hf_ratio);
+	}
+
+	slf->reverb_on = enabled && slf->reverb != NULL;
+	(void) mtx_unlock(&slf->lock);
 }
 
 DmResult
@@ -973,18 +1078,25 @@ DmPerformance_playTransition(DmPerformance* slf, DmSegment* sgt, DmEmbellishment
 		return DmResult_INVALID_ARGUMENT;
 	}
 
-	// If no segment is currently playing, simply start playing the
-	// new segment without a transition.
-	if (slf->segment == NULL) {
-		return DmPerformance_playSegment(slf, sgt, timing);
-	}
-
 	if (!sgt->downloaded) {
 		return DmResult_INVALID_ARGUMENT;
 	}
 
+	// (EE patch) The playing segment, style, band and chord are read under the lock: the render thread changes them.
+	if (mtx_lock(&slf->lock) != thrd_success) {
+		return DmResult_MUTEX_ERROR;
+	}
+
+	// If no segment is currently playing, simply start playing the
+	// new segment without a transition.
+	if (slf->segment == NULL) {
+		(void) mtx_unlock(&slf->lock);
+		return DmPerformance_playSegment(slf, sgt, timing);
+	}
+
 	DmSegment* transition = NULL;
 	DmResult rv = Dm_composeTransition(slf->style, slf->band, &slf->chord, sgt, embellishment, &transition);
+	(void) mtx_unlock(&slf->lock);
 	if (rv != DmResult_SUCCESS) {
 		return rv;
 	}
@@ -1003,10 +1115,18 @@ void DmPerformance_setVolume(DmPerformance* slf, float vol) {
 		return;
 	}
 
+	// (EE patch) Under the lock: the master volume now shifts the voices already sounding (tsf_set_volume), and the
+	// render thread sets it too (each band's fonts). Unlocked, the game's fade walked the voices while tsf_note_on
+	// changed them, and two threads applying the same change shifted a voice twice.
+	if (mtx_lock(&slf->lock) != thrd_success) {
+		return;
+	}
+
 	DmSynth_setVolume(&slf->synth, vol);
+	(void) mtx_unlock(&slf->lock);
 }
 
-void DmPerformance_setMasterGrooveLevel(DmPerformance* slf, int8_t level) {
+void DmPerformance_setGrooveLevel(DmPerformance* slf, uint8_t level) {
 	if (slf == NULL) {
 		return;
 	}
@@ -1014,6 +1134,61 @@ void DmPerformance_setMasterGrooveLevel(DmPerformance* slf, int8_t level) {
 	if (mtx_lock(&slf->lock) != thrd_success) {
 		return;
 	}
-	slf->groove_master = level;
+	// (the original's master groove level: added to the groove level of every segment's command track from then on)
+	slf->groove_master = (int32_t) level;
+	(void) mtx_unlock(&slf->lock);
+}
+
+// (EE patch) A stop as the original's stop sounds: what was due within the synthesizer's latency
+// is played first (a segment started just before, its band, its first notes: the original had already handed them to its
+// synthesizer), then every sounding note is released (its release and the reverb ring out) and the rest is dropped.
+// Stopping through DmPerformance_playSegment(NULL) replaced a play queued for the same instant (the queue's REPLACE),
+// so a segment played and stopped at once never sounded at all (Empire Earth's editor does exactly that).
+void DmPerformance_stop(DmPerformance* slf, uint32_t lookahead_ms) {
+	if (slf == NULL) {
+		return;
+	}
+
+	if (mtx_lock(&slf->lock) != thrd_success) {
+		return;
+	}
+
+	DmMessage msg_ctrl;
+	DmMessage msg_midi;
+	for (;;) {
+		bool ok_ctrl = DmMessageQueue_get(&slf->control_queue, &msg_ctrl);
+		bool ok_midi = DmMessageQueue_get(&slf->music_queue, &msg_midi);
+		if (!ok_ctrl && !ok_midi) {
+			break;
+		}
+
+		if (ok_ctrl && ok_midi) {
+			ok_ctrl = msg_ctrl.time <= msg_midi.time;
+			ok_midi = !ok_ctrl;
+		}
+
+		// The window in ticks at the current tempo (a segment's tempo applies once its first messages are handled)
+		double tempo = slf->tempo > 0.0 ? slf->tempo : 120.0;
+		uint32_t window = (uint32_t) ((double) lookahead_ms * tempo * 768.0 / 60000.0);
+		uint32_t time = ok_ctrl ? msg_ctrl.time : msg_midi.time;
+		if (time > slf->time + window) {
+			break;
+		}
+
+		DmMessage msg;
+		DmMessage_copy(ok_ctrl ? &msg_ctrl : &msg_midi, &msg, -1);
+		if (ok_ctrl) {
+			DmMessageQueue_pop(&slf->control_queue);
+		} else {
+			DmMessageQueue_pop(&slf->music_queue);
+		}
+
+		DmPerformance_handleMessage(slf, &msg);
+		DmMessage_free(&msg);
+	}
+
+	DmMessage_SegmentChange stop;
+	memset(&stop, 0, sizeof stop);
+	DmPerformance_handleSegmentMessage(slf, &stop);   // (no segment: queues cleared, every note released)
 	(void) mtx_unlock(&slf->lock);
 }

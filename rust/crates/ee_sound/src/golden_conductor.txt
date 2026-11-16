@@ -9,6 +9,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 8
@@ -58,7 +59,7 @@ dm transition S1 1 4
 = vol 3f400000 state 1 rev 1 next 1 playing 0 int 1 cgc 8
 = [0] Honor.sgt S1 id 0 n 2
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f400000 state 1 rev 1 next 1 playing -1 int 1 cgc 8
 > unload 0
@@ -98,6 +99,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment a.sgt S2
 dm get_segment b.sgt S3
 mixer source on
@@ -129,6 +131,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment a.sgt S4
 dm get_segment b.sgt S5
 mixer source on
@@ -164,6 +167,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -209,6 +213,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment a.sgt NULL
 mixer source on
 < 1
@@ -230,6 +235,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment a.sgt S8
 dm get_segment d.sgt S9
 mixer source on
@@ -284,6 +290,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -305,6 +312,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -345,8 +353,8 @@ dm play S10 1 FAIL
 < 1
 = vol 3f800000 state 1 rev 1 next 1 playing -1 int 0 cgc 1000
 > stop
-dm play - 1 FAIL
-< 1
+dm stop 100
+< 0
 = vol 3f800000 state 1 rev 1 next 1 playing -1 int 0 cgc 1000
 > fail play 0
 > trans 9 4
@@ -383,7 +391,8 @@ dm loader_create 1
 dm add_resolver R
 dm perf_create 44100
 dm volume 3ba34122
-dm groove -56
+dm groove 200
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3c23d70b state 1 rev 1 next 0 playing -1 int 200 cgc 1000
@@ -430,6 +439,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.sgt S11
 dm get_segment x.sgt S12
 mixer source on
@@ -713,6 +723,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3fcc2593
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Dawn.sgt S13
 mixer source on
 < 0
@@ -757,7 +768,7 @@ dm seg_release S14
 = vol 3fc00000 state 1 rev 1 next 2 playing 0 int 0 cgc 1000
 = [0] Dawn.sgt S13 id 0 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3fc00000 state 1 rev 1 next 2 playing -1 int 0 cgc 1000
 > mixer 0
@@ -773,6 +784,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -822,6 +834,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Mystery.sgt S15
 dm get_segment Dawn.sgt S16
 dm get_segment Honor.SGT S17
@@ -963,6 +976,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 00000000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.SGT S18
 mixer source on
 < 0
@@ -992,6 +1006,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 00000000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.SGT S19
 mixer source on
 < 0
@@ -1003,7 +1018,7 @@ mixer source on
 = [0] Honor.SGT S19 id 0 n 1
 > fail null 0
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 00000000 state 1 rev 1 next 1 playing -1 int 0 cgc 1000
 > get 3
@@ -1111,6 +1126,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Mystery.sgt S23
 mixer source on
 < 0
@@ -1127,6 +1143,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Mystery.sgt S24
 mixer source on
 < 0
@@ -1167,13 +1184,13 @@ dm groove 1
 = [1] Dawn.sgt S25 id 1 n 1
 = [2] Honor.sgt S26 id 2 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 3 playing -1 int 1 cgc 1000
 > get 6
 < S0
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 3 playing -1 int 1 cgc 1000
 > load x.sgt
@@ -1221,7 +1238,7 @@ dm play - 4
 < 0
 = vol 3f4ccccd state 1 rev 1 next 4 playing -1 int 1 cgc 1000
 > int 255 0
-dm groove -1
+dm groove 255
 < 0
 = vol 3f4ccccd state 1 rev 1 next 4 playing -1 int 255 cgc 1000
 > load battle.sgt
@@ -1276,7 +1293,7 @@ dm groove 3
 = [2] battle.sgt S28 id 4 n 3
 = [3] Honor.SGT S29 id 5 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f4ccccd state 1 rev 1 next 6 playing -1 int 3 cgc 1000
 > secondary 3
@@ -1332,13 +1349,14 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment x.sgt S30
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 1 playing -1 int 0 cgc 999
 = [0] x.sgt S30 id 0 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 1 playing -1 int 0 cgc 999
 > trans 4 4
@@ -1354,7 +1372,7 @@ dm seg_release S30
 < 0
 = vol 3f800000 state 1 rev 1 next 1 playing -1 int 0 cgc 999
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 1 playing -1 int 0 cgc 999
 > cgc 999
@@ -1366,6 +1384,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 1 playing -1 int 0 cgc 999
@@ -1375,7 +1394,7 @@ dm volume 3e4f907b
 < 0
 = vol 3e800000 state 1 rev 1 next 1 playing -1 int 0 cgc 999
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3e800000 state 1 rev 1 next 1 playing -1 int 0 cgc 999
 > cur
@@ -1386,6 +1405,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3e4f907b
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3e800000 state 1 rev 1 next 1 playing -1 int 0 cgc 999
@@ -1405,7 +1425,7 @@ dm get_segment battle.sgt S31
 = vol bf000000 state 1 rev 1 next 2 playing -1 int 0 cgc 999
 = [0] battle.sgt S31 id 1 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol bf000000 state 1 rev 1 next 2 playing -1 int 0 cgc 999
 > secondary 2
@@ -1777,6 +1797,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1
@@ -1867,7 +1888,7 @@ dm play - 4
 < 0
 = vol 3f800000 state 1 rev 1 next 2 playing -1 int 0 cgc 1
 > int 255 0
-dm groove -1
+dm groove 255
 < 0
 = vol 3f800000 state 1 rev 1 next 2 playing -1 int 255 cgc 1
 > trans 0 7
@@ -1892,7 +1913,7 @@ dm seg_release S35
 = [0] Mystery.sgt S33 id 0 n 1
 = [1] Honor.SGT S34 id 1 n 2
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3c23d776 state 1 rev 1 next 3 playing -1 int 255 cgc 1
 > unload 3
@@ -1956,6 +1977,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -2125,6 +2147,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.SGT S36
 dm get_segment battle.sgt S37
 mixer source on
@@ -2177,7 +2200,7 @@ dm play S39 1
 < 0
 = vol 3f800000 state 1 rev 1 next 4 playing 3 int 0 cgc 0
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 4 playing -1 int 0 cgc 0
 > get 2
@@ -2345,7 +2368,8 @@ dm loader_create 1
 dm add_resolver R
 dm perf_create 22050
 dm volume 3f46005a
-dm groove -1
+dm groove 255
+dm reverb 1 0 -10 1000 0.001
 dm get_segment battle.sgt S40
 dm get_segment Dawn.sgt S41
 dm get_segment x.sgt S42
@@ -2386,6 +2410,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -2616,7 +2641,8 @@ dm loader_create 1
 dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
-dm groove -56
+dm groove 200
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.sgt S47
 dm get_segment Mystery.sgt S48
 dm get_segment battle.sgt S49
@@ -2638,7 +2664,7 @@ dm get_segment Dawn.sgt S50
 < 0
 = vol 3f800000 state 1 rev 1 next 4 playing -1 int 200 cgc 1000
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 4 playing -1 int 200 cgc 1000
 > load x.sgt
@@ -2928,6 +2954,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 3
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Dawn.sgt S52
 dm get_segment Honor.sgt S53
 dm get_segment Honor.SGT S54
@@ -2963,7 +2990,7 @@ dm get_segment battle.sgt S55
 > getid 3
 < 3
 > int 128 1
-dm groove -128
+dm groove 128
 < 0
 = vol 3f800000 state 1 rev 1 next 4 playing -1 int 128 cgc 999
 > vol 3c23d776
@@ -2974,7 +3001,7 @@ dm volume 3ba3419d
 < 5
 = vol 3c23d776 state 1 rev 1 next 4 playing -1 int 128 cgc 999
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3c23d776 state 1 rev 1 next 4 playing -1 int 128 cgc 999
 > rate 22050
@@ -3028,7 +3055,8 @@ dm loader_create 1
 dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
-dm groove -128
+dm groove 128
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Mystery.sgt S56
 mixer source on
 < 0
@@ -3039,7 +3067,7 @@ mixer source on
 = vol 3f800000 state 1 rev 1 next 1 playing -1 int 128 cgc 1000
 = [0] Mystery.sgt S56 id 0 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 1 playing -1 int 128 cgc 1000
 > vol bf000000
@@ -3137,6 +3165,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.sgt S57
 dm get_segment Honor.SGT S58
 dm get_segment x.sgt S59
@@ -3172,6 +3201,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.sgt S61
 dm get_segment Honor.SGT S62
 dm get_segment x.sgt S63
@@ -3221,6 +3251,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment x.sgt S65
 mixer source on
 < 0
@@ -3268,7 +3299,7 @@ dm get_segment Honor.SGT S67
 > secondary 2
 < S67
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 3 playing -1 int 0 cgc 1000
 > rate 0
@@ -3373,6 +3404,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.SGT S68
 dm get_segment Mystery.sgt S69
 mixer source on
@@ -3409,6 +3441,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f46005a
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.SGT S72
 dm get_segment Mystery.sgt S73
 dm get_segment Honor.sgt S74
@@ -3478,7 +3511,7 @@ dm get_segment x.sgt S77
 = [4] Dawn.sgt S76 id 4 n 1
 = [5] x.sgt S77 id 5 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f4ccccd state 1 rev 1 next 6 playing -1 int 256 cgc 0
 > state 0
@@ -3525,6 +3558,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -3582,7 +3616,7 @@ dm play S80 1
 > secondary 4
 < S0
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 3 playing -1 int 0 cgc 1000
 > getid 5
@@ -3684,6 +3718,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 1
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.sgt S81
 dm get_segment battle.sgt S82
 mixer source on
@@ -3795,7 +3830,8 @@ dm loader_create 1
 dm add_resolver R
 dm perf_create 22050
 dm volume 3ba3419d
-dm groove -1
+dm groove 255
+dm reverb 1 0 -10 1000 0.001
 dm get_segment battle.sgt FAIL
 mixer source on
 < 1
@@ -3808,7 +3844,7 @@ dm groove 1
 < 0
 = vol 3c23d776 state 1 rev 1 next 4 playing -1 int 1 cgc 1000
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3c23d776 state 1 rev 1 next 4 playing -1 int 1 cgc 1000
 > load x.sgt
@@ -3838,6 +3874,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -3888,7 +3925,7 @@ dm get_segment x.sgt S85
 < 0
 = vol 3f800000 state 1 rev 1 next 2 playing -1 int 0 cgc 1000
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 2 playing -1 int 0 cgc 1000
 > trans 2 0
@@ -3908,7 +3945,7 @@ dm play - 4
 = vol 3f800000 state 1 rev 1 next 2 playing -1 int 0 cgc 1000
 = [0] x.sgt S85 id 1 n 2
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 2 playing -1 int 0 cgc 1000
 > cur
@@ -4292,6 +4329,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -4302,7 +4340,7 @@ mixer source on
 < 3
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
 > load battle.sgt
@@ -4324,7 +4362,7 @@ dm play - 4
 > getid 0
 < 0
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 1 playing -1 int 0 cgc 1000
 > trans 3 1
@@ -4420,7 +4458,7 @@ dm volume 3ba3419d
 = [3] Dawn.sgt S89 id 3 n 1
 > rate 22050
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3c23d776 state 1 rev 1 next 4 playing -1 int 0 cgc 1000
 > get 5
@@ -4503,6 +4541,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Dawn.sgt S90
 dm get_segment battle.sgt S91
 mixer source on
@@ -4738,6 +4777,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3ba3419d
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment battle.sgt S92
 dm get_segment Mystery.sgt S93
 dm get_segment x.sgt S94
@@ -4813,6 +4853,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -4856,7 +4897,7 @@ dm get_segment battle.sgt S97
 > getid 5
 < -1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 2 playing -1 int 0 cgc 1000
 > secondary 7
@@ -4891,7 +4932,7 @@ dm play - 4
 < 0
 = vol 3f800000 state 1 rev 1 next 3 playing -1 int 0 cgc 1000
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 3 playing -1 int 0 cgc 1000
 > load Honor.SGT
@@ -4927,6 +4968,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3e4f907b
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.sgt S100
 dm get_segment battle.sgt S101
 dm get_segment Honor.SGT S102
@@ -4977,7 +5019,7 @@ dm get_segment Dawn.sgt S104
 > getid 6
 < -1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3e800000 state 1 rev 1 next 5 playing -1 int 0 cgc 1000
 > mixer 1
@@ -5058,6 +5100,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment battle.sgt S105
 dm get_segment Mystery.sgt S106
 mixer source on
@@ -5066,7 +5109,7 @@ mixer source on
 = [0] battle.sgt S105 id 0 n 1
 = [1] Mystery.sgt S106 id 1 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 2 playing -1 int 0 cgc 1000
 > state 2
@@ -5075,6 +5118,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment battle.sgt S107
 dm get_segment Mystery.sgt S108
 mixer source on
@@ -5187,6 +5231,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -5265,7 +5310,7 @@ dm get_segment Honor.sgt FAIL
 < 0
 = vol 3f800000 state 1 rev 1 next 2 playing -1 int 2 cgc 1000
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 2 playing -1 int 2 cgc 1000
 > vol 3eaaaaab
@@ -5496,6 +5541,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3fcc2593
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3fc00000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -5504,7 +5550,7 @@ mixer source on
 = vol 3fc00000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
 > fail loader 0
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3fc00000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
 > mixer 1
@@ -5525,6 +5571,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3fcc2593
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3fc00000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -5602,6 +5649,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.sgt S114
 mixer source on
 < 0
@@ -5623,7 +5671,7 @@ dm get_segment Honor.SGT S116
 = [1] x.sgt S115 id 1 n 1
 = [2] Honor.SGT S116 id 2 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 3 playing -1 int 0 cgc 1000
 > mixer 1
@@ -5634,7 +5682,7 @@ dm play - 1
 = [1] x.sgt S115 id 1 n 1
 = [2] Honor.SGT S116 id 2 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 3 playing -1 int 0 cgc 1000
 > mixer 0
@@ -5681,12 +5729,12 @@ dm seg_release S115
 = [0] Honor.sgt S114 id 0 n 1
 = [1] Honor.SGT S116 id 2 n 3
 > int 255 1
-dm groove -1
+dm groove 255
 < 0
 = vol 3f800000 state 1 rev 1 next 3 playing 0 int 255 cgc 1000
 > mixer 1
 > int 200 1
-dm groove -56
+dm groove 200
 < 0
 = vol 3f800000 state 1 rev 1 next 3 playing 0 int 200 cgc 1000
 > rate 22050
@@ -5717,7 +5765,7 @@ dm get_segment battle.sgt S117
 = [1] Honor.SGT S116 id 2 n 3
 = [2] battle.sgt S117 id 3 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 4 playing -1 int 200 cgc 1000
 > secondary 6
@@ -6000,6 +6048,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment x.sgt S118
 mixer source on
 < 0
@@ -6037,6 +6086,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment x.sgt S120
 dm get_segment Honor.sgt S121
 mixer source on
@@ -6192,6 +6242,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3e90882e
 dm groove 3
+dm reverb 1 0 -10 1000 0.001
 dm get_segment x.sgt S123
 dm get_segment Honor.sgt S124
 dm get_segment Mystery.sgt S125
@@ -6357,6 +6408,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment battle.sgt S127
 dm get_segment x.sgt S128
 dm get_segment Honor.SGT S129
@@ -6425,8 +6477,8 @@ dm get_segment Dawn.sgt S131
 > get 5
 < S0
 > stop
-dm play - 1 FAIL
-< 1
+dm stop 100
+< 0
 = vol 3f800000 state 1 rev 1 next 5 playing -1 int 0 cgc 1000
 > cgc 0
 < 5
@@ -6473,6 +6525,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -6505,6 +6558,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment battle.sgt S133
 mixer source on
 < 0
@@ -6521,6 +6575,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment battle.sgt S134
 mixer source on
 < 0
@@ -6546,7 +6601,7 @@ dm play - 4
 = vol 3eaaaaab state 1 rev 1 next 2 playing -1 int 0 cgc 1000
 > fail segment 0
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3eaaaaab state 1 rev 1 next 2 playing -1 int 0 cgc 1000
 > int 256 1
@@ -6561,7 +6616,7 @@ dm play - 4
 < 0
 = vol 3eaaaaab state 1 rev 1 next 2 playing -1 int 256 cgc 1000
 > int 128 0
-dm groove -128
+dm groove 128
 < 0
 = vol 3eaaaaab state 1 rev 1 next 2 playing -1 int 128 cgc 1000
 > rate 22050
@@ -6627,7 +6682,7 @@ dm seg_release S135
 > fail loader 0
 > mixer 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3e800000 state 1 rev 1 next 4 playing -1 int 128 cgc 1000
 > load Honor.sgt
@@ -6675,6 +6730,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.SGT S138
 mixer source on
 < 0
@@ -6693,6 +6749,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.SGT S139
 mixer source on
 < 0
@@ -6715,6 +6772,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.SGT S140
 mixer source on
 < 0
@@ -6825,6 +6883,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -6848,6 +6907,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -6874,7 +6934,7 @@ dm volume 3ba3419d
 < 0
 = vol 3c23d776 state 1 rev 1 next 1 playing 0 int 0 cgc 1000
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3c23d776 state 1 rev 1 next 1 playing -1 int 0 cgc 1000
 > state 2
@@ -6883,6 +6943,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3ba3419d
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Dawn.sgt S145
 mixer source on
 < 0
@@ -6946,6 +7007,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.sgt S146
 dm get_segment battle.sgt S147
 mixer source on
@@ -7042,7 +7104,7 @@ dm get_segment x.sgt S150
 = [3] Dawn.sgt S149 id 3 n 1
 = [4] x.sgt S150 id 4 n 1
 > int 255 0
-dm groove -1
+dm groove 255
 < 0
 = vol 3f800000 state 1 rev 1 next 5 playing 1 int 255 cgc 1000
 > state 1
@@ -7061,7 +7123,7 @@ dm transition S147 5 4
 < 5
 = vol 3f800000 state 1 rev 1 next 5 playing 1 int 255 cgc 1000
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 5 playing -1 int 255 cgc 1000
 > load Dawn.sgt
@@ -7091,6 +7153,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -7155,16 +7218,16 @@ dm play S153 4
 < 0
 = vol 3f000000 state 1 rev 1 next 3 playing 2 int 0 cgc 1000
 > int 4294967295 1
-dm groove -1
+dm groove 255
 < 0
 = vol 3f000000 state 1 rev 1 next 3 playing 2 int 4294967295 cgc 1000
 > rate 0
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f000000 state 1 rev 1 next 3 playing -1 int 4294967295 cgc 1000
 > int 200 1
-dm groove -56
+dm groove 200
 < 0
 = vol 3f000000 state 1 rev 1 next 3 playing -1 int 200 cgc 1000
 > queue 1
@@ -7186,7 +7249,7 @@ dm play S152 4
 = [1] Honor.SGT S152 id 1 n 2
 = [2] battle.sgt S153 id 2 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f000000 state 1 rev 1 next 3 playing -1 int 200 cgc 1000
 > play 5
@@ -7242,7 +7305,7 @@ dm play - 4
 = [3] Dawn.sgt S154 id 3 n 1
 = [4] Mystery.sgt S155 id 4 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f000000 state 1 rev 1 next 5 playing -1 int 200 cgc 1000
 > secondary 1
@@ -7364,6 +7427,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3e4f907b
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Dawn.sgt S156
 mixer source on
 < 0
@@ -7418,7 +7482,7 @@ dm play - 4
 = vol 3e800000 state 1 rev 1 next 2 playing -1 int 0 cgc 1000
 = [0] Honor.sgt S157 id 1 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3e800000 state 1 rev 1 next 2 playing -1 int 0 cgc 1000
 > cgc 5000
@@ -7636,7 +7700,8 @@ dm loader_create 1
 dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
-dm groove -1
+dm groove 255
+dm reverb 1 0 -10 1000 0.001
 dm get_segment x.sgt S158
 dm get_segment battle.sgt S159
 mixer source on
@@ -7870,6 +7935,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 00000000
 dm groove 1
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Mystery.sgt S160
 dm get_segment Honor.sgt S161
 dm get_segment Honor.SGT S162
@@ -7897,6 +7963,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -7988,7 +8055,7 @@ dm get_segment battle.sgt S165
 = [1] Honor.SGT S164 id 1 n 1
 = [2] battle.sgt S165 id 2 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f000000 state 1 rev 1 next 3 playing -1 int 256 cgc 1000
 > load Honor.sgt
@@ -8013,6 +8080,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3ee68375
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment x.sgt S167
 dm get_segment Honor.SGT S168
 dm get_segment battle.sgt S169
@@ -8101,6 +8169,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3ee68375
 dm groove 1
+dm reverb 1 0 -10 1000 0.001
 dm get_segment x.sgt S171
 dm get_segment Honor.SGT S172
 dm get_segment battle.sgt S173
@@ -8612,7 +8681,8 @@ dm loader_create 1
 dm add_resolver R
 dm perf_create 22050
 dm volume 00000000
-dm groove -1
+dm groove 255
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.sgt S176
 dm get_segment x.sgt S177
 dm get_segment Dawn.sgt S178
@@ -8650,7 +8720,7 @@ dm seg_release S178
 = [0] Honor.sgt S176 id 0 n 1
 = [1] x.sgt S177 id 1 n 3
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol bf000000 state 1 rev 1 next 3 playing -1 int 4294967295 cgc 999
 > queue 2
@@ -8674,6 +8744,7 @@ dm add_resolver R
 dm perf_create 44100
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
@@ -8731,7 +8802,7 @@ dm volume 3e4f907b
 < 0
 = vol 3e800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3e800000 state 1 rev 1 next 0 playing -1 int 0 cgc 1000
 > secondary 0
@@ -8973,6 +9044,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 00000000
 dm groove 2
+dm reverb 1 0 -10 1000 0.001
 dm get_segment battle.sgt S180
 dm get_segment Mystery.sgt S181
 dm get_segment Honor.sgt S182
@@ -8990,6 +9062,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 00000000
 dm groove 2
+dm reverb 1 0 -10 1000 0.001
 dm get_segment battle.sgt S184
 dm get_segment Mystery.sgt S185
 dm get_segment Honor.sgt S186
@@ -9069,6 +9142,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Mystery.sgt S188
 dm get_segment Honor.sgt S189
 mixer source on
@@ -9094,7 +9168,7 @@ dm get_segment Dawn.sgt S190
 = [1] Honor.sgt S189 id 1 n 1
 = [2] Dawn.sgt S190 id 2 n 1
 > stop
-dm play - 1
+dm stop 100
 < 0
 = vol 3f800000 state 1 rev 1 next 3 playing -1 int 127 cgc 1000
 > fail resolver 0
@@ -9171,6 +9245,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f46005a
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment x.sgt S191
 dm get_segment Mystery.sgt S192
 mixer source on
@@ -9191,6 +9266,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f46005a
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment x.sgt S193
 dm get_segment Mystery.sgt S194
 mixer source on
@@ -9214,6 +9290,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 00000000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment x.sgt S195
 dm get_segment Mystery.sgt S196
 mixer source on
@@ -9460,6 +9537,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 2
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.sgt S197
 dm get_segment x.sgt S198
 mixer source on
@@ -9546,6 +9624,7 @@ dm add_resolver R
 dm perf_create 22050
 dm volume 3f800000
 dm groove 0
+dm reverb 1 0 -10 1000 0.001
 dm get_segment Honor.sgt NULL
 mixer source on
 < 1
@@ -9575,7 +9654,7 @@ mixer source on
 < 0
 = vol 3f800000 state 1 rev 1 next 4 playing -1 int 0 cgc 8
 > int 255 1
-dm groove -1
+dm groove 255
 < 0
 = vol 3f800000 state 1 rev 1 next 4 playing -1 int 255 cgc 8
 > getid 3

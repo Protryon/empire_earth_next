@@ -28,6 +28,7 @@
 #include "lle/U2DPolygon.h"
 #include "lle/USingleton.h"
 
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
@@ -39,25 +40,15 @@
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIPathArea.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EECPILocation.h"
-#include "ee/EECPIntelligence.h"
-#include "ee/EECPAGTask.h"
-#include "ee/EECPAttackSubGroup.h"
-#include "ee/EECPAttackGroup.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EECPUnitRequirement.h"
-#include "ee/EECPCombatStrategy.h"
-#include "ee/EECPCivilizationManager.h"
+#include "ee/EECPPlacement.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
-#include "ee/EECPUnitManager.h"
-#include "ee/EECPUnitSelector.h"
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
-#include "ee/EECPMilitaryAidPackage.h"
-#include "ee/EEAIFOSubGroupFilter.h"
 #include <EEAIFunctionObjects.h>
 #include "ee/EEUnitSetManager.h"
 
-#include "ee/EECPExplorationManager.h"
 
 // The aircraft carrier gatherer's slots: the unit's first members (range start 0x29f57).
 // Adds a request's count to the requested total when its class is an aircraft carrier (naval building with air
@@ -234,7 +225,7 @@ long EEAIFOUnitsToKillScoringBase::GetCitizenSurplus(EEComputerPlayer* inPlayer,
     long theCount = 0;
     EECPUGatherCitizenUnitsCount theGatherer(inPlayer);
     long theMaximum = inPlayer->GetPopulationLimit(0);
-    inPlayer->mCivilizationManager->mUnitManager->GatherUnits(theGatherer);
+    EECPGatherUnits(inPlayer, theGatherer);
     if (theMaximum > 0) {
         float theMaximumF = (float)theMaximum;
         theRatio = (float)(theGatherer.mUnits + theGatherer.mRequested) / theMaximumF;
@@ -277,64 +268,7 @@ bool EECPUGatherCitizenUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<E
     return theResult;
 }
 
-// Records one available unit under its unit class, starting the class's count at 1 or incrementing it
-void EEAIFOPAvailablePersonnelGatherer::AddUnit(const std::pair<long, EEUnit*>& inUnit)
-{
-    std::map<long, std::pair<long, EEUnitClass*> >::iterator theIterator = this->mClasses.find(inUnit.first);
-    if (theIterator != this->mClasses.end())
-        theIterator->second.first++;
-    else
-        this->mClasses.insert(std::make_pair(inUnit.first, std::make_pair(1L, inUnit.second->mUnitClass)));
-}
-
-// Takes one available unit of the class (dropping the class at 0); returns the class, or 0 when none is
-long EEAIFOPAvailablePersonnelGatherer::TakeUnitClass(long inUnitClass)
-{
-    long theResult = 0;
-    std::map<long, std::pair<long, EEUnitClass*> >::iterator theIterator = this->mClasses.find(inUnitClass);
-    if (theIterator != this->mClasses.end()) {
-        theResult = theIterator->first;
-        theIterator->second.first--;
-        if (theIterator->second.first <= 0)
-            this->mClasses.erase(theIterator);
-    }
-    return theResult;
-}
-
-// Takes one available unit of the first class in the unit category; returns that class, or 0 when none matches
-long EEAIFOPAvailablePersonnelGatherer::TakeByCategory(long inCategory)
-{
-    std::map<long, std::pair<long, EEUnitClass*> >::iterator theIterator;
-    long theResult = 0;
-    for (theIterator = this->mClasses.begin(); theIterator != this->mClasses.end(); ++theIterator) {
-        if (theIterator->second.second == 0 || theIterator->second.second->mCategory != inCategory)
-            continue;
-        theResult = theIterator->first;
-        theIterator->second.first--;
-        if (theIterator->second.first <= 0)
-            this->mClasses.erase(theIterator);
-        break;
-    }
-    return theResult;
-}
-
-// Takes one available unit of the first class of the AI kind; returns that class, or 0 when none matches
-long EEAIFOPAvailablePersonnelGatherer::TakeByKind(long inKind)
-{
-    std::map<long, std::pair<long, EEUnitClass*> >::iterator theIterator;
-    long theResult = 0;
-    for (theIterator = this->mClasses.begin(); theIterator != this->mClasses.end(); ++theIterator) {
-        if (theIterator->second.second == 0 || theIterator->second.second->mAIKind != inKind)
-            continue;
-        theResult = theIterator->first;
-        theIterator->second.first--;
-        if (theIterator->second.first <= 0)
-            this->mClasses.erase(theIterator);
-        break;
-    }
-    return theResult;
-}
-
+// FUNCTION: EXE 0x42a5de
 // Orders unit class ids by epoch, latest first
 bool EEAIFOUnitClassGreater::operator()(const long& inA, const long& inB)
 {
@@ -342,61 +276,7 @@ bool EEAIFOUnitClassGreater::operator()(const long& inA, const long& inB)
     return theResult;
 }
 
-// Creates a sub group filter for a continent (0: any), allowing adjacent continents and packaged groups as asked
-EEAIFOSubGroupFilter::EEAIFOSubGroupFilter(unsigned short inContinent, bool inAllowAdjacent, bool inAllowPackaged)
-{
-    this->mAllowAdjacent = inAllowAdjacent;
-    this->mContinent = inContinent;
-    this->mAllowPackaged = inAllowPackaged;
-}
-
-// Returns whether an attack group has no continent
-bool EEAIFOSubGroupFilter::operator()(EECPAttackGroup* inGroup)
-{
-    return inGroup->mContinentID == 0;
-}
-
-// Accepts a non-empty sub group that is idle or defending, of an accepted kind, on (or next to) the continent,
-// and not in an aid package unless packaged groups are allowed
-bool EEAIFOSubGroupFilter::operator()(EECPAttackSubGroup* inGroup)
-{
-    bool theSkip = inGroup->GetNumUnits() <= 0 ||
-        (inGroup->mTask.mIsActive && ((inGroup->mTask.mMode != kAGModeDefense && inGroup->mTask.mMode != kAGModeNone) ||
-         inGroup->mTask.mType == kAGTaskTerritory || inGroup->VirtualBC()));
-    bool result;
-    if (theSkip)
-        result = false;
-    else {
-        result = this->mKinds.find(inGroup->GetKind()) != this->mKinds.end();
-        if (result && this->mContinent != 0) {
-            unsigned short id = inGroup->GetMainContinent();
-            result = this->mContinent == id;
-            if (!result && this->mAllowAdjacent)
-                result = gContinentManager.mTileFlags[this->mContinent * gContinentManager.mFlagsWidth + id];
-        }
-        if (result == true && !this->mAllowPackaged)
-            result = this->mSubGroupIDs.find(inGroup->GetID()) == this->mSubGroupIDs.end();
-    }
-    return result;
-}
-
-// Replaces the filter's aid packages with the map's non-null packages and collects their sub group ids
-void EEAIFOSubGroupFilter::SetPackages(std::map<long, EECPMilitaryAidPackage*>& inPackages)
-{
-    this->mPackages.clear();
-    this->mSubGroupIDs.clear();
-    std::map<long, EECPMilitaryAidPackage*>::iterator theIterator;
-    EECPMilitaryAidPackage* thePackage;
-    for (theIterator = inPackages.begin(); theIterator != inPackages.end(); ++theIterator) {
-        thePackage = theIterator->second;
-        if (thePackage == NULL)
-            continue;
-        this->mPackages.push_back(thePackage);
-        for (long i = thePackage->GetNumUnits() - 1; i >= 0; i--)
-            this->mSubGroupIDs.insert(thePackage->mSubGroupIDs[i]);
-    }
-}
-
+// FUNCTION: EXE 0x42a7d2
 // Accepts a moving, attacking, non-citizen class within the epoch span whose domain is allowed, whose tech is
 // live and whose builder is live or present, and which passes that domain's favourite-unit test
 bool EEAIFOFavoriteUnitScreener::Screen(EEUnitClass* inClass)
@@ -421,9 +301,7 @@ bool EEAIFOFavoriteUnitScreener::Screen(EEUnitClass* inClass)
                     if (theFirstNode) {
                         bool theAvailable = true;
                         if (theFirstNode->GetIsObsolete() || theFirstNode->mScenEditorObsoleted) {   // the builder node's flag (was the class node's)
-                            std::deque<EEComplexUnit*>* theUnits =
-                                this->mPlayer->mCivilizationManager->GetUnitManager()->GetUnits(theNode->GetUnitClass(0));
-                            if (theUnits == NULL || theUnits->size() <= 0)
+                            if (EECPCountOwn(this->mPlayer, theNode->GetUnitClass(0)) <= 0)
                                 theAvailable = false;
                         }
                         if (!theAvailable)
@@ -586,16 +464,14 @@ bool EEAIFOCurrentlyBuildableUnitScreener::Screen(EEUnitClass* inClass)
                 EETechTreeNode* theBuilderNode = this->GetPlayer()->GetTechTree()->Get(theBuilder->GetTechnology());
                 if (theBuilderNode) {
                     if (theBuilderNode->GetIsObsolete() || theBuilderNode->GetScenEditorObsoleted()) {   // the builder node's flag (was the class node's)
-                        std::deque<EEComplexUnit*>* theUnits =
-                            this->GetPlayer()->GetCivilizationManager()->GetUnitManager()->GetUnits(theNode->GetUnitClass(0));
-                        if (theUnits == NULL || theUnits->size() == 0) {
+                        if (EECPCountOwn(this->GetPlayer(), theNode->GetUnitClass(0)) == 0) {
                             theResult = false;
                             return theResult;
                         }
                     }
                     if ((inClass->GetDomains() & kMovementAir) && theBuilder->GetCategory() == kUnitCategoryNavalBuilding && theBuilder->GetAirTrafficType()) {
                         EECPUGatheAircraftCarriersCount theGatherer(this->GetPlayer());
-                        this->GetPlayer()->GetCivilizationManager()->GetUnitManager()->GatherUnits(theGatherer);
+                        EECPGatherUnits(this->GetPlayer(), theGatherer);
                         theResult = theGatherer.GetUnits() + theGatherer.GetRequested() != 0;
                         if (!theResult)
                             return theResult;
@@ -632,97 +508,10 @@ bool EEAIFOCurrentlyBuildableUnitScreener::Screen(EEUnitClass* inClass)
     return theResult;
 }
 
-// Accepts a buildable non-citizen class from the last two epochs that costs 1 population, can explore, heals
-// nothing and is no support, siege, building, hero or carrier kind
-bool EEAIFOAcceptableComputerPlayerExplorerUnitScreener::Screen(EEUnitClass* inClass)
-{
-    bool theResult = EEAIFOCurrentlyBuildableUnitScreener::Screen(inClass);
-    if (theResult) {
-        if (inClass->mCategory == kUnitCategoryLandCitizen || inClass->mCategory == kUnitCategoryNavalCitizen ||
-            inClass->mEpoch < this->mPlayer->GetTechTree()->mCurrentEpoch - 1 || inClass->GetPopulationCost() > 1 ||
-            inClass->FindAction(kActionFindUnexploredArea) == NULL)
-            theResult = false;
-        else {
-            theResult = !inClass->mHasCalamityPowers && inClass->mHealThreshold == 0.0f && !inClass->mIsMedic;
-            theResult &= inClass->mUnitType != 0x2f4;
-            if (theResult == true) {
-                switch (inClass->mAIKind) {
-                case kAIKindAntiTank:
-                case kAIKindSpecial:
-                case kAIKindFieldWeapon:
-                case kAIKindAntiAir:
-                case kAIKindBomber:
-                case kAIKindAircraftCarrier:
-                case kAIKindArtillery:
-                case kAIKindSiege:
-                case kAIKindFortification:
-                case kAIKindBuilding:
-                case kAIKindHero:
-                case kAIKindSpaceCarrier:
-                    theResult = false;
-                    break;
-                }
-            }
-        }
-    }
-    return theResult;
-}
+// SYNTHETIC: EXE 0x42b1a4
+// (EEAIFOBestRegionToAttack's scalar deleting destructor, shared with EEAIFOBestInfluenceRegionToAttack by ICF)
 
-// Orders EECPIntelligence's GetTargets list: higher score first, building-19 targets ahead; a building-19 and a
-// other target pair orders the building first (struct in ee/EECPIntelligence.h)
-bool EECPITargetScoreGreater::operator()(const std::pair<EEComplexUnit*, long>& inFirst,
-                                         const std::pair<EEComplexUnit*, long>& inSecond)
-{
-    long theFirstCategory = inFirst.first->GetUnitClass()->mCategory;
-    bool theResult;
-    if (inSecond.first->GetUnitClass()->mCategory != kUnitCategoryBuilding19)
-        theResult = theFirstCategory == kUnitCategoryBuilding19 || inFirst.second > inSecond.second;
-    else
-        theResult = theFirstCategory == kUnitCategoryBuilding19 && inFirst.second > inSecond.second;
-    return theResult;
-}
-
-// Creates a strike-location scorer for a sub group starting from the given tile
-EEAIFOBestRegionToAttack::EEAIFOBestRegionToAttack(EECPAttackSubGroup* inSubGroup, const EETileLocation& inTile)
-    : mSubGroup(inSubGroup)
-{
-    this->mTile = inTile;
-}
-
-// Creates the land strike-location scorer for a sub group starting from the given tile
-EEAIFOBestInfluenceRegionToAttack::EEAIFOBestInfluenceRegionToAttack(EECPAttackSubGroup* inSubGroup,
-    const EETileLocation& inTile)
-    : EEAIFOBestRegionToAttack(inSubGroup, inTile)
-{
-}
-
-// Scores every location 0
-float EEAIFOBestInfluenceRegionToAttack::operator()(const EECPILocation& inLocation)
-{
-    return 0.0f;
-}
-
-// (folded by ICF into 0x42b145) Scores every air strike location 0
-float EEAIFOBestInfluenceRegionToAirStrike::operator()(const EECPILocation& inLocation)
-{
-    return 0.0f;
-}
-
-// Creates the air strike scorer; a positive chance sets the strike count to chance * 10 (at least 1), else 1
-// strike at chance 0
-EEAIFOBestInfluenceRegionToAirStrike::EEAIFOBestInfluenceRegionToAirStrike(EECPAttackSubGroup* inSubGroup,
-    const EETileLocation& inTile, float inChance)
-    : EEAIFOBestRegionToAttack(inSubGroup, inTile), mChance(0.0f)
-{
-    this->mCount = 1;
-    if (!(inChance > 0.0f))
-        return;
-    this->mCount = (long)(inChance * 10.0f);
-    if (this->mCount == 0)
-        this->mCount = 1;
-    this->mChance = inChance;
-}
-
+// FUNCTION: EXE 0x42b1c1
 // Adds a request's count to the requested total for any non-null class; returns whether it counted
 bool EECPUMGatherUnitsScreenBase::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
 {
@@ -935,4 +724,56 @@ long EETechTreeNode::GetUnitClass(unsigned long inIndex)
     if (inIndex < this->mData->mUnitClasses.size())
         return this->mData->mUnitClasses[inIndex];
     return this->mData->mDefaultUnitClass;
+}
+
+// the unit manager's GatherUnits without the unit manager (stage 6): the player's units by class (each class's units in
+// the player's order), then what its land buildings make (one request each: the one being made and the queue)
+void EECPGatherUnits(EEComputerPlayer* inPlayer, EECPUMGatherUnitsScreenBase& ioGatherer)
+{
+    if (ioGatherer.mByClass) {
+        std::map<long, std::deque<EEComplexUnit*> > theUnits;
+        for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            EEComplexUnit* c = theUnit->mComplexUnit;
+            long theCategory = theUnit->mUnitClass->mCategory;
+            if (c == NULL || !(theUnit->mHitPoints > 0) || theCategory == kUnitCategoryProjectile || theCategory == kUnitCategoryBomb
+                || theCategory == kUnitCategoryMissile || theUnit->mUnitClass->mUnitType == kUnitTypePathPoint)
+                continue;
+            theUnits[theUnit->mUnitClass->mUnitType].push_back(c);
+        }
+        for (std::map<long, std::deque<EEComplexUnit*> >::iterator it = theUnits.begin(); it != theUnits.end(); ++it) {
+            if (!ioGatherer.mByUnit)
+                ioGatherer.CountUnits(gUnitClassTable[it->first], &it->second);
+            else
+                for (long i = (long)it->second.size() - 1; i >= 0; i--)
+                    ioGatherer.CountUnit(it->second[i]);
+        }
+    }
+    if (!ioGatherer.mRequests)
+        return;
+    EECPUMRequest theRequest;
+    theRequest.mContinent = 0;
+    theRequest.mTownID = 0;
+    theRequest.mUnitClass = 0;
+    theRequest.mCount = 0;
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        if (!theComplex || !theComplex->mUnitClass->IsLandBuilding())
+            continue;
+        EETechTreeNode* theNode;
+        long theClass;
+        if (theComplex->mCurrentResearch != kTechNone && (theNode = inPlayer->GetTechTree()->Get(theComplex->mCurrentResearch)) != NULL
+            && (theClass = theNode->mData->mUnitClass) > 0 && gUnitClassTable[theClass]) {
+            theRequest.mCount = 1;
+            theRequest.mUnitClass = theClass;
+            ioGatherer.CountRequest(gUnitClassTable[theClass], &theRequest);
+        }
+        for (long k = theComplex->GetBuildQueueSize() - 1; k >= 0; k--) {
+            theNode = inPlayer->GetTechTree()->Get(theComplex->mBuildQueue[k].mTechnology);
+            if (!theNode || !((theClass = theNode->mData->mUnitClass) > 0) || !gUnitClassTable[theClass])
+                continue;
+            theRequest.mCount = 1;
+            theRequest.mUnitClass = theClass;
+            ioGatherer.CountRequest(gUnitClassTable[theClass], &theRequest);
+        }
+    }
 }

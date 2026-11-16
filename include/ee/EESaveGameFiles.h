@@ -197,6 +197,13 @@ inline bool EESaveHasUnitsLuaState(unsigned long inMajorVersion, unsigned long i
 {
     return inMajorVersion > 0 || inMinorVersion >= 280;
 }
+// port: from 0.281 (the merge of main's stages 5 and 6: the C++ classic AI deleted) a computer player's block has no
+// manager timers or intelligence files (EESaveHasManagerTimers, EESaveHasIntelligence) and its next engine's state is
+// main's "EENS" version 6; EEComputerPlayer::Load refuses an older save
+inline bool EESaveHasLuaOnlyComputers(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 281;
+}
 class FSFile;
 void EESaveActiveGroups(FSFile& outFile);
 long EELoadActiveGroups(FSFile& inFile);   // the groups back at the loaded game's first tick (EEAfterLoad)
@@ -221,13 +228,6 @@ class EEUnit;
 EEComplexUnit* EEFindLoadedGhost(unsigned long inID);
 // the same for any unit, simple ones too (0.275: the goals' resources and targets out of the world)
 EEUnit* EEFindLoadedGhostUnit(unsigned long inID);
-// the units out of the world the computer players' gatherer lists still hold (EECPResourceManager::mGatherers). They
-// are saved as ghosts too (EEPWorldHelper's SaveGhosts) and put back in their lists as saved (EECPResourceManager::Load).
-// Before the port's fix in EECPCivilizationManager::UnitLost a lost unit of a citizen category but neither citizen type
-// (the fishing boats) stayed filed, dead, for the rest of the game: the 0.272 saves of such a build hold those boats
-// as ghosts and load them back. A fixed game's lists lose every unit the player loses, so it writes none of them; what
-// is left is a unit lost while the computer player is inactive (SetActive: UnitTaken skips the managers then)
-void EECPOutOfWorldGatherers(std::vector<EEComplexUnit*>& ioUnits);
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);

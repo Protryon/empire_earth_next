@@ -10,13 +10,13 @@ results.json and results.csv (one row per run and player). With --repeat 2 the r
   python -I tools/sim_bench.py --name base --seeds 2-7 --cheats none --personality balanced --jobs 2
   python -I tools/sim_bench.py --name floor --seeds 2,3 --vary aipersonalities.balanced.military.army_floor=0.1,0.2,0.3
   python -I tools/sim_bench.py --name det --seeds 2 --repeat 2
-  python -I tools/sim_bench.py --name eng --seeds 2-7 --engine "classic;boom,classic"   # the engine by seat
+  python -I tools/sim_bench.py --name eng --seeds 2-7 --engine "classic;classic,boom"   # the engine by seat
 
 --set DOC.KEY=VALUE applies to every run; each --vary DOC.KEY=V1,V2,... adds a dimension (one run per value).
 --env NAME=VALUE sets an environment variable for every run; each --env-vary NAME=V1,V2,... adds a dimension, e.g.
 --env-vary EE_AI_DEMAND=1/0,0/1 plays a per-player switch from both seats (the per-player sets of ee/EECPTrace.h).
 tools/ai_scorecard.py scores the result (wins, time to each epoch, economy and army over time).
---ai-scripts DIR plays the next engine's Lua scripts from DIR (EE_AI_SCRIPTS, e.g. ai: the checkout's); each run's
+--ai-scripts DIR plays the next engine's Lua scripts from DIR (EE_AI_SCRIPTS, e.g. data/ai: the checkout's); each run's
 script errors (EE-SIM's "SIM next.error" lines) are counted in lua_errors.
 --sim-arg passes an option to EE-SIM.exe as it is (e.g. --sim-arg=--lobby --sim-arg=181=#0).
 The games run below normal priority (Windows: BELOW_NORMAL_PRIORITY_CLASS; POSIX: nice 10), so that the windowed
@@ -124,6 +124,7 @@ def tree_hash(data):
     h = hashlib.sha256()
     meta = tree / "open_data.json"
     h.update(meta.read_bytes() if meta.exists() else b"-")
+    h.update(sim.overlay_hash(tree).encode())   # the stage's Data/ai and Data/db: this checkout's (sim.stage_tree)
     for sub in sorted((tree / "Data").iterdir()):
         h.update(f"{sub.name.lower()}\0".encode())
         h.update((folder_hash(sub, sub.name.lower() in ("ai", "db")) if sub.is_dir() else file_hash(sub)).encode())
@@ -231,6 +232,8 @@ def run_one(run, args, slots, out):
                 "--report", str(report), "--trace", str(trace), "--ai-trace", "--wall-timeout", str(args.wall_timeout)]
         if run["map"] != "-":
             opts += ["--map-type", run["map"]]
+        if args.start_epoch:
+            opts += ["--lobby", "183=" + args.start_epoch]   # the lobby's starting epoch (late-start benches)
         if run["cheats"] != "-":
             opts += ["--cheats", run["cheats"]]
         if run["personality"] != "-":
@@ -355,10 +358,13 @@ def main():
     ap.add_argument("--ai", default="2")
     ap.add_argument("--cheats", default="none", help="EE_AI_CHEATS sets, comma separated (- unset: all)")
     ap.add_argument("--personality", default="balanced", help="EE_AI_PERSONALITY values, ';' between variants")
-    ap.add_argument("--engine", default="-", help="EE-SIM --engine values (classic, random, an AI id from Data/ai/ais.json "
-                                                  "such as boom, or next: its first AI; ',' by seat), "
-                                                  "';' between variants (- the lobby's classic)")
+    ap.add_argument("--engine", default="-", help="EE-SIM --engine values (classic: the manifest's classic AI, "
+                                                  "classic_lua; random; an AI id from "
+                                                  "Data/ai/ais.json such as boom; or next: its first AI; ',' by seat), "
+                                                  "';' between variants (- the lobby's Classic)")
     ap.add_argument("--set", action="append", default=[], help="DOC.KEY=VALUE for every run")
+    ap.add_argument("--start-epoch", default="", help="the lobby's starting epoch line (e.g. 'Copper Age'); "
+                    "late-start benches (AI_RESEARCH 8.69)")
     ap.add_argument("--vary", action="append", default=[], help="DOC.KEY=V1,V2,...: one dimension")
     ap.add_argument("--env", action="append", default=[], help="NAME=VALUE for every run")
     ap.add_argument("--env-vary", action="append", default=[], help="NAME=V1,V2,...: one dimension")
