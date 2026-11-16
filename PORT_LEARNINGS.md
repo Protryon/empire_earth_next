@@ -24857,3 +24857,60 @@ counted as savings): `build/wn27/measure.sh`.
 | `build.py --test-profile windowed-software` | (with the merge) | 0 / 0 |
 | `xbuild.py wontest` | the programs linking the changed units: exit 0 | all 128 programs exit 0 |
 | `lan_game.py` (harness lock) | (with the merge) | `RESULT PASS lan-game PT host=3639 joiner=3639` |
+
+## R6: WON's Internet code, round 28 (GameSpySupport and the GameSpy SDK whole in Rust; test-only headers; WONCrypt header-only)
+
+Branch `rust-won-net28`. Measured by net C++ over src + include (without include/rust) against 0cd8d3cd (the address
+markers were already stripped on both sides): `git diff --numstat 0cd8d3cd -- src include ':!include/rust'`.
+
+- **The measure first.** What round 27 left, per move (C++ lines freed): GameSpySupport and the GameSpy SDK it sits
+  on (GameSpySupport.cpp 363, gqueryreporting.c 721, nonport.c 619, their headers 369 + 165, the class header 107:
+  about 2,300, unlinked: WON SDK code the original exe did not contain); the six headers only the drivers include
+  (345); WONCrypt's three units of forwarders (131 net, header-only); ServerOp.cpp's `HostCall` onto the core table
+  (its nine cases need four new C++ makers in AsyncOp.cpp's table: a `BlockingSocket`, four more socket op classes, a
+  `PeerAuthOp` shell, the crypt transform on a socket; about 25 net); IPAddr and StringUtil inline (their homes are
+  EEWonNet.h, which 293 game units include: an inline forwarder there needs rust/ee_won.h in all of them; not
+  taken); MiscUtil (`Browse` is also declared non-inline by the lobby lane's WONLobbyImageButton.h: not taken). This
+  round took the first three.
+- **GameSpy (gamespy.rs).** The SDK (`gqueryreporting.c`): the query socket, the eight query types, the replies cut
+  into packets under 1,400 bytes (`buffer_send`'s 1,350 rule and its cut before the last key, a single key too big
+  dropped), the `\queryid\N.M` numbering, `\final\`, the `\secure\` answer (`gs_encrypt`'s stream, `gs_encode`'s
+  base64 without padding; a challenge over 128 bytes sends nothing at all), the heartbeats (the first pump, every
+  30 s until the first query ten times at most, else 5 minutes, a clock that went back, `\statechanged\`), and its
+  process statics as statics: `qr_hostname`, `hbaddr` (the last `qr_init`'s), `current_rec` (a record is an `Arc`; a
+  `NULL` record argument is the current one, so an instance whose start-up failed pumps the last one started, as the
+  original did). nonport.c: the tick clock, msleep, the socket start and end, blocking mode and Nagle, the minimal
+  standard random numbers (`nextlongrand` over 32-bit `unsigned long`s), `GenerateID` and `GOAGetUniqueID` on the Rust
+  RegKey (config.yaml, the round 27 rule); its console and Mac branches (`__KATANA__`, `UNDER_CE`, `_MACOS`,
+  `__mips64`) were never compiled for a platform the game runs on and `SetReceiveBufferSize` has no platform call:
+  not ported. GameSpySupport: the four maps, `DumpKeyValueMapToBuffer`'s gaps, the start-up (the original switch had
+  no `break`: every SDK error is `WS_GameSpySupport_UnhandledError`), the auto pump (a C++ `AsyncOp` timer through the
+  core table, its completion an `EeWonCompletion` holding the shim), the hourly `/GameSpy` lookup (a Rust request op
+  wrapped by a new maker, `ee_won_core_set_new_host_op`, which ServerOp.cpp sets at start-up: a program without the
+  class has none), `LockKeyValues` across calls (`ReLock::enter` / `leave`), the shutdown's `exiting`.
+- **The original no longer compiled** (`mCompletion =` and `->mKilled` on an AsyncOp whose state is Rust's): the
+  recording used a scratch copy with `SetCompletion(...)` and `IsKilled()` (build/wn28/make_orig.py), the SDK's .c
+  files compiled as C next to their headers.
+- **Golden.** `won_gamespy_test` over 127.0.0.1 (a master server stand-in on 27900, a client socket): the maps, every
+  query type, echo, validation, NULs in a query, the 128/129-byte challenges, a 255-byte query, two datagrams in one
+  pump, packets, a key too big, the dump's last byte, a reply of exactly 1,350 bytes, the auto pump, a second
+  instance on the next port, a failed start-up pumping the current record, shutdowns; recorded over the original
+  units (build/wn28/record_orig.py puts the original headers back for the build), three runs the same, 77 lines:
+  `golden_gamespy.txt`. The driver's first version read an erase's result twice in one `+` chain: the order of the
+  operands is the compiler's (clang-cl evaluated right to left); each call is its own statement now.
+- **Mutations** (6, each a driver run, the file restored): the split limit 1,351 (missed by the first golden: no
+  reply landed on 1,350 bytes; the case was added and the golden re-recorded), a failed start-up's error the SDK's,
+  no current record for a failed start-up, a 129-byte challenge validated, no state-change heartbeat: caught; the
+  dump's `<` as `<=`: equivalent (the bound check that keeps the dump inside its buffer refuses the same pair).
+- **Behaviour** (undefined paths only): a map dump never writes past its buffer, an empty secret key is one NUL
+  byte (a division by zero), a pump before `Startup` pumps nothing (an uninitialised record), `mStateChanged` starts
+  false, long names are kept whole (they overflowed fixed arrays), a record's socket closes with its last holder
+  (never, in the original), a callback whose instance is gone answers an empty dump. Reach: nothing in the game.
+- **The test-only headers** (WONHttpMsg.h, WONDirExtended.h, WONMiscOpsMsg.h, WONRegAuth.h, WONMD5.h,
+  WONLittleEndian.h) are tests/won's (`won_http_glue.h` and the like); URL.cpp keeps the one sink it used.
+- **WONCrypt** (Blowfish, ElGamal, MD5Digest) header-only; `link/won/units.txt` names the units the build stages:
+  a deleted unit must leave it too ("won: unit ... does not exist" stops the build before compiling).
+- **Not done:** ServerOp.cpp's `HostCall` onto the core table and the three drivers on the real PeerAuthOp: the
+  drivers' stand-ins need only RustServerOp's constructor, destructor and three hooks, which can stay in a small
+  ServerOp.cpp, and the nine cases free about 25 lines net once the C++ makers they need are counted; the crypt
+  transform as a Rust variant needs C++ helpers for the `ByteBufferPtr*` it replaces (no net saving).
