@@ -37,7 +37,7 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEACenterCamera.h"
+#include "ee/EEARust.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETSTrigger.h"
 #include "ee/EESETSCondition.h"

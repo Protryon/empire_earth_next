@@ -80,7 +80,7 @@
 #include "ee/EECivilization.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEAction.h"
-#include "ee/EEAResetAllPlayerInfo.h"
+#include "ee/EEARust.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEPhysics.h"
 #include "ee/EECivilizationBuilder.h"

@@ -1,7 +1,16 @@
 use super::*;
-use crate::hud_ctl::replay::{cases, f, flag, hex_f, Replay};
+use crate::hud_ctl::replay::{cases, editor_cases, f, flag, hex_f, Case, Replay};
 
 fn digest(r: &EeScreensCommandUnitsFields) -> String {
+    let base = digest_base(r);
+    if r.mEditor {
+        format!("{base} 1")
+    } else {
+        base
+    }
+}
+
+fn digest_base(r: &EeScreensCommandUnitsFields) -> String {
     format!(
         "{} {} {} {} {} {} {} {} {} {}",
         f(r.mDownLocation.x),
@@ -28,6 +37,8 @@ fn load(s: &str) -> EeScreensCommandUnitsFields {
         mCanFace: v[7] == "1",
         mHasFacing: v[8] == "1",
         mDrawnHasFacing: v[9] == "1",
+        // (the editor's golden: its flag after the original's ten)
+        mEditor: v.get(10) == Some(&"1"),
     }
 }
 
@@ -35,9 +46,21 @@ fn load(s: &str) -> EeScreensCommandUnitsFields {
 fn replays_the_golden() {
     let all = cases(3);
     assert!(all.len() > 50, "{} command cases", all.len());
+    assert!(replay(&all, false) > 300);
+}
+
+#[test]
+fn replays_the_editors_golden() {
+    let all = editor_cases(4);
+    assert!(all.len() > 50, "{} editor command cases", all.len());
+    assert!(replay(&all, true) > 300);
+}
+
+/// The cases replayed (`editor`: the scenario editor's control) -> the calls.
+fn replay(all: &[Case], editor: bool) -> usize {
     let mut calls = 0;
     for (n, case) in all.iter().enumerate() {
-        let mut fields = EeScreensCommandUnitsFields::default();
+        let mut fields = EeScreensCommandUnitsFields { mEditor: editor, ..Default::default() };
         init(&unsafe { Rec::new(&mut fields) });
         assert_eq!(digest(&fields), case.init.record, "case {n} init");
         for (i, call) in case.calls.iter().enumerate() {
@@ -68,7 +91,7 @@ fn replays_the_golden() {
             calls += 1;
         }
     }
-    assert!(calls > 300);
+    calls
 }
 
 /// The categories that take a facing: a lone citizen does, a lone building does not.

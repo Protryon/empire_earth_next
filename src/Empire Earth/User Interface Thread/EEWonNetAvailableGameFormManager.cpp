@@ -70,7 +70,7 @@
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEAction.h"
-#include "ee/EEARemovePlayer.h"
+#include "ee/EEARust.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEWonNetAvailableGameFormManager.h"

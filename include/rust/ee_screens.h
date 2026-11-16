@@ -938,6 +938,18 @@ constexpr static const uint32_t EE_SCREENS_CU_GROUP_COUNT = 75;
 /// (i) -> the group's unit i's class's category.
 constexpr static const uint32_t EE_SCREENS_CU_CATEGORY = 76;
 
+/// The editor's: its rotation action posted with the facing f[0] (`EESEARotateUnits::Rotate`).
+constexpr static const uint32_t EE_SCREENS_CU_ROTATE = 77;
+
+/// The editor's: -> the unit under the mouse (`EEUnit*`, referenced; 0 for none).
+constexpr static const uint32_t EE_SCREENS_CU_PICK = 78;
+
+/// The editor's: (unit) its deletion (`EESEADeleteUnit` of its id: posted when it exists).
+constexpr static const uint32_t EE_SCREENS_CU_DELETE = 79;
+
+/// The editor's: (unit) released.
+constexpr static const uint32_t EE_SCREENS_CU_UNIT_RELEASE = 82;
+
 /// `ee_screens_command_units`' members (`hud_ctl_ffi.rs`).
 constexpr static const uint32_t EE_SCREENS_CU_DO_INIT = 0;
 
@@ -4363,6 +4375,689 @@ constexpr static const uint32_t EE_SCREENS_FRAME_CELL_SIDE = 3;
 /// No reorder of the texture coordinates.
 constexpr static const uint32_t EE_SCREENS_FRAME_KEEP = 256;
 
+constexpr static const uint32_t EE_SCREENS_GA_CHAT = 1;
+
+constexpr static const uint32_t EE_SCREENS_GA_BOOT = 2;
+
+constexpr static const uint32_t EE_SCREENS_GA_BUILD = 3;
+
+constexpr static const uint32_t EE_SCREENS_GA_CALAMITY = 4;
+
+constexpr static const uint32_t EE_SCREENS_GA_CENTER_CAMERA = 5;
+
+constexpr static const uint32_t EE_SCREENS_GA_JOIN = 6;
+
+constexpr static const uint32_t EE_SCREENS_GA_LASSO = 7;
+
+constexpr static const uint32_t EE_SCREENS_GA_MINI_MAP = 8;
+
+constexpr static const uint32_t EE_SCREENS_GA_MOUSE_CLICK = 9;
+
+constexpr static const uint32_t EE_SCREENS_GA_PLAYER_EVENT = 10;
+
+constexpr static const uint32_t EE_SCREENS_GA_REMOVE_PLAYER = 11;
+
+constexpr static const uint32_t EE_SCREENS_GA_RESET_PLAYERS = 12;
+
+constexpr static const uint32_t EE_SCREENS_GA_SAVE_GAME = 13;
+
+constexpr static const uint32_t EE_SCREENS_GA_SCROLL = 14;
+
+constexpr static const uint32_t EE_SCREENS_GA_MIGRATION = 15;
+
+constexpr static const uint32_t EE_SCREENS_GA_UPGRADE = 16;
+
+constexpr static const uint32_t EE_SCREENS_GA_PAUSE = 17;
+
+constexpr static const uint32_t EE_SCREENS_GA_QUICK = 18;
+
+constexpr static const uint32_t EE_SCREENS_GA_EDITOR_QUICK = 19;
+
+/// `EESEAMouseClick`: the editor's click (its message applied to the editor's selection; `Execute` a deselection).
+constexpr static const uint32_t EE_SCREENS_GA_EDITOR_CLICK = 20;
+
+/// `EESEALasso`: the editor's lasso (its message applied; `SelectInRectangle` a deselection).
+constexpr static const uint32_t EE_SCREENS_GA_EDITOR_LASSO = 21;
+
+/// `EESETSAMouseClick`: the editor's click, then the trigger tab's object screen refreshed.
+constexpr static const uint32_t EE_SCREENS_GA_TRIGGER_CLICK = 22;
+
+/// `EESETSALasso`: the editor's lasso, then the trigger tab's object screen refreshed.
+constexpr static const uint32_t EE_SCREENS_GA_TRIGGER_LASSO = 23;
+
+/// `EESEAChangeLoadText`: the editor form's load text set to `mText`.
+constexpr static const uint32_t EE_SCREENS_GA_LOAD_TEXT = 24;
+
+/// `EESEAPaintRust`: the paints (`mPaint`).
+constexpr static const uint32_t EE_SCREENS_GA_EDITOR_PAINT = 25;
+
+/// `EESEARust`: the editor's whole actions (`mAction`).
+constexpr static const uint32_t EE_SCREENS_GA_EDITOR_WHOLE = 26;
+
+constexpr static const uint32_t EE_SCREENS_GA_VALUE_INT = 0;
+
+constexpr static const uint32_t EE_SCREENS_GA_VALUE_FLOAT = 1;
+
+constexpr static const uint32_t EE_SCREENS_GA_VALUE_POINT = 2;
+
+/// `PostAction(this)`.
+constexpr static const uint32_t EE_SCREENS_GA_OP_POST = 1;
+
+/// `gCommunications->ProcessLocalUserInput(p, kSlotNone)`.
+constexpr static const uint32_t EE_SCREENS_GA_OP_SEND = 2;
+
+/// The message `p` dereferenced.
+constexpr static const uint32_t EE_SCREENS_GA_OP_MESSAGE_RELEASE = 3;
+
+/// A selection message (`EENewSelectUnits`) over the rectangle `p` (`GERectangle*`): i0 its type (0x4e select,
+/// 0x4f add, 0x50 add and remove), i1 the unit type; answers the message.
+constexpr static const uint32_t EE_SCREENS_GA_OP_SELECT_UNITS = 4;
+
+/// `EEUnitClassCount()`.
+constexpr static const uint32_t EE_SCREENS_GA_OP_CLASS_COUNT = 5;
+
+/// The current player's saved group 0x15 reset (`mSavedGroups.Reset(0x15, 1)`).
+constexpr static const uint32_t EE_SCREENS_GA_OP_SAVED_GROUP_RESET = 6;
+
+/// The mouse's position into f0, f1.
+constexpr static const uint32_t EE_SCREENS_GA_OP_MOUSE = 7;
+
+/// Whether the mouse is frozen.
+constexpr static const uint32_t EE_SCREENS_GA_OP_MOUSE_FROZEN = 8;
+
+/// `gUnitPicker.PickUnit((f0, f1), i0)`: the unit (referenced) or 0.
+constexpr static const uint32_t EE_SCREENS_GA_OP_PICK = 9;
+
+/// The unit `p` referenced / dereferenced.
+constexpr static const uint32_t EE_SCREENS_GA_OP_UNIT_REFERENCE = 10;
+
+constexpr static const uint32_t EE_SCREENS_GA_OP_UNIT_RELEASE = 11;
+
+/// A unit's member (i0 `EE_SCREENS_GA_U_*`; i1 set: `p` is an `EEComplexUnit*`, else an `EEUnit*`).
+constexpr static const uint32_t EE_SCREENS_GA_OP_UNIT = 12;
+
+/// A unit's class's member (`p` an `EEUnit*` or, with i1, an `EEComplexUnit*`; i0 `EE_SCREENS_GA_C_*`).
+constexpr static const uint32_t EE_SCREENS_GA_OP_CLASS = 13;
+
+/// The current player's selected group (i0 `EE_SCREENS_GA_G_*`, i1 and `p` the arguments).
+constexpr static const uint32_t EE_SCREENS_GA_OP_GROUP = 14;
+
+/// The current player (i0 `EE_SCREENS_GA_P_*`, i1 the argument).
+constexpr static const uint32_t EE_SCREENS_GA_OP_PLAYER = 15;
+
+/// `EEGetFirstSelectedUnit(i0)`: i0 in and out (an `EEComplexUnit*`).
+constexpr static const uint32_t EE_SCREENS_GA_OP_FIRST_SELECTED = 16;
+
+/// `EEPointUnitOrTileXY((f0, f1), i1, i2, i3, i0)`: the tile, x and y in and out.
+constexpr static const uint32_t EE_SCREENS_GA_OP_POINT_TILE = 17;
+
+/// A tile's (`p`, an `EETile*`) member (i0 `EE_SCREENS_GA_T_*`, i1 the index).
+constexpr static const uint32_t EE_SCREENS_GA_OP_TILE = 18;
+
+/// `p->CanGather(i0, tile x, tile y, false, false)` (`p` an `EEComplexUnit*`, i0 an `EEUnit*`).
+constexpr static const uint32_t EE_SCREENS_GA_OP_CAN_GATHER = 19;
+
+/// `EEGetFarmDropSites(p)` (an `EEComplexUnit*`): the count; i0 the first one's id.
+constexpr static const uint32_t EE_SCREENS_GA_OP_FARM_DROP_SITES = 20;
+
+/// `EECanHeal(p, i0)` (two `EEComplexUnit*`).
+constexpr static const uint32_t EE_SCREENS_GA_OP_CAN_HEAL = 21;
+
+/// The map (i0 `EE_SCREENS_GA_M_*`).
+constexpr static const uint32_t EE_SCREENS_GA_OP_MAP = 22;
+
+/// The click's confirmation effect: on `p` (or none) at (f0, f1, f2), graphic effect i0, the player i1's.
+constexpr static const uint32_t EE_SCREENS_GA_OP_EFFECT = 23;
+
+/// `gWorld.GetUnit(i0)`.
+constexpr static const uint32_t EE_SCREENS_GA_OP_WORLD_UNIT = 24;
+
+/// The technologies (i0 `EE_SCREENS_GA_K_*`).
+constexpr static const uint32_t EE_SCREENS_GA_OP_TECH = 25;
+
+/// The calamities (i0 `EE_SCREENS_GA_A_*`).
+constexpr static const uint32_t EE_SCREENS_GA_OP_CALAMITY = 26;
+
+/// The camera (i0 `EE_SCREENS_GA_CAM_*`).
+constexpr static const uint32_t EE_SCREENS_GA_OP_CAMERA = 27;
+
+/// The mini map (i0 `EE_SCREENS_GA_MM_*`).
+constexpr static const uint32_t EE_SCREENS_GA_OP_MINI_MAP = 28;
+
+/// The edge scroll (i0 `EE_SCREENS_GA_S_*`).
+constexpr static const uint32_t EE_SCREENS_GA_OP_SCROLL = 29;
+
+/// The screens, the lobby and the network (i0 `EE_SCREENS_GA_N_*`, i1.. the arguments).
+constexpr static const uint32_t EE_SCREENS_GA_OP_NET = 30;
+
+/// The scenario editor and the saved games (i0 `EE_SCREENS_GA_E_*`, i1.. the arguments).
+constexpr static const uint32_t EE_SCREENS_GA_OP_EDITOR = 31;
+
+/// -> the action itself (its `EEAction*`: the editor's selection posts it).
+constexpr static const uint32_t EE_SCREENS_GA_OP_ACTION = 32;
+
+constexpr static const int64_t EE_SCREENS_GA_U_ID = 0;
+
+constexpr static const int64_t EE_SCREENS_GA_U_PLAYER_ID = 1;
+
+constexpr static const int64_t EE_SCREENS_GA_U_PLAYER = 2;
+
+constexpr static const int64_t EE_SCREENS_GA_U_COMPLEX = 3;
+
+constexpr static const int64_t EE_SCREENS_GA_U_TILE_NODE = 4;
+
+constexpr static const int64_t EE_SCREENS_GA_U_TILE_X = 5;
+
+constexpr static const int64_t EE_SCREENS_GA_U_TILE_Y = 6;
+
+constexpr static const int64_t EE_SCREENS_GA_U_HIT_POINTS = 7;
+
+constexpr static const int64_t EE_SCREENS_GA_U_MAX_HIT_POINTS = 8;
+
+constexpr static const int64_t EE_SCREENS_GA_U_RESOURCE_TYPE = 9;
+
+constexpr static const int64_t EE_SCREENS_GA_U_RESOURCE_AMOUNT = 10;
+
+/// `EEHerd::IsAnimalOnMap` of its complex unit.
+constexpr static const int64_t EE_SCREENS_GA_U_ANIMAL_ON_MAP = 11;
+
+/// Its complex unit's `GetIsDisabled`, `IsProtected`, `mIsBuilt`.
+constexpr static const int64_t EE_SCREENS_GA_U_DISABLED = 12;
+
+constexpr static const int64_t EE_SCREENS_GA_U_PROTECTED = 13;
+
+constexpr static const int64_t EE_SCREENS_GA_U_BUILT = 14;
+
+/// `EEIsSeenBy(unit, the current player, true)`, `EEIsFootprintVisibleTo(unit, the current player)`.
+constexpr static const int64_t EE_SCREENS_GA_U_SEEN = 15;
+
+constexpr static const int64_t EE_SCREENS_GA_U_FOOTPRINT_VISIBLE = 16;
+
+/// Its tile (`GetRTSTile`).
+constexpr static const int64_t EE_SCREENS_GA_U_TILE = 17;
+
+/// Its complex unit's location's x and y (f0, f1).
+constexpr static const int64_t EE_SCREENS_GA_U_LOCATION = 18;
+
+/// `GetClass()` (the pointer, compared).
+constexpr static const int64_t EE_SCREENS_GA_U_CLASS_PTR = 19;
+
+/// A complex unit's container (`mContainer`).
+constexpr static const int64_t EE_SCREENS_GA_U_CONTAINER = 20;
+
+/// Its tile's height (`mTile->mHeight`, f0).
+constexpr static const int64_t EE_SCREENS_GA_U_TILE_HEIGHT = 21;
+
+/// The improvement's level of its stats (i1 the improvement).
+constexpr static const int64_t EE_SCREENS_GA_U_IMPROVEMENT_LEVEL = 22;
+
+/// `EEUnitHandleID(unit)`.
+constexpr static const int64_t EE_SCREENS_GA_U_HANDLE = 23;
+
+/// `EEUnitHandleResolve(i1)` (the unit or 0).
+constexpr static const int64_t EE_SCREENS_GA_U_RESOLVE = 24;
+
+/// Its complex unit's location's `GetPosition` (f0, f1, f2).
+constexpr static const int64_t EE_SCREENS_GA_U_POSITION = 25;
+
+constexpr static const int64_t EE_SCREENS_GA_C_TYPE = 0;
+
+constexpr static const int64_t EE_SCREENS_GA_C_CATEGORY = 1;
+
+constexpr static const int64_t EE_SCREENS_GA_C_FAMILY = 2;
+
+constexpr static const int64_t EE_SCREENS_GA_C_ANIMAL_ID = 3;
+
+constexpr static const int64_t EE_SCREENS_GA_C_AIR_TRAFFIC = 4;
+
+constexpr static const int64_t EE_SCREENS_GA_C_CAN_RALLY = 5;
+
+constexpr static const int64_t EE_SCREENS_GA_C_TOWER = 6;
+
+constexpr static const int64_t EE_SCREENS_GA_C_TREE = 7;
+
+constexpr static const int64_t EE_SCREENS_GA_C_LAND_BUILDING = 8;
+
+constexpr static const int64_t EE_SCREENS_GA_C_DROP_SITE = 9;
+
+constexpr static const int64_t EE_SCREENS_GA_C_TRANSPORT = 10;
+
+constexpr static const int64_t EE_SCREENS_GA_C_AIR_BASE = 11;
+
+constexpr static const int64_t EE_SCREENS_GA_C_MEDIC = 12;
+
+/// `EEUUGetIsUnitClassTargetable(NULL, class)`.
+constexpr static const int64_t EE_SCREENS_GA_C_TARGETABLE = 13;
+
+constexpr static const int64_t EE_SCREENS_GA_G_COUNT = 0;
+
+constexpr static const int64_t EE_SCREENS_GA_G_KIND_FLAGS = 1;
+
+constexpr static const int64_t EE_SCREENS_GA_G_COUNT_KIND = 2;
+
+constexpr static const int64_t EE_SCREENS_GA_G_UNIT = 3;
+
+constexpr static const int64_t EE_SCREENS_GA_G_TYPE_COUNT = 4;
+
+constexpr static const int64_t EE_SCREENS_GA_G_FIND_CATEGORY = 5;
+
+constexpr static const int64_t EE_SCREENS_GA_G_FIND_FLAGS = 6;
+
+constexpr static const int64_t EE_SCREENS_GA_G_CONTAINS = 7;
+
+/// `GetFlags().mFlags[kAITileForest]`.
+constexpr static const int64_t EE_SCREENS_GA_G_FOREST = 8;
+
+/// The bounds' centre (f0, f1).
+constexpr static const int64_t EE_SCREENS_GA_G_CENTER = 9;
+
+/// `GetFirstUnit()->GetUnitID()`.
+constexpr static const int64_t EE_SCREENS_GA_G_FIRST_ID = 10;
+
+/// The active group's count and unit i1.
+constexpr static const int64_t EE_SCREENS_GA_G_ACTIVE_COUNT = 11;
+
+constexpr static const int64_t EE_SCREENS_GA_G_ACTIVE_UNIT = 12;
+
+constexpr static const int64_t EE_SCREENS_GA_P_PTR = 0;
+
+constexpr static const int64_t EE_SCREENS_GA_P_ID = 1;
+
+constexpr static const int64_t EE_SCREENS_GA_P_ENEMY = 2;
+
+/// `gWorld.mPlayers[gWorld.mCurrentPlayer]->mPlayerID`.
+constexpr static const int64_t EE_SCREENS_GA_P_CURRENT_ID = 3;
+
+/// `mEvents.GetNextEvent()`: whether there is one; its source in i0, i1.
+constexpr static const int64_t EE_SCREENS_GA_P_NEXT_EVENT = 4;
+
+constexpr static const int64_t EE_SCREENS_GA_T_DOPPEL_COUNT = 0;
+
+constexpr static const int64_t EE_SCREENS_GA_T_DOPPEL_PLAYER = 1;
+
+constexpr static const int64_t EE_SCREENS_GA_T_DOPPEL_UNIT = 2;
+
+/// `IsVisibleTo(the current player)`.
+constexpr static const int64_t EE_SCREENS_GA_T_VISIBLE = 3;
+
+/// The unit of its i1-th unit node (0 past the last).
+constexpr static const int64_t EE_SCREENS_GA_T_UNIT_AT = 4;
+
+/// `mTerrainMesh.GetIsValidTile((unsigned long)i1, (unsigned long)i2)`.
+constexpr static const int64_t EE_SCREENS_GA_M_VALID_TILE = 0;
+
+/// `mTerrainMesh.GetMeshZ(f0, f1)` into f0.
+constexpr static const int64_t EE_SCREENS_GA_M_MESH_Z = 1;
+
+/// `GetTile(i1, i2)` exists; its height into f0.
+constexpr static const int64_t EE_SCREENS_GA_M_TILE = 2;
+
+/// `GetClosestTile((f0, f1, 0))` into i0, i1.
+constexpr static const int64_t EE_SCREENS_GA_M_CLOSEST = 3;
+
+/// The mesh's left, right, front, back plane (i1 0..3) into f0..f5 (point, normal).
+constexpr static const int64_t EE_SCREENS_GA_M_PLANE = 4;
+
+/// `gWorld.mMap` is set.
+constexpr static const int64_t EE_SCREENS_GA_M_EXISTS = 5;
+
+/// `CanProduce(i1, 0x20, 1, true, 3, NULL)` of the current player.
+constexpr static const int64_t EE_SCREENS_GA_K_CAN_PRODUCE = 0;
+
+/// The tile size of technology i1's unit class (-1: no class).
+constexpr static const int64_t EE_SCREENS_GA_K_TILE_SIZE = 1;
+
+/// The current player's technology i1's node contains unit type i2.
+constexpr static const int64_t EE_SCREENS_GA_K_NODE_CONTAINS = 2;
+
+/// `ScreenToWorld((f0, f1))` through a copy of the world's transformation, into f0..f2.
+constexpr static const int64_t EE_SCREENS_GA_A_WORLD_POINT = 0;
+
+/// `GetDefaultTarget((f0, f1, f2), i1, i2, i3)` (the point written back).
+constexpr static const int64_t EE_SCREENS_GA_A_DEFAULT_TARGET = 1;
+
+/// `EEOrderAtCursor((f0, f1), i1)`.
+constexpr static const int64_t EE_SCREENS_GA_A_ORDER_AT_CURSOR = 2;
+
+/// `CanCastAt(i1, (f0, f1, f2), i2, i3, i4, i5)` (the point written back).
+constexpr static const int64_t EE_SCREENS_GA_A_CAN_CAST = 3;
+
+/// `SetLocation((f0, f1, f2), false, true)`.
+constexpr static const int64_t EE_SCREENS_GA_CAM_SET_LOCATION = 0;
+
+/// `SetZoom(GetZoom())`.
+constexpr static const int64_t EE_SCREENS_GA_CAM_KEEP_ZOOM = 1;
+
+constexpr static const int64_t EE_SCREENS_GA_CAM_CHANGED = 2;
+
+/// The camera object `p` (an `EEUnit*`) followed: zoom 0, mode 3, `MoveTo`, changed, `Update(0)`, mode 2.
+constexpr static const int64_t EE_SCREENS_GA_CAM_FOLLOW = 3;
+
+/// `mZoom` into f0.
+constexpr static const int64_t EE_SCREENS_GA_CAM_ZOOM = 4;
+
+/// `Scroll(f0, f1)`.
+constexpr static const int64_t EE_SCREENS_GA_CAM_SCROLL = 5;
+
+/// `gCameraFollowing = false`.
+constexpr static const int64_t EE_SCREENS_GA_CAM_FOLLOWING_OFF = 6;
+
+/// `gMiniMapTransformation.Apply(mPoint)` into f0, f1.
+constexpr static const int64_t EE_SCREENS_GA_MM_APPLY = 0;
+
+constexpr static const int64_t EE_SCREENS_GA_MM_REFRESH = 1;
+
+/// The side scroll speed setting into f0.
+constexpr static const int64_t EE_SCREENS_GA_S_SPEED = 0;
+
+/// `mEdges`' left, top, right, bottom into f0..f3.
+constexpr static const int64_t EE_SCREENS_GA_S_EDGES = 1;
+
+constexpr static const int64_t EE_SCREENS_GA_S_POLL_RUNNING = 2;
+
+constexpr static const int64_t EE_SCREENS_GA_S_POLL = 3;
+
+constexpr static const int64_t EE_SCREENS_GA_S_POLL_START = 4;
+
+constexpr static const int64_t EE_SCREENS_GA_S_POLL_STOP = 5;
+
+/// The lobby is the current form.
+constexpr static const int64_t EE_SCREENS_GA_N_LOBBY_CURRENT = 0;
+
+/// The lobby's chat box: whether it has a scroll bar; its slider's maximum and current value into i0, i1.
+constexpr static const int64_t EE_SCREENS_GA_N_CHAT_SCROLL = 1;
+
+/// `mText` appended to the chat box.
+constexpr static const int64_t EE_SCREENS_GA_N_CHAT_APPEND = 2;
+
+/// The chat box scrolled to its slider's maximum, when it has a scroll bar.
+constexpr static const int64_t EE_SCREENS_GA_N_CHAT_TO_END = 3;
+
+/// `gWonNet` (if any): the game list cleared, the room rejoined.
+constexpr static const int64_t EE_SCREENS_GA_N_WON_REJOIN = 4;
+
+/// `gUIManager->Pop()`.
+constexpr static const int64_t EE_SCREENS_GA_N_POP = 5;
+
+/// The string i1 shown in a message box (i2 set: closing it restarts the client).
+constexpr static const int64_t EE_SCREENS_GA_N_SHOW_STRING = 6;
+
+constexpr static const int64_t EE_SCREENS_GA_N_IS_SERVER = 7;
+
+/// The server boots `mPlayer` (`mB0D`, `mIsExiting`).
+constexpr static const int64_t EE_SCREENS_GA_N_BOOT_PLAYER = 8;
+
+constexpr static const int64_t EE_SCREENS_GA_N_CTS_PROCESSED = 9;
+
+constexpr static const int64_t EE_SCREENS_GA_N_USER_PAUSED = 10;
+
+/// The server paused (i1 set) or unpaused, the UI told, `mUserPaused` set to it.
+constexpr static const int64_t EE_SCREENS_GA_N_USER_PAUSE = 11;
+
+/// `gWonNet`'s firewall flag.
+constexpr static const int64_t EE_SCREENS_GA_N_FIREWALL = 12;
+
+/// `EEIsValidName(mPlayerName)` (i1 0) or `EEIsValidName(mGameName)`.
+constexpr static const int64_t EE_SCREENS_GA_N_VALID_NAME = 13;
+
+/// `gCommunications` is set.
+constexpr static const int64_t EE_SCREENS_GA_N_COMMS = 14;
+
+/// `gCommunications` deleted (if any).
+constexpr static const int64_t EE_SCREENS_GA_N_DELETE_COMMS = 15;
+
+/// A new client started (i1 set: through the `dynamic_cast`, as after a server).
+constexpr static const int64_t EE_SCREENS_GA_N_NEW_CLIENT = 16;
+
+/// A new server for `mGameName` started (i1: published to WON).
+constexpr static const int64_t EE_SCREENS_GA_N_NEW_SERVER = 17;
+
+constexpr static const int64_t EE_SCREENS_GA_N_PUBLISHED = 18;
+
+/// `gPlayerName` = `mPlayerName`, the host game name setting = `mGameName`.
+constexpr static const int64_t EE_SCREENS_GA_N_REMEMBER_HOST = 19;
+
+/// The game options reset from the last ones, multiplayer, no cheats (under their lock).
+constexpr static const int64_t EE_SCREENS_GA_N_OPTIONS = 20;
+
+/// `SearchForGame(false)`, then `Connect(mGameName, "EEService", "")`: its answer.
+constexpr static const int64_t EE_SCREENS_GA_N_CONNECT_ADDRESS = 21;
+
+/// The connection request (i1 the firewall flag) made, started (i2 set) and given as local input.
+constexpr static const int64_t EE_SCREENS_GA_N_REQUEST = 22;
+
+/// The lobby's open event: the client's (i1 set) or the server's.
+constexpr static const int64_t EE_SCREENS_GA_N_LOBBY_EVENT = 23;
+
+/// `gPlayerName` = `mPlayerName` (i1 0) or the Sierra user id setting.
+constexpr static const int64_t EE_SCREENS_GA_N_SET_NAME = 24;
+
+constexpr static const int64_t EE_SCREENS_GA_N_DETECTED_COUNT = 25;
+
+/// `GetDetectedGame(i1, ...)`'s answer; the address, service and name kept.
+constexpr static const int64_t EE_SCREENS_GA_N_DETECTED = 26;
+
+/// The kept service is "EEService" and the kept name `mGameName`.
+constexpr static const int64_t EE_SCREENS_GA_N_DETECTED_MATCH = 27;
+
+/// `Connect` to the kept game: its answer.
+constexpr static const int64_t EE_SCREENS_GA_N_CONNECT_DETECTED = 28;
+
+/// The migration: `gPhysics->RunOwedTicks()`, the client migrating.
+constexpr static const int64_t EE_SCREENS_GA_N_MIGRATE_BEGIN = 29;
+
+constexpr static const int64_t EE_SCREENS_GA_N_HAS_LEFT = 30;
+
+constexpr static const int64_t EE_SCREENS_GA_N_NUM_PLAYERS = 31;
+
+/// Player i1's slot, firewall flag, human flag, is the current player (i0..i3).
+constexpr static const int64_t EE_SCREENS_GA_N_PLAYER = 32;
+
+constexpr static const int64_t EE_SCREENS_GA_N_LOADING_SAVED = 33;
+
+/// Every player's active group cleared, the current player's selection copied into its active group, the fast
+/// selection reset.
+constexpr static const int64_t EE_SCREENS_GA_N_CLEAR_SELECTIONS = 34;
+
+/// Player i1's slot set to i2.
+constexpr static const int64_t EE_SCREENS_GA_N_SET_SLOT = 35;
+
+/// Player i1's name kept as the dropped host's (i2 0) or the new host's (its address too).
+constexpr static const int64_t EE_SCREENS_GA_N_KEEP_NAME = 36;
+
+/// Promoted: the chat lines, the new server (the ticks kept), its slots and selection id.
+constexpr static const int64_t EE_SCREENS_GA_N_PROMOTE = 37;
+
+/// The new server's wait: i1 other players (0: timed out at once).
+constexpr static const int64_t EE_SCREENS_GA_N_RECONNECT_WAIT = 38;
+
+/// Not promoted: the sleep, the chat lines, `SearchForGame(false)`, `Connect` to the new host: its answer.
+constexpr static const int64_t EE_SCREENS_GA_N_RECONNECT = 39;
+
+/// The reconnection request sent (the tick, the player).
+constexpr static const int64_t EE_SCREENS_GA_N_RECONNECT_REQUEST = 40;
+
+/// `gLagStatus = 0`.
+constexpr static const int64_t EE_SCREENS_GA_N_LAG_CLEAR = 41;
+
+/// `gUserInterface->UpdateJITManufacturing()`.
+constexpr static const int64_t EE_SCREENS_GA_E_JIT = 0;
+
+/// The improvement applied to the unit `p` (an `EEUnit*`; i1 set: lowered), its unit tab and help refreshed.
+constexpr static const int64_t EE_SCREENS_GA_E_APPLY_IMPROVEMENT = 1;
+
+/// The button sound i1 (1 or 2).
+constexpr static const int64_t EE_SCREENS_GA_E_SOUND = 2;
+
+/// Player list entry i1's civilization file applied, its start epoch posted (406).
+constexpr static const int64_t EE_SCREENS_GA_E_RESET_APPLY = 3;
+
+constexpr static const int64_t EE_SCREENS_GA_E_RESET_COUNT = 4;
+
+/// The load thread's 403 and 407 posts for entry i1.
+constexpr static const int64_t EE_SCREENS_GA_E_RESET_POST403 = 5;
+
+constexpr static const int64_t EE_SCREENS_GA_E_RESET_POST407 = 6;
+
+/// `SaveGame(mFileName, now, mFlag, mDescription)`.
+constexpr static const int64_t EE_SCREENS_GA_E_SAVE = 7;
+
+/// `gUserInterface->CloseForm(NULL)`.
+constexpr static const int64_t EE_SCREENS_GA_E_CLOSE_FORM = 8;
+
+/// The load/save error message box.
+constexpr static const int64_t EE_SCREENS_GA_E_SAVE_ERROR = 9;
+
+/// `gCommunications->GetIsGamePaused()`.
+constexpr static const int64_t EE_SCREENS_GA_E_PAUSED = 10;
+
+/// The master and music volumes into f0, f1, both set to 0.
+constexpr static const int64_t EE_SCREENS_GA_E_MUTE = 11;
+
+/// The server paused (i1 set) or unpaused and the UI told.
+constexpr static const int64_t EE_SCREENS_GA_E_SERVER_PAUSE = 12;
+
+/// The quick load of `EEQuickSave<mName>` (its error box).
+constexpr static const int64_t EE_SCREENS_GA_E_QUICK_LOAD = 13;
+
+/// The quick save into a new memory file (answered; its file name kept).
+constexpr static const int64_t EE_SCREENS_GA_E_QUICK_SAVE = 14;
+
+/// The memory file `p` written to disk under the kept name.
+constexpr static const int64_t EE_SCREENS_GA_E_QUICK_WRITE = 15;
+
+/// The volumes (f0, f1) restored, the physics' owed ticks cleared.
+constexpr static const int64_t EE_SCREENS_GA_E_UNMUTE = 16;
+
+/// The editor's current tab resumed.
+constexpr static const int64_t EE_SCREENS_GA_E_RESUME_GROUP = 17;
+
+/// The memory file `p` deleted.
+constexpr static const int64_t EE_SCREENS_GA_E_DELETE_FILE = 18;
+
+/// The trigger tab's object screen's `UpdateSelection`.
+constexpr static const int64_t EE_SCREENS_GA_E_OBJECT_SELECTION = 19;
+
+/// The editor form's `SetLoadText(mText)`.
+constexpr static const int64_t EE_SCREENS_GA_E_LOAD_TEXT = 20;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_SELECT_UNIT = 72;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_ADD_UNIT = 73;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_UNSELECT_ALL = 75;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_ATTACK = 76;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_PATH_TO = 77;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_SELECT_UNITS = 78;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_ADD_UNITS = 79;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_ADD_REMOVE_UNITS = 80;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_GATHER = 81;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_BUILD_UNIT = 86;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_REPAIR = 87;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_BUILD_WALL = 89;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_DROPOFF = 97;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_RALLY = 102;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_LOAD_TRANSPORT = 103;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_PATROL_GROUP = 116;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_CAST_CALAMITY = 117;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_ALWAYS_ADD_UNIT = 118;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_IMPROVE = 119;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_BUILD_GATE = 134;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_REMOVE_IMPROVEMENT = 139;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_SMART_FARMERS = 143;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_RETURN_TO_BASE = 144;
+
+constexpr static const uint32_t EE_SCREENS_GA_MSG_HEAL = 146;
+
+constexpr static const int64_t EE_SCREENS_GA_TYPE_TOWN_CENTER = 35;
+
+constexpr static const int64_t EE_SCREENS_GA_TYPE_DOCK = 36;
+
+constexpr static const int64_t EE_SCREENS_GA_TYPE_CAPITOL = 41;
+
+constexpr static const int64_t EE_SCREENS_GA_TYPE_FARM = 42;
+
+constexpr static const int64_t EE_SCREENS_GA_TYPE_SETTLEMENT = 43;
+
+constexpr static const int64_t EE_SCREENS_GA_TYPE_GRANARY = 52;
+
+constexpr static const int64_t EE_SCREENS_GA_TYPE_NAVY_YARD = 65;
+
+constexpr static const int64_t EE_SCREENS_GA_TYPE_AIRPORT = 66;
+
+constexpr static const int64_t EE_SCREENS_GA_TYPE_CAMERA_OBJECT = 359;
+
+constexpr static const int64_t EE_SCREENS_GA_TYPE_PATH_POINT = 223;
+
+constexpr static const int64_t EE_SCREENS_GA_TYPE_GRANARY_IMPROVED = 698;
+
+constexpr static const int64_t EE_SCREENS_GA_TYPE_CP_MISSILE_BASE = 749;
+
+constexpr static const int64_t EE_SCREENS_GA_CATEGORY_LAND_CITIZEN = 6;
+
+constexpr static const int64_t EE_SCREENS_GA_CATEGORY_NAVAL_BUILDING = 21;
+
+constexpr static const int64_t EE_SCREENS_GA_CATEGORY_NAVAL_CITIZEN = 22;
+
+constexpr static const int64_t EE_SCREENS_GA_CATEGORY_SPACE_BUILDING = 32;
+
+constexpr static const int64_t EE_SCREENS_GA_FAMILY_FISH = 18;
+
+constexpr static const uint32_t EE_SCREENS_GA_KIND_CITIZEN = 1;
+
+constexpr static const uint32_t EE_SCREENS_GA_KIND_BUILDING = 16;
+
+constexpr static const uint32_t EE_SCREENS_GA_KIND_NAVAL_CITIZEN = 64;
+
+constexpr static const uint32_t EE_SCREENS_GA_KIND_HELICOPTER_TRANSPORT = 128;
+
+constexpr static const uint32_t EE_SCREENS_GA_KIND_LAND_TRANSPORT = 256;
+
+constexpr static const uint32_t EE_SCREENS_GA_KIND_NAVAL_TRANSPORT = 512;
+
+constexpr static const uint32_t EE_SCREENS_GA_KIND_FORTRESS = 16384;
+
+constexpr static const uint32_t EE_SCREENS_GA_KIND_SPACE_TRANSPORT = 65536;
+
+constexpr static const int64_t EE_SCREENS_GA_EFFECT_CLICK_UNIT = 211;
+
+constexpr static const int64_t EE_SCREENS_GA_EFFECT_CLICK_NO_UNIT = 209;
+
+constexpr static const int32_t EE_SCREENS_GA_TECH_CONQUISTADORS_SPELL = 7020;
+
+constexpr static const int32_t EE_SCREENS_GA_TECH_NONE = 100000;
+
+constexpr static const int64_t EE_SCREENS_GA_SLOT_SERVER = 254;
+
+constexpr static const int64_t EE_SCREENS_GA_SLOT_NONE = 255;
+
+/// The string ids the join shows (`ee/EEStringIDs.h`; checked by the host).
+constexpr static const int64_t EE_SCREENS_GA_IDS_PLAYER_NAME_IS_INVALID = 10004;
+
+constexpr static const int64_t EE_SCREENS_GA_IDS_GAME_NAME_IS_INVALID = 10005;
+
+constexpr static const int64_t EE_SCREENS_GA_IDS_GAME_NAME_EXISTS = 10010;
+
 /// `EEUIEHKSelectGroup(group, false)` / `(group, true)`: the number keys (with Alt: the true one).
 constexpr static const uint32_t EE_SCREENS_HK_SELECT_GROUP = 3584;
 
@@ -7435,6 +8130,21 @@ constexpr static const uint32_t EE_SCREENS_SU_LASSO_BOX = 65;
 /// (modifiers) the click action selects at the mouse.
 constexpr static const uint32_t EE_SCREENS_SU_CLICK = 66;
 
+/// The trigger tab's: (unit) -> whether it is part of a complex unit.
+constexpr static const uint32_t EE_SCREENS_SU_HAS_COMPLEX = 67;
+
+/// The trigger tab's: the unit or tile under the control's mouse location -> f[0..2] its map point (x, y).
+constexpr static const uint32_t EE_SCREENS_SU_POINT_AT = 68;
+
+/// The trigger tab's: (flag) the lasso's `SelectInRectangle` over f[0..4].
+constexpr static const uint32_t EE_SCREENS_SU_LASSO_IN_RECT = 69;
+
+/// The trigger tab's: the click action's `Execute(f[0], f[1], true, 1, false, 0, false)`.
+constexpr static const uint32_t EE_SCREENS_SU_CLICK_EXECUTE = 80;
+
+/// The trigger tab's: -> the control's `MouseLButtonDown()`.
+constexpr static const uint32_t EE_SCREENS_SU_L_DOWN = 81;
+
 /// `ee_screens_select_units`' members (`hud_ctl_ffi.rs`).
 constexpr static const uint32_t EE_SCREENS_SU_DO_COPY_DATA = 0;
 
@@ -7447,6 +8157,10 @@ constexpr static const uint32_t EE_SCREENS_SU_DO_MOUSE_L_UP = 3;
 constexpr static const uint32_t EE_SCREENS_SU_DO_MOUSE_MOVE = 4;
 
 constexpr static const uint32_t EE_SCREENS_SU_DO_START = 5;
+
+constexpr static const uint32_t EE_SCREENS_SU_DO_R_DOWN = 6;
+
+constexpr static const uint32_t EE_SCREENS_SU_DO_R_UP = 7;
 
 /// `GetGraphicsQuality`'s answer when no preset matches: Custom.
 constexpr static const unsigned long EE_SCREENS_QUALITY_CUSTOM = 5;
@@ -9283,13 +9997,13 @@ struct EeScreensSeTriggerTab;
 /// The unit tab (opaque to C++).
 struct EeScreensSeUnit;
 
-/// A paint action's record (opaque to C++).
+/// A paint action's record (opaque to C++; the action's record holds it: `game_actions.rs`).
 struct EeScreensSeaPaint;
 
 /// An `EESEERust`'s event (opaque to C++).
 struct EeScreensSeeEvent;
 
-/// An `EESEARust`'s action (opaque to C++).
+/// An `EESEARust`'s action (opaque to C++; the action's record holds it: `game_actions.rs`).
 struct EeScreensSewAction;
 
 /// The unit hack's record (opaque to C++).
@@ -9364,6 +10078,69 @@ struct EeScreensPanelButton {
 /// The effect types (opaque to C++; the effect screen's `EffectTypes`, whose address their events carry).
 using EeScreensSeEffects = EffectTypes;
 
+/// An action's plain members (the C++ class's second base; the names are the original members').
+struct EeScreensGaFields {
+  /// The kind (`EE_SCREENS_GA_*`).
+  uint32_t mKind;
+  /// The message built and not sent yet (`EEMessage*`: the click, lasso, build and calamity).
+  void *mMessage;
+  /// The calamity's class (`EECalamityClass*`).
+  void *mCalamityClass;
+  /// The quick save's memory file (`FSMemoryFile*`, the host's).
+  void *mFile;
+  /// The editor paint's record (`EESEAPaintRust`'s: `editor_actions.rs`).
+  EeScreensSeaPaint *mPaint;
+  /// The editor's whole action (`EESEARust`'s: `editor_whole.rs`).
+  EeScreensSewAction *mAction;
+  /// The build's and the calamity's technology.
+  int32_t mTechnology;
+  int32_t mTargetID;
+  int32_t mCasterID;
+  /// The calamity's target tile.
+  int32_t mX;
+  int32_t mY;
+  /// The calamity's last check (nonzero: castable).
+  int32_t mValid;
+  /// The camera's target (`GE3DPoint`) and the camera object followed (-1: the point).
+  float mLocation[3];
+  int32_t mUnitID;
+  /// The mini map's click: 0 centre the camera, 1 send the group; the key modifiers at the click.
+  int32_t mMode;
+  uint32_t mModifiers;
+  /// The edge scroll's last poll.
+  uint32_t mElapsed;
+  /// The cancelled game's message string (0: none).
+  int32_t mStringID;
+  /// The improvement and its unit (by id: `EEUnitHandle`, referenced while the action lives).
+  int32_t mImprovement;
+  uint32_t mUnit;
+  /// The join's mode (0 host, 1 join a detected game, 2/3 connect to an address, 4 the WON host).
+  int32_t mJoinMode;
+  /// The build's queue flag (`EEMBuildUnit`'s).
+  uint8_t mIsQueued;
+  bool mScrollLeft;
+  bool mScrollRight;
+  bool mScrollUp;
+  bool mScrollDown;
+  bool mAccelerate;
+  /// The booted player's slot and its flags.
+  uint8_t mPlayer;
+  bool mB0D;
+  bool mIsExiting;
+  /// The cancelled game keeps the current form.
+  bool mNoPop;
+  /// The improvement raised (else lowered); in a game (else the scenario editor).
+  bool mRaise;
+  bool mIsInGame;
+  /// The saved game's flag.
+  bool mFlag;
+  /// The chat line is the local player's.
+  bool mFromLocalPlayer;
+  /// The quick save/load: load (else save); a save also written to disk.
+  bool mIsLoad;
+  bool mWriteToFile;
+};
+
 /// `EEUICPing`'s members (its protected base) but the bars.
 struct EeScreensPingFields {
   /// The lit bars less one (`SetPing`'s quality times 5).
@@ -9406,6 +10183,10 @@ struct EeScreensSelectUnitsFields {
   bool mDragging;
   /// The box is drawn.
   bool mD1;
+  /// The trigger tab's control (`EESEUICTriggerSelectUnits`; port addition: the subclass's overrides are this).
+  bool mTrigger;
+  /// The trigger tab's: the right button is down (its press and release drive the left's).
+  bool mRightButton;
 };
 
 /// `GE3DPoint`.
@@ -9430,6 +10211,8 @@ struct EeScreensCommandUnitsFields {
   bool mHasFacing;
   /// `mHasFacing` as of the last `CopyData`.
   bool mDrawnHasFacing;
+  /// The scenario editor's control (`EESEUICCommandUnits`; port addition: the subclass's overrides are this).
+  bool mEditor;
 };
 
 /// A lobby slot (`EEGameOptionsPlayer`) but its name.
@@ -9854,6 +10637,14 @@ struct EeScreensSefmButton {
   float pressed[2];
   float dest[4];
   float rect[4];
+};
+
+/// One member of a record message (`EEMRecordValue`): an integer, a float or a point.
+struct EeScreensGaValue {
+  /// `EE_SCREENS_GA_VALUE_*`.
+  uint32_t kind;
+  int64_t i;
+  float f[2];
 };
 
 /// `kSETSConditionTitleLabel`, `kSETSConditionTypeComboBox`, `kSETriggerScreenNameEditBox`, `NameLabel`,
@@ -10716,6 +11507,123 @@ long ee_screens_frame_draw(void *background,
                            float scale_y,
                            uint32_t flags,
                            const void *clip);
+
+/// The constructor's members (the record value-initialised, its kind set).
+///
+/// # Safety
+/// `r` is the action's record.
+void ee_screens_ga_init(EeScreensGaFields *r);
+
+/// The destructor's releases.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+void ee_screens_ga_free(EeScreensGaFields *r);
+
+/// `Virtual4`.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+void ee_screens_ga_run(EeScreensGaFields *r);
+
+/// The mouse click's `Execute`.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+void ee_screens_ga_click_execute(EeScreensGaFields *r,
+                                 float x,
+                                 float y,
+                                 bool mv,
+                                 uint32_t modifiers,
+                                 bool rotating,
+                                 float facing,
+                                 bool force);
+
+/// The mouse click's `SelectAtMouse`.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+void ee_screens_ga_select_at_mouse(EeScreensGaFields *r, uint32_t modifiers);
+
+/// The lasso's `SelectUnits` over the rectangle `rect` (a `GERectangle*`, handed to the message).
+///
+/// # Safety
+/// As `ee_screens_ga_init`; `rect` lives for the call.
+void ee_screens_ga_select_units(EeScreensGaFields *r,
+                                const void *rect,
+                                int32_t flags,
+                                uint32_t unit_type,
+                                int32_t patrol_group);
+
+/// The build's `Build`.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+void ee_screens_ga_build(EeScreensGaFields *r, float x, float y);
+
+/// The build's `BuildGate`.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+void ee_screens_ga_build_gate(EeScreensGaFields *r, float x, float y, int32_t side);
+
+/// The build's `BuildWall`.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+void ee_screens_ga_build_wall(EeScreensGaFields *r, float x0, float y0, float x1, float y1);
+
+/// The calamity's `Cast`.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+void ee_screens_ga_cast(EeScreensGaFields *r, float x, float y);
+
+/// The calamity's `Check`.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+int32_t ee_screens_ga_check(EeScreensGaFields *r, float x, float y);
+
+/// The camera's `SetLocation`.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+void ee_screens_ga_set_location(EeScreensGaFields *r, int32_t x, int32_t y);
+
+/// The camera's `SetUnit` (an `EEUnit*`).
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+void ee_screens_ga_set_unit(EeScreensGaFields *r, void *unit);
+
+/// The edge scroll's `Update`.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+bool ee_screens_ga_scroll_update(EeScreensGaFields *r, float x, float y);
+
+/// The lasso's `SelectInRectangle` (`rect` a `GERectangle*`; the editor's lassos).
+///
+/// # Safety
+/// As `ee_screens_ga_init`; `rect` lives for the call.
+void ee_screens_ga_select_in_rectangle(EeScreensGaFields *r, const void *rect);
+
+/// The editor paint's `SetArea` (left, top, right, bottom, in tiles): whether it queued the area.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+bool ee_screens_ga_paint_set_area(EeScreensGaFields *r,
+                                  int32_t left,
+                                  int32_t top,
+                                  int32_t right,
+                                  int32_t bottom);
+
+/// The improvement's constructor: the unit (an `EEUnit*`) referenced and held, the action posted.
+///
+/// # Safety
+/// As `ee_screens_ga_init`.
+void ee_screens_ga_upgrade_begin(EeScreensGaFields *r, void *unit);
 
 /// The unit selection hot key's code for its constructor's arguments (the unit type a 16-bit type id).
 uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,

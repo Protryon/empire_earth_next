@@ -1,20 +1,3 @@
-01000 016c0 Empire Earth/Actions/EEAAddChatMessage.cpp
-016c0 0173b Empire Earth/Actions/EEABootClientFromCanceledGame.cpp
-0173b 01a8d Empire Earth/Actions/EEABuild.cpp
-01a8d 01de1 Empire Earth/Actions/EEACalamity.cpp
-01de1 01fc4 Empire Earth/Actions/EEACenterCamera.cpp
-02086 0289f Empire Earth/Actions/EEAJoinOrHostAGame.cpp
-0289f 02a84 Empire Earth/Actions/EEALasso.cpp
-02a84 02fb0 Empire Earth/Actions/EEAMiniMap.cpp
-02fb0 04352 Empire Earth/Actions/EEAMouseClick.cpp
-04352 04413 Empire Earth/Actions/EEAPlayerEvent.cpp
-04413 04444 Empire Earth/Actions/EEARemovePlayer.cpp
-04444 04613 Empire Earth/Actions/EEAResetAllPlayerInfo.cpp
-04613 0470f Empire Earth/Actions/EEASaveGame.cpp
-0470f 04a0b Empire Earth/Actions/EEAScroll.cpp
-04a0b 0505b Empire Earth/Actions/EEAServerMigration.cpp
-0505b 05280 Empire Earth/Actions/EEAUpgradeImprovement.cpp
-05280 052f3 Empire Earth/Actions/EEAUserPauseGame.cpp
 052f3 05d47 Empire Earth/Actions/EEAWonNet.cpp
 0d6e3 0e9a1 Empire Earth/AI Thread/EEAIArea.cpp
 0e9a1 0f53b Empire Earth/AI Thread/EEAIAStarBoundedPathGoal.cpp
@@ -173,8 +156,6 @@ ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 18efb7 19393b Empire Earth/Scenario Editor/EESETSObject.cpp
 19393b 196ebe Empire Earth/Scenario Editor/EESETSTrigger.cpp
 196ebe 197261 Empire Earth/Scenario Editor/EESETSUICBPlayer.cpp
-197261 197393 Empire Earth/Scenario Editor/EESEUICCommandUnits.cpp
-197393 19764b Empire Earth/Scenario Editor/EESEUICTriggerSelectUnits.cpp
 19764b 199afd Empire Earth/Scenario Editor/EESEUITechListBox.cpp
 199afd 19cc39 Empire Earth/Scenario Editor/EESEUnit.cpp
 19cc39 1a0315 Empire Earth/Scenario Editor/EEUIFScenarioEditor.cpp
@@ -189,8 +170,6 @@ ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 1a4cbb 1a4dbe Empire Earth/Scenario Editor/EEUIFSERedo.cpp
 1a4dbe 1a4e99 Empire Earth/Scenario Editor/EEUIFSEUndo.cpp
 1a4e99 1a5529 Empire Earth/Scenario Editor/EEUIFSEUpgradePanel.cpp
-1a5529 1a5881 Empire Earth/Scenario Editor Actions/EEAQuickSaveLoad.cpp
-1aa70e 1aa723 Empire Earth/Scenario Editor Actions/EESEAQuickSaveLoad.cpp
 1aaad4 1af2a9 Empire Earth/Scenario Editor/EEUIFSETerrain.cpp
 1af2a9 1afa90 Empire Earth/Scenario Editor/EEUIFSETRBPaintType.cpp
 1afa90 1ba02f Empire Earth/Scenario Manager/EEScenarioManager.cpp

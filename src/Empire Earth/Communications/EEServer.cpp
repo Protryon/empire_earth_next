@@ -49,7 +49,7 @@
 #include "rust/ee_screens.h"   // EE_SCREENS_MG_*: the main game form's events (ee_screens main_game.rs)
 #include "ee/EEWonNet.h"
 #include "ee/EEPSaveGameHeader.h"
-#include "ee/EEARemovePlayer.h"
+#include "ee/EEARust.h"
 #include "lle/UResourceFile.h"
 #include "ee/EETeam.h"
 #include "ee/EEClient.h"
@@ -61,8 +61,6 @@
 #include "ee/EEGraphics.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEHumanPlayer.h"
-#include "ee/EEABootClientFromCanceledGame.h"
-#include "ee/EEAServerMigration.h"
 #include "rust/ee_netmsg.h"   // ee_netmsg session.rs
 long gDefaultPlayerColors[16] = {0, 1, 4, 9, 2, 15, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15};
 void EELobbyPostConnectStatus(bool inConnected);   // 0x295ce3 (EELobbyInit.cpp; provisional name)

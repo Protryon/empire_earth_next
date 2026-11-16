@@ -54,11 +54,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEMouse.h"
 #include "ee/EEAction.h"
-#include "ee/EEAScroll.h"
-#include "ee/EEAMouseClick.h"
-#include "ee/EEALasso.h"
-#include "ee/EEABuild.h"
-#include "ee/EEACalamity.h"
+#include "ee/EEARust.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
@@ -548,14 +544,6 @@ void EEUIFMainGame::StartGate(long inTechnology)
 {
     EEUIFMGFormCall theCall(this);
     ee_screens_main_form_start(&theCall, 0, inTechnology);
-}
-
-// Creates the build action with no tech chosen
-EEABuild::EEABuild()
-{
-    this->mMessage = NULL;
-    this->mTechnology = kTechNone;
-    this->mIsQueued = 0;
 }
 
 // Starts placing a wall for a tech (wall placement mode)

@@ -3,7 +3,8 @@
 //! the ground point under the mouse, the release sends the command with the dragged facing (or, for units that take
 //! one, facing away from the group's centre). The record is the class's members but the click action, the arrow's
 //! model and texture (C++ objects: the arrow's draw and the ground point's projection are host ops). The scenario
-//! editor's subclass reads the record.
+//! editor's subclass (`EESEUICCommandUnits`, `mEditor` set) is the same control: its drag rotates the selected units,
+//! its right click without a drag deletes the unit under the mouse.
 
 use ee_ge::types::Ge2DPoint;
 use ee_ge::um::{lrintf, um_arctan2};
@@ -30,6 +31,14 @@ pub const EE_SCREENS_CU_EXECUTE: u32 = 74;
 pub const EE_SCREENS_CU_GROUP_COUNT: u32 = 75;
 /// (i) -> the group's unit i's class's category.
 pub const EE_SCREENS_CU_CATEGORY: u32 = 76;
+/// The editor's: its rotation action posted with the facing f[0] (`EESEARotateUnits::Rotate`).
+pub const EE_SCREENS_CU_ROTATE: u32 = 77;
+/// The editor's: -> the unit under the mouse (`EEUnit*`, referenced; 0 for none).
+pub const EE_SCREENS_CU_PICK: u32 = 78;
+/// The editor's: (unit) its deletion (`EESEADeleteUnit` of its id: posted when it exists).
+pub const EE_SCREENS_CU_DELETE: u32 = 79;
+/// The editor's: (unit) released.
+pub const EE_SCREENS_CU_UNIT_RELEASE: u32 = 82;
 
 /// `ee_screens_command_units`' members (`hud_ctl_ffi.rs`).
 pub const EE_SCREENS_CU_DO_INIT: u32 = 0;
@@ -70,6 +79,8 @@ pub struct EeScreensCommandUnitsFields {
     pub mHasFacing: bool,
     /// `mHasFacing` as of the last `CopyData`.
     pub mDrawnHasFacing: bool,
+    /// The scenario editor's control (`EESEUICCommandUnits`; port addition: the subclass's overrides are this).
+    pub mEditor: bool,
 }
 
 type R = Rec<EeScreensCommandUnitsFields>;
@@ -122,11 +133,28 @@ pub fn mouse_move(rec: &R, h: &mut impl HudHost, x: f32, y: f32) -> i64 {
         let facing = angle(rec.get(|r| r.mPosition), target);
         rec.set(|r| r.mFacing = facing);
     }
+    // the editor's: the selected units turn with the drag
+    if rec.get(|r| r.mEditor && r.mHasFacing) {
+        h.op(EE_SCREENS_CU_ROTATE, 0, 0, &mut [rec.get(|r| r.mFacing)]);
+    }
     0
 }
 
-/// `MouseRButtonUp`: the command sent at the press's point with the facing, then hidden.
+/// `MouseRButtonUp`: the command sent at the press's point with the facing, then hidden. The editor's: without a
+/// drag, the unit under the mouse deleted; then hidden.
 pub fn mouse_r_up(rec: &R, h: &mut impl HudHost) -> i64 {
+    if rec.get(|r| r.mEditor) {
+        if !rec.get(|r| r.mHasFacing) {
+            let unit = h.call(EE_SCREENS_CU_PICK, 0, 0);
+            if unit != 0 {
+                h.call(EE_SCREENS_CU_DELETE, unit, 0);
+                h.call(EE_SCREENS_CU_UNIT_RELEASE, unit, 0);
+            }
+        }
+        h.call(EE_SCREENS_HC_SET_DISPLAY_MODE, EE_SCREENS_HC_HIDDEN, 0);
+        h.call(EE_SCREENS_HC_RELEASE_MOUSE, 0, 0);
+        return 0;
+    }
     let modifiers = h.call(EE_SCREENS_HC_MODIFIERS, 0, 0);
     let dragged = rec.get(|r| r.mHasFacing);
     let down = rec.get(|r| r.mDownLocation);
@@ -153,8 +181,15 @@ pub fn mouse_r_up(rec: &R, h: &mut impl HudHost) -> i64 {
 }
 
 /// `StartCommand`: on a unit or tile, the drag starts there (noting whether a selected unit takes a facing);
-/// elsewhere the command is sent at once without a target.
+/// elsewhere the command is sent at once without a target. The editor's: then any unit may be turned.
 pub fn start(rec: &R, h: &mut impl HudHost, x: f32, y: f32) {
+    start_command(rec, h, x, y);
+    if rec.get(|r| r.mEditor) {
+        rec.set(|r| r.mCanFace = true);
+    }
+}
+
+fn start_command(rec: &R, h: &mut impl HudHost, x: f32, y: f32) {
     let modifiers = h.call(EE_SCREENS_HC_MODIFIERS, 0, 0);
     let count = h.call(EE_SCREENS_CU_GROUP_COUNT, 0, 0) as u32;
     let p = rec.get(|r| r.mPosition);

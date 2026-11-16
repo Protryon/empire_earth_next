@@ -9,7 +9,7 @@ use ee_ge::types::GeTransformation;
 
 use crate::editor_events::{SeeHost, SeeKind};
 use crate::editor_place::SepHost;
-use crate::editor_whole::{SewAction, SewElevation, SewGate, SewHost, SewWall};
+use crate::editor_whole::{EeScreensSewAction, SewAction, SewElevation, SewGate, SewHost, SewWall};
 
 /// cbindgen:ignore
 mod sys {
@@ -67,9 +67,6 @@ impl SewHost for Host {
         })
     }
 }
-
-/// An `EESEARust`'s action (opaque to C++).
-pub struct EeScreensSewAction(SewAction);
 
 /// `code` over the action taken out of its box: no Rust reference into the box lives across the host's calls.
 ///

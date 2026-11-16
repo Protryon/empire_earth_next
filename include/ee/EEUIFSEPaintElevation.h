@@ -7,7 +7,7 @@
 #ifndef EE_EEUIFSEPAINTELEVATION_H
 #define EE_EEUIFSEPAINTELEVATION_H
 
-#include "ee/EESEAPaint.h"
+class EESEAPaint;
 
 class EEUIFSEPaintElevation : public EEUIFSEPaint {
 public:

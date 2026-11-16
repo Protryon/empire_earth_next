@@ -73,7 +73,7 @@
 #include "ee/EECivilization.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEAction.h"
-#include "ee/EEAResetAllPlayerInfo.h"
+#include "ee/EEARust.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EEPlayer.h"

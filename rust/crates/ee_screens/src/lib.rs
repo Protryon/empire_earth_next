@@ -116,6 +116,8 @@
 //! - [`mouse_modes`]: the main game form's mouse modes (targets, placements, orders, the normal mode's starts)
 //!   and the wall and gate placements' mouse over the main form's host.
 //! - [`upgrade`]: the improvement button's availability, tooltip, presses and cost update over the C++ host.
+//! - [`game_actions`]: the game's actions whole (`EEARust`: the click, lasso, build, calamity, camera, mini map,
+//!   edge scroll, chat line, join or host, migration, pause, saves, quick save/load...) over one C++ host.
 
 pub mod actions;
 #[cfg(not(test))]
@@ -216,6 +218,13 @@ pub mod factories;
 pub mod frame;
 #[cfg(not(test))]
 mod frame_ffi;
+pub mod game_actions;
+#[cfg(not(test))]
+mod game_actions_ffi;
+#[cfg(test)]
+mod game_actions_golden;
+#[cfg(test)]
+mod game_actions_tests;
 pub mod hot_keys;
 #[cfg(not(test))]
 mod hot_keys_ffi;

@@ -48,12 +48,7 @@
 #include "ee/EESMObject.h"
 #include "ee/EESEPlayerScreen.h"
 #include "ee/EEMessage.h"
-#include "ee/EEALasso.h"
-#include "ee/EEAMouseClick.h"
-#include "ee/EESEALasso.h"
-#include "ee/EESEAMouseClick.h"
-#include "ee/EESETSAMouseClick.h"
-#include "ee/EESETSALasso.h"
+#include "ee/EEARust.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EESEUICTriggerSelectUnits.h"
 #include "ee/EESETSOUnitList.h"
@@ -91,20 +86,6 @@ void EESETSOUnitList::ChangeSelectionIndex(unsigned long inIndex, bool inFireEve
 {
     UILBString::ChangeSelectionIndex(inIndex, false, inScrollTo);
     this->FireTriggerEvent(kControlTriggerSelectionChanged);
-}
-
-// Performs the editor's click selection, then refreshes the object page's unit list and name
-void EESETSAMouseClick::Virtual4()
-{
-    EESEAMouseClick::Virtual4();
-    static_cast<EESETSObject*>(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
-}
-
-// Performs the editor's lasso selection, then refreshes the object page's unit list and name
-void EESETSALasso::Virtual4()
-{
-    EESEALasso::Virtual4();
-    static_cast<EESETSObject*>(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
 }
 
 // Creates an object page combo box, 20 pixels high

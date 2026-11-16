@@ -26995,3 +26995,276 @@ points). The round is short because the measure found the other big files to be 
 the Rust bodies make.
 
 **Gates.** Per commit: a862edee built 0/0 on the unmodified bodies, its AGPL recorded twice equal on seeds 2-3 (then 2-7 once); df1ee745 built 0/0 (EE-AOC 911 inputs, EE-SIM 912), AGPL equal to the golden on seeds 2-5 and 7 (seed 6 the same fault and digest), oracle seeds 2-3 identical, the Rust gate PASS after two clippy fixes (`launch`'s arguments, a late initialisation); f631cef3 built 0/0, oracle seeds 2-3 identical, then on that build the captures at seeds 2-3 PASS in oracle (179 digests), late (180), space (181), calamity (197), units (195) and transport (186); 5584b9f7 built 0/0, oracle seeds 2-3 identical, the captures at seeds 2-3 PASS in the same six and scenario (27: UCBD kinds 40-45 equal everywhere), the saveload matrix equal to its expect file (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4: round 34's), the Rust gate PASS. Merged with `rust` f4244b22 (86 commits; the only conflict was PORT_LEARNINGS.md's end, both sides' sections kept; tools/strip_markers.py changed nothing, so no strip commit; headers current, nothing to narrow): build `--sim` 0/0 (EE-AOC 853 inputs, EE-SIM 854); oracle seeds 2-7 identical to `ref`; the Rust gate PASS (4,025 tests); the captures at seeds 2-3 PASS in oracle (187 digests), late (188), space (189), calamity (205), units (195), transport (186), scenario (33) and groups (2), groups at seeds 4-7 PASS (3; seed 6 the original's fault, its digest unchanged); the saveload matrix equal to its expect file (as above); a sim_bench game (seed 5, Small, Hard, 2 AI) to the time cap with both computers alive (populations 39 and 45, as rounds 33-34); the test profile 0/0 (853 inputs). Under the harness lock on that merge: the tour (`--exercise tour --input-check --play-seconds 120`) `RESULT PASS tour` and the orders game (`--exercise random-game --orders`) `RESULT PASS random-game` (gather, repair, queued repair and move judged ok on every unit, through Plan and LayOutFormation; the fixture skipped patrol, no button, and attack ground, no unit). Only the tour shows the drawn parts of the sight (the mini map's counts, the terrain mesh's references): it passed.
+
+## R6: the game actions, round 1: every action class one EEARust over a Rust record and one host (ee_screens game_actions.rs; branch rust-actions1, 2026-11-15)
+
+A new UI lane: the game's input actions (`src/Empire Earth/Actions`: the `EEAction` subclasses the forms post to the
+UI thread's queue) and the quick save/load pair of `Scenario Editor Actions`.
+
+### Census (at 3114725d)
+
+| Class | Lines (unit + header) | Made by | Reached by |
+|---|---|---|---|
+| `EEAMouseClick` (the right click's order, the plain click, the transport load) | 546 + 30 | the main game form (`mMouseClick`); subclassed by the editor's `EESEAMouseClick` and the trigger tab's `EESETSAMouseClick` | the orders game (`--orders`: gather, repair, move), the box selection's click |
+| `EEALasso` (the box selection's message) | 83 + 21 | the main game form; subclassed by `EESEALasso`, `EESETSALasso` | `--box-select` |
+| `EEABuild` (build, gate, wall) | 110 + 31 (its constructor sat in EEUIFMainGame.cpp, its `Virtual8` in EESEInstructions.cpp) | the main game form | a person |
+| `EEACalamity` (cast, check) | 154 + 43 | the main game form | `--cast` (the calamity lane's fixture command) |
+| `EEACenterCamera` | 131 + 26 | the fixture's scouting, the editor's events | the orders game |
+| `EEAMiniMap` | 197 + 31 | the mini map | a person |
+| `EEAScroll` (the edge scroll) | 152 + 30 | the main game form, the editor form | `--scroll-check`; every frame of a game (`Update`) |
+| `EEAPlayerEvent`, `EEAUserPauseGame`, `EEASaveGame` | 88, 42, 94 + 47 | EEScreens.cpp (hot keys, the save dialog) | a person |
+| `EEAAddChatMessage` | 311 + 25 (the first unit of the link: 146 lines of `$E` chain comments) | EEMessage.cpp (a lobby chat message) | the LAN game when a chat line is sent |
+| `EEABootClientFromCanceledGame`, `EEARemovePlayer`, `EEAServerMigration` | 82, 26, 213 + 60 | EEClient.cpp, EEServer.cpp, EEUserInterface.cpp, the WON forms | the LAN game (a client leaving); a host dropping out: a person |
+| `EEAJoinOrHostAGame` (with `EEIsValidName` and the restart callback) | 256 + 30 | EEWonNet.cpp (the LAN screen: host 4, join 3), EECommandLine.cpp | the LAN game |
+| `EEAResetAllPlayerInfo`, `EEAUpgradeImprovement` | 93, 129 + 57 | the civilization builder, the improvement buttons | a person |
+| `EEAQuickSaveLoad`, `EESEAQuickSaveLoad` | 157, 60 + 47 | the editor form, EE-SIM's editor script, the UI thread's quick load | the editor gate (`quicksave`, `savefile`) |
+| `EEAWonNet` (left: the WON lanes') | 285 + 42 | | |
+
+The action manager (`EEUserInterface`'s queues) is Rust since screens round 18 (`actions.rs`), holding the actions as
+`EEAction*`. EE-SIM builds no game form: the oracle reaches none of these, the editor gate the quick save only.
+
+### The shape
+
+- **One class.** `EEARust : EEAction, EeScreensGaFields` (`include/ee/EEARust.h`). The record is Rust's
+  (`#[repr(C)]`, cbindgen) and its fields keep the original members' names, so the forms that set `mTechnology`,
+  `mIsQueued`, `mCasterID`, `mMode`, `mModifiers`, `mIsLoad`, `mWriteToFile` and the editor host's `mMessage`
+  compile unchanged (screens round 29's pattern). The C++-typed members stay C++ members of the class, read by the
+  host: the mini map's `GE2DPoint mPoint`, the scroll's `GERectangle mEdges` (seven editor and HUD sites assign it)
+  and `TMPoll mPoll`, the strings (the chat text, the join's names, the saved game's file and description, the quick
+  save's name; the migration's and the detected game's scratch), the civilization reset's player list.
+- **The names stay types.** Each original class is a one-line constructor deriving from `EEARust` in the same header
+  (`class EEAMouseClick : public EEARust { public: EEAMouseClick() : EEARust(kEEAMouseClick) {} };`), so every
+  `new EEAX(...)`, every `EEAX*` member and forward declaration and the editor's subclasses compile unchanged: the
+  callers' change is their include line. `Execute` and `SelectInRectangle` are `EEARust`'s virtuals (the editor's
+  click and lasso override them). `EESEAQuickSaveLoad` is a kind (the editor tab's resume is its run's last op).
+- **One host.** `ee_screenscpp_ga(op, record, p, i[8], f[8])` in `Actions/EEARust.cpp` (a port unit in
+  `units.EXTRA_UNITS`): 31 ops, the unit, class, group, player, tile, map, technology, calamity, camera, mini map,
+  scroll, network and editor ones split by a field number in `i[0]`, one line each; `ee_screenscpp_ga_record(type,
+  values, n)` makes an `EEMRecord` from typed values (an integer, a float, a point: `EEMRecordValue`'s conversions).
+  The unit also keeps the COMDATs the deleted units emitted (`EEUnitClass::IsAirBase`, `IsDropSite`, `IsTransport`,
+  `EETile::IsVisibleTo`, `EEGraphicEffect::Get`, `EEGroup::GetFirstUnit`, `EEIsValidName`, the join's restart
+  callback, `gMiniMapTransformation`). Its include block was trimmed greedily (81 of 138 lines, each drop compiled).
+- **Rust owns the decisions** (`game_actions.rs`): the right click's whole tree (the doppelganger view of a target
+  the player cannot see, as one helper where the original had two copies; the tree under citizens moving onto a
+  tile; the gather, repair, smart farmers, attack, heal, drop-off, load, return-to-base and move decisions; the
+  confirmation effect's height), the plain click, the lasso's message by type and modifier, the build's footprint
+  offset, the calamity's cast and check, the camera targets, the mini map's send (`trunc_long`, `um_arctan2`) and
+  centre (`um::floor`, the mesh's side planes through `ee_ge`'s `Ge3DPlane`/`Ge3DLine`, the same functions the C++
+  `GE3DLine`/`GE3DPlane` forward to), the edge scroll's acceleration (the velocity a Rust static shared by the game's
+  and the editor's scroll, as the file statics were), the chat box's scroll to the end, the join per mode, the
+  migration's choice of the new host, the pause, the improvement's raise and lower, the quick save/load, the saved
+  game, the civilization reset, the boot.
+- **Traps.** The calamity class's `GetDefaultTarget` and `CanCastAt` take the world point by non-const reference and
+  may change it, and `Check` hands the changed point on to the next caster's `CanCastAt`: the host writes the point
+  back after each. `gEffectManager->CreateEffect` takes the location by reference too (a host local). The quick save's
+  memory file was a host-written record member, invisible to a replay: the host now answers the new file and Rust
+  keeps it and hands it back to write and to delete. The migration's three scratch strings are members (the original's
+  locals) and must be cleared at the run's start, or a second migration reports the first one's dropped host.
+- The record is copied out around each op and never borrowed across one; no op calls back into an action.
+
+### The golden (build/ga/drv in the round's worktree, not committed)
+
+- `cut.py` cuts the 19 units and their headers at 3114725d into `orig.inc` (namespace O; includes, externs and the
+  COMDATs the fake defines stripped) and the new host into `new_host.inc` (its entries renamed: the driver's logging
+  entries call them). `fake.h` (900 lines) is the world: eight units (six complex, two without a complex unit or a
+  tile node), their classes and stats, two tiles with doppelgangers and unit lists, four human players with tech
+  trees and events, the selected and active groups, the map with its four planes, the camera, the communications
+  classes (client, server, the `static_cast`s and `dynamic_cast`s), the lobby form and its chat box, the editor
+  form, the WON object, sounds, files and saves. Every answer is a function of the world (rolled before each
+  top-level call) and the arguments, so a side that reads more or in another order sees the same world; every effect
+  is a trace token; after each call the action's members and the world's directly written members (the players'
+  slots, the pause flag, the player name and host settings, the lag status, the camera-following flag, the owed
+  ticks) are digested.
+- A case makes the action (its constructor's arguments from the stream), makes 1-6 calls (5-10 in the "rich" world,
+  which favours the deep branches: own units, transports, town halls, farms, two casters, points on the scroll's
+  edges) and releases it. 0 differences: 10,000 mixed cases on each of seeds 2, 5, 6, 7 and 8,000 rich; 3,000-8,000
+  per kind on its own; the click 20,000 plain and 10,000 rich, which reach every message type it sends.
+- `golden_game_actions.txt` (817 cases, 3,892 calls, 36,499 ops and record messages, 1.9 MB) is the new side's host
+  log, replayed by `game_actions_tests::replays_the_golden`: each call's record loaded, the call made, each op and
+  record message checked and answered from the log, the record compared after; the destructor's ops after the last
+  call. Pointers travel by name (`u3`, `t0`, `m12`, `cal`, `rect`, `file`).
+- Mutations. The host (`mutate.py`, the driver rebuilt for each): 28 of 28 caught; the migration's slot write needed
+  the world digest widened first (the trace never showed the players' slots). Rust against the replay
+  (`rmutate.py`): 37 of 40; two of the three (the click's last-resort tile centre, the transport's group-of-one test)
+  are caught by the driver over the library rebuilt with them (`rdmutate.py`); the third, the scroll's
+  non-accelerating branch, is equivalent: `mAccelerate` is set by the constructor and never cleared (dead in the
+  original too).
+- Lessons. (1) A mixed world reaches the click's deep branches too rarely for a golden of this size: biasing part of
+  the cases ("rich") took the replay's score from 30/40 to 37/40. (2) Globals the actions write (the player name, the
+  host settings) must be reset each roll, or the original's and the new run of a case start from each other's
+  leftovers (10 false differences in 6,000 cases). (3) A `break;` left inside a converted `switch` arm cut every mini
+  map case to one call; the golden's missing record lines showed it. (4) One templated driver over 38 classes:
+  dispatch at compile time on a kind trait (`if constexpr`), or every branch is instantiated for every class.
+
+### Count
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 3026b8ba | the 19 classes as `EEARust` kinds, the host, the callers' include switches, 19 units and 19 headers deleted | +1,125 -3,508, net -2,383 |
+
+Rust: `game_actions.rs` 1,956 lines, `game_actions_ffi.rs` 192, tests 158, the replay 317.
+
+### Gates
+
+| Gate | The move (3026b8ba) | Merged with rust (92c1190e, after the address markers) |
+|---|---|---|
+| `build.py -j 3 --sim` | 0 unresolved, 0 duplicates | 0 unresolved, 0 duplicates |
+| `build.py --test-profile windowed-software` | | 0 unresolved, 0 duplicates |
+| `tools/sim_editor.py` | PASS (12,723 lines) | PASS (14,049 lines) |
+| oracle | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | PASS (3,707 tests) | PASS (3,867 tests) |
+| capture, oracle profile, seeds 2-3 | | PASS (179 digests; 4 SMSV/TNMT records without a golden, not this lane's) |
+| harness (the lock held) | | tour PASS, orders + box select PASS, LAN game PASS, legacy tour `STOP <windowed session complete>`; the scroll check passed once on the first merge (21cbf437) and failed twice on the final tree, once on the edge and once on the key scroll (the key scroll is not this lane's code: machine load; edge scrolling is flaky here) |
+
+The first legacy tour on the first merge crashed in `EETestCommsRefresh` (the fixture's graphics-thread read of
+`gCommunications` while the UI thread replaced it at the single player start: `ee_net_comms_get` on a freed object);
+the rerun on the final tree passed. The race is the fixture's, not the actions'.
+
+### Behaviour
+
+None intended. Unset members of the original are zero now (the record is value-initialised):
+`EEACenterCamera::mUnitID` was left unset by its constructor and by a `SetUnit` on a unit without a complex unit.
+Every action constructs the scroll's poll (10 ms, not started). Dead state dropped: `EEAQuickSaveLoad::mGameState`
+(only stored, by the UI thread's quick load; the store went too) and `mP20` (never set), the join's unused
+`EEGameOptionsPlayer` local and its `gWorldTable` read.
+
+### What runs it, and what only a person reaches
+
+The orders game (the right click's gather, repair, repair-queued and move; the scouting's camera), the box
+selection (the lasso, the plain click), the scroll check and every game frame (the scroll's `Update`), the LAN game
+(the join and host through the LAN screen, modes 4 and 3; a client leaving), the editor gate (the quick save) and the
+calamity fixture's casts. Only a person: the right click's other orders (rally points, attack, heal, the transports,
+air bases, drop-off, smart farmers, the tree under citizens), the mini map's clicks, the build placements, the player
+event key, the pause, the in-game save dialog, a host dropping out (the migration), the editor's civilization reset
+and improvement buttons, the chat line unless a chat message is sent.
+
+### Left
+
+`EEAWonNet` (the WON lanes'); `Scenario Editor Actions/EESEARust.cpp` (912 lines: the paints' and the whole editor
+actions' hosts and the selection host) onto this host's shape; the editor's click and lasso subclasses as kinds.
+
+## R6: the game actions, round 2: the scenario editor's actions as EEARust kinds, its mouse-mode controls on the HUD's Rust, the scroll check measured (ee_screens game_actions.rs, command_units.rs, select_units.rs; branch rust-actions2, 2026-11-15)
+
+### What moved
+
+| Original | Now | Reached by |
+| --- | --- | --- |
+| `EESEAMouseClick`, `EESEALasso` (headers, inline bodies over Rust) | `EEARust` kinds 20, 21: `Ga::run` applies the queued message through `editor_actions.rs`; `Execute` and `SelectInRectangle` are the editor's deselections | the editor gate (`select`, `toggle`, `add`, `clear`, `mouseclick`, `lasso`, `lassorect`) |
+| `EESETSAMouseClick`, `EESETSALasso` (two `Virtual4`s in `EESETSObject.cpp`) | kinds 22, 23: the same, then the object screen's `UpdateSelection` (host op `E_OBJECT_SELECTION`) | the editor gate (`tsclick`) |
+| `EESEAChangeLoadText` (header) | kind 24 (`mText`; `Post` out of line in `EESEARust.cpp`) | the editor gate (the load thread's texts) |
+| `EESEAPaint`, `EESEAPaintRust` (header; the record a Rust box) | kind 25, the box in the record (`mPaint`); `SetArea` non-virtual (it had one implementation) | the editor gate (terrain, elevation, bulldozer) |
+| `EESEARust` (`EESEARust.h`'s class over a Rust box) | kind 26, the box in the record (`mAction`) | the editor gate (every whole action) |
+| `EESEUICCommandUnits.cpp` (`MouseMove`, `MouseRButtonUp`, `StartCommand`) | `command_units.rs` with `mEditor`: the drag rotates the selection, a right click without a drag deletes the unit under the mouse, the start lets any unit turn; the class keeps its rotation action and four ops (`EESEARust.cpp`) | only a person (the editor's right drag) |
+| `EESEUICTriggerSelectUnits.cpp` (`MouseLButtonUp`, `MouseLButtonDoublePressed`, `MouseRButtonDown`, `MouseRButtonUp`) | `select_units.rs` with `mTrigger`, `mRightButton`; the class is its inline constructor and two right-button forwarders | only a person (the trigger tab's object screen) |
+
+Six headers (`EESEAMouseClick.h`, `EESEALasso.h`, `EESETSAMouseClick.h`, `EESETSALasso.h`, `EESEAChangeLoadText.h`,
+`EESEAPaint.h`) and two units (`EESEUICCommandUnits.cpp`, `EESEUICTriggerSelectUnits.cpp`) are deleted; the classes
+are one-line constructors in `ee/EEARust.h`. The editor lane's files touched, all mechanical: the include lines of
+`EESimEditor.cpp`, `EESEBSelect.cpp`, `EESEIAExport.cpp`, `EESELoadThread.cpp`, `EESERBUnitTypes.cpp`,
+`EESESCComboBox.cpp`, `EESETSObject.cpp` (and its two `Virtual4`s deleted), `EESEUITechListBox.cpp`, `EESEUnit.cpp`,
+`EEUIEOpenCivBuilder.cpp`, `EEUIFSEElevation.cpp`, `EEUIFSEPaint.cpp`, `EEUIFSEPaintElevation.cpp`,
+`EEUIFSETRBPaintType.cpp`, `EEUIFSETerrain.cpp`, `EEUIFSEUpgradePanel.cpp`, `EEUIFScenarioEditor.cpp`; a forward
+declaration in `EESELoadThread.h` and `EEUIFSEPaintElevation.h`. The screens lane's: `EEUICSelectUnits.cpp` (five
+host ops for the trigger tab), `command_units.rs`, `select_units.rs`, `hud_ctl_ffi.rs`, `hud_ctl/replay.rs`.
+
+### The shape
+
+- **The editor kinds' calls.** The editor's runs stay in `editor_actions.rs` and `editor_whole.rs` over their own
+  hosts (`ee_screenscpp_sea`, `_sew`, `_sep`, `_seu`). `Ga` reaches them through `GaHost::editor_call(GaEditorCall)`
+  (a default method answering 0: the round-1 golden's replay host needs nothing new); the FFI host calls the editor
+  modules' entries directly. The click's and lasso's editor entries want the action as an `EEAction*` (they post it):
+  the record is the second base, so the host answers it (`EE_SCREENS_GA_OP_ACTION`).
+- **The boxes in the record.** `mPaint` and `mAction` are pointers to Rust boxes (`EeScreensSeaPaint`,
+  `EeScreensSewAction`, moved from the FFI modules into `editor_actions.rs` / `editor_whole.rs` so the record compiles
+  under `cfg(test)`); the C++ constructors fill them (`ee_screens_sea_paint_new`, `ee_screens_sew_new`) and `Ga::free`
+  frees them. `#[allow(improper_ctypes)]` on the host's extern block: C++ never looks into the boxes.
+- **The controls as flags.** The editor's controls were subclasses overriding the HUD controls' virtuals; the HUD
+  controls are Rust already (screens round 29), so the overrides became branches on record flags the subclasses'
+  constructors set (`mEditor`, `mTrigger`). The base `StartCommand` and `MouseMove` reach the editor's branch with no
+  C++ override; the trigger control keeps `MouseRButtonDown`/`Up` forwarders (the game's control has none: UIControl's).
+- **The hosts.** `EESEARust.cpp` keeps its four host functions (they differ in signature; merging them would only
+  move lines); its includes were pruned by compiling the unit alone with each block of them dropped (110 -> 57; `Actions/EEARust.cpp` lost one more).
+
+### Golden and mutations
+
+- The round-29 HUD driver (`build/sc29/drv` of the screens worktree) copied to `build/ga2/hud` and extended with kinds
+  4 and 5: the unmodified `EESEUICCommandUnits` and `EESEUICTriggerSelectUnits` units of 32a9ab6a, renamed and
+  derived from the original 00754e4f base classes, against `EESEUICCommandUnits` / `EESEUICTriggerSelectUnits` over
+  the new Rust; the fake world gained units' complex part and class pointer (rolled last, so the earlier kinds'
+  streams are unchanged), the lasso's `SelectInRectangle`, a fake `EESEARust` and the rotation. 0 differences over
+  6,000 cases (seeds 2 and 3; about 1,000 of each new kind) and 600 (seed 7).
+- `golden_hud_editor.txt` (199 cases of kinds 4 and 5, 678 KB) is the new side's log; `replays_the_editors_golden`
+  and `replays_the_trigger_tabs_golden` replay it (the replays' loaders read the flags after the original ten).
+- Host mutations (`mutate2.py`, the driver rebuilt for each): 12 of 12 caught. Rust mutations (`rmutate2.py`): 21 of
+  22 caught by cargo; the editor start's `mCanFace` is masked by the replay (a start re-enters the control, so its
+  record is reloaded from the golden) and caught by the driver over the rebuilt library (`rdmutate2.py`, 285
+  differences). The driver gave the trigger kind no `CopyData` at first, which hid the release's `mD1 = false`; it
+  now does.
+- The editor kinds' dispatch has its own tests (`game_actions_tests.rs`: the four selection kinds with and without a
+  message, the trigger tabs' refresh, the click's `Execute`, the lasso's `SelectInRectangle`, the load text, the
+  paint's area, run and single free, the whole action's run and free).
+
+### The scroll check
+
+Round 1 ended with two scroll-check failures on the final tree. Measured on one harness slot with nothing else of
+this lane running: `fixture_game.py --exercise random-game --play-seconds 20 --scroll-check`, three times each on
+round 1's test exe and on rust 03ab5fe8's (built in a scratch worktree), alternating:
+
+| run | round 1 (edge) | rust 03ab5fe8 (edge) |
+| --- | --- | --- |
+| 1 | left 27.597 | left 37.427 |
+| 2 | left 0.041, right 0.041: FAIL | left 0.041, then right 19.865 |
+| 3 | left 33.341 | left 18.567 |
+
+Both builds behave the same: a 1.5 s hold moves the camera 18-37 tiles, and sometimes exactly 0.041, which is one
+step of the edge scroll (the first `Update`'s elapsed 1: the minimum speed's 0.1 x (setting + 0.5) plus one
+acceleration step, times (zoom + 0.5) x 0.1). One step means the scroll's `Update` saw the pointer at the edge once:
+the fixture's `pointer` command sets `gMouse`'s position once, and the next platform mouse event puts it back (a
+hypothesis: the window under the real cursor). rust's own exe shows it (run 2, left edge) as round 1's does; it is
+not the lane's code. The key scroll varies as much (1.4 to 11.3 tiles). No change made.
+
+### Commits and gates
+
+| Commit | What | Net C++ (src, include/ee) |
+| --- | --- | --- |
+| 9561e139 | the editor's actions as `EEARust` kinds, its two mouse-mode controls on the HUD's Rust; 6 headers, 2 units deleted | +180 -610, -430 |
+| c720a592 | `EESEARust.cpp`'s includes 110 -> 57, `EEARust.cpp`'s one fewer | -54 |
+| 619a44ba | the merge of rust (c7ffd6cd) | |
+
+| Gate | Per commit | On the merged tree (619a44ba) |
+| --- | --- | --- |
+| `build.py --sim` | 0/0 both | 0/0 both; `--test-profile windowed-software` 0/0 |
+| oracle | seeds 2-3 identical (both commits) | seeds 2-7 identical |
+| `tools/sim_editor.py` | PASS (14,049 lines) | PASS (14,260 lines; the first run differed in one `formstate` line, the load text the load thread had not yet posted: the load thread's timing, a rerun passed) |
+| civ builder gate | PASS (3,913 lines) | PASS (3,913 lines) |
+| Rust gate | tests and clippy pass, rustfmt fixed, headers current (an `ee_won` socket test failed once under load, passed alone) | PASS (a first run's `ee_gx` GPU timing test failed under load and passed alone; the rerun passed whole) |
+| harness (the lock held) | | tour PASS (render, F3); orders + box select PASS (4 box steps, gather/repair/repair-queued/move); scroll check PASS (edge 21.2, key 6.0); LAN game PASS; legacy tour `STOP <windowed session complete>` |
+
+The merge: rust's editor round 7 had pruned the include lines of seven editor units this branch had switched to
+`ee/EEARust.h` (rust's side taken, the deleted headers' includes made `ee/EEARust.h` again); two round-1 units rust
+had moved to the editor form's accessors stay deleted, `Actions/EEARust.cpp` uses `GetTabGroup` and `GetLoadThread`;
+`EEServer.cpp`'s new includes of round 1's headers became `ee/EEARust.h`; `cbindgen.toml` took both sides. A trap
+for next time: the include rewrite's pattern `EEA\w+` also matched `EEAirTrafficControl.h`, `EEAIContinentManager.h`,
+`EEAreaUtilities.h`, `EEAreaEffect.h`, `EEAmbientSoundManager.h` (four lines in two units, restored before the
+build): name the deleted headers. `strip_markers.py` changed nothing on the merged tree.
+
+### Behaviour changes
+
+None intended. `EESEAPaint::SetArea` is no longer virtual (one implementation). `EESEALasso::SelectUnits(rect, type,
+deselect, deselect-only)` (no caller) went with its header; the Rust entry `ee_screens_seu_lasso_select` stays.
+
+### What runs it, and what only a person reaches
+
+The editor gate runs every editor action kind (the click's select/toggle/add/clear, its `Execute`, the lasso's message
+and `SelectInRectangle`, the trigger tab's click, the paints, the whole actions, the load text). EE-SIM builds no game
+form, and no gate drives the editor's two mouse-mode controls: the editor's right drag (rotate, delete under the
+mouse) and the trigger tab's object screen selection (left and right drags, clicks, the double click) are only a
+person's, pinned by the driver's golden.
+
+### Left
+
+The input path's remaining C++ is hosts: `Actions/EEARust.cpp` (the round-1 host), `EESEARust.cpp`'s four editor
+hosts and the controls' ops, `EEUICSelectUnits.cpp`/`EEUICCommandUnits.cpp`'s ops, `EEUserInterface.cpp`'s action
+queue host (its decisions in `actions.rs` already), `EEUIFMainGame.cpp`'s mouse-mode host (screens'). `EEAWonNet`
+(the WON lanes'). Measured but not this lane's: `EEUnitPicker.cpp` (525, the gfx lane's picking), `EECameraControl.cpp`
+(894, the gfx lane's camera), `RTSMouse.cpp`.

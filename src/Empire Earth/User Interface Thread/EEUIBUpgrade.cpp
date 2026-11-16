@@ -22,7 +22,7 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEAction.h"
-#include "ee/EEAUpgradeImprovement.h"
+#include "ee/EEARust.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIBUpgrade.h"

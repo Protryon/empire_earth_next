@@ -112,7 +112,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEMouse.h"
 #include "ee/EEAction.h"
-#include "ee/EEARemovePlayer.h"
+#include "ee/EEARust.h"
 #include "ee/EEMessage.h"
 #include "ee/EECommunications.h"
 #include "ee/EEUserInterface.h"
@@ -153,8 +153,6 @@
 #include "ee/EECalamityManager.h"
 #include "ee/EEUnitClassIDs.h"
 #include "ee/EEGraphics.h"
-#include "ee/EEAMouseClick.h"
-#include "ee/EEALasso.h"
 #include "ee/EEUICSelectUnits.h"
 #include "lle/ISModifierState.h"
 #include "rust/ee_gfx.h"   // the drag end the selection control computes
