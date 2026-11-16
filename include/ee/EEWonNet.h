@@ -236,39 +236,7 @@ public:
 // Native directory value records. DataObject14, ACL10; node sizes1c/18.
 class ByteBuffer;
 class Blowfish;
-class CDKey {
-protected:
-    static const char* mCDKeyPath; // genuine SDK static default registry path, no instance layout
-public:
-    CDKey(); //2e3090, actual complete1c polymorphic owner
-    CDKey(const std::string& inProduct); //existing legacy constructor contract retained
-    bool LoadFromRegistry(long inMode = 2, const char* inKey = mCDKeyPath); //2e3ac0; genuine SDK default local-machine/path arguments
-    void ClearFromRegistry(long inMode = 2, const char* inKey = mCDKeyPath);
-    bool SaveToRegistry(long inMode = 2, const char* inKey = mCDKeyPath); //genuine SDK bool result; old unprovided legacy void declaration retained in history
-    void Invalidate(); //2e30c0, support only
-    void SetProductString(const std::string&); //2e30d0
-    static DWORD GetMachineId(bool* inSuccess = NULL); //2e3320
-    bool InitEncrypted(const void*, unsigned long); //2e3880
-    bool Init(const std::string&);
-    std::string GetString() const;
-    ConstSmartPtr<ByteBuffer> GetEncrypted() const;
-    bool InitRaw(const void*);
-    bool SaveToFile(const std::string&);
-    bool LoadFromFile(const std::string&);
-    bool IsBeta() const;
-    bool IsForceCheck() const;
-    const ByteBuffer* GetRaw() const { return mKey.get(); } //genuine SDK borrowed key accessor, mutable owner to const pointee only
-    bool IsValid() const { return mValid; } //genuine SDK CDKey validity bool18
-protected:
-    bool CalcKeyFromBuffer(const char*); //2e3220, exactly8 copied bytes and product CRC
-    void GetSymmetricKey(Blowfish&, bool = true) const; //2e35a0
-    virtual void NotifyUsedOldMethodToDecrypt() {} //actual slot0/326b60, no virtual destructor
-    virtual bool GetUseNewEncryptMethod() const { return true; } //actual slot4/2f30d0
-public:
-    std::string mProduct; //04..14; actual SDK mProduct
-    ConstSmartPtr<ByteBuffer> mKey; //14..18; actual SDK mKey, real ByteBuffer owner
-    bool mValid; //18; actual SDK mIsValid; complete extent1c
-};
+class CDKey; // ee/wonapi/WONAuthContext.h
 
 
 struct DirDataObject {
@@ -321,81 +289,7 @@ class AuthPeerData;
 class WriteBuffer;
 class ElGamal;
 class ServerContext; //actual complete3c owner in Routing
-// AuthContext (0xc0 bytes in the original) is ee_won's (rust/crates/ee_won/src/authobj.rs): its lock, sessions and
-// certificate flow, peer data, login data, server list and the class's verifier key (0x566018, its checked flag
-// 0x5661e1). This class is a RefCount shim holding one reference to it; every method forwards.
-class AuthContext : public RefCount {
-    void Init(); //2ddb70 original private SDK initializer
-public:
-protected:
-    virtual ~AuthContext(); //2de370 original external493, scalar2ddf90/30; genuine SDK protected access
-public:
-    AuthContext(); //2dddf0 original external404; real completec0 allocation authority
-    AuthContext(const std::wstring&,const std::wstring&,const std::wstring&);
-    bool AddAddress(const IPAddr&);
-    bool AddAddressesFromDir(const DirEntityList&,const wchar_t* = NULL);
-    void RemoveAllCommunity();
-    void AddCDKeyCommunityJoin(const std::wstring&,const CDKey&);
-    void AddUserData(const std::wstring&,const ByteBuffer*);
-    void SetLoginSecretFile(const std::string&);
-    void AddNickname(const std::wstring&);
-    void SetNickname(const std::wstring&,const std::wstring&);
-    void ClearNicknames();
-    bool RemoveAddress(const IPAddr&);
-    void RemoveAllAddresses();
-    bool AddAddressesFromDir(const std::map<std::wstring,DirEntityList>&,const std::wstring&,const wchar_t* = NULL);
-    static bool LoadVerifierKey(const std::string&); //2df440 actual cdecl/ret0
-    void SetServerContext(ServerContext*); //2df330 support0
-    SmartPtr<ServerContext> GetServerContext(); //2df3e0 support0
-    void ClearCDKeyCommunityJoins(); //2e0510 genuine SDK locked one-time CDKey join map clear
-    void ClearUserData(); //2e05e0 genuine SDK locked one-time community user-data map clear
-    void ClearOneTimeData(); //2e06b0 genuine SDK ClearUserData then ClearCDKeyCommunityJoins dispatcher
-    bool LoadSecretList(); //2e1240
-    bool SaveSecretList(); //2e1460
-    void AppendLoginSecrets(WriteBuffer&); //2e1560
-    void AddSecret(const void*); //2e1650
-    void RemoveSecret(const void*); //2e1790
-    void CommitSecrets(time_t,time_t); //2e1890
-    ConstSmartPtr<AuthPeerData> GetPeerData(); //2e19e0 support0
-    bool IsExpired(time_t = 0); //2e1a30 support0
-    void SetPeerData(const AuthPeerData*); //2e1aa0
-    void SetUserName(const std::wstring&); //2df620 actual locked call-only API
-    void SetPassword(const std::wstring&); //2df760 actual locked call-only API
-    void AddCommunity(const std::wstring&); //2df8a0 actual insert-only call API
-    void RemoveCommunity(const std::wstring&); //2e02d0 actual erase-range call API
-
-    // inline accessor: one more inline expansion in EEUIEWNAROpenScreen::ProcessEvent makes VC6 refuse the fourth
-    // UIEvent ctor as in the original (0x1eb3a2)
-    std::wstring GetName() const { return this->LoginText(1); } // a copy (the original returned its member)
-    std::wstring GetUserName() const { return this->LoginText(1); }
-    std::wstring GetPassword() const { return this->LoginText(2); }
-
-    void SetDoAutoRefresh(bool); //actual reference-only flag/reset API2deb30
-    void SetCommunity(const std::wstring&); //2dfcc0 preserves selected existing full3c record before clear
-    void SetCDKey(const std::wstring&,const CDKey&); //2e0380 original locked map mutation, borrowed call-only
-    bool SetHashFile(const std::wstring&); //2e06d0 support0 adapter
-    bool SetHashFile(const std::wstring&,const std::string&); //2e07f0 support0 adapter
-    bool SetHashFileList(const std::wstring&,const std::list<std::string>&); //2e08e0 actual HashFileList alias expansion
-    void AppendHashes(WriteBuffer&,const std::basic_string<unsigned char>&); //2e0c50, exact RawBuffer alias expansion
-    void AppendCommunityData(WriteBuffer&); //2e0e50
-    static void StaticAutoRefreshCallback(SmartPtr<AsyncOp>,SmartPtr<RefCount>); //2de760, genuine owned-value callback
-    void AutoRefreshCallback(AsyncOp*); //2de7f0
-    void StopAutoRefresh(); //2de8e0
-    void Kill(); //2df260
-    void StartAutoRefresh(bool = false); //2de970 actual call-only, owner allocation remains original
-    // a waiting LightGetCertOp: its run (an AsyncOp) and its member (ee_won authflow.rs), or NULL for none
-    void RefreshAsync(AsyncOp* = NULL, EeWonLightCert* = NULL, DWORD = INFINITE); //2deba0 actual call-only
-    long RefreshBlock(DWORD = INFINITE); //2dedf0, actual WONStatus=long alias expansion before Routing typedef
-    void GetCertCallback(GetCertOp*); //2de5f0
-    static void StaticGetCertCallback(SmartPtr<AsyncOp>,SmartPtr<RefCount>); //2de560 support0
-    friend struct AuthContextFlow;
-    // the Rust object (the certificate ops' host calls answer on it: ee_won hostauth.rs)
-    const EeWonAuthCtx* Core() const { return this->mCore; }
-private:
-    const EeWonAuthCtx* mCore; // one reference
-    std::wstring LoginText(int inWhich) const;
-    void LoginSet(int inWhich, const std::wstring& inKey, const std::string& inValue = std::string(), long long inNum = 0);
-};
+class AuthContext; // ee/wonapi/WONAuthContext.h (a shim over ee_won authobj.rs)
 } //namespace WONAPI
 
 // The game room's published game information (provisional names): three strings and counts;

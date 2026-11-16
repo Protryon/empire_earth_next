@@ -63,6 +63,9 @@ pub const EE_SCREENS_HC_ADD_DIRTY: u32 = 22;
 pub const EE_SCREENS_HC_VIEW_HAS_MOUSE: u32 = 23;
 /// -> the game window's width.
 pub const EE_SCREENS_HC_WINDOW_WIDTH: u32 = 24;
+/// A class's own ops from here (`EE_SCREENS_HC_CLASS + op` reaches its `RustOp` as `op`; the portrait's, the icon
+/// bar's).
+pub const EE_SCREENS_HC_CLASS: u32 = 64;
 
 /// `kDisplayModeHidden`, `kDisplayModeShown`.
 pub const EE_SCREENS_HC_HIDDEN: i64 = 0;

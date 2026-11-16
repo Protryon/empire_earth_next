@@ -21,11 +21,6 @@ class GE3DLine;
 class GEVector;
 template <class T> class UMemoryPool;
 
-// EEROUnits.cpp's three command textures (0x5294e0/0x5294e4/0x5294e8, loaded there; the confirmation draws with them)
-// (provisional names)
-extern GETexture* sTexture4E0;
-extern GETexture* sTexture4E4;
-extern GETexture* sTexture4E8;
 
 class EEE2DRust : public EEEffect2D {
 public:

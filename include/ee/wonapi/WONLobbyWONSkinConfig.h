@@ -22,8 +22,6 @@ public:
     static ComponentConfig* CfgFactory(); // at 0x00796d20
     virtual bool PreParse(ConfigParser*);  // at 0x00799010
     virtual bool Virtual24(const std::string&); // dispatch, at 0x00799210
-protected:
-    bool ReadVert(); // at 0x00798f90
     void HandleButtonClickSound(); //3990e0
 };
 }

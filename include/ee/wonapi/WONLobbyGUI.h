@@ -1164,6 +1164,7 @@ public:
     int ReadColor();                       // ReadColor
     Component* Fn386860(const std::string& inName); // 0x386860, borrowed component lookup
     bool ReadBool();                       // 0x3837f0, boolean parser
+    bool RunTable(int,const std::string&); // the table reader (ee_won cfgtab.rs, WONCfgTable.inl); false: not its key
     SmartPtr<Component> mComponent; // at +0x54 (set at 0x3825dc)
     ConfigParser* mConfigParser; //58, borrowed
     StringParser* mStringParser; // at +0x5c
@@ -1221,7 +1222,6 @@ template <class T> void SafeGetComponent(ComponentConfig* inConfig, SmartPtr<T>&
 
 class ButtonConfig : public ComponentConfig {
 public:
-    void HandleButtonFlags(); //381880
     void HandleFitText(); //381d00
     ButtonConfig();                         // 0x381860; the class is 0x7c bytes
     virtual bool Virtual24(const std::string&); //381e80

@@ -183,7 +183,7 @@ void EESELoadThread::Handle402(unsigned long inUnitClass, unsigned long inPlayer
         this->mChangeLoadText->Post(theText);
         thePlayer->SetUnitClassMedia(theClass->mUnitType, 0x7f);
         EEGhostUnit::Create(this->mEditor->GetMouseLocation(), theClass->mUnitType, thePlayer,
-                            !theClass->IsLandBuilding() ? static_cast<EESEUnit*>(this->mEditor->mTabGroups[kEditorTabUnits])->GetRotationAngle() : 0.0f, false);
+                            !theClass->IsLandBuilding() ? static_cast<EESEUnit*>(this->mEditor->GetTabGroup(kEditorTabUnits))->GetRotationAngle() : 0.0f, false);
         thePlayer->UnloadUnitClassMedia(theClass->mUnitType);
         this->mChangeLoadText->Post(UWideString(""));
     }

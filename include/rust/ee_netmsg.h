@@ -653,6 +653,18 @@ constexpr static const uint8_t JIT_MANUFACTURING = 173;
 
 constexpr static const uint8_t EXCHANGE_RESOURCES = 174;
 
+/// A game message's payload: the capture builds it (`EEMessage::BuildEEMessage`, an NMIM record)
+constexpr static const uint8_t EE_NETMSG_SWEEP_ITEM_GAME = 1;
+
+/// An engine message's payload: the capture builds it and records it (NMNE)
+constexpr static const uint8_t EE_NETMSG_SWEEP_ITEM_ENGINE = 2;
+
+/// A box selection's NMCU record, whole: the capture commits its bytes
+constexpr static const uint8_t EE_NETMSG_SWEEP_ITEM_COMPRESS = 3;
+
+/// The NMCU record's tag (the capture commits an `EE_NETMSG_SWEEP_ITEM_COMPRESS` item's bytes under it)
+constexpr static const uint32_t EE_NETMSG_SWEEP_NMCU = 1430474062;
+
 /// `EEMAddPatrolPoint`
 constexpr static const uint32_t EE_NETMSG_ADD_PATROL_POINT = 0;
 
@@ -1176,6 +1188,539 @@ constexpr static const uint8_t EE_NETMSG_SWEEP_SELECT_UNITS = 4;
 /// The header's size: reserved, type, target slot, originating slot.
 constexpr static const size_t HEADER_SIZE = 4;
 
+/// a lock entered (v1 1) or left (v1 0): `EE_NETMSG_SESS_LOCK_*`
+constexpr static const uint32_t EE_NETMSG_SESS_OP_LOCK = 1;
+
+/// a fact (`EE_NETMSG_SESS_FACT_*`, v1 its argument)
+constexpr static const uint32_t EE_NETMSG_SESS_OP_FACT = 2;
+
+/// the communications object's member v0 (`EE_NETMSG_SESS_SELF_*`; v1 an index)
+constexpr static const uint32_t EE_NETMSG_SESS_OP_SELF_GET = 3;
+
+/// sets the communications object's member v0 (v1 an index) to v2
+constexpr static const uint32_t EE_NETMSG_SESS_OP_SELF_SET = 4;
+
+/// a lobby slot register (v0 the register, v1 `EE_NETMSG_SESS_REG_*`, then its values)
+constexpr static const uint32_t EE_NETMSG_SESS_OP_REG = 5;
+
+/// a message sent (`EE_NETMSG_SESS_SEND_*`)
+constexpr static const uint32_t EE_NETMSG_SESS_OP_SEND = 6;
+
+/// a message's member or call (`EE_NETMSG_SESS_MSG_*`, v1 the message)
+constexpr static const uint32_t EE_NETMSG_SESS_OP_MSG = 7;
+
+/// the UI (`EE_NETMSG_SESS_UI_*`)
+constexpr static const uint32_t EE_NETMSG_SESS_OP_UI = 8;
+
+/// WON's game info (`EE_NETMSG_SESS_WON_*`; only when gWonNet is there)
+constexpr static const uint32_t EE_NETMSG_SESS_OP_WON = 9;
+
+/// a sound: v0 0 the server's (v1 out of sync), else `EELoadSound` of sound v0 (1 out of sync, 2 resending, 3 booted)
+constexpr static const uint32_t EE_NETMSG_SESS_OP_SOUND = 10;
+
+/// the world (`EE_NETMSG_SESS_WORLD_*`)
+constexpr static const uint32_t EE_NETMSG_SESS_OP_WORLD = 11;
+
+/// the engine's server or client (`EE_NETMSG_SESS_COMMS_*`)
+constexpr static const uint32_t EE_NETMSG_SESS_OP_COMMS = 12;
+
+/// the game start (`EE_NETMSG_SESS_START_*`)
+constexpr static const uint32_t EE_NETMSG_SESS_OP_START = 13;
+
+/// the server's `LockSendCommunicationsTick` / `Unlock...`
+constexpr static const int64_t EE_NETMSG_SESS_LOCK_CT = 0;
+
+/// `gGameOptions.mLock` for writing
+constexpr static const int64_t EE_NETMSG_SESS_LOCK_OPTIONS_WRITE = 1;
+
+/// the server's `mSearchForSlotLock`
+constexpr static const int64_t EE_NETMSG_SESS_LOCK_SEARCH = 2;
+
+/// the server's `mAttemptToRemovePlayerLock`
+constexpr static const int64_t EE_NETMSG_SESS_LOCK_ATTEMPT = 3;
+
+/// the server's or the client's `mFastSelectionLock`
+constexpr static const int64_t EE_NETMSG_SESS_LOCK_FAST = 4;
+
+/// `gPhysics->mServerMessageQueueLock`
+constexpr static const int64_t EE_NETMSG_SESS_LOCK_PHYSICS = 5;
+
+/// `gWorld.mLock` for writing
+constexpr static const int64_t EE_NETMSG_SESS_LOCK_WORLD_WRITE = 6;
+
+/// the server's ping: `StopPing` (enter), `StartPing` (leave)
+constexpr static const int64_t EE_NETMSG_SESS_LOCK_PING = 7;
+
+/// `EEIsMultiplayerGame(true)`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_MULTIPLAYER_GAME = 0;
+
+/// `gGameOptions.mIsMultiplayer`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_OPTIONS_MULTIPLAYER = 1;
+
+/// `gGameOptions.mLoadType`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_LOAD_TYPE = 2;
+
+/// the server's `GetGameState()`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_GAME_STATE = 3;
+
+/// `gDefaultPlayerColors[v1]`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_DEFAULT_COLOR = 4;
+
+/// the world table's starting citizens default
+constexpr static const int64_t EE_NETMSG_SESS_FACT_CITIZENS_DEFAULT = 5;
+
+/// the join request's version equals `gGameVersion`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_VERSION_MATCH = 6;
+
+/// `gBinaryChecksum`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_BINARY_CHECKSUM = 7;
+
+/// `GetCurrentCommunicationsTick()` (the virtual)
+constexpr static const int64_t EE_NETMSG_SESS_FACT_CURRENT_CT = 8;
+
+/// `GetNumberOfCTsProcessedInPhysics()`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_CTS_IN_PHYSICS = 9;
+
+/// `GetNumHumanPlayers()`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_HUMANS = 10;
+
+/// `GetIsMultiplayerSession()`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_MP_SESSION = 11;
+
+/// `GetPlayerNumber()`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_PLAYER_NUMBER = 12;
+
+/// the client's `GetCurrentPhysicsTick()`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_CURRENT_PT = 13;
+
+/// the client's `GetMySendToSlot()`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_MY_SEND_TO_SLOT = 14;
+
+/// the server's `GetNumberOfPlayers()`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_NUM_PLAYERS = 15;
+
+/// `gWorld.mNumPlayers`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_WORLD_PLAYERS = 16;
+
+/// `TMGetTime()`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_TIME = 17;
+
+/// `gWonNet != NULL`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_WON = 18;
+
+/// `gGameScreenActive`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_SCREEN_ACTIVE = 19;
+
+/// `EECPEngineChoiceCount()`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_ENGINE_CHOICES = 20;
+
+/// the current form is form v1 (v2 0: the form looked up first, 1: the current form first)
+constexpr static const int64_t EE_NETMSG_SESS_FACT_FORM_IS_CURRENT = 21;
+
+/// form v1 is visible
+constexpr static const int64_t EE_NETMSG_SESS_FACT_FORM_VISIBLE = 22;
+
+/// the server's `GetSendToSlot(v1)`
+constexpr static const int64_t EE_NETMSG_SESS_FACT_SEND_TO_SLOT = 23;
+
+/// the server's `GetPlayerSendToSlot(v1)` (the virtual)
+constexpr static const int64_t EE_NETMSG_SESS_FACT_PLAYER_SEND_TO = 24;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_HAS_LEFT = 0;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_MIGRATING = 1;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_FAST_ID = 2;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_EXECUTING = 3;
+
+/// the server's
+constexpr static const int64_t EE_NETMSG_SESS_SELF_LOAD_STATE = 4;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_DROPPED_LOADERS = 5;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_VOTE_EDICT = 6;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_YES_VOTES = 7;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_NO_VOTES = 8;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_NUM_VOTES = 9;
+
+/// `mVoted[v1]` (set: v1 -1 clears all 256)
+constexpr static const int64_t EE_NETMSG_SESS_SELF_VOTED = 10;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_LAG_MASK = 11;
+
+/// the client's
+constexpr static const int64_t EE_NETMSG_SESS_SELF_UI_SLOT = 12;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_ALLOW_MIGRATION = 13;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_IGNORE_TIMEOUT = 14;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_SERVER_LOST = 15;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_HAS_LOADED = 16;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_LOST_AFTER_LOADING = 17;
+
+constexpr static const int64_t EE_NETMSG_SESS_SELF_WAS_BOOTED = 18;
+
+/// `thePlayer`
+constexpr static const int64_t EE_NETMSG_SESS_R_PLAYER = 0;
+
+/// `theOther`
+constexpr static const int64_t EE_NETMSG_SESS_R_OTHER = 1;
+
+/// the join request's player (read only)
+constexpr static const int64_t EE_NETMSG_SESS_R_IN = 2;
+
+/// the register = `gGameOptions.mPlayers[v2]`
+constexpr static const int64_t EE_NETMSG_SESS_REG_LOAD_OPTIONS = 0;
+
+/// the register = `gWorld.GetLobbyOptions().mPlayers[v2]`
+constexpr static const int64_t EE_NETMSG_SESS_REG_LOAD_LOBBY = 1;
+
+/// the register = register v2
+constexpr static const int64_t EE_NETMSG_SESS_REG_LOAD_REG = 2;
+
+/// `gGameOptions.mPlayers[v2]` = the register
+constexpr static const int64_t EE_NETMSG_SESS_REG_STORE_OPTIONS = 3;
+
+/// `gWorld.GetLobbyOptions().mPlayers[v2]` = the register
+constexpr static const int64_t EE_NETMSG_SESS_REG_STORE_LOBBY = 4;
+
+/// field v2 (`EE_NETMSG_SESS_FIELD_*`; the ping as its float bits)
+constexpr static const int64_t EE_NETMSG_SESS_REG_GET = 5;
+
+/// field v2 = v3
+constexpr static const int64_t EE_NETMSG_SESS_REG_SET = 6;
+
+/// the name = ""
+constexpr static const int64_t EE_NETMSG_SESS_REG_NAME_CLEAR = 7;
+
+/// the name = register v2's
+constexpr static const int64_t EE_NETMSG_SESS_REG_NAME_COPY = 8;
+
+/// the name equals register v2's ignoring case (`PlatMbsICmp` == 0)
+constexpr static const int64_t EE_NETMSG_SESS_REG_NAME_ICMP = 9;
+
+/// the name equals register v2's (`==`)
+constexpr static const int64_t EE_NETMSG_SESS_REG_NAME_EQ = 10;
+
+/// the name = message v2's string (`EEMRecord::mString`)
+constexpr static const int64_t EE_NETMSG_SESS_REG_NAME_FROM_MSG = 11;
+
+/// the name equals world player v2's ignoring case
+constexpr static const int64_t EE_NETMSG_SESS_REG_NAME_ICMP_PLAYER = 12;
+
+constexpr static const int64_t EE_NETMSG_SESS_FIELD_TYPE = 0;
+
+constexpr static const int64_t EE_NETMSG_SESS_FIELD_LOADED_TYPE = 1;
+
+constexpr static const int64_t EE_NETMSG_SESS_FIELD_PING = 2;
+
+constexpr static const int64_t EE_NETMSG_SESS_FIELD_SLOT = 3;
+
+constexpr static const int64_t EE_NETMSG_SESS_FIELD_COLOR = 4;
+
+constexpr static const int64_t EE_NETMSG_SESS_FIELD_TEAM = 5;
+
+constexpr static const int64_t EE_NETMSG_SESS_FIELD_CITIZENS = 6;
+
+constexpr static const int64_t EE_NETMSG_SESS_FIELD_TRANSFER_ID = 7;
+
+constexpr static const int64_t EE_NETMSG_SESS_FIELD_LOCAL = 8;
+
+constexpr static const int64_t EE_NETMSG_SESS_FIELD_READY = 9;
+
+constexpr static const int64_t EE_NETMSG_SESS_FIELD_B36 = 10;
+
+constexpr static const int64_t EE_NETMSG_SESS_FIELD_ENGINE = 11;
+
+/// `SendConnectionResponse(v1 slot, v2 error, v3 send-to slot, v4 lobby slot, v5 unregister)`
+constexpr static const int64_t EE_NETMSG_SESS_SEND_RESPONSE = 0;
+
+/// `ProcessLocalUserInput(NewConnectionResponse(v1 error, v2 send-to slot, v3 lobby slot), v4)`
+constexpr static const int64_t EE_NETMSG_SESS_SEND_LOCAL_RESPONSE = 1;
+
+/// `gCommunications->ProcessLocalUserInput(EENewFullGameOptions(gGameOptions), v1)`
+constexpr static const int64_t EE_NETMSG_SESS_SEND_FULL_OPTIONS = 2;
+
+/// `ProcessLocalUserInput(EENewFullPlayerInformation(register v1), v2)`, from the server's slot when v3
+constexpr static const int64_t EE_NETMSG_SESS_SEND_PLAYER_INFO = 3;
+
+/// a new `EEMRecord(v1 type, {v3 .. v3 + v2})`: answers the message
+constexpr static const int64_t EE_NETMSG_SESS_SEND_NEW_RECORD = 4;
+
+/// the server's `SendPingStat(v1, the float bits v2)`
+constexpr static const int64_t EE_NETMSG_SESS_SEND_PING_STAT = 5;
+
+/// the server's slot info of player v1 at send-to slot v2 (`gCommunications->ProcessLocalUserInput`, no slot)
+constexpr static const int64_t EE_NETMSG_SESS_SEND_SLOT_INFO = 6;
+
+/// a new physics tick (v1 inputs, v2 ticks, v3 checksum, v4 dump, v5 PTs per second): answers the message
+constexpr static const int64_t EE_NETMSG_SESS_SEND_PHYSICS_TICK = 7;
+
+/// the client's connection check's answer (v1 the ping's start), `ProcessLocalUserInput` to no slot
+constexpr static const int64_t EE_NETMSG_SESS_SEND_CHECK_RESPONSE = 8;
+
+constexpr static const int64_t EE_NETMSG_SESS_MSG_TYPE = 0;
+
+constexpr static const int64_t EE_NETMSG_SESS_MSG_ORIGIN = 1;
+
+constexpr static const int64_t EE_NETMSG_SESS_MSG_FOR_SLOT = 2;
+
+/// an engine message's member v2 (`NEMRecord::Value`)
+constexpr static const int64_t EE_NETMSG_SESS_MSG_NE_VALUE = 3;
+
+/// a game message's record copied to v2 (64 bytes)
+constexpr static const int64_t EE_NETMSG_SESS_MSG_RECORD = 4;
+
+constexpr static const int64_t EE_NETMSG_SESS_MSG_INPUT_COUNT = 5;
+
+/// the communications tick's input v2
+constexpr static const int64_t EE_NETMSG_SESS_MSG_INPUT = 6;
+
+constexpr static const int64_t EE_NETMSG_SESS_MSG_REFERENCE = 7;
+
+constexpr static const int64_t EE_NETMSG_SESS_MSG_DEREFERENCE = 8;
+
+constexpr static const int64_t EE_NETMSG_SESS_MSG_EXECUTE = 9;
+
+/// the game message's selection id = v2
+constexpr static const int64_t EE_NETMSG_SESS_MSG_SET_FAST_ID = 10;
+
+/// `EEGameMessageCast(message) != NULL`
+constexpr static const int64_t EE_NETMSG_SESS_MSG_IS_GAME = 11;
+
+/// `gPhysics->QueueServerMessage`
+constexpr static const int64_t EE_NETMSG_SESS_MSG_QUEUE = 12;
+
+/// the server's `LogResponse`
+constexpr static const int64_t EE_NETMSG_SESS_MSG_LOG_RESPONSE = 13;
+
+/// `ProcessLocalUserInput(message, v2)`
+constexpr static const int64_t EE_NETMSG_SESS_MSG_LOCAL = 14;
+
+/// from the server's slot, `BroadcastMessage`
+constexpr static const int64_t EE_NETMSG_SESS_MSG_BROADCAST = 15;
+
+/// from the server's slot, `SendMessageToAll(message, false)`, released
+constexpr static const int64_t EE_NETMSG_SESS_MSG_SEND_ALL = 16;
+
+/// the server's `TakeConnectionRequest`
+constexpr static const int64_t EE_NETMSG_SESS_MSG_TAKE_REQUEST = 17;
+
+/// `PostLobbyUpdatePlayer(v1, 8)`
+constexpr static const int64_t EE_NETMSG_SESS_UI_LOBBY_PLAYER = 0;
+
+/// `PostAction(new EEARemovePlayer(v1, v2))`
+constexpr static const int64_t EE_NETMSG_SESS_UI_ACTION_REMOVE = 1;
+
+/// `PostAction(new EEABootClientFromCanceledGame(v1))`
+constexpr static const int64_t EE_NETMSG_SESS_UI_ACTION_BOOT = 2;
+
+/// `PostAction(new EEAServerMigration)`
+constexpr static const int64_t EE_NETMSG_SESS_UI_ACTION_MIGRATION = 3;
+
+/// the main game form's pause event
+constexpr static const int64_t EE_NETMSG_SESS_UI_PAUSE_EVENT = 4;
+
+/// string v1 shown (`DisplayMessage(text, true, NULL, v2 ? CancelGameCallback : NULL, v3)`)
+constexpr static const int64_t EE_NETMSG_SESS_UI_DISPLAY = 5;
+
+/// the game's chat line: string v1 with player v2's name
+constexpr static const int64_t EE_NETMSG_SESS_UI_CHAT_PLAYER = 6;
+
+/// `AddChatLogEntry(string v1, v2)`
+constexpr static const int64_t EE_NETMSG_SESS_UI_CHAT_TEXT = 7;
+
+constexpr static const int64_t EE_NETMSG_SESS_UI_CLOSE_FORM = 8;
+
+/// `OpenForm(GetFormByID(v1))`
+constexpr static const int64_t EE_NETMSG_SESS_UI_OPEN_FORM = 9;
+
+/// `Push(GetFormByID(v1))`
+constexpr static const int64_t EE_NETMSG_SESS_UI_PUSH_FORM = 10;
+
+constexpr static const int64_t EE_NETMSG_SESS_UI_CANCEL_GAME = 11;
+
+/// `CancelGameCallback`
+constexpr static const int64_t EE_NETMSG_SESS_UI_CANCEL_CALLBACK = 12;
+
+constexpr static const int64_t EE_NETMSG_SESS_UI_LOBBY_FORM = 13;
+
+constexpr static const int64_t EE_NETMSG_SESS_UI_HOST_MIGRATED = 14;
+
+/// `PostLobbyShowTransferProgress(v1, v2)`
+constexpr static const int64_t EE_NETMSG_SESS_UI_TRANSFER = 15;
+
+/// `EELobbyPostConnectStatus(v1)`
+constexpr static const int64_t EE_NETMSG_SESS_UI_CONNECT_STATUS = 16;
+
+/// the connecting box with the client's retries
+constexpr static const int64_t EE_NETMSG_SESS_UI_RETRY = 17;
+
+/// the client leaves the game: string v1, way v2 (`LEAVE_*`), the response v3 (its version); disconnected
+constexpr static const int64_t EE_NETMSG_SESS_UI_LEAVE = 18;
+
+/// the client's `HandleSlotUpdate(v1, register v2)`
+constexpr static const int64_t EE_NETMSG_SESS_UI_SLOT_UPDATE = 19;
+
+constexpr static const int64_t EE_NETMSG_SESS_LEAVE_SHOW = 0;
+
+constexpr static const int64_t EE_NETMSG_SESS_LEAVE_SHOW_VERSIONS = 1;
+
+constexpr static const int64_t EE_NETMSG_SESS_LEAVE_BOOT = 2;
+
+constexpr static const int64_t EE_NETMSG_SESS_LEAVE_QUIET = 3;
+
+/// the game info's players v1 and humans v2
+constexpr static const int64_t EE_NETMSG_SESS_WON_COUNT = 0;
+
+/// one human fewer
+constexpr static const int64_t EE_NETMSG_SESS_WON_HUMANS_DEC = 1;
+
+constexpr static const int64_t EE_NETMSG_SESS_WON_JOINED = 2;
+
+/// back to the game list (`ClearGameList`, `RejoinRoom(false)`)
+constexpr static const int64_t EE_NETMSG_SESS_WON_LEAVE = 3;
+
+/// `gWorld.mPlayers[v1]`
+constexpr static const int64_t EE_NETMSG_SESS_WORLD_PLAYER = 0;
+
+/// `gWorld.GetPlayerBySlot(v1)`
+constexpr static const int64_t EE_NETMSG_SESS_WORLD_PLAYER_BY_SLOT = 1;
+
+/// player v1's `IsHuman()`
+constexpr static const int64_t EE_NETMSG_SESS_WORLD_IS_HUMAN = 2;
+
+/// player v1's `mSlot`
+constexpr static const int64_t EE_NETMSG_SESS_WORLD_SLOT = 3;
+
+/// player v1's `mHumanPlayer != NULL`
+constexpr static const int64_t EE_NETMSG_SESS_WORLD_HAS_HUMAN = 4;
+
+/// player v1's `mPlayerID`
+constexpr static const int64_t EE_NETMSG_SESS_WORLD_ID = 5;
+
+/// player v1's `mSlot` = v2
+constexpr static const int64_t EE_NETMSG_SESS_WORLD_SET_SLOT = 6;
+
+/// player v1's `mBehindFirewall` = v2
+constexpr static const int64_t EE_NETMSG_SESS_WORLD_SET_FIREWALL = 7;
+
+/// human player v1's name = message v2's string
+constexpr static const int64_t EE_NETMSG_SESS_WORLD_NAME_FROM_MSG = 8;
+
+/// `gWorld.GetPlayer(v1)->mSlot = v2`
+constexpr static const int64_t EE_NETMSG_SESS_WORLD_RECONNECT = 9;
+
+/// `gWorld.RemoveDisconnectedPlayer(v1)`
+constexpr static const int64_t EE_NETMSG_SESS_WORLD_REMOVE = 10;
+
+/// the current player's `ExecuteSelectionMessage(v1)`
+constexpr static const int64_t EE_NETMSG_SESS_WORLD_EXECUTE_SELECTION = 11;
+
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_SET_CT = 0;
+
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_SET_CTS_IN_PHYSICS = 1;
+
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_INCREMENT_CTS = 2;
+
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_SET_MP_SESSION = 3;
+
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_SET_HUMANS = 4;
+
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_SET_PT = 5;
+
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_REGISTER = 6;
+
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_UNREGISTER = 7;
+
+/// the server's `mSendToSlots.clear()`
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_SEND_TO_CLEAR = 8;
+
+/// `mSendToSlots.insert(v1, v2)`
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_SEND_TO_INSERT = 9;
+
+/// `mSendToSlots.erase(v1)`
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_SEND_TO_ERASE = 10;
+
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_ABORT_XFER = 11;
+
+/// `RemovePlayerFromGameInProgress(v1, v2, false, v3)`
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_REMOVE_IN_PROGRESS = 12;
+
+/// the saved game or scenario (load type v1) sent to lobby slot v2's client
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_XFER_GAME_FILE = 13;
+
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_START_GAME = 14;
+
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_PAUSE_GAME = 15;
+
+/// the host removed: the server deleted, a client made (`gCommunications`)
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_BECOME_CLIENT = 16;
+
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_LOWEST_CTS = 17;
+
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_DISCONNECT = 18;
+
+/// `gLocalPlayerOut` = v1
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_LOCAL_OUT = 19;
+
+/// `PlatSleep(v1)`
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_SLEEP = 20;
+
+/// protocol 0 kept for the slot info's local address (`NEProtocol::GetProtocol`)
+constexpr static const int64_t EE_NETMSG_SESS_COMMS_PROTOCOL = 21;
+
+/// the start message v1's time, the physics' random draw, the teams, the protocol's status
+constexpr static const int64_t EE_NETMSG_SESS_START_PREP = 0;
+
+/// the graphics resumed, waited for
+constexpr static const int64_t EE_NETMSG_SESS_START_RESUME = 1;
+
+/// the physics' timer started, waited for; the main game form's state 0
+constexpr static const int64_t EE_NETMSG_SESS_START_PHYSICS = 2;
+
+/// The server's and client's members that moved, by `EE_NETMSG_SESS_DO_*`: a, b, c, d their arguments (a message:
+/// its pointer); the answer (FilterPlayerInput's pass, StartVote's, HandleStartGame's 0).
+constexpr static const uint32_t EE_NETMSG_SESS_DO_CONNECTION_REQUEST = 1;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_BOOT = 2;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_REMOVE = 3;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_SYSTEM_MESSAGE = 4;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_FILTER = 5;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_LOCAL_INPUT = 6;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_LOBBY_INPUT = 7;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_START_VOTE = 8;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_CAST_VOTE = 9;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_RECONNECT_TIMED_OUT = 10;
+
+/// a: the slots, b: their count, c: the flag
+constexpr static const uint32_t EE_NETMSG_SESS_DO_LAGGERS = 11;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_SLOT_INFO = 12;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_CONNECTION_STATE = 13;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_CLIENT_MESSAGE = 14;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_CONNECTION_LOST = 15;
+
+constexpr static const uint32_t EE_NETMSG_SESS_DO_START_GAME = 16;
+
 /// The most ids a buffer keeps.
 constexpr static const size_t MAX_IDS = 63;
 
@@ -1276,6 +1821,15 @@ struct EeNetMsgEngineSweepShape {
   uint8_t inputs;
 };
 
+/// One host call: the forwarder's frame (the communications object, the registers) and the values.
+struct EeNetSessCall {
+  void *frame;
+  int64_t v[8];
+};
+
+/// The C++ host (EEServer.cpp's `EESessionHost`).
+using EeNetSessHostFn = int64_t(*)(uint32_t op, EeNetSessCall *call);
+
 extern "C" {
 
 /// `EEMRecord::Execute` (`framing` 0), `EEMessage::ExecuteSelectionMessage` (1) or `ExecuteMessage` (2): the type's
@@ -1293,6 +1847,13 @@ void ee_netmsg_execute(EeNetMsgHostFn host,
                        const uint8_t *list,
                        size_t list_len,
                        uint8_t framing);
+
+/// The sweep for the capture: each payload handed to `sink` in order (kind, bytes); no Rust state is borrowed
+/// across the calls (the payloads are made first).
+///
+/// # Safety
+/// `sink` is the capture's C++ function.
+void ee_netmsg_capture_sweep(void (*sink)(uint8_t kind, const uint8_t *data, size_t size));
 
 uint8_t ee_netmsg_selection_marks_local(uint8_t is_server, uint8_t is_local);
 
@@ -1461,6 +2022,20 @@ EeNetMsgSweepShape ee_netmsg_sweep_shape(uint8_t message_type);
 
 /// The sweep shape of an engine message type (its codec class's layout).
 EeNetMsgEngineSweepShape ee_netmsg_engine_sweep_shape(uint8_t message_type);
+
+/// The C ABI: a server's (`server`) or client's member `what` over the C++ host, with the forwarder's frame.
+///
+/// # Safety
+/// `host` is the C++ host and `frame` its frame; a message argument is a live message; the laggers' slots are
+/// `b` bytes at `a`.
+int64_t ee_netmsg_session(EeNetSessHostFn host,
+                          void *frame,
+                          bool server,
+                          uint32_t what,
+                          int64_t a,
+                          int64_t b,
+                          int64_t c,
+                          int64_t d);
 
 }  // extern "C"
 

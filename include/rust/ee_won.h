@@ -2377,6 +2377,107 @@ constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 37;
 /// The last of round 33's fields (`EeWonWmField::PopupFront`; the goldens' first state line).
 constexpr static const int32_t EE_WON_WM_FIELD_POPUP_LAST = 22;
 
+/// `CreateGroup(group, name, password, max players, group flags, join flags, async flags)`
+constexpr static const int32_t EE_WON_RTQ_CREATE_GROUP = 0;
+
+/// `JoinGroup(group, password, comment, join flags, member flags)`
+constexpr static const int32_t EE_WON_RTQ_JOIN_GROUP = 1;
+
+/// `BanClient(group, on, seconds, explanation, client id)`; by WON id; by CD key id
+constexpr static const int32_t EE_WON_RTQ_BAN = 2;
+
+constexpr static const int32_t EE_WON_RTQ_BAN_WON_ID = 3;
+
+constexpr static const int32_t EE_WON_RTQ_BAN_CDKEY_ID = 4;
+
+/// `MuteClient(group, on, seconds, explanation, client id)`; by WON id; by CD key id
+constexpr static const int32_t EE_WON_RTQ_MUTE = 5;
+
+constexpr static const int32_t EE_WON_RTQ_MUTE_WON_ID = 6;
+
+constexpr static const int32_t EE_WON_RTQ_MUTE_CDKEY_ID = 7;
+
+/// `Register(name, password, reconnect id, async flags, register flags, client flags)`
+constexpr static const int32_t EE_WON_RTQ_REGISTER = 8;
+
+/// `GetClientList()`, `GetClientListEx()`
+constexpr static const int32_t EE_WON_RTQ_CLIENT_LIST = 9;
+
+constexpr static const int32_t EE_WON_RTQ_CLIENT_LIST_EX = 10;
+
+/// `GetGroupList(flags)`
+constexpr static const int32_t EE_WON_RTQ_GROUP_LIST = 11;
+
+/// `GetMembersOfGroup(group)`
+constexpr static const int32_t EE_WON_RTQ_MEMBERS = 12;
+
+/// `LeaveGroup(group)`
+constexpr static const int32_t EE_WON_RTQ_LEAVE = 13;
+
+/// `CancelJoinGroup(group, leave)`
+constexpr static const int32_t EE_WON_RTQ_CANCEL_JOIN = 14;
+
+/// `AcceptClient(group, client, on, explanation)`, `InviteClient(...)`
+constexpr static const int32_t EE_WON_RTQ_ACCEPT = 15;
+
+constexpr static const int32_t EE_WON_RTQ_INVITE = 16;
+
+/// `SetGroupFlags(group, mask, flags, async mask, async flags)`
+constexpr static const int32_t EE_WON_RTQ_SET_GROUP_FLAGS = 17;
+
+/// `SendServerAlert(text)`; `SendServerAlertWithRecipientList(text, recipients)` (nothing for none)
+constexpr static const int32_t EE_WON_RTQ_ALERT = 18;
+
+constexpr static const int32_t EE_WON_RTQ_ALERT_TO = 19;
+
+/// `StartServerShutdown(text, seconds)`, `AbortServerShutdown()`
+constexpr static const int32_t EE_WON_RTQ_START_SHUTDOWN = 20;
+
+constexpr static const int32_t EE_WON_RTQ_ABORT_SHUTDOWN = 21;
+
+/// `SetClientFlags(mask, flags, async mask, async flags)` (the mask cut to 16 bits)
+constexpr static const int32_t EE_WON_RTQ_SET_CLIENT_FLAGS = 22;
+
+/// `SendChatTo(text, flags, recipients)` (`SendChat`: one recipient)
+constexpr static const int32_t EE_WON_RTQ_CHAT = 23;
+
+/// `SendData(data, flags, recipients)`
+constexpr static const int32_t EE_WON_RTQ_DATA = 24;
+
+/// `BecomeModerator(on)`
+constexpr static const int32_t EE_WON_RTQ_MODERATOR = 25;
+
+/// `CreateDataObject(flags, link, type, name, data)`
+constexpr static const int32_t EE_WON_RTQ_CREATE_DATA = 26;
+
+/// `ReplaceDataObject(link, type, name)`: the delete request
+constexpr static const int32_t EE_WON_RTQ_DELETE_DATA = 27;
+
+/// `ModifyDataObject(link, type, name, offset, insert, data)`
+constexpr static const int32_t EE_WON_RTQ_MODIFY_DATA = 28;
+
+/// `ReadDataObject` / `SubscribeDataObject` / `GetClientCDKeyIdList`: (subscribe, link, type, flags)
+constexpr static const int32_t EE_WON_RTQ_READ_DATA = 29;
+
+/// `UnsubscribeDataObject(link, type, flags)`
+constexpr static const int32_t EE_WON_RTQ_UNSUBSCRIBE_DATA = 30;
+
+/// `DisconnectClient()`
+constexpr static const int32_t EE_WON_RTQ_DISCONNECT = 31;
+
+/// `SetGroupName(group, name)`, `SetGroupMaxPlayers(group, max)`, `RelinquishCaptaincy(group, new captain)`
+constexpr static const int32_t EE_WON_RTQ_SET_GROUP_NAME = 32;
+
+constexpr static const int32_t EE_WON_RTQ_SET_GROUP_MAX_PLAYERS = 33;
+
+constexpr static const int32_t EE_WON_RTQ_RELINQUISH = 34;
+
+/// `DetectFirewall(listen port, longest connect wait, listen)` (a `RoutingDetectFirewallOp`)
+constexpr static const int32_t EE_WON_RTQ_DETECT_FIREWALL = 35;
+
+/// `GetBadUserList(list type, group, flags)`
+constexpr static const int32_t EE_WON_RTQ_BAD_USERS = 36;
+
 /// The op codes. `a`..`d` are integers or pointers as each says.
 enum class EeWonGuiOp : uint32_t {
   /// the field `a` (`EeWonGuiField`).
@@ -3186,6 +3287,56 @@ enum class EeWonBtnStatic : uint32_t {
   Default,
   /// `mDialogDefaultButton.get()`.
   DialogDefault,
+};
+
+/// A read the host makes into its frame.
+enum class EeWonCfgRead : int32_t {
+  /// `ReadInt()` (an expression) into the ints.
+  Int = 0,
+  /// `ReadBool()` into the ints.
+  Bool = 1,
+  /// `ReadColor()` into the ints.
+  Color = 2,
+  /// `ReadChar()` into the ints.
+  Char = 3,
+  /// `ReadVertAlign()` into the ints.
+  VertAlign = 4,
+  /// `ReadHorzAlign()` into the ints.
+  HorzAlign = 5,
+  /// `ReadString(false)` into the strings.
+  Str = 6,
+  /// `ReadFlag(&on)` (on starting true): the flag into the strings, on into the ints.
+  Flag = 7,
+  /// `ReadFont()` into the fonts.
+  Font = 8,
+  /// `ReadImage(false)` into the images.
+  Image = 9,
+  /// `ReadSound()`.
+  Sound = 10,
+  /// `ReadBackground()`.
+  Background = 11,
+  /// `ReadSelectionColor()`.
+  SelColor = 12,
+  /// `ReadComponent()` into the components.
+  Comp = 13,
+  /// `SafeConfigGetComponent<Container*>(ReadComponent(),"Container")` into the components.
+  Container = 14,
+  /// The same as a Button.
+  Button = 15,
+  /// The same as a Scroller.
+  Scroller = 16,
+  /// The same as a MultiListArea.
+  MultiListArea = 17,
+  /// `dynamic_cast<ScrollArea*>(ReadComponent())`, "Expecting ScrollArea" when it is not one.
+  ScrollArea = 18,
+  /// WONFrameValueConfig's frame value (an image, one or four borders).
+  Frame = 19,
+  /// `ReadCursor()`.
+  Cursor = 20,
+  /// `ReadDirection()` into the ints.
+  Direction = 21,
+  /// `ReadStandardCursor()` into the ints.
+  StdCursor = 22,
 };
 
 /// A number of the parser.
@@ -6998,6 +7149,18 @@ enum class EeWonCoreObject {
   UdpSendRecv = 6,
   /// a `ServerConnection*`'s [`EeWonServerConn`]
   ServerConn = 7,
+  /// a `RoutingOp*`'s [`EeWonRouteOp`](crate::routeop::EeWonRouteOp)
+  RouteOp = 8,
+  /// a `RoutingConnection*`'s [`EeWonRouteConn`](crate::routeconn::EeWonRouteConn)
+  RouteConn = 9,
+  /// an `AuthContext*`'s [`EeWonAuthCtx`](crate::authobj::EeWonAuthCtx)
+  AuthCtx = 10,
+  /// a `RustServerOp*`'s [`EeWonHostOp`](crate::hostop::EeWonHostOp)
+  HostOp = 11,
+  /// an `HTTPConnection*`'s [`EeWonHttpConn`](crate::httpengine::EeWonHttpConn)
+  HttpConn = 12,
+  /// an `HTTPConnection*`'s or `HTTPSession*`'s lock (its `CriticalSection`'s platform mutex)
+  Lock = 13,
 };
 
 /// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
@@ -9982,6 +10145,7 @@ struct EeWonRouteConn;
 struct EeWonRouteLogic;
 
 /// A routing op, as the C++ `RoutingOp` holds it.
+/// The second field is the C++ `RoutingConnection*` it was made on (borrowed; 0 for none).
 struct EeWonRouteOp;
 
 /// The Rust ScrollArea.
@@ -10169,6 +10333,28 @@ struct EeWonCacheEntry {
   int64_t last_access;
   const uint8_t *strings[4];
   size_t lengths[4];
+};
+
+/// The host: the C++ config's reads, its frame and its setters. Every callback that can throw catches and keeps
+/// the exception and answers false.
+struct EeWonCfgTabHost {
+  void *ctx;
+  /// A read into the frame.
+  bool (*read)(void *ctx, EeWonCfgRead kind);
+  /// `EnsureComma()`.
+  bool (*comma)(void *ctx);
+  /// `EndOfString()` (it skips whitespace).
+  bool (*end)(void *ctx);
+  /// The frame's string `slot`: its units (`mText`), their count and size.
+  const void *(*text)(void *ctx, int32_t slot, uint16_t *len, uint32_t *unit);
+  /// A value into the frame's ints.
+  void (*push)(void *ctx, int32_t value);
+  /// The setter `table << 8 | n` over the frame.
+  bool (*apply)(void *ctx, int32_t setter);
+  /// Keep a ConfigObjectException of `len` bytes of `msg`, then the frame's string `slot` narrowed (none if < 0).
+  void (*fail)(void *ctx, const uint8_t *msg, size_t len, int32_t slot);
+  /// Empty the frame.
+  void (*clear)(void *ctx);
 };
 
 /// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
@@ -11713,6 +11899,13 @@ struct EeWonCoreHooks {
   long (*transform_call)(void *transform, void *message, bool send);
   /// `delete transform`
   EeWonCoreFn transform_free;
+  /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
+  void *(*new_route_op)(void *conn, int32_t ty);
+  /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
+  /// `GetUnsolicitedDerivedOp(type)` (1: the new op with one reference for the caller, or null)
+  void *(*route_virtual)(void *conn, int32_t which, void *op, uint8_t message_type);
+  /// `new HTTPConnection(NULL)`
+  void *(*new_http_conn)();
 };
 
 /// A C++ call on one object (an op, a completion or the socket).
@@ -12823,6 +13016,19 @@ void ee_won_cachemap_write(const char *path,
 /// A new `GetCertOp`: its auth context (`EE_WON_GETCERT_AUTH_CONTEXT`) and its server context
 /// (`EE_WON_REQHOST_CONTEXT`, the auth context's) are set after the bind.
 EeWonHostOp *ee_won_hostop_getcert();
+
+/// The handler of `table` for the instruction `key` (`len` bytes): -1 when the handler does not hold the key (the
+/// caller asks its base), 0 when it was handled, 1 when it threw (the host holds the exception).
+///
+/// # Safety
+/// `host` is valid and its callbacks do not unwind; `key` holds `len` bytes (or is NULL with 0).
+int32_t ee_won_cfg_tab_run(const EeWonCfgTabHost *host,
+                           int32_t table,
+                           const uint8_t *key,
+                           size_t len);
+
+/// Whether `table` is one of the reader's handlers, for the drivers.
+bool ee_won_cfg_tab_has(int32_t table);
 
 /// `GetCommandName`.
 const char *ee_won_chat_command_name(int32_t command);
@@ -21385,6 +21591,101 @@ size_t ee_won_wrap_paint(const EeWonWrapText *o,
                          const EeWonTextMeasure *m,
                          EeWonDrawOp *out,
                          size_t cap);
+
+/// A new auth context object for the C++ `AuthContext*` `ctx` with its login secret file (`len` bytes), its calls
+/// over the core table and the certificate op's maker; one reference.
+///
+/// # Safety
+/// `core` is the library's static table; `ctx` outlives the object's use of it; `secret_file` holds `len` bytes.
+const EeWonAuthCtx *ee_won_authctx_new_core(void *ctx,
+                                            const EeWonCoreHooks *core,
+                                            void *(*new_cert_op)(void *context),
+                                            const uint8_t *secret_file,
+                                            size_t len);
+
+/// A new connection object for the C++ `HTTPConnection*` `conn`, its calls over the core table.
+///
+/// # Safety
+/// `core` is the library's static table; `conn` outlives the object.
+EeWonHttpConn *ee_won_http_conn_new_core(void *conn, const EeWonCoreHooks *core);
+
+/// A new session object for the C++ `HTTPSession*` `session`, its calls over the core table.
+///
+/// # Safety
+/// As `ee_won_http_conn_new_core`.
+EeWonHttpSession *ee_won_http_session_new_core(void *session, const EeWonCoreHooks *core);
+
+/// `PerfTimer::GetCountedTime()`.
+double ee_won_perf_counted_time();
+
+/// `PerfTimer::GetElapsedTime()`.
+double ee_won_perf_elapsed_time();
+
+/// `PerfTimer::GetPercentTime()`.
+double ee_won_perf_percent_time();
+
+/// `PerfTimer::GlobalStart()`.
+void ee_won_perf_global_start();
+
+/// `PerfTimer::GlobalStop()`.
+void ee_won_perf_global_stop();
+
+/// `PerfTimer::Start()` of a timer (`named`: it has a name; `running`: its `mStarted`).
+///
+/// # Safety
+/// `running` is the timer's flag.
+void ee_won_perf_start(bool named, bool *running);
+
+/// `PerfTimer::Stop()` of a timer.
+///
+/// # Safety
+/// As `ee_won_perf_start`.
+void ee_won_perf_stop(bool named, bool *running);
+
+/// A request helper of a kind (`EE_WON_RTQ_*`) on the connection `conn` (a `RoutingConnection*`), its `count`
+/// values in the helper's parameter order (`num` a number or a buffer's presence; `data` / `len` a text's UTF-16
+/// little-endian units, a data type, a buffer's bytes, the recipients as 16-bit little-endian ids), with the
+/// completion (or null).
+///
+/// # Safety
+/// `conn` is a live connection; `values` holds `count` values whose bytes are valid for the call.
+void ee_won_routeconn_request(void *conn,
+                              int32_t kind,
+                              const EeWonAdminValue *values,
+                              size_t count,
+                              void *completion);
+
+/// A new routing op of a type (`RoutingOpType`) on the connection `conn` (borrowed: the C++ op holds its reference;
+/// the Rust op sends on it and leaves a group on it).
+EeWonRouteOp *ee_won_routeop_new_on(int32_t ty,
+                                    void *conn);
+
+/// `RoutingOp::SendRequest`'s base: the op's message (when it sends one) after the connection's length field,
+/// queued on the connection as a `SendMsgOp`; the op `cpp` added to the connection's list when it waits for a reply.
+///
+/// # Safety
+/// `op` is the live Rust op of the C++ op `cpp` (a `RoutingOp*` as its `RefCount*`).
+void ee_won_routeop_send(EeWonRouteOp *op,
+                         void *cpp);
+
+/// A new routing connection object for the C++ `conn`, on the socket's lock, its calls over the core table.
+///
+/// # Safety
+/// `core` is the library's static table; `conn` and `lock` outlive the object.
+EeWonRouteConn *ee_won_routeconn_new_core(void *conn,
+                                          const EeWonCoreHooks *core,
+                                          void *lock);
+
+/// `SmartRoutingConnection::HandleInput(input, group)`: the model's reading of a chat line (`len` `wchar_t`s), the
+/// request it makes sent on the connection `conn`; whether the line was taken. The caller holds the socket's lock.
+///
+/// # Safety
+/// `r` is the connection's model; `conn` the live connection; `text` holds `len` `wchar_t`s.
+bool ee_won_smart_handle_input(EeWonSmartRoute *r,
+                               void *conn,
+                               const void *text,
+                               size_t len,
+                               int32_t group);
 
 }  // extern "C"
 

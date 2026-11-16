@@ -41,40 +41,6 @@ bool FontConfig::GetNamedValue(const std::string& name,int& value)
     else return false;
     return true;
 }
-// Handles the font config instructions SRC, SIZE, STYLE (Bold/Italic/Plain/Underline flags added or
-// removed; throws on an unknown one), SETDEFAULTFONT and SETNAMEDFONT; false for others
-bool FontConfig::Virtual24(const std::string& instruction)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_FONTCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
-    if(aKeyIdx==0) this->SetFont(this->ReadFont().get());
-    else if(aKeyIdx==1) {
-        this->mNeedRecalcFont=true;
-        this->mDescriptor.mSize=this->ReadInt();
-    } else if(aKeyIdx==2) {
-        while(true) {
-            this->mNeedRecalcFont=true;
-            bool add=true;
-            GUIString flag=this->ReadFlag(&add);
-            if(flag.length()==0) break;
-            int style=0;
-            const int aNameIdx_flag=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_FONTCONFIG_VIRTUAL24_FLAG,flag.mData->mText,flag.mData->mLength,sizeof(wchar_t));
-            if(aNameIdx_flag==0) style=FontStyle_Bold;
-            else if(aNameIdx_flag==1) style=FontStyle_Italic;
-            else if(aNameIdx_flag==2) style=FontStyle_Plain;
-            else if(aNameIdx_flag==3) style=FontStyle_Underline;
-            else throw ConfigObjectException("Unknown font style: "+(std::string)flag);
-            if(add) this->mDescriptor.mStyle|=style;
-            else this->mDescriptor.mStyle&=~style;
-        }
-    } else if(aKeyIdx==3) WONAPI::WindowManager::GetDefaultWindowManager()->SetDefaultFont(this->ReadFont().get());
-    else if(aKeyIdx==4) {
-        GUIString name=this->ReadString(false);
-        this->EnsureComma();
-        SmartPtr<Font> font=this->ReadFont();
-        WONAPI::WindowManager::GetDefaultWindowManager()->SetNamedFont(name,font.get());
-    } else return false;
-    return true;
-}
 // Always succeeds (the linker folds this body into the identical one at 0x007099f0)
 bool FontConfig::PostParse(ConfigParser*) {return true;}
 }
