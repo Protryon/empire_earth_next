@@ -69,7 +69,10 @@ def _body(text, name):
 
 def _rust_member(field):
     """A Rust record field's name -> the record member name the text and the C++ use: mCamelCase, an `id` word as
-    `ID` (form_id -> mFormID, id -> mID)."""
+    `ID` (form_id -> mFormID, id -> mID). A field already named as the C++ member (mCamelCase, or a _gap/_pad
+    name) keeps its name."""
+    if re.fullmatch(r'm[A-Z0-9]\w*', field) or field.startswith('_'):
+        return field
     return 'm' + ''.join('ID' if w == 'id' else w[:1].upper() + w[1:] for w in field.split('_'))
 
 

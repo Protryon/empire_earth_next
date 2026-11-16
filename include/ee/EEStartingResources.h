@@ -6,17 +6,18 @@
 
 #include <vector>
 
+#include "rust/ee_data.h"
+
 class FSFileSpec;
 
-class EEStartingResources {
+// mAmounts and mNameID are EeDataStartingResourcesFields (rust/crates/ee_data tables.rs: the record and its copy)
+class EEStartingResources : public EeDataStartingResourcesFields {
 public:
     EEStartingResources();                  // 0xda9cd (the five amounts zeroed with stosd)
     virtual ~EEStartingResources();         // +0x00 0xda9fe (??_G 0xda9e2)
     static long Load(FSFileSpec* inFile);   // 0xdaa05 (records with a negative +0x68 are skipped)
     static void Unload();
 
-    long mAmounts[5];                       // +0x04 (record +0x70, +0x74, +0x78, +0x7c, +0x80)
-    long mNameID;                           // +0x18 (record +0x6c; the entry's name string id)
     // inline (the lobby's LobbyOpen 0x1df5ef loads it before GetString's other argument; was EEU1318E6Entry::GetU18)
     long GetNameID() const { return this->mNameID; }
 
