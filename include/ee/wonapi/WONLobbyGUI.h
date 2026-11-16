@@ -487,11 +487,12 @@ public:
     virtual void Execute(Component* p) { if (this->mLay) ee_won_layout_call(this->mLay,EeWonLayoutCall::Execute,(intptr_t)p,0); } // 0x30a800 (empty in the base)
     virtual bool UsesComponent(Component* c) { return this->mLay && ee_won_layout_call(this->mLay,EeWonLayoutCall::UsesComponent,(intptr_t)c,0)!=0; } // 0x3a90d0 (false in the base)
     EeWonLayout* mLay;
+    // a subclass's Add (public: the config table reader adds to the layout it made, WONCfgTable.inl)
+    void AddComponent(Component* c) { ee_won_layout_call(this->mLay,EeWonLayoutCall::Add,(intptr_t)c,0); }
 protected:
     // a new instruction of the class: two references (components), three ints and the two flags
     void Make(EeWonLayoutKind k,Component* r0,Component* r1=NULL,int i0=0,int i1=0,int i2=0,bool h=false,bool v=false);
     void Make(const EeWonLayoutInit& init);
-    void AddComponent(Component* c) { ee_won_layout_call(this->mLay,EeWonLayoutCall::Add,(intptr_t)c,0); }
 };
 class CenterLayout : public ChildLayoutInstructionBase {
 public:
@@ -1234,15 +1235,8 @@ public:
     static Component* LayoutPointFactory(); // 0x39ab10
     static ComponentConfig* CfgFactory(); // 0x295842
     static Component* CompFactory(); // 0x365120
-    bool HandleAdd(); // 0x388840
-    bool HandleAddLayoutPoint(); // 0x388870
     bool HandleLayout(bool chain=false,bool repeat=false); // 0x3888b0
-    bool HandleSameSizeLayout(bool,bool); // 0x388e20
-    bool HandleCenterLayout(bool,bool); // 0x388f30
-    bool HandleClearRightLayout(); // 0x389080
-    bool HandleSpaceEvenlyLayout(bool); // 0x389280
     bool HandleNoOverlapLayout(); // 0x3894b0
-    bool HandleSizeAtLeastLayout(); // 0x389860
     bool HandleNewLayoutPoint(); // 0x389a70
     ContainerConfig();                      // 0x387f90; the class is 0x98 bytes
     // The implicit destructor (0x38ef70) jumps to ComponentConfig's.

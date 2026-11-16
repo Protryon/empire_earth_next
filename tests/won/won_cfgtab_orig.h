@@ -1310,3 +1310,200 @@ bool ImageConfig::Virtual24(const std::string& inInstruction)
     else return false;
     return true;
 }
+
+// R6 WON round 40: ContainerConfig's instructions and its layout handlers as they were, copied verbatim from de9ba76a
+// by build/r40/gen_cfgcont.py (HandleLayout, HandleNewLayoutPoint and HandleNoOverlapLayout stay C++: the world's)
+// FUNCTION: WON 0x00788840
+// Reads a comma-separated list of components and adds each to the container
+bool ContainerConfig::HandleAdd()
+{
+	while(true)
+	{
+		Component *aComp = this->ReadComponent();
+		this->mContainer->AddChild(aComp);
+		if(this->EndOfString())
+			break;
+
+		this->EnsureComma();
+	}
+
+
+	return true;
+}
+// FUNCTION: WON 0x00788870
+// Reads a comma-separated list of layout points and adds each to the container
+bool ContainerConfig::HandleAddLayoutPoint()
+{
+	while(true)
+	{
+		LayoutPoint *aPoint = SafeConfigGetComponent<LayoutPoint*>(this->ReadComponent(),"LayoutPoint");
+		this->mContainer->AddLayoutPoint(aPoint);
+		if(this->EndOfString())
+			break;
+
+		this->EnsureComma();
+	}
+
+
+	return true;
+}
+// FUNCTION: WON 0x00789c80
+// Handles the container config instructions (ADD, LAYOUT and its variants, layout ids, tab focus,
+// child-only input); other instructions go to the base config
+bool ContainerConfig::Virtual24(const std::string& theInstruction)
+{
+	const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION,theInstruction.data(),theInstruction.size());
+	if(aKeyIdx==0)
+		return this->HandleAdd();
+	else if(aKeyIdx==1)
+		return this->HandleAddLayoutPoint();
+	else if(aKeyIdx==2)
+		return this->HandleNewLayoutPoint();
+	else if(aKeyIdx==3)
+		return this->HandleLayout();
+	else if(aKeyIdx==4)
+		this->mCurLayoutId = this->ReadInt();
+	else if(aKeyIdx==5)
+	{
+		bool enable = this->ReadBool();
+		while(true)
+		{
+			this->EnsureComma();
+			int anId = this->ReadInt();
+			this->mContainer->EnableLayoutInstructions(anId,enable);
+			if(this->EndOfString())
+				break;
+		}
+	}
+	else if(aKeyIdx==6)
+		this->mContainer->Relayout();
+	else if(aKeyIdx==7)
+		return this->HandleLayout(true);
+	else if(aKeyIdx==8)
+		return this->HandleLayout(false,true);
+	else if(aKeyIdx==9)
+		return this->HandleSameSizeLayout(true,true);
+	else if(aKeyIdx==10)
+		return this->HandleSameSizeLayout(true,false);
+	else if(aKeyIdx==11)
+		return this->HandleSameSizeLayout(false,true);
+	else if(aKeyIdx==12)
+		return this->HandleCenterLayout(true,true);
+	else if(aKeyIdx==13)
+		return this->HandleCenterLayout(true,false);
+	else if(aKeyIdx==14)
+		return this->HandleCenterLayout(false,true);
+	else if(aKeyIdx==15)
+		return this->HandleSpaceEvenlyLayout(true);
+	else if(aKeyIdx==16)
+		return this->HandleSpaceEvenlyLayout(false);
+	else if(aKeyIdx==17)
+		return this->HandleClearRightLayout();
+	else if(aKeyIdx==18)
+		return this->HandleNoOverlapLayout();
+	else if(aKeyIdx==19)
+		return this->HandleSizeAtLeastLayout();
+	else if(aKeyIdx==20)
+		this->mContainer->SetIsolateTabFocus(this->ReadBool());
+	else if(aKeyIdx==21)
+		this->mContainer->SetOnlyChildInput(this->ReadBool());
+	else
+		return ComponentConfig::Virtual24(theInstruction);
+
+	return true;
+}
+// FUNCTION: WON 0x00788e20
+// Reads a component list into a layout that gives them the same width and/or height
+bool ContainerConfig::HandleSameSizeLayout(bool sameWidth, bool sameHeight)
+{	
+	SmartPtr<SameSizeLayout> aLayout = new SameSizeLayout(sameWidth, sameHeight);
+
+	while(true)
+	{	
+		Component *aComp = this->ReadComponent();
+		aLayout->Add(aComp);
+		if(this->EndOfString())
+			break;
+		else
+			this->EnsureComma();
+	}
+
+	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
+	return true;
+}
+// FUNCTION: WON 0x00788f30
+// Reads a reference component and a component list into a layout that centres them on it
+bool ContainerConfig::HandleCenterLayout(bool horz, bool vert)
+{
+	Component *aComp = this->ReadComponent();
+	SmartPtr<CenterLayout> aLayout = new CenterLayout(aComp,horz,vert);
+	while(!this->EndOfString())
+	{	
+		this->EnsureComma();
+		aComp = this->ReadComponent();
+		aLayout->Add(aComp);
+	}
+
+	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
+	return true;
+}
+// FUNCTION: WON 0x00789080
+// Reads a component, a padding and a component list into a clear-right layout
+bool ContainerConfig::HandleClearRightLayout()
+{
+	Component *aComp = this->ReadComponent(); this->EnsureComma();
+	int aPad = this->ReadInt(); this->EnsureComma();
+
+	SmartPtr<ClearRightLayout> aLayout = new ClearRightLayout(aComp,aPad);
+	while(true)
+	{
+		aComp = this->ReadComponent();
+		aLayout->Add(aComp);
+		if(this->EndOfString())
+			break;
+
+		this->EnsureComma();
+	}
+
+	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
+	return true;
+}
+// FUNCTION: WON 0x00789280
+// Reads a bounding component, two paddings and a component list into a layout that spaces them evenly
+bool ContainerConfig::HandleSpaceEvenlyLayout(bool horz)
+{
+	Component *aSpaceBox = this->ReadComponent(); this->EnsureComma();
+	int aLeftPad = this->ReadInt(); this->EnsureComma();
+	int aRightPad = this->ReadInt(); this->EnsureComma();
+
+	SmartPtr<SpaceEvenlyLayout> aLayout = new SpaceEvenlyLayout(aSpaceBox,aLeftPad,aRightPad,horz);
+	while(!this->EndOfString())
+	{
+		Component *aComponent = this->ReadComponent();
+		aLayout->Add(aComponent);
+		if(this->EndOfString())
+			break;
+
+		this->EnsureComma();
+	}
+
+	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
+	return true;
+}
+// FUNCTION: WON 0x00789860
+// Reads a size-at-least layout (target, paddings, components); it is added under the default layout id
+bool ContainerConfig::HandleSizeAtLeastLayout()
+{
+	Component *target = this->ReadComponent(); this->EnsureComma();
+	int aHorzPad = this->ReadInt(); this->EnsureComma();
+	int aVertPad = this->ReadInt(); 
+
+	SmartPtr<SizeAtLeastLayout> aLayout = new SizeAtLeastLayout(target,aHorzPad, aVertPad);
+	while(!this->EndOfString())
+	{
+		this->EnsureComma();
+		aLayout->Add(this->ReadComponent());		
+	}
+	this->mContainer->AddChildLayout(aLayout.get());
+	return true;
+}

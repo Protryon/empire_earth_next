@@ -6,7 +6,7 @@
 struct CfgTabFrame {
     ComponentConfig* mConfig; std::exception_ptr mError;
     int i[8]; int ni; GUIString s[2]; int ns; SmartPtr<Font> f[1]; int nf; SmartPtr<Image> m[1]; int nm;
-    Component* c[2]; int nc; SmartPtr<Sound> snd; Background bg; SelectionColor sel; WONFrame fr; SmartPtr<Cursor> cur;
+    Component* c[2]; int nc; SmartPtr<ChildLayoutInstructionBase> lay; SmartPtr<Sound> snd; Background bg; SelectionColor sel; WONFrame fr; SmartPtr<Cursor> cur;
 };
 // WONFrameValueConfig's frame value: a stretch image alone (its own borders), or an image and one border or four
 static WONFrame CfgReadFrame(ComponentConfig* config)
@@ -26,7 +26,7 @@ static WONFrame CfgReadFrame(ComponentConfig* config)
 static void CfgTabClear(void* p)
 {
     CfgTabFrame& a=*static_cast<CfgTabFrame*>(p);
-    a.ni=a.ns=a.nf=a.nm=a.nc=0; a.f[0]=NULL; a.m[0]=NULL;
+    a.ni=a.ns=a.nf=a.nm=a.nc=0; a.f[0]=NULL; a.m[0]=NULL; a.lay=NULL;
 }
 static bool CfgTabRead(void* p,EeWonCfgRead inKind)
 {
@@ -61,6 +61,7 @@ static bool CfgTabRead(void* p,EeWonCfgRead inKind)
         case EeWonCfgRead::Cursor: a.cur=cfg->ReadCursor(); break;
         case EeWonCfgRead::Direction: a.i[a.ni++]=cfg->ReadDirection(); break;
         case EeWonCfgRead::StdCursor: a.i[a.ni++]=cfg->ReadStandardCursor(); break;
+        case EeWonCfgRead::LayoutPoint: a.c[a.nc++]=SafeConfigGetComponent<LayoutPoint*>(cfg->ReadComponent(),"LayoutPoint"); break;
         }
         return true;
     } catch(...) { a.mError=std::current_exception(); return false; }
@@ -110,7 +111,8 @@ enum {
     kScroller=EE_WON_CFG_KEYS_SCROLLERCONFIG_VIRTUAL24_INSTRUCTION, kSBScroller=EE_WON_CFG_KEYS_SCROLLBARSCROLLERCONFIG_VIRTUAL24_INSTRUCTION,
     kStretchCenter=EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION,
     kComponent=EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY, kSkin=EE_WON_CFG_KEYS_WONSKINCONFIG_VIRTUAL24_THEINSTRUCTION,
-    kFont=EE_WON_CFG_KEYS_FONTCONFIG_VIRTUAL24_INSTRUCTION, kImage=EE_WON_CFG_KEYS_IMAGECONFIG_VIRTUAL24_ININSTRUCTION
+    kFont=EE_WON_CFG_KEYS_FONTCONFIG_VIRTUAL24_INSTRUCTION, kImage=EE_WON_CFG_KEYS_IMAGECONFIG_VIRTUAL24_ININSTRUCTION,
+    kContainer=EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION
 };
 #define EE_CFG_SET(t,n) case (t)<<8|(n):
 #define EE_CFG(T) static_cast<T*>(a.mConfig)
@@ -376,6 +378,33 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     EE_CFG_SET(kImage,0) EE_CFG(ImageConfig)->mImage=a.m[0]; break;
     EE_CFG_SET(kImage,1) EE_CFG(ImageConfig)->mImage->SetSize(i[0],i[1]); break;
     default: break;
+    // ContainerConfig: the components and layouts read so far taken as each is used (c[--nc], i[--ni]); the
+    // layout made by the instruction is the frame's until the container holds it
+    EE_CFG_SET(kContainer,0) EE_CFG(ContainerConfig)->mContainer->AddChild(c[--a.nc]); break;
+    EE_CFG_SET(kContainer,1) EE_CFG(ContainerConfig)->mContainer->AddLayoutPoint(static_cast<LayoutPoint*>(c[--a.nc])); break;
+    EE_CFG_SET(kContainer,2) EE_CFG(ContainerConfig)->HandleNewLayoutPoint(); break;
+    EE_CFG_SET(kContainer,3) EE_CFG(ContainerConfig)->HandleLayout(); break;
+    EE_CFG_SET(kContainer,4) EE_CFG(ContainerConfig)->mCurLayoutId=i[0]; break;
+    EE_CFG_SET(kContainer,5) { int anId=i[--a.ni]; EE_CFG(ContainerConfig)->mContainer->EnableLayoutInstructions(anId,i[0]!=0); } break;
+    EE_CFG_SET(kContainer,6) EE_CFG(ContainerConfig)->mContainer->Relayout(); break;
+    EE_CFG_SET(kContainer,7) EE_CFG(ContainerConfig)->HandleLayout(true); break;
+    EE_CFG_SET(kContainer,8) EE_CFG(ContainerConfig)->HandleLayout(false,true); break;
+    EE_CFG_SET(kContainer,9) a.lay=new SameSizeLayout(true,true); break;
+    EE_CFG_SET(kContainer,10) a.lay=new SameSizeLayout(true,false); break;
+    EE_CFG_SET(kContainer,11) a.lay=new SameSizeLayout(false,true); break;
+    EE_CFG_SET(kContainer,12) a.lay=new CenterLayout(c[--a.nc],true,true); break;
+    EE_CFG_SET(kContainer,13) a.lay=new CenterLayout(c[--a.nc],true,false); break;
+    EE_CFG_SET(kContainer,14) a.lay=new CenterLayout(c[--a.nc],false,true); break;
+    EE_CFG_SET(kContainer,15) a.lay=new SpaceEvenlyLayout(c[--a.nc],i[0],i[1],true); a.ni=0; break;
+    EE_CFG_SET(kContainer,16) a.lay=new SpaceEvenlyLayout(c[--a.nc],i[0],i[1],false); a.ni=0; break;
+    EE_CFG_SET(kContainer,17) a.lay=new ClearRightLayout(c[--a.nc],i[0]); a.ni=0; break;
+    EE_CFG_SET(kContainer,18) EE_CFG(ContainerConfig)->HandleNoOverlapLayout(); break;
+    EE_CFG_SET(kContainer,19) a.lay=new SizeAtLeastLayout(c[--a.nc],i[0],i[1]); a.ni=0; break;
+    EE_CFG_SET(kContainer,20) a.lay->AddComponent(c[--a.nc]); break;
+    EE_CFG_SET(kContainer,21) EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get(),EE_CFG(ContainerConfig)->mCurLayoutId); break;
+    EE_CFG_SET(kContainer,22) EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get()); break;
+    EE_CFG_SET(kContainer,23) EE_CFG(ContainerConfig)->mContainer->SetIsolateTabFocus(i[0]!=0); break;
+    EE_CFG_SET(kContainer,24) EE_CFG(ContainerConfig)->mContainer->SetOnlyChildInput(i[0]!=0); break;
     }
 }
 #undef EE_CFG_SET
@@ -452,6 +481,7 @@ EE_CFG_V24(WONFrameComponentConfig,kWFrame,ComponentConfig)
 EE_CFG_V24(WONComboBoxConfig,kWCombo,ComboBoxConfig)
 EE_CFG_V24(WONTabCtrlConfig,kWTabCtrl,TabCtrlConfig)
 EE_CFG_V24(WONScrollContainerConfig,kWScrollCont,ScrollbarScrollerConfig)
+EE_CFG_V24(ContainerConfig,kContainer,ComponentConfig)
 EE_CFG_V24(ScrollAreaConfig,kScrollArea,ContainerConfig)
 EE_CFG_V24(ScrollerConfig,kScroller,ContainerConfig)
 EE_CFG_V24(ScrollbarScrollerConfig,kSBScroller,ScrollerConfig)

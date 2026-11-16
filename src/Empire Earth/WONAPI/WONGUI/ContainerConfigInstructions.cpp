@@ -1,4 +1,7 @@
-// Container config instructions: ADD, layout points and the LAYOUT family (file name inferred)
+// Container config instructions: the LAYOUT family and the no-overlap layout (file name inferred). R6 WON round 40: the
+// other instructions (ADD, ADDLAYOUTPOINT, LAYOUTID, ENABLELAYOUT, RELAYOUT, the same-size, centre, clear-right,
+// space-evenly and size-at-least layouts, the tab focus and child input flags) are programs of ee_won's table reader
+// (rust/crates/ee_won/src/cfgtab.rs) over WONCfgTable.inl, which calls these two for their keys.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -11,46 +14,13 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
+#include "ee/wonapi/WONLobbyLayout.h"
 #include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs).
 // The LAYOUT rule's instruction names and its offsets' rule are ee_won's guilayout module
 // (rust/crates/ee_won/src/guilayout.rs).
 namespace WONAPI {
-// FUNCTION: WON 0x00788840
-// Reads a comma-separated list of components and adds each to the container
-bool ContainerConfig::HandleAdd()
-{
-	while(true)
-	{
-		Component *aComp = this->ReadComponent();
-		this->mContainer->AddChild(aComp);
-		if(this->EndOfString())
-			break;
-
-		this->EnsureComma();
-	}
-
-
-	return true;
-}
-// FUNCTION: WON 0x00788870
-// Reads a comma-separated list of layout points and adds each to the container
-bool ContainerConfig::HandleAddLayoutPoint()
-{
-	while(true)
-	{
-		LayoutPoint *aPoint = SafeConfigGetComponent<LayoutPoint*>(this->ReadComponent(),"LayoutPoint");
-		this->mContainer->AddLayoutPoint(aPoint);
-		if(this->EndOfString())
-			break;
-
-		this->EnsureComma();
-	}
-
-
-	return true;
-}
 // FUNCTION: WON 0x007888b0
 // Reads a layout rule (target, instruction names, reference, up to four offsets) and adds it to the container;
 // chain and repeat forms reuse the previous rule's instructions and reference
@@ -127,73 +97,46 @@ bool ContainerConfig::HandleLayout(bool chain, bool repeat)
 
 	return true;
 }
-// FUNCTION: WON 0x00789c80
-// Handles the container config instructions (ADD, LAYOUT and its variants, layout ids, tab focus,
-// child-only input); other instructions go to the base config
-bool ContainerConfig::Virtual24(const std::string& theInstruction)
+// FUNCTION: WON 0x007894b0
+// Reads a no-overlap layout (target, sides, reference, paddings, more components); it is added
+// under the default layout id, not the current one
+bool ContainerConfig::HandleNoOverlapLayout()
 {
-	const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION,theInstruction.data(),theInstruction.size());
-	if(aKeyIdx==0)
-		return this->HandleAdd();
-	else if(aKeyIdx==1)
-		return this->HandleAddLayoutPoint();
-	else if(aKeyIdx==2)
-		return this->HandleNewLayoutPoint();
-	else if(aKeyIdx==3)
-		return this->HandleLayout();
-	else if(aKeyIdx==4)
-		this->mCurLayoutId = this->ReadInt();
-	else if(aKeyIdx==5)
+	Component *target = this->ReadComponent();
+	this->EnsureComma();
+
+	int instructions = 0;
+	while(true)
 	{
-		bool enable = this->ReadBool();
-		while(true)
-		{
-			this->EnsureComma();
-			int anId = this->ReadInt();
-			this->mContainer->EnableLayoutInstructions(anId,enable);
-			if(this->EndOfString())
-				break;
-		}
+		GUIString aStr = this->ReadString(true);
+		if(aStr.length()==0)
+			break;
+
+		const int aNameIdx_aStr=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_CONTAINERCONFIG_HANDLENOOVERLAPLAYOUT_ASTR,aStr.mData->mText,aStr.mData->mLength,sizeof(wchar_t));
+		if(aNameIdx_aStr==0) instructions |= 0x100;
+		else if(aNameIdx_aStr==1) instructions |= 0x200;
+		else if(aNameIdx_aStr==2) instructions |= 0x400;
+		else if(aNameIdx_aStr==3) instructions |= 0x800;
+		else 
+			throw ConfigObjectException("Unknown no overlap instruction: " + (std::string)aStr);
 	}
-	else if(aKeyIdx==6)
-		this->mContainer->Relayout();
-	else if(aKeyIdx==7)
-		return this->HandleLayout(true);
-	else if(aKeyIdx==8)
-		return this->HandleLayout(false,true);
-	else if(aKeyIdx==9)
-		return this->HandleSameSizeLayout(true,true);
-	else if(aKeyIdx==10)
-		return this->HandleSameSizeLayout(true,false);
-	else if(aKeyIdx==11)
-		return this->HandleSameSizeLayout(false,true);
-	else if(aKeyIdx==12)
-		return this->HandleCenterLayout(true,true);
-	else if(aKeyIdx==13)
-		return this->HandleCenterLayout(true,false);
-	else if(aKeyIdx==14)
-		return this->HandleCenterLayout(false,true);
-	else if(aKeyIdx==15)
-		return this->HandleSpaceEvenlyLayout(true);
-	else if(aKeyIdx==16)
-		return this->HandleSpaceEvenlyLayout(false);
-	else if(aKeyIdx==17)
-		return this->HandleClearRightLayout();
-	else if(aKeyIdx==18)
-		return this->HandleNoOverlapLayout();
-	else if(aKeyIdx==19)
-		return this->HandleSizeAtLeastLayout();
-	else if(aKeyIdx==20)
-		this->mContainer->SetIsolateTabFocus(this->ReadBool());
-	else if(aKeyIdx==21)
-		this->mContainer->SetOnlyChildInput(this->ReadBool());
-	else
-		return ComponentConfig::Virtual24(theInstruction);
+
+	this->EnsureComma();
+	Component *ref = this->ReadComponent(); this->EnsureComma();
+	int horzPad, vertPad;
+	horzPad = this->ReadInt(); this->EnsureComma();
+	vertPad = this->ReadInt(); 
+
+	SmartPtr<NoOverlapLayout> aLayout = new NoOverlapLayout(target,instructions,ref,horzPad,vertPad);
+	while(!this->EndOfString())
+	{
+		this->EnsureComma();
+		Component *aComponent = this->ReadComponent();
+		aLayout->Add(aComponent);
+	}
+
+	this->mContainer->AddChildLayout(aLayout.get());
 
 	return true;
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007a1da0
-// (class WONAPI::LayoutPoint * __cdecl WONAPI::SafeConfigGetComponent(class WONAPI::Component *,char const *)    [?SafeConfigGetComponent@WONAPI@@YAPAVLa)

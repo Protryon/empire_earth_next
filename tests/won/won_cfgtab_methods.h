@@ -1,5 +1,12 @@
 // The component methods the handlers (won_cfgtab_orig.h) and WONCfgTable.inl call (build/r39/gen_orig.py).
 #define EE_CFGTAB_METHODS(M) \
+    M(AddChild) \
+    M(AddChildLayout) \
+    M(AddLayoutPoint) \
+    M(EnableLayoutInstructions) \
+    M(Relayout) \
+    M(SetIsolateTabFocus) \
+    M(SetOnlyChildInput) \
     M(AddComplexSplitter) \
     M(AddContainedComponent) \
     M(AddFormatedText) \

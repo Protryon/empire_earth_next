@@ -70,6 +70,8 @@ pub enum EeWonCfgRead {
     Direction = 21,
     /// `ReadStandardCursor()` into the ints.
     StdCursor = 22,
+    /// `SafeConfigGetComponent<LayoutPoint*>(ReadComponent(),"LayoutPoint")` into the components.
+    LayoutPoint = 23,
 }
 
 /// The host: the C++ config's reads, its frame and its setters. Every callback that can throw catches and keeps
@@ -174,6 +176,20 @@ const CONDITION: Op = N(
 /// WONSkinConfig::ReadVert: "Vert" (any case) is 1, any other word 0.
 const VERT: Op = N(EE_WON_CFG_NAMES_WONSKINCONFIG_READVERT_TEXT, &[1], Miss::Value(0));
 const COMPONENT_FLAGS: &[i32] = &[0x1, 0x8, 0x20, 0x40, 0x80, 0x100, 0x200, 0x800, 0x1000, 0x4000, 0x2000, 0x20000];
+
+/// ContainerConfig's same-size layouts: the layout made (setter `s`), then a component list added to it, then the
+/// layout to the container under the current layout id (the setters take each component as they use it).
+const fn same(s: u8) -> [Op; 7] {
+    [S(s), COMP, S(20), Je(6), C, J(1), S(21)]
+}
+/// The centre layouts: the box read, the layout made, `, component` pairs added, the layout to the container.
+const fn center(s: u8) -> [Op; 8] {
+    [COMP, S(s), Je(7), C, COMP, S(20), J(2), S(21)]
+}
+/// The space-evenly layouts: the box and two pads, the layout made, a component list (it may be empty) added.
+const fn space(s: u8) -> [Op; 14] {
+    [COMP, C, I, C, I, C, S(s), Je(13), COMP, S(20), Je(13), C, J(7), S(21)]
+}
 
 /// The handlers: (key table, the program of each key in the table's order).
 #[rustfmt::skip]
@@ -364,6 +380,18 @@ static PROGRAMS: &[(i32, &[&[Op]])] = &[
         &[R(Rd::Font), S(0)], &[S(5), I, S(1)],
         &[S(5), X, R(Rd::Flag), Jz(END), N(EE_WON_CFG_NAMES_FONTCONFIG_VIRTUAL24_FLAG, &[1, 2, 0, 4], Miss::Throw(b"Unknown font style: ")), S(2), J(0)],
         &[R(Rd::Font), S(3)], &[STR, C, R(Rd::Font), S(4)],
+    ]),
+    // ContainerConfig (R6 WON round 40): ADD (a component list) ADDLAYOUTPOINT (a layout point list) NEWLAYOUTPOINT and
+    // LAYOUT (their C++ handlers) LAYOUTID ENABLELAYOUT (on, then a list of ids) RELAYOUT LAYOUTCHAIN LAYOUTREPEAT (C++),
+    // the same-size (both, width, height) and centre (both, horizontal, vertical) layouts, the space-evenly layouts
+    // (horizontal, vertical), the clear-right layout (component, pad, a list), NOOVERLAPLAYOUT (C++), the size-at-least
+    // layout (target, two pads, `, component` pairs; under the default id), ISOLATETABFOCUS ONLYCHILDINPUT
+    (EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION, &[
+        &[COMP, S(0), Je(END), C, J(0)], &[R(Rd::LayoutPoint), S(1), Je(END), C, J(0)], &[S(2)], &[S(3)], &[I, S(4)],
+        &[B, C, I, S(5), Je(END), J(1)], &[S(6)], &[S(7)], &[S(8)],
+        &same(9), &same(10), &same(11), &center(12), &center(13), &center(14), &space(15), &space(16),
+        &[COMP, C, I, C, S(17), COMP, S(20), Je(10), C, J(5), S(21)], &[S(18)],
+        &[COMP, C, I, C, I, S(19), Je(11), C, COMP, S(20), J(6), S(22)], &[B, S(23)], &[B, S(24)],
     ]),
     // ImageConfig: SRC SIZE
     (EE_WON_CFG_KEYS_IMAGECONFIG_VIRTUAL24_ININSTRUCTION, &[&[IMG, S(0)], &[I, C, I, S(1)]]),
