@@ -3,6 +3,7 @@
 // socket's C++ transform (ee_won_core_add_transform).
 #ifndef EE_TESTS_WON_MSGTRANSFORM_H
 #define EE_TESTS_WON_MSGTRANSFORM_H
+#include "rust/ee_won.h"
 namespace WONAPI {
 class MsgTransform {
 public:
