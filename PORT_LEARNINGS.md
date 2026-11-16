@@ -25914,3 +25914,90 @@ record's layout are `EESavePrimitive`'s. config.yaml is ee_plat_core's `PlatConf
 - **Left** (docs/progress/r6-app-and-world.md): `EECheatCodes` (the table, the parser and the dispatch, ~-300; the
   actions stay world walks), `EEMiniMap`'s pixels and cell counts, `EEEMStorm`'s step and route costs, `EEMap`'s sight
   and cliffs (simulation: captures first), the game's creation and the saved game's persistents, the app's start-up.
+
+## R6 app and world, round 2: EEMap's sight and cliffs, EEMiniMap's cells and pixels, EECheatCodes and EEEMStorm's step in Rust; their captures (ee_app map.rs, minimap.rs, cheats.rs, storm.rs; branch rust-app2, 2026-11-15)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 4bc677b9 | MAPS, MAPC, MAPK, MAPP, MMPX, MMSN, STRM, CHET/CHEF/CHLS capture records (TEST ONLY), EE-SIM `--app-sweep`, the app profile; goldens from the unmodified C++ | +577 -2 (test code) |
+| c0596e12 | `EEMap`'s sight, cliffs, painting, water colours, checksum and tile count in Rust (`map.rs`) | +137 -340, net -203 |
+| 78477dc7 | `EEMiniMap`'s cells and terrain pixels whole in Rust (`minimap.rs`) | +187 -496, net -309 |
+| b9a549aa | `EECheatCodes`' table, parse, lookup, list and dispatch in Rust (`cheats.rs`); its dead includes | +173 -511, net -338 |
+| c2f252da | `EEEMStorm`'s record, name, fades, step and route costs in Rust (`storm.rs`) | +77 -234, net -157 |
+| (fix) | the round's Rust constants crate-private (`CELLS` had reached ee_rust_common.h) | Rust only |
+
+The moves: **net -1,007 C++** (src, include/ee); the test hook adds +577 (EEAppCaptureWorld.cpp 441 of it). Short
+of the 1,500 asked: the rest of the list is object wiring (the game state and saved-game units: measured below), and
+the next terrain units (`RTSMap.cpp`, the tiles) were last moved by world-and-units, so not taken without them.
+
+**The measure** (lines on rust at the round's start; which gate reaches each):
+- `EEMap.cpp` 881: the random map's painting and cliffs (every game's start: MAPC), the calamities' and buildings'
+  terrain edits (`RTSMap::Raise` calls `UpdateWater`), the editor's paint (the editor gate), the sight of a wonder
+  (`AddSight`/`RemoveSight`: EEComplexUnit only for `kWorldWonderSightRadius`; no capture game builds one), the
+  out-of-synch checksum (multiplayer only), the pitch and roll (every ground unit's placement: MAPP).
+- `EEMiniMap.cpp` 672: every tile's sight change of the local player (`CountCellOn/Off` from the players' sight,
+  physics thread), the doppelgangers and units' moves, the terrain pixels at a map's start and after terrain edits;
+  EE-SIM runs it on its hidden window's surfaces, so the capture reads it (MMSN, MMPX); the tour draws it.
+- `EECheatCodes.cpp` 554: only a chat line reaches it (no gate typed one: the app profile now does).
+- `EEEMStorm.cpp` 602: no game makes a storm (the environment manager's `UpdateStorms` rolls for one and creates
+  nothing; only a saved game with storms would load them, and no game saves one). The calamity capture does not reach
+  it; the app profile's sweep makes one of each kind.
+- `EEGameState.cpp` 501, `EEGameStateLoader.cpp` 431, `EESaveLoad.cpp` 636: object wiring (the persistent templates'
+  dynamic_casts, the managers' handover); not moved.
+
+**One host per class, the mesh direct.** Each class's Rust half reaches the C++ through one callback (`EEMapHostOp`,
+`EEMiniMapHostOp`, `EECheatHostOp`, `EEEMStormHostOp`); the terrain mesh is ee_ge's Rust object, so map.rs and
+minimap.rs read and edit it through ee_ge's own functions (`ee_ge_tm_point`, `_tile`, `_point_edit`, ...) with the
+mesh pointer the C++ passes, not through the host. `ee_app` still imports no C++ symbol (`cargo test -p ee_app` links
+alone); it gained ee_random (URandomIntegers for the cliffs' table).
+
+- **No reference across a host call.** The mini map is a Rust object the class owns (`mRust`); no host operation
+  calls back into it: `TellTile`'s doppelgangers and units come back as a list of items (`EEMiniMapBuilding`,
+  `EEMiniMapUnit`: the dot, the tile size, a wall's facing, whether it gets a dot) that Rust applies, rather than the
+  C++ calling `AddDoppelganger`/`MoveUnit` back. The storm's record is copied in and out of `Step`; `TakePath` and
+  `RequestRoute` stopped setting the state (Rust's step and `Begin` set it right after, as the original did inside).
+- **Nesting kept for the capture.** MAPC records only the outermost terrain edit (a scope counter): the original's
+  `RemoveFlatCliffs` called the `PaintTerrain` member and `UpdateCliffs` the `SetCliffColorSets` member, Rust calls
+  its own functions; both record the same outer calls.
+- **Exactness.** The cliffs' table is `URandomIntegers` from seed 0 (`URandom { seed: 0 }`: `SetSeed` has no 0 -> 1
+  fix-up), the normals' sums and dot products in the C++'s order, the checksum's `(long)f` the x86 truncation
+  (`ftol`: the indefinite value out of range), unsigned loop counters where the C++'s were; the mini map's
+  `UMCeil`/`UMFloor`/`UMFloatToLong` over ee_ge's `lrintf`, `GETransformation::Apply`'s operand order for 2D and 3D
+  points, `GEColor::Normalize` as `f32::clamp` (the same for NaN and -0). The cheat parse calls ee_plat_core's
+  `PlatMbsLen`/`NInc`/`Dec`/`Lwr` on the line's bytes as the C++ did on the string's; a line longer than one
+  character always takes `atoi` of its last two (0 for "atm": the parameter is written).
+- **The colour fractal.** The first captures of MAPC and MMPX differed between two runs of the same exe: the terrain
+  mesh seeds its colour fractal from the clock (ee_ge tmobj.rs), and `SetColorSet` picks a point's colour index from
+  it, so the indices (and the mini map's pixels, which read the vertex colours) are cosmetic noise. Under
+  EE_SIM_CAPTURE the seed is now 1 (one TEST ONLY line in ee_ge, the renderer lane's file). CHEF first differed too:
+  gaia's resource slots 0 and 1 are never set (uninitialized); the record reads 2..6.
+- **Coverage.** MAPS (sight) has no golden: `EEMap::AddSight` is only a wonder's sight radius and no capture game
+  builds one (the players' ordinary sight is EEPlayer's). MAPK has none: the out-of-synch checksum runs only in a
+  multiplayer game. The storm is unreachable in a game (the environment manager never creates one; no save holds
+  one): the app profile's sweep makes one of each kind at ten minutes (200 STRM records a seed). The cheats: 42
+  lines, 30 applied (two to a second player), the two that end the game parsed only, "headshot 10" (gaia, sparing
+  the local selection) rather than a computer player (EE-SIM stops at the last computer standing).
+- **Tests.** map_tests.rs 11, minimap_tests.rs 9, cheats_tests.rs 5, storm_tests.rs 4 (ee_app 56).
+- **Behaviour changes.** None in the captures. The redraw's walk skips a missing tile where the original dereferenced
+  it; a goto's "atof" is a decimal/inf/nan prefix parse (a hexadecimal float, which UCRT's atof reads, gives 0).
+  `EEMiniMap`'s node pools are gone (the shutdown's two `DumpStats` lines with them).
+- **Gates.** The four moves were built and gated together (each commit's C++ needs only its own module and header;
+  the intermediate trees were not built one by one): `--sim` 0/0, the oracle identical on seeds 2-3, the six capture profiles at seeds 2-3 PASS on
+  the moved exe (oracle 197 digests, late 196, space 197, calamity 213, scenario 43, app 18), the Rust gate PASS.
+  The editor gate prints the same as the round's unmodified exe; both differ from expected.txt in one line at step
+  1453 (the loading caption "Loading Terrain Ambients - Aquatic" there or not: rust's own state, not this round).
+  On the result merged with `rust` (f4244b22: no conflict, `strip_markers.py --check` clean, the headers current,
+  `rust_includes.py` nothing to narrow): build `--sim` 0/0, the test profile 0/0, the oracle identical on seeds 2-7,
+  the captures at seeds 2-3: oracle (197 digests), late (196), space (197), calamity (213), scenario (43), app (18)
+  PASS; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) `saveload
+  expect: PASS`; the editor gate as above (a first run under load also differed at steps 79-89, the UI-hidden
+  toggle's view: a rerun alone gave only the step-1453 line); the Rust gate PASS. Harness (the lock, one session
+  each, the merged test profile): the tour `RESULT PASS tour` (F3 0 -> 1 -> 0 ok, the mini map lit, `gx_errors` {};
+  its capture by eye: the explored patch and the unit dots in the mini map, the rest black, as before);
+  `random-game --orders --box-select --scroll-check` BOX SELECT, ORDERS and SCROLL CHECK PASS, `RESULT PASS
+  random-game`; the legacy save (`game_session.py --exercise ai-game ... --save-at-pt 1500 --stop-after-save`) written
+  at PT 2177 and loaded (`--load-save`: LOADED at PT 2608), played on to game second 3,400+ with both computers
+  growing, stopped by the session's wall timeout I gave (1,500 s), not the time cap; the LAN game `RESULT PASS lan-game` (PT host 3015, joiner 3020).
+- **Only a person reaches**: the mini map as seen (the tour draws it; EE-SIM reads the same pixels the capture
+  digests); a cheat typed in a real chat window (the sweep calls the parse and the dispatch the chat line calls); a
+  storm in a game.
