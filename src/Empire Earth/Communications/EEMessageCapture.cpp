@@ -224,44 +224,6 @@ void EEMessageCaptureExecuted(NEMessage* inMessage)
         theMessage->Dereference();
 }
 
-// the sweep's types, in the capture's order (the original classes'); each one's shape is its codec layout's
-// (ee_netmsg_sweep_shape: fixed, a string between fixed members, a list, the box selection's blob)
-static const unsigned char kSweepTypes[] = {
-    0x50, 0x72, 0x9b, 0x4f, 0x49, 0x76, 0x9f, 0x70, 0x4c, 0x86, 0x56, 0x59, 0x6e, 0x75, 0x8d, 0x78,
-    0x5a, 0x85, 0xa7, 0x7f, 0x7e, 0x87, 0xa4, 0x61, 0x41, 0x42, 0x46, 0x47, 0x88, 0x89, 0x79, 0xa9,
-    0x60, 0x91, 0x5f, 0x51, 0xac, 0x6b, 0x58, 0x92, 0x95, 0x6c, 0x8e, 0x7d, 0xad, 0x5c, 0xa8, 0x97,
-    0x98, 0x64, 0x9a, 0x94, 0x71, 0x7b, 0x67, 0x8c, 0xab, 0x68, 0x55, 0x7c, 0x43, 0x4d, 0x73, 0x44,
-    0x5b, 0xaa, 0x6a, 0x6d, 0x4a, 0x57, 0x81, 0x53, 0x8b, 0x52, 0xa6, 0xa3, 0x90, 0x82, 0x93, 0x83,
-    0x84, 0xa0, 0xa2, 0x74, 0xa1, 0x96, 0x48, 0x4e, 0xa5, 0x9c, 0x80, 0x99, 0x66, 0x54, 0x8f, 0x5d,
-    0x5e, 0x8a, 0x63, 0x65, 0x62, 0x4b, 0x7a, 0x77, 0x6f, 0x9e, 0xae};
-static unsigned long sRandom = 0x2545f491u;
-static unsigned char NextRandom()
-{
-    sRandom ^= sRandom << 13;
-    sRandom &= 0xffffffffu;
-    sRandom ^= sRandom >> 17;
-    sRandom ^= sRandom << 5;
-    sRandom &= 0xffffffffu;
-    return (unsigned char)(sRandom >> 8);
-}
-
-// pattern p of n bytes: 0 all 0x00, 1 all 0xff, 2 all 0x7f, 3 all 0x80, 4 counting, 5.. random
-static void Pattern(std::vector<unsigned char>& ioData, unsigned long inCount, int inPattern)
-{
-    for (unsigned long i = 0; i < inCount; i++) {
-        unsigned char theByte;
-        switch (inPattern) {
-        case 0: theByte = 0x00; break;
-        case 1: theByte = 0xff; break;
-        case 2: theByte = 0x7f; break;
-        case 3: theByte = 0x80; break;
-        case 4: theByte = (unsigned char)(i * 37 + 11); break;
-        default: theByte = NextRandom(); break;
-        }
-        ioData.push_back(theByte);
-    }
-}
-
 static void Build(std::vector<unsigned char>& ioData)
 {
     ioData.resize(ioData.size() + 64, 0);   // slack past the message
@@ -270,104 +232,6 @@ static void Build(std::vector<unsigned char>& ioData)
     sSweeping = false;
     if (theMessage != NULL)
         theMessage->Dereference();
-}
-
-// the header with pattern p: reserved, type, target slot, originating slot
-static void Header(std::vector<unsigned char>& ioData, unsigned char inType, int inPattern)
-{
-    Pattern(ioData, 4, inPattern);
-    ioData[1] = inType;
-}
-
-static void PutU32(std::vector<unsigned char>& ioData, unsigned long inValue)
-{
-    for (int i = 0; i < 4; i++)
-        ioData.push_back((unsigned char)(inValue >> (8 * i)));
-}
-
-// a wire string (UWideString::Export): u32 length + 2, the bytes, u16 0
-static void PutString(std::vector<unsigned char>& ioData, unsigned long inLength, int inPattern)
-{
-    static const char kText[] = "Empire Earth \xc3\xa9\xc3\xa8 \xe2\x82\xac chat";   // ASCII and UTF-8
-    PutU32(ioData, inLength + 2);
-    for (unsigned long i = 0; i < inLength; i++) {
-        unsigned char theByte = inPattern == 0 ? (unsigned char)kText[i % (sizeof(kText) - 1)]
-                                               : (unsigned char)(0x21 + (NextRandom() % 0x5e));
-        ioData.push_back(theByte);
-    }
-    ioData.push_back(0);
-    ioData.push_back(0);
-}
-
-static const unsigned long kStringLengths[] = {0, 1, 2, 7, 31, 64, 255, 300};
-static const unsigned long kIDs[] = {0, 1, 0xff, 0x100, 0x1ff, 0xffff, 0x10000, 0xffff00, 0xffffff, 0x1000000, 0x7fffffff,
-                                     0x80000000, 0xffffffff, 0x123456, 0xabcdef};
-
-static unsigned char Compress(const std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer,
-                              std::vector<long>& outUnits)
-{
-    std::vector<uint32_t> theIDs(inUnits.begin(), inUnits.end());   // CompressUnits, then DecompressUnits over its bytes
-    unsigned char theSize = ee_netmsg_compress_units(theIDs.empty() ? NULL : &theIDs[0], theIDs.size(), (uint32_t)inOwner, outBuffer);
-    EEMRecord theMessage(kMessageSelectUnits);
-    theMessage.mList.assign(outBuffer, outBuffer + theSize);
-    EESelectUnitsIDs(&theMessage, outUnits);
-    return theSize;
-}
-
-static void CompressCase(const std::vector<unsigned long>& inUnits, unsigned long inOwner)
-{
-    EESimCaptureRecord theRecord(0x55434d4eu);   // NMCU
-    unsigned char theBuffer[0x100];
-    std::vector<long> theOut;
-    unsigned char theSize = Compress(inUnits, inOwner, theBuffer, theOut);
-    theRecord.U32((unsigned int)inOwner);
-    theRecord.U32((unsigned int)inUnits.size());
-    for (size_t i = 0; i < inUnits.size(); i++)
-        theRecord.U32((unsigned int)inUnits[i]);
-    theRecord.U32(theSize);
-    theRecord.Bytes(theBuffer, theSize);
-    Longs(theRecord, theOut);
-    theRecord.Commit();
-    // and the selection message built from it
-    std::vector<unsigned char> theData;
-    Header(theData, kMessageSelectUnits, 4);
-    theData.push_back(0x5a);
-    theData.push_back(theSize);
-    theData.insert(theData.end(), theBuffer, theBuffer + theSize);
-    Build(theData);
-}
-
-static void UnitLists()
-{
-    std::vector<unsigned long> theUnits;
-    for (unsigned long theOwner = 0; theOwner < 0x101; theOwner += 0x40) {
-        theUnits.clear();
-        CompressCase(theUnits, theOwner);   // the empty selection
-        for (size_t i = 0; i < sizeof(kIDs) / sizeof(kIDs[0]); i++) {
-            theUnits.assign(1, kIDs[i]);
-            CompressCase(theUnits, theOwner);
-        }
-        theUnits.assign(kIDs, kIDs + sizeof(kIDs) / sizeof(kIDs[0]));
-        CompressCase(theUnits, theOwner);
-        for (unsigned long theCount = 2; theCount <= 80; theCount += 13) {
-            theUnits.clear();
-            for (unsigned long i = 0; i < theCount; i++) {   // ids spread over a few groups, some repeated
-                unsigned long theID = ((unsigned long)NextRandom() << 16) % 0x30000;
-                theID |= ((unsigned long)NextRandom() << 8) & 0x300;
-                theID |= NextRandom();
-                theUnits.push_back(theID | (theOwner << 24));
-            }
-            CompressCase(theUnits, theOwner);
-        }
-        theUnits.clear();
-        for (unsigned long i = 0; i < 70; i++)   // one group over the 63-id limit
-            theUnits.push_back(0x4200 + i);
-        CompressCase(theUnits, theOwner);
-        theUnits.clear();
-        for (unsigned long i = 0; i < 70; i++)   // many groups over the limit
-            theUnits.push_back((i << 8) | (i * 7));
-        CompressCase(theUnits, theOwner);
-    }
 }
 
 // ---- NMNE: the engine messages (NEMessage.cpp, 0x20..0x3c) over edge payloads, with the players' inputs nested in
@@ -442,166 +306,30 @@ static void BuildEngine(std::vector<unsigned char>& ioData)
     theRecord.Commit();
 }
 
-// a fixed game message of the sweep's rows with pattern p
-static void PutGameMessage(std::vector<unsigned char>& ioData, unsigned char inType, int inPattern)
+// one payload of the sweep (ee_netmsg capture.rs, in its order): a game message built, an engine message built and
+// recorded, a whole NMCU record committed
+static void SweepItem(uint8_t inKind, const uint8_t* inData, size_t inSize)
 {
-    std::vector<unsigned char> theMessage;
-    Header(theMessage, inType, inPattern);
-    Pattern(theMessage, ee_netmsg_sweep_shape(inType).prefix - 4, inPattern);
-    ioData.insert(ioData.end(), theMessage.begin(), theMessage.end());
-}
-
-// a header of pattern p appended
-static void PutHeader(std::vector<unsigned char>& ioData, unsigned char inType, int inPattern)
-{
-    std::vector<unsigned char> theHeader;
-    Header(theHeader, inType, inPattern);
-    ioData.insert(ioData.end(), theHeader.begin(), theHeader.end());
-}
-
-// the players' inputs list number l (a count byte, then the messages)
-static void PutInputs(std::vector<unsigned char>& ioData, int inList, int inPattern)
-{
-    switch (inList) {
-    case 0:   // none
-        ioData.push_back(0);
-        break;
-    case 1:   // one game message
-        ioData.push_back(1);
-        PutGameMessage(ioData, kMessageAttackUnit, inPattern);
-        break;
-    case 2: {   // a chat, an engine message, a wall
-        ioData.push_back(3);
-        PutHeader(ioData, kMessageChat, inPattern);
-        Pattern(ioData, 2, inPattern);
-        PutString(ioData, kStringLengths[inPattern % 8], inPattern & 1);
-        PutHeader(ioData, kNetMessagePauseGame, inPattern);
-        Pattern(ioData, 8, inPattern);
-        PutGameMessage(ioData, kMessageBuildWall, inPattern);
-        break;
-    }
-    case 3:   // an unknown type first: the import does not advance, so every input is skipped
-        ioData.push_back(2);
-        PutHeader(ioData, 0x05, inPattern);
-        PutGameMessage(ioData, kMessageAttackUnit, inPattern);
-        break;
-    case 4:   // a known input, then an unknown type, then one the import never reaches
-        ioData.push_back(3);
-        PutGameMessage(ioData, kMessageGameSpeed, inPattern);
-        PutHeader(ioData, 0xfe, inPattern);
-        PutGameMessage(ioData, kMessageAttackUnit, inPattern);
-        break;
-    case 5:   // a communications tick in the inputs, with its own input
-        ioData.push_back(2);
-        PutHeader(ioData, kNetMessageCommunicationsTick, inPattern);
-        Pattern(ioData, 8, inPattern);
-        PutInputs(ioData, 1, (inPattern + 1) % 9);
-        PutGameMessage(ioData, kMessageExplore, inPattern);
-        break;
-    case 6:   // 255 inputs, the most the list holds
-        ioData.push_back(255);
-        for (int i = 0; i < 255; i++)
-            PutHeader(ioData, kNetMessageServerIsAlive, (inPattern + i) % 5);
-        break;
+    std::vector<unsigned char> theData(inData, inData + inSize);
+    if (inKind == EE_NETMSG_SWEEP_ITEM_GAME)
+        Build(theData);
+    else if (inKind == EE_NETMSG_SWEEP_ITEM_ENGINE)
+        BuildEngine(theData);
+    else {
+        EESimCaptureRecord theRecord(EE_NETMSG_SWEEP_NMCU);
+        if (inSize != 0)
+            theRecord.Bytes(inData, (unsigned int)inSize);
+        theRecord.Commit();
     }
 }
 
-// every engine type (0x20..0x3c) by its shape (ee_netmsg_engine_sweep_shape: the fixed bytes before its strings or
-// its players' inputs; a 4-byte member follows two strings)
-static void EngineSweep()
-{
-    for (unsigned char theType = 0x20; theType <= 0x3c; theType++) {
-        if (ee_netmsg_class_of_type(theType) == 0xffffffffu)
-            continue;
-        EeNetMsgEngineSweepShape theRow = ee_netmsg_engine_sweep_shape(theType);
-        for (int p = 0; p < 9; p++) {
-            int theVariants = theRow.inputs ? 7 : theRow.strings > 0 ? 8 : 1;
-            for (int v = 0; v < theVariants; v++) {
-                std::vector<unsigned char> theData;
-                Header(theData, theType, p);
-                Pattern(theData, theRow.fixed, p);
-                if (theRow.inputs) {
-                    PutInputs(theData, v, p);
-                } else if (theRow.strings > 0) {
-                    PutString(theData, kStringLengths[v], p & 1);
-                    if (theRow.strings > 1) {
-                        PutString(theData, kStringLengths[(v + 3) % 8], (p + 1) & 1);
-                        Pattern(theData, 4, p);
-                    }
-                }
-                BuildEngine(theData);
-            }
-        }
-    }
-}
-
+// NMSW, NMCU and NMNE: the sweep's payloads (ee_netmsg capture.rs: the game types by their codec shapes over edge
+// patterns, the box selections' lists, the engine types and the communications ticks' nested inputs)
 void EEMessageCaptureSweep()
 {
     if (!EESimCaptureRecord::Active())
         return;
-    for (size_t r = 0; r < sizeof(kSweepTypes); r++) {
-        unsigned char theType = kSweepTypes[r];
-        EeNetMsgSweepShape theRow = ee_netmsg_sweep_shape(theType);
-        for (int p = 0; p < 9; p++) {
-            std::vector<unsigned char> theData;
-            switch (theRow.kind) {
-            case EE_NETMSG_SWEEP_FIXED:
-                Header(theData, theType, p);
-                Pattern(theData, theRow.prefix - 4, p);
-                Build(theData);
-                break;
-            case EE_NETMSG_SWEEP_STRING:
-                for (size_t l = 0; l < sizeof(kStringLengths) / sizeof(kStringLengths[0]); l++) {
-                    theData.clear();
-                    Header(theData, theType, p);
-                    Pattern(theData, theRow.prefix - 4, p);
-                    PutString(theData, kStringLengths[l], p & 1);
-                    Pattern(theData, theRow.suffix, p);
-                    Build(theData);
-                }
-                break;
-            case EE_NETMSG_SWEEP_THESE_UNITS:
-                for (unsigned long n = 0; n <= 63; n += (n < 4 ? 1 : 19)) {
-                    theData.clear();
-                    Header(theData, theType, p);
-                    Pattern(theData, 1, p);
-                    PutU32(theData, n);
-                    Pattern(theData, 4 * n, p);
-                    Build(theData);
-                }
-                break;
-            case EE_NETMSG_SWEEP_CIV_UPGRADES:
-                for (unsigned long n = 0; n <= 40; n += (n < 3 ? 1 : 37)) {
-                    theData.clear();
-                    Header(theData, theType, p);
-                    Pattern(theData, theRow.prefix - 4, p);
-                    theData.push_back((unsigned char)n);
-                    Pattern(theData, 4 * n, p);
-                    PutString(theData, kStringLengths[(n + p) % 8], p & 1);
-                    Build(theData);
-                }
-                break;
-            case EE_NETMSG_SWEEP_SELECT_UNITS:
-                break;   // in UnitLists: only CompressUnits' buffers decode (DecompressUnits trusts its input)
-            }
-        }
-    }
-    UnitLists();
-    // the box selection's other two types over one buffer each
-    std::vector<unsigned long> theUnits(kIDs, kIDs + 5);
-    unsigned char theBuffer[0x100];
-    std::vector<long> theOut;
-    unsigned char theSize = Compress(theUnits, 3, theBuffer, theOut);
-    const unsigned char kTypes[] = {kMessageAddUnitsToSelectedGroup, kMessageAddAndRemoveUnitsFromSelectedGroup};
-    for (int t = 0; t < 2; t++) {
-        std::vector<unsigned char> theData;
-        Header(theData, kTypes[t], 5);
-        theData.push_back(0x11);
-        theData.push_back(theSize);
-        theData.insert(theData.end(), theBuffer, theBuffer + theSize);
-        Build(theData);
-    }
-    EngineSweep();
+    ee_netmsg_capture_sweep(SweepItem);
 }
 
 // ---- NMDC: the Execute decisions (ee_netmsg execute.rs) ----

@@ -490,7 +490,7 @@ void EEUIFSETerrain::Leave()
     unsigned long theSelection;
     if (theList->GetCurrentSelection(theSelection) == 0 && theSelection < this->mTerrains.size()) {
         EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->mTerrainType->GetForm());
-        theEditor->mLoadThread->Post409(reinterpret_cast<void*>(this->mTerrains[theSelection]->mID));
+        theEditor->GetLoadThread()->Post409(reinterpret_cast<void*>(this->mTerrains[theSelection]->mID));
     }
     for (theSelection = 0; theSelection < this->mTerrains.size(); theSelection++)
         this->mTerrainType->SetTexture(NULL, theSelection);
@@ -534,7 +534,7 @@ void EEUIFSETerrain::Enter()
     EESEUITerrainTypeLB* theList = static_cast<EESEUITerrainTypeLB*>(this->mTerrainType->GetForm()->GetControlById(kSETerrainTerrainType));
     if (theList->GetCurrentSelection(i) == kErrorOK && i < this->mTerrains.size()) {
         EEUIFScenarioEditor* theForm = static_cast<EEUIFScenarioEditor*>(this->mTerrainType->GetForm());
-        theForm->mLoadThread->Post408(reinterpret_cast<void*>(this->mTerrains[i]->mID));
+        theForm->GetLoadThread()->Post408(reinterpret_cast<void*>(this->mTerrains[i]->mID));
         this->mSelectedTerrain = i;
     } else
         this->mSelectedTerrain = -1;
@@ -545,10 +545,10 @@ void EEUIFSETerrain::SelectTerrain(unsigned long inSelection)
 {
     EEUIFScenarioEditor* theForm = static_cast<EEUIFScenarioEditor*>(this->mTerrainColorTypeLabel->GetForm());
     if (this->mSelectedTerrain < this->mTerrains.size())
-        theForm->mLoadThread->Post409(reinterpret_cast<void*>(this->mTerrains[this->mSelectedTerrain]->mID));
+        theForm->GetLoadThread()->Post409(reinterpret_cast<void*>(this->mTerrains[this->mSelectedTerrain]->mID));
     if (inSelection < this->mTerrains.size()) {
         this->mSelectedTerrain = inSelection;
-        theForm->mLoadThread->Post408(reinterpret_cast<void*>(this->mTerrains[inSelection]->mID));
+        theForm->GetLoadThread()->Post408(reinterpret_cast<void*>(this->mTerrains[inSelection]->mID));
     } else
         this->mSelectedTerrain = -1;
 }
@@ -561,9 +561,9 @@ void EEUIFSETerrain::MouseMove(const GE2DPoint& inLocation)
     EEUIFScenarioEditor* theForm = static_cast<EEUIFScenarioEditor*>(this->mTerrainTypeLabel->GetForm());
     if (gViewport.GetViewRectangle().Contains(inLocation)) {
         EEPointUnitOrTile(inLocation, theTile, thePoint, false);
-        theForm->mBrushGroup->mIsHighlightShown = true;
-        theForm->mBrushGroup->SetHighlight(thePoint.GetX(), thePoint.GetY(), !this->mMountainsButton->GetIsChecked());
+        theForm->GetBrushGroup()->mIsHighlightShown = true;
+        theForm->GetBrushGroup()->SetHighlight(thePoint.GetX(), thePoint.GetY(), !this->mMountainsButton->GetIsChecked());
     } else {
-        theForm->mBrushGroup->mIsHighlightShown = false;
+        theForm->GetBrushGroup()->mIsHighlightShown = false;
     }
 }

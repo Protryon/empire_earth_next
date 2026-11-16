@@ -511,7 +511,7 @@ static int64_t EditorOp(EEARust* a, void* p, int64_t* i, float* f)
         if (i[1] == 0)
             gUIManager->mScenarioEditorForm->GetUnitScreen()->ShowUnitStatus(theUnit);
         else
-            static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabUnits])->ShowUnitStatus(theUnit);
+            static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->ShowUnitStatus(theUnit);
         gUIManager->mScenarioEditorForm->UpdateHelpString();
         return 0;
     }
@@ -523,14 +523,14 @@ static int64_t EditorOp(EEARust* a, void* p, int64_t* i, float* f)
         EEPlayer* thePlayer = gWorld.mPlayers[a->mPlayers[i[1]]];
         EEApplyCivilizationFile(gWorld.mPlayers[a->mPlayers[i[1]]]->mCivilizationFile, thePlayer);
         long theCivilization = gWorld.mPlayers[a->mPlayers[i[1]]]->GetTechTree()->mStartEpoch;
-        gUIManager->mScenarioEditorForm->mLoadThread->Post406(reinterpret_cast<void*>(a->mPlayers[i[1]]), reinterpret_cast<void*>(theCivilization));
+        gUIManager->mScenarioEditorForm->GetLoadThread()->Post406(reinterpret_cast<void*>(a->mPlayers[i[1]]), reinterpret_cast<void*>(theCivilization));
         return 0;
     }
     case EE_SCREENS_GA_E_RESET_POST403:
-        gUIManager->GetScenarioEditorForm()->mLoadThread->Post403(reinterpret_cast<void*>(a->mPlayers[i[1]]), false);
+        gUIManager->GetScenarioEditorForm()->GetLoadThread()->Post403(reinterpret_cast<void*>(a->mPlayers[i[1]]), false);
         return 0;
     case EE_SCREENS_GA_E_RESET_POST407:
-        gUIManager->GetScenarioEditorForm()->mLoadThread->Post407(
+        gUIManager->GetScenarioEditorForm()->GetLoadThread()->Post407(
             reinterpret_cast<void*>(a->mPlayers[i[1]]), reinterpret_cast<void*>(gWorld.mPlayers[a->mPlayers[i[1]]]->GetTechTree()->mStartEpoch));
         return 0;
     case EE_SCREENS_GA_E_SAVE: return SaveGame(a->mFileName, TMGetTime(), a->mFlag, a->mDescription);

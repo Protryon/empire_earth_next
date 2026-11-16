@@ -9,42 +9,28 @@
 // the base's selection. This unit is its host (ee_screenscpp_sear): the scenario's areas, the trigger tab's boxes,
 // the editor's paint area, the mouse, the map's picking and the paint action.
 #include <windows.h>
-#include <algorithm>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
 #include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/TMPoll.h"
 #include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/Input System.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIEntityGroup.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
-#include "lle/GELine.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIEditBox.h"
 #include "lle/UICheckBox.h"
 #include "lle/UIListBox.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"
-#include <vector>
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
@@ -53,8 +39,6 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GE3DLine.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EEMouse.h"
@@ -144,7 +128,7 @@ void EESETSArea::GetNames(std::vector<UWideString>& outNames)
 // (defined in this unit: every caller calls it out of line)
 void EEUIFScenarioEditor::SetPaintArea(const GERectangle& inRectangle)
 {
-    this->mBrushGroup->mRectangle = inRectangle;
+    this->GetBrushGroup()->mRectangle = inRectangle;
 }
 
 // ---- the sub-screen's host (editor_area.rs: the ops from 600)
@@ -198,7 +182,7 @@ extern "C" int32_t ee_screenscpp_sear(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEAR_OP_HIGHLIGHT: SearEditor()->GetBrushGroup()->SetIsHighlightShown(i[0] != 0); return 0;
     case EE_SCREENS_SEAR_OP_PAINT_AREA: SearEditor()->SetPaintArea(GERectangle(f[0], f[1], f[2], f[3])); return 0;
-    case EE_SCREENS_SEAR_OP_UI_HIDDEN: return SearEditor()->mIsUIHidden;
+    case EE_SCREENS_SEAR_OP_UI_HIDDEN: return SearEditor()->GetIsUIHidden();
     case EE_SCREENS_SEAR_OP_ACTIVATE:
         SearEditor()->GetTriggerScreen()->HideText();
         SearEditor()->GetTriggerScreen()->ShowAlphaSort();
@@ -273,7 +257,7 @@ extern "C" int32_t ee_screenscpp_sear(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEAR_OP_PAINT_BEGIN: {
         *static_cast<EESEARust**>(p[0]) = new EESEARust(kSEAPaintArea, NULL, i[0], i[1]);
         gMouse->SetBounds(gViewport.GetViewRectangle());
-        SearEditor()->mEdgeScroll->mEdges = GERectangle(gViewport.GetViewRectangle().GetLeft(),
+        SearEditor()->GetEdgeScroll()->mEdges = GERectangle(gViewport.GetViewRectangle().GetLeft(),
                                                         gViewport.GetViewRectangle().GetTop(),
                                                         gViewport.GetViewRectangle().GetRight() - 1.0f,
                                                         gViewport.GetViewRectangle().GetBottom() - 1.0f);
@@ -285,7 +269,7 @@ extern "C" int32_t ee_screenscpp_sear(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEAR_OP_PAINT_END: {
         EESEARust* theAction = static_cast<EESEARust*>(p[0]);
         gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));
-        SearEditor()->mEdgeScroll->mEdges = GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth() - 1.0f,
+        SearEditor()->GetEdgeScroll()->mEdges = GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth() - 1.0f,
                                                         (float)gGameWindow->GetHeight() - 1.0f);
         int32_t theArea[4];   // left, top, right, bottom
         ee_screens_sew_area(theAction->mAction, theArea);

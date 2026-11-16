@@ -1,5 +1,10 @@
 // C:\EEX\Empire Earth\Communications\EEServer.cpp (__FILE__ 0x4bb934): the game's lock-step server, 0xca90f..0xcd4f9
 // (the WON error strings 0xcd4f9 open EEWonNet.cpp). Unit flags: the exe's module set.
+// Game messages round 6: the server's and client's decisions (the connection handling, the boots and removals, the
+// lobby's slots and players, the communications ticks' inputs, the votes, the laggers, the slot info, the migration's
+// restart, the client's answers) are ee_netmsg session.rs over the host at the end of this file (EESessionHost: the
+// world, lobby, UI and engine calls those members made); the members below forward to it. The golden:
+// tests/net/ee_session_test.cpp (the original units, tests/net/orig_ee, over a stand-in world).
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
@@ -52,7 +57,13 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEServer.h"
 #include "ee/EEStringIDs.h"
+#include "ee/RTSGraphics.h"
+#include "ee/EEGraphics.h"
+#include "ee/EEUIFMainGame.h"
+#include "ee/EEHumanPlayer.h"
+#include "rust/ee_netmsg.h"   // ee_netmsg session.rs
 long gDefaultPlayerColors[16] = {0, 1, 4, 9, 2, 15, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15};
+void EELobbyPostConnectStatus(bool inConnected);   // 0x295ce3 (EELobbyInit.cpp; provisional name)
 static unsigned long sSample = 0xffffffff;   // 0x4bb8b8 (ExecuteRemovePlayer: the last booted/out-of-synch sound)
 
 // Creates the game server with the lock-step rates from the game preferences, no vote or load running, and its locks
@@ -78,9 +89,7 @@ EEServer::EEServer(UWideString& inName, unsigned long inNetworkAdapter, unsigned
     this->mIsMigrating = false;
     this->ResetFastSelection();
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mSearchForSlotLock) == keseOK, 103);
-
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mFastSelectionLock) == keseOK, 106);
-
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mAttemptToRemovePlayerLock) == keseOK, 109);
 }
 
@@ -93,181 +102,84 @@ EEServer::~EEServer()
     TSScheduler::DestroyCriticalSection(this->mAttemptToRemovePlayerLock);
 }
 
-// Handles a join request: refuses a wrong version or checksum, a closed game, a name in use or a full game; else
-// gives it a slot, sends it the options and players and starts the saved game or scenario transfer
+// ---- the members whose decisions are ee_netmsg session.rs's (EESession: the host's frame, then the Rust) ----
+
+// A join request: refused for a wrong version or checksum, a closed game, a name in use or a full game; else a slot,
+// the options and players sent and the saved game's or scenario's transfer started
 void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOptionsPlayer& inPlayer,
                                         const UWideString& inVersion, unsigned long inChecksum)
 {
-    EEGameOptionsPlayer thePlayer;
-    EEGameOptionsPlayer theOther;
-    EEPSaveGameHeader theHeader;
-    EEWonNetGameInfo theInfo;
-    FSFileSpec* theFile;
-    unsigned long theXferID;
-    unsigned long theIndex;
-    unsigned long theCount;
-    unsigned long i;
-    bool theOK = true;
-    this->LockSendCommunicationsTick();
-    gGameOptions.mLock->WriteLock();
-    this->StopPing();
-    this->mSearchForSlotLock->Enter();
-    if (inVersion != gGameVersion) {
-        this->SendConnectionResponse(inSlot, kConnectionVersionMismatch, inSlot, 0xff, true);
-        theOK = false;
-    } else if (inChecksum != gBinaryChecksum) {
-        this->SendConnectionResponse(inSlot, kConnectionBadChecksum, inSlot, 0xff, true);
-        theOK = false;
-    }
-    if (inSlot == kSlotServer) {
-        this->mSendToSlots.clear();
-        gLocalPlayerOut = false;
-        theCount = gGameOptions.mIsMultiplayer ? 16 : 2;
-        thePlayer.mType = 3;
-        if (!EEIsMultiplayerGame(true)) {
-            for (i = 0; i < 16; i++) {
-                EEGameOptionsPlayer& theSlotPlayer = gGameOptions.mPlayers[i];
-                thePlayer = theSlotPlayer;
-                thePlayer.mColor = gDefaultPlayerColors[i];
-                thePlayer.mIsLocal = false;
-                thePlayer.mSlot = i;
-                thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-                thePlayer.mIsReady = false;
-                thePlayer.mPing = 0.0f;
-                thePlayer.mName = "";
-                thePlayer.mTeam = 0;
-                if (i + 1 > theCount || i >= 8)
-                    thePlayer.mType = 4;
-                else if (i == 1 && gGameOptions.mIsMultiplayer != true)
-                    thePlayer.mTeam = 0;
-                else
-                    thePlayer.mType = 3;
-                theSlotPlayer = thePlayer;
-            }
-        }
-    }
-    if (theOK == true && this->GetGameState() == kServerStateClosed) {
-        this->SendConnectionResponse(inSlot, kConnectionGameInProgressAsSent, inSlot, 0xff, true);
-        theOK = false;
-    }
-    if (!EEIsMultiplayerGame(true)) {
-        if (theOK != true)
-            goto done;
-        for (i = 0; i < 16; i++) {
-            thePlayer = gGameOptions.mPlayers[i];
-            if ((thePlayer.mType == 1 || thePlayer.mType == 2) && PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)thePlayer.mName),
-                                                                          reinterpret_cast<const unsigned char*>((const char*)inPlayer.mName)) == 0) {
-                this->SendConnectionResponse(inSlot, kConnectionNameInUse, inSlot, 0xff, true);
-                goto done;
-            }
-        }
-        if (gGameOptions.mLoadType == 2) {
-            theOK = false;
-            for (i = 0; i < 16; i++) {
-                thePlayer = gGameOptions.mPlayers[i];
-                if (thePlayer.mName == inPlayer.mName && thePlayer.mType == 3) {
-                    theOK = true;
-                    break;
-                }
-            }
-            if (!theOK)
-                this->SendConnectionResponse(inSlot, kConnectionGameFull, inSlot, 0xff, true);
-        }
-    }
-    if (theOK == true) {
-        for (theIndex = inSlot != kSlotServer; theIndex < 16; theIndex++) {
-            thePlayer = gGameOptions.mPlayers[theIndex];
-            if (EEIsMultiplayerGame(true)) {
-                if (thePlayer.mType != 1 && thePlayer.mType != 2)
-                    continue;
-            } else {
-                if (thePlayer.mType != 3)
-                    continue;
-                if (gGameOptions.mLoadType != 2)
-                    break;
-            }
-            if (thePlayer.mName == inPlayer.mName)
-                break;
-        }
-        if (theIndex >= 16) {
-            this->SendConnectionResponse(inSlot, kConnectionGameFull, inSlot, 0xff, true);
-            goto done;
-        }
-        this->SendConnectionResponse(inSlot, kConnectionAccepted, inSlot, (unsigned char)theIndex, false);
-        if (!EEIsMultiplayerGame(true)) {
-            if (gGameOptions.mLoadType == 0) {
-                thePlayer.mType = inPlayer.mType;
-                thePlayer.mColor = gDefaultPlayerColors[theIndex];
-                thePlayer.mName = inPlayer.mName;
-                thePlayer.mTeam = inPlayer.mTeam;
-                thePlayer.mPing = inPlayer.mPing;
-                thePlayer.mIsReady = inPlayer.mIsReady;
-                thePlayer.mSlot = theIndex;
-                thePlayer.mIsLocal = theIndex == 0;
-            } else if (gGameOptions.mLoadType == 2 && (thePlayer.mLoadedType == 1 || thePlayer.mLoadedType == 2)) {
-                thePlayer.mType = thePlayer.mLoadedType;
-            } else {
-                thePlayer.mType = inPlayer.mType;
-                thePlayer.mName = inPlayer.mName;
-            }
-        } else
-            thePlayer.mIsReady = true;
-        this->mSendToSlots.insert(std::map<unsigned char, unsigned char>::value_type((unsigned char)theIndex, inSlot));
-        this->GetCurrentCommunicationsTick();
-        gCommunications->ProcessLocalUserInput(EENewFullGameOptions(gGameOptions), inSlot);
-        for (i = 0; i < 16; i++) {
-            if (i != theIndex) theOther = gWorld.GetLobbyOptions().mPlayers[i]; else theOther = thePlayer;
-            this->GetCurrentCommunicationsTick();
-            this->ProcessLocalUserInput(EENewFullPlayerInformation(theOther), inSlot);
-            gUserInterface->PostLobbyUpdatePlayer(theOther.mSlot, 8);
-        }
-        for (i = 0; i < 16; i++) {
-            unsigned char theSendSlot = this->GetSendToSlot((unsigned char)i);
-            if (theSendSlot != kSlotNone) {
-                this->ProcessLocalUserInput(EENewFullPlayerInformation(thePlayer), theSendSlot);
-                gUserInterface->PostLobbyUpdatePlayer(thePlayer.mSlot, 8);
-            }
-        }
-        this->RegisterSlot(this->GetSendToSlot((unsigned char)thePlayer.mSlot));
-        this->ProcessLocalUserInput(this->NewConnectionResponse(kConnectionPlayerJoined, inSlot, (unsigned char)theIndex),
-                                    inSlot);
-        long theResult;
-        if (gGameOptions.mLoadType == 2) {
-            theResult = EEOpenSaveGameFile((const char*)gGameOptions.mMapType, "Saved Games\\", theFile);
-        } else if (gGameOptions.mLoadType == 1) {
-            theResult = EEOpenSaveGameFile((const char*)gGameOptions.mMapType, "Scenarios\\", theFile);
-        } else
-            goto loaded;
-        if (theResult == kErrorOK) {
-            theHeader.mMajorVersion = kSaveGameMajorVersion;
-            theHeader.mMinorVersion = kSaveGameMinorVersion;
-            if (theHeader.LoadFromFile(*theFile) == kErrorOK && !EEIsMultiplayerGame(true))
-                this->XferFileToClient(*theFile, theHeader.mChecksum, this->GetSendToSlot((unsigned char)thePlayer.mSlot), theXferID, false);
-        }
-    loaded:
-        gWorld.GetLobbyOptions().mPlayers[thePlayer.mSlot] = thePlayer;
-        if (gWonNet != NULL) {
-            unsigned long thePlayers = 0;
-            unsigned long theHumans = 0;
-            gWonNet->GetGameInfo(theInfo);
-            for (i = 0; i < 16; i++) {
-                thePlayer = gWorld.GetLobbyOptions().mPlayers[i];
-                if (thePlayer.mType == 3 || thePlayer.mType == 1 || thePlayer.mType == 2)
-                    thePlayers++;
-                if (thePlayer.mType == 1 || thePlayer.mType == 2)
-                    theHumans++;
-            }
-            theInfo.mPlayers = thePlayers;
-            theInfo.mHumans = theHumans;
-            gWonNet->SetGameInfo(theInfo);
-        }
-    }
-done:
-    this->mSearchForSlotLock->Leave();
-    this->StartPing();
-    gGameOptions.mLock->WriteUnlock();
-    this->UnlockSendCommunicationsTick();
+    EESession(this, true, EE_NETMSG_SESS_DO_CONNECTION_REQUEST, inSlot, (long long)inChecksum, 0, 0, &inPlayer, &inVersion);
 }
+
+// Removes a client: in a running game its player; the host leaving tells every client; in the lobby its slot reopened
+void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsExiting)
+{
+    EESession(this, true, EE_NETMSG_SESS_DO_BOOT, inSlot, inWasBooted, inGameIsExiting);
+}
+
+// A player's removal on the host: ours ends the game, another's is announced and removed
+void EEServer::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting)
+{
+    EESession(this, true, EE_NETMSG_SESS_DO_REMOVE, inPlayer, inWasBooted, inPlayerIsOOS, inGameIsExiting);
+}
+
+// A system message on the host: ping answers, communications ticks, join requests, disconnections, reconnections
+void EEServer::ProcessSystemMessage(NEMessage* inMessage)
+{
+    EESession(this, true, EE_NETMSG_SESS_DO_SYSTEM_MESSAGE, (long long)(uintptr_t)inMessage);
+}
+
+// Filters a client message (whether to pass it on): votes, pause and join requests; the host removed turns client
+bool EEServer::FilterPlayerInput(NEMessage* inMessage)
+{
+    return EESession(this, true, EE_NETMSG_SESS_DO_FILTER, (long long)(uintptr_t)inMessage) != 0;
+}
+
+// Stamps the host's local input with the fast-selection number; selection messages take a new one and run at once
+void EEServer::PrepareLocalInput(NEMessage* inMessage)
+{
+    EESession(this, true, EE_NETMSG_SESS_DO_LOCAL_INPUT, (long long)(uintptr_t)inMessage);
+}
+
+// A lobby message on the host: player info, transfer status, the game start, a joined player, slot info
+void EEServer::HandleLobbyInput(NEMessage* inMessage)
+{
+    EESession(this, true, EE_NETMSG_SESS_DO_LOBBY_INPUT, (long long)(uintptr_t)inMessage);
+}
+
+// Starts an edict vote (a running one closed with yes votes); true
+bool EEServer::StartVote(unsigned short inEdict)
+{
+    return EESession(this, true, EE_NETMSG_SESS_DO_START_VOTE, inEdict) != 0;
+}
+
+// A slot's vote on the edict; once all have voted the result is broadcast
+void EEServer::CastVote(unsigned char inIndex, bool inYes, unsigned char inCount)
+{
+    EESession(this, true, EE_NETMSG_SESS_DO_CAST_VOTE, inIndex, inYes, inCount);
+}
+
+// Restarts the game as the new host: the humans' migration slots, the new host announced, the restart
+void EEServer::HandleReconnectWaitTimedOut()
+{
+    EESession(this, true, EE_NETMSG_SESS_DO_RECONNECT_TIMED_OUT);
+}
+
+// Broadcasts the lagging players: in multiplayer as a player bit mask (when it changed or forced), else the count
+void EEServer::ReportLaggers(std::vector<unsigned char>& inSlots, bool inFlag)
+{
+    EESession(this, true, EE_NETMSG_SESS_DO_LAGGERS, inSlots.empty() ? 0 : (long long)(uintptr_t)&inSlots[0],
+              (long long)inSlots.size(), inFlag);
+}
+
+// Sends every human player's network slot, address and firewall flag, when more than one human is left
+void EEServer::SendPlayerSlotInfo()
+{
+    EESession(this, true, EE_NETMSG_SESS_DO_SLOT_INFO);
+}
+
+// ---- the members that stay C++ ----
 
 // New (LLE Network Engine round 6): the server's connection response: its error, the version, the send-to slot it
 // names, the current tick, the lobby slot
@@ -308,92 +220,6 @@ void EEServer::TakeConnectionRequest(NEMRecord* inRequest)
     inRequest->Dereference();
 }
 
-// Removes a client: in a running game drops its player; the host leaving tells every client the host is gone;
-// in the lobby reopens its slot, tells it why and stands in its load response
-void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsExiting)
-{
-    EEGameOptionsPlayer thePlayer;
-    EEWonNetGameInfo theInfo;
-    unsigned long i;
-    if (this->GetGameState() != 2 && (this->GetGameState() != kServerStateOpen || this->IsMigrating()) && this->GetGameState() != kServerStateClosed) {
-        this->RemovePlayerFromGameInProgress(inSlot, inWasBooted, false, inGameIsExiting);
-        if (gWonNet != NULL) {
-            gWonNet->GetGameInfo(theInfo);
-            theInfo.mHumans--;
-            gWonNet->SetGameInfo(theInfo);
-        }
-    } else if (inSlot == kSlotServer) {
-        for (i = 1; i < 16; i++) {
-            unsigned char theSendSlot = this->GetSendToSlot((unsigned char)i);
-            if (theSendSlot == kSlotNone)
-                continue;
-            this->SendConnectionResponse(theSendSlot, kConnectionHostGone, theSendSlot, 0xff, true);
-        }
-        this->ProcessLocalUserInput(
-            this->NewConnectionResponse(inGameIsExiting == true ? 6 : kConnectionRemovedByHost, kSlotServer, 0xff),
-            kSlotServer);
-    } else {
-        this->mAttemptToRemovePlayerLock->Enter();
-        for (i = 0; i < 16; i++) {
-            if (this->GetSendToSlot((unsigned char)i) != inSlot)
-                continue;
-            if (this->GetGameState() == kServerStateOpen) {
-                gGameOptions.mLock->WriteLock();
-                thePlayer = gGameOptions.mPlayers[i];
-                this->AbortXfer(thePlayer.mTransferID);
-                thePlayer.mIsReady = false;
-                thePlayer.mIsLocal = false;
-                thePlayer.mTransferID = 0;
-                thePlayer.mType = 3;
-                if (gGameOptions.mLoadType == 0) {
-                    thePlayer.mLoadedType = 3;
-                    thePlayer.mName = "";
-                    thePlayer.mPing = 0.0f;
-                    thePlayer.mColor = gDefaultPlayerColors[i];
-                    thePlayer.mTeam = 0;
-                    thePlayer.mB36 = false;
-                    thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-                    thePlayer.mEngine = kEECPChoiceClassic;   // port
-                }
-                EEMRecord* theInformation = EENewFullPlayerInformation(thePlayer);
-                theInformation->SetOriginatingSlot(kSlotServer);
-                this->ProcessLocalUserInput(theInformation, kSlotNone);
-                gUserInterface->PostLobbyUpdatePlayer(thePlayer.mSlot, 8);
-                gGameOptions.mPlayers[thePlayer.mSlot] = thePlayer;
-                gGameOptions.mLock->WriteUnlock();
-            }
-            if (inGameIsExiting == true)
-                this->SendConnectionResponse(inSlot, 6, inSlot, 0xff, false);
-            else if (inWasBooted == true)
-                this->SendConnectionResponse(inSlot, kConnectionRemovedByHost, inSlot, 0xff, false);
-            if (this->GetGameState() == kServerStateClosed || this->GetGameState() == 2) {
-                EEMessage* theMessage;
-                switch (this->mLoadState) {
-                case 2:
-                    theMessage = new EEMRecord(kMessageLoadMainScreenResponse, {inSlot, 0xff});
-                    this->ProcessLocalUserInput(theMessage, kSlotServer);
-                    this->mNumDroppedLoaders++;
-                    break;
-                case 1:
-                    theMessage = new EEMRecord(kMessageStartLoadingResponse, {inSlot, 0xff, 0});
-                    this->ProcessLocalUserInput(theMessage, kSlotServer);
-                    this->mNumDroppedLoaders++;
-                    break;
-                }
-            }
-            this->UnregisterSlot(inSlot);
-            this->mSendToSlots.erase((unsigned char)i);
-            if (gWonNet != NULL) {
-                gWonNet->GetGameInfo(theInfo);
-                theInfo.mHumans--;
-                gWonNet->SetGameInfo(theInfo);
-            }
-            break;
-        }
-        this->mAttemptToRemovePlayerLock->Leave();
-    }
-}
-
 // Removes a client from its lobby slot (removed-by-host response), forgets its slot and resends the slot's info
 void EEServer::RefuseClient(EEGameOptionsPlayer& inPlayer)
 {
@@ -402,72 +228,16 @@ void EEServer::RefuseClient(EEGameOptionsPlayer& inPlayer)
     this->SendFullPlayerInformation(inPlayer.mSlot, inPlayer);
 }
 
-// Handles a player's removal on the host: ours shows the booted or out-of-sync box and ends the game, another's
-// is announced in the chat log, unregistered and removed; plays the matching sound
-void EEServer::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting)
-{
-    GEColor theColor(1.0f, 1.0f, 1.0f);
-    UWideString theText;
-    UWideString theFormat;
-    UWideString theName;
-    unsigned long theUnused = 0;
-    if (!this->mHasLeftGame) {
-        if (inPlayer == kSlotServer) {
-            this->mHasLeftGame = true;
-            if (inGameIsExiting)
-                CancelGameCallback(&theUnused);
-            else {
-                if (inPlayerIsOOS)
-                    gResource->GetString(IDS_YOU_ARE_OUT_OF_SYNCH, theFormat);
-                else
-                    gResource->GetString(IDS_YOU_HAVE_BEEN_BOOTED_DUE, theFormat);
-                sprintf(theText, "%s", (const char*)theFormat);   // a resource text, not a format
-                gUIManager->DisplayMessage(theText, true, NULL, (EEUIFErrorCallback)CancelGameCallback, true);
-            }
-        } else {
-            if (inPlayerIsOOS)
-                gResource->GetString(IDS_PLAYER_IS_OUT_OF_SYNCH, theFormat);
-            else
-                gResource->GetString(IDS_PLAYER_HAS_DROPPED_OUT_OF_GAME, theFormat);
-
-            sprintf(theText, theFormat, (const char*)gWorld.mPlayers[inPlayer]->mName);
-            gResource->GetString(IDS_MSG_GAME, theName);
-            gUserInterface->AddChatLogEntry(theColor, theName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
-            if (!inWasBooted) {
-                this->LockSendCommunicationsTick();
-                this->UnregisterSlot(this->GetPlayerSendToSlot(inPlayer));
-                this->UnlockSendCommunicationsTick();
-            }
-            gWorld.RemoveDisconnectedPlayer(inPlayer);
-        }
-        if (!inWasBooted)
-            this->SetNumHumanPlayers(this->GetNumHumanPlayers() - 1);
-        if (!inGameIsExiting) {
-            if (inPlayerIsOOS)
-                sSample = gSoundManager->Load(UString("sounds\\OutOfSynch.wav"), 0x31, 1);
-            else
-                sSample = gSoundManager->Load(UString("sounds\\Booted.wav"), 0x31, 1);
-            if (!UIsNone32(sSample))
-                gSoundManager->Play(sSample, 1.0f, 0.0f, 1.0f, false, NULL);
-        }
-    }
-}
-
 // Returns the first world player index below the maximum that holds no player, else 0xff
 unsigned char EEServer::GetFreePlayerSlot()
 {
     unsigned char theMax = this->GetMaxPlayers();
     unsigned char i;
-    unsigned char theSlot;
     for (i = 0; i < theMax; i++) {
         if (gWorld.mPlayers[i] == NULL)
             break;
     }
-    if (i < theMax)
-        theSlot = i;
-    else
-        theSlot = 0xff;
-    return theSlot;
+    return i < theMax ? i : 0xff;
 }
 
 // Returns true when the world has no teams
@@ -494,239 +264,29 @@ const UWideString& EEServer::ServerSlot54(unsigned char inPlayer)
 // Returns a world player's network slot, 0xff when the player is not present
 unsigned char EEServer::GetPlayerSendToSlot(unsigned char inPlayer)
 {
-    unsigned char theSlot = 0xff;
-    if (this->IsPlayerPresent(inPlayer))
-        theSlot = gWorld.mPlayers[inPlayer]->mSlot;
-    return theSlot;
+    return this->IsPlayerPresent(inPlayer) ? gWorld.mPlayers[inPlayer]->mSlot : 0xff;
 }
 
 // Returns the network slot of a lobby slot, 0xff when none
 unsigned char EEServer::GetSendToSlot(unsigned char inPlayer)
 {
-    unsigned char theResult = 0xff;
     std::map<unsigned char, unsigned char>::iterator theIt = this->mSendToSlots.find(inPlayer);
-    if (theIt != this->mSendToSlots.end())
-        theResult = theIt->second;
-    return theResult;
+    return theIt != this->mSendToSlots.end() ? theIt->second : 0xff;
 }
 
 // Returns the lobby slot that uses a network slot, 0 when none
 unsigned char EEServer::GetLobbySlot(unsigned char inValue)
 {
-    unsigned char theResult = 0;
-    std::map<unsigned char, unsigned char>::iterator theIt;
-    for (theIt = this->mSendToSlots.begin(); theIt != this->mSendToSlots.end(); ++theIt) {
-        if (theIt->second == inValue) {
-            theResult = theIt->first;
-            break;
-        }
-    }
-    return theResult;
-}
-
-// Handles a system message on the host: ping replies (sent on as quality stats), communications ticks, join
-// requests, disconnections (removes the player), reconnections; load/save and lag messages execute
-void EEServer::ProcessSystemMessage(NEMessage* inMessage)
-{
-    EEGameOptionsPlayer thePlayer;
-    unsigned long theNumInputs = 0;
-    NEMessage* theInput;
-    unsigned long i;
-    switch (inMessage->GetType()) {
-    case kNetMessagePlayerConnectionCheckResponse:
-        this->mSearchForSlotLock->Enter();
-        for (i = 0; i < 16; i++) {
-            if (this->GetSendToSlot((unsigned char)i) == inMessage->GetOriginatingSlot())
-                break;
-        }
-        if (i < 16) {
-            unsigned long theStart = static_cast<NEMRecord*>(inMessage)->Get<uint32_t>(0);   // the ping's start
-            unsigned long thePing = (TMGetTime() - theStart) / 2;
-            float theQuality;
-            if (thePing > 750)
-                theQuality = 0.0f;
-            else if (thePing > 500)
-                theQuality = 0.2f;
-            else if (thePing > 250)
-                theQuality = 0.4f;
-            else if (thePing > 150)
-                theQuality = 0.6f;
-            else if (thePing > 50)
-                theQuality = 0.8f;
-            else
-                theQuality = 1.0f;
-            this->SendPingStat((unsigned char)i, theQuality);
-        }
-        this->mSearchForSlotLock->Leave();
-        break;
-    case kNetMessageCommunicationsTick: {
-        // the tick, its PTs to perform, PTs per second, checksum and dump flags, the players' inputs
-        NEMRecord* theTick = static_cast<NEMRecord*>(inMessage);
-        unsigned long theCount = theTick->GetNumberOfPlayerInputs();
-        unsigned char theTicksToPerform = theTick->Get<unsigned char>(1);
-        for (i = 0; i < theCount; i++) {
-            theTick->GetPlayerInput(i, theInput);
-            if (theInput->GetForSpecificSlot() == kSlotNone || theInput->GetForSpecificSlot() == kSlotServer)
-                theNumInputs++;
-        }
-        if (theTicksToPerform != 0xff) {
-            NEMessage* thePhysicsTick = new NEMRecord(kNetMessagePhysicsTick,
-                                                      {theNumInputs, theTicksToPerform, theTick->Get<bool>(3),
-                                                       theTick->Get<bool>(4), theTick->Get<unsigned char>(2)});
-            gPhysics->mServerMessageQueueLock->Enter();
-            gPhysics->QueueServerMessage(thePhysicsTick);
-            for (i = 0; i < theCount; i++) {
-                theTick->GetPlayerInput(i, theInput);
-                if (theInput->GetForSpecificSlot() == kSlotNone || theInput->GetForSpecificSlot() == kSlotServer) {
-                    gPhysics->QueueServerMessage(theInput);
-                    theInput->Reference();
-                }
-            }
-            gPhysics->mServerMessageQueueLock->Leave();
-        } else {
-            gPhysics->mServerMessageQueueLock->Enter();
-            gCommunications->IncrementNumberOfCTsProcessedInPhysics();
-            gPhysics->mServerMessageQueueLock->Leave();
-            unsigned long theCT = gCommunications->GetNumberOfCTsProcessedInPhysics();   // the original reads it (0xcbe8c) and drops it
-            for (i = 0; i < theCount; i++) {
-                theTick->GetPlayerInput(i, theInput);
-                if (theInput->GetForSpecificSlot() == kSlotNone || theInput->GetForSpecificSlot() == kSlotServer)
-                    this->HandleLobbyInput(theInput);
-            }
-        }
-        break;
-    }
-    case kNetMessageClientConnectionRequest:
-        this->TakeConnectionRequest(static_cast<NEMRecord*>(inMessage));
-        break;
-    case kNetMessageClientDisconnectionNotification: {
-        EEAction* theAction = new EEARemovePlayer(inMessage->GetOriginatingSlot(),
-                                                  static_cast<NEMRecord*>(inMessage)->Get<bool>(0));   // exiting
-        gUserInterface->PostAction(theAction);
-        theAction->Dereference();
-        inMessage->Dereference();
-        break;
-    }
-    case kNetMessageClientReconnectionRequest:
-        gWorld.GetPlayer(static_cast<NEMRecord*>(inMessage)->Get<uint32_t>(1))->mSlot =   // the player number
-            inMessage->GetOriginatingSlot();
-        break;
-    case kMessageNewEdictEnacted:
-                 // the optimiser removed; VC6 drops a label whose body is only `break`. EE_LOST_CASE stands in
-           // kept on the 2026-10-24 evidence rule (dispatch matches); function not yet exact
-        break;
-    case kMessageLoadOrSaveGame:
-    case kMessageLagStatus:
-        inMessage->Execute();
-        break;
-    }
-}
-
-// Filters a client message before it is passed on (returns whether to pass it): takes votes, pause and join
-// requests; when the host itself is removed it turns into a client
-bool EEServer::FilterPlayerInput(NEMessage* inMessage)
-{
-    EEGameOptionsPlayer thePlayer;
-    bool theResult = true;
-    switch (inMessage->GetType()) {
-    case kMessageLoadOrSaveGameResponse:
-        this->LogResponse(inMessage);
-        inMessage->Dereference();
-        theResult = false;
-        break;
-    case kMessageEdictVote: {
-        EEMRecord* theVote = static_cast<EEMRecord*>(inMessage);
-        this->CastVote(theVote->GetOriginatingSlot(), theVote->Get<bool>(2), theVote->Get<unsigned char>(3));   // edict, yes, count
-        theResult = false;
-        break;
-    }
-    case kMessageEdictProposal:
-        theResult = this->StartVote(static_cast<EEMRecord*>(inMessage)->Get<unsigned short>(1));   // the edict
-        break;
-    case kNetMessageClientRequestPause: {
-        UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_MG_PAUSE);
-        gUserInterface->PostEvent(theEvent, NULL);
-        theEvent->Dereference();
-        inMessage->Dereference();
-        theResult = false;
-        break;
-    }
-    case kNetMessageClientConnectionRequestResponse:
-        if (inMessage->GetForSpecificSlot() == kSlotServer) {
-            long theError = static_cast<NEMRecord*>(inMessage)->Get<int32_t>(0);
-            if (theError == kConnectionRemovedByHost || theError == 6) {
-                static_cast<NESynchronousServer*>(gCommunications)->StopPing();
-                static_cast<NESynchronousServer*>(gCommunications)->ResetXfer();
-                this->UnregisterSlot(kSlotServer);
-                this->RegisterSlot(kSlotServer);
-                if (gCommunications != NULL) {
-                    delete gCommunications;
-                    gCommunications = new EEClient;
-                    static_cast<NESynchronousClient*>(gCommunications)->StartThreads();
-                }
-                theResult = false;
-            } else if (theError == kConnectionPlayerJoined) {
-                if (!EEIsMultiplayerGame(true))
-                    gUIManager->Push(gUIManager->GetFormByID(kFormLobby));
-                theResult = true;
-            } else
-                theResult = false;
-        } else
-            theResult = true;
-        break;
-    case kNetMessageClientConnectionRequest:
-        this->TakeConnectionRequest(static_cast<NEMRecord*>(inMessage));
-        theResult = false;
-        break;
-    }
-    return theResult;
-}
-
-// Stamps the host's local input with the fast-selection number; selection messages take a new number and run at once
-void EEServer::PrepareLocalInput(NEMessage* inMessage)
-{
-    switch (inMessage->GetType()) {
-    default: {
-        EEMessage* theMessage = EEGameMessageCast(inMessage);
-        if (theMessage != NULL) {
-            this->mFastSelectionLock->Enter();
-            theMessage->mFastSelectionID = this->mFastSelectionID;
-            this->mFastSelectionLock->Leave();
-        }
-        break;
-    }
-    case kMessageSelectUnit:
-    case kMessageAddUnitToSelectedGroup:
-    case kMessageRemoveUnitFromSelectedGroup:
-    case kMessageUnselectAllUnits:
-    case kMessageSelectUnits:
-    case kMessageAddUnitsToSelectedGroup:
-    case kMessageAddAndRemoveUnitsFromSelectedGroup:
-    case kMessageAlwaysAddUnitToSelectedGroup:
-    case kMessageSavedGroupAddSelection:
-    case kMessageSavedGroupSelect:
-    case kMessageSelectTheseUnits:
-        if (!this->mIsMigrating) {
-            this->mFastSelectionLock->Enter();
-            unsigned char theID = this->mFastSelectionID + 1;
-            this->mFastSelectionID = theID;
-            static_cast<EEMessage*>(inMessage)->mFastSelectionID = theID;
-            this->mIsExecutingSelection = true;
-            gWorld.GetCurrentPlayer()->ExecuteSelectionMessage(inMessage);
-            this->mIsExecutingSelection = false;
-            this->mFastSelectionLock->Leave();
-        }
-        break;
-    }
+    for (std::map<unsigned char, unsigned char>::iterator theIt = this->mSendToSlots.begin(); theIt != this->mSendToSlots.end(); ++theIt)
+        if (theIt->second == inValue)
+            return theIt->first;
+    return 0;
 }
 
 // Returns whether a world player index holds a player
 bool EEServer::IsPlayerPresent(unsigned char inPlayer)
 {
-    bool theResult = false;
-    if (inPlayer < gWorld.mNumPlayers && gWorld.mPlayers[inPlayer] != NULL)
-        theResult = true;
-    return theResult;
+    return inPlayer < gWorld.mNumPlayers && gWorld.mPlayers[inPlayer] != NULL;
 }
 
 // Plays a warning sound: 1 out of sync, 2 resending
@@ -734,223 +294,8 @@ void EEServer::PlayWarningSound(long inSound)
 {
     unsigned long theSample;
     unsigned long theInstance;
-    switch (inSound) {
-    case 1:
-        EELoadSound(UString("sounds\\OutOfSynch.wav"), 0x31, theSample, theInstance, 1);
-        break;
-    case 2:
-        EELoadSound(UString("sounds\\Resending.wav"), 0x31, theSample, theInstance, 1);
-        break;
-    }
-}
-
-// (included here, below the ctor: placed so that the ctor's ESVERIFY keeps lines 103..109)
-#include "ee/RTSGraphics.h"
-#include "ee/EEGraphics.h"
-#include "ee/EEUIFMainGame.h"
-#include "ee/EEHumanPlayer.h"
-
-// Handles a lobby message on the host: player info (and the WON game info), transfer status, the game start,
-// a joined player, a player's slot info; the rest execute
-// player info falls through into the game options case (the WON game info follows the slots)
-void EEServer::HandleLobbyInput(NEMessage* inMessage)
-{
-    GEColor theColor(1.0f, 1.0f, 1.0f);
-    EEGameOptionsPlayer thePlayer;
-    EEWonNetGameInfo theInfo;
-    UWideString theText;
-    UWideString theSender;
-    UWideString theMessage;
-    UWideString theFormat;
-    NEProtocol* theProtocol = NULL;
-    switch (inMessage->GetType()) {
-    case kMessageFullPlayerInformation:
-        if (inMessage->GetOriginatingSlot() != kSlotServer) {
-            EEMRecord* theUpdate = static_cast<EEMRecord*>(inMessage);
-            // the record, in wire order: slot 1, type 2, loaded type 3, the name (mString), ping 5, colour 6, team 7,
-            // citizens 8, ready 9, local 10, mB42 11, engine 12
-            gGameOptions.mLock->WriteLock();
-            thePlayer.mColor = theUpdate->Get<int32_t>(6);
-            thePlayer.mType = theUpdate->Get<int32_t>(2);
-            thePlayer.mTeam = theUpdate->Get<int32_t>(7);
-            thePlayer.mName = theUpdate->mString;
-            float thePing = theUpdate->Get<float>(5);
-            thePlayer.mStartingCitizens = theUpdate->Get<int32_t>(8);
-            thePlayer.mLoadedType = theUpdate->Get<int32_t>(3);
-            thePlayer.mIsReady = theUpdate->Get<bool>(9);
-            thePlayer.mIsLocal = theUpdate->Get<bool>(10);
-            thePlayer.mB36 = theUpdate->Get<bool>(11);
-            thePlayer.mSlot = theUpdate->Get<int32_t>(1);
-            thePlayer.mTransferID = gGameOptions.mPlayers[thePlayer.mSlot].mTransferID;
-            thePlayer.mEngine = gGameOptions.mPlayers[thePlayer.mSlot].mEngine;   // port: the host's choice
-            thePlayer.mPing = thePing;
-            if (thePlayer.mSlot != 0 && this->GetSendToSlot(thePlayer.mSlot) != kSlotServer)
-                thePlayer.mIsLocal = false;
-            else
-                thePlayer.mIsLocal = true;
-            gWorld.GetLobbyOptions().mPlayers[thePlayer.mSlot] = thePlayer;
-            gGameOptions.mLock->WriteUnlock();
-            gUserInterface->PostLobbyUpdatePlayer(thePlayer.mSlot, 8);
-        }
-        if (gWonNet != NULL) {
-            unsigned long thePlayers = 0;
-            unsigned long theHumans = 0;
-            gWonNet->GetGameInfo(theInfo);
-            for (unsigned char i = 0; i < 16; i++) {
-                thePlayer = gGameOptions.mPlayers[i];
-                if (thePlayer.mType == 3 || thePlayer.mType == 1 || thePlayer.mType == 2)
-                    thePlayers++;
-                if (thePlayer.mType == 1 || thePlayer.mType == 2)
-                    theHumans++;
-            }
-            theInfo.mPlayers = thePlayers;
-            theInfo.mHumans = theHumans;
-            gWonNet->SetGameInfo(theInfo);
-        }
-        break;
-    case kNetMessageXferStatus: {
-        // the transfer's status: the client's slot, the percent done, the transfer's id, the status
-        NEMRecord* theStatus = static_cast<NEMRecord*>(inMessage);
-        unsigned long theSlot = theStatus->Get<unsigned char>(0);
-        if (inMessage->GetOriginatingSlot() != kSlotServer && theStatus->Get<unsigned char>(3) == 3) {
-            gGameOptions.mLock->WriteLock();
-            thePlayer = gGameOptions.mPlayers[theSlot];
-            unsigned long theXferID = theStatus->Get<uint32_t>(2);
-            if (theXferID == 0xffff)
-                theXferID = thePlayer.mTransferID;
-            this->AbortXfer(theXferID);
-            thePlayer.mTransferID = 0;
-            gGameOptions.mPlayers[thePlayer.mSlot] = thePlayer;
-            gGameOptions.mLock->WriteUnlock();
-        }
-        if (theStatus->Get<unsigned char>(3) == 4) {
-            gResource->GetString(IDS_FILE_TRANSFER_FAILED, theText);
-            gUIManager->DisplayMessage(theText, true, NULL, NULL, true);
-        }
-        gUserInterface->PostLobbyShowTransferProgress(theSlot, theStatus->Get<unsigned char>(1));
-        break;
-    }
-    case kNetMessageStartGame: {
-        gStartTime = static_cast<NEMRecord*>(inMessage)->Get<uint32_t>(0);   // the offset start time
-        long theSeed = gPhysics->GetRandom(0L, 0x7fffffffL);
-        theSeed += gWorld.mNumPlayers;
-        for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {
-            theText = gWorld.mPlayers[i]->mName;
-            for (int j = 0; j < theText.GetLength(); j++)
-                theSeed += theText[j];
-        }
-        gWorld.GetNumTeams();
-        NEProtocol::GetProtocol(0, theProtocol);
-        theProtocol->GetStatus(UWideString(""), 0xffff0000);
-        gCommunications->SetIsMultiplayerSession(gCommunications->GetNumHumanPlayers() != 1);
-        gGraphics->PostResume();
-        while (gGraphics->mIsPaused)
-            PlatSleep(1);
-        this->StartGame();
-        if (!gGameScreenActive)
-            this->PauseGame();
-        else {
-            gPhysics->mThread->Post(0x404, NULL, NULL, true);
-            while (true) {
-                if (gPhysics->mTimerRunning)
-                    break;
-                PlatSleep(1);
-            }
-            gUIManager->mMainGameForm->SetUIState(0);
-        }
-        if (gCommunications->GetIsMultiplayerSession() == true) {
-            for (unsigned long k = 1; k < gWorld.mNumPlayers; k++) {
-                EEPlayer* thePlayer = gWorld.mPlayers[k];
-                if (!thePlayer->IsHuman() || thePlayer->mSlot != kSlotNone)
-                    continue;
-                gResource->GetString(IDS_PLAYER_HAS_DROPPED_OUT_OF_GAME, theFormat);
-                sprintf(theMessage, theFormat, (const char*)thePlayer->mName);
-                gResource->GetString(IDS_MSG_GAME, theSender);
-                gUserInterface->AddChatLogEntry(theColor, theSender, theMessage,
-                                                gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
-                gWorld.RemoveDisconnectedPlayer(k);
-            }
-        }
-        break;
-    }
-    case kNetMessageClientConnectionRequestResponse:
-        if (static_cast<NEMRecord*>(inMessage)->Get<int32_t>(0) == kConnectionPlayerJoined) {   // the error
-            gUserInterface->PostLobbyUpdateForm();
-            if (gWonNet != NULL)
-                gWonNet->PlayerJoined();
-        }
-        break;
-    case kMessagePlayerInformation:
-        if (gWonNet != NULL) {
-            unsigned long thePlayers = 0;
-            unsigned long theHumans = 0;
-            gWonNet->GetGameInfo(theInfo);
-            for (unsigned char i = 0; i < 16; i++) {
-                thePlayer = gGameOptions.mPlayers[i];
-                if (thePlayer.mType == 3 || thePlayer.mType == 1 || thePlayer.mType == 2)
-                    thePlayers++;
-                if (thePlayer.mType == 1 || thePlayer.mType == 2)
-                    theHumans++;
-            }
-            theInfo.mPlayers = thePlayers;
-            theInfo.mHumans = theHumans;
-            gWonNet->SetGameInfo(theInfo);
-        }
-    case kMessageGameOptions:
-        if (inMessage->GetOriginatingSlot() == kSlotServer)
-            break;
-        inMessage->Execute();
-        break;
-    case kMessagePlayerSlotInfo: {
-        EEMRecord* theSlotInfo = static_cast<EEMRecord*>(inMessage);
-        gWorld.mLock->WriteLock();
-        EEPlayer* thePlayer = gWorld.mPlayers[theSlotInfo->Get<unsigned char>(1)];   // the player, slot, firewall, address
-        if (thePlayer != NULL) {
-            thePlayer->mSlot = theSlotInfo->Get<unsigned char>(2);
-            if (thePlayer->IsHuman()) {
-                static_cast<EEHumanPlayer*>(thePlayer)->SetName(theSlotInfo->mString);
-                thePlayer->mBehindFirewall = theSlotInfo->Get<bool>(3);
-            }
-        }
-        gWorld.mLock->WriteUnlock();
-        break;
-    }
-    case kMessageStartLoading:
-        inMessage->Execute();
-        break;
-    case kMessageUpdatePingStat:
-        inMessage->Execute();
-        break;
-    default:
-        inMessage->Execute();
-        break;
-    }
-}
-
-// Starts an edict vote, first closing a running one with yes votes for those who have not voted; returns true
-bool EEServer::StartVote(unsigned short inEdict)
-{
-    unsigned char theIndex = 0;
-    if (this->mVoteEdict != 0) {
-        unsigned char i = this->mNumVotes;
-        while (gWorld.mNumPlayers - 1 > i) {
-            for (unsigned short j = (unsigned char)(theIndex + 1); j < 0x100; j++) {
-                if (this->mVoted[j] != false)
-                    continue;
-                theIndex = (unsigned char)j;
-                this->CastVote(theIndex, true, 0);
-                i++;
-                break;
-            }
-        }
-    }
-    this->mVoteEdict = inEdict;
-    this->mNumVotes = 0;
-    this->mNoVotes = 0;
-    this->mYesVotes = 0;
-    for (long k = 0; k < 256; k++)
-        this->mVoted[k] = false;
-    return true;
+    if (inSound == 1 || inSound == 2)
+        EELoadSound(UString(inSound == 1 ? "sounds\\OutOfSynch.wav" : "sounds\\Resending.wav"), 0x31, theSample, theInstance, 1);
 }
 
 // Clears the fast-selection state (no selection executing, id 0, empty table)
@@ -963,93 +308,6 @@ void EEServer::ResetFastSelection()
         this->mFastSelection[i] = 0;
 }
 
-// Restarts the game as the new host: sends the humans' migration slots, announces the new host and restarts
-void EEServer::HandleReconnectWaitTimedOut()
-{
-    UWideString theText;
-    UWideString theUnused;
-    EEGameOptionsPlayer thePlayer;
-    static_cast<NESynchronousServer*>(gCommunications)->SetMessageManagerLowestCTs(this->GetCurrentCommunicationsTick() - 1);
-    for (unsigned long i = 1; i < gWorld.mNumPlayers; i++) {
-        EEPlayer* theOther = gWorld.mPlayers[i];
-        if (theOther->mHumanPlayer != NULL)
-            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageMigrationSlotInfo, {theOther->mPlayerID, theOther->mSlot}),
-                                                   kSlotNone);
-    }
-    gCommunications->SetIsMultiplayerSession(gCommunications->GetNumHumanPlayers() != 1);
-    gResource->GetString(IDS_NEW_HOST_ESTABLISHED, theText);
-    gUserInterface->AddChatLogEntry(theText, 0);
-    gUserInterface->PostHostMigrated();
-    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageGameRestarting), kSlotNone);
-    this->StartGame();
-}
-
-// Broadcasts the lagging players: in multiplayer as a player bit mask (when it changed or forced), else the count
-void EEServer::ReportLaggers(std::vector<unsigned char>& inSlots, bool inFlag)
-{
-    unsigned short theMask = 0;
-    if (this->GetIsMultiplayerSession()) {
-        UIForm* theForm = gUIManager->GetFormByID(kFormMainGame);
-        if (gUIManager->GetCurrentForm() == theForm) {
-            for (std::vector<unsigned char>::iterator it = inSlots.begin(); it != inSlots.end(); it++) {
-                EEPlayer* thePlayer = gWorld.GetPlayerBySlot(*it);
-                if (thePlayer != NULL)
-                    theMask |= (unsigned char)(1 << ((unsigned char)thePlayer->mPlayerID - 1));
-            }
-            if (theMask != this->mLagMask || inFlag) {
-                this->mLagMask = theMask;
-                EEMRecord* theMessage = new EEMRecord(kMessageLagStatus, {theMask, inFlag});
-                theMessage->SetOriginatingSlot(kSlotServer);
-                this->SendMessageToAll(theMessage, false);
-                theMessage->Dereference();
-            }
-        }
-    } else if (this->GetGameState() == kServerStateOpen || this->GetGameState() == kServerStateClosed) {
-        EEMRecord* theMessage = new EEMRecord(kMessageLagStatus, {inSlots.size(), inFlag});
-        theMessage->SetOriginatingSlot(kSlotServer);
-        this->SendMessageToAll(theMessage, false);
-        theMessage->Dereference();
-    }
-}
-
-// Sends every human player's network slot, address and firewall flag, when more than one human is left
-void EEServer::SendPlayerSlotInfo()
-{
-    NEProtocol* theProtocol = NULL;
-    UWideString theAddress;
-    EEGameOptionsPlayer thePlayer;
-    if (!(gCommunications->GetNumHumanPlayers() - this->mNumDroppedLoaders > 1))
-        return;
-    unsigned char theIndex = 1;
-    NEProtocol::GetProtocol(0, theProtocol);
-    for (unsigned long i = 1; i < gWorld.mNumPlayers; theIndex++, i++) {
-        EEPlayer* theWorldPlayer = gWorld.mPlayers[i];
-        if (theWorldPlayer->mHumanPlayer == NULL)
-            continue;
-        unsigned char j;
-        for (j = 0; j < 16; j++) {
-            thePlayer = gGameOptions.mPlayers[j];
-            if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)thePlayer.mName),
-                         reinterpret_cast<const unsigned char*>((const char*)theWorldPlayer->mName)) != 0
-                || (thePlayer.mType != 1 && thePlayer.mType != 2))
-                continue;
-            unsigned char theSlot = this->GetSendToSlot(j);
-            EEMRecord* theMessage;
-            if (theSlot == kSlotServer)
-                theMessage = new EEMRecord(kMessagePlayerSlotInfo, {theIndex, kSlotServer, this->mBehindFirewall[theSlot], EEGetLocalAddress(theProtocol, gGamePreferences.mSettings.GetNetworkAdapter())});
-            else if (theSlot == kSlotNone) {
-                theAddress = "";
-                theMessage = new EEMRecord(kMessagePlayerSlotInfo, {theIndex, kSlotNone, this->mBehindFirewall[theSlot], theAddress});
-            } else {
-                this->GetClientAddress(theSlot, theAddress);
-                theMessage = new EEMRecord(kMessagePlayerSlotInfo, {theIndex, theSlot, this->mBehindFirewall[theSlot], theAddress});
-            }
-            gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-            break;
-        }
-    }
-}
-
 // Sends a file transfer's progress for the lobby slot of the given network slot
 void EEServer::HandleXferStatus(unsigned char& inSlot, unsigned char& inPercentDone, uint32_t& inXferID,
                             unsigned char& inStatusID)
@@ -1057,39 +315,6 @@ void EEServer::HandleXferStatus(unsigned char& inSlot, unsigned char& inPercentD
     unsigned char thePlayer = this->GetLobbySlot(inSlot);
     this->ProcessLocalUserInput(new NEMRecord(kNetMessageXferStatus, {thePlayer, inPercentDone, inXferID, inStatusID}),
                                 kSlotNone);
-}
-
-// Records a slot's vote on the edict; once all have voted enacts it on a yes majority (ties fail) and resets the vote
-void EEServer::CastVote(unsigned char inIndex, bool inYes, unsigned char inCount)
-{
-    if (this->mVoted[inIndex] != false)
-        return;
-    this->mNumVotes++;
-    this->mVoted[inIndex] = true;
-    if (inCount > 0) {
-        if (inYes == true)
-            this->mYesVotes += inCount;
-        else
-            this->mNoVotes += inCount;
-    }
-    if (this->mNumVotes != this->GetNumberOfPlayers())
-        return;
-    EEMRecord* theMessage;
-    if ((this->mNoVotes == 0 && this->mYesVotes == 0) || this->mYesVotes == this->mNoVotes)
-        theMessage = new EEMRecord(kMessageNewEdictEnacted, {this->mVoteEdict, this->mYesVotes, this->mNoVotes, false});
-    else if (this->mYesVotes > this->mNoVotes)
-        theMessage = new EEMRecord(kMessageNewEdictEnacted, {this->mVoteEdict, this->mYesVotes, this->mNoVotes, true});
-    else
-        theMessage = new EEMRecord(kMessageNewEdictEnacted, {this->mVoteEdict, this->mYesVotes, this->mNoVotes, false});
-
-    if (theMessage != NULL) {
-        theMessage->SetOriginatingSlot(kSlotServer);
-        this->BroadcastMessage(theMessage);
-        this->ProcessSystemMessage(theMessage);
-        theMessage->Dereference();
-    }
-    this->mNumVotes = this->mYesVotes = 0;
-    this->mNoVotes = this->mVoteEdict = 0;
 }
 
 // Sends a lobby slot's player options to everyone and refreshes the slot's line
@@ -1147,4 +372,509 @@ bool EEServer::IsClient()
 bool EEServer::IsServer()
 {
     return true;
+}
+
+// ---- the host of ee_netmsg session.rs: the server's and the client's world calls, one operation each ----
+
+// the forwarder's frame: the communications object, the bodies' two lobby slot registers and a join request's
+// player and version, protocol 0 for the slot info
+struct EESessionFrame {
+    NESynchronousCommunications* mComms;
+    bool mServer;
+    EEGameOptionsPlayer mRegisters[2];
+    const EEGameOptionsPlayer* mIn;
+    const UWideString* mVersion;
+    NEProtocol* mProtocol;
+};
+
+// the engine's protected members the host calls (a friend of EEServer reaches them through the server)
+class EESessionAccess {
+public:
+    static void Unregister(EEServer* s, unsigned char inSlot) { s->UnregisterSlot(inSlot); }
+    static void Broadcast(EEServer* s, NEMessage* m) { s->BroadcastMessage(m); }
+    static void SendToAll(EEServer* s, NEMessage* m) { s->SendMessageToAll(m, false); }
+};
+
+static EEGameOptionsPlayer& EESessionRegister(EESessionFrame* f, long long inRegister)
+{
+    return inRegister == EE_NETMSG_SESS_R_IN ? const_cast<EEGameOptionsPlayer&>(*f->mIn) : f->mRegisters[inRegister];
+}
+
+static long long EESessionPlayerField(EEGameOptionsPlayer& p, long long inField, bool inSet, long long inValue)
+{
+    float thePing;
+    switch (inField) {
+    case EE_NETMSG_SESS_FIELD_TYPE: if (inSet) p.mType = (unsigned long)inValue; return (long long)p.mType;
+    case EE_NETMSG_SESS_FIELD_LOADED_TYPE: if (inSet) p.mLoadedType = (long)inValue; return p.mLoadedType;
+    case EE_NETMSG_SESS_FIELD_PING:   // the float's bits
+        if (inSet) { uint32_t theBits = (uint32_t)inValue; memcpy(&p.mPing, &theBits, 4); }
+        thePing = p.mPing;
+        { uint32_t theBits; memcpy(&theBits, &thePing, 4); return theBits; }
+    case EE_NETMSG_SESS_FIELD_SLOT: if (inSet) p.mSlot = (unsigned long)inValue; return (long long)p.mSlot;
+    case EE_NETMSG_SESS_FIELD_COLOR: if (inSet) p.mColor = (unsigned long)inValue; return (long long)p.mColor;
+    case EE_NETMSG_SESS_FIELD_TEAM: if (inSet) p.mTeam = (unsigned long)inValue; return (long long)p.mTeam;
+    case EE_NETMSG_SESS_FIELD_CITIZENS: if (inSet) p.mStartingCitizens = (unsigned long)inValue; return (long long)p.mStartingCitizens;
+    case EE_NETMSG_SESS_FIELD_TRANSFER_ID: if (inSet) p.mTransferID = (unsigned long)inValue; return (long long)p.mTransferID;
+    case EE_NETMSG_SESS_FIELD_LOCAL: if (inSet) p.mIsLocal = inValue != 0; return p.mIsLocal;
+    case EE_NETMSG_SESS_FIELD_READY: if (inSet) p.mIsReady = inValue != 0; return p.mIsReady;
+    case EE_NETMSG_SESS_FIELD_B36: if (inSet) p.mB36 = inValue != 0; return p.mB36;
+    default: if (inSet) p.mEngine = (unsigned long)inValue; return (long long)p.mEngine;   // port: the engine
+    }
+}
+
+// the server's and client's members (bool and byte members as their values)
+static long long EESessionMember(EESessionFrame* f, long long inMember, long long inIndex, bool inSet, long long v)
+{
+    EEServer* s = static_cast<EEServer*>(f->mComms);
+    EEClient* c = static_cast<EEClient*>(f->mComms);
+#define EE_SESSION_MEMBER(x, T) do { if (inSet) x = (T)v; return (long long)x; } while (0)
+    switch (inMember) {
+    case EE_NETMSG_SESS_SELF_HAS_LEFT:
+        if (f->mServer) EE_SESSION_MEMBER(s->mHasLeftGame, bool); else EE_SESSION_MEMBER(c->mHasLeftGame, bool);
+    case EE_NETMSG_SESS_SELF_MIGRATING:
+        if (f->mServer) EE_SESSION_MEMBER(s->mIsMigrating, bool); else EE_SESSION_MEMBER(c->mIsMigrating, bool);
+    case EE_NETMSG_SESS_SELF_FAST_ID:
+        if (f->mServer) EE_SESSION_MEMBER(s->mFastSelectionID, unsigned char); else EE_SESSION_MEMBER(c->mFastSelectionID, unsigned char);
+    case EE_NETMSG_SESS_SELF_EXECUTING:
+        if (f->mServer) EE_SESSION_MEMBER(s->mIsExecutingSelection, bool); else EE_SESSION_MEMBER(c->mIsExecutingSelection, bool);
+    case EE_NETMSG_SESS_SELF_LOAD_STATE: EE_SESSION_MEMBER(s->mLoadState, unsigned char);
+    case EE_NETMSG_SESS_SELF_DROPPED_LOADERS: EE_SESSION_MEMBER(s->mNumDroppedLoaders, unsigned char);
+    case EE_NETMSG_SESS_SELF_VOTE_EDICT: EE_SESSION_MEMBER(s->mVoteEdict, unsigned short);
+    case EE_NETMSG_SESS_SELF_YES_VOTES: EE_SESSION_MEMBER(s->mYesVotes, unsigned short);
+    case EE_NETMSG_SESS_SELF_NO_VOTES: EE_SESSION_MEMBER(s->mNoVotes, unsigned short);
+    case EE_NETMSG_SESS_SELF_NUM_VOTES: EE_SESSION_MEMBER(s->mNumVotes, unsigned char);
+    case EE_NETMSG_SESS_SELF_VOTED:
+        if (inSet && inIndex < 0) {
+            for (long k = 0; k < 256; k++)
+                s->mVoted[k] = false;
+            return 0;
+        }
+        EE_SESSION_MEMBER(s->mVoted[inIndex & 0xff], bool);
+    case EE_NETMSG_SESS_SELF_LAG_MASK: EE_SESSION_MEMBER(s->mLagMask, unsigned short);
+    case EE_NETMSG_SESS_SELF_UI_SLOT: EE_SESSION_MEMBER(c->mUISlotNumber, unsigned char);
+    case EE_NETMSG_SESS_SELF_ALLOW_MIGRATION: EE_SESSION_MEMBER(c->mAllowServerMigration, bool);
+    case EE_NETMSG_SESS_SELF_IGNORE_TIMEOUT: EE_SESSION_MEMBER(c->mIgnoreConnectionTimeout, bool);
+    case EE_NETMSG_SESS_SELF_SERVER_LOST: EE_SESSION_MEMBER(c->mIsServerLost, bool);
+    case EE_NETMSG_SESS_SELF_HAS_LOADED: EE_SESSION_MEMBER(c->mHasLoaded, bool);
+    case EE_NETMSG_SESS_SELF_LOST_AFTER_LOADING: EE_SESSION_MEMBER(c->mServerLostAfterLoading, bool);
+    default: EE_SESSION_MEMBER(c->mWasBooted, bool);
+    }
+#undef EE_SESSION_MEMBER
+}
+
+static void EESessionDisplay(long inText, EEUIFErrorCallback inCallback, bool inFlag)
+{
+    UWideString theText;
+    gResource->GetString(inText, theText);
+    gUIManager->DisplayMessage(theText, true, NULL, inCallback, inFlag);
+}
+
+static void EESessionPost(EEAction* inAction)
+{
+    gUserInterface->PostAction(inAction);
+    inAction->Dereference();
+}
+
+static void EESessionWon(long long inKind, long long a, long long b)
+{
+    EEWonNetGameInfo theInfo;
+    switch (inKind) {
+    case EE_NETMSG_SESS_WON_COUNT:
+        gWonNet->GetGameInfo(theInfo);
+        theInfo.mPlayers = (unsigned long)a;
+        theInfo.mHumans = (unsigned long)b;
+        gWonNet->SetGameInfo(theInfo);
+        break;
+    case EE_NETMSG_SESS_WON_HUMANS_DEC:
+        gWonNet->GetGameInfo(theInfo);
+        theInfo.mHumans--;
+        gWonNet->SetGameInfo(theInfo);
+        break;
+    case EE_NETMSG_SESS_WON_JOINED: gWonNet->PlayerJoined(); break;
+    default:   // back to the game list
+        gWonNet->ClearGameList();
+        gWonNet->RejoinRoom(false);
+        break;
+    }
+}
+
+static long long EESessionUI(EESessionFrame* f, const long long* v)
+{
+    EEClient* c = static_cast<EEClient*>(f->mComms);
+    UWideString theText;
+    UWideString theFormat;
+    UWideString theName;
+    switch (v[0]) {
+    case EE_NETMSG_SESS_UI_LOBBY_PLAYER: gUserInterface->PostLobbyUpdatePlayer((long)v[1], 8); break;
+    case EE_NETMSG_SESS_UI_ACTION_REMOVE: EESessionPost(new EEARemovePlayer((unsigned char)v[1], v[2] != 0)); break;
+    case EE_NETMSG_SESS_UI_ACTION_BOOT: EESessionPost(new EEABootClientFromCanceledGame((long)v[1])); break;
+    case EE_NETMSG_SESS_UI_ACTION_MIGRATION: EESessionPost(new EEAServerMigration); break;
+    case EE_NETMSG_SESS_UI_PAUSE_EVENT: {
+        UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_MG_PAUSE);
+        gUserInterface->PostEvent(theEvent, NULL);
+        theEvent->Dereference();
+        break;
+    }
+    case EE_NETMSG_SESS_UI_DISPLAY: EESessionDisplay((long)v[1], v[2] != 0 ? (EEUIFErrorCallback)CancelGameCallback : NULL, v[3] != 0); break;
+    case EE_NETMSG_SESS_UI_CHAT_PLAYER:   // the game's line about player v2 (string v1 formats its name)
+        gResource->GetString((long)v[1], theFormat);
+        sprintf(theText, theFormat, (const char*)((EEPlayer*)(uintptr_t)v[2])->mName);
+        gResource->GetString(IDS_MSG_GAME, theName);
+        gUserInterface->AddChatLogEntry(GEColor(1.0f, 1.0f, 1.0f), theName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
+        break;
+    case EE_NETMSG_SESS_UI_CHAT_TEXT:
+        gResource->GetString((long)v[1], theText);
+        gUserInterface->AddChatLogEntry(theText, (long)v[2]);
+        break;
+    case EE_NETMSG_SESS_UI_CLOSE_FORM: gUserInterface->CloseForm(NULL); break;
+    case EE_NETMSG_SESS_UI_OPEN_FORM: gUserInterface->OpenForm(gUIManager->GetFormByID(v[1])); break;
+    case EE_NETMSG_SESS_UI_PUSH_FORM: gUIManager->Push(gUIManager->GetFormByID(v[1])); break;
+    case EE_NETMSG_SESS_UI_CANCEL_GAME: gUserInterface->PostCancelGame(); break;
+    case EE_NETMSG_SESS_UI_CANCEL_CALLBACK: {
+        unsigned long theUnused = 0;
+        CancelGameCallback(&theUnused);
+        break;
+    }
+    case EE_NETMSG_SESS_UI_LOBBY_FORM: gUserInterface->PostLobbyUpdateForm(); break;
+    case EE_NETMSG_SESS_UI_HOST_MIGRATED: gUserInterface->PostHostMigrated(); break;
+    case EE_NETMSG_SESS_UI_TRANSFER: gUserInterface->PostLobbyShowTransferProgress((long)v[1], (long)v[2]); break;
+    case EE_NETMSG_SESS_UI_CONNECT_STATUS: EELobbyPostConnectStatus(v[1] != 0); break;
+    case EE_NETMSG_SESS_UI_RETRY:   // the connecting box with the retries
+        gResource->GetString((long)v[1], theFormat);
+        sprintf(theText, "%s Retry: %ld times", (const char*)theFormat, c->GetNumConnectionTrys());
+        gUIManager->DisplayMessage(theText, true, NULL, NULL, false);
+        break;
+    case EE_NETMSG_SESS_UI_LEAVE:   // back to the game list, the reason shown (with the host's version and ours) or
+                                    // the boot posted, then disconnected
+        if (gWonNet != NULL)
+            EESessionWon(EE_NETMSG_SESS_WON_LEAVE, 0, 0);
+        if (v[2] == EE_NETMSG_SESS_LEAVE_BOOT)
+            EESessionPost(new EEABootClientFromCanceledGame((long)v[1]));
+        else if (v[2] != EE_NETMSG_SESS_LEAVE_QUIET) {
+            gUserInterface->CloseForm(NULL);
+            gResource->GetString((long)v[1], theFormat);
+            if (v[2] == EE_NETMSG_SESS_LEAVE_SHOW_VERSIONS)
+                sprintf(theText, theFormat, (const char*)((NEMRecord*)(uintptr_t)v[3])->GetString(4), (const char*)gGameVersion);
+            gUIManager->DisplayMessage(v[2] == EE_NETMSG_SESS_LEAVE_SHOW_VERSIONS ? theText : theFormat, true, NULL, NULL, true);
+        }
+        c->Disconnect();
+        break;
+    default: c->HandleSlotUpdate((unsigned char)v[1], EESessionRegister(f, v[2])); break;
+    }
+    return 0;
+}
+
+static long long EESessionRecord(const long long* v)
+{
+    unsigned char theType = (unsigned char)v[1];
+    switch (v[2]) {   // the values' count
+    case 0: return (long long)(uintptr_t)new EEMRecord(theType);
+    case 2: return (long long)(uintptr_t)new EEMRecord(theType, {v[3], v[4]});
+    case 3: return (long long)(uintptr_t)new EEMRecord(theType, {v[3], v[4], v[5]});
+    default: return (long long)(uintptr_t)new EEMRecord(theType, {v[3], v[4], v[5], v[6]});
+    }
+}
+
+static long long EESessionSend(EESessionFrame* f, const long long* v)
+{
+    EEServer* s = static_cast<EEServer*>(f->mComms);
+    switch (v[0]) {
+    case EE_NETMSG_SESS_SEND_RESPONSE:
+        s->SendConnectionResponse((unsigned char)v[1], (long)v[2], (unsigned char)v[3], (unsigned char)v[4], v[5] != 0);
+        return 0;
+    case EE_NETMSG_SESS_SEND_LOCAL_RESPONSE:
+        s->ProcessLocalUserInput(s->NewConnectionResponse((long)v[1], (unsigned char)v[2], (unsigned char)v[3]), (unsigned char)v[4]);
+        return 0;
+    case EE_NETMSG_SESS_SEND_FULL_OPTIONS:
+        gCommunications->ProcessLocalUserInput(EENewFullGameOptions(gGameOptions), (unsigned char)v[1]);
+        return 0;
+    case EE_NETMSG_SESS_SEND_PLAYER_INFO: {
+        EEMRecord* theInformation = EENewFullPlayerInformation(EESessionRegister(f, v[1]));
+        if (v[3] != 0)
+            theInformation->SetOriginatingSlot(kSlotServer);
+        f->mComms->ProcessLocalUserInput(theInformation, (unsigned char)v[2]);
+        return 0;
+    }
+    case EE_NETMSG_SESS_SEND_NEW_RECORD: return EESessionRecord(v);
+    case EE_NETMSG_SESS_SEND_PING_STAT: {
+        uint32_t theBits = (uint32_t)v[2];
+        float theQuality;
+        memcpy(&theQuality, &theBits, 4);
+        s->SendPingStat((unsigned char)v[1], theQuality);
+        return 0;
+    }
+    case EE_NETMSG_SESS_SEND_SLOT_INFO: {   // player v1 at send-to slot v2: the host's address, none, a client's
+        unsigned char theIndex = (unsigned char)v[1];
+        unsigned char theSlot = (unsigned char)v[2];
+        UWideString theAddress;
+        EEMRecord* theMessage;
+        if (theSlot == kSlotServer)
+            theMessage = new EEMRecord(kMessagePlayerSlotInfo, {theIndex, kSlotServer, s->mBehindFirewall[theSlot], EEGetLocalAddress(f->mProtocol, gGamePreferences.mSettings.GetNetworkAdapter())});
+        else if (theSlot == kSlotNone) {
+            theAddress = "";
+            theMessage = new EEMRecord(kMessagePlayerSlotInfo, {theIndex, kSlotNone, s->mBehindFirewall[theSlot], theAddress});
+        } else {
+            s->GetClientAddress(theSlot, theAddress);
+            theMessage = new EEMRecord(kMessagePlayerSlotInfo, {theIndex, theSlot, s->mBehindFirewall[theSlot], theAddress});
+        }
+        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
+        return 0;
+    }
+    case EE_NETMSG_SESS_SEND_PHYSICS_TICK:   // the inputs, the ticks, checksum and dump, PTs per second
+        return (long long)(uintptr_t)new NEMRecord(kNetMessagePhysicsTick, {v[1], v[2], v[3], v[4], v[5]});
+    default:   // the connection check's answer
+        f->mComms->ProcessLocalUserInput(new NEMRecord(kNetMessagePlayerConnectionCheckResponse, {(uint32_t)v[1]}), kSlotNone);
+        return 0;
+    }
+}
+
+static long long EESessionMessage(EESessionFrame* f, const long long* v)
+{
+    EEServer* s = static_cast<EEServer*>(f->mComms);
+    NEMessage* m = (NEMessage*)(uintptr_t)v[1];
+    NEMessage* theInput;
+    switch (v[0]) {
+    case EE_NETMSG_SESS_MSG_TYPE: return m->GetType();
+    case EE_NETMSG_SESS_MSG_ORIGIN: return m->GetOriginatingSlot();
+    case EE_NETMSG_SESS_MSG_FOR_SLOT: return m->GetForSpecificSlot();
+    case EE_NETMSG_SESS_MSG_NE_VALUE: return (long long)static_cast<NEMRecord*>(m)->Value((uint32_t)v[2]);
+    case EE_NETMSG_SESS_MSG_RECORD: memcpy((void*)(uintptr_t)v[2], static_cast<EEMRecord*>(m)->mRecord, sizeof(static_cast<EEMRecord*>(m)->mRecord)); return 0;
+    case EE_NETMSG_SESS_MSG_INPUT_COUNT: return static_cast<NEMRecord*>(m)->GetNumberOfPlayerInputs();
+    case EE_NETMSG_SESS_MSG_INPUT: static_cast<NEMRecord*>(m)->GetPlayerInput((unsigned long)v[2], theInput); return (long long)(uintptr_t)theInput;
+    case EE_NETMSG_SESS_MSG_REFERENCE: m->Reference(); return 0;
+    case EE_NETMSG_SESS_MSG_DEREFERENCE: m->Dereference(); return 0;
+    case EE_NETMSG_SESS_MSG_EXECUTE: m->Execute(); return 0;
+    case EE_NETMSG_SESS_MSG_SET_FAST_ID: static_cast<EEMessage*>(m)->mFastSelectionID = (unsigned char)v[2]; return 0;
+    case EE_NETMSG_SESS_MSG_IS_GAME: return EEGameMessageCast(m) != NULL;
+    case EE_NETMSG_SESS_MSG_QUEUE: gPhysics->QueueServerMessage(m); return 0;
+    case EE_NETMSG_SESS_MSG_LOG_RESPONSE: s->LogResponse(m); return 0;
+    case EE_NETMSG_SESS_MSG_LOCAL: f->mComms->ProcessLocalUserInput(m, (unsigned char)v[2]); return 0;
+    case EE_NETMSG_SESS_MSG_BROADCAST: m->SetOriginatingSlot(kSlotServer); EESessionAccess::Broadcast(s, m); return 0;
+    case EE_NETMSG_SESS_MSG_SEND_ALL:
+        m->SetOriginatingSlot(kSlotServer);
+        EESessionAccess::SendToAll(s, m);
+        m->Dereference();
+        return 0;
+    default: s->TakeConnectionRequest(static_cast<NEMRecord*>(m)); return 0;
+    }
+}
+
+static long long EESessionComms(EESessionFrame* f, const long long* v)
+{
+    EEServer* s = static_cast<EEServer*>(f->mComms);
+    EEClient* c = static_cast<EEClient*>(f->mComms);
+    switch (v[0]) {
+    case EE_NETMSG_SESS_COMMS_SET_CT: gCommunications->SetCurrentCommunicationsTick((unsigned long)v[1]); break;
+    case EE_NETMSG_SESS_COMMS_SET_CTS_IN_PHYSICS: gCommunications->SetNumberOfCTsProcessedInPhysics((unsigned long)v[1]); break;
+    case EE_NETMSG_SESS_COMMS_INCREMENT_CTS: gCommunications->IncrementNumberOfCTsProcessedInPhysics(); break;
+    case EE_NETMSG_SESS_COMMS_SET_MP_SESSION: gCommunications->SetIsMultiplayerSession(v[1] != 0); break;
+    case EE_NETMSG_SESS_COMMS_SET_HUMANS: f->mComms->SetNumHumanPlayers((unsigned char)v[1]); break;
+    case EE_NETMSG_SESS_COMMS_SET_PT: {
+        unsigned long theTick = (unsigned long)v[1];
+        c->SetCurrentPhysicsTick(theTick);
+        break;
+    }
+    case EE_NETMSG_SESS_COMMS_REGISTER: s->RegisterSlot((unsigned char)v[1]); break;
+    case EE_NETMSG_SESS_COMMS_UNREGISTER: EESessionAccess::Unregister(s, (unsigned char)v[1]); break;
+    case EE_NETMSG_SESS_COMMS_SEND_TO_CLEAR: s->mSendToSlots.clear(); break;
+    case EE_NETMSG_SESS_COMMS_SEND_TO_INSERT:
+        s->mSendToSlots.insert(std::map<unsigned char, unsigned char>::value_type((unsigned char)v[1], (unsigned char)v[2]));
+        break;
+    case EE_NETMSG_SESS_COMMS_SEND_TO_ERASE: s->mSendToSlots.erase((unsigned char)v[1]); break;
+    case EE_NETMSG_SESS_COMMS_ABORT_XFER: s->AbortXfer((unsigned long)v[1]); break;
+    case EE_NETMSG_SESS_COMMS_REMOVE_IN_PROGRESS: s->RemovePlayerFromGameInProgress((unsigned char)v[1], v[2] != 0, false, v[3] != 0); break;
+    case EE_NETMSG_SESS_COMMS_XFER_GAME_FILE: {   // load type v1's file (the map type) to lobby slot v2's client
+        FSFileSpec* theFile;
+        EEPSaveGameHeader theHeader;
+        unsigned long theXferID;
+        if (EEOpenSaveGameFile((const char*)gGameOptions.mMapType, v[1] == 2 ? "Saved Games\\" : "Scenarios\\", theFile) == kErrorOK) {
+            theHeader.mMajorVersion = kSaveGameMajorVersion;
+            theHeader.mMinorVersion = kSaveGameMinorVersion;
+            if (theHeader.LoadFromFile(*theFile) == kErrorOK && !EEIsMultiplayerGame(true))
+                s->XferFileToClient(*theFile, theHeader.mChecksum, s->GetSendToSlot((unsigned char)v[2]), theXferID, false);
+        }
+        break;
+    }
+    case EE_NETMSG_SESS_COMMS_START_GAME: s->StartGame(); break;
+    case EE_NETMSG_SESS_COMMS_PAUSE_GAME: s->PauseGame(); break;
+    case EE_NETMSG_SESS_COMMS_BECOME_CLIENT:   // the host removed: the server deleted, a client in its place
+        static_cast<NESynchronousServer*>(gCommunications)->StopPing();
+        static_cast<NESynchronousServer*>(gCommunications)->ResetXfer();
+        EESessionAccess::Unregister(s, kSlotServer);
+        s->RegisterSlot(kSlotServer);
+        if (gCommunications != NULL) {
+            delete gCommunications;
+            gCommunications = new EEClient;
+            static_cast<NESynchronousClient*>(gCommunications)->StartThreads();
+        }
+        break;
+    case EE_NETMSG_SESS_COMMS_LOWEST_CTS: static_cast<NESynchronousServer*>(gCommunications)->SetMessageManagerLowestCTs((unsigned long)v[1]); break;
+    case EE_NETMSG_SESS_COMMS_DISCONNECT: c->Disconnect(); break;
+    case EE_NETMSG_SESS_COMMS_LOCAL_OUT: gLocalPlayerOut = v[1] != 0; break;
+    case EE_NETMSG_SESS_COMMS_SLEEP: PlatSleep((unsigned long)v[1]); break;
+    default: NEProtocol::GetProtocol(0, f->mProtocol); break;
+    }
+    return 0;
+}
+
+static long long EESessionFact(EESessionFrame* f, const long long* v)
+{
+    EEServer* s = static_cast<EEServer*>(f->mComms);
+    EEClient* c = static_cast<EEClient*>(f->mComms);
+    UIForm* theForm;
+    switch (v[0]) {
+    case EE_NETMSG_SESS_FACT_MULTIPLAYER_GAME: return EEIsMultiplayerGame(true);
+    case EE_NETMSG_SESS_FACT_OPTIONS_MULTIPLAYER: return gGameOptions.mIsMultiplayer;
+    case EE_NETMSG_SESS_FACT_LOAD_TYPE: return gGameOptions.mLoadType;
+    case EE_NETMSG_SESS_FACT_GAME_STATE: return s->GetGameState();
+    case EE_NETMSG_SESS_FACT_DEFAULT_COLOR: return gDefaultPlayerColors[v[1]];
+    case EE_NETMSG_SESS_FACT_CITIZENS_DEFAULT: return (long long)gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
+    case EE_NETMSG_SESS_FACT_VERSION_MATCH: return !(*f->mVersion != gGameVersion);
+    case EE_NETMSG_SESS_FACT_BINARY_CHECKSUM: return gBinaryChecksum;
+    case EE_NETMSG_SESS_FACT_CURRENT_CT: return (long long)f->mComms->GetCurrentCommunicationsTick();
+    case EE_NETMSG_SESS_FACT_CTS_IN_PHYSICS: return (long long)gCommunications->GetNumberOfCTsProcessedInPhysics();
+    case EE_NETMSG_SESS_FACT_HUMANS: return gCommunications->GetNumHumanPlayers();
+    case EE_NETMSG_SESS_FACT_MP_SESSION: return f->mComms->GetIsMultiplayerSession();
+    case EE_NETMSG_SESS_FACT_PLAYER_NUMBER: return (long long)f->mComms->GetPlayerNumber();
+    case EE_NETMSG_SESS_FACT_CURRENT_PT: return (long long)c->GetCurrentPhysicsTick();
+    case EE_NETMSG_SESS_FACT_MY_SEND_TO_SLOT: return c->GetMySendToSlot();
+    case EE_NETMSG_SESS_FACT_NUM_PLAYERS: return s->GetNumberOfPlayers();
+    case EE_NETMSG_SESS_FACT_WORLD_PLAYERS: return (long long)gWorld.mNumPlayers;
+    case EE_NETMSG_SESS_FACT_TIME: return (long long)TMGetTime();
+    case EE_NETMSG_SESS_FACT_WON: return gWonNet != NULL;
+    case EE_NETMSG_SESS_FACT_SCREEN_ACTIVE: return gGameScreenActive;
+    case EE_NETMSG_SESS_FACT_ENGINE_CHOICES: return (long long)EECPEngineChoiceCount();
+    case EE_NETMSG_SESS_FACT_FORM_IS_CURRENT:   // the form looked up first (v2 0) or the current form first
+        if (v[2] == 0) {
+            theForm = gUIManager->GetFormByID(v[1]);
+            return gUIManager->GetCurrentForm() == theForm;
+        }
+        theForm = gUIManager->GetCurrentForm();
+        return theForm == gUIManager->GetFormByID(v[1]);
+    case EE_NETMSG_SESS_FACT_FORM_VISIBLE: return gUIManager->IsFormVisible(gUIManager->GetFormByID(v[1]));
+    case EE_NETMSG_SESS_FACT_SEND_TO_SLOT: return s->GetSendToSlot((unsigned char)v[1]);
+    default: return s->GetPlayerSendToSlot((unsigned char)v[1]);
+    }
+}
+
+static long long EESessionWorld(EESessionFrame* f, const long long* v)
+{
+    EEPlayer* p = (EEPlayer*)(uintptr_t)v[1];
+    switch (v[0]) {
+    case EE_NETMSG_SESS_WORLD_PLAYER: return (long long)(uintptr_t)gWorld.mPlayers[v[1]];
+    case EE_NETMSG_SESS_WORLD_PLAYER_BY_SLOT: return (long long)(uintptr_t)gWorld.GetPlayerBySlot((unsigned char)v[1]);
+    case EE_NETMSG_SESS_WORLD_IS_HUMAN: return p->IsHuman();
+    case EE_NETMSG_SESS_WORLD_SLOT: return p->mSlot;
+    case EE_NETMSG_SESS_WORLD_HAS_HUMAN: return p->mHumanPlayer != NULL;
+    case EE_NETMSG_SESS_WORLD_ID: return (long long)p->mPlayerID;
+    case EE_NETMSG_SESS_WORLD_SET_SLOT: p->mSlot = (unsigned char)v[2]; return 0;
+    case EE_NETMSG_SESS_WORLD_SET_FIREWALL: p->mBehindFirewall = v[2] != 0; return 0;
+    case EE_NETMSG_SESS_WORLD_NAME_FROM_MSG: static_cast<EEHumanPlayer*>(p)->SetName(((EEMRecord*)(uintptr_t)v[2])->mString); return 0;
+    case EE_NETMSG_SESS_WORLD_RECONNECT: gWorld.GetPlayer((unsigned long)v[1])->mSlot = (unsigned char)v[2]; return 0;
+    case EE_NETMSG_SESS_WORLD_REMOVE: gWorld.RemoveDisconnectedPlayer((unsigned long)v[1]); return 0;
+    default: gWorld.GetCurrentPlayer()->ExecuteSelectionMessage((NEMessage*)(uintptr_t)v[1]); return 0;
+    }
+}
+
+static long long EESessionRegisterOp(EESessionFrame* f, const long long* v)
+{
+    EEGameOptionsPlayer& r = EESessionRegister(f, v[0]);
+    switch (v[1]) {
+    case EE_NETMSG_SESS_REG_LOAD_OPTIONS: r = gGameOptions.mPlayers[v[2]]; return 0;
+    case EE_NETMSG_SESS_REG_LOAD_LOBBY: r = gWorld.GetLobbyOptions().mPlayers[v[2]]; return 0;
+    case EE_NETMSG_SESS_REG_LOAD_REG: r = EESessionRegister(f, v[2]); return 0;
+    case EE_NETMSG_SESS_REG_STORE_OPTIONS: gGameOptions.mPlayers[v[2]] = r; return 0;
+    case EE_NETMSG_SESS_REG_STORE_LOBBY: gWorld.GetLobbyOptions().mPlayers[v[2]] = r; return 0;
+    case EE_NETMSG_SESS_REG_GET: return EESessionPlayerField(r, v[2], false, 0);
+    case EE_NETMSG_SESS_REG_SET: return EESessionPlayerField(r, v[2], true, v[3]);
+    case EE_NETMSG_SESS_REG_NAME_CLEAR: r.mName = ""; return 0;
+    case EE_NETMSG_SESS_REG_NAME_COPY: r.mName = EESessionRegister(f, v[2]).mName; return 0;
+    case EE_NETMSG_SESS_REG_NAME_ICMP:
+        return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)r.mName),
+                           reinterpret_cast<const unsigned char*>((const char*)EESessionRegister(f, v[2]).mName)) == 0;
+    case EE_NETMSG_SESS_REG_NAME_EQ: return r.mName == EESessionRegister(f, v[2]).mName;
+    case EE_NETMSG_SESS_REG_NAME_FROM_MSG: r.mName = ((EEMRecord*)(uintptr_t)v[2])->mString; return 0;
+    default:   // the name against world player v2's
+        return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)r.mName),
+                           reinterpret_cast<const unsigned char*>((const char*)((EEPlayer*)(uintptr_t)v[2])->mName)) == 0;
+    }
+}
+
+static int64_t EESessionHost(uint32_t inOp, EeNetSessCall* inCall)
+{
+    EESessionFrame* f = (EESessionFrame*)inCall->frame;
+    const long long* v = (const long long*)inCall->v;
+    EEServer* s = static_cast<EEServer*>(f->mComms);
+    TSCriticalSection* theSection;
+    switch (inOp) {
+    case EE_NETMSG_SESS_OP_LOCK:
+        switch (v[0]) {
+        case EE_NETMSG_SESS_LOCK_CT: if (v[1]) s->LockSendCommunicationsTick(); else s->UnlockSendCommunicationsTick(); return 0;
+        case EE_NETMSG_SESS_LOCK_OPTIONS_WRITE: if (v[1]) gGameOptions.mLock->WriteLock(); else gGameOptions.mLock->WriteUnlock(); return 0;
+        case EE_NETMSG_SESS_LOCK_WORLD_WRITE: if (v[1]) gWorld.mLock->WriteLock(); else gWorld.mLock->WriteUnlock(); return 0;
+        case EE_NETMSG_SESS_LOCK_PING: if (v[1]) s->StopPing(); else s->StartPing(); return 0;
+        case EE_NETMSG_SESS_LOCK_SEARCH: theSection = s->mSearchForSlotLock; break;
+        case EE_NETMSG_SESS_LOCK_ATTEMPT: theSection = s->mAttemptToRemovePlayerLock; break;
+        case EE_NETMSG_SESS_LOCK_FAST: theSection = f->mServer ? s->mFastSelectionLock : static_cast<EEClient*>(f->mComms)->mFastSelectionLock; break;
+        default: if (v[1]) gPhysics->mServerMessageQueueLock->Enter(); else gPhysics->mServerMessageQueueLock->Leave(); return 0;
+        }
+        if (v[1])
+            theSection->Enter();
+        else
+            theSection->Leave();
+        return 0;
+    case EE_NETMSG_SESS_OP_FACT: return EESessionFact(f, v);
+    case EE_NETMSG_SESS_OP_SELF_GET: return EESessionMember(f, v[0], v[1], false, 0);
+    case EE_NETMSG_SESS_OP_SELF_SET: return EESessionMember(f, v[0], v[1], true, v[2]);
+    case EE_NETMSG_SESS_OP_REG: return EESessionRegisterOp(f, v);
+    case EE_NETMSG_SESS_OP_SEND: return EESessionSend(f, v);
+    case EE_NETMSG_SESS_OP_MSG: return EESessionMessage(f, v);
+    case EE_NETMSG_SESS_OP_UI: return EESessionUI(f, v);
+    case EE_NETMSG_SESS_OP_WON: EESessionWon(v[0], v[1], v[2]); return 0;
+    case EE_NETMSG_SESS_OP_SOUND:
+        if (v[0] == 0) {   // the server's: loaded and played
+            sSample = gSoundManager->Load(UString(v[1] ? "sounds\\OutOfSynch.wav" : "sounds\\Booted.wav"), 0x31, 1);
+            if (!UIsNone32(sSample))
+                gSoundManager->Play(sSample, 1.0f, 0.0f, 1.0f, false, NULL);
+        } else {
+            unsigned long theSample;
+            unsigned long theInstance;
+            EELoadSound(UString(v[0] == 1 ? "sounds\\OutOfSynch.wav" : "sounds\\Booted.wav"), 0x31, theSample, theInstance, 1);
+        }
+        return 0;
+    case EE_NETMSG_SESS_OP_WORLD: return EESessionWorld(f, v);
+    case EE_NETMSG_SESS_OP_COMMS: return EESessionComms(f, v);
+    default:   // the game start
+        if (v[0] == EE_NETMSG_SESS_START_PREP) {   // the offset start time, the physics' draw, the protocol's status
+            NEProtocol* theProtocol = NULL;
+            gStartTime = ((NEMRecord*)(uintptr_t)v[1])->Get<uint32_t>(0);
+            gPhysics->GetRandom(0L, 0x7fffffffL);
+            gWorld.GetNumTeams();
+            NEProtocol::GetProtocol(0, theProtocol);
+            theProtocol->GetStatus(UWideString(""), 0xffff0000);
+        } else if (v[0] == EE_NETMSG_SESS_START_RESUME) {
+            gGraphics->PostResume();
+            while (gGraphics->mIsPaused)
+                PlatSleep(1);
+        } else {
+            gPhysics->mThread->Post(0x404, NULL, NULL, true);
+            while (!gPhysics->mTimerRunning)
+                PlatSleep(1);
+            gUIManager->mMainGameForm->SetUIState(0);
+        }
+        return 0;
+    }
+}
+
+// the server's or client's member inWhat (EE_NETMSG_SESS_DO_*) over the host
+long long EESession(NESynchronousCommunications* inComms, bool inServer, uint32_t inWhat, long long a, long long b,
+                    long long c, long long d, const EEGameOptionsPlayer* inPlayer, const UWideString* inVersion)
+{
+    EESessionFrame theFrame;
+    theFrame.mComms = inComms;
+    theFrame.mServer = inServer;
+    theFrame.mIn = inPlayer;
+    theFrame.mVersion = inVersion;
+    theFrame.mProtocol = NULL;
+    return ee_netmsg_session(EESessionHost, &theFrame, inServer, inWhat, a, b, c, d);
 }

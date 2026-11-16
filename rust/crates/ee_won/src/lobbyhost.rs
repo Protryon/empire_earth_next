@@ -398,6 +398,9 @@ pub enum EeWonLobbyOp {
 pub struct Host {
     pub logic: *mut c_void,
     pub call: EeWonLobbyHostFn,
+    /// the model's ops answered by its Rust objects (modelobj.rs), not the host (the game's logics; a golden's
+    /// scripted host answers them all)
+    pub model: bool,
 }
 
 /// A message: its C++ `ByteBuffer` (NULL for one Rust built) and its bytes (a pointer, not a slice: the bytes are
@@ -424,6 +427,11 @@ impl Host {
     /// The pointers are the C++ objects' and pass through: Rust never dereferences them.
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn op(&self, op: EeWonLobbyOp, a: *mut c_void, b: *mut c_void, c: isize, d: isize) -> isize {
+        if self.model {
+            if let Some(r) = crate::modelobj::lobby_op(op, a as isize, b as isize, c) {
+                return r;
+            }
+        }
         match self.call {
             // SAFETY: the host's contract (each op's arguments as documented)
             Some(f) => unsafe { f(self.logic, op, a, b, c, d) },

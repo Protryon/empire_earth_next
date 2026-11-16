@@ -155,7 +155,7 @@ long DX7Rasterizer::ActivateRenderingSurface(unsigned long inScreen, GETextureMa
 long DX7Rasterizer::ActivateScreen(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
                                    unsigned long inBackBuffers, bool inZBuffer, unsigned long inZBufferFormat)
 {
-    return ee_dx7r_activate_screen(this->mDX7, inScreen, inManager, inWindow, inWindow->mWidth, inWindow->mHeight, inBackBuffers,
+    return ee_dx7r_activate_screen(this->mDX7, inScreen, inManager, inWindow, inWindow->GetWidth(), inWindow->GetHeight(), inBackBuffers,
                                    inZBuffer, inZBufferFormat);
 }
 
@@ -369,7 +369,7 @@ long DX7Rasterizer::UpdateLight(unsigned long inIndex, GELight& inLight, unsigne
 // the ee_dx7cpp_* below read the GE objects for it
 long DX7Rasterizer::Draw(GEBitmap* inBitmap, unsigned long inScreen)
 {
-    return ee_dx7r_draw_bitmap(this->mDX7, inScreen, inBitmap);
+    return ee_dx7r_draw_bitmap(this->mDX7, inScreen, inBitmap->GetRust());
 }
 
 long DX7Rasterizer::Draw(GELine* inLine, unsigned long inCount, unsigned long inScreen)
@@ -387,19 +387,15 @@ long DX7Rasterizer::Draw(GERhombus* inRhombus, unsigned long inScreen)
     return ee_dx7r_draw_rhombus(this->mDX7, inScreen, inRhombus);
 }
 
-static Dx7StdColorVertex* DX7StdColorVerticesOf(GEVertexArray* inArray)
-{
-    return reinterpret_cast<Dx7StdColorVertex*>(static_cast<DX7StdColorVertexArray*>(inArray)->mVertices);
-}
+// the primitives are their Rust objects (one pointer each: the draws walk the C++ arrays, ee_dx7 draw_ffi.rs)
+static_assert(sizeof(GELine) == sizeof(void*) && sizeof(GEPoint) == sizeof(void*) && sizeof(GERhombus) == sizeof(void*),
+              "ee_ge prim.rs");
 
 extern "C" {
-void* ee_dx7cpp_bitmap_texture(void* inBitmap, unsigned long inScreen) { return static_cast<GEBitmap*>(inBitmap)->GetTexture(inScreen); }
-Dx7StdColorVertex* ee_dx7cpp_bitmap_vertices(void* inBitmap) { return DX7StdColorVerticesOf(static_cast<GEBitmap*>(inBitmap)->GetVertexArray()); }
-void* ee_dx7cpp_line_texture(void* inLines, unsigned long inScreen) { return static_cast<GELine*>(inLines)->GetTexture(inScreen); }
-Dx7StdColorVertex* ee_dx7cpp_line_vertices(void* inLines, unsigned long inIndex) { return DX7StdColorVerticesOf(static_cast<GELine*>(inLines)[inIndex].GetVertexArray()); }
-void* ee_dx7cpp_point_texture(void* inPoints, unsigned long inScreen) { return static_cast<GEPoint*>(inPoints)->GetTexture(inScreen); }
-Dx7StdColorVertex* ee_dx7cpp_point_vertices(void* inPoints, unsigned long inIndex) { return DX7StdColorVerticesOf(static_cast<GEPoint*>(inPoints)[inIndex].GetVertexArray()); }
-Dx7StdColorVertex* ee_dx7cpp_rhombus_vertices(void* inRhombus) { return DX7StdColorVerticesOf(static_cast<GERhombus*>(inRhombus)->GetVertexArray()); }
+Dx7StdColorVertex* ee_dx7cpp_color_vertices(void* inArray)
+{
+    return reinterpret_cast<Dx7StdColorVertex*>(static_cast<DX7StdColorVertexArray*>(static_cast<GEVertexArray*>(inArray))->mVertices);
+}
 void ee_dx7cpp_texture_frame(void* inTexture, float* outSize, float* outCorner)
 {
     GETexture* theTexture = static_cast<GETexture*>(inTexture);

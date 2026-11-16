@@ -296,7 +296,7 @@ extern "C" int64_t ee_screenscpp_cb(uint32_t inOp, uintptr_t inP, int64_t inA, i
     case EE_SCREENS_CBW_RESERVED: {
         UString theName(theBytes.c_str());
         for (unsigned long i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
-            if (PlatStrICmp(theName, gCivilizationManager.mCivilizations[i].mFileName) != 0)
+            if (PlatStrICmp(theName, gCivilizationManager.GetCivilization(i).mFileName) != 0)
                 continue;
             UWideString theFormat;
             UWideString theMessage;

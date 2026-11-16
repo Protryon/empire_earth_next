@@ -32,21 +32,19 @@ static_assert(sizeof(EECivPower) == 152, "on-disk record: 152 bytes on every tar
 
 class EEPlayer;
 
+// Whole in Rust (ee_tech civ.rs; civilization builder lane, round 2): the records (dbcivpowers) and the queries; the
+// grant of a power (the original's ApplyPower 0x2832a3) is ee_tech civ_apply.rs'. Forwarders in
+// EECivilizationManager.cpp.
 class EECivPowersManager {
 public:
     long GetName(long inID, UWideString& outName);   // 0x2831b3 (gResource->GetString(inID + 0x800c))
-    // 0x2832a3: GetPower(inID), then Research its +0x74 technology for inPlayer and the per-power extras
-    void ApplyPower(EEPlayer* inPlayer, unsigned long inID);
     long Load(FSFile* inFile); // original-backed 0x283124; caller1414a3, FSFile IO proof
-    bool GetPower(long inID, EECivPower& outPower);   // 0x2831d0 (inID - 0x26 indexes a vector of records)
+    bool GetPower(long inID, EECivPower& outPower);   // 0x2831d0 (inID - 0x26 indexes the records)
     bool HasPower(EEPlayer* inPlayer, long inID);   // 0x283248 (whether inPlayer's civilization has power inID; EEPlayer 0x1654be; provisional name)
     EECivPower* GetPowerRecord(long inID);  // 0x283235 (&record[inID - 0x26]; EEUCProjectile::ActionChanged) (provisional name)
+    unsigned long GetNumPowers();           // (the original's mPowers.size())
     EECivPowersManager();
     virtual ~EECivPowersManager();
-
-    // +0x04 (ctor 0x2830d0: the vector, then clear(); Load pushes 0x98-byte records; GetPower/GetPowerRecord index it
-    // by inID - 0x26)
-    std::vector<EECivPower> mPowers;
 };
 
 extern EECivPowersManager gCivPowersManager;

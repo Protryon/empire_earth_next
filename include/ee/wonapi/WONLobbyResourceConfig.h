@@ -17,8 +17,6 @@ public:
     static ComponentConfig* CfgFactory(); // at 0x00782150
     virtual bool Virtual24(const std::string&); //38da70
     virtual void SetComponent(Component*); // defined out of line
-    ListSortType ReadSortType(); //38d5d0
-    static void ReadListFlags(ComponentConfig*,ListArea*); //38d790
     ListArea* mListArea; //9c
 };
 // MultiList config classes (only the instruction dispatch is defined here).
@@ -51,7 +49,7 @@ public:
 // The explicit constructor (0x0078d290) calls the base and installs the vtable 0x00852230.
 class LabelConfig : public ComponentConfig {
 public:
-    LabelConfig(); // at 0x0078d290; leaves +0x78 untouched
+    LabelConfig() {} // at 0x0078d290; leaves +0x78 untouched
     static Component* CompFactory(); // at 0x0079afd0
     static ComponentConfig* CfgFactory(); // at 0x0078f9e0
     virtual bool Virtual24(const std::string&); //38d2b0
@@ -69,7 +67,6 @@ class ScrollbarScrollerConfig : public ScrollerConfig {
 public:
     virtual bool Virtual24(const std::string&); //3948a0
     virtual void SetComponent(Component*); //original external SetComponent
-    ScrollbarCondition GetScrollbarCondition(); //3946e0
     ScrollbarScroller* mScrollbarScroller; //9c, prefixa0
 };
 class ScrollbarConfig : public ContainerConfig {
