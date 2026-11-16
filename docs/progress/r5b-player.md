@@ -20,8 +20,8 @@ The lane's state. Each round rewrites this file to the current state; the round'
   `RemoveQueuedImprovement`, `AdvanceImprovement`, `Erase`/`MoveQueuedImprovements`, the portrait's improvement and
   progress, `RepairPointers`' requeue, `Reset`'s member stores.
 
-**C++ left** (`EEPlayer.cpp` about 3,850 lines with the 160-line test capture; `EEPPlayerEventList.cpp` 150;
-`EEPlayerStatistics.cpp` 140): the constructors, destructor, `Reset`, `Clear` (groups, upgrades, the tech tree, the
+**C++ left** (`EEPlayer.cpp` 3,926 lines with the 160-line test capture; `EEPPlayerEventList.cpp` 153;
+`EEPlayerStatistics.cpp` 143; `ee/EEPlayer.h` 1,036): the constructors, destructor, `Reset`, `Clear` (groups, upgrades, the tech tree, the
 air traffic: C++ objects); the unit bookkeeping (`AddUnit`, `UnitPlaced`, `UnitTaken`, `UnitCompleted`,
 `RecountPopulation`, `RecountHeroesAndTeleporters`, `GetTotalPopulation`: world reads per unit); the towns and herds
 (`AddUnitToTown`, `AddUnitToHerd`, `AssignTowns`, ...); the selection; diplomacy (`SetDiplomaticStance`, the sight
