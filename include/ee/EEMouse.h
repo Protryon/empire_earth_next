@@ -20,9 +20,8 @@ public:
     virtual ~EEMouse() {}                   // +0x00 (??_G 0x10aa66)
     virtual long Load(GEScreen* inScreen);        // +0x04 0x10a9f1 (loads the 14 extra pointers, then RTSMouse's)
     virtual long Release();                 // +0x08 0x10aa38 (dereferences them)
-    virtual GESurface* GetPointerSurface(unsigned long inIndex);  // +0x0c 0x10a9d1 (10..23: mLA8[inIndex - 10])
-
-    GESurface* mExtraPointerSurfaces[14];   // +0xa8 the extra pointers (zeroed with one rep stosd of 14; LoadPointer loads them)
+    // +0x0c 0x10a9d1 (10..23: its own pointers) is RTSMouse's since R4.4's twenty-sixth round: the pointers are ee_gfx
+    // mouse_frame.rs's slots, EEMouse's fourteen (+0xa8 in the original) in 10..23
 };
 
 extern EEMouse* gMouse;

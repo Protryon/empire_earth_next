@@ -75,9 +75,9 @@ pickup @38,42                      # the house, then the move cancelled
 cancelmove
 digest cancel
 # the editor form's own events: the hide-UI box (EESEEHideUI posting EESEEChangeViewport), the quick save button
-check 0x12 0                       # UI shown: the framed view
+check 0x12 0                       # unchecked: the UI hidden (the box shows the UI while checked, as the original); no views before tab 4
 view
-check 0x12 1                       # UI hidden: the full view
+check 0x12 1                       # checked: the UI shown
 view
 click quicksave
 editorsave
@@ -85,7 +85,7 @@ editorsave
 # with state (EESEECheckDisplay, EESEESliderChange, EESEEUseObjectArea) through their controls, then their digest
 tab 4
 view
-check 0x12 0
+check 0x12 0                       # unchecked: the full view, the UI hidden
 view
 trigger 4                          # an area and an object: the effects' area/object lists
 newentry
@@ -1304,7 +1304,7 @@ combo 0x898 1
 areastate
 fire 0x89a                         # centre the camera on the area
 areastate
-check 0x12 1                       # the UI hidden: the mode switch leaves the label and button
+check 0x12 1                       # checked: the UI shown, so the mode switch sets the label and button
 combo 0x898 0
 areastate
 form 0 999 11
@@ -1496,3 +1496,62 @@ formstate
 unittab
 tab 0
 formstate
+# editor screens round 8: the terrain tab (its lists, the preview, the paint radios and action, the mouse, leaving and
+# entering), the brush group's highlight, the player tab's tech lists (Fill, the marked lines, the sorts)
+tab 2
+terrainstate
+terrainpick 3
+terrainstate
+terraincolor 5
+terrainstate
+terrainpaint 30 36 33 33
+terrainpick 0
+terraincolor 2
+terrainpaint 36 40 38 38
+digest terrain8
+radio 0xca                         # bulldozer: the terrain controls hidden
+terrainstate
+terrainpaint 34 36 36 34
+digest bulldoze8
+radio 0xc8
+terrainstate
+radio 4                            # a medium brush
+terrainmouse 10 10
+terrainstate
+terrainmouse 3000 3000
+terrainstate
+terrainmouse update
+terrainstate
+brushhl 10.3 20.7 0
+terrainstate
+brushhl 10.3 20.7 1
+terrainstate
+brushhl -3.6 5.5 1
+terrainstate
+terrainpick 7
+tab 0                              # Leave
+terrainstate
+tab 2                              # Enter
+terrainstate
+terrainpick 9999
+terrainstate
+tab 5
+radio 0x12d                        # tech tree
+radio 0x14b
+techstate
+techfill 0x154 0 2
+techstate
+techfill 0x155 1 1
+techstate
+radio 0x14d
+techstate
+check 0x15e 0
+techstate
+techfill 0x154 3 3
+techstate
+check 0x15e 1
+radio 0x14c
+techstate
+techfill 0x155 0 0
+techstate
+tab 0

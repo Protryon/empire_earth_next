@@ -12,93 +12,14 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfigImages.h"
 #include "rust/ee_won.h"
-// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
-// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
+// R6 WON round 41: StretchImageConfig's instructions (SRC, TILE, BORDERS, SKIPCENTER and the three exports) are
+// programs of ee_won's table reader (cfgtab.rs, cfgimg.rs) over WONCfgTable.inl.
 namespace WONAPI {
 // Creates a stretch image config holding a new empty stretch image
 StretchImageConfig::StretchImageConfig()
 {
     this->mStretchImage=new StretchImage(NULL,0,0,0,0);
     this->mImage=this->mStretchImage;
-}
-
-// Reads SRC, TILE, BORDERS, SKIPCENTER and the EXPORT keys, which add copies with other images to the parent
-bool StretchImageConfig::Virtual24(const std::string& instruction)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_STRETCHIMAGECONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
-    if(aKeyIdx==0) {
-        this->mStretchImage->SetImage(this->ReadRawImage().get());
-    }
-    else if(aKeyIdx==1) {
-        bool horz=this->ReadBool();this->EnsureComma();
-        bool vert=this->ReadBool();
-        this->mStretchImage->SetTile(horz,vert);
-    }
-    else if(aKeyIdx==2) {
-        int left=this->ReadInt();this->EnsureComma();
-        int top=this->ReadInt();this->EnsureComma();
-        int right=this->ReadInt();this->EnsureComma();
-        this->mStretchImage->SetBorders(left,top,right,this->ReadInt());
-        if(!this->EndOfString()) {
-            this->EnsureComma();
-            bool horz=this->ReadBool();this->EnsureComma();
-            bool vert=this->ReadBool();
-            this->mStretchImage->SetTile(horz,vert);
-        }
-    }
-    else if(aKeyIdx==3) {
-        this->mStretchImage->SetSkipCenter(this->ReadBool());
-    }
-    else if(aKeyIdx==4) {
-        int count=this->ReadInt();this->EnsureComma();
-        std::string imagePrefix=this->ReadRawString(false);this->EnsureComma();
-        std::string configPrefix=this->ReadRawString(false);
-        int offset=0;
-        if(!this->EndOfString()) {
-            this->EnsureComma();
-            offset=this->ReadInt()-1;
-        }
-        for(int i=0;i<count;++i) {
-            char imageName[512],configName[512];
-            sprintf(imageName,"%s%d",imagePrefix.c_str(),i+1+offset);
-            sprintf(configName,"%s%d",configPrefix.c_str(),i+1);
-            SmartPtr<RawImage> image=this->GetRawImageFromStr(imageName);
-            SmartPtr<StretchImageConfig> child=new StretchImageConfig;
-            child->mStretchImage->CopyAttributes(this->mStretchImage);
-            child->mStretchImage->SetImage(image.get());
-            ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
-            parent->AddChildToConfigMap(configName,child.get());
-        }
-    }
-    else if(aKeyIdx==5) {
-        int count=this->ReadInt();this->EnsureComma();
-        SmartPtr<RawImage> image=this->ReadRawImage();this->EnsureComma();
-        std::string configPrefix=this->ReadRawString(false);
-        int width=image->GetWidth()/count;
-        SmartPtr<CropImageFilter> crop=new CropImageFilter;
-        crop->SetSize(width,image->GetHeight());
-        for(int i=0;i<count;i++) {
-            crop->SetPos(i*width,0);
-            char configName[512];
-            sprintf(configName,"%s%d",configPrefix.c_str(),i+1);
-            SmartPtr<RawImage> cropped=crop->Filter(image.get());
-            SmartPtr<StretchImageConfig> child=new StretchImageConfig;
-            child->mStretchImage->CopyAttributes(this->mStretchImage);
-            child->mStretchImage->SetImage(cropped.get());
-            ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
-            parent->AddChildToConfigMap(configName,child.get());
-        }
-    }
-    else if(aKeyIdx==6) {
-        GUIString name=this->ReadString(false);this->EnsureComma();
-        SmartPtr<StretchImageConfig> child=new StretchImageConfig;
-        child->mStretchImage->CopyAttributes(this->mStretchImage);
-        child->mStretchImage->SetImage(this->ReadRawImage().get());
-        ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
-        parent->AddChildToConfigMap(name,child.get());
-    }
-    else return ImageConfig::Virtual24(instruction);
-    return true;
 }
 
 // Creates a stretch-center image config holding a new empty stretch-center image

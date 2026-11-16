@@ -121,6 +121,9 @@ impl SePaintKind {
     }
 }
 
+/// A paint action's record (opaque to C++; the action's record holds it: `game_actions.rs`).
+pub struct EeScreensSeaPaint(pub SePaint);
+
 /// A paint action's record: its kind and queued areas (and the elevation's painted ones, kept as the original kept
 /// them).
 #[derive(Clone, Debug, PartialEq)]

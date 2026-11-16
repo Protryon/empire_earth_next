@@ -7,6 +7,7 @@
 //! its vtable); its virtuals and methods are one-line forwarders to `ee_won_bar_call`, and every call out is an op
 //! of the component op table (`guihost`). `guiscroll` keeps the thumb's and the steps' arithmetic, as before.
 
+use crate::compmem as mem;
 use std::cell::RefCell;
 use std::ffi::c_void;
 
@@ -125,16 +126,16 @@ impl EeWonScrollbar {
         self.st.borrow().vertical
     }
     fn left(&self, c: isize) -> i32 {
-        self.op(Op::ChildLeft, c, 0, 0) as i32
+        mem::left(c)
     }
     fn top(&self, c: isize) -> i32 {
-        self.op(Op::ChildTop, c, 0, 0) as i32
+        mem::top(c)
     }
     fn width(&self, c: isize) -> i32 {
-        self.op(Op::ChildWidth, c, 0, 0) as i32
+        mem::width(c)
     }
     fn height(&self, c: isize) -> i32 {
-        self.op(Op::ChildHeight, c, 0, 0) as i32
+        mem::height(c)
     }
     // the S_ helpers: along and across the bar (x and y swapped when horizontal)
     fn s_left(&self, c: isize) -> i32 {

@@ -274,6 +274,18 @@ static void SimpleButtonSize(World* t, int &width, int &height)
 #undef this
 }
 
+// the Rust reads the components' bounds and visibility from compmem.rs's blocks: each read gets one filled from
+// the stand-in it is given (every component the Rust names is a Comp)
+static EeWonCompMembers sFillBlock;
+static EeWonCompMembers* FillBlock(intptr_t c)
+{
+    memset(&sFillBlock, 0, sizeof(sFillBlock));
+    const Comp* x = (const Comp*)c;
+    sFillBlock.bounds.x = x->x; sFillBlock.bounds.y = x->y; sFillBlock.bounds.width = x->w; sFillBlock.bounds.height = x->h;
+    sFillBlock.bits = x->vis ? 0 : 1;
+    return &sFillBlock;
+}
+
 // ---- the Rust's host (as the ported units answer `SkinLay`)
 typedef EeWonSkinLay L;
 static intptr_t Host(void* inMe, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
@@ -308,12 +320,6 @@ static intptr_t Host(void* inMe, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t
         default: T("bad field %d", (int)c); return 0;
         }
     case L::SetHeaderHeight: t->mHeaderHeight = (int)b; T("headerheight %d", t->mHeaderHeight); return 0;
-    case L::Width: return x->Width();
-    case L::Height: return x->Height();
-    case L::Left: return x->Left();
-    case L::Top: return x->Top();
-    case L::Right: return x->Right();
-    case L::Visible: return x->IsVisible() ? 1 : 0;
     case L::SetPosSize: { const int* r = (const int*)c; x->SetPosSize(r[0], r[1], r[2], r[3]); return 0; }
     case L::DesiredSize: { int* wh = (int*)c; x->GetDesiredSize(wh[0], wh[1]); return 0; }
     case L::SetLeftPad: x->SetLeftPad((int)c); return 0;
@@ -420,6 +426,7 @@ static std::string Joined()
 
 int main(int argc, char** argv)
 {
+    ee_won_comp_members_resolver(FillBlock);
     bool aPrint = argc > 1 && strcmp(argv[1], "--print") == 0;
     int aFailures = 0;
     const int kSequences = 200000;

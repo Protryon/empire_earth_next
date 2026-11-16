@@ -771,6 +771,9 @@ pub enum EeUiOp {
     CtlAddEvent = 532,
     /// The string table's `GetString(b, *(UWideString*)a)`.
     CtlHelpString = 533,
+    /// The virtual `TabbedTo()` (the direct path's, `direct.rs`; `ReleaseMouse`, `SetDisplayMode` and `SetBgOpacity`
+    /// are its other virtuals on the record's host).
+    CtlTabbedTo = 534,
 
     // ---- the backgrounds (R6 ui round 20, bgobj.rs): on the background's C++ object; a bitmap or texture is its
     // address; the wide ops (`is_wide`) pass twelve floats
@@ -959,6 +962,23 @@ pub enum EeUiOp {
     FlPathReference = 666,
     /// Path `a`'s `Dereference()`.
     FlPathRelease = 667,
+    /// Line `a`'s `SetOpacity(f[0])`.
+    LineSetOpacity = 668,
+    /// The virtual `DrawBorder(f, a)` -> its result.
+    DrawBorder = 669,
+
+    // ---- the list boxes' lines for the direct path (R6 game screens B, round 3: `UIListBoxRust<T>::Op`)
+    /// `GetLineCount()`: the lines (`mData.size()`).
+    ListLineCount = 670,
+    /// Line `a`'s NUL-terminated bytes (a `UIListBox<UWideString>`'s `GetData(a)`; 0 for another line type or a line
+    /// past the end).
+    ListLineText = 671,
+    /// The virtual `AppendLine(UWideString(a bytes))` (a `UIListBox<UWideString>`'s; nothing for another type).
+    ListAppendText = 672,
+    /// The virtual `DeleteAllEntries()`.
+    ListDeleteAll = 673,
+    /// `GetCurrentSelection(out)` -> its result, `out`'s bits in `f[0]`.
+    ListSelection = 674,
 }
 
 impl EeUiOp {

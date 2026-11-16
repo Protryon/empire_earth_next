@@ -75,14 +75,14 @@ def mutex_bypass_rva(image_bytes,linkmap):
     """RVA of the `test eax,eax` after EECreateInstanceMutex's GetLastError call (original layout fixed, full link by map
     name); the function body and its IAT slot are checked so the guard can only land on that instruction.
     A build by map (this fork's x64 builds): the instruction right after the one rip-relative `call [slot]` to the
-    GetLastError slot in the function's first 0x80 bytes: eax is the call's result there, whatever the compiler does
+    GetLastError slot in the function's first 0x400 bytes (the per-instance name's std::string comes first): eax is the call's result there, whatever the compiler does
     with it next (it may move eax away first)."""
     import pefile
     pe=pefile.PE(data=image_bytes,fast_load=True)
     start=linkmap.rva(MUTEX_SYMBOL) if linkmap else MUTEX_RVA_ORIGINAL
     slot=linkmap.address(MUTEX_GETLASTERROR) if linkmap else MUTEX_GETLASTERROR_ORIGINAL
     if linkmap:
-        body=pe.get_data(start,0x80);hits=[]
+        body=pe.get_data(start,0x400);hits=[]
         for k in range(len(body)-6):
             if body[k:k+2]!=b'\xff\x15':continue
             field=int.from_bytes(body[k+2:k+6],'little',signed=True)
@@ -125,6 +125,9 @@ def main():
                     help='TEST ONLY (round 39): parallel instance K (1..32): stage build/boot/windowed_{o,f,r}_K, logs '
                          'build/boot/windowed_*_K.session.*, the harness bypasses the single-instance mutex (logged; image '
                          'unpatched); the stage has its own config.yaml')
+    ap.add_argument('--slot',type=int,
+                    help='TEST ONLY: the harness slot K (default EE_HARNESS_SLOT; tools/harness/slot.py run sets it): '
+                         'runs as --instance K+1 (its ports +16*(K+1), as slot K of the fixture drivers)')
     ap.add_argument('--registry-managed-by-batch',action='store_true',
                     help='TEST ONLY (round 39, with --instance): run from tools/harness/game_batch.py (no effect: the game '
                          'uses no registry; every stage has its own config.yaml)')
@@ -133,6 +136,10 @@ def main():
     a=ap.parse_args()
     if a.seed is not None and not 0<=a.seed<=0xffffffff:ap.error('--seed must fit in 32 bits')
     if a.pt_rate is not None and not 1<=a.pt_rate<=1000:ap.error('--pt-rate out of range')
+    import slot as harness_slot
+    try:a.slot=harness_slot.current(a.slot)
+    except ValueError as error:ap.error(str(error))
+    if a.instance is None and a.slot is not None:a.instance=harness_slot.legacy_instance(a.slot)
     if a.instance is not None and not 1<=a.instance<=32:ap.error('--instance must be 1..32')
     if a.registry_managed_by_batch and a.instance is None:ap.error('--registry-managed-by-batch requires --instance')
     import hbuild

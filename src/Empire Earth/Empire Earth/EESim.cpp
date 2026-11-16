@@ -111,7 +111,6 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
-#include "ee/EEARemovePlayer.h"
 #include "ee/EEMessage.h"
 #include "ee/EEMessageCapture.h"
 #include "ee/EEUnitStore.h"
@@ -167,6 +166,7 @@
 #include "ee/EERules.h"
 #include "ee/EECPTrace.h"
 #include "ee/EESimCapture.h"
+#include "ee/EEAppCapture.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEMap.h"
 #include "ee/RTSRegionTable.h"
@@ -192,6 +192,7 @@
 #include "ee/EEUnitClassKinds.h"
 void EEEffectCaptureSweep();               // the 3D effects' sweep (ee/EEEffectManager.h)
 void EEPhysicsUnitSweep(long inCall);      // the units sweep (Physics Thread/EEPhysicsSweep.cpp)
+void EEActiveGroupCaptureSweep();          // the active groups' sweep (Units/EEActiveGroupSweep.cpp)
 #include "ee/EEUGRust.h"
 #include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
@@ -474,6 +475,8 @@ struct Options {
     bool mMissileSweep = false;                          // --missile-sweep (TEST ONLY; the capture's missile game)
     bool mEffectSweep = false;                           // --effect-sweep (TEST ONLY; the capture's effects game)
     bool mUnitSweep = false;                             // --unit-sweep (TEST ONLY; the capture's units game)
+    bool mAppSweep = false;                              // --app-sweep (TEST ONLY; the capture's app game)
+    bool mGroupSweep = false;                            // --group-sweep (TEST ONLY; the capture's groups game)
     long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
     std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
     std::string mLoadSave;                               // --load-save FILE ("" a new game from the lobby)
@@ -722,6 +725,15 @@ void FinishGame(const char* inOutcome)
             // the 3D effects' sweep alone (the game's own records held since its start: EESimMain)
             EESimCaptureRecord::Hold(false);
             EEEffectCaptureSweep();
+            EECombatCaptureFlush();
+            EESimCaptureRecord::Close();
+            Finish(inOutcome);
+            return;
+        }
+        if (sOptions.mGroupSweep) {
+            // the active groups' sweep alone (the game's own records held since its start: EESimMain)
+            EESimCaptureRecord::Hold(false);
+            EEActiveGroupCaptureSweep();
             EECombatCaptureFlush();
             EESimCaptureRecord::Close();
             Finish(inOutcome);
@@ -1130,6 +1142,22 @@ void AfterTick()
     if (sOptions.mUnitSweep && theTime >= sNextUnitSweepMs) {
         sNextUnitSweepMs += 300000;
         EEPhysicsUnitSweep(sUnitSweeps++);
+    }
+    // TEST ONLY: the mini map's cells every game minute (MMSN); --app-sweep's cheat lines at five game minutes and
+    // storms at ten (ee/EEAppCapture.h)
+    static long sNextMiniMapMs = 60000;
+    if (EESimCaptureRecord::Active() && theTime >= sNextMiniMapMs) {
+        sNextMiniMapMs += 60000;
+        EEAppCaptureMiniMapSnapshot();
+    }
+    static int sAppSweeps = 0;
+    if (sOptions.mAppSweep && sAppSweeps == 0 && theTime >= 300000) {
+        sAppSweeps = 1;
+        EEAppCaptureCheatSweep();
+    }
+    if (sOptions.mAppSweep && sAppSweeps == 1 && theTime >= 600000) {
+        sAppSweeps = 2;
+        EEAppCaptureStormSweep();
     }
     if (theTime >= sNextSampleMs) {
         Sample s = TakeSample();
@@ -2154,8 +2182,12 @@ const char* kUsage =
     "                         missile class (the capture's missile game: CBMA, CBMH and the impact tests)\n"
     "  --unit-sweep           TEST ONLY: every five game minutes every player gets aircraft, ships under water,\n"
     "                         sea animals and spaceships sent at the next player (the capture's units game)\n"
+    "  --app-sweep            TEST ONLY: with EE_SIM_CAPTURE, cheat lines at five game minutes (CHET, CHEF, CHLS) and\n"
+    "                         one storm of each kind at ten (STRM; the capture's app game, ee/EEAppCapture.h)\n"
     "  --effect-sweep         TEST ONLY: with EE_SIM_CAPTURE, only the end of the game records: every swept 3D effect\n"
     "                         kind made, stepped, saved and loaded (the capture's effects game: EFSW, EFST, EFMU)\n"
+    "  --group-sweep          TEST ONLY: with EE_SIM_CAPTURE, only the end of the game records: every player's units\n"
+    "                         get real group commands, each one's outcome recorded (the capture's groups game: AGPL)\n"
     "  --editor-script FILE   TEST ONLY: instead of a game, the scenario editor (main menu -> Editors -> Scenario\n"
     "                         Editor) and this script of its actions and digests (EESimEditor.cpp names the commands)\n"
     "  --editor-out FILE      the script's steps and digests (default stdout)\n"
@@ -2375,8 +2407,13 @@ int EESimMain(int argc, char** argv)
             sOptions.mMissileSweep = true;
         else if (a == "--unit-sweep")
             sOptions.mUnitSweep = true;
+        else if (a == "--app-sweep")
+            sOptions.mAppSweep = true;
         else if (a == "--effect-sweep") {
             sOptions.mEffectSweep = true;
+            EESimCaptureRecord::Hold(true);   // only the end sweep records (FinishGame)
+        } else if (a == "--group-sweep") {
+            sOptions.mGroupSweep = true;
             EESimCaptureRecord::Hold(true);   // only the end sweep records (FinishGame)
         } else if (a == "--port-offset")
             sOptions.mPortOffset = atol(value().c_str());

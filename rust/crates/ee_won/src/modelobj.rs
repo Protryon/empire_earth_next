@@ -2385,6 +2385,48 @@ pub(crate) fn route_op(
     })
 }
 
+/// A model method on a live shell, as the C++ shells' inline forwards call it (the logics that hold model objects).
+pub(crate) fn call(shell: isize, k: EeWonModelCall, a: isize, bb: isize, c: isize) -> isize {
+    let empty = EMPTY_TEXT.load(std::sync::atomic::Ordering::Relaxed);
+    // SAFETY: a live shell; the call's arguments as `EeWonModelCall` documents
+    unsafe { dispatch(must(shell), k, a, bb, c, empty) }
+}
+/// A member of a live shell (`ee_won_model_get`).
+pub(crate) fn get(shell: isize, f: EeWonModelField) -> isize {
+    // SAFETY: a live shell
+    unsafe { ee_won_model_get(must(shell), f) }
+}
+/// A member of a live shell set (`ee_won_model_set`).
+pub(crate) fn set(shell: isize, f: EeWonModelField, v: isize) {
+    // SAFETY: a live shell; the value as the field takes it
+    unsafe { ee_won_model_set(must(shell), f, v) }
+}
+/// A reference on a model object taken (its shell's `AddRef`, through its own host); NULL: none.
+pub(crate) fn hold(shell: isize) {
+    if shell != 0 {
+        let host = must(shell).host;
+        // SAFETY: the host's contract
+        unsafe { host(EeWonModelOp::AddRef, shell, 0, 0) };
+    }
+}
+/// A reference on a model object given back (it may be deleted); NULL: none.
+pub(crate) fn release(shell: isize) {
+    if shell != 0 {
+        let host = must(shell).host;
+        // SAFETY: the host's contract; nothing of the object is used after
+        unsafe { host(EeWonModelOp::Release, shell, 0, 0) };
+    }
+}
+/// `SmartPtr<model object>::operator=`: the old one released, then the new one taken.
+pub(crate) fn assign(slot: &Cell<isize>, v: isize) {
+    let old = slot.get();
+    if old != v {
+        release(old);
+        hold(v);
+        slot.set(v);
+    }
+}
+
 /// The lobby logics' ops on the games and clients (lobbyhost.rs `EeWonLobbyOp`; their C++ was LobbyLogicHost.cpp's
 /// and LanLogicHost.cpp's): the answer, or `None` for an op that is C++'s.
 pub(crate) fn lobby_op(op: crate::lobbyhost::EeWonLobbyOp, a: isize, bb: isize, c: isize) -> Option<isize> {

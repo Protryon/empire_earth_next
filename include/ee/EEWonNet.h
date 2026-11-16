@@ -256,7 +256,7 @@ class DirEntity : public RefCount {
 protected:
     virtual ~DirEntity();
 public:
-    DirEntity();
+    DirEntity(); // DirEntityReplyParser.cpp (its members need ByteBuffer)
     IPAddr GetNetAddrAsIP() const; //native2f0400
     char mType; //08, naturalalignment09..0b
     std::wstring mPath; //0c

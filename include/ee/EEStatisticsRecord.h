@@ -35,7 +35,6 @@ public:
     UWideString mNameSuffix;                // +0x364
 };
 
-inline EEStatisticsSeries EEPlayerStatistics::GetSeries(unsigned long inSeries) { return this->mSeries[inSeries]; }
 
 // inline (the post-game Open calls the COMDAT 0x1e5d0f out of line)
 inline const EEStatisticsRecord& EEStatisticsHistory::GetCurrentRecord() const { return this->mRecords[this->mCurrentRecordIndex]; }

@@ -57,6 +57,8 @@
 // unit "orderunit <seq> <id> <ok|bad|skip> <expected> <found>".
 #include <windows.h>
 #include <stdint.h>
+#include <math.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -146,7 +148,8 @@
 #include "ee/EETown.h"
 #include "ee/EEMap.h"
 #include "ee/EEUnitPicker.h"
-#include "ee/EEACenterCamera.h"
+#include "ee/EECameraControl.h"
+#include "ee/EEARust.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEUIFMGStatusButton.h"
 #include "ee/EEGraphics.h"
@@ -191,6 +194,7 @@ struct OrderState {
     long mRoutePoint = -1;                  // patrol: the town's point nearest the first unit (-1: none)
     EEPPatrolGroup* mRoute = NULL;
     std::vector<OrderUnit> mUnits;
+    std::string mOthers;                    // the local player's other messages while armed (diagnostics)
 };
 
 std::mutex sOrderMutex;
@@ -486,11 +490,16 @@ void JudgeMove(OrderState& ioState)
 void MessageHook(NEMessage* inMessage, int inPhase)
 {
     std::lock_guard<std::mutex> theLock(sOrderMutex);
-    if (!sOrder.mArmed || inMessage->GetType() != sOrder.mType)
+    if (!sOrder.mArmed)
         return;
     EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
     if (thePlayer == NULL || gWorld.GetPlayerBySlot(inMessage->GetOriginatingSlot()) != thePlayer)
         return;
+    if (inMessage->GetType() != sOrder.mType) {
+        if (inPhase == 0 && sOrder.mOthers.size() < 200)
+            sOrder.mOthers += " " + Number((long)inMessage->GetType());
+        return;
+    }
     if (inPhase == 0) {
         sOrder.mBefore = true;
         sOrder.mUnits.clear();
@@ -650,6 +659,30 @@ void Click(float inX, float inY, uint32_t inButton, bool inShift)
         Event(PLAT_EVENT_KEY_UP, kLeftShift);
 }
 
+// a diagnostic line on stderr ("TEST UI order diag ...")
+void Diag(const char* inFormat, ...)
+{
+    char theText[512];
+    va_list theArgs;
+    va_start(theArgs, inFormat);
+    vsnprintf(theText, sizeof(theText), inFormat, theArgs);
+    va_end(theArgs);
+    fprintf(stderr, "TEST UI order diag %s\n", theText);
+    fflush(stderr);
+}
+
+// the camera's focus and target (tiles)
+std::string CameraText()
+{
+    EECameraControl& theCamera = gWorld.mCameraControl;
+    GE3DPoint theFocus;
+    theCamera.GetLocation(theCamera.mFraction, theFocus);
+    char theText[96];
+    snprintf(theText, sizeof(theText), "camera %.2f,%.2f target %.2f,%.2f", theFocus.GetX(), theFocus.GetY(),
+             theCamera.GetEndFocus().GetX(), theCamera.GetEndFocus().GetY());
+    return theText;
+}
+
 void Refuse(const char* inNote)
 {
     std::lock_guard<std::mutex> theLock(sOrderMutex);
@@ -658,9 +691,10 @@ void Refuse(const char* inNote)
     sOrder.mArmed = false;
 }
 
-// the first grid point (step inStep) of the game view where the picker finds each unit, under the world's read lock
-// (inPrefer: PickUnit's resource preference, as the click will pass it); the points with no unit in outEmpty
-void Scan(long inPrefer, std::map<long, GE2DPoint>& outPoints, std::vector<GE2DPoint>& outEmpty)
+// every grid point (12 pixels apart) of the game view where the picker finds each unit, in scan order, under the
+// world's read lock (inPrefer: PickUnit's resource preference, as the click will pass it); the points with no unit in
+// outEmpty
+void Scan(long inPrefer, std::map<long, std::vector<GE2DPoint> >& outPoints, std::vector<GE2DPoint>& outEmpty)
 {
     GERectangle theView = gViewport.GetViewRectangle();
     const float theStep = 12.0f;
@@ -670,9 +704,34 @@ void Scan(long inPrefer, std::map<long, GE2DPoint>& outPoints, std::vector<GE2DP
             EEUnit* theUnit = gUnitPicker.PickUnitUnreferenced(thePoint, inPrefer);
             if (theUnit == NULL)
                 outEmpty.push_back(thePoint);
-            else if (outPoints.find((long)theUnit->mUnitID) == outPoints.end())
-                outPoints[(long)theUnit->mUnitID] = thePoint;
+            else
+                outPoints[(long)theUnit->mUnitID].push_back(thePoint);
         }
+}
+
+// a unit's grid points ordered for the click: nearest their centroid first. The first point a scan meets is the edge
+// of the unit's hit area (its top left), where a pixel of camera or unit motion, or a unit walking past, changes
+// what a click there picks (the lead's runs: "no-message" after the click on a target found that way).
+std::vector<GE2DPoint> ClickOrder(const std::vector<GE2DPoint>& inPoints)
+{
+    float theX = 0.0f, theY = 0.0f;
+    for (size_t i = 0; i < inPoints.size(); i++) {
+        theX += inPoints[i].GetX();
+        theY += inPoints[i].GetY();
+    }
+    theX /= (float)inPoints.size();
+    theY /= (float)inPoints.size();
+    std::vector<std::pair<float, size_t> > theOrder;
+    for (size_t i = 0; i < inPoints.size(); i++) {
+        float theDX = inPoints[i].GetX() - theX, theDY = inPoints[i].GetY() - theY;
+        theOrder.push_back(std::make_pair(theDX * theDX + theDY * theDY, i));
+    }
+    std::stable_sort(theOrder.begin(), theOrder.end(),
+                     [](const std::pair<float, size_t>& a, const std::pair<float, size_t>& b) { return a.first < b.first; });
+    std::vector<GE2DPoint> theResult;
+    for (size_t i = 0; i < theOrder.size(); i++)
+        theResult.push_back(inPoints[theOrder[i].second]);
+    return theResult;
 }
 
 // the visible status button of the game form for button object inButton -> its centre (false: none)
@@ -715,6 +774,7 @@ bool Selected(const std::vector<long>& inIDs)
 struct OrderPlan {
     std::vector<long> mUnits;
     GE2DPoint mClick;                       // the target's point (gather, repair, move) or the ground point (attack)
+    std::vector<GE2DPoint> mCandidates;     // the click points to try, best first (VerifyClick: mClick is one)
     long mTarget = -1;
     long mDamage = -1;                      // repair: the building to damage
     const char* mRefusal = NULL;
@@ -812,12 +872,12 @@ void Choose(int inKind, OrderPlan& outPlan)
     }
     if (inKind == kOrderPatrol)
         return;
-    std::map<long, GE2DPoint> thePoints;
+    std::map<long, std::vector<GE2DPoint> > thePoints;
     std::vector<GE2DPoint> theEmpty;
     Scan(inKind == kOrderGather || inKind == kOrderRepair || inKind == kOrderRepairQueued ? 1 : 0, thePoints, theEmpty);
     if (inKind == kOrderGather) {
         EEComplexUnit* theWorker = OwnComplex(outPlan.mUnits[0]);
-        for (std::map<long, GE2DPoint>::iterator it = thePoints.begin(); it != thePoints.end(); ++it) {
+        for (std::map<long, std::vector<GE2DPoint> >::iterator it = thePoints.begin(); it != thePoints.end(); ++it) {
             EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)it->first));
             if (theUnit == NULL || theUnit->mPlayer == thePlayer || theUnit->mPlayer->mPlayerID != 0
                 || theUnit->mResourceAmount <= 0 || theUnit->mUnitClass->mFamily == kUnitFamilyAnimal
@@ -825,7 +885,8 @@ void Choose(int inKind, OrderPlan& outPlan)
                 || !theWorker->CanGather(theUnit, theUnit->GetTileX(), theUnit->GetTileY(), false, false))
                 continue;
             outPlan.mTarget = it->first;
-            outPlan.mClick = it->second;
+            outPlan.mCandidates = ClickOrder(it->second);
+            outPlan.mClick = outPlan.mCandidates[0];
             if (theUnit->mUnitClass->GetIsTree())   // a tree first, else the first resource found
                 break;
         }
@@ -834,13 +895,14 @@ void Choose(int inKind, OrderPlan& outPlan)
             ScoutTarget(theWorker, outPlan);
         }
     } else if (inKind == kOrderRepair || inKind == kOrderRepairQueued) {
-        for (std::map<long, GE2DPoint>::iterator it = thePoints.begin(); it != thePoints.end(); ++it) {
+        for (std::map<long, std::vector<GE2DPoint> >::iterator it = thePoints.begin(); it != thePoints.end(); ++it) {
             EEComplexUnit* theUnit = OwnComplex(it->first);
             if (theUnit == NULL || theUnit->mPlayer != thePlayer || !theUnit->mUnitClass->IsLandBuilding()
                 || !theUnit->mIsBuilt || !IsLiving(theUnit) || theUnit->GetStats()->GetMaxHitPoints() < 2)
                 continue;
             outPlan.mTarget = it->first;
-            outPlan.mClick = it->second;
+            outPlan.mCandidates = ClickOrder(it->second);
+            outPlan.mClick = outPlan.mCandidates[0];
             if (theUnit->mHitPoints < theUnit->GetStats()->GetMaxHitPoints())   // a damaged one first
                 break;
         }
@@ -860,9 +922,12 @@ void Choose(int inKind, OrderPlan& outPlan)
                 continue;
             if (inKind == kOrderAttackGround && theFirst->DistanceSquared3D(theWorld) < theMin * theMin)
                 continue;
-            outPlan.mClick = theEmpty[k];
+            if (outPlan.mTarget < 0)
+                outPlan.mClick = theEmpty[k];
             outPlan.mTarget = 0;
-            break;
+            outPlan.mCandidates.push_back(theEmpty[k]);
+            if (outPlan.mCandidates.size() >= 16)
+                break;
         }
         if (outPlan.mTarget < 0)
             outPlan.mRefusal = "no-point";
@@ -870,9 +935,64 @@ void Choose(int inKind, OrderPlan& outPlan)
     }
 }
 
+bool SelectGroup(std::vector<long>& inUnits);
+
+// the camera's focus and its move's target both at tile (inX, inY)'s centre (EEACenterCamera's point)
+bool CameraAt(long inX, long inY)
+{
+    EECameraControl& theCamera = gWorld.mCameraControl;
+    GE3DPoint theFocus;
+    theCamera.GetLocation(theCamera.mFraction, theFocus);
+    float theX = (float)inX + 0.5f, theY = (float)inY + 0.5f;
+    return fabsf(theFocus.GetX() - theX) < 0.05f && fabsf(theFocus.GetY() - theY) < 0.05f
+        && fabsf(theCamera.GetEndFocus().GetX() - theX) < 0.05f && fabsf(theCamera.GetEndFocus().GetY() - theY) < 0.05f;
+}
+
+// the camera centred on tile (inX, inY) (EEACenterCamera, as the mini map's click does), then the plan chosen from the
+// new view (outPlan). The picker holds the units of the last frame drawn, so a scan right after the move reads the old
+// view or none: wait (at most 10 s each) for the camera to reach the tile, then for two scans 250 ms apart to agree
+// on the target and its point (the lead's run 2026-11-15, orders_b37.log: "scout-no-pick" after a fixed 1.5 s).
+void CentreAndChoose(int inKind, long inX, long inY, OrderPlan& outPlan)
+{
+    EEACenterCamera* theAction = new EEACenterCamera;   // posted outside the world's lock, as Post does
+    theAction->SetLocation(inX, inY);
+    theAction->Dereference();
+    bool theArrived = false;
+    for (int k = 0; k < 200 && !theArrived; k++) {
+        Wait(50);
+        gWorld.mLock->ReadLock();
+        theArrived = CameraAt(inX, inY);
+        gWorld.mLock->ReadUnlock();
+    }
+    OrderPlan theLast;
+    int theScans = 0;
+    for (; theScans < 40; theScans++) {
+        Wait(250);
+        OrderPlan thePlan;
+        gWorld.mLock->ReadLock();
+        Choose(inKind, thePlan);
+        gWorld.mLock->ReadUnlock();
+        bool theSame = theScans > 0 && thePlan.mTarget >= 0 && thePlan.mTarget == theLast.mTarget
+            && thePlan.mClick.GetX() == theLast.mClick.GetX() && thePlan.mClick.GetY() == theLast.mClick.GetY();
+        theLast = thePlan;
+        if (theSame)
+            break;
+    }
+    gWorld.mLock->ReadLock();
+    std::string theCamera = CameraText();
+    gWorld.mLock->ReadUnlock();
+    Diag("centred on %ld,%ld: arrived %d; %d scans; target %ld at %.0f,%.0f (%lu points); %s", inX, inY,
+         theArrived ? 1 : 0, theScans + 1, theLast.mTarget, theLast.mClick.GetX(), theLast.mClick.GetY(),
+         (unsigned long)theLast.mCandidates.size(), theCamera.c_str());
+    outPlan = theLast;
+}
+
 // gather with no resource in view: the group selected and sent (EEMPathTo, as a UI action) to the nearest resource
-// ScoutTarget found, until the player sees its tile (at most 60 s); then the camera centred on it (EEACenterCamera,
-// as the mini map's click does) and the plan chosen again from the new view (ioPlan: the new plan, or "no-target")
+// ScoutTarget found, until the player sees its tile (at most 60 s); then the group halted (EEMStopActiveGroup, the Stop
+// button's message) where it stands, and the camera centred on the resource and the plan chosen again from the new
+// view (ioPlan: the new plan, or "no-target"). The halt: a group still walking onto the resource's tile stood in front
+// of it when the scan and the click came, and the picker gave the nearer citizen (no target found, "scout-no-pick", or
+// a click on a citizen of the group, a move instead of the gather: "no-message")
 void Scout(int inKind, OrderPlan& ioPlan)
 {
     {
@@ -882,11 +1002,12 @@ void Scout(int inKind, OrderPlan& ioPlan)
     long theScout = ioPlan.mScout;
     long theX = ioPlan.mScoutX, theY = ioPlan.mScoutY;
     long theWorkerID = ioPlan.mUnits[0];
-    Post(new EEMRecord(kMessageSelectTheseUnits, {ioPlan.mUnits}));
+    std::vector<long> theUnits = ioPlan.mUnits;
+    Post(new EEMRecord(kMessageSelectTheseUnits, {theUnits}));
     bool theSelected = false;
     for (int k = 0; k < 40 && !theSelected; k++) {
         Wait(150);
-        theSelected = Selected(ioPlan.mUnits);
+        theSelected = Selected(theUnits);
     }
     if (theSelected)
         Post(new EEMRecord(kMessagePathTo, {0.0f, (float)theX + 0.5f, (float)theY + 0.5f, false, true, false, false}));
@@ -903,14 +1024,29 @@ void Scout(int inKind, OrderPlan& ioPlan)
     }
     OrderPlan thePlan;
     if (theSeen) {
-        EEACenterCamera* theAction = new EEACenterCamera;   // posted outside the world's lock, as Post does
-        theAction->SetLocation(theX, theY);
-        theAction->Dereference();
-        Wait(1500);   // frames drawn from the new view fill the picker
+        bool theHalted = SelectGroup(theUnits);
+        if (theHalted)
+            Post(new EEMRecord(kMessageStopActiveGroup));
+        bool theIdle = false;
+        for (int k = 0; theHalted && k < 100 && !theIdle; k++) {   // at most 10 s
+            Wait(100);
+            gWorld.mLock->ReadLock();
+            theIdle = true;
+            for (size_t i = 0; i < theUnits.size(); i++) {
+                EEComplexUnit* theUnit = OwnComplex(theUnits[i]);
+                theIdle = theIdle && (theUnit == NULL || theUnit->mGoalState == NULL);
+            }
+            gWorld.mLock->ReadUnlock();
+        }
         gWorld.mLock->ReadLock();
-        Choose(inKind, thePlan);
+        EEComplexUnit* theWorker = OwnComplex(theWorkerID);
+        long theWX = theWorker ? theWorker->GetTileX() : -1, theWY = theWorker ? theWorker->GetTileY() : -1;
         gWorld.mLock->ReadUnlock();
-    }
+        Diag("scout %ld at %ld,%ld seen: halted %d idle %d, the worker at %ld,%ld", theScout, theX, theY,
+             theHalted ? 1 : 0, theIdle ? 1 : 0, theWX, theWY);
+        CentreAndChoose(inKind, theX, theY, thePlan);
+    } else
+        Diag("scout %ld at %ld,%ld: selected %d, not seen", theScout, theX, theY, theSelected ? 1 : 0);
     if (!theSelected)
         thePlan.mRefusal = "not-selected";
     else if (!theSeen)
@@ -924,23 +1060,16 @@ void Scout(int inKind, OrderPlan& ioPlan)
 }
 
 // repair with none of the player's buildings in view (the lead's run 2026-11-12, orders_b10.log: right after a gather
-// that scouted, the camera was away from the town): the camera centred on the building HomeBuilding found
-// (EEACenterCamera, as the mini map's click does) and the plan chosen again from the new view (ioPlan: the new plan,
-// or "home-no-pick")
+// that scouted, the camera was away from the town): the camera centred on the building HomeBuilding found and the
+// plan chosen again from the new view (CentreAndChoose; ioPlan: the new plan, or "home-no-pick")
 void Home(int inKind, OrderPlan& ioPlan)
 {
     {
         std::lock_guard<std::mutex> theLock(sOrderMutex);
         sOrder.mNote = "home";
     }
-    EEACenterCamera* theAction = new EEACenterCamera;   // posted outside the world's lock, as Post does
-    theAction->SetLocation(ioPlan.mHomeX, ioPlan.mHomeY);
-    theAction->Dereference();
-    Wait(1500);   // frames drawn from the new view fill the picker
     OrderPlan thePlan;
-    gWorld.mLock->ReadLock();
-    Choose(inKind, thePlan);
-    gWorld.mLock->ReadUnlock();
+    CentreAndChoose(inKind, ioPlan.mHomeX, ioPlan.mHomeY, thePlan);
     if (thePlan.mTarget < 0)
         thePlan.mRefusal = "home-no-pick";     // not a skip: the driver fails the step with this note
     thePlan.mHome = -1;
@@ -963,10 +1092,127 @@ bool SelectGroup(std::vector<long>& inUnits)
     return false;
 }
 
-// the order's input (the click on the plan's point, or the status button inButton, then the ground point) and the
-// wait for its message's verdict (at most 10 s) -> the phase then (2: no message executed)
-int SendOrder(int inKind, const OrderPlan& inPlan, const GE2DPoint& inButton)
+// a UI action that counts its runs (UIRoundTrip)
+std::atomic<unsigned long> sMarks(0);
+class OrderMarkAction : public EEAction {
+public:
+    virtual void Virtual4() { sMarks++; }
+    virtual void Virtual8() {}
+};
+
+// one marker action posted and run by the UI thread -> false when it did not run within 5 s
+bool UIRoundTrip()
 {
+    unsigned long theBefore = sMarks.load();
+    OrderMarkAction* theAction = new OrderMarkAction;
+    gUserInterface->PostAction(theAction);
+    theAction->Dereference();
+    for (int k = 0; k < 100; k++) {
+        if (sMarks.load() != theBefore)
+            return true;
+        Wait(50);
+    }
+    return false;
+}
+
+// the index of the game form's control under the pointer (the form's own hit test, as the UI thread last ran it): -1
+// (no control: the hit test passes over the view, the run of 2026-11-15) or kMainGameSelectUnits (while it holds the
+// mouse) for the game view; any other index is a panel of the HUD laid over the view
+long PointerOverView()
+{
+    gUIManager->LockUIForCopyData();
+    UIForm* theForm = gUIManager->GetCurrentForm();
+    UIControl* theOver = theForm != NULL ? theForm->GetMouseOverControl() : NULL;
+    long theIndex = theOver != NULL ? (long)theOver->GetIndex() : -1L;
+    gUIManager->UnlockUIForCopyData();
+    return theIndex;
+}
+
+// the click point checked just before the click (the order's own thread, no lock held): the pointer there taken by
+// the UI (two UI round trips), the game view under it (not the HUD's panels, which overlap the view's bottom: a right
+// click on the unit panel gave no message, the run of 2026-11-15 at 48,733), and the
+// picker giving the target there (no unit at all for a move or the ground). The plan's candidates are tried best
+// first, then the target's points from a new scan (units walk in front of it: the lead's run 2026-11-11,
+// orders_b8.log, "no-message" for a repair queued on the town centre the first repair's citizens walked to), three
+// rounds at most -> true and ioPlan.mClick the point; false: ioPlan unchanged
+bool VerifyClick(int inKind, OrderPlan& ioPlan)
+{
+    bool theTargeted = inKind == kOrderGather || inKind == kOrderRepair || inKind == kOrderRepairQueued;
+    std::vector<GE2DPoint> theCandidates = ioPlan.mCandidates;
+    int theTried = 0;
+    for (int theRound = 0; theRound < 3; theRound++) {
+        if (theRound > 0) {
+            Wait(500);
+            if (theTargeted) {
+                std::map<long, std::vector<GE2DPoint> > thePoints;
+                std::vector<GE2DPoint> theEmpty;
+                gWorld.mLock->ReadLock();
+                Scan(1, thePoints, theEmpty);
+                gWorld.mLock->ReadUnlock();
+                theCandidates = thePoints.count(ioPlan.mTarget) ? ClickOrder(thePoints[ioPlan.mTarget])
+                                                                 : std::vector<GE2DPoint>();
+            } else {
+                OrderPlan theFresh;
+                gWorld.mLock->ReadLock();
+                Choose(inKind, theFresh);
+                gWorld.mLock->ReadUnlock();
+                theCandidates = theFresh.mCandidates;
+            }
+        }
+        for (size_t i = 0; i < theCandidates.size() && i < 8; i++) {
+            const GE2DPoint& thePoint = theCandidates[i];
+            theTried++;
+            Pointer(thePoint.GetX(), thePoint.GetY());
+            bool theTrip = UIRoundTrip() && UIRoundTrip();
+            long theOver = PointerOverView();
+            gWorld.mLock->ReadLock();
+            EEUnit* thePicked = gUnitPicker.PickUnitUnreferenced(thePoint, theTargeted ? 1 : 0);
+            bool theGood = theTargeted ? IDOf(thePicked) == ioPlan.mTarget
+                                       : thePicked == NULL && gUnitPicker.PickUnitUnreferenced(thePoint, 1) == NULL;
+            gWorld.mLock->ReadUnlock();
+            if ((theOver != -1 && theOver != kMainGameSelectUnits) || !theGood) {
+                if (i == 0)
+                    Diag("click kind %d: %.0f,%.0f refused: UI round trip %d, control %ld under the pointer, picks %ld",
+                         inKind, thePoint.GetX(), thePoint.GetY(), theTrip ? 1 : 0, theOver, IDOf(thePicked));
+                continue;
+            }
+            if (theTried > 1)
+                Diag("click kind %d: point %.0f,%.0f after %d tried (the first was %.0f,%.0f)", inKind, thePoint.GetX(),
+                     thePoint.GetY(), theTried, ioPlan.mClick.GetX(), ioPlan.mClick.GetY());
+            ioPlan.mClick = thePoint;
+            return true;
+        }
+    }
+    Diag("click kind %d: no point verified (%d tried); target %ld at %.0f,%.0f", inKind, theTried, ioPlan.mTarget,
+         ioPlan.mClick.GetX(), ioPlan.mClick.GetY());
+    return false;
+}
+
+// the order's input (the click on the plan's point, verified first: VerifyClick; or the status button inButton, then
+// the ground point) and the wait for its message's verdict (at most 10 s) -> the phase then (2: no message executed)
+int SendOrder(int inKind, OrderPlan& ioPlan, const GE2DPoint& inButton)
+{
+    if (inKind != kOrderPatrol && !VerifyClick(inKind, ioPlan) && ioPlan.mTarget > 0) {
+        // no point of the target outside the HUD (the run of 2026-11-15: the town centre under the mini map, control
+        // 26): the camera centred on it, as the retry does, and the plan's point chosen there
+        long theX = -10000, theY = -10000;
+        gWorld.mLock->ReadLock();
+        EEUnit* theTarget = static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)ioPlan.mTarget));
+        if (theTarget != NULL) {
+            theX = theTarget->GetTileX();
+            theY = theTarget->GetTileY();
+        }
+        gWorld.mLock->ReadUnlock();
+        OrderPlan thePlan;
+        if (theX != -10000)
+            CentreAndChoose(inKind, theX, theY, thePlan);
+        if (thePlan.mTarget == ioPlan.mTarget) {
+            ioPlan.mClick = thePlan.mClick;
+            ioPlan.mCandidates = thePlan.mCandidates;
+            VerifyClick(inKind, ioPlan);
+        }
+    }
+    const OrderPlan& inPlan = ioPlan;
     switch (inKind) {
     case kOrderGather:
     case kOrderRepair:
@@ -991,6 +1237,13 @@ int SendOrder(int inKind, const OrderPlan& inPlan, const GE2DPoint& inButton)
         std::lock_guard<std::mutex> theLock(sOrderMutex);
         thePhase = sOrder.mPhase;
     }
+    std::string theOthers;
+    {
+        std::lock_guard<std::mutex> theLock(sOrderMutex);
+        theOthers = sOrder.mOthers;
+    }
+    Diag("click kind %d: phase %d; the local player's other messages meanwhile:%s", inKind, thePhase,
+         theOthers.empty() ? " none" : theOthers.c_str());
     return thePhase;
 }
 
@@ -1014,16 +1267,18 @@ const char* RetryPlan(int inKind, OrderPlan& ioPlan, GE2DPoint& outButton)
         }
         gWorld.mLock->ReadUnlock();
     }
-    if (theX != -10000) {
-        EEACenterCamera* theAction = new EEACenterCamera;   // posted outside the world's lock, as Post does
-        theAction->SetLocation(theX, theY);
-        theAction->Dereference();
-    }
-    Wait(1500);   // frames drawn from the new view fill the picker
     OrderPlan thePlan;
-    gWorld.mLock->ReadLock();
-    Choose(inKind, thePlan);
-    gWorld.mLock->ReadUnlock();
+    if (theX != -10000)
+        CentreAndChoose(inKind, theX, theY, thePlan);
+    else {
+        Wait(1500);   // frames drawn from the new view fill the picker
+        gWorld.mLock->ReadLock();
+        Choose(inKind, thePlan);
+        gWorld.mLock->ReadUnlock();
+    }
+    Diag("retry kind %d: target was %ld at %ld,%ld; new target %ld at %.0f,%.0f refusal %s", inKind, ioPlan.mTarget,
+         theX, theY, thePlan.mTarget, thePlan.mClick.GetX(), thePlan.mClick.GetY(),
+         thePlan.mRefusal ? thePlan.mRefusal : "-");
     if (thePlan.mRefusal != NULL)
         return "retry-no-pick";
     if (thePlan.mDamage >= 0 && thePlan.mDamage != ioPlan.mDamage) {   // TEST ONLY, as OrderRun's first damage
@@ -1050,7 +1305,11 @@ void OrderRun(unsigned long inSeq, int inKind)
     OrderPlan thePlan;
     gWorld.mLock->ReadLock();
     Choose(inKind, thePlan);
+    std::string theCamera = CameraText();
     gWorld.mLock->ReadUnlock();
+    Diag("plan kind %d: units %lu target %ld at %.0f,%.0f scout %ld home %ld refusal %s; %s", inKind,
+         (unsigned long)thePlan.mUnits.size(), thePlan.mTarget, thePlan.mClick.GetX(), thePlan.mClick.GetY(),
+         thePlan.mScout, thePlan.mHome, thePlan.mRefusal ? thePlan.mRefusal : "-", theCamera.c_str());
     if (inKind == kOrderGather && thePlan.mTarget < 0 && thePlan.mScout >= 0)
         Scout(inKind, thePlan);
     if ((inKind == kOrderRepair || inKind == kOrderRepairQueued) && thePlan.mTarget < 0 && thePlan.mHome >= 0)

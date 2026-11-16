@@ -62,7 +62,6 @@
 #include "lle/UIFileComboBox.h"
 #include "lle/UIFileListBox.h"
 #include "lle/UIGraph.h"
-#include "lle/UILineGraph.h"
 #include "lle/UIMovie.h"
 #include "lle/UIRadioButton.h"
 #include "lle/UIScalableButton.h"
@@ -109,7 +108,7 @@ struct UIControlsTableHost {
         case EeUiTableKind::EditBox:
             return new UIEditBox(m.id, theFont, m.max_chars, m.flag_a, r, theForm, m.index, m.border, m.flag_b, m.flag_c);
         case EeUiTableKind::FileListBox: return new UIFileListBox(m.id, theFont, false, r, theForm, m.index, m.border);
-        case EeUiTableKind::LineGraph: return new UILineGraph(m.id, r, theForm, m.index, m.border);
+        case EeUiTableKind::LineGraph: return new UIGraph(m.id, r, theForm, m.index, m.border);
         case EeUiTableKind::ListBox:
             return new UILBString(m.id, *theStrings, theFont, m.flag_a, r, theForm, m.index, m.border);
         case EeUiTableKind::RadioButton:

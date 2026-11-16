@@ -10,6 +10,7 @@
 //! manager's list. Every component read and move is an op on the component given as an argument (the host's own
 //! component is never read), so a layout object needs no live C++ object of its own except for its references.
 
+use crate::compmem as mem;
 use std::cell::{Cell, RefCell};
 use std::ffi::c_void;
 
@@ -108,16 +109,16 @@ impl EeWonLayout {
         }
     }
     fn left(&self, c: isize) -> i32 {
-        self.op(Op::ChildLeft, c, 0, 0) as i32
+        mem::left(c)
     }
     fn top(&self, c: isize) -> i32 {
-        self.op(Op::ChildTop, c, 0, 0) as i32
+        mem::top(c)
     }
     fn width(&self, c: isize) -> i32 {
-        self.op(Op::ChildWidth, c, 0, 0) as i32
+        mem::width(c)
     }
     fn height(&self, c: isize) -> i32 {
-        self.op(Op::ChildHeight, c, 0, 0) as i32
+        mem::height(c)
     }
     fn bounds(&self, c: isize) -> EeWonRect {
         EeWonRect::new(self.left(c), self.top(c), self.width(c), self.height(c))
@@ -189,7 +190,7 @@ impl EeWonLayout {
             width: self.ints[3],
             height: self.ints[4],
         };
-        let ref_is_parent = reference == self.op(Op::LayParentOf, child, 0, 0);
+        let ref_is_parent = reference == mem::parent(child);
         self.set_pos_size(child, guilayout::child_layout(c, r, ref_is_parent, l));
     }
 

@@ -191,6 +191,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ee_app"
+version = "0.1.0"
+dependencies = [
+ "ee_ge",
+ "ee_gfx",
+ "ee_plat_core",
+ "ee_random",
+]
+
+[[package]]
 name = "ee_astar"
 version = "0.1.0"
 dependencies = [
@@ -257,6 +267,7 @@ version = "0.1.0"
 dependencies = [
  "ee_plat_core",
  "ee_random",
+ "ee_ustring",
 ]
 
 [[package]]
@@ -362,14 +373,18 @@ version = "0.1.0"
 dependencies = [
  "ee_ge",
  "ee_random",
+ "ee_ustring",
+ "ee_util",
 ]
 
 [[package]]
 name = "ee_rmap_gatelib"
 version = "0.1.0"
 dependencies = [
+ "ee_fs",
  "ee_ge",
  "ee_rmap",
+ "ee_ts",
 ]
 
 [[package]]
@@ -377,6 +392,7 @@ name = "ee_rust"
 version = "0.1.0"
 dependencies = [
  "ee_ai",
+ "ee_app",
  "ee_astar",
  "ee_codec",
  "ee_combat",
@@ -431,6 +447,9 @@ dependencies = [
  "ee_plat_core",
  "ee_random",
  "ee_scenario",
+ "ee_sound",
+ "ee_ui",
+ "ee_util",
 ]
 
 [[package]]
@@ -473,6 +492,7 @@ version = "0.1.0"
 dependencies = [
  "ee_ge",
  "ee_plat_core",
+ "ee_util",
 ]
 
 [[package]]
@@ -504,8 +524,10 @@ dependencies = [
 name = "ee_won"
 version = "0.1.0"
 dependencies = [
+ "ee_openformats",
  "ee_plat_core",
  "ee_plat_sys",
+ "ee_plat_ui",
 ]
 
 [[package]]

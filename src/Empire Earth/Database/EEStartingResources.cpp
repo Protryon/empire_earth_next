@@ -11,28 +11,13 @@
 #include "lle/FSFileSpec.h"
 
 #include "ee/EEStartingResources.h"
-
-// One record of db\dbStartingResources.dat (0x84 bytes, read whole). Inferred layout.
-struct EEStartingResourcesRecord {
-    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
-    int32_t mIndex;                         // +0x68 (negative: skipped)
-    int32_t mNameID;                        // +0x6c -> +0x18
-    int32_t mFood;                          // +0x70 -> +0x04
-    int32_t mWood;                          // +0x74 -> +0x08
-    int32_t mStone;                         // +0x78 -> +0x0c
-    int32_t mGold;                          // +0x7c -> +0x10
-    int32_t mIron;                          // +0x80 -> +0x14
-};
-static_assert(sizeof(EEStartingResourcesRecord) == 132, "on-disk record: 132 bytes on every target");
+#include "ee/EEDbRecords.h"
 
 std::vector<EEStartingResources*> EEStartingResources::sTable;
 
 // Creates a starting-resources preset with every amount zero
-EEStartingResources::EEStartingResources()
+EEStartingResources::EEStartingResources() : EeDataStartingResourcesFields()
 {
-    for (long i = 0; i < 5; i++)
-        this->mAmounts[i] = 0;
 }
 
 // Destroys the starting-resources preset (nothing to release)
@@ -40,36 +25,19 @@ EEStartingResources::~EEStartingResources()
 {
 }
 
-// Loads the starting-resource presets (food, wood, stone, gold, iron, name) from db\dbStartingResources.dat; returns
-// the last read status
+// Loads the starting-resource presets (food, wood, stone, gold, iron, name) from db\dbStartingResources.dat (the
+// record and its copy: ee_data tables.rs); rows with a negative index are skipped. Returns the last read status
 long EEStartingResources::Load(FSFileSpec* inFile)
 {
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    EEStartingResourcesRecord theRecord;
-    inFile->Open(kFileAccessRead);
-    long theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
-        for (unsigned long i = 0; i < theCount; i++) {
-            EEStartingResources* theResources;
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-            if (theRecord.mIndex >= 0) {
-                theResources = new EEStartingResources;
-                theResources->mAmounts[1] = theRecord.mWood;
-                theResources->mAmounts[0] = theRecord.mFood;
-                theResources->mAmounts[2] = theRecord.mStone;
-                theResources->mAmounts[4] = theRecord.mIron;
-                theResources->mAmounts[3] = theRecord.mGold;
-                theResources->mNameID = theRecord.mNameID;
-            } else {
-                theResources = NULL;
-            }
-            if (theResources != NULL)
+    return EEDbReadRecords(inFile, ee_data_starting_resources_record_size(), [](unsigned long) { return true; },
+        [](unsigned long, const unsigned char* inRecord) {
+            EeDataStartingResourcesFields theFields;
+            if (ee_data_starting_resources_from_record(inRecord, &theFields)) {
+                EEStartingResources* theResources = new EEStartingResources;
+                *static_cast<EeDataStartingResourcesFields*>(theResources) = theFields;
                 EEStartingResources::sTable.push_back(theResources);
-        }
-    }
-    inFile->Close();
-    return theResult;
+            }
+        });
 }
 
 // Destroys every starting-resources preset and empties the table

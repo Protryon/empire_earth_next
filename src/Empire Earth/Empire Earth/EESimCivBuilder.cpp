@@ -97,7 +97,7 @@
 #include "ee/EECBUIListBox.h"
 #include "ee/EECivilizationBuilder.h"
 #include "rust/ee_screens.h"   // the edited civilization's TEST ONLY queries
-#include "ee/EEAResetAllPlayerInfo.h"
+#include "ee/EEARust.h"
 #include "ee/EESimEditor.h"
 
 namespace {

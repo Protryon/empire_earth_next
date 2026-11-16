@@ -8,55 +8,21 @@
 // EESEAPaintRust (ee/EESEAPaint.h): the original's EESEAPaintElevation.cpp 0x1a830a..0x1a86ff, EESEAPaintMoutains.cpp
 // 0x1a86ff..0x1a8d3e and EESEAPaintTerrain.cpp 0x1a8d3e..0x1a9112 (their deque and std::sort COMDATs with them).
 #include <windows.h>
-#include <mbstring.h>
-#include <stdio.h>
-#include <algorithm>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
-#include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/SESample.h"
-#include "lle/SESMInstanceNode.h"
-#include "lle/SESoundManager.h"
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
-#include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
 #include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
 #include "lle/GELine.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIEditBox.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GETransformation.h"
 #include "lle/GETerrainMesh.h"
-#include <vector>
-#include <deque>
 
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
@@ -64,56 +30,83 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEHumanPlayer.h"
-#include "ee/EEUnit.h"
-#include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEGraphics.h"
-#include "ee/RTSGraphics.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEUIMiniMap.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EEEnvironmentManager.h"
-#include "ee/EEGameOptions.h"
-#include "lle/UIButton.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapClass.h"
-#include "ee/EERandomMapGenerators.h"
-#include "lle/URandom.h"
-#include "ee/EEAreaUtilities.h"
-#include "ee/EESEAPaint.h"
-#include "ee/EESEAPaint.h"
-#include "ee/EEEffectManager.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEPaint.h"
-#include "ee/EEScenarioEditorIDs.h"
 #include "lle/UIRadioButton.h"
 #include "rust/ee_screens.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
 #include "lle/UIListBox.h"
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"
-#include "lle/UISlider.h"
-#include "lle/UIScrollBar.h"
-#include "lle/FSMemoryFile.h"
-#include "ee/EEAQuickSaveLoad.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EESEUITechListBox.h"
-#include "ee/EETileCoordinate.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
-#include "lle/GEOrientation.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEMouse.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEMessage.h"
 #include "ee/EEUnitPicker.h"
-#include "ee/EEAMouseClick.h"
-#include "lle/GERectangle.h"
 #include "ee/EESEARust.h"
+#include "lle/UICheckBox.h"
+#include "ee/EESETSBaseObject.h"
+#include "ee/EESETriggerScreen.h"
+#include "ee/EESETSObject.h"
+#include "ee/EEUICCommandUnits.h"
+#include "ee/EESEUICCommandUnits.h"
+
+// ------------------------------------------------------------------------------------------------ the classes' parts
+// The editor kinds' C++ (ee/EEARust.h): the trigger tab's click and lasso refresh the object screen after their
+// selection (EEARust's host op EE_SCREENS_GA_E_OBJECT_SELECTION); the load text's post from the load thread
+void EESEAObjectSelection()
+{
+    static_cast<EESETSObject*>(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))
+        ->UpdateSelection();
+}
+
+void EESEAChangeLoadText::Post(const UWideString& inText)
+{
+    this->mText = inText;
+    gUserInterface->PostAction(this);
+}
+
+// The editor's right-drag control (EESEUICCommandUnits.cpp 0x197261..0x197393, its overrides ee_screens
+// command_units.rs's editor path): its rotation action, and the rotation's and the deletion's ops
+EESEUICCommandUnits::EESEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex,
+                                         EEAMouseClick* inListener)
+    : EEUICCommandUnits(inForm, inId, inIndex, inListener)
+{
+    this->mEditor = true;
+    this->mRotateAction = new EESEARust(kSEARotate);
+}
+
+EESEUICCommandUnits::~EESEUICCommandUnits()
+{
+    this->mRotateAction->Dereference();
+}
+
+int64_t EESEUICCommandUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
+{
+    EEUnit* theUnit = reinterpret_cast<EEUnit*>(inA);
+    switch (inOp) {
+    case EE_SCREENS_CU_ROTATE: ee_screens_sew_rotate(this->mRotateAction->mAction, ioF[0]); return 0;
+    case EE_SCREENS_CU_PICK: return (int64_t)gUnitPicker.PickUnit(gMouse->mPosition, 0);
+    case EE_SCREENS_CU_DELETE: (new EESEARust(kSEADeleteUnit, NULL, theUnit->mUnitID))->Dereference(); return 0;
+    case EE_SCREENS_CU_UNIT_RELEASE: theUnit->Dereference(); return 0;
+    }
+    return EEUICCommandUnits::RustOp(inOp, inA, inB, ioF);
+}
 
 // ------------------------------------------------------------------------------------------------ the host
 // The paint actions' world-edit host (ee_screens editor_actions.rs: EE_SCREENS_SEA_*): the terrain, elevation and

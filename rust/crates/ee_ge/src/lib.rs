@@ -32,6 +32,7 @@
 pub mod bbox;
 pub mod bitmap;
 pub mod bmpobj;
+pub mod cppobj;
 pub mod fbobj;
 pub mod ffi;
 pub mod font;
@@ -95,5 +96,6 @@ pub mod um;
 pub mod values;
 /// cbindgen:ignore
 pub mod vector;
+pub mod vertarr;
 pub mod viewport;
 pub mod visible_ffi;

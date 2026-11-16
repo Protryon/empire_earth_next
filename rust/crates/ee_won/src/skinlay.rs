@@ -11,6 +11,7 @@
 //! and the few other calls the originals made. Each layout makes the original's calls in its order; ints wrap as
 //! the original's did (-fwrapv).
 
+use crate::compmem as mem;
 use std::ffi::c_void;
 
 use crate::guihost::{EeWonGuiHostFn, EeWonGuiOp as Op};
@@ -92,16 +93,9 @@ pub enum EeWonSkinLay {
     Field,
     /// `mHeaderHeight = b`.
     SetHeaderHeight,
-    /// `((Component*)b)->Width()`.
-    Width,
-    Height,
-    Left,
-    Top,
-    Right,
-    /// `IsVisible()` (0 or 1).
-    Visible,
-    /// `((Component*)b)->SetPosSize(r[0], r[1], r[2], r[3])` with `r` the four ints at `c`.
-    SetPosSize,
+    /// `((Component*)b)->SetPosSize(r[0], r[1], r[2], r[3])` with `r` the four ints at `c` (the bounds and
+    /// visibility the layouts read are compmem's block).
+    SetPosSize = 10,
     /// `((Component*)b)->GetDesiredSize(wh[0], wh[1])` with `wh` the two ints at `c`.
     DesiredSize,
     /// `((InputBox*)b)->SetLeftPad(c)`.
@@ -147,13 +141,13 @@ impl Host {
         self.op(w, c, 0, 0) as i32
     }
     fn width(&self, c: isize) -> i32 {
-        self.get(EeWonSkinLay::Width, c)
+        mem::width(c)
     }
     fn height(&self, c: isize) -> i32 {
-        self.get(EeWonSkinLay::Height, c)
+        mem::height(c)
     }
     fn visible(&self, c: isize) -> bool {
-        self.get(EeWonSkinLay::Visible, c) != 0
+        mem::is_visible(c)
     }
     fn place(&self, c: isize, x: i32, y: i32, w: i32, h: i32) {
         let r = [x, y, w, h];
@@ -199,7 +193,7 @@ fn combo(h: &Host, won: bool) {
         return;
     }
     if h.field(EeWonSkinField::ButtonInFrame) != 0 {
-        h.place(button, h.get(EeWonSkinLay::Right, edit), top, button_w, button_h);
+        h.place(button, mem::left(edit).wrapping_add(mem::width(edit)), top, button_w, button_h);
     } else {
         h.place(button, h.width(me).wrapping_sub(button_w), 0, button_w, h.height(me));
     }
@@ -253,8 +247,8 @@ fn list_header(h: &Host) {
     let header_h = h.field(EeWonSkinField::HeaderHeight);
     h.place(
         h.part(EeWonSkinPart::Header),
-        h.get(EeWonSkinLay::Left, area),
-        h.get(EeWonSkinLay::Top, area).wrapping_sub(header_h),
+        mem::left(area),
+        mem::top(area).wrapping_sub(header_h),
         h.width(area),
         header_h,
     );

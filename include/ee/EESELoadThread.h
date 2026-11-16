@@ -3,10 +3,12 @@
 // member names mThread/mThreadCreated/mThreadDone/mMessageQueueDone, the parameter inThreadPriority and
 // EESELoadThread::Main come from the ctor's ESVERIFY texts; everything else is named by offset (provisional name).
 // The editor holds it at EEUIFScenarioEditor +0x200. Posted messages 0x401..0x40c go to HandleMessage (0x17285c).
-// Requires lle/TSThread.h, lle/TSEvent.h, lle/TSScheduler.h, ee/EESEAChangeLoadText.h.
+// Requires lle/TSThread.h, lle/TSEvent.h, lle/TSScheduler.h (its EESEAChangeLoadText: ee/EEARust.h).
 #ifndef EE_EESELOADTHREAD_H
 #define EE_EESELOADTHREAD_H
 #include "ee/EEScenarioEditorIDs.h"
+
+class EESEAChangeLoadText;
 
 // 0x52a230 "ScenEdit" (its $E chain 0x13f0ec sits in another unit): the thread's name (provisional name)
 extern UString gScenarioEditorThreadName;

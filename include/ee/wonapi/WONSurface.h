@@ -52,6 +52,7 @@ protected:
 	virtual ~SurfaceBase() { ee_won_surface_free(this->mRust); }
 
 public:
+	EeWonSurface* GetRust() { return this->mRust; }
 	void CopySurface(SurfaceBase *theSurface, int x, int y, int left, int top, int width, int height)
 	{ ee_won_surface_copy(this->mRust,theSurface->mRust,NULL,x,y,left,top,width,height); }
 	void CopySurface(SurfaceBase *theSurface, const char *theMaskData, int x, int y, int left, int top, int width, int height)

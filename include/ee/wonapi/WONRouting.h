@@ -5,6 +5,10 @@
 #ifndef EE_WONAPI_WONROUTING_H
 #define EE_WONAPI_WONROUTING_H
 
+#include "ee/wonapi/WONStatus.h"
+#include <time.h>
+#include <stdlib.h>
+#include <vector>
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONElGamal.h"
 #include "ee/wonapi/WONBlowfish.h"
@@ -149,13 +153,7 @@ inline void AsyncOp::SetContainer(AsyncOpContainer* inContainer)
 }
 
 class SocketOp;
-class MsgTransform {
-public:
-    // Empty virtual dtor (WON SDK); the 32-byte deleting dtor 2ad880 stores the own vtable 44ca2c
-    virtual ~MsgTransform() {}
-    virtual WONStatus Send(ByteBufferPtr&) { return 0; } //VT+4=2ad870, ret4
-    virtual WONStatus Recv(ByteBufferPtr&) { return 0; } //VT+8=2ad870, ret4
-};
+// (MsgTransform, 2ad880, and its one class, CryptTransform, are Rust's since net round 29: ee_won cppcore.rs)
 
 // WON SDK NetStats: static functions only. The counters are Rust's (rust/crates/ee_won/src/netstats.rs)
 class NetStats
@@ -242,7 +240,6 @@ public:
     bool IsConnected() { return ee_won_asyncsocket_is_connected(this->mSock); }
     // a copy taken under the lock (the original returned a reference to the member)
     IPAddr GetDestAddr() { return IPAddr::FromValue(ee_won_asyncsocket_dest_addr(this->mSock)); }
-    void AddMsgTransform(MsgTransform* inTransform) { ee_won_asyncsocket_add_transform(this->mSock, inTransform); } // owned
     void WaitForRead(unsigned long);
     void ClosePrv() { ee_won_asyncsocket_close_handle(this->mSock); } // a hard close if it would block
     // Winsock's numbering; would-block and in-progress are WS_TimedOut, any other recorded
@@ -785,6 +782,7 @@ public:
     void KillAll() { ee_won_http_session_kill_all(this->mImpl); } //2d2bc0: every connection's requests killed
     int GetNumOps() { return ee_won_http_session_num_ops(this->mImpl); }
     PlatMutex* GetLock() const { return this->mDataCrit.mCrit; }
+    EeWonHttpSession* GetSessionObject() const { return this->mImpl; }
 private:
     CriticalSection mDataCrit;              //08..20
     EeWonHttpSession* mImpl;                //20..2c, owned
@@ -1009,31 +1007,77 @@ typedef std::map<std::wstring,DirEntityList> DirEntityMap;
 typedef std::set<IPAddr> AddrSet;
 // A shim over ee_won's server list (rust/crates/ee_won/src/servctx.rs: the addresses, their order, the one-time
 // shuffle and the lock); the original's 0x3c-byte layout is gone
+// a shim over ee_won's server list (servctx.rs: the addresses, their order, the one-time shuffle and the lock);
+// header-only since net round 27 (ServerContext.cpp deleted): it converts IPAddr values and walks the entities
 class ServerContext : public RefCount {
 public:
     EeWonServerList* GetListObject() const { return this->mList; }
-    ServerContext();
-    virtual ~ServerContext();
-    bool AddAddress(const IPAddr& inAddress); //2ac4b0, AL = success
-    void Clear(); //2ac390
-    void NotifyFailed(const IPAddr&); //2ac980
-    bool AddAddressesFromDir(const DirEntityList&,const wchar_t* inNameFilter=NULL); //2acab0/332
-    void RemoveAllAddresses(); //2acc00, SDK name, 5-byte body
-    unsigned long GetNumAddresses();
+    ServerContext() : mList(ee_won_ctx_new()) {}
+    virtual ~ServerContext() { ee_won_ctx_free(this->mList); }
+    // a valid address not yet in the list appended; whether it was
+    bool AddAddress(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); return ee_won_ctx_add(this->mList, &a); } //2ac4b0
+    void Clear() { ee_won_ctx_clear(this->mList); } //2ac390: the one-time shuffle re-enabled
+    // a server that failed to the end of the list
+    void NotifyFailed(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); ee_won_ctx_notify_failed(this->mList, &a); } //2ac980
+    // the directory's services' addresses (only those of the name when one is given)
+    bool AddAddressesFromDir(const DirEntityList& inDir, const wchar_t* inNameFilter=NULL) //2acab0/332
+    {
+        std::vector<IPAddr> anAddrs = DirAddresses(inDir, inNameFilter);
+        bool added = false;
+        for (size_t i = 0; i < anAddrs.size(); i++) if (this->AddAddress(anAddrs[i])) added = true;
+        return added;
+    }
+    void RemoveAllAddresses() { this->Clear(); } //2acc00
+    unsigned long GetNumAddresses() { return (unsigned long)ee_won_ctx_len(this->mList); }
     typedef std::list<IPAddr> AddrList;
-    void CopyAddresses(AddrList&); //2ac6d0, 685 bytes
-    bool RemoveAddress(const IPAddr&);
-    void CopyAddresses(AddrSet&);
-    bool AddAddressesFromDir(const DirEntityMap&,const std::wstring&,const wchar_t* inNameFilter=NULL);
-    bool AtomicClearAndAddAddressesFromDir(const DirEntityList&,const wchar_t* inNameFilter=NULL);
-    bool AtomicClearAndAddAddressesFromDir(const DirEntityMap&,const std::wstring&,const wchar_t* inNameFilter=NULL);
+    // shuffled the first time (the CRT's srand(time(NULL)) and rand, as random_shuffle drew)
+    void CopyAddresses(AddrList& outCopy) { outCopy.clear(); ee_won_ctx_copy(this->mList, Rand, ToList, &outCopy); } //2ac6d0
+    bool RemoveAddress(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); return ee_won_ctx_remove(this->mList, &a); }
+    void CopyAddresses(AddrSet& outCopy) { outCopy.clear(); ee_won_ctx_copy_sorted(this->mList, ToSet, &outCopy); }
+    bool AddAddressesFromDir(const DirEntityMap& inDir, const std::wstring& inPath, const wchar_t* inNameFilter=NULL)
+    {
+        DirEntityMap::const_iterator i = inDir.find(inPath);
+        return i != inDir.end() && this->AddAddressesFromDir(i->second, inNameFilter);
+    }
+    // cleared and refilled under the list's one lock
+    bool AtomicClearAndAddAddressesFromDir(const DirEntityList& inDir, const wchar_t* inNameFilter=NULL)
+    {
+        std::vector<IPAddr> anAddrs = DirAddresses(inDir, inNameFilter);
+        std::vector<EeWonAddr> aRaw;
+        for (size_t i = 0; i < anAddrs.size(); i++) aRaw.push_back(anAddrs[i].ToRaw());
+        return ee_won_ctx_replace(this->mList, aRaw.empty() ? NULL : &aRaw[0], aRaw.size());
+    }
+    bool AtomicClearAndAddAddressesFromDir(const DirEntityMap& inDir, const std::wstring& inPath, const wchar_t* inNameFilter=NULL)
+    {
+        DirEntityMap::const_iterator i = inDir.find(inPath);
+        if (i != inDir.end()) return this->AtomicClearAndAddAddressesFromDir(i->second, inNameFilter);
+        ee_won_ctx_replace(this->mList, NULL, 0); // the original cleared the list before looking the path up
+        return false;
+    }
     // the original's public mShuffleAddresses (copies shuffle once while it is on)
-    void SetShuffleAddresses(bool inShuffle);
-    bool GetShuffleAddresses();
+    void SetShuffleAddresses(bool inShuffle) { ee_won_ctx_set_shuffle(this->mList, inShuffle); }
+    bool GetShuffleAddresses() { return ee_won_ctx_shuffle(this->mList); }
 
 private:
     ServerContext(const ServerContext&);
     ServerContext& operator=(const ServerContext&);
+    static std::vector<IPAddr> DirAddresses(const DirEntityList& inDir, const wchar_t* inNameFilter)
+    {
+        std::wstring aFilter;
+        if (inNameFilter != NULL) aFilter = inNameFilter;
+        std::vector<IPAddr> anAddrs;
+        for (DirEntityList::const_iterator i = inDir.begin(); i != inDir.end(); ++i) {
+            DirEntity* e = i->get();
+            if (e->mType == 'D' || (!aFilter.empty() && !(aFilter == e->mName))) continue;
+            anAddrs.push_back(e->GetNetAddrAsIP());
+        }
+        return anAddrs;
+    }
+    static IPAddr FromRaw(const EeWonAddr* inRaw) { IPAddr a; a.FromRaw(*inRaw); return a; }
+    static void ToList(void* inList, const EeWonAddr* inRaw) { static_cast<AddrList*>(inList)->push_back(FromRaw(inRaw)); }
+    static void ToSet(void* inSet, const EeWonAddr* inRaw)
+    { AddrSet* s = static_cast<AddrSet*>(inSet); s->insert(s->end(), FromRaw(inRaw)); }
+    static int32_t Rand(bool inSeed) { if (inSeed) { srand((unsigned)time(NULL)); return 0; } return rand(); }
     EeWonServerList* mList;
 };
 
@@ -1091,9 +1135,9 @@ protected:
 
 // An op of the Rust op base (rust/crates/ee_won/src/hostop.rs): its members and steps are the Rust op's
 // (MultiPingOp: ee_won_multiping_new, FilePushOp: ee_won_filepush_new, FTPGetOp: ee_won_ftpget_new and _new_url;
-// the ops derived from ServerRequestOp: NewRequest over reqhost.rs); this class runs its hooks there and answers
-// its calls on the C++ objects (ServerOp.cpp's HostCall). Results and setters by number: ee_won_hostop_num,
-// ee_won_hostop_bytes, ee_won_hostop_set.
+// the ops derived from ServerRequestOp: NewRequest over reqhost.rs); this class runs its hooks there, and its calls
+// on the C++ objects are answered over the core table (hostcore.rs). Results and setters by number:
+// ee_won_hostop_num, ee_won_hostop_bytes, ee_won_hostop_set.
 class RustServerOp : public ServerOp {
 public:
     explicit RustServerOp(EeWonHostOp* inRustOp); // takes the op; its length field and time limits, no auth
@@ -1155,8 +1199,6 @@ public:
     virtual void RunHook();
     virtual void CleanupHook();
     virtual bool CallbackHook(AsyncOp* inOp, int inParam);
-    // the Rust op's calls (EeWonHostCall) that stay the C++ side's
-    static void HostCall(void* inOp, EeWonHostCall* inCall);
 protected:
     virtual ~RustServerOp();
 private:
@@ -1173,21 +1215,8 @@ inline void HTTPConnection::QueueOp(RustServerOp* inOp, int inId)
 inline void HTTPSession::AddOp(RustServerOp* inOp)
 { ee_won_http_session_add_op(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
 
-// AuthSession (0x10cc bytes in the original: type, length field size, id, sequence numbers, the by-value Blowfish
-// and the last use) is an ee_won handle (rust/crates/ee_won/src/hostauth.rs over peerauth.rs's session, round 22):
+// AuthSession (0x10cc bytes in the original) is an ee_won handle (hostauth.rs over peerauth.rs's session, round 22):
 // the peer auth op that makes it, the auth context's session cache and the sockets' transforms hold it.
-// CryptTransform: 8 bytes; new 8 at 2ad6d7, VT44ca1c, SDK CryptTransform.h. Holds a reference to the session handle
-// only; its Encrypt / Decrypt are Rust's.
-class CryptTransform : public MsgTransform {
-    void* mSession; //04, size08; an ee_won session handle (one reference)
-public:
-    explicit CryptTransform(void* inSession) : mSession(inSession) { ee_won_session_hold(inSession); } //inline
-    virtual ~CryptTransform() { ee_won_session_release(this->mSession); } //2ad8e0
-    virtual WONStatus Send(ByteBufferPtr& inMessage) { return this->Crypt(false, inMessage); } //2ad8b0
-    virtual WONStatus Recv(ByteBufferPtr& inMessage) { return this->Crypt(true, inMessage); } //2ad8a0
-private:
-    WONStatus Crypt(bool inDecrypt, ByteBufferPtr& ioMessage); // ServerOp.cpp
-};
 
 
 // The directory server's entity replies: the reading is ee_won's (dir.rs); a list of what it read as DirEntity
@@ -1262,12 +1291,14 @@ private:
     static void RunThreadFunc(void* inThread);     // the Rust thread's body (AsyncOp.cpp: the crash dump's SEH filter)
     static void DeleteThread(void* inThread);
 };
-// WON SDK static-only diagnostics API; no instance fields, bases, or virtual slots.
+// WON SDK static-only diagnostics API (ee_won debug.rs: the stack file and the crash dump; the trace is Rust's of
+// the calling thread, the filter's: theInfo is not read)
 class WONDebug {
 public:
-    static void SetStackFileName(const std::string &theName);
-    static const std::string& GetStackFileName();
-    static int DumpStackToFile(void *theInfo = NULL);
+    static void SetStackFileName(const std::string &theName)
+    { ee_won_debug_set_stack_file(reinterpret_cast<const uint8_t*>(theName.data()), theName.size()); }
+    static std::string GetStackFileName() { std::string s; ee_won_debug_stack_file(WonStringSink, &s); return s; }
+    static int DumpStackToFile(void* = NULL) { return ee_won_debug_dump_stack(); }
 };
 class Thread : public ThreadBase {
 public:
@@ -1276,13 +1307,13 @@ public:
 class DNSTestOp : public AsyncOp {
     friend class DNSTestThread;
 public:
-    DNSTestOp(const std::string& inHost);    //2d95a0
+    DNSTestOp(const std::string& inHost) { this->mHostString = inHost; } //2d95a0 (header-only since net round 27)
     // Accessor as in the SDK's DNSTestOp.h; the LAN family 3e28d0 reads
     // receiver+54 directly (no out-of-line helper).
     const IPAddr& GetHostAddr() { return this->mHostAddr; }
 protected:
-    virtual ~DNSTestOp();                   //2d9740 explicit/out of line
-    virtual void RunHook();                 //2d97f0 RunHook,slot04
+    virtual ~DNSTestOp() {}                 //2d9740
+    virtual void RunHook();                 //2d97f0: a self-deleting thread resolves the host
     std::string mHostString;                //44..54
     IPAddr mHostAddr;                       //54..7c
 };
@@ -1290,9 +1321,20 @@ typedef SmartPtr<DNSTestOp> DNSTestOpPtr;
 class DNSTestThread : public Thread {
 public:
     DNSTestThread(DNSTestOp* inOp) : mOp(inOp) {} //inline constructor 2d9826..985d
-    virtual void ThreadFunc(); //slot10 2d9920
+    // the op finished with success or the host-lookup failure status
+    virtual void ThreadFunc() //slot10 2d9920
+    {
+        this->mOp->mHostAddr.SetWithDefaultPort(this->mOp->mHostString, 0);
+        this->mOp->Finish(this->mOp->mHostAddr.IsValid() ? WS_Success : WS_InvalidAddress);
+    }
     DNSTestOpPtr mOp; //1c,owned; full20. Implicit dtor2d98b0 no ownvptr store.
 };
+inline void DNSTestOp::RunHook()
+{
+    DNSTestThread* aThread = new DNSTestThread(this);
+    aThread->SetAutoDelete(true);
+    aThread->Start();
+}
 
 
 // WONAPI's HTTP document request (sizeof 0xdc; implicit dtor 0x4cff46; ctor out of line in the base game,
@@ -1465,16 +1507,19 @@ private:
     EeWonServerConn* mConn;
 };
 
+// connects a server connection to an address, finishing with the connect's status (2abfc0; its run and completion
+// are Rust's: ee_won cppcore.rs ee_won_servconn_connect_op_run)
 class ServerConnectionConnectOp : public AsyncOp {
 public:
-    static void StaticConnectCompletion(AsyncOpPtr,SmartPtr<RefCount>); //2ac240
-    void ConnectCompletion(AsyncOp*); //2ac2d0
-    ServerConnectionConnectOp(ServerConnection*, const IPAddr&); //2abfc0/ret8
-    virtual void RunHook();   //2ac2f0 RunHook
-    virtual void CleanupHook(); //2ac380 CleanupHook
-    // Destructor stays implicit: ordinary2ac1a0 has NOown-vptr store.
+    ServerConnectionConnectOp(ServerConnection* inConnection, const IPAddr& inAddr) : mConnection(inConnection), mAddr(inAddr) {}
+    virtual void RunHook() //2ac2f0
+    {
+        ee_won_servconn_connect_op_run(static_cast<RefCount*>(this->mConnection.get()), static_cast<RefCount*>(this),
+                                       &this->mAddr, (uint32_t)this->GetTimeout());
+    }
+    virtual void CleanupHook() { this->mConnection->SetConnectCompletion(NULL); } //2ac380
     SmartPtr<ServerConnection> mConnection; //44
-    IPAddr mAddr; //48..6f, sizeof70, IPAddr 0x28
+    IPAddr mAddr; //48
 };
 
 // The op list, the completions and the reply dispatch are a Rust object since net round 16

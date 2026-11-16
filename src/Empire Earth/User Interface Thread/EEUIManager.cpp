@@ -5,10 +5,6 @@
 // StartScenarioEditor and the callback vectors' COMDATs. The factories have provisional names (by the forms they
 // serve); their case ids and classes come from emulating the original dispatch. Unit flags: the exe module set.
 #include <windows.h>
-#include <mbstring.h>
-#include <algorithm>
-#include <string>
-#include <list>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureManager.h"
@@ -93,9 +89,8 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 #include "ee/EEUICWonNetStatBox.h"
 #include "lle/UGraph.h"
 #include "lle/UIGraph.h"
-#include "lle/UILineGraph.h"
-#include "ee/EEUIPGSLineGraph.h"
 #include "ee/EEStringIDs.h"
+#include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
 // The host's record of one call of ee_screens ui_manager.rs (the manager, StartScenarioEditor's two names,
 // UpdateMouse's location)
 struct EEUIManagerCall {
@@ -271,10 +266,11 @@ UIControl* EEUIManager::CreateUserDefinedControl(UIControlsTable& inTable)
         theControl = new EEUICUnitIconBar(inTable, theRectangle, theForm);
         break;
     case kDbControlPGSLineGraph:
-        theControl = new EEUIPGSLineGraph(inTable.GetID(), theRectangle, theForm, inTable.GetFormIndex(),
-                                          inTable.GetBorderThickness());
-        static_cast<EEUIPGSLineGraph*>(theControl)->SetFont(inTable.GetFont());
-        static_cast<EEUIPGSLineGraph*>(theControl)->SetFontColor(inTable.GetTextForeground());
+        // the post-game summary's line graph (EEUIPGSLineGraph): its values formatted by ee_screens post_game.rs
+        theControl = new UIGraph(inTable.GetID(), theRectangle, theForm, inTable.GetFormIndex(),
+                                 inTable.GetBorderThickness(), EeUiGraphKind::PostGame, ee_screens_pgs_format);
+        static_cast<UIGraph*>(theControl)->SetFont(inTable.GetFont());
+        static_cast<UIGraph*>(theControl)->SetFontColor(inTable.GetTextForeground());
         break;
     case kDbControlPing:
         theControl = new EEUICPing(inTable.GetID(), theRectangle.GetTopLeft(), theForm, inTable.GetFormIndex());

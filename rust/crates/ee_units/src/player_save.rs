@@ -26,6 +26,8 @@
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 
+use crate::player::{load_list, save_list, EeUnitsQueued};
+
 /// `EEPlayer`'s saved numbers (their C++ names and types).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -180,6 +182,17 @@ pub const EE_UNITS_PLAYER_SAVE_OFFMAP_SAVE: i32 = 65;
 /// `mWonders->GetSize()` into `io.i`
 pub const EE_UNITS_PLAYER_SAVE_WONDER_COUNT: i32 = 66;
 pub const EE_UNITS_PLAYER_SAVE_WONDER_ID: i32 = 67;
+// `LoadUnit`'s and `SaveUnit`'s parts (load_unit, save_unit: their own context)
+/// whether unit type `io.i`'s class fits the saved kind (`io.b`: complex)
+pub const EE_UNITS_PLAYER_SAVE_UNIT_FITS: i32 = 68;
+/// a unit of class `io.i` made on the player off the map, loaded, killed when it was queued for delete
+pub const EE_UNITS_PLAYER_SAVE_UNIT_LOAD: i32 = 69;
+/// a stand-in unit (complex: `io.b`) loaded, its id kept, repaired, cleared and dropped
+pub const EE_UNITS_PLAYER_SAVE_UNIT_STANDIN: i32 = 70;
+/// the unit saved: its type into `io.i`, whether it is a path point into `io.b`; the result whether it is complex
+pub const EE_UNITS_PLAYER_SAVE_UNIT_KIND: i32 = 71;
+/// the unit's own `Save`
+pub const EE_UNITS_PLAYER_SAVE_UNIT_SAVE: i32 = 72;
 
 const OK: i32 = 0;
 
@@ -823,33 +836,132 @@ pub fn save<H: PlayerSaveHost + ?Sized>(h: &mut H, rec: Rec, major: u32, minor: 
     result
 }
 
+/// `EEPlayer::LoadUnit`: the unit's type, from 0.223 whether it was saved (none: done), whether it is complex, then the
+/// unit: made on the player when its class fits the kind, else loaded into a stand-in whose id is kept. (The original's
+/// two bodies by era, the earlier one passing major 0, which is its major.)
+pub fn load_unit<H: PlayerSaveHost + ?Sized>(h: &mut H, major: u32, minor: u32) -> i32 {
+    let mut unit_type: c_ulong = 0;
+    let mut result = h.read_ulong(&mut unit_type);
+    if result != OK {
+        return result;
+    }
+    if !(major == 0 && minor < 0xdf) {
+        let mut saved = true;
+        result = h.read_bool(&mut saved);
+        if !saved || result != OK {
+            return result;
+        }
+    }
+    let mut complex = false;
+    result = h.read_bool(&mut complex);
+    if result != OK {
+        return result;
+    }
+    let mut io = EeUnitsPlayerSaveIo { i: unit_type as i64, b: u8::from(complex), f: 0.0 };
+    let fits = h.call(EE_UNITS_PLAYER_SAVE_UNIT_FITS, 0, &mut io) != 0;
+    h.call(if fits { EE_UNITS_PLAYER_SAVE_UNIT_LOAD } else { EE_UNITS_PLAYER_SAVE_UNIT_STANDIN }, 0, &mut io)
+}
+
+/// `EEPlayer::SaveUnit`: the type, whether it is saved (not a path point before 0.254's live state), whether it is
+/// complex, then the unit's own save.
+pub fn save_unit<H: PlayerSaveHost + ?Sized>(h: &mut H, major: u32, minor: u32) -> i32 {
+    let mut io = EeUnitsPlayerSaveIo::default();
+    let complex = h.call(EE_UNITS_PLAYER_SAVE_UNIT_KIND, 0, &mut io) != 0;
+    let mut result = h.write_ulong(io.i as c_ulong);
+    if result != OK {
+        return result;
+    }
+    let saved = io.b == 0 || has_live_state(major, minor);
+    result = h.write_bool(saved);
+    if !saved {
+        return result;
+    }
+    result = h.write_bool(complex);
+    if result == OK {
+        result = h.op(EE_UNITS_PLAYER_SAVE_UNIT_SAVE);
+    }
+    result
+}
+
 // ---- FFI
 
 struct FfiHost {
     ctx: *mut c_void,
     f: EeUnitsPlayerSaveFn,
+    /// the player's queued improvements (player.rs): the QUEUED operations are answered here
+    queued: *mut EeUnitsQueued,
+}
+
+impl FfiHost {
+    fn prim(&mut self, op: i32, io: &mut EeUnitsPlayerSaveIo) -> i32 {
+        // SAFETY: the C++ callback with its own context; io lives for the call
+        unsafe { (self.f)(self.ctx, op, 0, io) }
+    }
 }
 
 impl PlayerSaveHost for FfiHost {
     fn call(&mut self, op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo) -> i32 {
+        if !self.queued.is_null() {
+            // SAFETY: the player's live queue; the C++ primitives never reach it
+            let q = unsafe { &mut *self.queued };
+            let nth = |q: &mut EeUnitsQueued| {
+                q.map.iter_mut().nth(index as usize).map(|(k, e)| (*k, e as *mut (f32, Vec<c_ulong>)))
+            };
+            match op {
+                EE_UNITS_PLAYER_SAVE_QUEUED_FLOAT => {
+                    io.f = q.entry(io.i as c_ulong).0;
+                    return OK;
+                }
+                EE_UNITS_PLAYER_SAVE_QUEUED_SET_FLOAT => {
+                    q.entry(io.i as c_ulong).0 = io.f;
+                    return OK;
+                }
+                EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_LOAD => {
+                    let list = &mut q.entry(io.i as c_ulong).1 as *mut Vec<c_ulong>;
+                    // SAFETY: the entry lives across the reads (nothing else touches the queue)
+                    return load_list(unsafe { &mut *list }, |op, io| self.prim(op, io));
+                }
+                EE_UNITS_PLAYER_SAVE_QUEUED_COUNT => {
+                    io.i = q.map.len() as i64;
+                    return OK;
+                }
+                EE_UNITS_PLAYER_SAVE_QUEUED_ENTRY => {
+                    if let Some((key, entry)) = nth(q) {
+                        io.i = key as i64;
+                        // SAFETY: the entry just found
+                        io.f = unsafe { (*entry).0 };
+                    }
+                    return OK;
+                }
+                EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_SAVE => {
+                    let Some((_, entry)) = nth(q) else { return OK };
+                    // SAFETY: as the load
+                    return save_list(unsafe { &(*entry).1 }, |op, io| self.prim(op, io));
+                }
+                _ => {}
+            }
+        }
         // SAFETY: the C++ callback with its own context; io lives for the call
         unsafe { (self.f)(self.ctx, op, index, io) }
     }
 }
 
-/// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base) and its C++ parts through `f`.
+/// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base), the queue `queued` (answered here)
+/// and its C++ parts through `f`.
 ///
 /// # Safety
-/// `rec` points to the player's live record; `f` is valid with `ctx` for the call.
+/// `rec` points to the player's live record, `queued` to its queue (or is null: `f` answers it); `f` is valid with
+/// `ctx` for the call.
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_player_load(
     ctx: *mut c_void,
     f: EeUnitsPlayerSaveFn,
     rec: *mut EeUnitsPlayerSaved,
+    queued: *mut EeUnitsQueued,
     major: u32,
     minor: u32,
 ) -> i32 {
-    load(&mut FfiHost { ctx, f }, Rec::new(rec), major, minor)
+    load(&mut FfiHost { ctx, f, queued }, Rec::new(rec), major, minor)
 }
 
 /// `EEPlayer::Save`: as [`ee_units_player_load`].
@@ -861,10 +973,31 @@ pub unsafe extern "C" fn ee_units_player_save(
     ctx: *mut c_void,
     f: EeUnitsPlayerSaveFn,
     rec: *mut EeUnitsPlayerSaved,
+    queued: *mut EeUnitsQueued,
     major: u32,
     minor: u32,
 ) -> i32 {
-    save(&mut FfiHost { ctx, f }, Rec::new(rec), major, minor)
+    save(&mut FfiHost { ctx, f, queued }, Rec::new(rec), major, minor)
+}
+
+/// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) through `f` on `ctx`.
+///
+/// # Safety
+/// `f` is valid with `ctx` for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_player_unit(
+    ctx: *mut c_void,
+    f: EeUnitsPlayerSaveFn,
+    save_it: bool,
+    major: u32,
+    minor: u32,
+) -> i32 {
+    let mut h = FfiHost { ctx, f, queued: std::ptr::null_mut() };
+    if save_it {
+        save_unit(&mut h, major, minor)
+    } else {
+        load_unit(&mut h, major, minor)
+    }
 }
 
 #[cfg(test)]

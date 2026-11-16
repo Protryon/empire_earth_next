@@ -1,8 +1,8 @@
 //! The campaign editor's events whole (form 24): the original `EEUIECampaignEditorEvents.cpp` (the form's open and
 //! close events, its 13 control events, the deferred save and the "save before ..." questions' and the delete
 //! question's callbacks) over a host ([`CampaignEditorHost`]) whose calls are each one toolkit call or one call of the
-//! editor's model (`EECampaignEditorBehavior`, which stays C++ with its one global, `gCampaignEditor`, in
-//! `UI Events/EEScreens.cpp`). The form keeps no state of its own; the original's `dynamic_cast` checks are the
+//! editor's model (the original's `EECampaignEditorBehavior`, Rust's whole in `campaign_model.rs`, which answers its
+//! ops before the C++ host). The form keeps no state of its own; the original's `dynamic_cast` checks are the
 //! host's [`EE_SCREENS_OP_CE_IS`], asked before each control's read or write, as the original asked them.
 
 use core::ffi::c_long;

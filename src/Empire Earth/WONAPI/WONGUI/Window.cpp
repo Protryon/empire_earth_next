@@ -107,18 +107,26 @@ Window::~Window()
 {
 }
 
-// Returns the cached font for a descriptor, creating it through the platform on first use
+// Returns the cached font for a descriptor, creating it through the platform on first use (a NULL platform font
+// is asked again at the next call; the map holds one reference to each font)
 SmartPtr<Font> Window::GetFont(const FontDescriptor &theDescriptor)
 {
-	std::map<FontDescriptor,SmartPtr<Font> >::iterator anItr = this->mFontMap.insert(std::map<FontDescriptor,SmartPtr<Font> >::value_type(theDescriptor, NULL)).first;
-	SmartPtr<Font> aFont = anItr->second;
-	if(aFont.get()==NULL)
+	const std::string& f = theDescriptor.mFace;
+	Font* aFont = (Font*)ee_won_fontmap_lookup(this->mFontMap.p, (const uint8_t*)f.data(), f.size(), theDescriptor.mStyle, theDescriptor.mSize);
+	if(aFont==NULL)
 	{
-		aFont = this->PlatformGetFont(theDescriptor);
-		anItr->second = aFont;
+		SmartPtr<Font> aNew = this->PlatformGetFont(theDescriptor);
+		aFont = aNew.get();
+		if(aFont!=NULL) aFont->AddRef();
+		ee_won_fontmap_store(this->mFontMap.p, (const uint8_t*)f.data(), f.size(), theDescriptor.mStyle, theDescriptor.mSize, (uintptr_t)aFont);
 	}
-
 	return aFont;
+}
+Window::FontMap::~FontMap()
+{
+	for(intptr_t aFont; (aFont = ee_won_fontmap_pop(this->p)) >= 0; )
+		if(aFont!=0) ((Font*)aFont)->Release();
+	ee_won_fontmap_free(this->p);
 }
 
 // Sets the window title, updating the platform window when open
@@ -184,26 +192,16 @@ SmartPtr<RawImage> Window::DecodeImageRaw(const char* path) {
     return this->mManager->DecodeImageRaw(path);
 }
 
-// The two functions after this one are not identified in the original exe
-// Returns the window's offscreen image
-NativeImage* Window::GetOffscreenImage()
-{
-    return this->mOffscreenImage.get();
-}
+// Tags the event with this window and posts it to the window manager's queue (the base QueueEvent)
+void Window::QueueEvent(WindowEventBase* event) { event->mWindow=this; this->mManager->PostEvent(event); }
 
+// Not identified in the original exe
 Graphics& Window::GetGraphics()
 {
     return this->mOffscreenImage->GetGraphics();
 }
 
-// The forwarders (the header's one-line methods are the rest)
-bool Window::CanClose() { return this->WCall(EeWonWinCall::CanClose) != 0; }
-bool Window::Close() { return this->WCall(EeWonWinCall::Close) != 0; }
-void Window::CheckResize(DWORD theTick) { this->WCall(EeWonWinCall::CheckResize, (intptr_t)(uint32_t)theTick); }
-void Window::Center(bool inParent) { this->WCall(EeWonWinCall::Center, inParent ? 1 : 0); }
-void Window::SetClientSize(int w, int h) { this->WCall(EeWonWinCall::SetClientSize, w, h); }
-void Window::Show(bool show) { this->WCall(EeWonWinCall::Show, show ? 1 : 0); }
-void Window::HandleMouseExit() { this->WCall(EeWonWinCall::HandleMouseExit); }
+// The forwarders that read the events' fields (the others are inline)
 static EeWonWinEvent WinEvent(InputEvent* e)
 {
     EeWonWinEvent r = {};
@@ -245,18 +243,3 @@ void Window::HandleInputEvent(InputEvent *e)
     }
     this->WCall(EeWonWinCall::HandleInputEvent, (intptr_t)&r);
 }
-bool Window::IdleUpdate() { return this->WCall(EeWonWinCall::IdleUpdate) != 0; }
-void Window::TimerEvent(DWORD e) { this->WCall(EeWonWinCall::TimerEvent, (intptr_t)(uint32_t)e); }
-void Window::SetParent(Window *p) { this->WCall(EeWonWinCall::SetParent, (intptr_t)p); }
-void Window::PlatformClose() { this->WCall(EeWonWinCall::PlatformClose); }
-void Window::ShowNativeCursor(bool show) { this->WCall(EeWonWinCall::ShowNativeCursor, show ? 1 : 0); }
-void Window::AddComponent(Component* c) { this->WCall(EeWonWinCall::AddComponent, (intptr_t)c); }
-void Window::SetModal(bool modal) { this->WCall(EeWonWinCall::SetModal, modal ? 1 : 0); }
-void Window::CheckSetCursor(bool force) { this->WCall(EeWonWinCall::CheckSetCursor, force ? 1 : 0); }
-namespace WONAPI {
-void Window::InvalidateRoot() { this->WCall(EeWonWinCall::InvalidateRoot); }
-void Window::Minimize(bool minimize) { this->WCall(EeWonWinCall::Minimize, minimize ? 1 : 0); }
-}
-void Window::SuspendRootResize(bool suspend) { this->WCall(EeWonWinCall::SuspendRootResize, suspend ? 1 : 0); }
-void Window::RemoveComponent(Component* c) { this->WCall(EeWonWinCall::RemoveComponent, (intptr_t)c); }
-bool Window::IsMouseDown(MouseButton b) { return this->WCall(EeWonWinCall::IsMouseDown, (intptr_t)b) != 0; }

@@ -9,13 +9,14 @@
 
 #include <vector>
 #include "ee/EETileCoordinate.h"
+#include "rust/ee_app.h"   // EeAppStormFields (ee_app storm.rs)
 
 class EEEnvironmentManager;
 class FSFile;
-class EEE3DRust;
+class EEEffect; typedef EEEffect EEE3DRust;   // the weather effect (one class EEEffect since R4.4 round 25)
 class EEAutoPathRequest;
 
-class EEEMStorm {
+class EEEMStorm : public EeAppStormFields {
 public:
     EEEMStorm(long inType, EEEnvironmentManager* inManager);
     virtual ~EEEMStorm();                   // +0x00
@@ -33,13 +34,9 @@ public:
     long GetType() const { return this->mType; }
     bool Contains(const U2DPoint<long>& inPoint) const { return this->mArea.Contains(inPoint); }
     void Begin();                           // 0x12df63 (the ctor's, type != 0): start/goal, the shaped path, the weather effect
-    void Grow();                            // 0x12e523: fade mIntensity up towards mTargetIntensity (step mStep, 0.3 from 0)
-    void Shrink();                          // 0x12e559: fade it down (to 0 below 0.01)
     bool IsOver();                          // 0x12e588 (true: the storm is over; EEEnvironmentManager::Update)
-    void RequestRoute();                    // 0x12e74e: cancel the old request; RequestPath with a Snow/Rain route planner; state 2
-    void TakePath();                        // 0x12e817: mPath = the request's path, reversed; release the request; state 3
-    void SetIntensity(float inIntensity);   // 0x12e9a2: mIntensity, and mStorm->mFA0 when set (provisional name)
-    void SetTargetIntensity(float inIntensity);   // 0x12e9bd: clamped to [0, 2] (provisional name)
+    void RequestRoute();                    // 0x12e74e: cancel the old request; RequestPath with a Snow/Rain route planner (the caller sets state 2)
+    void TakePath();                        // 0x12e817: mPath = the request's path, reversed; release the request (the step sets state 3)
     void Release();                         // 0x12e9eb (before the storm is deleted)
     void Step(unsigned long inTime);        // 0x12ea48 (each update)
 
@@ -54,14 +51,8 @@ public:
     EEE3DRust* mStorm;                     // +0x48 (dynamic_cast of the weather effect, referenced; saved as its +0x1c handle)
     EEAutoPathRequest* mRequest;            // +0x4c (referenced; gPathManager.CancelAutoPathRequest on cancel)
     EEEnvironmentManager* mManager;         // +0x50
-    float mTargetIntensity;                 // +0x54 (= 1; 0x12e9bd clamps it to [0, 2])
-    float mIntensity;                       // +0x58 (= 1; 0x12e9a2 forwards it to mStorm +0xa0)
-    float mStep;                            // +0x5c (= 0.02; the fade's relative step)
-    long mType;                             // +0x60 (1..4; 3 and 4 set mB70)
-    long mState;                            // +0x64 (= 1; Step's switch 2..8; 6 = over)
-    unsigned long mNextMoveTime;            // +0x68 (= 0; `cmp [esi+0x68], arg; ja`)
-    unsigned long mEndTime;                 // +0x6c (= -1; `cmp [esi+0x6c], arg; ja`)
-    bool mIsSevere;                         // +0x70
+    // port: mTargetIntensity (+0x54), mIntensity, mStep, mType, mState, mNextMoveTime, mEndTime and mIsSevere (+0x70)
+    // are the base EeAppStormFields (ee_app storm.rs: the fades and the step)
 };
 
 #endif

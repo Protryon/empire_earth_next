@@ -68,8 +68,24 @@ fn parse_op(line: &str) -> Op {
 
 /// The golden's cases of one kind.
 pub fn cases(kind: u32) -> Vec<Case> {
+    cases_in(GOLDEN, kind)
+}
+
+/// The scenario editor's controls against the real C++ (actions round 2, `build/ga2/hud` in its worktree: the same
+/// driver, the unmodified `EESEUICCommandUnits` and `EESEUICTriggerSelectUnits` units of 32a9ab6a over the
+/// original base classes against `EEUICCommandUnits` / `EEUICSelectUnits` with the editor's flags): kinds 4 (the
+/// editor's command) and 5 (the trigger tab's selection).
+const EDITOR_GOLDEN: &str = include_str!("../golden_hud_editor.txt");
+
+/// The editor golden's cases of one kind.
+pub fn editor_cases(kind: u32) -> Vec<Case> {
+    cases_in(EDITOR_GOLDEN, kind)
+}
+
+/// A golden text's cases of one kind.
+pub fn cases_in(text: &str, kind: u32) -> Vec<Case> {
     let mut out = Vec::new();
-    let mut lines = GOLDEN.lines().peekable();
+    let mut lines = text.lines().peekable();
     while let Some(line) = lines.next() {
         let Some(rest) = line.strip_prefix("case ") else { panic!("not a case: {line}") };
         let v: Vec<&str> = rest.split(' ').collect();

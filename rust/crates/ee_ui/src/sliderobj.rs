@@ -246,7 +246,11 @@ impl EeUiSlider {
 /// A new Rust slider for the C++ `slider` (its `UIControl` part constructed), its calls out through `host`.
 #[no_mangle]
 pub extern "C" fn ee_ui_slider_new(slider: *mut c_void, host: EeUiHostFn, style: c_ulong) -> *mut EeUiSlider {
-    Box::into_raw(Box::new(EeUiSlider::new(Host { obj: slider, f: host }, style)))
+    crate::direct::made(
+        crate::direct::Kind::Slider,
+        slider,
+        Box::into_raw(Box::new(EeUiSlider::new(Host { obj: slider, f: host }, style))),
+    )
 }
 
 /// The destructor: releases the thumb bitmap and frees the object.
@@ -255,6 +259,7 @@ pub extern "C" fn ee_ui_slider_new(slider: *mut c_void, host: EeUiHostFn, style:
 /// `slider` came from `ee_ui_slider_new` (or is NULL) and is not used again.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_slider_free(slider: *mut EeUiSlider) {
+    crate::direct::forget(crate::direct::Kind::Slider, slider as *const core::ffi::c_void);
     if slider.is_null() {
         return;
     }

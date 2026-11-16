@@ -1310,3 +1310,505 @@ bool ImageConfig::Virtual24(const std::string& inInstruction)
     else return false;
     return true;
 }
+
+// R6 WON round 40: ContainerConfig's instructions and its layout handlers as they were, copied verbatim from de9ba76a
+// by build/r40/gen_cfgcont.py (HandleLayout, HandleNewLayoutPoint and HandleNoOverlapLayout stay C++: the world's)
+// Reads a comma-separated list of components and adds each to the container
+bool ContainerConfig::HandleAdd()
+{
+	while(true)
+	{
+		Component *aComp = this->ReadComponent();
+		this->mContainer->AddChild(aComp);
+		if(this->EndOfString())
+			break;
+
+		this->EnsureComma();
+	}
+
+
+	return true;
+}
+// Reads a comma-separated list of layout points and adds each to the container
+bool ContainerConfig::HandleAddLayoutPoint()
+{
+	while(true)
+	{
+		LayoutPoint *aPoint = SafeConfigGetComponent<LayoutPoint*>(this->ReadComponent(),"LayoutPoint");
+		this->mContainer->AddLayoutPoint(aPoint);
+		if(this->EndOfString())
+			break;
+
+		this->EnsureComma();
+	}
+
+
+	return true;
+}
+// Handles the container config instructions (ADD, LAYOUT and its variants, layout ids, tab focus,
+// child-only input); other instructions go to the base config
+bool ContainerConfig::Virtual24(const std::string& theInstruction)
+{
+	const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION,theInstruction.data(),theInstruction.size());
+	if(aKeyIdx==0)
+		return this->HandleAdd();
+	else if(aKeyIdx==1)
+		return this->HandleAddLayoutPoint();
+	else if(aKeyIdx==2)
+		return this->HandleNewLayoutPoint();
+	else if(aKeyIdx==3)
+		return this->HandleLayout();
+	else if(aKeyIdx==4)
+		this->mCurLayoutId = this->ReadInt();
+	else if(aKeyIdx==5)
+	{
+		bool enable = this->ReadBool();
+		while(true)
+		{
+			this->EnsureComma();
+			int anId = this->ReadInt();
+			this->mContainer->EnableLayoutInstructions(anId,enable);
+			if(this->EndOfString())
+				break;
+		}
+	}
+	else if(aKeyIdx==6)
+		this->mContainer->Relayout();
+	else if(aKeyIdx==7)
+		return this->HandleLayout(true);
+	else if(aKeyIdx==8)
+		return this->HandleLayout(false,true);
+	else if(aKeyIdx==9)
+		return this->HandleSameSizeLayout(true,true);
+	else if(aKeyIdx==10)
+		return this->HandleSameSizeLayout(true,false);
+	else if(aKeyIdx==11)
+		return this->HandleSameSizeLayout(false,true);
+	else if(aKeyIdx==12)
+		return this->HandleCenterLayout(true,true);
+	else if(aKeyIdx==13)
+		return this->HandleCenterLayout(true,false);
+	else if(aKeyIdx==14)
+		return this->HandleCenterLayout(false,true);
+	else if(aKeyIdx==15)
+		return this->HandleSpaceEvenlyLayout(true);
+	else if(aKeyIdx==16)
+		return this->HandleSpaceEvenlyLayout(false);
+	else if(aKeyIdx==17)
+		return this->HandleClearRightLayout();
+	else if(aKeyIdx==18)
+		return this->HandleNoOverlapLayout();
+	else if(aKeyIdx==19)
+		return this->HandleSizeAtLeastLayout();
+	else if(aKeyIdx==20)
+		this->mContainer->SetIsolateTabFocus(this->ReadBool());
+	else if(aKeyIdx==21)
+		this->mContainer->SetOnlyChildInput(this->ReadBool());
+	else
+		return ComponentConfig::Virtual24(theInstruction);
+
+	return true;
+}
+// Reads a component list into a layout that gives them the same width and/or height
+bool ContainerConfig::HandleSameSizeLayout(bool sameWidth, bool sameHeight)
+{	
+	SmartPtr<SameSizeLayout> aLayout = new SameSizeLayout(sameWidth, sameHeight);
+
+	while(true)
+	{	
+		Component *aComp = this->ReadComponent();
+		aLayout->Add(aComp);
+		if(this->EndOfString())
+			break;
+		else
+			this->EnsureComma();
+	}
+
+	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
+	return true;
+}
+// Reads a reference component and a component list into a layout that centres them on it
+bool ContainerConfig::HandleCenterLayout(bool horz, bool vert)
+{
+	Component *aComp = this->ReadComponent();
+	SmartPtr<CenterLayout> aLayout = new CenterLayout(aComp,horz,vert);
+	while(!this->EndOfString())
+	{	
+		this->EnsureComma();
+		aComp = this->ReadComponent();
+		aLayout->Add(aComp);
+	}
+
+	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
+	return true;
+}
+// Reads a component, a padding and a component list into a clear-right layout
+bool ContainerConfig::HandleClearRightLayout()
+{
+	Component *aComp = this->ReadComponent(); this->EnsureComma();
+	int aPad = this->ReadInt(); this->EnsureComma();
+
+	SmartPtr<ClearRightLayout> aLayout = new ClearRightLayout(aComp,aPad);
+	while(true)
+	{
+		aComp = this->ReadComponent();
+		aLayout->Add(aComp);
+		if(this->EndOfString())
+			break;
+
+		this->EnsureComma();
+	}
+
+	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
+	return true;
+}
+// Reads a bounding component, two paddings and a component list into a layout that spaces them evenly
+bool ContainerConfig::HandleSpaceEvenlyLayout(bool horz)
+{
+	Component *aSpaceBox = this->ReadComponent(); this->EnsureComma();
+	int aLeftPad = this->ReadInt(); this->EnsureComma();
+	int aRightPad = this->ReadInt(); this->EnsureComma();
+
+	SmartPtr<SpaceEvenlyLayout> aLayout = new SpaceEvenlyLayout(aSpaceBox,aLeftPad,aRightPad,horz);
+	while(!this->EndOfString())
+	{
+		Component *aComponent = this->ReadComponent();
+		aLayout->Add(aComponent);
+		if(this->EndOfString())
+			break;
+
+		this->EnsureComma();
+	}
+
+	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
+	return true;
+}
+// Reads a size-at-least layout (target, paddings, components); it is added under the default layout id
+bool ContainerConfig::HandleSizeAtLeastLayout()
+{
+	Component *target = this->ReadComponent(); this->EnsureComma();
+	int aHorzPad = this->ReadInt(); this->EnsureComma();
+	int aVertPad = this->ReadInt(); 
+
+	SmartPtr<SizeAtLeastLayout> aLayout = new SizeAtLeastLayout(target,aHorzPad, aVertPad);
+	while(!this->EndOfString())
+	{
+		this->EnsureComma();
+		aLayout->Add(this->ReadComponent());		
+	}
+	this->mContainer->AddChildLayout(aLayout.get());
+	return true;
+}
+
+// ---- R6 WON round 41: ContainerConfig's LAYOUT family, NOOVERLAPLAYOUT and NEWLAYOUTPOINT (copied from
+// ContainerConfigInstructions.cpp and ContainerConfigPoints.cpp before the round)
+// Reads a layout rule (target, instruction names, reference, up to four offsets) and adds it to the container;
+// chain and repeat forms reuse the previous rule's instructions and reference
+bool ContainerConfig::HandleLayout(bool chain, bool repeat)
+{
+	Component *target = this->ReadComponent(); 
+	int instructions = 0;
+	Component *ref;
+
+	if(!chain && !repeat)
+	{
+		this->EnsureComma();
+		while(true)
+		{
+			GUIString aStr = this->ReadString(true);
+			if(aStr.length()==0)
+				break;
+
+			// the names in the original's order, each compared as the original compared it
+			const uint8_t* aName = NULL;
+			int aFlag = 0;
+			bool aFound = false;
+			for(int k = 0; !aFound && ee_won_gui_layout_keyword(k, &aName, &aFlag); k++)
+				if(aStr.CompareNoCase((const char*)aName)==0) { instructions |= aFlag; aFound = true; }
+			if(!aFound)
+				throw ConfigObjectException("Unknown layout instruction: " + (std::string)aStr);
+		}
+	}
+	else
+		instructions = this->mLayoutInstruction;
+
+	if(chain || (repeat && this->EndOfString()))
+	{
+		if(this->mLayoutRef==NULL)
+			throw ConfigObjectException("Invalid LayoutChain");
+
+		ref = this->mLayoutRef;
+	}
+	else
+	{
+		this->EnsureComma();
+		ref = this->ReadComponent();
+	}
+
+	if(!this->EndOfString())
+		this->EnsureComma();
+
+	int i;
+	for(i=0; i<4; i++)
+	{
+		if(this->EndOfString())
+			break;
+
+		this->mLayoutParams[i] = this->ReadInt();
+		if(!this->EndOfString())
+			this->EnsureComma();
+	}
+
+	if(ee_won_gui_layout_zero_rest(chain, repeat, i))
+	{
+		for(; i<4; i++)
+			this->mLayoutParams[i] = 0;
+	}
+
+	this->mContainer->Fn2F6140(target,instructions,ref,this->mLayoutParams[0],this->mLayoutParams[1],
+		this->mLayoutParams[2],this->mLayoutParams[3],this->mCurLayoutId);
+
+	if(repeat)
+		this->mLayoutRef = ref;
+	else
+		this->mLayoutRef = target;
+
+	this->mLayoutInstruction = instructions;
+
+	return true;
+}
+// Reads a no-overlap layout (target, sides, reference, paddings, more components); it is added
+// under the default layout id, not the current one
+bool ContainerConfig::HandleNoOverlapLayout()
+{
+	Component *target = this->ReadComponent();
+	this->EnsureComma();
+
+	int instructions = 0;
+	while(true)
+	{
+		GUIString aStr = this->ReadString(true);
+		if(aStr.length()==0)
+			break;
+
+		const int aNameIdx_aStr=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_CONTAINERCONFIG_HANDLENOOVERLAPLAYOUT_ASTR,aStr.mData->mText,aStr.mData->mLength,sizeof(wchar_t));
+		if(aNameIdx_aStr==0) instructions |= 0x100;
+		else if(aNameIdx_aStr==1) instructions |= 0x200;
+		else if(aNameIdx_aStr==2) instructions |= 0x400;
+		else if(aNameIdx_aStr==3) instructions |= 0x800;
+		else 
+			throw ConfigObjectException("Unknown no overlap instruction: " + (std::string)aStr);
+	}
+
+	this->EnsureComma();
+	Component *ref = this->ReadComponent(); this->EnsureComma();
+	int horzPad, vertPad;
+	horzPad = this->ReadInt(); this->EnsureComma();
+	vertPad = this->ReadInt(); 
+
+	SmartPtr<NoOverlapLayout> aLayout = new NoOverlapLayout(target,instructions,ref,horzPad,vertPad);
+	while(!this->EndOfString())
+	{
+		this->EnsureComma();
+		Component *aComponent = this->ReadComponent();
+		aLayout->Add(aComponent);
+	}
+
+	this->mContainer->AddChildLayout(aLayout.get());
+
+	return true;
+}
+// Creates a named layout point for each name in a comma-separated list, registers its config and adds it
+// to the container
+bool ContainerConfig::HandleNewLayoutPoint()
+{
+    while(true) {
+        SmartPtr<ComponentConfig> config=new ComponentConfig;
+        SmartPtr<LayoutPoint> point=new LayoutPoint;
+        config->SetComponent(point.get());
+        config->mParent=this;
+        this->mConfigMap[this->ReadString(false)]=config;
+        this->mContainer->AddLayoutPoint(point.get());
+        if(this->EndOfString()) break;
+        this->EnsureComma();
+    }
+    return true;
+}
+
+// ---- R6 WON round 41: StretchImageConfig's and ImageFilterConfig's instructions (copied from StretchImageConfig.cpp
+// and ImageConfig.cpp before the round)
+// Reads SRC, TILE, BORDERS, SKIPCENTER and the EXPORT keys, which add copies with other images to the parent
+bool StretchImageConfig::Virtual24(const std::string& instruction)
+{
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_STRETCHIMAGECONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0) {
+        this->mStretchImage->SetImage(this->ReadRawImage().get());
+    }
+    else if(aKeyIdx==1) {
+        bool horz=this->ReadBool();this->EnsureComma();
+        bool vert=this->ReadBool();
+        this->mStretchImage->SetTile(horz,vert);
+    }
+    else if(aKeyIdx==2) {
+        int left=this->ReadInt();this->EnsureComma();
+        int top=this->ReadInt();this->EnsureComma();
+        int right=this->ReadInt();this->EnsureComma();
+        this->mStretchImage->SetBorders(left,top,right,this->ReadInt());
+        if(!this->EndOfString()) {
+            this->EnsureComma();
+            bool horz=this->ReadBool();this->EnsureComma();
+            bool vert=this->ReadBool();
+            this->mStretchImage->SetTile(horz,vert);
+        }
+    }
+    else if(aKeyIdx==3) {
+        this->mStretchImage->SetSkipCenter(this->ReadBool());
+    }
+    else if(aKeyIdx==4) {
+        int count=this->ReadInt();this->EnsureComma();
+        std::string imagePrefix=this->ReadRawString(false);this->EnsureComma();
+        std::string configPrefix=this->ReadRawString(false);
+        int offset=0;
+        if(!this->EndOfString()) {
+            this->EnsureComma();
+            offset=this->ReadInt()-1;
+        }
+        for(int i=0;i<count;++i) {
+            char imageName[512],configName[512];
+            sprintf(imageName,"%s%d",imagePrefix.c_str(),i+1+offset);
+            sprintf(configName,"%s%d",configPrefix.c_str(),i+1);
+            SmartPtr<RawImage> image=this->GetRawImageFromStr(imageName);
+            SmartPtr<StretchImageConfig> child=new StretchImageConfig;
+            child->mStretchImage->CopyAttributes(this->mStretchImage);
+            child->mStretchImage->SetImage(image.get());
+            ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
+            parent->AddChildToConfigMap(configName,child.get());
+        }
+    }
+    else if(aKeyIdx==5) {
+        int count=this->ReadInt();this->EnsureComma();
+        SmartPtr<RawImage> image=this->ReadRawImage();this->EnsureComma();
+        std::string configPrefix=this->ReadRawString(false);
+        int width=image->GetWidth()/count;
+        SmartPtr<CropImageFilter> crop=new CropImageFilter;
+        crop->SetSize(width,image->GetHeight());
+        for(int i=0;i<count;i++) {
+            crop->SetPos(i*width,0);
+            char configName[512];
+            sprintf(configName,"%s%d",configPrefix.c_str(),i+1);
+            SmartPtr<RawImage> cropped=crop->Filter(image.get());
+            SmartPtr<StretchImageConfig> child=new StretchImageConfig;
+            child->mStretchImage->CopyAttributes(this->mStretchImage);
+            child->mStretchImage->SetImage(cropped.get());
+            ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
+            parent->AddChildToConfigMap(configName,child.get());
+        }
+    }
+    else if(aKeyIdx==6) {
+        GUIString name=this->ReadString(false);this->EnsureComma();
+        SmartPtr<StretchImageConfig> child=new StretchImageConfig;
+        child->mStretchImage->CopyAttributes(this->mStretchImage);
+        child->mStretchImage->SetImage(this->ReadRawImage().get());
+        ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
+        parent->AddChildToConfigMap(name,child.get());
+    }
+    else return ImageConfig::Virtual24(instruction);
+    return true;
+}
+
+// Reads a filter spec (SCALEPERCENT, SCALEABS, TINT, CROP, PIXELTRANS) and returns the filtered copy of
+// the raw image; an empty pointer for an unknown filter name
+SmartPtr<RawImage> ImageFilterConfig::HandleFilter()
+{
+    SmartPtr<ImageFilter> filter;
+    GUIString name=this->ReadString(false);
+    this->EnsureComma();
+    const int aNameIdx_name=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_IMAGEFILTERCONFIG_HANDLEFILTER_NAME,name.mData->mText,name.mData->mLength,sizeof(wchar_t));
+    if(aNameIdx_name==0)
+    {
+        int width=this->ReadInt(),height=width;
+        if(!this->EndOfString())
+        {
+            this->EnsureComma();
+            height=this->ReadInt();
+        }
+        SmartPtr<ScaleImageFilter> scale=new ScaleImageFilter(0);
+        scale->SetPercentSize(width,height);
+        filter=scale.get();
+    }
+    else if(aNameIdx_name==1)
+    {
+        int width=this->ReadInt();
+        this->EnsureComma();
+        int height=this->ReadInt();
+        filter=new ScaleImageFilter(width,height);
+    }
+    else if(aNameIdx_name==2)
+    {
+        int red=this->ReadInt();
+        this->EnsureComma();
+        int green=this->ReadInt();
+        this->EnsureComma();
+        int blue=this->ReadInt();
+        filter=new TintImageFilter(red,green,blue);
+    }
+    else if(aNameIdx_name==3)
+    {
+        int x=this->ReadInt();
+        this->EnsureComma();
+        int y=this->ReadInt();
+        this->EnsureComma();
+        int width=this->ReadInt();
+        this->EnsureComma();
+        int height=this->ReadInt();
+        filter=new CropImageFilter(x,y,width,height);
+    }
+    else if(aNameIdx_name==4)
+        filter=new TransparentImageFilter(this->ReadColor());
+    if(filter.get()!=NULL) return filter->Filter(this->mRawImage.get());
+    return SmartPtr<RawImage>();
+}
+
+// Handles the image filter keys SRC, FILTER, DUPLICATE, MULTIHORZCROP (splits the image into numbered
+// horizontal crops added to the parent) and EXPORT; passes other keys to the image configuration
+bool ImageFilterConfig::Virtual24(const std::string& inInstruction)
+{
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGEFILTERCONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
+    SmartPtr<RawImage> anImage;
+    if(aKeyIdx==0) this->SetRawImage(this->ReadRawImage().get());
+    else if(aKeyIdx==1) this->SetRawImage(this->HandleFilter().get());
+    else if(aKeyIdx==2)
+        this->SetRawImage(static_cast<RawImage*>(this->mRawImage->Duplicate().get()));
+    else if(aKeyIdx==3)
+    {
+        int count=this->ReadInt();
+        this->EnsureComma();
+        std::string prefix=this->ReadString(false);
+        int width=this->mRawImage->GetWidth()/count;
+        SmartPtr<CropImageFilter> crop=new CropImageFilter;
+        crop->SetSize(width,this->mRawImage->GetHeight());
+        for(int i=0;i<count;i++)
+        {
+            crop->SetPos(i*width,0);
+            SmartPtr<RawImage> image=crop->Filter(this->mRawImage.get());
+            char name[512];
+            sprintf(name,"%s%d",prefix.c_str(),i+1);
+            SmartPtr<ImageFilterConfig> config=new ImageFilterConfig;
+            config->SetRawImage(image.get());
+            ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
+            parent->AddChildToConfigMap(GUIString(name),config.get());
+        }
+    }
+    else if(aKeyIdx==4)
+    {
+        GUIString name=this->ReadString(false);
+        this->EnsureComma();
+        SmartPtr<ImageFilterConfig> config=new ImageFilterConfig;
+        config->SetRawImage(this->HandleFilter().get());
+        ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
+        parent->AddChildToConfigMap(name,config.get());
+    }
+    else return ImageConfig::Virtual24(inInstruction);
+    return true;
+}
+

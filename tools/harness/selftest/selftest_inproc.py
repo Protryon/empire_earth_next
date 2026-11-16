@@ -9,6 +9,7 @@
   fixture   fixture_driver.py (the gates' fixture driver: commands, verdicts, frames, the civilization pre-empt, the
             play loop's time cap, the telemetry and game log parsers) against fixture_standin.py, the fixture's protocol
             without a game
+  slot      slot.py (the harness slots: locks, stale takeover, run, the job object) and the drivers' slot values
 Stages: build/boot/selftest_stage, build/boot/selftest_fixture (fixture) and (probe, plumbing: the paths those tools accept) build/boot/windowed_o_32."""
 import pathlib
 import re
@@ -109,9 +110,8 @@ def bridge(arch, d):
 # game_state_probe reads only staged game processes: <worktree>/build/boot/windowed_[orf](_K)/EE-AOC.exe. The self test
 # uses instance 32 of the "o" kind of its own checkout (never a session's windowed_f).
 PROBE_STAGE = st.BOOT / "windowed_o_32"
-PROBE_FIELDS = {   # define: (class, VC6 offset) as game_state_probe.py reads them (layout.off)
-    "NESC_LAST_TICK": ("NESynchronousCommunications", 4), "NESC_TICKS": ("NESynchronousCommunications", 0x10),
-    "NESC_PAUSED": ("NESynchronousCommunications", 0x2d), "NESC_MP": ("NESynchronousCommunications", 0x2e),
+PROBE_FIELDS = {   # define: (class, VC6 offset) as game_state_probe.py reads them (layout.off); the communications'
+    # numbers are read from the fixture's mirror (gEETestComms: probe_test.c's selftest_comms_mirror), not by offset
     "PHYS_MS": ("EEPhysics", 0xd0), "PHYS_OVER": ("EEPhysics", 0xe6), "PHYS_PT": ("EEPhysics", 0xb4),
     "WORLD_COUNT": ("EEWorld", 0xcc), "WORLD_LOCAL": ("EEWorld", 0xb84), "WORLD_VICTORY": ("EEWorld", 0xb96),
     "WORLD_MAP": ("EEWorld", 0xbc), "WORLD_PLAYERS": ("EEWorld", 0x74),
@@ -122,9 +122,12 @@ PROBE_FIELDS = {   # define: (class, VC6 offset) as game_state_probe.py reads th
 
 
 def layout_dir(arch):
-    """The record layouts of this checkout (layout_gen.py, cached under build/boot/selftest/<arch>)."""
+    """The record layouts of this checkout (layout_gen.py, cached under build/boot/selftest/<arch>; made again when a
+    header under include/ is newer than the cache: a stale cache kept a member another lane had moved into Rust)."""
     d = st.SELF / arch / "layout"
-    if not (d / "layout.json").exists():
+    cached = d / "layout.json"
+    newest = max((f.stat().st_mtime for f in (st.ROOT / "include").rglob("*.h")), default=0)
+    if not cached.exists() or cached.stat().st_mtime < newest:
         d.mkdir(parents=True, exist_ok=True)
         subprocess.run([sys.executable, "-I", str(HARNESS / "layout_gen.py"), "--out", str(d)], check=True)
     return d
@@ -153,7 +156,8 @@ def probe(arch, d):
                 break
             time.sleep(0.05)
         addresses = dict(communications=base + syms["selftest_communications"], world=base + syms["selftest_world_object"],
-                         physics=base + syms["selftest_physics"], image_base=base)
+                         physics=base + syms["selftest_physics"], comms_mirror=base + syms["selftest_comms_mirror"],
+                         image_base=base)
         s = game_state_probe.sample(proc.pid, addresses, players=True)
     finally:
         proc.kill()
@@ -351,3 +355,138 @@ def fixture(arch, d):
     if not log or [p["kind"] for p in log["players"].values()].count("computer") != 2 or 3 not in log["last_sample"]:
         problems.append(f"game log {log}")
     return not problems, "; ".join(problems) or "commands, verdicts, frames, pre-empt, box selection, orders, scroll check, zoom captures, time cap, telemetry, game log"
+
+
+def slot(arch, d):
+    """slot.py (the harness slots): the slot locks (mkdir, owner.json, stale by a gone pid or a missing owner, the old
+    harness.lock counting as one), `run` (EE_HARNESS_SLOT in the command's environment, the release, the exit code, at
+    most N commands at once, the job object ending the command's children with it) and what a slot means to the
+    drivers (stage, evidence, mutex, port offset) -- on a scratch lock root, no game."""
+    import json
+    import os
+    import time
+    import types
+    import slot as harness_slot
+    import fixture_game
+    root = st.BOOT / "selftest_slot"
+    if root.exists():
+        if root.resolve().parent != st.BOOT.resolve():
+            raise ValueError("the slot root must be inside build/boot")
+        shutil.rmtree(root)
+    root.mkdir(parents=True)
+    problems = []
+    saved = os.environ.get("EE_HARNESS_SLOT_ROOT")
+    os.environ["EE_HARNESS_SLOT_ROOT"] = str(root)
+    script = str(HARNESS / "slot.py")
+    try:
+        # the locks: three slots, a fourth refused; a released one taken again
+        taken = [harness_slot.try_take(root, 3, "selftest", "x") for _ in range(4)]
+        if [t and t[0] for t in taken] != [0, 1, 2, None]:
+            problems.append(f"takes {taken}")
+        owner = harness_slot.read_owner(root / "harness.slot.1") or {}
+        if owner.get("pid") != os.getpid() or owner.get("owner") != "selftest" or owner.get("slot") != 1:
+            problems.append(f"owner {owner}")
+        harness_slot.release(root / "harness.slot.1")
+        again = harness_slot.try_take(root, 3, "selftest", "x")
+        if not again or again[0] != 1:
+            problems.append(f"retake {again}")
+        for k in range(3):
+            harness_slot.release(root / f"harness.slot.{k}")
+        # stale: a gone process, a pid reused, a missing owner.json (young: kept; old: taken over)
+        gone = subprocess.run([sys.executable, "-I", "-c", "import os;print(os.getpid())"], capture_output=True,
+                              text=True).stdout.strip()
+        (root / "harness.slot.0").mkdir()
+        (root / "harness.slot.0" / "owner.json").write_text(json.dumps(dict(owner="gone", pid=int(gone))))
+        (root / "harness.slot.1").mkdir()
+        (root / "harness.slot.1" / "owner.json").write_text(json.dumps(dict(owner="reused", pid=os.getpid(),
+                                                                            pid_start="1")))
+        (root / "harness.slot.2").mkdir()
+        reasons = [harness_slot.stale_reason(root / f"harness.slot.{k}") for k in range(3)]
+        if not reasons[0] or "gone" not in reasons[0] or not reasons[1] or "reused" not in reasons[1] or reasons[2]:
+            problems.append(f"stale reasons {reasons}")
+        old = time.time() - harness_slot.NO_OWNER_GRACE - 10
+        os.utime(root / "harness.slot.2", (old, old))
+        got = [harness_slot.try_take(root, 3, "selftest", "x") for _ in range(4)]
+        if [t and t[0] for t in got] != [0, 1, 2, None]:
+            problems.append(f"stale takeover {got}")
+        for k in range(3):
+            harness_slot.release(root / f"harness.slot.{k}")
+        if [p.name for p in root.iterdir()]:
+            problems.append(f"left behind {[p.name for p in root.iterdir()]}")
+        # the old single lock counts as one slot
+        (root / "harness.lock").mkdir()
+        got = [harness_slot.try_take(root, 2, "selftest", "x") for _ in range(2)]
+        if [t and t[0] for t in got] != [0, None]:
+            problems.append(f"with harness.lock {got}")
+        harness_slot.release(root / "harness.slot.0")
+        (root / "harness.lock").rmdir()
+        # run: the slot in the environment, the exit code, released after
+        r = subprocess.run([sys.executable, "-I", script, "run", "--owner", "selftest", "--", sys.executable, "-I", "-c",
+                            "import os,sys;print('SLOT=' + os.environ['EE_HARNESS_SLOT']);sys.exit(7)"],
+                           capture_output=True, text=True, timeout=60)
+        if r.returncode != 7 or "SLOT=0" not in r.stdout or "SLOT 0 released" not in r.stderr:
+            problems.append(f"run rc {r.returncode} out {r.stdout!r} err {r.stderr[-300:]!r}")
+        if list(root.glob("harness.slot.*")):
+            problems.append("run left its slot")
+        # at most N at once: five commands, two slots, each records its slot and its start and end times
+        log = root / "runs"
+        log.mkdir()
+        body = ("import os,time,pathlib;k=os.environ['EE_HARNESS_SLOT'];t=time.time();time.sleep(1.5);"
+                f"pathlib.Path(r'{log}', str(os.getpid())).write_text(f'{{k}} {{t}} {{time.time()}}')")
+        procs = [subprocess.Popen([sys.executable, "-I", script, "run", "--slots", "2", "--owner", f"selftest{n}", "--",
+                                   sys.executable, "-I", "-c", body], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                  env=dict(os.environ, EE_HARNESS_SLOT_POLL="0.2")) for n in range(5)]
+        codes = [p.wait(timeout=120) for p in procs]
+        rows = sorted((int(k), float(s), float(e)) for k, s, e in (f.read_text().split() for f in log.iterdir()))
+        overlaps = max(sum(1 for _, s, e in rows if s <= t < e) for _, t, _ in rows) if rows else 0
+        clash = any(a[0] == b[0] and a[1] < b[2] and b[1] < a[2] for i, a in enumerate(rows) for b in rows[i + 1:])
+        if codes != [0] * 5 or len(rows) != 5 or overlaps > 2 or clash or {r[0] for r in rows} != {0, 1}:
+            problems.append(f"concurrent runs: codes {codes} rows {rows}")
+        # the job object: a hard-killed run takes its command's children with it; its slot is then stale
+        pidfile = root / "grandchild.pid"
+        child = ("import subprocess,sys,time,pathlib;p=subprocess.Popen([sys.executable,'-c','import time;time.sleep(60)']);"
+                 f"pathlib.Path(r'{pidfile}').write_text(str(p.pid));time.sleep(60)")
+        holder = subprocess.Popen([sys.executable, "-I", script, "run", "--", sys.executable, "-I", "-c", child],
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        end = time.monotonic() + 30
+        while not pidfile.exists() and time.monotonic() < end:
+            time.sleep(0.2)
+        time.sleep(0.3)
+        holder.kill()
+        holder.wait()
+        time.sleep(1)
+        grand = int(pidfile.read_text()) if pidfile.exists() else 0
+        if not grand or harness_slot.process_start(grand) is not None:
+            problems.append(f"the killed run's grandchild {grand} lives on")
+        if harness_slot.stale_reason(root / "harness.slot.0") is None:
+            problems.append("a killed run's slot is not stale")
+        shutil.rmtree(root / "harness.slot.0", ignore_errors=True)
+        # what a slot means to the drivers
+        if (harness_slot.port_offset(None), harness_slot.port_offset(0), harness_slot.port_offset(2)) != (0, 16, 48) \
+                or harness_slot.legacy_instance(0) != 1 or harness_slot.suffix(1) != "-s1":
+            problems.append("offsets/instances/suffixes")
+        env = harness_slot.game_env({"EE_TEST_INSTANCE": "x", "EE_TEST_PORT_OFFSET": "5", "A": "1"}, 1, "host")
+        if env != {"A": "1", "EE_TEST_INSTANCE": "s1-host", "EE_TEST_PORT_OFFSET": "32"}:
+            problems.append(f"game env {env}")
+        env = harness_slot.game_env({"EE_TEST_INSTANCE": "x", "EE_TEST_PORT_OFFSET": "5"}, None)
+        if env:
+            problems.append(f"unslotted game env {env}")
+        os.environ["EE_HARNESS_SLOT"] = "2"
+        try:
+            a = types.SimpleNamespace(slot=None, out=None, out_kind="fixture_game")
+            fixture_game.use_slot(a)
+            if a.slot != 2 or fixture_game.STAGE.name != "stage-s2" or not a.out.endswith("-s2"):
+                problems.append(f"use_slot {a} {fixture_game.STAGE}")
+        finally:
+            del os.environ["EE_HARNESS_SLOT"]
+            fixture_game.STAGE = fixture_game.ROOT / "build" / "fixture_game" / "stage"
+    except Exception as error:
+        problems.append(repr(error))
+    finally:
+        if saved is None:
+            os.environ.pop("EE_HARNESS_SLOT_ROOT", None)
+        else:
+            os.environ["EE_HARNESS_SLOT_ROOT"] = saved
+        shutil.rmtree(root, ignore_errors=True)
+    return not problems, "; ".join(problems) or ("locks, stale takeover, the old lock, run (env, exit code, release), "
+                                                 "2 of 5 at once, the job object, the drivers' slot values")

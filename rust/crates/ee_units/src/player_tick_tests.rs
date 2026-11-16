@@ -1,33 +1,33 @@
 use super::*;
+use crate::player::EeUnitsQueued;
 
-/// A player: herds (next update, active, state), the queued improvements (key, float, list), units (hit points,
-/// max, healed), and the calls made.
+/// A player: herds (next update, active, state), units (hit points, max, healed), the records' fields and queue
+/// (`fields`), and the calls made.
 #[derive(Default)]
 struct Mock {
     herds: Vec<(u32, bool, u32)>,
-    queued: Vec<(i64, f32, Vec<u32>)>,
-    at: usize,
     units: Vec<(i32, i32, bool)>,
-    instant: bool,
-    heals: bool,
     tick_ms: i64,
     tick_time: f32,
     game_time: u32,
     epoch: i64,
     advance_empty: bool,
+    queue: Box<EeUnitsQueued>,
+    instant: bool,
+    heals: bool,
     log: Vec<String>,
 }
 
 impl Mock {
-    fn entry(&self, io: &mut EeUnitsPlayerSaveIo) -> i32 {
-        match self.queued.get(self.at) {
-            Some(e) => {
-                io.i = e.0;
-                io.f = e.1;
-                1
-            }
-            None => 0,
+    fn with_queue(entries: &[(c_ulong, f32, Vec<c_ulong>)]) -> Self {
+        let mut m = Mock::default();
+        for (k, f, v) in entries {
+            m.queue.map.insert(*k, (*f, v.clone()));
         }
+        m
+    }
+    fn queued(&self) -> Vec<(c_ulong, f32, Vec<c_ulong>)> {
+        self.queue.map.iter().map(|(k, e)| (*k, e.0, e.1.clone())).collect()
     }
 }
 
@@ -45,37 +45,17 @@ impl PlayerTickHost for Mock {
             EE_UNITS_PLAYER_TICK_HERD_STATE => return self.herds[index as usize].2 as i32,
             EE_UNITS_PLAYER_TICK_HERD_KILL => self.log.push(format!("herd {index} kill")),
             EE_UNITS_PLAYER_TICK_AIR_AND_EVENTS => self.log.push("air events".into()),
-            EE_UNITS_PLAYER_TICK_QUEUED_FIRST => {
-                self.at = 0;
-                return self.entry(io);
-            }
-            EE_UNITS_PLAYER_TICK_QUEUED_NEXT => {
-                self.at += 1;
-                return self.entry(io);
-            }
-            EE_UNITS_PLAYER_TICK_QUEUED_ERASE => {
-                self.log.push(format!("erase {}", self.queued[self.at].0));
-                self.queued.remove(self.at);
-                return self.entry(io);
-            }
-            EE_UNITS_PLAYER_TICK_QUEUED_SET => self.queued[self.at].1 = io.f,
             EE_UNITS_PLAYER_TICK_TICK_TIME => io.f = self.tick_time,
-            EE_UNITS_PLAYER_TICK_INSTANT_BUILD => return i32::from(self.instant),
-            EE_UNITS_PLAYER_TICK_QUEUED_APPLY => {
-                let e = &mut self.queued[self.at];
-                let front = e.2.remove(0);
-                e.1 = 0.0;
-                self.log.push(format!("apply {} {front}", e.0));
-            }
+            EE_UNITS_PLAYER_TICK_QUEUED_APPLY => self.log.push(format!("apply {} {index}", io.i)),
             EE_UNITS_PLAYER_TICK_QUEUED_ADVANCE => {
-                let e = &mut self.queued[self.at];
-                assert_eq!(e.0, io.i);
-                if e.2.is_empty() || self.advance_empty {
+                // the advance (player.rs) on the queue the walk reads
+                let e = self.queue.map.get_mut(&(io.i as c_ulong)).expect("the walk's entry");
+                if e.1.is_empty() || self.advance_empty {
+                    self.log.push(format!("erase {}", io.i));
                     return 1;
                 }
-                e.1 = 30.0;
+                e.0 = 30.0;
             }
-            EE_UNITS_PLAYER_TICK_HEALS_UNITS => return i32::from(self.heals),
             EE_UNITS_PLAYER_TICK_TICK_MS => io.i = self.tick_ms,
             EE_UNITS_PLAYER_TICK_HEAL_VALUE => match index {
                 0 => io.i = 10,
@@ -107,8 +87,14 @@ impl PlayerTickHost for Mock {
 }
 
 fn run(m: &mut Mock, rec: &mut EeUnitsPlayerSaved) {
-    // SAFETY: the record lives through the call
-    unsafe { update_player(m, rec) };
+    let mut fields = EeUnitsPlayerFields {
+        mInstantBuild: m.instant,
+        mHealsUnits: m.heals,
+        mQueued: &mut *m.queue,
+        ..Default::default()
+    };
+    // SAFETY: the records and the queue live through the call
+    unsafe { update_player(m, rec, &mut fields) };
 }
 
 #[test]
@@ -121,22 +107,21 @@ fn herds_update_when_due_and_end_in_state_0xb() {
 
 #[test]
 fn queued_timers_count_down_apply_and_erase() {
-    let mut m = Mock {
-        queued: vec![(3, 2.0, vec![7, 8]), (5, 0.5, vec![9]), (6, 0.0, vec![]), (9, 0.0, vec![4])],
-        tick_time: 1.0,
-        ..Default::default()
-    };
+    let mut m = Mock::with_queue(&[(3, 2.0, vec![7, 8]), (5, 0.5, vec![9]), (6, 0.0, vec![]), (9, 0.0, vec![4])]);
+    m.tick_time = 1.0;
     run(&mut m, &mut EeUnitsPlayerSaved::default());
     // 3 still runs (1.0 left); 5 runs out: 9 applied, its list empty, erased; 6 empty: erased; 9 idle: started
     assert_eq!(m.log, vec!["validate", "air events", "apply 5 9", "erase 5", "erase 6"]);
-    assert_eq!(m.queued, vec![(3, 1.0, vec![7, 8]), (9, 30.0, vec![4])]);
+    assert_eq!(m.queued(), vec![(3, 1.0, vec![7, 8]), (9, 30.0, vec![4])]);
 }
 
 #[test]
 fn instant_build_caps_a_timer_at_one() {
-    let mut m = Mock { queued: vec![(3, 20.0, vec![7])], tick_time: 1.0, instant: true, ..Default::default() };
+    let mut m = Mock::with_queue(&[(3, 20.0, vec![7])]);
+    m.tick_time = 1.0;
+    m.instant = true;
     run(&mut m, &mut EeUnitsPlayerSaved::default());
-    assert_eq!(m.queued[0].1, 1.0);
+    assert_eq!(m.queued()[0].1, 1.0);
     // and one more tick applies it
     run(&mut m, &mut EeUnitsPlayerSaved::default());
     assert!(m.log.contains(&"apply 3 7".to_string()));
@@ -204,7 +189,7 @@ fn reset_sets_the_records_fields_in_two_parts() {
         ..Default::default()
     };
     reset(&mut r, 2, 0);
-    assert_eq!(r.mResourceCaps, [9, 9, 0, 0, 0, 0, 0]);
+    assert_eq!(r.mResourceCaps, [0; 7], "all seven (0 and 1 too: the checksum sums them)");
     let mut enemies = [1; 17];
     enemies[2] = 0;
     assert_eq!(r.mEnemies, enemies);

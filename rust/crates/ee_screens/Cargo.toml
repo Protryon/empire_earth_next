@@ -22,3 +22,13 @@ ee_scenario = { path = "../ee_scenario" }
 ee_gfx = { path = "../ee_gfx" }
 # the scenario editor's terrain paint draws its ambient units from URandom (editor_actions.rs)
 ee_random = { path = "../ee_random" }
+# the toolkit's Rust objects, reached directly (toolkit.rs over ee_ui direct.rs)
+ee_ui = { path = "../ee_ui" }
+# the post-game summary's graphs' series (toolkit.rs)
+ee_util = { path = "../ee_util" }
+# the sound manager's and the conductor's Rust objects, called as their C++ forwarders call them (game_view_ffi.rs)
+ee_sound = { path = "../ee_sound" }
+
+[dev-dependencies]
+# the toolkit without its C++ imports, for the test binary
+ee_ui = { path = "../ee_ui", features = ["no_cpp"] }

@@ -17,7 +17,23 @@ template<class X> struct SmartPtr {
 struct Obj { int id; Obj(int i) : id(i) {} virtual ~Obj() {} };
 struct Font : Obj { Font(int i) : Obj(i) {} };
 struct Image : Obj { Image(int i) : Obj(i) {} void SetSize(int w, int h); };
-struct StretchImage : Image { StretchImage(int i) : Image(i) {} };
+struct RawImage : Image {
+    int w, h;
+    RawImage(int i, int ww, int hh) : Image(i), w(ww), h(hh) {}
+    // a width divided by a count of 0 (the original's crash) is -999 here, the same on both sides
+    struct Num { int v; operator int() const { return v; } Num operator/(int d) const { return Num{d ? v / d : -999}; } };
+    Num GetWidth() { return Num{w}; }
+    int GetHeight() { return h; }
+    SmartPtr<RawImage> Duplicate();
+};
+struct StretchImage : Image {
+    StretchImage(int i) : Image(i) {}
+    void SetImage(RawImage* r);
+    void SetTile(bool a, bool b);
+    void SetBorders(int a, int b, int c, int d);
+    void SetSkipCenter(bool a);
+    void CopyAttributes(StretchImage* s);
+};
 struct Sound : Obj { Sound(int i) : Obj(i) {} };
 struct Background { int id; Background() : id(-1) {} };
 struct SelectionColor { int id; SelectionColor() : id(-1) {} };
@@ -98,12 +114,33 @@ struct Component {
 };
 static int sNextComp;
 Component::Component() : Component(sNextComp++) {}
-static std::string PP(const Component* c) { return c ? "c" + P((long long)c->id) : "null"; }
+// a layout point's id is given at its first trace (the original made it before reading its name, the port after)
+static int sNextPoint;
+static std::string PP(const Component* c)
+{
+    if (c && c->id == -1) const_cast<Component*>(c)->id = 9000 + sNextPoint++;
+    return c ? "c" + P((long long)c->id) : "null";
+}
 typedef Component Container; typedef Component Button; typedef Component Scroller; typedef Component MultiListArea;
 typedef Component ScrollArea; typedef Component ListArea; typedef Component InputBox; typedef Component Splitter;
 typedef Component WONButton; typedef Component WONSimpleButton; typedef Component WONHeaderButton; typedef Component WONScrollbar;
 typedef Component WONScrollContainer; typedef Component WONListCtrl; typedef Component WONTabCtrl; typedef Component WONComboBox;
 typedef Component WONFrameComponent;
+struct LayoutPoint : Component { LayoutPoint() : Component(-1) {} };
+// the layouts ContainerConfig's instructions make (R6 WON round 40): each made and each component added is traced
+static int sNextLayout;
+struct ChildLayoutInstructionBase : Obj {
+    explicit ChildLayoutInstructionBase(const std::string& d) : Obj(sNextLayout++) { tr("new layout#" + P((long long)id) + " " + d); }
+    void AddComponent(Component* c) { tr("layout#" + P((long long)id) + ".Add(" + PP(c) + ")"); }
+};
+#define EE_CFGTAB_LAYOUT(T) T* Add(Component* c) { this->AddComponent(c); return this; }
+struct SameSizeLayout : ChildLayoutInstructionBase { SameSizeLayout(bool a, bool b) : ChildLayoutInstructionBase("SameSize(" + P(a) + "," + P(b) + ")") {} EE_CFGTAB_LAYOUT(SameSizeLayout) };
+struct CenterLayout : ChildLayoutInstructionBase { CenterLayout(Component* c, bool a, bool b) : ChildLayoutInstructionBase("Center(" + PP(c) + "," + P(a) + "," + P(b) + ")") {} EE_CFGTAB_LAYOUT(CenterLayout) };
+struct NoOverlapLayout : ChildLayoutInstructionBase { NoOverlapLayout(Component* t, int k, Component* r, int h, int v) : ChildLayoutInstructionBase("NoOverlap(" + PP(t) + "," + P((long long)k) + "," + PP(r) + "," + P((long long)h) + "," + P((long long)v) + ")") {} EE_CFGTAB_LAYOUT(NoOverlapLayout) };
+struct ClearRightLayout : ChildLayoutInstructionBase { ClearRightLayout(Component* c, int p) : ChildLayoutInstructionBase("ClearRight(" + PP(c) + "," + P((long long)p) + ")") {} EE_CFGTAB_LAYOUT(ClearRightLayout) };
+struct SpaceEvenlyLayout : ChildLayoutInstructionBase { SpaceEvenlyLayout(Component* c, int l, int r, bool h) : ChildLayoutInstructionBase("SpaceEvenly(" + PP(c) + "," + P((long long)l) + "," + P((long long)r) + "," + P(h) + ")") {} EE_CFGTAB_LAYOUT(SpaceEvenlyLayout) };
+struct SizeAtLeastLayout : ChildLayoutInstructionBase { SizeAtLeastLayout(Component* c, int h, int v) : ChildLayoutInstructionBase("SizeAtLeast(" + PP(c) + "," + P((long long)h) + "," + P((long long)v) + ")") {} EE_CFGTAB_LAYOUT(SizeAtLeastLayout) };
+#undef EE_CFGTAB_LAYOUT
 struct ImageComponent : Component { ImageComponent(Image* i) : Component(5000 + (i ? i->id : 0)) {} };
 enum StandardCursor { StandardCursor_Arrow, StandardCursor_Hand, StandardCursor_IBeam };
 struct Cursor : Obj {
@@ -134,6 +171,37 @@ struct SkinMap {
     std::string n;
     SkinSlot operator[](const GUIString& k) { SkinSlot s; s.n = n + "[" + (std::string)k + "]"; return s; }
 };
+// the image configs' raw images and filters (R6 WON round 41): every one made, copied and filtered is traced
+static int sNextRaw;
+SmartPtr<RawImage> RawImage::Duplicate() { RawImage* r = new RawImage(sNextRaw++, w, h); tr("raw#" + P((long long)id) + ".Duplicate -> #" + P((long long)r->id)); return r; }
+void StretchImage::SetImage(RawImage* r) { tr("stretch#" + P((long long)id) + ".SetImage(" + P(r) + ")"); }
+void StretchImage::SetTile(bool a, bool b) { tr("stretch#" + P((long long)id) + ".SetTile(" + P(a) + "," + P(b) + ")"); }
+void StretchImage::SetBorders(int a, int b, int c, int d) { tr("stretch#" + P((long long)id) + ".SetBorders(" + Args(a, b, c, d) + ")"); }
+void StretchImage::SetSkipCenter(bool a) { tr("stretch#" + P((long long)id) + ".SetSkipCenter(" + P(a) + ")"); }
+void StretchImage::CopyAttributes(StretchImage* s) { tr("stretch#" + P((long long)id) + ".CopyAttributes(#" + P((long long)s->id) + ")"); }
+struct ImageFilter : Obj {
+    std::string d;
+    explicit ImageFilter(const std::string& s) : Obj(0), d(s) {}
+    SmartPtr<RawImage> Filter(RawImage* r)
+    {
+        RawImage* o = r ? new RawImage(sNextRaw++, r->w / 2 + 1, r->h / 2 + 1) : NULL;
+        tr("filter " + d + "(" + P(r) + ") -> " + P(o)); return o;
+    }
+};
+struct ScaleImageFilter : ImageFilter {
+    explicit ScaleImageFilter(int) : ImageFilter("Scale0") {}
+    ScaleImageFilter(int w, int h) : ImageFilter("Scale(" + Args(w, h) + ")") {}
+    void SetPercentSize(int w, int h) { d = "ScalePercent(" + Args(w, h) + ")"; }
+};
+struct TintImageFilter : ImageFilter { TintImageFilter(int r, int g, int b) : ImageFilter("Tint(" + Args(r, g, b) + ")") {} };
+struct TransparentImageFilter : ImageFilter { explicit TransparentImageFilter(DWORD c) : ImageFilter("Transparent(" + P((long long)c) + ")") {} };
+struct CropImageFilter : ImageFilter {
+    int x = 0, y = 0, w = 0, h = 0;
+    CropImageFilter() : ImageFilter("Crop") {}
+    CropImageFilter(int a, int b, int c, int e) : ImageFilter("Crop(" + Args(a, b, c, e) + ")") {}
+    void SetSize(int a, int b) { w = a; h = b; d = "Crop(" + Args(x, y, w, h) + ")"; }
+    void SetPos(int a, int b) { x = a; y = b; d = "Crop(" + Args(x, y, w, h) + ")"; }
+};
 void Image::SetSize(int w, int h) { tr("image#" + P((long long)id) + ".SetSize(" + P((long long)w) + "," + P((long long)h) + ")"); }
 struct WindowManager {
     static WindowManager* GetDefaultWindowManager() { static WindowManager w; return &w; }
@@ -161,7 +229,7 @@ template<class T> T SafeConfigGetComponent(Component* c, const char* name)
         : !strcmp(name, "MultiListArea") ? 8 : 1u << (strlen(name) % 4);
     tr(std::string("SafeConfigGetComponent<") + name + ">(" + P(c) + ")");
     if (c == NULL || !(c->mask & bit)) throw ConfigObjectException(std::string("Invalid ") + name);
-    return c;
+    return (T)c;
 }
 
 // The reads: a cursor over the value text. A token runs to the next comma (or whitespace for a flag); a token
@@ -174,8 +242,29 @@ struct ComponentConfig {
     virtual ~ComponentConfig() {}
     virtual bool Virtual24(const std::string& key);
     SmartPtr<Component> mComponent = gComp;
+    ComponentConfig* mParent = NULL;
+    void SetComponent(Component* c) { mComponent = c; }
     bool mHasSetWidth = false, mHasSetHeight = false;
     bool HandleModify() { tr("HandleModify"); return mText.size() % 2 == 0; }
+    ComponentConfig* GetParentObject();
+    void AddChildToConfigMap(const GUIString& name, ComponentConfig* c);
+    SmartPtr<RawImage> ReadRawImage()
+    {
+        std::string t = Take("ReadRawImage");
+        RawImage* r = new RawImage(1000 + Hash(t) % 1000, 3 + Hash(t) % 60, 2 + Hash(t) % 40);
+        tr("ReadRawImage " + P(r)); return r;
+    }
+    SmartPtr<RawImage> GetRawImageFromStr(const std::string& n)
+    {
+        tr("GetRawImageFromStr \"" + n + "\"");
+        if (n.find('!') != std::string::npos) throw ConfigObjectException("bad image " + n);
+        return new RawImage(2000 + Hash(n) % 1000, 4 + Hash(n) % 30, 4);
+    }
+    GUIString ReadRawString(bool)
+    {
+        std::string t = Take("ReadRawString");
+        tr("ReadRawString \"" + t + "\""); return GUIString(t.c_str());
+    }
     bool HandleMapComponent() { tr("HandleMapComponent"); return true; }
     void SetDesiredSizeIfNecessary() { tr("SetDesiredSizeIfNecessary"); }
     SmartPtr<Cursor> ReadCursor() { Cursor* c = new Cursor(Hash(Take("ReadCursor"))); tr("ReadCursor " + P(c)); return c; }
@@ -224,11 +313,13 @@ struct ComponentConfig {
     }
     VertAlign ReadVertAlign() { int v = Hash(Take("ReadVertAlign")) % 3; tr("ReadVertAlign " + P((long long)v)); return (VertAlign)v; }
     HorzAlign ReadHorzAlign() { int v = Hash(Take("ReadHorzAlign")) % 3; tr("ReadHorzAlign " + P((long long)v)); return (HorzAlign)v; }
-    GUIString ReadString(bool)
+    GUIString ReadString(bool word)
     {
-        std::string t = Take("ReadString");
+        std::string t;
+        if (word) { Skip(); t = Token(true); if (!t.empty() && t[0] == '!') { tr("ReadWord throws"); throw ConfigObjectException("bad ReadWord"); } }
+        else t = Take("ReadString");
         if (!t.empty() && t[0] == '@') t = "res:" + t.substr(1);
-        tr("ReadString \"" + t + "\""); return GUIString(t.c_str());
+        tr((word ? "ReadWord \"" : "ReadString \"") + t + "\""); return GUIString(t.c_str());
     }
     GUIString ReadFlag(bool* on)
     {
@@ -269,8 +360,48 @@ struct ComponentConfig {
 };
 #define V24 virtual bool Virtual24(const std::string&)
 #define BASE(n) virtual bool Virtual24(const std::string& key) { return Base(#n, key); }
-struct ContainerConfig : ComponentConfig { BASE(ContainerConfig) };
+// ContainerConfig's instructions (R6 WON round 40; the LAYOUT family, NEWLAYOUTPOINT and NOOVERLAPLAYOUT round 41).
+// The layout state starts as the original's uninitialised members might (mLayoutRef is set by the constructor).
+struct ConfigMapSlot {
+    std::string n;
+    ConfigMapSlot& operator=(const SmartPtr<ComponentConfig>& c)
+    { tr("configmap[" + n + "]=config(" + PP(c->mComponent.get()) + "," + (c->mParent ? "parent" : "orphan") + ")"); return *this; }
+};
+struct ConfigMap { ConfigMapSlot operator[](const std::string& k) { ConfigMapSlot s; s.n = k; return s; } };
+struct ContainerConfig : ComponentConfig {
+    V24; Component* mContainer = gComp; int mCurLayoutId = 0;
+    Component* mLayoutRef = NULL; int mLayoutInstruction = 0x5a5; int mLayoutParams[4] = {11, -22, 33, -44};
+    ConfigMap mConfigMap;
+    bool HandleAdd(); bool HandleAddLayoutPoint(); bool HandleSameSizeLayout(bool, bool); bool HandleCenterLayout(bool, bool);
+    bool HandleClearRightLayout(); bool HandleSpaceEvenlyLayout(bool); bool HandleSizeAtLeastLayout();
+    bool HandleLayout(bool chain = false, bool repeat = false); bool HandleNewLayoutPoint(); bool HandleNoOverlapLayout();
+};
 struct ImageConfig : ComponentConfig { V24; SmartPtr<Image> mImage = new Image(77); };
+static int sNextStretch;
+struct StretchImageConfig : ImageConfig {
+    V24; StretchImage* mStretchImage;
+    StretchImageConfig() { mStretchImage = new StretchImage(sNextStretch++); mImage = mStretchImage; }
+};
+struct ImageFilterConfig : ImageConfig {
+    V24; SmartPtr<RawImage> mRawImage = new RawImage(99, 40, 20); bool mImageIsRawImage = false;
+    SmartPtr<RawImage> HandleFilter();
+    // (a filter that made no image leaves an empty one here: the original's next use of it would crash)
+    void SetRawImage(RawImage* r)
+    {
+        static RawImage sEmpty(0, 0, 0);
+        tr("SetRawImage(" + P(r) + ")"); mRawImage = r ? r : &sEmpty; mImage = r; mImageIsRawImage = true;
+    }
+};
+// the configs' parent: the children added to its map
+static ComponentConfig sParentConfig;
+ComponentConfig* ComponentConfig::GetParentObject() { return &sParentConfig; }
+void ComponentConfig::AddChildToConfigMap(const GUIString& name, ComponentConfig* c)
+{
+    std::string what = "config";
+    if (StretchImageConfig* s = dynamic_cast<StretchImageConfig*>(c)) what = "stretch#" + P((long long)s->mStretchImage->id);
+    else if (ImageFilterConfig* f = dynamic_cast<ImageFilterConfig*>(c)) what = "filter " + P(f->mRawImage.get());
+    tr("parent.AddChildToConfigMap(" + P(name) + "," + what + ")");
+}
 struct ButtonConfig : ComponentConfig { V24; Component* mButton = gComp; void HandleButtonFlags(); void HandleFitText() { tr("HandleFitText"); } };
 struct ScrollAreaConfig : ContainerConfig { V24; Component* mScrollArea = gComp; };
 struct ScrollerConfig : ContainerConfig { V24; Component* mScroller = gComp; };
@@ -335,7 +466,8 @@ struct WONSkinConfig : ComponentConfig { V24; bool ReadVert(); void HandleButton
     X(ImageButtonConfig) X(LabelConfig) X(ListAreaConfig) X(InputBoxConfig) X(TextAreaConfig) X(TreeAreaConfig) \
     X(WONSimpleButtonConfig) X(WONButtonConfig) X(SplitterConfig) X(WONScrollbarConfig) X(WONHeaderControlConfig) \
     X(WONListCtrlConfig) X(WONFrameComponentConfig) X(WONComboBoxConfig) X(WONTabCtrlConfig) X(WONScrollContainerConfig) \
-    X(ScrollAreaConfig) X(ScrollerConfig) X(ScrollbarScrollerConfig) X(StretchCenterImageConfig) X(ComponentConfig) X(WONSkinConfig) X(FontConfig) X(ImageConfig)
+    X(ScrollAreaConfig) X(ScrollerConfig) X(ScrollbarScrollerConfig) X(StretchCenterImageConfig) X(ComponentConfig) X(ContainerConfig) X(WONSkinConfig) X(FontConfig) X(ImageConfig) \
+    X(StretchImageConfig) X(ImageFilterConfig)
 static ComponentConfig* MakeConfig(int i)
 {
     int n = 0;
@@ -344,17 +476,24 @@ static ComponentConfig* MakeConfig(int i)
 #undef EE_CFGTAB_MK
     return NULL;
 }
-// One instruction on a new config of kind i: the trace, the result or exception, the layout config's arrays.
-static std::string RunOne(int i, const std::string& key, const std::string& value)
+// Instructions in turn on a new config of kind i: the trace, each result or exception, the layout config's arrays
+// and state.
+static std::string RunSeq(int i, const std::vector<std::pair<std::string, std::string>>& steps)
 {
-    sTrace.clear(); sComps.clear(); sNextComp = 1000;
+    sTrace.clear(); sComps.clear(); sNextComp = 1000; sNextLayout = 1; sNextPoint = 0; sNextRaw = 3000; sNextStretch = 500;
     gComp = new Component(1); gComp->mEdit = new Component(2);
     ComponentConfig* c = MakeConfig(i);
-    c->mText = value;
-    try { tr(c->Virtual24(key) ? "=> 1" : "=> 0"); }
-    catch (const ConfigObjectException& e) { tr("throws " + e.mText); }
+    for (const auto& s : steps) {
+        c->mText = s.second; c->mPos = 0;
+        try { tr(c->Virtual24(s.first) ? "=> 1" : "=> 0"); }
+        catch (const ConfigObjectException& e) { tr("throws " + e.mText); }
+    }
     if (FontConfig* f = dynamic_cast<FontConfig*>(c)) tr("style " + P((long long)f->mDescriptor.mStyle));
     if (ImageConfig* m = dynamic_cast<ImageConfig*>(c)) tr("image " + P(m->mImage));
+    if (ContainerConfig* k = dynamic_cast<ContainerConfig*>(c))
+        tr("layout id " + P((long long)k->mCurLayoutId) + " ref " + PP(k->mLayoutRef) + " rule " + P((long long)k->mLayoutInstruction) + " "
+           + P((long long)k->mLayoutParams[0]) + " " + P((long long)k->mLayoutParams[1]) + " " + P((long long)k->mLayoutParams[2]) + " "
+           + P((long long)k->mLayoutParams[3]));
     if (PercentLayoutConfig* p = dynamic_cast<PercentLayoutConfig*>(c)) {
         std::string s = "refs";
         for (Component* r : p->refs) s += " " + P(r);
@@ -365,3 +504,4 @@ static std::string RunOne(int i, const std::string& key, const std::string& valu
     tr("pos " + P((long long)c->mPos) + " set " + P(c->mHasSetWidth) + P(c->mHasSetHeight));
     return sTrace;
 }
+static std::string RunOne(int i, const std::string& key, const std::string& value) { return RunSeq(i, {{key, value}}); }

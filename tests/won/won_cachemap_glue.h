@@ -42,6 +42,15 @@ template <class Cache, class Entry> struct HttpCacheMsg {
         ee_won_cachemap_read(path.c_str(), static_cast<int32_t>(inVersion), Put, &o);
     }
 
+    // ReadCacheMap over the file's bytes in memory (the driver's cases that need no disk)
+    static void ReadMemory(Cache& o, long inVersion, const std::string& inFile)
+    {
+        o.mCacheIdMap.clear();
+        o.mCacheLocationMap.clear();
+        o.mNextFreeId = 1;
+        ee_won_cachemap_read_memory(B(inFile), inFile.size(), static_cast<int32_t>(inVersion), Put, &o);
+    }
+
     struct WriteCtx {
         Cache* mCache;
         std::vector<Entry*> mEntries;
@@ -53,8 +62,11 @@ template <class Cache, class Entry> struct HttpCacheMsg {
     }
     static const uint8_t* B(const std::string& s) { return reinterpret_cast<const uint8_t*>(s.data()); }
 
-    // WriteCacheMap (now is its time(NULL))
-    static void Write(Cache& o, long inVersion, time_t inNow)
+    static void Sink(void* inContext, const uint8_t* inBytes, size_t inLength)
+    { static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inBytes), inLength); }
+
+    // WriteCacheMap (now is its time(NULL)); with outFile, the file's bytes there instead of on disk
+    static void Write(Cache& o, long inVersion, time_t inNow, std::string* outFile = NULL)
     {
         std::string path = o.mCachePath + "cachemap.dat";
         WriteCtx aCtx;
@@ -75,8 +87,12 @@ template <class Cache, class Entry> struct HttpCacheMsg {
             }
             aRaw.push_back(r);
         }
-        ee_won_cachemap_write(path.c_str(), static_cast<int32_t>(inVersion), static_cast<int64_t>(inNow), aRaw.data(),
-                              aRaw.size(), Delete, &aCtx);
+        if (outFile != NULL)
+            ee_won_cachemap_write_memory(static_cast<int32_t>(inVersion), static_cast<int64_t>(inNow), aRaw.data(),
+                                         aRaw.size(), Delete, &aCtx, Sink, outFile);
+        else
+            ee_won_cachemap_write(path.c_str(), static_cast<int32_t>(inVersion), static_cast<int64_t>(inNow),
+                                  aRaw.data(), aRaw.size(), Delete, &aCtx);
     }
 };
 

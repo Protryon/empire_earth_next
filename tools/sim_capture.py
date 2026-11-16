@@ -14,6 +14,12 @@ from a capture of the C++ leaves before they were deleted: a later build whose g
 the same records, so `check` gates the whole path (the inputs the game hands a leaf and its outputs), and `replay`
 gates the Rust leaves alone over the C++ capture, even after the game has changed.
 
+PLST is each player's state at every EEPlayer::UpdatePlayer (the statistics but series 0x14 and 0x15, which the local
+player's reports set by the wall clock, the events, queued improvements and plain members as FNV-1a 64 digests, the
+resources 2..6 and counts), PLEC each economy and improvement decision (CanProduce,
+the CanAfford family, Pay, the improvements' queue and costs: the outermost call on the simulation thread, its
+arguments, result and the resources after); their golden lines (seeds 2-3 of the oracle, late, space and calamity
+profiles) come from the C++ player before its members and bodies moved (the player lane, round 1).
 EFMU is the effect manager's state after every Update (EEEffectManager.cpp: the last handle, the sizes and an
 FNV-1a 64 of the index, the list and the destruction queue); its golden lines come from the C++ manager (R4.4, sixth
 round; the missile profile's golden does not list it).
@@ -74,6 +80,15 @@ and loaded: EFSW one record per case (the creation, the save, the load and repai
 every update of the sweep. Its golden came from the C++ effects of f839d277 (R4.4, fourteenth, sixteenth and nineteenth rounds; the twentieth's
 from the C++ of 2c6cd492, whose 2D kinds but the shockwave and confirmation were the original classes; the
 twenty-first's from the C++ of cddb6963, whose particle, decals, marching icons and light glow were the original classes).
+CAMU is the camera's whole state (ee/EEAppCapture.h: the poses, the view, the target, the followed units' ids, the
+move's numbers, mode and flags, the path's keys, the viewport's clipping distances) at the start and end of every
+EECameraControl::Update (the physics thread's each tick); its golden lines (oracle, scenario) come from the C++ camera
+before it moved (app and world lane, round 1).
+MAPC (the map around each outer EEMap terrain edit), MAPP (the terrain pitch and roll), MMPX (the mini map's terrain
+pixels) and MMSN (every mini map cell each game minute) are in every profile, MAPS (EEMap's sight: only a wonder's) and
+MAPK (the out-of-synch checksum: multiplayer only) where a game reaches them; --profile app types cheat lines and starts
+storms (CHET, CHEF, CHLS, STRM; its golden also lists CAMU for the "goto" and "find" lines). Their goldens come from the
+C++ before EEMap, EEMiniMap, EECheatCodes and EEEMStorm moved (app and world lane, round 2; ee/EEAppCapture.h).
 CALW (every calamity update with its state before and after and its world calls), CCAS (CanCastAt: the game's
 calls and a sweep over every class, the computer players' first units and real points and targets), TRTE
 (ResearchToEpoch's steps) and EVUN (the units an effect walks, with what applies and the values) were recorded from
@@ -111,6 +126,12 @@ USGC is the group commands' sweep (ee/EEUnitHost.h, EEGroupCommandSweep.cpp): ev
 player and a set of selections and arguments, the Rust body of a group command run over the dry host (every world
 call logged, nothing changed); the original body's statements run over the same host must give the same log (else
 EE-SIM exits 3). The record holds the Rust body's log.
+AGPL is the active groups' sweep (--profile groups: EE-SIM --group-sweep, Units/EEActiveGroupSweep.cpp): no other game
+makes an active group plan, so at the game's end every player's units get real group commands (moves, attacks,
+gather and drop off, heal, explore, patrol, unload, disband, the spreads, the reserved destination tests), one record
+per command with the group and every unit's goals, queues, command and formation place after it. Its golden lines
+(seeds 2-5 and 7; seed 6 faults in the original's SetGroupPathGoals) come from the C++ bodies of EEActiveGroup.cpp
+before they moved (R5b.4 round 35).
 USTM is the unit step's leaves (ee/EEUnitStore.h, ee_units step.rs): one record per physics tick, the calls of the
 reload, target and heal search countdowns and RegeneratePower and the FNV-1a of each call's kind, unit, inputs and
 outputs. Its golden lines come from the C++ bodies (late 3, space 2); late 2, 6, 7 (the fishing-boat rebaseline's
@@ -180,12 +201,29 @@ PROFILES = {
     # from the Atomic Age (WW I), every five game minutes every player makes aircraft (airport, carrier and its deck
     # walk, navy yard), submarines, sea animals and spaceships and sends them at the next player (EE-SIM
     # --unit-sweep: no other profile steps those physics models); the map by seed (UNIT_MAPS: water or space)
+    # the oracle's game to twenty minutes with EE-SIM --app-sweep: cheat lines typed at five game minutes, a storm of
+    # each kind at ten (no game of the other profiles types a cheat or starts a storm); its golden lists the app and
+    # world lane's tags (CHET, CHEF, CHLS, STRM, CAMU, MAP*, MM*)
+    "app": ["--difficulty", "Hard", "--game-seconds", "1200", "--cheats", "none", "--app-sweep"],
     "units": ["--difficulty", "Hard", "--game-seconds", "1500", "--cheats", "all", "--ai", "3", "--lobby", "183=#9",
               "--map-type", "{map}", "--unit-sweep"],
+    # a small islands map from the Middle Ages to 90 game minutes, three computer players with the original's cheats:
+    # from about 50 minutes their invasions load transports, meet them at the shore and unload on the other islands
+    # (the transports' searches and tests: no other profile loads a transport)
+    # the end sweep of real group commands (EE-SIM --group-sweep: no other game makes an active group plan): the start
+    # epoch by seed (GROUP_EPOCHS), three computer players with the original's cheats, 15 game minutes; only AGPL
+    "groups": ["--difficulty", "Hard", "--game-seconds", "900", "--cheats", "all", "--ai", "3", "--lobby", "{epoch}",
+               "--group-sweep"],
+    "transport": ["--difficulty", "Hard", "--game-seconds", "5400", "--cheats", "all", "--ai", "3", "--lobby", "183=#5",
+                  "--map-type", "Small Islands"],
 }
 
 # the units profile's map by seed (seed 2 the first): water for the ships, space for the spaceships
 UNIT_MAPS = ["Continental", "Planets Small"]
+
+# the groups profile's start epoch by seed (seed 2 the first): the Middle Ages (priests, ships), the Atomic Age
+# (aircraft, airports, carriers)
+GROUP_EPOCHS = ["183=#5", "183=#9"]
 
 # the scenario profile's games by seed (seed 2 the first): (campaign archive, scenario) of the data tree's
 # Data/Campaigns, extracted once into build/sim_capture/scenarios (retail data: never committed)
@@ -234,7 +272,8 @@ def one(name, exe, seed, data, profile="oracle"):
     capture.unlink(missing_ok=True)
     env = dict(os.environ, EE_SIM_CAPTURE=str(capture.resolve()))
     args = [str(scenario_file(seed, data)) if v == "{scenario}" else UNIT_MAPS[(seed - 2) % len(UNIT_MAPS)]
-            if v == "{map}" else v for v in PROFILES[profile]]
+            if v == "{map}" else GROUP_EPOCHS[(seed - 2) % len(GROUP_EPOCHS)] if v == "{epoch}" else v
+            for v in PROFILES[profile]]
     r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "sim.py"), "--data", data, "--slot",
                         f"capture-{name}-{seed}", "--exe", str(exe), "--", "--seed", str(seed), *args,
                         "--report", str(report), "--ai-trace", "--trace", str(trace)], cwd=ROOT, capture_output=True,

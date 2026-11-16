@@ -9,12 +9,19 @@
 #include "lle/GE3DPoint.h"
 #include "lle/GEQuaternion.h"
 #include "ee/EEUnitHandle.h"
+#include "rust/ee_app.h"
 
 class GE3DPoint;
 class EEUnit;
 class EECameraKey;                          // 0xa4-byte camera keys (provisional name; also EEScenarioManager+8)
 
-class EECameraControl {
+// The camera is whole in Rust (rust/crates/ee_app camera.rs): the plain members below the methods are the record
+// EeAppCameraFields (rust/ee_app.h) the class derives from, in the original's order and names (mQ014, mQ024 the
+// start turns, mStartOffset, mStartFocus, mQ04C, mQ05C the end turns, mEndOffset, mEndFocus, mView, mTargetPoint (x =
+// -10000: none), mFraction, mRate, mZoom, mWait, mWaited, mTurnYaw, mTurnPitch, mMode (3: free), mPathIndex, mChanged,
+// mIsFollowingUnitB, mLocked, mB0FF); the GE values are their Rust mirrors (the same storage). Every body is Rust over
+// the host in EECameraControl.cpp; the key list and the followed units' handles stay here.
+class EECameraControl : public EeAppCameraFields {
 public:
     virtual ~EECameraControl();             // slot 0 (0x12779f)
     // 0x128129: the location inStep of the way from +0x40 to +0x78 (the earthquake passes mFraction and shakes the
@@ -27,6 +34,9 @@ public:
     void Update(float inElapsedTime);       // 0x129a34 (EEMLoadMainScreen passes 1.0; provisional name)
     // inline (the grab scroll copies it to a temporary before its GetValue call, 0x1d9a5c)
     float GetZoom() const { return this->mZoom; }
+    // port: the end offset and focus as the C++ value class (the scenario's camera keys, the test fixture)
+    const GE3DPoint& GetEndOffset() const { return reinterpret_cast<const GE3DPoint&>(this->mEndOffset); }
+    const GE3DPoint& GetEndFocus() const { return reinterpret_cast<const GE3DPoint&>(this->mEndFocus); }
     void ResetZoom();                       // 0x12934f: SetZoom(1.0f)
     void Revolve(const GE3DPoint& inAngles);    // 0x128722 (the mouse revolve event; provisional name)
     void Rotate(const GE3DPoint& inAngles);     // 0x12887d (the mouse rotate event; provisional name)
@@ -68,34 +78,9 @@ public:
     void GoTo(const EECameraKey& inKey);        // 0x12935b: moves towards a key
     void KeepPose();                        // 0x12976f: the current state becomes the start
 
-    // Layout (no gaps; sizeof 0x100): the ctor 0x127654 and the dtor 0x1277bb; floats by their
-    // fld/fstp stores; member names are provisional unless stated.
     std::vector<EECameraKey> mKeys;         // +0x004 (0xa4-byte POD elements: `_Buy` 0x12a081; provisional name)
-    GEQuaternion mQ014;                     // +0x014 (the start orientations: Slerp to +0x4c/+0x5c)
-    GEQuaternion mQ024;                     // +0x024
-    GE3DPoint mStartOffset;                 // +0x034 (the start points: lerped to +0x6c/+0x78)
-    GE3DPoint mStartFocus;                  // +0x040
-    GEQuaternion mQ04C;                     // +0x04c (the target key's orientations, ConvertFrom its transformations)
-    GEQuaternion mQ05C;                     // +0x05c
-    GE3DPoint mEndOffset;                   // +0x06c (the target key's points)
-    GE3DPoint mEndFocus;                    // +0x078
-    GETransformation mView;                 // +0x084
-    GE3DPoint mTargetPoint;                 // +0x0c4 (x = -10000: none; ClearUnitB resets it)
     EEUnitHandle<EEUnit> mUnitA;            // +0x0d0 (referenced; ClearUnitA; MoveTo's inUnitA; provisional name; a handle since R5a.4: read on the graphics and physics threads)
     EEUnitHandle<EEUnit> mUnitB;            // +0x0d4 (referenced; ClearUnitB; a handle)
-    float mFraction;                        // +0x0d8
-    float mRate;                            // +0x0dc
-    float mZoom;                            // +0x0e0 (SetZoom stores it; the wheel zoom reads it)
-    float mWait;                            // +0x0e4 (untouched by the ctor; the key's +0x98: a hold time)
-    float mWaited;                          // +0x0e8
-    float mTurnYaw;                         // +0x0ec
-    float mTurnPitch;                       // +0x0f0
-    long mMode;                             // +0x0f4 (3: the wheel and hot-key zoom first switch it back to 0)
-    long mPathIndex;                        // +0x0f8
-    bool mChanged;                          // +0x0fc
-    bool mIsFollowingUnitB;                 // +0x0fd
-    bool mLocked;                           // +0x0fe
-    bool mB0FF;                             // +0x0ff (untouched by the ctor)
 };
 
 #endif

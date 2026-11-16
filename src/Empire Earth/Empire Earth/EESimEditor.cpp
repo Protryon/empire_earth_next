@@ -72,6 +72,11 @@
 //   align c|e                             the condition's or effect's labels' alignments (- never set)
 //   seed                                  the user interface's random seed (the map tab's CreateMap)
 //   media                                 the scenario's media texts (their lengths, first 60 bytes), the export file
+//   terrainstate | terrainpick LINE | terraincolor LINE   round 8: the terrain tab (TerrainDigest), a list's line
+//                                         clicked (its event fires)
+//   terrainpaint L T R B                  the terrain paint area's CreatePaintAction over an area, posted
+//   terrainmouse X Y | terrainmouse update   the terrain tab's MouseMove / Update; brushhl X Y CENTERED SetHighlight
+//   techfill ID FIRST LAST | techstate    a tech list's Fill; the two tech lists (TechDigest: ids, lines, CopyData's marks)
 // Out of the script's reach (a person's): the mouse's picking (EEPreviewPlacement's screen point, the lasso's and
 // the click's picking), the save and test screens (EESEASaveScenario, EESEATestScenario, EESEAExitScenario), the tech
 // lists (EESEATechTree), the load thread's texts (EESEAChangeLoadText).
@@ -162,7 +167,7 @@
 #include "ee/EECommunications.h"
 #include "ee/EEGameSound.h"
 #include "ee/EESaveLoad.h"
-#include "ee/EEAQuickSaveLoad.h"
+#include "ee/EEARust.h"
 #include <string.h>
 #include "lle/GEFont.h"
 #include "lle/GEText.h"
@@ -170,7 +175,6 @@
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EESEAPaint.h"
 #include "ee/EESEARust.h"
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
@@ -178,11 +182,7 @@
 #include "ee/EECivilization.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EEMessage.h"
-#include "ee/EEALasso.h"
-#include "ee/EESEALasso.h"
 #include "ee/EEMouse.h"
-#include "ee/EEAMouseClick.h"
-#include "ee/EESEAMouseClick.h"
 #include "lle/GEOrientation.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEUnitClassKinds.h"
@@ -191,10 +191,11 @@
 #include "ee/EEEffectManager.h"
 #include "ee/EEUIFSEPaint.h"
 #include "ee/EEUIFSEPaintElevation.h"
+#include "lle/UIBitmap.h"
+#include "ee/EEUIFSETerrain.h"
 #include "lle/URandom.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EETileCoordinate.h"
-#include "ee/EESEAQuickSaveLoad.h"
 #include "ee/EEAreaEffect.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
@@ -206,7 +207,6 @@
 #include <mutex>
 #include <string>
 #include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EEAScroll.h"
 #include "ee/EEUIFSEMainButton.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPSaveGameHeader.h"
@@ -219,7 +219,6 @@
 #include "ee/EEScenarioEditorIDs.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESETSAMouseClick.h"
 #include "ee/EESETSCondition.h"
 #include "ee/EESETSConditionControls.h"
 #include "ee/EESETSArea.h"
@@ -240,7 +239,6 @@ long EESETestSaveTriggersOnly(UIForm* inForm);   // EEUIFScenarioEditor.cpp (TES
 #include "ee/EESERBUnitTypes.h"
 #include "lle/TSThread.h"
 #include "lle/TSEvent.h"
-#include "ee/EESEAChangeLoadText.h"
 #include "ee/EESELoadThread.h"
 #include "ee/EEScenarioEditorIDs.h"
 #include "rust/ee_time.h"
@@ -262,17 +260,33 @@ std::condition_variable sStepDone;
 bool sStepFinished = false;
 long sStepClock = 1000;                     // the time TMGetTime answers on the UI thread for the next step
 
-// The step's end, after the events it posted to the UI thread's queue: lets the clock run and wakes the driver
+class EESimEditorMarker;
+void PostMarker(long inLeft, long inRounds);
+
+// The step's end, after the events it posted to the UI thread's queue: inRounds more rounds through the action queue
+// first (a step makes one), then lets the clock run and wakes the driver. The round: a control's trigger event (a
+// list's selection, a question's Yes, a check box's change) is processed by a UI update, and what it posts (the
+// civilization choice's load of the selected file, the delete after the Yes, the hide-UI box's view change:
+// PostEvent) reached this queue after the first end, so the next step read the state before or after them depending
+// on when the update came: the gates' flakes under load (the civilization builder's choice statistics empty with
+// "Please wait" shown, or filled; the editor's view after the hide-UI box and the trigger tab's check boxes). After
+// the round every such event is processed before the end.
 class EESimEditorDone : public UIEvent {
 public:
+    explicit EESimEditorDone(long inRounds) : mRounds(inRounds) {}
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     {
+        if (this->mRounds > 0) {
+            PostMarker(3, this->mRounds - 1);
+            return 0;
+        }
         ee_time_pin(-1);
         std::lock_guard<std::mutex> theGuard(sStepLock);
         sStepFinished = true;
         sStepDone.notify_all();
         return 0;
     }
+    long mRounds;
 };
 
 // The last action of a step: posted after the step's own actions, it posts itself again inLeft times (an action run
@@ -280,7 +294,7 @@ public:
 // (EESimEditorDone) to the UI thread's message queue.
 class EESimEditorMarker : public EEAction {
 public:
-    EESimEditorMarker(long inLeft) : EEAction(false), mLeft(inLeft) {}
+    EESimEditorMarker(long inLeft, long inRounds) : EEAction(false), mLeft(inLeft), mRounds(inRounds) {}
     virtual void Virtual4()
     {
         if (this->mLeft-- > 0) {
@@ -289,40 +303,48 @@ public:
         }
         // the end goes through the UI thread's message queue too: the events a step posted there (e.g. the hide-UI
         // box's viewport change) are processed first (one queue, in order)
-        UIEvent* theDone = new EESimEditorDone;
+        UIEvent* theDone = new EESimEditorDone(this->mRounds);
         gUserInterface->PostEvent(theDone, NULL);
         theDone->Dereference();
     }
     virtual void Virtual8() {}
     long mLeft;
+    long mRounds;   // the rounds through the action queue still to make after this marker's end (EESimEditorDone)
 };
+
+void PostMarker(long inLeft, long inRounds)
+{
+    EESimEditorMarker* theMarker = new EESimEditorMarker(inLeft, inRounds);
+    gUserInterface->PostAction(theMarker);
+    theMarker->Dereference();
+}
 
 // A step: on the UI thread, in the action queue (under the UI copy lock and the world's write lock, as every
 // editor action runs), the clock pinned, the step's code, then the marker.
 class EESimEditorStep : public EEAction {
 public:
-    EESimEditorStep(const std::function<void()>& inCode) : EEAction(false), mCode(inCode) {}
+    EESimEditorStep(const std::function<void()>& inCode, long inRounds)
+        : EEAction(false), mCode(inCode), mRounds(inRounds) {}
     virtual void Virtual4()
     {
         ee_time_pin(sStepClock);
         this->mCode();
-        EESimEditorMarker* theMarker = new EESimEditorMarker(3);
-        gUserInterface->PostAction(theMarker);
-        theMarker->Dereference();
+        PostMarker(3, this->mRounds);
     }
     virtual void Virtual8() {}
     std::function<void()> mCode;
+    long mRounds;
 };
 
-// Runs a step and waits for its marker; false after a minute without it
-bool RunStep(const std::function<void()>& inCode)
+// Runs a step and waits for its marker (inRounds: EESimEditorDone's); false after a minute without it
+bool RunStep(const std::function<void()>& inCode, long inRounds = 1)
 {
     {
         std::lock_guard<std::mutex> theGuard(sStepLock);
         sStepFinished = false;
     }
     sStepClock += 1000;
-    EESimEditorStep* theStep = new EESimEditorStep(inCode);
+    EESimEditorStep* theStep = new EESimEditorStep(inCode, inRounds);
     gUserInterface->PostAction(theStep);
     theStep->Dereference();
     std::unique_lock<std::mutex> theLock(sStepLock);
@@ -1226,6 +1248,86 @@ void SyncLoadThread()
 // the editor form's own state (TEST ONLY, round 7): its tab and control group, the selection and its cargo count,
 // its flags, the mini map's, help label's and load text's display modes (the load text's text after the load thread
 // is idle), the brush highlight, the saved view and panel rectangles, the edge scroll's edges
+// the terrain tab (TEST ONLY, round 8): its terrains' and colour types' table ids in order, the selected terrain, the
+// type list (each line's name, preview and colour set), the colour list (each set's size and first colour), their
+// selections, the preview bitmap's texture and corner colours, the paint radios, the controls' display modes, the
+// paint area's centring, the brush group's size, highlight and rectangle
+void TerrainDigest(std::vector<std::string>& outLines)
+{
+    EEUIFScenarioEditor* e = gUIManager->mScenarioEditorForm;
+    EEUIFSETerrain* t = static_cast<EEUIFSETerrain*>(e->GetTabGroup(kEditorTabTerrain));
+    std::string s = "  terrain selected=" + std::to_string((long)t->GetSelectedTerrain()) + " terrains";
+    for (unsigned long k = 0; k < t->GetTerrainCount(); k++)
+        s += " " + std::to_string(t->GetTerrainID(k));
+    s += " colors";
+    for (unsigned long k = 0; k < t->GetColorTypeCount(); k++)
+        s += " " + std::to_string(t->GetColorTypeID(k));
+    outLines.push_back(s);
+    EESEUITerrainTypeLB* theTypes = static_cast<EESEUITerrainTypeLB*>(e->GetControlById(kSETerrainTerrainType));
+    unsigned long theSelection = 0;
+    bool theSelected = theTypes->GetCurrentSelection(theSelection) == kErrorOK;
+    s = "  types n=" + std::to_string(theTypes->GetLineCount()) + " sel=" +
+        (theSelected ? std::to_string(theSelection) : std::string("none")) + ":";
+    for (unsigned long k = 0; k < theTypes->GetLineCount(); k++) {
+        const EESEUITTData& d = theTypes->GetData(k);
+        s += std::string(" '") + (const char*)d.mName + "'" + (d.mTexture != NULL ? "t" : "-") + std::to_string(d.mColorSet);
+    }
+    outLines.push_back(s);
+    EESEUITerrainColorLB* theColors = static_cast<EESEUITerrainColorLB*>(e->GetControlById(kSETerrainTerrainColorType));
+    theSelected = theColors->GetCurrentSelection(theSelection) == kErrorOK;
+    s = "  colorsets n=" + std::to_string(theColors->GetLineCount()) + " sel=" +
+        (theSelected ? std::to_string(theSelection) : std::string("none")) + ":";
+    for (unsigned long k = 0; k < theColors->GetLineCount(); k++) {
+        const std::vector<GEColor>& d = theColors->GetData(k);
+        s += " " + std::to_string(d.size()) + (d.empty() ? std::string() : "/" + Colour(d[0]));
+    }
+    outLines.push_back(s);
+    UIBitmap* theBitmap = static_cast<UIBitmap*>(e->GetControlById(kSETerrainBitmap));
+    GEColor c0, c1, c2, c3;
+    theBitmap->GetBitmap()->GetColorPerVertex(c0, c1, c2, c3);
+    s = std::string("  preview texture=") + (theBitmap->GetBitmap()->GetTexture(0) != NULL ? "1" : "0") + " corners " +
+        Colour(c0) + " " + Colour(c1) + " " + Colour(c2) + " " + Colour(c3) + " modes";
+    for (unsigned long theID : {(unsigned long)kSETerrainTerrainTypeLabel, (unsigned long)kSETerrainTerrainType,
+                                (unsigned long)kSETerrainTerrainColorTypeLabel, (unsigned long)kSETerrainTerrainColorType,
+                                (unsigned long)kSETerrainBitmap})
+        s += " " + std::to_string(e->GetControlById(theID)->GetDisplayMode());
+    s += std::string(" radios ") +
+         (static_cast<UIRadioButton*>(e->GetControlById(kSETerrainTerrainButton))->GetIsChecked() ? "1" : "0") +
+         (static_cast<UIRadioButton*>(e->GetControlById(kSETerrainMountainsButton))->GetIsChecked() ? "1" : "0");
+    s += std::string(" centered=") + (static_cast<EEUIFSEPaint*>(e->GetControlById(205))->mIsCentered ? "1" : "0");
+    EEUIFSEBrushGroup* b = e->GetBrushGroup();
+    char theText[160];
+    snprintf(theText, sizeof(theText), " brush size=%lu shown=%d centered=%d rect=%g,%g,%g,%g", b->mBrushSize,
+             b->mIsHighlightShown ? 1 : 0, b->mIsCentered ? 1 : 0, (double)b->mRectangle.GetLeft(),
+             (double)b->mRectangle.GetTop(), (double)b->mRectangle.GetRight(), (double)b->mRectangle.GetBottom());
+    outLines.push_back(s + theText);
+}
+
+// the player tab's two tech lists (TEST ONLY, round 8): each one's techs (ids, in order), lines, selection and the
+// lines CopyData marks
+void TechDigest(std::vector<std::string>& outLines)
+{
+    for (unsigned long theID : {(unsigned long)kSERBUnitTypesTechList, (unsigned long)kSERBUnitTypesOtherTechList}) {
+        EESEUITechListBox* l = static_cast<EESEUITechListBox*>(gUIManager->mScenarioEditorForm->GetControlById(theID));
+        l->CopyData();
+        unsigned long theSelection = 0;
+        bool theSelected = l->GetCurrentSelection(theSelection) == kErrorOK;
+        std::string s = "  techs " + std::to_string(theID) + " n=" + std::to_string(l->mTechs.size()) + " lines=" +
+                        std::to_string(l->GetLineCount()) + " sel=" +
+                        (theSelected ? std::to_string(theSelection) : std::string("none")) + " marked";
+        for (unsigned long d : l->mDependents)
+            s += " " + std::to_string(d);
+        s += " ids";
+        for (long id : l->mTechs)
+            s += " " + std::to_string(id);
+        outLines.push_back(s);
+        s = "  lines";
+        for (unsigned long k = 0; k < l->GetLineCount(); k++)
+            s += std::string(k == 0 ? " '" : "|'") + (const char*)l->GetData(k) + "'";
+        outLines.push_back(s);
+    }
+}
+
 void FormState(std::vector<std::string>& outLines)
 {
     SyncLoadThread();
@@ -1662,7 +1764,10 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 gWorld.ClearGhostUnits();
                 gWorld.mGhostUnitsLock->Leave();
             };
-        else if (c == "check")   // check ID 0|1
+        // check ID 0|1: SetChecked, which fires the box's checked or unchecked event. The hide-UI box (0x12) shows
+        // the UI while checked: EESEEHideUI posts the check state as EESEEChangeViewport's flag, which calls
+        // SetGameView(view, flag == false), so checked -> GetIsUIHidden() false (the original's 0x5af4c1, 0x5af55a)
+        else if (c == "check")
             theCode = [=] {
                 UIControl* theBox = EditorControl(w[1]);
                 static_cast<UICheckBox*>(theBox)->SetChecked(L(2) != 0);
@@ -2110,6 +2215,43 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             };
         else if (c == "trigreport")   // trigreport [setup]: the trigger-only save's report (TriggerReport)
             theCode = [=, &theOutput] { TriggerReport(w.size() > 1 && w[1] == "setup", theOutput); };
+        else if (c == "terrainstate")   // round 8: the terrain tab (TerrainDigest)
+            theCode = [=, &theOutput] { TerrainDigest(theOutput); };
+        else if (c == "terrainpick" || c == "terraincolor")   // terrainpick|terraincolor LINE: a list's line clicked
+            theCode = [=] {
+                UIControl* theList = gUIManager->mScenarioEditorForm->GetControlById(
+                    c == "terrainpick" ? kSETerrainTerrainType : kSETerrainTerrainColorType);
+                if (c == "terrainpick")
+                    static_cast<EESEUITerrainTypeLB*>(theList)->ChangeSelectionIndex((unsigned long)L(1), true, false);
+                else
+                    static_cast<EESEUITerrainColorLB*>(theList)->ChangeSelectionIndex((unsigned long)L(1), true, false);
+            };
+        else if (c == "terrainpaint")   // terrainpaint L T R B: the paint area's CreatePaintAction over an area, posted
+            theCode = [=, &theOutput] {
+                EEUIFSEPaint* thePaint = static_cast<EEUIFSEPaint*>(gUIManager->mScenarioEditorForm->GetControlById(205));
+                EESEAPaint* a = thePaint->CreatePaintAction();
+                theOutput.push_back(std::string("  paint ") + (a != NULL ? "action" : "none") +
+                                    " centered=" + (thePaint->mIsCentered ? "1" : "0"));
+                if (a == NULL)
+                    return;
+                if (a->SetArea(L(1), L(2), L(3), L(4)))
+                    gUserInterface->PostAction(a);
+                a->Dereference();
+            };
+        else if (c == "terrainmouse")   // terrainmouse X Y | terrainmouse update: the tab's MouseMove or Update
+            theCode = [=] {
+                EEUIFSEMainGroup* t = gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabTerrain);
+                if (w[1] == "update")
+                    t->Update();
+                else
+                    t->MouseMove(GE2DPoint(F(1), F(2)));
+            };
+        else if (c == "brushhl")   // brushhl X Y CENTERED: the brush group's SetHighlight
+            theCode = [=] { gUIManager->mScenarioEditorForm->GetBrushGroup()->SetHighlight(F(1), F(2), L(3) != 0); };
+        else if (c == "techfill")   // techfill ID FIRST LAST: a tech list's Fill (EESEATechTree's move between them)
+            theCode = [=] { static_cast<EESEUITechListBox*>(EditorControl(w[1]))->Fill(L(2), L(3)); };
+        else if (c == "techstate")   // the two tech lists (TechDigest)
+            theCode = [=, &theOutput] { TechDigest(theOutput); };
         else if (c == "cb")   // cb ...: the civilization builder's steps (EESimCivBuilder.cpp)
             theCode = [=, &theOutput] {
                 if (!EESimCivBuilderStep(w, theOutput))
@@ -2124,7 +2266,11 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             outError = inScript + ":" + std::to_string(k + 1) + ": unknown command " + c;
             return 2;
         }
-        if (c == "form" || c == "players" || c == "unittab")
+        // the load thread drained before the step is queued: its texts reach the UI thread as actions
+        // (EESEAChangeLoadText, one object posted again with each text), so a sync inside the step (FormState's) leaves
+        // the ones posted meanwhile queued behind the step, and the load text read was whichever ran first (the
+        // editor gate's flake under load); drained here, every one runs before the step
+        if (c == "form" || c == "players" || c == "unittab" || c == "formstate")
             SyncLoadThread();
         size_t theBefore = theOutput.size();
         if (!RunStep(theCode)) {

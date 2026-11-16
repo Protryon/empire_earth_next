@@ -1,8 +1,8 @@
 // The WONAPI GUI's window on the lobby surface (WONLobbyPlatform.h), in place of the GDI backend's MSWindow.cpp:
-// a rectangle of the surface the manager composites. A window without a parent fills the surface; another is
-// placed in it, framed with a caption unless its style has 0x20 (WS_POPUP). The style bits keep MSWindow::Create's
-// meaning: 0x01 centre, 0x02 start hidden, 0x20 no frame, 0x40 the rectangle is the client area, 0x80 default
-// position. The offscreen image, the paint on an invalid root and the mouse-exit check are MSWindow's.
+// a rectangle of the surface the manager composites. R6 WON round 41: the window is ee_won's Rust object
+// (rust/crates/ee_won/src/platwin.rs: its rectangle and flags, Create, the moves and their size events, show, hide,
+// focus, capture, minimize, close, the cursor, the mouse-exit check); this class is its shell: the Window base, its
+// root and events, the manager's calls and the host the Rust calls them through.
 #include <windows.h>
 #include <string>
 #include <list>
@@ -17,22 +17,80 @@
 
 namespace WONAPI {
 
-// the classic dialog frame: a 3-pixel border and an 18-pixel caption
-static const int kFrameBorder = 3;
-static const int kFrameCaption = 18;
-
 Window* CreateNativeWindow() { return new PlatGUIWindow; }
 
-PlatGUIWindow::PlatGUIWindow()
-    : mX(0), mY(0), mWidth(0), mHeight(0), mVisible(false), mTopMost(false), mRegistered(false),
-      mMinimizeOnAltTab(false), mForwardKeyMsgToParent(false) {}
+// The Rust window's calls on its shell (EeWonPlatWinOp), each the original's statement
+static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    PlatGUIWindow* me = (PlatGUIWindow*)inMe;
+    PlatWindowManager* m = me->GetPlatManager();
+    typedef EeWonPlatWinOp Op;
+    switch (inOp) {
+    case Op::HasWm: return m != NULL;
+    case Op::Wm: return m->Call((EeWonPlatWmCall)a, b, c);
+    case Op::Mouse: return m->GetMousePosition(((int*)a)[0], ((int*)a)[1]);
+    case Op::Fills: return me->FillsSurface();
+    case Op::Frame: return me->HasFrame();
+    case Op::Popup: return me->IsPopup();
+    case Op::Open: return me->GetWindowState() == Window::WindowState_Open;
+    case Op::Style: return me->GetStyle();
+    case Op::WindowCreate:
+        me->Window::Create(WONRectangle((int)a, (int)b, (int)c, (int)d));
+        me->mDisplayContext = new DisplayContext(NULL);
+        me->mOffscreenImage = me->CreateImage(me->mRoot->Width(), me->mRoot->Height());
+        return 0;
+    case Op::Center: me->Center(a != 0); return 0;
+    case Op::Showing: me->SetIsShowing(a != 0); return 0;
+    case Op::Show: me->PlatformShow(a != 0); return 0;
+    case Op::QueueSize: me->QueueEvent(new SizeEvent((int)a, (int)b, (int)c, (int)d)); return 0;
+    case Op::QueueExit: me->QueueEvent(new InputEvent(InputEvent_MouseExit)); return 0;
+    case Op::QueueMouse: {
+        const int32_t* p = (const int32_t*)a;
+        me->QueueEvent(new MouseEvent(p[0], p[1], p[2], p[3], p[4]));
+        return 0;
+    }
+    case Op::InvalidateRoot: me->InvalidateRoot(); return 0;
+    case Op::MouseIn: return me->IsMouseInClientArea();
+    case Op::RootContains: return me->mRoot->Contains((int)a, (int)b);
+    case Op::Paint:
+        if (me->mRoot->mInvalidState == 0 || me->mOffscreenImage.get() == NULL)
+            return 0;
+        me->mRoot->PrePaint(me->mOffscreenImage->GetGraphics());
+        me->mRoot->Paint(me->mOffscreenImage->GetGraphics());
+        return 1;
+    case Op::ParentVisible: {
+        PlatGUIWindow* theParent = dynamic_cast<PlatGUIWindow*>(me->GetParent());
+        return theParent != NULL && theParent->Rust(EeWonPlatWinCall::IsVisible) ? (intptr_t)theParent : 0;
+    }
+    case Op::WindowClose: me->Window::PlatformClose(); return 0;
+    case Op::WindowTimer: me->Window::TimerEvent((DWORD)a); return 0;
+    case Op::ApplyCursor:
+        if (PlatCursor* theCursor = dynamic_cast<PlatCursor*>((Cursor*)a)) {
+            PlatCursorShow(1);
+            theCursor->Apply();
+        }
+        return 0;
+    case Op::PopupHit: {
+        Window* thePopup = m->GetPopupWindow();
+        return thePopup != NULL && (m->GetPopupFlags() & PopupFlag_DontWantMouse) && thePopup == (PlatGUIWindow*)a;
+    }
+    case Op::CursorShow: PlatCursorShow((int)a); return 0;
+    case Op::PlatMinimize: PlatWindowMinimize((PlatWindow*)a); return 0;
+    }
+    return 0;
+}
+
+PlatGUIWindow::PlatGUIWindow() : mRust(ee_won_plat_win_new(this, PlatWinHost)) {}
 
 PlatGUIWindow::~PlatGUIWindow()
 {
-    if (this->mRegistered) {
-        if (PlatWindowManager* theManager = this->GetPlatManager())
-            theManager->RemovePlatWindow(this);
-    }
+    this->Rust(EeWonPlatWinCall::Destroy);
+    ee_won_plat_win_free(this->mRust);
+}
+
+intptr_t PlatGUIWindow::Rust(EeWonPlatWinCall inCall, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    return ee_won_plat_win(this->mRust, inCall, a, b, c, d);
 }
 
 PlatWindowManager* PlatGUIWindow::GetPlatManager() { return dynamic_cast<PlatWindowManager*>(this->mManager); }
@@ -42,80 +100,17 @@ SmartPtr<Font> PlatGUIWindow::PlatformGetFont(const FontDescriptor& inDescriptor
     return new PlatGUIFont(this->mDisplayContext.get(), inDescriptor);
 }
 
-void PlatGUIWindow::GetClientRect(WONRectangle& outRect)
-{
-    if (this->HasFrame()) {
-        outRect.x = this->mX + kFrameBorder;
-        outRect.y = this->mY + kFrameBorder + kFrameCaption;
-        outRect.width = this->mWidth - 2 * kFrameBorder;
-        outRect.height = this->mHeight - 2 * kFrameBorder - kFrameCaption;
-        if (outRect.width < 0)
-            outRect.width = 0;
-        if (outRect.height < 0)
-            outRect.height = 0;
-    } else {
-        outRect.x = this->mX;
-        outRect.y = this->mY;
-        outRect.width = this->mWidth;
-        outRect.height = this->mHeight;
-    }
-}
+void PlatGUIWindow::GetInfo(EeWonPlatWinInfo& outInfo) { this->Rust(EeWonPlatWinCall::Info, (intptr_t)&outInfo); }
 
-// Opens the window: its rectangle in the surface, the root sized to its client area, a display context, an
-// offscreen image of the root's size (OnCreate), then centred and shown as the style asks
+void PlatGUIWindow::GetClientRect(WONRectangle& outRect) { this->GetRect(outRect, true); }
+
 void PlatGUIWindow::Create(const WONRectangle& inRect)
 {
-    PlatWindowManager* theManager = this->GetPlatManager();
-    if (this->FillsSurface() && theManager != NULL) {
-        this->mX = this->mY = 0;
-        this->mWidth = theManager->GetSurfaceWidth();
-        this->mHeight = theManager->GetSurfaceHeight();
-    } else {
-        this->mX = inRect.x;
-        this->mY = inRect.y;
-        this->mWidth = inRect.width;
-        this->mHeight = inRect.height;
-        if (this->HasFrame() && (this->GetStyle() & 0x40)) {
-            this->mWidth += 2 * kFrameBorder;
-            this->mHeight += 2 * kFrameBorder + kFrameCaption;
-        }
-    }
-    WONRectangle theClient;
-    this->GetClientRect(theClient);
-    Window::Create(WONRectangle(theClient.x, theClient.y, theClient.width, theClient.height));
-    this->mDisplayContext = new DisplayContext(NULL);
-    this->mOffscreenImage = this->CreateImage(this->mRoot->Width(), this->mRoot->Height());
-    if (theManager != NULL)
-        theManager->AddPlatWindow(this);
-
-    if (!this->FillsSurface()) {
-        if (this->GetStyle() & 0x01)
-            this->Center(true);
-        else if (this->GetStyle() & 0x80)
-            this->Center(false);
-    }
-    if (!(this->GetStyle() & 0x02)) {
-        this->SetIsShowing(true);
-        this->PlatformShow(true);
-    } else
-        this->SetIsShowing(false);
+    int r[4] = {inRect.x, inRect.y, inRect.width, inRect.height};
+    this->Rust(EeWonPlatWinCall::Create, (intptr_t)r);
 }
 
-// A window that fills the surface takes the surface's new size (WM_SIZE: a size event for the root)
-void PlatGUIWindow::FollowSurface()
-{
-    PlatWindowManager* theManager = this->GetPlatManager();
-    if (!this->FillsSurface() || theManager == NULL || this->GetWindowState() != WindowState_Open)
-        return;
-    int theWidth = theManager->GetSurfaceWidth(), theHeight = theManager->GetSurfaceHeight();
-    if (theWidth == this->mWidth && theHeight == this->mHeight)
-        return;
-    this->mX = this->mY = 0;
-    this->mWidth = theWidth;
-    this->mHeight = theHeight;
-    this->QueueEvent(new SizeEvent(-1, -1, theWidth, theHeight));
-    theManager->SetDirty();
-}
+void PlatGUIWindow::FollowSurface() { this->Rust(EeWonPlatWinCall::FollowSurface); }
 
 // The manager's pixel scale changed: a new offscreen image at it (the old one drawn in until the repaint, as
 // Window::CheckResize does) and the whole root repainted
@@ -133,193 +128,35 @@ void PlatGUIWindow::FollowPixelScale()
     theManager->SetDirty();
 }
 
-// Moves and resizes the window (-1: keep the width or height); one that fills the surface stays as it is. A size
-// change queues a size event with the client size (WM_SIZE), a move one with the client position (WM_MOVE).
-void PlatGUIWindow::SetPosSize(int x, int y, int width, int height)
-{
-    if (this->GetWindowState() != WindowState_Open || this->FillsSurface())
-        return;
-    if (width == -1)
-        width = this->mWidth;
-    if (height == -1)
-        height = this->mHeight;
-    WONRectangle theOld;
-    this->GetClientRect(theOld);
-    this->mX = x;
-    this->mY = y;
-    this->mWidth = width;
-    this->mHeight = height;
-    WONRectangle theNew;
-    this->GetClientRect(theNew);
-    if (theNew.width != theOld.width || theNew.height != theOld.height)
-        this->QueueEvent(new SizeEvent(-1, -1, theNew.width, theNew.height));
-    if (theNew.x != theOld.x || theNew.y != theOld.y)
-        this->QueueEvent(new SizeEvent(theNew.x, theNew.y, -1, -1));
-    if (PlatWindowManager* theManager = this->GetPlatManager())
-        theManager->SetDirty();
-}
+void PlatGUIWindow::SetPosSize(int x, int y, int width, int height) { this->Rust(EeWonPlatWinCall::SetPosSize, x, y, width, height); }
 
-// The window's rectangle, or its client area, in surface pixels
 void PlatGUIWindow::GetRect(WONRectangle& outRect, bool inClientArea)
 {
-    if (inClientArea)
-        this->GetClientRect(outRect);
-    else {
-        outRect.x = this->mX;
-        outRect.y = this->mY;
-        outRect.width = this->mWidth;
-        outRect.height = this->mHeight;
-    }
+    int r[4];
+    this->Rust(EeWonPlatWinCall::GetRect, (intptr_t)r, inClientArea);
+    outRect = WONRectangle(r[0], r[1], r[2], r[3]);
 }
 
-void PlatGUIWindow::PlatformSetTitle()
-{
-    if (PlatWindowManager* theManager = this->GetPlatManager())
-        theManager->SetDirty();
-}
-
+void PlatGUIWindow::PlatformSetTitle() { this->Rust(EeWonPlatWinCall::SetTitle); }
 // Window icons have no place on the lobby surface
 void PlatGUIWindow::PlatformSetIcon() {}
+void PlatGUIWindow::PlatformSetCursor(Cursor* inCursor) { this->Rust(EeWonPlatWinCall::SetCursor, (intptr_t)inCursor); }
+void PlatGUIWindow::PlatformShowNativeCursor(bool inShow) { this->Rust(EeWonPlatWinCall::ShowNativeCursor, inShow); }
+void PlatGUIWindow::PlatformShow(bool inShow) { this->Rust(EeWonPlatWinCall::Show, inShow); }
+void PlatGUIWindow::PlatformMinimize(bool inMinimize) { this->Rust(EeWonPlatWinCall::Minimize, inMinimize); }
+void PlatGUIWindow::PlatformSetTopMost(bool inTopMost) { this->Rust(EeWonPlatWinCall::SetTopMost, inTopMost); }
+void PlatGUIWindow::PlatformClose() { this->Rust(EeWonPlatWinCall::Close); }
+void PlatGUIWindow::PlatformSetFocus() { this->Rust(EeWonPlatWinCall::SetFocus); }
+void PlatGUIWindow::PlatformSetMouseCapture(bool inOn) { this->Rust(EeWonPlatWinCall::SetCapture, inOn); }
+bool PlatGUIWindow::PlatformIsVisible() { return this->Rust(EeWonPlatWinCall::IsVisible) != 0; }
+bool PlatGUIWindow::IdleUpdate() { return Window::IdleUpdate(); }
+void PlatGUIWindow::TimerEvent(DWORD inElapsed) { this->Rust(EeWonPlatWinCall::Timer, inElapsed); }
+void PlatGUIWindow::OnPaint() { this->Rust(EeWonPlatWinCall::Paint); }
 
-// Makes the cursor the pointer's shape while the pointer is in this window (or it holds the capture)
-void PlatGUIWindow::PlatformSetCursor(Cursor* inCursor)
-{
-    PlatWindowManager* theManager = this->GetPlatManager();
-    if (!this->IsMouseInClientArea() && (theManager == NULL || theManager->GetCaptureWindow() != this))
-        return;
-    if (PlatCursor* theCursor = dynamic_cast<PlatCursor*>(inCursor)) {
-        PlatCursorShow(1);
-        theCursor->Apply();
-    }
-}
-
-// Hides the system pointer for a cursor the GUI draws itself (MSWindow: SetCursor(NULL)); showing it shows it
-void PlatGUIWindow::PlatformShowNativeCursor(bool inShow)
-{
-    if (inShow)
-        PlatCursorShow(1);
-    else if (this->IsMouseInClientArea())
-        PlatCursorShow(0);
-}
-
-// Shows or hides the window; showing one that is not a popup activates it (SW_SHOW / SW_SHOWNA)
-void PlatGUIWindow::PlatformShow(bool inShow)
-{
-    PlatWindowManager* theManager = this->GetPlatManager();
-    if (this->mVisible == inShow)
-        return;
-    this->mVisible = inShow;
-    if (theManager == NULL)
-        return;
-    theManager->SetDirty();
-    if (inShow) {
-        this->InvalidateRoot();
-        if (!this->IsPopup()) {
-            theManager->BringToFront(this);
-            theManager->SetFocusWindow(this);
-        }
-    } else if (theManager->GetFocusWindow() == this) {
-        PlatGUIWindow* theNext = dynamic_cast<PlatGUIWindow*>(this->GetParent());
-        if (theNext != NULL && !theNext->mVisible)
-            theNext = NULL;
-        theManager->SetFocusWindow(theNext);
-    }
-}
-
-// Minimizing the window that fills the surface minimizes the game window
-void PlatGUIWindow::PlatformMinimize(bool inMinimize)
-{
-    PlatWindowManager* theManager = this->GetPlatManager();
-    if (inMinimize && this->FillsSurface() && theManager != NULL && theManager->GetPlatWindow() != NULL)
-        PlatWindowMinimize(theManager->GetPlatWindow());
-}
-
-void PlatGUIWindow::PlatformSetTopMost(bool inTopMost)
-{
-    this->mTopMost = inTopMost;
-    if (PlatWindowManager* theManager = this->GetPlatManager())
-        theManager->SetDirty();
-}
-
-// Closes the window and takes it off the surface (DestroyWindow)
-void PlatGUIWindow::PlatformClose()
-{
-    Window::PlatformClose();
-    this->mVisible = false;
-    if (this->mRegistered) {
-        if (PlatWindowManager* theManager = this->GetPlatManager())
-            theManager->RemovePlatWindow(this);
-    }
-}
-
-void PlatGUIWindow::PlatformSetFocus()
-{
-    PlatWindowManager* theManager = this->GetPlatManager();
-    if (theManager == NULL || this->GetWindowState() != WindowState_Open)
-        return;
-    if (!this->IsPopup())
-        theManager->BringToFront(this);
-    theManager->SetFocusWindow(this);
-}
-
-void PlatGUIWindow::PlatformSetMouseCapture(bool inOn)
-{
-    if (PlatWindowManager* theManager = this->GetPlatManager())
-        theManager->SetCaptureWindow(inOn ? this : NULL);
-}
-
-bool PlatGUIWindow::PlatformIsVisible() { return this->mVisible; }
-
-bool PlatGUIWindow::IdleUpdate()
-{
-    if (!Window::IdleUpdate())
-        return false;
-    return true;
-}
-
-// Runs the timer update and queues a mouse-exit event once the pointer has left the window (being over the
-// manager's popup window while the popup does not want the mouse does not count)
-void PlatGUIWindow::TimerEvent(DWORD inElapsed)
-{
-    Window::TimerEvent(inElapsed);
-    if (!this->IsMouseInClientArea())
-        return;
-    PlatWindowManager* theManager = this->GetPlatManager();
-    if (theManager == NULL)
-        return;
-    int theX = -100000, theY = -100000;
-    PlatGUIWindow* theHit = NULL;
-    if (theManager->GetMousePosition(theX, theY))
-        theHit = theManager->WindowFromPoint(theX, theY);
-    WONRectangle theClient;
-    this->GetClientRect(theClient);
-    if (theHit == this && this->mRoot->Contains(theX - theClient.x, theY - theClient.y))
-        return;
-    if (theHit != this) {
-        Window* thePopup = theManager->GetPopupWindow();
-        if (thePopup != NULL && (theManager->GetPopupFlags() & PopupFlag_DontWantMouse) && thePopup == theHit)
-            return;
-    }
-    this->QueueEvent(new InputEvent(InputEvent_MouseExit));
-}
-
-// Repaints an invalid root into the offscreen image (MSWindow::OnPaint without the blit: the manager composites)
-void PlatGUIWindow::OnPaint()
-{
-    if (this->mRoot->mInvalidState == 0 || this->mOffscreenImage.get() == NULL)
-        return;
-    this->mRoot->PrePaint(this->mOffscreenImage->GetGraphics());
-    this->mRoot->Paint(this->mOffscreenImage->GetGraphics());
-    if (PlatWindowManager* theManager = this->GetPlatManager())
-        theManager->SetDirty();
-}
-
-// Queues a mouse event at a surface point, in client coordinates
 void PlatGUIWindow::QueueMouse(int inType, int inSurfaceX, int inSurfaceY, int inMod, int inButtonOrAmount)
 {
-    WONRectangle theClient;
-    this->GetClientRect(theClient);
-    this->QueueEvent(new MouseEvent(inType, inSurfaceX - theClient.x, inSurfaceY - theClient.y, inMod, inButtonOrAmount));
+    int p[5] = {inType, inSurfaceX, inSurfaceY, inMod, inButtonOrAmount};
+    this->Rust(EeWonPlatWinCall::QueueMouse, (intptr_t)p);
 }
 
 } // namespace WONAPI

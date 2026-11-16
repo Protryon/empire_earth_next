@@ -29,8 +29,219 @@ constexpr static const int32_t TEAM_OUTER_NEUTRAL = -15;
 
 constexpr static const int32_t TEAM_MOON = -14;
 
+constexpr static const uint32_t DEFINE = 10;
+
+constexpr static const uint32_t IF = 11;
+
+constexpr static const uint32_t ELIF = 12;
+
+constexpr static const uint32_t ELSE = 13;
+
+constexpr static const uint32_t ENDIF = 14;
+
+constexpr static const uint32_t INCLUDE = 15;
+
+constexpr static const uint32_t MAX_INT_ELEVATION = 100;
+
+constexpr static const uint32_t MIN_INT_ELEVATION = 101;
+
+constexpr static const uint32_t INITIAL_ELEVATION = 102;
+
+constexpr static const uint32_t FLAT_ELEVATION = 103;
+
+constexpr static const uint32_t HEIGHT_MAP_CHAOS = 105;
+
+constexpr static const uint32_t HEIGHT_MAP_SMOOTHNESS = 106;
+
+constexpr static const uint32_t PERCENT_LAND = 200;
+
+constexpr static const uint32_t LAND_ELEVATION_THRESHOLD = 201;
+
+constexpr static const uint32_t WATER_BORDER = 202;
+
+constexpr static const uint32_t RIVER_WIDTH = 203;
+
+constexpr static const uint32_t COASTAL_TO_DEEPER_WATER_PERCENTAGE = 204;
+
+constexpr static const uint32_t TEAM_GROWTH = 205;
+
+constexpr static const uint32_t SHALLOWS_WIDTH = 206;
+
+constexpr static const uint32_t MAX_SHALLOW_CONNECTIONS_PER_PLAYER = 207;
+
+constexpr static const uint32_t GENERATE_SHALLOWS = 208;
+
+constexpr static const uint32_t SHALLOWS_ELEVATION = 209;
+
+constexpr static const uint32_t LANDFILL_PERCENTAGE = 210;
+
+constexpr static const uint32_t IS_SPACE_MAP = 211;
+
+constexpr static const uint32_t NUM_MOONS = 212;
+
+constexpr static const uint32_t MOON_SIZE = 213;
+
+constexpr static const uint32_t MOON_RESOURCES = 214;
+
+constexpr static const uint32_t PLAYER_INNER_RADIUS = 300;
+
+constexpr static const uint32_t PLAYER_OUTER_RADIUS = 301;
+
+constexpr static const uint32_t PLAYER_PERCENT_FLAT = 303;
+
+constexpr static const uint32_t PLAYER_TREE_PERCENTAGE = 304;
+
+constexpr static const uint32_t PLAYER_FLAT_CHAOS = 305;
+
+constexpr static const uint32_t PLAYER_FLAT_CLUMPS = 306;
+
+constexpr static const uint32_t PLAYER_LAND_CHAOS = 307;
+
+constexpr static const uint32_t PLAYER_LAND_CLUMPS = 308;
+
+constexpr static const uint32_t MAX_ANGLE_BETWEEN_TEAM_MEMBERS = 309;
+
+constexpr static const uint32_t OUTER_PUSH_FROM_MAP_CENTER = 310;
+
+constexpr static const uint32_t INNER_PUSH_FROM_MAP_CENTER = 311;
+
+constexpr static const uint32_t MINIMUM_START_POSITION_TO_MAP_EDGE = 312;
+
+constexpr static const uint32_t NEUTRAL_INNER_RADIUS = 400;
+
+constexpr static const uint32_t NEUTRAL_OUTER_RADIUS = 401;
+
+constexpr static const uint32_t NUM_OUTER_NEUTRALS = 500;
+
+constexpr static const uint32_t OUTER_NEUTRAL_PERCENT_LAND = 501;
+
+constexpr static const uint32_t OUTER_NEUTRAL_PERCENT_FLAT = 502;
+
+constexpr static const uint32_t OUTER_NEUTRAL_TREE_PERCENTAGE = 503;
+
+constexpr static const uint32_t OUTER_NEUTRAL_LAND_CHAOS = 504;
+
+constexpr static const uint32_t OUTER_NEUTRAL_LAND_CLUMPS = 505;
+
+constexpr static const uint32_t OUTER_NEUTRAL_FLAT_CHAOS = 506;
+
+constexpr static const uint32_t OUTER_NEUTRAL_FLAT_CLUMPS = 507;
+
+constexpr static const uint32_t NUM_INNER_NEUTRALS = 600;
+
+constexpr static const uint32_t INNER_NEUTRAL_PERCENT_LAND = 601;
+
+constexpr static const uint32_t INNER_NEUTRAL_PERCENT_FLAT = 602;
+
+constexpr static const uint32_t INNER_NEUTRAL_TREE_PERCENTAGE = 603;
+
+constexpr static const uint32_t INNER_NEUTRAL_LAND_CHAOS = 604;
+
+constexpr static const uint32_t INNER_NEUTRAL_LAND_CLUMPS = 605;
+
+constexpr static const uint32_t INNER_NEUTRAL_FLAT_CHAOS = 606;
+
+constexpr static const uint32_t INNER_NEUTRAL_FLAT_CLUMPS = 607;
+
+constexpr static const uint32_t FOREST_FREE_RADIUS = 700;
+
+constexpr static const uint32_t FORESTS_PER_PLAYER = 701;
+
+constexpr static const uint32_t FOREST_CHAOS_LEVEL = 702;
+
+constexpr static const uint32_t MAX_CLUMPS_PER_FOREST = 703;
+
+constexpr static const uint32_t MAX_TREE_LOOP_COUNT = 704;
+
+constexpr static const uint32_t MAXIMUM_TREES_PER_CLUMP = 705;
+
+constexpr static const uint32_t DEFINE_FOREST = 706;
+
+constexpr static const uint32_t AVAILABLE_FORESTS = 707;
+
+constexpr static const uint32_t RESOURCE_PER_PLAYER = 800;
+
+constexpr static const uint32_t RESOURCE_PER_NEUTRAL_LAND = 801;
+
+constexpr static const uint32_t MAX_RESOURCE_ELEVATION = 802;
+
+constexpr static const uint32_t RESOURCE_TO_EDGE_DISTANCE = 803;
+
+constexpr static const uint32_t RESOURCE_TO_WATER_DISTANCE = 804;
+
+constexpr static const uint32_t AVAILABLE_ANIMALS = 805;
+
+constexpr static const uint32_t RESOURCE_PLACEMENT_LIMIT = 806;
+
+constexpr static const uint32_t DEFINE_HERD = 807;
+
+constexpr static const uint32_t DEFINE_RANDOM_HERD_SET = 808;
+
+constexpr static const uint32_t HERD_PER_PLAYER = 809;
+
+constexpr static const uint32_t HERD_PER_NEUTRAL = 810;
+
+constexpr static const uint32_t RANDOM_HERD_PER_PLAYER = 811;
+
+constexpr static const uint32_t RANDOM_HERD_PER_NEUTRAL = 812;
+
+constexpr static const uint32_t MAX_TREE_ELEVATION = 813;
+
+constexpr static const uint32_t RESOURCE_SEPERATION = 814;
+
+constexpr static const uint32_t RESOURCE_TERRAIN_TEXTURE = 815;
+
+constexpr static const uint32_t PLACE_RESOURCE_IN_RING = 816;
+
+constexpr static const uint32_t PLACE_UNIT = 900;
+
+constexpr static const uint32_t PLACE_WALL = 901;
+
+constexpr static const uint32_t PLACE_WORLD_UNIT = 902;
+
+constexpr static const uint32_t PLACE_UNIT_IN_RING = 903;
+
+constexpr static const uint32_t PLACE_WORLD_UNIT_IN_RING = 904;
+
+constexpr static const uint32_t TERRAIN_REGION = 1000;
+
+constexpr static const uint32_t TERRAIN_CHAOS = 1001;
+
+constexpr static const uint32_t CLIFF_TEXTURE = 1002;
+
+constexpr static const uint32_t DECLARE_RANDOM_MAP_TERRAIN = 1003;
+
+constexpr static const uint32_t RANDOM_MAP_TERRAIN_RANGE = 1004;
+
+constexpr static const uint32_t CONVERGENT_SAMPLE_SIZE = 1100;
+
+constexpr static const uint32_t CONVERGENT_THRESHOLD = 1101;
+
+constexpr static const uint32_t MAX_LOOP_COUNT = 1102;
+
+constexpr static const uint32_t MAX_ITERATIONS_CLUMP_GROWTH = 1103;
+
+constexpr static const uint32_t USE_MAP_GENERATOR = 1104;
+
+constexpr static const uint32_t MAP_CHARACTERISTICS = 1105;
+
+constexpr static const uint32_t STRING_TABLE_ID = 1106;
+
+constexpr static const uint32_t FILTER_HEIGHT_MAP = 10000;
+
+constexpr static const uint32_t TESTING_LAND_DISTRIBUTION = 10001;
+
+/// The sink `EeRmapGameHost::wall_tiles` fills.
+struct EeRmapGameTiles;
+
 /// The arrays an output `EeRmapState` points into.
 struct EeRmapResult;
+
+/// A finished read's lists (opaque to the C++).
+struct EeRmapScript;
+
+/// The bytes of one script file, filled by the host's `read` through `ee_rmap_script_bytes_push`.
+struct EeRmapScriptBytes;
 
 /// `GERectangle`, as the generator reads it.
 struct EeRmapRect {
@@ -252,6 +463,387 @@ struct EeRmapState {
   uint32_t player_order_len;
 };
 
+/// One of the generator's players as the game passes read it (`EERMPlayer`).
+struct EeRmapGamePlayer {
+  EeRmapPoint position;
+  /// The game's player number (`mIndex`: `(*mGamePlayers)[mIndex]`).
+  uint32_t index;
+  uint8_t is_neutral;
+};
+
+/// `EERMWall`: a start wall, relative to the player's tile.
+struct EeRmapGameWall {
+  int32_t start_x;
+  int32_t start_y;
+  int32_t end_x;
+  int32_t end_y;
+  int32_t unit_type;
+};
+
+/// `EERMNamedEntry`'s numbers: the unit class a script unit name stands for, and its tile size.
+struct EeRmapGameUnitName {
+  int32_t unit_class;
+  uint32_t size;
+};
+
+/// `EERMTerrain`'s textures: one per elevation, -10 to 20 tile units.
+struct EeRmapGameTerrain {
+  int32_t textures[31];
+};
+
+/// `EERMTerrainRegion`: fractal values `from..=to` (plus the cliff, Mars or band hundreds) paint terrain `terrain`.
+struct EeRmapGameRegion {
+  int32_t from;
+  int32_t to;
+  uint32_t terrain;
+};
+
+/// `EERMForest`; its tree types are `forest_tree_types[tree_types_start..][..tree_types_len]`.
+struct EeRmapGameForest {
+  uint32_t tree_types_start;
+  uint32_t tree_types_len;
+  int32_t terrain_texture;
+};
+
+/// What the game passes read and write of `EERandomMapData`. The grids are the C++ rows (`*_rows[x]` points at row
+/// `x`, `grid_n` rows of `grid_n` cells); the lists are copies (a pointer may be null when its length is 0). The two
+/// seeds come back advanced.
+struct EeRmapGameState {
+  uint32_t grid_n;
+  float *const *heights;
+  /// `mTiles`: `unsigned long` cells (the values fit 32 bits).
+  unsigned long *const *tiles;
+  uint8_t *const *claimed_tiles;
+  uint8_t *const *valid_tiles;
+  /// `mGridSize` (the grids hold one more row and column).
+  uint32_t grid_size;
+  uint32_t maximum_y;
+  uint32_t map_characteristics;
+  uint8_t is_space_map;
+  float half_map_size;
+  int32_t water_border;
+  EeRmapPoint ring_center;
+  EeRmapRect flat_area;
+  int32_t min_int_elevation;
+  int32_t max_int_elevation;
+  float height_map_smoothness;
+  float terrain_chaos;
+  uint32_t seed;
+  uint32_t num_terrain_bands;
+  uint32_t terrain_band_offset;
+  uint32_t max_loop_count;
+  /// `EEMap::GetF1955F4`: the height of one elevation unit.
+  float tile_unit;
+  /// `gSpaceTerrain`: the terrain named "Space".
+  int32_t space_terrain;
+  uint32_t random_seed;
+  uint32_t random_integers_seed;
+  int32_t resource_terrain_texture[7];
+  const EeRmapGamePlayer *players;
+  uint32_t players_len;
+  const EeRmapFeature *features;
+  uint32_t features_len;
+  const EeRmapGameWall *walls;
+  uint32_t walls_len;
+  const EeRmapGameUnitName *unit_names;
+  uint32_t unit_names_len;
+  const EeRmapGameTerrain *terrains;
+  uint32_t terrains_len;
+  const EeRmapGameRegion *terrain_regions;
+  uint32_t terrain_regions_len;
+  const EeRmapObject *objects;
+  uint32_t objects_len;
+  const EeRmapGameForest *forests;
+  uint32_t forests_len;
+  const uint32_t *forest_tree_types;
+  uint32_t forest_tree_types_len;
+  const uint32_t *available_animals;
+  uint32_t available_animals_len;
+};
+
+/// A map tile as the passes read it (`EETile`).
+struct EeRmapGameTile {
+  int32_t terrain_type;
+  float height;
+};
+
+/// A terrain table entry's ambient units (`EETerrainTable`).
+struct EeRmapGameTerrainInfo {
+  uint32_t unit_count;
+  /// `mAmbientUnitChance`, a percentage.
+  int32_t ambient_chance;
+};
+
+/// A unit class as the passes read it (`EEUnitClass`).
+struct EeRmapGameClass {
+  int32_t tile_size;
+  uint8_t is_land_citizen;
+  uint8_t is_wall;
+};
+
+/// The host's callbacks (C++: `EERandomMap.cpp`'s host over the `EEMap`, the tables and the game's players).
+struct EeRmapGameHost {
+  void *context;
+  uint8_t (*tile)(void *context, uint32_t x, uint32_t y, EeRmapGameTile *out);
+  uint8_t (*is_edge_tile)(void *context, int32_t x, int32_t y);
+  void (*paint_terrain)(void *context, int32_t x, int32_t y, int32_t texture);
+  uint8_t (*terrain)(void *context, int32_t texture, EeRmapGameTerrainInfo *out);
+  int32_t (*terrain_unit_class)(void *context, int32_t texture, uint32_t index);
+  float (*mesh_z)(void *context, uint32_t x, uint32_t y);
+  void (*mesh_set_z)(void *context, uint32_t x, uint32_t y, float z);
+  uint8_t (*mesh_valid_point)(void *context, uint32_t x, uint32_t y);
+  uint8_t (*mesh_valid_tile)(void *context, uint32_t x, uint32_t y);
+  void (*mesh_set_water_color_set)(void *context, uint32_t x, uint32_t y);
+  void (*mesh_vertex_normal)(void *context, uint32_t x, uint32_t y);
+  void (*mesh_set_is_water)(void *context, uint32_t x, uint32_t y, uint8_t is_water);
+  void (*mesh_shorelines)(void *context, uint32_t x, uint32_t y);
+  void (*set_tile_height)(void *context, uint32_t x, uint32_t y, float height);
+  uint32_t (*unit_class_count)(void *context);
+  uint8_t (*unit_class)(void *context, uint32_t unit_class, EeRmapGameClass *out);
+  uint8_t (*class_allows_terrain)(void *context, uint32_t unit_class, int32_t terrain_type);
+  int32_t (*max_starting_citizens)(void *context, uint32_t player);
+  int32_t (*create_unit_at_point)(void *context,
+                                  uint32_t owner,
+                                  uint32_t unit_class,
+                                  float x,
+                                  float y,
+                                  float heading);
+  void (*create_unit_at_tile)(void *context,
+                              uint32_t owner,
+                              uint32_t unit_class,
+                              int32_t x,
+                              int32_t y,
+                              float heading);
+  void (*place_wall)(void *context,
+                     uint32_t unit_class,
+                     EeRmapPoint start,
+                     EeRmapPoint end,
+                     uint32_t player);
+  void (*wall_tiles)(void *context, EeRmapPoint start, EeRmapPoint end, EeRmapGameTiles *sink);
+  void (*push_water_point)(void *context, float x, float y);
+};
+
+/// The rings `CreateGrids` sets up, and the half map size.
+struct EeRmapGameRings {
+  float half_map_size;
+  EeRmapRing ring;
+  EeRmapRing neutral_ring;
+  EeRmapRing moon_ring;
+};
+
+/// The radii factors of `CreateGrids`' rings (`mPlayerInnerRadius` ...).
+struct EeRmapGameRadii {
+  float player_inner;
+  float player_outer;
+  float neutral_inner;
+  float neutral_outer;
+};
+
+/// The game's side of a read.
+struct EeRmapScriptHost {
+  void *context;
+  /// Reads `<script directory>/<name>.rmv` (`name` a C string) into `sink` -> false when the file is missing.
+  bool (*read)(void *context, const char *name, EeRmapScriptBytes *sink);
+  long (*draw_long)(void *context, long minimum, long maximum);
+  float (*draw_float)(void *context, float minimum, float maximum);
+};
+
+/// `EERandomMap`'s scalar block from `mMapSize` (+0x260) to `mIsSpaceMap` (+0x3f8), field for field (`long` is the
+/// build's: `c_long`). `Default.cpp` checks the layout against the C++ struct.
+struct EeRmapScriptScalars {
+  long map_size;
+  long start_epoch;
+  long player_count;
+  float coastal_to_deeper_water_percentage;
+  float convergent_sample_size;
+  float convergent_threshold;
+  float elevation_scale;
+  float elevation_unit;
+  float flat_elevation;
+  float forest_chaos_level;
+  float forest_free_radius;
+  float initial_elevation;
+  float inner_neutral_flat_chaos;
+  float inner_neutral_land_chaos;
+  float inner_neutral_percent_flat;
+  float inner_neutral_percent_land;
+  float inner_neutral_tree_percentage;
+  float land_elevation_threshold;
+  float max_angle_between_team_members;
+  float max_resource_elevation;
+  float max_tree_elevation;
+  float neutral_inner_radius;
+  float neutral_outer_radius;
+  float outer_neutral_flat_chaos;
+  float outer_neutral_land_chaos;
+  float outer_neutral_percent_flat;
+  float outer_neutral_percent_land;
+  float outer_neutral_tree_percentage;
+  float percent_land;
+  float player_flat_chaos;
+  float player_inner_radius;
+  float player_land_chaos;
+  float player_outer_radius;
+  float player_percent_flat;
+  float player_tree_percentage;
+  float terrain_chaos;
+  float shallows_elevation;
+  float height_map_chaos;
+  float height_map_smoothness;
+  float landfill_percentage;
+  float resource_seperation;
+  float half_map_size;
+  long max_int_elevation;
+  long max_iterations_clump_growth;
+  long maximum_trees_per_clump;
+  long min_int_elevation;
+  long water_border;
+  long shallows_width;
+  long max_shallow_connections_per_player;
+  long outer_push_from_map_center;
+  long inner_push_from_map_center;
+  long minimum_start_position_to_map_edge;
+  long resource_terrain_texture[7];
+  long resource_per_player[7];
+  unsigned long resource_per_neutral_land[7];
+  unsigned long forests_per_player;
+  unsigned long inner_neutral_flat_clumps;
+  unsigned long inner_neutral_land_clumps;
+  unsigned long maximum_y;
+  unsigned long grid_size;
+  unsigned long maximum_x;
+  unsigned long max_clumps_per_forest;
+  unsigned long max_loop_count;
+  unsigned long max_tree_loop_count;
+  unsigned long num_inner_neutrals;
+  unsigned long num_outer_neutrals;
+  unsigned long num_team_players;
+  unsigned long outer_neutral_flat_clumps;
+  unsigned long outer_neutral_land_clumps;
+  unsigned long player_flat_clumps;
+  unsigned long player_land_clumps;
+  unsigned long seed;
+  unsigned long river_width;
+  unsigned long tile_count;
+  unsigned long resource_to_edge_distance;
+  unsigned long resource_to_water_distance;
+  unsigned long map_characteristics;
+  long cliff_texture;
+  unsigned long num_moons;
+  unsigned long moon_size;
+  unsigned long moon_resources;
+  unsigned long num_terrain_bands;
+  unsigned long terrain_band_offset;
+  bool team_growth;
+  bool filter_height_map;
+  bool testing_land_distribution;
+  bool generate_shallows;
+  bool is_space_map;
+};
+
+/// One named table entry: a unit (`value` its `mSize`), a terrain or a cliff (`value` its `mValue`).
+struct EeRmapScriptName {
+  const char *text;
+  uint32_t length;
+  int32_t value;
+};
+
+/// `EERMFeature`'s twin.
+struct EeRmapScriptFeature {
+  float angle;
+  float x;
+  float y;
+  long unit_type;
+  long index;
+  bool is_world_unit;
+  bool in_ring;
+  bool is_herd;
+};
+
+/// `EERMWall`'s twin.
+struct EeRmapScriptWall {
+  long start_x;
+  long start_y;
+  long end_x;
+  long end_y;
+  long unit_type;
+};
+
+/// `EERMTerrain`'s twin: a terrain id and its texture per elevation -10..20.
+struct EeRmapScriptTerrain {
+  long id;
+  long textures[31];
+};
+
+/// `EERMTerrainRegion`'s twin.
+struct EeRmapScriptRegion {
+  long from;
+  long to;
+  unsigned long terrain;
+};
+
+/// One `EERMForest`: its tree types are `count` values of the output's `forest_trees` from `first`.
+struct EeRmapScriptForest {
+  long id;
+  long terrain_texture;
+  uint32_t first;
+  uint32_t count;
+};
+
+/// `EERMResourceKind`'s twin.
+struct EeRmapScriptKind {
+  long minimum;
+  long maximum;
+  long id;
+  long unit_type;
+  unsigned long area;
+};
+
+/// `EERMResourceSlot`'s twin.
+struct EeRmapScriptSlot {
+  long id;
+  bool per_player;
+  bool random_kind;
+};
+
+/// `EERMSpacingRule`'s twin.
+struct EeRmapScriptRule {
+  long kind;
+  long minimum;
+  long maximum;
+};
+
+/// A read's lists, as pointers into the returned handle (valid until `ee_rmap_script_free`).
+struct EeRmapScriptOutput {
+  float flat_area_top;
+  float flat_area_left;
+  float flat_area_bottom;
+  float flat_area_right;
+  const EeRmapScriptFeature *features;
+  uint32_t feature_count;
+  const EeRmapScriptWall *walls;
+  uint32_t wall_count;
+  const EeRmapScriptTerrain *terrains;
+  uint32_t terrain_count;
+  const EeRmapScriptRegion *regions;
+  uint32_t region_count;
+  const unsigned long *animals;
+  uint32_t animal_count;
+  const EeRmapScriptForest *forests;
+  uint32_t forest_count;
+  const unsigned long *forest_trees;
+  const long *tree_types;
+  uint32_t tree_type_count;
+  const EeRmapScriptKind *kinds;
+  uint32_t kind_count;
+  const long *kind_ids;
+  uint32_t kind_id_count;
+  const EeRmapScriptSlot *slots;
+  uint32_t slot_count;
+  const EeRmapScriptRule *rules;
+  uint32_t rule_count;
+};
+
 extern "C" {
 
 /// Runs generator step `step` (0 player positions, 1 neutral positions, 2 land and water, 3 flat map, 4 height map,
@@ -270,6 +862,95 @@ EeRmapResult *ee_rmap_run(int32_t step,
 /// # Safety
 /// `result` must be null or a handle from `ee_rmap_run`, freed once.
 void ee_rmap_free(EeRmapResult *result);
+
+/// Adds a tile to the line `EeRmapGameHost::wall_tiles` is filling.
+///
+/// # Safety
+/// `sink` is the sink the callback was handed.
+void ee_rmap_game_tiles_push(EeRmapGameTiles *sink, int32_t x, int32_t y);
+
+/// `EERandomMap::Fn284149` (the space fill and the water points).
+///
+/// # Safety
+/// `state` and `host` are valid (`EeRmapGameState`'s pointers for their lengths).
+void ee_rmap_game_water_points(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERandomMap::SmoothHeights`.
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+void ee_rmap_game_smooth_heights(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERandomMap::Fn288839` (the heights onto the mesh).
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+void ee_rmap_game_apply_heights(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERMArePlayersConnected`.
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+bool ee_rmap_game_players_connected(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERandomMap::MarkFeatures`.
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+void ee_rmap_game_mark_features(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERandomMap::PaintTiles` (with `PlaceTerrainUnit`).
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+void ee_rmap_game_paint_tiles(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERandomMap::PlaceFeatures`.
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+void ee_rmap_game_place_features(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERandomMap::Fn288426` (the resource objects).
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+void ee_rmap_game_place_objects(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `CreateGrids`' grid size (see [`grid_size`]).
+uint32_t ee_rmap_game_grid_size(uint32_t height, uint32_t width, uint32_t current);
+
+/// `CreateGrids`' rings (see [`rings`]).
+EeRmapGameRings ee_rmap_game_rings(EeRmapRect flat_area, int32_t map_size, EeRmapGameRadii radii);
+
+/// Appends `length` bytes to a read's file text.
+///
+/// # Safety
+/// `sink` is the sink the host's `read` received; `bytes` holds `length` readable bytes.
+void ee_rmap_script_bytes_push(EeRmapScriptBytes *sink, const uint8_t *bytes, size_t length);
+
+/// SetRandomMapValues: reads script `name` (a C string) into `scalars` (the map's block from `mMapSize`) and
+/// `kind_spacing` (`mKindSpacing`, 7 x 2), and its lists into `out` -> the handle that owns them.
+///
+/// # Safety
+/// Every pointer is live for its count; `host`'s callbacks are callable with its context.
+EeRmapScript *ee_rmap_script_read(const EeRmapScriptHost *host,
+                                  EeRmapScriptScalars *scalars,
+                                  unsigned long *kind_spacing,
+                                  const EeRmapScriptName *units,
+                                  uint32_t unit_count,
+                                  const EeRmapScriptName *terrains,
+                                  uint32_t terrain_count,
+                                  const EeRmapScriptName *cliffs,
+                                  uint32_t cliff_count,
+                                  const char *name,
+                                  EeRmapScriptOutput *out);
+
+/// Frees a read's lists.
+///
+/// # Safety
+/// `script` came from `ee_rmap_script_read` (or is null) and is not used again.
+void ee_rmap_script_free(EeRmapScript *script);
 
 }  // extern "C"
 

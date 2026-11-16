@@ -3,7 +3,7 @@
 // EEABuild.cpp folded in. Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "ee/EEABuild.h"
+#include "ee/EEARust.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
@@ -234,11 +234,6 @@ int32_t EESEInstructions::Host(uint32_t inOp, void* const* p, int32_t* i, float*
 extern "C" int32_t ee_screenscpp_sein(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
     return EESEInstructions::Host(inOp, p, i, f);
-}
-
-// Does nothing (the shared empty body; EESETSBaseObject::RefreshControls and EEPhysicsTrace bind here too)
-void EEABuild::Virtual8()
-{
 }
 
 void EESEInstructions::MouseMove(class GE2DPoint const &)

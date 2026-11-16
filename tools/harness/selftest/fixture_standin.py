@@ -16,7 +16,9 @@ click (phase 2, note "retry", for 1 s), then is judged with note "retried", as t
 with note "homed", as the game's Home does; the second has none at all and is refused "home-no-pick". The camera
 ("camera" telemetry line) starts at the map's right edge (63.8, 30 of 64 tiles), so the right arrow cannot move it:
 "key 11 <dik> <ms>" moves it 1 tile a 100 ms held (arrows; ']' and '[' zoom by 0.1, from 0 to 2), clamped to the
-map; "pointer 11 0 <y>" scrolls it 0.5 tile a 100 ms left until the pointer leaves the edge; "wheel 11 <0|1> <n>"
+map; "pointer 11 0 <y> <ms>" scrolls it 0.5 tile a 100 ms left for ms (the fixture's pointer hold) or until the pointer
+leaves the edge, and without ms for one step only (the game's own pointer moves took it away: the flake the hold
+fixed); "wheel 11 <0|1> <n>"
 zooms by 0.05 a notch; "zoom 11 0 <percent>" sets the zoom.
 """
 import os
@@ -31,9 +33,10 @@ if os.environ.get('EE_TEST_TIME_FACTOR'):
 if os.environ.get('EE_TEST_SEED'):
     print(f'TEST UI seed {os.environ["EE_TEST_SEED"]}', file=sys.stderr, flush=True)
 stack, last, frames, game_ms, ticks, ct, civ = [12], 0, 0, 0, 0, 0, 0
+wanted = False   # a frame.request seen and its frame not yet written
 units = {100 + k: 100 + 60 * k for k in range(10)}   # id -> x (all at y 250)
 selection, box, order = [], None, None
-cam = dict(x=63.8, y=30.0, zoom=1.0, held=None, until=0.0, edge=False)
+cam = dict(x=63.8, y=30.0, zoom=1.0, held=None, until=0.0, edge=False, edge_until=0.0)
 KEYS = {0xC8: (0, 1), 0xD0: (0, -1), 0xCB: (-1, 0), 0xCD: (1, 0)}
 scout, gathers = None, 0   # scout: the pending gather (its verdict due at scout['due'])
 retry, retried = None, False   # retry: the first repair's second click (its verdict due at retry['due'])
@@ -75,6 +78,8 @@ while True:
                 cam['zoom'] = min(max(cam['zoom'] + (0.1 if cam['held'] == 0x1A else -0.1), 0.0), 2.0)
         if cam['edge']:
             cam['x'] = max(cam['x'] - 0.5, 0.0)
+            if time.monotonic() >= cam['edge_until']:   # no hold (or its end): the pointer is taken away
+                cam['edge'] = False
         if game_ms % 30000 == 0:
             for i in (1, 2, 3):
                 log.write(f'EE-GAME {game_ms} p{i} sample epoch=1 pop={5 * i} army=0\n')
@@ -129,13 +134,14 @@ while True:
                   file=sys.stderr, flush=True)
     elif seq > last and op in ('key', 'wheel', 'pointer', 'zoom'):
         last = seq
-        ok = a == form == 11 and len(part) == 5
+        ok = a == form == 11 and (len(part) == 5 or (op == 'pointer' and len(part) == 6))
         if ok and op == 'key':
             cam['held'], cam['until'] = b, time.monotonic() + int(part[4]) / 1000
         elif ok and op == 'wheel':
             cam['zoom'] = min(max(cam['zoom'] + (0.05 if b else -0.05) * int(part[4]), 0.0), 2.0)
         elif ok and op == 'pointer':
             cam['edge'] = b == 0
+            cam['edge_until'] = time.monotonic() + (int(part[5]) / 1000 if len(part) == 6 else 0)
         elif ok and op == 'zoom':
             cam['zoom'] = int(part[4]) / 100
         verdict = {'key': 'key-pressed', 'wheel': 'wheeled', 'pointer': 'pointer-moved', 'zoom': 'zoomed'}[op]
@@ -200,14 +206,23 @@ while True:
         print(f'TEST UI order-done order control 1 value 0 on form 0 (seq {order["seq"]}, top form 0)', file=sys.stderr,
               flush=True)
         retry = None
-    if (ui / 'frame.request').exists():
-        (ui / 'frame.request').unlink()
+    try:   # Windows: the driver may still hold frame.request (its write) or frame.bmp (its read): the next poll then
+        if (ui / 'frame.request').exists():
+            (ui / 'frame.request').unlink()
+            wanted = True
+    except PermissionError:
+        pass
+    if wanted:
         width, height = 64, 48
         pixels = bytes((x * 4 + y * 3 + k * 50) & 0xff for y in range(height) for x in range(width) for k in range(4))
         header = b'BM' + struct.pack('<IHHI', 54 + len(pixels), 0, 0, 54) + struct.pack(
             '<IiiHHIIiiII', 40, width, -height, 1, 32, 0, 0, 0, 0, 0, 0)
         (ui / 'frame.tmp').write_bytes(header + pixels)
-        (ui / 'frame.bmp').unlink(missing_ok=True)
-        os.replace(ui / 'frame.tmp', ui / 'frame.bmp')
-        frames += 1
+        try:
+            (ui / 'frame.bmp').unlink(missing_ok=True)
+            os.replace(ui / 'frame.tmp', ui / 'frame.bmp')
+            frames += 1
+            wanted = False
+        except PermissionError:
+            pass
     time.sleep(0.1)

@@ -94,13 +94,7 @@ fn release(t: *mut Shell) {
 
 unsafe extern "C" fn host(_comp: *mut c_void, op: Op, a: isize, b: isize, c: isize, _d: isize) -> isize {
     let k = a as usize;
-    let get = |f: fn(&Bx) -> isize| with(|w| f(&w.w[k]));
     match op {
-        Op::ChildLeft => get(|b| b.x as isize),
-        Op::ChildTop => get(|b| b.y as isize),
-        Op::ChildWidth => get(|b| b.w as isize),
-        Op::ChildHeight => get(|b| b.h as isize),
-        Op::LayParentOf => get(|b| b.parent),
         Op::ChildSetPos => {
             trace(format!("pos {k} {b} {c}"));
             with(|w| {
@@ -171,6 +165,15 @@ fn replay(lines: &[String]) -> Vec<String> {
     let mgr = Box::new(EeWonLayoutMgr::new(0x77 as *mut c_void, Some(host)));
     let mp: *const EeWonLayoutMgr = &*mgr;
     WORLD.with(|x| *x.borrow_mut() = Some(World { w, trace: vec![lines[0].clone()], depth: 0, mgr: mp, live: 0 }));
+    // the components' bounds, read by the Rust from compmem's blocks
+    let _w = crate::compmem::filled_world(|c| {
+        with(|w| {
+            w.w.get(c as usize).map_or_else(Default::default, |b| crate::compmem::EeWonCompMembers {
+                parent: b.parent,
+                ..crate::compmem::block(b.x, b.y, b.w, b.h)
+            })
+        })
+    });
     let mut next_id = 0;
     for line in &lines[1..] {
         let n = nums(line);

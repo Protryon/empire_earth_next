@@ -96,7 +96,7 @@ static void Run()
             std::string aDir = f.GetFileDirectory();
             std::string aName = f.GetFileName();
             std::string anExt = f.GetFileExtension();
-            std::string aNoExt = f.mFileNameNoExtension;
+            std::string aNoExt = f.GetFileNameNoExtension();
             sLines.push_back(std::string(aCase) + " path=" + Hex(aPath) + " dir=" + Hex(aDir) + " name=" +
                              Hex(aName) + " ext=" + Hex(anExt) + " noext=" + Hex(aNoExt));
         } catch (const std::exception&) {

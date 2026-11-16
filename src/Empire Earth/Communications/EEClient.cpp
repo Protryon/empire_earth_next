@@ -32,7 +32,7 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEMessage.h"
 #include "ee/EEAction.h"
-#include "ee/EEABootClientFromCanceledGame.h"
+#include "ee/EEARust.h"
 #include "ee/EECommunications.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEGameOptions.h"
@@ -72,7 +72,6 @@ EEClient::EEClient()
 #include <mbstring.h>
 
 #include "ee/EEWonNet.h"
-#include "ee/EEAServerMigration.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/RTSGraphics.h"
 #include "ee/EEGraphics.h"

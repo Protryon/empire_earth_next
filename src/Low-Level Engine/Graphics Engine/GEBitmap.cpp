@@ -243,6 +243,16 @@ intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, in
 }
 // ---- end of the vertex host
 
+// ---- the layouts Rust reads in place (ee_ge cppobj.rs, R4.3 part 17): a reference-counted object is its vtable
+// pointer, its count and its Rust object; a text, a window and a primitive their Rust object alone; a UString and a
+// UWideString their vtable pointer and ee_ustring's record
+static_assert(sizeof(GEMaterial) == 3 * sizeof(void*) && sizeof(GEFont) == 3 * sizeof(void*) &&
+              sizeof(GETexture) == 3 * sizeof(void*) &&
+              sizeof(GEBitmap) == 3 * sizeof(void*) && sizeof(GEFontBitmap) == 3 * sizeof(void*), "cppobj.rs CppCounted");
+static_assert(sizeof(GEText) == sizeof(void*) && sizeof(GEWindow) == sizeof(void*), "cppobj.rs plain");
+static_assert(sizeof(UString) == sizeof(void*) + sizeof(EeUString) && sizeof(UWideString) == sizeof(void*) + sizeof(EeUWideString),
+              "cppobj.rs CppUString");
+
 // ---- the object host: the calls GEMaterial, GEFont, GEText and GEWindow (ee_ge smallobj.rs) make on other objects,
 // and GEWindow's forwarders (its header does not include the Rust header)
 intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b)
@@ -257,41 +267,17 @@ intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, intptr_t a, in
     case EeGeObjOp::StrDelete:
         delete theString;
         return 0;
-    case EeGeObjOp::StrAssign:
-        *theString = *(const UString*)a;
-        return 0;
-    case EeGeObjOp::StrSizeOf:
-        return (intptr_t)theString->SizeOf();
-    case EeGeObjOp::StrEqual:
-        return *theString == *(const UString*)a;
-    case EeGeObjOp::StrText:
-        return (intptr_t)(const char*)*theString;
     case EeGeObjOp::WStrNew:
         return (intptr_t)new UWideString((unsigned long)a);
     case EeGeObjOp::WStrDelete:
         delete theWide;
         return 0;
-    case EeGeObjOp::WStrAssign:
-        *theWide = *(const UWideString*)a;
-        return 0;
-    case EeGeObjOp::WStrText:
-        return (intptr_t)(const char*)*theWide;
-    case EeGeObjOp::WStrLength:
-        return (intptr_t)theWide->GetLength();
-    case EeGeObjOp::TexReference:
-        ((GETexture*)inObj)->Reference();
-        return 0;
     case EeGeObjOp::TexDereference:
         ((GETexture*)inObj)->Dereference();
-        return 0;
-    case EeGeObjOp::RefReference:
-        ((UReferenceCounter*)inObj)->Reference();
         return 0;
     case EeGeObjOp::RefDereference:
         ((UReferenceCounter*)inObj)->Dereference();
         return 0;
-    case EeGeObjOp::FontObj:
-        return (intptr_t)((GEFont*)inObj)->GetRust();
     case EeGeObjOp::PlatFontCreate:
         return (intptr_t)PlatFontCreate((const char*)inObj, (int32_t)a, (int)(b & 1), (int)((b >> 1) & 1),
                                         (int)((b >> 2) & 1), (int)((b >> 3) & 1));

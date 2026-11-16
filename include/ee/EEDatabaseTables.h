@@ -9,6 +9,7 @@
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 
 #include "ee/EEWorldConstants.h"
+#include "rust/ee_data.h"
 
 class FSFileSpec;
 class EEUnitClass;
@@ -152,7 +153,8 @@ public:
 };
 
 // RTTI EETerrainTypeTable (vtable 0x43f7f8; ctor 0xdbd11, ??_G 0xdbe27). Inline dtor.
-class EETerrainTypeTable {
+// mID..mIsInEditor are EeDataTerrainTypeFields (rust/crates/ee_data tables.rs: the record and its copy), the base
+class EETerrainTypeTable : public EeDataTerrainTypeFields {
 public:
     EETerrainTypeTable();
     virtual ~EETerrainTypeTable() {}
@@ -162,12 +164,6 @@ public:
     static void ClearDamageTables();
     // members from the ctor: +0x08..+0x18 = 0, +0x1c = false; sizeof 0x20 (new site)
     long mColorSetID;                       // +0x04 (untouched by the ctor)
-    long mID;                               // +0x08
-    long mFirstColor;                       // +0x0c
-    long mLastColor;                        // +0x10
-    long mNameID;                           // +0x14
-    long mL18;                              // +0x18
-    bool mIsInEditor;                       // +0x1c
     static std::vector<EETerrainTypeTable*> sTable;  // 0x8e86f8 (guard 0x8e86f0 bit 1; only its unit sees it)
     // inline (out-of-line COMDATs 0x11e22b / 0x11e24e after their first user in EEMap.cpp) (provisional names)
     static EETerrainTypeTable* Get(unsigned long inIndex) { return inIndex < EETerrainTypeTable::sTable.size() ? EETerrainTypeTable::sTable[inIndex] : NULL; }

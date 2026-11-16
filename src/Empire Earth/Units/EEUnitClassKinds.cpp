@@ -1,4 +1,6 @@
 // EEUnitClassKinds.cpp (new, R5b.4 round 32): EEUnitClass's virtuals as dispatchers by the class's kind.
+// Round 34: the kind tests are one Rust table (ee_units cls_dispatch.rs, EEClassBody in ee/EEUnitKind.h): each
+// dispatcher switches over its row's body for the class, in the order the tests below were written.
 // The 36 EEUC* subclasses (one per category the class factory built) are gone: a class is one EEUnitClass whose
 // kind is its category's entry in ee_units' table (kinds.rs EE_UNIT_CLASS_KINDS: the class's bit and its
 // ancestors'). Each dispatcher tests the kinds deepest first, as the vtables resolved an override: the first
@@ -31,113 +33,72 @@
 
 void EEUnitClass::ActionChanged(EEComplexUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_AIR_ANIMAL)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_AIR_ANIMAL, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_AIRPLANE)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_AIRPLANE, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_BUILDING_PRIEST)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_BUILDING_PRIEST, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_GATE)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_GATE, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_HELICOPTER_PRIEST)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_HELICOPTER_PRIEST, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_HELICOPTER_TRANSPORT)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_HELICOPTER_TRANSPORT, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_MINING_BUILDING)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_MINING_BUILDING, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_PLANET_SPACESHIP)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_PLANET_SPACESHIP, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_BASIC_CITIZEN)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_CITIZEN, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_BASIC_PRIEST)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_BASIC_PRIEST, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_BUILDING)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_BUILDING, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_HELICOPTER)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_HELICOPTER, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_LAND)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_LAND, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_LANDABLE)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_LANDABLE, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_MISSILE)
+    // the bodies' action kinds (ee_units actions.rs) by the dispatch row's answer; 15 and 17 the shots' members
+    static const int32_t kActions[] = {
+        EE_UNITS_ACTION_BASE, EE_UNITS_ACTION_AIR_ANIMAL, EE_UNITS_ACTION_AIRPLANE,
+        EE_UNITS_ACTION_BUILDING_PRIEST, EE_UNITS_ACTION_GATE, EE_UNITS_ACTION_HELICOPTER_PRIEST,
+        EE_UNITS_ACTION_HELICOPTER_TRANSPORT, EE_UNITS_ACTION_MINING_BUILDING, EE_UNITS_ACTION_PLANET_SPACESHIP,
+        EE_UNITS_ACTION_CITIZEN, EE_UNITS_ACTION_BASIC_PRIEST, EE_UNITS_ACTION_BUILDING,
+        EE_UNITS_ACTION_HELICOPTER, EE_UNITS_ACTION_LAND, EE_UNITS_ACTION_LANDABLE, EE_UNITS_ACTION_BASE,
+        EE_UNITS_ACTION_NAVAL, EE_UNITS_ACTION_BASE, EE_UNITS_ACTION_SPACESHIP, EE_UNITS_ACTION_SUBMERGED_NAVAL};
+    unsigned theBody = EEClassBody(this, EE_UNITS_BODY_ACTION_CHANGED);
+    if (theBody == 15)
         this->MissileActionChanged(inUnit);
-    else if (theKinds & EE_CLASS_KIND_NAVAL)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_NAVAL, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_PROJECTILE)
+    else if (theBody == 17)
         this->ProjectileActionChanged(inUnit);
-    else if (theKinds & EE_CLASS_KIND_SPACESHIP)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_SPACESHIP, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_SUBMERGED_NAVAL)
-        EEUnitClassActionChanged(EE_UNITS_ACTION_SUBMERGED_NAVAL, this, inUnit);
     else
-        EEUnitClassActionChanged(EE_UNITS_ACTION_BASE, this, inUnit);
+        EEUnitClassActionChanged(kActions[theBody], this, inUnit);
 }
 
 void EEUnitClass::AddToRegion(EEUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & (EE_CLASS_KIND_FORTRESS | EE_CLASS_KIND_BUILDING))
-        EEAddBuildingRegion(inUnit);
-    else if (theKinds & (EE_CLASS_KIND_MISSILE | EE_CLASS_KIND_PROJECTILE)) {
-    } else
-        this->BaseAddToRegion(inUnit);
+    switch (EEClassBody(this, EE_UNITS_BODY_ADD_TO_REGION)) {
+    case 1: EEAddBuildingRegion(inUnit); return;
+    case 2: return;
+    }
+    this->BaseAddToRegion(inUnit);
 }
 
 void EEUnitClass::AddToTile(EEUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & (EE_CLASS_KIND_FORTRESS | EE_CLASS_KIND_BUILDING))
-        EEAddToFootprintTiles(inUnit);
-    else if (theKinds & (EE_CLASS_KIND_HELICOPTER_PRIEST | EE_CLASS_KIND_HELICOPTER_TRANSPORT | EE_CLASS_KIND_NAVAL_TRANSPORT | EE_CLASS_KIND_SPACE_TRANSPORT | EE_CLASS_KIND_HELICOPTER | EE_CLASS_KIND_LANDABLE | EE_CLASS_KIND_NAVAL | EE_CLASS_KIND_SPACESHIP))
-        this->SpaceTransportAddToTile(inUnit);
-    else if (theKinds & EE_CLASS_KIND_AMBIENT)
-        this->AmbientAddToTile(inUnit);
-    else if (theKinds & EE_CLASS_KIND_RESOURCE)
-        this->ResourceAddToTile(inUnit);
-    else if (theKinds & EE_CLASS_KIND_SUBMERGED_NAVAL)
-        this->SubmergedNavalAddToTile(inUnit);
-    else
-        this->BaseAddToTile(inUnit);
+    switch (EEClassBody(this, EE_UNITS_BODY_ADD_TO_TILE)) {
+    case 1: EEAddToFootprintTiles(inUnit); return;
+    case 2: this->SpaceTransportAddToTile(inUnit); return;
+    case 3: this->AmbientAddToTile(inUnit); return;
+    case 4: this->ResourceAddToTile(inUnit); return;
+    case 5: this->SubmergedNavalAddToTile(inUnit); return;
+    }
+    this->BaseAddToTile(inUnit);
 }
 
 void EEUnitClass::AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_NAVAL_CITIZEN)
-        this->NavalCitizenAdjustPath(inUnit, ioPath, inSmooth);
-    else if (theKinds & EE_CLASS_KIND_NAVAL_PRIEST)
-        this->NavalPriestAdjustPath(inUnit, ioPath, inSmooth);
-    else if (theKinds & (EE_CLASS_KIND_NAVAL_TRANSPORT | EE_CLASS_KIND_NAVAL))
-        EEAdjustNavalPath(inUnit, ioPath, inSmooth);
-    else if (theKinds & EE_CLASS_KIND_SEA_ANIMAL)
-        this->SeaAnimalAdjustPath(inUnit, ioPath, inSmooth);
-    else if (theKinds & EE_CLASS_KIND_SUBMERGED_NAVAL)
-        this->NavalPriestAdjustPath(inUnit, ioPath, inSmooth);
+    switch (EEClassBody(this, EE_UNITS_BODY_ADJUST_PATH)) {
+    case 1: this->NavalCitizenAdjustPath(inUnit, ioPath, inSmooth); return;
+    case 2: this->NavalPriestAdjustPath(inUnit, ioPath, inSmooth); return;
+    case 3: EEAdjustNavalPath(inUnit, ioPath, inSmooth); return;
+    case 4: this->SeaAnimalAdjustPath(inUnit, ioPath, inSmooth); return;
+    case 5: this->NavalPriestAdjustPath(inUnit, ioPath, inSmooth); return;
+    }
 }
 
 void EEUnitClass::BadlyHurt(EEUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_LAND_TRANSPORT)
-        this->LandTransportBadlyHurt(inUnit);
+    switch (EEClassBody(this, EE_UNITS_BODY_BADLY_HURT)) {
+    case 1: this->LandTransportBadlyHurt(inUnit); return;
+    }
 }
 
 void EEUnitClass::CallParatroopPlane(EEComplexUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_LAND)
-        this->LandCallParatroopPlane(inUnit);
+    switch (EEClassBody(this, EE_UNITS_BODY_CALL_PARATROOP_PLANE)) {
+    case 1: this->LandCallParatroopPlane(inUnit); return;
+    }
 }
 
 bool EEUnitClass::CanAttackMove()
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_AIR_ANIMAL)
-        return false;
-    if (theKinds & (EE_CLASS_KIND_HELICOPTER_TRANSPORT | EE_CLASS_KIND_BASIC_PRIEST | EE_CLASS_KIND_HELICOPTER | EE_CLASS_KIND_LAND | EE_CLASS_KIND_LANDABLE | EE_CLASS_KIND_NAVAL | EE_CLASS_KIND_SPACESHIP | EE_CLASS_KIND_SUBMERGED_NAVAL))
-        return true;
-    return false;
+    return EEClassBody(this, EE_UNITS_BODY_CAN_ATTACK_MOVE) == 2;
 }
 
 bool EEUnitClass::CanCarry(EEComplexUnit* inUnit1, EEComplexUnit* inUnit2)
@@ -154,135 +115,80 @@ bool EEUnitClass::CanUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 
 void EEUnitClass::CargoAdded(EEComplexUnit* inUnit, EEComplexUnit* inCargo, bool inArg)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_FORTRESS) {
-        if (!inArg) inUnit->mPlayer->mPopulationCount -= inCargo->mUnitClass->GetPopulationCost();
+    switch (EEClassBody(this, EE_UNITS_BODY_CARGO_ADDED)) {
+    case 1: if (!inArg) inUnit->mPlayer->mPopulationCount -= inCargo->mUnitClass->GetPopulationCost(); return;
     }
 }
 
 void EEUnitClass::CargoRemoved(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_FORTRESS)
-        inUnit->mPlayer->mPopulationCount += inCargo->mUnitClass->GetPopulationCost();
+    switch (EEClassBody(this, EE_UNITS_BODY_CARGO_REMOVED)) {
+    case 1: inUnit->mPlayer->mPopulationCount += inCargo->mUnitClass->GetPopulationCost(); return;
+    }
 }
 
 void EEUnitClass::CargoUnloaded(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_FORTRESS)
-        inUnit->mPlayer->mPopulationCount += inCargo->mUnitClass->GetPopulationCost();
+    switch (EEClassBody(this, EE_UNITS_BODY_CARGO_UNLOADED)) {
+    case 1: inUnit->mPlayer->mPopulationCount += inCargo->mUnitClass->GetPopulationCost(); return;
+    }
 }
 
 bool EEUnitClass::CheckGroundImpact(EEComplexUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_TORPEDO)
-        return this->TorpedoCheckGroundImpact(inUnit);
-    if (theKinds & EE_CLASS_KIND_MISSILE)
-        return this->MissileCheckGroundImpact(inUnit);
-    if (theKinds & EE_CLASS_KIND_PROJECTILE)
-        return this->ProjectileCheckGroundImpact(inUnit);
+    switch (EEClassBody(this, EE_UNITS_BODY_CHECK_GROUND_IMPACT)) {
+    case 1: return this->TorpedoCheckGroundImpact(inUnit);
+    case 2: return this->MissileCheckGroundImpact(inUnit);
+    case 3: return this->ProjectileCheckGroundImpact(inUnit);
+    }
     return false;
 }
 
 bool EEUnitClass::CheckWaterImpact(EEComplexUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_TORPEDO)
-        return false;
-    if (theKinds & EE_CLASS_KIND_MISSILE)
-        return this->MissileCheckWaterImpact(inUnit);
-    if (theKinds & EE_CLASS_KIND_PROJECTILE)
-        return this->ProjectileCheckWaterImpact(inUnit);
+    switch (EEClassBody(this, EE_UNITS_BODY_CHECK_WATER_IMPACT)) {
+    case 1: return false;
+    case 2: return this->MissileCheckWaterImpact(inUnit);
+    case 3: return this->ProjectileCheckWaterImpact(inUnit);
+    }
     return false;
 }
 
 EEUnit* EEUnitClass::CreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_MINING_BUILDING)
-        return this->MiningBuildingCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
-    if (theKinds & (EE_CLASS_KIND_NAVAL_BUILDING | EE_CLASS_KIND_NAVAL_CITIZEN | EE_CLASS_KIND_NAVAL_PRIEST | EE_CLASS_KIND_NAVAL_TRANSPORT | EE_CLASS_KIND_NAVAL))
-        return this->NavalCitizenCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
-    if (theKinds & EE_CLASS_KIND_SPACE_BUILDING)
-        return this->SpaceBuildingCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
-    if (theKinds & EE_CLASS_KIND_BUILDING)
-        return this->BuildingCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
-    if (theKinds & EE_CLASS_KIND_SUBMERGED_NAVAL)
-        return this->SubmergedNavalCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
+    switch (EEClassBody(this, EE_UNITS_BODY_CREATE_UNIT)) {
+    case 1: return this->MiningBuildingCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
+    case 2: return this->NavalCitizenCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
+    case 3: return this->SpaceBuildingCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
+    case 4: return this->BuildingCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
+    case 5: return this->SubmergedNavalCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
+    }
     return this->BaseCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
 }
 
 EEUnit* EEUnitClass::CreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_MINING_BUILDING)
-        return this->MiningBuildingCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
-    if (theKinds & (EE_CLASS_KIND_NAVAL_BUILDING | EE_CLASS_KIND_NAVAL_CITIZEN | EE_CLASS_KIND_NAVAL_PRIEST | EE_CLASS_KIND_NAVAL_TRANSPORT | EE_CLASS_KIND_NAVAL))
-        return this->NavalPriestCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
-    if (theKinds & EE_CLASS_KIND_SPACE_BUILDING)
-        return this->SpaceBuildingCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
-    if (theKinds & EE_CLASS_KIND_BUILDING)
-        return this->BuildingCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
-    if (theKinds & EE_CLASS_KIND_SUBMERGED_NAVAL)
-        return this->SubmergedNavalCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
+    switch (EEClassBody(this, EE_UNITS_BODY_CREATE_UNIT_AT)) {
+    case 1: return this->MiningBuildingCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
+    case 2: return this->NavalPriestCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
+    case 3: return this->SpaceBuildingCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
+    case 4: return this->BuildingCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
+    case 5: return this->SubmergedNavalCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
+    }
     return this->BaseCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
-// the landing kinds' triggers (ee_units cls_air.rs): the common unit class answers the others
-static long EELandingCondition(EEUnitClass* inClass, EEComplexUnit* inUnit, unsigned long inEvent, bool inAnimal)
-{
-    long theAnswer = ee_units_cls_landing_condition(EEObj(inClass), EEObj(inUnit), (uint32_t)inEvent, inAnimal);
-    return theAnswer >= 0 ? theAnswer : inClass->BaseEvaluateCondition(inUnit, inEvent);
-}
-
+// the kinds' trigger answers are Rust (ee_units cls_condition.rs, R5b.4 round 34); the shots' are ee_combat's
 long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_AIR_ANIMAL)
-        return EELandingCondition(this, inUnit, inEvent, true);
-    if (theKinds & EE_CLASS_KIND_FORTRESS)
-        return this->FortressEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_BUILDING_PRIEST)
-        return this->BuildingPriestEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_GATE)
-        return this->GateEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_HELICOPTER_PRIEST)
-        return this->HelicopterPriestEvaluateCondition(inUnit, inEvent);
-    if (theKinds & (EE_CLASS_KIND_HELICOPTER_TRANSPORT | EE_CLASS_KIND_HELICOPTER))
-        return this->HelicopterTransportEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_MINING_BUILDING)
-        return this->MiningBuildingEvaluateCondition(inUnit, inEvent);
-    if (theKinds & (EE_CLASS_KIND_NAVAL_BUILDING | EE_CLASS_KIND_SPACE_BUILDING))
-        return this->NavalBuildingEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_NAVAL_CITIZEN)
-        return this->NavalCitizenEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_NAVAL_PRIEST)
-        return this->NavalPriestEvaluateCondition(inUnit, inEvent);
-    if (theKinds & (EE_CLASS_KIND_NAVAL_TRANSPORT | EE_CLASS_KIND_NAVAL))
-        return this->NavalEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_SPACE_TRANSPORT)
-        return this->SpaceTransportEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_TORPEDO)
+    int32_t theAnswer = ee_units_cls_condition(EEObj(this), EEObj(inUnit), (uint32_t)inEvent);
+    if (theAnswer == -1)
         return EECombatCondition(EE_COMBAT_GOAL_TORPEDO, inUnit, inEvent, EECombatShotTarget(inUnit), NULL, this);
-    if (theKinds & EE_CLASS_KIND_BASIC_CITIZEN)
-        return this->BasicCitizenEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_BASIC_PRIEST)
-        return this->BasicPriestEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_BUILDING)
-        return this->BuildingEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_LANDABLE)
-        return EELandingCondition(this, inUnit, inEvent, false);
-    if (theKinds & EE_CLASS_KIND_MISSILE)
+    if (theAnswer == -2)
         return this->MissileEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_PROJECTILE)
+    if (theAnswer == -3)
         return EECombatCondition(EE_COMBAT_GOAL_PROJECTILE, inUnit, inEvent, EECombatShotTarget(inUnit), NULL, this);
-    if (theKinds & EE_CLASS_KIND_SPACESHIP)
-        return this->SpaceshipEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_SUBMERGED_NAVAL)
-        return this->SubmergedNavalEvaluateCondition(inUnit, inEvent);
-    return this->BaseEvaluateCondition(inUnit, inEvent);
+    return theAnswer;
 }
 
 void EEUnitClass::FilterLoadable(std::vector<EEComplexUnit*>* ioUnits, EEComplexUnit* inTransport, std::vector<EEComplexUnit*>* outRejected)
@@ -328,19 +234,18 @@ void EEUnitClass::FindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* in
 
 bool EEUnitClass::FliesOver()
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & (EE_CLASS_KIND_HELICOPTER_PRIEST | EE_CLASS_KIND_HELICOPTER))
-        return true;
-    if (theKinds & EE_CLASS_KIND_TRANSPORT)
-        return this->mDomains & kMovementAir;
+    switch (EEClassBody(this, EE_UNITS_BODY_FLIES_OVER)) {
+    case 1: return true;
+    case 2: return this->mDomains & kMovementAir;
+    }
     return false;
 }
 
 void EEUnitClass::GateReplaced(EEUnit* inGate, EEUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_GATE)
-        this->GateGateReplaced(inGate, inUnit);
+    switch (EEClassBody(this, EE_UNITS_BODY_GATE_REPLACED)) {
+    case 1: this->GateGateReplaced(inGate, inUnit); return;
+    }
 }
 
 float EEUnitClass::GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
@@ -357,21 +262,15 @@ long EEUnitClass::GetPopulationCost()
 
 void EEUnitClass::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_AIR_ANIMAL)
-        this->AirAnimalGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
-    else if (theKinds & EE_CLASS_KIND_HELICOPTER_PRIEST)
-        this->HelicopterPriestGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
-    else if (theKinds & (EE_CLASS_KIND_HELICOPTER_TRANSPORT | EE_CLASS_KIND_HELICOPTER | EE_CLASS_KIND_SPACESHIP))
-        this->SpaceshipGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
-    else if (theKinds & EE_CLASS_KIND_LAND_PRIEST)
-        this->LandPriestGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
-    else if (theKinds & EE_CLASS_KIND_SPACE_TRANSPORT)
-        this->SpaceshipVirtual2C(inUnit, inSound, outVolume, outPan, outPitch);
-    else if (theKinds & EE_CLASS_KIND_LANDABLE)
-        this->LandableGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
-    else
-        this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
+    switch (EEClassBody(this, EE_UNITS_BODY_GET_SOUND_PARAMETERS)) {
+    case 1: this->AirAnimalGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
+    case 2: this->HelicopterPriestGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
+    case 3: this->SpaceshipGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
+    case 4: this->LandPriestGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
+    case 5: this->SpaceshipVirtual2C(inUnit, inSound, outVolume, outPan, outPitch); return;
+    case 6: this->LandableGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
+    }
+    this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
 }
 
 void EEUnitClass::GetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend)
@@ -391,29 +290,23 @@ void EEUnitClass::GetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileC
 
 long EEUnitClass::GetUnloadFailedTextID()
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_FORTRESS)
-        return 0x7c39;
-    if (theKinds & EE_CLASS_KIND_TRANSPORT)
-        return 0x7c38;
+    switch (EEClassBody(this, EE_UNITS_BODY_GET_UNLOAD_FAILED_TEXT_ID)) {
+    case 1: return 0x7c39;
+    case 2: return 0x7c38;
+    }
     return 0;
 }
 
 void EEUnitClass::GroundLocation(GE3DPoint& ioLocation)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_NAVAL_BUILDING)
-        ioLocation.SetZ(0.0f);
-    else if (theKinds & (EE_CLASS_KIND_NAVAL_CITIZEN | EE_CLASS_KIND_NAVAL_TRANSPORT | EE_CLASS_KIND_NAVAL)) {
-        if (ioLocation.GetZ() < 0.0f) ioLocation.SetZ(0.0f);
-    } else if (theKinds & EE_CLASS_KIND_SPACE_BUILDING)
-        ioLocation.SetZ(this->mCruiseAltitude);
-    else if (theKinds & EE_CLASS_KIND_AMBIENT) {
-        if (this->mUnitType == kUnitTypeAmbCattails1) ioLocation.SetZ(0.0f);
-    } else if (theKinds & EE_CLASS_KIND_BUILDING)
-        this->BuildingGroundLocation(ioLocation);
-    else if (theKinds & EE_CLASS_KIND_SUBMERGED_NAVAL)
-        this->SubmergedNavalGroundLocation(ioLocation);
+    switch (EEClassBody(this, EE_UNITS_BODY_GROUND_LOCATION)) {
+    case 1: ioLocation.SetZ(0.0f); return;
+    case 2: if (ioLocation.GetZ() < 0.0f) ioLocation.SetZ(0.0f); return;
+    case 3: ioLocation.SetZ(this->mCruiseAltitude); return;
+    case 4: if (this->mUnitType == kUnitTypeAmbCattails1) ioLocation.SetZ(0.0f); return;
+    case 5: this->BuildingGroundLocation(ioLocation); return;
+    case 6: this->SubmergedNavalGroundLocation(ioLocation); return;
+    }
 }
 
 bool EEUnitClass::HasArrived(EEComplexUnit* inUnit, float inValue)
@@ -452,119 +345,96 @@ bool EEUnitClass::HasRoom(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
 
 bool EEUnitClass::HasSunk(EEComplexUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_NAVAL_BUILDING)
-        return this->NavalBuildingHasSunk(inUnit);
-    if (theKinds & EE_CLASS_KIND_SPACE_BUILDING)
-        return true;
+    switch (EEClassBody(this, EE_UNITS_BODY_HAS_SUNK)) {
+    case 1: return this->NavalBuildingHasSunk(inUnit);
+    case 2: return true;
+    }
     return false;
 }
 
 bool EEUnitClass::IsBuilding()
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_BUILDING)
-        return true;
-    return false;
+    return EEClassBody(this, EE_UNITS_BODY_IS_BUILDING) == 1;
 }
 
 bool EEUnitClass::IsLandBuilding()
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_FORTRESS)
-        return true;
-    if (theKinds & (EE_CLASS_KIND_NAVAL_BUILDING | EE_CLASS_KIND_SPACE_BUILDING))
-        return false;
-    if (theKinds & EE_CLASS_KIND_BUILDING)
-        return true;
-    return false;
+    unsigned theBody = EEClassBody(this, EE_UNITS_BODY_IS_LAND_BUILDING);
+    return theBody == 1 || theBody == 3;
 }
 
 bool EEUnitClass::IsPartLeftOut(EEComplexUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_GATE)
-        return !this->IsSidePart(inUnit) && EEGetFirstPart(inUnit)->GetCommandType() != kActionClosed;
+    switch (EEClassBody(this, EE_UNITS_BODY_IS_PART_LEFT_OUT)) {
+    case 1: return !this->IsSidePart(inUnit) && EEGetFirstPart(inUnit)->GetCommandType() != kActionClosed;
+    }
     return false;
 }
 
 bool EEUnitClass::IsPickable()
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_AMBIENT)
-        return false;
-    if (theKinds & EE_CLASS_KIND_BUILDING)
-        return !this->mIsFlare && this->mUnitType != kUnitTypeVolcano;
+    switch (EEClassBody(this, EE_UNITS_BODY_IS_PICKABLE)) {
+    case 1: return false;
+    case 2: return !this->mIsFlare && this->mUnitType != kUnitTypeVolcano;
+    }
     return true;
 }
 
 bool EEUnitClass::IsSelectable(EEUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_AMBIENT)
-        return inUnit->mUnitClass->mUnitType == kUnitTypePathPoint;
-    if (theKinds & EE_CLASS_KIND_BUILDING)
-        return !this->mIsFlare && this->mUnitType != kUnitTypeVolcano;
+    switch (EEClassBody(this, EE_UNITS_BODY_IS_SELECTABLE)) {
+    case 1: return inUnit->mUnitClass->mUnitType == kUnitTypePathPoint;
+    case 2: return !this->mIsFlare && this->mUnitType != kUnitTypeVolcano;
+    }
     return true;
 }
 
 bool EEUnitClass::LaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_BOMB)
-        return this->BombLaunchProjectile(inUnit, inLocation);
-    if (theKinds & EE_CLASS_KIND_MISSILE)
-        return this->MissileLaunchProjectile(inUnit, inLocation);
-    if (theKinds & EE_CLASS_KIND_PROJECTILE)
-        return this->ProjectileLaunchProjectile(inUnit, inLocation);
+    switch (EEClassBody(this, EE_UNITS_BODY_LAUNCH_PROJECTILE)) {
+    case 1: return this->BombLaunchProjectile(inUnit, inLocation);
+    case 2: return this->MissileLaunchProjectile(inUnit, inLocation);
+    case 3: return this->ProjectileLaunchProjectile(inUnit, inLocation);
+    }
     return false;
 }
 
 void EEUnitClass::LoadMedia(EEPlayer* inPlayer)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_BUILDING_PRIEST)
-        this->BasicPriestLoadMedia(inPlayer);
-    else if (theKinds & EE_CLASS_KIND_BASIC_PRIEST)
-        this->BasicPriestLoadMedia(inPlayer);
-    else
-        this->BaseLoadMedia(inPlayer);
+    switch (EEClassBody(this, EE_UNITS_BODY_LOAD_MEDIA)) {
+    case 1: this->BasicPriestLoadMedia(inPlayer); return;
+    case 2: this->BasicPriestLoadMedia(inPlayer); return;
+    }
+    this->BaseLoadMedia(inPlayer);
 }
 
 void EEUnitClass::LocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & (EE_CLASS_KIND_NAVAL_BUILDING | EE_CLASS_KIND_NAVAL_CITIZEN | EE_CLASS_KIND_NAVAL_TRANSPORT | EE_CLASS_KIND_NAVAL))
-        this->NavalCitizenLocationToTile(inLocation, outX, outY);
-    else if (theKinds & EE_CLASS_KIND_SPACE_BUILDING)
-        this->SpaceBuildingLocationToTile(inLocation, outX, outY);
-    else if (theKinds & EE_CLASS_KIND_AMBIENT)
-        this->AmbientLocationToTile(inLocation, outX, outY);
-    else if (theKinds & EE_CLASS_KIND_SUBMERGED_NAVAL)
-        this->SubmergedNavalLocationToTile(inLocation, outX, outY);
+    switch (EEClassBody(this, EE_UNITS_BODY_LOCATION_TO_TILE)) {
+    case 1: this->NavalCitizenLocationToTile(inLocation, outX, outY); return;
+    case 2: this->SpaceBuildingLocationToTile(inLocation, outX, outY); return;
+    case 3: this->AmbientLocationToTile(inLocation, outX, outY); return;
+    case 4: this->SubmergedNavalLocationToTile(inLocation, outX, outY); return;
+    }
 }
 
 void EEUnitClass::RemoveFromRegion(EEUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & (EE_CLASS_KIND_FORTRESS | EE_CLASS_KIND_BUILDING))
-        EERemoveBuildingRegion(inUnit);
-    else if (theKinds & (EE_CLASS_KIND_MISSILE | EE_CLASS_KIND_PROJECTILE)) {
-    } else
-        this->BaseRemoveFromRegion(inUnit);
+    switch (EEClassBody(this, EE_UNITS_BODY_REMOVE_FROM_REGION)) {
+    case 1: EERemoveBuildingRegion(inUnit); return;
+    case 2: return;
+    }
+    this->BaseRemoveFromRegion(inUnit);
 }
 
 void EEUnitClass::RemoveFromTile(EEUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & (EE_CLASS_KIND_FORTRESS | EE_CLASS_KIND_BUILDING))
-        EERemoveFromFootprintTiles(inUnit);
-    else if (theKinds & (EE_CLASS_KIND_HELICOPTER_PRIEST | EE_CLASS_KIND_HELICOPTER_TRANSPORT | EE_CLASS_KIND_NAVAL_TRANSPORT | EE_CLASS_KIND_SPACE_TRANSPORT | EE_CLASS_KIND_HELICOPTER | EE_CLASS_KIND_LANDABLE | EE_CLASS_KIND_NAVAL | EE_CLASS_KIND_SPACESHIP | EE_CLASS_KIND_SUBMERGED_NAVAL))
-        this->SpaceTransportRemoveFromTile(inUnit);
-    else if (theKinds & (EE_CLASS_KIND_AMBIENT | EE_CLASS_KIND_RESOURCE))
-        this->AmbientRemoveFromTile(inUnit);
-    else
-        this->BaseRemoveFromTile(inUnit);
+    switch (EEClassBody(this, EE_UNITS_BODY_REMOVE_FROM_TILE)) {
+    case 1: EERemoveFromFootprintTiles(inUnit); return;
+    case 2: this->SpaceTransportRemoveFromTile(inUnit); return;
+    case 3: this->AmbientRemoveFromTile(inUnit); return;
+    }
+    this->BaseRemoveFromTile(inUnit);
 }
 
 bool EEUnitClass::SelectUnitToRelease(EEComplexUnit* inUnit)
@@ -582,152 +452,92 @@ bool EEUnitClass::SelectUnitToRelease(EEComplexUnit* inUnit)
 
 void EEUnitClass::SimpleUnitCreated(EEUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_RESOURCE)
-        this->ResourceSimpleUnitCreated(inUnit);
-    else
-        this->BaseSimpleUnitCreated(inUnit);
+    switch (EEClassBody(this, EE_UNITS_BODY_SIMPLE_UNIT_CREATED)) {
+    case 1: this->ResourceSimpleUnitCreated(inUnit); return;
+    }
+    this->BaseSimpleUnitCreated(inUnit);
 }
 
 void EEUnitClass::UnitCreated(EEComplexUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_AIR_ANIMAL)
-        this->AirAnimalUnitCreated(inUnit);
-    else if (theKinds & EE_CLASS_KIND_FORTRESS)
-        this->FortressUnitCreated(inUnit);
-    else if (theKinds & EE_CLASS_KIND_GATE)
-        this->GateUnitCreated(inUnit);
-    else if (theKinds & (EE_CLASS_KIND_HELICOPTER_PRIEST | EE_CLASS_KIND_HELICOPTER | EE_CLASS_KIND_SPACESHIP))
-        this->HelicopterPriestUnitCreated(inUnit);
-    else if (theKinds & EE_CLASS_KIND_HELICOPTER_TRANSPORT)
-        this->HelicopterTransportUnitCreated(inUnit);
-    else if (theKinds & (EE_CLASS_KIND_NAVAL_BUILDING | EE_CLASS_KIND_SPACE_BUILDING))
-        this->SpaceBuildingUnitCreated(inUnit);
-    else if (theKinds & EE_CLASS_KIND_SPACE_TRANSPORT)
-        this->SpaceTransportUnitCreated(inUnit);
-    else if (theKinds & EE_CLASS_KIND_BUILDING)
-        this->BuildingUnitCreated(inUnit);
-    else if (theKinds & EE_CLASS_KIND_LAND)
-        this->LandUnitCreated(inUnit);
-    else if (theKinds & EE_CLASS_KIND_LANDABLE)
-        this->LandableUnitCreated(inUnit);
-    else if (theKinds & EE_CLASS_KIND_MISSILE)
-        this->MissileUnitCreated(inUnit);
-    else if (theKinds & EE_CLASS_KIND_NAVAL)
-        this->NavalUnitCreated(inUnit);
-    else if (theKinds & EE_CLASS_KIND_PROJECTILE)
-        this->ProjectileUnitCreated(inUnit);
-    else if (theKinds & EE_CLASS_KIND_TRANSPORT)
-        this->TransportUnitCreated(inUnit);
-    else
-        this->BaseUnitCreated(inUnit);
+    switch (EEClassBody(this, EE_UNITS_BODY_UNIT_CREATED)) {
+    case 1: this->AirAnimalUnitCreated(inUnit); return;
+    case 2: this->FortressUnitCreated(inUnit); return;
+    case 3: this->GateUnitCreated(inUnit); return;
+    case 4: this->HelicopterPriestUnitCreated(inUnit); return;
+    case 5: this->HelicopterTransportUnitCreated(inUnit); return;
+    case 6: this->SpaceBuildingUnitCreated(inUnit); return;
+    case 7: this->SpaceTransportUnitCreated(inUnit); return;
+    case 8: this->BuildingUnitCreated(inUnit); return;
+    case 9: this->LandUnitCreated(inUnit); return;
+    case 10: this->LandableUnitCreated(inUnit); return;
+    case 11: this->MissileUnitCreated(inUnit); return;
+    case 12: this->NavalUnitCreated(inUnit); return;
+    case 13: this->ProjectileUnitCreated(inUnit); return;
+    case 14: this->TransportUnitCreated(inUnit); return;
+    }
+    this->BaseUnitCreated(inUnit);
 }
 
 void EEUnitClass::UnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_FORTRESS)
-        this->FortressUnloadAt(inTransport, inX, inY);
-    else if (theKinds & EE_CLASS_KIND_TRANSPORT)
-        this->TransportUnloadAt(inTransport, inX, inY);
+    switch (EEClassBody(this, EE_UNITS_BODY_UNLOAD_AT)) {
+    case 1: this->FortressUnloadAt(inTransport, inX, inY); return;
+    case 2: this->TransportUnloadAt(inTransport, inX, inY); return;
+    }
 }
 
 void EEUnitClass::UnloadMedia(EEPlayer* inPlayer)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_BUILDING_PRIEST)
-        this->BasicPriestUnloadMedia(inPlayer);
-    else if (theKinds & EE_CLASS_KIND_BASIC_PRIEST)
-        this->BasicPriestUnloadMedia(inPlayer);
-    else
-        this->BaseUnloadMedia(inPlayer);
+    switch (EEClassBody(this, EE_UNITS_BODY_UNLOAD_MEDIA)) {
+    case 1: this->BasicPriestUnloadMedia(inPlayer); return;
+    case 2: this->BasicPriestUnloadMedia(inPlayer); return;
+    }
+    this->BaseUnloadMedia(inPlayer);
 }
 
 void EEUnitClass::Update(EEComplexUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_AIR_ANIMAL)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_AIR_ANIMAL, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_FORTRESS)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_FORTRESS, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_BOMB)
-        this->BombUpdate(inUnit);
-    else if (theKinds & EE_CLASS_KIND_BUILDING_PRIEST) {
-        if (!inUnit->IsFoundation() || inUnit->mHitPoints <= 0 || inUnit->mCurrentPhysicsAction == 2) this->PriestVirtualB8(inUnit);
-    } else if (theKinds & EE_CLASS_KIND_GATE)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_GATE, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_HELICOPTER_TRANSPORT)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_HELICOPTER_TRANSPORT, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_LAND_CITIZEN)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_LAND_CITIZEN, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_LAND_TRANSPORT)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_LAND_TRANSPORT, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_MINING_BUILDING)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_MINING_BUILDING, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_NAVAL_BUILDING)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_NAVAL_BUILDING, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_NAVAL_CITIZEN)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_NAVAL_CITIZEN, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_SPACE_BUILDING)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_SPACE_BUILDING, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_TORPEDO)
-        this->TorpedoUpdate(inUnit);
-    else if (theKinds & EE_CLASS_KIND_AMBIENT)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_AMBIENT, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_BASIC_CITIZEN)
-        this->UpdateCitizen(inUnit);
-    else if (theKinds & EE_CLASS_KIND_BASIC_PRIEST)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_BASIC_PRIEST, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_BUILDING)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_BUILDING, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_HELICOPTER)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_HELICOPTER, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_LAND)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_LAND, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_LANDABLE)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_LANDABLE, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_MISSILE)
-        this->MissileUpdate(inUnit);
-    else if (theKinds & EE_CLASS_KIND_NAVAL)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_NAVAL, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_PROJECTILE)
-        this->ProjectileUpdate(inUnit);
-    else if (theKinds & EE_CLASS_KIND_SPACESHIP)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_SPACESHIP, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_SUBMERGED_NAVAL)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_SUBMERGED_NAVAL, this, inUnit);
-    else if (theKinds & EE_CLASS_KIND_TRANSPORT)
-        EEUnitClassUpdate(EE_UNITS_UPDATE_TRANSPORT, this, inUnit);
+    // the sequences' kinds (ee_units update.rs) by the dispatch row's answer; -1 the members below
+    static const int32_t kUpdates[] = {
+        -1, EE_UNITS_UPDATE_AIR_ANIMAL, EE_UNITS_UPDATE_FORTRESS, -1, -1, EE_UNITS_UPDATE_GATE,
+        EE_UNITS_UPDATE_HELICOPTER_TRANSPORT, EE_UNITS_UPDATE_LAND_CITIZEN, EE_UNITS_UPDATE_LAND_TRANSPORT,
+        EE_UNITS_UPDATE_MINING_BUILDING, EE_UNITS_UPDATE_NAVAL_BUILDING, EE_UNITS_UPDATE_NAVAL_CITIZEN,
+        EE_UNITS_UPDATE_SPACE_BUILDING, -1, EE_UNITS_UPDATE_AMBIENT, -1, EE_UNITS_UPDATE_BASIC_PRIEST,
+        EE_UNITS_UPDATE_BUILDING, EE_UNITS_UPDATE_HELICOPTER, EE_UNITS_UPDATE_LAND, EE_UNITS_UPDATE_LANDABLE,
+        -1, EE_UNITS_UPDATE_NAVAL, -1, EE_UNITS_UPDATE_SPACESHIP, EE_UNITS_UPDATE_SUBMERGED_NAVAL,
+        EE_UNITS_UPDATE_TRANSPORT};
+    unsigned theBody = EEClassBody(this, EE_UNITS_BODY_UPDATE);
+    if (kUpdates[theBody] >= 0) {
+        EEUnitClassUpdate(kUpdates[theBody], this, inUnit);
+        return;
+    }
+    switch (theBody) {
+    case 3: this->BombUpdate(inUnit); return;
+    case 4: if (!inUnit->IsFoundation() || inUnit->mHitPoints <= 0 || inUnit->mCurrentPhysicsAction == 2) this->PriestVirtualB8(inUnit); return;
+    case 13: this->TorpedoUpdate(inUnit); return;
+    case 15: this->UpdateCitizen(inUnit); return;
+    case 21: this->MissileUpdate(inUnit); return;
+    case 23: this->ProjectileUpdate(inUnit); return;
+    }
 }
 
 void EEUnitClass::UpdateEffects(EEComplexUnit* inUnit)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & (EE_CLASS_KIND_AIR_ANIMAL | EE_CLASS_KIND_FORTRESS | EE_CLASS_KIND_HELICOPTER_PRIEST | EE_CLASS_KIND_HELICOPTER_TRANSPORT | EE_CLASS_KIND_SPACE_BUILDING)) {
-        // their overrides were empty
-    } else if (theKinds & EE_CLASS_KIND_AIRPLANE) {
-        if (this->mRippleEffect != NULL && inUnit->mUnitClass->mUnitType == kUnitTypeCatalina && inUnit->mHitPoints != 0 && this->mRippleEffect->mDetailLevel <= gEffectDetail) this->UpdateRipples(inUnit);
-    } else if (theKinds & (EE_CLASS_KIND_NAVAL_BUILDING | EE_CLASS_KIND_SEA_ANIMAL | EE_CLASS_KIND_TORPEDO | EE_CLASS_KIND_BASIC_CITIZEN | EE_CLASS_KIND_BASIC_PRIEST | EE_CLASS_KIND_NAVAL | EE_CLASS_KIND_TRANSPORT)) {
-        if (this->mRippleEffect != NULL && inUnit->mHitPoints != 0 && (unsigned long)this->mRippleEffect->mDetailLevel <= gEffectDetail) this->UpdateRipples(inUnit);
-    } else if (theKinds & EE_CLASS_KIND_BUILDING) {
-        if ((this->mUnitType == kUnitTypeDock || this->mUnitType == kUnitTypeNavyYard) && this->mRippleEffect != NULL && inUnit->mHitPoints != 0 && this->mRippleEffect->mDetailLevel <= gEffectDetail) this->UpdateRipples(inUnit);
-    } else if (theKinds & EE_CLASS_KIND_LAND) {
-        if (this->mRippleEffect != NULL && inUnit->mHitPoints > 0 && this->mRippleEffect->mDetailLevel <= gEffectDetail) this->UpdateRipples(inUnit);
-    } else if (theKinds & EE_CLASS_KIND_MISSILE) {
-        if (inUnit->mHitPoints > 0 && this->mTrailEffect != NULL && inUnit->mVelocity != 0.0f && this->mTrailEffect->mDetailLevel <= gEffectDetail) this->UpdateTrail(inUnit);
-    } else if (theKinds & EE_CLASS_KIND_PROJECTILE)
-        this->ProjectileUpdateEffects(inUnit);
+    switch (EEClassBody(this, EE_UNITS_BODY_UPDATE_EFFECTS)) {
+    case 1: return;   // their overrides were empty
+    case 2: if (this->mRippleEffect != NULL && inUnit->mUnitClass->mUnitType == kUnitTypeCatalina && inUnit->mHitPoints != 0 && this->mRippleEffect->mDetailLevel <= gEffectDetail) this->UpdateRipples(inUnit); return;
+    case 3: if (this->mRippleEffect != NULL && inUnit->mHitPoints != 0 && (unsigned long)this->mRippleEffect->mDetailLevel <= gEffectDetail) this->UpdateRipples(inUnit); return;
+    case 4: if ((this->mUnitType == kUnitTypeDock || this->mUnitType == kUnitTypeNavyYard) && this->mRippleEffect != NULL && inUnit->mHitPoints != 0 && this->mRippleEffect->mDetailLevel <= gEffectDetail) this->UpdateRipples(inUnit); return;
+    case 5: if (this->mRippleEffect != NULL && inUnit->mHitPoints > 0 && this->mRippleEffect->mDetailLevel <= gEffectDetail) this->UpdateRipples(inUnit); return;
+    case 6: if (inUnit->mHitPoints > 0 && this->mTrailEffect != NULL && inUnit->mVelocity != 0.0f && this->mTrailEffect->mDetailLevel <= gEffectDetail) this->UpdateTrail(inUnit); return;
+    case 7: this->ProjectileUpdateEffects(inUnit); return;
+    }
 }
 
 long EEUnitClass::Virtual70()
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_BUILDING)
-        return 1;
-    if (theKinds & EE_CLASS_KIND_RESOURCE)
-        return 2;
-    return 0;
+    return EEClassBody(this, EE_UNITS_BODY_VIRTUAL70);   // 1 a building, 2 a resource
 }
 
 // TEST ONLY: the UCBD record (ee/EEUnitClassKinds.h EEUCNote; the unit utilities' UUTL record's pattern)
@@ -818,7 +628,7 @@ EEUCNote::~EEUCNote()
         }
         if (theTick / 20000 != sUCTick / 20000) {
             fprintf(stderr, "EE-UCBD-COUNT %lu", theTick);
-            for (int i = 1; i < 40; i++)
+            for (int i = 1; i < 50; i++)
                 fprintf(stderr, " %d:%u", i, sUCKinds[i]);
             fprintf(stderr, "\n");
         }

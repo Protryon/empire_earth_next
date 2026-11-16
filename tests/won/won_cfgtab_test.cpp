@@ -65,9 +65,10 @@ static void LPush(void* c, int32_t v) { H(c)->push(H(c)->ctx, v); Ev("p" + P((lo
 static bool LApply(void* c, int32_t s) { bool r = H(c)->apply(H(c)->ctx, s); Ev("a" + P((long long)s) + "=" + P(r)); return r; }
 static void LFail(void* c, const uint8_t* m, uintptr_t n, int32_t s) { H(c)->fail(H(c)->ctx, m, n, s); Ev("f" + P((long long)s) + ":" + Hex(m, n, 1)); }
 static void LClear(void* c) { H(c)->clear(H(c)->ctx); Ev("x"); }
+static int32_t LPeek(void* c, int32_t s) { int32_t v = H(c)->peek(H(c)->ctx, s); Ev("k" + P((long long)s) + "=" + P((long long)v)); return v; }
 static int32_t LoggedRun(const EeWonCfgTabHost* h, int32_t t, const uint8_t* k, uintptr_t n)
 {
-    EeWonCfgTabHost w = {(void*)h, LRead, LComma, LEnd, LText, LPush, LApply, LFail, LClear};
+    EeWonCfgTabHost w = {(void*)h, LRead, LComma, LEnd, LText, LPush, LApply, LFail, LClear, LPeek};
     sEv.clear();
     int32_t r = ::ee_won_cfg_tab_run(&w, t, k, n);
     sRuns[r + 1]++;
@@ -84,6 +85,20 @@ static unsigned Rand(unsigned n) { sSeed = sSeed * 6364136223846793005ull + 1442
 
 static int sFailures;
 static int sChecks;
+typedef std::vector<std::pair<std::string, std::string>> Steps;
+static void CompareSeq(int cfg, const Steps& steps)
+{
+    std::string a = Orig::RunSeq(cfg, steps), b = Shell::RunSeq(cfg, steps);
+    sChecks++;
+    if (a != b) {
+        sFailures++;
+        if (sFailures < 8) {
+            printf("MISMATCH config %d sequence:", cfg);
+            for (const auto& s : steps) printf(" [%s: %s]", s.first.c_str(), s.second.c_str());
+            printf("\n--- original\n%s--- port\n%s\n", a.c_str(), b.c_str());
+        }
+    }
+}
 static void Compare(int cfg, const std::string& key, const std::string& value)
 {
     std::string a = Orig::RunOne(cfg, key, value), b = Shell::RunOne(cfg, key, value);
@@ -96,6 +111,13 @@ static void Compare(int cfg, const std::string& key, const std::string& value)
 
 int main(int argc, char** argv)
 {
+    if (argc > 2 && !strcmp(argv[1], "--seq")) {
+        // one sequence on ContainerConfig, both traces printed: --seq KEY VALUE [KEY VALUE ...]
+        Steps steps;
+        for (int i = 2; i + 1 < argc; i += 2) steps.push_back({argv[i], argv[i + 1]});
+        printf("--- original\n%s--- port\n%s", Orig::RunSeq(46, steps).c_str(), Shell::RunSeq(46, steps).c_str());
+        return 0;
+    }
     bool print = argc > 1 && !strcmp(argv[1], "--print");
     std::string dir = (argc > 1 && !print) ? argv[1] : "C:/Users/max/Desktop/empire_earth_next/build/open_data/tree/Data/WONLobby Resources";
     int nConfigs = 0;
@@ -163,6 +185,65 @@ int main(int argc, char** argv)
             if (print) Shell::RunOne(cc, key, value);
             else Compare(cc, key, value);
         }
+    }
+    // ContainerConfig's stateful instructions in sequences on one config (R6 WON round 41): LAYOUT and its chain
+    // and repeat (the previous rule's reference, words and offsets), NOOVERLAPLAYOUT, NEWLAYOUTPOINT, ADD
+    {
+        const char* seqKeys[] = {"LAYOUT", "LAYOUT", "CHAINLAYOUT", "REPEATLAYOUT", "REPEATLAYOUT", "NOOVERLAPLAYOUT", "NEWLAYOUTPOINT", "ADD"};
+        std::vector<std::string> words = {"Above", "below", "SAMEWIDTH", "SameHeight", "Right", "Left", "SameLeft", "SameRight",
+            "SameTop", "SameBottom", "GrowToRight", "GrowToLeft", "GrowToTop", "GrowToBottom", "SameSize", "Sideways", "Above Left",
+            "Right SameTop GrowToBottom", "!w", "above", "BELOW", "LEFT", "Right", "Left Below", "middle"};
+        std::vector<std::string> seqTokens = {"c1", "c2all", "c3", "null", "0", "5", "-3", "12", "300", "!x", "name1", "pt", "", "abc def"};
+        int containers[] = {46, 17, 21, 24, 7};   // ContainerConfig, ScreenContainerConfig, TabCtrlConfig, DialogConfig, MSEtchedFrameGroupConfig
+        int seqRuns = print ? 300 : 6000;
+        for (int r = 0; r < seqRuns; r++) {
+            Steps steps;
+            int n = 1 + (int)Rand(4);
+            for (int s = 0; s < n; s++) {
+                std::string key = seqKeys[Rand(8)], value;
+                const char* comps[] = {"c1", "c2all", "c3", "null"};
+                if (Rand(2)) {
+                    // a well-formed rule: LAYOUT's target, words and reference, a chain's or repeat's target (and
+                    // reference), then 0..5 offsets
+                    value = comps[Rand(4)];
+                    if (key == "LAYOUT") value += std::string(", ") + words[Rand((unsigned)words.size())] + ", " + comps[Rand(4)];
+                    else if (key == "REPEATLAYOUT" && Rand(2)) value += std::string(", ") + comps[Rand(4)];
+                    for (int k = (int)Rand(6); k > 0; k--) value += ", " + seqTokens[4 + Rand(5)];
+                } else {
+                    int parts = (int)Rand(7);
+                    for (int i = 0; i < parts; i++) {
+                        if (i) { unsigned sep = Rand(12); value += sep < 9 ? ", " : sep < 11 ? " " : ","; }
+                        value += (i == 1 && Rand(3)) ? words[Rand((unsigned)words.size())] : seqTokens[Rand((unsigned)seqTokens.size())];
+                    }
+                }
+                steps.push_back({key, value});
+            }
+            int cfg = containers[Rand(5)];
+            if (print) Shell::RunSeq(cfg, steps);
+            else CompareSeq(cfg, steps);
+        }
+        // the image configs' instructions (round 41): StretchImageConfig (50) and ImageFilterConfig (51)
+        const char* stretchKeys[] = {"SRC", "TILE", "BORDERS", "SKIPCENTER", "MULTIEXPORT", "MULTICROPEXPORT", "EXPORT"};
+        const char* filterKeys[] = {"SRC", "FILTER", "DUPLICATE", "MULTIHORZCROP", "EXPORT"};
+        const char* filters[] = {"SCALEPERCENT", "scaleabs", "TINT", "Crop", "PIXELTRANS", "BLUR", "!f"};
+        std::vector<std::string> imgTokens = {"img", "a", "0", "1", "2", "3", "-1", "true", "false", "!x", "pre", "x!y", ""};
+        for (int r = 0; r < (print ? 200 : 4000); r++) {
+            Steps steps;
+            bool stretch = Rand(2) != 0;
+            for (int s = 0, n = 1 + (int)Rand(3); s < n; s++) {
+                std::string key = stretch ? stretchKeys[Rand(7)] : filterKeys[Rand(5)], value;
+                int parts = (int)Rand(7);
+                for (int i = 0; i < parts; i++) {
+                    if (i) value += Rand(10) ? ", " : " ";
+                    bool name = (i == 0 && key == "FILTER") || (i == 1 && key == "EXPORT" && !stretch);
+                    value += name && Rand(4) ? filters[Rand(7)] : imgTokens[Rand((unsigned)imgTokens.size())];
+                }
+                steps.push_back({key, value});
+            }
+            if (print) Shell::RunSeq(stretch ? 50 : 51, steps);
+            else CompareSeq(stretch ? 50 : 51, steps);
+        }
+        if (!print) printf("sequences: %d checks in all, %d mismatches\n", sChecks, sFailures);
     }
     if (print) { fputs(Shell::sGold.c_str(), stdout); return 0; }
     printf("%d checks, %d mismatches (the random instructions' reader: %ld handled, %ld threw, %ld passed on)\n", sChecks, sFailures,

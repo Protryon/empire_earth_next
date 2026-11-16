@@ -60,10 +60,22 @@ pub(crate) struct Form(pub(crate) *mut c_void, pub(crate) *mut c_void);
 
 impl Form {
     pub(crate) fn op(&mut self, op: u32, a: u32, b: u32, c: u32, d: u32) -> u32 {
+        if let Some(r) = crate::toolkit::op(self.0, self.1, op, a, b, c, d) {
+            return r;
+        }
+        if let Some(r) = crate::game_view::op(self, op, a, b) {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_call(self.0, self.1, op, a, b, c, d) }
     }
     /// A text, `None` when the host says it is missing (`usize::MAX`).
     pub(crate) fn get_checked(&mut self, which: u32, arg: u32) -> Option<Vec<u8>> {
+        if let Some(t) = crate::toolkit::text(self.0, which, arg) {
+            return Some(t);
+        }
+        if let Some(t) = crate::game_view::text(self, which, arg) {
+            return Some(t);
+        }
         let mut out = vec![0u8; 256];
         let n = unsafe { sys::ee_screenscpp_text(self.0, which, arg, out.as_mut_ptr(), out.len()) };
         if n == usize::MAX {
@@ -82,6 +94,9 @@ impl Form {
         self.get_checked(which, arg).unwrap_or_default()
     }
     pub(crate) fn put(&mut self, which: u32, arg: u32, text: &[u8]) -> u32 {
+        if let Some(r) = crate::toolkit::put_text(self.0, which, arg, text) {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_put_text(self.0, which, arg, text.as_ptr(), text.len()) }
     }
 }

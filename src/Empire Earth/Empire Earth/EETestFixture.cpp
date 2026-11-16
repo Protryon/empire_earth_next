@@ -19,8 +19,9 @@
 //   - when <dir>/frame.request exists, removes it and writes the next presented frame to <dir>/frame.bmp (a top-down
 //     32-bit BMP, through the renderer's GXTestSetPresentHook / GXTestReadFrame);
 //   - executes the newest line of <dir>/test.command, "<seq> click|select|check|lselect <form> <control> [<k>]"
-//     (or "<seq> zoom <form> 0 <percent>", the camera zoom, or "<seq> pointer <form> <x> <y>", the game's pointer
-//     moved to a window position and the UI updated: hover through the controls' real hit test, or
+//     (or "<seq> zoom <form> 0 <percent>", the camera zoom, or "<seq> pointer <form> <x> <y> [<ms>]", the game's pointer
+//     moved to a window position and the UI updated: hover through the controls' real hit test; with ms, the position
+//     held there for ms milliseconds (see "the pointer hold" below), or
 //     "<seq> lclick <form> <x> <y>", the same and then a left button press and release as the platform's mouse
 //     events deliver them (ISHandleEvent): a click through the real hit test, or
 //     "<seq> boxselect <form> <mode> <x0> <y0> <x1> <y1>", a box selection in the game view: see "the box selection"
@@ -31,7 +32,9 @@
 //     "<seq> wheel <form> <0|1> <n>", n notches of the mouse wheel (0 away from the user, 1 towards) 100 ms apart, or
 //     "<seq> cast <form> <enum> <offset>", a calamity cast by the local player at the camera's focus: see CastRun, or
 //     "<seq> chat <form> 0 0", a line in the chat log as a game message adds one (AddChatLogEntry: the game form's
-//     chat lines show it)),
+//     chat lines show it), or "<seq> clickevent <form> <code>", the first control whose button-up event is the
+//     screen event <code> clicked, or "<seq> screenevent <form> <code>", that screen event on the form as a dialog's
+//     answer posts it (fixture_game.py's editor exercise)),
 //     through the controls' own methods (the events go to the application's UI queue, as a player's input does),
 //     once per sequence number, only while <form> is on top; the verdict goes to stderr ("TEST UI ...").
 #include <windows.h>
@@ -111,7 +114,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEMouse.h"
 #include "ee/EEAction.h"
-#include "ee/EEARemovePlayer.h"
+#include "ee/EEARust.h"
 #include "ee/EEMessage.h"
 #include "ee/EECommunications.h"
 #include "ee/EEUserInterface.h"
@@ -152,11 +155,11 @@
 #include "ee/EECalamityManager.h"
 #include "ee/EEUnitClassIDs.h"
 #include "ee/EEGraphics.h"
-#include "ee/EEAMouseClick.h"
-#include "ee/EEALasso.h"
 #include "ee/EEUICSelectUnits.h"
 #include "lle/ISModifierState.h"
 #include "rust/ee_gfx.h"   // the drag end the selection control computes
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"   // ee_screens_event (the editor exercise's exit)
 #include <algorithm>
 #include <atomic>
 #include <mutex>
@@ -183,6 +186,87 @@ unsigned long sLastCommand = 0;
 std::string sDirectory;                      // EE_TEST_UI
 std::atomic<int> sFrameWanted(0);            // a frame.request seen: the next presented frame goes to frame.bmp
 std::atomic<unsigned long> sFramesWritten(0);
+
+// ---- the pointer hold (TEST ONLY): "pointer ... <ms>" keeps the game's pointer at the commanded position for ms
+// milliseconds. One SetPosition is not enough for the edge scroll check: the game moves its pointer on its own events
+// too (a platform mouse move adds its motion in RTSMouse::Update, the window's activation centres it), so under load
+// the pointer could leave the edge after one scroll step (a single 0.041-tile move, the gate's flake). A thread of the
+// fixture puts it back every 2 ms while the hold lasts, under the pointer's input lock as RTSMouse::Update moves it;
+// any later pointer, lclick, boxselect or order command ends the hold. Its end is reported on stderr with the number
+// of times it put the pointer back ("TEST UI pointer hold seq N done: K corrections").
+std::atomic<long long> sHoldUntil(0);         // steady-clock ms; 0: no hold
+std::atomic<unsigned long> sHoldSeq(0);       // the hold's command
+std::atomic<int> sHoldThread(0);
+std::mutex sHoldMutex;                        // sHoldAt
+GE2DPoint sHoldAt;                            // the held position (as SetPosition clamped it)
+
+long long HoldNow()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+}
+
+void HoldLoop()
+{
+    unsigned long theReported = 0, theFixes = 0, theSeq = 0;
+    auto theReport = [&theReported, &theFixes, &theSeq] {
+        if (theSeq != 0 && theReported != theSeq)
+            fprintf(stderr, "TEST UI pointer hold seq %lu done: %lu corrections\n", theSeq, theFixes);
+        theReported = theSeq;
+    };
+    for (;;) {
+        long long theUntil = sHoldUntil.load();
+        unsigned long theNowSeq = sHoldSeq.load();
+        if (theNowSeq != theSeq) {   // a new hold: the last one's report first
+            theReport();
+            theSeq = theNowSeq;
+            theFixes = 0;
+        }
+        if (theUntil == 0 || HoldNow() >= theUntil || gMouse == NULL) {
+            theReport();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
+        GE2DPoint theAt;
+        {
+            std::lock_guard<std::mutex> theGuard(sHoldMutex);
+            theAt = sHoldAt;
+        }
+        gMouse->mInputLock->Enter();
+        if (gMouse->mPosition.GetX() != theAt.GetX() || gMouse->mPosition.GetY() != theAt.GetY()) {
+            gMouse->SetPosition(theAt);
+            theFixes++;
+        }
+        gMouse->mInputLock->Leave();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+}
+
+// Ends a hold (a command that moves the pointer itself); the hold thread reports it
+void HoldRelease()
+{
+    sHoldUntil = 0;
+}
+
+// The pointer at (inX, inY) (clamped as the game clamps it), held for inMs milliseconds when inMs > 0
+void HoldPointer(unsigned long inSeq, float inX, float inY, unsigned long inMs)
+{
+    HoldRelease();
+    gMouse->mInputLock->Enter();
+    gMouse->SetPosition(GE2DPoint(inX, inY));
+    GE2DPoint theAt = gMouse->mPosition;
+    gMouse->mInputLock->Leave();
+    if (inMs == 0)
+        return;
+    {
+        std::lock_guard<std::mutex> theGuard(sHoldMutex);
+        sHoldAt = theAt;
+    }
+    sHoldUntil = HoldNow() + (long long)inMs;   // before the sequence: the thread reads the sequence first
+    sHoldSeq = inSeq;
+    if (sHoldThread.exchange(1) == 0)
+        std::thread(HoldLoop).detach();
+}
 
 // Replaces inTo with inFrom -> true on success. Windows' rename does not replace an existing file (the reader may
 // hold it open for a moment: the next poll writes it again)
@@ -289,7 +373,7 @@ void WriteTelemetry(FILE* outFile)
         EECameraControl& theCamera = gWorld.mCameraControl;
         GE3DPoint theFocus;
         theCamera.GetLocation(theCamera.mFraction, theFocus);
-        GE3DPoint theTarget = theCamera.mEndFocus;
+        GE3DPoint theTarget = theCamera.GetEndFocus();
         GETerrainMesh& theMesh = theMap->mTerrainMesh;
         bool theFocusValid = theMesh.GetIsValidPoint(UMFloorUnsigned(theFocus.GetX()), UMFloorUnsigned(theFocus.GetY()));
         bool theTargetValid = theMesh.GetIsValidPoint(UMFloorUnsigned(theTarget.GetX()), UMFloorUnsigned(theTarget.GetY()));
@@ -988,9 +1072,9 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
     fclose(theCommand);
     if (!theRead)
         return;
-    unsigned long theSeq = 0, a = 0, b = 0, c = 0;
+    unsigned long theSeq = 0, a = 0, b = 0, c = 0, d = 0;
     char theOp[32] = {0};
-    int theFields = sscanf(theLine, "%lu %31s %lu %lu %lu", &theSeq, theOp, &a, &b, &c);
+    int theFields = sscanf(theLine, "%lu %31s %lu %lu %lu %lu", &theSeq, theOp, &a, &b, &c, &d);
     if (theFields < 4 || theSeq <= sLastCommand)
         return;
     sLastCommand = theSeq;
@@ -1032,12 +1116,13 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
         gWorld.mCameraControl.SetZoom(c / 100.0f);
         theVerdict = "zoomed";
     } else if (!strcmp(theOp, "pointer") && theFields >= 5 && a == inFormID && gMouse) {
-        // "<seq> pointer <form> <x> <y>": the pointer where a player's mouse would put it (UIManager::UpdateUI
-        // hit-tests the form's controls at it on the next UI update)
-        gMouse->SetPosition(GE2DPoint((float)b, (float)c));
+        // "<seq> pointer <form> <x> <y> [<ms>]": the pointer where a player's mouse would put it (UIManager::UpdateUI
+        // hit-tests the form's controls at it on the next UI update); held there ms milliseconds (the pointer hold)
+        HoldPointer(theSeq, (float)b, (float)c, theFields >= 6 && d <= 60000 ? d : 0);
         gUIManager->ForceUIUpdate();
         theVerdict = "pointer-moved";
     } else if (!strcmp(theOp, "lclick") && theFields >= 5 && a == inFormID && gMouse) {
+        HoldRelease();
         gMouse->SetPosition(GE2DPoint((float)b, (float)c));
         gUIManager->ForceUIUpdate();
         std::thread([]() {   // not under the UI lock: the UI thread reads the button between the two
@@ -1081,10 +1166,28 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
             }
         }).detach();
         theVerdict = "wheeled";
+    } else if (!strcmp(theOp, "clickevent") && a == inFormID) {
+        // the first control whose button-up event is the screen event b, clicked (the editor exercise: the main
+        // menu's Editors, the editors' Scenario Editor)
+        for (unsigned long k = 0; k < inForm->GetControlCount(); k++) {
+            UIControl* theOne = inForm->GetControl(k);
+            EEScreenEvent* theEvent = theOne ? dynamic_cast<EEScreenEvent*>(theOne->GetTriggerEvent(kTriggerEvent)) : NULL;
+            if (theEvent != NULL && theEvent->mEvent == b) {
+                theOne->FireTriggerEvent(kTriggerEvent);
+                theVerdict = "triggered";
+                break;
+            }
+        }
+    } else if (!strcmp(theOp, "screenevent") && a == inFormID) {
+        // the screen event b on the form on top, as a dialog's answer posts it (the editor exercise: the exit
+        // question's "exit without saving")
+        ee_screens_event((uint32_t)b, inForm, NULL);
+        theVerdict = "screen-event";
     } else if (!strcmp(theOp, "chat") && a == inFormID && gUserInterface) {
         gUserInterface->AddChatLogEntry(UWideString("TEST chat line: the chat display (EEUICChatLine)"), 0);
         theVerdict = "chat-added";
     } else if (!strcmp(theOp, "boxselect") && a == inFormID) {
+        HoldRelease();
         theVerdict = BoxStart(theSeq, theLine, inForm);
     } else if (!strcmp(theOp, "cast") && theFields >= 5 && a == inFormID && b > 0 && c < 1000) {
         unsigned long theEnum = b;
@@ -1092,6 +1195,7 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
         std::thread([theEnum, theOffset]() { CastRun(theEnum, theOffset); }).detach();
         theVerdict = "cast-started";
     } else if (!strcmp(theOp, "order") && a == inFormID) {
+        HoldRelease();
         theVerdict = EETestOrderStart(theSeq, b);
     } else if (theControl && !strcmp(theOp, "lselect") && theFields >= 5) {
         UILBString* theList = dynamic_cast<UILBString*>(theControl);
@@ -1226,6 +1330,10 @@ LONG CALLBACK FixtureFault(EXCEPTION_POINTERS* inInfo)
 //   EE_TEST_TIME_FACTOR=F (or N/D, or a decimal): the harness clock (platform/PlatSim.h PlatSimSetTimeFactor);
 //   EE_TEST_SEED=S: the start seed (gPlatSimSeed: EEMStartLoading::Execute takes it instead of the lobby's);
 //   EE_TEST_NO_HUMAN_DEFEAT=1: the idle local human is never taken out or defeated (gPlatSimNoHumanDefeat);
+//   EE_TEST_PORT_OFFSET=N (0..4095): the harness slot's port offset (tools/harness/slot.py): the TCP protocol's
+//     ports 33334/33335 (gPlatSimPortOffset, as EE-SIM's --port-offset) and the WON lobby's LAN broadcast and lobby
+//     ports (LobbyTestPortOffset) move by N, so that sessions in other slots bind other ports and never see this
+//     one's LAN games (EE_TEST_INSTANCE names the single-instance mutex: Empire Earth.cpp EECreateInstanceMutex);
 // and the debug output goes to stderr ("debugstring <text>": PlatDebugSetHandler).
 // Each one taken is announced on stderr ("TEST UI ..."); a malformed one stops the game (a run must not go on
 // believing it is accelerated or seeded when it is not).
@@ -1275,6 +1383,17 @@ void EETestFixtureConfigure()
         gPlatSimNoHumanDefeat = atoi(theFlag) != 0;
         fprintf(stderr, "TEST UI no human defeat %d\n", gPlatSimNoHumanDefeat);
     }
+    if (const char* theOffset = getenv("EE_TEST_PORT_OFFSET")) {
+        char* theEnd = NULL;
+        long theValue = strtol(theOffset, &theEnd, 10);
+        if (!*theOffset || *theEnd || theValue < 0 || theValue > 4095) {
+            fprintf(stderr, "TEST UI EE_TEST_PORT_OFFSET=%s is not a port offset in 0..4095\n", theOffset);
+            exit(3);
+        }
+        gPlatSimPortOffset = (int)theValue;
+        fprintf(stderr, "TEST UI port offset %ld (TCP %ld/%ld, LAN broadcast %ld, lobby %ld)\n", theValue,
+                33334 + theValue, 33335 + theValue, 8585 + theValue, 8888 + theValue);
+    }
 }
 
 // Starts the fixture's thread when EE_TEST_UI names a directory (EERun, after the engine is initialised)
@@ -1309,18 +1428,27 @@ struct EETestComms {
     uint8_t mValid;   // 0: no communications object
 };
 EETestComms gEETestComms;
+// The render thread calls it, so it reads gCommunications only under the UI copy lock, taken without waiting (as the
+// bridge's ui_test takes it: a UI event can hold the lock while it waits for the render thread): the UI thread's
+// actions and events replace the communications object under that lock (EEAJoinOrHostAGame's delete and new when a
+// game is set up), and a read between the delete and the new (the legacy tour's crash in this function) used a
+// freed object. When the lock is busy the mirror keeps its last values until the next present.
 void EETestCommsRefresh()
 {
+    TSCriticalSection* theLock = gUIManager ? gUIManager->GetUILock() : NULL;
+    if (!theLock || !theLock->TryEnter())
+        return;
     NESynchronousCommunications* theCommunications = gCommunications;
     if (!theCommunications) {
         gEETestComms.mValid = 0;
-        return;
+    } else {
+        gEETestComms.mLastTickReceived = (int32_t)theCommunications->GetLastTickReceived();
+        gEETestComms.mCTsProcessed = (uint32_t)theCommunications->GetNumberOfCTsProcessedInPhysics();
+        gEETestComms.mPaused = theCommunications->GetIsGamePaused() ? 1 : 0;
+        gEETestComms.mMultiplayer = theCommunications->GetIsMultiplayerSession() ? 1 : 0;
+        gEETestComms.mValid = 1;
     }
-    gEETestComms.mLastTickReceived = (int32_t)theCommunications->GetLastTickReceived();
-    gEETestComms.mCTsProcessed = (uint32_t)theCommunications->GetNumberOfCTsProcessedInPhysics();
-    gEETestComms.mPaused = theCommunications->GetIsGamePaused() ? 1 : 0;
-    gEETestComms.mMultiplayer = theCommunications->GetIsMultiplayerSession() ? 1 : 0;
-    gEETestComms.mValid = 1;
+    theLock->Leave();
 }
 }
 #if defined(_MSC_VER)

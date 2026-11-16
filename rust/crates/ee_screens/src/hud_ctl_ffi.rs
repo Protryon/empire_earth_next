@@ -84,6 +84,8 @@ pub unsafe extern "C" fn ee_screens_select_units(
             select_units::start(r, h, x, y);
             0
         }
+        EE_SCREENS_SU_DO_R_DOWN => select_units::r_down(r, h),
+        EE_SCREENS_SU_DO_R_UP => select_units::r_up(r, h),
         _ => 0,
     }
 }

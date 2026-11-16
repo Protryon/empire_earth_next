@@ -12,7 +12,7 @@ fixture_driver.py's, shared with posix_game.py.
          --max-game-seconds 600 --time-factor 32 --no-render --seed 2 --pt-rate 40
   python -I tools/harness/fixture_game.py --exercise random-game --play-seconds 20 --scroll-check \\
          --zoom-captures 50 100 200
-  options: [--exe EXE] [--data TREE] [--out DIR] [--timeout S] [--config block.key=VALUE ...]
+  options: [--exe EXE] [--data TREE] [--out DIR] [--timeout S] [--config block.key=VALUE ...] [--slot K]
 
   menu         the main menu reached and its frame captured
   tour         as game_session.py's tour: main menu, the settings form's video/audio/interface tabs and Cancel, single
@@ -34,6 +34,9 @@ fixture_driver.py's, shared with posix_game.py.
                cast command, TEST ONLY: straight into the calamity manager) and captures it every --capture-every
                seconds while it lives (fixture_driver.cast_calamities; "CAST <name>: ..." lines)
   random-game  the tour without the settings
+  editor       the main menu's Editors, the Scenario Editor (its load, the editor form over its default map: the first
+               frame captured and checked), then the exit without saving (the form's destructor) back to a menu
+               (the fixture's clickevent and screenevent commands)
   ai-game      as game_session.py's ai-game: the lobby set up (the human idles in slot 0, N computers), Start, the
                civilization timer pre-empted, played until the game ends, --max-game-seconds of game time
                (outcome time-cap) or --play-seconds of wall time
@@ -42,7 +45,10 @@ Data: --data TREE stages that unified open data tree (tools/open_data.py); else 
 EE_HARNESS_OPEN_DATA names, as exe_boot.py), built when missing. The game reads only the open forms (RUST_PLAN D9):
 there is no binary tree. The stage is build/fixture_game/stage (the exe and the tree as hard links; the game's data
 root is the exe's directory), with a fresh config.yaml holding the run's pins.
-Evidence: --out (default build/fixture_game/<time>): game.log (the game's output), ui/, the frames (<name>.bmp),
+Slot: --slot K (else EE_HARNESS_SLOT, which `tools/harness/slot.py run` sets) runs beside other sessions: the stage
+build/fixture_game/stage-s<K>, the evidence <time>-s<K>, the mutex EE_TEST_INSTANCE=s<K> and the game's TCP and WON
+lobby ports moved by 16 * (K + 1) (EE_TEST_PORT_OFFSET); see slot.py.
+Evidence: --out (default build/fixture_game/<time>[-s<K>]): game.log (the game's output), ui/, the frames (<name>.bmp),
 rendering.json, samples.json, the game log (game-*.log), summary.json; the last line printed is
 "RESULT PASS|FAIL <exercise> ..." (an ai-game adds outcome, final PT and per-player units). Exit 0 on PASS.
 """
@@ -59,11 +65,24 @@ ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 import config_yaml
 import fixture_driver
+import slot as harness_slot
 from ai_game import GAME, LOBBY, VISIBLE_SLOTS
 from fixture_driver import MAIN, SETTINGS, SINGLE, WINDOWS
 
 STAGE = ROOT / 'build' / 'fixture_game' / 'stage'
 EXE = 'EE-AOC.exe' if WINDOWS else 'ee-aoc'
+
+
+def use_slot(a):
+    """a.slot (--slot, else EE_HARNESS_SLOT) -> this run's stage (STAGE) and default evidence directory (a.out)."""
+    global STAGE
+    a.slot = harness_slot.current(a.slot)
+    STAGE = ROOT / 'build' / 'fixture_game' / ('stage' + harness_slot.suffix(a.slot))
+    if a.out is None:
+        a.out = str(ROOT / 'build' / a.out_kind / (time.strftime('%Y%m%d-%H%M%S') + harness_slot.suffix(a.slot)))
+    if a.slot is not None:
+        print(f'slot: {a.slot} (stage {STAGE.name}, mutex {harness_slot.instance_name(a.slot)}, port offset '
+              f'{harness_slot.port_offset(a.slot)})', flush=True)
 
 
 def data_tree(a):
@@ -113,8 +132,8 @@ def stage(a, tree):
 class Game(fixture_driver.Game):
     """The staged exe under the fixture; captures are window captures on Windows (fixture_driver.capture_frame)."""
 
-    def __init__(self, a, out):
-        env = dict(os.environ)
+    def __init__(self, a, out, label=None):
+        env = harness_slot.game_env(os.environ, getattr(a, 'slot', None), label)
         for name in ('EE_TEST_TIME_FACTOR', 'EE_TEST_SEED', 'EE_TEST_NO_HUMAN_DEFEAT', 'EE_GX_NULL3D', 'EE_CONFIG',
                      'EE_DATA_ROOT'):
             env.pop(name, None)   # only this run's switches
@@ -137,11 +156,14 @@ def switches_taken(g, a):
     asked for was not taken."""
     log = g.game_output()
     taken = [line for line in log.splitlines() if line.startswith('TEST UI ') and
-             line.split()[2] in ('clock', 'seed', 'no', 'fixture')]
+             line.split()[2] in ('clock', 'seed', 'no', 'fixture', 'port')]
     if a.time_factor and not any(line.startswith('TEST UI clock factor') for line in taken):
         raise RuntimeError('the game did not take EE_TEST_TIME_FACTOR')
     if a.seed is not None and f'TEST UI seed {a.seed}' not in taken:
         raise RuntimeError('the game did not take EE_TEST_SEED')
+    offset = harness_slot.port_offset(getattr(a, 'slot', None))
+    if offset and not any(line.startswith(f'TEST UI port offset {offset} ') for line in taken):
+        raise RuntimeError('the game did not take EE_TEST_PORT_OFFSET (an exe older than the harness slots?)')
     return taken
 
 
@@ -194,35 +216,51 @@ def trigger(g, form, control, then_form, what):
 
 def input_check(g):
     """F3 (the game form's pause hot key) twice, posted to the game window as WM_KEYDOWN/UP: paused, then running
-    again, read from the fixture's telemetry -> evidence; raises on failure (session_exercise.input_check's test)."""
+    again, read from the fixture's telemetry -> evidence; raises on failure (session_exercise.input_check's test).
+    Each press is held until the telemetry shows the pause change (up to 5 s; the release then, and up to 15 s more
+    for the change): a fixed 0.3 s hold could end before a loaded UI thread read the key."""
     if not WINDOWS:
         raise RuntimeError('--input-check posts window messages: Windows only')
-    from session_exercise import game_window, press_key
+    import ctypes
+    from session_exercise import game_window
     hwnd = game_window(g.proc.pid)
     if not hwnd:
         raise RuntimeError('input check: no visible game window')
+    post = ctypes.windll.user32.PostMessageW
+    VK_F3, SCAN_F3 = 0x72, 0x3d
 
     def paused():
         return g.state()['telemetry'].get('paused')
+
+    def until_change(before, seconds):
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            g.check_alive()
+            now = paused()
+            if now != before:
+                return now
+            time.sleep(0.1)
+        return before
     end = time.monotonic() + 30
     while paused() and time.monotonic() < end:
         fixture_driver.dismiss(g, g.state())
         time.sleep(1)
-    states = [paused()]
+    states, held = [paused()], []
     for _ in range(2):
-        press_key(hwnd, 0x72, 0x3d)   # VK_F3, scan code DIK_F3
-        end = time.monotonic() + 15
-        while time.monotonic() < end:
-            time.sleep(0.5)
-            now = paused()
-            if now != states[-1]:
-                break
+        start = time.monotonic()
+        post(hwnd, 0x100, VK_F3, 1 | (SCAN_F3 << 16))   # WM_KEYDOWN
+        now = until_change(states[-1], 5)
+        held.append(round(time.monotonic() - start, 2))
+        post(hwnd, 0x101, VK_F3, 1 | (SCAN_F3 << 16) | 0xC0000000)   # WM_KEYUP
+        if now == states[-1]:
+            now = until_change(states[-1], 15)
         states.append(now)
     ok = states == [0, 1, 0]
-    g.note(f'INPUT CHECK F3 paused {states[0]} -> {states[1]} -> {states[2]}: {"ok" if ok else "FAILED"}')
+    g.note(f'INPUT CHECK F3 paused {states[0]} -> {states[1]} -> {states[2]}: {"ok" if ok else "FAILED"} '
+           f'(held {held[0]} s, {held[1]} s)')
     if not ok:
         raise RuntimeError(f'input check failed: paused states {states}')
-    return dict(key='F3', paused=states, ok=ok)
+    return dict(key='F3', paused=states, ok=ok, held=held)
 
 
 def chat_check(g):
@@ -305,6 +343,45 @@ def tour(g, a, summary):
     summary['result'] = 'PASS'
 
 
+# the editor exercise: the menus' screen events (ee_screens menus.rs), the editors' sub-menu, the editor form (no form
+# id: UIForm id -1 as the fixture prints it), the exit question's "exit without saving" (scenario_editor.rs)
+EDITORS_OPEN, EDITORS_SCENARIO_EDITOR, EDITORS = 0x0901, 0x0902, 9
+EDITOR_FORMS = (0xffffffff, 0xffffffffffffffff)
+EXIT_WITHOUT_SAVING = 0x242d
+
+
+def screen_click(g, form, code, then, what, timeout=60):
+    """The fixture's clickevent (the control whose button-up event is the screen event code), then a form of then."""
+    seq = g.command(f'clickevent {form} {code}')
+    st = g.wait(lambda s: s['command'] >= seq and s['form'] in then, what, timeout)
+    if g.verdict(seq) not in (None, 'triggered'):
+        raise RuntimeError(f'{what}: the fixture says {g.verdict(seq)!r}')
+    g.note(f'UI {what}: form {form} screen event {code:#x} -> form {st["form"]}')
+    return st
+
+
+def editor(g, a, summary):
+    results = summary['milestones']
+    screen_click(g, MAIN, EDITORS_OPEN, (EDITORS,), 'the editors menu')
+    milestone(g, results, 'editors-menu', EDITORS)
+    st = screen_click(g, EDITORS, EDITORS_SCENARIO_EDITOR, EDITOR_FORMS, 'the scenario editor', 300)
+    time.sleep(5)   # the editor's own posted work (its tabs' loads)
+    pixels = milestone(g, results, 'editor', st['form'], differ='editors-menu')
+    from session_exercise import check_rendering
+    try:
+        results[-1]['rendering'] = check_rendering(pixels, 'editor', False)
+    except Exception as error:   # evidence: the editor's frame is judged by eye too
+        results[-1]['rendering_error'] = str(error)
+    seq = g.command(f'screenevent {st["form"]} {EXIT_WITHOUT_SAVING}')
+    st = g.wait(lambda s: s['command'] >= seq and s['form'] in (MAIN, EDITORS), 'a menu after the editor', 300)
+    g.note(f'UI the editor closed (exit without saving): form {st["form"]}')
+    time.sleep(3)
+    milestone(g, results, 'editor-closed', st['form'])
+    if g.proc.poll() is not None:
+        raise RuntimeError(f'the game exited ({g.proc.returncode}) after the editor closed')
+    summary['result'] = 'PASS'
+
+
 def ai_game(g, a, summary):
     n = a.ai_players
     g.click(MAIN, 0, SINGLE, 'single player')
@@ -364,6 +441,8 @@ def run(a):
             summary['result'] = 'PASS'
         elif a.exercise in ('tour', 'random-game'):
             tour(g, a, summary)
+        elif a.exercise == 'editor':
+            editor(g, a, summary)
         else:
             ai_game(g, a, summary)
     except Exception as e:
@@ -412,8 +491,9 @@ def main():
                     help='the game (default: the test-profile build)')
     ap.add_argument('--data', help='the unified open data tree to stage (default: build/open_data/tree)')
     ap.add_argument('--tree', choices=['open'], help='(kept for old command lines: open is the only tree)')
-    ap.add_argument('--out', default=str(ROOT / 'build' / 'fixture_game' / time.strftime('%Y%m%d-%H%M%S')))
-    ap.add_argument('--exercise', choices=['menu', 'tour', 'random-game', 'ai-game'], default='tour')
+    ap.add_argument('--out', help='the evidence directory (default build/fixture_game/<time>[-s<K>])')
+    ap.add_argument('--slot', type=int, help='the harness slot (default EE_HARNESS_SLOT; tools/harness/slot.py)')
+    ap.add_argument('--exercise', choices=['menu', 'tour', 'random-game', 'editor', 'ai-game'], default='tour')
     ap.add_argument('--timeout', type=float, default=1800, help='wall seconds the whole run may take')
     ap.add_argument('--config', action='append', default=[], help='block.key=VALUE in the fresh config.yaml')
     ap.add_argument('--play-seconds', type=float, default=None, help='wall seconds of play after the start')
@@ -472,6 +552,8 @@ def main():
     a.exe = a.exe.resolve()
     if not a.exe.exists():
         ap.error(f'{a.exe} does not exist: python -I build.py --test-profile windowed-software')
+    a.out_kind = 'fixture_game'
+    use_slot(a)
     return 0 if run(a)['result'] == 'PASS' else 1
 
 

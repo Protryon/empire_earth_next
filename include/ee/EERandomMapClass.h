@@ -27,6 +27,8 @@ class EETerrainTable;
 class EEUnitClass;
 class GE3DPoint;
 class PIMModule;
+struct EeRmapGameState;
+struct EeRmapGameHost;
 
 // sRandomMapGenerators' element (0x38 bytes: idiv 0x38; implicit ctor 0x286d4f and dtor 0x286d6e, out of line)
 struct EERMGenerator {
@@ -55,28 +57,21 @@ public:
     // Data\Random Map Scripts\*.rmv
     static long Initialize(const FSFileSpec& inDirectory);
 
-    // members in address order (provisional names)
-    void Fn284149();                        // 0x284149 (tiles near the water's edge; the coast list mV130)
+    // members in address order (provisional names). The game passes between the PIM steps went to Rust (ee_rmap
+    // game.rs): Fn284149 (the water points), SmoothHeights, Fn288839 (the heights onto the mesh), PaintTiles with
+    // PlaceTerrainUnit, MarkFeatures with MarkLine, PlaceFeatures, Fn288426 (the resource objects); Generate runs them
+    // through RunGamePass.
     long Generate();                        // 0x28449e (the PIM steps with the load progress)
-    void PlaceFeatures();                   // 0x2849f2 (the units of mFeatures and mWalls)
     void CreateRandomMap(unsigned long inPlayer, unsigned long inGenerator, unsigned long inSeed, EEMap* inMap,
                          GE3DPoint& outLocation);
     void CreateTeams();
     void CreateValidMap();                  // 0x285933 ("EERandomMap::CreateValidMap %d valid tiles found")
     void PlaceWall(EEUnitClass* inClass, const GE2DPoint& inStart, const GE2DPoint& inEnd, EEPlayer* inPlayer);
     long FilterHeightMap();
-    void SmoothHeights();
     void InitializeValues(unsigned long inSeed);
     void CreateGrids();
-    void MarkFeatures();
-    void MarkLine(const GE2DPoint& inStart, const GE2DPoint& inEnd);
-    void PlaceTerrainUnit(unsigned long inX, unsigned long inY, EETerrainTable* inTerrain);
-    void PaintTiles();                      // 0x287d37 ("EERandomMap::PaintTiles Processing completed in ...")
-    void Fn288426();
     long SetUp(unsigned long inGenerator, EEMap* inMap, unsigned long inSeed);
-    void AddNeighbourHeight(unsigned long inX, unsigned long inY, float& ioSum, long& ioCount, float& ioMinimum,
-                            float& ioMaximum);
-    void Fn288839();
+    void RunGamePass(void (*inPass)(EeRmapGameState* ioState, EeRmapGameHost* inHost));   // port: one Rust pass
 
     static FSFileSpec sGeneratorDirectory;  // 0x565588 (guard 0x565580 bit 1)
     static std::vector<EERMGenerator> sRandomMapGenerators;   // 0x565570 (guard bit 2)

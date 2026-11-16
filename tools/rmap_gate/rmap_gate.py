@@ -5,8 +5,10 @@ map sizes x player counts, compared with the digests recorded from the C++ gener
   python -I tools/rmap_gate/rmap_gate.py check [--data TREE] [-j N]      run the matrix, compare with the golden digests
   python -I tools/rmap_gate/rmap_gate.py record [--data TREE] [-j N]     (over)write the golden digests
   python -I tools/rmap_gate/rmap_gate.py diff SCRIPT SIZE PLAYERS TEAMS SEED   per-stage digests of one map
+  ... check|record --reader                     the .rmv reader alone: the digest after SetRandomMapValues
+                                                (golden_reader.txt, recorded from the C++ reader Unit10.cpp)
 
-The tool compiles the .rmv reader (Unit10.cpp), the C++ adapter (Default.cpp) and the engine units they need, and links
+The tool compiles the C++ adapter (Default.cpp: the PIM entry points, the reader's host) and the engine units it needs, and links
 the generator as ee_rmap_gatelib. The golden digests were recorded from the C++ generator (commit 7e470841) before
 it was deleted; there is no way to re-record them from C++ now. `record` overwrites them from the Rust generator: only
 do that at a declared rebaseline.
@@ -29,14 +31,14 @@ from ee import LLD_LINK, MODULE_FLAGS, ROOT
 
 OUT = ROOT / "build" / "rmap_gate"
 GOLDEN = HERE / "golden_cpp.txt"
+GOLDEN_READER = HERE / "golden_reader.txt"
 DATA_DEFAULT = ROOT.parent / "empire_earth_next" / "build" / "open_data" / "tree"
 DEFAULT = ROOT / "src" / "Empire Earth" / "Random Map" / "Random Map Generators" / "Default"
 UTIL = ROOT / "src" / "Low-Level Engine"
-READER = ["Unit10.cpp"]
+READER = []   # the .rmv reader is Rust now (ee_rmap rmv.rs); Unit10.cpp was compiled here
 # engine units the dump tool compiles for real: the geometry math, the random stream, the strings and the fractal
-LLE_UNITS = ["Utilities/UString.cpp", "Utilities/UMath.cpp", "Utilities/U2DFractal.cpp",
-             "File System/FSBasicFile.cpp", "File System/FSFileSpec.cpp", "Graphics Engine/GE3DLine.cpp",
-             "Graphics Engine/GE2DPoint.cpp", "Graphics Engine/GE3DPoint.cpp", "Graphics Engine/GETransformation.cpp"]
+LLE_UNITS = ["Utilities/UString.cpp", "Utilities/UMath.cpp",
+             "File System/FSBasicFile.cpp", "File System/FSFileSpec.cpp", "Graphics Engine/GEValues.cpp"]
 OPT = "-O1"
 DEFAULT_GENERATOR = "rust"
 
@@ -94,10 +96,10 @@ def build(generator, jobs=4):
     return link(compile_units(generator, jobs), generator, extra)
 
 
-def run_matrix(exe, data, jobs):
+def run_matrix(exe, data, jobs, extra=()):
     """The matrix over `jobs` processes -> {key: digest}; a process that crashes fails the gate."""
-    procs = [subprocess.Popen([str(exe), str(data), "--shard", str(k), str(jobs)], stdout=subprocess.PIPE, text=True)
-             for k in range(jobs)]
+    procs = [subprocess.Popen([str(exe), str(data), *extra, "--shard", str(k), str(jobs)], stdout=subprocess.PIPE,
+                              text=True) for k in range(jobs)]
     with concurrent.futures.ThreadPoolExecutor(jobs) as ex:
         outs = list(ex.map(lambda p: p.communicate()[0], procs))
     for p in procs:
@@ -111,8 +113,8 @@ def run_matrix(exe, data, jobs):
     return table
 
 
-def read_golden():
-    return dict(line.rsplit(" ", 1) for line in GOLDEN.read_text().splitlines() if line)
+def read_golden(path=GOLDEN):
+    return dict(line.rsplit(" ", 1) for line in path.read_text().splitlines() if line)
 
 
 def main():
@@ -122,6 +124,7 @@ def main():
     ap.add_argument("--generator", choices=["rust"], default=DEFAULT_GENERATOR)
     ap.add_argument("--data", default=str(DATA_DEFAULT))
     ap.add_argument("-j", type=int, default=4)
+    ap.add_argument("--reader", action="store_true", help="check/record the reader's digests (golden_reader.txt)")
     a = ap.parse_args()
     exe = OUT / f"rmap_dump_{a.generator}.exe"
     if a.command == "build":
@@ -132,12 +135,13 @@ def main():
     if a.command == "diff":
         return subprocess.run([str(exe), a.data, "--stages", "--only", a.key]).returncode
     t0 = time.time()
-    table = run_matrix(exe, a.data, a.j)
+    golden_path = GOLDEN_READER if a.reader else GOLDEN
+    table = run_matrix(exe, a.data, a.j, ["--script-only"] if a.reader else [])
     if a.command == "record":
-        GOLDEN.write_text("".join(f"{k} {table[k]}\n" for k in sorted(table)), newline="\n")
-        print(f"recorded {len(table)} maps from the {a.generator} generator in {time.time() - t0:.0f} s -> {GOLDEN}")
+        golden_path.write_text("".join(f"{k} {table[k]}\n" for k in sorted(table)), newline="\n")
+        print(f"recorded {len(table)} maps in {time.time() - t0:.0f} s -> {golden_path}")
         return 0
-    golden = read_golden()
+    golden = read_golden(golden_path)
     differ = sorted(k for k in golden if table.get(k) != golden[k])
     extra = sorted(k for k in table if k not in golden)
     for k in (differ + extra)[:20]:

@@ -1,0 +1,6 @@
+seed 2 AGPL 107 495e33c250e8e7ee
+seed 3 AGPL 107 d88c26a24e04c6d7
+seed 4 AGPL 107 78deef8867f30936
+seed 5 AGPL 107 95c4a471f9a7142a
+seed 6 AGPL 107 fbc207fd1dd4a132
+seed 7 AGPL 107 4f4dcd3af3e3ac52

@@ -539,6 +539,12 @@ impl<P: Plan> Host<P> {
 
     fn send(&self, code: i32, obj: [Obj; 3], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply {
         let (f, host) = *self.bind.lock().unwrap_or_else(|e| e.into_inner());
+        // the game's ops have no C++ function: the C++ objects' calls are the core table's (hostcore.rs)
+        if f.is_none() && self.is_native.load(std::sync::atomic::Ordering::Relaxed) {
+            if let Some(r) = self.answer_cpp(code, obj, num, data, addr) {
+                return r;
+            }
+        }
         let mut out: Option<Vec<u8>> = None;
         let mut c = EeWonHostCall {
             code,
@@ -932,7 +938,8 @@ pub unsafe extern "C" fn ee_won_hostop_bind(op: *const EeWonHostOp, f: EeWonHost
     unsafe { (*op).op.bind(f, host) }
 }
 
-/// Binds the game's C++ side (`RustServerOp::HostCall`): as [`ee_won_hostop_bind`], and the calls that need no
+/// Binds the game's C++ side: as [`ee_won_hostop_bind`] (the game binds no function: the C++ objects' calls are
+/// answered over the core table, hostcore.rs; a driver's stand-in still sees them), and the calls that need no
 /// C++ object (the clock, `rand`, an address resolved, the op's file, the files it measures, the web proxy host) are
 /// answered in Rust (hostnative.rs) instead of sent; so are the op's own calls (hostbase.rs: its status and the
 /// like, `ServerOp`'s members, the tracker, its completions, references), on its own objects: `self_op` (the

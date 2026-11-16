@@ -224,347 +224,71 @@ WindowManager::WindowManager() {
 }
 
 // Destroys the window manager after closing every open window
-WindowManager::~WindowManager()
-{
-	this->CloseAllWindows();
-}
+WindowManager::~WindowManager() { this->CloseAllWindows(); }
 
-// Fills the colour scheme with the 17 standard Windows-style colours (face, shadow, highlight, text, links ...)
+// Fills the colour scheme with the 17 standard Windows-style colours (wmobj.rs's table)
 void WindowManager::InitColorScheme()
 {
-	this->mColorScheme->SetStandardColor(StandardColor_3DDarkShadow,0x000000);
-	this->mColorScheme->SetStandardColor(StandardColor_3DFace,0xD0D0D0);
-	this->mColorScheme->SetStandardColor(StandardColor_3DHilight,0xFFFFFF);
-	this->mColorScheme->SetStandardColor(StandardColor_3DShadow,0x848484);
-	this->mColorScheme->SetStandardColor(StandardColor_Scrollbar,0xDEDEDE);
-
-	this->mColorScheme->SetStandardColor(StandardColor_ButtonText,0x000000);
-	this->mColorScheme->SetStandardColor(StandardColor_GrayText,0x848484);
-	this->mColorScheme->SetStandardColor(StandardColor_Hilight,0x08246B);
-	this->mColorScheme->SetStandardColor(StandardColor_HilightText,0xFFFFFF);
-
-	this->mColorScheme->SetStandardColor(StandardColor_ToolTipBack,0xFFFFDD);
-	this->mColorScheme->SetStandardColor(StandardColor_ToolTipText,0x000000);
-
-	this->mColorScheme->SetStandardColor(StandardColor_MenuBack,0xD0D0D0);
-	this->mColorScheme->SetStandardColor(StandardColor_MenuText,0);
-
-	this->mColorScheme->SetStandardColor(StandardColor_Back,0xFFFFFF);
-	this->mColorScheme->SetStandardColor(StandardColor_Text,0x000000);
-
-	this->mColorScheme->SetStandardColor(StandardColor_Link,0x0000FF);
-	this->mColorScheme->SetStandardColor(StandardColor_LinkDown,0xFF0000);
+    uint32_t aColors[StandardColor_Max];
+    ee_won_wm_standard_colors(aColors);
+    for (int i = 0; i < StandardColor_Max; i++)
+        this->mColorScheme->SetStandardColor(i, aColors[i]);
 }
 
-// Records that no window has focus and when focus was lost (tick 0 is stored as 1)
-void WindowManager::NotifyLostFocus()
+// A font with another style and, when the size is positive, another size, from the default window (GetDefaultFontMod,
+// GetNamedFontMod)
+static Font* FontMod(WindowManager* inManager, Font* inFont, int inStyle, int inSize)
 {
-	this->WmCall(EeWonWmCall::NotifyLostFocus);
+    FontDescriptor aDesc = inFont->mDescriptor;
+    aDesc.mStyle = inStyle;
+    if (inSize > 0)
+        aDesc.mSize = inSize;
+    return inManager->GetDefaultWindow()->GetFont(aDesc).get();
 }
-
-// Records the window that gained focus and clears the lost-focus tick
-void WindowManager::NotifyGotFocus(Window *theWindow)
-{
-	this->WmCall(EeWonWmCall::NotifyGotFocus, (intptr_t)theWindow);
-}
-
-// Switches the screen resolution and remembers the previous one; only when both width and height differ
-// from the current mode
-void WindowManager::SetScreenResolution(int theWidth, int theHeight)
-{
-	this->WmCall(EeWonWmCall::SetScreenResolution, theWidth, theHeight);
-}
-
-// Minimizes open windows that ask for it and switches back to the remembered screen resolution, if any
-void WindowManager::RestoreScreenResolution()
-{
-	this->WmCall(EeWonWmCall::RestoreScreenResolution);
-}
-
-// Returns the window of the first open popup, or NULL when no popup is up
-Window* WindowManager::GetPopupWindow()
-{
-	return (Window*)this->WmCall(EeWonWmCall::PopupWindow);
-}
-
-// Stores a font under a name (case-insensitive), replacing any earlier one
-void WindowManager::SetNamedFont(const std::string &theName, Font *theFont)
-{
-	this->WmCall(EeWonWmCall::SetNamedFont, (intptr_t)theName.data(), (intptr_t)theName.size(), (intptr_t)theFont);
-}
-
-// Returns the font stored under a name, or the default font when there is none
-Font* WindowManager::GetNamedFont(const std::string &theName)
-{
-	return (Font*)this->WmCall(EeWonWmCall::GetNamedFont, (intptr_t)theName.data(), (intptr_t)theName.size());
-}
-
-// Returns the default font, creating Tahoma 8 on the default window the first time
-Font* WindowManager::GetDefaultFont()
-{
-	return (Font*)this->WmCall(EeWonWmCall::GetDefaultFont);
-}
-
-// Returns the default font with another style and, when the size is positive, another size
-Font* WindowManager::GetDefaultFontMod(int theStyle, int theSize)
-{
-	Font *aFont = GetDefaultFont();
-	FontDescriptor aDesc = aFont->mDescriptor;
-	aDesc.mStyle = theStyle;
-	if(theSize>0)
-		aDesc.mSize = theSize;
-
-	return this->GetDefaultWindow()->GetFont(aDesc).get();
-}
-
-// Adds or drops one image-caching request; when the count reaches 0 it empties the native and raw image caches
-void WindowManager::SetCacheImages(bool cache)
-{
-	this->WmCall(EeWonWmCall::SetCacheImages, cache ? 1 : 0);
-}
-
-// Decodes an image file for a display context, cached while caching is on; NULL without a context
-SmartPtr<NativeImage> WindowManager::DecodeImage(DisplayContext *theContext, const char *theFilePath)
-{
-	// the Rust's answer carries the returned SmartPtr's reference
-	SmartPtr<NativeImage> anImage;
-	anImage.mPtr = (NativeImage*)this->WmCall(EeWonWmCall::DecodeImage, (intptr_t)theContext, (intptr_t)theFilePath,
-	                                          (intptr_t)strlen(theFilePath));
-	return anImage;
-}
+Font* WindowManager::GetDefaultFontMod(int inStyle, int inSize) { return FontMod(this, this->GetDefaultFont(), inStyle, inSize); }
+Font* WindowManager::GetNamedFontMod(const std::string& inName, int inStyle, int inSize)
+{ return FontMod(this, this->GetNamedFont(inName), inStyle, inSize); }
 
 // Decodes an image file for the default window's display context; NULL when there is no window
 SmartPtr<NativeImage> WindowManager::DecodeImage(const char *theFilePath)
 {
-	if(this->GetDefaultWindow()==NULL)
-		return NULL;
-
-	return this->DecodeImage(this->GetDefaultWindow()->mDisplayContext.get(),theFilePath);
+    Window* aWindow = this->GetDefaultWindow();
+    return aWindow == NULL ? SmartPtr<NativeImage>() : this->DecodeImage(aWindow->mDisplayContext.get(), theFilePath);
 }
-
-// Returns an image that loads its file on first use, sized from the file's attributes; cached by path while
-// caching is on; NULL when the attributes cannot be read
-SmartPtr<Image> WindowManager::DecodeDelayImage(const char *theFilePath)
-{
-	SmartPtr<Image> anImage;
-	anImage.mPtr = (Image*)this->WmCall(EeWonWmCall::DecodeDelayImage, (intptr_t)theFilePath, (intptr_t)strlen(theFilePath));
-	return anImage;
-}
-
-// Decodes an image file into a raw image, through the raw image cache while caching is on
-SmartPtr<RawImage> WindowManager::DecodeImageRaw(const char *theFilePath)
-{
-	SmartPtr<RawImage> anImage;
-	anImage.mPtr = (RawImage*)this->WmCall(EeWonWmCall::DecodeImageRaw, (intptr_t)theFilePath, (intptr_t)strlen(theFilePath));
-	return anImage;
-}
-
-// Sets the decoder used for sounds
-void WindowManager::SetSoundDecoder(SoundDecoder *theDecoder)
-{
-	this->mSoundDecoder = theDecoder;
-}
-
 // Decodes a sound with the sound decoder, or returns a plain sound for the descriptor when there is none
 SmartPtr<Sound> WindowManager::DecodeSound(const SoundDescriptor &theDesc)
 {
-	if(this->mSoundDecoder.get()==NULL)
-		return new Sound(theDesc);
-	else
-		return this->mSoundDecoder->DecodeDescriptor(theDesc);
+    return this->mSoundDecoder.get() == NULL ? SmartPtr<Sound>(new Sound(theDesc)) : this->mSoundDecoder->DecodeDescriptor(theDesc);
 }
-
-// Closes every window, processes the resulting events and restores the screen resolution when full screen
-void WindowManager::CloseAllWindows()
-{
-	this->WmCall(EeWonWmCall::CloseAllWindows);
-}
-
-// Adds a window to the managed set (the first one becomes the default window); always returns true
-bool WindowManager::AddWindow(Window *theWindow)
-{
-	return this->WmCall(EeWonWmCall::AddWindow, (intptr_t)theWindow) != 0;
-}
-
-// Removes a window: drops its queued events, picks a new default window, ends its modal dialog and forgets
-// it as the saved popup window; false when it was not managed
-bool WindowManager::RemoveWindow(Window *theWindow)
-{
-	return this->WmCall(EeWonWmCall::RemoveWindow, (intptr_t)theWindow) != 0;
-}
-
-// Makes the innermost message loop return
-void WindowManager::ExitMessageLoop()
-{
-	this->WmCall(EeWonWmCall::ExitMessageLoop);
-}
-
-// Runs a nested message loop until it is exited; returns the dialog result, or -1 when there are no windows
-int WindowManager::MessageLoop()
-{
-	return (int)this->WmCall(EeWonWmCall::MessageLoop);
-}
-
-// Queues a window event and signals the event loop when asked or when no message loop is running
-void WindowManager::PostEvent(WindowEventBase *theEvent, bool needSignal)
-{
-	this->WmCall(EeWonWmCall::PostEvent, (intptr_t)theEvent, needSignal ? 1 : 0);
-}
-
-// Adds an event to be delivered on every timer tick
-void WindowManager::AddTimerEvent(WindowEventBase *theEvent)
-{
-	this->WmCall(EeWonWmCall::AddTimerEvent, (intptr_t)theEvent);
-}
-
-// Removes a timer event, deferring the removal while timers are being delivered
-void WindowManager::RemoveTimerEvent(WindowEventBase *theEvent)
-{
-	this->WmCall(EeWonWmCall::RemoveTimerEvent, (intptr_t)theEvent);
-}
-
-// Adds a component to or removes it from the set that receives broadcast events
-void WindowManager::SubscribeToBroadcast(Component *theComponent, bool subscribe)
-{
-	this->WmCall(EeWonWmCall::SubscribeToBroadcast, (intptr_t)theComponent, subscribe ? 1 : 0);
-}
-
-// Removes every component from the broadcast set
-void WindowManager::ClearSubscriptions()
-{
-	this->WmCall(EeWonWmCall::ClearSubscriptions);
-}
-
-// Sends a component event to every subscribed component
-void WindowManager::BroadcastEvent(ComponentEvent *theEvent)
-{
-	this->WmCall(EeWonWmCall::BroadcastEvent, (intptr_t)theEvent);
-}
-
-// Returns the next queued window event without removing it, or NULL
-WindowEventBase* WindowManager::PeekNextEvent()
-{
-	return (WindowEventBase*)this->WmCall(EeWonWmCall::PeekNextEvent);
-}
-
-// Every 50 ms ends or keeps popups by focus, restores the resolution after focus loss and ticks windows and
-// timer events; then delivers queued events and idles every window (deferred timer removals are never cleared)
-void WindowManager::ProcessEvents()
-{
-	this->WmCall(EeWonWmCall::ProcessEvents);
-}
-
-// Recomputes modal state from the open popups and the modal dialog: flags popups, the popup input component
-// and the dialog, and makes every other window modal
-void WindowManager::CalcModality()
-{
-	this->WmCall(EeWonWmCall::CalcModality);
-}
-
-// Returns true when a modal window exists and the given window is not it
-bool WindowManager::NotModalWindow(Window *theWindow)
-{
-	return this->WmCall(EeWonWmCall::NotModalWindow, (intptr_t)theWindow) != 0;
-}
-
-// Shows a component (default: the window's root) as a modal dialog until it ends; returns its result
-int WindowManager::DoDialog(Window *theWindow, Component *theComponent)
-{
-	return (int)this->WmCall(EeWonWmCall::DoDialog, (intptr_t)theWindow, (intptr_t)theComponent);
-}
-
-// Ends the current modal dialog with a result, unless another window or dialog is named
-void WindowManager::EndDialog(int theResult, Window *theWindow, Component *theDialog)
-{
-	this->WmCall(EeWonWmCall::EndDialog, theResult, (intptr_t)theWindow, (intptr_t)theDialog);
-}
-
 // Moves a popup back inside the screen or the parent's root, flipping it to the other side of the avoid rectangle
 void WindowManager::AdjustPopupPosition(Window *theParent, Component *theComponent, bool inOwnWindow, const WONRectangle &theAvoidRect)
 {
-	EeWonRect4 anAvoid = WinRect4(theAvoidRect);
-	this->WmCall(EeWonWmCall::AdjustPopupPosition, (intptr_t)theParent, (intptr_t)theComponent, inOwnWindow ? 1 : 0,
-	             (intptr_t)&anAvoid);
+    EeWonRect4 anAvoid = WinRect4(theAvoidRect);
+    this->WmCall(EeWonWmCall::AdjustPopupPosition, (intptr_t)theParent, (intptr_t)theComponent, inOwnWindow ? 1 : 0,
+                 (intptr_t)&anAvoid);
 }
-
 // Opens a popup at the given or mouse position, in its own popup window or inside the parent window, per
 // the popup flags; ignored while another popup opens or closes, or when the parent lacks focus
 void WindowManager::DoPopup(const PopupParams &theParams)
 {
-	EeWonWmPopup aParams = { (intptr_t)theParams.mParent, (intptr_t)theParams.mPopup, (intptr_t)theParams.mInputComponent,
-	                         (intptr_t)theParams.mOwnerComponent, theParams.mFlags, theParams.mx, theParams.my,
-	                         WinRect4(theParams.mAvoidRect) };
-	this->WmCall(EeWonWmCall::DoPopup, (intptr_t)&aParams);
+    EeWonWmPopup aParams = { (intptr_t)theParams.mParent, (intptr_t)theParams.mPopup, (intptr_t)theParams.mInputComponent,
+                             (intptr_t)theParams.mOwnerComponent, theParams.mFlags, theParams.mx, theParams.my,
+                             WinRect4(theParams.mAvoidRect) };
+    this->WmCall(EeWonWmCall::DoPopup, (intptr_t)&aParams);
 }
-
-// Closes the given popup and every popup opened after it (NULL: all), firing the end-popup event and
-// keeping the last popup window for reuse
-void WindowManager::EndPopup(Component *thePopup)
+// The default window's font for a descriptor and its display context (NULL without a window; not identified in the
+// original exe)
+SmartPtr<Font> WindowManager::GetDefaultFont(const FontDescriptor& theDescriptor)
 {
-	this->WmCall(EeWonWmCall::EndPopup, (intptr_t)thePopup);
+    Window* aWindow = Window::GetDefaultWindow();
+    return aWindow == NULL ? SmartPtr<Font>() : aWindow->GetFont(theDescriptor);
 }
-
-// Closes the popups when the popup's owner component lies inside the given component
-void WindowManager::CheckEndPopup(Component *theAncestor)
+DisplayContext* WindowManager::GetDefaultDisplayContext()
 {
-	this->WmCall(EeWonWmCall::CheckEndPopup, (intptr_t)theAncestor);
-}
-
-// Dispatches one window event: mouse, key, focus, resize, close and other events, applying popup, modal
-// and full-screen rules; merges repeated mouse moves and size changes
-void WindowManager::DeliverEvent(WindowEventBase *theEvent)
-{
-	this->WmCall(EeWonWmCall::DeliverEvent, (intptr_t)theEvent);
+    Window* aWindow = Window::GetDefaultWindow();
+    return aWindow == NULL ? NULL : aWindow->GetDisplayContext();
 }
 
 // Class statics: the default window manager and the GUI thread id (constant-initialised)
 WindowManager* WindowManager::mDefaultWindowManager = NULL;
 DWORD WindowManager::mThreadId = 0;
-
-// Not identified in the original exe: GetNamedFontMod (a named font with another style/size), GetDefaultFont
-// for a descriptor, GetDefaultDisplayContext, CheckModalValid (the modal window is open and visible and the
-// dialog is shown in it) and RemoveAllTimerEvents
-Font* WindowManager::GetNamedFontMod(const std::string& theName, int theStyle, int theSize)
-{
-    Font* aFont = this->GetNamedFont(theName);
-    FontDescriptor aDesc = aFont->GetDescriptor();
-    aDesc.mStyle = theStyle;
-    if(theSize > 0)
-        aDesc.mSize = theSize;
-
-    return this->GetDefaultWindow()->GetFont(aDesc).get();
-}
-
-SmartPtr<Font> WindowManager::GetDefaultFont(const FontDescriptor& theDescriptor)
-{
-    Window* aWindow = Window::GetDefaultWindow();
-    if(aWindow == NULL)
-        return NULL;
-    else
-        return aWindow->GetFont(theDescriptor);
-}
-
-DisplayContext* WindowManager::GetDefaultDisplayContext()
-{
-    Window* aWindow = Window::GetDefaultWindow();
-    if(aWindow == NULL)
-        return NULL;
-    else
-        return aWindow->GetDisplayContext();
-}
-
-bool WindowManager::CheckModalValid()
-{
-    return this->WmCall(EeWonWmCall::CheckModalValid) != 0;
-}
-
-void WindowManager::RemoveAllTimerEvents()
-{
-    this->WmCall(EeWonWmCall::RemoveAllTimerEvents);
-}
-
-// Runs one pass of the event loop (not identified in the original exe)
-void WindowManager::PumpOnce()
-{
-	this->GetNextEvent();
-}

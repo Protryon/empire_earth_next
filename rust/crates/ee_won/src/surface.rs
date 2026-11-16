@@ -793,6 +793,11 @@ impl EeWonSurface {
         }
     }
 
+    /// The pixels as 32-bit words (None without pixels): a 32-bit surface's pixels, `pixels_per_row` to a row.
+    pub fn words_mut(&mut self) -> Option<&mut [u32]> {
+        self.buf.as_deref_mut()
+    }
+
     /// The pixel bytes (empty without pixels).
     pub fn bytes(&self) -> &[u8] {
         match &self.buf {

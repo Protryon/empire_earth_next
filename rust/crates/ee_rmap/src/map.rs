@@ -35,7 +35,7 @@ pub fn is_cell_set(grid: &Grid<u8>, x: u32, y: u32) -> bool {
 
 /// `EERMRing`.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Ring {
     pub center: Point,
     pub min_radius: f32,

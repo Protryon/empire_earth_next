@@ -30,8 +30,13 @@ mod tests {
     ];
 
     /// names that do not follow the rule: the Rust name and the header's
-    const RENAMES: &[(&str, &str)] =
-        &[("UNIT_TYPE_RADIO_MAN", "kUnitTypeInf10RadioMan"), ("MOVEMENT_SEA_OR_SPACE", "kMovementSeaOrSpace")];
+    const RENAMES: &[(&str, &str)] = &[
+        ("UNIT_TYPE_RADIO_MAN", "kUnitTypeInf10RadioMan"),
+        ("MOVEMENT_SEA_OR_SPACE", "kMovementSeaOrSpace"),
+        ("TRIGGER_ENEMY_UNIT_IN_LOS", "kTriggerEnemyUnitInLOS"),
+        ("TRIGGER_CAN_I_PURSUE_PAST_INITIAL_CONTACT_LOS", "kTriggerCanIPursuePastInitialContactLOS"),
+        ("TRIGGER_ENEMY_INSIDE_INITIAL_CONTACT_LOS", "kTriggerEnemyInsideInitialContactLOS"),
+    ];
 
     /// copies with no header constant, and why
     const NO_HEADER: &[&str] = &[

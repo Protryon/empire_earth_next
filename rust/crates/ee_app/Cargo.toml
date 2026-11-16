@@ -1,0 +1,20 @@
+[package]
+name = "ee_app"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The app and world lane (docs/progress/r6-app-and-world.md): the game's options and settings, the camera and the
+# ambient sounds as Rust records and bodies behind their C++ classes (src/Empire Earth/Empire Earth). The C++ side
+# is reached only through the host callbacks the C++ passes in; no FFI imports.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+# the camera's math (GE value types, the table trigonometry) and its ee_gfx functions
+ee_ge = { path = "../ee_ge" }
+ee_gfx = { path = "../ee_gfx" }
+# config.yaml (PlatConfig*): the settings' rows
+ee_plat_core = { path = "../ee_plat_core" }
+# the cliffs' table generator (URandomIntegers)
+ee_random = { path = "../ee_random" }

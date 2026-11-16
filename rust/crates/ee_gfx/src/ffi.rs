@@ -6,18 +6,20 @@
 
 use std::ffi::c_void;
 
-use ee_ge::types::{Ge2DPoint, Ge3DLine, Ge3DPlane, Ge3DPoint, GeRectangle, GeTransformation, GeVector};
+use ee_ge::types::{Ge2DPoint, Ge3DLine, Ge3DPoint, GeRectangle, GeTransformation, GeVector};
 
 use crate::camera::{
     self, EeGfxCameraGoTo, EeGfxCameraPose, EeGfxCameraRays, EeGfxCameraStep, EeGfxClipping, EeGfxEdgePlanes,
     EeGfxOrthoView, Ground,
 };
-use crate::effects::{self, EeGfxColor, EeGfxEffectFog, EeGfxEffectQuad, EeGfxTexCoord};
+use crate::effect_batch;
+use crate::effects::{EeGfxColor, EeGfxTexCoord};
 use crate::minimap::{self, EeGfxMiniMapTransforms, EeGfxMiniMapView};
 use crate::models::{self, EeGfxRingModel, EeGfxSelectionModel};
 use crate::mouse::{self, EeGfxMouseInput, EeGfxMouseMove};
-use crate::pick::{self, EeGfxPickAdd, EeGfxPickHit, EeGfxPickRay, EeGfxPickTolerances, EeGfxPickUnit};
+use crate::pick::{self, EeGfxPickAdd, EeGfxPickUnit};
 use crate::quake::{self, EeGfxQuakeRow};
+use crate::raster::EeGfxRaster;
 use crate::select::{self, EeGfxSelectLines};
 use crate::terrain::{self, EeGfxCloudLayer, EeGfxSkyFrame};
 use crate::units::{
@@ -376,74 +378,6 @@ pub unsafe extern "C" fn ee_gfx_units_object_bar(
 
 // ---- the unit picker (pick.rs, EEUnitPicker.cpp)
 
-/// `FindUnit`'s ray through a screen point of `*viewport`.
-///
-/// # Safety
-/// The pointers are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_pick_ray(
-    viewport: *const GeViewport,
-    orthographic: bool,
-    point: *const Ge2DPoint,
-    out: *mut EeGfxPickRay,
-) {
-    // SAFETY: the function's contract (inputs copied before the store)
-    unsafe {
-        let r = pick::screen_ray(&*viewport, orthographic, *point);
-        *out = r;
-    }
-}
-
-/// `FindUnit`'s depth tolerance and pixel share.
-///
-/// # Safety
-/// `viewport` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_pick_tolerances(
-    viewport: *const GeViewport,
-    free_camera: bool,
-    window_width: u32,
-) -> EeGfxPickTolerances {
-    // SAFETY: the function's contract
-    pick::tolerances(unsafe { &*viewport }, free_camera, window_width)
-}
-
-/// The bounding test's scale of an entry of priority `kind`.
-#[no_mangle]
-pub extern "C" fn ee_gfx_pick_scale(kind: i32, saved: f32) -> f32 {
-    pick::pick_scale(kind, saved)
-}
-
-/// Whether a bounding hit is large on the screen (or a tree).
-#[no_mangle]
-pub extern "C" fn ee_gfx_pick_is_large(pixel_size: f32, pixel: f32, kind: i32) -> bool {
-    pick::is_large(pixel_size, pixel, kind)
-}
-
-/// `FindUnit`'s ranking and choice over `count` hits: the chosen hit's index into `hits`, or -1. `group_nonempty`
-/// (the current player's selection holds a unit) is asked only when both an exact and a bounding hit rank.
-///
-/// # Safety
-/// `hits` holds `count` hits (or `count` is 0); the callback's contract is the caller's.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_pick_best(
-    hits: *const EeGfxPickHit,
-    count: usize,
-    tolerance: f32,
-    show_hidden: bool,
-    context: *mut c_void,
-    group_nonempty: unsafe extern "C" fn(context: *mut c_void) -> bool,
-) -> isize {
-    let hits: Vec<EeGfxPickHit> =
-        if count == 0 { vec![] } else { unsafe { std::slice::from_raw_parts(hits, count) }.to_vec() };
-    let (first, second) = pick::rank(&hits, tolerance, show_hidden);
-    // SAFETY: the callback's contract (the hits are a copy)
-    match pick::choose(&hits, first, second, || unsafe { group_nonempty(context) }) {
-        Some(i) => i as isize,
-        None => -1,
-    }
-}
-
 /// `GetUnitPickPriority`; `ask(context, question)` answers 0 `IsLandBuilding`, 1 the current player's `IsAlly`.
 ///
 /// # Safety
@@ -469,67 +403,6 @@ pub unsafe extern "C" fn ee_gfx_pick_priority(
 pub unsafe extern "C" fn ee_gfx_pick_admits(add: *const EeGfxPickAdd) -> bool {
     // SAFETY: the function's contract
     pick::admits(unsafe { &*add })
-}
-
-/// # Safety
-/// `planes` holds the frustum's six planes.
-unsafe fn side_planes(planes: *const Ge3DPlane) -> [Ge3DPlane; 4] {
-    // SAFETY: the caller's contract
-    unsafe { [*planes.add(2), *planes.add(3), *planes.add(4), *planes.add(5)] }
-}
-
-/// `GetIsEntryInView`'s centre test against the side planes 2..5 of `planes` (six): `below[0..4]` and their count.
-///
-/// # Safety
-/// `center` is valid, `planes` holds six planes, `below` has room for four.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_pick_sphere_below(
-    center: *const Ge3DPoint,
-    planes: *const Ge3DPlane,
-    below: *mut bool,
-) -> u32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let b = pick::sphere_below(*center, &side_planes(planes));
-        for (k, v) in b.iter().enumerate() {
-            *below.add(k) = *v;
-        }
-        b.iter().filter(|v| **v).count() as u32
-    }
-}
-
-/// `GetIsEntryInView`'s sphere test: of the side planes the centre is below, how many the sphere does not reach.
-///
-/// # Safety
-/// `center` is valid, `planes` holds six planes, `below` four flags.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_pick_sphere_outside(
-    center: *const Ge3DPoint,
-    planes: *const Ge3DPlane,
-    below: *const bool,
-    radius: f32,
-) -> u32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let b = [*below, *below.add(1), *below.add(2), *below.add(3)];
-        pick::sphere_outside(*center, &side_planes(planes), &b, radius)
-    }
-}
-
-/// The LOD `GetIsEntryInView` walks.
-#[no_mangle]
-pub extern "C" fn ee_gfx_pick_view_lod(lod_count: u32) -> u32 {
-    pick::view_lod(lod_count)
-}
-
-/// `GetIsModelInView`'s vertex test against the side planes 2..5 of `planes` (six).
-///
-/// # Safety
-/// `planes` holds six planes, `point` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_pick_point_in_view(planes: *const Ge3DPlane, point: *const Ge3DPoint) -> bool {
-    // SAFETY: the function's contract
-    unsafe { pick::point_in_view(&side_planes(planes), *point) }
 }
 
 // ---- the mini map (minimap.rs, EEMiniMap.cpp)
@@ -797,101 +670,129 @@ pub unsafe extern "C" fn ee_gfx_units_label_point(
     }
 }
 
-// ---- the effects' quads (effects.rs, EEEffect.cpp)
+// ---- the effects' quad batches and plane models (effect_batch.rs, EEEffect.cpp)
 
-/// `GetEffectFogFactor`: the fog's fade at `*point` (`fog.state` 1: linear fog).
-///
-/// # Safety
-/// The pointers are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_fog_factor(
-    point: *const Ge3DPoint,
-    fog: *const EeGfxEffectFog,
-    camera_inverse: *const GeTransformation,
-) -> f32 {
-    // SAFETY: the function's contract
-    unsafe { effects::fog_factor(*point, &*fog, &*camera_inverse) }
+fn table<'a>(raster: *const EeGfxRaster) -> &'a EeGfxRaster {
+    // SAFETY: the C++ passes its raster table, alive for the program
+    unsafe { &*raster }
 }
 
-/// `AddGlowSprite`'s quad.
+/// `BeginEffectBatches`: both batches empty with `texture` (`GETexture*`, may be null), referenced for each.
 ///
 /// # Safety
-/// The pointers are valid.
+/// `raster` is the C++'s table.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_batches_begin(raster: *const EeGfxRaster, texture: *mut c_void) {
+    effect_batch::begin(&mut table(raster), texture)
+}
+
+/// `FlushEffectBatches`: what the ground batch and then the camera batch still hold, drawn.
+///
+/// # Safety
+/// `raster` is the C++'s table.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_batches_flush(raster: *const EeGfxRaster) {
+    effect_batch::flush_all(&mut table(raster))
+}
+
+/// `EndEffectBatches`: the references `begin` took dropped.
+///
+/// # Safety
+/// `raster` is the C++'s table.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_batches_end(raster: *const EeGfxRaster) {
+    effect_batch::end(&mut table(raster))
+}
+
+/// One effect quad (`AddGlowSprite`, `AddGroundSprite`, `AddBlendedSprite` by `kind`: `EE_GFX_SPRITE_GLOW` ...),
+/// as the raster table's `sprite` adds it (the drivers' entry point).
+///
+/// # Safety
+/// `raster` is the C++'s table; `position` is valid.
 #[no_mangle]
 #[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn ee_gfx_effect_glow_sprite(
+pub unsafe extern "C" fn ee_gfx_effect_batch_sprite(
+    raster: *const EeGfxRaster,
+    kind: u32,
     position: *const Ge3DPoint,
-    color: *const EeGfxColor,
+    color: EeGfxColor,
     rotation: f32,
     size: f32,
     alpha: f32,
     brightness: f32,
-    fog: f32,
-    camera_yaw: f32,
-    camera_pitch: f32,
-) -> EeGfxEffectQuad {
+    alpha_ref: f32,
+) {
     // SAFETY: the function's contract
-    unsafe { effects::glow_sprite(*position, *color, rotation, size, alpha, brightness, fog, camera_yaw, camera_pitch) }
+    let p = unsafe { &*position };
+    effect_batch::sprite(&mut table(raster), kind, p, color, rotation, size, alpha, brightness, alpha_ref)
 }
 
-/// `AddGroundSprite`'s and `AddGroundQuad`'s quad; `opacities` holds the four corners'.
+/// `AddGroundQuad` (four heights) and `AddGroundStrip`, as the raster's draws add them (the drivers' entry points).
 ///
 /// # Safety
-/// The pointers are valid; `opacities` holds four floats.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_ground_sprite(
-    position: *const Ge3DPoint,
-    color: *const EeGfxColor,
-    rotation: f32,
-    size: f32,
-    opacities: *const f32,
-    brightness: f32,
-) -> EeGfxEffectQuad {
-    // SAFETY: the function's contract
-    unsafe {
-        let opacities = *(opacities as *const [f32; 4]);
-        effects::ground_sprite(*position, *color, rotation, size, opacities, brightness)
-    }
-}
-
-/// `AddBlendedSprite`'s quad.
-///
-/// # Safety
-/// The pointers are valid.
+/// `raster` is the C++'s table; the pointers are valid (`heights` four floats).
 #[no_mangle]
 #[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn ee_gfx_effect_blended_sprite(
-    position: *const Ge3DPoint,
-    color: *const EeGfxColor,
-    rotation: f32,
+pub unsafe extern "C" fn ee_gfx_effect_batch_ground_quad(
+    raster: *const EeGfxRaster,
+    center: *const Ge3DPoint,
+    color: EeGfxColor,
+    yaw: f32,
     size: f32,
-    alpha: f32,
+    heights: *const f32,
     brightness: f32,
-    camera_yaw: f32,
-    camera_pitch: f32,
-) -> EeGfxEffectQuad {
+    alpha_ref: f32,
+) {
     // SAFETY: the function's contract
-    unsafe { effects::blended_sprite(*position, *color, rotation, size, alpha, brightness, camera_yaw, camera_pitch) }
+    let (c, h) = unsafe { (&*center, &*(heights as *const [f32; 4])) };
+    effect_batch::ground_quad(&mut table(raster), c, color, yaw, size, h, brightness, alpha_ref)
 }
 
-/// `AddGroundStrip`'s quad.
+/// `AddGroundStrip`.
 ///
 /// # Safety
-/// The pointers are valid.
+/// `raster` is the C++'s table; the pointers are valid.
 #[no_mangle]
 #[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn ee_gfx_effect_ground_strip(
+pub unsafe extern "C" fn ee_gfx_effect_batch_ground_strip(
+    raster: *const EeGfxRaster,
     from: *const Ge3DPoint,
     to: *const Ge3DPoint,
-    height: f32,
-    color: *const EeGfxColor,
-    origin: *const EeGfxTexCoord,
-    extent: *const EeGfxTexCoord,
+    width: f32,
+    color: EeGfxColor,
+    origin: EeGfxTexCoord,
+    extent: EeGfxTexCoord,
     alpha: f32,
     brightness: f32,
-) -> EeGfxEffectQuad {
+    alpha_ref: f32,
+) {
     // SAFETY: the function's contract
-    unsafe { effects::ground_strip(*from, *to, height, *color, *origin, *extent, alpha, brightness) }
+    let (f, t) = unsafe { (&*from, &*to) };
+    let (o, e) = ((origin.u, origin.v), (extent.u, extent.v));
+    effect_batch::ground_strip(&mut table(raster), f, t, width, color, o, e, alpha, brightness, alpha_ref)
+}
+
+/// `CreatePlaneModels`, `ReleasePlaneModels` (the shared plane models).
+///
+/// # Safety
+/// `raster` is the C++'s table.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_planes_create(raster: *const EeGfxRaster) {
+    effect_batch::create_planes(&mut table(raster))
+}
+
+/// # Safety
+/// `raster` is the C++'s table.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_planes_release(raster: *const EeGfxRaster) {
+    effect_batch::release_planes(&mut table(raster))
+}
+
+/// A shared plane model (`GEModel*`): standing (`gEffect2DModel`, the 2D effects' quad) or on the ground
+/// (`gU4E8DF4`); null before `ee_gfx_effect_planes_create`.
+#[no_mangle]
+pub extern "C" fn ee_gfx_effect_plane_model(standing: bool) -> *mut c_void {
+    effect_batch::plane_model(standing)
 }
 
 // ---- the box selection (select.rs, EEUICSelectUnits.cpp)
@@ -1003,23 +904,5 @@ pub unsafe extern "C" fn ee_gfx_minimap_press_point(
     unsafe {
         let p = minimap::press_point(*mouse, *origin, width, height, &*bounds);
         *out = p;
-    }
-}
-
-/// `GetIsEntryInView`'s model transformation (the box selection's frustum test).
-///
-/// # Safety
-/// The pointers are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_pick_entry_transform(
-    location: *const GeTransformation,
-    internal: *const GeTransformation,
-    scale: f32,
-    out: *mut GeTransformation,
-) {
-    // SAFETY: the function's contract (the inputs copied before the store)
-    unsafe {
-        let t = pick::entry_transform(&*location, &*internal, scale);
-        *out = t;
     }
 }

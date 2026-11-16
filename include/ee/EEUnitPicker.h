@@ -26,16 +26,6 @@ struct EEUnitPickerEntry : public GEPhysicalModel {
     unsigned long mUnitID;
 };
 
-// a hit of PickUnit's ray (0x14 bytes; its vector's members are ICF-folded with vector<GEVideoMode>'s) (provisional
-// name)
-struct EEUnitPickerHit {
-    float mDistance;                        // +0x00 along the ray
-    unsigned long mPriority;                // +0x04 GetUnitPickPriority(unit, inArg)
-    long mKind;                             // +0x08 GetUnitPickPriority(unit, false)
-    unsigned long mIndex;                   // +0x0c into mEntries
-    bool mExact;                            // +0x10 the exact (LOD 2) test hit
-    bool mLarge;                            // +0x11 big on the screen (or kind 2)
-};
 #endif
 
 class EEUnitPicker {                        // RTTI, vtable 0x441c48 (one slot)
@@ -60,9 +50,11 @@ public:
     TSCriticalSection* GetLock() const { return this->mLock; }
 #endif
 private:
-    // 0x118eaf: PickUnits' worker for one unit type (provisional name)
-    void PickUnitsOfType(const GERectangle& inRectangle, EEPlayer* inPlayer, long inType,
-                         std::vector<unsigned long>& outUnitIDs);
+    friend struct EEPickOps;                // the walks' host (EEUnitPicker.cpp)
+    // port (R4.4, twenty-sixth round): PickUnits (with its worker PickUnitsOfType 0x118eaf) and PickUnitsInRectangle
+    // under the lock over the rectangle's frustum (ee_gfx pick_walk.rs)
+    void PickBox(const GERectangle& inRectangle, bool inAll, EEPlayer* inPlayer, long inType,
+                 std::vector<unsigned long>& outUnitIDs);
     // port (R5a.3): ReferenceCarriers 0x119faa is gone with the references
     EEUnit* FindUnit(const GE2DPoint& inPoint, long inPreferResources);   // PickUnit's search (mLock held)
     EEUnit* GetEntryUnit(unsigned long inIndex);   // an entry's unit, or NULL once it has left the world

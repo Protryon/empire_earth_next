@@ -11,6 +11,7 @@
 //! original called (the list area's KeyDown and MouseWheel, the edit box's RequestFocus, its own SetFocusChild) goes
 //! through the C++ object.
 
+use crate::compmem as mem;
 use std::cell::RefCell;
 use std::ffi::c_void;
 
@@ -251,7 +252,7 @@ impl EeWonComboBox {
     }
 
     pub fn added_to_parent(&self) {
-        if self.op1(Op::CtParentOf, self.part(PART_EDIT)) != self.me() {
+        if mem::parent(self.part(PART_EDIT)) != self.me() {
             self.add_controls();
         }
         self.ct().added_to_parent();
@@ -276,11 +277,11 @@ impl EeWonComboBox {
             (s.width, s.height)
         };
         let list_box = self.part(PART_LIST_BOX);
-        let box_width = self.op1(Op::ChildWidth, list_box) as i32;
-        let area_width = self.op1(Op::ChildWidth, self.part(PART_LIST_AREA)) as i32;
+        let box_width = mem::width(list_box);
+        let area_width = mem::width(self.part(PART_LIST_AREA));
         let metric = |k: isize| self.op1(Op::ComboListMetric, k) as i32;
         let (right, left, total_w, total_h) = (metric(0), metric(1), metric(2), metric(3));
-        let combo_width = self.op1(Op::ChildWidth, self.me()) as i32;
+        let combo_width = mem::width(self.me());
         let (w, h) = guictl::combo_list_size(mw, mh, box_width, area_width, right, left, total_w, combo_width, total_h);
         self.op(Op::ChildSetSize, self.part(PART_LIST_BOX), w as isize, h as isize, 0);
     }
@@ -317,7 +318,7 @@ impl EeWonComboBox {
         }
         self.op1(Op::ComboEditItemText, item);
         let item_width = self.op1(Op::ComboItemWidth, item) as i32;
-        let edit_width = self.op1(Op::ChildWidth, self.part(PART_EDIT)) as i32;
+        let edit_width = mem::width(self.part(PART_EDIT));
         if guictl::combo_select_to_end(item_width, edit_width) {
             let len = self.op1(Op::ComboItemTextLength, item);
             self.op(Op::ComboEditSelect, len, 0, 0, 0);
@@ -459,7 +460,7 @@ impl EeWonComboBox {
     }
 
     pub fn set_enabled(&self, enabled: bool) {
-        let disabled = self.op1(Op::CtBits, self.me()) & FLAG_DISABLED != 0;
+        let disabled = mem::bits(self.me()) as u32 as isize & FLAG_DISABLED != 0;
         if enabled == !disabled {
             return;
         }

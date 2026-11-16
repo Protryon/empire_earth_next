@@ -25,6 +25,7 @@ void WONAPICore::Init()
     this->mDoPumpThread=false;
     this->mDoSocketAndTimerThreads=true;
     this->mSocketThread=NULL;
+    ee_won_api_set_file_directory(NULL,0); // the Rust objects' copy of the directory (ee_won hostnative.rs)
     AsyncSocket::StartWinsock();
 }
 // Creates the core and initialises its defaults (0x6f28d0 in the original, 173 bytes; listed below)
@@ -36,6 +37,7 @@ WONAPICore::~WONAPICore()
     delete this->mSocketThread;
     AsyncSocket::StopWinsock();
     WONAPICore::mInstance=NULL;
+    ee_won_api_set_file_directory(NULL,0);
 }
 // Once per run, rewrites _wonapiversion.txt in the file directory with the API version, only if the file exists
 void WONAPICore::WriteVersion()
@@ -173,11 +175,14 @@ void WONAPICoreEx::SetDefaultFileDirectory(const char* theDirectory)
 	if(this->mIsStarted)
 		return;
 	this->mFileDirectory = theDirectory;
-	if(this->mFileDirectory.empty())
+	if(this->mFileDirectory.empty()) {
+		ee_won_api_set_file_directory(NULL,0);
 		return;
+	}
 	char anEndChar = this->mFileDirectory[this->mFileDirectory.length()-1];
 	if(anEndChar!='\\' && anEndChar!='/')
 		this->mFileDirectory += '/';
+	ee_won_api_set_file_directory(reinterpret_cast<const uint8_t*>(this->mFileDirectory.data()),this->mFileDirectory.size());
 }
 
 void WONAPICoreEx::SetSocketThread(SocketThread *theThread)

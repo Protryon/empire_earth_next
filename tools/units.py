@@ -24,8 +24,6 @@ PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 PLATFORM_UNITS = [
                   # the fonts built in (PORT.md step 4.5; the C compiler's #embed, PlatFont itself is Rust)
                   "Platform/Common/PlatFontData.c"]
-# the DX7 renderer's C++ trampolines into Rust (ee_dx7, docs/RUST_PLAN.md R4.2): the classes' deleted bodies live there
-DX7_TRAMPOLINES = ["Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Trampolines.cpp"]
 # the UI toolkit's C++ trampolines into Rust (ee_ui, docs/RUST_PLAN.md R6): the moved units' members live there
 UI_TRAMPOLINES = ["Low-Level Engine/User Interface/UITrampolines.cpp"]
 # the Graphics Engine's value types' out-of-line members, fifteen units folded into one (R4.3 part 16)
@@ -33,13 +31,12 @@ GE_UNITS = ["Low-Level Engine/Graphics Engine/GEValues.cpp"]
 # the general MIDI instruments of the music, built in (EE.sf2 next to the unit)
 MUSIC_UNITS = ["Low-Level Engine/Sound Engine/SEGeneralMIDI.c"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
-               "dx7hrtnl": DX7_TRAMPOLINES,
                "exe": ["Empire Earth/Database/EEDataTextFile.cpp", "Empire Earth/Database/EERules.cpp",
                        # the EE lobby glue's shells and hosts (R6 WONLobby round 6; ee_won eecolor.rs, eeglue.rs): the
                        # game's code, built as the GameCode units it replaced were
                        "Empire Earth/WONAPI/WONLobby/EELobbyGlueHost.cpp",
-                       # the 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs)
-                       "Empire Earth/Graphics Thread/EEE3DRust.cpp", "Empire Earth/Graphics Thread/EEE2DRust.cpp",
+                       # the effects' constructors and hosts (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_2d.rs)
+                       "Empire Earth/Graphics Thread/EEEffectHost.cpp",
                        # the host of the game's controls whose logic is Rust (ee_screens hud_ctl.rs; ee/EEUIRustControl.h)
                        "Empire Earth/User Interface Thread/EEUIRustControl.cpp",
                        # the computer-player decision trace and cheat switches (docs/AI_RESEARCH.md stage 0)
@@ -80,13 +77,22 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
                        "Empire Earth/Empire Earth/EESimEditor.cpp",
                        # TEST ONLY: its civilization builder steps (the "cb" command; tools/sim_editor/civbuilder.txt)
                        "Empire Earth/Empire Earth/EESimCivBuilder.cpp",
-                       # the host of the scenario editor's actions whole in Rust: the paints' ranges
-                       # 0x1a830a..0x1a9112 (ee/EESEAPaint.h's EESEAPaintRust; ee_screens editor_actions.rs), the
-                       # deletion's 0x1a6b45..0x1a7331 (an EESEARust kind), the lasso's and the click's
-                       # 0x1a7358..0x1a75e0 (their bodies inline over Rust: ee/EESEALasso.h, ee/EESEAMouseClick.h)
+                       # the hosts of the scenario editor's actions whole in Rust (EEARust kinds, ee/EEARust.h): the
+                       # paints' ranges 0x1a830a..0x1a9112 (EESEAPaintRust; ee_screens editor_actions.rs), the
+                       # deletion's 0x1a6b45..0x1a7331, the lasso's and the click's 0x1a7358..0x1a75e0; the editor's
+                       # command control's 0x197261..0x197393 (the trigger tab's selection control's 0x197393..0x19764b
+                       # is EEUICSelectUnits' Rust: ee/EESEUICTriggerSelectUnits.h)
                        "Empire Earth/Scenario Editor Actions/EESEARust.cpp",
+                       # the host of the game's actions whole in Rust (ee/EEARust.h; ee_screens game_actions.rs): the
+                       # Actions units' ranges 0x1000..0x52f3 but EEAWonNet's, EEAQuickSaveLoad's 0x1a5529..0x1a5881
+                       # and EESEAQuickSaveLoad's 0x1aa70e..0x1aa723
+                       "Empire Earth/Actions/EEARust.cpp",
                        # TEST ONLY: the simulation capture of the Rust leaves' gates (EE_SIM_CAPTURE; tools/sim_capture.py)
                        "Empire Earth/Empire Earth/EESimCapture.cpp",
+                       # TEST ONLY: the app and world lane's capture records (ee/EEAppCapture.h: CAMU)
+                       "Empire Earth/Empire Earth/EEAppCapture.cpp",
+                       # TEST ONLY: its map, mini map, cheat and storm records and the --app-sweep (MAPS ... STRM)
+                       "Empire Earth/Empire Earth/EEAppCaptureWorld.cpp",
                        # TEST ONLY: the tech tree's, events' and calamities' capture records (ee/EETechCapture.h)
                        "Empire Earth/Tech Tree/EETechCapture.cpp",
                        # TEST ONLY: the units sweep of EE-SIM --unit-sweep (the capture's units profile)
@@ -137,6 +143,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
                        "Empire Earth/Units/EECombatGoals.cpp",
                        # TEST ONLY: the group command sweep over the dry host (ee/EEUnitHost.h; USGC records)
                        "Empire Earth/Units/EEGroupCommandSweep.cpp",
+                       # TEST ONLY: the active groups' sweep at a groups game's end (AGPL records; R5b.4 round 35)
+                       "Empire Earth/Units/EEActiveGroupSweep.cpp",
                        # TEST ONLY: the POSIX test driver's in-process UI fixture (EE_TEST_UI; tools/harness/posix_game.py)
                        "Empire Earth/Empire Earth/EETestFixture.cpp",
                        # TEST ONLY: the fixture's orders (EE_TEST_UI; tools/harness/fixture_driver.py orders)
@@ -147,8 +155,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
                        # (ee/EEScreenEvent.h; ee_screens menus.rs: the main menu, the editors' menu, single player, play campaign;
                        # settings_form.rs: the game settings; custom_campaign.rs: the custom campaign form)
                        "Empire Earth/UI Events/EEScreens.cpp",
-                       # the language strings, generated from Language.rc (tools/lang_strings.py)
-                       "Empire Earth/Language/LanguageStrings.cpp",
                        # a unit with no code range of its own (every member was ICF-folded into another unit's)
                        "Empire Earth/Calamities/EEGlobalCalamityClass.cpp"]}
 
@@ -164,12 +170,12 @@ def _won_extra_units():
             if p.resolve() not in listed and p.name not in WON_NOT_LINKED]
 
 
-# WONAPI sources not linked: the GameSpy query/report support (WON SDK code the original exe did not contain and
-# nothing references). The WON GUI toolkit's Win32/GDI backend (MS*.cpp, DisplayContext, Clipboard), the Win32
-# open/save file dialog and WinSkin are deleted: the backend is WONGUI/Plat*.cpp on the platform layer on every OS.
-# The Winsock event-driven socket thread backends (SocketThreadWinsock2, SocketThreadEx) are deleted: the game runs
-# WON's polling SocketThreadSimple
-WON_NOT_LINKED = {"GameSpySupport.cpp"}
+# WONAPI sources not linked: none (the GameSpy query/report support, WON SDK code the original exe did not contain
+# and nothing references, is ee_won gamespy.rs since net round 28; its class is header-only). The WON GUI toolkit's
+# Win32/GDI backend (MS*.cpp, DisplayContext, Clipboard), the Win32 open/save file dialog and WinSkin are deleted:
+# the backend is WONGUI/Plat*.cpp on the platform layer on every OS. The Winsock event-driven socket thread backends
+# (SocketThreadWinsock2, SocketThreadEx) are deleted: the game runs WON's polling SocketThreadSimple
+WON_NOT_LINKED = set()
 
 
 EXTRA_UNITS["won"] = _won_extra_units()

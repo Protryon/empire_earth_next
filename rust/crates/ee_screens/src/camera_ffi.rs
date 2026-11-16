@@ -21,9 +21,10 @@ impl CameraHost for Form {
     }
 }
 
-/// A form's grab scroll (0 the main game form's, 1 the scenario editor's) made anew or released with its form: not
-/// grabbing (`EECreateGrabScroll`, `EEReleaseGrabScroll`).
+/// A form's grab scroll (0 the main game form's, 1 the scenario editor's) made anew or released with its form: the
+/// mouse move event it saved released, not grabbing (`EECreateGrabScroll`, `EEReleaseGrabScroll`).
 #[no_mangle]
 pub extern "C" fn ee_screens_camera_grab_reset(form: u32) {
+    crate::toolkit::release_grab(form);
     crate::camera::reset_grab(&GRABS, form as usize);
 }

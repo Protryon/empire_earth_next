@@ -7,9 +7,6 @@ extern "C" void SPIMSetMuted(bool inMuted);   // port: the mixer plug-in (lle/SE
 #include "platform/PlatSim.h"
 unsigned long EEMenuWidth();    // port: the menus' resolution (Empire Earth.cpp)
 unsigned long EEMenuHeight();
-#include <mbstring.h>
-#include <algorithm>
-#include <string>
 #include <list>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -80,11 +77,10 @@ unsigned long EEMenuHeight();
 #include "ee/EEUIEWonNetServerSelectEvents.h"
 #include "ee/EEUIFError.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEABootClientFromCanceledGame.h"
+#include "ee/EEARust.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/RTSMousePointer.h"
 #include "ee/EEStatisticsRecord.h"
-#include "ee/EEAQuickSaveLoad.h"
 // free functions of other units (declared where they are used, as their own units do) (provisional names)
 void DeleteEffectBatchBuffers();            // 0x102e1b (before the rasterizer is deactivated)
 void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFlag);  // 0x140306 (Empire Earth.cpp)
@@ -673,7 +669,6 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
     case EE_SCREENS_UI_OP_QUICK_LOAD: {
         EEAQuickSaveLoad* theAction = reinterpret_cast<EEAQuickSaveLoad*>(inA);
         theAction->mIsLoad = true;
-        theAction->mGameState = &gGameState;
         gUserInterface->PostAction(theAction);
         theAction->Dereference();
         break;
@@ -1106,27 +1101,8 @@ void EEUserInterface::PostMessage424Once()
     }
 }
 
-// Shows a lag state: a waiting message in the game, or the blinking lag button in the lobby
-void EEUserInterface::ShowLagStatus(unsigned long inPlayer, bool inLagging)
-{
-    UWideString theText;
-    gUIManager->LockUIForCopyData();
-    if (gUIManager->GetCurrentForm() == gUIManager->GetFormByID(kFormMainGame)) {
-        if (inLagging) {
-            gResource->GetString(IDS_WAITING_FOR_PLAYERS, theText);
-            gUserInterface->AddChatLogEntry(theText, 0);
-        }
-    } else if (gUIManager->GetCurrentForm() == gUIManager->GetFormByID(kFormLobby)) {
-        UIBlinkingButton* theButton = static_cast<UIBlinkingButton*>(gUIManager->GetCurrentForm()->GetControl(0x111));
-        if (inPlayer == 0) {
-            theButton->SetDisplayMode(kDisplayModeHidden);
-        } else {
-            theButton->SetDisplayMode(kDisplayModeShown);
-            theButton->SetIsBlinking(true);
-        }
-    }
-    gUIManager->UnlockUIForCopyData();
-}
+// Shows a lag state: a waiting message in the game, or the blinking lag button in the lobby (ee_screens ui_game.rs)
+void EEUserInterface::ShowLagStatus(unsigned long inPlayer, bool inLagging) { ee_screens_ui_show_lag_status(inPlayer, inLagging); }
 
 // Undoes the last action; returns 7 when there is none (ee_screens actions.rs)
 long EEUserInterface::Undo()

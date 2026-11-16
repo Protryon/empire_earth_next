@@ -29,6 +29,16 @@ pub const EE_SCREENS_SU_DEREF: u32 = 64;
 pub const EE_SCREENS_SU_LASSO_BOX: u32 = 65;
 /// (modifiers) the click action selects at the mouse.
 pub const EE_SCREENS_SU_CLICK: u32 = 66;
+/// The trigger tab's: (unit) -> whether it is part of a complex unit.
+pub const EE_SCREENS_SU_HAS_COMPLEX: u32 = 67;
+/// The trigger tab's: the unit or tile under the control's mouse location -> f[0..2] its map point (x, y).
+pub const EE_SCREENS_SU_POINT_AT: u32 = 68;
+/// The trigger tab's: (flag) the lasso's `SelectInRectangle` over f[0..4].
+pub const EE_SCREENS_SU_LASSO_IN_RECT: u32 = 69;
+/// The trigger tab's: the click action's `Execute(f[0], f[1], true, 1, false, 0, false)`.
+pub const EE_SCREENS_SU_CLICK_EXECUTE: u32 = 80;
+/// The trigger tab's: -> the control's `MouseLButtonDown()`.
+pub const EE_SCREENS_SU_L_DOWN: u32 = 81;
 
 /// `ee_screens_select_units`' members (`hud_ctl_ffi.rs`).
 pub const EE_SCREENS_SU_DO_COPY_DATA: u32 = 0;
@@ -37,6 +47,8 @@ pub const EE_SCREENS_SU_DO_DOUBLE_CLICK: u32 = 2;
 pub const EE_SCREENS_SU_DO_MOUSE_L_UP: u32 = 3;
 pub const EE_SCREENS_SU_DO_MOUSE_MOVE: u32 = 4;
 pub const EE_SCREENS_SU_DO_START: u32 = 5;
+pub const EE_SCREENS_SU_DO_R_DOWN: u32 = 6;
+pub const EE_SCREENS_SU_DO_R_UP: u32 = 7;
 
 /// `EEUICSelectUnits`' members (its protected base) but the lines and the actions.
 #[repr(C)]
@@ -53,6 +65,10 @@ pub struct EeScreensSelectUnitsFields {
     pub mDragging: bool,
     /// The box is drawn.
     pub mD1: bool,
+    /// The trigger tab's control (`EESEUICTriggerSelectUnits`; port addition: the subclass's overrides are this).
+    pub mTrigger: bool,
+    /// The trigger tab's: the right button is down (its press and release drive the left's).
+    pub mRightButton: bool,
 }
 
 type R = Rec<EeScreensSelectUnitsFields>;
@@ -96,8 +112,20 @@ pub fn draw(rec: &R, h: &mut impl HudHost) -> i64 {
 }
 
 /// `MouseLButtonDoublePressed`: on one of the player's living units, its type selected in the view; else the
-/// base's.
+/// base's. The trigger tab's: a unit of a complex unit under the mouse has its type selected in the view; then the
+/// click ends.
 pub fn double_click(rec: &R, h: &mut impl HudHost) -> i64 {
+    if rec.get(|r| r.mTrigger) {
+        let unit = h.call(EE_SCREENS_SU_PICK, 0, 0);
+        if unit != 0 {
+            if h.call(EE_SCREENS_SU_HAS_COMPLEX, unit, 0) != 0 {
+                h.call(EE_SCREENS_SU_LASSO_TYPE, unit, 1);
+            }
+            h.call(EE_SCREENS_SU_DEREF, unit, 0);
+        }
+        finish(rec, h);
+        return 0;
+    }
     let modifiers = h.call(EE_SCREENS_HC_MODIFIERS, 0, 0);
     let unit = h.call(EE_SCREENS_SU_PICK, 0, 0);
     let result = if unit != 0 && h.call(EE_SCREENS_SU_OWN_LIVE, unit, 0) != 0 {
@@ -115,6 +143,9 @@ pub fn double_click(rec: &R, h: &mut impl HudHost) -> i64 {
 
 /// `MouseLButtonUp`: the units in the dragged box selected, or the unit under a plain click in the view.
 pub fn mouse_l_up(rec: &R, h: &mut impl HudHost) -> i64 {
+    if rec.get(|r| r.mTrigger) {
+        return trigger_l_up(rec, h);
+    }
     let modifiers = h.call(EE_SCREENS_HC_MODIFIERS, 0, 0);
     if rec.get(|r| r.mDragging) {
         rec.set(|r| r.mD1 = false);
@@ -126,6 +157,50 @@ pub fn mouse_l_up(rec: &R, h: &mut impl HudHost) -> i64 {
     }
     finish(rec, h);
     0
+}
+
+/// The trigger tab's `MouseLButtonUp`: the dragged box added to the selection (the right button: its selected units
+/// deselected), or at the mouse in the view the unit added (the right button: the click's deselection at the map
+/// point); then the click ends, the right button up.
+fn trigger_l_up(rec: &R, h: &mut impl HudHost) -> i64 {
+    let mut point = [0.0f32; 2];
+    h.op(EE_SCREENS_SU_POINT_AT, 0, 0, &mut point);
+    let right = rec.get(|r| r.mRightButton);
+    if rec.get(|r| r.mDragging) {
+        rec.set(|r| r.mD1 = false);
+        let (start, end) = rec.get(|r| (r.mDragStart.ge(), r.mDragEnd.ge()));
+        let r = EeScreensRect::of_ge(select::release_box(start, end));
+        if right {
+            h.with_rect(EE_SCREENS_SU_LASSO_IN_RECT, 2, r);
+        } else {
+            h.with_rect(EE_SCREENS_SU_LASSO_BOX, 1, r);
+        }
+    } else if h.call(EE_SCREENS_HC_VIEW_HAS_MOUSE, 0, 0) != 0 {
+        if right {
+            h.op(EE_SCREENS_SU_CLICK_EXECUTE, 0, 0, &mut point);
+        } else {
+            h.call(EE_SCREENS_SU_CLICK, 1, 0);
+        }
+    }
+    finish(rec, h);
+    rec.set(|r| r.mRightButton = false);
+    0
+}
+
+/// The trigger tab's `MouseRButtonDown`: the left press's, the right button noted.
+pub fn r_down(rec: &R, h: &mut impl HudHost) -> i64 {
+    rec.set(|r| r.mRightButton = true);
+    h.call(EE_SCREENS_SU_L_DOWN, 0, 0)
+}
+
+/// The trigger tab's `MouseRButtonUp`: after a right press, the left release's; else nothing.
+pub fn r_up(rec: &R, h: &mut impl HudHost) -> i64 {
+    if !rec.get(|r| r.mRightButton) {
+        return 0;
+    }
+    let result = mouse_l_up(rec, h);
+    rec.set(|r| r.mRightButton = false);
+    result
 }
 
 /// `MouseMove`: the drag end follows the mouse (clamped to the view); the drag starts past the threshold; a moved

@@ -16,8 +16,16 @@
 #
 # Tree: EE_GATES_TREE names it (no spaces in the path; EE_GATES_TREE_OPEN, its old name, too); else
 # build/open_data/tree, built when missing. Logs: build/gates/.
+#
+# Slot: the gates run in one harness slot (tools/harness/slot.py: the stage, mutex and ports of slot K, beside other
+# slots' sessions). Without EE_HARNESS_SLOT the script takes the first free slot itself (waiting for one) and holds it
+# for all three sessions; EE_HARNESS_SLOT=K runs in slot K (taken by the caller).
 cd "$(dirname "$0")/.." || exit 1
 P="${PYTHON:-python}"
+if [ -z "$EE_HARNESS_SLOT" ]; then
+  exec "$P" -I tools/harness/slot.py run --owner "gates:$(git rev-parse --abbrev-ref HEAD 2>/dev/null)" -- bash tools/gates.sh "$@"
+fi
+echo "== harness slot $EE_HARNESS_SLOT"
 mkdir -p build/gates
 TREE="${EE_GATES_TREE:-$EE_GATES_TREE_OPEN}"
 DATA=""

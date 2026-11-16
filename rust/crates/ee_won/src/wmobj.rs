@@ -1291,6 +1291,24 @@ pub unsafe extern "C" fn ee_won_wm_cache_line(wm: *const EeWonWm, buf: *mut u8, 
     n
 }
 
+/// `InitColorScheme`'s 17 standard colours, in `StandardColor` order (3D dark shadow, face, highlight, shadow,
+/// scroll bar, button text, grey text, highlight, highlight text, tool tip back and text, menu back and text, back,
+/// text, link, link down).
+const STANDARD_COLORS: [u32; 17] = [
+    0x000000, 0xD0D0D0, 0xFFFFFF, 0x848484, 0xDEDEDE, 0x000000, 0x848484, 0x08246B, 0xFFFFFF, 0xFFFFDD, 0x000000,
+    0xD0D0D0, 0, 0xFFFFFF, 0x000000, 0x0000FF, 0xFF0000,
+];
+
+/// `WindowManager::InitColorScheme`: the 17 standard colours into `out`.
+///
+/// # Safety
+/// `out` has room for 17 colours.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_wm_standard_colors(out: *mut u32) {
+    // SAFETY: room for 17 (the contract)
+    unsafe { std::ptr::copy_nonoverlapping(STANDARD_COLORS.as_ptr(), out, STANDARD_COLORS.len()) };
+}
+
 #[cfg(test)]
 #[path = "wmobj_tests.rs"]
 mod tests;

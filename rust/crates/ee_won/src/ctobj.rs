@@ -20,6 +20,7 @@ use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::ffi::c_void;
 
+use crate::compmem as mem;
 use crate::guictl::EeWonRect4;
 use crate::guidraw::{EeWonDrawOp, EE_WON_DRAW_POP_CLIP, EE_WON_DRAW_PUSH_CLIP, EE_WON_DRAW_TRANSLATE};
 use crate::guievent;
@@ -317,7 +318,7 @@ impl EeWonContainer {
     }
     // ---- the pure reads
     fn bits(&self, c: isize) -> isize {
-        self.op(Op::CtBits, c, 0, 0, 0)
+        mem::bits(c) as u32 as isize
     }
     fn flag(&self, c: isize, f: isize) -> bool {
         self.bits(c) & f != 0
@@ -329,22 +330,22 @@ impl EeWonContainer {
         self.flag(c, FLAG_DISABLED)
     }
     fn parent_of(&self, c: isize) -> isize {
-        self.op(Op::CtParentOf, c, 0, 0, 0)
+        mem::parent(c)
     }
     fn left(&self, c: isize) -> i32 {
-        self.op(Op::ChildLeft, c, 0, 0, 0) as i32
+        mem::left(c)
     }
     fn top(&self, c: isize) -> i32 {
-        self.op(Op::ChildTop, c, 0, 0, 0) as i32
+        mem::top(c)
     }
     fn contains(&self, c: isize, x: i32, y: i32) -> bool {
-        self.op(Op::CtContains, c, x as isize, y as isize, 0) != 0
+        mem::contains(c, x, y)
     }
     fn timer_flags(&self, c: isize) -> i32 {
-        self.op(Op::CtTimerFlags, c, 0, 0, 0) as i32
+        mem::timer(c) as i32
     }
     fn invalid_state(&self, c: isize) -> i32 {
-        self.op(Op::CtInvalidState, c, 0, 0, 0) as i32
+        mem::invalid(c) as i32
     }
     fn mouse_pos(&self) -> (i32, i32) {
         let (mut x, mut y) = (0i32, 0i32);
@@ -389,18 +390,8 @@ impl EeWonContainer {
     }
 
     pub fn desired_size(&self) -> (i32, i32) {
-        let rects: Vec<[i32; 4]> = self
-            .children()
-            .into_iter()
-            .map(|c| {
-                [
-                    self.left(c),
-                    self.top(c),
-                    self.op(Op::ChildWidth, c, 0, 0, 0) as i32,
-                    self.op(Op::ChildHeight, c, 0, 0, 0) as i32,
-                ]
-            })
-            .collect();
+        let rects: Vec<[i32; 4]> =
+            self.children().into_iter().map(|c| [self.left(c), self.top(c), mem::width(c), mem::height(c)]).collect();
         guievent::desired_size(&rects)
     }
 
@@ -651,7 +642,7 @@ impl EeWonContainer {
         while k < pending.len() {
             let c = pending[k];
             k += 1;
-            if self.op(Op::ChildControlId, c, 0, 0, 0) as i32 == id {
+            if mem::control_id(c) == id {
                 return c;
             }
             let ct = self.op(Op::CtContainerOf, c, 0, 0, 0) as *const EeWonContainer;
@@ -824,7 +815,7 @@ impl EeWonContainer {
             }
             self.draw(g, EE_WON_DRAW_TRANSLATE, [self.left(c), self.top(c), 0, 0]);
             if self.flag(c, FLAG_CLIP) {
-                let (w, h) = (self.op(Op::ChildWidth, c, 0, 0, 0) as i32, self.op(Op::ChildHeight, c, 0, 0, 0) as i32);
+                let (w, h) = (mem::width(c), mem::height(c));
                 self.draw(g, EE_WON_DRAW_PUSH_CLIP, [0, 0, w, h]);
             }
             let own = self.op(Op::CtOwnScheme, c, 0, 0, 0);
@@ -854,7 +845,7 @@ impl EeWonContainer {
             if c == changed {
                 break;
             }
-            if self.op(Op::CtIntersects, c, changed, 0, 0) != 0 && self.visible(c) {
+            if mem::intersects(c, changed) && self.visible(c) {
                 self.op(Op::ChildInvalidate, c, 0, 0, 0);
                 higher = true;
             }
@@ -1110,13 +1101,13 @@ impl EeWonContainer {
         let mut skip = false;
         let f = self.focus();
         if f != 0 {
-            current = self.op(Op::CtFocusId, f, 0, 0, 0) as u8;
+            current = mem::focus_id(f);
             self.child(f, V::LostFocus, 0, 0);
             self.st.borrow_mut().focus = 0;
             skip = true;
         }
         let children = self.children();
-        let ids: Vec<u8> = children.iter().map(|&c| self.op(Op::CtFocusId, c, 0, 0, 0) as u8).collect();
+        let ids: Vec<u8> = children.iter().map(|&c| mem::focus_id(c)).collect();
         if let Some(p) = guifocus::last_focus_child(current, skip, &ids) {
             self.child(children[p], V::RequestFocus, 0, 0);
         }
@@ -1203,12 +1194,7 @@ impl EeWonContainer {
 
     /// `ChildInvalidated`: the child's bounds through InvalidateIfRectVisible; false.
     pub fn vp_child_invalidated(&self, c: isize) -> bool {
-        let mut r = EeWonRect4 {
-            x: self.left(c),
-            y: self.top(c),
-            w: self.op(Op::ChildWidth, c, 0, 0, 0) as i32,
-            h: self.op(Op::ChildHeight, c, 0, 0, 0) as i32,
-        };
+        let mut r = EeWonRect4 { x: self.left(c), y: self.top(c), w: mem::width(c), h: mem::height(c) };
         self.vp_invalidate_if_rect_visible(&mut r);
         false
     }

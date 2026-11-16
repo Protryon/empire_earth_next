@@ -10,6 +10,7 @@ pub mod msg;
 pub mod node;
 pub mod rules;
 pub mod spec;
+pub mod tables;
 #[allow(clippy::needless_range_loop)]
 pub mod text;
 pub mod textrow;

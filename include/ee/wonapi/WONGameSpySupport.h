@@ -1,107 +1,53 @@
-// No original address identified: WON SDK GameSpySupport
+// WON SDK GameSpySupport over the GameSpy Query & Reporting SDK: whole in Rust (ee_won gamespy.rs EeWonGameSpy, net
+// round 28: the SDK's query socket, replies and heartbeats, the key-value maps, the auto pump, the service lookup);
+// this class holds it. GameSpySupport.cpp, GameSpySDK/gqueryreporting.c and GameSpySDK/nonport.c are deleted.
 #ifndef EE_WONAPI_WONGAMESPYSUPPORT_H
 #define EE_WONAPI_WONGAMESPYSUPPORT_H
-#include <time.h>
 #include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/GameSpySDK/gqueryreporting.h"
+#define EE_WON_GAMESPY_RUST 1 // (won_gamespy_test: the master server's host is set through the class)
 namespace WONAPI
 {
+enum GameSpyQueryType { GameSpyQueryType_Info = 1, GameSpyQueryType_Rules = 2, GameSpyQueryType_Players = 3 };
 
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-enum GameSpyQueryType
+class GameSpySupport : public RefCount
 {
-	GameSpyQueryType_Info		= 1,
-	GameSpyQueryType_Rules		= 2,
-	GameSpyQueryType_Players	= 3
-};
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-class GameSpySupport: public RefCount
-{
-protected:
-	qr_t	mQRInstance;					// out parameter from qr_init (identifies instance)
-
-	// Server information
-	IPAddr	mIP;					// qr_init
-
-	typedef std::map<std::string, std::string>	KeyValueMap;
-	KeyValueMap		mQueryMap[4];
-
-	std::string		mSecretKey;				// (Gamespy) Secret key for validation
-	bool			mStateChanged;			// has the mode changed since the last pump?
-	
-	bool			mInitialized;			// Has qr_init been called?
-
-	WONStatus	mStatus;			// WONStatus form of last error
-	int					mGameSpyStatus;		// Gamespy value for last error
-	unsigned long		mAutoPumpTime;		// Timeout for auto pump timer
-
-	AsyncOpPtr	mPumpTimerOp;
-	CriticalSection mDataCrit;
-
-	AsyncOpPtr mGetServiceOp;
-	SmartPtr<ServerContext> mDirServers;
-	bool mDisabled;
-	time_t mLastGetServiceTime;
-
-
-	void DumpKeyValueMapToBuffer(KeyValueMap &theMap, char* outbuf, unsigned int maxlen);
-
-	// Default Query Handlers
-	static void HandleQueryBasic  (char*,int,void*);	// does not call a user callback
-	static void HandleQueryInfo   (char*,int,void*);
-	static void HandleQueryRules  (char*,int,void*);
-	static void HandleQueryPlayers(char*,int,void*);
-	//static void HandleQueryStatus(char*,int,void*); // just calls all other queries
-
-	void	BeginAutoPump();
-	static void PumpTimerCompletion(AsyncOpPtr, SmartPtr<RefCount>); // Auto pumps completion signal
-
-	void LaunchGetServiceOp();
-	static void StaticGetServiceOpCompletion(AsyncOpPtr, SmartPtr<RefCount>);
-	void GetServiceOpCompletion(AsyncOp *theOp);
-
-	//GameSpyCallback		mStatusCallback;
 public:
-	GameSpySupport(const char* aGameName, const char* aGameVersion, const char* aSecretKey, ServerContext *theDirServers);
-
-	// Calls qr_init
-	WONStatus Startup(const IPAddr& ServAddr);
-	void	  Shutdown();	// sends status update with "gamemode" as "exiting"
-
-	// Error codes
-	WONStatus	GetStatus()			{ return this->mStatus;		 }
-	int					GetGameSpyStatus()  { return this->mGameSpyStatus; }
-
-	// Pump & Auto pump (calls process_queries)
-	void	Pump();
-	void	SetAutoPumpTime(unsigned long theMilliseconds);
-	bool	IsAutoPumping()	{ return ( this->mInitialized == true && this->mAutoPumpTime != 0); }
-
-	// Key Value accessors
-	void SetKeyValue(GameSpyQueryType theType, const char* theKey, const char* theValue);
-	const char* GetKeyValue(GameSpyQueryType theType, const char* theKey);
-	bool EraseKeyValue(GameSpyQueryType theType, const std::string &theKey);
-	void EraseAllKeyValues(GameSpyQueryType theType);
-
-	// Lock the KeyValues while doing multiple updates in order to
-	// ensure consistent data is being sent in query replies.
-	// Unlock when done modifying.
-	void LockKeyValues();
-	void UnlockKeyValues();
-
-	// Set the game state
-	void	SetGameMode(const char* aGameMode);
+    GameSpySupport(const char* aGameName, const char* aGameVersion, const char* aSecretKey, ServerContext* theDirServers)
+        : mRust(ee_won_gamespy_new(aGameName, aGameVersion, aSecretKey, static_cast<RefCount*>(this),
+                                   static_cast<RefCount*>(theDirServers), WonCore())) {}
+    WONStatus Startup(const IPAddr& ServAddr) // qr_init on the address's host string and port
+    {
+        std::string aHost = ServAddr.GetHostString(true);
+        return ee_won_gamespy_startup(mRust, reinterpret_cast<const uint8_t*>(aHost.data()), aHost.size(), ServAddr.GetPort());
+    }
+    void Shutdown() { this->Op(EE_WON_GAMESPY_SHUTDOWN); } // sends the "gamemode" "exiting" state change
+    WONStatus GetStatus() { return (WONStatus)this->Op(EE_WON_GAMESPY_STATUS); }
+    int GetGameSpyStatus() { return (int)this->Op(EE_WON_GAMESPY_GAMESPY_STATUS); }
+    void Pump() { this->Op(EE_WON_GAMESPY_PUMP); }
+    void SetAutoPumpTime(unsigned long theMilliseconds) { this->Op(EE_WON_GAMESPY_SET_AUTO_PUMP, theMilliseconds); }
+    bool IsAutoPumping() { return this->Op(EE_WON_GAMESPY_IS_AUTO_PUMPING) != 0; }
+    void SetKeyValue(GameSpyQueryType theType, const char* theKey, const char* theValue)
+    { ee_won_gamespy_set(mRust, theType, theKey, theValue); }
+    const char* GetKeyValue(GameSpyQueryType theType, const char* theKey) { return ee_won_gamespy_get(mRust, theType, theKey); }
+    bool EraseKeyValue(GameSpyQueryType theType, const std::string& theKey)
+    { return ee_won_gamespy_set(mRust, theType, theKey.c_str(), NULL); }
+    void EraseAllKeyValues(GameSpyQueryType theType) { this->Op(EE_WON_GAMESPY_ERASE_ALL, theType); }
+    // the key-value maps' lock held across several updates
+    void LockKeyValues() { this->Op(EE_WON_GAMESPY_LOCK); }
+    void UnlockKeyValues() { this->Op(EE_WON_GAMESPY_UNLOCK); }
+    void SetGameMode(const char* aGameMode) { ee_won_gamespy_set(mRust, 0, NULL, aGameMode); }
+    // the SDK's qr_hostname: the master server's host the next Startup resolves
+    static void SetMasterHost(const char* inHost) { ee_won_gamespy_set_master_host(inHost); }
 
 protected:
-	~GameSpySupport();
+    ~GameSpySupport() { ee_won_gamespy_free(mRust); }
+
+private:
+    long long Op(int inWhich, long long inNum = 0) { return ee_won_gamespy_op(mRust, inWhich, inNum); }
+    EeWonGameSpy* mRust; // owned
 };
 
-typedef SmartPtr<GameSpySupport>	GameSpySupportPtr;
-}; // namespace WONAPI
-
-
+typedef SmartPtr<GameSpySupport> GameSpySupportPtr;
+} // namespace WONAPI
 
 #endif

@@ -39,6 +39,18 @@ static const int kN = 14;
 static const int kContainer = 1;
 struct Box { int x, y, w, h, parent, refs; };
 static Box sW[kN + 1];
+
+// the Rust reads the components' members from compmem.rs's blocks: each read gets a block filled from the world
+static EeWonCompMembers sFillBlock;
+static EeWonCompMembers* FillBlock(intptr_t c)
+{
+    memset(&sFillBlock, 0, sizeof(sFillBlock));
+    if (c < 0 || c > kN) return &sFillBlock;
+    const Box& k = sW[c];
+    sFillBlock.bounds.x = k.x; sFillBlock.bounds.y = k.y; sFillBlock.bounds.width = k.w; sFillBlock.bounds.height = k.h;
+    sFillBlock.parent = k.parent;
+    return &sFillBlock;
+}
 static std::vector<std::string> sTrace;
 static std::set<std::string> sMet;
 static int sDepth;
@@ -717,6 +729,7 @@ static std::vector<std::string> RunSide(bool inRust, unsigned inSeq, int inCalls
 
 int main(int argc, char** argv)
 {
+    ee_won_comp_members_resolver(FillBlock);
     bool aPrint = argc > 1 && strcmp(argv[1], "--print") == 0;
     const int kSequences = 20000;
     const int kCalls = 40;

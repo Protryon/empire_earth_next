@@ -17,6 +17,7 @@ pub mod combo;
 pub mod comboobj;
 pub mod controlobj;
 pub mod controls_table;
+pub mod direct;
 pub mod draw;
 pub mod edit;
 pub mod edit_draw;
@@ -33,6 +34,7 @@ pub mod form;
 pub mod form_state;
 pub mod formobj;
 pub mod graph;
+pub mod graphobj;
 pub mod groupobj;
 pub mod hotkey;
 pub mod hotkeyobj;
@@ -61,11 +63,8 @@ pub mod text;
 pub mod variantobj;
 pub mod wrap;
 
-// imports the C++ graphs' texts, lines and draws (UIGraph.cpp, UILineGraph.cpp), absent from a test binary
-#[cfg(not(test))]
-mod graph_ffi;
 // imports the C++ candidate list's walk (UIIMECandidate.cpp), absent from a test binary
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "no_cpp")))]
 mod ime_ffi;
 // the hot keys' name and order (UIHotKey.cpp, UIForm.cpp)
 mod hotkey_ffi;
@@ -73,10 +72,10 @@ mod hotkey_ffi;
 mod draw_ffi;
 mod layout_ffi;
 // imports the C++ controls' and form's mouse calls (UIControl.cpp, UIForm.cpp), absent from a test binary
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "no_cpp")))]
 mod mouse_ffi;
 // imports the C++ string list's lines (UILBString.cpp), absent from a test binary
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "no_cpp")))]
 mod string_list_ffi;
 // imports the C++ scrolling label's members, timers and lines (UITLScrolling.cpp), absent from a test binary
 // imports the C++ text measuring (UITextLabel.cpp)

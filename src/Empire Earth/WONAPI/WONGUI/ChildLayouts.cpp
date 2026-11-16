@@ -27,11 +27,6 @@ static Component* Comp(intptr_t a) { return (Component*)a; }
 extern "C" intptr_t ee_won_guicpp_layout_call(void*, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t)
 {
     switch (op) {
-    case Op::ChildLeft: return Comp(a)->Left();
-    case Op::ChildTop: return Comp(a)->Top();
-    case Op::ChildWidth: return Comp(a)->Width();
-    case Op::ChildHeight: return Comp(a)->Height();
-    case Op::LayParentOf: return (intptr_t)static_cast<Component*>(Comp(a)->mParent);
     case Op::ChildSetPos: Comp(a)->SetPos((int)b, (int)c); return 0;
     case Op::ChildSetSize: Comp(a)->SetSize((int)b, (int)c); return 0;
     case Op::ChildSetPosSize: {

@@ -8,6 +8,7 @@
 #define EE_EEAMBIENTSOUND_H
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
+#include "rust/ee_app.h"
 
 class EESoundObject;
 class SESMInstanceNode;
@@ -29,16 +30,14 @@ struct EEAmbientSoundRecord {
 };
 static_assert(sizeof(EEAmbientSoundRecord) == 152, "on-disk record: 152 bytes on every target");
 
-class EEAmbientSound {
+// The plain members are EeAppAmbientSoundFields (rust/ee_app.h; ee_app ambient.rs: mSoundID, mSoundIndex, mProbability,
+// mVolume, mTargetVolume, mMaximumVolume, mStartVolume, mFadeUp, mFadeDown, mPan, mPitch, mF38, mF3C, mInterval (ms),
+// mNextTime, mIsLooping), the base; the fades, the play and the stop are Rust (EEAmbientSoundManager.cpp's host).
+class EEAmbientSound : public EeAppAmbientSoundFields {
 public:
     EEAmbientSound();
     virtual ~EEAmbientSound();
     void Init(const EEAmbientSoundRecord& inRecord);
-    void FadeIn();                          // 0x124c16 (fade up)
-    void FadeOut();                         // 0x124c46 (fade down)
-    bool LoadSound();                       // 0x124c72 (start: loads the sound object; whether there is one)
-    void PlayAtVolume(float inVolume);      // 0x124ca9 (plays/updates at inVolume; 0 or less stops)
-    void UnloadSound();
     // inline (COMDATs 0x1272c6.. in EEAmbientSoundManager.cpp)
     void ReleaseInstance()
     {
@@ -46,53 +45,9 @@ public:
             this->mInstance->Dereference();
         this->mInstance = NULL;
     }
-    void SetTargetVolume(float inVolume)
-    {
-        if (inVolume <= this->mMaximumVolume) {
-            if (inVolume < 0.0f)
-                inVolume = 0.0f;
-        } else
-            inVolume = this->mMaximumVolume;
-        this->mTargetVolume = inVolume;
-    }
-    void Stop()
-    {
-        if (this->mInstance != NULL) {
-            gSoundManager->Stop(this->mInstance, true);
-            this->ReleaseInstance();
-        }
-        this->mVolume = 0.0f;
-        this->mTargetVolume = 0.0f;
-    }
-    void UpdateFade()
-    {
-        if (this->mVolume != this->mTargetVolume) {
-            if (this->mVolume < this->mTargetVolume)
-                this->FadeIn();
-            else
-                this->FadeOut();
-        }
-    }
 
     EESoundObject* mSound;                  // +0x04 (its sample id is passed to SESoundManager::Play)
-    long mSoundID;                          // +0x08
     SESMInstanceNode* mInstance;            // +0x0c
-    long mSoundIndex;                       // +0x10
-    float mProbability;                     // +0x14
-    float mVolume;                          // +0x18
-    float mTargetVolume;                    // +0x1c
-    float mMaximumVolume;                   // +0x20
-    float mStartVolume;                     // +0x24
-    // +0x28..+0x3c floats (the ctor's fldz/fld1) (provisional names)
-    float mFadeUp;                          // +0x28 (record +0x78: FadeIn multiplies mVolume by it)
-    float mFadeDown;                        // +0x2c (record +0x7c: FadeOut)
-    float mPan;                             // +0x30 (0; PlayAtVolume's pan)
-    float mPitch;                           // +0x34 (1; PlayAtVolume's pitch)
-    float mF38;                             // +0x38 (0)
-    float mF3C;                             // +0x3c (1)
-    long mInterval;                         // +0x40 (ms)
-    long mNextTime;                         // +0x44
-    bool mIsLooping;                        // +0x48
 };
 
 #endif

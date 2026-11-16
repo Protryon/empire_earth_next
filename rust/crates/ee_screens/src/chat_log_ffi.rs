@@ -98,6 +98,17 @@ pub unsafe extern "C" fn ee_screens_chat_log_text(index: u32, which: u32, out: *
     text.len()
 }
 
+/// Entry `index`'s sender (`which` 0) or text (1); empty past the last.
+pub(crate) fn text(index: u32, which: u32) -> Vec<u8> {
+    let log = CHAT_LOG.lock().unwrap();
+    let Some(e) = log.entries.get(index as usize) else { return Vec::new() };
+    if which == 0 {
+        e.name.clone()
+    } else {
+        e.text.clone()
+    }
+}
+
 struct HostFile(*mut c_void);
 
 impl HostFile {

@@ -50,6 +50,17 @@ struct HostEvent {
     intptr_t comp;
 };
 static std::map<intptr_t, HostComp> sComps;
+
+// the Rust reads the components' members from compmem.rs's blocks: each read gets a block filled from the world
+static EeWonCompMembers sFillBlock;
+static EeWonCompMembers* FillBlock(intptr_t c)
+{
+    memset(&sFillBlock, 0, sizeof(sFillBlock));
+    if (sComps.count(c) == 0) return &sFillBlock;
+    const HostComp& k = sComps[c];
+    sFillBlock.bounds.x = k.x; sFillBlock.bounds.y = k.y; sFillBlock.bounds.width = k.w; sFillBlock.bounds.height = k.h;
+    return &sFillBlock;
+}
 static std::map<intptr_t, HostEvent> sEvents;
 static intptr_t sNextId;
 static int sWidth, sHeight;
@@ -534,6 +545,7 @@ static std::vector<std::string> RunSide(bool inRust, unsigned inSeq, int inCalls
 
 int main(int argc, char** argv)
 {
+    ee_won_comp_members_resolver(FillBlock);
     bool aPrint = argc > 1 && strcmp(argv[1], "--print") == 0;
     // the events a component object fires are the original enum's types
     CHECK(ee_won_gui_event_type(EeWonGuiEvent::Scroll) == WONAPI::ComponentEvent_Scroll);

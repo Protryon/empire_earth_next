@@ -14,7 +14,6 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONStatus.h"
-#include "ee/wonapi/WONDirExtended.h"
 namespace WONAPI {
 
 static void DirAssign(std::wstring& outText, const uint16_t* inUnits, size_t inCount)
@@ -72,6 +71,22 @@ static DirEntityPtr DirMakeEntity(const EeWonDirEntity* inEntity)
         anEntity->mACLs.push_back(acl);
     }
     return anEntity;
+}
+
+// an empty entity: no type, times, CRC or addresses (DirEntity.cpp is merged here: net round 29)
+DirEntity::DirEntity()
+    : mType(0), mLifespan(0), mCRC(0), mCreated(0), mCreateIP(0), mCreateId(0), mTouched(0), mTouchIP(0), mTouchId(0),
+      mReqUnique(false)
+{
+}
+DirEntity::~DirEntity() {}
+// Returns the service's network address as an IP address and port (empty when shorter than 6 bytes; 2f0400)
+IPAddr DirEntity::GetNetAddrAsIP() const
+{
+    IPAddr result;
+    if (this->mNetAddr.get() != NULL && this->mNetAddr->length() >= 6)
+        result.SetSixByte(this->mNetAddr->data());
+    return result;
 }
 
 // No original address identified: the parsers' entity sink, for the Rust ops' results

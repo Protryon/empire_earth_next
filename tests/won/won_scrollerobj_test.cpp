@@ -48,6 +48,17 @@ struct HostComp {
 };
 static const intptr_t kScroller = 0x54;
 static std::map<intptr_t, HostComp> sComps;
+
+// the Rust reads the components' members from compmem.rs's blocks: each read gets a block filled from the world
+static EeWonCompMembers sFillBlock;
+static EeWonCompMembers* FillBlock(intptr_t c)
+{
+    memset(&sFillBlock, 0, sizeof(sFillBlock));
+    if (sComps.count(c) == 0) return &sFillBlock;
+    const HostComp& k = sComps[c];
+    sFillBlock.bounds.x = k.x; sFillBlock.bounds.y = k.y; sFillBlock.bounds.width = k.w; sFillBlock.bounds.height = k.h;
+    return &sFillBlock;
+}
 static std::map<intptr_t, std::map<int, int> > sAreas; // the scroll areas' fields by EeWonGuiField
 static std::map<intptr_t, intptr_t> sAreaScroller;
 static std::map<intptr_t, EeWonScrollbar*> sBars;
@@ -526,6 +537,7 @@ static std::vector<std::string> RunSide(bool inRust, unsigned inSeq, int inCalls
 
 int main(int argc, char** argv)
 {
+    ee_won_comp_members_resolver(FillBlock);
     bool aPrint = argc > 1 && strcmp(argv[1], "--print") == 0;
     const int kSequences = 20000;
     const int kCallsPer = aPrint ? 16 : 40;

@@ -28,59 +28,6 @@ bool ImageConfig::GetNamedValue(const std::string& inName,int& outValue)
 }
 
 
-// Reads a filter spec (SCALEPERCENT, SCALEABS, TINT, CROP, PIXELTRANS) and returns the filtered copy of
-// the raw image; an empty pointer for an unknown filter name
-SmartPtr<RawImage> ImageFilterConfig::HandleFilter()
-{
-    SmartPtr<ImageFilter> filter;
-    GUIString name=this->ReadString(false);
-    this->EnsureComma();
-    const int aNameIdx_name=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_IMAGEFILTERCONFIG_HANDLEFILTER_NAME,name.mData->mText,name.mData->mLength,sizeof(wchar_t));
-    if(aNameIdx_name==0)
-    {
-        int width=this->ReadInt(),height=width;
-        if(!this->EndOfString())
-        {
-            this->EnsureComma();
-            height=this->ReadInt();
-        }
-        SmartPtr<ScaleImageFilter> scale=new ScaleImageFilter(0);
-        scale->SetPercentSize(width,height);
-        filter=scale.get();
-    }
-    else if(aNameIdx_name==1)
-    {
-        int width=this->ReadInt();
-        this->EnsureComma();
-        int height=this->ReadInt();
-        filter=new ScaleImageFilter(width,height);
-    }
-    else if(aNameIdx_name==2)
-    {
-        int red=this->ReadInt();
-        this->EnsureComma();
-        int green=this->ReadInt();
-        this->EnsureComma();
-        int blue=this->ReadInt();
-        filter=new TintImageFilter(red,green,blue);
-    }
-    else if(aNameIdx_name==3)
-    {
-        int x=this->ReadInt();
-        this->EnsureComma();
-        int y=this->ReadInt();
-        this->EnsureComma();
-        int width=this->ReadInt();
-        this->EnsureComma();
-        int height=this->ReadInt();
-        filter=new CropImageFilter(x,y,width,height);
-    }
-    else if(aNameIdx_name==4)
-        filter=new TransparentImageFilter(this->ReadColor());
-    if(filter.get()!=NULL) return filter->Filter(this->mRawImage.get());
-    return SmartPtr<RawImage>();
-}
-
 // Sets the raw image (also as the current image) and marks the native image as not yet built
 void ImageFilterConfig::SetRawImage(RawImage* inImage)
 {
@@ -89,48 +36,8 @@ void ImageFilterConfig::SetRawImage(RawImage* inImage)
     this->mImageIsRawImage=true;
 }
 
-// Handles the image filter keys SRC, FILTER, DUPLICATE, MULTIHORZCROP (splits the image into numbered
-// horizontal crops added to the parent) and EXPORT; passes other keys to the image configuration
-bool ImageFilterConfig::Virtual24(const std::string& inInstruction)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGEFILTERCONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
-    SmartPtr<RawImage> anImage;
-    if(aKeyIdx==0) this->SetRawImage(this->ReadRawImage().get());
-    else if(aKeyIdx==1) this->SetRawImage(this->HandleFilter().get());
-    else if(aKeyIdx==2)
-        this->SetRawImage(static_cast<RawImage*>(this->mRawImage->Duplicate().get()));
-    else if(aKeyIdx==3)
-    {
-        int count=this->ReadInt();
-        this->EnsureComma();
-        std::string prefix=this->ReadString(false);
-        int width=this->mRawImage->GetWidth()/count;
-        SmartPtr<CropImageFilter> crop=new CropImageFilter;
-        crop->SetSize(width,this->mRawImage->GetHeight());
-        for(int i=0;i<count;i++)
-        {
-            crop->SetPos(i*width,0);
-            SmartPtr<RawImage> image=crop->Filter(this->mRawImage.get());
-            char name[512];
-            sprintf(name,"%s%d",prefix.c_str(),i+1);
-            SmartPtr<ImageFilterConfig> config=new ImageFilterConfig;
-            config->SetRawImage(image.get());
-            ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
-            parent->AddChildToConfigMap(GUIString(name),config.get());
-        }
-    }
-    else if(aKeyIdx==4)
-    {
-        GUIString name=this->ReadString(false);
-        this->EnsureComma();
-        SmartPtr<ImageFilterConfig> config=new ImageFilterConfig;
-        config->SetRawImage(this->HandleFilter().get());
-        ComponentConfig* parent=static_cast<ComponentConfig*>(this->GetParentObject());
-        parent->AddChildToConfigMap(name,config.get());
-    }
-    else return ImageConfig::Virtual24(inInstruction);
-    return true;
-}
+// R6 WON round 41: ImageFilterConfig's instructions (SRC, FILTER and HandleFilter's filters, DUPLICATE,
+// MULTIHORZCROP, EXPORT) are programs of ee_won's table reader (cfgtab.rs, cfgimg.rs) over WONCfgTable.inl.
 
 // Returns the image, first converting a pending raw image to a native one on the default window
 Image* ImageFilterConfig::GetImage()

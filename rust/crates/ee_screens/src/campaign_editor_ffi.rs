@@ -10,21 +10,22 @@ use crate::scenario_screens_ffi::ee_screenscpp_form;
 /// original's event held that form; a posted event gets none).
 pub(crate) fn dispatch(host: &mut Form, event: u32) -> Option<c_long> {
     if event == EE_SCREENS_CE_SAVE_CONTINUED {
-        let mut editor = Form(unsafe { ee_screenscpp_form(24) }, host.1);
+        let mut editor = Form(ee_screenscpp_form(24), host.1);
         return crate::campaign_editor::dispatch(&mut editor, event);
     }
     crate::campaign_editor::dispatch(host, event)
 }
 
 impl CampaignEditorHost for Form {
+    // the model's ops are Rust's (campaign_model.rs); the rest the C++ host's
     fn call(&mut self, op: u32, a: u32, b: u32, c: u32) -> u32 {
-        self.op(op, a, b, c, 0)
+        crate::campaign_model_ffi::call(self, op, a, b).unwrap_or_else(|| self.op(op, a, b, c, 0))
     }
     fn text(&mut self, which: u32, arg: u32) -> Vec<u8> {
-        self.get(which, arg)
+        crate::campaign_model_ffi::text(which, arg).unwrap_or_else(|| self.get(which, arg))
     }
     fn put_text(&mut self, which: u32, arg: u32, text: &[u8]) -> u32 {
-        self.put(which, arg, text)
+        crate::campaign_model_ffi::put(which, arg, text).unwrap_or_else(|| self.put(which, arg, text))
     }
 }
 

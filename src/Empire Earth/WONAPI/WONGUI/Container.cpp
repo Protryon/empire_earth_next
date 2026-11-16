@@ -133,13 +133,6 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
     case Op::CtCursorHold: ((Cursor*)a)->AddRef(); return 0;
     case Op::CtCursorRelease: ((Cursor*)a)->Release(); return 0;
     case Op::CtSetScheme: ((Graphics*)a)->mColorScheme = (ColorScheme*)b; return 0;
-    case Op::CtBits: return (uint32_t)Comp(a)->mComponentBits;
-    case Op::CtParentOf: return (intptr_t)static_cast<Component*>(Comp(a)->mParent);
-    case Op::CtTimerFlags: return Comp(a)->mTimerFlags;
-    case Op::CtInvalidState: return Comp(a)->mInvalidState;
-    case Op::CtFocusId: return Comp(a)->mFocusId;
-    case Op::CtContains: return Comp(a)->Contains((int)b, (int)c) ? 1 : 0;
-    case Op::CtIntersects: return Comp(a)->Intersects(Comp(b)) ? 1 : 0;
     case Op::CtGrabBG: return (intptr_t)Comp(a)->GetGrabBG();
     case Op::CtOwnScheme: return (intptr_t)Comp(a)->GetOwnColorScheme();
     case Op::CtScheme: return (intptr_t)((Graphics*)a)->mColorScheme;
@@ -161,23 +154,13 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
     }
     case Op::ChildHold: Comp(a)->AddRef(); return 0;
     case Op::ChildRelease: Comp(a)->Release(); return 0;
-    case Op::ChildLeft: return Comp(a)->Left();
-    case Op::ChildTop: return Comp(a)->Top();
-    case Op::ChildWidth: return Comp(a)->Width();
-    case Op::ChildHeight: return Comp(a)->Height();
     case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
     case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
-    case Op::ChildControlId: return Comp(a)->mControlId;
     case Op::Invalidate: t->Invalidate(); return 0;
     case Op::RequestFocus: t->RequestFocus(); return 0;
     case Op::GetMousePos: t->GetMousePos(*(int*)a, *(int*)b); return 0;
     case Op::KeyMod: return t->GetKeyMod();
-    case Op::Draw: {
-        WONDrawSlots aSlots;
-        WONDrawNoCall aNoCall;
-        WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
-        return 0;
-    }
+    case Op::Draw: WONDrawPlain(*(Graphics*)a, *(const EeWonDrawOp*)b); return 0;
     default: return 0;
     }
 }

@@ -3,8 +3,6 @@
 // EEUIFileComboBox's ctor at 0x2624a6). Unit flags: the exe module set. The colours, constants and button members
 // have provisional names.
 #include <windows.h>
-#include <mbstring.h>
-#include <algorithm>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureManager.h"
@@ -29,8 +27,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIBGenericBackground.h"
 #include "ee/EEUIFError.h"
-#include "ee/EEStringIDs.h"
-#include "lle/UILayoutUtility.h"
 #include "rust/ee_screens.h"   // ee_screens_dialog_show, _open, _construct (ee_screens dialog.rs)
 static const float kMessageButtonOpacity = 0.4f;
 static const GEColor kMessageButtonColor(1.0f, 1.0f, 1.0f);

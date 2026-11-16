@@ -492,3 +492,79 @@ fn counts_past_the_arrays_read_into_a_scratch_word() {
     // the free-unit counter's word on (0xe8 reads none)
     assert_eq!(h.input.len(), 13);
 }
+
+/// A unit's load and save: a file of words, the class fit, the calls made.
+#[derive(Default)]
+struct UnitIo {
+    words: VecDeque<i64>,
+    out: Vec<i64>,
+    fits: bool,
+    kind: (i64, bool, bool),
+    log: Vec<(i32, i64, u8)>,
+}
+
+impl PlayerSaveHost for UnitIo {
+    fn call(&mut self, op: i32, _index: u32, io: &mut EeUnitsPlayerSaveIo) -> i32 {
+        match op {
+            EE_UNITS_PLAYER_SAVE_READ_ULONG | EE_UNITS_PLAYER_SAVE_READ_BOOL => {
+                let Some(w) = self.words.pop_front() else { return 5 };
+                if op == EE_UNITS_PLAYER_SAVE_READ_ULONG {
+                    io.i = w;
+                } else {
+                    io.b = w as u8;
+                }
+                0
+            }
+            EE_UNITS_PLAYER_SAVE_WRITE_ULONG => {
+                self.out.push(io.i);
+                0
+            }
+            EE_UNITS_PLAYER_SAVE_WRITE_BOOL => {
+                self.out.push(i64::from(io.b));
+                0
+            }
+            EE_UNITS_PLAYER_SAVE_UNIT_FITS => i32::from(self.fits),
+            EE_UNITS_PLAYER_SAVE_UNIT_KIND => {
+                io.i = self.kind.0;
+                io.b = u8::from(self.kind.1);
+                i32::from(self.kind.2)
+            }
+            _ => {
+                self.log.push((op, io.i, io.b));
+                7
+            }
+        }
+    }
+}
+
+#[test]
+fn a_unit_loads_into_its_class_or_a_stand_in_and_from_0_223_after_its_saved_flag() {
+    let mut h = UnitIo { words: VecDeque::from([42, 1, 1]), fits: true, ..Default::default() };
+    assert_eq!(load_unit(&mut h, 0, 0xe0), 7);
+    assert_eq!(h.log, [(EE_UNITS_PLAYER_SAVE_UNIT_LOAD, 42, 1)]);
+    // not saved: nothing more read
+    let mut h = UnitIo { words: VecDeque::from([42, 0, 1]), ..Default::default() };
+    assert_eq!(load_unit(&mut h, 0, 0xe0), 0);
+    assert!(h.log.is_empty() && h.words.len() == 1);
+    // before 0.223 no flag: the kind follows the type; a class that does not fit loads a stand-in
+    let mut h = UnitIo { words: VecDeque::from([42, 0]), ..Default::default() };
+    load_unit(&mut h, 0, 0xde);
+    assert_eq!(h.log, [(EE_UNITS_PLAYER_SAVE_UNIT_STANDIN, 42, 0)]);
+    // a short file: the read's error
+    let mut h = UnitIo { words: VecDeque::from([42]), ..Default::default() };
+    assert_eq!(load_unit(&mut h, 0, 0xe0), 5);
+}
+
+#[test]
+fn a_path_point_is_saved_as_its_type_only_before_the_live_state() {
+    let mut h = UnitIo { kind: (5, false, true), ..Default::default() };
+    assert_eq!(save_unit(&mut h, 0, 0xe0), 7);
+    assert_eq!(h.out, [5, 1, 1]);
+    let mut h = UnitIo { kind: (9, true, false), ..Default::default() };
+    assert_eq!(save_unit(&mut h, 0, 0xe0), 0);
+    assert_eq!(h.out, [9, 0]);
+    assert!(h.log.is_empty());
+    let mut h = UnitIo { kind: (9, true, false), ..Default::default() };
+    save_unit(&mut h, 0, 0x110);
+    assert_eq!(h.out, [9, 1, 0]);
+}

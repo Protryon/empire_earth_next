@@ -14,34 +14,34 @@ STRUCT_SOURCES = {
     'EEMusicRecord': 'src/Empire Earth/Data Pre-Loading Thread/EEMusicObject.cpp',
     'EEWorldTableEntry': 'include/ee/EEDatabaseTables.h',
     'EEDamageTableRecord': 'src/Empire Earth/Database/EETerrainTypeTable.cpp',
-    'EETerrainTypeRecord': 'src/Empire Earth/Database/EETerrainTypeTable.cpp',
+    'EETerrainTypeRecord': 'rust/crates/ee_data/src/tables.rs',
     'EEButtonRecord': 'src/Empire Earth/Database/EEButtonObject.cpp',
     'EETechTreeRecord': 'include/ee/EETechTreeRecord.h',
     'EEEventEffect': 'include/ee/EEEvent.h',
-    'EEAnimalRecord': 'src/Empire Earth/Database/EEAnimal.cpp',
-    'EEColorTableRecord': 'src/Empire Earth/Database/EEColorTable.cpp',
-    'EEAIUnitTargetingRecord': 'src/Empire Earth/Database/EEAIUnitTargetingTable.cpp',
+    'EEAnimalRecord': 'rust/crates/ee_data/src/tables.rs',
+    'EEColorTableRecord': 'rust/crates/ee_data/src/tables.rs',
+    'EEAIUnitTargetingRecord': 'rust/crates/ee_data/src/tables.rs',
     'EETerrainRecord': 'src/Empire Earth/Database/EETerrainTable.cpp',
     'EECliffTerrainRecord': 'src/Empire Earth/Database/EETerrainTable.cpp',
     'EECivPower': 'include/ee/EECivPowersManager.h',
     'EECivilizationCategoryEntry': 'include/ee/EECivilizationManager.h',
     'EECivilizationEntry': 'include/ee/EECivilizationManager.h',
-    'EEToHitRecord': 'src/Empire Earth/Database/EEUnitBehavior.cpp',
-    'EEUnitBehaviorRecord': 'src/Empire Earth/Database/EEUnitBehavior.cpp',
+    'EEToHitRecord': 'rust/crates/ee_data/src/tables.rs',
+    'EEUnitBehaviorRecord': 'rust/crates/ee_data/src/tables.rs',
     'EECalamityData': 'include/ee/EECalamityClass.h',
     'EEUnitSetRecord': 'src/Empire Earth/Empire Earth/EEUnitSetManager.cpp',
     'EEAreaEffectData': 'include/ee/EEAreaEffectTemplate.h',
-    'EEUCUpgradeRecord': 'src/Empire Earth/Database/EEUCUpgradeTable.cpp',
+    'EEUCUpgradeRecord': 'rust/crates/ee_data/src/tables.rs',
     'EECPBehavior': 'include/ee/EECPBehavior.h',
-    'EEGameVariantData': 'include/ee/EEGameVariant.h',
-    'EEStartingResourcesRecord': 'src/Empire Earth/Database/EEStartingResources.cpp',
+    'EEGameVariantData': 'rust/crates/ee_data/src/tables.rs',
+    'EEStartingResourcesRecord': 'rust/crates/ee_data/src/tables.rs',
     'EEAmbientSoundRecord': 'include/ee/EEAmbientSound.h',
-    'UIDbControl': 'src/Low-Level Engine/User Interface/UIControlsTable.cpp',
-    'UIDbDataBackgrounds': 'include/lle/UIBackgroundTable.h',
+    'UIDbControl': 'rust/crates/ee_ui/src/controls_table.rs',
+    'UIDbDataBackgrounds': 'rust/crates/ee_ui/src/background_table.rs',
     'UIDbDataForms': 'include/lle/UIForm.h',
-    'UIDbDataEvents': 'src/Low-Level Engine/User Interface/UIEvent.cpp',
-    'UIDbDataFonts': 'src/Low-Level Engine/User Interface/UIFontTable.cpp',
-    'UIDbDataHotKeys': 'src/Low-Level Engine/User Interface/UIHotKey.cpp',
+    'UIDbDataEvents': 'rust/crates/ee_ui/src/event.rs',
+    'UIDbDataFonts': 'rust/crates/ee_ui/src/font.rs',
+    'UIDbDataHotKeys': 'rust/crates/ee_ui/src/hotkey.rs',
     'EERandomMapRecord': 'include/ee/EEDatabaseTables.h',
     'EETerrainGrayTextureRecord': 'include/ee/EEDatabaseTables.h',
 }
@@ -51,9 +51,29 @@ STRUCT_SOURCES = {
 # data (a later feature may read them). census.py does not ask these fields for a reader.
 UNREAD_TABLES = {'dbrandommap', 'dbterraingraytextures'}
 
-# Sizes for the two structs whose source states the size in a comment instead of a static_assert
-# (EEUnitClassRecord.h: "EEDbObject::mRecord, 0x7a8 bytes"; UIControlsTable.cpp: "0x35c bytes each").
-COMMENT_SIZES = {'EEUnitClassRecord': 0x7a8, 'UIDbControl': 0x35c}
+# Records whose definition is Rust (the record's name -> the `#[repr(C)]` struct in its STRUCT_SOURCES file): specgen
+# reads the Rust struct (field names to mCamelCase, `id` as ID; a scalar u8 is a one-byte bool, a u8/c_char array
+# char[N]) and its `assert!(size_of::<T>() == N)`.
+RUST_STRUCTS = {
+    'EEAnimalRecord': 'DbAnimal',
+    'EEToHitRecord': 'DbToHit',
+    'EEUnitBehaviorRecord': 'DbUnitBehavior',
+    'EEStartingResourcesRecord': 'DbStartingResources',
+    'EEUCUpgradeRecord': 'DbUpgrade',
+    'EEColorTableRecord': 'DbColor',
+    'EEAIUnitTargetingRecord': 'DbAiTargeting',
+    'EETerrainTypeRecord': 'DbTerrainType',
+    'EEGameVariantData': 'DbGameVariant',
+    'UIDbControl': 'DbControl',
+    'UIDbDataBackgrounds': 'DbBackground',
+    'UIDbDataEvents': 'DbEvent',
+    'UIDbDataFonts': 'DbFont',
+    'UIDbDataHotKeys': 'DbHotKey',
+}
+
+# Sizes for the struct whose source states the size in a comment instead of a static_assert
+# (EEUnitClassRecord.h: "EEDbObject::mRecord, 0x7a8 bytes").
+COMMENT_SIZES = {'EEUnitClassRecord': 0x7a8}
 
 # Records with no source struct (loaded field by field). Fields: (name, type, count, class).
 VIRTUAL_STRUCTS = {
