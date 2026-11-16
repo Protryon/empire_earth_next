@@ -3930,6 +3930,88 @@ local function pool_step(view, memory)
     end
 end
 
+-- New (AI_RESEARCH 8.93): the raids. With the C++ attack commander gone (AI_RESEARCH 8.90) the pool's soldiers stayed
+-- home, and the enemy's economy lost the raids the commander's continent groups made of the classic's free soldiers.
+-- A raid is a lib.groups raid (the enemy's gatherers and fishing boats away from its known towers, soldiers only
+-- near, home when the seen soldiers and towers there are 1.5 times its strength) made of the pool's soldiers: from
+-- the Stone Age and RAID.start, when the pool holds RAID.min, all but RAID.keep of them (RAID.max at most) go at the
+-- nearest enemy with a known town on its land, at its gather spots as last seen (lib.groups note_spots). The raid
+-- is over when it fled, has nowhere left to go, is down to a third or has been out RAID.out_ms; its soldiers go
+-- back to the engine and the pool takes them in again. The next raid after RAID.gap_ms. Unit-level commands only
+-- (lib.groups: ai.move, ai.attack).
+M.RAID = {start = 20 * 60000, min = 16, max = 40, keep = 2, gap_ms = 60000, out_ms = 420000, check_ms = 5000,
+          task = "raid"}
+
+local RAID_ROUTE_AVOID = 8   -- (lib.raid's)
+local SPOTS_MS = 2000   -- the gather spots noted every 2 s (one ai.seen over the enemies' citizens and boats)
+
+local function raid_target(view)
+    local best, bd
+    for _, e in ipairs(view.enemies or {}) do
+        -- (on its land only: the raid walks)
+        if e.town_x ~= nil and e.town_x >= 0 and ai.reach(view.town_x, view.town_y, e.town_x, e.town_y) then
+            local d = d2(e.town_x, e.town_y, view.town_x, view.town_y)
+            if bd == nil or d < bd or (d == bd and e.player < best.player) then
+                best, bd = e, d
+            end
+        end
+    end
+    return best
+end
+
+local function raid_step(view, memory)
+    local a = army(memory)
+    local o = M.RAID
+    if o.min <= 0 or view.town_x < 0 then
+        return
+    end
+    if view.time - (a.spots_t or 0) >= SPOTS_MS then
+        a.spots_t = view.time
+        G.note_spots(a)
+    end
+    if view.time - (a.raid_t or 0) < o.check_ms then
+        return
+    end
+    a.raid_t = view.time
+    local g = G.role(a, "raid")
+    if g ~= nil then
+        local alive = #g.units
+        local over = g.task ~= o.task or g.state == "arrived" or alive * 3 < (g.raid_n or 0)
+            or view.time - (g.raid_sent or 0) >= o.out_ms
+        if over then
+            print(string.format("classic_lua army.raid done ms=%d sent=%d back=%d why=%s", view.time - (g.raid_sent or 0),
+                g.raid_n or 0, alive, g.task ~= o.task and "fled" or (g.state == "arrived" and "nowhere"
+                or (alive * 3 < (g.raid_n or 0) and "spent" or "time"))))
+            G.disband(a, g)
+            a.next_raid = view.time + o.gap_ms
+        end
+        return
+    end
+    if view.epoch < 1 or view.time < o.start or view.time < (a.next_raid or 0) then
+        return
+    end
+    local pool = G.role(a, "pool")
+    if pool == nil or #pool.units < o.min then
+        return
+    end
+    local e = raid_target(view)
+    if e == nil then
+        return
+    end
+    local n = math.min(o.max, #pool.units - o.keep)
+    local ids = {}
+    for k = 1, n do
+        ids[k] = pool.units[k]
+    end
+    g = G.create(a, {task = o.task, role = "raid", target = e.player, x = -1, y = -1, home_x = view.town_x,
+                     home_y = view.town_y})
+    G.add(a, g, ids)
+    g.route, g.route_avoid = true, RAID_ROUTE_AVOID   -- (lib.groups: the legs by ai.route round the known towers)
+    g.raid_n, g.raid_sent = #ids, view.time
+    print(string.format("classic_lua army.raid sent=%d enemy=%d town=%d,%d pool=%d", #ids, e.player, e.town_x,
+        e.town_y, #pool.units))
+end
+
 -- explore.lua's draft with lib.tactics POOL: a pool soldier of the class, out of the pool (nil: none)
 function M.pool_take(memory, class)
     local set = pool_set(memory)
@@ -3961,6 +4043,7 @@ function M.step(view, memory)
     local a = army(memory)
     G.init(a)
     pool_step(view, memory)
+    raid_step(view, memory)
     if memory.t.deathmatch and not a.built_up then
         a.built_up = true
         for _ = 1, 3 do
