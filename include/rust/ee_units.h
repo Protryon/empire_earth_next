@@ -2364,6 +2364,57 @@ constexpr static const uint8_t GOAL_CAST_CALAMITY = 11;
 /// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_PATH_POINT = 223;
 
+/// unit `a` into `unit`
+constexpr static const int32_t EE_UNITS_SIGHT_UNIT = 1;
+
+/// `gSightUpdatesEnabled`
+constexpr static const int32_t EE_UNITS_SIGHT_ENABLED = 2;
+
+/// unit `a`'s `IsFoundation()`
+constexpr static const int32_t EE_UNITS_SIGHT_FOUNDATION = 3;
+
+/// unit `a`'s `AddCenterOffset(f[0], f[1])`
+constexpr static const int32_t EE_UNITS_SIGHT_CENTER = 4;
+
+/// `gWorld.GetCurrentPlayer()`
+constexpr static const int32_t EE_UNITS_SIGHT_CURRENT = 5;
+
+/// player `a`'s `mSharedLOS`
+constexpr static const int32_t EE_UNITS_SIGHT_SHARED_LOS = 6;
+
+/// player `a`'s `IsAlliedWith(b)`
+constexpr static const int32_t EE_UNITS_SIGHT_ALLIED = 7;
+
+/// player `a`'s `mSightSharers.size()`
+constexpr static const int32_t EE_UNITS_SIGHT_SHARERS = 8;
+
+/// player `a`'s `mSightSharers[c]`
+constexpr static const int32_t EE_UNITS_SIGHT_SHARER = 9;
+
+/// `EEAddSightCircle` (`on`) / `EERemoveSightCircle(f[0], f[1], f[2], player a)`
+constexpr static const int32_t EE_UNITS_SIGHT_CIRCLE = 10;
+
+/// `gWorld.mMap->GetTile(c, d)`
+constexpr static const int32_t EE_UNITS_SIGHT_TILE = 11;
+
+/// tile `a`'s `AddSight` (`on`) / `RemoveSight(player b)`
+constexpr static const int32_t EE_UNITS_SIGHT_TILE_SIGHT = 12;
+
+/// player `a`'s `AddSharedSight(tile b, c, d)` (`on`) / `RemoveSharedSight(tile b)`
+constexpr static const int32_t EE_UNITS_SIGHT_SHARED = 13;
+
+/// `gMiniMap->CountCellOn/Off(c, d)`, the terrain mesh's `ReferenceTile/DereferenceTile(c, d)`
+constexpr static const int32_t EE_UNITS_SIGHT_SHOW = 14;
+
+/// `gWorld.mMap->AddSight/RemoveSight(player a, f[0], f[1], the wonder sight radius, false)`
+constexpr static const int32_t EE_UNITS_SIGHT_WONDER = 15;
+
+/// `gWorld.mNumPlayers`
+constexpr static const int32_t EE_UNITS_SIGHT_NUM_PLAYERS = 16;
+
+/// `gWorld.mPlayers[c]`
+constexpr static const int32_t EE_UNITS_SIGHT_PLAYER = 17;
+
 /// The kinds of countdown (`ee_units_step_countdown`'s `which`).
 constexpr static const uint32_t EE_UNITS_STEP_RELOAD = 1;
 
@@ -4448,6 +4499,25 @@ struct EeUnitsScriptReader {
   bool (*read)(void*, const uint8_t*, size_t, void*);
 };
 
+/// A unit as the body reads it.
+struct EeUnitsSightUnit {
+  /// `GetLineOfSight()`
+  float line_of_sight;
+  /// `mPlayer`
+  uint64_t player;
+  /// the player's `mSaveVisMap`
+  uint8_t save_vis_map;
+  int32_t hit_points;
+  uint8_t is_built;
+  /// the class's `IsLandBuilding()`; the unit's `IsFoundation()` (asked only of a land building)
+  uint8_t land_building;
+  int32_t tile_size;
+  /// the class's `mWonderBonus`
+  int32_t wonder_bonus;
+  /// `GetTechTreeNode()->mData->mKind` (-1: no node)
+  int32_t node_kind;
+};
+
 /// What `RegeneratePower` reads besides the unit's record: the unit's stats (`mStats->mPowerRegeneration`,
 /// `->mPower`), the world's cinematic flag, the rules' interval and the tick.
 struct EeUnitsPowerIn {
@@ -6265,6 +6335,18 @@ int32_t ee_units_script_action_id(const char *name);
 
 /// The NUL-terminated name of an action id ("" unknown), static.
 const char *ee_units_script_action_name(uint32_t id);
+
+extern int64_t ee_units_sight_host(int32_t op,
+                                   uint8_t on,
+                                   uint64_t a,
+                                   uint64_t b,
+                                   int64_t c,
+                                   int64_t d,
+                                   float (*f)[3],
+                                   EeUnitsSightUnit *unit);
+
+/// `EEComplexUnit::SightOn(x, y)` (`on` 1) and `SightOff(x, y)` (0) of unit `unit`.
+void ee_units_sight(uint64_t unit, uint32_t x, uint32_t y, uint8_t on);
 
 /// `Init`'s copies before `Reapply` ([`init`]).
 ///

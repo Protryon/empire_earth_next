@@ -76,6 +76,8 @@ pub mod rts_player_save;
 pub mod rust_goal;
 pub mod script;
 pub mod select;
+pub mod sight;
+pub mod sight_host;
 pub mod stats;
 pub mod step;
 pub mod store;

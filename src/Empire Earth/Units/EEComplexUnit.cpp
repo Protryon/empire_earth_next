@@ -1010,98 +1010,11 @@ void EEComplexUnit::UpdateWaterState(bool inArg)
         this->mWaterState = 0;
 }
 
-// Adds the unit's sight at a tile for its player, sight sharers and allies, revealing it on the minimap
+// Adds the unit's sight at a tile for its player, sight sharers and allies, revealing it on the minimap (ee_units
+// sight.rs over ee_units_sight_host)
 void EEComplexUnit::SightOn(unsigned long inX, unsigned long inY)
 {
-    EEPlayer* thePlayer = this->mPlayer;
-    GETerrainMesh* theMesh = &::gWorld.mMap->mTerrainMesh;
-    if (!(this->GetLineOfSight() > 0.0f) || thePlayer == NULL || !thePlayer->mSaveVisMap || inX == (unsigned long)-10000 || !gSightUpdatesEnabled)
-        return;
-    float theX = (float)(long)inX;
-    float theY = (float)(long)inY;
-    this->AddCenterOffset(theX, theY);
-    if (this->GetUnitClass()->IsLandBuilding() && this->IsFoundation())
-        return;
-    if (this->mHitPoints > 0 && this->mIsBuilt) {
-        EEAddSightCircle(theX, theY, this->GetLineOfSight(), thePlayer);
-        if (this->GetUnitClass()->IsLandBuilding() == true) {
-            for (unsigned long i = 0; i < thePlayer->mSightSharers.size(); i++) {
-                bool theVisible = ::gWorld.GetCurrentPlayer() == thePlayer->mSightSharers[i] &&
-                    ::gWorld.GetCurrentPlayer()->mSharedLOS && (thePlayer->mSightSharers[i])->mSharedLOS;
-                if (this->GetUnitClass()->mTileSize <= 1) {
-                    EEMapTile* theTile = ::gWorld.mMap->GetTile(inX, inY);
-                    if (theTile != NULL) {
-                        theTile->AddSight((thePlayer->mSightSharers[i]));
-                        if (theVisible) {
-                            gMiniMap->CountCellOn(inX, inY);
-                            theMesh->ReferenceTile(inX, inY);
-                        }
-                    }
-                } else {
-                    for (long x = inX; x < (long)(inX + this->GetUnitClass()->mTileSize); x++) {
-                        for (long y = inY; y < (long)(inY + this->GetUnitClass()->mTileSize); y++) {
-                            EEMapTile* theTile = ::gWorld.mMap->GetTile(x, y);
-                            if (theTile == NULL)
-                                continue;
-                            theTile->AddSight((thePlayer->mSightSharers[i]));
-                            if (theVisible) {
-                                gMiniMap->CountCellOn(x, y);
-                                theMesh->ReferenceTile(x, y);
-                            }
-                        }
-                    }
-                }
-            }
-            if (this->GetUnitClass()->mWonderBonus == 3)
-                ::gWorld.mMap->AddSight(thePlayer, theX, theY, gWorldTable.GetFloatValue(kWorldWonderSightRadius), false);
-        }
-    } else {
-        bool theVisible = ::gWorld.GetCurrentPlayer() == thePlayer ||
-            (::gWorld.GetCurrentPlayer()->IsAlliedWith(thePlayer) && ::gWorld.GetCurrentPlayer()->mSharedLOS && thePlayer->mSharedLOS);
-        if (this->GetUnitClass()->mTileSize <= 1) {
-            EEMapTile* theTile = ::gWorld.mMap->GetTile(inX, inY);
-            if (theTile != NULL) {
-                thePlayer->AddSharedSight(theTile, inX, inY);
-                if (theVisible) {
-                    gMiniMap->CountCellOn(inX, inY);
-                    theMesh->ReferenceTile(inX, inY);
-                }
-            }
-        } else {
-            for (long x = inX; x < (long)(inX + this->GetUnitClass()->mTileSize); x++) {
-                for (long y = inY; y < (long)(inY + this->GetUnitClass()->mTileSize); y++) {
-                    EEMapTile* theTile = ::gWorld.mMap->GetTile(x, y);
-                    if (theTile == NULL)
-                        continue;
-                    thePlayer->AddSharedSight(theTile, x, y);
-                    if (theVisible) {
-                        gMiniMap->CountCellOn(x, y);
-                        theMesh->ReferenceTile(x, y);
-                    }
-                }
-            }
-        }
-    }
-    if (this->GetTechTreeNode() == NULL || this->GetTechTreeNode()->mData->mKind != 4)
-        return;
-    for (unsigned long i = 1; i < ::gWorld.mNumPlayers; i++) {
-        EEPlayer* theOther = ::gWorld.mPlayers[i];
-        if (theOther == NULL)
-            continue;
-        bool theVisible = theOther == ::gWorld.GetCurrentPlayer();
-        for (long x = inX; x < (long)(inX + this->GetUnitClass()->mTileSize); x++) {
-            for (long y = inY; y < (long)(inY + this->GetUnitClass()->mTileSize); y++) {
-                EEMapTile* theTile = ::gWorld.mMap->GetTile(x, y);
-                if (theTile == NULL)
-                    continue;
-                theOther->AddSharedSight(theTile, x, y);
-                if (theVisible) {
-                    gMiniMap->CountCellOn(x, y);
-                    theMesh->ReferenceTile(x, y);
-                }
-            }
-        }
-    }
+    ee_units_sight(EEObj(this), (uint32_t)inX, (uint32_t)inY, 1);
 }
 
 
@@ -2796,88 +2709,94 @@ void EEComplexUnit::RemoveContactUnit(EEComplexUnit* inUnit)
 }
 
 // Removes the unit's line of sight at the tile for its player, its sight sharers, the minimap and terrain mesh
-// (plus a wonder's extra sight; kind-4 units also clear it for every player)
+// (plus a wonder's extra sight; kind-4 units also clear it for every player): SightOn's statements with each Add a
+// Remove, the tiles not tested for NULL (ee_units sight.rs)
 void EEComplexUnit::SightOff(unsigned long inX, unsigned long inY)
 {
-    EEPlayer* thePlayer = this->mPlayer;
-    GETerrainMesh* theMesh = &::gWorld.GetMap()->mTerrainMesh;
-    if (!(this->GetLineOfSight() > 0.0f) || thePlayer == NULL || !thePlayer->mSaveVisMap || inX == (unsigned long)-10000 || !gSightUpdatesEnabled)
-        return;
-    float theX = (float)(long)inX;
-    float theY = (float)(long)inY;
-    this->AddCenterOffset(theX, theY);
-    if (this->GetUnitClass()->IsLandBuilding() && this->IsFoundation())
-        return;
-    if (this->mHitPoints > 0 && this->mIsBuilt) {
-        EERemoveSightCircle(theX, theY, this->GetLineOfSight(), thePlayer);
-        if (this->GetUnitClass()->IsLandBuilding() == true) {
-            for (unsigned long i = 0; i < thePlayer->mSightSharers.size(); i++) {
-                bool theVisible = ::gWorld.GetCurrentPlayer() == thePlayer->mSightSharers[i] &&
-                    ::gWorld.GetCurrentPlayer()->mSharedLOS && (thePlayer->mSightSharers[i])->mSharedLOS;
-                if (this->GetUnitClass()->mTileSize <= 1) {
-                    EEMapTile* theTile = ::gWorld.GetMap()->GetTile(inX, inY);
-                    theTile->RemoveSight((thePlayer->mSightSharers[i]));
-                    if (theVisible) {
-                        gMiniMap->CountCellOff(inX, inY);
-                        theMesh->DereferenceTile(inX, inY);
-                    }
-                } else {
-                    for (long x = inX; x < (long)(inX + this->GetUnitClass()->mTileSize); x++) {
-                        for (long y = inY; y < (long)(inY + this->GetUnitClass()->mTileSize); y++) {
-                            EEMapTile* theTile = ::gWorld.GetMap()->GetTile(x, y);
-                            theTile->RemoveSight((thePlayer->mSightSharers[i]));
-                            if (theVisible) {
-                                gMiniMap->CountCellOff(x, y);
-                                theMesh->DereferenceTile(x, y);
-                            }
-                        }
-                    }
-                }
-            }
-            if (this->GetUnitClass()->mWonderBonus == 3)
-                ::gWorld.GetMap()->RemoveSight(thePlayer, theX, theY, gWorldTable.GetFloatValue(kWorldWonderSightRadius), false);
-        }
-    } else {
-        bool theVisible = ::gWorld.GetCurrentPlayer() == thePlayer ||
-            (::gWorld.GetCurrentPlayer()->IsAlliedWith(thePlayer) && ::gWorld.GetCurrentPlayer()->mSharedLOS && thePlayer->mSharedLOS);
-        if (this->GetUnitClass()->mTileSize <= 1) {
-            EEMapTile* theTile = ::gWorld.GetMap()->GetTile(inX, inY);
-            thePlayer->RemoveSharedSight(theTile);
-            if (theVisible) {
-                gMiniMap->CountCellOff(inX, inY);
-                theMesh->DereferenceTile(inX, inY);
-            }
+    ee_units_sight(EEObj(this), (uint32_t)inX, (uint32_t)inY, 0);
+}
+
+// SightOn's and SightOff's host (ee_units sight.rs, sight_host.rs; EE_UNITS_SIGHT_*): the unit's and players' reads and
+// the sight's world calls, each as the original made it (inOn: SightOn's Add, else SightOff's Remove)
+extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD,
+                                       float (*ioF)[3], EeUnitsSightUnit* outUnit)
+{
+    EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)inA;
+    EEPlayer* thePlayer = (EEPlayer*)(uintptr_t)inA;
+    float* f = *ioF;
+    switch (inOp) {
+    case EE_UNITS_SIGHT_UNIT: {
+        EEUnitClass* theClass = theUnit->GetUnitClass();
+        EETechTreeNode* theNode = theUnit->GetTechTreeNode();
+        outUnit->line_of_sight = theUnit->GetLineOfSight();
+        outUnit->player = EEObj(theUnit->mPlayer);
+        outUnit->save_vis_map = theUnit->mPlayer != NULL && theUnit->mPlayer->mSaveVisMap;
+        outUnit->hit_points = (int32_t)theUnit->mHitPoints;
+        outUnit->is_built = theUnit->mIsBuilt;
+        outUnit->land_building = theClass->IsLandBuilding();
+        outUnit->tile_size = (int32_t)theClass->mTileSize;
+        outUnit->wonder_bonus = (int32_t)theClass->mWonderBonus;
+        outUnit->node_kind = theNode != NULL ? (int32_t)theNode->mData->mKind : -1;
+        return 0;
+    }
+    case EE_UNITS_SIGHT_ENABLED:
+        return gSightUpdatesEnabled;
+    case EE_UNITS_SIGHT_FOUNDATION:
+        return theUnit->IsFoundation();
+    case EE_UNITS_SIGHT_CENTER:
+        theUnit->AddCenterOffset(f[0], f[1]);
+        return 0;
+    case EE_UNITS_SIGHT_CURRENT:
+        return EEObj(::gWorld.GetCurrentPlayer());
+    case EE_UNITS_SIGHT_SHARED_LOS:
+        return thePlayer->mSharedLOS;
+    case EE_UNITS_SIGHT_ALLIED:
+        return thePlayer->IsAlliedWith((EEPlayer*)(uintptr_t)inB);
+    case EE_UNITS_SIGHT_SHARERS:
+        return (int64_t)thePlayer->mSightSharers.size();
+    case EE_UNITS_SIGHT_SHARER:
+        return EEObj(thePlayer->mSightSharers[(size_t)inC]);
+    case EE_UNITS_SIGHT_CIRCLE:
+        if (inOn)
+            EEAddSightCircle(f[0], f[1], f[2], thePlayer);
+        else
+            EERemoveSightCircle(f[0], f[1], f[2], thePlayer);
+        return 0;
+    case EE_UNITS_SIGHT_TILE:
+        return EEObj(::gWorld.mMap->GetTile((long)inC, (long)inD));
+    case EE_UNITS_SIGHT_TILE_SIGHT:
+        if (inOn)
+            ((EEMapTile*)(uintptr_t)inA)->AddSight((EEPlayer*)(uintptr_t)inB);
+        else
+            ((EEMapTile*)(uintptr_t)inA)->RemoveSight((EEPlayer*)(uintptr_t)inB);
+        return 0;
+    case EE_UNITS_SIGHT_SHARED:
+        if (inOn)
+            thePlayer->AddSharedSight((EEMapTile*)(uintptr_t)inB, (long)inC, (long)inD);
+        else
+            thePlayer->RemoveSharedSight((EEMapTile*)(uintptr_t)inB);
+        return 0;
+    case EE_UNITS_SIGHT_SHOW:
+        if (inOn) {
+            gMiniMap->CountCellOn((long)inC, (long)inD);
+            ::gWorld.mMap->mTerrainMesh.ReferenceTile((long)inC, (long)inD);
         } else {
-            for (long x = inX; x < (long)(inX + this->GetUnitClass()->mTileSize); x++) {
-                for (long y = inY; y < (long)(inY + this->GetUnitClass()->mTileSize); y++) {
-                    EEMapTile* theTile = ::gWorld.GetMap()->GetTile(x, y);
-                    thePlayer->RemoveSharedSight(theTile);
-                    if (theVisible) {
-                        gMiniMap->CountCellOff(x, y);
-                        theMesh->DereferenceTile(x, y);
-                    }
-                }
-            }
+            gMiniMap->CountCellOff((long)inC, (long)inD);
+            ::gWorld.mMap->mTerrainMesh.DereferenceTile((long)inC, (long)inD);
         }
+        return 0;
+    case EE_UNITS_SIGHT_WONDER:
+        if (inOn)
+            ::gWorld.mMap->AddSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false);
+        else
+            ::gWorld.mMap->RemoveSight(thePlayer, f[0], f[1], gWorldTable.GetFloatValue(kWorldWonderSightRadius), false);
+        return 0;
+    case EE_UNITS_SIGHT_NUM_PLAYERS:
+        return (int64_t)::gWorld.mNumPlayers;
+    case EE_UNITS_SIGHT_PLAYER:
+        return EEObj(::gWorld.mPlayers[(size_t)inC]);
     }
-    if (this->GetTechTreeNode() == NULL || this->GetTechTreeNode()->mData->mKind != 4)
-        return;
-    for (unsigned long i = 1; i < ::gWorld.mNumPlayers; i++) {
-        EEPlayer* theOther = ::gWorld.mPlayers[i];
-        if (theOther == NULL)
-            continue;
-        bool theVisible = theOther == ::gWorld.GetCurrentPlayer();
-        for (long x = inX; x < (long)(inX + this->GetUnitClass()->mTileSize); x++) {
-            for (long y = inY; y < (long)(inY + this->GetUnitClass()->mTileSize); y++) {
-                EEMapTile* theTile = ::gWorld.GetMap()->GetTile(x, y);
-                theOther->RemoveSharedSight(theTile);
-                if (theVisible) {
-                    gMiniMap->CountCellOff(x, y);
-                    theMesh->DereferenceTile(x, y);
-                }
-            }
-        }
-    }
+    return 0;
 }
 
 
