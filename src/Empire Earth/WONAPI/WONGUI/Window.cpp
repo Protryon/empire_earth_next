@@ -184,26 +184,13 @@ SmartPtr<RawImage> Window::DecodeImageRaw(const char* path) {
     return this->mManager->DecodeImageRaw(path);
 }
 
-// The two functions after this one are not identified in the original exe
-// Returns the window's offscreen image
-NativeImage* Window::GetOffscreenImage()
-{
-    return this->mOffscreenImage.get();
-}
-
+// Not identified in the original exe
 Graphics& Window::GetGraphics()
 {
     return this->mOffscreenImage->GetGraphics();
 }
 
-// The forwarders (the header's one-line methods are the rest)
-bool Window::CanClose() { return this->WCall(EeWonWinCall::CanClose) != 0; }
-bool Window::Close() { return this->WCall(EeWonWinCall::Close) != 0; }
-void Window::CheckResize(DWORD theTick) { this->WCall(EeWonWinCall::CheckResize, (intptr_t)(uint32_t)theTick); }
-void Window::Center(bool inParent) { this->WCall(EeWonWinCall::Center, inParent ? 1 : 0); }
-void Window::SetClientSize(int w, int h) { this->WCall(EeWonWinCall::SetClientSize, w, h); }
-void Window::Show(bool show) { this->WCall(EeWonWinCall::Show, show ? 1 : 0); }
-void Window::HandleMouseExit() { this->WCall(EeWonWinCall::HandleMouseExit); }
+// The forwarders that read the events' fields (the others are inline)
 static EeWonWinEvent WinEvent(InputEvent* e)
 {
     EeWonWinEvent r = {};
@@ -245,18 +232,3 @@ void Window::HandleInputEvent(InputEvent *e)
     }
     this->WCall(EeWonWinCall::HandleInputEvent, (intptr_t)&r);
 }
-bool Window::IdleUpdate() { return this->WCall(EeWonWinCall::IdleUpdate) != 0; }
-void Window::TimerEvent(DWORD e) { this->WCall(EeWonWinCall::TimerEvent, (intptr_t)(uint32_t)e); }
-void Window::SetParent(Window *p) { this->WCall(EeWonWinCall::SetParent, (intptr_t)p); }
-void Window::PlatformClose() { this->WCall(EeWonWinCall::PlatformClose); }
-void Window::ShowNativeCursor(bool show) { this->WCall(EeWonWinCall::ShowNativeCursor, show ? 1 : 0); }
-void Window::AddComponent(Component* c) { this->WCall(EeWonWinCall::AddComponent, (intptr_t)c); }
-void Window::SetModal(bool modal) { this->WCall(EeWonWinCall::SetModal, modal ? 1 : 0); }
-void Window::CheckSetCursor(bool force) { this->WCall(EeWonWinCall::CheckSetCursor, force ? 1 : 0); }
-namespace WONAPI {
-void Window::InvalidateRoot() { this->WCall(EeWonWinCall::InvalidateRoot); }
-void Window::Minimize(bool minimize) { this->WCall(EeWonWinCall::Minimize, minimize ? 1 : 0); }
-}
-void Window::SuspendRootResize(bool suspend) { this->WCall(EeWonWinCall::SuspendRootResize, suspend ? 1 : 0); }
-void Window::RemoveComponent(Component* c) { this->WCall(EeWonWinCall::RemoveComponent, (intptr_t)c); }
-bool Window::IsMouseDown(MouseButton b) { return this->WCall(EeWonWinCall::IsMouseDown, (intptr_t)b) != 0; }

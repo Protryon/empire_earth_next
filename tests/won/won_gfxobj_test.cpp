@@ -4,7 +4,8 @@
 // (translation, colour, clip rectangle) compared after each call. The base hooks (DrawRectHook, DrawDottedRectHook,
 // FillRectHook) are not overridden, so theirs run. `--print FILE` writes the first sequences as
 // rust/crates/ee_won/src/golden_gfxobj.txt (cargo replays it, gfxobj_tests.rs); without it the golden is compared
-// too. The exit code is the number of failures.
+// too. It also checks WindowManager::InitColorScheme's statements against wmobj.rs's table. The exit code is the
+// number of failures.
 #include <windows.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -306,6 +307,34 @@ int main(int argc, char** argv)
     std::vector<std::string> aGolden;
     int aFailures = 0;
     long long aChecks = 0;
+    // WindowManager::InitColorScheme's statements (WindowManager.cpp at HEAD 6d0c36ca, on a scheme) against wmobj.rs's
+    // table
+    {
+        ColorScheme aScheme;
+        ColorScheme* mColorScheme = &aScheme;
+	mColorScheme->SetStandardColor(StandardColor_3DDarkShadow,0x000000);
+	mColorScheme->SetStandardColor(StandardColor_3DFace,0xD0D0D0);
+	mColorScheme->SetStandardColor(StandardColor_3DHilight,0xFFFFFF);
+	mColorScheme->SetStandardColor(StandardColor_3DShadow,0x848484);
+	mColorScheme->SetStandardColor(StandardColor_Scrollbar,0xDEDEDE);
+	mColorScheme->SetStandardColor(StandardColor_ButtonText,0x000000);
+	mColorScheme->SetStandardColor(StandardColor_GrayText,0x848484);
+	mColorScheme->SetStandardColor(StandardColor_Hilight,0x08246B);
+	mColorScheme->SetStandardColor(StandardColor_HilightText,0xFFFFFF);
+	mColorScheme->SetStandardColor(StandardColor_ToolTipBack,0xFFFFDD);
+	mColorScheme->SetStandardColor(StandardColor_ToolTipText,0x000000);
+	mColorScheme->SetStandardColor(StandardColor_MenuBack,0xD0D0D0);
+	mColorScheme->SetStandardColor(StandardColor_MenuText,0);
+	mColorScheme->SetStandardColor(StandardColor_Back,0xFFFFFF);
+	mColorScheme->SetStandardColor(StandardColor_Text,0x000000);
+	mColorScheme->SetStandardColor(StandardColor_Link,0x0000FF);
+	mColorScheme->SetStandardColor(StandardColor_LinkDown,0xFF0000);
+        uint32_t aTable[StandardColor_Max];
+        ee_won_wm_standard_colors(aTable);
+        for (int i = 0; i < StandardColor_Max; i++)
+            if (aScheme.mColors[i] != aTable[i] && aFailures++ < 20)
+                printf("FAIL standard colour %d: %x / %x\n", i, (unsigned)aScheme.mColors[i], (unsigned)aTable[i]);
+    }
     for (int q = 0; q < kSeqs; q++) {
         sSeed = 0x2545f491u ^ (unsigned)(q * 2654435761u);
         TOrig* o = new TOrig;

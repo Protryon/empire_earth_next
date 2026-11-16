@@ -21747,6 +21747,12 @@ size_t ee_won_wm_cache_line(const EeWonWm *wm,
                             uint8_t *buf,
                             size_t cap);
 
+/// `WindowManager::InitColorScheme`: the 17 standard colours into `out`.
+///
+/// # Safety
+/// `out` has room for 17 colours.
+void ee_won_wm_standard_colors(uint32_t *out);
+
 /// A new Rust WONButton for the C++ `component`, its calls out through `host`.
 EeWonWonButton *ee_won_wonbtn_new(void *component, EeWonGuiHostFn host);
 
