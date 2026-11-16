@@ -363,6 +363,7 @@ dependencies = [
  "ee_ge",
  "ee_random",
  "ee_ustring",
+ "ee_util",
 ]
 
 [[package]]

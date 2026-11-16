@@ -38,8 +38,7 @@ UTIL = ROOT / "src" / "Low-Level Engine"
 READER = []   # the .rmv reader is Rust now (ee_rmap rmv.rs); Unit10.cpp was compiled here
 # engine units the dump tool compiles for real: the geometry math, the random stream, the strings and the fractal
 LLE_UNITS = ["Utilities/UString.cpp", "Utilities/UMath.cpp",
-             "File System/FSBasicFile.cpp", "File System/FSFileSpec.cpp", "Graphics Engine/GE3DLine.cpp",
-             "Graphics Engine/GE2DPoint.cpp", "Graphics Engine/GE3DPoint.cpp", "Graphics Engine/GETransformation.cpp"]
+             "File System/FSBasicFile.cpp", "File System/FSFileSpec.cpp", "Graphics Engine/GEValues.cpp"]
 OPT = "-O1"
 DEFAULT_GENERATOR = "rust"
 

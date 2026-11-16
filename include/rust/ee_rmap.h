@@ -231,6 +231,9 @@ constexpr static const uint32_t FILTER_HEIGHT_MAP = 10000;
 
 constexpr static const uint32_t TESTING_LAND_DISTRIBUTION = 10001;
 
+/// The sink `EeRmapGameHost::wall_tiles` fills.
+struct EeRmapGameTiles;
+
 /// The arrays an output `EeRmapState` points into.
 struct EeRmapResult;
 
@@ -460,6 +463,182 @@ struct EeRmapState {
   uint32_t player_order_len;
 };
 
+/// One of the generator's players as the game passes read it (`EERMPlayer`).
+struct EeRmapGamePlayer {
+  EeRmapPoint position;
+  /// The game's player number (`mIndex`: `(*mGamePlayers)[mIndex]`).
+  uint32_t index;
+  uint8_t is_neutral;
+};
+
+/// `EERMWall`: a start wall, relative to the player's tile.
+struct EeRmapGameWall {
+  int32_t start_x;
+  int32_t start_y;
+  int32_t end_x;
+  int32_t end_y;
+  int32_t unit_type;
+};
+
+/// `EERMNamedEntry`'s numbers: the unit class a script unit name stands for, and its tile size.
+struct EeRmapGameUnitName {
+  int32_t unit_class;
+  uint32_t size;
+};
+
+/// `EERMTerrain`'s textures: one per elevation, -10 to 20 tile units.
+struct EeRmapGameTerrain {
+  int32_t textures[31];
+};
+
+/// `EERMTerrainRegion`: fractal values `from..=to` (plus the cliff, Mars or band hundreds) paint terrain `terrain`.
+struct EeRmapGameRegion {
+  int32_t from;
+  int32_t to;
+  uint32_t terrain;
+};
+
+/// `EERMForest`; its tree types are `forest_tree_types[tree_types_start..][..tree_types_len]`.
+struct EeRmapGameForest {
+  uint32_t tree_types_start;
+  uint32_t tree_types_len;
+  int32_t terrain_texture;
+};
+
+/// What the game passes read and write of `EERandomMapData`. The grids are the C++ rows (`*_rows[x]` points at row
+/// `x`, `grid_n` rows of `grid_n` cells); the lists are copies (a pointer may be null when its length is 0). The two
+/// seeds come back advanced.
+struct EeRmapGameState {
+  uint32_t grid_n;
+  float *const *heights;
+  /// `mTiles`: `unsigned long` cells (the values fit 32 bits).
+  unsigned long *const *tiles;
+  uint8_t *const *claimed_tiles;
+  uint8_t *const *valid_tiles;
+  /// `mGridSize` (the grids hold one more row and column).
+  uint32_t grid_size;
+  uint32_t maximum_y;
+  uint32_t map_characteristics;
+  uint8_t is_space_map;
+  float half_map_size;
+  int32_t water_border;
+  EeRmapPoint ring_center;
+  EeRmapRect flat_area;
+  int32_t min_int_elevation;
+  int32_t max_int_elevation;
+  float height_map_smoothness;
+  float terrain_chaos;
+  uint32_t seed;
+  uint32_t num_terrain_bands;
+  uint32_t terrain_band_offset;
+  uint32_t max_loop_count;
+  /// `EEMap::GetF1955F4`: the height of one elevation unit.
+  float tile_unit;
+  /// `gSpaceTerrain`: the terrain named "Space".
+  int32_t space_terrain;
+  uint32_t random_seed;
+  uint32_t random_integers_seed;
+  int32_t resource_terrain_texture[7];
+  const EeRmapGamePlayer *players;
+  uint32_t players_len;
+  const EeRmapFeature *features;
+  uint32_t features_len;
+  const EeRmapGameWall *walls;
+  uint32_t walls_len;
+  const EeRmapGameUnitName *unit_names;
+  uint32_t unit_names_len;
+  const EeRmapGameTerrain *terrains;
+  uint32_t terrains_len;
+  const EeRmapGameRegion *terrain_regions;
+  uint32_t terrain_regions_len;
+  const EeRmapObject *objects;
+  uint32_t objects_len;
+  const EeRmapGameForest *forests;
+  uint32_t forests_len;
+  const uint32_t *forest_tree_types;
+  uint32_t forest_tree_types_len;
+  const uint32_t *available_animals;
+  uint32_t available_animals_len;
+};
+
+/// A map tile as the passes read it (`EETile`).
+struct EeRmapGameTile {
+  int32_t terrain_type;
+  float height;
+};
+
+/// A terrain table entry's ambient units (`EETerrainTable`).
+struct EeRmapGameTerrainInfo {
+  uint32_t unit_count;
+  /// `mAmbientUnitChance`, a percentage.
+  int32_t ambient_chance;
+};
+
+/// A unit class as the passes read it (`EEUnitClass`).
+struct EeRmapGameClass {
+  int32_t tile_size;
+  uint8_t is_land_citizen;
+  uint8_t is_wall;
+};
+
+/// The host's callbacks (C++: `EERandomMap.cpp`'s host over the `EEMap`, the tables and the game's players).
+struct EeRmapGameHost {
+  void *context;
+  uint8_t (*tile)(void *context, uint32_t x, uint32_t y, EeRmapGameTile *out);
+  uint8_t (*is_edge_tile)(void *context, int32_t x, int32_t y);
+  void (*paint_terrain)(void *context, int32_t x, int32_t y, int32_t texture);
+  uint8_t (*terrain)(void *context, int32_t texture, EeRmapGameTerrainInfo *out);
+  int32_t (*terrain_unit_class)(void *context, int32_t texture, uint32_t index);
+  float (*mesh_z)(void *context, uint32_t x, uint32_t y);
+  void (*mesh_set_z)(void *context, uint32_t x, uint32_t y, float z);
+  uint8_t (*mesh_valid_point)(void *context, uint32_t x, uint32_t y);
+  uint8_t (*mesh_valid_tile)(void *context, uint32_t x, uint32_t y);
+  void (*mesh_set_water_color_set)(void *context, uint32_t x, uint32_t y);
+  void (*mesh_vertex_normal)(void *context, uint32_t x, uint32_t y);
+  void (*mesh_set_is_water)(void *context, uint32_t x, uint32_t y, uint8_t is_water);
+  void (*mesh_shorelines)(void *context, uint32_t x, uint32_t y);
+  void (*set_tile_height)(void *context, uint32_t x, uint32_t y, float height);
+  uint32_t (*unit_class_count)(void *context);
+  uint8_t (*unit_class)(void *context, uint32_t unit_class, EeRmapGameClass *out);
+  uint8_t (*class_allows_terrain)(void *context, uint32_t unit_class, int32_t terrain_type);
+  int32_t (*max_starting_citizens)(void *context, uint32_t player);
+  int32_t (*create_unit_at_point)(void *context,
+                                  uint32_t owner,
+                                  uint32_t unit_class,
+                                  float x,
+                                  float y,
+                                  float heading);
+  void (*create_unit_at_tile)(void *context,
+                              uint32_t owner,
+                              uint32_t unit_class,
+                              int32_t x,
+                              int32_t y,
+                              float heading);
+  void (*place_wall)(void *context,
+                     uint32_t unit_class,
+                     EeRmapPoint start,
+                     EeRmapPoint end,
+                     uint32_t player);
+  void (*wall_tiles)(void *context, EeRmapPoint start, EeRmapPoint end, EeRmapGameTiles *sink);
+  void (*push_water_point)(void *context, float x, float y);
+};
+
+/// The rings `CreateGrids` sets up, and the half map size.
+struct EeRmapGameRings {
+  float half_map_size;
+  EeRmapRing ring;
+  EeRmapRing neutral_ring;
+  EeRmapRing moon_ring;
+};
+
+/// The radii factors of `CreateGrids`' rings (`mPlayerInnerRadius` ...).
+struct EeRmapGameRadii {
+  float player_inner;
+  float player_outer;
+  float neutral_inner;
+  float neutral_outer;
+};
+
 /// The game's side of a read.
 struct EeRmapScriptHost {
   void *context;
@@ -683,6 +862,66 @@ EeRmapResult *ee_rmap_run(int32_t step,
 /// # Safety
 /// `result` must be null or a handle from `ee_rmap_run`, freed once.
 void ee_rmap_free(EeRmapResult *result);
+
+/// Adds a tile to the line `EeRmapGameHost::wall_tiles` is filling.
+///
+/// # Safety
+/// `sink` is the sink the callback was handed.
+void ee_rmap_game_tiles_push(EeRmapGameTiles *sink, int32_t x, int32_t y);
+
+/// `EERandomMap::Fn284149` (the space fill and the water points).
+///
+/// # Safety
+/// `state` and `host` are valid (`EeRmapGameState`'s pointers for their lengths).
+void ee_rmap_game_water_points(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERandomMap::SmoothHeights`.
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+void ee_rmap_game_smooth_heights(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERandomMap::Fn288839` (the heights onto the mesh).
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+void ee_rmap_game_apply_heights(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERMArePlayersConnected`.
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+bool ee_rmap_game_players_connected(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERandomMap::MarkFeatures`.
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+void ee_rmap_game_mark_features(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERandomMap::PaintTiles` (with `PlaceTerrainUnit`).
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+void ee_rmap_game_paint_tiles(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERandomMap::PlaceFeatures`.
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+void ee_rmap_game_place_features(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `EERandomMap::Fn288426` (the resource objects).
+///
+/// # Safety
+/// As `ee_rmap_game_water_points`.
+void ee_rmap_game_place_objects(EeRmapGameState *state, EeRmapGameHost *host);
+
+/// `CreateGrids`' grid size (see [`grid_size`]).
+uint32_t ee_rmap_game_grid_size(uint32_t height, uint32_t width, uint32_t current);
+
+/// `CreateGrids`' rings (see [`rings`]).
+EeRmapGameRings ee_rmap_game_rings(EeRmapRect flat_area, int32_t map_size, EeRmapGameRadii radii);
 
 /// Appends `length` bytes to a read's file text.
 ///

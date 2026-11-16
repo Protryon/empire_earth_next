@@ -12,3 +12,5 @@ ee_random = { path = "../ee_random" }
 ee_ge = { path = "../ee_ge" }
 # the .rmv reader splits lines with UString's tokenizers
 ee_ustring = { path = "../ee_ustring" }
+# the game passes' terrain fractal (U2DFractal)
+ee_util = { path = "../ee_util" }
