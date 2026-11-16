@@ -6025,6 +6025,82 @@ minutes). Determinism (seed 2, 18 raids, --repeat 2): identical.
 **Still open:** raids across water (the islands: the ferry carries citizens only); the raid's size is the pool's,
 so a short pool raids late.
 
+### 8.94 classic_lua's push: taking a town when clearly ahead (2026-11-16, EE-SIM)
+
+**The question** (the coordinator, after §8.93): on Hard Small against Age of AI classic_lua goes 53-2-9; its raids
+kill gatherers but never take a town, and close games run to the time cap. Add a decisive push for when it is clearly
+ahead, gated on strength, that breaks the towers, the town centre and the buildings, and comes home when it is losing
+(the attack task of §8.93 lost 61% of the soldiers it sent).
+
+**What the games looked like.** Of the 64 baseline games only 7 ended in a defeat; in most "wins" (the scorecard's
+1.5x rule) Age of AI kept 50-150 citizens and its towers, and the classic's army (40-150 soldiers) stood at home. The
+siege weapons come with the Bronze Age (the ram, the catapult; the Stone Age's log carrier is obsolete in the Copper
+Age), which the classic reaches at a median 82.8 minutes, so a push in a 90-minute game is made of melee and archers.
+The damage table (dbfamily) gives towers no shelter from melee (spear, horse 100%, clubs and maces 75%) but
+buildings take a third (town centre: 4000 hit points); archers do 20-25% to both.
+
+**The push** (classic_lua/army.lua push_step, `M.PUSH`; lib.groups task `push`):
+- **Ahead**, looked at every 10 s from the Stone Age and minute 30, no push out: at least 20 soldiers at home (the
+  pool, the free soldiers, the land army groups at home that are not attacking), their hit points x attack at least
+  twice the enemy's known army (the memory's soldiers, or the strength last seen at once, the larger) plus its known
+  towers within 30 tiles of the target (hit points x attack / 4); not an epoch behind; at least as many citizens as
+  the most it was seen with at once. The target: the nearest enemy town on its land as last seen, else that enemy's
+  nearest known building (in 1 game in 3 the town was never seen before minute 60; the raids still wait for it).
+- It takes all but 20% of them (48 at most); no raid starts while it is out or about to go.
+- **Targets**: soldiers within 12 tiles, towers, citizens within 20, the town centre, the other buildings; nothing a
+  known tower other than itself covers (range + 2): the town is taken from its edges. Its places are the known
+  buildings nobody covers, the towers and the town centre pulled 15 tiles nearer, looked at again every 10 s.
+- **Home** (a forced move, disbanded at home, the next push 3 minutes later) when the armed enemies it sees within
+  12 tiles (towers / 4) are 1.5 times its strength twice running, when it lost 20% of its strength in 20 s with that
+  enemy at half its strength or more, when it is under 60% of what it left with, or after 15 minutes. Nothing left to
+  take: disbanded where it stands.
+
+**Variants** (seeds 2-33, the standard cell; defeats: Age of AI defeated before the cap; lost: the push's soldiers
+not back):
+
+| variant | W-L-C | defeats | pushes | lost | Bronze |
+|---|---|---|---|---|---|
+| baseline | 30-0-2 | 4 | | | 21 |
+| towers / 16, home at 40% or 30% in 20 s, nothing 2+ towers cover | 27-0-5 | 6 | 66 | 45% | 17 |
+| **towers / 4, home at 60% or 20% in 20 s, nothing covered (kept)** | **30-0-2** | **7** | 27 | 23% | 21 |
+| towers / 8, the same | 31-0-1 | 5 | 43 | 25% | 21 |
+
+The first variant fought at the edges of the tower clusters too long: 695 of the 1070 soldiers it lost in its pushes
+died to towers (552 to the paleolithic tower, which Age of AI builds by the dozen), and the losses cost it three wins on the
+army count. The kept variant pushes half as often and loses a quarter.
+
+**Confirmed on 64 seeds** (the standard cell, against this branch's fresh baseline):
+
+| | baseline | push |
+|---|---|---|
+| W-L-C | 53-2-9 | 54-2-8 |
+| Age of AI defeated | 7 (median 82.4 min) | 10 (82.2 min) |
+| mean game length | 88.8 min | 88.6 min |
+| pushes (soldiers sent / back) | | 36 (765 / 588: 23% lost) |
+| classic_lua's soldiers lost a game | 85.1 | 87.3 |
+| classic_lua's citizens lost a game | 20.7 | 21.1 |
+| Age of AI's citizens lost a game | 86.8 | 83.9 |
+| raids (sent / back) | 307 (6389 / 5849) | 285 (5920 / 5374) |
+| Bronze Age (players, median) | 42/64, 82.8 min | 42/64, 82.8 min |
+
+On seeds 34-65 the push fired only 9 times: the close games there are games classic_lua is not ahead in (Age of AI
+with more citizens, or 150-250k of towers by its town), and the gate holds it home, as it should.
+
+**The other cells** (32 seeds, seeds 2-33; baseline against push):
+
+| cell | W-L-C | Age of AI defeated | pushes | Bronze |
+|---|---|---|---|---|
+| Continental Medium, against Age of AI | 16-5-11 -> **19-5-8** | 0 -> 1 | 32 | 13 -> 12 |
+| Small Islands, against Age of AI | 15-6-11 -> 15-6-11 | 0 -> 0 | 0 (no enemy building on its land: the games identical) | 7 -> 7 |
+| the classic_lua mirror, Small (seat 2) | 17-4-11 -> 17-5-10 | 1 -> 0 | 20 | 26/64 -> 26/64 |
+
+0 script errors in every cell. Determinism (seed 2, a push sent, --repeat 2): identical (16,840 trace lines).
+
+**Still open:** the towers gate most pushes (Age of AI's 10-20 paleolithic towers by its town); a push with siege
+from the Bronze Age, or a weaker tower weight once the enemy's army is gone (games end with Age of AI at 0-10
+citizens and its towers standing, not defeated); the enemy town found by scouting rather than by the raids'
+sightings.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
