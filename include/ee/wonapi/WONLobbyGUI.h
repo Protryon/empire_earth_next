@@ -200,13 +200,18 @@ extern GUIString gEmptyGUIString;
 // a GUI component (0x30 bytes: EELobbyColorChooser's members start at +0x30; vtable 0x84d71c, 43
 // slots). Unknown slots are named by vtable offset. The inline bodies are the COMDATs the first lobby unit
 // (EELobbyColorButton.cpp 0x29059d, 0x2905a2) keeps; the other tiny slots are ICF-folded into game code.
+// WONRectangle (Rectangle.cpp folded in, R6 WONGUI B round 1): the intersection (empty size when they do not
+// overlap), the union (an empty rectangle becomes a copy of the other) and the overlap test (touching this one's
+// right/bottom edge counts) are ee_won's guilayout.rs
 class WONRectangle {
 public:
-    WONRectangle();
-    WONRectangle(int inX, int inY, int inWidth, int inHeight);
-    void DoIntersect(const WONRectangle&); // 0x349330, called from 0x3271b1
-    void DoUnion(const WONRectangle&); // 0x3493b0 (called from RootContainer at 0x30498b)
-    bool Intersects(const WONRectangle&) const;
+    WONRectangle() : x(0), y(0), width(0), height(0) {}
+    WONRectangle(int inX, int inY, int inWidth, int inHeight) : x(inX), y(inY), width(inWidth), height(inHeight) {}
+    void DoIntersect(const WONRectangle& o) { this->Set(ee_won_gui_rect_intersect(this->Rust(), o.Rust())); } // 0x349330
+    void DoUnion(const WONRectangle& o) { this->Set(ee_won_gui_rect_union(this->Rust(), o.Rust())); } // 0x3493b0
+    bool Intersects(const WONRectangle& o) const { return ee_won_gui_rect_intersects(this->Rust(), o.Rust()); }
+    EeWonRect Rust() const { EeWonRect e = { this->x, this->y, this->width, this->height }; return e; }
+    void Set(const EeWonRect& e) { this->x = e.x; this->y = e.y; this->width = e.width; this->height = e.height; }
     int Left() const { return this->x; }
     int Top() const { return this->y; }
     int Width() const { return this->width; }

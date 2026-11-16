@@ -760,7 +760,7 @@ WON_TESTS = {
     # GUIStringData's buffer: the original's edits against guistrobj.rs (golden: rust/crates/ee_won/src/golden_guistrobj.txt)
     "won_guistrobj_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # Graphics: the original's statements against gfxobj.rs under traced hooks (golden: rust/crates/ee_won/src/golden_gfxobj.txt)
-    "won_gfxobj_test": [WON_SRC / "WONGUI" / f for f in ("Graphics.cpp", "Rectangle.cpp", "GUIStringSingleton.cpp")],
+    "won_gfxobj_test": [WON_SRC / "WONGUI" / f for f in ("Graphics.cpp", "GUIStringSingleton.cpp")],
     # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won/src/golden_cfgobj.txt)
     "won_cfgobj_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigObject.cpp", "ConfigValue.cpp", "ConfigParser.cpp",
                                                              "ConfigToken.cpp")],

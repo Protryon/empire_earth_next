@@ -113,7 +113,6 @@
 347910 348a60 WONGUI/ImageDecoder.cpp
 348a60 3529a8 WONGUI/ImageFilters.cpp
 349040 34910a WONGUI/Palette.cpp
-349300 349495 WONGUI/Rectangle.cpp
 3494e0 34953f WONGUI/SelectionColor.cpp
 349f10 34a100 WONGUI/StringLocalize.cpp
 34a100 34a1b4 WONGUI/StringLocalizeCalls.cpp
