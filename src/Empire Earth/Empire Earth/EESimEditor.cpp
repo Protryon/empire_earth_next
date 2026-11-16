@@ -262,17 +262,33 @@ std::condition_variable sStepDone;
 bool sStepFinished = false;
 long sStepClock = 1000;                     // the time TMGetTime answers on the UI thread for the next step
 
-// The step's end, after the events it posted to the UI thread's queue: lets the clock run and wakes the driver
+class EESimEditorMarker;
+void PostMarker(long inLeft, long inRounds);
+
+// The step's end, after the events it posted to the UI thread's queue: inRounds more rounds through the action queue
+// first (a step makes one), then lets the clock run and wakes the driver. The round: a control's trigger event (a
+// list's selection, a question's Yes, a check box's change) is processed by a UI update, and what it posts (the
+// civilization choice's load of the selected file, the delete after the Yes, the hide-UI box's view change:
+// PostEvent) reached this queue after the first end, so the next step read the state before or after them depending
+// on when the update came: the gates' flakes under load (the civilization builder's choice statistics empty with
+// "Please wait" shown, or filled; the editor's view after the hide-UI box and the trigger tab's check boxes). After
+// the round every such event is processed before the end.
 class EESimEditorDone : public UIEvent {
 public:
+    explicit EESimEditorDone(long inRounds) : mRounds(inRounds) {}
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     {
+        if (this->mRounds > 0) {
+            PostMarker(3, this->mRounds - 1);
+            return 0;
+        }
         ee_time_pin(-1);
         std::lock_guard<std::mutex> theGuard(sStepLock);
         sStepFinished = true;
         sStepDone.notify_all();
         return 0;
     }
+    long mRounds;
 };
 
 // The last action of a step: posted after the step's own actions, it posts itself again inLeft times (an action run
@@ -280,7 +296,7 @@ public:
 // (EESimEditorDone) to the UI thread's message queue.
 class EESimEditorMarker : public EEAction {
 public:
-    EESimEditorMarker(long inLeft) : EEAction(false), mLeft(inLeft) {}
+    EESimEditorMarker(long inLeft, long inRounds) : EEAction(false), mLeft(inLeft), mRounds(inRounds) {}
     virtual void Virtual4()
     {
         if (this->mLeft-- > 0) {
@@ -289,40 +305,48 @@ public:
         }
         // the end goes through the UI thread's message queue too: the events a step posted there (e.g. the hide-UI
         // box's viewport change) are processed first (one queue, in order)
-        UIEvent* theDone = new EESimEditorDone;
+        UIEvent* theDone = new EESimEditorDone(this->mRounds);
         gUserInterface->PostEvent(theDone, NULL);
         theDone->Dereference();
     }
     virtual void Virtual8() {}
     long mLeft;
+    long mRounds;   // the rounds through the action queue still to make after this marker's end (EESimEditorDone)
 };
+
+void PostMarker(long inLeft, long inRounds)
+{
+    EESimEditorMarker* theMarker = new EESimEditorMarker(inLeft, inRounds);
+    gUserInterface->PostAction(theMarker);
+    theMarker->Dereference();
+}
 
 // A step: on the UI thread, in the action queue (under the UI copy lock and the world's write lock, as every
 // editor action runs), the clock pinned, the step's code, then the marker.
 class EESimEditorStep : public EEAction {
 public:
-    EESimEditorStep(const std::function<void()>& inCode) : EEAction(false), mCode(inCode) {}
+    EESimEditorStep(const std::function<void()>& inCode, long inRounds)
+        : EEAction(false), mCode(inCode), mRounds(inRounds) {}
     virtual void Virtual4()
     {
         ee_time_pin(sStepClock);
         this->mCode();
-        EESimEditorMarker* theMarker = new EESimEditorMarker(3);
-        gUserInterface->PostAction(theMarker);
-        theMarker->Dereference();
+        PostMarker(3, this->mRounds);
     }
     virtual void Virtual8() {}
     std::function<void()> mCode;
+    long mRounds;
 };
 
-// Runs a step and waits for its marker; false after a minute without it
-bool RunStep(const std::function<void()>& inCode)
+// Runs a step and waits for its marker (inRounds: EESimEditorDone's); false after a minute without it
+bool RunStep(const std::function<void()>& inCode, long inRounds = 1)
 {
     {
         std::lock_guard<std::mutex> theGuard(sStepLock);
         sStepFinished = false;
     }
     sStepClock += 1000;
-    EESimEditorStep* theStep = new EESimEditorStep(inCode);
+    EESimEditorStep* theStep = new EESimEditorStep(inCode, inRounds);
     gUserInterface->PostAction(theStep);
     theStep->Dereference();
     std::unique_lock<std::mutex> theLock(sStepLock);

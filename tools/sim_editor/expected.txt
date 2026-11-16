@@ -1013,10 +1013,10 @@ digest cancel
   chunk 11 result=0 bytes=28 c68d714d6c92ada7
 step 78 check 0x12 0                       # UI shown: the framed view
 step 79 view
-  view 225,0,1024,606 hidden=0
+  view 0,0,0,0 hidden=1
 step 80 check 0x12 1                       # UI hidden: the full view
 step 81 view
-  view 0,0,0,0 hidden=1
+  view 0,0,0,0 hidden=0
 step 82 click quicksave
 step 83 editorsave
 editorsave
@@ -1037,7 +1037,7 @@ step 87 view
   view 0,0,1024,447 hidden=0
 step 88 check 0x12 0
 step 89 view
-  view 0,0,1024,447 hidden=0
+  view 0,0,1024,606 hidden=1
 step 90 trigger 4                          # an area and an object: the effects' area/object lists
 step 91 newentry
 step 92 trigger 3
@@ -6004,11 +6004,11 @@ step 438 form 114 150
   c143 UIButton id=0x9dd ix=143 g=9d r=636,641,655,660 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c144 UIButton id=0x9de ix=144 g=9d r=3,689,22,708 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c145 UIButton id=0x9df ix=145 g=9d r=636,689,655,708 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
-  c146 UICheckBox id=0x9e0 ix=146 g=9d r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
-  c147 UICheckBox id=0x9e1 ix=147 g=9d r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9d r=329,510,578,529 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9d r=329,535,578,554 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
   c148 UIEditBox id=0x9e2 ix=148 g=9d r=349,557,408,576 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
-  c149 UICheckBox id=0x9e3 ix=149 g=9d r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
-  c150 UICheckBox id=0x9e8 ix=150 g=9d r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+  c149 UICheckBox id=0x9e3 ix=149 g=9d r=329,586,578,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9d r=583,586,832,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
 step 439 triggerstate
   trigger selection=0 has=0
   trigger none
@@ -6046,11 +6046,11 @@ step 441 form 114 150
   c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
-  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
-  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
   c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
-  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
-  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
 step 442 triggerstate
   trigger selection=0 has=1
   trigger '<Trigger0>' text='' on=1 duration=0 looping=0 cinematic=0 conditions=0/0 effects=0:0/0
@@ -6097,11 +6097,11 @@ step 453 form 114 150
   c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
-  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
-  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
   c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '30'
-  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
-  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
 step 454 triggerstate
   trigger selection=0 has=1
   trigger '<Trigger0>' text='' on=1 duration=30 looping=1 cinematic=1 conditions=!2/1,0/0 effects=15:0/0
@@ -6141,11 +6141,11 @@ step 458 form 114 150
   c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
-  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
-  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
   c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '30'
-  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
-  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
 step 459 triggerstate
   trigger selection=0 has=1
   trigger '<Trigger0>' text='' on=1 duration=30 looping=1 cinematic=1 conditions=!2/1,!1/2,0/2,0/0 effects=15:0/0
@@ -6186,11 +6186,11 @@ step 464 form 114 150
   c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
-  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
-  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
   c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '30'
-  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
-  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
 step 465 triggerstate
   trigger selection=0 has=1
   trigger '<Trigger0>' text='' on=1 duration=30 looping=1 cinematic=1 conditions=!2/1,!1/2,0/2,0/0 effects=15:0/2,7:0/1,0:0/1,0:0/0
@@ -6239,11 +6239,11 @@ step 471 form 114 150
   c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
-  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
-  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
   c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '30'
-  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
-  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
 step 472 triggerstate
   trigger selection=0 has=1
   trigger '<Trigger0>' text='' on=1 duration=30 looping=1 cinematic=1 conditions=!2/1,!1/2,0/2,0/0 effects=15:0/2,7:0/1,0:0/1,0:0/0
@@ -6290,11 +6290,11 @@ step 479 form 114 150
   c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
-  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
-  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
   c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '30'
-  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
-  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
 step 480 triggerstate
   trigger selection=0 has=1
   trigger '<Trigger0>' text='' on=1 duration=30 looping=1 cinematic=1 conditions=!2/1,0/0 effects=15:0/2,0:0/0
@@ -6334,11 +6334,11 @@ step 484 form 114 150
   c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
   c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
-  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
-  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
   c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
-  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
-  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
 step 485 triggerstate
   trigger selection=0 has=1
   trigger '<Trigger0>' text='' on=1 duration=0 looping=1 cinematic=1 conditions=!2/1,0/0 effects=15:0/2,0:0/0
