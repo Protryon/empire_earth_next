@@ -53,6 +53,8 @@
 //!   form-event factory.
 //! - [`frame`]: the framed form background's draw (`EEUIBGenericBackground`: the tinted panel, the edges, corners
 //!   and side ornaments), over the C++ host.
+//! - [`game_view`]: the screens' read view of the game (the settings, the session, the world, the players, the
+//!   campaign and intro managers: one C++ fill per group at the read), the sound objects' ops on their Rust objects.
 //! - [`hot_keys`]: the main game form's hot key events whole (the control groups, the unit selection keys, the closest
 //!   aircraft; the player's units as records).
 //! - [`main_game`]: the main game form's events whole (form 11: its buttons' and hot keys' events, the formation
@@ -221,6 +223,9 @@ pub mod factories;
 pub mod frame;
 #[cfg(not(test))]
 mod frame_ffi;
+pub mod game_view;
+#[cfg(not(test))]
+mod game_view_ffi;
 pub mod hot_keys;
 #[cfg(not(test))]
 mod hot_keys_ffi;

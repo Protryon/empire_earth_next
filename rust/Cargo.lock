@@ -431,6 +431,7 @@ dependencies = [
  "ee_plat_core",
  "ee_random",
  "ee_scenario",
+ "ee_sound",
  "ee_ui",
  "ee_util",
 ]

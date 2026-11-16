@@ -63,11 +63,17 @@ impl Form {
         if let Some(r) = crate::toolkit::op(self.0, self.1, op, a, b, c, d) {
             return r;
         }
+        if let Some(r) = crate::game_view::op(self, op, a, b) {
+            return r;
+        }
         unsafe { sys::ee_screenscpp_call(self.0, self.1, op, a, b, c, d) }
     }
     /// A text, `None` when the host says it is missing (`usize::MAX`).
     pub(crate) fn get_checked(&mut self, which: u32, arg: u32) -> Option<Vec<u8>> {
         if let Some(t) = crate::toolkit::text(self.0, which, arg) {
+            return Some(t);
+        }
+        if let Some(t) = crate::game_view::text(self, which, arg) {
             return Some(t);
         }
         let mut out = vec![0u8; 256];

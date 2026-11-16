@@ -10,7 +10,7 @@ use crate::scenario_screens_ffi::ee_screenscpp_form;
 /// original's event held that form; a posted event gets none).
 pub(crate) fn dispatch(host: &mut Form, event: u32) -> Option<c_long> {
     if event == EE_SCREENS_CE_SAVE_CONTINUED {
-        let mut editor = Form(unsafe { ee_screenscpp_form(24) }, host.1);
+        let mut editor = Form(ee_screenscpp_form(24), host.1);
         return crate::campaign_editor::dispatch(&mut editor, event);
     }
     crate::campaign_editor::dispatch(host, event)

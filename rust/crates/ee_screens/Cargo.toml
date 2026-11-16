@@ -26,6 +26,8 @@ ee_random = { path = "../ee_random" }
 ee_ui = { path = "../ee_ui" }
 # the post-game summary's graphs' series (toolkit.rs)
 ee_util = { path = "../ee_util" }
+# the sound manager's and the conductor's Rust objects, called as their C++ forwarders call them (game_view_ffi.rs)
+ee_sound = { path = "../ee_sound" }
 
 [dev-dependencies]
 # the toolkit without its C++ imports, for the test binary

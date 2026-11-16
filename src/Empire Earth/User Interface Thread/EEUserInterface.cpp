@@ -1103,27 +1103,8 @@ void EEUserInterface::PostMessage424Once()
     }
 }
 
-// Shows a lag state: a waiting message in the game, or the blinking lag button in the lobby
-void EEUserInterface::ShowLagStatus(unsigned long inPlayer, bool inLagging)
-{
-    UWideString theText;
-    gUIManager->LockUIForCopyData();
-    if (gUIManager->GetCurrentForm() == gUIManager->GetFormByID(kFormMainGame)) {
-        if (inLagging) {
-            gResource->GetString(IDS_WAITING_FOR_PLAYERS, theText);
-            gUserInterface->AddChatLogEntry(theText, 0);
-        }
-    } else if (gUIManager->GetCurrentForm() == gUIManager->GetFormByID(kFormLobby)) {
-        UIBlinkingButton* theButton = static_cast<UIBlinkingButton*>(gUIManager->GetCurrentForm()->GetControl(0x111));
-        if (inPlayer == 0) {
-            theButton->SetDisplayMode(kDisplayModeHidden);
-        } else {
-            theButton->SetDisplayMode(kDisplayModeShown);
-            theButton->SetIsBlinking(true);
-        }
-    }
-    gUIManager->UnlockUIForCopyData();
-}
+// Shows a lag state: a waiting message in the game, or the blinking lag button in the lobby (ee_screens ui_game.rs)
+void EEUserInterface::ShowLagStatus(unsigned long inPlayer, bool inLagging) { ee_screens_ui_show_lag_status(inPlayer, inLagging); }
 
 // Undoes the last action; returns 7 when there is none (ee_screens actions.rs)
 long EEUserInterface::Undo()
