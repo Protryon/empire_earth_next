@@ -75,14 +75,14 @@ def mutex_bypass_rva(image_bytes,linkmap):
     """RVA of the `test eax,eax` after EECreateInstanceMutex's GetLastError call (original layout fixed, full link by map
     name); the function body and its IAT slot are checked so the guard can only land on that instruction.
     A build by map (this fork's x64 builds): the instruction right after the one rip-relative `call [slot]` to the
-    GetLastError slot in the function's first 0x80 bytes: eax is the call's result there, whatever the compiler does
+    GetLastError slot in the function's first 0x400 bytes (the per-instance name's std::string comes first): eax is the call's result there, whatever the compiler does
     with it next (it may move eax away first)."""
     import pefile
     pe=pefile.PE(data=image_bytes,fast_load=True)
     start=linkmap.rva(MUTEX_SYMBOL) if linkmap else MUTEX_RVA_ORIGINAL
     slot=linkmap.address(MUTEX_GETLASTERROR) if linkmap else MUTEX_GETLASTERROR_ORIGINAL
     if linkmap:
-        body=pe.get_data(start,0x80);hits=[]
+        body=pe.get_data(start,0x400);hits=[]
         for k in range(len(body)-6):
             if body[k:k+2]!=b'\xff\x15':continue
             field=int.from_bytes(body[k+2:k+6],'little',signed=True)
