@@ -30,17 +30,22 @@ opened the post-game summary over a running game was tried and reverted: the sum
 which the game writes at its end, so a capture of it needs a game played to its end (a person's, or a fixture
 that ends one).
 
-**Left** (C++ at the end of round 3): `EEScreens.cpp` 3,119 lines, of which the measure (`build/sb3/measure.py`)
-classes 281 game-call labels (1,178 lines) and 89 game texts (509): the sessions, options, campaigns, saves and
-messages, which go with the game's own lanes. The toolkit-only cases left (19 ops, 23 texts, about 175 lines) each
-need a C++ object no Rust object stands for: the chat's stack `UIHotKey` (`CH_SEND_KEYS`), `GEText`s copied or read
-(`PGS_TEXT_STYLE`, `DS_BUTTON_NUMBER`, the name colours), `GEBitmap` coordinates (`DS_UV`), new controls
-(`PGS_NEW_BAR`, `PGS_NEW_STAR`, `PGS_REMOVE`), `UIFileComboBox`/`EECBUIListBox`/`EEUICPing` members, the background
-rectangle (`SS_BACKGROUND`), the CRT's `rand`. `EEUserInterface.cpp` 1,267 (`SetLoadProgress`, `ShowLagStatus`,
-`UpdateIMECompositionString`'s attributes, `ChangeRasterizer`, `ResizeGameScreen`: each a handful of game calls, so
-a move to `ui_game.rs` frees a few lines each; not taken), `EEUIManager.cpp` 491, `EEUIFError.cpp`,
-`EEUIBGenericBackground.cpp`, `EEUIEScenarioIntroEvents.cpp`, `EEUIFileComboBox.cpp`, `ee/EEUIManager.h`. The
-game-call cases on plain records (players, options) need those records reachable from `ee_screens` (they are C++
-objects it holds no pointer to): a lane that gives the screens a view of `EEGameSettings` and the players would
-let about 60 such cases move. The list boxes' lines stay the C++ template's `std::vector<T>` (see round 3's
-learnings for why the Rust store was not taken).
+**Round 4** (branch `rust-screensb4`; PORT_LEARNINGS "R6: game screens B, round 4"): the screens' read view of the
+game (`ee_screens game_view.rs`: one C++ fill per group at the read, `ee_screenscpp_game_view` and
+`ee_screenscpp_game_texts`; the settings, the session, the world, a player through its accessors, the colour table,
+the campaign and intro managers). 88 host case labels moved over it (58 ops, 30 texts), among them the sound
+manager's and the conductor's ops on their `ee_sound` objects, the chat log's reads, the named-form lookup
+(`ee_screenscpp_form` gone) and the two player colour ops; `EEUserInterface::ShowLagStatus` in Rust
+(`ui_game::lag_status`). -107 (`EEScreens.cpp` 3,119 -> 3,034, `EEUserInterface.cpp` -19): a read case is two or
+three lines and its fill line one, so the view frees little by itself.
+
+**Left** (C++ at the end of round 4): `EEScreens.cpp` 3,034 lines; the measure (`build/sb3/measure.py`) classes 240
+game-call labels (1,176 lines, the view's fills among them: about 160) and 61 game texts (415): messages to
+`gCommunications`, new servers, file and archive opens, saved-game headers, map backdrops, the WON calls, the
+campaign and intro managers' file members. They move with the lanes that own those objects, or with
+`EEUISCIFormManager` (`EEUIEScenarioIntroEvents.cpp`, 234 lines; its four `FSFileSpec*` and media strings; users
+in the scenario, HUD and WON lanes' files) and `EECampaignFormManager` as Rust objects, which would take the SI_*,
+CS_* and campaign texts with them. The toolkit-only cases of round 3's list are unchanged. `EEUserInterface.cpp`
+1,248 (`SetLoadProgress`, `ResizeGameScreen`, `ChangeRasterizer`: game calls a host op each), `EEUIManager.cpp` 491,
+`EEUIFError.cpp`, `EEUIBGenericBackground.cpp`, `EEUIFileComboBox.cpp`, `ee/EEUIManager.h`. The list boxes' lines
+stay the C++ template's `std::vector<T>` (round 3's learnings).

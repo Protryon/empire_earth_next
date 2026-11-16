@@ -26282,3 +26282,147 @@ The post-game summary at a real game's end (the graphs drawn: `graphobj.rs`'s dr
 graph ops ran in the reverted fixture step's two runs, 0 lookups missing, before its record read faulted), the campaign editor's lists and combo box, the custom
 campaign's list, the camera grab (middle button drag), the in-game options' and chat's hot keys, the diplomacy
 form's colours, the civilization choice's selection.
+
+## R6: game screens B, round 4: the screens' read view of the game; the reads, the sound objects' ops and the lag status off the C++ host (ee_screens game_view.rs; branch rust-screensb4, 2026-11-15)
+
+The brief: round 3 found that `ee_screens` holds no view of `EEGameSettings` or the players, so the host's game-call
+cases (about 1,690 lines) stayed C++. Give the screens a read view with as few host calls as possible (players only
+through their accessors: the player lane moves their storage; `EEGame`/`EEWorld` storage stays the app-and-world
+lane's), move the cases that only read and format over it, and the UI thread's small ops if cheap. Target 1,500
+net C++ lines.
+
+### The view
+
+- **Two fills, one per group, at the read** (`game_view.rs`, `ee_screenscpp_game_view(group, arg, record)` and
+  `ee_screenscpp_game_texts(group, arg, out, capacity)` at the end of `EEScreens.cpp`). A read op names its group
+  (`group_of`), the fill copies that group's values into `EeScreensGameView` (or that group's texts, each ended by a
+  0 byte) at the moment of the read, and `value` / the text's slot picks the answer. No cache: a value read after a
+  write within one event is the new one, as the C++ case's was.
+- **Groups by object, not by screen.** A group holds the reads of one set of objects and is filled only when an
+  op of that group is asked, so a fill touches exactly what the replaced case touched: `SOUND` (the two Rust
+  objects' pointers), `SETTINGS` (plain globals and the preferences: safe in every state), `SESSION`
+  (`gCommunications`, all 0 without it), `WORLD` (`gWorld`, the world table's speeds, the main game form's hot key
+  mode), `PLAYER` (an index or the current player: `GetName`, `GetColor`, `GetObserverMode`, `mChatType`, the
+  selection's airport), `COLOUR` (`EEGetPlayerColor`), `CAMPAIGN` and `INTRO` (the form managers, which their `Get`
+  makes on first use: only their own ops may trigger that). A first draft put the world table's speeds in
+  `SETTINGS`; they moved to `WORLD` so the settings form's reads in the menus never touch a table only the game
+  needs. Every pointer a fill follows is checked (0 / "" where the case would have dereferenced NULL: a player slot,
+  the main game form, `gCommunications`, a statistics record past the end).
+- **What is Rust's directly**: the sound manager's and the conductor's ops (`SESoundManager` and `SEConductor` are
+  `ee_sound`'s objects: `game_view_ffi.rs` makes the same `ee_sound_manager_*` / `ee_sound_conductor_*` calls their
+  C++ forwarders make, on the pointers of the `SOUND` group), the chat log's count and texts (its Rust store), the
+  form question and the named-form lookup (`ee_ui direct.rs`: `ee_screenscpp_form` is gone), the two colour ops
+  (the toolkit's Rust controls, with the colour table's colour from the view), the loading screen's slot reads (the
+  lobby's existing slot record).
+
+### What moved
+
+88 host case labels: 58 ops (the settings form's sound, rasterizer and Korean reads; the session's server, client,
+multiplayer, CT count, exit and human count; the world's ghosts, camera, speed, cinematic, zoom, pause, players,
+teams, cheats, scenario; the current player's observer, chat type, airport; the campaign's checksum and all-open,
+the intro's flags; the camera's free, zoom-enabled, grab speed, maximum zoom; the main game form's hidden mode,
+hot key mode, speed table; the post-game page and screenshot flag; the loaded header's players; the eleven sound
+ops; the chat log count; the form question; the loading screen's slot and bar colour; the lobby's slot colour) and
+30 texts (the settings', extensions, version, player name, campaigns, registered name, campaign error, load names,
+missing lines, translation; the campaign manager's four; the intro's three; a player's name and civilization; the
+statistics' campaign and record names; a source's map type; the loading screen's slot name; the chat log's two).
+`EEUserInterface::ShowLagStatus` is Rust's (`ui_game::lag_status`, `ee_screens_ui_show_lag_status` on the
+manager's and the lobby button's Rust objects). `SetLoadProgress` and `ResizeGameScreen` were not taken: each is a
+handful of game calls (the load percent message, the mouse pointer thread's waits, `EEChangeGameScreen`, the mini
+map's redraw under the world lock) that would each need a host op as long as the line it replaces.
+
+### Why the line count is small
+
+The measure was right about where the lines are and wrong about what a view frees. A read case is two or three
+lines (`case X:` / `return gFoo;`); its fill line is one. So the 88 labels freed 270 lines of cases and cost 160 of
+fills: `EEScreens.cpp` 3,119 -> 3,034. What a view cannot free is the rest of the host: 240 game-call labels (1,176
+lines) and 61 game texts (415) that call into the game (messages to `gCommunications`, new servers, file and
+archive opens, saved-game headers, backgrounds, the campaign and intro managers' file members, the WON calls):
+those go with the lanes that own those objects, or with a Rust `EEUISCIFormManager` / `EECampaignFormManager`
+(their file members are `FSFileSpec*`, their users in three other lanes' files).
+
+### Goldens and checks
+
+- **The view's golden** (`build/sb4/gen_driver.py` -> `view_driver.cpp`, built by `build_driver.py`): the
+  UNMODIFIED cases (copied verbatim by label from round 3's `EEScreens.cpp`) and the view's two fills (verbatim from
+  the new one) over a stand-in world (`world.h`: the globals and classes under their own names). Each sample is a
+  random world: missing session, players, main game form, header and copy; random strings with multi-byte
+  characters, special floats; the driver prints every group's record bytes and text block, the lobby's slot
+  records, and every moved op's and text's answer by the original case, with the colour ops' calls. The cargo
+  replay (`game_view_golden.rs`) answers the host from the printed records and asserts every answer and call:
+  `golden_game_view.txt` (seed 1, 24 samples) and seed 2 over 200 samples (20,481 ops, 15,961 texts; not
+  committed, `EE_GAME_VIEW_TRACE`, `--ignored`) pass. The sound, chat log and form ops are by construction (the
+  forwarders' own calls) and unit-tested (`game_view_tests.rs`: groups, values, the short-circuit of the resign
+  question, the sound targets, the colours, the text slots).
+- **Mutations**: 16 of 16 in `game_view.rs` (swapped fields, slots one off, wrong groups, the slot colour, `&&`
+  for `||`) caught by the replay; 7 of 8 in the C++ fills (`cpp_mut.py`: each mutant fill rebuilt into the driver
+  and its trace replayed). The missed one drops the `break` of the current rasterizer's search: equivalent while
+  the rasterizer list has no duplicates (it never has).
+
+### Commits
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 4ea55fe0 | the view, its two fills, the 88 cases off the host, the named-form lookup and the lag status in Rust | -107 |
+
+Net C++ for the round: -107 (`EEScreens.cpp` 3,119 -> 3,034, `EEUserInterface.cpp` 1,267 -> 1,248). Far short of
+the 1,500 asked: see "Why the line count is small".
+
+### Gates
+
+`origin/rust` had nothing newer than this branch's base at the round's end (fetched; `git merge origin/rust`:
+already up to date), so the gates ran on the round's own tree.
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0/0 (EE-AOC 849, EE-SIM 850 inputs) |
+| `build.py -j 3 --test-profile windowed-software` | 0/0 |
+| oracle | seeds 2-7 identical |
+| `tools/sim_editor.py` | PASS 14,260 (its first run, beside the Rust gate's build, failed at step 1453 with the loading label caught mid-load, `load=1` vs `load=0`, 174 s against about 100 s: round 3's known timing flake; the rerun PASS) |
+| `tools/sim_editor.py --civbuilder` | PASS 3,913 |
+| Rust gate | PASS: 4,016 tests, clippy, rustfmt, headers current (the first run stopped at rustfmt on one long match arm) |
+| view golden | `golden_game_view.txt` replay; seed 2 x 200 samples (20,481 ops, 15,961 texts); mutations 16/16 Rust, 7/8 C++ (the one missed equivalent) |
+| fixture tour | `RESULT PASS tour`, F3 `paused 0 -> 1 -> 0: ok` |
+| orders game | `BOX SELECT PASS`, `ORDERS PASS` (gather, repair, repair-queued, move), `RESULT PASS random-game` |
+| LAN game | `RESULT PASS lan-game` (PT host 2777, joiner 2798) |
+| legacy tour | `STOP <windowed session complete> reached`, F3 `False -> True -> False: ok`; menu bmpdiff against the previous legacy run of this worktree: every capture identical but the build label (165 pixels on the main menu and settings-closed); the state dumps differ only in the pid and the event RVAs |
+| lookup check | tour 11,091 lookups, LAN 446: 0 MISSING |
+
+A slip to note: the sessions script was started twice (once with a shell `&` that survived the tool call, once in
+the background), so a second tour began under the lock after the first chain's four sessions had passed; it was
+killed (the game, the fixture driver and its harness shell) and the lock it held removed. Its partial lookup log
+also had 0 MISSING.
+
+### Behaviour
+
+- None intended in a working game. Where a replaced case dereferenced NULL (no session, no current player, no
+  main game form, a player slot or statistics record that is not there, a NULL sound manager) the view answers 0 or
+  "" and the sound op does nothing.
+- `ShowLagStatus` looks the lobby up only when the current form is not the main game form (the C++ looked both up;
+  the answer is the same).
+
+### Shared files
+
+`ee_screens` only (this lane's and the HUD lane's crate): `game_view*.rs` (new), `menus_ffi.rs` (the view after
+the toolkit in `Form::op` and `get_checked`), `chat_log_ffi.rs` (`text`), `scenario_screens_ffi.rs`
+(`ee_screenscpp_form` in Rust; `lobby_form_ffi.rs` and `campaign_editor_ffi.rs` call it without `unsafe`),
+`ui_game.rs`/`ui_game_ffi.rs`, `Cargo.toml` (`ee_sound`, called only from `game_view_ffi.rs`, which a test binary
+leaves out). `ee_sound` (the LLE lane's) is untouched: its public C functions are called as they are. C++:
+`EEScreens.cpp`, `EEUserInterface.cpp`. The player lane's and the app-and-world lane's storage is untouched: the
+fills read players through `GetName`, `GetColor`, `GetObserverMode` (and `mChatType`, `mSelectedGroup`,
+`mCivilization.mName` as the cases did, having no accessor).
+
+### What only a person reaches
+
+The lobby's lag button and the in-game waiting message (`ShowLagStatus`: a lagging LAN peer), the post-game page
+and screenshot reads (the summary at a game's end), the campaign and intro managers' reads (the campaign screens),
+the debug sound panel. The tour reaches the settings form's sound and rasterizer reads, the camera's and the main
+game form's reads in play; the LAN game the session's reads, the loading screen's slots and bar colours and the
+lobby's slot colours.
+
+### What is left
+
+`EEScreens.cpp` 3,034 lines: 240 game-call labels (1,176 lines, the fills among them) and 61 game texts (415) that
+call into the game. The largest piece within this lane's reach is `EEUISCIFormManager` as a Rust object (its file
+members as C++ handles, its media strings as Rust text; the SI_* cases, the intro texts and `CS_START` would follow),
+then `EECampaignFormManager`'s. `SetLoadProgress`, `ResizeGameScreen` and `ChangeRasterizer` stay C++.
