@@ -11,6 +11,8 @@
 //!   records the C++ classes derive from, every decision over a host ([`ambient_ffi`]: its C ABI).
 //! - [`map`]: `EEMap`'s sight, cliffs, terrain painting, water colours, checksum and tile count over a host
 //!   ([`map_ffi`]: its C ABI; it reads and edits the terrain mesh itself).
+//! - [`minimap`]: `EEMiniMap`'s cells (sight counts, building and unit dots, the unit layer's pixels), the terrain
+//!   pixels' colours and the redraw's walk ([`minimap_ffi`]: its C ABI, the object the C++ class owns).
 //! - [`save_io`]: a saved game's primitives over a host callback (`EESavePrimitive`'s operations).
 //! - [`ffi`]: the C ABI the C++ classes call.
 
@@ -22,6 +24,8 @@ pub mod ffi;
 pub mod game_options;
 pub mod map;
 pub mod map_ffi;
+pub mod minimap;
+pub mod minimap_ffi;
 pub mod save_io;
 pub mod settings;
 pub mod settings_ffi;
@@ -34,5 +38,7 @@ mod camera_tests;
 mod game_options_tests;
 #[cfg(test)]
 mod map_tests;
+#[cfg(test)]
+mod minimap_tests;
 #[cfg(test)]
 mod settings_tests;

@@ -1504,8 +1504,6 @@ void EEReleaseGamePools(bool inShutdown)
 {
     EEE2DRust::ReleaseParticlePool();
     EEComplexUnit::ReleasePool();
-    UList<EEMiniMapDot>::sNodePool.DumpStats(false);
-    UList<EEMiniMapUnitDot>::sNodePool.DumpStats(false);
     UList<EEComplexUnit*>::sNodePool.DumpStats(false);
 }
 

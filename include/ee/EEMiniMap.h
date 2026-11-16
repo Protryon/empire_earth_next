@@ -63,6 +63,7 @@ class GEColor;
 class GEViewport;
 
 class EEPlayer;
+struct EeAppMiniMap;   // rust/ee_app.h
 class EEMiniMap : public RTSMiniMap {
 public:
 // A doppelganger's dot in one mini-map cell (EEMiniMap::mPlayerUnits's lists: UListNode 0x10). The
@@ -105,23 +106,18 @@ struct MMMapUnit {
     void MoveUnit(EEUnit* inUnit, long inX, long inY, long inArg4, long inArg5);   // 0x1203b9 (EEUnit::Fn229D73; -10000, -10000) (provisional name)
     // EEMiniMap.cpp's other members in address order (provisional names)
     void SetMap(EEMap* inMap);              // 0x11eb87: the four transformations from the map's size
-    void TellTileVisibility(EETile* inTile, long inX, long inY);  // 0x11f0db (Redraw: a tile's visibility)
-    void TellTile(EETile* inTile, long inX, long inY);   // 0x11f184 (Redraw: a tile's doppelgangers and units)
-    void GetPixelColor(long inX, long inY, GEColor& outColor);  // 0x11f272 (the terrain colour of a mini-map pixel)
     void Recolor();                         // 0x11fa55 (the dots take the players' current colours)
-    void RedrawCell(long inX, long inY);    // 0x11fb2a (one cell's pixel)
+    void LockUnitLayer();                   // New (port): mUnitSurface locked, its pixels to the Rust half
     void RedrawPixels(long inLeft, long inRight, long inBottom, long inTop);  // 0x1202f2 (the terrain texture's pixels)
     // New (port): cell inIndex's sight count, unit layer pixel and dots in list order (the capture's read,
     // ee/EEAppCapture.h)
     void GetCell(long inIndex, unsigned short& outCount, unsigned short& outPixel, std::vector<MMPlayerUnit>& outDots,
                  std::vector<MMMapUnit>& outUnits) const;
 
-    // +0x0015c / +0x0815c: UList<EEMiniMapDot>[0x1000] / UList<EEMiniMapUnitDot>[0x1000] in the original (the dots
-    // per 0x40 x 0x40 cell; EEMiniMap's ctor/dtor loops; the lists' template statics renumber every includer's
-    // `$E`)
-    UList<MMPlayerUnit> mPlayerUnits[0x1000];  // +0x0015c
-    UList<MMMapUnit> mMapUnits[0x1000]; // +0x0815c
-    unsigned short mU1015C[0x1000];         // +0x1015c per-cell visibility count (0: unexplored; the ctor zeroes it last)
+    // port: the original's dots per 0x40 x 0x40 cell (UList<MMPlayerUnit>[0x1000] at +0x0015c, UList<MMMapUnit>
+    // [0x1000] at +0x0815c) and the cells' sight counts (+0x1015c) are the Rust half's (ee_app minimap.rs; the dots
+    // are its EeAppMiniMapDot and EeAppMiniMapUnitDot records)
+    EeAppMiniMap* mRust;
     GE2DPoint mU1215C;                      // +0x1215c
     GE2DPoint mU12164;                      // +0x12164
     GE2DPoint mU1216C;                      // +0x1216c

@@ -216,6 +216,24 @@ constexpr static const int32_t EE_APP_MAP_OP_SIGHT_AT = 12;
 /// x, y, flag (on): `gMiniMap->CountCellOn/Off`
 constexpr static const int32_t EE_APP_MAP_OP_COUNT_CELL = 13;
 
+/// The cells per side and in all.
+constexpr static const long SIDE = 64;
+
+/// "Not on the map" (`MoveUnit`'s -10000).
+constexpr static const long OFF_MAP = -10000;
+
+/// x, y -> flag: a unit dot on the tile is drawn (no tile, the local player sees it, or the free camera)
+constexpr static const int32_t EE_APP_MINIMAP_OP_UNIT_SHOWN = 1;
+
+/// x, y -> flag (a tile), seen, visible, all, visibility: `TellTileVisibility`'s reads
+constexpr static const int32_t EE_APP_MINIMAP_OP_TILE_SIGHT = 2;
+
+/// x, y -> items, count: `TellTile`'s doppelgangers and units
+constexpr static const int32_t EE_APP_MINIMAP_OP_TILE_ITEMS = 3;
+
+/// id -> color: `EETerrainTable::Get(id)->mColor`
+constexpr static const int32_t EE_APP_MINIMAP_OP_TERRAIN_COLOR = 4;
+
 constexpr static const int32_t EE_APP_SAVE_READ_ULONG = 1;
 
 constexpr static const int32_t EE_APP_SAVE_READ_LONG = 2;
@@ -263,6 +281,9 @@ constexpr static const int32_t EE_APP_SETTINGS_STRING_SET = 3;
 
 /// the member set to the defaults' member
 constexpr static const int32_t EE_APP_SETTINGS_STRING_DEFAULT = 4;
+
+/// The mini map's Rust half.
+struct EeAppMiniMap;
 
 /// `EEAmbientSoundManager`'s plain members (the analyzer, the generator and the sounds stay C++).
 struct EeAppAmbientFields {
@@ -556,6 +577,71 @@ struct EeAppMapHost {
   void *ctx;
   void *mesh;
   EeAppMapDims dims;
+};
+
+/// What the C++ says of a doppelganger or unit: its dot (colour packed, flag), its class's tile size, a wall's
+/// facing, and whether it gets a dot at all (a class with a mini map colour; for a unit also not another player's
+/// foundation).
+struct EeAppMiniMapItem {
+  uint16_t player;
+  uint16_t color;
+  long flag;
+  long tile_size;
+  long facing;
+  bool shown;
+  /// a wall: three more segments along its facing (`AddDoppelganger`'s `inIsWall`)
+  bool wall;
+  /// a unit (`MoveUnit`) rather than a building's image
+  bool unit;
+  /// the item's tile
+  long x;
+  long y;
+};
+
+/// One host operation's arguments and answers.
+struct EeAppMiniMapIo {
+  long x;
+  long y;
+  /// an answer; `TILE_SIGHT`: the tile exists
+  bool flag;
+  bool seen;
+  bool visible;
+  bool all;
+  unsigned long visibility;
+  /// `TERRAIN_COLOR`: the terrain id in, its colour out
+  unsigned long id;
+  float color[3];
+  /// `TILE_ITEMS`' answer: `count` items (the C++ keeps them until its next call)
+  const EeAppMiniMapItem *items;
+  long count;
+};
+
+/// The host: `(ctx, op, io)`.
+using EeAppMiniMapFn = void(*)(void*, int32_t, EeAppMiniMapIo*);
+
+/// A call's host: the callback, its context, the world map's mesh (`EeGeTerrainMesh`) and the terrain light.
+struct EeAppMiniMapHost {
+  EeAppMiniMapFn call;
+  void *ctx;
+  void *mesh;
+  float light[3];
+};
+
+/// A building's dot (`MMPlayerUnit`: compared by player and colour).
+struct EeAppMiniMapDot {
+  uint16_t player;
+  uint16_t color;
+  /// 1: a resource the units' dots go after
+  long flag;
+};
+
+/// A unit's dot (`MMMapUnit`: compared by player, colour and tile).
+struct EeAppMiniMapUnitDot {
+  uint16_t player;
+  uint16_t color;
+  long flag;
+  long x;
+  long y;
 };
 
 /// `EEGameSettings`' plain members (the game options and the strings stay C++), in the class's order.
@@ -1061,6 +1147,88 @@ long ee_app_map_checksum(const EeAppMapHost *host, unsigned long *cursor);
 /// # Safety
 /// `dims` is a live record.
 unsigned long ee_app_map_tile_count(const EeAppMapDims *dims);
+
+/// A new mini map's Rust half (no map: every count zero, every list empty).
+EeAppMiniMap *ee_app_minimap_new();
+
+/// # Safety
+/// `p` came from [`ee_app_minimap_new`] (or is null) and is not used again.
+void ee_app_minimap_free(EeAppMiniMap *p);
+
+/// `SetMap`'s numbers: the three transformations (16 floats each, `GETransformation`) and the map points a pixel
+/// spans.
+///
+/// # Safety
+/// `p` is live; the transformations point at 16 floats each.
+void ee_app_minimap_set_map(EeAppMiniMap *p,
+                            const float *map_to_pixel,
+                            const float *pixel_to_map,
+                            const float *map_to_cell,
+                            long pixel_width,
+                            long pixel_height);
+
+/// The unit layer's locked pixels (`mPixels`, `mPixelsPerRow`) after each lock.
+///
+/// # Safety
+/// `p` is live; `pixels` holds 64 rows of `pitch` pixels until the next call.
+void ee_app_minimap_set_pixels(EeAppMiniMap *p, uint16_t *pixels, long pitch);
+
+/// The mini map's bodies by entry (`what`): 0 `CountCellOff(x, y)`, 1 `CountCellOn`, 2 `RedrawCell`, 3 `Redraw`'s
+/// walk on a map of the side lengths x (`mL195614`) and y (`mL195610`), 4 `AddDoppelganger(item, x, y)`,
+/// 5 `RemoveDoppelganger`, 6 `MoveUnit(item, x, y, x2, y2)`.
+///
+/// # Safety
+/// `p` and `host` are live (and its callback and context for the call); `item` is live for 4 to 6.
+void ee_app_minimap_call(EeAppMiniMap *p,
+                         const EeAppMiniMapHost *host,
+                         uint32_t what,
+                         const EeAppMiniMapItem *item,
+                         long x,
+                         long y,
+                         long x2,
+                         long y2);
+
+/// `Recolor`: the players' unit and building colours, 17 each.
+///
+/// # Safety
+/// `p` is live; both arrays hold 17 colours.
+void ee_app_minimap_recolor(EeAppMiniMap *p, const uint16_t *unit_colors, const uint16_t *colors);
+
+/// `RedrawPixels(left, right, bottom, top)` into the locked terrain texture (`bits`, rows of `pitch` pixels).
+///
+/// # Safety
+/// `p` and `host` are live; `bits` holds `top` rows of `pitch` pixels and `right <= pitch`.
+void ee_app_minimap_redraw_pixels(const EeAppMiniMap *p,
+                                  const EeAppMiniMapHost *host,
+                                  uint16_t *bits,
+                                  unsigned long pitch,
+                                  long left,
+                                  long right,
+                                  long bottom,
+                                  long top);
+
+/// `RedrawRect`'s pixel rectangle: `out` = left, right, bottom, top.
+///
+/// # Safety
+/// `p` is live; `out` holds four values.
+void ee_app_minimap_pixel_rect(const EeAppMiniMap *p,
+                               long left,
+                               long right,
+                               long bottom,
+                               long top,
+                               long *out);
+
+/// A cell's count and its dots (the capture's read): the pointers live until the mini map changes.
+///
+/// # Safety
+/// `p` is live, `index` below 4096, the outputs live.
+void ee_app_minimap_cell(const EeAppMiniMap *p,
+                         long index,
+                         uint16_t *count,
+                         const EeAppMiniMapDot **dots,
+                         long *dot_count,
+                         const EeAppMiniMapUnitDot **units,
+                         long *unit_count);
 
 /// `EEGameSettings()`'s plain members.
 ///
