@@ -24789,3 +24789,94 @@ line, so a Rust version needs a host answer per read and frees about as much C++
   grid and lines, every unit and map object model, the selection and area-effect rings, the bars, the building
   placement and its footprint lines (a person placing a building), the command names and the debug label (a
   person's pointer over an enemy), the collision spheres (a debug key). EE-SIM never draws.
+
+## R4.4, twenty-fifth round: one EEEffect class for every effect kind; the quad batches, the plane models and the battlefield decals' placement in Rust (ee_gfx effect_batch.rs, effect_kinds.rs, effect_placement.rs; branch rust-gfx31, 2026-11-15)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 9,575 lines at the round's start; 9,290 after the
+batches (-285); 8,403 after the one class (-887); 8,324 after the decals (-79); 7,782 merged with rust 03ab5fe8 and
+its markers stripped (not counted). Deleted: `EEEffect2D.cpp`,
+`EEEffect3D.cpp`, `EEE2DRust.cpp` and the headers `EEEffect2D.h`, `EEEffect3D.h`, `EEE2DRust.h`, `EEE3DRust.h`;
+`EEE3DRust.cpp` became `EEEffectHost.cpp`. The round's C++ diff over `src` and `include/ee`: +2,702 -4,269 (net
+-1,567).
+
+| Commit | What | Graphics Thread C++ (.cpp) |
+|---|---|---|
+| ef2251d3, 537053c1 | the quad batches, `GetEffectFogFactor` and the plane models (`effect_batch.rs`) | -285 |
+| cb2ff2b0 | one `EEEffect` class: the 2D and 3D bases and both Rust leaf classes merged, the manager's switches gone | -887 |
+| d7a47e18 | the battlefield decals' placement (`effect_placement.rs`) | -79 |
+
+- **The quad batches** (`effect_batch.rs`). The camera batch (additive, camera-facing quads) and the ground batch
+  (`AddGroundSprite`, `AddGroundQuad`, `AddBlendedSprite`, `AddGroundStrip`): their textures (referenced twice by
+  `begin`), smallest alpha references, counts, the flush when full and both flushes' state sequences are Rust; the
+  raster table's `sprite`, `ground_quad` and `ground_strip` go straight into them in Rust (the entries are gone), and
+  the table has five new ones: `camera_inverse`, `camera_pitch`, `texture_reference`, `batch_quad` (a quad's four
+  `SetVertex`) and `batch_draw`. `GetEffectFogFactor` reads the fog's attributes through `get_fog_attributes`, which
+  now carries the scale. The plane models (`gEffect2DModel`, `gU4E8DF4`) are Rust's (`ee_gfx_effect_plane_model`;
+  the `standing_plane` entry is gone). The C++ keeps the vertex and polygon arrays and one-line forwarders
+  (`BeginEffectBatches` ... `ReleasePlaneModels`: their callers are other units).
+  - **Trap (test):** the batch state is a process static (`Mutex`): the unit tests take a lock of their own, and a
+    flush's log ends with the culling's restore after the draw (one test read the draw's next call as the quad).
+- **One class.** The original's bases `EEEffect`, `EEEffect2D`, `EEEffect3D` and the port's two leaf classes
+  (`EEE2DRust`, `EEE3DRust`, which held every kind since round 23) are one non-virtual `EEEffect` (only the
+  destructor is virtual, from `UReferenceCounter`): the record, the 2D kinds' parts and plane model, the 3D kinds'
+  members; `mIs2D` (`ee_gfx_effect_is_2d`, `effect_kinds.rs`) picks the Rust entry (`ee_gfx_effect2d` or `3d`) and
+  its host. Nine constructors, one a manager entry point (on a unit, at a point, unit to point, between units,
+  between points, along a line, over tiles, at a transformation, for loading), each choosing the original leaf's
+  body by kind; the manager's eight construction switches and its load switch are one line each (the plan,
+  `effect_manager.rs`, already names the kinds an entry makes; `ee_gfx_effect_loadable` the saved ones). `Load`,
+  `Save` and `RepairPointers` are one chain each (the base's record, then the 2D or 3D part, then the kind's), as are
+  the destructor and `ReleaseResources`. One `Ask` struct answers both hosts; the questions they shared (push,
+  frames, unit location, terrain z, orbitals, the graphic object's media, texture and model, the particles' ground)
+  are one function each. `EEEMStorm` keeps its `EEE3DRust*` member through a typedef.
+  - **Behaviour change:** the pooled 2D particle (0x2e) is a `new EEEffect` like every effect (the pool held 256 x
+    20 and was reset by `Reinit`; the 3D particle lost its pool in round 23). `PrepareQueue` (empty in every class)
+    is gone with its call in `QueueEffects`.
+  - **Trap (types):** `EEMapTile` is a typedef of `EETile`: a forward declaration `class EEMapTile;` in a header
+    breaks every unit that includes `EEMap.h` after it. Forward-declare `EETile` and repeat the typedef.
+- **The decals' placement** (`effect_placement.rs`). `EEPlaceImpactDecal` (a crash's or a shot's shell holes) and
+  `EEPlaceTrackDecal` (a blood stain or track): the variant pick (`GetEffectRandomLong` only with a linked effect),
+  the chance and scatter rolls, the search for a decal on the spot over the manager's list (compared in double), the
+  spread at the map's height and the giraffe's and horse's offsets; the effects' random draws in the original's order.
+  The C++ keeps the entry tests and answers through `EeGfxDecalHost`.
+- **Golden driver** (`build/gx31/drv/make_r25b.py COMMIT|WORKTREE OUT`): the original batch functions and plane
+  models of 86d223b6 against the new forwarders, arrays and raster table entries (cut from `EERenderObject.cpp` by
+  name) over the Rust, over one stub GE printing every rasterizer, vertex array, polygon array, texture and model
+  call with floats as bits: 150 rounds on seed 1 (157,948 lines) and 400 on seed 2 (396,013 lines: 725 draws, 90
+  of them full batches), identical. The one class and the decals are simulation-reached code: the effects capture
+  (seeds 2-7, every swept kind made, stepped, saved, loaded, repaired), the calamity capture and the oracle pin them.
+- **Gates.** Per commit: `build.py --sim` 0/0 each; the batches: the oracle at seeds 2-3 identical, the effects
+  capture at seeds 2-7 PASS (18 digests), the Rust gate's one failing test fixed as its own commit; the one class:
+  the oracle at seed 2 identical, seed 3 exited 2 with a 139-byte trace on the first run and was identical on its
+  rerun alone (a staging failure, no game ran), the effects capture PASS (18), the calamity capture at seeds 2-3
+  PASS (195 digests); the decals: the oracle at seeds 2-3 identical, the effects capture PASS (18), the calamity capture PASS (195), the Rust gate's tests PASS (3,738) with clippy failing on the decal tests' `1 as *mut c_void` (`manual_dangling_ptr`) and rustfmt on three lines, both fixed as their own commit (dc716ef6).
+- **The merges.** `rust` c80a1b00 (6033e8e9): PORT_LEARNINGS.md conflicted (rust's copy lacked round 24's section:
+  rust's taken, round 24's appended); `rust_build.py header` reordered two consts (34a384bb), `rust_includes.py`
+  changed nothing. On that result: both builds 0/0, the Rust gate PASS (3,883 tests; clippy, rustfmt, header), the
+  oracle identical on seeds 2-7, the oracle, late and calamity captures at seeds 2-3 PASS (179, 180, 197 digests)
+  and the effects capture at seeds 2-7 PASS (18), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt` PASS, the tour `RESULT PASS tour` and the orders game `RESULT PASS random-game`
+  (gather, repair, queued repair, move). Then, as the lead asked, `rust` 03ab5fe8 (the address markers deleted
+  repo-wide; d3a8b9ed): the units this round deleted or rewrote and round 24's render objects conflicted on marker
+  lines only (this branch's side taken, PORT_LEARNINGS rust's with rounds 24 and 25 appended), then
+  `tools/strip_markers.py` on the merged tree as its own commit (07bb4854: 299 lines in six units, not counted in
+  the round's net). `rust`'s tip past 03ab5fe8 (c7ffd6cd) did not build here: `ee_won`'s lib.rs lost `authcpp`,
+  `httpcpp`, `perftimer` and `routecpp` in the merge 4c0416ea (`WONRouting.h` calls `ee_won_smart_handle_input`, no
+  longer in the header) and `EEUICUnitIconBar.cpp` names `EEMSelectTheseUnits`, which the messages lane removed;
+  that merge was undone and 03ab5fe8 merged instead. On the final result (07bb4854): both builds 0/0, the Rust gate PASS (3,883 tests; clippy, rustfmt, header),
+  the oracle identical on seeds 2-7, the oracle, late and calamity captures at seeds 2-3 PASS (179, 180, 197) and the
+  effects capture at seeds 2-7 PASS (18); the saveload matrix and the harness sessions ran on the first merge only (the
+  second added marker deletions alone).
+- **The frames.** `build/gx31/frames.sh` (the tour at seed 7, `--pt-rate 40`, `--zoom-captures 100 40 20`), round
+  24's merged test exe (`build/gx30/new_exe`) against this round's first merged one, one after the other under the
+  harness lock: both `RESULT PASS tour`, no GX errors in either; the menus and settings equal but for 223 pixels of
+  the main menu (the version text); at each zoom and in the gameplay frame the same scene (the start's town centre,
+  its citizens and their shadows, the minimap), about two thirds of the pixels differing, three in four of those by
+  under 16 levels (the time of day's light; zoom 40 compared by eye), the rest where citizens stood in other poses,
+  the HUD's crown icons and the screens lane's new chat-line test text in this round's capture. No 2D sprite, decal,
+  glow or energy wall was in view.
+- **Only a tour or a person reaches:** every effect's draw (the batches carry every 2D sprite, the glow sprites,
+  the energy wall's strips, the energy wave's ground quads), the plane models (every 2D effect's quad), the decals'
+  draws.
+- **Not moved:** the effects' hosts (`EEEffectHost.cpp`, ~2.1k lines: the world reads the Rust effects ask for,
+  tag points, units, the map, sounds), the manager's capture sweep (test code), `EERenderObject.cpp`, the frame,
+  picker, goal manager and mouse.
