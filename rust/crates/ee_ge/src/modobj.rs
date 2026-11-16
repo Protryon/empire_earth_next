@@ -7,12 +7,14 @@
 //!
 //! As the managers and GETexture (`manobj.rs`, `texobj.rs`, `texobj_tex.rs`): the C++ `GEModel` stays the type the
 //! game, the renderer, the effects and the managers use; its methods are one-line forwarders and its only member is
-//! this object. Every call the original made on another object (the rasterizer, the vertex and polygon arrays, the
-//! materials, the texture manager and textures, its manager, its sub-models' reference counts, the `UString`s) is one
-//! host operation (`EeGeModOp`, `GEModel::Host`), in the original's order. A sub-model's fields are read and written
-//! on its own object, which the host hands over (`EeGeModOp::ModelObj`); the walks over the sub-models (frames,
-//! opacity, textures, sizes, sorting, verification) recurse in Rust as the original's non-virtual calls did. No
-//! reference to an object lives across a host call.
+//! this object. The calls the original made on other objects that cross into C++ (the rasterizer, the vertex and
+//! polygon arrays, making and releasing the materials, the texture manager, its manager, its sub-models' releases,
+//! making and deleting the `UString`s) are one host operation each (`EeGeModOp`, `GEModel::Host`), in the original's
+//! order. Since R4.3 part 17 the rest is read in place (`cppobj.rs`): the materials' Rust objects (`smallobj.rs`) are
+//! read and set directly, as are the strings' records (`ee_ustring`), the reference counts taken and a sub-model's
+//! object, whose fields are read and written on it; the walks over the
+//! sub-models (frames, opacity, textures, sizes, sorting, verification) recurse in Rust as the original's non-virtual
+//! calls did. No reference to an object lives across a host call.
 //!
 //! The arrays the header's accessors return references into (transforms, boxes, tag points, radii) are Rust
 //! vectors of the `#[repr(C)]` mirrors (`types.rs`), allocated once; the accessors index them in C++ as the inline
@@ -22,9 +24,11 @@
 use std::ffi::{c_long, c_ulong, c_void};
 use std::ptr;
 
+use crate::cppobj;
 use crate::model_ffi::EeGeSharedFrame;
 use crate::model_geom;
 use crate::model_store::CemModel;
+use crate::smallobj::{ee_ge_mat_get, ee_ge_mat_name, ee_ge_mat_set, ee_ge_mat_set_texture, EeGeMat, EeGeMatField};
 use crate::types::{Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
 
 /// `kErrorOK`.
@@ -80,31 +84,12 @@ pub enum EeGeModOp {
     MaterialNew,
     /// `obj->UReferenceCounter::Dereference()`.
     MaterialDereference,
-    /// `obj->SetTexture((GETexture*)a, b)`.
-    MaterialSetTexture,
-    /// `obj->GetPolygonRangeLength(a)`.
-    MaterialRangeLength,
-    /// `obj->GetPolygonStartingIndex(a)`.
-    MaterialStart,
-    /// `obj->GetVertexStartingIndex()`.
-    MaterialVertexStart,
     /// `obj->SizeOf()`.
     MaterialSizeOf,
-    /// `obj->SetName(UString(a's b bytes))`.
-    MaterialSetName,
-    /// `c` 0: `obj->SetTextureIndex(a)`; 1: `SetPolygonStartingIndex(a, b)`; 2: `SetPolygonRangeLength(a, b)`;
-    /// 3: `SetVertexStartingIndex(a)`; 4: `SetVertexRangeLength(a)`.
-    MaterialSetValue,
     /// `new GEModel((GEModelManager*)obj)`.
     ModelNew,
-    /// The Rust object of model `obj`.
-    ModelObj,
-    /// `obj->Reference()`.
-    ModelReference,
     /// `obj->UReferenceCounter::Dereference()`.
     ModelBaseDereference,
-    /// `obj->mReferenceCount`.
-    ModelRefCount,
     /// `((GEModelManager*)obj)->RemoveModel((GEModel*)a)`.
     ManagerRemove,
     /// `new UString`.
@@ -115,18 +100,6 @@ pub enum EeGeModOp {
     StrArrayNew,
     /// `delete[] (UString*)obj`.
     StrArrayDelete,
-    /// `&((UString*)obj)[a]`.
-    StrAt,
-    /// `*(UString*)obj = *(const UString*)a`.
-    StrAssign,
-    /// `*(UString*)obj = UString(a's b bytes)`.
-    StrSetBytes,
-    /// `obj->GetLength()`.
-    StrLength,
-    /// `obj->SizeOf()`.
-    StrSizeOf,
-    /// `((const char*)*obj)[0]`.
-    StrFirst,
     /// `((GETextureManager*)obj)->LoadTexture(*(const UString*)a, *(const GETextureDescription*)b)`.
     TexLoad,
     /// `obj->SetStageMinFilterMode(a, b)`.
@@ -294,6 +267,15 @@ unsafe fn md<'a>(p: *mut EeGeModel) -> &'a mut EeGeModel {
     unsafe { &mut *p }
 }
 
+/// A material's Rust object (the C++ `GEMaterial*` the model holds, read in place: `cppobj.rs`).
+///
+/// # Safety
+/// `material` is a live material (never NULL: the original called through it).
+unsafe fn mat(material: usize) -> *mut EeGeMat {
+    // SAFETY: the caller's contract
+    unsafe { cppobj::counted(material) }
+}
+
 /// `v[i]` of an optional array (0 or NULL past it or without it: the original read past its arrays).
 fn at<T: Copy + Default>(v: &Option<Vec<T>>, i: c_ulong) -> T {
     v.as_ref().and_then(|v| v.get(i as usize).copied()).unwrap_or_default()
@@ -338,7 +320,7 @@ impl EeGeModel {
             if model == md(p).owner {
                 return p;
             }
-            Self::op(p, EeGeModOp::ModelObj, model, 0, 0, 0) as *mut Self
+            cppobj::counted(model)
         }
     }
 
@@ -364,18 +346,17 @@ impl EeGeModel {
     ///
     /// # Safety
     /// `p` is live; `array` a `UString` array with an `i`.
-    unsafe fn str_at(p: *mut Self, array: usize, i: c_ulong) -> usize {
-        // SAFETY: the caller's contract
-        unsafe { Self::op(p, EeGeModOp::StrAt, array, i as isize, 0, 0) as usize }
+    unsafe fn str_at(_p: *mut Self, array: usize, i: c_ulong) -> usize {
+        cppobj::str_at(array, i as usize)
     }
 
     /// `*target = UString(bytes)`.
     ///
     /// # Safety
     /// `p` is live; `target` a `UString`.
-    unsafe fn str_set(p: *mut Self, target: usize, bytes: &[u8]) {
+    unsafe fn str_set(_p: *mut Self, target: usize, bytes: &[u8]) {
         // SAFETY: the caller's contract
-        unsafe { Self::op(p, EeGeModOp::StrSetBytes, target, bytes.as_ptr() as isize, bytes.len() as isize, 0) };
+        unsafe { cppobj::str_set_bytes(target, bytes) };
     }
 
     /// A frame's points (`GetPoint` of each of `count`), through the host.
@@ -481,7 +462,7 @@ impl EeGeModel {
         unsafe {
             let p = Self::create(host, owner, manager);
             let own = md(p).name;
-            Self::op(p, EeGeModOp::StrAssign, own, name as isize, 0, 0);
+            cppobj::str_assign(own, name);
             let m = md(p);
             m.polygon_count = counts[0];
             m.vertex_count = counts[1];
@@ -728,7 +709,7 @@ impl EeGeModel {
                 }
                 if !material.name.is_empty() {
                     let name = &material.name;
-                    Self::op(p, EeGeModOp::MaterialSetName, target, name.as_ptr() as isize, name.len() as isize, 0);
+                    cppobj::str_set_bytes(ee_ge_mat_name(mat(target)) as usize, name);
                 }
                 let lods = md(p).lod_count as usize;
                 for (k, value) in material.values.iter().enumerate() {
@@ -742,7 +723,14 @@ impl EeGeModel {
                     } else {
                         (4, 0)
                     };
-                    Self::op(p, EeGeModOp::MaterialSetValue, target, v, lod as isize, which);
+                    let field = [
+                        EeGeMatField::TextureIndex,
+                        EeGeMatField::PolygonStart,
+                        EeGeMatField::PolygonLength,
+                        EeGeMatField::VertexStart,
+                        EeGeMatField::VertexLength,
+                    ][which];
+                    ee_ge_mat_set(mat(target), field, lod as c_ulong, v as c_ulong);
                 }
                 if !material.texture_filename.is_empty() && md(p).texture_filenames != 0 {
                     let names = md(p).texture_filenames;
@@ -831,16 +819,16 @@ impl EeGeModel {
             while i < md(p).material_count {
                 let material = at(&md(p).materials, i);
                 if material != 0 {
-                    Self::op(p, EeGeModOp::MaterialSetTexture, material, 0, screen as isize, 0);
+                    ee_ge_mat_set_texture(mat(material), ptr::null_mut(), screen);
                 }
                 let names = md(p).texture_filenames;
                 let name = if names != 0 { Self::str_at(p, names, i) } else { 0 };
-                let length = if name != 0 { Self::op(p, EeGeModOp::StrLength, name, 0, 0, 0) as c_ulong } else { 0 };
+                let length = if name != 0 { cppobj::str_length(name) } else { 0 };
                 if length > 0 && material != 0 {
                     let texture =
                         Self::op(p, EeGeModOp::TexLoad, manager, name as isize, description as isize, 0) as usize;
                     if texture != 0 {
-                        Self::op(p, EeGeModOp::MaterialSetTexture, material, texture as isize, screen as isize, 0);
+                        ee_ge_mat_set_texture(mat(material), texture as *mut c_void, screen);
                         Self::op(p, EeGeModOp::TexMinFilter, texture, 1, EVERY_STAGE, 0);
                         Self::op(p, EeGeModOp::TexMagFilter, texture, 1, EVERY_STAGE, 0);
                         Self::op(p, EeGeModOp::TexMipFilter, texture, MIP_FILTER_POINT as isize, EVERY_STAGE, 0);
@@ -942,7 +930,7 @@ impl EeGeModel {
         // SAFETY: the caller's contract
         unsafe {
             let owner = md(p).owner;
-            let count = Self::op(p, EeGeModOp::ModelRefCount, owner, 0, 0, 0) as c_ulong;
+            let count = cppobj::reference_count(owner);
             if count > 2 {
                 Self::op(p, EeGeModOp::ModelBaseDereference, owner, 0, 0, 0);
             } else {
@@ -965,7 +953,7 @@ impl EeGeModel {
         unsafe {
             for i in 0..md(p).material_count {
                 let material = at(&md(p).materials, i);
-                let length = Self::op(p, EeGeModOp::MaterialRangeLength, material, lod as isize, 0, 0) as c_ulong;
+                let length = ee_ge_mat_get(mat(material), EeGeMatField::PolygonLength, lod);
                 count = count.wrapping_add(length);
             }
         }
@@ -1146,7 +1134,7 @@ impl EeGeModel {
                 Self::op(p, EeGeModOp::ModelBaseDereference, old, 0, 0, 0);
             }
             if model != 0 {
-                Self::op(p, EeGeModOp::ModelReference, model, 0, 0, 0);
+                cppobj::reference(model);
                 let owner = md(p).owner;
                 md(Self::obj(p, model)).parent = owner;
             }
@@ -1165,7 +1153,7 @@ impl EeGeModel {
             let materials = md(p).material_count;
             for i in 0..materials {
                 let material = at(&md(p).materials, i);
-                Self::op(p, EeGeModOp::MaterialSetTexture, material, texture as isize, screen as isize, 0);
+                ee_ge_mat_set_texture(mat(material), texture as *mut c_void, screen);
             }
             for sub in Self::sub_objects(p, subs) {
                 Self::set_texture(sub, texture, screen);
@@ -1182,7 +1170,7 @@ impl EeGeModel {
         // SAFETY: the caller's contract; every host call is a statement of its own
         unsafe {
             let name = md(p).name;
-            let name_size = Self::op(p, EeGeModOp::StrSizeOf, name, 0, 0, 0) as c_ulong;
+            let name_size = cppobj::str_size_of(name);
             let m = md(p);
             let shared = m.shared.len() as c_ulong;
             let mut size = 0xd8u32 as c_ulong;
@@ -1223,7 +1211,7 @@ impl EeGeModel {
             if names != 0 {
                 for l in 0..md(p).material_count {
                     let name = Self::str_at(p, names, l);
-                    size = size.wrapping_add(Self::op(p, EeGeModOp::StrSizeOf, name, 0, 0, 0) as c_ulong);
+                    size = size.wrapping_add(cppobj::str_size_of(name));
                 }
             }
             size = size.wrapping_add(4);
@@ -1231,7 +1219,7 @@ impl EeGeModel {
             if names != 0 {
                 for n in 0..md(p).tag_count {
                     let name = Self::str_at(p, names, n);
-                    size = size.wrapping_add(Self::op(p, EeGeModOp::StrSizeOf, name, 0, 0, 0) as c_ulong);
+                    size = size.wrapping_add(cppobj::str_size_of(name));
                 }
             }
             size = size.wrapping_add(md(p).frame_count.wrapping_mul(POINTER)).wrapping_add(0x60);
@@ -1254,7 +1242,8 @@ impl EeGeModel {
             let mut first = Vec::with_capacity(count as usize);
             for i in 0..count {
                 let name = Self::str_at(p, names, i);
-                first.push(Self::op(p, EeGeModOp::StrFirst, name, 0, 0, 0) as i8);
+                #[allow(clippy::unnecessary_cast)] // c_char is u8 on some targets
+                first.push(*cppobj::str_text(name) as i8);
             }
             let order = model_geom::tag_point_order(&first);
             for i in 0..count {
@@ -1264,9 +1253,9 @@ impl EeGeModel {
                 }
                 let a = Self::str_at(p, names, i);
                 let b = Self::str_at(p, names, minimum);
-                Self::op(p, EeGeModOp::StrAssign, temp, a as isize, 0, 0);
-                Self::op(p, EeGeModOp::StrAssign, a, b as isize, 0, 0);
-                Self::op(p, EeGeModOp::StrAssign, b, temp as isize, 0, 0);
+                cppobj::str_assign(temp, a);
+                cppobj::str_assign(a, b);
+                cppobj::str_assign(b, temp);
                 let m = md(p);
                 for k in 0..frames {
                     let points = at(&m.frame_tags, k);
@@ -1300,9 +1289,10 @@ impl EeGeModel {
             let mut ranges = Vec::with_capacity(materials as usize);
             for j in 0..materials {
                 let material = at(&md(p).materials, j);
-                let start = Self::op(p, EeGeModOp::MaterialStart, material, 0, 0, 0) as u32;
-                let length = Self::op(p, EeGeModOp::MaterialRangeLength, material, 0, 0, 0) as u32;
-                let vertex = Self::op(p, EeGeModOp::MaterialVertexStart, material, 0, 0, 0) as u32;
+                let m = mat(material);
+                let start = ee_ge_mat_get(m, EeGeMatField::PolygonStart, 0) as u32;
+                let length = ee_ge_mat_get(m, EeGeMatField::PolygonLength, 0) as u32;
+                let vertex = ee_ge_mat_get(m, EeGeMatField::VertexStart, 0) as u32;
                 ranges.push([start, length, vertex]);
             }
             for i in 0..frames {

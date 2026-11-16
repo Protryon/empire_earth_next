@@ -227,16 +227,6 @@ struct EeDx7Screen;
 /// The surface.
 struct EeDx7Surface;
 
-/// A `GEPolygonArray` of 16-bit triangle indices (`DrawIndexedPrimitive`'s WORD list).
-struct EeDx7PolygonArray;
-
-/// A `GEVertexArray` of [`Dx7Vertex`]: no colour (reads give white, opacity 1; writes of colour and opacity are
-/// ignored).
-struct EeDx7StandardVertexArray;
-
-/// A `GEVertexArray` of [`Dx7StdColorVertex`].
-struct EeDx7StdColorVertexArray;
-
 /// The host of the movie objects (several threads call it).
 using EeDx7MovieHostFn = ptrdiff_t(*)(EeDx7MovieOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
@@ -280,51 +270,12 @@ struct EeDx7WindowParams {
 /// A C++ object seen from Rust.
 using EeDx7Handle = void*;
 
-/// One `GEText` and its font as plain data (`DX7DrawText`). `font` is a `PlatFont*`, null when the font has none.
-struct EeDx7TextInfo {
-  const void *font;
-  const char *text;
-  uint32_t length;
-  float x;
-  float y;
-  unsigned long alignment;
-  bool transparent;
-  bool shadow_font;
-  float foreground[3];
-  float background[3];
-};
-
 /// `RECT`: Win32 `LONG`s, 32 bits on every system (`wintypes.h`), pinned by the C++.
 struct EeDx7TextRect {
   int32_t left;
   int32_t top;
   int32_t right;
   int32_t bottom;
-};
-
-/// `GXVERTEX`: position, normal, one texture coordinate.
-struct Dx7Vertex {
-  float x;
-  float y;
-  float z;
-  float nx;
-  float ny;
-  float nz;
-  float tu;
-  float tv;
-};
-
-/// `GXVERTEX_STD_COLOR`: position, normal, a packed ARGB colour, one texture coordinate.
-struct Dx7StdColorVertex {
-  float x;
-  float y;
-  float z;
-  float nx;
-  float ny;
-  float nz;
-  uint32_t color;
-  float tu;
-  float tv;
 };
 
 /// The host: `owner` is the C++ `DX7Rasterizer` of the object calling.
@@ -657,12 +608,12 @@ void ee_dx7r_transform_to_camera(EeDx7Rasterizer *rast,
                                  bool water_only,
                                  bool orthographic);
 
-/// `DX7TextBounds`: `clip` may be null.
-void ee_dx7r_text_bounds(const EeDx7TextInfo *info, const EeDx7TextRect *clip, EeDx7TextRect *out);
+/// `DX7TextBounds` of a `GEText*`: `clip` may be null.
+void ee_dx7r_text_bounds(EeDx7Handle text, const EeDx7TextRect *clip, EeDx7TextRect *out);
 
-/// `DX7DrawTextPlat` (the `GXSurface::DrawText` callback). `target` is the `PlatFontTarget*`. Returns false when the
+/// `DX7DrawTextPlat` (the `GXSurface::DrawText` callback) of a `GEText*`. `target` is the `PlatFontTarget*`. Returns false when the
 /// font has no OS font.
-bool ee_dx7r_text_draw(const EeDx7TextInfo *info,
+bool ee_dx7r_text_draw(EeDx7Handle text,
                        const EeDx7TextRect *clip,
                        long origin_x,
                        long origin_y,
@@ -670,113 +621,6 @@ bool ee_dx7r_text_draw(const EeDx7TextInfo *info,
                        int32_t target_height,
                        float target_scale,
                        const void *target);
-
-EeDx7StandardVertexArray *ee_dx7_std_va_new(uint32_t size);
-
-void ee_dx7_std_va_destroy(EeDx7StandardVertexArray *a);
-
-/// The vertex memory (GX reads it directly).
-Dx7Vertex *ee_dx7_std_va_vertices(EeDx7StandardVertexArray *a);
-
-void ee_dx7_std_va_copy_from(EeDx7StandardVertexArray *a, const EeDx7StandardVertexArray *b);
-
-void ee_dx7_std_va_color(const EeDx7StandardVertexArray *a, uint32_t index, float *out);
-
-void ee_dx7_std_va_normal(const EeDx7StandardVertexArray *a, uint32_t index, float *out);
-
-float ee_dx7_std_va_opacity(const EeDx7StandardVertexArray *a, uint32_t index);
-
-void ee_dx7_std_va_point(const EeDx7StandardVertexArray *a, uint32_t index, float *out);
-
-uint32_t ee_dx7_std_va_size(const EeDx7StandardVertexArray *a);
-
-void ee_dx7_std_va_texture_coordinate(const EeDx7StandardVertexArray *a,
-                                      uint32_t index,
-                                      float *out);
-
-void ee_dx7_std_va_set_normal(EeDx7StandardVertexArray *a, const float *n, uint32_t index);
-
-void ee_dx7_std_va_set_point(EeDx7StandardVertexArray *a, const float *p, uint32_t index);
-
-void ee_dx7_std_va_set_texture_coordinate(EeDx7StandardVertexArray *a,
-                                          const float *uv,
-                                          uint32_t index);
-
-void ee_dx7_std_va_set_vertex(EeDx7StandardVertexArray *a,
-                              const float *p,
-                              const float *n,
-                              const float *uv,
-                              uint32_t index);
-
-uint32_t ee_dx7_std_va_size_of(const EeDx7StandardVertexArray *a);
-
-EeDx7StdColorVertexArray *ee_dx7_color_va_new(uint32_t size);
-
-void ee_dx7_color_va_destroy(EeDx7StdColorVertexArray *a);
-
-Dx7StdColorVertex *ee_dx7_color_va_vertices(EeDx7StdColorVertexArray *a);
-
-void ee_dx7_color_va_copy_from(EeDx7StdColorVertexArray *a, const EeDx7StdColorVertexArray *b);
-
-void ee_dx7_color_va_color(const EeDx7StdColorVertexArray *a, uint32_t index, float *out);
-
-void ee_dx7_color_va_normal(const EeDx7StdColorVertexArray *a, uint32_t index, float *out);
-
-float ee_dx7_color_va_opacity(const EeDx7StdColorVertexArray *a, uint32_t index);
-
-void ee_dx7_color_va_point(const EeDx7StdColorVertexArray *a, uint32_t index, float *out);
-
-uint32_t ee_dx7_color_va_size(const EeDx7StdColorVertexArray *a);
-
-void ee_dx7_color_va_texture_coordinate(const EeDx7StdColorVertexArray *a,
-                                        uint32_t index,
-                                        float *out);
-
-void ee_dx7_color_va_set_color(EeDx7StdColorVertexArray *a, const float *c, uint32_t index);
-
-void ee_dx7_color_va_set_normal(EeDx7StdColorVertexArray *a, const float *n, uint32_t index);
-
-void ee_dx7_color_va_set_opacity(EeDx7StdColorVertexArray *a, float opacity, uint32_t index);
-
-void ee_dx7_color_va_set_point(EeDx7StdColorVertexArray *a, const float *p, uint32_t index);
-
-void ee_dx7_color_va_set_texture_coordinate(EeDx7StdColorVertexArray *a,
-                                            const float *uv,
-                                            uint32_t index);
-
-void ee_dx7_color_va_set_vertex(EeDx7StdColorVertexArray *a,
-                                const float *c,
-                                const float *p,
-                                const float *n,
-                                const float *uv,
-                                float opacity,
-                                uint32_t index);
-
-uint32_t ee_dx7_color_va_size_of(const EeDx7StdColorVertexArray *a);
-
-EeDx7PolygonArray *ee_dx7_poly_new(uint32_t size);
-
-void ee_dx7_poly_destroy(EeDx7PolygonArray *p);
-
-/// The 16-bit index memory (GX reads it directly).
-uint16_t *ee_dx7_poly_indices(EeDx7PolygonArray *p);
-
-uint32_t ee_dx7_poly_size(const EeDx7PolygonArray *p);
-
-uint32_t ee_dx7_poly_vertex_index(const EeDx7PolygonArray *p, uint32_t polygon, uint32_t corner);
-
-void ee_dx7_poly_set_vertex_index(EeDx7PolygonArray *p,
-                                  uint32_t polygon,
-                                  uint32_t corner,
-                                  uint32_t index);
-
-void ee_dx7_poly_set_vertex_indices(EeDx7PolygonArray *p,
-                                    uint32_t polygon,
-                                    uint32_t i1,
-                                    uint32_t i2,
-                                    uint32_t i3);
-
-uint32_t ee_dx7_poly_size_of(const EeDx7PolygonArray *p);
 
 /// `DX7Rasterizer(inName)`: `base` is the `GERasterizer`'s object.
 EeDx7Rasterizer *ee_dx7r_new(EeDx7RastHostFn host, void *owner, EeGeRasterizer *base, bool tnl);

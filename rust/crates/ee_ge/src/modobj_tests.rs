@@ -2,13 +2,17 @@
 //! original GEModel.cpp and 'GEModel Load.cpp' with traced fakes) and a few direct checks of the object.
 //!
 //! The replay keeps a world of the driver's objects by construction serial (models, materials, textures, vertex and
-//! polygon arrays as the fakes keep them; `UString`s as byte vectors), makes each "do" line's call on the Rust
-//! objects, writes every line the fakes and the driver would write, and compares the whole sequence with the
-//! golden's. A "step" line is followed by each live model's digest, computed as the driver computes it through the
+//! polygon arrays as the fakes keep them; since R4.3 part 17 the reference-counted ones are C++-layout objects whose
+//! counts and Rust objects the model reads in place, the materials are `smallobj.rs` objects and the `UString`s
+//! C++-layout records: `cppobj::testing`), makes each "do" line's call on the Rust objects, writes every line the
+//! fakes and the driver would write (the driver no longer traces what is done in place: references, the materials'
+//! setters), and compares the whole sequence with the golden's. A "step" line is followed by each live model's digest, computed as the driver computes it through the
 //! accessors. The decoded models come from the driver's generator (`modobj_cemgen.rs`).
 
 use super::*;
+use crate::cppobj::{testing, CppCounted};
 use crate::model_store::{CemFrame, CemMaterial, CemPolygons, Counts};
+use crate::smallobj::{ee_ge_mat_destroy, ee_ge_mat_new, ee_ge_mat_texture, EeGeObjOp};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
@@ -20,22 +24,9 @@ const TEXTURE_MANAGER: usize = 0x6000;
 const MODEL_MANAGER: usize = 0x7000;
 const HANDLE: usize = 0x10;
 
-#[derive(Default)]
-struct Material {
-    name: Vec<u8>,
-    screens: c_ulong,
-    lods: c_ulong,
-    textures: Vec<usize>,
-    starts: Vec<c_ulong>,
-    lengths: Vec<c_ulong>,
-    vertex_start: c_ulong,
-    vertex_length: c_ulong,
-    texture_index: c_ulong,
-}
-
 enum Kind {
     Model(*mut EeGeModel),
-    Material(Material),
+    Material(*mut EeGeMat),
     Texture,
     Vertices(Vec<Ge3DPoint>, Vec<GeVector>),
     Polygons(Vec<u32>),
@@ -44,7 +35,6 @@ enum Kind {
 struct Obj {
     serial: i32,
     kind: Kind,
-    refs: c_ulong,
     alive: bool,
 }
 
@@ -55,8 +45,8 @@ struct World {
     serial: i32,
     screen_id: c_ulong,
     caches: [BTreeMap<Vec<u8>, usize>; 2],
-    /// `new UString[n]` arrays by address, with their length.
-    arrays: BTreeMap<usize, usize>,
+    /// Handles by serial.
+    serials: BTreeMap<i32, usize>,
     out: Vec<String>,
 }
 
@@ -93,13 +83,42 @@ fn name(o: usize) -> String {
     })
 }
 
+/// A new object: a C++-layout reference-counted one (count 1) for a model, material or texture, a unique address
+/// for an array. Its memory lives as long as the test (a dangling pointer still names its object, as the driver's).
 fn new_object(kind: Kind) -> usize {
+    let h = match kind {
+        Kind::Vertices(..) | Kind::Polygons(_) => Box::into_raw(Box::new([0u8; HANDLE])) as usize,
+        _ => testing::new_counted(std::ptr::null_mut()),
+    };
     with(|w| {
         w.serial += 1;
-        let h = w.serial as usize * HANDLE;
-        w.objects.insert(h, Obj { serial: w.serial, kind, refs: 1, alive: true });
+        w.objects.insert(h, Obj { serial: w.serial, kind, alive: true });
+        w.serials.insert(w.serial, h);
         h
     })
+}
+
+/// Stores a model's or material's Rust object in its C++-layout object (`mRust`).
+fn set_rust(h: usize, rust: *mut c_void) {
+    // SAFETY: a counted object of `new_object`
+    unsafe { (*(h as *mut CppCounted)).rust = rust };
+}
+
+/// The object's reference count (`mReferenceCount`).
+fn refs(h: usize) -> c_ulong {
+    // SAFETY: a counted object of `new_object`
+    unsafe { (*(h as *const CppCounted)).count }
+}
+
+fn set_refs(h: usize, n: c_ulong) {
+    // SAFETY: a counted object of `new_object`
+    unsafe { (*(h as *mut CppCounted)).count = n };
+}
+
+/// A model object around its Rust object.
+fn new_model(p: *mut EeGeModel, h: usize) {
+    with(|w| w.objects.get_mut(&h).unwrap().kind = Kind::Model(p));
+    set_rust(h, p as *mut c_void);
 }
 
 fn rust_of(h: usize) -> *mut EeGeModel {
@@ -110,25 +129,29 @@ fn rust_of(h: usize) -> *mut EeGeModel {
 }
 
 fn handle_of(serial: &str) -> usize {
-    serial.trim_start_matches(['R', 'V', 'P']).parse::<usize>().unwrap() * HANDLE
+    let s = serial.trim_start_matches(['R', 'V', 'P']).parse::<i32>().unwrap();
+    with(|w| w.serials[&s])
 }
 
 /// `UReferenceCounter::Dereference` (the fake's): the line, then the delete at 0.
 fn deref(h: usize) {
-    let left = with(|w| {
-        let o = w.objects.get_mut(&h).unwrap();
-        o.refs -= 1;
-        o.refs
-    });
+    let left = refs(h) - 1;
+    set_refs(h, left);
     emit(format!("deref {} {left}", name(h)));
     if left == 0 {
-        let model = with(|w| match w.objects[&h].kind {
-            Kind::Model(p) => Some(p),
-            _ => None,
+        let kind = with(|w| match w.objects[&h].kind {
+            Kind::Model(p) => (p, std::ptr::null_mut()),
+            Kind::Material(m) => (std::ptr::null_mut(), m),
+            _ => (std::ptr::null_mut(), std::ptr::null_mut()),
         });
-        if let Some(p) = model {
-            // SAFETY: a live model's object
-            unsafe { EeGeModel::destroy(p) };
+        // SAFETY: a live model's or material's object
+        unsafe {
+            if !kind.0.is_null() {
+                EeGeModel::destroy(kind.0);
+            }
+            if !kind.1.is_null() {
+                ee_ge_mat_destroy(kind.1);
+            }
         }
         emit(format!("del {}", name(h)));
         with(|w| w.objects.get_mut(&h).unwrap().alive = false);
@@ -136,8 +159,25 @@ fn deref(h: usize) {
 }
 
 fn string(p: usize) -> Vec<u8> {
-    // SAFETY: a `UString` of the mock (a byte vector)
-    unsafe { (*(p as *const Vec<u8>)).clone() }
+    // SAFETY: a C++-layout `UString`
+    unsafe { testing::text(p) }.into_bytes()
+}
+
+/// The materials' host (GEObjectHost's share): their names and their textures' releases.
+unsafe extern "C" fn object_host(_owner: *mut c_void, op: EeGeObjOp, obj: *mut c_void, _a: isize, _b: isize) -> isize {
+    match op {
+        EeGeObjOp::StrNew => testing::new_ustring_default() as isize,
+        EeGeObjOp::StrDelete => {
+            // SAFETY: a material's name
+            unsafe { testing::delete_ustring(obj as usize) };
+            0
+        }
+        EeGeObjOp::TexDereference => {
+            deref(obj as usize);
+            0
+        }
+        other => panic!("unexpected object op {other:?}"),
+    }
 }
 
 fn text(b: &[u8]) -> String {
@@ -268,15 +308,11 @@ unsafe extern "C" fn host(_owner: *mut c_void, op: EeGeModOp, obj: *mut c_void, 
         }),
         EeGeModOp::MaterialNew => {
             let (screens, lods) = (a as c_ulong, b as c_ulong);
-            let m = Material {
-                screens,
-                lods,
-                textures: vec![0; screens as usize],
-                starts: vec![0; lods as usize],
-                lengths: vec![0; lods as usize],
-                ..Material::default()
-            };
-            let h = new_object(Kind::Material(m));
+            let h = new_object(Kind::Material(std::ptr::null_mut()));
+            // SAFETY: the materials' host serves the handle
+            let m = unsafe { ee_ge_mat_new(object_host, h as *mut c_void, screens, lods) };
+            with(|w| w.objects.get_mut(&h).unwrap().kind = Kind::Material(m));
+            set_rust(h, m as *mut c_void);
             emit(format!("{} material s{screens} l{lods}", name(h)));
             h as isize
         }
@@ -284,132 +320,38 @@ unsafe extern "C" fn host(_owner: *mut c_void, op: EeGeModOp, obj: *mut c_void, 
             deref(o);
             0
         }
-        EeGeModOp::MaterialSetTexture => {
-            emit(format!("{} settex {} {}", name(o), name(a as usize), b as c_ulong));
-            with(|w| {
-                if let Kind::Material(m) = &mut w.objects.get_mut(&o).unwrap().kind {
-                    if let Some(s) = m.textures.get_mut(b as usize) {
-                        *s = a as usize;
-                    }
-                }
-            });
-            0
-        }
-        EeGeModOp::MaterialRangeLength | EeGeModOp::MaterialStart | EeGeModOp::MaterialVertexStart => {
-            with(|w| match &w.objects[&o].kind {
-                Kind::Material(m) => match op {
-                    EeGeModOp::MaterialRangeLength => m.lengths.get(a as usize).copied().unwrap_or(0),
-                    EeGeModOp::MaterialStart => m.starts.get(a as usize).copied().unwrap_or(0),
-                    _ => m.vertex_start,
-                },
-                _ => unreachable!(),
-            }) as isize
-        }
-        EeGeModOp::MaterialSizeOf => with(|w| match &w.objects[&o].kind {
-            Kind::Material(m) => (0x48 + m.lods * 8 + m.screens * 4) as isize,
-            _ => unreachable!(),
-        }),
-        EeGeModOp::MaterialSetName => {
-            // SAFETY: `b` bytes at `a`
-            let n = unsafe { std::slice::from_raw_parts(a as *const u8, b as usize) }.to_vec();
-            emit(format!("{} name '{}'", name(o), text(&n)));
-            with(|w| {
-                if let Kind::Material(m) = &mut w.objects.get_mut(&o).unwrap().kind {
-                    m.name = n;
-                }
-            });
-            0
-        }
-        EeGeModOp::MaterialSetValue => {
-            let (v, l) = (a as c_ulong, b as c_ulong);
-            let line = match c {
-                0 => format!("{} ti {v}", name(o)),
-                1 => format!("{} ps {v} l{l}", name(o)),
-                2 => format!("{} pl {v} l{l}", name(o)),
-                3 => format!("{} vs {v}", name(o)),
-                _ => format!("{} vl {v}", name(o)),
+        EeGeModOp::MaterialSizeOf => {
+            let m: *mut EeGeMat = cppobj::counted(o);
+            // SAFETY: a live material
+            let (lods, screens) = unsafe {
+                (ee_ge_mat_get(m, EeGeMatField::LodCount, 0), ee_ge_mat_get(m, EeGeMatField::ScreenCount, 0))
             };
-            emit(line);
-            with(|w| {
-                if let Kind::Material(m) = &mut w.objects.get_mut(&o).unwrap().kind {
-                    match c {
-                        0 => m.texture_index = v,
-                        1 => {
-                            if let Some(s) = m.starts.get_mut(l as usize) {
-                                *s = v;
-                            }
-                        }
-                        2 => {
-                            if let Some(s) = m.lengths.get_mut(l as usize) {
-                                *s = v;
-                            }
-                        }
-                        3 => m.vertex_start = v,
-                        _ => m.vertex_length = v,
-                    }
-                }
-            });
-            0
+            (0x48 + lods * 8 + screens * 4) as isize
         }
         EeGeModOp::ModelNew => {
             let h = new_object(Kind::Model(std::ptr::null_mut()));
             // SAFETY: the mock host serves the handle
             let p = unsafe { EeGeModel::create(host, h, o) };
-            with(|w| w.objects.get_mut(&h).unwrap().kind = Kind::Model(p));
+            new_model(p, h);
             h as isize
         }
-        EeGeModOp::ModelObj => rust_of(o) as isize,
-        EeGeModOp::ModelReference => {
-            let n = with(|w| {
-                let x = w.objects.get_mut(&o).unwrap();
-                x.refs += 1;
-                x.refs
-            });
-            emit(format!("ref {} {n}", name(o)));
-            0
-        }
-        EeGeModOp::ModelRefCount => with(|w| w.objects[&o].refs) as isize,
         EeGeModOp::ManagerRemove => {
             emit(format!("G{} remove {}", o - MODEL_MANAGER, name(a as usize)));
             deref(a as usize);
             0
         }
-        EeGeModOp::StrNew => Box::into_raw(Box::new(Vec::<u8>::new())) as isize,
+        EeGeModOp::StrNew => testing::new_ustring_default() as isize,
         EeGeModOp::StrDelete => {
             // SAFETY: from StrNew
-            drop(unsafe { Box::from_raw(o as *mut Vec<u8>) });
+            unsafe { testing::delete_ustring(o) };
             0
         }
-        EeGeModOp::StrArrayNew => {
-            let n = a as usize;
-            let p = Box::into_raw(vec![Vec::<u8>::new(); n].into_boxed_slice()) as *mut Vec<u8> as usize;
-            let p = if n == 0 { with(|w| w.serial as usize * HANDLE + 0x8000_0000) } else { p };
-            with(|w| w.arrays.insert(p, n));
-            p as isize
-        }
+        EeGeModOp::StrArrayNew => testing::new_ustring_array(a as usize) as isize,
         EeGeModOp::StrArrayDelete => {
-            let n = with(|w| w.arrays.remove(&o)).unwrap();
-            if n > 0 {
-                // SAFETY: from StrArrayNew
-                drop(unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(o as *mut Vec<u8>, n)) });
-            }
+            // SAFETY: from StrArrayNew
+            unsafe { testing::delete_ustring_array(o) };
             0
         }
-        EeGeModOp::StrAt => (o as *mut Vec<u8>).wrapping_add(a as usize) as isize,
-        EeGeModOp::StrAssign => {
-            let v = string(a as usize);
-            // SAFETY: a mock `UString`
-            unsafe { *(o as *mut Vec<u8>) = v };
-            0
-        }
-        EeGeModOp::StrSetBytes => {
-            // SAFETY: `b` bytes at `a`; a mock `UString`
-            unsafe { *(o as *mut Vec<u8>) = std::slice::from_raw_parts(a as *const u8, b as usize).to_vec() };
-            0
-        }
-        EeGeModOp::StrLength => string(o).len() as isize,
-        EeGeModOp::StrSizeOf => (string(o).len() + 13) as isize,
-        EeGeModOp::StrFirst => string(o).first().map_or(0, |c| *c as i8 as isize),
         EeGeModOp::TexLoad => {
             let k = o - TEXTURE_MANAGER;
             let n = string(a as usize);
@@ -495,7 +437,7 @@ unsafe fn digest(h: usize) -> u64 {
     unsafe {
         let get = |v| ee_ge_mod_get(p, v) as usize;
         let ptr = |v| ee_ge_mod_ptr(p, v);
-        f.u(with(|w| w.objects[&h].refs) as u64);
+        f.u(refs(h) as u64);
         f.u(serial_of(get(EeGeModVal::Parent)) as u64);
         f.s(&string(ptr(EeGeModPtr::Name) as usize));
         let (frames, tags, mats) =
@@ -563,45 +505,39 @@ unsafe fn digest(h: usize) -> u64 {
                 }
             }
         }
-        let tn = ptr(EeGeModPtr::TagPointNames) as *const Vec<u8>;
-        f.u(!tn.is_null() as u64);
-        for i in 0..if tn.is_null() { 0 } else { tags } {
-            f.s(&*tn.add(i));
+        let tn = ptr(EeGeModPtr::TagPointNames) as usize;
+        f.u((tn != 0) as u64);
+        for i in 0..if tn == 0 { 0 } else { tags } {
+            f.s(&string(cppobj::str_at(tn, i)));
         }
         let ms = ptr(EeGeModPtr::Materials) as *const usize;
-        let fnames = ptr(EeGeModPtr::TextureFilenames) as *const Vec<u8>;
+        let fnames = ptr(EeGeModPtr::TextureFilenames) as usize;
         f.u(!ms.is_null() as u64);
-        f.u(!fnames.is_null() as u64);
+        f.u((fnames != 0) as u64);
         for i in 0..if ms.is_null() { 0 } else { mats } {
             let m = *ms.add(i);
             f.u(serial_of(m) as u64);
-            let fields = with(|w| match &w.objects[&m].kind {
-                Kind::Material(x) => (
-                    x.name.clone(),
-                    x.screens,
-                    x.textures.clone(),
-                    x.lods,
-                    x.starts.clone(),
-                    x.lengths.clone(),
-                    [x.vertex_start, x.vertex_length, x.texture_index],
-                ),
-                _ => unreachable!(),
-            });
-            f.s(&fields.0);
-            f.u(fields.1 as u64);
-            for t in fields.2 {
-                f.u(serial_of(t) as u64);
+            let r: *mut EeGeMat = cppobj::counted(m);
+            f.s(&string(ee_ge_mat_name(r) as usize));
+            let screens = ee_ge_mat_get(r, EeGeMatField::ScreenCount, 0);
+            f.u(screens as u64);
+            for k in 0..screens {
+                let x = ee_ge_mat_texture(r, k) as usize;
+                f.u(serial_of(x) as u64);
+                f.u(if x == 0 { 0 } else { refs(x) as u64 });
             }
-            f.u(fields.3 as u64);
-            for k in 0..fields.3 as usize {
-                f.u(fields.4[k] as u64);
-                f.u(fields.5[k] as u64);
+            let lods = ee_ge_mat_get(r, EeGeMatField::LodCount, 0);
+            f.u(lods as u64);
+            for k in 0..lods {
+                f.u(ee_ge_mat_get(r, EeGeMatField::PolygonStart, k) as u64);
+                f.u(ee_ge_mat_get(r, EeGeMatField::PolygonLength, k) as u64);
             }
-            for v in fields.6 {
-                f.u(v as u64);
+            for v in [EeGeMatField::VertexStart, EeGeMatField::VertexLength, EeGeMatField::TextureIndex] {
+                f.u(ee_ge_mat_get(r, v, 0) as u64);
             }
-            if !fnames.is_null() {
-                f.s(&*fnames.add(i));
+            f.u(refs(m) as u64);
+            if fnames != 0 {
+                f.s(&string(cppobj::str_at(fnames, i)));
             }
         }
         let serial = |x: usize| with(|w| w.objects.get(&x).map_or(0, |o| o.serial as u64));
@@ -664,7 +600,7 @@ unsafe fn run(line: &str) {
                     .collect();
                 let h = new_object(Kind::Model(std::ptr::null_mut()));
                 let p = EeGeModel::create(host, h, manager);
-                with(|x| x.objects.get_mut(&h).unwrap().kind = Kind::Model(p));
+                new_model(p, h);
                 let cem = cem_random(w[3].parse().unwrap());
                 let r = EeGeModel::store_loaded(p, &cem, &shared);
                 emit(format!("= {} {r}", name(h)));
@@ -675,23 +611,18 @@ unsafe fn run(line: &str) {
                 let rest: Vec<&str> = line[at + 2..].split(' ').collect();
                 let flags = rest[0][1..].parse::<c_ulong>().unwrap();
                 let manager = MODEL_MANAGER + rest[1][1..].parse::<usize>().unwrap();
-                let n = Box::into_raw(Box::new(quoted(line)));
+                let n = testing::new_ustring(&text(&quoted(line)));
                 let h = new_object(Kind::Model(std::ptr::null_mut()));
-                let p = EeGeModel::create_with_counts(host, h, counts, n as usize, flags, manager);
-                drop(Box::from_raw(n));
-                with(|x| x.objects.get_mut(&h).unwrap().kind = Kind::Model(p));
+                let p = EeGeModel::create_with_counts(host, h, counts, n, flags, manager);
+                testing::delete_ustring(n);
+                new_model(p, h);
                 emit(format!("= {}", name(h)));
             }
             "SetSub" => EeGeModel::set_sub_model(model(2), handle_of(w[4]), num(3)),
             "Deref" => deref(handle_of(w[2])),
             "Reference" => {
                 let h = handle_of(w[2]);
-                let n = with(|x| {
-                    let o = x.objects.get_mut(&h).unwrap();
-                    o.refs += 1;
-                    o.refs
-                });
-                emit(format!("ref {} {n}", name(h)));
+                set_refs(h, refs(h) + 1);
             }
             "Dereference" => EeGeModel::dereference(model(2)),
             "ComputeBoundingVolumes" => EeGeModel::compute_bounding_volumes(model(2)),
@@ -742,8 +673,8 @@ unsafe fn run(line: &str) {
             "SetTagPointName" | "SetTextureFilename" => {
                 let which =
                     if w[1] == "SetTagPointName" { EeGeModPtr::TagPointNames } else { EeGeModPtr::TextureFilenames };
-                let array = ee_ge_mod_ptr(model(2), which) as *mut Vec<u8>;
-                *array.add(num(3) as usize) = quoted(line);
+                let array = ee_ge_mod_ptr(model(2), which) as usize;
+                cppobj::str_set_bytes(cppobj::str_at(array, num(3) as usize), &quoted(line));
             }
             "SizeOf" => emit(format!("= {}", EeGeModel::size_of(model(2)))),
             other => panic!("unknown op {other}"),
@@ -753,8 +684,13 @@ unsafe fn run(line: &str) {
 
 fn step() {
     emit("step".into());
+    // by serial, as the driver's live objects
     let models: Vec<usize> = with(|w| {
-        w.objects.iter().filter(|(_, o)| o.alive && matches!(o.kind, Kind::Model(_))).map(|(h, _)| *h).collect()
+        w.serials
+            .values()
+            .filter(|h| w.objects[*h].alive && matches!(w.objects[*h].kind, Kind::Model(_)))
+            .copied()
+            .collect()
     });
     for h in models {
         // SAFETY: a live model
@@ -818,11 +754,11 @@ fn the_golden_replays() {
 fn a_counts_model_allocates_its_arrays() {
     with(|w| *w = World::default());
     let h = new_object(Kind::Model(std::ptr::null_mut()));
-    let n = Box::into_raw(Box::new(b"m".to_vec()));
+    let n = testing::new_ustring("m");
     // SAFETY: the mock host
     unsafe {
-        let p = EeGeModel::create_with_counts(host, h, [2, 3, 1, 2, 2, 0], n as usize, 1, MODEL_MANAGER + 1);
-        with(|w| w.objects.get_mut(&h).unwrap().kind = Kind::Model(p));
+        let p = EeGeModel::create_with_counts(host, h, [2, 3, 1, 2, 2, 0], n, 1, MODEL_MANAGER + 1);
+        new_model(p, h);
         assert_eq!(ee_ge_mod_get(p, EeGeModVal::FrameCount), 2);
         let b = &*(ee_ge_mod_ptr(p, EeGeModPtr::BoundingBoxes) as *const GeBoundingBox);
         assert_eq!((b.width, b.height, b.depth), (1.0, 1.0, 1.0));
@@ -837,7 +773,7 @@ fn a_counts_model_allocates_its_arrays() {
         );
         assert_eq!(string(ee_ge_mod_ptr(p, EeGeModPtr::Name) as usize), b"m");
         deref(h);
-        drop(Box::from_raw(n));
+        testing::delete_ustring(n);
     }
     let out = with(|w| std::mem::take(&mut w.out));
     assert_eq!(out[0], "V2 new f1 n3");
@@ -854,11 +790,8 @@ fn dereference_asks_the_manager_at_the_last_outside_reference() {
     // SAFETY: the mock host
     unsafe {
         let p = EeGeModel::create(host, h, MODEL_MANAGER + 2);
-        with(|w| {
-            let o = w.objects.get_mut(&h).unwrap();
-            o.kind = Kind::Model(p);
-            o.refs = 3;
-        });
+        new_model(p, h);
+        set_refs(h, 3);
         EeGeModel::dereference(p);
         assert_eq!(with(|w| std::mem::take(&mut w.out)), vec!["deref R1 2"]);
         EeGeModel::dereference(p);
@@ -871,18 +804,20 @@ fn dereference_asks_the_manager_at_the_last_outside_reference() {
 fn size_of_counts_pointers_at_the_builds_size() {
     with(|w| *w = World::default());
     let h = new_object(Kind::Model(std::ptr::null_mut()));
-    let n = Box::into_raw(Box::new(Vec::<u8>::new()));
+    let n = testing::new_ustring("");
     // SAFETY: the mock host
     unsafe {
-        let p = EeGeModel::create_with_counts(host, h, [1, 0, 0, 0, 1, 0], n as usize, 0, MODEL_MANAGER + 1);
+        let p = EeGeModel::create_with_counts(host, h, [1, 0, 0, 0, 1, 0], n, 0, MODEL_MANAGER + 1);
+        new_model(p, h);
         let size = EeGeModel::size_of(p);
-        // 0xd8 + name 13 + transforms 0x40 + LOD pointer + 4 + polygons 0x1c + 8 + vertices 0x20 + box and radius
+        let name = cppobj::str_size_of(ee_ge_mod_ptr(p, EeGeModPtr::Name) as usize);
+        // 0xd8 + the name + transforms 0x40 + LOD pointer + 4 + polygons 0x1c + 8 + vertices 0x20 + box and radius
         // 0x28 + 0x14 + 4 + frame pointer + 0x60
-        let expect = 0xd8 + 13 + 0x40 + POINTER + 4 + 0x1c + 8 + 0x20 + 0x28 + 0x14 + 4 + POINTER + 0x60;
+        let expect = 0xd8 + name + 0x40 + POINTER + 4 + 0x1c + 8 + 0x20 + 0x28 + 0x14 + 4 + POINTER + 0x60;
         assert_eq!(size, expect);
         assert_eq!(EeGeModel::polygon_count_at(p, 0), 0);
         EeGeModel::destroy(p);
-        drop(Box::from_raw(n));
+        testing::delete_ustring(n);
     }
 }
 
@@ -891,14 +826,14 @@ fn size_of_counts_pointers_at_the_builds_size() {
 #[test]
 fn set_sub_model_moves_the_parent() {
     with(|w| *w = World::default());
-    let n = Box::into_raw(Box::new(Vec::<u8>::new()));
+    let n = testing::new_ustring("");
     // SAFETY: the mock host
     unsafe {
         let mut made = Vec::new();
         for counts in [[1, 1, 0, 0, 1, 1], [1, 1, 0, 0, 1, 0], [1, 1, 0, 0, 1, 0]] {
             let h = new_object(Kind::Model(std::ptr::null_mut()));
-            let p = EeGeModel::create_with_counts(host, h, counts, n as usize, 0, MODEL_MANAGER + 1);
-            with(|w| w.objects.get_mut(&h).unwrap().kind = Kind::Model(p));
+            let p = EeGeModel::create_with_counts(host, h, counts, n, 0, MODEL_MANAGER + 1);
+            new_model(p, h);
             made.push((h, p));
         }
         let [(parent, pp), (first, fp), (second, sp)] = [made[0], made[1], made[2]];
@@ -907,9 +842,9 @@ fn set_sub_model_moves_the_parent() {
         EeGeModel::set_sub_model(pp, second, 0);
         assert_eq!(ee_ge_mod_get(fp, EeGeModVal::Parent), 0);
         assert_eq!(ee_ge_mod_get(sp, EeGeModVal::Parent) as usize, parent);
-        assert_eq!(with(|w| w.objects[&first].refs), 1);
-        assert_eq!(with(|w| w.objects[&second].refs), 2);
-        drop(Box::from_raw(n));
+        assert_eq!(refs(first), 1);
+        assert_eq!(refs(second), 2);
+        testing::delete_ustring(n);
     }
 }
 
@@ -917,16 +852,68 @@ fn set_sub_model_moves_the_parent() {
 #[test]
 fn prepare_transforms_applies_the_graphics_scale() {
     with(|w| *w = World::default());
-    let n = Box::into_raw(Box::new(Vec::<u8>::new()));
+    let n = testing::new_ustring("");
     let h = new_object(Kind::Model(std::ptr::null_mut()));
     // SAFETY: the mock host
     unsafe {
-        let p = EeGeModel::create_with_counts(host, h, [1, 1, 0, 0, 1, 0], n as usize, 0, MODEL_MANAGER + 1);
+        let p = EeGeModel::create_with_counts(host, h, [1, 1, 0, 0, 1, 0], n, 0, MODEL_MANAGER + 1);
+        new_model(p, h);
         ee_ge_mod_set_graphics_scale(p, 2.0);
         EeGeModel::prepare_transforms(p);
         let t = *(ee_ge_mod_ptr(p, EeGeModPtr::GraphicsTransform) as *const GeTransformation);
         assert_eq!((t.m[0][0], t.m[1][1], t.m[2][2], t.m[3][3]), (2.0, 2.0, 2.0, 1.0));
         EeGeModel::destroy(p);
-        drop(Box::from_raw(n));
+        testing::delete_ustring(n);
+    }
+}
+
+/// The physical walks' table reads a model in place (`physical_walk.rs`, `ee_ge_physical_models`).
+#[test]
+fn the_physical_table_reads_the_model_in_place() {
+    use crate::physical_walk::{ee_ge_physical_models, EeGePhysicalModels, GePhysicalMaterial};
+    unsafe extern "C" fn triangle(_: *const c_void, _: c_ulong, _: c_ulong, _: c_ulong, _: c_ulong, _: *mut Ge3DPoint) {
+    }
+    unsafe extern "C" fn retry(
+        _: *const c_void,
+        _: *const GeTransformation,
+        _: c_ulong,
+        _: f32,
+        _: *const crate::types::Ge3DLine,
+        _: c_ulong,
+    ) -> bool {
+        true
+    }
+    with(|w| *w = World::default());
+    let n = testing::new_ustring("p");
+    let h = new_object(Kind::Model(std::ptr::null_mut()));
+    // SAFETY: the mock host; the table reads the live model
+    unsafe {
+        let p = EeGeModel::create_with_counts(host, h, [3, 2, 1, 0, 2, 0], n, 0, MODEL_MANAGER + 1);
+        new_model(p, h);
+        let m: *mut EeGeMat = cppobj::counted(*(ee_ge_mod_ptr(p, EeGeModPtr::Materials) as *const usize));
+        ee_ge_mat_set(m, EeGeMatField::VertexStart, 0, 7);
+        ee_ge_mat_set(m, EeGeMatField::PolygonLength, 0, 3);
+        let mut table = std::mem::MaybeUninit::<EeGePhysicalModels>::uninit();
+        ee_ge_physical_models(triangle, retry, table.as_mut_ptr());
+        let t = table.assume_init();
+        let model = h as *const c_void;
+        assert!(!(t.has_parent)(model));
+        assert_eq!((t.material_count)(model), 1);
+        assert_eq!((t.lod_count)(model), 1);
+        assert_eq!((t.sub_model_count)(model), 0);
+        assert_eq!((t.polygon_count)(model, 0), 3);
+        let mut out = GePhysicalMaterial { vertex_start: 0, polygon_start: 9, polygon_length: 0 };
+        (t.material)(model, 0, 0, &mut out);
+        assert_eq!((out.vertex_start, out.polygon_start, out.polygon_length), (7, 0, 3));
+        let mut b = GeBoundingBox::default();
+        (t.bbox)(model, 1, &mut b);
+        assert_eq!((b.width, b.height, b.depth), (1.0, 1.0, 1.0));
+        let mut x = GeTransformation::default();
+        (t.internal_transform)(model, 1, &mut x);
+        assert_eq!(x, GeTransformation::IDENTITY);
+        assert_eq!((t.radius)(model, 0), *(ee_ge_mod_ptr(p, EeGeModPtr::BoundingRadii) as *const f32));
+        assert!((t.retry_line)(model, &x, 0, 1.0, std::ptr::null(), 0));
+        EeGeModel::destroy(p);
+        testing::delete_ustring(n);
     }
 }

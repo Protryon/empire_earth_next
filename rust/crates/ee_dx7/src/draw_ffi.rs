@@ -1,8 +1,9 @@
 //! `extern "C"` for the rasterizer's draw paths: the thin forwarders in `Common/DX7Rasterizer Draw*.cpp` call the
 //! `ee_dx7r_draw_*` functions with the rasterizer's object (`rastobj.rs`); the rasterizer's own steps (the lock, the
-//! modes, the texture, the vertex buffer, the base's visibility tests and viewport) are calls on it, and the steps
-//! that read other C++ objects come back through the `ee_dx7cpp_*` seam (declared here, defined in the Draw units).
-//! `screen` is the screen index. The Host holds only raw pointers; every access is a short field read or write, never
+//! modes, the texture, the vertex buffer, the base's visibility tests and viewport) are calls on it. The GE objects a
+//! draw reads (a model, its materials, sub-models and arrays, a texture's frame, a text and its font, a vertex
+//! array's vertices) are read in place (ee_ge `cppobj.rs`, R4.3 part 17; the C++ `ee_dx7cpp_*` seam is gone) and
+//! the text functions are the platform's (`platform/PlatFont.h`). `screen` is the screen index. The Host holds only raw pointers; every access is a short field read or write, never
 //! held across a call into C++.
 #![allow(clippy::missing_safety_doc, clippy::unnecessary_cast)]
 
@@ -20,8 +21,16 @@ use crate::rastobj::{EeDx7RastOp, EeDx7Rasterizer};
 use crate::state::ScreenState;
 use crate::vertex::Dx7StdColorVertex;
 use ee_ge::bmpobj::{ee_ge_bmp_texture, ee_ge_bmp_vertices};
+use ee_ge::cppobj;
+use ee_ge::modobj::{ee_ge_mod_get, ee_ge_mod_getf, ee_ge_mod_ptr, EeGeModFloat, EeGeModPtr, EeGeModVal, EeGeModel};
 use ee_ge::prim::{ee_ge_prim_texture, ee_ge_prim_vertices, EeGePrim};
 use ee_ge::rastobj::{ee_ge_rast_get, ee_ge_rast_model_visible, ee_ge_rast_pixel_size, ee_ge_rast_ripple, EeGeRastVal};
+use ee_ge::smallobj::{
+    ee_ge_font_os, ee_ge_font_value, ee_ge_mat_color, ee_ge_mat_get, ee_ge_mat_opacity, ee_ge_mat_texture,
+    ee_ge_text_alignment, ee_ge_text_color, ee_ge_text_font, ee_ge_text_location, ee_ge_text_string,
+    ee_ge_text_transparent, EeGeFont, EeGeFontValue, EeGeMat, EeGeMatField, EeGeText,
+};
+use ee_ge::texobj_tex::{ee_ge_tex_corner, ee_ge_tex_frame_uv_size, EeGeTexture};
 use ee_ge::tmobj::{
     ee_ge_tm_edge_points, ee_ge_tm_edge_vertices, ee_ge_tm_get, ee_ge_tm_get_f, ee_ge_tm_is_valid, ee_ge_tm_material,
     ee_ge_tm_material_map, ee_ge_tm_point, ee_ge_tm_point_visibility, ee_ge_tm_render_vertices, ee_ge_tm_vertex_color,
@@ -34,28 +43,21 @@ use ee_ge::viewport::GeViewport;
 mod cpp {
     use super::*;
 
+    /// `PlatFontMetrics` (platform/PlatFont.h).
+    #[repr(C)]
+    pub struct PlatFontMetrics {
+        pub height: i32,
+        pub other: [i32; 6],
+        pub first_char: u8,
+        pub last_char: u8,
+    }
+
+    // platform/PlatFont.h (ee_plat_ui)
     extern "C" {
-
-        /// A `DX7StdColorVertexArray`'s vertices (`GEVertexArray*` of a bitmap, line, point or rhombus).
-        pub fn ee_dx7cpp_color_vertices(array: Handle) -> *mut Dx7StdColorVertex;
-        pub fn ee_dx7cpp_texture_frame(texture: Handle, out_size: *mut f32, out_corner: *mut f32);
-
-        pub fn ee_dx7cpp_model_info(model: Handle, out: *mut ModelInfo);
-        pub fn ee_dx7cpp_material_info(
-            model: Handle,
-            screen: c_ulong,
-            index: c_ulong,
-            lod: c_ulong,
-            out: *mut MaterialInfo,
-        );
-        pub fn ee_dx7cpp_polygon_indices(model: Handle, lod: c_ulong) -> *const u16;
-        pub fn ee_dx7cpp_frame_vertices(model: Handle, frame: c_ulong, vertex_type: c_ulong) -> *const c_void;
-        pub fn ee_dx7cpp_sub_model(model: Handle, index: c_ulong) -> Handle;
-
-        pub fn ee_dx7cpp_text_measure(font: *const c_void, text: *const c_char, length: u32) -> i32;
-        pub fn ee_dx7cpp_text_scaled(font: *const c_void, scale: f32) -> *const c_void;
-        pub fn ee_dx7cpp_font_height(font: *const c_void) -> i32;
-        pub fn ee_dx7cpp_text_draw(
+        pub fn PlatFontMeasure(font: *const c_void, text: *const c_char, length: u32) -> i32;
+        pub fn PlatFontScaled(font: *const c_void, scale: f32) -> *const c_void;
+        pub fn PlatFontGetMetrics(font: *const c_void, out: *mut PlatFontMetrics);
+        pub fn PlatFontDraw(
             font: *const c_void,
             text: *const c_char,
             length: u32,
@@ -175,6 +177,25 @@ impl DrawHost for Host {
     }
 }
 
+/// The Rust object of a C++ `GEModel*`.
+///
+/// # Safety
+/// `model` is a live model.
+unsafe fn model_obj(model: Handle) -> *mut EeGeModel {
+    // SAFETY: the caller's contract
+    unsafe { cppobj::counted(model as usize) }
+}
+
+/// Element `index` of one of a model's pointer arrays (`GetMaterial`, `GetPolygonArray`, `GetVertexArray`,
+/// `GetSubModel`: the header's inline indexing).
+///
+/// # Safety
+/// `p` is a live model with the array and an `index` in it.
+unsafe fn model_array(p: *mut EeGeModel, which: EeGeModPtr, index: u32) -> usize {
+    // SAFETY: the caller's contract
+    unsafe { *(ee_ge_mod_ptr(p, which) as *const usize).add(index as usize) }
+}
+
 /// Element `index` of a `GELine`/`GEPoint` array: each element is one pointer, its Rust object (ee_ge prim.rs).
 ///
 /// # Safety
@@ -190,37 +211,52 @@ impl Draw2DHost for Host {
         unsafe { ee_ge_bmp_texture(bitmap.cast(), self.screen) }
     }
     fn bitmap_vertices(&mut self, bitmap: Handle) -> *mut Dx7StdColorVertex {
-        unsafe { ee_dx7cpp_color_vertices(ee_ge_bmp_vertices(bitmap.cast())) }
+        unsafe { cppobj::vertices(ee_ge_bmp_vertices(bitmap.cast()) as usize) as *mut Dx7StdColorVertex }
     }
     fn line_texture(&mut self, lines: Handle) -> Handle {
         unsafe { ee_ge_prim_texture(prim_at(lines, 0), self.screen) }
     }
     fn line_vertices(&mut self, lines: Handle, index: u32) -> *mut Dx7StdColorVertex {
-        unsafe { ee_dx7cpp_color_vertices(ee_ge_prim_vertices(prim_at(lines, index))) }
+        unsafe { cppobj::vertices(ee_ge_prim_vertices(prim_at(lines, index)) as usize) as *mut Dx7StdColorVertex }
     }
     fn point_texture(&mut self, points: Handle) -> Handle {
         unsafe { ee_ge_prim_texture(prim_at(points, 0), self.screen) }
     }
     fn point_vertices(&mut self, points: Handle, index: u32) -> *mut Dx7StdColorVertex {
-        unsafe { ee_dx7cpp_color_vertices(ee_ge_prim_vertices(prim_at(points, index))) }
+        unsafe { cppobj::vertices(ee_ge_prim_vertices(prim_at(points, index)) as usize) as *mut Dx7StdColorVertex }
     }
     fn rhombus_vertices(&mut self, rhombus: Handle) -> *mut Dx7StdColorVertex {
-        unsafe { ee_dx7cpp_color_vertices(ee_ge_prim_vertices(prim_at(rhombus, 0))) }
+        unsafe { cppobj::vertices(ee_ge_prim_vertices(prim_at(rhombus, 0)) as usize) as *mut Dx7StdColorVertex }
     }
     fn texture_frame(&mut self, texture: Handle) -> (f32, [f32; 2]) {
-        let mut size = 0.0;
-        let mut corner = [0.0; 2];
-        unsafe { ee_dx7cpp_texture_frame(texture, &mut size, corner.as_mut_ptr()) };
-        (size, corner)
+        // SAFETY: a live texture (`GetFrameUVSize`, `GetFrameTopLeftCorner`)
+        unsafe {
+            let t: *mut EeGeTexture = cppobj::counted(texture as usize);
+            let c = *ee_ge_tex_corner(t);
+            (ee_ge_tex_frame_uv_size(t), [c.u, c.v])
+        }
     }
 }
 
 impl ModelHost for Host {
     fn model_info(&mut self, model: Handle) -> ModelInfo {
-        let mut out = core::mem::MaybeUninit::uninit();
+        // SAFETY: a live model (the header's accessors, `GetVertexArray(0)->GetType()`)
         unsafe {
-            ee_dx7cpp_model_info(model, out.as_mut_ptr());
-            out.assume_init()
+            let p = model_obj(model);
+            let get = |v| ee_ge_mod_get(p, v) as u32;
+            let transform = *(ee_ge_mod_ptr(p, EeGeModPtr::GraphicsTransform) as *const Transform);
+            ModelInfo {
+                material_count: get(EeGeModVal::MaterialCount),
+                lod_count: get(EeGeModVal::LodCount),
+                sub_model_count: get(EeGeModVal::SubModelCount),
+                current_frame: get(EeGeModVal::CurrentFrame),
+                next_frame: get(EeGeModVal::NextFrame),
+                vertex_type: cppobj::vertex_type(model_array(p, EeGeModPtr::VertexArrays, 0)) as u32,
+                scale: ee_ge_mod_getf(p, EeGeModFloat::GraphicsScale),
+                opacity: ee_ge_mod_getf(p, EeGeModFloat::Opacity),
+                fraction: ee_ge_mod_getf(p, EeGeModFloat::FractionalFramePosition),
+                transform,
+            }
         }
     }
     fn model_visible(&mut self, model: Handle, scale: f32, transform: &Transform, orthographic: bool) -> (bool, bool) {
@@ -244,21 +280,33 @@ impl ModelHost for Host {
         r.right - r.left
     }
     fn material_info(&mut self, model: Handle, index: u32, lod: u32) -> MaterialInfo {
-        let mut out = core::mem::MaybeUninit::uninit();
+        // SAFETY: a live model and one of its materials (`GetMaterial(index)` and its accessors)
         unsafe {
-            ee_dx7cpp_material_info(model, self.screen, index as c_ulong, lod as c_ulong, out.as_mut_ptr());
-            out.assume_init()
+            let m: *mut EeGeMat = cppobj::counted(model_array(model_obj(model), EeGeModPtr::Materials, index));
+            let get = |f, l| ee_ge_mat_get(m, f, l as c_ulong) as u32;
+            let c = ee_ge_mat_color(m);
+            MaterialInfo {
+                texture: ee_ge_mat_texture(m, self.screen),
+                polygon_start: get(EeGeMatField::PolygonStart, lod),
+                polygon_length: get(EeGeMatField::PolygonLength, lod),
+                vertex_start: get(EeGeMatField::VertexStart, 0),
+                vertex_length: get(EeGeMatField::VertexLength, 0),
+                opacity: ee_ge_mat_opacity(m),
+                color: [*c, *c.add(1), *c.add(2)],
+            }
         }
     }
     fn polygon_indices(&mut self, model: Handle, lod: u32) -> *const u16 {
-        unsafe { ee_dx7cpp_polygon_indices(model, lod as c_ulong) }
+        // SAFETY: a live model (`GetPolygonArray(lod)`'s indices)
+        unsafe { cppobj::indices(model_array(model_obj(model), EeGeModPtr::PolygonArrays, lod)) }
     }
     fn frame_vertices(&mut self, model: Handle, frame: u32) -> *const c_void {
-        let vertex_type = self.model_info(model).vertex_type;
-        unsafe { ee_dx7cpp_frame_vertices(model, frame as c_ulong, vertex_type as c_ulong) }
+        // SAFETY: a live model (`GetVertexArray(frame)`'s vertices)
+        unsafe { cppobj::vertices(model_array(model_obj(model), EeGeModPtr::VertexArrays, frame)) }
     }
     fn sub_model(&mut self, model: Handle, index: u32) -> Handle {
-        unsafe { ee_dx7cpp_sub_model(model, index as c_ulong) }
+        // SAFETY: a live model (`GetSubModel(index)`)
+        unsafe { model_array(model_obj(model), EeGeModPtr::SubModels, index) as Handle }
     }
 }
 
@@ -700,13 +748,15 @@ struct TextPlat {
 
 impl TextHost for TextPlat {
     fn measure(&mut self, font: *const c_void, text: *const c_char, length: u32) -> i32 {
-        unsafe { ee_dx7cpp_text_measure(font, text, length) }
+        unsafe { PlatFontMeasure(font, text, length) }
     }
     fn scaled(&mut self, font: *const c_void, scale: f32) -> *const c_void {
-        unsafe { ee_dx7cpp_text_scaled(font, scale) }
+        unsafe { PlatFontScaled(font, scale) }
     }
     fn font_height(&mut self, font: *const c_void) -> i32 {
-        unsafe { ee_dx7cpp_font_height(font) }
+        let mut m = PlatFontMetrics { height: 0, other: [0; 6], first_char: 0, last_char: 0 };
+        unsafe { PlatFontGetMetrics(font, &mut m) };
+        m.height
     }
     fn draw(
         &mut self,
@@ -720,25 +770,54 @@ impl TextHost for TextPlat {
         background: u32,
         clip: &draw2d::TextClip,
     ) {
-        unsafe {
-            ee_dx7cpp_text_draw(font, text, length, x, y, color, opaque as i32, background, clip.as_ptr(), self.target)
-        };
+        unsafe { PlatFontDraw(font, text, length, x, y, color, opaque as i32, background, clip.as_ptr(), self.target) };
     }
 }
 
-/// `DX7TextBounds`: `clip` may be null.
+/// `DX7TextInfoOf`: one text draw's inputs, read off the `GEText*` and its font. The length is the text's bytes, as
+/// the platform's text functions take it (`GetLength` counts characters: under UTF-8, decision D6, it cut the text).
+///
+/// # Safety
+/// `text` is a live `GEText` with a font.
+unsafe fn text_info(text: Handle) -> TextInfo {
+    // SAFETY: the caller's contract
+    unsafe {
+        let t: *mut EeGeText = cppobj::plain(text as usize);
+        let font: *mut EeGeFont = cppobj::counted(ee_ge_text_font(t) as usize);
+        let string = ee_ge_text_string(t) as usize;
+        let location = *ee_ge_text_location(t);
+        let color = |foreground| {
+            let c = ee_ge_text_color(t, foreground);
+            [*c, *c.add(1), *c.add(2)]
+        };
+        TextInfo {
+            font: ee_ge_font_os(font),
+            text: cppobj::wstr_text(string),
+            length: cppobj::wstr_bytes(string) as u32,
+            x: location.x,
+            y: location.y,
+            alignment: ee_ge_text_alignment(t),
+            transparent: ee_ge_text_transparent(t),
+            shadow_font: ee_ge_font_value(font, EeGeFontValue::Style) & 0x10 != 0,
+            foreground: color(true),
+            background: color(false),
+        }
+    }
+}
+
+/// `DX7TextBounds` of a `GEText*`: `clip` may be null.
 #[no_mangle]
-pub unsafe extern "C" fn ee_dx7r_text_bounds(info: *const TextInfo, clip: *const TextRect, out: *mut TextRect) {
-    let bounds =
-        draw2d::text_bounds(&mut TextPlat { target: core::ptr::null() }, unsafe { &*info }, unsafe { clip.as_ref() });
+pub unsafe extern "C" fn ee_dx7r_text_bounds(text: Handle, clip: *const TextRect, out: *mut TextRect) {
+    let info = unsafe { text_info(text) };
+    let bounds = draw2d::text_bounds(&mut TextPlat { target: core::ptr::null() }, &info, unsafe { clip.as_ref() });
     unsafe { *out = bounds };
 }
 
-/// `DX7DrawTextPlat` (the `GXSurface::DrawText` callback). `target` is the `PlatFontTarget*`. Returns false when the
+/// `DX7DrawTextPlat` (the `GXSurface::DrawText` callback) of a `GEText*`. `target` is the `PlatFontTarget*`. Returns false when the
 /// font has no OS font.
 #[no_mangle]
 pub unsafe extern "C" fn ee_dx7r_text_draw(
-    info: *const TextInfo,
+    text: Handle,
     clip: *const TextRect,
     origin_x: c_long,
     origin_y: c_long,
@@ -749,7 +828,7 @@ pub unsafe extern "C" fn ee_dx7r_text_draw(
 ) -> bool {
     draw2d::text_draw(
         &mut TextPlat { target },
-        unsafe { &*info },
+        &unsafe { text_info(text) },
         unsafe { clip.as_ref() },
         origin_x,
         origin_y,

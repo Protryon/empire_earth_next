@@ -11,12 +11,10 @@
 #include <float.h>
 
 #include "dx7/DX7Rasterizer.h"
-#include "dx7/DX7PolygonArray.h"
-#include "dx7/DX7StandardVertexArray.h"
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
 #include "dx7/DX7Movie.h"
-#include "dx7/DX7StdColorVertexArray.h"
+#include "lle/GEPolygonArray.h"
 #include "rust/ee_dx7.h"
 #include "lle/TSCriticalSection.h"
 #include "platform/PlatFont.h"
@@ -114,8 +112,6 @@ struct DX7RasterizerHost {
     }
 };
 
-static_assert(sizeof(GEVideoMode) == sizeof(EeDx7VideoMode) && sizeof(GESurfaceDescription) == sizeof(EeDx7SurfaceDescription),
-              "ee_dx7/src/screen.rs VideoMode, api.rs SurfaceDescription");
 
 // GERectangle's left, top, right, bottom (Rust's order; the class keeps another)
 static void DX7Rect(const GERectangle& inRectangle, float outRect[4])
@@ -221,10 +217,10 @@ GEMovie* DX7Rasterizer::CreateMovie(const FSFileSpec& inFile, unsigned long inSc
     return new DX7Movie(inFile, inScreen, inRectangle, inLoop);
 }
 
-// Creates a polygon array of the given size
+// Creates a polygon array of the given size (16-bit indices: the renderer's DX7PolygonArray, now GEPolygonArray's)
 GEPolygonArray* DX7Rasterizer::CreatePolygonArray(unsigned long inCount)
 {
-    return new DX7PolygonArray(inCount);
+    return new GEPolygonArray(inCount);
 }
 
 // Does nothing and returns success (textures need no handle here)
@@ -233,12 +229,11 @@ long DX7Rasterizer::CreateTextureHandle(GETexture* inTexture)
     return kErrorOK;
 }
 
-// Creates a vertex array of type 0 (standard) or 1 (coloured); null for any other type
+// Creates a vertex array of type 0 (standard: the renderer's DX7StandardVertexArray) or 1 (coloured:
+// DX7StdColorVertexArray), both GEVertexArray's now; null for any other type
 GEVertexArray* DX7Rasterizer::CreateVertexArray(unsigned long inType, unsigned long inCount)
 {
-    if (inType == 0)
-        return new DX7StandardVertexArray(inCount);
-    return inType == 1 ? new DX7StdColorVertexArray(inCount) : NULL;
+    return inType <= 1 ? new GEVertexArray(inType, inCount) : NULL;
 }
 
 long DX7Rasterizer::DemoteTexture(GETexture* inTexture)
@@ -365,8 +360,8 @@ long DX7Rasterizer::UpdateLight(unsigned long inIndex, GELight& inLight, unsigne
     return ee_dx7r_update_light(this->mDX7, inIndex, &inLight, inScreen);
 }
 
-// ---- the draws (the four Draw units of the original, deleted in R4.3 part 14): the 2D draws are Rust (ee_dx7 draw2d.rs),
-// the ee_dx7cpp_* below read the GE objects for it
+// ---- the draws (the four Draw units of the original, deleted in R4.3 part 14): Rust (ee_dx7 draw2d.rs, draw_model.rs,
+// draw_terrain.rs), which reads the GE objects in place (ee_ge cppobj.rs, R4.3 part 17)
 long DX7Rasterizer::Draw(GEBitmap* inBitmap, unsigned long inScreen)
 {
     return ee_dx7r_draw_bitmap(this->mDX7, inScreen, inBitmap->GetRust());
@@ -391,59 +386,6 @@ long DX7Rasterizer::Draw(GERhombus* inRhombus, unsigned long inScreen)
 static_assert(sizeof(GELine) == sizeof(void*) && sizeof(GEPoint) == sizeof(void*) && sizeof(GERhombus) == sizeof(void*),
               "ee_ge prim.rs");
 
-extern "C" {
-Dx7StdColorVertex* ee_dx7cpp_color_vertices(void* inArray)
-{
-    return reinterpret_cast<Dx7StdColorVertex*>(static_cast<DX7StdColorVertexArray*>(static_cast<GEVertexArray*>(inArray))->mVertices);
-}
-void ee_dx7cpp_texture_frame(void* inTexture, float* outSize, float* outCorner)
-{
-    GETexture* theTexture = static_cast<GETexture*>(inTexture);
-    *outSize = theTexture->GetFrameUVSize();
-    outCorner[0] = theTexture->GetFrameTopLeftCorner().GetU();
-    outCorner[1] = theTexture->GetFrameTopLeftCorner().GetV();
-}
-int32_t ee_dx7cpp_text_measure(const void* inFont, const char* inText, uint32_t inLength) { return PlatFontMeasure(static_cast<const PlatFont*>(inFont), inText, inLength); }
-const void* ee_dx7cpp_text_scaled(const void* inFont, float inScale) { return PlatFontScaled(static_cast<const PlatFont*>(inFont), inScale); }
-int32_t ee_dx7cpp_font_height(const void* inFont)
-{
-    PlatFontMetrics theMetrics;
-    PlatFontGetMetrics(static_cast<const PlatFont*>(inFont), &theMetrics);
-    return theMetrics.mHeight;
-}
-void ee_dx7cpp_text_draw(const void* inFont, const char* inText, uint32_t inLength, int32_t inX, int32_t inY, uint32_t inColor, int inOpaque,
-                         uint32_t inBackground, const int32_t* inClip, const void* inTarget)
-{
-    PlatFontRect theClip = {inClip[0], inClip[1], inClip[2], inClip[3]};
-    PlatFontDraw(static_cast<const PlatFont*>(inFont), inText, inLength, inX, inY, inColor, inOpaque, inBackground, &theClip,
-                 static_cast<const PlatFontTarget*>(inTarget));
-}
-}
-
-// One text draw's plain inputs (Rust: draw2d.rs TextInfo). The layout and the draws are in Rust.
-static EeDx7TextInfo DX7TextInfoOf(GEText* inText)
-{
-    GEFont* theFont = inText->GetFont();
-    EeDx7TextInfo theInfo;
-    theInfo.font = theFont->GetOSFont();
-    theInfo.text = inText->GetText();
-    // the text's bytes, as PlatFontMeasure/PlatFontDraw take it (GetLength counts characters: under UTF-8, decision
-    // D6, a multi-byte character made it short, and the text lost its last characters)
-    theInfo.length = inText->GetText().GetTCHARLength();
-    theInfo.x = inText->GetLocation().GetX();
-    theInfo.y = inText->GetLocation().GetY();
-    theInfo.alignment = inText->GetAlignment();
-    theInfo.transparent = inText->GetIsTransparent();
-    theInfo.shadow_font = (theFont->GetFontStyle() & kFontStyleShadow) != 0;
-    theInfo.foreground[0] = inText->GetFgColor().GetRed();
-    theInfo.foreground[1] = inText->GetFgColor().GetGreen();
-    theInfo.foreground[2] = inText->GetFgColor().GetBlue();
-    theInfo.background[0] = inText->GetBgColor().GetRed();
-    theInfo.background[1] = inText->GetBgColor().GetGreen();
-    theInfo.background[2] = inText->GetBgColor().GetBlue();
-    return theInfo;
-}
-
 static_assert(sizeof(EeDx7TextRect) == sizeof(RECT), "ee_dx7/src/draw2d.rs TextRect");
 
 // One text draw (GDI in the original): a GXSurface::DrawText callback; the target covers the surface from
@@ -459,8 +401,7 @@ static bool DX7DrawTextPlat(const PlatFontTarget& inTarget, long inOriginX, long
     DX7TextJob* theJob = static_cast<DX7TextJob*>(inJob);
     GEFont* theFont = theJob->mText->GetFont();
     theFont->Reference();
-    EeDx7TextInfo theInfo = DX7TextInfoOf(theJob->mText);
-    if (!ee_dx7r_text_draw(&theInfo, reinterpret_cast<const EeDx7TextRect*>(theJob->mClip), inOriginX, inOriginY,
+    if (!ee_dx7r_text_draw(theJob->mText, reinterpret_cast<const EeDx7TextRect*>(theJob->mClip), inOriginX, inOriginY,
                            inTarget.mWidth, inTarget.mHeight, inTarget.mScale, &inTarget))
         theJob->mResult = kErrorNativeError;
     theFont->Dereference();
@@ -473,9 +414,8 @@ static long DX7DrawText(GEText* inText, const RECT* inClip, GESurface* inTarget)
 {
     DX7TextJob theJob = {inText, inClip, kErrorOK};
     GXSurface* theSurface = *static_cast<DX7Surface*>(inTarget);
-    EeDx7TextInfo theInfo = DX7TextInfoOf(inText);
     EeDx7TextRect theBounds;
-    ee_dx7r_text_bounds(&theInfo, reinterpret_cast<const EeDx7TextRect*>(inClip), &theBounds);
+    ee_dx7r_text_bounds(inText, reinterpret_cast<const EeDx7TextRect*>(inClip), &theBounds);
     RECT theRect;
     memcpy(&theRect, &theBounds, sizeof(RECT));
     if (theSurface->DrawText(theRect, DX7DrawTextPlat, &theJob) != GX_OK && theJob.mResult == kErrorOK)
@@ -503,66 +443,14 @@ long DX7Rasterizer::Draw(GEText* inText, const GERectangle& inRectangle, GESurfa
 }
 
 // The model draws are Rust (ee_dx7 draw_model.rs; the original's CopyStd*/CopyAndSmooth* are its blend_*/white_copy, the
-// transform stack a call parameter); the ee_dx7cpp_* below read the GE objects for it.
-
-extern "C" {
-void ee_dx7cpp_model_info(void* inModel, EeDx7ModelInfo* outInfo)
-{
-    GEModel* theModel = static_cast<GEModel*>(inModel);
-    outInfo->material_count = theModel->GetMaterialCount();
-    outInfo->lod_count = theModel->GetLODCount();
-    outInfo->sub_model_count = theModel->GetSubModelCount();
-    outInfo->current_frame = theModel->GetGraphicsCurrentFrame();
-    outInfo->next_frame = theModel->GetGraphicsNextFrame();
-    outInfo->vertex_type = theModel->GetVertexArray(0)->GetType();
-    outInfo->scale = theModel->GetGraphicsScale();
-    outInfo->opacity = theModel->GetModelOpacity();
-    outInfo->fraction = theModel->GetFractionalFramePosition();
-    const GETransformation& theTransform = theModel->GetGraphicsTransform();
-    for (int r = 0; r < 4; r++)
-        for (int c = 0; c < 4; c++)
-            outInfo->transform[r][c] = theTransform.GetElement(r, c);
-}
-
-void ee_dx7cpp_material_info(void* inModel, unsigned long inScreen, unsigned long inIndex, unsigned long inLOD, EeDx7MaterialInfo* outInfo)
-{
-    GEMaterial* theMaterial = static_cast<GEModel*>(inModel)->GetMaterial(inIndex);
-    outInfo->texture = theMaterial->GetTexture(inScreen);
-    outInfo->polygon_start = theMaterial->GetPolygonStartingIndex(inLOD);
-    outInfo->polygon_length = theMaterial->GetPolygonRangeLength(inLOD);
-    outInfo->vertex_start = theMaterial->GetVertexStartingIndex();
-    outInfo->vertex_length = theMaterial->GetVertexRangeLength();
-    outInfo->opacity = theMaterial->GetOpacity();
-    outInfo->color[0] = theMaterial->GetColor().GetRed();
-    outInfo->color[1] = theMaterial->GetColor().GetGreen();
-    outInfo->color[2] = theMaterial->GetColor().GetBlue();
-}
-
-const unsigned short* ee_dx7cpp_polygon_indices(void* inModel, unsigned long inLOD)
-{
-    return static_cast<DX7PolygonArray*>(static_cast<GEModel*>(inModel)->GetPolygonArray(inLOD))->mIndices;
-}
-
-const void* ee_dx7cpp_frame_vertices(void* inModel, unsigned long inFrame, unsigned long inVertexType)
-{
-    GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(inFrame);
-    if (inVertexType == 0)
-        return static_cast<DX7StandardVertexArray*>(theArray)->mVertices;
-    return static_cast<DX7StdColorVertexArray*>(theArray)->mVertices;
-}
-
-void* ee_dx7cpp_sub_model(void* inModel, unsigned long inIndex) { return static_cast<GEModel*>(inModel)->GetSubModel(inIndex); }
-}
+// transform stack a call parameter).
 
 // Draws an indexed triangle list with an identity world transform and D3D clipping on; counts the triangles drawn
 long DX7Rasterizer::Draw(GEPolygonArray& inPolygons, unsigned long inCount, GEVertexArray& inVertices,
                          unsigned long inVertexCount, GETexture* inTexture, unsigned long inScreen, bool inSorted)
 {
-    unsigned long theType = inVertices.GetType();
-    const void* theVertices = theType == 1 ? static_cast<const void*>(((DX7StdColorVertexArray&)inVertices).mVertices)
-                                           : static_cast<const void*>(((DX7StandardVertexArray&)inVertices).mVertices);
-    return ee_dx7r_draw_polygon_array(this->mDX7, inScreen, ((DX7PolygonArray&)inPolygons).mIndices,
-                                      inCount, theType, theVertices, inVertexCount, inTexture);
+    return ee_dx7r_draw_polygon_array(this->mDX7, inScreen, inPolygons.GetIndices(), inCount, inVertices.GetType(),
+                                      inVertices.GetVertices(), inVertexCount, inTexture);
 }
 
 // Draws a model and its sub-models under the drawing lock (the float argument becomes the level-of-detail divisor)
@@ -645,6 +533,247 @@ void DX7Rasterizer::TransformToCamera(GETerrainMesh& inMesh, GEViewport& inViewp
                                       bool inOrthographic)
 {
     ee_dx7r_transform_to_camera(this->mDX7, inMesh.GetRust(), &inViewport, inScale, inWaterOnly, inOrthographic);
+}
+
+// ---- the screens, surfaces and movies (DX7Trampolines.cpp, folded here in R4.3 part 17): their objects' hosts and
+// constructors, and the layouts Rust fills
+
+#include "lle/LowLevelEngine.h"
+#include "lle/Graphics Engine.h"
+#include <stddef.h>
+#include "lle/GESurface.h"
+#define DX7_SAME_OFFSET(cpp, rust, field) static_assert(offsetof(cpp, field) == offsetof(rust, field), #field)
+
+// --- GESurfaceDescription: filled by Rust (ee_dx7/src/api.rs SurfaceDescription) --------------------------------------
+static_assert(sizeof(GESurfaceDescription) == sizeof(EeDx7SurfaceDescription), "ee_dx7/src/api.rs SurfaceDescription");
+#include "lle/GEScreen.h"
+static_assert(sizeof(GEVideoMode) == sizeof(EeDx7VideoMode), "ee_dx7/src/screen.rs VideoMode");
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mWidth);
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mHeight);
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mRefreshRate);
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mBitCount);
+DX7_SAME_OFFSET(GEVideoMode, EeDx7VideoMode, mPixelFormat);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mType);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mPixelFormat);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mSurfaceVolatility);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mWidth);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mHeight);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, m14);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mMipLevelCount);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mPixelDepth);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mIs3DRenderable);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mIsTransparencyEnabled);
+DX7_SAME_OFFSET(GESurfaceDescription, EeDx7SurfaceDescription, mNoAlpha);
+
+extern "C" void ee_dx7cpp_record_native_error(long inError) { ESRecordNativeError((unsigned long)inError); }
+
+// --- DX7Screen and DX7Surface: whole in Rust (ee_dx7 scrobj.rs, surfobj.rs); the calls they make on C++ objects ------
+#include "GEWindow.h"
+#include "lle/UString.h"
+#include "platform/PlatWindow.h"
+#include "platform/PlatSim.h"
+static_assert(offsetof(GERectangle, mBottom) == 0 && offsetof(GERectangle, mLeft) == 4 && offsetof(GERectangle, mRight) == 8 &&
+              offsetof(GERectangle, mTop) == 12 && sizeof(GEColor) == 12, "ee_dx7/src/surfobj.rs ge_rect");
+
+static intptr_t DX7ObjectHost(EeDx7ObjOp inOp, void* inObj, intptr_t a, intptr_t b)
+{
+    GESurface* theSurface = static_cast<GESurface*>(inObj);
+    switch (inOp) {
+    case EeDx7ObjOp::NameNew: return (intptr_t) new UString(*static_cast<const UString*>(inObj));
+    case EeDx7ObjOp::NameDelete: delete static_cast<UString*>(inObj); return 0;
+    case EeDx7ObjOp::SurfaceNew:
+        return (intptr_t) static_cast<GESurface*>(new DX7Surface(static_cast<GXSurface*>(inObj), *reinterpret_cast<const GESurfaceDescription*>(a),
+                                                                 reinterpret_cast<DX7Screen*>(b)));
+    case EeDx7ObjOp::SurfaceObject: return (intptr_t) static_cast<DX7Surface*>(theSurface)->mDX7;
+    case EeDx7ObjOp::SurfaceReference: theSurface->Reference(); return 0;
+    case EeDx7ObjOp::SurfaceDereference: theSurface->Dereference(); return 0;
+    case EeDx7ObjOp::SurfaceAllocatedSize: return (intptr_t)theSurface->GetAllocatedSize();
+    case EeDx7ObjOp::SurfaceMetrics:
+    {   // ee_dx7/src/surface.rs LogicalMetrics: logical width and height set, pixel width and height, logical shift
+        const uint32_t theMetrics[5] = { (uint32_t)theSurface->GetLogicalWidthSet(), (uint32_t)theSurface->GetLogicalHeightSet(),
+                                         (uint32_t)theSurface->GetPixelWidth(), (uint32_t)theSurface->GetPixelHeight(),
+                                         (uint32_t)theSurface->GetLogicalShift() };
+        memcpy(reinterpret_cast<void*>(a), theMetrics, sizeof theMetrics);
+        return 0;
+    }
+    case EeDx7ObjOp::ProbeWindow: {   // Test32BitSupport's hidden 16 x 16 window
+        UString theClassName("TestWindowClass"), theTitle("");
+        return static_cast<DX7Screen*>(inObj)->CreateAWindow(GE2DPoint(0.0f, 0.0f), 16, 16, theClassName, theTitle,
+                                                             *reinterpret_cast<GEWindow**>(a), 2, NULL);
+    }
+    case EeDx7ObjOp::WindowOs: return (intptr_t) static_cast<GEWindow*>(inObj)->GetOSRepresentation();
+    case EeDx7ObjOp::WindowDelete: delete static_cast<GEWindow*>(inObj); return 0;
+    case EeDx7ObjOp::DispatchEvents: TSThread::DispatchWindowEvents(); return 0;
+    default: return 0;
+    }
+}
+
+// Creates a screen for a DirectDraw device: lists its display modes, finds the current one, probes 32-bit support and
+// registers it (the original's private ctor 0x1000d271; the rasterizer makes the screens while it enumerates)
+DX7Screen::DX7Screen(void* inMonitor, GXDirectDraw* inDirectDraw, const UString& inName, bool inAttachedToDesktop,
+                     bool inSharesPrimary)
+{
+    this->mDX7 = ee_dx7sc_new(DX7ObjectHost, this, inMonitor, inDirectDraw, &inName, inAttachedToDesktop, inSharesPrimary);
+    ee_dx7sc_start(this->mDX7);
+}
+
+// Creates a window (a platform window: platform/PlatWindow.h): style 1 is a framed, resizable window with an
+// inWidth x inHeight client area, else a topmost borderless one at inOrigin (the original's popup), which is the full
+// screen (borderless, no mode change) when it covers the display. The class name and the parent are unused. (0x1000d622)
+long DX7Screen::CreateAWindow(const GE2DPoint& inOrigin, unsigned long inWidth, unsigned long inHeight,
+                              UString& inClassName, UString& inTitle, GEWindow*& outWindow, unsigned long inStyle,
+                              GEWindow* inParent)
+{
+    int32_t theDisplayWidth = 0, theDisplayHeight = 0;
+    // window sizes are in the display's own units (macOS: points), not its pixels
+    PlatWindowGetDisplayLogicalSize(NULL, &theDisplayWidth, &theDisplayHeight);
+    EeDx7WindowParams theParams;
+    ee_dx7sc_window_params(gPlatSimMode != 0, inStyle, (int32_t)inWidth, (int32_t)inHeight, theDisplayWidth, theDisplayHeight,
+                           inOrigin.GetX(), inOrigin.GetY(), &theParams);
+    PlatWindow* theWindow = theParams.create_at
+        ? PlatWindowCreateAt(inTitle, theParams.x, theParams.y, theParams.width, theParams.height, theParams.flags)
+        : PlatWindowCreate(inTitle, theParams.width, theParams.height, theParams.flags);
+    if (theWindow == NULL) {
+        ESDebugOut("CreateAWindow: %s\n", PlatWindowLastError());
+        ESRecordNativeError(PlatGetLastError());
+        ESGetNativeError();
+        return kErrorNativeError;
+    }
+    PlatCursorShow(0);   // the game draws its own pointer over its windows (WM_SETCURSOR's SetCursor(NULL))
+    TSThread::DispatchWindowEvents();   // the messages CreateWindowEx sent (the window is not the game's yet)
+    outWindow = new GEWindow(theWindow, inWidth, inHeight, inStyle, true);
+    return kErrorOK;
+}
+
+// Wraps a GX surface with its description and parent screen, unlocked and with no attachments (0x1000eced)
+DX7Surface::DX7Surface(GXSurface* inSurface, const GESurfaceDescription& inDescription, GEScreen* inParentScreen)
+{
+    this->mDX7 = ee_dx7sf_new(DX7ObjectHost, static_cast<GESurface*>(this), inSurface,
+                              reinterpret_cast<const EeDx7SurfaceDescription*>(&inDescription), inParentScreen);
+}
+
+// --- DX7Movie: whole in Rust (ee_dx7 movobj.rs); the thread entry, pl_mpeg's callbacks, the mixer's pull and the calls
+// on C++ objects ---------------------------------------------------------------------------------------------------
+#include <stdio.h>
+#include <vector>
+#include "pl_mpeg/pl_mpeg.h"
+#include "platform/PlatPath.h"
+
+static unsigned long DX7MoviePlay(void* inMovie) { return ee_dx7mv_play(static_cast<EeDx7Movie*>(inMovie)); }
+static void DX7MovieMix(void* inMovie, float* outFrames, unsigned long inCount) { ee_dx7mv_mix(inMovie, outFrames, inCount); }
+static void DX7MovieAudio(plm_t*, plm_samples_t* inSamples, void* inMovie)
+{
+    ee_dx7mv_samples(static_cast<EeDx7Movie*>(inMovie), inSamples->interleaved, inSamples->count);
+}
+static void DX7MovieVideo(plm_t*, plm_frame_t* inFrame, void* inMovie)
+{
+    static std::vector<unsigned char> sBGRA;   // one movie plays at a time (sMovieCriticalSection)
+    unsigned long theStride = inFrame->width * 4;
+    if (sBGRA.size() < theStride * inFrame->height)
+        sBGRA.resize(theStride * inFrame->height);
+    plm_frame_to_bgra(inFrame, &sBGRA[0], (int)theStride);
+    ee_dx7mv_frame(static_cast<EeDx7Movie*>(inMovie), &sBGRA[0], theStride);
+}
+
+static intptr_t DX7MovieHost(EeDx7MovieOp inOp, void* inObj, intptr_t a, intptr_t b)
+{
+    GESurface* theSurface = static_cast<GESurface*>(inObj);
+    switch (inOp) {
+    case EeDx7MovieOp::CsNew: {
+        TSCriticalSection* theSection = NULL;
+        long theResult = TSScheduler::CreateCriticalSection(theSection);
+        if (a != 0)
+            ESVERIFY_AT(theResult == keseOK, (unsigned long)a);
+        return (intptr_t)theSection;
+    }
+    case EeDx7MovieOp::CsDelete: TSScheduler::DestroyCriticalSection(static_cast<TSCriticalSection*>(inObj)); return 0;
+    case EeDx7MovieOp::CsEnter: static_cast<TSCriticalSection*>(inObj)->Enter(); return 0;
+    case EeDx7MovieOp::CsLeave: static_cast<TSCriticalSection*>(inObj)->Leave(); return 0;
+    case EeDx7MovieOp::EventNew: {
+        TSEvent* theEvent = NULL;
+        ESVERIFY_AT(TSScheduler::CreateEvent(theEvent, false) == keseOK, (unsigned long)a);
+        return (intptr_t)theEvent;
+    }
+    case EeDx7MovieOp::EventDelete: TSScheduler::DestroyEvent(static_cast<TSEvent*>(inObj)); return 0;
+    case EeDx7MovieOp::EventSet: static_cast<TSEvent*>(inObj)->Set(); return 0;
+    case EeDx7MovieOp::EventClear: static_cast<TSEvent*>(inObj)->Clear(); return 0;
+    case EeDx7MovieOp::EventWait: static_cast<TSEvent*>(inObj)->Wait(INFINITE); return 0;
+    case EeDx7MovieOp::ThreadNew: {
+        TSThread* theThread = NULL;
+        ESVERIFY_AT(TSScheduler::CreateThread(theThread, DX7MoviePlay, inObj) == keseOK, (unsigned long)a);
+        return (intptr_t)theThread;
+    }
+    case EeDx7MovieOp::ThreadDelete: TSScheduler::DestroyThread(static_cast<TSThread*>(inObj)); return 0;
+    case EeDx7MovieOp::ThreadPriority: static_cast<TSThread*>(inObj)->SetPriority((long)a); return 0;
+    case EeDx7MovieOp::MovieReference: static_cast<GEMovie*>(inObj)->Reference(); return 0;
+    case EeDx7MovieOp::MovieDereference: static_cast<GEMovie*>(inObj)->Dereference(); return 0;
+    case EeDx7MovieOp::FileName: {
+        const FSFileSpec& theFile = *static_cast<const FSFileSpec*>(inObj);
+        snprintf(reinterpret_cast<char*>(a), MAX_PATH, "%s%s%s", (const char*)theFile.GetVolume(), (const char*)theFile.GetDirectory(),
+                 (const char*)theFile.GetFile());
+        return 0;
+    }
+    case EeDx7MovieOp::FpGet: return (intptr_t)(a == 0 ? UMGetFloatingPointPrecision() : UMGetFloatingPointRoundingMode());
+    case EeDx7MovieOp::FpSet:
+        if (a == 0)
+            UMSetFloatingPointPrecision((unsigned long)b);
+        else
+            UMSetFloatingPointRoundingMode((unsigned long)b);
+        return 0;
+    case EeDx7MovieOp::Open: {   // the game's path on the native file system (case-insensitive lookup off Windows)
+        char theNative[PLAT_MAX_PATH];
+        const char* thePath = reinterpret_cast<const char*>(a);
+        return (intptr_t)(PlatPathGetAttributes(thePath) != PLAT_ATTR_INVALID && PlatPathToNative(thePath, theNative, sizeof(theNative))
+                              ? plm_create_with_filename(theNative) : NULL);
+    }
+    case EeDx7MovieOp::InstallVideo: plm_set_video_decode_callback(static_cast<plm_t*>(inObj), DX7MovieVideo, reinterpret_cast<void*>(a)); return 0;
+    case EeDx7MovieOp::InstallAudio: {
+        double theLead;
+        memcpy(&theLead, &b, sizeof theLead);
+        plm_set_audio_decode_callback(static_cast<plm_t*>(inObj), DX7MovieAudio, reinterpret_cast<void*>(a));
+        plm_set_audio_lead_time(static_cast<plm_t*>(inObj), theLead);
+        return 0;
+    }
+    case EeDx7MovieOp::MixerRate: return SEMixer::GetActiveMixer() ? (intptr_t)SEMixer::GetActiveMixer()->GetOutputRate() : 0;
+    case EeDx7MovieOp::MixerSource: SEMixer::GetActiveMixer()->SetMovieSource(inObj ? DX7MovieMix : NULL, inObj); return 0;
+    case EeDx7MovieOp::ActiveScreen: return (intptr_t)GERasterizer::GetActiveRasterizer()->GetScreen((unsigned long)a);
+    case EeDx7MovieOp::ActiveTarget: return (intptr_t)GERasterizer::GetActiveRasterizer()->GetSecondarySurface((unsigned long)a);
+    case EeDx7MovieOp::ScreenCreateSurface:
+        return static_cast<GEScreen*>(inObj)->CreateSurface(*reinterpret_cast<GESurfaceDescription*>(a), reinterpret_cast<GESurface**>(b));
+    case EeDx7MovieOp::SurfaceInfo: {
+        const uint32_t theInfo[4] = { (uint32_t)theSurface->GetPixelFormat(), (uint32_t)theSurface->GetPixelDepth(),
+                                      (uint32_t)theSurface->GetWidth(), (uint32_t)theSurface->GetHeight() };
+        memcpy(reinterpret_cast<void*>(a), theInfo, sizeof theInfo);
+        return 0;
+    }
+    case EeDx7MovieOp::SurfaceLock: return theSurface->Lock();
+    case EeDx7MovieOp::SurfaceUnlock: return theSurface->Unlock();
+    case EeDx7MovieOp::SurfaceMemory:
+        reinterpret_cast<uintptr_t*>(a)[0] = (uintptr_t)theSurface->GetMemoryAddress();
+        reinterpret_cast<uintptr_t*>(a)[1] = theSurface->GetBytesPerRow();
+        return 0;
+    case EeDx7MovieOp::SurfaceReference: theSurface->Reference(); return 0;
+    case EeDx7MovieOp::SurfaceDereference: theSurface->Dereference(); return 0;
+    case EeDx7MovieOp::SurfaceCopy: {
+        const float* r = reinterpret_cast<const float*>(b);
+        GERectangle theSource(r[0], r[1], r[2], r[3]), theDestination(r[4], r[5], r[6], r[7]);
+        return theSurface->CopyTo(reinterpret_cast<GESurface*>(a), theSource, theDestination, false);
+    }
+    default: return 0;
+    }
+}
+
+// Creates a movie shown over the whole back buffer and starts its playback thread
+DX7Movie::DX7Movie(const FSFileSpec& inFile, unsigned long inScreen)
+{
+    this->mDX7 = ee_dx7mv_new(DX7MovieHost, static_cast<GEMovie*>(this), &inFile, inScreen, NULL, false);
+}
+
+// Creates a movie drawn into the given rectangle, optionally looping, and starts its playback thread
+DX7Movie::DX7Movie(const FSFileSpec& inFile, unsigned long inScreen, GERectangle inRectangle, bool inLoop)
+{
+    this->mDX7 = ee_dx7mv_new(DX7MovieHost, static_cast<GEMovie*>(this), &inFile, inScreen,
+                              reinterpret_cast<const float*>(&inRectangle), inLoop);
 }
 
 // ---- the renderer the game links (DX7HRTnLDisplay.cpp's globals; its PIM entry points went with the plug-in boundary)

@@ -26254,3 +26254,78 @@ Branch `rust-data2` (from round 1's d0fa7dea; origin/rust had not moved since 1c
   failed once under load in an earlier run and passed alone and in the final run); the tour PASS (view 83.7% lit,
   F3 ok). The tour is the only gate that loads the tables' media (the animals' graphics and sounds) and draws the
   random map's painted terrain.
+
+## R4.3, seventeenth part: the GE objects read in place; the renderer's vertex and polygon arrays merged into GEVertexArray and GEPolygonArray; the draws' C++ seam gone (ee_ge cppobj.rs, vertarr.rs; branch rust-ge17, 2026-11-15)
+
+Since round 16 every Graphics Engine class with state is a Rust object behind a one-member C++ class, but the Rust
+objects still called back into C++ to read each other (a host operation that only forwarded to another Rust object).
+This round reads them in place.
+
+| Commit | What | Net C++ (src + include, include/rust excluded, address markers not counted) |
+|---|---|---|
+| 68753118 | the GE objects read in place (`cppobj.rs`); `GEVertexArray`/`GEPolygonArray` concrete over `vertarr.rs`, the renderer's three array classes gone; the draws' reads in Rust | +163 -516, net -353 |
+| 43bda4df | DX7Trampolines.cpp folded into DX7Rasterizer.cpp | +241 -251, net -10 |
+
+Round total: net -363 (well short of the 1,500 aimed at: the remaining C++ is mostly forwarders the game calls, and each host that still forwards to a Rust object needs its golden rebuilt over real-layout fakes, as this round did for two). The Graphics Engine directory (with the DX7 plug-in): 5,698 -> 5,167 lines (marker lines included;
+the merge's strip_markers run removes the rest of them).
+
+- **In place** (`cppobj.rs`): a reference-counted GE object (`GEModel`, `GEMaterial`, `GEFont`, `GETexture`,
+  `GEBitmap`, `GEFontBitmap`) is its vtable pointer, its count and its Rust object; `GEText` and `GEWindow` their
+  Rust object alone; a `UString` / `UWideString` its vtable pointer and ee_ustring's record (ee_ge now depends on
+  ee_ustring). GEBitmap.cpp and GEModel.cpp assert the sizes. The model reads its materials' Rust objects, its
+  sub-models' objects and reference counts, and its strings' records (assign, set from bytes as a temporary assigned,
+  length, size, first byte, array element) in place; the small objects read their strings, take their references and
+  read a text's font in place. The hosts keep what crosses into C++: making and deleting the strings and objects, every
+  `Dereference` (it may delete), the texture stages (a texture's host), the platform calls.
+  - The materials are not a second Rust array in the model: the model keeps the C++ `GEMaterial*` (`GetMaterial`
+    returns it) and reads its Rust object through it.
+  - `UReferenceCounter::Reference` is the header's inline `mReferenceCount++`: taking it in place is the same
+    statement. Only `Dereference` stays a host call.
+- **The vertex and polygon arrays** (`vertarr.rs`, moved from ee_dx7's vertex.rs, which re-exports it):
+  `GEVertexArray` and `GEPolygonArray` are concrete over the Rust arrays (type 0 standard, 1 coloured); the renderer's
+  `DX7StandardVertexArray`, `DX7StdColorVertexArray` and `DX7PolygonArray` (three headers, two trampoline sets) are
+  gone, `CreateVertexArray` / `CreatePolygonArray` make the GE classes. The methods stay virtual (the store gate's
+  arrays are a subclass with their own storage; a protected default constructor leaves the Rust array NULL). One
+  declared difference: `CopyFrom` between arrays of two types copies nothing (the original cast the other array to its
+  own class; the game never mixes them).
+- **The draws** (`ee_dx7 draw_ffi.rs`): the model, material, polygon index, frame vertex, sub-model, texture frame and
+  text reads are Rust (the C++ `ee_dx7cpp_*` functions and `DX7TextInfoOf` went); `ee_dx7r_text_bounds` and
+  `ee_dx7r_text_draw` take the `GEText*`; the platform's text functions are called directly (`PlatFontMeasure` and
+  the others are ee_plat_ui's `extern "C"`). A draw reads a vertex array's vertices at `GetVertices()` (after the
+  vtable pointer). The vertex type a model draw uses is its first array's (`ee_ge_va_type`).
+- **The physical walks** read the models in place too (`ee_ge_physical_models` fills the table with Rust readers);
+  the C++ keeps the triangle read (the arrays' virtuals) and the exact retry.
+- **DX7Trampolines.cpp** folded into DX7Rasterizer.cpp (the screens', surfaces' and movies' hosts and constructors).
+  GX.cpp stays: the game's display settings, the smoke test and tools/gx_test call the GX shims.
+- **Goldens** (scratch, build/ge17): `gmod` (the ge9 GEModel driver) and `gms` (the ge16 material/font/text/window
+  driver) over the round's base (f23173ce: its GEModel.cpp / GEBitmap.cpp object host and its ee_ge, `git archive` in
+  build/ge17/base) and the worktree, both over real-layout fakes: a fake `UString` / `UWideString` is the game's layout
+  over ee_ustring, a fake material its count and an ee_ge material. What the round does in place (a string's
+  assignment, size, comparison; a reference taken; a material's setters) is traced with a `~` and not recorded, so
+  the traces compare the calls still made on C++ objects and the digests (every object through its accessors, now
+  with the materials' and textures' reference counts) the state. gmod: 20,000 sequences identical (4.48 M trace
+  lines), 11 of 12 mutations caught (the uncaught one, a material name set by `assign_text` instead of a temporary
+  and `operator=`, is the same record: ee_ustring's two paths agree). gms: 20,000 identical, 10 of 11 caught (a
+  font comparing equal whatever the name changes no sequence: the driver's fonts that agree in style, quality and
+  size also share their name; the unit test covers it). The cargo replay (modobj_tests.rs) replays the new driver's
+  first 25 sequences (golden_gmod.txt) over C++-layout objects (`cppobj::testing`).
+- **What only the game exercises**: the draws' reads (models, materials, texts, vertex arrays) run only in a drawing
+  game: the tour is their gate.
+- **Gates, before the merge** (68753118's tree; the fold not built on its own): `build.py --sim` 0/0, oracle seeds 2-3
+  identical, store gate PASS (25,140 lines), Rust gate PASS (a first run failed clippy: `unnecessary_cast` on two
+  casts that are needed on LP64 / for `c_char`, now allowed in place), `--test-profile windowed-software` 0/0. Harness
+  (the pre-merge test exe): the tour `RESULT PASS tour` (83.7% lit, render checks ok); the legacy tour `STOP <windowed
+  session complete> reached`; the LAN game `RESULT PASS lan-game`. Against the round's base exe (same seed): the
+  settings tabs, single player and random map setup 0 pixels; the main menu and closed settings 167 (the animated
+  corner); the game views differ run to run as before; the HUD by eye as before (resource bar, age label, mini map,
+  the town centre and units drawn).
+- **The merge of `rust`** (c40206d3): two conflicts, both where `rust` had deleted address markers next to this
+  round's comments (DX7Rasterizer.cpp's array constructors, GEModel.cpp's host): this round's text without the
+  markers. `rust_build.py header` rewrote include/rust/ee_won.h (constants in the generator's order: its own commit).
+  `strip_markers.py` then changed nothing (the merged tree had no markers left), so there is no strip commit.
+- **Gates on the merged tree**: `build.py --sim` and `--test-profile windowed-software` 0/0 (851/852 inputs); sim
+  oracle seeds 2-7 identical; captures at seeds 2-3: oracle 187 and late 188 digests equal (4 without a golden each),
+  effects 6 equal; store gate PASS; Rust gate PASS. Harness on the merged test exe: the tour `RESULT PASS tour` (83.3%
+  lit, render checks ok; against the base exe the menus as above: 110 pixels in the animated corner, 0 elsewhere);
+  the orders game `ORDERS PASS` (gather, repair, repair-queued, move) and `SCROLL CHECK PASS`, `RESULT PASS
+  random-game` (the left edge scroll moved 0.041 as on this machine before); the HUD by eye as before.

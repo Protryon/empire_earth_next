@@ -37,7 +37,7 @@
 #include "lle/U2DSparseArray.h"
 
 #include "dx7/DX7Common.h"
-#include "dx7/DX7StdColorVertexArray.h"
+#include "lle/GEVertexArray.h"
 
 struct EeDx7Rasterizer;                     // rust/ee_dx7.h
 
