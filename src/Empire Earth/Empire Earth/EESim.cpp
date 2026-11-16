@@ -481,6 +481,8 @@ struct Options {
     std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
     std::string mLoadSave;                               // --load-save FILE ("" a new game from the lobby)
     std::string mScenario;                               // --scenario FILE ("" a random map from the lobby)
+    std::string mCampaign;                               // --campaign NAME ("" none): learning, roman, pacific, asian
+    long mScenarioIndex = -1;                            // --scenario-index K (with --campaign; -1 the preselection)
     std::string mEditorScript;                           // --editor-script FILE ("" a game, not the editor)
     std::string mEditorOut;                              // --editor-out FILE (the script's steps; "" stdout)
     bool mQuiet = false;
@@ -515,11 +517,22 @@ void Note(const char* inFormat, ...)
 }
 
 // the game's debug strings: EE-AI lines to the trace, everything to --log
+// the game's load failure message (EEReportLoadFailure's "EE load failure: " debug line; "" none): the wait for the
+// game ends with it, a clean failure, instead of the wait's timeout
+std::string sLoadFailure;
+
 void DebugHandler(const char* inText)
 {
     if (!inText)
         return;
     std::lock_guard<std::mutex> theGuard(sOutLock);
+    if (!strncmp(inText, "EE load failure: ", 17) && sLoadFailure.empty()) {
+        sLoadFailure = inText + 17;
+        while (!sLoadFailure.empty() && (sLoadFailure.back() == '\n' || sLoadFailure.back() == '\r'))
+            sLoadFailure.pop_back();
+        if (sLoadFailure.empty())
+            sLoadFailure = "(no message)";
+    }
     if (!strncmp(inText, "EE-AI", 5)) {
         FILE* theOut = sTraceFile ? sTraceFile : stdout;
         fputs("debugstring ", theOut);
@@ -1307,9 +1320,16 @@ void WaitFor(const char* inWhat, double inSeconds, const std::function<bool()>& 
 {
     auto theEnd = std::chrono::steady_clock::now() + std::chrono::duration<double>(inSeconds);
     while (!inTest()) {
-        if (std::chrono::steady_clock::now() > theEnd)
+        if (std::chrono::steady_clock::now() > theEnd) {
+            std::string theClass = "none";
+            if (gUIManager) {   // the form's class too (an id -1 form: a message box is EEUIFError)
+                UILock theLock;
+                UIForm* theForm = gUIManager->GetCurrentForm();
+                if (theForm) theClass = typeid(*theForm).name();
+            }
             Fail(std::string("timed out waiting for ") + inWhat + " (top form " +
-                                     std::to_string(TopForm()) + ")");
+                                     std::to_string(TopForm()) + " " + theClass + ")");
+        }
         SimSleep(50);
     }
 }
@@ -1818,6 +1838,89 @@ void ScenarioFromLobby()
     Note("UI start (scenario)");
 }
 
+const unsigned long kFormPlayCampaign = 8, kFormCampaignSelect = 33, kFormScenarioIntro = 19;
+const unsigned long kCampaignScenarioList = 2;   // the campaign scenario select form's scenario list
+
+// the campaign scenario select form's scenario list (NULL: not on top)
+UILBString* CampaignScenarioList()
+{
+    UIForm* theForm = gUIManager->GetCurrentForm();
+    if (!theForm || theForm->GetFormID() != kFormCampaignSelect || kCampaignScenarioList >= theForm->GetControlCount())
+        return NULL;
+    return dynamic_cast<UILBString*>(theForm->GetControl(kCampaignScenarioList));
+}
+
+// the button of the form on top whose trigger is the screen event inCode, clicked (it must be there)
+void ClickScreenEvent(unsigned long inForm, unsigned long inCode, const char* inWhat)
+{
+    long theButton = -1;
+    WaitFor(inWhat, 60, [&] { return (theButton = ControlWithEvent<EEScreenEvent>(inForm, inCode)) >= 0; });
+    Click(inForm, (unsigned long)theButton);
+}
+
+// --campaign NAME [--scenario-index K]: a shipped campaign's scenario through the campaign screens, as
+// tools/harness/scenario_game.py plays it: the single-player form's Learn to Play (or Campaign, then the play campaign
+// form's campaign), the scenario select form (form 33: the list line K selected, the default difficulty), Start, the
+// scenario intro (form 19), Start. The Learning Campaign's scenarios are single-player files the lobby's Play Scenario
+// screen refuses ("This is not a valid multiplayer scenario file.")
+void CampaignFromMenu()
+{
+    const std::string& theName = sOptions.mCampaign;
+    if (theName == "learning")
+        ClickScreenEvent(kFormSingle, EE_SCREENS_PC_LEARNING, "the Learn to Play button");   // (EEUIEPCELearningCampaign)
+    else {
+        ClickScreenEvent(kFormSingle, EE_SCREENS_SP_CAMPAIGN, "the Campaign button");
+        WaitForm(kFormPlayCampaign);
+        unsigned long theCode = theName == "roman"     ? EE_SCREENS_PC_CAMPAIGN_1
+                                : theName == "pacific" ? EE_SCREENS_PC_CAMPAIGN_2
+                                                       : EE_SCREENS_PC_CAMPAIGN_3;
+        ClickScreenEvent(kFormPlayCampaign, theCode, "the campaign's button");
+    }
+    WaitForm(kFormCampaignSelect);
+    unsigned long theLines = 0;
+    WaitFor("the campaign's scenario list", 60, [&] {
+        UILock theLock;
+        UILBString* theList = CampaignScenarioList();
+        return theList && (theLines = theList->GetLineCount()) > 0;
+    });
+    SimSleep(1000);   // (the harness waits 2 s for the form's fill)
+    if (sOptions.mScenarioIndex >= 0) {
+        if ((unsigned long)sOptions.mScenarioIndex >= theLines)
+            Fail("--scenario-index " + std::to_string(sOptions.mScenarioIndex) + " outside the campaign's " +
+                 std::to_string(theLines) + " scenarios");
+        {
+            UILock theLock;
+            UILBString* theList = CampaignScenarioList();
+            if (!theList)
+                Fail("--campaign: the scenario select form went away");
+            theList->ChangeSelectionIndex((unsigned long)sOptions.mScenarioIndex, true, false);
+        }
+        WaitFor("the campaign scenario selection to stick", 20, [&] {
+            UILock theLock;
+            UILBString* theList = CampaignScenarioList();
+            unsigned long theSelection = 0xffffffffUL;
+            return theList && theList->GetCurrentSelection(theSelection) == kErrorOK &&
+                   theSelection == (unsigned long)sOptions.mScenarioIndex;
+        });
+        SimSleep(500);
+    }
+    {
+        UILock theLock;
+        UILBString* theList = CampaignScenarioList();
+        unsigned long theSelection = 0xffffffffUL;
+        const char* theText = theList && theList->GetCurrentSelection(theSelection) == kErrorOK &&
+                                      theSelection < theList->GetLineCount()
+                                  ? (const char*)theList->GetData(theSelection)
+                                  : NULL;
+        Note("UI campaign %s scenario %lu of %lu: %s", theName.c_str(), theSelection, theLines, theText ? theText : "?");
+    }
+    ClickScreenEvent(kFormCampaignSelect, EE_SCREENS_CS_START, "the scenario select form's Start");
+    WaitForm(kFormScenarioIntro);
+    SimSleep(1000);
+    ClickScreenEvent(kFormScenarioIntro, EE_SCREENS_SI_START, "the scenario intro's Start");
+    Note("UI start (campaign scenario)");
+}
+
 // ------------------------------------------------------------------------------------------------ the editor
 
 const unsigned long kFormEditors = 9;   // the editor form has no form id (UIForm id -1): found as the manager's
@@ -1894,9 +1997,11 @@ void Drive()
             RunEditor();
         Click(kFormMain, 0);
         WaitForm(kFormSingle);
-        bool theScenario = !sOptions.mScenario.empty();
+        bool theScenario = !sOptions.mScenario.empty() || !sOptions.mCampaign.empty();
         bool theLoaded = !sOptions.mLoadSave.empty() || theScenario;
-        if (theScenario)
+        if (!sOptions.mCampaign.empty())
+            CampaignFromMenu();
+        else if (theScenario)
             ScenarioFromLobby();
         else if (theLoaded)
             LoadFromMenu();
@@ -1910,6 +2015,15 @@ void Drive()
         }
         long theExpected = sOptions.mComputers + 2;
         WaitFor("the game", 600, [&] {
+            {
+                std::string theFailure;
+                {
+                    std::lock_guard<std::mutex> theGuard(sOutLock);
+                    theFailure = sLoadFailure;
+                }
+                if (!theFailure.empty())   // a clean failure (the load's teardown came through)
+                    Fail("load failed: " + theFailure);
+            }
             return TopForm() == kFormGame && gPhysics != NULL && gPhysics->mTimerRunning &&
                    (theLoaded ? gWorld.GetNumPlayers() > 1 : (long)gWorld.GetNumPlayers() == theExpected) &&
                    gWorld.GetMap() != NULL;
@@ -1922,7 +2036,10 @@ void Drive()
             for (unsigned long i = 1; i < gWorld.GetNumPlayers(); i++)
                 if (gWorld.GetPlayer(i) != NULL)
                     sResults[i] = gWorld.GetPlayer(i)->mGameResult;
-            Note("LOADED %s: game ms %ld PT %lu", theScenario ? sOptions.mScenario.c_str() : sOptions.mLoadSave.c_str(),
+            Note("LOADED %s: game ms %ld PT %lu",
+                 !sOptions.mCampaign.empty() ? sOptions.mCampaign.c_str()
+                 : theScenario              ? sOptions.mScenario.c_str()
+                                            : sOptions.mLoadSave.c_str(),
                  gPhysics->mGameTime, gPhysics->mNumTicksDone);
             if (sChecksumFile) {   // the loaded state (not a "CT" line: the comparisons skip it)
                 fprintf(sChecksumFile, "LOADED ");
@@ -2046,6 +2163,11 @@ const char* kUsage =
     "  --load-save FILE       load this saved game (the game's Load Game screen) instead of starting from the lobby\n"
     "  --scenario FILE        play this scenario (.scn) instead of a random map: the lobby's game type Scenario, the\n"
     "                         Play Scenario screen, Load, Start (the scenario's own players and options)\n"
+    "  --campaign NAME        play a shipped campaign's scenario through the campaign screens (learning, roman,\n"
+    "                         pacific, asian: single player, the campaign, its scenario select form, the intro, Start;\n"
+    "                         the single-player scenarios the lobby refuses, the Learning Campaign's)\n"
+    "  --scenario-index K     with --campaign: the scenario list line (default: the screen's preselection; every\n"
+    "                         Learning Campaign scenario is open, of the others only the first)\n"
     "  --dump-at MS=FILE      write the units' and players' state at the first tick at or after game ms MS (repeatable)\n"
     "  --dump-load FILE       with --load-save: the same of the loaded state (at its first tick, before it runs)\n"
     "  --dump-tick MS=FILE    the same after the first physics tick at or after game ms MS (repeatable; --dump-at\n"
@@ -2309,6 +2431,15 @@ int EESimMain(int argc, char** argv)
             sOptions.mLoadSave = Absolute(value());
         else if (a == "--scenario")
             sOptions.mScenario = Absolute(value());
+        else if (a == "--campaign") {
+            sOptions.mCampaign = value();
+            if (sOptions.mCampaign != "learning" && sOptions.mCampaign != "roman" && sOptions.mCampaign != "pacific" &&
+                sOptions.mCampaign != "asian") {
+                fprintf(stderr, "EE-SIM: --campaign learning|roman|pacific|asian\n");
+                return 64;
+            }
+        } else if (a == "--scenario-index")
+            sOptions.mScenarioIndex = atol(value().c_str());
         else if (a == "--editor-script")
             sOptions.mEditorScript = Absolute(value());
         else if (a == "--editor-out")
@@ -2387,7 +2518,7 @@ int EESimMain(int argc, char** argv)
     gPlatSimSeedSet = sOptions.mLoadSave.empty() ? 1 : 0;   // a loaded game: the file's seed, as the game loads it
     gPlatSimSeed = (uint32_t)sOptions.mSeed;
     gPlatSimNoHumanDefeat = sOptions.mNoHumanDefeat ? 1 : 0;
-    gScenarioSimDialogs = !sOptions.mScenario.empty();
+    gScenarioSimDialogs = !sOptions.mScenario.empty() || !sOptions.mCampaign.empty();
     // no fixed ports by default: a pair checked free at start could be taken by another process (another sim, a
     // connection's ephemeral port) before the random-map screen's local server bound it; that server then was not
     // published and its first input crashed (NERecordPlayback::Process on its NULL recorder)

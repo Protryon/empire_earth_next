@@ -1031,9 +1031,10 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
     unsigned long theCount;
     unsigned long theIdx;
     theResult = EEPlayer::Load(inMajorVersion, inMinorVersion, inFile);
-    // stage 5 (docs/AI_RESEARCH.md §8.90): only the current format (from 0.232, the original's last block) loads;
-    // the seven older blocks went (save compatibility is not a goal)
-    if (theResult == kErrorOK && inMajorVersion == 0 && inMinorVersion < 0xe8)
+    // stage 5 (docs/AI_RESEARCH.md §8.90): only the original's last two blocks load (from 0.229: the Learning
+    // Campaign's scenarios are 0.231 files; the seventh block lacks four fields, read below from 0.232); the six older
+    // blocks went (save compatibility is not a goal)
+    if (theResult == kErrorOK && inMajorVersion == 0 && inMinorVersion < 0xe5)
         return kErrorFailed;
     // port: the merge of main's stages 5 and 6 (save 0.281): the computer player's block without the C++ managers'
     // timers and intelligence files (0.269, 0.271), the next engine's state block main's version 6; an older save
@@ -1461,14 +1462,17 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         theResult = inFile.Read(this->mExpansionTimerMedium);
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mExpansionTimerHard);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mLF14);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mLF1C);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mLF18);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mLF20);
+    // (0.229-0.231, the original's seventh block: the same fields up to here, without these four)
+    if (inMajorVersion > 0 || inMinorVersion >= 0xe8) {
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(this->mLF14);
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(this->mLF1C);
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(this->mLF18);
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(this->mLF20);
+    }
     if (inMajorVersion > 0 || inMinorVersion >= 0xec) {
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mUnitsPerSpaceDock);

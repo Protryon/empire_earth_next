@@ -284,9 +284,11 @@ EEEffect::~EEEffect()
     }
     if (this->mTarget != NULL && this->mTarget != (EEUnit*)-1)
         this->mTarget->Dereference();
-    if (this->mFromUnit)   // the marching line's units (not referenced by a repair: as the original)
+    // the marching line's units (not referenced by a repair: as the original); still saved ids after a load that
+    // failed before the repair (mUnitIsSavedID): no units
+    if (this->mFromUnit && !this->mUnitIsSavedID)
         this->mFromUnit->Dereference();
-    if (this->mToUnit)
+    if (this->mToUnit && !this->mUnitIsSavedID)
         this->mToUnit->Dereference();
     if (this->mVolcanoModel)
         this->mVolcanoModel->Dereference();
@@ -320,10 +322,10 @@ void EEEffect::ReleaseBase()
         if (theList != NULL)
             theList->Remove(theEffect);
     }
-    if (this->mUnit != NULL) {
+    if (this->mUnit != NULL && !this->mUnitIsSavedID)   // (a failed load's effect: the id is no unit)
         this->mUnit->Dereference();
-        this->mUnit = NULL;
-    }
+    this->mUnit = NULL;
+    this->mUnitIsSavedID = false;
 }
 
 // Releases what the destructor releases without destroying the effect: the particles' graphic object (0xf4f30,
@@ -464,6 +466,7 @@ long EEEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
     }
     if (theLoaded.has_unit)
         this->mUnit = reinterpret_cast<EEUnit*>((uintptr_t)theLoaded.unit_id);
+    this->mUnitIsSavedID = true;   // (until RepairPointers: the kinds' saved unit ids too)
     if (!this->mIs2D) {
         long theBase = ee_gfx_effect_load_3d(this->mRecord, &theFile);
         if (this->mKind == 0x40)
@@ -514,6 +517,7 @@ long EEEffect::RepairPointers()
     if (this->mKind == 0x41)
         return this->Call(EeGfxEffect3DOp::Repair);
     long theResult = 0;
+    this->mUnitIsSavedID = false;
     if (USavedID(this->mUnit) == 0xffffffff)
         this->mUnit = NULL;
     else {
@@ -545,6 +549,9 @@ long EEEffect::RepairPointers()
             this->mFromUnit = static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(this->mFromUnit)));
         if (USavedID(this->mToUnit) > 0)
             this->mToUnit = static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(this->mToUnit)));
+    } else if (this->mKind == 0x2d) {   // port: a failed repair drops the effect; its ends are ids, not units
+        this->mFromUnit = NULL;
+        this->mToUnit = NULL;
     }
     return theResult != 0 ? theResult : this->Call(EeGfxEffect3DOp::Repair);
 }

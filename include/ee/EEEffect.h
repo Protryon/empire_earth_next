@@ -184,6 +184,11 @@ public:
     EeGfxEffectRecord* mRecord = ee_gfx_effect_record_new(0);
     EEUnit* mUnit = NULL;                   // +0x08 (referenced; saved as its id)
     EEGraphicEffect* mGraphicEffect = NULL; // +0x0c (referenced; Load/Unload)
+    // New (port): set while the effect's unit pointers hold Load's saved unit ids (mUnit, the marching line's ends),
+    // cleared by RepairPointers. A load that fails before the repair (a corrupt save, a scenario this build cannot
+    // read) tears its effects down with the ids in place: the destructor and ReleaseResources then drop the ids
+    // instead of dereferencing them (the original's destructor dereferenced the id and faulted)
+    bool mUnitIsSavedID = false;
     int32_t& mKind = mRecord->kind;         // +0x18
     EEEffectHandle& mHandle = *reinterpret_cast<EEEffectHandle*>(&mRecord->handle);   // +0x1c
     int32_t& mPlayer = mRecord->player;     // +0x20 (compared with the current player)
