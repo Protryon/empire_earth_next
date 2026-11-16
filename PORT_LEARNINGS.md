@@ -27268,3 +27268,616 @@ hosts and the controls' ops, `EEUICSelectUnits.cpp`/`EEUICCommandUnits.cpp`'s op
 queue host (its decisions in `actions.rs` already), `EEUIFMainGame.cpp`'s mouse-mode host (screens'). `EEAWonNet`
 (the WON lanes'). Measured but not this lane's: `EEUnitPicker.cpp` (525, the gfx lane's picking), `EECameraControl.cpp`
 (894, the gfx lane's camera), `RTSMouse.cpp`.
+
+## R6: game screens B, round 1: the campaign editor's model whole in Rust; the moved forms' dead ids; the host's, dialogs', manager's and thread's include blocks (ee_screens campaign_model.rs; branch rust-screensb1, 2026-11-15)
+
+A second game screens lane. The first (`docs/progress/r6-game-screens-60k-lines-on-the-toolkit.md`) keeps the
+in-game HUD; this one takes the host every moved form goes through (`UI Events/EEScreens.cpp`), the UI thread, the
+UI manager, the message box, the framed background, the post-game line graph, the file combo box, the scenario
+intro's form manager, the models of the moved forms and the ids headers of the forms whose events moved
+(`docs/progress/r6-game-screens-b.md`).
+
+### The measure
+
+| Unit (at 029e7372) | Lines | What is left in it |
+|---|---|---|
+| `UI Events/EEScreens.cpp` | 3,611 | the host: ~1,400 `case`s, each one toolkit or simulation call (none dead: every op code is used by Rust, `build/sb1/deadops.py`) |
+| `User Interface Thread/EEUserInterface.cpp` | 1,425 | the thread's hosts (`ee_screenscpp_ui_game`, `_ui_message`, `_ui_event`), 40 one-line posts, 123 include lines |
+| `EEUIManager.cpp` | 635 | the factories' and the control creation's `new`s (C++ classes), the host of `ui_manager.rs`, 155 include lines |
+| `EEUIFError.cpp` | 455 | the form, its two button classes and the host of `dialog.rs` |
+| `Campaign/EECampaignEditorBehavior.cpp` + header | 620 | **the campaign editor's model: real logic, only `EEScreens.cpp` used it** |
+| `EEUIEScenarioIntroEvents.cpp` | 315 | `EEUISCIFormManager`: file opens over `EEOpenSaveGameFile` |
+| `EEUIBGenericBackground.cpp` | 301 | the background's host for `frame.rs`, the campaign map's cell loader |
+| `EEUIPGSLineGraph.cpp` | 145 | a `UILineGraph` with 31 stored graphs |
+| `EEUIFileComboBox.cpp` | 128 | a `UIComboBox` subclass (the editor's) |
+| `ee/EEUIManager.h`, `EEControlEventID.h`, `EEFormEventID.h` | 874 | the forms' control indices and event ids: most dead since the events moved |
+
+Earlier rounds (13, 21-28) had already moved this scope's decisions to Rust behind hosts; what was left was host
+code (one C++ call per `case`), the C++ classes whose objects the toolkit makes, include blocks and dead ids. The
+gates reach: the tour (the main menu, the settings, the random map's lobby, a game: `EEScreens.cpp`'s menu,
+settings and lobby ops, the thread's messages, the manager's control and background creation, the framed
+backgrounds), the orders game (the thread's actions), the legacy tour's menu bmpdiff (the same menus' pixels), the
+LAN game (the lobby as host and client, WON's screens), the editor gate (EE-SIM: the scenario editor's host ops).
+None opens the campaign editor, the post-game summary or a message box.
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 82d12b87 | the campaign editor's model whole in Rust (`campaign_model.rs`, `campaign_model_ffi.rs`); `EECampaignEditorBehavior.cpp` and its header deleted; its host in `EEScreens.cpp` | +163 -697, net -534 |
+| b43158d6 | the moved forms' dead ids (`ee/EEUIManager.h` 193 control indices, `EEControlEventID.h` 233, `EEFormEventID.h` 18, with the emptied enums' comments) | -504 |
+| d9620222 | the include lines eight units compile without | +1 -377, net -376 |
+
+The scope's C++ (the thirteen files of the table above): 8,509 -> 7,095 (-1,414). Short of the 1,500 asked: only
+one of the scope's classes still had logic of its own (the campaign editor's model); the rest is hosts and `new`s that
+go with the toolkit's C++ classes.
+
+### The campaign editor's model
+
+- **What moved.** All of `EECampaignEditorBehavior` but its `EECampaign` member: the campaigns on disk, the
+  scenarios not in the campaign (sorted), the entered password, the new and edited flags, and `AddScenario`,
+  `MoveScenario` (the original's 1-based position arithmetic), `RemoveScenario`, `New` (the four default texts, the
+  first string error returned), `Delete` (the four characters cut as `InsertString("", n - 4, true)` cut them),
+  `GetIsUnlocked`, `Reset` (the extension stripped by characters through `ee_plat_core`'s `PlatMbsLen`,
+  `PlatMbsNInc`, `PlatMbsLwr`; `std::sort` as byte order, `operator<` being `PlatMbsCmp`), the three validations,
+  `Save` and `Load`; and the host's own state for the editor (the last error, the scenario list's result).
+- **The host** (`ee_screenscpp_ce_campaign`, `_text` in `EEScreens.cpp`): the edited campaign stays C++ (its file
+  format is `EECampaign.cpp`'s, shared with the play campaign flow) as a static of the host; 12 ops (a string, a
+  field set, the scenarios set, load, save, the scenario list, a file delete, Reset's begin, listing, built-in test,
+  archive check and end) and 6 pure reads. Ops that change things never return variable-length text; their results
+  are kept and read back, so a text read can be retried with a bigger buffer without repeating a side effect.
+  Reset's archive check is one op: the original read the archived copy's bytes even after warning once, and its
+  file and path objects live across the loop (`FindFile`'s out parameter is reused, as the original reused it).
+- **One quirk kept.** Reset lists the scenarios into the same `std::set` the campaigns were listed into, so the
+  campaign files come round again in the scenario pass (and can land in the available list when they lack the
+  scenario extension). The host keeps one set across both listings.
+- **How the events reach it.** `campaign_editor.rs` is unchanged: its host (`campaign_editor_ffi.rs`) asks
+  `campaign_model_ffi` first, which answers the model's ops (`EE_SCREENS_GAME_CE_RESET` .. `_LIST_OK`,
+  `_CHANGED`, `EE_SCREENS_TEXT_CE_FIELD`, `_LIST`, `_ERROR`, `_SET_FIELD` .. `_LOAD`), so round 12's golden still
+  replays as recorded. The model is one `Mutex`; no host op re-enters the editor's events.
+- **The golden** (`build/sb1/cem_driver.cpp`): one driver, two builds. Old: the unmodified unit (`build/sb1/orig`)
+  behind the old host's code for the model's ops. New: the new `EEScreens.cpp` and the Rust library through
+  `ee_screens_campaign_model`. Fakes of the campaign (its fields kept; `Load`, `Save`, `ListScenarioFiles` printed
+  with drawn answers), the strings, the file system (`FSFileSpec`, `FSPath`, `FSArchive`, `FSMemoryFile`: each call
+  printed, the answers drawn), the built-in test, the checksum and the message box; each op followed by a dump of
+  the lists, fields, flags, error and directory. Seeds 2-8 x 5,000 ops: identical (431 warnings, 933 checksums, 4,309
+  moves). `campaign_model/golden.txt` is the new side's host log for 450 ops of seed 11 (4 checks after a warning),
+  replayed from a fresh model by `replays_the_golden`. Mutations: 15 of 15 Rust (the replay) and 11 of 11 host (the
+  driver, seeds 2-3) caught; one host mutation could not be placed (its pattern occurs twice).
+- **Traps.** A driver that `#include`s `EEScreens.cpp` crashed at exit: the fakes' `std::map` was destroyed before
+  the unit's static `FSFileSpec`, whose destructor (a fake) used it, and the crash ate the buffered output (it looked
+  like a divergence at line 3,282). `fflush` and `_exit(0)` at the end of `main`. MSYS turns `SC8_DEFINES=/DSB1_NEW`
+  into a path with a space; `-DSB1_NEW` is safe.
+- **Only a person reaches it**: the campaign editor (the editors' sub-menu, form 24). No gate opens it.
+
+### The dead ids and the include blocks
+
+- **Dead ids** (b43158d6). `ee/EEUIManager.h` documents each form's control indices (from `dbuicontrols`), and
+  `EEControlEventID.h`/`EEFormEventID.h` the control-event and form-event ids the C++ factories switched on. The
+  events and factories have been `ee_screens`' since rounds 4-13, with their own constants, so most of these names
+  had no C++ user left: `build/sb1/deadenum.py` drops an enumerator no file of `src` or `include` names outside its
+  header (an enum left empty goes with its comment). Kept whole: the main game form's indices (the HUD lane's), the
+  form ids and the multiplayer form's (WON's). Every enumerator has an explicit value, so the kept ones do not move.
+  After the merge of `rust`, none of the 444 dropped names is used by the merged code.
+- **Include blocks** (d9620222). `build/sb1/mininc2.py`: each unit's `#include`s tried in blocks of eight from the
+  bottom, a block that still compiles (`/Zs`, the exe module's flags) dropped whole, one that does not halved; units
+  in parallel. 377 of 740 lines in eight units (the UI manager 83 of 155, the thread 45 of 123, the host about 44 of
+  155: most of its includes are needed by its ops). Two things to put back by hand: a unit's own `rust/<crate>.h` (it
+  compiled through another header; the rule is a direct include), and a block whose test was interrupted (an editor
+  or virus scanner held `EEScreens.cpp` open, the rewrite failed with `EINVAL` and left a failing block in place: the
+  tool restores nothing on an exception, so compile the unit after any crash of it). The POSIX build did not run.
+
+### Behaviour
+
+None intended. The campaign editor's model is the original's step for step (the driver's 35,000 ops); the other
+two commits change no code.
+
+### Gates
+
+| Gate | Per commit | Merged with rust (c6800630) |
+|---|---|---|
+| `build.py -j 3 --sim` | 82d12b87: 0/0; b43158d6 + d9620222 built together: 0/0 | EE-AOC 924 and EE-SIM 925 inputs, 0 unresolved, 0 duplicates |
+| oracle | seeds 2-3 identical (both trees) | seeds 2-7 identical |
+| `tools/sim_editor.py` | PASS 12,723 (both trees) | PASS 12,723 |
+| `rust_build.py gate` | PASS (3,655 tests; rustfmt fixed once in the replay test) | PASS (3,718 tests) |
+| `build.py --test-profile windowed-software` | | 0 unresolved, 0 duplicates |
+| fixture tour (`--exercise tour --play-seconds 60 --input-check`) | | `RESULT PASS tour`, F3 `paused 0 -> 1 -> 0: ok`, `gx_errors` {} |
+| orders game (`--exercise random-game --play-seconds 60 --orders --box-select`) | | `BOX SELECT PASS` (4 steps), `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground skipped by the driver), `RESULT PASS random-game` |
+| legacy tour (`game_session.py --exercise tour --input-check --play-seconds 120`) | | `STOP <windowed session complete> reached`, F3 ok, physics ticks 119 -> 437; menus against the worktree's reference (20261115T063114820578Z): single player, the settings' three tabs and the random map setup identical; the main menu and settings-closed differ in 159 pixels at (41..68, 3..12): the build label, whose suffix is the binary's checksum (`gGameVersion`'s `.%04ld`) |
+
+The LAN game was not run: no menu it opens changed (the campaign editor is not on its path).
+
+The merge of `rust` (65 commits): conflicts only between the base (UI toolkit round 21, not yet in `rust`) and
+`rust`, none in this lane's files: PORT_LEARNINGS.md (both sides kept), RUST_PLAN.md's Progress table (`rust`'s),
+the UI toolkit's progress file (round 21's, the newer), `include/rust/ee_units.h` (regenerated: `rust_build.py
+header` current, `rust_includes.py` nothing to narrow) and the four capture goldens' UUTL lines (`rust`'s: the unit
+utilities' round 2 re-recorded them; no simulation code changed here). None of the 444 dropped ids is named by the
+merged code; no crate defines an `EE_SCREENS_CEM_*` twice. No capture profile ran: no simulation code changed.
+
+### What is left
+
+- The host (`EEScreens.cpp`, about 3,150 lines): one `case` per toolkit or simulation call. It shrinks when the
+  toolkit's controls can be reached from Rust without a C++ hop (the toolkit lane's records) or when the forms' C++
+  objects go, not before; its ops are all live (`build/sb1/deadops.py`).
+- `EEUserInterface.cpp`: the thread's hosts and posts; its few remaining decisions (`SetLoadProgress`'s 20%
+  steps, `ShowLagStatus`, `UpdateIMECompositionString`'s attributes, `ChangeRasterizer`, `ResizeGameScreen`) can
+  join `ui_game.rs` (about 60 lines).
+- `EEUIManager.cpp`: the factories' and `CreateUserDefinedControl`'s `new`s (they go when the controls are Rust
+  objects).
+- `EEUISCIFormManager` (the scenario intro's files), `EEUIFError`'s form and buttons, `EEUIPGSLineGraph` with
+  `UIGraph`/`UILineGraph` (about 700 lines over the toolkit; the post-game summary is a person's only), the campaign
+  map background's cell loader (`EEUIBMapBackground::LoadBackground`), `EEUIFileComboBox`.
+
+### The history rewrite
+
+At the lead's request, after the merge: `fix_plan_history.sh rust-screensb1` rewrote the 26 commits `origin/rust`
+lacks, replacing the oversized `docs/RUST_PLAN.md` blobs (the lead's merge script had re-encoded one Progress row on
+each merge) with the clean ones. The branch's tree is unchanged (`git diff` of the merge before and after: empty);
+the lane's commits are 82d12b87, b43158d6, d9620222 and the merge c6800630, which already contains the rewritten
+`rust` (3114725d).
+
+## R6: game screens B, round 2: the direct path from the screens' Rust to the toolkit's Rust objects (ee_ui direct.rs, ee_screens toolkit.rs; branch rust-screensb2, 2026-11-15)
+
+The brief: `EEScreens.cpp` (3,654 lines) is one C++ `case` per call the screens' Rust makes; most of the toolkit's
+controls are Rust objects behind C++ shells, so a call from the screens' Rust went Rust -> C++ case -> C++ forwarder
+-> the same Rust object. Build a direct path and delete the cases it makes unused.
+
+### The measure
+
+`build/sb2/measure.py` splits every switch of the host into its case blocks and classes them by label
+(`EE_SCREENS_OP_*` toolkit ops, `EE_SCREENS_GAME_*` game calls, `EE_SCREENS_TEXT_*` texts) and by whether the body
+names a game global or class:
+
+| Class | Labels | Lines |
+|---|---|---|
+| game calls (`GAME_*`) | 307 | 1,260 |
+| toolkit ops whose body is toolkit only | 100 | 368 |
+| toolkit ops that also call the game (`gUIManager`'s forms, player colours, the post-game records) | 39 | 157 |
+| texts on the game | 95 | 531 |
+| texts on the toolkit only | 38 | 135 |
+
+So the toolkit calls are about 500 of the host's 3,650 lines, not the 1,500 the brief hoped for; the rest is the
+game's (the sessions, options, campaigns, saves, messages), which goes with the game's own lanes. Of the ~500,
+about 330 need a C++ object no Rust object stands for: the list boxes' lines (`UIListBox<T>::mData` stays C++, and
+so do `GetLineCount`, `GetCurrentSelection`, `AppendLine`, `DeleteAllEntries`), the combo box's list (`AppendLine`,
+`GetCurrentSelection` go through it), the new `EEScreenEvent`s every trigger, open/close event and hot key op makes
+(`EECreateScreenEvent`), `UIHotKey`s on the stack, `GEText` colours and fonts, `GEBitmap` texture coordinates, the
+post-game summary's status bars and graphs, the game's control classes (`EECBUIListBox`, `EEUIBSavedGroup`,
+`EEUICPing`, `UIFileComboBox`). The round moved the rest: the calls whose target is a whole Rust object.
+
+### The design
+
+- **The registry** (`ee_ui direct.rs`). Each whole object's constructor function records its C++ object
+  (`direct::made(kind, cpp, obj)` around `Box::into_raw` in `ee_ui_form_new`/`_new_db`, `ee_ui_manager_new`,
+  `ee_ui_entity_group_new`, `ee_ui_button_new`, `ee_ui_combo_new`, `ee_ui_label_new`, `ee_ui_edit_new`,
+  `ee_ui_slider_new`; `put` in `ee_ui_control_init` for every control's record and `ee_ui_bg_init` for every
+  background's), and the matching free forgets it. Two `BTreeMap`s ((C++, kind) -> Rust, (Rust, kind) -> C++) under
+  one `Mutex`, held only for the lookup: no lock across a call into an object (the calls out re-enter and may make
+  or destroy controls). The last manager made is the one a call with no form uses (`gUIManager`; the game makes
+  one). Every constructor already passed its C++ `this`, except the backgrounds': `UIBackground`'s record is its
+  (protected) base at another address, and `ee_ui_bg_init`'s object is the record itself, so the forms'
+  `UIBackground*` is named by one more call in the constructor (`ee_ui_direct_background(this, this)`).
+- **The calls** (`direct::manager_call`, `form_call`, `control`, `control_call`, `button_call`, `combo_call`,
+  `label_call`, `edit_call`, `slider_call`, `group_call`, `background_call`): a C++ pointer in, the same inward
+  call (`ee_ui_*_call`, same arguments, a four-float buffer) the C++ forwarder makes; an unknown pointer or a
+  pointer of another kind answers 0 / `None` (where the C++ `static_cast` would have run on it).
+- **The virtuals** a game class may override go through the C++ object: `direct::control_virtual` is an op on the
+  control record's host (`mHost(mCpp, ...)`, `UIControl::HostOp`), which gained four cases: `SetDisplayMode` (142),
+  `ReleaseMouse` (9), `SetBgOpacity` (145) and a new `CtlTabbedTo` (534); `SetDirty` (5) and the event references
+  (`FormEventCall`) were there already. The record's own logic never sends those numbers to its host, so nothing else
+  changes.
+- **The screens' side** (`ee_screens toolkit.rs`): `Form::op`, `get_checked` and `put` (`menus_ffi.rs`, the one
+  funnel every screen's host uses) ask `toolkit::op`/`text`/`put_text` first; each moved op is its C++ case
+  transcribed. The C++ cases are gone (`build/sb2/cut_cases.py`).
+- **What moved** (51 cases): the manager's Push, Pop, SwapForm, the current-form and visible-form questions; the
+  form's entity group enable/disable and background visibility (on a named form too), RemoveBackground, SetTabStop
+  (two ops), the keyboard-captured question (two ops), RemoveAllHotKeys; the control's index and id (of the entity
+  and of a control), SetDisplayMode, ReleaseCapturedMouse, SetDirty, SetBgOpacity, TabbedTo, SetStringTableID, the
+  trigger question, the slider check of the debug sound panel; the check boxes', radio buttons', disable and blink
+  ops; the sliders' get and set (of a control and of the entity); the combo boxes' select, clear and the lobby's
+  select without the change event; the labels' number, clear, line count, start line, and the chat log's three
+  label ops; the edit box's clear; the texts: the music file name (get, put), an edit box's text (get, put, on a
+  named form), the campaign editor's all-text read, a label's text.
+- **Tests without the C++.** `ee_screens`' test binary now links `ee_ui`, whose non-test build imports C++
+  (`graph_ffi`, `ime_ffi`, `mouse_ffi`, `string_list_ffi`, the hot keys' file reads): the link failed with 18
+  unresolved `ee_uicpp_*`. `ee_ui` gained a `no_cpp` feature (`#[cfg(not(any(test, feature = "no_cpp")))]` where
+  it had `#[cfg(not(test))]`), and `ee_screens` takes it as a dev-dependency (resolver 2 applies it only to test
+  builds; the staticlib keeps the imports).
+- **Header names.** The header splitter (`xtask split.rs`) gives a constant to the crate whose source defines it:
+  a private `const ALIGN_LEFT` in `toolkit.rs` (even inside a nested module or an `impl`) made `ee_dx7`'s
+  `ALIGN_LEFT` ambiguous and moved it to `ee_rust_common.h`. The module's constants are `K::TK_*`.
+
+### Goldens and checks
+
+The screens' replay goldens are at the host-trait level (above `Form`): unchanged and passing (`ee_screens` 299
+tests). The equivalence of the moved ops is by construction (the same inward call), so the risk is the lookup;
+it was checked in the real game: a scratch shadow mode (`build/sb2/sb2_shadow.rs`, never committed; on with
+`EE_SB2_SHADOW=<log>`) answered every moved read by both paths and compared them, and for every moved write ran
+the C++ case and logged whether the direct path found its target with the right kind. The fixture tour: 1,331
+checks (496 SetDisplayMode, 321 check box and 226 radio reads, the settings' writes, the lobby's combo, label and
+trigger ops, the music name), 0 mismatches, 0 missing; reads with non-zero answers 359. The LAN game (host and
+joiner through the lobby): 68 checks, 0 mismatches. **But** the shadow's form ops logged the background lookup as a
+field of an "OK" line (`bg=false`, six times) and I read only the status: the background visibility op did nothing
+on the direct path (the record keyed, not the `UIBackground*`). The merged tree's legacy tour caught it: its menu
+bmpdiff against round 1's run showed a frame left drawn on the settings' audio and interface tabs (166,486 and
+168,216 pixels) and the whole random map setup different (827,510), with the UI state dumps (`*.txt`) identical.
+Fixed in 02abc1ad7; the next legacy tour's menus equal round 1's but the build label. Lesson: a shadow check's log
+must fail on every negative it records, not carry it as a detail; and the pixel comparison catches what the state
+dumps and the fixture tour (`RESULT PASS tour` both times) do not. Unit tests: `direct_tests.rs` (the registry: put, replace,
+forget, unknowns, NULLs; a real Rust form reached by its C++ pointer; the texts), `toolkit_tests.rs` (the game ops
+fall through, unknown controls answer as missing ones, a registered form's music name and keyboard question).
+
+### Commits
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 15c60c66 | the registry, the direct calls, the screens' toolkit ops before the C++ hop; four virtual ops on `UIControl::HostOp` | +5 |
+| 1267edea | the 51 host cases the direct path answers removed from `EEScreens.cpp`; two include lines | -172 |
+| 02abc1ad7 | the backgrounds found by their C++ pointer (`ee_ui_direct_background`) | +1 |
+
+Net C++ for the round: -166 (`EEScreens.cpp` 3,654 -> 3,482, `UIControl.cpp` +5, `UIBackground.cpp` +1). Far short of the 1,500 asked:
+the measure shows the toolkit-only calls are about 500 lines of the host, and 330 of those need C++ objects.
+
+### Gates
+
+| Gate | Per commit | Merged with rust (021d136c, then 02abc1ad7) |
+|---|---|---|
+| `build.py -j 3 --sim` | 0/0 (15c60c66, 1267edea) | EE-AOC 909, EE-SIM 910 inputs, 0/0 |
+| oracle | seeds 2-3 identical | seeds 2-7 identical (021d136c); 2-3 after the fix |
+| `tools/sim_editor.py` | PASS 12,723 | PASS 14,049 |
+| `tools/sim_editor.py --civbuilder` | (not merged yet) | PASS 3,913 |
+| Rust gate | tests, clippy, fmt, header (one `ee_gx` GPU timing test failed under load, passed alone) | 3,874 tests pass, clippy, fmt, headers current (`ee_won` `eecolor::golden_replay` failed once in the full run, passed alone three times and in its crate's full run: not this lane's) |
+| test-profile build | | 0/0 |
+| fixture tour | (shadow run) PASS | `RESULT PASS tour`, F3 ok (both before and after the fix) |
+| orders game | | `BOX SELECT PASS`, `ORDERS PASS` (gather, repair, repair-queued, move), `RESULT PASS random-game` |
+| LAN game | (shadow run) PASS | `RESULT PASS lan-game` (PT host 2914, joiner 2912) |
+| legacy tour | | STOP reached, F3 ok; menus against round 1's merged run: see the background fix above; after it, identical but the build label |
+
+The merge of `rust` (c80a1b00, 30 lanes): `EECampaignEditorBehavior.cpp` deleted here, include-trimmed there (kept
+deleted); four include-block conflicts (`EEScreens.cpp`, `EEUIBGenericBackground.cpp`, `EEUIFileComboBox.cpp`,
+`EEUIManager.cpp`: the other side's trims taken, `ee/EEGameOptions.h` put back in the generic background, which
+had it only through the two includes round 1 kept); `PORT_LEARNINGS.md` (rust's, then round 1's and this section);
+the `mod toolkit` comment that git's merge separated from its line. Headers current, nothing to narrow.
+
+The second merge of `rust` (8620ad42: the address markers deleted, the Graphics Engine's round 16): conflicts only
+on `EECampaignEditorBehavior.cpp`/`.h` (kept deleted) and PORT_LEARNINGS.md (rust's, then this lane's two
+sections); `tools/strip_markers.py` then changed nothing (no marker lines in this lane's changes); headers current,
+nothing to narrow. On it: build `--sim` 0/0 (EE-AOC 877, EE-SIM 878 inputs), the test-profile build 0/0, the oracle
+seeds 2-7 identical, the editor gate PASS 14,049, the civilization builder gate PASS 3,913 (it failed once right
+after the oracle: the civilization choice's list was dumped filled and its "Please wait" label hidden, the expected
+dump has them before the fill; two reruns PASS: a timing-dependent dump, not this lane's ops), Rust tests 3,888 pass
+(`ee_gfx` `effect_storm::snow_drifts_spins_and_waits_for_its_last_flake` and the `ee_gx` GPU lag test failed in the
+full run under load and pass alone and in their crates' runs), clippy and rustfmt clean; the fixture tour `RESULT
+PASS tour` (F3 ok), the orders game `RESULT PASS random-game` (box select and orders PASS), the LAN game `RESULT PASS
+lan-game` (PT host 2912, joiner 2902), the legacy tour STOP reached with its menus equal to round 1's but the build
+label (its first run's F3 check read `paused False` three times; the rerun `False -> True -> False: ok`, as the
+fixture tour's).
+
+### Behaviour
+
+None intended. Where the C++ crashed on a control the form lacks (an unchecked `static_cast` on NULL) the direct
+path does nothing and answers 0. `LE_TYPE_SELECT`'s event reference and release go through the control's host
+(`FormEventCall`), as `UIControl`'s record does.
+
+### Shared files
+
+`ee_ui` is the toolkit lane's crate: `direct.rs` (new), one line in each object's constructor and destructor
+function, the `no_cpp` feature, `EeUiOp::CtlTabbedTo`; `UIControl.cpp`'s `HostOp` (four cases). The HUD lane's
+`EEUIRustControl` and the editor lane's hosts are untouched (their controls are registered like any other; nothing
+of theirs calls the registry).
+
+### What only a person reaches
+
+The chat log's label ops (the chat log form), the diplomacy form's check box disable, the debug sound panel's
+slider question, the campaign editor's all-text read, the scenario screens' labels and backgrounds. The tour
+reaches the menus, settings and lobby ops; the LAN game the multiplayer lobby's.
+
+### What is left
+
+- The event group: a C++ `ee_screenscpp_new_event(code)` (one line) would let the trigger, open/close event, form
+  keyboard event, hot key and add-trigger ops (about 60 lines) move to `toolkit.rs`.
+- The list boxes: their lines are C++ (`UIListBox<T>::mData`); a Rust line store for `UIListBox<UWideString>` would
+  let the list and combo text ops (about 80 lines) move.
+- `UIGraph`/`UILineGraph`/`EEUIPGSLineGraph` as one Rust object, with the post-game summary's ops; the UI thread's
+  small decisions into `ui_game.rs`.
+
+## R6: game screens B, round 3: UIGraph, UILineGraph and EEUIPGSLineGraph as one Rust object; the summary's graphs, the event group, the list and combo lines and the controls' plain ops on the direct path (ee_ui graphobj.rs, ee_screens toolkit.rs; branch rust-screensb3, 2026-11-15)
+
+The brief: round 2's measure showed what blocks `EEScreens.cpp`'s toolkit cases (C++ objects no Rust object stood
+for). Unblock them and move, aiming at 1,500 net C++ lines: a Rust line store for the list boxes, the three graph
+classes as one Rust object, the event and hot key group over a C++ event helper, the UI thread's small decisions,
+then the game calls on plain records.
+
+### The measure (lines freed, before the work)
+
+`build/sb3/measure.py` (round 2's) on the merged tree: `EEScreens.cpp` 3,389 lines; toolkit-only ops 59 labels /
+233 lines, toolkit ops on the game 35 / 141, toolkit texts 28 / 107, game calls 282 / 1,195, game texts 94 / 527.
+Outside the host, the graph classes were 714 lines (`UIGraph.cpp` 363, `UILineGraph.cpp` 110,
+`EEUIPGSLineGraph.cpp` 94, their headers 147), the summary's graph cases about 75 and `EEPGSFormManager`'s nine
+graphs. So the graph object was the one piece large enough to matter; the rest are tens of lines each.
+
+### What moved
+
+- **The graph, whole** (`ee_ui graphobj.rs`, 495 lines; `lle/UIGraph.h` 47 and `UIGraph.cpp` 101 the shell).
+  `UIGraph` (abstract), `UILineGraph` and the summary's `EEUIPGSLineGraph` were three classes for one control; the
+  only callers were the controls table (a line graph no form uses: the data has no type-30 control), the UI
+  manager (the summary's, type 1016) and the host. They are one C++ class with a kind (`EeUiGraphKind::Line`:
+  values `"%.2f"`; `PostGame`: values through a format the game gives, `ee_screens_pgs_format`, and 39 stored
+  graphs) and one Rust object holding every member: the seven `GEText`s by address, the rectangles, zoom and flags,
+  the shown graph and its copy for drawing, and the stored graphs. A graph is a `UiGraph` (`ee_util`'s
+  `EeUtilGraph` plus the three strings `UGraph` kept in C++). The arithmetic stays `graph.rs`'s (its golden
+  unchanged); the calls out go through the host as the C++'s did, a stack `GELine` becoming `LineCreate` ..
+  `LineDelete` (two new ops: `LineSetOpacity`, `DrawBorder`). `UILineGraph.cpp/.h`, `EEUIPGSLineGraph.cpp/.h` and
+  `graph_ffi.rs` (the ten `ee_uicpp_graph_*` callbacks) are gone; `EEPGSFormManager`'s nine `UGraph`s too (its 8
+  read ones live in the graph as stored graphs 31..38, the host's numbering 32..39 kept; the ninth was never read).
+- **The summary's graph ops** (`toolkit.rs pgs_op`): series enable, show, clear, prune, the series register
+  (`sPgsSeries`, now a Rust static), `AddSeries`, the axes, the six range/point reads, the three label texts, and
+  `GAME_PGS_COMBINE` (`CombineGraph` of 0x0e with 0x0d, recoloured by the records' colours through
+  `ee_screenscpp_pgs_record`). `GAME_PGS_NEW_MANAGER` resets the register and the form manager's graphs in Rust,
+  then lets the C++ make the manager. `GAME_PGS_ADD_SERIES` stays a C++ case (it reads the statistics' points) over
+  one new shell method, `UIGraph::AddGraphSeries(points, count, graph, colour)`.
+- **The event group** (`toolkit.rs event_group`) over one C++ helper, `ee_screenscpp_event(op, event, code)`: new
+  `EEScreenEvent` (NULL for code 0), `Reference`, `Dereference`. Open, close and trigger events, the trigger on the
+  event's form, the three hot key ops (`UIForm::AddHotKey`'s three record calls transcribed; the settings' hot key
+  passes its event as the just-unpressed one, the chat's and the options menu's as just-pressed), the keyboard
+  event (two forms), the camera grab's saved mouse move event (its slots now Rust's; `EEReleaseGrabScroll`'s
+  release moved with them into `ee_screens_camera_grab_reset`), `AddEventToTrigger`.
+- **The list and combo boxes' lines** through each list box's own per-type host: `UIListBoxRust<T>::Op` gained
+  `ListLineCount`, `ListLineText` and `ListAppendText` (with `if constexpr` for `UIListBox<UWideString>`; nothing
+  for the game's other line types), `ListDeleteAll` (the virtual) and `ListSelection`; list boxes and status bars
+  are registered for the direct path, and a combo box names its drop-down list. Moved: the list selects and clears
+  (settings, campaign editor, custom campaign, the save/load forms), the counts and selections, the combo boxes'
+  selection, count, delete, append (dirty, list append, reopen, as `UIComboBox::AppendLine`) and insert, the list
+  and combo line texts, the civilization choice's `GetHasSelection`.
+- **The controls' plain ops** (`control_ops`): the summary's rectangle read, background opacity (set and get),
+  dirty, background colour (also the diplomacy form's), designed size, the status bar test, existence and index,
+  the status bars' opacity, range and colour, the splash screen's bar value. `UIControl::HostOp` gained
+  `SetBgColor` and `GetBgOpacity` (the virtual and the rhombus read).
+
+### Why the lines stayed in the C++ vector
+
+The brief asked for a Rust line store for `UIListBox<UWideString>`. The template hands out `const T&` and
+`const std::vector<T>&` (`GetData`, `GetDataArray`, `Begin`, `End`, the subclasses' `mData[...]` and
+`mCopyLineArray`), and 15 call sites in four lanes' files (the civilization builder's list writes lines in place,
+the error log's `SetLine`, the editor's `GetDataArray` copies and `InsertLine` predicates, `Sort`'s `std::sort`)
+take those references. A Rust store would have to hold the lines in `UWideString`'s C++ layout (its vtable pointer
+included) for those references to stay valid, or every one of those sites would change. The direct path needs
+only the operations, so the round put them on the list's own per-type host instead: the moved cases free the same
+lines, the template keeps its interface for every T, and nothing reinterprets Rust memory as C++ objects.
+
+### Goldens and checks
+
+- **The graph**: `build/sb3/gr_driver.cpp` transcribes the unmodified `UIGraph.cpp`, `UILineGraph.cpp` and
+  `EEUIPGSLineGraph.cpp` onto the world (`build/ui21`'s `world.h`: their `GEText`, `GELine` and `UIControl` calls as
+  the host ops, the arithmetic through the base library `lib_orig.lib` and its `ee_uicpp_graph_*` callbacks, the
+  `UGraph` record over `ee_util`) and runs random sequences: a line graph or the summary's (with a test format),
+  fonts, colours, labels and series of the shown or a stored graph, `ShowGraph`, enable flags, the axis flags,
+  `CopyData`, both draws, zoom in and out, tabbing; the world's control rectangle and border, the texts' extents
+  and colours. `golden_graphobj.txt` (1.6 MB) is seed 1's first 36 sequences plus the C runtime's `"%.2f"` of 1,961
+  floats (ties at two places such as 0.125 -> "0.12", 0.375 -> "0.38": round half to even on the exact value;
+  `-0.00`, `nan`, `-nan(ind)`, `inf`, 3.4e38 written out, random bits) against `format_2f`. The replay passes;
+  seeds 1 and 2 over 300 sequences each (13 MB, not committed; `EE_GRAPHOBJ_TRACE=<file>` and `--ignored`) check
+  121,147 and 118,761 lines. Mutations (`build/sb3/mutate.py` over the cargo replay): 13 of 14 caught; the one
+  missed reads the grid colour from the x label's text instead of the title's, which the world colours alike.
+- **The lists, events and control ops** are the C++ cases transcribed onto the direct path, the same inward calls
+  and host ops; unit tests (`toolkit_tests.rs`: the event helper's make/release sequence, a registered list box's
+  lines, selection and append through a recording host) and the in-game lookup check below.
+- **The lookup check** (`EE_DIRECT_CHECK=<file>`): every lookup of a C++ pointer logs `found` or `MISSING` with its
+  kind under the screens' op that made it. Round 2's background bug was a lookup keyed by the wrong pointer, which
+  shows as a `MISSING` of a non-NULL pointer of the kind the op expects.
+
+### The post-game summary step (tried, reverted)
+
+The brief asked for a TEST ONLY fixture step that opens the summary after a short game. The fixture's new
+`postgame` command opened it over the running game. The first run aborted in `post_game.rs open()`: with no
+statistics records, `records - 1` wrapped and the reports' `resize` asked for 4,294,967,295 records (fixed:
+`saturating_sub`). The second ran the summary's graph ops on the Rust graph (the series register, the combine, the
+axes, `ShowGraph`; the lookup check found the form and the graph every time) and then faulted in
+`ee_screenscpp_pgs_record`: the summary reads the statistics' current record, which the game writes at its end.
+A capture needs a game played to its end, so the step was reverted; the graph's draws are a person's (or a future
+fixture's that ends a game) to see.
+
+### Commits
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 8cc54ec0 | `ee_won.h` regenerated after the merge of rust (its header was not current) | 0 |
+| de70eaaa | the graph object; the summary's graph ops; the event group | -738 |
+| 0c5a140d | the list and combo lines, the controls' plain ops, the status bars; the lookup check | -102 |
+| 35135baa, 7c24a8d3 | TEST ONLY: the fixture's `postgame` command, `fixture_game.py --postgame` (and its four fields) | +4 |
+| 172e80a8 | `post_game.rs`: no records -> no players (the resize of `records - 1` aborted) | 0 |
+| d4ec1e30 | the postgame step reverted (see above) | -4 |
+
+Net C++ for the round: -840 (`EEScreens.cpp` 3,389 -> 3,119, the graph units 714 -> 166 with the shell,
+`EEPGSFormManager.h` 40 -> 18, `UIListBox.h` +18, `UIControl.cpp` +2). Short of the 1,500 asked: the measure's
+toolkit cases were about 480 lines, of which this round took about 270 plus the 613 of the graph classes; what is
+left of the host is the game's.
+
+### Gates
+
+All on the final tree: the merge of `rust` at the round's start (6c8e6866, 71 commits; one conflict, PORT_LEARNINGS.md:
+rust's sections, then this lane's; `strip_markers.py` changed nothing; `ee_won.h` regenerated). `rust` had no newer
+commits at the end, so there was nothing more to merge.
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | per commit 0/0; final EE-AOC 849, EE-SIM 850 inputs, 0/0 |
+| `build.py -j 3 --test-profile windowed-software` | 0/0 |
+| oracle | seeds 2-3 identical per commit; seeds 2-7 identical on the final tree (and 2-3 after the post_game fix) |
+| `tools/sim_editor.py` | PASS 14,260 (one run under the test build's load failed at step 1453: the loading label caught mid-load, `load=1` vs `load=0`, 196 s against 99 s; reruns PASS) |
+| `tools/sim_editor.py --civbuilder` | PASS 3,913 |
+| Rust gate | PASS: 4,008 tests, clippy, rustfmt, headers current |
+| harness self test | 42 parts PASS; the in-process probe stops at `NESynchronousCommunications has no member mLastTickReceived` (a layout another lane changed; not this round's) |
+| fixture tour | `RESULT PASS tour` (F3 ok) on the final tree; the earlier runs with the post-game step: see above |
+| orders game | `BOX SELECT PASS`, `ORDERS PASS` (gather, repair, repair-queued, move), `RESULT PASS random-game` |
+| LAN game | `RESULT PASS lan-game` (PT host 2976, joiner 2976) |
+| legacy tour | `STOP <windowed session complete> reached`, F3 ok; **menu bmpdiff** against round 2's final run: every menu capture identical but the build label (222 pixels at 41..68, 3..12 on the main menu and settings-closed); the state dumps differ only in the pid and the code addresses |
+| lookup check | tour 6,645 lookups, LAN 152: 0 MISSING; the tour reached 40 of the moved ops (among them 94 triggers, 3 open events, 4 hot keys, the trigger on the event's form, the lobby's keyboard event, the list selects and clears, 611 combo appends, 89 list appends, the combo lines, the combo line text), the LAN game the splash screen's bar value and the summary-numbered rectangle and bar ops |
+
+### Behaviour
+
+- None intended in a working game. Where the C++ crashed (a control or text the form lacks, a series index past
+  the end, `CopyData` before `SetFont`) the Rust does nothing and answers 0.
+- The summary's form manager's graphs live in its line graph, reset when the manager is made (the C++ made fresh
+  graphs with each manager): the same graphs at every read.
+- The summary opened with no statistics records (only the reverted TEST ONLY step did) shows no players instead
+  of aborting on a wrapped `records - 1`; it still faults further on (`record(current_record)`), as the C++ did.
+
+### Shared files
+
+`ee_ui` (the parked toolkit lane's): `graphobj.rs` (new), `direct.rs` (the graph, list and status bar kinds,
+`list_call`, `list_op`, `list_line`, `combo_list`, `status_call`, `with_graph`, the lookup check), `listobj.rs` and
+`statusobj.rs` (registration), `comboobj.rs` (`list_cpp`), `obj.rs` (`LineSetOpacity`, `DrawBorder`, five list
+ops), `graph_ffi.rs` deleted; `lle/UIGraph.h`, `UIGraph.cpp`, `lle/UIListBox.h` (the five ops in
+`UIListBoxRust<T>::Op`), `UIControl.cpp` (`HostOp`: `SetBgColor`, `GetBgOpacity`), `UIControlsTable.cpp` (`new
+UIGraph`). `ee_util` (the LLE lane's): `EeUtilSeries::color`, `set_color`, `enabled`, `EeUtilGraph::combine`. The
+editor lane's `EESETSUICBPlayer.cpp`: one include line. The HUD lane's and app-and-world lane's files are untouched.
+
+### What only a person reaches
+
+The post-game summary at a real game's end (the graphs drawn: `graphobj.rs`'s draws run only there; the summary's
+graph ops ran in the reverted fixture step's two runs, 0 lookups missing, before its record read faulted), the campaign editor's lists and combo box, the custom
+campaign's list, the camera grab (middle button drag), the in-game options' and chat's hot keys, the diplomacy
+form's colours, the civilization choice's selection.
+
+## R6: game screens B, round 4: the screens' read view of the game; the reads, the sound objects' ops and the lag status off the C++ host (ee_screens game_view.rs; branch rust-screensb4, 2026-11-15)
+
+The brief: round 3 found that `ee_screens` holds no view of `EEGameSettings` or the players, so the host's game-call
+cases (about 1,690 lines) stayed C++. Give the screens a read view with as few host calls as possible (players only
+through their accessors: the player lane moves their storage; `EEGame`/`EEWorld` storage stays the app-and-world
+lane's), move the cases that only read and format over it, and the UI thread's small ops if cheap. Target 1,500
+net C++ lines.
+
+### The view
+
+- **Two fills, one per group, at the read** (`game_view.rs`, `ee_screenscpp_game_view(group, arg, record)` and
+  `ee_screenscpp_game_texts(group, arg, out, capacity)` at the end of `EEScreens.cpp`). A read op names its group
+  (`group_of`), the fill copies that group's values into `EeScreensGameView` (or that group's texts, each ended by a
+  0 byte) at the moment of the read, and `value` / the text's slot picks the answer. No cache: a value read after a
+  write within one event is the new one, as the C++ case's was.
+- **Groups by object, not by screen.** A group holds the reads of one set of objects and is filled only when an
+  op of that group is asked, so a fill touches exactly what the replaced case touched: `SOUND` (the two Rust
+  objects' pointers), `SETTINGS` (plain globals and the preferences: safe in every state), `SESSION`
+  (`gCommunications`, all 0 without it), `WORLD` (`gWorld`, the world table's speeds, the main game form's hot key
+  mode), `PLAYER` (an index or the current player: `GetName`, `GetColor`, `GetObserverMode`, `mChatType`, the
+  selection's airport), `COLOUR` (`EEGetPlayerColor`), `CAMPAIGN` and `INTRO` (the form managers, which their `Get`
+  makes on first use: only their own ops may trigger that). A first draft put the world table's speeds in
+  `SETTINGS`; they moved to `WORLD` so the settings form's reads in the menus never touch a table only the game
+  needs. Every pointer a fill follows is checked (0 / "" where the case would have dereferenced NULL: a player slot,
+  the main game form, `gCommunications`, a statistics record past the end).
+- **What is Rust's directly**: the sound manager's and the conductor's ops (`SESoundManager` and `SEConductor` are
+  `ee_sound`'s objects: `game_view_ffi.rs` makes the same `ee_sound_manager_*` / `ee_sound_conductor_*` calls their
+  C++ forwarders make, on the pointers of the `SOUND` group), the chat log's count and texts (its Rust store), the
+  form question and the named-form lookup (`ee_ui direct.rs`: `ee_screenscpp_form` is gone), the two colour ops
+  (the toolkit's Rust controls, with the colour table's colour from the view), the loading screen's slot reads (the
+  lobby's existing slot record).
+
+### What moved
+
+88 host case labels: 58 ops (the settings form's sound, rasterizer and Korean reads; the session's server, client,
+multiplayer, CT count, exit and human count; the world's ghosts, camera, speed, cinematic, zoom, pause, players,
+teams, cheats, scenario; the current player's observer, chat type, airport; the campaign's checksum and all-open,
+the intro's flags; the camera's free, zoom-enabled, grab speed, maximum zoom; the main game form's hidden mode,
+hot key mode, speed table; the post-game page and screenshot flag; the loaded header's players; the eleven sound
+ops; the chat log count; the form question; the loading screen's slot and bar colour; the lobby's slot colour) and
+30 texts (the settings', extensions, version, player name, campaigns, registered name, campaign error, load names,
+missing lines, translation; the campaign manager's four; the intro's three; a player's name and civilization; the
+statistics' campaign and record names; a source's map type; the loading screen's slot name; the chat log's two).
+`EEUserInterface::ShowLagStatus` is Rust's (`ui_game::lag_status`, `ee_screens_ui_show_lag_status` on the
+manager's and the lobby button's Rust objects). `SetLoadProgress` and `ResizeGameScreen` were not taken: each is a
+handful of game calls (the load percent message, the mouse pointer thread's waits, `EEChangeGameScreen`, the mini
+map's redraw under the world lock) that would each need a host op as long as the line it replaces.
+
+### Why the line count is small
+
+The measure was right about where the lines are and wrong about what a view frees. A read case is two or three
+lines (`case X:` / `return gFoo;`); its fill line is one. So the 88 labels freed 270 lines of cases and cost 160 of
+fills: `EEScreens.cpp` 3,119 -> 3,034. What a view cannot free is the rest of the host: 240 game-call labels (1,176
+lines) and 61 game texts (415) that call into the game (messages to `gCommunications`, new servers, file and
+archive opens, saved-game headers, backgrounds, the campaign and intro managers' file members, the WON calls):
+those go with the lanes that own those objects, or with a Rust `EEUISCIFormManager` / `EECampaignFormManager`
+(their file members are `FSFileSpec*`, their users in three other lanes' files).
+
+### Goldens and checks
+
+- **The view's golden** (`build/sb4/gen_driver.py` -> `view_driver.cpp`, built by `build_driver.py`): the
+  UNMODIFIED cases (copied verbatim by label from round 3's `EEScreens.cpp`) and the view's two fills (verbatim from
+  the new one) over a stand-in world (`world.h`: the globals and classes under their own names). Each sample is a
+  random world: missing session, players, main game form, header and copy; random strings with multi-byte
+  characters, special floats; the driver prints every group's record bytes and text block, the lobby's slot
+  records, and every moved op's and text's answer by the original case, with the colour ops' calls. The cargo
+  replay (`game_view_golden.rs`) answers the host from the printed records and asserts every answer and call:
+  `golden_game_view.txt` (seed 1, 24 samples) and seed 2 over 200 samples (20,481 ops, 15,961 texts; not
+  committed, `EE_GAME_VIEW_TRACE`, `--ignored`) pass. The sound, chat log and form ops are by construction (the
+  forwarders' own calls) and unit-tested (`game_view_tests.rs`: groups, values, the short-circuit of the resign
+  question, the sound targets, the colours, the text slots).
+- **Mutations**: 16 of 16 in `game_view.rs` (swapped fields, slots one off, wrong groups, the slot colour, `&&`
+  for `||`) caught by the replay; 7 of 8 in the C++ fills (`cpp_mut.py`: each mutant fill rebuilt into the driver
+  and its trace replayed). The missed one drops the `break` of the current rasterizer's search: equivalent while
+  the rasterizer list has no duplicates (it never has).
+
+### Commits
+
+| Commit | What | Net C++ |
+|---|---|---|
+| 4ea55fe0 | the view, its two fills, the 88 cases off the host, the named-form lookup and the lag status in Rust | -107 |
+
+Net C++ for the round: -107 (`EEScreens.cpp` 3,119 -> 3,034, `EEUserInterface.cpp` 1,267 -> 1,248). Far short of
+the 1,500 asked: see "Why the line count is small".
+
+### Gates
+
+`origin/rust` had nothing newer than this branch's base at the round's end (fetched; `git merge origin/rust`:
+already up to date), so the gates ran on the round's own tree.
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | 0/0 (EE-AOC 849, EE-SIM 850 inputs) |
+| `build.py -j 3 --test-profile windowed-software` | 0/0 |
+| oracle | seeds 2-7 identical |
+| `tools/sim_editor.py` | PASS 14,260 (its first run, beside the Rust gate's build, failed at step 1453 with the loading label caught mid-load, `load=1` vs `load=0`, 174 s against about 100 s: round 3's known timing flake; the rerun PASS) |
+| `tools/sim_editor.py --civbuilder` | PASS 3,913 |
+| Rust gate | PASS: 4,016 tests, clippy, rustfmt, headers current (the first run stopped at rustfmt on one long match arm) |
+| view golden | `golden_game_view.txt` replay; seed 2 x 200 samples (20,481 ops, 15,961 texts); mutations 16/16 Rust, 7/8 C++ (the one missed equivalent) |
+| fixture tour | `RESULT PASS tour`, F3 `paused 0 -> 1 -> 0: ok` |
+| orders game | `BOX SELECT PASS`, `ORDERS PASS` (gather, repair, repair-queued, move), `RESULT PASS random-game` |
+| LAN game | `RESULT PASS lan-game` (PT host 2777, joiner 2798) |
+| legacy tour | `STOP <windowed session complete> reached`, F3 `False -> True -> False: ok`; menu bmpdiff against the previous legacy run of this worktree: every capture identical but the build label (165 pixels on the main menu and settings-closed); the state dumps differ only in the pid and the event RVAs |
+| lookup check | tour 11,091 lookups, LAN 446: 0 MISSING |
+
+A slip to note: the sessions script was started twice (once with a shell `&` that survived the tool call, once in
+the background), so a second tour began under the lock after the first chain's four sessions had passed; it was
+killed (the game, the fixture driver and its harness shell) and the lock it held removed. Its partial lookup log
+also had 0 MISSING.
+
+### Behaviour
+
+- None intended in a working game. Where a replaced case dereferenced NULL (no session, no current player, no
+  main game form, a player slot or statistics record that is not there, a NULL sound manager) the view answers 0 or
+  "" and the sound op does nothing.
+- `ShowLagStatus` looks the lobby up only when the current form is not the main game form (the C++ looked both up;
+  the answer is the same).
+
+### Shared files
+
+`ee_screens` only (this lane's and the HUD lane's crate): `game_view*.rs` (new), `menus_ffi.rs` (the view after
+the toolkit in `Form::op` and `get_checked`), `chat_log_ffi.rs` (`text`), `scenario_screens_ffi.rs`
+(`ee_screenscpp_form` in Rust; `lobby_form_ffi.rs` and `campaign_editor_ffi.rs` call it without `unsafe`),
+`ui_game.rs`/`ui_game_ffi.rs`, `Cargo.toml` (`ee_sound`, called only from `game_view_ffi.rs`, which a test binary
+leaves out). `ee_sound` (the LLE lane's) is untouched: its public C functions are called as they are. C++:
+`EEScreens.cpp`, `EEUserInterface.cpp`. The player lane's and the app-and-world lane's storage is untouched: the
+fills read players through `GetName`, `GetColor`, `GetObserverMode` (and `mChatType`, `mSelectedGroup`,
+`mCivilization.mName` as the cases did, having no accessor).
+
+### What only a person reaches
+
+The lobby's lag button and the in-game waiting message (`ShowLagStatus`: a lagging LAN peer), the post-game page
+and screenshot reads (the summary at a game's end), the campaign and intro managers' reads (the campaign screens),
+the debug sound panel. The tour reaches the settings form's sound and rasterizer reads, the camera's and the main
+game form's reads in play; the LAN game the session's reads, the loading screen's slots and bar colours and the
+lobby's slot colours.
+
+### What is left
+
+`EEScreens.cpp` 3,034 lines: 240 game-call labels (1,176 lines, the fills among them) and 61 game texts (415) that
+call into the game. The largest piece within this lane's reach is `EEUISCIFormManager` as a Rust object (its file
+members as C++ handles, its media strings as Rust text; the SI_* cases, the intro texts and `CS_START` would follow),
+then `EECampaignFormManager`'s. `SetLoadProgress`, `ResizeGameScreen` and `ChangeRasterizer` stay C++.

@@ -47,7 +47,7 @@ impl Form {
         if form == LE_FORM_EVENT {
             Form(self.0, self.1)
         } else {
-            Form(unsafe { ee_screenscpp_form(form) }, self.1)
+            Form(ee_screenscpp_form(form), self.1)
         }
     }
 }

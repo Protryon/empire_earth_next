@@ -2,8 +2,6 @@
 // EEUIFileComboBox). The game's file combo box: 0x2624a6..0x26272b (ctor, ??_G, dtor, CreateEntries, SelectFile;
 // EEUIFMainGame.cpp's init chain at 0x26272b). Unit flags: the exe module set.
 #include <windows.h>
-#include <mbstring.h>
-#include <algorithm>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GERhombus.h"

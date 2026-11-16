@@ -158,3 +158,16 @@ fn a_lost_server_boots_the_client() {
         assert_eq!(h.ops.iter().any(|o| o.0 == EE_SCREENS_UG_OP_QUIT_FLAG), lobby == 1);
     }
 }
+
+/// `ShowLagStatus`: the main game form's message only while lagging (the lobby's test comes second, as the C++'s
+/// else-if); the lobby's button by the player; nothing on another form.
+#[test]
+fn lag_status_by_form() {
+    use crate::ui_game::{lag_status, LagStatus};
+    assert_eq!(lag_status(true, false, 3, true), LagStatus::WaitingMessage);
+    assert_eq!(lag_status(true, false, 3, false), LagStatus::Nothing);
+    assert_eq!(lag_status(true, true, 0, false), LagStatus::Nothing);
+    assert_eq!(lag_status(false, true, 0, true), LagStatus::HideButton);
+    assert_eq!(lag_status(false, true, 2, false), LagStatus::BlinkButton);
+    assert_eq!(lag_status(false, false, 2, true), LagStatus::Nothing);
+}

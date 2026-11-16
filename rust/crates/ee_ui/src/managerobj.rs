@@ -976,7 +976,11 @@ pub extern "C" fn ee_ui_manager_new(
         string_table: string_table as isize,
         screen,
     };
-    Box::into_raw(Box::new(EeUiManager::blank(Host { obj: manager, f: host }, c)))
+    crate::direct::made(
+        crate::direct::Kind::Manager,
+        manager,
+        Box::into_raw(Box::new(EeUiManager::blank(Host { obj: manager, f: host }, c))),
+    )
 }
 
 /// The destructor's work (the C++ then deletes the database tables); the object freed.
@@ -986,6 +990,7 @@ pub extern "C" fn ee_ui_manager_new(
 /// destructors may call the manager).
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_manager_free(manager: *mut EeUiManager) {
+    crate::direct::forget(crate::direct::Kind::Manager, manager as *const core::ffi::c_void);
     if manager.is_null() {
         return;
     }

@@ -1,6 +1,6 @@
 //! The post-game summary's host over the C++ calls (`post_game.rs`; `UI Events/EEScreens.cpp`).
 
-use core::ffi::{c_long, c_ulong};
+use core::ffi::{c_int, c_long, c_ulong};
 use std::sync::Mutex;
 
 use crate::menus_ffi::Form;
@@ -15,6 +15,8 @@ mod sys {
         pub fn ee_screenscpp_pgs_history(out: *mut EeScreensPgsHistory);
         /// Record `index` of the statistics into `out`.
         pub fn ee_screenscpp_pgs_record(index: u32, out: *mut EeScreensPgsRecord);
+        /// `gPhysics->GetGameTime()`.
+        pub fn ee_screenscpp_game_time() -> u32;
     }
 }
 
@@ -53,19 +55,28 @@ pub extern "C" fn ee_screens_post_game_event_for(id: c_ulong) -> u32 {
     crate::post_game::event_for_control(id)
 }
 
-unsafe fn put(text: Vec<u8>, out: *mut u8, capacity: usize) -> usize {
+/// The colours of the statistics' records (toolkit.rs's combined graph).
+pub(crate) fn record_colours() -> Vec<[f32; 3]> {
+    let mut out = EeScreensPgsHistory::default();
+    unsafe { sys::ee_screenscpp_pgs_history(&mut out) };
+    (0..out.records)
+        .map(|i| {
+            let mut r = EeScreensPgsRecord::default();
+            unsafe { sys::ee_screenscpp_pgs_record(i, &mut r) };
+            r.colour
+        })
+        .collect()
+}
+
+/// The summary's line graph's value format (`EEUIPGSLineGraph::FormatXValues` for `axis` 0, the game's time,
+/// `FormatYValues` for 1) into `out` (`capacity` bytes); its length in bytes (ee_ui graphobj.rs's format).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_pgs_format(axis: c_int, value: f32, out: *mut u8, capacity: usize) -> usize {
+    let text = if axis == 0 {
+        crate::post_game::format_x(value, sys::ee_screenscpp_game_time())
+    } else {
+        crate::post_game::format_y(value)
+    };
     core::ptr::copy_nonoverlapping(text.as_ptr(), out, text.len().min(capacity));
-    text.len()
-}
-
-/// `EEUIPGSLineGraph::FormatYValues` of a value (float bits) into `out`; its length in bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_pgs_format_y(value: u32, out: *mut u8, capacity: usize) -> usize {
-    put(crate::post_game::format_y(f32::from_bits(value)), out, capacity)
-}
-
-/// `EEUIPGSLineGraph::FormatXValues` of a value (float bits) with the game's time into `out`; its length in bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_pgs_format_x(value: u32, game_time: u32, out: *mut u8, capacity: usize) -> usize {
-    put(crate::post_game::format_x(f32::from_bits(value), game_time), out, capacity)
+    text.len().min(capacity)
 }

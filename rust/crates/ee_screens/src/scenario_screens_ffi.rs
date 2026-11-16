@@ -10,9 +10,9 @@ use crate::menus::EE_SCREENS_TEXT_STRING;
 use crate::menus_ffi::{sys, Form};
 use crate::scenario_screens::*;
 
-extern "C" {
-    /// The manager's form of an id (`gUIManager->GetFormByID`).
-    pub(crate) fn ee_screenscpp_form(id: u32) -> *mut c_void;
+/// The manager's form of an id (`gUIManager->GetFormByID`, on the manager's Rust object: `ee_ui direct.rs`).
+pub(crate) fn ee_screenscpp_form(id: u32) -> *mut c_void {
+    ee_ui::direct::form_by_id(ee_ui::direct::manager_of(core::ptr::null_mut()), id as c_ulong)
 }
 
 /// The intro's briefing sound (the UI thread's; locked only around its own reads and writes).
@@ -26,7 +26,7 @@ pub(crate) fn dispatch(host: &mut Form, event: u32) -> bool {
 impl Form {
     /// The host on form `form` (the same entity).
     fn on(&self, form: u32) -> Form {
-        Form(unsafe { ee_screenscpp_form(form) }, self.1)
+        Form(ee_screenscpp_form(form), self.1)
     }
 }
 

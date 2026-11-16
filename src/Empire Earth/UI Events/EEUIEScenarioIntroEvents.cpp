@@ -7,10 +7,6 @@
 // SoundOver, Start) follow in declaration order; deque<UIEventTrigger>::push_back (UIManager::AddEventToTrigger,
 // SIE Open) closes the unit. Unit flags: the exe module set.
 #include <windows.h>
-#include <mbstring.h>
-#include <algorithm>
-#include <string>
-#include <list>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"

@@ -591,5 +591,38 @@ pub fn show_civilization_builder(h: &mut impl UiHost, civ: i64, flag: bool, edit
     op(h, EE_SCREENS_UG_OP_GRAPHICS, 0);
 }
 
+/// What `ShowLagStatus` does on the current form.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LagStatus {
+    /// Nothing (another form, or the main game form while not lagging).
+    Nothing,
+    /// The main game form: the "waiting for players" string as a chat log entry.
+    WaitingMessage,
+    /// The lobby: its lag button (control 0x111) hidden.
+    HideButton,
+    /// The lobby: its lag button shown and blinking.
+    BlinkButton,
+}
+
+/// `EEUserInterface::ShowLagStatus`'s decision (under the UI copy lock): in the game a waiting message when lagging;
+/// in the lobby the lag button hidden for player 0, else shown and blinking.
+pub fn lag_status(on_main_game: bool, on_lobby: bool, player: u32, lagging: bool) -> LagStatus {
+    if on_main_game {
+        if lagging {
+            LagStatus::WaitingMessage
+        } else {
+            LagStatus::Nothing
+        }
+    } else if on_lobby {
+        if player == 0 {
+            LagStatus::HideButton
+        } else {
+            LagStatus::BlinkButton
+        }
+    } else {
+        LagStatus::Nothing
+    }
+}
+
 #[cfg(test)]
 mod tests;

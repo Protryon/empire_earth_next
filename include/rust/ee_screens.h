@@ -256,6 +256,49 @@ constexpr static const uint32_t EE_SCREENS_CE_ASK_EDITOR = 3;
 
 constexpr static const uint32_t EE_SCREENS_CE_ASK_DELETE = 4;
 
+/// The host's calls (`EE_SCREENS_CEM_*`): the edited campaign's fields and files, the strings, the disk.
+constexpr static const uint32_t EE_SCREENS_CEM_STRING = 0;
+
+constexpr static const uint32_t EE_SCREENS_CEM_SET_FIELD = 1;
+
+constexpr static const uint32_t EE_SCREENS_CEM_SET_SCENARIOS = 2;
+
+constexpr static const uint32_t EE_SCREENS_CEM_LOAD = 3;
+
+constexpr static const uint32_t EE_SCREENS_CEM_SAVE = 4;
+
+constexpr static const uint32_t EE_SCREENS_CEM_LIST = 5;
+
+constexpr static const uint32_t EE_SCREENS_CEM_DELETE = 6;
+
+constexpr static const uint32_t EE_SCREENS_CEM_RESET_BEGIN = 7;
+
+constexpr static const uint32_t EE_SCREENS_CEM_LIST_FILES = 8;
+
+constexpr static const uint32_t EE_SCREENS_CEM_BUILT_IN = 9;
+
+constexpr static const uint32_t EE_SCREENS_CEM_CHECK = 10;
+
+constexpr static const uint32_t EE_SCREENS_CEM_RESET_END = 11;
+
+/// The host's texts (`ee_screenscpp_ce_campaign_text`).
+constexpr static const uint32_t EE_SCREENS_CEM_TEXT_FIELD = 0;
+
+constexpr static const uint32_t EE_SCREENS_CEM_TEXT_SCENARIOS = 1;
+
+constexpr static const uint32_t EE_SCREENS_CEM_TEXT_KEPT = 2;
+
+constexpr static const uint32_t EE_SCREENS_CEM_TEXT_LINES = 3;
+
+constexpr static const uint32_t EE_SCREENS_CEM_TEXT_FILES = 4;
+
+constexpr static const uint32_t EE_SCREENS_CEM_TEXT_EXTENSION = 5;
+
+/// [`EE_SCREENS_CEM_LIST_FILES`]' and [`EE_SCREENS_CEM_TEXT_EXTENSION`]'s directories.
+constexpr static const uint32_t EE_SCREENS_CEM_CAMPAIGNS = 0;
+
+constexpr static const uint32_t EE_SCREENS_CEM_SCENARIOS = 1;
+
 /// The chat form's open and close events and its mouse press outside (`EECreateFormEvent`).
 constexpr static const uint32_t EE_SCREENS_CH_OPEN = 4609;
 
@@ -5057,6 +5100,54 @@ constexpr static const int64_t EE_SCREENS_GA_IDS_PLAYER_NAME_IS_INVALID = 10004;
 constexpr static const int64_t EE_SCREENS_GA_IDS_GAME_NAME_IS_INVALID = 10005;
 
 constexpr static const int64_t EE_SCREENS_GA_IDS_GAME_NAME_EXISTS = 10010;
+
+/// The sound manager and the mixer's conductor (`gSoundManager`, `&gConductor->GetConductor()`).
+constexpr static const uint32_t EE_SCREENS_VIEW_SOUND = 0;
+
+/// Plain globals: the settings, the display list, the camera's and the UI's flags, the loaded header's player count.
+constexpr static const uint32_t EE_SCREENS_VIEW_SETTINGS = 1;
+
+/// `gCommunications`' (all 0 without it).
+constexpr static const uint32_t EE_SCREENS_VIEW_SESSION = 2;
+
+/// `gWorld`'s, the world table's game speeds and the main game form's hot key mode.
+constexpr static const uint32_t EE_SCREENS_VIEW_WORLD = 3;
+
+/// A player's (the argument: its index, or [`EE_SCREENS_VIEW_CURRENT`]; all 0 for a missing one).
+constexpr static const uint32_t EE_SCREENS_VIEW_PLAYER = 4;
+
+/// The colour table's colour of the argument (`EEGetPlayerColor`).
+constexpr static const uint32_t EE_SCREENS_VIEW_COLOUR = 5;
+
+/// The campaign form manager's (`EECampaignFormManager::Get()`).
+constexpr static const uint32_t EE_SCREENS_VIEW_CAMPAIGN = 6;
+
+/// The scenario intro's form manager's (`EEUISCIFormManager::Get()`).
+constexpr static const uint32_t EE_SCREENS_VIEW_INTRO = 7;
+
+/// The player argument for the current player (`gWorld.GetCurrentPlayer()`).
+constexpr static const uint32_t EE_SCREENS_VIEW_CURRENT = 4294967295;
+
+/// Texts: the settings' and the plain globals' (`EE_SCREENS_VIEW_T_*` in order).
+constexpr static const uint32_t EE_SCREENS_VIEW_TEXTS_SETTINGS = 0;
+
+/// Texts: the campaign form manager's (loaded description, required civilization, name, description).
+constexpr static const uint32_t EE_SCREENS_VIEW_TEXTS_CAMPAIGN = 1;
+
+/// Texts: the intro manager's (briefing, hints, history).
+constexpr static const uint32_t EE_SCREENS_VIEW_TEXTS_INTRO = 2;
+
+/// Texts: a player's (name, civilization name; the argument as [`EE_SCREENS_VIEW_PLAYER`]'s).
+constexpr static const uint32_t EE_SCREENS_VIEW_TEXTS_PLAYER = 3;
+
+/// Texts: the world's (the statistics' campaign name).
+constexpr static const uint32_t EE_SCREENS_VIEW_TEXTS_WORLD = 4;
+
+/// Texts: a statistics record's (the argument: its index; its name).
+constexpr static const uint32_t EE_SCREENS_VIEW_TEXTS_RECORD = 5;
+
+/// Texts: the map type of a lobby options source (the argument: `EE_SCREENS_LE_SOURCE_*`).
+constexpr static const uint32_t EE_SCREENS_VIEW_TEXTS_MAP_TYPE = 6;
 
 /// `EEUIEHKSelectGroup(group, false)` / `(group, true)`: the number keys (with Alt: the true one).
 constexpr static const uint32_t EE_SCREENS_HK_SELECT_GROUP = 3584;
@@ -10141,6 +10232,70 @@ struct EeScreensGaFields {
   bool mWriteToFile;
 };
 
+/// The values of a group (only the group's fields are filled, the rest are 0).
+struct EeScreensGameView {
+  size_t sound_manager;
+  size_t conductor;
+  /// `gRasterizer`'s index among `GERasterizer::GetRasterizer` (0 when it is none of them).
+  uint32_t current_rasterizer;
+  /// `gDisplayRasterizers.size()`.
+  uint32_t rasterizer_count;
+  bool not_korean;
+  /// The settings' `mLastOpenPostGameStatsPage`, `mTakeEndGameScreenshots`, `GetGrabScrollSpeed()`, `mZoomEnabled`.
+  int32_t pgs_page;
+  bool pgs_screenshots;
+  float grab_scroll_speed;
+  bool settings_zoom_enabled;
+  /// `gZoomEnabled`, `gDifficultyLevel`, `gFreeCamera`, `gGameScreenActive`, `gSavedMainGameForm != NULL`,
+  /// `gCameraMaxZoom`, `gHiddenUnitsMode`.
+  bool zoom_enabled;
+  int32_t difficulty;
+  bool free_camera;
+  bool screen_active;
+  bool saved_main_form;
+  float max_zoom;
+  int32_t hidden_mode;
+  /// The loaded header's `mNumPlayers` (0 without one).
+  uint32_t header_players;
+  bool is_server;
+  bool is_client;
+  bool multiplayer_session;
+  uint32_t cts_processed;
+  /// The server migrating, or the client a playback session.
+  bool cannot_exit;
+  uint32_t humans;
+  uint32_t ghosts;
+  bool has_player;
+  int32_t camera_mode;
+  bool lock_speed;
+  float game_speed;
+  bool cinematic;
+  float zoom;
+  bool user_paused;
+  uint32_t players;
+  int32_t current;
+  bool teams_locked;
+  bool cheats;
+  /// `gWorld.GetGameOptions().GetIsScenarioGame()`.
+  bool scenario_game;
+  /// `gWorldTable`'s game speed step and range (`kWorldGameSpeedStep`, `kWorldGameSpeedRange` and its second).
+  float speed_step;
+  float speed_low;
+  float speed_high;
+  /// The manager's main game form's `mHotKeyMode` (0 without the form).
+  uint32_t hot_key_mode;
+  bool present;
+  bool observer;
+  uint32_t chat_type;
+  /// An airport among the player's selected group.
+  bool airport_selected;
+  float colour[3];
+  uint32_t campaign_checksum;
+  bool all_scenarios_open;
+  /// `EE_SCREENS_SI_FLAG_*` of the intro manager's four flags.
+  uint32_t si_flags;
+};
+
 /// `EEUICPing`'s members (its protected base) but the bars.
 struct EeScreensPingFields {
   /// The lit bars less one (`SetPing`'s quality times 5).
@@ -10690,12 +10845,36 @@ long ee_screens_actions_redo();
 /// list).
 void ee_screens_actions_clear(uint32_t queue);
 
-/// A form's grab scroll (0 the main game form's, 1 the scenario editor's) made anew or released with its form: not
-/// grabbing (`EECreateGrabScroll`, `EEReleaseGrabScroll`).
+/// A form's grab scroll (0 the main game form's, 1 the scenario editor's) made anew or released with its form: the
+/// mouse move event it saved released, not grabbing (`EECreateGrabScroll`, `EEReleaseGrabScroll`).
 void ee_screens_camera_grab_reset(uint32_t form);
 
 /// The campaign editor's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_campaign_editor_event_for(unsigned long id);
+
+extern uint32_t ee_screenscpp_ce_campaign(uint32_t op,
+                                          uint32_t a,
+                                          const uint8_t *text,
+                                          size_t length);
+
+extern size_t ee_screenscpp_ce_campaign_text(uint32_t which,
+                                             uint32_t arg,
+                                             uint8_t *out,
+                                             size_t capacity);
+
+/// The model's ops for a caller without the events (the golden driver): `kind` 0 a call (`which` the op, `a` its
+/// argument), 1 a text (written to `out` up to `capacity`; its length), 2 a put; `usize::MAX` for an op it does
+/// not own.
+///
+/// # Safety
+/// `text` holds `length` bytes, `out` `capacity`.
+size_t ee_screens_campaign_model(uint32_t kind,
+                                 uint32_t which,
+                                 uint32_t a,
+                                 const uint8_t *text_in,
+                                 size_t length,
+                                 uint8_t *out,
+                                 size_t capacity);
 
 /// `EEUIECLEFormManager::AddEntry`.
 void ee_screens_chat_log_add(const EeScreensChatLogHead *head,
@@ -11625,6 +11804,16 @@ bool ee_screens_ga_paint_set_area(EeScreensGaFields *r,
 /// As `ee_screens_ga_init`.
 void ee_screens_ga_upgrade_begin(EeScreensGaFields *r, void *unit);
 
+/// The values of `group` (`EE_SCREENS_VIEW_*`) for `arg` into `out`.
+extern void ee_screenscpp_game_view(uint32_t group, uint32_t arg, EeScreensGameView *out);
+
+/// The texts of `group` (`EE_SCREENS_VIEW_TEXTS_*`) for `arg`, each ended by a 0 byte, into `out` (up to
+/// `capacity` bytes); their length.
+extern size_t ee_screenscpp_game_texts(uint32_t group,
+                                       uint32_t arg,
+                                       uint8_t *out,
+                                       size_t capacity);
+
 /// The unit selection hot key's code for its constructor's arguments (the unit type a 16-bit type id).
 uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
                                            bool idle_workers,
@@ -11858,14 +12047,12 @@ void ee_screens_portrait_set_unit(void *portrait, void *unit);
 /// The post-game summary's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_post_game_event_for(unsigned long id);
 
-/// `EEUIPGSLineGraph::FormatYValues` of a value (float bits) into `out`; its length in bytes.
-size_t ee_screens_pgs_format_y(uint32_t value, uint8_t *out, size_t capacity);
-
-/// `EEUIPGSLineGraph::FormatXValues` of a value (float bits) with the game's time into `out`; its length in bytes.
-size_t ee_screens_pgs_format_x(uint32_t value,
-                               uint32_t game_time,
-                               uint8_t *out,
-                               size_t capacity);
+/// The summary's line graph's value format (`EEUIPGSLineGraph::FormatXValues` for `axis` 0, the game's time,
+/// `FormatYValues` for 1) into `out` (`capacity` bytes); its length in bytes (ee_ui graphobj.rs's format).
+size_t ee_screens_pgs_format(int axis,
+                             float value,
+                             uint8_t *out,
+                             size_t capacity);
 
 /// The save/load form's event code for a control event id (the screen active and the editor on when the form is
 /// made); 0 for another form's (and for the load form's Cancel, C++'s `EEUIECancel`).
@@ -11878,9 +12065,6 @@ uint32_t ee_screens_sp_load_event_for(unsigned long id);
 
 /// The scenario load form's event code for a control event id; 0 for another form's.
 uint32_t ee_screens_scenario_load_event_for(unsigned long id);
-
-/// The manager's form of an id (`gUIManager->GetFormByID`).
-extern void *ee_screenscpp_form(uint32_t id);
 
 /// The scenario intro form's event code for a control event id; 0 for another form's.
 uint32_t ee_screens_scenario_intro_event_for(unsigned long id);
@@ -11938,6 +12122,12 @@ void ee_screens_ui_member(void *ui,
                           int64_t a,
                           int64_t b,
                           int64_t c);
+
+/// `EEUserInterface::ShowLagStatus(player, lagging)` (`ui_game::lag_status`) on the toolkit's Rust objects: under the
+/// manager's copy lock, the current form compared with the main game form (11) and the lobby (26); the waiting
+/// message through the host's string and chat log texts; the lobby's lag button (control 0x111) by index.
+void ee_screens_ui_show_lag_status(uint32_t player,
+                                   bool lagging);
 
 /// `EEUIManager`'s constructor's work after its base, on the host's call record `call`.
 void ee_screens_ui_manager_construct(void *call);

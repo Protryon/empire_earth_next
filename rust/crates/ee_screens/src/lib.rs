@@ -25,6 +25,8 @@
 //!   C++ host).
 //! - [`campaign_editor`]: the campaign editor's events whole (form 24: its events and its questions' answers over
 //!   the C++ host and the editor's C++ model).
+//! - [`campaign_model`]: the campaign editor's model whole (the original's `EECampaignEditorBehavior`) over the
+//!   edited campaign and the files.
 //! - [`custom_campaign`]: the custom campaign form whole (its events over the C++ host).
 //! - [`civ_builder`]: the civilization builder's events whole (its form's and dialogs' control events, the form's
 //!   open and close events; the builder's ops over [`civ_whole`]).
@@ -51,6 +53,8 @@
 //!   form-event factory.
 //! - [`frame`]: the framed form background's draw (`EEUIBGenericBackground`: the tinted panel, the edges, corners
 //!   and side ornaments), over the C++ host.
+//! - [`game_view`]: the screens' read view of the game (the settings, the session, the world, the players, the
+//!   campaign and intro managers: one C++ fill per group at the read), the sound objects' ops on their Rust objects.
 //! - [`hot_keys`]: the main game form's hot key events whole (the control groups, the unit selection keys, the closest
 //!   aircraft; the player's units as records).
 //! - [`main_game`]: the main game form's events whole (form 11: its buttons' and hot keys' events, the formation
@@ -128,6 +132,9 @@ mod camera_ffi;
 pub mod campaign_editor;
 #[cfg(not(test))]
 mod campaign_editor_ffi;
+pub mod campaign_model;
+#[cfg(not(test))]
+mod campaign_model_ffi;
 pub mod chat;
 #[cfg(not(test))]
 mod chat_ffi;
@@ -225,6 +232,9 @@ mod game_actions_ffi;
 mod game_actions_golden;
 #[cfg(test)]
 mod game_actions_tests;
+pub mod game_view;
+#[cfg(not(test))]
+mod game_view_ffi;
 pub mod hot_keys;
 #[cfg(not(test))]
 mod hot_keys_ffi;
@@ -295,6 +305,8 @@ mod status_box_ffi;
 pub mod status_button;
 #[cfg(not(test))]
 mod status_button_ffi;
+// the screens' toolkit ops on the toolkit's Rust objects (ee_ui direct.rs), before menus_ffi's C++ hop
+mod toolkit;
 pub mod ui_game;
 #[cfg(not(test))]
 mod ui_game_ffi;

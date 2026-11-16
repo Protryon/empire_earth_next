@@ -236,7 +236,6 @@ ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 26de97 271319 Empire Earth/User Interface Thread/EEUIFMGStatusButton.cpp
 271319 2753b1 Empire Earth/User Interface Thread/EEUIManager.cpp
 2753b1 276442 Empire Earth/User Interface Thread/EEUIMiniMap.cpp
-276442 276631 Empire Earth/User Interface Thread/EEUIPGSLineGraph.cpp
 276631 27a37e Empire Earth/User Interface Thread/EEUserInterface.cpp
 27a37e 27aa0b Empire Earth/User Interface Thread/EEWonNetAvailableGameFormManager.cpp
 27adb0 27b911 Empire Earth/Civilization Builder/EEAEManager.cpp
@@ -248,7 +247,6 @@ ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 2813f4 2830d0 Empire Earth/Civilization Builder/EECivilizationManager.cpp
 283b2e 28befc Empire Earth/Random Map/EERandomMap.cpp
 28befc 28d82d Empire Earth/Campaign/EECampaign.cpp
-28d82d 28f0cb Empire Earth/Campaign/EECampaignEditorBehavior.cpp
 28f0cb 28f39a Empire Earth/Campaign/EECampaignFormManager.cpp
 28f39a 290578 Empire Earth/Campaign/EECampaignProgress.cpp
 29a43d 29ce06 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyResource.cpp

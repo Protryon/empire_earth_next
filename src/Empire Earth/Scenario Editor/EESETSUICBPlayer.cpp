@@ -125,7 +125,6 @@
 #include "lle/UIHotKey.h"
 #include "lle/UIIMECandidate.h"
 #include "lle/UITiledBackground.h"
-#include "lle/UILineGraph.h"
 #include "lle/UIManager.h"
 #include "lle/UIMovie.h"
 #include "lle/UIRadioButton.h"

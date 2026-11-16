@@ -628,7 +628,11 @@ pub extern "C" fn ee_ui_button_new(
     focused: *mut c_void,
     pressed: *mut c_void,
 ) -> *mut EeUiButton {
-    Box::into_raw(Box::new(EeUiButton::new(Host { obj: button, f: host }, normal, focused, pressed)))
+    crate::direct::made(
+        crate::direct::Kind::Button,
+        button,
+        Box::into_raw(Box::new(EeUiButton::new(Host { obj: button, f: host }, normal, focused, pressed))),
+    )
 }
 
 /// The destructor: releases the texts, bitmaps and sounds and frees the object.
@@ -637,6 +641,7 @@ pub extern "C" fn ee_ui_button_new(
 /// `button` came from `ee_ui_button_new` (or is NULL) and is not used again.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_button_free(button: *mut EeUiButton) {
+    crate::direct::forget(crate::direct::Kind::Button, button as *const core::ffi::c_void);
     if button.is_null() {
         return;
     }

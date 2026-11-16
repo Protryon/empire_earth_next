@@ -11,7 +11,7 @@
 use core::ffi::{c_long, c_ulong, c_void};
 use std::sync::Mutex;
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "no_cpp")))]
 use crate::hotkey::CreateHost;
 use crate::hotkey::{self, EventCall, EventSlotHost, FireHost, HotKeyEvent, KeysHost, KEY_SLOT};
 use crate::obj::{EeUiHostFn, EeUiOp as Op, Host};
@@ -299,13 +299,13 @@ fn table() -> std::sync::MutexGuard<'static, Vec<usize>> {
 }
 
 /// `CreateHotKeys`' file (`FSFileSpec&`, read through `UIEvent.cpp`'s file calls) and the table.
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "no_cpp")))]
 struct Create {
     keys: Keys,
     file: *mut c_void,
 }
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "no_cpp")))]
 mod file_sys {
     use core::ffi::{c_long, c_ulong, c_void};
 
@@ -317,7 +317,7 @@ mod file_sys {
     }
 }
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "no_cpp")))]
 impl KeysHost for Create {
     fn get_entity(&mut self, key: hotkey::HotKey, code: c_ulong, member: usize) -> c_long {
         self.keys.get_entity(key, code, member)
@@ -339,7 +339,7 @@ impl KeysHost for Create {
     }
 }
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "no_cpp")))]
 impl CreateHost for Create {
     fn open(&mut self) {
         // SAFETY: the C++ caller's live file
@@ -412,7 +412,7 @@ pub unsafe extern "C" fn ee_ui_hotkey_call(
 ///
 /// # Safety
 /// `file` is a live `FSFileSpec`.
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "no_cpp")))]
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_hotkey_create_all(file: *mut c_void, host: EeUiHostFn) -> c_long {
     let keys = Keys(Host { obj: core::ptr::null_mut(), f: host });

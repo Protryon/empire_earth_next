@@ -137,7 +137,11 @@ impl EeUiEntityGroup {
 /// A new Rust group for the C++ `group`.
 #[no_mangle]
 pub extern "C" fn ee_ui_entity_group_new(group: *mut c_void, host: EeUiHostFn) -> *mut EeUiEntityGroup {
-    Box::into_raw(Box::new(EeUiEntityGroup::new(Host { obj: group, f: host })))
+    crate::direct::made(
+        crate::direct::Kind::Group,
+        group,
+        Box::into_raw(Box::new(EeUiEntityGroup::new(Host { obj: group, f: host }))),
+    )
 }
 
 /// The destructor.
@@ -146,6 +150,7 @@ pub extern "C" fn ee_ui_entity_group_new(group: *mut c_void, host: EeUiHostFn) -
 /// `group` came from `ee_ui_entity_group_new` (or is NULL) and is not used again.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_entity_group_free(group: *mut EeUiEntityGroup) {
+    crate::direct::forget(crate::direct::Kind::Group, group as *const core::ffi::c_void);
     if !group.is_null() {
         // SAFETY: the contract
         drop(unsafe { Box::from_raw(group) });

@@ -19,6 +19,8 @@
 
 #include <vector>
 #include <algorithm>
+#include <type_traits>
+#include <string.h>
 #include "lle/UIControl.h"
 
 // The default InsertLine predicate: never "less", so lower_bound keeps the insertion index.
@@ -263,6 +265,23 @@ template <class T> struct UIListBoxRust {
             break;
         case EeUiOp::ButtonDown: l->ButtonDown(); break;
         case EeUiOp::ButtonUp: l->ButtonUp(); break;
+        // the lines, for the screens' direct path (ee_ui direct.rs)
+        case EeUiOp::ListLineCount: return l->GetLineCount();
+        case EeUiOp::ListLineText:
+            if constexpr (std::is_same<T, UWideString>::value)
+                return (unsigned long)a < l->GetLineCount() ? (intptr_t)(const char*)l->GetData((unsigned long)a) : 0;
+            return 0;
+        case EeUiOp::ListAppendText:
+            if constexpr (std::is_same<T, UWideString>::value)
+                l->AppendLine(UWideString(reinterpret_cast<const char*>(a)));
+            break;
+        case EeUiOp::ListDeleteAll: l->DeleteAllEntries(); break;
+        case EeUiOp::ListSelection: {
+            unsigned long theSelection = 0;
+            long theResult = l->GetCurrentSelection(theSelection);
+            memcpy(&f[0], &theSelection, 4);
+            return theResult;
+        }
         default: return UIListBoxHostOp(l, inOp, a, b, c, d, f);
         }
         return 0;
