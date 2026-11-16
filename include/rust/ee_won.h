@@ -3392,6 +3392,8 @@ enum class EeWonCfgRead : int32_t {
   StdCursor = 22,
   /// `SafeConfigGetComponent<LayoutPoint*>(ReadComponent(),"LayoutPoint")` into the components.
   LayoutPoint = 23,
+  /// `ReadString(true)` (a word: it stops at whitespace) into the strings' first slot, alone.
+  Word = 24,
 };
 
 /// A number of the parser.
@@ -10516,6 +10518,8 @@ struct EeWonCfgTabHost {
   void (*fail)(void *ctx, const uint8_t *msg, size_t len, int32_t slot);
   /// Empty the frame.
   void (*clear)(void *ctx);
+  /// The frame's int `slot` (a value a read or a setter put there).
+  int32_t (*peek)(void *ctx, int32_t slot);
 };
 
 /// `wchar_t` text handed in: `length` units of `wchar_size` bytes.

@@ -3,6 +3,7 @@
     M(AddChild) \
     M(AddChildLayout) \
     M(AddLayoutPoint) \
+    M(Fn2F6140) \
     M(EnableLayoutInstructions) \
     M(Relayout) \
     M(SetIsolateTabFocus) \

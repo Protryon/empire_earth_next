@@ -172,8 +172,6 @@
 387fb0 38831b WONGUI/ValueConfigConstructors.cpp
 388000 3885cf WONGUI/ComponentLayoutConfigs.cpp
 3885d0 388834 WONGUI/ContainerConfigGroups.cpp
-388840 389f75 WONGUI/ContainerConfigInstructions.cpp
-389a70 389c7b WONGUI/ContainerConfigPoints.cpp
 38a080 38aa36 WONGUI/FontConfig.cpp
 38aa60 38ac87 WONGUI/ComponentConfigLookup.cpp
 38adf0 38cd5c WONGUI/ImageConfig.cpp

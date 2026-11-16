@@ -72,6 +72,8 @@ pub enum EeWonCfgRead {
     StdCursor = 22,
     /// `SafeConfigGetComponent<LayoutPoint*>(ReadComponent(),"LayoutPoint")` into the components.
     LayoutPoint = 23,
+    /// `ReadString(true)` (a word: it stops at whitespace) into the strings' first slot, alone.
+    Word = 24,
 }
 
 /// The host: the C++ config's reads, its frame and its setters. Every callback that can throw catches and keeps
@@ -95,6 +97,8 @@ pub struct EeWonCfgTabHost {
     pub fail: extern "C" fn(ctx: *mut c_void, msg: *const u8, len: usize, slot: i32),
     /// Empty the frame.
     pub clear: extern "C" fn(ctx: *mut c_void),
+    /// The frame's int `slot` (a value a read or a setter put there).
+    pub peek: extern "C" fn(ctx: *mut c_void, slot: i32) -> i32,
 }
 
 /// What a name read does with a name its table does not hold.
@@ -131,6 +135,8 @@ pub enum Op {
     Jz(u8),
     /// Empty the frame (a loop's next turn).
     X,
+    /// A handler written out (`NATIVE`): its reads and setters in the original's order.
+    F(u8),
 }
 
 use EeWonCfgRead as Rd;
@@ -387,10 +393,10 @@ static PROGRAMS: &[(i32, &[&[Op]])] = &[
     // (horizontal, vertical), the clear-right layout (component, pad, a list), NOOVERLAPLAYOUT (C++), the size-at-least
     // layout (target, two pads, `, component` pairs; under the default id), ISOLATETABFOCUS ONLYCHILDINPUT
     (EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION, &[
-        &[COMP, S(0), Je(END), C, J(0)], &[R(Rd::LayoutPoint), S(1), Je(END), C, J(0)], &[S(2)], &[S(3)], &[I, S(4)],
-        &[B, C, I, S(5), Je(END), J(1)], &[S(6)], &[S(7)], &[S(8)],
+        &[COMP, S(0), Je(END), C, J(0)], &[R(Rd::LayoutPoint), S(1), Je(END), C, J(0)], &[STR, S(2), Je(END), C, J(0)],
+        &[F(0)], &[I, S(4)], &[B, C, I, S(5), Je(END), J(1)], &[S(6)], &[F(1)], &[F(2)],
         &same(9), &same(10), &same(11), &center(12), &center(13), &center(14), &space(15), &space(16),
-        &[COMP, C, I, C, S(17), COMP, S(20), Je(10), C, J(5), S(21)], &[S(18)],
+        &[COMP, C, I, C, S(17), COMP, S(20), Je(10), C, J(5), S(21)], &[F(3)],
         &[COMP, C, I, C, I, S(19), Je(11), C, COMP, S(20), J(6), S(22)], &[B, S(23)], &[B, S(24)],
     ]),
     // ImageConfig: SRC SIZE
@@ -398,6 +404,152 @@ static PROGRAMS: &[(i32, &[&[Op]])] = &[
     // StretchCenterImageConfig: STRETCHIMAGE CENTERIMAGE
     (EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION, &[&[IMG, S(0)], &[IMG, S(1)]]),
 ];
+
+// ---- the handlers written out (R6 WON round 41): ContainerConfig's LAYOUT family and NOOVERLAPLAYOUT, whose
+// reads depend on the config's state (the previous rule's reference, instructions and offsets) and on the words
+// read. The state stays the config's (mLayoutRef, mLayoutInstruction, mLayoutParams): setter 25 puts the
+// instructions and offsets in the frame, 26 the reference (throwing "Invalid LayoutChain" when there is none), 27
+// keeps the offsets read so far (a read that throws leaves the earlier ones set, as the original's assignments
+// did), 28 adds the rule (Container::Fn2F6140) and keeps it as the config's state, 29 makes the no-overlap layout.
+
+type Native = fn(i32, &mut dyn CfgHost) -> bool;
+static NATIVE: [Native; 4] =
+    [|t, h| layout(t, h, false, false), |t, h| layout(t, h, true, false), |t, h| layout(t, h, false, true), no_overlap];
+
+/// The LAYOUT keywords (guilayout's), NUL-terminated.
+const LAYOUT_NAMES: [&[u8]; 15] = [
+    b"SameWidth\0",
+    b"SameHeight\0",
+    b"Above\0",
+    b"Below\0",
+    b"Right\0",
+    b"Left\0",
+    b"SameLeft\0",
+    b"SameRight\0",
+    b"SameTop\0",
+    b"SameBottom\0",
+    b"GrowToRight\0",
+    b"GrowToLeft\0",
+    b"GrowToTop\0",
+    b"GrowToBottom\0",
+    b"SameSize\0",
+];
+
+/// `ContainerConfig::HandleLayout(chain, repeat)`: the target, the instruction words (or the previous rule's), the
+/// reference (or the previous rule's), up to four offsets (the ones not read zeroed, or kept from the previous
+/// rule by a chain or repeat that read none); the rule added and kept.
+fn layout(table: i32, h: &mut dyn CfgHost, chain: bool, repeat: bool) -> bool {
+    let set = |n: i32| table << 8 | n;
+    h.clear();
+    if !h.apply(set(25)) {
+        return false;
+    }
+    let prev = h.int(0);
+    let mut params = [h.int(1), h.int(2), h.int(3), h.int(4)];
+    h.clear();
+    if !h.read(Rd::Comp) {
+        return false;
+    }
+    let mut instructions = 0;
+    if !chain && !repeat {
+        if !h.comma() {
+            return false;
+        }
+        loop {
+            if !h.read(Rd::Word) {
+                return false;
+            }
+            if h.empty(0) {
+                break;
+            }
+            let k = h.keyword(0, &LAYOUT_NAMES);
+            if k < 0 {
+                h.fail(b"Unknown layout instruction: ", 0);
+                return false;
+            }
+            instructions |= crate::guilayout::LAYOUT_KEYWORDS[k as usize].1;
+        }
+    } else {
+        instructions = prev;
+    }
+    if chain || (repeat && h.end()) {
+        if !h.apply(set(26)) {
+            return false;
+        }
+    } else if !h.comma() || !h.read(Rd::Comp) {
+        return false;
+    }
+    if !h.end() && !h.comma() {
+        return false;
+    }
+    // the offsets, each read into the frame's ints in turn; a throw keeps the ones read
+    let keep = |h: &mut dyn CfgHost, p: &[i32; 4]| {
+        p.iter().for_each(|&v| h.push(v));
+        h.apply(set(27));
+    };
+    let mut read = 0usize;
+    while read < 4 {
+        if h.end() {
+            break;
+        }
+        if !h.read(Rd::Int) {
+            keep(h, &params);
+            return false;
+        }
+        params[read] = h.int(read as i32);
+        read += 1;
+        if !h.end() && !h.comma() {
+            keep(h, &params);
+            return false;
+        }
+    }
+    if crate::guilayout::layout_zero_rest(chain, repeat, read as i32) {
+        params[read..].fill(0);
+    }
+    h.push(instructions);
+    params.iter().for_each(|&v| h.push(v));
+    h.push(i32::from(repeat));
+    h.apply(set(28))
+}
+
+/// `ContainerConfig::HandleNoOverlapLayout`: the target, the side words, the reference and two paddings, then more
+/// components; the layout added under the default layout id.
+fn no_overlap(table: i32, h: &mut dyn CfgHost) -> bool {
+    let set = |n: i32| table << 8 | n;
+    h.clear();
+    if !h.read(Rd::Comp) || !h.comma() {
+        return false;
+    }
+    let mut instructions = 0;
+    loop {
+        if !h.read(Rd::Word) {
+            return false;
+        }
+        if h.empty(0) {
+            break;
+        }
+        match h.name(EE_WON_CFG_NAMES_CONTAINERCONFIG_HANDLENOOVERLAPLAYOUT_ASTR, 0) {
+            k @ 0..=3 => instructions |= 0x100 << k,
+            _ => {
+                h.fail(b"Unknown no overlap instruction: ", 0);
+                return false;
+            }
+        }
+    }
+    if !h.comma() || !h.read(Rd::Comp) || !h.comma() || !h.read(Rd::Int) || !h.comma() || !h.read(Rd::Int) {
+        return false;
+    }
+    h.push(instructions);
+    if !h.apply(set(29)) {
+        return false;
+    }
+    while !h.end() {
+        if !h.comma() || !h.read(Rd::Comp) || !h.apply(set(20)) {
+            return false;
+        }
+    }
+    h.apply(set(22))
+}
 
 /// The program of `key` in the handler of `table`; None for a key the handler does not hold (or no handler).
 pub fn program(table: i32, key: &[u8]) -> Option<&'static [Op]> {
@@ -421,6 +573,11 @@ pub trait CfgHost {
     fn apply(&mut self, setter: i32) -> bool;
     fn fail(&mut self, msg: &[u8], slot: i32);
     fn clear(&mut self);
+    /// The frame's int `slot`.
+    fn int(&mut self, slot: i32) -> i32;
+    /// The index of the frame's string `slot` among `names` (NUL-terminated ASCII), compared as
+    /// `GUIString::CompareNoCase` compares with narrow text; -1 for none.
+    fn keyword(&mut self, slot: i32, names: &[&[u8]]) -> i32;
 }
 
 /// Runs a program: true when it ran to its end, false when a read, a comma, a setter or a name threw (the host
@@ -485,6 +642,7 @@ pub fn run(table: i32, prog: &[Op], h: &mut impl CfgHost) -> bool {
                 h.clear();
                 strings = 0;
             }
+            F(n) => return NATIVE[usize::from(n)](table, h),
         }
         pc = next;
     }
@@ -530,6 +688,17 @@ impl CfgHost for Ffi<'_> {
     }
     fn clear(&mut self) {
         (self.0.clear)(self.0.ctx)
+    }
+    fn int(&mut self, slot: i32) -> i32 {
+        (self.0.peek)(self.0.ctx, slot)
+    }
+    fn keyword(&mut self, slot: i32, names: &[&[u8]]) -> i32 {
+        let (p, len, unit) = self.units(slot);
+        // SAFETY: the host's units of the string (its contract); the names end in NUL
+        let hit = |n: &&[u8]| unsafe {
+            crate::guistring::ee_won_guistring_compare_narrow(p, len, 0, n.as_ptr(), true, unit) == 0
+        };
+        names.iter().position(hit).map_or(-1, |i| i as i32)
     }
 }
 

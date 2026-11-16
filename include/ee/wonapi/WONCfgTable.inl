@@ -5,7 +5,7 @@
 // throws is caught and kept; ComponentConfig::RunTable rethrows it after the Rust returns.
 struct CfgTabFrame {
     ComponentConfig* mConfig; std::exception_ptr mError;
-    int i[8]; int ni; GUIString s[2]; int ns; SmartPtr<Font> f[1]; int nf; SmartPtr<Image> m[1]; int nm;
+    int i[12]; int ni; GUIString s[2]; int ns; SmartPtr<Font> f[1]; int nf; SmartPtr<Image> m[1]; int nm;
     Component* c[2]; int nc; SmartPtr<ChildLayoutInstructionBase> lay; SmartPtr<Sound> snd; Background bg; SelectionColor sel; WONFrame fr; SmartPtr<Cursor> cur;
 };
 // WONFrameValueConfig's frame value: a stretch image alone (its own borders), or an image and one border or four
@@ -62,6 +62,7 @@ static bool CfgTabRead(void* p,EeWonCfgRead inKind)
         case EeWonCfgRead::Direction: a.i[a.ni++]=cfg->ReadDirection(); break;
         case EeWonCfgRead::StdCursor: a.i[a.ni++]=cfg->ReadStandardCursor(); break;
         case EeWonCfgRead::LayoutPoint: a.c[a.nc++]=SafeConfigGetComponent<LayoutPoint*>(cfg->ReadComponent(),"LayoutPoint"); break;
+        case EeWonCfgRead::Word: a.s[0]=cfg->ReadString(true); a.ns=1; break;
         }
         return true;
     } catch(...) { a.mError=std::current_exception(); return false; }
@@ -79,6 +80,7 @@ static const void* CfgTabText(void* p,int32_t inSlot,uint16_t* outLen,uint32_t* 
     return s.mData->mText;
 }
 static void CfgTabPush(void* p,int32_t inValue) { CfgTabFrame& a=*static_cast<CfgTabFrame*>(p); a.i[a.ni++]=inValue; }
+static int32_t CfgTabPeek(void* p,int32_t inSlot) { return static_cast<CfgTabFrame*>(p)->i[inSlot]; }
 static void CfgTabFail(void* p,const uint8_t* inMsg,uintptr_t inLen,int32_t inSlot)
 {
     CfgTabFrame& a=*static_cast<CfgTabFrame*>(p);
@@ -382,13 +384,13 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     // layout made by the instruction is the frame's until the container holds it
     EE_CFG_SET(kContainer,0) EE_CFG(ContainerConfig)->mContainer->AddChild(c[--a.nc]); break;
     EE_CFG_SET(kContainer,1) EE_CFG(ContainerConfig)->mContainer->AddLayoutPoint(static_cast<LayoutPoint*>(c[--a.nc])); break;
-    EE_CFG_SET(kContainer,2) EE_CFG(ContainerConfig)->HandleNewLayoutPoint(); break;
-    EE_CFG_SET(kContainer,3) EE_CFG(ContainerConfig)->HandleLayout(); break;
+    EE_CFG_SET(kContainer,2) { // NEWLAYOUTPOINT's name: a layout point, its config registered under the name
+        ContainerConfig* k=EE_CFG(ContainerConfig); SmartPtr<ComponentConfig> config=new ComponentConfig; SmartPtr<LayoutPoint> point=new LayoutPoint;
+        config->SetComponent(point.get()); config->mParent=k; k->mConfigMap[s[--a.ns]]=config; k->mContainer->AddLayoutPoint(point.get());
+    } break;
     EE_CFG_SET(kContainer,4) EE_CFG(ContainerConfig)->mCurLayoutId=i[0]; break;
     EE_CFG_SET(kContainer,5) { int anId=i[--a.ni]; EE_CFG(ContainerConfig)->mContainer->EnableLayoutInstructions(anId,i[0]!=0); } break;
     EE_CFG_SET(kContainer,6) EE_CFG(ContainerConfig)->mContainer->Relayout(); break;
-    EE_CFG_SET(kContainer,7) EE_CFG(ContainerConfig)->HandleLayout(true); break;
-    EE_CFG_SET(kContainer,8) EE_CFG(ContainerConfig)->HandleLayout(false,true); break;
     EE_CFG_SET(kContainer,9) a.lay=new SameSizeLayout(true,true); break;
     EE_CFG_SET(kContainer,10) a.lay=new SameSizeLayout(true,false); break;
     EE_CFG_SET(kContainer,11) a.lay=new SameSizeLayout(false,true); break;
@@ -398,13 +400,23 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     EE_CFG_SET(kContainer,15) a.lay=new SpaceEvenlyLayout(c[--a.nc],i[0],i[1],true); a.ni=0; break;
     EE_CFG_SET(kContainer,16) a.lay=new SpaceEvenlyLayout(c[--a.nc],i[0],i[1],false); a.ni=0; break;
     EE_CFG_SET(kContainer,17) a.lay=new ClearRightLayout(c[--a.nc],i[0]); a.ni=0; break;
-    EE_CFG_SET(kContainer,18) EE_CFG(ContainerConfig)->HandleNoOverlapLayout(); break;
     EE_CFG_SET(kContainer,19) a.lay=new SizeAtLeastLayout(c[--a.nc],i[0],i[1]); a.ni=0; break;
     EE_CFG_SET(kContainer,20) a.lay->AddComponent(c[--a.nc]); break;
     EE_CFG_SET(kContainer,21) EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get(),EE_CFG(ContainerConfig)->mCurLayoutId); break;
     EE_CFG_SET(kContainer,22) EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get()); break;
     EE_CFG_SET(kContainer,23) EE_CFG(ContainerConfig)->mContainer->SetIsolateTabFocus(i[0]!=0); break;
     EE_CFG_SET(kContainer,24) EE_CFG(ContainerConfig)->mContainer->SetOnlyChildInput(i[0]!=0); break;
+    // the LAYOUT family's state (cfgtab.rs layout): the previous rule's instructions and offsets, its reference, the
+    // offsets read, the rule added (the frame's last six ints: instructions, offsets, which component stays the reference)
+    EE_CFG_SET(kContainer,25) { ContainerConfig* k=EE_CFG(ContainerConfig); a.i[a.ni++]=k->mLayoutInstruction; for(int j=0;j<4;j++) a.i[a.ni++]=k->mLayoutParams[j]; } break;
+    EE_CFG_SET(kContainer,26) { ContainerConfig* k=EE_CFG(ContainerConfig); if(k->mLayoutRef==NULL) throw ConfigObjectException("Invalid LayoutChain"); a.c[a.nc++]=k->mLayoutRef; } break;
+    EE_CFG_SET(kContainer,27) for(int j=0;j<4;j++) EE_CFG(ContainerConfig)->mLayoutParams[j]=i[a.ni-4+j]; break;
+    EE_CFG_SET(kContainer,28) {
+        ContainerConfig* k=EE_CFG(ContainerConfig); const int* v=i+a.ni-6;
+        for(int j=0;j<4;j++) k->mLayoutParams[j]=v[1+j];
+        k->mContainer->Fn2F6140(c[0],v[0],c[1],v[1],v[2],v[3],v[4],k->mCurLayoutId); k->mLayoutRef=c[v[5]]; k->mLayoutInstruction=v[0];
+    } break;
+    EE_CFG_SET(kContainer,29) a.lay=new NoOverlapLayout(c[0],i[2],c[1],i[0],i[1]); a.nc=0; break;
     }
 }
 #undef EE_CFG_SET
@@ -419,7 +431,7 @@ static bool CfgTabApply(void* p,int32_t inSetter)
 bool ComponentConfig::RunTable(int inTable,const std::string& inKey)
 {
     CfgTabFrame aFrame; aFrame.mConfig=this; aFrame.ni=aFrame.ns=aFrame.nf=aFrame.nm=aFrame.nc=0;
-    EeWonCfgTabHost aHost={&aFrame,CfgTabRead,CfgTabComma,CfgTabEnd,CfgTabText,CfgTabPush,CfgTabApply,CfgTabFail,CfgTabClear};
+    EeWonCfgTabHost aHost={&aFrame,CfgTabRead,CfgTabComma,CfgTabEnd,CfgTabText,CfgTabPush,CfgTabApply,CfgTabFail,CfgTabClear,CfgTabPeek};
     int aResult=ee_won_cfg_tab_run(&aHost,inTable,(const uint8_t*)inKey.data(),inKey.size());
     if(aResult==1) std::rethrow_exception(aFrame.mError);
     return aResult==0;

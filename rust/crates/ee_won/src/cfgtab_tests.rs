@@ -12,6 +12,7 @@ enum Ev {
     Apply(i32, bool),
     Fail(i32, Vec<u8>),
     Clear,
+    Peek(i32, i32),
 }
 
 fn unhex(s: &str, width: usize) -> Vec<u32> {
@@ -45,6 +46,10 @@ fn parse_ev(e: &str) -> Ev {
             Ev::Fail(s.parse().unwrap(), unhex(m, 4).into_iter().map(|u| u as u8).collect())
         }
         "x" => Ev::Clear,
+        "k" => {
+            let (s, v) = rest.split_once('=').unwrap();
+            Ev::Peek(s.parse().unwrap(), v.parse().unwrap())
+        }
         _ => panic!("event {e}"),
     }
 }
@@ -117,6 +122,26 @@ impl CfgHost for Replay {
     fn clear(&mut self) {
         assert_eq!(self.next(), Ev::Clear);
     }
+    fn int(&mut self, slot: i32) -> i32 {
+        match self.next() {
+            Ev::Peek(s, v) if s == slot => v,
+            e => panic!("expected peek {slot}, got {e:?}"),
+        }
+    }
+    fn keyword(&mut self, slot: i32, names: &[&[u8]]) -> i32 {
+        let u = self.text(slot);
+        keyword_of(&u, names)
+    }
+}
+
+fn keyword_of(units: &[u32], names: &[&[u8]]) -> i32 {
+    names
+        .iter()
+        .position(|n| {
+            let narrow = crate::guistring::widen(&n[..n.len() - 1], 4);
+            crate::guistring::compare_no_case_narrow(units, 0, &narrow, &CChat) == 0
+        })
+        .map_or(-1, |i| i as i32)
 }
 
 fn replay_line(line: &str) {
@@ -160,6 +185,7 @@ struct Script {
     throw_read: Option<usize>,
     reads: usize,
     fail_apply: bool,
+    ints: Vec<i32>,
 }
 
 impl CfgHost for Script {
@@ -205,6 +231,15 @@ impl CfgHost for Script {
     }
     fn clear(&mut self) {
         self.log.push("x".into());
+    }
+    fn int(&mut self, slot: i32) -> i32 {
+        self.log.push(format!("k{slot}"));
+        self.ints.get(slot as usize).copied().unwrap_or(0)
+    }
+    fn keyword(&mut self, _slot: i32, names: &[&[u8]]) -> i32 {
+        let s = self.texts.remove(0);
+        let u: Vec<u32> = s.chars().map(u32::from).collect();
+        keyword_of(&u, names)
     }
 }
 

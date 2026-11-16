@@ -98,13 +98,19 @@ struct Component {
 };
 static int sNextComp;
 Component::Component() : Component(sNextComp++) {}
-static std::string PP(const Component* c) { return c ? "c" + P((long long)c->id) : "null"; }
+// a layout point's id is given at its first trace (the original made it before reading its name, the port after)
+static int sNextPoint;
+static std::string PP(const Component* c)
+{
+    if (c && c->id == -1) const_cast<Component*>(c)->id = 9000 + sNextPoint++;
+    return c ? "c" + P((long long)c->id) : "null";
+}
 typedef Component Container; typedef Component Button; typedef Component Scroller; typedef Component MultiListArea;
 typedef Component ScrollArea; typedef Component ListArea; typedef Component InputBox; typedef Component Splitter;
 typedef Component WONButton; typedef Component WONSimpleButton; typedef Component WONHeaderButton; typedef Component WONScrollbar;
 typedef Component WONScrollContainer; typedef Component WONListCtrl; typedef Component WONTabCtrl; typedef Component WONComboBox;
 typedef Component WONFrameComponent;
-typedef Component LayoutPoint;
+struct LayoutPoint : Component { LayoutPoint() : Component(-1) {} };
 // the layouts ContainerConfig's instructions make (R6 WON round 40): each made and each component added is traced
 static int sNextLayout;
 struct ChildLayoutInstructionBase : Obj {
@@ -114,6 +120,7 @@ struct ChildLayoutInstructionBase : Obj {
 #define EE_CFGTAB_LAYOUT(T) T* Add(Component* c) { this->AddComponent(c); return this; }
 struct SameSizeLayout : ChildLayoutInstructionBase { SameSizeLayout(bool a, bool b) : ChildLayoutInstructionBase("SameSize(" + P(a) + "," + P(b) + ")") {} EE_CFGTAB_LAYOUT(SameSizeLayout) };
 struct CenterLayout : ChildLayoutInstructionBase { CenterLayout(Component* c, bool a, bool b) : ChildLayoutInstructionBase("Center(" + PP(c) + "," + P(a) + "," + P(b) + ")") {} EE_CFGTAB_LAYOUT(CenterLayout) };
+struct NoOverlapLayout : ChildLayoutInstructionBase { NoOverlapLayout(Component* t, int k, Component* r, int h, int v) : ChildLayoutInstructionBase("NoOverlap(" + PP(t) + "," + P((long long)k) + "," + PP(r) + "," + P((long long)h) + "," + P((long long)v) + ")") {} EE_CFGTAB_LAYOUT(NoOverlapLayout) };
 struct ClearRightLayout : ChildLayoutInstructionBase { ClearRightLayout(Component* c, int p) : ChildLayoutInstructionBase("ClearRight(" + PP(c) + "," + P((long long)p) + ")") {} EE_CFGTAB_LAYOUT(ClearRightLayout) };
 struct SpaceEvenlyLayout : ChildLayoutInstructionBase { SpaceEvenlyLayout(Component* c, int l, int r, bool h) : ChildLayoutInstructionBase("SpaceEvenly(" + PP(c) + "," + P((long long)l) + "," + P((long long)r) + "," + P(h) + ")") {} EE_CFGTAB_LAYOUT(SpaceEvenlyLayout) };
 struct SizeAtLeastLayout : ChildLayoutInstructionBase { SizeAtLeastLayout(Component* c, int h, int v) : ChildLayoutInstructionBase("SizeAtLeast(" + PP(c) + "," + P((long long)h) + "," + P((long long)v) + ")") {} EE_CFGTAB_LAYOUT(SizeAtLeastLayout) };
@@ -175,7 +182,7 @@ template<class T> T SafeConfigGetComponent(Component* c, const char* name)
         : !strcmp(name, "MultiListArea") ? 8 : 1u << (strlen(name) % 4);
     tr(std::string("SafeConfigGetComponent<") + name + ">(" + P(c) + ")");
     if (c == NULL || !(c->mask & bit)) throw ConfigObjectException(std::string("Invalid ") + name);
-    return c;
+    return (T)c;
 }
 
 // The reads: a cursor over the value text. A token runs to the next comma (or whitespace for a flag); a token
@@ -188,6 +195,8 @@ struct ComponentConfig {
     virtual ~ComponentConfig() {}
     virtual bool Virtual24(const std::string& key);
     SmartPtr<Component> mComponent = gComp;
+    ComponentConfig* mParent = NULL;
+    void SetComponent(Component* c) { mComponent = c; }
     bool mHasSetWidth = false, mHasSetHeight = false;
     bool HandleModify() { tr("HandleModify"); return mText.size() % 2 == 0; }
     bool HandleMapComponent() { tr("HandleMapComponent"); return true; }
@@ -238,11 +247,13 @@ struct ComponentConfig {
     }
     VertAlign ReadVertAlign() { int v = Hash(Take("ReadVertAlign")) % 3; tr("ReadVertAlign " + P((long long)v)); return (VertAlign)v; }
     HorzAlign ReadHorzAlign() { int v = Hash(Take("ReadHorzAlign")) % 3; tr("ReadHorzAlign " + P((long long)v)); return (HorzAlign)v; }
-    GUIString ReadString(bool)
+    GUIString ReadString(bool word)
     {
-        std::string t = Take("ReadString");
+        std::string t;
+        if (word) { Skip(); t = Token(true); if (!t.empty() && t[0] == '!') { tr("ReadWord throws"); throw ConfigObjectException("bad ReadWord"); } }
+        else t = Take("ReadString");
         if (!t.empty() && t[0] == '@') t = "res:" + t.substr(1);
-        tr("ReadString \"" + t + "\""); return GUIString(t.c_str());
+        tr((word ? "ReadWord \"" : "ReadString \"") + t + "\""); return GUIString(t.c_str());
     }
     GUIString ReadFlag(bool* on)
     {
@@ -283,15 +294,21 @@ struct ComponentConfig {
 };
 #define V24 virtual bool Virtual24(const std::string&)
 #define BASE(n) virtual bool Virtual24(const std::string& key) { return Base(#n, key); }
-// ContainerConfig's instructions (R6 WON round 40); LAYOUT, its chain and repeat, NEWLAYOUTPOINT and NOOVERLAPLAYOUT
-// stay C++ on both sides (traced stand-ins)
+// ContainerConfig's instructions (R6 WON round 40; the LAYOUT family, NEWLAYOUTPOINT and NOOVERLAPLAYOUT round 41).
+// The layout state starts as the original's uninitialised members might (mLayoutRef is set by the constructor).
+struct ConfigMapSlot {
+    std::string n;
+    ConfigMapSlot& operator=(const SmartPtr<ComponentConfig>& c)
+    { tr("configmap[" + n + "]=config(" + PP(c->mComponent.get()) + "," + (c->mParent ? "parent" : "orphan") + ")"); return *this; }
+};
+struct ConfigMap { ConfigMapSlot operator[](const std::string& k) { ConfigMapSlot s; s.n = k; return s; } };
 struct ContainerConfig : ComponentConfig {
     V24; Component* mContainer = gComp; int mCurLayoutId = 0;
+    Component* mLayoutRef = NULL; int mLayoutInstruction = 0x5a5; int mLayoutParams[4] = {11, -22, 33, -44};
+    ConfigMap mConfigMap;
     bool HandleAdd(); bool HandleAddLayoutPoint(); bool HandleSameSizeLayout(bool, bool); bool HandleCenterLayout(bool, bool);
     bool HandleClearRightLayout(); bool HandleSpaceEvenlyLayout(bool); bool HandleSizeAtLeastLayout();
-    bool HandleLayout(bool chain = false, bool repeat = false) { tr("HandleLayout(" + P(chain) + "," + P(repeat) + ")"); return true; }
-    bool HandleNewLayoutPoint() { tr("HandleNewLayoutPoint"); return true; }
-    bool HandleNoOverlapLayout() { tr("HandleNoOverlapLayout"); return true; }
+    bool HandleLayout(bool chain = false, bool repeat = false); bool HandleNewLayoutPoint(); bool HandleNoOverlapLayout();
 };
 struct ImageConfig : ComponentConfig { V24; SmartPtr<Image> mImage = new Image(77); };
 struct ButtonConfig : ComponentConfig { V24; Component* mButton = gComp; void HandleButtonFlags(); void HandleFitText() { tr("HandleFitText"); } };
@@ -367,18 +384,24 @@ static ComponentConfig* MakeConfig(int i)
 #undef EE_CFGTAB_MK
     return NULL;
 }
-// One instruction on a new config of kind i: the trace, the result or exception, the layout config's arrays.
-static std::string RunOne(int i, const std::string& key, const std::string& value)
+// Instructions in turn on a new config of kind i: the trace, each result or exception, the layout config's arrays
+// and state.
+static std::string RunSeq(int i, const std::vector<std::pair<std::string, std::string>>& steps)
 {
-    sTrace.clear(); sComps.clear(); sNextComp = 1000; sNextLayout = 1;
+    sTrace.clear(); sComps.clear(); sNextComp = 1000; sNextLayout = 1; sNextPoint = 0;
     gComp = new Component(1); gComp->mEdit = new Component(2);
     ComponentConfig* c = MakeConfig(i);
-    c->mText = value;
-    try { tr(c->Virtual24(key) ? "=> 1" : "=> 0"); }
-    catch (const ConfigObjectException& e) { tr("throws " + e.mText); }
+    for (const auto& s : steps) {
+        c->mText = s.second; c->mPos = 0;
+        try { tr(c->Virtual24(s.first) ? "=> 1" : "=> 0"); }
+        catch (const ConfigObjectException& e) { tr("throws " + e.mText); }
+    }
     if (FontConfig* f = dynamic_cast<FontConfig*>(c)) tr("style " + P((long long)f->mDescriptor.mStyle));
     if (ImageConfig* m = dynamic_cast<ImageConfig*>(c)) tr("image " + P(m->mImage));
-    if (ContainerConfig* k = dynamic_cast<ContainerConfig*>(c)) tr("layout id " + P((long long)k->mCurLayoutId));
+    if (ContainerConfig* k = dynamic_cast<ContainerConfig*>(c))
+        tr("layout id " + P((long long)k->mCurLayoutId) + " ref " + PP(k->mLayoutRef) + " rule " + P((long long)k->mLayoutInstruction) + " "
+           + P((long long)k->mLayoutParams[0]) + " " + P((long long)k->mLayoutParams[1]) + " " + P((long long)k->mLayoutParams[2]) + " "
+           + P((long long)k->mLayoutParams[3]));
     if (PercentLayoutConfig* p = dynamic_cast<PercentLayoutConfig*>(c)) {
         std::string s = "refs";
         for (Component* r : p->refs) s += " " + P(r);
@@ -389,3 +412,4 @@ static std::string RunOne(int i, const std::string& key, const std::string& valu
     tr("pos " + P((long long)c->mPos) + " set " + P(c->mHasSetWidth) + P(c->mHasSetHeight));
     return sTrace;
 }
+static std::string RunOne(int i, const std::string& key, const std::string& value) { return RunSeq(i, {{key, value}}); }

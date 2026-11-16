@@ -1499,3 +1499,138 @@ bool ContainerConfig::HandleSizeAtLeastLayout()
 	this->mContainer->AddChildLayout(aLayout.get());
 	return true;
 }
+
+// ---- R6 WON round 41: ContainerConfig's LAYOUT family, NOOVERLAPLAYOUT and NEWLAYOUTPOINT (copied from
+// ContainerConfigInstructions.cpp and ContainerConfigPoints.cpp before the round)
+// Reads a layout rule (target, instruction names, reference, up to four offsets) and adds it to the container;
+// chain and repeat forms reuse the previous rule's instructions and reference
+bool ContainerConfig::HandleLayout(bool chain, bool repeat)
+{
+	Component *target = this->ReadComponent(); 
+	int instructions = 0;
+	Component *ref;
+
+	if(!chain && !repeat)
+	{
+		this->EnsureComma();
+		while(true)
+		{
+			GUIString aStr = this->ReadString(true);
+			if(aStr.length()==0)
+				break;
+
+			// the names in the original's order, each compared as the original compared it
+			const uint8_t* aName = NULL;
+			int aFlag = 0;
+			bool aFound = false;
+			for(int k = 0; !aFound && ee_won_gui_layout_keyword(k, &aName, &aFlag); k++)
+				if(aStr.CompareNoCase((const char*)aName)==0) { instructions |= aFlag; aFound = true; }
+			if(!aFound)
+				throw ConfigObjectException("Unknown layout instruction: " + (std::string)aStr);
+		}
+	}
+	else
+		instructions = this->mLayoutInstruction;
+
+	if(chain || (repeat && this->EndOfString()))
+	{
+		if(this->mLayoutRef==NULL)
+			throw ConfigObjectException("Invalid LayoutChain");
+
+		ref = this->mLayoutRef;
+	}
+	else
+	{
+		this->EnsureComma();
+		ref = this->ReadComponent();
+	}
+
+	if(!this->EndOfString())
+		this->EnsureComma();
+
+	int i;
+	for(i=0; i<4; i++)
+	{
+		if(this->EndOfString())
+			break;
+
+		this->mLayoutParams[i] = this->ReadInt();
+		if(!this->EndOfString())
+			this->EnsureComma();
+	}
+
+	if(ee_won_gui_layout_zero_rest(chain, repeat, i))
+	{
+		for(; i<4; i++)
+			this->mLayoutParams[i] = 0;
+	}
+
+	this->mContainer->Fn2F6140(target,instructions,ref,this->mLayoutParams[0],this->mLayoutParams[1],
+		this->mLayoutParams[2],this->mLayoutParams[3],this->mCurLayoutId);
+
+	if(repeat)
+		this->mLayoutRef = ref;
+	else
+		this->mLayoutRef = target;
+
+	this->mLayoutInstruction = instructions;
+
+	return true;
+}
+// Reads a no-overlap layout (target, sides, reference, paddings, more components); it is added
+// under the default layout id, not the current one
+bool ContainerConfig::HandleNoOverlapLayout()
+{
+	Component *target = this->ReadComponent();
+	this->EnsureComma();
+
+	int instructions = 0;
+	while(true)
+	{
+		GUIString aStr = this->ReadString(true);
+		if(aStr.length()==0)
+			break;
+
+		const int aNameIdx_aStr=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_CONTAINERCONFIG_HANDLENOOVERLAPLAYOUT_ASTR,aStr.mData->mText,aStr.mData->mLength,sizeof(wchar_t));
+		if(aNameIdx_aStr==0) instructions |= 0x100;
+		else if(aNameIdx_aStr==1) instructions |= 0x200;
+		else if(aNameIdx_aStr==2) instructions |= 0x400;
+		else if(aNameIdx_aStr==3) instructions |= 0x800;
+		else 
+			throw ConfigObjectException("Unknown no overlap instruction: " + (std::string)aStr);
+	}
+
+	this->EnsureComma();
+	Component *ref = this->ReadComponent(); this->EnsureComma();
+	int horzPad, vertPad;
+	horzPad = this->ReadInt(); this->EnsureComma();
+	vertPad = this->ReadInt(); 
+
+	SmartPtr<NoOverlapLayout> aLayout = new NoOverlapLayout(target,instructions,ref,horzPad,vertPad);
+	while(!this->EndOfString())
+	{
+		this->EnsureComma();
+		Component *aComponent = this->ReadComponent();
+		aLayout->Add(aComponent);
+	}
+
+	this->mContainer->AddChildLayout(aLayout.get());
+
+	return true;
+}
+// Creates a named layout point for each name in a comma-separated list, registers its config and adds it
+// to the container
+bool ContainerConfig::HandleNewLayoutPoint()
+{
+    while(true) {
+        SmartPtr<ComponentConfig> config=new ComponentConfig;
+        SmartPtr<LayoutPoint> point=new LayoutPoint;
+        config->SetComponent(point.get());
+        config->mParent=this;
+        this->mConfigMap[this->ReadString(false)]=config;
+        this->mContainer->AddLayoutPoint(point.get());
+        if(this->EndOfString()) break;
+        this->EnsureComma();
+    }
+    return true;
+}
