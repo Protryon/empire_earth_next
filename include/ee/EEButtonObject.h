@@ -12,16 +12,16 @@ class UIHotKey;
 
 class EEButtonObject {                      // RTTI, vtable 0x43e4f4 (two slots), sizeof 0x3c, ctor 0xd5498
 public:
-    EEButtonObject();                       // 0xd5498
+    EEButtonObject();
     virtual ~EEButtonObject();              // +0x00 (??_G 0xd54c3)
     virtual long LoadMedia();               // +0x04 0xd5cfe (a tail call of Acquire)
     virtual long UnloadMedia();             // +0x08 0xd5d03 (a tail call of Release)
     long Release();                         // 0xd5bdf (EEPlayer::SwapClassButtonMedia; provisional name): dereference (returns 0)
     long Acquire();                         // 0xd5690: reference, loading the texture on the first one
-    long LoadTexture();                     // 0xd572e (provisional names)
+    long LoadTexture();
     static long Load(FSFileSpec* inFile);   // 0xd5500 (db\dbButtons.dat)
-    static void Unload();                   // 0xd55f1
-    static void DumpAllLoadedMedia(FSFileSpec& inFile);   // 0xd5631
+    static void Unload();
+    static void DumpAllLoadedMedia(FSFileSpec& inFile);
     static long Reload();                   // 0xd5c31 (ReloadTexture of every referenced button)
     // 0xd584e (ret 0xc): sets inBitmap to this button's cell for inRectangle (EEUIBSavedGroup::SetUnit; provisional
     // name)

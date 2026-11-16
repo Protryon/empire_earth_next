@@ -58,7 +58,6 @@
 #include "ee/EEAction.h"
 #include "ee/EEABootClientFromCanceledGame.h"
 
-// FUNCTION: EXE 0x4016c0
 // Tells a client its game was cancelled: rejoins the WON room, leaves the form and shows the reason string
 void EEABootClientFromCanceledGame::Virtual4()
 {
@@ -75,8 +74,6 @@ void EEABootClientFromCanceledGame::Virtual4()
     }
 }
 
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEABootClientFromCanceledGame::Virtual8()
 {
 }

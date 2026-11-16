@@ -17,7 +17,6 @@
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 
-// FUNCTION: WON 0x0078b370
 // Returns the image's WIDTH or HEIGHT for a named-value lookup; false for any other name
 bool ImageConfig::GetNamedValue(const std::string& inName,int& outValue)
 {
@@ -29,7 +28,6 @@ bool ImageConfig::GetNamedValue(const std::string& inName,int& outValue)
 }
 
 
-// FUNCTION: WON 0x0078c340
 // Reads a filter spec (SCALEPERCENT, SCALEABS, TINT, CROP, PIXELTRANS) and returns the filtered copy of
 // the raw image; an empty pointer for an unknown filter name
 SmartPtr<RawImage> ImageFilterConfig::HandleFilter()
@@ -83,7 +81,6 @@ SmartPtr<RawImage> ImageFilterConfig::HandleFilter()
     return SmartPtr<RawImage>();
 }
 
-// FUNCTION: WON 0x0078c6e0
 // Sets the raw image (also as the current image) and marks the native image as not yet built
 void ImageFilterConfig::SetRawImage(RawImage* inImage)
 {
@@ -92,7 +89,6 @@ void ImageFilterConfig::SetRawImage(RawImage* inImage)
     this->mImageIsRawImage=true;
 }
 
-// FUNCTION: WON 0x0078c780
 // Handles the image filter keys SRC, FILTER, DUPLICATE, MULTIHORZCROP (splits the image into numbered
 // horizontal crops added to the parent) and EXPORT; passes other keys to the image configuration
 bool ImageFilterConfig::Virtual24(const std::string& inInstruction)
@@ -136,7 +132,6 @@ bool ImageFilterConfig::Virtual24(const std::string& inInstruction)
     return true;
 }
 
-// FUNCTION: WON 0x0078cc80
 // Returns the image, first converting a pending raw image to a native one on the default window
 Image* ImageFilterConfig::GetImage()
 {
@@ -152,7 +147,6 @@ Image* ImageFilterConfig::GetImage()
 
 
 namespace WONAPI {
-// FUNCTION: WON 0x0078adf0
 // Registers the Image, StretchImage, StretchCenterImage and ImageFilter configuration types
 void ImageConfig_Init(ResourceConfigTable* table)
 {
@@ -166,28 +160,24 @@ void ImageConfig_Init(ResourceConfigTable* table)
 // Factory callbacks used by the registration above
 namespace WONAPI {
 
-// FUNCTION: WON 0x0078b130
 // Creates a new image configuration
 ComponentConfig* ImageConfig::CfgFactory()
 {
     return new ImageConfig;
 }
 
-// FUNCTION: WON 0x0078b190
 // Creates a new stretch image configuration
 ComponentConfig* StretchImageConfig::CfgFactory()
 {
     return new StretchImageConfig;
 }
 
-// FUNCTION: WON 0x0078b1f0
 // Creates a new stretch-center image configuration
 ComponentConfig* StretchCenterImageConfig::CfgFactory()
 {
     return new StretchCenterImageConfig;
 }
 
-// FUNCTION: WON 0x0078b250
 // Creates a new image filter configuration
 ComponentConfig* ImageFilterConfig::CfgFactory()
 {

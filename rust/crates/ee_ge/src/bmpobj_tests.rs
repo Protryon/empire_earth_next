@@ -251,6 +251,7 @@ unsafe extern "C" fn host(_owner: *mut c_void, op: EeGeBmpOp, obj: *mut c_void, 
             EeGeBmpOp::TexWidth => texture(o).width as isize,
             EeGeBmpOp::TexHeight => texture(o).height as isize,
             EeGeBmpOp::TexDropLevels => texture(o).drop as isize,
+            EeGeBmpOp::VertexCopyFrom => unreachable!("a bitmap copies no vertex array"),
         }
     }
 }

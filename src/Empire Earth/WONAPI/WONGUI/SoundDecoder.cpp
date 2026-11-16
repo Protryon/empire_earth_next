@@ -10,7 +10,6 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/EELobbySound.h"
 namespace WONAPI {
-// FUNCTION: WON 0x0074a530
 // Creates a sound decoder (nothing beyond the reference-counted base)
 SoundDecoder::SoundDecoder()
 {
@@ -21,7 +20,6 @@ SoundDecoder::~SoundDecoder()
 {
 }
 
-// FUNCTION: WON 0x0074a540
 // Decodes the sound a descriptor names by calling the virtual Decode
 SoundPtr SoundDecoder::DecodeDescriptor(const SoundDescriptor& inDescriptor)
 {

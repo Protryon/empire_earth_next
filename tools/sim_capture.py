@@ -124,7 +124,8 @@ tile, arrival, animation, hit points, orientation, height). Its golden lines com
 the oracle, late, space and calamity profiles, before the models moved to Rust).
 SM** are the scenario manager's records (ee/EEScenarioCapture.h, R5b.5): SMCE every trigger condition's test, SMTE
 every trigger's evaluation, SMOB every scenario object's, SMCP the player choices and SMAR the area queries outside an
-object's evaluation, SMEX every effect run, SMUP each trigger round. No random map has a trigger, so --profile
+object's evaluation, SMEX every effect run, SMEW the world after it (the effect's objects' units, the players, the
+manager; R5b.5's eighth round), SMUP each trigger round. No random map has a trigger, so --profile
 scenario plays a retail campaign scenario per seed (SCENARIOS, extracted from the data tree's campaign archives into
 build/sim_capture/scenarios; EE-SIM --scenario); its golden file lists only the SM tags (recorded from the C++
 scenario manager before its logic moved); its USCK stops the game on a mismatch like every profile's (a scenario's
@@ -135,6 +136,12 @@ scale, immunity, the three modifiers of a probe value, the morale count, the Cov
 acting on it as owner and index, its hit points and cloaking, the active list and the running state's save bytes.
 Their golden lines come from the C++ of the eight area-effect classes before they became one (calamities lane, round
 3; seeds 2-3 of the oracle, late, space and calamity profiles).
+CV** are the civilization builder lane's records (ee/EECivCapture.h; every profile): CVMG once (the civilization
+manager's and powers' data and every query over it, the premade civilizations' files loaded and matched), CVAP every
+ApplyUpgrade (the player's fields and the category set's class upgrades before and after; a power level adds the tech
+tree's nodes, the media count and HasPower), CVLD every EELoadCivilization, CVAF every EEApplyCivilizationFile with
+the player's civilization after. Their golden lines come from the C++ manager, powers and files before they moved
+(civilization builder lane, round 2; seeds 2-3 of the oracle, late, space, calamity and scenario profiles).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """

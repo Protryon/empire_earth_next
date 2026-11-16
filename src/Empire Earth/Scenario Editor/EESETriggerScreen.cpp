@@ -4,86 +4,37 @@
 // button ??_G, EEScenarioManager::GetCondition, the events' ??_G, the hide-UI event's SetRectangles). After the "?" unit
 // 0x17acf6..0x17b0b7 (a globals chain), before EESETSArea.cpp (0x17ccf3). Unit flags: the exe module set.
 #include <windows.h>
-#include <mbstring.h>
-#include <algorithm>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
-#include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/SESample.h"
-#include "lle/SESMInstanceNode.h"
-#include "lle/SESoundManager.h"
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
 #include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
-#include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
-#include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
-#include "lle/GELine.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIEditBox.h"
 #include "lle/UIListBox.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
 #include "lle/UILBString.h"
-#include "lle/UIComboBox.h"
 #include "lle/UIFileComboBox.h"
-#include "lle/UIFormManager.h"
 #include "lle/UResourceFile.h"
-#include "lle/UISlider.h"
 #include "lle/UICheckBox.h"
 #include "lle/UIRadioButton.h"
-#include <vector>
-#include <deque>
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
-#include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
 #include "lle/USingleton.h"
-#include "ee/EECalamityClass.h"
-#include "ee/EECalamityManager.h"
-#include "ee/EEMedia.h"
-#include "ee/EEGraphicEffect.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EESETSEScenarioComboBox.h"
-#include "ee/EESETSUICBPlayer.h"
-#include "ee/EESETSEffectControls.h"
-#include "ee/EESMArea.h"
 #include "ee/EESETSConditionControls.h"
-#include "ee/EESMCondition.h"
-#include "ee/EESMTrigger.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEGraphics.h"
 #include "ee/EESETSCondition.h"
@@ -100,7 +51,6 @@ extern GEFont* gSeplScreenFont;   // the screen's font while the tab makes its c
 
 bool gB4C3220 = true;
 
-// FUNCTION: EXE 0x57b0b7
 // Builds the trigger tab (ee_screens editor_tscreen.rs: the entry list, the five sub-tab buttons, new/duplicate/
 // delete, the sort and priority buttons, the debug-id check box, the name and description boxes), then the five
 // sub-screens, then disables their groups
@@ -116,13 +66,6 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
     ee_screens_sets_call(this->mRust, EE_SCREENS_SETS_FINISH, 0, 0.0f, 0.0f, NULL);
 }
 
-// SYNTHETIC: EXE 0x57bf58
-// (EESETSShowIDsCheckBox's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57bf7b
-// (EESETriggerScreen's scalar deleting destructor)
-
-// FUNCTION: EXE 0x57bf97
 // Destroys the trigger tab's list, tab buttons, sub-screens, name and description controls and buttons (the
 // original's order: the sub-screens between the tabs and the name box)
 EESETriggerScreen::~EESETriggerScreen()
@@ -201,7 +144,6 @@ long EESETriggerScreen::GetCurrentScreen() const
     return (long)(intptr_t)ee_screens_sets_control(this->mRust, EE_SCREENS_SETS_CURRENT_SCREEN, 0);
 }
 
-// FUNCTION: EXE 0x57c1e5
 // Creates the trigger, condition, effect, object or area sub-screen for a sub-tab index
 EESETSBaseObject* EESETriggerScreen::CreateScreen(unsigned long inType, GEFont* inFont, UIForm* inForm,
                                                   unsigned long& ioIndex)
@@ -388,8 +330,8 @@ extern "C" int32_t ee_screenscpp_sets(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SETS_OP_DRAW: {
         GERectangle theClip;
         EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
-        if (!theEditor->mWasUIHidden && static_cast<const GERectangle*>(p[1])->And(theTab->mR18, theClip))
-            theEditor->UIForm::DrawBackground(theEditor->mPanelBackground, theClip,
+        if (!theEditor->GetWasUIHidden() && static_cast<const GERectangle*>(p[1])->And(theTab->mR18, theClip))
+            theEditor->UIForm::DrawBackground(theEditor->GetPanelBackground(), theClip,
                                               GERectangle(0.0f, 0.0f, 256.0f, 256.0f), theTab->mR18);
         return 0;
     }
@@ -418,15 +360,5 @@ extern "C" int32_t ee_screenscpp_sets(uint32_t inOp, void* const* p, int32_t* i,
     return 0;
 }
 
-// SYNTHETIC: EXE 0x57caa5
-// (UILBString's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57cac2
-// (UIRadioButton's scalar deleting destructor)
-
 // MISSING 0x57cadf: EEScenarioManager::GetCondition's COMDAT (inline, ee/EEScenarioManager.h); no user written in this
 // unit yet, so it is not emitted here
-
-// FUNCTION: EXE 0x57ccba
-// Sets the hide-UI panel event's full and reduced game view rectangles
-// (inline; ee_screens editor_events.rs: ee_screens_see_hide_ui_views)

@@ -8,68 +8,31 @@
 // unit keeps their two hosts, ee_screenscpp_seet and ee_screenscpp_sect, one template over the effect or condition
 // screen's controls by array and index.
 #include <windows.h>
-#include <mbstring.h>
-#include <algorithm>
 #include <string>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
-#include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/SESample.h"
-#include "lle/SESMInstanceNode.h"
-#include "lle/SESoundManager.h"
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
-#include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
-#include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
-#include "lle/GELine.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIEditBox.h"
 #include "lle/UIListBox.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
 #include "lle/UILBString.h"
-#include "lle/UIComboBox.h"
 #include "lle/UIFileComboBox.h"
-#include "lle/UIFormManager.h"
 #include "lle/UResourceFile.h"
-#include "lle/UISlider.h"
 #include "lle/UICheckBox.h"
 
 #include "lle/UIRadioButton.h"
-#include <vector>
-#include <deque>
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
@@ -101,7 +64,6 @@
 #include "ee/EEUnit.h"
 #include "lle/UIESliderChange.h"
 #include "ee/EEStringIDs.h"
-#include "ee/EEScenarioIDs.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
 // The screen is whole in Rust (ee_screens editor_subscreens.rs) with its seven effect types (editor_effects.rs): the
@@ -111,7 +73,6 @@
 
 extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
 
-// FUNCTION: EXE 0x582629
 // Creates the effect sub-screen: shared controls, title label, effect-type combo and the seven effect types,
 // starting on the object effect (editor_subscreens.rs)
 EESETSEffect::EESETSEffect(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
@@ -122,10 +83,6 @@ EESETSEffect::EESETSEffect(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
     ioIndex = theIndex;
 }
 
-// SYNTHETIC: EXE 0x582988
-// (EESETSEffect's scalar deleting destructor)
-
-// FUNCTION: EXE 0x5829a4
 // Destroys the effect sub-screen with its controls and the seven effect types (editor_subscreens.rs)
 EESETSEffect::~EESETSEffect()
 {
@@ -150,7 +107,6 @@ void EESETSEffect::Load() { this->Call(EE_SCREENS_SESC_LOAD); }
 void EESETSEffect::New() { this->Call(EE_SCREENS_SESC_NEW); }
 void EESETSEffect::RefreshControls() { this->Call(EE_SCREENS_SESC_REFRESH); }
 void EESETSEffect::Show() { this->Call(EE_SCREENS_SESC_SHOW); }
-// ICF-FOLDED: EXE 0x57c5d9
 // (folded with EESETriggerScreen::HideText in the original: the same two member offsets)
 void EESETSEffect::Hide() { this->Call(EE_SCREENS_SESC_HIDE); }
 void EESETSEffect::GetNames(std::vector<UWideString>& outNames) { ee_screens_sefx_names(this->mRust, &outNames); }
@@ -165,12 +121,6 @@ UIComboBox* EESETSEffect::GetTypeComboBox() const
     return static_cast<UIComboBox*>(static_cast<UIControl*>(ee_screens_sefx_handle(this->mRust, 1)));
 }
 
-// FUNCTION: EXE 0x582d82
-// Returns the scenario effect with the given index (EEScenarioManager::GetEffect)
-// (inline, ee/EEScenarioManager.h)
-
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EESETSEffect::Deactivate()
 {
 }
@@ -179,7 +129,6 @@ void EESETSEffect::Deactivate()
 
 void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESEEvents.cpp
 
-// FUNCTION: EXE 0x58b1b0
 // Switches a scenario combo to areas or objects: sets its label, fills it with the names and selects the first silently
 // (once EESETSETPlayer.cpp; the camera and flare types' loads and their radios' event)
 void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, bool inAreas)
@@ -210,7 +159,6 @@ void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inCom
     }
 }
 
-// FUNCTION: EXE 0x584a90
 // Sets the place label to 'Area' or 'Object' and fills the place combo with the scenario's area or object names
 // (once EESETSETGame.cpp; the place radios' event, ee_screens scenario_editor.rs, calls it through EESEEvents.cpp)
 void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox)
@@ -270,6 +218,14 @@ struct SeetTechNameLess {
     bool operator()(const long& inLeft, const long& inRight) const { return SeetTechName(inLeft) < SeetTechName(inRight); }
 };
 
+}   // namespace
+
+// TEST ONLY: the alignment each label was last given through the host (the editor gate's `align`; the toolkit's label
+// keeps it without a getter)
+std::map<const void*, unsigned long> gSeetAlignments;
+
+namespace {
+
 std::vector<UWideString> sSeetNames;   // EE_SCREENS_SEET_OP_NAMES' kept names
 std::vector<long> sSeetTechs;          // EE_SCREENS_SEET_OP_TECHS' kept technologies
 
@@ -292,39 +248,59 @@ UISlider* SeetSlider(EESETSConditionControls* c, int32_t) { return c->mSlider; }
 UILBString* SeetList(EESETSEffectControls* c, int32_t k) { return c->mListBoxes[k]; }
 UILBString* SeetList(EESETSConditionControls*, int32_t) { return NULL; }
 
-UIControl* SeetControl(EESETSEffectControls* c, int32_t a, int32_t k)
+// a control member read into or (inSet) written from *ioControl (EE_SCREENS_SEET_OP_SLOT; the tables of
+// editor_controls.rs make them)
+template <class T>
+void SeetSwap(T*& ioMember, UIControl** ioControl, bool inSet)
 {
-    switch (a) {
-    case EE_SCREENS_SEET_A_LABEL: return c->mLabels[k];
-    case EE_SCREENS_SEET_A_CHECK: return c->mCheckBoxes[k];
-    case EE_SCREENS_SEET_A_COMBO: return c->mComboBoxes[k];
-    case EE_SCREENS_SEET_A_ECOMBO: return c->mEffectComboBoxes[k];
-    case EE_SCREENS_SEET_A_SCEN: return c->mScenarioComboBoxes[k];
-    case EE_SCREENS_SEET_A_EDIT: return c->mEditBoxes[k];
-    case EE_SCREENS_SEET_A_EDIT2: return c->mEditBoxes2[k];
-    case EE_SCREENS_SEET_A_TEXT: return c->mTextEditBox;
-    case EE_SCREENS_SEET_A_RADIO: return c->mRadioButtons[k];
-    case EE_SCREENS_SEET_A_SLIDER: return c->mSliders[k];
-    case EE_SCREENS_SEET_A_PLAYER: return c->mPlayers[k];
-    case EE_SCREENS_SEET_A_LIST: return c->mListBoxes[k];
-    }
-    return NULL;
+    if (inSet)
+        ioMember = static_cast<T*>(*ioControl);
+    else
+        *ioControl = ioMember;
 }
 
-UIControl* SeetControl(EESETSConditionControls* c, int32_t a, int32_t k)
+void SeetSlot(EESETSEffectControls* c, int32_t a, int32_t k, UIControl** ioControl, bool inSet)
 {
     switch (a) {
-    case EE_SCREENS_SEET_A_LABEL: return c->mLabels[k];
-    case EE_SCREENS_SEET_A_CHECK: return c->mCheckBoxes[k];
-    case EE_SCREENS_SEET_A_COMBO: return c->mComboBoxes[k];
-    case EE_SCREENS_SEET_A_SCEN: return c->mScenarioComboBoxes[k];
-    case EE_SCREENS_SEET_A_EDIT: return c->mEditBoxes[k];
-    case EE_SCREENS_SEET_A_TEXT: return c->mTextEditBox;
-    case EE_SCREENS_SEET_A_RADIO: return c->mRadioButtons[k];
-    case EE_SCREENS_SEET_A_SLIDER: return c->mSlider;
-    case EE_SCREENS_SEET_A_PLAYER: return c->mPlayers[k];
+    case EE_SCREENS_SEET_A_LABEL: SeetSwap(c->mLabels[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_CHECK: SeetSwap(c->mCheckBoxes[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_COMBO: SeetSwap(c->mComboBoxes[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_ECOMBO: SeetSwap(c->mEffectComboBoxes[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_SCEN: SeetSwap(c->mScenarioComboBoxes[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_EDIT: SeetSwap(c->mEditBoxes[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_EDIT2: SeetSwap(c->mEditBoxes2[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_TEXT: SeetSwap(c->mTextEditBox, ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_EDIT48: SeetSwap(c->mEditBox48, ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_RADIO: SeetSwap(c->mRadioButtons[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_SLIDER: SeetSwap(c->mSliders[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_PLAYER: SeetSwap(c->mPlayers[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_LIST: SeetSwap(c->mListBoxes[k], ioControl, inSet); break;
+    default: *ioControl = NULL; break;
     }
-    return NULL;
+}
+
+void SeetSlot(EESETSConditionControls* c, int32_t a, int32_t k, UIControl** ioControl, bool inSet)
+{
+    switch (a) {
+    case EE_SCREENS_SEET_A_LABEL: SeetSwap(c->mLabels[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_CHECK: SeetSwap(c->mCheckBoxes[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_COMBO: SeetSwap(c->mComboBoxes[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_SCEN: SeetSwap(c->mScenarioComboBoxes[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_EDIT: SeetSwap(c->mEditBoxes[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_TEXT: SeetSwap(c->mTextEditBox, ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_RADIO: SeetSwap(c->mRadioButtons[k], ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_SLIDER: SeetSwap(c->mSlider, ioControl, inSet); break;
+    case EE_SCREENS_SEET_A_PLAYER: SeetSwap(c->mPlayers[k], ioControl, inSet); break;
+    default: *ioControl = NULL; break;
+    }
+}
+
+template <class C>
+UIControl* SeetControl(C* c, int32_t a, int32_t k)
+{
+    UIControl* theControl = NULL;
+    SeetSlot(c, a, k, &theControl, false);
+    return theControl;
 }
 
 UIComboBox* SeetCombo(EESETSEffectControls* c, int32_t a, int32_t k)
@@ -389,6 +365,13 @@ int32_t SeetOp(uint32_t inOp, C* c, void* const* p, int32_t* i, float* f, bool& 
     UWideString theText;
     outHandled = true;
     switch (inOp) {
+    case EE_SCREENS_SEET_OP_SLOT:
+        if (i[2] != 0) {
+            UIControl* theControl = static_cast<UIControl*>(p[2]);
+            SeetSlot(c, a, k, &theControl, true);
+        } else
+            SeetSlot(c, a, k, static_cast<UIControl**>(p[2]), false);
+        return 0;
     case EE_SCREENS_SEET_OP_DISPLAY: SeetControl(c, a, k)->SetDisplayMode((unsigned long)i[2]); return 0;
     case EE_SCREENS_SEET_OP_RECT: {
         const GERectangle& r = SeetControl(c, a, k)->GetRectangle();
@@ -399,7 +382,10 @@ int32_t SeetOp(uint32_t inOp, C* c, void* const* p, int32_t* i, float* f, bool& 
         SeetControl(c, a, k)->SetRectangle(GERectangle(GE2DPoint(f[0], f[1]), GE2DPoint(f[2], f[3])));
         return 0;
     case EE_SCREENS_SEET_OP_LOCATION: SeetControl(c, a, k)->SetLocation(GE2DPoint(f[0], f[1])); return 0;
-    case EE_SCREENS_SEET_OP_ALIGN: c->mLabels[k]->SetAlignment((unsigned long)i[2]); return 0;
+    case EE_SCREENS_SEET_OP_ALIGN:
+        c->mLabels[k]->SetAlignment((unsigned long)i[2]);
+        gSeetAlignments[c->mLabels[k]] = (unsigned long)i[2];
+        return 0;
     case EE_SCREENS_SEET_OP_TEXT_STRING:
     case EE_SCREENS_SEET_OP_TEXT:
         if (inOp == EE_SCREENS_SEET_OP_TEXT_STRING)
@@ -727,12 +713,9 @@ extern "C" int32_t ee_screenscpp_seet(uint32_t inOp, void* const* p, int32_t* i,
     EESETSEffectControls* c = static_cast<EESETSEffectControls*>(p[0]);
     EESMEffect* theEffect = static_cast<EESMEffect*>(p[1]);
     switch (inOp) {
-    case EE_SCREENS_SEET_OP_CONTROLS_NEW: {
-        unsigned long theIndex = (unsigned long)(uint32_t)i[2];
-        *static_cast<void**>(p[2]) = new EESETSEffectControls(gSeplScreenFont, static_cast<UIForm*>(p[1]), theIndex);
-        i[2] = (int32_t)theIndex;
+    case EE_SCREENS_SEET_OP_CONTROLS_NEW:   // empty: editor_controls.rs makes the members (the index unchanged)
+        *static_cast<void**>(p[2]) = new EESETSEffectControls();
         return 0;
-    }
     case EE_SCREENS_SEET_OP_CONTROLS_FREE: delete c; return 0;
     case EE_SCREENS_SEET_OP_ENTRY: {
         EESMEffect* theEntry = gWorld.mScenarioManager->GetEffect((unsigned long)(uint32_t)i[2]);
@@ -776,12 +759,9 @@ extern "C" int32_t ee_screenscpp_sect(uint32_t inOp, void* const* p, int32_t* i,
     EESETSConditionControls* c = static_cast<EESETSConditionControls*>(p[0]);
     EESMCondition* theCondition = static_cast<EESMCondition*>(p[1]);
     switch (inOp) {
-    case EE_SCREENS_SEET_OP_CONTROLS_NEW: {
-        unsigned long theIndex = (unsigned long)(uint32_t)i[2];
-        *static_cast<void**>(p[2]) = new EESETSConditionControls(gSeplScreenFont, static_cast<UIForm*>(p[1]), theIndex);
-        i[2] = (int32_t)theIndex;
+    case EE_SCREENS_SEET_OP_CONTROLS_NEW:   // empty: editor_controls.rs makes the members (the index unchanged)
+        *static_cast<void**>(p[2]) = new EESETSConditionControls();
         return 0;
-    }
     case EE_SCREENS_SEET_OP_CONTROLS_FREE: delete c; return 0;
     case EE_SCREENS_SEET_OP_ENTRY: {
         EESMCondition* theEntry = gWorld.mScenarioManager->GetCondition((unsigned long)(uint32_t)i[2]);

@@ -110,6 +110,9 @@ pub struct EeScreensSeplCtl {
     pub bg2: f32,
     pub groups: u32,
     pub extra: [i32; 4],
+    /// a combo box's list's height and its text's characters (400 and 0 unless set)
+    pub list_height: i32,
+    pub max_chars: i32,
 }
 
 impl EeScreensSeplCtl {
@@ -132,7 +135,15 @@ impl EeScreensSeplCtl {
             bg2: -1.0,
             groups: 0,
             extra: [0; 4],
+            list_height: 400,
+            max_chars: 0,
         }
+    }
+    /// A combo box's list `height` high, its text up to `chars` characters.
+    pub(crate) fn list(mut self, height: i32, chars: i32) -> Self {
+        self.list_height = height;
+        self.max_chars = chars;
+        self
     }
     pub(crate) fn font(mut self, f: u32) -> Self {
         self.font = f;

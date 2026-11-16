@@ -12,23 +12,17 @@
 #include "ee/EEAIAStarFastStorage.h"
 #include "ee/EEAIAStarBoundedStorage.h"
 
-// FUNCTION: EXE 0x410bc7
 // Creates an empty node storage for the bounded path search
 EEAIAStarBoundedStorage::EEAIAStarBoundedStorage()
     : EEAIAStarFastStorage(EeAStarStorageKind::Bounded)
 {
 }
 
-// SYNTHETIC: EXE 0x410be7
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x410c03
 // Destroys the storage (base members only)
 EEAIAStarBoundedStorage::~EEAIAStarBoundedStorage()
 {
 }
 
-// FUNCTION: EXE 0x410c0e
 // Sizes the node and tile-flag grids and clears them, only the span covering the last search bounds plus 2 when they
 // were set; then forgets the bounds
 void EEAIAStarBoundedStorage::PrepareGrid(long inWidth, long inHeight)

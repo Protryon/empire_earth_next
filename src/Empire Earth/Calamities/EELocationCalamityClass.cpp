@@ -23,7 +23,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 
-// FUNCTION: EXE 0x4b6f21
 // Creates a calamity of the class at the location for the caster and resets it for its start
 EECalamity* EELocationCalamityClass::CreateCalamity(GE3DPoint& inLocation, EEUnit* inCasterUnit)
 {
@@ -33,14 +32,12 @@ EECalamity* EELocationCalamityClass::CreateCalamity(GE3DPoint& inLocation, EEUni
     return theCalamity;
 }
 
-// FUNCTION: EXE 0x4b6f6a
 // Returns 2: cast at a location
 long EELocationCalamityClass::GetTargetKind()
 {
     return 2;
 }
 
-// FUNCTION: EXE 0x4b6f6e
 // Checks the base cast rules, then refuses (1) a tile that is not a valid location for the calamity
 long EELocationCalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
                                         bool inCheck, EEUnit* inTargetUnit)
@@ -51,7 +48,6 @@ long EELocationCalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLoca
                              EECalamityCanCastAt(this, EeCalamityCastMode::Location, inUnit, inX, inY, inCheck, inTargetUnit));
 }
 
-// FUNCTION: EXE 0x4b4e74 (EECCVolcano::GetRandomLocation)
 // Picks a random point on the map between the minimum and maximum radius around the centre, at the tile's height
 void EELocationCalamityClass::GetRandomLocation(const GE3DPoint& inCenter, GE3DPoint& outLocation)
 {

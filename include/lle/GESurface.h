@@ -30,7 +30,7 @@ struct GESurfaceDescription {
 
 class LLE_API GESurface : public UReferenceCounter {   // sizeof 8 (vector deleting dtor 0xdf58)
 protected:
-    GESurface() {}                          // 0xdf33
+    GESurface() {}
     virtual ~GESurface() {}                 // slot 0 (exported protected: ??1GESurface@@MAE@XZ)
 public:
     virtual long AttachSurface(GESurface* inSurface) = 0;
@@ -68,7 +68,7 @@ public:
     // renderer draws the game's logical pixels into a larger texture); 1 for every other surface
     virtual float GetRenderScale() const { return 1.0f; }
 
-    // Image files (GESurface.cpp); inType: GEImageFileType (the switches in Load/Save)
+    // Image files (inType: GEImageFileType): Rust (ee_openformats surface_file.rs), GETexture.cpp forwards
     long Load(FSFileSpec& inFile, unsigned char inType);
     long Save(FSFileSpec& inFile, unsigned char inType);
     static long GetImageFileAttributes(FSFileSpec& inFile, unsigned char inType, unsigned long& outWidth,
@@ -90,23 +90,7 @@ public:
     unsigned long GetPixelWidth() const { return this->GetSurfaceDescription().mWidth; }
     unsigned long GetPixelHeight() const { return this->GetSurfaceDescription().mHeight; }
 
-protected:  // the per-format members are exported protected (?LoadBMP@GESurface@@IAE.., ..@@KAJ..)
-    long LoadBMP(FSFileSpec& inFile);
-    long LoadJPG(FSFileSpec& inFile);
-    long LoadJPG2(FSFileSpec& inFile);
-    long LoadPNG(FSFileSpec& inFile);       // port: the pictures read outside the texture manager
-    long SaveAsBMP(FSFileSpec& inFile);
-    long SaveAsJPG(FSFileSpec& inFile);
-    long SaveAsJPG2(FSFileSpec& inFile);
-    static long GetBMPFileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
-                                     unsigned long& outDepth);
-    static long GetJPGFileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
-                                     unsigned long& outDepth);
-    static long GetJPG2FileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
-                                      unsigned long& outDepth);
-    static long GetPNGFileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
-                                     unsigned long& outDepth);   // port (GetTGAFileAttributes: removed)
-
+protected:
     unsigned long mLogicalShift = 0;        // port: see GetLogicalShift
     unsigned long mLogicalWidth = 0;        // port: see SetLogicalSize (0: none)
     unsigned long mLogicalHeight = 0;
@@ -115,10 +99,10 @@ protected:  // the per-format members are exported protected (?LoadBMP@GESurface
 // GESurface::Load/Save/GetImageFileAttributes inType: the per-format exported member each case calls
 enum GEImageFileType {
     kImageFileTGA = 0,  // the original's Targa: no longer read or written (RUST_PLAN D9)
-    kImageFileBMP = 1,  // GESurface switch case -> exported LoadBMP/SaveAsBMP/GetBMPFileAttributes
-    kImageFileJPG = 2,  // GESurface switch case -> exported LoadJPG/SaveAsJPG/GetJPGFileAttributes
-    kImageFileJPG2 = 3,  // GESurface switch case -> exported LoadJPG2/SaveAsJPG2/GetJPG2FileAttributes
-    kImageFilePNG = 4,  // port: LoadPNG/GetPNGFileAttributes (no saver)
+    kImageFileBMP = 1,  // saved (24-bit, bottom up); never loaded
+    kImageFileJPG = 2,  // libjpeg, quality 80
+    kImageFileJPG2 = 3,  // two JPEGs (colour, alpha) behind a two-word offset header
+    kImageFilePNG = 4,  // port: loaded only
 };
 
 #endif

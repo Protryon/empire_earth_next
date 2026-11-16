@@ -68,7 +68,6 @@ void WONSimpleButtonConfig::SetComponent(Component* component) { this->mButton=s
 void WONButtonConfig::SetComponent(Component* component) { this->mButton=static_cast<WONButton*>(component); ButtonConfig::SetComponent(component); }
 // Out-of-line copy constructor (not identified separately in the original exe)
 WONFrame::WONFrame(const WONFrame& from) { this->Copy(from); }
-// FUNCTION: WON 0x00781d00
 // Grows the button to fit the largest of a comma-separated list of texts, keeping its current text
 void ButtonConfig::HandleFitText()
 {
@@ -89,7 +88,6 @@ void ButtonConfig::HandleFitText()
     this->mButton->SetText(oldText,true);
     this->mButton->SetSize(width,height);
 }
-// FUNCTION: WON 0x00782070
 // The predefined LISTAREA and INPUTBOX children; other names go to the container configuration
 bool ComboBoxConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
 {
@@ -99,7 +97,6 @@ bool ComboBoxConfig::GetPredefinedComponent(const std::string& name,ComponentCon
     else return ContainerConfig::GetPredefinedComponent(name,config,component);
     return true;
 }
-// FUNCTION: WON 0x007949c0
 // The scrollbar's THUMB, UPARROW, DOWNARROW or SCROLLRECT with a new config for it; else the container's
 bool ScrollbarConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
 {
@@ -111,7 +108,6 @@ bool ScrollbarConfig::GetPredefinedComponent(const std::string& name,ComponentCo
     else return ContainerConfig::GetPredefinedComponent(name,config,component);
     return true;
 }
-// FUNCTION: WON 0x007958e0
 // A plain configuration and the tab control's page layout point for CONTAINERLAYOUT; else the container's
 bool TabCtrlConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
 {
@@ -120,7 +116,6 @@ bool TabCtrlConfig::GetPredefinedComponent(const std::string& name,ComponentConf
     else return ContainerConfig::GetPredefinedComponent(name,config,component);
     return true;
 }
-// FUNCTION: WON 0x00798590
 // The frame paddings LEFTPAD, RIGHTPAD, TOPPAD, BOTTOMPAD, HORZPAD and VERTPAD; else the base config's
 bool WONFrameComponentConfig::GetNamedValue(const std::string& key,int& value)
 {

@@ -63,7 +63,6 @@ public:
     unsigned long mValues[6]; // 0x34..0x48: sort keys; only the WON id (1), expiry (2) and moderator id (4) are set
     bool mIsSimple; // 0x4c (padded to 0x50)
 };
-// FUNCTION: WON 0x7f5290
 // Creates a row from a bad user entry, writing the expiry as days, hours, minutes, seconds or infinite
 BadUserItem::BadUserItem(const RoutingBadUser& inUser, bool inSimple)
 {
@@ -101,14 +100,12 @@ BadUserItem::BadUserItem(const RoutingBadUser& inUser, bool inSimple)
     this->mStrings[5] = GUIString(inUser.mModeratorComment);
 }
 
-// FUNCTION: WON 0x7f5790
 // Takes the list's font and makes the row one text line high
 void BadUserItem::CalcDimensions(ListArea* inList)
 {
     this->mFont=inList->mFont;
     this->mHeight=this->mFont->GetHeight();
 }
-// FUNCTION: WON 0x7f5800
 // Draws the selection background and the text of the column being painted (the name in the simple list)
 void BadUserItem::Paint(Graphics& inGraphics,ListArea* inList)
 {
@@ -131,7 +128,6 @@ void BadUserItem::Paint(Graphics& inGraphics,ListArea* inList)
     inGraphics.SetFont(this->mFont.get());
     inGraphics.DrawString(this->mStrings[aColumn],0,0);
 }
-// FUNCTION: WON 0x7f58c0
 // Orders two rows by the sort column: numerically for the ids and expiry, else by text
 int BadUserItem::Compare(const ListItem* inOther,ListArea* inList) const
 {
@@ -155,7 +151,6 @@ public:
     virtual int Compare(const ListItem* inOther,ListArea* inList) const;
     long mHost; // 0x28; 0x2c bytes in all (the inherited column vector is at 0x18)
 };
-// FUNCTION: WON 0x7f9c00
 // Sorts the default adapter row (host 0) first, the others by their column text
 int NetworkAdapterListItem::Compare(const ListItem* inOther,ListArea* inList) const
 {
@@ -506,7 +501,7 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
 static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a, intptr_t b, intptr_t c);
 
 LobbyRustPopup::LobbyRustPopup(EeWonLobbyPopupKind inKind)
-    : mLobbyPopup(ee_won_lobbypopup_new(this, inKind, LobbyPopupHost))
+    : mLobbyPopup(ee_won_lobbypopup_new_model(this, inKind, LobbyPopupHost))
 {
     this->PCall(EeWonLobbyPopupCall::Construct);
 }
@@ -595,21 +590,6 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
     case Op::Width: return reinterpret_cast<Component*>(a)->Width();
     case Op::Height: return reinterpret_cast<Component*>(a)->Height();
     case Op::SetSize: aPopup->SetSize((int)a, (int)b); return 0;
-    case Op::ClientIsModerator: return aClient->IsModerator() ? 1 : 0;
-    case Op::ClientIsCaptain: return aClient->IsCaptain(b != 0) ? 1 : 0;
-    case Op::ClientId: return (intptr_t)aClient->GetClientId();
-    case Op::ClientWonUserId: return (intptr_t)aClient->GetWONUserId();
-    case Op::ClientGameGroupId: return (intptr_t)aClient->GetGameGroupId();
-    case Op::ClientIsInvited: return aClient->IsInvited() ? 1 : 0;
-    case Op::ClientIsFriend: return aClient->IsFriend() ? 1 : 0;
-    case Op::ClientIsAway: return aClient->IsAway() ? 1 : 0;
-    case Op::ClientIsIgnored: return aClient->IsIgnored() ? 1 : 0;
-    case Op::ClientIsBlocked: return aClient->IsBlocked() ? 1 : 0;
-    case Op::ClientIsMuted: return aClient->IsMuted(b != 0) ? 1 : 0;
-    case Op::GameCanJoin: return aGame->CanJoin() ? 1 : 0;
-    case Op::GameInProgress: return aGame->IsInProgress() ? 1 : 0;
-    case Op::GameType: return (intptr_t)aGame->GetGameType();
-    case Op::GameShowDetails: return aGame->GetShowDetails() ? 1 : 0;
     case Op::Config: return (intptr_t)GetLobbyConfig();
     case Op::ConfigNoPingInProgress: return reinterpret_cast<LobbyConfig*>(a)->GetNoPingInProgress() ? 1 : 0;
     case Op::BaseEvent: aPopup->Container::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(a)); return 0;

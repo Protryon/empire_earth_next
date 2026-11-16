@@ -142,7 +142,6 @@ extern "C" long ee_uicpp_graph_border(void* inGraph, const EeUiRect* inRectangle
 }
 extern "C" long ee_uicpp_graph_draw_text(void* inGraph, int inWhich) { return UIGraphRust::DrawText(UIGraphRust::Graph(inGraph), inWhich); }
 
-// FUNCTION: LLE 0x10075c9c
 // Creates a graph control with a 15 x 10 grid, every label on, zoom 1 and no fonts yet
 UIGraph::UIGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
                  unsigned long inBorderThickness)
@@ -180,7 +179,6 @@ UIGraph::UIGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inF
     this->mCopiedLabelGraph = true;
 }
 
-// FUNCTION: LLE 0x10075eb8
 // Destroys the graph's title, axis and grid texts
 UIGraph::~UIGraph()
 {
@@ -200,7 +198,6 @@ UIGraph::~UIGraph()
         delete this->mGridText;
 }
 
-// FUNCTION: LLE 0x10075f8a
 // Lays out the title, axis labels and grid-value margins around the plot area and copies the graph state for
 // drawing; needs SetFont first (dereferences the texts unchecked)
 long UIGraph::CopyData()
@@ -233,7 +230,6 @@ long UIGraph::CopyData()
     return UIControl::CopyData();
 }
 
-// FUNCTION: LLE 0x10076430
 // Draws the x-axis label
 long UIGraph::DrawXAxisText()
 {
@@ -241,7 +237,6 @@ long UIGraph::DrawXAxisText()
     return this->GetForm()->DrawClippedText(this->mXAxisRectangle, this->mCopiedXAxisText, this);
 }
 
-// FUNCTION: LLE 0x10076472
 // Draws the y-axis label
 long UIGraph::DrawYAxisText()
 {
@@ -249,7 +244,6 @@ long UIGraph::DrawYAxisText()
     return this->GetForm()->DrawClippedText(this->mYAxisRectangle, this->mCopiedYAxisText, this);
 }
 
-// FUNCTION: LLE 0x100764b4
 // Draws the grid values below each column line and left of each row line (the bottom row stays unlabelled)
 long UIGraph::DrawGridText()
 {
@@ -257,7 +251,6 @@ long UIGraph::DrawGridText()
                                       this->mNumberOfGridDivisionsY, this->mCopiedZoomScale, UIGraphRust::Displayed(this));
 }
 
-// FUNCTION: LLE 0x10076822
 // Draws the graph title
 long UIGraph::DrawTitleText()
 {
@@ -265,7 +258,6 @@ long UIGraph::DrawTitleText()
     return this->GetForm()->DrawClippedText(this->mTitleRectangle, this->mCopiedTitleText, this);
 }
 
-// FUNCTION: LLE 0x10076864
 // Draws the control, an inner border around the plot area and the grid lines
 long UIGraph::DrawPolygons()
 {
@@ -279,7 +271,6 @@ long UIGraph::DrawPolygons()
                                  this->mCopiedZoomScale);
 }
 
-// FUNCTION: LLE 0x10076acc
 // Draws the title, axis labels and grid values that are switched on
 long UIGraph::DrawTextA()
 {
@@ -288,7 +279,6 @@ long UIGraph::DrawTextA()
                                   this->mCopiedLabelGrid);
 }
 
-// FUNCTION: LLE 0x10076b22
 // Sets the font of every graph text, creating the texts on first use, and marks the graph dirty
 void UIGraph::SetFont(GEFont* inFont)
 {
@@ -320,7 +310,6 @@ void UIGraph::SetFont(GEFont* inFont)
     this->SetDirty(true);
 }
 
-// FUNCTION: LLE 0x10076c78
 // Sets the colour of every graph text (transparent background)
 void UIGraph::SetFontColor(const GEColor& inColor)
 {
@@ -334,14 +323,12 @@ void UIGraph::SetFontColor(const GEColor& inColor)
     this->mGridText->SetFgColor(inColor);
 }
 
-// FUNCTION: LLE 0x10076d1c
 // Marks the graph dirty
 void UIGraph::TabbedTo()
 {
     this->SetDirty(true);
 }
 
-// FUNCTION: LLE 0x10076d24
 // Releases the mouse and keyboard and marks the graph dirty
 void UIGraph::TabbedFrom()
 {
@@ -350,7 +337,6 @@ void UIGraph::TabbedFrom()
     this->SetDirty(true);
 }
 
-// FUNCTION: LLE 0x10076d3e
 // Ignores the mouse (MouseMove is the same code)
 long UIGraph::UpdateMouse(const GE2DPoint& inLocation)
 {
@@ -363,7 +349,6 @@ long UIGraph::MouseMove(const GE2DPoint& inLocation)
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10076d43
 // Zooms in one step (at most 4x) and shrinks the visible value range; the zoom location is stored but unused
 void UIGraph::ZoomIn(const GE2DPoint& inLocation)
 {
@@ -371,35 +356,8 @@ void UIGraph::ZoomIn(const GE2DPoint& inLocation)
     UIGraphRust::Zoom(this, true);
 }
 
-// FUNCTION: LLE 0x10076e44
 // Zooms out one step (at least 1x) and widens the visible value range
 void UIGraph::ZoomOut()
 {
     UIGraphRust::Zoom(this, false);
 }
-
-// Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x10075b7c
-// SYNTHETIC: LLE 0x10075b86
-// SYNTHETIC: LLE 0x10075b96
-// SYNTHETIC: LLE 0x10075ba2
-// SYNTHETIC: LLE 0x10075bac
-// SYNTHETIC: LLE 0x10075bb6
-// SYNTHETIC: LLE 0x10075bc6
-// SYNTHETIC: LLE 0x10075bd2
-// SYNTHETIC: LLE 0x10075bdc
-// SYNTHETIC: LLE 0x10075be6
-// SYNTHETIC: LLE 0x10075bf6
-// SYNTHETIC: LLE 0x10075c02
-// SYNTHETIC: LLE 0x10075c0c
-// SYNTHETIC: LLE 0x10075c16
-// SYNTHETIC: LLE 0x10075c26
-// SYNTHETIC: LLE 0x10075c32
-// SYNTHETIC: LLE 0x10075c3c
-// SYNTHETIC: LLE 0x10075c46
-// SYNTHETIC: LLE 0x10075c56
-// SYNTHETIC: LLE 0x10075c62
-// SYNTHETIC: LLE 0x10075c6c
-// SYNTHETIC: LLE 0x10075c76
-// SYNTHETIC: LLE 0x10075c86
-// SYNTHETIC: LLE 0x10075c92

@@ -1,25 +1,25 @@
 //! `extern "C"` for the mini map control (`mini_map.rs`). The host of the left release and drag is
-//! `ee_screenscpp_mini_map` (`User Interface Thread/EEUIMiniMap.cpp`) on the control.
+//! `EEUIRustControl`'s (`ee_screenscpp_hud_ctl`, the mini map's own ops through its `RustOp`) on the control.
 
 use core::ffi::c_void;
 
 use crate::mini_map::{self, EeScreensMiniMapCopy, EeScreensMiniMapDraw, EeScreensMiniMapUpdate};
 use crate::ui_thread::UiHost;
 
-/// cbindgen:ignore
-mod sys {
-    use core::ffi::c_void;
-
-    extern "C" {
-        pub fn ee_screenscpp_mini_map(map: *mut c_void, op: u32, a: i64, b: i64, c: i64) -> i64;
-    }
-}
-
 struct MapHost(*mut c_void);
 
 impl UiHost for MapHost {
     fn op(&mut self, op: u32, a: i64, b: i64, c: i64) -> i64 {
-        unsafe { sys::ee_screenscpp_mini_map(self.0, op, a, b, c) }
+        let (op, a) = mini_map::hud_op(op, a);
+        let mut none = [0.0f32; 0];
+        // the mouse's read hands its record (c) as the op's floats
+        let f: &mut [f32] = if op == crate::hud_ctl::EE_SCREENS_HC_CLASS + mini_map::EE_SCREENS_MM_OP_READ_MOUSE {
+            // SAFETY: c is the caller's live EeScreensMiniMapMouse, twelve f32s
+            unsafe { core::slice::from_raw_parts_mut(c as *mut f32, 12) }
+        } else {
+            &mut none
+        };
+        crate::hud_ctl::HudHost::op(&mut crate::hud_ctl::Cpp(self.0), op, a, b, f)
     }
 }
 

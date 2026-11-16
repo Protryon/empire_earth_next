@@ -26,7 +26,6 @@
 
 typedef EeUiButtonCall C;
 
-// FUNCTION: LLE 0x1007d013
 // Creates a 20x20 scroll arrow button that steps a slider down or up, with a 500 ms delay and 100 ms repeat
 UIScrollButton::UIScrollButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inPressedBitmap,
                                const GE2DPoint& inLocation, UIForm* inForm, UISlider* inSlider,
@@ -39,7 +38,6 @@ UIScrollButton::UIScrollButton(unsigned long inId, GEBitmap* inNormalBitmap, GEB
     UIButtonRust::Call(this, C::ScrollInit, (intptr_t)inSlider, (intptr_t)inDecrement);
 }
 
-// FUNCTION: LLE 0x1007d0c3
 // Steps the slider while held: once on press, again after the 500 ms delay, then every 100 ms
 void UIScrollButton::ButtonDown() { UIButtonRust::Call(this, C::ScrollButtonDown); }
 // Stops the delay and the repeat, then releases the button

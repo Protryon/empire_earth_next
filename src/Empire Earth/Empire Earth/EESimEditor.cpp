@@ -67,6 +67,11 @@
 //   object                                the trigger tab's open scenario object (ObjectDigest)
 //   triggerstate                          the trigger tab's open trigger (TriggerDigest)
 //   fire ID                               a control's button-up event processed
+//   areaset AREA L T R B | areapoint AREA X Y   a scenario area's rectangle or anchor set (as the area screen's Store)
+//   areastate                             the area screen's state and centre, the paint area, the scenario's areas
+//   align c|e                             the condition's or effect's labels' alignments (- never set)
+//   seed                                  the user interface's random seed (the map tab's CreateMap)
+//   media                                 the scenario's media texts (their lengths, first 60 bytes), the export file
 // Out of the script's reach (a person's): the mouse's picking (EEPreviewPlacement's screen point, the lasso's and
 // the click's picking), the save and test screens (EESEASaveScenario, EESEATestScenario, EESEAExitScenario), the tech
 // lists (EESEATechTree), the load thread's texts (EESEAChangeLoadText).
@@ -201,6 +206,7 @@
 #include <mutex>
 #include <string>
 #include "ee/EEUIFSEBrushGroup.h"
+#include "ee/EEAScroll.h"
 #include "ee/EEUIFSEMainButton.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPSaveGameHeader.h"
@@ -216,6 +222,11 @@
 #include "ee/EESETSAMouseClick.h"
 #include "ee/EESETSCondition.h"
 #include "ee/EESETSConditionControls.h"
+#include "ee/EESETSArea.h"
+#include <map>
+// the alignments the condition and effect types gave their labels (EESETSEffect.cpp, the types' host)
+extern std::map<const void*, unsigned long> gSeetAlignments;
+long EESETestSaveTriggersOnly(UIForm* inForm);   // EEUIFScenarioEditor.cpp (TEST ONLY)
 #include "ee/EESETSEffect.h"
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESETSEScenarioComboBox.h"
@@ -233,6 +244,9 @@
 #include "ee/EESELoadThread.h"
 #include "ee/EEScenarioEditorIDs.h"
 #include "rust/ee_time.h"
+#include <vector>
+// the civilization builder's steps (TEST ONLY; EESimCivBuilder.cpp): false for an unknown one
+bool EESimCivBuilderStep(const std::vector<std::string>& w, std::vector<std::string>& outLines);
 
 // TEST ONLY: ee_time_pin sets the time TMGetTime answers on this thread (-1: the clock; rust/crates/ee_time)
 
@@ -493,7 +507,7 @@ void Digest(const std::string& inLabel, std::vector<std::string>& outLines)
     for (unsigned long i = 0; i < theEditor->GetSelectedUnitCount(); i++)
         theSelection += " " + std::to_string(theEditor->GetSelectedUnit(i)->GetUnitID());
     outLines.push_back(theSelection);
-    const GERectangle& theArea = theEditor->mBrushGroup->mRectangle;
+    const GERectangle& theArea = theEditor->GetBrushGroup()->mRectangle;
     char theText[160];
     snprintf(theText, sizeof(theText), "  paint area %g,%g,%g,%g", (double)theArea.GetLeft(), (double)theArea.GetTop(),
              (double)theArea.GetRight(), (double)theArea.GetBottom());
@@ -934,6 +948,39 @@ EESETSEffectControls* EffectControls()
                gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect))->GetControls();
 }
 
+// the area screen (TEST ONLY): its state and centre, the brush group's highlight and paint area, every scenario area's
+// name, text, select mode, rectangle and anchor
+void AreaDigest(std::vector<std::string>& outLines)
+{
+    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+    EESETSArea* s = static_cast<EESETSArea*>(theEditor->GetTriggerScreen()->GetScreen(kSETriggerScreenArea));
+    GERectangle r;
+    GE2DPoint p;
+    unsigned long theFlags = 0;
+    s->GetState(r, p, theFlags);
+    GE2DPoint c;
+    bool theCenter = s->GetCenter(c);
+    EEUIFSEBrushGroup* b = theEditor->GetBrushGroup();
+    char theText[512];
+    snprintf(theText, sizeof(theText),
+             "  areascreen flags=%lu rect=%g,%g,%g,%g point=%g,%g center=%s highlight=%d paint=%g,%g,%g,%g", theFlags,
+             (double)r.GetLeft(), (double)r.GetTop(), (double)r.GetRight(), (double)r.GetBottom(), (double)p.GetX(),
+             (double)p.GetY(), theCenter ? (std::to_string(c.GetX()) + "," + std::to_string(c.GetY())).c_str() : "none",
+             b->mIsHighlightShown ? 1 : 0, (double)b->mRectangle.GetLeft(), (double)b->mRectangle.GetTop(),
+             (double)b->mRectangle.GetRight(), (double)b->mRectangle.GetBottom());
+    outLines.push_back(theText);
+    EEScenarioManager* m = gWorld.mScenarioManager;
+    for (unsigned long i = 0; i < m->mAreas.size(); i++) {
+        EESMArea* a = m->GetArea(i);
+        const GERectangle& q = a->GetRect();
+        snprintf(theText, sizeof(theText), "  area %lu mode=%lu rect=%d %g,%g,%g,%g anchor=%d %ld,%ld '", i,
+                 a->GetSelectMode(), a->GetHasRectangle() ? 1 : 0, (double)q.GetLeft(), (double)q.GetTop(),
+                 (double)q.GetRight(), (double)q.GetBottom(), a->GetHasAnchor() ? 1 : 0, a->GetAnchor().GetX(),
+                 a->GetAnchor().GetY());
+        outLines.push_back(theText + std::string((const char*)a->GetName()) + "' '" + (const char*)a->GetText() + "'");
+    }
+}
+
 // one control: its display mode, then a label's first line, a slider's value, a combo box's lines and selection
 std::string ControlText(const char* inName, size_t inIndex, UIControl* inControl)
 {
@@ -1169,11 +1216,118 @@ void PlayersDigest(std::vector<std::string>& outLines)
 // (epochs, tech trees, the load text) run after it, so they do not depend on its timing
 void SyncLoadThread()
 {
-    EESELoadThread* theThread = gUIManager->mScenarioEditorForm->mLoadThread;
+    EESELoadThread* theThread = gUIManager->mScenarioEditorForm->GetLoadThread();
     if (theThread->mThread->Post(kLoadThreadMessageQueueDone, NULL, NULL, true) == kErrorOK) {
         theThread->mMessageQueueDone->Wait(kTSWaitInfinite);
         theThread->mMessageQueueDone->Clear();
     }
+}
+
+// the editor form's own state (TEST ONLY, round 7): its tab and control group, the selection and its cargo count,
+// its flags, the mini map's, help label's and load text's display modes (the load text's text after the load thread
+// is idle), the brush highlight, the saved view and panel rectangles, the edge scroll's edges
+void FormState(std::vector<std::string>& outLines)
+{
+    SyncLoadThread();
+    EEUIFScenarioEditor* e = gUIManager->mScenarioEditorForm;
+    char theText[600];
+    std::string theUnits;
+    for (unsigned long i = 0; i < e->GetSelectedUnitCount(); i++) {
+        EEUnit* u = e->GetSelectedUnit(i);
+        theUnits += (i == 0 ? "" : ",") + (u == NULL ? std::string("null") : std::to_string(u->GetUnitID()) +
+                                                                              (u->mIsEditorSelected ? "" : "!"));
+    }
+    // the form's slots (editor_form.rs EE_SCREENS_SEFM_*): the saved view and the panel as float bits
+    auto S = [e](uint32_t inSlot) { return e->GetSlot(inSlot); };
+    auto R = [&S](uint32_t inSlot) {
+        float r[4];
+        for (uint32_t k = 0; k < 4; k++) {
+            uint32_t theBits = (uint32_t)S(inSlot + k);
+            memcpy(&r[k], &theBits, 4);
+        }
+        return GERectangle(r[0], r[1], r[2], r[3]);
+    };
+    GERectangle a = R(EE_SCREENS_SEFM_SAVED_VIEW);
+    GERectangle b = R(EE_SCREENS_SEFM_PANEL);
+    const GERectangle& s = e->GetEdgeScroll()->mEdges;
+    UITextLabel* theLoadText = (UITextLabel*)S(EE_SCREENS_SEFM_LOAD_TEXT);
+    snprintf(theText, sizeof(theText),
+             "  form tab=%ld eg=%ld on=%d cargo=%ld sel=[%s] b=%d%d sw=%d sus=%d hid=%d exit=%d mini=%lu help=%lu "
+             "load=%lu hl=%d view=%g,%g,%g,%g panel=%g,%g,%g,%g edges=%g,%g,%g,%g",
+             (long)S(EE_SCREENS_SEFM_CURRENT_TAB), (long)S(EE_SCREENS_SEFM_ENTITY_GROUP),
+             S(EE_SCREENS_SEFM_ENTITY_GROUP_ENABLED) ? 1 : 0, (long)S(EE_SCREENS_SEFM_NUM_CARGO_UNITS),
+             theUnits.c_str(), S(EE_SCREENS_SEFM_B2B1) ? 1 : 0, S(EE_SCREENS_SEFM_B2B2) ? 1 : 0,
+             S(EE_SCREENS_SEFM_SWITCHING) ? 1 : 0, S(EE_SCREENS_SEFM_SUSPENDED) ? 1 : 0, e->GetIsUIHidden() ? 1 : 0,
+             S(EE_SCREENS_SEFM_EXIT_AFTER_SAVE) ? 1 : 0, ((UIControl*)S(EE_SCREENS_SEFM_MINI_MAP))->GetDisplayMode(),
+             ((UIControl*)S(EE_SCREENS_SEFM_HELP_LABEL))->GetDisplayMode(), theLoadText->GetDisplayMode(),
+             e->GetBrushGroup()->mIsHighlightShown ? 1 : 0, (double)a.GetLeft(), (double)a.GetTop(), (double)a.GetRight(),
+             (double)a.GetBottom(), (double)b.GetLeft(), (double)b.GetTop(), (double)b.GetRight(), (double)b.GetBottom(),
+             (double)s.GetLeft(), (double)s.GetTop(), (double)s.GetRight(), (double)s.GetBottom());
+    std::string theLine = theText;
+    if (theLoadText->GetDisplayMode() == kDisplayModeShown)
+        theLine += LabelText(theLoadText);
+    outLines.push_back(theLine);
+    std::string theGroups = "  groups";
+    for (unsigned long g = 0; g < e->GetControlGroupCount(); g++)
+        theGroups += std::string(" ") + (e->GetEntityGroup(g) != NULL && e->GetEntityGroup(g)->GetIsEnabled() ? "1" : "0");
+    outLines.push_back(theGroups);
+}
+
+// the trigger-only save's report (TEST ONLY, round 7): a fixed set of changes first with `setup` (a trigger off,
+// looping, timed and described; a NOT and an OR; a wrapper past the conditions and one past the effects; a looping
+// trigger's effect naming the class; an effect of no type; an object in an effect's list, one a parent, an area an
+// object's and one an effect's), then the save's result and ScenarioTriggers.txt's lines
+void TriggerReport(bool inSetup, std::vector<std::string>& outLines)
+{
+    EEScenarioManager* m = gWorld.mScenarioManager;
+    if (inSetup && m->mTriggers.size() >= 2 && m->mEffects.size() >= 3 && m->mConditions.size() >= 2) {
+        EESMTrigger* t = m->mTriggers[0];
+        t->SetIsOn(false);
+        t->SetIsLooping(true);
+        t->SetConditionDuration(7);
+        t->SetName(UWideString("Report One"));
+        t->mText = UWideString("A described trigger");
+        t->SetCondition(0, true, 1);
+        t->SetConditionOperator(0, kSMTriggerOperatorOr);
+        t->SetCondition(1, false, (long)m->mConditions.size() + 3);
+        t->SetEffect(0, 4, 1);
+        t->SetEffectOperator(0, kSMTriggerOperatorAnd);
+        t->SetEffect(1, 0, (long)m->mEffects.size() + 2);
+        m->mEffects[1]->mType = kSMEffectObject;
+        m->mEffects[1]->mObjectAction = kSMObjectActionClassName;
+        m->mEffects[2]->mType = kSMEffectNone;
+        EESMTrigger* u = m->mTriggers[1];
+        u->SetIsLooping(true);
+        u->SetEffect(0, 0, 2);
+        if (m->mObjects.size() >= 4 && m->mAreas.size() >= 4) {
+            m->mEffects[1]->mObjects.push_back(1);
+            m->mObjects[3]->mParent = 2;
+            m->mObjects[1]->mArea = 2;
+            m->mEffects[2]->mTaskArea = 3;
+        }
+    }
+    long theResult = EESETestSaveTriggersOnly(gUIManager->mScenarioEditorForm);
+    outLines.push_back("  result " + std::to_string(theResult));
+    UString thePath = gStartupVolume + gStartupDirectory + "ScenarioTriggers.txt";
+    FILE* theFile = fopen((const char*)thePath, "rb");
+    if (theFile == NULL) {
+        outLines.push_back("  no report");
+        return;
+    }
+    std::string theLine;
+    int c;
+    while ((c = fgetc(theFile)) != EOF) {
+        if (c == '\n') {
+            outLines.push_back("  | " + theLine);
+            theLine.clear();
+        } else if (c == '\r')
+            theLine += "<CR>";
+        else
+            theLine += (char)c;
+    }
+    if (!theLine.empty())
+        outLines.push_back("  | " + theLine + "<no LF>");
+    fclose(theFile);
 }
 
 // the protected virtuals a person's mouse reaches (TEST ONLY): a button's release, a combo box's chosen line
@@ -1285,7 +1439,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
         std::function<void()> theCode;
         std::string theProblem;
         if (c == "tab")
-            theCode = [=] { gUIManager->mScenarioEditorForm->mTabButtons[L(1)]->CheckDirect(); };
+            theCode = [=] { gUIManager->mScenarioEditorForm->GetTabButton(L(1))->CheckDirect(); };
         else if (c == "blank")
             theCode = [=] { (new EESEARust(kSEABlankMap, NULL, L(1), L(2), L(3)))->Dereference(); };
         else if (c == "random")
@@ -1518,13 +1672,13 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 const GERectangle& r = gViewport.GetViewRectangle();
                 char theText[160];
                 snprintf(theText, sizeof(theText), "  view %g,%g,%g,%g hidden=%d", (double)r.GetLeft(), (double)r.GetTop(),
-                         (double)r.GetRight(), (double)r.GetBottom(), gUIManager->mScenarioEditorForm->mIsUIHidden ? 1 : 0);
+                         (double)r.GetRight(), (double)r.GetBottom(), gUIManager->mScenarioEditorForm->GetIsUIHidden() ? 1 : 0);
                 theOutput.push_back(theText);
             };
         else if (c == "click")   // click quicksave
             theCode = [=] {
                 EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
-                UIControl* theButton = theEditor->mQuickSaveButton;
+                UIControl* theButton = theEditor->GetQuickSaveButton();
                 theButton->GetTriggerEvent(kControlTriggerButtonUp)->ProcessEvent(theEditor, theButton);
             };
         else if (c == "editorsave")   // the editor's own quick save file (EEQuickSave + the scenario extension)
@@ -1664,6 +1818,47 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                     theOutput.push_back(s);
                 }
             };
+        else if (c == "areaset" || c == "areapoint")   // areaset AREA L T R B | areapoint AREA X Y: a scenario area's
+            // rectangle or anchor set (EESMArea::SetRectangle, SetAnchor), as the area screen's Store sets them
+            theCode = [=] {
+                EESMArea* a = gWorld.mScenarioManager->GetArea((unsigned long)L(1));
+                if (c == "areaset")
+                    a->SetRectangle(GERectangle(F(2), F(3), F(4), F(5)));
+                else
+                    a->SetAnchor(U2DPoint<long>(L(2), L(3)));
+            };
+        else if (c == "areastate")   // the area screen and the scenario's areas (AreaDigest)
+            theCode = [=, &theOutput] { AreaDigest(theOutput); };
+        else if (c == "align")   // align c|e: the condition's or effect's labels' text alignments
+            theCode = [=, &theOutput] {
+                std::vector<UITextLabel*> theLabels;
+                if (w[1] == "c")
+                    theLabels.assign(ConditionControls()->mLabels, ConditionControls()->mLabels + 5);
+                else
+                    theLabels.assign(EffectControls()->mLabels, EffectControls()->mLabels + 13);
+                std::string theText = "  align";
+                for (UITextLabel* l : theLabels)
+                    theText += " " + (gSeetAlignments.count(l) ? std::to_string(gSeetAlignments[l]) : std::string("-"));
+                theOutput.push_back(theText);
+            };
+        else if (c == "media")   // the scenario's media texts (hints, aftermath, history, instructions) and export file
+            theCode = [=, &theOutput] {
+                EEScenarioManager* m = gWorld.mScenarioManager;
+                const char* theNames[4] = {"hints", "aftermath", "history", "instructions"};
+                for (unsigned long k = 0; k < 4; k++) {
+                    std::string theText = (const char*)m->mMediaStrings.GetSection(k);
+                    size_t n = (std::min)(theText.size(), (size_t)60);
+                    while (n > 0 && n < theText.size() && (theText[n] & 0xC0) == 0x80)   // a whole character
+                        n--;
+                    std::string theHead = theText.substr(0, n);
+                    std::replace(theHead.begin(), theHead.end(), '\n', '|');
+                    theOutput.push_back("  " + std::string(theNames[k]) + " " + std::to_string(theText.size()) + " '" +
+                                        theHead + "'");
+                }
+                theOutput.push_back(std::string("  export '") + (const char*)m->mExportFileName + "'");
+            };
+        else if (c == "seed")   // the user interface's random seed (the map tab's CreateMap draws or reads it)
+            theCode = [=, &theOutput] { theOutput.push_back("  seed " + std::to_string(gUserInterface->mRandomSeed)); };
         else if (c == "erefresh")   // the effect screen's RefreshControls (an effect combo box's change: UpdateName)
             theCode = [=] {
                 gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect)->RefreshControls();
@@ -1879,6 +2074,47 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             theCode = [=, &theOutput] { ObjectDigest(theOutput); };
         else if (c == "sm")   // sm OP LIST [INDEX] | sm fill | sm state: the scenario lists (ScenarioListStep)
             theCode = [=, &theOutput] { ScenarioListStep(w, theOutput); };
+        else if (c == "formstate")   // round 7: the editor form's own state (FormState)
+            theCode = [=, &theOutput] { FormState(theOutput); };
+        else if (c == "loadtext")   // loadtext TEXT|-: the form's SetLoadText ('_' a space)
+            theCode = [=] {
+                std::string theText = w[1] == "-" ? std::string() : w[1];
+                std::replace(theText.begin(), theText.end(), '_', ' ');
+                gUIManager->mScenarioEditorForm->SetLoadText(UWideString(theText.c_str()));
+            };
+        else if (c == "fsel")   // fsel add|remove UNIT | fsel first | fsel clear: the form's selection members
+            theCode = [=] {
+                EEUIFScenarioEditor* e = gUIManager->mScenarioEditorForm;
+                if (w[1] == "first")
+                    e->DeselectFirstUnit();
+                else if (w[1] == "clear")
+                    e->ClearSelection();
+                else {
+                    EEUnit* u = static_cast<EEUnit*>(RTSResolveUnitID((uint32_t)UnitRef(w[2])));
+                    if (u != NULL && w[1] == "add")
+                        e->SelectUnit(u);
+                    else if (u != NULL)
+                        e->DeselectUnit(u);
+                }
+            };
+        else if (c == "formcall")   // formcall store|resume: the form's RefreshCurrentGroup / ResumeCurrentGroup
+            theCode = [=] {
+                if (w[1] == "store")
+                    gUIManager->mScenarioEditorForm->RefreshCurrentGroup();
+                else
+                    gUIManager->mScenarioEditorForm->ResumeCurrentGroup();
+            };
+        else if (c == "gameview")   // gameview L T R B HIDDEN: the form's SetGameView
+            theCode = [=] {
+                gUIManager->mScenarioEditorForm->SetGameView(GERectangle(F(1), F(2), F(3), F(4)), L(5) != 0);
+            };
+        else if (c == "trigreport")   // trigreport [setup]: the trigger-only save's report (TriggerReport)
+            theCode = [=, &theOutput] { TriggerReport(w.size() > 1 && w[1] == "setup", theOutput); };
+        else if (c == "cb")   // cb ...: the civilization builder's steps (EESimCivBuilder.cpp)
+            theCode = [=, &theOutput] {
+                if (!EESimCivBuilderStep(w, theOutput))
+                    theOutput.push_back("  cb: unknown " + (w.size() > 1 ? w[1] : std::string()));
+            };
         else if (c == "digest")   // the world flushed first: the physics thread flushes it on its own clock otherwise
             theCode = [=, &theOutput] {
                 gPhysics->FlushWorld();

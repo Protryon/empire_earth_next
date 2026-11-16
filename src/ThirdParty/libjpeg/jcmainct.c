@@ -65,7 +65,6 @@ METHODDEF(void) process_data_buffer_main
  * Initialize for a processing pass.
  */
 
-// FUNCTION: JPEG 0x10090f7e
 METHODDEF(void)
 start_pass_main (j_compress_ptr cinfo, J_BUF_MODE pass_mode)
 {
@@ -110,7 +109,6 @@ start_pass_main (j_compress_ptr cinfo, J_BUF_MODE pass_mode)
  * where we have only a strip buffer.
  */
 
-// FUNCTION: JPEG 0x10090fc0
 METHODDEF(void)
 process_data_simple_main (j_compress_ptr cinfo,
 			  JSAMPARRAY input_buf, JDIMENSION *in_row_ctr,
@@ -243,7 +241,6 @@ process_data_buffer_main (j_compress_ptr cinfo,
  * Initialize main buffer controller.
  */
 
-// FUNCTION: JPEG 0x10090efa
 GLOBAL(void)
 jinit_c_main_controller (j_compress_ptr cinfo, boolean need_full_buffer)
 {

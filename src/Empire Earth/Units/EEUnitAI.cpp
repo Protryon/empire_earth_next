@@ -63,7 +63,6 @@ const float kUnitAIShortWaitFactor = 0.5f;    // 0x447ab4 (EvaluateCondition 0x6
 const float kUnitAILongWaitFactor = 1.5f;     // 0x447ab8 (likewise; provisional name)
 const float kUnitAIDiveDepth = -6.0f;         // 0x447abc (likewise; provisional name)
 
-// FUNCTION: EXE 0x62d95f
 // Picks a target for inUnit when its search timer has run out or it is attack-moving and gives it an attack goal
 // (ahead of a move, patrol or explore goal); returns whether it did, and restarts the search timer
 bool EEUnitClass::AttackNearby(EEComplexUnit* inUnit, EEUnitGoal* inGoal)
@@ -113,7 +112,6 @@ bool EEUnitClass::AttackNearby(EEComplexUnit* inUnit, EEUnitGoal* inGoal)
     return theResult;
 }
 
-// FUNCTION: EXE 0x62e47a
 // Tests one AI-script trigger for inUnit (its active goal may answer first); returns 0 for false, 1 for true, 2 for
 // true from an active goal that is not the current one
 long EEUnitClass::BaseEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
@@ -470,7 +468,6 @@ long EEUnitClass::BaseEvaluateCondition(EEComplexUnit* inUnit, unsigned long inE
     return theResult;
 }
 
-// FUNCTION: EXE 0x62f20d
 // Returns whether inUnit's first goal queue holds a move goal that is not a forced move (EvaluateCondition's helper)
 bool EEIsLocationGoalQueued(EEComplexUnit* inUnit)
 {

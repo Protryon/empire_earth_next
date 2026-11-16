@@ -87,10 +87,6 @@ bool EEDoesWallGateFitOnUnit(EEComplexUnit* inUnit, long inSide, long inUnitType
 bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles);
 
 const UString EECPWallManager::sData("EECPWallManager-Data");
-// SYNTHETIC: EXE 0x49c833   (wrapper)
-// SYNTHETIC: EXE 0x49c83d   (ctor)
-// SYNTHETIC: EXE 0x49c84e   (registrar)
-// SYNTHETIC: EXE 0x49c85a   (dtor)
 
 // The wall sizes by mSize (9 entries, 0x4e5db8; Update fills them once, by the map and the number of computer players)
 struct EECPWMSize {
@@ -129,7 +125,6 @@ struct EECPWMWallIs {
 // The three predicates were built without /Og (memory-resident locals, `leave`, the bool through a frame slot) while
 // the rest of the unit is normal -O1.
 // NEAR: built without /Og (memory-resident locals, leave); the pragma alone does not make them exact (the original calls DistanceSquaredTo/GetCenter out of line), so it is not used
-// FUNCTION: EXE 0x49c876
 // Orders two players by the squared distance of their centers from the unit, the farther first
 bool EECPWMPlayerFarther::operator()(EEPlayer* inFirst, EEPlayer* inSecond) const
 {
@@ -140,7 +135,6 @@ bool EECPWMPlayerFarther::operator()(EEPlayer* inFirst, EEPlayer* inSecond) cons
     return theFirstDistance > theSecondDistance ? true : false;
 }
 
-// FUNCTION: EXE 0x49c8e6
 // Orders two tile runs by their middle tiles' squared distance from the unit, nearer first; runs within the
 // tolerance of each other by tile count, shorter first
 bool EECPWMRunLess::operator()(const RTSMapTileRun& inFirst, const RTSMapTileRun& inSecond) const
@@ -167,7 +161,6 @@ bool EECPWMRunLess::operator()(const RTSMapTileRun& inFirst, const RTSMapTileRun
     return theResult;
 }
 
-// FUNCTION: EXE 0x49cad8
 // Orders two tile runs by their middle tiles' squared distance from the center tile, nearer first
 bool EETileDistanceLess::operator()(const RTSMapTileRun& inFirst, const RTSMapTileRun& inSecond) const
 {
@@ -183,7 +176,6 @@ bool EETileDistanceLess::operator()(const RTSMapTileRun& inFirst, const RTSMapTi
     return theFirstDistance < theSecondDistance;
 }
 
-// FUNCTION: EXE 0x49cc24
 // Creates the wall manager of a civilization manager's player, with no walls, gates or path request
 EECPWallManager::EECPWallManager(EECPCivilizationManager* inManager)
 {
@@ -202,14 +194,12 @@ EECPWallManager::EECPWallManager(EECPCivilizationManager* inManager)
     this->mSize = 0;
 }
 
-// FUNCTION: EXE 0x49ccde
 // Destroys the wall manager, releasing its planned walls, wall pieces and path request
 EECPWallManager::~EECPWallManager()
 {
     this->Clear();
 }
 
-// FUNCTION: EXE 0x49cd0e
 // Returns whether a land building stands within two tiles of the line, ignoring the player's own wall pieces
 // (not gates) on the line itself
 bool EECPWallManager::IsPathBlocked(std::vector<U2DPoint<long> >& inTiles)
@@ -242,7 +232,6 @@ bool EECPWallManager::IsPathBlocked(std::vector<U2DPoint<long> >& inTiles)
     return theResult;
 }
 
-// FUNCTION: EXE 0x49cf2a
 // Replaces the town's wall plans with one per enemy that has a center (the farthest first) and waits 30 s
 // before the next wall
 void EECPWallManager::AddWalls(EEComplexUnit* inUnit)
@@ -275,7 +264,6 @@ void EECPWallManager::AddWalls(EEComplexUnit* inUnit)
     this->mNextTime = gPhysics->mGameTime + 30000;
 }
 
-// FUNCTION: EXE 0x49d05f
 // Selects up to one builder per 10 tiles and orders a wall from inFrom to inTo; while the order runs, new wall
 // foundations count as the planned wall's (inBuildingPlannedWall)
 void EECPWallManager::BuildWall(U2DPoint<long>& inFrom, U2DPoint<long>& inTo, long inUnitClass, bool inBuildingPlannedWall)
@@ -326,7 +314,6 @@ void EECPWallManager::BuildWall(U2DPoint<long>& inFrom, U2DPoint<long>& inTo, lo
     this->mBuildingPlannedWall = false;
 }
 
-// FUNCTION: EXE 0x49d1e7
 // Returns whether a wall line stays 0.75 drop-off distances from every resource center (unless ignored) and
 // crosses the enemy path (unless the path check is skipped)
 bool EECPWallManager::IsRunClear(U2DPoint<long>& inFrom, U2DPoint<long>& inTo, bool inIgnoreResourceCenters, bool inSkipPathCheck)
@@ -357,7 +344,6 @@ bool EECPWallManager::IsRunClear(U2DPoint<long>& inFrom, U2DPoint<long>& inTo, b
     return theResult;
 }
 
-// FUNCTION: EXE 0x49d371
 // Releases every planned wall, pending wall piece and the path request
 void EECPWallManager::Clear()
 {
@@ -377,7 +363,6 @@ void EECPWallManager::Clear()
     this->ClearRequest();
 }
 
-// FUNCTION: EXE 0x49d3f2
 // Releases the path request and its two end units and clears the path
 void EECPWallManager::ClearRequest()
 {
@@ -397,7 +382,6 @@ void EECPWallManager::ClearRequest()
     this->mPath.clear();
 }
 
-// FUNCTION: EXE 0x49d437
 // Drops a finished piece of the planned wall from the pending ones; after the last, orders a gate on the wall
 // tile nearest the middle (else remembers the middle); a new town center or capitol gets walls planned
 void EECPWallManager::AddGates(EEComplexUnit* inUnit)
@@ -447,7 +431,6 @@ void EECPWallManager::AddGates(EEComplexUnit* inUnit)
         this->AddWalls(inUnit);
 }
 
-// FUNCTION: EXE 0x49d6cc
 // Takes the nearest planned wall and requests a wall-planner path from that enemy's center to the town
 void EECPWallManager::StartNextWall()
 {
@@ -505,7 +488,6 @@ void EECPWallManager::RequestPath()
         this->ClearRequest();
 }
 
-// FUNCTION: EXE 0x49d815
 // Returns the player's capitol, else its first unit (NULL without units)
 EEComplexUnit* EECPWallManager::GetCenter(EEPlayer* inPlayer)
 {
@@ -519,7 +501,6 @@ EEComplexUnit* EECPWallManager::GetCenter(EEPlayer* inPlayer)
     return theResult;
 }
 
-// FUNCTION: EXE 0x49d851
 // Finds the first listed tile with a live wall piece where a gate fits on some side; returns the side and the
 // tile's index
 bool EECPWallManager::FindGate(std::vector<U2DPoint<long> >& inTiles, long& outSide, long& outIndex)
@@ -559,7 +540,6 @@ bool EECPWallManager::FindGate(std::vector<U2DPoint<long> >& inTiles, long& outS
     return theFound;
 }
 
-// FUNCTION: EXE 0x49d9e9
 // Lays out the enemy path and searches its middle stretch for a run across it between obstacles, on level
 // ground away from gates; picks an affordable run (false if none); unsuitable clear runs are kept for later
 bool EECPWallManager::PlanWall()
@@ -721,7 +701,6 @@ bool EECPWallManager::PlanWall()
     }
 }
 
-// FUNCTION: EXE 0x49e58e
 // Returns whether the path request has finished (false without one)
 bool EECPWallManager::IsRequestDone()
 {
@@ -730,7 +709,6 @@ bool EECPWallManager::IsRequestDone()
     return false;
 }
 
-// FUNCTION: EXE 0x49e59c
 // Reads the planned walls and pending wall pieces (as unit and player IDs), the gate and wall tiles and the
 // timers from the saved game; returns the read error
 long EECPWallManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -818,7 +796,6 @@ long EECPWallManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     return theResult;
 }
 
-// FUNCTION: EXE 0x49e6fe
 // Returns whether the path's end lies in the town's path subsector or a neighbor, with no link between them
 // through a kind 0xe subsector
 bool EECPWallManager::IsPathUsable()
@@ -845,7 +822,6 @@ bool EECPWallManager::IsPathUsable()
     return theResult;
 }
 
-// FUNCTION: EXE 0x49e7fe
 // Picks the first affordable run, nearest the town first (similar distances: shorter first); returns its ends
 bool EECPWallManager::ChooseRun(std::vector<RTSMapTileRun>& inRuns, U2DPoint<long>& outFrom, U2DPoint<long>& outTo)
 {
@@ -872,7 +848,6 @@ bool EECPWallManager::ChooseRun(std::vector<RTSMapTileRun>& inRuns, U2DPoint<lon
     return theResult;
 }
 
-// FUNCTION: EXE 0x49e99b
 // Picks the affordable run nearest one of the player's gates, else nearest the town center; returns its ends
 bool EECPWallManager::ChooseRunNearGates(std::vector<RTSMapTileRun>& inRuns, U2DPoint<long>& outFrom, U2DPoint<long>& outTo)
 {
@@ -912,7 +887,6 @@ bool EECPWallManager::ChooseRunNearGates(std::vector<RTSMapTileRun>& inRuns, U2D
     return theResult;
 }
 
-// FUNCTION: EXE 0x49ec12
 // Replaces swapped units in the pending wall pieces, moving the references
 void EECPWallManager::UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps)
 {
@@ -927,14 +901,12 @@ void EECPWallManager::UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps)
     }
 }
 
-// FUNCTION: EXE 0x49ecc6
 // Releases every planned wall, pending wall piece and the path request
 void EECPWallManager::Reset()
 {
     this->Clear();
 }
 
-// FUNCTION: EXE 0x49eccb
 // Turns the loaded unit and player IDs back into references, dropping missing ones, and makes the next-wall
 // time absolute
 long EECPWallManager::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -1001,7 +973,6 @@ long EECPWallManager::Restore(unsigned long inMajorVersion, unsigned long inMino
     return 0;
 }
 
-// FUNCTION: EXE 0x49ee89
 // Zeroes the wall size table so the next Update fills it again
 void EECPWallManager::ResetSizes()
 {
@@ -1012,7 +983,6 @@ void EECPWallManager::ResetSizes()
     }
 }
 
-// FUNCTION: EXE 0x49eea6
 // Writes the planned walls, pending wall pieces (unit and player IDs), gate and wall tiles and the time to the
 // next wall (port, from 0.254: and the wall being planned); returns the write error
 long EECPWallManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -1096,7 +1066,6 @@ long EECPWallManager::Save(unsigned long inMajorVersion, unsigned long inMinorVe
     return theResult;
 }
 
-// FUNCTION: EXE 0x49f058
 // Records a new wall foundation as a pending piece while a planned wall is being ordered
 void EECPWallManager::UnitAdded(EEComplexUnit* inUnit)
 {
@@ -1107,7 +1076,6 @@ void EECPWallManager::UnitAdded(EEComplexUnit* inUnit)
     this->mGates.push_back(theUnit);
 }
 
-// FUNCTION: EXE 0x49f09d
 // Queues a lost wall piece off the planned wall for rebuilding (one on it abandons the pending pieces);
 // drops the wall plans of any other lost unit
 void EECPWallManager::UnitLost(EEComplexUnit* inUnit, bool inSwapped)
@@ -1138,7 +1106,6 @@ void EECPWallManager::UnitLost(EEComplexUnit* inUnit, bool inSwapped)
     }
 }
 
-// FUNCTION: EXE 0x49f244
 // Fills the wall size table once; from the Copper age on turns a finished path request into a wall (larger
 // size on failure), or every 30 s starts the next planned wall once the last gate stands
 void EECPWallManager::Update(unsigned long inTime)
@@ -1242,7 +1209,6 @@ void EECPWallManager::Update(unsigned long inTime)
         this->mNextTime = inTime + 300000;
 }
 
-// FUNCTION: EXE 0x49fec3
 // Returns whether both runs have the same start and end tiles
 // RTSMapTileRun (ee/EEMap.h) declares both members out of line. Their bodies sit among this unit's COMDATs (the
 // find 0x9fe9d calls ==; Fn9D9E9 0x9e2bd is the ctor's first caller; RTSMap.cpp calls it too), so they are defined
@@ -1254,95 +1220,8 @@ bool RTSMapTileRun::operator==(const RTSMapTileRun& inOther) const
         inOther.mEnd.mY == this->mEnd.mY;
 }
 
-// FUNCTION: EXE 0x4a016f
 // Creates a tile run from inStart to inEnd
 RTSMapTileRun::RTSMapTileRun(const U2DPoint<long>& inStart, const U2DPoint<long>& inEnd)
     : mStart(inStart), mEnd(inEnd)
 {
 }
-
-// Template and inline COMDATs this unit's code instantiates (the bodies come from the headers; each was compared
-// against the original by name)
-// TEMPLATE: EXE 0x49f6d0
-// TEMPLATE: EXE 0x49f717
-// TEMPLATE: EXE 0x49f869
-// TEMPLATE: EXE 0x49f87c
-// TEMPLATE: EXE 0x49f8a8
-// TEMPLATE: EXE 0x49f8e3
-// TEMPLATE: EXE 0x49f8f6
-// TEMPLATE: EXE 0x49f983
-// TEMPLATE: EXE 0x49f9d3
-// TEMPLATE: EXE 0x49fcc9
-// TEMPLATE: EXE 0x49fd8f
-// TEMPLATE: EXE 0x49fe75
-// TEMPLATE: EXE 0x49fe9d
-// TEMPLATE: EXE 0x49feef
-// TEMPLATE: EXE 0x49ffb8
-// TEMPLATE: EXE 0x4a009e
-// TEMPLATE: EXE 0x4a00bc
-// TEMPLATE: EXE 0x4a00ed
-// TEMPLATE: EXE 0x4a0115
-// TEMPLATE: EXE 0x4a014c
-// TEMPLATE: EXE 0x4a0191
-// TEMPLATE: EXE 0x4a01be
-// TEMPLATE: EXE 0x4a029a
-// TEMPLATE: EXE 0x4a02ce
-// TEMPLATE: EXE 0x4a03db
-// TEMPLATE: EXE 0x4a0410
-// TEMPLATE: EXE 0x4a043d
-// TEMPLATE: EXE 0x4a0564
-// TEMPLATE: EXE 0x4a0597
-// TEMPLATE: EXE 0x4a06a4
-// TEMPLATE: EXE 0x4a06ef
-// TEMPLATE: EXE 0x4a0702
-// TEMPLATE: EXE 0x4a07a2
-// TEMPLATE: EXE 0x4a07df
-// TEMPLATE: EXE 0x4a0823
-// TEMPLATE: EXE 0x4a0943
-// TEMPLATE: EXE 0x4a0976
-// TEMPLATE: EXE 0x4a09ba
-// TEMPLATE: EXE 0x4a0a07
-// TEMPLATE: EXE 0x4a0a43
-// TEMPLATE: EXE 0x4a0b15
-// TEMPLATE: EXE 0x4a0b1b
-// TEMPLATE: EXE 0x4a0b58
-// TEMPLATE: EXE 0x4a0b9c
-// TEMPLATE: EXE 0x4a0cc2
-// TEMPLATE: EXE 0x4a0d16
-// TEMPLATE: EXE 0x4a0df1
-// TEMPLATE: EXE 0x4a0e35
-// TEMPLATE: EXE 0x4a0e82
-// TEMPLATE: EXE 0x4a0fa8
-// TEMPLATE: EXE 0x4a0ffc
-// TEMPLATE: EXE 0x4a1043
-// TEMPLATE: EXE 0x4a1070
-// TEMPLATE: EXE 0x4a10a3
-// TEMPLATE: EXE 0x4a1100
-// TEMPLATE: EXE 0x4a112d
-// TEMPLATE: EXE 0x4a1152
-// TEMPLATE: EXE 0x4a11b8
-// TEMPLATE: EXE 0x4a11eb
-// TEMPLATE: EXE 0x4a125c
-// TEMPLATE: EXE 0x4a134c
-// TEMPLATE: EXE 0x4a13c4
-// TEMPLATE: EXE 0x4a14f0
-// TEMPLATE: EXE 0x4a1536
-// TEMPLATE: EXE 0x4a15fa
-// TEMPLATE: EXE 0x4a1673
-// TEMPLATE: EXE 0x4a16c2
-// TEMPLATE: EXE 0x4a16f9
-// TEMPLATE: EXE 0x4a174d
-// TEMPLATE: EXE 0x4a17cf
-// TEMPLATE: EXE 0x4a1827
-// TEMPLATE: EXE 0x4a18a9
-// TEMPLATE: EXE 0x4a190a
-// SYNTHETIC: EXE 0x49ccc2
-// (EECPWallManager's scalar deleting destructor)
-// Named COMDATs of this unit (compiled here; names in analysis/exe/names.txt)
-// TEMPLATE: EXE 0x49f922
-// TEMPLATE: EXE 0x49f9eb
-// TEMPLATE: EXE 0x4a12b2
-// TEMPLATE: EXE 0x4a147f
-// COMDATs named by matching symbol names (names in analysis/exe/names.txt)
-// TEMPLATE: EXE 0x49fca2
-// TEMPLATE: EXE 0x4a0522

@@ -109,7 +109,6 @@ extern "C" intptr_t ee_won_guicpp_wonbtn_call(void* inComp, EeWonGuiOp op, intpt
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007180e0
 // Returns the button text, or an empty string when the button has no font yet
 const GUIString& WONButton::GetText()
 {
@@ -119,7 +118,3 @@ const GUIString& WONButton::GetText()
 // Destroys the button: the Rust button gives its texts and images back
 WONButton::~WONButton() { ee_won_wonbtn_free(this->mWb); }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x00722490
-// (public: class std::_Tree<class WONAPI::Font *,struct std::pair<class WONAPI::Font * const,class WONAPI::SmartPtr<class WONAPI::WrappedText> >,struct s)

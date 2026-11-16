@@ -31,7 +31,6 @@ static_assert(sizeof(EEColorTableRecord) == 168, "on-disk record: 168 bytes on e
 std::vector<EEColorTable*> EEColorTable::sTable;
 GEColor EEColorTable::sColor;
 
-// FUNCTION: EXE 0x4d5d91
 // Loads the player colours from db\dbcolortable.dat (main, second with a 60% dark shade, fourth); returns the last
 // read status
 long EEColorTable::Load(FSFileSpec* inFile)
@@ -65,7 +64,6 @@ long EEColorTable::Load(FSFileSpec* inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4d5e88
 // Destroys every player colour and empties the table
 void EEColorTable::Unload()
 {
@@ -74,7 +72,6 @@ void EEColorTable::Unload()
     EEColorTable::sTable.resize(0);
 }
 
-// FUNCTION: EXE 0x4d5ec8
 // Returns the index of the player colour whose main colour equals the given one, else 0
 unsigned long EEColorTable::FindIndex(const GEColor& inColor)
 {
@@ -87,18 +84,3 @@ unsigned long EEColorTable::FindIndex(const GEColor& inColor)
     }
     return theResult;
 }
-
-// SYNTHETIC: EXE 0x4d5f1c
-// (the ctor, emitted out of line after its first user)
-
-// SYNTHETIC: EXE 0x4d5f61
-// (the scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x4d5d08
-// SYNTHETIC: EXE 0x4d5d12
-// SYNTHETIC: EXE 0x4d5d2a
-// SYNTHETIC: EXE 0x4d5d36
-// SYNTHETIC: EXE 0x4d5d51
-// SYNTHETIC: EXE 0x4d5d5b
-// SYNTHETIC: EXE 0x4d5d74
-// SYNTHETIC: EXE 0x4d5d80

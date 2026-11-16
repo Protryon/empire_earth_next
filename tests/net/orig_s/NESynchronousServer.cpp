@@ -16,7 +16,6 @@
 inline void NESSTrace(unsigned long inA) {}
 inline void NESSTrace(unsigned long inA, unsigned long inB) {}
 
-// FUNCTION: LLE 0x10047400
 // Creates the game server on protocol 0 and publishes it as "EEService"; on failure stops with no threads/events
 NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned long inDefaultSendInterval, unsigned char inPTsPerCT,
                                          unsigned long inMaxPhysicsTicksPerSecond, unsigned long inMinPhysicsTicksPerSecond, float inPhysicsTickCostFactor, unsigned long inMaxSendInterval,
@@ -124,7 +123,6 @@ NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned lo
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mIncomingPlayerInputsLock) == keseOK, 295);
 }
 
-// FUNCTION: LLE 0x10047c20
 // Creates a zeroed server debug-info block
 NECDIServer::NECDIServer()
     : mU0C(0), mU10(0), mU14(0), mU18(0), mU1C(0), mU20(0), mU24(0), mU28(0), mU2C(0), mU30(0), mU34(0), mU38(0),
@@ -132,7 +130,6 @@ NECDIServer::NECDIServer()
 {
 }
 
-// FUNCTION: LLE 0x10047c65
 // Destroys the server: frees events, threads, locks and the recorder, then closes the published server
 NESynchronousServer::~NESynchronousServer()
 {
@@ -299,21 +296,18 @@ ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp
     return 0;
 }
 
-// FUNCTION: LLE 0x10047e73
 // Cancels a file transfer
 void NESynchronousServer::AbortXfer(unsigned long inXferID)
 {
     ee_net_mm_abort_xfer(this->mMessageManager, inXferID);
 }
 
-// FUNCTION: LLE 0x10047e85
 // Boots every client that has not answered a message (ee_net tune.rs)
 void NESynchronousServer::BootAllLaggers(unsigned long inMessageNumber)
 {
     ee_net_tu_boot_all_laggers(this->mTune, (uint32_t)inMessageNumber);
 }
 
-// FUNCTION: LLE 0x10048011
 // Sends a message to every present player's slot; stops at the first send error and returns it
 long NESynchronousServer::BroadcastMessage(NEMessage* inMessage)
 {
@@ -334,14 +328,12 @@ long NESynchronousServer::BroadcastMessage(NEMessage* inMessage)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10048093
 // Returns the message manager's current message number
 unsigned long NESynchronousServer::GetMessageManagerCurrentMessageNumber()
 {
     return ee_net_mm_current_number(this->mMessageManager);
 }
 
-// FUNCTION: LLE 0x100480a0
 // Returns the send slot of a player, or 0xff when unknown
 unsigned char NESynchronousServer::GetSendToSlotForPlayer(unsigned char inPlayer)
 {
@@ -353,7 +345,6 @@ unsigned char NESynchronousServer::GetSendToSlotForPlayer(unsigned char inPlayer
 }
 
 struct NESSSlotOrder { NESSSlotOrder(unsigned char inFirst) : mFirst(inFirst) {} bool operator()(unsigned char inA, unsigned char inB) const { return inA == this->mFirst && inB != this->mFirst; } unsigned char mFirst; };
-// FUNCTION: LLE 0x10048139
 // Collects world checksums per tick; once every human has answered, marks the out-of-sync slots
 // (with 2 humans the client; else those off the most common checksum, server wins ties)
 void NESynchronousServer::LogChecksumResponse(NEMWorldDatabaseChecksumResponse* inMessage)
@@ -420,7 +411,6 @@ void NESynchronousServer::LogChecksumResponse(NEMWorldDatabaseChecksumResponse* 
     this->mChecksumResponsesLock->Leave();
 }
 
-// FUNCTION: LLE 0x10048472
 // Records a client's response to a message
 long NESynchronousServer::LogResponse(NEMessage* inMessage)
 {
@@ -428,7 +418,6 @@ long NESynchronousServer::LogResponse(NEMessage* inMessage)
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10048484
 // Sends a pause request to every client and waits for their answers
 void NESynchronousServer::PauseGame()
 {
@@ -442,7 +431,6 @@ void NESynchronousServer::PauseGame()
     this->mPauseUnpauseLock->Leave();
 }
 
-// FUNCTION: LLE 0x100484de
 // Handles a client's tick response: replays its inputs and logs its response time and answer
 void NESynchronousServer::ProcessCommunicationsTickResponse(NEMCommunicationsTickResponse* inMessage)
 {
@@ -458,7 +446,6 @@ void NESynchronousServer::ProcessCommunicationsTickResponse(NEMCommunicationsTic
     inMessage->Dereference();
 }
 
-// FUNCTION: LLE 0x1004855d
 // Takes a local input from the server's player, unless paused in multiplayer, and passes it to the recorder
 long NESynchronousServer::ProcessLocalUserInput(NEMessage* inMessage, unsigned char inPlayer)
 {
@@ -473,7 +460,6 @@ long NESynchronousServer::ProcessLocalUserInput(NEMessage* inMessage, unsigned c
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x100485b6
 // Queues the server's own input for the next tick, dropping it while migrating or paused
 long NESynchronousServer::ProcessLocalUserInput2(NEMessage* inMessage)
 {
@@ -492,7 +478,6 @@ long NESynchronousServer::ProcessLocalUserInput2(NEMessage* inMessage)
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10048637
 // Reads one pending client packet and passes it to the recorder with its client slot
 void NESynchronousServer::ProcessPendingPlayerInputs()
 {
@@ -508,7 +493,6 @@ void NESynchronousServer::ProcessPendingPlayerInputs()
     }
 }
 
-// FUNCTION: LLE 0x10048690
 // Handles a client message: connect/reconnect requests, tick responses, checksums, pause answers; queues inputs
 void NESynchronousServer::ProcessPendingPlayerInputs2(NEMessage* inMessage)
 {
@@ -577,7 +561,6 @@ void NESynchronousServer::ProcessPendingPlayerInputs2(NEMessage* inMessage)
     }
 }
 
-// FUNCTION: LLE 0x100488a6
 // Recorder callback: routes the server's own messages and client messages to their handlers
 void NESynchronousServer::RecordPlaybackCallback(NEMessage* inMessage, void* inThisPointer)
 {
@@ -605,14 +588,12 @@ ptrdiff_t NESynchronousServer::QueueHost(void* inServer, EeNetQOp inOp, size_t a
     return 0;
 }
 
-// FUNCTION: LLE 0x100488df
 // Registers a client slot with the message manager
 void NESynchronousServer::RegisterSlot(unsigned char inSlot)
 {
     ee_net_mm_register_slot(this->mMessageManager, inSlot);
 }
 
-// FUNCTION: LLE 0x100488f1
 // Announces the removal of every player that uses the given send slot
 void NESynchronousServer::RemovePlayer(unsigned char inSlot, bool inA)
 {
@@ -624,7 +605,6 @@ void NESynchronousServer::RemovePlayer(unsigned char inSlot, bool inA)
         }
 }
 
-// FUNCTION: LLE 0x10048983
 // Announces a player's removal from a running game; a booted client's slot is unregistered and counted out
 void NESynchronousServer::RemovePlayerFromGameInProgress(unsigned char inSlot, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting)
 {
@@ -651,7 +631,6 @@ void NESynchronousServer::RemovePlayerFromGameInProgress(unsigned char inSlot, b
         this->ProcessLocalUserInput(theMessage, kSlotNone);
 }
 
-// FUNCTION: LLE 0x10048a4a
 // Starts or stops searching the network for "EEService" games
 long NESynchronousServer::SearchForGame(bool inStart)
 {
@@ -660,7 +639,6 @@ long NESynchronousServer::SearchForGame(bool inStart)
     return this->mProtocol->SearchForGame(theHost, theName, inStart);
 }
 
-// FUNCTION: LLE 0x10048a9d
 // Sends the next communications tick with queued inputs (or a keep-alive while tuning fails)
 // and removes out-of-sync players, subtracting them from the human count a second time
 void NESynchronousServer::SendCommunicationsTick(bool inGenerateChecksum, bool inB)
@@ -744,21 +722,18 @@ void NESynchronousServer::SimCommunicationsTick()
     this->SendCommunicationsTick(false, false);
 }
 
-// FUNCTION: LLE 0x10048e31
 // Sends a message to one client slot
 long NESynchronousServer::SendMessageTo(unsigned char inSlot, NEMessage* inMessage, bool inGuaranteed)
 {
     return ee_net_mm_send_to(this->mMessageManager, inMessage, inSlot, inGuaranteed);
 }
 
-// FUNCTION: LLE 0x10048e4b
 // Sends a message to every client
 long NESynchronousServer::SendMessageToAll(NEMessage* inMessage, bool inGuaranteed)
 {
     return ee_net_mm_send(this->mMessageManager, inMessage, inGuaranteed);
 }
 
-// FUNCTION: LLE 0x10048e61
 // Queues a message to be sent to every client with answers awaited (timeout, retries) on a later tick
 unsigned long NESynchronousServer::SendToAllAndWait(NEMessage* inMessage, unsigned long inTimeout,
                                                     unsigned long inRetries)
@@ -775,21 +750,18 @@ unsigned long NESynchronousServer::SendToAllAndWait(NEMessage* inMessage, unsign
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10048eb4
 // Sets the lowest communications tick in the message manager
 void NESynchronousServer::SetMessageManagerLowestCTs(unsigned long inCT)
 {
     ee_net_mm_set_lowest_cts(this->mMessageManager, inCT);
 }
 
-// FUNCTION: LLE 0x10048ec6
 // Sets the message manager's current message number
 void NESynchronousServer::SetMessageManagerCurrentMessageNumber(unsigned long inNumber)
 {
     ee_net_mm_set_current_number(this->mMessageManager, inNumber);
 }
 
-// FUNCTION: LLE 0x10048ed9
 // Starts the server's main, send and transfer threads ("CommMain", "CommSend", "CommXfer") once published
 void NESynchronousServer::StartThreads()
 {
@@ -808,7 +780,6 @@ void NESynchronousServer::StartThreads()
     this->mXferThread->SetName(UString("CommXfer"));
 }
 
-// FUNCTION: LLE 0x10049028
 // Stops the send, main and transfer threads and waits for each to finish
 void NESynchronousServer::StopThreads()
 {
@@ -822,7 +793,6 @@ void NESynchronousServer::StopThreads()
     this->mXferThreadFinishedEvent->Wait(kTSWaitInfinite);
 }
 
-// FUNCTION: LLE 0x1004969a
 // Tunes for network and CPU speed and reports (or clears) the lagging players; returns false while lagging
 // (ee_net tune.rs: TuneServer, TuneForSlowNetwork, TuneForSlowCPU and the booting they do)
 bool NESynchronousServer::TuneServer()
@@ -929,7 +899,6 @@ ptrdiff_t NESynchronousServer::TuneHost(void* inServer, EeNetTuOp inOp, size_t a
     return 0;
 }
 
-// FUNCTION: LLE 0x10049753
 // Unregisters a client slot (never the server or no-slot)
 void NESynchronousServer::UnregisterSlot(unsigned char inSlot)
 {
@@ -937,7 +906,6 @@ void NESynchronousServer::UnregisterSlot(unsigned char inSlot)
         ee_net_mm_unregister_slot(this->mMessageManager, inSlot);
 }
 
-// FUNCTION: LLE 0x1004976e
 // Sends an unpause request to every client and waits for their answers
 void NESynchronousServer::UnpauseGame()
 {
@@ -951,7 +919,6 @@ void NESynchronousServer::UnpauseGame()
     this->mPauseUnpauseLock->Leave();
 }
 
-// FUNCTION: LLE 0x100497c8
 // Queues a file transfer to a client slot and wakes the transfer thread
 long NESynchronousServer::XferFileToClient(FSFileSpec& inFile, unsigned long inUserData, unsigned char inSlot,
                                            unsigned long& outXferID, bool inP5)
@@ -966,7 +933,6 @@ long NESynchronousServer::XferFileToClient(FSFileSpec& inFile, unsigned long inU
     return theResult;
 }
 
-// FUNCTION: LLE 0x10049802
 // Server main thread: handles start/pause/stop, client packets, answer waits with retries and reconnect waits
 unsigned long NESynchronousServer::Main(void* inServerObject)
 {
@@ -1145,7 +1111,6 @@ unsigned long NESynchronousServer::Main(void* inServerObject)
     return 0;
 }
 
-// FUNCTION: LLE 0x10049d13
 // Server send thread: sends a communications tick every send interval (with a checksum when due)
 unsigned long NESynchronousServer::Send(void* inServerObject)
 {
@@ -1231,7 +1196,6 @@ unsigned long NESynchronousServer::Send(void* inServerObject)
     }
 }
 
-// FUNCTION: LLE 0x10049eee
 // Server transfer thread: pumps queued file transfers every 500 ms until none remain
 unsigned long NESynchronousServer::Xfer(void* inServerObject)
 {
@@ -1279,56 +1243,3 @@ unsigned long NESynchronousServer::Xfer(void* inServerObject)
 }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
-
-// TEMPLATE: LLE 0x1004a000
-// TEMPLATE: LLE 0x1004a02c
-// TEMPLATE: LLE 0x1004a07d
-// TEMPLATE: LLE 0x1004a0a8
-// TEMPLATE: LLE 0x1004a0d4
-// TEMPLATE: LLE 0x1004a135
-// TEMPLATE: LLE 0x1004a160
-// TEMPLATE: LLE 0x1004a19a
-// TEMPLATE: LLE 0x1004a208
-// TEMPLATE: LLE 0x1004a233
-// TEMPLATE: LLE 0x1004a26d
-// TEMPLATE: LLE 0x1004a295
-// TEMPLATE: LLE 0x1004a2c0
-// TEMPLATE: LLE 0x1004a304
-// TEMPLATE: LLE 0x1004a313
-// TEMPLATE: LLE 0x1004a329
-// TEMPLATE: LLE 0x1004a33a
-// TEMPLATE: LLE 0x1004a38a
-// TEMPLATE: LLE 0x1004a461
-// TEMPLATE: LLE 0x1004a4d2
-// TEMPLATE: LLE 0x1004a76d
-// TEMPLATE: LLE 0x1004a796
-// TEMPLATE: LLE 0x1004a92a
-// TEMPLATE: LLE 0x1004a953
-// TEMPLATE: LLE 0x1004a985
-// TEMPLATE: LLE 0x1004aa7b
-// TEMPLATE: LLE 0x1004aaa9
-// TEMPLATE: LLE 0x1004aacb
-// TEMPLATE: LLE 0x1004aaf9
-// TEMPLATE: LLE 0x1004ab0b
-// TEMPLATE: LLE 0x1004ab20
-// TEMPLATE: LLE 0x1004a9c6
-// TEMPLATE: LLE 0x1004ab36
-// TEMPLATE: LLE 0x1004ab5f
-// TEMPLATE: LLE 0x1004ac2c
-// TEMPLATE: LLE 0x1004ac5f
-// TEMPLATE: LLE 0x1004acf8
-// TEMPLATE: LLE 0x1004acfd
-// TEMPLATE: LLE 0x1004ad34
-// TEMPLATE: LLE 0x1004ad70
-// TEMPLATE: LLE 0x1004ae5a
-// TEMPLATE: LLE 0x1004ae7e
-// TEMPLATE: LLE 0x1004aebe
-// TEMPLATE: LLE 0x1004aee7
-// TEMPLATE: LLE 0x1004af0c
-// TEMPLATE: LLE 0x1004af74
-// TEMPLATE: LLE 0x1004afca
-// TEMPLATE: LLE 0x1004afdd
-// TEMPLATE: LLE 0x1004b01e
-// The std::sort chain over vector<unsigned char> 0x1004a9c6..0x1004b04f (Dinkum 2.33 <algorithm>, NESSSlotOrder).
-// TEMPLATE: LLE 0x1004a067
-// TEMPLATE: LLE 0x1004a440

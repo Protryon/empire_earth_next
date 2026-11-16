@@ -27,7 +27,10 @@
 //!   the C++ host and the editor's C++ model).
 //! - [`custom_campaign`]: the custom campaign form whole (its events over the C++ host).
 //! - [`civ_builder`]: the civilization builder's events whole (its form's and dialogs' control events, the form's
-//!   open and close events, over the C++ builder helpers).
+//!   open and close events; the builder's ops over [`civ_whole`]).
+//! - [`civ_whole`]: the civilization builder whole (its forms' helpers, the timer, its files' writing, its open,
+//!   close, buys, returns, loads, deletes and accept) with [`civ_edit`] (the edited civilization, the creator) and
+//!   [`civ_list`] (the upgrade list box's logic), over one C++ host.
 //! - [`civ_choice`]: the in-game civilization choice form whole (form 35: the predefined civilizations, over the C++
 //!   host; the posted loads' files by slot).
 //! - [`debug_sound`]: the debug sound panel whole (form 22: its sliders' events over the C++ host).
@@ -61,6 +64,9 @@
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
 //! - [`editor_actions`]: the scenario editor's actions over a world-edit host: the terrain, elevation and bulldozer
 //!   paints' queued areas and runs, the trigger area's rectangle.
+//! - [`editor_elevation`]: the scenario editor's elevation tab whole in Rust (`EEUIFSEElevation`).
+//! - [`editor_form`]: the scenario editor's main form whole in Rust (`EEUIFScenarioEditor`): its controls, tabs,
+//!   selection, keys and the trigger-only save's report over the scenario's records.
 //! - [`editor_subscreens`]: the scenario editor's trigger tab condition and effect screens whole in Rust
 //!   (`EESETSCondition`, `EESETSEffect`): their title and type combo box, store, load, names and type switch.
 //! - [`editor_conditions`]: the scenario editor's condition types whole in Rust (`EESETSConditionType` and its
@@ -133,6 +139,11 @@ mod civ_builder_ffi;
 pub mod civ_choice;
 #[cfg(not(test))]
 mod civ_choice_ffi;
+pub mod civ_edit;
+pub mod civ_list;
+pub mod civ_whole;
+#[cfg(not(test))]
+mod civ_whole_ffi;
 pub mod command_panel;
 mod command_panel_ffi;
 pub mod command_units;
@@ -152,7 +163,11 @@ mod diplomacy_ffi;
 pub mod editor_actions;
 #[cfg(not(test))]
 mod editor_actions_ffi;
+pub mod editor_area;
+#[cfg(not(test))]
+mod editor_area_ffi;
 pub mod editor_conditions;
+pub mod editor_controls;
 pub mod editor_effects;
 #[cfg(not(test))]
 mod editor_effects_ffi;
@@ -162,7 +177,19 @@ pub mod editor_effects_object;
 pub mod editor_effects_player;
 #[cfg(test)]
 mod editor_effects_tests;
+pub mod editor_elevation;
+#[cfg(not(test))]
+mod editor_elevation_ffi;
 pub mod editor_events;
+pub mod editor_form;
+#[cfg(not(test))]
+mod editor_form_ffi;
+pub mod editor_instructions;
+#[cfg(not(test))]
+mod editor_instructions_ffi;
+pub mod editor_map;
+#[cfg(not(test))]
+mod editor_map_ffi;
 pub mod editor_object;
 #[cfg(not(test))]
 mod editor_object_ffi;

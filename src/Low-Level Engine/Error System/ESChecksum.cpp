@@ -9,7 +9,6 @@
 #include "lle/ESChecksum.h"
 #include "rust/ee_error.h"
 
-// FUNCTION: LLE 0x10002a50
 // Creates an empty checksum set, verbose (one described entry per checksum) or summed
 ESChecksum::ESChecksum(bool inVerbose) : mRust(ee_error_checksum_new(inVerbose))
 {
@@ -30,19 +29,16 @@ ESChecksum::~ESChecksum()
     ee_error_checksum_free(this->mRust);
 }
 
-// FUNCTION: LLE 0x10002a78
 void ESChecksum::AddChecksum(const UString& inDescription, unsigned long inChecksum)
 {
     ee_error_checksum_add(this->mRust, inDescription, inChecksum);
 }
 
-// FUNCTION: LLE 0x10002ac9
 void ESChecksum::AddChecksum(unsigned long inChecksum)
 {
     ee_error_checksum_add_value(this->mRust, inChecksum);
 }
 
-// FUNCTION: LLE 0x10002b1b
 bool ESChecksum::Compare(const ESChecksum& inOther, std::vector<UString>& outErrors) const
 {
     EeErrorTexts* theTexts;
@@ -53,13 +49,11 @@ bool ESChecksum::Compare(const ESChecksum& inOther, std::vector<UString>& outErr
     return theResult;
 }
 
-// FUNCTION: LLE 0x10002c3e
 bool ESChecksum::GetIsVerboseMode() const
 {
     return ee_error_checksum_verbose(this->mRust);
 }
 
-// FUNCTION: LLE 0x10002c42
 unsigned long ESChecksum::GetTotalChecksum() const
 {
     return ee_error_checksum_total(this->mRust);

@@ -37,7 +37,6 @@ void ImageComponentConfig::SetComponent(Component *theComponent)
 	this->mImageComponent = static_cast<ImageComponent*>(theComponent);
 }
 
-// FUNCTION: WON 0x00794e30
 // Binds the config to its screen container (calls the component-level binder, so the container pointer stays unset)
 void ScreenContainerConfig::SetComponent(Component *theComponent)
 {
@@ -45,28 +44,24 @@ void ScreenContainerConfig::SetComponent(Component *theComponent)
 	this->mScreenContainer = static_cast<ScreenContainer*>(theComponent);
 }
 
-// FUNCTION: WON 0x0079b030
 // Creates a new rectangle component
 Component* RectangleComponentConfig::CompFactory()
 {
     return new RectangleComponent;
 }
 
-// FUNCTION: WON 0x0079b0e0
 // Creates a new 3D rectangle component
 Component* RectangleComponent3DConfig::CompFactory()
 {
     return new RectangleComponent3D;
 }
 
-// FUNCTION: WON 0x0079b190
 // Creates a new image component
 Component* ImageComponentConfig::CompFactory()
 {
     return new ImageComponent;
 }
 
-// FUNCTION: WON 0x0079b2f0
 // Creates a new screen container
 Component* ScreenContainerConfig::CompFactory()
 {

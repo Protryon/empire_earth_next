@@ -1269,3 +1269,230 @@ trigger 0
 trigger 2
 ui e
 tscreenstate
+# round 6 of the editor lane: the area screen (EESETSArea). Three areas made, the first two given a rectangle and an
+# anchor through the scenario manager (a person paints them with the mouse), each loaded; the mode combo box
+# (EESEEAreaCheck: SetAreaMode) with and without the UI hidden, the centre button (EESEECenterCameraOnArea), a name
+# and a text stored, the list's buttons, the sub-tab left and entered
+tab 4
+trigger 4
+tscreenstate
+areastate
+form 0 999 11
+tscreen new
+tscreen new
+tscreen new
+tscreenstate
+areastate
+areaset 2 10 12 20 30
+areapoint 3 7 9
+areaset 4 5 6 15 16
+areapoint 4 8 8
+tscreen select 0
+areastate
+form 0 999 11
+tscreen select 1
+areastate
+form 0 999 11
+combo 0x898 1                      # point mode
+areastate
+form 0 999 11
+combo 0x898 0                      # rectangle mode
+areastate
+tscreen select 2
+areastate
+combo 0x898 1
+areastate
+fire 0x89a                         # centre the camera on the area
+areastate
+check 0x12 1                       # the UI hidden: the mode switch leaves the label and button
+combo 0x898 0
+areastate
+form 0 999 11
+check 0x12 0
+combo 0x898 1
+edit 0x7db Named_area
+edit 0x963 area_text
+tscreen select 0                   # the third stored: its name, text, mode and anchor
+areastate
+tscreen select 2
+areastate
+tscreen dup
+tscreenstate
+areastate
+tscreen up
+tscreen down
+tscreen sort
+tscreenstate
+areastate
+tscreen delete
+tscreenstate
+areastate
+form 0 999 11
+trigger 0
+areastate
+form 0 999 11
+trigger 4
+areastate
+form 0 999 11
+# round 6: round 5's gaps. The chat condition's Enter (its text box's event stores the condition); the labels'
+# alignments as one type is hidden and another shown (diplomacy, then player attribute, game, diplomacy, then the
+# sub-tab left and entered: Activate shows the type without a Load); the effect controls after the last effect is
+# deleted (no Load follows the delete)
+tab 4
+trigger 1
+tscreen select 0
+ctype 7
+cctl text 0 typed_chat
+enter 0x915
+conditionstate
+align c
+ctype 5
+align c
+ctype 2
+align c
+ctype 6
+align c
+ctype 5
+align c
+trigger 0
+trigger 1
+align c
+ui c
+trigger 2
+align e
+tscreen delete
+tscreen delete
+ui e
+align e
+tscreen delete
+tscreenstate
+ui e
+align e
+effectstate
+# round 6: the map tab (EEUIFSEMap): its kind radio buttons (UIRBMap::Check), the elevation file's boxes in each
+# kind, the create button (UIBMap: CreateMap) for a seeded random map, a blank map and a random map, the tab entered
+tab 0
+form 0 999 1
+radio 0x6f
+form 0 999 1
+radio 0x6d
+form 0 999 1
+edit 0x70 4321
+combo 0x72 0
+combo 0x6a 1
+buttonup 0x65
+seed
+digest mapseed
+radio 0x6e
+form 0 999 1
+combo 0x75 1
+form 0 999 1
+radio 0x6f
+combo 0x75 1
+controls 0x7d 0x7c 0x79 0x78 0x6c 0x67
+radio 0x6e
+controls 0x7d 0x7c 0x79 0x78 0x6c 0x67
+combo 0x75 0
+combo 0x6b 2
+combo 0x6c 3
+combo 0x69 1
+buttonup 0x65
+seed
+digest mapblank
+radio 0x6f
+buttonup 0x65
+seed
+form 0 999 1
+digest maprandom
+tab 3
+tab 0
+form 0 999 1
+# round 6: the instructions tab (EESEInstructions): its controls as made, texts typed, the tab left (Store) and the
+# scenario's media texts, the texts changed and the tab entered again (Enter, Load), a text box's Enter (EESEEFindText)
+tab 6
+form 0 9999 7
+media
+edit 0x453 Do_this_first
+edit 0x455 After_it_all
+edit %889 Hint_one
+edit %890 Long_ago
+tab 0
+media
+edit 0x453 changed
+edit %890 changed_too
+tab 6
+form 0 9999 7
+media
+enter 0x453
+form 0 9999 7
+tab 0
+media
+# editor screens round 7: the editor form (EEUIFScenarioEditor): the trigger-only save's report (Ctrl+S) as the
+# scenario stands, then over new entries and a fixed set of changes (TriggerReport); the form's state as the tabs
+# change, the load text, the game view, a store and a resume; its selection members called directly (a trojan horse
+# with cargo room, a citizen, a clubman)
+trigreport
+sm new 0
+sm new 0
+sm new 0
+sm new 1
+sm new 1
+sm new 2
+sm new 2
+sm new 2
+sm new 3
+sm new 3
+sm new 3
+sm new 4
+sm new 4
+sm state
+trigreport
+trigreport setup
+formstate
+tab 2
+formstate
+tab 5
+formstate
+tab 1
+formstate
+tab 3
+formstate
+loadtext Loading_the_terrain
+formstate
+loadtext -
+formstate
+gameview 0 0 1024 700 1
+formstate
+gameview 0 0 1024 606 0
+formstate
+formcall store
+formcall resume
+formstate
+blank 40 40 3
+ghost 1 209 42 40 0
+placeghost 1
+place 1 32 36.5 44.5 0
+place 2 20 44.5 44.5 0
+units
+fsel add @42,40
+formstate
+fsel add @36,44
+fsel add @44,44
+fsel add @42,40
+formstate
+unittab
+fsel remove @36,44
+formstate
+fsel first
+formstate
+unittab
+fsel remove @44,44
+formstate
+fsel add @36,44
+fsel add @42,40
+formstate
+fsel clear
+formstate
+unittab
+tab 0
+formstate

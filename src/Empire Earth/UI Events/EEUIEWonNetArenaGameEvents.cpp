@@ -60,13 +60,13 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEWonNet.h"
+#include "ee/wonapi/WONRouting.h" // AuthContext (WONAuthContext.h)
 #include "ee/EEUICWonNetGamesBox.h"
 #include "ee/EEWonNetAvailableGameFormManager.h"
 #include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEStringIDs.h"
 static void OnGamePassword(const char* inPassword);
 
-// FUNCTION: EXE 0x5e9fed
 // Refreshes the WON game list each time the game room's poll timer fires, while a game-list server is known
 long EEUIEWNAGUpdateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -79,7 +79,6 @@ long EEUIEWNAGUpdateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5ea027
 // Starts the game room's poll timer and, the first time, installs the update event and fetches the game list
 long EEUIEWNAGActivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -96,11 +95,6 @@ long EEUIEWNAGActivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5ea0a6
-// Destroys the game room's update event and frees it when asked (scalar deleting destructor)
-// (??_G of EEUIEWNAGUpdateForm)
-
-// FUNCTION: EXE 0x5ea0d1
 // Leaves the WON room and returns to the previous screen
 long EEUIEWNAGBack::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -108,7 +102,6 @@ long EEUIEWNAGBack::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return inForm->GetManager()->Pop();
 }
 
-// FUNCTION: EXE 0x5ea0ef
 // Shows and clears the host-game password and retype boxes when the password box is ticked; hides them otherwise
 long EEUIEWNAGCheckPassword::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -135,7 +128,6 @@ long EEUIEWNAGCheckPassword::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5ea193
 // Reapplies the game list filters after a filter toggle changes
 long EEUIEWNAGClickGameFilter::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -144,7 +136,6 @@ long EEUIEWNAGClickGameFilter::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5ea1a7
 // Stops the game room's poll timer when the form closes
 long EEUIEWNAGCloseForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -154,7 +145,6 @@ long EEUIEWNAGCloseForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5ea1be
 // Stops the game room's poll timer and removes the current form's update event
 long EEUIEWNAGDeactivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -165,7 +155,6 @@ long EEUIEWNAGDeactivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5ea1eb
 // Starts a private message to the double-clicked user: puts /t "name" in the chat box with the caret at the end
 long EEUIEWNAGDoubleclickUser::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -190,7 +179,6 @@ long EEUIEWNAGDoubleclickUser::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5ea2fb
 // Hosts a game (with an optional confirmed password) or joins the selected one, at most once every 5 seconds
 // (an in-progress game shows a message and lifts the delay; a password game prompts for its password)
 long EEUIEWNAGHostOrJoinGame::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
@@ -245,17 +233,6 @@ long EEUIEWNAGHostOrJoinGame::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5ea583
-// Returns the name of a game in the WON games box
-// (EEUICWonNetGamesBox::GetGameName, GetHasPassword, GetIsInProgress: inline, emitted after their first user)
-
-// FUNCTION: EXE 0x5ea5e7
-// Returns whether a game in the WON games box needs a password
-
-// FUNCTION: EXE 0x5ea618
-// Returns whether a game in the WON games box is already in progress
-
-// FUNCTION: EXE 0x5ea649
 // Joins the selected WON game with the password typed in the prompt
 static void OnGamePassword(const char* inPassword)
 {
@@ -265,7 +242,6 @@ static void OnGamePassword(const char* inPassword)
         gWonNet->JoinGame(theGames->GetGameName(theSelection), inPassword);
 }
 
-// FUNCTION: EXE 0x5ea6bd
 // Sends the chat box's text to the WON room (prefixed with ": ") and clears the box
 long EEUIEWNAGSendChat::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -283,7 +259,6 @@ long EEUIEWNAGSendChat::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5ea743
 // Switches the game room to its Host tab: host controls on, button labelled Host, password unticked, caret in the name
 long EEUIEWNAGToggleHostScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -300,7 +275,6 @@ long EEUIEWNAGToggleHostScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5ea804
 // Switches the game room to its Join tab: join controls on, button labelled Join
 long EEUIEWNAGToggleJoinScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -314,7 +288,6 @@ long EEUIEWNAGToggleJoinScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5ea884
 // Sets up the WON game room: hooks every button, list and toggle to its event, opens on the Join tab
 // and shows the user, the room and the last hosted game name
 long EEUIEWNAGOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
@@ -365,42 +338,3 @@ long EEUIEWNAGOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     static_cast<UICheckBox*>(inForm->GetControl(kAvailableGamesPWForHostedGameCheckbox))->SetChecked(false);
     return kErrorOK;
 }
-
-// FUNCTION: EXE 0x5eadd6
-// Installs an event as a control's trigger event and releases the caller's reference
-// (EEUIEWNSetTriggerEvent, the static function of EEUIEWonNetArenaGameEvents.h)
-
-// FUNCTION: EXE 0x5eadf2
-// Destroys the game room's activate event and frees it when asked (scalar deleting destructor)
-// (??_G of the events in declaration order: ActivateForm, Back, CheckPassword, ClickGameFilter, CloseForm,
-// DeactivateForm, DoubleclickUser, HostOrJoinGame, SendChat, ToggleHostScreen, ToggleJoinScreen)
-
-// FUNCTION: EXE 0x5eae1d
-// Destroys the game room's back event and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5eae48
-// Destroys the game room's password-check event and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5eae73
-// Destroys the game room's filter event and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5eae9e
-// Destroys the game room's close event and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5eaec9
-// Destroys the game room's deactivate event and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5eaef4
-// Destroys the game room's user double-click event and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5eaf1f
-// Destroys the game room's host-or-join event and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5eaf4a
-// Destroys the game room's send-chat event and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5eaf75
-// Destroys the game room's Host tab event and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5eafa0
-// Destroys the game room's Join tab event and frees it when asked (scalar deleting destructor)

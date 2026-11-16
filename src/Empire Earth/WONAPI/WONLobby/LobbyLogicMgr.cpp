@@ -12,13 +12,11 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyLogic.h"
 namespace WONAPI {
-// FUNCTION: WON 0x007e5c10
 // Adds a logic object to the end of the list
 void LobbyLogicMgr::AddLogic(LobbyLogic* logic)
 {
     this->mLogicList.push_back(logic);
 }
-// FUNCTION: WON 0x007e5d40
 // Lets every logic object find its controls in the lobby layout
 void LobbyLogicMgr::Init(ComponentConfig* config)
 {
@@ -28,7 +26,6 @@ void LobbyLogicMgr::Init(ComponentConfig* config)
         ++itr;
     }
 }
-// FUNCTION: WON 0x007e5d80
 // Kills every logic object, cancelling their tracked operations
 void LobbyLogicMgr::Kill()
 {
@@ -38,7 +35,6 @@ void LobbyLogicMgr::Kill()
         ++itr;
     }
 }
-// FUNCTION: WON 0x007e5db0
 // Passes a control or menu id to every logic object
 void LobbyLogicMgr::DispatchControlEvent(int control)
 {
@@ -48,7 +44,6 @@ void LobbyLogicMgr::DispatchControlEvent(int control)
         ++itr;
     }
 }
-// FUNCTION: WON 0x007e5df0
 // Passes a component event to every logic object
 void LobbyLogicMgr::DispatchComponentEvent(ComponentEvent* event)
 {
@@ -58,7 +53,6 @@ void LobbyLogicMgr::DispatchComponentEvent(ComponentEvent* event)
         ++itr;
     }
 }
-// FUNCTION: WON 0x007e5e30
 // Gives every logic object its timer tick (vtable slot 0xc, declared as Reset)
 void LobbyLogicMgr::DispatchTimerEvent()
 {
@@ -68,7 +62,6 @@ void LobbyLogicMgr::DispatchTimerEvent()
         ++itr;
     }
 }
-// FUNCTION: WON 0x007e5e60
 // Turns left clicks on menu items and button presses into control events; passes other events to the logics
 void LobbyLogicMgr::HandleComponentEvent(ComponentEvent* event)
 {

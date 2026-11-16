@@ -679,6 +679,8 @@ pub fn connection_speed_index(speed: i32) -> i32 {
 pub struct EeWonLobbyCtl {
     ctl: *mut c_void,
     host: EeWonLobbyCtlHostFn,
+    /// the model's ops answered by its Rust objects (modelobj.rs; the game's), not the host
+    model: Cell<bool>,
     kind: Kind,
     /// the `SmartPtr` members, in the original's member order (see the `B_`, `S_`, `O_` and `U_` indices)
     members: [Cell<isize>; MEMBERS],
@@ -700,6 +702,7 @@ impl EeWonLobbyCtl {
     pub fn new(ctl: *mut c_void, kind: Kind, host: EeWonLobbyCtlHostFn) -> Self {
         Self {
             ctl,
+            model: Cell::new(false),
             host,
             kind,
             members: std::array::from_fn(|_| Cell::new(0)),
@@ -719,6 +722,11 @@ impl EeWonLobbyCtl {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
+        if self.model.get() {
+            if let Some(r) = crate::modelobj::ctl_op(op, a) {
+                return r;
+            }
+        }
         match self.host {
             // SAFETY: the host is the C++ control's (or a test's), called with the control it was given for
             Some(f) => unsafe { f(self.ctl, op, a, b, c) },
@@ -1829,6 +1837,18 @@ pub extern "C" fn ee_won_lobbyctl_slot_count() -> u32 {
 }
 
 /// A new control object for the C++ `ctl` of `kind`.
+/// As `ee_won_lobbyctl_new`, with the model's ops answered by its Rust objects (the game's).
+#[no_mangle]
+pub extern "C" fn ee_won_lobbyctl_new_model(
+    ctl: *mut c_void,
+    kind: EeWonLobbyCtlKind,
+    host: EeWonLobbyCtlHostFn,
+) -> *mut EeWonLobbyCtl {
+    let c = EeWonLobbyCtl::new(ctl, kind, host);
+    c.model.set(true);
+    Box::into_raw(Box::new(c))
+}
+
 #[no_mangle]
 pub extern "C" fn ee_won_lobbyctl_new(
     ctl: *mut c_void,

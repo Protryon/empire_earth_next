@@ -16,7 +16,6 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 using namespace WONAPI;
-// FUNCTION: WON 0x00788000
 // Finds the component this config is named after in the parent config; reports an error if it is missing
 bool PercentLayoutConfig::PreParse(ConfigParser* parser)
 {
@@ -28,7 +27,6 @@ bool PercentLayoutConfig::PreParse(ConfigParser* parser)
     }
     return true;
 }
-// FUNCTION: WON 0x007883b0
 // Starts from the colors of the nearest parent component with its own scheme, else the window manager's
 bool ColorSchemeConfig::PreParse(ConfigParser*)
 {

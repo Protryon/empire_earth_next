@@ -1,0 +1,217 @@
+# The civilization builder gate's script (tools/sim_editor.py --script tools/sim_editor/civbuilder.txt --expected
+# tools/sim_editor/civbuilder_expected.txt; the "cb" steps: src/Empire Earth/Empire Earth/EESimCivBuilder.cpp).
+# Forms: 7 the builder (203 the available upgrades, 204 the bought ones, 196 the name, 206 the points spent, 210 the
+# points left, 197 change name, 198 load, 211 save, 212 exit, 448 accept), 15 the name dialog (410 the name, 411 OK,
+# 412 cancel), 16 save (420 the files, 421 delete, 422 OK, 423 cancel, 562 the name), 17 load (425 the files, 426
+# delete, 427 OK, 428 cancel), 35 the predefined civilizations. A list's events: 0x3f2 selected, 0x3f0 released.
+# The user's civilization files this script writes start with "cbgate"; they are removed first and last.
+cb rm cbgate1
+cb rm cbgate2
+cb rm cbgatelegacy
+cb rm cbgatebad
+cb state
+# ---- the creator over the editor's civilization (the editor's button: free camera, unlimited points)
+fire 17
+cb state
+cb form 7
+cb pick 7 203 1
+cb event 7 203 0x3f2
+cb event 7 203 0x3f0
+cb form 7
+cb state
+cb pick 7 203 1
+cb event 7 203 0x3f0
+cb pick 7 203 24
+cb event 7 203 0x3f0
+cb pick 7 203 30
+cb event 7 203 0x3f0
+cb pick 7 203 0
+cb event 7 203 0x3f0
+cb form 7
+cb state
+cb pick 7 204 2
+cb event 7 204 0x3f2
+cb event 7 204 0x3f0
+cb pick 7 204 0
+cb event 7 204 0x3f0
+cb form 7
+cb state
+cb reset 7 203
+cb tab 7 203
+cb form 7
+# the save dialog: the civilization's name offered; an unchanged civilization takes the typed file name as its name
+cb event 7 211 0x3f0
+cb form 16
+cb text 16 562 cbgate1
+cb event 16 422 0x3f0
+cb state
+cb top
+cb file cbgate1
+# saved again under the same name: the overwrite question, No then Yes
+cb event 7 211 0x3f0
+cb form 16
+cb event 16 422 0x3f0
+cb top
+cb answer 2
+cb state
+cb event 16 422 0x3f0
+cb answer 1
+cb state
+cb file cbgate1
+# a premade civilization's file name is reserved; a name the file system refuses
+cb text 16 562 austria
+cb event 16 422 0x3f0
+cb top
+cb answer 1
+cb text 16 562 cbgate?bad
+cb event 16 422 0x3f0
+cb top
+cb answer 1
+cb event 16 423 0x3f0
+cb state
+# a second file, then the load dialog
+cb pick 7 203 40
+cb event 7 203 0x3f0
+cb event 7 211 0x3f0
+cb text 16 562 cbgate2
+cb event 16 422 0x3f0
+cb file cbgate2
+cb event 7 198 0x3f0
+cb form 17
+cb state
+# the first file loaded over the edit; the second deleted (its question: Yes)
+cb pickname 17 425 cbgate1
+cb event 17 427 0x3f0
+cb state
+cb form 7
+cb event 7 198 0x3f0
+cb pickname 17 425 cbgate2
+cb event 17 426 0x3f0
+cb top
+cb answer 1
+cb file cbgate2
+cb form 17
+# a legacy binary file (name length, name, count, (category << 6) | level ids): written, listed, loaded
+cb put cbgatelegacy 060000004c656761637902000000c100000042010000
+cb file cbgatelegacy
+cb load cbgatelegacy
+cb event 17 428 0x3f0
+cb event 7 198 0x3f0
+cb pickname 17 425 cbgatelegacy
+cb event 17 427 0x3f0
+cb state
+cb form 7
+# the name dialog after a save: OK saves under the last file name (cbgate1)
+cb event 7 197 0x3f0
+cb form 15
+cb text 15 410 Renamed_Civ
+cb event 15 411 0x3f0
+cb state
+cb file cbgate1
+cb event 7 197 0x3f0
+cb event 15 412 0x3f0
+# the builder accepted (the creator applies nothing; its close event deletes it)
+cb event 7 448 0x3f0
+cb state
+# ---- the creator with points (no free camera): buys until refused, a return, exit
+cb flag freecam 0
+fire 17
+cb state
+cb form 7
+cb pick 7 203 1
+cb event 7 203 0x3f0
+cb pick 7 203 9
+cb event 7 203 0x3f0
+cb pick 7 203 10
+cb event 7 203 0x3f0
+cb pick 7 203 11
+cb event 7 203 0x3f0
+cb pick 7 203 12
+cb event 7 203 0x3f0
+cb pick 7 203 13
+cb event 7 203 0x3f0
+cb state
+cb form 7
+cb pick 7 204 1
+cb event 7 204 0x3f0
+cb state
+cb event 7 448 0x3f0
+cb state
+fire 17
+cb event 7 212 0x3f0
+cb state
+cb flag freecam 1
+# ---- the civilization timer: the predefined civilizations' choice (no custom civilizations), its list
+cb flag custom 0
+cb timer
+cb state
+cb form 35
+cb pick 35 3230 0
+cb form 35
+cb pick 35 3230 5
+cb form 35
+cb pick 35 3230 3
+cb form 35
+cb pick 35 3230 7
+cb form 35
+cb pick 35 3230 26
+cb form 35
+cb pick 35 3230 14
+cb form 35
+cb pick 35 3230 0
+cb form 35
+cb tab 35 3230
+cb reset 35 3230
+cb tab 35 3230
+cb copy 35 3230
+cb copy 35 3231
+cb pick 35 3231 2
+cb form 35
+cb close
+cb state
+# ---- the edit of the current player's civilization (the game's path), free camera then not
+cb edit
+cb state
+cb form 7
+cb pick 7 203 1
+cb event 7 203 0x3f0
+cb event 7 448 0x3f0
+cb state
+cb flag freecam 0
+cb apply 1 austria
+cb edit
+cb state
+cb form 7
+cb pick 7 204 1
+cb event 7 204 0x3f2
+cb event 7 204 0x3f0
+cb pick 7 203 5
+cb form 7
+cb copy 7 203
+cb copy 7 204
+cb pick 7 203 1
+cb event 7 203 0x3f0
+cb save cbgatecamp 1
+cb file cbgatecamp
+cb load cbgatecamp
+cb event 7 197 0x3f0
+cb text 15 410 Edited
+cb event 15 411 0x3f0
+cb state
+cb flag custom 1
+cb timer
+cb state
+cb event 7 212 0x3f0
+cb state
+cb flag freecam 1
+cb flag custom 0
+# ---- the main game form's blinking builder button
+cb blink 1
+cb blink 0
+# ---- the files removed
+cb rm cbgate1
+cb rm cbgate2
+cb rm cbgatelegacy
+cb rm cbgatecamp
+cb rm cbgatebad
+cb state

@@ -35,17 +35,20 @@
 #include "lle/GERasterizer.h"
 #include "lle/GE2DVertex.h"
 #include "lle/GEBitmap.h"
+#include "lle/GELine.h"   // GEVertexHost
+#include "lle/UWideString.h"
+#include "lle/GEMaterial.h"
+#include "lle/GEFont.h"
+#include "lle/GEText.h"
+#include "platform/PlatFont.h"
+#include "platform/PlatWindow.h"
+#include "GERustText.h"
 #include "GERustMath.h"
+#include <mbstring.h>
+#include "lle/Graphics Engine.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
-// header-inline members emitted by this unit: URandom(unsigned long) 0x1000dd9e, operator= 0x1000ddca (ICF pair
-// with URandomIntegers'), Generate(float, float) 0x1000de1a, the default-ctor closure 0x1000de43
-// FUNCTION: LLE 0x1000dd9e
-// FUNCTION: LLE 0x1000ddca
-// FUNCTION: LLE 0x1000de1a
-
-// FUNCTION: LLE 0x1000dde9
 // Advances the random generator one step and returns the new seed as a fraction in [0, 1)
 void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST ONLY (lle/URandom.h)
 
@@ -57,7 +60,6 @@ float URandom::Generate()
     return (float)((double)this->mSeed / (double)this->mModulus);
 }
 
-// FUNCTION: LLE 0x1000de30
 // Advances the random generator one step and returns the new seed
 unsigned long URandom::NextInSeries()
 {
@@ -65,25 +67,14 @@ unsigned long URandom::NextInSeries()
     return this->mSeed;
 }
 
-// header-inline (lle/URandom.h, after the class), emitted by this unit
-// FUNCTION: LLE 0x1000de5f
-// FUNCTION: LLE 0x1000de95
-
 // ---- GERectangle members this unit emits (0x1000e39e..0x1000e78f)
 
-// SYNTHETIC: LLE 0x1000e39e
-// GERectangle(): header-inline (lle/GERectangle.h), emitted here
-//
 //
 //
 //
 //
 //
 
-// SYNTHETIC: LLE 0x1000e3b4
-// GERectangle(const GE2DPoint&, const GE2DPoint&): header-inline (lle/GERectangle.h), emitted here
-
-// FUNCTION: LLE 0x1000e3d6
 // Creates a zero-size rectangle at the given point
 GERectangle::GERectangle(const GE2DPoint& inPoint)
 {
@@ -93,7 +84,6 @@ GERectangle::GERectangle(const GE2DPoint& inPoint)
     this->mRight = inPoint.GetX();
 }
 
-// FUNCTION: LLE 0x1000e3f4
 // Creates a rectangle from a Windows RECT
 GERectangle::GERectangle(const tagRECT& inRect)
 {
@@ -103,22 +93,12 @@ GERectangle::GERectangle(const tagRECT& inRect)
     this->mRight = (float)inRect.right;
 }
 
-// SYNTHETIC: LLE 0x1000e413
-// GERectangle(long x4): header-inline (lle/GERectangle.h), emitted here
-
-// SYNTHETIC: LLE 0x1000e433
-// GERectangle(float, float, float, float): header-inline (lle/GERectangle.h), emitted here
-//
 //
 //
 //
 //
 //
 
-// SYNTHETIC: LLE 0x1000e453
-// GERectangle(const GE2DPoint&, float, float): header-inline (lle/GERectangle.h), emitted here
-
-// FUNCTION: LLE 0x1000e488
 // Returns whether both rectangles have the same four edges
 bool GERectangle::operator==(const GERectangle& inRectangle) const
 {
@@ -126,20 +106,12 @@ bool GERectangle::operator==(const GERectangle& inRectangle) const
            this->mBottom == inRectangle.mBottom;
 }
 
-// SYNTHETIC: LLE 0x1000e4c0
-// GERectangle::operator!=: header-inline, emitted here
-
-// FUNCTION: LLE 0x1000e517
 // Returns whether the point lies inside the rectangle, edges included
 bool GERectangle::Contains(const GE2DPoint& inPoint) const
 {
     return inPoint.mX >= this->mLeft && inPoint.mX <= this->mRight && inPoint.mY >= this->mTop && inPoint.mY <= this->mBottom;
 }
 
-// SYNTHETIC: LLE 0x1000e54e
-// GERectangle::Contains(const GERectangle&): header-inline (lle/GERectangle.h), emitted here
-
-// FUNCTION: LLE 0x1000e586
 // Grows the rectangle just enough to contain the point
 void GERectangle::Extend(const GE2DPoint& inPoint)
 {
@@ -149,21 +121,14 @@ void GERectangle::Extend(const GE2DPoint& inPoint)
     this->mBottom = max(this->mBottom, inPoint.mY);
 }
 
-// SYNTHETIC: LLE 0x1000e5e4
-// GERectangle::GetBottomLeft: header-inline (lle/GERectangle.h), emitted here
-//
-//
-//
-//
-
-// SYNTHETIC: LLE 0x1000e5f9
-// GERectangle::GetBottomRight: header-inline (lle/GERectangle.h), emitted here
-//
 //
 //
 //
 
-// FUNCTION: LLE 0x1000e60e
+//
+//
+//
+
 // Returns the rectangle's centre point in outCenter
 void GERectangle::GetCenter(GE2DPoint& outCenter) const
 {
@@ -171,24 +136,14 @@ void GERectangle::GetCenter(GE2DPoint& outCenter) const
     outCenter.mY = (this->mBottom - this->mTop) * 0.5f + this->mTop;
 }
 
-// SYNTHETIC: LLE 0x1000e63d
-// GERectangle::GetTopLeft: header-inline (lle/GERectangle.h), emitted here
-//
-//
-//
-//
-
-// SYNTHETIC: LLE 0x1000e653
-// GERectangle::GetTopRight: header-inline (lle/GERectangle.h), emitted here
-//
 //
 //
 //
 
-// SYNTHETIC: LLE 0x1000e670
-// GERectangle::Intersects: header-inline (lle/GERectangle.h), emitted here
+//
+//
+//
 
-// FUNCTION: LLE 0x1000e6a8
 // Rounds each edge of the rectangle to the nearest whole number
 void GERectangle::RoundToNearest()
 {
@@ -198,141 +153,14 @@ void GERectangle::RoundToNearest()
     this->mBottom = (float)UMFloor(this->mBottom + 0.5f);
 }
 
-// SYNTHETIC: LLE 0x1000e74e
-// GERectangle::SetBottomRight: header-inline (lle/GERectangle.h), emitted here
-
-// SYNTHETIC: LLE 0x1000e77d
-// GERectangle::SetTopLeft: header-inline (lle/GERectangle.h), emitted here
-
-// ---- Header-inline members first emitted here (COMDATs; markers only)
-// FUNCTION: LLE 0x1000deb3
-// FUNCTION: LLE 0x1000dec4
-// FUNCTION: LLE 0x1000df33
-// FUNCTION: LLE 0x1000df43
-// SYNTHETIC: LLE 0x1000df58
-// FUNCTION: LLE 0x1000dfc9
-// FUNCTION: LLE 0x1000dfd3
-// FUNCTION: LLE 0x1000e013
-// FUNCTION: LLE 0x1000e040
-// FUNCTION: LLE 0x1000e047
-// FUNCTION: LLE 0x1000e04b
-// FUNCTION: LLE 0x1000e06e
-// FUNCTION: LLE 0x1000e075
-// FUNCTION: LLE 0x1000e08c
-// FUNCTION: LLE 0x1000e090
-// FUNCTION: LLE 0x1000e0b3
-// FUNCTION: LLE 0x1000e0bb
-// FUNCTION: LLE 0x1000e0c2
-// FUNCTION: LLE 0x1000e0c9
-// FUNCTION: LLE 0x1000e0d4
-// FUNCTION: LLE 0x1000e0da
-// FUNCTION: LLE 0x1000e0e2
-// FUNCTION: LLE 0x1000e0e6
-// FUNCTION: LLE 0x1000e0fc
-// FUNCTION: LLE 0x1000e109
-// FUNCTION: LLE 0x1000e10e
-// FUNCTION: LLE 0x1000e113
-// FUNCTION: LLE 0x1000e11d
-// FUNCTION: LLE 0x1000e1bf
-// SYNTHETIC: LLE 0x1000e255
-// FUNCTION: LLE 0x1000e2b0
-// FUNCTION: LLE 0x1000e2e0
-// FUNCTION: LLE 0x1000e311
-// FUNCTION: LLE 0x1000e31a
-// FUNCTION: LLE 0x1000e321
-// FUNCTION: LLE 0x1000e327
-// FUNCTION: LLE 0x1000e331
-// SYNTHETIC: LLE 0x1000e34c
-// FUNCTION: LLE 0x1000e4f8
-// FUNCTION: LLE 0x1000e78f
-// FUNCTION: LLE 0x1000e7a5
-// FUNCTION: LLE 0x1000e7de
-// FUNCTION: LLE 0x1000e7e5
-// FUNCTION: LLE 0x1000e7ec
-// FUNCTION: LLE 0x1000e7f3
-// FUNCTION: LLE 0x1000e7fa
-// FUNCTION: LLE 0x1000e815
-// FUNCTION: LLE 0x1000e81c
-// FUNCTION: LLE 0x1000e823
-// FUNCTION: LLE 0x1000e82a
-// FUNCTION: LLE 0x1000e83e
-// FUNCTION: LLE 0x1000e852
-// FUNCTION: LLE 0x1000e859
-// FUNCTION: LLE 0x1000e860
-// FUNCTION: LLE 0x1000e864
-// FUNCTION: LLE 0x1000e86b
-// FUNCTION: LLE 0x1000e872
-// FUNCTION: LLE 0x1000e879
-// FUNCTION: LLE 0x1000e87d
-// FUNCTION: LLE 0x1000e884
-// FUNCTION: LLE 0x1000e88b
-// FUNCTION: LLE 0x1000e892
-// FUNCTION: LLE 0x1000e899
-// FUNCTION: LLE 0x1000e8d4
-// FUNCTION: LLE 0x1000e910
-// FUNCTION: LLE 0x1000e959
-// FUNCTION: LLE 0x1000e970
-// FUNCTION: LLE 0x1000e992
-// FUNCTION: LLE 0x1000ebfa
-// SYNTHETIC: LLE 0x1000ec05
-// FUNCTION: LLE 0x1000ed7c
-// FUNCTION: LLE 0x1000ed82
-// FUNCTION: LLE 0x1000ed97
-// FUNCTION: LLE 0x1000edac
-// FUNCTION: LLE 0x1000edc1
-// FUNCTION: LLE 0x1000edc5
-// FUNCTION: LLE 0x1000edda
-// FUNCTION: LLE 0x1000ee0c
-// FUNCTION: LLE 0x1000ee21
-// FUNCTION: LLE 0x1000ee36
-// FUNCTION: LLE 0x1000ee4b
-// FUNCTION: LLE 0x1000ee60
-// FUNCTION: LLE 0x1000ee75
-// FUNCTION: LLE 0x1000ee8a
-// FUNCTION: LLE 0x1000ee9f
-// FUNCTION: LLE 0x1000eeb4
-// FUNCTION: LLE 0x1000ef33
-// FUNCTION: LLE 0x1000ef48
-// FUNCTION: LLE 0x1000ef4c
-// FUNCTION: LLE 0x1000ef61
-// FUNCTION: LLE 0x1000ef65
-// FUNCTION: LLE 0x1000ef7a
-// FUNCTION: LLE 0x1000ef8f
-// FUNCTION: LLE 0x1000ef9d
-// FUNCTION: LLE 0x1000efb5
-// FUNCTION: LLE 0x1000efca
-// FUNCTION: LLE 0x1000efdf
-// FUNCTION: LLE 0x1000eff2
-// FUNCTION: LLE 0x1000f007
-// FUNCTION: LLE 0x1000f01c
-// FUNCTION: LLE 0x1000f031
-// FUNCTION: LLE 0x1000f046
-// FUNCTION: LLE 0x1000f05b
-// FUNCTION: LLE 0x1000f073
-// FUNCTION: LLE 0x1000f088
-// FUNCTION: LLE 0x1000f097
-// FUNCTION: LLE 0x1000f0ac
-// FUNCTION: LLE 0x1000f0c1
-// FUNCTION: LLE 0x1000f0d6
-// FUNCTION: LLE 0x1000f0e0
-// FUNCTION: LLE 0x1000f0ea
-// FUNCTION: LLE 0x1000f102
-// FUNCTION: LLE 0x1000f114
-// FUNCTION: LLE 0x1000f126
-// FUNCTION: LLE 0x1000f144
-// FUNCTION: LLE 0x1000f15b
-// FUNCTION: LLE 0x1000f1e6
-// SYNTHETIC: LLE 0x1000f279
-// FUNCTION: LLE 0x1000f2d4
-// FUNCTION: LLE 0x1000f308
-// FUNCTION: LLE 0x1000f34f
-
 // ---- GEBitmap (0x1000f3a4..). Vertex order: 0 top left, 1 top right, 2 bottom left, 3 bottom right.
 //
 // port (R4.3, ninth part): the bitmap is a whole Rust object (ee_ge bmpobj.rs): the constructor's quad, the
 // destructor's releases, the corners, the stretched coordinates, the flips, the per-vertex values and SetTexture.
 // This section is its shell: the forwarders and the host, which makes each call the original made on another
 // object (the rasterizer, the vertex array, the textures). Floats cross the host as their bits.
+
+// ---- the vertex host: the calls GEBitmap, GELine, GEPoint and GERhombus (ee_ge bmpobj.rs, prim.rs) make on other objects
 
 static intptr_t GEBitmapFloatBits(float inValue)
 {
@@ -349,7 +177,7 @@ static float GEBitmapBitsFloat(intptr_t inBits)
     return theValue;
 }
 
-intptr_t GEBitmap::Host(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
+intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     GEVertexArray* theVertices = (GEVertexArray*)inObj;
     GETexture* theTexture = (GETexture*)inObj;
@@ -406,12 +234,102 @@ intptr_t GEBitmap::Host(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, 
         return (intptr_t)theTexture->GetHeight();
     case EeGeBmpOp::TexDropLevels:
         return (intptr_t)theTexture->GetNumMipLevelsToDrop();
+    case EeGeBmpOp::VertexCopyFrom:
+        theVertices->CopyFrom(*(const GEVertexArray*)b);
+        return 0;
+    }
+    (void)inOwner;
+    return 0;
+}
+// ---- end of the vertex host
+
+// ---- the object host: the calls GEMaterial, GEFont, GEText and GEWindow (ee_ge smallobj.rs) make on other objects,
+// and GEWindow's forwarders (its header does not include the Rust header)
+intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b)
+{
+    UString* theString = (UString*)inObj;
+    UWideString* theWide = (UWideString*)inObj;
+    switch (inOp) {
+    case EeGeObjOp::StrNew:
+        return (intptr_t)new UString;
+    case EeGeObjOp::StrCopy:
+        return (intptr_t)new UString(*(const UString*)a);
+    case EeGeObjOp::StrDelete:
+        delete theString;
+        return 0;
+    case EeGeObjOp::StrAssign:
+        *theString = *(const UString*)a;
+        return 0;
+    case EeGeObjOp::StrSizeOf:
+        return (intptr_t)theString->SizeOf();
+    case EeGeObjOp::StrEqual:
+        return *theString == *(const UString*)a;
+    case EeGeObjOp::StrText:
+        return (intptr_t)(const char*)*theString;
+    case EeGeObjOp::WStrNew:
+        return (intptr_t)new UWideString((unsigned long)a);
+    case EeGeObjOp::WStrDelete:
+        delete theWide;
+        return 0;
+    case EeGeObjOp::WStrAssign:
+        *theWide = *(const UWideString*)a;
+        return 0;
+    case EeGeObjOp::WStrText:
+        return (intptr_t)(const char*)*theWide;
+    case EeGeObjOp::WStrLength:
+        return (intptr_t)theWide->GetLength();
+    case EeGeObjOp::TexReference:
+        ((GETexture*)inObj)->Reference();
+        return 0;
+    case EeGeObjOp::TexDereference:
+        ((GETexture*)inObj)->Dereference();
+        return 0;
+    case EeGeObjOp::RefReference:
+        ((UReferenceCounter*)inObj)->Reference();
+        return 0;
+    case EeGeObjOp::RefDereference:
+        ((UReferenceCounter*)inObj)->Dereference();
+        return 0;
+    case EeGeObjOp::FontObj:
+        return (intptr_t)((GEFont*)inObj)->GetRust();
+    case EeGeObjOp::PlatFontCreate:
+        return (intptr_t)PlatFontCreate((const char*)inObj, (int32_t)a, (int)(b & 1), (int)((b >> 1) & 1),
+                                        (int)((b >> 2) & 1), (int)((b >> 3) & 1));
+    case EeGeObjOp::PlatFontDestroy:
+        PlatFontDestroy((PlatFont*)inObj);
+        return 0;
+    case EeGeObjOp::PlatFontHeight: {
+        PlatFontMetrics theMetrics;
+        PlatFontGetMetrics((const PlatFont*)inObj, &theMetrics);
+        return theMetrics.mHeight;
+    }
+    case EeGeObjOp::TextOps:
+        return (intptr_t)GERustTextOps();
+    case EeGeObjOp::PlatWindowDestroy:
+        PlatWindowDestroy((PlatWindow*)inObj);
+        return 0;
+    case EeGeObjOp::PlatWindowSetSize:
+        PlatWindowSetSize((PlatWindow*)inObj, (int32_t)a, (int32_t)b);
+        return 0;
+    case EeGeObjOp::PlatWindowPosition:
+        PlatWindowGetPosition((PlatWindow*)inObj, (int32_t*)a, (int32_t*)b);
+        return 0;
     }
     (void)inOwner;
     return 0;
 }
 
-// FUNCTION: LLE 0x1000f3a4
+GEWindow::GEWindow(PlatWindow* inWindow, unsigned long inWidth, unsigned long inHeight, unsigned long inDepth,
+                   bool inIsFullScreen)
+    : mRust(ee_ge_win_new(&GEObjectHost, this, inWindow, inWidth, inHeight, inDepth, inIsFullScreen)) {}
+GEWindow::~GEWindow() { ee_ge_win_destroy(this->mRust); }
+const GE2DPoint& GEWindow::GetClientOrigin() { return *reinterpret_cast<const GE2DPoint*>(ee_ge_win_origin(this->mRust)); }
+unsigned long GEWindow::GetHeight() const { return ee_ge_win_size(this->mRust, true); }
+PlatWindow* GEWindow::GetOSRepresentation() const { return static_cast<PlatWindow*>(ee_ge_win_os(this->mRust)); }
+unsigned long GEWindow::GetWidth() const { return ee_ge_win_size(this->mRust, false); }
+void GEWindow::Resize(unsigned long inWidth, unsigned long inHeight) { ee_ge_win_resize(this->mRust, inWidth, inHeight); }
+// ---- end of the object host
+
 // Returns the colours of the bitmap's four corners in vertex order (top left, top right, bottom left, bottom right)
 void GEBitmap::GetColorPerVertex(GEColor& outTopLeft, GEColor& outTopRight, GEColor& outBottomRight,
                                  GEColor& outBottomLeft) const
@@ -420,7 +338,6 @@ void GEBitmap::GetColorPerVertex(GEColor& outTopLeft, GEColor& outTopRight, GECo
     ee_ge_bmp_colors(this->mRust, &theOut);
 }
 
-// FUNCTION: LLE 0x1000f4a4
 // Returns the opacities of the bitmap's four corners in vertex order
 void GEBitmap::GetOpacityPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight,
                                    float& outBottomLeft) const
@@ -429,7 +346,6 @@ void GEBitmap::GetOpacityPerVertex(float& outTopLeft, float& outTopRight, float&
     ee_ge_bmp_opacities(this->mRust, &theOut);
 }
 
-// FUNCTION: LLE 0x1000f4f8
 // Returns the texture coordinates of the bitmap's four corners in vertex order
 void GEBitmap::GetTextureCoordinatesPerVertex(GETextureCoordinate& outTopLeft, GETextureCoordinate& outTopRight,
                                               GETextureCoordinate& outBottomRight,
@@ -439,14 +355,12 @@ void GEBitmap::GetTextureCoordinatesPerVertex(GETextureCoordinate& outTopLeft, G
     ee_ge_bmp_uvs(this->mRust, &theOut);
 }
 
-// FUNCTION: LLE 0x1000f5e4
 // Gives all four corners of the bitmap the same colour
 void GEBitmap::SetColor(const GEColor& inColor)
 {
     this->SetColorPerVertex(inColor, inColor, inColor, inColor);
 }
 
-// FUNCTION: LLE 0x1000f61d
 // Sets the colours of the bitmap's four corners in vertex order
 void GEBitmap::SetColorPerVertex(const GEColor& inTopLeft, const GEColor& inTopRight, const GEColor& inBottomRight,
                                  const GEColor& inBottomLeft)
@@ -455,14 +369,12 @@ void GEBitmap::SetColorPerVertex(const GEColor& inTopLeft, const GEColor& inTopR
     ee_ge_bmp_set_colors(this->mRust, &theColors);
 }
 
-// FUNCTION: LLE 0x1000f673
 // Gives all four corners of the bitmap the same opacity
 void GEBitmap::SetOpacity(float inOpacity)
 {
     this->SetOpacityPerVertex(inOpacity, inOpacity, inOpacity, inOpacity);
 }
 
-// FUNCTION: LLE 0x1000f6c2
 // Sets the opacities of the bitmap's four corners in vertex order
 void GEBitmap::SetOpacityPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
 {
@@ -470,14 +382,12 @@ void GEBitmap::SetOpacityPerVertex(float inTopLeft, float inTopRight, float inBo
     ee_ge_bmp_set_opacities(this->mRust, &theOpacities);
 }
 
-// FUNCTION: LLE 0x1000f720
 // Sets one scale for both axes of the bitmap and recomputes its corner positions
 void GEBitmap::SetScale(float inScale)
 {
     this->SetXYScale(inScale, inScale);
 }
 
-// FUNCTION: LLE 0x1000f732
 // Sets the texture coordinates of the bitmap's four corners in vertex order
 void GEBitmap::SetTextureCoordinates(GETextureCoordinate& inTopLeft, GETextureCoordinate& inTopRight,
                                      GETextureCoordinate& inBottomRight, GETextureCoordinate& inBottomLeft)
@@ -486,14 +396,12 @@ void GEBitmap::SetTextureCoordinates(GETextureCoordinate& inTopLeft, GETextureCo
     ee_ge_bmp_set_uvs(this->mRust, &theCoordinates);
 }
 
-// FUNCTION: LLE 0x1000f787
 // Gives all four corners of the bitmap the same depth (Z)
 void GEBitmap::SetZ(float inZ)
 {
     this->SetZPerVertex(inZ, inZ, inZ, inZ);
 }
 
-// FUNCTION: LLE 0x1000f7af
 // Sets the depths (Z) of the bitmap's four corners in vertex order, keeping their X and Y
 void GEBitmap::SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
 {
@@ -501,21 +409,18 @@ void GEBitmap::SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRi
     ee_ge_bmp_set_depths(this->mRust, &theDepths);
 }
 
-// FUNCTION: LLE 0x1000f97f
 // Creates an untextured, unscaled, unrotated white bitmap: one texture slot per screen and a four-vertex quad
 GEBitmap::GEBitmap()
 {
-    this->mRust = ee_ge_bmp_new(&GEBitmap::Host, this);
+    this->mRust = ee_ge_bmp_new(&GEVertexHost, this);
 }
 
-// FUNCTION: LLE 0x1000fb74
 // Destroys the bitmap, deleting its vertex array and releasing the texture of every screen
 GEBitmap::~GEBitmap()
 {
     ee_ge_bmp_destroy(this->mRust);
 }
 
-// FUNCTION: LLE 0x1000fda1
 // Maps a source rectangle of the screen's texture onto texture coordinates and sets the matching X/Y scale
 void GEBitmap::ComputeStretchedCoordsAndScale(const GERectangle& inTextureRectangle,
                                               const GERectangle& inSourceRectangle,
@@ -525,61 +430,220 @@ void GEBitmap::ComputeStretchedCoordsAndScale(const GERectangle& inTextureRectan
                       GERust(inDestinationRectangle), inScreen);
 }
 
-// FUNCTION: LLE 0x1000ff33
 // Mirrors the bitmap's texture left to right (resets the texture coordinates to the full flipped texture)
 void GEBitmap::FlipHorizontally()
 {
     ee_ge_bmp_flip(this->mRust, false);
 }
 
-// FUNCTION: LLE 0x10010009
 // Sets the bitmap's texture for one screen, referencing the new one and releasing the old; takes its frame size
 void GEBitmap::SetTexture(GETexture* inTexture, unsigned long inScreen)
 {
     ee_ge_bmp_set_texture(this->mRust, inTexture, inScreen);
 }
 
-// U2DPoint/U2DRectangle key init chains (wrapper, ctor, atexit registration, dtor per key)
-// SYNTHETIC: LLE 0x1000ec5c
-// SYNTHETIC: LLE 0x1000ec66
-// SYNTHETIC: LLE 0x1000ec76
-// SYNTHETIC: LLE 0x1000ec82
-// SYNTHETIC: LLE 0x1000ec8c
-// SYNTHETIC: LLE 0x1000ec96
-// SYNTHETIC: LLE 0x1000eca6
-// SYNTHETIC: LLE 0x1000ecb2
-// SYNTHETIC: LLE 0x1000ecbc
-// SYNTHETIC: LLE 0x1000ecc6
-// SYNTHETIC: LLE 0x1000ecd6
-// SYNTHETIC: LLE 0x1000ece2
-// SYNTHETIC: LLE 0x1000ecec
-// SYNTHETIC: LLE 0x1000ecf6
-// SYNTHETIC: LLE 0x1000ed06
-// SYNTHETIC: LLE 0x1000ed12
-// SYNTHETIC: LLE 0x1000ed1c
-// SYNTHETIC: LLE 0x1000ed26
-// SYNTHETIC: LLE 0x1000ed36
-// SYNTHETIC: LLE 0x1000ed42
-// SYNTHETIC: LLE 0x1000ed4c
-// SYNTHETIC: LLE 0x1000ed56
-// SYNTHETIC: LLE 0x1000ed66
-// SYNTHETIC: LLE 0x1000ed72
+// ---- GEFontBitmap (GEFontBitmap.cpp, folded here in R4.3 part 16)
 
-// map<UString, GETexture*> (GETextureManager) and vector<GERScreenState*> (GERasterizer) COMDATs
-// TEMPLATE: LLE 0x1001005c
-// TEMPLATE: LLE 0x10010090
-// TEMPLATE: LLE 0x100100d7
-// TEMPLATE: LLE 0x10010148
-// TEMPLATE: LLE 0x100101a8
-// TEMPLATE: LLE 0x100101dd
-// TEMPLATE: LLE 0x10010493
-// TEMPLATE: LLE 0x10010516
+// ---- GEFontBitmap.
+//
+// port (R4.3, tenth part): the font bitmap is a whole Rust object (ee_ge fbobj.rs): the constructor's glyph rendering,
+// the destructor, CreateNewFontTexture, CreateSurfaceAlpha and the two draws. This unit is its shell: the forwarders
+// and the host, which makes each call the original made on another object (the rasterizer, the font, the working
+// text, the drawing bitmap, the textures, surfaces and screens). Floats cross the host as their bits.
 
-// Header-inline/COMDAT members this unit emits (markers at the end)
-// FUNCTION: LLE 0x1000de43
-// FUNCTION: LLE 0x1000e637
-// FUNCTION: LLE 0x1000e669
-// FUNCTION: LLE 0x1000e745
-// FUNCTION: LLE 0x1000e773
-// FUNCTION: LLE 0x1000e75f
-// FUNCTION: LLE 0x1000e769
+static_assert(sizeof(EeGeSurfaceDescription) == sizeof(GESurfaceDescription), "ee_ge texobj.rs EeGeSurfaceDescription");
+
+intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t a, intptr_t b)
+{
+    GEText* theText = (GEText*)inObj;
+    GEBitmap* theBitmap = (GEBitmap*)inObj;
+    GESurface* theSurface = (GESurface*)inObj;
+    GERasterizer* theRasterizer = (GERasterizer*)inObj;
+    GETexture* theTexture = (GETexture*)inObj;
+    GEScreen* theScreen = (GEScreen*)inObj;
+    unsigned long* theLongs = (unsigned long*)a;
+    float* theFloats = (float*)a;
+    GETextureCoordinate* theCoordinates = (GETextureCoordinate*)a;
+    switch (inOp) {
+    case EeGeFbOp::TextNew:
+        return (intptr_t)new GEText((GEFont*)inObj);
+    case EeGeFbOp::TextDelete:
+        delete theText;
+        return 0;
+    case EeGeFbOp::TextPrepare:
+        theText->SetFgColor(GEColor());
+        theText->SetIsTransparent(true);
+        return 0;
+    case EeGeFbOp::TextSetByte: {
+        // a cell is a Windows-1252 byte's character (decision D6: the text is UTF-8, so the cell holds that
+        // character's UTF-8 and Draw maps a drawn character back to its cell)
+        char theByte = (char)a;
+        char theCell[8];
+        PlatCp1252ToUtf8(&theByte, 1, theCell, sizeof(theCell));
+        UWideString theString;
+        theString = theCell;
+        theText->SetText(theString);
+        return 0;
+    }
+    case EeGeFbOp::TextExtent:
+        theFloats[0] = theText->GetTextExtent().GetWidth();
+        theFloats[1] = theText->GetTextExtent().GetHeight();
+        return 0;
+    case EeGeFbOp::TextSetLocation:
+        theText->SetLocation(*(const GE2DPoint*)a);
+        return 0;
+    case EeGeFbOp::TextString:
+        return (intptr_t)(const char*)theText->GetText();
+    case EeGeFbOp::TextLocation:
+        return (intptr_t)&theText->GetLocation();
+    case EeGeFbOp::TextColor:
+        return (intptr_t)&theText->GetFgColor();
+    case EeGeFbOp::TextOps:
+        return (intptr_t)GERustTextOps();
+    case EeGeFbOp::FontRange: {
+        PlatFontMetrics theMetrics;   // the font's character range (TEXTMETRIC's tmFirstChar..tmLastChar)
+        PlatFontGetMetrics(((GEFont*)inObj)->GetOSFont(), &theMetrics);
+        theLongs[0] = theMetrics.mFirstChar;
+        theLongs[1] = theMetrics.mLastChar;
+        return 0;
+    }
+    case EeGeFbOp::FontSetBitmap:
+        ((GEFont*)inObj)->SetFontBitmap((GEFontBitmap*)inOwner);
+        return 0;
+    case EeGeFbOp::RasterScreen:
+        return (intptr_t)theRasterizer->GetScreen((unsigned long)a);
+    case EeGeFbOp::RasterGetBlending:
+        theRasterizer->GetBlending(theLongs[0], theLongs[1], (unsigned long)b);
+        return 0;
+    case EeGeFbOp::RasterSetBlending:
+        theRasterizer->SetBlending(theLongs[0], theLongs[1], (unsigned long)b);
+        return 0;
+    case EeGeFbOp::RasterDrawText:
+        return theRasterizer->Draw((GEText*)a, (GESurface*)b);
+    case EeGeFbOp::RasterDrawBitmap:
+        return theRasterizer->Draw((GEBitmap*)a, (unsigned long)b);
+    case EeGeFbOp::BmpNew:
+        return (intptr_t)new GEBitmap;
+    case EeGeFbOp::BmpDereference:
+        theBitmap->Dereference();
+        return 0;
+    case EeGeFbOp::BmpSetTexture:
+        theBitmap->SetTexture((GETexture*)a, (unsigned long)b);
+        return 0;
+    case EeGeFbOp::BmpStretch: {
+        const GERectangle* theRects = (const GERectangle*)a;
+        theBitmap->ComputeStretchedCoordsAndScale(theRects[0], theRects[0], theRects[1], (unsigned long)b);
+        return 0;
+    }
+    case EeGeFbOp::BmpUvsPerVertex: {
+        GETextureCoordinate theCoordinate;
+        theBitmap->GetTextureCoordinatesPerVertex(theCoordinates[0], theCoordinate, theCoordinate, theCoordinates[1]);
+        return 0;
+    }
+    case EeGeFbOp::BmpScales:
+        theFloats[0] = theBitmap->GetXScale();
+        theFloats[1] = theBitmap->GetYScale();
+        return 0;
+    case EeGeFbOp::BmpSetColor:
+        theBitmap->SetColor(*(const GEColor*)a);
+        return 0;
+    case EeGeFbOp::BmpSetUvs:
+        theBitmap->SetTextureCoordinates(theCoordinates[0], theCoordinates[1], theCoordinates[2], theCoordinates[3]);
+        return 0;
+    case EeGeFbOp::BmpSetXyScale: {
+        uint32_t theBits[2] = {(uint32_t)a, (uint32_t)b};
+        float theScales[2];
+        memcpy(theScales, theBits, sizeof(theScales));
+        theBitmap->SetXYScale(theScales[0], theScales[1]);
+        return 0;
+    }
+    case EeGeFbOp::BmpSetLocation:
+        theBitmap->SetLocation(*(const GE2DPoint*)a);
+        return 0;
+    case EeGeFbOp::TexSurface:
+        return (intptr_t)theTexture->GetSurface();
+    case EeGeFbOp::TexReference:
+        theTexture->Reference();
+        return 0;
+    case EeGeFbOp::TexStage:
+        switch ((EeGeTexStage)a) {
+        case EeGeTexStage::MinFilterMode:
+            theTexture->SetStageMinFilterMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::MagFilterMode:
+            theTexture->SetStageMagFilterMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::MipFilterMode:
+            theTexture->SetStageMipFilterMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::TextureAddressingMode:
+            theTexture->SetStageTextureAddressingMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::AlphaMode:
+            theTexture->SetStageAlphaMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::ColorMode:
+            theTexture->SetStageColorMode((unsigned long)b, -1);
+            break;
+        default:
+            break;
+        }
+        return 0;
+    case EeGeFbOp::SurfTextUnlock:
+        return theSurface->TextUnlock();
+    case EeGeFbOp::SurfLock:
+        return theSurface->Lock();
+    case EeGeFbOp::SurfUnlock:
+        return theSurface->Unlock();
+    case EeGeFbOp::SurfPixels:
+        theLongs[0] = theSurface->GetWidth();
+        theLongs[1] = theSurface->GetHeight();
+        theLongs[2] = theSurface->GetBytesPerRow();
+        return (intptr_t)theSurface->GetMemoryAddress();
+    case EeGeFbOp::SurfClear: {
+        GEColor theBlack(0.0f, 0.0f, 0.0f);
+        return theSurface->Clear(theBlack, 1.0f);
+    }
+    case EeGeFbOp::ScreenCreateSurface:
+        return theScreen->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b);
+    case EeGeFbOp::ScreenMakeTexture:
+        return (intptr_t)theScreen->GetTextureManager()->MakeTexture((GESurface*)a);
+    case EeGeFbOp::Verify:
+        ESVerify(__FILE__, a == 0 ? 228 : 235, a == 0 ? "theResult == keseOK" : "theTexture != NULL");
+        return 0;
+    default:
+        return 0;
+    }
+}
+
+// Always returns true (any font matches)
+bool GEFontBitmap::operator==(GEFont* inFont)
+{
+    return true;
+}
+
+// Renders every glyph of the font into 256x256 alpha textures and records each glyph's cell (Rust: ee_ge fbobj.rs)
+GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned long inScreen)
+{
+    this->mRust = NULL;
+    this->mRust = ee_ge_fb_new(&GEFontBitmap::Host, this, inRasterizer, inFont, inScreen);
+}
+
+// Destroys the glyph bitmap, releasing its drawing bitmap
+GEFontBitmap::~GEFontBitmap()
+{
+    ee_ge_fb_destroy(this->mRust);
+}
+
+// Draws the text glyph by glyph at its location in its colour; returns the last draw's result (Rust: ee_ge fbobj.rs)
+long GEFontBitmap::Draw(GEText* inText, GERasterizer* inRasterizer, unsigned long inScreen)
+{
+    return ee_ge_fb_draw(this->mRust, inText, NULL, inRasterizer, inScreen);
+}
+
+// Draws the text glyph by glyph clipped to a rectangle (Rust: ee_ge fbobj.rs)
+long GEFontBitmap::Draw(GEText* inText, const GERectangle& inRectangle, GERasterizer* inRasterizer,
+                        unsigned long inScreen)
+{
+    return ee_ge_fb_draw(this->mRust, inText, GERust(inRectangle), inRasterizer, inScreen);
+}

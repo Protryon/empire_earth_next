@@ -157,7 +157,7 @@ public:
     virtual bool CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest);   // +0x04 0x7b7fc
     virtual bool CountUnit(EEComplexUnit* inUnit);   // +0x08 0x7b828
     virtual bool CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits);   // +0x0c 0x7b84e
-    bool IsFighter(EEUnitClass* inClass);   // 0x7b880 (ret 4)
+    bool IsFighter(EEUnitClass* inClass);
 
     EEComputerPlayer* mPlayer;              // +0x10
 };
@@ -247,9 +247,8 @@ static const float kDCOwnArmyRange = 225.0f;   // 0x43c0f8 (ComputeTownThreat)
 // unit-local globals (provisional names)
 extern long& gDCGameSpeed;                   // 0x530d24 (> 0x32: the naval maintenance)
 #include "ee/EEUnitUtilities.h" // PermuteValues, the shared pointer shuffle (eight callers in the original)
-long EEGetPlayerUnitsOfType(long inUnitType, long inPlayerID, std::vector<EEUnit*>& outUnits);   // 0x64c395
+long EEGetPlayerUnitsOfType(long inUnitType, long inPlayerID, std::vector<EEUnit*>& outUnits);
 
-// FUNCTION: EXE 0x477718
 // Adds a pending request's count if it is for a land building other than a wall
 bool EECPUGatherBuildingUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
 {
@@ -261,7 +260,6 @@ bool EECPUGatherBuildingUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMReq
     return theResult;
 }
 
-// FUNCTION: EXE 0x47774e
 // Counts a living land building that is not a wall or a farm
 bool EECPUGatherBuildingUnitsCount::CountUnit(EEComplexUnit* inUnit)
 {
@@ -276,7 +274,6 @@ bool EECPUGatherBuildingUnitsCount::CountUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x477799
 // Counts a class's units if it is a land building other than a wall (farms included)
 bool EECPUGatherBuildingUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits)
 {
@@ -288,7 +285,6 @@ bool EECPUGatherBuildingUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<
     return theResult;
 }
 
-// FUNCTION: EXE 0x4777dc
 // Counts a land or naval citizen and keeps it in the citizen list
 bool EECPUGatherCitizenUnits::CountUnit(EEComplexUnit* inUnit)
 {
@@ -304,7 +300,6 @@ bool EECPUGatherCitizenUnits::CountUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x477812
 // Counts a citizen class's units and appends them to the citizen list
 bool EECPUGatherCitizenUnits::CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits)
 {
@@ -320,7 +315,6 @@ bool EECPUGatherCitizenUnits::CountUnits(EEUnitClass* inClass, std::deque<EEComp
     return theResult;
 }
 
-// FUNCTION: EXE 0x477864
 // Adds a pending request's count if it is for a non-transport, non-citizen ship
 bool EECPUGatherNavalUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
 {
@@ -335,7 +329,6 @@ bool EECPUGatherNavalUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMReques
     return theResult;
 }
 
-// FUNCTION: EXE 0x4778ab
 // Counts a ship that is neither a transport nor a citizen
 bool EECPUGatherNavalUnitsCount::CountUnit(EEComplexUnit* inUnit)
 {
@@ -348,7 +341,6 @@ bool EECPUGatherNavalUnitsCount::CountUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4778e4
 // Counts a class's units if it is a non-transport, non-citizen ship class
 bool EECPUGatherNavalUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits)
 {
@@ -363,7 +355,6 @@ bool EECPUGatherNavalUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<EEC
     return theResult;
 }
 
-// FUNCTION: EXE 0x477937
 // Accepts a buildable current-epoch mobile defence land combat class (no specials, siege, artillery, AA, medics,
 // priests) whose upgrade line is current or already fielded, if the difficulty's DM minimum is set
 bool EEAIFOGatherAllDeathMatchDefenseBuildUpUnits::Screen(EEUnitClass* inClass)
@@ -423,7 +414,6 @@ bool EEAIFOGatherAllDeathMatchDefenseBuildUpUnits::Screen(EEUnitClass* inClass)
 }
 
 
-// FUNCTION: EXE 0x477ae5
 // Adds a pending request's count if it is for a space combat unit (no transports, citizens, space buildings)
 bool EECPUGatherSpaceUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
 {
@@ -438,7 +428,6 @@ bool EECPUGatherSpaceUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMReques
     return theResult;
 }
 
-// FUNCTION: EXE 0x477b31
 // Counts a space combat unit (no transports, citizens or space buildings)
 bool EECPUGatherSpaceUnitsCount::CountUnit(EEComplexUnit* inUnit)
 {
@@ -451,7 +440,6 @@ bool EECPUGatherSpaceUnitsCount::CountUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x477b76
 // Counts a class's units if it is a space combat class
 bool EECPUGatherSpaceUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits)
 {
@@ -466,7 +454,6 @@ bool EECPUGatherSpaceUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<EEC
     return theResult;
 }
 
-// FUNCTION: EXE 0x477bce
 // Creates the defence commander, disabled; first update after (player id + 5) s, first aid after a random
 // replenish delay on top
 EECPDefenseCommander::EECPDefenseCommander(EEComputerPlayer* inPlayer) : mNextSpaceTime(0), mNextSpecialTime(0)
@@ -481,17 +468,12 @@ EECPDefenseCommander::EECPDefenseCommander(EEComputerPlayer* inPlayer) : mNextSp
     this->mNextRaidCheckTime = 0;
 }
 
-// SYNTHETIC: EXE 0x477c64
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x477c80
 // Destroys the defence commander, freeing its aid packages
 EECPDefenseCommander::~EECPDefenseCommander()
 {
     this->FreePackages();
 }
 
-// FUNCTION: EXE 0x477ca8
 // If units are allowed, creates an inactive defensive attack group against a random enemy and marks its
 // sub-groups as defenders
 void EECPDefenseCommander::CreateDefendGroup()
@@ -512,7 +494,6 @@ void EECPDefenseCommander::CreateDefendGroup()
     }
 }
 
-// FUNCTION: EXE 0x477d32
 // Sends aid to the player's town: reuses its package or builds one (threat, attacker or a random enemy) and
 // assigns sub-groups; keeps the new package only if that succeeds; returns whether aid was sent
 bool EECPDefenseCommander::SendAid(EEPlayer* inPlayer, long inTownID, bool inCounterAttackOnly)
@@ -553,7 +534,6 @@ bool EECPDefenseCommander::SendAid(EEPlayer* inPlayer, long inTownID, bool inCou
     return theResult;
 }
 
-// FUNCTION: EXE 0x477e4b
 // Returns the town's threat level (0..1) and the strongest enemy's id
 float EECPDefenseCommander::GetTownThreat(EETown* inTown, long& outPlayerID)
 {
@@ -562,7 +542,6 @@ float EECPDefenseCommander::GetTownThreat(EETown* inTown, long& outPlayerID)
     return theThreat;
 }
 
-// FUNCTION: EXE 0x477e8e
 // Updates the intelligence file on every player, with armies, forcing it when the file has no armies yet
 void EECPDefenseCommander::RefreshIntelligence()
 {
@@ -576,7 +555,6 @@ void EECPDefenseCommander::RefreshIntelligence()
     }
 }
 
-// FUNCTION: EXE 0x477efd
 // Picks the land sub-group best matching the town's last threat point (or the nearest when none), sets it
 // to the aid mission and adds it to the package; the town task it builds is never used
 bool EECPDefenseCommander::SendBestSubGroup(std::vector<EECPAttackSubGroup*>& inGroups, EECPMilitaryAidPackage* inPackage)
@@ -654,7 +632,6 @@ bool EECPDefenseCommander::SendBestSubGroup(std::vector<EECPAttackSubGroup*>& in
     return theResult;
 }
 
-// FUNCTION: EXE 0x478148
 // Creates an inactive attack group of up to 20 units (the allowance) of one random deathmatch defence class
 // against a random enemy
 void EECPDefenseCommander::BuildUp()
@@ -700,7 +677,6 @@ void EECPDefenseCommander::BuildUp()
         delete it->second;
 }
 
-// FUNCTION: EXE 0x4783e7
 // With units allowed: by the town-guard chance sends aid to the most threatened own town (else to one of the
 // 3 richest), otherwise creates a defend group; then schedules the next aid
 void EECPDefenseCommander::PlanAid(unsigned long inTime)
@@ -733,7 +709,6 @@ void EECPDefenseCommander::PlanAid(unsigned long inTime)
     this->SetNextAidTime(inTime);
 }
 
-// FUNCTION: EXE 0x4785cb
 // Goes through the allies in shuffled order and sends one new aid package to the first threatened (or
 // unguarded) allied town without one, when the threat or relation and the allowance permit
 void EECPDefenseCommander::AidAllies()
@@ -780,7 +755,6 @@ void EECPDefenseCommander::AidAllies()
     }
 }
 
-// FUNCTION: EXE 0x478866
 // Every 80 s after the attack starts: if the player has fewer buildings than its bonzai attack level, rushes a
 // random enemy (Retaliate) and waits 300 s
 void EECPDefenseCommander::CheckRaids()
@@ -801,7 +775,6 @@ void EECPDefenseCommander::CheckRaids()
     }
 }
 
-// FUNCTION: EXE 0x47897c
 // Sends aid to each of the player's towns that has no aid package
 void EECPDefenseCommander::AidOwnTowns()
 {
@@ -813,7 +786,6 @@ void EECPDefenseCommander::AidOwnTowns()
     }
 }
 
-// FUNCTION: EXE 0x4789fb
 // Fills the town's threat map and lists its 3 strongest enemy threat points, ordered by net threat
 void EECPDefenseCommander::GetWorstThreats(EEPlayer* inPlayer, long inTownID, std::map<U2DPoint<long>, EECPDCTownThreat>& ioMap,
                                    std::vector<EECPDCTownThreat>& outList)
@@ -835,7 +807,6 @@ void EECPDefenseCommander::GetWorstThreats(EEPlayer* inPlayer, long inTownID, st
     std::sort(outList.begin(), outList.end(), EECPDCThreatNetGreater());
 }
 
-// FUNCTION: EXE 0x478b34
 // Creates a counter-attack group (special and counter units) for the package's town against its attacker
 // and adds its sub-groups to the package; returns whether a group was made
 bool EECPDefenseCommander::CounterAttack(EECPMilitaryAidPackage* inPackage)
@@ -898,7 +869,6 @@ bool EECPDefenseCommander::CounterAttack(EECPMilitaryAidPackage* inPackage)
     return theResult;
 }
 
-// FUNCTION: EXE 0x478d7b
 // Releases every aid package's sub-groups and deletes the packages
 void EECPDefenseCommander::FreePackages()
 {
@@ -910,7 +880,6 @@ void EECPDefenseCommander::FreePackages()
     this->mPackages.clear();
 }
 
-// FUNCTION: EXE 0x478dc8
 // Attacks the enemy's chosen target unit and sends every citizen at it (fighters attack, others move); with
 // the Bundeswehr power citizens first queue its research
 void EECPDefenseCommander::Retaliate(EEPlayer* inEnemy)
@@ -979,7 +948,6 @@ void EECPDefenseCommander::Retaliate(EEPlayer* inEnemy)
     delete theGoal;
 }
 
-// FUNCTION: EXE 0x4792ec
 // Appends the combat manager's defending units that the gatherer accepts
 void EECPDefenseCommander::CollectDefendingUnits(EEAIFOGatherUnits& inGatherer, std::vector<EEUnitHandle<EEUnit> >& ioUnits)
 {
@@ -991,7 +959,6 @@ void EECPDefenseCommander::CollectDefendingUnits(EEAIFOGatherUnits& inGatherer, 
             ioUnits.push_back(theUnits[i]);
 }
 
-// FUNCTION: EXE 0x479382
 // Rates the town's threat (0..1) from enemy armies in or near it minus own armies, over the owner's strength;
 // optionally fills a map of threat points; outPlayerID gets the strongest enemy
 float EECPDefenseCommander::ComputeTownThreat(EETown* inTown, long& outPlayerID, std::map<U2DPoint<long>, EECPDCTownThreat>* ioMap,
@@ -1121,7 +1088,6 @@ float EECPDefenseCommander::ComputeTownThreat(EETown* inTown, long& outPlayerID,
     return theResult;
 }
 
-// FUNCTION: EXE 0x4799fa
 // Returns how many more population the defensive groups may use (defensive cap minus used share of the unit
 // limit); 0 with no unit limit
 long EECPDefenseCommander::GetUnitAllowance()
@@ -1152,7 +1118,6 @@ long EECPDefenseCommander::GetUnitAllowance()
     return theAllowance;
 }
 
-// FUNCTION: EXE 0x479bd1
 // Returns the player's (or area's) most threatened town and fills the package with it, else the first
 // allied town without a package; 0 if none
 long EECPDefenseCommander::FindThreatenedTown(EEPlayer* inPlayer, EECPMilitaryAidPackage* ioPackage, unsigned short inArea)
@@ -1214,7 +1179,6 @@ long EECPDefenseCommander::FindThreatenedTown(EEPlayer* inPlayer, EECPMilitaryAi
     return theResult;
 }
 
-// FUNCTION: EXE 0x479e41
 // When enabled: refreshes intelligence, updates packages, aids own and allied towns, plans aid when due and
 // checks raids, ships, space units and specials; schedules the next update
 void EECPDefenseCommander::Update(unsigned long inTime)
@@ -1235,7 +1199,6 @@ void EECPDefenseCommander::Update(unsigned long inTime)
     this->mNextUpdateTime = theDelay + inTime;
 }
 
-// FUNCTION: EXE 0x479eb8
 // Reads the timers, the flag, the aid packages and loose sub-group ids from a saved game (by version);
 // returns the last read's error
 long EECPDefenseCommander::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -1316,7 +1279,6 @@ long EECPDefenseCommander::Load(unsigned long inMajorVersion, unsigned long inMi
     return theResult;
 }
 
-// FUNCTION: EXE 0x47a142
 // Re-links the loaded packages by town (merging duplicates) and puts loose sub-groups back on inactive
 // defence; always succeeds
 long EECPDefenseCommander::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -1357,7 +1319,6 @@ long EECPDefenseCommander::Restore(unsigned long inMajorVersion, unsigned long i
     return 0;
 }
 
-// FUNCTION: EXE 0x47b088
 // Returns the town's aid package, or NULL
 EECPMilitaryAidPackage* EECPDefenseCommander::GetPackage(long inTownID)
 {
@@ -1367,7 +1328,6 @@ EECPMilitaryAidPackage* EECPDefenseCommander::GetPackage(long inTownID)
     return NULL;
 }
 
-// FUNCTION: EXE 0x47b0b2
 // Schedules the next aid after the difficulty's (deathmatch) defensive update delay
 void EECPDefenseCommander::SetNextAidTime(unsigned long inTime)
 {
@@ -1400,7 +1360,6 @@ void EECPDefenseCommander::SetNextAidTime(unsigned long inTime)
     this->mNextAidTime = theDelay + inTime;
 }
 
-// FUNCTION: EXE 0x47b115
 // Writes the timers, the flag and every package (invalid towns' sub-groups saved as loose ids) to the saved
 // game; returns the first write error
 long EECPDefenseCommander::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -1452,7 +1411,6 @@ long EECPDefenseCommander::Save(unsigned long inMajorVersion, unsigned long inMi
     return theResult;
 }
 
-// FUNCTION: EXE 0x47b2d3
 // For a friendly town: sends the best nearby free sub-group (unless counter-attack only), else a new
 // counter-attack group; returns whether help was sent
 bool EECPDefenseCommander::AssignSubGroups(EECPMilitaryAidPackage* inPackage, bool inCounterAttackOnly)
@@ -1497,7 +1455,6 @@ bool EECPDefenseCommander::AssignSubGroups(EECPMilitaryAidPackage* inPackage, bo
     return theResult;
 }
 
-// FUNCTION: EXE 0x47b442
 // Updates the due packages and deletes finished ones; returns the shortest next delay (at most 30 s)
 unsigned long EECPDefenseCommander::UpdatePackages(unsigned long inTime)
 {
@@ -1521,7 +1478,6 @@ unsigned long EECPDefenseCommander::UpdatePackages(unsigned long inTime)
     return theDelay;
 }
 
-// FUNCTION: EXE 0x47b502
 // Every ship-maintenance period while gDCGameSpeed > 50: tops ships up to the difficulty's quota (freeing
 // population if needed) and, from the WW2 epoch, the carrier fighters; returns the next check time
 unsigned long EECPDefenseCommander::CheckNaval(unsigned long inTime)
@@ -1612,7 +1568,6 @@ unsigned long EECPDefenseCommander::CheckNaval(unsigned long inTime)
     return this->mNextNavalTime;
 }
 
-// FUNCTION: EXE 0x47b7fc
 // Adds a pending request's count if it is for a carrier fighter
 bool EECPUGatherCarrierFightersCount::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
 {
@@ -1624,7 +1579,6 @@ bool EECPUGatherCarrierFightersCount::CountRequest(EEUnitClass* inClass, EECPUMR
     return theResult;
 }
 
-// FUNCTION: EXE 0x47b828
 // Counts a carrier fighter
 bool EECPUGatherCarrierFightersCount::CountUnit(EEComplexUnit* inUnit)
 {
@@ -1636,7 +1590,6 @@ bool EECPUGatherCarrierFightersCount::CountUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x47b84e
 // Counts a carrier-fighter class's units
 bool EECPUGatherCarrierFightersCount::CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits)
 {
@@ -1648,7 +1601,6 @@ bool EECPUGatherCarrierFightersCount::CountUnits(EEUnitClass* inClass, std::dequ
     return theResult;
 }
 
-// FUNCTION: EXE 0x47b880
 // Returns true for the five carrier fighter unit types
 bool EECPUGatherCarrierFightersCount::IsFighter(EEUnitClass* inClass)
 {
@@ -1657,7 +1609,6 @@ bool EECPUGatherCarrierFightersCount::IsFighter(EEUnitClass* inClass)
                                inClass->mUnitType == kUnitTypeCarrierFighter11Zero);
 }
 
-// FUNCTION: EXE 0x47b8b7
 // Accepts living, collidable non-ship citizens that cost population, while citizens may be killed
 bool EEAIFOUnitsToKillForNavalMaintenance::CanKill(EEComplexUnit* inUnit)
 {
@@ -1665,7 +1616,6 @@ bool EEAIFOUnitsToKillForNavalMaintenance::CanKill(EEComplexUnit* inUnit)
            inUnit->mUnitClass->GetPopulationCost() > 0 && inUnit->mIsCollidable != 0 && (!inUnit->mIsCitizen || this->mCitizensToKill > 0);
 }
 
-// FUNCTION: EXE 0x47b923
 // Every ship-maintenance period on space maps: tops space units up to the ship quota (freeing population if
 // needed) and requests a space carrier while under 4 and fewer than the space docks
 unsigned long EECPDefenseCommander::CheckSpace(unsigned long inTime)
@@ -1728,7 +1678,6 @@ unsigned long EECPDefenseCommander::CheckSpace(unsigned long inTime)
     return this->mNextSpaceTime;
 }
 
-// FUNCTION: EXE 0x47bbf1
 // Accepts living, collidable non-space citizens that cost population, while citizens may be killed
 bool EEAIFOUnitsToKillForSpaceMaintenance::CanKill(EEComplexUnit* inUnit)
 {
@@ -1736,7 +1685,6 @@ bool EEAIFOUnitsToKillForSpaceMaintenance::CanKill(EEComplexUnit* inUnit)
            inUnit->mUnitClass->GetPopulationCost() > 0 && inUnit->mIsCollidable != 0 && (!inUnit->mIsCitizen || this->mCitizensToKill > 0);
 }
 
-// FUNCTION: EXE 0x47bc5b
 // Keeps 1..10 anti-missile batteries (one more per town centre), casts cloaking from capitols near threatened
 // towns, and keeps one ICBM with the missile power; returns the next check time
 unsigned long EECPDefenseCommander::CheckSpecials(unsigned long inTime)
@@ -1804,7 +1752,6 @@ unsigned long EECPDefenseCommander::CheckSpecials(unsigned long inTime)
     return this->mNextSpecialTime;
 }
 
-// FUNCTION: EXE 0x47c04f
 // Scores a battery for deletion: other batteries within 4 tiles minus town centres there
 long EEAIFOAMBToKill::GetKillScore(EEComplexUnit* inUnit)
 {
@@ -1829,7 +1776,6 @@ long EEAIFOAMBToKill::GetKillScore(EEComplexUnit* inUnit)
 // The combat manager's tasks are tried with a chance of at least 90%; forests need move flag 4 and adjacent
 // continents flag 3; choke points go nearest first when inHasContinent and there are more than the player's
 // limit. NEAR: the original also returns outTask.mPlayer in al (declared void here)
-// FUNCTION: EXE 0x47a461
 // Gives a sub-group its next defence task, first come: a combat-manager task, a nearby forest, adjacent
 // continent, hill, choke point, threatened town, else its own continent
 void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EECPAGTask& outTask, bool inHasContinent)
@@ -2057,163 +2003,18 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
     }
 }
 
-// Compiler-generated for this unit (names in analysis/exe/names.txt). 0x478937 (EECPUMGatherUnitsScreenBase) is emitted and exact.
-// TEMPLATE: EXE 0x4783b8
-// TEMPLATE: EXE 0x4783ca
-// TEMPLATE: EXE 0x4785a1
-// TEMPLATE: EXE 0x478937
-// TEMPLATE: EXE 0x47895f
-// TEMPLATE: EXE 0x4792bc
-// TEMPLATE: EXE 0x4792c1
-// TEMPLATE: EXE 0x4799a9
-// TEMPLATE: EXE 0x4799c2
-// TEMPLATE: EXE 0x479bb5
-// TEMPLATE: EXE 0x47b7e4
-// TEMPLATE: EXE 0x47b906
-// TEMPLATE: EXE 0x47bc40
-// TEMPLATE: EXE 0x47c023
-// TEMPLATE: EXE 0x47c276
-// TEMPLATE: EXE 0x47c2a1
-// TEMPLATE: EXE 0x47c2cc
-// TEMPLATE: EXE 0x47c2fc
-// TEMPLATE: EXE 0x47c327
-// TEMPLATE: EXE 0x47c3e7
-// TEMPLATE: EXE 0x47c428
-// TEMPLATE: EXE 0x47c466
-// TEMPLATE: EXE 0x47c548
-// TEMPLATE: EXE 0x47c600
-// TEMPLATE: EXE 0x47c62c
-// TEMPLATE: EXE 0x47c676
-// TEMPLATE: EXE 0x47c719
-// TEMPLATE: EXE 0x47c73a
-// TEMPLATE: EXE 0x47c7ab
-// TEMPLATE: EXE 0x47c9c8
-// TEMPLATE: EXE 0x47ca38
-// TEMPLATE: EXE 0x47ca6a
-// TEMPLATE: EXE 0x47cd18
-// TEMPLATE: EXE 0x47cd4a
-// TEMPLATE: EXE 0x47cd7c
-// TEMPLATE: EXE 0x47cdbe
-// TEMPLATE: EXE 0x47ce02
-// TEMPLATE: EXE 0x47ce34
-// TEMPLATE: EXE 0x47d149
-// TEMPLATE: EXE 0x47d231
-// TEMPLATE: EXE 0x47d258
-// TEMPLATE: EXE 0x47d313
-// TEMPLATE: EXE 0x47d3ce
-// TEMPLATE: EXE 0x47d48e
-// TEMPLATE: EXE 0x47d549
-// TEMPLATE: EXE 0x47d575
-// TEMPLATE: EXE 0x47d599
-// TEMPLATE: EXE 0x47d5ca
-// TEMPLATE: EXE 0x47d5ed
-// TEMPLATE: EXE 0x47d60a
-// TEMPLATE: EXE 0x47d636
-// TEMPLATE: EXE 0x47d66b
-// TEMPLATE: EXE 0x47d7c1
-// TEMPLATE: EXE 0x47da43
-// TEMPLATE: EXE 0x47db1b
-// TEMPLATE: EXE 0x47db4f
-// TEMPLATE: EXE 0x47ddcf
-// TEMPLATE: EXE 0x47de84
-// TEMPLATE: EXE 0x47de8a
-// TEMPLATE: EXE 0x47dec7
-// TEMPLATE: EXE 0x47df06
-// TEMPLATE: EXE 0x47dffb
-// TEMPLATE: EXE 0x47e025
-// TEMPLATE: EXE 0x47e15e
-// TEMPLATE: EXE 0x47e284
-// TEMPLATE: EXE 0x47e2b7
-// TEMPLATE: EXE 0x47e353
-// TEMPLATE: EXE 0x47e38d
-// TEMPLATE: EXE 0x47e3ce
-// TEMPLATE: EXE 0x47e4ba
-// TEMPLATE: EXE 0x47e557
-// TEMPLATE: EXE 0x47e5dd
-// TEMPLATE: EXE 0x47e688
-// TEMPLATE: EXE 0x47e7b4
-// TEMPLATE: EXE 0x47e842
-// TEMPLATE: EXE 0x47e8b0
-// TEMPLATE: EXE 0x47e8da
-// TEMPLATE: EXE 0x47e9e4
-// TEMPLATE: EXE 0x47ea5f
-// TEMPLATE: EXE 0x47eb28
-// TEMPLATE: EXE 0x47eb80
-// TEMPLATE: EXE 0x47ebc4
-// TEMPLATE: EXE 0x47ebd5
-// TEMPLATE: EXE 0x47ec7c
-// TEMPLATE: EXE 0x47ecc6
-
-
-// Original-unit COMDATs (strictly verified)
-// TEMPLATE: EXE 0x47d694
-// TEMPLATE: EXE 0x47d767
-// TEMPLATE: EXE 0x47db9c
-// TEMPLATE: EXE 0x47dc2d
-// TEMPLATE: EXE 0x47dc67
-// TEMPLATE: EXE 0x47dca8
-// TEMPLATE: EXE 0x47dda6
-// TEMPLATE: EXE 0x47e4ea
-// TEMPLATE: EXE 0x47e52e
-
-// Template and inline COMDATs this unit's code instantiates (the bodies come from the headers; each was
-// compared against the original by name)
-// TEMPLATE: EXE 0x47c43b
-// TEMPLATE: EXE 0x47c51c
-// TEMPLATE: EXE 0x47c67c
-// TEMPLATE: EXE 0x47c6a8
-// TEMPLATE: EXE 0x47ce78
-// TEMPLATE: EXE 0x47d174
-// TEMPLATE: EXE 0x47d798
-// TEMPLATE: EXE 0x47d89a
-// TEMPLATE: EXE 0x47d8d9
-// TEMPLATE: EXE 0x47d902
-// TEMPLATE: EXE 0x47d9db
-// TEMPLATE: EXE 0x47da1a
-// TEMPLATE: EXE 0x47e0e2
-// TEMPLATE: EXE 0x47e11f
-// TEMPLATE: EXE 0x47e5b4
-// TEMPLATE: EXE 0x47e65f
-// TEMPLATE: EXE 0x47e6d3
-// TEMPLATE: EXE 0x47e6fc
-// TEMPLATE: EXE 0x47e761
-// TEMPLATE: EXE 0x47eab5
-// TEMPLATE: EXE 0x47eaf4
-// Named COMDATs of this unit (compiled here; names in analysis/exe/names.txt)
-// TEMPLATE: EXE 0x47e602
-// TEMPLATE: EXE 0x47e976
-// TEMPLATE: EXE 0x47ec38
-// Named COMDATs of this unit (compiled here; names in analysis/exe/names.txt)
-// TEMPLATE: EXE 0x47c0f6
-// TEMPLATE: EXE 0x47c21e
-// TEMPLATE: EXE 0x47c24a
-
-// Template COMDATs named by their mangled names
-// TEMPLATE: EXE 0x47c93f
-// ?erase@?$_Tree@KKU_Kfn@?$set@KU?$less@K@std@@V?$allocator@K@2@@std@@U?$less@K@3@V?$allocator@K@3@$0A@@std@@QAE?AViterator@12@V312@0@Z
-// TEMPLATE: EXE 0x47d4f3
-// ?GetTowns@EEPlayer@@QAEXABGAAV?$vector@PAVEETown@@V?$allocator@PAVEETown@@@std@@@std@@@Z
-
-// ICF-FOLDED: EXE 0x557269
-// (no address of its own: folded into the shared `ret 4` body the vtable slot points at)
 void EECPDefenseCommander::UnitsSwapped(std::vector<EEPUnitSwap>&)
 {
 }
 
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
 void EECPDefenseCommander::Refresh()
 {
 }
 
-// ICF-FOLDED: EXE 0x557269
-// (no address of its own: folded into the shared `ret` body of EECCAreaEffect::Reset)
 void EECPDefenseCommander::RespondToUnit(class EEComplexUnit *)
 {
 }
 
-// ICF-FOLDED: EXE 0x563d6f
-// (no address of its own: folded into the shared `ret` body of EECCVolcano::UpdateVolcano)
 void EECPDefenseCommander::TargetPlayerNotice(class EEPlayer *,bool)
 {
 }

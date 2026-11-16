@@ -152,7 +152,6 @@
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEStringIDs.h"
-// FUNCTION: EXE 0x596ebe
 // Creates a trigger-screen player picker combo of the given width, 20 pixels high
 EESETSUICBPlayer::EESETSUICBPlayer(unsigned long inId, unsigned long inTextBoxType,
     std::vector<UWideString>& inData, GEFont* inFont, const GE2DPoint& inLocation,
@@ -164,16 +163,11 @@ EESETSUICBPlayer::EESETSUICBPlayer(unsigned long inId, unsigned long inTextBoxTy
 {
 }
 
-// SYNTHETIC: EXE 0x596f36
-// (the scalar deleting destructor, emitted with the vtable; slot EESETSUICBPlayer+0x0)
-
-// FUNCTION: EXE 0x596f52
 // Destroys the player picker
 EESETSUICBPlayer::~EESETSUICBPlayer()
 {
 }
 
-// FUNCTION: EXE 0x596f5e
 // Returns the picked entry as a player code: 0..6 for World/Any/All entries by flag bit, 7 + n for player
 // n + 1 (0 when nothing is picked)
 unsigned long EESETSUICBPlayer::GetSelectedPlayer()
@@ -199,7 +193,6 @@ unsigned long EESETSUICBPlayer::GetSelectedPlayer()
     return thePlayer;
 }
 
-// FUNCTION: EXE 0x596fbd
 // Selects the list entry for a player code (the inverse of GetSelectedPlayer)
 void EESETSUICBPlayer::SetSelectedPlayer(unsigned long inPlayer)
 {
@@ -222,7 +215,6 @@ void EESETSUICBPlayer::SetSelectedPlayer(unsigned long inPlayer)
     this->SetCurrentSelection(theSelection);
 }
 
-// FUNCTION: EXE 0x597014
 // Refills the list with the World/Any/All entries its flags allow, then 'Player n' for each scenario player
 void EESETSUICBPlayer::FillList()
 {
@@ -269,7 +261,6 @@ void EESETSUICBPlayer::FillList()
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
 
-// FUNCTION: EXE 0x59718d
 // Changes the selection and refreshes the whole trigger screen
 void EESETSUICBPlayer::ChangeSelection()
 {
@@ -277,35 +268,31 @@ void EESETSUICBPlayer::ChangeSelection()
     gUIManager->mScenarioEditorForm->GetTriggerScreen()->RefreshScreen();
 }
 
-// FUNCTION: EXE 0x5971ac
 // Places the gate being built in the scenario editor (the location and direction are ignored)
 void EESEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
 {
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabUnits])->PlaceGate();
+    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->PlaceGate();
 }
 
-// FUNCTION: EXE 0x5971c8
 // Ends gate placement in the scenario editor and unloads the gate class's media for its player
 void EESEUIBuildGate::Cancel()
 {
     EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayer];
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabUnits])->EndGate();
+    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->EndGate();
     thePlayer->UnloadUnitClassMedia(this->mUnitClass->mUnitType);
 }
 
-// FUNCTION: EXE 0x597202
 // Places the wall being built in the scenario editor
 void EESEUIBuildWall::Build()
 {
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabUnits])->PlaceWall();
+    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->PlaceWall();
 }
 
-// FUNCTION: EXE 0x59721b
 // Ends wall placement in the scenario editor and unloads the wall technology's unit media for its player
 void EESEUIBuildWall::Cancel()
 {
     EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayer];
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabUnits])->EndWall();
+    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->EndWall();
     long theTechnology = this->mTechnology;
     thePlayer->UnloadUnitClassMedia(thePlayer->mTechnologies->GetData(theTechnology)->mUnitClass);
 }

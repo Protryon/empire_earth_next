@@ -13,7 +13,6 @@
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 #include "ee/wonapi/WONLobbyWONListConfig.h"
 namespace WONAPI {
-// FUNCTION: WON 0x00796960
 // Creates a plain component for a configuration entry
 Component* ComponentConfig::CompFactory()
 {

@@ -9,7 +9,7 @@
 class EESEUICCommandUnits : public EEUICCommandUnits {
 public:
     EESEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex, EEAMouseClick* inListener);
-    virtual ~EESEUICCommandUnits();         // 0x1972c8
+    virtual ~EESEUICCommandUnits();
     virtual void StartCommand(const GE2DPoint& inLocation);   // +0x88 0x19737c
 protected:
     virtual long MouseMove(const GE2DPoint& inLocation);    // +0x40 0x1972e6

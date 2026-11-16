@@ -38,7 +38,6 @@
 // (inX, inY), the unit's nearest tile out (provisional name)
 float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
 
-// FUNCTION: EXE 0x5c5f73
 // Creates an object named None that picks units on the map, owned by and selected by player 7, with no filters
 // (the numbers: ee_scenario fields.rs object_defaults)
 EESMObject::EESMObject()
@@ -48,22 +47,11 @@ EESMObject::EESMObject()
     *static_cast<EeScenarioObjectFields*>(this) = ee_scenario_object_defaults();
 }
 
-// SYNTHETIC: EXE 0x5c6019
-// (the scalar deleting destructor, emitted with the vtable; slot EESMObject+0x0)
-
-// FUNCTION: EXE 0x5c6035
 // Destroys the object (members only)
 EESMObject::~EESMObject()
 {
 }
 
-// FUNCTION: EXE 0x5c6148
-// IsNearUnit: ee_scenario placement.rs near_unit (objeval.rs asks it)
-
-// FUNCTION: EXE 0x5c629f
-// IsNearTile: ee_scenario placement.rs near_tile (find_placement asks it)
-
-// FUNCTION: EXE 0x5c6386
 // Copies another object's name and filter settings, and its unit list when it picks units on the map
 void EESMObject::Copy(const EESMObject& inObject)
 {
@@ -73,7 +61,6 @@ void EESMObject::Copy(const EESMObject& inObject)
         this->mUnits = inObject.mUnits;
 }
 
-// FUNCTION: EXE 0x5c6458
 // Rebuilds a dynamic object's units (parent or owners), keeps those passing the state/attribute/selected/visible/area/
 // near filters, shuffles and caps them; returns whether any pass (visibility uses the selected-by player)
 bool EESMObject::Evaluate(bool inIncludeDead)
@@ -229,7 +216,6 @@ void EESMObjectTiles(uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, std::
     }
 }
 
-// FUNCTION: EXE 0x5c6b14
 // Picks the unit type to create for the object: the parent's first unit's type, the object's class, or a random
 // class matching its epoch/family/AI kind/unit set filter; -1 if none
 long EESMObject::PickUnitType()
@@ -239,7 +225,6 @@ long EESMObject::PickUnitType()
     return ee_scenario_object_pick_unit_type(&theHost, this);
 }
 
-// FUNCTION: EXE 0x5c6d4f
 // Finds a free spot for a new unit of the type that meets the object's area and nearness filters (random tries for
 // 'not in/near' filters, then one retry without them); returns whether one was found
 bool EESMObject::FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom)
@@ -271,7 +256,6 @@ bool EESMObject::FindPlacementUncaptured(unsigned long inUnitType, GE2DPoint& ou
     return theResult == EE_SCENARIO_PLACEMENT_FOUND;
 }
 
-// FUNCTION: EXE 0x5c7749
 // Returns a unit's attribute for an object filter: current values, upgrade bonuses over the class, or totals,
 // optionally as a percentage of the class or upgrade value; 0 for a NULL unit
 long EESMObject::GetUnitAttribute(unsigned long inAttribute, bool inPercent, EEUnit* inUnit,
@@ -364,14 +348,12 @@ int64_t EESMUnitField(EEUnit* inUnit, int32_t inField)
 }
 
 
-// FUNCTION: EXE 0x5c8274
 // Copies the object's unit ids out
 void EESMObject::GetUnits(std::vector<unsigned long>& outUnits) const
 {
     outUnits = this->mUnits;
 }
 
-// FUNCTION: EXE 0x5c8284
 // Reads the object's units (appended) and filter settings (files before 0.0xcd: attribute ids above Construction
 // Complete move up by 3); returns the first error (ee_scenario save.rs object_load)
 long EESMObject::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -382,7 +364,6 @@ long EESMObject::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_scenario_object_load(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
-// FUNCTION: EXE 0x5c85a4
 // Replaces every occurrence of a unit id in the object's unit list by a new id
 void EESMObject::ReplaceUnit(long inOldUnit, long inNewUnit)
 {
@@ -394,7 +375,6 @@ void EESMObject::ReplaceUnit(long inOldUnit, long inNewUnit)
     }
 }
 
-// FUNCTION: EXE 0x5c85de
 // Writes the object's units and filter settings (the parent only for minor version >= 0x2a); returns the first error
 // (ee_scenario save.rs object_save)
 long EESMObject::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -405,430 +385,33 @@ long EESMObject::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_scenario_object_save(&theTable, this, inMinorVersion);
 }
 
-#include "ee/EESMEffect.h"
-#include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
-#include "ee/EEAIArea.h"
-#include "ee/EEHerd.h"
-
-// FUNCTION: EXE 0x5c8871
-// Raises or lowers a player's unit type stat by an amount or percent of the class value (armor: the bonus over the
-// class base changes and is clamped at 0), clamped, and queues the change as a pending effect
-// Original cdecl helper. Parameter types follow the dispatcher's pushes and the actual player/upgrade readers.
-// Every case is written out in full (the original reads inUpgrade->mUnitClass per case; the int cases' shared
-// add/clamp/store tail is VC6 tail merging); theAdd is the original's sete (negate when it is false).
-void EEModifyUnitAttribute(unsigned long inAttribute, bool inPercentage, EEPlayer* inPlayer,
-                EEUnitClassUpgrade* inUpgrade, long inAmount, long inMode)
-{
-    std::vector<EEUnit*> theUnits;
-    std::vector<EEHerd*> theHerds;
-    EESMEffect theEffect;
-    bool theAdd = inMode == 0;
-    long theAmount = inAmount;
-    float theFloat;
-    EEUnit* theNode;
-    long theArmor = 0;
-    theEffect.mAttributeUnit = (unsigned long)-1;
-    theEffect.mType = kSMEffectObject;
-    theEffect.mObjectAction = kSMObjectActionUnitAttribute;
-    theEffect.mAttributeUnitType = inUpgrade != NULL ? inUpgrade->mUnitClass->GetUnitType() : 0;
-    theEffect.mAttributePlayer = inPlayer != NULL ? inPlayer->GetPlayerID() : -1;
-    theEffect.mObject = 0;
-    theEffect.mAttribute = inAttribute;
-    theEffect.mUsesPercent = inPercentage;
-    theEffect.mAttributeAmount = inAmount;
-    theEffect.mAttributeMode = inMode;
-    if (inUpgrade == NULL)
-        return;
-    switch (inAttribute) {
-    case kSMUnitAttributeShockArmorPlus: case kSMUnitAttributeArrowArmorPlus: case kSMUnitAttributePierceArmorPlus: case kSMUnitAttributeGunArmorPlus: case kSMUnitAttributeLaserArmorPlus: case kSMUnitAttributeMissileArmorPlus: {
-        switch (inAttribute) {
-        case kSMUnitAttributeShockArmorPlus: theArmor = 0; break;
-        case kSMUnitAttributeArrowArmorPlus: theArmor = 1; break;
-        case kSMUnitAttributePierceArmorPlus: theArmor = 2; break;
-        case kSMUnitAttributeGunArmorPlus: theArmor = 3; break;
-        case kSMUnitAttributeLaserArmorPlus: theArmor = 4; break;
-        case kSMUnitAttributeMissileArmorPlus: theArmor = 5; break;
-        }
-        if (inPercentage)
-            theAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mArmor[theArmor] * inAmount * 0.01f);
-        theFloat = (float)theAmount;
-        if (!theAdd)
-            theFloat = -theFloat;
-        theFloat = (inUpgrade->mArmor[theArmor] - (float)inUpgrade->mUnitClass->mArmor[theArmor]) + theFloat;
-        if (theFloat < 0.0f)
-            theFloat = 0.0f;
-        // the clamped bonus goes back on top of the class base armor (the upgrade holds the total armor)
-        inUpgrade->mArmor[theArmor] = theFloat + (float)inUpgrade->mUnitClass->mArmor[theArmor];
-        break;
-    }
-    case kSMUnitAttributeReloadTimePlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mReloadTime * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mReloadTime;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mReloadTime = inAmount;
-        break;
-    case kSMUnitAttributeAttackPlus:
-        if (inPercentage)
-            theAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mAttack * inAmount * 0.01f);
-        theFloat = (float)theAmount;
-        if (!theAdd)
-            theFloat = -theFloat;
-        theFloat = inUpgrade->GetAttack() + theFloat;
-        if (theFloat < 0.0f)
-            theFloat = 0.0f;
-        inUpgrade->mAttack = theFloat;
-        break;
-    case kSMUnitAttributeWorkRatePlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mWorkRate * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mWorkRate;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mWorkRate = inAmount;
-        break;
-    case kSMUnitAttributeFlightTimePlus: {
-        long theChange;
-        if (inPercentage)
-            theChange = UMFloatToLong((float)inUpgrade->mUnitClass->mFlightTime * inAmount * 0.01f);
-        else
-            theChange = (long)(inAmount / 0.001f + 0.5f);
-        if (!theAdd)
-            theChange = -theChange;
-        theChange += inUpgrade->mFlightTime;
-        if (theChange < 0)
-            theChange = 0;
-        inUpgrade->mFlightTime = theChange;
-        break;
-    }
-    case kSMUnitAttributeLeadershipPlus:
-        if (inPercentage)
-            theAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mLeadership * inAmount * 0.01f);
-        theFloat = (float)theAmount;
-        if (!theAdd)
-            theFloat = -theFloat;
-        theFloat = inUpgrade->GetLeadership() + theFloat;
-        if (theFloat < 0.0f)
-            theFloat = 0.0f;
-        inUpgrade->mLeadership = theFloat;
-        break;
-    case kSMUnitAttributeMaxObjectsCarriedPlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mMaxObjectCarry * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mMaxObjectCarry;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mMaxObjectCarry = inAmount;
-        break;
-    case kSMUnitAttributeRepairPlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mRepairRate * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mRepairRate;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mRepairRate = inAmount;
-        break;
-    case kSMUnitAttributeHitPointsPlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mHitPoints * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mMaxHitPoints;
-        if (inAmount < 0)
-            inAmount = 0;
-        if (inAmount <= 1)
-            inAmount = 1;
-        inUpgrade->mMaxHitPoints = inAmount;
-        break;
-    case kSMUnitAttributeCarryAmountPlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mCarryAmount * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mCarryAmount;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mCarryAmount = inAmount;
-        break;
-    case kSMUnitAttributeContainerHealingHPPerSecPlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mHealingPoints * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mHealingPoints;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mHealingPoints = inAmount;
-        break;
-    case kSMUnitAttributeRangePlus:
-        if (inPercentage)
-            theAmount = UMFloatToLong(inUpgrade->mUnitClass->GetRange() * inAmount * 0.01f);
-        theFloat = (float)theAmount;
-        if (!theAdd)
-            theFloat = -theFloat;
-        theFloat = inUpgrade->GetRange() + theFloat;
-        if (theFloat < 0.0f)
-            theFloat = 0.0f;
-        inUpgrade->SetRange(theFloat);
-        break;
-    case kSMUnitAttributeLineOfSightPlus: {
-        if (inPercentage)
-            theAmount = UMFloatToLong(inUpgrade->mUnitClass->GetLineOfSight() * inAmount * 0.01f);
-        theFloat = (float)theAmount;
-        if (!theAdd)
-            theFloat = -theFloat;
-        float theSpeed = inUpgrade->GetLineOfSight() + theFloat;
-        if (theSpeed < 0.0f)
-            theSpeed = 0.0f;
-        for (theNode = inPlayer->mFirstUnit; theNode != NULL;
-             theNode = static_cast<EEUnit*>(theNode->mNext)) {
-            if (theNode->mComplexUnit != NULL && theNode->mUnitClass == inUpgrade->mUnitClass) {
-                theNode->mComplexUnit->SightOffHere();
-                theUnits.push_back(theNode);
-            }
-        }
-        inUpgrade->mLineOfSight = theSpeed;
-        for (unsigned long i = 0; i < theUnits.size(); i++)
-            theUnits[i]->SightOnHere();
-        break;
-    }
-    case kSMUnitAttributeMaxVelocityPlus:
-        if (inPercentage)
-            theFloat = inUpgrade->mUnitClass->GetMaxVelocity() * inAmount * 0.01f;
-        else
-            theFloat = (float)inAmount / 20.0f;
-        if (!theAdd)
-            theFloat = -theFloat;
-        theFloat = inUpgrade->GetMaxVelocity() + theFloat;
-        if (theFloat < 0.0001f)
-            theFloat = 0.0001f;
-        inUpgrade->SetMaxVelocity(theFloat);
-        break;
-    case kSMUnitAttributePowerPlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mPower * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mPower;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mPower = inAmount;
-        break;
-    case kSMUnitAttributeAnimalAIActivePlus: {
-        if (inPercentage)
-            inAmount = inAmount > 0;
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mIsInitialized != false;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mIsInitialized = inAmount > 0;
-        inPlayer->GetHerdsOfType(theHerds, inUpgrade->mUnitClass->mUnitType);
-        for (long j = (long)theHerds.size() - 1; j >= 0; --j)
-            theHerds[j]->mIsActive = inUpgrade->mIsInitialized;
-        break;
-    }
-    case kSMUnitAttributeCameraFocusPlus:
-        if (!theAdd)
-            inAmount = -inAmount;
-        theAmount = inAmount + (long)(inUpgrade->mCameraFocus * 100.0f);
-        if (theAmount < 0)
-            theAmount = 0;
-        inUpgrade->mCameraFocus = (float)theAmount * 0.01f;
-        break;
-    }
-    gWorld.mScenarioManager->AddV134Effect(theEffect);
-}
-
-#include "ee/EEUnitAction.h"
-#include "ee/EEUGRust.h"
-
-// FUNCTION: EXE 0x5c8f28
 // Adds to, subtracts from or sets one unit's attribute (hit points, cargo, flight time, garrison, ammo, scale, power,
 // rot time, built state, variables) by a fixed, random or percentage amount
 // Original cdecl helper; random range and the percentage flag are independent of add/subtract/assign mode.
+static void EEChangeUnitUncaptured(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
+                long inMinimum, unsigned long inMaximum, bool inRandom, long inMode);
 void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
                 long inMinimum, unsigned long inMaximum, bool inRandom, long inMode)
 {
-    std::vector<unsigned long> theUnused;
-    std::vector<EEComplexUnit*> theUnits;
-    EESMEffect theEffect;
-    EEUnitClass* theClass = inUnit != NULL ? inUnit->GetUnitClass() : NULL;
-    EEComplexUnit* theComplex = inUnit != NULL ? inUnit->GetComplexUnit() : NULL;
-    EEUnitClassUpgrade* theStats = inUnit != NULL ? inUnit->GetStats() : NULL;
-    theEffect.mType = kSMEffectObject;
-    theEffect.mObjectAction = kSMObjectActionUnitAttribute;
-    theEffect.mAttributeUnit = inUnit != NULL ? inUnit->GetUnitID() : (unsigned long)-1;
-    theEffect.mAttributeUnitType = theClass != NULL ? theClass->GetUnitType() : 0;
-    theEffect.mAttributePlayer = inUnit != NULL ? inUnit->GetPlayer()->GetPlayerID() : -1;
-    theEffect.mUsesPercent = false;
-    theEffect.mObject = 0;
-    theEffect.mAttribute = inAttribute;
-    theEffect.mAttributeMode = inMode;
-    long theAmount = inMaximum != 0 ? gPhysics->GetRandom(inMinimum, (long)inMaximum) : inMinimum;
-    if (inRandom) {
-        if (!inPercentage)
-            theAmount = gPhysics->GetRandom(0, inMinimum);
-        else {
-            theAmount = gPhysics->GetRandom(0L, inMinimum + (long)(inMaximum > 100 ? 0 : 100 - inMaximum));
-            if (theAmount >= inMinimum)
-                theAmount += 1 + (inMaximum - inMinimum);
-        }
-    }
-    int theValue = 0;   // the counter changed below: 1 the reload timer, 2 the power, 3 the rotting time (unit store holders)
-    long theBase = 0;
-    switch (inAttribute) {
-    case kSMUnitAttributeHitPoints:
-        if (inUnit != NULL && inUnit->GetHitPoints() > 0) {
-            if (inPercentage) theAmount = UMFloatToLong((float)theStats->mMaxHitPoints * theAmount * 0.01f);
-            if (inMode == kSMAttributeModeIncrease) theAmount += inUnit->GetHitPoints();
-            else if (inMode == kSMAttributeModeDecrease) theAmount = inUnit->GetHitPoints() - theAmount;
-            if (theAmount < 1) {
-                if (inUnit->GetUnitClass()->GetCategory() == kUnitCategoryResource) {
-                    inUnit->SetResourceAmount(0);
-                    inUnit->GetPlayer()->UnitTaken(inUnit, false);
-                    inUnit->GetPlayer()->KillUnit(inUnit, false);
-                } else
-                    inUnit->Kill(0, 0, 0);
-            } else
-                inUnit->SetHitPoints(theAmount);
-        }
-        break;
-    case kSMUnitAttributeAnyResource: case kSMUnitAttributeStone: case kSMUnitAttributeGold: case kSMUnitAttributeWood: case kSMUnitAttributeFood: case kSMUnitAttributeIron: {
-        if (inPercentage) theAmount = UMFloatToLong((float)theStats->mCarryAmount * theAmount * 0.01f);
-        if (inMode == kSMAttributeModeIncrease) theAmount += inUnit->mResourceAmount;
-        else if (inMode == kSMAttributeModeDecrease) theAmount = inUnit->mResourceAmount - theAmount;
-        if (theAmount < 0) theAmount = 0;
-        unsigned long theState = 6;
-        if (inAttribute == kSMUnitAttributeAnyResource) {
-            // any resource: a random type unless the unit is gathering, which keeps the type it gathers
-            inUnit->SetResourceAmount(theAmount);
-            if (theComplex == NULL || theComplex->mCommand == NULL || theComplex->mCommand->mType != kActionGatherResource)
-                inUnit->SetResourceType(gPhysics->GetRandom(2L, 6L));
-            break;
-        } else if (inAttribute == kSMUnitAttributeStone) theState = 4;
-        else if (inAttribute == kSMUnitAttributeGold) theState = 5;
-        else if (inAttribute == kSMUnitAttributeWood) theState = 3;
-        else if (inAttribute == kSMUnitAttributeFood) theState = 2;
-        if (theComplex != NULL && theComplex->mCommand != NULL && theComplex->mCommand->mType == kActionGatherResource
-            && theComplex->mResourceType != theState)
-            break;
-        inUnit->SetResourceAmount(theAmount);
-        inUnit->SetResourceType(theState);
-        break;
-    }
-    case kSMUnitAttributeFlightTime:
-        if (theComplex != NULL) {
-            long theTime = inPercentage ? UMFloatToLong((float)theStats->mFlightTime * theAmount * 0.01f)
-                                       : (long)(theAmount / 0.001f + 0.5f);
-            if (inMode == kSMAttributeModeIncrease) theTime += theComplex->mFlightTime;
-            else if (inMode == kSMAttributeModeDecrease) theTime = theComplex->mFlightTime - theTime;
-            if (theTime < 0) theTime = 0;
-            theComplex->SetFlightTime(theTime);
-        }
-        break;
-    case kSMUnitAttributeGarrisonLevel:
-        if (theComplex != NULL && theComplex->GetUnitClass()->mGarrisonCapacity > 0) {
-            if (inPercentage) theAmount = UMFloatToLong((float)theClass->mGarrisonCapacity * theAmount * 0.01f);
-            if (inMode == kSMAttributeModeIncrease) theAmount += theComplex->mGarrisonCount;
-            else if (inMode == kSMAttributeModeDecrease) theAmount = theComplex->mGarrisonCount - theAmount;
-            if (theAmount < 0) theAmount = 0;
-            long theDelta = theAmount - theComplex->mGarrisonCount;
-            if (theComplex->GetUnitClass()->mGarrisonCapacity < theComplex->mGarrisonCount + theDelta)
-                theDelta = theComplex->GetUnitClass()->mGarrisonCapacity - theComplex->mGarrisonCount;
-            theComplex->AddGarrison(theDelta, theComplex->mGarrisonPopulation);
-            if (theComplex->mGarrisonCount == theComplex->GetUnitClass()->mGarrisonCapacity) {
-                EEUnitGoal* theGoal = EEUGRust::NewLoad(kGoalLoadGarrison, theComplex, theUnits, false);
-                theComplex->QueueGoal(theGoal, 0);
-                theComplex->StartAction(kActionWaitForGarrisonCost);
-                theComplex->GetUnitClass()->ActionChanged(theComplex);
-            }
-        }
-        break;
-    case kSMUnitAttributeAmmunition:
-        if (theComplex != NULL) {
-            if (inPercentage) theAmount = UMFloatToLong((float)(unsigned long)theClass->mAmmunition * theAmount * 0.01f);
-            if (inMode == kSMAttributeModeIncrease) theAmount += theComplex->mAmmunition;
-            else if (inMode == kSMAttributeModeDecrease) theAmount = theComplex->mAmmunition - theAmount;
-            if (theAmount < 0) theAmount = 0;
-            if (theComplex->mAmmunition != (unsigned long)theAmount)
-                theComplex->mAmmunition = theAmount;
-        }
-        break;
-    case kSMUnitAttributeAnimationIsPaused:
-        if (theComplex != NULL)
-            theComplex->SetAnimation(theComplex->mAnimation, theComplex->mPhysicalModel.GetFrame(), theAmount != 0);
-        break;
-    case kSMUnitAttributeReloadTime:
-        if (theComplex != NULL) {
-            theBase = theStats->mReloadTime;
-            theValue = 1;
-        }
-        break;
-    case kSMUnitAttributeGraphicScale:
-        if (theComplex != NULL) {
-            float theScale = inPercentage ? theClass->GetScale() * theAmount * 0.01f : (float)theAmount;
-            if (inMode == kSMAttributeModeIncrease) theScale = theComplex->mPhysicalModel.GetScale() + theScale;
-            else if (inMode == kSMAttributeModeDecrease) theScale = theComplex->mPhysicalModel.GetScale() - theScale;
-            if (theScale <= 0.0f) theScale = 0.001f;
-            theComplex->mPhysicalModel.SetScale(theScale);
-        }
-        break;
-    case kSMUnitAttributePower:
-        if (theComplex != NULL) {
-            theBase = theStats->mPower;
-            theValue = 2;
-        }
-        break;
-    case kSMUnitAttributeRottingTime:
-        if (theComplex != NULL) {
-            theBase = theClass->mRottingTime;
-            theValue = 3;
-        }
-        break;
-    case kSMUnitAttributeConstructionComplete:
-        if (theComplex != NULL)
-            theComplex->SetBuilt(theAmount != 0, 1, 1);
-        break;
-    case kSMUnitAttributeUnitVariable1: case kSMUnitAttributeUnitVariable2: case kSMUnitAttributeUnitVariable3:
-        if (theComplex != NULL) {
-            long& theCounter = theComplex->mUnitVariables[inAttribute - 17];
-            if (inMode == kSMAttributeModeIncrease) theAmount += theCounter;
-            else if (inMode == kSMAttributeModeDecrease) theAmount = theCounter - theAmount;
-            if (theAmount < 0) theAmount = 0;
-            theCounter = theAmount;
-        }
-        break;
-    }
-    if (theValue == 0)
-        return;
-    long theCurrent = theValue == 1 ? theComplex->mReloadTimer
-                    : theValue == 2 ? theComplex->mPower : theComplex->mRottingAwayTime;
-    if (inPercentage) theAmount = UMFloatToLong((float)theBase * theAmount * 0.01f);
-    if (inMode == kSMAttributeModeIncrease) theAmount += theCurrent;
-    else if (inMode == kSMAttributeModeDecrease) theAmount = theCurrent - theAmount;
-    if (theAmount < 0) theAmount = 0;
-    if (theCurrent != theAmount) {
-        if (theValue == 1)
-            theComplex->mReloadTimer = theAmount;
-        else if (theValue == 2)
-            theComplex->mPower = theAmount;
-        else
-            theComplex->mRottingAwayTime = theAmount;
+    unsigned int theSeed = EESimCaptureRecord::Active() ? EESMCaptureSeed() : 0;
+    long theID = inUnit != NULL ? (long)inUnit->mUnitID : -1;   // the unit by id after (a kill may free it)
+    EEChangeUnitUncaptured(inAttribute, inPercentage, inUnit, inMinimum, inMaximum, inRandom, inMode);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY: SMCU (ee/EEScenarioCapture.h)
+        long theArgs[7] = {(long)inAttribute, inPercentage, theID, inMinimum, (long)inMaximum, inRandom, inMode};
+        EESMCaptureUnitChange(0, theArgs, theID >= 0 ? gWorld.GetUnit((unsigned long)theID) : NULL, NULL, NULL, theSeed);
     }
 }
 
-// FUNCTION: EXE 0x5c9628
+// EEChangeUnit's body (EEChangeUnit adds the simulation capture's SMCU record): the draws, the clamps and which value
+// changes are ee_scenario unit_change.rs's, the unit's reads and writes EESMEffect.cpp's EE_SCENARIO_WORLD_CU_*
+static void EEChangeUnitUncaptured(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
+                long inMinimum, unsigned long inMaximum, bool inRandom, long inMode)
+{
+    EESMHostContext theContext = {NULL, inUnit};
+    EeScenarioHost theHost = EESMHost(&theContext);
+    ee_scenario_change_unit(&theHost, inAttribute, inPercentage, inMinimum, inMaximum, inRandom, inMode);
+}
+
 // Renames the object and renames its object conditions to "<name> Exists" (ee_scenario lists.rs)
 void EESMObject::SetName(const UWideString& inName)
 {
@@ -837,7 +420,6 @@ void EESMObject::SetName(const UWideString& inName)
         gWorld.mScenarioManager->ObjectChanged(this, false, 0);
 }
 
-// FUNCTION: EXE 0x5c96b7
 // Sets the parent object; a parent chain that loops back to this object resets the parent to 0 (ee_scenario
 // lists.rs set_parent)
 void EESMObject::SetParent(long inParent)
@@ -847,14 +429,12 @@ void EESMObject::SetParent(long inParent)
         gWorld.mScenarioManager->ObjectChanged(this, true, inParent);
 }
 
-// FUNCTION: EXE 0x5c97a8
 // Replaces the object's unit list
 void EESMObject::SetUnits(const std::vector<unsigned long>& inUnits)
 {
     this->mUnits = inUnits;
 }
 
-// FUNCTION: EXE 0x5c97b7
 // Creates an enabled, non-looping trigger with one empty condition entry and one empty effect entry
 EESMTrigger::EESMTrigger()
 {
@@ -879,7 +459,6 @@ EESMTrigger::EESMTrigger()
     this->mID = 0;
 }
 
-// FUNCTION: EXE 0x5c98dd
 // Destroys the trigger and its condition and effect entries
 EESMTrigger::~EESMTrigger()
 {
@@ -895,7 +474,6 @@ EESMTrigger::~EESMTrigger()
     }
 }
 
-// FUNCTION: EXE 0x5c9966
 // Copies another trigger's name, text, conditions, effects and flags (not its condition start time)
 void EESMTrigger::Copy(const EESMTrigger& inTrigger)
 {
@@ -911,7 +489,6 @@ void EESMTrigger::Copy(const EESMTrigger& inTrigger)
     this->mIsInCinematic = inTrigger.mIsInCinematic;
 }
 
-// FUNCTION: EXE 0x5c99c7
 // Deletes a condition entry; deleting the last one makes the previous entry end the list
 void EESMTrigger::DeleteCondition(unsigned long inIndex)
 {
@@ -921,7 +498,6 @@ void EESMTrigger::DeleteCondition(unsigned long inIndex)
         this->mConditions[inIndex - 1]->mOperator = kSMTriggerOperatorEnd;
 }
 
-// FUNCTION: EXE 0x5c9a3e
 // Deletes an effect entry; deleting the last one makes the previous entry end the list
 void EESMTrigger::DeleteEffect(unsigned long inIndex)
 {
@@ -931,7 +507,6 @@ void EESMTrigger::DeleteEffect(unsigned long inIndex)
         this->mEffects[inIndex - 1]->mOperator = kSMTriggerOperatorEnd;
 }
 
-// FUNCTION: EXE 0x5c9ab5
 // Fires the trigger when its AND/OR condition chain has held for the set duration: queues all effects, or one random
 // OR-separated group, at their delays, and turns a non-looping trigger off
 // (EEScenarioManager::Update 0x1b20e6)
@@ -974,10 +549,6 @@ void EESMTrigger::EvaluateUncaptured(float inTime)
         gWorld.mScenarioManager->AddTimedEffect((long)theTimed[t].effect, theTimed[t].time, this->mIsInCinematic);
 }
 
-// FUNCTION: EXE 0x5c9caf
-// (EESMTConditionWrapper::Evaluate: ee_scenario trigger.rs entry)
-
-// FUNCTION: EXE 0x5c9d0e
 // Returns the condition entry at an index, or NULL
 EESMTConditionWrapper* EESMTrigger::GetCondition(unsigned long inIndex)
 {
@@ -987,7 +558,6 @@ EESMTConditionWrapper* EESMTrigger::GetCondition(unsigned long inIndex)
     return theWrapper;
 }
 
-// FUNCTION: EXE 0x5c9d32
 // Returns the effect entry at an index, or NULL
 EESMTEffectWrapper* EESMTrigger::GetEffect(unsigned long inIndex)
 {
@@ -997,7 +567,6 @@ EESMTEffectWrapper* EESMTrigger::GetEffect(unsigned long inIndex)
     return theWrapper;
 }
 
-// FUNCTION: EXE 0x5c9d56
 // Reads the trigger's settings, condition entries and effect entries (id -1 becomes 0); returns the first error
 // (ee_scenario save.rs trigger_load)
 long EESMTrigger::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -1008,7 +577,6 @@ long EESMTrigger::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
     return ee_scenario_trigger_load(&theTable, this);
 }
 
-// FUNCTION: EXE 0x5ca0b3
 // Writes the trigger's settings, condition entries and effect entries; returns the first error
 // (ee_scenario save.rs trigger_save)
 long EESMTrigger::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -1019,7 +587,6 @@ long EESMTrigger::Save(unsigned long inMajorVersion, unsigned long inMinorVersio
     return ee_scenario_trigger_save(&theTable, this);
 }
 
-// FUNCTION: EXE 0x5ca29d
 // Sets a condition entry's condition index and NOT flag
 void EESMTrigger::SetCondition(unsigned long inIndex, bool inNot, unsigned long inCondition)
 {
@@ -1027,7 +594,6 @@ void EESMTrigger::SetCondition(unsigned long inIndex, bool inNot, unsigned long 
     this->mConditions[inIndex]->mValue = inCondition;
 }
 
-// FUNCTION: EXE 0x5ca2c3
 // Sets a condition entry's operator; a non-end operator on the last entry appends an empty entry
 void EESMTrigger::SetConditionOperator(unsigned long inIndex, long inOperator)
 {
@@ -1036,7 +602,6 @@ void EESMTrigger::SetConditionOperator(unsigned long inIndex, long inOperator)
     this->mConditions[inIndex]->mOperator = inOperator;
 }
 
-// FUNCTION: EXE 0x5ca331
 // Replaces the trigger's condition entries by copies of the given ones
 void EESMTrigger::CopyConditions(const std::vector<EESMTConditionWrapper*>& inConditions)
 {
@@ -1049,7 +614,6 @@ void EESMTrigger::CopyConditions(const std::vector<EESMTConditionWrapper*>& inCo
     }
 }
 
-// FUNCTION: EXE 0x5ca39b
 // Sets an effect entry's effect index and delay
 void EESMTrigger::SetEffect(unsigned long inIndex, long inDelay, unsigned long inEffect)
 {
@@ -1057,7 +621,6 @@ void EESMTrigger::SetEffect(unsigned long inIndex, long inDelay, unsigned long i
     this->mEffects[inIndex]->mEffectIndex = inEffect;
 }
 
-// FUNCTION: EXE 0x5ca3c1
 // Sets an effect entry's operator; a non-end operator on the last entry appends an empty entry
 void EESMTrigger::SetEffectOperator(unsigned long inIndex, long inType)
 {
@@ -1066,7 +629,6 @@ void EESMTrigger::SetEffectOperator(unsigned long inIndex, long inType)
     this->mEffects[inIndex]->mOperator = inType;
 }
 
-// FUNCTION: EXE 0x5ca42f
 // Replaces the trigger's effect entries by copies of the given ones
 void EESMTrigger::CopyEffects(const std::vector<EESMTEffectWrapper*>& inEffects)
 {
@@ -1078,9 +640,3 @@ void EESMTrigger::CopyEffects(const std::vector<EESMTEffectWrapper*>& inEffects)
         this->SetEffectOperator(i, theWrapper->mOperator);
     }
 }
-
-// FUNCTION: EXE 0x5ca496
-// Appends a condition entry to a trigger's list (vector<EESMTConditionWrapper*>::push_back)
-
-// FUNCTION: EXE 0x5ca4c2
-// Appends an effect entry to a trigger's list (vector<EESMTEffectWrapper*>::push_back)

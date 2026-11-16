@@ -150,18 +150,18 @@ extern EEToHitTable gToHitTable;           // 0x5318e8 (as EECPAttackSubGroupUni
 static const float kUUSectorLow = -0.39269909f;  // 0x449bb8 (-pi/8)
 static const float kUUSectorScale = 1.2732395f;  // 0x449bbc (4/pi)
 static const float kUUSectorHigh = 0.39269909f;  // 0x449bc0 (pi/8)
-static const float kUUWorkReach = 1.5f;          // 0x449b80
-static const float kUUGatherReach = 1.42f;       // 0x449b84
-static const float kUUMinimumFacing = 0.1f;      // 0x449b64
-static const float kUUTwoOverPi = 0.63661975f;   // 0x449bc4
-static const float kUUWallYaw10 = 5.4977875f;    // 0x449bc8
-static const float kUUWallYaw9 = 3.926991f;      // 0x449bcc
-static const float kUUWallYaw8 = 4.712389f;      // 0x449bd0
-static const float kUUClearance = 0.1f;          // 0x449b78
+static const float kUUWorkReach = 1.5f;
+static const float kUUGatherReach = 1.42f;
+static const float kUUMinimumFacing = 0.1f;
+static const float kUUTwoOverPi = 0.63661975f;
+static const float kUUWallYaw10 = 5.4977875f;
+static const float kUUWallYaw9 = 3.926991f;
+static const float kUUWallYaw8 = 4.712389f;
+static const float kUUClearance = 0.1f;
 static const float kUUYawNudge = 0.0174f;        // 0x449b68 (0x24286a: about one degree)
-static const float kUUSearchTurns = 5.0f;        // 0x449b6c
-static const float kUUCheckReach = 2.5f;         // 0x449b70
-static const float kUUWidthFactor = 0.5f;        // 0x449b74
+static const float kUUSearchTurns = 5.0f;
+static const float kUUCheckReach = 2.5f;
+static const float kUUWidthFactor = 0.5f;
 static const float kUUFacingStep = 0.2617994f;   // 0x449bb4 (pi/12)
 // (0x23dd54/0x23dd6e/0x23dd82, the dynamic initializers of the sound falloff factors gF564520/gF56451C/gF564518: ee_units
 // uu_world.rs sound_parameters computes them)
@@ -336,14 +336,12 @@ EEUUNote::~EEUUNote()
 // Units by id: EEUUUnitIDLess / EEUUUnitIDEqual are declared in ee/EEUnitCollector.h (its EEGetUnitsInRectangle
 // sorts with them too; EEAIArea.cpp's family 0xe3d7.. calls these bodies)
 
-// FUNCTION: EXE 0x63dd96
 // Orders units by ascending unit id
 bool EEUUUnitIDLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const
 {
     return inFirst->mUnitID < inSecond->mUnitID;
 }
 
-// FUNCTION: EXE 0x63ddab
 // Tells whether two units have the same unit id
 bool EEUUUnitIDEqual::operator()(EEUnit* inFirst, EEUnit* inSecond) const
 {
@@ -355,7 +353,6 @@ bool EEUUUnitIDEqual::operator()(EEUnit* inFirst, EEUnit* inSecond) const
 // Built without /Og (frame 0x54: the locals of the two undone DistanceSquaredToTile / DistanceSquared2D expansions);
 // the pragma alone makes 0x63ddc1 and 0x63de0f exact (r37_big, with packet B1)
 #pragma optimize("g", off)
-// FUNCTION: EXE 0x63ddc1
 // Orders tiles by their distance from a unit (the nearer first)
 bool EEUUTileNearerToUnit::operator()(const U2DPoint<long>& inFirst,
                                     const U2DPoint<long>& inSecond) const
@@ -372,7 +369,6 @@ bool EEUUTileNearerToUnit::operator()(const U2DPoint<long>& inFirst,
 
 // (0x63deae, EEUUTileNearerToPoint, EEGetSortedRingTiles' sort order: ee_units uu.rs sorted_ring_tiles)
 
-// FUNCTION: EXE 0x63dee8
 // Accepts a tile that is on the map and on the screen's continent and path area (when set)
 bool EEFOLocationScreenEnsureContinentAndPathOverlay::Screen(const U2DPoint<long>& inTile)
 {
@@ -393,7 +389,6 @@ bool EEFOLocationScreenEnsureContinentAndPathOverlay::Screen(const U2DPoint<long
     return true;
 }
 
-// FUNCTION: EXE 0x63df77
 // Smooths a ship's path: keeps the ends and drops points whose straight line from the last kept point stays
 // on passable water away from other units
 // The naval path smoothing (EEUCNaval::AdjustPath): when inSmooth, keep the first and last points and drop each point
@@ -417,7 +412,6 @@ void EEAdjustNavalPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bo
     ioPath = theNewPath;
 }
 
-// FUNCTION: EXE 0x63e530
 // Collects the units on a tile that block a unit type for a player; true when there are any
 bool EEGetBlockingUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, bool inIgnoreOwner,
                std::vector<EEUnit*>& outUnits)
@@ -426,7 +420,6 @@ bool EEGetBlockingUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, boo
     return theNote.R(ee_units_uu_tile_units_standing(UUHandle(inPlayer), inUnitType, UUHandle(inTile), inIgnoreOwner, 2, &outUnits) != 0);
 }
 
-// FUNCTION: EXE 0x63e598
 // Collects the units on a tile that can move out of the way of a unit type; true when there are any
 bool EEGetMovableTileUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, bool inIgnoreOwner,
                std::vector<EEUnit*>& outUnits)
@@ -436,7 +429,6 @@ bool EEGetMovableTileUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, 
 }
 
 
-// FUNCTION: EXE 0x63e630
 // Hands the wall pieces out to the group's builders until every piece has one; units that had another goal
 // start over
 // Hands the wall pieces inPieces out to inGroup's units: spread evenly first, then every unit steps further along the
@@ -446,9 +438,6 @@ void EEBuildWall(EEActiveGroup* inGroup, std::vector<EEUnit*>& inPieces)
     EEUUNote theNote(73); theNote.I(inGroup->GetNumUnits()).Us(inPieces);   // TEST ONLY (UUTL)
     ee_units_uu_build_wall(UUHandle(inGroup), &inPieces);   // ee_units uu_world.rs build_wall (0x63e600 EEHasZeroCount too)
 }
-
-// FUNCTION: EXE 0x63eabc
-// Sends a citizen to a farm: to gather when it is built and whole, else to build or repair it
 
 void EEWorkFarm(EEComplexUnit* inTarget, EEComplexUnit* inUnit)
 {
@@ -463,7 +452,6 @@ void EEWorkFarm(EEComplexUnit* inTarget, EEComplexUnit* inUnit)
 }
 
 
-// FUNCTION: EXE 0x63eb4c
 // Shows the wall ghosts for a wall line of a technology and player
 void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, long inPlayer)
 {
@@ -475,7 +463,6 @@ void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, lo
     EEBuildWallGhosts(inTiles, theCorners, inTechnology, thePlayer, 0.0f);
 }
 
-// FUNCTION: EXE 0x63ebb2
 // Builds a wall line for a player: a new piece (paid foundation or finished) on every free tile, existing
 // pieces reshaped and joined
 // The wall of class inClass from inStart to inEnd for inPlayer: a new piece on every free tile of the line (paid for
@@ -491,7 +478,6 @@ void EEPlanWall(GE2DPoint inStart, GE2DPoint inEnd, EEUnitClass* inClass, EEPlay
 
 // (0x63efa1, EEGetSeabedUnder: ee_units uu_world.rs seabed_under)
 
-// FUNCTION: EXE 0x63f27e
 // Puts a submarine at its cruise depth, or at the surface when the seabed is too high
 void EEGetSeabedDepth(EEComplexUnit* inUnit, GE3DPoint& ioLocation)
 {
@@ -499,7 +485,6 @@ void EEGetSeabedDepth(EEComplexUnit* inUnit, GE3DPoint& ioLocation)
     ioLocation.SetZ(ee_units_uu_seabed(0, UUHandle(static_cast<EEUnit*>(inUnit)), (const float(*)[3])&ioLocation.mX));
 }
 
-// FUNCTION: EXE 0x63f2c0
 // Moves a submarine one small step up or down towards its cruise depth, staying above the seabed
 void EEAdjustDiveDepth(EEComplexUnit* inUnit, GE3DPoint& ioLocation)
 {
@@ -507,7 +492,6 @@ void EEAdjustDiveDepth(EEComplexUnit* inUnit, GE3DPoint& ioLocation)
     ioLocation.SetZ(ee_units_uu_seabed(1, UUHandle(static_cast<EEUnit*>(inUnit)), (const float(*)[3])&ioLocation.mX));
 }
 
-// FUNCTION: EXE 0x63f32a
 // Tells whether a unit can reach a target across path sub-sectors within a step limit; reports the target
 // tile or its closest reachable tile
 // Whether inUnit can reach inTarget across path sub-sectors (a path request of inArg5 (10/25 by distance when out
@@ -569,7 +553,6 @@ bool EEHasPathToTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<
     return theResult;
 }
 
-// FUNCTION: EXE 0x63f630
 // Tells whether a unit can be pushed aside: alive and not a building, aircraft, projectile or fixed object
 bool EEIsUnitMovable(EEComplexUnit* inPlayer, EEComplexUnit* inUnit)
 {
@@ -600,7 +583,6 @@ bool EEIsUnitMovable(EEComplexUnit* inPlayer, EEComplexUnit* inUnit)
     return true;
 }
 
-// FUNCTION: EXE 0x640ddb
 // Finds a free spot for a unit on a tile, stepping in from a neighbour; false when every step collides
 // A free location for a unit of inClass on tile (inToX, inToY), stepping in from (inX, inY) (the steps of 0x23f697);
 // false when every step collides with a unit on the tile (or with the unit's active group's spots)
@@ -616,7 +598,6 @@ bool EEFindPlaceOnTile(EEComplexUnit* inUnit, EEUnitClass* inClass, long inX, lo
     return theNote.R(theFound);
 }
 
-// FUNCTION: EXE 0x64116b
 // Collects the tiles around a container unit for a unit, nearest first
 void EEGetTilesAroundUnit(EEComplexUnit* inUnit, EEComplexUnit* inContainer, long inRange, long inCorners, bool inArg5,
                 std::vector<EETileCoordinate>& outTiles)
@@ -626,7 +607,6 @@ void EEGetTilesAroundUnit(EEComplexUnit* inUnit, EEComplexUnit* inContainer, lon
                              inContainer->mTileY, inContainer->mUnitClass->mTileSize, inRange, inCorners, inArg5, &outTiles);
 }
 
-// FUNCTION: EXE 0x641299
 // Collects the ring tiles at a range around a square, sorted by distance from a point
 void EEGetSortedRingTiles(const GE3DPoint& inFrom, long inX, long inY, long inSize, long inRange, long inCorners,
                 std::vector<U2DPoint<long> >& outTiles)
@@ -636,7 +616,6 @@ void EEGetSortedRingTiles(const GE3DPoint& inFrom, long inX, long inY, long inSi
     ee_units_uu_sorted_ring_tiles(&theFrom, inX, inY, inSize, inRange, inCorners, &outTiles);
 }
 
-// FUNCTION: EXE 0x641419
 // Returns the foundation model a player uses for a building class of its size
 EEModel* EEGetPlayerClassGraphic(EEPlayer* inPlayer, EEUnitClass* inClass)
 {
@@ -658,7 +637,6 @@ EEModel* EEGetPlayerClassGraphic(EEPlayer* inPlayer, EEUnitClass* inClass)
     return inPlayer->mUnitClassUpgrades[kUnitTypeFoundationAirport]->mModel;
 }
 
-// FUNCTION: EXE 0x6414d2
 // Tells whether two techs count as the same research (0x432 and 0x5ab are twins)
 bool EEIsSameResearch(long inFirst, long inSecond)
 {
@@ -672,7 +650,6 @@ bool EEIsSameResearch(long inFirst, long inSecond)
     return theResult;
 }
 
-// FUNCTION: EXE 0x641504
 // Picks a free spot next to a container among candidate tiles that the unit can stand on and reach
 // A free location next to inContainer among inTiles for inUnit (its unit can stand there, the continents connect,
 // 0x240ddb finds room, and unless inArg4 the tile path to the container is clear)
@@ -688,7 +665,6 @@ bool EEPickTileNear(std::vector<EETileCoordinate>& inTiles, EEComplexUnit* inUni
     return theNote.R(theFound);
 }
 
-// FUNCTION: EXE 0x641658
 // Tells whether a unit may stand on a tile: on the map, off its edge, allowed terrain, no blocking unit
 // Whether inUnit may stand on inTile: on the map, not an edge tile, a terrain its class allows, the tile's water side
 // for an amphibious class, and no unit on it that blocks inUnit (always for a class with flag 1 and no Virtual5C)
@@ -697,9 +673,6 @@ bool EECanStandOn(const EETileCoordinate& inTile, EEComplexUnit* inUnit)
     EEUUNote theNote(8); theNote.I(inTile.mX).I(inTile.mY).U(inUnit);   // TEST ONLY (UUTL)
     return theNote.R(ee_units_uu_can_stand_on(inTile.mX, inTile.mY, UUHandle(static_cast<EEUnit*>(inUnit))) != 0);
 }
-
-// FUNCTION: EXE 0x641743
-// Computes the bounding rectangle of a list of units' tiles
 
 void EEGetSelectionBounds(std::vector<EEUnit*>& inUnits, GERectangle& outBounds, long inTerrainFilter)
 {
@@ -712,7 +685,6 @@ void EEGetSelectionBounds(std::vector<EEUnit*>& inUnits, GERectangle& outBounds,
     outBounds.SetBottom(theBounds[3]);
 }
 
-// FUNCTION: EXE 0x64181a
 // Computes where an attacker should aim to intercept a moving target (else its location)
 // Where inAttacker should aim at a moving inTarget: the intercept point along the target's next waypoint (the
 // quadratic of the two speeds), else the target's location
@@ -721,7 +693,6 @@ void EEGetLeadPosition(EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& o
     EECombatAttackPosition(false, inAttacker, inTarget, outLocation);   // ee_combat leaves.rs lead_position
 }
 
-// FUNCTION: EXE 0x641a6a
 // Computes the launch pitch for a shot at its speed under gravity (low or high arc); false (45 degrees) when
 // out of reach
 // The launch angle for a shot from inFrom to inTo at inStats' speed under its projectile class's gravity (the low
@@ -745,7 +716,6 @@ bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, con
     return theOut.reached != 0;
 }
 
-// FUNCTION: EXE 0x641bc9
 // Points a unit's attack goal at a new target and restarts its attack
 // inUnit's attack goal (inGoal is an EEUGAttackUnit: 0x241c2d's dynamic_cast) moves on to inTarget, and the unit starts
 // its attack action (0x7dd) over
@@ -763,7 +733,6 @@ void EERetargetAttack(EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEComplexUnit* 
     inUnit->mUnitClass->ActionChanged(inUnit);
 }
 
-// FUNCTION: EXE 0x641c2d
 // Finds a unit a new target near its old one: another piece of a linked (wall/gate) target, else the
 // nearest living enemy within 5 tiles
 void EEFindNewTargetNearOld(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
@@ -807,7 +776,6 @@ void EEFindNewTargetNearOld(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
     }
 }
 
-// FUNCTION: EXE 0x641e21
 // Accepts a living unit within the screen's distance of the old target (new: ee_combat's screen)
 // the old target's screen's candidate distance (asked by ee_combat's screen for a living candidate only)
 struct EENearOldScreenContext {
@@ -840,14 +808,12 @@ bool EEFOFindNewTargetNearOldTarget::Virtual08(EEComplexUnit* inUnit)
     return EENearOldScreen(this, inUnit);
 }
 
-// FUNCTION: EXE 0x641e49
 // Computes where an attacker should stand to fire on a target (healers and melee closer, others at range)
 void EEGetFiringPosition(EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& outLocation)
 {
     EECombatAttackPosition(true, inAttacker, inTarget, outLocation);   // ee_combat leaves.rs firing_position
 }
 
-// FUNCTION: EXE 0x642110
 // Computes a moving unit's Doppler pitch shift against the camera
 // The pitch shift of a moving unit against the camera (the Doppler factor of EEUCLandable::GetSoundParameters 0x2141a3, whose
 // base call is the caller's here)
@@ -860,7 +826,6 @@ void EEGetDopplerPitch(EEUnit* inUnit, EESoundObject* inSound, float* outVolume,
                               &theCamera, outPitch);   // ee_units uu_world.rs doppler_pitch
 }
 
-// FUNCTION: EXE 0x642345
 // Returns the angle between north and the direction from one point to the other
 float EEGetAngleFromNorth(GE3DPoint* inFrom, GE3DPoint* inTo)
 {
@@ -868,7 +833,6 @@ float EEGetAngleFromNorth(GE3DPoint* inFrom, GE3DPoint* inTo)
     return theNote.RF(ee_units_uu_angle(1, 0, 0, (const float(*)[3])&inFrom->mX, (const float(*)[3])&inTo->mX));   // uu_world.rs
 }
 
-// FUNCTION: EXE 0x64240d
 // Returns the ground heading from one point to another
 float EEGetHeadingBetween(GE3DPoint* inFrom, GE3DPoint* inTo)
 {
@@ -876,7 +840,6 @@ float EEGetHeadingBetween(GE3DPoint* inFrom, GE3DPoint* inTo)
     return theNote.RF(UMArcTan2(-(inTo->GetX() - inFrom->GetX()), inTo->GetY() - inFrom->GetY()));
 }
 
-// FUNCTION: EXE 0x642448
 // Returns the heading from one tile to another
 float EEGetSeaHeading(const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo)
 {
@@ -889,14 +852,12 @@ float EEGetSeaHeading(const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo)
 
 // (0x642489, EEGetUnitAngle, and the escape point's sort by it, EEUUAngleLess: ee_units uu_world.rs unit_angle)
 
-// FUNCTION: EXE 0x6424f6
 // Tells whether the target unit is attacking the unit
 bool EEIsAttackedBy(EEComplexUnit* inUnit, EEUnit* inTarget)
 {
     return EECombatWorld(EE_COMBAT_WORLD_ATTACKED_BY, inUnit, inTarget) != 0;   // ee_combat leaves.rs is_attacked_by
 }
 
-// FUNCTION: EXE 0x642542
 // Tells whether a priest can convert the target
 bool EECanPriestConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {
@@ -908,7 +869,6 @@ bool EECanPriestConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
     return theResult;
 }
 
-// FUNCTION: EXE 0x642575
 // Tells whether a unit can attack a target from where it is; else finds the first tile of a path to a place
 // it can (outTile)
 bool EEIsAttackReachable(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<long>* outTile)
@@ -921,21 +881,18 @@ bool EEIsAttackReachable(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoin
     return theResult;
 }
 
-// FUNCTION: EXE 0x64282e
 // Returns a launch facing for a ship leaving a dock (facing only)
 bool EEGetDockShipFacing(GE3DPoint* inPoint, EEUnitClass* inClass, EEUnit* inUnit, bool inFacePoint, GETransformation* outTransformation)
 {
     return EEGetDockShipPlacement(inPoint, inClass, inUnit, inFacePoint, true, outTransformation);
 }
 
-// FUNCTION: EXE 0x64284c
 // Finds a launch position and facing for a ship leaving a dock
 bool EEFindDockShipPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, EEUnit* inUnit, bool inFacePoint, GETransformation* outTransformation)
 {
     return EEGetDockShipPlacement(inPoint, inClass, inUnit, inFacePoint, false, outTransformation);
 }
 
-// FUNCTION: EXE 0x64286a
 // Finds a launch position and facing for a unit leaving a dock or carrier: a free tile around the exit, then
 // a turn until the way out is clear of shore, other areas and blocking units
 // A launch facing for inUnit's unit (a unit of inClass leaving it): unless inArg5, first a free space tile within six
@@ -952,7 +909,6 @@ bool EEGetDockShipPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, EEUnit* in
                                                      (float(*)[4][4])&outTransformation->mMatrix[0][0]) != 0);
 }
 
-// FUNCTION: EXE 0x64352f
 // Finds a free placement for a unit of a class around a tile
 bool EEFindPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, unsigned long inX, unsigned long inY, long inSize,
                      long inRings, bool inCorners, bool inFacePoint, bool inArg11, GETransformation* outTransformation,
@@ -962,7 +918,6 @@ bool EEFindPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, unsigned long inX
                            outTransformation, inTarget);
 }
 
-// FUNCTION: EXE 0x643561
 // Finds a free placement around a tile, ring by ring, reachable from the start's continent, with its facing
 // A free place for a unit (inUnit, or one of inClass) around (inX, inY), ring by ring up to inRings, reachable from
 // the start's continent; outTransformation faces it from inPoint (inArg10) or south, on the ground
@@ -978,7 +933,6 @@ bool EEFindPlacement(GE3DPoint* inPoint, EEComplexUnit* inUnit, EEUnitClass* inC
                                                 UUHandle(static_cast<EEUnit*>(inTarget))) != 0);
 }
 
-// FUNCTION: EXE 0x643978
 // Classifies a unit on a tile for a placement: 0 ignored, 1 movable, 2 blocking
 // How inPlayer sees inUnit as a candidate of unit type inUnitType: 0 not at all, 1 a target, 2 otherwise (inferred)
 char EEGetTileUnitStanding(EEUnit* inUnit, EEPlayer* inPlayer, long inUnitType, bool inIgnoreOwner)
@@ -987,7 +941,6 @@ char EEGetTileUnitStanding(EEUnit* inUnit, EEPlayer* inPlayer, long inUnitType, 
     return theNote.R((char)ee_units_uu_tile_unit_standing(UUHandle(inUnit), UUHandle(inPlayer), inUnitType, inIgnoreOwner));
 }
 
-// FUNCTION: EXE 0x643ae1
 // Turns wall pieces with three or more neighbours into plain junction pieces
 // Wall pieces with three or more neighbours (inPlayer's live pieces of a wall class around them, or tiles of inTiles
 // within one tile) become plain pieces facing south (inferred)
@@ -1001,7 +954,6 @@ void EEMakeWallJunctions(std::vector<EEComplexUnit*>& inUnits, std::vector<EETil
                                     UUHandle(inMap));
 }
 
-// FUNCTION: EXE 0x643c7d
 // Tells whether every tile of a rectangle can take a unit type for the unit's player
 bool EEBlockTakes(EEUnit* inUnit, long inUnitType, long inX, long inY, long inWidth, long inHeight, long inIgnoreOwner)
 {
@@ -1010,7 +962,6 @@ bool EEBlockTakes(EEUnit* inUnit, long inUnitType, long inX, long inY, long inWi
                                              inIgnoreOwner != 0) != 0);
 }
 
-// FUNCTION: EXE 0x643ce6
 // Tells whether every tile of a rectangle can take a unit type for a player
 // returns the result in al (EECPBuildManager tests it)
 bool EEPlayerBlockTakes(EEPlayer* inPlayer, long inUnitType, long inX, long inY, long inWidth, long inHeight, long inIgnoreOwner)
@@ -1302,7 +1253,6 @@ struct EEUUCircleScreen {
     float mRadiusSquared;                   // +0x08
 };
 
-// FUNCTION: EXE 0x643d43
 // Returns the best target for a unit around a tile, scored by a target search
 // The best target for inUnit around (inX, inY) (the tile search 0x24fcd1, or 0x2503d7 from its position for a
 // class with +0x318), scored by an EEUUTargetSearch (new: the search, its walks and scores are ee_combat's
@@ -1347,7 +1297,6 @@ EEUnit* EESearchTarget(EEComplexUnit* inUnit, U2DRectangle<long>* inArea, long i
     return theBest;
 }
 
-// FUNCTION: EXE 0x643f78
 // Returns a target near a unit (along the unit list for anti-air ammunition 0x3c)
 EEUnit* EEFindNearbyTarget(EEComplexUnit* inUnit)
 {
@@ -1356,7 +1305,6 @@ EEUnit* EEFindNearbyTarget(EEComplexUnit* inUnit)
     return EESearchTargetAlongList(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), 1.0f);
 }
 
-// FUNCTION: EXE 0x643fa7
 // Returns the best target for a unit around a tile along the x-sorted unit list, scored by its targeting table
 // The best target for inUnit around (inX, inY) along the x-sorted unit list (both ways), scored by the targeting
 // table row of its mode (the unit-list twin of EEUUTargetSearch) (new: the walk and the scores are ee_combat's
@@ -1387,7 +1335,6 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
     return theBest;
 }
 
-// FUNCTION: EXE 0x64485b
 // Returns the best target for a unit around a tile when the influence table shows enemies within its reach
 EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inScale)
 {
@@ -1413,14 +1360,12 @@ EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inScal
     return theResult;
 }
 
-// FUNCTION: EXE 0x64495a
 // Sums the other players' influence values on a rectangle of tiles
 long EEInfluenceTable::SumOthersValueOnTiles(unsigned long inPlayer, const U2DRectangle<long>& inTiles)
 {
     return this->SumOthersValue(inPlayer, this->GetRegions(inTiles));
 }
 
-// FUNCTION: EXE 0x6449ca
 // Computes a sound's volume, pan and pitch as heard from the camera (silent off tiles the player sees)
 // Volume, pan and pitch of a sound of inVolume at inLocation, as heard from the camera (outPitch 1; volume 0 off a
 // tile the current player sees)
@@ -1449,7 +1394,6 @@ void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float
     outPitch = theOut[2];
 }
 
-// FUNCTION: EXE 0x644c83
 // Creates a paid building site (one hit point) of a unit type for a player at a tile
 EEUnit* EEMakeBuilding(EEPlayer* inPlayer, long inUnitType, long inX, long inY)
 {
@@ -1478,7 +1422,6 @@ EEUnit* EEMakeBuilding(EEPlayer* inPlayer, long inUnitType, long inX, long inY)
     return theUnit;
 }
 
-// FUNCTION: EXE 0x644deb
 // Replaces a queued technology on every living unit of a player whose class makes it
 void EEReplaceQueuedTechnology(EEPlayer* inPlayer, EEUnitClass* inClass, long inNewTechnology)
 {
@@ -1499,7 +1442,6 @@ void EEReplaceQueuedTechnology(EEPlayer* inPlayer, EEUnitClass* inClass, long in
     }
 }
 
-// FUNCTION: EXE 0x644e95
 // Replaces a unit with a new one of another class (pack/unpack): hit points in proportion, goals, groups
 // and effects moved over
 // inUnit replaced by a new unit of inClass for inPlayer (EEMPackUnpack): hit points in proportion, the goals, groups
@@ -1546,7 +1488,6 @@ EEComplexUnit* EEReplaceUnit(EEComplexUnit* inUnit, unsigned long inPlayer, EEUn
     return theNew;
 }
 
-// FUNCTION: EXE 0x645073
 // Creates a copy of a unit (or a new class) for a player on its tile, in its state
 EEUnit* EEMakeUnitCopy(EEComplexUnit* inUnit, unsigned long inPlayer, EEUnitClass* inClass)
 {
@@ -1566,7 +1507,6 @@ EEUnit* EEMakeUnitCopy(EEComplexUnit* inUnit, unsigned long inPlayer, EEUnitClas
 
 // (0x6450f1, EEClearUnderBuilding: ee_units uu_world.rs clear_under_building)
 
-// FUNCTION: EXE 0x6451df
 // Returns the compass sector (0..7) of the direction from one tile to another
 long EEGetTileDirection(long inX1, long inY1, long inX2, long inY2)
 {
@@ -1574,14 +1514,12 @@ long EEGetTileDirection(long inX1, long inY1, long inX2, long inY2)
     return theNote.R(ee_units_uu_tile_direction(inX1, inY1, inX2, inY2));
 }
 
-// FUNCTION: EXE 0x645261
 // Returns the compass sector of the direction from one unit to another
 long EEGetDirectionTo(EEUnit* inFrom, EEUnit* inTo)
 {
     return EEGetTileDirection(inFrom->GetTileX(), inFrom->GetTileY(), inTo->GetTileX(), inTo->GetTileY());
 }
 
-// FUNCTION: EXE 0x645284
 // Unloads what a gatherer carries into a container: the player's resources (with the variant's rate and a
 // nearby-site bonus), the effect and the statistics
 // inUnit unloads what it carries into inContainer: the player's resources (the variant's rate; a bonus when the
@@ -1592,7 +1530,6 @@ void EEDepositLoad(EEComplexUnit* inUnit, EEComplexUnit* inContainer)
     ee_units_uu_deposit_load(UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(static_cast<EEUnit*>(inContainer)));   // uu_world.rs
 }
 
-// FUNCTION: EXE 0x6454eb
 // Tells whether an enemy the unit may target is within its reach
 bool EEIsEnemyWithinRange(EEComplexUnit* inUnit)
 {
@@ -1604,7 +1541,6 @@ bool EEIsEnemyWithinRange(EEComplexUnit* inUnit)
     return theInRange;
 }
 
-// FUNCTION: EXE 0x64572b
 // Splits calamity flags into their single bits
 void EESplitCalamityFlags(unsigned long inFlags, std::vector<unsigned long>& outFlags)
 {
@@ -1620,7 +1556,6 @@ void EESplitCalamityFlags(unsigned long inFlags, std::vector<unsigned long>& out
         outFlags.push_back(0x10);
 }
 
-// FUNCTION: EXE 0x6457a3
 // Walks a tile path back from its end and drops the middle tile wherever two tiles one step apart
 // differ by exactly (+1, +1), cutting diagonal corners
 void EEDropDiagonalCorners(std::vector<EETileCoordinate>& ioTiles)
@@ -1629,7 +1564,6 @@ void EEDropDiagonalCorners(std::vector<EETileCoordinate>& ioTiles)
     ee_units_uu_drop_tiles(0, &ioTiles);
 }
 
-// FUNCTION: EXE 0x645903
 // Collects the player's town centers on the corners and sides of a farm's footprint
 bool EEGetFarmDropSites(EEComplexUnit* inUnit, std::vector<EEUnit*>& outUnits)
 {
@@ -1637,7 +1571,6 @@ bool EEGetFarmDropSites(EEComplexUnit* inUnit, std::vector<EEUnit*>& outUnits)
     return theNote.R(ee_units_uu_farm_drop_sites(UUHandle(static_cast<EEUnit*>(inUnit)), &outUnits) != 0);
 }
 
-// FUNCTION: EXE 0x645a19
 // Finds the nearest free farm of the unit's player, ring by ring (the ring reached goes back)
 EEComplexUnit* EEFindFreeFarm(EEComplexUnit* inUnit, bool inFreeOnly, long* ioRing)
 {
@@ -1648,7 +1581,6 @@ EEComplexUnit* EEFindFreeFarm(EEComplexUnit* inUnit, bool inFreeOnly, long* ioRi
     return theNote.RU(theFarm != NULL ? theFarm->mComplexUnit : NULL);
 }
 
-// FUNCTION: EXE 0x645bc4
 // Returns the nearest unit that attacks or gathers from the unit
 // (new: the walk along the unit list and the choice are ee_combat's pursuer_of; the goal tests stay here)
 EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit)
@@ -1747,7 +1679,6 @@ static void EENewTargetPush(void* inContext, uint64_t inUnit)
     ((EENewTargetHost*)inContext)->mUnits.push_back(EENewTargetUnit(inUnit));
 }
 
-// FUNCTION: EXE 0x645dd6
 // Gives a unit's goal the first enemy near a tile that passes a screen; false when none
 // (new: the region walk under it and the choice are ee_combat's; the tests and the retarget stay here)
 bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, EEComplexUnit* inUnit,
@@ -1790,7 +1721,6 @@ bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, 
     return theFound;
 }
 
-// FUNCTION: EXE 0x646254
 // Finds a place for a computer player's unit to flee to, away from its attackers
 // A place for a computer player's unit to move off to, away from the units attacking it: the middle of the widest
 // gap between them pushed out to its reach, else a step away from the first attacker (EEUnitClass::FindSafeLocation)
@@ -1804,7 +1734,6 @@ bool EEGetEscapePoint(EEComplexUnit* inUnit, GE2DPoint& outLocation)
     return theNote.R(theResult);
 }
 
-// FUNCTION: EXE 0x6466fe
 // Runs a functor over the units of every player but nature
 void EEForEachPlayersUnit(EEUUUnitFunctor* inFunctor)
 {
@@ -1812,7 +1741,6 @@ void EEForEachPlayersUnit(EEUUUnitFunctor* inFunctor)
         EEForEachUnitOf(::gWorld.mPlayers[i], inFunctor, false);
 }
 
-// FUNCTION: EXE 0x64672f
 // Runs a functor over a player's units (and its pending units when asked)
 void EEForEachUnitOf(EEPlayer* inPlayer, EEUUUnitFunctor* inFunctor, bool inCalamities)
 {
@@ -1833,7 +1761,6 @@ void EEForEachUnitOf(EEPlayer* inPlayer, EEUUUnitFunctor* inFunctor, bool inCala
     }
 }
 
-// FUNCTION: EXE 0x6467bb
 // Returns the squared ground distance between two units
 float EEGetDistanceSquared(EEComplexUnit* inUnit, EEComplexUnit* inOther)
 {
@@ -1842,7 +1769,6 @@ float EEGetDistanceSquared(EEComplexUnit* inUnit, EEComplexUnit* inOther)
     return theFirst.DistanceToSquared(theSecond);
 }
 
-// FUNCTION: EXE 0x64680c
 // Returns the bounds of a unit's area effect of a kind, grown by its radius; false when it has none
 bool EEGetAreaEffectBounds(long inKind, EEComplexUnit* inUnit, EEAIAStarBounds* outBounds)
 {
@@ -1866,7 +1792,6 @@ bool EEGetAreaEffectBounds(long inKind, EEComplexUnit* inUnit, EEAIAStarBounds* 
     return theFound;
 }
 
-// FUNCTION: EXE 0x646889
 // Returns the world position of a unit's current attach point; false (half a tile up) without one
 // The world position of inUnit's current tag point (its model part's list, the unit's frame), scaled by its size;
 // false (and the point half a tile up) when the part has no tag points (new: ee_combat's attach_point)
@@ -1891,7 +1816,6 @@ bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint)
     return theOut.result != 0;
 }
 
-// FUNCTION: EXE 0x64697b
 // Collects the tiles around a rectangle (sides only, no corners)
 void EEGetSquareRing(long inX, long inY, long inWidth, long inHeight, std::vector<U2DPoint<long> >& outTiles)
 {
@@ -1901,7 +1825,6 @@ void EEGetSquareRing(long inX, long inY, long inWidth, long inHeight, std::vecto
 
 // (the EETileCoordinate twin of 0x64697b is gone: one tile type)
 
-// FUNCTION: EXE 0x646a26
 // Collects the tiles around a square (sides only)
 void EEGetSideTiles(long inX, long inY, long inSize, std::vector<U2DPoint<long> >& outTiles)
 {
@@ -1909,7 +1832,6 @@ void EEGetSideTiles(long inX, long inY, long inSize, std::vector<U2DPoint<long> 
     EEGetSquareRing(inX, inY, inSize, inSize, outTiles);
 }
 
-// FUNCTION: EXE 0x646a42
 // Collects the tiles around a rectangle, with corners or only the corners not closed by two wall pieces
 // The tiles around the inWidth x inHeight rectangle at (inX, inY); the corners too when inCorners, else only those
 // not closed by two wall pieces (appended to outTiles when inAppend)
@@ -1920,7 +1842,6 @@ void EEGetBlockRing(long inCorners, long inX, long inY, long inWidth, long inHei
     ee_units_uu_block_ring(inCorners, inX, inY, inWidth, inHeight, &outTiles, inAppend);
 }
 
-// FUNCTION: EXE 0x646bd0
 // Collects the tiles around a square, corners as asked
 void EEGetSquareBlockRing(long inCorners, long inX, long inY, long inSize, std::vector<EETileCoordinate>& outTiles, bool inAppend)
 {
@@ -1928,7 +1849,6 @@ void EEGetSquareBlockRing(long inCorners, long inX, long inY, long inSize, std::
     EEGetBlockRing(inCorners, inX, inY, inSize, inSize, outTiles, inAppend);
 }
 
-// FUNCTION: EXE 0x646bf2
 // Tells whether a unit can heal a target (wounded enough, not an enemy, in its heal set)
 // (new: the decision is ee_combat's can_heal over a record of pure reads; the unit set is looked up only for a set
 // in the manager's range, which the original indexed unchecked)
@@ -1951,7 +1871,6 @@ bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget)
     return theResult != 0;
 }
 
-// FUNCTION: EXE 0x646c87
 // Returns a unit around the given one whose gather goal works on it (searched in a random rotation)
 EEComplexUnit* EEGetWaitingGatherer(EEUnit* inUnit)
 {
@@ -1979,7 +1898,6 @@ EEComplexUnit* EEGetWaitingGatherer(EEUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x646ea2
 // Returns the tile of a unit's footprint nearest to a tile's centre and that squared distance
 float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY)
 {
@@ -1991,7 +1909,6 @@ float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* ou
     return theDistance;
 }
 
-// FUNCTION: EXE 0x646edc
 // Tells whether both tiles hold a wall piece
 bool EEIsCornerBlocked(unsigned long inX1, unsigned long inY1, unsigned long inX2, unsigned long inY2)
 {
@@ -1999,14 +1916,12 @@ bool EEIsCornerBlocked(unsigned long inX1, unsigned long inY1, unsigned long inX
     return theNote.R(ee_units_uu_is_corner_blocked((int32_t)inX1, (int32_t)inY1, (int32_t)inX2, (int32_t)inY2) != 0);
 }
 
-// FUNCTION: EXE 0x646f93
 // Returns the nearest piece of a target's linked group that the unit may attack
 EEComplexUnit* EEGetAttackPart(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {
     return static_cast<EEComplexUnit*>(UUUnit(ee_units_uu_attack_part(UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(static_cast<EEUnit*>(inTarget)))));
 }
 
-// FUNCTION: EXE 0x647021
 // Collects the four corner tiles of a rectangle (only the open ones unless corners are asked)
 // The four corner tiles of the inWidth x inHeight rectangle at (inX, inY); with inCorners false only those not closed
 // by two wall pieces
@@ -2019,7 +1934,6 @@ void EEGetRingCorners(long inCorners, long inX, long inY, long inWidth, long inH
 
 // (0x647125, EEGetEnemiesAround: ee_units uu_world.rs enemies_around)
 
-// FUNCTION: EXE 0x64720e
 // Collects the corner tiles of a square
 void EEGetCornerTiles(long inCorners, long inX, long inY, long inSize, std::vector<U2DPoint<long> >& outTiles)
 {
@@ -2027,7 +1941,6 @@ void EEGetCornerTiles(long inCorners, long inX, long inY, long inSize, std::vect
     EEGetRingCorners(inCorners, inX, inY, inSize, inSize, outTiles);
 }
 
-// FUNCTION: EXE 0x64722d
 // Tells whether a unit can attack a target from where it stands (in range, not blocked)
 bool EEIsInRangeToHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 {
@@ -2036,7 +1949,6 @@ bool EEIsInRangeToHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 
 // (0x647316, EECanReach: ee_combat's can_reach, called by leaves.rs in_contact_range)
 
-// FUNCTION: EXE 0x64734c
 // Tells whether a unit is close enough to a target to build or repair it
 bool EEIsInWorkReach(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {
@@ -2047,7 +1959,6 @@ bool EEIsInWorkReach(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
     return EECombatWorkReach(theIn) != 0;
 }
 
-// FUNCTION: EXE 0x6473e0
 // Tells whether a unit at a squared distance reaches a target (gather and arrival test)
 bool EEIsInGatherReach(float inDistanceSquared, EEComplexUnit* inUnit, EEUnit* inTarget)
 {
@@ -2057,7 +1968,6 @@ bool EEIsInGatherReach(float inDistanceSquared, EEComplexUnit* inUnit, EEUnit* i
     return EECombatGatherReach(theIn) != 0;
 }
 
-// FUNCTION: EXE 0x64745d
 // Tells whether a gatherer has arrived at its target (2D distance to the target's position)
 // inUnit at inTarget (the gather goal's arrival): the 2D distance to the target's position (a dead unit's model
 // point, a tile centre for an unplaced one)
@@ -2067,7 +1977,6 @@ bool EEIsWithinReach(EEComplexUnit* inUnit, EEUnit* inTarget)
     return theNote.R(ee_units_uu_within_reach(UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(inTarget), NULL) != 0);   // uu_world.rs
 }
 
-// FUNCTION: EXE 0x6475a0
 // Tells whether a location is within a unit's reach of a target
 bool EEIsWithinReachOf(const GE3DPoint& inLocation, EEComplexUnit* inUnit, EEUnit* inTarget)
 {
@@ -2076,7 +1985,6 @@ bool EEIsWithinReachOf(const GE3DPoint& inLocation, EEComplexUnit* inUnit, EEUni
                                               (const float(*)[3])&inLocation.mX) != 0);   // uu_world.rs
 }
 
-// FUNCTION: EXE 0x6476c5
 // Tells whether a unit can hit a target from its attach point (a clear line to the drop location)
 bool EECanBallisticHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 {
@@ -2099,7 +2007,6 @@ bool EECanBallisticHit(EEComplexUnit* inUnit, EEUnit* inTarget)
     return theResult;
 }
 
-// FUNCTION: EXE 0x647772
 // Tells whether a unit touches a target (collision spheres; walls count as radius 1)
 bool EEIsInContactRange(EEComplexUnit* inUnit, EEUnit* inTarget, float inDistanceSquared)
 {
@@ -2123,21 +2030,18 @@ static bool EETargetable(EEUnit* inAttacker, EEUnitClass* inClass, bool inCanTar
     return ee_combat_targetable(&in, inCanTarget);
 }
 
-// FUNCTION: EXE 0x6477f9
 // Tells whether a unit may target a class (walls only by siege units or computer players)
 bool EECanTargetClass(EEComplexUnit* inUnit, EEUnitClass* inClass)
 {
     return EETargetable(inUnit, inClass, true);
 }
 
-// FUNCTION: EXE 0x647848
 // Tells whether a class can be targeted at all (by an attacker's ammunition when given)
 bool EEUUGetIsUnitClassTargetable(EEUnit* inAttacker, EEUnitClass* inClass)
 {
     return EETargetable(inAttacker, inClass, false);
 }
 
-// FUNCTION: EXE 0x6478f7
 // Tells whether a unit is a cloaked enemy of a player
 bool EEIsCloakedEnemyOf(EEUnit* inUnit, EEPlayer* inPlayer)
 {
@@ -2146,7 +2050,6 @@ bool EEIsCloakedEnemyOf(EEUnit* inUnit, EEPlayer* inPlayer)
         && inPlayer != inUnit->mPlayer && inUnit->mPlayer->mEnemies[inPlayer->GetPlayerID()] != 0;
 }
 
-// FUNCTION: EXE 0x64793c
 // Tells whether a player sees any tile of a unit's footprint
 bool EEIsFootprintVisibleTo(EEUnit* inUnit, EEPlayer* inPlayer)
 {
@@ -2154,7 +2057,6 @@ bool EEIsFootprintVisibleTo(EEUnit* inUnit, EEPlayer* inPlayer)
     return theNote.R(ee_units_uu_footprint_visible(UUHandle(inUnit), UUHandle(inPlayer)) != 0);   // uu_world.rs
 }
 
-// FUNCTION: EXE 0x6479eb
 // Tells whether a player sees a unit (explored may be enough; cloaked enemies never)
 // Whether inPlayer sees inUnit (inExplored: explored is enough; a cloaked enemy is never seen; any tile of a large
 // unit's footprint)
@@ -2163,14 +2065,12 @@ bool EEIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inExplored)
     return EECombatIsSeenBy(inUnit, inPlayer, inExplored);   // ee_combat leaves.rs is_seen_by
 }
 
-// FUNCTION: EXE 0x647bd8
 // Tells whether the owner of another unit sees the unit (explored is enough)
 bool EEIsSeenByOwnerOf(EEComplexUnit* inUnit, EEUnit* inOther)
 {
     return EEIsSeenBy(inUnit, inOther->GetPlayer(), true);
 }
 
-// FUNCTION: EXE 0x647bef
 // Extends a wall line to the walls of the same type it joins at either end
 // The tile line of a wall through inTiles (from the walls of inClass's type it joins at either end) (inferred)
 long EEExtendWallLine(std::vector<EETileCoordinate>& inTiles, EEPlayer* inPlayer, EEUnitClass* inClass,
@@ -2180,10 +2080,6 @@ long EEExtendWallLine(std::vector<EETileCoordinate>& inTiles, EEPlayer* inPlayer
     return theNote.R(ee_units_uu_extend_wall_line(&inTiles, UUHandle(inPlayer), (uint32_t)inClass->mUnitType, &outTiles));
 }
 
-// TEMPLATE: EXE 0x6481da
-// (the reverse_iterator copy ctor, out of line right after its first user 0x247bef)
-
-// FUNCTION: EXE 0x648709
 // Finds a place for a unit next to a target, preferring its own path area and continent
 // A place for inUnit next to inTarget, preferring tiles in inUnit's own path area and continent (inferred)
 bool EEFindResourceSpot(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation)
@@ -2197,7 +2093,6 @@ bool EEFindResourceSpot(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoin
     return theNote.R(theFound);
 }
 
-// FUNCTION: EXE 0x64899b
 // Finds a free spot next to a target (or the nearest piece of its group) for a unit
 bool EEFindNextFreeTile(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation)
 {
@@ -2210,7 +2105,6 @@ bool EEFindNextFreeTile(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoin
     return theNote.R(theFound);
 }
 
-// FUNCTION: EXE 0x648c7e
 // Finds a place for a unit to attack a target from (around a wall it stands in, or next to it)
 bool EEGetWallSpot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& outLocation)
 {
@@ -2223,7 +2117,6 @@ bool EEGetWallSpot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& outLocati
     return theNote.R(theFound);
 }
 
-// FUNCTION: EXE 0x648d05
 // Returns a unit's radius seen from another: full in front or behind, down to a tenth from the side
 float EEGetUnitRadius(EEComplexUnit* inUnit, EEComplexUnit* inOther)
 {
@@ -2231,7 +2124,6 @@ float EEGetUnitRadius(EEComplexUnit* inUnit, EEComplexUnit* inOther)
     return theNote.RF(ee_units_uu_angle(0, UUHandle(static_cast<EEUnit*>(inUnit)), UUHandle(static_cast<EEUnit*>(inOther)), NULL, NULL));
 }
 
-// FUNCTION: EXE 0x648ecc
 // Returns the tile a distance away in a compass direction (tile form)
 void EEGetNextTile(const EETileCoordinate& inTile, EETileCoordinate& outTile, long inDirection, long inDistance)
 {
@@ -2244,7 +2136,6 @@ void EEGetNextTile(const EETileCoordinate& inTile, EETileCoordinate& outTile, lo
 
 // (the U2DPoint<long> twin of 0x648ecc is gone: one tile type)
 
-// FUNCTION: EXE 0x648efd
 // Moves a point a number of tiles in a compass direction, keeping its offset within the tile
 void EEMoveInDirection(const GE2DPoint& inFrom, GE2DPoint& outTo, long inDirection, long inDistance)
 {
@@ -2255,7 +2146,6 @@ void EEMoveInDirection(const GE2DPoint& inFrom, GE2DPoint& outTo, long inDirecti
     outTo.SetY(thePoint[1]);
 }
 
-// FUNCTION: EXE 0x648f86
 // Turns a compass direction by a random amount within a spread
 long EETurnAway(long inDirection, long inSpread)
 {
@@ -2263,7 +2153,6 @@ long EETurnAway(long inDirection, long inSpread)
     return theNote.R(ee_units_uu_turn_away(inDirection, inSpread));
 }
 
-// FUNCTION: EXE 0x648fe4
 // Collects the tiles a unit covers, widened by a margin (a line along a ship's heading, else a disc)
 // The tiles inUnit covers, widened by inMargin (a line along a ship's heading; a disc otherwise) (inferred)
 void EEGetUnitTiles(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles, float inMargin)
@@ -2272,7 +2161,6 @@ void EEGetUnitTiles(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles, floa
     ee_units_uu_unit_tiles_margin(UUHandle(inUnit), inMargin, &outTiles);   // ee_units uu_world.rs unit_tiles
 }
 
-// FUNCTION: EXE 0x6491c9
 // Returns a random number in [min, max]
 long EEGetRandomInt(long inMin, long inMax, URandom& inRandom)
 {
@@ -2283,7 +2171,6 @@ long EEGetRandomInt(long inMin, long inMax, URandom& inRandom)
     return theResult;
 }
 
-// FUNCTION: EXE 0x649201
 // Picks a random tile of the bounds that a screen accepts; (0, 0) when none in the tries
 bool EEFOFindLocation(EEAIAStarBounds& inBounds, U2DPoint<long>& outTile, URandom& inRandom,
                       EEFOLocationScreenBase& inScreen, long inTries)
@@ -2305,7 +2192,6 @@ bool EEFOFindLocation(EEAIAStarBounds& inBounds, U2DPoint<long>& outTile, URando
     return theFound;
 }
 
-// FUNCTION: EXE 0x64927c
 // Returns the id of a player's leading unit, -1 when none
 unsigned long EEGetLeadUnitID(EEPlayer* inPlayer)
 {
@@ -2320,7 +2206,6 @@ unsigned long EEGetLeadUnitID(EEPlayer* inPlayer)
     return theResult;
 }
 
-// FUNCTION: EXE 0x6492c2
 // Collects the ring of tiles at a distance around a tile
 void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<U2DPoint<long> >& outTiles)
 {
@@ -2328,7 +2213,6 @@ void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<U2DPoin
     ee_units_uu_square_ring_tiles(inX, inY, inRadius, &outTiles);
 }
 
-// FUNCTION: EXE 0x64939d
 // Finds where a dropped unit lands on a target: the model's drop point (lower when damaged) or its tile
 // Where a unit dropped onto inTarget (its goal's target when NULL) lands: the model's drop point (scaled down with
 // a damaged unit's health), else its tile; *outTarget the target (NULL when not placed)
@@ -2337,14 +2221,12 @@ void EEFindDropLocation(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* ou
     *outTarget = EECombatFindDropLocation(inUnit, inTarget, *outLocation);   // ee_combat leaves.rs find_drop_location
 }
 
-// FUNCTION: EXE 0x6494cb
 // Returns the squared ground distance from a unit (or a point) to where it would hit a target
 float EEGetHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inX, float inY)
 {
     return EECombatHitDistanceSquared(inUnit, inTarget, inX, inY);   // ee_combat leaves.rs hit_distance_squared
 }
 
-// FUNCTION: EXE 0x649560
 // Returns a point 90% of a unit's range from a target towards the unit
 void EEGetAimPoint(EEComplexUnit* inUnit, GE3DPoint* inTarget, GE3DPoint* outPoint)
 {
@@ -2361,7 +2243,6 @@ void EEGetAimPoint(EEComplexUnit* inUnit, GE3DPoint* inTarget, GE3DPoint* outPoi
     outPoint->SetZ(inTarget->GetZ() + theOffset.GetZ());
 }
 
-// FUNCTION: EXE 0x6495f5
 // Returns where a unit casts its calamity from: 90% of the calamity's range from the target
 void EEGetHelicopterPriestDestination(EEComplexUnit* inUnit, GE3DPoint& outPoint)
 {
@@ -2390,7 +2271,6 @@ void EEGetHelicopterPriestDestination(EEComplexUnit* inUnit, GE3DPoint& outPoint
     outPoint.SetZ(theTarget.GetZ() + theOffset.GetZ());
 }
 
-// FUNCTION: EXE 0x649727
 // Collects the tiles of a line, walking in from both ends (optionally the end tiles and 4-connected)
 // The tiles of the line (inX1, inY1)-(inX2, inY2): a symmetric double-step rasteriser that walks in from both ends
 // (inEnds: the two end tiles too; !inThin: the extra tiles that make the line 4-connected), in order from (inX1, inY1)
@@ -2428,7 +2308,6 @@ void EEGetTileLine(long inX1, long inY1, long inX2, long inY2, std::vector<U2DPo
     }
 }
 
-// FUNCTION: EXE 0x64b212
 // Collects the tiles whose nearest point lies within a distance of a point
 void EEGetTilesNearPoint(const GE3DPoint& inPoint, float inDistance, std::vector<EETileCoordinate>& outTiles)
 {
@@ -2436,7 +2315,6 @@ void EEGetTilesNearPoint(const GE3DPoint& inPoint, float inDistance, std::vector
     ee_units_uu_tiles_near_point(inPoint.mX, inPoint.mY, inDistance, &outTiles);
 }
 
-// FUNCTION: EXE 0x64b556
 // Collects the square of tiles within a radius of a tile
 void EEGetTilesInRadius(long inX, long inY, unsigned long inRadius, bool inInclusive,
                         std::vector<EETileCoordinate>& outTiles)
@@ -2447,7 +2325,6 @@ void EEGetTilesInRadius(long inX, long inY, unsigned long inRadius, bool inInclu
 
 // (the U2DPoint<long> twin of 0x64b556 is gone: one tile type)
 
-// FUNCTION: EXE 0x64b5b3
 // Collects the tiles of a unit's footprint (a gate's pieces; a long wonder's full length)
 void EEGetFootprintTiles(EEUnit* inUnit, std::vector<EETileCoordinate>& outTiles)
 {
@@ -2455,7 +2332,6 @@ void EEGetFootprintTiles(EEUnit* inUnit, std::vector<EETileCoordinate>& outTiles
     ee_units_uu_unit_tiles(0, UUHandle(inUnit), &outTiles);
 }
 
-// FUNCTION: EXE 0x64b747
 // Collects the tiles of a wall line between two points
 void EEGetWallLineXY(const GE2DPoint& inFrom, const GE2DPoint& inTo, std::vector<EETileCoordinate>& outTiles)
 {
@@ -2468,7 +2344,6 @@ void EEGetWallLineXY(const GE2DPoint& inFrom, const GE2DPoint& inTo, std::vector
     EEGetWallLine(theFrom, theTo, outTiles);
 }
 
-// FUNCTION: EXE 0x64b794
 // Collects the tiles of a wall line between two tiles
 void EEGetWallLine(const EETileCoordinate& inFrom, const EETileCoordinate& inTo, std::vector<EETileCoordinate>& outTiles)
 {
@@ -2476,14 +2351,12 @@ void EEGetWallLine(const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
     ee_units_uu_wall_line(inFrom.mX, inFrom.mY, inTo.mX, inTo.mY, &outTiles);
 }
 
-// FUNCTION: EXE 0x64b7e9
 // Collects the units on a list of tiles (sorted and unique when a large one is among them)
 long EEGetUnitsOnTiles(std::vector<EETileLocation>& inTiles, std::vector<EEUnit*>& outUnits)
 {
     return ee_units_uu_units_on(1, &inTiles, &outUnits);
 }
 
-// FUNCTION: EXE 0x64b8ac
 // Returns the path distance from a unit to a tile (10000 when unreachable) and the path's first tile
 // The path distance from inUnit to ioTile (10000 when the path does not reach it; ioTile becomes the path's first
 // tile, or (-1, -1)); inWalls lets walls not block (inferred)
@@ -2497,7 +2370,6 @@ float EEGetPathLengthTo(EEComplexUnit* inUnit, EETileCoordinate& ioTile, unsigne
     return theNote.RF(theResult);   // ee_units uu_world.rs path_length_to
 }
 
-// FUNCTION: EXE 0x64baf6
 // Tells whether a tile lies on the diamond map's edge
 bool RTSMap::IsEdgeTile(const EETileLocation& inTile)
 {
@@ -2506,7 +2378,6 @@ bool RTSMap::IsEdgeTile(const EETileLocation& inTile)
     return theX + theY == this->mL195608 || theY - theX == this->mL195610 || theX + theY == this->mL19560C || theX - theY == this->mL195610;
 }
 
-// FUNCTION: EXE 0x64bf01
 // Collects the units within a radius of a point; their number
 long EEGetUnitsNear(const GE3DPoint& inCenter, float inRadius, std::vector<EEUnit*>& outUnits)
 {
@@ -2520,7 +2391,6 @@ long EEGetUnitsNear(const GE3DPoint& inCenter, float inRadius, std::vector<EEUni
     return EEGetUnitsInRectangle(theArea, outUnits, theScreen, true);
 }
 
-// FUNCTION: EXE 0x64bfd3
 // Creates a circle screen for a centre and radius
 EEUUCircleScreen::EEUUCircleScreen(const GE3DPoint& inCenter, float inRadius)
 {
@@ -2528,7 +2398,6 @@ EEUUCircleScreen::EEUUCircleScreen(const GE3DPoint& inCenter, float inRadius)
     this->mRadiusSquared = inRadius * inRadius;
 }
 
-// FUNCTION: EXE 0x64c146
 // Collects the units on the tiles of a screen rectangle; their number
 long EEGetUnitsInRectangle(const GERectangle& inRectangle, std::vector<EEUnit*>& outUnits)
 {
@@ -2550,7 +2419,6 @@ long EEGetUnitsInRectangle(const GERectangle& inRectangle, std::vector<EEUnit*>&
     return theNote.R(EEGetUnitsOnTiles(theTiles, outUnits));
 }
 
-// FUNCTION: EXE 0x64c22a
 // Collects the units within a radius of a point (the square of tiles around it); their number
 // The units in inRadius of inCenter (the square of tiles around it; one less on the far side unless the point is
 // near a tile's middle)
@@ -2579,7 +2447,6 @@ long EEGetUnitsInRadius(GE2DPoint inCenter, float inRadius, std::vector<EEUnit*>
     return 0;
 }
 
-// FUNCTION: EXE 0x64c312
 // Returns the living unit of a type on a tile, or NULL
 EEUnit* EEGetTileUnitOfType(const EETileCoordinate& inTile, unsigned long inUnitType)
 {
@@ -2587,7 +2454,6 @@ EEUnit* EEGetTileUnitOfType(const EETileCoordinate& inTile, unsigned long inUnit
     return theNote.RU(UUUnit(ee_units_uu_tile_unit_of_type(inTile.mX, inTile.mY, (uint32_t)inUnitType, 0, 0)));
 }
 
-// FUNCTION: EXE 0x64c395
 // Collects a player's units of a type; their number
 long EEGetPlayerUnitsOfType(long inUnitType, long inPlayer, std::vector<EEUnit*>& outUnits)
 {
@@ -2595,7 +2461,6 @@ long EEGetPlayerUnitsOfType(long inUnitType, long inPlayer, std::vector<EEUnit*>
     return theNote.R(ee_units_uu_player_units_of_type(inUnitType, inPlayer, &outUnits));
 }
 
-// FUNCTION: EXE 0x64c3df
 // Collects the units on a tile; their number
 long EEGetUnitsOnTile(long inX, long inY, std::vector<EEUnit*>& outUnits)
 {
@@ -2606,7 +2471,6 @@ long EEGetUnitsOnTile(long inX, long inY, std::vector<EEUnit*>& outUnits)
     return theNote.R(EEGetUnitsOn(theTiles, outUnits));
 }
 
-// FUNCTION: EXE 0x64c433
 // Collects the units on a list of tiles
 long EEGetUnitsOn(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& outUnits)
 {
@@ -2614,14 +2478,12 @@ long EEGetUnitsOn(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& o
     return theNote.R(ee_units_uu_units_on(0, &inTiles, &outUnits));
 }
 
-// FUNCTION: EXE 0x64c4be
 // Returns a player's living unit of a type on a tile, or NULL
 EEUnit* EEGetWallAt(const EETileCoordinate& inTile, EEPlayer* inPlayer, long inUnitType)
 {
     return UUUnit(ee_units_uu_tile_unit_of_type(inTile.mX, inTile.mY, (uint32_t)inUnitType, UUHandle(inPlayer), 1));
 }
 
-// FUNCTION: EXE 0x64c627
 // Collects the units of a type on a list of tiles; their number
 long EEGetWallUnitsOfTypeOnTiles(std::vector<EETileCoordinate>& inTiles, long inUnitType, std::vector<EEUnit*>& outUnits)
 {
@@ -2629,7 +2491,6 @@ long EEGetWallUnitsOfTypeOnTiles(std::vector<EETileCoordinate>& inTiles, long in
     return theNote.R(ee_units_uu_units_of_type_on_tiles(&inTiles, 0, 0, inUnitType, &outUnits));
 }
 
-// FUNCTION: EXE 0x64c6fc
 // Collects the free tiles around a unit (its ring, corners included)
 void EEGetResourceSpots(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles)
 {
@@ -2638,7 +2499,6 @@ void EEGetResourceSpots(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles)
 }
 
 
-// FUNCTION: EXE 0x64c8bc
 // Enters a fortress into the unit regions under its footprint, clearing ambient units outside a load
 // inUnit (a fortress) entered in the unit regions under its footprint; outside a load, the ambient units on its
 // tiles (and its carriers') are cleared (inferred)
@@ -2648,14 +2508,12 @@ void EEAddBuildingRegion(EEUnit* inUnit)
     ee_units_uu_footprint(2, UUHandle(inUnit));   // ee_units uu_world.rs building_region
 }
 
-// FUNCTION: EXE 0x64caef
 // Adds a unit to every tile of its footprint
 void EEAddToFootprintTiles(EEUnit* inUnit)
 {
     EEUUNote theNote(66); theNote.U(inUnit).OutFoot(inUnit->GetTileX(), inUnit->GetTileY(), inUnit->mUnitClass->mTileSize);   // TEST ONLY (UUTL)
     ee_units_uu_footprint(0, UUHandle(inUnit));   // ee_units uu_world.rs footprint_link
 }
-// FUNCTION: EXE 0x64cbd7
 // Returns the tile two tiles away in a direction (1..8)
 void EEGetSlotTile(const EETileCoordinate& inTile, long inDirection, EETileCoordinate& outTile)
 {
@@ -2666,7 +2524,6 @@ void EEGetSlotTile(const EETileCoordinate& inTile, long inDirection, EETileCoord
     outTile.mY = theTile[1];
 }
 
-// FUNCTION: EXE 0x64cc5f
 // Returns a resource's column (iron 3, gold 2, stone 1, else as listed), -1 for none
 long EEGetResourceIndex(EEUnit* inResource)
 {
@@ -2693,7 +2550,6 @@ long EEGetResourceIndex(EEUnit* inResource)
     return theResult;
 }
 
-// FUNCTION: EXE 0x64cca5
 // Picks the wall piece (straight, corner or slope) for every tile of a wall line from its neighbours and the
 // terrain heights
 // The corner (slope) piece of each wall tile of inTiles from the step to the next tile and the heights: runs along y
@@ -2707,7 +2563,6 @@ void EEPickWallPieces(std::vector<EETileCoordinate>& inTiles, std::vector<long>&
     outCorners.assign(theCorners.begin(), theCorners.end() - 1);
 }
 
-// FUNCTION: EXE 0x64d779
 // Takes a fortress out of the unit regions under its footprint
 // NEAR: the original removes through the vector remove helper 0x239ee2 (find + erase; see EEUnitClass::RemoveFromRegion)
 // inUnit (a fortress) taken out of the unit regions under its footprint (inferred)
@@ -2717,7 +2572,6 @@ void EERemoveBuildingRegion(EEUnit* inUnit)
     ee_units_uu_footprint(3, UUHandle(inUnit));   // ee_units uu_world.rs building_region
 }
 
-// FUNCTION: EXE 0x64d946
 // Removes a unit from every tile of its footprint
 void EERemoveFromFootprintTiles(EEUnit* inUnit)
 {
@@ -2725,7 +2579,6 @@ void EERemoveFromFootprintTiles(EEUnit* inUnit)
     ee_units_uu_footprint(1, UUHandle(inUnit));   // ee_units uu_world.rs footprint_link
 }
 
-// FUNCTION: EXE 0x64da0c
 // Drops repeated tiles from a list
 void EEDropRepeatedTiles(std::vector<EETileCoordinate>& ioTiles)
 {
@@ -2733,7 +2586,6 @@ void EEDropRepeatedTiles(std::vector<EETileCoordinate>& ioTiles)
     ee_units_uu_drop_tiles(1, &ioTiles);
 }
 
-// FUNCTION: EXE 0x64da82
 // Turns a compass direction by a number of steps, either way
 long EETurnDirection(long inDirection, long inSteps, bool inClockwise)
 {
@@ -2741,7 +2593,6 @@ long EETurnDirection(long inDirection, long inSteps, bool inClockwise)
     return theNote.R(ee_units_uu_turn_direction(inDirection, inSteps, inClockwise));
 }
 
-// FUNCTION: EXE 0x64db3f
 // Turns an angle by a random share of a full turn, kept in (-pi, pi]
 float EEJitterHeading(float inAngle, float inMin, float inMax)
 {
@@ -2750,7 +2601,6 @@ float EEJitterHeading(float inAngle, float inMin, float inMax)
 }
 
 
-// FUNCTION: EXE 0x64dbd2
 // Tells whether a wall piece on a tile rises above a height
 // Whether a wall piece on tile (inX, inY) rises above inHeight (its height scaled by the unit's size and health)
 // (the original calls RTSMap::GetTile out of line: inline budget)
@@ -2764,7 +2614,6 @@ bool EEIsTileTopAbove(unsigned long inX, unsigned long inY, float inHeight, EEUn
     return theNote.R(theResult);
 }
 
-// FUNCTION: EXE 0x64dd2e
 // Tells whether a wall blocks a tile line (diagonal steps between two pieces count); reports the last free tile
 // Whether a wall blocks the line from (inX1, inY1) to (inX2, inY2) (diagonal steps between two pieces count);
 // outX/outY the last free tile
@@ -2781,7 +2630,6 @@ bool EEIsLineBlocked(long inX1, long inY1, long inX2, long inY2, EEUnit** outArg
     *outY = theLast[1];
     return theNote.R(theResult);
 }
-// FUNCTION: EXE 0x64df23
 // Tells whether something on the tile line from a unit to a target blocks its shot
 // Whether something on the tile line from inUnit to inTarget blocks inUnit's shot (the shot's height runs from
 // inUnit's weapon point to the top of inTarget); outX/outY: the last tile reached (inferred)
@@ -2933,7 +2781,6 @@ static bool EEIsLineToUnitBlockedWalk(EEComplexUnit* inUnit, EEUnit* inTarget, E
     return theOut.blocked != 0;
 }
 
-// FUNCTION: EXE 0x64e3b2
 // Shapes a wall ghost as the piece for a corner
 void EEOrientWallGhost(EEGhostUnit* inGhost, long inCorner, long inRaisedCorners)
 {
@@ -2942,7 +2789,6 @@ void EEOrientWallGhost(EEGhostUnit* inGhost, long inCorner, long inRaisedCorners
     inGhost->mTransformation = theTransformation;
 }
 
-// FUNCTION: EXE 0x64e3f4
 // Returns the frame set of a wall piece for a corner (1..12) and sets its facing
 long EEOrientWallPiece(GETransformation& ioTransformation, long inCorner, long inRaisedCorners)
 {
@@ -2952,7 +2798,6 @@ long EEOrientWallPiece(GETransformation& ioTransformation, long inCorner, long i
     return thePiece.frame_set;
 }
 
-// FUNCTION: EXE 0x64e518
 // Moves a unit to a transformation, snapping to the closest tile when off the map
 void EEUpdateUnitTile(GETransformation* inTransformation, EEComplexUnit* inUnit, long* outX, long* outY)
 {
@@ -2980,7 +2825,6 @@ void EEUpdateUnitTile(GETransformation* inTransformation, EEComplexUnit* inUnit,
     }
 }
 
-// FUNCTION: EXE 0x64e647
 // Shapes a wall piece as the piece for a corner
 void EEShapeWall(EEComplexUnit* inUnit, long inCorner, long inRaisedCorners)
 {
@@ -2988,7 +2832,6 @@ void EEShapeWall(EEComplexUnit* inUnit, long inCorner, long inRaisedCorners)
     ee_units_uu_shape_wall(UUHandle(static_cast<EEUnit*>(inUnit)), inCorner);   // ee_units uu_world.rs shape_wall
 }
 
-// FUNCTION: EXE 0x64e68f
 // Builds the text of a civilization upgrade ("category: attribute percent%"); false when a string is missing
 // The text of civilization upgrade inUpgrade ("<category>: <attribute> <percent>%"); false when a string is missing.
 // Its two function-local static strings' atexit dtors follow it (0x24e7c4 / 0x24e7cf).
@@ -3020,13 +2863,6 @@ bool EEFn24E68F(EECivUpgrade inUpgrade, UWideString& outText)
     return theResult;
 }
 
-// SYNTHETIC: EXE 0x64e7c4
-// (the atexit dtor of 0x24e68f's static sAttribute)
-
-// SYNTHETIC: EXE 0x64e7cf
-// (the atexit dtor of 0x24e68f's static sCategory)
-
-// FUNCTION: EXE 0x64e7da
 // Converts a unit to another player: a converted priest may hand over a civ power or upgrade, the class
 // follows the new owner, the new unit keeps hit points, actions and groups
 // inUnit converted to player inPlayer (the priests, the scenario effect): a converted priest or prophet may hand over
@@ -3045,7 +2881,7 @@ EEComplexUnit* EEConvertUnit(EEComplexUnit* inUnit, long inPlayer, bool inIsConv
         UWideString theMessage;
         UWideString theName;
         unsigned long theUpgrade = 0;
-        for (unsigned long i = 0x26; i < gCivPowersManager.mPowers.size() + 0x26; i++) {
+        for (unsigned long i = 0x26; i < gCivPowersManager.GetNumPowers() + 0x26; i++) {
             if (gCivPowersManager.HasPower(inUnit->GetPlayer(), i) && !gCivPowersManager.HasPower(thePlayer, i)) {
                 theUpgrade = gCivilizationManager.MakePowerUpgrade(EECivilizationManager::PowerLevel(i));
                 gCivPowersManager.GetName(i, theName);
@@ -3176,7 +3012,6 @@ EEComplexUnit* EEConvertUnit(EEComplexUnit* inUnit, long inPlayer, bool inIsConv
     return theNew;
 }
 
-// FUNCTION: EXE 0x64edcf
 // Tells whether a civilization bought an upgrade
 // Whether inValue is in inCivilization's mPurchasedUpgrades (read through the out-of-line GetPurchasedUpgrades 0x12c738, ICF with EECampaign::GetScenarios)
 bool EEHasCivilizationUpgrade(EECivilization* inCivilization, EECivUpgrade inValue)
@@ -3189,7 +3024,6 @@ bool EEHasCivilizationUpgrade(EECivilization* inCivilization, EECivUpgrade inVal
     return false;
 }
 
-// FUNCTION: EXE 0x64edf6
 // Makes the units on a building site's footprint step aside for it
 // The units on the footprint of a unit of inClass at inTile (or of inUnit) make way for it
 // Actual caller24effd..24f01a forwards player/class/current footprint tile and the bool flag.
@@ -3200,7 +3034,6 @@ void EEStepAsideFromSite(EEUnit* inUnit, EEUnitClass* inClass, EEPlayer* inPlaye
     ee_units_uu_step_aside(UUHandle(inUnit), UUHandle(inClass), UUHandle(inPlayer), inTile.mX, inTile.mY, inForce);   // uu_world.rs
 }
 
-// FUNCTION: EXE 0x64f03d
 // Moves a container's cargo into the unit's care (also placing it on the map for a conversion)
 void EEMovePassengers(EEComplexUnit* inUnit, EEComplexUnit* inContainer, bool inIsConversion)
 {
@@ -3218,7 +3051,6 @@ void EEMovePassengers(EEComplexUnit* inUnit, EEComplexUnit* inContainer, bool in
     }
 }
 
-// FUNCTION: EXE 0x64f0bc
 // Gives a unit another unit's load (as much as its class allows), emptying the other
 void EETakeOverLoad(EEComplexUnit* inUnit, EEComplexUnit* inOther)
 {
@@ -3239,7 +3071,6 @@ public:
     float mRatio;                           // +0x08
 };
 
-// FUNCTION: EXE 0x64f0e9
 // Raises a class upgrade's hit points by a share of its base, and the player's units of that type with it
 // inUpgrade's hit points raised by inFactor of its class's base; inPlayer's units of type inType follow (inferred)
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer)
@@ -3256,7 +3087,6 @@ void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFact
         EEForEachUnitOf(inPlayer, &theUpgrader, true);
 }
 
-// FUNCTION: EXE 0x64f18d
 // Scales the hit points of a living unit of the upgraded type by the ratio (at least 1)
 void EEHitPointUpgrader::Apply(EEComplexUnit* inUnit)
 {
@@ -3266,7 +3096,6 @@ void EEHitPointUpgrader::Apply(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x64f1f8
 // Tells whether a unit type can be placed on a tile for a player
 bool EECanPlaceOnTile(EEPlayer* inPlayer, long inUnitType, long inX, long inY, bool inSkipPlayerChecks, long inIgnoreOwner)
 {
@@ -3274,7 +3103,6 @@ bool EECanPlaceOnTile(EEPlayer* inPlayer, long inUnitType, long inX, long inY, b
     return EECanPlaceUnitOnTile(inPlayer, NULL, inUnitType, inX, inY, inSkipPlayerChecks, inIgnoreOwner, theFlag);
 }
 
-// FUNCTION: EXE 0x64f21d
 // Tells whether a unit type can be placed at a location (the editor's own test in free camera mode)
 bool EECanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, long inX, long inY, bool inSkipPlayerChecks, long inIgnoreOwner)
 {
@@ -3284,7 +3112,6 @@ bool EECanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, long inX
     return EECanPlaceUnitOnTile(inPlayer, NULL, inType, inX, inY, inSkipPlayerChecks, inIgnoreOwner, theFlag);
 }
 
-// FUNCTION: EXE 0x64f264
 // Tells whether a unit type can be placed on a tile for a player (or a unit's continent)
 // Whether a unit of inUnitType may be placed at (inX, inY) (for inUnit's continent, or inPlayer's selection's);
 // outFlag: the second unit test (inferred)
@@ -3300,7 +3127,6 @@ bool EECanPlaceUnitOnTile(EEPlayer* inPlayer, EEComplexUnit* inUnit, long inUnit
     return theNote.R(theResult);
 }
 
-// FUNCTION: EXE 0x64f4f2
 // Tells whether a unit type can be placed in the scenario editor (free camera)
 // The scenario editor's (free camera) placement test (inferred)
 bool EEEditorCanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, long inX, long inY)
@@ -3311,7 +3137,6 @@ bool EEEditorCanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, lo
 
 // (0x64f6f7, EEIsEditorSpacingClear: ee_units uu_world.rs editor_spacing_clear)
 
-// FUNCTION: EXE 0x64f86d
 // Tells whether a tile has no unit (trees aside) blocking a class for a player, and is not space
 bool EEIsTileUnblocked(EEPlayer* inPlayer, long inUnitClass, EETile* inTile)
 {
@@ -3319,7 +3144,6 @@ bool EEIsTileUnblocked(EEPlayer* inPlayer, long inUnitClass, EETile* inTile)
     return theNote.R(ee_units_uu_is_tile_unblocked(UUHandle(inPlayer), inUnitClass, UUHandle(inTile)) != 0);
 }
 
-// FUNCTION: EXE 0x64f8c0
 // Gives a space wall its energy wall effect
 void EECreateSpaceWallEnergyWall(EEComplexUnit* inUnit)
 {
@@ -3328,7 +3152,6 @@ void EECreateSpaceWallEnergyWall(EEComplexUnit* inUnit)
     inUnit->mFireEffect = theHandle;
 }
 
-// FUNCTION: EXE 0x64f8f9
 // Gives a space gate its energy wall effect
 void EECreateSpaceGateEnergyWall(EEComplexUnit* inUnit)
 {
@@ -3824,165 +3647,17 @@ extern "C" void ee_units_uu_host_units_set(void* outUnits, const uint64_t* inUni
         theUnits.push_back(UUUnit(inUnits[i]));
 }
 
-// ---- template COMDATs 0x24f932..0x2544e9 (instantiated by the functions above; names from tools/csname.py) ----
-// TEMPLATE: EXE 0x64f932
-// TEMPLATE: EXE 0x64f960
-// TEMPLATE: EXE 0x64f9d7
-// TEMPLATE: EXE 0x64fa03
-// TEMPLATE: EXE 0x64fa0e
-// TEMPLATE: EXE 0x64fa5e
-// TEMPLATE: EXE 0x64fb1e
-// TEMPLATE: EXE 0x64fc04
-// TEMPLATE: EXE 0x64fc86
-// TEMPLATE: EXE 0x64fcd1
-// TEMPLATE: EXE 0x64ffca
-// TEMPLATE: EXE 0x65000c
-// TEMPLATE: EXE 0x6503d7
-// TEMPLATE: EXE 0x650806
-// TEMPLATE: EXE 0x6509af
-// TEMPLATE: EXE 0x650a6c
-// TEMPLATE: EXE 0x650aa5
-// TEMPLATE: EXE 0x650b65
-// TEMPLATE: EXE 0x650b99
-// TEMPLATE: EXE 0x650d37
-// TEMPLATE: EXE 0x650d71
-// TEMPLATE: EXE 0x650eff
-// TEMPLATE: EXE 0x650f26
-// TEMPLATE: EXE 0x650f51
-// TEMPLATE: EXE 0x650f7c
-// TEMPLATE: EXE 0x650f93
-// TEMPLATE: EXE 0x650fbc
-// TEMPLATE: EXE 0x651094
-// TEMPLATE: EXE 0x6510d2
-// TEMPLATE: EXE 0x651105
-// TEMPLATE: EXE 0x651212
-// TEMPLATE: EXE 0x65125c
-// TEMPLATE: EXE 0x651282
-// TEMPLATE: EXE 0x6512d4
-// TEMPLATE: EXE 0x65130e
-// TEMPLATE: EXE 0x65138b
-// TEMPLATE: EXE 0x6513b4
-// TEMPLATE: EXE 0x651487
-// TEMPLATE: EXE 0x6514b8
-// TEMPLATE: EXE 0x651792
-// TEMPLATE: EXE 0x6517bb
-// TEMPLATE: EXE 0x651893
-// TEMPLATE: EXE 0x6518d2
-// TEMPLATE: EXE 0x65193f
-// TEMPLATE: EXE 0x651971
-// TEMPLATE: EXE 0x6519b8
-// TEMPLATE: EXE 0x6519cc
-// TEMPLATE: EXE 0x651a82
-// TEMPLATE: EXE 0x651abc
-// TEMPLATE: EXE 0x651afd
-// TEMPLATE: EXE 0x651c14
-// TEMPLATE: EXE 0x651c50
-// TEMPLATE: EXE 0x651d12
-// TEMPLATE: EXE 0x651d56
-// TEMPLATE: EXE 0x651da3
-// TEMPLATE: EXE 0x651eba
-// TEMPLATE: EXE 0x651ef6
-// TEMPLATE: EXE 0x651fb3
-// TEMPLATE: EXE 0x65201f
-// TEMPLATE: EXE 0x6520d9
-// TEMPLATE: EXE 0x652113
-// TEMPLATE: EXE 0x652154
-// TEMPLATE: EXE 0x6522ba
-// TEMPLATE: EXE 0x6522ff
-// TEMPLATE: EXE 0x65232a
-// TEMPLATE: EXE 0x652356
-// TEMPLATE: EXE 0x65238a
-// TEMPLATE: EXE 0x652441
-// TEMPLATE: EXE 0x65247b
-// TEMPLATE: EXE 0x6524bc
-// TEMPLATE: EXE 0x6525d3
-// TEMPLATE: EXE 0x65260f
-// TEMPLATE: EXE 0x652725
-// TEMPLATE: EXE 0x65277b
-// TEMPLATE: EXE 0x6527d4
-// TEMPLATE: EXE 0x6527fd
-// TEMPLATE: EXE 0x652862
-// TEMPLATE: EXE 0x652895
-// TEMPLATE: EXE 0x6528be
-// TEMPLATE: EXE 0x652991
-// TEMPLATE: EXE 0x6529c2
-// TEMPLATE: EXE 0x6529fa
-// TEMPLATE: EXE 0x652a49
-// TEMPLATE: EXE 0x652a8d
-// TEMPLATE: EXE 0x652ace
-// TEMPLATE: EXE 0x652ae0
-// TEMPLATE: EXE 0x652b3a
-// TEMPLATE: EXE 0x652b63
-// TEMPLATE: EXE 0x652b88
-// TEMPLATE: EXE 0x652bb1
-// TEMPLATE: EXE 0x652c98
-// TEMPLATE: EXE 0x652fb2
-// TEMPLATE: EXE 0x652fce
-// TEMPLATE: EXE 0x65305c
-// TEMPLATE: EXE 0x6530c9
-// TEMPLATE: EXE 0x653163
-// TEMPLATE: EXE 0x6531db
-// TEMPLATE: EXE 0x65326c
-// TEMPLATE: EXE 0x6532a6
-// TEMPLATE: EXE 0x6532e7
-// TEMPLATE: EXE 0x6533e5
-// TEMPLATE: EXE 0x65340a
-// TEMPLATE: EXE 0x65344c
-// TEMPLATE: EXE 0x6534d2
-// TEMPLATE: EXE 0x653525
-// TEMPLATE: EXE 0x6535b4
-// TEMPLATE: EXE 0x653622
-// TEMPLATE: EXE 0x653649
-// TEMPLATE: EXE 0x6536ff
-// TEMPLATE: EXE 0x65383b
-// TEMPLATE: EXE 0x6538d3
-// TEMPLATE: EXE 0x653910
-// TEMPLATE: EXE 0x6539aa
-// TEMPLATE: EXE 0x653a56
-// TEMPLATE: EXE 0x653a8e
-// TEMPLATE: EXE 0x653ac6
-// TEMPLATE: EXE 0x653c68
-// TEMPLATE: EXE 0x653cb2
-// TEMPLATE: EXE 0x653d15
-// TEMPLATE: EXE 0x653d5d
-// TEMPLATE: EXE 0x653dc0
-// TEMPLATE: EXE 0x653e14
-// TEMPLATE: EXE 0x653e58
-// TEMPLATE: EXE 0x653e81
-// TEMPLATE: EXE 0x653ebf
-// TEMPLATE: EXE 0x653f20
-// TEMPLATE: EXE 0x653f54
-// TEMPLATE: EXE 0x653fb7
-// TEMPLATE: EXE 0x654000
-// TEMPLATE: EXE 0x65403c
-// TEMPLATE: EXE 0x654114
-// TEMPLATE: EXE 0x654196
-// TEMPLATE: EXE 0x65420b
-// TEMPLATE: EXE 0x654280
-// TEMPLATE: EXE 0x6542c1
-// TEMPLATE: EXE 0x654326
-// TEMPLATE: EXE 0x654379
-// TEMPLATE: EXE 0x6543ad
-// TEMPLATE: EXE 0x6543ec
-// TEMPLATE: EXE 0x654420
-
-// ICF-FOLDED: EXE 0x620a18
-// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
 bool EEFOFindNewTargetScreenBase::Virtual04(class EEComplexUnit *)
 {
     return true;
 }
 
-// ICF-FOLDED: EXE 0x620a18
-// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
 bool EEFOFindNewTargetScreenBase::Virtual08(class EEComplexUnit *)
 {
     return true;
 }
 
-// ICF-FOLDED: EXE 0x64edf6
 // Makes the units on the footprint of a unit of inClass placed at inTile (or of inUnit) step aside for it
-// (no address of its own: the same body as EEStepAsideFromSite, which ICF kept; that one only reads the tile)
 void EEPlaceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, EEPlayer* inPlayer, const U2DPoint<long>& inTile, bool inArg)
 {
     EETileCoordinate theTile(inTile);

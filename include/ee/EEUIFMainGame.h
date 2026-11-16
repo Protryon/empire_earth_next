@@ -15,6 +15,7 @@ class EEALasso;
 class EEAMouseClick;
 class EEAScroll;
 class EEUIFMGGroup;
+class EEUIFMGStatusButton;
 class EEUIFMGInformation;
 class EEUIFMGMainGroup;
 class EEUIFMGUnitHack;
@@ -24,17 +25,12 @@ class TMPoll;
 class TSCriticalSection;
 struct EeScreensMainFormIo;   // rust/ee_screens.h
 
-// the status buttons' availability tests (+0x520..+0x5cc; cdecl functions in EEUIFMGStatusButton.cpp's range
-// 0x26fe64..0x27115c; argument types inferred)
-typedef bool (*EEUIFMGButtonTest)(void* inArg1, void* inArg2);
-// the keyboard tests take the form only (UpdateKeyboard 0x271290 pushes one argument)
-typedef bool (*EEUIFMGKeyboardTest)(void* inForm);
 
 class EEUIFMainGame : public UIForm {
 public:
     virtual void SetHelpTextPopupLocation() {}   // +0x24 datacmp: slot 9 = 0x4e123d (an empty `ret`)
-    EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData);   // 0x262e73
-    virtual ~EEUIFMainGame();               // 0x2647e1 (??_G 0x2647c5)
+    EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData);
+    virtual ~EEUIFMainGame();
     virtual void Activate();                // +0x04 0x2648d4
     virtual void Deactivate();              // +0x14 0x264d40
     virtual long UpdateKeyboard();          // +0x2c 0x271290 (EEUIFMGStatusButton.cpp's range)
@@ -46,8 +42,8 @@ public:
 
     // the saved game's main-form state (EEPWorldHelper's Load 0x14c39b / Save 0x14c525 call them; provisional
     // names)
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);    // 0x2662f4
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // 0x26633a
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
 
     void SetUIState(long inUIState);        // 0x2668ee (EEMLoadMainScreen passes 0x11, EEMSavedGroupSelect 0)
     // 0x264b1f / 0x264b35: the build action (+0x514, EEABuild) BuildGate / BuildWall
@@ -59,10 +55,10 @@ public:
     void DisplayChatLine(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                          unsigned long inFlags);    // 0x2649a2 (controls 0x65..0x6b: EEUICChatLine)
     void SetStatusText(const UWideString& inText);  // 0x264cd5 (control 0x19)
-    void CreateGroup(unsigned long inIndex);    // 0x26522b
+    void CreateGroup(unsigned long inIndex);
     void DisplayChat(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
-                     unsigned long inFlags, unsigned long inArg5);   // 0x265317
-    void SetEntityGroup(long inGroup);      // 0x2655da
+                     unsigned long inFlags, unsigned long inArg5);
+    void SetEntityGroup(long inGroup);
     bool IsInGameView(const GE2DPoint& inLocation);     // 0x265a06 (in the view, outside background 0x64)
     void SetErrorString(const UWideString& inText, unsigned long inIndex);   // 0x265ff6 (mStrings, mStringsChanged)
     void ShowInformation(EEUIFMGInformation* inInformation);   // 0x26533e (the scrolling text 0xd3, portrait 0xdf)
@@ -81,8 +77,10 @@ public:
     // ResumeInformation 0x266367, SetChatTop 0x26676e, HideMessages 0x2669e8,
     // RefreshSavedGroups 0x26716e, UpdateIconBar 0x2671b0, and the overrides above)
     int64_t Rust(uint32_t inWhich, int64_t inA = 0);
+    // a command button's member in Rust (EE_SCREENS_SB_DO_*; ee_screens status_button.rs over the form's host)
+    int64_t ButtonCall(EEUIFMGStatusButton* inButton, uint32_t inWhich, UWideString* outString = NULL);
     void ShowAllBackgrounds();              // 0x26568e (EERenderObject's; Rust's whole)
-    void HideAllBackgrounds();              // 0x266960
+    void HideAllBackgrounds();
     // the host of the per-frame work in Rust (ee_screens main_form.rs: CopyData, RefreshStatus, DisplayChatLine,
     // ShowInformation); a member for UIForm's protected GetMouseCaptured and CopyData
     static int64_t HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, EeScreensMainFormIo* ioIo);
@@ -109,7 +107,7 @@ public:
     long mL51C;                             // +0x51c
     // indexed by mUIState: UpdateKeyboard 0x271290 [this + 0x520 + mUIState*4], UpdateMouse 0x2712b8 [this + 0x578 +
     // mUIState*4] (provisional names)
-    EEUIFMGKeyboardTest mKeyboardTests[22]; // +0x520
+    long mKeyboardModes[22];                // +0x520 (port: the keyboard tests as modes: 2 the cinematic's)
     long mMouseModes[22];                   // +0x578 (port: the mode's EE_SCREENS_MF_MODE_*, ee_screens mouse_modes.rs)
     long mUIState;                          // +0x5d0 (5: gate, 6: wall, 0xb: ..., 0x11: no scrolling; provisional name)
     long mMediaID;                          // +0x5d4 (= -1) the background media (UpdateBackgroundMedia)

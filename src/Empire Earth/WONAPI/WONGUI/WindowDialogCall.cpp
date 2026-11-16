@@ -12,7 +12,6 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
 // Window::DoDialog in the WON SDK
-// FUNCTION: WON 0x0072b080
 // Runs the component as a modal dialog over this window through the window manager; returns the dialog result
 int Window::RunDialog(Component* component)
 {

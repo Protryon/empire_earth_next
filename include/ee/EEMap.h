@@ -66,9 +66,9 @@ public:
     // (EEUCResource::AddToTile stores the result in mUnits) (provisional name)
     virtual RTSTileUnitNode* AddUnit(EEUnit* inUnit, RTSTileUnitNode* inNext) = 0;
     virtual void FreeUnitNode(RTSTileUnitNode* inNode);  // +0x1c 0x124708 (deletes it; EETile returns it to its pool)
-    void RemoveAllUnits();                  // 0x12483c (provisional name)
-    void RemoveUnit(EEUnit* inUnit);        // 0x12485f (provisional name)
-    bool HasUnit(EEUnit* inUnit);           // 0x1248d5 (provisional name)
+    void RemoveAllUnits();
+    void RemoveUnit(EEUnit* inUnit);
+    bool HasUnit(EEUnit* inUnit);
     void AddSight(EEPlayer* inPlayer);      // 0x1247ed (counts inPlayer in; a first sighting stores 2) (provisional name)
     // inline: out-of-line COMDAT 0x124072 after its first user in RTSMap.cpp (AddSight calls it): stores inValue in
     // inPlayer's 16-bit half of the visibility word (provisional name)
@@ -229,30 +229,30 @@ public:
 
     // RTSMap.cpp's non-virtual members in address order (provisional names unless stated)
     long SpreadDown(long inX, long inY, long inEnd, float inHeight, float inSlope);  // 0x121e7d (raise-terrain edges)
-    long SpreadUp(long inX, long inY, long inEnd, float inHeight, float inSlope);   // 0x121fa8
-    long SpreadLeft(long inX, long inY, long inEnd, float inHeight, float inSlope);  // 0x1220d6
-    long SpreadRight(long inX, long inY, long inEnd, float inHeight, float inSlope);  // 0x1221e6
+    long SpreadUp(long inX, long inY, long inEnd, float inHeight, float inSlope);
+    long SpreadLeft(long inX, long inY, long inEnd, float inHeight, float inSlope);
+    long SpreadRight(long inX, long inY, long inEnd, float inHeight, float inSlope);
     long GetNumRaisedCorners(unsigned long inX, unsigned long inY);   // 0x1222ed (EEPlanWall; built without /Og)
     void ClearU1955DC();                    // 0x1225ef (EESelectedGroup::ShowSelectionAreas)
     void UpdateTiles(long inX, long inY);   // 0x1225fa (the four tiles around vertex (inX, inY))
     long SmoothVertex(unsigned long inX, unsigned long inY, unsigned long inFromX, unsigned long inFromY,
-                      float inSlope);       // 0x122761
-    void Create(long inWidth, long inHeight, unsigned long inPlayerCount, bool inCreateTiles);   // 0x1229b3
-    void ApplyVertexColors();               // 0x122b06
-    bool IsTileFlat(unsigned long inX, unsigned long inY);   // 0x122ce1
+                      float inSlope);
+    void Create(long inWidth, long inHeight, unsigned long inPlayerCount, bool inCreateTiles);
+    void ApplyVertexColors();
+    bool IsTileFlat(unsigned long inX, unsigned long inY);
     EEMapTile* GetTileOnLine(const GE3DLine& inLine, long& outX, long& outY, bool inHitWaterSurface);  // 0x122ee8 (EEMap::PickScreenTile)
     EEMapTile* GetLocationOnLine(const GE3DLine& inLine, GE3DPoint& outLocation, bool inHitWaterSurface);  // 0x12307d (EEMap::GetLocationAt)
-    const GEColor& GetVertexColor(long inX, long inY, long inCorner);   // 0x12320d
+    const GEColor& GetVertexColor(long inX, long inY, long inCorner);
     void Raise(long* ioLeft, long* ioRight, long* ioTop, long* ioBottom, float inHeight, float inSlope,
                float inEdgeHeight, float inEdgeSlope, bool inRaise);  // 0x123389 (x in [left, right + 1], y in [bottom, top + 1])
-    void DeleteTiles();                     // 0x1236e6
+    void DeleteTiles();
     void FogSeen(EEPlayer* inPlayer);       // 0x1236f3 (seen tiles become explored)
     void ExploreUnseen(EEPlayer* inPlayer);  // 0x12377f (unseen tiles become explored)
-    void BuildAreaOutlines(std::vector<U2DRectangle<long> >& inAreas, std::vector<unsigned short>& inContinents);  // 0x1238bd
+    void BuildAreaOutlines(std::vector<U2DRectangle<long> >& inAreas, std::vector<unsigned short>& inContinents);
     // inline (refused in EEROTerrain::RenderScene's erase; its copy is ICF-folded with the `lea eax, [ecx+4]` 0x1d99fb;
     // provisional name)
     std::vector<RTSColoredRectangle>& GetColoredRectangles() { return this->mColoredRectangles; }
-    void AddOutlineEdge(U2DPoint<long> inStart, U2DPoint<long> inEnd, unsigned short inContinent);  // 0x123e36
+    void AddOutlineEdge(U2DPoint<long> inStart, U2DPoint<long> inEnd, unsigned short inContinent);
 
     static const UString sMapWidth;         // "RTSMap-MapWidth" (0x529840; key names are provisional)
     static const UString sMapHeight;        // "RTSMap-MapHeight" (0x529828)
@@ -356,12 +356,12 @@ public:
     void PrepareSave();                     // 0x122517 (EESEASaveScenario before saving a scenario)
     // 0x122c9b: the nearest tile on the map to inPoint; its coordinates in ioX/ioY (EEMPathTo; provisional name)
     EEMapTile* GetClosestTile(GE3DPoint* inPoint, long* ioX, long* ioY);
-    bool IsAreaOnMap(unsigned long inX, unsigned long inY, unsigned long inRadius);   // 0x122dec
+    bool IsAreaOnMap(unsigned long inX, unsigned long inY, unsigned long inRadius);
     // EEMap.cpp members called by the random map (EERandomMap.cpp; provisional names)
     void PaintTerrain(long inX, long inY, long inTerrain);  // 0x11d34b (the tile's terrain texture)
-    void UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop);  // 0x11d5e8
+    void UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop);
     void SetCliffTexture(long inCliffTexture);  // 0x11df99 (+0x19565c = it, then UpdateCliffs over the whole map)
-    unsigned long GetTileCount();           // 0x11e12f
+    unsigned long GetTileCount();
     long ComputeChecksum();                 // 0x11c3ca (EEPhysics::GetOutOfSynchChecksum: the out-of-synch checksum) (provisional name)
     // EEMap.cpp's other members in address order (provisional names)
     void SetPlayerCount(unsigned long inPlayerCount);  // 0x11bc03 (the visibility words for a new player count)
@@ -370,9 +370,9 @@ public:
     void RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared);
     void Initialize();                      // 0x11c9a3 (the ctors' common part)
     void AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared);
-    void PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff);  // 0x11d2a2
+    void PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff);
     void SetCliffColorSets(long inLeft, long inRight, long inTop, long inBottom, long inCliff);  // 0x11d433 (cliff colours)
-    void RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop);  // 0x11dbf1
+    void RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop);
     void RegisterTerrainSets();             // 0x11dd95 (registers the terrain texture and colour sets with the mesh)
     void SetTileTerrain(long inX, long inY, long inTextureSet, bool inUnload);  // 0x11dfb7 (the tile's texture set)
 
