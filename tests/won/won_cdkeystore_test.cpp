@@ -183,6 +183,28 @@ static void Run(Side s)
             fclose(f);
         }
         Line("load file big " + B(s.LoadFile(fromFile, kKeyFile)) + KeyText(fromFile));
+        // the saved key padded to 2,047 .. 2,049 bytes (the read stops at 2,048)
+        for (int aSize = 2047; aSize <= 2049; aSize++) {
+            ByteBufferPtr anEncrypted = k.GetEncrypted();
+            std::string aPadded(anEncrypted->data(), anEncrypted->length());
+            aPadded.resize(aSize, '');
+            FILE* f = fopen(kKeyFile, "wb");
+            fwrite(aPadded.data(), 1, aPadded.size(), f);
+            fclose(f);
+            CDKey padded(aProduct);
+            Line("load file padded " + std::to_string(aSize) + " " + B(s.LoadFile(padded, kKeyFile)) + KeyText(padded));
+        }
+        // a file of exactly the encrypted bytes after 2,040 bytes of filler: only the read's cut sees the key's end
+        {
+            ByteBufferPtr anEncrypted = k.GetEncrypted();
+            std::string aTail(2048 - anEncrypted->length(), ' ');
+            aTail.append(anEncrypted->data(), anEncrypted->length());
+            FILE* f = fopen(kKeyFile, "wb");
+            fwrite(aTail.data(), 1, aTail.size(), f);
+            fclose(f);
+            CDKey tail(aProduct);
+            Line("load file tail " + B(s.LoadFile(tail, kKeyFile)) + KeyText(tail));
+        }
         {
             FILE* f = fopen(kKeyFile, "wb");
             fclose(f);
