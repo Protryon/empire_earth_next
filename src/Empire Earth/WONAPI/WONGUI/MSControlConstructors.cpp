@@ -1,4 +1,5 @@
-// Constructors and destructors of the Windows-style controls, and helpers they inline (file name inferred)
+// Constructors and destructors of the Windows-style controls, and helpers they inline (file name inferred; three of
+// the original's units, their include lists joined)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -14,6 +15,11 @@
 #include "ee/wonapi/WONLobbySkinnedContainers.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "ee/wonapi/WONSkinLayout.h"
+#include "ee/wonapi/WONLobbyMSExtraConfig.h"
+#include "ee/wonapi/WONLobbyMSRemainingPainters.h"
+#include "ee/wonapi/WONLobbyMSMessageBox.h"
+#include "ee/wonapi/WONLobbyMSPainters.h"
+#include "ee/wonapi/WONLobbyMSBorderPainters.h"
 namespace WONAPI {
 // Creates an arrow button pointing the given way that repeats while held (emitted at 0x006ff0c0)
 MSArrowButton::MSArrowButton(Direction direction)
@@ -46,23 +52,7 @@ MSSeperator::MSSeperator(int height)
 {
     this->SetSize(this->Width(),height);
 }
-}
 
-// Push button, header and list control setup
-// UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
-#include <windows.h>
-#include <string>
-#include <list>
-#include <map>
-#include <set>
-#include <vector>
-#include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONLobbyMSExtraConfig.h"
-#include "ee/wonapi/WONLobbyMSRemainingPainters.h"
-namespace WONAPI {
 // Sets a push button's padding (8 across, 4 down), makes it take focus and become the default button while focused
 void MSButton::Init()
 {
@@ -119,11 +109,6 @@ void MSListCtrl::Virtual08()
     Container::Virtual08();
     WONSkinLayout(this,EeWonSkinLayKind::MsList);
 }
-}
-
-#include "ee/wonapi/WONLobbyMSRemainingPainters.h"
-#include "ee/wonapi/WONLobbyMSExtraConfig.h"
-namespace WONAPI {
 
 // Sets a check box's left-aligned text after the box, its focus rectangle around the text, and focus
 void MSCheckbox::Init()
@@ -167,11 +152,7 @@ MSEtchedFrameGroup::MSEtchedFrameGroup()
     this->mLabel=new Label;
     this->mLabel->SetHorzAlign(HorzAlign_Center);
 }
-}
 
-#include "ee/wonapi/WONLobbyMSMessageBox.h"
-#include "ee/wonapi/WONLobbyMSPainters.h"
-namespace WONAPI {
 // Creates a dialog with a dialog background that fills it (emitted at 0x00700550)
 MSDialog::MSDialog()
 {
@@ -179,11 +160,7 @@ MSDialog::MSDialog()
     this->Fn2F6140(back.get(),3,this,0,0,0,0,0);
     this->AddChild(back.get());
 }
-}
 
-#include "ee/wonapi/WONLobbyMSBorderPainters.h"
-#include "ee/wonapi/WONLobbyMSRemainingPainters.h"
-namespace WONAPI {
 // Destroys the push button (emitted at 0x006fed10)
 MSButton::~MSButton() {}
 // Destroys the arrow button (emitted at 0x006ff140)
