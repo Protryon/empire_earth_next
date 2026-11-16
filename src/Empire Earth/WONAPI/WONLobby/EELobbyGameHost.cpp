@@ -148,7 +148,7 @@ EELobbyGame::EELobbyGame() : mRust(NULL)
         this->mSlots[i].mGame = this;
         this->mSlots[i].mIndex = (unsigned char)i;
     }
-    this->mRust = ee_won_eegame_new(this, EELobbyGameHost);
+    this->mRust = ee_won_eegame_new_model(this, EELobbyGameHost);
 }
 
 // Destroys the lobby game, releasing its slots, player names and file transfer
@@ -296,26 +296,7 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
         LobbySendToClient(reinterpret_cast<LobbyClient*>(b), aWrite->ToByteBuffer(true).get());
         return 0;
     case Op::FreeBuffer: delete aWrite; return 0;
-    case Op::IsHost: return aGame->GetIsHost() ? 1 : 0;
-    case Op::MaxPlayers: return aGame->GetMaxPlayers();
-    case Op::SetMaxPlayers: aGame->SetMaxPlayers((long)a); return 0;
-    case Op::GameType: return aGame->GetGameType();
-    case Op::Clients: return (intptr_t)aGame->GetClients().mPtr;
-    case Op::FindClient: return (intptr_t) reinterpret_cast<LobbyClientList*>(a)->FindClient((unsigned short)b);
     case Op::CurrentServer: return (intptr_t)LobbyGetCurrentServer();
-    case Op::ServerClient: return (intptr_t) reinterpret_cast<LobbyServer*>(a)->GetClient((int)b);
-    case Op::IterNew: return (intptr_t) new LobbyClientSetIterator(reinterpret_cast<LobbyClientList*>(a));
-    case Op::IterHasMore: return reinterpret_cast<LobbyClientSetIterator*>(a)->HasMore() ? 1 : 0;
-    case Op::IterNext: {
-        LobbyClient* aNext = NULL;
-        reinterpret_cast<LobbyClientSetIterator*>(a)->Next(&aNext);
-        return (intptr_t)aNext;
-    }
-    case Op::IterFree: delete reinterpret_cast<LobbyClientSetIterator*>(a); return 0;
-    case Op::ClientName: return (intptr_t)aClient->GetName().mData.get();
-    case Op::ClientId: return aClient->GetClientId();
-    case Op::ClientPlayer: return (intptr_t)(EELobbyPlayer*)aClient->GetPlayer().mPtr;
-    case Op::ClientIsCaptain: return aClient->IsCaptain(1) ? 1 : 0;
     case Op::PlayerSlot: return aPlayer->GetSlot();
     case Op::PlayerTeam: return aPlayer->GetTeam();
     case Op::PlayerAttach:

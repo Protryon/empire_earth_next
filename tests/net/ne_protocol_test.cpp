@@ -70,23 +70,6 @@ unsigned long TMGetTime()
 {
     return 1000;
 }
-long TSScheduler::CreateCriticalSection(TSCriticalSection*& outSection)   // as TSScheduler.cpp (ee_ts)
-{
-    outSection = reinterpret_cast<TSCriticalSection*>(ee_ts_section_new());
-    return kErrorOK;
-}
-void TSScheduler::DestroyCriticalSection(TSCriticalSection* inSection)
-{
-    ee_ts_section_free(reinterpret_cast<EeTsSection*>(inSection));
-}
-long TSScheduler::CreateEvent(TSEvent*& outEvent, bool inManualReset)
-{
-    return ee_ts_event_new(reinterpret_cast<EeTsEvent**>(&outEvent), inManualReset);
-}
-void TSScheduler::DestroyEvent(TSEvent* inEvent)
-{
-    ee_ts_event_free(reinterpret_cast<EeTsEvent*>(inEvent));
-}
 float URandom::Generate()   // as GEBitmap.cpp
 {
     this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;

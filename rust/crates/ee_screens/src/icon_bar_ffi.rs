@@ -1,5 +1,5 @@
 //! `extern "C"` for the selected-units icon bar (`icon_bar.rs`): `EEUICUnitIconBar`'s members forward here with
-//! their state (`mState`, from [`ee_screens_icon_bar_new`]) and the bar; the host is `ee_screenscpp_icon_bar`
+//! their state (`mState`, from [`ee_screens_icon_bar_new`]) and the bar; the host is `EEUIRustControl`'s (`ee_screenscpp_hud_ctl`, the class's own ops through its `RustOp`)
 //! (`User Interface Thread/EEUICUnitIconBar.cpp`).
 #![allow(clippy::missing_safety_doc)]
 
@@ -7,20 +7,12 @@ use core::ffi::c_void;
 
 use crate::icon_bar::{IconBar, IconBarHost};
 
-/// cbindgen:ignore
-mod sys {
-    use core::ffi::c_void;
-
-    extern "C" {
-        pub fn ee_screenscpp_icon_bar(bar: *mut c_void, op: u32, a: i64, b: i64, f: *mut f32) -> i64;
-    }
-}
-
 struct Bar(*mut c_void);
 
 impl IconBarHost for Bar {
     fn op(&mut self, op: u32, a: i64, b: i64, f: &mut [f32]) -> i64 {
-        unsafe { sys::ee_screenscpp_icon_bar(self.0, op, a, b, f.as_mut_ptr()) }
+        let (op, a) = crate::icon_bar::hud_op(op, a);
+        crate::hud_ctl::HudHost::op(&mut crate::hud_ctl::Cpp(self.0), op, a, b, f)
     }
 }
 

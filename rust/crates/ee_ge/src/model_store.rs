@@ -1,6 +1,6 @@
 //! The model `GEModel::StoreLoaded` stores ('GEModel Load.cpp'): the counts, names, polygon lists, material ranges,
 //! frames and sub-models, as the original's `.cem` chunk readers left them. The game's models are glTF files only
-//! (docs/RUST_PLAN.md D9): `ee_openformats` decodes one into a [`CemModel`] (`ee_of_gltf_to_model`), and the C++
+//! (docs/RUST_PLAN.md D9): `ee_openformats` decodes one into a [`CemModel`] (`ee_of_find_model`), and the C++
 //! walks it through `model_ffi`'s views. The `.cem` reader that filled it before D9 is gone.
 //!
 //! The lists keep the reader's shape: a model the reader refused has no counts and stores nothing, and a material's

@@ -104,7 +104,7 @@ fn room(kind: u8, id: u16, flag: bool, ping: u16) -> Vec<u8> {
 impl EeWonStaging {
     pub fn new(logic: *mut c_void, call: EeWonLobbyHostFn) -> Self {
         EeWonStaging {
-            host: Host { logic, call },
+            host: Host { logic, call, model: false },
             join_status: Cell::new(0),
             in_staging: Cell::new(false),
             last_ready: Cell::new(false),
@@ -812,6 +812,14 @@ impl EeWonStaging {
 // ---- the C ABI (WONLobbyStaging.h)
 
 /// A new StagingLogic state for the C++ shell `logic`, calling out through `host`.
+/// As `ee_won_staging_new`, with the model's ops answered by its Rust objects (the game's).
+#[no_mangle]
+pub extern "C" fn ee_won_staging_new_model(logic: *mut c_void, host: EeWonLobbyHostFn) -> *mut EeWonStaging {
+    let mut l = EeWonStaging::new(logic, host);
+    l.host.model = true;
+    Box::into_raw(Box::new(l))
+}
+
 #[no_mangle]
 pub extern "C" fn ee_won_staging_new(logic: *mut c_void, host: EeWonLobbyHostFn) -> *mut EeWonStaging {
     Box::into_raw(Box::new(EeWonStaging::new(logic, host)))

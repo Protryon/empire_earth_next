@@ -6,7 +6,7 @@
 //!
 //! The entries are the C++'s array of `EEUnitPickerEntry` (a `GEPhysicalModel` and the unit's id), read and written
 //! in place through their `#[repr(C)]` mirror [`EeGfxPickEntry`] (the pick scale is set and put back, as the C++
-//! did). The models are read through ee_ge's physical model table (`GEPhysicalModel.cpp`'s, the same callbacks its
+//! did). The models are read through ee_ge's physical model table (`GEModel.cpp`'s, the same callbacks its
 //! line walk uses); the units, the rasterizer's pixel size and the results through [`EeGfxPickHost`]. The C++ keeps
 //! the lock, the viewport's frustum planes and the entries' filling (`AddUnit`).
 //!
@@ -145,7 +145,7 @@ pub trait PickModels {
     fn sub_model(&self, m: *const c_void, index: c_ulong) -> *const c_void;
 }
 
-/// The C++'s table (`GEPhysicalModel.cpp`'s).
+/// The C++'s table (`GEModel.cpp`'s).
 struct Table<'a>(&'a EeGePhysicalModels);
 
 // SAFETY (every method): the table's callbacks take the live `GEModel*` the entries hold or the table returned

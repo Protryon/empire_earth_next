@@ -193,7 +193,7 @@ EEUnit* EEUnitPicker::PickUnitUnreferenced(const GE2DPoint& inPoint, long inPref
 }
 
 // The picker's walks (ee_gfx pick_walk.rs: FindUnit, the box selection and its frustum test over the entries in
-// place and GEPhysicalModel.cpp's model table) ask these (EeGfxPickHost; the context: the picker)
+// place and GEModel.cpp's model table) ask these (EeGfxPickHost; the context: the picker)
 const EeGePhysicalModels* GEPhysicalModelTable();
 static_assert(sizeof(EEUnitPickerEntry) == sizeof(EeGfxPickEntry) && offsetof(EEUnitPickerEntry, mUnitID) == offsetof(EeGfxPickEntry, unit_id),
               "EEUnitPickerEntry");

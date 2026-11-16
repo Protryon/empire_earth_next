@@ -97,6 +97,26 @@ pub const EE_SCREENS_UP_OP_BORDER_THICKNESS: u32 = 42;
 /// -> the scenario editor's first selected unit's complex unit.
 pub const EE_SCREENS_UP_OP_EDITOR_COMPLEX: u32 = 43;
 
+// ---- the status bar's (`EEUIFMGStatusBar`, an improvement button drawn as an icon, a bar and two values)
+/// The bar's a: `mEnabled` (0), `mPressed` (1), `GetHasMouseCapture()` (2).
+pub const EE_SCREENS_UP_OP_BAR_FIELD: u32 = 44;
+/// The bar's `mPressed = a != 0`.
+pub const EE_SCREENS_UP_OP_BAR_SET_PRESSED: u32 = 45;
+/// Whether the button's rectangle contains the form's mouse location (a 0) or the call's location (a 1).
+pub const EE_SCREENS_UP_OP_BAR_INSIDE: u32 = 46;
+/// The handler under the bar's: `UIButton::MouseLButtonDown` (a 0), `UIButton::MouseLButtonUp` (1),
+/// `EEUIBUpgrade::MouseRButtonDown` (2); its result.
+pub const EE_SCREENS_UP_OP_BAR_BASE: u32 = 47;
+/// The icon moved by (a, a) (`mIcon->SetLocation(its top left + (a, a))`).
+pub const EE_SCREENS_UP_OP_BAR_ICON: u32 = 48;
+
+/// The status bar's mouse handlers (`bar_mouse`'s which).
+pub const EE_SCREENS_UP_BAR_L_DOWN: u32 = 0;
+pub const EE_SCREENS_UP_BAR_L_UP: u32 = 1;
+pub const EE_SCREENS_UP_BAR_MOVE: u32 = 2;
+pub const EE_SCREENS_UP_BAR_R_DOWN: u32 = 3;
+pub const EE_SCREENS_UP_BAR_R_UP: u32 = 4;
+
 /// The fields of [`EE_SCREENS_UP_OP_FIELD`]: the improvement, the scenario editor flag, the level last shown, the
 /// greyed-out state of the last cost update, the time of the last refusal line.
 pub const EE_SCREENS_UP_FIELD_ATTRIBUTE: i64 = 0;
@@ -344,3 +364,144 @@ pub fn update_cost<H: UpgradeHost + ?Sized>(h: &mut H) {
 
 #[cfg(test)]
 mod golden;
+
+/// `EEUIFMGStatusBar::MoveIcon` (0x269c43): the icon moved by (by, by) when the improvement can be bought.
+fn move_icon<H: UpgradeHost + ?Sized>(h: &mut H, by: i64) {
+    if can_upgrade(h).0 {
+        op(h, EE_SCREENS_UP_OP_BAR_ICON, by);
+    }
+}
+
+/// The icon pressed (nudged down-right) or released (moved back) when it is not already.
+fn press_icon<H: UpgradeHost + ?Sized>(h: &mut H, pressed: bool) {
+    if (op(h, EE_SCREENS_UP_OP_BAR_FIELD, 1) != 0) != pressed {
+        move_icon(h, if pressed { 1 } else { -1 });
+        op(h, EE_SCREENS_UP_OP_BAR_SET_PRESSED, pressed as i64);
+    }
+}
+
+/// `EEUIFMGStatusBar`'s mouse handler `which` (`EE_SCREENS_UP_BAR_*`; 0x269a40, 0x269a9c, 0x269afa, 0x269b8b,
+/// 0x269be6): a press or release inside an enabled button presses or releases the icon, then the button's own
+/// handler (nothing when disabled); a move while captured makes the icon follow the mouse in and out, then the
+/// improvement button's move.
+pub fn bar_mouse<H: UpgradeHost + ?Sized>(h: &mut H, which: u32) -> i64 {
+    if which == EE_SCREENS_UP_BAR_MOVE {
+        if op(h, EE_SCREENS_UP_OP_BAR_FIELD, 2) != 0 {
+            let inside = op(h, EE_SCREENS_UP_OP_BAR_INSIDE, 1) != 0;
+            press_icon(h, inside);
+        }
+        return mouse_move(h);
+    }
+    if op(h, EE_SCREENS_UP_OP_BAR_FIELD, 0) == 0 {
+        return 0;
+    }
+    let press = which == EE_SCREENS_UP_BAR_L_DOWN || which == EE_SCREENS_UP_BAR_R_DOWN;
+    if op(h, EE_SCREENS_UP_OP_BAR_INSIDE, 0) != 0 {
+        press_icon(h, press);
+    }
+    match which {
+        EE_SCREENS_UP_BAR_L_DOWN => op(h, EE_SCREENS_UP_OP_BAR_BASE, 0),
+        EE_SCREENS_UP_BAR_L_UP => op(h, EE_SCREENS_UP_OP_BAR_BASE, 1),
+        EE_SCREENS_UP_BAR_R_DOWN => op(h, EE_SCREENS_UP_OP_BAR_BASE, 2),
+        _ => mouse_r_up(h),
+    }
+}
+
+#[cfg(test)]
+mod bar_tests {
+    use super::*;
+
+    /// A host answering the bar's fields and the button's reads from a table (unlisted ops answer 0), recording ops.
+    struct Bar {
+        enabled: bool,
+        pressed: bool,
+        captured: bool,
+        inside: [bool; 2],
+        can_buy: bool,
+        log: Vec<(u32, i64)>,
+    }
+
+    impl UpgradeHost for Bar {
+        fn op(&mut self, op: u32, a: i64, _: i64, _: i64) -> i64 {
+            self.log.push((op, a));
+            match op {
+                EE_SCREENS_UP_OP_BAR_FIELD => [self.enabled, self.pressed, self.captured][a as usize] as i64,
+                EE_SCREENS_UP_OP_BAR_SET_PRESSED => {
+                    self.pressed = a != 0;
+                    0
+                }
+                EE_SCREENS_UP_OP_BAR_INSIDE => self.inside[a as usize] as i64,
+                EE_SCREENS_UP_OP_BAR_BASE => 10 + a,
+                // the selection's first unit, allowed, buyable
+                EE_SCREENS_UP_OP_HAS_GROUP | EE_SCREENS_UP_OP_FIRST_UNIT | EE_SCREENS_UP_OP_ALLOWED => 1,
+                EE_SCREENS_UP_OP_CAN_BUY => self.can_buy as i64,
+                _ => 0,
+            }
+        }
+    }
+
+    fn bar(enabled: bool, pressed: bool, inside: bool) -> Bar {
+        Bar { enabled, pressed, captured: true, inside: [inside, inside], can_buy: true, log: Vec::new() }
+    }
+
+    fn icon(b: &Bar) -> Vec<i64> {
+        b.log.iter().filter(|o| o.0 == EE_SCREENS_UP_OP_BAR_ICON).map(|o| o.1).collect()
+    }
+
+    #[test]
+    fn a_press_inside_an_enabled_bar_nudges_the_icon_then_the_buttons_press() {
+        let mut b = bar(true, false, true);
+        assert_eq!(bar_mouse(&mut b, EE_SCREENS_UP_BAR_L_DOWN), 10);
+        assert_eq!((icon(&b), b.pressed), (vec![1], true));
+        // pressed already: no second nudge
+        let mut b = bar(true, true, true);
+        assert_eq!(bar_mouse(&mut b, EE_SCREENS_UP_BAR_R_DOWN), 12);
+        assert!(icon(&b).is_empty());
+        // the release moves it back
+        let mut b = bar(true, true, true);
+        assert_eq!(bar_mouse(&mut b, EE_SCREENS_UP_BAR_L_UP), 11);
+        assert_eq!((icon(&b), b.pressed), (vec![-1], false));
+        // outside: the button's own only; disabled: nothing at all
+        let mut b = bar(true, false, false);
+        assert_eq!(bar_mouse(&mut b, EE_SCREENS_UP_BAR_L_DOWN), 10);
+        assert!(icon(&b).is_empty() && !b.pressed);
+        let mut b = bar(false, false, true);
+        assert_eq!(bar_mouse(&mut b, EE_SCREENS_UP_BAR_L_DOWN), 0);
+        assert_eq!(b.log, [(EE_SCREENS_UP_OP_BAR_FIELD, 0)]);
+    }
+
+    #[test]
+    fn the_icon_moves_only_when_the_improvement_can_be_bought() {
+        let mut b = bar(true, false, true);
+        b.can_buy = false;
+        bar_mouse(&mut b, EE_SCREENS_UP_BAR_L_DOWN);
+        assert!(icon(&b).is_empty());
+        assert!(b.pressed, "the state follows the mouse even so");
+    }
+
+    #[test]
+    fn a_captured_move_follows_the_mouse_in_and_out_then_the_buttons_move() {
+        let mut b = bar(true, false, true);
+        b.inside = [false, true];
+        bar_mouse(&mut b, EE_SCREENS_UP_BAR_MOVE);
+        assert_eq!((icon(&b), b.pressed), (vec![1], true));
+        assert_eq!(b.log.last(), Some(&(EE_SCREENS_UP_OP_BASE_MOVE, 0)));
+        b.inside = [true, false];
+        b.log.clear();
+        bar_mouse(&mut b, EE_SCREENS_UP_BAR_MOVE);
+        assert_eq!((icon(&b), b.pressed), (vec![-1], false));
+        // not captured: only the button's move
+        let mut b = bar(true, false, true);
+        b.captured = false;
+        bar_mouse(&mut b, EE_SCREENS_UP_BAR_MOVE);
+        assert!(icon(&b).is_empty() && !b.pressed);
+    }
+
+    #[test]
+    fn the_right_release_is_the_buttons() {
+        let mut b = bar(true, true, true);
+        assert_eq!(bar_mouse(&mut b, EE_SCREENS_UP_BAR_R_UP), 0);
+        assert_eq!(icon(&b), [-1]);
+        assert_eq!(b.log.last(), Some(&(EE_SCREENS_UP_OP_RELEASE_MOUSE, 0)));
+    }
+}

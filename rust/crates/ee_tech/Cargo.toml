@@ -13,3 +13,5 @@ crate-type = ["rlib"]
 [dependencies]
 # lrintf as the C++ build rounds (UMCeil)
 ee_ge = { path = "../ee_ge" }
+ee_data = { path = "../ee_data" }
+ee_plat_core = { path = "../ee_plat_core" }

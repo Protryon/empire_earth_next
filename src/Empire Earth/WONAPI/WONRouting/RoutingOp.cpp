@@ -1,4 +1,5 @@
-// WONAPI routing ops: the AsyncOp shim over a Rust routing op (rust/crates/ee_won/src/routeop.rs EeWonRouteOp)
+// WONAPI routing ops: the records a Rust routing op built (rust/crates/ee_won/src/routeop.rs EeWonRouteOp), copied
+// into new C++ records; the op class is WONRouting.h's
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -12,120 +13,11 @@
 #include "ee/wonapi/WONStatus.h"
 #include "rust/ee_won.h"
 namespace WONAPI {
-static void Append(void* inContext, const uint8_t* inBytes, size_t inLength)
-{
-    static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes), inLength);
-}
-static void Units(void* inContext, const uint16_t* inUnits, size_t inCount)
-{
-    WideAssignUtf16LE(*static_cast<std::wstring*>(inContext), inUnits, (unsigned long)inCount);
-}
 static std::wstring Wide(const uint16_t* inUnits, size_t inCount)
 {
     std::wstring s;
     WideAssignUtf16LE(s, inUnits, (unsigned long)inCount);
     return s;
-}
-
-// Creates a routing op of a type on a connection (or none): the Rust op with its constructor's members
-RoutingOp::RoutingOp(RoutingConnection* inConnection, RoutingOpType inType)
-    : mConnection(inConnection), mRust(ee_won_routeop_new((int32_t)inType)) {}
-RoutingOp::~RoutingOp() { ee_won_routeop_free(this->mRust); }
-RoutingOpType RoutingOp::GetType() const { return (RoutingOpType)ee_won_routeop_type(this->mRust); }
-
-// Sends the request; fails at once in blocking mode, which routing ops do not support
-void RoutingOp::RunHook()
-{
-    if (this->GetMode() == OP_MODE_BLOCK) {
-        this->Finish((WONStatus)WS_BlockMode_NotSupported);
-        return;
-    }
-    this->SendRequest();
-}
-
-// The op's request (Rust's): sent, then the op waits in the connection's list when it wants a reply
-void RoutingOp::SendRequest()
-{
-    std::string aMessage;
-    int32_t aSent = ee_won_routeop_request(this->mRust, Append, &aMessage);
-    if (aSent & 1) this->SendMsg(aMessage);
-    if (aSent & 2) this->AddOp();
-}
-
-// The op's read of a reply (Rust's); a read past the end throws as the original's did, and the create op's leave
-// (CheckLeaveGroup 2c4cb0) runs here
-WONStatus RoutingOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
-{
-    EeWonRouteOpRead aRead;
-    ee_won_routeop_reply(this->mRust, inMsgType, reinterpret_cast<const uint8_t*>(inMsg.data()), inMsg.length(),
-                         (size_t)inMsg.pos(), this->GetStatus() == (WONStatus)WS_Pending, &aRead);
-    if (aRead.leave) {
-        SmartPtr<RoutingOp> aLeave = new RoutingOp(this->mConnection.get(), RoutingOp_LeaveGroup);
-        aLeave->SetNum(EE_WON_RTF_GROUP_ID, aRead.leave_group);
-        aLeave->RunAsync(-1);
-    }
-    if (aRead.cut) throw ReadBufferException("Attempt to read past end of buffer.");
-    return (WONStatus)aRead.status;
-}
-
-// Queues the message on the connection for sending, with the connection's length field
-void RoutingOp::SendMsg(const std::string& inMessage)
-{
-    WriteBuffer aMsg(this->mConnection->GetLengthFieldSize(), true);
-    if (!inMessage.empty()) aMsg.AppendBytes(inMessage.data(), (unsigned long)inMessage.size());
-    this->mConnection->QueueOp(new SendMsgOp(aMsg.ToByteBuffer(true).get()), -1);
-}
-
-// Registers the op with the connection to receive replies
-void RoutingOp::AddOp() { this->mConnection->AddOp(this); }
-
-// ---- the members
-
-std::wstring RoutingOp::Text(int inWhich) const
-{
-    std::wstring s;
-    ee_won_routeop_text(this->mRust, inWhich, Units, &s);
-    return s;
-}
-void RoutingOp::SetText(int inWhich, const std::wstring& inText)
-{
-    std::string aBytes;
-    WideAppendUtf16LE(aBytes, inText);
-    ee_won_routeop_set_text(this->mRust, inWhich, reinterpret_cast<const uint16_t*>(aBytes.data()), aBytes.size() / 2);
-}
-std::string RoutingOp::DataType() const
-{
-    std::string s;
-    ee_won_routeop_data_type(this->mRust, Append, &s);
-    return s;
-}
-void RoutingOp::SetDataType(const std::string& inType)
-{
-    ee_won_routeop_set_data_type(this->mRust, reinterpret_cast<const uint8_t*>(inType.data()), inType.size());
-}
-ByteBufferPtr RoutingOp::GetData() const
-{
-    std::string s;
-    if (!ee_won_routeop_data(this->mRust, Append, &s)) return NULL;
-    return new ByteBuffer(s.data(), (unsigned long)s.size(), false);
-}
-void RoutingOp::SetData(const ByteBuffer* inData)
-{
-    if (inData == NULL) ee_won_routeop_set_data(this->mRust, false, NULL, 0);
-    else
-        ee_won_routeop_set_data(this->mRust, true, reinterpret_cast<const uint8_t*>(inData->data()), inData->length());
-}
-std::list<unsigned short> RoutingOp::Recipients() const
-{
-    size_t n = ee_won_routeop_ids(this->mRust, NULL, 0);
-    std::vector<uint16_t> anIds(n + 1);
-    ee_won_routeop_ids(this->mRust, &anIds[0], n);
-    return std::list<unsigned short>(anIds.begin(), anIds.begin() + n);
-}
-void RoutingOp::SetRecipients(const std::list<unsigned short>& inIds)
-{
-    std::vector<uint16_t> anIds(inIds.begin(), inIds.end());
-    ee_won_routeop_set_ids(this->mRust, anIds.empty() ? NULL : &anIds[0], anIds.size());
 }
 
 // ---- the records, copied into new C++ records
@@ -263,9 +155,4 @@ RoutingGroupInfoPtr RoutingOp::GetGroupInfo() const
     return group;
 }
 
-// Parses a group list body into the group map (Rust's read); false when the body runs short (what was read stays)
-bool RoutingOp::ParseGroupListObj(const void* inData, unsigned long inSize)
-{
-    return ee_won_routeop_parse_group_list(this->mRust, static_cast<const uint8_t*>(inData), inSize);
-}
 }

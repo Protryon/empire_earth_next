@@ -57,6 +57,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEWonNet.h"
+#include "ee/wonapi/WONRouting.h" // AuthContext (WONAuthContext.h)
 #include "ee/EEUICWonNetRoomsBox.h"
 #include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEUIEWonNetModifyUserAccountEvents.h"
