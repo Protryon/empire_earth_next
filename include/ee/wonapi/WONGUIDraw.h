@@ -82,6 +82,13 @@ template <class Call> inline void WONDrawOne(Graphics& g, const EeWonDrawOp& o, 
 struct WONDrawNoCall {
     void operator()(const EeWonDrawOp&) {}
 };
+// one operation with no slots and no call (the component hosts' Draw op)
+inline void WONDrawPlain(Graphics& g, const EeWonDrawOp& o)
+{
+    WONDrawSlots aSlots;
+    WONDrawNoCall aNoCall;
+    WONDrawOne(g, o, aSlots, aNoCall);
+}
 
 template <class Call> inline void WONDrawRun(Graphics& g, const WONDrawOps& ops, const WONDrawSlots& s, Call call)
 {

@@ -172,12 +172,7 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
     case Op::RequestFocus: t->RequestFocus(); return 0;
     case Op::GetMousePos: t->GetMousePos(*(int*)a, *(int*)b); return 0;
     case Op::KeyMod: return t->GetKeyMod();
-    case Op::Draw: {
-        WONDrawSlots aSlots;
-        WONDrawNoCall aNoCall;
-        WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
-        return 0;
-    }
+    case Op::Draw: WONDrawPlain(*(Graphics*)a, *(const EeWonDrawOp*)b); return 0;
     default: return 0;
     }
 }
