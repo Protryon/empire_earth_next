@@ -25814,3 +25814,122 @@ bloated RUST_PLAN.md (the hashes stayed).
 read by many lanes, so a move keeps them and takes the bodies over a view); `FillCivilizationList` (a UI list: to
 `civ_whole.rs`); the builder host's remaining ops. Net C++ of the round is -683, short of the 1,500 aim: the hosts
 (21 + 12 ops) and the forwarders the callers keep cost back about half of what moved.
+
+## R6 WONLobby, round 11: the game's LanLogic holds what its shell held (ee_won lanown.rs; branch rust-wonlobby11, 2026-11-15)
+
+Round 10's recommendation: the lists the logics own held by the Rust logics; then the LAN host's lists, discovery
+and timers, and LobbyLogicHost.cpp's messages and boxes through one shared table.
+
+### What moved (net WON C++ = every tracked file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`;
+no address markers left since rust 03ab5fe8)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 12402d18 | the game's LanLogic holds the shell's members (`lanown.rs`), LanLogicHost.cpp's cases over them gone | -214 (50,442 -> 50,228) |
+| e648fad5 | the boxes', yes/no dialogs', status waits' texts and the staging sounds as resource rows | -19 (50,228 -> 50,209) |
+| 51de19f1 | the discovery packet's take kept (lost in the first commit; `lan_game.py` found it) | +5 |
+
+Net -228 (on the merged tree 47,857, rust alone 48,085). LanLogicHost.cpp 645 -> 463 lines, WONLobbyLan.h 118 -> 91, LobbyLogicHost.cpp 327 -> 308. The round stops well
+short of 1,500 lines: what the hosts keep is C++ calls on C++ objects (sockets, ops, events, dialogs, the lobby's
+functions), which leave only with those classes.
+
+### The object
+
+- **`LanOwned`** (`EeWonLan::owned`, made by `ee_won_lan_new_model(logic, host, clients, lan, direct)`; the C++
+  constructor makes the three lists in the original's order and hands them over, Rust takes a reference each): the
+  client list, the LAN and direct-connect game lists, this player's client (model objects through modelobj.rs's
+  new `call` / `get` / `set` / `hold` / `release` / `assign`), the pending sockets (a sorted vector: `std::set`'s
+  pointer order), the listen, host and discovery sockets and the two timers (a reference each through the new
+  `RefHold` / `RefRelease` ops), the discovery address (an `EeWonIpAddr`), the join password (UTF-16 units). Freed
+  in reverse member order, as the shell's destructor did.
+- **One intercept, the golden's op set unchanged**: `EeWonLan::op` answers the Lan ops that read or set those
+  members in Rust (`LanOwned::op`, 50 of them: each the deleted C++ case's statements in order) before the host;
+  the golden's object (`ee_won_lan_new`) still sends them all to its scripted host, so `won_lanobj_test` and
+  `golden_lanobj.txt` are untouched. The C++ calls those cases made are 33 new ops (`RefHold` = 400 on: kill,
+  close, the timers' make and run, the events, the listen and discovery sockets' set-up, the summary's bytes, the
+  send-to, the direct-connect dialog and saved games, the summary's read).
+- **New inward calls**: `MyClient` and `ClientList` (the shell's `GetMyClient` / `GetClientList`), `AddPending`
+  (the peer-auth completion's accepted socket; HandlePeerAuthDone keeps the certificate check).
+- RefreshCertificate is its op's case (the method and its declaration gone).
+
+### The texts
+
+The Rust lobby logics passed a text code (`EeWonLobbyText`) and LobbyLogicHost.cpp looked the pair up in a
+15-row table; the game's host (`Host::model`) now passes the resource rows (`lobbyhost::lobby_text`: title,
+details `<< 16`; `lobby_sound` for the three staging sounds) and the C++ indexes `gLobbyResources` as RoutingLogic's
+host already did. The goldens' scripted hosts still see the codes.
+
+### The golden
+
+`won_lanmodel_test` (new): the game's object (`ee_won_lan_new_model`) against the golden's (`ee_won_lan_new`, which
+won_lanobj_test proves the original LanLogic.cpp) over a host whose answers to the moved ops are LanLogicHost.cpp's
+cases as they were (`RefLan`: their statements over the same members, a model call on the same model objects, a C++
+call on a socket, timer, event or the lobby the op that makes it now), both over real modelobj.rs objects on
+stand-in shells and counted socket stand-ins in an arena (so the pending set orders alike). 20,000 sequences of
+eight calls; the traces (every op the C++ still makes, its arguments and answer, the messages' and summaries'
+bytes, the addresses, each deletion), a dump after each call (every live object's count, the lists' members, the
+game's clients and captain, this player's client) and the end (everything freed) must match. The text table is
+checked against LobbyLogicHost.cpp's as it was for every code.
+
+| Golden | Sequences | Trace lines | Distinct ops and calls | Failures |
+|---|---|---|---|---|
+| `won_lanmodel_test` | 20,000 | 1,356,412 | 111 (every new op reached: 402..432) | 0 (1,396,430 checks) |
+
+| Mutation of `lanown.rs` | Sequences that change (of 20,000) |
+|---|---|
+| the client list not cleared on close | 4,944 |
+| a pending socket appended (no address order) | 149 |
+| the summary's hold given back before its event | 2 (the event's game was the list's last reference) |
+| filtered direct-connect games pinged | 0, then 10 after the generator marked some saved games filtered and ran the refresh and the LAN screen more often |
+| an empty LAN list synced on stop | 8,092 |
+| a new timer at each start | 1,254 |
+| the new client's reference kept | 18,330 |
+| a removed direct-connect game reported as changed (2) | 934 |
+| a keep-alive's last seen not stamped | 10 |
+| the join password not kept | 2,698 |
+
+Unit tests: lanown 2 (hosting holds the client and the list, closing gives every reference back with the pending
+sockets closed in address order; no sync for an empty LAN list), lobbyhost 1 (the texts' rows).
+
+### Behaviour changes
+
+- A join reply that does not name the joiner: the original's JoinGame read `mMyClient->GetClientId()` through NULL
+  for its room event; the room event now carries 0xffff (a new client's id).
+- The discovery query's reply address: the C++ took the address of `RecvBytesFromOp::GetAddr()`'s returned copy (a
+  temporary, dangling when used); the Rust keeps its own copy.
+- HostGame's player client is made by `LanNewClient` with the LAN name taken first (the original made the client,
+  then set `LobbyGetLanName()`): the same name, a copy of its text.
+
+### The lesson: a golden of the object does not test its host
+
+`won_lanmodel_test` answers every op itself, so it could not see that the new LanLogicHost.cpp had lost a case
+the Rust still makes: `LanDiscoveryTake` (the discovery packet's bytes) went with the cases the move deleted. The
+host answered 0 with no bytes, every packet read as empty, and the LAN list stayed empty: the first
+`lan_game.py` failed ("no LAN game appeared in 120 s"). Found by listing the round-10 host's cases against the new
+host's and `lanown.rs`'s answers (`comm` over the `case` names): that one alone was missing. When a host's cases
+move, compare the old case set against the new cases plus the Rust answers before the first game.
+
+### What only a person reaches
+
+Everything here is the LAN game's: `lan_game.py` (host and join through the lobby, the discovery's summaries,
+keep-alives and removals, the pending sockets, the timers). Nothing draws.
+
+### What is left
+
+StagingLogic's `mGame`, `mMyClient`, `mJoinOp` and RoutingLogic's `mServerList`, `mGameList` held by their Rust
+objects the same way (about 25 cases). The hosts' remaining cases are C++ calls on C++ objects.
+
+### Gates
+
+| Gate | code commits | final tree (merged with rust 1c108108) |
+|---|---|---|
+| `build.py -j 3 --sim` | 0 unresolved, 0 duplicates (878/879 inputs) | 0 / 0 (852/853 inputs), again after 51de19f1 |
+| Rust gate | 12402d18: tests and clippy PASS, rustfmt (fixed before the commit); e648fad5 was not gated: its test module before other items failed clippy on the merged tree (fixed in 4f6b3258) | PASS (3,989 tests) |
+| oracle | seeds 2-3 identical (12402d18) | seeds 2-7 identical (before 51de19f1, which changes only the LAN host) |
+| lobby wontest | won_lanmodel_test, won_lanobj_test, won_stagingobj_test, won_lanlogic_test, won_staging_test, won_lan_test exit 0 | 26 programs exit 0 (round 10's 25 and won_lanmodel_test) |
+| `--test-profile windowed-software` | | 0 unresolved, 0 duplicates, again after 51de19f1 |
+| `tools/harness/lan_game.py` (harness lock) | | first FAIL (the lost case), after 51de19f1 RESULT PASS lan-game (PT host 3694, joiner 3332) |
+
+The merges of rust: at the start (marker conflicts in five files: this branch's side taken, then
+`tools/strip_markers.py` as its own commit; PORT_LEARNINGS.md both sides' sections kept); at the end PORT_LEARNINGS.md
+rust's copy (it has this lane's rounds 9 and 10); `rust_build.py header` reordered include/rust/ee_won.h.
