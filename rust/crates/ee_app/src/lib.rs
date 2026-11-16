@@ -14,6 +14,8 @@
 //! - [`minimap`]: `EEMiniMap`'s cells (sight counts, building and unit dots, the unit layer's pixels), the terrain
 //!   pixels' colours and the redraw's walk ([`minimap_ffi`]: its C ABI, the object the C++ class owns).
 //! - [`cheats`]: `EECheatCodes`' table, chat line parse, lookup, list and dispatch ([`cheats_ffi`]: its C ABI).
+//! - [`storm`]: `EEEMStorm`'s name, fades, step and route costs as a record the C++ class derives from and bodies
+//!   over a host ([`storm_ffi`]: its C ABI).
 //! - [`save_io`]: a saved game's primitives over a host callback (`EESavePrimitive`'s operations).
 //! - [`ffi`]: the C ABI the C++ classes call.
 
@@ -32,6 +34,8 @@ pub mod minimap_ffi;
 pub mod save_io;
 pub mod settings;
 pub mod settings_ffi;
+pub mod storm;
+pub mod storm_ffi;
 
 #[cfg(test)]
 mod ambient_tests;
@@ -47,3 +51,5 @@ mod map_tests;
 mod minimap_tests;
 #[cfg(test)]
 mod settings_tests;
+#[cfg(test)]
+mod storm_tests;

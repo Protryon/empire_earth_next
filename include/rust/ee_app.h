@@ -332,6 +332,53 @@ constexpr static const int32_t EE_APP_SETTINGS_STRING_SET = 3;
 /// the member set to the defaults' member
 constexpr static const int32_t EE_APP_SETTINGS_STRING_DEFAULT = 4;
 
+/// `EEStormType`'s kinds.
+constexpr static const long STORM_UNKNOWN = 0;
+
+constexpr static const long STORM_RAIN = 1;
+
+constexpr static const long STORM_SNOW = 2;
+
+constexpr static const long STORM_HURRICANE = 3;
+
+constexpr static const long STORM_BLIZZARD = 4;
+
+/// -> flag (a request), done
+constexpr static const int32_t EE_APP_STORM_OP_REQUEST = 1;
+
+/// `TakePath`; `RequestRoute`
+constexpr static const int32_t EE_APP_STORM_OP_TAKE_PATH = 2;
+
+constexpr static const int32_t EE_APP_STORM_OP_REQUEST_ROUTE = 3;
+
+/// -> n: the path's length
+constexpr static const int32_t EE_APP_STORM_OP_PATH_LEN = 4;
+
+/// flag (the goal, else the path's last point) -> n: the effect's centre's squared distance to it
+constexpr static const int32_t EE_APP_STORM_OP_DISTANCE = 5;
+
+/// `mPath.pop_back()`; flag: the effect moved to the goal (else to the path's last point)
+constexpr static const int32_t EE_APP_STORM_OP_POP_PATH = 6;
+
+constexpr static const int32_t EE_APP_STORM_OP_MOVE = 7;
+
+/// -> n: the effect's tile count; the effect ended; f: the effect's intensity
+constexpr static const int32_t EE_APP_STORM_OP_TILE_COUNT = 8;
+
+constexpr static const int32_t EE_APP_STORM_OP_END_EFFECT = 9;
+
+constexpr static const int32_t EE_APP_STORM_OP_SET_INTENSITY = 10;
+
+/// -> f: the game speed; f, g -> f: `gPhysics->GetRandom(f, g)`; -> f: `gPhysics->mRandom.Generate()`
+constexpr static const int32_t EE_APP_STORM_OP_GAME_SPEED = 11;
+
+constexpr static const int32_t EE_APP_STORM_OP_RANDOM_RANGE = 12;
+
+constexpr static const int32_t EE_APP_STORM_OP_RANDOM = 13;
+
+/// the environment manager's colour back to the storm colour
+constexpr static const int32_t EE_APP_STORM_OP_RESET_COLOR = 14;
+
 /// The cheat table (`mCodes`, `mIsSinglePlayerOnly`).
 struct EeAppCheats;
 
@@ -823,6 +870,38 @@ struct EeAppSettingsFields {
 
 /// The string host: `(ctx, op, id, buffer, size) -> a length` (`EE_APP_SETTINGS_STRING_*`).
 using EeAppSettingsStringFn = uint32_t(*)(void*, int32_t, uint32_t, char*, uint32_t);
+
+/// The storm's plain members (names and order the C++ class's).
+struct EeAppStormFields {
+  /// = 1; clamped to [0, 2]
+  float mTargetIntensity;
+  /// = 1; the weather effect's intensity follows it
+  float mIntensity;
+  /// = 0.02: the fade's relative step
+  float mStep;
+  /// the kind (1..4)
+  long mType;
+  /// = 1; the step's state (2 routing, 3 moving, 4 pausing, 5 dying, 6 over, 7 lingering, 8 to route again)
+  long mState;
+  unsigned long mNextMoveTime;
+  /// = -1
+  unsigned long mEndTime;
+  /// a hurricane or a blizzard
+  bool mIsSevere;
+};
+
+/// One host operation's arguments and answers.
+struct EeAppStormIo {
+  bool flag;
+  /// `REQUEST`: the request is done
+  bool done;
+  long n;
+  float f;
+  float g;
+};
+
+/// The host: `(ctx, op, io)`.
+using EeAppStormFn = void(*)(void*, int32_t, EeAppStormIo*);
 
 extern "C" {
 
@@ -1379,6 +1458,29 @@ int32_t ee_app_settings_write(EeAppSettingsFields *settings,
 bool ee_app_settings_after_load(EeAppSettingsFields *settings,
                                 const EeAppSettingsFields *defaults,
                                 bool korean);
+
+/// `EEEMStorm(kind)`'s plain members.
+///
+/// # Safety
+/// `out` is live.
+void ee_app_storm_init(EeAppStormFields *out, long kind);
+
+/// `Step(time)`: the record copied in, the step run, copied back (no host op touches it).
+///
+/// # Safety
+/// `fields` is live; `call` and `ctx` are live for the call.
+void ee_app_storm_step(EeAppStormFields *fields, EeAppStormFn call, void *ctx, unsigned long time);
+
+/// `GetTypeName(kind)`: a NUL-terminated static name.
+const char *ee_app_storm_type_name(long kind);
+
+/// The route planners' step cost (`snow`, else rain): the step between sectors (`other_sector`, `straight`: the
+/// centres share an axis), the tile's kind and (snow) whether it is on a hill.
+long ee_app_storm_route_cost(bool snow,
+                             bool other_sector,
+                             bool straight,
+                             long kind,
+                             bool hill);
 
 }  // extern "C"
 
