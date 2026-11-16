@@ -25924,7 +25924,7 @@ objects the same way (about 25 cases). The hosts' remaining cases are C++ calls 
 | Gate | code commits | final tree (merged with rust 1c108108) |
 |---|---|---|
 | `build.py -j 3 --sim` | 0 unresolved, 0 duplicates (878/879 inputs) | 0 / 0 (852/853 inputs), again after 51de19f1 |
-| Rust gate | 12402d18: tests and clippy PASS, rustfmt (fixed before the commit); e648fad5 was not gated: its test module before other items failed clippy on the merged tree (fixed in 4f6b3258) | PASS (3,989 tests) |
+| Rust gate | 12402d18: tests and clippy PASS, rustfmt (fixed before the commit); e648fad5 was not gated: its test module before other items failed clippy on the merged tree (fixed in 4f6b3258) | PASS (3,987 tests) |
 | oracle | seeds 2-3 identical (12402d18) | seeds 2-7 identical (before 51de19f1, which changes only the LAN host) |
 | lobby wontest | won_lanmodel_test, won_lanobj_test, won_stagingobj_test, won_lanlogic_test, won_staging_test, won_lan_test exit 0 | 26 programs exit 0 (round 10's 25 and won_lanmodel_test) |
 | `--test-profile windowed-software` | | 0 unresolved, 0 duplicates, again after 51de19f1 |
