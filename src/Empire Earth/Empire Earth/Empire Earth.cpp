@@ -1065,8 +1065,6 @@ void EECreateGameTimer()
 #include "ee/EEROTerrain.h"
 #include "ee/EEROGroundShadows.h"
 #include "ee/EEEffect.h"
-#include "ee/EEEffect2D.h"
-#include "ee/EEE2DRust.h"
 
 void CreatePlaneModels(); // actual cdecl effect-media reset, defined in EEEffect.cpp
 
@@ -1311,7 +1309,6 @@ void EEInitGamePools()
     SESoundManager::InitializeSoundsPool(500, 100, 10);
     gDoppelgangerManager.SetPoolSize(500, 100);
     gDoppelgangerManager.SetComplexPoolSize(100, 100);
-    EEE2DRust::SetParticlePoolSize(256, 20);
 }
 
 
@@ -1506,7 +1503,6 @@ void EEGraphicsShutdown(bool inShutdown)
 // (EEDeleteDatabase passes true; the argument is not read)
 void EEReleaseGamePools(bool inShutdown)
 {
-    EEE2DRust::ReleaseParticlePool();
     EEComplexUnit::ReleasePool();
     UList<EEMiniMapDot>::sNodePool.DumpStats(false);
     UList<EEMiniMapUnitDot>::sNodePool.DumpStats(false);

@@ -9,7 +9,7 @@ use std::ffi::c_void;
 
 use ee_ge::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeTransformation};
 
-use crate::effects::EeGfxColor;
+use crate::effects::{EeGfxColor, EeGfxEffectQuad};
 use crate::lighting::EeGfxLighting;
 use crate::mesh::{EeGfxMeshTriangle, EeGfxMeshVertex};
 
@@ -126,8 +126,6 @@ pub struct EeGfxRaster {
     pub model_own_texture: extern "C" fn(model: EeGfxModel, texture: EeGfxModel),
     /// the render snapshot's camera transformation (`gRenderSnapshot.mCamera`)
     pub camera: extern "C" fn() -> GeTransformation,
-    /// the shared standing plane model (`gEffect2DModel`)
-    pub standing_plane: extern "C" fn() -> EeGfxModel,
     /// the main viewport's depth range, then the viewport set on the rasterizer (`gU4E8F08`)
     pub depth_range: extern "C" fn(near: f32, far: f32),
     pub set_zcompare: extern "C" fn(mode: u32),
@@ -149,16 +147,6 @@ pub struct EeGfxRaster {
     pub set_culling: extern "C" fn(mode: u32),
     /// adds `delta` to the v of every texture coordinate of vertex array 0 for good (nothing kept)
     pub model_shift_v: extern "C" fn(model: EeGfxModel, delta: f32),
-    /// `AddGroundQuad(center, color, yaw, size, heights, brightness, alpha reference)` (four heights)
-    pub ground_quad: extern "C" fn(
-        center: *const Ge3DPoint,
-        color: EeGfxColor,
-        yaw: f32,
-        size: f32,
-        heights: *const f32,
-        brightness: f32,
-        alpha_ref: f32,
-    ),
     /// `SetFrame(frame)` of a texture (`GETexture*`)
     pub texture_frame: extern "C" fn(texture: EeGfxModel, frame: u32),
     /// the camera's yaw (`gRenderSnapshot.mCameraYaw`)
@@ -166,20 +154,6 @@ pub struct EeGfxRaster {
     /// `GetZBuffer`, `GetZCompare`
     pub get_zbuffer: extern "C" fn() -> u32,
     pub get_zcompare: extern "C" fn() -> u32,
-    /// `AddGroundStrip(from, to, width, color, offset, size, alpha, brightness, alpha reference)`
-    pub ground_strip: extern "C" fn(
-        from: *const Ge3DPoint,
-        to: *const Ge3DPoint,
-        width: f32,
-        color: EeGfxColor,
-        offset_u: f32,
-        offset_v: f32,
-        size_u: f32,
-        size_v: f32,
-        alpha: f32,
-        brightness: f32,
-        alpha_ref: f32,
-    ),
     /// `SetGraphicsNextFrame(next)` then `SetFractionalFramePosition(fraction)` (the tween between two frames)
     pub model_tween: extern "C" fn(model: EeGfxModel, next: u32, fraction: f32),
     /// `GetScreenPoint`: the world point's place on the screen (the camera, then the main viewport)
@@ -203,18 +177,6 @@ pub struct EeGfxRaster {
     /// `ComputeBoundingVolumes`, `ComputeModelNormals`
     pub model_bounds: extern "C" fn(model: EeGfxModel),
     pub model_normals: extern "C" fn(model: EeGfxModel),
-    /// one effect quad (`EE_GFX_SPRITE_GLOW`, `_GROUND`, `_BLENDED`: `AddGlowSprite`, `AddGroundSprite`,
-    /// `AddBlendedSprite` of `EEEffect.cpp`) at `position` turned by `rotation`
-    pub sprite: extern "C" fn(
-        kind: u32,
-        position: *const Ge3DPoint,
-        color: EeGfxColor,
-        rotation: f32,
-        size: f32,
-        alpha: f32,
-        brightness: f32,
-        alpha_ref: f32,
-    ),
     /// `GetAlphaTestingRefValue`
     pub get_alpha_ref: extern "C" fn() -> f32,
     /// `GetBlending(source, destination)`
@@ -305,6 +267,17 @@ pub struct EeGfxRaster {
     ),
     /// a texture's `Dereference` (`GETexture*`)
     pub texture_dereference: extern "C" fn(texture: EeGfxModel),
+    /// the main viewport's camera inverse (`gU4E8F08.GetCameraInverse()`), the render snapshot's camera pitch
+    pub camera_inverse: extern "C" fn() -> GeTransformation,
+    pub camera_pitch: extern "C" fn() -> f32,
+    /// a texture's `Reference`
+    pub texture_reference: extern "C" fn(texture: EeGfxModel),
+    /// an effect batch's (`effect_batch.rs`: 0 the camera batch, 1 the ground batch) four vertices from `index` on
+    /// (`SetVertex(color, point, normal, coordinate, opacity, index)` each)
+    pub batch_quad: extern "C" fn(which: u32, quad: *const EeGfxEffectQuad, index: u32),
+    /// an effect batch drawn: `count` vertices, `count / 2` polygons of the batches' polygon array, in `texture`
+    /// (`Draw(polygons, n, vertices, count, texture, screen, gOrthographicView)`)
+    pub batch_draw: extern "C" fn(which: u32, count: u32, texture: EeGfxModel) -> i32,
 }
 
 /// The rasterizer's fog (`GERFogAttributes`).
@@ -315,6 +288,8 @@ pub struct EeGfxFogAttributes {
     pub color: EeGfxColor,
     pub start: f32,
     pub end: f32,
+    /// `mScale` (the linear fade a unit of distance)
+    pub scale: f32,
 }
 
 /// One screen line of a batch (`screen_lines`): its colour and ends.
@@ -458,6 +433,11 @@ pub trait Raster {
         bottom: f32,
     );
     fn texture_dereference(&mut self, texture: EeGfxModel);
+    fn camera_inverse(&mut self) -> GeTransformation;
+    fn camera_pitch(&mut self) -> f32;
+    fn texture_reference(&mut self, texture: EeGfxModel);
+    fn batch_quad(&mut self, which: u32, quad: &EeGfxEffectQuad, index: u32);
+    fn batch_draw(&mut self, which: u32, count: u32, texture: EeGfxModel) -> i32;
 }
 
 impl Raster for &EeGfxRaster {
@@ -528,7 +508,7 @@ impl Raster for &EeGfxRaster {
         (self.camera)()
     }
     fn standing_plane(&mut self) -> EeGfxModel {
-        (self.standing_plane)()
+        crate::effect_batch::plane_model(true)
     }
     fn depth_range(&mut self, near: f32, far: f32) {
         (self.depth_range)(near, far)
@@ -573,7 +553,7 @@ impl Raster for &EeGfxRaster {
         brightness: f32,
         alpha_ref: f32,
     ) {
-        (self.ground_quad)(center, color, yaw, size, heights.as_ptr(), brightness, alpha_ref)
+        crate::effect_batch::ground_quad(self, center, color, yaw, size, heights, brightness, alpha_ref)
     }
     fn ground_strip(
         &mut self,
@@ -587,7 +567,7 @@ impl Raster for &EeGfxRaster {
         brightness: f32,
         alpha_ref: f32,
     ) {
-        (self.ground_strip)(from, to, width, color, offset.0, offset.1, size.0, size.1, alpha, brightness, alpha_ref)
+        crate::effect_batch::ground_strip(self, from, to, width, color, offset, size, alpha, brightness, alpha_ref)
     }
     fn texture_frame(&mut self, texture: EeGfxModel, frame: u32) {
         (self.texture_frame)(texture, frame)
@@ -647,7 +627,7 @@ impl Raster for &EeGfxRaster {
         brightness: f32,
         alpha_ref: f32,
     ) {
-        (self.sprite)(kind, position, color, rotation, size, alpha, brightness, alpha_ref)
+        crate::effect_batch::sprite(self, kind, position, color, rotation, size, alpha, brightness, alpha_ref)
     }
     fn get_alpha_ref(&mut self) -> f32 {
         (self.get_alpha_ref)()
@@ -768,6 +748,21 @@ impl Raster for &EeGfxRaster {
     }
     fn texture_dereference(&mut self, texture: EeGfxModel) {
         (self.texture_dereference)(texture)
+    }
+    fn camera_inverse(&mut self) -> GeTransformation {
+        (self.camera_inverse)()
+    }
+    fn camera_pitch(&mut self) -> f32 {
+        (self.camera_pitch)()
+    }
+    fn texture_reference(&mut self, texture: EeGfxModel) {
+        (self.texture_reference)(texture)
+    }
+    fn batch_quad(&mut self, which: u32, quad: &EeGfxEffectQuad, index: u32) {
+        (self.batch_quad)(which, quad, index)
+    }
+    fn batch_draw(&mut self, which: u32, count: u32, texture: EeGfxModel) -> i32 {
+        (self.batch_draw)(which, count, texture)
     }
 }
 
@@ -1193,5 +1188,21 @@ impl Raster for LogRaster {
     }
     fn texture_dereference(&mut self, texture: EeGfxModel) {
         self.calls.push(format!("texture dereference {}", texture as usize));
+    }
+    fn camera_inverse(&mut self) -> GeTransformation {
+        GeTransformation::IDENTITY
+    }
+    fn camera_pitch(&mut self) -> f32 {
+        0.0
+    }
+    fn texture_reference(&mut self, texture: EeGfxModel) {
+        self.calls.push(format!("texture reference {}", texture as usize));
+    }
+    fn batch_quad(&mut self, which: u32, _quad: &EeGfxEffectQuad, index: u32) {
+        self.calls.push(format!("batch quad {which} {index}"));
+    }
+    fn batch_draw(&mut self, which: u32, count: u32, texture: EeGfxModel) -> i32 {
+        self.calls.push(format!("batch draw {which} {count} {}", texture as usize));
+        0
     }
 }

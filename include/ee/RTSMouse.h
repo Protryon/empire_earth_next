@@ -11,12 +11,7 @@ class GEScreen;
 class GESurface;
 class TSCriticalSection;
 
-// The area under the pointer, saved before it is drawn (0x14 bytes; RTSMouse +0x24/+0x38; Virtual04 0x11b02b creates
-// mSurface on the screen, SaveUnder copies the screen into it, RestoreUnder copies it back) (provisional name)
-struct RTSMouseSaveUnder {
-    GERectangle mRect;                      // +0x00
-    GESurface* mSurface;                    // +0x10
-};
+struct EeGfxMouseFrame;                      // ee_gfx mouse_frame.rs
 
 class RTSMouse {
 public:
@@ -24,7 +19,7 @@ public:
     virtual ~RTSMouse();                    // +0x00 (??_G 0x11acbe)
     virtual long Load(GEScreen* inScreen);        // +0x04 0x11b02b (calls inScreen's GetCurrentMode; EEGraphics passes the game screen; returns the load result)
     virtual long Release();                 // +0x08 0x11b373 (returns 0)
-    virtual GESurface* GetPointerSurface(unsigned long inIndex);  // +0x0c 0x11af52: mPointerSurfaces[inIndex] below 10, else NULL
+    virtual GESurface* GetPointerSurface(unsigned long inIndex);  // +0x0c 0x11af52: pointer inIndex below 10 (EEMouse's 0x10a9d1: 10..23 its own), else NULL
     // 0x11af66: finds inFile on the texture path and loads it into *ioSurface on inScreen (EEMouse::Load passes
     // its 14 pointer files; provisional name)
     long LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** ioSurface);
@@ -45,20 +40,16 @@ public:
     void ClampPosition();                   // 0x11b31c: mPosition into mBounds (provisional name)
 
     GE2DPoint mPosition;                    // +0x04 (provisional name; the unit calamities pick the unit under it)
-    GE2DPoint mDrawnPosition;               // +0x0c (the ctor zeroes it right after mPosition; BeginFrame copies mPosition into it, SaveUnder saves under it) (provisional name)
     // +0x14: the bounds the position is clamped to (SetBounds; GERectangle's operator= order top/left/bottom/right:
     // +0x20/+0x18/+0x14/+0x1c) (provisional name)
     GERectangle mBounds;
-    // +0x24/+0x38: the two save-under records (the ctor zeroes both rectangles and points mCurrentSaveUnder /
-    // mPreviousSaveUnder at them; BeginFrame swaps the pointers each frame)
-    RTSMouseSaveUnder mSaveUnder24;         // +0x24
-    RTSMouseSaveUnder mSaveUnder38;         // +0x38
-    GESurface* mPointerSurfaces[10];        // +0x4c (zeroed with one rep stosd; Virtual04 loads the pointer files into them, Virtual08 dereferences them)
-    GESurface* mCurrentSurface;             // +0x74 (EndFrame dereferences and clears it; the current pointer surface: BeginFrame = Virtual0C(..), GetWidth/GetHeight/CopyTo)
+    // port (R4.4, twenty-sixth round): the frame's state, ee_gfx mouse_frame.rs's: the drawn position (+0x0c), the two
+    // save-under records (+0x24/+0x38, each a rectangle and a 32x32 surface; BeginFrame swaps the current and
+    // previous, +0x80/+0x84), the ten pointer pictures (+0x4c; EEMouse's fourteen, +0xa8, after them), the frame's
+    // pointer (+0x74), the in-frame and just-loaded flags (+0xa1, +0xa3)
+    EeGfxMouseFrame* mFrame;
     TSCriticalSection* mRenderLock;         // +0x78
     TSCriticalSection* mInputLock;          // +0x7c
-    RTSMouseSaveUnder* mCurrentSaveUnder;   // +0x80 (= &mSaveUnder24)
-    RTSMouseSaveUnder* mPreviousSaveUnder;  // +0x84 (= &mSaveUnder38)
     float mSensitivity;                     // +0x88
     unsigned long mDesktopHeight;           // +0x8c (the desktop height; unsigned: Update divides by it through a zero-extended qword temp)
     unsigned long mDesktopWidth;            // +0x90 (the desktop width; unsigned, likewise)
@@ -66,9 +57,7 @@ public:
     volatile long mPointer;                 // +0x98 (volatile: EEMSavedGroupSelect stores `mov dword ptr [x], 0`)
     volatile long mOverlay;                 // +0x9c (= 8; volatile like mPointer: BeginFrame keeps the push next to the call, 0x11b240)
     volatile bool mShiftMode;               // +0xa0 (volatile: `mov byte ptr [x], 0`, 0xbe1b7) set with the local player's shift mode (0xbe076; provisional name)
-    bool mInFrame;                          // +0xa1
     bool mBA2;                              // +0xa2
-    bool mIsJustLoaded;                     // +0xa3 (= true)
     bool mIsFrozen;                         // +0xa4
 };
 

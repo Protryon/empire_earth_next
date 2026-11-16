@@ -497,6 +497,7 @@ EeGePhysicalModels PMTable()
 }
 const EeGePhysicalModels kPMModels = PMTable();
 }   // namespace
+const EeGePhysicalModels* GEPhysicalModelTable() { return &kPMModels; }   // the unit picker's walks (ee_gfx pick_walk.rs)
 
 // Places a model in the world at a location and scale, holding a reference to it, at frame 0
 GEPhysicalModel::GEPhysicalModel(GEModel* inModel, const GETransformation& inLocation, float inScale)

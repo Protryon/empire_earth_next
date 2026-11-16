@@ -1,34 +1,30 @@
-// C:\EEX\Empire Earth\Graphics Thread\EEGraphicalGoalManager.h (RECONSTRUCTION; file name inferred; INCOMPLETE). The
-// graphical goals (the "go here" markers: EEGraphicalGoal, vtable 0x4412a0, which create their effects through
-// gEffectManager) kept by EEEffectManager +0x24 (vtable 0x4412a8: only the deleting dtor; EEGraphicalGoalManager.cpp
-// 0x107616..0x10972b). sizeof 0x10. Names are provisional.
+// C:\EEX\Empire Earth\Graphics Thread\EEGraphicalGoalManager.h (RECONSTRUCTION; file name inferred). The
+// graphical goals (the "go here" markers of the current player's selected units: marching lines and icons, made
+// through gEffectManager) kept by EEEffectManager +0x24 (vtable 0x4412a8: only the deleting dtor;
+// EEGraphicalGoalManager.cpp 0x107616..0x10972b). Names are provisional.
+// port (R4.4, twenty-sixth round): the markers and every algorithm are ee_gfx goal_markers.rs's (the original's
+// EEGraphicalGoal, held by value in a map of maps of vectors, is its GoalMarker); this class holds the Rust object
+// and answers its questions (EEGraphicalGoalManager.cpp).
 #ifndef EE_EEGRAPHICALGOALMANAGER_H
 #define EE_EEGRAPHICALGOALMANAGER_H
 
-#include <map>
-#include <vector>
-
-class EEGraphicalGoal;                      // ee/EEGraphicalGoal.h (held by value: 0x28 bytes)
 class FSFile;
+struct EeGfxGoalMarkers;
 
 class EEGraphicalGoalManager {
 public:
     EEGraphicalGoalManager();
-    virtual ~EEGraphicalGoalManager();      // +0x00 0x1077e9 (??_G 0x1077cd)
+    EEGraphicalGoalManager(const EEGraphicalGoalManager&) = delete;   // owns its markers
+    virtual ~EEGraphicalGoalManager();      // +0x00 0x1077e9 (??_G 0x1077cd): every marker's effect destroyed
     // ICF-folded into EEE3DCommandConfirmation::Load 0xea1fc (EEEffectManager::Load calls it) (provisional name)
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
     // ICF-folded into 0x27cf38 (EEEffectManager::RepairPointers calls it) (provisional name)
     long RepairPointers(unsigned long inFirst, unsigned long inSecond);
-    void Update();                          // 0x1081f1 (EEEffectManager::Update, every tick) (provisional name)
-    // EEGraphicalGoalManager.cpp's own members (provisional names)
-    void Rebuild(long inPlayer);            // 0x1078c9: the current player's selected units' goal markers
-    void AddGoal(long inPlayer, unsigned long inCount, long inType);      // 0x10786c: one more when inCount >= the count
-    void TrimGoals(long inPlayer, unsigned long inCount, long inType);  // 0x108185: drops goals from the front to inCount
-    unsigned long GetGoalCount(long inPlayer, long inType);
+    // 0x1081f1 (EEEffectManager::Update, every tick): the current player's markers rebuilt (Rebuild 0x1078c9,
+    // AddGoal 0x10786c, TrimGoals 0x108185), then every changed marker's effect moved (EEGraphicalGoal::Update)
+    void Update();
 
-    // +0x04 the goals by player, then by type (the dtor/Update walk: outer node +0x10 is the inner map, inner node
-    // +0x10 the vector, 0x28-byte elements; was map<unsigned long, EEGraphicalGoal*>)
-    std::map<unsigned long, std::map<unsigned long, std::vector<EEGraphicalGoal> > > mGoals;
+    EeGfxGoalMarkers* mMarkers;             // +0x04 (ee_gfx goal_markers.rs; was the map of maps of vectors)
 };
 
 #endif

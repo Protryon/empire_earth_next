@@ -26329,3 +26329,164 @@ the merge's strip_markers run removes the rest of them).
   lit, render checks ok; against the base exe the menus as above: 110 pixels in the animated corner, 0 elsewhere);
   the orders game `ORDERS PASS` (gather, repair, repair-queued, move) and `SCROLL CHECK PASS`, `RESULT PASS
   random-game` (the left edge scroll moved 0.041 as on this machine before); the HUD by eye as before.
+
+## R4.4, twenty-fifth round: one EEEffect class for every effect kind; the quad batches, the plane models and the battlefield decals' placement in Rust (ee_gfx effect_batch.rs, effect_kinds.rs, effect_placement.rs; branch rust-gfx31, 2026-11-15)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 9,575 lines at the round's start; 9,290 after the
+batches (-285); 8,403 after the one class (-887); 8,324 after the decals (-79); 7,782 merged with rust 03ab5fe8 and
+its markers stripped (not counted). Deleted: `EEEffect2D.cpp`,
+`EEEffect3D.cpp`, `EEE2DRust.cpp` and the headers `EEEffect2D.h`, `EEEffect3D.h`, `EEE2DRust.h`, `EEE3DRust.h`;
+`EEE3DRust.cpp` became `EEEffectHost.cpp`. The round's C++ diff over `src` and `include/ee`: +2,702 -4,269 (net
+-1,567).
+
+| Commit | What | Graphics Thread C++ (.cpp) |
+|---|---|---|
+| ef2251d3, 537053c1 | the quad batches, `GetEffectFogFactor` and the plane models (`effect_batch.rs`) | -285 |
+| cb2ff2b0 | one `EEEffect` class: the 2D and 3D bases and both Rust leaf classes merged, the manager's switches gone | -887 |
+| d7a47e18 | the battlefield decals' placement (`effect_placement.rs`) | -79 |
+
+- **The quad batches** (`effect_batch.rs`). The camera batch (additive, camera-facing quads) and the ground batch
+  (`AddGroundSprite`, `AddGroundQuad`, `AddBlendedSprite`, `AddGroundStrip`): their textures (referenced twice by
+  `begin`), smallest alpha references, counts, the flush when full and both flushes' state sequences are Rust; the
+  raster table's `sprite`, `ground_quad` and `ground_strip` go straight into them in Rust (the entries are gone), and
+  the table has five new ones: `camera_inverse`, `camera_pitch`, `texture_reference`, `batch_quad` (a quad's four
+  `SetVertex`) and `batch_draw`. `GetEffectFogFactor` reads the fog's attributes through `get_fog_attributes`, which
+  now carries the scale. The plane models (`gEffect2DModel`, `gU4E8DF4`) are Rust's (`ee_gfx_effect_plane_model`;
+  the `standing_plane` entry is gone). The C++ keeps the vertex and polygon arrays and one-line forwarders
+  (`BeginEffectBatches` ... `ReleasePlaneModels`: their callers are other units).
+  - **Trap (test):** the batch state is a process static (`Mutex`): the unit tests take a lock of their own, and a
+    flush's log ends with the culling's restore after the draw (one test read the draw's next call as the quad).
+- **One class.** The original's bases `EEEffect`, `EEEffect2D`, `EEEffect3D` and the port's two leaf classes
+  (`EEE2DRust`, `EEE3DRust`, which held every kind since round 23) are one non-virtual `EEEffect` (only the
+  destructor is virtual, from `UReferenceCounter`): the record, the 2D kinds' parts and plane model, the 3D kinds'
+  members; `mIs2D` (`ee_gfx_effect_is_2d`, `effect_kinds.rs`) picks the Rust entry (`ee_gfx_effect2d` or `3d`) and
+  its host. Nine constructors, one a manager entry point (on a unit, at a point, unit to point, between units,
+  between points, along a line, over tiles, at a transformation, for loading), each choosing the original leaf's
+  body by kind; the manager's eight construction switches and its load switch are one line each (the plan,
+  `effect_manager.rs`, already names the kinds an entry makes; `ee_gfx_effect_loadable` the saved ones). `Load`,
+  `Save` and `RepairPointers` are one chain each (the base's record, then the 2D or 3D part, then the kind's), as are
+  the destructor and `ReleaseResources`. One `Ask` struct answers both hosts; the questions they shared (push,
+  frames, unit location, terrain z, orbitals, the graphic object's media, texture and model, the particles' ground)
+  are one function each. `EEEMStorm` keeps its `EEE3DRust*` member through a typedef.
+  - **Behaviour change:** the pooled 2D particle (0x2e) is a `new EEEffect` like every effect (the pool held 256 x
+    20 and was reset by `Reinit`; the 3D particle lost its pool in round 23). `PrepareQueue` (empty in every class)
+    is gone with its call in `QueueEffects`.
+  - **Trap (types):** `EEMapTile` is a typedef of `EETile`: a forward declaration `class EEMapTile;` in a header
+    breaks every unit that includes `EEMap.h` after it. Forward-declare `EETile` and repeat the typedef.
+- **The decals' placement** (`effect_placement.rs`). `EEPlaceImpactDecal` (a crash's or a shot's shell holes) and
+  `EEPlaceTrackDecal` (a blood stain or track): the variant pick (`GetEffectRandomLong` only with a linked effect),
+  the chance and scatter rolls, the search for a decal on the spot over the manager's list (compared in double), the
+  spread at the map's height and the giraffe's and horse's offsets; the effects' random draws in the original's order.
+  The C++ keeps the entry tests and answers through `EeGfxDecalHost`.
+- **Golden driver** (`build/gx31/drv/make_r25b.py COMMIT|WORKTREE OUT`): the original batch functions and plane
+  models of 86d223b6 against the new forwarders, arrays and raster table entries (cut from `EERenderObject.cpp` by
+  name) over the Rust, over one stub GE printing every rasterizer, vertex array, polygon array, texture and model
+  call with floats as bits: 150 rounds on seed 1 (157,948 lines) and 400 on seed 2 (396,013 lines: 725 draws, 90
+  of them full batches), identical. The one class and the decals are simulation-reached code: the effects capture
+  (seeds 2-7, every swept kind made, stepped, saved, loaded, repaired), the calamity capture and the oracle pin them.
+- **Gates.** Per commit: `build.py --sim` 0/0 each; the batches: the oracle at seeds 2-3 identical, the effects
+  capture at seeds 2-7 PASS (18 digests), the Rust gate's one failing test fixed as its own commit; the one class:
+  the oracle at seed 2 identical, seed 3 exited 2 with a 139-byte trace on the first run and was identical on its
+  rerun alone (a staging failure, no game ran), the effects capture PASS (18), the calamity capture at seeds 2-3
+  PASS (195 digests); the decals: the oracle at seeds 2-3 identical, the effects capture PASS (18), the calamity capture PASS (195), the Rust gate's tests PASS (3,738) with clippy failing on the decal tests' `1 as *mut c_void` (`manual_dangling_ptr`) and rustfmt on three lines, both fixed as their own commit (dc716ef6).
+- **The merges.** `rust` c80a1b00 (6033e8e9): PORT_LEARNINGS.md conflicted (rust's copy lacked round 24's section:
+  rust's taken, round 24's appended); `rust_build.py header` reordered two consts (34a384bb), `rust_includes.py`
+  changed nothing. On that result: both builds 0/0, the Rust gate PASS (3,883 tests; clippy, rustfmt, header), the
+  oracle identical on seeds 2-7, the oracle, late and calamity captures at seeds 2-3 PASS (179, 180, 197 digests)
+  and the effects capture at seeds 2-7 PASS (18), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt` PASS, the tour `RESULT PASS tour` and the orders game `RESULT PASS random-game`
+  (gather, repair, queued repair, move). Then, as the lead asked, `rust` 03ab5fe8 (the address markers deleted
+  repo-wide; d3a8b9ed): the units this round deleted or rewrote and round 24's render objects conflicted on marker
+  lines only (this branch's side taken, PORT_LEARNINGS rust's with rounds 24 and 25 appended), then
+  `tools/strip_markers.py` on the merged tree as its own commit (07bb4854: 299 lines in six units, not counted in
+  the round's net). `rust`'s tip past 03ab5fe8 (c7ffd6cd) did not build here: `ee_won`'s lib.rs lost `authcpp`,
+  `httpcpp`, `perftimer` and `routecpp` in the merge 4c0416ea (`WONRouting.h` calls `ee_won_smart_handle_input`, no
+  longer in the header) and `EEUICUnitIconBar.cpp` names `EEMSelectTheseUnits`, which the messages lane removed;
+  that merge was undone and 03ab5fe8 merged instead. On the final result (07bb4854): both builds 0/0, the Rust gate PASS (3,883 tests; clippy, rustfmt, header),
+  the oracle identical on seeds 2-7, the oracle, late and calamity captures at seeds 2-3 PASS (179, 180, 197) and the
+  effects capture at seeds 2-7 PASS (18); the saveload matrix and the harness sessions ran on the first merge only (the
+  second added marker deletions alone).
+- **The frames.** `build/gx31/frames.sh` (the tour at seed 7, `--pt-rate 40`, `--zoom-captures 100 40 20`), round
+  24's merged test exe (`build/gx30/new_exe`) against this round's first merged one, one after the other under the
+  harness lock: both `RESULT PASS tour`, no GX errors in either; the menus and settings equal but for 223 pixels of
+  the main menu (the version text); at each zoom and in the gameplay frame the same scene (the start's town centre,
+  its citizens and their shadows, the minimap), about two thirds of the pixels differing, three in four of those by
+  under 16 levels (the time of day's light; zoom 40 compared by eye), the rest where citizens stood in other poses,
+  the HUD's crown icons and the screens lane's new chat-line test text in this round's capture. No 2D sprite, decal,
+  glow or energy wall was in view.
+- **Only a tour or a person reaches:** every effect's draw (the batches carry every 2D sprite, the glow sprites,
+  the energy wall's strips, the energy wave's ground quads), the plane models (every 2D effect's quad), the decals'
+  draws.
+- **Not moved:** the effects' hosts (`EEEffectHost.cpp`, ~2.1k lines: the world reads the Rust effects ask for,
+  tag points, units, the map, sounds), the manager's capture sweep (test code), `EERenderObject.cpp`, the frame,
+  picker, goal manager and mouse.
+
+## R4.4, twenty-sixth round: the goal markers, the picker's walks and the pointer's frame in Rust (ee_gfx goal_markers.rs, pick_walk.rs, mouse_frame.rs; branch rust-gfx32, 2026-11-15)
+
+C++ (`src/Empire Earth/Graphics Thread/*.cpp`, `src/RTS Engine/Graphics/*.cpp`, `include/ee`): the round's diff +322
+-758 (net -436); Graphics Thread `.cpp` 7,782 -> 7,449 lines, `RTS Engine/Graphics` 1,049 -> 992. Deleted:
+`include/ee/EEGraphicalGoal.h`.
+
+| Commit | What | C++ (.cpp/.h) |
+|---|---|---|
+| 55d05c09 | the goal markers whole in Rust (`goal_markers.rs`) | -155 .cpp, -27 .h |
+| 91957189 | the picker's walks (`pick_walk.rs`) over the entries in place and ee_ge's model table | -157 .cpp, -8 .h |
+| 9fcd713f | the pointer's frame whole in Rust (`mouse_frame.rs`) | -77 .cpp, -12 .h |
+
+- **The measure.** The frame, picker, goal manager and mouse were 2,032 lines (`RTSGraphics.cpp` 539, `RTSMouse.cpp`
+  399, `RTSMousePointer.cpp` 111, `EEUnitPicker.cpp` 525, `EEGraphicalGoalManager.cpp` 375, `EEMouse.cpp` 67, and
+  their headers). What moved is the state and the walks; what stays is a call into another C++ object per line:
+  the graphics thread's loop and messages (`TSThread`, the rasterizer, movies, the conductor's volume, the render
+  objects' virtuals), `RenderLobby` (the lobby's frame lock, a surface's creation, `GEPackBGRXRow` per row), the
+  pointer files' loading (`FSFileSpec`, the texture pack) and the pointer thread's loop. A Rust frame over a host of
+  those calls adds about as many lines as it frees: not moved. `EERenderObject.cpp`'s fill, re-measured: the render
+  snapshot (R5a.3) holds the camera, the terrain mesh and the coloured rectangles, not the units, so a Rust fill
+  "over the snapshot" needs the units copied into it first (more C++); `FillUnit`, `FillObject`, the doppelgangers and
+  the ghost records each read 20-40 fields of `EEUnit`, its class, upgrade, player and model, then call
+  `LoadMedia`, the picker and the texture maps. The units' Rust bases (`EeUnitsUnitFields` and the class records)
+  sit at C++ base offsets Rust cannot compute without a host per object: no gain this round. `EEEffectHost.cpp`'s
+  `Ask` members are the same pattern (a field or two of a unit through its class, stats or model, then a C++ call):
+  no answer there is a plain read of a Rust record.
+- **The goal markers** (`goal_markers.rs`). `EEGraphicalGoalManager` holds an `EeGfxGoalMarkers*` (the original's
+  map of maps of `EEGraphicalGoal` by value, a `BTreeMap` of `BTreeMap`s of `GoalMarker` walked in key order);
+  `Rebuild` (the unit kinds, the seven marker types per queue, the airport's spacing, the ground points, the target
+  carried from one goal to the next as the original's variable was), `AddGoal`, `TrimGoals`, `Update` and the
+  destructor's walk are Rust. `EEGoalOps` answers `EeGfxGoalHost` (the player, the selected units, their goals and
+  targets, the map's ground, the markers' effects made, moved and destroyed through `gEffectManager`).
+  - **Behaviour change:** a marker whose effect was not made (its graphic effect above the detail setting) has handle
+    0; the original's `mEffect` was never written then (the temporary's uninitialised member, copied into the
+    vector), so `GetEffect` could find and move an unrelated effect.
+  - **Trap (cbindgen):** a module `const` is exported even when private: `GOAL_LOAD_GARRISON` here and in ee_units
+    became a common constant and was dropped from `ee_units.h`. Every const in the module is `EE_GFX_MARKER_...`.
+- **The picker's walks** (`pick_walk.rs`). `FindUnit` (the ray, the bounding then exact tests at the pick scales,
+  the pixel size, the ranking, the carrier), `PickUnits` with `PickUnitsOfType`, `PickUnitsInRectangle` and the
+  frustum test `GetIsEntryInView` / `GetIsModelInView` are Rust, over the entries in place (`EeGfxPickEntry`, the
+  `#[repr(C)]` mirror of `EEUnitPickerEntry`, size and id offset asserted) and the model table
+  `GEModel.cpp` fills for ee_ge's line walk (`GEPhysicalModelTable()`, one line added there; the GE lane merged `GEPhysicalModel.cpp` into it on `rust`, the accessor moved with it in the merge; the line test
+  is `ee_ge_physical_line_walk` itself, as `GEPhysicalModel::Intersects` calls it). The C++ keeps the entries'
+  filling (`AddUnit`), the lock, the frustum's planes and `EEPickOps` (the units' facts, the pixel size, the
+  carriers, the result vector). `EEUnitPickerHit` and ten of pick.rs's FFI wrappers are gone.
+- **The pointer's frame** (`mouse_frame.rs`). `RTSMouse` holds an `EeGfxMouseFrame*`: the 24 pointer slots (the
+  engine's ten, `EEMouse`'s fourteen after them; `GetPointerSurface` is one function, `EEMouse`'s override gone),
+  both save-under records and their swap, the drawn position, the frame's pointer, the in-frame and just-loaded
+  flags; `BeginFrame` (the shift mode's composition in slot 9), `SaveUnder`, `Draw`, `RestoreUnder`, `EndFrame`
+  (moved from `EEGraphics.cpp`) and both `Release`s are one Rust call each over a surface table. The loads fill the
+  slots in place (`RTSMouseSlot`). The members other units set (position, bounds, pointer, overlay, shift mode,
+  freeze) stay.
+- **Golden drivers** (`build/gx32/drv/`): `make_r26a.py` (the goal markers: the original unit and headers of 1a8a67bc
+  against the new unit over the Rust, one mock world of players, selections, goal queues, targets and ground, one
+  mock effect manager printing every effect call with floats as bits; 8 seeds of 300-600 ticks, 5,650-11,109 lines
+  each, identical; every marker type made); `make_r26b.py` (the picker: the original functions of 1a8a67bc over
+  that commit's FFI against the new host and walks, both over one mock world, mock models with frames, materials,
+  four LODs and sub-models through one physical model table, and a mock frustum; 6 seeds of 300 rounds of 6 picks
+  and 4 box or lasso selections, 3,301 lines each, identical; 71-100 picks hit and 195-305 selections non-empty per
+  seed); `make_r26c.py` (the pointer: the original members of 1a8a67bc against the new forwarders, mock surfaces
+  printing every copy with rectangles as bits, reference and dereference; both threads' sequences, the shift mode,
+  reloads and releases; 6 seeds of 800 frames, 1,566-1,677 copies each, identical). The old picker driver links a
+  Rust library built with the old `ffi.rs` (the removed wrappers over the unchanged pick.rs).
+  - **Trap (driver):** the mock models first had three LODs while `view_lod` picks up to the fourth: both versions
+    read past the material's arrays and walked billions of polygons (a hang, not a difference).
+- **Gates.** Gates per piece (one combined run before the commits, the three pieces built together): `build.py --sim` 0/0, the oracle at seeds 2-3 identical, the effects capture at seeds 2-7 PASS (18 digests), the calamity capture at seeds 2-3 PASS (197), the Rust gate's tests PASS (3,892) and clippy PASS with rustfmt failing on the new modules (formatted before the commits). On the result merged with `origin/rust` 1c108108 (8bcb9e86): `strip_markers.py --check` nothing to change, both builds 0/0, the oracle identical on seeds 2-7, the oracle, late and calamity captures at seeds 2-3 PASS (187, 188, 205 digests), the effects capture at seeds 2-7 PASS (18), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS, the Rust gate PASS (4,002 tests; clippy, rustfmt, header; its first run failed one ee_won test, `eecolor::tests::the_palette_is_the_originals_until_the_game_sets_it`, under load with two harness sessions running, which passed alone and on the rerun); the tour `RESULT PASS tour` with both exes, the orders game with box select: the first run `RESULT FAIL` (a desert start with no resource in view: the gather scouted, then both clicks on the target gave no message, the fixture's known `no-message` after a scout, PORT_LEARNINGS "R5b.4, tenth round"; the box select before it PASS, 4 steps), then the orders game alone and with box select `RESULT PASS random-game` (box select PASS 4 steps; gather, repair, queued repair, move), round 25's exe with box select and orders PASS as well. The frames (the tour at seed 7, `--pt-rate 40`, zoom captures 100 40 20; round 25's merged test exe against this round's merged one, one after the other under the harness lock): no GX errors in either; the menus equal but for 211 pixels of the main menu (the version text); the gameplay frame and each zoom the same scene (the start's town centre, citizens, shadows, the mini map), 49-71% of the pixels differing, half to two thirds of those by under 16 levels (the time of day's light, the citizens' poses).
+- **Only a person or a tour reaches:** the pointer's drawing (every frame, both threads), the box selection's and
+  the lasso's frustum test, the goal markers' effects (the selected units' queued goals; the orders game's shifted
+  orders make them), the picks of every click.

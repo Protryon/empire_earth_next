@@ -97,8 +97,6 @@ dde94 ddee7 Empire Earth/Formations/EEFShortLine.cpp
 ddee7 ddf3a Empire Earth/Formations/EEFStaggeredLine.cpp
 ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 10251d 10428c Empire Earth/Graphics Thread/EEEffect.cpp
-10428c 1050fb Empire Earth/Graphics Thread/EEEffect2D.cpp
-1050fb 1054ec Empire Earth/Graphics Thread/EEEffect3D.cpp
 1054ec 107616 Empire Earth/Graphics Thread/EEEffectManager.cpp
 107616 10972b Empire Earth/Graphics Thread/EEGraphicalGoalManager.cpp
 10972b 10a9b0 Empire Earth/Graphics Thread/EEGraphics.cpp

@@ -22,8 +22,11 @@
 
 #include "ee/RTSMouse.h"
 #include "lle/GERenderState.h"
-#include "rust/ee_ge.h"   // ee_gfx mouse.rs: ClampPosition and Update's move (RUST_PLAN R4.4)
+#include "rust/ee_ge.h"   // ee_gfx mouse.rs (ClampPosition, Update's move), mouse_frame.rs (the frame)
 #include "rust/ee_gfx.h"
+// the GE value classes as their #[repr(C)] mirrors (the same storage)
+static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GERectangle) == sizeof(EeGeRectangle), "GE mirrors");
+
 // 0x4be9f8: the pointer textures, by pointer index (Virtual0C); the last slot repeats the blank pointer. PNG files
 // (the original's were Targa files, .tga; RUST_PLAN D9)
 static const char* sPointerFiles[10] = {
@@ -45,31 +48,53 @@ static long sMinYValue = 100;
 // 0x5297a8: the pointer textures' transparent colour (blue)
 static GEColor sTransparencyColor(0.0f, 0.0f, 1.0f);
 
+// The frame's surface calls (ee_gfx mouse_frame.rs)
+static uint32_t EEMouseWidth(void* inSurface) { return (uint32_t)static_cast<GESurface*>(inSurface)->GetWidth(); }
+static uint32_t EEMouseHeight(void* inSurface) { return (uint32_t)static_cast<GESurface*>(inSurface)->GetHeight(); }
+static int32_t EEMouseCopy(void* inFrom, void* inTo, const EeGeRectangle* inSource, const EeGeRectangle* inDestination,
+                           bool inTransparent)
+{
+    GERectangle theSource = *reinterpret_cast<const GERectangle*>(inSource);   // CopyTo takes non-const references
+    GERectangle theDestination = *reinterpret_cast<const GERectangle*>(inDestination);
+    return (int32_t)static_cast<GESurface*>(inFrom)->CopyTo(static_cast<GESurface*>(inTo), theSource, theDestination,
+                                                            inTransparent);
+}
+static void EEMouseReference(void* inSurface) { static_cast<GESurface*>(inSurface)->Reference(); }
+static void EEMouseDereference(void* inSurface) { static_cast<GESurface*>(inSurface)->Dereference(); }
+static const EeGfxMouseSurfaces kMouseSurfaces = {EEMouseWidth, EEMouseHeight, EEMouseCopy, EEMouseReference,
+                                                  EEMouseDereference};
+
+// One of the frame's calls (ee_gfx_mouse_frame_call's ops)
+long RTSMouseFrameCall(RTSMouse* inMouse, uint32_t inOp, GESurface* inSurface, const GE2DPoint* inOrigin, bool inFlag)
+{
+    return ee_gfx_mouse_frame_call(inMouse->mFrame, &kMouseSurfaces, inOp, inSurface,
+                                   reinterpret_cast<const EeGe2DPoint*>(inOrigin), (uint32_t)inMouse->mPointer,
+                                   (uint32_t)inMouse->mOverlay, inFlag);
+}
+
+// Pointer slot inIndex (0..23) or save-under record 24 + k's surface, filled in place by the loads
+GESurface** RTSMouseSlot(RTSMouse* inMouse, unsigned long inIndex)
+{
+    return reinterpret_cast<GESurface**>(ee_gfx_mouse_frame_slot(inMouse->mFrame, (uint32_t)inIndex));
+}
+
 // Creates the mouse with its render and input locks and the desktop size: normal pointer, plus overlay, no surfaces
 RTSMouse::RTSMouse()
+    : mFrame(ee_gfx_mouse_frame_new())
 {
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mRenderLock) == keseOK, 68);
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mInputLock) == keseOK, 69);
     int32_t theDesktopWidth = 0, theDesktopHeight = 0;
     PlatWindowGetDisplaySize(NULL, &theDesktopWidth, &theDesktopHeight);   // the desktop window's size
     this->mSensitivity = 1.0f;
-    this->mCurrentSaveUnder = &this->mSaveUnder24;
     this->mDesktopHeight = theDesktopHeight;
     this->mDesktopWidth = theDesktopWidth;
-    this->mPreviousSaveUnder = &this->mSaveUnder38;
     this->mWheel = 0;
     this->mPointer = 0;
     this->mOverlay = 8;
     this->mIsFrozen = false;
-    this->mInFrame = false;
     this->mBA2 = false;
-    this->mIsJustLoaded = true;
     this->mShiftMode = false;
-    this->mCurrentSurface = NULL;
-    this->mSaveUnder24.mSurface = NULL;
-    this->mSaveUnder38.mSurface = NULL;
-    for (unsigned long i = 0; i < 10; i++)
-        this->mPointerSurfaces[i] = NULL;
 }
 
 // Destroys the mouse's input and render locks
@@ -77,65 +102,27 @@ RTSMouse::~RTSMouse()
 {
     TSScheduler::DestroyCriticalSection(this->mInputLock);
     TSScheduler::DestroyCriticalSection(this->mRenderLock);
+    ee_gfx_mouse_frame_free(this->mFrame);
 }
 
 // Saves the screen under the pointer (at the frame's drawn position, clipped to the surface) into the current
 // save-under record
 void RTSMouse::SaveUnder(GESurface* inSurface, const GE2DPoint& inOrigin)
 {
-    GERectangle theSource;
-    GERectangle theDestination;
-    long theX = UMFloor(this->mDrawnPosition.GetX());
-    long theY = UMFloor(this->mDrawnPosition.GetY());
-    long theWidth = this->mCurrentSurface->GetWidth();
-    long theHeight = this->mCurrentSurface->GetHeight();
-    if (theX + theWidth > (long)inSurface->GetWidth())
-        theWidth = inSurface->GetWidth() - theX;
-    if (theY + theHeight > (long)inSurface->GetHeight())
-        theHeight = inSurface->GetHeight() - theY;
-    theDestination.SetTop(0.0f);
-    theDestination.SetLeft(0.0f);
-    theDestination.SetBottom(theHeight);
-    theDestination.SetRight(theWidth);
-    theSource.SetTop(inOrigin.GetY() + theY);
-    theSource.SetLeft(inOrigin.GetX() + theX);
-    theSource.SetBottom(theSource.GetTop() + theHeight);
-    theSource.SetRight(theSource.GetLeft() + theWidth);
-    this->mCurrentSaveUnder->mRect = GERectangle(theX, theY, theX + theWidth, theY + theHeight);
-    inSurface->CopyTo(this->mCurrentSaveUnder->mSurface, theSource, theDestination, false);
+    RTSMouseFrameCall(this, 1, inSurface, &inOrigin, false);
 }
 
 // Puts back the screen saved under the pointer from the previous record (windowed: the current one, unshifted);
 // the first call after a load only clears the just-loaded flag; returns the copy's result
 long RTSMouse::RestoreUnder(GESurface* inSurface, const GE2DPoint& inOrigin, bool inIsWindowed)
 {
-    GERectangle theSource;
-    GERectangle theDestination;
-    if (!this->mIsJustLoaded) {
-        if (inIsWindowed) {
-            this->mPreviousSaveUnder = this->mCurrentSaveUnder;
-            theDestination = this->mPreviousSaveUnder->mRect;
-        } else {
-            theDestination = this->mPreviousSaveUnder->mRect;
-            theDestination.SetLeft(theDestination.GetLeft() + inOrigin.GetX());
-            theDestination.SetTop(theDestination.GetTop() + inOrigin.GetY());
-            theDestination.SetRight(theDestination.GetRight() + inOrigin.GetX());
-            theDestination.SetBottom(theDestination.GetBottom() + inOrigin.GetY());
-        }
-        theSource.SetTop(0.0f);
-        theSource.SetLeft(0.0f);
-        theSource.SetBottom(theDestination.GetBottom() - theDestination.GetTop());
-        theSource.SetRight(theDestination.GetRight() - theDestination.GetLeft());
-        return this->mPreviousSaveUnder->mSurface->CopyTo(inSurface, theSource, theDestination, false);
-    }
-    this->mIsJustLoaded = false;
-    return 0;
+    return RTSMouseFrameCall(this, 3, inSurface, &inOrigin, inIsWindowed);
 }
 
-// Returns the texture of pointer inIndex (NULL past the 10 pointers)
+// Returns the picture of pointer inIndex (EEMouse's 10..23 too; NULL past them)
 GESurface* RTSMouse::GetPointerSurface(unsigned long inIndex)
 {
-    return inIndex < 10 ? this->mPointerSurfaces[inIndex] : NULL;
+    return static_cast<GESurface*>(ee_gfx_mouse_frame_pointer(this->mFrame, (uint32_t)inIndex));
 }
 
 // port: a pointer from the texture pack (GETextureManager::SetTexturePack): its file is 32x32 << the pack's scale;
@@ -253,7 +240,7 @@ long RTSMouse::Load(GEScreen* inScreen)
     GESurfaceDescription theDescription;
     long theResult = kErrorOK;
     for (unsigned long i = 0; i < 10 && theResult == kErrorOK; i++)
-        theResult = this->LoadPointer(sPointerFiles[i], inScreen, &this->mPointerSurfaces[i]);
+        theResult = this->LoadPointer(sPointerFiles[i], inScreen, RTSMouseSlot(this, i));
     if (theResult == kErrorOK) {
         theDescription.mIs3DRenderable = false;
         theDescription.mIsTransparencyEnabled = false;
@@ -265,36 +252,25 @@ long RTSMouse::Load(GEScreen* inScreen)
         theDescription.mSurfaceVolatility = 0;
         theDescription.m14 = 0;
         theDescription.mMipLevelCount = 0;
-        if (this->mSaveUnder24.mSurface == NULL) {
-            theResult = inScreen->CreateSurface(theDescription, &this->mSaveUnder24.mSurface);
+        if (*RTSMouseSlot(this, 24) == NULL) {
+            theResult = inScreen->CreateSurface(theDescription, RTSMouseSlot(this, 24));
 
             ESVERIFY_AT(theResult == keseOK, 349);
         }
-        if (this->mSaveUnder38.mSurface == NULL) {
-            theResult = inScreen->CreateSurface(theDescription, &this->mSaveUnder38.mSurface);
+        if (*RTSMouseSlot(this, 25) == NULL) {
+            theResult = inScreen->CreateSurface(theDescription, RTSMouseSlot(this, 25));
 
             ESVERIFY_AT(theResult == keseOK, 356);
         }
     }
-    this->mIsJustLoaded = true;
+    RTSMouseFrameCall(this, 7, NULL, NULL, false);   // the next restore only clears the flag
     return theResult;
 }
 
 // Draws the frame's pointer transparently over the current save-under rectangle, shifted by inOrigin
 void RTSMouse::Draw(GESurface* inSurface, const GE2DPoint& inOrigin)
 {
-    GERectangle theSource;
-    GERectangle theDestination;
-    theDestination = this->mCurrentSaveUnder->mRect;
-    theDestination.SetLeft(theDestination.GetLeft() + inOrigin.GetX());
-    theDestination.SetTop(theDestination.GetTop() + inOrigin.GetY());
-    theDestination.SetRight(theDestination.GetRight() + inOrigin.GetX());
-    theDestination.SetBottom(theDestination.GetBottom() + inOrigin.GetY());
-    theSource.SetTop(0.0f);
-    theSource.SetLeft(0.0f);
-    theSource.SetBottom(theDestination.GetBottom() - theDestination.GetTop());
-    theSource.SetRight(theDestination.GetRight() - theDestination.GetLeft());
-    this->mCurrentSurface->CopyTo(inSurface, theSource, theDestination, true);
+    RTSMouseFrameCall(this, 2, inSurface, &inOrigin, false);
 }
 
 // Starts a pointer frame: enters the render lock (EndFrame leaves it), takes the position and pointer (in shift mode
@@ -302,32 +278,16 @@ void RTSMouse::Draw(GESurface* inSurface, const GE2DPoint& inOrigin)
 void RTSMouse::BeginFrame()
 {
     this->mRenderLock->Enter();
-    this->mInFrame = true;
-    this->mDrawnPosition = this->mPosition;
-    this->mCurrentSurface = this->GetPointerSurface(this->mPointer);
-    this->mCurrentSurface->Reference();
-    if (this->mShiftMode) {
-        GESurface* thePlus = this->GetPointerSurface(9);
-        GESurface* thePointer = this->GetPointerSurface(this->mPointer);
-        GESurface* theOverlay = this->GetPointerSurface(this->mOverlay);
-        float theWidth = (float)this->mCurrentSurface->GetWidth();
-        float theHeight = (float)this->mCurrentSurface->GetHeight();
-        GERectangle theRect(0.0f, 0.0f, theWidth, theHeight);   // CopyTo takes non-const references: a named local
-        if (thePointer->CopyTo(thePlus, theRect, theRect, false) == kErrorOK) {
-            if (theOverlay->CopyTo(thePlus, theRect, theRect, true) == kErrorOK) {
-                this->mCurrentSurface->Dereference();
-                this->mCurrentSurface = thePlus;
-                thePlus->Reference();
-            }
-        }
-    }
-    RTSMouseSaveUnder* theSaveUnder = this->mCurrentSaveUnder;
-    this->mCurrentSaveUnder = this->mPreviousSaveUnder;
-    this->mPreviousSaveUnder = theSaveUnder;
+    GE2DPoint thePosition = this->mPosition;
+    RTSMouseFrameCall(this, 0, NULL, &thePosition, this->mShiftMode);
 }
 
-// the GE value classes as their #[repr(C)] mirrors (the same storage)
-static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GERectangle) == sizeof(EeGeRectangle), "GE mirrors");
+// Ends the mouse cursor's frame, releasing its surface and the render lock
+void RTSMouse::EndFrame()
+{
+    RTSMouseFrameCall(this, 4, NULL, NULL, false);
+    this->mRenderLock->Leave();
+}
 
 // Keeps the pointer position inside the bounds (the right and bottom edges excluded): ee_gfx mouse.rs
 void RTSMouse::ClampPosition()
@@ -339,24 +299,7 @@ void RTSMouse::ClampPosition()
 // Releases the pointer textures, both save-under surfaces and the frame's pointer; returns 0
 long RTSMouse::Release()
 {
-    for (unsigned long i = 0; i < 10; i++) {
-        if (this->mPointerSurfaces[i] != NULL) {
-            this->mPointerSurfaces[i]->Dereference();
-            this->mPointerSurfaces[i] = NULL;
-        }
-    }
-    if (this->mSaveUnder24.mSurface != NULL) {
-        this->mSaveUnder24.mSurface->Dereference();
-        this->mSaveUnder24.mSurface = NULL;
-    }
-    if (this->mSaveUnder38.mSurface != NULL) {
-        this->mSaveUnder38.mSurface->Dereference();
-        this->mSaveUnder38.mSurface = NULL;
-    }
-    if (this->mCurrentSurface != NULL) {
-        this->mCurrentSurface->Dereference();
-        this->mCurrentSurface = NULL;
-    }
+    RTSMouseFrameCall(this, 6, NULL, NULL, false);
     return 0;
 }
 

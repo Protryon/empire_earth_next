@@ -1,7 +1,9 @@
 // C:\EEX\Empire Earth\Graphics Thread\EEEffect.cpp (no __FILE__; name from the RTTI class and its key
-// "EEEffect-Data"). The base of every graphics-thread effect (vtable 0x43f9fc): 0x10251d..0x10428c (the key chain,
-// the file's URandom, the ctor .. Virtual20, the shared effect models and the two quad batches the 2D effects draw
-// into). EEEffect2D.cpp follows.
+// "EEEffect-Data"). The graphics thread's effects (vtable 0x43f9fc): 0x10251d..0x10428c (the key chain, the file's
+// URandom, the ctor .. Virtual20, the shared effect models and the two quad batches the 2D effects draw into), since
+// R4.4's twenty-fifth round with what was EEEffect2D.cpp (0x10428c..0x1050fb) and EEEffect3D.cpp (0x1050fb..0x1054ec)
+// and the leaves' lifetimes: one class for every kind (ee/EEEffect.h); its constructors and the world's answers to its
+// Rust calls are EEEffectHost.cpp's.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -40,7 +42,6 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EERenderObject.h"
 #include "ee/EEEffect.h"
-#include "ee/EEEffect2D.h"
 #include "lle/GEModelManager.h"
 #include "lle/GEPolygonArray.h"
 #include "lle/GEQuaternion.h"
@@ -49,6 +50,11 @@
 #include "rust/ee_ge.h"   // ee_gfx effects.rs (RUST_PLAN R4.4)
 #include "rust/ee_gfx.h"
 #include "ee/EEEffectMesh.h"
+#include "lle/SESoundManager.h"
+#include "ee/EEGameSound.h"
+#include "lle/SESMInstanceNode.h"
+#include "lle/U2DPoint.h"
+#include "ee/EESoundObject.h"
 
 const UString EEEffect::sData("EEEffect-Data");
 
@@ -121,75 +127,32 @@ EeGfxEffectFile EEEffectFile(FSFile& inFile)
     return theFile;
 }
 
-// The two quad batches (one draw call per 0x800 vertices; provisional names): the camera-facing quads of AddGlowSprite
-// (0x4e8db8) and the flat/heightened ones of AddGroundSprite/AddGroundQuad/AddBlendedSprite/AddGroundStrip (0x4e8da8)
-struct EEEffectBatch {
-    GEVertexArray* mVertices;               // +0x00
-    GETexture* mTexture;                    // +0x04 (referenced twice by BeginEffectBatches)
-    float mAlphaReference;                  // +0x08 (the smallest reference value of the batch; 1 when empty)
-    unsigned long mCount;                   // +0x0c vertices
-};
-static EEEffectBatch sEffectGroundBatch;
-static EEEffectBatch sEffectBatch;
-static GEPolygonArray* sEffectPolygons;           // 0x4e8df0 (0x400 polygons: two per quad)
-GEModel* gU4E8DF4;
-GEModel* gEffect2DModel;
-
-void FlushEffectBatch();
-// The quads' corners, colours, normals and opacities are ee_gfx effects.rs (RUST_PLAN R4.4); the GE value classes
-// pass as their #[repr(C)] mirrors (the same storage)
+// The quad batches' arrays (the camera batch's vertices 0x4e8db8, the ground batch's 0x4e8da8 and their polygons
+// 0x4e8df0: two triangles a quad); their textures, counts, alpha references, quads, flushes and draws are ee_gfx
+// effect_batch.rs's, the shared plane models (0x4e8df4, 0x4e8df8) and GetEffectFogFactor (0x1030c8) too (RUST_PLAN
+// R4.4). The GE value classes pass as their #[repr(C)] mirrors (the same storage).
+static GEVertexArray* sEffectVertices[2];
+static GEPolygonArray* sEffectPolygons;
+extern const EeGfxRaster gEERustRaster;
 static_assert(sizeof(GEColor) == sizeof(EeGfxColor) && sizeof(GETextureCoordinate) == sizeof(EeGfxTexCoord) &&
               sizeof(GEVector) == sizeof(EeGeVector) && sizeof(GE3DPoint) == sizeof(EeGe3DPoint), "GE mirrors");
-// Sets a quad's four vertices from index inIndex on and counts them (provisional name)
-static void AddEffectQuad(EEEffectBatch& ioBatch, const EeGfxEffectQuad& inQuad, unsigned long inIndex)
+
+// A batch's quad: its four vertices from inIndex on (the raster table's batch_quad; AddEffectQuad)
+void EEEffectBatchQuad(uint32_t inWhich, const EeGfxEffectQuad* inQuad, uint32_t inIndex)
 {
-    const GEColor& theColor = *reinterpret_cast<const GEColor*>(&inQuad.color);
-    const GEVector& theNormal = *reinterpret_cast<const GEVector*>(&inQuad.normal);
+    const GEColor& theColor = *reinterpret_cast<const GEColor*>(&inQuad->color);
+    const GEVector& theNormal = *reinterpret_cast<const GEVector*>(&inQuad->normal);
     for (unsigned long i = 0; i < 4; i++)
-        ioBatch.mVertices->SetVertex(theColor, *reinterpret_cast<const GE3DPoint*>(&inQuad.points[i]), theNormal,
-                                     *reinterpret_cast<const GETextureCoordinate*>(&inQuad.coords[i]),
-                                     inQuad.opacities[i], inIndex + i);
-    ioBatch.mCount += 4;
-}
-// the camera plane (a, b, c, d) the fog distance is measured from (also RTSGraphics.cpp 0x11a130; read through
-// inline accessors: `fld; fld; fmulp`; a GEQuaternion by its x, y, z, w accessors) (provisional name; type inferred)
-void FlushEffectGroundBatch();
-
-// Creates an effect on a unit (or none) with a graphic effect, referencing both, in no region yet, and loads its media
-EEEffect::EEEffect(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind, bool inKeepsUnit)
-{
-    this->Init();
-    this->mUnit = inUnit;
-    if (this->mUnit)
-        this->mUnit->Reference();
-    this->mGraphicEffect = inGraphicEffect;
-    if (this->mGraphicEffect)
-        this->mGraphicEffect->Reference();
-    this->mKind = inKind;
-    this->mKeepsUnit = inKeepsUnit;
-    this->LoadMedia(gLoadingSavedGame == false);
+        sEffectVertices[inWhich]->SetVertex(theColor, *reinterpret_cast<const GE3DPoint*>(&inQuad->points[i]), theNormal,
+                                            *reinterpret_cast<const GETextureCoordinate*>(&inQuad->coords[i]),
+                                            inQuad->opacities[i], inIndex + i);
 }
 
-// Destroys the effect: unloads and releases its graphic effect, leaves its map region and releases its unit
-EEEffect::~EEEffect()
+// A batch's draw: inCount vertices, half as many polygons (the raster table's batch_draw)
+int32_t EEEffectBatchDraw(uint32_t inWhich, uint32_t inCount, void* inTexture)
 {
-    if (this->mGraphicEffect != NULL) {
-        this->UnloadMedia();
-        this->mGraphicEffect->Dereference();
-        this->mGraphicEffect = NULL;
-    }
-    if (gWorld.mMap != NULL && this->mTileX != -1 && this->mTileY != -1) {
-        EEEffect* theEffect = this;
-        RTSRegion<EEEffect*>* theList = gWorld.mMap->mEffectRegions->GetRegion(this->mTileX, this->mTileY);
-        if (theList != NULL)
-            theList->Remove(theEffect);
-    }
-    if (this->mUnit != NULL) {
-        this->mUnit->Dereference();
-        this->mUnit = NULL;
-    }
-    ee_gfx_effect_record_free(this->mRecord);
-    this->mRecord = NULL;
+    return (int32_t)gRasterizer->Draw(*sEffectPolygons, inCount / 2, *sEffectVertices[inWhich], inCount,
+                                      static_cast<GETexture*>(inTexture), gScreenIndex, gOrthographicView);
 }
 
 // Creates the quad batches' shared polygon array (two triangles per quad, 0x200 quads) and both vertex arrays
@@ -203,119 +166,151 @@ void CreateEffectBatchBuffers()
         sEffectPolygons->SetVertexIndices(j + 1, i * 4, i * 4 + 2, i * 4 + 3);
         j += 2;
     }
-    sEffectBatch.mVertices = gRasterizer->CreateVertexArray(1, 0x800);
-    sEffectGroundBatch.mVertices = gRasterizer->CreateVertexArray(1, 0x800);
+    sEffectVertices[EE_GFX_BATCH_CAMERA] = gRasterizer->CreateVertexArray(1, 0x800);
+    sEffectVertices[EE_GFX_BATCH_GROUND] = gRasterizer->CreateVertexArray(1, 0x800);
 }
 
 // Starts both quad batches empty with the given texture, referencing it once per batch (provisional name)
-void BeginEffectBatches(GETexture* inTexture)
-{
-    sEffectBatch.mTexture = inTexture;
-    sEffectGroundBatch.mTexture = inTexture;
-    if (inTexture) {
-        inTexture->Reference();
-        inTexture->Reference();
-    }
-    sEffectBatch.mCount = 0;
-    sEffectGroundBatch.mCount = 0;
-    sEffectBatch.mAlphaReference = 1.0f;
-    sEffectGroundBatch.mAlphaReference = 1.0f;
-}
+void BeginEffectBatches(GETexture* inTexture) { ee_gfx_effect_batches_begin(&gEERustRaster, inTexture); }
 
-// Returns the unit's position (physical model, else its tile centre at the tile's height; the origin without a
-// unit) in a shared static point
-const GE3DPoint& EEEffect::GetUnitLocation()
-{
-    static GE3DPoint sLocation;
-    EEUnit* theUnit = this->mUnit;
-    if (theUnit) {
-        EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
-        if (theComplexUnit) {
-            sLocation.SetX(theComplexUnit->mPhysicalModel.GetLocation().GetX());
-            sLocation.SetY(theComplexUnit->mPhysicalModel.GetLocation().GetY());
-            sLocation.SetZ(theComplexUnit->mPhysicalModel.GetLocation().GetZ());
-        } else {
-            sLocation.SetX(theUnit->mTileX + 0.5f);
-            sLocation.SetY(theUnit->GetTileY() + 0.5f);
-            if (theUnit->mTile)
-                sLocation.SetZ(theUnit->mTile->mHeight);
-            else
-                sLocation.SetZ(0.0f);
-        }
-    } else {
-        sLocation.SetX(0.0f);
-        sLocation.SetY(0.0f);
-        sLocation.SetZ(0.0f);
-    }
-    return sLocation;
-}
-
-// Returns 10 (skip) for an effect shown only to another player, else 0
-long EEEffect::Queue(EEEffectQueue* inQueues)
-{
-    long theResult = 0;
-    if (this->mIsLocalOnly && this->mPlayer != gWorld.mCurrentPlayer)
-        theResult = 10;
-    return theResult;
-}
-
-// A shared quad model (unit square, two triangles, white and opaque): standing facing -y or on the ground facing up;
-// its mesh is ee_gfx effects.rs's (RUST_PLAN R4.4) (provisional name)
-static GEModel* CreatePlaneModel(bool inStanding)
-{
-    GEModel* theModel = gModelManager->CreateModel(2, 4, 1, 0, 1, 0, "EEEffect::sHorizontalPlane", 1);
-    theModel->Reference();
-    EEEffectMesh theMesh(4, 2);
-    ee_gfx_effect_plane(inStanding, theMesh.Vertices(), theMesh.Triangles());
-    theMesh.Store(theModel);
-    theModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    theModel->GetMaterial(0)->SetPolygonRangeLength(2, 0);
-    theModel->GetMaterial(0)->SetVertexStartingIndex(0);
-    theModel->GetMaterial(0)->SetVertexRangeLength(4);
-    theModel->ComputeBoundingVolumes();
-    return theModel;
-}
-
-// Creates the shared horizontal quad model gU4E8DF4 (unit square in the ground plane, facing up) (provisional name)
-void CreateHorizontalPlaneModel()
-{
-    if (gU4E8DF4) {
-        gU4E8DF4->Dereference();
-        gU4E8DF4 = NULL;
-    }
-    gU4E8DF4 = CreatePlaneModel(false);
-}
-
-// Creates the shared upright quad model gEffect2DModel (unit square facing -y, which the 2D effects turn to the
-// camera) (provisional name)
-void CreateStandingPlaneModel()
-{
-    if (gEffect2DModel) {
-        gEffect2DModel->Dereference();
-        gEffect2DModel = NULL;
-    }
-    gEffect2DModel = CreatePlaneModel(true);
-}
 
 // Deletes the quad batches' polygon array and vertex arrays (provisional name)
 void DeleteEffectBatchBuffers()
 {
     if (sEffectPolygons)
         delete sEffectPolygons;
-    if (sEffectBatch.mVertices)
-        delete sEffectBatch.mVertices;
-    if (sEffectGroundBatch.mVertices)
-        delete sEffectGroundBatch.mVertices;
+    for (int i = 0; i < 2; i++) {
+        if (sEffectVertices[i])
+            delete sEffectVertices[i];
+    }
     sEffectPolygons = NULL;
-    sEffectBatch.mVertices = NULL;
-    sEffectGroundBatch.mVertices = NULL;
+    sEffectVertices[0] = sEffectVertices[1] = NULL;
 }
 
-// Releases what the destructor releases (graphic effect, map region, unit) without destroying the effect
-void EEEffect::ReleaseResources()
+// Drops the two texture references BeginEffectBatches took (both through the first batch's texture)
+void EndEffectBatches() { ee_gfx_effect_batches_end(&gEERustRaster); }
+
+// Creates the two shared quad models (provisional name)
+void CreatePlaneModels() { ee_gfx_effect_planes_create(&gEERustRaster); }
+
+// Draws whatever the ground batch and then the camera batch still hold (provisional name)
+void FlushEffectBatches() { ee_gfx_effect_batches_flush(&gEERustRaster); }
+
+// Releases the two shared quad models (provisional name)
+void ReleasePlaneModels() { ee_gfx_effect_planes_release(&gEERustRaster); }
+
+// The original base constructor's part (EEEffect 0x10258e: Init, both pointers referenced, the kind, the keeps-unit
+// flag, the media load), then the kind's class part
+void EEEffect::Attach(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind, bool inKeepsUnit)
+{
+    ee_gfx_effect_init(this->mRecord);
+    this->mUnit = inUnit;
+    if (this->mUnit)
+        this->mUnit->Reference();
+    this->mGraphicEffect = inGraphicEffect;
+    if (this->mGraphicEffect)
+        this->mGraphicEffect->Reference();
+    this->mKind = inKind;
+    this->mKeepsUnit = inKeepsUnit;
+    if (this->mGraphicEffect)
+        this->mGraphicEffect->Load(gLoadingSavedGame == false);
+    this->Begin(inKind);
+}
+
+// The kind's class: a 2D kind (EEEffect2D's constructor 0xdf44e) references its shared plane model, the ground plane
+// for the shockwave's, confirmation's, pulse wave's, ripple's, vortex's and decal's (0x4e8df4), else the standing one
+// (0x4e8df8); its bounding radius 0 (a new record's)
+void EEEffect::Begin(long inKind)
+{
+    this->mKind = inKind;
+    this->mIs2D = ee_gfx_effect_is_2d((int32_t)inKind);
+    if (!this->mIs2D)
+        return;
+    bool theGround = inKind == 0x12 || inKind == 0x41 || inKind == 0x2f || inKind == 0x22 || inKind == 0x31 || inKind == 0x32;
+    this->mModel = static_cast<GEModel*>(ee_gfx_effect_plane_model(!theGround));
+    if (this->mModel)
+        this->mModel->Reference();
+    if (inKind == 0x2e)   // the particle's motion, age, look and timing cleared (EEE2DParticle::Clear 0xe4be3)
+        ee_gfx_effect_particle_clear(this->mRecord);
+}
+
+// for loading (the leaves' load-time constructors: the record's kind; its new record holds Init's values)
+EEEffect::EEEffect(long inKind)
+{
+    this->Begin(inKind);
+}
+
+// Destroys the effect: the leaves' parts (the marching line's regions, the sounds, the rain's sound media, the storms'
+// and the farm's and earthquake's models, the kept graphic objects, the tracer beam's target, the marching line's
+// ends), the 2D parts and plane model (EEEffect2D 0x1042cf), then the base's: the graphic effect unloaded and
+// released, the map region left, the unit released
+EEEffect::~EEEffect()
+{
+    if (this->mKind == 0x2d)
+        this->RemoveRegions();
+    SESMInstanceNode** theSounds[2] = {&this->mSound, &this->mRumble};
+    for (int i = 0; i < 2; i++) {
+        if (*theSounds[i]) {
+            gSoundManager->Stop(*theSounds[i], false);
+            (*theSounds[i])->Dereference();
+            *theSounds[i] = NULL;
+        }
+    }
+    if (this->mKind == 0x2a) {   // the rain's three sound objects' media (0xf74a0)
+        for (int i = 0; i < 3; i++) {
+            EESoundObject* theSound = EESoundObject::Get(this->mRecord->storm.sounds[i]);
+            if (theSound)
+                theSound->UnloadMedia();
+        }
+    }
+    void* theModels[5] = {NULL, NULL, NULL, NULL, NULL};
+    if (this->mKind == 0x2a || this->mKind == 0x3d)
+        theModels[0] = this->mRecord->storm.model;
+    if (this->mKind == 0x29) {   // the farm's ground model and draw copies (0xee775)
+        theModels[1] = this->mRecord->farm.ground;
+        theModels[2] = this->mRecord->farm.ground_copy;
+        theModels[3] = this->mRecord->farm.crops_copy;
+    }
+    if (this->mKind == 0x1a)   // the earthquake's model (0xec88f)
+        theModels[4] = this->mRecord->quake.model;
+    EEGraphicObject** theObjects[2] = {&this->mGraphicObject, &this->mUnitModel};
+    for (int i = 0; i < 2; i++) {
+        if (theModels[0] && i == 0)
+            static_cast<GEModel*>(theModels[0])->Dereference();
+        if (*theObjects[i]) {
+            (*theObjects[i])->UnloadMedia();
+            *theObjects[i] = NULL;
+        }
+    }
+    if (this->mTarget != NULL && this->mTarget != (EEUnit*)-1)
+        this->mTarget->Dereference();
+    if (this->mFromUnit)   // the marching line's units (not referenced by a repair: as the original)
+        this->mFromUnit->Dereference();
+    if (this->mToUnit)
+        this->mToUnit->Dereference();
+    if (this->mVolcanoModel)
+        this->mVolcanoModel->Dereference();
+    for (int i = 1; i < 5; i++) {
+        if (theModels[i])
+            static_cast<GEModel*>(theModels[i])->Dereference();
+    }
+    for (unsigned long i = 0; i < this->mParts.size(); i++)
+        this->mParts[i].mGraphicObject->UnloadMedia();
+    if (this->mModel) {
+        this->mModel->Dereference();
+        this->mModel = NULL;
+    }
+    this->ReleaseBase();
+    ee_gfx_effect_record_free(this->mRecord);
+    this->mRecord = NULL;
+}
+
+// The base's release (EEEffect's destructor 0x102600 and ReleaseResources 0x102e61): the graphic effect unloaded and
+// released, the map region left, the unit released
+void EEEffect::ReleaseBase()
 {
     if (this->mGraphicEffect != NULL) {
-        this->UnloadMedia();
+        this->mGraphicEffect->Unload();
         this->mGraphicEffect->Dereference();
         this->mGraphicEffect = NULL;
     }
@@ -329,33 +324,70 @@ void EEEffect::ReleaseResources()
         this->mUnit->Dereference();
         this->mUnit = NULL;
     }
+}
+
+// Releases what the destructor releases without destroying the effect: the particles' graphic object (0xf4f30,
+// 0xe4b2b), the marching line's regions (0xf3882), the 2D parts and plane model (0x1048b1), the base's
+void EEEffect::ReleaseResources()
+{
+    if ((this->mKind == 0x39 || this->mKind == 0x2e) && this->mGraphicObject) {
+        this->mGraphicObject->UnloadMedia();
+        this->mGraphicObject = NULL;
+    }
+    if (this->mKind == 0x2d)
+        this->RemoveRegions();
+    if (this->mIs2D) {
+        for (unsigned long i = 0; i < this->mParts.size(); i++)
+            this->mParts[i].mGraphicObject->UnloadMedia();
+        this->mParts.clear();
+        if (this->mModel) {
+            this->mModel->Dereference();
+            this->mModel = NULL;
+        }
+    }
+    this->ReleaseBase();
     this->mTileX = -1;
     this->mTileY = -1;
 }
 
-// Releases the shared horizontal quad model
-void ReleaseHorizontalPlaneModel()
+// Returns the unit's position (physical model, else its tile centre at the tile's height; the origin without a
+// unit) in a shared static point
+const GE3DPoint& EEEffect::GetUnitLocation()
 {
-    if (gU4E8DF4)
-        gU4E8DF4->Dereference();
-    gU4E8DF4 = NULL;
-}
-
-// Releases the shared upright quad model gEffect2DModel
-void ReleaseStandingPlaneModel()
-{
-    if (gEffect2DModel)
-        gEffect2DModel->Dereference();
-    gEffect2DModel = NULL;
-}
-
-// Drops the two texture references BeginEffectBatches took (both through the first batch's texture)
-void EndEffectBatches()
-{
-    if (sEffectBatch.mTexture) {
-        sEffectBatch.mTexture->Dereference();
-        sEffectBatch.mTexture->Dereference();
+    static GE3DPoint sLocation;
+    EEUnit* theUnit = this->mUnit;
+    sLocation = GE3DPoint(0.0f, 0.0f, 0.0f);
+    if (theUnit && theUnit->mComplexUnit) {
+        const GETransformation& theLocation = theUnit->mComplexUnit->mPhysicalModel.GetLocation();
+        sLocation = GE3DPoint(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
+    } else if (theUnit) {
+        sLocation = GE3DPoint(theUnit->mTileX + 0.5f, theUnit->GetTileY() + 0.5f, theUnit->mTile ? theUnit->mTile->mHeight : 0.0f);
     }
+    return sLocation;
+}
+
+// The base queues: 10 (skip) for an effect shown only to another player; with inInView also off the map, on a tile
+// the current player does not see (the 3D kinds' IsTileVisible) unless the camera is free, or with its bounding
+// sphere out of view (EEEffect2D::Queue 0x104332 at its position, EEEffect3D::Queue 0x10513e at its translation)
+long EEEffect::BaseQueue(bool inInView)
+{
+    if (this->mIsLocalOnly && this->mPlayer != gWorld.mCurrentPlayer)
+        return 10;
+    if (!inInView)
+        return 0;
+    GE3DPoint theLocation = this->mIs2D ? this->mPosition
+                                        : GE3DPoint(this->mTransformation.GetX(), this->mTransformation.GetY(),
+                                                    this->mTransformation.GetZ());
+    EEMapTile* theTile = gWorld.mMap->GetTile(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY()));
+    if (theTile == NULL)
+        return 10;
+    bool theSeen = this->mIs2D ? theTile->IsSeenBy(gWorld.GetCurrentPlayer()) : this->IsTileVisible(theTile);
+    if (!theSeen && !gFreeCamera)
+        return 10;
+    if (!ee_gfx_effect_in_view(reinterpret_cast<const EeGeViewport*>(&gViewport), gOrthographicView,
+                               reinterpret_cast<const EeGe3DPoint*>(&theLocation), this->mBoundingRadius))
+        return 10;
+    return 0;
 }
 
 // Returns a random float between the minimum and the maximum from the effects' random generator
@@ -388,229 +420,99 @@ EEGraphicObject* EEEffect::GetGraphicObject()
     return this->mGraphicEffect ? static_cast<EEGraphicObject*>(this->mGraphicEffect->GetMedia()) : 0;
 }
 
-// Resets a pooled effect and attaches it to a new unit and graphic effect, referencing both, then loads its media
-void EEEffect::Reinit(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, bool inKeepsUnit)
-{
-    this->Init();
-    this->mUnit = inUnit;
-    if (this->mUnit)
-        this->mUnit->Reference();
-    this->mGraphicEffect = inGraphicEffect;
-    if (this->mGraphicEffect)
-        this->mGraphicEffect->Reference();
-    this->mKeepsUnit = inKeepsUnit;
-    this->LoadMedia(gLoadingSavedGame == false);
-}
+// The 2D parts as ee_gfx effect_state.rs's Load and Save use them (the context: the effect): a loaded part takes the
+// effect's graphic object and is kept when its media loads
+struct EEEffectPartOps {
+    static EEEffect& Effect(void* inContext) { return *static_cast<EEEffect*>(inContext); }
+    static int32_t Push(void* inContext, const EeGfxEffectPart* inPart)
+    {
+        EEEffect2DPart thePart = {*reinterpret_cast<const GE3DPoint*>(&inPart->position), Effect(inContext).GetGraphicObject(),
+                                  inPart->tag, inPart->frame, 0, inPart->time, inPart->done};
+        long theResult = thePart.mGraphicObject->LoadMedia();
+        if (theResult == 0)
+            Effect(inContext).mParts.push_back(thePart);
+        return (int32_t)theResult;
+    }
+    static uint32_t Count(void* inContext) { return (uint32_t)Effect(inContext).mParts.size(); }
+    static void Get(void* inContext, uint32_t inIndex, EeGfxEffectPart* outPart)
+    {
+        const EEEffect2DPart& thePart = Effect(inContext).mParts[inIndex];
+        outPart->position = *reinterpret_cast<const EeGe3DPoint*>(&thePart.mPosition);
+        outPart->tag = (uint32_t)thePart.mTag;
+        outPart->frame = (uint32_t)thePart.mFrame;
+        outPart->time = thePart.mTime;
+        outPart->done = thePart.mIsDone;
+    }
+};
 
-// Resets a pooled effect to the empty state with the given keeps-unit flag
-void EEEffect::Reinit(bool inKeepsUnit)
-{
-    this->Init();
-    this->mKeepsUnit = inKeepsUnit;
-}
-
-// Clears the effect's unit, graphic effect, links, handle, region and flags (shown to everyone, saved)
-void EEEffect::Init()
-{
-    this->mUnit = NULL;
-    this->mGraphicEffect = NULL;
-    ee_gfx_effect_init(this->mRecord);
-}
-
-// Reads the graphic effect id (and loads its media), region, saved unit id, handle and keeps-unit flag; returns
-// the first read error
-// (the reads are ee_gfx effect_state.rs's; the graphic effect is resolved after them: its media load reads no file)
+// Reads the base's state (the graphic effect id, whose media loads, the region, the saved unit id, the handle and the
+// keeps-unit flag; ee_gfx effect_state.rs: its result ignored by every class), then the 3D kinds' transformation and
+// radius (0x105484) or the 2D kinds' position, radius and parts (0x104985), then the kind's own (ee_gfx); the command
+// confirmation is never saved (0 without the base's), the explosion has no state of its own, the damage controller its
+// children's handles; returns the first error, as each original
 long EEEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
+    if (this->mKind == 0x41)
+        return this->Call(EeGfxEffect3DOp::Load);
     EeGfxEffectFile theFile = EEEffectFile(inFile);
     EeGfxEffectLoaded theLoaded;
-    long theResult = ee_gfx_effect_load(this->mRecord, &theFile, &theLoaded);
+    ee_gfx_effect_load(this->mRecord, &theFile, &theLoaded);
     if (theLoaded.has_graphic_effect) {
         this->mGraphicEffect = EEGraphicEffect::Get(theLoaded.graphic_effect_id);
         this->mGraphicEffect->Reference();
-        this->LoadMedia(false);
+        this->mGraphicEffect->Load(false);
     }
     if (theLoaded.has_unit)
         this->mUnit = reinterpret_cast<EEUnit*>((uintptr_t)theLoaded.unit_id);
-    return theResult;
-}
-
-// Creates the two shared quad models (provisional name)
-void CreatePlaneModels()
-{
-    CreateHorizontalPlaneModel();
-    CreateStandingPlaneModel();
-}
-
-// Loads the graphic effect's media (on demand or now)
-void EEEffect::LoadMedia(bool inIsOnDemand)
-{
-    if (this->mGraphicEffect)
-        this->mGraphicEffect->Load(inIsOnDemand);
-}
-
-// NEAR: block layout of the three returns; fld1 and fldz where ours loads the literals
-// Returns the fog visibility of a point: 1 unless the fog mode is linear, else fades from 1 at the fog start to 0
-// at the fog end, by the distance along the camera (row 1 of the inverse)
-float GetEffectFogFactor(const GE3DPoint& inPoint, unsigned long inFog)
-{
-    GERFogAttributes theAttributes;
-    if (inFog == 1)
-        gRasterizer->GetFogAttributes(theAttributes, gScreenIndex);
-    EeGfxEffectFog theFog;
-    theFog.state = inFog == 1 ? 1 : 0;
-    theFog.start = theAttributes.mStart;
-    theFog.end = theAttributes.mEnd;
-    theFog.scale = theAttributes.mScale;
-    return ee_gfx_effect_fog_factor(reinterpret_cast<const EeGe3DPoint*>(&inPoint), &theFog,
-                                    reinterpret_cast<const EeGeTransformation*>(&gU4E8F08.GetCameraInverse()));
-}
-
-// NEAR: register allocation (ours hoists the Apply(GE3DPoint) import into esi; the original keeps the index
-// in esi and inPosition in edi) and the GEVector stores' order
-// Adds a camera-facing additive quad to the camera batch (colour dimmed by fog, alpha and brightness), drawing the
-// batch first when it is full
-void AddGlowSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
-              float inBrightness, float inAlphaReference)
-{
-    float theFog = GetEffectFogFactor(inPosition, gRasterizer->GetFog(gScreenIndex));
-    unsigned long theIndex = sEffectBatch.mCount;
-    if (theIndex == 0x800) {
-        FlushEffectBatch();
-        theIndex = 0;
+    if (!this->mIs2D) {
+        long theBase = ee_gfx_effect_load_3d(this->mRecord, &theFile);
+        if (this->mKind == 0x40)
+            this->mTarget = (EEUnit*)-1;   // the tracer beam's: no target saved (RepairPointers)
+        return this->Call(EeGfxEffect3DOp::Load, NULL, &theFile, theBase, inMajorVersion, inMinorVersion);
     }
-    if (inAlphaReference < sEffectBatch.mAlphaReference)
-        sEffectBatch.mAlphaReference = inAlphaReference;
-    EeGfxEffectQuad theQuad = ee_gfx_effect_glow_sprite(reinterpret_cast<const EeGe3DPoint*>(&inPosition), reinterpret_cast<const EeGfxColor*>(&inColor), inRotation, inSize,
-                                                        inAlpha, inBrightness, theFog, gRenderSnapshot.mCameraYaw,
-                                                        gRenderSnapshot.mCameraPitch);
-    AddEffectQuad(sEffectBatch, theQuad, theIndex);
+    EeGfxEffectParts theParts = {this, EEEffectPartOps::Push, EEEffectPartOps::Count, EEEffectPartOps::Get};
+    long theBase = ee_gfx_effect_load_2d(this->mRecord, &theFile, &theParts);
+    if (this->mKind == 0x3e)   // the children's handles and, from 0.249 on, the finished flag (0x1020e2)
+        return ee_gfx_effect_load_damaged(this->mRecord, &theFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
+    if (this->mKind == 4)
+        return theBase;
+    return this->Call(EeGfxEffect3DOp::Load, NULL, &theFile, 0, inMajorVersion, inMinorVersion);
 }
 
-// Adds a flat ground quad turned by the rotation to the ground batch with one opacity, drawing the batch first when
-// it is full
-void AddGroundSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
-              float inBrightness, float inAlphaReference)
+// Writes the base's state (the graphic effect id, the region, the unit id or -1, the handle, the keeps-unit flag;
+// its result ignored by every class), then the 3D kinds' transformation and radius (0x1054b8) or the 2D kinds'
+// position, radius and parts (0x104a8a; the particle where it was drawn, 0xe517c), then the kind's own (ee_gfx; the
+// marching icons stop at the 2D part's error); the command confirmation is never saved
+long EEEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theIndex = sEffectGroundBatch.mCount;
-    if (theIndex == 0x800) {
-        FlushEffectGroundBatch();
-        theIndex = 0;
+    if (this->mKind == 0x41)
+        return this->Call(EeGfxEffect3DOp::Save);
+    GE3DPoint& theDrawn = *reinterpret_cast<GE3DPoint*>(&this->mRecord->particle.draw_position);
+    if (this->mKind == 0x2e && this->mPosition != theDrawn)
+        this->SetPosition(theDrawn);
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    ee_gfx_effect_save(this->mRecord, &theFile, (int32_t)this->mGraphicEffect->mID,
+                       this->mUnit ? (uint32_t)this->mUnit->mUnitID : 0xffffffffu);
+    if (!this->mIs2D) {
+        long theBase = ee_gfx_effect_save_3d(this->mRecord, &theFile);
+        return this->Call(EeGfxEffect3DOp::Save, NULL, &theFile, theBase, inMajorVersion, inMinorVersion);
     }
-    if (inAlphaReference < sEffectGroundBatch.mAlphaReference)
-        sEffectGroundBatch.mAlphaReference = inAlphaReference;
-    float theOpacities[4] = {inAlpha, inAlpha, inAlpha, inAlpha};
-    EeGfxEffectQuad theQuad = ee_gfx_effect_ground_sprite(reinterpret_cast<const EeGe3DPoint*>(&inPosition), reinterpret_cast<const EeGfxColor*>(&inColor), inRotation, inSize,
-                                                          theOpacities, inBrightness);
-    AddEffectQuad(sEffectGroundBatch, theQuad, theIndex);
+    EeGfxEffectParts theParts = {this, EEEffectPartOps::Push, EEEffectPartOps::Count, EEEffectPartOps::Get};
+    long theBase = ee_gfx_effect_save_2d(this->mRecord, &theFile, &theParts);
+    if (this->mKind == 0x3e)
+        return ee_gfx_effect_save_damaged(this->mRecord, &theFile, this->mGraphicEffect->mLinkedEffect2 != NULL);
+    if (this->mKind == 4 || ((this->mKind == 0xf || this->mKind == 0x10) && theBase != 0))
+        return theBase;
+    return this->Call(EeGfxEffect3DOp::Save, NULL, &theFile, 0, inMajorVersion, inMinorVersion);
 }
 
-// Adds a flat ground quad turned by the yaw to the ground batch with a separate opacity per corner, drawing the
-// batch first when it is full
-void AddGroundQuad(const GE3DPoint& inCenter, const GEColor& inColor, float inYaw, float inSize, float* inHeights,
-              float inBrightness, float inAlphaReference)
-{
-    unsigned long theIndex = sEffectGroundBatch.mCount;
-    if (theIndex == 0x800) {
-        FlushEffectGroundBatch();
-        theIndex = 0;
-    }
-    if (inAlphaReference < sEffectGroundBatch.mAlphaReference)
-        sEffectGroundBatch.mAlphaReference = inAlphaReference;
-    EeGfxEffectQuad theQuad = ee_gfx_effect_ground_sprite(reinterpret_cast<const EeGe3DPoint*>(&inCenter), reinterpret_cast<const EeGfxColor*>(&inColor), inYaw, inSize, inHeights,
-                                                          inBrightness);
-    AddEffectQuad(sEffectGroundBatch, theQuad, theIndex);
-}
-
-// Adds a camera-facing quad to the alpha-blended ground batch, drawing the batch first when it is full
-void AddBlendedSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
-              float inBrightness, float inAlphaReference)
-{
-    unsigned long theIndex = sEffectGroundBatch.mCount;
-    if (theIndex == 0x800) {
-        FlushEffectGroundBatch();
-        theIndex = 0;
-    }
-    if (inAlphaReference < sEffectGroundBatch.mAlphaReference)
-        sEffectGroundBatch.mAlphaReference = inAlphaReference;
-    EeGfxEffectQuad theQuad = ee_gfx_effect_blended_sprite(reinterpret_cast<const EeGe3DPoint*>(&inPosition), reinterpret_cast<const EeGfxColor*>(&inColor), inRotation, inSize,
-                                                           inAlpha, inBrightness, gRenderSnapshot.mCameraYaw,
-                                                           gRenderSnapshot.mCameraPitch);
-    AddEffectQuad(sEffectGroundBatch, theQuad, theIndex);
-}
-
-// Adds an upright quad from inFrom to inTo, inHeight tall above the ground line between them, to the ground batch,
-// textured from inOrigin over inSize (EEE3DEnergyWave) (provisional names)
-void AddGroundStrip(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inHeight, const GEColor& inColor,
-              const GETextureCoordinate& inOrigin, const GETextureCoordinate& inSize, float inAlpha, float inBrightness,
-              float inAlphaReference)
-{
-    unsigned long theIndex = sEffectGroundBatch.mCount;
-    if (theIndex == 0x800) {
-        FlushEffectGroundBatch();
-        theIndex = 0;
-    }
-    if (inAlphaReference < sEffectGroundBatch.mAlphaReference)
-        sEffectGroundBatch.mAlphaReference = inAlphaReference;
-    EeGfxEffectQuad theQuad = ee_gfx_effect_ground_strip(
-        reinterpret_cast<const EeGe3DPoint*>(&inFrom), reinterpret_cast<const EeGe3DPoint*>(&inTo), inHeight, reinterpret_cast<const EeGfxColor*>(&inColor),
-        reinterpret_cast<const EeGfxTexCoord*>(&inOrigin), reinterpret_cast<const EeGfxTexCoord*>(&inSize), inAlpha,
-        inBrightness);
-    AddEffectQuad(sEffectGroundBatch, theQuad, theIndex);
-}
-
-// Draws and empties the camera batch: additive, no fog, no culling, z test only (provisional name)
-void FlushEffectBatch()
-{
-    unsigned long theScreen = gScreenIndex;
-    unsigned long theCulling = gRasterizer->GetCulling();
-    gRasterizer->SetCulling(kCullNone);
-    unsigned long theFog = gRasterizer->GetFog(theScreen);
-    gRasterizer->SetFog(0, theScreen);
-    gRasterizer->SetAlphaTestingRefValue(sEffectBatch.mAlphaReference, theScreen);
-    gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
-    gRasterizer->SetShadingColorSource(1, theScreen);
-    gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
-    SetWhiteLighting();
-    gRasterizer->Draw(*sEffectPolygons, sEffectBatch.mCount / 2, *sEffectBatch.mVertices, sEffectBatch.mCount, sEffectBatch.mTexture, theScreen,
-                      gOrthographicView);
-    gRasterizer->SetFog(theFog, theScreen);
-    gRasterizer->SetCulling(theCulling);
-    sEffectBatch.mCount = 0;
-    sEffectBatch.mAlphaReference = 1.0f;
-}
-
-// Draws and empties the ground batch: alpha-blended, no culling, z test only (provisional name)
-void FlushEffectGroundBatch()
-{
-    unsigned long theScreen = gScreenIndex;
-    unsigned long theCulling = gRasterizer->GetCulling();
-    gRasterizer->SetCulling(kCullNone);
-    gRasterizer->SetAlphaTestingRefValue(sEffectGroundBatch.mAlphaReference, theScreen);
-    gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
-    gRasterizer->SetShadingColorSource(1, theScreen);
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    SetPrelitLighting();
-    gRasterizer->Draw(*sEffectPolygons, sEffectGroundBatch.mCount / 2, *sEffectGroundBatch.mVertices, sEffectGroundBatch.mCount,
-                      sEffectGroundBatch.mTexture, theScreen, gOrthographicView);
-    gRasterizer->SetCulling(theCulling);
-    sEffectGroundBatch.mCount = 0;
-    sEffectGroundBatch.mAlphaReference = 1.0f;
-}
-
-// Draws whatever the ground batch and then the camera batch still hold (provisional name)
-void FlushEffectBatches()
-{
-    if (sEffectGroundBatch.mCount != 0)
-        FlushEffectGroundBatch();
-    if (sEffectBatch.mCount != 0)
-        FlushEffectBatch();
-}
-
-// After a load, turns the saved unit id back into the unit (returns 7 when it is gone) and joins the effect's
-// map region
+// After a load: the saved unit id back to the unit (7 when it is gone) and the map region joined (the base's; not
+// the command confirmation's), then the tracer beam's target (0xfd000), the marching line's ends (0xf3ee8), the kind's
+// own (ee_gfx), or the light glow's set-up again (0xe25a1)
 long EEEffect::RepairPointers()
 {
+    if (this->mKind == 0x41)
+        return this->Call(EeGfxEffect3DOp::Repair);
     long theResult = 0;
     if (USavedID(this->mUnit) == 0xffffffff)
         this->mUnit = NULL;
@@ -622,27 +524,45 @@ long EEEffect::RepairPointers()
             this->mUnit->Reference();
     }
     EEEffect* theEffect = this;
-    RTSRegionTable<EEEffect*>* theTable = gWorld.mMap->mEffectRegions;
-    RTSRegion<EEEffect*>* theList = theTable->GetRegion(this->mTileX, this->mTileY);
+    RTSRegion<EEEffect*>* theList = gWorld.mMap->mEffectRegions->GetRegion(this->mTileX, this->mTileY);
     if (theList != NULL)
         theList->push_back(theEffect);
-    return theResult;
+    if (this->mIs2D)
+        return this->mKind == 0xd && theResult == 0 ? this->SetUp() : theResult;
+    if (this->mKind == 0x40) {
+        if (theResult == 0 && this->mTarget != (EEUnit*)-1) {
+            this->mTarget = dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mTarget)));
+            if (this->mTarget == NULL)
+                theResult = 7;
+            else
+                this->mTarget->Reference();
+        } else
+            this->mTarget = NULL;
+        return theResult;
+    }
+    if (this->mKind == 0x2d && theResult == 0) {
+        if (USavedID(this->mFromUnit) > 0)
+            this->mFromUnit = static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(this->mFromUnit)));
+        if (USavedID(this->mToUnit) > 0)
+            this->mToUnit = static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(this->mToUnit)));
+    }
+    return theResult != 0 ? theResult : this->Call(EeGfxEffect3DOp::Repair);
 }
 
-// Writes the graphic effect id, region, unit id (-1 without a unit), handle and keeps-unit flag; returns the first
-// write error
-long EEEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    EeGfxEffectFile theFile = EEEffectFile(outFile);
-    return ee_gfx_effect_save(this->mRecord, &theFile, (int32_t)this->mGraphicEffect->mID,
-                              this->mUnit ? (uint32_t)this->mUnit->mUnitID : 0xffffffffu);
-}
-
-// Moves the effect to the map region under a point when that region changed (mTileX/mTileY hold region
-// coordinates)
+// Moves the effect to the map region under a point (the marching line: its regions along it again, 0xf3e29)
 void EEEffect::MoveToPoint(const GE3DPoint& inLocation)
 {
+    if (this->mKind == 0x2d)
+        this->RemoveRegions();
     this->MoveToRegion(inLocation.GetX(), inLocation.GetY());
+    if (this->mKind == 0x2d)
+        this->AddRegions(inLocation, *reinterpret_cast<const GE3DPoint*>(&this->mRecord->march.to));
+}
+
+// Moves the effect to the map region under a transformation's translation (the marching line's: 0xf3e52)
+void EEEffect::MoveToTransformation(const GETransformation& inTransformation)
+{
+    this->MoveToPoint(GE3DPoint(inTransformation.GetX(), inTransformation.GetY(), inTransformation.GetZ()));
 }
 
 // Moves the effect to the map region under (inX, inY) when that region changed: leaves the old region's list, joins
@@ -664,57 +584,36 @@ void EEEffect::MoveToRegion(float inX, float inY)
     }
 }
 
-// Moves the effect to the map region under a transformation's translation when that region changed
-void EEEffect::MoveToTransformation(const GETransformation& inTransformation)
+void EEEffect::SetPosition(const GE3DPoint& inPosition)
 {
-    this->MoveToRegion(inTransformation.GetX(), inTransformation.GetY());
+    this->mPosition = inPosition;
+    this->MoveToPoint(inPosition);
 }
 
-// Moves the effect from the old unit to the new one (when it is on the old unit and does not keep its unit)
+void EEEffect::SetTransformation(const GETransformation& inTransformation)
+{
+    this->mTransformation = inTransformation;
+    this->MoveToTransformation(inTransformation);
+}
+
+// Moves the effect from the old unit to the new one (when it is on the old unit and does not keep its unit); the
+// marching line's ends (0xf4017) and the tracer beam's target unless it keeps its unit (0xfd10f); the farm's is empty
 void EEEffect::ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
 {
-    if (this->mUnit != inOldUnit || this->mKeepsUnit)
+    if (this->mKind == 0x29)
         return;
-    this->mUnit->Dereference();
-    this->mUnit = inNewUnit;
-    this->mUnit->Reference();
-}
-
-// Releases the two shared quad models (provisional name)
-void ReleasePlaneModels()
-{
-    ReleaseHorizontalPlaneModel();
-    ReleaseStandingPlaneModel();
-}
-
-// Unloads the graphic effect's media
-void EEEffect::UnloadMedia()
-{
-    if (this->mGraphicEffect)
-        this->mGraphicEffect->Unload();
-}
-
-long EEEffect::DrawPass2()
-{
-    return 0;
-}
-
-long EEEffect::DrawPass3()
-{
-    return 0;
-}
-
-long EEEffect::DrawPass4()
-{
-    return 0;
-}
-
-long EEEffect::DrawPass5()
-{
-    return 0;
-}
-
-long EEEffect::DrawPass6()
-{
-    return 0;
+    if (this->mUnit == inOldUnit && !this->mKeepsUnit) {
+        this->mUnit->Dereference();
+        this->mUnit = inNewUnit;
+        this->mUnit->Reference();
+    }
+    EEUnit** theEnds[3] = {&this->mFromUnit, &this->mToUnit, &this->mTarget};
+    for (int i = 0; i < 3; i++) {
+        bool theMoves = i < 2 ? this->mKind == 0x2d : this->mKind == 0x40 && !this->mKeepsUnit;
+        if (theMoves && inOldUnit == *theEnds[i]) {
+            (*theEnds[i])->Dereference();
+            *theEnds[i] = inNewUnit;
+            inNewUnit->Reference();
+        }
+    }
 }

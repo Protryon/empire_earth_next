@@ -35,8 +35,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
                        # the EE lobby glue's shells and hosts (R6 WONLobby round 6; ee_won eecolor.rs, eeglue.rs): the
                        # game's code, built as the GameCode units it replaced were
                        "Empire Earth/WONAPI/WONLobby/EELobbyGlueHost.cpp",
-                       # the 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs)
-                       "Empire Earth/Graphics Thread/EEE3DRust.cpp", "Empire Earth/Graphics Thread/EEE2DRust.cpp",
+                       # the effects' constructors and hosts (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_2d.rs)
+                       "Empire Earth/Graphics Thread/EEEffectHost.cpp",
                        # the host of the game's controls whose logic is Rust (ee_screens hud_ctl.rs; ee/EEUIRustControl.h)
                        "Empire Earth/User Interface Thread/EEUIRustControl.cpp",
                        # the computer-player decision trace and cheat switches (docs/AI_RESEARCH.md stage 0)

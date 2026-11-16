@@ -12,7 +12,7 @@
 
 class EEEnvironmentManager;
 class FSFile;
-class EEE3DRust;
+class EEEffect; typedef EEEffect EEE3DRust;   // the weather effect (one class EEEffect since R4.4 round 25)
 class EEAutoPathRequest;
 
 class EEEMStorm {

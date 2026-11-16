@@ -27,20 +27,14 @@ static const char* sPointerFiles[14] = {
     "Textures\\Attack Ground Pointer.png",
 };
 
-// Creates the game's mouse with none of its 14 extra pointer images loaded
+// Creates the game's mouse with none of its 14 extra pointer images loaded (the frame's slots 10..23)
 EEMouse::EEMouse()
 {
-    for (long i = 0; i < 14; i++)
-        this->mExtraPointerSurfaces[i] = NULL;
 }
 
-// Returns the image of a mouse pointer: the game's extra pointers for 10..23, else the engine's
-GESurface* EEMouse::GetPointerSurface(unsigned long inIndex)
-{
-    if (inIndex >= 10 && inIndex <= 23)
-        return this->mExtraPointerSurfaces[inIndex - 10];
-    return RTSMouse::GetPointerSurface(inIndex);
-}
+// The frame's slots and calls (RTSMouse.cpp)
+GESurface** RTSMouseSlot(RTSMouse* inMouse, unsigned long inIndex);
+long RTSMouseFrameCall(RTSMouse* inMouse, uint32_t inOp, GESurface* inSurface, const GE2DPoint* inOrigin, bool inFlag);
 
 // Loads the 14 extra pointer images (convert, transport, calamity, rally, heal, patrol, garrison, flare,
 // attack ground...), then the engine's pointers; returns the first load error
@@ -48,7 +42,7 @@ long EEMouse::Load(GEScreen* inScreen)
 {
     long theResult = kErrorOK;
     for (long i = 0; i < 14 && theResult == kErrorOK; i++)
-        theResult = this->LoadPointer(sPointerFiles[i], inScreen, &this->mExtraPointerSurfaces[i]);
+        theResult = this->LoadPointer(sPointerFiles[i], inScreen, RTSMouseSlot(this, 10 + i));
     if (theResult == kErrorOK)
         theResult = RTSMouse::Load(inScreen);
     return theResult;
@@ -57,11 +51,6 @@ long EEMouse::Load(GEScreen* inScreen)
 // Releases the extra pointer images, then the engine's; returns the engine's result
 long EEMouse::Release()
 {
-    for (long i = 0; i < 14; i++) {
-        if (this->mExtraPointerSurfaces[i] != NULL) {
-            this->mExtraPointerSurfaces[i]->Dereference();
-            this->mExtraPointerSurfaces[i] = NULL;
-        }
-    }
+    RTSMouseFrameCall(this, 5, NULL, NULL, false);
     return RTSMouse::Release();
 }
