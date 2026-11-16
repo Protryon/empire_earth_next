@@ -258,36 +258,6 @@ bool EEUnitClass::NavalHasArrived(EEComplexUnit* inUnit, float inValue)
     return theResult;
 }
 
-// Answers dying done: true once the ship's transformed bounding box lies wholly below the water line
-long EEUnitClass::NavalEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    GE3DPoint thePosition;
-    GEBoundingBox theBox;
-    GEBoundingBox theTransformedBox;
-    EEComplexUnit* theUnit = inUnit;
-    const GEPhysicalModel& thePhysicalModel = theUnit->mPhysicalModel;
-    GEModel* theModel = thePhysicalModel.GetModel();
-    long theResult = 0;
-    if (inEvent != kTriggerDyingAnimationFinished)
-        theResult = this->BaseEvaluateCondition(theUnit, inEvent);
-    else {
-        theUnit->GetPosition(thePosition);
-        GETransformation theTransformation(false);
-        thePhysicalModel.GetLocation().Apply(theModel->GetInternalTransform(thePhysicalModel.GetFrame()),
-                                             theTransformation);
-        float theScale = thePhysicalModel.GetScale();
-        theTransformation.Scale(theScale, theScale, theScale);
-        theTransformation.SetX(thePosition.GetX());
-        theTransformation.SetY(thePosition.GetY());
-        theTransformation.SetZ(thePosition.GetZ());
-        theBox = theModel->GetBoundingBox(theUnit->mPhysicalModel.GetFrame());
-        theBox.Transform(theTransformation, theTransformedBox);
-        if (theTransformedBox.GetTopRightBack().GetZ() < 0.0f)
-            theResult = 1;
-    }
-    return theResult;
-}
-
 // Updates a fish resource: while its resources rot it loses one every 4 s; a rotting unit counts its rotting time down
 void EEUnitClass::UpdateResourceUnit(EEComplexUnit* inUnit)
 {
@@ -407,24 +377,6 @@ bool EEUnitClass::SubmergedNavalHasArrived(EEComplexUnit* inUnit, float inValue)
         }
     }
     return inValue <= 0.05f;
-}
-
-// Answers dying-animation-finished once the submarine has sunk below the sea floor; other triggers go to the
-// common unit class
-long EEUnitClass::SubmergedNavalEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = 0;
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GE3DPoint theGround(0.0f, 0.0f, 0.0f);
-    if (inEvent != kTriggerDyingAnimationFinished) {
-        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-    } else {
-        inUnit->GetPosition(thePosition);
-        ::gWorld.mMap->GetGroundPoint(thePosition, theGround);
-        if (thePosition.GetZ() < theGround.GetZ())
-            theResult = 1;
-    }
-    return theResult;
 }
 
 // ---- EEUCSeaAnimal.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The sea animal's unit

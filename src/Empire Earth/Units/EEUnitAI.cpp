@@ -45,6 +45,9 @@
 #include "ee/EEAnimal.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUnitClassKinds.h"
+#include "ee/EEAirTrafficControl.h"
+#include "lle/GEBoundingBox.h"
+#include "lle/GEModel.h"
 
 // The obstacle wait time scale at 0x4c2374 (a long, 4000; EvaluateCondition reads it at 0x22eca0). Its owning unit
 // is not recoverable, so it is only declared here (provisional name).
@@ -61,7 +64,7 @@ EEUnit* EEFindNearbyTarget(EEComplexUnit* inUnit);
 const float kUnitAINoHeading = -10000.0f;
 const float kUnitAIShortWaitFactor = 0.5f;    // 0x447ab4 (EvaluateCondition 0x62e47a; provisional name)
 const float kUnitAILongWaitFactor = 1.5f;     // 0x447ab8 (likewise; provisional name)
-const float kUnitAIDiveDepth = -6.0f;         // 0x447abc (likewise; provisional name)
+// 0x447abc (-6.0, the bottom of space) is ee_units cls_condition.rs DIVE_DEPTH
 
 // Picks a target for inUnit when its search timer has run out or it is attack-moving and gives it an attack goal
 // (ahead of a move, patrol or explore goal); returns whether it did, and restarts the search timer
@@ -114,358 +117,10 @@ bool EEUnitClass::AttackNearby(EEComplexUnit* inUnit, EEUnitGoal* inGoal)
 
 // Tests one AI-script trigger for inUnit (its active goal may answer first); returns 0 for false, 1 for true, 2 for
 // true from an active goal that is not the current one
+// New (R5b.4, the thirty-fourth round): the answers are Rust (ee_units cls_condition.rs base, over the host below)
 long EEUnitClass::BaseEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    long theResult = 0;
-    bool theFlag = false;
-    EEUnitGoal* theGoal = inUnit->mActiveGoal;
-    if (theGoal != NULL && theGoal->EvaluateCondition(inUnit, inEvent))
-        return (theGoal != inUnit->mGoalState) + 1;
-    switch (inEvent) {
-    case kTriggerCanITargetEnemies:
-        theFlag = inUnit->mBehavior->mCanTargetEnemies || EEIsLocationGoalQueued(inUnit);
-        break;
-    case kTriggerAmIUnderAttack:
-        theFlag = (inUnit->mLastAttacker == NULL ? 0 : inUnit->GetConditionTarget()) != 0;
-        break;
-    case kTriggerAttackMoveEnabled: {
-        unsigned char theKind = theGoal != NULL ? theGoal->mKind : 0;
-        theFlag = theKind == kGoalLocation && this->CanAttackMove() && !static_cast<EEUGRust*>(theGoal)->GetIsForcedMove();
-        break;
-    }
-    case kTriggerAmmoExhausted:
-        theFlag = inUnit->mAmmunition == 0 && inUnit->mUnitClass->mUsesAmmunition;
-        break;
-    case kTriggerReloaded:
-        theFlag = inUnit->mReloadTimer == 0;
-        break;
-    case kTriggerAttackerIsNotBuilding:
-        theFlag = inUnit->mLastAttacker != NULL && inUnit->mLastAttacker->mUnitClass->mFamily != kUnitFamilyBuilding;
-        break;
-    case kTriggerAttackerIsReachable:
-        theFlag = inUnit->mLastAttacker != NULL && inUnit->CanReachUnit(inUnit->mLastAttacker);
-        break;
-    case kTriggerCanDamageAttacker: {
-        if (inUnit->mLastAttacker == NULL)
-            break;
-        EEUnitClass* theClass = inUnit->mLastAttacker->mUnitClass;
-        long theColumn = inUnit->mUnitClass->mAmmoType;
-        unsigned long theRow = theClass->mFamily;
-        theFlag = theClass->CanBeAttacked() && EEDamageFactor(theRow, theColumn) != 0.0f;
-        break;
-    }
-    case kTriggerCanFlee:
-        theFlag = inUnit->mBehavior->mCanFlee && !EEIsLocationGoalQueued(inUnit);
-        break;
-    case kTriggerCanIMoveFreely:
-        theFlag = inUnit->mBehavior->CanMoveFreely(inUnit) || EEIsLocationGoalQueued(inUnit);
-        // port: a guard (a stance that returns to its initial contact location) closes on the unit that hit it,
-        // then goes back (CanIPursuePastInitialContactLOS and ReturnsToInitialContactLocation still apply); the
-        // original's ranged guards (dbunitbehavior guard mRangedCanMoveFreely 0) stood and took hits from beyond
-        // their weapon range
-        if (!theFlag && inUnit->mBehavior->mReturnsToInitialContactLocation && inUnit->mBehavior->mCanTargetEnemies
-            && theGoal != NULL && theGoal->mKind == kGoalAttackUnit && inUnit->mLastAttacker != NULL
-            && static_cast<EEUGRust*>(theGoal)->GetAttackTarget() == inUnit->mLastAttacker && inUnit->mLastAttacker->mHitPoints > 0)
-            theFlag = true;
-        break;
-    case kTriggerCanIPursuePastInitialContactLOS:
-        theFlag = inUnit->mBehavior->mCanPursuePastInitialContactLOS || EEIsLocationGoalQueued(inUnit);
-        break;
-    case kTriggerEnemyInsideInitialContactLOS: {
-        GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
-        unsigned char theKind = theGoal != NULL ? theGoal->mKind : 0;
-        if (theKind != kGoalAttackUnit && theKind != kGoalAttackGround)
-            break;
-        EEUnit* theTarget;
-        EEFindDropLocation(inUnit, &theTarget, &theLocation, NULL);
-        theLocation.SetZ(0.0f);
-        float theRange = inUnit->GetLineOfSight();
-        theFlag = inUnit->mInitialContactLocation.DistanceToSquared(theLocation) <= theRange * theRange;
-        break;
-    }
-    case kTriggerEnemyWithinMinimumRange: {
-        GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
-        unsigned char theKind = theGoal != NULL ? theGoal->mKind : 0;
-        if (theKind != kGoalAttackUnit && theKind != kGoalAttackGround)
-            break;
-        EEUnit* theTarget;
-        EEFindDropLocation(inUnit, &theTarget, &theLocation, NULL);
-        float theRange = this->mMinRange;
-        float theDistance = theKind == kGoalAttackUnit
-            ? EEGetHitDistanceSquared(inUnit, theTarget, -10000.0f, -10000.0f)
-            : inUnit->DistanceSquared3D(theLocation);
-        theFlag = theDistance < theRange * theRange;
-        break;
-    }
-    case kTriggerHasValidInitialContactLocation:
-        theFlag = inUnit->mInitialContactHeading != kUnitAINoHeading;
-        break;
-    case kTriggerIsAttackerInRetaliationRange: {
-        if (inUnit->mLastAttacker == NULL)
-            break;
-        float theRange = inUnit->mPlayer->mComputerPlayer != NULL
-            ? inUnit->mPlayer->mComputerPlayer->mMaxAttackResponseRange : gCPBehaviors[kCPBehaviorMaximumAttackResponseRange].mFloatValue;
-        theFlag = inUnit->DistanceSquaredTo(inUnit->mLastAttacker) < theRange;
-        break;
-    }
-    case kTriggerReturnsToInitialContactLocation:
-        theFlag = inUnit->mBehavior->mReturnsToInitialContactLocation && !EEIsLocationGoalQueued(inUnit);
-        break;
-    case kTriggerUnitIdleOrAttackingDefenselessBuilding: {
-        if (theGoal != NULL) {
-            if (theGoal->mKind != kGoalAttackUnit)
-                break;
-            EEUnit* theTarget = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
-            if (!theTarget->mUnitClass->IsLandBuilding()) {
-                // port: a unit still on its way to its target (not yet in reach of it) fights back against another
-                // unit that hits it (Generic Attack.tai UnderAttack retaliates only when this holds); the original
-                // kept walking and took the hits
-                theFlag = inUnit->mLastAttacker != NULL && inUnit->mLastAttacker != theTarget && !inUnit->IsInReach(theTarget);
-                break;
-            }
-            if (theTarget->mStats->mAttack != 0.0f) {
-                EEUnitClass* theClass = inUnit->mUnitClass;
-                long theColumn = theTarget->mUnitClass->mAmmoType;
-                unsigned long theRow = theClass->mFamily;
-                if (theClass->CanBeAttacked()) {
-                    theFlag = EEDamageFactor(theRow, theColumn) == 0.0f;
-                    break;
-                }
-            }
-        }
-        theFlag = true;
-        break;
-    }
-    case kTriggerAttackerInWeaponRange:
-        theFlag = inUnit->mLastAttacker != NULL && inUnit->IsInReach(inUnit->mLastAttacker) && inUnit->mIsBuilt;
-        break;
-    case kTriggerGoalIsLocation:
-    case kTriggerSafeLocationFound:
-        theFlag = theGoal != NULL && theGoal->mKind == kGoalLocation;
-        break;
-    case kTriggerTakingLightDamage:
-        theFlag = inUnit->mLastHitPoints > inUnit->mHitPoints;
-        break;
-    case kTriggerGoalIsUnit:
-        theFlag = theGoal != NULL && theGoal->mKind == kGoalAttackUnit;
-        break;
-    case kTriggerEnemyUnitInLOS:
-        theFlag = EEIsEnemyWithinRange(inUnit);
-        break;
-    case kTriggerOwnerIsComputer:
-        theFlag = inUnit->mPlayer->mComputerPlayer != NULL;
-        break;
-    case kTriggerOwnerIsHuman:
-        theFlag = inUnit->mPlayer->mHumanPlayer != NULL;
-        break;
-    case kTriggerGoalIsPlayerInitiated:
-        theFlag = theGoal != NULL && theGoal->mB1C;
-        break;
-    case kTriggerOneSecondElapsed:
-        theFlag = theGoal != NULL && (unsigned long)(gPhysics->mGameTime - theGoal->GetStartTime()) >= 1000;
-        break;
-    case kTriggerGoalIsAttackLocation:
-        theFlag = theGoal != NULL && theGoal->mKind == kGoalAttackGround;
-        break;
-    case kTriggerUnitHasGoal:
-        theFlag = theGoal != NULL;
-        break;
-    case kTriggerGoalIsCalamity:
-        theFlag = theGoal != NULL && theGoal->mKind == kGoalCastCalamity;
-        break;
-    case kTriggerGoalIsExplore:
-        theFlag = theGoal != NULL && theGoal->mKind == kGoalExplore;
-        break;
-    case kTriggerTwoSecondsElapsed:
-        theFlag = theGoal != NULL && (unsigned long)(gPhysics->mGameTime - theGoal->GetStartTime()) >= 2000;
-        break;
-    case kTriggerLocationOffMap: {
-        theFlag = !::gWorld.mMap->mTerrainMesh.GetIsValidTile(
-            UMFloorUnsigned(inUnit->mPhysicalModel.GetLocation().GetX()),
-            UMFloorUnsigned(inUnit->mPhysicalModel.GetLocation().GetY()));
-        break;
-    }
-    case kTriggerLocationInSpace: {
-        EEMapTile* theTile = ::gWorld.mMap->GetTile(
-            UMFloorUnsigned(inUnit->mPhysicalModel.GetLocation().GetX()),
-            UMFloorUnsigned(inUnit->mPhysicalModel.GetLocation().GetY()));
-        theFlag = theTile != NULL && theTile->mTerrainType == kTerrainSpace;
-        break;
-    }
-    case kTriggerGoalIsNotCalamity:
-        theFlag = theGoal == NULL || theGoal->mKind != kGoalCastCalamity;
-        break;
-    case kTriggerLocationWayOffMap: {
-        GE3DPoint theLocation((float)inUnit->mTileX + 0.5f, (float)inUnit->mTileY + 0.5f, inUnit->mHeight);
-        theFlag = inUnit->mPhysicalModel.GetLocation().DistanceTo(theLocation) > gWorldTable.GetFloatValue(kWorldTileStrayDistance);
-        break;
-    }
-    case kTriggerOneAndAHalfSecondsElapsed:
-        theFlag = theGoal != NULL && (unsigned long)(gPhysics->mGameTime - theGoal->GetStartTime()) >= 1500;
-        break;
-    case kTriggerThreeSecondsElapsed:
-        theFlag = theGoal != NULL && (unsigned long)(gPhysics->mGameTime - theGoal->GetStartTime()) >= 3000;
-        break;
-    case kTriggerCargoIsEmpty:
-        theFlag = inUnit->GetNumCargoUnits() == 0;
-        break;
-    case kTriggerUnitHitSpace: {
-        GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
-        inUnit->GetPosition(theLocation);
-        theFlag = inUnit->mTile->mTerrainType == kTerrainSpace && theLocation.GetZ() <= 0.0f;
-        break;
-    }
-    case kTriggerReachedBottomOfSpace: {
-        GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
-        inUnit->GetPosition(theLocation);
-        theFlag = theLocation.GetZ() <= kUnitAIDiveDepth;
-        break;
-    }
-    case kTriggerDyingAnimationFinished:
-        theFlag = inUnit->mIsAnimationPaused || inUnit->GetModel()->mFrameCounts[inUnit->GetAnimation()] == 1;
-        break;
-    case kTriggerCanIMove:
-        theFlag = inUnit->GetMaxVelocity() > 0.1f;
-        break;
-    case kTriggerMovePreparationComplete:
-        theFlag = inUnit->mIsPathDone && (long)inUnit->mWaypoints.size() > 0;
-        break;
-    case kTriggerUnitRottedAway:
-        theFlag = inUnit->mRottingAwayTime == 0;
-        break;
-    case kTriggerResourceDepleted:
-    case kTriggerResourcesRottedAway:
-        theFlag = inUnit->mResourceAmount == 0;
-        break;
-    case kTriggerObstacleDetected: {
-        if (inUnit->mBlockingUnit == NULL) {
-            unsigned long theWait = UMFloatToLong(gPhysics->GetRandom(0.75f, 1.25f) * (float)gUnitAIWaitScale);
-            if (inUnit->mUnitClass->mIsMelee && inUnit->mVelocity > 0.0f && theGoal != NULL && theGoal->mKind == kGoalAttackUnit)
-                theWait = UMFloatToLong((float)theWait * kUnitAIShortWaitFactor);
-            else if ((inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen || inUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
-                     && inUnit->mVelocity > 0.0f && theGoal != NULL && theGoal->mKind == kGoalBuildRepair)
-                theWait = UMFloatToLong((float)theWait * kUnitAILongWaitFactor);
-            if (inUnit->GetCollisionResolutionCount() <= (float)theWait)
-                break;
-            inUnit->mCollisionResolutionCount = 0.0f;
-        }
-        theFlag = true;
-        break;
-    }
-    case kTriggerShouldMoveToNextAutoWaypoint:
-        theFlag = theGoal != NULL && inUnit->ShouldMoveToNextAutoWaypoint();
-        break;
-    case kTriggerGoalIsPatrol:
-        theFlag = theGoal != NULL && theGoal->mKind == kGoalPatrol;
-        break;
-    case kTriggerNoMoreWaypoints:
-        theFlag = inUnit->mWaypoints.size() == 0;
-        if (theFlag && (!gPathManager.HasAutoPath(inUnit) || !gPathManager.IsPathDone(inUnit))) {
-            inUnit->RefreshPath();
-            theFlag = inUnit->mWaypoints.size() == 0;
-        }
-        if (theFlag && inUnit->mCollisionState != 0)
-            inUnit->mCollisionState = 0;
-        break;
-    case kTriggerNextWaypointRetrieved:
-        if (inUnit->mWaypoints.size() == 0) {
-            inUnit->RefreshPath();
-            theFlag = (long)inUnit->mWaypoints.size() > 0;
-            break;
-        }
-        if (inUnit->mWaypoints.size() == 1)
-            inUnit->RefreshPath();
-        theFlag = true;
-        break;
-    case kTriggerNextPatrolPointRetrieved:
-        theFlag = (long)inUnit->mWaypoints.size() > 0;
-        break;
-    case kTriggerArrivedAtMoveWaypoint:
-        theFlag = inUnit->mHasArrived;
-        if (theFlag && inUnit->mCollisionState != 0)
-            inUnit->mCollisionState = 0;
-        break;
-    case kTriggerOneWaypointRemaining:
-        theFlag = inUnit->mWaypoints.size() == 1 && gPathManager.IsPathDone(inUnit);
-        break;
-    case kTriggerIsAdult:
-        theFlag = inUnit->mGrowth >= 1.0f;
-        break;
-    case kTriggerIsBaby:
-        theFlag = inUnit->mGrowth < 1.0f;
-        break;
-    case kTriggerHealSearchTimeElapsed:
-        theFlag = this->mHealDelay != 0.0f && inUnit->mHealSearchTimer == 0.0f;
-        break;
-    case kTriggerGoalIsNotAttack: {
-        unsigned char theKind = theGoal != NULL ? theGoal->mKind : 0;
-        theFlag = theKind != kGoalAttackUnit && theKind != kGoalAttackGround;
-        break;
-    }
-    case kTriggerHasGroupAttack:
-        theFlag = inUnit->mHerd != NULL && inUnit->mHerd->mAnimal->mHasGroupAttack;
-        break;
-    case kTriggerCanISeeEnemy:
-        if (!inUnit->mBehavior->mCanTargetEnemies && !EEIsLocationGoalQueued(inUnit))
-            break;
-        theFlag = this->AttackNearby(inUnit, theGoal);
-        break;
-    case kTriggerEnemyUnitSpotted:
-        theFlag = this->AttackNearby(inUnit, theGoal);
-        break;
-    case kTriggerShouldIRetaliate: {
-        if (inUnit->mLastAttacker == NULL)
-            break;
-        EEComplexUnit* theAttacker = inUnit->GetConditionTarget();
-        if (theAttacker == NULL || (!inUnit->mBehavior->mCanTargetEnemies && !EEIsLocationGoalQueued(inUnit))
-            || (theGoal != NULL && theGoal->mB1C))
-            break;
-        EEUnitClass* theAttackerClass = theAttacker->mUnitClass;
-        long theColumn = inUnit->mUnitClass->mAmmoType;
-        unsigned long theRow = theAttackerClass->mFamily;
-        if (!theAttackerClass->CanBeAttacked() || EEDamageFactor(theRow, theColumn) == 0.0f)
-            break;
-        if (theGoal != NULL) {
-            if (theGoal->mKind != kGoalAttackUnit)
-                break;
-            EEUnit* theTarget = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
-            if (!theTarget->mUnitClass->IsLandBuilding())
-                break;
-            if (theTarget->mStats->mAttack != 0.0f) {
-                EEUnitClass* theClass = inUnit->mUnitClass;
-                long theTargetColumn = theTarget->mUnitClass->mAmmoType;
-                unsigned long theOwnRow = theClass->mFamily;
-                if (theClass->CanBeAttacked() && EEDamageFactor(theOwnRow, theTargetColumn) != 0.0f)
-                    break;
-            }
-        }
-        float theRange = inUnit->mPlayer->mComputerPlayer != NULL
-            ? inUnit->mPlayer->mComputerPlayer->mMaxAttackResponseRange : gCPBehaviors[kCPBehaviorMaximumAttackResponseRange].mFloatValue;
-        theFlag = inUnit->DistanceSquaredTo(theAttacker) < theRange && inUnit->CanReachUnit(theAttacker);
-        break;
-    }
-    case kTriggerShouldIRun:
-        theFlag = inUnit->mBehavior->mCanFlee && !EEIsLocationGoalQueued(inUnit) && inUnit->mLastAttacker != NULL
-                && inUnit->GetConditionTarget() != NULL && (theGoal == NULL || !theGoal->mB1C);
-        break;
-    case kTriggerGoalIsNotPlayerInitiated:
-        theFlag = theGoal == NULL || !theGoal->mB1C;
-        break;
-    case kTriggerHasParentalVengance:
-        theFlag = inUnit->mHerd != NULL && inUnit->mHerd->mAnimal->mHasParentalVengeance && inUnit->mUnitClass->mAttack > 0;
-        break;
-    case kTriggerHasGroupFlee:
-        theFlag = inUnit->mHerd != NULL && inUnit->mHerd->mAnimal->mHasGroupFlee;
-        break;
-    case kTriggerAlwaysTrue:
-        theFlag = true;
-        break;
-    default:
-        break;
-    }
-    if (theFlag)
-        theResult = 1;
-    return theResult;
+    return ee_units_cls_base_condition(EEObj(this), EEObj(inUnit), (uint32_t)inEvent);
 }
 
 // Returns whether inUnit's first goal queue holds a move goal that is not a forced move (EvaluateCondition's helper)
@@ -482,4 +137,261 @@ bool EEIsLocationGoalQueued(EEComplexUnit* inUnit)
             theResult = false;
     }
     return theResult;
+}
+
+// New (R5b.4, the thirty-fourth round): the trigger answers are Rust (ee_units cls_condition.rs: every kind's body and
+// the common one, golden USST kind 2); this switch is their host, each case the original's expression or statement
+static EEUnitGoal* CondGoal(uint64_t inGoal) { return (EEUnitGoal*)(uintptr_t)inGoal; }
+static EEComplexUnit* CondUnit(uint64_t inUnit) { return static_cast<EEComplexUnit*>((EEUnit*)(uintptr_t)inUnit); }
+
+static void CondPoint(EeUnitsCondIo* ioIo, const GE3DPoint& inPoint)
+{
+    ioIo->p[0] = inPoint.GetX();
+    ioIo->p[1] = inPoint.GetY();
+    ioIo->p[2] = inPoint.GetZ();
+}
+
+static int64_t CondTimeGone(EEUnitGoal* inGoal, int64_t inMs)
+{
+    return (unsigned long)(gPhysics->mGameTime - inGoal->GetStartTime()) >= (unsigned long)inMs;
+}
+
+extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, EeUnitsCondIo* ioIo)
+{
+    EEComplexUnit* theUnit = CondUnit(inA);
+    switch (inOp) {
+    case EE_UNITS_COND_GOAL:
+        return EEObj(inC != 0 ? theUnit->mGoalState : theUnit->mActiveGoal);
+    case EE_UNITS_COND_GOAL_INFO: {
+        EEUnitGoal* theGoal = CondGoal(inB);
+        bool theForced = theGoal->mKind == kGoalLocation && static_cast<EEUGRust*>(theGoal)->GetIsForcedMove();
+        return (int64_t)theGoal->mKind | (theGoal->mB1C ? 0x100 : 0) | (theForced ? 0x200 : 0);
+    }
+    case EE_UNITS_COND_GOAL_CONDITION:
+        return CondGoal(inB)->EvaluateCondition(theUnit, (unsigned long)inC);
+    case EE_UNITS_COND_GOAL_ELAPSED:
+        return CondTimeGone(CondGoal(inB), inC);
+    case EE_UNITS_COND_GOAL_TARGET:
+        return EEObj(static_cast<EEUGRust*>(CondGoal(inB))->GetAttackTarget());
+    case EE_UNITS_COND_BEHAVIOR: {
+        EEUnitBehavior* theBehavior = theUnit->mBehavior;
+        return (theBehavior->mCanTargetEnemies ? 1 : 0) | (theBehavior->mCanFlee ? 2 : 0) |
+               (theBehavior->mCanPursuePastInitialContactLOS ? 4 : 0) | (theBehavior->mReturnsToInitialContactLocation ? 8 : 0);
+    }
+    case EE_UNITS_COND_MOVE_FREELY:
+        return theUnit->mBehavior->CanMoveFreely(theUnit);
+    case EE_UNITS_COND_LOCATION_QUEUED:
+        return EEIsLocationGoalQueued(theUnit);
+    case EE_UNITS_COND_LAST_ATTACKER:
+        return EEObj(static_cast<EEUnit*>(theUnit->mLastAttacker));
+    case EE_UNITS_COND_CONDITION_TARGET:
+        return EEObj(static_cast<EEUnit*>(theUnit->GetConditionTarget()));
+    case EE_UNITS_COND_CAN_REACH:
+        return theUnit->CanReachUnit((EEUnit*)(uintptr_t)inB);
+    case EE_UNITS_COND_IN_REACH:
+        return theUnit->IsInReach((EEUnit*)(uintptr_t)inB);
+    case EE_UNITS_COND_CAN_BE_ATTACKED:
+        return ((EEUnitClass*)(uintptr_t)inB)->CanBeAttacked();
+    case EE_UNITS_COND_DAMAGE_FACTOR:
+        ioIo->f = EEDamageFactor((long)inC, (long)inD);
+        return 0;
+    case EE_UNITS_COND_DROP_LOCATION: {
+        GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
+        EEUnit* theTarget;
+        EEFindDropLocation(theUnit, &theTarget, &theLocation, NULL);
+        CondPoint(ioIo, theLocation);
+        return EEObj(theTarget);
+    }
+    case EE_UNITS_COND_LINE_OF_SIGHT:
+        ioIo->f = theUnit->GetLineOfSight();
+        return 0;
+    case EE_UNITS_COND_HIT_DISTANCE:
+        ioIo->f = EEGetHitDistanceSquared(theUnit, (EEUnit*)(uintptr_t)inB, -10000.0f, -10000.0f);
+        return 0;
+    case EE_UNITS_COND_DISTANCE_3D:
+        ioIo->f = theUnit->DistanceSquared3D(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]));
+        return 0;
+    case EE_UNITS_COND_RESPONSE_RANGE:
+        ioIo->f = theUnit->mPlayer->mComputerPlayer != NULL ? theUnit->mPlayer->mComputerPlayer->mMaxAttackResponseRange
+                                                            : gCPBehaviors[kCPBehaviorMaximumAttackResponseRange].mFloatValue;
+        return 0;
+    case EE_UNITS_COND_DISTANCE_TO:
+        ioIo->f = theUnit->DistanceSquaredTo(CondUnit(inB));
+        return 0;
+    case EE_UNITS_COND_ENEMY_IN_RANGE:
+        return EEIsEnemyWithinRange(theUnit);
+    case EE_UNITS_COND_OWNER:
+        return (theUnit->mPlayer->mComputerPlayer != NULL ? 1 : 0) | (theUnit->mPlayer->mHumanPlayer != NULL ? 2 : 0);
+    case EE_UNITS_COND_OFF_MAP: {
+        const GETransformation& theLocation = theUnit->mPhysicalModel.GetLocation();
+        if (inC == 0)
+            return !::gWorld.mMap->mTerrainMesh.GetIsValidTile(UMFloorUnsigned(theLocation.GetX()), UMFloorUnsigned(theLocation.GetY()));
+        if (inC == 1) {
+            EEMapTile* theTile = ::gWorld.mMap->GetTile(UMFloorUnsigned(theLocation.GetX()), UMFloorUnsigned(theLocation.GetY()));
+            return theTile != NULL && theTile->mTerrainType == kTerrainSpace;
+        }
+        GE3DPoint thePoint((float)theUnit->mTileX + 0.5f, (float)theUnit->mTileY + 0.5f, theUnit->mHeight);
+        return theLocation.DistanceTo(thePoint) > gWorldTable.GetFloatValue(kWorldTileStrayDistance);
+    }
+    case EE_UNITS_COND_CARGO:
+        return theUnit->GetNumCargoUnits();
+    case EE_UNITS_COND_FRAME_COUNT:
+        return theUnit->GetModel()->mFrameCounts[theUnit->GetAnimation()];
+    case EE_UNITS_COND_MAX_VELOCITY:
+        ioIo->f = theUnit->GetMaxVelocity();
+        return 0;
+    case EE_UNITS_COND_OBSTACLE: {
+        if (theUnit->mBlockingUnit != NULL)
+            return 1;
+        EEUnitGoal* theGoal = theUnit->mActiveGoal;
+        unsigned long theWait = UMFloatToLong(gPhysics->GetRandom(0.75f, 1.25f) * (float)gUnitAIWaitScale);
+        if (theUnit->mUnitClass->mIsMelee && theUnit->mVelocity > 0.0f && theGoal != NULL && theGoal->mKind == kGoalAttackUnit)
+            theWait = UMFloatToLong((float)theWait * kUnitAIShortWaitFactor);
+        else if ((theUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen || theUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
+                 && theUnit->mVelocity > 0.0f && theGoal != NULL && theGoal->mKind == kGoalBuildRepair)
+            theWait = UMFloatToLong((float)theWait * kUnitAILongWaitFactor);
+        if (theUnit->GetCollisionResolutionCount() <= (float)theWait)
+            return 0;
+        theUnit->mCollisionResolutionCount = 0.0f;
+        return 1;
+    }
+    case EE_UNITS_COND_AUTO_WAYPOINT:
+        return theUnit->ShouldMoveToNextAutoWaypoint();
+    case EE_UNITS_COND_WAYPOINT_STEP: {
+        bool theFlag;
+        if (inC == 0) {
+            theFlag = theUnit->mWaypoints.size() == 0;
+            if (theFlag && (!gPathManager.HasAutoPath(theUnit) || !gPathManager.IsPathDone(theUnit))) {
+                theUnit->RefreshPath();
+                theFlag = theUnit->mWaypoints.size() == 0;
+            }
+        } else if (inC == 1) {
+            if (theUnit->mWaypoints.size() == 0) {
+                theUnit->RefreshPath();
+                return (long)theUnit->mWaypoints.size() > 0;
+            }
+            if (theUnit->mWaypoints.size() == 1)
+                theUnit->RefreshPath();
+            return 1;
+        } else if (inC == 2)
+            theFlag = theUnit->mHasArrived;
+        else
+            return theUnit->mWaypoints.size() == 1 && gPathManager.IsPathDone(theUnit);
+        if (theFlag && theUnit->mCollisionState != 0)
+            theUnit->mCollisionState = 0;
+        return theFlag;
+    }
+    case EE_UNITS_COND_HERD: {
+        EEHerd* theHerd = theUnit->mHerd;
+        if (theHerd == NULL)
+            return 0;
+        return 1 | (theHerd->mAnimal->mHasGroupAttack ? 2 : 0) | (theHerd->mAnimal->mHasParentalVengeance ? 4 : 0) |
+               (theHerd->mAnimal->mHasGroupFlee ? 8 : 0);
+    }
+    case EE_UNITS_COND_ATTACK_NEARBY:
+        return ((EEUnitClass*)(uintptr_t)inB)->AttackNearby(theUnit, CondGoal((uint64_t)inC));
+    case EE_UNITS_COND_INITIAL_CONTACT:
+        CondPoint(ioIo, theUnit->mInitialContactLocation);
+        return 0;
+    case EE_UNITS_COND_WAYPOINTS:
+        return (int64_t)theUnit->mWaypoints.size();
+    case EE_UNITS_COND_POSITION: {
+        GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
+        theUnit->GetPosition(thePosition);
+        CondPoint(ioIo, thePosition);
+        return 0;
+    }
+    case EE_UNITS_COND_GROUND_Z: {
+        GE3DPoint theGround(0.0f, 0.0f, 0.0f);
+        ::gWorld.mMap->GetGroundPoint(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]), theGround);
+        ioIo->f = theGround.GetZ();
+        return 0;
+    }
+    case EE_UNITS_COND_TILE:
+        ioIo->f = theUnit->mTile->GetHeight();
+        return theUnit->mTile->mTerrainType;
+    case EE_UNITS_COND_BUILD_QUEUE: {
+        if (inC == 0)
+            return (int64_t)theUnit->mCitizenBuildQueue.size();
+        EEUnit* theSite = theUnit->PopBuildTarget();
+        if (theSite == NULL)
+            return 0;
+        theUnit->SetGoal(EEUGRust::NewBuildRepair(theUnit->GetPlayer(), theSite, true), 0, 0);
+        theUnit->StartAction(kActionMoveToRepairSite);
+        return 1;
+    }
+    case EE_UNITS_COND_CAN_CONVERT: {
+        bool theFlag;
+        return EECanConvert(theUnit, CondUnit(inB), theFlag);
+    }
+    case EE_UNITS_COND_CONVERSION_COST:
+        return EEGetConversionCost(theUnit);
+    case EE_UNITS_COND_ATTACK_GOAL: {
+        EEUGRust* theGoal = EEAttackUnitCast(theUnit->GetGoal());
+        if (theGoal == NULL)
+            return 0;
+        EEUnit* theTarget = theGoal->GetAttackTarget();
+        bool theValid = theTarget != NULL && (theTarget->mTileNode == NULL || !theTarget->GetComplexUnit()->mIsDisabled ||
+                                              theTarget->GetComplexUnit()->IsProtected());
+        bool theFriendly = theTarget != NULL && (theTarget->GetPlayer() == theUnit->GetPlayer() ||
+                                                 theUnit->GetPlayer()->mEnemies[theTarget->GetPlayer()->GetPlayerID()] == 0);
+        return 1 | (theValid ? 2 : 0) | (theGoal->IsConvertAttack() ? 4 : 0) | (theFriendly ? 8 : 0);
+    }
+    case EE_UNITS_COND_CRUSADER:
+        return theUnit->GetUnitClass()->IsCrusader();
+    case EE_UNITS_COND_SUNK: {
+        GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
+        const GEPhysicalModel& theModel = theUnit->mPhysicalModel;
+        GEModel* theGEModel = theModel.GetModel();
+        GEBoundingBox theTransformedBox;
+        theUnit->GetPosition(thePosition);
+        GETransformation theTransformation(false);
+        theModel.GetLocation().Apply(theGEModel->GetInternalTransform(theModel.GetFrame()), theTransformation);
+        float theScale = theModel.GetScale();
+        theTransformation.Scale(theScale, theScale, theScale);
+        theTransformation.SetX(thePosition.GetX());
+        theTransformation.SetY(thePosition.GetY());
+        theTransformation.SetZ(thePosition.GetZ());
+        GEBoundingBox theBox = theGEModel->GetBoundingBox(theModel.GetFrame());
+        theBox.Transform(theTransformation, theTransformedBox);
+        return theTransformedBox.GetTopRightBack().GetZ() < 0.0f;
+    }
+    case EE_UNITS_COND_MEMBER: {
+        EEUnitClass* theClass = (EEUnitClass*)(uintptr_t)inB;
+        switch (inC) {
+        case 0: return theClass->SelectUnitToRelease(theUnit);
+        case 1: return theClass->EruptVolcano(theUnit);
+        case 2: return theClass->HasSunk(theUnit);
+        case 3: return theClass->AreEnemiesNear(theUnit);
+        default: return theClass->IsPasserNear(theUnit);
+        }
+    }
+    case EE_UNITS_COND_LAUNCH: {
+        EEAirTrafficControl* theTraffic = theUnit->mPlayer->mAirTraffic[theUnit->mUnitClass->mAirTrafficType - 1];
+        if (inC == 0)
+            return theTraffic->GetQueueLength(theUnit) == 0 || theUnit->mExitingUnitID == -1;
+        long theID = theUnit->mExitingUnitID;
+        if (theID == -1)
+            return 0;
+        EEComplexUnit* theCargo = theUnit->FindPassenger(theID);
+        if (theCargo != NULL)
+            return theCargo->mIsClearanceGranted;
+        theUnit->SetExitingUnitID(-1);
+        EEUnit* theOther = ::gWorld.GetUnit(theID);
+        if (theOther != NULL && theOther->mComplexUnit != NULL)
+            theTraffic->RemovePlane(theUnit, theOther->mComplexUnit);
+        return 0;
+    }
+    case EE_UNITS_COND_QUEUED_GOAL:
+        return theUnit->GetQueuedGoal((unsigned long)inC) != NULL;
+    case EE_UNITS_COND_MINE_DEPLETED: {
+        EEUnit* theMine = theUnit->mMine;
+        return theMine == NULL || !theMine->mIsValid || theMine->mResourceAmount <= 0;
+    }
+    case EE_UNITS_COND_SECONDARY_TARGET: {
+        EEUGRust* theGoal = EEAttackUnitCast(theUnit->GetGoal());
+        return theGoal != NULL && theGoal->GetAttackTarget()->mHitPoints > 0;
+    }
+    }
+    return 0;
 }

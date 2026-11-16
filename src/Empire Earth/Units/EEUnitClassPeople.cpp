@@ -84,152 +84,31 @@ void EEGetRingCorners(long inArg1, long inX, long inY, long inSizeX, long inSize
 void EEGetSquareRing(long inX, long inY, long inSizeX, long inSizeY, std::vector<U2DPoint<long> >& outTiles);
 
 // Searches rings 2..9 around the citizen for a tile on its continent where a unit of the given type fits; returns
-// whether one was found
+// whether one was found (ee_units citizen.rs)
 bool EEUnitClass::FindWoodSite(EEComplexUnit* inUnit, long inUnitType, U2DPoint<float>& outLocation)
 {
-    std::vector<EETileCoordinate> theTiles;
-    EEUnitClass* theClass = gUnitClassTable[inUnitType];
-    bool theFound = false;
-    long theX = inUnit->mTileX;
-    long theY = inUnit->mTileY;
-    long theRadius = 2;
-    do {
-        if (theFound)
-            break;
-        EEGetSquareRingTiles(theX, theY, theRadius, theTiles);
-        for (std::vector<EETileCoordinate>::iterator it = theTiles.begin(); it != theTiles.end() && !theFound; ++it) {
-            if (!((unsigned long)it->GetX() < gMapWidth) || !((unsigned long)it->GetY() < gMapHeight))
-                continue;
-            unsigned short theContinent = gContinentManager.GetContinent(*it, kAIPathLandMass);
-            if (gContinentManager.GetContinent(inUnit, kAIPathLandMass) != theContinent
-                || !EEBlockTakes(inUnit, inUnitType, it->GetX(), it->GetY(), theClass->GetTileSize(), theClass->GetTileSize(), 0))
-                continue;
-            theFound = true;
-            outLocation.SetX((float)it->GetX());
-            outLocation.SetY((float)it->GetY());
-        }
-        theRadius++;
-    } while (theRadius < 10);
-    return theFound;
-}
-
-// Returns whether a unit matches the wanted resource: any for kind 1, else the same sort as inResource (farm, animal
-// or fish, forage bush) or the wanted resource type; animals only when inFarms
-bool EEIsResourceOfKind(EEUnit* inUnit, EEUnit* inResource, unsigned long inKind, bool inFarms)
-{
-    bool theTree;
-    if (inResource != NULL && (inResource->mUnitClass->mFamily == kUnitFamilyAnimal || inResource->mUnitClass->mFamily == kUnitFamilyFish))
-        theTree = true;
-    else
-        theTree = false;
-    bool theFarm;
-    if (inResource != NULL && inResource->mUnitClass->mUnitType == kUnitTypeFarm)
-        theFarm = true;
-    else
-        theFarm = false;
-    bool theFish;
-    if (inResource != NULL && inResource->mUnitClass->mUnitType == kUnitTypeResForageBush)
-        theFish = true;
-    else
-        theFish = false;
-    return (inKind == 1 || inKind == 2 && theFarm && inUnit->mUnitClass->mUnitType == kUnitTypeFarm
-            || theTree && (inUnit->mUnitClass->mFamily == kUnitFamilyAnimal || inUnit->mUnitClass->mFamily == kUnitFamilyFish)
-            || theFish && inUnit->mUnitClass->mUnitType == kUnitTypeResForageBush || inKind != 2 && inUnit->mResourceType == inKind)
-           && (inFarms || inUnit->mUnitClass->mFamily != kUnitFamilyAnimal);
+    EEUCNote theNote(40); theNote.C(this).U(inUnit).I(inUnitType);   // TEST ONLY (UCBD)
+    float thePoint[2] = {0.0f, 0.0f};
+    bool theFound = ee_units_cz_find_wood_site(EEObj(inUnit), (int32_t)inUnitType, &thePoint) != 0;
+    if (theFound) {
+        outLocation.SetX(thePoint[0]);
+        outLocation.SetY(thePoint[1]);
+        theNote.F(outLocation.GetX()).F(outLocation.GetY());   // TEST ONLY (UCBD)
+    }
+    return theNote.R(theFound);
 }
 
 // Returns the nearest gatherable resource of a kind within inRange rings of a centre unit, not in ioUnits (tiles
 // shuffled per ring; another path area costs 400; a dead animal wins at once; boats look for naval resources)
+// (ee_units citizen.rs)
 EEUnit* EEUnitClass::FindResourceOfKind(EEComplexUnit* inUnit, EEUnit* inCenter, EEUnit* inResource, long inRange,
                                    unsigned long inKind, std::vector<EEUnit*>* ioUnits, bool inFarms)
 {
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<U2DPoint<long> > theInner;
-    std::vector<U2DPoint<long> > theOuter;
-    long theX = inCenter->GetTileX();
-    long theY = inCenter->GetTileY();
-    long theSize = inCenter->GetUnitClass()->GetTileSize();
-    long theBest = inRange * inRange * 2;
-    EEUnit* theResult = NULL;
-    long i = 0;
-    GE2DPoint theCenter(theSize * 0.5f + theX, inCenter->GetUnitClass()->GetTileSize() * 0.5f + theY);
-    if (inRange > 0) {
-        do {
-            if (theBest == 0)
-                break;
-            EEGetSideTiles(theX, theY, theSize, theInner);
-            EEGetRingCorners(1, theX, theY, theSize, theSize, theOuter);
-            theSize += 2;
-            theX--;
-            theY--;
-            theTiles.clear();
-            theTiles.insert(theTiles.end(), theInner.begin(), theInner.end());
-            theTiles.insert(theTiles.end(), theOuter.begin(), theOuter.end());
-            EEAIRandomShuffle(theTiles.begin(), theTiles.end());
-            for (std::vector<U2DPoint<long> >::iterator it = theTiles.begin(); it != theTiles.end(); ++it) {
-                long theTileX = it->GetX();
-                long theTileY = it->GetY();
-                EEMapTile* theTile = gWorld.mMap->GetTile(theTileX, theTileY);
-                if (theTile == NULL)
-                    continue;
-                RTSTileUnitNode* theNode = theTile->mUnits;
-                if (this->mCategory == kUnitCategoryLandCitizen) {
-                    for (; theNode != NULL; theNode = theNode->mNext) {
-                        EEUnit* theUnit = theNode->mUnit;
-                        if (theUnit == NULL || theUnit == inCenter || !EEIsResourceOfKind(theUnit, inResource, inKind, inFarms)
-                            || !inUnit->CanGather(theUnit, theTileX, theTileY, false, false)
-                            || std::find(ioUnits->begin(), ioUnits->end(), theUnit) != ioUnits->end()
-                            || !((unsigned long)theTileX < gMapWidth) || !((unsigned long)theTileY < gMapHeight)
-                            || !gContinentManager.CanGetToUnit(inUnit, theUnit))
-                            continue;
-                        GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
-                        long theUnitX = theUnit->GetTileX();
-                        long theUnitY = theUnit->GetTileY();
-                        this->FindGatherPoint(inUnit, theUnitX, theUnitY, theUnit->GetUnitClass()->GetTileSize(), theUnit->GetUnitClass()->GetTileSize(),
-                                 theLocation);
-                        if (UMFloor(theLocation.GetX()) == theUnitX && UMFloor(theLocation.GetY()) == theUnitY)
-                            continue;
-                        long theDistance;
-                        if (theUnit->mTileNode != NULL)
-                            theDistance = UMFloor(theUnit->mComplexUnit->DistanceSquared2D(theCenter));
-                        else
-                            theDistance = UMFloor(theUnit->GetTileDistanceSquared(inCenter));
-                        EETileLocation theFrom(inUnit->GetTileX(), inUnit->GetTileY());
-                        EETileLocation theTo(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY()));
-                        // area ids, not pointers (the original: GetPathAreaIDAt call at 0x60c403, inline id at 0x60c458, cmp bx, ax)
-                        if (gContinentManager.GetPathAreaIDAt(theFrom) != gContinentManager.GetPathAreaIDAt(theTo))
-                            theDistance += 400;
-                        if (theUnit->GetUnitClass()->mFamily == kUnitFamilyAnimal && theUnit->GetHitPoints() == 0)
-                            theDistance = 0;
-                        if (theDistance < theBest) {
-                            theResult = theUnit;
-                            theBest = theDistance;
-                        }
-                    }
-                } else {
-                    for (; theNode != NULL; theNode = theNode->mNext) {
-                        EEUnit* theUnit = theNode->mUnit;
-                        if (theUnit == NULL || theUnit == inCenter || (inKind != 1 && theUnit->mResourceType != inKind)
-                            || theUnit->GetUnitClass()->GetCategory() != kUnitCategoryNaval
-                            || (!inFarms && theUnit->GetUnitClass()->mFamily == kUnitFamilyAnimal)
-                            || !inUnit->CanGather(theUnit, theTileX, theTileY, false, false)
-                            || !gContinentManager.CanGetToUnit(inUnit, theUnit) || !this->HasGatherPoint(inUnit, theUnit))
-                            continue;
-                        long theDistance;
-                        if (theUnit->mTileNode == NULL)
-                            theDistance = UMFloor(theUnit->GetTileDistanceSquared(inCenter));
-                        else
-                            theDistance = UMFloor(theUnit->mComplexUnit->DistanceSquared2D(theCenter));
-                        if (theDistance < theBest) {
-                            theResult = theUnit;
-                            theBest = theDistance;
-                        }
-                    }
-                }
-            }
-            i++;
-        } while (i < inRange);
-    }
+    EEUCNote theNote(41); theNote.C(this).U(inUnit).U(inCenter).U(inResource).I(inRange).I((long)inKind).Us(*ioUnits).I(inFarms);   // TEST ONLY (UCBD)
+    EEUnit* theResult = (EEUnit*)(uintptr_t)ee_units_cz_find_resource_of_kind((uint32_t)this->mCategory, EEObj(inUnit),
+        EEObj(inCenter), EEObj(inResource), (int32_t)inRange, (uint32_t)inKind,
+        ioUnits->empty() ? NULL : reinterpret_cast<const uint64_t*>(ioUnits->data()), ioUnits->size(), inFarms);
+    theNote.U(theResult);   // TEST ONLY (UCBD)
     return theResult;
 }
 
@@ -252,159 +131,26 @@ EEUnit* EEUnitClass::FindNextResource(EEComplexUnit* inUnit, EEUnit* inResource,
     return this->FindResourceOfKind(inUnit, inUnit, inResource, theRange, inKind, ioUnits, true);
 }
 
-// the range from a farm to its storage within which a citizen counts it as the storage's farm (0x446fdc)
-// (provisional name)
-static const float kCitizenFarmRange = 20.0f;
-
 // Returns where the citizen drops its load: its goal's storage, else a farm's nearest drop site within 20, else the
-// owner's nearest built drop site that takes the load (docks and navy yards for boats)
+// owner's nearest built drop site that takes the load (docks and navy yards for boats) (ee_units citizen.rs)
 EEUnit* EEUnitClass::FindStorage(EEComplexUnit* inUnit, bool inAnyStorage)
 {
-    std::vector<EEUnit*> theUnits;
-    EEUnit* theUnit = inUnit->GetPlayer()->mFirstUnit;
-    bool theFarm = false;
-    EEUnitGoal* theGoal = inUnit->mGoalState;
-    EEComplexUnit* theResult = NULL;
-    EEComplexUnit* theOwn = NULL;
-    if (theGoal != NULL && theGoal->mKind == kGoalGather) {
-        EEUGRust* theGather = EEGatherGoalCast(theGoal);
-        if (!inAnyStorage) {
-            theOwn = static_cast<EEComplexUnit*>(theGather->GetGatherStorage());
-            if (theOwn != NULL && theOwn->GetHitPoints() > 0 && !theOwn->mIsDisabled)
-                theResult = theOwn;
-        }
-        EEUnit* theResource = theGather->GetGatherResource();
-        if (theResource != NULL && theResource->GetUnitClass()->GetUnitType() == kUnitTypeFarm) {
-            EEGetFarmDropSites(theResource->GetComplexUnit(), theUnits);
-            for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); ++it) {
-                unsigned long theValue = inUnit->mResourceType;
-                if (!(*it)->GetComplexUnit()->CanTake(inUnit, theValue)) {
-                    inUnit->SetResourceAmount(0);
-                    inUnit->SetResourceType((*it)->mResourceType);
-                }
-                EEUnit* theStorage = *it;
-                if (!(theStorage->GetHitPoints() > 0) || !theStorage->GetComplexUnit()->mIsBuilt
-                    || theStorage->GetComplexUnit()->mIsDisabled)
-                    continue;
-                // keep the storage picked so far unless this drop site is nearer
-                if (theResult != NULL && inUnit->DistanceSquaredToUnit(theStorage) >= inUnit->DistanceSquaredToUnit(theResult))
-                    continue;
-                if ((*it)->GetComplexUnit()->DistanceSquaredToUnit(theResource) <= kCitizenFarmRange) {
-                    theFarm = true;
-                    theResult = (*it)->GetComplexUnit();
-                }
-            }
-        }
-    }
-    if (inUnit->GetUnitClass()->GetCategory() == kUnitCategoryLandCitizen) {
-        if (!theFarm && theUnit != NULL) {
-            do {
-                EEComplexUnit* theStorage = theUnit->GetComplexUnit();
-                if (theStorage != NULL && theStorage->GetHitPoints() > 0 && !theStorage->mIsDisabled
-                    && theStorage->GetUnitClass()->IsDropSite() && theStorage != theOwn
-                    && theStorage->CanTake(inUnit, inUnit->mResourceType) && theStorage->mIsBuilt) {
-                    if (theResult == NULL || inUnit->DistanceSquaredToUnit(theUnit) < inUnit->DistanceSquaredTo(theResult))
-                        theResult = theStorage;
-                }
-                theUnit = static_cast<EEUnit*>(theUnit->mNext);
-            } while (theUnit != NULL);
-        }
-    } else {
-        for (; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            EEComplexUnit* theStorage = theUnit->GetComplexUnit();
-            if (theStorage != NULL && theStorage->GetHitPoints() > 0 && !theStorage->mIsDisabled
-                && (theStorage->GetUnitClass()->GetUnitType() == kUnitTypeDock || theStorage->GetUnitClass()->GetUnitType() == kUnitTypeNavyYard)
-                && theStorage != theOwn && theStorage->CanTake(inUnit, inUnit->mResourceType) && theStorage->mIsBuilt) {
-                if (theResult == NULL || inUnit->DistanceSquaredToUnit(theUnit) < inUnit->DistanceSquaredTo(theResult))
-                    theResult = theStorage;
-            }
-        }
-    }
+    EEUCNote theNote(43); theNote.C(this).U(inUnit).I(inAnyStorage).I(inUnit->mResourceAmount).I((long)inUnit->mResourceType);   // TEST ONLY (UCBD)
+    EEUnit* theResult = (EEUnit*)(uintptr_t)ee_units_cz_find_storage(EEObj(inUnit), inAnyStorage);
+    theNote.U(theResult).I(inUnit->mResourceAmount).I((long)inUnit->mResourceType);   // TEST ONLY (UCBD)
     return theResult;
 }
 
 // Finds where the citizen gathers or builds at a footprint: the free tile nearest it (a farm's own tiles when farming,
 // corners when needed, not on a wall piece of the type being built), else the footprint's corner; z from the map
+// (ee_units citizen.rs)
 void EEUnitClass::FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY, long inSizeX,
                                 long inSizeY, GE3DPoint& outLocation)
 {
-    std::vector<U2DPoint<long> > theTiles;
-    EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(inUnit->GetUnitClass());
-    EEUGRust* theGather = EEGatherGoalCast(inUnit->GetGoal());
-    EEUGRust* theBuild = EEBuildRepairGoalCast(inUnit->GetGoal());
-    long theUnitX = inUnit->mTileX;
-    long theUnitY = inUnit->mTileY;
-    EEUnit* theFarm;
-    if (theGather != NULL && theGather->IsGathering() && (theFarm = theGather->GetGatherResource()) != NULL
-        && theFarm->mUnitClass->mUnitType == kUnitTypeFarm) {
-        for (long x = theFarm->mTileX; x < theFarm->mUnitClass->GetTileSize() + theFarm->mTileX; x++)
-            for (long y = theFarm->mTileY; y < theFarm->mUnitClass->GetTileSize() + theFarm->mTileY; y++)
-                theTiles.push_back(U2DPoint<long>(x, y));
-    } else
-        EEGetSquareRing(inX, inY, inSizeX, inSizeY, theTiles);
-    std::vector<U2DPoint<long> >::iterator it = theTiles.begin();
-    while (it != theTiles.end()) {
-        EEMapTile* theTile = gWorld.mMap->GetTile(it->GetX(), it->GetY());
-        if (theTile == NULL || theClass->IsTileHeld(theTile) || theTile->mTerrainType == kTerrainCliff)
-            it = theTiles.erase(it);
-        else
-            ++it;
-    }
-    EEMapTile* theCenter = gWorld.mMap->GetTile(inX, inY);
-    bool theWater;
-    if (theCenter != NULL && (theCenter->mTerrainType == kTerrainDeepWater || theCenter->mTerrainType == kTerrainShallowWater))
-        theWater = true;
-    else
-        theWater = false;
-    if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind != kGoalGather && (theWater || theTiles.size() == 0)) {
-        EEGetRingCorners(0, inX, inY, inSizeX, inSizeY, theTiles);
-        it = theTiles.begin();
-        while (it != theTiles.end()) {
-            EEMapTile* theTile = gWorld.mMap->GetTile(it->GetX(), it->GetY());
-            if (theTile == NULL || theClass->IsTileHeld(theTile)
-                || theWater && (theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater) || theTile->mTerrainType == kTerrainCliff)
-                it = theTiles.erase(it);
-            else
-                ++it;
-        }
-    }
-    if (theBuild != NULL && theBuild->GetBuildTargetClass()->mIsWall) {
-        it = theTiles.begin();
-        while (it != theTiles.end()) {
-            EEMapTile* theTile = gWorld.mMap->GetTile(it->GetX(), it->GetY());
-            bool theErased = false;
-            if (theTile != NULL) {
-                for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL && !theErased; theNode = theNode->mNext) {
-                    if (theNode->mUnit != NULL && theNode->mUnit->mUnitClass->mUnitType == theBuild->GetBuildTargetType()) {
-                        it = theTiles.erase(it);
-                        theErased = true;
-                    }
-                }
-            }
-            if (!theErased)
-                ++it;
-        }
-    }
-    if (theTiles.size() != 0) {
-        std::vector<U2DPoint<long> >::iterator theNearest = theTiles.begin();
-        long theBest = (theUnitX - theNearest->GetX()) * (theUnitX - theNearest->GetX())
-                       + (theUnitY - theNearest->GetY()) * (theUnitY - theNearest->GetY());
-        for (it = theTiles.begin() + 1; it != theTiles.end(); ++it) {
-            long theDistance = (theUnitY - it->GetY()) * (theUnitY - it->GetY())
-                               + (theUnitX - it->GetX()) * (theUnitX - it->GetX());
-            if (theDistance < theBest) {
-                theNearest = it;
-                theBest = theDistance;
-            }
-        }
-        outLocation.SetX((float)theNearest->GetX() + 0.5f);
-        outLocation.SetY((float)theNearest->GetY() + 0.5f);
-        outLocation.SetZ(gWorld.mMap->GetTile(theNearest->GetX(), theNearest->GetY())->GetHeight());
-    } else {
-        outLocation.SetX((float)(long)inX);
-        outLocation.SetY((float)(long)inY);
-        outLocation.SetZ(gWorld.mMap->GetTile(inX, inY)->GetHeight());
-    }
+    EEUCNote theNote(44); theNote.C(this).S(inUnit).I((long)inX).I((long)inY).I(inSizeX).I(inSizeY);   // TEST ONLY (UCBD)
+    ee_units_cz_find_gather_point(EEObj(inUnit), (uint32_t)inX, (uint32_t)inY, (int32_t)inSizeX, (int32_t)inSizeY,
+                                  (float(*)[3])&outLocation.mX);
+    theNote.P(outLocation);   // TEST ONLY (UCBD)
 }
 
 // Researches a tech on a unit (idling it unless only goal kinds 1, 2, 7, 10 are queued); if that kills the unit,
@@ -459,96 +205,6 @@ void EEPlayUnitEffect(EEComplexUnit* inUnit, long inEffect)
         return;
     EEComputeSoundParameters(1.0f, thePosition, theVolume, thePan, thePitch, kUnitEffectSoundFalloff);
     theSound->Play(theVolume, thePan, thePitch);
-}
-
-// Answers the citizen triggers: starts the next queued build, build queue empty, smart task not assigned (true when
-// it has a goal), goal is repair; gather and build triggers go to the active goal (2 when not the main goal)
-long EEUnitClass::BasicCitizenEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    bool theTrue = false;
-    long theResult = 0;
-    switch (inEvent) {
-    default:
-        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-        break;
-    case kTriggerBuildingInBuildQueue:
-        if ((long)inUnit->mCitizenBuildQueue.size() > 0) {
-            EEUnit* theSite = inUnit->PopBuildTarget();
-            if (theSite != NULL) {
-                inUnit->SetGoal(EEUGRust::NewBuildRepair(inUnit->GetPlayer(), theSite, true), 0, 0);
-                inUnit->StartAction(kActionMoveToRepairSite);
-                theTrue = true;
-            }
-        }
-        break;
-    case kTriggerBuildQueueEmpty:
-        theTrue = inUnit->mCitizenBuildQueue.size() == 0;
-        break;
-    case kTriggerSmartTaskNotAssigned:
-        // True while the citizen still has a goal, as in the original: "not assigned" means the smart task gave it
-        // no new job, so it still holds its finished build goal. A smart task that found work has already moved the
-        // citizen out of TaskSmartCitizen (FindNextWork starts an action), so this only fires for the leftovers, whose
-        // Idle clears the stale goal. Inverting it (== NULL) left every such citizen in TaskSmartCitizen for good,
-        // still in its work animation beside the finished building.
-        theTrue = inUnit->mGoalState != NULL;
-        break;
-    case kTriggerGoalIsRepairSite:
-        if (inUnit->mActiveGoal != NULL && inUnit->mActiveGoal->mKind == kGoalBuildRepair)
-            theTrue = true;
-        else
-            theTrue = false;
-        break;
-    case kTriggerBuildingDestroyed:
-    case kTriggerBuildingRepaired:
-    case kTriggerResourceCapacityFilled:
-    case kTriggerResourceCapacityEmpty:
-    case kTriggerNewResourceFound:
-    case kTriggerResourceDepleted:
-    case kTriggerResourceInRange:
-    case kTriggerStorageInRange:
-    case kTriggerStorageFound:
-    case kTriggerRepairSiteInRange:
-    case kTriggerStorageDestroyed:
-    case kTriggerBuildSiteClear:
-    case kTriggerBuildSiteVisible:
-    case kTriggerBuildSiteValid:
-    case kTriggerResourceAccessible:
-    case kTriggerWaitingAreaInRange:
-    case kTriggerResourceTargetIsTree:
-    case kTriggerOpenPositionAvailable:
-    case kTriggerGoalIsBuild:
-    case kTriggerGoalIsResource:
-    case kTriggerGoalIsStorage:
-    case kTriggerGoalIsWaitingArea: {
-        EEUnitGoal* theGoal = inUnit->mActiveGoal;
-        if (theGoal != NULL && theGoal->EvaluateCondition(inUnit, inEvent))
-            theResult = (theGoal != inUnit->mGoalState) + 1;
-        break;
-    }
-    }
-    if (theTrue)
-        theResult = 1;
-    return theResult;
-}
-
-// Returns whether a tile holds a unit that blocks a citizen (not a farm, robotic farm, path point, ambient or
-// foundation)
-bool EEUnitClass::IsTileHeld(EEMapTile* inTile)
-{
-    bool theResult = false;
-    for (RTSTileUnitNode* theNode = inTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-        EEUnit* theUnit = theNode->mUnit;
-        if (theUnit == NULL)
-            continue;
-        EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        long theType = theUnit->mUnitClass->mUnitType;
-        if (theType != kUnitTypeFarm && theType != kUnitTypeRoboticFarm && theType != kUnitTypePathPoint && theUnit->mUnitClass->mCategory != kUnitCategoryAmbient
-            && (theComplex == NULL || !theComplex->IsFoundation())) {
-            theResult = true;
-            break;
-        }
-    }
-    return theResult;
 }
 
 // Runs the work timer (working the gather or repair goal when it expires), then finishes a due unit research
@@ -615,13 +271,158 @@ done:
 }
 
 // Returns whether the citizen has a gather point beside a resource (not just the resource's own corner tile)
+// (ee_units citizen.rs)
 bool EEUnitClass::HasGatherPoint(EEComplexUnit* inUnit, EEUnit* inResource)
 {
-    GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
-    long theX = inResource->mTileX;
-    long theY = inResource->mTileY;
-    this->FindGatherPoint(inUnit, theX, theY, inResource->mUnitClass->GetTileSize(), inResource->mUnitClass->GetTileSize(), theLocation);
-    return !(UMFloor(theLocation.GetX()) == theX && UMFloor(theLocation.GetY()) == theY);
+    EEUCNote theNote(45); theNote.C(this).U(inUnit).U(inResource);   // TEST ONLY (UCBD)
+    return theNote.R(ee_units_cz_has_gather_point(EEObj(inUnit), EEObj(inResource)) != 0);
+}
+
+// The citizens' searches' host (ee_units citizen.rs, citizen_host.rs; EE_UNITS_CZ_*): the units' reads, the noted
+// unit utilities, the AI's shuffle and the world tests, each as the original called it
+static void EECzTilesIn(const EeUnitsCzIo* inIo, std::vector<U2DPoint<long> >& outTiles)
+{
+    for (size_t i = 0; i < inIo->tiles_len; i++)
+        outTiles.push_back(U2DPoint<long>(inIo->tiles[i][0], inIo->tiles[i][1]));
+}
+
+static void EECzTilesOut(EeUnitsCzIo* ioIo, const std::vector<U2DPoint<long> >& inTiles)
+{
+    for (size_t i = 0; i < inTiles.size(); i++)
+        ee_units_cz_push_tile((EeUnitsCzList*)ioIo->list, (int32_t)inTiles[i].mX, (int32_t)inTiles[i].mY);
+}
+
+extern "C" int64_t ee_units_cz_host(int32_t inOp, uint64_t inA, uint64_t inB, EeUnitsCzIo* io)
+{
+    EEUnit* theUnit = (EEUnit*)(uintptr_t)inA;
+    EEMapTile* theTile = (EEMapTile*)(uintptr_t)inA;
+    EEUGRust* theGoal = (EEUGRust*)(uintptr_t)inA;
+    const int64_t* v = io->v;
+    std::vector<U2DPoint<long> > theTiles;
+    switch (inOp) {
+    case EE_UNITS_CZ_UNIT: {
+        EeUnitsCzUnit& o = io->unit;
+        EEUnitClass* c = theUnit->mUnitClass;
+        EEComplexUnit* x = theUnit->mComplexUnit;
+        o.obj = inA;
+        o.class_obj = EEObj(c);
+        o.complex = EEObj(x);
+        o.player = EEObj(theUnit->mPlayer);
+        o.goal_state = x != NULL ? EEObj(x->mGoalState) : 0;
+        o.goal_kind = x != NULL && x->mGoalState != NULL ? (int32_t)x->mGoalState->mKind : -1;
+        o.tile_x = (int32_t)theUnit->mTileX;
+        o.tile_y = (int32_t)theUnit->mTileY;
+        o.hit_points = (int32_t)theUnit->GetHitPoints();
+        o.resource_type = (uint32_t)theUnit->mResourceType;
+        o.on_map = theUnit->mTileNode != NULL;
+        o.disabled = x != NULL && x->mIsDisabled;
+        o.built = x != NULL && x->mIsBuilt;
+        o.foundation = x != NULL && x->IsFoundation();
+        if (c != NULL) {
+            o.category = (uint32_t)c->mCategory;
+            o.unit_type = (uint32_t)c->mUnitType;
+            o.family = (uint32_t)c->mFamily;
+            o.tile_size = (int32_t)c->GetTileSize();
+            o.drop_site = c->IsDropSite();
+        }
+        return 0;
+    }
+    case EE_UNITS_CZ_CLASS_TILE_SIZE:
+        return gUnitClassTable[(size_t)v[0]]->GetTileSize();
+    case EE_UNITS_CZ_MAP_SIZE:
+        io->v[0] = gMapWidth;
+        io->v[1] = gMapHeight;
+        return 0;
+    case EE_UNITS_CZ_SQUARE_RING_TILES: {
+        std::vector<EETileCoordinate> theRing;
+        EEGetSquareRingTiles((long)v[0], (long)v[1], (long)v[2], theRing);
+        EECzTilesOut(io, theRing);
+        return 0;
+    }
+    case EE_UNITS_CZ_SIDE_TILES:
+        EECzTilesIn(io, theTiles);
+        EEGetSideTiles((long)v[0], (long)v[1], (long)v[2], theTiles);
+        EECzTilesOut(io, theTiles);
+        return 0;
+    case EE_UNITS_CZ_RING_CORNERS:
+        EECzTilesIn(io, theTiles);
+        EEGetRingCorners((long)v[0], (long)v[1], (long)v[2], (long)v[3], (long)v[4], theTiles);
+        EECzTilesOut(io, theTiles);
+        return 0;
+    case EE_UNITS_CZ_SQUARE_RING:
+        EECzTilesIn(io, theTiles);
+        EEGetSquareRing((long)v[0], (long)v[1], (long)v[2], (long)v[3], theTiles);
+        EECzTilesOut(io, theTiles);
+        return 0;
+    case EE_UNITS_CZ_SHUFFLE:
+        EECzTilesIn(io, theTiles);
+        EEAIRandomShuffle(theTiles.begin(), theTiles.end());
+        EECzTilesOut(io, theTiles);
+        return 0;
+    case EE_UNITS_CZ_TILE_CONTINENT:
+        return gContinentManager.GetContinent(EETileCoordinate((long)v[0], (long)v[1]), kAIPathLandMass);
+    case EE_UNITS_CZ_UNIT_CONTINENT:
+        return gContinentManager.GetContinent(theUnit, kAIPathLandMass);
+    case EE_UNITS_CZ_BLOCK_TAKES:
+        return EEBlockTakes(theUnit, (long)v[0], (long)v[1], (long)v[2], (long)v[3], (long)v[3], 0);
+    case EE_UNITS_CZ_TILE:
+        return EEObj(gWorld.mMap->GetTile((long)v[0], (long)v[1]));
+    case EE_UNITS_CZ_TILE_UNITS:
+        for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext)
+            ee_units_cz_push_unit((EeUnitsCzList*)io->list, EEObj(theNode->mUnit));
+        return 0;
+    case EE_UNITS_CZ_TERRAIN:
+        return theTile->mTerrainType;
+    case EE_UNITS_CZ_HEIGHT:
+        io->f[0] = theTile->GetHeight();
+        return 0;
+    case EE_UNITS_CZ_CAN_GATHER:
+        return ((EEComplexUnit*)theUnit)->CanGather((EEUnit*)(uintptr_t)inB, (long)v[0], (long)v[1], false, false);
+    case EE_UNITS_CZ_CAN_GET_TO_UNIT:
+        return gContinentManager.CanGetToUnit(theUnit, (EEUnit*)(uintptr_t)inB);
+    case EE_UNITS_CZ_DISTANCE_2D:
+        io->f[0] = theUnit->mComplexUnit->DistanceSquared2D(GE2DPoint(io->f[0], io->f[1]));
+        return 0;
+    case EE_UNITS_CZ_TILE_DISTANCE:
+        io->f[0] = theUnit->GetTileDistanceSquared((EEUnit*)(uintptr_t)inB);
+        return 0;
+    case EE_UNITS_CZ_PATH_AREA:
+        return gContinentManager.GetPathAreaIDAt(EETileLocation((long)v[0], (long)v[1]));
+    case EE_UNITS_CZ_GATHER_STORAGE:
+        return EEObj(theGoal->GetGatherStorage());
+    case EE_UNITS_CZ_GATHER_RESOURCE:
+        return EEObj(theGoal->GetGatherResource());
+    case EE_UNITS_CZ_IS_GATHERING:
+        return theGoal->IsGathering();
+    case EE_UNITS_CZ_BUILD_IS_WALL:
+        return theGoal->GetBuildTargetClass()->mIsWall;
+    case EE_UNITS_CZ_BUILD_TYPE:
+        return (int64_t)theGoal->GetBuildTargetType();
+    case EE_UNITS_CZ_FARM_DROP_SITES: {
+        std::vector<EEUnit*> theSites;
+        EEGetFarmDropSites((EEComplexUnit*)theUnit, theSites);
+        for (size_t i = 0; i < theSites.size(); i++)
+            ee_units_cz_push_unit((EeUnitsCzList*)io->list, EEObj(theSites[i]));
+        return 0;
+    }
+    case EE_UNITS_CZ_CAN_TAKE:
+        return ((EEComplexUnit*)theUnit)->CanTake((EEComplexUnit*)(uintptr_t)inB, (unsigned long)v[0]);
+    case EE_UNITS_CZ_EMPTY_LOAD:
+        theUnit->SetResourceAmount(0);
+        theUnit->SetResourceType((unsigned long)v[0]);
+        return 0;
+    case EE_UNITS_CZ_DISTANCE_TO_UNIT:
+        io->f[0] = ((EEComplexUnit*)theUnit)->DistanceSquaredToUnit((EEUnit*)(uintptr_t)inB);
+        return 0;
+    case EE_UNITS_CZ_DISTANCE_TO:
+        io->f[0] = ((EEComplexUnit*)theUnit)->DistanceSquaredTo((EEComplexUnit*)(uintptr_t)inB);
+        return 0;
+    case EE_UNITS_CZ_PLAYER_UNITS:
+        for (EEUnit* u = ((EEPlayer*)(uintptr_t)inA)->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext))
+            ee_units_cz_push_unit((EeUnitsCzList*)io->list, EEObj(u));
+        return 0;
+    }
+    return 0;
 }
 
 // ---- EEUCLandCitizen.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
@@ -681,36 +482,6 @@ EEUnit* EEUnitClass::NavalCitizenCreateUnit(long inX, long inY, long inPlayer, b
     theTransformation.SetY((float)inY);
     theTransformation.SetZ(0.0f);
     return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
-}
-
-// Answers dying done: true once the boat's transformed bounding box lies wholly below the water line
-long EEUnitClass::NavalCitizenEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    GE3DPoint thePosition;
-    GEBoundingBox theBox;
-    GEBoundingBox theTransformedBox;
-    EEComplexUnit* theUnit = inUnit;
-    const GEPhysicalModel& thePhysicalModel = theUnit->mPhysicalModel;
-    GEModel* theModel = thePhysicalModel.GetModel();
-    long theResult = 0;
-    if (inEvent != kTriggerDyingAnimationFinished)
-        theResult = this->BasicCitizenEvaluateCondition(theUnit, inEvent);
-    else {
-        theUnit->GetPosition(thePosition);
-        GETransformation theTransformation(false);
-        thePhysicalModel.GetLocation().Apply(theModel->GetInternalTransform(thePhysicalModel.GetFrame()),
-                                             theTransformation);
-        float theScale = thePhysicalModel.GetScale();
-        theTransformation.Scale(theScale, theScale, theScale);
-        theTransformation.SetX(thePosition.GetX());
-        theTransformation.SetY(thePosition.GetY());
-        theTransformation.SetZ(thePosition.GetZ());
-        theBox = theModel->GetBoundingBox(theUnit->mPhysicalModel.GetFrame());
-        theBox.Transform(theTransformation, theTransformedBox);
-        if (theTransformedBox.GetTopRightBack().GetZ() < 0.0f)
-            theResult = 1;
-    }
-    return theResult;
 }
 
 // ---- EEUCBasicPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The priests' common
@@ -878,62 +649,6 @@ void EEUnitClass::BasicPriestLoadMedia(EEPlayer* inPlayer)
 {
     EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator)->Load(false);
     this->BaseLoadMedia(inPlayer);
-}
-
-// Answers the conversion triggers (attacker convertible, enough faith, goal still valid, goal is or is not a
-// conversion, target converted); the faith check uses the attacker's conversion cost
-long EEUnitClass::BasicPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = 0;
-    switch (inEvent) {
-    default:
-        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-        break;
-    case kTriggerAttackerIsLegalConversionTarget: {
-        bool theFlag;
-        theResult = inUnit->mLastAttacker != NULL && EECanConvert(inUnit, static_cast<EEComplexUnit*>(inUnit->mLastAttacker), theFlag) ? 1 : 0;
-        break;
-    }
-    case kTriggerHasEnoughManaForConversion:
-        theResult = inUnit->mLastAttacker != NULL && inUnit->GetPower() >= EEGetConversionCost(inUnit) ? 1 : 0;
-        break;
-    case kTriggerConvertGoalStillValid:
-        if (inUnit->mGoalState != NULL) {
-            EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetGoal());
-            if (theGoal != NULL && theGoal->GetAttackTarget() != NULL &&
-                (theGoal->GetAttackTarget()->mTileNode == NULL || !theGoal->GetAttackTarget()->GetComplexUnit()->mIsDisabled ||
-                 theGoal->GetAttackTarget()->GetComplexUnit()->IsProtected()))
-                theResult = 1;
-            else
-                theResult = 0;
-        }
-        break;
-    case kTriggerGoalIsNotConversion: {
-        EEUnitGoal* theGoal = inUnit->mGoalState;
-        if (theGoal == NULL || theGoal->mKind != kGoalAttackUnit ||
-            (inUnit->GetUnitClass()->IsCrusader() && !static_cast<EEUGRust*>(theGoal)->IsConvertAttack()))
-            theResult = 1;
-        break;
-    }
-    case kTriggerGoalIsConversion:
-        if (inUnit->mGoalState != NULL) {
-            EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetGoal());
-            if (theGoal != NULL && (!inUnit->GetUnitClass()->IsCrusader() || theGoal->IsConvertAttack()))
-                theResult = 1;
-        }
-        break;
-    case kTriggerEnemyUnitConverted:
-        if (inUnit->mGoalState != NULL) {
-            EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetGoal());
-            if (theGoal != NULL) {
-                EEPlayer* thePlayer = theGoal->GetAttackTarget()->GetPlayer();
-                if (thePlayer == inUnit->GetPlayer() || inUnit->GetPlayer()->mEnemies[thePlayer->GetPlayerID()] == 0)
-                    theResult = 1;
-            }
-        }
-        break;
-    }
-    return theResult;
 }
 
 // Unloads the conversion indicator effect and the class's media
@@ -1147,34 +862,6 @@ EEUnit* EEUnitClass::NavalPriestCreateUnitAt(GETransformation& inTransformation,
     return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
-// Answers dying done: true once the ship's transformed bounding box lies wholly below the water line
-long EEUnitClass::NavalPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GEBoundingBox theBox;
-    GEBoundingBox theTransformedBox;
-    EEComplexUnit* theUnit = inUnit;
-    GEPhysicalModel& theModel = theUnit->mPhysicalModel;
-    GEModel* theGEModel = theModel.GetModel();
-    long theResult = 0;
-    if (inEvent != kTriggerDyingAnimationFinished) {
-        theResult = this->BasicPriestEvaluateCondition(theUnit, inEvent);
-    } else {
-        GETransformation theTransformation(false);
-        theUnit->GetPosition(thePosition);
-        theModel.GetLocation().Apply(theGEModel->GetInternalTransform(theModel.GetFrame()), theTransformation);
-        theTransformation.Scale(theModel.GetScale());
-        theTransformation.SetX(thePosition.GetX());
-        theTransformation.SetY(thePosition.GetY());
-        theTransformation.SetZ(thePosition.GetZ());
-        theBox = theGEModel->GetBoundingBox(theUnit->mPhysicalModel.GetFrame());
-        theBox.Transform(theTransformation, theTransformedBox);
-        if (theTransformedBox.GetTopRightBack().GetZ() < 0.0f)
-            theResult = 1;
-    }
-    return theResult;
-}
-
 // ---- EEUCHelicopterPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The priest
 // helicopter's unit class: 0x212edf..0x21339d (after EEUCHelicopter.cpp; EEUCHelicopterTransport.cpp follows). One unit
@@ -1236,30 +923,5 @@ void EEUnitClass::HelicopterPriestUnitCreated(EEComplexUnit* inUnit)
     theTransformation.SetZ(theZ);
     inUnit->SetTransformation(theTransformation, true);
     inUnit->SetHeight(theZ);
-}
-
-// Answers the dying-finished (below its tile's height) and move-prepared (has waypoints) triggers; others the
-// priest's way
-long EEUnitClass::HelicopterPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = 0;
-    bool theFlag = false;
-    switch (inEvent) {
-    case kTriggerDyingAnimationFinished:
-        if (inUnit->mPhysicalModel.GetLocation().GetZ() < inUnit->mTile->GetHeight())
-            theFlag = true;
-        else
-            theFlag = false;
-        break;
-    case kTriggerMovePreparationComplete:
-        theFlag = (long)inUnit->mWaypoints.size() > 0;
-        break;
-    default:
-        theResult = this->BasicPriestEvaluateCondition(inUnit, inEvent);
-        break;
-    }
-    if (theFlag)
-        theResult = 1;
-    return theResult;
 }
 

@@ -24,6 +24,8 @@
 //! the units on tiles, the wall lines, the placement tests) are `uu_tiles` (the pure geometry) and `uu` over its host.
 
 pub mod actions;
+pub mod ag;
+pub mod ag_host;
 pub mod ai;
 pub mod animate;
 pub mod atc;
@@ -31,8 +33,12 @@ pub mod atc_save;
 pub mod boarding;
 pub mod build;
 pub mod calamity;
+pub mod citizen;
+pub mod citizen_host;
 pub mod cls_air;
 pub mod cls_building;
+pub mod cls_condition;
+pub mod cls_dispatch;
 pub mod cls_host;
 pub mod cls_transport;
 pub mod commands;
@@ -79,6 +85,8 @@ pub mod rts_player_save;
 pub mod rust_goal;
 pub mod script;
 pub mod select;
+pub mod sight;
+pub mod sight_host;
 pub mod stats;
 pub mod step;
 pub mod store;

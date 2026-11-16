@@ -100,7 +100,7 @@
 // 0x446ff0/0x446ff4: the unit's named constants (one .rdata copy per unit)
 static const float kBuildingLift = 0.001f;      // 0x446ff0 (a building sits just above the ground)
 
-static const float kBuildingSunk = -2.0f;       // 0x446ff4 (VirtualA0 6000: below it the building is gone)
+// 0x446ff4 (-2.0, below it a building is gone) is ee_units cls_condition.rs BUILDING_SUNK
 
 // 0x446dc0: the yaw of each map quarter (EEGetFacingQuarter's 0..3) (provisional name)
 static const float kQuarterYaws[4] = { 0.0f, 3.1415927f, -1.5707964f, 1.5707964f };
@@ -539,71 +539,6 @@ void EEUnitClass::ReleaseUnit(EEComplexUnit* inUnit)
     inUnit->SetExitingUnitID(-1);
 }
 
-// Answers the building triggers (fall finished, enemy spotted when built, plane to launch, volcano target, secondary
-// target, capitol, launch requests, takeoff clearance); others go to the common unit class
-long EEUnitClass::BuildingEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = 0;
-    bool theFlag = false;
-    switch (inEvent) {
-    case kTriggerDyingAnimationFinished: {
-        long theType = inUnit->mUnitClass->mUnitType;
-        if (theType == kUnitTypeSpaceTurret || theType == kUnitTypeOrbitalSpaceStation || theType == kUnitTypeSpaceDock ||
-            inUnit->mPhysicalModel.GetLocation().GetZ() < kBuildingSunk)
-            theResult = 1;
-        break;
-    }
-    case kTriggerEnemyUnitSpotted:
-        if (inUnit->mIsBuilt)
-            theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-        break;
-    case kTriggerAirplaneAvailableToLaunch:
-        theFlag = this->SelectUnitToRelease(inUnit);
-        break;
-    case kTriggerChooseRandomVolcanoTarget:
-        theFlag = this->EruptVolcano(inUnit);
-        break;
-    case kTriggerSecondaryTargetFound: {
-        EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetGoal());
-        theFlag = theGoal != NULL && theGoal->GetAttackTarget()->mHitPoints > 0;
-        break;
-    }
-    default:
-        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-        break;
-    case kTriggerCalamityTargetStillValid:
-        theFlag = this->mUnitType == kUnitTypeCapitol;
-        break;
-    case kTriggerNoLaunchRequests:
-        if (inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1]->GetQueueLength(inUnit) == 0 ||
-            inUnit->mExitingUnitID == -1)
-            theResult = 1;
-        break;
-    case kTriggerTakeoffClearanceGranted: {
-        long theID = inUnit->mExitingUnitID;
-        if (theID != -1) {
-            EEComplexUnit* theCargo = inUnit->FindPassenger(theID);
-            if (theCargo != NULL)
-                theFlag = theCargo->mIsClearanceGranted;
-            else {
-                inUnit->SetExitingUnitID(-1);
-                EEUnit* theUnit = ::gWorld.GetUnit(theID);
-                if (theUnit != NULL && theUnit->mComplexUnit != NULL)
-                    inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1]->RemovePlane(inUnit,
-                                                                                         theUnit->mComplexUnit);
-            }
-        }
-        break;
-    }
-    case kTriggerLaunchedAirplane:
-        theResult = 1;
-        break;
-    }
-    if (theFlag)
-        theResult = 1;
-    return theResult;
-}
-
 // Runs an armed building's tick (physics, turrets, timers, animation, sound) and fires on its attack frame; skips
 // disabled ones and standing foundations
 void EEUnitClass::UpdateArmed(EEComplexUnit* inUnit)
@@ -645,22 +580,6 @@ void EEUnitClass::UpdateArmed(EEComplexUnit* inUnit)
 // EEUCBasicPriest's (0x20d59f, 0x20d7f2, 0x20d998, 0x20dd0a, 0x20dd2d, 0x20dee4, 0x20df05, 0x20e16a, 0x20e274). With
 // one class the temple runs the basic priest's bodies themselves (R5b.4 round 32); only the update's copy is left
 // (PriestVirtualB8: the basic priest's update is a Rust sequence the temple does not run).
-
-// Answers a trigger as a building, except the conversion triggers, which the priest half answers
-long EEUnitClass::BuildingPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = this->BuildingEvaluateCondition(inUnit, inEvent);
-    switch (inEvent) {
-    case kTriggerEnemyUnitConverted:
-    case kTriggerGoalIsConversion:
-    case kTriggerConvertGoalStillValid:
-    case kTriggerHasEnoughManaForConversion:
-    case kTriggerAttackerIsLegalConversionTarget:
-        theResult = this->BasicPriestEvaluateCondition(inUnit, inEvent);
-        break;
-    }
-    return theResult;
-}
 
 // The temple's copy of EEUCBasicPriest::Update (0x20df05)
 void EEUnitClass::PriestVirtualB8(EEComplexUnit* inUnit)
@@ -724,9 +643,7 @@ static GEColor sGateHighlight(0.0f, 1.0f, 0.0f);
 static GEColor sGateNormal(1.0f, 1.0f, 1.0f);
 
 // 0x447004..0x447018: the unit's named float constants (one .rdata block per unit) (provisional names)
-static const float kGateOpen = 1.0f;            // 0x447004 (+0x228: fully open)
-
-static const float kGateClosed = 0.0f;
+// 0x447004/0x447008 (1.0 open, 0.0 closed) are ee_units cls_condition.rs GATE_OPEN, GATE_CLOSED
 
 static const float kGateStep = 0.2f;            // 0x44700c (per update)
 
@@ -1142,45 +1059,6 @@ void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType)
     }
 }
 
-// Answers the gate's triggers: open, closed, locked, special (enemy) unit or any passer in opening range;
-// others the building's way
-long EEUnitClass::GateEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = 0;
-    bool theFlag = false;
-    switch (inEvent) {
-    case kTriggerIsOpen:
-        theFlag = inUnit->mOpenFraction == kGateOpen;
-        break;
-    case kTriggerIsClosed:
-        theFlag = inUnit->mOpenFraction == kGateClosed;
-        break;
-    case kTriggerLocked:
-        theFlag = inUnit->mIsLocked;
-        break;
-    case kTriggerNotLocked:
-        theFlag = !inUnit->mIsLocked;
-        break;
-    case kTriggerSpecialUnitInOpeningRange:
-        theFlag = this->AreEnemiesNear(inUnit);
-        break;
-    case kTriggerSpecialUnitNotInOpeningRange:
-        theFlag = !this->AreEnemiesNear(inUnit);
-        break;
-    case kTriggerUnitInOpeningRange:
-        theFlag = this->IsPasserNear(inUnit);
-        break;
-    case kTriggerUnitNotInOpeningRange:
-        theFlag = !this->IsPasserNear(inUnit);
-        break;
-    default:
-        theResult = this->BuildingEvaluateCondition(inUnit, inEvent);
-    }
-    if (theFlag)
-        theResult = 1;
-    return theResult;
-}
-
 // Returns whether all tiles are on the map, flat or ramps (0 or 2 raised corners), and differ in height by at most
 // 0.6 (0x447014; cls_building.rs) (EECPWallManager.cpp declares it the same way)
 bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles)
@@ -1236,18 +1114,6 @@ EEUnit* EEUnitClass::MiningBuildingCreateUnit(long inX, long inY, long inPlayer,
         theTransformation.SetZ(0.0f);
     }
     return this->MiningBuildingCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
-}
-
-// Answers resource depleted (its resource is gone, invalid or empty); other triggers go to the building class
-long EEUnitClass::MiningBuildingEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    EEUnit* theMine = inUnit->mMine;
-    long theResult = 0;
-    if (inEvent != kTriggerResourceDepleted)
-        theResult = this->BuildingEvaluateCondition(inUnit, inEvent);
-    else if (theMine == NULL || !theMine->mIsValid || theMine->mResourceAmount <= 0)
-        theResult = 1;
-    return theResult;
 }
 
 // ---- EEUCNavalBuilding.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval building's
@@ -1314,31 +1180,6 @@ bool EEUnitClass::NavalBuildingHasSunk(EEComplexUnit* inUnit)
     theBox = theModel->GetBoundingBox(inUnit->mPhysicalModel.GetFrame());
     theBox.Transform(theTransformation, theTransformedBox);
     return theTransformedBox.GetTopRightBack().GetZ() < 0.0f ? true : false;
-}
-
-// Answers the dock triggers: unit has a rally goal, ship ready to launch, sunk after dying; others to the building
-long EEUnitClass::NavalBuildingEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = 0;
-    bool theHandled;
-    switch (inEvent) {
-    case kTriggerFighterHasGoal:
-        theHandled = inUnit->GetQueuedGoal(1) != NULL;
-        break;
-    case kTriggerAirplaneAvailableToLaunch:
-        theHandled = this->SelectUnitToRelease(inUnit);
-        break;
-    case kTriggerDyingAnimationFinished:
-        theHandled = this->HasSunk(inUnit);
-        break;
-    default:
-        theResult = this->BuildingEvaluateCondition(inUnit, inEvent);
-        theHandled = false;
-        break;
-    }
-    if (theHandled)
-        theResult = 1;
-    return theResult;
 }
 
 // ---- EEUCSpaceBuilding.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The space

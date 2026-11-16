@@ -126,6 +126,12 @@ USGC is the group commands' sweep (ee/EEUnitHost.h, EEGroupCommandSweep.cpp): ev
 player and a set of selections and arguments, the Rust body of a group command run over the dry host (every world
 call logged, nothing changed); the original body's statements run over the same host must give the same log (else
 EE-SIM exits 3). The record holds the Rust body's log.
+AGPL is the active groups' sweep (--profile groups: EE-SIM --group-sweep, Units/EEActiveGroupSweep.cpp): no other game
+makes an active group plan, so at the game's end every player's units get real group commands (moves, attacks,
+gather and drop off, heal, explore, patrol, unload, disband, the spreads, the reserved destination tests), one record
+per command with the group and every unit's goals, queues, command and formation place after it. Its golden lines
+(seeds 2-5 and 7; seed 6 faults in the original's SetGroupPathGoals) come from the C++ bodies of EEActiveGroup.cpp
+before they moved (R5b.4 round 35).
 USTM is the unit step's leaves (ee/EEUnitStore.h, ee_units step.rs): one record per physics tick, the calls of the
 reload, target and heal search countdowns and RegeneratePower and the FNV-1a of each call's kind, unit, inputs and
 outputs. Its golden lines come from the C++ bodies (late 3, space 2); late 2, 6, 7 (the fishing-boat rebaseline's
@@ -201,10 +207,23 @@ PROFILES = {
     "app": ["--difficulty", "Hard", "--game-seconds", "1200", "--cheats", "none", "--app-sweep"],
     "units": ["--difficulty", "Hard", "--game-seconds", "1500", "--cheats", "all", "--ai", "3", "--lobby", "183=#9",
               "--map-type", "{map}", "--unit-sweep"],
+    # a small islands map from the Middle Ages to 90 game minutes, three computer players with the original's cheats:
+    # from about 50 minutes their invasions load transports, meet them at the shore and unload on the other islands
+    # (the transports' searches and tests: no other profile loads a transport)
+    # the end sweep of real group commands (EE-SIM --group-sweep: no other game makes an active group plan): the start
+    # epoch by seed (GROUP_EPOCHS), three computer players with the original's cheats, 15 game minutes; only AGPL
+    "groups": ["--difficulty", "Hard", "--game-seconds", "900", "--cheats", "all", "--ai", "3", "--lobby", "{epoch}",
+               "--group-sweep"],
+    "transport": ["--difficulty", "Hard", "--game-seconds", "5400", "--cheats", "all", "--ai", "3", "--lobby", "183=#5",
+                  "--map-type", "Small Islands"],
 }
 
 # the units profile's map by seed (seed 2 the first): water for the ships, space for the spaceships
 UNIT_MAPS = ["Continental", "Planets Small"]
+
+# the groups profile's start epoch by seed (seed 2 the first): the Middle Ages (priests, ships), the Atomic Age
+# (aircraft, airports, carriers)
+GROUP_EPOCHS = ["183=#5", "183=#9"]
 
 # the scenario profile's games by seed (seed 2 the first): (campaign archive, scenario) of the data tree's
 # Data/Campaigns, extracted once into build/sim_capture/scenarios (retail data: never committed)
@@ -253,7 +272,8 @@ def one(name, exe, seed, data, profile="oracle"):
     capture.unlink(missing_ok=True)
     env = dict(os.environ, EE_SIM_CAPTURE=str(capture.resolve()))
     args = [str(scenario_file(seed, data)) if v == "{scenario}" else UNIT_MAPS[(seed - 2) % len(UNIT_MAPS)]
-            if v == "{map}" else v for v in PROFILES[profile]]
+            if v == "{map}" else GROUP_EPOCHS[(seed - 2) % len(GROUP_EPOCHS)] if v == "{epoch}" else v
+            for v in PROFILES[profile]]
     r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "sim.py"), "--data", data, "--slot",
                         f"capture-{name}-{seed}", "--exe", str(exe), "--", "--seed", str(seed), *args,
                         "--report", str(report), "--ai-trace", "--trace", str(trace)], cwd=ROOT, capture_output=True,
