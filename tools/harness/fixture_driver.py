@@ -835,13 +835,16 @@ def scroll_check(g, form, hold_ms=1500, settle=2.0, captures=True):
 
 def edge(g, form, fx, ms):
     """The game's pointer at the window's left (fx 0) or right (fx 1) edge, mid height, for ms milliseconds, then back
-    to the middle of the window (EEUIFMainGame's update hands the pointer to the edge scroll, EEAScroll::Update)."""
+    to the middle of the window (EEUIFMainGame's update hands the pointer to the edge scroll, EEAScroll::Update).
+    The fixture holds the pointer there (the pointer command's hold, ms plus a margin; the pointer back ends it): the
+    game moves its pointer on its own events too, and one placement left the edge after a single scroll step under
+    load."""
     st = window_state(g)
     if not st['window']:
         raise RuntimeError('the fixture reports no window size')
     w, h = st['window']
     x = 0 if fx < 0.5 else w - 1
-    _command(g, f'pointer {form} {x} {h // 2}', ('pointer-moved',), f'pointer {x}')
+    _command(g, f'pointer {form} {x} {h // 2} {ms + 2000}', ('pointer-moved',), f'pointer {x}')
     time.sleep(ms / 1000)
     _command(g, f'pointer {form} {w // 2} {h // 2}', ('pointer-moved',), 'pointer back')
 
