@@ -25892,3 +25892,85 @@ markers were already stripped on both sides): `git diff --numstat 0cd8d3cd -- sr
 | `build.py --test-profile windowed-software` | (with the merge) | 0 / 0 |
 | `xbuild.py wontest` | the programs linking the changed units: exit 0 | all 132 programs exit 0 |
 | `lan_game.py` (harness lock) | (with the merge) | `RESULT PASS lan-game PT host=2750 joiner=2771` |
+
+## R6: WON's Internet code, round 29 (RustServerOp's HostCall onto the core table; CryptTransform, the request members, CDKey's storage, ServerConnectionConnectOp and URL in Rust)
+
+Branch `rust-won-net29`. Net C++ over src + include (without include/rust) against rust-won-net28:
+`git diff --numstat rust-won-net28 -- src include ':!include/rust'`: 155 added, 444 deleted, net -289 (ServerOp.cpp -136, AsyncOp.cpp -35, URL -36, DirEntity -24, ServerConnection -29, AuthContext -16, WONRouting.h -18, WONAPI.cpp +5).
+
+- **The measure first.** The round's goal was "finish the Internet code, about 2,300 lines". What is left is not
+  logic but the C++ classes' shims: the lobby (WONLobby, another lane) and the drivers construct, subclass and read
+  AsyncOp, the sockets, the socket ops, the routing records, RustServerOp's factories and accessors, IPAddr and the
+  string helpers. A shim's forwarders stay as long as a C++ caller does, so the round took the code that was C++
+  logic or C++ object glue the Rust objects could answer themselves; it fell far short of the 1,500-line target
+  (see "Not done").
+- **HostCall onto the core table (hostcore.rs).** ServerOp.cpp's `RustServerOp::HostCall` (nine cases left after
+  round 24) is gone: a natively bound op with no C++ function (`ee_won_hostop_bind_native(op, NULL, ...)`) answers
+  them in `Host::send` over AsyncOp.cpp's core table: `new BlockingSocket(type)` (the queue socket maker takes a
+  blocking flag), the socket op classes (the core's maker gained Connect, SendBytes, RecvBytes and RecvCRMsg; its
+  size is 32 bits for RecvBytesOp's length), a plain `AsyncOp`, `new PeerAuthOp(...)` and `NewHttpGet(...)` as a
+  `RustServerOp` over the Rust op (`new_host_op`, the members set as the constructors set them and `CopyMaxTimes`),
+  an HTTP session's `AddOp` (a new `HttpSession` core object), the auth context's object and `SOCK_CORE`'s kinds (a
+  new `Context` core object). **`CoreObjectOf` is `dynamic_cast` now** for every kind: `SOCK_CORE` answered null
+  for an object of another class (its `dynamic_cast`s), and one function serves both. The drivers' stand-ins bound
+  with a function still see every call.
+- **CryptTransform and MsgTransform in Rust.** The socket's transforms are a Rust enum (cppcore.rs
+  `CoreTransform`): the session's crypt (`ee_won_session_crypt` on the message's bytes, the `ByteBufferPtr`'s one
+  pointer replaced by a new buffer when the session made one) or a C++ transform with its own call and free
+  functions (`ee_won_core_add_transform`), which only won_sockobj_test uses: `MsgTransform` and `AddMsgTransform`
+  moved to `tests/won/won_msgtransform.h`. The core table lost `transform_call` / `transform_free`. **Name clash:**
+  a private enum first named `Transform` made cbindgen emit `ee_dx7.h` without `EeDx7Transform` (the global rename
+  `Transform -> EeDx7Transform`) and include `ee_won.h`; renamed, the header check alone would not have caught it.
+- **The receive op's file** (`PlatFOpen`, `fwrite`, `fclose`, `utime`) is Rust's (hostnative.rs); the modify time
+  is `File::set_times` on the path as given (the original's `_utime`: both times; a file that cannot be opened for
+  writing keeps its time, where `_utime` might have set it).
+- **The WON directory** (`WONAPICore::GetDefaultFileDirectory`'s rule) is also a Rust value
+  (`ee_won_api_set_file_directory` / `ee_won_api_file_directory`, hostnative.rs) so the Rust HTTP get can read the
+  proxy file (`ee_won_httpget_open`); WONAPICore keeps its C++ copy and hands the Rust one every change (its
+  constructor, `SetDefaultFileDirectory`, its destructor). The first version forgot the hand-over: won_serverop_test's
+  proxy lines read nothing (the Rust copy fell back to the data root), the one failure the full wontest found.
+- **The requests' members (reqmake.rs).** `NewGetDir`, `NewGetMultiDir`, `NewGetService`, `NewGetAccount`,
+  `NewUpdateAccount`, `NewCreateAccount`, `NewGroupListReq` pass their arguments (wide texts as `wchar_t` units of
+  their size) to one Rust maker each; ServerOp.cpp's `ReqMembers` is gone.
+- **CDKey's storage (cdkeystore.rs).** The registry value (config.yaml through the Rust RegKey) and the key file
+  are read and written in Rust; the C++ CDKey keeps the encryption calls. New driver `won_cdkeystore_test`: the
+  original five functions' statements against the port on a scratch config, run against run (the encrypted key is
+  machine-bound, so no static golden), 70 lines the same. Behaviour: `SaveToFile` closes the file on a short write
+  and no longer opens (truncates) it when the encryption fails (the original leaked the `FILE*` both times).
+- **ServerConnectionConnectOp** header-only: its run and completion are `ee_won_servconn_connect_op_run`
+  (cppcore.rs: a completion holding the op, finishing it with the connect's status while pending); won_servconn_test's
+  golden covers it. ServerConnection.cpp keeps the peer authentication maker because the servconn driver's stand-in
+  PeerAuthOp is reached through it.
+- **URL** header-only (WONURL.h over http.rs: parse, relative, entire); **DirEntity.cpp** merged into
+  DirEntityReplyParser.cpp (its constructor and destructor cannot be inline in EEWonNet.h: `ConstSmartPtr<ByteBuffer>`
+  members need the complete ByteBuffer, which needs rust/ee_won.h).
+- **Units deleted:** URL.cpp, DirEntity.cpp (and their lines in link/won/units.txt and the drivers' lists).
+- **Not done (and why):**
+  - IPAddr.cpp and StringUtil.cpp are already forwarders to Rust (rounds 14 and D6); with inlining in EEWonNet.h ruled
+    out, their remaining lines are the forwarders themselves.
+  - RoutingOp.cpp and SmartRoutingConnection.cpp copy Rust records into the C++ records the lobby reads; they go
+    with the lobby's readers.
+  - TitleConfig needs ConfigObject's object model in Rust (the WONGUI lane's config reader keeps the objects and their
+    virtual hooks); TitleConfig has no caller in the game.
+  - WONAPICore (WONAPI.cpp, 201 lines) could be a Rust object over the container, timer and pump threads, but its
+    socket thread is a user-replaceable C++ `SocketThread*` (virtual calls back): about 100 lines net, next.
+  - AsyncOp.cpp's 47 `static_assert`s (Winsock numbering) stay: they check the C++ headers against each other.
+  - MiscUtil's `Browse` callback takes a `std::string`: no gain.
+- **Mutations** (6, each a driver run, the source restored: build/wn29/mut.py): no `CopyMaxTimes` for the peer
+  auth op (won_opcore_test, 2 failures), the crypt transform never replacing the message (won_authsession_test, 10),
+  `SendBytesToOp` made as `SendBytesOp` (won_hostsock_test, 8), `SOCK_CORE` without the op itself for a NULL object
+  (won_opcore_test, 1): caught. Not caught: the key file read cut at 2,047 bytes (equivalent through CDKey's results:
+  `InitEncrypted` rejects every input longer than the key's; the driver gained padded files around 2,048 to show it),
+  and ServerConnectionConnectOp finishing with success whatever the connect's status (won_servconn_test's golden has
+  no failing connect; a case needs a re-recording over the original, not done).
+
+### Gates
+
+| Gate | per commit | End of round (origin/rust 1c108108: nothing new to merge) |
+|---|---|---|
+| `build.py -j 3 --sim` | 7186a49c, 067eb6c0, 23b47e76: 0 / 0 | 0 / 0 |
+| oracle against the main checkout's `ref` | (end only) | seeds 2-7 identical |
+| `rust_build.py gate` | rustfmt failed on 7186a49c (fixed with the next commit) | PASS |
+| `build.py --test-profile windowed-software` | (end only) | 0 / 0 |
+| `xbuild.py wontest` | all programs once: won_serverop_test 2 failures (the directory hand-over, fixed); the four HTTP drivers rerun: 0 | all 133 programs exit 0 (won_cdkeystore_test the new one) |
+| `lan_game.py` (harness lock) | (end only) | `RESULT PASS lan-game PT host=2726 joiner=2727` |
