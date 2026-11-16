@@ -3930,7 +3930,7 @@ local function pool_step(view, memory)
     end
 end
 
--- New (AI_RESEARCH 8.92): the raids. With the C++ attack commander gone (AI_RESEARCH 8.90) the pool's soldiers stayed
+-- New (AI_RESEARCH 8.93): the raids. With the C++ attack commander gone (AI_RESEARCH 8.90) the pool's soldiers stayed
 -- home, and the enemy's economy lost the raids the commander's continent groups made of the classic's free soldiers.
 -- A raid is a lib.groups raid (the enemy's gatherers and fishing boats away from its known towers, soldiers only
 -- near, home when the seen soldiers and towers there are 1.5 times its strength) made of the pool's soldiers: from
