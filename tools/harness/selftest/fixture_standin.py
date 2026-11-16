@@ -31,6 +31,7 @@ if os.environ.get('EE_TEST_TIME_FACTOR'):
 if os.environ.get('EE_TEST_SEED'):
     print(f'TEST UI seed {os.environ["EE_TEST_SEED"]}', file=sys.stderr, flush=True)
 stack, last, frames, game_ms, ticks, ct, civ = [12], 0, 0, 0, 0, 0, 0
+wanted = False   # a frame.request seen and its frame not yet written
 units = {100 + k: 100 + 60 * k for k in range(10)}   # id -> x (all at y 250)
 selection, box, order = [], None, None
 cam = dict(x=63.8, y=30.0, zoom=1.0, held=None, until=0.0, edge=False)
@@ -200,14 +201,23 @@ while True:
         print(f'TEST UI order-done order control 1 value 0 on form 0 (seq {order["seq"]}, top form 0)', file=sys.stderr,
               flush=True)
         retry = None
-    if (ui / 'frame.request').exists():
-        (ui / 'frame.request').unlink()
+    try:   # Windows: the driver may still hold frame.request (its write) or frame.bmp (its read): the next poll then
+        if (ui / 'frame.request').exists():
+            (ui / 'frame.request').unlink()
+            wanted = True
+    except PermissionError:
+        pass
+    if wanted:
         width, height = 64, 48
         pixels = bytes((x * 4 + y * 3 + k * 50) & 0xff for y in range(height) for x in range(width) for k in range(4))
         header = b'BM' + struct.pack('<IHHI', 54 + len(pixels), 0, 0, 54) + struct.pack(
             '<IiiHHIIiiII', 40, width, -height, 1, 32, 0, 0, 0, 0, 0, 0)
         (ui / 'frame.tmp').write_bytes(header + pixels)
-        (ui / 'frame.bmp').unlink(missing_ok=True)
-        os.replace(ui / 'frame.tmp', ui / 'frame.bmp')
-        frames += 1
+        try:
+            (ui / 'frame.bmp').unlink(missing_ok=True)
+            os.replace(ui / 'frame.tmp', ui / 'frame.bmp')
+            frames += 1
+            wanted = False
+        except PermissionError:
+            pass
     time.sleep(0.1)
