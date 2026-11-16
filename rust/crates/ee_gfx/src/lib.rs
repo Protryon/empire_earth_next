@@ -120,6 +120,7 @@ pub mod mesh;
 pub mod minimap;
 pub mod models;
 pub mod mouse;
+pub mod mouse_frame;
 pub mod pick;
 pub mod pick_walk;
 pub mod quake;

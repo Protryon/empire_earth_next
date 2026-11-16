@@ -521,12 +521,3 @@ long EEGraphics::PostMessage50AAndWait()
         this->mMessageQueueDone->Wait(kTSWaitInfinite);
     return theResult;
 }
-
-// Ends the mouse cursor's frame, releasing its surface and the render lock
-void RTSMouse::EndFrame()
-{
-    this->mCurrentSurface->Dereference();
-    this->mCurrentSurface = NULL;
-    this->mInFrame = false;
-    this->mRenderLock->Leave();
-}
