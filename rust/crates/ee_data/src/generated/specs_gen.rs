@@ -990,6 +990,22 @@ static FIELDS_35: &[Field] = &[
     Field { name: "mLongValue2", offset: 20, count: 1, ty: Type::U32 },
 ];
 static STRUCT_35: Struct = Struct { name: "EEWorldTableEntry", size: 28, fields: FIELDS_35, base: None };
+static FIELDS_36: &[Field] = &[
+    Field { name: "mID", offset: 0, count: 1, ty: Type::S32 },
+    Field { name: "mGroup", offset: 4, count: 1, ty: Type::S32 },
+    Field { name: "mName", offset: 8, count: 100, ty: Type::Str },
+    Field { name: "mElevationLow", offset: 108, count: 1, ty: Type::S32 },
+    Field { name: "mElevationHigh", offset: 112, count: 1, ty: Type::S32 },
+    Field { name: "mTerrain", offset: 116, count: 4, ty: Type::S32 },
+];
+static STRUCT_36: Struct = Struct { name: "EERandomMapRecord", size: 132, fields: FIELDS_36, base: None };
+static FIELDS_37: &[Field] = &[
+    Field { name: "mName", offset: 0, count: 100, ty: Type::Str },
+    Field { name: "mID", offset: 100, count: 1, ty: Type::S32 },
+    Field { name: "mIndex", offset: 104, count: 1, ty: Type::S32 },
+    Field { name: "mColor", offset: 108, count: 3, ty: Type::S32 },
+];
+static STRUCT_37: Struct = Struct { name: "EETerrainGrayTextureRecord", size: 120, fields: FIELDS_37, base: None };
 
 static REFS_dbaiunittargeting: &[Ref] = &[
     Ref { field: "mPreferredUnitType", table: "dbobjects", none: &[], never: false },
@@ -1267,6 +1283,7 @@ static ROWS_dbworld: &[RowName] = &[
     RowName { row: 93, name: "jit_manufacturing_cost_factor_deathmatch", fields: "mFloatValue" },
     RowName { row: 94, name: "deathmatch_jit_manufacturing_delay", fields: "mLongValue" },
 ];
+static LEAD_dbterraingraytextures: &[&str] = &["mTextureName"];
 
 pub static TABLES: &[Table] = &[
     Table {
@@ -2055,6 +2072,48 @@ pub static TABLES: &[Table] = &[
         list_name: None,
         list_signed: false,
         row_names: ROWS_dbworld,
+        hole: None,
+        key_field: None,
+        self_field: None,
+        self_offset: 0,
+        refs: &[],
+        derived: &[],
+        text_only: false,
+        epoch_flags: None,
+        epoch_key: None,
+        levels_field: None,
+        levels_key: None,
+    },
+    Table {
+        name: "dbrandommap",
+        container: Container::Count,
+        yaml: false,
+        record: &STRUCT_36,
+        lead: &[],
+        list_name: None,
+        list_signed: false,
+        row_names: &[],
+        hole: None,
+        key_field: None,
+        self_field: None,
+        self_offset: 0,
+        refs: &[],
+        derived: &[],
+        text_only: false,
+        epoch_flags: None,
+        epoch_key: None,
+        levels_field: None,
+        levels_key: None,
+    },
+    Table {
+        name: "dbterraingraytextures",
+        container: Container::Lead,
+        yaml: false,
+        record: &STRUCT_37,
+        lead: LEAD_dbterraingraytextures,
+        list_name: None,
+        list_signed: false,
+        row_names: &[],
         hole: None,
         key_field: None,
         self_field: None,
@@ -4550,6 +4609,40 @@ pub mod records {
     const _: () = assert!(core::mem::offset_of!(EEWorldTableEntry, long_value_2) == 20);
     const _: () = assert!(core::mem::offset_of!(EEWorldTableEntry, unused) == 24);
 
+    #[derive(Clone, Copy)]
+    #[allow(non_camel_case_types, dead_code)]
+    #[repr(C)]
+    pub struct EERandomMapRecord {
+        pub id: i32,
+        pub group: i32,
+        pub name: [u8; 100],
+        pub elevation_low: i32,
+        pub elevation_high: i32,
+        pub terrain: [i32; 4],
+    }
+    const _: () = assert!(core::mem::size_of::<EERandomMapRecord>() == 132);
+    const _: () = assert!(core::mem::offset_of!(EERandomMapRecord, id) == 0);
+    const _: () = assert!(core::mem::offset_of!(EERandomMapRecord, group) == 4);
+    const _: () = assert!(core::mem::offset_of!(EERandomMapRecord, name) == 8);
+    const _: () = assert!(core::mem::offset_of!(EERandomMapRecord, elevation_low) == 108);
+    const _: () = assert!(core::mem::offset_of!(EERandomMapRecord, elevation_high) == 112);
+    const _: () = assert!(core::mem::offset_of!(EERandomMapRecord, terrain) == 116);
+
+    #[derive(Clone, Copy)]
+    #[allow(non_camel_case_types, dead_code)]
+    #[repr(C)]
+    pub struct EETerrainGrayTextureRecord {
+        pub name: [u8; 100],
+        pub id: i32,
+        pub index: i32,
+        pub color: [i32; 3],
+    }
+    const _: () = assert!(core::mem::size_of::<EETerrainGrayTextureRecord>() == 120);
+    const _: () = assert!(core::mem::offset_of!(EETerrainGrayTextureRecord, name) == 0);
+    const _: () = assert!(core::mem::offset_of!(EETerrainGrayTextureRecord, id) == 100);
+    const _: () = assert!(core::mem::offset_of!(EETerrainGrayTextureRecord, index) == 104);
+    const _: () = assert!(core::mem::offset_of!(EETerrainGrayTextureRecord, color) == 108);
+
 }
 
 pub mod text_rows {
@@ -7026,6 +7119,60 @@ pub mod text_rows {
             let long_value_2 = textrow::num::<u32>(&mut g, "mLongValue2", Type::U32)?;
             g.leftover()?;
             Ok(Self { row, id, float_value, float_value_2, long_value, long_value_2 })
+        }
+    }
+
+    #[derive(Clone, Debug)]
+    pub struct DbrandommapText {
+        pub row: Option<i32>,
+        pub id: Option<Vec<u8>>,
+        pub id_2: Option<i32>,
+        pub group: Option<i32>,
+        pub name: Option<Vec<u8>>,
+        pub elevation_low: Option<i32>,
+        pub elevation_high: Option<i32>,
+        pub terrain: Vec<Option<i32>>,
+    }
+    impl DbrandommapText {
+        /// One record mapping (a YAML entry or a CSV row made a mapping) -> its typed keys; an unknown key is an error.
+        pub fn from_node(m: &Node, where_: &[u8]) -> Res<Self> {
+            let mut g = Getter::new(m, where_);
+            let row = textrow::int(&mut g, "row", Type::S32)?.map(|v| v as i32);
+            let id = textrow::raw(&mut g, "id")?;
+            let id_2 = textrow::num::<i32>(&mut g, "mID", Type::S32)?;
+            let group = textrow::num::<i32>(&mut g, "mGroup", Type::S32)?;
+            let name = textrow::text(&mut g, "mName")?;
+            let elevation_low = textrow::num::<i32>(&mut g, "mElevationLow", Type::S32)?;
+            let elevation_high = textrow::num::<i32>(&mut g, "mElevationHigh", Type::S32)?;
+            let terrain = textrow::num_array::<i32>(&mut g, "mTerrain", Type::S32, 4)?;
+            g.leftover()?;
+            Ok(Self { row, id, id_2, group, name, elevation_low, elevation_high, terrain })
+        }
+    }
+
+    #[derive(Clone, Debug)]
+    pub struct DbterraingraytexturesText {
+        pub row: Option<i32>,
+        pub id: Option<Vec<u8>>,
+        pub texture_name: Option<Vec<u8>>,
+        pub name: Option<Vec<u8>>,
+        pub id_2: Option<i32>,
+        pub index: Option<i32>,
+        pub color: Vec<Option<i32>>,
+    }
+    impl DbterraingraytexturesText {
+        /// One record mapping (a YAML entry or a CSV row made a mapping) -> its typed keys; an unknown key is an error.
+        pub fn from_node(m: &Node, where_: &[u8]) -> Res<Self> {
+            let mut g = Getter::new(m, where_);
+            let row = textrow::int(&mut g, "row", Type::S32)?.map(|v| v as i32);
+            let id = textrow::raw(&mut g, "id")?;
+            let texture_name = textrow::text(&mut g, "mTextureName")?;
+            let name = textrow::text(&mut g, "mName")?;
+            let id_2 = textrow::num::<i32>(&mut g, "mID", Type::S32)?;
+            let index = textrow::num::<i32>(&mut g, "mIndex", Type::S32)?;
+            let color = textrow::num_array::<i32>(&mut g, "mColor", Type::S32, 3)?;
+            g.leftover()?;
+            Ok(Self { row, id, texture_name, name, id_2, index, color })
         }
     }
 }
