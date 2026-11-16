@@ -966,6 +966,19 @@ pub enum EeUiOp {
     LineSetOpacity = 668,
     /// The virtual `DrawBorder(f, a)` -> its result.
     DrawBorder = 669,
+
+    // ---- the list boxes' lines for the direct path (R6 game screens B, round 3: `UIListBoxRust<T>::Op`)
+    /// `GetLineCount()`: the lines (`mData.size()`).
+    ListLineCount = 670,
+    /// Line `a`'s NUL-terminated bytes (a `UIListBox<UWideString>`'s `GetData(a)`; 0 for another line type or a line
+    /// past the end).
+    ListLineText = 671,
+    /// The virtual `AppendLine(UWideString(a bytes))` (a `UIListBox<UWideString>`'s; nothing for another type).
+    ListAppendText = 672,
+    /// The virtual `DeleteAllEntries()`.
+    ListDeleteAll = 673,
+    /// `GetCurrentSelection(out)` -> its result, `out`'s bits in `f[0]`.
+    ListSelection = 674,
 }
 
 impl EeUiOp {

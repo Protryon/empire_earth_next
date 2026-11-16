@@ -15,14 +15,7 @@ const GOLDEN: &str = include_str!("golden_graphobj.txt");
 unsafe fn dispatch(target: *const c_void, call: u32, a: isize, b: isize, f: *mut f32) -> isize {
     // SAFETY: the call numbers are EeUiGraphCall's (the golden's); the target is the live graph
     unsafe {
-        ee_ui_graph_call(
-            target as *const EeUiGraph,
-            core::mem::transmute::<u32, EeUiGraphCall>(call),
-            a,
-            b,
-            0,
-            f,
-        )
+        ee_ui_graph_call(target as *const EeUiGraph, core::mem::transmute::<u32, EeUiGraphCall>(call), a, b, 0, f)
     }
 }
 

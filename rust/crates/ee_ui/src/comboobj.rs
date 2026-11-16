@@ -212,6 +212,13 @@ pub struct EeUiCombo {
     key: Cell<(isize, isize)>,
 }
 
+impl EeUiCombo {
+    /// The drop-down list's C++ object (its `UILBString*`; the direct path's list).
+    pub fn list_cpp(&self) -> isize {
+        self.list
+    }
+}
+
 /// NUL-terminated bytes at `p` (with the terminator).
 ///
 /// # Safety

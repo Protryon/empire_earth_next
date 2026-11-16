@@ -98,6 +98,8 @@ intptr_t UIControl::HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b,
     case EeUiOp::SetDisplayMode: c->SetDisplayMode((unsigned long)a); break;
     case EeUiOp::ReleaseMouse: c->ReleaseCapturedMouse(); break;
     case EeUiOp::SetBgOpacity: c->SetBgOpacity(f[0]); break;
+    case EeUiOp::PartSetBgColor: c->SetBgColor(GEColor(f[0], f[1], f[2])); break;
+    case EeUiOp::BgOpacity: f[0] = c->GetBgOpacity(); break;
     case EeUiOp::CtlTabbedTo: c->TabbedTo(); break;
     case EeUiOp::FormEventCall: {
         UIEvent* theEvent = reinterpret_cast<UIEvent*>(a);

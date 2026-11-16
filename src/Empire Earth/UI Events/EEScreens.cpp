@@ -985,9 +985,6 @@ static uint32_t EEScreensDiplomacyCall(UIForm* inForm, uint32_t inOp, uint32_t i
                                                                                             theBottomRight, theBottomLeft);
         break;
     }
-    case EE_SCREENS_OP_DS_BG:
-        inForm->GetControl(inA)->SetBgColor(GEColor(Float(inB), Float(inC), Float(inD)));
-        break;
     case EE_SCREENS_OP_DS_FG: {
         UIControl* theControl = inForm->GetControl(inA);
         GEText* theText = inC ? static_cast<UIButton*>(theControl)->GetGEText()
@@ -1080,22 +1077,11 @@ static uint32_t EEScreensPostGameCall(UIForm* inForm, UIEntity* inEntity, uint32
         break;
     case EE_SCREENS_GAME_PGS_PAGE:
         return (uint32_t)gGamePreferences.GetSettings().mLastOpenPostGameStatsPage;
-    case EE_SCREENS_OP_PGS_RECT: {
-        const GERectangle& r = Ctl(inA)->GetRectangle();
-        const float theValues[4] = {r.GetLeft(), r.GetTop(), r.GetRight(), r.GetBottom()};
-        return Bits(theValues[inB & 3]);
-    }
     case EE_SCREENS_OP_PGS_SET_R:
         sPgsRectangle[inA & 3] = Float(inB);
         break;
     case EE_SCREENS_OP_PGS_APPLY_R:
         Ctl(inA)->SetRectangle(GERectangle(sPgsRectangle[0], sPgsRectangle[1], sPgsRectangle[2], sPgsRectangle[3]));
-        break;
-    case EE_SCREENS_OP_PGS_BG_OPACITY:
-        Ctl(inA)->SetBgOpacity(Float(inB));
-        break;
-    case EE_SCREENS_OP_PGS_DIRTY:
-        Ctl(inA)->SetDirty(true);
         break;
     case EE_SCREENS_GAME_PGS_ADD_SERIES: {
         // the record's statistics series into the line graph's stored graph inB (its graph ops: ee_screens toolkit.rs)
@@ -1112,23 +1098,12 @@ static uint32_t EEScreensPostGameCall(UIForm* inForm, UIEntity* inEntity, uint32
     case EE_SCREENS_GAME_PGS_NEW_MANAGER:
         inForm->SetFormManager(new EEPGSFormManager);
         break;
-    case EE_SCREENS_OP_PGS_BG_COLOUR:
-        Ctl(inA)->SetBgColor(GEColor(Float(inB), Float(inC), Float(inD)));
-        break;
     case EE_SCREENS_GAME_PGS_WINDOW: {
         GEWindow* theWindow = inForm->GetManager()->GetRasterizer()->GetWindow(inForm->GetManager()->GetScreen());
         return inA ? theWindow->GetWidth() : theWindow->GetHeight();
     }
-    case EE_SCREENS_OP_PGS_DESIGNED:
-        return inA ? inForm->GetDesignedWidth() : inForm->GetDesignedHeight();
-    case EE_SCREENS_OP_PGS_IS_BAR:
-        return dynamic_cast<UIStatusBar*>(Ctl(inA)) != NULL;
     case EE_SCREENS_OP_PGS_IS_BITMAP:
         return dynamic_cast<UIBitmap*>(Ctl(inA)) != NULL;
-    case EE_SCREENS_OP_PGS_EXISTS:
-        return Ctl(inA) != NULL;
-    case EE_SCREENS_OP_PGS_INDEX:
-        return Ctl(inA)->GetIndex();
     case EE_SCREENS_OP_PGS_NEW_BAR: {
         UIControl* theTemplate = Ctl(inA);
         UIStatusBar* theBar = new UIStatusBar(theTemplate->GetId() + inB - 1,
@@ -1171,18 +1146,6 @@ static uint32_t EEScreensPostGameCall(UIForm* inForm, UIEntity* inEntity, uint32
         theBitmap->Dereference();
         break;
     }
-    case EE_SCREENS_OP_PGS_BAR_OPACITY:
-        Bar(inA)->SetStatusBarOpacity(Float(inB));
-        break;
-    case EE_SCREENS_OP_PGS_BAR_RANGE:
-        Bar(inA)->SetRange(0, inB);
-        Bar(inA)->SetCurrentRangeValue((long)(int32_t)inC);
-        break;
-    case EE_SCREENS_OP_PGS_GET_BG_OPACITY:
-        return Bits(Ctl(inA)->GetBgOpacity());
-    case EE_SCREENS_OP_PGS_BAR_COLOUR:
-        Bar(inA)->SetStatusBarColor(GEColor(Float(inB), Float(inC), Float(inD)));
-        break;
     case EE_SCREENS_GAME_PGS_PROTOCOL:
         NEProtocol::GetProtocol(0, sPgsProtocol);
         break;
@@ -1279,9 +1242,6 @@ static uint32_t EEScreensSplashCall(UIForm* inForm, UIEntity* inEntity, uint32_t
         static_cast<UIStatusBar*>(inForm->GetControl(inA))
             ->SetStatusBarColor(EEGetPlayerColor(gWorld.GetLobbyOptions().mPlayers[inB].mColor));
         break;
-    case EE_SCREENS_OP_SS_BAR_VALUE:
-        static_cast<UIStatusBar*>(inForm->GetControl(inA))->SetCurrentRangeValue((long)(int32_t)inB);
-        break;
     case EE_SCREENS_OP_SS_BACKGROUND: {
         UIBackground* theBackground = inForm->GetBackgroundByID(0x84);
         GERectangle theRectangle = theBackground->GetRectangle();
@@ -1324,8 +1284,6 @@ static uint32_t EEScreensCivChoiceCall(UIForm* inForm, UIEntity* inEntity, uint3
     case EE_SCREENS_GAME_PDCS_FILL:
         gCivilizationManager.FillCivilizationList(static_cast<EECBUIListBox*>(inForm->GetControl(inA)));
         break;
-    case EE_SCREENS_OP_PDCS_HAS_SELECTION:
-        return static_cast<EECBUIListBox*>(inForm->GetControl(inA))->GetHasSelection();
     case EE_SCREENS_GAME_PDCS_PAUSE:
         gWorld.PauseGame();
         break;
@@ -1601,7 +1559,6 @@ static uint32_t EEScreensCampaignEditorCall(UIForm* inForm, UIEntity* inEntity, 
 {
     // the control op's control (read only by the ops that take one)
     auto Ctl = [&]() { return inForm->GetControl(inA); };
-    auto List = [&]() { return static_cast<UIListBox<UWideString>*>(Ctl()); };
     auto Combo = [&]() { return static_cast<UIFileComboBox*>(Ctl()); };
     switch (inOp) {
     case EE_SCREENS_OP_CE_IS:
@@ -1632,18 +1589,6 @@ static uint32_t EEScreensCampaignEditorCall(UIForm* inForm, UIEntity* inEntity, 
         thePath->Dereference();
         break;
     }
-    case EE_SCREENS_OP_CE_LIST_SELECT:
-        List()->ChangeSelectionIndex(inB, false, inC != 0);
-        break;
-    case EE_SCREENS_OP_CE_CLEAR_SELECTION:
-        List()->ClearSelection();
-        break;
-    case EE_SCREENS_OP_CE_COMBO_SELECTION: {
-        unsigned long theSelection;
-        return Combo()->GetCurrentSelection(theSelection) == kErrorOK ? (uint32_t)theSelection : 0xffffffffu;
-    }
-    case EE_SCREENS_OP_CE_COMBO_COUNT:
-        return Combo()->GetListBox()->GetLineCount();
     case EE_SCREENS_OP_CE_BG_NONE:
         EEScreensCampaignNoBackground(Combo());
         break;
@@ -1667,14 +1612,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     case EE_SCREENS_OP_OPEN_FORM:
         return (uint32_t)gUserInterface->OpenForm(theManager->GetFormByID(inA));
-    case EE_SCREENS_OP_LIST_SELECT:
-        if (UIControl* c = Ctl())
-            static_cast<UILBString*>(c)->ChangeSelectionIndex(inB, false, true);
-        break;
-    case EE_SCREENS_OP_LIST_CLEAR:
-        if (UIControl* c = Ctl())
-            static_cast<UILBString*>(c)->DeleteAllEntries();
-        break;
     case EE_SCREENS_OP_SLIDER_LABEL: {
         UIESliderChange* theEvent = new UIESliderChange(static_cast<UITextLabel*>(theForm->GetControl(inB)), 1.0f, 0);
         Ctl()->SetTriggerEvent(kControlTriggerRangeChanged, theEvent);
@@ -1799,19 +1736,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     }
     // the custom campaign form's (custom_campaign.rs): a list box of form inA
-    case EE_SCREENS_OP_FORM_LIST_CLEAR:
-        static_cast<UIListBox<UWideString>*>(theManager->GetFormByID(inA)->GetControl(inB))->DeleteAllEntries();
-        break;
-    case EE_SCREENS_OP_FORM_LIST_COUNT:
-        return static_cast<UIListBox<UWideString>*>(theManager->GetFormByID(inA)->GetControl(inB))->GetLineCount();
-    case EE_SCREENS_OP_FORM_LIST_SELECT:
-        static_cast<UIListBox<UWideString>*>(theManager->GetFormByID(inA)->GetControl(inB))->ChangeSelectionIndex(inC, true, false);
-        break;
-    case EE_SCREENS_OP_FORM_LIST_SELECTION: {
-        unsigned long theSelection = 0;
-        static_cast<UIListBox<UWideString>*>(theManager->GetFormByID(inA)->GetControl(inB))->GetCurrentSelection(theSelection);
-        return theSelection;
-    }
     case EE_SCREENS_GAME_RASTERIZER_COUNT:
         return (uint32_t)gDisplayRasterizers.size();
     case EE_SCREENS_GAME_SCREEN_COUNT:
@@ -1873,14 +1797,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         gUserInterface->PostEvent(theEvent, NULL);
         theEvent->Dereference();
         break;
-    }
-    case EE_SCREENS_OP_FORM_LIST_SELECTED: {
-        UIForm* theTarget = inA ? theManager->GetFormByID(inA - 1) : theForm;
-        UILBString* theList = static_cast<UILBString*>(theTarget->GetControl(inB));
-        unsigned long theSelection = 0;
-        if (theList && theList->GetCurrentSelection(theSelection) == kErrorOK)
-            return (uint32_t)theSelection;
-        return 0xffffffffu;
     }
     case EE_SCREENS_GAME_FREE_CAMERA:
         return gFreeCamera;
@@ -2125,11 +2041,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         gDifficultyLevel = (long)(int32_t)inA;
         gDifficultyLevel2 = (long)(int32_t)inA;
         break;
-    case EE_SCREENS_OP_LE_COMBO_DELETE_LINE:
-        static_cast<UIComboBox*>(Ctl())->DeleteLine(inB);
-        break;
-    case EE_SCREENS_OP_LE_COMBO_LINES:
-        return (uint32_t)static_cast<UIComboBox*>(Ctl())->GetListBox()->GetLineCount();
     case EE_SCREENS_OP_LE_PLAYER_COLOUR:
         Ctl()->SetBgColor(EEGetPlayerColor(inB));
         break;
@@ -2454,25 +2365,6 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
         if (inArg < GERasterizer::GetRasterizerCount())
             theText = GERasterizer::GetRasterizer(inArg)->GetName();
         break;
-    case EE_SCREENS_TEXT_LIST_DATA: {
-        UILBString* theBox = static_cast<UILBString*>(theForm->GetControl(inArg >> 16));
-        if ((inArg & 0xffff) < theBox->GetLineCount())
-            theText = theBox->GetData(inArg & 0xffff);
-        break;
-    }
-    case EE_SCREENS_TEXT_COMBO_DATA: {
-        const UILBString* theBox = static_cast<UIComboBox*>(theForm->GetControl(inArg >> 16))->GetListBox();
-        if ((inArg & 0xffff) < theBox->GetLineCount())
-            theText = theBox->GetData(inArg & 0xffff);
-        break;
-    }
-    case EE_SCREENS_TEXT_FORM_LIST_DATA: {
-        UIListBox<UWideString>* theBox =
-            static_cast<UIListBox<UWideString>*>(gUIManager->GetFormByID(inArg >> 24)->GetControl((inArg >> 16) & 0xff));
-        if ((inArg & 0xffff) < theBox->GetLineCount())
-            theText = theBox->GetData(inArg & 0xffff);
-        break;
-    }
     case EE_SCREENS_TEXT_CAMPAIGN_FILES: {
         // the files of data\Campaigns with the campaign extension (a set: in its order)
         std::set<UString> theFiles;
@@ -2652,21 +2544,6 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
                  std::string((const char*)inText, inLength).c_str());
         break;
     }
-    case EE_SCREENS_TEXT_COMBO_APPEND:
-        if (UIComboBox* theBox = static_cast<UIComboBox*>(theForm->GetControl(inArg)))
-            theBox->AppendLine(theText);
-        break;
-    case EE_SCREENS_TEXT_COMBO_INSERT:
-        if (UIComboBox* theBox = static_cast<UIComboBox*>(theForm->GetControl(inArg >> 16)))
-            theBox->InsertLine(theText, inArg & 0xffff);
-        break;
-    case EE_SCREENS_TEXT_LIST_APPEND:
-        if (UILBString* theBox = static_cast<UILBString*>(theForm->GetControl(inArg)))
-            theBox->AppendLine(theText);
-        break;
-    case EE_SCREENS_TEXT_FORM_LIST_APPEND:
-        static_cast<UIListBox<UWideString>*>(gUIManager->GetFormByID(inArg >> 16)->GetControl(inArg & 0xffff))->AppendLine(theText);
-        break;
     case EE_SCREENS_TEXT_CAMPAIGN_BUILT_IN:
         return EECampaignFormManager::GetBuiltInCampaign(theText);   // (its number: the checksum it must have)
     case EE_SCREENS_TEXT_MESSAGE_NONE_FOUND:

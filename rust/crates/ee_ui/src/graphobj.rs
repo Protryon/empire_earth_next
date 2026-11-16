@@ -70,7 +70,8 @@ pub enum EeUiGraphKind {
 
 /// A graph's value format (the summary's: `axis` 0 x, 1 y): the text of `value` into `out` (`capacity` bytes);
 /// its length.
-pub type EeUiGraphFormatFn = Option<unsafe extern "C" fn(axis: c_int, value: f32, out: *mut u8, capacity: usize) -> usize>;
+pub type EeUiGraphFormatFn =
+    Option<unsafe extern "C" fn(axis: c_int, value: f32, out: *mut u8, capacity: usize) -> usize>;
 
 /// A `UGraph`: the series and range (`ee_util`'s) and the title and axis labels (UTF-8, no NUL).
 #[derive(Clone, Debug, Default)]
@@ -320,7 +321,8 @@ impl EeUiGraph {
             label_x: s.label_x,
             has_x: s.texts[X_AXIS] != 0,
         };
-        let layout = graph::copy_layout(&mut Draw { g: self, line: 0 }, rect, texts, s.displayed.max_x, s.displayed.max_y);
+        let layout =
+            graph::copy_layout(&mut Draw { g: self, line: 0 }, rect, texts, s.displayed.max_x, s.displayed.max_y);
         let mut color = [1.0f32, 1.0, 1.0, 0.0];
         if s.texts[TITLE] != 0 {
             h.op_f(Op::TextFgColor, s.texts[TITLE], 0, 0, 0, &mut color);
@@ -370,7 +372,13 @@ impl EeUiGraph {
     /// `DrawGridText`.
     fn draw_grid_text(&self) -> c_long {
         let s = self.st();
-        graph::draw_grid_text(&mut Draw { g: self, line: 0 }, s.copied_graph_rect, s.divisions, s.copied_zoom, s.displayed)
+        graph::draw_grid_text(
+            &mut Draw { g: self, line: 0 },
+            s.copied_graph_rect,
+            s.divisions,
+            s.copied_zoom,
+            s.displayed,
+        )
     }
 
     /// `DrawPolygons`: the control, an inner border around the plot area, the grid lines, then every enabled series

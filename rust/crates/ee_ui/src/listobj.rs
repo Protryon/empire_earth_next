@@ -127,7 +127,7 @@ pub enum EeUiListCall {
 
 /// The Rust UIListBox.
 pub struct EeUiList {
-    host: Host,
+    pub(crate) host: Host,
     /// The selection record and `mTextRectangle` (`rect` and `border` are read from `UIControl` at each load).
     st: Cell<ListState>,
     /// `mCopyTextRectangle`.
@@ -661,7 +661,8 @@ pub unsafe extern "C" fn ee_ui_list_new(
     auto_select: bool,
     border: c_ulong,
 ) -> *mut EeUiList {
-    Box::into_raw(Box::new(EeUiList::new(Host { obj: list, f: host }, line_height, auto_select, border)))
+    let obj = Box::into_raw(Box::new(EeUiList::new(Host { obj: list, f: host }, line_height, auto_select, border)));
+    crate::direct::made(crate::direct::Kind::List, list, obj)
 }
 
 /// The destructor (after `mData.clear()`): the rest of `DeleteAllEntries`, then the parts deleted; frees the object.
@@ -673,6 +674,7 @@ pub unsafe extern "C" fn ee_ui_list_free(list: *mut EeUiList) {
     if list.is_null() {
         return;
     }
+    crate::direct::forget(crate::direct::Kind::List, list as *const c_void);
     // SAFETY: the contract
     unsafe { (*list).release() };
     // SAFETY: the contract

@@ -239,7 +239,8 @@ impl EeUiStatusBar {
 /// A new Rust status bar for the C++ `bar` (its `UIControl` part constructed with `border`).
 #[no_mangle]
 pub extern "C" fn ee_ui_status_bar_new(bar: *mut c_void, host: EeUiHostFn, border: c_ulong) -> *mut EeUiStatusBar {
-    Box::into_raw(Box::new(EeUiStatusBar::new(Host { obj: bar, f: host }, border)))
+    let obj = Box::into_raw(Box::new(EeUiStatusBar::new(Host { obj: bar, f: host }, border)));
+    crate::direct::made(crate::direct::Kind::StatusBar, bar, obj)
 }
 
 /// The destructor: deletes the texts and frees the object.
@@ -251,6 +252,7 @@ pub unsafe extern "C" fn ee_ui_status_bar_free(bar: *mut EeUiStatusBar) {
     if bar.is_null() {
         return;
     }
+    crate::direct::forget(crate::direct::Kind::StatusBar, bar as *const c_void);
     // SAFETY: the contract
     unsafe { (*bar).release() };
     // SAFETY: the contract

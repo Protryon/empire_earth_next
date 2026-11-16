@@ -27,9 +27,11 @@ use crate::formobj::{ee_ui_form_call, EeUiForm, EeUiFormCall};
 use crate::graphobj::EeUiGraph;
 use crate::groupobj::{ee_ui_entity_group_call, EeUiEntityGroup, EeUiEntityGroupCall};
 use crate::labelobj::{ee_ui_label_call, EeUiLabel, EeUiLabelCall};
+use crate::listobj::{ee_ui_list_call, EeUiList, EeUiListCall};
 use crate::managerobj::{ee_ui_manager_call, EeUiManager, EeUiManagerCall};
 use crate::obj::EeUiOp;
 use crate::sliderobj::{ee_ui_slider_call, EeUiSlider, EeUiSliderCall};
+use crate::statusobj::{ee_ui_status_bar_call, EeUiStatusBar, EeUiStatusBarCall};
 
 /// What a registered Rust object is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -56,6 +58,10 @@ pub enum Kind {
     Slider,
     /// `UIGraph`'s [`EeUiGraph`] (the line graph's and the post-game summary's).
     Graph,
+    /// `UIListBox<T>`'s [`EeUiList`] (every instantiation; the lines are the C++'s, reached through its host).
+    List,
+    /// `UIStatusBar`'s [`EeUiStatusBar`].
+    StatusBar,
 }
 
 /// The C++ pointer of a toolkit object (`UIForm*`, `UIControl*`, ...).
@@ -117,7 +123,41 @@ pub fn find(kind: Kind, cpp: *const c_void) -> *mut c_void {
     if cpp.is_null() {
         return core::ptr::null_mut();
     }
-    registry().by_cpp.get(&(cpp as usize, kind)).map_or(core::ptr::null_mut(), |&o| o as *mut c_void)
+    let o = registry().by_cpp.get(&(cpp as usize, kind)).map_or(core::ptr::null_mut(), |&o| o as *mut c_void);
+    check(kind, cpp, !o.is_null());
+    o
+}
+
+// ---- the lookup check (round 3): `EE_DIRECT_CHECK=<file>` logs every lookup of a C++ object, found or missing,
+// under the screens' op that made it ([`check_op`]); a missing non-NULL object of the kind an op expects is the
+// bug class of round 2's backgrounds (a registry keyed by another pointer)
+
+static CHECK: std::sync::OnceLock<Option<Mutex<std::fs::File>>> = std::sync::OnceLock::new();
+
+fn check_file() -> Option<&'static Mutex<std::fs::File>> {
+    CHECK
+        .get_or_init(|| std::env::var_os("EE_DIRECT_CHECK").and_then(|p| std::fs::File::create(p).ok()).map(Mutex::new))
+        .as_ref()
+}
+
+fn check_line(line: &str) {
+    if let Some(f) = check_file() {
+        use std::io::Write;
+        let _ = writeln!(f.lock().unwrap_or_else(|e| e.into_inner()), "{line}");
+    }
+}
+
+fn check(kind: Kind, cpp: *const c_void, found: bool) {
+    if check_file().is_some() {
+        check_line(&format!("{} {kind:?} {:#x}", if found { "found" } else { "MISSING" }, cpp as usize));
+    }
+}
+
+/// The lookup check's op line: the screens' op `op` (an `EE_SCREENS_*` number) on `form` starts.
+pub fn check_op(what: &str, op: u32) {
+    if check_file().is_some() {
+        check_line(&format!("{what} {op:#x}"));
+    }
 }
 
 /// `UIBackground`'s constructor's step: the background `cpp` (the `UIBackground*` the forms hold; its record's own
@@ -254,6 +294,16 @@ sub_call!(
     slider_call, Kind::Slider, EeUiSlider, EeUiSliderCall, ee_ui_slider_call
 );
 
+/// One of `UIStatusBar`'s methods with the float buffer `f`; `None` when `control` is not a status bar.
+pub fn status_call(control: Cpp, call: EeUiStatusBarCall, a: isize, b: isize, f: &mut [f32; 4]) -> Option<isize> {
+    let o = find(Kind::StatusBar, control) as *const EeUiStatusBar;
+    if o.is_null() {
+        return None;
+    }
+    // SAFETY: a live status bar
+    Some(unsafe { ee_ui_status_bar_call(o, call, a, b, f.as_mut_ptr()) })
+}
+
 /// One of `UIEditBox`'s methods; `None` when `control` is not an edit box.
 pub fn edit_call(control: Cpp, call: EeUiEditCall, a: isize, b: isize) -> Option<isize> {
     let o = find(Kind::Edit, control) as *const EeUiEdit;
@@ -284,6 +334,49 @@ pub fn background_call(background: Cpp, call: EeUiBgCall, a: isize, b: isize) ->
     let mut f = buf();
     // SAFETY: a live background record
     unsafe { ee_ui_bg_call(r, call, a, b, f.as_mut_ptr()) }
+}
+
+/// One of `UIListBox`'s methods on the list `control`; `None` when `control` is not a list box.
+pub fn list_call(control: Cpp, call: EeUiListCall, a: isize, b: isize) -> Option<isize> {
+    let o = find(Kind::List, control) as *const EeUiList;
+    if o.is_null() {
+        return None;
+    }
+    let mut f = buf();
+    // SAFETY: a live list box
+    Some(unsafe { ee_ui_list_call(o, call, a, b, f.as_mut_ptr()) })
+}
+
+/// An op on the list `control` through its per-type host (`UIListBoxRust<T>::Op`: the lines and the virtuals); the
+/// result and the float buffer; `None` when `control` is not a list box.
+pub fn list_op(control: Cpp, op: EeUiOp, a: isize, b: isize, c: isize) -> Option<(isize, [f32; 4])> {
+    let o = find(Kind::List, control) as *const EeUiList;
+    if o.is_null() {
+        return None;
+    }
+    // SAFETY: a live list box; its host is copied out before the call (which may re-enter)
+    let host = unsafe { (*o).host };
+    let mut f = buf();
+    let r = host.op_f(op, a, b, c, 0, &mut f);
+    Some((r, f))
+}
+
+/// The list `control`'s line `index` (`GetData(index)` of a `UIListBox<UWideString>`), `None` past the end or for
+/// another control.
+pub fn list_line(control: Cpp, index: isize) -> Option<Vec<u8>> {
+    let (p, _) = list_op(control, EeUiOp::ListLineText, index, 0, 0)?;
+    // SAFETY: the line's NUL-terminated bytes (or NULL)
+    (p != 0).then(|| unsafe { c_bytes(p as *const c_void) })
+}
+
+/// The combo box `control`'s drop-down list (its `UILBString*`), NULL when `control` is not a combo box.
+pub fn combo_list(control: Cpp) -> Cpp {
+    let o = find(Kind::Combo, control) as *const EeUiCombo;
+    if o.is_null() {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: a live combo box
+    unsafe { (*o).list_cpp() as Cpp }
 }
 
 /// The graph `control` (a `UIGraph`) handed to `f`; `None` when `control` is not a graph.

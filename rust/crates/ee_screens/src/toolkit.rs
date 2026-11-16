@@ -28,27 +28,39 @@ use ee_ui::formobj::EeUiFormCall;
 use ee_ui::graphobj::UiGraph;
 use ee_ui::groupobj::EeUiEntityGroupCall;
 use ee_ui::labelobj::EeUiLabelCall;
+use ee_ui::listobj::EeUiListCall;
 use ee_ui::managerobj::EeUiManagerCall;
 use ee_ui::obj::EeUiOp;
 use ee_ui::sliderobj::EeUiSliderCall;
+use ee_ui::statusobj::EeUiStatusBarCall;
 
 use crate::camera::{
     EE_SCREENS_CAM_GRAB_EDITOR, EE_SCREENS_CAM_GRAB_MAIN, EE_SCREENS_OP_CAM_GRAB_BEGIN, EE_SCREENS_OP_CAM_GRAB_END,
 };
-use crate::campaign_editor::EE_SCREENS_TEXT_CE_ALL_TEXT;
+use crate::campaign_editor::{
+    EE_SCREENS_OP_CE_CLEAR_SELECTION, EE_SCREENS_OP_CE_COMBO_COUNT, EE_SCREENS_OP_CE_COMBO_SELECTION,
+    EE_SCREENS_OP_CE_LIST_SELECT, EE_SCREENS_TEXT_CE_ALL_TEXT,
+};
 use crate::chat::*;
+use crate::civ_choice::EE_SCREENS_OP_PDCS_HAS_SELECTION;
+use crate::custom_campaign::*;
 use crate::debug_sound::EE_SCREENS_OP_DSU_SLIDER;
-use crate::diplomacy::EE_SCREENS_OP_DS_DISABLE;
+use crate::diplomacy::{EE_SCREENS_OP_DS_BG, EE_SCREENS_OP_DS_DISABLE};
 use crate::lobby_form::*;
-use crate::main_game_options::{EE_SCREENS_OP_GO_HOT_KEY, EE_SCREENS_OP_GO_REMOVE_HOT_KEYS, EE_SCREENS_OP_GO_STRING_ID};
+use crate::main_game_options::{
+    EE_SCREENS_OP_GO_HOT_KEY, EE_SCREENS_OP_GO_REMOVE_HOT_KEYS, EE_SCREENS_OP_GO_STRING_ID,
+};
 use crate::menus::*;
 use crate::post_game::*;
-use crate::save_load::{EE_SCREENS_OP_CURRENT_FORM_IS, EE_SCREENS_OP_SWAP_FORM, EE_SCREENS_TEXT_FORM_EDIT};
+use crate::save_load::{
+    EE_SCREENS_OP_CURRENT_FORM_IS, EE_SCREENS_OP_FORM_LIST_SELECTED, EE_SCREENS_OP_SWAP_FORM, EE_SCREENS_TEXT_FORM_EDIT,
+};
 use crate::scenario_screens::{
-    EE_SCREENS_OP_ADD_TRIGGER, EE_SCREENS_OP_LABEL_CLEAR, EE_SCREENS_OP_LABEL_LINE_COUNT, EE_SCREENS_OP_LABEL_START_LINE,
-    EE_SCREENS_OP_REMOVE_BACKGROUND, EE_SCREENS_OP_TAB_STOP,
+    EE_SCREENS_OP_ADD_TRIGGER, EE_SCREENS_OP_LABEL_CLEAR, EE_SCREENS_OP_LABEL_LINE_COUNT,
+    EE_SCREENS_OP_LABEL_START_LINE, EE_SCREENS_OP_REMOVE_BACKGROUND, EE_SCREENS_OP_TAB_STOP,
 };
 use crate::settings_form::*;
+use crate::splash::EE_SCREENS_OP_SS_BAR_VALUE;
 
 /// The toolkit's constants the ops use (lle/UIControl.h, GETextAlignment.h, ee/EEUIManager.h; associated, so the
 /// header generator leaves them out).
@@ -141,6 +153,7 @@ fn set_form_event(form: Cpp, index: isize, code: u32) {
 static GRAB_SAVED: Mutex<[usize; 2]> = Mutex::new([0; 2]);
 
 /// `EEReleaseGrabScroll`'s first step: the mouse move event the form's grab saved, released.
+#[cfg_attr(test, allow(dead_code))]
 pub(crate) fn release_grab(form: u32) {
     let saved = GRAB_SAVED.lock().unwrap_or_else(|e| e.into_inner()).get_mut(form as usize).map(core::mem::take);
     if let Some(saved) = saved.filter(|&s| s != 0) {
@@ -192,7 +205,9 @@ fn event_group(form: Cpp, op: u32, a: u32, b: u32, c: u32, d: u32) -> Option<u32
             let none = core::ptr::null_mut();
             add_hot_key(form, [a as u64, KEY_NONE, KEY_NONE, KEY_NONE], [event, none, none, none]);
         }
-        EE_SCREENS_OP_CH_KEYBOARD_EVENT | EE_SCREENS_OP_LE_KEYBOARD_EVENT => set_form_event(form, FORM_EVENT_KEYBOARD, a),
+        EE_SCREENS_OP_CH_KEYBOARD_EVENT | EE_SCREENS_OP_LE_KEYBOARD_EVENT => {
+            set_form_event(form, FORM_EVENT_KEYBOARD, a)
+        }
         EE_SCREENS_OP_CAM_GRAB_BEGIN => {
             // the form's mouse move event saved; the grab its mouse move event while the button is down
             let saved = direct::form_call(form, EeUiFormCall::Event, FORM_EVENT_MOUSE_MOVE, 0) as Cpp;
@@ -202,10 +217,15 @@ fn event_group(form: Cpp, op: u32, a: u32, b: u32, c: u32, d: u32) -> Option<u32
             if !saved.is_null() {
                 reference(saved);
             }
-            set_form_event(form, FORM_EVENT_MOUSE_MOVE, if a != 0 { EE_SCREENS_CAM_GRAB_EDITOR } else { EE_SCREENS_CAM_GRAB_MAIN });
+            set_form_event(
+                form,
+                FORM_EVENT_MOUSE_MOVE,
+                if a != 0 { EE_SCREENS_CAM_GRAB_EDITOR } else { EE_SCREENS_CAM_GRAB_MAIN },
+            );
         }
         EE_SCREENS_OP_CAM_GRAB_END => {
-            let saved = GRAB_SAVED.lock().unwrap_or_else(|e| e.into_inner()).get(a as usize).copied().unwrap_or(0) as Cpp;
+            let saved =
+                GRAB_SAVED.lock().unwrap_or_else(|e| e.into_inner()).get(a as usize).copied().unwrap_or(0) as Cpp;
             direct::form_call(form, EeUiFormCall::SetEvent, FORM_EVENT_MOUSE_MOVE, saved as isize);
             if !saved.is_null() {
                 dereference(saved);
@@ -224,6 +244,168 @@ fn event_group(form: Cpp, op: u32, a: u32, b: u32, c: u32, d: u32) -> Option<u32
         _ => return None,
     }
     Some(0)
+}
+
+// ---- the list boxes' and combo boxes' lines (the list's per-type host: `UIListBoxRust<T>::Op`)
+
+/// `kErrorOK`.
+const ERROR_OK: isize = 0;
+
+fn list_op(list: Cpp, op: EeUiOp, a: isize, b: isize, c: isize) -> isize {
+    direct::list_op(list, op, a, b, c).map_or(0, |r| r.0)
+}
+
+/// `GetCurrentSelection`: its result and the selection (`None` for a control that is not a list box).
+fn list_selection(list: Cpp) -> Option<(isize, u32)> {
+    direct::list_op(list, EeUiOp::ListSelection, 0, 0, 0).map(|(r, f)| (r, f[0].to_bits()))
+}
+
+/// The virtual `ChangeSelectionIndex(index, fire, scroll)`.
+fn list_select(list: Cpp, index: u32, fire: bool, scroll: bool) {
+    list_op(list, EeUiOp::ListChangeSelection, index as isize, fire as isize, scroll as isize);
+}
+
+/// A combo box's `AppendLine`: the box dirtied, the line appended to its list, an open list reopened.
+fn combo_append(combo: Cpp, text: &[u8]) {
+    virt(combo, EeUiOp::SetDirty, 1);
+    list_op(direct::combo_list(combo), EeUiOp::ListAppendText, text.as_ptr() as isize, 0, 0);
+    direct::combo_call(combo, EeUiComboCall::Reopen, 0, 0);
+}
+
+fn floats(a: u32, b: u32, c: u32) -> [f32; 4] {
+    [f32::from_bits(a), f32::from_bits(b), f32::from_bits(c), 0.0]
+}
+
+fn bar(control: Cpp, call: EeUiStatusBarCall, a: isize, b: isize, f: [f32; 4]) {
+    direct::status_call(control, call, a, b, &mut { f });
+}
+
+/// The controls' plain ops of the post-game summary, the splash screen and the diplomacy form: rectangles,
+/// colours, opacities, the status bars.
+fn control_ops(form: Cpp, op: u32, a: u32, b: u32, c: u32, d: u32) -> Option<u32> {
+    let r = match op {
+        EE_SCREENS_OP_PGS_RECT => {
+            let r = direct::with_fields(ctl(form, a), |r| r.mRectangle).unwrap_or_default();
+            [r.left, r.top, r.right, r.bottom][(b & 3) as usize].to_bits()
+        }
+        EE_SCREENS_OP_PGS_BG_OPACITY => {
+            direct::control_virtual(ctl(form, a), EeUiOp::SetBgOpacity, 0, 0, &mut floats(b, 0, 0));
+            0
+        }
+        EE_SCREENS_OP_PGS_GET_BG_OPACITY => {
+            let mut f = [0.0f32; 4];
+            direct::control_virtual(ctl(form, a), EeUiOp::BgOpacity, 0, 0, &mut f);
+            f[0].to_bits()
+        }
+        EE_SCREENS_OP_PGS_DIRTY => {
+            virt(ctl(form, a), EeUiOp::SetDirty, 1);
+            0
+        }
+        EE_SCREENS_OP_PGS_BG_COLOUR | EE_SCREENS_OP_DS_BG => {
+            direct::control_virtual(ctl(form, a), EeUiOp::PartSetBgColor, 0, 0, &mut floats(b, c, d));
+            0
+        }
+        EE_SCREENS_OP_PGS_DESIGNED => {
+            let call = if a != 0 { EeUiFormCall::DesignedWidth } else { EeUiFormCall::DesignedHeight };
+            direct::form_call(form, call, 0, 0) as u32
+        }
+        EE_SCREENS_OP_PGS_IS_BAR => !direct::find(Kind::StatusBar, ctl(form, a)).is_null() as u32,
+        EE_SCREENS_OP_PGS_EXISTS => !ctl(form, a).is_null() as u32,
+        EE_SCREENS_OP_PGS_INDEX => direct::with_fields(ctl(form, a), |r| r.mIndex as u32).unwrap_or(0),
+        EE_SCREENS_OP_PGS_BAR_OPACITY => {
+            bar(ctl(form, a), EeUiStatusBarCall::SetStatusBarOpacity, 0, 0, floats(b, 0, 0));
+            0
+        }
+        EE_SCREENS_OP_PGS_BAR_RANGE => {
+            let x = ctl(form, a);
+            bar(x, EeUiStatusBarCall::SetRange, 0, b as isize, [0.0; 4]);
+            bar(x, EeUiStatusBarCall::SetCurrentRangeValue, c as i32 as isize, 0, [0.0; 4]);
+            0
+        }
+        EE_SCREENS_OP_PGS_BAR_COLOUR => {
+            bar(ctl(form, a), EeUiStatusBarCall::SetStatusBarColor, 0, 0, floats(b, c, d));
+            0
+        }
+        EE_SCREENS_OP_SS_BAR_VALUE => {
+            bar(ctl(form, a), EeUiStatusBarCall::SetCurrentRangeValue, b as i32 as isize, 0, [0.0; 4]);
+            0
+        }
+        _ => return None,
+    };
+    Some(r)
+}
+
+/// The list and combo ops.
+fn list_ops(form: Cpp, op: u32, a: u32, b: u32, c: u32) -> Option<u32> {
+    let r = match op {
+        EE_SCREENS_OP_LIST_SELECT => {
+            list_select(ctl(form, a), b, false, true);
+            0
+        }
+        EE_SCREENS_OP_LIST_CLEAR => {
+            list_op(ctl(form, a), EeUiOp::ListDeleteAll, 0, 0, 0);
+            0
+        }
+        EE_SCREENS_OP_CE_LIST_SELECT => {
+            list_select(ctl(form, a), b, false, c != 0);
+            0
+        }
+        EE_SCREENS_OP_CE_CLEAR_SELECTION => {
+            list_op(ctl(form, a), EeUiOp::ListClearSelection, 0, 0, 0);
+            0
+        }
+        EE_SCREENS_OP_CE_COMBO_SELECTION => {
+            // the combo box's own selection (`GetCurrentSelection`: kErrorOK unless it is -1)
+            let s = direct::combo_call(ctl(form, a), EeUiComboCall::Selection, 0, 0).unwrap_or(-1) as u32;
+            if s != u32::MAX {
+                s
+            } else {
+                0xffff_ffff
+            }
+        }
+        EE_SCREENS_OP_CE_COMBO_COUNT | EE_SCREENS_OP_LE_COMBO_LINES => {
+            list_op(direct::combo_list(ctl(form, a)), EeUiOp::ListLineCount, 0, 0, 0) as u32
+        }
+        EE_SCREENS_OP_LE_COMBO_DELETE_LINE => {
+            direct::combo_call(ctl(form, a), EeUiComboCall::DeleteLine, b as isize, 0);
+            0
+        }
+        EE_SCREENS_OP_FORM_LIST_CLEAR => {
+            list_op(ctl(form_by_id(form, a), b), EeUiOp::ListDeleteAll, 0, 0, 0);
+            0
+        }
+        EE_SCREENS_OP_FORM_LIST_COUNT => list_op(ctl(form_by_id(form, a), b), EeUiOp::ListLineCount, 0, 0, 0) as u32,
+        EE_SCREENS_OP_FORM_LIST_SELECT => {
+            list_select(ctl(form_by_id(form, a), b), c, true, false);
+            0
+        }
+        EE_SCREENS_OP_FORM_LIST_SELECTION => list_selection(ctl(form_by_id(form, a), b)).map_or(0, |s| s.1),
+        EE_SCREENS_OP_FORM_LIST_SELECTED => {
+            let target = if a != 0 { form_by_id(form, a - 1) } else { form };
+            match list_selection(ctl(target, b)) {
+                Some((ERROR_OK, s)) => s,
+                _ => 0xffff_ffff,
+            }
+        }
+        EE_SCREENS_OP_PDCS_HAS_SELECTION => {
+            (direct::list_call(ctl(form, a), EeUiListCall::HasSelection, 0, 0).unwrap_or(0) != 0) as u32
+        }
+        _ => return None,
+    };
+    Some(r)
+}
+
+/// The list texts: a list box's or a combo box's line, by the host's numbering.
+fn list_text(form: Cpp, which: u32, arg: u32) -> Option<Vec<u8>> {
+    let (list, line) = match which {
+        EE_SCREENS_TEXT_LIST_DATA => (ctl(form, arg >> 16), arg & 0xffff),
+        EE_SCREENS_TEXT_COMBO_DATA => (direct::combo_list(ctl(form, arg >> 16)), arg & 0xffff),
+        EE_SCREENS_TEXT_FORM_LIST_DATA => {
+            (ctl(form_by_id(core::ptr::null_mut(), arg >> 24), (arg >> 16) & 0xff), arg & 0xffff)
+        }
+        _ => return None,
+    };
+    Some(direct::list_line(list, line as isize).unwrap_or_default())
 }
 
 /// The summary's series register (`BuildGraphs`' series: `PGS_SERIES_CLEAR`, `_POINT`, `_ADD`).
@@ -264,7 +446,7 @@ fn pgs_combine(form: Cpp) {
     let colours = pgs_record_colours();
     let mut combined = EeUtilGraph::default();
     for (i, c) in colours.iter().enumerate().skip(1) {
-        if i - 1 >= both.len() {
+        if i > both.len() {
             break;
         }
         let mut series = both.series(i - 1).clone();
@@ -276,8 +458,14 @@ fn pgs_combine(form: Cpp) {
 
 /// The series `series` of the summary's graph `graph` handed to `f`; `None` without it.
 fn pgs_series_of<R>(form: Cpp, graph: u32, series: u32, f: impl FnOnce(&EeUtilSeries) -> R) -> Option<R> {
-    pgs_graph(form, graph, |g| if (series as usize) < g.data.len() { Some(f(g.data.series(series as usize))) } else { None })
-        .flatten()
+    pgs_graph(form, graph, |g| {
+        if (series as usize) < g.data.len() {
+            Some(f(g.data.series(series as usize)))
+        } else {
+            None
+        }
+    })
+    .flatten()
 }
 
 /// The summary's graph ops (`EE_SCREENS_OP_PGS_*` on its line graph's graphs, `GAME_PGS_COMBINE`).
@@ -379,10 +567,17 @@ fn id_of(control: Cpp) -> Option<u32> {
 /// One of the screens' ops on the form `form` (the event's entity `entity`), when it is a toolkit op: its result.
 /// `None` for the ops the C++ host answers.
 pub(crate) fn op(form: *mut c_void, entity: *mut c_void, op: u32, a: u32, b: u32, c: u32, d: u32) -> Option<u32> {
+    direct::check_op("op", op);
     if let Some(r) = pgs_op(form, op, a, b, c, d) {
         return Some(r);
     }
     if let Some(r) = event_group(form, op, a, b, c, d) {
+        return Some(r);
+    }
+    if let Some(r) = list_ops(form, op, a, b, c) {
+        return Some(r);
+    }
+    if let Some(r) = control_ops(form, op, a, b, c, d) {
         return Some(r);
     }
     if op == EE_SCREENS_GAME_PGS_NEW_MANAGER {
@@ -592,6 +787,10 @@ fn chat_log_label(_form: Cpp) -> Cpp {
 
 /// A text of the screens (`EE_SCREENS_TEXT_*`) when it is a toolkit read: `Some(text)`; `None` for the host's.
 pub(crate) fn text(form: *mut c_void, which: u32, arg: u32) -> Option<Vec<u8>> {
+    direct::check_op("text", which);
+    if let Some(t) = list_text(form, which, arg) {
+        return Some(t);
+    }
     match which {
         EE_SCREENS_TEXT_MUSIC_FILE => {
             let p = direct::form_call(form, EeUiFormCall::MusicFileName, 0, 0) as *const c_void;
@@ -614,6 +813,7 @@ pub(crate) fn text(form: *mut c_void, which: u32, arg: u32) -> Option<Vec<u8>> {
 
 /// A text into the screens (`EE_SCREENS_TEXT_*`) when it is a toolkit write: `Some(result)`; `None` for the host's.
 pub(crate) fn put_text(form: *mut c_void, which: u32, arg: u32, text: &[u8]) -> Option<u32> {
+    direct::check_op("put", which);
     let t = direct::c_text(text);
     let p = t.as_ptr() as isize;
     match which {
@@ -629,6 +829,23 @@ pub(crate) fn put_text(form: *mut c_void, which: u32, arg: u32, text: &[u8]) -> 
         }
         EE_SCREENS_TEXT_LABEL => {
             direct::label_call(ctl(form, arg), EeUiLabelCall::SetText, p, 1);
+        }
+        // the list boxes' and combo boxes' appends
+        EE_SCREENS_TEXT_COMBO_APPEND => {
+            let combo = ctl(form, arg);
+            if !combo.is_null() {
+                combo_append(combo, &t);
+            }
+        }
+        EE_SCREENS_TEXT_COMBO_INSERT => {
+            direct::combo_call(ctl(form, arg >> 16), EeUiComboCall::InsertLine, p, (arg & 0xffff) as isize);
+        }
+        EE_SCREENS_TEXT_LIST_APPEND => {
+            list_op(ctl(form, arg), EeUiOp::ListAppendText, p, 0, 0);
+        }
+        EE_SCREENS_TEXT_FORM_LIST_APPEND => {
+            let target = form_by_id(core::ptr::null_mut(), arg >> 16);
+            list_op(ctl(target, arg & 0xffff), EeUiOp::ListAppendText, p, 0, 0);
         }
         // the post-game summary's graph `arg`'s title and labels
         EE_SCREENS_TEXT_PGS_TITLE | EE_SCREENS_TEXT_PGS_Y_LABEL | EE_SCREENS_TEXT_PGS_X_LABEL => {
