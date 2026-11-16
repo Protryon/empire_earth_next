@@ -25942,3 +25942,42 @@ read by many lanes, so a move keeps them and takes the bodies over a view); `Fil
 - **Units the deleted units emitted:** `EEComplexUnit::IsResearchQueued` (EECPUnitManager.cpp's range),
   `EEUnit::IsPathMarker` (EECPCivilizationManager.cpp's) and `RTSMapTileRun`'s two members (EECPWallManager.cpp's)
   moved to EECPEngineHelpers.cpp. The link names them as unresolved when they are missing.
+
+## main merge: the gates on the Lua AI (2026-11-15)
+
+- **What came.** main ff7db710 (210 commits): the C++ classic computer player deleted (stage 5: the combat tree;
+  stage 6: the economy managers and the group verbs, their work done by data/ai/lib/verbs.lua), the Rush AI gone,
+  the AI scripts in data/ai and the db tables committed as data/db (no db release any more), the music's general
+  MIDI set and reverb, the volcano and damage vent fixes, EE-SIM --volcano and --flare, the sources staged under
+  build/eex.
+- **Deleted on main, edited on rust (93 files): the deletion wins**, and what still named them was fixed: the
+  EEUGRust goal API applied to main's new C++ (EECPReflexes, EECPPlacement, the next view, EECPTransportIdle: the
+  goal casts, NewLocation/NewAttackUnit, the load goal's HasLoadUnit/GetLoadContainerTile, the unload goal's
+  GetUnloadTransport), the AI areas' accessors (GetShoreTiles, the forest's GetID), gDamageTable for gU4E8708.
+- **Moved to Rust on rust, edited on main (7 files): main's change ported into the Rust or its host**: the damage
+  vent's short aim list (EEE3DRust VentCount), the lobby's Classic text, the build goal's AddGates/BuildingAbandoned
+  and the gather goal's BuildSettlementFor (EEUGRust.cpp host cases), the conductor's reverb, groove level, stop and
+  built-in gm.dls (ee_sound conductor.rs/conductorobj.rs), the mixer's play from the start (ee_mixer), DoStart's
+  silence only for a fade-in (ee_sound music.rs). Their goldens were captured from the C++ before main's change:
+  golden_conductor, golden_objects and golden_music were re-derived from the Rust and every changed line checked to
+  be one of those calls (the stop, the reverb, the groove's u8, the removed volume line).
+- **Rust's save work on the classic managers went with them.** EENS is main's version 6 (ee_ai next_save.rs follows
+  it; the golden's nens lines record the old layout and are no longer replayed). Save 0.281
+  (EESaveHasLuaOnlyComputers): no manager timers and intelligence files, and EEComputerPlayer::Load refuses an older
+  save (main's rule: save compatibility is not a goal). The experiment timers' and resource state's blocks keep their
+  layout; the danger zones are the computer player's now. The graph searches never write a sub group's route planner.
+- **The scenario AI military effects do nothing**, as on main (ee_scenario effect_ai.rs): the C++ attack groups they
+  raised are gone.
+- **The engine.** The lobby's Classic (choice 0, EE-SIM without --engine) plays the AI ais.json marks "classic":
+  classic_lua. Nothing in code had to switch; the fixture's ai-game now checks it (--engine-check classic_lua in
+  gates.sh, the engines in the RESULT line).
+- **Determinism on the Lua AI.** The same seed twice: the oracle's EE-AI traces identical (seeds 2-3, 5,728 and
+  5,292 lines). The captures (oracle and calamity profiles, seeds 2-3) equal in every tag but two: TNMT (timing, no
+  golden, as before) and UUTL, the unit utilities' per-tick record. UUTL's calls of EEUpdateUnitTile (kind 81) differ
+  by a few per run (seed 2 oracle: 169,596 against 169,602 by tick 40,000; first differing ticks 802 and 509), all on
+  the physics thread (callers ee_units_pm_host_update_tile and EEUnitClass::ProjectileLaunchProjectile), while every
+  other tag (PMST, the combat, the goals) is equal. Under the C++ classic UUTL was stable run to run. The capture
+  goldens were therefore not re-recorded in this merge.
+- **Lesson.** In this shell a heredoc's backslash sequences reach Python already turned into control characters
+  (a printed backslash-n became a line break inside a C string, a backslash at a line's end joined two lines): edit
+  such text with the editor tool, not a heredoc script.
