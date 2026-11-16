@@ -226,9 +226,6 @@ constexpr static const uint32_t EE_APP_OPTIONS_MAP_NAME = 2;
 /// The sixteen slots.
 constexpr static const uint32_t EE_APP_OPTIONS_SLOTS = 16;
 
-/// `kTerrainCliff`: the terrain type `UpdateCliffs` gives a steep tile.
-constexpr static const long TERRAIN_CLIFF = 9;
-
 /// x, y -> flag: `GetTile(x, y) != NULL`
 constexpr static const int32_t EE_APP_MAP_OP_TILE = 1;
 
@@ -265,12 +262,6 @@ constexpr static const int32_t EE_APP_MAP_OP_SIGHT_AT = 12;
 
 /// x, y, flag (on): `gMiniMap->CountCellOn/Off`
 constexpr static const int32_t EE_APP_MAP_OP_COUNT_CELL = 13;
-
-/// The cells per side and in all.
-constexpr static const long SIDE = 64;
-
-/// "Not on the map" (`MoveUnit`'s -10000).
-constexpr static const long OFF_MAP = -10000;
 
 /// x, y -> flag: a unit dot on the tile is drawn (no tile, the local player sees it, or the free camera)
 constexpr static const int32_t EE_APP_MINIMAP_OP_UNIT_SHOWN = 1;
@@ -331,17 +322,6 @@ constexpr static const int32_t EE_APP_SETTINGS_STRING_SET = 3;
 
 /// the member set to the defaults' member
 constexpr static const int32_t EE_APP_SETTINGS_STRING_DEFAULT = 4;
-
-/// `EEStormType`'s kinds.
-constexpr static const long STORM_UNKNOWN = 0;
-
-constexpr static const long STORM_RAIN = 1;
-
-constexpr static const long STORM_SNOW = 2;
-
-constexpr static const long STORM_HURRICANE = 3;
-
-constexpr static const long STORM_BLIZZARD = 4;
 
 /// -> flag (a request), done
 constexpr static const int32_t EE_APP_STORM_OP_REQUEST = 1;

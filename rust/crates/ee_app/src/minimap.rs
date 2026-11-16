@@ -15,12 +15,12 @@ use ee_ge::um::lrintf;
 use std::os::raw::{c_long, c_ulong};
 
 /// The cells per side and in all.
-pub const SIDE: c_long = 0x40;
-pub const CELLS: usize = 0x1000;
+pub(crate) const SIDE: c_long = 0x40;
+pub(crate) const CELLS: usize = 0x1000;
 /// The terrain texture's side in pixels (`kMiniMapSize`).
 const PIXELS: f32 = 128.0;
 /// "Not on the map" (`MoveUnit`'s -10000).
-pub const OFF_MAP: c_long = -10000;
+pub(crate) const OFF_MAP: c_long = -10000;
 /// `gMiniMapAmbient`: the terrain colours' ambient term.
 const AMBIENT: [f32; 3] = [0.102745101, 0.132549018, 0.188235298];
 /// `kPixelFormatR5G6B5`.

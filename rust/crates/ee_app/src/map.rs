@@ -15,7 +15,7 @@ use ee_random::URandom;
 use std::os::raw::{c_long, c_ulong};
 
 /// `kTerrainCliff`: the terrain type `UpdateCliffs` gives a steep tile.
-pub const TERRAIN_CLIFF: c_long = 9;
+pub(crate) const TERRAIN_CLIFF: c_long = 9;
 /// `kCliffNormalTolerance`.
 const CLIFF_NORMAL_TOLERANCE: f32 = 0.075;
 /// `kChecksumScale`.

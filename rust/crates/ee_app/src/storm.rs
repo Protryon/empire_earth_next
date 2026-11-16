@@ -11,11 +11,11 @@ use std::ffi::CStr;
 use std::os::raw::{c_long, c_ulong};
 
 /// `EEStormType`'s kinds.
-pub const STORM_UNKNOWN: c_long = 0;
-pub const STORM_RAIN: c_long = 1;
-pub const STORM_SNOW: c_long = 2;
-pub const STORM_HURRICANE: c_long = 3;
-pub const STORM_BLIZZARD: c_long = 4;
+pub(crate) const STORM_UNKNOWN: c_long = 0;
+pub(crate) const STORM_RAIN: c_long = 1;
+pub(crate) const STORM_SNOW: c_long = 2;
+pub(crate) const STORM_HURRICANE: c_long = 3;
+pub(crate) const STORM_BLIZZARD: c_long = 4;
 /// `kStormMaximumStay`.
 const MAXIMUM_STAY: f32 = 45000.0;
 
