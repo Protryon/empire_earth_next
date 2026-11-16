@@ -234,8 +234,12 @@ fn load_point(p: &mut [f32; 3], host: &mut dyn LocationHost) -> i32 {
     0
 }
 
+/// The first save version holding the group path state (the original never saved it: a load had 0, so a goal
+/// waiting for its group path (1) asked an ordinary one, and the out-of-synch checksum differed).
+pub(crate) const GROUP_PATH_STATE_MINOR: u32 = 282;
+
 /// `Save`'s part after the base goal's: the location, forced-move flag, yaw, facing, auto-waypoint and group
-/// movement flags; the first failing status.
+/// movement flags, then (new, 0.282) the group path state as a u32; the first failing status.
 pub fn save(goal: u64, host: &mut dyn LocationHost) -> i32 {
     let x = get(goal);
     let mut r = save_point(x.location, host);
@@ -254,12 +258,15 @@ pub fn save(goal: u64, host: &mut dyn LocationHost) -> i32 {
     if r == 0 {
         r = host.write_bool(x.group_movement);
     }
+    if r == 0 {
+        r = host.write_u32(u32::from(x.group_path_state));
+    }
     r
 }
 
 /// `Load`'s part after the base goal's: the location and the settings the save's version has (forced move from
-/// 0.15, yaw and facing from 0.26, auto waypoint from 0.135, group movement from 0.173); a field not read keeps its
-/// value; the first failing status.
+/// 0.15, yaw and facing from 0.26, auto waypoint from 0.135, group movement from 0.173, the group path state from
+/// 0.282); a field not read keeps its value; the first failing status.
 pub fn load(goal: u64, major: u32, minor: u32, host: &mut dyn LocationHost) -> i32 {
     let mut x = get(goal);
     let old = major == 0;
@@ -283,6 +290,11 @@ pub fn load(goal: u64, major: u32, minor: u32, host: &mut dyn LocationHost) -> i
     }
     if group && r == 0 {
         r = host.read_bool(&mut x.group_movement);
+    }
+    if !(old && minor < GROUP_PATH_STATE_MINOR) && r == 0 {
+        let mut state = u32::from(x.group_path_state);
+        r = host.read_u32(&mut state);
+        x.group_path_state = state as u8;
     }
     put(goal, x);
     r

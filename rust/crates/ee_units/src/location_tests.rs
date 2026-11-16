@@ -325,14 +325,24 @@ fn save_and_load_by_version() {
     // SAFETY: a valid record
     unsafe { ee_units_location_goal_set(g, &EeUnitsLocationGoal { group_movement: true, ..get(g) }) };
     assert_eq!(run(EE_UNITS_GOAL_SAVE, g, 0, 0x10c, &mut w).0, 0);
-    let all = [1.0f32.to_bits(), 2.0f32.to_bits(), 3.0f32.to_bits(), 1, 0.5f32.to_bits(), 1, 1, 1];
+    let all = [1.0f32.to_bits(), 2.0f32.to_bits(), 3.0f32.to_bits(), 1, 0.5f32.to_bits(), 1, 1, 1, 7];
     assert_eq!(w.file, all);
-    // the current version reads everything back (the group path state is not saved)
+    // the current version reads everything back, the group path state too (from 0.282)
     let g2 = 0x75_0002;
     let mut w2 = new(g2, [0.0; 3], 0.0, [0, 0, 0, 0]);
     w2.reads = all.to_vec();
-    assert_eq!(run(EE_UNITS_GOAL_LOAD, g2, 0, 0x10c, &mut w2).0, 0);
-    assert_eq!(get(g2), EeUnitsLocationGoal { group_path_state: 0, ..get(g) });
+    assert_eq!(run(EE_UNITS_GOAL_LOAD, g2, 0, u64::from(GROUP_PATH_STATE_MINOR), &mut w2).0, 0);
+    assert!(w2.reads.is_empty());
+    assert_eq!(get(g2), get(g));
+    // a 0.281 file has no group path state: the goal keeps its own (0 for a loaded goal)
+    let g6 = 0x75_0005;
+    let mut w7 = new(g6, [0.0; 3], 0.0, [0, 0, 0, 0]);
+    w7.reads = all[..8].to_vec();
+    w7.reads.push(0xdead);
+    assert_eq!(run(EE_UNITS_GOAL_LOAD, g6, 0, 281, &mut w7).0, 0);
+    assert_eq!(w7.reads, [0xdead]);
+    assert_eq!(get(g6), EeUnitsLocationGoal { group_path_state: 0, ..get(g) });
+    run(EE_UNITS_GOAL_DESTROY, g6, 0, 0, &mut w7);
     // older files: the fields their version has
     for (minor, count) in [(14u64, 3usize), (15, 4), (25, 4), (26, 6), (134, 6), (135, 7), (172, 7), (173, 8)] {
         let g3 = 0x75_0100 + minor;
