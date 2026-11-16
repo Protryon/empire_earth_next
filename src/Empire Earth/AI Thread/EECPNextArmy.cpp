@@ -54,6 +54,7 @@
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 
+static const long kNextTowerAvoid = 9;         // a gather spot this near a known tower is not a raid's (the view's citizen_x)
 static const long kNextSpotRange = 8;          // gather spots this near are one spot
 static const long kNextSpotsPerPlayer = 8;
 static const long kNextTowersPerPlayer = 32;
