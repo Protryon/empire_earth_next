@@ -261,9 +261,9 @@ pub fn reset(r: &mut EeUnitsPlayerSaved, player_id: u32, part: u32) {
         r.mNumVitalBuildings = 0;
         return;
     }
-    for cap in &mut r.mResourceCaps[2..7] {
-        *cap = 0;
-    }
+    // port (the player lane, round 2; a deliberate change): all seven words, where the original set 2..6 and left 0
+    // and 1 (never written) holding the memory the player was made in, which `EEPlayer::GetChecksum` sums
+    r.mResourceCaps = [0; 7];
     for (player, enemy) in r.mEnemies.iter_mut().enumerate() {
         *enemy = c_ulong::from(player_id != player as u32);
     }

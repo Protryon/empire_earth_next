@@ -189,7 +189,7 @@ fn reset_sets_the_records_fields_in_two_parts() {
         ..Default::default()
     };
     reset(&mut r, 2, 0);
-    assert_eq!(r.mResourceCaps, [9, 9, 0, 0, 0, 0, 0]);
+    assert_eq!(r.mResourceCaps, [0; 7], "all seven (0 and 1 too: the checksum sums them)");
     let mut enemies = [1; 17];
     enemies[2] = 0;
     assert_eq!(r.mEnemies, enemies);
