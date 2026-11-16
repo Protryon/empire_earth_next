@@ -170,12 +170,12 @@ def _won_extra_units():
             if p.resolve() not in listed and p.name not in WON_NOT_LINKED]
 
 
-# WONAPI sources not linked: the GameSpy query/report support (WON SDK code the original exe did not contain and
-# nothing references). The WON GUI toolkit's Win32/GDI backend (MS*.cpp, DisplayContext, Clipboard), the Win32
-# open/save file dialog and WinSkin are deleted: the backend is WONGUI/Plat*.cpp on the platform layer on every OS.
-# The Winsock event-driven socket thread backends (SocketThreadWinsock2, SocketThreadEx) are deleted: the game runs
-# WON's polling SocketThreadSimple
-WON_NOT_LINKED = {"GameSpySupport.cpp"}
+# WONAPI sources not linked: none (the GameSpy query/report support, WON SDK code the original exe did not contain
+# and nothing references, is ee_won gamespy.rs since net round 28; its class is header-only). The WON GUI toolkit's
+# Win32/GDI backend (MS*.cpp, DisplayContext, Clipboard), the Win32 open/save file dialog and WinSkin are deleted:
+# the backend is WONGUI/Plat*.cpp on the platform layer on every OS. The Winsock event-driven socket thread backends
+# (SocketThreadWinsock2, SocketThreadEx) are deleted: the game runs WON's polling SocketThreadSimple
+WON_NOT_LINKED = set()
 
 
 EXTRA_UNITS["won"] = _won_extra_units()

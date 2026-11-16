@@ -20,7 +20,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONDirExtended.h"
+#include "won_dir_flags.h"
 #include "won_dir_msg.h"
 #include "rust/ee_won.h"
 

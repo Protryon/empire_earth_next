@@ -1003,6 +1003,36 @@ pub unsafe extern "C" fn ee_won_httpget_new_url(url: *const u8, len: usize) -> *
     EeWonHostOp::boxed(HttpGet::from_url(unsafe { crate::ffi::bytes(url, len) }))
 }
 
+/// `RustServerOp::NewHttpGet(host, path)`'s Rust op: [`ee_won_httpget_new`], then the web proxy file read once per
+/// process from the WON directory (`HTTPGetOp::ReadProxyHostFile(false)` as its constructors ran it).
+///
+/// # Safety
+/// As [`ee_won_httpget_new`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_httpget_open(
+    host: *const u8,
+    host_len: usize,
+    path: *const u8,
+    path_len: usize,
+) -> *mut EeWonHostOp {
+    // SAFETY: the contract
+    let op = unsafe { ee_won_httpget_new(host, host_len, path, path_len) };
+    crate::hostnative::read_proxy_file(&crate::hostnative::file_directory());
+    op
+}
+
+/// `RustServerOp::NewHttpGet(url)`'s Rust op, as [`ee_won_httpget_open`].
+///
+/// # Safety
+/// `url` holds `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_httpget_open_url(url: *const u8, len: usize) -> *mut EeWonHostOp {
+    // SAFETY: the contract
+    let op = unsafe { ee_won_httpget_new_url(url, len) };
+    crate::hostnative::read_proxy_file(&crate::hostnative::file_directory());
+    op
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -49,8 +49,8 @@ static std::string Hex(const std::string& inText)
 
 static void Key(const char* inCase, RegKey& inKey)
 {
-    Line("%s open=%d block=%s path=%s", inCase, inKey.IsOpen() ? 1 : 0, Hex(inKey.mBlock).c_str(),
-         Hex(inKey.mPath).c_str());
+    Line("%s open=%d block=%s path=%s", inCase, inKey.IsOpen() ? 1 : 0, Hex(inKey.GetBlock()).c_str(),
+         Hex(inKey.GetLeafName()).c_str());
 }
 
 static void Query(const char* inCase, RegKey& inKey, const char* inName)

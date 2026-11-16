@@ -1,0 +1,27 @@
+empty read5 ok=0 port=15200 addr=- login=- community=- password=6b656570
+empty read3 ok=0 login=- community=- password=6b656570
+write5 ok=1
+written read5 ok=1 port=15201 addr=31302e312e322e33 login=506c61796572 community=456d70697265 password=736563726574207077
+written read3 ok=1 login=506c61796572 community=456d70697265 password=736563726574207077
+write5 nopw ok=0
+nopw read5 ok=1 port=80 addr=686f73742e6578616d706c65 login=4f74686572 community=436f6d6d password=736563726574207077
+write3 ok=1
+third read5 ok=1 port=80 addr=686f73742e6578616d706c65 login=5468697264 community=436f6d33 password=700077
+third read3 ok=1 login=5468697264 community=436f6d33 password=700077
+write3 long ok=1
+long read3 ok=1 login=4c community=43 password=78787878787878787878787878787878787878787878787878787878787878787878787878787878
+bad hex read3 ok=0 login=4c community=43 password=6b656570
+odd hex read3 ok=0 login=4c community=43 password=6b656570
+short cipher read3 ok=0 login=4c community=43 password=6b656570
+bad port read5 ok=0 port=0 addr=686f73742e6578616d706c65 login=4c community=43 password=6b656570
+no port read5 ok=0 port=15200 addr=686f73742e6578616d706c65 login=4c community=43 password=6b656570
+file # Empire Earth AoC settings. The game rewrites this file whenever a setting changes (comments are not kept).
+file won:
+file   Software:
+file     Sierra:
+file       MPTools:
+file         Auth:
+file           AuthServerIP: host.example
+file           UserName: L
+file           Community: C
+file           Password: "0011"

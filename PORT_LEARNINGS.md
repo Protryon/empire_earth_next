@@ -28660,3 +28660,163 @@ catches it.
   lines, every module's golden regenerated), the ct cluster's member writes (their goldens need a world-state line),
   the traced member reads (multiobj, splitobj, the skin buttons, wmobj, winobj, dlglogic, lobbyctl), the MS
   constructors as init kinds and SkinnedContainers' paints.
+
+## R6: WON's Internet code, round 28 (GameSpySupport and the GameSpy SDK whole in Rust; test-only headers; WONCrypt header-only)
+
+Branch `rust-won-net28`. Measured by net C++ over src + include (without include/rust) against 0cd8d3cd (the address
+markers were already stripped on both sides): `git diff --numstat 0cd8d3cd -- src include ':!include/rust'`.
+
+- **The measure first.** What round 27 left, per move (C++ lines freed): GameSpySupport and the GameSpy SDK it sits
+  on (GameSpySupport.cpp 363, gqueryreporting.c 721, nonport.c 619, their headers 369 + 165, the class header 107:
+  about 2,300, unlinked: WON SDK code the original exe did not contain); the six headers only the drivers include
+  (345); WONCrypt's three units of forwarders (131 net, header-only); ServerOp.cpp's `HostCall` onto the core table
+  (its nine cases need four new C++ makers in AsyncOp.cpp's table: a `BlockingSocket`, four more socket op classes, a
+  `PeerAuthOp` shell, the crypt transform on a socket; about 25 net); IPAddr and StringUtil inline (their homes are
+  EEWonNet.h, which 293 game units include: an inline forwarder there needs rust/ee_won.h in all of them; not
+  taken); MiscUtil (`Browse` is also declared non-inline by the lobby lane's WONLobbyImageButton.h: not taken). This
+  round took the first three.
+- **GameSpy (gamespy.rs).** The SDK (`gqueryreporting.c`): the query socket, the eight query types, the replies cut
+  into packets under 1,400 bytes (`buffer_send`'s 1,350 rule and its cut before the last key, a single key too big
+  dropped), the `\queryid\N.M` numbering, `\final\`, the `\secure\` answer (`gs_encrypt`'s stream, `gs_encode`'s
+  base64 without padding; a challenge over 128 bytes sends nothing at all), the heartbeats (the first pump, every
+  30 s until the first query ten times at most, else 5 minutes, a clock that went back, `\statechanged\`), and its
+  process statics as statics: `qr_hostname`, `hbaddr` (the last `qr_init`'s), `current_rec` (a record is an `Arc`; a
+  `NULL` record argument is the current one, so an instance whose start-up failed pumps the last one started, as the
+  original did). nonport.c: the tick clock, msleep, the socket start and end, blocking mode and Nagle, the minimal
+  standard random numbers (`nextlongrand` over 32-bit `unsigned long`s), `GenerateID` and `GOAGetUniqueID` on the Rust
+  RegKey (config.yaml, the round 27 rule); its console and Mac branches (`__KATANA__`, `UNDER_CE`, `_MACOS`,
+  `__mips64`) were never compiled for a platform the game runs on and `SetReceiveBufferSize` has no platform call:
+  not ported. GameSpySupport: the four maps, `DumpKeyValueMapToBuffer`'s gaps, the start-up (the original switch had
+  no `break`: every SDK error is `WS_GameSpySupport_UnhandledError`), the auto pump (a C++ `AsyncOp` timer through the
+  core table, its completion an `EeWonCompletion` holding the shim), the hourly `/GameSpy` lookup (a Rust request op
+  wrapped by a new maker, `ee_won_core_set_new_host_op`, which ServerOp.cpp sets at start-up: a program without the
+  class has none), `LockKeyValues` across calls (`ReLock::enter` / `leave`), the shutdown's `exiting`.
+- **The original no longer compiled** (`mCompletion =` and `->mKilled` on an AsyncOp whose state is Rust's): the
+  recording used a scratch copy with `SetCompletion(...)` and `IsKilled()` (build/wn28/make_orig.py), the SDK's .c
+  files compiled as C next to their headers.
+- **Golden.** `won_gamespy_test` over 127.0.0.1 (a master server stand-in on 27900, a client socket): the maps, every
+  query type, echo, validation, NULs in a query, the 128/129-byte challenges, a 255-byte query, two datagrams in one
+  pump, packets, a key too big, the dump's last byte, a reply of exactly 1,350 bytes, the auto pump, a second
+  instance on the next port, a failed start-up pumping the current record, shutdowns; recorded over the original
+  units (build/wn28/record_orig.py puts the original headers back for the build), three runs the same, 77 lines:
+  `golden_gamespy.txt`. The driver's first version read an erase's result twice in one `+` chain: the order of the
+  operands is the compiler's (clang-cl evaluated right to left); each call is its own statement now.
+- **Mutations** (6, each a driver run, the file restored): the split limit 1,351 (missed by the first golden: no
+  reply landed on 1,350 bytes; the case was added and the golden re-recorded), a failed start-up's error the SDK's,
+  no current record for a failed start-up, a 129-byte challenge validated, no state-change heartbeat: caught; the
+  dump's `<` as `<=`: equivalent (the bound check that keeps the dump inside its buffer refuses the same pair).
+- **Behaviour** (undefined paths only): a map dump never writes past its buffer, an empty secret key is one NUL
+  byte (a division by zero), a pump before `Startup` pumps nothing (an uninitialised record), `mStateChanged` starts
+  false, long names are kept whole (they overflowed fixed arrays), a record's socket closes with its last holder
+  (never, in the original), a callback whose instance is gone answers an empty dump. Reach: nothing in the game.
+- **The test-only headers** (WONHttpMsg.h, WONDirExtended.h, WONMiscOpsMsg.h, WONRegAuth.h, WONMD5.h,
+  WONLittleEndian.h) are tests/won's (`won_http_glue.h` and the like); URL.cpp keeps the one sink it used.
+- **WONCrypt** (Blowfish, ElGamal, MD5Digest) header-only; `link/won/units.txt` names the units the build stages:
+  a deleted unit must leave it too ("won: unit ... does not exist" stops the build before compiling).
+- **Not done:** ServerOp.cpp's `HostCall` onto the core table and the three drivers on the real PeerAuthOp: the
+  drivers' stand-ins need only RustServerOp's constructor, destructor and three hooks, which can stay in a small
+  ServerOp.cpp, and the nine cases free about 25 lines net once the C++ makers they need are counted; the crypt
+  transform as a Rust variant needs C++ helpers for the `ByteBufferPtr*` it replaces (no net saving).
+- **won_cachemap_test** (the lead's item: about 23 minutes on a loaded machine, over wontest's 20-minute limit,
+  because each of its 6,001 cases opened files eight times): one case in ten keeps the disk on both sides (writes,
+  the cut files written back and read by path, a missing file, the missing directory); in the others the original
+  still writes its file (FileWriter has only a file) but the port writes to memory (`ee_won_cachemap_write_memory`:
+  `write_map` over a byte vector that behaves as the file writer) and both read the bytes from memory through the
+  same FileReader (the original's statements over its memory `Open`, as won_persist_test's fix did;
+  `ee_won_cachemap_read_memory`). The same 18,003 checks in 1 min 43 s here; a memory writer flipping a byte gives
+  5,400 failures.
+- **The merge** (origin/rust 1c108108): PORT_LEARNINGS conflicted (both sides appended: rust's copy and this
+  section) and include/rust/ee_won.h (regenerated); `strip_markers.py` found nothing to strip.
+
+### Gates
+
+| Gate | per commit | Merged with rust (origin/rust 1c108108) |
+|---|---|---|
+| `build.py -j 3 --sim` | c8c71bc9, after WONCrypt: 0 / 0 | 0 / 0 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical (both) | seeds 2-7 identical |
+| `rust_build.py gate` | PASS (after clippy's fixes) | ee_input's tests died once with STATUS_HEAP_CORRUPTION (passed three runs alone); PASS on the rerun with the cachemap change |
+| `build.py --test-profile windowed-software` | (with the merge) | 0 / 0 |
+| `xbuild.py wontest` | the programs linking the changed units: exit 0 | all 132 programs exit 0 |
+| `lan_game.py` (harness lock) | (with the merge) | `RESULT PASS lan-game PT host=2750 joiner=2771` |
+
+## R6: WON's Internet code, round 29 (RustServerOp's HostCall onto the core table; CryptTransform, the request members, CDKey's storage, ServerConnectionConnectOp and URL in Rust)
+
+Branch `rust-won-net29`. Net C++ over src + include (without include/rust) against rust-won-net28:
+`git diff --numstat rust-won-net28 -- src include ':!include/rust'`: 155 added, 444 deleted, net -289 (ServerOp.cpp -136, AsyncOp.cpp -35, URL -36, DirEntity -24, ServerConnection -29, AuthContext -16, WONRouting.h -18, WONAPI.cpp +5).
+
+- **The measure first.** The round's goal was "finish the Internet code, about 2,300 lines". What is left is not
+  logic but the C++ classes' shims: the lobby (WONLobby, another lane) and the drivers construct, subclass and read
+  AsyncOp, the sockets, the socket ops, the routing records, RustServerOp's factories and accessors, IPAddr and the
+  string helpers. A shim's forwarders stay as long as a C++ caller does, so the round took the code that was C++
+  logic or C++ object glue the Rust objects could answer themselves; it fell far short of the 1,500-line target
+  (see "Not done").
+- **HostCall onto the core table (hostcore.rs).** ServerOp.cpp's `RustServerOp::HostCall` (nine cases left after
+  round 24) is gone: a natively bound op with no C++ function (`ee_won_hostop_bind_native(op, NULL, ...)`) answers
+  them in `Host::send` over AsyncOp.cpp's core table: `new BlockingSocket(type)` (the queue socket maker takes a
+  blocking flag), the socket op classes (the core's maker gained Connect, SendBytes, RecvBytes and RecvCRMsg; its
+  size is 32 bits for RecvBytesOp's length), a plain `AsyncOp`, `new PeerAuthOp(...)` and `NewHttpGet(...)` as a
+  `RustServerOp` over the Rust op (`new_host_op`, the members set as the constructors set them and `CopyMaxTimes`),
+  an HTTP session's `AddOp` (a new `HttpSession` core object), the auth context's object and `SOCK_CORE`'s kinds (a
+  new `Context` core object). **`CoreObjectOf` is `dynamic_cast` now** for every kind: `SOCK_CORE` answered null
+  for an object of another class (its `dynamic_cast`s), and one function serves both. The drivers' stand-ins bound
+  with a function still see every call.
+- **CryptTransform and MsgTransform in Rust.** The socket's transforms are a Rust enum (cppcore.rs
+  `CoreTransform`): the session's crypt (`ee_won_session_crypt` on the message's bytes, the `ByteBufferPtr`'s one
+  pointer replaced by a new buffer when the session made one) or a C++ transform with its own call and free
+  functions (`ee_won_core_add_transform`), which only won_sockobj_test uses: `MsgTransform` and `AddMsgTransform`
+  moved to `tests/won/won_msgtransform.h`. The core table lost `transform_call` / `transform_free`. **Name clash:**
+  a private enum first named `Transform` made cbindgen emit `ee_dx7.h` without `EeDx7Transform` (the global rename
+  `Transform -> EeDx7Transform`) and include `ee_won.h`; renamed, the header check alone would not have caught it.
+- **The receive op's file** (`PlatFOpen`, `fwrite`, `fclose`, `utime`) is Rust's (hostnative.rs); the modify time
+  is `File::set_times` on the path as given (the original's `_utime`: both times; a file that cannot be opened for
+  writing keeps its time, where `_utime` might have set it).
+- **The WON directory** (`WONAPICore::GetDefaultFileDirectory`'s rule) is also a Rust value
+  (`ee_won_api_set_file_directory` / `ee_won_api_file_directory`, hostnative.rs) so the Rust HTTP get can read the
+  proxy file (`ee_won_httpget_open`); WONAPICore keeps its C++ copy and hands the Rust one every change (its
+  constructor, `SetDefaultFileDirectory`, its destructor). The first version forgot the hand-over: won_serverop_test's
+  proxy lines read nothing (the Rust copy fell back to the data root), the one failure the full wontest found.
+- **The requests' members (reqmake.rs).** `NewGetDir`, `NewGetMultiDir`, `NewGetService`, `NewGetAccount`,
+  `NewUpdateAccount`, `NewCreateAccount`, `NewGroupListReq` pass their arguments (wide texts as `wchar_t` units of
+  their size) to one Rust maker each; ServerOp.cpp's `ReqMembers` is gone.
+- **CDKey's storage (cdkeystore.rs).** The registry value (config.yaml through the Rust RegKey) and the key file
+  are read and written in Rust; the C++ CDKey keeps the encryption calls. New driver `won_cdkeystore_test`: the
+  original five functions' statements against the port on a scratch config, run against run (the encrypted key is
+  machine-bound, so no static golden), 70 lines the same. Behaviour: `SaveToFile` closes the file on a short write
+  and no longer opens (truncates) it when the encryption fails (the original leaked the `FILE*` both times).
+- **ServerConnectionConnectOp** header-only: its run and completion are `ee_won_servconn_connect_op_run`
+  (cppcore.rs: a completion holding the op, finishing it with the connect's status while pending); won_servconn_test's
+  golden covers it. ServerConnection.cpp keeps the peer authentication maker because the servconn driver's stand-in
+  PeerAuthOp is reached through it.
+- **URL** header-only (WONURL.h over http.rs: parse, relative, entire); **DirEntity.cpp** merged into
+  DirEntityReplyParser.cpp (its constructor and destructor cannot be inline in EEWonNet.h: `ConstSmartPtr<ByteBuffer>`
+  members need the complete ByteBuffer, which needs rust/ee_won.h).
+- **Units deleted:** URL.cpp, DirEntity.cpp (and their lines in link/won/units.txt and the drivers' lists).
+- **Not done (and why):**
+  - IPAddr.cpp and StringUtil.cpp are already forwarders to Rust (rounds 14 and D6); with inlining in EEWonNet.h ruled
+    out, their remaining lines are the forwarders themselves.
+  - RoutingOp.cpp and SmartRoutingConnection.cpp copy Rust records into the C++ records the lobby reads; they go
+    with the lobby's readers.
+  - TitleConfig needs ConfigObject's object model in Rust (the WONGUI lane's config reader keeps the objects and their
+    virtual hooks); TitleConfig has no caller in the game.
+  - WONAPICore (WONAPI.cpp, 201 lines) could be a Rust object over the container, timer and pump threads, but its
+    socket thread is a user-replaceable C++ `SocketThread*` (virtual calls back): about 100 lines net, next.
+  - AsyncOp.cpp's 47 `static_assert`s (Winsock numbering) stay: they check the C++ headers against each other.
+  - MiscUtil's `Browse` callback takes a `std::string`: no gain.
+- **Mutations** (6, each a driver run, the source restored: build/wn29/mut.py): no `CopyMaxTimes` for the peer
+  auth op (won_opcore_test, 2 failures), the crypt transform never replacing the message (won_authsession_test, 10),
+  `SendBytesToOp` made as `SendBytesOp` (won_hostsock_test, 8), `SOCK_CORE` without the op itself for a NULL object
+  (won_opcore_test, 1): caught. Not caught: the key file read cut at 2,047 bytes (equivalent through CDKey's results:
+  `InitEncrypted` rejects every input longer than the key's; the driver gained padded files around 2,048 to show it),
+  and ServerConnectionConnectOp finishing with success whatever the connect's status (won_servconn_test's golden has
+  no failing connect; a case needs a re-recording over the original, not done).
+
+### Gates
+
+| Gate | per commit | End of round (origin/rust 1c108108: nothing new to merge) |
+|---|---|---|
+| `build.py -j 3 --sim` | 7186a49c, 067eb6c0, 23b47e76: 0 / 0 | 0 / 0 |
+| oracle against the main checkout's `ref` | (end only) | seeds 2-7 identical |
+| `rust_build.py gate` | rustfmt failed on 7186a49c (fixed with the next commit) | PASS |
+| `build.py --test-profile windowed-software` | (end only) | 0 / 0 |
+| `xbuild.py wontest` | all programs once: won_serverop_test 2 failures (the directory hand-over, fixed); the four HTTP drivers rerun: 0 | all 133 programs exit 0 (won_cdkeystore_test the new one) |
+| `lan_game.py` (harness lock) | (end only) | `RESULT PASS lan-game PT host=2726 joiner=2727` |

@@ -380,12 +380,11 @@ WON_TESTS = {
     # the message buffers' script (golden: rust/crates/ee_won/src/golden_buffer.txt, recorded over the C++ classes)
     "won_buffer_test": [],
     # the forwarders to ee_won (rust/crates/ee_won)
-    "won_crypto_test": [*[WON_SRC / "WONCommon" / f for f in ("CRC16.cpp", "MD5.cpp")],
-                        *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp", "MD5Digest.cpp")]],
+    "won_crypto_test": [],  # (the crypto classes are header-only since net round 28)
     "won_socket_test": "won_ops_test",
     # the socket ops, BlockingSocket / QueueSocket, the async op machinery and WONAPICore's threads
     "won_ops_test": [WON_SRC / "WONSocket" / "IPAddr.cpp",
-                     *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "WONDebug.cpp")],
+                     WON_SRC / "WONCommon" / "AsyncOp.cpp",
                      WON_SRC / "WONAPI.cpp"],
     # the async machinery's events (golden: rust/crates/ee_won/src/golden_asyncop.txt, recorded over the C++ classes)
     "won_asyncop_test": "won_ops_test",
@@ -418,9 +417,7 @@ WON_TESTS = {
     "won_stagingobj_test": [],
     # the lobby's saved settings (LobbyPersistentData's files and rules), the original's statements against ee_won's
     # persist module
-    "won_persist_test": [WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
-                                                            "FileWriter.cpp", "WONFile.cpp", "CRC16.cpp",
-                                                            "StringUtil.cpp")],
+    "won_persist_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # the lobby's data model (LobbyModel's client, group, game and server lists), the original's statements against
     # ee_won's model module
     "won_model_test": [],
@@ -652,32 +649,27 @@ WON_TESTS = {
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 and libjpeg 6b decoders; both are
     # ee_won's imgdec.rs now, R6 WON round 41)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
-                       *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
-                                                            "WONFile.cpp", "StringUtil.cpp")]],
+                       WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # JPGDecoder: the original's statements on libjpeg 6b (tests/won/won_jpeg_orig.h) against ee_won's jpeg.rs over
     # libjpeg's own compressed pictures, the lobby's, and their corruptions (golden: rust/crates/ee_won/src/golden_jpeg.txt)
     "won_jpeg_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
-                      *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
-                                                           "WONFile.cpp", "StringUtil.cpp")],
+                      WON_SRC / "WONCommon" / "StringUtil.cpp",
                       *[ROOT / "src" / "ThirdParty" / "libjpeg" / l.split()[2]
                         for l in (ROOT / "link" / "jpeg" / "units.txt").read_text().splitlines() if l.strip()]],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
-    "won_parse_test": [WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
-                                                          "StringParserLists.cpp", "StringUtil.cpp")],
+    "won_parse_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # FileReader / FileWriter (golden: rust/crates/ee_won/src/golden_file.txt)
-    "won_file_test": [WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
-                                                         "FileWriter.cpp", "WONFile.cpp")],
+    "won_file_test": [],
     # ConfigParser, the lobby's .cfg reader (golden: rust/crates/ee_won/src/golden_config.txt)
     "won_config_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigParser.cpp", "ConfigToken.cpp")],
-                        *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
-                                                             "StringUtil.cpp")]],
+                        WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # AuthContext's secrets, community data and hashes, and its login data as one object: the original's statements
     # against ee_won's authctx and authlogin modules (golden: rust/crates/ee_won/src/golden_authlogin.txt)
-    "won_auth_test": [WON_SRC / "WONCrypt" / "MD5Digest.cpp", WON_SRC / "WONCommon" / "MD5.cpp"],
+    "won_auth_test": [],
     # the directory server's entity replies (golden: rust/crates/ee_won/src/golden_dir.txt)
-    "won_dir_test": [*[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
+    "won_dir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
                      WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # the directory server's ops (every request's bytes, the status replies, the multi-directory accounting, the
     # find's parser choice, the listing's grouping), the original's statements against ee_won's dirops module
@@ -697,10 +689,9 @@ WON_TESTS = {
     # golden_getcert.txt)
     "won_cert_test": [],
     # WONMisc's HTTP (HTTPGetOp's dates, lines, request and URL split, URL, HTTPCache's ids and names), the
-    # original's statements against include/ee/wonapi/WONHttpMsg.h over ee_won's http module and the URL unit
+    # original's statements against tests/won/won_http_glue.h over ee_won's http module and the URL unit
     # (golden: rust/crates/ee_won/src/golden_http.txt)
-    "won_http_test": [WON_SRC / "WONMisc" / "URL.cpp", WON_SRC / "WONCommon" / "WONFile.cpp",
-                      WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_http_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # WONMisc's FTP and patch code (FTPGetOp's URL, commands and reply steps; the version and patch records; the
     # version filter; the patch ops' requests and replies), the original's statements against
     # tests/won/won_ftp_msg.h and won_patch_msg.h over ee_won's ftp and patch modules
@@ -721,22 +712,21 @@ WON_TESTS = {
     # WONDir's list, multi-list, alias, find and get-service ops and WONDB's get and update account ops as whole ops
     # (requests, replies, Reset, the results), the original's statements against the Rust ops (ee_won reqdir.rs)
     # through their C ABI (golden: rust/crates/ee_won/src/golden_reqdir.txt)
-    "won_reqdir_test": [WON_SRC / "WONDir" / "DirEntity.cpp", WON_SRC / "WONSocket" / "IPAddr.cpp",
+    "won_reqdir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp", WON_SRC / "WONSocket" / "IPAddr.cpp",
                         ROOT / "tests" / "won" / "won_profiledata.cpp"],
     # WONDB's create account op and WONRouting's group list request op as whole ops (requests, replies, Reset, the
     # keys, the group map read again), the original's statements against the Rust ops (ee_won reqlast.rs) through
     # their C ABI (golden: rust/crates/ee_won/src/golden_reqlast.txt)
-    "won_reqlast_test": [ROOT / "tests" / "won" / "won_profiledata.cpp",
-                         *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]],
+    "won_reqlast_test": [ROOT / "tests" / "won" / "won_profiledata.cpp"],
     # WONMisc's GetVersionOp and FindPatchOp as whole ops (the directory request, the versions and patches read from
     # its listing, the version checks and patch lists), the original's statements against the Rust ops (ee_won
     # verop.rs) through their C ABI (golden: rust/crates/ee_won/src/golden_verop.txt)
-    "won_verop_test": [WON_SRC / "WONDir" / "DirEntity.cpp", WON_SRC / "WONCommon" / "StringUtil.cpp",
+    "won_verop_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp", WON_SRC / "WONCommon" / "StringUtil.cpp",
                        WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # the Rust op base and the ops on it (MultiPingOp, FilePushOp, FTPGetOp): the original's statements against the
     # Rust ops (ee_won hostop.rs, multiping.rs, filepush.rs, ftpop.rs) through the base's one call over a stand-in
     # (golden: rust/crates/ee_won/src/golden_hostop.txt)
-    "won_hostop_test": [WON_SRC / "WONCrypt" / "Blowfish.cpp", WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    "won_hostop_test": [WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # WONInternal's TitleConfig and CommunityConfig (the instructions' children and errors, PostParse's rules, the
     # texts), the original's statements against include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module
     # (golden: rust/crates/ee_won/src/golden_titlecfg.txt)
@@ -744,11 +734,11 @@ WON_TESTS = {
     # WONAuth's peer authentication (PeerAuthClient's and PeerAuthServer's handshake) and AuthSession, the original's
     # statements against tests/won/won_peerauth_msg.h over ee_won's peerauth module and its session object
     # (golden: rust/crates/ee_won/src/golden_peerauth.txt)
-    "won_peerauth_test": [WON_SRC / "WONCrypt" / "Blowfish.cpp"],
+    "won_peerauth_test": [],
     # the certificate classes, the peer data and PeerAuthClient / PeerAuthServer: the original's statements
     # (tests/won/won_auth_orig.h) against the game's classes over ee_won's peerobj module (golden:
     # rust/crates/ee_won/src/golden_peerobj.txt)
-    "won_peerobj_test": [WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")],
+    "won_peerobj_test": [],
     # PeerAuthOp and PeerAuthServerOp: the original's statements against the Rust ops on the op base (golden:
     # rust/crates/ee_won/src/golden_peerop.txt)
     "won_peerop_test": "won_peerobj_test",
@@ -759,23 +749,24 @@ WON_TESTS = {
     # same stand-ins (golden: rust/crates/ee_won/src/golden_httpengine.txt)
     "won_httpengine_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # FindPatchOp's patch choice, DetectFirewallOp's request, reply and wait, RegAuth's password and port, the
-    # original's statements against include/ee/wonapi/WONMiscOpsMsg.h over ee_won's miscops module
+    # original's statements against tests/won/won_miscops_glue.h over ee_won's miscops module
     # (golden: rust/crates/ee_won/src/golden_miscops.txt)
-    "won_miscops_test": [WON_SRC / "WONCrypt" / "Blowfish.cpp"],
+    "won_miscops_test": [],
     # HTTPCache's index file (cachemap.dat read and written on the Rust file layer, the kept entries and the deleted
     # files), the original's statements over the real FileReader / FileWriter against won_cachemap_glue.h over ee_won's
     # cachemap module
-    "won_cachemap_test": [WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
-                                                             "FileWriter.cpp", "WONFile.cpp", "StringUtil.cpp")],
+    "won_cachemap_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
-    "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
+    "won_path_test": [],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)
-    "won_regkey_test": [WON_SRC / "WONCommon" / "RegKey.cpp"],
+    "won_regkey_test": [],
+    # RegAuth's settings on config.yaml through the Rust RegKey (golden: rust/crates/ee_won/src/golden_regauth.txt,
+    # recorded over RegAuth.cpp before its port in net round 27)
+    "won_regauth_test": [],
     # the lobby's chat command parser (golden: rust/crates/ee_won/src/golden_chat.txt)
     "won_chat_test": [*[WON_SRC / "WONLobby" / f for f in ("ChatCommandParser.cpp",)],
-                      *[WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
-                      *[WON_SRC / "WONCommon" / f for f in ("StringParser.cpp", "StringParserCollections.cpp",
-                                                           "StringParserLists.cpp", "StringUtil.cpp")]],
+                      WON_SRC / "WONGUI" / "GUIStringSingleton.cpp",
+                      WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # WONGUI's GUIStringData (golden: rust/crates/ee_won/src/golden_guistring.txt)
     "won_guistring_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # GUIStringData's buffer: the original's edits against guistrobj.rs (golden: rust/crates/ee_won/src/golden_guistrobj.txt)
@@ -787,9 +778,7 @@ WON_TESTS = {
     # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won/src/golden_cfgobj.txt)
     "won_cfgobj_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigObject.cpp", "ConfigValue.cpp", "ConfigParser.cpp",
                                                              "ConfigToken.cpp")],
-                        *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
-                                                             "StringParser.cpp", "StringParserCollections.cpp",
-                                                             "StringParserLists.cpp", "StringUtil.cpp")]],
+                        WON_SRC / "WONCommon" / "StringUtil.cpp"],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   WON_SRC / "WONServer" / "ServerConnection.cpp",
@@ -804,11 +793,10 @@ WON_TESTS["won_userstatus_test"] = WON_TESTS["won_ops_test"]
 # rust/crates/ee_won/src/golden_serverop.txt, recorded over ServerOp.cpp's HostCall); its units (won_ops_test's,
 # ServerOp.cpp and what it names) are set here
 WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
-                                  *[WON_SRC / "WONServer" / f for f in ("ServerOp.cpp", "ServerContext.cpp")],
-                                  *[WON_SRC / "WONCommon" / f for f in ("WONFile.cpp", "StringUtil.cpp", "RegKey.cpp")],
-                                  *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
-                                  WON_SRC / "WONAuth" / "AuthContext.cpp",
-                                  *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]]
+                                  WON_SRC / "WONServer" / "ServerOp.cpp",
+                                  WON_SRC / "WONCommon" / "StringUtil.cpp",
+                                  WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
+                                  WON_SRC / "WONAuth" / "AuthContext.cpp"]
 # RustServerOp's certificate and auth context calls and the AuthContext class, through the op's own call path with
 # real certificates (golden: rust/crates/ee_won/src/golden_authhost.txt, recorded over ServerOp.cpp's HostCall and
 # AuthContext.cpp); the same units as won_serverop_test
@@ -840,6 +828,13 @@ WON_TESTS["won_opcore_test"] = WON_TESTS["won_serverop_test"]
 # rust/crates/ee_won/src/golden_httpsession.txt, recorded over HTTPEngine.cpp before its hooks moved into Rust in
 # net round 26: httpcpp.rs); the same units as won_serverop_test
 WON_TESTS["won_httpsession_test"] = WON_TESTS["won_serverop_test"]
+# GameSpySupport and the GameSpy Query & Reporting SDK over 127.0.0.1 with a master server stand-in (golden:
+# rust/crates/ee_won/src/golden_gamespy.txt, recorded over GameSpySupport.cpp, gqueryreporting.c and nonport.c before
+# they moved into ee_won gamespy.rs in net round 28); the same units as won_serverop_test (the service lookup's op)
+WON_TESTS["won_gamespy_test"] = WON_TESTS["won_serverop_test"]
+# CDKey's registry and file storage (ee_won cdkeystore.rs) against the original statements of AuthContext.cpp,
+# run against run on a scratch config.yaml; the same units as won_serverop_test
+WON_TESTS["won_cdkeystore_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]

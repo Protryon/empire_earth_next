@@ -17,11 +17,6 @@
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatSocket.h"
-#ifdef _WIN32
-#include <sys/utime.h>
-#else
-#include <utime.h>
-#endif
 // The socket error codes WON reports are Winsock's; the platform layer reports them in that numbering everywhere
 static_assert(WS_WSAEINTR == PLAT_SOCK_EINTR, "Winsock numbering");
 static_assert(WS_WSAEBADF == PLAT_SOCK_EBADF, "Winsock numbering");
@@ -122,30 +117,31 @@ public:
     QueueCloseOp() : SocketOp(NULL) {}
     virtual WONStatus Continue() { return WS_Success; }
 };
+// a C++ object's Rust object of the kind (NULL when it is not of the kind's class)
 static void* CoreObjectOf(void* inObject,EeWonCoreObject inKind)
 {
-    RefCount* anObject=static_cast<RefCount*>(inObject);
+    RefCount* r=static_cast<RefCount*>(inObject);
     switch(inKind) {
-    case EeWonCoreObject::Op: return static_cast<AsyncOp*>(anObject)->GetOpObject();
-    case EeWonCoreObject::SocketOp: return static_cast<SocketOp*>(static_cast<AsyncOp*>(anObject))->GetSocketOpObject();
-    case EeWonCoreObject::Socket: return static_cast<AsyncSocket*>(anObject)->GetSocketObject();
-    case EeWonCoreObject::Queue: return static_cast<QueueSocket*>(static_cast<AsyncSocket*>(anObject))->GetQueueObject();
-    case EeWonCoreObject::UdpManager: return static_cast<UDPManager*>(anObject)->GetManagerObject();
-    case EeWonCoreObject::UdpRecv:
-        return static_cast<UDPManagerRecvOp*>(static_cast<AsyncOp*>(anObject))->GetUdpObject();
-    case EeWonCoreObject::UdpSendRecv:
-        return static_cast<UDPManagerSendRecvOp*>(static_cast<AsyncOp*>(anObject))->GetUdpObject();
-    case EeWonCoreObject::ServerConn:
-        return static_cast<ServerConnection*>(static_cast<AsyncSocket*>(anObject))->GetConnObject();
-    case EeWonCoreObject::RouteOp: return static_cast<RoutingOp*>(static_cast<AsyncOp*>(anObject))->mRust;
-    case EeWonCoreObject::RouteConn:
-        return static_cast<RoutingConnection*>(static_cast<AsyncSocket*>(anObject))->GetRouteObject();
-    case EeWonCoreObject::AuthCtx: return const_cast<EeWonAuthCtx*>(static_cast<AuthContext*>(anObject)->Core());
-    case EeWonCoreObject::HostOp: return static_cast<RustServerOp*>(static_cast<AsyncOp*>(anObject))->GetRustOp();
-    case EeWonCoreObject::HttpConn: return static_cast<HTTPConnection*>(anObject)->GetConnObject();
+#define EE_WON_CORE_OF(kind,cls,get) case EeWonCoreObject::kind: { cls* x=dynamic_cast<cls*>(r); return x ? (void*)x->get : NULL; }
+    EE_WON_CORE_OF(Op,AsyncOp,GetOpObject())
+    EE_WON_CORE_OF(SocketOp,SocketOp,GetSocketOpObject())
+    EE_WON_CORE_OF(Socket,AsyncSocket,GetSocketObject())
+    EE_WON_CORE_OF(Queue,QueueSocket,GetQueueObject())
+    EE_WON_CORE_OF(UdpManager,UDPManager,GetManagerObject())
+    EE_WON_CORE_OF(UdpRecv,UDPManagerRecvOp,GetUdpObject())
+    EE_WON_CORE_OF(UdpSendRecv,UDPManagerSendRecvOp,GetUdpObject())
+    EE_WON_CORE_OF(ServerConn,ServerConnection,GetConnObject())
+    EE_WON_CORE_OF(RouteOp,RoutingOp,mRust)
+    EE_WON_CORE_OF(RouteConn,RoutingConnection,GetRouteObject())
+    EE_WON_CORE_OF(AuthCtx,AuthContext,Core())
+    EE_WON_CORE_OF(HostOp,RustServerOp,GetRustOp())
+    EE_WON_CORE_OF(HttpConn,HTTPConnection,GetConnObject())
+    EE_WON_CORE_OF(HttpSession,HTTPSession,GetSessionObject())
+    EE_WON_CORE_OF(Context,ServerContext,GetListObject())
+#undef EE_WON_CORE_OF
     case EeWonCoreObject::Lock: {
-        if (HTTPConnection* c=dynamic_cast<HTTPConnection*>(anObject)) return c->GetLock();
-        if (HTTPSession* s=dynamic_cast<HTTPSession*>(anObject)) return s->GetLock();
+        if (HTTPConnection* c=dynamic_cast<HTTPConnection*>(r)) return c->GetLock();
+        if (HTTPSession* s=dynamic_cast<HTTPSession*>(r)) return s->GetLock();
         return NULL;
     }
     }
@@ -157,26 +153,29 @@ static void* CoreSocketOpDuplicate(void* inOp)
 }
 static void* CoreNewOp() { return static_cast<RefCount*>(new AsyncOp); }
 static void* CoreNewSocketOp(EeWonCoreSocketOp inKind,void* inSocket,void* inBytes,const EeWonIpAddr* inAddr,
-                             uint16_t inSize)
+                             uint32_t inSize)
 {
     AsyncSocket* aSocket=static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket));
+    const ByteBuffer* aBytes=static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes));
     SocketOp* anOp=NULL;
     switch(inKind) {
     case EeWonCoreSocketOp::Close: anOp=new CloseOp(aSocket); break;
     case EeWonCoreSocketOp::QueueClose: anOp=new QueueCloseOp; anOp->SetRunAsyncImmediately(false); break;
-    case EeWonCoreSocketOp::RecvFrom: anOp=new RecvBytesFromOp(inSize,aSocket); break;
+    case EeWonCoreSocketOp::RecvFrom: anOp=new RecvBytesFromOp((unsigned short)inSize,aSocket); break;
     case EeWonCoreSocketOp::RecvMsg: anOp=new RecvMsgOp(aSocket); break;
-    case EeWonCoreSocketOp::SendMsg:
-        anOp=new SendMsgOp(static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes)),aSocket);
-        break;
+    case EeWonCoreSocketOp::SendMsg: anOp=new SendMsgOp(aBytes,aSocket); break;
     case EeWonCoreSocketOp::SendTo:
-        anOp=new SendBytesToOp(static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes)),
-                               IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)),aSocket);
+        anOp=new SendBytesToOp(aBytes,IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)),aSocket);
         break;
+    case EeWonCoreSocketOp::Connect: anOp=new ConnectOp(IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)),aSocket); break;
+    case EeWonCoreSocketOp::SendBytes: anOp=new SendBytesOp(aBytes,aSocket); break;
+    case EeWonCoreSocketOp::RecvBytes: anOp=new RecvBytesOp(inSize,aSocket); break;
+    case EeWonCoreSocketOp::RecvCrMsg: anOp=new RecvCRMsgOp(aSocket); break;
     }
     return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp));
 }
-static void* CoreNewQueueSocket(int32_t inType) { return static_cast<RefCount*>(new QueueSocket(inType)); }
+static void* CoreNewQueueSocket(int32_t inType,bool inBlocking)
+{ return static_cast<RefCount*>(inBlocking ? new BlockingSocket(inType) : new QueueSocket(inType)); }
 static void* CoreNewUdpRecvOp(const EeWonIpAddr* inAddr)
 {
     UDPManagerRecvOp* anOp=inAddr!=NULL ? new UDPManagerRecvOp(IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)))
@@ -225,31 +224,6 @@ static long CoreTransform(void* inSocket,void** ioMessage,bool inSend)
     *ioMessage=aResult;
     return aStatus;
 }
-static void* CoreFileOpen(const uint8_t* inPath,size_t inLength,bool inBinary,bool inAppend)
-{
-    std::string aPath(reinterpret_cast<const char*>(inPath),inLength);
-    if(inBinary) return PlatFOpen(aPath.c_str(),inAppend ? "a+b" : "wb");
-    return PlatFOpen(aPath.c_str(),inAppend ? "a+" : "w");
-}
-static size_t CoreFileWrite(void* inFile,const uint8_t* inData,size_t inLength)
-{ return fwrite(inData,1,inLength,static_cast<FILE*>(inFile)); }
-static int32_t CoreFileClose(void* inFile) { return fclose(static_cast<FILE*>(inFile)); }
-static void CoreFileSetTime(const uint8_t* inPath,size_t inLength,int64_t inTime)
-{
-    std::string aPath(reinterpret_cast<const char*>(inPath),inLength);
-#ifdef _WIN32
-    struct _utimbuf aTime;
-#else
-    struct utimbuf aTime;   // POSIX's utime: the same fields
-#endif
-    aTime.actime=static_cast<time_t>(inTime);
-    aTime.modtime=static_cast<time_t>(inTime);
-#ifdef _WIN32
-    _utime(aPath.c_str(),&aTime);
-#else
-    utime(aPath.c_str(),&aTime);
-#endif
-}
 // a progress chunk: a RecvChunkOp of the receiving op with its completion, run in the op's mode
 static void CoreProgress(void* inOp,void* inCompletion)
 {
@@ -278,13 +252,6 @@ static void CoreSocketHook(void* inSocket,int32_t inWhich)
     else if(inWhich==1) aSocket->CloseHook();
     else aSocket->KillHook();
 }
-static long CoreTransformCall(void* inTransform,void* inMessage,bool inSend)
-{
-    MsgTransform* aTransform=static_cast<MsgTransform*>(inTransform);
-    ByteBufferPtr& aMessage=*static_cast<ByteBufferPtr*>(inMessage);
-    return inSend ? aTransform->Send(aMessage) : aTransform->Recv(aMessage);
-}
-static void CoreTransformFree(void* inTransform) { delete static_cast<MsgTransform*>(inTransform); }
 static void* CoreNewHttpConn() { return static_cast<RefCount*>(new HTTPConnection(NULL)); }
 // the routing classes' (ee_won routecpp.rs): a new op on a connection, the connection's two virtuals
 static RoutingConnection* RouteConn(void* inConn)
@@ -363,10 +330,8 @@ static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletion
                                         CoreNewQueueSocket,CoreNewUdpRecvOp,CoreUdpCheck,
                                         reinterpret_cast<void*>(&UDPManagerSendRecvOp::StaticCheckResponse),
                                         CoreBindLocal,CoreBytesOf,CoreSocketOpContinue,CoreSocketOpStart,
-                                        &SocketOp::HookAddToSocketThread,CoreBytesAdopt,CoreTransform,CoreFileOpen,
-                                        CoreFileWrite,CoreFileClose,CoreFileSetTime,CoreProgress,CoreAccept,
-                                        CoreSocketHook,CoreTransformCall,CoreTransformFree,CoreNewRouteOp,
-                                        CoreRouteVirtual,CoreNewHttpConn};
+                                        &SocketOp::HookAddToSocketThread,CoreBytesAdopt,CoreTransform,CoreProgress,
+                                        CoreAccept,CoreSocketHook,CoreNewRouteOp,CoreRouteVirtual,CoreNewHttpConn};
 const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
 
 }

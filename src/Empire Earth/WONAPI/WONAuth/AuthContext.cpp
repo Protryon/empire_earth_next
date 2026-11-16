@@ -46,51 +46,35 @@ bool AuthContext::SetHashFile(const std::wstring& inCommunity)
 
 // WON SDK default registry path (no original address identified)
 const char* CDKey::mCDKeyPath = "SOFTWARE\\Sierra\\CDKeys";
-// Loads and decrypts the product's key from a registry value; false when absent or invalid
+// The encrypted key's stores are Rust's (ee_won cdkeystore.rs: config.yaml through the Rust RegKey, the file's bytes)
 bool CDKey::LoadFromRegistry(long inRoot, const char* inPath)
 {
-    if (this->mProduct.empty()) return false;
-    RegKey aKey(inRoot, std::string(inPath), false, true);
-    if (!aKey.mIsOpen) return false;
-    ByteBufferPtr anEncrypted;
-    if (aKey.QueryBinary(this->mProduct, anEncrypted) != 0) return false;
-    return this->InitEncrypted(anEncrypted->data(), anEncrypted->length());
+    std::string aBytes;
+    return !this->mProduct.empty()
+        && ee_won_cdkey_registry_read(inRoot, inPath, WonBytes(this->mProduct), this->mProduct.size(), WonStringSink, &aBytes)
+        && this->InitEncrypted(aBytes.data(), aBytes.size());
 }
-// No original address identified: WON SDK registry storage
 bool CDKey::SaveToRegistry(long inRoot, const char* inPath)
 {
-    if (!this->IsValid()) return false;
-    RegKey aKey(inRoot, inPath, true, true);
-    if (!aKey.IsOpen()) return false;
     ByteBufferPtr anEncrypted = this->GetEncrypted();
-    if (anEncrypted.get() == NULL) return false;
-    return aKey.SetValue(this->mProduct, anEncrypted->data(), anEncrypted->length());
+    return anEncrypted.get() != NULL
+        && ee_won_cdkey_registry_write(inRoot, inPath, WonBytes(this->mProduct), this->mProduct.size(),
+                                       reinterpret_cast<const uint8_t*>(anEncrypted->data()), anEncrypted->length());
 }
 void CDKey::ClearFromRegistry(long inRoot, const char* inPath)
 {
-    if (this->mProduct.empty()) return;
-    RegKey aKey(inRoot, inPath, false, true);
-    aKey.DeleteValue(this->mProduct);
+    if (!this->mProduct.empty()) ee_won_cdkey_registry_clear(inRoot, inPath, WonBytes(this->mProduct), this->mProduct.size());
 }
-// No original address identified: WON SDK file storage (the encrypted key)
 bool CDKey::SaveToFile(const std::string& inFileName)
 {
-    if (!this->IsValid()) return false;
-    FILE* aFile = PlatFOpen(inFileName.c_str(), "wb");
-    if (aFile == NULL) return false;
     ByteBufferPtr anEncrypted = this->GetEncrypted();
-    if (anEncrypted.get() == NULL) return false;
-    if (fwrite(anEncrypted->data(), 1, anEncrypted->length(), aFile) != anEncrypted->length()) return false;
-    fclose(aFile);
-    return true;
+    return anEncrypted.get() != NULL
+        && ee_won_cdkey_file_write(inFileName.c_str(), reinterpret_cast<const uint8_t*>(anEncrypted->data()),
+                                   anEncrypted->length());
 }
 bool CDKey::LoadFromFile(const std::string& inFileName)
 {
-    FILE* aFile = PlatFOpen(inFileName.c_str(), "rb");
-    if (aFile == NULL) return false;
-    char aBuf[2048];
-    int aReadLen = (int)fread(aBuf, 1, 2048, aFile);
-    fclose(aFile);
-    return this->InitEncrypted(aBuf, aReadLen);
+    std::string aBytes;
+    return ee_won_cdkey_file_read(inFileName.c_str(), WonStringSink, &aBytes) && this->InitEncrypted(aBytes.data(), aBytes.size());
 }
 }

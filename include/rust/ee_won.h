@@ -347,6 +347,9 @@ constexpr static const int32_t EE_WON_DB_REQ_INFO_EMAIL = 9;
 
 constexpr static const int32_t EE_WON_DB_REQ_CONTEST = 10;
 
+/// `EXCEPTION_CONTINUE_SEARCH`
+constexpr static const int32_t EE_WON_DEBUG_CONTINUE_SEARCH = 0;
+
 /// `DIR_UF_UNIQUEDISPLAYNAME`
 constexpr static const uint32_t EE_WON_DIR_UF_UNIQUE_DISPLAY_NAME = 1;
 
@@ -495,6 +498,45 @@ constexpr static const int32_t EE_WON_FWOP_HAS_PUBLIC = 4;
 
 /// the public address's host, set with port 0 (`ee_won_hostop_num`)
 constexpr static const int32_t EE_WON_FWOP_PUBLIC_HOST = 5;
+
+/// `qr_init`'s errors (the SDK's `E_GOA_*`).
+constexpr static const int32_t E_GOA_WSOCKERROR = 1;
+
+constexpr static const int32_t E_GOA_BINDERROR = 2;
+
+constexpr static const int32_t E_GOA_DNSERROR = 3;
+
+constexpr static const int32_t E_GOA_CONNERROR = 4;
+
+/// `NUM_PORTS_TO_TRY`: the ports `qr_init` scans from its base port.
+constexpr static const int32_t NUM_PORTS_TO_TRY = 100;
+
+/// `BUF_SIZE`: a callback's buffer
+constexpr static const size_t BUF_SIZE = 1400;
+
+/// `GameSpyQueryType`'s maps: 0 the basic keys, 1 info, 2 rules, 3 players.
+constexpr static const size_t EE_WON_GAMESPY_MAPS = 4;
+
+/// `EE_WON_GAMESPY_*`: [`ee_won_gamespy_op`]'s calls.
+constexpr static const int32_t EE_WON_GAMESPY_SHUTDOWN = 0;
+
+constexpr static const int32_t EE_WON_GAMESPY_PUMP = 1;
+
+/// the number: the time in ms
+constexpr static const int32_t EE_WON_GAMESPY_SET_AUTO_PUMP = 2;
+
+constexpr static const int32_t EE_WON_GAMESPY_IS_AUTO_PUMPING = 3;
+
+constexpr static const int32_t EE_WON_GAMESPY_STATUS = 4;
+
+constexpr static const int32_t EE_WON_GAMESPY_GAMESPY_STATUS = 5;
+
+constexpr static const int32_t EE_WON_GAMESPY_LOCK = 6;
+
+constexpr static const int32_t EE_WON_GAMESPY_UNLOCK = 7;
+
+/// the number: the map
+constexpr static const int32_t EE_WON_GAMESPY_ERASE_ALL = 8;
 
 /// `ComponentFlag_DebugBG` and `ComponentFlag_Translucent` (WONComponentFlags.h; the C++ asserts them).
 constexpr static const ptrdiff_t EE_WON_GRAB_FLAG_DEBUG_BG = 131072;
@@ -1662,6 +1704,56 @@ constexpr static const int32_t FRAME_BORDER = 3;
 
 constexpr static const int32_t FRAME_CAPTION = 18;
 
+/// The texts `ee_won_regauth_read` hands back, by the sink's `which`.
+constexpr static const int32_t EE_WON_REGAUTH_ADDRESS = 0;
+
+constexpr static const int32_t EE_WON_REGAUTH_LOGIN = 1;
+
+constexpr static const int32_t EE_WON_REGAUTH_COMMUNITY = 2;
+
+constexpr static const int32_t EE_WON_REGAUTH_PASSWORD = 3;
+
+/// What `ee_won_regkey_op` does.
+constexpr static const int32_t EE_WON_REGKEY_IS_OPEN = 0;
+
+constexpr static const int32_t EE_WON_REGKEY_CLOSE = 1;
+
+/// `OpenNewKey(root = value, name)`
+constexpr static const int32_t EE_WON_REGKEY_OPEN_NEW = 2;
+
+/// `DeleteSubKey(name)`
+constexpr static const int32_t EE_WON_REGKEY_DELETE_SUBKEY = 3;
+
+/// `SetValue(name, text)`, `SetValue(name, value)`, `SetValue(name, bytes)`
+constexpr static const int32_t EE_WON_REGKEY_SET_TEXT = 4;
+
+constexpr static const int32_t EE_WON_REGKEY_SET_DWORD = 5;
+
+constexpr static const int32_t EE_WON_REGKEY_SET_BINARY = 6;
+
+/// `DeleteValue(name)`
+constexpr static const int32_t EE_WON_REGKEY_DELETE_VALUE = 7;
+
+/// `OpenSubKey(name)`
+constexpr static const int32_t EE_WON_REGKEY_OPEN_SUBKEY = 8;
+
+/// `GetToBuf(name, out)`, `GetValue(name, out)` (true: found; the text to the sink)
+constexpr static const int32_t EE_WON_REGKEY_GET_TO_BUF = 9;
+
+constexpr static const int32_t EE_WON_REGKEY_GET_VALUE = 10;
+
+/// `QueryDWORD(name, out)`: the code; the value to `*num`
+constexpr static const int32_t EE_WON_REGKEY_QUERY_DWORD = 11;
+
+/// `QueryBinary(name, out)`: the code; the bytes to the sink for 0
+constexpr static const int32_t EE_WON_REGKEY_QUERY_BINARY = 12;
+
+/// `GetLeafName()`: the path to the sink
+constexpr static const int32_t EE_WON_REGKEY_LEAF_NAME = 13;
+
+/// the block (`mBlock`) to the sink
+constexpr static const int32_t EE_WON_REGKEY_BLOCK = 14;
+
 /// `GetDirOp`: the query's flags, path (UTF-16 LE), data type count and each type
 constexpr static const int32_t EE_WON_REQOPS_DIR_GET = 7;
 
@@ -2486,6 +2578,62 @@ constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 37;
 /// The last of round 33's fields (`EeWonWmField::PopupFront`; the goldens' first state line).
 constexpr static const int32_t EE_WON_WM_FIELD_POPUP_LAST = 22;
 
+/// `GetFilePath`
+constexpr static const int32_t EE_WON_FILE_PATH = 0;
+
+/// `GetFileDirectory`
+constexpr static const int32_t EE_WON_FILE_DIRECTORY = 1;
+
+/// `GetFileName`
+constexpr static const int32_t EE_WON_FILE_NAME = 2;
+
+/// `GetFileExtension`
+constexpr static const int32_t EE_WON_FILE_EXTENSION = 3;
+
+/// `GetFullPath` (2 returned where the original threw)
+constexpr static const int32_t EE_WON_FILE_FULL_PATH = 4;
+
+/// `GetRelativePath(other)`: `other`'s path after this one's directory
+constexpr static const int32_t EE_WON_FILE_RELATIVE = 5;
+
+/// `mFileNameNoExtension` as it is (no computing)
+constexpr static const int32_t EE_WON_FILE_NAME_NO_EXTENSION = 6;
+
+/// `SetFilePath(data)`
+constexpr static const int32_t EE_WON_FILE_SET_PATH = 0;
+
+/// `Reset`
+constexpr static const int32_t EE_WON_FILE_RESET = 1;
+
+/// `CalcFileInfo`, `CalcFileDirectory`, `CalcFullPath` (2 where it threw), `CalcFileExtension`
+constexpr static const int32_t EE_WON_FILE_CALC_INFO = 2;
+
+constexpr static const int32_t EE_WON_FILE_CALC_DIRECTORY = 3;
+
+constexpr static const int32_t EE_WON_FILE_CALC_FULL_PATH = 4;
+
+constexpr static const int32_t EE_WON_FILE_CALC_EXTENSION = 5;
+
+/// `GetSize`, `GetModifyTime`
+constexpr static const int32_t EE_WON_FILE_SIZE = 6;
+
+constexpr static const int32_t EE_WON_FILE_MODIFY_TIME = 7;
+
+/// `Exists`, `IsDir`
+constexpr static const int32_t EE_WON_FILE_EXISTS = 8;
+
+constexpr static const int32_t EE_WON_FILE_IS_DIR = 9;
+
+/// `SetReadOnly(value)`, `Delete(value)`, `CreateAsDirectory`
+constexpr static const int32_t EE_WON_FILE_SET_READ_ONLY = 10;
+
+constexpr static const int32_t EE_WON_FILE_DELETE = 11;
+
+constexpr static const int32_t EE_WON_FILE_CREATE_DIRECTORY = 12;
+
+/// `NormalizePath` (0 false, 1 true, 2 where it threw)
+constexpr static const int32_t EE_WON_FILE_NORMALIZE = 13;
+
 /// Which Rust object of a C++ object [`EeWonCoreHooks::object_of`] returns.
 enum class EeWonCoreObject {
   /// an `AsyncOp*`'s [`EeWonAsyncOp`]
@@ -2516,6 +2664,10 @@ enum class EeWonCoreObject {
   HttpConn = 12,
   /// an `HTTPConnection*`'s or `HTTPSession*`'s lock (its `CriticalSection`'s platform mutex)
   Lock = 13,
+  /// an `HTTPSession*`'s [`EeWonHttpSession`](crate::httpengine::EeWonHttpSession)
+  HttpSession = 14,
+  /// a `ServerContext*`'s [`ServerList`](crate::servctx::ServerList)
+  Context = 15,
 };
 
 /// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
@@ -2532,6 +2684,14 @@ enum class EeWonCoreSocketOp {
   RecvMsg = 4,
   /// `new SendMsgOp(bytes, socket)`
   SendMsg = 5,
+  /// `new ConnectOp(addr, socket)`
+  Connect = 6,
+  /// `new SendBytesOp(bytes, socket)`
+  SendBytes = 7,
+  /// `new RecvBytesOp(size, socket)`
+  RecvBytes = 8,
+  /// `new RecvCRMsgOp(socket)`
+  RecvCrMsg = 9,
 };
 
 /// The op codes. `a`..`d` are integers or pointers as each says.
@@ -10359,11 +10519,17 @@ struct EeWonEeXfer;
 /// One send op: the path, the open file, the chunk and its read position.
 struct EeWonEeXferSend;
 
+/// `WONFile`'s members (0x70 bytes in the original).
+struct EeWonFile;
+
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
 
 /// The window's fonts.
 struct EeWonFontMap;
+
+/// `GameSpySupport` (the C++ class a `RefCount` shim holding this).
+struct EeWonGameSpy;
 
 /// `GetCertOp`'s state: the members and the session key.
 struct EeWonGetCert;
@@ -10487,6 +10653,10 @@ struct EeWonProfile;
 
 /// `QueueSocket`'s state and steps.
 struct EeWonQueueSocket;
+
+/// `RegKey`'s members: `mBlock` (the config.yaml block, was the HKEY), `mIsOpen`, `mPath` (the path it was opened
+/// with).
+struct EeWonRegKey;
 
 /// A Rust op held by a C++ `ServerRequestOp`.
 struct EeWonReqOp;
@@ -10634,7 +10804,7 @@ struct EeWonCoreHooks {
   EeWonCoreFn ref_release;
   /// `completion->Complete(op)` (the C++ makes the `AsyncOpPtr`)
   void (*completion_call)(void *completion, void *op);
-  /// the object's Rust object of that kind (null for a null object)
+  /// the object's Rust object of that kind (null for a null object or one not of the kind's class)
   void *(*object_of)(void *object, EeWonCoreObject kind);
   /// a socket op's virtual `Duplicate()` (a new op, or null)
   void *(*socketop_duplicate)(void *op);
@@ -10647,9 +10817,9 @@ struct EeWonCoreHooks {
                          void *socket,
                          void *bytes,
                          const EeWonIpAddr *addr,
-                         uint16_t size);
-  /// `new QueueSocket(type)`
-  void *(*new_queue_socket)(int32_t kind);
+                         uint32_t size);
+  /// `new QueueSocket(type)`, or `new BlockingSocket(type)` (the ops' own sockets)
+  void *(*new_queue_socket)(int32_t kind, bool blocking);
   /// `new UDPManagerRecvOp` (from `addr`; any sender for null)
   void *(*new_udp_recv_op)(const EeWonIpAddr *addr);
   /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
@@ -10671,22 +10841,12 @@ struct EeWonCoreHooks {
   /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
   /// result's
   long (*transform)(void *socket, void **message, bool send);
-  /// a receive op's target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`,
-  /// `fclose`, the modify time (`utime`)
-  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
-  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
-  int32_t (*file_close)(void *file);
-  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
   /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
   void (*progress)(void *op, void *completion);
   /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
   long (*accept)(void *socket, void **out);
   /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
   void (*socket_hook)(void *socket, int32_t which);
-  /// a transform's virtual `Send` (`send`) or `Recv` on the message (a `ByteBufferPtr*`)
-  long (*transform_call)(void *transform, void *message, bool send);
-  /// `delete transform`
-  EeWonCoreFn transform_free;
   /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
   void *(*new_route_op)(void *conn, int32_t ty);
   /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
@@ -10875,6 +11035,10 @@ struct EeWonConfigState {
 
 /// Receives a saved state; valid only during the call.
 using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
+
+/// `new RustServerOp(op)`: the C++ op of a Rust op on the op base (it takes `op`; no reference yet). ServerOp.cpp
+/// sets it at start-up ([`ee_won_core_set_new_host_op`]): a program without the class has none.
+using EeWonNewHostOp = void*(*)(EeWonHostOp *op);
 
 /// Bytes handed over by the C++ (`present` false: a NULL buffer).
 struct EeWonDirBytes {
@@ -12393,6 +12557,12 @@ struct EeWonLanSocketHooks {
   void (*client_set_socket)(void *client, void *socket);
 };
 
+/// One text argument of `ee_won_regauth_write`.
+struct EeWonRegAuthText {
+  const uint8_t *data;
+  size_t length;
+};
+
 /// A row for the C++: NUL-terminated texts; `new_section` when the section differs from the previous row's.
 struct EeWonResource {
   const char *section;
@@ -13494,6 +13664,17 @@ void ee_won_cachemap_read(const char *path,
                           void (*put)(void*, const EeWonCacheEntry*),
                           void *context);
 
+/// As [`ee_won_cachemap_read`], the file's bytes read from memory by the same reader (its memory mode): the
+/// driver's cases that need no disk (won_cachemap_test: the file opens made it I/O bound).
+///
+/// # Safety
+/// `data` holds `length` bytes; `put` as `ee_won_cachemap_read`.
+void ee_won_cachemap_read_memory(const uint8_t *data,
+                                 size_t length,
+                                 int32_t version,
+                                 void (*put)(void*, const EeWonCacheEntry*),
+                                 void *context);
+
 /// `WriteCacheMap`'s file: opened for writing (nothing when it cannot be), written with [`write_map`] (the entries
 /// in the id map's order, `delete` called with an index for each one not kept), closed.
 ///
@@ -13507,6 +13688,68 @@ void ee_won_cachemap_write(const char *path,
                            size_t count,
                            void (*delete_)(void*, size_t),
                            void *context);
+
+/// As [`ee_won_cachemap_write`], the file's bytes given to `sink` instead of a file (the driver's cases that need no
+/// disk).
+///
+/// # Safety
+/// As `ee_won_cachemap_write`; `sink` is callable with `sink_context` during the call.
+void ee_won_cachemap_write_memory(int32_t version,
+                                  int64_t now,
+                                  const EeWonCacheEntry *entries,
+                                  size_t count,
+                                  void (*delete_)(void*, size_t),
+                                  void *context,
+                                  EeWonByteSink sink,
+                                  void *sink_context);
+
+/// `LoadFromRegistry`'s read: the product's value as bytes to `sink` (false when the key or value is missing, not
+/// hex, or empty: `QueryBinary` other than 0).
+///
+/// # Safety
+/// `path` is a C string or NULL; `product` holds `product_len` bytes; `sink` is valid with `context`.
+bool ee_won_cdkey_registry_read(int32_t root,
+                                const char *path,
+                                const uint8_t *product,
+                                size_t product_len,
+                                EeWonByteSink sink,
+                                void *context);
+
+/// `SaveToRegistry`'s write: the encrypted bytes as the product's value (false when the key does not open or the
+/// value is not set).
+///
+/// # Safety
+/// `path` is a C string or NULL; `product` and `data` hold their lengths.
+bool ee_won_cdkey_registry_write(int32_t root,
+                                 const char *path,
+                                 const uint8_t *product,
+                                 size_t product_len,
+                                 const uint8_t *data,
+                                 size_t data_len);
+
+/// `ClearFromRegistry`: the product's value deleted.
+///
+/// # Safety
+/// `path` is a C string or NULL; `product` holds `product_len` bytes.
+void ee_won_cdkey_registry_clear(int32_t root,
+                                 const char *path,
+                                 const uint8_t *product,
+                                 size_t product_len);
+
+/// `SaveToFile`'s write: the encrypted bytes through `PlatFOpen(path, "wb")` (false when it does not open or the
+/// write is short; the file is closed either way).
+///
+/// # Safety
+/// `path` is a C string; `data` holds `data_len` bytes.
+bool ee_won_cdkey_file_write(const char *path,
+                             const uint8_t *data,
+                             size_t data_len);
+
+/// `LoadFromFile`'s read: up to 2,048 bytes of the file to `sink` (false when it does not open).
+///
+/// # Safety
+/// `path` is a C string; `sink` is valid with `context`.
+bool ee_won_cdkey_file_read(const char *path, EeWonByteSink sink, void *context);
 
 /// A new `GetCertOp`: its auth context (`EE_WON_GETCERT_AUTH_CONTEXT`) and its server context
 /// (`EE_WON_REQHOST_CONTEXT`, the auth context's) are set after the bind.
@@ -13895,6 +14138,30 @@ void ee_won_cfg_include_path(const uint8_t *path,
                              EeWonByteSink sink,
                              void *context);
 
+/// Sets the maker of a Rust op's C++ op.
+void ee_won_core_set_new_host_op(EeWonNewHostOp maker);
+
+/// `socket->AddMsgTransform(transform)` for a C++ transform: `call(transform, ByteBufferPtr*, send)` runs its
+/// `Send` or `Recv`, `free(transform)` deletes it; the socket owns it.
+///
+/// # Safety
+/// `socket` is a live `AsyncSocket*` (its `RefCount*`); `transform` lives until `free`.
+void ee_won_core_add_transform(void *socket,
+                               void *transform,
+                               long (*call)(void *object, void *message, bool send),
+                               void (*free)(void *object));
+
+/// `ServerConnectionConnectOp::RunHook` (2ac2f0): the connection's connect completion finishes the op with the
+/// connect's status while it is pending (`StaticConnectCompletion` 2ac240 / `ConnectCompletion` 2ac2d0, a
+/// `ParamCompletion` holding the op), then `ConnectAsync(*address, timeout)`.
+///
+/// # Safety
+/// `conn` is a live `ServerConnection*`, `op` the live op (its `RefCount*`), `address` its `IPAddr*`.
+void ee_won_servconn_connect_op_run(void *conn,
+                                    void *op,
+                                    const void *address,
+                                    uint32_t timeout);
+
 /// A new Rust Container for the C++ `component`, its calls out through `host`; the wheel goes to the focus child
 /// when `wheel_to_focus` (the class default).
 EeWonContainer *ee_won_ct_new(void *component,
@@ -14006,6 +14273,21 @@ bool ee_won_db_user_id(const uint8_t *data, size_t length, int32_t *out);
 
 /// Whether a DBProxy reply's sub-message answers the request's `sub` (the email requests).
 bool ee_won_db_answers(int16_t reply_sub, uint16_t sub);
+
+/// `WONDebug::SetStackFileName`.
+///
+/// # Safety
+/// `name` holds `length` bytes.
+void ee_won_debug_set_stack_file(const uint8_t *name, size_t length);
+
+/// `WONDebug::GetStackFileName`: the name to the sink.
+///
+/// # Safety
+/// `sink` receives the name during the call.
+void ee_won_debug_stack_file(EeWonByteSink sink, void *context);
+
+/// `WONDebug::DumpStackToFile`: an exception filter's value.
+int32_t ee_won_debug_dump_stack();
 
 /// A new Rust Dialog for the C++ `component` over its container's Rust object `ct`, its calls out through `host`.
 ///
@@ -15388,6 +15670,61 @@ bool ee_won_fwop_wait_for_connect(const EeWonFirewallOp *op);
 /// # Safety
 /// `op` is valid.
 bool ee_won_fwop_use_udp(const EeWonFirewallOp *op);
+
+/// A new instance: C strings for the name, version and key; the shim (`GameSpySupport*`), its directory servers
+/// (`ServerContext*`, a reference taken) and the library's core table (bound).
+///
+/// # Safety
+/// The strings are NUL-ended; the objects live C++ objects (the shim owns the result).
+EeWonGameSpy *ee_won_gamespy_new(const char *name,
+                                 const char *version,
+                                 const char *secret_key,
+                                 void *shim,
+                                 void *dirs,
+                                 const EeWonCoreHooks *core);
+
+/// # Safety
+/// `g` from [`ee_won_gamespy_new`], freed once.
+void ee_won_gamespy_free(EeWonGameSpy *g);
+
+/// `Startup(addr)`: the address's `GetHostString(true)` and port.
+///
+/// # Safety
+/// `g` live; `host` holds `length` bytes.
+int32_t ee_won_gamespy_startup(const EeWonGameSpy *g,
+                               const uint8_t *host,
+                               size_t length,
+                               uint16_t port);
+
+/// The calls without arguments but a number ([`EE_WON_GAMESPY_SHUTDOWN`] ..): their result (0 for none).
+///
+/// # Safety
+/// `g` live.
+int64_t ee_won_gamespy_op(const EeWonGameSpy *g,
+                          int32_t which,
+                          int64_t num);
+
+/// `SetKeyValue(type, key, value)` (C strings); a NULL value erases the key and returns whether it was there
+/// (`EraseKeyValue`); `SetGameMode(value)` for a NULL key.
+///
+/// # Safety
+/// `g` live; the strings NUL-ended or NULL.
+bool ee_won_gamespy_set(const EeWonGameSpy *g,
+                        int32_t kind,
+                        const char *key,
+                        const char *value);
+
+/// `GetKeyValue(type, key)`: the value's C string, valid until the key changes, or NULL.
+///
+/// # Safety
+/// `g` live; `key` NUL-ended.
+const char *ee_won_gamespy_get(const EeWonGameSpy *g, int32_t kind, const char *key);
+
+/// `qr_hostname`: the master server's host the next start-up resolves (a test's stand-in).
+///
+/// # Safety
+/// `host` NUL-ended.
+void ee_won_gamespy_set_master_host(const char *host);
 
 /// `GetCertOp(context)`: the op keeps a reference to `context` (taken here).
 ///
@@ -17392,6 +17729,20 @@ int64_t ee_won_hostop_base_get(const EeWonHostOp *op, int32_t which);
 /// `op` is a live, natively bound op; `obj` NULL or a live `RefCount*`.
 void ee_won_hostop_base(const EeWonHostOp *op, int32_t which, int64_t num, void *obj);
 
+/// `WONAPICoreEx::SetDefaultFileDirectory` (a separator appended when missing), or the core's directory cleared
+/// (a new or deleted core: NULL).
+///
+/// # Safety
+/// `dir` holds `len` bytes, or is NULL.
+void ee_won_api_set_file_directory(const uint8_t *dir,
+                                   size_t len);
+
+/// `WONAPICore::GetDefaultFileDirectory()`'s bytes to `sink`.
+///
+/// # Safety
+/// `sink` is valid with `context`.
+void ee_won_api_file_directory(EeWonByteSink sink, void *context);
+
 /// `HTTPGetOp`'s constructors' proxy file read (`dir`: `WONAPICore::GetDefaultFileDirectory()`, `len` bytes).
 ///
 /// # Safety
@@ -17405,7 +17756,8 @@ void ee_won_http_proxy_read(const uint8_t *dir,
 /// `op` is a live op.
 void ee_won_hostop_bind(const EeWonHostOp *op, EeWonHostFn f, void *host);
 
-/// Binds the game's C++ side (`RustServerOp::HostCall`): as [`ee_won_hostop_bind`], and the calls that need no
+/// Binds the game's C++ side: as [`ee_won_hostop_bind`] (the game binds no function: the C++ objects' calls are
+/// answered over the core table, hostcore.rs; a driver's stand-in still sees them), and the calls that need no
 /// C++ object (the clock, `rand`, an address resolved, the op's file, the files it measures, the web proxy host) are
 /// answered in Rust (hostnative.rs) instead of sent; so are the op's own calls (hostbase.rs: its status and the
 /// like, `ServerOp`'s members, the tracker, its completions, references), on its own objects: `self_op` (the
@@ -17725,6 +18077,22 @@ EeWonHostOp *ee_won_httpget_new(const uint8_t *host,
 /// # Safety
 /// `url` holds `len` bytes.
 EeWonHostOp *ee_won_httpget_new_url(const uint8_t *url, size_t len);
+
+/// `RustServerOp::NewHttpGet(host, path)`'s Rust op: [`ee_won_httpget_new`], then the web proxy file read once per
+/// process from the WON directory (`HTTPGetOp::ReadProxyHostFile(false)` as its constructors ran it).
+///
+/// # Safety
+/// As [`ee_won_httpget_new`].
+EeWonHostOp *ee_won_httpget_open(const uint8_t *host,
+                                 size_t host_len,
+                                 const uint8_t *path,
+                                 size_t path_len);
+
+/// `RustServerOp::NewHttpGet(url)`'s Rust op, as [`ee_won_httpget_open`].
+///
+/// # Safety
+/// `url` holds `len` bytes.
+EeWonHostOp *ee_won_httpget_open_url(const uint8_t *url, size_t len);
 
 /// `DoGetAttrib` -> true with the size in `wh`; `thrown` the FileReader status the C++ throws (0: none).
 bool ee_won_img_attrib(EeWonImgKind kind,
@@ -19933,6 +20301,29 @@ void ee_won_lansocket_set_last_message_time(const EeWonLanSocket *l, int64_t t);
 /// again). For the `tests/won` drivers only: nothing in the game calls it.
 void ee_won_random_test_seed(int64_t seed);
 
+/// `ReadAuthSettings`: each value read to `sink` with its `EE_WON_REGAUTH_*` (none for a value left alone); the
+/// port to `*port` when read (`with_server`).
+///
+/// # Safety
+/// `port` is NULL or writable; `sink` receives the texts during the call.
+bool ee_won_regauth_read(bool with_server,
+                         uint16_t *port,
+                         void (*sink)(void *context,
+                                      int32_t which,
+                                      const uint8_t *bytes,
+                                      size_t length),
+                         void *context);
+
+/// `WriteAuthSettings`; `address` NULL for the three-value form.
+///
+/// # Safety
+/// Each text holds its length's bytes; `address` is NULL or a text.
+bool ee_won_regauth_write(const EeWonRegAuthText *address,
+                          uint16_t port,
+                          EeWonRegAuthText login,
+                          EeWonRegAuthText community,
+                          EeWonRegAuthText pw);
+
 /// `config_name`.
 ///
 /// # Safety
@@ -19971,12 +20362,115 @@ int32_t ee_won_regkey_binary_value(const uint8_t *text,
 /// `root_valid`.
 bool ee_won_regkey_root_valid(int32_t root);
 
+/// `RegKey(root, path, create, nonvolatile)`: a new key opened as `OpenNewKey`.
+///
+/// # Safety
+/// `path` holds `length` bytes.
+EeWonRegKey *ee_won_regkey_new(int32_t root, const uint8_t *path, size_t length);
+
+/// # Safety
+/// `key` is from `ee_won_regkey_new` (or NULL), not used afterwards.
+void ee_won_regkey_free(EeWonRegKey *key);
+
+/// One of RegKey's methods on `key` (`EE_WON_REGKEY_*`): `name` its string argument, `data` its text or bytes,
+/// `*num` its number in and out; results as the method returns them (bools as 0/1), texts to the sink.
+///
+/// # Safety
+/// `k` is a live key; `name` and `data` hold their lengths' bytes (NULL for none); `num` is NULL or writable;
+/// `sink` receives bytes during the call.
+int32_t ee_won_regkey_op(EeWonRegKey *k,
+                         int32_t which,
+                         const uint8_t *name,
+                         size_t name_length,
+                         const uint8_t *data,
+                         size_t data_length,
+                         int64_t *num,
+                         void (*sink)(void *context, const uint8_t *bytes, size_t length),
+                         void *context);
+
+/// `GetSubKey(name, child)` or (`delete`) `DeleteSubKey(child)`; the same key as both is the original's statements on
+/// one object.
+///
+/// # Safety
+/// `parent` and `child` are live keys (different ones); `name` holds `length` bytes.
+bool ee_won_regkey_child(EeWonRegKey *parent,
+                         EeWonRegKey *child,
+                         bool delete_,
+                         const uint8_t *name,
+                         size_t length);
+
 /// An op derived from `ServerRequestOp` on the base: the round 7/8 Rust op (`ee_won_reqop_*`'s constructors), taken.
 /// Its server context or address are set after the bind (`EE_WON_REQHOST_CONTEXT`, `EE_WON_REQHOST_ADDR`).
 ///
 /// # Safety
 /// `op` came from a Rust op constructor and is not used after.
 EeWonHostOp *ee_won_hostop_request(EeWonReqOp *op);
+
+/// `GetDirOp(context, path, flags)` with its data types (C strings).
+///
+/// # Safety
+/// `path` holds `path_len` characters of `wchar` bytes; `types` holds `type_count` C strings (or is NULL for 0).
+EeWonReqOp *ee_won_reqmake_get_dir(uint32_t flags,
+                                   const void *path,
+                                   size_t path_len,
+                                   uint32_t wchar,
+                                   const char *const *types,
+                                   int32_t type_count);
+
+/// `GetMultiDirOp(context, flags)` with each path (`GetMultiDirOp::AddPath`: the op's flags, no data types).
+///
+/// # Safety
+/// `paths` and `lengths` hold `count` entries; each path `lengths[i]` characters of `wchar` bytes.
+EeWonReqOp *ee_won_reqmake_get_multi_dir(uint32_t flags,
+                                         const void *const *paths,
+                                         const size_t *lengths,
+                                         int32_t count,
+                                         uint32_t wchar);
+
+/// `GetServiceOp(context, path, name, netaddr)` (`Init`'s flags: the services, their display names, data objects,
+/// names and addresses).
+///
+/// # Safety
+/// `path` and `name` hold their counts of `wchar`-byte characters; `addr` holds `addr_len` bytes.
+EeWonReqOp *ee_won_reqmake_get_service(const void *path,
+                                       size_t path_len,
+                                       const void *name,
+                                       size_t name_len,
+                                       uint32_t wchar,
+                                       const uint8_t *addr,
+                                       size_t addr_len);
+
+/// `GetAccountOp` with an empty profile.
+EeWonReqOp *ee_won_reqmake_get_account();
+
+/// `UpdateAccountOp(password, email)` with an empty profile.
+///
+/// # Safety
+/// `password` holds `password_len` characters of `wchar` bytes; `email` holds `email_len` bytes.
+EeWonReqOp *ee_won_reqmake_update_account(const void *password,
+                                          size_t password_len,
+                                          uint32_t wchar,
+                                          const uint8_t *email,
+                                          size_t email_len);
+
+/// `CreateAccountOp(user, password, email)` with the lobby's profile: newsletter 1 and the birth date.
+///
+/// # Safety
+/// `user` and `password` hold their counts of `wchar`-byte characters; `email` holds `email_len` bytes.
+EeWonReqOp *ee_won_reqmake_create_account(const void *user,
+                                          size_t user_len,
+                                          const void *password,
+                                          size_t password_len,
+                                          uint32_t wchar,
+                                          const uint8_t *email,
+                                          size_t email_len,
+                                          bool newsletter,
+                                          uint8_t month,
+                                          uint8_t day,
+                                          uint16_t year);
+
+/// A routing server's group list request with its flags.
+EeWonReqOp *ee_won_reqmake_group_list(uint8_t flags);
 
 /// Frees an op.
 ///
@@ -22474,6 +22968,50 @@ void ee_won_wonbtn_set_state(const EeWonWonButton *btn,
 /// # Safety
 /// Both buttons are live and distinct (`Duplicate` copies onto a new button).
 void ee_won_wonbtn_copy(const EeWonWonButton *btn, const EeWonWonButton *from, void *from_comp);
+
+/// `WONFile(path)`; `path` NULL for the working directory (`GetWorkingDirectory`: empty when it cannot be read).
+///
+/// # Safety
+/// `path` (when not NULL) holds `length` bytes.
+EeWonFile *ee_won_file_new(const uint8_t *path,
+                           size_t length);
+
+/// A copy (the C++ class's copy constructor).
+///
+/// # Safety
+/// `f` is a live file.
+EeWonFile *ee_won_file_clone(const EeWonFile *f);
+
+/// `*to = *from` (the copy assignment).
+///
+/// # Safety
+/// Both are live files.
+void ee_won_file_assign(EeWonFile *to, const EeWonFile *from);
+
+/// # Safety
+/// `f` is from `ee_won_file_new` / `_clone` (or NULL), not used afterwards.
+void ee_won_file_free(EeWonFile *f);
+
+/// One of the file's texts (`EE_WON_FILE_*`) to the sink, computed and cached as the getter did; 1, or 2 where the
+/// original threw.
+///
+/// # Safety
+/// `f` is a live file, `other` one for `EE_WON_FILE_RELATIVE`; `sink` receives the text during the call.
+int32_t ee_won_file_text(EeWonFile *f,
+                         int32_t which,
+                         const EeWonFile *other,
+                         EeWonByteSink sink,
+                         void *context);
+
+/// One of the file's methods (`EE_WON_FILE_*`): its number result (bools 0/1).
+///
+/// # Safety
+/// `f` is a live file; `data` holds `length` bytes (NULL for none).
+int64_t ee_won_file_op(EeWonFile *f,
+                       int32_t which,
+                       int64_t value,
+                       const uint8_t *data,
+                       size_t length);
 
 /// A new WrappedText's state (`Init()`).
 EeWonWrapText *ee_won_wrap_new();

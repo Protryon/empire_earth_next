@@ -20,7 +20,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONLobbyResource.h"
-#include "ee/wonapi/WONHttpMsg.h"
+#include "won_http_glue.h"
 #include "won_ftp_msg.h"
 #include "won_patch_msg.h"
 #include "won_version_msg.h"

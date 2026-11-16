@@ -1,7 +1,7 @@
 // WONMisc's HTTP (HTTPGetOp's dates, status and header lines, redirect, chunk length, request text, URL split and
 // up-to-date test; URL; HTTPCache's ids, file names and keep rule): the original's statements (copied from
 // HTTPGetOp.cpp, URL.cpp and HTTPCache.cpp before the port, the op's members on a stand-in) against
-// include/ee/wonapi/WONHttpMsg.h over ee_won's http module and the URL unit linked here, over generated input (the
+// tests/won/won_http_glue.h over ee_won's http module and the URL unit linked here, over generated input (the
 // original's CRT calls: gmtime, sscanf, atoi, toupper). The exit code is the number of failed checks.
 //
 // `--print N` prints N lines of each kind in the golden's format (rust/crates/ee_won/src/golden_http.txt): the
@@ -20,7 +20,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONURL.h"
-#include "ee/wonapi/WONHttpMsg.h"
+#include "won_http_glue.h"
 #include "rust/ee_won.h"
 
 using namespace WONAPI;

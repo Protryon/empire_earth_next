@@ -27,6 +27,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "won_msgtransform.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatSocket.h"
@@ -298,8 +299,8 @@ static void Sockets()
     // the transforms: send in order, receive in reverse, the first refusal stops the chain
     TagTransform* x = new TagTransform('x');
     TagTransform* y = new TagTransform('y');
-    b->AddMsgTransform(x);
-    b->AddMsgTransform(y);
+    AddMsgTransform(b, x);
+    AddMsgTransform(b, y);
     ByteBufferPtr m = Bytes("m", 1);
     LOG2("b transform send ", St(b->TransformSendMsg(m)), " " + Hex(m));
     LOG2("b transform recv ", St(b->TransformRecvMsg(m)), " " + Hex(m));
@@ -413,8 +414,8 @@ static void BlockingOps()
     LOG2("recvmsg short ", St(WonBlocking::RecvMsg(s, aGot, 50)), " " + Hex(aGot));
 
     // with transforms on both sides
-    c->AddMsgTransform(new TagTransform('t'));
-    s->AddMsgTransform(new TagTransform('t'));
+    AddMsgTransform(c, new TagTransform('t'));
+    AddMsgTransform(s, new TagTransform('t'));
     const unsigned char aMsgT[] = {6, 0, 0, 0, 'h', 'i'};
     Log("sendmsg transformed " + St(WonBlocking::SendMsg(c, Bytes(aMsgT, sizeof(aMsgT)), 5000)));
     LOG2("recvmsg transformed ", St(WonBlocking::RecvMsg(s, aGot, 5000)), " " + Hex(aGot));
@@ -901,11 +902,11 @@ static void MoreOps()
     Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes(aHuge, 4), 5000)));
     Log("recvmsg 256000 " + St(WonBlocking::RecvMsg(s, aBigGot, 5000)));
     const unsigned char aOk[] = {7, 0, 0, 0, 'o', 'k', '!'};
-    c->AddMsgTransform(new RefuseTransform);
+    AddMsgTransform(c, new RefuseTransform);
     SmartPtr<SendMsgOp> aRefused = new SendMsgOp(Bytes(aOk, sizeof(aOk)), c);
     LOG2("sendmsg refused ", N(aRefused->RunBlock(5000)), " " + St(aRefused->GetStatus()));
     c->RemoveAllMsgTransforms();
-    s->AddMsgTransform(new RefuseTransform);
+    AddMsgTransform(s, new RefuseTransform);
     Log("sendmsg " + St(WonBlocking::SendMsg(c, Bytes(aOk, sizeof(aOk)), 5000)));
     SmartPtr<RecvMsgOp> aRecvRefused = new RecvMsgOp(s);
     LOG2("recvmsg refused ", N(aRecvRefused->RunBlock(5000)), " " + St(aRecvRefused->GetStatus()) + " "

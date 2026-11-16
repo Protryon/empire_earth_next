@@ -1,5 +1,5 @@
 // GetVersionOp's and FindPatchOp's statements over ee_won's patch and miscops modules as their C++ applied them before
-// the ops became Rust's (verop.rs; moved here from include/ee/wonapi/WONMiscOpsMsg.h and WONPatchMsg.h): the
+// the ops became Rust's (verop.rs; moved here from tests/won/won_miscops_glue.h and WONPatchMsg.h): the
 // version filter set and test, and FindPatchOp's patch choice, for the drivers' original halves (won_misc_test,
 // won_miscops_test, won_verop_test).
 #pragma once
