@@ -155,9 +155,10 @@ mod tests {
     }
 
     #[test]
-    fn specs_hold_the_38_tables_with_consistent_fields() {
+    fn specs_hold_the_40_tables_with_consistent_fields() {
+        // 38 and main's dbrandommap and dbterraingraytextures (carried as text, read by nothing)
         let tables = crate::generated::specs_gen::TABLES;
-        assert_eq!(tables.len(), 38);
+        assert_eq!(tables.len(), 40);
         for t in tables {
             for f in t.record.fields {
                 let end = f.offset as usize + f.ty.size() * f.count as usize;
