@@ -12,7 +12,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONCRC16.h"
-#include "ee/wonapi/WONMD5.h"
+#include "won_md5.h"
 #include "ee/wonapi/WONMD5Digest.h"
 #include "ee/wonapi/WONBlowfish.h"
 #include "ee/wonapi/WONElGamal.h"

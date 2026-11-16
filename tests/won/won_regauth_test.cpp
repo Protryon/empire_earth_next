@@ -14,7 +14,7 @@
 #include <set>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
-#include "ee/wonapi/WONRegAuth.h"
+#include "won_regauth.h"
 
 using namespace WONAPI;
 

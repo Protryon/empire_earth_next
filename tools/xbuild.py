@@ -660,7 +660,7 @@ WON_TESTS = {
     # golden_getcert.txt)
     "won_cert_test": [],
     # WONMisc's HTTP (HTTPGetOp's dates, lines, request and URL split, URL, HTTPCache's ids and names), the
-    # original's statements against include/ee/wonapi/WONHttpMsg.h over ee_won's http module and the URL unit
+    # original's statements against tests/won/won_http_glue.h over ee_won's http module and the URL unit
     # (golden: rust/crates/ee_won/src/golden_http.txt)
     "won_http_test": [WON_SRC / "WONMisc" / "URL.cpp",
                       WON_SRC / "WONCommon" / "StringUtil.cpp"],
@@ -722,7 +722,7 @@ WON_TESTS = {
     # same stand-ins (golden: rust/crates/ee_won/src/golden_httpengine.txt)
     "won_httpengine_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # FindPatchOp's patch choice, DetectFirewallOp's request, reply and wait, RegAuth's password and port, the
-    # original's statements against include/ee/wonapi/WONMiscOpsMsg.h over ee_won's miscops module
+    # original's statements against tests/won/won_miscops_glue.h over ee_won's miscops module
     # (golden: rust/crates/ee_won/src/golden_miscops.txt)
     "won_miscops_test": [WON_SRC / "WONCrypt" / "Blowfish.cpp"],
     # HTTPCache's index file (cachemap.dat read and written on the Rust file layer, the kept entries and the deleted

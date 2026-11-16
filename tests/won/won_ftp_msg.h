@@ -5,7 +5,7 @@
 // own (the op is the Rust ftpop.rs since round 9; moved here from include/ee/wonapi/WONFtpMsg.h).
 #pragma once
 #include <string>
-#include "ee/wonapi/WONHttpMsg.h"
+#include "won_http_glue.h"
 #include "rust/ee_won.h"
 
 namespace WONAPI {

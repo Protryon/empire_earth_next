@@ -17,7 +17,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONMD5Digest.h"
-#include "ee/wonapi/WONMD5.h"
+#include "won_md5.h"
 #include "platform/PlatFile.h"
 #include "rust/ee_won.h"
 

@@ -11,8 +11,11 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONURL.h"
-#include "ee/wonapi/WONHttpMsg.h"
 namespace WONAPI {
+static void HttpStringSink(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inBytes), inLength);
+}
 // The results of ee_won's URL functions (http.rs) into a URL's members
 namespace {
 struct UrlOut {

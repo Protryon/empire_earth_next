@@ -1,7 +1,7 @@
 // FindPatchOp's patch choice (GetPatchList, GetValidPatchList, GetHighestPatchList and DoFinish's patch ids and 4-byte
 // data) and RegAuth's password cipher and port default (DetectFirewallOp is won_fwop_test's): the original's
 // statements (copied from FindPatchOp.cpp and RegAuth.cpp before the
-// port, over stand-ins) against include/ee/wonapi/WONMiscOpsMsg.h over ee_won's miscops module, on generated input.
+// port, over stand-ins) against tests/won/won_miscops_glue.h over ee_won's miscops module, on generated input.
 // The version compares log their calls, so their order and count are compared too.
 //
 // `--print N` prints N patch-list cases in the golden's format (rust/crates/ee_won/src/golden_miscops.txt; the Rust
@@ -19,8 +19,8 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
-#include "ee/wonapi/WONLittleEndian.h"
-#include "ee/wonapi/WONMiscOpsMsg.h"
+#include "won_little_endian.h"
+#include "won_miscops_glue.h"
 #include "won_version_msg.h"
 #include "rust/ee_won.h"
 
