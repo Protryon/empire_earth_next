@@ -648,7 +648,7 @@ WON_TESTS = {
     # against ee_won's authctx and authlogin modules (golden: rust/crates/ee_won/src/golden_authlogin.txt)
     "won_auth_test": [],
     # the directory server's entity replies (golden: rust/crates/ee_won/src/golden_dir.txt)
-    "won_dir_test": [*[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
+    "won_dir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
                      WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # the directory server's ops (every request's bytes, the status replies, the multi-directory accounting, the
     # find's parser choice, the listing's grouping), the original's statements against ee_won's dirops module
@@ -670,8 +670,7 @@ WON_TESTS = {
     # WONMisc's HTTP (HTTPGetOp's dates, lines, request and URL split, URL, HTTPCache's ids and names), the
     # original's statements against tests/won/won_http_glue.h over ee_won's http module and the URL unit
     # (golden: rust/crates/ee_won/src/golden_http.txt)
-    "won_http_test": [WON_SRC / "WONMisc" / "URL.cpp",
-                      WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    "won_http_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # WONMisc's FTP and patch code (FTPGetOp's URL, commands and reply steps; the version and patch records; the
     # version filter; the patch ops' requests and replies), the original's statements against
     # tests/won/won_ftp_msg.h and won_patch_msg.h over ee_won's ftp and patch modules
@@ -692,7 +691,7 @@ WON_TESTS = {
     # WONDir's list, multi-list, alias, find and get-service ops and WONDB's get and update account ops as whole ops
     # (requests, replies, Reset, the results), the original's statements against the Rust ops (ee_won reqdir.rs)
     # through their C ABI (golden: rust/crates/ee_won/src/golden_reqdir.txt)
-    "won_reqdir_test": [WON_SRC / "WONDir" / "DirEntity.cpp", WON_SRC / "WONSocket" / "IPAddr.cpp",
+    "won_reqdir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp", WON_SRC / "WONSocket" / "IPAddr.cpp",
                         ROOT / "tests" / "won" / "won_profiledata.cpp"],
     # WONDB's create account op and WONRouting's group list request op as whole ops (requests, replies, Reset, the
     # keys, the group map read again), the original's statements against the Rust ops (ee_won reqlast.rs) through
@@ -701,7 +700,7 @@ WON_TESTS = {
     # WONMisc's GetVersionOp and FindPatchOp as whole ops (the directory request, the versions and patches read from
     # its listing, the version checks and patch lists), the original's statements against the Rust ops (ee_won
     # verop.rs) through their C ABI (golden: rust/crates/ee_won/src/golden_verop.txt)
-    "won_verop_test": [WON_SRC / "WONDir" / "DirEntity.cpp", WON_SRC / "WONCommon" / "StringUtil.cpp",
+    "won_verop_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp", WON_SRC / "WONCommon" / "StringUtil.cpp",
                        WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # the Rust op base and the ops on it (MultiPingOp, FilePushOp, FTPGetOp): the original's statements against the
     # Rust ops (ee_won hostop.rs, multiping.rs, filepush.rs, ftpop.rs) through the base's one call over a stand-in
@@ -773,7 +772,7 @@ WON_TESTS["won_userstatus_test"] = WON_TESTS["won_ops_test"]
 WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
                                   WON_SRC / "WONServer" / "ServerOp.cpp",
                                   WON_SRC / "WONCommon" / "StringUtil.cpp",
-                                  *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
+                                  WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
                                   WON_SRC / "WONAuth" / "AuthContext.cpp"]
 # RustServerOp's certificate and auth context calls and the AuthContext class, through the op's own call path with
 # real certificates (golden: rust/crates/ee_won/src/golden_authhost.txt, recorded over ServerOp.cpp's HostCall and
@@ -810,6 +809,9 @@ WON_TESTS["won_httpsession_test"] = WON_TESTS["won_serverop_test"]
 # rust/crates/ee_won/src/golden_gamespy.txt, recorded over GameSpySupport.cpp, gqueryreporting.c and nonport.c before
 # they moved into ee_won gamespy.rs in net round 28); the same units as won_serverop_test (the service lookup's op)
 WON_TESTS["won_gamespy_test"] = WON_TESTS["won_serverop_test"]
+# CDKey's registry and file storage (ee_won cdkeystore.rs) against the original statements of AuthContext.cpp,
+# run against run on a scratch config.yaml; the same units as won_serverop_test
+WON_TESTS["won_cdkeystore_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]

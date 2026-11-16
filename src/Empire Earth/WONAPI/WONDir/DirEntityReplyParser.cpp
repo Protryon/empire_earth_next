@@ -73,6 +73,22 @@ static DirEntityPtr DirMakeEntity(const EeWonDirEntity* inEntity)
     return anEntity;
 }
 
+// an empty entity: no type, times, CRC or addresses (DirEntity.cpp is merged here: net round 29)
+DirEntity::DirEntity()
+    : mType(0), mLifespan(0), mCRC(0), mCreated(0), mCreateIP(0), mCreateId(0), mTouched(0), mTouchIP(0), mTouchId(0),
+      mReqUnique(false)
+{
+}
+DirEntity::~DirEntity() {}
+// Returns the service's network address as an IP address and port (empty when shorter than 6 bytes; 2f0400)
+IPAddr DirEntity::GetNetAddrAsIP() const
+{
+    IPAddr result;
+    if (this->mNetAddr.get() != NULL && this->mNetAddr->length() >= 6)
+        result.SetSixByte(this->mNetAddr->data());
+    return result;
+}
+
 // No original address identified: the parsers' entity sink, for the Rust ops' results
 // Appends a DirEntity made of what ee_won read to a DirEntityList
 void DirEntityReplyParser::TakeEntity(void* inList, const EeWonDirEntity* inEntity)
