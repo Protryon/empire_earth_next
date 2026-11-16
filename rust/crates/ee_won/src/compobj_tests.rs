@@ -4,6 +4,7 @@
 //! tests of the corners.
 
 use super::*;
+use crate::compmem::{ee_won_comp_members_table, EeWonCompMembers};
 use crate::guihost::EeWonGuiOp;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
@@ -18,14 +19,11 @@ struct Extra {
     dont: bool,
 }
 
+/// A component: its members' block first (the table compobj reads them through), then the world's own state.
+#[repr(C)]
 #[derive(Clone, Debug, Default)]
 struct Cmp {
-    parent: isize,
-    r: EeWonRect,
-    bits: i32,
-    ctrl: i32,
-    inv: i8,
-    timer: i8,
+    m: EeWonCompMembers,
     modal: bool,
     extra: Option<Extra>,
 }
@@ -90,44 +88,13 @@ unsafe extern "C" fn host(_me: *mut c_void, op: EeWonGuiOp, k: isize, b: isize, 
     let k: EeWonComp = unsafe { std::mem::transmute(k as u32) };
     use EeWonComp as K;
     match k {
-        K::Bits => with(|w| w.comps[idx(b)].bits as isize),
-        K::SetBits => with(|w| {
-            w.comps[idx(b)].bits = c as i32;
-            0
-        }),
-        K::Invalid => with(|w| w.comps[idx(b)].inv as isize),
-        K::SetInvalid => with(|w| {
-            w.comps[idx(b)].inv = c as i8;
-            0
-        }),
-        K::Timer => with(|w| w.comps[idx(b)].timer as isize),
-        K::SetTimer => with(|w| {
-            w.comps[idx(b)].timer = c as i8;
-            0
-        }),
-        K::ControlId => with(|w| w.comps[idx(b)].ctrl as isize),
-        K::Bounds => {
-            let r = with(|w| w.comps[idx(b)].r);
-            // SAFETY: compobj's rectangle
-            unsafe { *(c as *mut EeWonRect) = r };
-            0
-        }
-        K::SetXY => with(|w| {
-            w.comps[idx(b)].r.x = c as i32;
-            w.comps[idx(b)].r.y = d as i32;
-            0
-        }),
-        K::SetWH => with(|w| {
-            w.comps[idx(b)].r.height = d as i32;
-            w.comps[idx(b)].r.width = c as i32;
-            0
-        }),
-        K::Parent => with(|w| w.comps[idx(b)].parent),
-        K::HasExtra => with(|w| w.comps[idx(b)].extra.is_some() as isize),
         K::AllocExtra => {
             if with(|w| w.comps[idx(b)].extra.is_none()) {
                 t(format!("alloc extra {}", b));
-                with(|w| w.comps[idx(b)].extra = Some(Extra::default()));
+                with(|w| {
+                    w.comps[idx(b)].extra = Some(Extra::default());
+                    w.comps[idx(b)].m.extra = 1;
+                });
             }
             0
         }
@@ -444,12 +411,16 @@ fn build(lines: &[&str]) -> World {
     for l in &lines[1..=n] {
         let v = nums(&l[2..]);
         let mut c = Cmp {
-            parent: if v[0] < 0 { 0 } else { v[0] as isize + 1 },
-            r: EeWonRect::new(v[1] as i32, v[2] as i32, v[3] as i32, v[4] as i32),
-            bits: v[5] as i32,
-            ctrl: v[6] as i32,
-            inv: v[7] as i8,
-            timer: v[8] as i8,
+            m: EeWonCompMembers {
+                parent: if v[0] < 0 { 0 } else { v[0] as isize + 1 },
+                bounds: EeWonRect::new(v[1] as i32, v[2] as i32, v[3] as i32, v[4] as i32),
+                bits: v[5] as i32,
+                control_id: v[6] as i32,
+                invalid: v[7] as i8,
+                timer: v[8] as i8,
+                extra: (v[10] != 0) as isize,
+                ..Default::default()
+            },
             modal: v[9] != 0,
             extra: None,
         };
@@ -496,13 +467,13 @@ fn dump() -> String {
             out.push(format!(
                 "{}:{},{},{},{},{:x},{},{},{}",
                 i + 1,
-                c.r.x,
-                c.r.y,
-                c.r.width,
-                c.r.height,
-                c.bits as u32,
-                c.inv,
-                c.timer,
+                c.m.bounds.x,
+                c.m.bounds.y,
+                c.m.bounds.width,
+                c.m.bounds.height,
+                c.m.bits as u32,
+                c.m.invalid,
+                c.m.timer,
                 x
             ));
         }
@@ -585,7 +556,7 @@ fn run(k: EeWonCompCall, c: isize, a: i32, b: i32, cc: i32, dd: i32) -> String {
             extra = format!(" {} {} {} {}", rr.x, rr.y, rr.width, rr.height);
         }
         C::AddedToParent => {
-            if with(|w| w.comps[idx(c)].parent) != 0 {
+            if with(|w| w.comps[idx(c)].m.parent) != 0 {
                 p.added_to_parent(c);
             }
         }
@@ -660,7 +631,7 @@ fn golden_replay() {
             j += 1;
         }
         let w = build(&lines[start..j]);
-        W.with(|x| *x.borrow_mut() = w);
+        install(w);
         i = j;
         while i < lines.len() && lines[i].starts_with("O ") {
             let v = nums(&lines[i][2..]);
@@ -689,23 +660,40 @@ fn golden_replay() {
 }
 
 fn one(comps: Vec<Cmp>) {
-    W.with(|x| *x.borrow_mut() = World { comps, ..Default::default() });
+    install(World { comps, ..Default::default() });
+}
+
+/// The world installed, its components' blocks the table compobj reads (the Vec is not grown after).
+fn install(w: World) {
+    W.with(|x| {
+        let mut x = x.borrow_mut();
+        *x = w;
+        let n = x.comps.len() as isize;
+        ee_won_comp_members_table(x.comps.as_mut_ptr() as *mut EeWonCompMembers, 1, n, std::mem::size_of::<Cmp>());
+    });
+}
+
+fn cmp(m: EeWonCompMembers) -> Cmp {
+    Cmp { m, ..Default::default() }
 }
 
 #[test]
 fn request_timer_keeps_the_other_bits() {
-    one(vec![Cmp { timer: 1, ..Default::default() }, Cmp { parent: 1, timer: -2, ..Default::default() }]);
+    one(vec![
+        cmp(EeWonCompMembers { timer: 1, ..Default::default() }),
+        cmp(EeWonCompMembers { parent: 1, timer: -2, ..Default::default() }),
+    ]);
     let p = comp();
     p.request_timer(1, true);
     p.request_timer(2, false);
     with(|w| {
-        assert_eq!(w.comps[0].timer, 3);
-        assert_eq!(w.comps[1].timer, -4);
+        assert_eq!(w.comps[0].m.timer, 3);
+        assert_eq!(w.comps[1].m.timer, -4);
         // no parent for 1; 2's need did not change (-2 and -4 are both non-zero)
         assert!(w.trace.is_empty());
     });
     p.request_timer(2, true);
-    with(|w| assert_eq!(w.comps[1].timer, -2));
+    with(|w| assert_eq!(w.comps[1].m.timer, -2));
 }
 
 #[test]
@@ -727,7 +715,11 @@ fn deliver_to_a_closed_window_deletes_an_unheld_event() {
 #[test]
 fn hover_closes_the_tip_after_the_display_time() {
     assert_eq!(EE_WON_COMP_TIP_START.wrapping_add(EE_WON_COMP_TIP_END), 5500);
-    one(vec![Cmp { extra: Some(Extra { tip: 1, dont: true, ..Default::default() }), ..Default::default() }]);
+    one(vec![Cmp {
+        m: EeWonCompMembers { extra: 1, ..Default::default() },
+        extra: Some(Extra { tip: 1, dont: true, ..Default::default() }),
+        ..Default::default()
+    }]);
     let p = comp();
     p.mouse_hover(1, 5499);
     with(|w| assert!(w.trace.is_empty()));
@@ -737,11 +729,11 @@ fn hover_closes_the_tip_after_the_display_time() {
 
 #[test]
 fn set_size_clamps_and_skips_the_same_size() {
-    one(vec![Cmp { r: EeWonRect::new(0, 0, 5, 5), ..Default::default() }]);
+    one(vec![cmp(EeWonCompMembers { bounds: EeWonRect::new(0, 0, 5, 5), ..Default::default() })]);
     let p = comp();
     p.set_size(1, -3, 5);
     with(|w| {
-        assert_eq!((w.comps[0].r.width, w.comps[0].r.height), (0, 5));
+        assert_eq!((w.comps[0].m.bounds.width, w.comps[0].m.bounds.height), (0, 5));
         assert_eq!(w.trace, vec!["1 sizechanged"]);
         w.trace.clear();
     });
@@ -751,7 +743,7 @@ fn set_size_clamps_and_skips_the_same_size() {
 
 #[test]
 fn contains_excludes_the_right_and_bottom_edges() {
-    one(vec![Cmp { r: EeWonRect::new(10, 20, 5, 4), ..Default::default() }]);
+    one(vec![cmp(EeWonCompMembers { bounds: EeWonRect::new(10, 20, 5, 4), ..Default::default() })]);
     let p = comp();
     assert!(p.contains(1, 10, 20));
     assert!(p.contains(1, 14, 23));

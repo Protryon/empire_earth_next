@@ -81,10 +81,6 @@ unsafe extern "C" fn replay_host(_comp: *mut c_void, op: Op, a: isize, b: isize,
                 }
             }) as isize
         }
-        Op::ChildLeft => return with(|r| r.comps.get(&a).map_or(0, |k| k.x)) as isize,
-        Op::ChildTop => return with(|r| r.comps.get(&a).map_or(0, |k| k.y)) as isize,
-        Op::ChildWidth => return with(|r| r.comps.get(&a).map_or(0, |k| k.w)) as isize,
-        Op::ChildHeight => return with(|r| r.comps.get(&a).map_or(0, |k| k.h)) as isize,
         Op::ChildIsMine => return with(|r| r.comps.get(&a).is_some_and(|k| k.mine)) as isize,
         Op::IsDisabled => return with(|r| r.disabled) as isize,
         Op::MouseChild => return with(|r| r.mouse_child),
@@ -160,6 +156,10 @@ fn replay(lines: &[String]) -> Option<String> {
         (start[1].parse().unwrap_or(0), start[2].parse().unwrap_or(0), start.get(3) == Some(&"1"));
     REPLAY.with(|r| {
         *r.borrow_mut() = Some(Replay { lines: lines.to_vec(), at: 1, width: w, height: h, ..Replay::default() })
+    });
+    // the children's bounds, read by the Rust from compmem's blocks
+    let _w = crate::compmem::filled_world(|c| {
+        with(|r| r.comps.get(&c).map_or_else(Default::default, |k| crate::compmem::block(k.x, k.y, k.w, k.h)))
     });
     let holder = Box::new(EeWonScrollbar::new(0x54 as *mut c_void, Some(replay_host), v));
     let t: &EeWonScrollbar = &holder;

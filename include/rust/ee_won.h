@@ -263,6 +263,9 @@ constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 /// The sink's `which`: the text.
 constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
 
+/// The block's offset in a C++ `Component` (RefCount's vtable pointer and its 32-bit count, padded).
+constexpr static const size_t EE_WON_COMP_MEMBERS_AT = 16;
+
 /// `ComponentFlag_*` (WONComponentFlags.h; the C++ asserts them).
 constexpr static const int32_t EE_WON_COMP_FLAG_INVISIBLE = 1;
 
@@ -2669,13 +2672,13 @@ enum class EeWonGuiOp : uint32_t {
   ChildSetPosSize,
   /// `a->IsVisible()` (0 or 1).
   ChildIsVisible,
-  /// `a->Width()`.
+  /// `a->Width()` (multiobj, splitobj; the others read compmem's block).
   ChildWidth,
-  /// `a->Height()`.
+  /// `a->Height()` (splitobj; the others read compmem's block).
   ChildHeight,
-  /// `a->Left()`.
+  /// `a->Left()` (multiobj, splitobj; the others read compmem's block).
   ChildLeft,
-  /// `a->Top()`.
+  /// `a->Top()` (splitobj; the others read compmem's block).
   ChildTop,
   /// `a->AddRef()` (a `SmartPtr` the Rust object keeps).
   ChildHold,
@@ -2826,7 +2829,7 @@ enum class EeWonGuiOp : uint32_t {
   MultiOf,
   /// `RemoveChild(a)`.
   RemoveChild,
-  /// `a->mControlId`.
+  /// `a->mControlId` (multiobj; the others read compmem's block).
   ChildControlId,
   /// `a->mControlId = b`.
   ChildSetControlId,
@@ -2977,19 +2980,19 @@ enum class EeWonGuiOp : uint32_t {
   CtCursorRelease,
   /// `((Graphics*)a)->mColorScheme = (ColorScheme*)b`.
   CtSetScheme,
-  /// `a->mComponentBits`.
+  /// `a->mComponentBits` (the Rust reads compmem's block: only the drivers' original statements send it).
   CtBits = 430,
-  /// `a->mParent`.
+  /// `a->mParent` (the Rust reads compmem's block: only the drivers' original statements send it).
   CtParentOf,
-  /// `a->mTimerFlags`.
+  /// `a->mTimerFlags` (the Rust reads compmem's block: only the drivers' original statements send it).
   CtTimerFlags,
-  /// `a->mInvalidState`.
+  /// `a->mInvalidState` (the Rust reads compmem's block: only the drivers' original statements send it).
   CtInvalidState,
-  /// `a->mFocusId`.
+  /// `a->mFocusId` (the Rust reads compmem's block: only the drivers' original statements send it).
   CtFocusId,
-  /// `a->Contains(b, c)` (0 or 1).
+  /// `a->Contains(b, c)` (0 or 1) (the Rust reads compmem's block: only the drivers' original statements send it).
   CtContains,
-  /// `a->Intersects((Component*)b)` (0 or 1).
+  /// `a->Intersects((Component*)b)` (0 or 1) (the Rust reads compmem's block: only the drivers' original statements send it).
   CtIntersects,
   /// `a->GetGrabBG()`.
   CtGrabBG,
@@ -3140,7 +3143,7 @@ enum class EeWonGuiOp : uint32_t {
   BtnHasClickSound,
   /// `mClickSound->Play()`.
   BtnPlayClick,
-  /// `a->mParent` (a `Component*`; a pure read).
+  /// `a->mParent` (a `Component*`; a pure read) (the Rust reads compmem's block: only the drivers' original statements send it).
   LayParentOf = 560,
   /// `a->SetSizeAtLeast(b, c)`.
   LaySetSizeAtLeast,
@@ -4629,6 +4632,75 @@ enum class EeWonStageRoute {
   LocalAndNet = 3,
 };
 
+/// A virtual the Rust calls on the C++ object (`args` its ints, `p` its object).
+enum class EeWonGfxHook {
+  ClearClipRect,
+  /// (x, y, width, height)
+  SetClipRect,
+  /// (x, y, colour)
+  SetPixel,
+  SetColor,
+  /// (x1, y1, x2, y2)
+  DrawLine,
+  /// (x, y, width, height): the virtual (the base's is `GfxCall::BaseRect`)
+  DrawRect,
+  FillRect,
+  DrawDottedRect,
+  DrawEllipse,
+  FillEllipse,
+  /// (x, y, width, height, start, arc)
+  DrawArc,
+  /// (x, y, width, height, amount)
+  FillRectBlend,
+  /// `p` the Image: `DrawEntire(context, x, y)`
+  ImageEntire,
+  /// `p` the Image: `Draw(context, x, y, left, top, width, height)`
+  ImagePart,
+  /// `p` the GUIString: the font's `DrawString(context, text, offset, length, x, y)`
+  String,
+};
+
+/// The method `ee_won_gfx_call` runs (`a` its ints, `p` its object).
+enum class EeWonGfxCall {
+  /// `SetColor(a0)`
+  SetColor,
+  /// `GetStandardColor(a0)`: the scheme's colour, 0 without a scheme
+  StandardColor,
+  /// `SetSysColor(a0)`
+  SetSysColor,
+  /// `Translate(a0, a1)`
+  Translate,
+  /// `SetPixel(x, y, colour)`
+  SetPixel,
+  /// `DrawImage(p, x, y)`
+  DrawImage,
+  /// `DrawImage(p, x, y, left, top, width, height)`
+  DrawImagePart,
+  DrawLine,
+  DrawRect,
+  FillRect,
+  /// `FillRectBlend(x, y, width, height, amount)`
+  FillRectBlend,
+  DrawDottedRect,
+  DrawEllipse,
+  FillEllipse,
+  DrawArc,
+  /// `DrawString(p, x, y)` with `a2` the text's length (the whole text)
+  DrawString,
+  /// `DrawString(p, offset, length, x, y)`
+  DrawStringPart,
+  PerformClip,
+  /// `PushClipRect(x, y, width, height)`
+  PushClip,
+  PopClip,
+  /// Graphics' own `DrawRectHook`: four lines to the far edges
+  BaseRect,
+  /// Graphics' own `DrawDottedRectHook`: every other pixel of the four edges in the current colour
+  BaseDottedRect,
+  /// Graphics' own `FillRectHook`: a line per row
+  BaseFillRect,
+};
+
 /// The inward calls (the C++ shell's methods; `a` the component, `b` the Graphics where they take them).
 enum class EeWonGrabCall : uint32_t {
   /// `Clear()`.
@@ -4705,6 +4777,41 @@ enum class EeWonGuiStringOp {
   FindNoCase,
   FindOneOf,
   RFind,
+};
+
+/// The edit `ee_won_gstr` runs (each the original's method; `a`, `b`, `c` its arguments, `other` its other string
+/// or its units).
+enum class EeWonGstrOp {
+  /// `GUIStringData(unsigned short a)`: room for `a` units, empty.
+  NewCapacity,
+  /// The copy constructor: `other`'s text and terminator.
+  NewCopy,
+  /// `GUIStringData(other, a, b)`: `b` units of `other` from `a`.
+  NewSub,
+  /// `Reserve(a, b != 0)`.
+  Reserve,
+  /// `resize(a, b != 0)`.
+  Resize,
+  /// `AssignWStr(other, a)`: `a` units at `other` (wchar_t*).
+  AssignUnits,
+  /// `AssignStr(other, a)`: `a` bytes of UTF-8 at `other` (char*).
+  AssignNarrow,
+  /// `Fill(a, b, c)`: units `b..b+c` set to `a`, the length `b + c`.
+  Fill,
+  /// `assign(other, a, b)`.
+  Assign,
+  /// `append(a)`: one unit.
+  AppendUnit,
+  /// `append(other, a, b)`.
+  Append,
+  /// `erase(a, b)`.
+  Erase,
+  /// `insert(a, other)`.
+  Insert,
+  /// `setAt(a, b)`: answers `b`.
+  SetAt,
+  /// The destructor: the buffer freed.
+  Free,
 };
 
 /// The decoders.
@@ -5158,6 +5265,75 @@ enum class EeWonLobbyOp : uint32_t {
   /// JoinGame's end: the host socket's completions and receive op, the network timer, the game's clients,
   /// JoinedRoomEvent.
   LanJoinArm,
+  /// `((RefCount*)a)->AddRef()` (a socket's, a timer's).
+  RefHold = 400,
+  RefRelease,
+  /// `((QueueSocket*)a)->Kill()`.
+  LanSocketKill,
+  /// `((AsyncOp*)a)->Kill(true)`.
+  LanTimerKill,
+  /// a new AsyncOp with the network (`c` 0) or discovery (1) timer's completion; held.
+  LanNewTimer,
+  /// `((AsyncOp*)a)->RunAsTimer(c)`.
+  LanRunTimer,
+  /// `LobbyGameDisconnected(true)`.
+  LanGameDisconnected,
+  /// `new SyncGameListEvent(a)` broadcast.
+  LanSyncGameList,
+  /// `new GameChangedEvent(a, c)` broadcast.
+  LanGameChanged,
+  /// `new LobbyLanSocket`; held.
+  LanNewSocket,
+  /// HostGame's listen socket `a` bound to the lobby port and listening (an error dialog and 0 when not), its
+  /// accept completion and op; 1.
+  LanListen,
+  /// `new JoinedRoomEvent("", a's name, 10, c, a's clients)` broadcast.
+  LanJoinedRoom,
+  /// StartDiscovery's: `*(EeWonIpAddr*)a` the broadcast address on the LAN broadcast port, a new QueueSocket(1)
+  /// (held, returned) bound to it with address reuse, its bind status at `*(intptr_t*)b`.
+  LanNewDiscovery,
+  /// the discovery socket `a`'s receive completion and op.
+  LanArmDiscovery,
+  /// the game `a`'s summary (`WriteSummary`), taken.
+  LanSummaryTake,
+  /// a SendBytesToOp of the bytes `c`/`d` to the address `(const EeWonIpAddr*)b` queued on the socket `a`.
+  LanSendTo,
+  /// the receive op `a` is the socket `b`'s and succeeded.
+  LanOpOnSocket,
+  /// a PeerAuthOp (`c`) or ConnectOp to the game `a` on the socket `b` run with status: whether it succeeded.
+  LanConnectTo,
+  /// a RecvMsgOp on the socket `a` run with status: -1 failed, 0 no message, 1 its bytes taken into `b`.
+  LanRecvReply,
+  /// the socket `a`'s close and receive completions and its receive op.
+  LanArmSocket,
+  /// the password dialog: Reset, LobbyDoDialog.
+  LanPasswordDialog,
+  /// the password dialog's password, taken.
+  LanPasswordTake,
+  /// `LobbyPingGame(a, false)`.
+  LanPingGame,
+  /// `LobbySetCurrentUser(NULL)`.
+  LanNoCurrentUser,
+  /// `LobbyGetDirectConnectCount()`.
+  LanDirectCount,
+  /// `*(EeWonIpAddr*)a = LobbyGetDirectConnectAddressAt(c)`.
+  LanDirectAddressAt,
+  /// `a->SetName(LobbyGetDirectConnectNameAt(c))`.
+  LanDirectNameAt,
+  /// `LobbyRemoveDirectConnect(a's address)`.
+  LanRemoveSavedDirect,
+  /// AddDirectConnect's dialog and address (its DNS check): 1 with the address at `*(EeWonIpAddr*)a`, 0 when
+  /// cancelled or unresolved.
+  LanDirectAsk,
+  /// AddDirectConnect's name (the address when empty) set on the game `a` and saved with the address `b`.
+  LanDirectSave,
+  /// the summary read from the receive op `a`'s packet past its head into the game `b` (`ReadSummary`): its
+  /// result, or Threw.
+  LanReadSummary,
+  /// the receive op `a`'s sender address copied to `*(EeWonIpAddr*)b`.
+  LanRecvFromAddr,
+  /// a ClientOptionsPopup for `a` (this player's client `b`, room spec `c`).
+  LanClientOptions,
 };
 
 /// The inward calls (LanLogic's virtual slots and its completions). `a`, `b` pointers, `c`, `d` integers; a
@@ -5186,6 +5362,12 @@ enum class EeWonLanCall : uint32_t {
   DiscoveryTimer,
   DiscoveryRecv,
   Accept,
+  /// `GetMyClient()`.
+  MyClient,
+  /// `GetClientList()`.
+  ClientList,
+  /// `AddPendingSocket(a)` (a peer-authenticated socket the shell accepted).
+  AddPending,
 };
 
 /// The instruction classes.
@@ -9828,16 +10010,9 @@ enum class EeWonSkinLay : uint32_t {
   Field,
   /// `mHeaderHeight = b`.
   SetHeaderHeight,
-  /// `((Component*)b)->Width()`.
-  Width,
-  Height,
-  Left,
-  Top,
-  Right,
-  /// `IsVisible()` (0 or 1).
-  Visible,
-  /// `((Component*)b)->SetPosSize(r[0], r[1], r[2], r[3])` with `r` the four ints at `c`.
-  SetPosSize,
+  /// `((Component*)b)->SetPosSize(r[0], r[1], r[2], r[3])` with `r` the four ints at `c` (the bounds and
+  /// visibility the layouts read are compmem's block).
+  SetPosSize = 10,
   /// `((Component*)b)->GetDesiredSize(wh[0], wh[1])` with `wh` the two ints at `c`.
   DesiredSize,
   /// `((InputBox*)b)->SetLeftPad(c)`.
@@ -9932,32 +10107,8 @@ enum class EeWonGrab : uint32_t {
 
 /// The host's calls (`EeWonGuiOp::Comp`; `b` the receiver, `c`, `d` the arguments; a component as `Component*`).
 enum class EeWonComp : uint32_t {
-  /// `mComponentBits`.
-  Bits = 1,
-  /// `mComponentBits = c`.
-  SetBits,
-  /// `mInvalidState` (a `char`).
-  Invalid,
-  /// `mInvalidState = c`.
-  SetInvalid,
-  /// `mTimerFlags` (a `char`).
-  Timer,
-  /// `mTimerFlags = c`.
-  SetTimer,
-  /// `mControlId`.
-  ControlId,
-  /// `mBounds` into the `EeWonRect` at `c`.
-  Bounds,
-  /// `mBounds.x = c; mBounds.y = d`.
-  SetXY,
-  /// `mBounds.height = d; mBounds.width = c`.
-  SetWH,
-  /// `mParent` (as a `Component*`, 0 for none).
-  Parent,
-  /// `mExtraStuff != NULL` (0 or 1).
-  HasExtra,
   /// `AllocateExtraStuff()`.
-  AllocExtra,
+  AllocExtra = 1,
   /// a member of `mExtraStuff` (`c` an `EeWonCompExtra`; a pointer, or the tip flag 0 or 1).
   Extra,
   /// a member of `mExtraStuff` (`c` an `EeWonCompExtra`) = `d`; `GrabBG`: `new BackgroundGrabber`.
@@ -10211,8 +10362,14 @@ struct EeWonEeXferSend;
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
 
+/// The window's fonts.
+struct EeWonFontMap;
+
 /// `GetCertOp`'s state: the members and the session key.
 struct EeWonGetCert;
+
+/// The clip stack (`mClipStack`).
+struct EeWonGfx;
 
 /// The Rust BackgroundGrabber.
 struct EeWonGrabber;
@@ -10656,6 +10813,37 @@ struct EeWonChatOutcome {
 
 /// Receives a text the parse set (`which`: `EE_WON_CHAT_TARGET_NAME` or `EE_WON_CHAT_TEXT`).
 using EeWonChatSink = void(*)(void *context, int32_t which, const uint32_t *units, size_t count);
+
+/// A `WONRectangle` (x, y, width, height).
+struct EeWonRect {
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+};
+
+/// Component's members, in their C++ order (`mParent` .. `mExtraStuff`).
+struct EeWonCompMembers {
+  /// `mParent` (a `Container*`, which is its `Component*`: Container's only base), 0 for none.
+  ptrdiff_t parent;
+  /// `mBounds`.
+  EeWonRect bounds;
+  /// `mComponentBits`.
+  int32_t bits;
+  /// `mControlId`.
+  int32_t control_id;
+  /// `mFocusId` (`unsigned char`).
+  uint8_t focus_id;
+  /// `mInvalidState` (`char`).
+  int8_t invalid;
+  /// `mTimerFlags` (`char`).
+  int8_t timer;
+  /// `mExtraStuff` (owned by the C++; the Rust tests only whether it is made).
+  ptrdiff_t extra;
+};
+
+/// A world's own lookup of a component's block (`ee_won_comp_members_resolver`).
+using EeWonCompResolveFn = EeWonCompMembers*(*)(ptrdiff_t c);
 
 /// `FileReader`'s state: the file, or the memory buffer (owned when read into memory), its length and position.
 /// `memory_mode` is the original's flag: set by a memory open and by `length()` once it measured the file.
@@ -11135,6 +11323,18 @@ struct EeWonGetCertHooks {
   void (*clear_one_time)(void*, void*);
 };
 
+/// The host: the hook on the C++ Graphics `g` with up to seven ints at `args` and an object `p`; its answer.
+using EeWonGfxHost = uint32_t(*)(void *g, EeWonGfxHook hook, const int32_t *args, const void *p);
+
+/// The C++ Graphics' translation, colour and clip rectangle (`mTransX`, `mTransY`, `mColor`, `mClipRect`, in that
+/// order).
+struct EeWonGfxState {
+  int32_t trans_x;
+  int32_t trans_y;
+  uint32_t color;
+  EeWonRect clip;
+};
+
 /// A rectangle (x, y, width, height).
 struct EeWonRect4 {
   int32_t x;
@@ -11433,14 +11633,6 @@ struct EeWonBlink {
   bool changed;
 };
 
-/// A `WONRectangle` (x, y, width, height).
-struct EeWonRect {
-  int32_t x;
-  int32_t y;
-  int32_t width;
-  int32_t height;
-};
-
 /// A child layout instruction (`ChildLayoutInstruction`): its flags and the four offsets.
 struct EeWonChildLayout {
   int32_t flags;
@@ -11529,6 +11721,14 @@ struct EeWonScrollArea {
   int32_t view_y;
   int32_t view_width;
   int32_t view_height;
+};
+
+/// The C++ `GUIStringData`'s members as one block (`mText`, `mLength`, `mCapacity`, in that order).
+struct EeWonGuiStrBuf {
+  /// `wchar_t* mText`: units of `wchar_size` bytes, NULL before the first reservation.
+  void *text;
+  uint16_t length;
+  uint16_t capacity;
 };
 
 /// A line's vertical metrics (`TextLine`'s height, baseline and descent).
@@ -13482,6 +13682,18 @@ ptrdiff_t ee_won_combo_call(const EeWonComboBox *combo,
                             ptrdiff_t b,
                             ptrdiff_t c);
 
+/// A world's components by id (drivers and tests): the ids `first..first + count` resolve to the blocks at
+/// `base + (id - first) * stride`. `base` NULL removes the table.
+void ee_won_comp_members_table(EeWonCompMembers *base,
+                               ptrdiff_t first,
+                               ptrdiff_t count,
+                               size_t stride);
+
+/// A world whose components live in a map (drivers and tests): `f` answers a component's block, an id outside a
+/// registered table. A world whose Rust objects only read the members may answer a block filled from its own state
+/// at each call (the block is read at once, before any other call). NULL removes it.
+void ee_won_comp_members_resolver(EeWonCompResolveFn f);
+
 /// One of Component's methods on the C++ component `me` (`EeWonCompCall`), its calls out through `host`.
 ///
 /// # Safety
@@ -14928,6 +15140,42 @@ void ee_won_init_cross_promotion(const uint8_t *doc,
                                  EeWonByteSink image,
                                  void *context);
 
+/// A new, empty font map.
+EeWonFontMap *ee_won_fontmap_new();
+
+/// Frees the map (its fonts already popped and released by the C++).
+///
+/// # Safety
+/// `m` is a map from `ee_won_fontmap_new` (or NULL), not used after.
+void ee_won_fontmap_free(EeWonFontMap *m);
+
+/// `GetFont`'s lookup of the descriptor (`face` its `n` bytes): its font, or 0 (the entry is made).
+///
+/// # Safety
+/// `m` is a live map; `face` points at `n` bytes (or is NULL with `n` 0).
+size_t ee_won_fontmap_lookup(EeWonFontMap *m,
+                             const uint8_t *face,
+                             size_t n,
+                             int32_t style,
+                             int32_t size);
+
+/// Stores the descriptor's font; returns the one it replaces (for the C++ to release).
+///
+/// # Safety
+/// As `ee_won_fontmap_lookup`.
+size_t ee_won_fontmap_store(EeWonFontMap *m,
+                            const uint8_t *face,
+                            size_t n,
+                            int32_t style,
+                            int32_t size,
+                            size_t font);
+
+/// Removes the first entry: its font (0 for NULL), or -1 when the map is empty.
+///
+/// # Safety
+/// `m` is a live map.
+ptrdiff_t ee_won_fontmap_pop(EeWonFontMap *m);
+
 /// The URL's ranges: [user, password, host, path] as (start, end), -1 for one not set.
 ///
 /// # Safety
@@ -15278,6 +15526,28 @@ void ee_won_getcert_setup(EeWonGetCert *op,
                           const uint8_t *seed,
                           size_t length,
                           void *block);
+
+/// A new Graphics' clip stack (empty).
+EeWonGfx *ee_won_gfx_new();
+
+/// # Safety
+/// `o` is null or from `ee_won_gfx_new`, not freed before.
+void ee_won_gfx_free(EeWonGfx *o);
+
+/// One Graphics method on the C++ object `g` (its members `st`, its clip stack `o`, its scheme's 17 colours at
+/// `scheme` or NULL): `a` holds seven ints, `p` the image or text; the host calls `g`'s hooks.
+///
+/// # Safety
+/// `g` is live for the host; `o`, `st` and `a` are live (seven ints); `scheme` is NULL or 17 colours. The host may
+/// call back into Graphics on another object only.
+uint32_t ee_won_gfx_call(void *g,
+                         EeWonGfxHost host,
+                         EeWonGfx *o,
+                         EeWonGfxState *st,
+                         const uint32_t *scheme,
+                         EeWonGfxCall call,
+                         const int32_t *a,
+                         const void *p);
 
 /// A new grabber for the C++ `BackgroundGrabber` `me`.
 EeWonGrabber *ee_won_grab_new(void *me, EeWonGuiHostFn host);
@@ -16692,6 +16962,21 @@ void ee_won_guistring_widen(const uint8_t *narrow,
                             EeWonWideSink sink,
                             void *context);
 
+/// One of GUIStringData's edits on `b` (the C++ object's members); `other` is the other string's members
+/// (`NewCopy`, `NewSub`, `Assign`, `Append`, `Insert`), `wchar_t` units (`AssignUnits`) or UTF-8 bytes
+/// (`AssignNarrow`); answers `SetAt`'s character, else 0.
+///
+/// # Safety
+/// `b` is a live block whose `text` is NULL or this module's (for the `New*` ops: writable room, unread);
+/// `other` as the op needs it, live for the call (it may be `b` itself for `Assign`, `Append` and `Insert`).
+int32_t ee_won_gstr(EeWonGstrOp op,
+                    EeWonGuiStrBuf *b,
+                    const void *other,
+                    int32_t a,
+                    int32_t bb,
+                    int32_t c,
+                    uint32_t wchar_size);
+
 /// `add_seg_metrics` on the line and the total height in place.
 ///
 /// # Safety
@@ -17830,9 +18115,17 @@ bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
 
 int32_t ee_won_lanlogic_direct_event(bool existed);
 
-/// A new LanLogic state for the C++ shell `logic`, calling out through `host`.
-/// As `ee_won_lan_new`, with the model's ops answered by its Rust objects (the game's).
-EeWonLan *ee_won_lan_new_model(void *logic, EeWonLobbyHostFn host);
+/// The game's LanLogic for the C++ shell `logic`: as `ee_won_lan_new`, with the model's ops answered by its Rust
+/// objects and the shell's members held here (lanown.rs): the shell's new client list and LAN (type 1) and
+/// direct-connect (type 3) game lists, a reference taken on each.
+///
+/// # Safety
+/// The lists are live model shells.
+EeWonLan *ee_won_lan_new_model(void *logic,
+                               EeWonLobbyHostFn host,
+                               void *clients,
+                               void *lan_games,
+                               void *direct_games);
 
 EeWonLan *ee_won_lan_new(void *logic, EeWonLobbyHostFn host);
 
@@ -17971,6 +18264,9 @@ ptrdiff_t ee_won_lobbydlg_call(const EeWonLobbyDlg *dlg,
                                ptrdiff_t a,
                                ptrdiff_t b,
                                ptrdiff_t c);
+
+/// `lobby_text` for the C++ (`won_lanmodel_test` checks it against LobbyLogicHost.cpp's table as it was).
+ptrdiff_t ee_won_lobby_text(ptrdiff_t code);
 
 /// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
 ///
@@ -22137,6 +22433,12 @@ ptrdiff_t ee_won_wm_popup_at(const EeWonWm *wm, size_t i);
 size_t ee_won_wm_cache_line(const EeWonWm *wm,
                             uint8_t *buf,
                             size_t cap);
+
+/// `WindowManager::InitColorScheme`: the 17 standard colours into `out`.
+///
+/// # Safety
+/// `out` has room for 17 colours.
+void ee_won_wm_standard_colors(uint32_t *out);
 
 /// A new Rust WONButton for the C++ `component`, its calls out through `host`.
 EeWonWonButton *ee_won_wonbtn_new(void *component, EeWonGuiHostFn host);

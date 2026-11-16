@@ -24,13 +24,25 @@ enum { kN = 12, kCt = 4 };
 #endif
 static const intptr_t kGraphics = 0x7000, kIds = 0x6000, kEvent = 0x6100;
 
+// a component: its members first, laid out as compmem.rs's block (the Rust reads them there: InitWorld registers
+// the table of ids), then the world's own count
 struct World {
+    intptr_t parent;
     int x, y, w, h;
     uint32_t bits;
-    intptr_t parent;
-    int timer, invalid, focusId, controlId;
+    int controlId;
+    unsigned char focusId;
+    signed char invalid, timer;
+    intptr_t extra;
     int refs;
 };
+static_assert(offsetof(World, parent) == offsetof(EeWonCompMembers, parent) &&
+              offsetof(World, x) == offsetof(EeWonCompMembers, bounds) && offsetof(World, bits) == offsetof(EeWonCompMembers, bits) &&
+              offsetof(World, controlId) == offsetof(EeWonCompMembers, control_id) &&
+              offsetof(World, focusId) == offsetof(EeWonCompMembers, focus_id) &&
+              offsetof(World, invalid) == offsetof(EeWonCompMembers, invalid) &&
+              offsetof(World, timer) == offsetof(EeWonCompMembers, timer) && offsetof(World, extra) == offsetof(EeWonCompMembers, extra),
+              "the world's components are compmem.rs's blocks");
 static World sW[kN + 1];
 static intptr_t sRoot, sDefCursor, sScheme;
 static bool sRootFocused, sMouseIn;
@@ -53,8 +65,8 @@ static void Set(int id, int field, long long v)
     World& w = sW[id];
     switch (field) {
     case 0: w.bits = (uint32_t)v; break;
-    case 1: w.invalid = (int)v; break;
-    case 2: w.timer = (int)v; break;
+    case 1: w.invalid = (signed char)v; break;
+    case 2: w.timer = (signed char)v; break;
     case 3: w.x = (int)v; break;
     case 4: w.y = (int)v; break;
     case 5: w.w = (int)v; break;
@@ -278,9 +290,9 @@ static intptr_t Host(void* inComp, Op inOp, intptr_t a, intptr_t b, intptr_t c, 
     case Op::CtVirt: r = Do(self, OverrideOf((V)a), b, c); break;
     case Op::CtDetach: Do(sW[a].parent, C::RemoveChild, a); break;
     case Op::CtSetParent: sW[a].parent = b ? self : 0; break;
-    case Op::CtSetFocusId: sW[a].focusId = (int)b; break;
-    case Op::CtSetInvalidState: sW[a].invalid = (int)b; break;
-    case Op::CtSetTimerFlags: w.timer = (int)a; break;
+    case Op::CtSetFocusId: sW[a].focusId = (unsigned char)b; break;
+    case Op::CtSetInvalidState: sW[a].invalid = (signed char)b; break;
+    case Op::CtSetTimerFlags: w.timer = (signed char)a; break;
     case Op::ChildSetFlags: sW[a].bits = c ? (sW[a].bits | (uint32_t)b) : (sW[a].bits & ~(uint32_t)b); break;
     case Op::CtSetScheme: sScheme = b; break;
     case Op::ChildInvalidate: VCall(a, V::Invalidate); break;
@@ -329,6 +341,7 @@ static void RandomChange()
 // the world of a sequence: the components (no parents yet) and the environment
 static void InitWorld()
 {
+    ee_won_comp_members_table((EeWonCompMembers*)&sW[0], 0, kN + 1, sizeof(World));
     sScheme = 0xB000;
     for (int id = 1; id <= kN; id++) {
         World& q = sW[id];
@@ -345,9 +358,9 @@ static void InitWorld()
         if (DR(2) == 0) q.bits |= 0x4000;
         if (DR(4) == 0) q.bits |= 0x8000;
         if (DR(3) == 0) q.bits |= 0x40000;
-        q.parent = 0; q.timer = (int)DR(3); q.invalid = (int)DR(3); q.focusId = 0; q.controlId = (int)DR(8); q.refs = 0;
+        q.parent = 0; q.timer = (signed char)DR(3); q.invalid = (signed char)DR(3); q.focusId = 0; q.controlId = (int)DR(8); q.extra = 0; q.refs = 0;
         Line("comp %lld %lld %lld %lld %lld %lld", id, q.x, q.y, q.w, q.h, q.bits);
-        sTrace.back() += " " + std::to_string(q.timer) + " " + std::to_string(q.invalid) + " " + std::to_string(q.controlId);
+        sTrace.back() += " " + std::to_string((int)q.timer) + " " + std::to_string((int)q.invalid) + " " + std::to_string(q.controlId);
     }
     Env(0, 1); Env(1, DR(2)); Env(2, DR(4) != 0); Env(3, (int)DR(260) - 30); Env(4, (int)DR(260) - 30); Env(5, DR(2));
     Env(6, 0x5000 + DR(3));

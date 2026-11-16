@@ -1,7 +1,6 @@
 // LAN and direct-connect play: LobbyLanClient, LobbyLanSocket and LanLogic
 #ifndef EE_WONAPI_WONLOBBYLAN_H
 #define EE_WONAPI_WONLOBBYLAN_H
-#include <set>
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyModel.h"
 namespace WONAPI {
@@ -9,10 +8,6 @@ class DirectConnectDialog;
 class LanNameDialog;
 class LanPortDialog;
 class PasswordDialog;
-class ChangeDirectConnectEvent;
-class ClientActionEvent;
-class LobbyGameList;
-class QueueSocket;
 class LobbyLanSocket;
 
 // RTTI 0x8559d8; 0x30 bytes (allocated at 0x7e0ada and 0x7e37f6); LobbyClient is 0x2c bytes.
@@ -42,10 +37,10 @@ private:
 };
 
 // LanLogic: 0xb8 bytes in the original (allocated at 0x762f7f); vtable slots as NetLogic's.
-// A Rust object since round 20 (rust/crates/ee_won/src/lanobj.rs): its methods and scalar state (the next client
-// id, the captain and peer-auth flags, the last host ping and broadcast times) are Rust's, its calls out the host's
-// ops (WONLobby/LanLogicHost.cpp); this shell keeps the SmartPtrs, the socket set, the discovery address, the
-// virtual slots and completions, and the steps that are C++ alone.
+// A Rust object since round 20 (rust/crates/ee_won/src/lanobj.rs): its methods and state are Rust's (since WONLobby
+// round 11 also the members the shell held: the client list, the LAN and direct-connect games, this player's
+// client, the sockets and their set, the timers, the discovery address, the join password: lanown.rs), its calls out
+// the host's ops (WONLobby/LanLogicHost.cpp); this shell keeps the dialogs, the virtual slots and completions.
 class LanLogic : public NetLogic {
 public:
     LanLogic();
@@ -56,7 +51,7 @@ public:
     virtual void HandleComponentEvent(ComponentEvent* inEvent);
     virtual bool HostGame(LobbyGame* inGame) { return this->Call(EeWonLanCall::HostGame, inGame) != 0; }
     virtual bool JoinGame(LobbyGame* inGame) { return this->Call(EeWonLanCall::JoinGame, inGame) != 0; }
-    virtual LobbyClient* GetMyClient() { return this->mMyClient.get(); }
+    virtual LobbyClient* GetMyClient() { return reinterpret_cast<LobbyClient*>(this->Call(EeWonLanCall::MyClient)); }
     virtual void SendToCaptain(const ByteBuffer* inBuffer)
     { this->CallMessage(EeWonLanCall::SendToCaptain, inBuffer, NULL); }
     virtual void BroadcastToGame(const ByteBuffer* inBuffer)
@@ -72,7 +67,7 @@ public:
     virtual void Suspend() {} // empty: the shared no-argument stub at 0x8142a0
     virtual void Resume();
     virtual void Logout() { this->Call(EeWonLanCall::Logout); }
-    LobbyClientList* GetClientList() { return this->mClients.get(); }
+    LobbyClientList* GetClientList() { return reinterpret_cast<LobbyClientList*>(this->Call(EeWonLanCall::ClientList)); }
     intptr_t Call(EeWonLanCall inCall, void* inA = NULL, void* inB = NULL, intptr_t inC = 0)
     { return ee_won_lan_call(this->mRust, inCall, inA, inB, inC, 0); }
     void CallMessage(EeWonLanCall inCall, const ByteBuffer* inMessage, LobbyClient* inClient);
@@ -83,34 +78,12 @@ public:
     void HandleDiscoveryTimer(AsyncOp* inOp) { this->Call(EeWonLanCall::DiscoveryTimer, inOp); }
     void HandleDiscoveryRecv(AsyncOp* inOp) { this->Call(EeWonLanCall::DiscoveryRecv, inOp); }
     void HandleAccept(AsyncOp* inOp) { this->Call(EeWonLanCall::Accept, inOp); }
-    // the steps that are C++ alone (the host's ops)
-    void HandlePeerAuthDone(AsyncOp* inOp);
-    void AddPendingSocket(LobbyLanSocket* inSocket);
-    void StartNetworkTimer();
-    void StartDiscoveryTimer();
-    void StopDiscovery();
-    bool RefreshCertificate();
-    void HandleGameSummary(unsigned short inPort, ReadBuffer& inSummary, const IPAddr& inAddress);
-    void HandleGameKeepAlive(unsigned short inPort, const IPAddr& inAddress);
-    void HandleGameRemoved(unsigned short inPort, const IPAddr& inAddress);
-    void AddDirectConnect();
+    void HandlePeerAuthDone(AsyncOp* inOp); // the certificate's check (C++), then the Rust's AddPending
 
     SmartPtr<DirectConnectDialog> mDirectConnectDialog; // 0x40
     SmartPtr<LanNameDialog> mLanNameDialog; // 0x44
     SmartPtr<LanPortDialog> mLanPortDialog; // 0x48
     SmartPtr<PasswordDialog> mPasswordDialog; // 0x4c
-    SmartPtr<LobbyGameList> mLanGames; // 0x50, LobbyGameList(1)
-    SmartPtr<LobbyGameList> mDirectGames; // 0x54, LobbyGameList(3)
-    std::set<SmartPtr<LobbyLanSocket> > mPendingSockets; // 0x58
-    SmartPtr<LobbyLanSocket> mListenSocket; // 0x64
-    SmartPtr<LobbyLanSocket> mServerSocket; // 0x68
-    AsyncOpPtr mNetworkTimer; // 0x70, callback HandleNetworkTimer
-    SmartPtr<QueueSocket> mDiscoverySocket; // 0x78, QueueSocket type 1
-    AsyncOpPtr mDiscoveryTimer; // 0x7c, callback HandleDiscoveryTimer
-    IPAddr mDiscoveryAddress; // 0x80
-    SmartPtr<LobbyClientList> mClients; // 0xac
-    SmartPtr<LobbyLanClient> mMyClient; // 0xb0
-    GUIString mJoinPassword; // JoinGame's password (the original's loop local)
 private:
     EeWonLan* mRust;
 };

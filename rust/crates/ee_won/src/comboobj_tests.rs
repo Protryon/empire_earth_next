@@ -14,6 +14,7 @@ const GOLDEN: &str = include_str!("golden_comboobj.txt");
 
 #[test]
 fn the_constructor_state_and_the_fields() {
+    let _w = crate::compmem::zeroed_world(16);
     let c = EeWonComboBox::new(std::ptr::dangling_mut::<c_void>(), None, std::ptr::null());
     type F = EeWonComboField;
     let f = |k: F| c.field(k as i32);

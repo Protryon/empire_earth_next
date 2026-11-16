@@ -16,6 +16,7 @@
 #include "ee/wonapi/WONAPICore.h"
 #include "ee/wonapi/WONLobbyMap.h"
 #include "ee/wonapi/WONEventTypes.h"
+#include "platform/PlatTime.h" // PlatSleep (WindowManager::GetNextEvent)
 
 namespace WONAPI {
 
@@ -200,13 +201,18 @@ extern GUIString gEmptyGUIString;
 // a GUI component (0x30 bytes: EELobbyColorChooser's members start at +0x30; vtable 0x84d71c, 43
 // slots). Unknown slots are named by vtable offset. The inline bodies are the COMDATs the first lobby unit
 // (EELobbyColorButton.cpp 0x29059d, 0x2905a2) keeps; the other tiny slots are ICF-folded into game code.
+// WONRectangle (Rectangle.cpp folded in, R6 WONGUI B round 1): the intersection (empty size when they do not
+// overlap), the union (an empty rectangle becomes a copy of the other) and the overlap test (touching this one's
+// right/bottom edge counts) are ee_won's guilayout.rs
 class WONRectangle {
 public:
-    WONRectangle();
-    WONRectangle(int inX, int inY, int inWidth, int inHeight);
-    void DoIntersect(const WONRectangle&); // 0x349330, called from 0x3271b1
-    void DoUnion(const WONRectangle&); // 0x3493b0 (called from RootContainer at 0x30498b)
-    bool Intersects(const WONRectangle&) const;
+    WONRectangle() : x(0), y(0), width(0), height(0) {}
+    WONRectangle(int inX, int inY, int inWidth, int inHeight) : x(inX), y(inY), width(inWidth), height(inHeight) {}
+    void DoIntersect(const WONRectangle& o) { this->Set(ee_won_gui_rect_intersect(this->Rust(), o.Rust())); }
+    void DoUnion(const WONRectangle& o) { this->Set(ee_won_gui_rect_union(this->Rust(), o.Rust())); }
+    bool Intersects(const WONRectangle& o) const { return ee_won_gui_rect_intersects(this->Rust(), o.Rust()); }
+    EeWonRect Rust() const { EeWonRect e = { this->x, this->y, this->width, this->height }; return e; }
+    void Set(const EeWonRect& e) { this->x = e.x; this->y = e.y; this->width = e.width; this->height = e.height; }
     int Left() const { return this->x; }
     int Top() const { return this->y; }
     int Width() const { return this->width; }
@@ -329,11 +335,13 @@ public:
     int Height() { return this->mBounds.Height(); }
     int Right() { return this->mBounds.Right(); }
     int Bottom() { return this->mBounds.Bottom(); }
-    Container* GetParent() { return this->mParent; } // inline, at +0x08
-    Container* mParent;                     // +0x08 (SetEnabled notifies it through its slot +0xbc)
-    std::list<SmartPtr<Component> >::iterator mChildListItr; // +0x0c, child-list node iterator
+    Container* GetParent() { return this->mParent; }
+    // the members, mParent .. mExtraStuff, are laid out as the Rust block compobj and the Rust objects read and
+    // write in place (ee_won compmem.rs EeWonCompMembers; ComponentLifetime.cpp asserts the offsets). The
+    // original's mChildListItr (the node in the parent's list) went with the list (the Rust container's)
+    Container* mParent;                     // (SetEnabled notifies it through its slot +0xbc)
 protected:
-    WONRectangle mBounds; // at +0x10..0x1f, embedded rectangle (16 bytes)
+    WONRectangle mBounds;
 public:
     int mComponentBits; //20, full DWORD flags (int: the tests compile to shr n; test 1); bit80 disabled
     int mControlId;                         // +0x24 (the component events' id)
@@ -467,10 +475,20 @@ protected:
 // ScreenContainer (0x88 bytes); constructor 0x306a20, destructor 0x306a60; points at the current screen.
 class ScreenContainer : public Container {
 public:
-    ScreenContainer();
+    ScreenContainer() : mCurScreen(NULL) {}
     // Implicit destructor (0x306a60) jumps to Container's at 0x2f5e80; the screen at +0x84 is not owned.
-    void ShowScreen(Component* inScreen, bool inTakeFocus = true); //306ab0
-    void AddScreen(Component*); //306a70
+    // 0x306ab0: hides the current screen and shows the given one, optionally focused; nothing if it is current
+    void ShowScreen(Component* inScreen, bool inTakeFocus = true)
+    {
+        if (inScreen == this->mCurScreen) return;
+        if (this->mCurScreen != NULL) this->mCurScreen->SetVisible(false);
+        inScreen->SetVisible(true);
+        this->mCurScreen = inScreen;
+        if (inScreen != NULL && inTakeFocus) inScreen->RequestFocus();
+        this->Invalidate();
+    }
+    // 0x306a70: adds a hidden screen laid out to the container's size
+    void AddScreen(Component* inScreen) { inScreen->SetVisible(false); this->Fn2F6140(inScreen, 3, this, 0, 0, 0, 0, 0); this->AddChild(inScreen); }
     Component* mCurScreen; //84, borrowed
 };
 
@@ -1431,7 +1449,7 @@ public:
 class ComponentListenerComp : public ComponentListener {
 public:
     ComponentListenerComp(Component* inComponent) : mComponent(inComponent) {}
-    virtual void HandleComponentEvent(ComponentEvent*);    // 0x337bf0 (WONAPI)
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->mComponent->HandleComponentEvent(e); }
 
     Component* mComponent;                  // +0x08
 };
@@ -1485,13 +1503,17 @@ public:
     void PushClipRect(int, int, int, int);
     void PopClipRect();
     SmartPtr<DisplayContext> mDisplayContext; //04
-    int mTransX, mTransY; //08,0c
+    // R6 WONGUI B round 1: the methods are ee_won's gfxobj.rs. The translation, colour and clip rectangle are the block
+    // of members it edits in place (EeWonGfxState: the original's +08, +0c, +14, +24; checked in Graphics.cpp), the
+    // clip stack (+18) its object
+    int mTransX, mTransY;
+    DWORD mColor;
+    WONRectangle mClipRect;
     SmartPtr<Font> mFont; //10
-    DWORD mColor; //14
-    typedef std::list<WONRectangle> ClipStack;
-    ClipStack mClipStack; //18..23
-    WONRectangle mClipRect; //24..33
     ColorScheme* mColorScheme; //34, borrowed
+    EeWonGfx* mGfx; // the clip stack, owned
+private:
+    DWORD GCall(EeWonGfxCall c, int a = 0, int b = 0, int cc = 0, int d = 0, int e = 0, int f = 0, int g = 0, const void* p = NULL);
 };
 
 // 0x2fdcd0 / 0x2fddf0 (cdecl): a 3D frame (inPressed: sunken) and a flat frame (provisional names)
@@ -1554,66 +1576,70 @@ class WindowManager : public RefCount {
 protected:
     static WindowManager* mDefaultWindowManager; // 0x566270, the default manager
     static DWORD mThreadId; // 0x566274, the GUI thread's id
-    bool CheckModalValid(); // checks the modal state
+    bool CheckModalValid() { return this->WmCall(EeWonWmCall::CheckModalValid) != 0; } // checks the modal state
 public:
     static WindowManager* GetDefaultWindowManager() { return WindowManager::mDefaultWindowManager; }
     static DWORD GetThreadId() { return WindowManager::mThreadId; }
     WindowManager(); // 0x32b660; the class is 0x148 bytes
     virtual ~WindowManager(); //32bff0
-    virtual void GetNextEvent(); //04 32e7c0
-    virtual bool SetScreenResolutionHook(int,int); //08 32c380
-    virtual void GetScreenResolutionHook(int&,int&); //0c 327440
-    virtual void Signal(); //10 326b60
-    virtual bool AddWindow(Window*); //14 32d6a0
-    virtual bool RemoveWindow(Window*); //18 32d840
-    virtual void GetScreenRect(WONRectangle&); //1c 30a800
-    virtual void GetSystemColorScheme(); //20 326b60; target no argument, MS3d0b70 reads own20
+    virtual void GetNextEvent() { PlatSleep(20); } //04 32e7c0: the base only sleeps 20 ms
+    virtual bool SetScreenResolutionHook(int,int) { return false; } //08 32c380
+    virtual void GetScreenResolutionHook(int&,int&) {} //0c 327440
+    virtual void Signal() {} //10 326b60
+    virtual bool AddWindow(Window* w) { return this->WmCall(EeWonWmCall::AddWindow, (intptr_t)w) != 0; } //14 32d6a0
+    virtual bool RemoveWindow(Window* w) { return this->WmCall(EeWonWmCall::RemoveWindow, (intptr_t)w) != 0; } //18 32d840
+    virtual void GetScreenRect(WONRectangle&) {} //1c 30a800
+    virtual void GetSystemColorScheme() {} //20 326b60
     void InitColorScheme(); //32c230
-    void NotifyLostFocus(); //32c2d0
-    void NotifyGotFocus(Window*); //32c300
-    void SetScreenResolution(int,int); //32c320
-    void RestoreScreenResolution(); //32c390
-    Window* GetPopupWindow(); //32c440
-    void SetNamedFont(const std::string&,Font*); //32c470
+    void NotifyLostFocus() { this->WmCall(EeWonWmCall::NotifyLostFocus); } //32c2d0
+    void NotifyGotFocus(Window* w) { this->WmCall(EeWonWmCall::NotifyGotFocus, (intptr_t)w); } //32c300
+    void SetScreenResolution(int w, int h) { this->WmCall(EeWonWmCall::SetScreenResolution, w, h); } //32c320
+    void RestoreScreenResolution() { this->WmCall(EeWonWmCall::RestoreScreenResolution); } //32c390
+    Window* GetPopupWindow() { return (Window*)this->WmCall(EeWonWmCall::PopupWindow); } //32c440
+    void SetNamedFont(const std::string& n, Font* f) { this->WmCall(EeWonWmCall::SetNamedFont, (intptr_t)n.data(), (intptr_t)n.size(), (intptr_t)f); } //32c470
     void SetDefaultFont(Font* font); // inline, defined after Font below
-    Font* GetNamedFont(const std::string&); //32c4d0
-    Font* GetDefaultFont(); //32c540
+    Font* GetNamedFont(const std::string& n) { return (Font*)this->WmCall(EeWonWmCall::GetNamedFont, (intptr_t)n.data(), (intptr_t)n.size()); } //32c4d0
+    Font* GetDefaultFont() { return (Font*)this->WmCall(EeWonWmCall::GetDefaultFont); } //32c540
     Font* GetDefaultFontMod(int,int=0); //32c700
     Font* GetNamedFontMod(const std::string&,int,int=0);
     static SmartPtr<Font> GetDefaultFont(const FontDescriptor&);
     static DisplayContext* GetDefaultDisplayContext();
-    void RemoveAllTimerEvents();
-    void SetCacheImages(bool); // 0x32c7f0: changes the image-cache setting and clears the cache when needed
-    SmartPtr<NativeImage> DecodeImage(DisplayContext*,const char*); //32c950
+    void RemoveAllTimerEvents() { this->WmCall(EeWonWmCall::RemoveAllTimerEvents); }
+    void SetCacheImages(bool c) { this->WmCall(EeWonWmCall::SetCacheImages, c ? 1 : 0); } // 0x32c7f0: a count; at 0 the caches empty
+    // the decodes: the Rust answer carries the returned SmartPtr's reference
+    SmartPtr<NativeImage> DecodeImage(DisplayContext* c, const char* p)
+    { SmartPtr<NativeImage> i; i.mPtr = (NativeImage*)this->WmCall(EeWonWmCall::DecodeImage, (intptr_t)c, (intptr_t)p, (intptr_t)strlen(p)); return i; } //32c950
     SmartPtr<NativeImage> DecodeImage(const char*); //32ccb0
-    SmartPtr<Image> DecodeDelayImage(const char*); //32ccf0
-    SmartPtr<RawImage> DecodeImageRaw(const char*); //32d160
-    void SetSoundDecoder(SoundDecoder*); //32d490
+    SmartPtr<Image> DecodeDelayImage(const char* p)
+    { SmartPtr<Image> i; i.mPtr = (Image*)this->WmCall(EeWonWmCall::DecodeDelayImage, (intptr_t)p, (intptr_t)strlen(p)); return i; } //32ccf0
+    SmartPtr<RawImage> DecodeImageRaw(const char* p)
+    { SmartPtr<RawImage> i; i.mPtr = (RawImage*)this->WmCall(EeWonWmCall::DecodeImageRaw, (intptr_t)p, (intptr_t)strlen(p)); return i; } //32d160
+    void SetSoundDecoder(SoundDecoder* d) { this->mSoundDecoder = d; } //32d490
     SmartPtr<Sound> DecodeSound(const SoundDescriptor&); //32d4f0
-    void CloseAllWindows();
-    void CalcModality(); //32da30
-    bool NotModalWindow(Window*); // 0x32dc30 (called from the window procedure at 0x3d1730)
+    void CloseAllWindows() { this->WmCall(EeWonWmCall::CloseAllWindows); }
+    void CalcModality() { this->WmCall(EeWonWmCall::CalcModality); } //32da30
+    bool NotModalWindow(Window* w) { return this->WmCall(EeWonWmCall::NotModalWindow, (intptr_t)w) != 0; }
     // 0x32dbe0 is a separate static SetModal(Component*,bool) helper, not a member.
-    int DoDialog(Window*,Component*); //32dc50
-    void EndDialog(int,Window*,Component*);
-    void ExitMessageLoop(); //32ddf0
+    int DoDialog(Window* w, Component* c) { return (int)this->WmCall(EeWonWmCall::DoDialog, (intptr_t)w, (intptr_t)c); } //32dc50
+    void EndDialog(int r, Window* w, Component* c) { this->WmCall(EeWonWmCall::EndDialog, r, (intptr_t)w, (intptr_t)c); }
+    void ExitMessageLoop() { this->WmCall(EeWonWmCall::ExitMessageLoop); } //32ddf0
     void AdjustPopupPosition(Window*,Component*,bool,const WONRectangle&); //32de00
     void DoPopup(const PopupParams&); //32e040
-    void EndPopup(Component*); //32e4d0
-    void CheckEndPopup(Component*); //32e790
-    int MessageLoop(); //32e7d0
-    void PumpOnce(); //32e840
-    void PostEvent(WindowEventBase*,bool=true); //32e850
-    void AddTimerEvent(WindowEventBase*); //32e960
-    void RemoveTimerEvent(WindowEventBase*); //32ea70
+    void EndPopup(Component* c) { this->WmCall(EeWonWmCall::EndPopup, (intptr_t)c); } //32e4d0
+    void CheckEndPopup(Component* c) { this->WmCall(EeWonWmCall::CheckEndPopup, (intptr_t)c); } //32e790
+    int MessageLoop() { return (int)this->WmCall(EeWonWmCall::MessageLoop); } //32e7d0
+    void PumpOnce() { this->GetNextEvent(); } //32e840
+    void PostEvent(WindowEventBase* e, bool s = true) { this->WmCall(EeWonWmCall::PostEvent, (intptr_t)e, s ? 1 : 0); } //32e850
+    void AddTimerEvent(WindowEventBase* e) { this->WmCall(EeWonWmCall::AddTimerEvent, (intptr_t)e); } //32e960
+    void RemoveTimerEvent(WindowEventBase* e) { this->WmCall(EeWonWmCall::RemoveTimerEvent, (intptr_t)e); } //32ea70
     // FindMouseWindow (0x32ec60) and CheckPopupClick (0x32ee40) are the Rust manager's (wmobj.rs), called by its
     // DeliverEvent (round 34)
-    void DeliverEvent(WindowEventBase*); //32ef20
-    void SubscribeToBroadcast(Component*,bool); //32f3f0
-    void BroadcastEvent(ComponentEvent*);
-    void ClearSubscriptions(); //32f5d0
-    WindowEventBase* PeekNextEvent(); //32f700
-    void ProcessEvents(); //32f760
+    void DeliverEvent(WindowEventBase* e) { this->WmCall(EeWonWmCall::DeliverEvent, (intptr_t)e); } //32ef20
+    void SubscribeToBroadcast(Component* c, bool s) { this->WmCall(EeWonWmCall::SubscribeToBroadcast, (intptr_t)c, s ? 1 : 0); } //32f3f0
+    void BroadcastEvent(ComponentEvent* e) { this->WmCall(EeWonWmCall::BroadcastEvent, (intptr_t)e); }
+    void ClearSubscriptions() { this->WmCall(EeWonWmCall::ClearSubscriptions); } //32f5d0
+    WindowEventBase* PeekNextEvent() { return (WindowEventBase*)this->WmCall(EeWonWmCall::PeekNextEvent); } //32f700
+    void ProcessEvents() { this->WmCall(EeWonWmCall::ProcessEvents); } //32f760
     // R6 WON round 33: the popup stack, the modal dialog, the message loop's depths and the focus are the Rust
     // manager (rust/crates/ee_won/src/wmobj.rs); these read and set it
     Component* GetModalComponent() const { return (Component*)this->WmField(EeWonWmField::ModalComponent); }
@@ -1680,17 +1706,17 @@ public:
     static void SetSkipDecodeImages(bool); // 0x32a640: static byte switch
     SmartPtr<RawImage> DecodeImageRaw(const char*); // 0x32a800: decodes through the manager's decoder
     SmartPtr<NativeImage> CreateImage(int,int); // 0x32a8c0, wrapper
-    bool CanClose(); //32ab80
-    void CheckResize(DWORD); //32ac90
-    void SuspendRootResize(bool suspend);
-    NativeImage* GetOffscreenImage();
+    bool CanClose() { return this->WCall(EeWonWinCall::CanClose) != 0; } //32ab80
+    void CheckResize(DWORD t) { this->WCall(EeWonWinCall::CheckResize, (intptr_t)(uint32_t)t); } //32ac90
+    void SuspendRootResize(bool s) { this->WCall(EeWonWinCall::SuspendRootResize, s ? 1 : 0); }
+    NativeImage* GetOffscreenImage() { return this->mOffscreenImage.get(); }
     Graphics& GetGraphics();
-    void RemoveComponent(Component*);
-    bool IsMouseDown(MouseButton);
-    void ShowNativeCursor(bool); // 0x32afc0, wrapper
-    void CheckSetCursor(bool);
+    void RemoveComponent(Component* c) { this->WCall(EeWonWinCall::RemoveComponent, (intptr_t)c); }
+    bool IsMouseDown(MouseButton b) { return this->WCall(EeWonWinCall::IsMouseDown, (intptr_t)b) != 0; }
+    void ShowNativeCursor(bool s) { this->WCall(EeWonWinCall::ShowNativeCursor, s ? 1 : 0); }
+    void CheckSetCursor(bool f) { this->WCall(EeWonWinCall::CheckSetCursor, f ? 1 : 0); }
     bool CheckDoubleClick(MouseButton b) { return this->WCall(EeWonWinCall::CheckDoubleClick,(intptr_t)b)!=0; }
-    void HandleMouseExit(); //32b120
+    void HandleMouseExit() { this->WCall(EeWonWinCall::HandleMouseExit); } //32b120
     void HandleKeyEvent(KeyEvent*); //32b170
     void HandleMouseDown(MouseEvent*); //32b1c0
     void HandleMouseEvent(MouseEvent*); //32b260
@@ -1698,40 +1724,40 @@ public:
 
     Window();
     virtual ~Window();                     // 0x32a020, out of line
-    virtual SmartPtr<Font> PlatformGetFont(const FontDescriptor&);
-    virtual bool IdleUpdate();
-    virtual void TimerEvent(DWORD inElapsed);
-    virtual void PlatformSetTitle();
-    virtual void PlatformSetIcon();
-    virtual void PlatformSetCursor(Cursor*);
-    virtual void PlatformShowNativeCursor(bool);
-    virtual void PlatformShow(bool);
-    virtual void PlatformMinimize(bool);
-    virtual void PlatformSetTopMost(bool);
-    virtual void PlatformClose();
+    virtual SmartPtr<Font> PlatformGetFont(const FontDescriptor&) { return NULL; } // (the platform windows override these)
+    virtual bool IdleUpdate() { return this->WCall(EeWonWinCall::IdleUpdate) != 0; }
+    virtual void TimerEvent(DWORD e) { this->WCall(EeWonWinCall::TimerEvent, (intptr_t)(uint32_t)e); }
+    virtual void PlatformSetTitle() {}
+    virtual void PlatformSetIcon() {}
+    virtual void PlatformSetCursor(Cursor*) {}
+    virtual void PlatformShowNativeCursor(bool) {}
+    virtual void PlatformShow(bool) {}
+    virtual void PlatformMinimize(bool) {}
+    virtual void PlatformSetTopMost(bool) {}
+    virtual void PlatformClose() { this->WCall(EeWonWinCall::PlatformClose); }
     virtual void Create(const WONRectangle&);
-    virtual void SetPosSize(int, int, int, int);
-    virtual void GetRect(WONRectangle&, bool);
-    virtual void PlatformSetFocus();
-    virtual void Show(bool);
-    void Minimize(bool minimize); // nonvirtual wrapper (0x32afb0)
+    virtual void SetPosSize(int, int, int, int) {}
+    virtual void GetRect(WONRectangle&, bool) {}
+    virtual void PlatformSetFocus() {}
+    virtual void Show(bool s) { this->WCall(EeWonWinCall::Show, s ? 1 : 0); }
+    void Minimize(bool m) { this->WCall(EeWonWinCall::Minimize, m ? 1 : 0); }
     DisplayContext* GetDisplayContext() { return this->mDisplayContext.get(); } // inline, at +0x28
-    virtual void PlatformSetMouseCapture(bool);
+    virtual void PlatformSetMouseCapture(bool) {}
     virtual void QueueEvent(WindowEventBase*);
-    virtual bool PlatformIsVisible();
+    virtual bool PlatformIsVisible() { return this->IsShowing(); } // whether last shown
     static Window* GetDefaultWindow();
     SmartPtr<NativeImage> DecodeImage(const char*);
-    int RunDialog(Component*);
-    void AddComponent(Component*); // 0x32b040: forwards to the root
-    void SetModal(bool); // 0x32b060: calls Container::EnterModal/LeaveModal
-    bool Close();                          // 0x32ac30, returns false or true
-    void SetClientSize(int, int);
-    void Center(bool);
+    int RunDialog(Component* c) { return this->mManager->DoDialog(this, c); } // DoDialog in the WON SDK
+    void AddComponent(Component* c) { this->WCall(EeWonWinCall::AddComponent, (intptr_t)c); }
+    void SetModal(bool m) { this->WCall(EeWonWinCall::SetModal, m ? 1 : 0); }
+    bool Close() { return this->WCall(EeWonWinCall::Close) != 0; }
+    void SetClientSize(int w, int h) { this->WCall(EeWonWinCall::SetClientSize, w, h); }
+    void Center(bool p) { this->WCall(EeWonWinCall::Center, p ? 1 : 0); }
     void EndDialog(int, Component*);
     void OpenPopup(PopupParams&);
     void ClosePopup(Component*);
-    void InvalidateRoot();
-    void SetParent(Window*);                // 0x32a210, the parent at +0x80
+    void InvalidateRoot() { this->WCall(EeWonWinCall::InvalidateRoot); }
+    void SetParent(Window* p) { this->WCall(EeWonWinCall::SetParent, (intptr_t)p); }
     void SetTitle(const GUIString&);
     void SetIcon(NativeIcon*);
     // R6 WON round 32: the state is the Rust window (rust/crates/ee_won/src/winobj.rs); these read and set it
@@ -1768,7 +1794,9 @@ public:
     SmartPtr<NativeIcon> mIcon; // +98
     GUIString mTitle; // +9c
     SmartPtr<RootContainer> mRoot; // +a4
-    std::map<FontDescriptor, SmartPtr<Font> > mFontMap; // +a8
+    // GetFont's cache (+a8; ee_won fontmap.rs): each font held once; released where the map member was destroyed
+    struct FontMap { EeWonFontMap* p; FontMap() : p(ee_won_fontmap_new()) {} ~FontMap(); };
+    FontMap mFontMap;
     SmartPtr<Font> mDefaultFont; // +b4
 };
 
@@ -1868,19 +1896,19 @@ public:
 class InputEvent : public WindowEventBase {
 public:
     InputEvent(int type) : WindowEventBase(type) {}
-    virtual void Deliver(); //32b520
+    virtual void Deliver() { this->mWindow->HandleInputEvent(this); } //32b520: to its window
 };
 class MouseEvent : public InputEvent {
 public:
     MouseEvent(int type,int x,int y,int mod,int button=0)
       : InputEvent(type),mx(x),my(y),mKeyMod(mod),mButtonOrAmount(button) {}
-    virtual void Deliver(); //32b630
+    virtual void Deliver() { this->mWindow->HandleMouseEvent(this); } //32b630
     int mx,my,mKeyMod,mButtonOrAmount; //10,14,18,1c
 };
 class KeyEvent : public InputEvent {
 public:
     KeyEvent(int type,int key,int mod) : InputEvent(type),mKey(key),mKeyMod(mod) {}
-    virtual void Deliver(); //32b640
+    virtual void Deliver() { this->mWindow->HandleKeyEvent(this); } //32b640
     int mKey,mKeyMod; //10,14
 };
 class SizeEvent : public InputEvent {
@@ -1892,10 +1920,13 @@ public:
 
 class ComponentEvent : public WindowEventBase {
 public:
-    ComponentEvent(Component* inComponent, int inType);
-    virtual void Deliver();
-    void SetComponent(Component* inComponent);
-    int GetControlId() const;
+    // an event of the given type for a component (not a broadcast)
+    ComponentEvent(Component* c, int t) : mComponentRef(c), mType(t), mComponent(c) { this->mBroadcast = false; }
+    // broadcast through the window manager, or bubbled up from the component
+    virtual void Deliver()
+    { if (this->mBroadcast) this->mWindow->mManager->BroadcastEvent(this); else this->mComponent->BubbleEvent(this); }
+    void SetComponent(Component* c) { this->mComponent = c; this->mComponentRef = c; } // retargets the event
+    int GetControlId() const { return this->mComponent->mControlId; }
     SmartPtr<Component> mComponentRef;      // +0x10
     int mType;                              // +0x14
     bool mBroadcast;                        // +0x18

@@ -1,6 +1,9 @@
-// Graphics: translated drawing, colours, fonts and the clip stack
+// Graphics (R6 WONGUI B round 1): translated drawing, colours and the clip stack are ee_won's gfxobj.rs. This unit
+// keeps the constructor, the destructor, the display context's attachment and the font (C++ objects), one-line
+// forwarders, and the host: each hook a virtual on this object, an image's draw or the font's.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
+#include <stddef.h>
 #include <string>
 #include <list>
 #include <vector>
@@ -9,261 +12,104 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/ee_won.h"
 using namespace WONAPI;
-// Creates a graphics context with no translation and no colour scheme
-Graphics::Graphics()
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static_assert(offsetof(Graphics, mTransY) == offsetof(Graphics, mTransX) + offsetof(EeWonGfxState, trans_y) &&
+              offsetof(Graphics, mColor) == offsetof(Graphics, mTransX) + offsetof(EeWonGfxState, color) &&
+              offsetof(Graphics, mClipRect) == offsetof(Graphics, mTransX) + offsetof(EeWonGfxState, clip) &&
+              sizeof(WONRectangle) == sizeof(EeWonRect), "gfxobj.rs EeWonGfxState");
+#pragma clang diagnostic pop
+
+typedef EeWonGfxHook H;
+// the Rust Graphics' calls out: the hooks (a[] their ints, p the image or text)
+static uint32_t GfxHost(void* inGraphics, EeWonGfxHook inHook, const int32_t* a, const void* p)
 {
-	this->mTransX = this->mTransY = 0;
-	this->mColorScheme = NULL;
+    Graphics* g = (Graphics*)inGraphics;
+    switch (inHook) {
+    case H::ClearClipRect: g->ClearClipRectHook(); return 0;
+    case H::SetClipRect: g->SetClipRectHook(a[0], a[1], a[2], a[3]); return 0;
+    case H::SetPixel: g->SetPixelHook(a[0], a[1], (DWORD)a[2]); return 0;
+    case H::SetColor: g->SetColorHook(); return 0;
+    case H::DrawLine: g->DrawLineHook(a[0], a[1], a[2], a[3]); return 0;
+    case H::DrawRect: g->DrawRectHook(a[0], a[1], a[2], a[3]); return 0;
+    case H::FillRect: g->FillRectHook(a[0], a[1], a[2], a[3]); return 0;
+    case H::DrawDottedRect: g->DrawDottedRectHook(a[0], a[1], a[2], a[3]); return 0;
+    case H::DrawEllipse: g->DrawEllipseHook(a[0], a[1], a[2], a[3]); return 0;
+    case H::FillEllipse: g->FillEllipseHook(a[0], a[1], a[2], a[3]); return 0;
+    case H::DrawArc: g->DrawArcHook(a[0], a[1], a[2], a[3], a[4], a[5]); return 0;
+    case H::FillRectBlend: g->FillRectBlendHook(a[0], a[1], a[2], a[3], a[4]); return 0;
+    case H::ImageEntire: ((Image*)p)->DrawEntire(g->mDisplayContext.get(), a[0], a[1]); return 0;
+    case H::ImagePart: ((Image*)p)->Draw(g->mDisplayContext.get(), a[0], a[1], a[2], a[3], a[4], a[5]); return 0;
+    case H::String:
+        g->mFont->DrawString(g->mDisplayContext.get(), *(const GUIString*)p, (unsigned short)a[0], (unsigned short)a[1], a[2], a[3]);
+        return 0;
+    }
+    return 0;
 }
 
+DWORD Graphics::GCall(EeWonGfxCall c, int a, int b, int cc, int d, int e, int f, int g, const void* p)
+{
+    int32_t anArgs[7] = { a, b, cc, d, e, f, g };
+    return ee_won_gfx_call(this, GfxHost, this->mGfx, (EeWonGfxState*)&this->mTransX,
+                           this->mColorScheme != NULL ? (const uint32_t*)this->mColorScheme->mColors : NULL, c, anArgs, p);
+}
+
+// Creates a graphics context with no translation, no colour scheme and an empty clip stack
+Graphics::Graphics()
+{
+    this->mTransX = this->mTransY = 0;
+    this->mColorScheme = NULL;
+    this->mGfx = ee_won_gfx_new();
+}
 // Destroys the graphics context, detaching it first
 Graphics::~Graphics()
 {
-	this->Detach();
+    this->Detach();
+    ee_won_gfx_free(this->mGfx);
 }
-
-void Graphics::Detach()
-{
-}
-
+void Graphics::Detach() {}
 // Attaches the graphics context to a display context and links the display context back to it
 void Graphics::Attach(DisplayContext *theContext)
 {
-	this->Detach();
-	this->mDisplayContext = theContext;
-	this->mDisplayContext->mGraphics = this;
+    this->Detach();
+    this->mDisplayContext = theContext;
+    this->mDisplayContext->mGraphics = this;
 }
-
-// Sets the drawing colour, resolving colour-scheme references (0x80000000 + 0..16) through the
-// scheme; calls the colour hook only when the colour changes
-void Graphics::SetColor(DWORD theColor)
-{
-	if(theColor>=0x80000000 && theColor<0x80000000+17 && this->mColorScheme)
-	{
-		// Do it this way instead of calling ApplyColorSchemeColor in order to avoid an infinite loop
-		// If a colorscheme color is a reference to itself
-		DWORD aColor = this->mColorScheme->GetStandardColor((int)(theColor-0x80000000));
-		if(aColor!=this->mColor)
-		{
-			this->mColor = aColor;
-			this->SetColorHook();
-		}
-	}
-	else if(this->mColor!=theColor)
-	{
-		this->mColor = theColor;
-		this->SetColorHook();
-	}
-}
-
-// Returns a colour-scheme colour, or 0 without a scheme
-DWORD Graphics::GetStandardColor(int theColorRef)
-{
-	if(this->mColorScheme)
-		return this->mColorScheme->GetStandardColor(theColorRef);
-	else
-		return 0;
-}
-
-// Sets the drawing colour to a colour-scheme colour; does nothing without a scheme
-void Graphics::SetSysColor(int theColorRef)
-{
-	if(this->mColorScheme)
-		this->SetColor(this->mColorScheme->GetStandardColor(theColorRef));
-}
-
-// Moves the drawing origin by the given offset
-void Graphics::Translate(int dx, int dy)
-{
-	this->mTransX += dx;
-	this->mTransY += dy;
-}
-
-// Applies the drawing origin to a point
-void Graphics::DoTranslate(int &x, int &y)
-{
-	x+=this->mTransX;
-	y+=this->mTransY;
-}
-
-// Sets one pixel at a point relative to the drawing origin
-void Graphics::SetPixel(int x, int y, DWORD color)
-{
-    this->DoTranslate(x,y);
-    this->SetPixelHook(x,y,color);
-}
-
-// Draws a whole image at a point relative to the drawing origin
-void Graphics::DrawImage(Image *theImage, int x, int y)
-{
-	this->DoTranslate(x,y);
-	theImage->DrawEntire(this->mDisplayContext.get(),x,y);
-}
-
-// Draws part of an image at a point relative to the drawing origin
-void Graphics::DrawImage(Image *theImage, int x, int y, int left, int top, int width, int height)
-{
-	this->DoTranslate(x,y);
-	theImage->Draw(this->mDisplayContext.get(), x, y, left, top, width, height);
-}
-
-// Draws a line between two points relative to the drawing origin
-void Graphics::DrawLine(int x1, int y1, int x2, int y2)
-{
-
-	this->DoTranslate(x1,y1);
-	this->DoTranslate(x2,y2);
-
-	this->DrawLineHook(x1,y1,x2,y2);	
-}
-
-// Draws a rectangle outline relative to the drawing origin
-void Graphics::DrawRect(int x, int y, int width, int height)
-{
-	this->DoTranslate(x,y);
-	this->DrawRectHook(x,y,width,height);
-}
-
-// Fills a rectangle relative to the drawing origin
-void Graphics::FillRect(int x, int y, int width, int height)
-{
-	this->DoTranslate(x,y);
-	this->FillRectHook(x,y,width,height);
-}
-
-// Fills a rectangle blended by the given amount, relative to the drawing origin
-void Graphics::FillRectBlend(int x, int y, int width, int height, int theBlendAmount)
-{
-	this->DoTranslate(x,y);
-	this->FillRectBlendHook(x,y,width,height,theBlendAmount);
-}
-
-// Draws a dotted rectangle outline relative to the drawing origin
-void Graphics::DrawDottedRect(int x, int y, int width, int height)
-{
-	this->DoTranslate(x,y);
-	this->DrawDottedRectHook(x,y,width,height);
-}
-
-// Draws an ellipse outline relative to the drawing origin
-void Graphics::DrawEllipse(int x, int y, int width, int height)
-{
-	this->DoTranslate(x,y);
-	this->DrawEllipseHook(x,y,width,height);
-}
-
-// Fills an ellipse relative to the drawing origin
-void Graphics::FillEllipse(int x, int y, int width, int height)
-{
-	this->DoTranslate(x,y);
-	this->FillEllipseHook(x,y,width,height);
-}
-
-// Draws an arc relative to the drawing origin
-void Graphics::DrawArc(int x, int y, int width, int height, int startAngle, int arcAngle)
-{
-	this->DoTranslate(x,y);
-	this->DrawArcHook(x,y,width,height,startAngle,arcAngle);
-}
-
 // Selects a font into the display context when it differs from the current one
 void Graphics::SetFont(Font *theFont)
 {
-	if(theFont!=this->mFont.get())
-	{
-		this->mFont = theFont;
-		this->mFont->PrepareContext(this->mDisplayContext.get());
-	}
+    if (theFont != this->mFont.get()) {
+        this->mFont = theFont;
+        this->mFont->PrepareContext(this->mDisplayContext.get());
+    }
 }
+void Graphics::DoTranslate(int &x, int &y) { x += this->mTransX; y += this->mTransY; }
 
-// Draws a whole string at a point relative to the drawing origin
-void Graphics::DrawString(const GUIString &theStr, int x, int y)
-{
-	this->DoTranslate(x,y);
-	this->mFont->DrawString(this->mDisplayContext.get(),theStr,0,theStr.length(),x, y);
-}
-
-// Draws part of a string at a point relative to the drawing origin
-void Graphics::DrawString(const GUIString &theStr, unsigned short theOffset, unsigned short theLength, int x, int y)
-{
-	this->DoTranslate(x,y);
-	this->mFont->DrawString(this->mDisplayContext.get(),theStr,theOffset,theLength,x, y);
-}
-
-// Recomputes the clip area as the intersection of every rectangle on the clip stack; with an empty
-// stack clipping is off
-void Graphics::PerformClip()
-{
-	this->ClearClipRectHook();
-	this->mClipRect.x = this->mClipRect.y = -10000000;
-	this->mClipRect.width = this->mClipRect.height = 20000001;
-	if(this->mClipStack.empty())
-		return;
-
-	WONRectangle aRect = this->mClipStack.front();
-	ClipStack::iterator anItr = this->mClipStack.begin();
-	++anItr;
-
-	while(anItr!=this->mClipStack.end())
-	{
-		aRect.DoIntersect(*anItr);
-		++anItr;
-	}
-
-	this->SetClipRectHook(aRect.x, aRect.y, aRect.width, aRect.height);
-	this->mClipRect = aRect;
-}
-
-// Pushes a clip rectangle (relative to the drawing origin) and narrows the clip area to it
-void Graphics::PushClipRect(int x, int y, int width, int height)
-{
-	this->DoTranslate(x,y);
-	WONRectangle aRect(x , y, width, height);
-	this->mClipStack.push_back(aRect);
-	this->PerformClip();
-}
-
-// Pops the last clip rectangle, if any, and recomputes the clip area
-void Graphics::PopClipRect()
-{
-	if(!this->mClipStack.empty())
-		this->mClipStack.pop_back();
-
-	this->PerformClip();
-
-}
-
-// Draws a rectangle outline as four lines, the far edges at x+width and y+height
-void Graphics::DrawRectHook(int x, int y, int width, int height)
-{
-	this->DrawLineHook(x,y,x+width,y);
-	this->DrawLineHook(x+width,y,x+width,y+height);
-	this->DrawLineHook(x+width,y+height,x,y+height);
-	this->DrawLineHook(x,y+height,x,y);
-}
-
-// Draws a rectangle outline with every other pixel set in the current colour
-void Graphics::DrawDottedRectHook(int x, int y, int width, int height)
-{
-//	DrawRectHook(x,y,width,height);
-	int i;
-	for(i=0; i<width; i+=2)
-	{
-		this->SetPixelHook(x+i,y,this->mColor);
-		this->SetPixelHook(x+i,y+height-1,this->mColor);
-	}
-
-	for(i=0; i<height; i+=2)
-	{
-		this->SetPixelHook(x,y+i,this->mColor);
-		this->SetPixelHook(x+width-1,y+i,this->mColor);
-	}
-}
-
-// Fills a rectangle with one horizontal line per row
-void Graphics::FillRectHook(int x, int y, int width, int height)
-{
-	for(int i=0; i<height; i++)
-		this->DrawLineHook(x,y+i,x+width,y+i);
-}
+// the forwarders (gfxobj.rs)
+typedef EeWonGfxCall C;
+void Graphics::SetColor(DWORD c) { this->GCall(C::SetColor, (int)c); }
+DWORD Graphics::GetStandardColor(int i) { return this->GCall(C::StandardColor, i); }
+void Graphics::SetSysColor(int i) { this->GCall(C::SetSysColor, i); }
+void Graphics::Translate(int dx, int dy) { this->GCall(C::Translate, dx, dy); }
+void Graphics::SetPixel(int x, int y, DWORD c) { this->GCall(C::SetPixel, x, y, (int)c); }
+void Graphics::DrawImage(Image *i, int x, int y) { this->GCall(C::DrawImage, x, y, 0, 0, 0, 0, 0, i); }
+void Graphics::DrawImage(Image *i, int x, int y, int l, int t, int w, int h) { this->GCall(C::DrawImagePart, x, y, l, t, w, h, 0, i); }
+void Graphics::DrawLine(int x1, int y1, int x2, int y2) { this->GCall(C::DrawLine, x1, y1, x2, y2); }
+void Graphics::DrawRect(int x, int y, int w, int h) { this->GCall(C::DrawRect, x, y, w, h); }
+void Graphics::FillRect(int x, int y, int w, int h) { this->GCall(C::FillRect, x, y, w, h); }
+void Graphics::FillRectBlend(int x, int y, int w, int h, int n) { this->GCall(C::FillRectBlend, x, y, w, h, n); }
+void Graphics::DrawDottedRect(int x, int y, int w, int h) { this->GCall(C::DrawDottedRect, x, y, w, h); }
+void Graphics::DrawEllipse(int x, int y, int w, int h) { this->GCall(C::DrawEllipse, x, y, w, h); }
+void Graphics::FillEllipse(int x, int y, int w, int h) { this->GCall(C::FillEllipse, x, y, w, h); }
+void Graphics::DrawArc(int x, int y, int w, int h, int s, int a) { this->GCall(C::DrawArc, x, y, w, h, s, a); }
+void Graphics::DrawString(const GUIString &s, int x, int y) { this->GCall(C::DrawString, x, y, s.length(), 0, 0, 0, 0, &s); }
+void Graphics::DrawString(const GUIString &s, unsigned short o, unsigned short n, int x, int y)
+{ this->GCall(C::DrawStringPart, o, n, x, y, 0, 0, 0, &s); }
+void Graphics::PerformClip() { this->GCall(C::PerformClip); }
+void Graphics::PushClipRect(int x, int y, int w, int h) { this->GCall(C::PushClip, x, y, w, h); }
+void Graphics::PopClipRect() { this->GCall(C::PopClip); }
+void Graphics::DrawRectHook(int x, int y, int w, int h) { this->GCall(C::BaseRect, x, y, w, h); }
+void Graphics::DrawDottedRectHook(int x, int y, int w, int h) { this->GCall(C::BaseDottedRect, x, y, w, h); }
+void Graphics::FillRectHook(int x, int y, int w, int h) { this->GCall(C::BaseFillRect, x, y, w, h); }

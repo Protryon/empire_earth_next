@@ -11,6 +11,7 @@
 //! calls their non-virtual methods directly, as the original did; the parent's `SetHasUsedDialogKeys` goes to the
 //! parent's Rust container.
 
+use crate::compmem as mem;
 use std::cell::Cell;
 use std::ffi::c_void;
 use std::sync::Mutex;
@@ -337,7 +338,7 @@ impl EeWonButton {
 
     /// `Fn2F3440`: unless disabled, checks a radio or toggles the check, then fires the button event.
     pub fn click(&self) {
-        if self.op1(Op::CtBits, self.me()) & FLAG_DISABLED != 0 || self.has(BTN_NO_ACTIVATE) {
+        if mem::bits(self.me()) as u32 as isize & FLAG_DISABLED != 0 || self.has(BTN_NO_ACTIVATE) {
             return;
         }
         if self.is_radio() {
@@ -451,8 +452,8 @@ impl EeWonButton {
     }
 
     pub fn mouse_drag(&self, x: i32, y: i32) {
-        let w = self.op1(Op::ChildWidth, self.me()) as i32;
-        let h = self.op1(Op::ChildHeight, self.me()) as i32;
+        let w = mem::width(self.me());
+        let h = mem::height(self.me());
         let place = guifocus::button_drag(i32::from(self.mouse_down_state.get()), x, y, w, h);
         if place < 0 {
             return;
@@ -489,7 +490,7 @@ impl EeWonButton {
 
     /// `mParent->SetHasUsedDialogKeys(true)` on the parent's Rust container.
     fn parent_used_dialog_keys(&self) {
-        let parent = self.op1(Op::CtParentOf, self.me());
+        let parent = mem::parent(self.me());
         if parent == 0 {
             return;
         }

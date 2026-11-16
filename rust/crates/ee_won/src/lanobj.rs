@@ -15,6 +15,7 @@ use std::ptr::null_mut;
 
 use crate::lan::{self, GameMsg};
 use crate::lanlogic::{self, EeWonLanJoinStep, EeWonLanRoute};
+use crate::lanown::LanOwned;
 use crate::lobbyhost::{EeWonLobbyHostFn, EeWonLobbyOp as Op, EeWonLobbyText, Host, Msg};
 
 const DIALOG_OK: isize = 0x186a1;
@@ -50,6 +51,12 @@ pub enum EeWonLanCall {
     DiscoveryTimer,
     DiscoveryRecv,
     Accept,
+    /// `GetMyClient()`.
+    MyClient,
+    /// `GetClientList()`.
+    ClientList,
+    /// `AddPendingSocket(a)` (a peer-authenticated socket the shell accepted).
+    AddPending,
 }
 
 /// LanLogic's scalar state (the original's 0x6c, 0x74, 0xa8, 0xb4, 0xb6).
@@ -60,6 +67,8 @@ pub struct EeWonLan {
     require_peer_auth: Cell<bool>,
     last_server_ping: Cell<i64>,
     last_broadcast_time: Cell<i64>,
+    /// the members the C++ shell held (the game's object: `ee_won_lan_new_model`; the golden's host answers them)
+    owned: Option<LanOwned>,
 }
 
 /// A client reference the Rust side holds (the original's local `SmartPtr<LobbyClient>`), given back when dropped.
@@ -89,7 +98,36 @@ impl EeWonLan {
             require_peer_auth: Cell::new(false),
             last_server_ping: Cell::new(0),
             last_broadcast_time: Cell::new(0),
+            owned: None,
         }
+    }
+
+    // ---- the calls out: the held members' ops answered here (lanown.rs), the rest the host's
+    fn op(&self, op: Op, a: *mut c_void, b: *mut c_void, c: isize, d: isize) -> isize {
+        if let Some(o) = &self.owned {
+            if let Some(r) = o.op(&self.host, op, a, b, c, d) {
+                return r;
+            }
+        }
+        self.host.op(op, a, b, c, d)
+    }
+    fn on(&self, op: Op, a: *mut c_void) -> isize {
+        self.op(op, a, null_mut(), 0, 0)
+    }
+    fn on_bool(&self, op: Op, a: *mut c_void) -> bool {
+        self.on(op, a) != 0
+    }
+    fn on_ptr(&self, op: Op, a: *mut c_void) -> *mut c_void {
+        self.on(op, a) as *mut c_void
+    }
+    fn get(&self, op: Op) -> isize {
+        self.on(op, null_mut())
+    }
+    fn int(&self, op: Op, c: isize) -> isize {
+        self.op(op, null_mut(), null_mut(), c, 0)
+    }
+    fn msg(&self, op: Op, m: Msg, client: *mut c_void) -> isize {
+        self.op(op, m.buffer, client, m.data as isize, m.length as isize)
     }
 
     fn h(&self) -> &Host {
@@ -103,7 +141,7 @@ impl EeWonLan {
         id
     }
     fn ptr(&self, op: Op) -> *mut c_void {
-        self.h().get(op) as *mut c_void
+        self.get(op) as *mut c_void
     }
     fn my_client(&self) -> *mut c_void {
         self.ptr(Op::LanMyClient)
@@ -112,22 +150,22 @@ impl EeWonLan {
         HeldClient { host: *self.h(), client }
     }
     fn client_id(&self, client: *mut c_void) -> u16 {
-        self.h().on(Op::ClientId, client) as u16
+        self.on(Op::ClientId, client) as u16
     }
     fn game_type(&self, game: *mut c_void) -> i32 {
-        self.h().on(Op::GameType, game) as i32
+        self.on(Op::GameType, game) as i32
     }
     /// A take op: its result and the bytes it appended.
     fn take(&self, op: Op, a: *mut c_void) -> (isize, Vec<u8>) {
         let mut v: Vec<u8> = Vec::new();
-        let r = self.h().op(op, a, &mut v as *mut Vec<u8> as *mut c_void, 0, 0);
+        let r = self.op(op, a, &mut v as *mut Vec<u8> as *mut c_void, 0, 0);
         (r, v)
     }
     fn take_text(&self, op: Op, a: *mut c_void) -> Vec<u16> {
         units(&self.take(op, a).1)
     }
     fn text_op(&self, op: Op, a: *mut c_void, text: &[u16]) -> isize {
-        self.h().op(op, a, null_mut(), text.as_ptr() as isize, text.len() as isize)
+        self.op(op, a, null_mut(), text.as_ptr() as isize, text.len() as isize)
     }
     fn new_client(&self, name: &[u16]) -> HeldClient {
         let c = self.text_op(Op::LanNewClient, null_mut(), name) as *mut c_void;
@@ -135,41 +173,41 @@ impl EeWonLan {
     }
     fn discovery_send(&self, bytes: &[u8]) {
         let address = self.ptr(Op::LanDiscoveryAddress);
-        self.h().msg(Op::LanDiscoverySend, Msg::built(bytes), address);
+        self.msg(Op::LanDiscoverySend, Msg::built(bytes), address);
     }
 
     /// `IsConnected`: hosting (listening) or connected to a host.
     fn is_connected(&self) -> bool {
-        self.h().get(Op::LanListenSocket) != 0 || self.h().get(Op::LanServerSocket) != 0
+        self.get(Op::LanListenSocket) != 0 || self.get(Op::LanServerSocket) != 0
     }
 
     /// Leaves the LAN game: stops certificate refresh, closes the listen, host and player sockets, clears the players.
     fn close_connections(&self) {
-        self.h().get(Op::LanAuthAutoRefreshOff);
+        self.get(Op::LanAuthAutoRefreshOff);
         self.next_client_id.set(0);
         self.is_captain.set(false);
         self.require_peer_auth.set(false);
-        self.h().get(Op::LanCloseSockets);
+        self.get(Op::LanCloseSockets);
     }
 
     /// Host: announces the departed player and drops its socket; joiner: reports the lost host connection.
     fn handle_socket_closed(&self, op: *mut c_void) {
-        let socket = self.h().on_ptr(Op::LanOpSocket, op);
+        let socket = self.on_ptr(Op::LanOpSocket, op);
         let have = !socket.is_null();
-        let has_client = have && !self.h().on_ptr(Op::LanSocketClient, socket).is_null();
+        let has_client = have && !self.on_ptr(Op::LanSocketClient, socket).is_null();
         let is_server = have && socket == self.ptr(Op::LanServerSocket);
         let closed = lanlogic::socket_closed(have, self.is_captain.get(), has_client, is_server);
         if closed.announce_left {
-            let client = self.h().on_ptr(Op::LanSocketClient, socket);
+            let client = self.on_ptr(Op::LanSocketClient, socket);
             let message = lan::client_left(self.client_id(client));
-            self.h().op(Op::LanSocketSetClient, socket, null_mut(), 0, 0);
+            self.op(Op::LanSocketSetClient, socket, null_mut(), 0, 0);
             self.broadcast_message(Msg::built(&message), true);
         }
         if closed.forget_socket {
-            self.h().on(Op::LanForgetSocket, socket);
+            self.on(Op::LanForgetSocket, socket);
         }
         if closed.lost_host {
-            self.h().get(Op::LanLoseHost);
+            self.get(Op::LanLoseHost);
         }
     }
 
@@ -179,21 +217,21 @@ impl EeWonLan {
             return;
         }
         if self.is_captain.get() {
-            let now = self.h().get(Op::Now) as i64;
+            let now = self.get(Op::Now) as i64;
             let mut i = 0;
-            while i < self.h().get(Op::LanPendingCount) {
-                let socket = self.h().int(Op::LanPendingAt, i) as *mut c_void;
-                if lan::host_socket_stale(now, self.h().on(Op::LanSocketLastTime, socket) as i64) {
-                    self.h().op(Op::LanSocketClose, socket, null_mut(), 1000, 0);
+            while i < self.get(Op::LanPendingCount) {
+                let socket = self.int(Op::LanPendingAt, i) as *mut c_void;
+                if lan::host_socket_stale(now, self.on(Op::LanSocketLastTime, socket) as i64) {
+                    self.op(Op::LanSocketClose, socket, null_mut(), 1000, 0);
                 }
                 i += 1;
             }
-        } else if self.h().get(Op::LanServerSocket) != 0
-            && lan::joiner_ping_due(self.h().get(Op::Now) as i64, self.last_server_ping.get())
+        } else if self.get(Op::LanServerSocket) != 0
+            && lan::joiner_ping_due(self.get(Op::Now) as i64, self.last_server_ping.get())
         {
             self.send_message_to_captain(Msg::built(&lan::ping()));
         }
-        self.h().get(Op::LanStartNetworkTimer);
+        self.get(Op::LanStartNetworkTimer);
     }
 
     /// Host: answers a join request: rejects other subnets (LAN) or a wrong password, else adds and announces the
@@ -208,7 +246,7 @@ impl EeWonLan {
         }
         let (mut peer, mut local) = ([0u8; 2], [0u8; 2]);
         if self.game_type(game) == 1 {
-            let nets = self.h().on(Op::LanSubnets, socket) as u32;
+            let nets = self.on(Op::LanSubnets, socket) as u32;
             peer = [nets as u8, (nets >> 8) as u8];
             local = [(nets >> 16) as u8, (nets >> 24) as u8];
         }
@@ -216,20 +254,20 @@ impl EeWonLan {
         let matches = self.text_op(Op::LanGamePasswordIs, game, password) != 0;
         let status = lan::join_status(kind, peer, local, matches);
         if status != 0 {
-            self.h().msg(Op::LanSocketSend, Msg::built(&lan::join_refused(status)), socket);
+            self.msg(Op::LanSocketSend, Msg::built(&lan::join_refused(status)), socket);
             return;
         }
         let client = self.new_client(name);
         let id = self.next_id();
-        self.h().op(Op::LanAddClient, client.client, null_mut(), id as isize, 0);
+        self.op(Op::LanAddClient, client.client, null_mut(), id as isize, 0);
         let joined_name = self.take_text(Op::ClientNameTake, client.client);
         let notify = lan::client_joined(self.client_id(client.client), &joined_name);
         self.broadcast_message(Msg::built(&notify), true);
-        self.h().op(Op::LanSocketSetClient, socket, client.client, 0, 0);
+        self.op(Op::LanSocketSetClient, socket, client.client, 0, 0);
         let mut listed = Vec::new();
         let mut i = 0;
-        while i < self.h().get(Op::LanClientCount) {
-            let c = self.h().int(Op::LanClientAt, i) as *mut c_void;
+        while i < self.get(Op::LanClientCount) {
+            let c = self.int(Op::LanClientAt, i) as *mut c_void;
             let id = self.client_id(c);
             listed.push((id, self.take_text(Op::ClientNameTake, c)));
             i += 1;
@@ -242,23 +280,23 @@ impl EeWonLan {
 
     /// Reads the host's join reply into the player list and the game's captain; its status, 1 on bad data.
     fn read_join_reply(&self, m: Msg, game: *mut c_void) -> i32 {
-        if m.is_none() || self.h().get(Op::LanServerSocket) == 0 || game.is_null() {
+        if m.is_none() || self.get(Op::LanServerSocket) == 0 || game.is_null() {
             return 1;
         }
         // SAFETY: the message's bytes (a Rust buffer here)
         let reply = lan::read_join_reply(unsafe { message_bytes(&m) });
         if let Some(captain) = reply.captain {
-            self.h().op(Op::GameSetCaptainId, game, null_mut(), captain as isize, 0);
+            self.op(Op::GameSetCaptainId, game, null_mut(), captain as isize, 0);
         }
         for (id, name) in &reply.clients {
             let client = self.new_client(name);
-            self.h().op(Op::LanAddClient, client.client, null_mut(), *id as isize, 0);
+            self.op(Op::LanAddClient, client.client, null_mut(), *id as isize, 0);
             match lanlogic::reply_role(*id, reply.you, reply.captain.unwrap_or(0)) {
                 1 => {
-                    self.h().on(Op::LanSetMyClient, client.client);
+                    self.on(Op::LanSetMyClient, client.client);
                 }
                 2 => {
-                    self.h().on(Op::LanServerClientIsCaptain, client.client);
+                    self.on(Op::LanServerClientIsCaptain, client.client);
                 }
                 _ => {}
             }
@@ -279,15 +317,15 @@ impl EeWonLan {
 
     /// Handles a received LAN message: stamps the socket's activity (host) and dispatches it.
     fn handle_recv_msg(&self, op: *mut c_void) {
-        let socket = self.h().on_ptr(Op::LanOpSocket, op);
-        let ok = self.h().on_bool(Op::LanRecvOk, op);
-        let has_client = ok && !self.h().on_ptr(Op::LanSocketClient, socket).is_null();
+        let socket = self.on_ptr(Op::LanOpSocket, op);
+        let ok = self.on_bool(Op::LanRecvOk, op);
+        let has_client = ok && !self.on_ptr(Op::LanSocketClient, socket).is_null();
         let recv = lanlogic::recv(ok, self.is_captain.get(), has_client);
         if !recv.handle {
             return;
         }
         if recv.stamp {
-            self.h().on(Op::LanSocketStamp, socket);
+            self.on(Op::LanSocketStamp, socket);
         }
         let (buffer, bytes) = self.take(Op::LanRecvMsgTake, op);
         let m = received(buffer, &bytes);
@@ -295,7 +333,7 @@ impl EeWonLan {
             self.handle_new_socket_message(m, socket);
             return;
         }
-        let client = self.h().on_ptr(Op::LanSocketClient, socket);
+        let client = self.on_ptr(Op::LanSocketClient, socket);
         self.handle_message(m, client);
     }
 
@@ -303,11 +341,11 @@ impl EeWonLan {
     fn send_message_to_client(&self, client: *mut c_void, m: Msg) {
         let captain = self.is_captain.get() && self.is_connected();
         let to_me = captain && client == self.my_client();
-        let has_socket = captain && !to_me && !self.h().on_ptr(Op::LanClientSocket, client).is_null();
+        let has_socket = captain && !to_me && !self.on_ptr(Op::LanClientSocket, client).is_null();
         match lanlogic::send_to_client(self.is_captain.get(), self.is_connected(), to_me, has_socket) {
             EeWonLanRoute::Local => self.handle_message(m, self.my_client()),
             EeWonLanRoute::Socket => {
-                self.h().msg(Op::LanClientSocketSend, m, client);
+                self.msg(Op::LanClientSocketSend, m, client);
             }
             _ => {}
         }
@@ -316,12 +354,12 @@ impl EeWonLan {
     /// Sends a message to the host, or handles it directly when this player is the host.
     fn send_message_to_captain(&self, m: Msg) {
         let connected = self.is_connected();
-        let has_server = self.h().get(Op::LanServerSocket) != 0;
+        let has_server = self.get(Op::LanServerSocket) != 0;
         match lanlogic::send_to_captain(connected, self.is_captain.get(), has_server) {
             EeWonLanRoute::Local => self.handle_message(m, self.my_client()),
             EeWonLanRoute::Socket => {
-                self.last_server_ping.set(self.h().get(Op::Now) as i64);
-                self.h().msg(Op::LanServerSend, m, null_mut());
+                self.last_server_ping.set(self.get(Op::Now) as i64);
+                self.msg(Op::LanServerSend, m, null_mut());
             }
             _ => {}
         }
@@ -338,20 +376,19 @@ impl EeWonLan {
         }
         let mut sockets = Vec::new();
         let mut i = 0;
-        while i < self.h().get(Op::LanPendingCount) {
-            sockets.push(self.h().int(Op::LanPendingAt, i) as *mut c_void);
+        while i < self.get(Op::LanPendingCount) {
+            sockets.push(self.int(Op::LanPendingAt, i) as *mut c_void);
             i += 1;
         }
         if sockets.is_empty() {
             return;
         }
-        let has_client: Vec<bool> =
-            sockets.iter().map(|s| !self.h().on_ptr(Op::LanSocketClient, *s).is_null()).collect();
+        let has_client: Vec<bool> = sockets.iter().map(|s| !self.on_ptr(Op::LanSocketClient, *s).is_null()).collect();
         let mut send = vec![false; sockets.len()];
         lanlogic::broadcast(captain, false, &has_client, &mut send);
         for (socket, send) in sockets.iter().zip(send) {
             if send {
-                self.h().msg(Op::LanSocketSend, m, *socket);
+                self.msg(Op::LanSocketSend, m, *socket);
             }
         }
     }
@@ -365,27 +402,27 @@ impl EeWonLan {
     /// Adds the announced player (the host already has it) and broadcasts a client-added event.
     fn handle_client_joined(&self, id: u16, name: &[u16]) {
         let client = if self.is_captain.get() {
-            let c = self.h().int(Op::LanFindClient, id as isize) as *mut c_void;
+            let c = self.int(Op::LanFindClient, id as isize) as *mut c_void;
             if !c.is_null() {
-                self.h().on(Op::ClientHold, c);
+                self.on(Op::ClientHold, c);
             }
             self.held(c)
         } else {
             let c = self.new_client(name);
-            self.h().op(Op::LanAddClient, c.client, null_mut(), id as isize, 0);
+            self.op(Op::LanAddClient, c.client, null_mut(), id as isize, 0);
             c
         };
         if !client.client.is_null() {
-            self.h().op(Op::LanClientChanged, client.client, null_mut(), 0, 0);
+            self.op(Op::LanClientChanged, client.client, null_mut(), 0, 0);
         }
     }
 
     /// Removes the announced player and tells the lobby the player left the game.
     fn handle_client_left(&self, id: u16) {
-        let client = self.held(self.h().int(Op::LanRemoveClient, id as isize) as *mut c_void);
+        let client = self.held(self.int(Op::LanRemoveClient, id as isize) as *mut c_void);
         if !client.client.is_null() {
-            self.h().op(Op::LanClientChanged, client.client, null_mut(), 1, 0);
-            self.h().on(Op::ClientLeftGame, client.client);
+            self.op(Op::LanClientChanged, client.client, null_mut(), 1, 0);
+            self.on(Op::ClientLeftGame, client.client);
         }
     }
 
@@ -398,7 +435,7 @@ impl EeWonLan {
         let m = Msg::built(&line);
         match lan::chat_route(flags) {
             lan::ChatRoute::Whisper => {
-                let to = self.h().int(Op::LanFindClient, target as isize) as *mut c_void;
+                let to = self.int(Op::LanFindClient, target as isize) as *mut c_void;
                 if to.is_null() {
                     return;
                 }
@@ -409,9 +446,9 @@ impl EeWonLan {
             }
             lan::ChatRoute::Team => {
                 let mut i = 0;
-                while i < self.h().get(Op::LanClientCount) {
-                    let c = self.h().int(Op::LanClientAt, i) as *mut c_void;
-                    if self.h().op(Op::ClientIsTeammate, c, sender, 0, 0) != 0 {
+                while i < self.get(Op::LanClientCount) {
+                    let c = self.int(Op::LanClientAt, i) as *mut c_void;
+                    if self.op(Op::ClientIsTeammate, c, sender, 0, 0) != 0 {
                         self.send_message_to_client(c, m);
                     }
                     i += 1;
@@ -423,23 +460,23 @@ impl EeWonLan {
 
     /// Shows a relayed chat line unless the sender is ignored; whispers play a sound and set the reply name.
     fn handle_chat_message(&self, flags: u16, sender_id: u16, text: &[u16], target_id: u16) {
-        let sender = self.h().int(Op::LanFindClient, sender_id as isize) as *mut c_void;
-        if sender.is_null() || self.h().on_bool(Op::ClientIsIgnored, sender) {
+        let sender = self.int(Op::LanFindClient, sender_id as isize) as *mut c_void;
+        if sender.is_null() || self.on_bool(Op::ClientIsIgnored, sender) {
             return;
         }
         let mut target = null_mut();
         let line_flags = lan::chat_line_flags(flags);
         if lan::chat_route(flags) == lan::ChatRoute::Whisper {
-            target = self.h().int(Op::LanFindClient, target_id as isize) as *mut c_void;
+            target = self.int(Op::LanFindClient, target_id as isize) as *mut c_void;
             if target.is_null() {
                 return;
             }
             if lanlogic::whisper_received(true, sender == self.my_client()) {
-                self.h().on(Op::LanWhisperReceived, sender);
+                self.on(Op::LanWhisperReceived, sender);
             }
         }
         let d = ((line_flags as isize) << 32) | text.len() as isize;
-        self.h().op(Op::LanRecvChat, sender, target, text.as_ptr() as isize, d);
+        self.op(Op::LanRecvChat, sender, target, text.as_ptr() as isize, d);
     }
 
     /// Dispatches a LAN message by type: player joined/left, chat request, chat line, staging.
@@ -460,7 +497,7 @@ impl EeWonLan {
             Ok(GameMsg::Staging) => {
                 // the bytes from the type byte (the read above proved they reach it)
                 let rest = Msg { buffer: null_mut(), data: m.data.wrapping_add(offset), length: m.length - offset };
-                self.h().msg(Op::LanStagingRead, rest, client);
+                self.msg(Op::LanStagingRead, rest, client);
             }
             _ => {}
         }
@@ -483,7 +520,7 @@ impl EeWonLan {
             EVENT_CLIENT_ACTION => self.handle_client_action(event),
             EVENT_CHANGE_DIRECT_CONNECT => self.handle_change_direct_connect(event),
             EVENT_CHAT_COMMAND => {
-                let component = self.h().on_ptr(Op::EventComponent, event);
+                let component = self.on_ptr(Op::EventComponent, event);
                 self.handle_chat_command(component);
             }
             _ => {}
@@ -492,34 +529,34 @@ impl EeWonLan {
 
     /// Asks for a new LAN player name and saves it when confirmed and not empty.
     fn change_lan_name(&self) {
-        let result = self.h().get(Op::LanNameDialogRun);
-        let length = if result == DIALOG_OK { self.h().get(Op::LanNameDialogLength) as usize } else { 0 };
+        let result = self.get(Op::LanNameDialogRun);
+        let length = if result == DIALOG_OK { self.get(Op::LanNameDialogLength) as usize } else { 0 };
         if lanlogic::lan_name_accepted(result as i32, length) {
-            self.h().get(Op::LanNameDialogSave);
+            self.get(Op::LanNameDialogSave);
         }
     }
 
     /// Asks for a new LAN broadcast port; on change saves it and restarts discovery.
     fn change_lan_port(&self) {
-        let port = self.h().get(Op::LanBroadcastPort);
-        let result = self.h().int(Op::LanPortDialogRun, port);
-        let new_port = if result == DIALOG_OK { self.h().get(Op::LanPortDialogPort) } else { port };
+        let port = self.get(Op::LanBroadcastPort);
+        let result = self.int(Op::LanPortDialogRun, port);
+        let new_port = if result == DIALOG_OK { self.get(Op::LanPortDialogPort) } else { port };
         if !lanlogic::lan_port_accepted(result as i32, port as i32, new_port as i32) {
             return;
         }
-        self.h().int(Op::LanSetBroadcastPort, new_port);
+        self.int(Op::LanSetBroadcastPort, new_port);
         self.start_discovery();
     }
 
     /// Removes a saved direct-connect game, or asks for an address and adds or renames one.
     fn handle_change_direct_connect(&self, event: *mut c_void) {
-        if self.h().on_bool(Op::EventDirectIsDelete, event) {
-            let game = self.h().on_ptr(Op::EventDirectGame, event);
+        if self.on_bool(Op::EventDirectIsDelete, event) {
+            let game = self.on_ptr(Op::EventDirectGame, event);
             if !game.is_null() {
-                self.h().on(Op::LanDirectRemove, game);
+                self.on(Op::LanDirectRemove, game);
             }
-        } else if self.h().on_bool(Op::EventDirectIsAdd, event) {
-            self.h().get(Op::LanDirectAdd);
+        } else if self.on_bool(Op::EventDirectIsAdd, event) {
+            self.get(Op::LanDirectAdd);
         }
     }
 
@@ -528,32 +565,32 @@ impl EeWonLan {
         if self.my_client().is_null() || client.is_null() {
             return;
         }
-        self.h().op(Op::LanShowClientOptions, client, null_mut(), room_spec, 0);
+        self.op(Op::LanShowClientOptions, client, null_mut(), room_spec, 0);
     }
 
     /// Handles a player action in the LAN room: options popup, ignore, unignore, whisper or kick.
     fn handle_client_action(&self, event: *mut c_void) {
-        let client = self.h().on_ptr(Op::EventClientActionClient, event);
+        let client = self.on_ptr(Op::EventClientActionClient, event);
         let connected = self.is_connected();
-        let room_spec = self.h().on(Op::EventClientActionRoomSpec, event) as i32;
-        let action = self.h().on(Op::EventClientActionAction, event) as i32;
+        let room_spec = self.on(Op::EventClientActionRoomSpec, event) as i32;
+        let action = self.on(Op::EventClientActionAction, event) as i32;
         match lanlogic::client_action(connected, room_spec, !client.is_null(), action) {
             18 => {
-                let room_spec = self.h().on(Op::EventClientActionRoomSpec, event);
+                let room_spec = self.on(Op::EventClientActionRoomSpec, event);
                 self.show_client_options(client, room_spec);
             }
             5 => {
-                self.h().op(Op::SetClientIgnored, client, null_mut(), 1, 8);
+                self.op(Op::SetClientIgnored, client, null_mut(), 1, 8);
             }
             12 => {
-                self.h().op(Op::SetClientIgnored, client, null_mut(), 0, 8);
+                self.op(Op::SetClientIgnored, client, null_mut(), 0, 8);
             }
             16 => {
-                let room_spec = self.h().on(Op::EventClientActionRoomSpec, event);
-                self.h().op(Op::LanSetChatInput, client, null_mut(), room_spec, 0);
+                let room_spec = self.on(Op::EventClientActionRoomSpec, event);
+                self.op(Op::LanSetChatInput, client, null_mut(), room_spec, 0);
             }
             7 => {
-                self.h().on(Op::KickClientFromLobby, client);
+                self.on(Op::KickClientFromLobby, client);
             }
             _ => {}
         }
@@ -570,12 +607,12 @@ impl EeWonLan {
             return;
         }
         let parser = self.ptr(Op::ChatParser);
-        if parser.is_null() || self.h().on(Op::ParserRoomFlags, parser) & 8 == 0 {
+        if parser.is_null() || self.on(Op::ParserRoomFlags, parser) & 8 == 0 {
             return;
         }
-        let client = self.h().on_ptr(Op::ParserTarget, parser);
-        let room_flags = self.h().on(Op::ParserRoomFlags, parser) as i32;
-        let command = self.h().on(Op::ParserCommand, parser) as i32;
+        let client = self.on_ptr(Op::ParserTarget, parser);
+        let room_flags = self.on(Op::ParserRoomFlags, parser) as i32;
+        let command = self.on(Op::ParserCommand, parser) as i32;
         let c = lanlogic::chat_command(true, room_flags, command, !client.is_null());
         match c.action {
             1 => {
@@ -584,11 +621,11 @@ impl EeWonLan {
                 self.send_chat(&text, c.flags, target);
             }
             2 => {
-                let ignored = self.h().on_bool(Op::ClientIsIgnored, client);
-                self.h().op(Op::SetClientIgnored, client, null_mut(), !ignored as isize, 4);
+                let ignored = self.on_bool(Op::ClientIsIgnored, client);
+                self.op(Op::SetClientIgnored, client, null_mut(), !ignored as isize, 4);
             }
             3 => {
-                self.h().on(Op::LanChatCommandError, component);
+                self.on(Op::LanChatCommandError, component);
             }
             _ => {}
         }
@@ -596,16 +633,16 @@ impl EeWonLan {
 
     /// LAN screen: clears the games and broadcasts a discovery query; direct connect: pings the shown games.
     fn refresh_games(&self) {
-        match lanlogic::refresh(self.h().get(Op::GameScreenType) as i32) {
+        match lanlogic::refresh(self.get(Op::GameScreenType) as i32) {
             1 => {
-                self.h().get(Op::LanClearLanGames);
-                if self.h().get(Op::LanDiscoverySocket) == 0 {
+                self.get(Op::LanClearLanGames);
+                if self.get(Op::LanDiscoverySocket) == 0 {
                     return;
                 }
                 self.discovery_send(&lan::discovery(lan::DISCOVERY_QUERY, 0));
             }
             3 => {
-                self.h().get(Op::LanPingDirectGames);
+                self.get(Op::LanPingDirectGames);
             }
             _ => {}
         }
@@ -613,16 +650,16 @@ impl EeWonLan {
 
     /// Enters the LAN screen: loads the saved direct-connect games and starts LAN discovery.
     fn enter_lan_screen(&self) {
-        self.h().get(Op::LanEnterScreenLists);
+        self.get(Op::LanEnterScreenLists);
         self.start_discovery();
-        self.h().get(Op::ShowLanScreen);
+        self.get(Op::ShowLanScreen);
     }
 
     /// Both games' peer authentication check (a direct-connect game with the CD key check on).
     fn needs_peer_auth(&self, game: *mut c_void) -> bool {
         self.game_type(game) == 3 && {
             let kind = self.game_type(game);
-            lanlogic::needs_peer_auth(kind, self.h().get(Op::DoCDKeyCheck) != 0)
+            lanlogic::needs_peer_auth(kind, self.get(Op::DoCDKeyCheck) != 0)
         }
     }
 
@@ -631,27 +668,27 @@ impl EeWonLan {
         self.close_connections();
         if self.needs_peer_auth(game) {
             self.require_peer_auth.set(true);
-            if self.h().get(Op::LanRefreshCertificate) == 0 {
+            if self.get(Op::LanRefreshCertificate) == 0 {
                 return false;
             }
         }
-        self.h().get(Op::KillFirewallTest);
+        self.get(Op::KillFirewallTest);
         self.is_captain.set(true);
         let id = self.next_id();
-        self.h().op(Op::LanHostMyClient, game, null_mut(), id as isize, 0);
-        if self.h().on(Op::LanHostListen, game) == 0 {
+        self.op(Op::LanHostMyClient, game, null_mut(), id as isize, 0);
+        if self.on(Op::LanHostListen, game) == 0 {
             return false;
         }
         self.last_broadcast_time.set(0);
-        self.h().get(Op::LanStartNetworkTimer);
+        self.get(Op::LanStartNetworkTimer);
         true
     }
 
     /// Host: closes the player's socket.
     fn kick_client(&self, client: *mut c_void) {
         if self.is_captain.get() {
-            let socket = self.h().on_ptr(Op::LanClientSocket, client);
-            self.h().op(Op::LanSocketClose, socket, null_mut(), 1000, 0);
+            let socket = self.on_ptr(Op::LanClientSocket, client);
+            self.op(Op::LanSocketClose, socket, null_mut(), 1000, 0);
         }
     }
 
@@ -672,7 +709,7 @@ impl EeWonLan {
 
     /// This player hosts a LAN game and discovery is running.
     fn can_broadcast_game(&self, game: *mut c_void) -> bool {
-        let discovery = self.h().get(Op::LanDiscoverySocket) != 0;
+        let discovery = self.get(Op::LanDiscoverySocket) != 0;
         let kind = if game.is_null() { 0 } else { self.game_type(game) };
         lanlogic::can_broadcast(self.is_captain.get(), discovery, !game.is_null(), kind)
     }
@@ -682,9 +719,9 @@ impl EeWonLan {
         if !self.can_broadcast_game(game) {
             return;
         }
-        let port = self.h().on(Op::GameAddressPort, game) as u16;
+        let port = self.on(Op::GameAddressPort, game) as u16;
         let head = lan::discovery(lan::DISCOVERY_SUMMARY, port);
-        self.h().op(Op::LanSendSummary, game, address, head.as_ptr() as isize, head.len() as isize);
+        self.op(Op::LanSendSummary, game, address, head.as_ptr() as isize, head.len() as isize);
     }
 
     /// Broadcasts a keep-alive for the hosted game, or its full summary every 30 seconds.
@@ -692,12 +729,12 @@ impl EeWonLan {
         if !self.can_broadcast_game(game) {
             return;
         }
-        let now = self.h().get(Op::Now) as i64;
+        let now = self.get(Op::Now) as i64;
         if lan::summary_due(now, self.last_broadcast_time.get()) {
             let address = self.ptr(Op::LanDiscoveryAddress);
             self.broadcast_game_summary(game, address);
         } else {
-            let port = self.h().on(Op::GameAddressPort, game) as u16;
+            let port = self.on(Op::GameAddressPort, game) as u16;
             self.discovery_send(&lan::discovery(lan::DISCOVERY_KEEP_ALIVE, port));
         }
         self.last_broadcast_time.set(now);
@@ -708,7 +745,7 @@ impl EeWonLan {
         if !self.can_broadcast_game(game) {
             return;
         }
-        let port = self.h().on(Op::GameAddressPort, game) as u16;
+        let port = self.on(Op::GameAddressPort, game) as u16;
         self.discovery_send(&lan::discovery(lan::DISCOVERY_REMOVED, port));
     }
 
@@ -723,13 +760,13 @@ impl EeWonLan {
                 self.broadcast_game_keep_alive(game);
             }
         }
-        self.h().get(Op::LanRemoveStaleGames);
-        self.h().get(Op::LanStartDiscoveryTimer);
+        self.get(Op::LanRemoveStaleGames);
+        self.get(Op::LanStartDiscoveryTimer);
     }
 
     /// Dispatches a discovery packet: game summary, keep-alive, removal or query.
     fn handle_discovery_recv(&self, op: *mut c_void) {
-        if !self.h().on_bool(Op::LanDiscoveryOk, op) {
+        if !self.on_bool(Op::LanDiscoveryOk, op) {
             return;
         }
         let (_, bytes) = self.take(Op::LanDiscoveryTake, op);
@@ -738,16 +775,16 @@ impl EeWonLan {
         };
         match kind {
             lan::DISCOVERY_SUMMARY => {
-                self.h().op(Op::LanGameSummary, op, null_mut(), port as isize, 0);
+                self.op(Op::LanGameSummary, op, null_mut(), port as isize, 0);
             }
             lan::DISCOVERY_KEEP_ALIVE => {
-                self.h().op(Op::LanGameKeepAlive, op, null_mut(), port as isize, 0);
+                self.op(Op::LanGameKeepAlive, op, null_mut(), port as isize, 0);
             }
             lan::DISCOVERY_REMOVED => {
-                self.h().op(Op::LanGameRemoved, op, null_mut(), port as isize, 0);
+                self.op(Op::LanGameRemoved, op, null_mut(), port as isize, 0);
             }
             lan::DISCOVERY_QUERY => {
-                let from = self.h().on_ptr(Op::LanRecvFrom, op);
+                let from = self.on_ptr(Op::LanRecvFrom, op);
                 let game = self.ptr(Op::LanMyGame);
                 if !game.is_null() {
                     self.broadcast_game_summary(game, from);
@@ -759,13 +796,13 @@ impl EeWonLan {
 
     /// Opens the broadcast discovery socket, queries for LAN games and advertises the hosted game.
     fn start_discovery(&self) {
-        self.h().get(Op::LanStopDiscovery);
-        if self.h().get(Op::LanOpenDiscovery) != 0 {
-            self.h().get(Op::LanStopDiscovery);
+        self.get(Op::LanStopDiscovery);
+        if self.get(Op::LanOpenDiscovery) != 0 {
+            self.get(Op::LanStopDiscovery);
             return;
         }
-        self.h().get(Op::LanDiscoveryArm);
-        self.h().get(Op::LanStartDiscoveryTimer);
+        self.get(Op::LanDiscoveryArm);
+        self.get(Op::LanStartDiscoveryTimer);
         self.discovery_send(&lan::discovery(lan::DISCOVERY_QUERY, 0));
         if !self.is_captain.get() {
             return;
@@ -779,20 +816,20 @@ impl EeWonLan {
 
     /// Stops LAN discovery and clears the direct-connect games.
     fn logout(&self) {
-        self.h().get(Op::LanStopDiscovery);
-        self.h().get(Op::LanClearDirectGames);
+        self.get(Op::LanStopDiscovery);
+        self.get(Op::LanClearDirectGames);
     }
 
     /// Host: takes an accepted connection, running peer authentication first when required.
     fn handle_accept(&self, op: *mut c_void) {
-        let socket = self.h().on_ptr(Op::LanAcceptedSocket, op);
+        let socket = self.on_ptr(Op::LanAcceptedSocket, op);
         if socket.is_null() {
             return;
         }
         if self.require_peer_auth.get() {
-            self.h().on(Op::LanStartPeerAuth, socket);
+            self.on(Op::LanStartPeerAuth, socket);
         } else {
-            self.h().on(Op::LanAddPending, socket);
+            self.on(Op::LanAddPending, socket);
         }
     }
 
@@ -801,22 +838,22 @@ impl EeWonLan {
         self.close_connections();
         if self.needs_peer_auth(game) {
             self.require_peer_auth.set(true);
-            if self.h().get(Op::LanRefreshCertificate) == 0 {
+            if self.get(Op::LanRefreshCertificate) == 0 {
                 return false;
             }
         }
-        self.h().get(Op::LanNewServerSocket);
+        self.get(Op::LanNewServerSocket);
         let mut joined = false;
-        let mut need_password = self.h().on_bool(Op::GameHasPassword, game);
+        let mut need_password = self.on_bool(Op::GameHasPassword, game);
         let mut need_connect = true;
         while !joined {
-            self.h().get(Op::LanJoinPasswordClear);
-            if need_password && self.h().get(Op::LanPasswordDialogRun) != DIALOG_OK {
+            self.get(Op::LanJoinPasswordClear);
+            if need_password && self.get(Op::LanPasswordDialogRun) != DIALOG_OK {
                 return false;
             }
             if need_connect {
                 let peer = self.require_peer_auth.get() as isize;
-                if self.h().op(Op::LanConnect, game, null_mut(), peer, 0) == 0 {
+                if self.op(Op::LanConnect, game, null_mut(), peer, 0) == 0 {
                     return false;
                 }
                 need_connect = false;
@@ -824,8 +861,8 @@ impl EeWonLan {
             let name = self.take_text(Op::LanNameTake, null_mut());
             let secret = self.take_text(Op::LanJoinPasswordTake, null_mut());
             let request = lan::join_request(&name, &secret);
-            self.h().msg(Op::LanServerSend, Msg::built(&request), null_mut());
-            self.last_server_ping.set(self.h().get(Op::Now) as i64);
+            self.msg(Op::LanServerSend, Msg::built(&request), null_mut());
+            self.last_server_ping.set(self.get(Op::Now) as i64);
             let (got, bytes) = self.take(Op::LanRecvReplyTake, null_mut());
             if got < 0 {
                 return false;
@@ -840,17 +877,17 @@ impl EeWonLan {
                 EeWonLanJoinStep::Joined => joined = true,
                 EeWonLanJoinStep::Fail => return false,
                 EeWonLanJoinStep::WrongPassword => {
-                    self.h().int(Op::MessageBox, EeWonLobbyText::WrongPassword as isize);
+                    self.int(Op::MessageBox, EeWonLobbyText::WrongPassword as isize);
                     need_password = true;
                 }
                 EeWonLanJoinStep::OtherSubnet => {
-                    self.h().int(Op::MessageBox, EeWonLobbyText::OtherSubnet as isize);
+                    self.int(Op::MessageBox, EeWonLobbyText::OtherSubnet as isize);
                     return false;
                 }
                 EeWonLanJoinStep::Again => {}
             }
         }
-        self.h().on(Op::LanJoinArm, game);
+        self.on(Op::LanJoinArm, game);
         true
     }
 
@@ -879,6 +916,11 @@ impl EeWonLan {
             EeWonLanCall::DiscoveryTimer => self.handle_discovery_timer(a),
             EeWonLanCall::DiscoveryRecv => self.handle_discovery_recv(a),
             EeWonLanCall::Accept => self.handle_accept(a),
+            EeWonLanCall::MyClient => return self.get(Op::LanMyClient),
+            EeWonLanCall::ClientList => return self.owned.as_ref().map_or(0, |o| o.clients()),
+            EeWonLanCall::AddPending => {
+                self.on(Op::LanAddPending, a);
+            }
         }
         0
     }
@@ -922,13 +964,32 @@ unsafe fn message_bytes<'a>(m: &Msg) -> &'a [u8] {
 
 // ---- the C ABI (WONLobbyLan.h)
 
-/// A new LanLogic state for the C++ shell `logic`, calling out through `host`.
-/// As `ee_won_lan_new`, with the model's ops answered by its Rust objects (the game's).
+/// The game's LanLogic for the C++ shell `logic`: as `ee_won_lan_new`, with the model's ops answered by its Rust
+/// objects and the shell's members held here (lanown.rs): the shell's new client list and LAN (type 1) and
+/// direct-connect (type 3) game lists, a reference taken on each.
+///
+/// # Safety
+/// The lists are live model shells.
 #[no_mangle]
-pub extern "C" fn ee_won_lan_new_model(logic: *mut c_void, host: EeWonLobbyHostFn) -> *mut EeWonLan {
+pub unsafe extern "C" fn ee_won_lan_new_model(
+    logic: *mut c_void,
+    host: EeWonLobbyHostFn,
+    clients: *mut c_void,
+    lan_games: *mut c_void,
+    direct_games: *mut c_void,
+) -> *mut EeWonLan {
     let mut l = EeWonLan::new(logic, host);
     l.host.model = true;
+    l.owned = Some(LanOwned::new(clients as isize, lan_games as isize, direct_games as isize));
     Box::into_raw(Box::new(l))
+}
+
+impl Drop for EeWonLan {
+    fn drop(&mut self) {
+        if let Some(o) = &self.owned {
+            o.free(&self.host);
+        }
+    }
 }
 
 #[no_mangle]

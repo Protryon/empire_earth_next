@@ -40,8 +40,6 @@ extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t
         default: return 0;
         }
     case Op::CtChild: if ((V)b == V::RequestFocus) Comp(a)->RequestFocus(); return 0; // (the next radio's)
-    case Op::CtBits: return (uint32_t)Comp(a)->mComponentBits;
-    case Op::CtParentOf: return (intptr_t)static_cast<Component*>(Comp(a)->mParent);
     case Op::CtWantFocus: return t->WantFocus() ? 1 : 0;
     case Op::CtNextSibling: return (intptr_t)Comp(a)->GetNextSibling(b != 0, c != 0);
     case Op::CtContainerOf: {
@@ -54,8 +52,6 @@ extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t
     }
     case Op::ChildHold: Comp(a)->AddRef(); return 0;
     case Op::ChildRelease: Comp(a)->Release(); return 0;
-    case Op::ChildWidth: return Comp(a)->Width();
-    case Op::ChildHeight: return Comp(a)->Height();
     case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
     case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
     case Op::Invalidate: t->Invalidate(); return 0;

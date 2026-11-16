@@ -95,10 +95,6 @@ unsafe extern "C" fn replay_host(comp: *mut c_void, op: Op, a: isize, b: isize, 
                 0
             } as isize;
         }
-        Op::ChildLeft => return comp_of(a).x as isize,
-        Op::ChildTop => return comp_of(a).y as isize,
-        Op::ChildWidth => return comp_of(a).w as isize,
-        Op::ChildHeight => return comp_of(a).h as isize,
         Op::ChildIsVisible => return comp_of(a).visible as isize,
         Op::ChildIsMine => return (comp_of(a).parent == me) as isize,
         Op::IsDisabled => return comp_of(me).disabled as isize,
@@ -241,6 +237,10 @@ fn replay(lines: &[String]) -> Option<String> {
         let mut rp = Replay { lines: lines.to_vec(), at: 1, ..Replay::default() };
         rp.comps.insert(SCROLLER, me);
         *r.borrow_mut() = Some(rp);
+    });
+    // the components' bounds, read by the Rust from compmem's blocks
+    let _w = crate::compmem::filled_world(|c| {
+        with(|r| r.comps.get(&c).map_or_else(Default::default, |k| crate::compmem::block(k.x, k.y, k.w, k.h)))
     });
     let mut holder = Some(Box::new(EeWonScroller::new(SCROLLER as *mut c_void, Some(replay_host))));
     let t: *const EeWonScroller = &**holder.as_ref().expect("the scroller");

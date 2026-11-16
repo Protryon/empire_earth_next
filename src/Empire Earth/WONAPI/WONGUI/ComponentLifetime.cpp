@@ -53,6 +53,16 @@ Font* Component::GetDefaultFontMod(int style,int size) { return this->GetRoot()-
 // the Rust component's calls out (compobj.rs EeWonComp), each a run of the original's statements
 extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, intptr_t b, intptr_t c, intptr_t d)
 {
+    // Component's members as compmem.rs's block (EeWonCompMembers), at EE_WON_COMP_MEMBERS_AT (here: a friend)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+#define EE_COMP_AT(m, f) (offsetof(Component, m) == EE_WON_COMP_MEMBERS_AT + offsetof(EeWonCompMembers, f))
+    static_assert(EE_COMP_AT(mParent, parent) && EE_COMP_AT(mBounds, bounds) && EE_COMP_AT(mComponentBits, bits) &&
+              EE_COMP_AT(mControlId, control_id) && EE_COMP_AT(mFocusId, focus_id) &&
+              EE_COMP_AT(mInvalidState, invalid) && EE_COMP_AT(mTimerFlags, timer) && EE_COMP_AT(mExtraStuff, extra),
+              "compmem.rs's block");
+#undef EE_COMP_AT
+#pragma clang diagnostic pop
     typedef EeWonComp K;
     typedef EeWonCompExtra X;
     Component* t = (Component*)b;
@@ -63,18 +73,6 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
     if (op != EeWonGuiOp::Comp)
         return 0;
     switch ((K)k) {
-    case K::Bits: return t->mComponentBits;
-    case K::SetBits: t->mComponentBits = (int)c; return 0;
-    case K::Invalid: return t->mInvalidState;
-    case K::SetInvalid: t->mInvalidState = (char)c; return 0;
-    case K::Timer: return t->mTimerFlags;
-    case K::SetTimer: t->mTimerFlags = (char)c; return 0;
-    case K::ControlId: return t->mControlId;
-    case K::Bounds: *(WONRectangle*)c = t->mBounds; return 0;
-    case K::SetXY: t->mBounds.x = (int)c; t->mBounds.y = (int)d; return 0;
-    case K::SetWH: t->mBounds.height = (int)d; t->mBounds.width = (int)c; return 0;
-    case K::Parent: return (intptr_t)(Component*)t->mParent;
-    case K::HasExtra: return t->mExtraStuff != NULL;
     case K::AllocExtra: t->AllocateExtraStuff(); return 0;
     case K::Extra: case K::SetExtra: {
         ComponentExtra* x = t->mExtraStuff;

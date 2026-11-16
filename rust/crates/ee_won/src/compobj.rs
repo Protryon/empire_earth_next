@@ -8,7 +8,8 @@
 //!
 //! The C++ `Component` stays the type every control derives from: it keeps its members (151 files read its
 //! bounds, flags and parent inline) and its vtable. Each method is a one-line forwarder to `ee_won_comp_call`; the
-//! Rust has no state of its own and reads and writes the members, makes the virtual calls (dispatched by the C++
+//! Rust has no state of its own and reads and writes the members in place (compmem's block, R6 WONGUI B round 2;
+//! the extra data's members through the host), makes the virtual calls (dispatched by the C++
 //! on the object's class) and calls the parent container, the window, the event, the listener and the background
 //! grabber through the host's `Comp` op (`EeWonComp`). A nonvirtual Component method the original called is the
 //! Rust function here (on the same or another component), as the original's call was to that one body. Ints wrap
@@ -16,6 +17,7 @@
 
 use std::ffi::c_void;
 
+use crate::compmem as mem;
 use crate::guifocus::want_focus;
 use crate::guihost::{EeWonGuiHostFn, EeWonGuiOp as Op};
 use crate::guilayout::{intersects, set_size, size_at_least, EeWonRect};
@@ -172,33 +174,9 @@ pub enum EeWonCompCall {
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeWonComp {
-    // ---- the component `b`'s members
-    /// `mComponentBits`.
-    Bits = 1,
-    /// `mComponentBits = c`.
-    SetBits,
-    /// `mInvalidState` (a `char`).
-    Invalid,
-    /// `mInvalidState = c`.
-    SetInvalid,
-    /// `mTimerFlags` (a `char`).
-    Timer,
-    /// `mTimerFlags = c`.
-    SetTimer,
-    /// `mControlId`.
-    ControlId,
-    /// `mBounds` into the `EeWonRect` at `c`.
-    Bounds,
-    /// `mBounds.x = c; mBounds.y = d`.
-    SetXY,
-    /// `mBounds.height = d; mBounds.width = c`.
-    SetWH,
-    /// `mParent` (as a `Component*`, 0 for none).
-    Parent,
-    /// `mExtraStuff != NULL` (0 or 1).
-    HasExtra,
+    // ---- the component `b`'s extra data (its other members are compmem's block)
     /// `AllocateExtraStuff()`.
-    AllocExtra,
+    AllocExtra = 1,
     /// a member of `mExtraStuff` (`c` an `EeWonCompExtra`; a pointer, or the tip flag 0 or 1).
     Extra,
     /// a member of `mExtraStuff` (`c` an `EeWonCompExtra`) = `d`; `GrabBG`: `new BackgroundGrabber`.
@@ -356,9 +334,9 @@ impl Comp {
         unsafe { f(b as *mut c_void, Op::Comp, k as isize, b, c, d) }
     }
 
-    // ---- the members
+    // ---- the members (the C++ object's block, compmem)
     fn bits(&self, c: isize) -> i32 {
-        self.h(K::Bits, c, 0, 0) as i32
+        mem::bits(c)
     }
     fn flag_set(&self, c: isize, f: i32) -> bool {
         self.bits(c) & f != 0
@@ -373,21 +351,19 @@ impl Comp {
         self.bits(c) & EE_WON_COMP_FLAG_DISABLED != 0
     }
     fn invalid(&self, c: isize) -> i8 {
-        self.h(K::Invalid, c, 0, 0) as i8
+        mem::invalid(c)
     }
     fn set_invalid(&self, c: isize, v: i8) {
-        self.h(K::SetInvalid, c, v as isize, 0);
+        mem::set_invalid(c, v);
     }
     fn bounds(&self, c: isize) -> EeWonRect {
-        let mut r = EeWonRect::default();
-        self.h(K::Bounds, c, &mut r as *mut EeWonRect as isize, 0);
-        r
+        mem::bounds(c)
     }
     fn parent(&self, c: isize) -> isize {
-        self.h(K::Parent, c, 0, 0)
+        mem::parent(c)
     }
     fn has_extra(&self, c: isize) -> bool {
-        self.h(K::HasExtra, c, 0, 0) != 0
+        mem::has_extra(c)
     }
     fn extra(&self, c: isize, e: EeWonCompExtra) -> isize {
         self.h(K::Extra, c, e as isize, 0)
@@ -403,12 +379,12 @@ impl Comp {
     /// `SetComponentFlags`.
     pub fn set_flags(&self, c: isize, flags: i32, on: bool) {
         let b = self.bits(c);
-        self.h(K::SetBits, c, (if on { b | flags } else { b & !flags }) as isize, 0);
+        mem::set_bits(c, if on { b | flags } else { b & !flags });
     }
 
     /// `SetPos`.
     pub fn set_pos(&self, c: isize, x: i32, y: i32) {
-        self.h(K::SetXY, c, x as isize, y as isize);
+        mem::set_xy(c, x, y);
         self.h(K::VPositionChanged, c, 0, 0);
     }
 
@@ -416,7 +392,7 @@ impl Comp {
     pub fn set_size(&self, c: isize, width: i32, height: i32) {
         let r = self.bounds(c);
         if let Some((w, h)) = set_size(r.width, r.height, width, height) {
-            self.h(K::SetWH, c, w as isize, h as isize);
+            mem::set_wh(c, w, h);
             self.h(K::VSizeChanged, c, 0, 0);
         }
     }
@@ -494,7 +470,7 @@ impl Comp {
 
     /// `EnableControlsById`.
     pub fn enable_controls_by_id(&self, c: isize, ids: isize, enabled: bool) {
-        let id = self.h(K::ControlId, c, 0, 0) as i32;
+        let id = mem::control_id(c);
         if id != 0 && self.h(K::IdIn, ids, id as isize, 0) != 0 {
             self.h(K::VSetEnabled, c, enabled as isize, 0);
         }
@@ -630,7 +606,7 @@ impl Comp {
                 self.h(K::PSetFocusChild, self.parent(c), c, 0);
             }
         }
-        if self.h(K::Timer, c, 0, 0) as i8 != 0 {
+        if mem::timer(c) != 0 {
             self.h(K::PAddTimerChild, self.parent(c), c, 0);
         }
         if self.is_root_visible(self.parent(c)) && self.is_visible(c) {
@@ -698,9 +674,9 @@ impl Comp {
 
     /// `RequestTimer`: bit 2 of the timer flags; the parent told when the need changes.
     pub fn request_timer(&self, c: isize, on: bool) {
-        let old = self.h(K::Timer, c, 0, 0) as i8;
+        let old = mem::timer(c);
         let new = if on { old | 2 } else { old & !2 };
-        self.h(K::SetTimer, c, new as isize, 0);
+        mem::set_timer(c, new);
         if (new != 0) != (old != 0) {
             let p = self.parent(c);
             if p != 0 {

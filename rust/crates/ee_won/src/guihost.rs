@@ -229,13 +229,13 @@ pub enum EeWonGuiOp {
     ChildSetPosSize,
     /// `a->IsVisible()` (0 or 1).
     ChildIsVisible,
-    /// `a->Width()`.
+    /// `a->Width()` (multiobj, splitobj; the others read compmem's block).
     ChildWidth,
-    /// `a->Height()`.
+    /// `a->Height()` (splitobj; the others read compmem's block).
     ChildHeight,
-    /// `a->Left()`.
+    /// `a->Left()` (multiobj, splitobj; the others read compmem's block).
     ChildLeft,
-    /// `a->Top()`.
+    /// `a->Top()` (splitobj; the others read compmem's block).
     ChildTop,
     /// `a->AddRef()` (a `SmartPtr` the Rust object keeps).
     ChildHold,
@@ -389,7 +389,7 @@ pub enum EeWonGuiOp {
     MultiOf,
     /// `RemoveChild(a)`.
     RemoveChild,
-    /// `a->mControlId`.
+    /// `a->mControlId` (multiobj; the others read compmem's block).
     ChildControlId,
     /// `a->mControlId = b`.
     ChildSetControlId,
@@ -547,19 +547,19 @@ pub enum EeWonGuiOp {
     /// `((Graphics*)a)->mColorScheme = (ColorScheme*)b`.
     CtSetScheme,
     // the container's pure reads
-    /// `a->mComponentBits`.
+    /// `a->mComponentBits` (the Rust reads compmem's block: only the drivers' original statements send it).
     CtBits = 430,
-    /// `a->mParent`.
+    /// `a->mParent` (the Rust reads compmem's block: only the drivers' original statements send it).
     CtParentOf,
-    /// `a->mTimerFlags`.
+    /// `a->mTimerFlags` (the Rust reads compmem's block: only the drivers' original statements send it).
     CtTimerFlags,
-    /// `a->mInvalidState`.
+    /// `a->mInvalidState` (the Rust reads compmem's block: only the drivers' original statements send it).
     CtInvalidState,
-    /// `a->mFocusId`.
+    /// `a->mFocusId` (the Rust reads compmem's block: only the drivers' original statements send it).
     CtFocusId,
-    /// `a->Contains(b, c)` (0 or 1).
+    /// `a->Contains(b, c)` (0 or 1) (the Rust reads compmem's block: only the drivers' original statements send it).
     CtContains,
-    /// `a->Intersects((Component*)b)` (0 or 1).
+    /// `a->Intersects((Component*)b)` (0 or 1) (the Rust reads compmem's block: only the drivers' original statements send it).
     CtIntersects,
     /// `a->GetGrabBG()`.
     CtGrabBG,
@@ -718,7 +718,7 @@ pub enum EeWonGuiOp {
     // ---- the child layouts (`layoutobj`; a component is a `Component*`, an instruction a
     // `ChildLayoutInstructionBase*`; the reads are `ChildLeft` .. `ChildHeight`, the moves `ChildSetPos`,
     // `ChildSetPosSize` and `ChildSetSize`, a layout point's reference `ChildHold` / `ChildRelease`)
-    /// `a->mParent` (a `Component*`; a pure read).
+    /// `a->mParent` (a `Component*`; a pure read) (the Rust reads compmem's block: only the drivers' original statements send it).
     LayParentOf = 560,
     /// `a->SetSizeAtLeast(b, c)`.
     LaySetSizeAtLeast,
