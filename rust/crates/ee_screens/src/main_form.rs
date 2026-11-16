@@ -192,7 +192,7 @@ pub const EE_SCREENS_MF_OP_NEW_ACTION: u32 = 83;
 pub const EE_SCREENS_MF_OP_ENTITY_GROUP: u32 = 84;
 /// `mMouseTests[a]` = the host's mouse test b (`EE_SCREENS_MF_MOUSE_*`).
 pub const EE_SCREENS_MF_OP_MOUSE_TEST: u32 = 85;
-/// `mKeyboardTests[a]` = the host's keyboard test b (`EE_SCREENS_MF_KEYBOARD_*`).
+/// `mKeyboardModes[a]` = b (the keyboard mode: 2 the cinematic's, `EE_SCREENS_MF_KEYBOARD_CINEMATIC`; else none).
 pub const EE_SCREENS_MF_OP_KEYBOARD_TEST: u32 = 86;
 /// `mWheelZoom = EECreateScreenEvent(a)`; `SetMouseWheelMoveEvent(mWheelZoom)`.
 pub const EE_SCREENS_MF_OP_WHEEL_ZOOM: u32 = 87;
@@ -1228,6 +1228,9 @@ pub const EE_SCREENS_MF_BASE_DEACTIVATE: i64 = 1;
 pub const EE_SCREENS_MF_BASE_OPEN: i64 = 2;
 pub const EE_SCREENS_MF_BASE_CLOSE: i64 = 3;
 pub const EE_SCREENS_MF_BASE_DRAW: i64 = 4;
+/// `UIForm::UpdateMouse`, `UIForm::UpdateKeyboard`: their results.
+pub const EE_SCREENS_MF_BASE_UPDATE_MOUSE: i64 = 5;
+pub const EE_SCREENS_MF_BASE_UPDATE_KEYBOARD: i64 = 6;
 
 /// The members `ee_screens_main_form_member` runs (its `which`).
 pub const EE_SCREENS_MF_DO_ACTIVATE: u32 = 1;
@@ -1248,6 +1251,9 @@ pub const EE_SCREENS_MF_DO_INFO_PAUSE: u32 = 11;
 pub const EE_SCREENS_MF_DO_CHAT_TOP: u32 = 12;
 pub const EE_SCREENS_MF_DO_SAVED_GROUPS: u32 = 13;
 pub const EE_SCREENS_MF_DO_ICON_BAR: u32 = 14;
+/// `UpdateKeyboard()` in the keyboard mode a (`mKeyboardModes[mUIState]`), `UpdateMouse()`: their results.
+pub const EE_SCREENS_MF_DO_KEYBOARD: u32 = 15;
+pub const EE_SCREENS_MF_DO_MOUSE: u32 = 16;
 
 /// The title label (`kMainGameTitle`), the error log, the information's scrolling text, the icon bar.
 pub const EE_SCREENS_MF_CTL_TITLE: i64 = 25;
@@ -1261,7 +1267,8 @@ pub const EE_SCREENS_MF_IDS_DEFEATED: i64 = 30402;
 /// The form's default background media (`mMediaID` when none), the carbon one.
 pub const EE_SCREENS_MF_MEDIA_CARBON: i64 = 0x377;
 
-/// Runs the member `which` with its argument `a` (`EE_SCREENS_MF_DO_*`): `DrawPolygons`' answer, else 0.
+/// Runs the member `which` with its argument `a` (`EE_SCREENS_MF_DO_*`): `DrawPolygons`', `UpdateKeyboard`'s and
+/// `UpdateMouse`'s answers, else 0.
 pub fn member(h: &mut impl FormHost, which: u32, a: i64) -> i64 {
     match which {
         EE_SCREENS_MF_DO_ACTIVATE => activate(h),
@@ -1269,6 +1276,8 @@ pub fn member(h: &mut impl FormHost, which: u32, a: i64) -> i64 {
         EE_SCREENS_MF_DO_OPEN => open(h),
         EE_SCREENS_MF_DO_CLOSE => close(h),
         EE_SCREENS_MF_DO_DRAW => return draw_polygons(h),
+        EE_SCREENS_MF_DO_KEYBOARD => return crate::mouse_modes::update_keyboard(h, a),
+        EE_SCREENS_MF_DO_MOUSE => return crate::mouse_modes::update_mouse(h),
         EE_SCREENS_MF_DO_UPDATE_MEDIA => update_background_media(h, a != 0),
         EE_SCREENS_MF_DO_SHOW_BACKGROUNDS => show_all_backgrounds(h),
         EE_SCREENS_MF_DO_HIDE_BACKGROUNDS => hide_all_backgrounds(h),

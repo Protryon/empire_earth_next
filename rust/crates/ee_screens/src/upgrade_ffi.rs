@@ -68,3 +68,9 @@ pub extern "C" fn ee_screens_upgrade_mouse_r_up(call: *mut c_void) -> i64 {
 pub extern "C" fn ee_screens_upgrade_update_cost(call: *mut c_void) {
     upgrade::update_cost(&mut Call(call));
 }
+
+/// `EEUIFMGStatusBar`'s mouse handler `which` (`EE_SCREENS_UP_BAR_*`; the call's location is `MouseMove`'s).
+#[no_mangle]
+pub extern "C" fn ee_screens_upgrade_bar_mouse(call: *mut c_void, which: u32) -> i64 {
+    upgrade::bar_mouse(&mut Call(call), which)
+}

@@ -97,7 +97,7 @@ LobbyServerList* LobbyGetServerList()
 // Returns the chat room the player is in, or NULL
 LobbyGroup* LobbyGetChatGroup()
 {
-    return gLobbyData.get()!=NULL?gLobbyData->mRoutingLogic->mChatGroup.get():NULL;
+    return gLobbyData.get()!=NULL?gLobbyData->mRoutingLogic->GetChatGroup():NULL;
 }
 }
 
@@ -105,7 +105,7 @@ namespace WONAPI {
 // Returns the lobby server the player is on, or NULL
 LobbyServer* LobbyGetCurrentServer()
 {
-    return gLobbyData.get()!=NULL?gLobbyData->mRoutingLogic->mCurrentServer.get():NULL;
+    return gLobbyData.get()!=NULL?gLobbyData->mRoutingLogic->GetCurrentServer():NULL;
 }
 }
 

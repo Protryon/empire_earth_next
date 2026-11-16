@@ -71,15 +71,14 @@
 #include "ee/EEUICUnitIconBar.h"
 #include "ee/EEUIFMGErrorLog.h"
 #include "ee/EEUIFMGUnitHack.h"
+#include "ee/EEUIFMGStatusButton.h"
 #include "lle/UIFormManager.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEUISCIFormManager.h"
 #include "ee/EEStringIDs.h"
-// the keyboard tests (EEUIFMGStatusButton.cpp's range) (provisional names)
-bool EEModeKeyboardCinematic(void* inForm);
-bool EEModeKeyboardNone(void* inForm);  // `return false` (ICF-folded)
-bool EEFn27C0B4B(void* inForm);   // another `return false` (the ctor reloads its address: a different
-                                             // function, ICF-folded into the same body)
+// the command buttons' part of the host (EEUIFMGStatusButton.cpp)
+int64_t EEStatusButtonOp(EEUIFMGStatusButton* inButton, EEComplexUnit* inFirst, UWideString& ioText,
+                         UWideString* outString, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC);
 bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection);  // 0x2116a2 (EEUIBuildGate.cpp's)
 void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, long inPlayer);
 void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (the calamity's ghost at the mouse) (provisional name)
@@ -300,10 +299,12 @@ struct EEUIFMGFormCall {
     EETile* mTile;
     EEUIBuildWall* mWall;                   // the placement whose Update runs (the game form's or the editor's)
     EEUIBuildGate* mGate;
+    EEUIFMGStatusButton* mButton;           // a command button's press, CopyData or help string (its result)
+    UWideString* mOut;
     explicit EEUIFMGFormCall(EEUIFMainGame* inForm)
         : mForm(inForm), mPicked(NULL), mColor(NULL), mFlags(0), mMessage(NULL), mNode(NULL), mUnit(NULL),
           mCaster(NULL), mCalamity(NULL), mOldMedia(NULL), mMedia(NULL), mFirst(NULL), mTile(NULL),
-          mWall(NULL), mGate(NULL) {}
+          mWall(NULL), mGate(NULL), mButton(NULL), mOut(NULL) {}
 };
 
 // Runs a member that is Rust's (EE_SCREENS_MF_DO_*: Activate, Deactivate, Open, Close, DrawPolygons and the
@@ -313,6 +314,22 @@ int64_t EEUIFMainGame::Rust(uint32_t inWhich, int64_t inA)
 {
     EEUIFMGFormCall theCall(this);
     return ee_screens_main_form_member(&theCall, inWhich, inA);
+}
+
+// A command button's member in Rust (EE_SCREENS_SB_DO_*: ButtonUp, MouseRButtonUp, CopyData, GetHelpString into
+// outString; ee_screens status_button.rs over this host)
+int64_t EEUIFMainGame::ButtonCall(EEUIFMGStatusButton* inButton, uint32_t inWhich, UWideString* outString)
+{
+    EEUIFMGFormCall theCall(this);
+    theCall.mButton = inButton;
+    theCall.mOut = outString;
+    return ee_screens_status_button_member(&theCall, inWhich);
+}
+
+// Runs the keyboard mode of the current interface state (the cinematic's keys), else the form's keys
+long EEUIFMainGame::UpdateKeyboard()
+{
+    return (long)this->Rust(EE_SCREENS_MF_DO_KEYBOARD, this->mKeyboardModes[this->mUIState]);
 }
 
 void EEUIFMainGame::ShowAllBackgrounds()
@@ -604,8 +621,10 @@ extern "C" int64_t ee_screenscpp_main_form(void* inCall, uint32_t inOp, int64_t 
 
 // ---- the mouse modes' ops (ee_screens mouse_modes.rs, EE_SCREENS_MF_OP_MD_*): the picked unit, the first selected
 // unit and the pointed tile held in the call; io.f[0..2] the mouse location where an op takes one
-static_assert(EE_SCREENS_MF_TYPE_FARM == kUnitTypeFarm && EE_SCREENS_MF_TYPE_ROBOTIC_FARM == kUnitTypeRoboticFarm,
-              "mouse_modes.rs' farms");
+static_assert(EE_SCREENS_MF_TYPE_FARM == kUnitTypeFarm && EE_SCREENS_MF_TYPE_ROBOTIC_FARM == kUnitTypeRoboticFarm &&
+                  EE_SCREENS_MF_KEY_ESCAPE == kKeyEscape && EE_SCREENS_MF_KEY_F1 == kKeyF1 && EE_SCREENS_MF_KEY_F3 == kKeyF3 &&
+                  EE_SCREENS_MF_KEY_F9 == kKeyF9,
+              "mouse_modes.rs' farms and keys");
 static int64_t EEMouseModeOp(EEUIFMGFormCall& theCall, uint32_t inOp, int64_t inA, int64_t inB, EeScreensMainFormIo* ioIo)
 {
     EEUIFMainGame* theForm = theCall.mForm;
@@ -758,8 +777,32 @@ static int64_t EEMouseModeOp(EEUIFMGFormCall& theCall, uint32_t inOp, int64_t in
             gWorld.mCameraControl.Follow(NULL, false, 1.0f, 0.0f, 0.0f);
         return 0;
     case EE_SCREENS_MF_OP_MD_HACK:
-        inA == 0 ? theForm->mUnitHack->Fn157269(theLocation) : theForm->mUnitHack->PlaceUnit(theLocation);
+        if (inA == 2)
+            theForm->mUnitHack->Update(theLocation);
+        else
+            inA == 0 ? theForm->mUnitHack->Fn157269(theLocation) : theForm->mUnitHack->PlaceUnit(theLocation);
         return 0;
+    case EE_SCREENS_MF_OP_MD_MOUSE_AT:
+        ioIo->f[0] = theForm->GetMouseLocation().GetX(), ioIo->f[1] = theForm->GetMouseLocation().GetY();
+        return theForm->mMouseModes[theForm->mUIState];
+    case EE_SCREENS_MF_OP_MD_KEY: {
+        ISEntity* theKey;
+        if (gISKeyboard->GetEntity((unsigned long)inA, theKey) != 0)
+            return 0;
+        return 1 | (theKey->GetValue() ? 2 : 0) | (theKey->JustPressed() ? 4 : 0);
+    }
+    case EE_SCREENS_MF_OP_MD_CINEMATIC: {
+        if (inA == EE_SCREENS_MF_CINE_ENDING)
+            return gWorld.GetScenarioManager()->mIsEndingCinematic;
+        if (inA == EE_SCREENS_MF_CINE_SCREENSHOT) {
+            gUserInterface->PostScreenShot(-1, true, false);
+            return 0;
+        }
+        UIEvent* theEvent = inA == EE_SCREENS_MF_CINE_END ? new EEUIEndCinematicModeEvent : EECreateScreenEvent(EE_SCREENS_MG_PAUSE);
+        gUserInterface->PostEvent(theEvent, NULL);
+        theEvent->Dereference();
+        return 0;
+    }
     case EE_SCREENS_MF_OP_MD_START:
         if (inA == 0)
             static_cast<EEUICSelectUnits*>(theForm->GetControl(kMainGameSelectUnits))->StartSelection(theForm->GetMouseLocation());
@@ -1077,11 +1120,7 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         theForm->mMouseModes[inA] = (long)inB;   // an EE_SCREENS_MF_MODE_*
         return 0;
     }
-    case EE_SCREENS_MF_OP_KEYBOARD_TEST: {
-        static const EEUIFMGKeyboardTest kTests[3] = {EEModeKeyboardNone, EEFn27C0B4B, EEModeKeyboardCinematic};
-        theForm->mKeyboardTests[inA] = kTests[inB];
-        return 0;
-    }
+    case EE_SCREENS_MF_OP_KEYBOARD_TEST: theForm->mKeyboardModes[inA] = (long)inB; return 0;
     case EE_SCREENS_MF_OP_WHEEL_ZOOM:
         theForm->mWheelZoom = EECreateScreenEvent((unsigned long)inA);
         theForm->SetMouseWheelMoveEvent(theForm->mWheelZoom);
@@ -1178,6 +1217,8 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         case EE_SCREENS_MF_BASE_DEACTIVATE: theForm->UIForm::Deactivate(); break;
         case EE_SCREENS_MF_BASE_OPEN: theForm->UIForm::Open(); break;
         case EE_SCREENS_MF_BASE_CLOSE: theForm->UIForm::Close(); break;
+        case EE_SCREENS_MF_BASE_UPDATE_MOUSE: return theForm->UIForm::UpdateMouse();
+        case EE_SCREENS_MF_BASE_UPDATE_KEYBOARD: return theForm->UIForm::UpdateKeyboard();
         default: return theForm->UIForm::DrawPolygons();
         }
         return 0;
@@ -1273,7 +1314,11 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     }
     case EE_SCREENS_MF_OP_MAIN_UI_STATE: return gUIManager->mMainGameForm->mUIState;
     case EE_SCREENS_MF_OP_UNIT_SELECTED: return gUnitSelected;
-    default: return EEMouseModeOp(theCall, inOp, inA, inB, ioIo);
+    default:
+        if (inOp >= EE_SCREENS_MF_OP_SB)
+            return EEStatusButtonOp(theCall.mButton, theCall.mFirst, theCall.mText, theCall.mOut, inOp - EE_SCREENS_MF_OP_SB,
+                                    inA, inB, ioIo->n[0]);
+        return EEMouseModeOp(theCall, inOp, inA, inB, ioIo);
     }
     return 0;
 }
@@ -1468,38 +1513,13 @@ void EEUIBuildGate::Update(const GE2DPoint& inLocation)
 }
 
 // Runs the mouse: the unit hack, the form's controls, then the current interface mode's mouse (ee_screens
-// mouse_modes.rs); returns the last UpdateMouse result (the modes answer 0)
+// mouse_modes.rs update_mouse); returns the last UpdateMouse result (the modes answer 0)
 long EEUIFMainGame::UpdateMouse()
 {
-    long theResult = 0;
-    this->mB5F0 = false;
-    if (this->mUIState != 0x11) {
-        this->mUnitHack->Update(this->GetMouseLocation());
-        if (this->GetMouseCaptured() == NULL) {
-            theResult = UIForm::UpdateMouse();
-            if (this->GetMouseCaptured() == NULL) {
-                EEUIFMGFormCall theCall(this);
-                const GE2DPoint& theLocation = this->GetMouseLocation();
-                theResult = (long)ee_screens_main_form_mouse(&theCall, this->mMouseModes[this->mUIState],
-                                                             theLocation.GetX(), theLocation.GetY());
-            }
-        } else
-            theResult = UIForm::UpdateMouse();
-    }
-    return theResult;
+    return (long)this->Rust(EE_SCREENS_MF_DO_MOUSE);
 }
 
 // ICF-folded empty members (no address of their own: 0x157269 / 0xe123d are their twins)
 void EEUIFMainGame::FnE123D()
 {
-}
-
-bool EEFn27C0B4B(void *)
-{
-    return false;
-}
-
-bool EEModeKeyboardNone(void *)
-{
-    return false;
 }

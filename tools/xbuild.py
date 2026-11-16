@@ -578,6 +578,9 @@ WON_TESTS = {
     "won_guievent_test": [],
     # WONGUI's config readers' key tables (the instruction keys, the flag and value names), the original's compares
     # against ee_won's guiconf tables, the names through the real GUIString
+    # the resource configs' table reader (cfgtab.rs) against the 45 handlers' original statements over the shipped
+    # resource files and random instructions (golden: rust/crates/ee_won/src/golden_cfgtab.txt)
+    "won_cfgtab_test": "won_guiconf_test",
     "won_guiconf_test": [WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
                                                          "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
                                                          "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
@@ -623,6 +626,11 @@ WON_TESTS = {
     # PingLogic (with PingGameOp), AccountLogic and InitLogic as Rust objects (golden:
     # rust/crates/ee_won/src/golden_logics.txt)
     "won_logics_test": [],
+    # RoutingLogic as a Rust object (golden: rust/crates/ee_won/src/golden_routelogic.txt)
+    "won_routelogic_test": [],
+    # the lobby model (LobbyModel.cpp's classes) as Rust objects over stand-in shells (golden:
+    # rust/crates/ee_won/src/golden_modelobj.txt)
+    "won_modelobj_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
