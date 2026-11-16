@@ -88,6 +88,18 @@ def stage(a, tree):
     STAGE.mkdir(parents=True)
     shutil.copy(a.exe, STAGE / EXE)
     exe_boot.stage_tree(tree, STAGE)
+    # the stage's Data/ai and Data/db are this checkout's data/ai and data/db, whatever the tree holds (a shared tree
+    # can lag: one built before the "classic" key left the lobby's Classic without an AI, and the computers stood
+    # idle). open_data.json is copied first, so recording the hashes never writes through a hard link into the tree
+    meta = STAGE / 'open_data.json'
+    if meta.exists():
+        data = meta.read_bytes()
+        meta.unlink()
+        meta.write_bytes(data)
+    sys.path.insert(0, str(ROOT / 'tools'))
+    import open_data
+    open_data.refresh_scripts(STAGE)
+    open_data.refresh_db(STAGE)
     pins = ['audio.music.enabled=true']   # as game_session.py: the mixer runs (the null device without audio)
     if a.pt_rate:
         pins += [f'network.pt_rate.min={a.pt_rate}', f'network.pt_rate.max={a.pt_rate}']
