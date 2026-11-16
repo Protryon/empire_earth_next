@@ -2228,3 +2228,31 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Units the deleted units emitted:** `EEComplexUnit::IsResearchQueued` (EECPUnitManager.cpp's range),
   `EEUnit::IsPathMarker` (EECPCivilizationManager.cpp's) and `RTSMapTileRun`'s two members (EECPWallManager.cpp's)
   moved to EECPEngineHelpers.cpp. The link names them as unresolved when they are missing.
+
+## Android (arm64) port (2026-11-15, docs/ANDROID.md)
+
+Found while bringing the game up on a phone (Mali-G76, Vulkan through wgpu-native, SDL3 activity). Most were not
+Android-specific.
+
+- **sRGB swap chain = washed out.** The game's colours are already gamma encoded; Android Vulkan offers RGBA8 with the
+  sRGB variant first and no BGRA8, and the old "first format" fallback picked it (grey blacks, looked like a gamma bug
+  and, with texture filtering, like blur). Prefer BGRA8Unorm, RGBA8Unorm, any non-sRGB format.
+- **One `wgpuQueueWriteBuffer` per draw** is thousands of staging buffers a frame; the Android driver's thread stayed
+  busy and the frame rate collapsed. The rings keep a CPU shadow and Submit writes each once.
+- **A texture per text draw** made GPU memory grow without bound (GXSurface::DrawText); pool them by size, reuse an
+  entry only after a submit (the earlier blit is still in the open encoder). `wgpuDevicePoll` after present frees
+  released resources.
+- **Shared event condition variable.** `PlatEventSet` broadcast one process-wide condition; the world lock's read locks
+  set an event constantly, so a dozen threads woke for nothing (most of the kernel time in a simpleperf profile). One
+  condition per waiting thread, registered with its events.
+- **The ANativeWindow is destroyed and recreated** on rotation and activity restart; a wgpu surface kept over the old one
+  panics in configure. Look the window up on every present.
+- **AAudio:** closing a stream right after opening it (PIMIsValid's probe) races the callback thread (SIGABRT "pure
+  virtual function called"); stop the device before uninit. Without an AAudio/OpenSL backend list the Linux one ended on
+  the null backend: no sound.
+- **bionic:** no `fopencookie` (use `funopen`, as on macOS), no `backtrace` before API 33, `INTERNET` permission needed
+  or `socket()` fails with EACCES at start-up.
+- **Mouse state:** inputs must go through SDL_SendMouseMotion/Button (not SDL_PushEvent) or `SDL_GetMouseState` (edge
+  scrolling) sticks.
+- **Field of view:** the 30 degree horizontal FOV of the original, on a 19.5:9 phone, shows too little height; keep the
+  vertical field of a 0.80 rad horizontal one at 16:9 and widen the horizontal.

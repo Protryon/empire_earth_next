@@ -1,10 +1,13 @@
 // Platform layer, POSIX: threads and synchronisation (include/platform/PlatThread.h), and the per-thread last
 // error the whole POSIX implementation sets (PlatPosix.h).
 //
-// Events: every event shares one process-wide mutex and condition variable. A wait checks its events under the
-// mutex and sleeps on the condition; PlatEventSet broadcasts it. That makes PlatEventWaitAny exact (the lowest set
-// event wins, an automatic-reset event is cleared by the one wait it releases) at the cost of waking every waiter
-// on every set, which is cheap for the game's dozen threads. Timed waits run on the monotonic clock.
+// Events: every event shares one process-wide mutex, which makes PlatEventWaitAny exact (the lowest set event wins,
+// an automatic-reset event is cleared by the one wait it releases). Each waiting thread sleeps on a condition of its
+// own, registered with every event it waits on, and PlatEventSet wakes only those threads. (A single shared
+// condition broadcast on every set woke every waiting thread each time: the world lock's ReadLock sets an event for
+// its first reader, so the UI thread's read locks kept a dozen threads waking for nothing - most of the kernel time
+// in an Android profile, 2026-11-15.) A set with no waiters makes no system call. Timed waits run on the monotonic
+// clock.
 //
 // Threads: a PlatThread is a reference-counted record (the thread holds one reference, each handle one), so a handle
 // stays valid after the thread ends and PlatThreadClose never touches a running thread. A thread created suspended
@@ -29,6 +32,7 @@
 #endif
 
 #include <new>
+#include <vector>
 
 #include "platform/PlatThread.h"
 #include "PlatPosix.h"
@@ -160,24 +164,30 @@ extern "C" int PlatMutexTryLock(PlatMutex* inMutex)
 struct PlatEvent {
     bool mManualReset;
     bool mSet;
+    std::vector<pthread_cond_t*> mWaiters;   // the conditions of the threads waiting on it (sEventLock)
 };
 
 namespace {
 
 pthread_mutex_t sEventLock = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t sEventCondition;
-pthread_once_t sEventOnce = PTHREAD_ONCE_INIT;
 
-void InitEventCondition()
-{
-    pthread_condattr_t theAttributes;
-    pthread_condattr_init(&theAttributes);
+// the calling thread's own wait condition (monotonic where the system allows it)
+struct EventWaiter {
+    pthread_cond_t mCondition;
+    EventWaiter()
+    {
+        pthread_condattr_t theAttributes;
+        pthread_condattr_init(&theAttributes);
 #if !defined(__APPLE__)
-    pthread_condattr_setclock(&theAttributes, CLOCK_MONOTONIC);
+        pthread_condattr_setclock(&theAttributes, CLOCK_MONOTONIC);
 #endif
-    pthread_cond_init(&sEventCondition, &theAttributes);
-    pthread_condattr_destroy(&theAttributes);
-}
+        pthread_cond_init(&mCondition, &theAttributes);
+        pthread_condattr_destroy(&theAttributes);
+    }
+    ~EventWaiter() { pthread_cond_destroy(&mCondition); }
+};
+
+thread_local EventWaiter tEventWaiter;
 
 struct timespec MonotonicNow()
 {
@@ -197,8 +207,8 @@ struct timespec AddMilliseconds(struct timespec inTime, uint32_t inMs)
     return inTime;
 }
 
-// Sleeps on the event condition (sEventLock held) until inDeadline -> false once the deadline has passed
-bool WaitUntil(const struct timespec& inDeadline)
+// Sleeps on inCondition (sEventLock held) until inDeadline -> false once the deadline has passed
+bool WaitUntil(pthread_cond_t* inCondition, const struct timespec& inDeadline)
 {
 #if defined(__APPLE__)
     // macOS has no monotonic condition clock: wait relative to what is left
@@ -212,18 +222,30 @@ bool WaitUntil(const struct timespec& inDeadline)
         theLeft.tv_sec--;
         theLeft.tv_nsec += 1000000000L;
     }
-    pthread_cond_timedwait_relative_np(&sEventCondition, &sEventLock, &theLeft);
+    pthread_cond_timedwait_relative_np(inCondition, &sEventLock, &theLeft);
     return true;
 #else
-    return pthread_cond_timedwait(&sEventCondition, &sEventLock, &inDeadline) != ETIMEDOUT;
+    return pthread_cond_timedwait(inCondition, &sEventLock, &inDeadline) != ETIMEDOUT;
 #endif
+}
+
+// the lowest set event of inEvents, cleared if automatic-reset (sEventLock held) -> its index, else PLAT_WAIT_TIMEOUT
+int32_t TakeSetEvent(PlatEvent* const* inEvents, uint32_t inCount)
+{
+    for (uint32_t i = 0; i < inCount; i++) {
+        if (inEvents[i]->mSet) {
+            if (!inEvents[i]->mManualReset)
+                inEvents[i]->mSet = false;
+            return static_cast<int32_t>(i);
+        }
+    }
+    return PLAT_WAIT_TIMEOUT;
 }
 
 }   // namespace
 
 extern "C" PlatEvent* PlatEventCreate(int inManualReset, int inInitiallySet)
 {
-    pthread_once(&sEventOnce, InitEventCondition);
     PlatEvent* theEvent = new (std::nothrow) PlatEvent;
     if (!theEvent) {
         PlatPosix::Fail(PlatPosix::kErrorNotEnoughMemory);
@@ -245,7 +267,8 @@ extern "C" int PlatEventSet(PlatEvent* inEvent)
         return PlatPosix::Fail(PlatPosix::kErrorInvalidHandle);
     pthread_mutex_lock(&sEventLock);
     inEvent->mSet = true;
-    pthread_cond_broadcast(&sEventCondition);
+    for (size_t i = 0; i < inEvent->mWaiters.size(); i++)   // each condition has one thread on it
+        pthread_cond_signal(inEvent->mWaiters[i]);
     pthread_mutex_unlock(&sEventLock);
     return 1;
 }
@@ -271,34 +294,32 @@ extern "C" int32_t PlatEventWaitAny(PlatEvent* const* inEvents, uint32_t inCount
             PlatPosix::Fail(PlatPosix::kErrorInvalidHandle);
             return PLAT_WAIT_FAILED;
         }
-    pthread_once(&sEventOnce, InitEventCondition);
-    struct timespec theDeadline = AddMilliseconds(MonotonicNow(), inTimeoutMs == PLAT_WAIT_INFINITE ? 0 : inTimeoutMs);
     pthread_mutex_lock(&sEventLock);
-    int32_t theResult = PLAT_WAIT_TIMEOUT;
-    for (;;) {
-        for (uint32_t i = 0; i < inCount; i++) {
-            if (inEvents[i]->mSet) {
-                if (!inEvents[i]->mManualReset)
-                    inEvents[i]->mSet = false;
-                theResult = static_cast<int32_t>(i);
+    int32_t theResult = TakeSetEvent(inEvents, inCount);
+    if (theResult == PLAT_WAIT_TIMEOUT && inTimeoutMs != 0) {
+        struct timespec theDeadline = AddMilliseconds(MonotonicNow(), inTimeoutMs == PLAT_WAIT_INFINITE ? 0 : inTimeoutMs);
+        pthread_cond_t* theCondition = &tEventWaiter.mCondition;
+        for (uint32_t i = 0; i < inCount; i++)
+            inEvents[i]->mWaiters.push_back(theCondition);
+        for (;;) {
+            if (inTimeoutMs == PLAT_WAIT_INFINITE)
+                pthread_cond_wait(theCondition, &sEventLock);
+            else if (!WaitUntil(theCondition, theDeadline)) {
+                theResult = TakeSetEvent(inEvents, inCount);   // one last look: a set that raced with the deadline
                 break;
             }
+            theResult = TakeSetEvent(inEvents, inCount);
+            if (theResult != PLAT_WAIT_TIMEOUT)
+                break;
         }
-        if (theResult != PLAT_WAIT_TIMEOUT || inTimeoutMs == 0)
-            break;
-        if (inTimeoutMs == PLAT_WAIT_INFINITE)
-            pthread_cond_wait(&sEventCondition, &sEventLock);
-        else if (!WaitUntil(theDeadline)) {
-            // one last look: a set that raced with the deadline still counts
-            for (uint32_t i = 0; i < inCount; i++) {
-                if (inEvents[i]->mSet) {
-                    if (!inEvents[i]->mManualReset)
-                        inEvents[i]->mSet = false;
-                    theResult = static_cast<int32_t>(i);
+        for (uint32_t i = 0; i < inCount; i++) {   // unregister (the same event may be listed more than once)
+            std::vector<pthread_cond_t*>& theWaiters = inEvents[i]->mWaiters;
+            for (size_t j = 0; j < theWaiters.size(); j++)
+                if (theWaiters[j] == theCondition) {
+                    theWaiters[j] = theWaiters.back();
+                    theWaiters.pop_back();
                     break;
                 }
-            }
-            break;
         }
     }
     pthread_mutex_unlock(&sEventLock);

@@ -1,0 +1,11 @@
+# Phone defaults (first run only; the game rewrites this file when a setting changes).
+display:
+  window_mode: 0
+  frame_rate_limit: 0
+
+graphics:
+  model_detail: 1
+  effect_detail: 1
+  shadows: false
+  clouds: false
+  battlefield_ambients: false

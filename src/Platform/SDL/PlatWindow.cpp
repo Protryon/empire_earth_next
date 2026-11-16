@@ -630,6 +630,9 @@ extern "C" int PlatWindowGetNative(PlatWindow* inWindow, PlatNativeWindow* outNa
         inWindow->mMetalView = SDL_Metal_CreateView(inWindow->mWindow);
     outNative->mKind = PLAT_NATIVE_METAL;
     outNative->mWindow = inWindow->mMetalView ? SDL_Metal_GetLayer(inWindow->mMetalView) : NULL;
+#elif defined(__ANDROID__)
+    outNative->mKind = PLAT_NATIVE_ANDROID;
+    outNative->mWindow = SDL_GetPointerProperty(theProperties, SDL_PROP_WINDOW_ANDROID_WINDOW_POINTER, NULL);
 #else
     const char* theDriver = SDL_GetCurrentVideoDriver();
     if (theDriver && strcmp(theDriver, "wayland") == 0) {

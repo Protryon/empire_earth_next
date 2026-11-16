@@ -68,7 +68,8 @@ typedef enum PlatNativeKind {
     PLAT_NATIVE_WIN32 = 1,                  // mDisplay HINSTANCE, mWindow HWND
     PLAT_NATIVE_X11 = 2,                    // mDisplay Display*, mWindow the X11 Window id (an integer)
     PLAT_NATIVE_WAYLAND = 3,                // mDisplay wl_display*, mWindow wl_surface*
-    PLAT_NATIVE_METAL = 4                   // mDisplay NULL, mWindow CAMetalLayer*
+    PLAT_NATIVE_METAL = 4,                  // mDisplay NULL, mWindow CAMetalLayer*
+    PLAT_NATIVE_ANDROID = 5                 // mDisplay NULL, mWindow ANativeWindow*
 } PlatNativeKind;
 typedef struct PlatNativeWindow {
     PlatNativeKind mKind;

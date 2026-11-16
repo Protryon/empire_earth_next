@@ -407,7 +407,7 @@ int CloseText(TextReader* inReader)
     return theResult;
 }
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__ANDROID__)   // BSD funopen (bionic has no fopencookie)
 int ReadTextFn(void* inCookie, char* outData, int inSize)
 {
     return (int)ReadText(static_cast<TextReader*>(inCookie), outData, (size_t)inSize);
@@ -442,7 +442,7 @@ int CloseTextFn(void* inCookie)
 FILE* OpenTextReader(FILE* inBase)
 {
     TextReader* theReader = new TextReader{inBase, -1, 0};
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__ANDROID__)   // BSD funopen (bionic has no fopencookie)
     FILE* theStream = funopen(theReader, ReadTextFn, NULL, SeekTextFn, CloseTextFn);
 #else
     cookie_io_functions_t theFunctions = {ReadTextFn, NULL, SeekTextFn, CloseTextFn};

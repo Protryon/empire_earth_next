@@ -20,7 +20,10 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #else
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 33
 #include <execinfo.h>
+#define EE_HAVE_BACKTRACE 1
+#endif
 #include <pthread.h>
 #include <signal.h>
 #include <unistd.h>
@@ -1174,7 +1177,11 @@ static void EESimFault(int inSignal, siginfo_t* inInfo, void*)
     if (n > 0 && write(2, theText, (size_t)n) < 0)
         n = 0;
     void* theFrames[48];
+#ifdef EE_HAVE_BACKTRACE
     backtrace_symbols_fd(theFrames, backtrace(theFrames, 48), 2);
+#else
+    (void)theFrames;   // bionic has no backtrace before API 33
+#endif
 }
 
 static void EESimInstallFaultHandler()
@@ -1185,7 +1192,11 @@ static void EESimInstallFaultHandler()
 #endif
 #endif
     void* theFrame[1];
+#ifdef EE_HAVE_BACKTRACE
     backtrace(theFrame, 1);   // loads the unwinder now, not inside the handler
+#else
+    (void)theFrame;
+#endif
     struct sigaction theAction;
     memset(&theAction, 0, sizeof(theAction));
     theAction.sa_sigaction = EESimFault;

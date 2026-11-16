@@ -4,6 +4,9 @@
 // (UWideString/UString 0x10001000.., FSFile/FSBasicFile/FSFileSpec 0x10001279..0x1000144b).
 // Complete: the debug-output filter (0x100016fb), the shutdown hook (0x100019cc), the globals' init chains
 // (0x1000144b..0x100014f4) and the 0x10001a96.. COMDATs included.
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
 #include <windows.h>
 #include "platform/PlatMessage.h"
 #include <stdio.h>
@@ -292,6 +295,9 @@ void ESVerify(const char* inFile, unsigned long inLine, const char* inExpression
         return;
     gInVerify = true;
     sprintf(theText, "%s (%ld) : Verification failure (%s)", inFile, inLine, inExpression);
+#ifdef __ANDROID__
+    __android_log_write(ANDROID_LOG_FATAL, "EE", theText);   // the only place a phone shows it
+#endif
     ESShowVerification(theText);
 }
 
