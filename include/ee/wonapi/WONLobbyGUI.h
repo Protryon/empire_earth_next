@@ -208,8 +208,8 @@ class WONRectangle {
 public:
     WONRectangle() : x(0), y(0), width(0), height(0) {}
     WONRectangle(int inX, int inY, int inWidth, int inHeight) : x(inX), y(inY), width(inWidth), height(inHeight) {}
-    void DoIntersect(const WONRectangle& o) { this->Set(ee_won_gui_rect_intersect(this->Rust(), o.Rust())); } // 0x349330
-    void DoUnion(const WONRectangle& o) { this->Set(ee_won_gui_rect_union(this->Rust(), o.Rust())); } // 0x3493b0
+    void DoIntersect(const WONRectangle& o) { this->Set(ee_won_gui_rect_intersect(this->Rust(), o.Rust())); }
+    void DoUnion(const WONRectangle& o) { this->Set(ee_won_gui_rect_union(this->Rust(), o.Rust())); }
     bool Intersects(const WONRectangle& o) const { return ee_won_gui_rect_intersects(this->Rust(), o.Rust()); }
     EeWonRect Rust() const { EeWonRect e = { this->x, this->y, this->width, this->height }; return e; }
     void Set(const EeWonRect& e) { this->x = e.x; this->y = e.y; this->width = e.width; this->height = e.height; }
@@ -1453,7 +1453,7 @@ public:
 class ComponentListenerComp : public ComponentListener {
 public:
     ComponentListenerComp(Component* inComponent) : mComponent(inComponent) {}
-    virtual void HandleComponentEvent(ComponentEvent* e) { this->mComponent->HandleComponentEvent(e); } // 0x337bf0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->mComponent->HandleComponentEvent(e); }
 
     Component* mComponent;                  // +0x08
 };
@@ -1622,7 +1622,7 @@ public:
     SmartPtr<Sound> DecodeSound(const SoundDescriptor&); //32d4f0
     void CloseAllWindows() { this->WmCall(EeWonWmCall::CloseAllWindows); }
     void CalcModality() { this->WmCall(EeWonWmCall::CalcModality); } //32da30
-    bool NotModalWindow(Window* w) { return this->WmCall(EeWonWmCall::NotModalWindow, (intptr_t)w) != 0; } // 0x32dc30
+    bool NotModalWindow(Window* w) { return this->WmCall(EeWonWmCall::NotModalWindow, (intptr_t)w) != 0; }
     // 0x32dbe0 is a separate static SetModal(Component*,bool) helper, not a member.
     int DoDialog(Window* w, Component* c) { return (int)this->WmCall(EeWonWmCall::DoDialog, (intptr_t)w, (intptr_t)c); } //32dc50
     void EndDialog(int r, Window* w, Component* c) { this->WmCall(EeWonWmCall::EndDialog, r, (intptr_t)w, (intptr_t)c); }
@@ -1717,7 +1717,7 @@ public:
     Graphics& GetGraphics();
     void RemoveComponent(Component* c) { this->WCall(EeWonWinCall::RemoveComponent, (intptr_t)c); }
     bool IsMouseDown(MouseButton b) { return this->WCall(EeWonWinCall::IsMouseDown, (intptr_t)b) != 0; }
-    void ShowNativeCursor(bool s) { this->WCall(EeWonWinCall::ShowNativeCursor, s ? 1 : 0); } // 0x32afc0
+    void ShowNativeCursor(bool s) { this->WCall(EeWonWinCall::ShowNativeCursor, s ? 1 : 0); }
     void CheckSetCursor(bool f) { this->WCall(EeWonWinCall::CheckSetCursor, f ? 1 : 0); }
     bool CheckDoubleClick(MouseButton b) { return this->WCall(EeWonWinCall::CheckDoubleClick,(intptr_t)b)!=0; }
     void HandleMouseExit() { this->WCall(EeWonWinCall::HandleMouseExit); } //32b120
@@ -1744,7 +1744,7 @@ public:
     virtual void GetRect(WONRectangle&, bool) {}
     virtual void PlatformSetFocus() {}
     virtual void Show(bool s) { this->WCall(EeWonWinCall::Show, s ? 1 : 0); }
-    void Minimize(bool m) { this->WCall(EeWonWinCall::Minimize, m ? 1 : 0); } // 0x32afb0
+    void Minimize(bool m) { this->WCall(EeWonWinCall::Minimize, m ? 1 : 0); }
     DisplayContext* GetDisplayContext() { return this->mDisplayContext.get(); } // inline, at +0x28
     virtual void PlatformSetMouseCapture(bool) {}
     virtual void QueueEvent(WindowEventBase*);
@@ -1752,16 +1752,16 @@ public:
     static Window* GetDefaultWindow();
     SmartPtr<NativeImage> DecodeImage(const char*);
     int RunDialog(Component* c) { return this->mManager->DoDialog(this, c); } // DoDialog in the WON SDK
-    void AddComponent(Component* c) { this->WCall(EeWonWinCall::AddComponent, (intptr_t)c); } // 0x32b040
-    void SetModal(bool m) { this->WCall(EeWonWinCall::SetModal, m ? 1 : 0); } // 0x32b060
-    bool Close() { return this->WCall(EeWonWinCall::Close) != 0; } // 0x32ac30
+    void AddComponent(Component* c) { this->WCall(EeWonWinCall::AddComponent, (intptr_t)c); }
+    void SetModal(bool m) { this->WCall(EeWonWinCall::SetModal, m ? 1 : 0); }
+    bool Close() { return this->WCall(EeWonWinCall::Close) != 0; }
     void SetClientSize(int w, int h) { this->WCall(EeWonWinCall::SetClientSize, w, h); }
     void Center(bool p) { this->WCall(EeWonWinCall::Center, p ? 1 : 0); }
     void EndDialog(int, Component*);
     void OpenPopup(PopupParams&);
     void ClosePopup(Component*);
     void InvalidateRoot() { this->WCall(EeWonWinCall::InvalidateRoot); }
-    void SetParent(Window* p) { this->WCall(EeWonWinCall::SetParent, (intptr_t)p); } // 0x32a210
+    void SetParent(Window* p) { this->WCall(EeWonWinCall::SetParent, (intptr_t)p); }
     void SetTitle(const GUIString&);
     void SetIcon(NativeIcon*);
     // R6 WON round 32: the state is the Rust window (rust/crates/ee_won/src/winobj.rs); these read and set it

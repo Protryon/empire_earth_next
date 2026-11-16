@@ -35,13 +35,13 @@ class GUIStringData : public RefCount {
 public:
     explicit GUIStringData(unsigned short inCapacity) { this->S(EeWonGstrOp::NewCapacity, NULL, inCapacity); }
     virtual ~GUIStringData() { this->S(EeWonGstrOp::Free); }
-    GUIStringData(const wchar_t* inText) { this->Init(); this->AssignWStr(inText, (int)wcslen(inText)); } // 0x327840
-    GUIStringData(const char* inText) { this->Init(); this->AssignStr(inText, (int)strlen(inText)); } // 0x3277e0
+    GUIStringData(const wchar_t* inText) { this->Init(); this->AssignWStr(inText, (int)wcslen(inText)); }
+    GUIStringData(const char* inText) { this->Init(); this->AssignStr(inText, (int)strlen(inText)); }
     GUIStringData(const char* inText, unsigned short inLength) { this->Init(); this->AssignStr(inText, inLength); }
     GUIStringData(const wchar_t* inText, unsigned short inLength) { this->Init(); this->AssignWStr(inText, inLength); }
     GUIStringData(const std::string& inText) { this->Init(); this->AssignStr(inText.c_str(), (int)inText.length()); }
     GUIStringData(const std::wstring& inText) { this->Init(); this->AssignWStr(inText.c_str(), (int)inText.length()); }
-    GUIStringData(const GUIStringData& inCopy) : RefCount() { this->S(EeWonGstrOp::NewCopy, inCopy.Buf()); } // 0x727600
+    GUIStringData(const GUIStringData& inCopy) : RefCount() { this->S(EeWonGstrOp::NewCopy, inCopy.Buf()); }
     // 0x7276f0: offset and length are not range-checked
     GUIStringData(const GUIStringData* inOther, unsigned short inStart, unsigned short inLength)
     { this->S(EeWonGstrOp::NewSub, inOther->Buf(), inStart, inLength); }
