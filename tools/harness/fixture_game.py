@@ -213,35 +213,51 @@ def trigger(g, form, control, then_form, what):
 
 def input_check(g):
     """F3 (the game form's pause hot key) twice, posted to the game window as WM_KEYDOWN/UP: paused, then running
-    again, read from the fixture's telemetry -> evidence; raises on failure (session_exercise.input_check's test)."""
+    again, read from the fixture's telemetry -> evidence; raises on failure (session_exercise.input_check's test).
+    Each press is held until the telemetry shows the pause change (up to 5 s; the release then, and up to 15 s more
+    for the change): a fixed 0.3 s hold could end before a loaded UI thread read the key."""
     if not WINDOWS:
         raise RuntimeError('--input-check posts window messages: Windows only')
-    from session_exercise import game_window, press_key
+    import ctypes
+    from session_exercise import game_window
     hwnd = game_window(g.proc.pid)
     if not hwnd:
         raise RuntimeError('input check: no visible game window')
+    post = ctypes.windll.user32.PostMessageW
+    VK_F3, SCAN_F3 = 0x72, 0x3d
 
     def paused():
         return g.state()['telemetry'].get('paused')
+
+    def until_change(before, seconds):
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            g.check_alive()
+            now = paused()
+            if now != before:
+                return now
+            time.sleep(0.1)
+        return before
     end = time.monotonic() + 30
     while paused() and time.monotonic() < end:
         fixture_driver.dismiss(g, g.state())
         time.sleep(1)
-    states = [paused()]
+    states, held = [paused()], []
     for _ in range(2):
-        press_key(hwnd, 0x72, 0x3d)   # VK_F3, scan code DIK_F3
-        end = time.monotonic() + 15
-        while time.monotonic() < end:
-            time.sleep(0.5)
-            now = paused()
-            if now != states[-1]:
-                break
+        start = time.monotonic()
+        post(hwnd, 0x100, VK_F3, 1 | (SCAN_F3 << 16))   # WM_KEYDOWN
+        now = until_change(states[-1], 5)
+        held.append(round(time.monotonic() - start, 2))
+        post(hwnd, 0x101, VK_F3, 1 | (SCAN_F3 << 16) | 0xC0000000)   # WM_KEYUP
+        if now == states[-1]:
+            now = until_change(states[-1], 15)
         states.append(now)
     ok = states == [0, 1, 0]
-    g.note(f'INPUT CHECK F3 paused {states[0]} -> {states[1]} -> {states[2]}: {"ok" if ok else "FAILED"}')
+    g.note(f'INPUT CHECK F3 paused {states[0]} -> {states[1]} -> {states[2]}: {"ok" if ok else "FAILED"} '
+           f'(held {held[0]} s, {held[1]} s)')
     if not ok:
         raise RuntimeError(f'input check failed: paused states {states}')
-    return dict(key='F3', paused=states, ok=ok)
+    return dict(key='F3', paused=states, ok=ok, held=held)
 
 
 def chat_check(g):

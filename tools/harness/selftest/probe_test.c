@@ -1,7 +1,8 @@
 /* TEST ONLY: game_state_probe.py's target in the harness self test (selftest_inproc.py): a stand-in "EE-AOC.exe"
  * with gCommunications, gWorld and gPhysics laid out at the offsets the build's record layouts give for the members
- * the probe reads (probe_offsets.h, written by selftest_inproc.py from layout.json of the architecture). It fills
- * known values, writes probe.ready and waits to be killed. */
+ * the probe reads (probe_offsets.h, written by selftest_inproc.py from layout.json of the architecture), and the
+ * communications' numbers in EETestFixture.cpp's mirror (gEETestComms: their state is Rust's, at no offset of the C++
+ * object). It fills known values, writes probe.ready and waits to be killed. */
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,16 +13,22 @@ unsigned char selftest_world_object[WORLD_BYTES];   /* gWorld (an object) */
 #define world selftest_world_object
 void *selftest_communications = communications;     /* gCommunications (a pointer) */
 void *selftest_physics = physics;                   /* gPhysics (a pointer) */
+struct {                                            /* gEETestComms (EETestFixture.cpp's EETestComms) */
+    int mLastTickReceived;
+    unsigned int mCTsProcessed;
+    unsigned char mPaused, mMultiplayer, mValid;
+} selftest_comms_mirror;
 
 #define PUT(buf, off, type, v) (*(type *)((buf) + (off)) = (type)(v))
 
 int main(void)
 {
     int i;
-    PUT(communications, NESC_LAST_TICK, long, 1234);
-    PUT(communications, NESC_TICKS, unsigned long, 5678);
-    PUT(communications, NESC_PAUSED, unsigned char, 1);
-    PUT(communications, NESC_MP, unsigned char, 0);
+    selftest_comms_mirror.mLastTickReceived = 1234;
+    selftest_comms_mirror.mCTsProcessed = 5678;
+    selftest_comms_mirror.mPaused = 1;
+    selftest_comms_mirror.mMultiplayer = 0;
+    selftest_comms_mirror.mValid = 1;
     PUT(physics, PHYS_MS, long, 4321);
     PUT(physics, PHYS_OVER, unsigned char, 0);
     PUT(physics, PHYS_PT, unsigned long, 99);

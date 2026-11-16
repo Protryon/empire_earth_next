@@ -75,9 +75,9 @@ pickup @38,42                      # the house, then the move cancelled
 cancelmove
 digest cancel
 # the editor form's own events: the hide-UI box (EESEEHideUI posting EESEEChangeViewport), the quick save button
-check 0x12 0                       # UI shown: the framed view
+check 0x12 0                       # unchecked: the UI hidden (the box shows the UI while checked, as the original); no views before tab 4
 view
-check 0x12 1                       # UI hidden: the full view
+check 0x12 1                       # checked: the UI shown
 view
 click quicksave
 editorsave
@@ -85,7 +85,7 @@ editorsave
 # with state (EESEECheckDisplay, EESEESliderChange, EESEEUseObjectArea) through their controls, then their digest
 tab 4
 view
-check 0x12 0
+check 0x12 0                       # unchecked: the full view, the UI hidden
 view
 trigger 4                          # an area and an object: the effects' area/object lists
 newentry
@@ -1304,7 +1304,7 @@ combo 0x898 1
 areastate
 fire 0x89a                         # centre the camera on the area
 areastate
-check 0x12 1                       # the UI hidden: the mode switch leaves the label and button
+check 0x12 1                       # checked: the UI shown, so the mode switch sets the label and button
 combo 0x898 0
 areastate
 form 0 999 11

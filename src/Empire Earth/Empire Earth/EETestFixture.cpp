@@ -19,8 +19,9 @@
 //   - when <dir>/frame.request exists, removes it and writes the next presented frame to <dir>/frame.bmp (a top-down
 //     32-bit BMP, through the renderer's GXTestSetPresentHook / GXTestReadFrame);
 //   - executes the newest line of <dir>/test.command, "<seq> click|select|check|lselect <form> <control> [<k>]"
-//     (or "<seq> zoom <form> 0 <percent>", the camera zoom, or "<seq> pointer <form> <x> <y>", the game's pointer
-//     moved to a window position and the UI updated: hover through the controls' real hit test, or
+//     (or "<seq> zoom <form> 0 <percent>", the camera zoom, or "<seq> pointer <form> <x> <y> [<ms>]", the game's pointer
+//     moved to a window position and the UI updated: hover through the controls' real hit test; with ms, the position
+//     held there for ms milliseconds (see "the pointer hold" below), or
 //     "<seq> lclick <form> <x> <y>", the same and then a left button press and release as the platform's mouse
 //     events deliver them (ISHandleEvent): a click through the real hit test, or
 //     "<seq> boxselect <form> <mode> <x0> <y0> <x1> <y1>", a box selection in the game view: see "the box selection"
@@ -183,6 +184,87 @@ unsigned long sLastCommand = 0;
 std::string sDirectory;                      // EE_TEST_UI
 std::atomic<int> sFrameWanted(0);            // a frame.request seen: the next presented frame goes to frame.bmp
 std::atomic<unsigned long> sFramesWritten(0);
+
+// ---- the pointer hold (TEST ONLY): "pointer ... <ms>" keeps the game's pointer at the commanded position for ms
+// milliseconds. One SetPosition is not enough for the edge scroll check: the game moves its pointer on its own events
+// too (a platform mouse move adds its motion in RTSMouse::Update, the window's activation centres it), so under load
+// the pointer could leave the edge after one scroll step (a single 0.041-tile move, the gate's flake). A thread of the
+// fixture puts it back every 2 ms while the hold lasts, under the pointer's input lock as RTSMouse::Update moves it;
+// any later pointer, lclick, boxselect or order command ends the hold. Its end is reported on stderr with the number
+// of times it put the pointer back ("TEST UI pointer hold seq N done: K corrections").
+std::atomic<long long> sHoldUntil(0);         // steady-clock ms; 0: no hold
+std::atomic<unsigned long> sHoldSeq(0);       // the hold's command
+std::atomic<int> sHoldThread(0);
+std::mutex sHoldMutex;                        // sHoldAt
+GE2DPoint sHoldAt;                            // the held position (as SetPosition clamped it)
+
+long long HoldNow()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+}
+
+void HoldLoop()
+{
+    unsigned long theReported = 0, theFixes = 0, theSeq = 0;
+    auto theReport = [&theReported, &theFixes, &theSeq] {
+        if (theSeq != 0 && theReported != theSeq)
+            fprintf(stderr, "TEST UI pointer hold seq %lu done: %lu corrections\n", theSeq, theFixes);
+        theReported = theSeq;
+    };
+    for (;;) {
+        long long theUntil = sHoldUntil.load();
+        unsigned long theNowSeq = sHoldSeq.load();
+        if (theNowSeq != theSeq) {   // a new hold: the last one's report first
+            theReport();
+            theSeq = theNowSeq;
+            theFixes = 0;
+        }
+        if (theUntil == 0 || HoldNow() >= theUntil || gMouse == NULL) {
+            theReport();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
+        GE2DPoint theAt;
+        {
+            std::lock_guard<std::mutex> theGuard(sHoldMutex);
+            theAt = sHoldAt;
+        }
+        gMouse->mInputLock->Enter();
+        if (gMouse->mPosition.GetX() != theAt.GetX() || gMouse->mPosition.GetY() != theAt.GetY()) {
+            gMouse->SetPosition(theAt);
+            theFixes++;
+        }
+        gMouse->mInputLock->Leave();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+}
+
+// Ends a hold (a command that moves the pointer itself); the hold thread reports it
+void HoldRelease()
+{
+    sHoldUntil = 0;
+}
+
+// The pointer at (inX, inY) (clamped as the game clamps it), held for inMs milliseconds when inMs > 0
+void HoldPointer(unsigned long inSeq, float inX, float inY, unsigned long inMs)
+{
+    HoldRelease();
+    gMouse->mInputLock->Enter();
+    gMouse->SetPosition(GE2DPoint(inX, inY));
+    GE2DPoint theAt = gMouse->mPosition;
+    gMouse->mInputLock->Leave();
+    if (inMs == 0)
+        return;
+    {
+        std::lock_guard<std::mutex> theGuard(sHoldMutex);
+        sHoldAt = theAt;
+    }
+    sHoldUntil = HoldNow() + (long long)inMs;   // before the sequence: the thread reads the sequence first
+    sHoldSeq = inSeq;
+    if (sHoldThread.exchange(1) == 0)
+        std::thread(HoldLoop).detach();
+}
 
 // Replaces inTo with inFrom -> true on success. Windows' rename does not replace an existing file (the reader may
 // hold it open for a moment: the next poll writes it again)
@@ -988,9 +1070,9 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
     fclose(theCommand);
     if (!theRead)
         return;
-    unsigned long theSeq = 0, a = 0, b = 0, c = 0;
+    unsigned long theSeq = 0, a = 0, b = 0, c = 0, d = 0;
     char theOp[32] = {0};
-    int theFields = sscanf(theLine, "%lu %31s %lu %lu %lu", &theSeq, theOp, &a, &b, &c);
+    int theFields = sscanf(theLine, "%lu %31s %lu %lu %lu %lu", &theSeq, theOp, &a, &b, &c, &d);
     if (theFields < 4 || theSeq <= sLastCommand)
         return;
     sLastCommand = theSeq;
@@ -1032,12 +1114,13 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
         gWorld.mCameraControl.SetZoom(c / 100.0f);
         theVerdict = "zoomed";
     } else if (!strcmp(theOp, "pointer") && theFields >= 5 && a == inFormID && gMouse) {
-        // "<seq> pointer <form> <x> <y>": the pointer where a player's mouse would put it (UIManager::UpdateUI
-        // hit-tests the form's controls at it on the next UI update)
-        gMouse->SetPosition(GE2DPoint((float)b, (float)c));
+        // "<seq> pointer <form> <x> <y> [<ms>]": the pointer where a player's mouse would put it (UIManager::UpdateUI
+        // hit-tests the form's controls at it on the next UI update); held there ms milliseconds (the pointer hold)
+        HoldPointer(theSeq, (float)b, (float)c, theFields >= 6 && d <= 60000 ? d : 0);
         gUIManager->ForceUIUpdate();
         theVerdict = "pointer-moved";
     } else if (!strcmp(theOp, "lclick") && theFields >= 5 && a == inFormID && gMouse) {
+        HoldRelease();
         gMouse->SetPosition(GE2DPoint((float)b, (float)c));
         gUIManager->ForceUIUpdate();
         std::thread([]() {   // not under the UI lock: the UI thread reads the button between the two
@@ -1085,6 +1168,7 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
         gUserInterface->AddChatLogEntry(UWideString("TEST chat line: the chat display (EEUICChatLine)"), 0);
         theVerdict = "chat-added";
     } else if (!strcmp(theOp, "boxselect") && a == inFormID) {
+        HoldRelease();
         theVerdict = BoxStart(theSeq, theLine, inForm);
     } else if (!strcmp(theOp, "cast") && theFields >= 5 && a == inFormID && b > 0 && c < 1000) {
         unsigned long theEnum = b;
@@ -1092,6 +1176,7 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
         std::thread([theEnum, theOffset]() { CastRun(theEnum, theOffset); }).detach();
         theVerdict = "cast-started";
     } else if (!strcmp(theOp, "order") && a == inFormID) {
+        HoldRelease();
         theVerdict = EETestOrderStart(theSeq, b);
     } else if (theControl && !strcmp(theOp, "lselect") && theFields >= 5) {
         UILBString* theList = dynamic_cast<UILBString*>(theControl);
@@ -1324,18 +1409,27 @@ struct EETestComms {
     uint8_t mValid;   // 0: no communications object
 };
 EETestComms gEETestComms;
+// The render thread calls it, so it reads gCommunications only under the UI copy lock, taken without waiting (as the
+// bridge's ui_test takes it: a UI event can hold the lock while it waits for the render thread): the UI thread's
+// actions and events replace the communications object under that lock (EEAJoinOrHostAGame's delete and new when a
+// game is set up), and a read between the delete and the new (the legacy tour's crash in this function) used a
+// freed object. When the lock is busy the mirror keeps its last values until the next present.
 void EETestCommsRefresh()
 {
+    TSCriticalSection* theLock = gUIManager ? gUIManager->GetUILock() : NULL;
+    if (!theLock || !theLock->TryEnter())
+        return;
     NESynchronousCommunications* theCommunications = gCommunications;
     if (!theCommunications) {
         gEETestComms.mValid = 0;
-        return;
+    } else {
+        gEETestComms.mLastTickReceived = (int32_t)theCommunications->GetLastTickReceived();
+        gEETestComms.mCTsProcessed = (uint32_t)theCommunications->GetNumberOfCTsProcessedInPhysics();
+        gEETestComms.mPaused = theCommunications->GetIsGamePaused() ? 1 : 0;
+        gEETestComms.mMultiplayer = theCommunications->GetIsMultiplayerSession() ? 1 : 0;
+        gEETestComms.mValid = 1;
     }
-    gEETestComms.mLastTickReceived = (int32_t)theCommunications->GetLastTickReceived();
-    gEETestComms.mCTsProcessed = (uint32_t)theCommunications->GetNumberOfCTsProcessedInPhysics();
-    gEETestComms.mPaused = theCommunications->GetIsGamePaused() ? 1 : 0;
-    gEETestComms.mMultiplayer = theCommunications->GetIsMultiplayerSession() ? 1 : 0;
-    gEETestComms.mValid = 1;
+    theLock->Leave();
 }
 }
 #if defined(_MSC_VER)

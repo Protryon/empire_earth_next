@@ -110,9 +110,8 @@ def bridge(arch, d):
 # game_state_probe reads only staged game processes: <worktree>/build/boot/windowed_[orf](_K)/EE-AOC.exe. The self test
 # uses instance 32 of the "o" kind of its own checkout (never a session's windowed_f).
 PROBE_STAGE = st.BOOT / "windowed_o_32"
-PROBE_FIELDS = {   # define: (class, VC6 offset) as game_state_probe.py reads them (layout.off)
-    "NESC_LAST_TICK": ("NESynchronousCommunications", 4), "NESC_TICKS": ("NESynchronousCommunications", 0x10),
-    "NESC_PAUSED": ("NESynchronousCommunications", 0x2d), "NESC_MP": ("NESynchronousCommunications", 0x2e),
+PROBE_FIELDS = {   # define: (class, VC6 offset) as game_state_probe.py reads them (layout.off); the communications'
+    # numbers are read from the fixture's mirror (gEETestComms: probe_test.c's selftest_comms_mirror), not by offset
     "PHYS_MS": ("EEPhysics", 0xd0), "PHYS_OVER": ("EEPhysics", 0xe6), "PHYS_PT": ("EEPhysics", 0xb4),
     "WORLD_COUNT": ("EEWorld", 0xcc), "WORLD_LOCAL": ("EEWorld", 0xb84), "WORLD_VICTORY": ("EEWorld", 0xb96),
     "WORLD_MAP": ("EEWorld", 0xbc), "WORLD_PLAYERS": ("EEWorld", 0x74),
@@ -123,9 +122,12 @@ PROBE_FIELDS = {   # define: (class, VC6 offset) as game_state_probe.py reads th
 
 
 def layout_dir(arch):
-    """The record layouts of this checkout (layout_gen.py, cached under build/boot/selftest/<arch>)."""
+    """The record layouts of this checkout (layout_gen.py, cached under build/boot/selftest/<arch>; made again when a
+    header under include/ is newer than the cache: a stale cache kept a member another lane had moved into Rust)."""
     d = st.SELF / arch / "layout"
-    if not (d / "layout.json").exists():
+    cached = d / "layout.json"
+    newest = max((f.stat().st_mtime for f in (st.ROOT / "include").rglob("*.h")), default=0)
+    if not cached.exists() or cached.stat().st_mtime < newest:
         d.mkdir(parents=True, exist_ok=True)
         subprocess.run([sys.executable, "-I", str(HARNESS / "layout_gen.py"), "--out", str(d)], check=True)
     return d
@@ -154,7 +156,8 @@ def probe(arch, d):
                 break
             time.sleep(0.05)
         addresses = dict(communications=base + syms["selftest_communications"], world=base + syms["selftest_world_object"],
-                         physics=base + syms["selftest_physics"], image_base=base)
+                         physics=base + syms["selftest_physics"], comms_mirror=base + syms["selftest_comms_mirror"],
+                         image_base=base)
         s = game_state_probe.sample(proc.pid, addresses, players=True)
     finally:
         proc.kill()

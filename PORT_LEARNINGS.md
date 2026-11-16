@@ -26036,3 +26036,99 @@ read by many lanes, so a move keeps them and takes the bodies over a view); `Fil
   `random-game --box-select --orders --scroll-check` 0/2 concurrent (once the play frame equal to the gameplay
   frame, once the edge scroll moving 0.041 tile in its 1.5 s hold) and 1/1 alone; `gates.sh` in slot 0 GATES PASS. The fixed-time holds of the
   scroll check are what load breaks; the tour's checks wait on telemetry and held up.
+
+## Harness and gate flakes under load: wait for the condition, never a fixed time (branch rust-flakes1, 2026-11-15)
+
+Six checks failed now and then on rust's own build and passed on a rerun. Each was a fixed sleep or a one-shot
+action racing the game's own threads; the fixes are in the test tooling and the TEST ONLY fixture code
+(EETestFixture.cpp, on only with EE_TEST_UI; EESimEditor.cpp, EE-SIM's scripted editor). No game code changed.
+
+- **Edge scroll moved one 0.041 step.** The fixture's `pointer` set gMouse once. The game moves its pointer on its
+  own events (a platform mouse move adds its motion in `RTSMouse::Update`, the window's activation centres it), so
+  under load the pointer left the edge after one scroll update. Fix: `pointer <form> <x> <y> <ms>` holds the
+  position for ms. A fixture thread puts it back every 2 ms under `gMouse->mInputLock` until the time runs out or a
+  pointer, lclick, boxselect or order command moves it. stderr reports `TEST UI pointer hold seq N done: K
+  corrections`. `fixture_driver.edge` holds for the check's time plus 2 s. The stand-in scrolls for one step only
+  without a hold, so the self test checks that the driver asks for one.
+- **The AI game's lobby saw empty player-type combos** (`slot 0 human: index 0 outside []`). The combos exist when
+  the form opens, but their lines arrive with the local server's updates. Fix: `lobby_settled` waits until every
+  wanted combo has lines and none has changed for 1 s (60 s limit, and the error names the empty combos);
+  `Game.select` waits up to 30 s for its value to resolve.
+- **F3 input check paused 0 -> 0 -> 0.** The key's down and up were posted 0.3 s apart, and a loaded UI thread
+  missed the press. Fix: hold the key down until the telemetry shows the pause change (up to 5 s), then release it
+  (and wait up to 15 s more).
+- **The legacy tour's crash in EETestCommsRefresh.** The bridge calls it on the render thread before each present.
+  It read `gCommunications` with no lock while a UI action replaced the object (EEAJoinOrHostAGame: delete the
+  client, new server), so a present in that window read a freed object. Fix: take the UI copy lock
+  (`GetUILock()->TryEnter()`, as the bridge's ui_test does, since a UI event can hold it while waiting for the render
+  thread) and keep the last values when it is busy. Every action and UI event runs under that lock. Deletes on other
+  threads (the lobby glue, EEServer's become-client message) are not covered; the tour does not reach them.
+- **The editor gate's load-thread line** (`formstate` after `tab 2`: `'Loading Terrain Ambients - Aquatic'` or
+  hidden). The editor's load thread posts its texts as actions: one `EESEAChangeLoadText` object, its text
+  overwritten and the object posted again for each text. `FormState` drained the load thread from inside its step,
+  so the actions posted meanwhile queued behind the step. Which text it read depended on how many had run. Fix: the
+  driver drains the load thread before it queues `formstate` (as it already did for form/players/unittab), so every
+  text action runs first and the label reads the final state (hidden).
+- **The civilization builder gate's choice list, and more of the editor gate.** A step ended when its marker had
+  passed through the action queue three times and then the UI thread's message queue once. A control's trigger
+  event (a list's selection, a question's Yes, a check box) is processed by the next UI update, and what that posts
+  (`PostEvent`: the choice form's load of the selected civilization, the delete after Yes, the hide-UI box's view)
+  reached the message queue after the step's end. The next step's dump therefore read the state before or after
+  them, depending on when the update came. The expected files had recorded the "before" states: statistics empty
+  with "Please wait..." shown, `file cbgate2` still present after the delete's Yes, the view before the hide-UI
+  box's change, and the trigger tab's check boxes shown. Three runs of the editor gate gave three different outputs.
+  Fix: the step's end (`EESimEditorDone`) makes one more round through the action queue before it wakes the driver,
+  so every event a step's trigger events post is processed first. expected.txt and civbuilder_expected.txt now hold
+  the settled states. For the editor lane: settled, `check 0x12 0` (the "UI shown" comment) reads `hidden=1` and
+  `check 0x12 1` reads `hidden=0`, which suggests SetChecked on that box toggles rather than sets. The old expected
+  hid this because it read one step late.
+- **The self test's probe** stopped on `NESynchronousCommunications has no member mLastTickReceived`. The class holds
+  only its Rust handle now, and the probe read the members by layout offset. It now reads a stand-in of the
+  fixture's mirror `gEETestComms`, which game_session.py already passes. The self test's layout cache had hidden the
+  break here: it is now regenerated when a header under include/ is newer than the cache. The stand-in also retries
+  a frame.request that the driver still holds open (WinError 32 on its unlink).
+
+## Harness flakes, round 2: the orders check's clicks; the editor gate's hide-UI box (branch rust-flakes2, 2026-11-15)
+
+Test tooling only: the fixture's orders (`EETestFixtureOrders.cpp`, on only with EE_TEST_UI) and the editor gate's
+script comments. No game code changed.
+
+- **The orders check's gather after a scout** (`scout-no-pick`, `no-message`; the lead's orders_b37.log). On a
+  start with no resource in view, the gather sends its group (EEMPathTo) towards the nearest resource until the
+  player sees it, then centres the camera on it and scans the view with the picker. The fixture now writes
+  `TEST UI order diag` lines to the game log, and they show three causes:
+  1. **The scouting group stood in front of the resource.** It kept walking onto the resource's tile. The picker
+     ranks hits by distance before priority (`pick.rs` `better`), so a citizen nearer the camera wins over the
+     resource even with the resource preference. The scan then found no point picking the resource
+     (`scout-no-pick`), or the click picked a citizen of the group: a move, not a gather (`no-message`).
+  2. **A fixed 1.5 s after the camera move.** The picker holds the units of the last frame drawn. Under load, the
+     scan could read the old view.
+  3. **The click point.** It was the first grid point where the scan met the unit: the top left edge of its hit
+     area, where a pixel of motion changes the pick. The scan also covers the game view under the HUD's panels: a
+     right click there reaches the panel. A run here aimed the repair at the town centre under the mini map
+     (control 26 under the pointer). The repair-queued `no-message` in orders_b8.log fits causes 1 and 3: the first
+     repair's citizens walking to the same building.
+
+  Fixes:
+  - Once the resource is seen, the group is halted (EEMStopActiveGroup, the Stop button's message) and the fixture
+    waits until it is idle.
+  - `CentreAndChoose` waits for the camera's focus and target to reach the tile, then for two scans 250 ms apart
+    to agree on the target and its point. Home and the retry use it as well.
+  - The click candidates are the target's grid points, nearest their centroid first.
+  - `VerifyClick` runs before each click. The pointer is placed and the UI thread makes two round trips (marker
+    actions). Then the form's mouse-over control must be none (-1: the hit test passes over the view) or the view's
+    selection control (28), and the picker must give the target there (no unit for a move). If no candidate passes,
+    a target is centred and its points are tried again.
+- **Five or more runs.** One run with the first fix was rejected: it took -1 for a HUD control, so nothing verified.
+  Then 11 orders runs (`fixture_game.py --exercise random-game --orders --box-select`, unseeded, varied maps)
+  passed, every one with a scout: 6 before the last change (the centring when no point verifies) and 5 on the final build. That centring path did not run in the final five. One earlier diagnostic run failed at the box selection's dead step instead (the
+  disbanded unit was not in the box's ids: "lasso 4", the candidate left out). That is a separate flake, and the
+  orders never ran in that run. It did not recur in the later runs and was not fixed.
+- **The editor gate's hide-UI box is not a toggle.** `check 0x12 0` reads `hidden=1` and `check 0x12 1` reads
+  `hidden=0`, and that is the original's behaviour. EESEEHideUI posts the check state as EESEEChangeViewport's flag,
+  and that calls `SetGameView(view, flag == false)` (main's `EEUIFSETRBPaintType.cpp`, 0x5af4c1 / 0x5af55a). So the
+  box shows the UI while checked. The trigger tab's Enter checks it, with the framed view (447) for checked and the
+  full view (606) for unchecked. The Rust port (`editor_events.rs`, `editor_form.rs`) matches, and its tests pin the
+  mapping. The script's comments had it backwards. They are corrected, and step 1307's comment ("the UI hidden")
+  now says the UI is shown: the gate does not reach `set_area_mode`'s hidden branch, which only its unit test
+  covers. expected.txt changed only in the four echoed comment lines.

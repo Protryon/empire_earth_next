@@ -208,12 +208,23 @@ class Game:
         self.note(f'UI {what}: form {form} control {control} -> form {then_form}')
         return st
 
-    def select(self, control, value, label):
-        st = self.state()
-        combo = st['combos'].get(control)
-        if combo is None:
-            raise RuntimeError(f'{label}: control {control} is not a combo on form {st["form"]}')
-        index = resolve(value, combo['lines'], label)
+    def select(self, control, value, label, timeout=30):
+        # the combo's lines can come after the combo itself (the lobby fills its player types from the local server's
+        # updates): wait until value resolves among them, then choose
+        end = time.monotonic() + timeout
+        while True:
+            self.check_alive()
+            st = self.state()
+            combo = st['combos'].get(control)
+            try:
+                if combo is None:
+                    raise ValueError(f'{label}: control {control} is not a combo on form {st["form"]}')
+                index = resolve(value, combo['lines'], label)
+                break
+            except ValueError as error:
+                if time.monotonic() > end:
+                    raise RuntimeError(f'{error} (after waiting {timeout} s for its lines)') from None
+            time.sleep(0.25)
         if combo['sel'] != index:
             seq = self.command(f'select {LOBBY} {control} {index}')
             self.wait(lambda s: s['command'] >= seq and s['combos'].get(control, {}).get('sel') == index,
@@ -381,12 +392,37 @@ def dismiss(g, st):
     return False
 
 
+def lobby_settled(g, wanted, timeout=60, quiet=1.0):
+    """Waits until the lobby's combos `wanted` all exist with lines (the player types are filled from the local
+    server's updates, after the form opens: a fixed 3 s wait saw them empty under load) and have not changed for
+    `quiet` s (the queued lobby updates applied) -> the state; raises naming the combos still empty."""
+    def filled(s):
+        return s['form'] == LOBBY and all(s['combos'].get(c, {}).get('lines') for c in wanted)
+    end = time.monotonic() + timeout
+    try:
+        st = g.wait(filled, 'the lobby combos filled', timeout)
+    except RuntimeError:
+        st = g.state()
+        empty = [c for c in wanted if not st['combos'].get(c, {}).get('lines')]
+        raise RuntimeError(f'the lobby combos {empty} are still missing or empty after {timeout} s '
+                           f'(form {st["form"]})') from None
+    seen, since = st['combos'], time.monotonic()
+    while time.monotonic() - since < quiet:
+        if time.monotonic() > end:
+            raise RuntimeError(f'the lobby combos kept changing for {timeout} s')
+        time.sleep(0.25)
+        st = g.wait(filled, 'the lobby combos filled', max(1.0, end - time.monotonic()))
+        if st['combos'] != seen:
+            seen, since = st['combos'], time.monotonic()
+    g.note(f'LOBBY settled: {len(wanted)} combos filled, unchanged for {quiet} s')
+    return st
+
+
 def setup_lobby(g, a):
     """The lobby set up as ai_game.py does: the human idles in slot 0, a.ai_players computers, every option absolute
     (a.map_size, a.map_type, a.difficulty, a.game_speed; a.lobby CONTROL=VALUE; a.lobby_check CONTROL=0|1)."""
-    g.wait(lambda s: s['form'] == LOBBY and all(PLAYER_TYPE + k in s['combos'] for k in range(VISIBLE_SLOTS))
-           and all(c in s['combos'] for c in NAMED.values()), 'the lobby combos', 60)
-    time.sleep(3)   # local-server readiness and queued lobby updates (as ai_game.py)
+    wanted = [PLAYER_TYPE + k for k in range(VISIBLE_SLOTS)] + list(NAMED.values())
+    lobby_settled(g, wanted)
     (g.out / 'lobby_before.txt').write_text(g.raw(), encoding='latin-1')
     chosen = [g.select(PLAYER_TYPE, '#0', 'slot 0 human')]
     for k in range(1, VISIBLE_SLOTS):
@@ -835,13 +871,16 @@ def scroll_check(g, form, hold_ms=1500, settle=2.0, captures=True):
 
 def edge(g, form, fx, ms):
     """The game's pointer at the window's left (fx 0) or right (fx 1) edge, mid height, for ms milliseconds, then back
-    to the middle of the window (EEUIFMainGame's update hands the pointer to the edge scroll, EEAScroll::Update)."""
+    to the middle of the window (EEUIFMainGame's update hands the pointer to the edge scroll, EEAScroll::Update).
+    The fixture holds the pointer there (the pointer command's hold, ms plus a margin; the pointer back ends it): the
+    game moves its pointer on its own events too, and one placement left the edge after a single scroll step under
+    load."""
     st = window_state(g)
     if not st['window']:
         raise RuntimeError('the fixture reports no window size')
     w, h = st['window']
     x = 0 if fx < 0.5 else w - 1
-    _command(g, f'pointer {form} {x} {h // 2}', ('pointer-moved',), f'pointer {x}')
+    _command(g, f'pointer {form} {x} {h // 2} {ms + 2000}', ('pointer-moved',), f'pointer {x}')
     time.sleep(ms / 1000)
     _command(g, f'pointer {form} {w // 2} {h // 2}', ('pointer-moved',), 'pointer back')
 

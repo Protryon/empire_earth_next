@@ -56,14 +56,8 @@ def sample(pid,addresses=None,players=False):
             last_tick,cts,paused,multiplayer,valid=struct.unpack('<iIBBB',read(mirror_va,11))
             if not valid:raise ValueError('No game communications object')
             comms=dict(last_tick_received=last_tick,physics_ticks_processed=cts,paused=bool(paused),multiplayer=bool(multiplayer))
-        else:
-            comm=ptr(comm_va)
-            if not comm:raise ValueError('No game communications object')
-            state=read(comm,max(off('NESynchronousCommunications',0x2e)+1,0x30))
-            comms=dict(last_tick_received=struct.unpack_from('<i',state,off('NESynchronousCommunications',4))[0],
-                       physics_ticks_processed=struct.unpack_from('<I',state,off('NESynchronousCommunications',0x10))[0],
-                       paused=bool(state[off('NESynchronousCommunications',0x2d)]),
-                       multiplayer=bool(state[off('NESynchronousCommunications',0x2e)]))
+        else:   # the C++ object holds only its Rust handle (NESynchronousCommunications::mComms): no offset to read
+            raise ValueError('No communications mirror (gEETestComms) in this build')
         extra={}
         if addresses and addresses.get('victory_detail') and P==4:   # opt-in (full-link triage): EEWorld/EEPlayer victory fields (VC6 vector reads: 32-bit only)
             extra['victory_enabled']=read(world_va+off('EEWorld',0xb96),1)[0]
