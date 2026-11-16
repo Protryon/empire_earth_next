@@ -5968,6 +5968,63 @@ foundations either.
 **Open:** the reflexes (militia, danger zones, naval flight) are still C++ decision code (AI_LUA_VERBS.md §5);
 FindSite's finders are C++ placement searches behind `ai.place`, a candidate for a Lua port.
 
+### 8.93 classic_lua's raids in Lua (2026-11-15, EE-SIM)
+
+**The question** (the coordinator, after §8.90): phase 2 left classic_lua's free soldiers in lib.tactics POOL, a
+defence group at home, and the raids that the C++ attack commander's continent groups made of them were lost
+(§8.86's open item). The 64-seed bench against Age of AI went 52-5-7 -> 42-6-16. Win them back with raid groups in
+Lua, over the unit-level commands only (the C++ group verbs are gone, §8.92).
+
+**The raid** (classic_lua/army.lua raid_step, `M.RAID`). Every 5 s, from the Stone Age and minute 20: when the pool
+holds 16 soldiers, all but 2 of them (40 at most) become a lib.groups raid group. It goes at the nearest enemy whose
+town is on its land (ai.reach), at its gather spots as last seen (lib.groups note_spots, every 2 s), routing round the
+known towers (g.route, avoid 8). On the way it takes the enemy's citizens and boats and fights soldiers only within 6
+tiles. It flees home when the soldiers and towers it sees within 10 tiles are 1.5 times its strength (lib.groups).
+The raid is over when it fled, has nowhere left to go, is down to a third or has been out 7 minutes; its soldiers go
+back to the engine, the pool takes them in, and the next raid follows 60 s later. Trace: `army.raid sent`,
+`army.raid done ... why=`.
+
+**Variants** (seeds 2-33, Small, Hard, 90 min, against Age of AI, before the merge of stage 6; citizens killed:
+Age of AI's citizens killed by classic_lua, the 32 games):
+
+| variant | W-L-C | citizens killed |
+|---|---|---|
+| no raids | 26-3-3 | 1526 |
+| from 10 in the pool, 4 kept home | 26-1-5 | 1795 |
+| from 6, 2 kept, from minute 15 | 26-1-5 | 1647 |
+| **from 16, 2 kept (kept)** | **28-2-2** | **1876** |
+| from 22, none kept | 26-3-3 | 1781 |
+| from 16, a 30 s gap, from minute 15 | 27-3-2 | 1872 |
+| the attack task instead of raid, from 12 | 26-1-5 | 1742 (61% of the soldiers sent lost) |
+
+Seeds 34-65 with the kept variant: 25-2-5 -> 25-2-5, citizens killed 1375 -> 1538; 64 seeds 51-5-8 -> 53-4-7. The
+64-seed baseline was already 51-5-8 there, not 42-6-16: the island fishing (§8.89), merged after phase 2's bench,
+closed most of the gap.
+
+**After the merge of stage 6** (lua-verbs: Age of AI's economy verbs in Lua; the games differ from the cache), the
+same bench again (64 seeds):
+
+| | no raids | raids |
+|---|---|---|
+| W-L-C | 47-2-15 | **53-2-9** |
+| Age of AI's citizens killed by classic_lua | 3682 | 4422 |
+| Age of AI's citizens lost a game | 77.4 | 86.8 |
+| classic_lua's citizens lost a game | 23.1 | 20.7 |
+| classic_lua's Bronze Age | 39/64 (80.2 min) | 42/64 (82.8 min) |
+
+292 raids in the 64 games: 266 came home fleeing, 16 had nowhere to go, 10 timed out; 6057 soldiers sent, 5849 back.
+The raid lives by flight: it kills the gatherers it finds away from the towers and leaves before the towers and
+soldiers answer (the attack task, which fights its way in, lost most of its soldiers).
+
+**The other cells** (32 seeds, against Age of AI): Small Islands 15-6-11 and Large Islands (Medium) 13-2-17 with and
+without raids, the games identical (no enemy town on the town's land: no raid); Continental Medium 16-5-11 both,
+Age of AI's citizens killed 873 -> 1034. 0 script errors from classic_lua in every cell (the 7 errors in the
+Continental baseline are Age of AI's: ageofai/tactics.lua bait over the instruction budget, seed 14, at 83-84
+minutes). Determinism (seed 2, 18 raids, --repeat 2): identical.
+
+**Still open:** raids across water (the islands: the ferry carries citizens only); the raid's size is the pool's,
+so a short pool raids late.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
