@@ -1394,18 +1394,27 @@ struct EETestComms {
     uint8_t mValid;   // 0: no communications object
 };
 EETestComms gEETestComms;
+// The render thread calls it, so it reads gCommunications only under the UI copy lock, taken without waiting (as the
+// bridge's ui_test takes it: a UI event can hold the lock while it waits for the render thread): the UI thread's
+// actions and events replace the communications object under that lock (EEAJoinOrHostAGame's delete and new when a
+// game is set up), and a read between the delete and the new (the legacy tour's crash in this function) used a
+// freed object. When the lock is busy the mirror keeps its last values until the next present.
 void EETestCommsRefresh()
 {
+    TSCriticalSection* theLock = gUIManager ? gUIManager->GetUILock() : NULL;
+    if (!theLock || !theLock->TryEnter())
+        return;
     NESynchronousCommunications* theCommunications = gCommunications;
     if (!theCommunications) {
         gEETestComms.mValid = 0;
-        return;
+    } else {
+        gEETestComms.mLastTickReceived = (int32_t)theCommunications->GetLastTickReceived();
+        gEETestComms.mCTsProcessed = (uint32_t)theCommunications->GetNumberOfCTsProcessedInPhysics();
+        gEETestComms.mPaused = theCommunications->GetIsGamePaused() ? 1 : 0;
+        gEETestComms.mMultiplayer = theCommunications->GetIsMultiplayerSession() ? 1 : 0;
+        gEETestComms.mValid = 1;
     }
-    gEETestComms.mLastTickReceived = (int32_t)theCommunications->GetLastTickReceived();
-    gEETestComms.mCTsProcessed = (uint32_t)theCommunications->GetNumberOfCTsProcessedInPhysics();
-    gEETestComms.mPaused = theCommunications->GetIsGamePaused() ? 1 : 0;
-    gEETestComms.mMultiplayer = theCommunications->GetIsMultiplayerSession() ? 1 : 0;
-    gEETestComms.mValid = 1;
+    theLock->Leave();
 }
 }
 #if defined(_MSC_VER)
