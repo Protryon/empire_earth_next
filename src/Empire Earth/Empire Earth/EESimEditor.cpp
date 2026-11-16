@@ -72,6 +72,11 @@
 //   align c|e                             the condition's or effect's labels' alignments (- never set)
 //   seed                                  the user interface's random seed (the map tab's CreateMap)
 //   media                                 the scenario's media texts (their lengths, first 60 bytes), the export file
+//   terrainstate | terrainpick LINE | terraincolor LINE   round 8: the terrain tab (TerrainDigest), a list's line
+//                                         clicked (its event fires)
+//   terrainpaint L T R B                  the terrain paint area's CreatePaintAction over an area, posted
+//   terrainmouse X Y | terrainmouse update   the terrain tab's MouseMove / Update; brushhl X Y CENTERED SetHighlight
+//   techfill ID FIRST LAST | techstate    a tech list's Fill; the two tech lists (TechDigest: ids, lines, CopyData's marks)
 // Out of the script's reach (a person's): the mouse's picking (EEPreviewPlacement's screen point, the lasso's and
 // the click's picking), the save and test screens (EESEASaveScenario, EESEATestScenario, EESEAExitScenario), the tech
 // lists (EESEATechTree), the load thread's texts (EESEAChangeLoadText).
@@ -186,6 +191,8 @@
 #include "ee/EEEffectManager.h"
 #include "ee/EEUIFSEPaint.h"
 #include "ee/EEUIFSEPaintElevation.h"
+#include "lle/UIBitmap.h"
+#include "ee/EEUIFSETerrain.h"
 #include "lle/URandom.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EETileCoordinate.h"
@@ -1241,6 +1248,86 @@ void SyncLoadThread()
 // the editor form's own state (TEST ONLY, round 7): its tab and control group, the selection and its cargo count,
 // its flags, the mini map's, help label's and load text's display modes (the load text's text after the load thread
 // is idle), the brush highlight, the saved view and panel rectangles, the edge scroll's edges
+// the terrain tab (TEST ONLY, round 8): its terrains' and colour types' table ids in order, the selected terrain, the
+// type list (each line's name, preview and colour set), the colour list (each set's size and first colour), their
+// selections, the preview bitmap's texture and corner colours, the paint radios, the controls' display modes, the
+// paint area's centring, the brush group's size, highlight and rectangle
+void TerrainDigest(std::vector<std::string>& outLines)
+{
+    EEUIFScenarioEditor* e = gUIManager->mScenarioEditorForm;
+    EEUIFSETerrain* t = static_cast<EEUIFSETerrain*>(e->GetTabGroup(kEditorTabTerrain));
+    std::string s = "  terrain selected=" + std::to_string((long)t->GetSelectedTerrain()) + " terrains";
+    for (unsigned long k = 0; k < t->GetTerrainCount(); k++)
+        s += " " + std::to_string(t->GetTerrainID(k));
+    s += " colors";
+    for (unsigned long k = 0; k < t->GetColorTypeCount(); k++)
+        s += " " + std::to_string(t->GetColorTypeID(k));
+    outLines.push_back(s);
+    EESEUITerrainTypeLB* theTypes = static_cast<EESEUITerrainTypeLB*>(e->GetControlById(kSETerrainTerrainType));
+    unsigned long theSelection = 0;
+    bool theSelected = theTypes->GetCurrentSelection(theSelection) == kErrorOK;
+    s = "  types n=" + std::to_string(theTypes->GetLineCount()) + " sel=" +
+        (theSelected ? std::to_string(theSelection) : std::string("none")) + ":";
+    for (unsigned long k = 0; k < theTypes->GetLineCount(); k++) {
+        const EESEUITTData& d = theTypes->GetData(k);
+        s += std::string(" '") + (const char*)d.mName + "'" + (d.mTexture != NULL ? "t" : "-") + std::to_string(d.mColorSet);
+    }
+    outLines.push_back(s);
+    EESEUITerrainColorLB* theColors = static_cast<EESEUITerrainColorLB*>(e->GetControlById(kSETerrainTerrainColorType));
+    theSelected = theColors->GetCurrentSelection(theSelection) == kErrorOK;
+    s = "  colorsets n=" + std::to_string(theColors->GetLineCount()) + " sel=" +
+        (theSelected ? std::to_string(theSelection) : std::string("none")) + ":";
+    for (unsigned long k = 0; k < theColors->GetLineCount(); k++) {
+        const std::vector<GEColor>& d = theColors->GetData(k);
+        s += " " + std::to_string(d.size()) + (d.empty() ? std::string() : "/" + Colour(d[0]));
+    }
+    outLines.push_back(s);
+    UIBitmap* theBitmap = static_cast<UIBitmap*>(e->GetControlById(kSETerrainBitmap));
+    GEColor c0, c1, c2, c3;
+    theBitmap->GetBitmap()->GetColorPerVertex(c0, c1, c2, c3);
+    s = std::string("  preview texture=") + (theBitmap->GetBitmap()->GetTexture(0) != NULL ? "1" : "0") + " corners " +
+        Colour(c0) + " " + Colour(c1) + " " + Colour(c2) + " " + Colour(c3) + " modes";
+    for (unsigned long theID : {(unsigned long)kSETerrainTerrainTypeLabel, (unsigned long)kSETerrainTerrainType,
+                                (unsigned long)kSETerrainTerrainColorTypeLabel, (unsigned long)kSETerrainTerrainColorType,
+                                (unsigned long)kSETerrainBitmap})
+        s += " " + std::to_string(e->GetControlById(theID)->GetDisplayMode());
+    s += std::string(" radios ") +
+         (static_cast<UIRadioButton*>(e->GetControlById(kSETerrainTerrainButton))->GetIsChecked() ? "1" : "0") +
+         (static_cast<UIRadioButton*>(e->GetControlById(kSETerrainMountainsButton))->GetIsChecked() ? "1" : "0");
+    s += std::string(" centered=") + (static_cast<EEUIFSEPaint*>(e->GetControlById(205))->mIsCentered ? "1" : "0");
+    EEUIFSEBrushGroup* b = e->GetBrushGroup();
+    char theText[160];
+    snprintf(theText, sizeof(theText), " brush size=%lu shown=%d centered=%d rect=%g,%g,%g,%g", b->mBrushSize,
+             b->mIsHighlightShown ? 1 : 0, b->mIsCentered ? 1 : 0, (double)b->mRectangle.GetLeft(),
+             (double)b->mRectangle.GetTop(), (double)b->mRectangle.GetRight(), (double)b->mRectangle.GetBottom());
+    outLines.push_back(s + theText);
+}
+
+// the player tab's two tech lists (TEST ONLY, round 8): each one's techs (ids, in order), lines, selection and the
+// lines CopyData marks
+void TechDigest(std::vector<std::string>& outLines)
+{
+    for (unsigned long theID : {(unsigned long)kSERBUnitTypesTechList, (unsigned long)kSERBUnitTypesOtherTechList}) {
+        EESEUITechListBox* l = static_cast<EESEUITechListBox*>(gUIManager->mScenarioEditorForm->GetControlById(theID));
+        l->CopyData();
+        unsigned long theSelection = 0;
+        bool theSelected = l->GetCurrentSelection(theSelection) == kErrorOK;
+        std::string s = "  techs " + std::to_string(theID) + " n=" + std::to_string(l->mTechs.size()) + " lines=" +
+                        std::to_string(l->GetLineCount()) + " sel=" +
+                        (theSelected ? std::to_string(theSelection) : std::string("none")) + " marked";
+        for (unsigned long d : l->mDependents)
+            s += " " + std::to_string(d);
+        s += " ids";
+        for (long id : l->mTechs)
+            s += " " + std::to_string(id);
+        outLines.push_back(s);
+        s = "  lines";
+        for (unsigned long k = 0; k < l->GetLineCount(); k++)
+            s += std::string(k == 0 ? " '" : "|'") + (const char*)l->GetData(k) + "'";
+        outLines.push_back(s);
+    }
+}
+
 void FormState(std::vector<std::string>& outLines)
 {
     SyncLoadThread();
@@ -2128,6 +2215,43 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             };
         else if (c == "trigreport")   // trigreport [setup]: the trigger-only save's report (TriggerReport)
             theCode = [=, &theOutput] { TriggerReport(w.size() > 1 && w[1] == "setup", theOutput); };
+        else if (c == "terrainstate")   // round 8: the terrain tab (TerrainDigest)
+            theCode = [=, &theOutput] { TerrainDigest(theOutput); };
+        else if (c == "terrainpick" || c == "terraincolor")   // terrainpick|terraincolor LINE: a list's line clicked
+            theCode = [=] {
+                UIControl* theList = gUIManager->mScenarioEditorForm->GetControlById(
+                    c == "terrainpick" ? kSETerrainTerrainType : kSETerrainTerrainColorType);
+                if (c == "terrainpick")
+                    static_cast<EESEUITerrainTypeLB*>(theList)->ChangeSelectionIndex((unsigned long)L(1), true, false);
+                else
+                    static_cast<EESEUITerrainColorLB*>(theList)->ChangeSelectionIndex((unsigned long)L(1), true, false);
+            };
+        else if (c == "terrainpaint")   // terrainpaint L T R B: the paint area's CreatePaintAction over an area, posted
+            theCode = [=, &theOutput] {
+                EEUIFSEPaint* thePaint = static_cast<EEUIFSEPaint*>(gUIManager->mScenarioEditorForm->GetControlById(205));
+                EESEAPaint* a = thePaint->CreatePaintAction();
+                theOutput.push_back(std::string("  paint ") + (a != NULL ? "action" : "none") +
+                                    " centered=" + (thePaint->mIsCentered ? "1" : "0"));
+                if (a == NULL)
+                    return;
+                if (a->SetArea(L(1), L(2), L(3), L(4)))
+                    gUserInterface->PostAction(a);
+                a->Dereference();
+            };
+        else if (c == "terrainmouse")   // terrainmouse X Y | terrainmouse update: the tab's MouseMove or Update
+            theCode = [=] {
+                EEUIFSEMainGroup* t = gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabTerrain);
+                if (w[1] == "update")
+                    t->Update();
+                else
+                    t->MouseMove(GE2DPoint(F(1), F(2)));
+            };
+        else if (c == "brushhl")   // brushhl X Y CENTERED: the brush group's SetHighlight
+            theCode = [=] { gUIManager->mScenarioEditorForm->GetBrushGroup()->SetHighlight(F(1), F(2), L(3) != 0); };
+        else if (c == "techfill")   // techfill ID FIRST LAST: a tech list's Fill (EESEATechTree's move between them)
+            theCode = [=] { static_cast<EESEUITechListBox*>(EditorControl(w[1]))->Fill(L(2), L(3)); };
+        else if (c == "techstate")   // the two tech lists (TechDigest)
+            theCode = [=, &theOutput] { TechDigest(theOutput); };
         else if (c == "cb")   // cb ...: the civilization builder's steps (EESimCivBuilder.cpp)
             theCode = [=, &theOutput] {
                 if (!EESimCivBuilderStep(w, theOutput))

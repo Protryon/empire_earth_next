@@ -1496,3 +1496,62 @@ formstate
 unittab
 tab 0
 formstate
+# editor screens round 8: the terrain tab (its lists, the preview, the paint radios and action, the mouse, leaving and
+# entering), the brush group's highlight, the player tab's tech lists (Fill, the marked lines, the sorts)
+tab 2
+terrainstate
+terrainpick 3
+terrainstate
+terraincolor 5
+terrainstate
+terrainpaint 30 36 33 33
+terrainpick 0
+terraincolor 2
+terrainpaint 36 40 38 38
+digest terrain8
+radio 0xca                         # bulldozer: the terrain controls hidden
+terrainstate
+terrainpaint 34 36 36 34
+digest bulldoze8
+radio 0xc8
+terrainstate
+radio 4                            # a medium brush
+terrainmouse 10 10
+terrainstate
+terrainmouse 3000 3000
+terrainstate
+terrainmouse update
+terrainstate
+brushhl 10.3 20.7 0
+terrainstate
+brushhl 10.3 20.7 1
+terrainstate
+brushhl -3.6 5.5 1
+terrainstate
+terrainpick 7
+tab 0                              # Leave
+terrainstate
+tab 2                              # Enter
+terrainstate
+terrainpick 9999
+terrainstate
+tab 5
+radio 0x12d                        # tech tree
+radio 0x14b
+techstate
+techfill 0x154 0 2
+techstate
+techfill 0x155 1 1
+techstate
+radio 0x14d
+techstate
+check 0x15e 0
+techstate
+techfill 0x154 3 3
+techstate
+check 0x15e 1
+radio 0x14c
+techstate
+techfill 0x155 0 0
+techstate
+tab 0

@@ -8,13 +8,8 @@
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERhombus.h"
-#include "lle/UIHotKey.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/NEMessage.h"
@@ -22,9 +17,6 @@
 #include "lle/UIEditBox.h"
 #include "lle/UIListBox.h"
 #include "lle/GEText.h"
-#include "lle/UILBString.h"
-#include "lle/UIFileComboBox.h"
-#include "lle/UICheckBox.h"
 
 
 #include "ee/EmpireEarth.h"
@@ -32,16 +24,10 @@
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
-#include "ee/EESETSBaseObject.h"
-#include "lle/USingleton.h"
-#include "ee/EEMedia.h"
-#include "ee/RTSWorld.h"
-#include "lle/GETerrainMesh.h"
 #include "ee/EEMouse.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEMessage.h"
 #include "ee/EEARust.h"
-#include "ee/EEUICSelectUnits.h"
 #include "lle/UIESliderChange.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EEUIFSEESElevation.h"
@@ -146,12 +132,18 @@ extern "C" int32_t ee_screenscpp_seel(uint32_t inOp, void* const* p, int32_t* i,
         long theY;
         EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]));
         GE2DPoint theLocation(f[0], f[1]);
-        if (gViewport.GetViewRectangle().Contains(theLocation)) {
+        if (!gViewport.GetViewRectangle().Contains(theLocation))
+            theEditor->GetBrushGroup()->mIsHighlightShown = false;
+        else if (i[0] == EE_SCREENS_SEEL_HIGHLIGHT_POINT) {   // the terrain tab's: the map point, centred by i1
+            GE3DPoint thePoint;
+            EEPointUnitOrTile(theLocation, theTile, thePoint, false);
+            theEditor->GetBrushGroup()->mIsHighlightShown = true;
+            theEditor->GetBrushGroup()->SetHighlight(thePoint.GetX(), thePoint.GetY(), i[1] != 0);
+        } else {
             EEPointUnitOrTileXY(theLocation, theTile, theX, theY, false);
             theEditor->GetBrushGroup()->mIsHighlightShown = true;
             theEditor->GetBrushGroup()->SetHighlight((float)theX, (float)theY, false);
-        } else
-            theEditor->GetBrushGroup()->mIsHighlightShown = false;
+        }
         return 0;
     }
     }

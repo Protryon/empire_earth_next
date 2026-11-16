@@ -69,6 +69,9 @@
 //! - [`editor_actions`]: the scenario editor's actions over a world-edit host: the terrain, elevation and bulldozer
 //!   paints' queued areas and runs, the trigger area's rectangle.
 //! - [`editor_elevation`]: the scenario editor's elevation tab whole in Rust (`EEUIFSEElevation`).
+//! - [`editor_terrain`]: the scenario editor's terrain tab whole in Rust (`EEUIFSETerrain`, its lists' events, the
+//!   paint radios' `Check` and the paint area's `CreatePaintAction`; the lists' draws stay C++).
+//! - [`editor_brush`]: the scenario editor's brush size group's controls and highlight square (`EEUIFSEBrushGroup`).
 //! - [`editor_form`]: the scenario editor's main form whole in Rust (`EEUIFScenarioEditor`): its controls, tabs,
 //!   selection, keys and the trigger-only save's report over the scenario's records.
 //! - [`editor_subscreens`]: the scenario editor's trigger tab condition and effect screens whole in Rust
@@ -175,6 +178,7 @@ mod editor_actions_ffi;
 pub mod editor_area;
 #[cfg(not(test))]
 mod editor_area_ffi;
+pub mod editor_brush;
 pub mod editor_conditions;
 pub mod editor_controls;
 pub mod editor_effects;
@@ -209,6 +213,9 @@ mod editor_players_ffi;
 pub mod editor_subscreens;
 #[cfg(not(test))]
 mod editor_subscreens_ffi;
+pub mod editor_terrain;
+#[cfg(not(test))]
+mod editor_terrain_ffi;
 pub mod editor_trigger;
 #[cfg(not(test))]
 mod editor_trigger_ffi;

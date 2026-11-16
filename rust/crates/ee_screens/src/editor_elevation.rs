@@ -32,7 +32,8 @@ pub const EE_SCREENS_SEEL_OP_FONT_HEIGHT: u32 = 903;
 pub const EE_SCREENS_SEEL_OP_ADD: u32 = 904;
 /// -> whether the form p0 is its manager's current form; the mouse's position into f0, f1.
 pub const EE_SCREENS_SEEL_OP_MOUSE: u32 = 905;
-/// The brush highlight of the form p0 at the tile under (f0, f1) when the view holds it (shown), else hidden.
+/// The brush highlight of the form p0 at the tile under (f0, f1) when the view holds it (shown), else hidden; i0
+/// `EE_SCREENS_SEEL_HIGHLIGHT_POINT` (the terrain tab's): at the map point there, centred by i1.
 pub const EE_SCREENS_SEEL_OP_HIGHLIGHT: u32 = 906;
 
 /// The tab's members (`ee_screens_seel_call`).

@@ -1627,6 +1627,10 @@ constexpr static const uint32_t EE_SCREENS_SEAR_SHOW = 13;
 
 constexpr static const uint32_t EE_SCREENS_SEAR_SET_MODE = 14;
 
+/// A brush radio (`EEUIFSERBBrush` of the group p2, the brush size i0, id i1, the string i2, the index i3, checked
+/// when the size is 0) at (f0, f1) on the form p1, its text yellow -> into p0 (not added).
+constexpr static const uint32_t EE_SCREENS_SETN_OP_BRUSH = 1030;
+
 /// `EESETSEffectControls::mEditBox48` (the effect controls' fourth edit box; index 0).
 constexpr static const uint32_t EE_SCREENS_SEET_A_EDIT48 = 12;
 
@@ -2025,7 +2029,8 @@ constexpr static const uint32_t EE_SCREENS_SEEL_OP_ADD = 904;
 /// -> whether the form p0 is its manager's current form; the mouse's position into f0, f1.
 constexpr static const uint32_t EE_SCREENS_SEEL_OP_MOUSE = 905;
 
-/// The brush highlight of the form p0 at the tile under (f0, f1) when the view holds it (shown), else hidden.
+/// The brush highlight of the form p0 at the tile under (f0, f1) when the view holds it (shown), else hidden; i0
+/// `EE_SCREENS_SEEL_HIGHLIGHT_POINT` (the terrain tab's): at the map point there, centred by i1.
 constexpr static const uint32_t EE_SCREENS_SEEL_OP_HIGHLIGHT = 906;
 
 /// The tab's members (`ee_screens_seel_call`).
@@ -3585,6 +3590,113 @@ constexpr static const uint32_t EE_SCREENS_SESC_REFRESH = 12;
 constexpr static const uint32_t EE_SCREENS_SESC_CHANGE_TYPE = 13;
 
 constexpr static const uint32_t EE_SCREENS_SESC_CHANGE_ACTION = 14;
+
+/// The in-editor tables into the buffer p0 (up to i1 entries; p0 0: none written) -> their count: i0 0 the colour
+/// types (`EETerrainTypeTable`), 1 the terrains (`EETerrainTable`, sorted by their localized names without case).
+constexpr static const uint32_t EE_SCREENS_SETN_OP_TABLES = 1000;
+
+/// The terrain p0 -> its first unit class (-1: none); i0 its id, i1 its colour type, i2 ambients only, i3 its unit
+/// class count; its preview texture into p1.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_TERRAIN = 1001;
+
+/// The colour type p0 -> its id.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_COLOR_TYPE = 1002;
+
+/// The colour type table of the id i0 (`EETerrainTypeTable::Get`) into p0.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_TYPE_TABLE = 1003;
+
+/// A paint type radio (`EEUIFSETRBPaintType`, id i0, the string i1, the index i2, checked i3) at (f0, f1) on the
+/// form p1, its label's background at 0.4, its text yellow -> into p0 (not added).
+constexpr static const uint32_t EE_SCREENS_SETN_OP_RADIO = 1004;
+
+/// The type list (`EESEUITerrainTypeLB`, id 0xcc) on the form p1 at (f0, f1), f2 x 85, the index i1: the i0 terrains
+/// of p2[1] named, each with the colour set p2[2][k]; its event over the tab p2[0], its text yellow, the selection's
+/// background clear, its own at 0.4, added to group 3 -> into p0.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_TYPE_LIST = 1005;
+
+/// The colour list (`EESEUITerrainColorLB`, id 0xcf) on the form p1 at (f0, f1), f2 x 85, the index i1: the i0 colour
+/// types of p2[1], each its colours; its event over the tab p2[0], its line i2 selected, the selection's background
+/// clear, its own at 0.4, added to group 3 -> into p0.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_COLOR_LIST = 1006;
+
+/// The paint area (`EEUIFSETerrainPaint`, id 205, 1024 x 606 at the top left) over the scroll p2[0], the brushes
+/// p2[1] and the tab p2[2] on the form p1, the index i0, added to group 3 -> into p0.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_PAINT = 1007;
+
+/// The preview bitmap (`UIBitmap`, id 0xc9, 64 x 64, a new `GEBitmap`) on the form p1 at (f0, f1), the index i0,
+/// added to group 3 -> into p0.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_BITMAP = 1008;
+
+/// The terrain previews loaded (i0 1) or released (0).
+constexpr static const uint32_t EE_SCREENS_SETN_OP_PREVIEWS = 1009;
+
+/// The control p0 added to the form p1's group i0.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_ADD = 1010;
+
+/// -> the selected line of the type list (i0 0) or colour list (1) p0, -1: none.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_SELECTION = 1011;
+
+/// The type list p0's line i0 given the texture p1 (the old one dereferenced, the new one referenced).
+constexpr static const uint32_t EE_SCREENS_SETN_OP_SET_TEXTURE = 1012;
+
+/// The unit class i0's button texture into p0 -> whether the class exists.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_CLASS_BUTTON = 1013;
+
+/// -> whether the type list p0's line i0 has a texture.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_LINE_TEXTURE = 1014;
+
+/// The bitmap p1 shows the type list p0's line i0's texture, stretched over the bitmap's rectangle.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_SHOW_PREVIEW = 1015;
+
+/// The colour list p0's line i0 selected (no event).
+constexpr static const uint32_t EE_SCREENS_SETN_OP_COLOR_SELECT = 1016;
+
+/// The control p0's selection-changed event fired.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_FIRE = 1017;
+
+/// The bitmap p0 marked dirty.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_DIRTY = 1018;
+
+/// -> the colour count of the colour list p0's line i0.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_COLOR_COUNT = 1019;
+
+/// The bitmap p1's corners: the colour list p0's line i0's colours 0, i1, i2 and i3.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_TINT = 1020;
+
+/// The load thread of the form p0 asked to load (i0 0x408) or unload (0x409) the terrain id i1.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_POST = 1021;
+
+/// The paint area p0's centring set to i3 (-1: kept); a new paint action of i0 (0 terrain with the terrain i1 and the
+/// colour type i2, 1 the bulldozer, -1 none) into p1.
+constexpr static const uint32_t EE_SCREENS_SETN_OP_PAINT_ACTION = 1022;
+
+/// `EE_SCREENS_SEEL_OP_HIGHLIGHT`'s i0: the terrain tab's (the map point under the mouse, centred by i1).
+constexpr static const int32_t EE_SCREENS_SEEL_HIGHLIGHT_POINT = 1;
+
+/// The tab's members (`ee_screens_setn_call`).
+constexpr static const uint32_t EE_SCREENS_SETN_UPDATE = 1;
+
+constexpr static const uint32_t EE_SCREENS_SETN_MOUSE_MOVE = 2;
+
+constexpr static const uint32_t EE_SCREENS_SETN_ENTER = 3;
+
+constexpr static const uint32_t EE_SCREENS_SETN_LEAVE = 4;
+
+/// The type list's and the colour list's selection-changed events (the list at p).
+constexpr static const uint32_t EE_SCREENS_SETN_TYPE_CHANGE = 5;
+
+constexpr static const uint32_t EE_SCREENS_SETN_COLOR_CHANGE = 6;
+
+/// The gate's reads (`ee_screens_setn_get`): the selected terrain, the terrains' count and ids, the colour types'.
+constexpr static const uint32_t EE_SCREENS_SETN_GET_SELECTED = 1;
+
+constexpr static const uint32_t EE_SCREENS_SETN_GET_TERRAIN_COUNT = 2;
+
+constexpr static const uint32_t EE_SCREENS_SETN_GET_TERRAIN_ID = 3;
+
+constexpr static const uint32_t EE_SCREENS_SETN_GET_COLOR_COUNT = 4;
+
+constexpr static const uint32_t EE_SCREENS_SETN_GET_COLOR_ID = 5;
 
 /// The triggers' list: i0 the operation (`EE_SCREENS_SEOB_SM_*`) on the trigger i1.
 constexpr static const uint32_t EE_SCREENS_SETR_OP_SM = 200;
@@ -10079,6 +10191,9 @@ struct EeScreensSeObject;
 /// The player tab (opaque to C++).
 struct EeScreensSePlayers;
 
+/// The terrain tab (opaque to C++).
+struct EeScreensSeTerrain;
+
 /// The trigger screen (opaque to C++).
 struct EeScreensSeTrigger;
 
@@ -11373,6 +11488,76 @@ void ee_screens_sefx_names(const EeScreensSeEffectScreen *screen, void *names);
 /// # Safety
 /// `screen` comes from `ee_screens_sefx_new` (or is NULL).
 void *ee_screens_sefx_handle(const EeScreensSeEffectScreen *screen, uint32_t which);
+
+/// `EEUIFSETerrain`'s constructor: every control made on `form` from the control index `*index` (advanced), the
+/// lists' events over the C++ `tab`, the paint area over the form's edge `scroll` and `brushes`. Freed by
+/// `ee_screens_setn_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index.
+EeScreensSeTerrain *ee_screens_setn_new(void *tab,
+                                        void *form,
+                                        void *scroll,
+                                        void *brushes,
+                                        uint32_t *index);
+
+/// The destructor: every control deleted (the original's order), the previews released, the object freed.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_setn_new` (or is NULL) and is not used again.
+void ee_screens_setn_free(EeScreensSeTerrain *tab);
+
+/// A member (`EE_SCREENS_SETN_UPDATE`, `_MOUSE_MOVE` at (`x`, `y`), `_ENTER`, `_LEAVE`) or a list's event
+/// (`_TYPE_CHANGE`, `_COLOR_CHANGE` of the list `list`).
+///
+/// # Safety
+/// `tab` comes from `ee_screens_setn_new` (or is NULL).
+void ee_screens_setn_call(const EeScreensSeTerrain *tab,
+                          uint32_t what,
+                          void *list,
+                          float x,
+                          float y);
+
+/// The paint area `paint`'s `CreatePaintAction` -> the new `EESEAPaint` (NULL: none).
+///
+/// # Safety
+/// `tab` comes from `ee_screens_setn_new` (or is NULL).
+void *ee_screens_setn_paint(const EeScreensSeTerrain *tab, void *paint);
+
+/// A paint type radio's `Check` on `form` (after the base's): its id's controls shown or hidden.
+///
+/// # Safety
+/// `form` is the editor form.
+void ee_screens_setn_check(void *form, uint32_t id);
+
+/// The gate's reads (`EE_SCREENS_SETN_GET_*`, `k` an index).
+///
+/// # Safety
+/// `tab` comes from `ee_screens_setn_new` (or is NULL).
+int32_t ee_screens_setn_get(const EeScreensSeTerrain *tab, uint32_t what, uint32_t k);
+
+/// `EEUIFSEBrushGroup`'s constructor's controls on `form` at (`x`, `y`) from the control index `*index` (advanced),
+/// the radios over the C++ `group`: the title into `out[0]`, the tiny .. huge radios into `out[1..6]`.
+///
+/// # Safety
+/// `index` points at the form's next control index, `out` at six handles.
+void ee_screens_sebr_build(void *group,
+                           void *form,
+                           float x,
+                           float y,
+                           uint32_t *index,
+                           size_t *out);
+
+/// `EEUIFSEBrushGroup::SetHighlight`'s square (left, top, right, bottom into `out`) around (`x`, `y`) for the brush
+/// `size`, `centred` or not.
+///
+/// # Safety
+/// `out` points at four floats.
+void ee_screens_sebr_highlight(float x,
+                               float y,
+                               uint32_t size,
+                               bool centred,
+                               float *out);
 
 /// `EESETSTrigger`'s constructor: every control made on `form` from the control index `*index` (advanced).
 /// Freed by `ee_screens_setr_free`.

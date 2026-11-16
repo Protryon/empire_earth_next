@@ -3,81 +3,23 @@
 // EEUIFScenarioEditor.cpp. Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/ESChecksum.h"
-#include "lle/FSFile.h"
-#include "lle/FSBasicFile.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSMemoryFile.h"
-#include "lle/GE2DPoint.h"
 #include "lle/GEColor.h"
-#include "lle/GE3DLine.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GEOrientation.h"
-#include "lle/GERectangle.h"
 #include "lle/GERhombus.h"
-#include "lle/GETransformation.h"
-#include "lle/GEVector.h"
-#include "lle/ISEntity.h"
-#include "lle/PIMModule.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/SEConductor.h"
-#include "lle/SEMixer.h"
-#include "lle/SESample.h"
-#include "lle/TSEvent.h"
-#include "lle/TSReadWriteLock.h"
-#include "lle/TSThread.h"
-#include "lle/TSScheduler.h"
-#include "lle/UILayoutUtility.h"
-#include "lle/UIEntity.h"
-#include "lle/UIControl.h"
 #include "lle/UIForm.h"
-#include "lle/UIEvent.h"
-#include "lle/UMFastMath.h"
-#include "lle/URandom.h"
-#include "lle/UString.h"
-#include "lle/UWideString.h"
-#include "lle/GEFont.h"
-#include "lle/GEBitmap.h"
 #include "lle/GEText.h"
-#include "lle/UIButton.h"
 #include "lle/UIRadioButton.h"
 #include "ee/EmpireEarth.h"
-#include "lle/UResourceFile.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EEUIFSERBBrush.h"
-#include <algorithm>
-#include "lle/UITextLabel.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
-#include "ee/EEUnit.h"
-#include "ee/EESEUnit.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
-#include "GEWindow.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GERasterizer.h"
 #include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEUIFSEMainButton.h"
 #include "ee/EEAction.h"
-#include "ee/EEUserInterface.h"
-#include "ee/EEARust.h"
-#include "ee/EESELoadThread.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
 
-#include "lle/UIEntityGroup.h"
-#include "lle/UISlider.h"
-#include "ee/EEUIFSEElevation.h"
-#include "lle/GELine.h"
-#include "ee/EEUIMiniMap.h"
-#include "ee/RTSGraphics.h"
 #include "ee/EEGraphics.h"
 
 // The render-list API and object (defined in EERenderObject.cpp)
@@ -88,7 +30,6 @@ extern RTSRenderObject* gU56534C;
 // 0x19eba9 reads order/help/normal+pressed cells/flag while constructing the buttons;
 // 0x19ef5a dispatches group numbers; 0x19f615 reads full-view and brush flags.
 // Fundamental fields keep the original static payload (no point-constructor init chain).
-#include "ee/EESEEditorTab.h"
 // EESEEditorTab sEditorTabs[7] = {   // (one array at 0x4c46d0, defined in EEUIFScenarioEditor.cpp)
 //     {0, 0, 0x213a,   0.0f, 50.0f,  32.0f, 50.0f,  1, false, false},
 //     {1, 1, 0x213b, 128.0f, 50.0f, 160.0f, 50.0f,  2, false, true},
@@ -121,105 +62,34 @@ struct EESEToolbarButton {
 // };
 
 
-#include "lle/UIFullBackground.h"
 
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "ee/EERenderObject.h"
-#include "ee/EEROTerrain.h"
 
 #include "lle/UIListBox.h"
 #include "lle/UILBString.h"
 #include "lle/UIEditBox.h"
-#include "lle/UIComboBox.h"
-#include "ee/EESEPlayerScreen.h"
 extern RTSRenderObject* gU56535C; // the terrain render object (an EEROTerrain newed in Empire Earth.cpp)
-#include "ee/EEStringIDs.h"
-#include "lle/GELine.h"
-#include "ee/EEUIMiniMap.h"
-#include "ee/EEMiniMap.h"
-#include "lle/TMPoll.h"
-#include "ee/EEAmbientSoundManager.h"
-#include "ee/EEMusicManager.h"
-#include "ee/EEScenarioManager.h"
-#include "lle/GEText.h"
-#include "ee/EEUIFSEPaint.h"
-#include "ee/EEUIFSEMap.h"
-#include "ee/EEUIFSETerrain.h"
-#include "lle/UICheckBox.h"
-#include "ee/EESETSBaseObject.h"
 extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's fonts)
 extern GEFont* gU531938;
-#include "ee/EESETriggerScreen.h"
-#include "ee/EESEInstructions.h"
-extern unsigned long& gTexturePixelDepth; // 0x5308b4 (Empire Earth.cpp)
-extern bool gSightUpdatesEnabled;
-extern GEViewport gViewport;
+#include "rust/ee_screens.h"
+
+extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 
 // Builds the brush size group (title and tiny to huge radio buttons, tiny checked) on the terrain and elevation tabs
+// (editor_brush.rs)
 EEUIFSEBrushGroup::EEUIFSEBrushGroup(unsigned long& ioIndex, const GE2DPoint& inLocation,
                                    UIForm* inForm, GEFont* inFont)
 {
-    GE2DPoint theLocation = inLocation;
-    UWideString theText;
-    GEText* theGEText;
     this->mIsHighlightShown = false;
-    gResource->GetString(IDS_BRUSH_SIZE, theText);
-    this->mTitle = new UITextLabel(theText, inFont, 7,
-        GERectangle(theLocation, 100.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    ioIndex++;
-    theGEText = this->mTitle->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    this->mTitle->SetAlignment(kTextAlignCenter);
-    this->mTitle->SetBgOpacity(0.4f);
-    inForm->AddControl(this->mTitle, 2);
-    inForm->AddControl(this->mTitle, 3);
-    theLocation.SetY(this->mTitle->GetRectangle().GetBottom() + 1.0f);
-    gResource->GetString(IDS_SE_TINY, theText);
-    this->mButtons[0] = new EEUIFSERBBrush(this, 0, 2, theText, inFont, theLocation, inForm, ioIndex, true);
-    ioIndex++;
-    theGEText = this->mButtons[0]->GetTextLabel()->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theLocation.SetY(this->mButtons[0]->GetRectangle().GetBottom() + 1.0f);
-    gResource->GetString(IDS_SE_SMALL, theText);
-    this->mButtons[1] = new EEUIFSERBBrush(this, 1, 3, theText, inFont, theLocation, inForm, ioIndex, false);
-    ioIndex++;
-    theGEText = this->mButtons[1]->GetTextLabel()->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    inForm->AddControl(this->mButtons[1], 2);
-    inForm->AddControl(this->mButtons[1], 3);
-    theLocation.SetY(this->mButtons[1]->GetRectangle().GetBottom() + 1.0f);
-    gResource->GetString(IDS_SE_MEDIUM, theText);
-    this->mButtons[2] = new EEUIFSERBBrush(this, 2, 4, theText, inFont, theLocation, inForm, ioIndex, false);
-    ioIndex++;
-    theGEText = this->mButtons[2]->GetTextLabel()->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    inForm->AddControl(this->mButtons[2], 2);
-    inForm->AddControl(this->mButtons[2], 3);
-    theLocation.SetY(this->mButtons[2]->GetRectangle().GetBottom() + 1.0f);
-    gResource->GetString(IDS_SE_LARGE, theText);
-    this->mButtons[3] = new EEUIFSERBBrush(this, 3, 5, theText, inFont, theLocation, inForm, ioIndex, false);
-    ioIndex++;
-    theGEText = this->mButtons[3]->GetTextLabel()->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    inForm->AddControl(this->mButtons[3], 2);
-    inForm->AddControl(this->mButtons[3], 3);
-    theLocation.SetY(this->mButtons[3]->GetRectangle().GetBottom() + 1.0f);
-    gResource->GetString(IDS_SE_HUGE, theText);
-    this->mButtons[4] = new EEUIFSERBBrush(this, 4, 6, theText, inFont, theLocation, inForm, ioIndex, false);
-    ioIndex++;
-    theGEText = this->mButtons[4]->GetTextLabel()->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    inForm->AddControl(this->mButtons[4], 2);
-    inForm->AddControl(this->mButtons[4], 3);
-    inForm->AddControl(this->mButtons[0], 2);
-    inForm->AddControl(this->mButtons[0], 3);
+    GEFont* theScreenFont = gSeplScreenFont;
+    gSeplScreenFont = inFont;
+    uint32_t theIndex = (uint32_t)ioIndex;
+    size_t theControls[6];
+    ee_screens_sebr_build(this, inForm, inLocation.GetX(), inLocation.GetY(), &theIndex, theControls);
+    gSeplScreenFont = theScreenFont;
+    ioIndex = theIndex;
+    this->mTitle = static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(theControls[0]));
+    for (unsigned long i = 0; i < 5; i++)
+        this->mButtons[i] = static_cast<EEUIFSERBBrush*>(reinterpret_cast<UIControl*>(theControls[i + 1]));
     this->mBrushSize = this->mButtons[0]->mBrushSize;
     this->mIsCentered = false;
 }
@@ -233,22 +103,14 @@ EEUIFSEBrushGroup::~EEUIFSEBrushGroup()
 }
 
 // Sets the highlighted brush square around a map position, one tile larger to the top left when centered
+// (editor_brush.rs)
 void EEUIFSEBrushGroup::SetHighlight(float inX, float inY, bool inIsCentered)
 {
-    if (!inIsCentered) {
-        this->mRectangle.SetLeft((float)(long)(inX - this->mBrushSize));
-        this->mRectangle.SetTop((float)(long)(inY - this->mBrushSize));
-        this->mRectangle.SetRight((float)(long)(inX + this->mBrushSize));
-        this->mRectangle.SetBottom((float)(long)(inY + this->mBrushSize));
-        this->mIsCentered = false;
-    } else {
-        inX += 0.5f;
-        inY += 0.5f;
-        this->mRectangle.SetLeft((float)(long)(inX - this->mBrushSize - 1.0f));
-        this->mRectangle.SetTop((float)(long)(inY - this->mBrushSize - 1.0f));
-        this->mRectangle.SetRight((float)(long)(inX + this->mBrushSize));
-        this->mRectangle.SetBottom((float)(long)(inY + this->mBrushSize));
-        this->mIsCentered = true;
-    }
+    float r[4];
+    ee_screens_sebr_highlight(inX, inY, (uint32_t)this->mBrushSize, inIsCentered, r);
+    this->mRectangle.SetLeft(r[0]);
+    this->mRectangle.SetTop(r[1]);
+    this->mRectangle.SetRight(r[2]);
+    this->mRectangle.SetBottom(r[3]);
+    this->mIsCentered = inIsCentered;
 }
-
