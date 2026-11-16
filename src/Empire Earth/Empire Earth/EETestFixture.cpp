@@ -1081,6 +1081,10 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
             }
         }).detach();
         theVerdict = "wheeled";
+    } else if (!strcmp(theOp, "postgame") && a == inFormID && gUserInterface) {
+        // TEST ONLY: the post-game summary opened over the running game (its graphs from the statistics so far)
+        gUserInterface->OpenForm(gUIManager->GetFormByID(kFormPostGameSummary));
+        theVerdict = "postgame-opened";
     } else if (!strcmp(theOp, "chat") && a == inFormID && gUserInterface) {
         gUserInterface->AddChatLogEntry(UWideString("TEST chat line: the chat display (EEUICChatLine)"), 0);
         theVerdict = "chat-added";
