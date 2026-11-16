@@ -962,6 +962,10 @@ pub enum EeUiOp {
     FlPathReference = 666,
     /// Path `a`'s `Dereference()`.
     FlPathRelease = 667,
+    /// Line `a`'s `SetOpacity(f[0])`.
+    LineSetOpacity = 668,
+    /// The virtual `DrawBorder(f, a)` -> its result.
+    DrawBorder = 669,
 }
 
 impl EeUiOp {

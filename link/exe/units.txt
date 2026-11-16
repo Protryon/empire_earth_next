@@ -309,7 +309,6 @@ ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 26de97 271319 Empire Earth/User Interface Thread/EEUIFMGStatusButton.cpp
 271319 2753b1 Empire Earth/User Interface Thread/EEUIManager.cpp
 2753b1 276442 Empire Earth/User Interface Thread/EEUIMiniMap.cpp
-276442 276631 Empire Earth/User Interface Thread/EEUIPGSLineGraph.cpp
 276631 27a37e Empire Earth/User Interface Thread/EEUserInterface.cpp
 27a37e 27aa0b Empire Earth/User Interface Thread/EEWonNetAvailableGameFormManager.cpp
 27adb0 27b911 Empire Earth/Civilization Builder/EEAEManager.cpp

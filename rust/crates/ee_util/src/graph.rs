@@ -132,6 +132,21 @@ impl EeUtilSeries {
         self.range
     }
 
+    /// `GetColor`.
+    pub fn color(&self) -> EeUtilColor {
+        self.color
+    }
+
+    /// `SetColor`.
+    pub fn set_color(&mut self, color: EeUtilColor) {
+        self.color = color;
+    }
+
+    /// `GetIsEnabled`.
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
+
     /// `UGGetValueAt`: the y of the last point at or before x; false when the series is empty or x is below its
     /// (stored) minimum. Past the last point, the last point's y.
     fn value_at(&self, x: c_long) -> Option<c_long> {
@@ -245,6 +260,12 @@ impl EeUtilGraph {
     /// `operator=` (the series and the range; the strings are the C++'s).
     pub fn assign(&mut self, other: &EeUtilGraph) {
         *self = other.clone();
+    }
+
+    /// `CombineGraph(other, out)` into a graph of its own.
+    pub fn combine(&self, other: &EeUtilGraph, out: &mut EeUtilGraph) {
+        // SAFETY: three live graphs; `out` is distinct from the other two (a `&mut`)
+        unsafe { combine(self, other, out) }
     }
 
     /// One series of `CombineGraph`: the sum of both series' values at every x either has (a missing value is 0).

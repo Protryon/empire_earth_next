@@ -432,6 +432,7 @@ dependencies = [
  "ee_random",
  "ee_scenario",
  "ee_ui",
+ "ee_util",
 ]
 
 [[package]]
@@ -474,6 +475,7 @@ version = "0.1.0"
 dependencies = [
  "ee_ge",
  "ee_plat_core",
+ "ee_util",
 ]
 
 [[package]]

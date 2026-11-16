@@ -34,6 +34,7 @@ pub mod form;
 pub mod form_state;
 pub mod formobj;
 pub mod graph;
+pub mod graphobj;
 pub mod groupobj;
 pub mod hotkey;
 pub mod hotkeyobj;
@@ -62,9 +63,6 @@ pub mod text;
 pub mod variantobj;
 pub mod wrap;
 
-// imports the C++ graphs' texts, lines and draws (UIGraph.cpp, UILineGraph.cpp), absent from a test binary
-#[cfg(not(any(test, feature = "no_cpp")))]
-mod graph_ffi;
 // imports the C++ candidate list's walk (UIIMECandidate.cpp), absent from a test binary
 #[cfg(not(any(test, feature = "no_cpp")))]
 mod ime_ffi;

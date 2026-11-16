@@ -9942,8 +9942,8 @@ long ee_screens_actions_redo();
 /// list).
 void ee_screens_actions_clear(uint32_t queue);
 
-/// A form's grab scroll (0 the main game form's, 1 the scenario editor's) made anew or released with its form: not
-/// grabbing (`EECreateGrabScroll`, `EEReleaseGrabScroll`).
+/// A form's grab scroll (0 the main game form's, 1 the scenario editor's) made anew or released with its form: the
+/// mouse move event it saved released, not grabbing (`EECreateGrabScroll`, `EEReleaseGrabScroll`).
 void ee_screens_camera_grab_reset(uint32_t form);
 
 /// The campaign editor's event code for a control event id, 0 for another form's.
@@ -11017,14 +11017,12 @@ void ee_screens_portrait_set_unit(void *portrait, void *unit);
 /// The post-game summary's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_post_game_event_for(unsigned long id);
 
-/// `EEUIPGSLineGraph::FormatYValues` of a value (float bits) into `out`; its length in bytes.
-size_t ee_screens_pgs_format_y(uint32_t value, uint8_t *out, size_t capacity);
-
-/// `EEUIPGSLineGraph::FormatXValues` of a value (float bits) with the game's time into `out`; its length in bytes.
-size_t ee_screens_pgs_format_x(uint32_t value,
-                               uint32_t game_time,
-                               uint8_t *out,
-                               size_t capacity);
+/// The summary's line graph's value format (`EEUIPGSLineGraph::FormatXValues` for `axis` 0, the game's time,
+/// `FormatYValues` for 1) into `out` (`capacity` bytes); its length in bytes (ee_ui graphobj.rs's format).
+size_t ee_screens_pgs_format(int axis,
+                             float value,
+                             uint8_t *out,
+                             size_t capacity);
 
 /// The save/load form's event code for a control event id (the screen active and the editor on when the form is
 /// made); 0 for another form's (and for the load form's Cancel, C++'s `EEUIECancel`).

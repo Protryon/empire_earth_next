@@ -110,10 +110,8 @@
 #include "ee/EECivilizationManager.h"
 #include "lle/UGraph.h"
 #include "lle/UIGraph.h"
-#include "lle/UILineGraph.h"
 #include "lle/UIStatusBar.h"
 #include "lle/UEncryption.h"
-#include "ee/EEUIPGSLineGraph.h"
 #include "ee/EEPGSFormManager.h"
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EEAPlayerEvent.h"
@@ -379,6 +377,19 @@ UIEvent* EECreateScreenEvent(unsigned long inEvent)
     return new EEScreenEvent(inEvent);
 }
 
+// The screens' events for ee_screens toolkit.rs (its event group): 0 a new event of the code, 1 the event's
+// Reference, 2 its Dereference
+extern "C" void* ee_screenscpp_event(uint32_t inOp, void* inEvent, uint32_t inCode)
+{
+    if (inOp == 0)
+        return EECreateScreenEvent(inCode);
+    if (inOp == 1)
+        static_cast<UIEvent*>(inEvent)->Reference();
+    else
+        static_cast<UIEvent*>(inEvent)->Dereference();
+    return NULL;
+}
+
 static float Float(uint32_t inBits)
 {
     float theValue;
@@ -626,19 +637,10 @@ static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, u
         inForm->AddHotKey(theHotKey, 0);
         break;
     }
-    case EE_SCREENS_OP_CH_HOT_KEY:
-        inForm->AddHotKey(inA, inB, kKeyNone, kKeyNone, EECreateScreenEvent(inC), NULL, NULL, NULL, 0, false);
-        break;
     case EE_SCREENS_GAME_CH_OBSERVER:
         return gWorld.GetCurrentPlayer()->mObserverMode != false;
     case EE_SCREENS_GAME_CH_PLAYER_TYPE:
         return gWorld.GetCurrentPlayer()->mChatType;
-    case EE_SCREENS_OP_CH_KEYBOARD_EVENT: {
-        UIEvent* theEvent = EECreateScreenEvent(inA);
-        inForm->SetFormKeyboardCapturedEvent(theEvent);
-        theEvent->Dereference();
-        break;
-    }
     case EE_SCREENS_GAME_CH_CLOSE:
         return (uint32_t)gUserInterface->CloseForm(gUIManager->mMainGameForm);
     case EE_SCREENS_OP_CH_MOUSE_INSIDE:
@@ -850,22 +852,14 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
 
 // ---- the camera, scroll and zoom events' (camera.rs): inForm is the main game form or the scenario editor's
 
-static UIEvent* sGrabSaved[2];   // each form's grab scroll: the mouse move event it saved (referenced) while grabbing
-
 UIEvent* EECreateGrabScroll(unsigned long inForm)
 {
     EEReleaseGrabScroll(inForm);
     return EECreateScreenEvent(inForm ? EE_SCREENS_CAM_GRAB_EDITOR : EE_SCREENS_CAM_GRAB_MAIN);
 }
 
-void EEReleaseGrabScroll(unsigned long inForm)
-{
-    if (sGrabSaved[inForm] != NULL) {
-        sGrabSaved[inForm]->Dereference();
-        sGrabSaved[inForm] = NULL;
-    }
-    ee_screens_camera_grab_reset(inForm);
-}
+// (the mouse move event the grab saved is released there: ee_screens toolkit.rs's event group holds it)
+void EEReleaseGrabScroll(unsigned long inForm) { ee_screens_camera_grab_reset(inForm); }
 
 // the mouse's X axis, Y axis, middle button and wheel (EE_SCREENS_CAM_AXIS_*)
 static ISEntity* EEScreensMouseEntity(uint32_t inAxis)
@@ -921,23 +915,6 @@ static uint32_t EEScreensCameraCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
         return Bits(gCameraMaxZoom);
     case EE_SCREENS_GAME_CAM_COS:
         return Bits(UMCos(Float(inA)));
-    case EE_SCREENS_OP_CAM_GRAB_BEGIN: {
-        // the form's mouse move event saved; the grab its mouse move event while the button is down
-        sGrabSaved[inA] = inForm->GetMouseMoveEvent();
-        if (sGrabSaved[inA])
-            sGrabSaved[inA]->Reference();
-        UIEvent* theGrab = EECreateScreenEvent(inA ? EE_SCREENS_CAM_GRAB_EDITOR : EE_SCREENS_CAM_GRAB_MAIN);
-        inForm->SetMouseMoveEvent(theGrab);
-        theGrab->Dereference();
-        break;
-    }
-    case EE_SCREENS_OP_CAM_GRAB_END:
-        inForm->SetMouseMoveEvent(sGrabSaved[inA]);
-        if (sGrabSaved[inA]) {
-            sGrabSaved[inA]->Dereference();
-            sGrabSaved[inA] = NULL;
-        }
-        break;
     case EE_SCREENS_GAME_MG_SET_FORMATION: {
         // the selected group's formation, posted; the formation menu closed
         EEFormation* theFormation = EEFormation::Create((long)inA);
@@ -1040,29 +1017,11 @@ static uint32_t EEScreensDiplomacyCall(UIForm* inForm, uint32_t inOp, uint32_t i
 // ---- the post-game summary's (post_game.rs): inForm is the summary's form (25)
 static UString sPgsReportFile("B7B226CDB7B226CD2C112D1E2C99B50E9C2355F6C48226BEB7B2086D");   // 0x563108 (encrypted)
 static float sPgsRectangle[4];          // the rectangle register (left, top, right, bottom)
-static UGraphSeries sPgsSeries;         // the series register (BuildGraphs' series)
 static NEProtocol* sPgsProtocol;        // the reports' protocol
 static EECampaignFormManager* sPgsCampaign;   // Exit's campaign manager
 
-static EEUIPGSLineGraph* EEScreensPgsLineGraph(UIForm* inForm)
-{
-    return static_cast<EEUIPGSLineGraph*>(inForm->GetControl(kPostGameLineGraph));
-}
-
-// the graphs: the line graph's stored 0..30, its shown one (31), the form manager's 32..39
-static UGraph* EEScreensPgsGraph(UIForm* inForm, uint32_t inGraph)
-{
-    EEUIPGSLineGraph* theLineGraph = EEScreensPgsLineGraph(inForm);
-    if (inGraph < 31)
-        return &theLineGraph->GetGraphAt(inGraph);
-    if (inGraph == 31)
-        return const_cast<UGraph*>(&theLineGraph->GetShownGraph());
-    EEPGSFormManager* m = static_cast<EEPGSFormManager*>(inForm->GetFormManager());
-    UGraph* const theGraphs[8] = {&m->mEconomyScoreGraph, &m->mTotalCollectedGraph, &m->mTotalSpentGraph,
-                                  &m->mEpochScoreGraph, &m->mMilitaryScoreGraph, &m->mSpeedRatingGraph,
-                                  &m->mSocietyScoreGraph, &m->mScoreGraph};
-    return theGraphs[inGraph - 32];
-}
+// the post-game line graph's x values: the game's time (ee_screens post_game_ffi.rs ee_screens_pgs_format)
+extern "C" uint32_t ee_screenscpp_game_time() { return (uint32_t)gPhysics->GetGameTime(); }
 
 extern "C" void ee_screenscpp_pgs_history(EeScreensPgsHistory* outHistory)
 {
@@ -1138,77 +1097,20 @@ static uint32_t EEScreensPostGameCall(UIForm* inForm, UIEntity* inEntity, uint32
     case EE_SCREENS_OP_PGS_DIRTY:
         Ctl(inA)->SetDirty(true);
         break;
-    case EE_SCREENS_OP_PGS_SERIES_ENABLED:
-        EEScreensPgsGraph(inForm, inA)->SetIsSeriesEnabled(inB, inC != 0);
-        break;
-    case EE_SCREENS_OP_PGS_SHOW_GRAPH:
-        EEScreensPgsLineGraph(inForm)->ShowGraph(inA);
-        break;
-    case EE_SCREENS_OP_PGS_CLEAR_GRAPH:
-        EEScreensPgsGraph(inForm, inA)->ClearAllSeries();
-        break;
     case EE_SCREENS_GAME_PGS_ADD_SERIES: {
+        // the record's statistics series into the line graph's stored graph inB (its graph ops: ee_screens toolkit.rs)
         EEStatisticsRecord& r = gWorld.mStatistics.mRecords[inA];
-        EEScreensPgsLineGraph(inForm)->AddGraphSeries(r.mStatistics.GetSeries(inB).mPoints, inB, r.mColor);
-        break;
-    }
-    case EE_SCREENS_OP_PGS_PRUNE:
-        EEScreensPgsGraph(inForm, inA)->PruneGraph();
-        break;
-    case EE_SCREENS_OP_PGS_SERIES_CLEAR:
-        sPgsSeries.ClearAllDataPoints();
-        break;
-    case EE_SCREENS_OP_PGS_SERIES_POINT:
-        sPgsSeries.AddDataPoint(U2DPoint<long>((long)(int32_t)inA, (long)(int32_t)inB));
-        break;
-    case EE_SCREENS_OP_PGS_SERIES_ADD:
-        EEScreensPgsGraph(inForm, inA)->AddSeries(sPgsSeries);
-        break;
-    case EE_SCREENS_GAME_PGS_COMBINE: {
-        // graph 0x17: 0x0e combined with 0x0d, each series in its record's colour
-        UGraph theGraph;
-        UGraph theFirst;
-        UGraph theSecond;
-        UGraph theCombined;
-        UGraphSeries theSeries;
-        EEUIPGSLineGraph* theLineGraph = EEScreensPgsLineGraph(inForm);
-        theGraph = theLineGraph->GetGraphAt(0x17);
-        theGraph.ClearAllSeries();
-        theFirst = theLineGraph->GetGraphAt(0x0d);
-        theSecond = theLineGraph->GetGraphAt(0x0e);
-        theSecond.CombineGraph(theFirst, theGraph);
-        theCombined = theGraph;
-        theCombined.ClearAllSeries();
-        for (unsigned long i = 1; i < gWorld.mStatistics.GetRecords().size(); i++) {
-            theSeries.ClearAllDataPoints();
-            theSeries = theGraph.GetSeries(i - 1);
-            theSeries.SetColor(gWorld.mStatistics.GetRecords()[i].mColor);
-            theCombined.AddSeries(theSeries);
+        const std::vector<EEStatisticsPoint>& thePoints = r.mStatistics.GetSeries(inB).mPoints;
+        std::vector<long> thePairs;
+        for (unsigned long i = 0; i < thePoints.size(); i++) {
+            thePairs.push_back((long)thePoints[i].mTime);
+            thePairs.push_back((long)thePoints[i].mValue);
         }
-        theLineGraph->SetGraphAt(theCombined, 0x17);
+        static_cast<UIGraph*>(Ctl(kPostGameLineGraph))->AddGraphSeries(thePairs.data(), thePoints.size(), inB, r.mColor);
         break;
-    }
-    case EE_SCREENS_OP_PGS_AXES:
-        EEScreensPgsLineGraph(inForm)->SetLabelYAxis(false);
-        EEScreensPgsLineGraph(inForm)->SetLabelXAxis(true);
-        break;
-    case EE_SCREENS_OP_PGS_MAX_Y:
-        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetMaxY();
-    case EE_SCREENS_OP_PGS_MIN_Y:
-        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetMinY();
-    case EE_SCREENS_OP_PGS_SERIES_MAX_Y:
-        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetSeries(inB).GetMaxY();
-    case EE_SCREENS_OP_PGS_SERIES_COUNT:
-        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetSeriesCount();
-    case EE_SCREENS_OP_PGS_POINT_COUNT:
-        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetSeries(inB).GetDataPointCount();
-    case EE_SCREENS_OP_PGS_POINT: {
-        const U2DPoint<long>& p = EEScreensPgsGraph(inForm, inA)->GetSeries(inB).GetDataPoint(inC);
-        return (uint32_t)(inD ? p.GetY() : p.GetX());
     }
     case EE_SCREENS_GAME_PGS_NEW_MANAGER:
         inForm->SetFormManager(new EEPGSFormManager);
-        sPgsSeries = UGraphSeries();
         break;
     case EE_SCREENS_OP_PGS_BG_COLOUR:
         Ctl(inA)->SetBgColor(GEColor(Float(inB), Float(inC), Float(inD)));
@@ -1763,20 +1665,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     case EE_SCREENS_OP_SWITCH:
         gUserInterface->SwitchToForm(theManager->GetFormByID(inA));
         break;
-    case EE_SCREENS_OP_OPEN_EVENT:
-    case EE_SCREENS_OP_CLOSE_EVENT:
-    case EE_SCREENS_OP_TRIGGER: {
-        UIEvent* theEvent = EECreateScreenEvent(inOp == EE_SCREENS_OP_TRIGGER ? inD : inB);
-        if (inOp == EE_SCREENS_OP_OPEN_EVENT)
-            theManager->GetFormByID(inA)->SetFormOpenEvent(theEvent);
-        else if (inOp == EE_SCREENS_OP_CLOSE_EVENT)
-            theManager->GetFormByID(inA)->SetFormCloseEvent(theEvent);
-        else
-            theManager->GetFormByID(inA)->GetControl(inB)->SetTriggerEvent(inC, theEvent);
-        if (theEvent)
-            theEvent->Dereference();
-        break;
-    }
     case EE_SCREENS_OP_OPEN_FORM:
         return (uint32_t)gUserInterface->OpenForm(theManager->GetFormByID(inA));
     case EE_SCREENS_OP_LIST_SELECT:
@@ -1787,13 +1675,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         if (UIControl* c = Ctl())
             static_cast<UILBString*>(c)->DeleteAllEntries();
         break;
-    case EE_SCREENS_OP_TRIGGER_HERE: {
-        UIEvent* theEvent = EECreateScreenEvent(inC);
-        Ctl()->SetTriggerEvent(inB, theEvent);
-        if (theEvent)
-            theEvent->Dereference();
-        break;
-    }
     case EE_SCREENS_OP_SLIDER_LABEL: {
         UIESliderChange* theEvent = new UIESliderChange(static_cast<UITextLabel*>(theForm->GetControl(inB)), 1.0f, 0);
         Ctl()->SetTriggerEvent(kControlTriggerRangeChanged, theEvent);
@@ -1935,9 +1816,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         return (uint32_t)gDisplayRasterizers.size();
     case EE_SCREENS_GAME_SCREEN_COUNT:
         return inA < gDisplayRasterizers.size() ? (uint32_t)gDisplayRasterizers[inA].mScreens.size() : 0;
-    case EE_SCREENS_OP_HOT_KEY:
-        theForm->AddHotKey(inA, inB, inC, kKeyNone, NULL, NULL, EECreateScreenEvent(inD), NULL, 0, false);
-        break;
     case EE_SCREENS_GAME_QUIT:
         gUserInterface->PostQuit();
         break;
@@ -2035,12 +1913,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         gUserInterface->OpenForm(gSavedMainGameForm);
         break;
     // the campaign scenario select and scenario intro forms' (scenario_screens.rs)
-    case EE_SCREENS_OP_ADD_TRIGGER: {
-        UIEvent* theEvent = EECreateScreenEvent(inA);
-        theManager->AddEventToTrigger(theEvent, theForm, NULL);
-        theEvent->Dereference();
-        break;
-    }
     case EE_SCREENS_OP_SLEEP:
         PlatSleep(inA);
         break;
@@ -2277,13 +2149,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     case EE_SCREENS_OP_LE_PING:
         static_cast<EEUICPing*>(Ctl())->SetPing(Float(inB));
         break;
-    case EE_SCREENS_OP_LE_KEYBOARD_EVENT: {
-        UIEvent* theEvent = EECreateScreenEvent(inA);
-        theForm->SetFormKeyboardCapturedEvent(theEvent);
-        if (theEvent)
-            theEvent->Dereference();
-        break;
-    }
     case EE_SCREENS_GAME_LE_DISCONNECT:
         gCommunications->ProcessGuaranteedLocalUserInput(new NEMRecord(kNetMessageClientDisconnectionNotification, {false}), kSlotNone);
         break;
@@ -2471,9 +2336,6 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     case EE_SCREENS_GAME_GO_USER_PAUSED:
         return gWorld.mUserPaused == true;
-    case EE_SCREENS_OP_GO_HOT_KEY:
-        theForm->AddHotKey(inA, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(inB), NULL, NULL, NULL, 0, false);
-        break;
     case EE_SCREENS_GAME_GO_HIDE_RESIGN:
         return gWorld.GetCurrentPlayer()->GetObserverMode() == true || gWorld.GetGameOptions().GetIsScenarioGame() == true;
     default:
@@ -3109,15 +2971,6 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
             theLabel->SetText(theText);
         break;
     // the post-game summary's (post_game.rs)
-    case EE_SCREENS_TEXT_PGS_TITLE:
-        EEScreensPgsGraph(theForm, inArg)->SetTitle(theText);
-        break;
-    case EE_SCREENS_TEXT_PGS_Y_LABEL:
-        EEScreensPgsGraph(theForm, inArg)->SetYLabel(theText);
-        break;
-    case EE_SCREENS_TEXT_PGS_X_LABEL:
-        EEScreensPgsGraph(theForm, inArg)->SetXLabel(theText);
-        break;
     case EE_SCREENS_TEXT_PGS_BAR:
         static_cast<UIStatusBar*>(theForm->GetControl(inArg))->SetText(theText, NULL);
         break;

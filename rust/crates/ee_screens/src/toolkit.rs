@@ -13,7 +13,10 @@
 // `c_ulong` is `u32` on Windows and `u64` on LP64: the casts between it and the ops' `u32` stay
 #![allow(clippy::unnecessary_cast)]
 
-use core::ffi::{c_ulong, c_void};
+use core::ffi::{c_long, c_ulong, c_void};
+use std::sync::Mutex;
+
+use ee_util::graph::{EeUtilColor, EeUtilGraph, EeUtilPoint, EeUtilSeries};
 
 use ee_ui::bgobj::EeUiBgCall;
 use ee_ui::buttonobj::EeUiButtonCall;
@@ -22,22 +25,27 @@ use ee_ui::controlobj::EeUiControlCall;
 use ee_ui::direct::{self, Cpp, Kind};
 use ee_ui::editobj::EeUiEditCall;
 use ee_ui::formobj::EeUiFormCall;
+use ee_ui::graphobj::UiGraph;
 use ee_ui::groupobj::EeUiEntityGroupCall;
 use ee_ui::labelobj::EeUiLabelCall;
 use ee_ui::managerobj::EeUiManagerCall;
 use ee_ui::obj::EeUiOp;
 use ee_ui::sliderobj::EeUiSliderCall;
 
+use crate::camera::{
+    EE_SCREENS_CAM_GRAB_EDITOR, EE_SCREENS_CAM_GRAB_MAIN, EE_SCREENS_OP_CAM_GRAB_BEGIN, EE_SCREENS_OP_CAM_GRAB_END,
+};
 use crate::campaign_editor::EE_SCREENS_TEXT_CE_ALL_TEXT;
 use crate::chat::*;
 use crate::debug_sound::EE_SCREENS_OP_DSU_SLIDER;
 use crate::diplomacy::EE_SCREENS_OP_DS_DISABLE;
 use crate::lobby_form::*;
-use crate::main_game_options::{EE_SCREENS_OP_GO_REMOVE_HOT_KEYS, EE_SCREENS_OP_GO_STRING_ID};
+use crate::main_game_options::{EE_SCREENS_OP_GO_HOT_KEY, EE_SCREENS_OP_GO_REMOVE_HOT_KEYS, EE_SCREENS_OP_GO_STRING_ID};
 use crate::menus::*;
+use crate::post_game::*;
 use crate::save_load::{EE_SCREENS_OP_CURRENT_FORM_IS, EE_SCREENS_OP_SWAP_FORM, EE_SCREENS_TEXT_FORM_EDIT};
 use crate::scenario_screens::{
-    EE_SCREENS_OP_LABEL_CLEAR, EE_SCREENS_OP_LABEL_LINE_COUNT, EE_SCREENS_OP_LABEL_START_LINE,
+    EE_SCREENS_OP_ADD_TRIGGER, EE_SCREENS_OP_LABEL_CLEAR, EE_SCREENS_OP_LABEL_LINE_COUNT, EE_SCREENS_OP_LABEL_START_LINE,
     EE_SCREENS_OP_REMOVE_BACKGROUND, EE_SCREENS_OP_TAB_STOP,
 };
 use crate::settings_form::*;
@@ -58,6 +66,286 @@ impl K {
     /// `UIControl::HostOp`'s `FormEventCall`: `b` 1 dereferences the event `a`, 2 references it.
     const TK_EVENT_DEREFERENCE: isize = 1;
     const TK_EVENT_REFERENCE: isize = 2;
+    /// `kPostGameLineGraph` (ee/EEUIManager.h): the summary's line graph, control 0 of its form.
+    const TK_PGS_LINE_GRAPH: u32 = 0;
+    /// The summary's combined graph and its two parts (`GAME_PGS_COMBINE`).
+    const TK_PGS_COMBINED: u32 = 0x17;
+    const TK_PGS_COMBINE_FIRST: u32 = 0x0d;
+    const TK_PGS_COMBINE_SECOND: u32 = 0x0e;
+}
+
+/// `kKeyNone` (lle/ISKeyCode.h): no key, no modifier.
+const KEY_NONE: u64 = 0x7fff;
+/// `kUIEventFormOpen`, `kUIEventFormClose`, `kUIEventMouseMove`, the keyboard-captured event: `UIForm::SetEvent`'s
+/// indices.
+const FORM_EVENT_OPEN: isize = 0;
+const FORM_EVENT_CLOSE: isize = 1;
+const FORM_EVENT_MOUSE_MOVE: isize = 11;
+const FORM_EVENT_KEYBOARD: isize = 16;
+
+// ---- the screens' events (`EEScreenEvent`s: C++ objects, made and released by the host's one helper)
+
+/// cbindgen:ignore
+#[cfg(not(test))]
+mod sys {
+    use core::ffi::c_void;
+    extern "C" {
+        /// `op` 0: a new `EEScreenEvent(code)` (`EECreateScreenEvent`: NULL for code 0); 1 the event's `Reference()`;
+        /// 2 its `Dereference()` (UI Events/EEScreens.cpp).
+        pub fn ee_screenscpp_event(op: u32, event: *mut c_void, code: u32) -> *mut c_void;
+    }
+}
+#[cfg(not(test))]
+fn event_op(op: u32, event: Cpp, code: u32) -> Cpp {
+    // SAFETY: the host's helper; `event` is one it made (or NULL for a new one)
+    unsafe { sys::ee_screenscpp_event(op, event, code) }
+}
+#[cfg(test)]
+fn event_op(op: u32, event: Cpp, code: u32) -> Cpp {
+    tests::event_op(op, event, code)
+}
+
+/// `EECreateScreenEvent(code)`: a new event, NULL for code 0.
+fn new_event(code: u32) -> Cpp {
+    event_op(0, core::ptr::null_mut(), code)
+}
+fn reference(event: Cpp) {
+    event_op(1, event, 0);
+}
+fn dereference(event: Cpp) {
+    event_op(2, event, 0);
+}
+
+/// `UIForm::AddHotKey(key, m1, m2, m3, just pressed, pressed, just unpressed, double pressed, 0, false)` (`UIForm.cpp`'s
+/// three calls; the keys packed 16 bits each, a code past 0xffff as 0xffff). The form keeps the events' references.
+fn add_hot_key(form: Cpp, keys: [u64; 4], events: [Cpp; 4]) {
+    let mut packed = 0u64;
+    for (i, k) in keys.iter().enumerate() {
+        packed |= (*k).min(0xffff) << (16 * i);
+    }
+    direct::form_call(form, EeUiFormCall::AddHotKeyEvents, events[0] as isize, events[1] as isize);
+    direct::form_call(form, EeUiFormCall::AddHotKeyEvents2, events[2] as isize, events[3] as isize);
+    direct::form_call(form, EeUiFormCall::AddHotKeyBuild, packed as isize, 0);
+}
+
+/// A new event set as one of the form's events (`SetEvent(index, event)`), then released: the form holds it.
+fn set_form_event(form: Cpp, index: isize, code: u32) {
+    let event = new_event(code);
+    direct::form_call(form, EeUiFormCall::SetEvent, index, event as isize);
+    if !event.is_null() {
+        dereference(event);
+    }
+}
+
+/// The camera grabs' saved mouse move events (`sGrabSaved`: the main game form's, the editor's).
+static GRAB_SAVED: Mutex<[usize; 2]> = Mutex::new([0; 2]);
+
+/// `EEReleaseGrabScroll`'s first step: the mouse move event the form's grab saved, released.
+pub(crate) fn release_grab(form: u32) {
+    let saved = GRAB_SAVED.lock().unwrap_or_else(|e| e.into_inner()).get_mut(form as usize).map(core::mem::take);
+    if let Some(saved) = saved.filter(|&s| s != 0) {
+        dereference(saved as Cpp);
+    }
+}
+
+/// The event group: the ops that make an event and hand it to a form, a control, a hot key or the manager.
+fn event_group(form: Cpp, op: u32, a: u32, b: u32, c: u32, d: u32) -> Option<u32> {
+    match op {
+        EE_SCREENS_OP_OPEN_EVENT | EE_SCREENS_OP_CLOSE_EVENT | EE_SCREENS_OP_TRIGGER => {
+            let event = new_event(if op == EE_SCREENS_OP_TRIGGER { d } else { b });
+            let target = form_by_id(form, a);
+            match op {
+                EE_SCREENS_OP_OPEN_EVENT => {
+                    direct::form_call(target, EeUiFormCall::SetEvent, FORM_EVENT_OPEN, event as isize);
+                }
+                EE_SCREENS_OP_CLOSE_EVENT => {
+                    direct::form_call(target, EeUiFormCall::SetEvent, FORM_EVENT_CLOSE, event as isize);
+                }
+                _ => {
+                    direct::control_call(ctl(target, b), EeUiControlCall::SetTrigger, c as isize, event as isize);
+                }
+            }
+            if !event.is_null() {
+                dereference(event);
+            }
+        }
+        EE_SCREENS_OP_TRIGGER_HERE => {
+            let event = new_event(c);
+            direct::control_call(ctl(form, a), EeUiControlCall::SetTrigger, b as isize, event as isize);
+            if !event.is_null() {
+                dereference(event);
+            }
+        }
+        EE_SCREENS_OP_HOT_KEY => {
+            // the settings' hot keys: the event fires on the key's release
+            let event = new_event(d);
+            let none = core::ptr::null_mut();
+            add_hot_key(form, [a as u64, b as u64, c as u64, KEY_NONE], [none, none, event, none]);
+        }
+        EE_SCREENS_OP_CH_HOT_KEY => {
+            let event = new_event(c);
+            let none = core::ptr::null_mut();
+            add_hot_key(form, [a as u64, b as u64, KEY_NONE, KEY_NONE], [event, none, none, none]);
+        }
+        EE_SCREENS_OP_GO_HOT_KEY => {
+            let event = new_event(b);
+            let none = core::ptr::null_mut();
+            add_hot_key(form, [a as u64, KEY_NONE, KEY_NONE, KEY_NONE], [event, none, none, none]);
+        }
+        EE_SCREENS_OP_CH_KEYBOARD_EVENT | EE_SCREENS_OP_LE_KEYBOARD_EVENT => set_form_event(form, FORM_EVENT_KEYBOARD, a),
+        EE_SCREENS_OP_CAM_GRAB_BEGIN => {
+            // the form's mouse move event saved; the grab its mouse move event while the button is down
+            let saved = direct::form_call(form, EeUiFormCall::Event, FORM_EVENT_MOUSE_MOVE, 0) as Cpp;
+            if let Some(slot) = GRAB_SAVED.lock().unwrap_or_else(|e| e.into_inner()).get_mut(a as usize) {
+                *slot = saved as usize;
+            }
+            if !saved.is_null() {
+                reference(saved);
+            }
+            set_form_event(form, FORM_EVENT_MOUSE_MOVE, if a != 0 { EE_SCREENS_CAM_GRAB_EDITOR } else { EE_SCREENS_CAM_GRAB_MAIN });
+        }
+        EE_SCREENS_OP_CAM_GRAB_END => {
+            let saved = GRAB_SAVED.lock().unwrap_or_else(|e| e.into_inner()).get(a as usize).copied().unwrap_or(0) as Cpp;
+            direct::form_call(form, EeUiFormCall::SetEvent, FORM_EVENT_MOUSE_MOVE, saved as isize);
+            if !saved.is_null() {
+                dereference(saved);
+                if let Some(slot) = GRAB_SAVED.lock().unwrap_or_else(|e| e.into_inner()).get_mut(a as usize) {
+                    *slot = 0;
+                }
+            }
+        }
+        EE_SCREENS_OP_ADD_TRIGGER => {
+            let event = new_event(a);
+            direct::manager_call(mgr(form), EeUiManagerCall::AddEventToTrigger, event as isize, form as isize, 0);
+            if !event.is_null() {
+                dereference(event);
+            }
+        }
+        _ => return None,
+    }
+    Some(0)
+}
+
+/// The summary's series register (`BuildGraphs`' series: `PGS_SERIES_CLEAR`, `_POINT`, `_ADD`).
+static PGS_SERIES: Mutex<Option<EeUtilSeries>> = Mutex::new(None);
+
+fn pgs_series<R>(f: impl FnOnce(&mut EeUtilSeries) -> R) -> R {
+    let mut s = PGS_SERIES.lock().unwrap_or_else(|e| e.into_inner());
+    f(s.get_or_insert_with(EeUtilSeries::default))
+}
+
+/// The summary's graph `index` (0..30 its line graph's stored ones, 31 the shown one, 32..39 its form manager's)
+/// handed to `f`; `None` without the line graph or the graph.
+fn pgs_graph<R>(form: Cpp, index: u32, f: impl FnOnce(&mut UiGraph) -> R) -> Option<R> {
+    direct::with_graph(ctl(form, K::TK_PGS_LINE_GRAPH), |g| g.graph_at(index, f)).flatten()
+}
+
+/// The colours of the statistics' records (`gWorld.mStatistics.mRecords[i].mColor`; the first is no player's).
+#[cfg(not(test))]
+fn pgs_record_colours() -> Vec<[f32; 3]> {
+    crate::post_game_ffi::record_colours()
+}
+#[cfg(test)]
+fn pgs_record_colours() -> Vec<[f32; 3]> {
+    tests::RECORD_COLOURS.with(|c| c.borrow().clone())
+}
+
+/// `GAME_PGS_COMBINE`: graph 0x17's series become those of 0x0e combined with 0x0d (`CombineGraph`), the first
+/// `records - 1` of them, each in its record's colour (records 1..); its title and labels stay.
+fn pgs_combine(form: Cpp) {
+    let Some(first) = pgs_graph(form, K::TK_PGS_COMBINE_FIRST, |g| g.data.clone()) else {
+        return;
+    };
+    let Some(second) = pgs_graph(form, K::TK_PGS_COMBINE_SECOND, |g| g.data.clone()) else {
+        return;
+    };
+    let mut both = EeUtilGraph::default();
+    second.combine(&first, &mut both);
+    let colours = pgs_record_colours();
+    let mut combined = EeUtilGraph::default();
+    for (i, c) in colours.iter().enumerate().skip(1) {
+        if i - 1 >= both.len() {
+            break;
+        }
+        let mut series = both.series(i - 1).clone();
+        series.set_color(EeUtilColor { red: c[0], green: c[1], blue: c[2] });
+        combined.add_series(&series);
+    }
+    pgs_graph(form, K::TK_PGS_COMBINED, |g| g.data = combined);
+}
+
+/// The series `series` of the summary's graph `graph` handed to `f`; `None` without it.
+fn pgs_series_of<R>(form: Cpp, graph: u32, series: u32, f: impl FnOnce(&EeUtilSeries) -> R) -> Option<R> {
+    pgs_graph(form, graph, |g| if (series as usize) < g.data.len() { Some(f(g.data.series(series as usize))) } else { None })
+        .flatten()
+}
+
+/// The summary's graph ops (`EE_SCREENS_OP_PGS_*` on its line graph's graphs, `GAME_PGS_COMBINE`).
+fn pgs_op(form: Cpp, op: u32, a: u32, b: u32, c: u32, d: u32) -> Option<u32> {
+    let r = match op {
+        EE_SCREENS_OP_PGS_SERIES_ENABLED => {
+            pgs_graph(form, a, |g| {
+                if (b as usize) < g.data.len() {
+                    g.data.set_enabled(b as usize, c != 0);
+                }
+            });
+            0
+        }
+        EE_SCREENS_OP_PGS_SHOW_GRAPH => {
+            direct::with_graph(ctl(form, K::TK_PGS_LINE_GRAPH), |g| g.show_graph(a));
+            0
+        }
+        EE_SCREENS_OP_PGS_CLEAR_GRAPH => {
+            pgs_graph(form, a, |g| g.data.clear());
+            0
+        }
+        EE_SCREENS_OP_PGS_PRUNE => {
+            pgs_graph(form, a, |g| g.data.prune());
+            0
+        }
+        EE_SCREENS_OP_PGS_SERIES_CLEAR => {
+            pgs_series(|s| s.clear());
+            0
+        }
+        EE_SCREENS_OP_PGS_SERIES_POINT => {
+            pgs_series(|s| s.add_point(EeUtilPoint { x: a as i32 as c_long, y: b as i32 as c_long }));
+            0
+        }
+        EE_SCREENS_OP_PGS_SERIES_ADD => {
+            let series = pgs_series(|s| s.clone());
+            pgs_graph(form, a, |g| g.data.add_series(&series));
+            0
+        }
+        EE_SCREENS_GAME_PGS_COMBINE => {
+            pgs_combine(form);
+            0
+        }
+        EE_SCREENS_OP_PGS_AXES => {
+            direct::with_graph(ctl(form, K::TK_PGS_LINE_GRAPH), |g| {
+                g.set_label_y(false);
+                g.set_label_x(true);
+            });
+            0
+        }
+        EE_SCREENS_OP_PGS_MAX_Y => pgs_graph(form, a, |g| g.data.range().max_y as u32).unwrap_or(0),
+        EE_SCREENS_OP_PGS_MIN_Y => pgs_graph(form, a, |g| g.data.range().min_y as u32).unwrap_or(0),
+        EE_SCREENS_OP_PGS_SERIES_MAX_Y => pgs_series_of(form, a, b, |s| s.range().max_y as u32).unwrap_or(0),
+        EE_SCREENS_OP_PGS_SERIES_COUNT => pgs_graph(form, a, |g| g.data.len() as u32).unwrap_or(0),
+        EE_SCREENS_OP_PGS_POINT_COUNT => pgs_series_of(form, a, b, |s| s.points().len() as u32).unwrap_or(0),
+        EE_SCREENS_OP_PGS_POINT => pgs_series_of(form, a, b, |s| {
+            s.points().get(c as usize).map_or(0, |p| if d != 0 { p.y as u32 } else { p.x as u32 })
+        })
+        .unwrap_or(0),
+        EE_SCREENS_GAME_PGS_NEW_MANAGER => {
+            // the new form manager came with empty graphs, and the series register was reset: the graphs are the
+            // line graph's now; the C++ still makes the manager (None: the host's case runs)
+            pgs_series(|s| *s = EeUtilSeries::default());
+            direct::with_graph(ctl(form, K::TK_PGS_LINE_GRAPH), |g| g.reset_manager_graphs());
+            return None;
+        }
+        _ => return None,
+    };
+    Some(r)
 }
 
 fn mgr(form: Cpp) -> Cpp {
@@ -90,7 +378,16 @@ fn id_of(control: Cpp) -> Option<u32> {
 
 /// One of the screens' ops on the form `form` (the event's entity `entity`), when it is a toolkit op: its result.
 /// `None` for the ops the C++ host answers.
-pub(crate) fn op(form: *mut c_void, entity: *mut c_void, op: u32, a: u32, b: u32, c: u32) -> Option<u32> {
+pub(crate) fn op(form: *mut c_void, entity: *mut c_void, op: u32, a: u32, b: u32, c: u32, d: u32) -> Option<u32> {
+    if let Some(r) = pgs_op(form, op, a, b, c, d) {
+        return Some(r);
+    }
+    if let Some(r) = event_group(form, op, a, b, c, d) {
+        return Some(r);
+    }
+    if op == EE_SCREENS_GAME_PGS_NEW_MANAGER {
+        return None;
+    }
     let r = match op {
         // ---- the manager's
         EE_SCREENS_OP_PUSH => {
@@ -332,6 +629,15 @@ pub(crate) fn put_text(form: *mut c_void, which: u32, arg: u32, text: &[u8]) -> 
         }
         EE_SCREENS_TEXT_LABEL => {
             direct::label_call(ctl(form, arg), EeUiLabelCall::SetText, p, 1);
+        }
+        // the post-game summary's graph `arg`'s title and labels
+        EE_SCREENS_TEXT_PGS_TITLE | EE_SCREENS_TEXT_PGS_Y_LABEL | EE_SCREENS_TEXT_PGS_X_LABEL => {
+            let text = t[..t.len() - 1].to_vec();
+            pgs_graph(form, arg, |g| match which {
+                EE_SCREENS_TEXT_PGS_TITLE => g.title = text,
+                EE_SCREENS_TEXT_PGS_Y_LABEL => g.y_label = text,
+                _ => g.x_label = text,
+            });
         }
         _ => return None,
     }

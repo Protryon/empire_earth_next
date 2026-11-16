@@ -24,6 +24,7 @@ use crate::comboobj::{ee_ui_combo_call, EeUiCombo, EeUiComboCall};
 use crate::controlobj::{ee_ui_control_call, EeUiControlCall, EeUiControlFields};
 use crate::editobj::{ee_ui_edit_call, EeUiEdit, EeUiEditCall};
 use crate::formobj::{ee_ui_form_call, EeUiForm, EeUiFormCall};
+use crate::graphobj::EeUiGraph;
 use crate::groupobj::{ee_ui_entity_group_call, EeUiEntityGroup, EeUiEntityGroupCall};
 use crate::labelobj::{ee_ui_label_call, EeUiLabel, EeUiLabelCall};
 use crate::managerobj::{ee_ui_manager_call, EeUiManager, EeUiManagerCall};
@@ -53,6 +54,8 @@ pub enum Kind {
     Edit,
     /// `UISlider`'s [`EeUiSlider`].
     Slider,
+    /// `UIGraph`'s [`EeUiGraph`] (the line graph's and the post-game summary's).
+    Graph,
 }
 
 /// The C++ pointer of a toolkit object (`UIForm*`, `UIControl*`, ...).
@@ -281,6 +284,17 @@ pub fn background_call(background: Cpp, call: EeUiBgCall, a: isize, b: isize) ->
     let mut f = buf();
     // SAFETY: a live background record
     unsafe { ee_ui_bg_call(r, call, a, b, f.as_mut_ptr()) }
+}
+
+/// The graph `control` (a `UIGraph`) handed to `f`; `None` when `control` is not a graph.
+pub fn with_graph<R>(control: Cpp, f: impl FnOnce(&EeUiGraph) -> R) -> Option<R> {
+    let o = find(Kind::Graph, control) as *const EeUiGraph;
+    if o.is_null() {
+        return None;
+    }
+    // SAFETY: a live graph (registered between its construction and destruction); a shared reference, as the
+    // inward calls take it
+    Some(f(unsafe { &*o }))
 }
 
 /// `UITextLabel::SetText(long)`'s text: `PlatIToA(value, 10)` (the sign, then the decimal digits).

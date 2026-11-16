@@ -24,6 +24,8 @@ ee_gfx = { path = "../ee_gfx" }
 ee_random = { path = "../ee_random" }
 # the toolkit's Rust objects, reached directly (toolkit.rs over ee_ui direct.rs)
 ee_ui = { path = "../ee_ui" }
+# the post-game summary's graphs' series (toolkit.rs)
+ee_util = { path = "../ee_util" }
 
 [dev-dependencies]
 # the toolkit without its C++ imports, for the test binary

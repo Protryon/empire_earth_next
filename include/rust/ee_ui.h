@@ -71,6 +71,10 @@ constexpr static const float TEXT_SPACING = 5.0;
 /// `kMaximumZoomScale`.
 constexpr static const float MAXIMUM_ZOOM = 4.0;
 
+/// The index of the shown graph in [`EeUiGraph::graph_at`] (the summary's numbering: 0..30 stored, 31 shown,
+/// 32..39 the form manager's).
+constexpr static const uint32_t EE_UI_GRAPH_SHOWN = 31;
+
 /// `kKeyNone`: a hot key record's empty modifier.
 constexpr static const uint32_t KEY_NONE = 32767;
 
@@ -993,6 +997,10 @@ enum class EeUiOp : uint32_t {
   FlPathReference = 666,
   /// Path `a`'s `Dereference()`.
   FlPathRelease = 667,
+  /// Line `a`'s `SetOpacity(f[0])`.
+  LineSetOpacity = 668,
+  /// The virtual `DrawBorder(f, a)` -> its result.
+  DrawBorder = 669,
 };
 
 /// The inward calls (each C++ class's methods forward here with their own call).
@@ -1618,6 +1626,45 @@ enum class EeUiFormCall : uint32_t {
   UseGdiForText = 92,
   DrawToolTipShadow = 93,
   SetDrawToolTipShadow = 94,
+};
+
+/// What the graph is: which values it formats and whether it stores graphs.
+enum class EeUiGraphKind : uint32_t {
+  /// `UILineGraph`: values as `"%.2f"`, no stored graphs.
+  Line = 0,
+  /// `EEUIPGSLineGraph`: values through the format the game gave, the summary's 31 + 8 stored graphs.
+  PostGame = 1,
+};
+
+/// The inward calls (the C++ shell's methods).
+enum class EeUiGraphCall : uint32_t {
+  /// `CopyData()` -> the base's result.
+  CopyData = 1,
+  /// `DrawPolygons()`: the frame, the grid, then the series.
+  DrawPolygons = 2,
+  /// `DrawTextA()`.
+  DrawText = 3,
+  /// `SetFont(font a)`.
+  SetFont = 4,
+  /// `SetFontColor(f[0..3])`.
+  SetFontColor = 5,
+  /// `TabbedTo()`.
+  TabbedTo = 6,
+  /// `TabbedFrom()`.
+  TabbedFrom = 7,
+  /// `ZoomIn((f[0], f[1]))`.
+  ZoomIn = 8,
+  /// `ZoomOut()`.
+  ZoomOut = 9,
+  /// `SetLabelXAxis(a != 0)`.
+  SetLabelXAxis = 10,
+  /// `SetLabelYAxis(a != 0)`.
+  SetLabelYAxis = 11,
+  /// The summary's `AddGraphSeries`: a series of the `c` (time, value) pairs of `long`s at `b`, in the colour
+  /// `f[0..3]`, added to the stored graph `a`.
+  AddGraphSeries = 12,
+  /// The summary's `ShowGraph(a)` ([`EeUiGraph::show_graph`]).
+  ShowGraph = 13,
 };
 
 /// UIEntityGroup's inward calls.
@@ -2348,6 +2395,9 @@ struct EeUiFileList;
 /// The Rust UIForm.
 struct EeUiForm;
 
+/// The Rust graph.
+struct EeUiGraph;
+
 /// The Rust UITextLabel (and UITLScrolling).
 struct EeUiLabel;
 
@@ -2524,6 +2574,10 @@ struct EeUiEventFields {
   unsigned long mInitializeCount;
 };
 
+/// A graph's value format (the summary's: `axis` 0 x, 1 y): the text of `value` into `out` (`capacity` bytes);
+/// its length.
+using EeUiGraphFormatFn = size_t(*)(int axis, float value, uint8_t *out, size_t capacity);
+
 /// `UIHotKey`'s members (`include/lle/UIHotKey.h`), the C++ class's base.
 struct EeUiHotKeyFields {
   /// The host of the calls out (its object is the record).
@@ -2633,35 +2687,6 @@ struct EeUiControlsTableData {
   /// The normal, pressed and focused file names and the button down and up sounds, NUL-terminated (owned by the
   /// object).
   const char *names[5];
-};
-
-/// `CopyData`'s rectangles: the title's, the axis labels' (empty when off) and the plot area.
-struct EeUiGraphLayout {
-  EeUiRect title;
-  EeUiRect y_axis;
-  EeUiRect x_axis;
-  EeUiRect graph;
-};
-
-/// Which texts `CopyData` lays out: each label's flag (`mLabelGraph` ..) and whether its text exists (`SetFont`
-/// made them).
-struct EeUiGraphTexts {
-  bool label_graph;
-  bool has_title;
-  bool label_grid;
-  bool has_grid;
-  bool label_y;
-  bool has_y;
-  bool label_x;
-  bool has_x;
-};
-
-/// A graph's value range (`UGraph`'s or the displayed one, `UIGraph::mMinX` ..).
-struct EeUiGraphRange {
-  long min_x;
-  long max_x;
-  long min_y;
-  long max_y;
 };
 
 /// What `SetCandidateList` leaves: the window's left and right edges and the selected line within the page.
@@ -3098,6 +3123,29 @@ ptrdiff_t ee_ui_form_call(const EeUiForm *form,
                           ptrdiff_t b,
                           float *f);
 
+/// The constructor's part after `UIControl`'s ([`EeUiGraph::new`]); the graph recorded for the direct path.
+EeUiGraph *ee_ui_graph_new(void *graph,
+                           EeUiHostFn host,
+                           EeUiGraphKind kind,
+                           EeUiGraphFormatFn format);
+
+/// The destructor: deletes the texts and frees the object.
+///
+/// # Safety
+/// `graph` came from `ee_ui_graph_new` (or is NULL) and is not used again.
+void ee_ui_graph_free(EeUiGraph *graph);
+
+/// One of the graph's methods ([`EeUiGraphCall`]).
+///
+/// # Safety
+/// `graph` is live; `f` is NULL or four live floats; see [`EeUiGraph::call`].
+ptrdiff_t ee_ui_graph_call(const EeUiGraph *graph,
+                           EeUiGraphCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c,
+                           float *f);
+
 /// A new Rust group for the C++ `group`.
 EeUiEntityGroup *ee_ui_entity_group_new(void *group, EeUiHostFn host);
 
@@ -3380,60 +3428,6 @@ ptrdiff_t ee_ui_controls_table_call(const EeUiControlsTable *table,
 /// `SetupStringArray`'s count: the strings `begin..=end` (none unless `begin` is positive and `end` not before it).
 unsigned long ee_ui_controls_table_string_count(long begin,
                                                 long end);
-
-/// `UIGraph::CopyData`'s rectangles for the control's `rect` (the texts set through the host).
-EeUiGraphLayout ee_ui_graph_copy_layout(void *graph,
-                                        EeUiRect rect,
-                                        EeUiGraphTexts texts,
-                                        long max_x,
-                                        long max_y);
-
-/// `UIGraph::CopyData`'s displayed range.
-EeUiGraphRange ee_ui_graph_copy_range(float zoom, EeUiGraphRange displayed, EeUiGraphRange graph);
-
-/// `ZoomIn` (`zoom_in`) or `ZoomOut`: the new zoom; `out` the displayed range.
-float ee_ui_graph_zoom(bool zoom_in,
-                       float zoom,
-                       float increment,
-                       EeUiGraphRange graph,
-                       EeUiGraphRange *out);
-
-/// `UIGraph::DrawPolygons` after `UIControl::DrawPolygons` (`result`), the grid lines drawn with `line`.
-long ee_ui_graph_draw_grid(void *graph,
-                           void *line,
-                           long result,
-                           unsigned long thickness,
-                           EeUiRect rect,
-                           bool grid,
-                           unsigned long divisions_x,
-                           unsigned long divisions_y,
-                           float zoom);
-
-/// `UIGraph::DrawGridText`.
-long ee_ui_graph_draw_grid_text(void *graph,
-                                EeUiRect rect,
-                                unsigned long divisions_x,
-                                unsigned long divisions_y,
-                                float zoom,
-                                EeUiGraphRange range);
-
-/// `UIGraph::DrawTextA` after the draw count's decrement.
-long ee_ui_graph_draw_texts(void *graph, bool title, bool x, bool y, bool grid);
-
-/// `UILineGraph::DrawPolygons` after `UIGraph::DrawPolygons` (`result`), over the copied graph's `count` series.
-long ee_ui_linegraph_draw_list(void *graph,
-                               long result,
-                               unsigned long count);
-
-/// `UILineGraph::DrawSeries` of `series` (`count` points), drawn with `line`.
-long ee_ui_linegraph_draw_series(void *graph,
-                                 void *line,
-                                 const void *series,
-                                 unsigned long count,
-                                 long series_min_x,
-                                 EeUiGraphRange copied,
-                                 EeUiGraphRange displayed,
-                                 EeUiRect rect);
 
 /// `OpenCandidateWindow`'s rectangle.
 EeUiRect ee_ui_ime_open_rect(EeUiRect screen,
