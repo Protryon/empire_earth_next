@@ -1,5 +1,5 @@
-// C:\EEX\Low-Level Engine\Graphics Engine\Graphics Engine.h (RECONSTRUCTION; Graphics Engine.cpp 0x38527..0x38abf).
-// Graphics Engine start-up (loads the rasterizer plug-ins) and pixel-format packing.
+// C:\EEX\Low-Level Engine\Graphics Engine\Graphics Engine.h (RECONSTRUCTION). The Graphics Engine's start-up and
+// pixel-format packing (GERasterizer.cpp: Graphics Engine.cpp was folded in R4.3 part 15).
 #ifndef LLE_GRAPHICSENGINE_H
 #define LLE_GRAPHICSENGINE_H
 

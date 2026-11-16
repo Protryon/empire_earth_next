@@ -68,6 +68,12 @@ pub extern "C" fn ee_gfx_scene_letterbox(zoom: f32, height: f32) -> EeGfxLetterb
     scene::letterbox(zoom, height)
 }
 
+/// `EEInitialiseScene`'s key frames (the ambient colour and the sun's and moon's directions left zero).
+#[no_mangle]
+pub extern "C" fn ee_gfx_scene_daylight_tables() -> EeGfxDaylightTables {
+    scene::initial_tables()
+}
+
 /// The lights at `time_of_day`.
 ///
 /// # Safety

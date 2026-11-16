@@ -119,6 +119,8 @@ pub mod mouse;
 pub mod pick;
 pub mod quake;
 pub mod raster;
+pub mod ro_terrain;
+pub mod ro_units;
 pub mod scene;
 pub mod select;
 pub mod shadows;

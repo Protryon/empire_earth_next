@@ -2,8 +2,12 @@
 // 0x114296..0x118741 (the player-colour key and eleven colour constants' init chains, ctor, ??_G, dtor, Virtual00,
 // the ring/bar/model passes, the labels, Virtual08, Virtual0C, the media release, the screen projection GetScreenPoint);
 // EEROUserInterface.cpp's init chain starts at 0x118741. Unit flags: the exe's module set.
-// The passes are EEROUnits members; LoadMedia 0x116a97's asserts carry their original __LINE__ 1823/1824.
+// The passes (the rings, the models, the placements, the bars, the labels), the media's textures and models and the
+// colour constants are ee_gfx ro_units.rs's (RUST_PLAN R4.4): the C++ hands the frame's render lists over as records
+// and keeps the bar rhombi and the line batch (LoadMedia 0x516a97's asserts carry their original __LINE__ 1823/1824).
 #include <windows.h>
+
+#include <vector>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -17,7 +21,6 @@
 #include "lle/GETransformation.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
@@ -28,7 +31,6 @@
 #include "lle/GELine.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
-#include "lle/GEModelManager.h"
 #include "lle/GEText.h"
 #include "lle/UIControl.h"
 #include "lle/UIEvent.h"
@@ -66,77 +68,19 @@ extern GEFont* gU531994;                    // 0x531994 (the labels' default fon
 char gEmptyString[4] = "";
 extern EERenderUnit* gU529044;              // 0x529044 (the unit with the debug label; EERenderObject.cpp; provisional name)
 extern UWideString gU529030;                // 0x529030 (that label; EERenderObject.cpp; provisional name)
+// the rasterizer as the Rust draws call it (EERenderObject.cpp)
+extern const EeGfxRaster gEERustRaster;
 
-const UString kPlayerColorKey("player color");
-
-// the rings' and bars' colours (0x5294c0..0x529418) (provisional names)
-GEColor gRingHighlightColor(0.537f, 0.678f, 1.0f);
-GEColor gRingColor(0.0f, 1.0f, 0.0f);
-GEColor gU5294A0(1.0f, 0.75f, 0.5f);
-GEColor gU529490(1.0f, 0.56f, 0.25f);
-GEColor gSelectionRingDark(1.0f, 0.375f, 0.0f);
-GEColor gBarColor(0.0f, 1.0f, 0.0f);
-GEColor gBarBackColor(1.0f, 0.0f, 0.0f);
-GEColor gU529448(1.0f, 1.0f, 0.0f);
-GEColor gBarBorderColor(0.9f, 0.9f, 0.9f);
-GEColor gHealthColor(0.0f, 0.0f, 0.7f);
-GEColor gHealthBackColor(1.0f, 1.0f, 1.0f);
-
-// the media (provisional names): the ring model, the selection models by size, the bars' rhombi
-static GEModel* sRingModel;
-static GEModel* sSelectionModels[3];
-GETexture* sTexture4E0;                     // 0x5294e0 (EEE3DCommandConfirmation.cpp reads it)
-GETexture* sTexture4E4;                     // 0x5294e4 (EEE3DCommandConfirmation.cpp reads it)
-GETexture* sTexture4E8;                     // 0x5294e8 (EEE3DCommandConfirmation.cpp reads it)
-static GEModel* sModel4EC;
-static GELine* sLines;                      // 0x529478 (new[])
-static GETexture* sDottedLineTexture;       // 0x529474 (the lines' texture)
-static GETexture* sSelectionTexture;
-static GETexture* sAreaEffectTexture;
-static GERhombus* sFGBar;
-static GERhombus* sBGBar;
+// the bars' rhombi (0x529508 the fill, 0x52950c its back) and the line batch (0x529478, new[]) (provisional names)
+static GERhombus* sBars[2];
+static GELine* sLines;
 long gCollisionSphereMode;                  // 0x529510 (ee/EmpireEarth.h; read-only: EERenderObject, EEMessage. .bss after this
                                             // unit's statics, before EEROUserInterface's gUIViewport 0x529518: either unit)
 
-// the selection model by ring size (0x4be73c; .data): ee_gfx units.rs SELECTION_SIZES
-// the selection models' ring widths by size (0x4be748): ee_gfx models.rs SELECTION_WIDTHS
-// the bars' size (0x4be754..0x4be75c; .data, recomputed per frame from the window size)
-static unsigned long sBarWidth = 24;
-static float sBarHeight = 2.0f;
-static float sBarStep = 5.0f;
-// the unit's named constants (0x441ba0..0x441bb4) (provisional names)
-const float kFogDepth = 500.0f;
-const float kMinAlphaRef = 0.03f;
-const float kZWriteOpacity = 0.6f;
-const float kTranslucentAmbientScale = 0.59f;
-const float kBarFraction = 0.75f;
-// 0x441bb4 (0.3, kSelectionGrow): ee_gfx units.rs SELECTION_GROW
-// after the vtable (0x441bd0..0x441be4)
-// 0x441bd0..0x441bd8: DrawBars's bar literals 0.0013020834f (1 / 768), 24.0f and 1 / 1024 (orig fmul [1/1024]; fmul [24]:
-// 24.0f * (theWidth / 1024.0f) keeps the two multiplies, and max() reuses the product)
-// 0x441bdc (0.7135417, 548 / 768: the main game form's bottom strip) and 0x441be0 (0.18066406, 185 / 1024: the unit
-// panel's width): ee_gfx units.rs LABEL_BOTTOM and LABEL_MARGIN (DrawLabels)
-// 0x441be4 (-2 pi / 14, the area-effect ring's step): ee_gfx models.rs RING_STEP
-// DrawPlacement's edges at most: an 11 x 11 grid's outline (44) and its inner edges (264)
-const size_t kPlacementLineCapacity = 320;
-
-// The bars' sizes, the bar rectangles and GetScreenPoint are ee_gfx units.rs (RUST_PLAN R4.4); the GE value classes
-// pass as their #[repr(C)] mirrors (the same storage)
+// The GE value classes pass as their #[repr(C)] mirrors (the same storage)
 static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GE3DPoint) == sizeof(EeGe3DPoint) &&
               sizeof(GERectangle) == sizeof(EeGeRectangle) && sizeof(GETransformation) == sizeof(EeGeTransformation) &&
-              sizeof(GEViewport) == sizeof(EeGeViewport), "GE mirrors");
-static EeGfxBarSizes EEROBarSizes()
-{
-    EeGfxBarSizes theSizes;
-    theSizes.width = (uint32_t)sBarWidth;
-    theSizes.height = sBarHeight;
-    theSizes.step = sBarStep;
-    return theSizes;
-}
-static const GERectangle& EERORect(const EeGfxBarRects& inRects, int inIndex)
-{
-    return *reinterpret_cast<const GERectangle*>(&inRects.rects[inIndex]);
-}
+              sizeof(GEViewport) == sizeof(EeGeViewport) && sizeof(GEColor) == sizeof(EeGfxColor), "GE mirrors");
 
 // Creates the units' render object
 EEROUnits::EEROUnits()
@@ -154,824 +98,291 @@ void EEROUnits::FrameStarting()
     this->FillRenderLists();
 }
 
-// Draws the small selection ring under each selected aircraft
-void EEROUnits::DrawSelectionRings()
+// the raster table's entries for the bars, the placement lines and the labels (EERenderObject.cpp's table)
+void EEROUnitsBarSet(uint32_t inWhich, const EeGeRectangle* inRect, const EeGfxColor* inColors)
 {
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
-    gRasterizer->SetCulling(kCullNone);
-    SetWhiteLighting();
-    gRasterizer->SetAlphaTestingRefValue(0.0f, theScreen);
-    for (unsigned long i = 0; i < EERenderLists::sInstance.mSelectedUnits.size(); i++) {
-        EERenderUnit* theUnit = EERenderLists::sInstance.mSelectedUnits[i];
-        if (!(theUnit->mSelectionSize > 0.0f) || (theUnit->mInfo->mDomains & kMovementAir) == 0)
-            continue;
-        sSelectionModels[0]->SetGraphicsPostModelTransform(theUnit->mTransformation);
-        sSelectionModels[0]->SetGraphicsScale(theUnit->mSelectionSize);
-        sSelectionModels[0]->PrepareTransforms();
-        gRasterizer->Draw(sSelectionModels[0], theScreen, 1.0f, gOrthographicView);
-    }
+    if (inRect != NULL)
+        sBars[inWhich]->SetRectangle(*reinterpret_cast<const GERectangle*>(inRect));
+    if (inColors != NULL)
+        sBars[inWhich]->SetColorPerVertex(*reinterpret_cast<const GEColor*>(&inColors[0]),
+                                          *reinterpret_cast<const GEColor*>(&inColors[1]),
+                                          *reinterpret_cast<const GEColor*>(&inColors[2]),
+                                          *reinterpret_cast<const GEColor*>(&inColors[3]));
 }
-
-// Draws the area-effect ring of each unit with an area effect, its first segments (one per strength point)
-// in the ring colour and the rest of the seven in the highlight colour, turned to the camera
-void EEROUnits::DrawRings()
+int32_t EEROUnitsBarDraw(uint32_t inWhich)
 {
-    GETransformation theTransformation;
-    EERenderUnitMap::iterator theIterator;
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    gRasterizer->SetCulling(kCullNone);
-    SetWhiteLighting();
-    theTransformation.SetOrientationYPR(gRenderEnvironment.mCameraYaw, 0.0f, 0.0f);
-    theIterator = EERenderLists::sInstance.mUnits0.begin();
-    while (theIterator != EERenderLists::sInstance.mUnits0.end()) {
-        EERenderUnit* theUnit = theIterator->second;
-        long theVertex = 0;
-        if (theUnit->mAreaEffectStrength > 0 && theUnit->mSelectionSize > 0.0f) {
-            theTransformation.SetX(theUnit->mTransformation.GetX());
-            theTransformation.SetY(theUnit->mTransformation.GetY());
-            theTransformation.SetZ(theUnit->mTransformation.GetZ());
-            // the segments' colours: ee_gfx units.rs (a strength past 7 colours past the ring's seven, as before)
-            EeGfxRingSegments theSegments = ee_gfx_units_ring_segments((uint32_t)theUnit->mAreaEffectStrength);
-            for (uint32_t k = 0; k < theSegments.ring * 3; k++) {
-                sRingModel->GetVertexArray(0)->SetColor(gRingColor, theVertex);
-                theVertex++;
-            }
-            for (uint32_t k = 0; k < theSegments.highlight * 3; k++) {
-                sRingModel->GetVertexArray(0)->SetColor(gRingHighlightColor, theVertex);
-                theVertex++;
-            }
-            sRingModel->SetGraphicsPostModelTransform(theTransformation);
-            sRingModel->SetGraphicsScale(theUnit->mSelectionSize);
-            sRingModel->PrepareTransforms();
-            gRasterizer->Draw(sRingModel, theScreen, 1.0f, gOrthographicView);
-        }
-        theIterator++;
-    }
+    return gRasterizer->Draw(sBars[inWhich], gScreenIndex);
 }
-
-void EEROUnits::DrawBar(EERenderUnit* inUnit, const GEColor& inColor, const GEColor& inBackColor, float inFraction,
-                         long inRow)
-{
-    unsigned long theScreen = gScreenIndex;
-    EeGfxBarSizes theSizes = EEROBarSizes();
-    EeGfxBarRects theRects = ee_gfx_units_unit_bar(
-        reinterpret_cast<const EeGeViewport*>(&gU4E8F08), gOrthographicView,
-        reinterpret_cast<const EeGeTransformation*>(&inUnit->mTransformation),
-        reinterpret_cast<const EeGe3DPoint*>(&inUnit->mSource->mBar), inUnit->mScale, inFraction, (int32_t)inRow,
-        &theSizes);
-    if (theRects.kind == 0) {   // full: the fill, then its back
-        sFGBar->SetRectangle(EERORect(theRects, 0));
-        sFGBar->SetColorPerVertex(inColor, gBarBorderColor, inColor, inColor);
-        gRasterizer->Draw(sFGBar, theScreen);
-        sBGBar->SetRectangle(EERORect(theRects, 1));
-        sBGBar->SetColorPerVertex(gBarBorderColor, inColor, inColor, inColor);
-        gRasterizer->Draw(sBGBar, theScreen);
-    } else if (theRects.kind == 1) {   // partial: the fill and its back, then the rest and its back
-        sFGBar->SetRectangle(EERORect(theRects, 0));
-        sFGBar->SetColorPerVertex(inColor, gBarBorderColor, inColor, inColor);
-        sBGBar->SetRectangle(EERORect(theRects, 1));
-        sBGBar->SetColorPerVertex(gBarBorderColor, inColor, inColor, inColor);
-        gRasterizer->Draw(sBGBar, theScreen);
-        gRasterizer->Draw(sFGBar, theScreen);
-        sFGBar->SetRectangle(EERORect(theRects, 2));
-        sFGBar->SetColorPerVertex(inBackColor, gBarBorderColor, inBackColor, inBackColor);
-        sBGBar->SetRectangle(EERORect(theRects, 3));
-        sBGBar->SetColorPerVertex(gBarBorderColor, inBackColor, inBackColor, inBackColor);
-        gRasterizer->Draw(sBGBar, theScreen);
-        gRasterizer->Draw(sFGBar, theScreen);
-    } else {   // empty: the rest and its back
-        sFGBar->SetRectangle(EERORect(theRects, 0));
-        sFGBar->SetColorPerVertex(inBackColor, gBarBorderColor, inBackColor, inBackColor);
-        gRasterizer->Draw(sFGBar, theScreen);
-        sBGBar->SetRectangle(EERORect(theRects, 1));
-        sBGBar->SetColorPerVertex(gBarBorderColor, inBackColor, inBackColor, inBackColor);
-        gRasterizer->Draw(sBGBar, theScreen);
-    }
-}
-
-// Draws a building being placed: its model (fogged red where it cannot be placed), then for land buildings
-// its footprint outline and the edges of its blocked cells as screen lines
-void EEROUnits::DrawPlacement(EERenderUnitRecord& inRecord)
+int32_t EEROUnitsScreenLines(const EeGfxScreenLine* inLines, uint32_t inCount, float inStartU, float inEndU)
 {
     GETextureCoordinate theStart;
     GETextureCoordinate theEnd;
-    GERFogAttributes theFogAttributes;
-    unsigned long theScreen = gScreenIndex;
-    long theSize = inRecord.mUnit.mGridSize;
-    long theX = inRecord.mTileX;
-    long theY = inRecord.mTileY;
-    unsigned long theLineCount = 0;
-    inRecord.mUnit.mOpacity = 1.0f;
-    if (inRecord.mUnit.mScale != 0.0f) {
-        gRasterizer->SetShadingColorSource(0, gScreenIndex);
-        SetUnitLighting();
-        if (inRecord.mUnit.mCanPlace) {
-            this->DrawUnitModel(&inRecord.mUnit);
-        } else {
-            GE3DPoint theCenter;
-            GE3DPoint theCameraPoint;
-            unsigned long theFog = gRasterizer->GetFog(theScreen);
-            gRasterizer->GetFogAttributes(theFogAttributes, theScreen);
-            inRecord.mUnit.mTransformation.Apply(
-                inRecord.mUnit.mSource->mModels[inRecord.mUnit.mAnimation]->GetCenterPoint(), theCenter);
-            gU4E8F08.GetCameraInverse().Apply(theCenter, theCameraPoint);
-            float theStartDistance = theCameraPoint.GetY() - kFogDepth * 0.6f;
-            float theEndDistance = kFogDepth + theStartDistance;
-            gRasterizer->SetFog(1, theScreen);
-            gRasterizer->SetFogColor(GEColor(1.0f, 0.0f, 0.0f), theScreen);
-            gRasterizer->SetFogRange(theStartDistance, theEndDistance, theScreen);
-            this->DrawUnitModel(&inRecord.mUnit);
-            gRasterizer->SetFog(theFog, theScreen);
-            gRasterizer->SetFogType(theFogAttributes.mType, theScreen);
-            gRasterizer->SetFogColor(theFogAttributes.mColor, theScreen);
-            gRasterizer->SetFogRange(theFogAttributes.mStart, theFogAttributes.mEnd, theScreen);
-        }
+    theStart.SetU(inStartU);
+    theEnd.SetU(inEndU);
+    for (uint32_t i = 0; i < inCount; i++) {
+        sLines[i].SetTextureCoordinates(theStart, theEnd);
+        sLines[i].SetColor(*reinterpret_cast<const GEColor*>(&inLines[i].color));
+        sLines[i].SetStartPoint(*reinterpret_cast<const GE2DPoint*>(&inLines[i].start));
+        sLines[i].SetEndPoint(*reinterpret_cast<const GE2DPoint*>(&inLines[i].end));
     }
-    if (!inRecord.mUnit.mInfo->IsLandBuilding())
-        return;
-    SetWhiteLighting();
-    SetFogOff();
-    gRasterizer->SetShadingColorSource(1, gScreenIndex);
-    gU4E8F08.SetDepthRange(0.0f, 0.0f);
-    gRasterizer->SetViewport(gU4E8F08, theScreen);
-    gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
-    gRasterizer->SetZCompare(kCompareLess, theScreen);
-    theStart.SetU(gU4E9330);
-    theEnd.SetU(gU4E9330 + 3.0f);
-    // the outline, then the edges round the unusable cells: ee_gfx units.rs (RUST_PLAN R4.4)
-    static_assert(sizeof(inRecord.mHeights) == 144 * sizeof(float) && sizeof(inRecord.mCells) == 144, "the grid");
-    EeGfxPlacementLine theLines[kPlacementLineCapacity];
-    size_t theCount = ee_gfx_units_placement_lines(reinterpret_cast<const EeGeViewport*>(&gU4E8F08),
-                                                   gOrthographicView, (int32_t)theSize, (int32_t)theX,
-                                                   (int32_t)theY, &inRecord.mHeights[0][0], &inRecord.mCells[0][0],
-                                                   theLines, kPlacementLineCapacity);
-    for (size_t i = 0; i < theCount; i++) {
-        sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
-        sLines[theLineCount].SetColor(theLines[i].back != 0 ? gBarBackColor : gBarColor);
-        sLines[theLineCount].SetStartPoint(*reinterpret_cast<const GE2DPoint*>(&theLines[i].start));
-        sLines[theLineCount].SetEndPoint(*reinterpret_cast<const GE2DPoint*>(&theLines[i].end));
-        if (++theLineCount == 0x40) {
-            gRasterizer->Draw(sLines, theLineCount, theScreen);
-            theLineCount = 0;
-        }
-    }
-    if (theLineCount > 0)
-        gRasterizer->Draw(sLines, theLineCount, theScreen);
-    gU4E8F08.SetDepthRange(0.0f, 1.0f);
-    gRasterizer->SetViewport(gU4E8F08, theScreen);
-    gRasterizer->SetZBuffer(kZBufferTestAndWrite, theScreen);
-    gRasterizer->SetZCompare(kCompareLessEqual, theScreen);
+    return gRasterizer->Draw(sLines, inCount, gScreenIndex);
 }
-
-// Draws the selection ring (small, medium or large by size) under each selected ground unit, and with
-// collision spheres on, each unit's inner collision sphere
-void EEROUnits::DrawSelection()
+void EEROUnitsLabel(const uint8_t* inText, float inX, float inY, EeGfxColor inColor, uint32_t inFont,
+                    const EeGeRectangle* inView, const EeGeRectangle* inStrip, float inBottom)
 {
-    EERenderUnitMap::iterator theIterator;
-    unsigned long theScreen = gScreenIndex;
-    unsigned long i;
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    gRasterizer->SetCulling(kCullNone);
-    SetWhiteLighting();
-    gRasterizer->SetAlphaTestingRefValue(0.0f, theScreen);
-    for (i = 0; i < EERenderLists::sInstance.mSelectedUnits.size(); i++) {
-        EERenderUnit* theUnit = EERenderLists::sInstance.mSelectedUnits[i];
-        if (!(theUnit->mSelectionSize > 0.0f) || (theUnit->mInfo->mDomains & kMovementAir) != 0)
-            continue;
-        // the size choice and the growth: ee_gfx units.rs
-        EeGfxSelectionRing theRing = ee_gfx_units_selection_ring(theUnit->mSelectionSize);
-        unsigned long theSize = theRing.model;
-        sSelectionModels[theSize]->SetGraphicsPostModelTransform(theUnit->mTransformation);
-        sSelectionModels[theSize]->SetGraphicsScale(theRing.scale);
-        sSelectionModels[theSize]->PrepareTransforms();
-        gRasterizer->Draw(sSelectionModels[theSize], theScreen, 1.0f, gOrthographicView);
-    }
-    if (!gShowCollisionSpheres)
-        return;
-    for (theIterator = EERenderLists::sInstance.mUnits0.begin();
-         theIterator != EERenderLists::sInstance.mUnits0.end(); theIterator++) {
-        EERenderUnit* theUnit = theIterator->second;
-        if (theUnit->mCategory == kUnitCategoryAmbient || theUnit->mCategory == kUnitCategoryResource || theUnit->mAnimation == 5 || theUnit->mAnimation == 4)
-            continue;
-        float theSize = theUnit->mInfo->GetInnerCollisionSphere();
-        if (!(theSize > 0.0f))
-            continue;
-        sSelectionModels[0]->SetGraphicsPostModelTransform(theUnit->mTransformation);
-        sSelectionModels[0]->SetGraphicsScale(theSize);
-        sSelectionModels[0]->PrepareTransforms();
-        gRasterizer->Draw(sSelectionModels[0], theScreen, 1.0f, gOrthographicView);
-    }
-}
-
-// Draws one map object's model at its frame, scale and location, with alpha test and z writes by its opacity
-void EEROUnits::DrawObjectModel(GETransformation& ioTransformation, EERenderShadow* inObject)
-{
-    unsigned long theScreen = gScreenIndex;
-    EEGraphicObject* theObject = inObject->mObject;
-    GEModel* theModel = theObject->mModels[inObject->mModelIndex];
-    GETexture* theTexture = theObject->mTextures[inObject->mModelIndex];
-    if (!(inObject->mModelScale > 0.0f))
-        return;
-    if (theObject->mAlphaReference > inObject->mOpacity)
-        gRasterizer->SetAlphaTestingRefValue(kMinAlphaRef, gScreenIndex);
-    else
-        gRasterizer->SetAlphaTestingRefValue(theObject->mAlphaReference, gScreenIndex);
-    gRasterizer->SetZBuffer(inObject->mOpacity > kZWriteOpacity ? 3 : 2, theScreen);
-    theModel->SetOpacity(inObject->mOpacity);
-    theModel->SetTexture(theTexture, theScreen);
-    theModel->SetGraphicsCurrentFrame(inObject->mCurrentFrame);
-    theModel->SetGraphicsNextFrame(inObject->mNextFrame);
-    theModel->SetFractionalFramePosition(inObject->mFraction);
-    theModel->SetGraphicsScale(inObject->mModelScale);
-    ioTransformation.SetPosition(inObject->mLocation.GetX(), inObject->mLocation.GetY(),
-                                 inObject->mLocation.GetZ());
-    theModel->SetGraphicsPostModelTransform(ioTransformation);
-    theModel->PrepareTransforms();
-    gRasterizer->Draw(theModel, theScreen, inObject->mObject->mOpacity, gOrthographicView);
-}
-
-// Draws a selected object's health bar above the object at its bar tag, restoring the blending
-void EEROUnits::DrawObjectBars(EERenderShadow* inObject)
-{
-    unsigned long theScreen = gScreenIndex;
-    unsigned long theSource;
-    unsigned long theDestination;
-    gRasterizer->GetBlending(theSource, theDestination, theScreen);
-    gRasterizer->SetBlending(kBlendOne, kBlendZero, theScreen);
-    sFGBar->SetColor(gBarColor);
-    sBGBar->SetColor(gBarBackColor);
-    // The bar tag is relative to the object: its location is added before projecting (it was projected near the map
-    // origin); the back part runs to the bar's full width (it was shortened by the filled width a second time).
-    EeGfxBarSizes theSizes = EEROBarSizes();
-    EeGfxBarRects theRects = ee_gfx_units_object_bar(
-        reinterpret_cast<const EeGeViewport*>(&gU4E8F08), gOrthographicView,
-        reinterpret_cast<const EeGe3DPoint*>(&inObject->mLocation),
-        reinterpret_cast<const EeGe3DPoint*>(&inObject->mObject->mBar), inObject->mModelScale, inObject->mHealth,
-        &theSizes);
-    if (theRects.kind == 0) {   // full
-        sFGBar->SetRectangle(EERORect(theRects, 0));
-        gRasterizer->Draw(sFGBar, theScreen);
-    } else if (theRects.kind == 1) {   // partial: the fill, then the back
-        sFGBar->SetRectangle(EERORect(theRects, 0));
-        gRasterizer->Draw(sFGBar, theScreen);
-        sBGBar->SetRectangle(EERORect(theRects, 1));
-        gRasterizer->Draw(sBGBar, theScreen);
-    } else {   // empty: the back
-        sBGBar->SetRectangle(EERORect(theRects, 0));
-        gRasterizer->Draw(sBGBar, theScreen);
-    }
-    gRasterizer->SetBlending(theSource, theDestination, theScreen);
-}
-
-// Draws the map objects' models facing the camera, lit as fogged or not, translucent ones additively
-// when the card cannot modulate texture alpha
-void EEROUnits::DrawObjectModels(EERenderShadowMap& inObjects)
-{
-    GETransformation theTransformation;
-    EERenderShadowMap::iterator theIterator;
-    unsigned long theScreen = gScreenIndex;
-    bool theCanModulate = gRasterizer->GetCanModulateTextureAlpha(theScreen);
-    SetMapObjectLighting();
-    theTransformation.SetOrientationYPR(gRenderEnvironment.mCameraYaw - 0.7853982f, 0.0f, 0.0f);
-    for (theIterator = inObjects.begin(); theIterator != inObjects.end(); theIterator++) {
-        EERenderShadow* theObject = theIterator->second;
-        if (!theObject->mIsFogged)
-            RestoreUnitLighting();
-        else
-            DimUnitLighting();
-        if (theCanModulate) {
-            gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-        } else if (theObject->mOpacity < 1.0f) {
-            gRasterizer->SetAmbientIntensity(kTranslucentAmbientScale * theObject->mOpacity, theScreen);
-            gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
-        }
-        this->DrawObjectModel(theTransformation, theObject);
-    }
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-}
-
-// Draws the selection ring at each selected object that has a ring size
-void EEROUnits::DrawObjectSelection()
-{
-    GETransformation theTransformation;
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    gRasterizer->SetCulling(kCullNone);
-    SetWhiteLighting();
-    for (unsigned long i = 0; i < EERenderLists::sInstance.mSelectedObjects.size(); i++) {
-        EERenderShadow* theObject = EERenderLists::sInstance.mSelectedObjects[i];
-        theTransformation.SetPosition(theObject->mLocation.GetX(), theObject->mLocation.GetY(),
-                                      theObject->mLocation.GetZ());
-        if (theObject->mSelectionSize > 0.0f) {
-            sSelectionModels[0]->SetGraphicsPostModelTransform(theTransformation);
-            sSelectionModels[0]->SetGraphicsScale(theObject->mSelectionSize);
-            sSelectionModels[0]->PrepareTransforms();
-            // Drawn only with its own transform and size (an object without a ring size redrew the previous
-            // object's ring).
-            gRasterizer->Draw(sSelectionModels[0], theScreen, 1.0f, gOrthographicView);
-        }
-    }
-}
-
-// Draws a unit's health bar (when it has health) and one bar per extra fraction above it; returns the bars'
-// height in pixels (5 per bar)
-long EEROUnits::DrawUnitBars(EERenderUnit* inUnit)
-{
-    unsigned long i = 0;
-    unsigned long theRow = 0;
-    if (inUnit->mHealth >= 0.0f) {
-        theRow = 1;
-        this->DrawBar(inUnit, gHealthColor, gHealthBackColor, inUnit->mHealth, 0);
-    }
-    for (; i < inUnit->mHealthBars.size(); i++) {
-        this->DrawBar(inUnit, gBarColor, gBarBackColor, inUnit->mHealthBars[i], theRow);
-        theRow++;
-    }
-    return theRow * 5.0f;
-}
-
-// Draws a unit's model: frame textures, player colour, turret/orbital/wheel rotations, frames and opacity
-// (model detail), then its second graphic object's model (a robotic farm's at full opacity when gone or at 1 hp)
-void EEROUnits::DrawUnitModel(EERenderUnit* inUnit)
-{
-    GETransformation theRotation;
-    GETransformation theTransformation;
-    GEModel* theModel = inUnit->mSource->mModels[inUnit->mAnimation];
-    GETexture* theTexture = inUnit->mSource->mTextures[inUnit->mAnimation];
-    unsigned long theScreen = gScreenIndex;
-    unsigned long theYawCount = inUnit->mTurretAngles.size();
-    unsigned long theRollCount = inUnit->mOrbitalAngles.size();
-    unsigned long thePitchCount = inUnit->mWheelAngles.size();
-    unsigned long i;
-    if (!inUnit->mSource->mIsDrawn || !(inUnit->mScale > 0.0f))
-        return;
-    if (inUnit->mSource->mAlphaReference <= inUnit->mOpacity)
-        gRasterizer->SetAlphaTestingRefValue(inUnit->mSource->mAlphaReference, gScreenIndex);
-    else
-        gRasterizer->SetAlphaTestingRefValue(kMinAlphaRef, gScreenIndex);
-    gRasterizer->SetZBuffer(inUnit->mOpacity <= kZWriteOpacity ? 2 : 3, theScreen);
-    inUnit->mSource->SetGroupColor(inUnit->mPlayerColor, inUnit->mAnimation);
-    theModel->SetOpacity(inUnit->mOpacity);
-    theModel->SetTexture(theTexture, theScreen);
-    for (unsigned long theMaterial = 1; theMaterial < theModel->GetMaterialCount(); theMaterial++) {
-        if (theTexture == NULL)
-            continue;
-        GEMaterial* theFirst = theModel->GetMaterial(theMaterial);
-        theFirst->SetTexture(theFirst->GetTextureIndex() < theTexture->GetFrameCount() ? theTexture->GetFrameTexture(theFirst->GetTextureIndex()) : theTexture->GetFrameTexture(0), theScreen);   // past the frame count, frame 0 (0x115e53 jae)
-        for (unsigned long theSub = 0; theSub < theModel->GetSubModelCount(); theSub++) {
-            GEModel* theSubModel = theModel->GetSubModel(theSub);
-            for (unsigned long j = 0; j < theSubModel->GetMaterialCount(); j++) {
-                GEMaterial* theOther = theSubModel->GetMaterial(j);
-                if (theOther->GetTextureIndex() < theTexture->GetFrameCount())
-                    theOther->SetTexture(theTexture->GetFrameTexture(theOther->GetTextureIndex()), theScreen);
-            }
-        }
-    }
-    for (i = 0; i < theYawCount; i++) {
-        theRotation.SetOrientationYPR(inUnit->mTurretAngles[i], 0.0f, 0.0f);
-        inUnit->mTurretModels[i]->SetGraphicsPreModelTransform(theRotation);
-    }
-    for (i = 0; i < theRollCount; i++) {
-        theRotation.SetOrientationYPR(inUnit->mOrbitalAngles[i], 0.0f, 0.0f);
-        inUnit->mOrbitalModels[i]->SetGraphicsPreModelTransform(theRotation);
-    }
-    for (i = 0; i < thePitchCount; i++) {
-        theRotation.SetOrientationYPR(0.0f, inUnit->mWheelAngles[i], 0.0f);
-        inUnit->mWheelModels[i]->SetGraphicsPreModelTransform(theRotation);
-    }
-    if (inUnit->mHasSubModelOffset) {
-        GEModel* theSubModel = theModel->GetSubModel(0);
-        theTransformation = theSubModel->GetGraphicsPostModelTransform();
-        theTransformation.SetPosition(theSubModel->GetInternalTransform(0).GetX() * inUnit->mSubModelOffsetScale * -1.0f,
-                                      theSubModel->GetInternalTransform(0).GetY() * inUnit->mSubModelOffsetScale * -1.0f,
-                                      theSubModel->GetInternalTransform(0).GetZ() * inUnit->mSubModelOffsetScale * -1.0f);
-        theSubModel->SetGraphicsPostModelTransform(theTransformation);
-    }
-    theModel->SetGraphicsCurrentFrame(inUnit->mCurrentFrame);
-    theModel->SetGraphicsNextFrame(inUnit->mNextFrame);
-    theModel->SetGraphicsScale(inUnit->mScale);
-    theModel->SetGraphicsPostModelTransform(inUnit->mTransformation);
-    theModel->SetFractionalFramePosition(gInterpolateFrames ? inUnit->mFraction : 0.0f);
-    theModel->PrepareTransforms();
-    if (inUnit->mUnitClassIndex == kUnitTypeWaypoint)
-        theModel->GetMaterial(0)->SetColor(inUnit->mTintColor);
-    if (gModelDetail == 0)
-        gRasterizer->Draw(theModel, theScreen, inUnit->mSource->mOpacity, gOrthographicView);
-    else if (gModelDetail == 1)
-        gRasterizer->Draw(theModel, theScreen, inUnit->mSource->mOpacity * 0.5f, gOrthographicView);
-    else
-        gRasterizer->Draw(theModel, theScreen, 1.0f, gOrthographicView);
-    if (inUnit->mSource2 == NULL || !inUnit->mSource2->mIsDrawn)
-        return;
-    theModel = inUnit->mSource2->mModel;
-    if (theModel == NULL)
-        return;
-    theModel->GetMaterial(0)->SetTexture(inUnit->mSource2->mTexture, theScreen);
-    inUnit->mSource2->SetGroupColor(inUnit->mPlayerColor, 0);
-    theTransformation.SetPosition(inUnit->mTransformation.GetX(), inUnit->mTransformation.GetY(),
-                                  inUnit->mTransformation.GetZ());
-    theModel->SetGraphicsPostModelTransform(theTransformation);
-    theModel->SetGraphicsScale(inUnit->mScale);
-    theModel->PrepareTransforms();
-    if (inUnit->mSecondFullOpacity)   // port: taken by FillRenderLists (R5a.3), not read from the live unit
-        theModel->SetOpacity(1.0f);
-    else
-        theModel->SetOpacity(inUnit->mOpacity);
-    gRasterizer->Draw(theModel, theScreen, inUnit->mSource->mOpacity, gOrthographicView);
-}
-
-// Draws the units' models, tinted ones inside a fog band of their tint colour, translucent ones additively
-// when the card cannot modulate texture alpha
-void EEROUnits::DrawUnitModels(EERenderUnitMap& inUnits)
-{
-    EERenderUnitMap::iterator theIterator;
-    unsigned long theScreen = gScreenIndex;
-    unsigned long theFog;
-    GERFogAttributes theFogAttributes;
-    bool theCanModulate = gRasterizer->GetCanModulateTextureAlpha(theScreen);
-    SetUnitLighting();
-    gRasterizer->SetCulling(kCullCW);
-    gRasterizer->GetLighting(theScreen);
-    for (theIterator = inUnits.begin(); theIterator != inUnits.end(); theIterator++) {
-        EERenderUnit* theUnit = theIterator->second;
-        if (theUnit->mIsTinted) {
-            GE3DPoint theCenter;
-            GE3DPoint theCameraPoint;
-            theFog = gRasterizer->GetFog(theScreen);
-            gRasterizer->GetFogAttributes(theFogAttributes, theScreen);
-            theUnit->mTransformation.Apply(theUnit->mSource->mModels[theUnit->mAnimation]->GetCenterPoint(), theCenter);
-            gU4E8F08.GetCameraInverse().Apply(theCenter, theCameraPoint);
-            float theStartDistance = theCameraPoint.GetY() - kFogDepth * theUnit->mFogScale;
-            float theEndDistance = kFogDepth + theStartDistance;
-            gRasterizer->SetFog(1, theScreen);
-            gRasterizer->SetFogColor(theUnit->mTintColor, theScreen);
-            gRasterizer->SetFogRange(theStartDistance, theEndDistance, theScreen);
-        }
-        if (!theUnit->mIsFogged)
-            RestoreUnitLighting();
-        else
-            DimUnitLighting();
-        if (theCanModulate) {
-            gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-        } else if (theUnit->mOpacity == 1.0f) {
-            gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-        } else {
-            gRasterizer->SetAmbientIntensity(kTranslucentAmbientScale * theUnit->mOpacity, theScreen);
-            gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
-        }
-        this->DrawUnitModel(theUnit);
-        if (!theUnit->mIsTinted)
-            continue;
-        gRasterizer->SetFog(theFog, theScreen);
-        gRasterizer->SetFogType(theFogAttributes.mType, theScreen);
-        gRasterizer->SetFogColor(theFogAttributes.mColor, theScreen);
-        gRasterizer->SetFogRange(theFogAttributes.mStart, theFogAttributes.mEnd, theScreen);
-    }
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-}
-
-// Sizes the bars from the window and draws the bars of every selected unit and object and the pointed-at ones
-void EEROUnits::DrawBars()
-{
-    unsigned long theWidth = gGameWindow->GetWidth();
-    unsigned long theHeight = gGameWindow->GetHeight();
-    unsigned long i;
-    unsigned long theCount;
-    gRasterizer->SetBlending(kBlendOne, kBlendZero, gScreenIndex);
-    gRasterizer->SetCulling(kCullNone);
-    SetWhiteLighting();
-    EeGfxBarSizes theSizes = ee_gfx_units_bar_sizes((uint32_t)theWidth, (uint32_t)theHeight);   // ee_gfx units.rs
-    sBarWidth = theSizes.width;
-    sBarHeight = theSizes.height;
-    sBarStep = theSizes.step;
-    theCount = EERenderLists::sInstance.mSelectedUnits.size();
-    for (i = 0; i < theCount; i++)
-        this->DrawUnitBars(EERenderLists::sInstance.mSelectedUnits[i]);
-    theCount = EERenderLists::sInstance.mSelectedObjects.size();
-    for (i = 0; i < theCount; i++)
-        this->DrawObjectBars(EERenderLists::sInstance.mSelectedObjects[i]);
-    if (EERenderLists::sInstance.mSelectedUnit != NULL)
-        this->DrawUnitBars(EERenderLists::sInstance.mSelectedUnit);
-    if (EERenderLists::sInstance.mSelectedObject != NULL)
-        this->DrawObjectBars(EERenderLists::sInstance.mSelectedObject);
-}
-
-// Draws the units' text labels (a name starting with a blank, and the debug label above its unit), clipped
-// to the view above and beside the main game form's bottom strip unless the camera is free
-void EEROUnits::DrawLabels(EERenderUnit* inUnits, unsigned long inCount)
-{
-    GE2DPoint theScreenPoint;
-    GE3DPoint theOffset;
-    GERectangle theView;
-    GERectangle theStrip;
     GEText theText(gU531994);
-    UWideString theString;
-    unsigned long theWidth = gGameWindow->GetWidth();
-    unsigned long theHeight = gGameWindow->GetHeight();
-    // the view above the bottom strip, the strip beside the panels and the font: ee_gfx units.rs (RUST_PLAN R4.4)
-    EeGfxLabelClip theClip = ee_gfx_units_label_clip(
-        reinterpret_cast<const EeGeRectangle*>(&gU4E8F08.GetViewRectangle()), (uint32_t)theWidth, (uint32_t)theHeight,
-        gFreeCamera, gUnitPanelActive);
-    theView = *reinterpret_cast<const GERectangle*>(&theClip.view);
-    theStrip = *reinterpret_cast<const GERectangle*>(&theClip.strip);
-    float theBottom = theClip.bottom;
-    theText.SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
+    theText.SetFgColor(GEColor(inColor.red, inColor.green, inColor.blue));
     theText.SetIsTransparent(true);
     theText.SetAlignment(kTextAlignCenter);
-    if (theClip.font == 2)
+    if (inFont == 2)
         theText.SetFont(gFontTahoma16);
-    else if (theClip.font == 1)
+    else if (inFont == 1)
         theText.SetFont(gFontTahoma12);
-    for (unsigned long i = 0; i < inCount; i++) {
-        EERenderUnit* theUnit = &inUnits[i];
-        if (theUnit->mCommandType != 0) {
-            theString = theUnit->mName;
-            if (theString != gEmptyString && theString[0] == ' ') {
-                theText.SetText(theString);
-                theOffset.SetX(theUnit->mTransformation.GetX());
-                theOffset.SetY(theUnit->mTransformation.GetY());
-                theOffset.SetZ(theUnit->mTransformation.GetZ());
-                GetScreenPoint(theOffset, theScreenPoint);
-                theText.SetLocation(theScreenPoint);
-            } else {
-                continue;
-            }
-        } else if (gU529044 == theUnit) {
-            sprintf(theString, "%s", (const char*)gU529030);
-            theText.SetText(theString);
-            ee_gfx_units_label_point(reinterpret_cast<const EeGeViewport*>(&gU4E8F08), gOrthographicView,
-                                     reinterpret_cast<const EeGeTransformation*>(&theUnit->mTransformation),
-                                     reinterpret_cast<const EeGe3DPoint*>(&theUnit->mSource->mBar), theUnit->mScale,
-                                     (uint64_t)theUnit->mHealthBars.size(),
-                                     reinterpret_cast<EeGe2DPoint*>(&theScreenPoint));
-            theText.SetLocation(theScreenPoint);
-            theText.SetFgColor(theUnit->mPlayerColor);
-        } else {
-            continue;
-        }
-        float theTextHeight = gFreeCamera ? 0.0f : theText.GetTextExtent().GetHeight();
-        uint32_t theTargets = ee_gfx_units_label_targets(theScreenPoint.GetY(), theTextHeight, theBottom, gFreeCamera);
-        if (theTargets & 1)
-            gUIManager->mMainGameForm->DrawClippedText(theView, &theText, NULL);
-        if (theTargets & 2)
-            gUIManager->mMainGameForm->DrawClippedText(theStrip, &theText, NULL);
-        if (theTargets & 4)
-            gUIManager->mScenarioEditorForm->DrawClippedText(theView, &theText, NULL);
-    }
+    theText.SetText(UWideString(reinterpret_cast<const char*>(inText)));
+    GE2DPoint thePoint;
+    thePoint.SetX(inX);
+    thePoint.SetY(inY);
+    theText.SetLocation(thePoint);
+    const GERectangle& theView = *reinterpret_cast<const GERectangle*>(inView);
+    float theTextHeight = gFreeCamera ? 0.0f : theText.GetTextExtent().GetHeight();
+    uint32_t theTargets = ee_gfx_units_label_targets(inY, theTextHeight, inBottom, gFreeCamera);
+    if (theTargets & 1)
+        gUIManager->mMainGameForm->DrawClippedText(theView, &theText, NULL);
+    if (theTargets & 2)
+        gUIManager->mMainGameForm->DrawClippedText(*reinterpret_cast<const GERectangle*>(inStrip), &theText, NULL);
+    if (theTargets & 4)
+        gUIManager->mScenarioEditorForm->DrawClippedText(theView, &theText, NULL);
 }
 
-// Loads the units' media: bar rhombi, command and dotted-line textures, the line buffer, the area-effect
-// ring model and the three selection ring models (segment count by detail level)
-void EEROUnits::LoadMedia()
+namespace {
+// one render unit as its passes read it (its graphic objects' models, textures and flags, its class's)
+EeGfxRenderUnit UnitRecord(EERenderUnit& inUnit)
 {
-    GETextureDescription theDescription;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mPixelDepth = 16;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    GETextureCoordinate theLineStart;
-    GETextureCoordinate theLineEnd(3.0f, 0.0f);
-    UString theName;
-    unsigned long theSegments;
-    unsigned long i;
-    sBGBar = new GERhombus;
-    sFGBar = new GERhombus;
-    ESVERIFY_AT(sBGBar != NULL, 1823);
-    ESVERIFY_AT(sFGBar != NULL, 1824);
-    theDescription.mHasAlpha = false;
-    theDescription.mCreateMIPMaps = false;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mPixelDepth = 0x10;
-    theDescription.mSurfaceVolatility = 1;
-    theName = "textures\\DottedLine";
-    sDottedLineTexture = gTextureManager->LoadTexture(theName, theDescription);
-    sDottedLineTexture->Reference();
-    sDottedLineTexture->SetStageAlphaMode(kStageOpModulate, -1);
-    sDottedLineTexture->SetStageColorMode(kStageOpModulate, -1);
-    sDottedLineTexture->SetStageMinFilterMode(0, -1);
-    sDottedLineTexture->SetStageMagFilterMode(0, -1);
-    sDottedLineTexture->SetStageMipFilterMode(kMipFilterNone, -1);
-    sDottedLineTexture->SetStageMipMapBias(0.0f, -1);
-    sDottedLineTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mPixelDepth = 0x10;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    theDescription.mSurfaceVolatility = 1;
-    theName = "textures\\UnitCommandConfirmation";
-    sTexture4E0 = gTextureManager->LoadTexture(theName, theDescription);
-    sTexture4E0->Reference();
-    sTexture4E0->SetStageAlphaMode(kStageOpModulate, -1);
-    sTexture4E0->SetStageColorMode(kStageOpModulate, -1);
-    sTexture4E0->SetStageMinFilterMode(1, -1);
-    sTexture4E0->SetStageMagFilterMode(1, -1);
-    sTexture4E0->SetStageMipFilterMode(kMipFilterPoint, -1);
-    sTexture4E0->SetStageMipMapBias(-1.0f, -1);
-    sTexture4E0->SetStageTextureAddressingMode(kAddressingWrap, -1);
-    theName = "textures\\PathCommandConfirmation";
-    sTexture4E4 = gTextureManager->LoadTexture(theName, theDescription);
-    sTexture4E4->Reference();
-    sTexture4E4->SetStageAlphaMode(kStageOpModulate, -1);
-    sTexture4E4->SetStageColorMode(kStageOpModulate, -1);
-    sTexture4E4->SetStageMinFilterMode(1, -1);
-    sTexture4E4->SetStageMagFilterMode(1, -1);
-    sTexture4E4->SetStageMipFilterMode(kMipFilterPoint, -1);
-    sTexture4E4->SetStageMipMapBias(-1.0f, -1);
-    sTexture4E4->SetStageTextureAddressingMode(kAddressingWrap, -1);
-    theName = "textures\\ClickCommandConfirmation";
-    sTexture4E8 = gTextureManager->LoadTexture(theName, theDescription);
-    sTexture4E8->Reference();
-    sTexture4E8->SetStageAlphaMode(kStageOpModulate, -1);
-    sTexture4E8->SetStageColorMode(kStageOpModulate, -1);
-    sTexture4E8->SetStageMinFilterMode(1, -1);
-    sTexture4E8->SetStageMagFilterMode(1, -1);
-    sTexture4E8->SetStageMipFilterMode(kMipFilterPoint, -1);
-    sTexture4E8->SetStageMipMapBias(-1.0f, -1);
-    sTexture4E8->SetStageTextureAddressingMode(kAddressingWrap, -1);
-    sLines = new GELine[0x40];
-    for (i = 0; i < 0x40; i++) {
-        sLines[i].SetColor(gBarColor);
-        sLines[i].SetTexture(sDottedLineTexture, gScreenIndex);
-        sLines[i].SetTextureCoordinates(theLineStart, theLineEnd);
+    EeGfxRenderUnit r = {};
+    r.transformation = *reinterpret_cast<const EeGeTransformation*>(&inUnit.mTransformation);
+    r.player_color = {inUnit.mPlayerColor.mRed, inUnit.mPlayerColor.mGreen, inUnit.mPlayerColor.mBlue};
+    r.tint_color = {inUnit.mTintColor.mRed, inUnit.mTintColor.mGreen, inUnit.mTintColor.mBlue};
+    EEGraphicObject* theObject = inUnit.mSource;
+    GEModel* theModel = theObject->mModels[inUnit.mAnimation];
+    r.object = theObject;
+    r.model = theModel;
+    r.texture = theObject->mTextures[inUnit.mAnimation];
+    if (theModel != NULL)
+        r.center = *reinterpret_cast<const EeGe3DPoint*>(&theModel->GetCenterPoint());
+    r.bar = *reinterpret_cast<const EeGe3DPoint*>(&theObject->mBar);
+    r.drawn = theObject->mIsDrawn;
+    r.alpha_ref = theObject->mAlphaReference;
+    r.object_opacity = theObject->mOpacity;
+    if (inUnit.mSource2 != NULL) {
+        r.object2 = inUnit.mSource2;
+        r.model2 = inUnit.mSource2->mModel;
+        r.texture2 = inUnit.mSource2->mTexture;
+        r.drawn2 = inUnit.mSource2->mIsDrawn;
     }
-    theName = "textures\\UnitSelection";
-    sSelectionTexture = gTextureManager->LoadTexture(theName, theDescription);
-    sSelectionTexture->Reference();
-    sSelectionTexture->SetStageAlphaMode(kStageOpModulate, -1);
-    sSelectionTexture->SetStageColorMode(kStageOpModulate, -1);
-    sSelectionTexture->SetStageMinFilterMode(1, -1);
-    sSelectionTexture->SetStageMagFilterMode(1, -1);
-    sSelectionTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
-    sSelectionTexture->SetStageMipMapBias(-1.0f, -1);
-    sSelectionTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
-    theName = "textures\\UnitAreaEffectCircle";
-    sAreaEffectTexture = gTextureManager->LoadTexture(theName, theDescription);
-    sAreaEffectTexture->Reference();
-    sAreaEffectTexture->SetStageAlphaMode(kStageOpModulate, -1);
-    sAreaEffectTexture->SetStageColorMode(kStageOpModulate, -1);
-    sAreaEffectTexture->SetStageMinFilterMode(1, -1);
-    sAreaEffectTexture->SetStageMagFilterMode(1, -1);
-    sAreaEffectTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
-    sAreaEffectTexture->SetStageMipMapBias(-1.0f, -1);
-    sAreaEffectTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
-    sRingModel = gModelManager->CreateModel(0xa, 0x1a, 1, 0, 1, 0, "area effect", 1);
-    // the ring's points, texture coordinates and triangles: ee_gfx models.rs (RUST_PLAN R4.4)
-    EeGfxRingModel theRing = ee_gfx_units_area_effect_ring();
-    for (i = 0; i < 0x1a; i++) {
-        sRingModel->GetVertexArray(0)->SetPoint(*reinterpret_cast<const GE3DPoint*>(&theRing.points[i]), i);
-        sRingModel->GetVertexArray(0)->SetTextureCoordinate(
-            *reinterpret_cast<const GETextureCoordinate*>(&theRing.coords[i]), i);
-    }
-    for (i = 0; i < 10; i++) {
-        sRingModel->GetPolygonArray(0)->SetVertexIndex1(i, theRing.indices[i * 3]);
-        sRingModel->GetPolygonArray(0)->SetVertexIndex2(i, theRing.indices[i * 3 + 1]);
-        sRingModel->GetPolygonArray(0)->SetVertexIndex3(i, theRing.indices[i * 3 + 2]);
-    }
-    for (i = 0; i < 0x1a; i++) {
-        sRingModel->GetVertexArray(0)->SetColor(gRingHighlightColor, i);
-        sRingModel->GetVertexArray(0)->SetOpacity(1.0f, i);
-    }
-    sRingModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    sRingModel->GetMaterial(0)->SetPolygonRangeLength(0xa, 0);
-    sRingModel->GetMaterial(0)->SetVertexStartingIndex(0);
-    sRingModel->GetMaterial(0)->SetVertexRangeLength(0x1a);
-    sRingModel->GetMaterial(0)->SetTexture(sAreaEffectTexture, gScreenIndex);
-    sRingModel->ComputeModelNormals();
-    sRingModel->ComputeBoundingVolumes();
-    // the selection rings' segments, points, texture coordinates, triangles and colours: ee_gfx models.rs
-    theSegments = ee_gfx_units_selection_segments((int32_t)gModelDetail);
-    const GEColor* theColors[3] = { &gU5294A0, &gU529490, &gSelectionRingDark };
-    for (unsigned long k = 0; k < 3; k++) {
-        sSelectionModels[k] = gModelManager->CreateModel(theSegments * 2, theSegments * 2, 1, 0, 1, 0,
-                                                         "unit selection", 1);
-        EeGfxSelectionModel theModel = ee_gfx_units_selection_model((int32_t)gModelDetail, (uint32_t)k);
-        GEVertexArray* theVertices = sSelectionModels[k]->GetVertexArray(0);
-        for (i = 0; i < theModel.count; i++) {
-            theVertices->SetPoint(*reinterpret_cast<const GE3DPoint*>(&theModel.points[i]), i);
-            theVertices->SetTextureCoordinate(*reinterpret_cast<const GETextureCoordinate*>(&theModel.coords[i]), i);
-        }
-        for (i = 0; i < theModel.count; i++) {
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(i, theModel.indices[i * 3]);
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex2(i, theModel.indices[i * 3 + 1]);
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex3(i, theModel.indices[i * 3 + 2]);
-        }
-        for (i = 0; i < theModel.count; i++)
-            theVertices->SetColor(*theColors[theModel.colors[i]], i);
-        for (i = 0; i < theModel.count; i++)
-            theVertices->SetOpacity(1.0f, i);
-        sSelectionModels[k]->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-        sSelectionModels[k]->GetMaterial(0)->SetPolygonRangeLength(theSegments * 2, 0);
-        sSelectionModels[k]->GetMaterial(0)->SetVertexStartingIndex(0);
-        sSelectionModels[k]->GetMaterial(0)->SetVertexRangeLength(theSegments * 2);
-        sSelectionModels[k]->GetMaterial(0)->SetTexture(sSelectionTexture, gScreenIndex);
-        sSelectionModels[k]->ComputeModelNormals();
-        sSelectionModels[k]->ComputeBoundingVolumes();
-    }
+    r.health_bars = inUnit.mHealthBars.empty() ? NULL : &inUnit.mHealthBars[0];
+    r.health_bar_count = inUnit.mHealthBars.size();
+    r.turret_angles = inUnit.mTurretAngles.empty() ? NULL : &inUnit.mTurretAngles[0];
+    r.turret_models = inUnit.mTurretModels.empty() ? NULL : reinterpret_cast<void* const*>(&inUnit.mTurretModels[0]);
+    r.turret_count = min(inUnit.mTurretAngles.size(), inUnit.mTurretModels.size());
+    r.orbital_angles = inUnit.mOrbitalAngles.empty() ? NULL : &inUnit.mOrbitalAngles[0];
+    r.orbital_models = inUnit.mOrbitalModels.empty() ? NULL : reinterpret_cast<void* const*>(&inUnit.mOrbitalModels[0]);
+    r.orbital_count = min(inUnit.mOrbitalAngles.size(), inUnit.mOrbitalModels.size());
+    r.wheel_angles = inUnit.mWheelAngles.empty() ? NULL : &inUnit.mWheelAngles[0];
+    r.wheel_models = inUnit.mWheelModels.empty() ? NULL : reinterpret_cast<void* const*>(&inUnit.mWheelModels[0]);
+    r.wheel_count = min(inUnit.mWheelAngles.size(), inUnit.mWheelModels.size());
+    r.name = reinterpret_cast<const uint8_t*>((const char*)inUnit.mName);
+    r.scale = inUnit.mScale;
+    r.selection_size = inUnit.mSelectionSize;
+    r.opacity = inUnit.mOpacity;
+    r.health = inUnit.mHealth;
+    r.fraction = inUnit.mFraction;
+    r.sub_model_offset_scale = inUnit.mSubModelOffsetScale;
+    r.fog_scale = inUnit.mFogScale;
+    r.inner_collision_sphere = inUnit.mInfo->GetInnerCollisionSphere();
+    r.category = (int32_t)inUnit.mCategory;
+    r.command_type = (int32_t)inUnit.mCommandType;
+    r.animation = (int32_t)inUnit.mAnimation;
+    r.current_frame = (uint32_t)inUnit.mCurrentFrame;
+    r.next_frame = (uint32_t)inUnit.mNextFrame;
+    r.area_effect_strength = (uint32_t)inUnit.mAreaEffectStrength;
+    r.air = (inUnit.mInfo->mDomains & kMovementAir) != 0;
+    r.waypoint = inUnit.mUnitClassIndex == kUnitTypeWaypoint;
+    r.fogged = inUnit.mIsFogged;
+    r.tinted = inUnit.mIsTinted;
+    r.has_sub_model_offset = inUnit.mHasSubModelOffset;
+    r.second_full_opacity = inUnit.mSecondFullOpacity;
+    return r;
 }
 
-void EEROUnits::RenderScene()
+// one placed map object as its passes read it
+EeGfxRenderObject ObjectRecord(const EERenderShadow& inObject)
 {
-    EERenderUnitRecord theRecord;
-    EEEffectQueue::iterator theIterator;
-    std::deque<EEEffect*>::iterator theEffect;
-    float theAlphaRefValue = gRasterizer->GetAlphaTestingRefValue(gScreenIndex);
-    long theCount = EERenderLists::sInstance.mGhostRecords.size();
-    unsigned long theScreen = gScreenIndex;
-    SetSceneFog();
-    if (!gRenderSnapshot.mInCinematic) {
-        gU4E8F08.SetDepthRange(0.0f, 0.0f);
-        gRasterizer->SetViewport(gU4E8F08, theScreen);
-        gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
-        gRasterizer->SetZCompare(kCompareLess, theScreen);
-        gRasterizer->SetShadingColorSource(1, gScreenIndex);
-        this->DrawObjectSelection();
-        this->DrawSelection();
-        this->DrawRings();
-        gU4E8F08.SetDepthRange(0.0f, 1.0f);
-        gRasterizer->SetViewport(gU4E8F08, theScreen);
-        gRasterizer->SetZBuffer(kZBufferTestAndWrite, theScreen);
-        gRasterizer->SetZCompare(kCompareLessEqual, theScreen);
-    }
-    gRasterizer->SetShadingColorSource(0, gScreenIndex);
-    SetSceneFog();
-    this->DrawObjectModels(EERenderLists::sInstance.mShadows0);
-    this->DrawUnitModels(EERenderLists::sInstance.mUnits0);
-    this->DrawUnitModels(EERenderLists::sInstance.mUnits1);
-    this->DrawObjectModels(EERenderLists::sInstance.mShadows1);
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    for (long i = 0; i < theCount; i++) {
-        theRecord = EERenderLists::sInstance.mGhostRecords[i];
-        this->DrawPlacement(theRecord);
-    }
-    if (!gRenderSnapshot.mInCinematic) {
-        gRasterizer->SetShadingColorSource(1, gScreenIndex);
-        this->DrawSelectionRings();
-        gU4E8F08.SetDepthRange(0.0f, 0.0f);
-        gRasterizer->SetViewport(gU4E8F08, theScreen);
-        gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
-        gRasterizer->SetZCompare(kCompareLess, theScreen);
-        this->DrawBars();
-        gU4E8F08.SetDepthRange(0.0f, 1.0f);
-        gRasterizer->SetViewport(gU4E8F08, theScreen);
-        gRasterizer->SetZBuffer(kZBufferTestAndWrite, theScreen);
-        gRasterizer->SetZCompare(kCompareLessEqual, theScreen);
-    }
-    gRasterizer->SetCulling(kCullNone);
-    for (theIterator = gEffectQueues[3].begin(); theIterator != gEffectQueues[3].end(); theIterator++) {
-        BeginEffectBatches(theIterator->first);
-        for (theEffect = theIterator->second.begin(); theEffect != theIterator->second.end(); theEffect++)
+    EeGfxRenderObject r = {};
+    r.location = *reinterpret_cast<const EeGe3DPoint*>(&inObject.mLocation);
+    r.model = inObject.mObject->mModels[inObject.mModelIndex];
+    r.texture = inObject.mObject->mTextures[inObject.mModelIndex];
+    r.bar = *reinterpret_cast<const EeGe3DPoint*>(&inObject.mObject->mBar);
+    r.alpha_ref = inObject.mObject->mAlphaReference;
+    r.object_opacity = inObject.mObject->mOpacity;
+    r.model_scale = inObject.mModelScale;
+    r.selection_size = inObject.mSelectionSize;
+    r.health = inObject.mHealth;
+    r.opacity = inObject.mOpacity;
+    r.fraction = inObject.mFraction;
+    r.current_frame = (uint32_t)inObject.mCurrentFrame;
+    r.next_frame = (uint32_t)inObject.mNextFrame;
+    r.fogged = inObject.mIsFogged;
+    return r;
+}
+
+// the effects' units pass: queue 3, batched per texture
+void UnitsEffects(void*)
+{
+    for (EEEffectQueue::iterator i = gEffectQueues[3].begin(); i != gEffectQueues[3].end(); i++) {
+        BeginEffectBatches(i->first);
+        for (std::deque<EEEffect*>::iterator theEffect = i->second.begin(); theEffect != i->second.end(); theEffect++)
             (*theEffect)->DrawPass5();
         FlushEffectBatches();
         EndEffectBatches();
     }
-    gRasterizer->SetAlphaTestingRefValue(theAlphaRefValue, gScreenIndex);
 }
 
-// Draws the unit labels (not in cinematics) and the effects' pass 3
+// the frame's render lists as records and indices (ee_gfx ro_units.rs)
+struct UnitsFrame {
+    std::vector<EeGfxRenderUnit> mUnits;
+    std::vector<EeGfxRenderObject> mObjects;
+    std::vector<uint32_t> mLists[6];
+    std::vector<EeGfxGhostRecord> mGhosts;
+    EeGfxUnitsScene mScene;
+
+    template <class M> void Units(M& inMap, std::vector<uint32_t>& outList)
+    {
+        for (typename M::iterator i = inMap.begin(); i != inMap.end(); i++)
+            outList.push_back((uint32_t)(i->second - EERenderLists::sInstance.mRenderUnits));
+    }
+    template <class M> void Objects(M& inMap, std::vector<uint32_t>& outList)
+    {
+        for (typename M::iterator i = inMap.begin(); i != inMap.end(); i++)
+            outList.push_back((uint32_t)(i->second - EERenderLists::sInstance.mRenderShadows));
+    }
+    UnitsFrame()
+    {
+        EERenderLists& l = EERenderLists::sInstance;
+        for (unsigned long i = 0; i < l.mRenderUnitCount; i++)
+            this->mUnits.push_back(UnitRecord(l.mRenderUnits[i]));
+        for (unsigned long i = 0; i < l.mRenderShadowCount; i++)
+            this->mObjects.push_back(ObjectRecord(l.mRenderShadows[i]));
+        this->Units(l.mUnits0, this->mLists[0]);
+        this->Units(l.mUnits1, this->mLists[1]);
+        for (unsigned long i = 0; i < l.mSelectedUnits.size(); i++)
+            this->mLists[2].push_back((uint32_t)(l.mSelectedUnits[i] - l.mRenderUnits));
+        this->Objects(l.mShadows0, this->mLists[3]);
+        this->Objects(l.mShadows1, this->mLists[4]);
+        for (unsigned long i = 0; i < l.mSelectedObjects.size(); i++)
+            this->mLists[5].push_back((uint32_t)(l.mSelectedObjects[i] - l.mRenderShadows));
+        for (unsigned long i = 0; i < l.mGhostRecords.size(); i++) {
+            EERenderUnitRecord& theRecord = l.mGhostRecords[i];
+            EeGfxGhostRecord g;
+            g.unit = UnitRecord(theRecord.mUnit);
+            static_assert(sizeof(g.heights) == sizeof(theRecord.mHeights) && sizeof(g.cells) == sizeof(theRecord.mCells),
+                          "the grid");
+            memcpy(g.heights, theRecord.mHeights, sizeof(g.heights));
+            memcpy(g.cells, theRecord.mCells, sizeof(g.cells));
+            g.tile_x = (int32_t)theRecord.mTileX;
+            g.tile_y = (int32_t)theRecord.mTileY;
+            g.grid_size = (int32_t)theRecord.mUnit.mGridSize;
+            g.can_place = theRecord.mUnit.mCanPlace;
+            g.land_building = theRecord.mUnit.mInfo->IsLandBuilding();
+            this->mGhosts.push_back(g);
+        }
+        EeGfxUnitsScene& s = this->mScene;
+        s.context = NULL;
+        s.viewport = reinterpret_cast<const EeGeViewport*>(&gU4E8F08);
+        s.orthographic = gOrthographicView;
+        s.cinematic = gRenderSnapshot.mInCinematic;
+        s.collision_spheres = gShowCollisionSpheres;
+        s.interpolate_frames = gInterpolateFrames;
+        s.model_detail = (int32_t)gModelDetail;
+        s.free_camera = gFreeCamera;
+        s.panel_active = gUnitPanelActive;
+        s.grid_phase = gU4E9330;
+        s.camera_yaw = gRenderEnvironment.mCameraYaw;
+        s.window_width = (uint32_t)gGameWindow->GetWidth();
+        s.window_height = (uint32_t)gGameWindow->GetHeight();
+        s.units = this->mUnits.empty() ? NULL : &this->mUnits[0];
+        s.unit_count = this->mUnits.size();
+        s.objects = this->mObjects.empty() ? NULL : &this->mObjects[0];
+        s.object_count = this->mObjects.size();
+        const uint32_t** theLists[6] = {&s.units0, &s.units1, &s.selected_units, &s.objects0, &s.objects1,
+                                        &s.selected_objects};
+        uintptr_t* theCounts[6] = {&s.units0_count, &s.units1_count, &s.selected_unit_count, &s.objects0_count,
+                                   &s.objects1_count, &s.selected_object_count};
+        for (int i = 0; i < 6; i++) {
+            *theLists[i] = this->mLists[i].empty() ? NULL : &this->mLists[i][0];
+            *theCounts[i] = this->mLists[i].size();
+        }
+        s.selected_unit = l.mSelectedUnit != NULL ? (int32_t)(l.mSelectedUnit - l.mRenderUnits) : -1;
+        s.selected_object = l.mSelectedObject != NULL ? (int32_t)(l.mSelectedObject - l.mRenderShadows) : -1;
+        s.ghosts = this->mGhosts.empty() ? NULL : &this->mGhosts[0];
+        s.ghost_count = this->mGhosts.size();
+        s.debug_unit = gU529044 != NULL ? (int32_t)(gU529044 - l.mRenderUnits) : -1;
+        s.debug_text = reinterpret_cast<const uint8_t*>((const char*)gU529030);
+        s.draw_effects = UnitsEffects;
+    }
+};
+}
+
+// Loads the units' media: bar rhombi, command and dotted-line textures, the line buffer, the area-effect
+// ring model and the three selection ring models (segment count by detail level) (ee_gfx ro_units.rs)
+void EEROUnits::LoadMedia()
+{
+    GETextureCoordinate theLineStart;
+    GETextureCoordinate theLineEnd(3.0f, 0.0f);
+    sBars[1] = new GERhombus;
+    sBars[0] = new GERhombus;
+    ESVERIFY_AT(sBars[1] != NULL, 1823);
+    ESVERIFY_AT(sBars[0] != NULL, 1824);
+    ee_gfx_ro_units_load(&gEERustRaster, (int32_t)gModelDetail);
+    sLines = new GELine[0x40];
+    for (unsigned long i = 0; i < 0x40; i++) {
+        sLines[i].SetColor(GEColor(0.0f, 1.0f, 0.0f));
+        sLines[i].SetTexture(static_cast<GETexture*>(ee_gfx_ro_units_line_texture()), gScreenIndex);
+        sLines[i].SetTextureCoordinates(theLineStart, theLineEnd);
+    }
+}
+
+// Draws the selections and rings (not in cinematics), the object and unit models, the buildings being
+// placed, the air selection rings and bars, then the effects' pass 5 (ee_gfx ro_units.rs)
+void EEROUnits::RenderScene()
+{
+    UnitsFrame theFrame;
+    ee_gfx_ro_units_render(&gEERustRaster, &theFrame.mScene);
+}
+
+// Draws the unit labels (not in cinematics; ee_gfx ro_units.rs) and the effects' pass 3
 void EEROUnits::FrameDone()
 {
     EEEffectQueue::iterator theIterator;
     std::deque<EEEffect*>::iterator theEffect;
-    if (!gRenderSnapshot.mInCinematic)
-        this->DrawLabels(EERenderLists::sInstance.mRenderUnits, EERenderLists::sInstance.mRenderUnitCount);
+    if (!gRenderSnapshot.mInCinematic) {
+        UnitsFrame theFrame;
+        ee_gfx_ro_units_labels(&gEERustRaster, &theFrame.mScene);
+    }
     for (theIterator = gEffectQueues[1].begin(); theIterator != gEffectQueues[1].end(); theIterator++) {
         for (theEffect = theIterator->second.begin(); theEffect != theIterator->second.end(); theEffect++)
             (*theEffect)->DrawPass3();
     }
 }
 
-// Releases the units' media: bar rhombi, line buffer, textures, ring and selection models
+// Releases the units' media: bar rhombi, line buffer, textures, ring and selection models (ee_gfx ro_units.rs)
 void EEROUnits::ReleaseMedia()
 {
-    delete sBGBar;
-    delete sFGBar;
+    delete sBars[1];
+    delete sBars[0];
     if (sLines != NULL)
         delete[] sLines;
-    sSelectionTexture->Dereference();
-    sDottedLineTexture->Dereference();
-    sAreaEffectTexture->Dereference();
-    sTexture4E0->Dereference();
-    sTexture4E0 = NULL;
-    sTexture4E4->Dereference();
-    sTexture4E4 = NULL;
-    sTexture4E8->Dereference();
-    sTexture4E8 = NULL;
-    sRingModel->Dereference();
-    for (long i = 0; i < 3; i++)
-        sSelectionModels[i]->Dereference();
-    if (sModel4EC != NULL)
-        sModel4EC->Dereference();
+    sLines = NULL;
+    ee_gfx_ro_units_release(&gEERustRaster);
 }
 
 // Projects a world point to window coordinates in the game view (ee_gfx units.rs)

@@ -35,6 +35,8 @@
 #include "lle/GEText.h"
 #include "lle/GEModel.h"
 #include "lle/GEPhysicalModel.h"
+#include "lle/Graphics Engine.h"
+#include "platform/PlatFont.h"
 #include "rust/ee_ge.h"
 #include "GERustMath.h"
 #include "GERustViewport.h"
@@ -367,3 +369,50 @@ GERasterizer* GERasterizer::GetRasterizer(unsigned long inIndex) { return static
 // 0x10024665..0x100246a7: the template-static init wrapper and three atexit registrars of
 //   UList<GELODMetaVertex*>/<GELODPolygon*>/<GELODVertex*>::sNodePool (their $D ctors are GEBoundingBox.cpp's
 //   0x10014ed4/0x10014efb/0x10014f22).
+
+// ---- the engine's start-up and pixel formats (Graphics Engine.cpp, folded in R4.3 part 15)
+
+HINSTANCE__* GEScreen::sInstance;
+
+// The renderer linked into the game: the T&L DX7 rasterizer (DX7Rasterizer.cpp; the plug-in boundary went in part 14)
+GERasterizer* DX7TnLRasterizer();
+
+// Shuts the graphics engine down: forgets the rasterizers
+static void GEShutdown(bool inForced)
+{
+    GERasterizer::ClearRasterizers();
+}
+
+// Starts the graphics engine: registers the shutdown hook and adds the rasterizer when it activates and finds a screen
+// (the original's PIMIsValid: activate, count the screens, deactivate)
+long GEInitialize(FSFileSpec& inDirectory, HINSTANCE__* const inInstance)
+{
+    URegisterShutdown(GEShutdown);
+    PlatFontRegisterBuiltIn();   // the faces the fonts are made from (GDI's system fonts before)
+    GEScreen::sInstance = inInstance;
+    GERasterizer::ClearRasterizers();
+    GERasterizer* theRasterizer = DX7TnLRasterizer();
+    bool theValid = theRasterizer->Activate() == kErrorOK && theRasterizer->GetScreenCount() > 0;
+    theRasterizer->Deactivate();
+    if (theValid)
+        GERasterizer::AddRasterizer(theRasterizer);
+    return kErrorOK;
+}
+
+// The pixel formats (ee_ge pixel.rs): a colour and alpha (0..1 floats, or 8 bits each) packed into a pixel, a
+// pixel's channels scaled to 8 bits
+unsigned long GEPackColor(unsigned long inFormat, const GEColor& inColor, float inAlpha)
+{
+    return ee_ge_pack_color_float(inFormat, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue(), inAlpha);
+}
+
+unsigned long GEPackColor(unsigned long inFormat, unsigned long inRed, unsigned long inGreen, unsigned long inBlue,
+                          unsigned long inAlpha)
+{
+    return ee_ge_pack_color(inFormat, inRed, inGreen, inBlue, inAlpha);
+}
+
+unsigned char GEUnpackRed(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_red(inFormat, inColor); }
+unsigned char GEUnpackGreen(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_green(inFormat, inColor); }
+unsigned char GEUnpackBlue(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_blue(inFormat, inColor); }
+unsigned char GEUnpackAlpha(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_alpha(inFormat, inColor); }

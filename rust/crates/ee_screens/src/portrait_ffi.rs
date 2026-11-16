@@ -1,24 +1,16 @@
 //! `extern "C"` for the selected unit's portrait (`portrait.rs`): `EEUICPortrait`'s members forward here with the
-//! portrait; the host is `ee_screenscpp_portrait` (`User Interface Thread/EEUICPortrait.cpp`).
+//! portrait; the host is `EEUIRustControl`'s (`ee_screenscpp_hud_ctl`, the class's own ops through its `RustOp`) (`User Interface Thread/EEUICPortrait.cpp`).
 
 use core::ffi::c_void;
 
 use crate::portrait::{self, PortraitHost};
 
-/// cbindgen:ignore
-mod sys {
-    use core::ffi::c_void;
-
-    extern "C" {
-        pub fn ee_screenscpp_portrait(portrait: *mut c_void, op: u32, a: i64, b: i64, f: *mut f32) -> i64;
-    }
-}
-
 struct Portrait(*mut c_void);
 
 impl PortraitHost for Portrait {
     fn op(&mut self, op: u32, a: i64, b: i64, f: &mut [f32]) -> i64 {
-        unsafe { sys::ee_screenscpp_portrait(self.0, op, a, b, f.as_mut_ptr()) }
+        let (op, a) = crate::portrait::hud_op(op, a);
+        crate::hud_ctl::HudHost::op(&mut crate::hud_ctl::Cpp(self.0), op, a, b, f)
     }
 }
 

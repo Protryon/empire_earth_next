@@ -575,6 +575,9 @@ WON_TESTS = {
     "won_guievent_test": [],
     # WONGUI's config readers' key tables (the instruction keys, the flag and value names), the original's compares
     # against ee_won's guiconf tables, the names through the real GUIString
+    # the resource configs' table reader (cfgtab.rs) against the 45 handlers' original statements over the shipped
+    # resource files and random instructions (golden: rust/crates/ee_won/src/golden_cfgtab.txt)
+    "won_cfgtab_test": "won_guiconf_test",
     "won_guiconf_test": [WON_SRC / "WONGUI" / f for f in ("GUIStringData.cpp", "GUIStringDataMutations.cpp",
                                                          "GUIStringDataResize.cpp", "GUIStringDataSearch.cpp",
                                                          "GUIStringSingleton.cpp", "GUIStringSliceAdapters.cpp")],
@@ -620,6 +623,11 @@ WON_TESTS = {
     # PingLogic (with PingGameOp), AccountLogic and InitLogic as Rust objects (golden:
     # rust/crates/ee_won/src/golden_logics.txt)
     "won_logics_test": [],
+    # RoutingLogic as a Rust object (golden: rust/crates/ee_won/src/golden_routelogic.txt)
+    "won_routelogic_test": [],
+    # the lobby model (LobbyModel.cpp's classes) as Rust objects over stand-in shells (golden:
+    # rust/crates/ee_won/src/golden_modelobj.txt)
+    "won_modelobj_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
@@ -807,14 +815,15 @@ WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]
 
 
-def build_won_test(t, name, units, folder="won"):
+def build_won_test(t, name, units, folder="won", first_inc=None):
     """One tests/won (or tests/<folder>) program: its source and units in the game's dialect and include path (module
-    won's defines), the platform layer as standard code -> the executable."""
+    won's defines), the platform layer as standard code -> the executable. first_inc: a directory searched before the
+    include path (stand-in headers)."""
     out = t.out / f"{folder}_test" / name
     out.mkdir(parents=True, exist_ok=True)
     exe = out / (name + t.exe_suffix)
     game = [ROOT / "tests" / folder / f"{name}.cpp", *units]
-    inc = [ROOT / "include", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
+    inc = [*([first_inc] if first_inc else []), ROOT / "include", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
     defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS"]
     # an engine unit gets the engine's module define (tools/ee.py MODULE_FLAGS "lle"), as tcptest's do
     lle = ROOT / "src" / "Low-Level Engine"
@@ -887,6 +896,12 @@ def cmd_wontest(a):
 
 # ---- nettest: the Network Engine's whole Rust classes against the original units (tests/net)
 
+SESSION_STAND = ROOT / "tests" / "net" / "ee_stand"
+SESSION_UNITS = [ROOT / "src" / p for p in (
+    "Low-Level Engine/Network Engine/NEMessage.cpp", "Low-Level Engine/Utilities/UString.cpp",
+    "Low-Level Engine/Utilities/UWideString.cpp", "Low-Level Engine/File System/FSBasicFile.cpp",
+    "Low-Level Engine/File System/FSFileSpec.cpp", "Empire Earth/Communications/EEMRecord.cpp")]
+
 # program -> the units it links besides its source (the originals it compares are #included over tests/net/orig's
 # stand-in headers)
 NET_TESTS = {
@@ -912,6 +927,13 @@ NET_TESTS = {
     # the original 28 classes)
     "ne_message_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
         "Network Engine/NEMessage.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
+    # the game's server and client (EEServer.cpp, EEClient.cpp) over a stand-in world (tests/net/ee_stand: every game
+    # header they include; golden: tests/net/golden_session.txt, made by the original units, tests/net/orig_ee)
+    "ee_session_test": (SESSION_UNITS + [ROOT / "src" / "Empire Earth" / "Communications" / u
+                                         for u in ("EEServer.cpp", "EEClient.cpp")], SESSION_STAND),
+    # the same driver over the original units (tests/net/orig_ee: EEServer.cpp and EEClient.cpp before round 6)
+    "ee_session_orig": (SESSION_UNITS + [ROOT / "tests" / "net" / "orig_ee" / u for u in ("EEServer.cpp", "EEClient.cpp")],
+                        SESSION_STAND),
 }
 
 
@@ -924,7 +946,8 @@ def cmd_nettest(a):
     for name, units in NET_TESTS.items():
         if a.programs and name not in a.programs:
             continue
-        exe = build_won_test(t, name, units, folder="net")
+        units, first_inc = units if isinstance(units, tuple) else (units, None)
+        exe = build_won_test(t, name, units, folder="net", first_inc=first_inc)
         print(f"built {exe}")
         if not a.no_run:
             result |= run_program(t, exe, cwd=exe.parent)

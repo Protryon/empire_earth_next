@@ -1,101 +1,58 @@
 // C:\EEX\Low-Level Engine\Graphics Engine\GERhombus.h (RECONSTRUCTION). A rectangle drawn as a four-vertex
-// rasterizer vertex array, optionally rotated about its centre. GERhombus.cpp (0x10024ea0..0x1002534b) holds the ctor
-// and ComputeRotation; the other members are header-inline (GEBoundingBox.cpp emits them first, 0x10011fe3..; the
-// exported list: GetRectangle, GetVertexArray, ~GERhombus, operator=, Get/Set{Color,Location,Opacity,Z}PerVertex,
-// GetRotation, SetColor, SetOpacity, SetRectangle, SetRotation, SetZ). Only what GERhombus.cpp needs is declared so far.
+// rasterizer vertex array, optionally rotated about its centre.
+// port (R4.3, fifteenth part): a whole Rust object (ee_ge prim.rs, as GELine; GERhombus.cpp deleted). The vertices
+// are top left, top right, bottom left, bottom right; the corners are ee_ge bitmap.rs's.
 #ifndef LLE_GERHOMBUS_H
 #define LLE_GERHOMBUS_H
 
-#include "lle/GEVertexArray.h"   // the inline per-vertex members call through mVertices
+#include "lle/GELine.h"   // ee_ge prim.rs, GEVertexHost
 
-class LLE_API GERhombus {                   // sizeof 0x18
+class LLE_API GERhombus {
 public:
-    GERhombus();
-    ~GERhombus() { delete this->mVertices; }  // 0x10011fe3 (ICF-folded with ~NEPlayer)
-    const GERectangle& GetRectangle() const { return this->mRectangle; }
-    GEVertexArray* GetVertexArray() { return this->mVertices; }
-    // the members below are inline in the real header: GEBoundingBox.cpp emits them first (0x10011ff0..0x10012426,
-    // declaration order); the User Interface units call them out of line
-    GERhombus& operator=(const GERhombus& inRhombus)
-    {
-        this->mVertices->CopyFrom(*inRhombus.mVertices);
-        this->mRectangle = inRhombus.mRectangle;
-        this->mRotation = inRhombus.mRotation;
-        return *this;
-    }
+    GERhombus() : mRust(ee_ge_prim_new(&GEVertexHost, this, EeGePrimKind::Rhombus)) {}
+    ~GERhombus() { ee_ge_prim_destroy(this->mRust); }
+    GERhombus(const GERhombus&) = delete;
+    const GERectangle& GetRectangle() const { return *(const GERectangle*)ee_ge_prim_rectangle(this->mRust); }
+    GEVertexArray* GetVertexArray() { return (GEVertexArray*)ee_ge_prim_vertices(this->mRust); }
+    GERhombus& operator=(const GERhombus& inRhombus) { ee_ge_prim_assign(this->mRust, inRhombus.mRust); return *this; }
     void GetColorPerVertex(GEColor& outTopLeft, GEColor& outTopRight, GEColor& outBottomRight,
                            GEColor& outBottomLeft) const
     {
-        this->mVertices->GetColor(outTopLeft, 0);
-        this->mVertices->GetColor(outTopRight, 1);
-        this->mVertices->GetColor(outBottomRight, 2);
-        this->mVertices->GetColor(outBottomLeft, 3);
+        GEColor* const theOut[4] = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
+        for (unsigned long i = 0; i < 4; i++)
+            ee_ge_prim_vertex(this->mRust, EeGeBmpOp::VertexGetColor, i, theOut[i]);
     }
-    void GetOpacityPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight,
-                             float& outBottomLeft) const
+    void GetOpacityPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight, float& outBottomLeft) const
     {
-        outTopLeft = this->mVertices->GetOpacity(0);
-        outTopRight = this->mVertices->GetOpacity(1);
-        outBottomRight = this->mVertices->GetOpacity(2);
-        outBottomLeft = this->mVertices->GetOpacity(3);
+        float* const theOut[4] = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
+        for (unsigned long i = 0; i < 4; i++)
+            *theOut[i] = ee_ge_prim_opacity(this->mRust, i);
     }
-    void SetColor(const GEColor& inColor)
-    {
-        this->mVertices->SetColor(inColor, 0);
-        this->mVertices->SetColor(inColor, 1);
-        this->mVertices->SetColor(inColor, 2);
-        this->mVertices->SetColor(inColor, 3);
-    }
+    void SetColor(const GEColor& inColor) { this->SetColorPerVertex(inColor, inColor, inColor, inColor); }
     void SetColorPerVertex(const GEColor& inTopLeft, const GEColor& inTopRight, const GEColor& inBottomRight,
                            const GEColor& inBottomLeft)
     {
-        this->mVertices->SetColor(inTopLeft, 0);
-        this->mVertices->SetColor(inTopRight, 1);
-        this->mVertices->SetColor(inBottomRight, 2);
-        this->mVertices->SetColor(inBottomLeft, 3);
+        const GEColor* const theColors[4] = {&inTopLeft, &inTopRight, &inBottomRight, &inBottomLeft};
+        for (unsigned long i = 0; i < 4; i++)
+            ee_ge_prim_vertex(this->mRust, EeGeBmpOp::VertexSetColor, i, (void*)theColors[i]);
     }
-    void SetOpacity(float inOpacity)
-    {
-        this->mVertices->SetOpacity(inOpacity, 0);
-        this->mVertices->SetOpacity(inOpacity, 1);
-        this->mVertices->SetOpacity(inOpacity, 2);
-        this->mVertices->SetOpacity(inOpacity, 3);
-    }
+    void SetOpacity(float inOpacity) { this->SetOpacityPerVertex(inOpacity, inOpacity, inOpacity, inOpacity); }
     void SetOpacityPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
     {
-        this->mVertices->SetOpacity(inTopLeft, 0);
-        this->mVertices->SetOpacity(inTopRight, 1);
-        this->mVertices->SetOpacity(inBottomRight, 2);
-        this->mVertices->SetOpacity(inBottomLeft, 3);
+        const float theOpacities[4] = {inTopLeft, inTopRight, inBottomRight, inBottomLeft};
+        for (unsigned long i = 0; i < 4; i++)
+            ee_ge_prim_set_opacity(this->mRust, i, theOpacities[i]);
     }
-    void SetRectangle(const GERectangle& inRectangle) { this->mRectangle = inRectangle; this->ComputeRotation(); }  // UIEditBox::DrawPolygons expands it
-    void SetRotation(float inRotation) { this->mRotation = inRotation; this->ComputeRotation(); }
+    void SetRectangle(const GERectangle& inRectangle) { ee_ge_prim_place(this->mRust, (const EeGeRectangle*)&inRectangle, 0.0f); }
+    void SetRotation(float inRotation) { ee_ge_prim_place(this->mRust, NULL, inRotation); }
     void SetZ(float inZ) { this->SetZPerVertex(inZ, inZ, inZ, inZ); }
     void SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
     {
-        GE3DPoint theTopLeft;
-        GE3DPoint theTopRight;
-        GE3DPoint theBottomRight;
-        GE3DPoint theBottomLeft;
-        this->mVertices->GetPoint(theTopLeft, 0);
-        this->mVertices->GetPoint(theTopRight, 1);
-        this->mVertices->GetPoint(theBottomRight, 2);
-        this->mVertices->GetPoint(theBottomLeft, 3);
-        theTopLeft.SetZ(inTopLeft);
-        theTopRight.SetZ(inTopRight);
-        theBottomRight.SetZ(inBottomRight);
-        theBottomLeft.SetZ(inBottomLeft);
-        this->mVertices->SetPoint(theTopLeft, 0);
-        this->mVertices->SetPoint(theTopRight, 1);
-        this->mVertices->SetPoint(theBottomRight, 2);
-        this->mVertices->SetPoint(theBottomLeft, 3);
+        const float theDepths[4] = {inTopLeft, inTopRight, inBottomRight, inBottomLeft};
+        ee_ge_prim_set_depths(this->mRust, &theDepths);
     }
 private:
-    void ComputeRotation();
-
-    GEVertexArray* mVertices;               // +0x00 four vertices: top left, top right, bottom left, bottom right
-    GERectangle mRectangle;                 // +0x04
-    float mRotation;                        // +0x14 radians, about the rectangle's centre
+    EeGePrim* mRust;                        // the rhombus (ee_ge prim.rs)
 };
 
 #endif

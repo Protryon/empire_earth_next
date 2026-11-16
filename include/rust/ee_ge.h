@@ -77,6 +77,8 @@ enum class EeGeBmpOp : uint32_t {
   TexHeight,
   /// `obj->GetNumMipLevelsToDrop()`.
   TexDropLevels,
+  /// `obj->CopyFrom(*(const GEVertexArray*)b)` (a rhombus's assignment, `prim.rs`).
+  VertexCopyFrom,
 };
 
 /// A float of the header's accessors (`ee_ge_bmp_getf`).
@@ -440,6 +442,16 @@ enum class EeGeModXf : uint32_t {
   Internal,
 };
 
+/// Which class a default constructor builds.
+enum class EeGePrimKind : uint32_t {
+  /// `GELine()`: two white opaque vertices at the origin facing -z, texture coordinates (0, 0) and (1, 1).
+  Line = 1,
+  /// `GEPoint()`: one opaque vertex, texture coordinate (0, 0).
+  Point,
+  /// `GERhombus()`: four white opaque vertices facing -z, an empty rectangle, no rotation.
+  Rhombus,
+};
+
 /// The calls the rasterizer makes on other objects. `obj` is the object called; `a`, `b` as each says.
 enum class EeGeRastOp : uint32_t {
   /// `new UString(*(const UString*)a)` (the name).
@@ -551,6 +563,89 @@ enum class EeGeRastState : uint32_t {
   WaitForVSync,
   ZBuffer,
   ZCompare,
+};
+
+/// The calls the four classes make on other objects.
+enum class EeGeObjOp : uint32_t {
+  /// `new UString` -> the string.
+  StrNew = 1,
+  /// `new UString(*a)` -> the string.
+  StrCopy,
+  /// `delete obj` (a `UString`).
+  StrDelete,
+  /// `*obj = *a` (`UString`s).
+  StrAssign,
+  /// `obj->SizeOf()` (a `UString`).
+  StrSizeOf,
+  /// `*obj == *a` (`UString`s) -> 0 or 1.
+  StrEqual,
+  /// `(const char*)*obj` (a `UString`).
+  StrText,
+  /// `new UWideString(a)` (a capacity in characters) -> the string.
+  WStrNew,
+  /// `delete obj` (a `UWideString`).
+  WStrDelete,
+  /// `*obj = *a` (`UWideString`s).
+  WStrAssign,
+  /// `(const char*)*obj` (a `UWideString`).
+  WStrText,
+  /// `obj->GetLength()` (a `UWideString`: characters).
+  WStrLength,
+  /// `obj->Reference()` (a `GETexture`).
+  TexReference,
+  /// `obj->Dereference()` (a `GETexture`: its own).
+  TexDereference,
+  /// `obj->Reference()` (a `UReferenceCounter`: a font, a font bitmap).
+  RefReference,
+  /// `obj->Dereference()` (a `UReferenceCounter`).
+  RefDereference,
+  /// A `GEFont`'s object (this module's `EeGeFont`).
+  FontObj,
+  /// `PlatFontCreate(obj, a, b & 1, (b >> 1) & 1, (b >> 2) & 1, (b >> 3) & 1)` (face, height, bold, italic,
+  /// underline, antialiased) -> the font or NULL.
+  PlatFontCreate,
+  /// `PlatFontDestroy(obj)`.
+  PlatFontDestroy,
+  /// `PlatFontGetMetrics(obj, ...)`'s `mHeight`.
+  PlatFontHeight,
+  /// `GERustTextOps()` -> the platform's text functions (`GeTextOps`).
+  TextOps,
+  /// `PlatWindowDestroy(obj)`.
+  PlatWindowDestroy,
+  /// `PlatWindowSetSize(obj, a, b)`.
+  PlatWindowSetSize,
+  /// `PlatWindowGetPosition(obj, a, b)` (`int32_t*` outputs).
+  PlatWindowPosition,
+};
+
+/// A material's unsigned fields (`ee_ge_mat_get` / `ee_ge_mat_set`).
+enum class EeGeMatField : uint32_t {
+  /// `GetLODCount` (read only).
+  LodCount = 1,
+  /// `Get/SetPolygonStartingIndex(lod)`.
+  PolygonStart,
+  /// `Get/SetPolygonRangeLength(lod)`.
+  PolygonLength,
+  /// `Get/SetTextureIndex`.
+  TextureIndex,
+  /// `Get/SetVertexStartingIndex`.
+  VertexStart,
+  /// `Get/SetVertexRangeLength`.
+  VertexLength,
+  /// The screens (`mScreenCount`, read only: the store gate's digest).
+  ScreenCount,
+};
+
+/// A font's unsigned fields (`ee_ge_font_value`).
+enum class EeGeFontValue : uint32_t {
+  /// `GetFontQuality`.
+  Quality = 1,
+  /// `GetFontSize`.
+  Size,
+  /// `GetFontStyle`.
+  Style,
+  /// `GetHeight` (the platform font's cell, 0 without one).
+  Height,
 };
 
 /// The 3-byte order of `ee_ge_surf_row_out`.
@@ -778,8 +873,14 @@ struct EeGeCemModel;
 /// The bitmap.
 struct EeGeBitmap;
 
+/// The font.
+struct EeGeFont;
+
 /// The font bitmap.
 struct EeGeFontBitmap;
+
+/// The material.
+struct EeGeMat;
 
 /// The model.
 struct EeGeModel;
@@ -787,17 +888,26 @@ struct EeGeModel;
 /// The model manager.
 struct EeGeModelManager;
 
+/// The primitive.
+struct EeGePrim;
+
 /// The rasterizer.
 struct EeGeRasterizer;
 
 /// The terrain mesh.
 struct EeGeTerrainMesh;
 
+/// The text.
+struct EeGeText;
+
 /// The texture.
 struct EeGeTexture;
 
 /// The texture manager.
 struct EeGeTextureManager;
+
+/// The window.
+struct EeGeWin;
 
 /// The host: `owner` is the C++ bitmap of the object calling.
 using EeGeBmpHostFn = ptrdiff_t(*)(void *owner, EeGeBmpOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
@@ -1076,6 +1186,9 @@ struct EeGeRastScreen {
   bool is_screen_activated;
   bool wait_for_vsync;
 };
+
+/// The C++ host: `owner` is the C++ object making the call.
+using EeGeObjHostFn = ptrdiff_t(*)(void *owner, EeGeObjOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
 /// `GETextureDescription` (lle/GETextureManager.h), field for field.
 struct EeGeTextureDescription {
@@ -2006,10 +2119,10 @@ void ee_ge_modman_set_path(EeGeModelManager *p, void *path);
 /// `p` is live.
 void ee_ge_modman_verify(EeGeModelManager *p);
 
-/// Frees a model (`ee_of_gltf_to_model`'s; not a sub-model's handle).
+/// Frees a model (`ee_of_find_model`'s; not a sub-model's handle).
 ///
 /// # Safety
-/// `model` came from `ee_of_gltf_to_model` and is freed once.
+/// `model` came from `ee_of_find_model` and is freed once.
 void ee_ge_cem_free(EeGeCemModel *model);
 
 /// `GEModel(manager)`.
@@ -2259,6 +2372,119 @@ bool ee_ge_physical_model_walk(const EeGePhysicalModels *table,
                                unsigned long other_frame,
                                unsigned long lod);
 
+/// The default constructors (`GELine()`, `GEPoint()`, `GERhombus()`).
+///
+/// # Safety
+/// `host` serves `owner` until `ee_ge_prim_destroy`.
+EeGePrim *ee_ge_prim_new(EeGeBmpHostFn host, void *owner, EeGePrimKind kind);
+
+/// `GELine(start, end, start colour, end colour, opacity)` (the colours as `const GEColor*`).
+///
+/// # Safety
+/// As `ee_ge_prim_new`; the pointers are valid.
+EeGePrim *ee_ge_prim_new_line(EeGeBmpHostFn host,
+                              void *owner,
+                              const EeGe2DPoint *start,
+                              const EeGe2DPoint *end,
+                              const void *start_color,
+                              const void *end_color,
+                              float opacity);
+
+/// `GEPoint(point, colour, opacity)` (the colour as `const GEColor*`).
+///
+/// # Safety
+/// As `ee_ge_prim_new`; the pointers are valid.
+EeGePrim *ee_ge_prim_new_point(EeGeBmpHostFn host,
+                               void *owner,
+                               const EeGe2DPoint *point,
+                               const void *color,
+                               float opacity);
+
+/// The destructors.
+///
+/// # Safety
+/// `p` is live (freed).
+void ee_ge_prim_destroy(EeGePrim *p);
+
+/// One vertex array call on vertex `i` (`op` one of the `Vertex*` operations with a pointer argument: the colours,
+/// points, normals and texture coordinates the headers read and write).
+///
+/// # Safety
+/// `p` is live; `arg` points at what `op` reads or writes.
+void ee_ge_prim_vertex(EeGePrim *p,
+                       EeGeBmpOp op,
+                       unsigned long i,
+                       void *arg);
+
+/// `GetOpacity(i)` of the vertex array.
+///
+/// # Safety
+/// `p` is live.
+float ee_ge_prim_opacity(EeGePrim *p, unsigned long i);
+
+/// `SetOpacity(opacity, i)` of the vertex array.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_prim_set_opacity(EeGePrim *p, unsigned long i, float opacity);
+
+/// `SetStartPoint`/`SetEndPoint`/`SetPoint`: vertex `i` at (x, y, 0).
+///
+/// # Safety
+/// `p` is live; `point` is valid.
+void ee_ge_prim_set_xy(EeGePrim *p, unsigned long i, const EeGe2DPoint *point);
+
+/// `GEPoint::GetPoint`: vertex `i`'s x and y.
+///
+/// # Safety
+/// `p` is live; `out` is valid.
+void ee_ge_prim_xy(EeGePrim *p, unsigned long i, EeGe2DPoint *out);
+
+/// `SetTexture(texture, screen)`.
+///
+/// # Safety
+/// `p` is live; `texture` a texture or NULL.
+void ee_ge_prim_set_texture(EeGePrim *p, void *texture, unsigned long screen);
+
+/// `GetTexture(screen)` (NULL past the screens: the original read past its array).
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_prim_texture(const EeGePrim *p, unsigned long screen);
+
+/// `GetVertexArray()`.
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_prim_vertices(const EeGePrim *p);
+
+/// A rhombus's `GetRectangle()`: the rectangle inside the object.
+///
+/// # Safety
+/// `p` is live.
+const EeGeRectangle *ee_ge_prim_rectangle(const EeGePrim *p);
+
+/// A rhombus's `SetRectangle` (`rectangle` set) or `SetRotation` (`rectangle` NULL), then `ComputeRotation`.
+///
+/// # Safety
+/// `p` is live; `rectangle` is valid or NULL.
+void ee_ge_prim_place(EeGePrim *p,
+                      const EeGeRectangle *rectangle,
+                      float rotation);
+
+/// A rhombus's `SetZPerVertex` (`SetZ` passes one four times): the four points read, their depths set, written back.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_prim_set_depths(EeGePrim *p,
+                           const float (*z)[4]);
+
+/// A rhombus's `operator=`: the vertices copied (`CopyFrom`), then the rectangle and the rotation.
+///
+/// # Safety
+/// `p` and `from` are live rhombi.
+void ee_ge_prim_assign(EeGePrim *p, const EeGePrim *from);
+
 /// `GERasterizer(inName)`.
 ///
 /// # Safety
@@ -2421,6 +2647,279 @@ void ee_ge_rast_set_active(void *rasterizer);
 void *ee_ge_rast_list(uint32_t op,
                       void *rasterizer,
                       size_t index);
+
+/// `GEMaterial(screens, lods)`: the name, a white colour, empty texture slots, opacity 1, texture index 0. The
+/// original left the polygon ranges and the vertex range uninitialized (`new unsigned long[]`): here they are 0.
+///
+/// # Safety
+/// `host` serves `owner` until `ee_ge_mat_destroy`.
+EeGeMat *ee_ge_mat_new(EeGeObjHostFn host,
+                       void *owner,
+                       unsigned long screens,
+                       unsigned long lods);
+
+/// `~GEMaterial`: every screen's texture released, then the name.
+///
+/// # Safety
+/// `p` is from `ee_ge_mat_new`; it is not used again.
+void ee_ge_mat_destroy(EeGeMat *p);
+
+/// `SetTexture(texture, screen)`: the old texture released, the new one referenced.
+///
+/// # Safety
+/// `p` is live; `texture` is a texture or NULL; `screen` is one of its screens.
+void ee_ge_mat_set_texture(EeGeMat *p, void *texture, unsigned long screen);
+
+/// `GetTexture(screen)` (NULL past the screens: the original read past its array).
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_mat_texture(const EeGeMat *p, unsigned long screen);
+
+/// `GetName()`: the C++ `UString`.
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_mat_name(const EeGeMat *p);
+
+/// `SetName(name)`.
+///
+/// # Safety
+/// `p` is live; `name` is a `UString`.
+void ee_ge_mat_set_name(EeGeMat *p, const void *name);
+
+/// `GetColor()`: the colour inside the object (`GEColor`'s layout).
+///
+/// # Safety
+/// `p` is live.
+float *ee_ge_mat_color(EeGeMat *p);
+
+/// `GetOpacity()`.
+///
+/// # Safety
+/// `p` is live.
+float ee_ge_mat_opacity(const EeGeMat *p);
+
+/// `SetOpacity(opacity)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_mat_set_opacity(EeGeMat *p, float opacity);
+
+/// One unsigned field (`lod` for the polygon ranges; 0 past the levels: the original read past its arrays).
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_mat_get(const EeGeMat *p,
+                            EeGeMatField field,
+                            unsigned long lod);
+
+/// Sets one unsigned field (a level past the arrays is ignored: the original wrote past them).
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_mat_set(EeGeMat *p, EeGeMatField field, unsigned long lod, unsigned long value);
+
+/// `SizeOf()`: the original object (`object`, the C++'s size of its old layout), its name, texture slots and
+/// per-level polygon ranges (`texture.rs`'s `material_size_of`).
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_mat_size_of(const EeGeMat *p,
+                                size_t object,
+                                size_t string,
+                                size_t pointer,
+                                size_t ulong);
+
+/// `GEFont(name, size, style, quality)`: the name copied, the platform font made (height `-size`; bold, italic and
+/// underline from the style's bits 0-2; antialiased only for quality 2) and its cell height read.
+///
+/// # Safety
+/// `host` serves `owner` until `ee_ge_font_destroy`; `name` is a `UString`.
+EeGeFont *ee_ge_font_new(EeGeObjHostFn host,
+                         void *owner,
+                         const void *name,
+                         unsigned long size,
+                         unsigned long style,
+                         unsigned long quality);
+
+/// `~GEFont`: the platform font destroyed, the font bitmap released, then the name.
+///
+/// # Safety
+/// `p` is from `ee_ge_font_new`; it is not used again.
+void ee_ge_font_destroy(EeGeFont *p);
+
+/// `CompareFont(name, style, quality, size)`: the quality, style and size, then the name.
+///
+/// # Safety
+/// `p` is live; `name` is a `UString`.
+bool ee_ge_font_compare(const EeGeFont *p,
+                        const void *name,
+                        unsigned long style,
+                        unsigned long quality,
+                        unsigned long size);
+
+/// `SetFontBitmap(bitmap)`: stored and referenced (the old one is kept referenced, as the original did).
+///
+/// # Safety
+/// `p` is live; `bitmap` is a font bitmap.
+void ee_ge_font_set_bitmap(EeGeFont *p,
+                           void *bitmap);
+
+/// `GetFontBitmap()`.
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_font_bitmap(const EeGeFont *p);
+
+/// `GetFontName()`: the C++ `UString`.
+///
+/// # Safety
+/// `p` is live.
+const void *ee_ge_font_name(const EeGeFont *p);
+
+/// `GetOSFont()`: the `PlatFont*`.
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_font_os(const EeGeFont *p);
+
+/// One unsigned field.
+///
+/// # Safety
+/// `p` is live.
+long ee_ge_font_value(const EeGeFont *p, EeGeFontValue value);
+
+/// `GEText(font)`: at the origin, white on white, an empty extent, a 256-character string, the font referenced,
+/// opaque, left-aligned.
+///
+/// # Safety
+/// `host` serves `owner` until `ee_ge_text_destroy`; `font` is a `GEFont`.
+EeGeText *ee_ge_text_new(EeGeObjHostFn host,
+                         void *owner,
+                         void *font);
+
+/// `~GEText`: the font released, then the string.
+///
+/// # Safety
+/// `p` is from `ee_ge_text_new`; it is not used again.
+void ee_ge_text_destroy(EeGeText *p);
+
+/// `operator=(from)`: the font released and `from`'s referenced, then the flags, the string, the extent, the colours
+/// and the location.
+///
+/// # Safety
+/// `p` and `from` are live and distinct.
+void ee_ge_text_assign(EeGeText *p,
+                       const EeGeText *from);
+
+/// `SetFont(font)`: the old font released, the new one referenced, the extent measured again.
+///
+/// # Safety
+/// `p` is live; `font` is a `GEFont`.
+void ee_ge_text_set_font(EeGeText *p, void *font);
+
+/// `SetText(text)`: the string assigned, the extent measured again.
+///
+/// # Safety
+/// `p` is live; `text` is a `UWideString`.
+void ee_ge_text_set_text(EeGeText *p, const void *text);
+
+/// `GetText()`: the C++ `UWideString`.
+///
+/// # Safety
+/// `p` is live.
+const void *ee_ge_text_string(const EeGeText *p);
+
+/// `GetFont()`.
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_text_font(const EeGeText *p);
+
+/// `GetFgColor()` (`foreground`) or `GetBgColor()`: the colour inside the object.
+///
+/// # Safety
+/// `p` is live.
+float *ee_ge_text_color(EeGeText *p, bool foreground);
+
+/// `GetLocation()`: the point inside the object (`SetLocation` writes it).
+///
+/// # Safety
+/// `p` is live.
+EeGe2DPoint *ee_ge_text_location(EeGeText *p);
+
+/// `GetTextExtent()`: the rectangle inside the object.
+///
+/// # Safety
+/// `p` is live.
+const EeGeRectangle *ee_ge_text_extent_of(const EeGeText *p);
+
+/// `GetAlignment()`.
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_text_alignment(const EeGeText *p);
+
+/// `SetAlignment(alignment)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_text_set_alignment(EeGeText *p, unsigned long alignment);
+
+/// `GetIsTransparent()`.
+///
+/// # Safety
+/// `p` is live.
+bool ee_ge_text_transparent(const EeGeText *p);
+
+/// `SetIsTransparent(transparent)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_text_set_transparent(EeGeText *p, bool transparent);
+
+/// `GEWindow(window, width, height, depth, full screen)`.
+///
+/// # Safety
+/// `host` serves `owner` until `ee_ge_win_destroy`.
+EeGeWin *ee_ge_win_new(EeGeObjHostFn host,
+                       void *owner,
+                       void *window,
+                       unsigned long width,
+                       unsigned long height,
+                       unsigned long depth,
+                       bool full_screen);
+
+/// `~GEWindow`: the platform window destroyed only in full-screen mode.
+///
+/// # Safety
+/// `p` is from `ee_ge_win_new`; it is not used again.
+void ee_ge_win_destroy(EeGeWin *p);
+
+/// `GetClientOrigin()`: the platform window's position, stored in the object and returned.
+///
+/// # Safety
+/// `p` is live.
+const EeGe2DPoint *ee_ge_win_origin(EeGeWin *p);
+
+/// `GetWidth()` (`height` false) or `GetHeight()`.
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_win_size(const EeGeWin *p, bool height);
+
+/// `GetOSRepresentation()`: the `PlatWindow*`.
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_win_os(const EeGeWin *p);
+
+/// `Resize(width, height)`: the platform window's client area, then the stored size.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_win_resize(EeGeWin *p, unsigned long width, unsigned long height);
 
 /// `SaveAsBMP`'s, `SaveAsJPG`'s and `SaveAsJPG2`'s row: `width` pixels of `row` (`depth` 32, else 16 bits) as 3
 /// bytes each into `out`.
@@ -3238,12 +3737,6 @@ bool ee_ge_physical_visible(const EeGeTransformation *location,
                             const EeGeBoundingBox *bbox,
                             const EeGeViewport *viewport,
                             bool orthographic);
-
-/// `GERhombus::ComputeRotation`'s corners into `out`.
-///
-/// # Safety
-/// `rectangle` is valid; `out` holds four points.
-void ee_ge_rhombus_corners(const EeGeRectangle *rectangle, float rotation, EeGe2DPoint *out);
 
 }  // extern "C"
 

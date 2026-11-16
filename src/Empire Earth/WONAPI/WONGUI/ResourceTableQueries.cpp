@@ -124,59 +124,6 @@ void ResourceConfigTable::ClearAll()
 }
 
 
-// Compiler-generated and header-inline functions this unit emits:
-// Handles BACKGROUND and BORDERPADDING (left,top,right,bottom) for a scroll area; else defers to the container parser
-bool ScrollAreaConfig::Virtual24(const std::string& instruction)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SCROLLAREACONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
-    if(aKeyIdx==0) this->mScrollArea->SetBackground(this->ReadBackground());
-    else if(aKeyIdx==1)
-    {
-        int left=this->ReadInt();this->EnsureComma();
-        int top=this->ReadInt();this->EnsureComma();
-        int right=this->ReadInt();this->EnsureComma();
-        int bottom=this->ReadInt();
-        this->mScrollArea->SetBorderPadding(left,top,right,bottom);
-    }
-    else return ContainerConfig::Virtual24(instruction);
-    return true;
-}
-// Handles SCROLLAREA, attaching the named scroll area (throws if it is not one); else defers to the container parser
-bool ScrollerConfig::Virtual24(const std::string& instruction)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SCROLLERCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
-    if(aKeyIdx==0)
-    {
-        ScrollArea* area=dynamic_cast<ScrollArea*>(this->ReadComponent());
-        if(area==NULL) throw ConfigObjectException("Expecting ScrollArea");
-        this->mScroller->SetScrollArea(area);
-        return true;
-    }
-    return ContainerConfig::Virtual24(instruction);
-}
-// Reads DISABLE, ENABLE or CONDITIONAL (any case) as a scrollbar condition; throws on anything else
-ScrollbarCondition ScrollbarScrollerConfig::GetScrollbarCondition()
-{
-    GUIString condition=this->ReadString(false);
-    const int aNameIdx_condition=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_SCROLLBARSCROLLERCONFIG_GETSCROLLBARCONDITION_CONDITION,condition.mData->mText,condition.mData->mLength,sizeof(wchar_t));
-    if(aNameIdx_condition==0) return ScrollbarCondition_Disable;
-    if(aNameIdx_condition==1) return ScrollbarCondition_Enable;
-    if(aNameIdx_condition==2) return ScrollbarCondition_Conditional;
-    throw ConfigObjectException("Invalid scrollbar condition: "+(std::string)condition);
-}
-// Handles SCROLLBARCONDITIONS (horizontal,vertical); else defers to the scroller parser
-bool ScrollbarScrollerConfig::Virtual24(const std::string& instruction)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SCROLLBARSCROLLERCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
-    if(aKeyIdx==0)
-    {
-        ScrollbarCondition horz=this->GetScrollbarCondition();this->EnsureComma();
-        ScrollbarCondition vert=this->GetScrollbarCondition();
-        this->mScrollbarScroller->SetScrollbarConditions(horz,vert);
-        return true;
-    }
-    return ScrollerConfig::Virtual24(instruction);
-}
 
 
 // Compiler-generated and header-inline functions this unit emits:

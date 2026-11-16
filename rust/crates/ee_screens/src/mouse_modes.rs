@@ -92,6 +92,30 @@ pub const EE_SCREENS_MF_OP_MD_GATE_PREVIEW: u32 = 182;
 /// The form's `mBuildWall.Update(GetMouseLocation())` (a 0) or `mBuildGate.Update` (a 1): virtual, each back in
 /// [`wall_update`] / [`gate_update`] over a call of its own.
 pub const EE_SCREENS_MF_OP_MD_PLACEMENT: u32 = 183;
+/// `GetMouseLocation()` into io.f[0..2]; the answer `mMouseModes[mUIState]` (`EE_SCREENS_MF_MODE_*`).
+pub const EE_SCREENS_MF_OP_MD_MOUSE_AT: u32 = 184;
+/// `gISKeyboard->GetEntity(a, key)`: `EE_SCREENS_MF_KEY_*` bits (the entity found, `GetValue()`, `JustPressed()`).
+pub const EE_SCREENS_MF_OP_MD_KEY: u32 = 185;
+/// The cinematic's calls (`EE_SCREENS_MF_CINE_*` a): the end-cinematic event posted, the scenario manager's
+/// `mIsEndingCinematic`, the pause screen event posted, `PostScreenShot(-1, true, false)`.
+pub const EE_SCREENS_MF_OP_MD_CINEMATIC: u32 = 186;
+
+/// The key's bits (`EE_SCREENS_MF_OP_MD_KEY`).
+pub const EE_SCREENS_MF_KEY_FOUND: i64 = 1;
+pub const EE_SCREENS_MF_KEY_HELD: i64 = 2;
+pub const EE_SCREENS_MF_KEY_JUST_PRESSED: i64 = 4;
+/// The cinematic's calls (`EE_SCREENS_MF_OP_MD_CINEMATIC`).
+pub const EE_SCREENS_MF_CINE_END: i64 = 0;
+pub const EE_SCREENS_MF_CINE_ENDING: i64 = 1;
+pub const EE_SCREENS_MF_CINE_PAUSE: i64 = 2;
+pub const EE_SCREENS_MF_CINE_SCREENSHOT: i64 = 3;
+/// The keyboard modes (`mKeyboardModes[state]`): none (the original's two `return false` tests), the cinematic's.
+pub const EE_SCREENS_MF_KEYBOARD_CINEMATIC: i64 = 2;
+/// The cinematic's keys (DirectInput's codes: `kKeyEscape`, `kKeyF1`, `kKeyF3`, `kKeyF9`).
+pub const EE_SCREENS_MF_KEY_ESCAPE: i64 = 0x01;
+pub const EE_SCREENS_MF_KEY_F1: i64 = 0x3b;
+pub const EE_SCREENS_MF_KEY_F3: i64 = 0x3d;
+pub const EE_SCREENS_MF_KEY_F9: i64 = 0x43;
 
 /// The mouse buttons (`EE_SCREENS_MF_OP_MD_BUTTONS`): left just pressed, held, just released; the right's.
 pub const EE_SCREENS_MF_BTN_L_PRESSED: i64 = 1;
@@ -269,6 +293,57 @@ pub fn mouse(h: &mut impl FormHost, mode: i64, x: f32, y: f32) -> i64 {
         _ => {}
     }
     0
+}
+
+/// `EEUIFMainGame::UpdateMouse` (0x2712b8): the unit hack, the form's controls, then the interface state's mode
+/// (read after the controls ran: a button may change the state); the last `UpdateMouse` result (the modes answer 0).
+pub fn update_mouse(h: &mut impl FormHost) -> i64 {
+    h.set_field(EE_SCREENS_MF_FIELD_B5F0, 0);
+    if h.field(EE_SCREENS_MF_FIELD_UI_STATE) == EE_SCREENS_MF_STATE_NO_SCROLL {
+        return 0;
+    }
+    let mut io = EeScreensMainFormIo::default();
+    h.op(EE_SCREENS_MF_OP_MD_MOUSE_AT, 0, 0, &mut io);
+    h.op(EE_SCREENS_MF_OP_MD_HACK, 2, 0, &mut io);
+    if h.t(EE_SCREENS_MF_OP_MOUSE_CAPTURED) {
+        return h.a(EE_SCREENS_MF_OP_BASE, EE_SCREENS_MF_BASE_UPDATE_MOUSE);
+    }
+    let result = h.a(EE_SCREENS_MF_OP_BASE, EE_SCREENS_MF_BASE_UPDATE_MOUSE);
+    if h.t(EE_SCREENS_MF_OP_MOUSE_CAPTURED) {
+        return result;
+    }
+    let mut io = EeScreensMainFormIo::default();
+    let mode = h.op(EE_SCREENS_MF_OP_MD_MOUSE_AT, 0, 0, &mut io);
+    mouse(h, mode, io.f[0], io.f[1])
+}
+
+/// `EEUIFMainGame::UpdateKeyboard` (0x271290) in the keyboard mode `mode` (`mKeyboardModes[mUIState]`): the mode's
+/// keys, else the form's (`UIForm::UpdateKeyboard`'s result; 0 when the mode took the keys).
+pub fn update_keyboard(h: &mut impl FormHost, mode: i64) -> i64 {
+    if mode == EE_SCREENS_MF_KEYBOARD_CINEMATIC {
+        cinematic_keys(h);
+        return 0;
+    }
+    h.a(EE_SCREENS_MF_OP_BASE, EE_SCREENS_MF_BASE_UPDATE_KEYBOARD)
+}
+
+/// `EEModeKeyboardCinematic` (0x27115c): Escape or F1 ends the cinematic (unless the game is paused), else F3 pauses
+/// (unless the cinematic is ending), else F9 takes a screenshot; it always takes the keys.
+fn cinematic_keys(h: &mut impl FormHost) {
+    let pressed = |h: &mut _, key, bits: i64| FormHost::a(h, EE_SCREENS_MF_OP_MD_KEY, key) & bits == bits;
+    let down = EE_SCREENS_MF_KEY_FOUND | EE_SCREENS_MF_KEY_HELD | EE_SCREENS_MF_KEY_JUST_PRESSED;
+    let just = EE_SCREENS_MF_KEY_FOUND | EE_SCREENS_MF_KEY_JUST_PRESSED;
+    if (pressed(h, EE_SCREENS_MF_KEY_ESCAPE, down) || pressed(h, EE_SCREENS_MF_KEY_F1, down))
+        && h.a(EE_SCREENS_MF_OP_COMMS_PAUSED, 0) == 0
+    {
+        h.a(EE_SCREENS_MF_OP_MD_CINEMATIC, EE_SCREENS_MF_CINE_END);
+    } else if pressed(h, EE_SCREENS_MF_KEY_F3, just)
+        && h.a(EE_SCREENS_MF_OP_MD_CINEMATIC, EE_SCREENS_MF_CINE_ENDING) == 0
+    {
+        h.a(EE_SCREENS_MF_OP_MD_CINEMATIC, EE_SCREENS_MF_CINE_PAUSE);
+    } else if pressed(h, EE_SCREENS_MF_KEY_F9, just) {
+        h.a(EE_SCREENS_MF_OP_MD_CINEMATIC, EE_SCREENS_MF_CINE_SCREENSHOT);
+    }
 }
 
 /// The mouse location of one call and the ops' shapes.
