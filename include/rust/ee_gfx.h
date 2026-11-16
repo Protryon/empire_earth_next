@@ -240,6 +240,9 @@ constexpr static const size_t EE_GFX_SELECTION_MAX_VERTICES = 20;
 /// Three indices per triangle.
 constexpr static const size_t EE_GFX_SELECTION_MAX_INDICES = 60;
 
+/// `RTSMouse`'s ten pointers and `EEMouse`'s fourteen.
+constexpr static const size_t EE_GFX_MOUSE_POINTERS = 24;
+
 /// `kU441C28`: the depth tolerance, in clipping ranges.
 constexpr static const float PICK_TOLERANCE = 3.0;
 
@@ -419,8 +422,14 @@ struct EeGfxEffectStore;
 /// The glows (owned by the record).
 struct EeGfxGlowSpots;
 
+/// `EEGraphicalGoalManager`: the markers by player, then by type.
+struct EeGfxGoalMarkers;
+
 /// The icons' offsets and the frame's copy (owned by the record).
 struct EeGfxMarchingLists;
+
+/// The pointer's frame state (`RTSMouse` +0x0c, +0x24..+0x84, +0xa1, +0xa3 and `EEMouse` +0xa8).
+struct EeGfxMouseFrame;
 
 /// The effect's orbitals (`mOrbitals`, copies of the graphic's) and the angles the draw uses (`mAngles`).
 struct EeGfxOrbitals;
@@ -1161,36 +1170,6 @@ struct EeGfxBarRects {
   uint32_t kind;
   uint32_t count;
   EeGeRectangle rects[4];
-};
-
-/// A screen point's ray: its world points on the near and far clipping planes.
-struct EeGfxPickRay {
-  /// on the near (front) clipping plane
-  EeGe3DPoint front;
-  /// on the far (rear) one
-  EeGe3DPoint rear;
-};
-
-/// `FindUnit`'s depth tolerance and one pixel's share of the window it picks against.
-struct EeGfxPickTolerances {
-  float tolerance;
-  float pixel;
-};
-
-/// `EEUnitPickerHit` (0x14 bytes).
-struct EeGfxPickHit {
-  /// along the ray
-  float distance;
-  /// the priority with the caller's resource preference
-  uint32_t priority;
-  /// the priority without it
-  int32_t kind;
-  /// into the picker's entries
-  uint32_t index;
-  /// the exact (LOD 2) test hit
-  bool exact;
-  /// big on the screen (or a tree)
-  bool large;
 };
 
 /// What `GetUnitPickPriority` reads of a unit (its class's virtual `IsLandBuilding` and the current player's
@@ -2627,6 +2606,151 @@ struct EeGfxDrawnHost {
   bool (*model_in_view)(void *context, float x, float y);
 };
 
+/// The player `Rebuild` places markers for.
+struct EeGfxGoalPlayer {
+  /// its epoch is Atomic - WW2 or later
+  bool late_epoch;
+  bool shift_mode;
+  /// its selected group's units
+  uint32_t unit_count;
+};
+
+/// A selected unit.
+struct EeGfxGoalUnit {
+  uint32_t category;
+  uint32_t unit_type;
+  int32_t air_traffic_type;
+  /// `mTile != NULL`
+  bool on_tile;
+  /// `mContainer != NULL`
+  bool held;
+  uint32_t queue_count;
+};
+
+/// A queued goal.
+struct EeGfxGoalStep {
+  uint32_t kind;
+  /// a location goal's automatic waypoint (no marker)
+  bool auto_waypoint;
+  /// a garrison's container or an attack's target was found (`target` then)
+  bool has_target;
+  void *target;
+  /// `GetGoalLocation`
+  EeGe3DPoint to;
+};
+
+/// The C++'s answers (`context`: none; the selection is the player's last asked).
+struct EeGfxGoalHost {
+  void *context;
+  /// `gWorld.mCurrentPlayer`
+  uint32_t (*current_player)(void *context);
+  /// `gWorld.mNumPlayers`
+  uint32_t (*player_count)(void *context);
+  EeGfxGoalPlayer (*player)(void *context, uint32_t player);
+  /// the selected group's unit `unit`
+  EeGfxGoalUnit (*unit)(void *context, uint32_t unit);
+  uint32_t (*goal_count)(void *context, uint32_t unit, uint32_t queue);
+  EeGfxGoalStep (*goal)(void *context, uint32_t unit, uint32_t queue, uint32_t goal);
+  /// goal `goal`'s location (false: no goal there)
+  bool (*goal_location)(void *context,
+                        uint32_t unit,
+                        uint32_t queue,
+                        uint32_t goal,
+                        EeGe3DPoint *out);
+  /// the unit's location on its tile, else its container's
+  EeGe3DPoint (*unit_location)(void *context, uint32_t unit, bool on_tile);
+  /// a target's outer part when placed; a land building's centre written into `to`: the target as resolved
+  void *(*target)(void *context, void *target, EeGe3DPoint *to);
+  /// the ground point under `point` when its tile is on the map
+  bool (*ground)(void *context, const EeGe3DPoint *point, EeGe3DPoint *out);
+  /// a marker's effect (`EEGraphicalGoal`'s constructor): its handle, 0 for none
+  uint32_t (*create)(void *context, uint32_t kind, uint32_t player);
+  void (*destroy)(void *context, uint32_t effect);
+  /// a line's effect to its ends (`SetFrom`, `SetTo`, its transformation at `from`)
+  void (*move_line)(void *context, uint32_t effect, const EeGe3DPoint *from, const EeGe3DPoint *to);
+  /// an icon's effect to `to` (`SetLocation`)
+  void (*move_icon)(void *context, uint32_t effect, const EeGe3DPoint *to);
+};
+
+/// The surface calls the frame makes (`GESurface`).
+struct EeGfxMouseSurfaces {
+  uint32_t (*width)(void *surface);
+  uint32_t (*height)(void *surface);
+  /// `from->CopyTo(to, source, destination, transparent)`
+  int32_t (*copy)(void *from,
+                  void *to,
+                  const EeGeRectangle *source,
+                  const EeGeRectangle *destination,
+                  bool transparent);
+  void (*reference)(void *surface);
+  void (*dereference)(void *surface);
+};
+
+/// What `FindUnit` reads of an entry's unit.
+struct EeGfxPickFindUnit {
+  /// `GetUnitPickPriority`'s facts
+  EeGfxPickUnit facts;
+  /// `GetTileX()` (-10000: off the map)
+  int32_t tile_x;
+};
+
+/// What the box selection reads of an entry's unit (its own class; a part's carrier's id and class).
+struct EeGfxPickBoxUnit {
+  /// `GetComplexUnit() != NULL`
+  bool complex;
+  /// the class's `IsPickable()`
+  bool pickable;
+  /// `mHitPoints > 0`
+  bool alive;
+  uint32_t category;
+  uint32_t unit_type;
+  /// `mPlayer` (an `EEPlayer*`, compared only)
+  const void *player;
+  /// the outermost carrier's (a complex unit's `mPreviousPart` walked; else the unit's own) id and whether its
+  /// class is a land building
+  uint32_t outer_id;
+  bool outer_land_building;
+};
+
+/// The C++'s answers (`context`: the picker).
+struct EeGfxPickHost {
+  void *context;
+  /// entry `index`'s unit (`gWorld.GetUnit` of its id), null once it has left the world
+  void *(*unit)(void *context, uint32_t index);
+  EeGfxPickFindUnit (*find_unit)(void *context, void *unit);
+  /// `GetUnitPickPriority`'s questions
+  bool (*ask)(void *context, void *unit, uint32_t question);
+  /// the current player's selection holds a unit
+  bool (*group_nonempty)(void *context);
+  /// `gRasterizer->GetPixelSize(entry, viewport, orthographic)` of entry `index`
+  float (*pixel_size)(void *context, uint32_t index);
+  /// a unit's outermost carrier (a complex unit's `mPreviousPart` walked), or the unit
+  void *(*carrier)(void *context, void *unit);
+  EeGfxPickBoxUnit (*box_unit)(void *context, void *unit);
+  /// an id onto the caller's result
+  void (*push)(void *context, void *out, uint32_t id);
+};
+
+/// `EEUnitPickerEntry` (0x50 bytes in the original): its `GEPhysicalModel` (location, model, scale, frame) and the
+/// unit's id.
+struct EeGfxPickEntry {
+  EeGeTransformation location;
+  /// `GEModel*`
+  const void *model;
+  float scale;
+  unsigned long frame;
+  unsigned long unit_id;
+};
+
+/// The view's facts `FindUnit` reads (`mViewport`, `mOrthographic`, `mShowHiddenUnits`, `gFreeCamera`, the window).
+struct EeGfxPickView {
+  EeGeViewport viewport;
+  bool orthographic;
+  bool show_hidden;
+  bool free_camera;
+  uint32_t window_width;
+};
+
 /// The area-effect textures `CreateSkyModel` loads (`gAreaEffectTexture`, `gCircleAreaEffectTexture`).
 struct EeGfxTerrainTextures {
   EeGfxModel area_effect;
@@ -3092,41 +3216,6 @@ EeGfxBarRects ee_gfx_units_object_bar(const EeGeViewport *viewport,
                                       float health,
                                       const EeGfxBarSizes *sizes);
 
-/// `FindUnit`'s ray through a screen point of `*viewport`.
-///
-/// # Safety
-/// The pointers are valid.
-void ee_gfx_pick_ray(const EeGeViewport *viewport,
-                     bool orthographic,
-                     const EeGe2DPoint *point,
-                     EeGfxPickRay *out);
-
-/// `FindUnit`'s depth tolerance and pixel share.
-///
-/// # Safety
-/// `viewport` is valid.
-EeGfxPickTolerances ee_gfx_pick_tolerances(const EeGeViewport *viewport,
-                                           bool free_camera,
-                                           uint32_t window_width);
-
-/// The bounding test's scale of an entry of priority `kind`.
-float ee_gfx_pick_scale(int32_t kind, float saved);
-
-/// Whether a bounding hit is large on the screen (or a tree).
-bool ee_gfx_pick_is_large(float pixel_size, float pixel, int32_t kind);
-
-/// `FindUnit`'s ranking and choice over `count` hits: the chosen hit's index into `hits`, or -1. `group_nonempty`
-/// (the current player's selection holds a unit) is asked only when both an exact and a bounding hit rank.
-///
-/// # Safety
-/// `hits` holds `count` hits (or `count` is 0); the callback's contract is the caller's.
-ptrdiff_t ee_gfx_pick_best(const EeGfxPickHit *hits,
-                           size_t count,
-                           float tolerance,
-                           bool show_hidden,
-                           void *context,
-                           bool (*group_nonempty)(void *context));
-
 /// `GetUnitPickPriority`; `ask(context, question)` answers 0 `IsLandBuilding`, 1 the current player's `IsAlly`.
 ///
 /// # Safety
@@ -3141,32 +3230,6 @@ int32_t ee_gfx_pick_priority(const EeGfxPickUnit *unit,
 /// # Safety
 /// `add` is valid.
 bool ee_gfx_pick_admits(const EeGfxPickAdd *add);
-
-/// `GetIsEntryInView`'s centre test against the side planes 2..5 of `planes` (six): `below[0..4]` and their count.
-///
-/// # Safety
-/// `center` is valid, `planes` holds six planes, `below` has room for four.
-uint32_t ee_gfx_pick_sphere_below(const EeGe3DPoint *center,
-                                  const EeGe3DPlane *planes,
-                                  bool *below);
-
-/// `GetIsEntryInView`'s sphere test: of the side planes the centre is below, how many the sphere does not reach.
-///
-/// # Safety
-/// `center` is valid, `planes` holds six planes, `below` four flags.
-uint32_t ee_gfx_pick_sphere_outside(const EeGe3DPoint *center,
-                                    const EeGe3DPlane *planes,
-                                    const bool *below,
-                                    float radius);
-
-/// The LOD `GetIsEntryInView` walks.
-uint32_t ee_gfx_pick_view_lod(uint32_t lod_count);
-
-/// `GetIsModelInView`'s vertex test against the side planes 2..5 of `planes` (six).
-///
-/// # Safety
-/// `planes` holds six planes, `point` is valid.
-bool ee_gfx_pick_point_in_view(const EeGe3DPlane *planes, const EeGe3DPoint *point);
 
 /// `SetMap`'s transformations and pixel sizes for a map of `height` (`mL195610`) by `width` (`mL195614`) tiles and
 /// `size` tiles per side.
@@ -3442,15 +3505,6 @@ void ee_gfx_minimap_press_point(const EeGe2DPoint *mouse,
                                 uint32_t height,
                                 const EeGeRectangle *bounds,
                                 EeGe2DPoint *out);
-
-/// `GetIsEntryInView`'s model transformation (the box selection's frustum test).
-///
-/// # Safety
-/// The pointers are valid.
-void ee_gfx_pick_entry_transform(const EeGeTransformation *location,
-                                 const EeGeTransformation *internal,
-                                 float scale,
-                                 EeGeTransformation *out);
 
 /// A new effect's record (`Init`'s values, the identity, `kind`), freed by `ee_gfx_effect_record_free`.
 EeGfxEffectRecord *ee_gfx_effect_record_new(int32_t kind);
@@ -4156,6 +4210,86 @@ EeGfxColor ee_gfx_capture_waypoint_tint(int32_t carrier_id);
 
 /// `FillRenderLists`' music intensity.
 uint32_t ee_gfx_capture_music_intensity(uint32_t current, float fighting, float count);
+
+/// `EEGraphicalGoalManager`'s constructor: no markers.
+EeGfxGoalMarkers *ee_gfx_goals_new();
+
+/// Its destructor: every marker's effect destroyed, the markers freed.
+///
+/// # Safety
+/// `markers` came from [`ee_gfx_goals_new`] (or is null) and is not used again; `host` is valid.
+void ee_gfx_goals_free(EeGfxGoalMarkers *markers, const EeGfxGoalHost *host);
+
+/// `Update` (every tick, `EEEffectManager::Update`).
+///
+/// # Safety
+/// `markers` came from [`ee_gfx_goals_new`]; `host` is valid.
+void ee_gfx_goals_update(EeGfxGoalMarkers *markers, const EeGfxGoalHost *host);
+
+/// A new frame (the constructors').
+EeGfxMouseFrame *ee_gfx_mouse_frame_new();
+
+/// The frame freed (the destructor's; its surfaces are released by `Release`).
+///
+/// # Safety
+/// `frame` came from [`ee_gfx_mouse_frame_new`] (or is null) and is not used again.
+void ee_gfx_mouse_frame_free(EeGfxMouseFrame *frame);
+
+/// Pointer slot `index` (0..24), for `LoadPointer` to fill in place; save-under record `24 + k`'s surface slot.
+///
+/// # Safety
+/// `frame` is valid; the slot lives as long as the frame.
+void **ee_gfx_mouse_frame_slot(EeGfxMouseFrame *frame,
+                               uint32_t index);
+
+/// `GetPointerSurface`.
+///
+/// # Safety
+/// `frame` is valid.
+void *ee_gfx_mouse_frame_pointer(const EeGfxMouseFrame *frame, uint32_t index);
+
+/// The frame's calls (`op`): 0 `BeginFrame` (`position`, `pointer`, `overlay`, `shift`), 1 `SaveUnder`, 2 `Draw`,
+/// 3 `RestoreUnder` (`shift`: windowed; its copy's result), 4 `EndFrame`, 5 `EEMouse::Release`'s own, 6
+/// `RTSMouse::Release`, 7 a load done (the next restore skipped). `target` and `origin` for 1..3.
+///
+/// # Safety
+/// `frame` and `surfaces` are valid; `origin` is valid for 0..3 (`position` for 0); the surfaces are live.
+int32_t ee_gfx_mouse_frame_call(EeGfxMouseFrame *frame,
+                                const EeGfxMouseSurfaces *surfaces,
+                                uint32_t op,
+                                void *target,
+                                const EeGe2DPoint *origin,
+                                uint32_t pointer,
+                                uint32_t overlay,
+                                bool shift);
+
+/// `FindUnit` for the C++ (under its lock).
+///
+/// # Safety
+/// `host`, `models`, `view` and `point` are valid; `entries` holds `count` entries the callbacks do not touch.
+void *ee_gfx_pick_find_unit(const EeGfxPickHost *host,
+                            const EeGePhysicalModels *models,
+                            EeGfxPickEntry *entries,
+                            uint32_t count,
+                            const EeGfxPickView *view,
+                            const EeGe2DPoint *point,
+                            bool prefer_resources);
+
+/// `PickUnits` (`all` false) or `PickUnitsInRectangle` (`all` true; `player` unused) for the C++ (under its lock):
+/// the ids pushed onto `out` through the host. `planes` is the selection frustum's six planes, null when there are no
+/// entries.
+///
+/// # Safety
+/// `host` and `models` are valid; `entries` holds `count` entries; `planes` as said.
+void ee_gfx_pick_box(const EeGfxPickHost *host,
+                     const EeGePhysicalModels *models,
+                     EeGfxPickEntry *entries,
+                     uint32_t count,
+                     const EeGe3DPlane *planes,
+                     bool all,
+                     const void *player,
+                     uint32_t kind,
+                     void *out);
 
 /// `EEROTerrain::CreateSkyModel`.
 ///

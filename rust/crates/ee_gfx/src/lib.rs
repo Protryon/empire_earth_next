@@ -72,6 +72,7 @@ pub mod ffi_effect;
 pub mod ffi_manager;
 pub mod ffi_mesh;
 pub mod ffi_scene;
+pub mod goal_markers;
 #[cfg(test)]
 mod golden_beam;
 #[cfg(test)]
