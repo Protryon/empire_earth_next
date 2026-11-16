@@ -25,9 +25,7 @@
  * responsibility.
  */
 
-// FUNCTION: JPEG 0x1008a5d0
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x809da0
 jpeg_abort (j_common_ptr cinfo)
 {
   int pool;
@@ -67,9 +65,7 @@ jpeg_abort (j_common_ptr cinfo)
  * responsibility.
  */
 
-// FUNCTION: JPEG 0x1008a603
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x809de0
 jpeg_destroy (j_common_ptr cinfo)
 {
   /* We need only tell the memory manager to release everything. */
@@ -86,9 +82,7 @@ jpeg_destroy (j_common_ptr cinfo)
  * (Would jutils.c be a more reasonable place to put these?)
  */
 
-// FUNCTION: JPEG 0x1008a61e
 GLOBAL(JQUANT_TBL *)
-// FUNCTION: EXEIMG 0x809e00
 jpeg_alloc_quant_table (j_common_ptr cinfo)
 {
   JQUANT_TBL *tbl;
@@ -100,9 +94,7 @@ jpeg_alloc_quant_table (j_common_ptr cinfo)
 }
 
 
-// FUNCTION: JPEG 0x1008a63a
 GLOBAL(JHUFF_TBL *)
-// FUNCTION: EXEIMG 0x809e20
 jpeg_alloc_huff_table (j_common_ptr cinfo)
 {
   JHUFF_TBL *tbl;

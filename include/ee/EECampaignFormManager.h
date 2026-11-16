@@ -17,7 +17,7 @@ public:
     EECampaign();                           // 0x28c08c (+0x74 = gStartupDirectory + "data\")
     // 0x28c122: copies every file of inFiles found in gDataPath to the list outFiles (refilled) names
     bool CopyScenarioFiles(std::vector<UWideString>& inFiles, std::vector<UWideString>& outFiles);
-    bool CreateScenarioList(const UWideString& inFile, UWideString& outError);  // 0x28c36e
+    bool CreateScenarioList(const UWideString& inFile, UWideString& outError);
     UWideString DecryptPassword(const UWideString& inPassword);    // 0x28c4a5 (UEDecryptUString)
     UWideString EncryptPassword(const UWideString& inPassword);    // 0x28c517 (UEEncryptUString)
     UWideString GetScenarioListFile();      // 0x28c589 ("Campaigns\" + gU52A280 + "ScenarioList.txt")
@@ -28,14 +28,14 @@ public:
     // 0x28ca06: the scenario files (and, through ListScenarioMedia, their media) of the campaign
     bool ListScenarioFiles(std::vector<UWideString>& outFiles, UWideString& outError, bool inAdd, bool inPrefixed);
     bool ListScenarioMedia(const UWideString& inFile, std::vector<UWideString>& ioFiles, UWideString& outError,
-                           bool inPrefixed);    // 0x28cc2e
+                           bool inPrefixed);
     bool ListEffectSound(const UWideString& inFile, EESMEffect* inEffect, std::vector<UWideString>& ioFiles,
-                         UWideString& outError, bool inPrefixed);   // 0x28ceba
+                         UWideString& outError, bool inPrefixed);
     bool ListEffectSounds(const UWideString& inFile, std::vector<UWideString>& ioFiles, UWideString& outError,
-                          bool inPrefixed);     // 0x28d219
-    bool NotArchived(UWideString inFile);   // 0x28d2e3
-    bool SaveArchive(FSArchive* inArchive, UWideString& outError);  // 0x28d317
-    bool Save(UWideString& outError);       // 0x28d53b
+                          bool inPrefixed);
+    bool NotArchived(UWideString inFile);
+    bool SaveArchive(FSArchive* inArchive, UWideString& outError);
+    bool Save(UWideString& outError);
     void SetAuthorEmail(const UWideString& inText);         // 0x28d79b (+0x10)
     void SetAuthorName(const UWideString& inText);          // 0x28d7ab (+0x24)
     void SetBackgroundImage(const UWideString& inText);     // 0x28d7bb (+0x38)
@@ -68,9 +68,9 @@ public:
 
 class EECampaignFormManager : public UIFormManager {
 public:
-    EECampaignFormManager();                // 0x28f0cb
-    virtual ~EECampaignFormManager();       // 0x28f16c (??_G 0x28f150)
-    static EECampaignFormManager* Get();    // 0x28f1ae
+    EECampaignFormManager();
+    virtual ~EECampaignFormManager();
+    static EECampaignFormManager* Get();
     // 0x28f1f8: index of a built-in campaign by name (0: a custom one; provisional name)
     static unsigned long GetBuiltInCampaign(const UWideString& inName);
     void SetCampaignName(const UWideString& inName) { this->mCampaignName = inName; }

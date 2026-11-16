@@ -4,64 +4,31 @@
 // options page are whole in Rust (ee_screens editor_players.rs): EESEPlayerScreen holds the object, and this unit
 // is its host (ee_screenscpp_sepl). Unit flags: the exe module set.
 #include <windows.h>
-#include <mbstring.h>
-#include <algorithm>
-#include <set>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/SESample.h"
-#include "lle/SESMInstanceNode.h"
-#include "lle/SESoundManager.h"
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
 #include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
 #include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
 #include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
-#include "lle/GELine.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIEditBox.h"
 #include "lle/UIListBox.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
 #include "lle/UILBString.h"
-#include "lle/UIComboBox.h"
 #include "lle/UIFileComboBox.h"
-#include "lle/UIFormManager.h"
 #include "lle/UResourceFile.h"
-#include "lle/UISlider.h"
 #include "lle/UICheckBox.h"
 
 #include "lle/UIRadioButton.h"
-#include "lle/UITriStateCheckBox.h"
-#include <vector>
-#include <deque>
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
@@ -70,55 +37,19 @@
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
-#include "ee/EESMEffect.h"
-#include "ee/EESETSBaseObject.h"
-#include "ee/EESETriggerScreen.h"
-#include "lle/USingleton.h"
-#include "ee/EECalamityClass.h"
-#include "ee/EECalamityManager.h"
-#include "ee/EEMedia.h"
-#include "ee/EEGraphicEffect.h"
-#include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EESETSEScenarioComboBox.h"
-#include "ee/EESETSUICBPlayer.h"
-#include "ee/EESETSEffectControls.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GE3DLine.h"
-#include "lle/GETransformation.h"
-#include "lle/GETerrainMesh.h"
-#include "ee/EEMap.h"
-#include "ee/EEMouse.h"
-#include "ee/EEGraphics.h"
-#include "ee/EEAScroll.h"
-#include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EESMArea.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUnitSetManager.h"
-#include "ee/EESMObject.h"
 #include "ee/EESEPlayerScreen.h"
 #include "ee/EEMessage.h"
-#include "ee/EESETSConditionControls.h"
 #include "ee/EESETSEffectControls.h"
 #include "ee/EEALasso.h"
-#include "ee/EEAMouseClick.h"
-#include "ee/EESEALasso.h"
-#include "ee/EESEAMouseClick.h"
-#include "ee/EESETSAMouseClick.h"
-#include "ee/EESETSALasso.h"
-#include "ee/EEUICSelectUnits.h"
-#include "ee/EESEUICTriggerSelectUnits.h"
-#include "ee/EESETSOUnitList.h"
 #include "ee/EESETSCComboBox.h"
 #include "ee/EESETSEComboBox.h"
-#include "ee/EESETSAComboBox.h"
-#include "ee/EESETSAEditBox.h"
 #include "ee/EESERBUnitTypes.h"
 #include "lle/UIESliderChange.h"
 #include "ee/EESEARust.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
 #include "ee/EEUIFSEMainButton.h"
 #include "ee/EEUIBColor.h"
@@ -129,7 +60,6 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EESEAChangeLoadText.h"
 #include "ee/EESELoadThread.h"
-#include "lle/UIRadioButton.h"
 #include "lle/UITriStateCheckBox.h"
 #include "ee/EESETSUICBPlayer.h"
 #include "ee/EESETSEScenarioComboBox.h"
@@ -153,7 +83,6 @@ GEBitmap* EESEUIBDiplomacy::sPressedBitmaps[2];
 extern FSPath* gCivilizationDataPath;
 extern UString gSECivilizationExtension;
 
-// FUNCTION: EXE 0x573218
 // Creates one of the tech tree page's unit-type radio buttons (Units, Buildings, Heroes, Technologies)
 EESERBUnitTypes::EESERBUnitTypes(unsigned long inID, const UWideString& inText, GEFont* inFont,
                                  const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight,
@@ -164,10 +93,6 @@ EESERBUnitTypes::EESERBUnitTypes(unsigned long inID, const UWideString& inText, 
 {
 }
 
-// SYNTHETIC: EXE 0x573295
-// (the scalar deleting destructor, emitted with the vtable; slot EESERBUnitTypes+0x0, stores EESERBUnitTypes vtable)
-
-// FUNCTION: EXE 0x5732b8
 // Checks the unit-type button and refills the tech tree page's two tech lists for that type
 void EESERBUnitTypes::Check()
 {
@@ -175,7 +100,6 @@ void EESERBUnitTypes::Check()
     gUIManager->mScenarioEditorForm->GetPlayerScreen()->FillTechLists();
 }
 
-// FUNCTION: EXE 0x5732d7
 // Applies a new max-players choice: sets the player tab's player count to the selection + 2, then selects it
 void EESECBMaxPlayer::ChangeSelection()
 {
@@ -200,7 +124,6 @@ GEFont* gSeplScreenFont;
 UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
                             unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex);
 
-// FUNCTION: EXE 0x573313
 // Creates the player tab: player page, tech tree page and game options page controls (editor_players.rs)
 EESEPlayerScreen::EESEPlayerScreen(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont,
                                    UIComboBox* inPlayerSelection)
@@ -211,7 +134,6 @@ EESEPlayerScreen::EESEPlayerScreen(unsigned long& ioIndex, UIForm* inForm, GEFon
     ioIndex = theIndex;
 }
 
-// FUNCTION: EXE 0x5733bf
 // Destroys the player tab, deleting every control it created (editor_players.rs)
 EESEPlayerScreen::~EESEPlayerScreen()
 {
@@ -223,7 +145,6 @@ void EESEPlayerScreen::SetPlayerCount(unsigned long inCount)
     ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_SET_PLAYER_COUNT, (uint32_t)inCount, 0);
 }
 
-// FUNCTION: EXE 0x5737a3
 // Performs the action: sets gMaxPlayers to the new player count
 void EESEAChangeWorldPlayerCount::Virtual4()
 {
@@ -266,7 +187,6 @@ UIComboBox* EESEPlayerScreen::GetRowEpochs(unsigned long inRow, bool inEnd)
         this->mRust, (uint32_t)inRow, inEnd ? EE_SCREENS_SEPL_ROW_END_EPOCH : EE_SCREENS_SEPL_ROW_START_EPOCH));
 }
 
-// FUNCTION: EXE 0x575001
 // Creates the max-players combo box, 20 pixels high
 EESECBMaxPlayer::EESECBMaxPlayer(unsigned long inID, unsigned long inTextBoxType,
                                  const std::vector<UWideString>& inStrings, GEFont* inFont,
@@ -278,10 +198,6 @@ EESECBMaxPlayer::EESECBMaxPlayer(unsigned long inID, unsigned long inTextBoxType
 {
 }
 
-// SYNTHETIC: EXE 0x575079
-// (the scalar deleting destructor, emitted with the vtable; slot EESECBMaxPlayer+0x0, stores EESECBMaxPlayer vtable)
-
-// FUNCTION: EXE 0x576818
 // Creates a 23x23 diplomacy grid button, starting as enemies (state 1)
 EESEUIBDiplomacy::EESEUIBDiplomacy(unsigned long inID, const GE2DPoint& inLocation, UIForm* inForm,
                                    unsigned long inIndex, unsigned long inBorderThickness)
@@ -291,14 +207,10 @@ EESEUIBDiplomacy::EESEUIBDiplomacy(unsigned long inID, const GE2DPoint& inLocati
     this->mState = kButtonStateFocused;
 }
 
-// SYNTHETIC: EXE 0x576883
-// (the scalar deleting destructor, emitted with the vtable; slot EESEUIBDiplomacy+0x0, stores EESEUIBDiplomacy vtable)
-
-// FUNCTION: EXE 0x5768a6
 // Cuts the diplomacy buttons' normal, focused and pressed bitmaps (allies, enemies) from the editor's button texture
 void EESEUIBDiplomacy::LoadBitmaps(EEUIFScenarioEditor* inEditor)
 {
-    GETexture* theTexture = inEditor->mButtonTexture;
+    GETexture* theTexture = inEditor->GetButtonTexture();
     float theWidth = (float)theTexture->GetWidth();
     float theTop = 230.0f / theWidth;
     float theBottom = 253.0f / theWidth;
@@ -338,7 +250,6 @@ void EESEUIBDiplomacy::LoadBitmaps(EEUIFScenarioEditor* inEditor)
 }
 
 
-// FUNCTION: EXE 0x576b18
 // Releases the diplomacy buttons' shared bitmaps
 void EESEUIBDiplomacy::ReleaseBitmaps()
 {
@@ -349,7 +260,6 @@ void EESEUIBDiplomacy::ReleaseBitmaps()
     }
 }
 
-// FUNCTION: EXE 0x576b49
 // Shows the bitmaps and help text (players currently allies / enemies) of the button's state
 void EESEUIBDiplomacy::UpdateBitmaps()
 {
@@ -366,7 +276,6 @@ void EESEUIBDiplomacy::UpdateBitmaps()
     }
 }
 
-// FUNCTION: EXE 0x576baf
 // Toggles the button between allies and enemies, updating its bitmaps and the form's help text
 void EESEUIBDiplomacy::ButtonUp()
 {
@@ -586,7 +495,8 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
     case EE_SCREENS_SEPL_RADIO: {
         UIRadioButton* t = new UIRadioButton(c.id, theText, theFont, theRect, inForm, c.index, 0, false, c.extra[0] != 0,
                                              false);
-        if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
+        if (c.bg >= 0.0f && (c.flags & EE_SCREENS_SEPL_LABEL_BG)) t->GetTextLabel()->SetBgOpacity(c.bg);   // the elevation tab's
+        else if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
         if (theFg) SeplYellow(t->GetTextLabel()->GetGEText());
         theControl = t;
         break;
@@ -810,7 +720,7 @@ void SeplCivFill(UIComboBox* inControl)
     gResource->GetString(IDS_NONE, theText);
     inControl->AppendLine(theText);
     for (unsigned long i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
-        EECivilizationEntry theEntry = gCivilizationManager.mCivilizations[i];
+        EECivilizationEntry theEntry = gCivilizationManager.GetCivilization(i);
         gResource->GetString(theEntry.mNameID, theText);
         inControl->AppendLine(theText);
     }
@@ -832,7 +742,7 @@ void SeplCivSelect(UIComboBox* inControl, EEPlayer* inPlayer)
     }
     unsigned long i;
     for (i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
-        EECivilizationEntry theEntry = gCivilizationManager.mCivilizations[i];
+        EECivilizationEntry theEntry = gCivilizationManager.GetCivilization(i);
         if (UString(theEntry.mFileName) == inPlayer->mCivilizationFile)
             break;
     }
@@ -860,8 +770,8 @@ bool SeplCivApply(UIComboBox* inControl, EEPlayer* inPlayer)
     unsigned long theSelection;
     inControl->GetCurrentSelection(theSelection);
     gResource->GetString(IDS_UNKNOWN_CIVILIZATION, theText);
-    if (theSelection > 0 && theSelection <= gCivilizationManager.mCivilizations.size()) {
-        EECivilizationEntry theEntry = gCivilizationManager.mCivilizations[theSelection - 1];
+    if (theSelection > 0 && theSelection <= gCivilizationManager.GetNumCivilizations()) {
+        EECivilizationEntry theEntry = gCivilizationManager.GetCivilization(theSelection - 1);
         theCivilization = theEntry.mFileName;
     } else
         theCivilization = UString(inControl->GetListBox()->GetData(theSelection));
@@ -1077,7 +987,7 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPL_OP_WORLD_SET: SeplWorld(i[0], true, i[1]); return 0;
     case EE_SCREENS_SEPL_OP_LOAD_THREAD: {
         // the existing queue API carries the original scalar message words as void*
-        EESELoadThread* theThread = gUIManager->mScenarioEditorForm->mLoadThread;
+        EESELoadThread* theThread = gUIManager->mScenarioEditorForm->GetLoadThread();
         void* thePlayer = reinterpret_cast<void*>((uintptr_t)i[1]);
         void* theEpoch = reinterpret_cast<void*>((intptr_t)gWorld.GetPlayer(i[1])->GetTechTree()->mStartEpoch);
         if (i[0] == 406) theThread->Post406(thePlayer, theEpoch);

@@ -67,12 +67,7 @@
 #include <EEAIFunctionObjects.h>
 
 const UString EECPUnitManager::sData("EECPUnitManager-Data");
-// SYNTHETIC: EXE 0x49350f   (wrapper)
-// SYNTHETIC: EXE 0x493519   (ctor)
-// SYNTHETIC: EXE 0x49352a   (registrar)
-// SYNTHETIC: EXE 0x493536   (dtor)
 
-// FUNCTION: EXE 0x493552
 // Orders two units by the squared distance of their tiles from the center tile, nearer first
 // Built without /Og (rule 4 evidence: memory-resident locals, `leave`); exact with the pragma, hash-fitted names and
 // U2DPoint<long>::DistanceSquared (an inline the /Os post-check undoes: its locals keep 8 frame slots; r37_load)
@@ -88,7 +83,6 @@ bool EECPUnitDistanceLess::operator()(EEComplexUnit* inFirst, EEComplexUnit* inS
 }
 #pragma optimize("g", on)
 
-// FUNCTION: EXE 0x4935e6
 // Creates the unit manager of a civilization manager, with nothing waiting or in production and production off
 EECPUnitManager::EECPUnitManager(EECPCivilizationManager* inManager)
 {
@@ -99,14 +93,12 @@ EECPUnitManager::EECPUnitManager(EECPCivilizationManager* inManager)
     this->mProductionEnabled = false;
 }
 
-// FUNCTION: EXE 0x493660
 // Destroys the manager, releasing every unit it tracks
 EECPUnitManager::~EECPUnitManager()
 {
     this->ReleaseUnits();
 }
 
-// FUNCTION: EXE 0x493696
 // Returns whether any epoch's request list holds a request for a unit class
 bool EECPUnitManager::IsRequested(long inUnitClass)
 {
@@ -119,7 +111,6 @@ bool EECPUnitManager::IsRequested(long inUnitClass)
     return theFound;
 }
 
-// FUNCTION: EXE 0x4936ec
 // Returns whether a producing building of a unit class is researching or has queued that class's technology
 bool EECPUnitManager::IsInProduction(long inUnitClass)
 {
@@ -146,14 +137,12 @@ bool EECPUnitManager::IsInProduction(long inUnitClass)
     return theFound;
 }
 
-// FUNCTION: EXE 0x4937dd
 // Returns whether a technology is in the unit's build queue
 bool EEComplexUnit::IsResearchQueued(long inTechnology)
 {
     return std::find(this->mBuildQueue.begin(), this->mBuildQueue.end(), inTechnology) != this->mBuildQueue.end();
 }
 
-// FUNCTION: EXE 0x493832
 // Returns whether any tracked unit of a class is not yet built
 bool EECPUnitManager::HasUnfinished(long inUnitClass)
 {
@@ -166,7 +155,6 @@ bool EECPUnitManager::HasUnfinished(long inUnitClass)
     return theFound;
 }
 
-// FUNCTION: EXE 0x493893
 // Cancels a count of requested units of a class for a town and continent, from the requests and then from the
 // build queues; returns true if the whole count was cancelled
 bool EECPUnitManager::CancelRequest(long inUnitClass, unsigned long inCount, long inTownID, unsigned short inContinent)
@@ -223,7 +211,6 @@ done:
 }
 
 // NEAR: the original multiplies with fimul (float loaded first, the long counted from memory); ours fild + fmul (90.5)
-// FUNCTION: EXE 0x493aee
 // Returns the citizen target: the population limit times the player's citizen percentage
 static const long kStoneCitizens = 90;   // the experiment "stonecit"
 
@@ -260,7 +247,6 @@ long EECPUnitManager::GetWantedCitizens()
     return theWanted;
 }
 
-// FUNCTION: EXE 0x493b20
 // Releases every tracked unit and frees the per-class lists
 void EECPUnitManager::ReleaseUnits()
 {
@@ -277,7 +263,6 @@ void EECPUnitManager::ReleaseUnits()
     this->mUnits.clear();
 }
 
-// FUNCTION: EXE 0x493b97
 // Spreads the queued production of a building's class over its buildings on the same continent; the remainder
 // goes to the given building
 void EECPUnitManager::BalanceProduction(EEComplexUnit* inUnit)
@@ -329,14 +314,12 @@ void EECPUnitManager::BalanceProduction(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x493dbb
 // Removes the first entry of the unit's build queue
 void EEComplexUnit::PopProductionQueue()
 {
     this->mBuildQueue.erase(this->mBuildQueue.begin());
 }
 
-// FUNCTION: EXE 0x493de4
 // Returns the first attached citizen building an unfinished building whose site is taken while it waits for the
 // site or is disabled
 EEComplexUnit* EECPUnitManager::FindStalledBuilder()
@@ -359,7 +342,6 @@ EEComplexUnit* EECPUnitManager::FindStalledBuilder()
     return theResult;
 }
 
-// FUNCTION: EXE 0x493ed4
 // Feeds a counting screen the tracked units, the open requests of the tech tree's epochs and the units being
 // produced at land buildings
 void EECPUnitManager::GatherUnits(EECPUMGatherUnitsScreenBase& ioGatherer)
@@ -414,10 +396,6 @@ void EECPUnitManager::GatherUnits(EECPUMGatherUnitsScreenBase& ioGatherer)
     }
 }
 
-// FUNCTION: EXE 0x4940eb
-// Returns the length of a unit's build queue (EEComplexUnit::GetBuildQueueSize, inline in ee/EEUnit.h)
-
-// FUNCTION: EXE 0x4940fe
 // Collects the citizens that are available for a new job
 void EECPUnitManager::GetIdleCitizens(std::vector<EEComplexUnit*>& outUnits)
 {
@@ -431,7 +409,6 @@ void EECPUnitManager::GetIdleCitizens(std::vector<EEComplexUnit*>& outUnits)
             outUnits.push_back(theUnits[i]);
 }
 
-// FUNCTION: EXE 0x494174
 // Returns the best available citizen to build a unit class at a tile
 EEComplexUnit* EECPUnitManager::FindBuilderForTile(U2DPoint<long>& inTile, long inUnitClass)
 {
@@ -439,7 +416,6 @@ EEComplexUnit* EECPUnitManager::FindBuilderForTile(U2DPoint<long>& inTile, long 
     return this->FindBuilder(theLocation, inUnitClass);
 }
 
-// FUNCTION: EXE 0x494197
 // Returns the best available citizen to build a unit class at a unit's tile
 EEComplexUnit* EECPUnitManager::FindBuilderForTarget(EEUnit* inTarget, long inUnitClass)
 {
@@ -447,7 +423,6 @@ EEComplexUnit* EECPUnitManager::FindBuilderForTarget(EEUnit* inTarget, long inUn
     return this->FindBuilder(theLocation, inUnitClass);
 }
 
-// FUNCTION: EXE 0x4941bb
 // Returns the nearest available citizen in the site's path area (or on a shore touching it, for site classes and
 // towers); farm builders skip citizens already farming
 // NEAR: the original copies the sort predicate from the tile local
@@ -494,7 +469,6 @@ EEComplexUnit* EECPUnitManager::FindBuilder(GE2DPoint& inLocation, long inUnitCl
     return theResult;
 }
 
-// FUNCTION: EXE 0x49447e
 // Collects every tracked citizen of both citizen classes (class 0x1e0 first, then 0x20)
 // each deque goes in with vector::insert(begin(), F, L) over deque iterators (COMDAT 0x96506); the deque reference
 // local lets begin() and end() share the _Myoff load
@@ -514,7 +488,6 @@ void EECPUnitManager::GetCitizens(std::vector<EEComplexUnit*>& outUnits)
     }
 }
 
-// FUNCTION: EXE 0x494524
 // Returns whether a citizen is alive, on the map, attached to the AI, has no buildings queued and is idle or
 // gathering
 bool EECPUnitManager::IsCitizenAvailable(EEComplexUnit* inUnit)
@@ -523,14 +496,12 @@ bool EECPUnitManager::IsCitizenAvailable(EEComplexUnit* inUnit)
            inUnit->mTileY != -10000 && inUnit->mCitizenBuildQueue.size() == 0 && (inUnit->mActiveGoal == NULL || inUnit->mActiveGoal->mKind == kGoalGather);
 }
 
-// FUNCTION: EXE 0x494572
 // Returns the number of citizens and fishing boats
 unsigned long EECPUnitManager::GetNumWorkers()
 {
     return this->GetCount(this->mManager->GetFishingBoatClass()) + this->GetCount(0x1e0) + this->GetCount(0x20);
 }
 
-// FUNCTION: EXE 0x4945a7
 // Counts the military units, optionally per class and including requests
 long EECPUnitManager::CountMilitaryUnits(bool inByClass, bool inRequests)
 {
@@ -539,7 +510,6 @@ long EECPUnitManager::CountMilitaryUnits(bool inByClass, bool inRequests)
     return theGatherer.mRequested + theGatherer.mUnits;
 }
 
-// FUNCTION: EXE 0x4945de
 // Returns the number of tracked units of a class
 unsigned long EECPUnitManager::GetCount(long inUnitClass)
 {
@@ -549,7 +519,6 @@ unsigned long EECPUnitManager::GetCount(long inUnitClass)
     return 0;
 }
 
-// FUNCTION: EXE 0x494608
 // Returns the list of tracked units of a class, or NULL
 std::deque<EEComplexUnit*>* EECPUnitManager::GetUnits(long inUnitClass)
 {
@@ -559,7 +528,6 @@ std::deque<EEComplexUnit*>* EECPUnitManager::GetUnits(long inUnitClass)
     return NULL;
 }
 
-// FUNCTION: EXE 0x49462f
 // Reads the requests per epoch (epoch 14 only from version 0.234 on), waiting counts and flags, dropping invalid
 // requests; returns the first read error
 long EECPUnitManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -707,7 +675,6 @@ long EECPUnitManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     return theResult;
 }
 
-// FUNCTION: EXE 0x4947f3
 // Returns whether any request is filed under an epoch later than the current one
 bool EECPUnitManager::HasLaterEpochRequests()
 {
@@ -721,7 +688,6 @@ bool EECPUnitManager::HasLaterEpochRequests()
     return theFound;
 }
 
-// FUNCTION: EXE 0x49482b
 // Tracks every unit of the player and files its living citizens as idle gatherers
 void EECPUnitManager::AddAllUnits()
 {
@@ -733,7 +699,6 @@ void EECPUnitManager::AddAllUnits()
     }
 }
 
-// FUNCTION: EXE 0x49487b
 // Requests fishing boats unless the player already has or has requested one
 void EECPUnitManager::RequestFishingBoats(long inCount)
 {
@@ -772,7 +737,6 @@ struct EECPUMQueueLess {
         { return inFirst->GetBuildQueueSize() < inSecond->GetBuildQueueSize(); }
 };
 
-// FUNCTION: EXE 0x4948e6
 // Files a request for units of a class under its epoch (or adds to an existing one) and adds their cost to the
 // needs; a new request first needs a producing building, else it requests the cheapest available one
 void EECPUnitManager::RequestUnits(long inUnitClass, long inCount, long inTownID, unsigned short inContinent)
@@ -865,7 +829,6 @@ void EECPUnitManager::RequestUnits(long inUnitClass, long inCount, long inTownID
     }
 }
 
-// FUNCTION: EXE 0x494c80
 // Releases every tracked unit and clears the waiting counts and every epoch's requests
 void EECPUnitManager::Reset()
 {
@@ -875,7 +838,6 @@ void EECPUnitManager::Reset()
     this->mWaitingCounts.clear();
 }
 
-// FUNCTION: EXE 0x494cac
 // Drops the requests filed before an epoch whose class went obsolete before it, releasing their personnel
 void EECPUnitManager::DropObsoleteRequests(long inEpoch)
 {
@@ -896,7 +858,6 @@ void EECPUnitManager::DropObsoleteRequests(long inEpoch)
     }
 }
 
-// FUNCTION: EXE 0x494d9b
 // Re-tracks the player's units after loading when the player is active; returns 0
 long EECPUnitManager::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -905,7 +866,6 @@ long EECPUnitManager::Restore(unsigned long inMajorVersion, unsigned long inMino
     return 0;
 }
 
-// FUNCTION: EXE 0x494db4
 // Writes the requests per epoch, the waiting counts and flags to the saved game; returns the first write error
 long EECPUnitManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -970,7 +930,6 @@ long EECPUnitManager::Save(unsigned long inMajorVersion, unsigned long inMinorVe
     return theResult;
 }
 
-// FUNCTION: EXE 0x494f42
 // Queues a request's units round-robin at the least busy built producers in its town, on its continent or else on
 // the continent with the most; returns true and the count started
 bool EECPUnitManager::StartProduction(EECPUMRequest& inRequest, long& outMade)
@@ -1064,7 +1023,6 @@ bool EECPUnitManager::StartProduction(EECPUMRequest& inRequest, long& outMade)
     return theResult;
 }
 
-// FUNCTION: EXE 0x495440
 // Tracks a new unit by class (buildings ordered by distance from the town center) and counts one unit out of
 // production
 // NEAR: shape so far: std::find for the membership test, the existing-queue branch first, *it read once
@@ -1115,7 +1073,6 @@ void EECPUnitManager::UnitAdded(EEUnit* inUnit, long inArg)
         this->mNumInProduction--;
 }
 
-// FUNCTION: EXE 0x4956b9
 // Stops tracking a lost unit; for a lost building, re-requests the units it was producing or reschedules an
 // interrupted epoch advance
 void EECPUnitManager::UnitLost(EEUnit* inUnit)
@@ -1187,7 +1144,6 @@ void EECPUnitManager::UnitLost(EEUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x495929
 // Requests citizens when below target, starts one transport, then starts the requests of each epoch up to the
 // current one while population room remains
 void EECPUnitManager::Update(unsigned long inTime)
@@ -1309,82 +1265,3 @@ void EECPUnitManager::Update(unsigned long inTime)
             return;
     }
 }
-
-// TEMPLATE: EXE 0x495eaf
-// TEMPLATE: EXE 0x496506
-// TEMPLATE: EXE 0x496854
-
-// Template and inline COMDATs this unit's code instantiates (the bodies come from the headers; each was compared
-// against the original by name)
-// TEMPLATE: EXE 0x495e70
-// TEMPLATE: EXE 0x495fed
-// TEMPLATE: EXE 0x495fff
-// TEMPLATE: EXE 0x49602a
-// TEMPLATE: EXE 0x49603e
-// TEMPLATE: EXE 0x496060
-// TEMPLATE: EXE 0x4961a3
-// TEMPLATE: EXE 0x496214
-// TEMPLATE: EXE 0x496372
-// TEMPLATE: EXE 0x4963a4
-// TEMPLATE: EXE 0x4963d6
-// TEMPLATE: EXE 0x496422
-// TEMPLATE: EXE 0x496533
-// TEMPLATE: EXE 0x4965f0
-// TEMPLATE: EXE 0x4966ad
-// TEMPLATE: EXE 0x496812
-// TEMPLATE: EXE 0x496ac4
-// TEMPLATE: EXE 0x496aed
-// TEMPLATE: EXE 0x496bc0
-// TEMPLATE: EXE 0x496bf1
-// TEMPLATE: EXE 0x496c1a
-// TEMPLATE: EXE 0x496ced
-// TEMPLATE: EXE 0x496daf
-// TEMPLATE: EXE 0x496ecf
-// TEMPLATE: EXE 0x496f02
-// TEMPLATE: EXE 0x496f38
-// TEMPLATE: EXE 0x496f6b
-// TEMPLATE: EXE 0x497089
-// TEMPLATE: EXE 0x4970c3
-// TEMPLATE: EXE 0x497104
-// TEMPLATE: EXE 0x497224
-// TEMPLATE: EXE 0x497257
-// TEMPLATE: EXE 0x4972ff
-// TEMPLATE: EXE 0x497339
-// TEMPLATE: EXE 0x49750c
-// TEMPLATE: EXE 0x4975d1
-// TEMPLATE: EXE 0x497615
-// TEMPLATE: EXE 0x49763e
-// TEMPLATE: EXE 0x497682
-// TEMPLATE: EXE 0x49771b
-// TEMPLATE: EXE 0x497789
-// TEMPLATE: EXE 0x4977dc
-// TEMPLATE: EXE 0x49785b
-// TEMPLATE: EXE 0x4978f2
-// TEMPLATE: EXE 0x497941
-// TEMPLATE: EXE 0x497975
-// TEMPLATE: EXE 0x4979cb
-// The std::sort helpers of EECPUnitDistanceLess (exact body pairs, names in names.txt)
-// TEMPLATE: EXE 0x4966d7
-// TEMPLATE: EXE 0x497541
-// TEMPLATE: EXE 0x4978ae
-// TEMPLATE: EXE 0x495e9b
-// TEMPLATE: EXE 0x4960f3
-// TEMPLATE: EXE 0x496356
-// TEMPLATE: EXE 0x497008
-// TEMPLATE: EXE 0x49737a
-
-// Template COMDATs named by their mangled names
-// TEMPLATE: EXE 0x49670a
-// ?_Sort@std@@YAXV?$_Ptrit@PAVEEComplexUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0HUEECPUnitDistanceLess@@@Z
-// TEMPLATE: EXE 0x496d1e
-// ?make_heap@std@@YAXV?$_Ptrit@PAVEEComplexUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPUnitDistanceLess@@@Z
-// TEMPLATE: EXE 0x496d62
-// ?sort_heap@std@@YAXV?$_Ptrit@PAVEEComplexUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPUnitDistanceLess@@@Z
-// TEMPLATE: EXE 0x49759e
-// ?pop_heap@std@@YAXV?$_Ptrit@PAVEEComplexUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPUnitDistanceLess@@@Z
-// TEMPLATE: EXE 0x4976ab
-// ?_Pop_heap_0@std@@YAXV?$_Ptrit@PAVEEComplexUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPUnitDistanceLess@@PAPAVEEComplexUnit@@@Z
-
-// Template COMDATs named by their mangled names
-// TEMPLATE: EXE 0x4963ff
-// ?find@std@@YA?AV?$_Ptrit@UEEProductionEntry@@HPAU1@AAU1@PAU1@AAU1@@1@V21@0ABJ@Z

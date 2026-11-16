@@ -16,7 +16,6 @@
 namespace WONAPI {
 void LobbyLogicEventHook(ComponentEvent*);
 
-// FUNCTION: WON 0x00759020
 // Passes the lobby timer tick to the lobby logic
 void LobbyTimerCallback(int)
 {
@@ -24,7 +23,6 @@ void LobbyTimerCallback(int)
         gLobbyData->mLogicMgr.DispatchTimerEvent();
 }
 
-// FUNCTION: WON 0x00758f70
 // Routes the lobby container's events to the lobby logic and starts the lobby timer
 void LobbyInstallEventHooks()
 {
@@ -35,7 +33,6 @@ void LobbyInstallEventHooks()
     WONAPI::WindowManager::GetDefaultWindowManager()->AddTimerEvent(gLobbyData->mTimerEvent.get());
 }
 
-// FUNCTION: WON 0x00759040
 // Detaches the lobby logic from the lobby container, stops the timer and clears window subscriptions
 void LobbyRemoveEventHooks()
 {
@@ -49,7 +46,6 @@ void LobbyRemoveEventHooks()
     }
 }
 
-// FUNCTION: WON 0x00759080
 // Makes a component send its events to the lobby logic
 void LobbyAddLogicListener(Component* component)
 {
@@ -57,7 +53,6 @@ void LobbyAddLogicListener(Component* component)
         component->AddListener(new ComponentListenerFunc(LobbyLogicEventHook));
 }
 
-// FUNCTION: WON 0x007590e0
 // Hands a component event to the lobby logic
 void LobbyLogicEventHook(ComponentEvent* event)
 {
@@ -65,7 +60,3 @@ void LobbyLogicEventHook(ComponentEvent* event)
         gLobbyData->mLogicMgr.HandleComponentEvent(event);
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007590d0
-// (public: virtual void __thiscall WONAPI::ComponentListenerFunc::Virtual04(class WONAPI::ComponentEvent *)    [?Virtual04@ComponentListenerFunc@WONAPI@@)

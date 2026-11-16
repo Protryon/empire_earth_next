@@ -19,7 +19,6 @@
 #include "ee/RTSMouse.h"
 #include "ee/RTSMousePointer.h"
 
-// FUNCTION: EXE 0x51b54e
 // Creates the mouse-pointer thread for a window, hidden and with no surface, and waits until it runs
 RTSMousePointer::RTSMousePointer(RTSMouse* inMouse, GEWindow* inWindow, long inThreadPriority)
     : mWindow(inWindow)
@@ -37,10 +36,6 @@ RTSMousePointer::RTSMousePointer(RTSMouse* inMouse, GEWindow* inWindow, long inT
     this->mThread->SetName(gMousePointerThreadName);
 }
 
-// SYNTHETIC: EXE 0x51b628
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x51b644
 // Destroys the mouse-pointer thread and its events
 RTSMousePointer::~RTSMousePointer()
 {
@@ -49,7 +44,6 @@ RTSMousePointer::~RTSMousePointer()
     TSScheduler::DestroyThread(this->mThread);
 }
 
-// FUNCTION: EXE 0x51b66d
 // Runs the pointer thread: handles messages and, while shown with a surface, redraws the pointer when it has moved
 // (restore, save under, draw; at the window's client origin unless full screen), every 25 ms
 unsigned long RTSMousePointer::Main(void* inPointer)
@@ -97,7 +91,6 @@ unsigned long RTSMousePointer::Main(void* inPointer)
     return 0;
 }
 
-// FUNCTION: EXE 0x51b813
 // Handles a pointer thread message: quit, hide (0x402), show (0x404) or set the surface to draw on (0x405)
 void RTSMousePointer::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
 {

@@ -6,9 +6,9 @@
 
 class EECPASGUTransport : public EECPAttackSubGroupUnit {
 public:
-    EECPASGUTransport(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);   // 0xd5d8
-    EECPASGUTransport(EECPAttackSubGroup* inSubGroup);  // 0xd617
-    virtual ~EECPASGUTransport();           // 0xd636
+    EECPASGUTransport(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);
+    EECPASGUTransport(EECPAttackSubGroup* inSubGroup);
+    virtual ~EECPASGUTransport();
     virtual bool Retarget();                // +0x14 0x27c0b4 (`xor al, al`, ICF-shared)
     virtual void SetState(long inState, unsigned long inTime);    // +0x28 0xd641
     virtual bool CanAttack(EECPASTargetUnit* inTarget);    // +0x2c 0xbb118 (`xor al, al; ret 4`, ICF-shared)

@@ -12,7 +12,6 @@
 #include "lle/NESynchronousCommunications.h"
 #include "rust/ee_net.h"
 
-// FUNCTION: LLE 0x10047301
 // Creates the shared client/server state (ee_net comms.rs): the CTs processed given, the last tick received -2, the
 // rest 0. (The debug lock, the bytes-per-second meters and their clock reads went: no caller.)
 NESynchronousCommunications::NESynchronousCommunications(unsigned long inNumberOfCTsProcessedInPhysics)
@@ -20,7 +19,6 @@ NESynchronousCommunications::NESynchronousCommunications(unsigned long inNumberO
     this->mComms = ee_net_comms_new((uint32_t)inNumberOfCTsProcessedInPhysics);
 }
 
-// FUNCTION: LLE 0x10047365
 // Gives up the base's reference to the state (the Rust server or client, freed first, held its own)
 NESynchronousCommunications::~NESynchronousCommunications()
 {

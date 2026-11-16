@@ -26,7 +26,6 @@
 bool gShowParseTime = false;
 int gLinesParsed = 0;
 namespace WONAPI {
-// FUNCTION: WON 0x00783bd0
 // Looks up a string resource in the current resource set, then up the parent configs; throws if none has it
 GUIString ComponentConfig::GetStringResource(const std::string& inKey)
 {
@@ -35,7 +34,6 @@ GUIString ComponentConfig::GetStringResource(const std::string& inKey)
     if(this->mParent!=NULL) return static_cast<ComponentConfig*>(this->mParent)->GetStringResource(inKey);
     throw ConfigObjectException("String resource not found: "+inKey);
 }
-// FUNCTION: WON 0x00783d60
 // Looks up an image resource in the current resource set, then up the parent configs; throws if none has it
 Image* ComponentConfig::GetImageResource(const std::string& inKey)
 {
@@ -44,7 +42,6 @@ Image* ComponentConfig::GetImageResource(const std::string& inKey)
     if(this->mParent!=NULL) return static_cast<ComponentConfig*>(this->mParent)->GetImageResource(inKey);
     throw ConfigObjectException("Image resource not found: "+inKey);
 }
-// FUNCTION: WON 0x00783e50
 // Looks up a font resource in the current resource set, then up the parent configs; throws if none has it
 Font* ComponentConfig::GetFontResource(const std::string& inKey)
 {
@@ -53,7 +50,6 @@ Font* ComponentConfig::GetFontResource(const std::string& inKey)
     if(this->mParent!=NULL) return static_cast<ComponentConfig*>(this->mParent)->GetFontResource(inKey);
     throw ConfigObjectException("Font resource not found: "+inKey);
 }
-// FUNCTION: WON 0x00783f40
 // Looks up a sound resource in the current resource set, then up the parent configs; throws if none has it
 SmartPtr<Sound> ComponentConfig::GetSoundResource(const std::string& inKey)
 {
@@ -62,7 +58,6 @@ SmartPtr<Sound> ComponentConfig::GetSoundResource(const std::string& inKey)
     if(this->mParent!=NULL) return static_cast<ComponentConfig*>(this->mParent)->GetSoundResource(inKey);
     throw ConfigObjectException("Sound resource not found: "+inKey);
 }
-// FUNCTION: WON 0x00784050
 // Looks up a color resource in the current resource set, then up the parent configs; throws if none has it
 DWORD ComponentConfig::GetColorResource(const std::string& inKey)
 {
@@ -71,7 +66,6 @@ DWORD ComponentConfig::GetColorResource(const std::string& inKey)
     if(this->mParent!=NULL) return static_cast<ComponentConfig*>(this->mParent)->GetColorResource(inKey);
     throw ConfigObjectException("Color resource not found: "+inKey);
 }
-// FUNCTION: WON 0x00784140
 // Copies a background resource from the current resource set or a parent config; throws if none has it
 void ComponentConfig::GetBackgroundResource(const std::string& inKey,Background& outValue)
 {
@@ -83,7 +77,6 @@ void ComponentConfig::GetBackgroundResource(const std::string& inKey,Background&
     }
     throw ConfigObjectException("Background resource not found: "+inKey);
 }
-// FUNCTION: WON 0x00785510
 // Reads a color value: '@key' looks up a color resource, anything else is parsed as a literal color
 int ComponentConfig::ReadColor()
 {
@@ -98,7 +91,6 @@ int ComponentConfig::ReadColor()
     }
     return ResourceConfig::SafeReadColor(*this->mStringParser);
 }
-// FUNCTION: WON 0x007855f0
 // Reads a sound value: '@key' looks up a sound resource, anything else is parsed as a sound spec
 SmartPtr<Sound> ComponentConfig::ReadSound()
 {
@@ -113,7 +105,6 @@ SmartPtr<Sound> ComponentConfig::ReadSound()
     }
     return ResourceConfig::SafeReadSound(*this->mStringParser);
 }
-// FUNCTION: WON 0x00785ea0
 // Reads a background: '@key' copies a background resource (turning on background grabbing when it needs it),
 // anything else is parsed as a background spec
 Background ComponentConfig::ReadBackground()
@@ -133,7 +124,6 @@ Background ComponentConfig::ReadBackground()
 }
 
 
-// FUNCTION: WON 0x00786070
 // Runs the base pre-parse, then includes the base group this config inherits from, if any
 bool ComponentConfig::PreParse(ConfigParser* parser)
 {
@@ -143,7 +133,6 @@ bool ComponentConfig::PreParse(ConfigParser* parser)
         return this->IncludeGroup(*parser,this->mBaseName);
     return true;
 }
-// FUNCTION: WON 0x007860b0
 // Gives the component its desired width/height in each dimension not already set (positive size or WIDTH/HEIGHT)
 void ComponentConfig::SetDesiredSizeIfNecessary()
 {
@@ -165,14 +154,12 @@ void ComponentConfig::SetDesiredSizeIfNecessary()
     }
     this->mComponent->SetSize(width,height);
 }
-// FUNCTION: WON 0x00786140
 // Applies the desired size to dimensions still unset once the group is parsed; always succeeds
 bool ComponentConfig::PostParse(ConfigParser*)
 {
     this->SetDesiredSizeIfNecessary();
     return true;
 }
-// FUNCTION: WON 0x00786150
 // Handles a group instruction: MODIFY, RESOURCE, or a component type, which creates and parses a child config
 // and registers it under its name
 bool ComponentConfig::HandleInstruction(ConfigParser* parser,const std::string& type)
@@ -192,7 +179,6 @@ bool ComponentConfig::HandleInstruction(ConfigParser* parser,const std::string& 
     }
     return success;
 }
-// FUNCTION: WON 0x00786380
 // Resolves a dotted config path (this, parent, child names, '_NAME' predefined components); a missing step
 // throws or returns NULL, as fail says
 ComponentConfig* ComponentConfig::GetComponentConfig(const GUIString& path,bool fail)
@@ -231,7 +217,6 @@ ComponentConfig* ComponentConfig::GetComponentConfig(const GUIString& path,bool 
     if (rest.length()==0) return config;
     return config->GetComponentConfig(rest,true);
 }
-// FUNCTION: WON 0x00786860
 // Returns the component of the named child config, or NULL
 Component* ComponentConfig::Fn386860(const std::string& name)
 {
@@ -241,27 +226,23 @@ Component* ComponentConfig::Fn386860(const std::string& name)
     return i->second->mComponent.get();
 }
 
-// FUNCTION: WON 0x007868c0
 // Default hook for predefined components: provides none
 bool ComponentConfig::GetPredefinedComponent(const std::string&,ComponentConfig*&,Component*&)
 {
     return false;
 }
-// FUNCTION: WON 0x007868d0
 // Reads a config path and returns that config; throws if it is not found
 ComponentConfig* ComponentConfig::ReadComponentConfig()
 {
     GUIString name=this->ReadString(false);
     return this->GetComponentConfig(name,true);
 }
-// FUNCTION: WON 0x00786950
 // Reads a config path and returns that config's component
 Component* ComponentConfig::ReadComponent()
 {
     ComponentConfig* config=this->ReadComponentConfig();
     return config->mComponent.get();
 }
-// FUNCTION: WON 0x00786960
 // MAPCOMPONENT: registers a config under a further name (optionally in another config's map, 'config.name');
 // with no name, maps this config into the referenced config under this config's name
 bool ComponentConfig::HandleMapComponent()
@@ -284,13 +265,11 @@ bool ComponentConfig::HandleMapComponent()
     config->mConfigMap[this->mName]=this;
     return true;
 }
-// FUNCTION: WON 0x00786c30
 // Registers a child config under a name; empty names are ignored
 void ComponentConfig::AddChildToConfigMap(const GUIString& name,ComponentConfig* config)
 {
     if (!name.empty()) this->mConfigMap[name]=config;
 }
-// FUNCTION: WON 0x00786d80
 // MODIFY group: parses the following group into the named existing config
 bool ComponentConfig::HandleModifyGroup(ConfigParser& parser)
 {
@@ -300,7 +279,6 @@ bool ComponentConfig::HandleModifyGroup(ConfigParser& parser)
     config->ParseGroup(parser,true,false,false,false);
     return true;
 }
-// FUNCTION: WON 0x00786f20
 // RESOURCE group: parses a named resource set, allowing overwrites when the set already exists
 bool ComponentConfig::HandleResourceGroup(ConfigParser& parser)
 {
@@ -311,7 +289,6 @@ bool ComponentConfig::HandleResourceGroup(ConfigParser& parser)
     resource->SetAllowOverwrite(alreadyExists);
     return this->ParseChild(parser,resource.get(),false,false);
 }
-// FUNCTION: WON 0x007870a0
 // MODIFY instruction: runs one instruction on another config, warning when it is not recognised
 bool ComponentConfig::HandleModify()
 {
@@ -324,7 +301,6 @@ bool ComponentConfig::HandleModify()
         this->mConfigParser->AddWarning("Unrecognized instruction: "+instruction);
     return true;
 }
-// FUNCTION: WON 0x00787250
 // Handles a value instruction: SETRESOURCE selects the current resource set, other keys go to
 // the component instructions
 bool ComponentConfig::HandleValueInstruction(ConfigParser* parser,const std::string& key,StringParser& value)
@@ -339,7 +315,6 @@ bool ComponentConfig::HandleValueInstruction(ConfigParser* parser,const std::str
     }
     return this->BaseHandleInstruction(*parser,key,value);
 }
-// FUNCTION: WON 0x00787370
 // Points the config at the parser and the value text, then runs the component instruction for the key
 bool ComponentConfig::BaseHandleInstruction(ConfigParser& parser,const std::string& key,StringParser& value)
 {
@@ -348,120 +323,6 @@ bool ComponentConfig::BaseHandleInstruction(ConfigParser& parser,const std::stri
     return this->Virtual24(key);
 }
 
-// FUNCTION: WON 0x00787520
-// Applies a component instruction (position, size, color, flags, cursor, focus, parse timer ...); false if unknown
-bool ComponentConfig::Virtual24(const std::string& key)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY,key.data(),key.size());
-    if (aKeyIdx==0) return this->HandleModify();
-    if (aKeyIdx==1) return this->HandleMapComponent();
-    if (aKeyIdx==2) {
-        Component* component=this->mComponent.get();
-        component->mControlId=this->ReadInt();
-    } else if (aKeyIdx==3) {
-        Component* component=this->mComponent.get();
-        int value=this->ReadInt();
-        component->SetPos(value,component->Top());
-    } else if (aKeyIdx==4) {
-        Component* component=this->mComponent.get();
-        int value=this->ReadInt();
-        component->SetPos(component->Left(),value);
-    } else if (aKeyIdx==5) {
-        Component* component=this->mComponent.get();
-        this->mHasSetWidth=true;
-        int value=this->ReadInt();
-        component->SetSize(value,component->Height());
-    } else if (aKeyIdx==6) {
-        Component* component=this->mComponent.get();
-        this->mHasSetHeight=true;
-        int value=this->ReadInt();
-        component->SetSize(component->Width(),value);
-    } else if (aKeyIdx==7) {
-        int x=this->ReadInt(); this->EnsureComma();
-        int y=this->ReadInt();
-        this->mComponent->SetPos(x,y);
-    } else if (aKeyIdx==8) {
-        this->mHasSetWidth=this->mHasSetHeight=true;
-        int width=this->ReadInt(); this->EnsureComma();
-        int height=this->ReadInt();
-        this->mComponent->SetSize(width,height);
-    } else if (aKeyIdx==9) {
-        int color=this->ReadColor();
-        if (this->EndOfString()) this->mComponent->SetTranslucentColor(color,4);
-        else {
-            this->EnsureComma();
-            this->mComponent->SetTranslucentColor(color,this->ReadInt());
-        }
-    } else if (aKeyIdx==10) {
-        this->SetDesiredSizeIfNecessary();
-        int width=this->ReadInt(); this->EnsureComma();
-        int height=this->ReadInt();
-        this->mHasSetWidth=width>0;
-        this->mHasSetHeight=height>0;
-        this->mComponent->SetSizeAtLeast(width,height);
-    } else if (aKeyIdx==11) {
-        int width=this->ReadInt(); this->EnsureComma();
-        int height=this->ReadInt();
-        this->mComponent->SetDesiredSize(width,height);
-    } else if (aKeyIdx==12) {
-        Component* component=this->mComponent.get();
-        int width=this->ReadInt();
-        component->SetDesiredWidth(width);
-    } else if (aKeyIdx==13) {
-        Component* component=this->mComponent.get();
-        int height=this->ReadInt();
-        component->SetDesiredHeight(height);
-    } else if (aKeyIdx==14) {
-        this->mHasSetWidth=this->mHasSetHeight=true;
-        int x=this->ReadInt(); this->EnsureComma();
-        int y=this->ReadInt(); this->EnsureComma();
-        int width=this->ReadInt(); this->EnsureComma();
-        int height=this->ReadInt();
-        this->mComponent->SetPosSize(x,y,width,height);
-    } else if (aKeyIdx==15) {
-        this->mComponent->SetEnabled(this->ReadBool());
-    } else if (aKeyIdx==16) {
-        this->mComponent->SetVisible(this->ReadBool());
-    } else if (aKeyIdx==17) {
-        if (this->ReadBool()) this->mComponent->RequestFocus();
-    } else if (aKeyIdx==18) {
-        this->mComponent->SetDefaultCursor(this->ReadCursor());
-    } else if (aKeyIdx==19) {
-        while (true) {
-            bool add=true;
-            GUIString name=this->ReadFlag(&add);
-            if (name.length()==0) break;
-            int flag;
-            const int aNameIdx_name=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_COMPONENTCONFIG_VIRTUAL24_NAME,name.mData->mText,name.mData->mLength,sizeof(wchar_t));
-            if (aNameIdx_name==0) flag=0x1;
-            else if (aNameIdx_name==1) flag=0x8;
-            else if (aNameIdx_name==2) flag=0x20;
-            else if (aNameIdx_name==3) flag=0x40;
-            else if (aNameIdx_name==4) flag=0x80;
-            else if (aNameIdx_name==5) flag=0x100;
-            else if (aNameIdx_name==6) flag=0x200;
-            else if (aNameIdx_name==7) flag=0x800;
-            else if (aNameIdx_name==8) flag=0x1000;
-            else if (aNameIdx_name==9) flag=0x4000;
-            else if (aNameIdx_name==10) flag=0x2000;
-            else if (aNameIdx_name==11) flag=0x20000;
-            else throw ConfigObjectException("Unknown component flag: "+(std::string)name);
-            this->mComponent->SetComponentFlags(flag,add);
-        }
-    } else if (aKeyIdx==20) {
-        Window* window=Window::GetDefaultWindow();
-        window->SetSkipDecodeImages(!this->ReadBool());
-    } else if (aKeyIdx==21) {
-        gShowParseTime=this->ReadBool();
-    } else if (aKeyIdx==22) {
-        ConfigParser::ResetLineCount();
-        PerfTimer::GlobalStart(NULL);
-    } else if (aKeyIdx==23) {
-        PerfTimer::GlobalStop(NULL);
-        gLinesParsed=ConfigParser::GetLineCount();
-    } else return false;
-    return true;
-}
 
 // Direct-child lookups by name: the component or the config, or NULL (not identified in the original exe)
 Component* ComponentConfig::GetChildComponent(const std::string& theName)
@@ -480,7 +341,6 @@ ComponentConfig* ComponentConfig::GetChildConfig(const std::string& theName)
         return NULL;
 }
 
-// FUNCTION: WON 0x00787ca0
 // Sets the resource folder, adding a trailing '/' when it ends in neither a slash nor a backslash
 void ComponentConfig::SetResourceFolder(const std::string& inFolder)
 {
@@ -490,7 +350,6 @@ void ComponentConfig::SetResourceFolder(const std::string& inFolder)
         ComponentConfig::mResourceFolder[last]!='\\')
         ComponentConfig::mResourceFolder+='/' ;
 }
-// FUNCTION: WON 0x00787e50
 // Resolves a resource file name: drive paths are kept, './' is stripped, the rest get the resource folder prefix
 // (the UNC and 'html' checks only run for names shorter than 2 characters, so they never match)
 std::string ComponentConfig::GetResourceFile(const std::string& inFile)
@@ -509,26 +368,5 @@ std::string ComponentConfig::GetResourceFile(const std::string& inFile)
     }
     return ComponentConfig::mResourceFolder+inFile;
 }
-// TEMPLATE: WON 0x0079b820
-// (public: __thiscall std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,class WONAPI::SmartPtr<cla)
-// TEMPLATE: WON 0x0079b8b0
-// (public: struct std::pair<class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<cla)
 
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0079ba60
-// (public: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic_str)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0079d140
-// (protected: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic_)
-// TEMPLATE: WON 0x007a0780
-// (protected: struct std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic)
-// TEMPLATE: WON 0x007a1b60
-// (public: void __thiscall std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std:)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007a2d00
-// TEMPLATE: WON 0x007a3180
-// (public: __thiscall WONAPI::Background::~Background(void)    [??1Background@WONAPI@@QAE@XZ])
-// TEMPLATE: WON 0x0074af60
 }

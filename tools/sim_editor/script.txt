@@ -1427,3 +1427,72 @@ enter 0x453
 form 0 9999 7
 tab 0
 media
+# editor screens round 7: the editor form (EEUIFScenarioEditor): the trigger-only save's report (Ctrl+S) as the
+# scenario stands, then over new entries and a fixed set of changes (TriggerReport); the form's state as the tabs
+# change, the load text, the game view, a store and a resume; its selection members called directly (a trojan horse
+# with cargo room, a citizen, a clubman)
+trigreport
+sm new 0
+sm new 0
+sm new 0
+sm new 1
+sm new 1
+sm new 2
+sm new 2
+sm new 2
+sm new 3
+sm new 3
+sm new 3
+sm new 4
+sm new 4
+sm state
+trigreport
+trigreport setup
+formstate
+tab 2
+formstate
+tab 5
+formstate
+tab 1
+formstate
+tab 3
+formstate
+loadtext Loading_the_terrain
+formstate
+loadtext -
+formstate
+gameview 0 0 1024 700 1
+formstate
+gameview 0 0 1024 606 0
+formstate
+formcall store
+formcall resume
+formstate
+blank 40 40 3
+ghost 1 209 42 40 0
+placeghost 1
+place 1 32 36.5 44.5 0
+place 2 20 44.5 44.5 0
+units
+fsel add @42,40
+formstate
+fsel add @36,44
+fsel add @44,44
+fsel add @42,40
+formstate
+unittab
+fsel remove @36,44
+formstate
+fsel first
+formstate
+unittab
+fsel remove @44,44
+formstate
+fsel add @36,44
+fsel add @42,40
+formstate
+fsel clear
+formstate
+unittab
+tab 0
+formstate

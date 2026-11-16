@@ -1,8 +1,11 @@
 // C:\EEX\Empire Earth\Graphics Thread\EEROTerrain.cpp (__FILE__ 0x4be5f4). The terrain's render object (vtable
 // 0x441b7c): 0x11251f..0x114296 (four init chains, the ctor, ??_G, the dtor, Virtual00, the star/cloud/sky models,
 // Virtual08, the sky index step, the release, the cloud layer, the sky colours, the coloured rectangles' erase
-// COMDATs and RTSWorld's inline map accessor); EEROUnits.cpp's init chains start at 0x114296. The .rdata tables
-// 0x41142c..0x441b98 are this unit's. Unit flags: the exe's module set.
+// COMDATs and RTSWorld's inline map accessor); EEROUnits.cpp's init chains start at 0x114296. The sky, star and cloud
+// models, their textures and the area-effect textures, the frame's sky colours and cloud layer and the scene pass are
+// ee_gfx ro_terrain.rs's (RUST_PLAN R4.4; the .rdata tables 0x41142c..0x441b98 and the sky colours 0x5290b0 with
+// them): the C++ draws the terrain mesh, its highlights, grid and lines and the effects' terrain pass for it.
+// Unit flags: the exe's module set.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -17,23 +20,14 @@
 #include "lle/GETransformation.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
 #include "lle/GEPolygonArray.h"
 #include "lle/GERasterizer.h"
-#include "lle/GERhombus.h"
-#include "lle/GEMaterial.h"
-#include "lle/GEModel.h"
-#include "lle/GEModelManager.h"
 #include "lle/TSCriticalSection.h"
 #include "lle/U2DRectangle.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEMap.h"
@@ -41,9 +35,6 @@
 #include "ee/EEPlayer.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEUIManager.h"
-#include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEBrushGroup.h"
 #include "ee/RTSGraphics.h"
 #include "ee/EEGraphics.h"
 #include "ee/EERenderObject.h"
@@ -51,554 +42,141 @@
 #include "ee/EERenderLists.h"
 #include "ee/EEROTerrain.h"
 #include "ee/EERenderSnapshot.h"
-#include "rust/ee_ge.h"   // ee_gfx terrain.rs (RUST_PLAN R4.4)
 #include "rust/ee_gfx.h"
 
-static_assert(sizeof(GEColor) == sizeof(EeGfxColor) && sizeof(GE3DPoint) == sizeof(EeGe3DPoint) &&
-                  sizeof(GETextureCoordinate) == sizeof(EeGfxTexCoord),
-              "GE mirrors");
-
-extern unsigned long& gTexturePixelDepth;    // 0x5308b4
-extern unsigned long& gTextureMipLevelsToDrop; // 0x530894 (provisional name)
+extern unsigned long& gTextureMipLevelsToDrop;
 extern bool& gDrawClouds;                    // 0x5308d3 (the clouds are drawn; provisional name)
 extern bool& gTrilinearFilter;               // 0x5308da (the sky textures use mip filtering; provisional name)
+// the rasterizer as the Rust draws call it (EERenderObject.cpp)
+extern const EeGfxRaster gEERustRaster;
 
-// the cloud layer's ten triangles (0x44142c)
-static const unsigned long sCloudIndices[30] = {
-    0, 1, 4, 4, 1, 5, 2, 0, 6, 6, 0, 4, 3, 2, 7, 7, 2, 6, 1, 3, 5, 5, 3, 7, 4, 5, 6, 6, 5, 7,
-};
-// 0x441408..0x441414 (the cloud layer's height, overhang, z and texture repeat): ee_gfx terrain.rs CLOUD_*
-const float kHighlightOpacity = 0.5f;       // 0x441418
-const float kEEROTerrainStarU = 6.0f;                  // 0x441428: original word 0000c040, verified
-
-const float kSkyRearClipping = 20000.0f;    // 0x441b94
-// 0x441b98: the sky floor -10000.0f is a literal (fld; fst ... fstp keeps it on the x87 stack across both corners)
-
-// the brush highlight colour (0x5293e8) (provisional name)
+// the brush highlight colour (0x5293e8; its init chain 0x51251f: GEColor's default white) (provisional name)
 GEColor gBrushHighlightColor;
-// SYNTHETIC: EXE 0x51251f   (wrapper)
-// SYNTHETIC: EXE 0x512529   (ctor)
-// SYNTHETIC: EXE 0x512542   (registrar)
-// SYNTHETIC: EXE 0x51254e   (dtor)
-
-// 0x5293e0 (two floats) (provisional name; type inferred)
-GETextureCoordinate gU5293E0;
-// SYNTHETIC: EXE 0x51254f   (wrapper)
-// SYNTHETIC: EXE 0x512559   (ctor)
-// SYNTHETIC: EXE 0x51256a   (registrar)
-// SYNTHETIC: EXE 0x512576   (dtor)
-
-// the sky colours by time of day (0x5290b0) (provisional name)
-GEColor gSkyColors[68];
-// SYNTHETIC: EXE 0x512577   (wrapper)
-// SYNTHETIC: EXE 0x512581   (ctor)
-// SYNTHETIC: EXE 0x51259c   (registrar)
-// SYNTHETIC: EXE 0x5125a8   (dtor)
-
 // the map's tile runs as of the last frame, drawn as grid lines (0x5290a0) (provisional name)
 std::vector<RTSMapTileRun> gGridRuns;
-// SYNTHETIC: EXE 0x5125c3   (wrapper)
-// SYNTHETIC: EXE 0x5125cd   (ctor)
-// SYNTHETIC: EXE 0x5125e5   (registrar)
-// SYNTHETIC: EXE 0x5125f1   (dtor)
 
 GETexture* gAreaEffectTexture;
 GETexture* gCircleAreaEffectTexture;
-static GEModel* sSkyModel;                  // 0x5293fc
-static GEModel* sCloudModel;                // 0x529400
-static GETexture* sCloudTexture;            // 0x529404
-static GEModel* sOuterStarModel;            // 0x529408
-static GEModel* sInnerStarModel;            // 0x52940c
-static GETexture* sStarTexture;             // 0x529410
 
-// FUNCTION: EXE 0x5125fb
 // Creates the terrain's render object with the terrain grid off
 EEROTerrain::EEROTerrain()
 {
     this->mGridMode = 0;
 }
 
-// SYNTHETIC: EXE 0x512611
-// (the scalar deleting destructor, emitted with the vtable; slot EEROTerrain+0x10)
-
-// FUNCTION: EXE 0x51262d
 // Destroys the terrain's render object
 EEROTerrain::~EEROTerrain()
 {
 }
 
-static void UpdateSkyColors();
-static void UpdateCloudLayer();
+static EeGfxTerrainMedia EETerrainMedia()
+{
+    EeGfxTerrainMedia theMedia = {(uint32_t)gTextureMipLevelsToDrop, gTrilinearFilter, gDrawClouds};
+    return theMedia;
+}
 
-// FUNCTION: EXE 0x512638
 // Prepares the frame: updates the sky colours and models, the clouds (black fog colour on space maps instead),
 // the fog of war (all seen for see-all or the free camera) and copies the map's grid runs
 void EEROTerrain::FrameStarting()
 {
     this->Fn10C036();
-    UpdateSkyColors();
-    if (gWorld.mMap->mTerrainMesh.GetIsSpaceMap()) {
-        gU4E9220.SetRed(0.0f);
-        gU4E9220.SetGreen(0.0f);
-        gU4E9220.SetBlue(0.0f);
-    } else if (gDrawClouds) {
-        UpdateCloudLayer();
-    }
-    this->Fn10E8D1();
     EEMap* theMap = gWorld.mMap;
+    EeGfxTerrainFrame theFrame = {gRenderEnvironment.mTimeOfDay, (int32_t)theMap->mSize, (int32_t)theMap->mL195614,
+                                  theMap->mTerrainMesh.GetIsSpaceMap(), gRenderEnvironment.mCloudOffset, EETerrainMedia()};
+    EeGfxTerrainFrameOut theOut = ee_gfx_ro_terrain_frame(&gEERustRaster, &theFrame);
+    gU4E9220 = GEColor(theOut.fog.red, theOut.fog.green, theOut.fog.blue);
+    gRenderEnvironment.mCloudOffset = theOut.cloud_offset;
+    this->Fn10E8D1();
     theMap->mTerrainMesh.UpdateFogOfWar(gWorld.GetCurrentPlayer()->mSeesAll || gFreeCamera);
 
     gGridRuns = gWorld.mMap->mU1955DC;
     EETakeTerrainSnapshot();   // port: what RenderScene draws from the map and the editor (ee/EERenderSnapshot.h)
 }
 
-// FUNCTION: EXE 0x5126ce
-// Creates the outer and inner star models (space maps' backdrop) and loads their texture (provisional name)
-static void CreateStarModels()
-{
-    GETextureDescription theDescription;
-    unsigned long i;
-    unsigned long j;
-    sOuterStarModel = gModelManager->CreateModel(0xc, 0x18, 1, 0, 1, 0, "outer star model", 1);
-    sInnerStarModel = gModelManager->CreateModel(0xc, 0x18, 1, 0, 1, 0, "inner star model", 1);
-    sOuterStarModel->Reference();
-    sInnerStarModel->Reference();
-    sOuterStarModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    sOuterStarModel->GetMaterial(0)->SetPolygonRangeLength(0xc, 0);
-    sOuterStarModel->GetMaterial(0)->SetVertexStartingIndex(0);
-    sOuterStarModel->GetMaterial(0)->SetVertexRangeLength(0x18);
-    sInnerStarModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    sInnerStarModel->GetMaterial(0)->SetPolygonRangeLength(0xc, 0);
-    sInnerStarModel->GetMaterial(0)->SetVertexStartingIndex(0);
-    sInnerStarModel->GetMaterial(0)->SetVertexRangeLength(0x18);
-    for (i = 0, j = 2; j < 0x1a; j += 4, i += 2) {
-        sOuterStarModel->GetPolygonArray(0)->SetVertexIndex1(i, j - 2);
-        sOuterStarModel->GetPolygonArray(0)->SetVertexIndex2(i, j - 1);
-        sOuterStarModel->GetPolygonArray(0)->SetVertexIndex3(i, j);
-        sInnerStarModel->GetPolygonArray(0)->SetVertexIndex1(i, j - 2);
-        sInnerStarModel->GetPolygonArray(0)->SetVertexIndex2(i, j - 1);
-        sInnerStarModel->GetPolygonArray(0)->SetVertexIndex3(i, j);
-        sOuterStarModel->GetPolygonArray(0)->SetVertexIndex1(i + 1, j - 2);
-        sOuterStarModel->GetPolygonArray(0)->SetVertexIndex2(i + 1, j);
-        sOuterStarModel->GetPolygonArray(0)->SetVertexIndex3(i + 1, j + 1);
-        sInnerStarModel->GetPolygonArray(0)->SetVertexIndex1(i + 1, j - 2);
-        sInnerStarModel->GetPolygonArray(0)->SetVertexIndex2(i + 1, j);
-        sInnerStarModel->GetPolygonArray(0)->SetVertexIndex3(i + 1, j + 1);
-    }
-    sOuterStarModel->ComputeModelNormals();
-    sOuterStarModel->ComputeBoundingVolumes();
-    GETextureCoordinate theCoordinate0(0.0f, 0.0f);
-    GETextureCoordinate theCoordinate1(kEEROTerrainStarU, 0.0f);
-    GETextureCoordinate theCoordinate3(0.0f, kEEROTerrainStarU);
-    GETextureCoordinate theCoordinate2(kEEROTerrainStarU, kEEROTerrainStarU);
-    for (j = 2; j < 0x1a; j += 4) {
-        GEVertexArray* theVertices = sOuterStarModel->GetVertexArray(0);
-        theVertices->SetTextureCoordinate(theCoordinate0, j - 2);
-        theVertices->SetTextureCoordinate(theCoordinate1, j - 1);
-        theVertices->SetTextureCoordinate(theCoordinate2, j);
-        theVertices->SetTextureCoordinate(theCoordinate3, j + 1);
-        theVertices = sInnerStarModel->GetVertexArray(0);
-        theVertices->SetTextureCoordinate(theCoordinate2, j - 2);
-        theVertices->SetTextureCoordinate(theCoordinate3, j - 1);
-        theVertices->SetTextureCoordinate(theCoordinate0, j);
-        theVertices->SetTextureCoordinate(theCoordinate1, j + 1);
-    }
-    for (j = 0; j < 0x18; j++) {
-        sOuterStarModel->GetVertexArray(0)->SetColor(GEColor(1.0f, 1.0f, 1.0f), j);
-        sOuterStarModel->GetVertexArray(0)->SetOpacity(1.0f, j);
-        sInnerStarModel->GetVertexArray(0)->SetColor(GEColor(1.0f, 1.0f, 1.0f), j);
-        sInnerStarModel->GetVertexArray(0)->SetOpacity(1.0f, j);
-    }
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mNumMipLevelsToDrop = gTextureMipLevelsToDrop;
-    theDescription.mPixelDepth = 0x20;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    theDescription.mPixelDepth = gRasterizer->GetScreen(gScreenIndex)->Get32BitTextureSupport() ? 0x20 : 0x10;
-    sStarTexture = gTextureManager->LoadTexture("textures\\stars", theDescription);
-    ESVERIFY_AT(sStarTexture != NULL, 246);
-    sStarTexture->Reference();
-    sStarTexture->SetStageAlphaMode(kStageOpModulate, -1);
-    sStarTexture->SetStageColorMode(kStageOpModulate, -1);
-    sStarTexture->SetStageMinFilterMode(1, -1);
-    sStarTexture->SetStageMagFilterMode(1, -1);
-    sStarTexture->SetStageMipMapBias(0.0f, -1);
-    sStarTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
-    sStarTexture->SetStageMipFilterMode(gTrilinearFilter ? 2 : 0, -1);
-    sOuterStarModel->SetTexture(sStarTexture, gScreenIndex);
-    sInnerStarModel->SetTexture(sStarTexture, gScreenIndex);
-}
-
-// FUNCTION: EXE 0x512bc4
-// Creates the cloud layer model (opaque inner square, transparent outer edge) and loads the cloud texture
-// (provisional name)
-static void CreateCloudModel()
-{
-    GETextureDescription theDescription;
-    unsigned long i;
-    theDescription.mPixelDepth = 0x10;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    sCloudModel = gModelManager->CreateModel(10, 8, 1, 0, 1, 0, "cloud layer model", 1);
-    sCloudModel->Reference();
-    sCloudModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    sCloudModel->GetMaterial(0)->SetPolygonRangeLength(10, 0);
-    sCloudModel->GetMaterial(0)->SetVertexStartingIndex(0);
-    sCloudModel->GetMaterial(0)->SetVertexRangeLength(8);
-    unsigned long thePolygon;
-    for (thePolygon = 0; thePolygon < 10; thePolygon++) {
-        sCloudModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon, sCloudIndices[thePolygon * 3]);
-        sCloudModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon, sCloudIndices[thePolygon * 3 + 1]);
-        sCloudModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon, sCloudIndices[thePolygon * 3 + 2]);
-    }
-    for (i = 0; i < 8; i++)
-        sCloudModel->GetVertexArray(0)->SetColor(GEColor(1.0f, 1.0f, 1.0f), i);
-    for (i = 0; i < 4; i++)
-        sCloudModel->GetVertexArray(0)->SetOpacity(0.0f, i);
-    for (i = 4; i < 8; i++)
-        sCloudModel->GetVertexArray(0)->SetOpacity(1.0f, i);
-    theDescription.mNumMipLevelsToDrop = gTextureMipLevelsToDrop;
-    theDescription.mPixelDepth = 0x20;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mPixelDepth = gRasterizer->GetScreen(gScreenIndex)->Get32BitTextureSupport() ? 0x20 : 0x10;
-    sCloudTexture = gTextureManager->LoadTexture("textures\\fx_cloudtexture", theDescription);
-    ESVERIFY_AT(sCloudTexture != NULL, 328);
-    sCloudTexture->Reference();
-    sCloudTexture->SetStageAlphaMode(kStageOpModulate, -1);
-    sCloudTexture->SetStageColorMode(kStageOpModulate, -1);
-    sCloudTexture->SetStageMinFilterMode(1, -1);
-    sCloudTexture->SetStageMagFilterMode(1, -1);
-    sCloudTexture->SetStageMipMapBias(0.0f, -1);
-    sCloudTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
-    if (gTrilinearFilter)
-        sCloudTexture->SetStageMipFilterMode(kMipFilterLinear, -1);
-    else
-        sCloudTexture->SetStageMipFilterMode(kMipFilterNone, -1);
-
-    sCloudModel->SetTexture(sCloudTexture, gScreenIndex);
-}
-
-// the sky dome's 36 triangles (0x441524)
-static const unsigned long sSkyIndices[108] = {
-    0, 1, 5, 0, 5, 4, 4, 5, 9, 4, 9, 8, 8, 9, 13, 8, 13, 12, 12, 13, 17, 12, 17, 16, 1, 2, 6, 1, 6, 5, 5, 6, 10, 5,
-    10, 9, 9, 10, 14, 9, 14, 13, 13, 14, 18, 13, 18, 17, 2, 3, 7, 2, 7, 6, 6, 7, 11, 6, 11, 10, 10, 11, 15, 10, 15,
-    14, 14, 15, 19, 14, 19, 18, 3, 0, 4, 3, 4, 7, 7, 4, 8, 7, 8, 11, 11, 8, 12, 11, 12, 15, 15, 12, 16, 15, 16, 19,
-    16, 17, 18, 16, 18, 19, 0, 3, 2, 0, 2, 1,
-};
-
-// the sky colours: 17 times of day x 4 bands (0x4416d4; copied into gSkyColors)
-static const float sSkyColorTable[68][3] = {
-    {0.773f, 0.255f, 0.051f}, {0.698f, 0.894f, 0.984f}, {0.698f, 0.894f, 0.984f}, {0.698f, 0.894f, 0.984f},
-    {0.698f, 0.894f, 0.984f}, {0.698f, 0.894f, 0.984f}, {0.698f, 0.894f, 0.984f}, {0.698f, 0.894f, 0.984f},
-    {0.773f, 0.255f, 0.051f}, {0.047f, 0.22f, 0.373f}, {0.023f, 0.11f, 0.185f}, {0.023f, 0.11f, 0.185f},
-    {0.023f, 0.11f, 0.185f}, {0.023f, 0.11f, 0.185f}, {0.023f, 0.11f, 0.185f}, {0.047f, 0.22f, 0.373f},
-    {0.773f, 0.255f, 0.051f}, {0.941f, 0.69f, 0.259f}, {0.698f, 0.894f, 0.984f}, {0.698f, 0.894f, 0.984f},
-    {0.698f, 0.894f, 0.984f}, {0.698f, 0.894f, 0.984f}, {0.698f, 0.894f, 0.984f}, {0.698f, 0.894f, 0.984f},
-    {0.698f, 0.894f, 0.984f}, {0.941f, 0.69f, 0.259f}, {0.023f, 0.11f, 0.185f}, {0.008f, 0.031f, 0.125f},
-    {0.008f, 0.031f, 0.125f}, {0.008f, 0.031f, 0.125f}, {0.008f, 0.031f, 0.125f}, {0.008f, 0.031f, 0.125f},
-    {0.023f, 0.11f, 0.185f}, {0.941f, 0.69f, 0.259f}, {0.302f, 0.267f, 0.349f}, {0.2f, 0.29f, 0.659f},
-    {0.2f, 0.29f, 0.659f}, {0.2f, 0.29f, 0.659f}, {0.2f, 0.29f, 0.659f}, {0.2f, 0.29f, 0.659f}, {0.2f, 0.29f, 0.659f},
-    {0.2f, 0.29f, 0.659f}, {0.302f, 0.267f, 0.349f}, {0.008f, 0.031f, 0.125f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f},
-    {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.008f, 0.031f, 0.125f}, {0.302f, 0.267f, 0.349f},
-    {0.008f, 0.031f, 0.125f}, {0.1f, 0.15f, 0.325f}, {0.1f, 0.15f, 0.325f}, {0.1f, 0.15f, 0.325f},
-    {0.1f, 0.15f, 0.325f}, {0.1f, 0.15f, 0.325f}, {0.1f, 0.15f, 0.325f}, {0.1f, 0.15f, 0.325f},
-    {0.008f, 0.031f, 0.125f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f},
-    {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.008f, 0.031f, 0.125f},
-};
-// FUNCTION: EXE 0x512e7f
 // Creates the sky dome model and its colour table, the star models, the clouds (when clouds are on) and
-// loads the area-effect textures (square and circle)
+// loads the area-effect textures (square and circle) (ee_gfx ro_terrain.rs, with CreateStarModels 0x5126ce and
+// CreateCloudModel 0x512bc4)
 void EEROTerrain::CreateSkyModel()
 {
-    GETextureDescription theDescription;
-    long i;
-    long j;
-    theDescription.mPixelDepth = 0x10;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    sSkyModel = gModelManager->CreateModel(0x24, 0x14, 1, 0, 1, 0, "sky model", 1);
-    sSkyModel->Reference();
-    sSkyModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    sSkyModel->GetMaterial(0)->SetPolygonRangeLength(0x24, 0);
-    sSkyModel->GetMaterial(0)->SetVertexStartingIndex(0);
-    sSkyModel->GetMaterial(0)->SetVertexRangeLength(0x14);
-    long thePolygon;
-    for (thePolygon = 0; thePolygon < 36; thePolygon++) {
-        sSkyModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon, sSkyIndices[thePolygon * 3]);
-        sSkyModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon, sSkyIndices[thePolygon * 3 + 1]);
-        sSkyModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon, sSkyIndices[thePolygon * 3 + 2]);
-    }
-    const float* theRow = &sSkyColorTable[0][1];
-    for (i = 0; i < 4; i++) {
-        const float* theEntry = theRow;
-        theRow += 17 * 3;
-        for (j = 0; j < 17; j++, theEntry += 3)
-            gSkyColors[i * 17 + j] = GEColor(theEntry[-1], theEntry[0], theEntry[1]);
-    }
-    CreateStarModels();
-    if (gDrawClouds)
-        CreateCloudModel();
-    theDescription.mPixelDepth = 0x10;
-    theDescription.mHasAlpha = false;
-    theDescription.mCreateMIPMaps = false;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    gAreaEffectTexture = gTextureManager->LoadTexture("textures\\AreaEffect", theDescription);
-    ESVERIFY_AT(gAreaEffectTexture != NULL, 417);
-    gAreaEffectTexture->Reference();
-    gAreaEffectTexture->SetStageAlphaMode(kStageOpTexture, -1);
-    gAreaEffectTexture->SetStageColorMode(kStageOpTexture, -1);
-    gAreaEffectTexture->SetStageMinFilterMode(0, -1);
-    gAreaEffectTexture->SetStageMagFilterMode(0, -1);
-    gAreaEffectTexture->SetStageMipFilterMode(kMipFilterNone, -1);
-    gAreaEffectTexture->SetStageMipMapBias(0.0f, -1);
-    gAreaEffectTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
-    theDescription.mPixelDepth = 0x10;
-    theDescription.mHasAlpha = false;
-    theDescription.mCreateMIPMaps = false;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    gCircleAreaEffectTexture = gTextureManager->LoadTexture("textures\\CircleAreaEffect", theDescription);
-
-    ESVERIFY_AT(gCircleAreaEffectTexture != NULL, 440);
-    gCircleAreaEffectTexture->Reference();
-    gCircleAreaEffectTexture->SetStageAlphaMode(kStageOpModulate, -1);
-    gCircleAreaEffectTexture->SetStageColorMode(kStageOpModulate, -1);
-    gCircleAreaEffectTexture->SetStageMinFilterMode(0, -1);
-    gCircleAreaEffectTexture->SetStageMagFilterMode(0, -1);
-    gCircleAreaEffectTexture->SetStageMipFilterMode(kMipFilterNone, -1);
-    gCircleAreaEffectTexture->SetStageMipMapBias(0.0f, -1);
-    gCircleAreaEffectTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
+    EeGfxTerrainMedia theMedia = EETerrainMedia();
+    EeGfxTerrainTextures theTextures = ee_gfx_ro_terrain_create(&gEERustRaster, &theMedia);
+    gAreaEffectTexture = static_cast<GETexture*>(theTextures.area_effect);
+    gCircleAreaEffectTexture = static_cast<GETexture*>(theTextures.circle_area_effect);
 }
 
-// FUNCTION: EXE 0x5131a4
-// Draws the sky (stars on space maps, the inner layer only with clouds on; else sky and clouds), the terrain,
-// the editor brush highlight, the map's coloured rectangles (erasing faded ones), grid, lines and ground effects
-void EEROTerrain::RenderScene()
+namespace {
+// the terrain mesh's draws from the frame's snapshot (port: EETakeTerrainSnapshot took the editor's brush and the
+// map's coloured rectangles, and erased the erase markers, where this drew them from the live map and its lock)
+void TerrainDraw(void*) { gRasterizer->Draw(*gRenderSnapshot.mTerrainMesh, gScreenIndex, gOrthographicView); }
+void TerrainHighlights(void*, float inOpacity)
 {
-    EEEffectQueue::iterator theIterator;
-    std::deque<EEEffect*>::iterator theEffect;
-    unsigned long theScreen = gScreenIndex;
-    float theAlphaRefValue = gRasterizer->GetAlphaTestingRefValue(gScreenIndex);
-    unsigned long theLineCount = gU529050.size();
-    unsigned long theAlphaTesting = gRasterizer->GetAlphaTesting(gScreenIndex);
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    gRasterizer->SetZBuffer(kZBufferTestAndWrite, theScreen);
-    gRasterizer->SetZCompare(kCompareLessEqual, theScreen);
-    gRasterizer->SetAlphaTesting(0, theScreen);
-    gRasterizer->SetShadingColorSource(1, theScreen);
-    gRasterizer->SetCulling(kCullNone);
-    SetLightingOff();
-    SetSceneFog();
-    gRasterizer->SetFog(0, theScreen);
-    gRasterizer->SetBlending(kBlendOne, kBlendZero, theScreen);
-    gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
-    SetWhiteLighting();
-    float theRearClipping = gU4E8F08.GetRearClippingDistance();
-    gU4E8F08.SetRearClippingDistance(kSkyRearClipping);
-    gU4E8F08.SetDepthRange(1.0f, 1.0f);
-    gRasterizer->SetViewport(gU4E8F08, theScreen);
-    if (gRenderSnapshot.mIsSpaceMap) {
-        gRasterizer->DrawSky(sOuterStarModel, theScreen, 1.0f, false);
-        if (gDrawClouds) {
-            gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-            gRasterizer->DrawSky(sInnerStarModel, theScreen, 1.0f, false);
-        }
-    } else {
-        gRasterizer->DrawSky(sSkyModel, theScreen, 1.0f, gOrthographicView);
-        if (gDrawClouds) {
-            gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-            SetCloudLighting();
-            gRasterizer->DrawSky(sCloudModel, theScreen, 1.0f, false);
-        }
-    }
-    gU4E8F08.SetRearClippingDistance(theRearClipping);
-    gU4E8F08.SetDepthRange(0.0f, 1.0f);
-    gRasterizer->SetViewport(gU4E8F08, theScreen);
-    gRasterizer->SetCulling(kCullCCW);
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    gRasterizer->SetZBuffer(kZBufferTestAndWrite, theScreen);
-    gRasterizer->SetZCompare(kCompareLessEqual, theScreen);
-    gRasterizer->SetAlphaTesting(0, theScreen);
-    gRasterizer->SetShadingColorSource(1, theScreen);
-    gRasterizer->SetCulling(kCullNone);
-    SetLightingOff();
-    SetSceneFog();
     GETerrainMesh& theMesh = *gRenderSnapshot.mTerrainMesh;
-    gRasterizer->Draw(theMesh, theScreen, gOrthographicView);
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, gScreenIndex);
-    gRasterizer->SetZBuffer(kZBufferDisabled, gScreenIndex);
-    // port: the editor's brush and the map's coloured rectangles from the frame's snapshot (EETakeTerrainSnapshot
-    // took them, and erased the erase markers, where this drew them from the live map and its lock)
     if (gRenderSnapshot.mBrushHighlightShown)
         gRasterizer->DrawTerrainHighlight(theMesh, gRenderSnapshot.mBrushTiles, gScreenIndex, gOrthographicView,
-                                          gBrushHighlightColor, kHighlightOpacity);
+                                          gBrushHighlightColor, inOpacity);
     for (unsigned long theRect = 0; theRect < gRenderSnapshot.mColoredRectangles.size(); theRect++) {
         const RTSColoredRectangle& theColored = gRenderSnapshot.mColoredRectangles[theRect];
         gRasterizer->DrawTerrainHighlight(theMesh, theColored.mRect, gScreenIndex, gOrthographicView, theColored.mColor,
                                           theColored.mOpacity);
     }
-    gU4E8F08.SetDepthRange(0.0f, 0.0f);
-    gRasterizer->SetViewport(gU4E8F08, theScreen);
-    gRasterizer->SetBlending(kBlendOne, kBlendZero, theScreen);
-    gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
-    gRasterizer->SetZCompare(kCompareLess, theScreen);
-    if (this->mGridMode != 0)
-        gRasterizer->DrawTerrainGrid(theMesh, theScreen, gOrthographicView);
-    if (gGridRuns.size() != 0)
-        gRasterizer->DrawGridLines(theMesh, gGridRuns, gAreaEffectTexture, gU4E9330, theScreen,
-                                   gOrthographicView);
-    for (long i = 0; i < (long)theLineCount; i++) {
-        EERenderLine& theLine = gU529050[i];
-        gRasterizer->Draw3DLine(theLine.mPoints, theLine.mTexture, theLine.mWidth, theScreen, false);
-    }
-    gRasterizer->SetZCompare(kCompareLessEqual, theScreen);
-    for (theIterator = gEffectQueues[2].begin(); theIterator != gEffectQueues[2].end(); theIterator++) {
-        BeginEffectBatches(theIterator->first);
-        for (theEffect = theIterator->second.begin(); theEffect != theIterator->second.end(); theEffect++)
+}
+void TerrainGrid(void*) { gRasterizer->DrawTerrainGrid(*gRenderSnapshot.mTerrainMesh, gScreenIndex, gOrthographicView); }
+void TerrainGridLines(void*)
+{
+    gRasterizer->DrawGridLines(*gRenderSnapshot.mTerrainMesh, gGridRuns, gAreaEffectTexture, gU4E9330, gScreenIndex,
+                               gOrthographicView);
+}
+void TerrainLines(void*)
+{
+    for (unsigned long i = 0; i < gU529050.size(); i++)
+        gRasterizer->Draw3DLine(gU529050[i].mPoints, gU529050[i].mTexture, gU529050[i].mWidth, gScreenIndex, false);
+}
+// the effects' terrain pass: queue 2, batched per texture
+void TerrainEffects(void*)
+{
+    for (EEEffectQueue::iterator i = gEffectQueues[2].begin(); i != gEffectQueues[2].end(); i++) {
+        BeginEffectBatches(i->first);
+        for (std::deque<EEEffect*>::iterator theEffect = i->second.begin(); theEffect != i->second.end(); theEffect++)
             (*theEffect)->DrawPass4();
         FlushEffectBatches();
         EndEffectBatches();
     }
-    gU4E8F08.SetDepthRange(0.0f, 1.0f);
-    gRasterizer->SetViewport(gU4E8F08, theScreen);
-    gRasterizer->SetAlphaTesting(theAlphaTesting, theScreen);
-    gRasterizer->SetAlphaTestingRefValue(theAlphaRefValue, gScreenIndex);
+}
 }
 
-// FUNCTION: EXE 0x5138a6
+// Draws the sky (stars on space maps, the inner layer only with clouds on; else sky and clouds), the terrain,
+// the editor brush highlight, the map's coloured rectangles (erasing faded ones), grid, lines and ground effects
+// (ee_gfx ro_terrain.rs)
+void EEROTerrain::RenderScene()
+{
+    EeGfxTerrainScene theScene = {NULL, gRenderSnapshot.mIsSpaceMap, gDrawClouds, gOrthographicView,
+                                  this->mGridMode != 0, gGridRuns.size(), TerrainDraw, TerrainHighlights, TerrainGrid,
+                                  TerrainGridLines, TerrainLines, TerrainEffects};
+    ee_gfx_ro_terrain_render(&gEERustRaster, &theScene);
+}
+
 // Steps the terrain grid mode forwards or backwards through 0..17, wrapping around
 void EEROTerrain::StepGridMode(bool inBackwards)
 {
     this->mGridMode = ee_gfx_terrain_grid_mode_step((int32_t)this->mGridMode, inBackwards);   // ee_gfx terrain.rs
 }
 
-// FUNCTION: EXE 0x5138d2
-// Releases the sky, cloud and star models and textures and the two area-effect textures
+// Releases the sky, cloud and star models and textures and the two area-effect textures (ee_gfx ro_terrain.rs)
 void EEROTerrain::ReleaseSkyModels()
 {
-    if (sSkyModel)
-        sSkyModel->Dereference();
-    sSkyModel = NULL;
-    if (sCloudModel)
-        sCloudModel->Dereference();
-    sCloudModel = NULL;
-    if (sCloudTexture)
-        sCloudTexture->Dereference();
-    sCloudTexture = NULL;
-    if (sOuterStarModel)
-        sOuterStarModel->Dereference();
-    sOuterStarModel = NULL;
-    if (sInnerStarModel)
-        sInnerStarModel->Dereference();
-    sInnerStarModel = NULL;
-    if (sStarTexture)
-        sStarTexture->Dereference();
-    sStarTexture = NULL;
-    gAreaEffectTexture->Dereference();
+    ee_gfx_ro_terrain_release(&gEERustRaster);
     gAreaEffectTexture = NULL;
-    gCircleAreaEffectTexture->Dereference();
     gCircleAreaEffectTexture = NULL;
 }
 
-// the band of each group of four sky vertices (0x441a04), the sky vertices (0x441a18) and the star vertices
-// (0x441ab8): ee_gfx terrain.rs SKY_BANDS, SKY_VERTICES and STAR_VERTICES
-// FUNCTION: EXE 0x51396f
-// Places the cloud layer over the map square and scrolls its texture by the environment's cloud offset
-// (kept in 0..1) (provisional name)
-static void UpdateCloudLayer()
-{
-    if (sCloudModel == NULL)
-        CreateCloudModel();
-    // the layer's points, its texture coordinates and the offset kept in 0..1: ee_gfx terrain.rs
-    EEMap* theMap = gWorld.mMap;
-    EeGfxCloudLayer theLayer = ee_gfx_terrain_cloud_layer((int32_t)theMap->mSize, (int32_t)theMap->mL195614,
-                                                          gRenderEnvironment.mCloudOffset);
-    unsigned long i;
-    for (i = 0; i < 8; i++)
-        sCloudModel->GetVertexArray(0)->SetPoint(*reinterpret_cast<const GE3DPoint*>(&theLayer.points[i]), i);
-    sCloudModel->ComputeModelNormals();
-    sCloudModel->ComputeBoundingVolumes();
-    if (theLayer.wrapped)
-        gRenderEnvironment.mCloudOffset = theLayer.offset;
-    for (i = 0; i < 8; i++)
-        sCloudModel->GetVertexArray(0)->SetTextureCoordinate(
-            *reinterpret_cast<const GETextureCoordinate*>(&theLayer.coords[i]), i);
-}
-
-// FUNCTION: EXE 0x513ebd
-// Blends the sky colours for the environment's time of day (17 steps) into the sky dome and fog colour, and
-// stretches the sky dome and star models over the map square (provisional name)
-static void UpdateSkyColors()
-{
-    // the bands' blend for the time of day and the models stretched over the map's square: ee_gfx terrain.rs
-    EEMap* theMap = gWorld.mMap;
-    EeGfxSkyFrame theFrame =
-        ee_gfx_terrain_sky_frame(gRenderEnvironment.mTimeOfDay, reinterpret_cast<const EeGfxColor*>(gSkyColors),
-                                 (int32_t)theMap->mSize, (int32_t)theMap->mL195614);
-    unsigned long i;
-    gU4E9220 = *reinterpret_cast<const GEColor*>(&theFrame.fog);
-    for (i = 0; i < 0x14; i++)
-        sSkyModel->GetVertexArray(0)->SetColor(*reinterpret_cast<const GEColor*>(&theFrame.sky_colors[i]), i);
-    GEVertexArray* theSkyArray = sSkyModel->GetVertexArray(0);
-    for (i = 0; i < 20; i++)
-        theSkyArray->SetPoint(*reinterpret_cast<const GE3DPoint*>(&theFrame.sky_points[i]), i);
-    sSkyModel->ComputeModelNormals();
-    sSkyModel->ComputeBoundingVolumes();
-    GEVertexArray* theOuterArray = sOuterStarModel->GetVertexArray(0);
-    GEVertexArray* theInnerArray = sInnerStarModel->GetVertexArray(0);
-    for (i = 0; i < 24; i++) {
-        theOuterArray->SetPoint(*reinterpret_cast<const GE3DPoint*>(&theFrame.outer_stars[i]), i);
-        theInnerArray->SetPoint(*reinterpret_cast<const GE3DPoint*>(&theFrame.inner_stars[i]), i);
-    }
-    sOuterStarModel->ComputeModelNormals();
-    sOuterStarModel->ComputeBoundingVolumes();
-    sInnerStarModel->ComputeModelNormals();
-    sInnerStarModel->ComputeBoundingVolumes();
-}
-
-// the COMDATs closing the unit: the coloured rectangles' erase (vector<RTSColoredRectangle>::erase, its copy and the
-// element's implicit operator=) and RTSWorld::GetMap's refused copy
-// SYNTHETIC: EXE 0x5141c5
-// SYNTHETIC: EXE 0x514229
-// SYNTHETIC: EXE 0x514252
-// SYNTHETIC: EXE 0x51428f
-
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEROTerrain::FrameDone()
 {
 }
 
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEROTerrain::SceneStarting()
 {
 }
 
-// ICF-FOLDED: EXE 0x557269
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEROTerrain::Virtual14(long)
 {
 }

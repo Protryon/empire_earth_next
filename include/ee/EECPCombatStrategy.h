@@ -12,14 +12,14 @@ class EECPIntelligencePlayerFile;
 
 class EECPCombatStrategy {
 public:
-    EECPCombatStrategy();                   // 0x77084
-    EECPCombatStrategy(const EECPCombatStrategy& inOther);   // 0x770f6
+    EECPCombatStrategy();
+    EECPCombatStrategy(const EECPCombatStrategy& inOther);
     virtual ~EECPCombatStrategy();          // +0x00 0x7716d (??_G 0x770da)
 
-    void Reset();                           // 0x7717b
+    void Reset();
     // 0x771be (ret 8): splits mTotal over the four shares by what inOwn lacks (inOther unused)
     void Calculate(EECPIntelligencePlayerFile* inOwn, EECPIntelligencePlayerFile* inOther);
-    EECPCombatStrategy* Clone();            // 0x773bf
+    EECPCombatStrategy* Clone();
     // 0x97c53 (EECPUnitSelector.cpp, between AllocateAlreadyDefinedUnits and AllocateHeldUnits; both call it out of
     // line at a depth-1 site, so not an inline): one unit of mL30 less, not below 0 (provisional name)
     void DecrementRemaining();

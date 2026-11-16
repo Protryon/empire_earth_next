@@ -14,7 +14,6 @@
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyScreens.h"
 namespace WONAPI {
-// FUNCTION: WON 0x00758df0
 // Opens a popup over the lobby at the given position and lets it receive lobby logic events
 void LobbyOpenPopup(Component* popup,int flags,int x,int y)
 {

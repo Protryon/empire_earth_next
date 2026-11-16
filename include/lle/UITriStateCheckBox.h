@@ -23,7 +23,7 @@ public:
     virtual long DrawTextA();
     unsigned long GetCheckState() const;    // ICF-folded (0x100660be)
     UITextLabel* GetTextLabel() const;      // ICF-folded (0x100633b1)
-    virtual unsigned long GetType() const { return kControlTypeTriStateCheckBox; }  // 0x100805e6
+    virtual unsigned long GetType() const { return kControlTypeTriStateCheckBox; }
     void SetCheckState(unsigned long inState);
     virtual void SetLocation(const GE2DPoint& inLocation);
     void SetText(const UWideString& inText, GEFont* inFont);

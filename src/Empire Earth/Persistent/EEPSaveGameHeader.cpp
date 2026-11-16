@@ -17,7 +17,6 @@ const UString EEPSaveGameHeader::sNumChunks("EEPSaveGameHeader-NumChunks");
 const UString EEPSaveGameHeader::sChunkID("EEPSaveGameHeader-ChunkID");
 const UString EEPSaveGameHeader::sCompressionType("EEPSaveGameHeader-CompressionType");
 
-// FUNCTION: EXE 0x54b8f4
 // Creates a save header with placeholder name and description, version 0.1 and three players
 EEPSaveGameHeader::EEPSaveGameHeader()
 {
@@ -30,7 +29,6 @@ EEPSaveGameHeader::EEPSaveGameHeader()
     this->mNumPlayers = 3;
 }
 
-// FUNCTION: EXE 0x54b993
 // Reads the header's name/version part, then its body; returns the first read error
 long EEPSaveGameHeader::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -45,7 +43,6 @@ long EEPSaveGameHeader::Load(unsigned long inMajorVersion, unsigned long inMinor
     return theResult;
 }
 
-// FUNCTION: EXE 0x54b9b2
 // Reads the save's name, description and version; fails for saves older than version 0.197
 long EEPSaveGameHeader::LoadHeader(FSFile& inFile)
 {
@@ -64,7 +61,6 @@ long EEPSaveGameHeader::LoadHeader(FSFile& inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x54ba08
 // Reads the player names, date, game options, player count, chunk tag list, media strings and checksum; returns the
 // first read error
 long EEPSaveGameHeader::LoadBody(FSFile& inFile)
@@ -106,7 +102,6 @@ long EEPSaveGameHeader::LoadBody(FSFile& inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x54bb26
 // Opens a save file, copies it into memory and reads its header from there; returns the first error
 long EEPSaveGameHeader::LoadFromFile(FSFile& inFile)
 {
@@ -123,7 +118,6 @@ long EEPSaveGameHeader::LoadFromFile(FSFile& inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x54bb9a
 // Writes the header's name/version part, then its body; returns the first write error
 long EEPSaveGameHeader::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -133,7 +127,6 @@ long EEPSaveGameHeader::Save(unsigned long inMajorVersion, unsigned long inMinor
     return theResult;
 }
 
-// FUNCTION: EXE 0x54bbb9
 // Writes the save's name, description and version; returns the first write error
 long EEPSaveGameHeader::SaveHeader(FSFile& outFile)
 {
@@ -149,7 +142,6 @@ long EEPSaveGameHeader::SaveHeader(FSFile& outFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x54bc02
 // Writes the player names, date, game options, player count, chunk tag list, media strings and checksum; returns the
 // first write error
 long EEPSaveGameHeader::SaveBody(FSFile& outFile)
@@ -182,35 +174,7 @@ long EEPSaveGameHeader::SaveBody(FSFile& outFile)
     return theResult;
 }
 
-// ICF-FOLDED: EXE 0x557269
 // Adds nothing to the checksum (empty: folded into a shared empty function)
 void EEPSaveGameHeader::GetChecksum(ESChecksum& ioChecksum) const
 {
 }
-
-// TEMPLATE: EXE 0x54bd09
-// std::vector<long>::push_back (first used by LoadBody)
-
-// SYNTHETIC: EXE 0x54bd35
-// EESMMediaStrings's implicit default ctor (first used by the ctor)
-
-// SYNTHETIC: EXE 0x54b7a5
-// SYNTHETIC: EXE 0x54b7af
-// SYNTHETIC: EXE 0x54b7c0
-// SYNTHETIC: EXE 0x54b7cc
-// SYNTHETIC: EXE 0x54b7e8
-// SYNTHETIC: EXE 0x54b7f2
-// SYNTHETIC: EXE 0x54b803
-// SYNTHETIC: EXE 0x54b80f
-// SYNTHETIC: EXE 0x54b82b
-// SYNTHETIC: EXE 0x54b835
-// SYNTHETIC: EXE 0x54b846
-// SYNTHETIC: EXE 0x54b852
-// SYNTHETIC: EXE 0x54b86e
-// SYNTHETIC: EXE 0x54b878
-// SYNTHETIC: EXE 0x54b889
-// SYNTHETIC: EXE 0x54b895
-// SYNTHETIC: EXE 0x54b8b1
-// SYNTHETIC: EXE 0x54b8bb
-// SYNTHETIC: EXE 0x54b8cc
-// SYNTHETIC: EXE 0x54b8d8

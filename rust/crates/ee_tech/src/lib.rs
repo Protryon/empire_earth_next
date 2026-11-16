@@ -24,6 +24,9 @@
 //!   numbers, player and area tests.
 //! - [`area_effect_save`]: the area effects' running state in a saved game.
 //! - [`capture`]: the simulation capture's records (`ee/EETechCapture.h`) and their replay.
+//! - [`civ`]: the civilization manager's and the civilization powers' tables and their queries (whole in Rust).
+//! - [`civ_apply`]: an upgrade applied to a player, a level on a class's upgrade and a power granted, over a host.
+//! - [`civ_file`]: a civilization file's bytes read, a file applied to a player, a player's upgrade request granted.
 
 pub mod area_effect;
 pub mod area_effect_save;
@@ -34,6 +37,11 @@ pub mod calamity_record;
 pub mod calamity_start;
 pub mod calamity_update;
 pub mod capture;
+pub mod civ;
+pub mod civ_apply;
+pub mod civ_file;
+#[cfg(test)]
+mod civ_tests;
 pub mod contagion;
 pub mod contagion_functor;
 pub mod contagion_save;

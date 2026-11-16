@@ -130,7 +130,6 @@ void EELobbyColorButton::HandleComponentEvent(ComponentEvent* inEvent)
 
 EELobbyColorChooser::EELobbyColorChooser() : mRust(ee_won_eecolor_new(this, EeWonEeColorKind::Chooser, ColorHost)) {}
 EELobbyColorChooser::~EELobbyColorChooser() { ee_won_eecolor_free(this->mRust); }
-// FUNCTION: EXE 0x6908af
 // Returns the chooser's fixed size of 120 x 120 pixels
 void EELobbyColorChooser::GetDesiredSize(int& outWidth, int& outHeight) { outWidth = outHeight = 120; }
 void EELobbyColorChooser::Paint(Graphics& inGraphics) { ee_won_eecolor_call(this->mRust, CC::Paint, (intptr_t)&inGraphics, 0, 0); }
@@ -208,27 +207,18 @@ static intptr_t EELobbySoundHost(void*, EeWonEeSoundOp inOp, intptr_t a)
     return 0;
 }
 
-// FUNCTION: EXE 0x69ce06
 EELobbyMusic::EELobbyMusic(const SoundDescriptor& inDescriptor)
     : Sound(inDescriptor), mRust(ee_won_eesound_new(this, EeWonEeSoundKind::Music, EELobbySoundHost, 0)) {}
 EELobbyMusic::~EELobbyMusic() { ee_won_eesound_free(this->mRust); }
-// FUNCTION: EXE 0x69ce46
 void EELobbyMusic::PlayHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Play, 0); }
-// FUNCTION: EXE 0x69ce61
 void EELobbyMusic::StopHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Stop, 0); }
-// FUNCTION: EXE 0x69ce78
 void EELobbyMusic::ResumeHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Resume, 0); }
-// FUNCTION: EXE 0x69ce7d
 EELobbySound::EELobbySound(const SoundDescriptor& inDescriptor, unsigned long inSampleID)
     : Sound(inDescriptor),
       mRust(ee_won_eesound_new(this, EeWonEeSoundKind::Effect, EELobbySoundHost, (uint32_t)inSampleID)) {}
-// FUNCTION: EXE 0x69cebc
 EELobbySound::~EELobbySound() { ee_won_eesound_free(this->mRust); }
-// FUNCTION: EXE 0x69ceeb
 void EELobbySound::PlayHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Play, 0); }
-// FUNCTION: EXE 0x69cf1c
 void EELobbySound::StopHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Stop, 0); }
-// FUNCTION: EXE 0x69cf40
 // Loads a lobby sound file into the engine's sound manager; returns NULL without a sound manager
 SoundPtr EELobbySoundDecoder::Decode(const SoundDescriptor& inDescriptor)
 {
@@ -238,7 +228,6 @@ SoundPtr EELobbySoundDecoder::Decode(const SoundDescriptor& inDescriptor)
     return new EELobbySound(inDescriptor, (unsigned long)aSample);
 }
 
-// FUNCTION: EXE 0x694dbe
 // Creates the lobby config with the EEFileTransferPort key (default 8889)
 EELobbyConfig::EELobbyConfig() { this->KeyAdd("EEFileTransferPort", this->mFileTransferPort, 8889); }
 
@@ -591,7 +580,6 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
 
 // ---- the entry points (EELobbyInit.cpp's and EELobbyMisc.cpp's; the Rust's)
 
-// FUNCTION: EXE 0x695511
 // Sets the lobby up for Empire Earth: the server list's epoch and map type columns, the factories, the game's
 // components, resources, epoch and map type options, player colours and the product name
 void EELobbyInit()
@@ -622,23 +610,18 @@ unsigned long EELobbyGetNumMapTypes() { return EERMGetNumberOfGenerators(); }
 
 // ---- what the game owns (EELobbyMisc.cpp's and EELobbyInterface.cpp's)
 
-static CriticalSection gEELobbyCriticalSection;     // 0x565858
+static CriticalSection gEELobbyCriticalSection;
 
-// FUNCTION: EXE 0x697f15
 // Enters the lobby's critical section (shared with the renderer)
 void EELobbyLock() { gEELobbyCriticalSection.Enter(); }
-// FUNCTION: EXE 0x697f21
 // Leaves the lobby's critical section
 void EELobbyUnlock() { gEELobbyCriticalSection.Leave(); }
 
-// FUNCTION: EXE 0x6981ff
 // Converts a game wide string (player or map name) to a lobby GUI string
 GUIString EELobbyToGUIString(const UWideString& inText) { return GUIString(StringToWString(std::string(inText), -1)); }
-// FUNCTION: EXE 0x696c32
 // Converts a lobby GUI string to a game wide string
 UWideString EELobbyToWideString(const GUIString& inText) { return UWideString(WStringToString(inText, -1).c_str()); }
 
-// FUNCTION: EXE 0x6988e9
 // Returns the saved games directory (data\Saved Games)
 const GUIString& EELobbyFn2988E9()
 {
@@ -649,11 +632,9 @@ const GUIString& EELobbyFn2988E9()
     return theDirectory;
 }
 
-// FUNCTION: EXE 0x6989a9
 // Returns whether the game is multiplayer when the flag is set, true otherwise
 bool EEIsMultiplayerGame(bool inFlag) { return inFlag ? gGameOptions.mIsMultiplayer : true; }
 
-// FUNCTION: EXE 0x6989b8
 // Returns the game's version string and binary checksum
 void EELobbyGetVersion(GUIString& outVersion, unsigned long& outChecksum)
 {
@@ -661,20 +642,19 @@ void EELobbyGetVersion(GUIString& outVersion, unsigned long& outChecksum)
     outChecksum = gBinaryChecksum;
 }
 
-SmartPtr<PlatWindowManager> gEELobbyRootWindow;          // 0x965894
-SmartPtr<Window> gEELobbyPlatformWindow;  // 0x965890
-static WONAPICoreEx* gEELobbyWindowManager;      // 0x965898
-static bool gEELobbyOpen;                   // 0x96589c
-static bool gEELobbyShown;                  // 0x96589d
-static long sEELobbyHeight;                 // 0x965888
-static long sEELobbyWidth;                  // 0x96588c
+SmartPtr<PlatWindowManager> gEELobbyRootWindow;
+SmartPtr<Window> gEELobbyPlatformWindow;
+static WONAPICoreEx* gEELobbyWindowManager;
+static bool gEELobbyOpen;
+static bool gEELobbyShown;
+static long sEELobbyHeight;
+static long sEELobbyWidth;
 // port: the lobby's screens are laid out for 1024x768 (the original switched the display mode); its surface keeps
 // that size and RTSGraphics::RenderLobby shows it letterboxed in the window
 static const int kEELobbySurfaceWidth = 1024;
 static const int kEELobbySurfaceHeight = 768;
-static unsigned long sEELobbyStartTime;     // 0x9658a8
+static unsigned long sEELobbyStartTime;
 
-// FUNCTION: EXE 0x696c89
 // Returns the lobby game's host address in a multiplayer lobby game, else the protocol's local address
 UWideString& EEGetLocalAddress(NEProtocol* inProtocol, unsigned long inAdapter)
 {
@@ -688,7 +668,6 @@ UWideString& EEGetLocalAddress(NEProtocol* inProtocol, unsigned long inAdapter)
     return theAddress;
 }
 
-// FUNCTION: EXE 0x696d1e
 // Hosts the lobby game: replaces the connection with a new game server and, once the game is published, sends the
 // host's own connection request; returns whether it was published
 bool EELobbyHostGame()
@@ -716,11 +695,9 @@ bool EELobbyHostGame()
     return true;
 }
 
-// FUNCTION: EXE 0x697276
 // Asks the user interface thread to open the external lobby
 void EEStartExternalLobby() { EELobbyPostAction(EELobbyOpen); }
 
-// FUNCTION: EXE 0x697282
 // Posts a function for the user interface thread to call
 void EELobbyPostAction(void (*inFunc)())
 {
@@ -733,7 +710,6 @@ void EELobbyPostAction(void (*inFunc)())
 // exposure, the keys of its main window): handled as the game window's own (EEUserInterface::HandleEvent)
 static void EELobbyForwardEvent(const PlatInputEvent& inEvent) { EEUserInterface::HandleEvent(inEvent); }
 
-// FUNCTION: EXE 0x6972c6
 // Opens the external lobby: WONAPI core, window manager, the lobby window and the lobby screen in it; then shows it
 // and runs it until it is left
 // port: the window manager and window are the platform backend's (WONLobbyPlatform.h): the lobby window fills the
@@ -805,7 +781,6 @@ void EELobbyUnlockFrame()
         gEELobbyRootWindow->UnlockFrame();
 }
 
-// FUNCTION: EXE 0x69754d
 // Shows the lobby in the game's place, keeping the cursor where it was, and suspends the game's input
 // port: the lobby is drawn into the game's window (RTSGraphics::RenderLobby), so the game window stays; its input is
 // suspended in both modes (the mouse leaves relative mode), the system pointer shows and the lobby gets typed text.
@@ -846,7 +821,6 @@ void EELobbyShow(bool inFlag)
     gEELobbyPlatformWindow->InvalidateRoot();
 }
 
-// FUNCTION: EXE 0x69775d
 // Starts loading the hosted game: closes it to new players, counts the humans, sends the start message with a random
 // seed and saves the options as the last game's
 void EELobbyStartHostedGame()
@@ -874,7 +848,6 @@ void EELobbyStartHostedGame()
     gGameOptions.mLock->ReadUnlock();
 }
 
-// FUNCTION: EXE 0x697897
 // Joins the lobby game: makes this a client, resets the game options and connects to the host's address
 void EELobbyJoinGame()
 {
@@ -911,7 +884,6 @@ void EELobbyJoinGame()
     }
 }
 
-// FUNCTION: EXE 0x697ac9
 // Hides the lobby and gives the game back its window, resuming input and the game's cursor
 // port: the reverse of EELobbyShow: the game's pointer goes where the system pointer is, the system pointer hides
 // again (the game draws its own) with its default shape; typed text stays on (the game window always takes it)
@@ -947,7 +919,6 @@ void EELobbyHide()
     gEELobbyPlatformWindow->Show(false);
 }
 
-// FUNCTION: EXE 0x697be0
 // Runs Sierra Update and quits the game, or tells the player it is missing
 void EELobbyRunSierraUpdate()
 {
@@ -973,7 +944,6 @@ void EELobbyRunSierraUpdate()
     gUIManager->DisplayMessage(theMessage, true, NULL, 0, true);
 }
 
-// FUNCTION: EXE 0x697d5d
 // Pushes the game form (form 30), hooking it to return to the lobby once the game is done
 void EELobbyShowGameScreen()
 {
@@ -986,11 +956,9 @@ void EELobbyShowGameScreen()
 }
 
 void EELobbyReturnFromGame() { Glue(GL::ReturnFromGame); }
-// FUNCTION: EXE 0x697e45
 // Asks the user interface thread to return to the lobby
 void EELobbyPostReturnFromGame() { EELobbyPostAction(EELobbyReturnFromGame); }
 
-// FUNCTION: EXE 0x697e51
 // Closes the external lobby, its windows and its WONAPI core, and restores the game's music volume
 void EELobbyClose()
 {

@@ -17,27 +17,23 @@
 #include "rust/ee_won.h"
 using namespace WONAPI;
 // RoomListItem: an entry of the room tree (a server or one of its chat rooms), private to this file
-// FUNCTION: WON 0x007c19a0
 // Creates a room tree entry for a server, or its 'querying server' placeholder when loading
 RoomListItem::RoomListItem(WONAPI::LobbyServer* inServer,bool inLoading)
     :mColor(-1),mLoading(inLoading),mAddress(inServer->GetAddress()),mGroupId(0xffff)
 {
     this->UpdateText(inServer,NULL);
 }
-// FUNCTION: WON 0x007c1c50
 // Creates a room tree entry for a chat room on a server
 RoomListItem::RoomListItem(WONAPI::LobbyGroup* inGroup,WONAPI::LobbyServer* inServer)
     :mColor(-1),mLoading(false),mAddress(inServer->GetAddress()),mGroupId(inGroup->GetId())
 {
     this->UpdateText(inServer,inGroup);
 }
-// FUNCTION: WON 0x007c20a0
 // Orders room tree entries by their text, ignoring case
 int RoomListItem::Compare(const WONAPI::ListItem* inOther,WONAPI::ListArea*) const
 {
     return this->mText.CompareNoCase(static_cast<const RoomListItem*>(inOther)->mText);
 }
-// FUNCTION: WON 0x007c1d40
 // Sets the entry's text ('querying server', or the room or server name with its player count) and lock icon
 void RoomListItem::UpdateText(WONAPI::LobbyServer* inServer,WONAPI::LobbyGroup* inGroup)
 {
@@ -61,7 +57,6 @@ void RoomListItem::UpdateText(WONAPI::LobbyServer* inServer,WONAPI::LobbyGroup* 
     if(inGroup!=NULL && inGroup->IsPasswordProtected()) this->mImage=LOBBY_IMAGE(RoomCtrl_Password_Image);
     else this->mImage=NULL;
 }
-// FUNCTION: WON 0x007c1fd0
 // Measures the entry: server entries use a bold font, and the lock icon adds width and height
 void RoomListItem::CalcDimensions(WONAPI::ListArea* inList)
 {
@@ -81,7 +76,6 @@ void RoomListItem::CalcDimensions(WONAPI::ListArea* inList)
     }
 }
 // Uses the list's selection color (ListArea at 0x140) and its full-row selection flag (list flags at 0x124)
-// FUNCTION: WON 0x007c20c0
 // Draws the entry with its selection highlight, lock icon and text
 void RoomListItem::Paint(WONAPI::Graphics& g,WONAPI::ListArea* inList)
 {
@@ -108,7 +102,6 @@ void RoomListItem::Paint(WONAPI::Graphics& g,WONAPI::ListArea* inList)
 
 namespace WONAPI {
 RoomCtrl::RoomCtrl() {}
-// FUNCTION: WON 0x007c22a0
 // Looks up the room tree and the Join and Create buttons, listens to broadcasts and updates Join
 void RoomCtrl::InitComponent(ComponentInit& inInit)
 {
@@ -120,20 +113,17 @@ void RoomCtrl::InitComponent(ComponentInit& inInit)
     this->SubscribeToBroadcast(1);
     this->EnableControls();
 }
-// FUNCTION: WON 0x007c2320
 // Enables Join only while a room tree entry is selected
 void RoomCtrl::EnableControls()
 {
     this->mJoinButton->SetEnabled(this->mRoomList->GetSelItem()!=NULL);
 }
-// FUNCTION: WON 0x007c2350
 // Adds a chat room entry under a server entry
 void RoomCtrl::AddGroup(TreeItem* inParent,LobbyServer* inServer,LobbyGroup* inGroup)
 {
     RoomListItem* aItem=new RoomListItem(inGroup,inServer);
     this->mRoomList->InsertTreeItem(inParent,aItem,-1);
 }
-// FUNCTION: WON 0x007c23d0
 // Adds a server entry with its chat rooms (or a 'querying' placeholder while unconnected), optionally opened
 void RoomCtrl::AddServer(LobbyServer* inServer,bool inOpen,int inPos)
 {
@@ -158,7 +148,6 @@ void RoomCtrl::AddServer(LobbyServer* inServer,bool inOpen,int inPos)
     this->mRoomList->EndUpdate();
     this->EnableControls();
 }
-// FUNCTION: WON 0x007c2b10
 // Returns the server entry with the given address, or NULL
 TreeItem* RoomCtrl::GetServerItem(const IPAddr& inAddress)
 {
@@ -170,7 +159,6 @@ TreeItem* RoomCtrl::GetServerItem(const IPAddr& inAddress)
     }
     return NULL;
 }
-// FUNCTION: WON 0x007c2b70
 // Returns the entry of the room with the given id under the server at the given address, or NULL
 TreeItem* RoomCtrl::GetGroupItem(const IPAddr& inAddress,int inGroupId)
 {
@@ -184,14 +172,12 @@ TreeItem* RoomCtrl::GetGroupItem(const IPAddr& inAddress,int inGroupId)
     }
     return NULL;
 }
-// FUNCTION: WON 0x007c2bc0
 // Returns a server's entry, or NULL
 TreeItem* RoomCtrl::GetServerItem(LobbyServer* inServer)
 {
     if(inServer!=NULL) return this->GetServerItem(inServer->GetAddress());
     return NULL;
 }
-// FUNCTION: WON 0x007c2be0
 // Returns a chat room's entry on a server, or NULL
 TreeItem* RoomCtrl::GetGroupItem(LobbyServer* inServer,LobbyGroup* inGroup)
 {
@@ -199,7 +185,6 @@ TreeItem* RoomCtrl::GetGroupItem(LobbyServer* inServer,LobbyGroup* inGroup)
     return NULL;
 }
 
-// FUNCTION: WON 0x007c2630
 // Asks the lobby to join the selected room (or server)
 void RoomCtrl::DoJoinRoom()
 {
@@ -210,7 +195,6 @@ void RoomCtrl::DoJoinRoom()
         this->DeliverEvent(new JoinRoomEvent(aItem->mAddress,aItem->mGroupId),false);
     }
 }
-// FUNCTION: WON 0x007c28f0
 // Asks the lobby to create a room on the selected server (no address when nothing is selected)
 void RoomCtrl::DoCreateRoom()
 {
@@ -219,7 +203,6 @@ void RoomCtrl::DoCreateRoom()
     if(aSelected!=NULL) aAddress=static_cast<RoomListItem*>(aSelected->GetWrappedItem())->mAddress;
     this->DeliverEvent(new CreateRoomEvent(aAddress),false);
 }
-// FUNCTION: WON 0x007c2550
 // Rebuilds the room tree from the server list and selects our current chat room (or its server)
 void RoomCtrl::HandleSetRoomList()
 {
@@ -248,7 +231,6 @@ void RoomCtrl::HandleSetRoomList()
     }
     this->EnableControls();
 }
-// FUNCTION: WON 0x007c2e20
 // Adds, removes or refreshes a chat room's entry, refreshing its server's player count too
 void RoomCtrl::HandleGroupChanged(GroupChangedEvent* inEvent)
 {
@@ -279,7 +261,6 @@ void RoomCtrl::HandleGroupChanged(GroupChangedEvent* inEvent)
     }
     this->EnableControls();
 }
-// FUNCTION: WON 0x007c2f00
 // Asks the lobby to query a server's rooms when its entry is opened
 void RoomCtrl::HandleItemOpened(TreeItemOpenedEvent* inEvent)
 {
@@ -290,7 +271,6 @@ void RoomCtrl::HandleItemOpened(TreeItemOpenedEvent* inEvent)
         this->DeliverEvent(new QueryServerGroupsEvent(aItem->mAddress),false);
     }
 }
-// FUNCTION: WON 0x007c2c10
 // Adds, removes or rebuilds a server's entry, keeping it open, its selected room and the scroll position
 void RoomCtrl::HandleServerChanged(ServerChangedEvent* inEvent)
 {
@@ -336,7 +316,6 @@ void RoomCtrl::HandleServerChanged(ServerChangedEvent* inEvent)
     this->mRoomList->SetVertOffset(aVertOffset);
     this->EnableControls();
 }
-// FUNCTION: WON 0x007c31b0
 // Routes double clicks, Join and Create, tree opening and room/server changes to the handlers
 void RoomCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -372,32 +351,3 @@ void RoomCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 }
 
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007c1b70
-// (public: virtual __thiscall RoomListItem::~RoomListItem(void)    [??1RoomListItem@@UAE@XZ])
-// TEMPLATE: WON 0x007c2190
-// (public: __thiscall WONAPI::RoomCtrl::RoomCtrl(void)    [??0RoomCtrl@WONAPI@@QAE@XZ])
-// TEMPLATE: WON 0x007ce350
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007c21c0
-// (public: virtual void * __thiscall WONAPI::RoomCtrl::`scalar deleting destructor'(unsigned int)    [??_GRoomCtrl@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007c21e0
-// (public: virtual __thiscall WONAPI::RoomCtrl::~RoomCtrl(void)    [??1RoomCtrl@WONAPI@@UAE@XZ])
-// TEMPLATE: WON 0x007c2840
-// (public: virtual void * __thiscall WONAPI::JoinRoomEvent::`scalar deleting destructor'(unsigned int)    [??_GJoinRoomEvent@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007c2860
-// (public: virtual __thiscall WONAPI::JoinRoomEvent::~JoinRoomEvent(void)    [??1JoinRoomEvent@WONAPI@@UAE@XZ])
-// TEMPLATE: WON 0x007c2a60
-// (public: virtual void * __thiscall WONAPI::CreateRoomEvent::`scalar deleting destructor'(unsigned int)    [??_GCreateRoomEvent@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007c2a80
-// (public: virtual __thiscall WONAPI::CreateRoomEvent::~CreateRoomEvent(void)    [??1CreateRoomEvent@WONAPI@@UAE@XZ])
-// TEMPLATE: WON 0x007c3100
-// (public: virtual void * __thiscall WONAPI::QueryServerGroupsEvent::`scalar deleting destructor'(unsigned int)    [??_GQueryServerGroupsEvent@WONAPI@@UA)
-// TEMPLATE: WON 0x007c3120
-// (public: virtual __thiscall WONAPI::QueryServerGroupsEvent::~QueryServerGroupsEvent(void)    [??1QueryServerGroupsEvent@WONAPI@@UAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007c1b50
-// (public: virtual void * __thiscall RoomListItem::`scalar deleting destructor'(unsigned int)    [??_GRoomListItem@@UAEPAXI@Z])

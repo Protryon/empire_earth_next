@@ -9,31 +9,28 @@
 #ifndef EE_EEUICUNITICONBAR_H
 #define EE_EEUICUNITICONBAR_H
 
+#include "ee/EEUIRustControl.h"
+
 class GEBitmap;
 class UIControlsTable;
 
-class EEUICUnitIconBar : public UIControl {
+class EEUICUnitIconBar : public EEUIRustControl {
 public:
     // 0x259f7f (the user-defined control factory 0x274b82)
     EEUICUnitIconBar(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm);
-    virtual ~EEUICUnitIconBar();            // 0x25a194
+    virtual ~EEUICUnitIconBar();
     virtual long CopyData();                // +0x14 0x25a258
     virtual long DrawPolygons();            // +0x18 0x25a32f
     // 0x25b010: refills the icons from the local player's selected group (EEUIFMainGame 0x26814f) (provisional name)
     void Update();
 protected:
-    virtual long MouseLButtonDown();        // +0x34 (ICF-folded with MouseRButtonDown 0x25ae3b)
+    virtual long MouseLButtonDown() { return this->MouseRButtonDown(); }   // +0x34 (ICF-folded with 0x25ae3b)
     virtual long MouseLButtonUp();          // +0x38 0x25aa9b
     virtual long MouseMove(const GE2DPoint& inLocation);    // +0x40 0x25afa5
     virtual long MouseRButtonDown();        // +0x44 0x25ae3b
     virtual long MouseRButtonUp();          // +0x48 0x25ae44
-    virtual void TabbedTo() {}
-    virtual void TabbedFrom() {}
-    virtual long UpdateKeyboard() { return 0; }
-
-public:
-    // the bar's host (ee_screenscpp_icon_bar, EEUICUnitIconBar.cpp): a member for the protected toolkit calls
-    static int64_t HostOp(EEUICUnitIconBar* inBar, uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
+    // the bar's own ops (EEUIRustControl's host the toolkit's)
+    virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
 
     // (+0x0a0..+0x141: the icons' buttons, the Shift-collected ids and icons, the health values, the icon rectangle,
     // the spacing and the cargo and collecting flags, each with its snapshot, are ee_screens icon_bar.rs' IconBar)

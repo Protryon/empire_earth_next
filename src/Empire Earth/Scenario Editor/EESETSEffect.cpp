@@ -8,69 +8,31 @@
 // unit keeps their two hosts, ee_screenscpp_seet and ee_screenscpp_sect, one template over the effect or condition
 // screen's controls by array and index.
 #include <windows.h>
-#include <mbstring.h>
-#include <algorithm>
-#include <map>
 #include <string>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
-#include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/SESample.h"
-#include "lle/SESMInstanceNode.h"
-#include "lle/SESoundManager.h"
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
-#include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
-#include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
-#include "lle/GELine.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIEditBox.h"
 #include "lle/UIListBox.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
 #include "lle/UILBString.h"
-#include "lle/UIComboBox.h"
 #include "lle/UIFileComboBox.h"
-#include "lle/UIFormManager.h"
 #include "lle/UResourceFile.h"
-#include "lle/UISlider.h"
 #include "lle/UICheckBox.h"
 
 #include "lle/UIRadioButton.h"
-#include <vector>
-#include <deque>
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
@@ -102,7 +64,6 @@
 #include "ee/EEUnit.h"
 #include "lle/UIESliderChange.h"
 #include "ee/EEStringIDs.h"
-#include "ee/EEScenarioIDs.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
 // The screen is whole in Rust (ee_screens editor_subscreens.rs) with its seven effect types (editor_effects.rs): the
@@ -112,7 +73,6 @@
 
 extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
 
-// FUNCTION: EXE 0x582629
 // Creates the effect sub-screen: shared controls, title label, effect-type combo and the seven effect types,
 // starting on the object effect (editor_subscreens.rs)
 EESETSEffect::EESETSEffect(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
@@ -123,10 +83,6 @@ EESETSEffect::EESETSEffect(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
     ioIndex = theIndex;
 }
 
-// SYNTHETIC: EXE 0x582988
-// (EESETSEffect's scalar deleting destructor)
-
-// FUNCTION: EXE 0x5829a4
 // Destroys the effect sub-screen with its controls and the seven effect types (editor_subscreens.rs)
 EESETSEffect::~EESETSEffect()
 {
@@ -151,7 +107,6 @@ void EESETSEffect::Load() { this->Call(EE_SCREENS_SESC_LOAD); }
 void EESETSEffect::New() { this->Call(EE_SCREENS_SESC_NEW); }
 void EESETSEffect::RefreshControls() { this->Call(EE_SCREENS_SESC_REFRESH); }
 void EESETSEffect::Show() { this->Call(EE_SCREENS_SESC_SHOW); }
-// ICF-FOLDED: EXE 0x57c5d9
 // (folded with EESETriggerScreen::HideText in the original: the same two member offsets)
 void EESETSEffect::Hide() { this->Call(EE_SCREENS_SESC_HIDE); }
 void EESETSEffect::GetNames(std::vector<UWideString>& outNames) { ee_screens_sefx_names(this->mRust, &outNames); }
@@ -166,12 +121,6 @@ UIComboBox* EESETSEffect::GetTypeComboBox() const
     return static_cast<UIComboBox*>(static_cast<UIControl*>(ee_screens_sefx_handle(this->mRust, 1)));
 }
 
-// FUNCTION: EXE 0x582d82
-// Returns the scenario effect with the given index (EEScenarioManager::GetEffect)
-// (inline, ee/EEScenarioManager.h)
-
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EESETSEffect::Deactivate()
 {
 }
@@ -180,7 +129,6 @@ void EESETSEffect::Deactivate()
 
 void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESEEvents.cpp
 
-// FUNCTION: EXE 0x58b1b0
 // Switches a scenario combo to areas or objects: sets its label, fills it with the names and selects the first silently
 // (once EESETSETPlayer.cpp; the camera and flare types' loads and their radios' event)
 void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, bool inAreas)
@@ -211,7 +159,6 @@ void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inCom
     }
 }
 
-// FUNCTION: EXE 0x584a90
 // Sets the place label to 'Area' or 'Object' and fills the place combo with the scenario's area or object names
 // (once EESETSETGame.cpp; the place radios' event, ee_screens scenario_editor.rs, calls it through EESEEvents.cpp)
 void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox)

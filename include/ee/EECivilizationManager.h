@@ -13,8 +13,6 @@ class FSFile;
 
 class EECBUIListBox;
 class EEPlayer;
-class EEUnitClassUpgrade;
-class EECMUpgradeFunctor;                   // EECivilizationManager.cpp (vtable 0x44bfec)
 class UString;
 class UWideString;
 
@@ -49,61 +47,58 @@ struct EECivilizationCategoryEntry {
 };
 static_assert(sizeof(EECivilizationCategoryEntry) == 600, "on-disk record: 600 bytes on every target");
 
+// Whole in Rust (ee_tech civ.rs, civ_apply.rs; civilization builder lane, round 2): the tables (the categories and
+// their levels and ids, the powers' category, the premade civilizations and eras) and every query and apply; the
+// class keeps its name and methods (forwarders in EECivilizationManager.cpp, the host of the Rust simulation).
 class EECivilizationManager {
 public:
     long Load(FSFile* inFile); // original-backed 0x281514; caller1414a3, FSFile IO proof
     long LoadPremadeCivilizations(FSFile* inFile); // original-backed 0x281672; caller1414a3, FSFile IO proof
-    EECivilizationManager();            // 0x281458
-    virtual ~EECivilizationManager();   // 0x2814c4
-    // (EEUIEPDCS*; provisional names): 0x2818f9 clears outCivs and push_backs every entry of
-    // the vector at +0x5210; 0x28199b DeleteAllEntries, then fills inList from the string ids at +0x5220
+    EECivilizationManager();
+    virtual ~EECivilizationManager();
+    // (EEUIEPDCS*; provisional names): 0x2818f9 every premade civilization (sorted by index); 0x28199b DeleteAllEntries,
+    // then a header per era and a line per premade civilization of that era
     void GetCivilizations(std::vector<EECivilizationEntry>& outCivs);
+    void GetCivilizationsOfType(std::vector<EECivilizationEntry>& outCivs, long inType);
     void FillCivilizationList(EECBUIListBox* inList);
+    unsigned long GetNumCivilizations();    // actual17a522
+    const EECivilizationEntry& GetCivilization(unsigned long inIndex);   // (the original's vector's [])
+    unsigned long GetEraCount();            // the distinct era name ids, in order
+    long GetEra(unsigned long inIndex);
     // an upgrade id is (category << 16) | level (EECivUpgrade); the categories are those of dbcivilization (any
     // number; the original's table had 0x23 entries of 0x258 bytes) plus the special powers category
     long GetExtraCost(EECivUpgrade inUpgrade);    // 0x281873 (the category entry's +0x74: the upgrade's cost)
     bool GetCategoryNameID(unsigned long inCategory, long* outNameID);  // 0x281c92 (false past the categories)
-    bool LookupLevel(EECivUpgrade inUpgrade, float* outValue, float* outBonus);  // 0x281d18
+    bool LookupLevel(EECivUpgrade inUpgrade, float* outValue, float* outBonus);
     long CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList);  // 0x28189e (how many of inList share inUpgrade's category)
-    void SplitAttribute(EECivUpgrade inUpgrade, unsigned long* outCategory, unsigned long* outIndex);  // 0x281dc7
-    // (provisional names)
-    void AddCategory(const EECivilizationCategoryEntry& inEntry);   // 0x2814e5 (memcpy into mCategories[mCategoryCount++])
-    void GetCivilizationsOfType(std::vector<EECivilizationEntry>& outCivs, long inType);   // 0x281945 (mU74 == inType)
-    bool GetCategoryLevel(unsigned long inCategory, unsigned long inIndex, float* outValue, float* outBonus);  // 0x281d37
-    bool GetCategory(unsigned long inCategory, EECivilizationCategoryEntry** outEntry);   // 0x281d79
+    void SplitAttribute(EECivUpgrade inUpgrade, unsigned long* outCategory, unsigned long* outIndex);
+    bool GetCategoryLevel(unsigned long inCategory, unsigned long inIndex, float* outValue, float* outBonus);
+    bool GetCategory(unsigned long inCategory, EECivilizationCategoryEntry** outEntry);   // 0x281d79 (the record in place)
+    unsigned long GetCategoryCount();       // mCategoryCount (+0x522c)
+    std::string GetCategoryID(unsigned long inCategory);   // dbcivilization.yaml's id (empty from the binary table)
     unsigned long MakeUpgrade(unsigned long inCategory, unsigned long inIndex);   // 0x281d9c (ecx unused)
     unsigned long MakePowerUpgrade(unsigned long inIndex);   // 0x281db1 (the powers' category Load appends; ecx unused)
     // a category's levels (1 .. this; the record's 60, or as many as dbcivilization.yaml gives)
     unsigned long GetLevelCount(unsigned long inCategory) const;
-    // the legacy (category << 6) | level form (.civ files, premade checksums): false when it does not fit
     // an attribute level's name (civbuilder.yaml name) and whether it applies a civ power; the level of the
     // attribute that applies a power (by power id; the original: the id itself)
     static long LevelNameID(unsigned long inLevel);
     static bool IsPowerLevel(unsigned long inLevel);
     static unsigned long PowerLevel(unsigned long inPowerID);
+    // the legacy (category << 6) | level form (.civ files, premade checksums): false when it does not fit
     static EECivUpgrade FromLegacy(unsigned long inLegacy);
     static bool ToLegacy(EECivUpgrade inUpgrade, unsigned long& outLegacy);
     // the keyed form `<category id>.<attribute id>` (keyed .civ files); false without ids (the binary tables)
     bool UpgradeKey(EECivUpgrade inUpgrade, std::string& outKey) const;
     bool FindUpgradeKey(const std::string& inKey, EECivUpgrade& outUpgrade) const;
-    bool ForEachUpgrade(EECMUpgradeFunctor& inFunctor);   // 0x281cb2 (every category while the functor agrees)
-    bool ForEachUpgradeOfCategory(unsigned long inCategory, EECMUpgradeFunctor& inFunctor);   // 0x281cd5 (indices 1..60)
-    std::vector<EECivUpgrade> GetUpgrades();      // 0x281ded (every upgrade, through the EECMGetUpgrades functor)
+    std::vector<EECivUpgrade> GetUpgrades();      // 0x281ded (every upgrade of every category, in order)
     // (provisional names)
     bool MatchesPremadeCivilization(const UWideString& inFile, const UWideString& inName, std::vector<EECivUpgrade>& inUpgrades,
-                  long* outNameID);   // 0x281bc5 (premade civilization checksum test; reads gCivilizationManager)
-    bool ApplyUpgrade(EECivUpgrade inUpgrade, long inPlayer);  // 0x281e4d (an EECBProcessUpgrade over the category's unit set)
-    void ApplyUpgradeLevel(EEUnitClassUpgrade* inUpgrade, unsigned long inIndex, long inUnitType, float inValue, EEPlayer* inPlayer);  // 0x281ed3
-    unsigned long GetNumCivilizations() { return this->mCivilizations.size(); } // actual17a522
-    std::vector<EECivilizationCategoryEntry> mCategories; // +0004 (35 records in the original)
-    std::vector<std::vector<EECivilizationUpgradeValue>> mLevels;   // each category's levels (by level - 1)
-    std::vector<std::string> mCategoryIDs;  // each category's id (dbcivilization.yaml; empty from the binary table)
-    std::vector<EECivilizationEntry> mCivilizations; // +520c
-    std::vector<long> mEraNameIDs;                // +521c
-    unsigned long mCategoryCount;               // +522c
+                  long* outNameID);   // 0x281bc5 (premade civilization checksum test)
+    bool ApplyUpgrade(EECivUpgrade inUpgrade, long inPlayer);  // 0x281e4d (the level on every class of the category's unit set)
 };
 
-extern EECivilizationManager gCivilizationManager;          // 0x52a3a0
+extern EECivilizationManager gCivilizationManager;
 // EECivilizationManager.cpp's two init-chain strings, read by the civilization file unit (0x27fdfe..; extern, so the
 // definitions have external linkage)
 extern const UString kCivKey;               // 0x5654d0 ".civ"

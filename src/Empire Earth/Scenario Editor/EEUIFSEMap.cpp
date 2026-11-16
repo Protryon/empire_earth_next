@@ -8,32 +8,21 @@
 // stay C++ classes (controls the form owns) whose slots call into it. This unit is the tab's host
 // (ee_screenscpp_semp): the controls only the tab makes and the world it reads and posts to.
 #include <windows.h>
-#include <algorithm>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
-#include "lle/FSFileSpec.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIEntityGroup.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIEditBox.h"
 #include "lle/UIListBox.h"
 #include "lle/UILBString.h"
-#include "lle/UIComboBox.h"
 #include "lle/UIFileComboBox.h"
 #include "lle/UResourceFile.h"
 #include "lle/UIRadioButton.h"
-#include "lle/URandom.h"
-#include <vector>
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
 #include "ee/EEUserInterface.h"
@@ -51,7 +40,6 @@
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 void SeplLinePush(const UWideString& inLine);   // a line for the next combo box made with pending lines (the same)
 
-// FUNCTION: EXE 0x5a18f1
 // Releases the Create Map button and creates the map from the tab's settings
 void UIBMap::ButtonUp()
 {
@@ -59,7 +47,6 @@ void UIBMap::ButtonUp()
     this->mMap->CreateMap();
 }
 
-// FUNCTION: EXE 0x5a1907
 // Selects a map kind (blank, random or seeded) and shows only that kind's controls; blank re-runs the elevation
 // file's selection event (editor_map.rs)
 void UIRBMap::Check()
@@ -68,18 +55,12 @@ void UIRBMap::Check()
     ee_screens_semp_kind(this->GetForm(), (uint32_t)this->GetId());
 }
 
-// FUNCTION: EXE 0x5a1a6b
 // Hides every kind's controls of the map tab (editor_map.rs)
 void UIRBMap::HideControls()
 {
     ee_screens_semp_kind(this->GetForm(), 0);
 }
 
-// FUNCTION: EXE 0x5a1bc6
-// Shows the elevation controls when an elevation file is selected (selection above 0), else hides them
-// (EEUIFSEEMapType; ee_screens editor_events.rs)
-
-// FUNCTION: EXE 0x5a1be6
 // Builds the map tab: the editor terrains, the size, terrain, style and seed controls, the kind radio buttons, the
 // Create Map button and the elevation file controls (editor_map.rs)
 EEUIFSEMap::EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
@@ -90,26 +71,12 @@ EEUIFSEMap::EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
     ioIndex = theIndex;
 }
 
-// FUNCTION: EXE 0x5a3a9a
-// Destroys the Create Map button and frees it if asked (UIBMap's scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x5a3abd
-// Destroys and frees a map kind radio button (UIRBMap's scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x5a3ae0
-// Destroys and frees the elevation file event (EEUIFSEEMapType's scalar deleting destructor, with its vtable)
-
-// SYNTHETIC: EXE 0x5a3b0b
-// (EEUIFSEMap's scalar deleting destructor)
-
-// FUNCTION: EXE 0x5a3b27
 // Destroys the map tab, deleting all of its controls (editor_map.rs)
 EEUIFSEMap::~EEUIFSEMap()
 {
     ee_screens_semp_free(this->mRust);
 }
 
-// FUNCTION: EXE 0x5a3c7d
 // Creates a blank map of the chosen size and terrain (then draws a new random seed), or a random map of the chosen
 // size and style with a fresh seed (shown in the seed label) or the seed typed in the edit box (editor_map.rs)
 void EEUIFSEMap::CreateMap()
@@ -117,7 +84,6 @@ void EEUIFSEMap::CreateMap()
     ee_screens_semp_call(this->mRust, EE_SCREENS_SEMP_CREATE_MAP, 0);
 }
 
-// FUNCTION: EXE 0x5a3dec
 // In blank mode shows or hides the water/land elevation controls (the height box does the opposite); else hides all
 // (editor_map.rs)
 void EEUIFSEMap::ShowElevationControls(bool inShow)
@@ -125,18 +91,11 @@ void EEUIFSEMap::ShowElevationControls(bool inShow)
     ee_screens_semp_call(this->mRust, EE_SCREENS_SEMP_SHOW_ELEVATION, inShow ? 1 : 0);
 }
 
-// FUNCTION: EXE 0x5a3ebf
 // Refreshes the elevation file list when the tab is entered (editor_map.rs)
 void EEUIFSEMap::Enter()
 {
     ee_screens_semp_call(this->mRust, EE_SCREENS_SEMP_ENTER, 0);
 }
-
-// FUNCTION: EXE 0x5a3ecc
-// Appends a terrain table to the tab's terrain list (vector<EETerrainTable*>::push_back; first user the ctor)
-
-// FUNCTION: EXE 0x5a3ef8
-// Returns the number of terrain tables (EETerrainTable::GetNumTables, inline COMDAT; first user the ctor)
 
 // ---- the tab's host (editor_map.rs: the ops from 500)
 

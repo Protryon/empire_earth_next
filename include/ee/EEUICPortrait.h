@@ -8,6 +8,7 @@
 #define EE_EEUICPORTRAIT_H
 
 #include "ee/EEUnitHandle.h"
+#include "ee/EEUIRustControl.h"
 
 class EEButtonObject;
 class EEUnit;
@@ -15,7 +16,7 @@ class GEBitmap;
 class GERhombus;
 class GEText;
 
-class EEUICPortrait : public UIControl {
+class EEUICPortrait : public EEUIRustControl {
 public:
     // 0x25861c (the user-defined control factory 0x274965; the scenario editor 0x1a4f39)
     EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, unsigned long inId, unsigned long inIndex,
@@ -28,17 +29,12 @@ public:
     void SetUnit(EEUnit* inUnit);
     // 0x259028: updates the bars and the level text from the unit (EEUIFMainGame 0x26d0a0)
     void Update();
-    // the portrait's host (ee_screenscpp_portrait, EEUICPortrait.cpp; the bar rectangles of 0x25891c are portrait.rs')
-    static int64_t HostOp(EEUICPortrait* inPortrait, uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
 protected:
+    // the portrait's own ops (EEUIRustControl's host the toolkit's; the bar rectangles of 0x25891c are portrait.rs')
+    virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
     virtual long MouseLButtonDown();        // +0x34 0x258d02
-    virtual long MouseLButtonUp() { return 0; }
     virtual long MouseMove(const GE2DPoint& inLocation);    // +0x40 0x258f5d
     virtual long MouseRButtonDown() { return this->MouseLButtonDown(); }  // +0x44 0x258f7d
-    virtual long MouseRButtonUp() { return 0; }
-    virtual void TabbedTo() {}
-    virtual void TabbedFrom() {}
-    virtual long UpdateKeyboard() { return 0; }
 
     GEText* mText;                          // +0x0a0 the level number
     GEBitmap* mPortrait;                    // +0x0a4 (new GEBitmap)
