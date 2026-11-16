@@ -1804,6 +1804,107 @@ constexpr static const size_t EE_WON_LOBBYRES_COUNT = 469;
 /// How many op types have a completion slot (`mCompletions[61]`).
 constexpr static const size_t EE_WON_ROUTE_COMPLETIONS = 61;
 
+/// `CreateGroup(group, name, password, max players, group flags, join flags, async flags)`
+constexpr static const int32_t EE_WON_RTQ_CREATE_GROUP = 0;
+
+/// `JoinGroup(group, password, comment, join flags, member flags)`
+constexpr static const int32_t EE_WON_RTQ_JOIN_GROUP = 1;
+
+/// `BanClient(group, on, seconds, explanation, client id)`; by WON id; by CD key id
+constexpr static const int32_t EE_WON_RTQ_BAN = 2;
+
+constexpr static const int32_t EE_WON_RTQ_BAN_WON_ID = 3;
+
+constexpr static const int32_t EE_WON_RTQ_BAN_CDKEY_ID = 4;
+
+/// `MuteClient(group, on, seconds, explanation, client id)`; by WON id; by CD key id
+constexpr static const int32_t EE_WON_RTQ_MUTE = 5;
+
+constexpr static const int32_t EE_WON_RTQ_MUTE_WON_ID = 6;
+
+constexpr static const int32_t EE_WON_RTQ_MUTE_CDKEY_ID = 7;
+
+/// `Register(name, password, reconnect id, async flags, register flags, client flags)`
+constexpr static const int32_t EE_WON_RTQ_REGISTER = 8;
+
+/// `GetClientList()`, `GetClientListEx()`
+constexpr static const int32_t EE_WON_RTQ_CLIENT_LIST = 9;
+
+constexpr static const int32_t EE_WON_RTQ_CLIENT_LIST_EX = 10;
+
+/// `GetGroupList(flags)`
+constexpr static const int32_t EE_WON_RTQ_GROUP_LIST = 11;
+
+/// `GetMembersOfGroup(group)`
+constexpr static const int32_t EE_WON_RTQ_MEMBERS = 12;
+
+/// `LeaveGroup(group)`
+constexpr static const int32_t EE_WON_RTQ_LEAVE = 13;
+
+/// `CancelJoinGroup(group, leave)`
+constexpr static const int32_t EE_WON_RTQ_CANCEL_JOIN = 14;
+
+/// `AcceptClient(group, client, on, explanation)`, `InviteClient(...)`
+constexpr static const int32_t EE_WON_RTQ_ACCEPT = 15;
+
+constexpr static const int32_t EE_WON_RTQ_INVITE = 16;
+
+/// `SetGroupFlags(group, mask, flags, async mask, async flags)`
+constexpr static const int32_t EE_WON_RTQ_SET_GROUP_FLAGS = 17;
+
+/// `SendServerAlert(text)`; `SendServerAlertWithRecipientList(text, recipients)` (nothing for none)
+constexpr static const int32_t EE_WON_RTQ_ALERT = 18;
+
+constexpr static const int32_t EE_WON_RTQ_ALERT_TO = 19;
+
+/// `StartServerShutdown(text, seconds)`, `AbortServerShutdown()`
+constexpr static const int32_t EE_WON_RTQ_START_SHUTDOWN = 20;
+
+constexpr static const int32_t EE_WON_RTQ_ABORT_SHUTDOWN = 21;
+
+/// `SetClientFlags(mask, flags, async mask, async flags)` (the mask cut to 16 bits)
+constexpr static const int32_t EE_WON_RTQ_SET_CLIENT_FLAGS = 22;
+
+/// `SendChatTo(text, flags, recipients)` (`SendChat`: one recipient)
+constexpr static const int32_t EE_WON_RTQ_CHAT = 23;
+
+/// `SendData(data, flags, recipients)`
+constexpr static const int32_t EE_WON_RTQ_DATA = 24;
+
+/// `BecomeModerator(on)`
+constexpr static const int32_t EE_WON_RTQ_MODERATOR = 25;
+
+/// `CreateDataObject(flags, link, type, name, data)`
+constexpr static const int32_t EE_WON_RTQ_CREATE_DATA = 26;
+
+/// `ReplaceDataObject(link, type, name)`: the delete request
+constexpr static const int32_t EE_WON_RTQ_DELETE_DATA = 27;
+
+/// `ModifyDataObject(link, type, name, offset, insert, data)`
+constexpr static const int32_t EE_WON_RTQ_MODIFY_DATA = 28;
+
+/// `ReadDataObject` / `SubscribeDataObject` / `GetClientCDKeyIdList`: (subscribe, link, type, flags)
+constexpr static const int32_t EE_WON_RTQ_READ_DATA = 29;
+
+/// `UnsubscribeDataObject(link, type, flags)`
+constexpr static const int32_t EE_WON_RTQ_UNSUBSCRIBE_DATA = 30;
+
+/// `DisconnectClient()`
+constexpr static const int32_t EE_WON_RTQ_DISCONNECT = 31;
+
+/// `SetGroupName(group, name)`, `SetGroupMaxPlayers(group, max)`, `RelinquishCaptaincy(group, new captain)`
+constexpr static const int32_t EE_WON_RTQ_SET_GROUP_NAME = 32;
+
+constexpr static const int32_t EE_WON_RTQ_SET_GROUP_MAX_PLAYERS = 33;
+
+constexpr static const int32_t EE_WON_RTQ_RELINQUISH = 34;
+
+/// `DetectFirewall(listen port, longest connect wait, listen)` (a `RoutingDetectFirewallOp`)
+constexpr static const int32_t EE_WON_RTQ_DETECT_FIREWALL = 35;
+
+/// `GetBadUserList(list type, group, flags)`
+constexpr static const int32_t EE_WON_RTQ_BAD_USERS = 36;
+
 constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
 
 /// `WS_None`
@@ -2377,106 +2478,53 @@ constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 37;
 /// The last of round 33's fields (`EeWonWmField::PopupFront`; the goldens' first state line).
 constexpr static const int32_t EE_WON_WM_FIELD_POPUP_LAST = 22;
 
-/// `CreateGroup(group, name, password, max players, group flags, join flags, async flags)`
-constexpr static const int32_t EE_WON_RTQ_CREATE_GROUP = 0;
+/// Which Rust object of a C++ object [`EeWonCoreHooks::object_of`] returns.
+enum class EeWonCoreObject {
+  /// an `AsyncOp*`'s [`EeWonAsyncOp`]
+  Op = 0,
+  /// a `SocketOp*`'s [`EeWonSocketOp`]
+  SocketOp = 1,
+  /// an `AsyncSocket*`'s [`EeWonAsyncSocket`]
+  Socket = 2,
+  /// a `QueueSocket*`'s [`EeWonQueueSocket`]
+  Queue = 3,
+  /// a `UDPManager*`'s [`EeWonUdpManager`]
+  UdpManager = 4,
+  /// a `UDPManagerRecvOp*`'s [`EeWonUdpRecvOp`]
+  UdpRecv = 5,
+  /// a `UDPManagerSendRecvOp*`'s [`EeWonUdpSendRecvOp`]
+  UdpSendRecv = 6,
+  /// a `ServerConnection*`'s [`EeWonServerConn`]
+  ServerConn = 7,
+  /// a `RoutingOp*`'s [`EeWonRouteOp`](crate::routeop::EeWonRouteOp)
+  RouteOp = 8,
+  /// a `RoutingConnection*`'s [`EeWonRouteConn`](crate::routeconn::EeWonRouteConn)
+  RouteConn = 9,
+  /// an `AuthContext*`'s [`EeWonAuthCtx`](crate::authobj::EeWonAuthCtx)
+  AuthCtx = 10,
+  /// a `RustServerOp*`'s [`EeWonHostOp`](crate::hostop::EeWonHostOp)
+  HostOp = 11,
+  /// an `HTTPConnection*`'s [`EeWonHttpConn`](crate::httpengine::EeWonHttpConn)
+  HttpConn = 12,
+  /// an `HTTPConnection*`'s or `HTTPSession*`'s lock (its `CriticalSection`'s platform mutex)
+  Lock = 13,
+};
 
-/// `JoinGroup(group, password, comment, join flags, member flags)`
-constexpr static const int32_t EE_WON_RTQ_JOIN_GROUP = 1;
-
-/// `BanClient(group, on, seconds, explanation, client id)`; by WON id; by CD key id
-constexpr static const int32_t EE_WON_RTQ_BAN = 2;
-
-constexpr static const int32_t EE_WON_RTQ_BAN_WON_ID = 3;
-
-constexpr static const int32_t EE_WON_RTQ_BAN_CDKEY_ID = 4;
-
-/// `MuteClient(group, on, seconds, explanation, client id)`; by WON id; by CD key id
-constexpr static const int32_t EE_WON_RTQ_MUTE = 5;
-
-constexpr static const int32_t EE_WON_RTQ_MUTE_WON_ID = 6;
-
-constexpr static const int32_t EE_WON_RTQ_MUTE_CDKEY_ID = 7;
-
-/// `Register(name, password, reconnect id, async flags, register flags, client flags)`
-constexpr static const int32_t EE_WON_RTQ_REGISTER = 8;
-
-/// `GetClientList()`, `GetClientListEx()`
-constexpr static const int32_t EE_WON_RTQ_CLIENT_LIST = 9;
-
-constexpr static const int32_t EE_WON_RTQ_CLIENT_LIST_EX = 10;
-
-/// `GetGroupList(flags)`
-constexpr static const int32_t EE_WON_RTQ_GROUP_LIST = 11;
-
-/// `GetMembersOfGroup(group)`
-constexpr static const int32_t EE_WON_RTQ_MEMBERS = 12;
-
-/// `LeaveGroup(group)`
-constexpr static const int32_t EE_WON_RTQ_LEAVE = 13;
-
-/// `CancelJoinGroup(group, leave)`
-constexpr static const int32_t EE_WON_RTQ_CANCEL_JOIN = 14;
-
-/// `AcceptClient(group, client, on, explanation)`, `InviteClient(...)`
-constexpr static const int32_t EE_WON_RTQ_ACCEPT = 15;
-
-constexpr static const int32_t EE_WON_RTQ_INVITE = 16;
-
-/// `SetGroupFlags(group, mask, flags, async mask, async flags)`
-constexpr static const int32_t EE_WON_RTQ_SET_GROUP_FLAGS = 17;
-
-/// `SendServerAlert(text)`; `SendServerAlertWithRecipientList(text, recipients)` (nothing for none)
-constexpr static const int32_t EE_WON_RTQ_ALERT = 18;
-
-constexpr static const int32_t EE_WON_RTQ_ALERT_TO = 19;
-
-/// `StartServerShutdown(text, seconds)`, `AbortServerShutdown()`
-constexpr static const int32_t EE_WON_RTQ_START_SHUTDOWN = 20;
-
-constexpr static const int32_t EE_WON_RTQ_ABORT_SHUTDOWN = 21;
-
-/// `SetClientFlags(mask, flags, async mask, async flags)` (the mask cut to 16 bits)
-constexpr static const int32_t EE_WON_RTQ_SET_CLIENT_FLAGS = 22;
-
-/// `SendChatTo(text, flags, recipients)` (`SendChat`: one recipient)
-constexpr static const int32_t EE_WON_RTQ_CHAT = 23;
-
-/// `SendData(data, flags, recipients)`
-constexpr static const int32_t EE_WON_RTQ_DATA = 24;
-
-/// `BecomeModerator(on)`
-constexpr static const int32_t EE_WON_RTQ_MODERATOR = 25;
-
-/// `CreateDataObject(flags, link, type, name, data)`
-constexpr static const int32_t EE_WON_RTQ_CREATE_DATA = 26;
-
-/// `ReplaceDataObject(link, type, name)`: the delete request
-constexpr static const int32_t EE_WON_RTQ_DELETE_DATA = 27;
-
-/// `ModifyDataObject(link, type, name, offset, insert, data)`
-constexpr static const int32_t EE_WON_RTQ_MODIFY_DATA = 28;
-
-/// `ReadDataObject` / `SubscribeDataObject` / `GetClientCDKeyIdList`: (subscribe, link, type, flags)
-constexpr static const int32_t EE_WON_RTQ_READ_DATA = 29;
-
-/// `UnsubscribeDataObject(link, type, flags)`
-constexpr static const int32_t EE_WON_RTQ_UNSUBSCRIBE_DATA = 30;
-
-/// `DisconnectClient()`
-constexpr static const int32_t EE_WON_RTQ_DISCONNECT = 31;
-
-/// `SetGroupName(group, name)`, `SetGroupMaxPlayers(group, max)`, `RelinquishCaptaincy(group, new captain)`
-constexpr static const int32_t EE_WON_RTQ_SET_GROUP_NAME = 32;
-
-constexpr static const int32_t EE_WON_RTQ_SET_GROUP_MAX_PLAYERS = 33;
-
-constexpr static const int32_t EE_WON_RTQ_RELINQUISH = 34;
-
-/// `DetectFirewall(listen port, longest connect wait, listen)` (a `RoutingDetectFirewallOp`)
-constexpr static const int32_t EE_WON_RTQ_DETECT_FIREWALL = 35;
-
-/// `GetBadUserList(list type, group, flags)`
-constexpr static const int32_t EE_WON_RTQ_BAD_USERS = 36;
+/// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
+enum class EeWonCoreSocketOp {
+  /// `new CloseOp(socket)`
+  Close = 0,
+  /// the queue socket's queued close: a socket op without a socket whose `Continue` succeeds, not run at once
+  QueueClose = 1,
+  /// `new RecvBytesFromOp(size, socket)`
+  RecvFrom = 2,
+  /// `new SendBytesToOp(bytes, addr, socket)`
+  SendTo = 3,
+  /// `new RecvMsgOp(socket)`
+  RecvMsg = 4,
+  /// `new SendMsgOp(bytes, socket)`
+  SendMsg = 5,
+};
 
 /// The op codes. `a`..`d` are integers or pointers as each says.
 enum class EeWonGuiOp : uint32_t {
@@ -7056,54 +7104,6 @@ enum class EeWonPrefsText {
   LastRoomName = 3,
 };
 
-/// Which Rust object of a C++ object [`EeWonCoreHooks::object_of`] returns.
-enum class EeWonCoreObject {
-  /// an `AsyncOp*`'s [`EeWonAsyncOp`]
-  Op = 0,
-  /// a `SocketOp*`'s [`EeWonSocketOp`]
-  SocketOp = 1,
-  /// an `AsyncSocket*`'s [`EeWonAsyncSocket`]
-  Socket = 2,
-  /// a `QueueSocket*`'s [`EeWonQueueSocket`]
-  Queue = 3,
-  /// a `UDPManager*`'s [`EeWonUdpManager`]
-  UdpManager = 4,
-  /// a `UDPManagerRecvOp*`'s [`EeWonUdpRecvOp`]
-  UdpRecv = 5,
-  /// a `UDPManagerSendRecvOp*`'s [`EeWonUdpSendRecvOp`]
-  UdpSendRecv = 6,
-  /// a `ServerConnection*`'s [`EeWonServerConn`]
-  ServerConn = 7,
-  /// a `RoutingOp*`'s [`EeWonRouteOp`](crate::routeop::EeWonRouteOp)
-  RouteOp = 8,
-  /// a `RoutingConnection*`'s [`EeWonRouteConn`](crate::routeconn::EeWonRouteConn)
-  RouteConn = 9,
-  /// an `AuthContext*`'s [`EeWonAuthCtx`](crate::authobj::EeWonAuthCtx)
-  AuthCtx = 10,
-  /// a `RustServerOp*`'s [`EeWonHostOp`](crate::hostop::EeWonHostOp)
-  HostOp = 11,
-  /// an `HTTPConnection*`'s [`EeWonHttpConn`](crate::httpengine::EeWonHttpConn)
-  HttpConn = 12,
-  /// an `HTTPConnection*`'s or `HTTPSession*`'s lock (its `CriticalSection`'s platform mutex)
-  Lock = 13,
-};
-
-/// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
-enum class EeWonCoreSocketOp {
-  /// `new CloseOp(socket)`
-  Close = 0,
-  /// the queue socket's queued close: a socket op without a socket whose `Continue` succeeds, not run at once
-  QueueClose = 1,
-  /// `new RecvBytesFromOp(size, socket)`
-  RecvFrom = 2,
-  /// `new SendBytesToOp(bytes, addr, socket)`
-  SendTo = 3,
-  /// `new RecvMsgOp(socket)`
-  RecvMsg = 4,
-  /// `new SendMsgOp(bytes, socket)`
-  SendMsg = 5,
-};
-
 /// A resource's kind (the `ResourceConfig::SafeGet*` that reads it).
 enum class EeWonResKind {
   String = 0,
@@ -10192,6 +10192,79 @@ struct EeWonAdminField {
 /// The values of a reply, handed over once.
 using EeWonAdminSink = void(*)(void *context, const EeWonAdminField *fields, size_t count);
 
+/// A C++ call on one object.
+using EeWonCoreFn = void(*)(void *object);
+
+/// The C++ calls of the whole library (AsyncOp.cpp's one table). Every object crosses as its `RefCount*`; a `new`
+/// object holds no reference yet.
+struct EeWonCoreHooks {
+  /// `object->AddRef()`, `object->Release()` (any `RefCount*`)
+  EeWonCoreFn ref_add;
+  EeWonCoreFn ref_release;
+  /// `completion->Complete(op)` (the C++ makes the `AsyncOpPtr`)
+  void (*completion_call)(void *completion, void *op);
+  /// the object's Rust object of that kind (null for a null object)
+  void *(*object_of)(void *object, EeWonCoreObject kind);
+  /// a socket op's virtual `Duplicate()` (a new op, or null)
+  void *(*socketop_duplicate)(void *op);
+  /// `new AsyncOp`
+  void *(*new_op)();
+  /// `new RustCompletion(body)`: its `Complete` runs the body, its deletion frees it
+  void *(*new_completion)(EeWonCompletion *body);
+  /// a new socket op of the class (`socket`, `bytes` and `addr` may be null where the class takes none)
+  void *(*new_socket_op)(EeWonCoreSocketOp kind,
+                         void *socket,
+                         void *bytes,
+                         const EeWonIpAddr *addr,
+                         uint16_t size);
+  /// `new QueueSocket(type)`
+  void *(*new_queue_socket)(int32_t kind);
+  /// `new UDPManagerRecvOp` (from `addr`; any sender for null)
+  void *(*new_udp_recv_op)(const EeWonIpAddr *addr);
+  /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
+  long (*udp_check)(void *op, const uint8_t *data, size_t length, bool *threw);
+  /// `UDPManagerSendRecvOp::StaticCheckResponse`, a reply wait's message check (kept as the C++ function's address)
+  void *udp_response_check;
+  /// a socket's `Fn2B0D90(port, reuse)`: bound to the local host
+  long (*socket_bind_local)(void *socket, uint16_t port, bool reuse);
+  /// a `ByteBuffer`'s bytes (its `mBytes`)
+  const EeWonByteBuffer *(*bytes_of)(void *buffer);
+  /// a socket op's virtual `Continue()`
+  long (*socketop_continue)(void *op);
+  /// a socket op's virtual `Start()`
+  long (*socketop_start)(void *op);
+  /// `WONAPICore::AddToSocketThread(op)`
+  EeWonCoreFn socket_thread_add;
+  /// a new `ByteBuffer` adopting Rust's bytes, a reference taken
+  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
+  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
+  /// result's
+  long (*transform)(void *socket, void **message, bool send);
+  /// a receive op's target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`,
+  /// `fclose`, the modify time (`utime`)
+  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
+  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
+  int32_t (*file_close)(void *file);
+  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
+  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
+  void (*progress)(void *op, void *completion);
+  /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
+  long (*accept)(void *socket, void **out);
+  /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
+  void (*socket_hook)(void *socket, int32_t which);
+  /// a transform's virtual `Send` (`send`) or `Recv` on the message (a `ByteBufferPtr*`)
+  long (*transform_call)(void *transform, void *message, bool send);
+  /// `delete transform`
+  EeWonCoreFn transform_free;
+  /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
+  void *(*new_route_op)(void *conn, int32_t ty);
+  /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
+  /// `GetUnsolicitedDerivedOp(type)` (1: the new op with one reference for the caller, or null)
+  void *(*route_virtual)(void *conn, int32_t which, void *op, uint8_t message_type);
+  /// `new HTTPConnection(NULL)`
+  void *(*new_http_conn)();
+};
+
 /// One entry of the login's maps across the C ABI: a name (UTF-16 LE bytes), a second text (UTF-16 LE bytes: a
 /// nickname's value), bytes (a CD key, user data, a file hash) when `present`, and more bytes (the keyed hash
 /// data).
@@ -11760,79 +11833,6 @@ struct EeWonPrefsEvent {
 /// Receives each event of a read in order.
 using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
 
-/// A C++ call on one object.
-using EeWonCoreFn = void(*)(void *object);
-
-/// The C++ calls of the whole library (AsyncOp.cpp's one table). Every object crosses as its `RefCount*`; a `new`
-/// object holds no reference yet.
-struct EeWonCoreHooks {
-  /// `object->AddRef()`, `object->Release()` (any `RefCount*`)
-  EeWonCoreFn ref_add;
-  EeWonCoreFn ref_release;
-  /// `completion->Complete(op)` (the C++ makes the `AsyncOpPtr`)
-  void (*completion_call)(void *completion, void *op);
-  /// the object's Rust object of that kind (null for a null object)
-  void *(*object_of)(void *object, EeWonCoreObject kind);
-  /// a socket op's virtual `Duplicate()` (a new op, or null)
-  void *(*socketop_duplicate)(void *op);
-  /// `new AsyncOp`
-  void *(*new_op)();
-  /// `new RustCompletion(body)`: its `Complete` runs the body, its deletion frees it
-  void *(*new_completion)(EeWonCompletion *body);
-  /// a new socket op of the class (`socket`, `bytes` and `addr` may be null where the class takes none)
-  void *(*new_socket_op)(EeWonCoreSocketOp kind,
-                         void *socket,
-                         void *bytes,
-                         const EeWonIpAddr *addr,
-                         uint16_t size);
-  /// `new QueueSocket(type)`
-  void *(*new_queue_socket)(int32_t kind);
-  /// `new UDPManagerRecvOp` (from `addr`; any sender for null)
-  void *(*new_udp_recv_op)(const EeWonIpAddr *addr);
-  /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
-  long (*udp_check)(void *op, const uint8_t *data, size_t length, bool *threw);
-  /// `UDPManagerSendRecvOp::StaticCheckResponse`, a reply wait's message check (kept as the C++ function's address)
-  void *udp_response_check;
-  /// a socket's `Fn2B0D90(port, reuse)`: bound to the local host
-  long (*socket_bind_local)(void *socket, uint16_t port, bool reuse);
-  /// a `ByteBuffer`'s bytes (its `mBytes`)
-  const EeWonByteBuffer *(*bytes_of)(void *buffer);
-  /// a socket op's virtual `Continue()`
-  long (*socketop_continue)(void *op);
-  /// a socket op's virtual `Start()`
-  long (*socketop_start)(void *op);
-  /// `WONAPICore::AddToSocketThread(op)`
-  EeWonCoreFn socket_thread_add;
-  /// a new `ByteBuffer` adopting Rust's bytes, a reference taken
-  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
-  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
-  /// result's
-  long (*transform)(void *socket, void **message, bool send);
-  /// a receive op's target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`,
-  /// `fclose`, the modify time (`utime`)
-  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
-  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
-  int32_t (*file_close)(void *file);
-  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
-  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
-  void (*progress)(void *op, void *completion);
-  /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
-  long (*accept)(void *socket, void **out);
-  /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
-  void (*socket_hook)(void *socket, int32_t which);
-  /// a transform's virtual `Send` (`send`) or `Recv` on the message (a `ByteBufferPtr*`)
-  long (*transform_call)(void *transform, void *message, bool send);
-  /// `delete transform`
-  EeWonCoreFn transform_free;
-  /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
-  void *(*new_route_op)(void *conn, int32_t ty);
-  /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
-  /// `GetUnsolicitedDerivedOp(type)` (1: the new op with one reference for the caller, or null)
-  void *(*route_virtual)(void *conn, int32_t which, void *op, uint8_t message_type);
-  /// `new HTTPConnection(NULL)`
-  void *(*new_http_conn)();
-};
-
 /// A C++ call on one object (an op, a completion or the socket).
 using EeWonQueueFn = void(*)(void *object);
 
@@ -12356,6 +12356,17 @@ EeWonReqOp *ee_won_reqop_password_email(const uint8_t *name, size_t len);
 /// # Safety
 /// `email` holds `len` bytes.
 EeWonReqOp *ee_won_reqop_info_email(const uint8_t *email, size_t len);
+
+/// A new auth context object for the C++ `AuthContext*` `ctx` with its login secret file (`len` bytes), its calls
+/// over the core table and the certificate op's maker; one reference.
+///
+/// # Safety
+/// `core` is the library's static table; `ctx` outlives the object's use of it; `secret_file` holds `len` bytes.
+const EeWonAuthCtx *ee_won_authctx_new_core(void *ctx,
+                                            const EeWonCoreHooks *core,
+                                            void *(*new_cert_op)(void *context),
+                                            const uint8_t *secret_file,
+                                            size_t len);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 
@@ -16981,6 +16992,18 @@ void *ee_won_http_cache_global(const uint8_t *dir,
 /// last); the next [`ee_won_http_cache_global`] makes a new one.
 void ee_won_http_cache_reset_global();
 
+/// A new connection object for the C++ `HTTPConnection*` `conn`, its calls over the core table.
+///
+/// # Safety
+/// `core` is the library's static table; `conn` outlives the object.
+EeWonHttpConn *ee_won_http_conn_new_core(void *conn, const EeWonCoreHooks *core);
+
+/// A new session object for the C++ `HTTPSession*` `session`, its calls over the core table.
+///
+/// # Safety
+/// As `ee_won_http_conn_new_core`.
+EeWonHttpSession *ee_won_http_session_new_core(void *session, const EeWonCoreHooks *core);
+
 /// `new GetHTTPDocumentOp(product, type)`: the document type, the product (its lower case for the paths) and the
 /// cache files in the WON directory `dir` (`SetDocType`, `CheckHostAndPath`).
 ///
@@ -18596,6 +18619,33 @@ EeWonHostOp *ee_won_hostop_peerauth(const uint8_t *addr,
 /// `new PeerAuthServerOp(context, socket)`'s Rust op.
 EeWonHostOp *ee_won_hostop_peerauth_server();
 
+/// `PerfTimer::GetCountedTime()`.
+double ee_won_perf_counted_time();
+
+/// `PerfTimer::GetElapsedTime()`.
+double ee_won_perf_elapsed_time();
+
+/// `PerfTimer::GetPercentTime()`.
+double ee_won_perf_percent_time();
+
+/// `PerfTimer::GlobalStart()`.
+void ee_won_perf_global_start();
+
+/// `PerfTimer::GlobalStop()`.
+void ee_won_perf_global_stop();
+
+/// `PerfTimer::Start()` of a timer (`named`: it has a name; `running`: its `mStarted`).
+///
+/// # Safety
+/// `running` is the timer's flag.
+void ee_won_perf_start(bool named, bool *running);
+
+/// `PerfTimer::Stop()` of a timer.
+///
+/// # Safety
+/// As `ee_won_perf_start`.
+void ee_won_perf_stop(bool named, bool *running);
+
 /// `write_global` into the sink.
 ///
 /// # Safety
@@ -19223,6 +19273,51 @@ void ee_won_routeconn_close_hook(const EeWonRouteConn *r);
 /// # Safety
 /// As `ee_won_routeconn_set_completion`.
 void ee_won_routeconn_kill_hook(const EeWonRouteConn *r);
+
+/// A request helper of a kind (`EE_WON_RTQ_*`) on the connection `conn` (a `RoutingConnection*`), its `count`
+/// values in the helper's parameter order (`num` a number or a buffer's presence; `data` / `len` a text's UTF-16
+/// little-endian units, a data type, a buffer's bytes, the recipients as 16-bit little-endian ids), with the
+/// completion (or null).
+///
+/// # Safety
+/// `conn` is a live connection; `values` holds `count` values whose bytes are valid for the call.
+void ee_won_routeconn_request(void *conn,
+                              int32_t kind,
+                              const EeWonAdminValue *values,
+                              size_t count,
+                              void *completion);
+
+/// A new routing op of a type (`RoutingOpType`) on the connection `conn` (borrowed: the C++ op holds its reference;
+/// the Rust op sends on it and leaves a group on it).
+EeWonRouteOp *ee_won_routeop_new_on(int32_t ty,
+                                    void *conn);
+
+/// `RoutingOp::SendRequest`'s base: the op's message (when it sends one) after the connection's length field,
+/// queued on the connection as a `SendMsgOp`; the op `cpp` added to the connection's list when it waits for a reply.
+///
+/// # Safety
+/// `op` is the live Rust op of the C++ op `cpp` (a `RoutingOp*` as its `RefCount*`).
+void ee_won_routeop_send(EeWonRouteOp *op,
+                         void *cpp);
+
+/// A new routing connection object for the C++ `conn`, on the socket's lock, its calls over the core table.
+///
+/// # Safety
+/// `core` is the library's static table; `conn` and `lock` outlive the object.
+EeWonRouteConn *ee_won_routeconn_new_core(void *conn,
+                                          const EeWonCoreHooks *core,
+                                          void *lock);
+
+/// `SmartRoutingConnection::HandleInput(input, group)`: the model's reading of a chat line (`len` `wchar_t`s), the
+/// request it makes sent on the connection `conn`; whether the line was taken. The caller holds the socket's lock.
+///
+/// # Safety
+/// `r` is the connection's model; `conn` the live connection; `text` holds `len` `wchar_t`s.
+bool ee_won_smart_handle_input(EeWonSmartRoute *r,
+                               void *conn,
+                               const void *text,
+                               size_t len,
+                               int32_t group);
 
 /// As `ee_won_routelogic_new`, with the model's ops answered by its Rust objects (the game's).
 EeWonRouteLogic *ee_won_routelogic_new_model(void *obj, EeWonRouteLogicHostFn host);
@@ -21505,101 +21600,6 @@ size_t ee_won_wrap_paint(const EeWonWrapText *o,
                          const EeWonTextMeasure *m,
                          EeWonDrawOp *out,
                          size_t cap);
-
-/// A new auth context object for the C++ `AuthContext*` `ctx` with its login secret file (`len` bytes), its calls
-/// over the core table and the certificate op's maker; one reference.
-///
-/// # Safety
-/// `core` is the library's static table; `ctx` outlives the object's use of it; `secret_file` holds `len` bytes.
-const EeWonAuthCtx *ee_won_authctx_new_core(void *ctx,
-                                            const EeWonCoreHooks *core,
-                                            void *(*new_cert_op)(void *context),
-                                            const uint8_t *secret_file,
-                                            size_t len);
-
-/// A new connection object for the C++ `HTTPConnection*` `conn`, its calls over the core table.
-///
-/// # Safety
-/// `core` is the library's static table; `conn` outlives the object.
-EeWonHttpConn *ee_won_http_conn_new_core(void *conn, const EeWonCoreHooks *core);
-
-/// A new session object for the C++ `HTTPSession*` `session`, its calls over the core table.
-///
-/// # Safety
-/// As `ee_won_http_conn_new_core`.
-EeWonHttpSession *ee_won_http_session_new_core(void *session, const EeWonCoreHooks *core);
-
-/// `PerfTimer::GetCountedTime()`.
-double ee_won_perf_counted_time();
-
-/// `PerfTimer::GetElapsedTime()`.
-double ee_won_perf_elapsed_time();
-
-/// `PerfTimer::GetPercentTime()`.
-double ee_won_perf_percent_time();
-
-/// `PerfTimer::GlobalStart()`.
-void ee_won_perf_global_start();
-
-/// `PerfTimer::GlobalStop()`.
-void ee_won_perf_global_stop();
-
-/// `PerfTimer::Start()` of a timer (`named`: it has a name; `running`: its `mStarted`).
-///
-/// # Safety
-/// `running` is the timer's flag.
-void ee_won_perf_start(bool named, bool *running);
-
-/// `PerfTimer::Stop()` of a timer.
-///
-/// # Safety
-/// As `ee_won_perf_start`.
-void ee_won_perf_stop(bool named, bool *running);
-
-/// A request helper of a kind (`EE_WON_RTQ_*`) on the connection `conn` (a `RoutingConnection*`), its `count`
-/// values in the helper's parameter order (`num` a number or a buffer's presence; `data` / `len` a text's UTF-16
-/// little-endian units, a data type, a buffer's bytes, the recipients as 16-bit little-endian ids), with the
-/// completion (or null).
-///
-/// # Safety
-/// `conn` is a live connection; `values` holds `count` values whose bytes are valid for the call.
-void ee_won_routeconn_request(void *conn,
-                              int32_t kind,
-                              const EeWonAdminValue *values,
-                              size_t count,
-                              void *completion);
-
-/// A new routing op of a type (`RoutingOpType`) on the connection `conn` (borrowed: the C++ op holds its reference;
-/// the Rust op sends on it and leaves a group on it).
-EeWonRouteOp *ee_won_routeop_new_on(int32_t ty,
-                                    void *conn);
-
-/// `RoutingOp::SendRequest`'s base: the op's message (when it sends one) after the connection's length field,
-/// queued on the connection as a `SendMsgOp`; the op `cpp` added to the connection's list when it waits for a reply.
-///
-/// # Safety
-/// `op` is the live Rust op of the C++ op `cpp` (a `RoutingOp*` as its `RefCount*`).
-void ee_won_routeop_send(EeWonRouteOp *op,
-                         void *cpp);
-
-/// A new routing connection object for the C++ `conn`, on the socket's lock, its calls over the core table.
-///
-/// # Safety
-/// `core` is the library's static table; `conn` and `lock` outlive the object.
-EeWonRouteConn *ee_won_routeconn_new_core(void *conn,
-                                          const EeWonCoreHooks *core,
-                                          void *lock);
-
-/// `SmartRoutingConnection::HandleInput(input, group)`: the model's reading of a chat line (`len` `wchar_t`s), the
-/// request it makes sent on the connection `conn`; whether the line was taken. The caller holds the socket's lock.
-///
-/// # Safety
-/// `r` is the connection's model; `conn` the live connection; `text` holds `len` `wchar_t`s.
-bool ee_won_smart_handle_input(EeWonSmartRoute *r,
-                               void *conn,
-                               const void *text,
-                               size_t len,
-                               int32_t group);
 
 }  // extern "C"
 
