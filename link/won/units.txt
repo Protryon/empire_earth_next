@@ -33,7 +33,6 @@
 2f66c0 319fe1 WONGUI/ControlSetupCompletion.cpp
 2f7990 2f7d69 WONGUI/DialogBehavior.cpp
 2f7d70 2f7f66 WONGUI/ImageButton.cpp
-2f84b0 306b01 WONGUI/ScreenSelectionState.cpp
 2fa2c0 2fa478 WONGUI/TextListItem.cpp
 2fa480 2fda7a WONGUI/ComponentListItemAdapters.cpp
 2fa510 300777 WONGUI/MenuSeparator.cpp
@@ -61,7 +60,6 @@
 3016f0 302236 WONGUI/MSMessageBox.cpp
 3033a0 3199da WONGUI/WONControlSetup.cpp
 3040d0 304ded WONGUI/RootContainer.cpp
-305540 306a3c WONGUI/ControlLifetime.cpp
 308280 3094c5 WONGUI/TabCtrl.cpp
 309880 3098cd WONGUI/PaletteLifetime.cpp
 30a800 30a803 WONGUI/ListItemDefaults.cpp
@@ -92,7 +90,6 @@
 3267f0 326aca WONGUI/Font.cpp
 326a20 326a35 WONGUI/FontDefaults.cpp
 326ad0 32742b WONGUI/Graphics.cpp
-3272f0 32b105 WONGUI/WindowBaseDefaults.cpp
 328450 3284f9 WONGUI/GUIStringSingleton.cpp
 328540 32b0f0 WONGUI/PopupValueAdapters.cpp
 3285a0 3285c9 WONGUI/ImageDrawEntire.cpp
@@ -101,14 +98,11 @@
 328bd0 32b9e7 WONGUI/NativeImageDefaults.cpp
 329990 329c29 WONGUI/Sound.cpp
 329c30 32b519 WONGUI/Window.cpp
-32b080 32b091 WONGUI/WindowDialogCall.cpp
 32b520 32b65d WONGUI/ComponentEvent.cpp
 32b660 33531e WONGUI/WindowManager.cpp
-32c380 32e7c9 WONGUI/WindowManagerBaseDefaults.cpp
 335cb0 336000 WONGUI/Background.cpp
 336000 33668e WONGUI/BackgroundGrabber.cpp
 3372c0 337be2 WONGUI/ChildLayoutsAdvanced.cpp
-337bf0 337c00 WONGUI/ComponentListener.cpp
 337c00 337f4e WONGUI/DelayLoadImage.cpp
 347910 348a60 WONGUI/ImageDecoder.cpp
 348a60 3529a8 WONGUI/ImageFilters.cpp

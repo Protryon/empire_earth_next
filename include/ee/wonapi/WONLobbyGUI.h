@@ -16,6 +16,7 @@
 #include "ee/wonapi/WONAPICore.h"
 #include "ee/wonapi/WONLobbyMap.h"
 #include "ee/wonapi/WONEventTypes.h"
+#include "platform/PlatTime.h" // PlatSleep (WindowManager::GetNextEvent)
 
 namespace WONAPI {
 
@@ -472,10 +473,20 @@ protected:
 // ScreenContainer (0x88 bytes); constructor 0x306a20, destructor 0x306a60; points at the current screen.
 class ScreenContainer : public Container {
 public:
-    ScreenContainer();
+    ScreenContainer() : mCurScreen(NULL) {}
     // Implicit destructor (0x306a60) jumps to Container's at 0x2f5e80; the screen at +0x84 is not owned.
-    void ShowScreen(Component* inScreen, bool inTakeFocus = true); //306ab0
-    void AddScreen(Component*); //306a70
+    // 0x306ab0: hides the current screen and shows the given one, optionally focused; nothing if it is current
+    void ShowScreen(Component* inScreen, bool inTakeFocus = true)
+    {
+        if (inScreen == this->mCurScreen) return;
+        if (this->mCurScreen != NULL) this->mCurScreen->SetVisible(false);
+        inScreen->SetVisible(true);
+        this->mCurScreen = inScreen;
+        if (inScreen != NULL && inTakeFocus) inScreen->RequestFocus();
+        this->Invalidate();
+    }
+    // 0x306a70: adds a hidden screen laid out to the container's size
+    void AddScreen(Component* inScreen) { inScreen->SetVisible(false); this->Fn2F6140(inScreen, 3, this, 0, 0, 0, 0, 0); this->AddChild(inScreen); }
     Component* mCurScreen; //84, borrowed
 };
 
@@ -1442,7 +1453,7 @@ public:
 class ComponentListenerComp : public ComponentListener {
 public:
     ComponentListenerComp(Component* inComponent) : mComponent(inComponent) {}
-    virtual void HandleComponentEvent(ComponentEvent*);    // 0x337bf0 (WONAPI)
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->mComponent->HandleComponentEvent(e); } // 0x337bf0
 
     Component* mComponent;                  // +0x08
 };
@@ -1575,14 +1586,14 @@ public:
     static DWORD GetThreadId() { return WindowManager::mThreadId; }
     WindowManager(); // 0x32b660; the class is 0x148 bytes
     virtual ~WindowManager(); //32bff0
-    virtual void GetNextEvent(); //04 32e7c0
-    virtual bool SetScreenResolutionHook(int,int); //08 32c380
-    virtual void GetScreenResolutionHook(int&,int&); //0c 327440
-    virtual void Signal(); //10 326b60
+    virtual void GetNextEvent() { PlatSleep(20); } //04 32e7c0: the base only sleeps 20 ms
+    virtual bool SetScreenResolutionHook(int,int) { return false; } //08 32c380
+    virtual void GetScreenResolutionHook(int&,int&) {} //0c 327440
+    virtual void Signal() {} //10 326b60
     virtual bool AddWindow(Window* w) { return this->WmCall(EeWonWmCall::AddWindow, (intptr_t)w) != 0; } //14 32d6a0
     virtual bool RemoveWindow(Window* w) { return this->WmCall(EeWonWmCall::RemoveWindow, (intptr_t)w) != 0; } //18 32d840
-    virtual void GetScreenRect(WONRectangle&); //1c 30a800
-    virtual void GetSystemColorScheme(); //20 326b60; target no argument, MS3d0b70 reads own20
+    virtual void GetScreenRect(WONRectangle&) {} //1c 30a800
+    virtual void GetSystemColorScheme() {} //20 326b60
     void InitColorScheme(); //32c230
     void NotifyLostFocus() { this->WmCall(EeWonWmCall::NotifyLostFocus); } //32c2d0
     void NotifyGotFocus(Window* w) { this->WmCall(EeWonWmCall::NotifyGotFocus, (intptr_t)w); } //32c300
@@ -1717,30 +1728,30 @@ public:
 
     Window();
     virtual ~Window();                     // 0x32a020, out of line
-    virtual SmartPtr<Font> PlatformGetFont(const FontDescriptor&);
+    virtual SmartPtr<Font> PlatformGetFont(const FontDescriptor&) { return NULL; } // (the platform windows override these)
     virtual bool IdleUpdate() { return this->WCall(EeWonWinCall::IdleUpdate) != 0; }
     virtual void TimerEvent(DWORD e) { this->WCall(EeWonWinCall::TimerEvent, (intptr_t)(uint32_t)e); }
-    virtual void PlatformSetTitle();
-    virtual void PlatformSetIcon();
-    virtual void PlatformSetCursor(Cursor*);
-    virtual void PlatformShowNativeCursor(bool);
-    virtual void PlatformShow(bool);
-    virtual void PlatformMinimize(bool);
-    virtual void PlatformSetTopMost(bool);
+    virtual void PlatformSetTitle() {}
+    virtual void PlatformSetIcon() {}
+    virtual void PlatformSetCursor(Cursor*) {}
+    virtual void PlatformShowNativeCursor(bool) {}
+    virtual void PlatformShow(bool) {}
+    virtual void PlatformMinimize(bool) {}
+    virtual void PlatformSetTopMost(bool) {}
     virtual void PlatformClose() { this->WCall(EeWonWinCall::PlatformClose); }
     virtual void Create(const WONRectangle&);
-    virtual void SetPosSize(int, int, int, int);
-    virtual void GetRect(WONRectangle&, bool);
-    virtual void PlatformSetFocus();
+    virtual void SetPosSize(int, int, int, int) {}
+    virtual void GetRect(WONRectangle&, bool) {}
+    virtual void PlatformSetFocus() {}
     virtual void Show(bool s) { this->WCall(EeWonWinCall::Show, s ? 1 : 0); }
     void Minimize(bool m) { this->WCall(EeWonWinCall::Minimize, m ? 1 : 0); } // 0x32afb0
     DisplayContext* GetDisplayContext() { return this->mDisplayContext.get(); } // inline, at +0x28
-    virtual void PlatformSetMouseCapture(bool);
+    virtual void PlatformSetMouseCapture(bool) {}
     virtual void QueueEvent(WindowEventBase*);
-    virtual bool PlatformIsVisible();
+    virtual bool PlatformIsVisible() { return this->IsShowing(); } // whether last shown
     static Window* GetDefaultWindow();
     SmartPtr<NativeImage> DecodeImage(const char*);
-    int RunDialog(Component*);
+    int RunDialog(Component* c) { return this->mManager->DoDialog(this, c); } // DoDialog in the WON SDK
     void AddComponent(Component* c) { this->WCall(EeWonWinCall::AddComponent, (intptr_t)c); } // 0x32b040
     void SetModal(bool m) { this->WCall(EeWonWinCall::SetModal, m ? 1 : 0); } // 0x32b060
     bool Close() { return this->WCall(EeWonWinCall::Close) != 0; } // 0x32ac30
