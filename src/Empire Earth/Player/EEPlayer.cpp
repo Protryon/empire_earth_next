@@ -62,6 +62,7 @@
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEGameVariant.h"           // the wonder powers' hit point factors (EEPlayerHost)
 #include "ee/EEUnitUtilities.h"
+#include "ee/EEUGRust.h"                // the towns' patrol goals (EEPlayerHost)
 #include "lle/UIEvent.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
@@ -428,6 +429,11 @@ static int64_t EEPlayerUnitArg(RTSUnit* inUnit)
     return (int64_t)reinterpret_cast<uintptr_t>(inUnit);
 }
 
+static EEComplexUnit* EEPlayerUnitAt(int64_t inUnit)
+{
+    return static_cast<EEComplexUnit*>(reinterpret_cast<RTSUnit*>(inUnit));
+}
+
 // port (the player lane, round 1): the economy and the improvements are Rust (ee_units player.rs) over this host; the
 // player's members after the saved record are the Rust record EeUnitsPlayerFields, the queued improvements its
 // queue (mQueued)
@@ -675,6 +681,119 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         if (gMiniMap != NULL)
             gMiniMap->Redraw();
         return 0;
+    // the towns and herds (ee_units player_areas.rs): list a[0] (0 the towns, 1 the herds), the areas and units by address
+    case EE_UNITS_PLAYER_AREA_COUNT: return a[0] == 0 ? thePlayer->mTowns.size() : thePlayer->mHerds.size();
+    case EE_UNITS_PLAYER_AREA_AT:
+        return a[0] == 0 ? (int64_t)reinterpret_cast<uintptr_t>(thePlayer->mTowns[(size_t)a[1]])
+                         : (int64_t)reinterpret_cast<uintptr_t>(thePlayer->mHerds[(size_t)a[1]]);
+    case EE_UNITS_PLAYER_TOWN_UNIT: return EETown::IsTownUnit(theUnit);
+    case EE_UNITS_PLAYER_HERD_ANIMAL: return EEHerd::IsAnimalOnMap(theUnit);
+    case EE_UNITS_PLAYER_AREA_CAN_TAKE:
+        return a[0] == 0 ? reinterpret_cast<EETown*>(a[1])->CanTake(EEPlayerUnitAt(a[2])) : reinterpret_cast<EEHerd*>(a[1])->CanTake(EEPlayerUnitAt(a[2]), true);
+    case EE_UNITS_PLAYER_HERD_HAS: return reinterpret_cast<EEHerd*>(a[0])->HasUnit(EEPlayerUnitAt(a[1]));
+    case EE_UNITS_PLAYER_AREA_ADD:
+        return a[0] == 0 ? reinterpret_cast<EETown*>(a[1])->AddUnit(EEPlayerUnitAt(a[2])) : reinterpret_cast<EEHerd*>(a[1])->AddUnit(EEPlayerUnitAt(a[2]));
+    case EE_UNITS_PLAYER_AREA_NEW: {
+        EEComplexUnit* theNew = EEPlayerUnitAt(a[1]);
+        bool theResult;
+        if (a[0] == 0) {
+            EETown* theTown = new EETown(thePlayer, ++gWorld.mTownIDCounter);
+            theTown->SetSerial(++gContinentManager.mLastSerial);
+            gContinentManager.AddArea(theTown);
+            theResult = theTown->AddUnit(theNew);
+            if (theResult) {
+                thePlayer->mTownsByID.insert(std::pair<long, EETown*>(theTown->mTownID, theTown));
+                thePlayer->mTowns.push_back(theTown);
+            } else
+                delete theTown;
+        } else {
+            EEHerd* theHerd = new EEHerd(thePlayer, theNew->mUnitClass->mAnimalID, ++gWorld.mHerdIDCounter);
+            theHerd->SetSerial(++gContinentManager.mLastSerial);
+            gContinentManager.AddArea(theHerd);
+            theResult = theHerd->AddUnit(theNew);
+            if (theResult)
+                thePlayer->mHerds.push_back(theHerd);
+            else
+                delete theHerd;
+        }
+        return theResult;
+    }
+    case EE_UNITS_PLAYER_HOLDER: return EEPlayerUnitArg(theComplex->mHolder);
+    case EE_UNITS_PLAYER_RANDOM: return gPhysics->GetRandom((long)a[0], (long)a[1]);
+    case EE_UNITS_PLAYER_AREA_TILES: return a[0] == 0 ? reinterpret_cast<EETown*>(a[1])->GetNumTiles() : reinterpret_cast<EEHerd*>(a[1])->GetNumTiles();
+    case EE_UNITS_PLAYER_AREA_REMOVE_UNIT:
+        if (a[0] == 0)
+            reinterpret_cast<EETown*>(a[1])->RemoveUnit(EEPlayerUnitAt(a[2]));
+        else
+            reinterpret_cast<EEHerd*>(a[1])->RemoveUnit(EEPlayerUnitAt(a[2]));
+        return 0;
+    case EE_UNITS_PLAYER_AREA_DROP:
+        if (a[0] == 0) {
+            EETown* theTown = thePlayer->mTowns[(size_t)a[1]];
+            gContinentManager.RemoveArea(theTown);
+            thePlayer->mTowns.erase(thePlayer->mTowns.begin() + (size_t)a[1]);
+            delete theTown;
+        } else {
+            EEHerd* theHerd = thePlayer->mHerds[(size_t)a[1]];
+            gContinentManager.RemoveArea(theHerd);
+            thePlayer->mHerds.erase(thePlayer->mHerds.begin() + (size_t)a[1]);
+            delete theHerd;
+        }
+        return 0;
+    case EE_UNITS_PLAYER_TOWN_MERGE: {
+        EETown* theTown = reinterpret_cast<EETown*>(a[0]);
+        EETown* theOld = reinterpret_cast<EETown*>(a[1]);
+        theTown->Merge(theOld);
+        gContinentManager.RemoveArea(theOld);
+        std::vector<EETown*>::iterator theIterator = std::find(thePlayer->mTowns.begin(), thePlayer->mTowns.end(), theOld);
+        if (theIterator == thePlayer->mTowns.end())
+            return 0;
+        thePlayer->RemoveTownID(theOld->mTownID);
+        thePlayer->mTowns.erase(theIterator);
+        EEPPatrolGroup* theGroup = theOld->mPatrolGroup;
+        if (theGroup != NULL) {
+            EEComplexUnit* thePoint;
+            while ((thePoint = theGroup->GetLast()) != NULL) {
+                theGroup->RemoveUnit(thePoint);
+                thePoint->SetPatrolGroup(NULL);
+                thePoint->Kill(true, false, false);
+                thePoint->mPlayer->KillUnit(thePoint, false);
+            }
+            theGroup->Reference();
+        }
+        delete theOld;
+        return (int64_t)reinterpret_cast<uintptr_t>(theGroup);
+    }
+    case EE_UNITS_PLAYER_TOWN_REPATROL: {
+        EETown* theTown = reinterpret_cast<EETown*>(a[0]);
+        EEPPatrolGroup* const* theOld = reinterpret_cast<EEPPatrolGroup* const*>(a[1]);   // (addresses as int64_t: 64-bit pointers)
+        if (theTown->mPatrolGroup == NULL)
+            return 0;
+        for (EEUnit* u = thePlayer->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext)) {
+            EEUGRust* theGoal = u->GetComplexUnit() != NULL ? EEPatrolGoalCast(u->GetComplexUnit()->mGoalState) : NULL;
+            if (theGoal != NULL && theGoal->GetPatrolGroup() != NULL && std::find(theOld, theOld + a[2], theGoal->GetPatrolGroup()) != theOld + a[2])
+                theGoal->SetPatrolGroup(theTown->mPatrolGroup);
+        }
+        std::for_each(theOld, theOld + a[2], EEPDereferencer());
+        return 0;
+    }
+    case EE_UNITS_PLAYER_TOWN_CONTAINS: return reinterpret_cast<EETown*>(a[0])->Contains(U2DPoint<long>((long)a[1], (long)a[2]));
+    case EE_UNITS_PLAYER_AREA_TILE: {
+        U2DPoint<long> theTile = theComplex->FindAreaTile(true, 1);
+        a[0] = theTile.mX;
+        a[1] = theTile.mY;
+        return 0;
+    }
+    case EE_UNITS_PLAYER_ASSIGN_TILE: {
+        EEComplexUnit* theBuilding = theUnit->GetComplexUnit();
+        a[0] = theBuilding->mTileX != -10000 ? theUnit->mTileX : UMFloor(theBuilding->mLastMapPosition.GetX());
+        a[1] = theBuilding->mTileX != -10000 ? theUnit->mTileY : UMFloor(theBuilding->mLastMapPosition.GetY());
+        return 0;
+    }
+    case EE_UNITS_PLAYER_TOWN_PATROL:
+        if (reinterpret_cast<EETown*>(a[0])->mPatrolGroup == NULL)
+            reinterpret_cast<EETown*>(a[0])->RefreshPatrolGroup();
+        return 0;
     }
     return 0;
 }
@@ -879,44 +998,7 @@ void EEPlayer::AddOffMapUnit(RTSUnit* inUnit)
 // several); returns false when it is no herd animal or no herd took it
 bool EEPlayer::AddUnitToHerd(EEComplexUnit* inUnit)
 {
-    std::vector<EEHerd*> theHerds;
-    long theAnimal = inUnit->mUnitClass->mAnimalID;
-    bool theResult = false;
-    if (EEHerd::IsAnimalOnMap(inUnit)) {
-        theResult = true;
-        for (long i = this->mHerds.size() - 1; i >= 0; i--) {
-            if (this->mHerds[i]->CanTake(inUnit, true))
-                theHerds.push_back(this->mHerds[i]);
-            if (this->mHerds[i]->HasUnit(inUnit))
-                return theResult;
-        }
-        EEHerd* theHerd;
-        if (theHerds.size() == 0) {
-            theHerd = new EEHerd(this, theAnimal, ++gWorld.mHerdIDCounter);
-            theHerd->SetSerial(++gContinentManager.mLastSerial);
-            gContinentManager.AddArea(theHerd);
-            theResult = theHerd->AddUnit(inUnit);
-            if (theResult)
-                this->mHerds.push_back(theHerd);
-            else
-                delete theHerd;
-        } else if (theHerds.size() != 1) {
-            long theIndex = -1;
-            if (inUnit->mHolder != NULL) {
-                for (theIndex = theHerds.size() - 1; theIndex >= 0; theIndex--)
-                    if (theHerds[theIndex]->HasUnit(inUnit->mHolder))
-                        break;
-            }
-            if (theIndex == -1)
-                theIndex = gPhysics->GetRandom(0L, (long)theHerds.size() - 1);
-            theHerd = *(theHerds.begin() + theIndex);
-            theResult = theHerd->AddUnit(inUnit);
-        } else {
-            theHerd = *theHerds.begin();
-            theResult = theHerd->AddUnit(inUnit);
-        }
-    }
-    return theResult;
+    return ee_units_player_areas(EEPlayerRefs(this), 1, static_cast<RTSUnit*>(inUnit));
 }
 
 // Adds a unit to the stranded list once, keeping a reference to it
@@ -1260,54 +1342,14 @@ void EEPlayer::NoticeForeignUnit(EEUnit* inUnit)
 // Puts every herd animal of the player that is in no herd into one
 void EEPlayer::AssignHerds()
 {
-    std::vector<EEComplexUnit*> theUnits;
-    for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-        bool theFound = false;
-        if (theComplex == NULL || !EEHerd::IsAnimalOnMap(theComplex))
-            continue;
-        for (long i = this->mHerds.size() - 1; i >= 0 && !theFound; i--)
-            theFound = this->mHerds[i]->HasUnit(theComplex);
-        if (!theFound)
-            theUnits.push_back(theComplex);
-    }
-    for (long j = theUnits.size() - 1; j >= 0; j--)
-        this->AddUnitToHerd(theUnits[j]);
+    ee_units_player_areas(EEPlayerRefs(this), 5, NULL);
 }
 
 // Adds every land building outside the player's towns to a town, then gives each town without
 // a patrol group one
 void EEPlayer::AssignTowns()
 {
-    std::vector<EEComplexUnit*> theUnits;
-    U2DPoint<long> theTile;
-    for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-        bool theFound = false;
-        if (theComplex == NULL || !theComplex->mUnitClass->IsLandBuilding() || theComplex->mContainer != NULL)
-            continue;
-        if (theComplex->mTileX != -10000) {
-            theTile.mX = theUnit->mTileX;
-            theTile.mY = theUnit->mTileY;
-        } else {
-            long theTileY = UMFloor(theComplex->mLastMapPosition.GetY());
-            long theTileX = UMFloor(theComplex->mLastMapPosition.GetX());
-            theTile.mX = theTileX;
-            theTile.mY = theTileY;
-        }
-        if (theTile.mX == -10000)
-            continue;
-        for (long i = this->mTowns.size() - 1; i >= 0 && !theFound; i--)
-            theFound = this->mTowns[i]->Contains(theTile);
-        if (!theFound)
-            theUnits.push_back(theComplex);
-    }
-    for (long j = theUnits.size() - 1; j >= 0; j--)
-        this->AddUnitToTown(theUnits[j]);
-    for (long k = this->mTowns.size() - 1; k >= 0; k--) {
-        if (this->mTowns[k] != NULL && this->mTowns[k]->mPatrolGroup == NULL)
-            (*(this->mTowns.begin() + k))->RefreshPatrolGroup();
-    }
+    ee_units_player_areas(EEPlayerRefs(this), 4, NULL);
 }
 
 // Executes a selection message against the player's network selection, keeping its local
@@ -2383,19 +2425,7 @@ void EEPlayer::RemoveWonderPower(EEComplexUnit* inUnit)
 // Removes an animal from its herds, deleting any herd left with no tiles
 void EEPlayer::RemoveUnitFromHerd(EEComplexUnit* inUnit)
 {
-    if (!EEHerd::IsAnimalOnMap(inUnit))
-        return;
-    for (long i = this->mHerds.size() - 1; i >= 0; i--) {
-        EEHerd* theHerd = this->mHerds[i];
-        if (!theHerd->HasUnit(inUnit))
-            continue;
-        theHerd->RemoveUnit(inUnit);
-        if (theHerd->GetNumTiles() != 0)
-            continue;
-        gContinentManager.RemoveArea(theHerd);
-        this->mHerds.erase(this->mHerds.begin() + i);
-        delete theHerd;
-    }
+    ee_units_player_areas(EEPlayerRefs(this), 3, static_cast<RTSUnit*>(inUnit));
 }
 
 // Takes a unit being removed off its tile, its region and the influence map
@@ -2440,21 +2470,7 @@ void EEPlayer::DeselectUnit(EEUnit* inUnit)
 // Removes a town building from the towns containing it, deleting any town left with no tiles
 void EEPlayer::RemoveUnitFromTown(EEComplexUnit* inUnit)
 {
-    U2DPoint<long> theTile;
-    if (!EETown::IsTownUnit(inUnit))
-        return;
-    theTile = inUnit->FindAreaTile(true, 1);
-    for (long i = this->mTowns.size() - 1; i >= 0; i--) {
-        EETown* theTown = this->mTowns[i];
-        if (!theTown->Contains(theTile))
-            continue;
-        theTown->RemoveUnit(inUnit);
-        if (theTown->GetNumTiles() != 0)
-            continue;
-        gContinentManager.RemoveArea(theTown);
-        this->mTowns.erase(this->mTowns.begin() + i);
-        delete theTown;
-    }
+    ee_units_player_areas(EEPlayerRefs(this), 2, static_cast<RTSUnit*>(inUnit));
 }
 
 // Removes a unit from the player's construction sites
@@ -3318,88 +3334,13 @@ void EEPlayer::UnselectAllUnits()
     this->mActiveGroup->Clear();
 }
 
-#include "ee/EEUGRust.h"
 #include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
 // Adds a town building to a town: a new one, the only fitting one, or the largest fitting one after merging
 // the others into it (their patrols move over); returns whether it was added
 bool EEPlayer::AddUnitToTown(EEComplexUnit* inUnit)
 {
-    std::vector<EEPPatrolGroup*> theOldGroups;
-    std::vector<EETown*> theTowns;
-    bool theResult = false;
-    if (EETown::IsTownUnit(inUnit)) {
-        inUnit->FindAreaTile(true, 1);
-        for (long i = this->mTowns.size() - 1; i >= 0; i--)
-            if (this->mTowns[i]->CanTake(inUnit))
-                theTowns.push_back(this->mTowns[i]);
-        if (theTowns.size() == 0) {
-            EETown* theTown = new EETown(this, ++gWorld.mTownIDCounter);
-            theTown->SetSerial(++gContinentManager.mLastSerial);
-            gContinentManager.AddArea(theTown);
-            theResult = theTown->AddUnit(inUnit);
-            if (theResult) {
-                this->mTownsByID.insert(std::pair<long, EETown*>(theTown->mTownID, theTown));
-                this->mTowns.push_back(theTown);
-            } else
-                delete theTown;
-        } else if (theTowns.size() == 1) {
-            EETown* theTown = *theTowns.begin();
-            theResult = theTown->AddUnit(inUnit);
-        } else {
-            EETown* theTown = theTowns.back();
-            long theSize = theTown->GetNumTiles();
-            for (long j = theTowns.size() - 2; j >= 0; j--) {
-                if (theSize < theTowns[j]->GetNumTiles()) {
-                    theTown = theTowns[j];
-                    theSize = theTown->GetNumTiles();
-                }
-            }
-            for (long k = theTowns.size() - 1; k >= 0; k--) {
-                if (theTowns[k] == theTown)
-                    continue;
-                theTown->Merge(theTowns[k]);
-                gContinentManager.RemoveArea(theTowns[k]);
-                std::vector<EETown*>::iterator theIterator =
-                    std::find(this->mTowns.begin(), this->mTowns.end(), theTowns[k]);
-                if (theIterator != this->mTowns.end()) {
-                    EETown* theOldTown = *theIterator;
-                    this->RemoveTownID(theOldTown->mTownID);
-                    this->mTowns.erase(theIterator);
-                    EEPPatrolGroup* theGroup = theOldTown->mPatrolGroup;
-                    if (theGroup != NULL) {
-                        EEComplexUnit* theUnit;
-                        while ((theUnit = theGroup->GetLast()) != NULL) {
-                            theGroup->RemoveUnit(theUnit);
-                            theUnit->SetPatrolGroup(NULL);
-                            theUnit->Kill(true, false, false);
-                            theUnit->mPlayer->KillUnit(theUnit, false);
-                        }
-                        theGroup->Reference();
-                        theOldGroups.push_back(theGroup);
-                    }
-                    delete theOldTown;
-                }
-                theTowns[k] = NULL;
-            }
-            theResult = theTown->AddUnit(inUnit);
-            if (theTown->mPatrolGroup != NULL && theOldGroups.size() > 0) {
-                for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-                    if (theUnit->GetComplexUnit() == NULL)
-                        continue;
-                    EEUGRust* theGoal = EEPatrolGoalCast(theUnit->GetComplexUnit()->mGoalState);
-                    if (theGoal == NULL)
-                        continue;
-                    EEPPatrolGroup* theGroup = theGoal->GetPatrolGroup();
-                    if (theGroup != NULL &&
-                        std::find(theOldGroups.begin(), theOldGroups.end(), theGroup) != theOldGroups.end())
-                        theGoal->SetPatrolGroup(theTown->mPatrolGroup);
-                }
-                std::for_each(theOldGroups.begin(), theOldGroups.end(), EEPDereferencer());
-            }
-        }
-    }
-    return theResult;
+    return ee_units_player_areas(EEPlayerRefs(this), 0, static_cast<RTSUnit*>(inUnit));
 }
 
 // Sends each enabled unit waiting to repatrol to the nearest point of its nearest town's patrol, then clears the list

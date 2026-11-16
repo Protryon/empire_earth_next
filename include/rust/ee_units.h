@@ -1098,6 +1098,72 @@ constexpr static const int32_t EE_UNITS_PLAYER_UPDATE_JIT = 23;
 /// `PayImprovement(gUnitClassTable[i[0]], i[1])` (virtual)
 constexpr static const int32_t EE_UNITS_PLAYER_PAY_IMPROVEMENT = 24;
 
+/// `kind` of the area operations: the towns (`mTowns`) or the herds (`mHerds`)
+constexpr static const int64_t EE_UNITS_PLAYER_TOWNS = 0;
+
+constexpr static const int64_t EE_UNITS_PLAYER_HERDS = 1;
+
+/// the size of the list `i[0]` (towns or herds)
+constexpr static const int32_t EE_UNITS_PLAYER_AREA_COUNT = 84;
+
+/// list `i[0]`'s entry `i[1]` (its address; 0: none)
+constexpr static const int32_t EE_UNITS_PLAYER_AREA_AT = 85;
+
+/// whether unit `i[0]` is a town building (`EETown::IsTownUnit`)
+constexpr static const int32_t EE_UNITS_PLAYER_TOWN_UNIT = 86;
+
+/// whether unit `i[0]` is a herd animal on the map (`EEHerd::IsAnimalOnMap`)
+constexpr static const int32_t EE_UNITS_PLAYER_HERD_ANIMAL = 87;
+
+/// area `i[1]` of list `i[0]` may take unit `i[2]` (a town's `CanTake(unit)`, a herd's `CanTake(unit, true)`)
+constexpr static const int32_t EE_UNITS_PLAYER_AREA_CAN_TAKE = 88;
+
+/// herd `i[0]` holds unit `i[1]` (`HasUnit`)
+constexpr static const int32_t EE_UNITS_PLAYER_HERD_HAS = 89;
+
+/// area `i[1]` of list `i[0]` adds unit `i[2]` (`AddUnit`: the result)
+constexpr static const int32_t EE_UNITS_PLAYER_AREA_ADD = 90;
+
+/// a new area of list `i[0]` for unit `i[1]` (a town with the next town id, a herd of its animal with the next herd
+/// id; a new serial, the continent manager's area): listed when it took the unit, else deleted (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_AREA_NEW = 91;
+
+/// unit `i[0]`'s holder (`mHolder`; 0: none)
+constexpr static const int32_t EE_UNITS_PLAYER_HOLDER = 92;
+
+/// `gPhysics->GetRandom(i[0], i[1])` (a long)
+constexpr static const int32_t EE_UNITS_PLAYER_RANDOM = 93;
+
+/// area `i[1]` of list `i[0]`'s `GetNumTiles()`
+constexpr static const int32_t EE_UNITS_PLAYER_AREA_TILES = 94;
+
+/// area `i[1]` of list `i[0]` removes unit `i[2]` (`RemoveUnit`)
+constexpr static const int32_t EE_UNITS_PLAYER_AREA_REMOVE_UNIT = 95;
+
+/// list `i[0]`'s entry `i[1]` out of the continent manager, the list, and deleted
+constexpr static const int32_t EE_UNITS_PLAYER_AREA_DROP = 96;
+
+/// town `i[0]` merges town `i[1]` (`Merge`; `i[1]` out of the continent manager, and when listed out of the list
+/// and the ids, its patrol points killed, deleted): the result its patrol group, referenced (0: none)
+constexpr static const int32_t EE_UNITS_PLAYER_TOWN_MERGE = 97;
+
+/// town `i[0]` has a patrol group: every patrol goal of the player's units on one of the `i[2]` groups at `i[1]`
+/// moves to it, and the groups are dereferenced
+constexpr static const int32_t EE_UNITS_PLAYER_TOWN_REPATROL = 98;
+
+/// town `i[0]` contains the tile (`i[1]`, `i[2]`) (`EEAIArea::Contains`)
+constexpr static const int32_t EE_UNITS_PLAYER_TOWN_CONTAINS = 99;
+
+/// unit `i[0]`'s `FindAreaTile(true, 1)` into `i[0]`, `i[1]`
+constexpr static const int32_t EE_UNITS_PLAYER_AREA_TILE = 100;
+
+/// a land building's tile for `AssignTowns` into `i[0]`, `i[1]`: complex unit `i[0]`'s tile when on the map, else
+/// its last map position's floors
+constexpr static const int32_t EE_UNITS_PLAYER_ASSIGN_TILE = 101;
+
+/// town `i[0]` without a patrol group gets one (`RefreshPatrolGroup`)
+constexpr static const int32_t EE_UNITS_PLAYER_TOWN_PATROL = 102;
+
 /// player `i[0]`'s id (`i[0]`), `mSaveVisMap` (`i[1]`) and stance toward player `i[1]` (`i[2]`)
 constexpr static const int32_t EE_UNITS_PLAYER_VIEW = 71;
 
@@ -5879,6 +5945,15 @@ void ee_units_player_fields_reset(EeUnitsPlayerFields *r,
 /// # Safety
 /// `queued` is live.
 uint64_t ee_units_queued_digest(const EeUnitsQueued *queued);
+
+/// The towns and herds on `unit`: `what` 0 `AddUnitToTown`, 1 `AddUnitToHerd` (the result: whether it was added),
+/// 2 `RemoveUnitFromTown`, 3 `RemoveUnitFromHerd`, 4 `AssignTowns`, 5 `AssignHerds`.
+///
+/// # Safety
+/// As player.rs's `with`.
+bool ee_units_player_areas(const EeUnitsPlayerRefs *refs,
+                           uint32_t what,
+                           void *unit);
 
 /// The diplomacy on player `other` (an `EEPlayer*`): `what` 0 `SetDiplomaticStance(other, stance, map)` (`flag`:
 /// a map), 1 `AddSightSharer(other)`, 2 `RemoveSightSharer(other)`, 3 `SetSharedLOS(flag)`.

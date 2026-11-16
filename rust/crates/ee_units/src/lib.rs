@@ -58,6 +58,7 @@ pub mod patrol_group;
 pub mod physics;
 pub mod physics_save;
 pub mod player;
+pub mod player_areas;
 pub mod player_diplomacy;
 pub mod player_events;
 pub mod player_save;
