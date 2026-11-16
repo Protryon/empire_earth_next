@@ -278,7 +278,6 @@ bool EEAIGPModifierEnemyAvoidance::CanEnter(EEAIPathSubSector* inSector, EEAIPat
     return theResult;
 }
 
-// FUNCTION: EXE 0x410639
 // Creates the computer player's wall route planner for the player against an enemy
 EEAIGPGModifierComputerPlayerWallPlanner::EEAIGPGModifierComputerPlayerWallPlanner(unsigned long inPlayerID,
                                                                                    long inEnemyID)
@@ -374,17 +373,3 @@ bool EEAIGPGModifierComputerPlayerWallPather::CanEnter(EETile* inTile, long inX,
     EeAStarViewCallbacks theCallbacks = theView.Callbacks();
     return ee_astar_mod_wall_pather_can_enter(&theCallbacks, this->mBoundedGoal->mUnit, inX, inY);
 }
-
-// The inline COMDATs of their first users: RTSRegionTable::GetRegion(const U2DPoint<long>&) (GetStepCost), then the
-// bases' inline slots (EEAIPathGoalModifierBase +0x04/+0x08/??_G, EEAIGraphPathGoalModifierBase +0x04/+0x08/??_G,
-// EEAIBoundedPathGoalModifierBase +0x0c, EEAIBPGModifierSpace/Sea +0x04/+0x08 ICF-shared)
-// TEMPLATE: EXE 0x410ae9
-// TEMPLATE: EXE 0x410b12
-// TEMPLATE: EXE 0x410b18
-// TEMPLATE: EXE 0x410b24
-// TEMPLATE: EXE 0x410b48
-// TEMPLATE: EXE 0x410b4e
-// TEMPLATE: EXE 0x410b5a
-// TEMPLATE: EXE 0x410b7e
-// TEMPLATE: EXE 0x410b8a
-// TEMPLATE: EXE 0x410baa

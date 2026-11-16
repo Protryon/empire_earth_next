@@ -268,7 +268,6 @@ bool EECPUGatherCitizenUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<E
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a5de
 // Orders unit class ids by epoch, latest first
 bool EEAIFOUnitClassGreater::operator()(const long& inA, const long& inB)
 {
@@ -276,7 +275,6 @@ bool EEAIFOUnitClassGreater::operator()(const long& inA, const long& inB)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a7d2
 // Accepts a moving, attacking, non-citizen class within the epoch span whose domain is allowed, whose tech is
 // live and whose builder is live or present, and which passes that domain's favourite-unit test
 bool EEAIFOFavoriteUnitScreener::Screen(EEUnitClass* inClass)
@@ -508,10 +506,6 @@ bool EEAIFOCurrentlyBuildableUnitScreener::Screen(EEUnitClass* inClass)
     return theResult;
 }
 
-// SYNTHETIC: EXE 0x42b1a4
-// (EEAIFOBestRegionToAttack's scalar deleting destructor, shared with EEAIFOBestInfluenceRegionToAttack by ICF)
-
-// FUNCTION: EXE 0x42b1c1
 // Adds a request's count to the requested total for any non-null class; returns whether it counted
 bool EECPUMGatherUnitsScreenBase::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
 {

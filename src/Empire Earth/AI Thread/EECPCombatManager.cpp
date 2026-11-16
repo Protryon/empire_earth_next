@@ -28,12 +28,10 @@
 #include "ee/EEUnit.h"
 #include "ee/EECPCombatManager.h"
 
-// FUNCTION: EXE 0x471d74
 EECPCombatManager::EECPCombatManager(EEComputerPlayer* inPlayer) : mPlayer(inPlayer)
 {
 }
 
-// FUNCTION: EXE 0x471ea6
 EECPCombatManager::~EECPCombatManager()
 {
 }
@@ -54,7 +52,6 @@ long EECPCombatManager::Save(unsigned long inMajorVersion, unsigned long inMinor
     return 0;
 }
 
-// FUNCTION: EXE 0x47377e
 // Returns true for a live, AI-controlled unit of a military class that can move
 bool EECPCombatManager::IsMilitaryUnit(EEComplexUnit* inUnit)
 {
@@ -64,7 +61,6 @@ bool EECPCombatManager::IsMilitaryUnit(EEComplexUnit* inUnit)
     return false;
 }
 
-// FUNCTION: EXE 0x4737c9
 // Returns true for a mobile military class (not a citizen, building, projectile or naval mine)
 bool EECPCombatManager::IsMilitaryClass(EEUnitClass* inClass)
 {
@@ -115,7 +111,6 @@ bool EECPCombatManager::IsMilitaryClass(EEUnitClass* inClass)
     return theResult;
 }
 
-// FUNCTION: EXE 0x475122
 // Returns true when the unit type's class is in a military category
 bool EECPCombatManager::IsMilitaryType(unsigned long inUnitType)
 {
@@ -170,7 +165,6 @@ bool EECPCombatManager::IsMilitaryType(unsigned long inUnitType)
     return theResult;
 }
 
-// FUNCTION: EXE 0x47517d
 // Returns true when the unit's type is military
 bool EECPCombatManager::IsMilitaryTypeUnit(EEUnit* inUnit)
 {

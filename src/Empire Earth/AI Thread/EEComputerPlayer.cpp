@@ -234,7 +234,6 @@ void EEComputerPlayer::WorkOutPopulation()
     }
 }
 
-// FUNCTION: EXE 0x42db35
 // Detaches a unit from AI control: marks it, removes it from the combat manager and sets its AI state
 void EEComputerPlayer::DetachUnitFromAI(EEComplexUnit* inUnit)
 {
@@ -490,7 +489,6 @@ void EEComputerPlayer::Regroup()
 }
 
 
-// FUNCTION: EXE 0x42e9e7
 // Returns the most frequent path area id among the tiles around the unit (0 when none has one)
 unsigned short EEComputerPlayer::GetObjectRegion(EEComplexUnit* inUnit)
 {
@@ -551,7 +549,6 @@ float EEComputerPlayer::GetAttackFrequencyModifier()
     return theResult;
 }
 
-// FUNCTION: EXE 0x42eb7c
 // Returns the unit cost factor for the AI's difficulty (percent / 100)
 float EEComputerPlayer::GetUnitCostModifier()
 {
@@ -613,7 +610,6 @@ bool EEComputerPlayer::IsDeathmatch()
     return theResult;
 }
 
-// FUNCTION: EXE 0x42ec74
 // Returns the population cap factor for the AI's difficulty (percent / 100)
 float EEComputerPlayer::GetPopLimitAdjustment()
 {
@@ -627,7 +623,6 @@ float EEComputerPlayer::GetPopLimitAdjustment()
     return theResult;
 }
 
-// FUNCTION: EXE 0x42ecca
 // Returns the AI's population cap, working it out first if unset and inactive; the player's limit when ignoring others
 long EEComputerPlayer::GetPopulationLimit(long inArg)
 {
@@ -651,7 +646,6 @@ unsigned long EEComputerPlayer::GetIslandExpansionTimer()
     return theResult;
 }
 
-// FUNCTION: EXE 0x42ed4b
 // Returns true on an island or planets map once the next island expansion time has come
 bool EEComputerPlayer::IsIslandExpansionDue()
 {
@@ -659,7 +653,6 @@ bool EEComputerPlayer::IsIslandExpansionDue()
         && gPhysics->mGameTime >= this->mNextIslandExpansionTime;
 }
 
-// FUNCTION: EXE 0x42edff
 // Collects nature's stone, gold, iron and forage resources reachable from the town center (all on water maps)
 // into outUnits and counts the fish
 // NEAR: the original passes one tile local to GetPathAreaAt (U2DPoint) and GetContinentAt (EETileCoordinate)
@@ -730,7 +723,6 @@ long EECPPendingEpoch(EEComputerPlayer* inPlayer)
     return kTechNone;
 }
 
-// FUNCTION: EXE 0x42f033
 // Returns true for epoch technologies; otherwise asks the player whether it can afford the cost
 bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCount)
 {
@@ -1019,7 +1011,6 @@ void EEComputerPlayer::Init()
     this->mCombatManager = new EECPCombatManager(this);
 }
 
-// FUNCTION: EXE 0x42fd50
 // Loads the computer player from a saved game (the current format only since stage 5): the base player, the combat
 // and civilization managers, the resource centers and the tuning values; returns the first read error
 // Built without /Og while the rest of the unit is -O1 (CLAUDE.md rule 4 evidence: 4,968 [ebp-N] references, every
@@ -1543,7 +1534,6 @@ void EEComputerPlayer::EpochMediaLoaded(long inEpoch)
 
 static void EECPRetireObsoleteUnits(EEComputerPlayer* inPlayer);   // (below)
 
-// FUNCTION: EXE 0x43c9c5
 // Enters an epoch: researches its kind-7 technologies, re-picks the favourite land, sea, air and space types and,
 // outside saved-game loading, retires obsolete units and tells the combat manager
 void EEComputerPlayer::EnterEpoch(long inEpoch)
@@ -1646,7 +1636,6 @@ void EEComputerPlayer::RefreshResourceCenters()
     this->RefreshTownGroups();
 }
 
-// FUNCTION: EXE 0x43cec9
 // Let the combat personnel draft the units it deferred (stage 5: no personnel; the Lua AIs take their units)
 void EEComputerPlayer::RefreshTownGroups()
 {
@@ -1868,7 +1857,6 @@ static void EECPRetireObsoleteUnits(EEComputerPlayer* inPlayer)
         theUnits[i]->Kill(true, false, false);
 }
 
-// FUNCTION: EXE 0x43d45d
 // Tells the research manager about a new epoch, enters it if it is a real epoch, then runs the base handling
 void EEComputerPlayer::EpochReached(long inEpoch)
 {
@@ -1880,7 +1868,6 @@ void EEComputerPlayer::EpochReached(long inEpoch)
     EEPlayer::EpochReached(inEpoch);
 }
 
-// FUNCTION: EXE 0x43d4cd
 // Schedules the next attack: a random number of minutes (initial delay before the first, frequency after), scaled
 // by epoch span and difficulty or deathmatch modifier, clamped, added to inTime
 void EEComputerPlayer::SetNextAttackTime(unsigned long inTime)
@@ -1919,7 +1906,6 @@ void EEComputerPlayer::SetNextAttackTime(unsigned long inTime)
     }
 }
 
-// FUNCTION: EXE 0x43d652
 // Schedules the next island expansion the difficulty's island timer (minutes) from now
 void EEComputerPlayer::SetNextIslandExpansionTime()
 {
@@ -2496,7 +2482,6 @@ void EEComputerPlayer::PayImprovement(EEUnitClass* inClass, long inImprovement)
 }
 
 
-// FUNCTION: EXE 0x43ef5d
 // Registers a new unit with the player and, while the AI is active, with the civilization and combat managers
 void EEComputerPlayer::UnitPlaced(EEComplexUnit* inUnit)
 {
@@ -2571,7 +2556,6 @@ static void EECPTransportIdle(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x43f028
 // Handles a unit finishing a goal: idles transports (sending empty damaged ones home), returns detached units to
 // the combat manager, marks citizens as idle gatherers and drops nearly idle units from their group
 void EEComputerPlayer::UnitGoalDone(EEComplexUnit* inUnit)
@@ -2608,7 +2592,6 @@ void EEComputerPlayer::EpochMediaUnloaded(long inEpoch)
     EEPlayer::EpochMediaUnloaded(inEpoch);
 }
 
-// FUNCTION: EXE 0x43f175
 // Runs the AI tick: one-time start-up on the first call, then the enable, attack-state, population and
 // expansion timers and the manager updates; finally kills the units queued as stranded
 void EEComputerPlayer::Update(unsigned long inTime)

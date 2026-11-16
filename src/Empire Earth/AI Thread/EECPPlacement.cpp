@@ -61,10 +61,6 @@
 
 // the class key (0x4e5d00, guard 0x4e5cf8 bit 1)
 const UString EECPPlacement::sData("EECPPlacement-Data");
-// SYNTHETIC: EXE 0x466af0   (wrapper)
-// SYNTHETIC: EXE 0x466afa   (ctor)
-// SYNTHETIC: EXE 0x466b0b   (registrar)
-// SYNTHETIC: EXE 0x466b17   (dtor)
 
 // Orders two (continent, town) pairs by the distance of the continent's centre from the reference tile
 // Built without /Og (frame locals, `this` spilled to [ebp-0x3c]); the -4 -> -0x20 bool copy is the inline (tile, tile)
@@ -960,7 +956,6 @@ bool EECPPlacement::FindWonderSite(long inUnitClass, unsigned long inSize, EETil
     return theResult;
 }
 
-// FUNCTION: EXE 0x46a228
 // Finds a building site for a class by its kind (wonder, granary, dock, centre, airport, tower, production,
 // anti-air, space) or, for farms, an unbuilt farm foundation; returns whether one was found
 // NEAR (55): the switch layout, which depends on the tile parameter: the shared declaration takes a long*
@@ -1040,7 +1035,6 @@ bool EECPPlacement::FindSite(long inUnitClass, EETileCoordinate& theTile)
 }
 
 
-// FUNCTION: EXE 0x46a833
 // Tells whether a square of inSize at a tile lies within the distance of the far end of an airport runway
 bool EECPPlacement::IsNearAirportEnd(long inX, long inY, long inSize, float inDistance)
 {
@@ -1257,128 +1251,6 @@ bool EECPUnitWithinDistance::operator()(EEUnit* inUnit) const
     U2DPoint<long> theTile(inUnit->mTileX, inUnit->mTileY);
     return (float)theTile.DistanceToSquared(this->mCenter) <= this->mDistanceSquared;
 }
-
-// The deque/vector/heap/sort COMDATs (named through call sites)
-// TEMPLATE: EXE 0x466cfb
-// TEMPLATE: EXE 0x468849
-// TEMPLATE: EXE 0x46b6dc
-// TEMPLATE: EXE 0x46b76c
-// TEMPLATE: EXE 0x46b798
-// TEMPLATE: EXE 0x46b82b
-// TEMPLATE: EXE 0x46b857
-// TEMPLATE: EXE 0x46b883
-// TEMPLATE: EXE 0x46b92c
-// TEMPLATE: EXE 0x46ba3a
-// TEMPLATE: EXE 0x46ba94
-// TEMPLATE: EXE 0x46bd85
-// TEMPLATE: EXE 0x46bdbe
-// TEMPLATE: EXE 0x46bde5
-// TEMPLATE: EXE 0x46be1f
-// TEMPLATE: EXE 0x46be46
-// TEMPLATE: EXE 0x46be8e
-// TEMPLATE: EXE 0x46bf74
-// TEMPLATE: EXE 0x46c027
-// TEMPLATE: EXE 0x46c065
-// TEMPLATE: EXE 0x46c120
-// TEMPLATE: EXE 0x46c1e6
-// TEMPLATE: EXE 0x46c2cc
-// TEMPLATE: EXE 0x46c3b0
-// TEMPLATE: EXE 0x46c494
-// TEMPLATE: EXE 0x46c4bb
-// TEMPLATE: EXE 0x46c4e7
-// TEMPLATE: EXE 0x46c536
-// TEMPLATE: EXE 0x46c5ce
-// TEMPLATE: EXE 0x46c5f3
-// TEMPLATE: EXE 0x46c62b
-// TEMPLATE: EXE 0x46c65e
-// TEMPLATE: EXE 0x46c76b
-// TEMPLATE: EXE 0x46c7fa
-// TEMPLATE: EXE 0x46c854
-// TEMPLATE: EXE 0x46c87d
-// TEMPLATE: EXE 0x46c956
-// TEMPLATE: EXE 0x46c993
-// TEMPLATE: EXE 0x46c9c0
-// TEMPLATE: EXE 0x46ca9c
-// TEMPLATE: EXE 0x46cad0
-// TEMPLATE: EXE 0x46cb03
-// TEMPLATE: EXE 0x46cc10
-// TEMPLATE: EXE 0x46cc55
-// TEMPLATE: EXE 0x46cc88
-// TEMPLATE: EXE 0x46cd90
-// TEMPLATE: EXE 0x46cdc3
-// TEMPLATE: EXE 0x46cecb
-// TEMPLATE: EXE 0x46cf0d
-// TEMPLATE: EXE 0x46cf51
-// TEMPLATE: EXE 0x46cf9e
-// TEMPLATE: EXE 0x46d0b5
-// TEMPLATE: EXE 0x46d1cd
-// TEMPLATE: EXE 0x46d21a
-// TEMPLATE: EXE 0x46d2d1
-// TEMPLATE: EXE 0x46d30e
-// TEMPLATE: EXE 0x46d34d
-// TEMPLATE: EXE 0x46d446
-// TEMPLATE: EXE 0x46d470
-// TEMPLATE: EXE 0x46d510
-// TEMPLATE: EXE 0x46d62f
-// TEMPLATE: EXE 0x46d66c
-// TEMPLATE: EXE 0x46d6b0
-// TEMPLATE: EXE 0x46d7d0
-// TEMPLATE: EXE 0x46d803
-// TEMPLATE: EXE 0x46d8c1
-// TEMPLATE: EXE 0x46d905
-// TEMPLATE: EXE 0x46d952
-// TEMPLATE: EXE 0x46da69
-// TEMPLATE: EXE 0x46daa5
-// TEMPLATE: EXE 0x46dae9
-// TEMPLATE: EXE 0x46db36
-// TEMPLATE: EXE 0x46db69
-// TEMPLATE: EXE 0x46dc1a
-// TEMPLATE: EXE 0x46dc5e
-// TEMPLATE: EXE 0x46dcab
-// TEMPLATE: EXE 0x46ddcb
-// TEMPLATE: EXE 0x46ddfe
-// TEMPLATE: EXE 0x46deaa
-// TEMPLATE: EXE 0x46ded6
-// TEMPLATE: EXE 0x46df09
-// TEMPLATE: EXE 0x46df70
-// TEMPLATE: EXE 0x46df99
-// TEMPLATE: EXE 0x46dfbe
-// TEMPLATE: EXE 0x46e005
-// TEMPLATE: EXE 0x46e032
-// TEMPLATE: EXE 0x46e092
-// TEMPLATE: EXE 0x46e0c5
-// TEMPLATE: EXE 0x46e122
-// TEMPLATE: EXE 0x46e155
-// TEMPLATE: EXE 0x46e1b2
-// TEMPLATE: EXE 0x46e1e5
-// TEMPLATE: EXE 0x46e26d
-// TEMPLATE: EXE 0x46e2ce
-// TEMPLATE: EXE 0x46e2fc
-// TEMPLATE: EXE 0x46e36d
-// TEMPLATE: EXE 0x46e3c3
-// TEMPLATE: EXE 0x46e457
-// TEMPLATE: EXE 0x46e4d0
-// TEMPLATE: EXE 0x46e540
-// TEMPLATE: EXE 0x46e5ba
-// TEMPLATE: EXE 0x46e683
-// TEMPLATE: EXE 0x46e6ca
-// TEMPLATE: EXE 0x46e719
-// TEMPLATE: EXE 0x46e750
-// TEMPLATE: EXE 0x46e7b0
-// TEMPLATE: EXE 0x46e7fd
-// TEMPLATE: EXE 0x46e841
-// TEMPLATE: EXE 0x46e890
-
-// Template and inline COMDATs this unit's code instantiates (the bodies come from the headers; each was compared
-// against the original by name)
-// TEMPLATE: EXE 0x46a20e
-
-// Template and inline COMDATs this unit already emits (identified by name)
-// TEMPLATE: EXE 0x46bace
-// TEMPLATE: EXE 0x46c585
-// TEMPLATE: EXE 0x46c5a2
-// TEMPLATE: EXE 0x46e62a
-
 
 // whether one of the player's living citizens on the map could build a class at a tile: the unit manager's FindBuilder
 // rule (the site's path area, or for the site classes and towers a shore of its continent touching the footprint) over

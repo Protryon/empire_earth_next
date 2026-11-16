@@ -38,10 +38,10 @@ class EECPUSFavoriteUnitsScreen {
 public:
     EECPUSFavoriteUnitsScreen() : mAllowAir(true), mAllowSea(true), mAllowLand(true), mAllowSpace(true) {}
     virtual ~EECPUSFavoriteUnitsScreen() {}   // +0x00 (??_G 0x2a978)
-    bool IsFavoriteAir(EEUnitClass* inClass);  // 0x2a9bd
-    bool IsFavoriteSea(EEUnitClass* inClass);  // 0x2aab4
-    bool IsFavoriteLand(EEUnitClass* inClass);  // 0x2aba7
-    bool IsFavoriteSpace(EEUnitClass* inClass);  // 0x2ad11
+    bool IsFavoriteAir(EEUnitClass* inClass);
+    bool IsFavoriteSea(EEUnitClass* inClass);
+    bool IsFavoriteLand(EEUnitClass* inClass);
+    bool IsFavoriteSpace(EEUnitClass* inClass);
 
     bool mAllowAir;                         // +0x04
     bool mAllowSea;                         // +0x05

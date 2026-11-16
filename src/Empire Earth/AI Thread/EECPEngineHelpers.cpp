@@ -45,21 +45,18 @@
 // 0x43bf0c (.rdata; both neighbours are this unit's constants): declared extern in ee/EEGlobalConstants.h
 const float kHeightEpsilon = 0.01f;
 
-// FUNCTION: EXE 0x446fc0
 // Returns true when the given unit is in this unit's cargo
 bool EEComplexUnit::HasCargo(EEComplexUnit* inCargo)
 {
     return std::find(this->mCargo.begin(), this->mCargo.end(), inCargo) != this->mCargo.end();
 }
 
-// FUNCTION: EXE 0x449b21
 // Returns true when the player has explored the tile (visibility above 1) or sees the whole map
 bool EETile::IsSeenBy(EEPlayer* inPlayer)
 {
     return this->GetVisibility(inPlayer->mPlayerID) > 1 || inPlayer->mSeesAll;
 }
 
-// FUNCTION: EXE 0x45b96d
 // Returns true for the four crusader unit types (short sword, long sword, bronze spear cavalry, knight)
 // An EEUnitClass member (Virtual1C calls it with ecx = the unit's class); its body follows its first user here.
 bool EEUnitClass::IsCrusader()
@@ -67,7 +64,6 @@ bool EEUnitClass::IsCrusader()
     return this->mUnitType == kUnitTypeInf04ShortSwordCrusader || this->mUnitType == kUnitTypeInf06LongSwordCrusader || this->mUnitType == kUnitTypeCav04BronzeSpearCavalryCrusader || this->mUnitType == kUnitTypeCav06KnightCrusader;
 }
 
-// FUNCTION: EXE 0x406ef9
 // Tells whether the unit class is a land, naval, helicopter or building priest
 bool EEUnitClass::IsPriest()
 {
@@ -75,21 +71,18 @@ bool EEUnitClass::IsPriest()
     return theCategory == kUnitCategoryLandPriest || theCategory == kUnitCategoryNavalPriest || theCategory == kUnitCategoryHelicopterPriest || theCategory == kUnitCategoryBuildingPriest;
 }
 
-// FUNCTION: EXE 0x409d5e
 // Returns the owner's tech tree node of the technology that makes the unit's class
 EETechTreeNode* EEUnit::GetTechTreeNode()
 {
     return this->GetPlayer()->GetTechTree()->Get(this->GetUnitClass()->GetTechnology());
 }
 
-// FUNCTION: EXE 0x40c5bb
 // Returns the map tile at a tile location
 EETile* EEMap::GetTileAtLocation(const EETileLocation& inLocation)
 {
     return this->GetTile(inLocation.GetX(), inLocation.GetY());
 }
 
-// FUNCTION: EXE 0x44211d
 // Returns the squared distance from the unit's position to a tile
 float EEComplexUnit::DistanceSquaredToTileXY(long inTileX, long inTileY)
 {
@@ -98,7 +91,6 @@ float EEComplexUnit::DistanceSquaredToTileXY(long inTileX, long inTileY)
     return theDY * theDY + theDX * theDX;
 }
 
-// FUNCTION: EXE 0x45e407
 // Returns the unit's top speed: its active group's value when it is in one, else its stats'
 // Out of line after its first user here
 float EEComplexUnit::GetMaxVelocity()
@@ -108,7 +100,6 @@ float EEComplexUnit::GetMaxVelocity()
     return this->mStats->mMaxVelocity;
 }
 
-// FUNCTION: EXE 0x408a3f
 // Returns the squared tile distance from the stored centre tile to a given tile
 long EETileDistanceLess::DistanceSquared(const EETileCoordinate& inTile) const
 {
@@ -117,7 +108,6 @@ long EETileDistanceLess::DistanceSquared(const EETileCoordinate& inTile) const
     return theDX * theDX + theDY * theDY;
 }
 
-// FUNCTION: EXE 0x441da1
 // Returns the number of goal queues the unit has
 unsigned long EEComplexUnit::GetNumGoalQueues()
 {
@@ -127,14 +117,12 @@ unsigned long EEComplexUnit::GetNumGoalQueues()
 // ---------------------------------------------------------------------------------------------------------------
 // Engine members the deleted economy managers' units emitted (stage 6, docs/AI_LUA_VERBS.md)
 
-// FUNCTION: EXE 0x4937dd (EECPUnitManager.cpp's range)
 // Returns whether a technology is in the unit's build queue
 bool EEComplexUnit::IsResearchQueued(long inTechnology)
 {
     return std::find(this->mBuildQueue.begin(), this->mBuildQueue.end(), inTechnology) != this->mBuildQueue.end();
 }
 
-// FUNCTION: EXE 0x4708c9 (EECPCivilizationManager.cpp's range)
 // Returns true for waypoint and path point units
 bool EEUnit::IsPathMarker()
 {
@@ -148,7 +136,6 @@ bool RTSMapTileRun::operator==(const RTSMapTileRun& inOther) const
         inOther.mEnd.mY == this->mEnd.mY;
 }
 
-// FUNCTION: EXE 0x4a016f (EECPWallManager.cpp's range)
 // Creates a tile run from inStart to inEnd
 RTSMapTileRun::RTSMapTileRun(const U2DPoint<long>& inStart, const U2DPoint<long>& inEnd)
     : mStart(inStart), mEnd(inEnd)

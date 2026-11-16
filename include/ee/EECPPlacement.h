@@ -44,30 +44,30 @@ public:
     EECPPlacement(EEComputerPlayer* inPlayer);
     ~EECPPlacement();
     static const UString sData;             // "EECPBuildManager-Data" (the original's key)
-    bool HasUnitNear(long inUnitType, long inX, long inY, float inDistance);  // 0x66d50
-    bool HasAntiAirNear(long inX, long inY);  // 0x66de3
-    bool HasTownCenterNear(long inX, long inY, float inDistance);  // 0x66ee8
-    bool HasGateNear(long inX, long inY, float inRadius);  // 0x67122
-    bool HasTowerNear(long inX, long inY, float inRadius);  // 0x671c2
-    bool HasWallNear(long inX, long inY, float inRadius);  // 0x6725e
+    bool HasUnitNear(long inUnitType, long inX, long inY, float inDistance);
+    bool HasAntiAirNear(long inX, long inY);
+    bool HasTownCenterNear(long inX, long inY, float inDistance);
+    bool HasGateNear(long inX, long inY, float inRadius);
+    bool HasTowerNear(long inX, long inY, float inRadius);
+    bool HasWallNear(long inX, long inY, float inRadius);
     void CollectSiteTiles(char inKind);     // 0x67b87 (2: the dock sites, 4: the space dock sites)
-    bool HasEnemyNear(long inX, long inY);  // 0x67e10
-    bool FindAirportSite(EETileCoordinate& outTile);  // 0x67f97
-    bool FindAntiAirSiteNear(EEUnit* inUnit, EETileCoordinate& outTile);  // 0x681b3
-    bool FindAntiAirSiteAround(EETileCoordinate& inTile, long inSize, EETileCoordinate& outTile);  // 0x681e3
-    bool FindAntiAirSite(EETileCoordinate& outTile);  // 0x6832b
-    bool FindCenterSite(long inUnitClass, EETileCoordinate& outTile);  // 0x6865a
-    bool FindGranarySite(EETileCoordinate& outTile);  // 0x68862
-    bool FindProductionSite(long inUnitClass, EETileCoordinate& outTile);  // 0x689d0
-    bool FindShoreSite(long inUnitClass, long inSize, EETileCoordinate& outTile);  // 0x68a45
-    bool FindSpaceSite(long inUnitClass, long inSize, EETileCoordinate& outTile);  // 0x68c90
-    bool FindTowerSite(long inUnitClass, long inSize, EETileCoordinate& outTile);  // 0x69245
-    bool FindWonderSite(long inUnitClass, unsigned long inSize, EETileCoordinate& outTile);  // 0x69d6c
-    bool FindSite(long inUnitClass, EETileCoordinate& ioTile);  // 0x6a228
-    bool IsNearAirportEnd(long inX, long inY, long inSize, float inDistance);  // 0x6a833
+    bool HasEnemyNear(long inX, long inY);
+    bool FindAirportSite(EETileCoordinate& outTile);
+    bool FindAntiAirSiteNear(EEUnit* inUnit, EETileCoordinate& outTile);
+    bool FindAntiAirSiteAround(EETileCoordinate& inTile, long inSize, EETileCoordinate& outTile);
+    bool FindAntiAirSite(EETileCoordinate& outTile);
+    bool FindCenterSite(long inUnitClass, EETileCoordinate& outTile);
+    bool FindGranarySite(EETileCoordinate& outTile);
+    bool FindProductionSite(long inUnitClass, EETileCoordinate& outTile);
+    bool FindShoreSite(long inUnitClass, long inSize, EETileCoordinate& outTile);
+    bool FindSpaceSite(long inUnitClass, long inSize, EETileCoordinate& outTile);
+    bool FindTowerSite(long inUnitClass, long inSize, EETileCoordinate& outTile);
+    bool FindWonderSite(long inUnitClass, unsigned long inSize, EETileCoordinate& outTile);
+    bool FindSite(long inUnitClass, EETileCoordinate& ioTile);
+    bool IsNearAirportEnd(long inX, long inY, long inSize, float inDistance);
     // whether one of the player's citizens could build the class at the tile (FindBuilder's land rule, any citizen)
     bool HasBuilderFor(const U2DPoint<long>& inTile, long inUnitClass);
-    void SetTownCenter(EEUnit* inUnit);     // 0x6aef3
+    void SetTownCenter(EEUnit* inUnit);
     // a unit the player gained: the first of a class that is not a land building sets the town centre tile while
     // there is none (the original unit manager's UnitAdded rule)
     void UnitAdded(EEComplexUnit* inUnit);

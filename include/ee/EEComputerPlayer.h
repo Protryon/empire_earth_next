@@ -64,10 +64,10 @@ public:
     void ChooseFavoriteSpaceType();
     void Regroup();                         // 0x2e2a3 (Attacked when there is no resource center)
     void EnterEpoch(long inEpoch);          // 0x3c9c5 (GetMaxWidth: a new epoch)
-    void UpdateGroups();                    // 0x3f3f1
+    void UpdateGroups();
     void SetNextAttackTime(unsigned long inTime);  // 0x3d4cd (Update) (provisional name)
     void ChooseCivilization();              // 0x3ca49 (Update, unless gGameOptions.mLoadType) (provisional name)
-    void GetObjectsToGroup(std::vector<EEUnit*>& outUnits, long& outCount);  // 0x2edff (ret 8) (provisional name)
+    void GetObjectsToGroup(std::vector<EEUnit*>& outUnits, long& outCount);
     virtual void EpochReached(long inEpoch);  // +0xa4 0x3d45d
     virtual void UnitStranded(EEComplexUnit* inUnit);  // +0xac 0x3ed48
     virtual void Pay(EETechnology* inTechnology, long inUnitType, float inFraction);   // +0xb4 0x3ed98 (epochs: free)
