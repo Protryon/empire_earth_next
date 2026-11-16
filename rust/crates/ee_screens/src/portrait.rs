@@ -342,5 +342,41 @@ pub fn mouse_down<H: PortraitHost + ?Sized>(h: &mut H) -> i64 {
     0
 }
 
+/// The op as the shared control host's (`EEUIRustControl`, `ee_screenscpp_hud_ctl`): the toolkit's calls it answers
+/// itself (dirty, the rectangles, the base's draws, the mouse's release) as its ops, the others as the class's own
+/// (`EE_SCREENS_HC_CLASS + op`, `RustOp`); with its a.
+pub fn hud_op(op: u32, a: i64) -> (u32, i64) {
+    use crate::hud_ctl::{
+        EE_SCREENS_HC_CLASS, EE_SCREENS_HC_COPIED_RECT, EE_SCREENS_HC_DRAW_BASE, EE_SCREENS_HC_RECT,
+        EE_SCREENS_HC_SET_DIRTY,
+    };
+    match op {
+        EE_SCREENS_PT_OP_DIRTY => (EE_SCREENS_HC_SET_DIRTY, 1),
+        EE_SCREENS_PT_OP_RECT => (EE_SCREENS_HC_RECT, a),
+        EE_SCREENS_PT_OP_DRAW_RECT => (EE_SCREENS_HC_COPIED_RECT, a),
+        EE_SCREENS_PT_OP_DRAW_BASE => (EE_SCREENS_HC_DRAW_BASE, a),
+        _ => (EE_SCREENS_HC_CLASS + op, a),
+    }
+}
+
+#[cfg(test)]
+mod hud_op_tests {
+    use super::*;
+    use crate::hud_ctl::*;
+
+    #[test]
+    fn the_shared_ops_are_the_hosts_and_the_others_the_classs() {
+        assert_eq!(hud_op(EE_SCREENS_PT_OP_DIRTY, 0), (EE_SCREENS_HC_SET_DIRTY, 1));
+        assert_eq!(hud_op(EE_SCREENS_PT_OP_RECT, 0), (EE_SCREENS_HC_RECT, 0));
+        assert_eq!(hud_op(EE_SCREENS_PT_OP_DRAW_RECT, 0), (EE_SCREENS_HC_COPIED_RECT, 0));
+        assert_eq!(hud_op(EE_SCREENS_PT_OP_DRAW_BASE, 0), (EE_SCREENS_HC_DRAW_BASE, 0));
+        let shared =
+            [EE_SCREENS_PT_OP_DIRTY, EE_SCREENS_PT_OP_RECT, EE_SCREENS_PT_OP_DRAW_RECT, EE_SCREENS_PT_OP_DRAW_BASE];
+        for op in (0..=37).filter(|op| !shared.contains(op)) {
+            assert_eq!(hud_op(op, -3), (EE_SCREENS_HC_CLASS + op, -3));
+        }
+    }
+}
+
 #[cfg(test)]
 mod golden;

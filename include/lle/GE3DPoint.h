@@ -18,31 +18,24 @@ public:
     ~GE3DPoint() {}
     // user-defined (field moves): GE3DLine's assignments 0xc5da/0xc66a copy the start with three movs, not movsd
     GE3DPoint& operator=(const GE3DPoint& inPoint) { this->mX = inPoint.mX; this->mY = inPoint.mY; this->mZ = inPoint.mZ; return *this; }
-    GE3DPoint& operator+=(const GE3DPoint& inPoint);
-#ifdef LLE_EXE_HEADERS
-    // exe: inline (the engine body, GE2DPoint.cpp); the /Os post-check undoes it, so each site calls [imp] directly
-    // instead of caching the import in a register (EEMap 0x51c75a/0x51c847; LEARNINGS)
-    GE3DPoint& operator+=(const GEVector& inVector)
-    {
-        this->mX += inVector.GetX();
-        this->mY += inVector.GetY();
-        this->mZ += inVector.GetZ();
-        return *this;
-    }
-#else
-    GE3DPoint& operator+=(const GEVector& inVector);
-#endif
-    GE3DPoint& operator-=(const GE3DPoint& inPoint);
-    GE3DPoint& operator-=(const GEVector& inVector);
-    bool operator==(const GE2DPoint& inPoint) const;
+    GE3DPoint& operator+=(const GE3DPoint& inPoint) { this->mX += inPoint.mX; this->mY += inPoint.mY; this->mZ += inPoint.mZ; return *this; }
+    GE3DPoint& operator+=(const GEVector& inVector) { this->mX += inVector.GetX(); this->mY += inVector.GetY(); this->mZ += inVector.GetZ(); return *this; }
+    GE3DPoint& operator-=(const GE3DPoint& inPoint) { this->mX -= inPoint.mX; this->mY -= inPoint.mY; this->mZ -= inPoint.mZ; return *this; }
+    GE3DPoint& operator-=(const GEVector& inVector) { this->mX -= inVector.GetX(); this->mY -= inVector.GetY(); this->mZ -= inVector.GetZ(); return *this; }
+    bool operator==(const GE2DPoint& inPoint) const { return inPoint.mX == this->mX && inPoint.mY == this->mY; }
     // inline (GEModel::Verify, GELODMetaVertex::BuildMetaVertexList/CollapseEdge expand it); GE2DPoint.cpp's block
     // emits the exported copy 0x1000c47e (ICF-folded with GEVector's/GEColor's ==)
     bool operator==(const GE3DPoint& inPoint) const { return mX == inPoint.mX && mY == inPoint.mY && mZ == inPoint.mZ; }
     bool operator==(const GETransformation& inTransformation) const;
     // inline (InterpolateTo 0xdae4 expands it); its exported copy is ICF-folded into GEVector's 0x1000c29f
     bool operator!=(const GE3DPoint& inPoint) const { return mX != inPoint.mX || mY != inPoint.mY || mZ != inPoint.mZ; }
-    void Add(const GEVector& inVector, GE3DPoint& outPoint) const;
-    void Clear();
+    void Add(const GEVector& inVector, GE3DPoint& outPoint) const
+    {
+        outPoint.mX = inVector.GetX() + this->mX;
+        outPoint.mY = inVector.GetY() + this->mY;
+        outPoint.mZ = inVector.GetZ() + this->mZ;
+    }
+    void Clear() { this->mX = 0.0f; this->mY = 0.0f; this->mZ = 0.0f; }
     float DistanceTo(const GE3DPoint& inPoint) const;
     float DistanceToSquared(const GE3DPoint& inPoint) const;
     GE2DPoint Get2DPoint() const { return GE2DPoint(this->mX, this->mY); }  // inline (InterpolateTo 0xc80e)
@@ -52,19 +45,13 @@ public:
     float GetZ() const { return this->mZ; }
     void InterpolateTo(const GE3DPoint& inPoint, float inStep, std::vector<GE3DPoint>& outPoints) const;
     long Load(FSFile& inFile);
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return this->Load(inFile); }
     long Save(FSFile& inFile) const;
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) const;
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) const { return this->Save(inFile); }
     void SetX(float inX) { this->mX = inX; }
     void SetY(float inY) { this->mY = inY; }
     void SetZ(float inZ) { this->mZ = inZ; }
-#ifdef LLE_EXE_HEADERS
-    // inline in the exe's view: the exe never imports ?SetXYZ@GE3DPoint@@QAEXMMM@Z and expands it (three stores,
-    // EECPASGUProphetCalamityAnalyzerVolcano::Fn09318 0x409483)
     void SetXYZ(float inX, float inY, float inZ) { this->mX = inX; this->mY = inY; this->mZ = inZ; }
-#else
-    void SetXYZ(float inX, float inY, float inZ);
-#endif
 
     float mX;                               // +0x00
     float mY;                               // +0x04

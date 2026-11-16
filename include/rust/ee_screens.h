@@ -1946,6 +1946,38 @@ constexpr static const uint32_t EE_SCREENS_SEET_SHOW = 5;
 
 constexpr static const uint32_t EE_SCREENS_SEET_UPDATE_NAME = 6;
 
+/// `EeScreensSeplCtl::flags`: a radio button's or check box's background opacity (`bg`) is its text label's.
+constexpr static const uint32_t EE_SCREENS_SEPL_LABEL_BG = 1024;
+
+/// The paint area (`EEUIFSEPaintElevation`, id 0xa1, 0x400 x 0x25e at the top left, over the edge scroll and brush
+/// group, the two words at p2) at the index i0; group 2 -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_PAINT = 900;
+
+/// The elevation slider (`EEUIFSEESElevation`, id 0x9d) at (f0, f1), f2 high, the index i0, 0 .. 0x40 at 0x28,
+/// page 1, grey at 0.4 -> into p0; its value's strength (max - value - 0x18) returned.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_ELEVATION_SLIDER = 901;
+
+/// The strength slider (id 0xa2) at (f0, f1), 20 x f2, the index i0, 0 .. 0x10 at 10, page 1, grey at 0.4, its
+/// changes shown in the label p2 (`UIESliderChange(-4, 0x28)`) -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_STRENGTH_SLIDER = 902;
+
+/// -> the screen font's height.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_FONT_HEIGHT = 903;
+
+/// The control p0 added to the form p1's group 2 / hidden.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_ADD = 904;
+
+/// -> whether the form p0 is its manager's current form; the mouse's position into f0, f1.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_MOUSE = 905;
+
+/// The brush highlight of the form p0 at the tile under (f0, f1) when the view holds it (shown), else hidden.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_HIGHLIGHT = 906;
+
+/// The tab's members (`ee_screens_seel_call`).
+constexpr static const uint32_t EE_SCREENS_SEEL_UPDATE = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEEL_MOUSE_MOVE = 2;
+
 /// `EESEEHideUI`.
 constexpr static const uint32_t EE_SCREENS_SEE_HIDE_UI = 1;
 
@@ -2090,6 +2122,416 @@ constexpr static const uint32_t EE_SCREENS_SEE_OP_MAX_PLAYERS = 28;
 
 /// The form p's label i0 set to the number i1 (`SetText(unsigned long)`).
 constexpr static const uint32_t EE_SCREENS_SEE_OP_LABEL_NUMBER = 29;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_BUTTON_TEXTURE = 0;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_EDGE_SCROLL = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_POLL = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_PANEL_BACKGROUND = 3;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_FULL_BACKGROUND = 4;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_MINI_MAP = 5;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_PLAYER_COMBO = 6;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_LOAD_TEXT = 7;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_HELP_LABEL = 8;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_BRUSH_GROUP = 9;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_UNDO = 10;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_REDO = 11;
+
+/// The tab groups, by group (`kEditorTab*`): 12 .. 18.
+constexpr static const uint32_t EE_SCREENS_SEFM_GROUP = 12;
+
+/// The tab buttons, by tab: 19 .. 25.
+constexpr static const uint32_t EE_SCREENS_SEFM_TAB_BUTTON = 19;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_CIV_BUILDER = 26;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_LOAD_BUTTON = 27;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_TEST_BUTTON = 28;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_SAVE_BUTTON = 29;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_EXIT_BUTTON = 30;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_QUICK_SAVE_BUTTON = 31;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_QUICK_LOAD_BUTTON = 32;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_HIDE_UI = 33;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_NEW_PLAYER_EVENT = 34;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_WHEEL_ZOOM_EVENT = 35;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_ZOOM_IN_EVENT = 36;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_ZOOM_OUT_EVENT = 37;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_REVOLVE_EVENT = 38;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_ROTATE_EVENT = 39;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_DISABLE_MOUSE_EVENT = 40;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_ENABLE_MOUSE_EVENT = 41;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_GRAB_SCROLL = 42;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_LOAD_THREAD = 43;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_CURRENT_TAB = 44;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_ENTITY_GROUP = 45;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_NUM_CARGO_UNITS = 46;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_ENTITY_GROUP_ENABLED = 47;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_B2B1 = 48;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_B2B2 = 49;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_SWITCHING = 50;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_SUSPENDED = 51;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_UI_HIDDEN = 52;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_WAS_UI_HIDDEN = 53;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_EXIT_AFTER_SAVE = 54;
+
+/// The view rectangle saved by `Open` (left, top, right, bottom as `f32` bits): 55 .. 58.
+constexpr static const uint32_t EE_SCREENS_SEFM_SAVED_VIEW = 55;
+
+/// The bottom panel's rectangle (`mR1F0`, set by `CreateBackground`; `f32` bits): 59 .. 62.
+constexpr static const uint32_t EE_SCREENS_SEFM_PANEL = 59;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_BUILD = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_SELECT_TAB = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_LEAVE_TAB = 3;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_ENTER_FULL_VIEW = 4;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_LEAVE_FULL_VIEW = 5;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_EXIT_EDITOR = 6;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_STORE_GROUP = 7;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_RESUME_GROUP = 8;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_POST_LOAD_EVENT = 9;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_POST_SHOW_LOADED = 10;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_OPEN = 11;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_COPY_DATA = 12;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_DRAW_BACKGROUND = 13;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_UPDATE_KEYBOARD = 14;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_UPDATE_MOUSE = 15;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_SELECT_UNIT = 16;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_DESELECT_UNIT = 17;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_DESELECT_FIRST = 18;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_CLEAR_SELECTION = 19;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_SET_GAME_VIEW = 20;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_SET_LOAD_TEXT = 21;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_SAVE_TRIGGERS = 22;
+
+/// The button texture (`textures\SE Buttons`, referenced), the edge scroll, the poll (500, started), the panel's
+/// bitmap (`textures\scenpart`) and the full view's background (`textures\Scenfull`) made into the five words at p0.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_BASICS = 800;
+
+/// The mini map at (f0, f1), f2 square, the control index i0; group 0, hidden -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_MINI_MAP = 801;
+
+/// The player combo box (0x149, 140 x 20 at the top left) at the index i0 with its selection's new player event
+/// (`EE_SCREENS_SE_NEW_PLAYER`); group 0, hidden -> the box into p0, the event into p1.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_PLAYER_COMBO = 802;
+
+/// The load text label (i0 = 0: id 9, right aligned, at (500, 0)) or the help label (i0 = 1: id 0x10, the form's
+/// tool tips on, 600 ms) at the index i1; group 0, hidden -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_LABEL = 803;
+
+/// The brush group at (f0, f1) from the index *p1 (advanced) -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_BRUSH_GROUP = 804;
+
+/// The undo (i0 = 0) or redo (1) button at (f0, f1), the index i1, its text white -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_UNDO_REDO = 805;
+
+/// The tab group i0 (`kEditorTab*`) made from the index *p1 (advanced) -> into p0 (NULL for another group).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_TAB_GROUP = 806;
+
+/// A button from the button texture (`EeScreensSefmButton` at p1) -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_BUTTON = 807;
+
+/// The quick save/load action (`EESEAQuickSaveLoad` over the scenario extension) -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_QUICK_ACTION = 808;
+
+/// The hide-UI check box (its `EESEERust` hide-UI event on both changes) at the index i0; group 0, hidden -> p0.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_HIDE_UI = 809;
+
+/// The form's control group i0 enabled (i1 = 1) or disabled.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_GROUP_ENABLE = 810;
+
+/// A screen event of code i0 (`EECreateScreenEvent`) / an `EESEERust` of kind i0 over the object p1 -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_SCREEN_EVENT = 811;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_SEE_EVENT = 812;
+
+/// The form's mouse wheel event (i0 = 0) or middle button's pressed and unpressed events (i0 = 1) set to p0.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_MOUSE_EVENT = 813;
+
+/// A hot key (`UIHotKey`) on the key i0 (`KEY_*`) with the just-pressed, pressed and just-unpressed events (three
+/// words at p0) added to the form p1's group 0.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_HOT_KEY = 814;
+
+/// The form p1's `AddHotKey(key i0, modifiers i1 and i2, none, the event p0 in event slot i3 & 3, group i3 >> 4,
+/// false)`.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_ADD_HOT_KEY = 815;
+
+/// The grab scroll (`EECreateGrabScroll(1)`) -> into p0 / released (`EEReleaseGrabScroll(1)`).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_GRAB_SCROLL = 816;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_RELEASE_GRAB_SCROLL = 817;
+
+/// The tab button p0 checked (i0 = 0: `Check`, 1: `CheckDirect`).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_TAB_CHECK = 818;
+
+/// p0 dereferenced as an event (i0 = 0), a texture (1), a bitmap (2), an action (3) or the edge scroll (4).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_DEREFERENCE = 819;
+
+/// p0 deleted as a control (i0 = 0), a tab group (1), the poll (2), the brush group (3) or the full background (4).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_DELETE = 820;
+
+/// The tab group p0's member i0 (`EE_SCREENS_SEFM_GROUP_*`) with the point (f0, f1) or rectangle f.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_GROUP_CALL = 821;
+
+/// The game's render list set to its base object (i0 = 1, the full view) or every object (0).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_RENDER_LIST = 822;
+
+/// The manager redraws everything and the current form's controls are made dirty.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_REDRAW_ALL = 823;
+
+/// The brush group p0's highlight shown (i0 = 1) or not.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_HIGHLIGHT = 824;
+
+/// The unit of id i0 (`EEUnitHandleResolve`) -> into p0 / the unit p0's id (`EEUnitHandleID`).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_RESOLVE = 825;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_UNIT_ID = 826;
+
+/// The unit p0's editor selection flag set to i0, then referenced (i1 = 1) or dereferenced (i1 = -1).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_UNIT_SELECT = 827;
+
+/// -> whether the unit p0 is placed and has cargo room or cargo.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_UNIT_CARGO = 828;
+
+/// The unit tab p0's `ShowCargo(i0)` / `ShowUnitStatus(p1)`.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_SHOW_CARGO = 829;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_SHOW_STATUS = 830;
+
+/// The game view set to f (`EESetGameViewRectangle`).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_GAME_VIEW = 831;
+
+/// The load thread: made over the form (i0 = 0, into p0), or p1's post i0 (`EE_SCREENS_SEFM_POST_*`) with p2.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_LOAD_THREAD = 832;
+
+/// -> whether the user interface is in the scenario editor; the world's active units rebuilt first (i0 = 1).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_TEST_PREPARE = 833;
+
+/// `Open`'s camera: the editor camera mode, the units refreshed, no sight updates, the editor's turn.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_OPEN_CAMERA = 834;
+
+/// The full background p0's textures loaded.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_LOAD_BACKGROUND = 835;
+
+/// `Open`'s world: the fade in, the player tab p0 refreshed, the music and ambient sounds paused, the edge scroll
+/// p1's edges the window, the free camera, the view rectangle saved into f, the editor's game view, the mini map's
+/// view.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_OPEN_WORLD = 836;
+
+/// `Open`'s end: the scenario's camera move off, the mini map redrawn, `UIForm::Open`.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_OPEN_FORM = 837;
+
+/// The help label p0 made the form's help text label.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_HELP_LABEL = 838;
+
+/// The editor's exit action posted.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_POST_EXIT = 839;
+
+/// `CopyData`'s world: the view rectangle (less a pixel) made dirty (i0 = 1), the mini map p0 dirty, the
+/// placement's ghost at the mouse.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_COPY_WORLD = 840;
+
+/// -> whether a control holds the mouse (i0 = 0) or the keyboard (1).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_CAPTURED = 841;
+
+/// The edge scroll p0 updated at the mouse.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_EDGE_SCROLL = 842;
+
+/// The full background p0 drawn in f -> its result / the panel's bitmap p0 drawn on the form p1 clipped to f into
+/// the panel (four floats at p2).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_DRAW_FULL = 843;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_DRAW_PANEL = 844;
+
+/// -> the key i0 (`KEY_*`): 1 just pressed, 2 held (its value).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_KEY = 845;
+
+/// The form's control i0 fires its button-up event (if there is one).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_FIRE = 846;
+
+/// The terrain's grid mode stepped (backwards with i0 = 1).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_GRID = 847;
+
+/// -> the player tab p0's player count / the combo box p0's selection set to i0.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_PLAYER_COUNT = 848;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_COMBO_SELECT = 849;
+
+/// The label p0's text set to the `UWideString` p1.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_LABEL_TEXT = 850;
+
+/// -> the mouse's location on the form into f0, f1.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_MOUSE = 851;
+
+/// -> the scenario's list i0 (`LIST_*`) count / its record i1's numbers (its `EeScenario*Fields`) into p0, NULL
+/// for none.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_SM_COUNT = 852;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_SM_RECORD = 853;
+
+/// -> the bytes of the list i0's record i1's name (i2 = 0) or description (1) into the p0 buffer of i3 bytes: the
+/// length (more than i3: call again), -1 for no record.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_SM_TEXT = 854;
+
+/// -> the length of the record i1's vector i0 (`VEC_*`) / its element i2 into i0 .. i2.
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_SM_VEC_LEN = 855;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_SM_VEC_AT = 856;
+
+/// The scenario's triggers saved to ScenarioTriggers.scn -> the open's result / the report's i0 bytes at p0
+/// written to ScenarioTriggers.txt (a text file).
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_REPORT_SAVE = 857;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_OP_REPORT_WRITE = 858;
+
+/// A tab group's members (`EE_SCREENS_SEFM_OP_GROUP_CALL`).
+constexpr static const int32_t EE_SCREENS_SEFM_GROUP_UPDATE = 0;
+
+constexpr static const int32_t EE_SCREENS_SEFM_GROUP_LEAVE = 1;
+
+constexpr static const int32_t EE_SCREENS_SEFM_GROUP_DRAW = 2;
+
+constexpr static const int32_t EE_SCREENS_SEFM_GROUP_DISABLE = 3;
+
+constexpr static const int32_t EE_SCREENS_SEFM_GROUP_LOAD = 4;
+
+constexpr static const int32_t EE_SCREENS_SEFM_GROUP_ENTER = 5;
+
+constexpr static const int32_t EE_SCREENS_SEFM_GROUP_STORE = 6;
+
+constexpr static const int32_t EE_SCREENS_SEFM_GROUP_ENABLE = 7;
+
+constexpr static const int32_t EE_SCREENS_SEFM_GROUP_MOUSE_MOVE = 8;
+
+constexpr static const int32_t EE_SCREENS_SEFM_GROUP_UPDATE_KEYS = 9;
+
+/// The load thread's posts (`EE_SCREENS_SEFM_OP_LOAD_THREAD`).
+constexpr static const int32_t EE_SCREENS_SEFM_POST_401 = 1;
+
+constexpr static const int32_t EE_SCREENS_SEFM_POST_404 = 2;
+
+constexpr static const int32_t EE_SCREENS_SEFM_POST_405 = 3;
+
+constexpr static const int32_t EE_SCREENS_SEFM_POST_40B = 4;
+
+constexpr static const int32_t EE_SCREENS_SEFM_POST_40C = 5;
+
+/// The scenario's lists (`EE_SCREENS_SEFM_OP_SM_*`).
+constexpr static const int32_t EE_SCREENS_SEFM_LIST_TRIGGERS = 0;
+
+constexpr static const int32_t EE_SCREENS_SEFM_LIST_CONDITIONS = 1;
+
+constexpr static const int32_t EE_SCREENS_SEFM_LIST_EFFECTS = 2;
+
+constexpr static const int32_t EE_SCREENS_SEFM_LIST_OBJECTS = 3;
+
+constexpr static const int32_t EE_SCREENS_SEFM_LIST_AREAS = 4;
+
+/// A record's vectors: a trigger's condition wrappers (not, condition, operator), its effect wrappers (delay,
+/// effect, operator), an effect's objects.
+constexpr static const int32_t EE_SCREENS_SEFM_VEC_CONDITIONS = 0;
+
+constexpr static const int32_t EE_SCREENS_SEFM_VEC_EFFECTS = 1;
+
+constexpr static const int32_t EE_SCREENS_SEFM_VEC_OBJECTS = 2;
+
+/// The keys the form reads or binds (the host's table of `kKey*`).
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_SEMICOLON = 0;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_SLASH = 1;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_T = 2;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_SHIFT = 3;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_ALT = 4;
+
+/// `1` .. `8`: 5 .. 12.
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_1 = 5;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_RBRACKET = 13;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_LBRACKET = 14;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_GRAVE = 15;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_HOME = 16;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_S = 17;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_L = 18;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_TAB = 19;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_D = 20;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_CONTROL = 21;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_NONE = 22;
+
+constexpr static const int32_t EE_SCREENS_SEFM_KEY_COUNT = 23;
+
+/// The trigger-only save event's kind (`EESEERust`: Ctrl+S runs `EE_SCREENS_SEFM_SAVE_TRIGGERS`).
+constexpr static const uint32_t EE_SCREENS_SEE_SAVE_TRIGGERS_ONLY = 17;
+
+constexpr static const uint32_t EE_SCREENS_SEFM_IDS_CIVILIZATION_BUILDER_TOOL = 8537;
 
 /// The scenarios', movies' and sounds' directories made when missing -> their paths (`FSPath`) into p0's three
 /// words / the three paths p0 released.
@@ -4057,6 +4499,10 @@ constexpr static const uint32_t EE_SCREENS_HC_VIEW_HAS_MOUSE = 23;
 /// -> the game window's width.
 constexpr static const uint32_t EE_SCREENS_HC_WINDOW_WIDTH = 24;
 
+/// A class's own ops from here (`EE_SCREENS_HC_CLASS + op` reaches its `RustOp` as `op`; the portrait's, the icon
+/// bar's).
+constexpr static const uint32_t EE_SCREENS_HC_CLASS = 64;
+
 /// `kDisplayModeHidden`, `kDisplayModeShown`.
 constexpr static const int64_t EE_SCREENS_HC_HIDDEN = 0;
 
@@ -4810,7 +5256,7 @@ constexpr static const uint32_t EE_SCREENS_MF_OP_ENTITY_GROUP = 84;
 /// `mMouseTests[a]` = the host's mouse test b (`EE_SCREENS_MF_MOUSE_*`).
 constexpr static const uint32_t EE_SCREENS_MF_OP_MOUSE_TEST = 85;
 
-/// `mKeyboardTests[a]` = the host's keyboard test b (`EE_SCREENS_MF_KEYBOARD_*`).
+/// `mKeyboardModes[a]` = b (the keyboard mode: 2 the cinematic's, `EE_SCREENS_MF_KEYBOARD_CINEMATIC`; else none).
 constexpr static const uint32_t EE_SCREENS_MF_OP_KEYBOARD_TEST = 86;
 
 /// `mWheelZoom = EECreateScreenEvent(a)`; `SetMouseWheelMoveEvent(mWheelZoom)`.
@@ -5152,6 +5598,11 @@ constexpr static const int64_t EE_SCREENS_MF_BASE_CLOSE = 3;
 
 constexpr static const int64_t EE_SCREENS_MF_BASE_DRAW = 4;
 
+/// `UIForm::UpdateMouse`, `UIForm::UpdateKeyboard`: their results.
+constexpr static const int64_t EE_SCREENS_MF_BASE_UPDATE_MOUSE = 5;
+
+constexpr static const int64_t EE_SCREENS_MF_BASE_UPDATE_KEYBOARD = 6;
+
 /// The members `ee_screens_main_form_member` runs (its `which`).
 constexpr static const uint32_t EE_SCREENS_MF_DO_ACTIVATE = 1;
 
@@ -5184,6 +5635,11 @@ constexpr static const uint32_t EE_SCREENS_MF_DO_CHAT_TOP = 12;
 constexpr static const uint32_t EE_SCREENS_MF_DO_SAVED_GROUPS = 13;
 
 constexpr static const uint32_t EE_SCREENS_MF_DO_ICON_BAR = 14;
+
+/// `UpdateKeyboard()` in the keyboard mode a (`mKeyboardModes[mUIState]`), `UpdateMouse()`: their results.
+constexpr static const uint32_t EE_SCREENS_MF_DO_KEYBOARD = 15;
+
+constexpr static const uint32_t EE_SCREENS_MF_DO_MOUSE = 16;
 
 /// The title label (`kMainGameTitle`), the error log, the information's scrolling text, the icon bar.
 constexpr static const int64_t EE_SCREENS_MF_CTL_TITLE = 25;
@@ -5889,6 +6345,44 @@ constexpr static const uint32_t EE_SCREENS_MF_OP_MD_GATE_PREVIEW = 182;
 /// The form's `mBuildWall.Update(GetMouseLocation())` (a 0) or `mBuildGate.Update` (a 1): virtual, each back in
 /// [`wall_update`] / [`gate_update`] over a call of its own.
 constexpr static const uint32_t EE_SCREENS_MF_OP_MD_PLACEMENT = 183;
+
+/// `GetMouseLocation()` into io.f[0..2]; the answer `mMouseModes[mUIState]` (`EE_SCREENS_MF_MODE_*`).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_MOUSE_AT = 184;
+
+/// `gISKeyboard->GetEntity(a, key)`: `EE_SCREENS_MF_KEY_*` bits (the entity found, `GetValue()`, `JustPressed()`).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_KEY = 185;
+
+/// The cinematic's calls (`EE_SCREENS_MF_CINE_*` a): the end-cinematic event posted, the scenario manager's
+/// `mIsEndingCinematic`, the pause screen event posted, `PostScreenShot(-1, true, false)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_CINEMATIC = 186;
+
+/// The key's bits (`EE_SCREENS_MF_OP_MD_KEY`).
+constexpr static const int64_t EE_SCREENS_MF_KEY_FOUND = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_KEY_HELD = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_KEY_JUST_PRESSED = 4;
+
+/// The cinematic's calls (`EE_SCREENS_MF_OP_MD_CINEMATIC`).
+constexpr static const int64_t EE_SCREENS_MF_CINE_END = 0;
+
+constexpr static const int64_t EE_SCREENS_MF_CINE_ENDING = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_CINE_PAUSE = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_CINE_SCREENSHOT = 3;
+
+/// The keyboard modes (`mKeyboardModes[state]`): none (the original's two `return false` tests), the cinematic's.
+constexpr static const int64_t EE_SCREENS_MF_KEYBOARD_CINEMATIC = 2;
+
+/// The cinematic's keys (DirectInput's codes: `kKeyEscape`, `kKeyF1`, `kKeyF3`, `kKeyF9`).
+constexpr static const int64_t EE_SCREENS_MF_KEY_ESCAPE = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_KEY_F1 = 59;
+
+constexpr static const int64_t EE_SCREENS_MF_KEY_F3 = 61;
+
+constexpr static const int64_t EE_SCREENS_MF_KEY_F9 = 67;
 
 /// The mouse buttons (`EE_SCREENS_MF_OP_MD_BUTTONS`): left just pressed, held, just released; the right's.
 constexpr static const int64_t EE_SCREENS_MF_BTN_L_PRESSED = 1;
@@ -7467,10 +7961,12 @@ constexpr static const uint32_t EE_SCREENS_SB_OP_WORLD_LONG = 23;
 /// The string a into the chat log (`gResource->GetString`, `gUserInterface->AddChatLogEntry(..., 0)`).
 constexpr static const uint32_t EE_SCREENS_SB_OP_CHAT_STRING = 24;
 
-/// `EECanAffordTrade(a)`.
+/// Whether the current player can make the market trade of the button a (the original's `EECanAffordTrade`: the
+/// adapter's, [`form_op`]).
 constexpr static const uint32_t EE_SCREENS_SB_OP_CAN_AFFORD_TRADE = 25;
 
-/// `EEDecodeTradeButton(a, ...)`: -1 when it fails (b 0), else (or b 1) the resource * 2 + the sell flag.
+/// The market button a decoded ([`decode_trade`], the original's `EEDecodeTradeButton`): -1 when it is none (b 0),
+/// else (or b 1) the resource * 2 + the sell flag.
 constexpr static const uint32_t EE_SCREENS_SB_OP_DECODE_TRADE = 26;
 
 /// `UIControl::ShiftKeyPressed()`.
@@ -7718,6 +8214,21 @@ constexpr static const int64_t EE_SCREENS_SB_IDS_RESOURCE_NAME_GOLD = 30119;
 constexpr static const int64_t EE_SCREENS_SB_IDS_IMPROVEMENT_POWER = 30024;
 
 constexpr static const int64_t EE_SCREENS_SB_IDS_POP_COST = 30469;
+
+/// The form's host's status button ops: `EE_SCREENS_MF_OP_SB + EE_SCREENS_SB_OP_*`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_SB = 256;
+
+/// `EEUIFMainGame::ButtonCall`'s members (`which`): `ButtonUp`, `MouseRButtonUp`, `CopyData`, `GetHelpString`.
+constexpr static const uint32_t EE_SCREENS_SB_DO_UP = 0;
+
+constexpr static const uint32_t EE_SCREENS_SB_DO_RIGHT_UP = 1;
+
+constexpr static const uint32_t EE_SCREENS_SB_DO_COPY_DATA = 2;
+
+constexpr static const uint32_t EE_SCREENS_SB_DO_HELP = 3;
+
+/// `kResourceGold` (`mResourceCaps`' index).
+constexpr static const int64_t EE_SCREENS_SB_RESOURCE_GOLD = 5;
 
 /// `PauseGraphics()` (a 1) or `ResumeGraphics()` (a 0).
 constexpr static const uint32_t EE_SCREENS_UG_OP_GRAPHICS = 1;
@@ -8690,6 +9201,33 @@ constexpr static const uint32_t EE_SCREENS_UP_OP_BORDER_THICKNESS = 42;
 /// -> the scenario editor's first selected unit's complex unit.
 constexpr static const uint32_t EE_SCREENS_UP_OP_EDITOR_COMPLEX = 43;
 
+/// The bar's a: `mEnabled` (0), `mPressed` (1), `GetHasMouseCapture()` (2).
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_FIELD = 44;
+
+/// The bar's `mPressed = a != 0`.
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_SET_PRESSED = 45;
+
+/// Whether the button's rectangle contains the form's mouse location (a 0) or the call's location (a 1).
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_INSIDE = 46;
+
+/// The handler under the bar's: `UIButton::MouseLButtonDown` (a 0), `UIButton::MouseLButtonUp` (1),
+/// `EEUIBUpgrade::MouseRButtonDown` (2); its result.
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_BASE = 47;
+
+/// The icon moved by (a, a) (`mIcon->SetLocation(its top left + (a, a))`).
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_ICON = 48;
+
+/// The status bar's mouse handlers (`bar_mouse`'s which).
+constexpr static const uint32_t EE_SCREENS_UP_BAR_L_DOWN = 0;
+
+constexpr static const uint32_t EE_SCREENS_UP_BAR_L_UP = 1;
+
+constexpr static const uint32_t EE_SCREENS_UP_BAR_MOVE = 2;
+
+constexpr static const uint32_t EE_SCREENS_UP_BAR_R_DOWN = 3;
+
+constexpr static const uint32_t EE_SCREENS_UP_BAR_R_UP = 4;
+
 /// The fields of [`EE_SCREENS_UP_OP_FIELD`]: the improvement, the scenario editor flag, the level last shown, the
 /// greyed-out state of the last cost update, the time of the last refusal line.
 constexpr static const int64_t EE_SCREENS_UP_FIELD_ATTRIBUTE = 0;
@@ -8702,6 +9240,10 @@ constexpr static const int64_t EE_SCREENS_UP_FIELD_DISABLED = 3;
 
 constexpr static const int64_t EE_SCREENS_UP_FIELD_LAST_MESSAGE = 4;
 
+/// One editor tab (0x4c46d0): its group, its order along the bottom, its help string, the normal and pressed corners
+/// in the button texture, its control group, whether it is a full view and whether it paints with the brush.
+struct EditorTab;
+
 /// An op's outputs: a text and values.
 struct EeScreensCbOut;
 
@@ -8713,6 +9255,12 @@ struct EeScreensSeConditionScreen;
 
 /// The effect screen (opaque to C++).
 struct EeScreensSeEffectScreen;
+
+/// The elevation tab (opaque to C++).
+struct EeScreensSeElevation;
+
+/// The editor form (opaque to C++).
+struct EeScreensSeForm;
 
 /// The instructions tab (opaque to C++).
 struct EeScreensSeInstructions;
@@ -8749,6 +9297,9 @@ struct EeScreensUnitHack;
 
 /// Every effect type (`EESETSEffect::mTypes`): no effect, object, player, trigger, media, game, AI.
 struct EffectTypes;
+
+/// One tool bar button (0x4c47b0): its id, its location, the normal and pressed corners, its help string.
+struct ToolbarButton;
 
 /// A chat log entry's fixed fields (its name and text go as bytes beside it).
 struct EeScreensChatLogHead {
@@ -9284,6 +9835,27 @@ struct EeScreensSeplCtl {
   int32_t max_chars;
 };
 
+/// A button the form makes from its button texture (`EE_SCREENS_SEFM_OP_BUTTON`): a tab button (`EEUIFSEMainButton`,
+/// kind 0: id, flag, tab, checked; the normal and pressed corners, `rect`'s top left its location) or a plain
+/// button (`UIButton`, kind 1: the normal and pressed sources 32 x 32 stretched over `dest`, the control `rect`, its
+/// button-up event a screen event of code `event` or, with `object`, an `EESEERust` of kind `event` over it); help
+/// string `help`, control index `index`, added to group 0.
+struct EeScreensSefmButton {
+  uint32_t kind;
+  uint32_t id;
+  uint32_t index;
+  uint32_t help;
+  uint32_t flag;
+  int32_t tab;
+  uint32_t checked;
+  uint32_t event;
+  size_t object;
+  float normal[2];
+  float pressed[2];
+  float dest[4];
+  float rect[4];
+};
+
 /// `kSETSConditionTitleLabel`, `kSETSConditionTypeComboBox`, `kSETriggerScreenNameEditBox`, `NameLabel`,
 /// `DuplicateButton`, `DeleteButton`: what the always-true type hides while shown.
 constexpr static const int32_t EE_SCREENS_SECT_ALWAYS_TRUE_CONTROLS[6] = { 2300, 2301, 2011, 2012, 2006, 2007, };
@@ -9291,6 +9863,9 @@ constexpr static const int32_t EE_SCREENS_SECT_ALWAYS_TRUE_CONTROLS[6] = { 2300,
 /// `kSETSEffectTitleLabel`, `kSETSEffectTypeComboBox`, `kSETriggerScreenNameEditBox`, `NameLabel`,
 /// `DuplicateButton`, `DeleteButton`.
 constexpr static const int32_t EE_SCREENS_SEET_NO_EFFECT_CONTROLS[6] = { 2400, 2401, 2011, 2012, 2006, 2007, };
+
+/// The bottom panel (`CreateBackground`).
+constexpr static const float PANEL[4] = { 0.0, 606.0, 1023.0, 767.0, };
 
 /// The map sizes the width and height combo boxes offer (0x4c4f40).
 constexpr static const int32_t MAP_SIZES[25] = { 15, 25, 50, 60, 70, 75, 80, 90, 100, 125, 130, 135, 140, 145, 150, 155, 160, 165, 175, 200, 225, 250, 300, 350, 400, };
@@ -9581,6 +10156,71 @@ void ee_screens_seet_event(const EeScreensSeEffects *types,
                            uint32_t what,
                            uint32_t a,
                            uint32_t b);
+
+/// `EEUIFSEElevation`'s constructor: every control made on `form` from the control index `*index` (advanced), the
+/// paint area over the form's edge `scroll` and `brushes`. Freed by `ee_screens_seel_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index.
+EeScreensSeElevation *ee_screens_seel_new(void *form,
+                                          void *scroll,
+                                          void *brushes,
+                                          uint32_t *index);
+
+/// The destructor: every control deleted (the original's order), the object freed.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_seel_new` (or is NULL) and is not used again.
+void ee_screens_seel_free(EeScreensSeElevation *tab);
+
+/// `Update` (`EE_SCREENS_SEEL_UPDATE`) or `MouseMove` at (`x`, `y`).
+///
+/// # Safety
+/// `tab` comes from `ee_screens_seel_new` (or is NULL).
+void ee_screens_seel_call(const EeScreensSeElevation *tab, uint32_t what, float x, float y);
+
+/// The form's object over the C++ `EEUIFScenarioEditor` `shell`, empty until `EE_SCREENS_SEFM_BUILD` (the shell
+/// stores it first: the build's controls call back into it). Freed by `ee_screens_sefm_free`.
+EeScreensSeForm *ee_screens_sefm_new(void *shell);
+
+/// The destructor: the events released and the controls deleted (the original's order), the object freed.
+///
+/// # Safety
+/// `form` comes from `ee_screens_sefm_new` (or is NULL) and is not used again.
+void ee_screens_sefm_free(EeScreensSeForm *form);
+
+/// The form's slot `slot` (`EE_SCREENS_SEFM_*`: a control, an event, a flag, the current tab ...); 0 for none.
+///
+/// # Safety
+/// `form` comes from `ee_screens_sefm_new` (or is NULL).
+size_t ee_screens_sefm_get(const EeScreensSeForm *form,
+                           uint32_t slot);
+
+/// The form's slot `slot` set to `value`.
+///
+/// # Safety
+/// `form` comes from `ee_screens_sefm_new` (or is NULL).
+void ee_screens_sefm_set(const EeScreensSeForm *form, uint32_t slot, size_t value);
+
+/// The selection's size (`index` = -1) or its unit `index`'s id (`EEUnitHandle`'s 0xffffffff past the end).
+///
+/// # Safety
+/// `form` comes from `ee_screens_sefm_new` (or is NULL).
+uint32_t ee_screens_sefm_selected(const EeScreensSeForm *form,
+                                  ptrdiff_t index);
+
+/// One of the form's members (`EE_SCREENS_SEFM_BUILD` ...): `a` its number (a flag, the tab's control group | its
+/// tab << 8), `p` its object (a unit, a load event, the load text's `UWideString`), `r` its rectangle (four floats or
+/// NULL). Returns the member's result (`DrawBackground`'s, the trigger-only save's) or whether the form's own
+/// `UpdateKeyboard` / `UpdateMouse` runs.
+///
+/// # Safety
+/// `form` comes from `ee_screens_sefm_new` (or is NULL); `r` is NULL or points at four floats.
+int32_t ee_screens_sefm_call(const EeScreensSeForm *form,
+                             uint32_t what,
+                             int32_t a,
+                             void *p,
+                             const float *r);
 
 /// `EESEInstructions`' constructor: its controls made on `form` from the control index `*index` (advanced). Freed by
 /// `ee_screens_sein_free`.
@@ -10358,17 +10998,17 @@ void ee_screens_status_box_hide_backgrounds(void *call);
 /// `EEUIFMGStatusBox::LoadIcons`.
 void ee_screens_status_box_load_icons(void *call);
 
-/// `EEUIFMGStatusButton::ButtonUp` over the host's press record.
-void ee_screens_status_button_up(void *press);
+/// One button op (`EE_SCREENS_SB_OP_*`) over the form's call record, as [`form_op`] sends it to the form's host.
+int64_t ee_screens_status_button_op(void *call,
+                                    uint32_t op,
+                                    int64_t a,
+                                    int64_t b,
+                                    int64_t c);
 
-/// `EEUIFMGStatusButton::MouseRButtonUp` over the host's press record.
-void ee_screens_status_button_right_up(void *press);
-
-/// `EEUIFMGStatusButton::CopyData` over the host's press record: `UIButton::CopyData`'s result.
-int64_t ee_screens_status_button_copy_data(void *press);
-
-/// `EEUIFMGStatusButton::GetHelpString` over the host's press record (its result string): always true.
-bool ee_screens_status_button_help(void *press);
+/// `EEUIFMGStatusButton`'s member `which` (`EE_SCREENS_SB_DO_*`) over the form's call record: `CopyData`'s
+/// `UIButton::CopyData` result, `GetHelpString`'s true, else 0.
+int64_t ee_screens_status_button_member(void *call,
+                                        uint32_t which);
 
 /// `EEUserInterface::TestScenario` on the UI object `ui`.
 void ee_screens_ui_test_scenario(void *ui);
@@ -10458,6 +11098,10 @@ int64_t ee_screens_upgrade_mouse_r_up(void *call);
 
 /// `EEUIBUpgrade::UpdateCost` (the call's out text is the new cost).
 void ee_screens_upgrade_update_cost(void *call);
+
+/// `EEUIFMGStatusBar`'s mouse handler `which` (`EE_SCREENS_UP_BAR_*`; the call's location is `MouseMove`'s).
+int64_t ee_screens_upgrade_bar_mouse(void *call,
+                                     uint32_t which);
 
 }  // extern "C"
 

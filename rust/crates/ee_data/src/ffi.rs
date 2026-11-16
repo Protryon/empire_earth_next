@@ -256,6 +256,32 @@ pub unsafe extern "C" fn ee_data_quote_text(bytes: *const u8, len: usize, out: *
 /// One keyed upgrade of a `.civ` text: its key and line.
 pub type EeDataCivVisit = unsafe extern "C" fn(ctx: *mut c_void, key: *const u8, key_len: usize, line: i32);
 
+/// A keyed .civ text's upgrades: each key with its line.
+pub type CivKeys = Vec<(Vec<u8>, i32)>;
+
+/// A keyed .civ text read (`ee_data_civ_read`'s work): its name and its upgrades' keys with their lines; the error's
+/// text on a parse error, a document that is not a mapping or a bad name.
+pub fn civ_read(text: &[u8], w: &[u8]) -> Result<(Vec<u8>, CivKeys), Vec<u8>> {
+    let doc = match text::parse_yaml(text) {
+        Ok(d) if d.kind == Kind::Map => d,
+        Ok(_) => {
+            let mut e = w.to_vec();
+            e.extend_from_slice(b": not a civilization");
+            return Err(e);
+        }
+        Err(f) => return Err(f.text),
+    };
+    let name = text::node_text(doc.find(b"name"), w, "name").map_err(|f| f.text)?;
+    let mut keys = Vec::new();
+    if let Some(list) = doc.find(b"upgrades").filter(|l| l.kind == Kind::List) {
+        for item in &list.items {
+            let key: &[u8] = if item.kind == Kind::Scalar { &item.text } else { &[] };
+            keys.push((key.to_vec(), item.line as i32));
+        }
+    }
+    Ok((name, keys))
+}
+
 /// Reads a keyed `.civ` text: its name as UTF-8 bytes (`name`), its upgrades through `visit` (the list's items in
 /// order; only when the document is a mapping). The error (with `where_`) is in `err`: false on a parse problem or
 /// when the document is not a mapping ("<where>: not a civilization").
@@ -272,34 +298,19 @@ pub unsafe extern "C" fn ee_data_civ_read(
     ctx: *mut c_void,
     err: *mut EeDataBytes,
 ) -> bool {
-    let w = cstr(where_);
-    let doc = match text::parse_yaml(slice(text_ptr, len)) {
-        Ok(d) if d.kind == Kind::Map => d,
-        Ok(_) => {
-            let mut e = w.to_vec();
-            e.extend_from_slice(b": not a civilization");
+    match civ_read(slice(text_ptr, len), cstr(where_)) {
+        Ok((n, keys)) => {
+            *name = EeDataBytes::from_vec(n);
+            for (key, line) in &keys {
+                visit(ctx, key.as_ptr(), key.len(), *line);
+            }
+            true
+        }
+        Err(e) => {
             put_error(err, Failure::new(e));
-            return false;
-        }
-        Err(f) => {
-            put_error(err, f);
-            return false;
-        }
-    };
-    match text::node_text(doc.find(b"name"), w, "name") {
-        Ok(n) => *name = EeDataBytes::from_vec(n),
-        Err(f) => {
-            put_error(err, f);
-            return false;
+            false
         }
     }
-    if let Some(list) = doc.find(b"upgrades").filter(|l| l.kind == Kind::List) {
-        for item in &list.items {
-            let key: &[u8] = if item.kind == Kind::Scalar { &item.text } else { &[] };
-            visit(ctx, key.as_ptr(), key.len(), item.line as i32);
-        }
-    }
-    true
 }
 
 // ------------------------------------------------------------------------------------------------ rules
@@ -307,6 +318,14 @@ pub unsafe extern "C" fn ee_data_civ_read(
 /// The rules (ee/EERules.h, its `mRust`). Every field starts at its default.
 pub struct EeDataRules {
     rules: Rules,
+}
+
+impl EeDataRules {
+    /// The rules as the last load left them (ee_tech's civilization manager reads the civilization builder's and
+    /// powers' rules through the game's instance).
+    pub fn rules(&self) -> &Rules {
+        &self.rules
+    }
 }
 
 #[no_mangle]

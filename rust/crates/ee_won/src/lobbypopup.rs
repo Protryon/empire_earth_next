@@ -186,6 +186,8 @@ use EeWonLobbyPopupString as S;
 pub struct EeWonLobbyPopup {
     popup: *mut c_void,
     host: EeWonLobbyPopupHostFn,
+    /// the model's ops answered by its Rust objects (modelobj.rs; the game's), not the host
+    model: Cell<bool>,
     kind: Kind,
     /// `mPopupMenu`.
     menu: Cell<isize>,
@@ -197,10 +199,23 @@ pub struct EeWonLobbyPopup {
 
 impl EeWonLobbyPopup {
     pub fn new(popup: *mut c_void, kind: Kind, host: EeWonLobbyPopupHostFn) -> Self {
-        Self { popup, host, kind, menu: Cell::new(0), subject: Cell::new(0), room_flags: Cell::new(0) }
+        Self {
+            popup,
+            host,
+            model: Cell::new(false),
+            kind,
+            menu: Cell::new(0),
+            subject: Cell::new(0),
+            room_flags: Cell::new(0),
+        }
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
+        if self.model.get() {
+            if let Some(r) = crate::modelobj::popup_op(op, a, b) {
+                return r;
+            }
+        }
         match self.host {
             // SAFETY: the host is the C++ popup's (or a test's), called with the popup it was given for
             Some(f) => unsafe { f(self.popup, op, a, b, c) },
@@ -465,6 +480,18 @@ impl EeWonLobbyPopup {
 }
 
 /// A new popup object for the C++ `popup` of `kind`.
+/// As `ee_won_lobbypopup_new`, with the model's ops answered by its Rust objects (the game's).
+#[no_mangle]
+pub extern "C" fn ee_won_lobbypopup_new_model(
+    popup: *mut c_void,
+    kind: EeWonLobbyPopupKind,
+    host: EeWonLobbyPopupHostFn,
+) -> *mut EeWonLobbyPopup {
+    let p = EeWonLobbyPopup::new(popup, kind, host);
+    p.model.set(true);
+    Box::into_raw(Box::new(p))
+}
+
 #[no_mangle]
 pub extern "C" fn ee_won_lobbypopup_new(
     popup: *mut c_void,
