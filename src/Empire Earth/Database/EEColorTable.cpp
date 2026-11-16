@@ -9,59 +9,30 @@
 #include "lle/FSFileSpec.h"
 
 #include "ee/EEColorTable.h"
-
-// One record of db\dbcolortable.dat (0xa8 bytes, read whole). Inferred layout.
-struct EEColorTableRecord {
-    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
-    int32_t mUnusedIndex;                   // +0x068 the 0-based row index (not read)
-    float mColorRed;                        // +0x6c
-    float mColorGreen;                      // +0x70
-    float mColorBlue;                       // +0x74
-    float mColor2Red;                       // +0x78
-    float mColor2Green;                     // +0x7c
-    float mColor2Blue;                      // +0x80
-    float mColor4Red;                       // +0x84
-    float mColor4Green;                     // +0x88
-    float mColor4Blue;                      // +0x8c
-    char _gap90[0x18];
-};
-static_assert(sizeof(EEColorTableRecord) == 168, "on-disk record: 168 bytes on every target");
+#include "ee/EEDbRecords.h"
+#include "rust/ee_data.h"
 
 std::vector<EEColorTable*> EEColorTable::sTable;
 GEColor EEColorTable::sColor;
 
-// Loads the player colours from db\dbcolortable.dat (main, second with a 60% dark shade, fourth); returns the last
-// read status
+// Loads the player colours from db\dbcolortable.dat (main, second with a 60% dark shade, fourth: the record and its
+// copy are ee_data tables.rs); returns the last read status
 long EEColorTable::Load(FSFileSpec* inFile)
 {
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    EEColorTableRecord theRecord;
-    inFile->Open(kFileAccessRead);
-    long theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
-        EEColorTable::sTable.resize(theCount, NULL);
-        for (unsigned long i = 0; i < theCount; i++) {
+    return EEDbReadRecords(inFile, ee_data_color_record_size(),
+        [](unsigned long inCount) { EEColorTable::sTable.resize(inCount, NULL); return true; },
+        [](unsigned long inIndex, const unsigned char* inRecord) {
             EEColorTable* theColor = new EEColorTable;
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-            theColor->mColor.SetRed(theRecord.mColorRed);
-            theColor->mColor.SetGreen(theRecord.mColorGreen);
-            theColor->mColor.SetBlue(theRecord.mColorBlue);
-            theColor->mColor2.SetRed(theRecord.mColor2Red);
-            theColor->mColor2.SetGreen(theRecord.mColor2Green);
-            theColor->mColor2.SetBlue(theRecord.mColor2Blue);
-            theColor->mDarkColor.SetRed(theRecord.mColor2Red * 0.6f);
-            theColor->mDarkColor.SetGreen(theRecord.mColor2Green * 0.6f);
-            theColor->mDarkColor.SetBlue(theRecord.mColor2Blue * 0.6f);
-            theColor->mColor4.SetRed(theRecord.mColor4Red);
-            theColor->mColor4.SetGreen(theRecord.mColor4Green);
-            theColor->mColor4.SetBlue(theRecord.mColor4Blue);
-            EEColorTable::sTable[i] = theColor;
-        }
-    }
-    inFile->Close();
-    return theResult;
+            EeDataPlayerColors c;
+            ee_data_color_from_record(inRecord, &c);
+            GEColor* theOut[4] = {&theColor->mColor, &theColor->mColor2, &theColor->mDarkColor, &theColor->mColor4};
+            for (int k = 0; k < 4; k++) {
+                theOut[k]->SetRed(c.colors[k][0]);
+                theOut[k]->SetGreen(c.colors[k][1]);
+                theOut[k]->SetBlue(c.colors[k][2]);
+            }
+            EEColorTable::sTable[inIndex] = theColor;
+        });
 }
 
 // Destroys every player colour and empties the table

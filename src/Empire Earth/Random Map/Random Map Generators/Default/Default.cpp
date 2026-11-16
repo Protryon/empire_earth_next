@@ -1,8 +1,11 @@
 // C:\EEX\Empire Earth\Random Map\Random Map Generators\Default\Default.cpp: the plug-in's entry points, the "rmap" PIM.
 // The generator itself is Rust (rust/crates/ee_rmap, RUST_PLAN R3.4): each step copies EERandomMap into flat arrays,
-// runs in Rust and copies the result back (ee_rmap::ffi, EeRmapState); the .rmv script reader stays in C++ (Unit10.cpp).
+// runs in Rust and copies the result back (ee_rmap::ffi, EeRmapState); the .rmv script reader is Rust too
+// (ee_rmap rmv.rs, over the host below).
 #include <windows.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include <vector>
 
@@ -10,7 +13,7 @@
 #include "lle/U2DGeometry.h"
 #include "ee/EERandomMap.h"
 #include "rust/ee_rmap.h"
-#include "Unit10.h"
+#include "platform/PlatFile.h"
 #include "ee/EERandomMapIDs.h"
 
 static UString gName("Default");
@@ -21,7 +24,7 @@ static unsigned long gType = 'rmap';
 static std::vector<long> gPlayerOrder;
 static unsigned long gPlayerOrderIndex;
 
-void ResetPlayerOrder()
+static void ResetPlayerOrder()
 {
     gPlayerOrder.clear();
     gPlayerOrderIndex = 0;
@@ -486,7 +489,106 @@ extern "C" long EERMPIMGenerateShallows(EERandomMap* ioMap)
     return RunStep(ioMap, 6);
 }
 
-// Reads the named .rmv script into the map settings (SetRandomMapValues, the C++ reader in Unit10.cpp)
+// ---- The .rmv script reader is Rust (ee_rmap rmv.rs): it writes the map's scalar settings in place, through
+// EeRmapScriptScalars (the twin of EERandomMap's block from mMapSize to mIsSpaceMap), and returns the lists a script
+// builds, which replace the map's. This host reads the script files and draws the map's random numbers.
+#define EE_RMS_AT(cpp, rust) \
+    (offsetof(EERandomMap, cpp) - offsetof(EERandomMap, mMapSize) == offsetof(EeRmapScriptScalars, rust))
+static_assert(EE_RMS_AT(mCoastalToDeeperWaterPercentage, coastal_to_deeper_water_percentage) &&
+              EE_RMS_AT(mHalfMapSize, half_map_size) && EE_RMS_AT(mMaxIntElevation, max_int_elevation) &&
+              EE_RMS_AT(mResourceTerrainTexture, resource_terrain_texture) &&
+              EE_RMS_AT(mResourcePerNeutralLand, resource_per_neutral_land) &&
+              EE_RMS_AT(mForestsPerPlayer, forests_per_player) && EE_RMS_AT(mMapCharacteristics, map_characteristics) &&
+              EE_RMS_AT(mCliffTexture, cliff_texture) && EE_RMS_AT(mTerrainBandOffset, terrain_band_offset) &&
+              EE_RMS_AT(mTeamGrowth, team_growth) && EE_RMS_AT(mIsSpaceMap, is_space_map),
+              "EeRmapScriptScalars is EERandomMap's block from mMapSize");
+#undef EE_RMS_AT
+static_assert(sizeof(EERMFeature) == sizeof(EeRmapScriptFeature) &&
+              offsetof(EERMFeature, mIndex) == offsetof(EeRmapScriptFeature, index) &&
+              offsetof(EERMFeature, mIsHerd) == offsetof(EeRmapScriptFeature, is_herd) &&
+              sizeof(EERMWall) == sizeof(EeRmapScriptWall) &&
+              offsetof(EERMWall, mUnitType) == offsetof(EeRmapScriptWall, unit_type) &&
+              sizeof(EERMTerrain) == sizeof(EeRmapScriptTerrain) && sizeof(EERMTerrainRegion) == sizeof(EeRmapScriptRegion) &&
+              sizeof(EERMResourceKind) == sizeof(EeRmapScriptKind) &&
+              offsetof(EERMResourceKind, mArea) == offsetof(EeRmapScriptKind, area) &&
+              sizeof(EERMResourceSlot) == sizeof(EeRmapScriptSlot) && sizeof(EERMSpacingRule) == sizeof(EeRmapScriptRule),
+              "the script records are the C++ records' twins");
+
+// <script directory>\<name>.rmv as the C runtime's text mode reads it (fgets in the original) -> false when missing
+static bool RMReadScript(void* inMap, const char* inName, EeRmapScriptBytes* ioSink)
+{
+    FSFileSpec theFile(static_cast<EERandomMap*>(inMap)->mScriptDirectory);
+    theFile.SetFile(UString(inName) + ".rmv");
+    FILE* theStream = PlatFOpen(theFile.GetVolume() + theFile.GetDirectory() + theFile.GetFile(), "r");
+    if (!theStream)
+        return false;
+    char theBuffer[0x1000];
+    size_t theCount;
+    while ((theCount = fread(theBuffer, 1, sizeof(theBuffer), theStream)) != 0)
+        ee_rmap_script_bytes_push(ioSink, (const uint8_t*)theBuffer, theCount);
+    fclose(theStream);
+    return true;
+}
+
+static long RMDrawLong(void* inMap, long inMinimum, long inMaximum)
+{
+    return static_cast<EERandomMap*>(inMap)->mRandomIntegers.Generate(inMinimum, inMaximum);
+}
+
+static float RMDrawFloat(void* inMap, float inMinimum, float inMaximum)
+{
+    return static_cast<EERandomMap*>(inMap)->mRandom.Generate(inMinimum, inMaximum);
+}
+
+template <class T, class R> static void RMAssign(std::vector<T>& outVector, const R* inData, uint32_t inCount)
+{
+    static_assert(sizeof(T) == sizeof(R), "twin records");
+    outVector.assign(reinterpret_cast<const T*>(inData), reinterpret_cast<const T*>(inData) + inCount);
+}
+
+// SetRandomMapValues: resets the neutral order, then reads <script directory>\<inScriptName>.rmv into the map (the
+// defaults, the script, the rescaled elevations, the flat area, the forests' tree types). Always returns 0.
+static long SetRandomMapValues(EERandomMap* ioMap, const UString& inScriptName)
+{
+    ResetPlayerOrder();
+    std::vector<EeRmapScriptName> theUnits, theTerrains, theCliffs;
+    for (const EERMNamedEntry& e : ioMap->mUnitNames)
+        theUnits.push_back({(const char*)e.mName, (uint32_t)e.mName.GetLength(), (int32_t)e.mSize});
+    for (const EERMNamedValue& e : ioMap->mTerrainNames)
+        theTerrains.push_back({(const char*)e.mName, (uint32_t)e.mName.GetLength(), (int32_t)e.mValue});
+    for (const EERMNamedValue& e : ioMap->mCliffNames)
+        theCliffs.push_back({(const char*)e.mName, (uint32_t)e.mName.GetLength(), (int32_t)e.mValue});
+    EeRmapScriptHost theHost = {ioMap, RMReadScript, RMDrawLong, RMDrawFloat};
+    EeRmapScriptOutput o;
+    EeRmapScript* theScript = ee_rmap_script_read(
+        &theHost, reinterpret_cast<EeRmapScriptScalars*>(&ioMap->mMapSize), &ioMap->mKindSpacing[0][0], theUnits.data(),
+        (uint32_t)theUnits.size(), theTerrains.data(), (uint32_t)theTerrains.size(), theCliffs.data(),
+        (uint32_t)theCliffs.size(), inScriptName, &o);
+    ioMap->mFlatArea.SetTop(o.flat_area_top);
+    ioMap->mFlatArea.SetLeft(o.flat_area_left);
+    ioMap->mFlatArea.SetBottom(o.flat_area_bottom);
+    ioMap->mFlatArea.SetRight(o.flat_area_right);
+    RMAssign(ioMap->mFeatures, o.features, o.feature_count);
+    RMAssign(ioMap->mWalls, o.walls, o.wall_count);
+    RMAssign(ioMap->mTerrains, o.terrains, o.terrain_count);
+    RMAssign(ioMap->mTerrainRegions, o.regions, o.region_count);
+    RMAssign(ioMap->mAvailableAnimals, o.animals, o.animal_count);
+    RMAssign(ioMap->mTreeTypes, o.tree_types, o.tree_type_count);
+    RMAssign(ioMap->mResourceKinds, o.kinds, o.kind_count);
+    RMAssign(ioMap->mResourceKindIds, o.kind_ids, o.kind_id_count);
+    RMAssign(ioMap->mResourceSlots, o.slots, o.slot_count);
+    RMAssign(ioMap->mSpacingRules, o.rules, o.rule_count);
+    ioMap->mForests.resize(o.forest_count);
+    for (uint32_t i = 0; i < o.forest_count; i++) {
+        ioMap->mForests[i].mId = o.forests[i].id;
+        ioMap->mForests[i].mTerrainTexture = o.forests[i].terrain_texture;
+        RMAssign(ioMap->mForests[i].mTreeTypes, o.forest_trees + o.forests[i].first, o.forests[i].count);
+    }
+    ee_rmap_script_free(theScript);
+    return 0;
+}
+
+// Reads the named .rmv script into the map settings
 extern "C" long EERMPIMSetRandomMapValues(EERandomMap* ioMap, const UString& inScriptName)
 {
     return SetRandomMapValues(ioMap, inScriptName);

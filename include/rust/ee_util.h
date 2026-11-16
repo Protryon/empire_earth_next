@@ -7,6 +7,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// The strings' Windows LANGID (the script's LANGUAGE statement).
+constexpr static const uint16_t LANGUAGE = 1033;
+
 /// A `U2DFractal`: `dimension` x `dimension` values, column `x` first as the C++'s `mValues[x][y]`.
 struct EeUtilFractal;
 
@@ -246,6 +249,12 @@ void ee_util_graph_remove_series(EeUtilGraph *graph, unsigned long index);
 /// # Safety
 /// `graph` is a live graph; `index` is below its series count.
 void ee_util_graph_set_enabled(EeUtilGraph *graph, unsigned long index, bool enabled);
+
+/// The strings' Windows LANGID, or 0 when the table is empty (the caller then asks the system).
+uint16_t ee_util_resource_strings_language();
+
+/// String `id` as a NUL-terminated UTF-8 C string that lives for the whole run, or null when it is missing.
+const uint8_t *ee_util_resource_string(uint16_t id);
 
 extern void exit(int code);
 

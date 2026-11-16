@@ -6,23 +6,20 @@
 
 #include <vector>
 
+#include "rust/ee_data.h"
+
 class FSFileSpec;
 
-// One upgraded value (no ctor: the table's ctor loops over them after the vptr store: 1.0f, 0.0f)
-struct EEUCUpgradeFactor {
-    float mScale;                           // +0x00
-    float mOffset;                          // +0x04
-};
+// One upgraded value, scale and offset (Rust's: rust/crates/ee_data tables.rs)
+typedef EeDataUpgradeFactor EEUCUpgradeFactor;
 
-class EEUCUpgradeTable {
+// mFactors (16) and mMaxLevel are EeDataUpgradeFields (ee_data tables.rs: the record, its copy and the defaults)
+class EEUCUpgradeTable : public EeDataUpgradeFields {
 public:
     EEUCUpgradeTable();
     virtual ~EEUCUpgradeTable() {}          // +0x00 (??_G 0xdc8ca)
     static long Load(FSFileSpec* inFile);   // 0xdc6f0 (records with a negative +0xe0 stay NULL)
     static void Unload();
-
-    EEUCUpgradeFactor mFactors[16];         // +0x04
-    long mMaxLevel;                         // +0x84 (record +0xd8)
 
     static std::vector<EEUCUpgradeTable*> sTable;   // 0x8e8728 (guard 0x8e8720 bit 1; only its unit sees it)
 };

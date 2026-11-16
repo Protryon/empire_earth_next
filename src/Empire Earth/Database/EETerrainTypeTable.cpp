@@ -12,6 +12,7 @@
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
+#include "ee/EEDbRecords.h"
 
 // The damage tables (.bss after sTable 0x4e86f8): 0x4e8708 gDamageTable (EmpireEarth.h), 0x4e870c / 0x4e8710 its
 // two twin tables, 0x4e8714 / 0x4e8718 their row and column counts (provisional names). VC6 orders a unit's .bss by
@@ -22,57 +23,24 @@ float** gDamageTableScaled2;
 unsigned long gDamageTableRowCount;
 unsigned long gDamageTableColumnCount;
 
-// One record of db\dbterrainType.dat (0x80 bytes, read whole). Inferred layout.
-struct EETerrainTypeRecord {
-    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
-    int32_t mID;                            // +0x68 -> +0x08
-    int32_t mFirstColor;                    // +0x6c -> +0x0c
-    int32_t mLastColor;                     // +0x70 -> +0x10
-    int32_t mNameID;                        // +0x74 -> +0x14
-    int32_t mUnusedPaletteIndex;            // +0x78 -> +0x18
-    bool mIsInEditor;                       // +0x7c -> +0x1c
-};
-static_assert(sizeof(EETerrainTypeRecord) == 128, "on-disk record: 128 bytes on every target");
-
 std::vector<EETerrainTypeTable*> EETerrainTypeTable::sTable;
 
 // Creates an empty terrain type
-EETerrainTypeTable::EETerrainTypeTable()
+EETerrainTypeTable::EETerrainTypeTable() : EeDataTerrainTypeFields()
 {
-    this->mID = 0;
-    this->mFirstColor = 0;
-    this->mLastColor = 0;
-    this->mNameID = 0;
-    this->mL18 = 0;
-    this->mIsInEditor = false;
 }
 
-// Loads the terrain types (id, colour range, name, editor flag) from db\dbterrainType.dat; returns the last read status
+// Loads the terrain types (id, colour range, name, editor flag: the record and its copy are ee_data tables.rs) from
+// db\dbterrainType.dat; returns the last read status
 long EETerrainTypeTable::Load(FSFileSpec* inFile)
 {
-    long theResult;
-    EETerrainTypeRecord theRecord;
-    inFile->Open(kFileAccessRead);
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
-        EETerrainTypeTable::sTable.resize(theCount, NULL);
-        for (unsigned long i = 0; i < theCount; i++) {
+    return EEDbReadRecords(inFile, ee_data_terrain_type_record_size(),
+        [](unsigned long inCount) { EETerrainTypeTable::sTable.resize(inCount, NULL); return true; },
+        [](unsigned long inIndex, const unsigned char* inRecord) {
             EETerrainTypeTable* theType = new EETerrainTypeTable;
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-            theType->mID = theRecord.mID;
-            theType->mFirstColor = theRecord.mFirstColor;
-            theType->mLastColor = theRecord.mLastColor;
-            theType->mNameID = theRecord.mNameID;
-            theType->mL18 = theRecord.mUnusedPaletteIndex;
-            theType->mIsInEditor = theRecord.mIsInEditor;
-            EETerrainTypeTable::sTable[i] = theType;
-        }
-    }
-    inFile->Close();
-    return theResult;
+            ee_data_terrain_type_from_record(inRecord, theType);
+            EETerrainTypeTable::sTable[inIndex] = theType;
+        });
 }
 
 // Destroys every terrain type and empties the table

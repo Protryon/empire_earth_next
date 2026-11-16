@@ -9,12 +9,13 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/UResourceFile.h"
-#include "lle/UResourceStrings.h"
+#include "rust/ee_util.h"
 
-// The strings come from a table generated from Language.rc (tools/lang_strings.py), on every system: the original
-// enumerated the module's RT_STRING resources for their language (URFEnumNames/URFEnumLanguages: the first table's,
-// else UGetOSLanguage) and read each string with LoadStringA. The table holds what LoadStringA returned, its
-// language is the script's; an id it lacks fails as LoadStringA did (ERROR_RESOURCE_NAME_NOT_FOUND).
+// The strings come from a Rust table generated from Language.rc (tools/lang_strings.py; ee_util strings.rs), on
+// every system: the original enumerated the module's RT_STRING resources for their language (URFEnumNames/
+// URFEnumLanguages: the first table's, else UGetOSLanguage) and read each string with LoadStringA. The table holds
+// what LoadStringA returned, its language is the script's; an id it lacks fails as LoadStringA did
+// (ERROR_RESOURCE_NAME_NOT_FOUND).
 static const uint32_t kErrorResourceNameNotFound = 1814;
 
 // Records the string table's language (the module is kept for GetModule; nothing is read from it)
@@ -22,7 +23,8 @@ UResourceFile::UResourceFile(HINSTANCE inModule)
     : mOwnsModule(false)
 {
     this->mModule = inModule;
-    this->mLanguage = gResourceStringCount != 0 ? gResourceStringsLanguage : UGetOSLanguage();
+    uint16_t theLanguage = ee_util_resource_strings_language();
+    this->mLanguage = theLanguage != 0 ? theLanguage : UGetOSLanguage();
 }
 
 // Destroys the resource file (the module is the game's own: mOwnsModule is always false)
@@ -33,17 +35,8 @@ UResourceFile::~UResourceFile()
 // Looks a string up by id (up to 4500 bytes, as LoadStringA's buffer); native error when it is missing
 long UResourceFile::GetString(long inID, UWideString& outString)
 {
-    unsigned long theLow = 0, theHigh = gResourceStringCount;
-    unsigned short theID = (unsigned short)inID;
-    while (theLow < theHigh) {
-        unsigned long theMiddle = (theLow + theHigh) / 2;
-        if (gResourceStrings[theMiddle].mID < theID)
-            theLow = theMiddle + 1;
-        else
-            theHigh = theMiddle;
-    }
-    if (theLow < gResourceStringCount && gResourceStrings[theLow].mID == theID) {
-        const char* theText = gResourceStrings[theLow].mText;
+    const char* theText = (const char*)ee_util_resource_string((uint16_t)inID);
+    if (theText != NULL) {
         if (strlen(theText) < 4499) {
             outString = theText;
         } else {

@@ -9,6 +9,7 @@
 #include "lle/FSFileSpec.h"
 
 #include "ee/EEGameVariant.h"
+#include "ee/EEDbRecords.h"
 #include "ee/EEUnitSetManager.h"
 
 // NEAR (chain 0x4d68c7): the original's dtor registrar is guarded (a class static data member's guard byte
@@ -25,59 +26,19 @@ EEGameVariant::~EEGameVariant()
 {
 }
 
-// Loads the game variants (unit-set factors, cost, work-time, morale and earthquake factors) from db\dbGameVariant.dat;
-// returns the last read status
+// Loads the game variants (unit-set factors, cost, work-time, morale and earthquake factors: the record and its copy
+// are ee_data tables.rs) from db\dbGameVariant.dat; rows with a negative index are skipped. Returns the last read status
 long EEGameVariant::Load(FSFileSpec* inFile)
 {
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    EEGameVariantData theData;
-    long theResult;
-    inFile->Open(kFileAccessRead);
-    theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
-        for (unsigned long i = 0; i < theCount; i++) {
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theData), sizeof(theData), theRead);
-            if (!(theData.mIndex >= 0))
-                continue;
-            EEGameVariant* theVariant = new EEGameVariant;
-            theVariant->mFactors[0] = theData.mFactor0;
-            theVariant->mFactors[1] = theData.mFactor1;
-            theVariant->mFactors[2] = theData.mFactor2;
-            theVariant->mFactors[3] = theData.mFactor3;
-            theVariant->mFactors[4] = theData.mFactor4;
-            theVariant->mFactors[5] = theData.mFactor5;
-            theVariant->mFactors[6] = theData.mFactor6;
-            theVariant->mFactors[7] = theData.mFactor7;
-            theVariant->mFactors[8] = theData.mFactor8;
-            theVariant->mFactors[9] = theData.mFactor9;
-            theVariant->mSets[0] = theData.mSet0;
-            theVariant->mSets[1] = theData.mSet1;
-            theVariant->mSets[2] = theData.mSet2;
-            theVariant->mSets[3] = theData.mSet3;
-            theVariant->mSets[4] = theData.mSet4;
-            theVariant->mSets[5] = theData.mSet5;
-            theVariant->mSets[6] = theData.mSet6;
-            theVariant->mSets[7] = theData.mSet7;
-            theVariant->mSets[8] = theData.mSet8;
-            theVariant->mSets[9] = theData.mSet9;
-            theVariant->mDepositFactor = theData.mDepositFactor;
-            theVariant->mEpochCostFactor = theData.mEpochCostFactor;
-            theVariant->mWorkTimeFactor = theData.mWorkTimeFactor;
-            theVariant->mMoraleBonus = theData.mMoraleBonus;
-            theVariant->mIndex = theData.mIndex;
-            theVariant->mNameID = theData.mNameID;
-            theVariant->mFirstEpochCostFactor = theData.mFirstEpochCostFactor;
-            theVariant->mSecondEpochCostFactor = theData.mSecondEpochCostFactor;
-            theVariant->mSelectable = theData.mSelectable;
-            theVariant->mCostSetFactor = theData.mCostSetFactor;
-            theVariant->mCostSet = theData.mCostSet;
-            theVariant->mEarthquakeDamageFactor = theData.mEarthquakeDamageFactor;
-            gGameVariants.push_back(theVariant);
-        }
-    }
-    inFile->Close();
-    return theResult;
+    return EEDbReadRecords(inFile, ee_data_game_variant_record_size(), [](unsigned long) { return true; },
+        [](unsigned long, const unsigned char* inRecord) {
+            EeDataGameVariantFields theFields;
+            if (ee_data_game_variant_from_record(inRecord, &theFields)) {
+                EEGameVariant* theVariant = new EEGameVariant;
+                *static_cast<EeDataGameVariantFields*>(theVariant) = theFields;
+                gGameVariants.push_back(theVariant);
+            }
+        });
 }
 
 // Destroys every game variant and empties the list

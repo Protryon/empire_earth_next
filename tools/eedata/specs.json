@@ -1727,7 +1727,7 @@
   "EEAIUnitTargetingRecord": {
    "name": "EEAIUnitTargetingRecord",
    "size": 160,
-   "source": "src/Empire Earth/Database/EEAIUnitTargetingTable.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     160,
     "static_assert"
@@ -1740,7 +1740,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mUnusedDatabaseID",
@@ -1749,7 +1749,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x064 the database row id (not read)"
+     "comment": "The database row id (not read)."
     },
     {
      "name": "mUnusedIndex",
@@ -1758,7 +1758,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x068 the 0-based row index (not read)"
+     "comment": "The 0-based row index (not read)."
     },
     {
      "name": "mAttackerBonus",
@@ -1767,7 +1767,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c"
+     "comment": ""
     },
     {
      "name": "mUnusedWeight",
@@ -1776,7 +1776,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x70"
+     "comment": ""
     },
     {
      "name": "mInRangeBonus",
@@ -1785,7 +1785,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x74"
+     "comment": ""
     },
     {
      "name": "mFasterTargetBonus",
@@ -1794,7 +1794,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78"
+     "comment": ""
     },
     {
      "name": "mStrongerTargetBonus",
@@ -1803,7 +1803,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c"
+     "comment": ""
     },
     {
      "name": "mPreferredUnitType",
@@ -1812,7 +1812,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x80"
+     "comment": ""
     },
     {
      "name": "mToHitWeight",
@@ -1821,7 +1821,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x84"
+     "comment": ""
     },
     {
      "name": "mProximityWeight",
@@ -1830,7 +1830,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x88"
+     "comment": ""
     },
     {
      "name": "mImmobileTargetBonus",
@@ -1839,7 +1839,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x8c"
+     "comment": ""
     },
     {
      "name": "mUnused1",
@@ -1848,7 +1848,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x90"
+     "comment": ""
     },
     {
      "name": "mUnused2",
@@ -1857,7 +1857,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x94"
+     "comment": ""
     },
     {
      "name": "mUnused3",
@@ -1866,7 +1866,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x98"
+     "comment": ""
     },
     {
      "name": "mMaxValue",
@@ -1875,7 +1875,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x9c"
+     "comment": ""
     }
    ],
    "defaults": {}
@@ -2003,7 +2003,7 @@
   "EEAnimalRecord": {
    "name": "EEAnimalRecord",
    "size": 272,
-   "source": "src/Empire Earth/Database/EEAnimal.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     272,
     "static_assert"
@@ -2016,7 +2016,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mUnusedDatabaseID",
@@ -2025,7 +2025,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x064 the database row id (not read)"
+     "comment": "The database row id (not read)."
     },
     {
      "name": "mAnimalID",
@@ -2034,7 +2034,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68 -> +0x3c"
+     "comment": ""
     },
     {
      "name": "mUnitType",
@@ -2043,7 +2043,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c -> +0x38"
+     "comment": ""
     },
     {
      "name": "mMinHerdSize",
@@ -2052,7 +2052,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70 -> +0x40"
+     "comment": ""
     },
     {
      "name": "mMaxHerdSize",
@@ -2061,7 +2061,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x74 -> +0x44"
+     "comment": ""
     },
     {
      "name": "mBreeds",
@@ -2070,7 +2070,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78 -> +0x85"
+     "comment": ""
     },
     {
      "name": "pad_0x079",
@@ -2088,7 +2088,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c -> +0x48 (s)"
+     "comment": "Seconds (the class keeps milliseconds), as every interval below."
     },
     {
      "name": "mMaxBirthInterval",
@@ -2097,7 +2097,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x80 -> +0x4c (s)"
+     "comment": ""
     },
     {
      "name": "mHasLeader",
@@ -2106,7 +2106,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x84 -> +0x87"
+     "comment": ""
     },
     {
      "name": "mUnusedFlag1",
@@ -2115,7 +2115,7 @@
      "type": "raw",
      "count": 1,
      "cls": "unused",
-     "comment": "+0x85 -> +0x88"
+     "comment": ""
     },
     {
      "name": "pad_0x086",
@@ -2133,7 +2133,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x88 -> mL04"
+     "comment": "Four values the class lists when positive (nothing reads the list)."
     },
     {
      "name": "mUnusedListValue2",
@@ -2142,7 +2142,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x8c -> mL04"
+     "comment": ""
     },
     {
      "name": "mUnusedListValue3",
@@ -2151,7 +2151,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x90 -> mL04"
+     "comment": ""
     },
     {
      "name": "mUnusedListValue4",
@@ -2160,7 +2160,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x94 -> mL04"
+     "comment": ""
     },
     {
      "name": "mUnusedIsPredator",
@@ -2169,7 +2169,7 @@
      "type": "raw",
      "count": 1,
      "cls": "unused",
-     "comment": "+0x98 -> +0x89"
+     "comment": ""
     },
     {
      "name": "pad_0x099",
@@ -2187,7 +2187,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x9c -> +0x28 (copied with mov in the original)"
+     "comment": ""
     },
     {
      "name": "mMinHuntInterval",
@@ -2196,7 +2196,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa0 -> +0x50 (s)"
+     "comment": ""
     },
     {
      "name": "mMaxHuntInterval",
@@ -2205,7 +2205,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa4 -> +0x54 (s)"
+     "comment": ""
     },
     {
      "name": "mMinRoamMargin",
@@ -2214,7 +2214,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa8 -> +0x58"
+     "comment": ""
     },
     {
      "name": "mMaxRoamMargin",
@@ -2223,7 +2223,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xac -> +0x5c"
+     "comment": ""
     },
     {
      "name": "mMinGrazeTime",
@@ -2232,7 +2232,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb0 -> +0x60 (s)"
+     "comment": ""
     },
     {
      "name": "mMaxGrazeTime",
@@ -2241,7 +2241,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb4 -> +0x64 (s)"
+     "comment": ""
     },
     {
      "name": "mUnusedIsFlightless",
@@ -2250,7 +2250,7 @@
      "type": "raw",
      "count": 1,
      "cls": "unused",
-     "comment": "+0xb8 -> +0x84"
+     "comment": ""
     },
     {
      "name": "mIsPredator",
@@ -2259,7 +2259,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb9 -> +0x86"
+     "comment": ""
     },
     {
      "name": "mUnusedFightsBack",
@@ -2268,7 +2268,7 @@
      "type": "raw",
      "count": 1,
      "cls": "unused",
-     "comment": "+0xba -> +0x83"
+     "comment": ""
     },
     {
      "name": "mHasParentalVengeance",
@@ -2277,7 +2277,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xbb -> +0x80"
+     "comment": ""
     },
     {
      "name": "mHasGroupAttack",
@@ -2286,7 +2286,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xbc -> +0x81"
+     "comment": ""
     },
     {
      "name": "mHasGroupFlee",
@@ -2295,7 +2295,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xbd -> +0x82"
+     "comment": ""
     },
     {
      "name": "pad_0x0be",
@@ -2313,7 +2313,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc0 -> +0x30"
+     "comment": ""
     },
     {
      "name": "mGrowthStep",
@@ -2322,7 +2322,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc4 -> +0x34"
+     "comment": ""
     },
     {
      "name": "mGrowInterval",
@@ -2331,7 +2331,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc8 -> +0x6c (s)"
+     "comment": ""
     },
     {
      "name": "mHerdRadius",
@@ -2340,7 +2340,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xcc -> +0x68"
+     "comment": ""
     },
     {
      "name": "mMinRestInterval",
@@ -2349,7 +2349,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd0 -> +0x70 (s)"
+     "comment": ""
     },
     {
      "name": "mMaxRestInterval",
@@ -2358,7 +2358,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd4 -> +0x74 (s)"
+     "comment": ""
     },
     {
      "name": "mUnusedPredatorFleeChance",
@@ -2367,7 +2367,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0xd8 -> +0x2c"
+     "comment": ""
     },
     {
      "name": "mMinFollowInterval",
@@ -2376,7 +2376,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xdc -> +0x78 (s)"
+     "comment": ""
     },
     {
      "name": "mMaxFollowInterval",
@@ -2385,7 +2385,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xe0 -> +0x7c (s)"
+     "comment": ""
     },
     {
      "name": "mMedia",
@@ -2394,7 +2394,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xe4 -> +0x24 (EEMedia::Get)"
+     "comment": "The media table index of the animal's graphics (negative: none)."
     },
     {
      "name": "mSound1",
@@ -2403,7 +2403,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xe8 -> mSounds"
+     "comment": "Up to three sounds' media indices (negative: none)."
     },
     {
      "name": "mSound2",
@@ -2412,7 +2412,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xec -> mSounds"
+     "comment": ""
     },
     {
      "name": "mSound3",
@@ -2421,7 +2421,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xf0 -> mSounds"
+     "comment": ""
     },
     {
      "name": "_gapF4",
@@ -3428,7 +3428,7 @@
   "EEColorTableRecord": {
    "name": "EEColorTableRecord",
    "size": 168,
-   "source": "src/Empire Earth/Database/EEColorTable.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     168,
     "static_assert"
@@ -3441,7 +3441,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mUnusedDatabaseID",
@@ -3450,7 +3450,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x064 the database row id (not read)"
+     "comment": "The database row id (not read)."
     },
     {
      "name": "mUnusedIndex",
@@ -3459,7 +3459,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x068 the 0-based row index (not read)"
+     "comment": "The 0-based row index (not read)."
     },
     {
      "name": "mColorRed",
@@ -3468,7 +3468,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c"
+     "comment": ""
     },
     {
      "name": "mColorGreen",
@@ -3477,7 +3477,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70"
+     "comment": ""
     },
     {
      "name": "mColorBlue",
@@ -3486,7 +3486,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x74"
+     "comment": ""
     },
     {
      "name": "mColor2Red",
@@ -3495,7 +3495,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78"
+     "comment": ""
     },
     {
      "name": "mColor2Green",
@@ -3504,7 +3504,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c"
+     "comment": ""
     },
     {
      "name": "mColor2Blue",
@@ -3513,7 +3513,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x80"
+     "comment": ""
     },
     {
      "name": "mColor4Red",
@@ -3522,7 +3522,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x84"
+     "comment": ""
     },
     {
      "name": "mColor4Green",
@@ -3531,7 +3531,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x88"
+     "comment": ""
     },
     {
      "name": "mColor4Blue",
@@ -3540,7 +3540,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x8c"
+     "comment": ""
     },
     {
      "name": "_gap90",
@@ -4007,7 +4007,7 @@
   "EEGameVariantData": {
    "name": "EEGameVariantData",
    "size": 276,
-   "source": "include/ee/EEGameVariant.h",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     276,
     "static_assert"
@@ -4020,7 +4020,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x00"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mUnusedDatabaseID",
@@ -4029,7 +4029,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x64"
+     "comment": "The database row id (not read)."
     },
     {
      "name": "mIndex",
@@ -4038,7 +4038,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68 (the loader skips a record whose index is negative) -> +0x70"
+     "comment": "Negative: the row is skipped."
     },
     {
      "name": "mFactor0",
@@ -4047,7 +4047,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c -> +0x04 (factor 0)"
+     "comment": ""
     },
     {
      "name": "mSet0",
@@ -4056,7 +4056,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70 -> +0x48 (then (long, float) pairs: +0x70/+0x74 .. +0xb8/+0xbc)"
+     "comment": ""
     },
     {
      "name": "mFactor1",
@@ -4065,7 +4065,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x74 -> +0x08"
+     "comment": ""
     },
     {
      "name": "mSet1",
@@ -4074,7 +4074,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78 -> +0x4c"
+     "comment": ""
     },
     {
      "name": "mFactor2",
@@ -4083,7 +4083,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c -> +0x0c"
+     "comment": ""
     },
     {
      "name": "mSet2",
@@ -4092,7 +4092,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x80 -> +0x50"
+     "comment": ""
     },
     {
      "name": "mFactor3",
@@ -4101,7 +4101,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x84 -> +0x10"
+     "comment": ""
     },
     {
      "name": "mSet3",
@@ -4110,7 +4110,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x88 -> +0x54"
+     "comment": ""
     },
     {
      "name": "mFactor4",
@@ -4119,7 +4119,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x8c -> +0x14"
+     "comment": ""
     },
     {
      "name": "mSet4",
@@ -4128,7 +4128,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x90 -> +0x58"
+     "comment": ""
     },
     {
      "name": "mFactor5",
@@ -4137,7 +4137,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x94 -> +0x18"
+     "comment": ""
     },
     {
      "name": "mSet5",
@@ -4146,7 +4146,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x98 -> +0x5c"
+     "comment": ""
     },
     {
      "name": "mFactor6",
@@ -4155,7 +4155,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x9c -> +0x1c"
+     "comment": ""
     },
     {
      "name": "mSet6",
@@ -4164,7 +4164,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa0 -> +0x60"
+     "comment": ""
     },
     {
      "name": "mFactor7",
@@ -4173,7 +4173,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa4 -> +0x20"
+     "comment": ""
     },
     {
      "name": "mSet7",
@@ -4182,7 +4182,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa8 -> +0x64"
+     "comment": ""
     },
     {
      "name": "mFactor8",
@@ -4191,7 +4191,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xac -> +0x24"
+     "comment": ""
     },
     {
      "name": "mSet8",
@@ -4200,7 +4200,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb0 -> +0x68"
+     "comment": ""
     },
     {
      "name": "mFactor9",
@@ -4209,7 +4209,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb4 -> +0x28"
+     "comment": ""
     },
     {
      "name": "mSet9",
@@ -4218,7 +4218,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb8 -> +0x6c"
+     "comment": ""
     },
     {
      "name": "mDepositFactor",
@@ -4227,7 +4227,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xbc -> +0x2c"
+     "comment": ""
     },
     {
      "name": "mEpochCostFactor",
@@ -4236,7 +4236,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc0 -> +0x30"
+     "comment": ""
     },
     {
      "name": "mWorkTimeFactor",
@@ -4245,7 +4245,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc4 -> +0x34"
+     "comment": ""
     },
     {
      "name": "mMoraleBonus",
@@ -4254,7 +4254,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc8 -> +0x74"
+     "comment": ""
     },
     {
      "name": "mNameID",
@@ -4263,7 +4263,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xcc -> +0x78 (gResource string id: 31255 / 31254)"
+     "comment": "The name's string id."
     },
     {
      "name": "mFirstEpochCostFactor",
@@ -4272,7 +4272,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd0 -> +0x38"
+     "comment": ""
     },
     {
      "name": "mSecondEpochCostFactor",
@@ -4281,7 +4281,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd4 -> +0x3c"
+     "comment": ""
     },
     {
      "name": "mCostSetFactor",
@@ -4290,7 +4290,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd8 -> +0x40"
+     "comment": ""
     },
     {
      "name": "mCostSet",
@@ -4299,7 +4299,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xdc -> +0x7c"
+     "comment": ""
     },
     {
      "name": "mEarthquakeDamageFactor",
@@ -4308,7 +4308,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xe0 -> +0x44"
+     "comment": ""
     },
     {
      "name": "mUnused1",
@@ -4317,7 +4317,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0xe4 (0 in every record; not copied)"
+     "comment": "Zero in every record; not copied (`mUnused1` .. `mUnused10`)."
     },
     {
      "name": "mUnused2",
@@ -4326,7 +4326,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0xe8"
+     "comment": ""
     },
     {
      "name": "mUnused3",
@@ -4335,7 +4335,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0xec"
+     "comment": ""
     },
     {
      "name": "mUnused4",
@@ -4344,7 +4344,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0xf0"
+     "comment": ""
     },
     {
      "name": "mUnused5",
@@ -4353,7 +4353,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0xf4"
+     "comment": ""
     },
     {
      "name": "mUnused6",
@@ -4362,7 +4362,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0xf8"
+     "comment": ""
     },
     {
      "name": "mUnused7",
@@ -4371,7 +4371,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0xfc"
+     "comment": ""
     },
     {
      "name": "mUnused8",
@@ -4380,7 +4380,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x100"
+     "comment": ""
     },
     {
      "name": "mUnused9",
@@ -4389,7 +4389,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x104"
+     "comment": ""
     },
     {
      "name": "mUnused10",
@@ -4398,7 +4398,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x108"
+     "comment": ""
     },
     {
      "name": "mSelectable",
@@ -4407,7 +4407,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x10c -> +0x80"
+     "comment": ""
     },
     {
      "name": "pad_0x10d",
@@ -4425,7 +4425,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x110 (0 in every record)"
+     "comment": ""
     }
    ],
    "defaults": {}
@@ -9267,7 +9267,7 @@
   "EEStartingResourcesRecord": {
    "name": "EEStartingResourcesRecord",
    "size": 132,
-   "source": "src/Empire Earth/Database/EEStartingResources.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     132,
     "static_assert"
@@ -9280,7 +9280,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mUnusedDatabaseID",
@@ -9289,7 +9289,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x064 the database row id (not read)"
+     "comment": "The database row id (not read)."
     },
     {
      "name": "mIndex",
@@ -9298,7 +9298,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68 (negative: skipped)"
+     "comment": "Negative: the row is skipped."
     },
     {
      "name": "mNameID",
@@ -9307,7 +9307,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c -> +0x18"
+     "comment": ""
     },
     {
      "name": "mFood",
@@ -9316,7 +9316,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70 -> +0x04"
+     "comment": ""
     },
     {
      "name": "mWood",
@@ -9325,7 +9325,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x74 -> +0x08"
+     "comment": ""
     },
     {
      "name": "mStone",
@@ -9334,7 +9334,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78 -> +0x0c"
+     "comment": ""
     },
     {
      "name": "mGold",
@@ -9343,7 +9343,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c -> +0x10"
+     "comment": ""
     },
     {
      "name": "mIron",
@@ -9352,7 +9352,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x80 -> +0x14"
+     "comment": ""
     }
    ],
    "defaults": {}
@@ -10023,7 +10023,7 @@
   "EETerrainTypeRecord": {
    "name": "EETerrainTypeRecord",
    "size": 128,
-   "source": "src/Empire Earth/Database/EETerrainTypeTable.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     128,
     "static_assert"
@@ -10036,7 +10036,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mUnusedDatabaseID",
@@ -10045,7 +10045,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x064 the database row id (not read)"
+     "comment": "The database row id (not read)."
     },
     {
      "name": "mID",
@@ -10054,7 +10054,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68 -> +0x08"
+     "comment": ""
     },
     {
      "name": "mFirstColor",
@@ -10063,7 +10063,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c -> +0x0c"
+     "comment": ""
     },
     {
      "name": "mLastColor",
@@ -10072,7 +10072,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70 -> +0x10"
+     "comment": ""
     },
     {
      "name": "mNameID",
@@ -10081,7 +10081,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x74 -> +0x14"
+     "comment": ""
     },
     {
      "name": "mUnusedPaletteIndex",
@@ -10090,7 +10090,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x78 -> +0x18"
+     "comment": ""
     },
     {
      "name": "mIsInEditor",
@@ -10099,7 +10099,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c -> +0x1c"
+     "comment": ""
     },
     {
      "name": "pad_0x07d",
@@ -10116,7 +10116,7 @@
   "UIDbDataBackgrounds": {
    "name": "UIDbDataBackgrounds",
    "size": 308,
-   "source": "include/lle/UIBackgroundTable.h",
+   "source": "rust/crates/ee_ui/src/background_table.rs",
    "size_check": [
     308,
     "static_assert"
@@ -10129,7 +10129,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x000 an empty name leaves the slot NULL"
+     "comment": ""
     },
     {
      "name": "mTextureFile",
@@ -10138,7 +10138,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x064"
+     "comment": ""
     },
     {
      "name": "mTopOffset",
@@ -10147,7 +10147,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0c8"
+     "comment": ""
     },
     {
      "name": "mBottomOffset",
@@ -10156,7 +10156,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0cc"
+     "comment": ""
     },
     {
      "name": "mLeftOffset",
@@ -10165,7 +10165,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0d0"
+     "comment": ""
     },
     {
      "name": "mRightOffset",
@@ -10174,7 +10174,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0d4"
+     "comment": ""
     },
     {
      "name": "mTileWidthPercent",
@@ -10183,7 +10183,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0d8"
+     "comment": ""
     },
     {
      "name": "mTileHeightPercent",
@@ -10192,7 +10192,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0dc"
+     "comment": ""
     },
     {
      "name": "mOpacity",
@@ -10201,7 +10201,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0e0"
+     "comment": ""
     },
     {
      "name": "mID",
@@ -10210,7 +10210,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0e4"
+     "comment": ""
     },
     {
      "name": "mBackgroundID",
@@ -10219,7 +10219,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0e8"
+     "comment": ""
     },
     {
      "name": "mFormID",
@@ -10228,7 +10228,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0ec"
+     "comment": ""
     },
     {
      "name": "mTextureTop",
@@ -10237,7 +10237,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0f0"
+     "comment": ""
     },
     {
      "name": "mTextureLeft",
@@ -10246,7 +10246,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0f4"
+     "comment": ""
     },
     {
      "name": "mTextureBottom",
@@ -10255,7 +10255,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0f8"
+     "comment": ""
     },
     {
      "name": "mTextureRight",
@@ -10264,7 +10264,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x0fc"
+     "comment": ""
     },
     {
      "name": "mBackgroundType",
@@ -10273,7 +10273,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x100"
+     "comment": ""
     },
     {
      "name": "mTopOffsetType",
@@ -10282,7 +10282,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x104"
+     "comment": ""
     },
     {
      "name": "mBottomOffsetType",
@@ -10291,7 +10291,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x108"
+     "comment": ""
     },
     {
      "name": "mLeftOffsetType",
@@ -10300,7 +10300,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x10c"
+     "comment": ""
     },
     {
      "name": "mRightOffsetType",
@@ -10309,7 +10309,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x110"
+     "comment": ""
     },
     {
      "name": "mNumCols",
@@ -10318,7 +10318,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x114"
+     "comment": ""
     },
     {
      "name": "mNumRows",
@@ -10327,7 +10327,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x118"
+     "comment": ""
     },
     {
      "name": "mDrawPriority",
@@ -10336,7 +10336,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x11c at least 1"
+     "comment": ""
     },
     {
      "name": "mRed",
@@ -10345,7 +10345,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x120 0..255"
+     "comment": ""
     },
     {
      "name": "mGreen",
@@ -10354,7 +10354,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x124"
+     "comment": ""
     },
     {
      "name": "mBlue",
@@ -10363,7 +10363,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x128"
+     "comment": ""
     },
     {
      "name": "mVisible",
@@ -10372,7 +10372,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x12c"
+     "comment": ""
     },
     {
      "name": "mHasAlpha",
@@ -10381,7 +10381,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x12d"
+     "comment": ""
     },
     {
      "name": "mAttribute1",
@@ -10390,7 +10390,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x12e"
+     "comment": ""
     },
     {
      "name": "mAttribute2",
@@ -10399,7 +10399,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x12f"
+     "comment": ""
     },
     {
      "name": "mAttribute3",
@@ -10408,16 +10408,16 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x130"
+     "comment": ""
     },
     {
-     "name": "pad_0x131",
-     "member": "pad_0x131",
+     "name": "mPad",
+     "member": "mPad",
      "off": 305,
      "type": "pad",
      "count": 3,
      "cls": "pad",
-     "comment": "tail padding"
+     "comment": ""
     }
    ],
    "defaults": {}
@@ -10425,7 +10425,7 @@
   "UIDbDataEvents": {
    "name": "UIDbDataEvents",
    "size": 116,
-   "source": "src/Low-Level Engine/User Interface/UIEvent.cpp",
+   "source": "rust/crates/ee_ui/src/event.rs",
    "size_check": [
     116,
     "static_assert"
@@ -10438,7 +10438,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": ""
     },
     {
      "name": "mUnusedDatabaseID",
@@ -10447,7 +10447,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x064 the database row id (not read)"
+     "comment": ""
     },
     {
      "name": "mEventID",
@@ -10456,7 +10456,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68 negative: no event"
+     "comment": ""
     },
     {
      "name": "mOwnerID",
@@ -10465,7 +10465,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c control table index / form ID"
+     "comment": ""
     },
     {
      "name": "mEventType",
@@ -10474,7 +10474,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70"
+     "comment": ""
     }
    ],
    "defaults": {}
@@ -10482,7 +10482,7 @@
   "UIDbControl": {
    "name": "UIDbControl",
    "size": 860,
-   "source": "src/Low-Level Engine/User Interface/UIControlsTable.cpp",
+   "source": "rust/crates/ee_ui/src/controls_table.rs",
    "size_check": [
     860,
     "static_assert"
@@ -10495,7 +10495,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000"
+     "comment": ""
     },
     {
      "name": "mNormalFileName",
@@ -10504,7 +10504,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x064"
+     "comment": ""
     },
     {
      "name": "mPressedFileName",
@@ -10513,7 +10513,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x0c8"
+     "comment": ""
     },
     {
      "name": "mFocusedFileName",
@@ -10522,7 +10522,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x12c"
+     "comment": ""
     },
     {
      "name": "mButtonDownSound",
@@ -10531,7 +10531,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x190"
+     "comment": ""
     },
     {
      "name": "mButtonUpSound",
@@ -10540,7 +10540,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x1f4"
+     "comment": ""
     },
     {
      "name": "mBackgroundOpacity",
@@ -10549,7 +10549,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x258"
+     "comment": ""
     },
     {
      "name": "mTextBoxOpacity",
@@ -10558,7 +10558,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x25c"
+     "comment": ""
     },
     {
      "name": "mScrollBarBgOpacity",
@@ -10567,7 +10567,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x260"
+     "comment": ""
     },
     {
      "name": "mUnused1",
@@ -10576,7 +10576,7 @@
      "type": "raw",
      "count": 20,
      "cls": "unused",
-     "comment": "+0x264"
+     "comment": ""
     },
     {
      "name": "mLeftOffset",
@@ -10585,7 +10585,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x278"
+     "comment": ""
     },
     {
      "name": "mRightOffset",
@@ -10594,7 +10594,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x27c"
+     "comment": ""
     },
     {
      "name": "mBottomOffset",
@@ -10603,7 +10603,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x280"
+     "comment": ""
     },
     {
      "name": "mTopOffset",
@@ -10612,16 +10612,16 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x284"
+     "comment": ""
     },
     {
-     "name": "mUnusedDbRecordId",
-     "member": "mUnusedDbRecordId",
+     "name": "mUnusedDbRecordID",
+     "member": "mUnusedDbRecordID",
      "off": 648,
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x288"
+     "comment": ""
     },
     {
      "name": "mID",
@@ -10630,7 +10630,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x28c"
+     "comment": ""
     },
     {
      "name": "mFormID",
@@ -10639,7 +10639,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x290"
+     "comment": ""
     },
     {
      "name": "mGroup",
@@ -10648,7 +10648,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x294"
+     "comment": ""
     },
     {
      "name": "mControlType",
@@ -10657,7 +10657,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x298"
+     "comment": ""
     },
     {
      "name": "mFormIndex",
@@ -10666,7 +10666,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x29c"
+     "comment": ""
     },
     {
      "name": "mBorderThickness",
@@ -10675,7 +10675,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2a0"
+     "comment": ""
     },
     {
      "name": "mLeftOffsetType",
@@ -10684,7 +10684,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2a4"
+     "comment": ""
     },
     {
      "name": "mRightOffsetType",
@@ -10693,7 +10693,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2a8"
+     "comment": ""
     },
     {
      "name": "mTopOffsetType",
@@ -10702,7 +10702,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2ac"
+     "comment": ""
     },
     {
      "name": "mBottomOffsetType",
@@ -10711,7 +10711,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2b0"
+     "comment": ""
     },
     {
      "name": "mBackgroundRed",
@@ -10720,7 +10720,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2b4"
+     "comment": ""
     },
     {
      "name": "mBackgroundGreen",
@@ -10729,7 +10729,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2b8"
+     "comment": ""
     },
     {
      "name": "mBackgroundBlue",
@@ -10738,7 +10738,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2bc"
+     "comment": ""
     },
     {
      "name": "mStringTableBegin",
@@ -10747,7 +10747,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2c0"
+     "comment": ""
     },
     {
      "name": "mStringTableEnd",
@@ -10756,7 +10756,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2c4"
+     "comment": ""
     },
     {
      "name": "mFontTableIndex",
@@ -10765,7 +10765,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2c8"
+     "comment": ""
     },
     {
      "name": "mTextForegroundRed",
@@ -10774,7 +10774,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2cc"
+     "comment": ""
     },
     {
      "name": "mTextForegroundGreen",
@@ -10783,7 +10783,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2d0"
+     "comment": ""
     },
     {
      "name": "mTextForegroundBlue",
@@ -10792,7 +10792,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2d4"
+     "comment": ""
     },
     {
      "name": "mTextAlignment",
@@ -10801,7 +10801,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2d8"
+     "comment": ""
     },
     {
      "name": "mNormalLeft",
@@ -10810,7 +10810,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2dc"
+     "comment": ""
     },
     {
      "name": "mNormalRight",
@@ -10819,7 +10819,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2e0"
+     "comment": ""
     },
     {
      "name": "mNormalTop",
@@ -10828,7 +10828,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2e4"
+     "comment": ""
     },
     {
      "name": "mNormalBottom",
@@ -10837,7 +10837,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2e8"
+     "comment": ""
     },
     {
      "name": "mPressedLeft",
@@ -10846,7 +10846,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2ec"
+     "comment": ""
     },
     {
      "name": "mPressedRight",
@@ -10855,7 +10855,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2f0"
+     "comment": ""
     },
     {
      "name": "mPressedTop",
@@ -10864,7 +10864,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2f4"
+     "comment": ""
     },
     {
      "name": "mPressedBottom",
@@ -10873,7 +10873,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2f8"
+     "comment": ""
     },
     {
      "name": "mFocusedLeft",
@@ -10882,7 +10882,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2fc"
+     "comment": ""
     },
     {
      "name": "mFocusedRight",
@@ -10891,7 +10891,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x300"
+     "comment": ""
     },
     {
      "name": "mFocusedTop",
@@ -10900,7 +10900,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x304"
+     "comment": ""
     },
     {
      "name": "mFocusedBottom",
@@ -10909,7 +10909,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x308"
+     "comment": ""
     },
     {
      "name": "mMaxChars",
@@ -10918,7 +10918,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x30c"
+     "comment": ""
     },
     {
      "name": "mSelectedListBoxRed",
@@ -10927,7 +10927,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x310"
+     "comment": ""
     },
     {
      "name": "mSelectedListBoxGreen",
@@ -10936,7 +10936,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x314"
+     "comment": ""
     },
     {
      "name": "mSelectedListBoxBlue",
@@ -10945,7 +10945,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x318"
+     "comment": ""
     },
     {
      "name": "mStartCurrentSelection",
@@ -10954,7 +10954,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x31c"
+     "comment": ""
     },
     {
      "name": "mFocusedLineRed",
@@ -10963,7 +10963,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x320"
+     "comment": ""
     },
     {
      "name": "mFocusedLineGreen",
@@ -10972,7 +10972,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x324"
+     "comment": ""
     },
     {
      "name": "mFocusedLineBlue",
@@ -10981,7 +10981,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x328"
+     "comment": ""
     },
     {
      "name": "mStartRange",
@@ -10990,7 +10990,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x32c"
+     "comment": ""
     },
     {
      "name": "mEndRange",
@@ -10999,7 +10999,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x330"
+     "comment": ""
     },
     {
      "name": "mCurrentRange",
@@ -11008,7 +11008,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x334"
+     "comment": ""
     },
     {
      "name": "mPageSize",
@@ -11017,7 +11017,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x338"
+     "comment": ""
     },
     {
      "name": "mStringTableID",
@@ -11026,7 +11026,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x33c"
+     "comment": ""
     },
     {
      "name": "mBlinkRate",
@@ -11035,7 +11035,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x340"
+     "comment": ""
     },
     {
      "name": "mUnused2",
@@ -11044,7 +11044,7 @@
      "type": "raw",
      "count": 12,
      "cls": "unused",
-     "comment": "+0x344"
+     "comment": ""
     },
     {
      "name": "mIsVisible",
@@ -11053,7 +11053,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x350"
+     "comment": ""
     },
     {
      "name": "mStartChecked",
@@ -11062,7 +11062,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x351"
+     "comment": ""
     },
     {
      "name": "mListBoxAlwaysDirty",
@@ -11071,7 +11071,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x352"
+     "comment": ""
     },
     {
      "name": "mSortListBox",
@@ -11080,7 +11080,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x353"
+     "comment": ""
     },
     {
      "name": "mFocusedHasAlpha",
@@ -11089,7 +11089,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x354"
+     "comment": ""
     },
     {
      "name": "mPressedHasAlpha",
@@ -11098,7 +11098,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x355"
+     "comment": ""
     },
     {
      "name": "mNormalHasAlpha",
@@ -11107,7 +11107,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x356"
+     "comment": ""
     },
     {
      "name": "mAlwaysDirty",
@@ -11116,7 +11116,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x357"
+     "comment": ""
     },
     {
      "name": "mFitRectToText",
@@ -11125,7 +11125,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x358"
+     "comment": ""
     },
     {
      "name": "mScaleToControl",
@@ -11134,7 +11134,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x359"
+     "comment": ""
     },
     {
      "name": "mLoopMovie",
@@ -11143,7 +11143,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x35a"
+     "comment": ""
     },
     {
      "name": "pad_0x35b",
@@ -11160,7 +11160,7 @@
   "UIDbDataFonts": {
    "name": "UIDbDataFonts",
    "size": 128,
-   "source": "src/Low-Level Engine/User Interface/UIFontTable.cpp",
+   "source": "rust/crates/ee_ui/src/font.rs",
    "size_check": [
     128,
     "static_assert"
@@ -11173,7 +11173,7 @@
      "type": "str",
      "count": 108,
      "cls": "named",
-     "comment": "+0x00 empty: no font"
+     "comment": "Empty: no font."
     },
     {
      "name": "mStringID",
@@ -11182,7 +11182,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c face name in the string table"
+     "comment": "The face name's string-table ID."
     },
     {
      "name": "mSize",
@@ -11191,7 +11191,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70"
+     "comment": ""
     },
     {
      "name": "mQuality",
@@ -11200,7 +11200,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x74"
+     "comment": ""
     },
     {
      "name": "mBold",
@@ -11209,7 +11209,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78 style bit 0x01"
+     "comment": ""
     },
     {
      "name": "mItalic",
@@ -11218,7 +11218,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x79 style bit 0x02"
+     "comment": ""
     },
     {
      "name": "mUnderline",
@@ -11227,7 +11227,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7a style bit 0x04"
+     "comment": ""
     },
     {
      "name": "mStyle10",
@@ -11236,7 +11236,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7b style bit 0x10"
+     "comment": ""
     },
     {
      "name": "mStyle08",
@@ -11245,7 +11245,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c style bit 0x08"
+     "comment": ""
     },
     {
      "name": "mPad",
@@ -11472,7 +11472,7 @@
   "UIDbDataHotKeys": {
    "name": "UIDbDataHotKeys",
    "size": 124,
-   "source": "src/Low-Level Engine/User Interface/UIHotKey.cpp",
+   "source": "rust/crates/ee_ui/src/hotkey.rs",
    "size_check": [
     124,
     "static_assert"
@@ -11485,7 +11485,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x00"
+     "comment": ""
     },
     {
      "name": "mID",
@@ -11494,7 +11494,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x04 negative: no hot key"
+     "comment": "Negative: no hot key in this slot."
     },
     {
      "name": "label",
@@ -11503,7 +11503,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x08"
+     "comment": ""
     },
     {
      "name": "mModifiers",
@@ -11512,7 +11512,7 @@
      "type": "u32",
      "count": 3,
      "cls": "named",
-     "comment": "+0x6c DIK_* codes, 0x7fff: none"
+     "comment": "`DIK_*` codes, [`KEY_NONE`]: none."
     },
     {
      "name": "mKey",
@@ -11521,7 +11521,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78"
+     "comment": ""
     }
    ],
    "defaults": {}
@@ -11529,7 +11529,7 @@
   "EEUnitBehaviorRecord": {
    "name": "EEUnitBehaviorRecord",
    "size": 124,
-   "source": "src/Empire Earth/Database/EEUnitBehavior.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     124,
     "static_assert"
@@ -11542,7 +11542,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mUnusedDatabaseID",
@@ -11551,7 +11551,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x064 the database row id (not read)"
+     "comment": "The database row id (not read)."
     },
     {
      "name": "mIndex",
@@ -11560,7 +11560,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68 (negative: no entry)"
+     "comment": "Negative: no behaviour in this row."
     },
     {
      "name": "mCanMoveFreely",
@@ -11569,7 +11569,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c -> +0x04"
+     "comment": ""
     },
     {
      "name": "mCanPursuePastInitialContactLOS",
@@ -11578,7 +11578,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6d -> +0x07"
+     "comment": ""
     },
     {
      "name": "mCanTargetEnemies",
@@ -11587,7 +11587,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6e -> +0x08"
+     "comment": ""
     },
     {
      "name": "mReturnsToInitialContactLocation",
@@ -11596,7 +11596,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6f -> +0x09"
+     "comment": ""
     },
     {
      "name": "mCanFlee",
@@ -11605,7 +11605,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70 -> +0x0a"
+     "comment": ""
     },
     {
      "name": "mMeleeCanMoveFreely",
@@ -11614,7 +11614,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x71 -> +0x05"
+     "comment": ""
     },
     {
      "name": "mRangedCanMoveFreely",
@@ -11623,7 +11623,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x72 -> +0x06"
+     "comment": ""
     },
     {
      "name": "_gap73",
@@ -11724,7 +11724,7 @@
   "EEUCUpgradeRecord": {
    "name": "EEUCUpgradeRecord",
    "size": 240,
-   "source": "src/Empire Earth/Database/EEUCUpgradeTable.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     240,
     "static_assert"
@@ -11737,7 +11737,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mAttackStep",
@@ -11746,7 +11746,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x64"
+     "comment": ""
     },
     {
      "name": "mHitPointsStep",
@@ -11755,7 +11755,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68"
+     "comment": ""
     },
     {
      "name": "mSpeedStep",
@@ -11764,7 +11764,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c"
+     "comment": ""
     },
     {
      "name": "mRangeStep",
@@ -11773,7 +11773,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70"
+     "comment": ""
     },
     {
      "name": "mShockArmorStep",
@@ -11782,7 +11782,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x74"
+     "comment": ""
     },
     {
      "name": "mArrowArmorStep",
@@ -11791,7 +11791,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78"
+     "comment": ""
     },
     {
      "name": "mPierceArmorStep",
@@ -11800,7 +11800,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c"
+     "comment": ""
     },
     {
      "name": "mGunArmorStep",
@@ -11809,7 +11809,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x80"
+     "comment": ""
     },
     {
      "name": "mLaserArmorStep",
@@ -11818,7 +11818,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x84"
+     "comment": ""
     },
     {
      "name": "mMissileArmorStep",
@@ -11827,7 +11827,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x88"
+     "comment": ""
     },
     {
      "name": "mFlightTimeStep",
@@ -11836,7 +11836,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x8c"
+     "comment": ""
     },
     {
      "name": "mLeadershipStep",
@@ -11845,7 +11845,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x90"
+     "comment": ""
     },
     {
      "name": "mAreaEffectStep",
@@ -11854,7 +11854,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x94"
+     "comment": ""
     },
     {
      "name": "mTransportStep",
@@ -11863,7 +11863,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x98"
+     "comment": ""
     },
     {
      "name": "mAttackCost",
@@ -11872,7 +11872,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x9c"
+     "comment": ""
     },
     {
      "name": "mHitPointsCost",
@@ -11881,7 +11881,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa0"
+     "comment": ""
     },
     {
      "name": "mSpeedCost",
@@ -11890,7 +11890,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa4"
+     "comment": ""
     },
     {
      "name": "mRangeCost",
@@ -11899,7 +11899,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa8"
+     "comment": ""
     },
     {
      "name": "mShockArmorCost",
@@ -11908,7 +11908,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xac"
+     "comment": ""
     },
     {
      "name": "mArrowArmorCost",
@@ -11917,7 +11917,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb0"
+     "comment": ""
     },
     {
      "name": "mPierceArmorCost",
@@ -11926,7 +11926,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb4"
+     "comment": ""
     },
     {
      "name": "mGunArmorCost",
@@ -11935,7 +11935,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb8"
+     "comment": ""
     },
     {
      "name": "mLaserArmorCost",
@@ -11944,7 +11944,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xbc"
+     "comment": ""
     },
     {
      "name": "mMissileArmorCost",
@@ -11953,7 +11953,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc0"
+     "comment": ""
     },
     {
      "name": "mFlightTimeCost",
@@ -11962,7 +11962,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc4"
+     "comment": ""
     },
     {
      "name": "mLeadershipCost",
@@ -11971,7 +11971,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc8"
+     "comment": ""
     },
     {
      "name": "mRepairCost",
@@ -11980,7 +11980,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xcc"
+     "comment": ""
     },
     {
      "name": "mAreaEffectCost",
@@ -11989,7 +11989,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd0"
+     "comment": ""
     },
     {
      "name": "mTransportCost",
@@ -11998,7 +11998,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd4"
+     "comment": ""
     },
     {
      "name": "mMaxLevel",
@@ -12007,7 +12007,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd8"
+     "comment": ""
     },
     {
      "name": "mUnused1",
@@ -12016,7 +12016,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0xdc"
+     "comment": ""
     },
     {
      "name": "mIndex",
@@ -12025,7 +12025,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xe0 (negative: no entry)"
+     "comment": "Negative: no entry."
     },
     {
      "name": "mUnused2",
@@ -12034,7 +12034,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0xe4"
+     "comment": ""
     },
     {
      "name": "mUnused3",
@@ -12043,7 +12043,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0xe8"
+     "comment": ""
     },
     {
      "name": "mHasRepairStep",
@@ -12052,7 +12052,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xec"
+     "comment": ""
     },
     {
      "name": "pad_0x0ed",
@@ -12069,7 +12069,7 @@
   "EEToHitRecord": {
    "name": "EEToHitRecord",
    "size": 132,
-   "source": "src/Empire Earth/Database/EEUnitBehavior.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     132,
     "static_assert"
@@ -12082,7 +12082,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mUnusedDatabaseID",
@@ -12091,7 +12091,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x064 the database row id (not read)"
+     "comment": "The database row id (not read)."
     },
     {
      "name": "mUnusedIndex",
@@ -12100,7 +12100,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x068 the 0-based row index (not read)"
+     "comment": "The 0-based row index (not read)."
     },
     {
      "name": "mPercents",
@@ -12109,7 +12109,7 @@
      "type": "s32",
      "count": 6,
      "cls": "named",
-     "comment": "+0x6c (hundredths)"
+     "comment": "Hundredths, per target kind."
     }
    ],
    "defaults": {}

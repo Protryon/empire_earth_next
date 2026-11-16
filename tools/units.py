@@ -147,8 +147,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
                        # (ee/EEScreenEvent.h; ee_screens menus.rs: the main menu, the editors' menu, single player, play campaign;
                        # settings_form.rs: the game settings; custom_campaign.rs: the custom campaign form)
                        "Empire Earth/UI Events/EEScreens.cpp",
-                       # the language strings, generated from Language.rc (tools/lang_strings.py)
-                       "Empire Earth/Language/LanguageStrings.cpp",
                        # a unit with no code range of its own (every member was ICF-folded into another unit's)
                        "Empire Earth/Calamities/EEGlobalCalamityClass.cpp"]}
 

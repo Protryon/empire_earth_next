@@ -7,10 +7,13 @@
 
 #include <vector>
 
+#include "rust/ee_data.h"
+
 class EEUnit;
 class FSFileSpec;
 
-class EEUnitBehavior {
+// the flags are EeDataUnitBehaviorFields (rust/crates/ee_data tables.rs: the record and its copy), the base
+class EEUnitBehavior : public EeDataUnitBehaviorFields {
 public:
     EEUnitBehavior();
     virtual ~EEUnitBehavior();              // +0x00 0xdc96c (??_G 0xdc950)
@@ -21,13 +24,6 @@ public:
     // 0x1fac37
     static EEUnitBehavior* Get(unsigned long inIndex) { return EEUnitBehavior::sTable[inIndex]; }
 
-    bool mCanMoveFreely;                    // +0x04 (record +0x6c)
-    bool mMeleeCanMoveFreely;               // +0x05 (record +0x73)
-    bool mRangedCanMoveFreely;              // +0x06 (record +0x74)
-    bool mCanPursuePastInitialContactLOS;   // +0x07 (record +0x6d)
-    bool mCanTargetEnemies;                 // +0x08 (record +0x6e)
-    bool mReturnsToInitialContactLocation;  // +0x09 (record +0x6f)
-    bool mCanFlee;                          // +0x0a (record +0x70)
 
     // 0x8e8740 (guard 0x8e8738 bit 1; only its unit sees it: other units read its _First as gUnitBehaviors)
     static std::vector<EEUnitBehavior*> sTable;

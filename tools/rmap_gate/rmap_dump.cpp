@@ -25,6 +25,8 @@
 #include "lle/FSFileSpec.h"
 #include "ee/EERandomMap.h"
 #include "ee/EERandomMapIDs.h"
+#include "rust/ee_rmap.h"
+#include "ee/EERandomMapView.h"
 
 extern "C" {
 long EERMPIMCreateFlatMap(EERandomMap* ioMap);
@@ -114,12 +116,24 @@ struct Sha256 {
     }
 };
 
+static FILE* gTrace;   // EE_RMAP_TRACE=<file>: every dumped value, one per line (to find a differing field)
 struct Digest {
     Sha256 mSha;
-    void U32(uint32_t v) { mSha.Update(&v, 4); }
+    void U32(uint32_t v)
+    {
+        if (gTrace)
+            fprintf(gTrace, "%08x\n", v);
+        mSha.Update(&v, 4);
+    }
     void I32(long v) { U32((uint32_t)v); }
     void F32(float v) { U32(*(uint32_t*)&v); }
-    void Bool(bool v) { uint8_t b = v ? 1 : 0; mSha.Update(&b, 1); }
+    void Bool(bool v)
+    {
+        uint8_t b = v ? 1 : 0;
+        if (gTrace)
+            fprintf(gTrace, "b%d\n", b);
+        mSha.Update(&b, 1);
+    }
     void Point(const GE2DPoint& p) { F32(p.mX); F32(p.mY); }
     void String(const UString& s)
     {
@@ -225,7 +239,10 @@ static void DumpMap(EERandomMap& m, Digest& d)
         d.F32(f.mPosition.mX);
         d.F32(f.mPosition.mY);
         d.I32(f.mUnitType);
-        d.I32(f.mIndex);
+        // mIndex is set for herds only: the C++ reader left a script feature's uninitialized (stack bytes; the Rust
+        // reader writes 0), and nothing reads it there
+        if (f.mIsHerd)
+            d.I32(f.mIndex);
         d.Bool(f.mIsWorldUnit);
         d.Bool(f.mInRing);
         d.Bool(f.mIsHerd);
@@ -554,49 +571,67 @@ static const char* const kModeNames[3] = {"ffa", "teams", "forced"};
 static const unsigned long kSeeds[] = {1, 2, 3, 1000, 12345, 2147483647};
 
 static float gScale;
+static bool gScriptOnly;   // --script-only: one digest after SetRandomMapValues (and the dump's grids and teams)
 static NamedTables gTables;
 static std::string gScriptDirectoryText;
+
+// ---- the game's passes the gate runs (ee_rmap game.rs, EERandomMap.cpp's since the data lane's round 2), over the
+// map shape: a tile where the shape has one, of terrain 0 (no cliffs) and height 0; no units, no walls (the gate's
+// claims leave the walls out, as before the port)
+struct DumpHost {
+    const Shape* mShape;
+    EERandomMap* mMap;
+};
+
+static uint8_t DumpTile(void* inContext, uint32_t inX, uint32_t inY, EeRmapGameTile* outTile)
+{
+    if (!static_cast<DumpHost*>(inContext)->mShape->HasTile(inX, inY))
+        return 0;
+    outTile->terrain_type = 0;
+    outTile->height = 0.0f;
+    return 1;
+}
+static uint8_t DumpNo(void*, int32_t, int32_t) { return 0; }
+static void DumpPaint(void*, int32_t, int32_t, int32_t) {}
+static uint8_t DumpTerrain(void*, int32_t, EeRmapGameTerrainInfo*) { return 0; }
+static int32_t DumpTerrainClass(void*, int32_t, uint32_t) { return 0; }
+static float DumpZ(void*, uint32_t, uint32_t) { return 0.0f; }
+static void DumpSetZ(void*, uint32_t, uint32_t, float) {}
+static uint8_t DumpNoCell(void*, uint32_t, uint32_t) { return 0; }
+static void DumpCell(void*, uint32_t, uint32_t) {}
+static void DumpSetWater(void*, uint32_t, uint32_t, uint8_t) {}
+static uint32_t DumpClassCount(void*) { return 0; }
+static uint8_t DumpClass(void*, uint32_t, EeRmapGameClass*) { return 0; }
+static uint8_t DumpAllows(void*, uint32_t, int32_t) { return 0; }
+static int32_t DumpCitizens(void*, uint32_t) { return 0; }
+static int32_t DumpAtPoint(void*, uint32_t, uint32_t, float, float, float) { return -1; }
+static void DumpAtTile(void*, uint32_t, uint32_t, int32_t, int32_t, float) {}
+static void DumpWall(void*, uint32_t, EeRmapPoint, EeRmapPoint, uint32_t) {}
+static void DumpWallTiles(void*, EeRmapPoint, EeRmapPoint, EeRmapGameTiles*) {}
+static void DumpWater(void* inContext, float inX, float inY)
+{
+    GE2DPoint thePoint;
+    thePoint.SetX(inX);
+    thePoint.SetY(inY);
+    static_cast<DumpHost*>(inContext)->mMap->mWaterPoints.push_back(thePoint);
+}
+
+static void RunGamePass(EERandomMap& m, const Shape& inShape, void (*inPass)(EeRmapGameState*, EeRmapGameHost*))
+{
+    DumpHost theContext = {&inShape, &m};
+    EeRmapGameHost theHost = {&theContext, DumpTile, DumpNo, DumpPaint, DumpTerrain, DumpTerrainClass, DumpZ,
+        DumpSetZ, DumpNoCell, DumpNoCell, DumpCell, DumpCell, DumpSetWater, DumpCell, DumpSetZ, DumpClassCount,
+        DumpClass, DumpAllows, DumpCitizens, DumpAtPoint, DumpAtTile, DumpWall, DumpWallTiles, DumpWater};
+    EERMGameView theView(m, gScale, 0);
+    inPass(&theView.mState, &theHost);
+    theView.StoreSeeds(m);
+}
 
 // EERandomMap::Fn284149 (water points; the space-map fill)
 static void WaterPoints(EERandomMap& m, const Shape& inShape)
 {
-    unsigned long theSize = m.mGridSize, x, y;
-    if (m.mIsSpaceMap) {
-        if ((m.mMapCharacteristics & kRMMapEarthOrMarsMap) != 0) {
-            float theRadius = (m.mHalfMapSize - m.mWaterBorder) * 0.75f;
-            for (x = 0; x < theSize; x++)
-                for (y = 0; y < theSize; y++)
-                    if (m.mValidTiles[x][y] && m.mRing.mCenter.DistanceTo(GE2DPoint((float)x, (float)y)) <= theRadius &&
-                        (m.mTiles[x][y] & 0x7fff) == 0)
-                        m.mTiles[x][y] = 0x400;
-        } else {
-            for (x = 0; x < theSize; x++)
-                for (y = 0; y < theSize; y++) {
-                    if (!m.mValidTiles[x][y] || (m.mTiles[x][y] & 0x7fff) != 0)
-                        continue;
-                    unsigned long theValue = 0, theCount = 0;
-                    for (unsigned long i = x - 1; i <= x + 1; i++)
-                        for (unsigned long j = y - 1; j <= y + 1; j++)
-                            if ((m.mTiles[i][j] & 0x7fff) != 0) {
-                                theValue = m.mTiles[i][j];
-                                theCount++;
-                            }
-                    if (theCount >= 5)
-                        m.mTiles[x][y] = theValue;
-                }
-        }
-    }
     m.mWaterPoints.clear();
-    for (x = 0; x < theSize; x++)
-        for (y = 0; y < theSize; y++) {
-            if (!inShape.HasTile(x, y) || !(x < m.mValidTiles.size() && y < m.mValidTiles.size() && m.mValidTiles[x][y]) ||
-                (m.mTiles[x][y] & 0x7fff) != 0)
-                continue;
-            GE2DPoint thePoint;
-            thePoint.SetX((float)x);
-            thePoint.SetY((float)y);
-            m.mWaterPoints.push_back(thePoint);
-        }
+    RunGamePass(m, inShape, ee_rmap_game_water_points);
 }
 
 // EERandomMap::AddNeighbourHeight
@@ -651,38 +686,15 @@ static void SmoothHeights(EERandomMap& m, const Shape& inShape)
 
 // EERandomMap::MarkFeatures (the claims the game makes before the resources; walls and cliffs left out: the gate
 // only needs both generators to see the same input)
-static void ClaimArea(EERandomMap& m, unsigned long inX, unsigned long inY, unsigned long inSize)
+static void MarkFeatures(EERandomMap& m, const Shape& inShape)
 {
-    unsigned long theSize = m.mClaimedTiles.size();
-    for (unsigned long i = 0; i < inSize; i++)
-        for (unsigned long j = 0; j < inSize; j++)
-            if (inX + i < theSize && j + inY < theSize)
-                m.mClaimedTiles[inX + i][j + inY] = true;
-}
-
-static void MarkFeatures(EERandomMap& m)
-{
-    for (size_t i = 0; i < m.mPlayers.size(); i++) {
-        if (m.mPlayers[i].mIsNeutral)
-            continue;
-        float thePlayerX = m.mPlayers[i].mPosition.GetX();
-        float thePlayerY = m.mPlayers[i].mPosition.mY;
-        for (size_t j = 0; j < m.mFeatures.size(); j++) {
-            EERMFeature theFeature = m.mFeatures[j];
-            if (theFeature.mUnitType < 0 || theFeature.mUnitType >= (long)m.mUnitNames.size())
-                continue;
-            unsigned long theY = UMFloor(theFeature.mPosition.GetY() + thePlayerY);
-            unsigned long theX = UMFloor(theFeature.mPosition.GetX() + thePlayerX);
-            ClaimArea(m, theX, theY, m.mUnitNames[theFeature.mUnitType].mSize);
-        }
-    }
+    RunGamePass(m, inShape, ee_rmap_game_mark_features);
 }
 
 // EERandomMap::CreateGrids (the map dimensions as RTSMap::Create sets them)
 static void CreateGrids(EERandomMap& m, const Shape& inShape, long inTiles)
 {
-    unsigned long theSize = inTiles * 2;
-    m.mGridSize = theSize < 0x40 ? 0x40 : theSize < 0x80 ? 0x80 : theSize < 0x100 ? 0x100 : theSize < 0x200 ? 0x200 : 0x400;
+    m.mGridSize = ee_rmap_game_grid_size((uint32_t)inTiles, (uint32_t)inTiles, 0x400);
     unsigned long n = m.mGridSize + 1;
     m.mClaimedTiles.assign(n, std::vector<unsigned char>(n, 0));
     m.mTiles.assign(n, std::vector<unsigned long>(n, 0));
@@ -692,28 +704,17 @@ static void CreateGrids(EERandomMap& m, const Shape& inShape, long inTiles)
     for (unsigned long x = 0; x < n; x++)
         for (unsigned long y = 0; y < n; y++)
             m.mValidTiles[x][y] = inShape.IsValidPoint(x, y);
-    float theExtent = UMAbs(m.mFlatArea.GetLeft());
-    float theValue = UMAbs(m.mFlatArea.GetRight());
-    if (theValue > theExtent)
-        theExtent = theValue;
-    theValue = UMAbs(m.mFlatArea.GetBottom());
-    if (theValue > theExtent)
-        theExtent = theValue;
-    theValue = UMAbs(m.mFlatArea.GetTop());
-    if (theValue > theExtent)
-        theExtent = theValue;
-    theValue = (float)inShape.mSize;
-    float theRadius = (theValue - theExtent) * 0.35355338f;
-    m.mHalfMapSize = theValue * 0.5f;
-    m.mRing.mCenter = GE2DPoint(0.5f * (float)inShape.mSize, 0.5f * (float)inShape.mSize);
-    m.mRing.mMinRadius = theRadius * m.mPlayerInnerRadius;
-    m.mRing.mMaxRadius = theRadius * m.mPlayerOuterRadius;
-    m.mNeutralRing.mCenter = m.mRing.mCenter;
-    m.mNeutralRing.mMinRadius = theRadius * m.mNeutralInnerRadius;
-    m.mNeutralRing.mMaxRadius = theRadius * m.mNeutralOuterRadius;
-    m.mMoonRing.mCenter = m.mRing.mCenter;
-    m.mMoonRing.mMaxRadius = m.mHalfMapSize;
-    m.mMoonRing.mMinRadius = (m.mHalfMapSize - m.mRing.mMaxRadius) * 0.5f + m.mRing.mMaxRadius;
+    EeRmapRect theFlat = {m.mFlatArea.GetLeft(), m.mFlatArea.GetBottom(), m.mFlatArea.GetRight(), m.mFlatArea.GetTop()};
+    EeRmapGameRadii theRadii = {m.mPlayerInnerRadius, m.mPlayerOuterRadius, m.mNeutralInnerRadius, m.mNeutralOuterRadius};
+    EeRmapGameRings theRings = ee_rmap_game_rings(theFlat, (int32_t)inShape.mSize, theRadii);
+    m.mHalfMapSize = theRings.half_map_size;
+    EERMRing* theOut[3] = {&m.mRing, &m.mNeutralRing, &m.mMoonRing};
+    const EeRmapRing* theIn[3] = {&theRings.ring, &theRings.neutral_ring, &theRings.moon_ring};
+    for (int i = 0; i < 3; i++) {
+        theOut[i]->mCenter = GE2DPoint(theIn[i]->center.x, theIn[i]->center.y);
+        theOut[i]->mMinRadius = theIn[i]->min_radius;
+        theOut[i]->mMaxRadius = theIn[i]->max_radius;
+    }
 }
 
 static void CreateTeams(EERandomMap& m, long inPlayers, bool inTeams)
@@ -791,6 +792,13 @@ static bool RunOne(const RunKey& inKey, const std::string& inVolume, const std::
         m.mShallowsElevation = -0.5f;
     }
     theStage("script");
+    if (gScriptOnly) {   // the .rmv reader's own gate: the map as the script left it
+        fprintf(inOut, "%s|%d|%ld|%s|%lu %s\n", inKey.mScript.c_str(), inKey.mSizeIndex, inKey.mPlayers,
+                kModeNames[inKey.mMode], inKey.mSeed, HexDigest(m).c_str());
+        fflush(inOut);
+        delete theMap;
+        return true;
+    }
 
     if ((m.mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap) {
         m.mNumTerrainBands = (unsigned long)(m.mTerrainRegions[m.mTerrainRegions.size() - 1].mTo + 1) / 100;
@@ -820,7 +828,7 @@ static bool RunOne(const RunKey& inKey, const std::string& inVolume, const std::
     theStage("filter");
     SmoothHeights(m, theShape);
     theStage("smooth");
-    MarkFeatures(m);
+    MarkFeatures(m, theShape);
     theStage("mark");
     if (EERMPIMGenerateResources(&m) != 0)
         return false;
@@ -1084,6 +1092,8 @@ int main(int argc, char** argv)
         std::string a = argv[i];
         if (a == "--stages")
             theStages = true;
+        else if (a == "--script-only")
+            gScriptOnly = true;
         else if (a == "--shard" && i + 2 < argc) {
             theShard = atoi(argv[++i]);
             theShards = atoi(argv[++i]);
@@ -1093,7 +1103,7 @@ int main(int argc, char** argv)
             theData = a;
     }
     if (theData.empty()) {
-        fprintf(stderr, "usage: rmap_dump <data tree> [--stages] [--shard K N] [--only key]\n");
+        fprintf(stderr, "usage: rmap_dump <data tree> [--stages | --script-only] [--shard K N] [--only key]\n");
         return 2;
     }
     if (theData.back() != '\\' && theData.back() != '/')
@@ -1101,6 +1111,8 @@ int main(int argc, char** argv)
     for (size_t i = 0; i < theData.size(); i++)
         if (theData[i] == '/')
             theData[i] = '\\';
+    if (getenv("EE_RMAP_TRACE"))
+        gTrace = fopen(getenv("EE_RMAP_TRACE"), "w");
     gScale = 2.0f;   // RTSMap's mF1955F4 (world units per elevation step) is set by EEMap; only SmoothHeights reads it
 
     if (!ReadUnits(theData + "Data\\db\\dbobjects.yaml", gTables.mUnits) ||

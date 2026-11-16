@@ -16,6 +16,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitBehavior.h"
+#include "ee/EEDbRecords.h"
 
 // 0x4e8750: the weapon to-hit factors (6 x 6; provisional name: not gToHitTable, which is Empire Earth.cpp's
 // EEToHitTable 0x5318e8; EEPhysicsModel::Push reads both)
@@ -23,43 +24,11 @@ float gWeaponToHitFactors[6][6];
 // 0x52fb54: world table entry 42's float, cached after the load (provisional name)
 extern float& gGameStateGameSpeed;
 
-// One record of db\dbUnitBehavior.dat (0x7c bytes, read whole). Inferred layout.
-struct EEUnitBehaviorRecord {
-    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
-    int32_t mIndex;                         // +0x68 (negative: no entry)
-    bool mCanMoveFreely;                    // +0x6c -> +0x04
-    bool mCanPursuePastInitialContactLOS;   // +0x6d -> +0x07
-    bool mCanTargetEnemies;                 // +0x6e -> +0x08
-    bool mReturnsToInitialContactLocation;  // +0x6f -> +0x09
-    bool mCanFlee;                          // +0x70 -> +0x0a
-    bool mMeleeCanMoveFreely;               // +0x71 -> +0x05
-    bool mRangedCanMoveFreely;              // +0x72 -> +0x06
-    char _gap73[0x09];
-};
-static_assert(sizeof(EEUnitBehaviorRecord) == 124, "on-disk record: 124 bytes on every target");
-
-// One record of db\dbweapontohit.dat (0x84 bytes). Inferred layout.
-struct EEToHitRecord {
-    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
-    int32_t mUnusedIndex;                   // +0x068 the 0-based row index (not read)
-    int32_t mPercents[6];                   // +0x6c (hundredths)
-};
-static_assert(sizeof(EEToHitRecord) == 132, "on-disk record: 132 bytes on every target");
-
 std::vector<EEUnitBehavior*> EEUnitBehavior::sTable;
 
 // Creates a unit behaviour with every permission off
-EEUnitBehavior::EEUnitBehavior()
+EEUnitBehavior::EEUnitBehavior() : EeDataUnitBehaviorFields()
 {
-    this->mCanMoveFreely = false;
-    this->mMeleeCanMoveFreely = false;
-    this->mRangedCanMoveFreely = false;
-    this->mCanPursuePastInitialContactLOS = false;
-    this->mCanTargetEnemies = false;
-    this->mReturnsToInitialContactLocation = false;
-    this->mCanFlee = false;
 }
 
 // Destroys the unit behaviour (nothing to release)
@@ -67,37 +36,21 @@ EEUnitBehavior::~EEUnitBehavior()
 {
 }
 
-// Loads the unit behaviours (move, pursue, target, return and flee permissions) from db\dbUnitBehavior.dat; returns
-// the last read status
+// Loads the unit behaviours (move, pursue, target, return and flee permissions) from db\dbUnitBehavior.dat (the record
+// and its copy: ee_data tables.rs); a row with a negative index stays NULL. Returns the last read status
 long EEUnitBehavior::Load(FSFileSpec* inFile)
 {
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    EEUnitBehaviorRecord theRecord;
-    inFile->Open(kFileAccessRead);
-    long theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
-        EEUnitBehavior::sTable.resize(theCount, NULL);
-        for (unsigned long i = 0; i < theCount; i++) {
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-            EEUnitBehavior* theBehavior;
-            if (theRecord.mIndex >= 0) {
+    return EEDbReadRecords(inFile, ee_data_unit_behavior_record_size(),
+        [](unsigned long inCount) { EEUnitBehavior::sTable.resize(inCount, NULL); return true; },
+        [](unsigned long inIndex, const unsigned char* inRecord) {
+            EeDataUnitBehaviorFields theFields;
+            EEUnitBehavior* theBehavior = NULL;
+            if (ee_data_unit_behavior_from_record(inRecord, &theFields)) {
                 theBehavior = new EEUnitBehavior;
-                theBehavior->mCanMoveFreely = theRecord.mCanMoveFreely;
-                theBehavior->mCanPursuePastInitialContactLOS = theRecord.mCanPursuePastInitialContactLOS;
-                theBehavior->mCanTargetEnemies = theRecord.mCanTargetEnemies;
-                theBehavior->mReturnsToInitialContactLocation = theRecord.mReturnsToInitialContactLocation;
-                theBehavior->mCanFlee = theRecord.mCanFlee;
-                theBehavior->mMeleeCanMoveFreely = theRecord.mMeleeCanMoveFreely;
-                theBehavior->mRangedCanMoveFreely = theRecord.mRangedCanMoveFreely;
-            } else {
-                theBehavior = NULL;
+                *static_cast<EeDataUnitBehaviorFields*>(theBehavior) = theFields;
             }
-            EEUnitBehavior::sTable[i] = theBehavior;
-        }
-    }
-    inFile->Close();
-    return theResult;
+            EEUnitBehavior::sTable[inIndex] = theBehavior;
+        });
 }
 
 // Destroys every unit behaviour and empties the table
@@ -116,27 +69,14 @@ bool EEUnitBehavior::CanMoveFreely(EEUnit* inUnit)
     return this->mCanMoveFreely || (inUnit->GetUnitClass()->mIsMelee && this->mMeleeCanMoveFreely) || (!inUnit->GetUnitClass()->mIsMelee && this->mRangedCanMoveFreely);
 }
 
-// Loads the 6 x 6 weapon to-hit factors (percent to fraction) from db\dbweapontohit.dat; returns the last read status
+// Loads the 6 x 6 weapon to-hit factors (percent to fraction: ee_data tables.rs) from db\dbweapontohit.dat; a table
+// of another size is not read. Returns the last read status
 long EEToHitTable::Load(FSFileSpec* inFile)
 {
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    EEToHitRecord theRecord;
-    inFile->Open(kFileAccessRead);
-    long theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK && theCount == 6) {
-        for (unsigned long i = 0; i < theCount; i++) {
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-            gWeaponToHitFactors[i][0] = theRecord.mPercents[0] * kHeightEpsilon;
-            gWeaponToHitFactors[i][1] = theRecord.mPercents[1] * kHeightEpsilon;
-            gWeaponToHitFactors[i][2] = theRecord.mPercents[2] * kHeightEpsilon;
-            gWeaponToHitFactors[i][3] = theRecord.mPercents[3] * kHeightEpsilon;
-            gWeaponToHitFactors[i][4] = theRecord.mPercents[4] * kHeightEpsilon;
-            gWeaponToHitFactors[i][5] = theRecord.mPercents[5] * kHeightEpsilon;
-        }
-    }
-    inFile->Close();
-    return theResult;
+    return EEDbReadRecords(inFile, ee_data_to_hit_record_size(), [](unsigned long inCount) { return inCount == 6; },
+        [](unsigned long inIndex, const unsigned char* inRecord) {
+            ee_data_to_hit_from_record(inRecord, gWeaponToHitFactors[inIndex]);
+        });
 }
 
 // Creates an empty world constants table

@@ -1,9 +1,9 @@
 // C:\EEX\Empire Earth\Random Map\EERandomMap.cpp (__FILE__ at 0x28655a). The game's random map: the generator list
 // (EERandomMap::Initialize over the "rmap" PIMs and Data\Random Map Scripts\*.rmv), and one EERandomMap per try:
 // the generator PIM steps on the shared state (ee/EERandomMap.h, seen here as EERandomMapData), then the game-side
-// passes that turn the state into the EEMap's tiles, terrain and units. 0x283b2e..0x28befc: the two key chains, the
-// class statics' chains, the members in address order, then the template COMDATs (0x288bd4..). Unit flags: the exe's
-// module set. Header: ee/EERandomMapClass.h.
+// passes that turn the state into the EEMap's tiles, terrain and units. Those passes are Rust (ee_rmap game.rs, R6
+// data round 2) over the state's grid rows and the host below; the PIM steps, the generator list, the state's set-up
+// and PlaceWall stay here. Header: ee/EERandomMapClass.h.
 #include <windows.h>
 #include <mbstring.h>
 #include <string.h>
@@ -70,6 +70,8 @@
 #include "ee/EERandomMapClass.h"
 #include "ee/EEGlobalConstants.h"
 #include "ee/EERules.h"
+#include "rust/ee_rmap.h"
+#include "ee/EERandomMapView.h"
 
 // EETerrainTable::sCliffTable[inIndex] (its COMDAT 0x28aaf7 follows the unit's code; provisional name)
 inline EECliffTerrainTable* EEGetCliffTerrainTable(unsigned long inIndex)
@@ -84,167 +86,239 @@ const UString kStringTableIDKey("StringTableID");
 FSFileSpec EERandomMap::sGeneratorDirectory;
 std::vector<EERMGenerator> EERandomMap::sRandomMapGenerators;
 
-// unit-local constants (.rdata 0x44c00c, 0x44c040, 0x44c048; provisional names)
-static const float kRMMinimumPlayerDistance = 6.0f;
-static const float kRMRingScale = 0.35355338f;
-static const float kRMElevationOffset = -10.0f;
-
-// the grid helpers (their COMDATs follow the unit's code at 0x28bccb..0x28be87: inline, refused at every call)
-inline unsigned long EERMGetElevation(float inHeight)
-{
-    unsigned long theIndex = UMFloorUnsigned(UMFloor(inHeight) - kRMElevationOffset);
-    if (theIndex > 30)
-        theIndex = 30;
-    return theIndex;
-}
-
-inline bool EERMIsAreaFree(const std::vector<std::vector<unsigned char> >& inValid,
-                           const std::vector<std::vector<unsigned char> >& inUsed, unsigned long inX, unsigned long inY,
-                           unsigned long inRadius)
-{
-    unsigned long theSize = inValid.size();
-    unsigned long theLeft = inX - inRadius;
-    unsigned long theRight = inX + inRadius;
-    unsigned long theBottom = inY - inRadius;
-    unsigned long theTop = inY + inRadius;
-    bool theResult = true;
-    if (theLeft >= theSize)
-        theLeft = 0;
-    if (theBottom >= theSize)
-        theBottom = 0;
-    if (theRight >= theSize)
-        theRight = theSize - 1;
-    if (theTop >= theSize)
-        theTop = theSize - 1;
-    for (unsigned long x = theLeft; x <= theRight && theResult; x++) {
-        for (unsigned long y = theBottom; y <= theTop && theResult; y++) {
-            if (inValid[x][y] == 0 || inUsed[x][y] != 0)
-                theResult = false;
-            else
-                theResult = true;
-        }
-    }
-    return theResult;
-}
-
-inline bool EERMIsNearEdge(const std::vector<std::vector<unsigned char> >& inValid, unsigned long inX, unsigned long inY,
-                           unsigned long inRadius)
-{
-    unsigned long theSize = inValid.size();
-    unsigned long theLeft = inX - inRadius;
-    unsigned long theRight = inX + 1 + inRadius;
-    unsigned long theBottom = inY - inRadius;
-    unsigned long theTop = inY + 1 + inRadius;
-    return !(theLeft < theSize && theRight < theSize && theBottom < theSize && theTop < theSize &&
-             inValid[theLeft][theBottom] && inValid[theLeft][theTop] && inValid[theRight][theBottom] &&
-             inValid[theRight][theTop]);
-}
-
-inline void EERMClaimArea(std::vector<std::vector<unsigned char> >& ioUsed, unsigned long inX, unsigned long inY,
-                          unsigned long inSize)
-{
-    unsigned long theSize = ioUsed.size();
-    for (unsigned long i = 0; i < inSize; i++) {
-        for (unsigned long j = 0; j < inSize; j++) {
-            if (inX + i < theSize && j + inY < theSize)
-                ioUsed[inX + i][j + inY] = true;
-        }
-    }
-}
-
-static bool EERMIsCliff(const std::vector<std::vector<unsigned long> >& inTiles, unsigned long inX, unsigned long inY);
-
-// the generator list's string ids: the terrain named "Space" (0x5655f0; provisional name)
+// gSpaceTerrain: the terrain named "Space" (0x5655f0; provisional name)
 unsigned long gSpaceTerrain;
 
-// Creates a random map for a generator PIM, the game options and the players, binding the generator's entry points
-EERandomMap::EERandomMap(PIMModule* inModule, EEGameOptions* inOptions, std::vector<EEPlayer*>* inPlayers)
-    : mGamePlayers(inPlayers), mOptions(inOptions)
+// ---- the game passes in Rust (ee_rmap game.rs): the state's grids by their rows, its lists copied, and the host
+// below for the map, the mesh, the tables and the players
+
+// A wall line's tiles (the feature claims' and PlaceWall's): a point every tile along the line, truncated to tiles,
+// the diagonal corners dropped (a line only), then the repeats
+static void EERMWallLineTiles(const GE2DPoint& inStart, const GE2DPoint& inEnd, std::vector<EETileCoordinate>& outTiles)
 {
-    this->mModule = inModule;
-    this->mCreateFlatMap = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreateFlatMap");
-    this->mCreateHeightMap = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreateHeightMap");
-    this->mCreateNeutralLandWaterMap = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreateNeutralLandWaterMap");
-    this->mCreatePlayerLandWaterMap = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreatePlayerLandWaterMap");
-    this->mCreateTrees = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreateTrees");
-    this->mFilterHeightMapPIM = (EERMPIMFunction)inModule->GetEntry("EERMPIMFilterHeightMap");
-    this->mGenerateNeutralPositions = (EERMPIMFunction)inModule->GetEntry("EERMPIMGenerateNeutralPositions");
-    this->mGeneratePlayerPositions = (EERMPIMFunction)inModule->GetEntry("EERMPIMGeneratePlayerPositions");
-    this->mGenerateResources = (EERMPIMFunction)inModule->GetEntry("EERMPIMGenerateResources");
-    this->mGenerateShallows = (EERMPIMFunction)inModule->GetEntry("EERMPIMGenerateShallows");
-    this->mSetRandomMapValues = (EERMPIMSetValuesFunction)inModule->GetEntry("EERMPIMSetRandomMapValues");
+    std::vector<GE2DPoint> thePoints;
+    EETileCoordinate theTile;
+    outTiles.clear();
+    if (inStart != inEnd) {
+        inStart.InterpolateTo(inEnd, 1.0f, thePoints);
+        for (unsigned long i = 0; i < thePoints.size(); i++) {
+            theTile.mX = (long)thePoints[i].GetX();
+            theTile.mY = (long)thePoints[i].GetY();
+            outTiles.push_back(theTile);
+        }
+        EEDropDiagonalCorners(outTiles);
+    } else {
+        theTile.mX = (long)inStart.GetX();
+        theTile.mY = (long)inStart.GetY();
+        outTiles.push_back(theTile);
+    }
+    EEDropRepeatedTiles(outTiles);
 }
 
-// Destroys the random map (members only)
-EERandomMap::~EERandomMap()
+// What the host's callbacks reach: the map, the game's players, the random map (PlaceWall, the water points)
+struct EERMGameContext {
+    EEMap* mMap;
+    std::vector<EEPlayer*>* mPlayers;
+    EERandomMap* mRandomMap;
+};
+
+static GE2DPoint EERMToPoint(EeRmapPoint inPoint)
 {
+    return GE2DPoint(inPoint.x, inPoint.y);
 }
 
-// Returns whether a cell of a byte grid (the valid tiles) lies inside the grid and is set
-static bool EERMIsCellSet(const std::vector<std::vector<unsigned char> >& inGrid, unsigned long inX, unsigned long inY)
+static EEMap* EERMMap(void* inContext)
 {
-    return inX < inGrid.size() && inY < inGrid.size() && inGrid[inX][inY] != 0;
+    return static_cast<EERMGameContext*>(inContext)->mMap;
 }
 
-// Returns whether a grid cell has no land value (its low 15 bits are clear)
-static bool EERMIsTileFree(const std::vector<std::vector<unsigned long> >& inTiles, unsigned long inX, unsigned long inY)
+static EEPlayer* EERMPlayerAt(void* inContext, uint32_t inIndex)
 {
-    return (inTiles[inX][inY] & 0x7fff) == 0;
+    return (*static_cast<EERMGameContext*>(inContext)->mPlayers)[inIndex];
 }
 
-// On space maps fills empty cells (a disc on Earth and Mars maps, else cells with 5+ land neighbours), then lists the
-// empty valid map cells as the water points
-void EERandomMap::Fn284149()
+static uint8_t EERMHostTile(void* inContext, uint32_t inX, uint32_t inY, EeRmapGameTile* outTile)
+{
+    EEMapTile* theTile = EERMMap(inContext)->GetTile(inX, inY);
+    if (theTile == NULL)
+        return 0;
+    outTile->terrain_type = (int32_t)theTile->mTerrainType;
+    outTile->height = theTile->GetHeight();
+    return 1;
+}
+
+static uint8_t EERMHostIsEdgeTile(void* inContext, int32_t inX, int32_t inY)
+{
+    return EERMMap(inContext)->IsEdgeTile(inX, inY);
+}
+
+static void EERMHostPaintTerrain(void* inContext, int32_t inX, int32_t inY, int32_t inTexture)
+{
+    EERMMap(inContext)->PaintTerrain(inX, inY, inTexture);
+}
+
+static uint8_t EERMHostTerrain(void*, int32_t inTexture, EeRmapGameTerrainInfo* outInfo)
+{
+    EETerrainTable* theTable = EETerrainTable::Get(inTexture);
+    if (theTable == NULL)
+        return 0;
+    outInfo->unit_count = (uint32_t)theTable->GetNumUnitClasses();
+    outInfo->ambient_chance = (int32_t)theTable->mAmbientUnitChance;
+    return 1;
+}
+
+static int32_t EERMHostTerrainUnitClass(void*, int32_t inTexture, uint32_t inIndex)
+{
+    return (int32_t)EETerrainTable::Get(inTexture)->GetUnitClass(inIndex);
+}
+
+static float EERMHostMeshZ(void* inContext, uint32_t inX, uint32_t inY)
+{
+    return EERMMap(inContext)->mTerrainMesh.GetZ(inX, inY);
+}
+
+static void EERMHostMeshSetZ(void* inContext, uint32_t inX, uint32_t inY, float inZ)
+{
+    EERMMap(inContext)->mTerrainMesh.SetZ(inX, inY, inZ);
+}
+
+static uint8_t EERMHostMeshValidPoint(void* inContext, uint32_t inX, uint32_t inY)
+{
+    return EERMMap(inContext)->mTerrainMesh.GetIsValidPoint(inX, inY);
+}
+
+static uint8_t EERMHostMeshValidTile(void* inContext, uint32_t inX, uint32_t inY)
+{
+    return EERMMap(inContext)->mTerrainMesh.GetIsValidTile(inX, inY);
+}
+
+static void EERMHostMeshWaterColorSet(void* inContext, uint32_t inX, uint32_t inY)
+{
+    EERMMap(inContext)->mTerrainMesh.SetWaterColorSet(inX, inY);
+}
+
+static void EERMHostMeshVertexNormal(void* inContext, uint32_t inX, uint32_t inY)
+{
+    EERMMap(inContext)->mTerrainMesh.ComputeVertexNormal(inX, inY);
+}
+
+static void EERMHostMeshSetIsWater(void* inContext, uint32_t inX, uint32_t inY, uint8_t inIsWater)
+{
+    EERMMap(inContext)->mTerrainMesh.SetIsWater(inX, inY, inIsWater != 0);
+}
+
+static void EERMHostMeshShorelines(void* inContext, uint32_t inX, uint32_t inY)
+{
+    EERMMap(inContext)->mTerrainMesh.ComputeShorelines(inX, inY);
+}
+
+static void EERMHostSetTileHeight(void* inContext, uint32_t inX, uint32_t inY, float inHeight)
+{
+    EERMMap(inContext)->GetTile(inX, inY)->mHeight = inHeight;
+}
+
+static uint32_t EERMHostUnitClassCount(void*)
+{
+    return (uint32_t)EEUnitClassCount();
+}
+
+static uint8_t EERMHostUnitClass(void*, uint32_t inClass, EeRmapGameClass* outClass)
+{
+    EEUnitClass* theClass = inClass < EEUnitClassCount() ? gUnitClassTable[inClass] : NULL;
+    if (theClass == NULL)
+        return 0;
+    outClass->tile_size = (int32_t)theClass->GetTileSize();
+    outClass->is_land_citizen = EEUnitClassOfKind<EE_CLASS_KIND_LAND_CITIZEN>(theClass) != NULL;
+    outClass->is_wall = theClass->mIsWall;
+    return 1;
+}
+
+static uint8_t EERMHostClassAllowsTerrain(void*, uint32_t inClass, int32_t inTerrainType)
+{
+    return gUnitClassTable[inClass]->mTerrainTypes[inTerrainType];
+}
+
+static int32_t EERMHostMaxStartingCitizens(void* inContext, uint32_t inPlayer)
+{
+    return (int32_t)EERMPlayerAt(inContext, inPlayer)->mMaxStartingCitizens;
+}
+
+// A start unit: a complex unit is built and paid for; a resource unit with an amount answers its resource type (the
+// pass paints that resource's terrain under it)
+static int32_t EERMHostCreateUnitAtPoint(void* inContext, uint32_t inOwner, uint32_t inClass, float inX, float inY,
+                                         float inHeading)
+{
+    EEUnit* theUnit = gUnitClassTable[inClass]->CreateUnitAtPoint(EERMPlayerAt(inContext, inOwner), inX, inY,
+                                                                  EERMMap(inContext), inHeading);
+    if (theUnit == NULL)
+        return -1;
+    if (theUnit->mComplexUnit) {
+        theUnit->mComplexUnit->SetBuilt(1, 0, 0);
+        EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
+        if (theComplexUnit->mIsPaidFor != true)
+            theComplexUnit->mIsPaidFor = true;
+        return -1;
+    }
+    if (theUnit->mResourceType >= kResourceFood && theUnit->mResourceType < 7 && theUnit->mResourceAmount > 0)
+        return (int32_t)theUnit->mResourceType;
+    return -1;
+}
+
+static void EERMHostCreateUnitAtTile(void* inContext, uint32_t inOwner, uint32_t inClass, int32_t inX, int32_t inY,
+                                     float inHeading)
+{
+    gUnitClassTable[inClass]->CreateUnitAtTile(EERMPlayerAt(inContext, inOwner), inX, inY, EERMMap(inContext), inHeading);
+}
+
+static void EERMHostPlaceWall(void* inContext, uint32_t inClass, EeRmapPoint inStart, EeRmapPoint inEnd,
+                              uint32_t inPlayer)
+{
+    static_cast<EERMGameContext*>(inContext)->mRandomMap->PlaceWall(
+        gUnitClassTable[inClass], EERMToPoint(inStart), EERMToPoint(inEnd), EERMPlayerAt(inContext, inPlayer));
+}
+
+static void EERMHostWallTiles(void*, EeRmapPoint inStart, EeRmapPoint inEnd, EeRmapGameTiles* ioSink)
+{
+    std::vector<EETileCoordinate> theTiles;
+    EERMWallLineTiles(EERMToPoint(inStart), EERMToPoint(inEnd), theTiles);
+    for (unsigned long i = 0; i < theTiles.size(); i++)
+        ee_rmap_game_tiles_push(ioSink, (int32_t)theTiles[i].mX, (int32_t)theTiles[i].mY);
+}
+
+static void EERMHostPushWaterPoint(void* inContext, float inX, float inY)
 {
     GE2DPoint thePoint;
-    unsigned long theSize = this->mData.mGridSize;
-    unsigned long x;
-    unsigned long y;
-    if (this->mData.mIsSpaceMap) {
-        if ((this->mData.mMapCharacteristics & kRMMapEarthOrMarsMap) != 0) {
-            float theRadius = (this->mData.mHalfMapSize - this->mData.mWaterBorder) * 0.75f;
-            for (x = 0; x < theSize; x++) {
-                for (y = 0; y < theSize; y++) {
-                    if (this->mData.mValidTiles[x][y] && this->mData.mRing.mCenter.DistanceTo(GE2DPoint((float)x, (float)y)) <= theRadius &&
-                        EERMIsTileFree(this->mData.mTiles, x, y))
-                        this->mData.mTiles[x][y] = 0x400;
-                }
-            }
-        } else {
-            for (x = 0; x < theSize; x++) {
-                for (y = 0; y < theSize; y++) {
-                    if (!this->mData.mValidTiles[x][y] || !EERMIsTileFree(this->mData.mTiles, x, y))
-                        continue;
-                    unsigned long theValue = 0;
-                    unsigned long theCount = 0;
-                    for (unsigned long i = x - 1; i <= x + 1; i++) {
-                        for (unsigned long j = y - 1; j <= y + 1; j++) {
-                            if (!EERMIsTileFree(this->mData.mTiles, i, j)) {
-                                theValue = this->mData.mTiles[i][j];
-                                theCount++;
-                            }
-                        }
-                    }
-                    if (theCount >= 5)
-                        this->mData.mTiles[x][y] = theValue;
-                }
-            }
-        }
-    }
-    this->mData.mWaterPoints.clear();
-    for (x = 0; x < theSize; x++) {
-        for (y = 0; y < theSize; y++) {
-            if (!this->mMap->GetTile(x, y) || !EERMIsCellSet(this->mData.mValidTiles, x, y) || (this->mData.mTiles[x][y] & 0x7fff) != 0)
-                continue;
-            thePoint.SetX((float)x);
-            thePoint.SetY((float)y);
-            this->mData.mWaterPoints.push_back(thePoint);
-        }
-    }
+    thePoint.SetX(inX);
+    thePoint.SetY(inY);
+    static_cast<EERMGameContext*>(inContext)->mRandomMap->mData.mWaterPoints.push_back(thePoint);
+}
+
+static EeRmapGameHost EERMHost(EERMGameContext* inContext)
+{
+    EeRmapGameHost theHost = {inContext, EERMHostTile, EERMHostIsEdgeTile, EERMHostPaintTerrain, EERMHostTerrain,
+        EERMHostTerrainUnitClass, EERMHostMeshZ, EERMHostMeshSetZ, EERMHostMeshValidPoint, EERMHostMeshValidTile,
+        EERMHostMeshWaterColorSet, EERMHostMeshVertexNormal, EERMHostMeshSetIsWater, EERMHostMeshShorelines,
+        EERMHostSetTileHeight, EERMHostUnitClassCount, EERMHostUnitClass, EERMHostClassAllowsTerrain,
+        EERMHostMaxStartingCitizens, EERMHostCreateUnitAtPoint, EERMHostCreateUnitAtTile, EERMHostPlaceWall,
+        EERMHostWallTiles, EERMHostPushWaterPoint};
+    return theHost;
+}
+
+// Runs one of the Rust passes over this map's state
+void EERandomMap::RunGamePass(void (*inPass)(EeRmapGameState* ioState, EeRmapGameHost* inHost))
+{
+    EERMGameContext theContext = {this->mMap, this->mGamePlayers, this};
+    EeRmapGameHost theHost = EERMHost(&theContext);
+    EERMGameView theView(this->mData, this->mMap->GetF1955F4(), gSpaceTerrain);
+    inPass(&theView.mState, &theHost);
+    theView.StoreSeeds(this->mData);
 }
 
 // Runs the generator's steps in order (positions, land and water, heights, terrain, resources, trees, features) with
-// load progress; returns the first step error, or 9 when the players end up cut off
+// load progress; returns the first step error, or 9 when the players end up cut off. The game's passes between them
+// are Rust's (ee_rmap game.rs): the water points and the space fill (Fn284149), the smoothing, the heights onto the
+// mesh (Fn288839), the painting with the ambient units, the feature claims, the start units and walls, the resource
+// objects (Fn288426).
 long EERandomMap::Generate()
 {
     long theResult;
@@ -269,7 +343,8 @@ long EERandomMap::Generate()
     if (theResult != 0)
         return theResult;
     gUserInterface->SetLoadProgress(0.22f);
-    this->Fn284149();
+    this->mData.mWaterPoints.clear();
+    this->RunGamePass(ee_rmap_game_water_points);
     theResult = this->mCreateFlatMap(&this->mData);
     if (theResult != 0)
         return theResult;
@@ -286,14 +361,16 @@ long EERandomMap::Generate()
     if (theResult != 0)
         return theResult;
     gUserInterface->SetLoadProgress(0.38f);
-    this->SmoothHeights();
+    this->RunGamePass(ee_rmap_game_smooth_heights);
     this->mMap->SetCliffTexture(this->mData.mCliffTexture);
-    this->Fn288839();
+    this->RunGamePass(ee_rmap_game_apply_heights);
     if (!EERMArePlayersConnected(this->mData, this->mMap))
         return 9;
-    this->PaintTiles();
+    unsigned long theStart = TMGetTime();
+    this->RunGamePass(ee_rmap_game_paint_tiles);
+    ESDebugOut("EERandomMap::PaintTiles Processing completed in %6.2f s\n", (TMGetTime() - theStart) * 0.001f);
     this->mMap->UpdateCliffs(0, this->mMap->mSize, 0, this->mMap->mSize);
-    this->MarkFeatures();
+    this->RunGamePass(ee_rmap_game_mark_features);
     theResult = this->mGenerateResources(&this->mData);
     if (theResult != 0)
         return theResult;
@@ -302,192 +379,43 @@ long EERandomMap::Generate()
     if (theResult != 0)
         return theResult;
     gUserInterface->SetLoadProgress(0.46f);
-    this->PlaceFeatures();
-    this->Fn288426();
+    this->RunGamePass(ee_rmap_game_place_features);
+    this->RunGamePass(ee_rmap_game_place_objects);
     this->mMap->mMapCharacteristics = this->mData.mMapCharacteristics;
     return 0;
 }
 
 // Checks that every player's start area is dry, non-space land and that no two players stand closer than
-// kRMMinimumPlayerDistance
+// kRMMinimumPlayerDistance (Rust: ee_rmap game.rs)
 bool EERMArePlayersConnected(EERandomMapData& inMap, EEMap* inGameMap)
 {
-    bool theResult = true;
-    unsigned long i;
-    for (i = 0; i < inMap.mPlayers.size() && theResult; i++) {
-        if (inMap.mPlayers[i].mIsNeutral)
-            continue;
-        unsigned long x = UMFloor(inMap.mPlayers[i].mPosition.GetX() + inMap.mFlatArea.GetLeft());
-        unsigned long theBottom = UMFloor(inMap.mPlayers[i].mPosition.GetY() + inMap.mFlatArea.GetBottom());
-        unsigned long theRight = UMFloor(inMap.mPlayers[i].mPosition.GetX() + inMap.mFlatArea.GetRight()) + 1;
-        unsigned long theTop = UMFloor(inMap.mPlayers[i].mPosition.GetY() + inMap.mFlatArea.GetTop()) + 1;
-        // every column of the flat area runs the full y range
-        for (; x < theRight && theResult; x++) {
-            for (unsigned long y = theBottom; y < theTop && theResult; y++) {
-                EEMapTile* theTile = inGameMap->GetTile(x, y);
-                theResult = theTile && theTile->GetHeight() >= 0.0f && theTile->mTerrainType != kTerrainSpace;
-            }
-        }
-    }
-    for (i = 0; i < inMap.mPlayers.size() - 1 && theResult; i++) {
-        if (inMap.mPlayers[i].mIsNeutral)
-            continue;
-        for (unsigned long j = i + 1; j < inMap.mPlayers.size() && theResult; j++) {
-            if (!inMap.mPlayers[j].mIsNeutral) {
-                float theDistance = inMap.mPlayers[i].mPosition.DistanceToSquared(inMap.mPlayers[j].mPosition);
-                theResult = theDistance >= kRMMinimumPlayerDistance * kRMMinimumPlayerDistance;
-            }
-        }
-    }
-    return theResult;
+    EERMGameContext theContext = {inGameMap, NULL, NULL};
+    EeRmapGameHost theHost = EERMHost(&theContext);
+    EERMGameView theView(inMap, inGameMap->GetF1955F4(), gSpaceTerrain);
+    return ee_rmap_game_players_connected(&theView.mState, &theHost);
 }
 
-// Places each player's start units (citizens up to the player's limit, ring units on random free tiles) and walls,
-// then the herds as nature units; resource units paint their resource terrain under them
-void EERandomMap::PlaceFeatures()
+// Creates a random map for a generator PIM, the game options and the players, binding the generator's entry points
+EERandomMap::EERandomMap(PIMModule* inModule, EEGameOptions* inOptions, std::vector<EEPlayer*>* inPlayers)
+    : mGamePlayers(inPlayers), mOptions(inOptions)
 {
-    GE2DPoint theStart;
-    GE2DPoint theEnd;
-    EERMNamedEntry theEntry;
-    EERMFeature theFeature;
-    unsigned long theNumPlayers = this->mData.mPlayers.size();
-    unsigned long theNumFeatures = this->mData.mFeatures.size();
-    unsigned long theNumWalls = this->mData.mWalls.size();
-    EEUnitClass* theClass;
-    EEUnit* theUnit;
-    unsigned long j;
-    for (unsigned long i = 0; i < theNumPlayers; i++) {
-        if (this->mData.mPlayers[i].mIsNeutral)
-            continue;
-        this->mData.mPlayers[i];
-        float thePlayerX = this->mData.mPlayers[i].mPosition.GetX();
-        float thePlayerY = this->mData.mPlayers[i].mPosition.mY;
-        long thePlayer = this->mData.mPlayers[i].mIndex;
-        unsigned long theCitizenLimit = (*this->mGamePlayers)[thePlayer]->mMaxStartingCitizens;
-        unsigned long theCitizens = 0;
-        for (j = 0; j < theNumFeatures; j++) {
-            theFeature = this->mData.mFeatures[j];
-            theEntry = this->mData.mUnitNames[theFeature.mUnitType];
-            if (theFeature.mIsHerd || theEntry.mUnitClass >= EEUnitClassCount())
-                continue;
-            theClass = gUnitClassTable[theEntry.mUnitClass];
-            if (EEUnitClassOfKind<EE_CLASS_KIND_LAND_CITIZEN>(theClass)) {
-                theCitizens++;
-                if (theCitizens > theCitizenLimit)
-                    theClass = NULL;
-            }
-            if (theClass == NULL)
-                continue;
-            float theX;
-            float theY;
-            if (!this->mData.mFeatures[j].mInRing) {
-                theX = theFeature.mPosition.GetX() + thePlayerX;
-                theY = theFeature.mPosition.GetY() + thePlayerY;
-            } else {
-                theX = 0.0f;
-                unsigned long theTry = 0;
-                theY = 0.0f;
-                if (theTry < this->mData.mMaxLoopCount) {
-                    float theRange = theFeature.mPosition.GetY() - theFeature.mPosition.GetX();
-                    do {
-                        float theAngle = this->mData.mRandom.GenerateUnit() * 6.2831855f - 3.1415927f;
-                        float theRadius = this->mData.mRandom.GenerateUnit() * theRange + theFeature.mPosition.GetX();
-                        theX = UMCos(theAngle) * theRadius + thePlayerX;
-                        theY = UMSin(theAngle) * theRadius + thePlayerY;
-                        long theTileX = UMFloor(theX);
-                        long theTileY = UMFloor(theY);
-                        EEMapTile* theTile = this->mMap->GetTile(theTileX, theTileY);
-                        if (theTile && !this->mMap->IsEdgeTile(theTileX, theTileY) &&
-                            theClass->mTerrainTypes[theTile->mTerrainType] &&
-                            EERMIsAreaFree(this->mData.mValidTiles, this->mData.mClaimedTiles, theTileX, theTileY, theClass->GetTileSize()) &&
-                            !EERMIsNearEdge(this->mData.mValidTiles, theTileX, theTileY, 1)) {
-                            EERMClaimArea(this->mData.mClaimedTiles, theTileX, theTileY, theClass->GetTileSize());
-                            theX = theTileX + 0.5f;
-                            theY = theTileY + 0.5f;
-                            break;
-                        }
-                        theTry++;
-                    } while (theTry < this->mData.mMaxLoopCount);
-                }
-                if (theTry == this->mData.mMaxLoopCount)
-                    theX = theY = -1.0f;
-            }
-            if (this->mMap->GetTile(UMFloor(theX), UMFloor(theY)) == NULL ||
-                this->mMap->IsEdgeTile(UMFloor(theX), UMFloor(theY)))
-                continue;
-            EEPlayer* theOwner = this->mData.mFeatures[j].mIsWorldUnit ? (*this->mGamePlayers)[0] : (*this->mGamePlayers)[thePlayer];
-            theUnit = theClass->CreateUnitAtPoint(theOwner, theX, theY, this->mMap, theFeature.mAngle);
-            if (theUnit == NULL)
-                continue;
-            if (theUnit->mComplexUnit) {
-                theUnit->mComplexUnit->SetBuilt(1, 0, 0);
-                EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
-                if (theComplexUnit->mIsPaidFor != true)
-                    theComplexUnit->mIsPaidFor = true;
-            } else if (theUnit->mResourceType >= kResourceFood && theUnit->mResourceType < 7 && theUnit->mResourceAmount > 0) {
-                long theTexture;
-                switch (theUnit->mResourceType) {
-                case kResourceFood: theTexture = this->mData.mResourceTerrainTexture[3]; break;
-                case kResourceWood: theTexture = this->mData.mResourceTerrainTexture[2]; break;
-                case kResourceStone: theTexture = this->mData.mResourceTerrainTexture[0]; break;
-                case kResourceGold: theTexture = this->mData.mResourceTerrainTexture[1]; break;
-                case kResourceIron: theTexture = this->mData.mResourceTerrainTexture[6]; break;
-                default: continue;
-                }
-                if (theTexture != -1)
-                    this->mMap->PaintTerrain(UMFloor(theX), UMFloor(theY), theTexture);
-            }
-        }
-        for (j = 0; j < theNumWalls; j++) {
-            theEntry = this->mData.mUnitNames[this->mData.mWalls[j].mUnitType];
-            if (theEntry.mUnitClass >= EEUnitClassCount())
-                continue;
-            theClass = gUnitClassTable[theEntry.mUnitClass];
-            if (theClass == NULL || !theClass->mIsWall)
-                continue;
-            theStart.SetX((float)(UMFloor(thePlayerX) + this->mData.mWalls[j].mStartX) + 0.5f);
-            theStart.SetY((float)(UMFloor(thePlayerY) + this->mData.mWalls[j].mStartY) + 0.5f);
-            theEnd.SetX((float)(UMFloor(thePlayerX) + this->mData.mWalls[j].mEndX) + 0.5f);
-            theEnd.SetY((float)(UMFloor(thePlayerY) + this->mData.mWalls[j].mEndY) + 0.5f);
-            this->PlaceWall(theClass, theStart, theEnd, (*this->mGamePlayers)[thePlayer]);
-        }
-    }
-    for (j = 0; j < theNumFeatures; j++) {
-        theFeature = this->mData.mFeatures[j];
-        theEntry = this->mData.mUnitNames[theFeature.mUnitType];
-        if (theFeature.mIsHerd != true || theEntry.mUnitClass >= EEUnitClassCount())
-            continue;
-        theClass = gUnitClassTable[theEntry.mUnitClass];
-        if (theClass == NULL)
-            continue;
-        if (this->mMap->GetTile(UMFloor(theFeature.mPosition.GetX()), UMFloor(theFeature.mPosition.GetY())) == NULL)
-            continue;
-        if (this->mMap->IsEdgeTile(UMFloor(theFeature.mPosition.GetX()), UMFloor(theFeature.mPosition.GetY())))
-            continue;
-        theUnit = theClass->CreateUnitAtPoint(this->mGamePlayers->front(), theFeature.mPosition.GetX(),
-                                      theFeature.mPosition.GetY(), this->mMap, theFeature.mAngle);
-        if (theUnit == NULL)
-            continue;
-        if (theUnit->mComplexUnit) {
-            theUnit->mComplexUnit->SetBuilt(1, 0, 0);
-            EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
-            if (theComplexUnit->mIsPaidFor != true)
-                theComplexUnit->mIsPaidFor = true;
-        } else if (theUnit->mResourceType >= kResourceFood && theUnit->mResourceType < 7 && theUnit->mResourceAmount > 0) {
-            long theTexture;
-            switch (theUnit->mResourceType) {
-            case kResourceFood: theTexture = this->mData.mResourceTerrainTexture[3]; break;
-            case kResourceWood: theTexture = this->mData.mResourceTerrainTexture[2]; break;
-            case kResourceStone: theTexture = this->mData.mResourceTerrainTexture[0]; break;
-            case kResourceGold: theTexture = this->mData.mResourceTerrainTexture[1]; break;
-            case kResourceIron: theTexture = this->mData.mResourceTerrainTexture[6]; break;
-            default: continue;
-            }
-            if (theTexture != -1)
-                this->mMap->PaintTerrain(UMFloor(theFeature.mPosition.GetX()), UMFloor(theFeature.mPosition.GetY()),
-                               theTexture);
-        }
-    }
+    this->mModule = inModule;
+    this->mCreateFlatMap = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreateFlatMap");
+    this->mCreateHeightMap = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreateHeightMap");
+    this->mCreateNeutralLandWaterMap = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreateNeutralLandWaterMap");
+    this->mCreatePlayerLandWaterMap = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreatePlayerLandWaterMap");
+    this->mCreateTrees = (EERMPIMFunction)inModule->GetEntry("EERMPIMCreateTrees");
+    this->mFilterHeightMapPIM = (EERMPIMFunction)inModule->GetEntry("EERMPIMFilterHeightMap");
+    this->mGenerateNeutralPositions = (EERMPIMFunction)inModule->GetEntry("EERMPIMGenerateNeutralPositions");
+    this->mGeneratePlayerPositions = (EERMPIMFunction)inModule->GetEntry("EERMPIMGeneratePlayerPositions");
+    this->mGenerateResources = (EERMPIMFunction)inModule->GetEntry("EERMPIMGenerateResources");
+    this->mGenerateShallows = (EERMPIMFunction)inModule->GetEntry("EERMPIMGenerateShallows");
+    this->mSetRandomMapValues = (EERMPIMSetValuesFunction)inModule->GetEntry("EERMPIMSetRandomMapValues");
+}
+
+// Destroys the random map (members only)
+EERandomMap::~EERandomMap()
+{
 }
 
 // Sets up and generates the map from a generator and seed, and returns the player's start point (the centre for 0)
@@ -565,29 +493,13 @@ void EERandomMap::CreateValidMap()
 void EERandomMap::PlaceWall(EEUnitClass* inClass, const GE2DPoint& inStart, const GE2DPoint& inEnd,
                             EEPlayer* inPlayer)
 {
-    std::vector<GE2DPoint> thePoints;
     std::vector<EETileCoordinate> theTiles;
     std::vector<long> theCorners;
     std::vector<EEComplexUnit*> theUnits;
     std::vector<EETileCoordinate> thePlaced;
-    unsigned long i = 0;
     EETileCoordinate theTile;
-    if (inStart != inEnd) {
-        inStart.InterpolateTo(inEnd, 1.0f, thePoints);
-        for (; i < thePoints.size(); i++) {
-            const GE2DPoint& thePoint = thePoints[i];
-            theTile.mX = (long)thePoint.GetX(); theTile.mY = (long)thePoint.GetY();
-            theTiles.push_back(theTile);
-        }
-        EEDropDiagonalCorners(theTiles);
-        i = 0;
-    } else {
-        theTile.mX = (long)inStart.GetX();
-        theTile.mY = (long)inStart.mY;
-        theTiles.push_back(theTile);
-    }
-    EEDropRepeatedTiles(theTiles);
-    for (unsigned long j = i; j < theTiles.size(); j++) {
+    EERMWallLineTiles(inStart, inEnd, theTiles);
+    for (unsigned long j = 0; j < theTiles.size(); j++) {
         long theX = theTiles[j].GetX();
         long theY = theTiles[j].mY;
         EEMapTile* theMapTile = this->mMap->GetTile(theX, theY);
@@ -595,10 +507,9 @@ void EERandomMap::PlaceWall(EEUnitClass* inClass, const GE2DPoint& inStart, cons
             theTiles.erase(theTiles.begin() + j);
             j--;
         }
-        i = 0;
     }
     EEPickWallPieces(theTiles, theCorners, this->mMap);
-    for (unsigned long k = i; k < theTiles.size(); k++) {
+    for (unsigned long k = 0; k < theTiles.size(); k++) {
         long theX = theTiles[k].GetX();
         long theY = theTiles[k].GetY();
         EEMapTile* theMapTile = this->mMap->GetTile(theX, theY);
@@ -633,90 +544,6 @@ long EERandomMap::FilterHeightMap()
     if (this->mData.mFilterHeightMap)
         theResult = this->mFilterHeightMapPIM(&this->mData);
     return theResult;
-}
-
-// Smooths each height toward its neighbours' mean and keeps edge (space maps: empty) cells at sea level, then
-// raises the low corners of tiles straddling the sea level
-void EERandomMap::SmoothHeights()
-{
-    float theRange = (float)(this->mData.mMaxIntElevation - this->mData.mMinIntElevation);
-    float theScale = this->mMap->GetF1955F4();
-    float theMinimum = (float)this->mData.mMinIntElevation;
-    float theSeaLevel = -(theMinimum / theRange);
-    long x;
-    long y;
-    for (x = 0; x < (long)this->mData.mGridSize; x++) {
-        for (y = 0; y < (long)this->mData.mGridSize; y++) {
-            if (!this->mData.mValidTiles[x][y])
-                continue;
-            float theHeight = this->mData.mHeights[x][y];
-            float theSum = 0.0f;
-            long theCount = 0;
-            float theLow;
-            float theHigh;
-            this->AddNeighbourHeight(x - 1, y - 1, theSum, theCount, theLow, theHigh);
-            this->AddNeighbourHeight(x - 1, y, theSum, theCount, theLow, theHigh);
-            this->AddNeighbourHeight(x - 1, y + 1, theSum, theCount, theLow, theHigh);
-            this->AddNeighbourHeight(x, y - 1, theSum, theCount, theLow, theHigh);
-            this->AddNeighbourHeight(x, y + 1, theSum, theCount, theLow, theHigh);
-            this->AddNeighbourHeight(x + 1, y - 1, theSum, theCount, theLow, theHigh);
-            this->AddNeighbourHeight(x + 1, y, theSum, theCount, theLow, theHigh);
-            this->AddNeighbourHeight(x + 1, y + 1, theSum, theCount, theLow, theHigh);
-            theSum = theSum / theCount;
-            theHeight = (theHeight * theRange + theMinimum) * theScale;
-            if (UMAbs(theHeight - (theSum * theRange + theMinimum) * theScale) >= theScale * this->mData.mHeightMapSmoothness)
-                this->mData.mHeights[x][y] = theSum;
-            if (this->mData.mIsSpaceMap) {
-                // the normalised height, like the sea level (theHeight is in world units)
-                if (this->mData.mHeights[x][y] < theSeaLevel && EERMIsTileFree(this->mData.mTiles, x, y))
-                    this->mData.mHeights[x][y] = theSeaLevel;
-            } else {
-                if (this->mMap->GetTile(x, y) && this->mMap->GetTile(x - 1, y) && this->mMap->GetTile(x - 1, y - 1) &&
-                    this->mMap->GetTile(x, y - 1))
-                    continue;
-                if (this->mData.mHeights[x][y] < theSeaLevel)
-                    this->mData.mHeights[x][y] = theSeaLevel;
-            }
-        }
-    }
-    for (x = 0; x < (long)this->mData.mGridSize; x++) {
-        for (y = 0; y < (long)this->mData.mGridSize; y++) {
-            if (!this->mData.mValidTiles[x][y] || this->mMap->GetTile(x, y) == NULL)
-                continue;
-            bool theLow = false;
-            bool theHigh = false;
-            float theHeight = this->mData.mHeights[x][y];
-            if (theHeight > theSeaLevel) theHigh = true;
-            else if (theHeight < theSeaLevel + 0.0001f)
-                theLow = true;
-            theHeight = this->mData.mHeights[x][y + 1];
-            if (theHeight > theSeaLevel) theHigh = true;
-            else if (theHeight < theSeaLevel + 0.0001f)
-                theLow = true;
-            theHeight = this->mData.mHeights[x + 1][y];
-            if (theHeight > theSeaLevel) theHigh = true;
-            else if (theHeight < theSeaLevel + 0.0001f)
-                theLow = true;
-            theHeight = this->mData.mHeights[x + 1][y + 1];
-            if (theHeight > theSeaLevel)
-                theHigh = true;
-            else { if (theHeight < theSeaLevel + 0.0001f)
-                    theLow = true;
-                if (!theHigh)
-                    continue;
-            }
-            if (!theLow)
-                continue;
-            if (this->mData.mHeights[x][y] < theSeaLevel)
-                this->mData.mHeights[x][y] = theSeaLevel;
-            if (this->mData.mHeights[x][y + 1] < theSeaLevel)
-                this->mData.mHeights[x][y + 1] = theSeaLevel;
-            if (this->mData.mHeights[x + 1][y] < theSeaLevel)
-                this->mData.mHeights[x + 1][y] = theSeaLevel;
-            if (this->mData.mHeights[x + 1][y + 1] < theSeaLevel)
-                this->mData.mHeights[x + 1][y + 1] = theSeaLevel;
-        }
-    }
 }
 
 // Finds the named generator's PIM and generates the map, retrying with a new seed (11 tries at most) until the players
@@ -963,23 +790,11 @@ void EERandomMap::InitializeValues(unsigned long inSeed)
 }
 
 // Sizes the generator grids to the power of two above the map (64 to 1024), resets them to the initial elevation and
-// sets up the player, neutral and moon rings
+// sets up the player, neutral and moon rings (the size and the rings: ee_rmap game.rs)
 void EERandomMap::CreateGrids()
 {
-    unsigned long theSize = this->mMap->mL195610 * 2;
-    unsigned long theOther = this->mMap->mL195614 * 2;
-    if (theOther > theSize)
-        theSize = theOther;
-    if (theSize < 0x40)
-        this->mData.mGridSize = 0x40;
-    else if (theSize < 0x80)
-        this->mData.mGridSize = 0x80;
-    else if (theSize < 0x100)
-        this->mData.mGridSize = 0x100;
-    else if (theSize < 0x200)
-        this->mData.mGridSize = 0x200;
-    else if (theSize < 0x400)
-        this->mData.mGridSize = 0x400;
+    this->mData.mGridSize = ee_rmap_game_grid_size((uint32_t)(this->mMap->mL195610), (uint32_t)(this->mMap->mL195614),
+                                                   (uint32_t)this->mData.mGridSize);
     this->mData.mClaimedTiles.resize(this->mData.mGridSize + 1);
     this->mData.mTiles.resize(this->mData.mGridSize + 1);
     this->mData.mHeights.resize(this->mData.mGridSize + 1);
@@ -1002,269 +817,19 @@ void EERandomMap::CreateGrids()
             this->mData.mValidTiles[x][y] = 0;
         }
     }
-    float theExtent = UMAbs(this->mData.mFlatArea.GetLeft());
-    float theValue = UMAbs(this->mData.mFlatArea.GetRight());
-    if (theValue > theExtent)
-        theExtent = theValue;
-    theValue = UMAbs(this->mData.mFlatArea.GetBottom());
-    if (theValue > theExtent)
-        theExtent = theValue;
-    theValue = UMAbs(this->mData.mFlatArea.GetTop());
-    if (theValue > theExtent)
-        theExtent = theValue;
-    theValue = (float)this->mMap->mSize;
-    float theRadius = (theValue - theExtent) * kRMRingScale;
-    this->mData.mHalfMapSize = theValue * 0.5f;
-    this->mData.mRing.mCenter = GE2DPoint(0.5f * (float)this->mMap->mSize, 0.5f * (float)this->mMap->mSize);
-    this->mData.mRing.mMinRadius = theRadius * this->mData.mPlayerInnerRadius;
-    this->mData.mRing.mMaxRadius = theRadius * this->mData.mPlayerOuterRadius;
-    this->mData.mNeutralRing.mCenter = this->mData.mRing.mCenter;
-    this->mData.mNeutralRing.mMinRadius = theRadius * this->mData.mNeutralInnerRadius;
-    this->mData.mNeutralRing.mMaxRadius = theRadius * this->mData.mNeutralOuterRadius;
-    this->mData.mMoonRing.mCenter = this->mData.mRing.mCenter;
-    this->mData.mMoonRing.mMaxRadius = this->mData.mHalfMapSize;
-    this->mData.mMoonRing.mMinRadius = (this->mData.mHalfMapSize - this->mData.mRing.mMaxRadius) * 0.5f + this->mData.mRing.mMaxRadius;
-}
-
-// Claims the grid cells of every player's start units and walls, and of every cliff tile
-void EERandomMap::MarkFeatures()
-{
-    GE2DPoint theStart;
-    GE2DPoint theEnd;
-    EERMNamedEntry theEntry;
-    unsigned long theNumPlayers = this->mData.mPlayers.size();
-    unsigned long theNumFeatures = this->mData.mFeatures.size();
-    unsigned long theNumWalls = this->mData.mWalls.size();
-    for (unsigned long i = 0; i < theNumPlayers; i++) {
-        if (this->mData.mPlayers[i].mIsNeutral)
-            continue;
-        float thePlayerX = this->mData.mPlayers[i].mPosition.GetX();
-        float thePlayerY = this->mData.mPlayers[i].mPosition.mY;
-        unsigned long j;
-        for (j = 0; j < theNumFeatures; j++) {
-            EERMFeature theFeature = this->mData.mFeatures[j];
-            theEntry = this->mData.mUnitNames[theFeature.mUnitType];
-            unsigned long theY = UMFloor(theFeature.mPosition.GetY() + thePlayerY);
-            unsigned long theX = UMFloor(theFeature.mPosition.GetX() + thePlayerX);
-            EERMClaimArea(this->mData.mClaimedTiles, theX, theY, theEntry.mSize);
-        }
-        for (j = 0; j < theNumWalls; j++) {
-            theStart.SetX((float)this->mData.mWalls[j].mStartX + thePlayerX + 0.5f);
-            theStart.SetY((float)this->mData.mWalls[j].mStartY + thePlayerY + 0.5f);
-            theEnd.SetX((float)this->mData.mWalls[j].mEndX + thePlayerX + 0.5f);
-            theEnd.SetY((float)this->mData.mWalls[j].mEndY + thePlayerY + 0.5f);
-            this->MarkLine(theStart, theEnd);
-        }
+    EeRmapRect theFlat = {this->mData.mFlatArea.GetLeft(), this->mData.mFlatArea.GetBottom(),
+                          this->mData.mFlatArea.GetRight(), this->mData.mFlatArea.GetTop()};
+    EeRmapGameRadii theRadii = {this->mData.mPlayerInnerRadius, this->mData.mPlayerOuterRadius,
+                                this->mData.mNeutralInnerRadius, this->mData.mNeutralOuterRadius};
+    EeRmapGameRings theRings = ee_rmap_game_rings(theFlat, (int32_t)this->mMap->mSize, theRadii);
+    EERMRing* theOut[3] = {&this->mData.mRing, &this->mData.mNeutralRing, &this->mData.mMoonRing};
+    const EeRmapRing* theIn[3] = {&theRings.ring, &theRings.neutral_ring, &theRings.moon_ring};
+    this->mData.mHalfMapSize = theRings.half_map_size;
+    for (int i = 0; i < 3; i++) {
+        theOut[i]->mCenter = GE2DPoint(theIn[i]->center.x, theIn[i]->center.y);
+        theOut[i]->mMinRadius = theIn[i]->min_radius;
+        theOut[i]->mMaxRadius = theIn[i]->max_radius;
     }
-    for (float x = 0.0f; x < (float)this->mData.mGridSize; x += 1.0f) {
-        for (float y = 0.0f; y < (float)this->mData.mGridSize; y += 1.0f) {
-            EEMapTile* theTile = this->mMap->GetTile(UMFloor(x), UMFloor(y));
-            if (theTile && theTile->mTerrainType == kTerrainCliff)
-                this->mData.mClaimedTiles[UMFloor(x)][UMFloor(y)] = true;
-        }
-    }
-}
-
-// Marks a wall line's tiles as land and claimed on the grid
-void EERandomMap::MarkLine(const GE2DPoint& inStart, const GE2DPoint& inEnd)
-{
-    std::vector<GE2DPoint> thePoints;
-    std::vector<EETileCoordinate> theTiles;
-    EETileCoordinate theTile;
-    unsigned long i = 0;
-    if (inStart != inEnd) {
-        inStart.InterpolateTo(inEnd, 1.0f, thePoints);
-        for (; i < thePoints.size(); i++) {
-            const GE2DPoint& thePoint = thePoints[i];
-            theTile.mX = (long)thePoint.GetX();
-            theTile.mY = (long)thePoint.GetY();
-            theTiles.push_back(theTile);
-        }
-        EEDropDiagonalCorners(theTiles);
-    } else {
-        theTile.mX = (long)inStart.GetX();
-        theTile.mY = (long)inStart.GetY();
-        theTiles.push_back(theTile);
-    }
-    EEDropRepeatedTiles(theTiles);
-    for (unsigned long j = 0; j < theTiles.size(); j++) {
-        long theX = theTiles[j].GetX();
-        long theY = theTiles[j].GetY();
-        if (this->mMap->GetTile(theX, theY)) {
-            this->mData.mTiles[theX][theY] = 0x400;
-            this->mData.mClaimedTiles[theX][theY] = true;
-        }
-    }
-}
-
-// May place one of the terrain's ambient units (by its chance) on an unclaimed tile away from the edge, owned by nature
-void EERandomMap::PlaceTerrainUnit(unsigned long inX, unsigned long inY, EETerrainTable* inTerrain)
-{
-    if (!(inTerrain->GetNumUnitClasses() > 0) || this->mData.mClaimedTiles[inX][inY] ||
-        !(this->mData.mRandom.Generate() <= inTerrain->mAmbientUnitChance * kHeightEpsilon) ||
-        EERMIsNearEdge(this->mData.mValidTiles, inX, inY, this->mData.mIsSpaceMap ? 3 : 1))
-        return;
-    long theIndex = this->mData.mRandomIntegers.Generate(0, inTerrain->GetNumUnitClasses() - 1);
-    EEUnitClass* theClass = gUnitClassTable[inTerrain->GetUnitClass(theIndex)];
-    if (theClass) {
-        theClass->CreateUnitAtTile(this->mGamePlayers->front(), inX, inY, this->mMap, 0.0f);
-        this->mData.mClaimedTiles[inX][inY] = true;
-    }
-}
-
-// Paints every land tile, then every water tile, with the terrain its fractal value (plus cliff, Mars or band offset)
-// selects by elevation, and may add that terrain's ambient unit
-void EERandomMap::PaintTiles()
-{
-    U2DFractal theFractal(this->mData.mGridSize, 0.0f, this->mData.mTerrainChaos, this->mData.mSeed);
-    GETerrainMesh* theMesh = &this->mMap->mTerrainMesh;
-    unsigned long theStart = TMGetTime();
-    ESDebugOut("EERandomMap::PaintTiles begin of function\n");
-    unsigned long x;
-    unsigned long y;
-    unsigned long i;
-    unsigned long theTerrain;
-    unsigned long theValue;
-    for (x = 0; x < this->mData.mGridSize; x++) {
-        for (y = 0; y < this->mData.mGridSize; y++) {
-            EEMapTile* theTile = this->mMap->GetTile(x, y);
-            if (theTile == NULL || theTile->GetHeight() < 0.0f || theTile->mTerrainType == kTerrainSpace)
-                continue;
-            theTerrain = this->mData.mTerrains.size();
-            theValue = min(99, max(0, UMFloatToLong(theFractal.GetValue(x, y) * 100.0f)));
-            if (EERMIsCliff(this->mData.mTiles, x, y)) {
-                theValue += (((this->mData.mTiles[x][y] + 1) & 3) + 10) * 100;
-            } else if ((this->mData.mMapCharacteristics & kRMMapMarsMap) == kRMMapMarsMap) {
-                theValue += 100;
-            } else if ((this->mData.mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap) {
-                theValue += ((this->mData.mTerrainBandOffset + this->mData.mTiles[x][y]) % this->mData.mNumTerrainBands) * 100;
-            }
-            for (i = 0; i < this->mData.mTerrainRegions.size(); i++) {
-                if (theValue >= this->mData.mTerrainRegions[i].mFrom && theValue <= this->mData.mTerrainRegions[i].mTo) {
-                    theTerrain = this->mData.mTerrainRegions[i].mTerrain;
-                    break;
-                }
-            }
-            if (theTerrain == this->mData.mTerrains.size() && this->mData.mTerrainRegions.size() != 0)
-                theTerrain = this->mData.mTerrainRegions[0].mTerrain;
-            if (theTerrain >= this->mData.mTerrains.size())
-                continue;
-            float theHeight = theTile->GetHeight();
-            float theUnit = this->mMap->GetF1955F4();
-            long theTexture = this->mData.mTerrains[theTerrain].mTextures[EERMGetElevation(theHeight / theUnit)];
-            if (EETerrainTable::Get(theTexture)) {
-                this->mMap->PaintTerrain(x, y, theTexture);
-                this->PlaceTerrainUnit(x, y, EETerrainTable::Get(theTexture));
-            }
-        }
-    }
-    for (x = 0; x < this->mData.mGridSize; x++) {
-        for (y = 0; y < this->mData.mGridSize; y++) {
-            EEMapTile* theTile = this->mMap->GetTile(x, y);
-            if (theTile == NULL || theTile->GetHeight() >= 0.0f)
-                continue;
-            theTerrain = this->mData.mTerrains.size();
-            theValue = min(99, max(0, UMFloatToLong(theFractal.GetValue(x, y) * 100.0f)));
-            for (i = 0; i < this->mData.mTerrainRegions.size(); i++) {
-                if (theValue >= this->mData.mTerrainRegions[i].mFrom && theValue <= this->mData.mTerrainRegions[i].mTo) {
-                    theTerrain = this->mData.mTerrainRegions[i].mTerrain;
-                    break;
-                }
-            }
-            if (theTerrain == this->mData.mTerrains.size() && this->mData.mTerrainRegions.size() != 0)
-                theTerrain = this->mData.mTerrainRegions[0].mTerrain;
-            if (theTerrain >= this->mData.mTerrains.size())
-                continue;
-            // the water tile's highest corner; a corner at or above the water line counts as one unit deep
-            float theHighest = theMesh->GetZ(x, y);
-            if (theMesh->GetZ(x + 1, y) > theHighest)
-                theHighest = theMesh->GetZ(x + 1, y);
-            if (theMesh->GetZ(x, y + 1) > theHighest)
-                theHighest = theMesh->GetZ(x, y + 1);
-            if (theMesh->GetZ(x + 1, y + 1) > theHighest)
-                theHighest = theMesh->GetZ(x + 1, y + 1);
-            if (theHighest >= 0.0f)
-                theHighest = -this->mMap->GetF1955F4();
-            long theTexture = this->mData.mTerrains[theTerrain].mTextures[EERMGetElevation(theHighest /
-                                                                              this->mMap->GetF1955F4())];
-            if (EETerrainTable::Get(theTexture)) {
-                this->mMap->PaintTerrain(x, y, theTexture);
-                this->PlaceTerrainUnit(x, y, EETerrainTable::Get(theTexture));
-            }
-        }
-    }
-    ESDebugOut("EERandomMap::PaintTiles Processing completed in %6.2f s\n", (TMGetTime() - theStart) * 0.001f);
-}
-
-// Returns whether a grid cell is a cliff (value 0x8000 or more)
-static bool EERMIsCliff(const std::vector<std::vector<unsigned long> >& inTiles, unsigned long inX, unsigned long inY)
-{
-    return inTiles[inX][inY] >= 0x8000;
-}
-
-// Creates the generator's resource objects (stone, gold, trees, food, animals, kind 5, iron) as nature units and paints
-// their resource terrain under them
-void EERandomMap::Fn288426()
-{
-    unsigned long theStart = TMGetTime();
-    for (std::vector<EERMObject>::iterator theObject = this->mData.mObjects.begin(); theObject < this->mData.mObjects.end(); theObject++) {
-        long theTexture = this->mData.mResourceTerrainTexture[theObject->mKind];
-        bool theRandomHeading = false;
-        unsigned long theClass;
-        switch (theObject->mKind) {
-        case 0:
-            theClass = 0x26;
-            break;
-        case 1:
-            theClass = 0x32;
-            break;
-        case 2: {
-            unsigned long theIndex = this->mData.mRandomIntegers.Generate(0, this->mData.mForests[theObject->mType].mTreeTypes.size() - 1);
-            theClass = this->mData.mUnitNames[this->mData.mForests[theObject->mType].mTreeTypes[theIndex]].mUnitClass;
-            theTexture = this->mData.mForests[theObject->mType].mTerrainTexture;
-            break;
-        }
-        case 3:
-            theClass = 0x37;
-            break;
-        case 4:
-            if (this->mData.mAvailableAnimals.size() != 0) {
-                unsigned long theIndex = this->mData.mRandomIntegers.Generate(0, this->mData.mAvailableAnimals.size() - 1);
-                theClass = this->mData.mUnitNames[this->mData.mAvailableAnimals[theIndex]].mUnitClass;
-                theRandomHeading = true;
-            } else {
-                theClass = 0;
-            }
-            theTexture = -1;
-            break;
-        case 5:
-            theTexture = -1;
-            theClass = 0x13b;
-            break;
-        case 6:
-            theClass = 0xe0;
-            break;
-        default:
-            continue;
-        }
-        if (theClass == 0 || theClass >= EEUnitClassCount())
-            continue;
-        unsigned long theX = UMFloor(theObject->mLocation.GetX());
-        unsigned long theY = UMFloor(theObject->mLocation.GetY());
-        EEUnitClass* theUnitClass = gUnitClassTable[theClass];
-        EEMapTile* theTile = this->mMap->GetTile(theX, theY);
-        if (theUnitClass == NULL || theTile == NULL || theTile->mTerrainType == kTerrainCliff)
-            continue;
-        float theHeading;
-        if (theRandomHeading)
-            theHeading = this->mData.mRandom.Generate() * 6.2831855f - 3.1415927f;
-        else
-            theHeading = 3.1415927f;
-        theUnitClass->CreateUnitAtTile((*this->mGamePlayers)[0], theX, theY, this->mMap, theHeading);
-        if (theTexture != -1 && theTile->mTerrainType != kTerrainSpace && this->mData.mTiles[theX][theY] < 0x8000)
-            this->mMap->PaintTerrain(theX, theY, theTexture);
-    }
-    TMGetTime();
 }
 
 // Prepares a generation: fills the state, applies the generator script's values, then builds the grids, valid map and
@@ -1282,83 +847,6 @@ long EERandomMap::SetUp(unsigned long inGenerator, EEMap* inMap, unsigned long i
         this->CreateTeams();
     }
     return theResult;
-}
-
-// Adds a valid grid cell's height to a running sum, count, minimum and maximum (cells outside the grid are skipped)
-void EERandomMap::AddNeighbourHeight(unsigned long inX, unsigned long inY, float& ioSum, long& ioCount,
-                                     float& ioMinimum, float& ioMaximum)
-{
-    if (!(inX < this->mData.mGridSize) || !(inY < this->mData.mGridSize) || !this->mData.mValidTiles[inX][inY])
-        return;
-    float theHeight = this->mData.mHeights[inX][inY];
-    ioSum += theHeight;
-    ioCount++;
-    if (ioCount == 1) {
-        ioMinimum = theHeight;
-        ioMaximum = theHeight;
-    } else {
-        if (theHeight < ioMinimum)
-            ioMinimum = theHeight;
-        if (theHeight > ioMaximum)
-            ioMaximum = theHeight;
-    }
-}
-
-// Applies the height grid to the terrain mesh (clamped, shallow dips flattened, empty space-map cells painted Space),
-// then sets water, normals, tile heights and shorelines
-void EERandomMap::Fn288839()
-{
-    GETerrainMesh* theMesh = &this->mMap->mTerrainMesh;
-
-    float theRange = (float)(this->mData.mMaxIntElevation - this->mData.mMinIntElevation);
-    float theScale = this->mMap->GetF1955F4();
-    unsigned long theSize = this->mData.mMaximumY + 1;
-    float theMinimum = (float)this->mData.mMinIntElevation;
-    EETerrainTable* theTerrain = EETerrainTable::Get(theMesh->GetGlobalWaterSetID());
-    EETerrainTypeTable::Get(theTerrain->mColorType);
-    unsigned long x;
-    unsigned long y;
-    for (x = 0; x < theSize; x++) {
-        for (y = 0; y < theSize; y++) {
-            float theZ = theRange * this->mData.mHeights[x][y] + theMinimum;
-            if (theZ > (float)this->mData.mMaxIntElevation)
-                theZ = (float)this->mData.mMaxIntElevation;
-            else if (theZ < (float)this->mData.mMinIntElevation)
-                theZ = (float)this->mData.mMinIntElevation;
-            if (theZ < 0.0f && (theZ > -0.25f || this->mData.mIsSpaceMap))
-                theZ = 0.0f;
-            theZ = theZ * theScale;
-            if (this->mData.mIsSpaceMap && EERMIsTileFree(this->mData.mTiles, x, y)) {
-                if (theMesh->GetIsValidPoint(x, y))
-                    theMesh->SetZ(x, y, 0.0f);
-                this->mMap->PaintTerrain(x, y, gSpaceTerrain);
-            } else if (theMesh->GetIsValidPoint(x, y)) {
-                theMesh->SetZ(x, y, theZ);
-                if (theZ < 0.0f)
-                    theMesh->SetWaterColorSet(x, y);
-            }
-        }
-    }
-    for (x = 0; x < theSize; x++) {
-        for (y = 0; y < theSize; y++) {
-            if (!theMesh->GetIsValidPoint(x, y))
-                continue;
-            theMesh->ComputeVertexNormal(x, y);
-            if (!theMesh->GetIsValidTile(x, y))
-                continue;
-            float theLowest = min(theMesh->GetZ(x, y), theMesh->GetZ(x + 1, y));
-            theLowest = min(theLowest, theMesh->GetZ(x, y + 1));
-            theLowest = min(theLowest, theMesh->GetZ(x + 1, y + 1));
-            theMesh->SetIsWater(x, y, theLowest < 0.0f);
-            this->mMap->GetTile(x, y)->mHeight = theLowest;
-        }
-    }
-    for (x = 0; x < theSize; x++) {
-        for (y = 0; y < theSize; y++) {
-            if (theMesh->GetIsValidTile(x, y))
-                theMesh->ComputeShorelines(x, y);
-        }
-    }
 }
 
 // Drops the registered random-map generators (at Empire Earth.cpp's shutdown); returns 0

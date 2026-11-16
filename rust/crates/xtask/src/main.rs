@@ -33,6 +33,7 @@ fn generate_single(root: &Path, config: cbindgen::Config) -> Result<String, Stri
         // a dependency's `extern "C"` functions: cbindgen emits functions only from the binding crate or from
         // loose source files
         .with_src(root.join("rust/crates/ee_data/src/ffi.rs"))
+        .with_src(root.join("rust/crates/ee_data/src/tables.rs"))
         .with_config(config)
         .with_header(HEADER_NOTE)
         .generate()

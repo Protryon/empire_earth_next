@@ -2,3 +2,6 @@
 use ee_rmap as _;
 // the C ABI of the engine math the tool's UMath.cpp and GE units forward to (ee_ge::ffi)
 use ee_ge as _;
+// the file specs and the thread primitives the tool's FSFileSpec.cpp and engine headers forward to
+use ee_fs as _;
+use ee_ts as _;
