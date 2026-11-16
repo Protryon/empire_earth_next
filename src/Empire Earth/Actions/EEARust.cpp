@@ -26,7 +26,6 @@
 #include "ee/EEMouse.h"
 #include "ee/EEMessage.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EEAction.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EEDoppelganger.h"
