@@ -66,12 +66,6 @@ unsafe extern "C" fn host(_me: *mut c_void, op: EeWonGuiOp, a: isize, b: isize, 
             1 => EeWonSkinLay::Part,
             2 => EeWonSkinLay::Field,
             3 => EeWonSkinLay::SetHeaderHeight,
-            4 => EeWonSkinLay::Width,
-            5 => EeWonSkinLay::Height,
-            6 => EeWonSkinLay::Left,
-            7 => EeWonSkinLay::Top,
-            8 => EeWonSkinLay::Right,
-            9 => EeWonSkinLay::Visible,
             10 => EeWonSkinLay::SetPosSize,
             11 => EeWonSkinLay::DesiredSize,
             12 => EeWonSkinLay::SetLeftPad,
@@ -98,12 +92,6 @@ unsafe extern "C" fn host(_me: *mut c_void, op: EeWonGuiOp, a: isize, b: isize, 
                 w.trace.push(format!("headerheight {}", b));
                 0
             }
-            EeWonSkinLay::Width => comp_mut(&mut w, b, |c| c.w as isize),
-            EeWonSkinLay::Height => comp_mut(&mut w, b, |c| c.h as isize),
-            EeWonSkinLay::Left => comp_mut(&mut w, b, |c| c.x as isize),
-            EeWonSkinLay::Top => comp_mut(&mut w, b, |c| c.y as isize),
-            EeWonSkinLay::Right => comp_mut(&mut w, b, |c| c.x.wrapping_add(c.w) as isize),
-            EeWonSkinLay::Visible => comp_mut(&mut w, b, |c| c.vis as isize),
             EeWonSkinLay::SetPosSize => {
                 // SAFETY: four ints
                 let r = unsafe { std::slice::from_raw_parts(c as *const i32, 4) };
@@ -241,7 +229,7 @@ fn golden_replay() {
         let a = nums(f[0]);
         let (kind, col, title, width, item, in_w, in_h) = (a[1], a[2], a[3], a[4], a[5], a[6], a[7]);
         let kind = kind_of(kind);
-        WORLD.with(|c| *c.borrow_mut() = world_of(f[1]));
+        let _m = install(world_of(f[1]));
         let arg = match kind {
             EeWonSkinLayKind::WonListTextHeader => title as isize,
             EeWonSkinLayKind::WonListHeader => 100 + item as isize,
@@ -256,8 +244,22 @@ fn golden_replay() {
     assert_eq!(n, 400);
 }
 
-fn run(kind: EeWonSkinLayKind, w: World) -> (String, World) {
+/// The world installed; the receiver's and parts' bounds and visibility are read by the Rust from compmem's blocks
+/// (filled from the world at each read) while the guard lives.
+fn install(w: World) -> crate::compmem::FilledWorld {
     WORLD.with(|c| *c.borrow_mut() = w);
+    crate::compmem::filled_world(|h| {
+        WORLD.with(|w| {
+            comp_mut(&mut w.borrow_mut(), h, |c| crate::compmem::EeWonCompMembers {
+                bits: if c.vis { 0 } else { 1 },
+                ..crate::compmem::block(c.x, c.y, c.w, c.h)
+            })
+        })
+    })
+}
+
+fn run(kind: EeWonSkinLayKind, w: World) -> (String, World) {
+    let _m = install(w);
     let (mut ww, mut hh) = (0, 0);
     layout(kind, std::ptr::dangling_mut::<c_void>(), Some(host), 0, 0, 0, &mut ww, &mut hh);
     let w = WORLD.with(|c| std::mem::take(&mut *c.borrow_mut()));
@@ -321,7 +323,7 @@ fn ms_scroll_frame_needs_both_flags() {
 #[test]
 fn won_combo_desired_size_without_parts() {
     let w = World { held: [-1, -1, -1, -1, -1, -1, -1, -1, -1], ..Default::default() };
-    WORLD.with(|c| *c.borrow_mut() = w);
+    let _m = install(w);
     let (mut ww, mut hh) = (7, 7);
     layout(EeWonSkinLayKind::WonComboSize, std::ptr::dangling_mut::<c_void>(), Some(host), 0, 0, 0, &mut ww, &mut hh);
     assert_eq!((ww, hh), (100, 22));
@@ -330,7 +332,7 @@ fn won_combo_desired_size_without_parts() {
 #[test]
 fn simple_button_size_is_the_largest_image() {
     let w = World { images: [(-1, 90), (12, 5), (7, 30), (-1, 0)], ..Default::default() };
-    WORLD.with(|c| *c.borrow_mut() = w);
+    let _m = install(w);
     let (mut ww, mut hh) = (99, 99);
     layout(
         EeWonSkinLayKind::SimpleButtonSize,
@@ -350,7 +352,7 @@ fn first_column_header_fixes_the_height() {
     let mut p = parts(10);
     p[6].col_desired = 0;
     let w = World { parts: p, held: [-1, -1, -1, 3, -1, -1, 6, -1, -1], ..Default::default() };
-    WORLD.with(|c| *c.borrow_mut() = w);
+    let _m = install(w);
     let (mut ww, mut hh) = (0, 0);
     layout(
         EeWonSkinLayKind::WonListTextHeader,

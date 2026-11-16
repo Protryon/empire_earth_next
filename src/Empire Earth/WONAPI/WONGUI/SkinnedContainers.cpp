@@ -141,18 +141,12 @@ using namespace WONAPI;
 extern "C" intptr_t ee_won_guicpp_skin_call(void* inMe, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     Component* m = (Component*)inMe;
-    Component* x = (Component*)b;
+    Component* x = (Component*)b; // (the bounds and visibility the layouts read are compmem.rs's block)
     if (op != EeWonGuiOp::SkinLay) return 0;
     switch ((SL)a) {
     case SL::Part: return SkinPartOrField(m, (SK)b, c, true);
     case SL::Field: return SkinPartOrField(m, (SK)b, c, false);
     case SL::SetHeaderHeight: static_cast<WONScrollContainer*>(m)->mHeaderHeight = (int)b; return 0;
-    case SL::Width: return x->Width();
-    case SL::Height: return x->Height();
-    case SL::Left: return x->Left();
-    case SL::Top: return x->Top();
-    case SL::Right: return x->Right();
-    case SL::Visible: return x->IsVisible() ? 1 : 0;
     case SL::SetPosSize: { const int* r = (const int*)c; x->SetPosSize(r[0], r[1], r[2], r[3]); return 0; }
     case SL::DesiredSize: { int* wh = (int*)c; x->GetDesiredSize(wh[0], wh[1]); return 0; }
     case SL::SetLeftPad: static_cast<InputBox*>(x)->SetLeftPad((int)c); return 0;

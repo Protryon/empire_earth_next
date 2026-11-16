@@ -94,7 +94,6 @@ fn release(t: *mut Shell) {
 
 unsafe extern "C" fn host(_comp: *mut c_void, op: Op, a: isize, b: isize, c: isize, _d: isize) -> isize {
     let k = a as usize;
-    let get = |f: fn(&Bx) -> isize| with(|w| f(&w.w[k]));
     match op {
         Op::ChildSetPos => {
             trace(format!("pos {k} {b} {c}"));
