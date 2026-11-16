@@ -266,6 +266,8 @@ pub struct EeAiUnitsSave {
     pub mark_count: usize,
     pub trades: *const i32,
     pub trade_count: usize,
+    pub reflex_militia: bool,
+    pub reflex_held: bool,
 }
 
 /// Safety: every pointer of `v` points to its count of entries.
@@ -284,6 +286,8 @@ unsafe fn units_from_view(v: &EeAiUnitsSave) -> UnitsSave {
         hurt: slice(v.hurt, v.hurt_count * 2).as_chunks::<2>().0.to_vec(),
         marks: slice(v.marks, v.mark_count).to_vec(),
         trades: slice(v.trades, v.trade_count * 4).as_chunks::<4>().0.to_vec(),
+        reflex_militia: v.reflex_militia,
+        reflex_held: v.reflex_held,
     }
 }
 
@@ -337,6 +341,8 @@ pub unsafe extern "C" fn ee_ai_units_save_decode(
         mark_count: state.marks.len(),
         trades: state.trades.as_ptr().cast(),
         trade_count: state.trades.len(),
+        reflex_militia: state.reflex_militia,
+        reflex_held: state.reflex_held,
     };
     // the vectors' buffers do not move when the state moves into the box
     Box::into_raw(Box::new(EeAiUnitsDecoded { state, view }))
@@ -626,7 +632,8 @@ mod tests {
     #[test]
     fn units_view_round_trip() {
         let s = UnitsSave {
-            version: 3,
+            version: units_save::VERSION,
+            reflex_militia: true,
             held: vec![1, 2],
             forward: vec![[1, 2, 3], [4, 5, 6]],
             hurt: vec![[7, 8]],

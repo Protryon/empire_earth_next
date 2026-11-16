@@ -7,7 +7,8 @@
 //! - `nens`: 60 generated next states (every tenth past the decoder's limits): the block's length and FNV-1a 64, then
 //!   16 changed blocks (the older versions, bad versions, cuts, a byte more, a bad magic, flipped bytes) decoded onto
 //!   another state: whether it reads, and the state then encoded again;
-//! - `nenu`: the same for 80 per-unit states (sets and maps as the C++ containers keep them);
+//! - `nenu`: the same for 80 per-unit states (sets and maps as the C++ containers keep them), in the version 3 layout
+//!   the driver wrote (`as_v3`: version 4's reflex words left out);
 //! - `man`: 427 manifest documents (`golden_manifest_cases.txt`, hex): the log lines (the C++ summary line included,
 //!   900 bytes at most) and the entries; `choice`/`seat`: choices by name, EE_AI_ENGINE's lists and a hash of 15,000
 //!   resolves per manifest.
@@ -266,6 +267,8 @@ impl Units {
             hurt: self.hurt.clone(),
             marks: self.marks.clone(),
             trades: self.trades.iter().map(|(&(a, b), &(c, d))| [a, b, c, d]).collect(),
+            reflex_militia: true,
+            reflex_held: false,
         }
     }
     /// `EECPUnitsLoadState`'s puts.
@@ -357,6 +360,16 @@ fn gen_units(seed: u32, big: bool) -> Units {
     s
 }
 
+/// A block as the driver's C++ wrote it: version 3, before the militia and held reflexes (version 4 appends them, two
+/// int32 words; the golden predates them, so a version 4 block is compared in that layout).
+fn as_v3(mut b: Vec<u8>) -> Vec<u8> {
+    if b.len() >= 16 && b[4] == 4 {
+        b.truncate(b.len() - 8);
+        b[4] = 3;
+    }
+    b
+}
+
 const LIMITS: EeAiUnitsLimits =
     EeAiUnitsLimits { max_events: 512, max_remembered: 4000, max_trades: 1024, event_kind_min: 1, event_kind_max: 7 };
 
@@ -365,7 +378,7 @@ fn units_block() {
     let mut got = Vec::new();
     for seed in 1..=80u32 {
         let s = gen_units(seed, seed % 10 == 9);
-        let b = units_save::encode(&s.save());
+        let b = as_v3(units_save::encode(&s.save()));
         got.push(format!("nenu enc {seed} {} {:016x}", b.len(), fnv64(&b)));
         if seed <= 3 {
             got.push(format!("nenu hex {seed} {}", hex(&b)));
@@ -375,7 +388,7 @@ fn units_block() {
             match units_save::decode(&m, &LIMITS) {
                 None => got.push(format!("nenu dec {seed} {name} 0")),
                 Some(d) => {
-                    let again = units_save::encode(&Units::load(&d).save());
+                    let again = as_v3(units_save::encode(&Units::load(&d).save()));
                     got.push(format!("nenu dec {seed} {name} 1 {} {:016x} 0 0 0 0 0 0", again.len(), fnv64(&again)));
                 }
             }
