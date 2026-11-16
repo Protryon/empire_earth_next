@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # The game gates (Windows, x86_64): a tour (main menu, settings tabs, a random map, 120 s of play, input check) and a
-# seeded 2-AI Hard game to the time cap, on the open data tree (text db, glTF, PNG: the only forms the game reads,
+# seeded 2-AI Hard game to the time cap (the lobby's Classic for both computers: classic_lua, the Lua AI the manifest
+# marks "classic"; the C++ classic is gone since the merge of main's stages 5 and 6), on the open data tree (text db, glTF, PNG: the only forms the game reads,
 # RUST_PLAN D9). Build the test profile first: python -I build.py --test-profile windowed-software
 #
 # Default: the fixture driver (tools/harness/fixture_game.py): the game's own UI fixture and telemetry, its game log,
 # the harness clock through PlatSim. It reads no memory by offset and hooks no symbol or import.
 # Pass: the tour prints "RESULT PASS tour"; the AI game "RESULT PASS ai-game outcome time-cap" with both computer
-# players alive (alive_computers [2, 3]); a LAN game between two instances through the WON lobby
+# players alive (alive_computers [2, 3]) and both running classic_lua (engines in the game log); a LAN game between two instances through the WON lobby
 # (tools/harness/lan_game.py) "RESULT PASS lan-game"; the script ends "GATES PASS".
 #
 # --legacy: the debugger harness (game_session.py: record layouts, mangled names, the time shim on the Win32
@@ -50,7 +51,8 @@ tour() {   # log, data option
 }
 ai() {   # log, data option
   "$P" -I tools/harness/fixture_game.py --exercise ai-game --ai-players 2 --map-size Small --difficulty Hard \
-      --max-game-seconds 600 --time-factor 32 --no-render --seed 2 --pt-rate 40 $2 --timeout 2400 > "$1" 2>&1
+      --max-game-seconds 600 --time-factor 32 --no-render --seed 2 --pt-rate 40 --engine-check classic_lua $2 \
+      --timeout 2400 > "$1" 2>&1
   grep -E "^data:|^RESULT" "$1"
   grep -qE "^RESULT PASS ai-game outcome time-cap .*alive_computers \[2, 3\]" "$1" || FAILED=1
 }

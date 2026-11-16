@@ -365,9 +365,16 @@ def run(a):
             summary['game_log_error'] = str(error)
         if a.exercise == 'ai-game' and summary.get('game_log') and summary['result'] == 'PASS':
             kinds = [p.get('kind') for p in summary['game_log']['players'].values()]
+            # the computer seats' AIs (the game log's engine: the lobby's Classic plays the manifest's "classic" AI,
+            # classic_lua since the C++ classic was deleted, main's stage 5)
+            summary['engines'] = [p.get('engine', '?') for p in summary['game_log']['players'].values()
+                                  if p.get('kind') == 'computer']
             if kinds.count('computer') != a.ai_players:
                 summary['result'] = 'FAIL'
                 summary['error'] = f'the game log names {kinds.count("computer")} computer players: {kinds}'
+            elif a.engine_check and any(e != a.engine_check for e in summary['engines']):
+                summary['result'] = 'FAIL'
+                summary['error'] = f'the computer players run {summary["engines"]}, not {a.engine_check}'
         try:
             summary['gx_errors'] = gx_errors(g)
         except OSError:
@@ -377,7 +384,8 @@ def run(a):
     line = f'RESULT {summary["result"]} {a.exercise}'
     if a.exercise == 'ai-game' and 'outcome' in summary:
         line += (f' outcome {summary["outcome"]} PT {summary["final_pt"]} game_s {(summary["game_ms"] or 0) // 1000}'
-                 f' units {[p["units"] for p in summary["players"]]} alive_computers {summary["alive_computers"]}')
+                 f' units {[p["units"] for p in summary["players"]]} alive_computers {summary["alive_computers"]}'
+                 f' engines {summary.get("engines", "?")}')
     if summary.get('error'):
         line += f' error: {summary["error"]}'
     print(f'EVIDENCE {out}', flush=True)
@@ -415,6 +423,9 @@ def main():
     ap.add_argument('--capture-every', type=float, default=2.0, help='--cast: seconds between the captures')
     ap.add_argument('--cast-captures', type=int, default=6, help='--cast: captures per calamity at most')
     ap.add_argument('--ai-players', type=int, default=2)
+    ap.add_argument('--engine-check', metavar='AI',
+                    help="ai-game: fail unless every computer player's engine in the game log is this AI's id "
+                         "(the gates: classic_lua, the lobby's Classic)")
     ap.add_argument('--map-size', default='Small')
     ap.add_argument('--map-type', default='Continental')
     ap.add_argument('--difficulty', default='Easy')

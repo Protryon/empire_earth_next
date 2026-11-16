@@ -468,7 +468,7 @@ struct Options {
     std::string mChecksumTrace;                          // the per-CT checksum lines ("" none)
     std::vector<std::string> mSets;                      // --set doc.key=value
     std::string mCheats, mPersonality;
-    std::string mEngine;                                 // --engine: the computer seats' engines ("" the lobby's: classic)
+    std::string mEngine;                                 // --engine: the computer seats' engines ("" the lobby's Classic: classic_lua)
     long mPortOffset = -1;                               // -1: no fixed ports (kPlatSimAnyPort)
     bool mCalamities = false;                            // --calamities (TEST ONLY; ee/EETechCapture.h)
     bool mMissileSweep = false;                          // --missile-sweep (TEST ONLY; the capture's missile game)
@@ -1465,7 +1465,8 @@ void SetUpLobby()
             theOptions.push_back({kCitizens + s, "5"});
     }
     // --engine: each computer seat's engine box (seat s = slot s; a shorter list is taken in turn), unless --lobby
-    // sets that box itself; without --engine the boxes keep the lobby's classic
+    // sets that box itself; without --engine the boxes keep the lobby's Classic, which plays the AI the manifest
+    // marks "classic" (classic_lua: the C++ classic is gone since the merge of main's stages 5 and 6)
     std::vector<std::string> theEngines;
     for (size_t a = 0; !sOptions.mEngine.empty() && a <= sOptions.mEngine.size();) {
         size_t b = sOptions.mEngine.find(',', a);
@@ -1998,7 +1999,8 @@ const char* kUsage =
     "                         computer attacks it)\n"
     "  --cheats SETS          EE_AI_CHEATS (e.g. none, all, none/all)\n"
     "  --personality NAMES    EE_AI_PERSONALITY (e.g. balanced)\n"
-    "  --engine LIST          the computer seats' engine through the lobby's engine boxes: classic, random, an AI's\n"
+    "  --engine LIST          the computer seats' engine through the lobby's engine boxes: classic (the default: the\n"
+    "                         manifest's classic AI, classic_lua), random, an AI's\n"
     "                         id from Data/ai/ais.json (e.g. boom) or next (its first AI); one for every seat or a\n"
     "                         comma list by seat, taken in turn (e.g. boom,classic)\n"
     "  --set DOC.KEY=VALUE    a rules document value (repeatable), e.g. aipersonalities.balanced.military.army_floor=0.2\n"
