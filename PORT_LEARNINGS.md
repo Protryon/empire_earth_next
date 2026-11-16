@@ -25961,3 +25961,129 @@ and improvement buttons, the chat line unless a chat message is sent.
 
 `EEAWonNet` (the WON lanes'); `Scenario Editor Actions/EESEARust.cpp` (912 lines: the paints' and the whole editor
 actions' hosts and the selection host) onto this host's shape; the editor's click and lasso subclasses as kinds.
+
+## R6: the game actions, round 2: the scenario editor's actions as EEARust kinds, its mouse-mode controls on the HUD's Rust, the scroll check measured (ee_screens game_actions.rs, command_units.rs, select_units.rs; branch rust-actions2, 2026-11-15)
+
+### What moved
+
+| Original | Now | Reached by |
+| --- | --- | --- |
+| `EESEAMouseClick`, `EESEALasso` (headers, inline bodies over Rust) | `EEARust` kinds 20, 21: `Ga::run` applies the queued message through `editor_actions.rs`; `Execute` and `SelectInRectangle` are the editor's deselections | the editor gate (`select`, `toggle`, `add`, `clear`, `mouseclick`, `lasso`, `lassorect`) |
+| `EESETSAMouseClick`, `EESETSALasso` (two `Virtual4`s in `EESETSObject.cpp`) | kinds 22, 23: the same, then the object screen's `UpdateSelection` (host op `E_OBJECT_SELECTION`) | the editor gate (`tsclick`) |
+| `EESEAChangeLoadText` (header) | kind 24 (`mText`; `Post` out of line in `EESEARust.cpp`) | the editor gate (the load thread's texts) |
+| `EESEAPaint`, `EESEAPaintRust` (header; the record a Rust box) | kind 25, the box in the record (`mPaint`); `SetArea` non-virtual (it had one implementation) | the editor gate (terrain, elevation, bulldozer) |
+| `EESEARust` (`EESEARust.h`'s class over a Rust box) | kind 26, the box in the record (`mAction`) | the editor gate (every whole action) |
+| `EESEUICCommandUnits.cpp` (`MouseMove`, `MouseRButtonUp`, `StartCommand`) | `command_units.rs` with `mEditor`: the drag rotates the selection, a right click without a drag deletes the unit under the mouse, the start lets any unit turn; the class keeps its rotation action and four ops (`EESEARust.cpp`) | only a person (the editor's right drag) |
+| `EESEUICTriggerSelectUnits.cpp` (`MouseLButtonUp`, `MouseLButtonDoublePressed`, `MouseRButtonDown`, `MouseRButtonUp`) | `select_units.rs` with `mTrigger`, `mRightButton`; the class is its inline constructor and two right-button forwarders | only a person (the trigger tab's object screen) |
+
+Six headers (`EESEAMouseClick.h`, `EESEALasso.h`, `EESETSAMouseClick.h`, `EESETSALasso.h`, `EESEAChangeLoadText.h`,
+`EESEAPaint.h`) and two units (`EESEUICCommandUnits.cpp`, `EESEUICTriggerSelectUnits.cpp`) are deleted; the classes
+are one-line constructors in `ee/EEARust.h`. The editor lane's files touched, all mechanical: the include lines of
+`EESimEditor.cpp`, `EESEBSelect.cpp`, `EESEIAExport.cpp`, `EESELoadThread.cpp`, `EESERBUnitTypes.cpp`,
+`EESESCComboBox.cpp`, `EESETSObject.cpp` (and its two `Virtual4`s deleted), `EESEUITechListBox.cpp`, `EESEUnit.cpp`,
+`EEUIEOpenCivBuilder.cpp`, `EEUIFSEElevation.cpp`, `EEUIFSEPaint.cpp`, `EEUIFSEPaintElevation.cpp`,
+`EEUIFSETRBPaintType.cpp`, `EEUIFSETerrain.cpp`, `EEUIFSEUpgradePanel.cpp`, `EEUIFScenarioEditor.cpp`; a forward
+declaration in `EESELoadThread.h` and `EEUIFSEPaintElevation.h`. The screens lane's: `EEUICSelectUnits.cpp` (five
+host ops for the trigger tab), `command_units.rs`, `select_units.rs`, `hud_ctl_ffi.rs`, `hud_ctl/replay.rs`.
+
+### The shape
+
+- **The editor kinds' calls.** The editor's runs stay in `editor_actions.rs` and `editor_whole.rs` over their own
+  hosts (`ee_screenscpp_sea`, `_sew`, `_sep`, `_seu`). `Ga` reaches them through `GaHost::editor_call(GaEditorCall)`
+  (a default method answering 0: the round-1 golden's replay host needs nothing new); the FFI host calls the editor
+  modules' entries directly. The click's and lasso's editor entries want the action as an `EEAction*` (they post it):
+  the record is the second base, so the host answers it (`EE_SCREENS_GA_OP_ACTION`).
+- **The boxes in the record.** `mPaint` and `mAction` are pointers to Rust boxes (`EeScreensSeaPaint`,
+  `EeScreensSewAction`, moved from the FFI modules into `editor_actions.rs` / `editor_whole.rs` so the record compiles
+  under `cfg(test)`); the C++ constructors fill them (`ee_screens_sea_paint_new`, `ee_screens_sew_new`) and `Ga::free`
+  frees them. `#[allow(improper_ctypes)]` on the host's extern block: C++ never looks into the boxes.
+- **The controls as flags.** The editor's controls were subclasses overriding the HUD controls' virtuals; the HUD
+  controls are Rust already (screens round 29), so the overrides became branches on record flags the subclasses'
+  constructors set (`mEditor`, `mTrigger`). The base `StartCommand` and `MouseMove` reach the editor's branch with no
+  C++ override; the trigger control keeps `MouseRButtonDown`/`Up` forwarders (the game's control has none: UIControl's).
+- **The hosts.** `EESEARust.cpp` keeps its four host functions (they differ in signature; merging them would only
+  move lines); its includes were pruned by compiling the unit alone with each block of them dropped (110 -> 57; `Actions/EEARust.cpp` lost one more).
+
+### Golden and mutations
+
+- The round-29 HUD driver (`build/sc29/drv` of the screens worktree) copied to `build/ga2/hud` and extended with kinds
+  4 and 5: the unmodified `EESEUICCommandUnits` and `EESEUICTriggerSelectUnits` units of 32a9ab6a, renamed and
+  derived from the original 00754e4f base classes, against `EESEUICCommandUnits` / `EESEUICTriggerSelectUnits` over
+  the new Rust; the fake world gained units' complex part and class pointer (rolled last, so the earlier kinds'
+  streams are unchanged), the lasso's `SelectInRectangle`, a fake `EESEARust` and the rotation. 0 differences over
+  6,000 cases (seeds 2 and 3; about 1,000 of each new kind) and 600 (seed 7).
+- `golden_hud_editor.txt` (199 cases of kinds 4 and 5, 678 KB) is the new side's log; `replays_the_editors_golden`
+  and `replays_the_trigger_tabs_golden` replay it (the replays' loaders read the flags after the original ten).
+- Host mutations (`mutate2.py`, the driver rebuilt for each): 12 of 12 caught. Rust mutations (`rmutate2.py`): 21 of
+  22 caught by cargo; the editor start's `mCanFace` is masked by the replay (a start re-enters the control, so its
+  record is reloaded from the golden) and caught by the driver over the rebuilt library (`rdmutate2.py`, 285
+  differences). The driver gave the trigger kind no `CopyData` at first, which hid the release's `mD1 = false`; it
+  now does.
+- The editor kinds' dispatch has its own tests (`game_actions_tests.rs`: the four selection kinds with and without a
+  message, the trigger tabs' refresh, the click's `Execute`, the lasso's `SelectInRectangle`, the load text, the
+  paint's area, run and single free, the whole action's run and free).
+
+### The scroll check
+
+Round 1 ended with two scroll-check failures on the final tree. Measured on one harness slot with nothing else of
+this lane running: `fixture_game.py --exercise random-game --play-seconds 20 --scroll-check`, three times each on
+round 1's test exe and on rust 03ab5fe8's (built in a scratch worktree), alternating:
+
+| run | round 1 (edge) | rust 03ab5fe8 (edge) |
+| --- | --- | --- |
+| 1 | left 27.597 | left 37.427 |
+| 2 | left 0.041, right 0.041: FAIL | left 0.041, then right 19.865 |
+| 3 | left 33.341 | left 18.567 |
+
+Both builds behave the same: a 1.5 s hold moves the camera 18-37 tiles, and sometimes exactly 0.041, which is one
+step of the edge scroll (the first `Update`'s elapsed 1: the minimum speed's 0.1 x (setting + 0.5) plus one
+acceleration step, times (zoom + 0.5) x 0.1). One step means the scroll's `Update` saw the pointer at the edge once:
+the fixture's `pointer` command sets `gMouse`'s position once, and the next platform mouse event puts it back (a
+hypothesis: the window under the real cursor). rust's own exe shows it (run 2, left edge) as round 1's does; it is
+not the lane's code. The key scroll varies as much (1.4 to 11.3 tiles). No change made.
+
+### Commits and gates
+
+| Commit | What | Net C++ (src, include/ee) |
+| --- | --- | --- |
+| 9561e139 | the editor's actions as `EEARust` kinds, its two mouse-mode controls on the HUD's Rust; 6 headers, 2 units deleted | +180 -610, -430 |
+| c720a592 | `EESEARust.cpp`'s includes 110 -> 57, `EEARust.cpp`'s one fewer | -54 |
+| 619a44ba | the merge of rust (c7ffd6cd) | |
+
+| Gate | Per commit | On the merged tree (619a44ba) |
+| --- | --- | --- |
+| `build.py --sim` | 0/0 both | 0/0 both; `--test-profile windowed-software` 0/0 |
+| oracle | seeds 2-3 identical (both commits) | seeds 2-7 identical |
+| `tools/sim_editor.py` | PASS (14,049 lines) | PASS (14,260 lines; the first run differed in one `formstate` line, the load text the load thread had not yet posted: the load thread's timing, a rerun passed) |
+| civ builder gate | PASS (3,913 lines) | PASS (3,913 lines) |
+| Rust gate | tests and clippy pass, rustfmt fixed, headers current (an `ee_won` socket test failed once under load, passed alone) | PASS (a first run's `ee_gx` GPU timing test failed under load and passed alone; the rerun passed whole) |
+| harness (the lock held) | | tour PASS (render, F3); orders + box select PASS (4 box steps, gather/repair/repair-queued/move); scroll check PASS (edge 21.2, key 6.0); LAN game PASS; legacy tour `STOP <windowed session complete>` |
+
+The merge: rust's editor round 7 had pruned the include lines of seven editor units this branch had switched to
+`ee/EEARust.h` (rust's side taken, the deleted headers' includes made `ee/EEARust.h` again); two round-1 units rust
+had moved to the editor form's accessors stay deleted, `Actions/EEARust.cpp` uses `GetTabGroup` and `GetLoadThread`;
+`EEServer.cpp`'s new includes of round 1's headers became `ee/EEARust.h`; `cbindgen.toml` took both sides. A trap
+for next time: the include rewrite's pattern `EEA\w+` also matched `EEAirTrafficControl.h`, `EEAIContinentManager.h`,
+`EEAreaUtilities.h`, `EEAreaEffect.h`, `EEAmbientSoundManager.h` (four lines in two units, restored before the
+build): name the deleted headers. `strip_markers.py` changed nothing on the merged tree.
+
+### Behaviour changes
+
+None intended. `EESEAPaint::SetArea` is no longer virtual (one implementation). `EESEALasso::SelectUnits(rect, type,
+deselect, deselect-only)` (no caller) went with its header; the Rust entry `ee_screens_seu_lasso_select` stays.
+
+### What runs it, and what only a person reaches
+
+The editor gate runs every editor action kind (the click's select/toggle/add/clear, its `Execute`, the lasso's message
+and `SelectInRectangle`, the trigger tab's click, the paints, the whole actions, the load text). EE-SIM builds no game
+form, and no gate drives the editor's two mouse-mode controls: the editor's right drag (rotate, delete under the
+mouse) and the trigger tab's object screen selection (left and right drags, clicks, the double click) are only a
+person's, pinned by the driver's golden.
+
+### Left
+
+The input path's remaining C++ is hosts: `Actions/EEARust.cpp` (the round-1 host), `EESEARust.cpp`'s four editor
+hosts and the controls' ops, `EEUICSelectUnits.cpp`/`EEUICCommandUnits.cpp`'s ops, `EEUserInterface.cpp`'s action
+queue host (its decisions in `actions.rs` already), `EEUIFMainGame.cpp`'s mouse-mode host (screens'). `EEAWonNet`
+(the WON lanes'). Measured but not this lane's: `EEUnitPicker.cpp` (525, the gfx lane's picking), `EECameraControl.cpp`
+(894, the gfx lane's camera), `RTSMouse.cpp`.
