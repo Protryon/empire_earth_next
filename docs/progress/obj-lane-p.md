@@ -3,33 +3,59 @@
 The lane's state (the object-storage plan, "Lane P"). Each round rewrites this file to the current state; each
 round's story goes in PORT_LEARNINGS.md ("Object storage, lane P, round N").
 
-The move waits for lane V (`ee_sim::world`: typed in-place views of units, classes, stats, players, the map, tiles
+The move builds on lane V (`ee_sim::world`: typed in-place views of units, classes, stats, players, the map, tiles
 and the world). It covers EEPlayer.cpp's plain host cases, EEWorld.cpp's plain cases, the tile sight in Rust over
 the visibility words, and `EEMap::mVisibilityWords` as a Rust-owned `Vec<u32>` (C++ keeps the pointer; the save bytes
-stay the same). This round (branch rust-objP) is the preparation that does not need V.
+stay the same). Round 1 (branch rust-objP) was the preparation that did not need V; round 2 the move.
 
-## State
+## State (round 2: the move, on lane V's views)
 
-- **TSGT** (TEST ONLY; `include/ee/EESightCapture.h`, `src/Empire Earth/Map/EESightCapture.cpp`): every sight
-  function opens an `EESightScope`; when the outermost one on the thread returns, one record holds its kind, the
-  player, its arguments, the tile range it can reach and an FNV-1a of that range after the call (each tile's
-  visibility words and the terrain mesh tile's reference count; a tile's call hashes that tile's words and records
-  its index in `mTileArray`). Nested calls record nothing (the outer range covers them), so the record stays the
-  same when the inner calls move to Rust: only the outermost boundary must keep recording (from Rust if it moves
-  there). Kinds: `RTSTile::AddSight`/`RemoveSight`/`SetVisibility`, `EEPlayer::AddSharedSight`/`RemoveSharedSight`/
-  `AddOwnSight`/`RemoveOwnSight`, `EEMap::AddSight`/`RemoveSight`, the four circle and ring-step walks and
-  `EEMoveSightCircle` (EESightRings.cpp), `RTSMap::FogSeen`/`ExploreUnseen`, `EEMap::PrepareSave`, the world's reveal
-  of the map at a game's start, and a whole-map snapshot each game minute (EE-SIM's tick hook).
-- **MAPS and MAPK now have a game**: the app profile's end sweep (`EESightCaptureSweep`, EE-SIM `--app-sweep` at the
-  game's end, only MAPS, MAPK and TSGT recorded, then the capture closed): for every player `EEMap::AddSight` at three
-  points with the wonder sight radius (70) and half of it shared, then `RemoveSight`; `ExploreUnseen` and `FogSeen`
-  of the last player; two full cycles of `ComputeChecksum`'s 64 x 64 windows.
-- **Goldens**: TSGT in the oracle and app profiles, MAPS and MAPK in the app profile, seeds 2-7, from the unmodified
-  C++ (the TEST ONLY commit), two runs identical (see "Gates").
-- **Gathered** (behaviour-identical): RTSTile's `AddSight`/`RemoveSight` and EEPlayer's eight tile-sight functions
-  moved into EESightRings.cpp next to the circles, so the move replaces one file's bodies.
+- **The tile sight is Rust** (`ee_sim::units::tile_sight`, its game world `tile_sight_host.rs`): the sight circles,
+  ring steps and `EEMoveSightCircle` with their ring table (built lazily, as `EEBuildSightRings` built it),
+  `RTSTile::AddSight`/`RemoveSight`/`SetVisibility`, EEPlayer's `Add/RemoveSharedSight` and `Add/RemoveOwnSight`,
+  `RTSMap::FogSeen`/`ExploreUnseen` and `EEMap::PrepareSave`'s pass. The map, tiles and players are read through
+  `MapView`, `TileView`, `PlayerView` and `WorldView`; the words are written through each tile's `mVisibility`. The
+  C++ world calls stay behind `ee_units_tile_sight_host` (EESightRings.cpp): the doppelganger manager's
+  `TileShown`/`TileHidden`, the mini map's `CountCellOn/Off` with the mesh's `Reference/DereferenceTile` (ee_sim
+  must not call ee_render or ee_game), the statistics' `Reset(0x18, 1)`. EESightRings.cpp keeps the C++ entry
+  points as forwarders with the TSGT scope, so every outermost call still records where it did.
+  `RTSTile::SetVisibility` and `EEBuildSightRings` are gone.
+- **`EEMap::mVisibilityWords` is a Rust buffer** (`map_words.rs`): `ReserveTiles` allocates it zeroed,
+  `SetPlayerCount`'s copy runs in Rust (the tiles in y then x order, each given the next old slice and pointed at its
+  new one), the destructor frees it. The C++ keeps the pointer and each tile's `mVisibility` into it; the save reads
+  and writes the words through those pointers as before.
+- **The player hosts' plain reads** (`player_views.rs`): `FnHost` answers 16 EEPlayerHost operations through the
+  views before calling the C++ (UNIT_INFO, CONTAINER_CATEGORY, NEXT_UNIT, BUILD_QUEUE_TECH, PENDING_COUNT,
+  PENDING_POPULATION, COMPLEX_VALUES, IS_LOCAL, IS_CURRENT, NUM_PLAYERS, ID, AT, VIEW, VIEWED_OF, AREA_COUNT,
+  AREA_AT), the tick's host TICK_UNIT_HIT_POINTS; their C++ cases are gone. `GetPopulationCost()` is `mWeight` (every
+  class kind's body), `IsLandBuilding()` the class body table's row for the category. EEWorld's constructor
+  registers its handle (`ee_world_register_world`) for the hosts that read `gWorld`.
+- **`EEWorld::CheckGameOver` and `EEWorldCanRecover` are Rust** (`game_over.rs`, its world `game_over_host.rs`): the
+  decision in the C++'s order (its gotos as one labelled block), the players' and units' fields through the views;
+  the teams' victory conditions, `IsHuman`, `RemovePlayerFromGame`, `SetGameResult`, the rules and the citizen's
+  `CanAfford` (TCST pins its calls: the short circuit is the C++'s) through `ee_units_game_over_host` (EEWorld.cpp).
+- **Views added for the lane** (layout fields and `EEWorldLayout.cpp` lines): the player's `mAllies`,
+  `mSightSharers`, `mPendingUnits`, `mTowns`, `mHerds` (vectors), `mViewedUnit`, `shared_los`, `save_vis_map`; the
+  tile's words' address; the map's `mTileArray`, `mVisibilityWords` (registered, not read yet).
+- **TSGT and the goldens** (round 1): unchanged by the move: TSGT, MAPS and MAPK equal their goldens after each step.
 
-## The measure (for the move once V lands)
+### Kept as host calls (why)
+
+- The tech-node cases (NODE_INFO, NODE_AVAILABLE, NODE_UNIT_CLASS, NODE_IS_AVAILABLE, TECH_OBSOLETE): no node view;
+  the node is looked up through `mTechnologies->Get` (a C++ call) anyway, so a view saves only the field copies.
+- CLASS and UPGRADE_VALUES: they index `gUnitClassTable` and `mUnitClassUpgrades` (no view of either table).
+- SCENARIO, STATE: the game options are ee_game's record, STATE reads six globals, none in the views.
+- IMPROVEMENT_TIME, WONDER_FACTORS: the world table and the game variant (C++ objects over ee_data's records).
+- NEXT_COMPLEX (`GetNextComplexUnit` tests `mLastUnit`, not in the views), FOUNDATION (a virtual), STATS_LOWER/RESET
+  (the statistics' `Set` gate).
+- The tick and save hosts' other plain cases (HERD_COUNT, the save's counts): their context is the C++ context, not
+  the player's handle; HERD_DUE and HERD_STATE read the herd objects.
+- `RecordStatistics` (277 lines): EE-SIM never calls `EEWorld::Clear`, so no gate reaches it; it needs an end sweep
+  that records its `mStatistics` on the unmodified C++ first.
+- The teams (`AddTeam`, `AddAlliance`, `RebuildTeams`, `BreakAlliance`): EETeam is a C++ object with its own
+  victory condition; only their `mEnemies` tests are plain.
+
+## The measure (round 1, before the move)
 
 ### EEPlayerHost (EEPlayer.cpp, 111 cases) and EEPlayer.cpp's other switches (92 cases)
 
@@ -123,10 +149,9 @@ record, exclusive, then closes the capture). Gate the move with `sim_capture.py 
 `--profile app`. The digest says only that TSGT differs; to find the call, compare the two capture files' TSGT
 records in order (each holds the kind, player, arguments and range).
 
-## Left (waits for V)
+## Left
 
-- The tile sight in Rust over the views (RTSTile's, EEPlayer's, the circles), `mVisibilityWords` a Rust Vec.
-- EEPlayerHost's 33 plain cases and the other switches' 23; EEWorld.cpp's plain bodies (RecordStatistics after a
-  capture of its records).
+- `RecordStatistics` (after a capture of its records), the teams' plain tests, a tech-node view (then the five
+  node cases), views of the class and upgrade tables (CLASS, UPGRADE_VALUES).
 - No game reaches a sight shared between allies (mSharedLOS with allies): a random map has no alliance; only a
   scenario or a lobby team game does. TSGT covers those code paths only where a game reaches them.
