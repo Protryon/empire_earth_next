@@ -279,6 +279,192 @@ public:
 
 // The bounded goal's sea/space modifiers EEAIBPGModifierSea/Space: ee/EEAIBoundedPathGoalModifierBase.h
 
+// TEST ONLY (docs/RUST_PLAN.md R5b.1, tools/sim_capture.py): the path manager's record PMRQ, one per outermost
+// call of its entry points (the units', the AI's, the storm's, the physics tick's): a u32 kind, the inputs, the
+// result, then the queued searches after the call (per search: the queue, unit, goal tile, passes, request id, the
+// machine's type, revs, steps, found, step and rev limits) and every unit and request whose search left the queues
+// during the call with what it got (a unit's waypoints, path-done flag, request count, bounded tiles, goals; a
+// request's path, length and done flag). An Update that leaves nothing and finds nothing queued writes no record.
+// The record reads only the manager's queues and the objects, so it is the same over any implementation of them.
+namespace {
+enum {
+    kPathRequestCapture = 0x51524d50,   // "PMRQ"
+    kPathRequestPath = 1,
+    kPathRequestUnitPath = 2,
+    kPathRequestFindPath = 3,
+    kPathRequestFindBoundedPath = 4,
+    kPathRequestCompletePath = 5,
+    kPathRequestCompleteAutoPath = 6,
+    kPathRequestCancelPaths = 7,
+    kPathRequestCancelRequest = 8,
+    kPathRequestUpdate = 9,
+    kPathRequestPending = 10,
+    kPathRequestRegionUpdates = 11,
+    kPathRequestIsPathDone = 12,
+    kPathRequestHasAutoPath = 13,
+    kPathRequestGetPathGoal = 14,
+    kPathRequestReset = 15,
+};
+
+struct EEPathQueueEntry {
+    unsigned int mQueue, mUnitID;
+    int mX, mY, mPasses, mRequestID, mType, mRevs, mSteps, mFound, mMaxRevs, mRevLimit;
+    UReferenceCounter* mRequest;
+    bool operator==(const EEPathQueueEntry& inOther) const
+    {
+        return mQueue == inOther.mQueue && mUnitID == inOther.mUnitID && mX == inOther.mX && mY == inOther.mY
+            && mRequest == inOther.mRequest;
+    }
+};
+
+thread_local int sPathRequestDepth = 0;
+}   // namespace
+
+class EEPathRequestCapture {
+public:
+    EEPathRequestCapture(unsigned int inKind, EEPathManager* inManager)
+        : mRecord(kPathRequestCapture), mManager(inManager), mOn(sPathRequestDepth == 0 && EESimCaptureRecord::Active()),
+          mKind(inKind)
+    {
+        sPathRequestDepth++;
+        if (!this->mOn)
+            return;
+        this->mRecord.U32(inKind);
+        this->Queues(this->mBefore);
+        for (size_t i = 0; i < this->mBefore.size(); i++)
+            if (this->mBefore[i].mRequest != NULL)
+                this->mBefore[i].mRequest->Reference();   // read after the call, whoever else let go of it
+    }
+    ~EEPathRequestCapture()
+    {
+        sPathRequestDepth--;
+        if (!this->mOn)
+            return;
+        std::vector<EEPathQueueEntry> theAfter;
+        this->Queues(theAfter);
+        std::vector<const EEPathQueueEntry*> theLeft;
+        for (size_t i = 0; i < this->mBefore.size(); i++)
+            if (std::find(theAfter.begin(), theAfter.end(), this->mBefore[i]) == theAfter.end())
+                theLeft.push_back(&this->mBefore[i]);
+        if (this->mKind != kPathRequestUpdate || !this->mBefore.empty() || !theAfter.empty()) {
+            this->mRecord.U32(0x2d2d2d2d);   // the queues after
+            this->mRecord.U32((unsigned int)theAfter.size());
+            for (size_t i = 0; i < theAfter.size(); i++)
+                this->Entry(theAfter[i]);
+            this->mRecord.U32((unsigned int)theLeft.size());
+            for (size_t i = 0; i < theLeft.size(); i++) {
+                this->Entry(*theLeft[i]);
+                this->Unit(theLeft[i]->mUnitID);
+                if (theLeft[i]->mRequest != NULL)
+                    this->Request(static_cast<EEAutoPathRequest*>(theLeft[i]->mRequest));
+            }
+            this->mRecord.Commit();
+        }
+        for (size_t i = 0; i < this->mBefore.size(); i++)
+            if (this->mBefore[i].mRequest != NULL)
+                this->mBefore[i].mRequest->Dereference();
+    }
+    bool On() const { return this->mOn; }
+    void Tile(const EETileCoordinate& inTile)
+    {
+        this->mRecord.I32((int)inTile.mX);
+        this->mRecord.I32((int)inTile.mY);
+    }
+    void Unit(unsigned int inUnitID)
+    {
+        EEComplexUnit* theUnit = NULL;
+        EEUnitHandleResolve(inUnitID, theUnit);
+        this->mRecord.U32(theUnit != NULL ? inUnitID : 0xffffffffu);
+        if (theUnit == NULL)
+            return;
+        EEPathCaptureWaypoints(this->mRecord, theUnit->mWaypoints);
+        this->mRecord.U32(theUnit->mIsPathDone ? 1 : 0);
+        this->mRecord.I32((int)theUnit->mNumPathRequests);
+        this->mRecord.U32((unsigned int)theUnit->mBoundedPathTiles.size());
+        this->mRecord.U32((unsigned int)theUnit->mGoalQueues[0].mGoals.size());
+        EEUnitGoal* theGoal = theUnit->GetGoal();
+        this->mRecord.I32(theGoal != NULL ? (int)theGoal->GetKind() : -1);
+        EEUGRust* theLocation = EELocationGoalCast(theGoal);
+        this->mRecord.F32(theLocation != NULL ? theLocation->GetLocation().GetX() : 0.0f);
+        this->mRecord.F32(theLocation != NULL ? theLocation->GetLocation().GetY() : 0.0f);
+    }
+    void Request(EEAutoPathRequest* inRequest)
+    {
+        this->mRecord.I32(inRequest != NULL ? (int)inRequest->mRequestID : -1);
+        if (inRequest == NULL)
+            return;
+        this->mRecord.U32((unsigned int)inRequest->mPath.size());
+        for (size_t i = 0; i < inRequest->mPath.size(); i++)
+            this->Tile(inRequest->mPath[i]);
+        this->mRecord.I32((int)inRequest->mPathLength);
+        this->mRecord.U32(inRequest->mIsDone ? 1 : 0);
+    }
+    void Points(const std::vector<U2DPoint<long> >& inPoints)
+    {
+        this->mRecord.U32((unsigned int)inPoints.size());
+        for (size_t i = 0; i < inPoints.size(); i++)
+            this->Tile(inPoints[i]);
+    }
+    EESimCaptureRecord mRecord;
+
+private:
+    void Entry(const EEPathQueueEntry& inEntry)
+    {
+        const int theWords[] = {(int)inEntry.mQueue, (int)inEntry.mUnitID, inEntry.mX, inEntry.mY, inEntry.mPasses,
+                                inEntry.mRequestID, inEntry.mType, inEntry.mRevs, inEntry.mSteps, inEntry.mFound,
+                                inEntry.mMaxRevs, inEntry.mRevLimit};
+        for (int w : theWords)
+            this->mRecord.I32(w);
+    }
+    void Queues(std::vector<EEPathQueueEntry>& outEntries);
+    EEPathManager* mManager;
+    bool mOn;
+    unsigned int mKind;
+    std::vector<EEPathQueueEntry> mBefore;
+};
+
+void EEPathRequestCapture::Queues(std::vector<EEPathQueueEntry>& outEntries)
+{
+    for (unsigned int q = 0; q < 2; q++) {
+        const std::deque<EEPathManagerNode*>& theQueue = q == 0 ? this->mManager->mPaths : this->mManager->mAutoPaths;
+        for (size_t i = 0; i < theQueue.size(); i++) {
+            const EEPathManagerNode* theNode = theQueue[i];
+            EEPathQueueEntry e;
+            memset(&e, 0, sizeof(e));
+            e.mQueue = q;
+            e.mUnitID = theNode->mUnit.GetSavedID();
+            e.mX = (int)theNode->mTile.mX;
+            e.mY = (int)theNode->mTile.mY;
+            e.mPasses = (int)theNode->mPasses;
+            e.mRequest = theNode->mRequest;
+            e.mRequestID = theNode->mRequest != NULL ? (int)theNode->mRequest->mRequestID : -1;
+            if (q == 0 && theNode->mPathMachine != NULL) {
+                EEAIAStarMachineBase* m = theNode->mPathMachine;
+                e.mType = (int)m->mType;
+                e.mRevs = (int)m->mRevs;
+                e.mSteps = (int)m->mSteps;
+                e.mFound = m->mFound ? 1 : 0;
+                e.mMaxRevs = (int)m->GetMaxRevs();
+                e.mRevLimit = (int)m->GetRevLimit();
+            } else if (q == 1 && theNode->mGraphMachine != NULL) {
+                EEGraphPathMachine* m = theNode->mGraphMachine;
+                e.mType = (int)m->mType;
+                e.mRevs = (int)m->mRevs;
+                e.mSteps = (int)m->mSteps;
+                e.mFound = m->mFound ? 1 : 0;
+                e.mMaxRevs = (int)m->GetMaxRevs();
+                e.mRevLimit = (int)m->GetRevLimit();
+            }
+            outEntries.push_back(e);
+        }
+    }
+}
+
+static unsigned int EEPathCaptureUnitID(EEComplexUnit* inUnit)
+{
+    return inUnit != NULL ? (unsigned int)inUnit->mUnitID : 0xffffffffu;
+}
+
 // Creates the path manager with no bounded machine, nothing queued and region updates off
 EEPathManager::EEPathManager()
     : mRecord(ee_path_record_new()), mLCC(0), mNextRequestID(0), mNextRegionTime(0), mIsUpdatingRegions(false)
@@ -415,6 +601,9 @@ void EEPathManager::CancelAutoPath(EEComplexUnit* inUnit)
 // Finishes the queued graph search of a path request at once, applies its result and drops it
 void EEPathManager::CompleteAutoPath(EEAutoPathRequest* inRequest)
 {
+    EEPathRequestCapture theCapture(kPathRequestCompleteAutoPath, this);   // TEST ONLY
+    if (theCapture.On())
+        theCapture.Request(inRequest);
     if (this->mAutoPaths.size() == 0)
         return;
     for (std::deque<EEPathManagerNode*>::iterator it = this->mAutoPaths.begin(); it != this->mAutoPaths.end(); it++) {
@@ -434,6 +623,11 @@ void EEPathManager::CompleteAutoPath(EEAutoPathRequest* inRequest)
 // Finishes the unit's queued searches at once: its graph search, then its tile search, whose path it takes
 void EEPathManager::CompletePath(EEComplexUnit* inUnit)
 {
+    EEPathRequestCapture theCapture(kPathRequestCompletePath, this);   // TEST ONLY
+    if (theCapture.On()) {
+        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
+        theCapture.Unit(EEPathCaptureUnitID(inUnit));
+    }
     if (this->mAutoPaths.size() != 0)
         this->CancelAutoPath(inUnit);
     EEPathManagerNode* theNode = this->FindPath(inUnit);
@@ -561,6 +755,9 @@ EEPathManagerNode* EEPathManager::NewNode()
 // Returns whether a graph search is queued for the unit
 bool EEPathManager::HasAutoPath(EEComplexUnit* inUnit)
 {
+    EEPathRequestCapture theCapture(kPathRequestHasAutoPath, this);   // TEST ONLY
+    if (theCapture.On())
+        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
     bool theResult = false;
     if (this->mAutoPaths.size() != 0) {
         for (std::deque<EEPathManagerNode*>::iterator it = this->mAutoPaths.begin(); it != this->mAutoPaths.end(); it++) {
@@ -570,12 +767,17 @@ bool EEPathManager::HasAutoPath(EEComplexUnit* inUnit)
             }
         }
     }
+    if (theCapture.On())
+        theCapture.mRecord.U32(theResult ? 1 : 0);
     return theResult;
 }
 
 // Returns false while a tile search is queued for the unit (true for no unit)
 bool EEPathManager::IsPathDone(EEComplexUnit* inUnit)
 {
+    EEPathRequestCapture theCapture(kPathRequestIsPathDone, this);   // TEST ONLY
+    if (theCapture.On())
+        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
     bool theResult = true;
     if (this->mPaths.size() != 0 && inUnit) {
         std::deque<EEPathManagerNode*>::iterator it;
@@ -586,12 +788,17 @@ bool EEPathManager::IsPathDone(EEComplexUnit* inUnit)
             }
         }
     }
+    if (theCapture.On())
+        theCapture.mRecord.U32(theResult ? 1 : 0);
     return theResult;
 }
 
 // Gets the goal tile of the unit's queued tile search; returns false when one is queued, true (tile 0,0) if not
 bool EEPathManager::GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile)
 {
+    EEPathRequestCapture theCapture(kPathRequestGetPathGoal, this);   // TEST ONLY
+    if (theCapture.On())
+        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
     bool theResult = true;
     outTile.mX = 0;
     outTile.mY = 0;
@@ -604,6 +811,10 @@ bool EEPathManager::GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile)
             break;
         }
     }
+    if (theCapture.On()) {
+        theCapture.mRecord.U32(theResult ? 1 : 0);
+        theCapture.Tile(outTile);
+    }
     return theResult;
 }
 
@@ -612,11 +823,26 @@ EEAutoPathRequest* EEPathManager::RequestPath(unsigned long inPlayerID, const EE
                                               const EETileCoordinate& inTo, EECPASGFlags* inFlags, long inType,
                                               long inRevs, EEAIGraphPathGoalModifierBase* inModifier, bool inUnlimitedRevs)
 {
+    EEPathRequestCapture theCapture(kPathRequestPath, this);   // TEST ONLY
+    if (theCapture.On()) {
+        theCapture.mRecord.U32((unsigned int)inPlayerID);
+        theCapture.Tile(inFrom);
+        theCapture.Tile(inTo);
+        theCapture.mRecord.I32((int)inFlags->mPlayerID);
+        for (int f = 0; f < 17; f++)
+            theCapture.mRecord.U32(inFlags->mFlags[f] ? 1 : 0);
+        theCapture.mRecord.I32((int)inType);
+        theCapture.mRecord.I32((int)inRevs);
+        theCapture.mRecord.U32(inModifier != NULL ? 1 : 0);
+        theCapture.mRecord.U32(inUnlimitedRevs ? 1 : 0);
+    }
     EEAutoPathRequest* theRequest =
         new EEAutoPathRequest(this->mNextRequestID, inPlayerID, inFrom, inTo, *inFlags);
     bool theStarted = false;
     this->mNextRequestID++;
     this->StartGraphPath(NULL, inFrom, inTo, &theStarted, inPlayerID, theRequest, inType, inRevs, inModifier, inUnlimitedRevs);
+    if (theCapture.On())
+        theCapture.Request(theRequest);
     return theRequest;
 }
 
@@ -698,6 +924,17 @@ void EEPathManager::FindPath(EEComplexUnit* inUnit, EEMap* inMap, const U2DPoint
                              const EEAIAStarBounds& inBounds, std::vector<U2DPoint<long> >& outPath, long inType,
                              long inRevs, EEAIPathGoalModifierBase* inModifier, std::vector<U2DPoint<long> >* outVisited)
 {
+    EEPathRequestCapture theCapture(kPathRequestFindPath, this);   // TEST ONLY
+    if (theCapture.On()) {
+        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
+        theCapture.Tile(inFrom);
+        theCapture.Tile(inTo);
+        EEPathCaptureBounds(theCapture.mRecord, inBounds);
+        theCapture.mRecord.I32((int)inType);
+        theCapture.mRecord.I32((int)inRevs);
+        theCapture.mRecord.U32(inModifier != NULL ? 1 : 0);
+        theCapture.mRecord.U32(outVisited != NULL ? 1 : 0);
+    }
     EEAIAStarBounds theBounds = inBounds;
     EETileCoordinate theFrom;
     theFrom = inFrom;
@@ -770,6 +1007,11 @@ set:
     else
         theReached = false;
     this->mBoundedMachine->Reset();
+    if (theCapture.On()) {
+        theCapture.Points(outPath);
+        if (outVisited != NULL)
+            theCapture.Points(*outVisited);
+    }
 }
 
 // NEAR: the location goal's tile goes through __ftol here.
@@ -778,6 +1020,18 @@ set:
 void EEPathManager::RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
                                     bool inUnlimitedRevs, long inRevs, bool inUseGraph, EEAIGraphPathGoalModifierBase* inModifier, bool inArg8)
 {
+    EEPathRequestCapture theCapture(kPathRequestUnitPath, this);   // TEST ONLY
+    if (theCapture.On()) {
+        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
+        theCapture.Tile(inFrom);
+        theCapture.Tile(inTo);
+        theCapture.mRecord.U32(inUnlimitedRevs ? 1 : 0);
+        theCapture.mRecord.I32((int)inRevs);
+        theCapture.mRecord.U32(inUseGraph ? 1 : 0);
+        theCapture.mRecord.U32(inModifier != NULL ? 1 : 0);
+        theCapture.mRecord.U32(inArg8 ? 1 : 0);
+        theCapture.Unit(EEPathCaptureUnitID(inUnit));
+    }
     EETileCoordinate theShort;
     theShort.mX = 0;
     theShort.mY = 0;
@@ -875,6 +1129,15 @@ bool EEPathManager::FindBoundedPath(EEComplexUnit* inUnit, EEMap* inMap, long in
                                     const EETileCoordinate& inTo, std::vector<GE3DPoint>& outPath, long inMargin,
                                     bool inArg8, bool* outReached)
 {
+    EEPathRequestCapture theCapture(kPathRequestFindBoundedPath, this);   // TEST ONLY
+    if (theCapture.On()) {
+        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
+        theCapture.mRecord.I32((int)inType);
+        theCapture.Tile(inFrom);
+        theCapture.Tile(inTo);
+        theCapture.mRecord.I32((int)inMargin);
+        EEPathCapturePoints(theCapture.mRecord, outPath);
+    }
     std::vector<GE3DPoint> thePath;
     EEAIAStarBounds theBounds;
     EETileCoordinate theFrom = inFrom;
@@ -920,6 +1183,10 @@ start:
     }
     theGoal.ReleaseModifier();
     this->mBoundedMachine->Reset();
+    if (theCapture.On()) {
+        theCapture.mRecord.U32(theReached ? 1 : 0);
+        EEPathCapturePoints(theCapture.mRecord, outPath);
+    }
     return theReached;
 }
 
@@ -1316,6 +1583,14 @@ done:
 // Requests the pending unit paths again (the world's StartGame after a map change), last first; then none is pending
 void EEPathManager::RequestPendingPaths(EEMap* inMap)
 {
+    EEPathRequestCapture theCapture(kPathRequestPending, this);   // TEST ONLY
+    if (theCapture.On()) {
+        theCapture.mRecord.U32((unsigned int)this->mPending.size());
+        for (size_t i = 0; i < this->mPending.size(); i++) {
+            theCapture.mRecord.U32((unsigned int)this->mPending[i].mUnitID);
+            theCapture.Tile(this->mPending[i].mTile);
+        }
+    }
     for (long i = this->mPending.size() - 1; i >= 0; i--) {
         EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mPending[i].mUnitID)));
         if (theUnit != NULL) {
@@ -1377,6 +1652,7 @@ void EEPathManager::FinishFoundPath(EEPathManagerNode* inNode)
 // and the timers
 void EEPathManager::Reset()
 {
+    EEPathRequestCapture theCapture(kPathRequestReset, this);   // TEST ONLY
     if (this->mBoundedMachine)
         this->mBoundedMachine->Reset();
     if (this->mBoundedMachine)
@@ -1448,6 +1724,9 @@ void EEPathManager::CancelAutoPaths(EEComplexUnit* inUnit)
 // Drops the queued graph search of a path request, if any, returning its machine and node
 void EEPathManager::CancelAutoPathRequest(UReferenceCounter* inRequest)
 {
+    EEPathRequestCapture theCapture(kPathRequestCancelRequest, this);   // TEST ONLY
+    if (theCapture.On())
+        theCapture.Request(static_cast<EEAutoPathRequest*>(inRequest));
     if (this->mAutoPaths.size() == 0)
         return;
     for (std::deque<EEPathManagerNode*>::iterator it = this->mAutoPaths.begin(); it != this->mAutoPaths.end(); it++) {
@@ -1463,6 +1742,11 @@ void EEPathManager::CancelAutoPathRequest(UReferenceCounter* inRequest)
 // Drops the unit's queued tile search (and its graph search when inAutoPaths)
 void EEPathManager::CancelPaths(EEComplexUnit* inUnit, bool inAutoPaths)
 {
+    EEPathRequestCapture theCapture(kPathRequestCancelPaths, this);   // TEST ONLY
+    if (theCapture.On()) {
+        theCapture.mRecord.U32(EEPathCaptureUnitID(inUnit));
+        theCapture.mRecord.U32(inAutoPaths ? 1 : 0);
+    }
     if (inAutoPaths)
         this->CancelAutoPaths(inUnit);
     if (this->mPaths.size() == 0)
@@ -1515,6 +1799,13 @@ void EEPathManager::Clear()
 // Turns region rebuilds on or off; turning them on schedules the next one now or 10 s (times the game speed) ahead
 void EEPathManager::SetRegionUpdates(bool inOn, bool inNow)
 {
+    EEPathRequestCapture theCapture(kPathRequestRegionUpdates, this);   // TEST ONLY
+    if (theCapture.On()) {
+        theCapture.mRecord.U32(inOn ? 1 : 0);
+        theCapture.mRecord.U32(inNow ? 1 : 0);
+        theCapture.mRecord.U32(this->mIsUpdatingRegions ? 1 : 0);
+        theCapture.mRecord.U32((unsigned int)this->mNextRegionTime);
+    }
     if (this->mIsUpdatingRegions == inOn)
         return;
     if (inOn == true) {
@@ -2420,6 +2711,7 @@ long EEPathManager::LoadGraphSearches(FSFile& inFile)
 // Advances the queued graph and tile searches and the region rebuild, when there are any
 void EEPathManager::Update()
 {
+    EEPathRequestCapture theCapture(kPathRequestUpdate, this);   // TEST ONLY
     if (this->mAutoPaths.size() != 0)
         this->UpdateAutoPaths();
     if (this->mPaths.size() != 0)

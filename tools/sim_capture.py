@@ -45,6 +45,11 @@ CNTN is every GetTilesNextTo call of the continent manager (the tile, the contin
 tiles), PMSP the path manager's splicing (EEPathManager.cpp: TrimPath, AppendWaypoints, JoinPaths, FinishFailedPath's
 detour search, the bounded searches' revolutions and bounds; a kind, the inputs, the outputs). Their golden lines
 come from the C++ (R5b.1, branch rust-r5b-cont2).
+PMRQ is the path manager's every outermost entry (EEPathManager.cpp: the requests, the bounded searches, the
+cancels and completions, the queries, Update, the pending paths, the region updates, Reset): its inputs and result,
+the queued searches after it, and every unit and request whose search left the queues with the waypoints, flags and
+goals or the path it got. Its golden lines (seeds 2-3 of the oracle, late, space and calamity profiles) come from
+the C++ manager before it moved (R5b.1, branch rust-ai-path1).
 HULL is the AI hulls' geometry (lle/U2DPolygon.h, U2DConvexHull<long>: every SetPoints with its input and the whole
 hull, GetClosestOutlinePoint, GetClosestPoints, GetClosestPoint, Contains and GetScanLines with a hash of the hull, the
 input and the result), AREA the areas' geometry on it (EEAIArea::GetClosestPoints, GetClosestHullPoint,
