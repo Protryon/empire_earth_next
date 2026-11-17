@@ -4,13 +4,16 @@
 //! (every op's answer, the fields, the sort's order) and runs the calls back the original's host made (the list's
 //! virtuals, the rows' virtuals, the header's methods, a row going with its last reference); every op the Rust objects
 //! make must be the golden's next line. A sort's comparisons are std::sort's: the replay takes its order and skips
-//! them; the sorted insert's search is std::lower_bound's, run here with the rows' Compare.
+//! them; the sorted insert's search is std::lower_bound's, run here with the rows' Compare. The column viewports and
+//! the header's buttons are blocks (compmem's map world; a "comp" line makes a button's): the Rust reads and moves
+//! them in place, the world's SetEnabled and SetVisible set their flags as the driver's do.
 
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::ffi::c_void;
 
-use crate::guictl::EeWonRect4;
+use crate::compmem::{self, map_block};
+use crate::compobj::{host_world, EeWonComp as K};
 use crate::guidraw::EeWonDrawOp;
 use crate::guihost::{EeWonGuiField as F, EeWonGuiOp as Op};
 use crate::listobj::{EeWonItemClick, EeWonList, EeWonListCall as L};
@@ -330,19 +333,28 @@ unsafe extern "C" fn replay_host(comp: *mut c_void, op: Op, a: isize, b: isize, 
             row_call(a, R::SetItem, b, c, 0);
             0
         }
-        Op::ChildSetPosSize => {
-            // SAFETY: the object passes a live rectangle
-            let q = unsafe { *(b as *const EeWonRect4) };
-            expect(&format!("{n} pos-size {a:x} {} {} {} {}", q.x, q.y, q.w, q.h));
+        Op::Comp if a == K::VPositionChanged as isize || a == K::VSizeChanged as isize => {
+            let r = compmem::bounds(b);
+            expect(&format!("{n} comp {a} {b:x} at {} {} {} {}", r.x, r.y, r.width, r.height));
             0
         }
-        Op::ChildDesiredSize => {
-            let w = expect(&format!("{n} desired {a:x} -> "));
+        Op::Comp if a == K::VDesiredSize as isize => {
+            let w = expect(&format!("{n} desired {b:x} -> "));
             // SAFETY: the object passes two live i32s
-            let wh = unsafe { std::slice::from_raw_parts_mut(b as *mut i32, 2) };
+            let wh = unsafe { std::slice::from_raw_parts_mut(c as *mut i32, 2) };
             wh[0] = w.first().and_then(|x| x.parse().ok()).unwrap_or(0);
             wh[1] = 20;
             0
+        }
+        Op::Comp => {
+            let w = expect(&format!("{n} comp {a} {b:x} {c} -> "));
+            // the world's SetEnabled and SetVisible (the driver's rule)
+            if a == K::VSetEnabled as isize {
+                compmem::set_flags(b, 0x80, c == 0);
+            } else if a == K::VSetVisible as isize {
+                compmem::set_flags(b, 0x1, c == 0);
+            }
+            w.first().map_or(0, |x| hex(x))
         }
         _ => {
             let w = expect(&format!("{n} {a:x} {b:x} {c:x} {d:x} -> "));
@@ -506,6 +518,8 @@ fn replay(lines: &[String]) -> Option<String> {
             rows: BTreeMap::new(),
         })
     });
+    let _world = compmem::map_world();
+    let _host = host_world(Some(replay_host));
     let list_box = Box::new(EeWonList::new(LIST as *mut c_void, Some(replay_host)));
     let lp: *const EeWonList = &*list_box;
     let multi_box = Box::new(EeWonMulti::new(LIST as *mut c_void, Some(replay_host), lp));
@@ -527,6 +541,15 @@ fn replay(lines: &[String]) -> Option<String> {
         });
         if done || line == "free" {
             break;
+        }
+        if let Some(rest) = line.strip_prefix("comp ") {
+            // a header button's block (its width; its control id -1)
+            let w: Vec<&str> = rest.split_whitespace().collect();
+            let mut m = compmem::block(0, 0, w.get(1).and_then(|x| x.parse().ok()).unwrap_or(0), 0);
+            m.control_id = -1;
+            // SAFETY: the map world's block, no other reference to it live
+            unsafe { *map_block(hex(w[0])) = m };
+            continue;
         }
         let Some(rest) = line.strip_prefix("call ") else {
             return Some(format!("unexpected golden line '{line}'"));
@@ -593,12 +616,10 @@ fn golden_multiobj_replays() {
 #[test]
 fn a_changed_answer_is_seen() {
     let seqs = sequences();
-    let (s, k) = seqs
-        .iter()
-        .find_map(|s| s.iter().position(|l| l.contains(" pos-size ")).map(|k| (s, k)))
-        .expect("a header layout");
+    let (s, k) =
+        seqs.iter().find_map(|s| s.iter().position(|l| l.contains(" at ")).map(|k| (s, k))).expect("a header layout");
     let mut m = s.clone();
-    m[k] = m[k].replacen(" pos-size ", " pos-size 1", 1);
+    m[k] = m[k].replacen(" at ", " at 1", 1);
     assert!(replay(&m).is_some());
 }
 

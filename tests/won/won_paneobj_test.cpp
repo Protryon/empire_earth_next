@@ -13,6 +13,11 @@
 // desired and fitted sizes, visible rectangles, paints, every field read and written). The traces must be the
 // same. The first 40 sequences and every later one that makes an op or a call none before made are
 // rust/crates/ee_won_gui/src/golden_paneobj.txt, which the Rust tests replay; `--print` prints them.
+//
+// WONGUI B round 3: the Rust area calls Component's methods itself (compobj.rs over the component host) and reads
+// its size in place (compmem.rs). The area and its viewport are blocks; the original statements make the calls
+// the C++ makes: SetSize and the viewport's SetPosSize are compobj's, Invalidate the component host's op, Width and
+// Height the block's. The moves' bounds are traced at PositionChanged and the size change.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -20,6 +25,8 @@
 #include <vector>
 #include <map>
 #include <set>
+#include "rust/won_gui/compmem.h"
+#include "rust/won_gui/compobj.h"
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/guidraw.h"
 #include "rust/won_gui/guihost.h"
@@ -38,7 +45,12 @@ static unsigned sDriverSeed;
 static unsigned DR(unsigned n) { sDriverSeed = sDriverSeed * 69069u + 1u; return n ? (sDriverSeed >> 16) % n : 0; }
 
 static const intptr_t kViewport = 0x3001;
-static int sWidth, sHeight;
+// the area's block (0x54) and the viewport's (compmem.rs reads and compobj writes them)
+static EeWonCompMembers sSelf, sView;
+static int& sWidth = sSelf.bounds.width;
+static int& sHeight = sSelf.bounds.height;
+typedef EeWonComp K;
+static EeWonCompMembers* Resolve(intptr_t c) { return c == kViewport ? &sView : &sSelf; }
 static std::map<intptr_t, bool> sBarsScroller; // the scrollers that are ScrollbarScrollers
 static intptr_t sNextScroller;
 static int sWheelBase;
@@ -65,13 +77,18 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
     int n = (int)inOp;
     switch (inOp) {
     // pure reads: not traced
-    case Op::Get: return (Fd)a == Fd::Width ? sWidth : (Fd)a == Fd::Height ? sHeight : 0;
     case Op::GetViewport: return kViewport;
     case Op::ScrollerAsBars: return a != 0 && sBarsScroller[a] ? a : 0;
-    case Op::ChildSetPosSize: {
-        const EeWonRect4* q = (const EeWonRect4*)b;
-        Line("%lld pos-size %llx %lld %lld %lld", n, (long long)a, q->x, q->y, q->w);
-        sTrace.back() += " " + std::to_string(q->h);
+    case Op::Comp: {
+        // the component host: a component's virtual (b the component)
+        sOpsMet.insert(1000 + (int)a);
+        EeWonCompMembers& m = *Resolve(b);
+        if ((K)a == K::VPositionChanged || (K)a == K::VSizeChanged) {
+            Line("%lld comp %lld %llx at %lld %lld", n, (long long)a, (long long)b, m.bounds.x, m.bounds.y);
+            sTrace.back() += " " + std::to_string(m.bounds.width) + " " + std::to_string(m.bounds.height);
+            return 0;
+        }
+        Line("%lld comp %lld %llx %lld -> 0", n, (long long)a, (long long)b, (long long)c);
         return 0;
     }
     case Op::Draw: {
@@ -99,7 +116,6 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
         return 0;
     case Op::BaseMouseWheel: r = sWheelBase; break;
     case Op::NewScrollbarScroller: r = 0x5000 + (++sNextScroller); sBarsScroller[r] = true; break;
-    case Op::SetSize: sWidth = (int)a; sHeight = (int)b; break;
     default: break;
     }
     Line("%lld %llx %llx %llx -> %llx", n, (long long)a, (long long)b, (long long)c, (long long)r);
@@ -109,6 +125,13 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
 static intptr_t H(Op inOp, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0)
 {
     return ScriptedHost((void*)0x54, inOp, a, b, c, 0);
+}
+// a component's virtual (the component host's op, as the C++ dispatches it)
+static intptr_t HK(K k, intptr_t comp, intptr_t c = 0) { return ScriptedHost((void*)comp, Op::Comp, (intptr_t)k, comp, c, 0); }
+// a nonvirtual Component method (compobj's, over the component host)
+static intptr_t KC(intptr_t comp, EeWonCompCall k, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0)
+{
+    return ee_won_comp_call((void*)comp, ScriptedHost, k, a, b, c);
 }
 
 // ---- the original (ScrollArea.cpp; the base Container, the viewport, the background, the scroller and the
@@ -153,8 +176,8 @@ struct ScrollArea {
         this->mUserHasScrolled = false;
         this->mScrollArea.x = this->mScrollArea.y = this->mScrollArea.width = this->mScrollArea.height = 0;
     }
-    int Width() { return (int)H(Op::Get, (intptr_t)Fd::Width); }
-    int Height() { return (int)H(Op::Get, (intptr_t)Fd::Height); }
+    int Width() { return sSelf.bounds.width; }
+    int Height() { return sSelf.bounds.height; }
     EeWonScrollArea AreaOf()
     {
         EeWonScrollArea r = { mVertOffset, mHorzOffset, mTotalWidth, mTotalHeight, mExtraHeight,
@@ -165,7 +188,8 @@ struct ScrollArea {
     {
         EeWonRect4 r = {this->mScrollArea.x - this->mHorzOffset, this->mScrollArea.y - this->mVertOffset,
                         this->mTotalWidth, this->mTotalHeight};
-        H(Op::ChildSetPosSize, H(Op::GetViewport), (intptr_t)&r);
+        int s[2] = {r.w, r.h};
+        KC(H(Op::GetViewport), EeWonCompCall::SetPosSize, r.x, r.y, (intptr_t)s);
     }
     void AdjustPosition(bool scrollbar)
     {
@@ -182,7 +206,7 @@ struct ScrollArea {
         this->mOldScrollAreaWidth = this->mScrollArea.width;
         this->mOldScrollAreaHeight = this->mScrollArea.height;
         this->SetDelegatePos();
-        H(Op::Invalidate);
+        HK(K::VInvalidate, 0x54);
     }
     void SetVertOffset(int offset) { this->mVertOffset = offset; H(Op::VirtAdjustPosition, 0); }
     void SetOffsets(int horizontal, int vertical)
@@ -235,7 +259,7 @@ struct ScrollArea {
         int width = 0, height = 0;
         ee_won_gui_scroll_size(1, this->AreaOf(), minWidth, minHeight, this->mLeftPad, this->mTopPad, this->mRightPad,
                                this->mBottomPad, &width, &height);
-        H(Op::SetSize, width, height);
+        KC(0x54, EeWonCompCall::SetSize, width, height);
     }
     void GetDesiredSize(int& width, int& height)
     {
@@ -454,6 +478,9 @@ static std::vector<std::string> RunSide(bool inRust, unsigned inSeq, int inCalls
     sWheelBase = 0;
     sRelayout = sInRelayout = false;
     sRustSide = inRust;
+    memset(&sSelf, 0, sizeof(sSelf)); memset(&sView, 0, sizeof(sView));
+    ee_won_comp_members_resolver(Resolve);
+    ee_won_comp_host_world(ScriptedHost);
     sWidth = (int)DR(400); sHeight = (int)DR(400);
     Line("start %lld %lld", sWidth, sHeight);
     if (inRust) sRust = ee_won_pane_new((void*)0x54, ScriptedHost);

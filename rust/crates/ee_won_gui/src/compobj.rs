@@ -15,7 +15,9 @@
 //! Rust function here (on the same or another component), as the original's call was to that one body. Ints wrap
 //! as the original's did (-fwrapv); the timer flags and invalid state are the original's `char`s.
 
+use std::cell::Cell;
 use std::ffi::c_void;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::compmem as mem;
 use crate::guifocus::want_focus;
@@ -295,6 +297,11 @@ pub enum EeWonComp {
     GTranslucent,
     /// `((const ControlIdSet*)b)->find(c) != end()` (0 or 1).
     IdIn,
+    // ---- more of the component `b`'s virtual methods (the Rust objects' calls on another component, round 3)
+    /// `SetVisible(c != 0)`.
+    VSetVisible,
+    /// `GetMouseChild()`.
+    VMouseChild,
 }
 
 /// A member of a component's extra data (`EeWonComp::Extra` / `SetExtra`).
@@ -316,6 +323,64 @@ pub enum EeWonCompExtra {
 }
 
 use EeWonComp as K;
+
+/// The game's component host (`ee_won_guicpp_comp_call`, registered by ComponentLifetime.cpp at start).
+static GAME_HOST: AtomicUsize = AtomicUsize::new(0);
+
+thread_local! {
+    /// A world's component host (drivers and tests), ahead of the game's on its thread.
+    static WORLD_HOST: Cell<EeWonGuiHostFn> = const { Cell::new(None) };
+}
+
+/// Registers the game's component host: the one C++ host every Rust object's call on a component goes through
+/// (its virtuals, its parent, window, events and extra data).
+#[no_mangle]
+pub extern "C" fn ee_won_comp_host_register(host: EeWonGuiHostFn) {
+    GAME_HOST.store(host.map_or(0, |f| f as usize), Ordering::Release);
+}
+
+/// A world's component host on this thread (drivers and tests; NULL removes it).
+#[no_mangle]
+pub extern "C" fn ee_won_comp_host_world(host: EeWonGuiHostFn) {
+    WORLD_HOST.with(|h| h.set(host));
+}
+
+/// The component host: this thread's world's, else the game's.
+pub fn host() -> EeWonGuiHostFn {
+    if let Some(f) = WORLD_HOST.with(|h| h.get()) {
+        return Some(f);
+    }
+    let f = GAME_HOST.load(Ordering::Acquire);
+    if f == 0 {
+        return None;
+    }
+    // SAFETY: a value `ee_won_comp_host_register` stored from a host function pointer
+    Some(unsafe {
+        std::mem::transmute::<usize, unsafe extern "C" fn(*mut c_void, Op, isize, isize, isize, isize) -> isize>(f)
+    })
+}
+
+/// A test's component host on its thread, until the guard is dropped.
+#[cfg(test)]
+pub(crate) struct HostWorld;
+
+#[cfg(test)]
+impl Drop for HostWorld {
+    fn drop(&mut self) {
+        ee_won_comp_host_world(None);
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn host_world(host: EeWonGuiHostFn) -> HostWorld {
+    ee_won_comp_host_world(host);
+    HostWorld
+}
+
+/// Component's methods over the component host: what a Rust object calls on a component (its own or another's).
+pub fn comp() -> Comp {
+    Comp::new(host())
+}
 
 /// The host and the calls out; every function below takes the component as `c`.
 #[derive(Clone, Copy)]
@@ -376,6 +441,39 @@ impl Comp {
     }
 
     // ---- the methods
+    // ---- the virtual methods, dispatched by the C++ on the component's class
+    /// `Invalidate()`.
+    pub fn v_invalidate(&self, c: isize) {
+        self.h(K::VInvalidate, c, 0, 0);
+    }
+    /// `SetVisible(on)`.
+    pub fn v_set_visible(&self, c: isize, on: bool) {
+        self.h(K::VSetVisible, c, on as isize, 0);
+    }
+    /// `SetEnabled(on)`.
+    pub fn v_set_enabled(&self, c: isize, on: bool) {
+        self.h(K::VSetEnabled, c, on as isize, 0);
+    }
+    /// `GetDesiredSize(w, h)`.
+    pub fn v_desired_size(&self, c: isize) -> (i32, i32) {
+        self.desired(c)
+    }
+    /// `GetMouseChild()`.
+    pub fn v_mouse_child(&self, c: isize) -> isize {
+        self.h(K::VMouseChild, c, 0, 0)
+    }
+
+    /// `GetDefaultCursor()`.
+    pub fn default_cursor(&self, c: isize) -> isize {
+        self.extra_or_null(c, EeWonCompExtra::Cursor)
+    }
+
+    /// `SetPosSize`.
+    pub fn set_pos_size(&self, c: isize, x: i32, y: i32, width: i32, height: i32) {
+        self.set_pos(c, x, y);
+        self.set_size(c, width, height);
+    }
+
     /// `SetComponentFlags`.
     pub fn set_flags(&self, c: isize, flags: i32, on: bool) {
         let b = self.bits(c);
@@ -925,8 +1023,7 @@ impl Comp {
             C::SetPosSize => {
                 // SAFETY: the caller's two ints
                 let (w, h) = unsafe { (*ints(cc), *ints(cc).add(1)) };
-                self.set_pos(c, ai, bi);
-                self.set_size(c, w, h);
+                self.set_pos_size(c, ai, bi, w, h);
             }
             C::FireBroadcast => self.fire_broadcast(c, a, b != 0),
             C::BroadcastDown => self.broadcast_down(c, a),

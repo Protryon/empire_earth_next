@@ -2,13 +2,15 @@
 //! --print` over the original ScrollArea's methods and a scripted host): each sequence is replayed op for op. The
 //! replay host keeps the C++ host's model (the area's size, which scrollers are ScrollbarScrollers, the wheel's
 //! answer, whether a notification lays the area out again) from the golden's driver lines and runs what the C++
-//! virtuals run (the area's own AdjustPosition and Virtual08).
+//! virtuals run (the area's own AdjustPosition and Virtual08). The area and its viewport are blocks (compmem's map
+//! world): the Rust reads the size and moves the viewport in place.
 
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::ffi::c_void;
 
-use crate::guictl::EeWonRect4;
+use crate::compmem::{self, map_block};
+use crate::compobj::{host_world, EeWonComp as K};
 use crate::guidraw::EeWonDrawOp;
 use crate::guihost::{EeWonGuiField as F, EeWonGuiOp as Op};
 use crate::paneobj::{EeWonPaneCall as P, EeWonScrollPane};
@@ -20,8 +22,6 @@ const VIEWPORT: isize = 0x3001;
 struct Replay {
     lines: Vec<String>,
     at: usize,
-    width: i32,
-    height: i32,
     bars: BTreeMap<isize, bool>,
     wheel: isize,
     relayout: bool,
@@ -66,23 +66,15 @@ fn pane() -> &'static EeWonScrollPane {
 unsafe extern "C" fn replay_host(_comp: *mut c_void, op: Op, a: isize, b: isize, c: isize, _d: isize) -> isize {
     let n = op as u32;
     match op {
-        Op::Get => {
-            return with(|r| {
-                if a == F::Width as isize {
-                    r.width
-                } else if a == F::Height as isize {
-                    r.height
-                } else {
-                    0
-                }
-            }) as isize
-        }
         Op::GetViewport => return VIEWPORT,
         Op::ScrollerAsBars => return with(|r| if a != 0 && r.bars.get(&a) == Some(&true) { a } else { 0 }),
-        Op::ChildSetPosSize => {
-            // SAFETY: the object passes a live rectangle
-            let q = unsafe { *(b as *const EeWonRect4) };
-            expect(&format!("{n} pos-size {:x} {} {} {} {}", a as i64, q.x, q.y, q.w, q.h), false);
+        Op::Comp if a == K::VPositionChanged as isize || a == K::VSizeChanged as isize => {
+            let r = compmem::bounds(b);
+            expect(&format!("{n} comp {a} {b:x} at {} {} {} {}", r.x, r.y, r.width, r.height), false);
+            return 0;
+        }
+        Op::Comp => {
+            expect(&format!("{n} comp {a} {b:x} {c} -> 0"), false);
             return 0;
         }
         Op::Draw => {
@@ -126,15 +118,18 @@ unsafe extern "C" fn replay_host(_comp: *mut c_void, op: Op, a: isize, b: isize,
     }
     let r = with(|r| match op {
         Op::BaseMouseWheel => r.wheel,
-        Op::SetSize => {
-            r.width = a as i32;
-            r.height = b as i32;
-            0
-        }
         _ => 0,
     });
     expect(&format!("{head}{:x}", r as i64), false);
     r
+}
+
+/// The area's size (its block, 0x54).
+fn set_size(w: i32, h: i32) {
+    // SAFETY: the map world's block of the area
+    let m = unsafe { &mut *map_block(0x54) };
+    m.bounds.width = w;
+    m.bounds.height = h;
 }
 
 fn words(s: &str) -> Vec<&str> {
@@ -147,15 +142,10 @@ fn num(w: &str) -> i32 {
 
 fn replay(lines: &[String]) -> Option<String> {
     let start = words(&lines[0]);
-    REPLAY.with(|r| {
-        *r.borrow_mut() = Some(Replay {
-            lines: lines.to_vec(),
-            at: 1,
-            width: num(start[1]),
-            height: num(start[2]),
-            ..Replay::default()
-        })
-    });
+    REPLAY.with(|r| *r.borrow_mut() = Some(Replay { lines: lines.to_vec(), at: 1, ..Replay::default() }));
+    let _world = compmem::map_world();
+    let _host = host_world(Some(replay_host));
+    set_size(num(start[1]), num(start[2]));
     let holder = Box::new(EeWonScrollPane::new(0x54 as *mut c_void, Some(replay_host)));
     let t: &EeWonScrollPane = &holder;
     with(|r| r.pane = t as *const EeWonScrollPane as usize);
@@ -174,10 +164,7 @@ fn replay(lines: &[String]) -> Option<String> {
         let ws = words(&line);
         match ws[0] {
             "relayout" => with(|r| r.relayout = ws[1] == "1"),
-            "size" => with(|r| {
-                r.width = num(ws[1]);
-                r.height = num(ws[2]);
-            }),
+            "size" => set_size(num(ws[1]), num(ws[2])),
             "wheel" => with(|r| r.wheel = num(ws[1]) as isize),
             "scroller" => with(|r| {
                 r.bars.insert(hex(ws[1]), ws[2] == "1");

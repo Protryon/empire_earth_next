@@ -194,8 +194,6 @@ EETerrainTable gTerrainTable;
 EETerrainColorTable gTerrainColorTable;
 // chain at 0x53ed1b (wrapper)
 EETerrainTypeTable gTerrainTypeTable;
-// chain at 0x53ed46 (wrapper)
-EERandomMapTable gRandomMapTable;
 // chain at 0x53ed71 (wrapper)
 EEGameState gGameState;
 // data the original placed inside gGameState (it addressed them as globals): references to the members
@@ -2450,7 +2448,6 @@ void EEDeleteGameObjects(bool inShutdown)
 
 // Cleanup routines defined in other units
 void EEReportLeakingUnits();
-void EEUnloadBuiltInGraphicObjects();
 void EEDeleteMediaTable();
 
 // Unloads every database table and its media, deletes the calamity manager and language resources, frees the pools
@@ -2465,7 +2462,6 @@ void EEDeleteDatabase(bool inShutdown)
     unsigned long theSound = 962;
     if (EESoundObject::Get(theSound) != NULL)
         EESoundObject::Get(theSound)->UnloadMedia();
-    EEUnloadBuiltInGraphicObjects();
     EEAnimal::Unload();
     gAmbientSoundManager.ClearSounds();
     EETerrainTypeTable::ClearDamageTables();
@@ -2482,7 +2478,6 @@ void EEDeleteDatabase(bool inShutdown)
     EETerrainColorTable::Unload();
     EETerrainTypeTable::Unload();
     EECliffTerrainTable::Unload();
-    EERandomMapTable::Unload();
     EEUCUpgradeTable::Unload();
     EEUnitBehavior::Unload();
     EEStartingResources::Unload();

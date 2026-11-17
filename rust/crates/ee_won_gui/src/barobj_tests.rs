@@ -2,25 +2,22 @@
 //! --print` over the original Scrollbar's methods and a scripted host): each sequence is replayed op for op. The
 //! replay host keeps the C++ host's model (the parts' places, sizes, visibility and references, the bar's size,
 //! disabled state, mouse child and point, the events) from the golden's driver lines and the traced ops, and
-//! answers the untraced reads from it.
+//! answers the untraced reads from it. The parts and the bar are blocks (compmem's map world, the bar 0x54): the
+//! Rust reads and moves them in place, the world's SetEnabled and SetVisible set their flags as the driver's do.
 
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::ffi::c_void;
 
 use crate::barobj::{EeWonBarCall as C, EeWonScrollbar};
-use crate::guictl::EeWonRect4;
-use crate::guihost::{ee_won_gui_event_type, EeWonGuiEvent, EeWonGuiField as F, EeWonGuiOp as Op};
+use crate::compmem::{self, map_block};
+use crate::compobj::{host_world, EeWonComp as K};
+use crate::guihost::{ee_won_gui_event_type, EeWonGuiEvent, EeWonGuiOp as Op};
 
 const GOLDEN: &str = include_str!("golden_barobj.txt");
 
 #[derive(Clone, Copy, Default)]
 struct Comp {
-    x: i32,
-    y: i32,
-    w: i32,
-    h: i32,
-    mine: bool,
     held: i32,
 }
 
@@ -30,10 +27,6 @@ struct Replay {
     at: usize,
     comps: BTreeMap<isize, Comp>,
     events: BTreeMap<isize, (isize, isize)>,
-    width: i32,
-    height: i32,
-    disabled: bool,
-    mouse_child: isize,
     mouse: (i32, i32),
     failure: Option<String>,
 }
@@ -70,20 +63,21 @@ unsafe extern "C" fn replay_host(_comp: *mut c_void, op: Op, a: isize, b: isize,
     let n = op as u32;
     // the untraced reads
     match op {
-        Op::Get => {
-            return with(|r| {
-                if a == F::Width as isize {
-                    r.width
-                } else if a == F::Height as isize {
-                    r.height
-                } else {
-                    0
-                }
-            }) as isize
+        Op::Comp if a == K::VPositionChanged as isize || a == K::VSizeChanged as isize => {
+            let r = compmem::bounds(b);
+            expect(&format!("{n} comp {a} {b:x} at {} {} {} {}", r.x, r.y, r.width, r.height), false);
+            return 0;
         }
-        Op::ChildIsMine => return with(|r| r.comps.get(&a).is_some_and(|k| k.mine)) as isize,
-        Op::IsDisabled => return with(|r| r.disabled) as isize,
-        Op::MouseChild => return with(|r| r.mouse_child),
+        Op::Comp => {
+            let w = expect(&format!("{n} comp {a} {b:x} {c} -> "), true);
+            // the world's SetEnabled and SetVisible (the driver's rule)
+            if a == K::VSetEnabled as isize {
+                compmem::set_flags(b, 0x80, c == 0);
+            } else if a == K::VSetVisible as isize {
+                compmem::set_flags(b, 0x1, c == 0);
+            }
+            return hex(&w);
+        }
         Op::EventType => return with(|r| r.events.get(&a).map_or(0, |e| e.0)),
         Op::EventComponent => return with(|r| r.events.get(&a).map_or(0, |e| e.1)),
         Op::GetMousePos => {
@@ -101,19 +95,6 @@ unsafe extern "C" fn replay_host(_comp: *mut c_void, op: Op, a: isize, b: isize,
             expect(&format!("fire {}", ee_won_gui_event_type(e)), false);
             return 0;
         }
-        Op::ChildSetPosSize => {
-            // SAFETY: the object passes a live rectangle
-            let q = unsafe { *(b as *const EeWonRect4) };
-            expect(&format!("{n} pos-size {:x} {} {} {} {}", a as i64, q.x, q.y, q.w, q.h), false);
-            with(|r| {
-                let k = r.comps.entry(a).or_default();
-                k.x = q.x;
-                k.y = q.y;
-                k.w = q.w;
-                k.h = q.h;
-            });
-            return 0;
-        }
         _ => {}
     }
     let head = format!("{n} {:x} {:x} {:x} -> ", a as i64, b as i64, c as i64);
@@ -122,28 +103,29 @@ unsafe extern "C" fn replay_host(_comp: *mut c_void, op: Op, a: isize, b: isize,
         with(|r| {
             r.comps.insert(id, Comp::default());
         });
+        // SAFETY: the map world's block of the new button
+        unsafe { *map_block(id) = compmem::EeWonCompMembers::default() };
         return id;
     }
     with(|r| {
         let k = r.comps.entry(a).or_default();
         match op {
-            Op::ChildSetPos => {
-                k.x = b as i32;
-                k.y = c as i32;
-            }
-            Op::ChildSetSize => {
-                k.w = b as i32;
-                k.h = c as i32;
-            }
             Op::ChildHold => k.held += 1,
             Op::ChildRelease => k.held -= 1,
-            Op::AddChild => k.mine = true,
-            Op::BaseSetEnabled => r.disabled = a == 0,
+            Op::AddChild => compmem::set_parent(a, 0x54),
             _ => {}
         }
     });
     expect(&format!("{head}0"), false);
     0
+}
+
+/// The bar's own size (its block, 0x54).
+fn set_size(w: i32, h: i32) {
+    // SAFETY: the map world's block of the bar
+    let m = unsafe { &mut *map_block(0x54) };
+    m.bounds.width = w;
+    m.bounds.height = h;
 }
 
 fn words(s: &str) -> Vec<&str> {
@@ -154,13 +136,10 @@ fn replay(lines: &[String]) -> Option<String> {
     let start = words(&lines[0]);
     let (w, h, v): (i32, i32, bool) =
         (start[1].parse().unwrap_or(0), start[2].parse().unwrap_or(0), start.get(3) == Some(&"1"));
-    REPLAY.with(|r| {
-        *r.borrow_mut() = Some(Replay { lines: lines.to_vec(), at: 1, width: w, height: h, ..Replay::default() })
-    });
-    // the children's bounds, read by the Rust from compmem's blocks
-    let _w = crate::compmem::filled_world(|c| {
-        with(|r| r.comps.get(&c).map_or_else(Default::default, |k| crate::compmem::block(k.x, k.y, k.w, k.h)))
-    });
+    REPLAY.with(|r| *r.borrow_mut() = Some(Replay { lines: lines.to_vec(), at: 1, ..Replay::default() }));
+    let _world = compmem::map_world();
+    let _host = host_world(Some(replay_host));
+    set_size(w, h);
     let holder = Box::new(EeWonScrollbar::new(0x54 as *mut c_void, Some(replay_host), v));
     let t: &EeWonScrollbar = &holder;
     loop {
@@ -177,21 +156,23 @@ fn replay(lines: &[String]) -> Option<String> {
         }
         let ws = words(&line);
         match ws[0] {
-            "comp" => with(|r| {
-                let k = Comp {
-                    x: ws[2].parse().unwrap_or(0),
-                    y: ws[3].parse().unwrap_or(0),
-                    w: ws[4].parse().unwrap_or(0),
-                    h: ws[5].parse().unwrap_or(0),
-                    ..Comp::default()
-                };
-                r.comps.insert(hex(ws[1]), k);
-            }),
-            "size" => with(|r| {
-                r.width = ws[1].parse().unwrap_or(0);
-                r.height = ws[2].parse().unwrap_or(0);
-            }),
-            "mouse-child" => with(|r| r.mouse_child = hex(ws[1])),
+            "comp" => {
+                let id = hex(ws[1]);
+                with(|r| r.comps.insert(id, Comp::default()));
+                let mut m = compmem::block(
+                    ws[2].parse().unwrap_or(0),
+                    ws[3].parse().unwrap_or(0),
+                    ws[4].parse().unwrap_or(0),
+                    ws[5].parse().unwrap_or(0),
+                );
+                if ws.get(6) == Some(&"0") {
+                    m.bits = 0x1;
+                }
+                // SAFETY: the map world's block, no other reference to it live
+                unsafe { *map_block(id) = m };
+            }
+            "size" => set_size(ws[1].parse().unwrap_or(0), ws[2].parse().unwrap_or(0)),
+            "mouse-child" => {} // (the bar asks GetMouseChild through the component host: traced)
             "mouse-pos" => with(|r| r.mouse = (ws[1].parse().unwrap_or(0), ws[2].parse().unwrap_or(0))),
             "event" => with(|r| {
                 r.events.insert(hex(ws[1]), (ws[2].parse().unwrap_or(0), hex(ws[3])));
