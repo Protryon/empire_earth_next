@@ -6101,6 +6101,159 @@ from the Bronze Age, or a weaker tower weight once the enemy's army is gone (gam
 citizens and its towers standing, not defeated); the enemy town found by scouting rather than by the raids'
 sightings.
 
+### 8.96 classic_lua's war on water: raids by sea, the fleet and the fishing grounds (2026-11-16, EE-SIM)
+
+**The question** (the coordinator, after §8.93): on the islands no raid is ever sent, because the raid walks and the
+ferry carries only citizens. Make soldiers ride the transports so that raids land on an enemy island; use the
+warships against the enemy's fishing boats and docks and guard the own fishing grounds.
+
+**Why only citizens rode.** Not the engine: soldiers board and land through the same unit commands (ai.load,
+ai.unload), and lib.navy's landing (Age of AI's) carries any unit. In classic_lua, ferry.lua is the classic's
+RequestFerry (idle citizens to a mineral across the water), the raid (army.lua raid_step) goes only for an enemy town
+on its own land (ai.reach), and army.lua's crossing (EECPASGSeaTransport) serves the attack groups, which on the
+islands waited for their slots all game. No engine change was needed.
+
+**Built** (classic_lua/sea.lua, stepped by main.lua after the army; island and planets maps only):
+- **The sea raid.** From the Stone Age and minute 20, while no land raid is out: 10 or more soldiers in the pool, an
+  enemy town (or building) known across the water, a finished dock, and an aim: the enemy's gather spot last seen on
+  its land, no known tower within 9 tiles, whose weakest beach (lib.navy N.beach) has no known armed enemy within
+  12. The free transports are taken (one of the epoch's ordered at a time while they hold too few, 3 at most); all
+  but 2 of the pool (30 at most, what the transports hold) board, sail and land. Ashore it is a lib.groups raid as on
+  land, its home the beach and its targets on that land only (a new opt-in, `g.same_land`: lib.groups' enemy_place
+  skips the spots a walk from the group cannot reach); with no spot left it goes for the enemy's remembered buildings
+  there (3 times). Over (fled, nowhere, a third left, 5 minutes) it holds until free transports carry it home (a
+  second landing, to the own town's land), where the pool takes it in. The transports it holds are left alone by the
+  ferry and the army's crossings. Trace `sea.raid ...`, with `wait why=` once a minute while one is due.
+- **The fleet**, beside army.lua's naval maintenance groups (CheckNaval, kind 5): 6 warships of the best class the
+  dock trains (attack x hit points over the cost), 2 more an epoch, 12 at most, a manual lib.groups group. Every 2 s:
+  home when the seen enemy warships and armed buildings within 10 tiles outweigh it by 1.5 (that place avoided 3
+  minutes); else it attacks enemy warships, transports, boats and shore citizens within 14 tiles of the own fishing
+  boats; else, hunting or exploring, what it meets within 10 (none within 8 of a known tower); at half its number it
+  hunts the enemy's gather spots last seen on water or on the shore of its sea, else a dock remembered; with nothing
+  known it explores its water. Trace `sea.fleet` every minute.
+- **The fishing grounds first** (army.lua AssignSeaTask asks sea.fishing_place): a naval sub-group's next place is
+  the enemy's gather spot last seen on water of its body (a boat), not by a known tower; else the classic's ladder.
+
+**First runs** (Small Islands seed 5): aimed at the enemy's town, the raids turned back within a second (towers) and
+the transports were sunk carrying them home: 30 soldiers for 1 kill. Hence the aim's conditions and the transports
+gathered before the soldiers leave the pool.
+
+**Variants** (Small Islands, Hard, 90 minutes, against Age of AI, seeds 2-33; sunk, killed: Age of AI's boats and
+citizens destroyed by classic_lua; lost: classic_lua's soldiers and warships; landings: raids landed / soldiers
+landed; Age of AI's food a minute, 75-90 minutes):
+
+| variant | W-L-C | sunk | killed | soldiers / ships lost | landings | Age of AI food |
+|---|---|---|---|---|---|---|
+| baseline | 15-6-11 | 220 | 180 | 359 / 174 | - | 107 |
+| A1: raids + a fleet of 6, hunting only when full | 16-6-10 | 168 | 65 | 426 / 197 | 21 / 276 | 102 |
+| A2: A1 with the fleet growing by epoch and taking the naval groups' ships | 13-6-13 | 84 | 201 | 450 / 177 | 18 / 194 | 108 |
+| A4: raids only | 15-5-12 | 172 | 251 | 543 / 195 | 23 / 290 | 108 |
+| A5: A4 + the naval groups to the fishing grounds | 14-5-13 | 174 | 240 | 546 / 213 | 24 / 300 | 107 |
+| **A6: A5 + the fleet beside the naval groups (kept)** | **17-6-9** | **233** | **279** | 416 / 219 | 16 / 188 | **100** |
+| A7: A5, raids of 16 or more waiting for 3 transports | 13-7-12 | 124 | 208 | 586 / 198 | 12 / 276 | 114 |
+| A8: A7 as an assault (lib.groups attack, no way back) | 15-6-11 | 193 | 251 | 668 / 200 | 10 / 237 | 107 |
+
+**What it shows.** The fishing war was already being fought: army.lua's naval maintenance groups roam the sea and
+attack what they remember, and sank 220 of Age of AI's boats and shot 146 of its shore citizens in the baseline's 32
+games (its copper frigates). A fleet that took those groups' ships (A2) sank 84; one that waited to be full before it
+hunted (A1) sank fewer too. Kept as a second force beside them, hunting at half strength and shooting shore
+gatherers (A6), the two sank 233 and killed 279 citizens, and classic_lua lost 240 citizens against 338. The raids
+land (16-26 a 32 games) but kill little on their own: Age of AI's island is towered and its army at home, and the
+raid lives by flight, which an island does not allow; bigger raids (A7) or an assault (A8) only lost more soldiers.
+
+**Results**, with §8.97's island food (A+B: this branch; 32 seeds, Hard, 90 minutes; the mirror: classic_lua in both
+seats, 64 seats; sunk / killed: the enemy's boats and citizens destroyed by classic_lua; boats lost: classic_lua's):
+
+| cell | W-L-C | food 75-90 (own / enemy) | sunk / killed | boats lost | landings | Copper / Bronze |
+|---|---|---|---|---|---|---|
+| Small Islands, baseline | 15-6-11 | 114 / 107 | 220 / 180 | 129 | - | 26 / 7 |
+| Small Islands, B only | 16-3-13 | 169 / 110 | 189 / 139 | 185 | - | 27 / 11 |
+| Small Islands, A+B | **19-4-9** | 183 / 94 | 265 / 248 | 153 | 26 / 298 | 28 / 10 |
+| Large Islands Medium, baseline | 13-2-17 | 59 / 145 | 70 / 112 | 10 | - | 23 / 0 |
+| Large Islands Medium, B only | 19-1-12 | 144 / 138 | 97 / 84 | 113 | - | 30 / 8 |
+| Large Islands Medium, A+B | **19-1-12** | 138 / 121 | 173 / 248 | 59 | 19 / 270 | 30 / 6 |
+| mirror Small Islands, baseline | - | 102 | 494 / 255 | 494 | - | 52 / 12 of 64 |
+| mirror Small Islands, A+B | - | 140 | 931 / 337 | 931 | 23 / 271 | 49 / 14 of 64 |
+
+On the merged build (main 3f6a6a4f, cl-army's push): the baselines 15-6-11 and 13-2-17, A+B 19-4-9 and 19-1-12
+again (the push changes no island game's outcome here). 64 seeds, Small Islands: 34-9-21 -> 39-8-17 (seeds 34-65: 19-3-10 -> 20-4-8). Determinism (Small Islands seeds 10 and
+12, `--repeat 2`, a raid landing, the fleet's kills, a stuck dock and the island granary): identical. 0 script errors in
+every cell. The land cells (standard Small and Continental Medium against Age of AI, seeds 2-9 each): every game identical to the baseline, trace for trace (all the new code runs on island and planets maps only).
+
+**Tried, not kept:** a fleet that takes army.lua's naval groups' ships (sank 84, not 220); a fleet hunting only at
+full strength; larger raids waiting for 3 transports, and an assault that stays (more soldiers lost, no more
+kills); the first aim at the enemy's town (the raid turned back at once and lost its transports on the way home).
+
+**Still open.** Raids that pay on Age of AI's island: Age of AI's own landings (landing.c) size the force from what
+holds the beach and what is known behind it and clear the beach with warships first; the sea raid takes what the pool
+holds and lives by fresh sightings of gatherers. `sea.kill`'s counts are an estimate (a target gone from a visible
+tile); the engine's `next.death` lines give the real ones.
+
+### 8.97 The island food after the first hour (2026-11-16, EE-SIM)
+
+**The question** (§8.89's open item): on Large Islands classic_lua's food falls after minute 60, from about 114 a
+minute to 59 (this branch's baseline, 75-90 minutes). The guess: the fish within 30 tiles of the town worked out, and
+no room for farms.
+
+**What the traces showed** (the classic seat's food gatherers by source from the `cp food` lines, mean of 32 seeds,
+Large Islands Medium, Hard, against Age of AI; and a probe printing the fish by distance from the docks and every
+boat's trip every 5 minutes, seeds 2-4):
+
+| minute | bushes | hunters | boats | farms |
+|---|---|---|---|---|
+| 40 | 9.5 | 2.9 | 2.0 | 0 |
+| 60 | 9.9 | 1.0 | 5.2 | 0 |
+| 80 | 1.9 | 0.2 | 5.9 | 1.0 |
+| 90 | 0.9 | 0 | 6.1 | 1.9 |
+
+The guess was half right. Four causes, each seen in games:
+- **The forage bushes run out** at 60-80 minutes on a Large Islands home island, and nothing replaced them: the
+  granary, whose foundations are the farms, came from the building counts, which the managers' rotation leaves off
+  for long stretches. Only 14 of 32 seats had one by 90 minutes (median 75 minutes, 17 after the Copper Age).
+- **Seats with no boat at all** (6 of 32 had none fishing at 80 minutes). The boats were requested only while idle
+  citizens were being assigned (RequestBoats sits in AssignIdleGatherers), and once the advance is ordered the
+  epoch's whole cost is reserved (§8.88), so the request waited for the stock all game.
+- **A dock that never let a boat out**: seed 2's dock stood with its first fishing boat queued for 50 minutes, and
+  no other dock was built.
+- **The fish by the dock worked out**: seed 3 had none left within 20 tiles of the dock at 90 minutes and 43 fish
+  (19,350 food) further out; the boats sailed 20-30 tiles a trip. The coast's boats wanted counted only the fish
+  within 30 tiles of the town.
+
+**The changes** (econ.lua island_food, every 30 s from the Stone Age, island and planets maps only):
+- a dock that has been making a unit for 5 minutes while no unit of that category came out (not at the population
+  cap) is deleted and its site never used again (build.lua forbid_site); the next dock is built elsewhere;
+- one more fishing boat while the boats (every fishing class), requested or being made, are fewer than the coast's
+  boats wanted, whatever the idle citizens;
+- the boats, the granary and the farms are paid from the stock whatever the epoch's reserve holds (units.lua
+  can_afford);
+- the coast's boats count the fish within 30 tiles of a built dock as well as of the town;
+- a second dock (three at most) at the nearest placeable site within 8 tiles of the richest fresh fish (the most food
+  within 12 tiles of it, 1,800 at least, none of it within 12 of a dock), once the fish within 12 tiles of the docks
+  hold less than 1,500;
+- the granary from the farms' epoch once the forage bushes left on the town's land hold less than 3,000.
+DEVIATION (fog): the fish and bushes counted are the explored ones.
+
+A first version counted the bushes by `ai.resources{source = "bush"}`, which returns the forests (the granary never
+came: 18-1-13, food 75-90 124); the stuck-dock test first counted the units of the very class made, and a boat made in
+the Bronze Age turns into the epoch's class at once (a working dock was deleted).
+
+**Results** (32 seeds, Hard, 90 minutes, against Age of AI; B: these changes alone):
+
+| cell | W-L-C | food 60-75 / 75-90 | boats 75 / 90 min | farms 90 min | granary (seats, median) | Copper / Bronze |
+|---|---|---|---|---|---|---|
+| Large Islands Medium, baseline | 13-2-17 | 90 / 59 | 5.9 / 6.1 | 1.9 | 14, 75.4 m | 23 / 0 |
+| Large Islands Medium, B | **19-1-12** | 164 / 144 | 15.2 / 14.5 | 7.1 | 28, 61.0 m | 30 / 8 |
+| Small Islands, baseline | 15-6-11 | 134 / 114 | 12.2 / 11.9 | 3.6 | | 26 / 7 |
+| Small Islands, B | 16-3-13 | 179 / 169 | 18.5 / 17.9 | 5.9 | | 27 / 11 |
+
+With §8.96 (A+B), Large Islands 19-1-12 (food 75-90 138, boats lost 59: the fleet guards them), Small Islands 19-4-9.
+64 seeds, Large Islands, A+B on the merged build: 20-6-38 -> 34-4-26 (seeds 34-65: 7-4-21 -> 15-3-14, food 75-90 62 -> 121; B alone there, before the merge: 16-4-12). Determinism (Large Islands seed 2, `--repeat 2`: the stuck dock replaced, the
+second dock, the island granary): identical. 0 script errors.
+
+**Still open.** Age of AI's navy sinks the larger fishing fleet (classic_lua lost 113 boats on Large Islands against
+10), which the warships of §8.96 only partly cover; the second dock stops at three; a small home island has room for
+few farms, and the farms come from the granary's foundations only.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
