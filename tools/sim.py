@@ -194,7 +194,7 @@ class Batch:
 
     play() takes a run's whole option list: the game's options go on the line, the process's (--set, --cheats,
     --personality, --ai-trace, ...) and the environment start the process; a game whose process options or environment
-    differ from the running process's starts a new process first. A game that fails (rc 2 or 3: an error, the wall
+    differ from the running process's (or the exe, Batch.exe) starts a new process first. A game that fails (rc 2 or 3: an error, the wall
     timeout) or crashes ends its process; the next play() starts a new one. err (the game's stderr: its progress, script
     errors, a fault's frames) is the game's own file even in a shared process. A batch process is not safe to share
     between threads: one Batch per slot (its stage, its --port-offset)."""
@@ -261,7 +261,7 @@ class Batch:
         if err:
             game_args += ["--err", str(err)]
         env = dict(os.environ if env is None else env)
-        key = (tuple(proc_args), tuple(sorted(env.items())))
+        key = (str(self.exe), tuple(proc_args), tuple(sorted(env.items())))
         restarted = False
         if self.proc is None or self.proc.poll() is not None or key != self.key:
             self._start(proc_args, env)

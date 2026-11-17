@@ -280,6 +280,10 @@ again for 6 hours), and starts games by `--priority` (`confirm` before `explore`
 played by the requesting checkout's own tools and inputs, its key checked again when it starts. Killing a bench drops
 its queued games (its running ones finish, into the cache). Logs: the main checkout's `build/sim/queue/queue.log`,
 each game's files in `build/sim/queue/jobs/`.
+Each slot keeps one EE-SIM process that plays its games one after the other (`EE-SIM --games`, below; `bench.py serve
+--single`: one process per game): a slot worker (`bench.py slotwork`, log `build/sim/queue/slot-<k>.log`) per
+slot and checkout, ended after 60 s idle and on pause or stop. A direct bench does the same with `--batch`. A game
+that fails before its game ran is retried in a process of its own.
 
 ```
 python -I tools/sim_bench.py --name v1 --queue --priority confirm --seeds 2-65 --engine classic,ageofai --cache
