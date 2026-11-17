@@ -259,6 +259,9 @@ const SHARED: &[(&str, &str)] =
 /// The header a source file's items go to: its crate's directory and its top-level module; ee_game's root (the
 /// library's own items) is the common header.
 fn header_of(crates_dir: &Path, krate: &str, file: &Path) -> String {
+    if krate == "ee_net_tcp" {
+        return "net/net_tcp".to_string(); // the plug-in, a crate of its own beside ee_net
+    }
     let dir = CRATE_DIRS.iter().find(|(k, _)| *k == krate).map_or(krate, |(_, d)| *d);
     let src = crates_dir.join(krate).join("src");
     let first = file.strip_prefix(&src).ok().and_then(|p| p.components().next()).and_then(|c| c.as_os_str().to_str());

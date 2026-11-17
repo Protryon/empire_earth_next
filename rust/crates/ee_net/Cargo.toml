@@ -1,4 +1,4 @@
-# ee_net: ee_net, ee_net_tcp (docs/progress/crate-restructure.md)
+# ee_net: ee_net (docs/progress/crate-restructure.md; its TCP plug-in is the crate ee_net_tcp)
 [package]
 name = "ee_net"
 version.workspace = true

@@ -27,7 +27,7 @@ use ee_render as _;
 #[cfg(not(test))] // its FFI imports the C++ shim
 use ee_audio as _;
 #[cfg(not(test))] // its FFI imports the platform layer, absent from a test binary
-use ee_net as _;
+use ee_net_tcp as _;
 #[cfg(not(test))]
 use ee_render as _;
 #[cfg(not(test))] // its FFI imports the platform layer's window functions (absent from a test binary)

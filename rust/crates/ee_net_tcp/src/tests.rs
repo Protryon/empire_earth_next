@@ -4,9 +4,9 @@ use std::collections::VecDeque;
 use std::ffi::c_void;
 use std::sync::{Arc, Mutex};
 
-use crate::net_tcp::cipher::Cipher;
-use crate::net_tcp::host::*;
-use crate::net_tcp::plugin::*;
+use crate::cipher::Cipher;
+use crate::host::*;
+use crate::plugin::*;
 
 const WOULD_BLOCK_ERROR: u32 = E_WOULD_BLOCK;
 

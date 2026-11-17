@@ -1,0 +1,14 @@
+[package]
+name = "ee_net_tcp"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The TCP plug-in behind the Network Engine's C ABI (ee_tcp_*). A crate of its own, not a module of ee_net
+# (docs/progress/crate-restructure.md): the network test programs (tests/net, xbuild.py nettest) put stand-ins of
+# that C ABI in its place, which they cannot do once its objects are the Network Engine's.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+ee_base = { path = "../ee_base" }

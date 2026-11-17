@@ -36,6 +36,7 @@
 #include "rust/won_net/peerobj.h"
 #include "rust/won_net/peerop.h"
 #include "rust/won_net/random.h"
+#include "rust/won_net/auth.h"   // the names its original copy (_orig.h) uses
 
 using namespace WONAPI;
 using std::string;

@@ -29,6 +29,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "rust/won_gui/cfgtab.h"
 #include "rust/won_gui/guiconf.h"
+#include "rust/won_gui/guilayout.h"   // the names its original copy (_orig.h) uses
 #include "won_cfgtab_methods.h"
 wchar_t gEmptyWideString[2]; // EEWonNet.cpp's (GetEmptyGUIStringData)
 

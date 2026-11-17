@@ -7,8 +7,8 @@ usize_is_size_t = true
 
 [parse]
 parse_deps = true
-include = ["ee_base", "ee_game", "ee_net", "ee_audio", "ee_data", "ee_sim", "ee_render", "ee_ui", "ee_won_net", "ee_won_lobby", "ee_won_gui"]
-extra_bindings = ["ee_base", "ee_net", "ee_audio", "ee_sim", "ee_render", "ee_ui", "ee_won_net", "ee_won_lobby", "ee_won_gui"]
+include = ["ee_base", "ee_game", "ee_net", "ee_net_tcp", "ee_audio", "ee_data", "ee_sim", "ee_render", "ee_ui", "ee_won_net", "ee_won_lobby", "ee_won_gui"]
+extra_bindings = ["ee_base", "ee_net", "ee_net_tcp", "ee_audio", "ee_sim", "ee_render", "ee_ui", "ee_won_net", "ee_won_lobby", "ee_won_gui"]
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]

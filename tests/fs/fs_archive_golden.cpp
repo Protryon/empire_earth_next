@@ -44,6 +44,7 @@
 #undef protected
 #include "rust/base/error.h"
 #include "rust/base/ustring.h"
+#include "rust/base/fs.h"   // the names its original copy (_orig.h) uses
 UString::~UString() { ee_ustring_free(&this->mState); }
 UWideString::~UWideString() { ee_uwstring_free(&this->mState); }
 

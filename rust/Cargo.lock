@@ -208,6 +208,7 @@ dependencies = [
  "ee_base",
  "ee_data",
  "ee_net",
+ "ee_net_tcp",
  "ee_render",
  "ee_sim",
  "ee_ui",
@@ -218,6 +219,13 @@ dependencies = [
 
 [[package]]
 name = "ee_net"
+version = "0.1.0"
+dependencies = [
+ "ee_base",
+]
+
+[[package]]
+name = "ee_net_tcp"
 version = "0.1.0"
 dependencies = [
  "ee_base",

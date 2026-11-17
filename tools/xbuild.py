@@ -840,6 +840,13 @@ WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]
 
 
+# A WON or network test program links the game's Rust library without the game's C++ and SDL. The objects it takes
+# from the library's merged crates also hold calls into those (the crate restructure, docs/progress/
+# crate-restructure.md R1), which the program never makes: its linker leaves them unresolved.
+TEST_LINK_LOOSE = {"windows": ["/FORCE:UNRESOLVED"], "linux": ["-Wl,--unresolved-symbols=ignore-all"],
+                   "macos": ["-Wl,-undefined,dynamic_lookup"]}
+
+
 def build_won_test(t, name, units, folder="won", first_inc=None):
     """One tests/won (or tests/<folder>) program: its source and units in the game's dialect and include path (module
     won's defines), the platform layer as standard code -> the executable. first_inc: a directory searched before the
@@ -871,7 +878,8 @@ def build_won_test(t, name, units, folder="won", first_inc=None):
                  f"/Fo{obj}", src], env=env)
             objs.append(obj)
         run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, *rust_libs(t), "libcmt.lib",
-             "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *WIN32_SYSLIBS], env=env)
+             "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *WIN32_SYSLIBS, *TEST_LINK_LOOSE["windows"]],
+            env=env)
     else:
         base = t.base_flags()
         for src in [*game, *platform_sources(t)]:
@@ -885,7 +893,7 @@ def build_won_test(t, name, units, folder="won", first_inc=None):
             run([t.clang(), *base, *flags, "-c", "-o", obj, src])
             objs.append(obj)
         run([t.clang(), *t.link_flags(), "-o", exe, *objs, *rust_libs(t),
-             *(["-ldl", "-lpthread"] if t.os == "linux" else [])])
+             *(["-ldl", "-lpthread"] if t.os == "linux" else []), *TEST_LINK_LOOSE[t.os]])
     return exe
 
 
