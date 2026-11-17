@@ -61,6 +61,7 @@ pub mod effect_storm;
 pub mod effect_tracer;
 pub mod effect_trail;
 pub mod effect_vent;
+pub mod effect_views;
 pub mod effect_volcano;
 pub mod effect_vortex;
 pub mod effect_wall;
@@ -72,6 +73,7 @@ pub mod ffi_effect;
 pub mod ffi_manager;
 pub mod ffi_mesh;
 pub mod ffi_scene;
+pub mod fill;
 pub mod goal_markers;
 #[cfg(test)]
 mod golden_beam;
@@ -81,6 +83,10 @@ mod golden_camera;
 mod golden_center;
 #[cfg(test)]
 mod golden_farm;
+#[cfg(test)]
+mod golden_fill;
+#[cfg(test)]
+mod golden_fill_replay;
 #[cfg(test)]
 mod golden_lighting;
 #[cfg(test)]

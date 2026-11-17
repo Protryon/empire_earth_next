@@ -33,6 +33,7 @@ use crate::gfx::effect_state::{
 };
 use crate::gfx::effect_trail::{trail, trail_file};
 use crate::gfx::effect_vent::EeGfxFrames;
+use crate::gfx::effect_views;
 use crate::gfx::effect_vortex::{vortex, vortex_file};
 use crate::gfx::ffi_effect::EeGfxParticleGround;
 use crate::gfx::raster::{EeGfxModel, Raster};
@@ -41,6 +42,10 @@ use crate::gfx::raster::{EeGfxModel, Raster};
 #[repr(C)]
 pub struct EeGfxEffect2DHost {
     pub context: *mut c_void,
+    /// the effect's unit (`mUnit`, an `EEUnit*`; 0: none, or its saved id before RepairPointers) and the
+    /// current player (`gWorld.GetCurrentPlayer()`): ee_gfx effect_views.rs reads them through the world views
+    pub unit: u64,
+    pub player: u64,
     /// the base's queue: `EEEffect::Queue` for the confirmation (not `EEEffect2D`'s projection), else `EEEffect2D`'s
     pub base_queue: extern "C" fn(context: *mut c_void) -> i32,
     /// pushes the effect on render queue `index` under its graphic's texture for the current screen
@@ -53,17 +58,11 @@ pub struct EeGfxEffect2DHost {
     pub move_to_point: extern "C" fn(context: *mut c_void),
     /// `EEEffect2D::mModel`
     pub model: extern "C" fn(context: *mut c_void) -> EeGfxModel,
-    /// the unit's class's selection size
-    pub selection_size: extern "C" fn(context: *mut c_void) -> f32,
-    /// the unit's player is another, not player 0, and the current player's enemy
-    pub confirm_enemy: extern "C" fn(context: *mut c_void) -> bool,
     /// the goal the confirmation shows (`EeGfxConfirmGoal`) for the unit's goal queue at the tile
     pub confirm_goal:
         extern "C" fn(context: *mut c_void, goal_index: u32, tile_x: i32, tile_y: i32) -> EeGfxConfirmGoal,
     /// where the unit stands for the confirmation (its position, a tree's tile, a dead unit's top point)
     pub confirm_unit: extern "C" fn(context: *mut c_void) -> EeGfxConfirmUnit,
-    /// the unit's complex unit's physical location
-    pub unit_location: extern "C" fn(context: *mut c_void) -> GeTransformation,
     /// the terrain mesh's height at a point (`GetMeshZ`)
     pub terrain_z: extern "C" fn(context: *mut c_void, x: f32, y: f32) -> f32,
     /// one of the command textures (0 `sTexture4E0`, 1 `sTexture4E4`, 2 `sTexture4E8`)
@@ -88,11 +87,8 @@ pub struct EeGfxEffect2DHost {
         extern "C" fn(context: *mut c_void, location: Ge3DPoint, frame: u32, changed: bool, part0: bool),
     /// `gDrawBlood`
     pub draw_blood: extern "C" fn(context: *mut c_void) -> bool,
-    /// the effect has a unit with a complex unit
-    pub has_complex: extern "C" fn(context: *mut c_void) -> bool,
     /// the unit's model's default point, the unit's stats' scale
     pub default_point: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
-    pub stats_scale: extern "C" fn(context: *mut c_void) -> f32,
     /// `gWorld.IsTileBlocked`
     pub tile_blocked: extern "C" fn(context: *mut c_void, x: i32, y: i32) -> bool,
     /// `gWorld.mWindDirection`
@@ -110,8 +106,6 @@ pub struct EeGfxEffect2DHost {
     /// part `index` on the unit's current frame: its model's tag point (the unit itself for tag 10000) under the
     /// unit's location (not without a complex unit)
     pub part_follow: extern "C" fn(context: *mut c_void, index: u32) -> crate::gfx::effect_sprite::EeGfx2DPoint,
-    /// the unit's stats' maximum hit points
-    pub max_hit_points: extern "C" fn(context: *mut c_void) -> i32,
     /// `EEEffect::GetUnitLocation` (the complex unit's location, else its tile's centre)
     pub unit_point: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
     /// the kept graphic object's model (`mModel`)
@@ -128,8 +122,6 @@ pub struct EeGfxEffect2DHost {
     pub set_area_effects: extern "C" fn(context: *mut c_void, count: i32),
     /// the unit's type is in its player's active group (a town centre or capitol also with 0x23 or 0x29 there)
     pub icons_selected: extern "C" fn(context: *mut c_void) -> bool,
-    /// the unit is the current player's and built
-    pub icons_owner: extern "C" fn(context: *mut c_void) -> bool,
     /// `gWorld.GetNumGhostUnits()`
     pub ghost_units: extern "C" fn(context: *mut c_void) -> u32,
     /// the ground under a point on a map tile (`GetGroundPoint`; `has` false off the map)
@@ -323,10 +315,12 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         (self.model)(self.context)
     }
     fn selection_size(&mut self) -> f32 {
-        (self.selection_size)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::selection_size(self.unit) }
     }
     fn confirm_enemy(&mut self) -> bool {
-        (self.confirm_enemy)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::confirm_enemy(self.unit, self.player) }
     }
     fn confirm_goal(&mut self, goal_index: u32, tile_x: i32, tile_y: i32) -> EeGfxConfirmGoal {
         (self.confirm_goal)(self.context, goal_index, tile_x, tile_y)
@@ -335,7 +329,8 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         (self.confirm_unit)(self.context)
     }
     fn unit_location(&mut self) -> GeTransformation {
-        (self.unit_location)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::unit_location(self.unit) }
     }
     fn terrain_z(&mut self, x: f32, y: f32) -> f32 {
         (self.terrain_z)(self.context, x, y)
@@ -368,13 +363,15 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         (self.draw_blood)(self.context)
     }
     fn has_complex(&mut self) -> bool {
-        (self.has_complex)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::has_complex(self.unit) }
     }
     fn default_point(&mut self) -> Ge3DPoint {
         (self.default_point)(self.context)
     }
     fn stats_scale(&mut self) -> f32 {
-        (self.stats_scale)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::unit_scale(self.unit) }
     }
     fn tile_blocked(&mut self, x: i32, y: i32) -> bool {
         (self.tile_blocked)(self.context, x, y)
@@ -407,7 +404,8 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         (self.part_follow)(self.context, index)
     }
     fn max_hit_points(&mut self) -> i32 {
-        (self.max_hit_points)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::max_hit_points(self.unit) }
     }
     fn unit_point(&mut self) -> Ge3DPoint {
         (self.unit_point)(self.context)
@@ -437,7 +435,8 @@ impl Effect2DHost for &EeGfxEffect2DHost {
         (self.icons_selected)(self.context)
     }
     fn icons_owner(&mut self) -> bool {
-        (self.icons_owner)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::icons_owner(self.unit, self.player) }
     }
     fn ghost_units(&mut self) -> u32 {
         (self.ghost_units)(self.context)

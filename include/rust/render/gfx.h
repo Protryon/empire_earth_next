@@ -1888,21 +1888,6 @@ struct EeGfxAnimation {
   uint32_t frame_count;
 };
 
-/// A unit's tile facts (the nuclear explosion's place off the map): on the map (`mTileNode`), the class's tile size
-/// and the unit's tile, as floats.
-struct EeGfxUnitTile {
-  bool on_map;
-  float size;
-  float x;
-  float y;
-};
-
-/// The damage vent's unit: its command is to die; its maximum hit points.
-struct EeGfxVentUnit {
-  bool dead;
-  float max_hit_points;
-};
-
 /// A jet's places on the unit (the C++'s tag points at frame 0 around the unit's location scaled by its stats): its
 /// vent, its aim, and the vent's offset from the model's centre turned by that location.
 struct EeGfxVentPoints {
@@ -1924,19 +1909,6 @@ struct EeGfxTracerEnds {
   EeGe3DPoint start;
   EeGe3DPoint end;
   bool has_target;
-};
-
-/// What the farm reads of its unit.
-struct EeGfxFarmUnit {
-  /// `GetTileX()`, `GetTileY()`
-  int32_t tile_x;
-  int32_t tile_y;
-  /// `GetClass()->GetTileSize()`
-  int32_t tile_size;
-  /// the complex unit's `mIsBuilt`
-  bool built;
-  /// the complex unit's `mCloaked`: the crop variant (0..4)
-  int32_t cloaked;
 };
 
 /// The terrain under a farm field, as C++ callbacks over `context` (the `GETerrainMesh`).
@@ -1982,6 +1954,10 @@ struct EeGfxEmitterUnit {
 /// The C++'s answers for an `EEE3DRust`.
 struct EeGfxEffect3DHost {
   void *context;
+  /// the effect's unit (`mUnit`, an `EEUnit*`; 0: none, or its saved id before RepairPointers) and the
+  /// current player (`gWorld.GetCurrentPlayer()`): ee_gfx effect_views.rs reads them through the world views
+  uint64_t unit;
+  uint64_t player;
   /// the unit's position (`EEUnit::GetPosition`)
   EeGe3DPoint (*unit_position)(void *context);
   /// the graphic effect's first model's height in its bounding box at frame 0
@@ -2014,18 +1990,12 @@ struct EeGfxEffect3DHost {
   EeGe3DPoint (*beam_start)(void *context);
   /// the citizen beam's unit: a complex unit, its animation and frame
   EeGfxBeamUnit (*beam_unit)(void *context);
-  /// the beam's unit is cloaked, another player's and the current player's enemy
-  bool (*beam_hidden)(void *context);
   /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`), when there is one
   void (*place_linked)(void *context, const EeGe3DPoint *point);
   /// the unit's complex unit's position (`mComplexUnit->GetPosition`)
   EeGe3DPoint (*complex_position)(void *context);
   /// the unit's model is the effect's second model (`mUnit->GetModel()`); its `LoadMedia`
   int32_t (*unit_model_media)(void *context);
-  /// the unit's stats' scale (`mUnit->mStats->GetScale()`)
-  float (*unit_scale)(void *context);
-  /// the unit's complex unit's physical model's location
-  EeGeTransformation (*unit_location)(void *context);
   /// the unit's model's first model's bounding radius at frame 0
   float (*unit_model_radius)(void *context);
   /// the unit's complex unit's physical model's frame and animation
@@ -2049,12 +2019,8 @@ struct EeGfxEffect3DHost {
   int32_t (*spawn)(void *context, const EeGe3DPoint *point);
   /// the graphic object's texture `index` (`mTextures[index]`)
   EeGfxModel (*texture_at)(void *context, uint32_t index);
-  /// the unit's tile facts (on the map, the class's tile size, the tile)
-  EeGfxUnitTile (*unit_tile)(void *context);
   /// the terrain mesh's height at a point (`GetMeshZ`)
   float (*terrain_z)(void *context, float x, float y);
-  /// the unit's complex unit is cloaked, another player's and the current player's enemy
-  bool (*unit_hidden)(void *context);
   /// the terrain mesh's tile is a space tile (`GetIsSpaceTile`)
   bool (*space_tile)(void *context, uint32_t x, uint32_t y);
   /// the graphic effect's linked effect `index` (1..3) made through the entry point that made the effect (on its
@@ -2066,12 +2032,8 @@ struct EeGfxEffect3DHost {
   bool (*wall_piece)(void *context, int32_t x, int32_t y, float *z);
   /// the unit's complex unit is a gate: how open it is into `open`
   bool (*gate_open)(void *context, float *open);
-  /// the unit's complex unit's player's colour
-  EeGfxColor (*player_color)(void *context);
   /// the damage vent's tag point lists (kinds 5 and 0x38 of the unit's model at its animation), kept for the call
   void (*vent_lists)(void *context);
-  /// the damage vent's unit: its command is to die, its maximum hit points
-  EeGfxVentUnit (*vent_unit)(void *context);
   /// the number of vents (kind 5 tag points; after `vent_lists`)
   uint32_t (*vent_count)(void *context);
   /// vent `tag`'s and its aim's offsets at frame 0 into `points[0]` and `points[1]` (after `vent_lists`)
@@ -2080,15 +2042,11 @@ struct EeGfxEffect3DHost {
   EeGfxVentPoints (*vent_points)(void *context, int32_t tag);
   /// the kept graphic object's animation `index`
   EeGfxFrames (*frames)(void *context, uint32_t index);
-  /// the unit's class's scale (`GetClass()->GetScale()`)
-  float (*unit_class_scale)(void *context);
   /// the graphic object is the graphic effect's; its `LoadMedia`, then the media of the one it replaces unloaded
   int32_t (*reload_media)(void *context);
   /// the unit's position, raised by its complex unit's effect height while on the map and alive (the origin
   /// without a unit)
   EeGe3DPoint (*unit_raised_position)(void *context);
-  /// the unit is an unbuilt market (a complex unit of type market, not built, not a foundation)
-  bool (*market_unbuilt)(void *context);
   /// push the effect into render queue `index` under the graphic effect's object's texture of the preferences'
   /// screen (none without an object)
   void (*queue_screen)(void *context, uint32_t index);
@@ -2111,8 +2069,6 @@ struct EeGfxEffect3DHost {
   int32_t (*volcano_build)(void *context, EeGe3DPoint *points, float *heights, uint32_t count);
   /// the volcano's model
   EeGfxModel (*volcano_model)(void *context);
-  /// the farm's unit: its tile, size, built state and crop variant (`mCloaked`)
-  EeGfxFarmUnit (*farm_unit)(void *context);
   /// the terrain the farm's meshes follow (`gWorld.mMap->mTerrainMesh`)
   EeGfxFarmTerrain (*farm_terrain)(void *context);
   /// the tile of the farm's first drop site (`EEGetFarmDropSites`); false when it has none
@@ -2252,6 +2208,10 @@ struct EeGfxGlowArea {
 /// The C++'s answers for an `EEE2DRust`.
 struct EeGfxEffect2DHost {
   void *context;
+  /// the effect's unit (`mUnit`, an `EEUnit*`; 0: none, or its saved id before RepairPointers) and the
+  /// current player (`gWorld.GetCurrentPlayer()`): ee_gfx effect_views.rs reads them through the world views
+  uint64_t unit;
+  uint64_t player;
   /// the base's queue: `EEEffect::Queue` for the confirmation (not `EEEffect2D`'s projection), else `EEEffect2D`'s
   int32_t (*base_queue)(void *context);
   /// pushes the effect on render queue `index` under its graphic's texture for the current screen
@@ -2264,10 +2224,6 @@ struct EeGfxEffect2DHost {
   void (*move_to_point)(void *context);
   /// `EEEffect2D::mModel`
   EeGfxModel (*model)(void *context);
-  /// the unit's class's selection size
-  float (*selection_size)(void *context);
-  /// the unit's player is another, not player 0, and the current player's enemy
-  bool (*confirm_enemy)(void *context);
   /// the goal the confirmation shows (`EeGfxConfirmGoal`) for the unit's goal queue at the tile
   EeGfxConfirmGoal (*confirm_goal)(void *context,
                                    uint32_t goal_index,
@@ -2275,8 +2231,6 @@ struct EeGfxEffect2DHost {
                                    int32_t tile_y);
   /// where the unit stands for the confirmation (its position, a tree's tile, a dead unit's top point)
   EeGfxConfirmUnit (*confirm_unit)(void *context);
-  /// the unit's complex unit's physical location
-  EeGeTransformation (*unit_location)(void *context);
   /// the terrain mesh's height at a point (`GetMeshZ`)
   float (*terrain_z)(void *context, float x, float y);
   /// one of the command textures (0 `sTexture4E0`, 1 `sTexture4E4`, 2 `sTexture4E8`)
@@ -2304,11 +2258,8 @@ struct EeGfxEffect2DHost {
                           bool part0);
   /// `gDrawBlood`
   bool (*draw_blood)(void *context);
-  /// the effect has a unit with a complex unit
-  bool (*has_complex)(void *context);
   /// the unit's model's default point, the unit's stats' scale
   EeGe3DPoint (*default_point)(void *context);
-  float (*stats_scale)(void *context);
   /// `gWorld.IsTileBlocked`
   bool (*tile_blocked)(void *context, int32_t x, int32_t y);
   /// `gWorld.mWindDirection`
@@ -2326,8 +2277,6 @@ struct EeGfxEffect2DHost {
   /// part `index` on the unit's current frame: its model's tag point (the unit itself for tag 10000) under the
   /// unit's location (not without a complex unit)
   EeGfx2DPoint (*part_follow)(void *context, uint32_t index);
-  /// the unit's stats' maximum hit points
-  int32_t (*max_hit_points)(void *context);
   /// `EEEffect::GetUnitLocation` (the complex unit's location, else its tile's centre)
   EeGe3DPoint (*unit_point)(void *context);
   /// the kept graphic object's model (`mModel`)
@@ -2344,8 +2293,6 @@ struct EeGfxEffect2DHost {
   void (*set_area_effects)(void *context, int32_t count);
   /// the unit's type is in its player's active group (a town centre or capitol also with 0x23 or 0x29 there)
   bool (*icons_selected)(void *context);
-  /// the unit is the current player's and built
-  bool (*icons_owner)(void *context);
   /// `gWorld.GetNumGhostUnits()`
   uint32_t (*ghost_units)(void *context);
   /// the ground under a point on a map tile (`GetGroundPoint`; `has` false off the map)
@@ -2605,6 +2552,158 @@ struct EeGfxDrawnHost {
   bool (*first_drawn)(void *context);
   bool (*complex_in_view)(void *context);
   bool (*model_in_view)(void *context, float x, float y);
+};
+
+/// `EERenderShadow` (ee/EERenderLists.h), field for field (the C++ static_asserts every offset).
+struct EeGfxFillObject {
+  float location[3];
+  /// `EEGraphicObject*` (the C++ sets it before the fill)
+  uint64_t object;
+  float model_scale;
+  float selection_size;
+  float scale;
+  float f1c;
+  float health;
+  float opacity;
+  float fraction;
+  unsigned long model_index;
+  unsigned long current_frame;
+  unsigned long next_frame;
+  bool is_fogged;
+  uint8_t gap[3];
+};
+
+/// The frame's values the fill reads (`EERenderFrameInfo` and the render globals).
+struct EeGfxFillFrame {
+  /// `EERenderFrameInfo::mYaw`
+  float yaw;
+  /// `gFreeCamera`
+  bool free_camera;
+  /// the objects' sway clock (`sSwayClock`)
+  uint32_t sway_clock;
+  /// the current player (`gWorld.GetCurrentPlayer()`), the world player (`gWorld.mPlayers[0]`) and the map
+  uint64_t player;
+  uint64_t world_player;
+  uint64_t map;
+  /// `gU4E9230`: the rectangle's picked unit ids
+  const unsigned long *picked;
+  size_t picked_count;
+  /// `EERenderFrameInfo::mPickedUnit` (the unit under the pointer, 0: none)
+  uint64_t pointed;
+  /// `gMusicFollowsBattle`, `gCollisionSphereMode`
+  bool music_follows_battle;
+  bool collision_spheres;
+  /// `gRenderEnvironment.mSeaLevel`, `gSpaceTurretHeight`, `gSpaceStationHeight`
+  float sea_level;
+  float space_turret_height;
+  float space_station_height;
+};
+
+/// `EERenderUnit`'s head (ee/EERenderLists.h): every member but the vectors and the name, which follow it (the C++
+/// static_asserts every offset).
+struct EeGfxFillUnit {
+  EeGeTransformation transformation;
+  float player_color[3];
+  float tint_color[3];
+  /// `EEUnitClass*`, `EEGraphicObject*` twice (the C++ sets `source` before the fill)
+  uint64_t info;
+  uint64_t source;
+  uint64_t source2;
+  float scale;
+  float selection_size;
+  float shadow_scale;
+  float ff4;
+  float ground_z;
+  float opacity;
+  float health;
+  float fraction;
+  float sub_model_offset_scale;
+  float fog_scale;
+  long category;
+  unsigned long unit_class_index;
+  long l118;
+  long command_type;
+  long current_research;
+  long animation;
+  long grid_size;
+  unsigned long current_frame;
+  unsigned long next_frame;
+  long l134;
+  unsigned long unit_id;
+  long player_id;
+  unsigned long area_effect_strength;
+  bool can_place;
+  bool is_fogged;
+  bool is_tinted;
+  bool has_sub_model_offset;
+  bool second_full_opacity;
+};
+
+/// A morale area effect's strength.
+struct EeGfxFillMorale {
+  bool found;
+  unsigned long strength;
+};
+
+/// A point the host answers (`found` false: none).
+struct EeGfxFillPoint {
+  bool found;
+  float point[3];
+};
+
+/// The C++'s [`FillHost`]: its context and the calls.
+struct EeGfxFillHost {
+  void *context;
+  float (*mesh_z)(void*, float, float);
+  uint64_t (*model_frames)(void*, uint64_t, uint64_t);
+  bool (*water_tile)(void*, long, long);
+  bool (*valid_tile)(void*, long, long);
+  float (*ground_z)(void*, float, float, float);
+  float (*physical_scale)(void*, uint64_t);
+  unsigned long (*physical_frame)(void*, uint64_t);
+  EeGfxColor (*tint)(void*, uint64_t);
+  bool (*side_part)(void*, uint64_t);
+  bool (*land_building)(void*, uint64_t);
+  void (*ground_location)(void*, uint64_t, float*);
+  bool (*group_contains)(void*, uint64_t, uint64_t);
+  void (*parts)(void*, EeGfxFillUnit*, uint64_t);
+  void (*bars_resize)(void*, EeGfxFillUnit*, size_t);
+  void (*bars_set)(void*, EeGfxFillUnit*, size_t, float);
+  void (*bars_clear)(void*, EeGfxFillUnit*);
+  void (*name_clear)(void*, EeGfxFillUnit*);
+  void (*name_from_stats)(void*, EeGfxFillUnit*, uint64_t);
+  void (*select)(void*, EeGfxFillUnit*);
+  void (*point_at)(void*, EeGfxFillUnit*);
+  void (*label)(void*, EeGfxFillUnit*, uint64_t);
+  EeGfxFillMorale (*morale)(void*, uint64_t);
+  uint64_t (*scaffolding)(void*, long, uint64_t);
+  uint64_t (*unit)(void*, long);
+  EeGfxFillPoint (*waypoint)(void*, uint64_t, long, long);
+};
+
+/// `FillUnitFields`' answers from the frame: the fighting count it adds to and whether the priest tower's circle is
+/// drawn.
+struct EeGfxFillUnitResult {
+  float fighting;
+  bool circle;
+};
+
+/// `GetUnitOpacity`'s calls that are not views.
+struct EeGfxOpacityHost {
+  void *context;
+  /// the unit's virtual `UpdateHidden()` (it may write the hidden flags)
+  bool (*update_hidden)(void*, uint64_t);
+  /// `Fn23CEE2(complex, translucent, opacity)`: the complex unit's own translucency (`opacity` in and out)
+  bool (*own)(void*, uint64_t, bool, float*);
+  /// the class's `IsLandBuilding()`
+  bool (*land_building)(void*, uint64_t);
+  /// the unit's `GetModel()->mModels[index]`: its centre point and its bounding radius at `frame`
+  EeGe3DPoint (*model_center)(void*, uint64_t, unsigned long);
+  float (*model_radius)(void*, uint64_t, unsigned long, unsigned long);
+  /// the complex unit's `mPhysicalModel.GetScale()`, `GetFrame()`; the mesh's height
+  float (*physical_scale)(void*, uint64_t);
+  unsigned long (*physical_frame)(void*, uint64_t);
+  float (*mesh_z)(void*, float, float);
 };
 
 /// The player `Rebuild` places markers for.
@@ -4211,6 +4310,50 @@ EeGfxColor ee_gfx_capture_waypoint_tint(int32_t carrier_id);
 
 /// `FillRenderLists`' music intensity.
 uint32_t ee_gfx_capture_music_intensity(uint32_t current, float fighting, float count);
+
+/// `FillObjectFields` (EERenderObject.cpp) through Rust.
+///
+/// # Safety
+/// The caller holds the world (the graphics thread under the world's read lock); `unit` is a live unit, the pointers
+/// are valid.
+bool ee_gfx_fill_object_fields(uint64_t unit,
+                               EeGfxFillObject *out,
+                               const EeGfxFillFrame *frame,
+                               EeGeTransformation *transformation,
+                               const EeGfxFillHost *host);
+
+/// `FillUnitFields` (EERenderObject.cpp) through Rust.
+///
+/// # Safety
+/// As [`ee_gfx_fill_object_fields`]; `out` is the head of an `EERenderUnit`.
+EeGfxFillUnitResult ee_gfx_fill_unit_fields(uint64_t unit,
+                                            EeGfxFillUnit *out,
+                                            const EeGfxFillFrame *frame,
+                                            const EeGfxFillHost *host);
+
+/// `IsUnitDrawn` (EERenderObject.cpp) through Rust: the facts over the views, the decision walk.rs's.
+///
+/// # Safety
+/// As [`ee_gfx_fill_object_fields`]; `unit`, `tile` and `player` are live, `host` valid.
+bool ee_gfx_fill_unit_drawn(uint64_t unit,
+                            uint64_t tile,
+                            uint64_t player,
+                            bool free_camera,
+                            uint32_t unit_count,
+                            uint32_t object_count,
+                            EeGfxDrawnHost *host);
+
+/// `GetUnitOpacity` (EERenderObject.cpp) through Rust.
+///
+/// # Safety
+/// As [`ee_gfx_fill_object_fields`]; the pointers are valid.
+bool ee_gfx_fill_unit_opacity(uint64_t unit,
+                              long show_hidden,
+                              bool in_cinematic,
+                              bool orthographic,
+                              const EeGeViewport *viewport,
+                              const EeGfxOpacityHost *host,
+                              float *opacity);
 
 /// `EEGraphicalGoalManager`'s constructor: no markers.
 EeGfxGoalMarkers *ee_gfx_goals_new();

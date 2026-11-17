@@ -72,6 +72,8 @@ struct FakePlayer {
     saved: EeUnitsPlayerSaved,
     fields: EeUnitsPlayerFields,
     selected_group: usize,
+    viewed_unit: usize,
+    selected_viewed_unit: usize,
     computer: usize,
 }
 
@@ -85,6 +87,8 @@ impl Default for FakePlayer {
             saved: EeUnitsPlayerSaved::default(),
             fields: EeUnitsPlayerFields::default(),
             selected_group: 0,
+            viewed_unit: 0,
+            selected_viewed_unit: 0,
             computer: 0,
         }
     }
@@ -203,6 +207,8 @@ fn fake_layout() -> EeWorldLayout {
         tile_ai_value: offset_of!(FakeTile, ai) as u64,
         unit_node_unit: offset_of!(FakeNode, unit) as u64,
         unit_node_next: offset_of!(FakeNode, next) as u64,
+        player_viewed_unit: offset_of!(FakePlayer, viewed_unit) as u64,
+        player_selected_viewed_unit: offset_of!(FakePlayer, selected_viewed_unit) as u64,
     }
 }
 
@@ -330,6 +336,8 @@ fn fixture() -> Fixture {
     f.player.saved.mResourceCaps[3] = 500;
     f.player.fields.mTributeFee = 0.4;
     f.player.selected_group = 0x77;
+    f.player.viewed_unit = 0x55;
+    f.player.selected_viewed_unit = 0x66;
     f.player.first_unit = addr(&*f.tree);
     f.tree.next = addr(&*f.soldier);
     let player = addr(&*f.player);
@@ -490,6 +498,7 @@ fn players_world_map_and_tiles() {
         (p.color(), p.selected_group_handle(), p.enemy(2), p.enemy(3), p.enemy(99)),
         ([0.25, 0.5, 0.75], 0x77, 1, 0, 0)
     );
+    assert_eq!((p.viewed_unit_handle(), p.selected_viewed_unit_handle()), (0x55, 0x66));
     let ids: Vec<u32> = p.units().map(|u| u.id()).collect();
     assert_eq!(ids, [0x0100_0001, 0x0100_0002]);
     // SAFETY: the fixture's

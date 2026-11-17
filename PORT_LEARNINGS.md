@@ -29489,3 +29489,71 @@ Round total: net -211, far short of the 1,500 aimed at (see "Why short").
 - **After the merge of origin/rust f63bd44b** (WONLobby 12, world views, A* round 1; PORT_LEARNINGS conflicted on
   appended sections only: rust's taken, this one appended): both builds 0/0 (734/735 inputs), the oracle seeds 2-7
   identical, the saveload matrix `--expect` PASS, the Rust gate PASS (the full run).
+## Object plan, Lane R preparation: RFIL, the fill's golden, the fill split into reads and calls (branch rust-objR, 2026-11-17)
+
+The preparation for moving `EERenderObject.cpp`'s fill and `EEEffectHost.cpp`'s `Ask` readers onto Lane V's views
+(`ee_sim::world`); nothing moved to Rust yet. docs/progress/obj-lane-r.md has the gates and every read by object.
+
+- **RFIL in the live game.** `EE_RENDER_CAPTURE=<file>` (TEST ONLY, `EERenderCapture.cpp`) digests every filled
+  frame. The game draws on wall time, so no two runs fill the same frames: `tools/rfil.py compare` matches frames by
+  keys (physics tick, camera, flags, the unit under the pointer and a digest of the visible tiles' units) and requires
+  the matched ones equal. To share ticks between runs the RFIL tours run the harness clock at 1/20
+  (`--time-factor 1/20`: the software renderer draws about one frame per physics tick); seed 7: 65 to 89 matched
+  frames between runs, all equal.
+  - **Trap (addresses):** the texture maps are multimaps keyed by `GETexture*`: their order differs between runs. The
+    capture names a key by its lowest pool index and writes the keys in that order.
+  - **Trap (indeterminate fields):** `FillGhostRecords` fills a local `EERenderUnitRecord`; the scalars it does not set
+    are stack garbage (the driver's two runs differed until only the set fields were compared).
+  - **Trap (input):** the box selection's "dead" step fails at the 1/20 clock (the disbanded unit does not finish dying
+    within its wait), and a selection or kill changes the world at a wall time: the world digest in the key keeps such
+    frames unmatched instead of reported.
+  - **Coverage gap:** the tours at seeds 2, 3 and 7 drew the start's six units and no map object; selections, objects,
+    ghosts and circles are covered only by the driver.
+- **The stub-GE driver** (`build/gxR/drv/make_rfil.py`, scratch): the fill's functions cut verbatim from a commit or the
+  working tree over a stand-in world; prints every call and each frame's full lists. 3,000 frames of seed 2: 21,344
+  render units, 10,882 objects, 1,512 ghost records, 125 circles; two runs identical. 40 frames are the committed
+  `golden_fill.txt`; `golden_fill.rs` replays the parts already in Rust (`capture.rs`' place, jitter and sway,
+  `walk.rs`' owned food) against it.
+  - **Trap (Git Bash heredocs):** a quoted heredoc (`<<'EOF'`) feeding Python on this machine turned `\\n` in the
+    script into a real newline twice (the patched C++ string literals broke). Write such scripts with the Write tool.
+- **The split.** `FillUnit` and `FillObject` keep their calls (counters, `LoadMedia`, the circle, `AddUnit`, the list
+  and map inserts) in the original order and hand every read and field write to `FillUnitFields` /
+  `FillObjectFields`: the driver's trace byte-identical, RFIL equal against the unmodified exe's tours.
+
+## Object plan, Lane R round 2: the fill's fields, IsUnitDrawn's facts, GetUnitOpacity and sixteen effect readers over the world views (ee_gfx fill.rs, effect_views.rs; branch rust-objR, 2026-11-17)
+
+On Lane V's `ee_sim::world` (origin/rust f63bd44ba). docs/progress/obj-lane-r.md has the commits and the numbers:
+the round's code is net -89 C++, far from the plan's -850 to -1,050.
+
+- **Why so little.** The views made the plain reads free, but the fill is mostly not plain reads: the graphic
+  objects (models, textures, turret parts, `LoadMedia`), the physical model, the class virtuals (`GetModel`,
+  `IsLandBuilding`, `GroundLocation`, `IsSidePart`, `UpdateHidden`), `EERenderUnit`'s vectors and name, the render
+  lists, the picker, the upgrades table, `FindWaypointAtTile`. Each is a host entry of three to ten lines: the 210
+  lines of `FillUnitFields` became about 190 of host. The effect host's readers that were only record fields freed
+  real C++ (-73). Measure a move by "which reads are records" before counting on the views.
+- **Mirrors, not copies.** `EERenderShadow` is `EeGfxFillObject` member for member, and `EERenderUnit` now starts
+  with the members Rust writes (`EeGfxFillUnit`; its vectors and name follow): Rust writes the C++ objects in place,
+  `EERenderObject.cpp` static_asserts every offset. Members a fill does not write keep the pool slot's earlier value,
+  as the original's did (the replay starts each entry from the slot's previous dump for that reason).
+  - **Trap (names):** a mirror named `EeGfxRenderUnit` clashed with ro_units.rs's record of the same name: cbindgen
+    emitted one, and EEROUnits.cpp failed on fields it lacked. Name exported records after the module.
+  - **Trap (cbindgen):** a `type Ctx = *mut c_void` alias in an exported struct was emitted as an incomplete `Ctx`;
+    spell the types out. Private `const`s named like another crate's (`GOAL_CAST_CALAMITY`) moved that crate's
+    constant into common.h: prefix them.
+  - **Trap (includes):** host functions that touch `EEWheel` and the class kinds must sit after `EERenderObject.cpp`'s
+    late includes (they renumber an init chain when included earlier); FillObject reaches them by declaration.
+- **The stub-GE driver over the views.** Its stand-in classes now derive from the Rust records and it registers its
+  own `EeWorldLayout`, so the Rust reads the stand-in world as it reads the game's. Where the Rust re-implements a C++
+  member the stubs answer as the game does (`IsPathMarker` by class type, `IsSeenBy` through the visibility words,
+  `Fn27C0B4` false); the unmodified fill over the same stubs is the reference. A stand-in mesh row off the map
+  (x = -1) crashed the views (the old stub read a NULL tile's flag and survived): the game's rows are on the map.
+- **The replay.** `golden_fill_replay.rs` builds every frame as fake objects at offsets it registers with
+  `ee_sim::world::layout::set` (the test binary's one layout) and checks every filled render unit and object bit for
+  bit. The golden needs every tile with units printed, not only the visible rows': a map object's shadow reads its
+  neighbours, which footprints put outside them.
+- **The effect readers.** `EeGfxEffect3DHost`/`EeGfxEffect2DHost` carry the effect's unit (0 while `mUnit` holds a
+  saved id) and the current player; effect_views.rs answers scale, location, tile, sight, colour, vent, class scale,
+  market, farm, ring size, enemy, complex unit, hit points and owner. The effects capture (seeds 2-7, 18 digests)
+  reaches them in EE-SIM.
+- **Only a tour reaches** the fill (EE-SIM never draws): RFIL against the unmodified exe's two tours, all matched
+  frames equal; the tour with box selection and orders.

@@ -749,6 +749,16 @@ impl<'t> PlayerView<'t> {
         // SAFETY: a live player's pointer member
         unsafe { pointer(self.object, layout().player_selected_group) as u64 }
     }
+    /// `mViewedUnit`'s handle (an `RTSUnit*`, 0: none)
+    pub fn viewed_unit_handle(&self) -> u64 {
+        // SAFETY: a live player's pointer member
+        unsafe { pointer(self.object, layout().player_viewed_unit) as u64 }
+    }
+    /// `mSelectedViewedUnit`'s handle (an `RTSUnit*`, 0: none)
+    pub fn selected_viewed_unit_handle(&self) -> u64 {
+        // SAFETY: a live player's pointer member
+        unsafe { pointer(self.object, layout().player_selected_viewed_unit) as u64 }
+    }
     /// `mComputerPlayer != NULL`
     pub fn has_computer_player(&self) -> bool {
         // SAFETY: a live player's pointer member
