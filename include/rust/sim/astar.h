@@ -140,6 +140,9 @@ struct EeAStarStorage;
 /// What `CreateContinentGrid` computed (opaque to C++; `ee_astar_continent_grid_free` releases it).
 struct EeContinentGrid;
 
+/// The C++ manager's handle.
+struct EePathRecord;
+
 /// One `U2DSparseArrayPointContainer`'s points (opaque to C++), with the scratch list its point lists come back in.
 struct EeSparseArray;
 
@@ -737,6 +740,9 @@ struct EeShoreCallbacks {
   uint32_t map_width;
   uint32_t map_height;
 };
+
+/// A word reader: 0 and the word, or the file's error.
+using EePathRecordRead = int32_t(*)(void *ctx, uint32_t *out);
 
 extern "C" {
 
@@ -1751,6 +1757,82 @@ void ee_area_shore_in_regions(const EeHullPoint *shore,
                               const EeShoreCallbacks *host,
                               void *out,
                               void (*push)(void*, long, long));
+
+EePathRecord *ee_path_record_new();
+
+/// # Safety
+/// `r` from `ee_path_record_new` / `ee_path_record_load`, or NULL.
+void ee_path_record_free(EePathRecord *r);
+
+/// # Safety
+/// `r` a live handle.
+void ee_path_record_add_history(EePathRecord *r, int32_t unit, int32_t x, int32_t y, uint32_t time);
+
+/// # Safety
+/// `r` a live handle.
+bool ee_path_record_repeated(EePathRecord *r, int32_t unit, int32_t x, int32_t y, uint32_t since);
+
+/// # Safety
+/// `r` a live handle.
+void ee_path_record_prune_history(EePathRecord *r, uint32_t now, bool loading);
+
+/// `PruneRegions`' units, in the order to handle them, into `out` (up to `cap`); their count.
+///
+/// # Safety
+/// `r` a live handle; `out` writable for `cap` ids (or NULL with `cap` 0).
+uint32_t ee_path_record_prune_regions(EePathRecord *r, bool loading, int32_t *out, uint32_t cap);
+
+/// The region maps' unit count (what `PruneRegions` can return at most).
+///
+/// # Safety
+/// `r` a live handle.
+uint32_t ee_path_record_region_count(EePathRecord *r);
+
+/// # Safety
+/// `r` a live handle.
+uint32_t ee_path_record_history_count(EePathRecord *r);
+
+/// `UpdatePaths`' schedule: bit 0 prune the history now, bit 1 the regions.
+///
+/// # Safety
+/// `r` a live handle.
+uint32_t ee_path_record_due(EePathRecord *r, uint32_t now);
+
+/// The two timers (`mNextHistoryPruneTime`, `mNextRegionPruneTime`).
+///
+/// # Safety
+/// `r` a live handle; the outputs writable.
+void ee_path_record_timers(EePathRecord *r, int32_t *out_history, int32_t *out_regions);
+
+/// `Reset`/`Clear`: no history, no region maps, the timers at `history` and `regions`.
+///
+/// # Safety
+/// `r` a live handle.
+void ee_path_record_reset(EePathRecord *r, int32_t history, int32_t regions);
+
+/// `FreeRegions`.
+///
+/// # Safety
+/// `r` a live handle.
+void ee_path_record_free_regions(EePathRecord *r);
+
+/// The save's words into `out` (up to `cap`); their count (call with `cap` 0 for the size).
+///
+/// # Safety
+/// `r` a live handle; `out` writable for `cap` words (or NULL with `cap` 0).
+uint32_t ee_path_record_save(EePathRecord *r, uint32_t *out, uint32_t cap);
+
+/// A record from the save's words (NULL on a failed read).
+///
+/// # Safety
+/// `read` called with `ctx`.
+EePathRecord *ee_path_record_load(EePathRecordRead read, void *ctx);
+
+/// The loaded record's contents into the manager's (the loaded game's first tick).
+///
+/// # Safety
+/// both live handles.
+void ee_path_record_assign(EePathRecord *r, EePathRecord *from);
 
 }  // extern "C"
 

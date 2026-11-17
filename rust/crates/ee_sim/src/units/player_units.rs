@@ -27,21 +27,14 @@
 #![allow(non_snake_case)]
 #![allow(clippy::unnecessary_cast)]
 
-use std::collections::BTreeMap;
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
+
+pub use crate::world::player_fields::EeUnitsPlayerWonders;
 
 use crate::units::player::{trunc_long, with, EeUnitsPlayerFields, EeUnitsPlayerRefs, Player, PlayerHost};
 use crate::units::player_save::EeUnitsPlayerSaved;
 use crate::units::player_tick::EE_UNITS_PLAYER_HEAL_INTERVAL;
-
-/// The wonders' Rust state: the count of the player's wonders per unit type (`mWonderTypeCounts`) and the powers
-/// they grant, in the order granted (`mWonderPowers`: a power once per wonder type that grants it).
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct EeUnitsPlayerWonders {
-    pub counts: BTreeMap<c_long, c_long>,
-    pub powers: Vec<c_long>,
-}
 
 /// One unit as the bookkeeping reads it (`EE_UNITS_PLAYER_UNIT_INFO`): its class's members, its own, and its
 /// complex unit's (zeros without one).

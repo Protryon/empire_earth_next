@@ -13,46 +13,7 @@ use crate::units::player_save::{EeUnitsPlayerSaveFn, EeUnitsPlayerSaveIo, Player
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 
-/// `RTSMap`'s plain members (ee/EEMap.h), in the class's order.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct EeUnitsRtsMapFields {
-    /// the constructor's tile size (copied to `gMapTileSize`)
-    pub mF1955F4: f32,
-    pub mF1955F8: f32,
-    pub mF1955FC: f32,
-    pub mL195600: c_long,
-    pub mL195604: c_long,
-    pub mL195608: c_long,
-    pub mL19560C: c_long,
-    /// saved: `Create`'s height
-    pub mL195610: c_long,
-    /// saved: `Create`'s width
-    pub mL195614: c_long,
-    /// tiles per side
-    pub mSize: c_long,
-    /// saved: the player count
-    pub mU19561C: c_ulong,
-    /// the tiles exist
-    pub mB195620: bool,
-}
-
-/// `EEMap`'s plain members (ee/EEMap.h), in the class's order.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct EeUnitsMapFields {
-    /// saved
-    pub mMapCharacteristics: c_ulong,
-    /// saved: the base terrain
-    pub mU195650: c_ulong,
-    /// the next free entry of the tile array
-    pub mNextTile: c_ulong,
-    pub mTileArrayCount: c_ulong,
-    /// saved: the cliff terrain
-    pub mU19565C: c_ulong,
-    /// `ComputeChecksum` checks 64 x 64 tiles from here
-    pub mChecksumCursor: c_ulong,
-}
+pub use crate::world::map_fields::{EeUnitsMapFields, EeUnitsRtsMapFields};
 
 // ---- the operations (`index` a tile's y, the low 32 bits of `io.i` its x, where they take a tile)
 /// `Create(mL195614, mL195610, mU19561C, false)`

@@ -29,6 +29,8 @@
 #include "rust/won_net/hostop.h"
 #include "rust/won_net/smartroute.h"
 #include "won_blocking.h"
+#include "won_servconn_cpp.h" // the stand-in PeerAuthOp reached (the messages the game's way)
+#include "won_routerecords.h"
 
 using namespace WONAPI;
 
@@ -354,16 +356,16 @@ static void Dump(Smart* c, const char* inWhy, bool inAsync = true)
 
 // ---- the snapshot calls
 
-static std::string Show(const Smart::ClientInfo& i)
+static std::string Show(const SmartCopies::ClientInfo& i)
 {
     return "client " + N(i.mId) + " " + Esc(i.mName) + " f=" + X(i.mFlags) + " cd=" + N(i.mCDKeyId);
 }
-static std::string Show(const Smart::GroupInfo& i)
+static std::string Show(const SmartCopies::GroupInfo& i)
 {
     return "group " + N(i.mId) + " " + Esc(i.mName) + " cap=" + N(i.mCaptainId) + " mp=" + N(i.mMaxPlayers) + " f="
         + X(i.mFlags) + " af=" + X(i.mAsyncFlags) + " obs=" + N(i.mObserverCount);
 }
-static std::string Show(const Smart::MemberInfo& i)
+static std::string Show(const SmartCopies::MemberInfo& i)
 {
     return "member " + N(i.mClientId) + " " + Esc(i.mName) + " cf=" + X(i.mClientFlags) + " mf=" + N(i.mMemberFlags);
 }
@@ -372,40 +374,40 @@ static void Snapshots(Smart* c, const char* inWhy)
     Log(std::string("-- snapshots ") + inWhy);
     for (int i = 0; i < 2; i++) {
         unsigned short anId = i == 0 ? 11 : 99;
-        Smart::ClientInfo a;
-        bool ok = c->GetClient(anId, a);
+        SmartCopies::ClientInfo a;
+        bool ok = SmartCopies(c).GetClient(anId, a);
         Log("GetClient " + N(anId) + " " + N(ok) + " " + Show(a));
     }
     {
-        Smart::GroupInfo g;
-        bool ok = c->GetGroup(100, g);
+        SmartCopies::GroupInfo g;
+        bool ok = SmartCopies(c).GetGroup(100, g);
         Log("GetGroup 100 " + N(ok) + " " + Show(g));
-        Smart::GroupInfo h;
-        ok = c->GetGroup(555, h);
+        SmartCopies::GroupInfo h;
+        ok = SmartCopies(c).GetGroup(555, h);
         Log("GetGroup 555 " + N(ok) + " " + Show(h));
-        Smart::MemberInfo m;
-        ok = c->GetMember(100, 11, m);
+        SmartCopies::MemberInfo m;
+        ok = SmartCopies(c).GetMember(100, 11, m);
         Log("GetMember 100 11 " + N(ok) + " " + Show(m));
-        Smart::MemberInfo n;
-        ok = c->GetMember(100, 77, n);
+        SmartCopies::MemberInfo n;
+        ok = SmartCopies(c).GetMember(100, 77, n);
         Log("GetMember 100 77 " + N(ok) + " " + Show(n));
     }
     c->StartClientItr();
-    Smart::ClientInfo aClient;
-    while (c->GetNextClient(aClient))
+    SmartCopies::ClientInfo aClient;
+    while (SmartCopies(c).GetNextClient(aClient))
         Log("next " + Show(aClient));
     c->StartGroupItr();
-    Smart::GroupInfo aGroup;
-    while (c->GetNextGroup(aGroup)) {
+    SmartCopies::GroupInfo aGroup;
+    while (SmartCopies(c).GetNextGroup(aGroup)) {
         Log("next " + Show(aGroup));
         bool started = c->StartMemberItr(aGroup.mId);
-        Smart::MemberInfo aMember;
-        while (started && c->GetNextMember(aMember))
+        SmartCopies::MemberInfo aMember;
+        while (started && SmartCopies(c).GetNextMember(aMember))
             Log(" next " + Show(aMember));
     }
     Log("StartMemberItr 555 " + N(c->StartMemberItr(555)));
-    Smart::MemberInfo aMember;
-    Log("GetNextMember after " + N(c->GetNextMember(aMember)));
+    SmartCopies::MemberInfo aMember;
+    Log("GetNextMember after " + N(SmartCopies(c).GetNextMember(aMember)));
 }
 
 // ---- the scenario
@@ -438,10 +440,10 @@ static void Input(Server& s, Smart* c, const wchar_t* inText, int inGroup = -1)
         aText += (char)*p;
     Log("input \"" + aText + "\" group " + N(inGroup) + " -> " + N(ok));
     Log(InputState(c, true));
-    Smart::MemberInfo m;
-    Smart::ClientInfo cl;
-    bool hasM = c->GetLastTargetMember(m);
-    bool hasC = c->GetLastTargetClient(cl);
+    SmartCopies::MemberInfo m;
+    SmartCopies::ClientInfo cl;
+    bool hasM = SmartCopies(c).GetLastTargetMember(m);
+    bool hasC = SmartCopies(c).GetLastTargetClient(cl);
     Log("last target " + N(hasM) + " " + Show(m) + " / " + N(hasC) + " " + Show(cl));
     bool anIgnore = wcsncmp(inText, L"/i ", 3) == 0 || wcsncmp(inText, L"/ignore", 7) == 0;
     if (ok && !anIgnore)
@@ -646,16 +648,16 @@ static void Scenario()
     // the member iterator stepped past a leaving member; the client in no group is dropped (async flag 2)
     c->StartMemberItr(100);
     {
-        Smart::MemberInfo m;
+        SmartCopies::MemberInfo m;
         {
-            bool ok_ = c->GetNextMember(m);
+            bool ok_ = SmartCopies(c).GetNextMember(m);
             Log("member itr first " + N(ok_) + " " + Show(m));
         }
         W w = Msg(9);
         w.S(100).S(11);
         Note(s, c, "client 11 left group 100", w);
         {
-            bool ok_ = c->GetNextMember(m);
+            bool ok_ = SmartCopies(c).GetNextMember(m);
             Log("member itr next " + N(ok_) + " " + Show(m));
         }
         W w2 = Msg(9);
@@ -668,23 +670,23 @@ static void Scenario()
         w4.S(444).S(10);
         Note(s, c, "client 10 left unknown group 444", w4);
         {
-            bool ok_ = c->GetNextMember(m);
+            bool ok_ = SmartCopies(c).GetNextMember(m);
             Log("member itr rest " + N(ok_) + " " + Show(m));
         }
     }
     // the client iterator stepped past a leaving client
     c->StartClientItr();
     {
-        Smart::ClientInfo a;
+        SmartCopies::ClientInfo a;
         {
-            bool ok_ = c->GetNextClient(a);
+            bool ok_ = SmartCopies(c).GetNextClient(a);
             Log("client itr first " + N(ok_) + " " + Show(a));
         }
         W w = Msg(10);
         w.S(11);
         Note(s, c, "client 11 left server", w);
         {
-            bool ok_ = c->GetNextClient(a);
+            bool ok_ = SmartCopies(c).GetNextClient(a);
             Log("client itr next " + N(ok_) + " " + Show(a));
         }
         W w2 = Msg(10);
@@ -901,9 +903,9 @@ static void Scenario()
             Smart::MatchResult r = c->FindClient(kNames[i], aFound);
             std::string aWho = aFound.get() == NULL ? std::string("-") : N(aFound->mClientId) + " " + Esc(aFound->mName);
 #else
-            Smart::ClientInfo aFound;
+            SmartCopies::ClientInfo aFound;
             bool aHas = false;
-            Smart::MatchResult r = c->FindClient(kNames[i], aFound, aHas);
+            Smart::MatchResult r = SmartCopies(c).FindClient(kNames[i], aFound, aHas);
             std::string aWho = !aHas ? std::string("-") : N(aFound.mId) + " " + Esc(aFound.mName);
 #endif
             Log("FindClient " + Esc(kNames[i]) + " " + N(r) + " " + aWho);
@@ -995,8 +997,8 @@ static void Scenario()
     }
     PumpRoute(aList2, 1);
     {
-        Smart::MemberInfo m;
-        Log("member itr after its group went " + N(c->GetNextMember(m)));
+        SmartCopies::MemberInfo m;
+        Log("member itr after its group went " + N(SmartCopies(c).GetNextMember(m)));
     }
     Dump(c, "group list 2");
     Snapshots(c, "end");
@@ -1023,6 +1025,7 @@ static std::string GoldenPath()
 
 int main(int argc, char** argv)
 {
+    BindServerConnectionCpp(false);
     AsyncSocket::StartWinsock();
     {
         WONAPICoreEx aCore;

@@ -18,25 +18,7 @@ use crate::units::player_save::{EeUnitsPlayerSaveFn, EeUnitsPlayerSaveIo, Player
 use std::ffi::c_void;
 use std::os::raw::c_ulong;
 
-/// `RTSPlayer`'s plain members (ee/EEPlayer.h), in the class's order.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct EeUnitsRtsPlayerFields {
-    /// the next unit id's low 24 bits (saved)
-    pub mNextUniqueID: c_ulong,
-    /// the player's index (saved)
-    pub mPlayerID: c_ulong,
-    /// its units (saved)
-    pub mUnitCount: c_ulong,
-    /// the lobby slot (0xff none; not saved)
-    pub mSlot: u8,
-    /// sees the whole map (saved; cleared for 0.207 and older)
-    pub mSeesAll: bool,
-    /// keeps a visibility map (saved)
-    pub mSaveVisMap: bool,
-    /// an observer (saved)
-    pub mObserverMode: bool,
-}
+pub use crate::world::player_fields::EeUnitsRtsPlayerFields;
 
 // ---- the C++ parts (the callback's `op`; the file's primitives are player_save.rs's)
 /// `mColor.Load(inFile)`, the result

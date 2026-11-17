@@ -61,7 +61,6 @@ d68c7 d6bed Empire Earth/Database/EEGameVariant.cpp
 d6bed d72c1 Empire Earth/Data Pre-Loading Thread/EEGraphicEffect.cpp
 d72c1 d9b2b Empire Earth/Data Pre-Loading Thread/EEGraphicObject.cpp
 d9b2b da3be Empire Earth/Data Pre-Loading Thread/EEMusicObject.cpp
-da3be da56d Empire Earth/Database/EERandomMapTable.cpp
 da56d da984 Empire Earth/Data Pre-Loading Thread/EESoundObject.cpp
 da984 dae63 Empire Earth/Database/EEStartingResources.cpp
 dae63 db169 Empire Earth/Database/EETerrainColorTable.cpp

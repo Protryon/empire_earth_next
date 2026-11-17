@@ -14,6 +14,7 @@
 #include "rust/won_net/dirops.h"
 #include "rust/won_net/reqlast.h"
 #include "rust/won_net/routemsg.h"
+#include "won_routerecords.h" // the C++ records (its includer has WONRouting.h)
 // (the part below was include/ee/wonapi/WONRoutingMsg.h until net round 19, for RoutingGetUserStatusOp, a Rust
 // object now: userstatus.rs)
 

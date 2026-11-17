@@ -158,6 +158,32 @@ pub fn height(c: isize) -> i32 {
 pub fn control_id(c: isize) -> i32 {
     get(c).control_id
 }
+/// `mControlId = v`.
+pub fn set_control_id(c: isize, v: i32) {
+    edit(c, |m| m.control_id = v);
+}
+/// `ComponentFlagSet(f)`.
+pub fn flag_set(c: isize, f: i32) -> bool {
+    bits(c) & f != 0
+}
+/// `Right()`.
+pub fn right(c: isize) -> i32 {
+    let r = get(c).bounds;
+    r.x.wrapping_add(r.width)
+}
+/// `Bottom()`.
+pub fn bottom(c: isize) -> i32 {
+    let r = get(c).bounds;
+    r.y.wrapping_add(r.height)
+}
+/// `IsDisabled()` (flag 0x80).
+pub fn is_disabled(c: isize) -> bool {
+    bits(c) & 0x80 != 0
+}
+/// `HasFocus()` (flag 0x10).
+pub fn has_focus(c: isize) -> bool {
+    bits(c) & 0x10 != 0
+}
 /// `mFocusId`.
 pub fn focus_id(c: isize) -> u8 {
     get(c).focus_id
@@ -257,6 +283,43 @@ pub(crate) fn filled_world(f: FillFn) -> FilledWorld {
     FILL.with(|x| x.set(Some(f)));
     ee_won_comp_members_resolver(Some(fill_resolve));
     FilledWorld
+}
+
+/// A test world whose components are blocks made on first use (zeroed), each at a fixed address until the guard
+/// is dropped: the replays of the drivers whose worlds keep a block per component.
+#[cfg(test)]
+pub(crate) struct MapWorld;
+
+#[cfg(test)]
+thread_local! {
+    static MAP: std::cell::RefCell<std::collections::BTreeMap<isize, Box<EeWonCompMembers>>> =
+        const { std::cell::RefCell::new(std::collections::BTreeMap::new()) };
+}
+
+#[cfg(test)]
+unsafe extern "C" fn map_resolve(c: isize) -> *mut EeWonCompMembers {
+    map_block(c)
+}
+
+/// The map world's block of `c` (made zeroed on first use).
+#[cfg(test)]
+pub(crate) fn map_block(c: isize) -> *mut EeWonCompMembers {
+    MAP.with(|m| &mut **m.borrow_mut().entry(c).or_default() as *mut EeWonCompMembers)
+}
+
+#[cfg(test)]
+impl Drop for MapWorld {
+    fn drop(&mut self) {
+        ee_won_comp_members_resolver(None);
+        MAP.with(|m| m.borrow_mut().clear());
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn map_world() -> MapWorld {
+    MAP.with(|m| m.borrow_mut().clear());
+    ee_won_comp_members_resolver(Some(map_resolve));
+    MapWorld
 }
 
 /// A block of these bounds (the filled worlds').

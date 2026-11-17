@@ -117,6 +117,10 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
                        "Empire Earth/Communications/EEMRecord.cpp",
                        # the unit store's C++ side: the holders' reports, the insert, the check (ee/EEUnitStore.h)
                        "Empire Earth/Units/EEUnitStore.cpp",
+                       # the world's layout for Rust's views (ee/EEWorldLayout.h; ee_sim world layout.rs)
+                       "Empire Earth/Units/EEWorldLayout.cpp",
+                       # TEST ONLY: the world views' check (ee/EEWorldLayout.h: VWCK)
+                       "Empire Earth/Units/EEWorldViewCheck.cpp",
                        # the world calls of the Rust decisions: groups as ids, goals as handles (ee_units host.rs)
                        "Empire Earth/Units/EEUnitHost.cpp",
                        # the host of the unit classes' Update sequences (ee/EEUnitUpdate.h; ee_units update.rs)
