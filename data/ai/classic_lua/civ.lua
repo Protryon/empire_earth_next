@@ -342,6 +342,16 @@ local function check_building_counts(view, memory)
                         build = 0
                     end
                 end
+                -- New (AI_RESEARCH 8.99): only when the stock pays for it (the manager runs on wood or stone alone now:
+                -- main.lua enable_managers); the farms' request is the granary
+                if build > 0 then
+                    local cost = U.cost(e.farm and other == 0 and C.granary or class)
+                    for _, r in ipairs(R.RES) do
+                        if (cost[r] or 0) > view.stock[r] then
+                            build = 0
+                        end
+                    end
+                end
                 if build > 0 and not B.is_queued(memory, class) then
                     if e.farm and other == 0 then
                         if not B.is_queued(memory, C.granary) then

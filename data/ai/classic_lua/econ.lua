@@ -573,6 +573,22 @@ local function split_by_demand(view, memory)
         end
     end
     rm.wanted = wanted
+    -- New (AI_RESEARCH 8.99): the gatherers past every resource's room (60-90 of 150-180 citizens on wood, a wood
+    -- stock of 5,000-11,000) go to farms: with 10 or more spare and food at its room, one more granary (whose
+    -- foundations are the farms) a minute, beyond the building counts' granary_max. Food income +13% (64 seeds)
+    if gatherers > 0 and view.epoch >= 2 and not rm.uses_fishing then
+        local placed = 0
+        for _, r in ipairs(RES) do
+            placed = placed + wanted[r]
+        end
+        if gatherers - placed >= 10 and weight.food > 0 and wanted.food >= M.gather_capacity(view, memory, "food")
+                and not B().is_queued(memory, C.granary) and not U().has_unfinished(C.granary)
+                and view.time - (rm.granary_more_t or -60000) >= 60000 then
+            rm.granary_more_t = view.time
+            B().queue(view, memory, C.granary, false, false)
+            print(string.format("classic_lua granary.more spare=%d", gatherers - placed))
+        end
+    end
     if view.time % 30000 < 5000 then
         local function row(t)
             return string.format("%d/%d/%d/%d/%d", t.food, t.wood, t.stone, t.gold, t.iron)

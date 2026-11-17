@@ -74,7 +74,10 @@ local function enable_managers(view, memory)
         and can_enable(view, memory, "defense", 6)) or cp.building_damaged or cp.citizen_damaged
     local explore = can_enable(view, memory, "exploration", 2) and can_enable(view, memory, "exploration", 5)
         and can_enable(view, memory, "exploration", 6)
-    local build = can_enable(view, memory, "build", 3) and can_enable(view, memory, "build", 4)
+    -- New (AI_RESEARCH 8.99): the building counts on wood or stone at the threshold, not both (the classic: both). Most
+    -- buildings cost wood alone; stone went to towers and walls and stayed under 300, and the first granary came a
+    -- median 17 minutes after the Copper Age. civ.lua's counts now queue a building only when the stock pays for it
+    local build = can_enable(view, memory, "build", 3) or can_enable(view, memory, "build", 4)
     if memory.t.all_managers then
         prio = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
         limit = #prio
