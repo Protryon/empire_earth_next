@@ -14,7 +14,7 @@ use ee_sim::world_field;
 
 use crate::gfx::capture::{object_place, object_scale, sway_fraction};
 use crate::gfx::effects::EeGfxColor;
-use crate::gfx::walk::{owned_food, waypoint_tint};
+use crate::gfx::walk::{owned_food, unit_drawn, waypoint_tint, EeGfxDrawnHost, EeGfxUnitFacts};
 
 const EE_GFX_FILL_RESOURCE_FOOD: u64 = 2;
 const EE_GFX_FILL_TECH_NONE: c_long = 100000;
@@ -27,6 +27,7 @@ const EE_GFX_FILL_TYPE_SPACE_TURRET: u64 = 0x302;
 const EE_GFX_FILL_TYPE_ORBITAL_SPACE_STATION: u64 = 0x31f;
 const EE_GFX_FILL_TYPE_WAYPOINT: u64 = 0x104;
 const EE_GFX_FILL_TYPE_PATH_POINT: u64 = 0xdf;
+const EE_GFX_FILL_ACTION_DEAD: u32 = 6003;
 
 /// `EERenderShadow` (ee/EERenderLists.h), field for field (the C++ static_asserts every offset).
 #[repr(C)]
@@ -490,12 +491,17 @@ pub fn fill_unit_fields<H: FillHost>(
         if frame.music_follows_battle
             && c.hit_points() != 0
             && c.active_goal().is_some_and(|(kind, _)| {
-                kind == EE_GFX_FILL_GOAL_ATTACK_UNIT || kind == EE_GFX_FILL_GOAL_ATTACK_GROUND || kind == EE_GFX_FILL_GOAL_CAST_CALAMITY
+                kind == EE_GFX_FILL_GOAL_ATTACK_UNIT
+                    || kind == EE_GFX_FILL_GOAL_ATTACK_GROUND
+                    || kind == EE_GFX_FILL_GOAL_CAST_CALAMITY
             })
         {
             result.fighting += 1.0;
         }
-        if c_class.unit_type() == EE_GFX_FILL_TYPE_PRIEST_TOWER && c.is_built() && host.group_contains(current.handle(), ch) {
+        if c_class.unit_type() == EE_GFX_FILL_TYPE_PRIEST_TOWER
+            && c.is_built()
+            && host.group_contains(current.handle(), ch)
+        {
             result.circle = true;
         }
         let foundation: bool = world_field!(c.complex(), mIsFoundation);
@@ -589,7 +595,8 @@ pub fn fill_unit_fields<H: FillHost>(
             0.0,
         ];
         point[2] = host.mesh_z(point[0], point[1]);
-        let path_marker = class.unit_type() == EE_GFX_FILL_TYPE_WAYPOINT || class.unit_type() == EE_GFX_FILL_TYPE_PATH_POINT;
+        let path_marker =
+            class.unit_type() == EE_GFX_FILL_TYPE_WAYPOINT || class.unit_type() == EE_GFX_FILL_TYPE_PATH_POINT;
         let carrier_id = unit.hit_points() as c_long;
         if path_marker && host.unit(carrier_id) != 0 {
             // SAFETY: the C++'s live unit
@@ -678,5 +685,192 @@ pub unsafe extern "C" fn ee_gfx_fill_unit_fields(
         let unit = UnitView::of(&t, unit).expect("a unit");
         let mut host = &*host;
         fill_unit_fields(&t, unit, out, &*frame, &mut host)
+    }
+}
+
+/// `IsUnitDrawn`'s facts of a unit on a tile of the walk (walk.rs `unit_drawn` decides over them): its class's,
+/// stats' and owner's, the tile's sight by the current player, the complex unit's command, class and foundation.
+pub fn unit_drawn_facts(
+    unit: UnitView<'_>,
+    tile: TileView<'_>,
+    current: PlayerView<'_>,
+    free_camera: bool,
+    unit_count: u32,
+    object_count: u32,
+) -> EeGfxUnitFacts {
+    let complex = unit.complex_unit();
+    let class = unit.class().expect("a unit's class");
+    let owner = unit.player().expect("a unit's owner");
+    let (tile_x, tile_y) = unit.tile_xy();
+    let mut f = EeGfxUnitFacts {
+        food: unit.resource_type() == EE_GFX_FILL_RESOURCE_FOOD && unit.resource_amount() > 0,
+        has_complex: complex.is_some(),
+        category: class.category() as c_ulong as i32,
+        owner_id: owner.id() as i32,
+        seen: tile.visibility(current.id() as usize) > 1 || current.sees_all(),
+        free_camera,
+        scale: unit.stats().expect("a unit's stats").scale(),
+        is_tree: class.tree(),
+        unit_type: class.unit_type() as c_ulong as i32,
+        unit_count,
+        object_count,
+        tile_size: tile_size(class) as i32,
+        mine: owner.handle() == current.handle(),
+        // EEUnit::Fn27C0B4: the original's ICF-folded `return false`
+        marker_shown: false,
+        path_marker: class.unit_type() == EE_GFX_FILL_TYPE_WAYPOINT || class.unit_type() == EE_GFX_FILL_TYPE_PATH_POINT,
+        id: unit.id() as i32,
+        tile_x: tile_x as i32,
+        tile_y: tile_y as i32,
+        ..EeGfxUnitFacts::default()
+    };
+    if let Some(c) = complex {
+        let c_class = c.class().expect("a unit's class");
+        f.dead = c.command_handle() != 0 && c.command_type() == EE_GFX_FILL_ACTION_DEAD;
+        f.complex_gate = c_class.category() == EE_GFX_FILL_CATEGORY_GATE;
+        f.complex_path_point = c_class.unit_type() == EE_GFX_FILL_TYPE_PATH_POINT;
+        f.complex_flare = world_field!(c_class.fields(), mIsFlare);
+        f.foundation = world_field!(c.complex(), mIsFoundation);
+    }
+    f
+}
+
+/// `IsUnitDrawn` (EERenderObject.cpp) through Rust: the facts over the views, the decision walk.rs's.
+///
+/// # Safety
+/// As [`ee_gfx_fill_object_fields`]; `unit`, `tile` and `player` are live, `host` valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_fill_unit_drawn(
+    unit: u64,
+    tile: u64,
+    player: u64,
+    free_camera: bool,
+    unit_count: u32,
+    object_count: u32,
+    host: *mut EeGfxDrawnHost,
+) -> bool {
+    // SAFETY: the function's contract
+    unsafe {
+        let t = WorldRead::begin();
+        let unit = UnitView::of(&t, unit).expect("a unit");
+        let tile = TileView::of(&t, tile).expect("a tile");
+        let current = PlayerView::of(&t, player).expect("a current player");
+        let facts = unit_drawn_facts(unit, tile, current, free_camera, unit_count, object_count);
+        unit_drawn(&facts, &mut *host)
+    }
+}
+
+/// `GetUnitOpacity`'s calls that are not views.
+#[repr(C)]
+pub struct EeGfxOpacityHost {
+    pub context: *mut c_void,
+    /// the unit's virtual `UpdateHidden()` (it may write the hidden flags)
+    pub update_hidden: extern "C" fn(*mut c_void, u64) -> bool,
+    /// `Fn23CEE2(complex, translucent, opacity)`: the complex unit's own translucency (`opacity` in and out)
+    pub own: extern "C" fn(*mut c_void, u64, bool, *mut f32) -> bool,
+    /// the class's `IsLandBuilding()`
+    pub land_building: extern "C" fn(*mut c_void, u64) -> bool,
+    /// the unit's `GetModel()->mModels[index]`: its centre point and its bounding radius at `frame`
+    pub model_center: extern "C" fn(*mut c_void, u64, c_ulong) -> ee_base::math::types::Ge3DPoint,
+    pub model_radius: extern "C" fn(*mut c_void, u64, c_ulong, c_ulong) -> f32,
+    /// the complex unit's `mPhysicalModel.GetScale()`, `GetFrame()`; the mesh's height
+    pub physical_scale: extern "C" fn(*mut c_void, u64) -> f32,
+    pub physical_frame: extern "C" fn(*mut c_void, u64) -> c_ulong,
+    pub mesh_z: extern "C" fn(*mut c_void, f32, f32) -> f32,
+}
+
+/// `GETransformation::Apply(point)` (the C++ inline's sums in its order)
+fn apply_point(m: &[[f32; 4]; 4], p: [f32; 3]) -> [f32; 3] {
+    [
+        p[2] * m[0][2] + p[1] * m[0][1] + p[0] * m[0][0] + m[0][3],
+        p[0] * m[1][0] + p[2] * m[1][2] + p[1] * m[1][1] + m[1][3],
+        p[0] * m[2][0] + p[2] * m[2][2] + p[1] * m[2][1] + m[2][3],
+    ]
+}
+
+fn point3(p: ee_base::math::types::Ge3DPoint) -> [f32; 3] {
+    [p.x, p.y, p.z]
+}
+
+const EE_GFX_FILL_HIDDEN_MOVED: u8 = 0x10;
+const EE_GFX_FILL_SEE_THROUGH: f32 = 0.35;
+
+/// `GetUnitOpacity`: a unit's opacity this frame (the see-through modes, its own fade, a land building fading in
+/// front of the near clipping plane) and whether it is drawn translucent.
+#[allow(clippy::too_many_arguments)]
+pub fn unit_opacity(
+    unit: UnitView<'_>,
+    show_hidden: c_long,
+    in_cinematic: bool,
+    orthographic: bool,
+    viewport: &crate::ge::viewport::GeViewport,
+    host: &EeGfxOpacityHost,
+    opacity: &mut f32,
+) -> bool {
+    let ctx = host.context;
+    let complex = unit.complex_unit();
+    let class = unit.class().expect("a unit's class");
+    let obstacle: bool = world_field!(class.fields(), mIsObstacle);
+    let mut result = false;
+    *opacity = 1.0;
+    if show_hidden == 1 {
+        if (obstacle || unit.hidden_flags() & EE_GFX_FILL_HIDDEN_MOVED == EE_GFX_FILL_HIDDEN_MOVED)
+            && (host.update_hidden)(ctx, unit.handle())
+        {
+            result = true;
+            *opacity = EE_GFX_FILL_SEE_THROUGH;
+        }
+    } else if show_hidden == 2 && obstacle {
+        result = true;
+        *opacity = EE_GFX_FILL_SEE_THROUGH;
+    }
+    if let Some(c) = complex {
+        result = (host.own)(ctx, c.handle(), result, opacity);
+    }
+    if (host.land_building)(ctx, class.handle()) && !in_cinematic && !orthographic {
+        let (center, scale, frame, index);
+        if let Some(c) = complex {
+            let animation: c_ulong = world_field!(c.complex(), mAnimation);
+            index = animation;
+            scale = (host.physical_scale)(ctx, c.handle());
+            frame = (host.physical_frame)(ctx, c.handle());
+            center = apply_point(&c.transform(), point3((host.model_center)(ctx, unit.handle(), index)));
+        } else {
+            let (x, y) = unit.tile_xy();
+            let mut m = [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]];
+            m[0][3] = x as c_long as f32 + 0.5;
+            m[1][3] = y as c_long as f32 + 0.5;
+            m[2][3] = (host.mesh_z)(ctx, m[0][3], m[1][3]);
+            index = 0;
+            frame = 0;
+            scale = unit.stats().expect("a unit's stats").scale();
+            center = apply_point(&m, point3((host.model_center)(ctx, unit.handle(), index)));
+        }
+        let radius = (host.model_radius)(ctx, unit.handle(), index, frame);
+        let point = ee_base::math::types::Ge3DPoint { x: center[0], y: center[1], z: center[2] };
+        (result, *opacity) = crate::gfx::view::near_fade(viewport, point, radius, scale, result, *opacity);
+    }
+    result
+}
+
+/// `GetUnitOpacity` (EERenderObject.cpp) through Rust.
+///
+/// # Safety
+/// As [`ee_gfx_fill_object_fields`]; the pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_fill_unit_opacity(
+    unit: u64,
+    show_hidden: c_long,
+    in_cinematic: bool,
+    orthographic: bool,
+    viewport: *const crate::ge::viewport::GeViewport,
+    host: *const EeGfxOpacityHost,
+    opacity: *mut f32,
+) -> bool {
+    // SAFETY: the function's contract
+    unsafe {
+        let t = WorldRead::begin();
+        let unit = UnitView::of(&t, unit).expect("a unit");
+        unit_opacity(unit, show_hidden, in_cinematic, orthographic, &*viewport, &*host, &mut *opacity)
     }
 }

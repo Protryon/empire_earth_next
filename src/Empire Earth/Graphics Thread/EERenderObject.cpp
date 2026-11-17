@@ -202,7 +202,8 @@ void EEStartLetterboxIn(unsigned long inFrames)
 // view; a unit whose footprint spans several tiles counts once (ioDrawn)
 bool EERenderObject::IsUnitDrawn(EEUnit* inUnit, EETile* inTile, std::set<EEUnit*>& ioDrawn)
 {
-    // the decisions are ee_gfx walk.rs's (RUST_PLAN R4.4); the drawn set and the view tests are answered here
+    // the facts are ee_gfx fill.rs's over the world views, the decisions walk.rs's; the drawn set and the view tests
+    // are answered here
     struct Ask {
         EEUnit* mUnit;
         std::set<EEUnit*>* mDrawn;
@@ -229,37 +230,12 @@ bool EERenderObject::IsUnitDrawn(EEUnit* inUnit, EETile* inTile, std::set<EEUnit
             return theModel.Intersects(gViewport, gOrthographicView);
         }
     } theAsk = {inUnit, &ioDrawn};
-    EEComplexUnit* theComplex = inUnit->mComplexUnit;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EEUnitClass* theClass = inUnit->mUnitClass;
-    EeGfxUnitFacts theFacts = {};
-    theFacts.food = inUnit->mResourceType == kResourceFood && inUnit->mResourceAmount > 0;
-    theFacts.has_complex = theComplex != NULL;
-    theFacts.category = theClass->mCategory;
-    theFacts.owner_id = inUnit->mPlayer->GetPlayerID();
-    theFacts.seen = inTile->IsSeenBy(thePlayer);
-    theFacts.free_camera = gFreeCamera;
-    theFacts.scale = inUnit->mStats->GetScale();
-    theFacts.is_tree = theClass->mIsTree;
-    theFacts.unit_type = theClass->GetUnitType();
-    theFacts.unit_count = EERenderLists::sInstance.mRenderUnitCount;
-    theFacts.object_count = EERenderLists::sInstance.mRenderShadowCount;
-    theFacts.tile_size = theClass->GetTileSize();
-    theFacts.mine = inUnit->mPlayer == thePlayer;
-    theFacts.marker_shown = inUnit->Fn27C0B4();
-    theFacts.path_marker = inUnit->IsPathMarker();
-    theFacts.id = inUnit->GetUnitID();
-    theFacts.tile_x = inUnit->mTileX;
-    theFacts.tile_y = inUnit->mTileY;
-    if (theComplex != NULL) {
-        theFacts.dead = theComplex->mCommand != NULL && theComplex->mCommand->mType == kActionDead;
-        theFacts.complex_gate = theComplex->mUnitClass->mCategory == kUnitCategoryGate;
-        theFacts.complex_path_point = theComplex->mUnitClass->GetUnitType() == kUnitTypePathPoint;
-        theFacts.complex_flare = theComplex->mUnitClass->mIsFlare;
-        theFacts.foundation = theComplex->IsFoundation();
-    }
+    // the facts: ee_gfx fill.rs over the world views; the decisions walk.rs's
     EeGfxDrawnHost theHost = {&theAsk, Ask::First, Ask::Complex, Ask::Model};
-    return ee_gfx_capture_unit_drawn(&theFacts, &theHost);
+    return ee_gfx_fill_unit_drawn((uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTile,
+                                  (uint64_t)(uintptr_t)gWorld.GetCurrentPlayer(), gFreeCamera,
+                                  (uint32_t)EERenderLists::sInstance.mRenderUnitCount,
+                                  (uint32_t)EERenderLists::sInstance.mRenderShadowCount, &theHost);
 }
 
 // Unloads the media of every pooled map object and empties the pool
@@ -1320,54 +1296,59 @@ void EEStartLightFadeOut(unsigned long inFrames)
     ee_gfx_scene_start_fade(&sSceneFade, true, (uint32_t)inFrames);
 }
 
+// GetUnitOpacity's calls (ee_gfx fill.rs EeGfxOpacityHost)
+static EEUnit* EEOpacityUnit(uint64_t inUnit)
+{
+    return reinterpret_cast<EEUnit*>((uintptr_t)inUnit);
+}
+static bool EEOpacityUpdateHidden(void*, uint64_t inUnit)
+{
+    return EEOpacityUnit(inUnit)->UpdateHidden();
+}
+static bool EEOpacityOwn(void*, uint64_t inUnit, bool inTranslucent, float* ioOpacity)
+{
+    return Fn23CEE2(reinterpret_cast<EEComplexUnit*>((uintptr_t)inUnit), inTranslucent, *ioOpacity);
+}
+static bool EEOpacityLandBuilding(void*, uint64_t inClass)
+{
+    return reinterpret_cast<EEUnitClass*>((uintptr_t)inClass)->IsLandBuilding();
+}
+static EeGe3DPoint EEOpacityModelCenter(void*, uint64_t inUnit, unsigned long inIndex)
+{
+    const GE3DPoint& theCenter = EEOpacityUnit(inUnit)->GetModel()->mModels[inIndex]->GetCenterPoint();
+    return EeGe3DPoint{theCenter.mX, theCenter.mY, theCenter.mZ};
+}
+static float EEOpacityModelRadius(void*, uint64_t inUnit, unsigned long inIndex, unsigned long inFrame)
+{
+    return EEOpacityUnit(inUnit)->GetModel()->mModels[inIndex]->GetBoundingRadius(inFrame);
+}
+static float EEOpacityPhysicalScale(void*, uint64_t inUnit)
+{
+    return reinterpret_cast<EEComplexUnit*>((uintptr_t)inUnit)->mPhysicalModel.GetScale();
+}
+static unsigned long EEOpacityPhysicalFrame(void*, uint64_t inUnit)
+{
+    return reinterpret_cast<EEComplexUnit*>((uintptr_t)inUnit)->mPhysicalModel.GetFrame();
+}
+static float EEOpacityMeshZ(void*, float inX, float inY)
+{
+    return gWorld.mMap->mTerrainMesh.GetMeshZ(inX, inY);
+}
+static const EeGfxOpacityHost* EEOpacityHost()
+{
+    static const EeGfxOpacityHost sHost = {NULL, EEOpacityUpdateHidden, EEOpacityOwn, EEOpacityLandBuilding, EEOpacityModelCenter,
+                                           EEOpacityModelRadius, EEOpacityPhysicalScale, EEOpacityPhysicalFrame, EEOpacityMeshZ};
+    return &sHost;
+}
+
 // Computes a unit's opacity this frame (see-through modes, its own fade, and buildings fading in front of
 // the near clipping plane); returns whether it is drawn translucent
 bool EERenderObject::GetUnitOpacity(EEUnit* inUnit, float& outOpacity)
 {
-    EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
-    bool theResult = false;
-    outOpacity = 1.0f;
-    if (gRenderEnvironment.mShowHiddenUnits == 1) {
-        if (inUnit->mUnitClass->mIsObstacle || (inUnit->mHiddenFlags & kHiddenFlagMoved) == kHiddenFlagMoved) {
-            // only when the bool Virtual40 returns is set (0x10f452 `test al, al`)
-            if (inUnit->UpdateHidden()) {
-                theResult = true;
-                outOpacity = kEERenderObject_F441350;
-            }
-        }
-    } else if (gRenderEnvironment.mShowHiddenUnits == 2) {
-        if (inUnit->mUnitClass->mIsObstacle) {
-            theResult = true;
-            outOpacity = kEERenderObject_F441350;
-        }
-    }
-    if (theComplexUnit != NULL)
-        theResult = Fn23CEE2(theComplexUnit, theResult, outOpacity);
-    if (inUnit->mUnitClass->IsLandBuilding() && !gWorld.mInCinematic && !gOrthographicView) {
-        GE3DPoint theCenter;
-        float theScale;
-        unsigned long theFrame;
-        GEModel* theModel;
-        if (theComplexUnit != NULL) {
-            theModel = inUnit->GetModel()->mModels[theComplexUnit->GetAnimation()];
-            theScale = theComplexUnit->mPhysicalModel.GetScale();
-            theFrame = theComplexUnit->mPhysicalModel.GetFrame();
-            theComplexUnit->mPhysicalModel.GetLocation().Apply(theModel->GetCenterPoint(), theCenter);
-        } else {
-            GETransformation theLocation;
-            theLocation.SetX(inUnit->mTileX + 0.5f);
-            theLocation.SetY(inUnit->GetTileY() + 0.5f);
-            theLocation.SetZ(gWorld.mMap->mTerrainMesh.GetMeshZ(theLocation.GetX(), theLocation.GetY()));
-            theModel = inUnit->GetModel()->mModels[0];
-            theFrame = 0;
-            theScale = inUnit->mStats->GetScale();
-            theLocation.Apply(theModel->GetCenterPoint(), theCenter);
-        }
-        // the near fade: ee_gfx view.rs (RUST_PLAN R4.4)
-        ee_gfx_unit_near_fade(reinterpret_cast<const EeGeViewport*>(&gViewport), reinterpret_cast<const EeGe3DPoint*>(&theCenter),
-                              theModel->GetBoundingRadius(theFrame), theScale, &theResult, &outOpacity);
-    }
-    return theResult;
+    // ee_gfx fill.rs over the world views; the virtual and model calls here
+    return ee_gfx_fill_unit_opacity((uint64_t)(uintptr_t)inUnit, gRenderEnvironment.mShowHiddenUnits, gWorld.mInCinematic,
+                                    gOrthographicView, reinterpret_cast<const EeGeViewport*>(&gViewport), EEOpacityHost(),
+                                    &outOpacity);
 }
 
 // The lighting set-ups below: their rasterizer calls are ee_gfx lighting.rs's (RUST_PLAN R4.4), applied in order

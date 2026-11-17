@@ -2688,6 +2688,24 @@ struct EeGfxFillUnitResult {
   bool circle;
 };
 
+/// `GetUnitOpacity`'s calls that are not views.
+struct EeGfxOpacityHost {
+  void *context;
+  /// the unit's virtual `UpdateHidden()` (it may write the hidden flags)
+  bool (*update_hidden)(void*, uint64_t);
+  /// `Fn23CEE2(complex, translucent, opacity)`: the complex unit's own translucency (`opacity` in and out)
+  bool (*own)(void*, uint64_t, bool, float*);
+  /// the class's `IsLandBuilding()`
+  bool (*land_building)(void*, uint64_t);
+  /// the unit's `GetModel()->mModels[index]`: its centre point and its bounding radius at `frame`
+  EeGe3DPoint (*model_center)(void*, uint64_t, unsigned long);
+  float (*model_radius)(void*, uint64_t, unsigned long, unsigned long);
+  /// the complex unit's `mPhysicalModel.GetScale()`, `GetFrame()`; the mesh's height
+  float (*physical_scale)(void*, uint64_t);
+  unsigned long (*physical_frame)(void*, uint64_t);
+  float (*mesh_z)(void*, float, float);
+};
+
 /// The player `Rebuild` places markers for.
 struct EeGfxGoalPlayer {
   /// its epoch is Atomic - WW2 or later
@@ -4312,6 +4330,30 @@ EeGfxFillUnitResult ee_gfx_fill_unit_fields(uint64_t unit,
                                             EeGfxFillUnit *out,
                                             const EeGfxFillFrame *frame,
                                             const EeGfxFillHost *host);
+
+/// `IsUnitDrawn` (EERenderObject.cpp) through Rust: the facts over the views, the decision walk.rs's.
+///
+/// # Safety
+/// As [`ee_gfx_fill_object_fields`]; `unit`, `tile` and `player` are live, `host` valid.
+bool ee_gfx_fill_unit_drawn(uint64_t unit,
+                            uint64_t tile,
+                            uint64_t player,
+                            bool free_camera,
+                            uint32_t unit_count,
+                            uint32_t object_count,
+                            EeGfxDrawnHost *host);
+
+/// `GetUnitOpacity` (EERenderObject.cpp) through Rust.
+///
+/// # Safety
+/// As [`ee_gfx_fill_object_fields`]; the pointers are valid.
+bool ee_gfx_fill_unit_opacity(uint64_t unit,
+                              long show_hidden,
+                              bool in_cinematic,
+                              bool orthographic,
+                              const EeGeViewport *viewport,
+                              const EeGfxOpacityHost *host,
+                              float *opacity);
 
 /// `EEGraphicalGoalManager`'s constructor: no markers.
 EeGfxGoalMarkers *ee_gfx_goals_new();
