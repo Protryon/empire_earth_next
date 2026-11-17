@@ -5,16 +5,19 @@
 #ifndef EE_EEMUSICOBJECT_H
 #define EE_EEMUSICOBJECT_H
 
-class FSFile;
-struct EEMusicRecord;
+#include "rust/data/tables.h"
 
-class EEMusicObject : public UReferenceCounter, public EEMedia {
+class FSFile;
+
+// The record's members (the reverb, mInEpoch) are EeDataMusicFields (rust/crates/ee_data tables.rs: the record and
+// its copy), the third base.
+class EEMusicObject : public UReferenceCounter, public EEMedia, public EeDataMusicFields {
 public:
-    EEMusicObject(EEMusicRecord* inRecord);
+    EEMusicObject(const unsigned char* inRecord);   // a dbmusic record
     virtual ~EEMusicObject();                       // ??_G 0xd9f1c (EEMedia's thunk 0xda3a6), dtor 0xd9f38
     virtual long LoadMedia();                       // EEMedia +0x04 0xda3ae
     virtual long UnloadMedia();                     // EEMedia +0x08 0xda3b6
-    static long ReadNewMusic(EEMusicRecord* outRecord);   // 0xd9c6b (Data\Music\New Music.txt)
+    static long ReadNewMusic(unsigned char* outRecord);   // 0xd9c6b (Data\Music\New Music.txt)
     static long LoadTable(FSFile* inFile);
     static void ClearAll();
     static EEMusicObject* GetRandom(long inEpoch);  // 0xda116 (a random song of the epoch's list)
@@ -27,12 +30,7 @@ public:
 
     UWideString mFileName;                  // +0x0c (passed to the conductor's LoadScore)
     long mScoreID;                          // +0x20 (-1 when unloaded)
-    float mReverbGain;                      // +0x24 (SetReverbStyle's arguments, in order)
-    float mReverbHighFreqRTRatio;           // +0x28
-    float mReverbMix;                       // +0x2c
-    float mReverbTime;                      // +0x30
     unsigned long mState;                   // +0x34 (1: loaded; more: use count)
-    bool mInEpoch[15];                      // +0x38
     volatile bool mIsLoading;               // +0x47 (a load is under way; `mov byte [+0x47], 0` stays a move: volatile)
 
     // each epoch's songs and their shuffled play order (0x4e8568 / 0x4e8470: [15] arrays in the original): one list

@@ -6,6 +6,7 @@
 
 pub mod admin;
 pub mod adminop;
+pub mod apicore;
 pub mod asyncop;
 pub mod auth;
 pub mod authcpp;

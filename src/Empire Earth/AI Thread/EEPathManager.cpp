@@ -281,7 +281,7 @@ public:
 
 // Creates the path manager with no bounded machine, nothing queued and region updates off
 EEPathManager::EEPathManager()
-    : mNextHistoryPruneTime(0), mNextRegionPruneTime(0), mLCC(0), mNextRequestID(0), mNextRegionTime(0), mIsUpdatingRegions(false)
+    : mRecord(ee_path_record_new()), mLCC(0), mNextRequestID(0), mNextRegionTime(0), mIsUpdatingRegions(false)
 {
     this->mBoundedMachine = NULL;
     this->mLC8 = 5;
@@ -291,18 +291,15 @@ EEPathManager::EEPathManager()
 EEPathManager::~EEPathManager()
 {
     this->Clear();
+    ee_path_record_free(this->mRecord);
+    this->mRecord = NULL;
 }
 
 // Records that a unit asked for a path to a tile, stamped with the game time (newest first)
 void EEPathManager::AddHistory(EEComplexUnit* inUnit, const EETileCoordinate& inTile)
 {
-    EEPathHistoryEntry theEntry;
-    theEntry.mUnitID = inUnit->mUnitID;
-    theEntry.mTime = 0;
-    theEntry.mX = inTile.GetX();
-    theEntry.mY = inTile.GetY();
-    theEntry.mTime = gPhysics->mGameTime;
-    this->mHistory.push_front(theEntry);  // newest first: 0xa95ae is deque::push_front (_Myoff ? _Myoff : _Mapsize * 256, then --)
+    ee_path_record_add_history(this->mRecord, (int32_t)inUnit->mUnitID, (int32_t)inTile.GetX(), (int32_t)inTile.GetY(),
+                               (uint32_t)gPhysics->mGameTime);
 }
 
 // Deletes every spare path and graph machine
@@ -342,10 +339,7 @@ void EEPathManager::FreePaths()
 // Deletes every unit's region map (its repeated goal tile counts)
 void EEPathManager::FreeRegions()
 {
-    std::map<long, std::map<U2DPoint<long>, unsigned long>*>::iterator it;
-    for (it = this->mRegions.begin(); it != this->mRegions.end(); it++)
-        delete it->second;
-    this->mRegions.clear();
+    ee_path_record_free_regions(this->mRecord);
 }
 
 // Sets a graph search's step budget to the distance times 250/75/90/110 (by distance band); at most 40 per tile when
@@ -353,7 +347,6 @@ void EEPathManager::FreeRegions()
 void EEPathManager::SetGraphRevs(EEGraphPathMachine* inMachine, const EETileCoordinate& inFrom,
                                  const EETileCoordinate& inTo)
 {
-    std::deque<EEPathHistoryEntry>::iterator it;
     EEAIPathSubSector* theSector = gContinentManager.GetPathSubSectorAt(inTo.GetX(), inTo.GetY());
     long theDistance = inFrom.DistanceTo(inTo);
     unsigned long theTime;
@@ -364,17 +357,9 @@ void EEPathManager::SetGraphRevs(EEGraphPathMachine* inMachine, const EETileCoor
     bool theAllowed = inMachine->mGoal.mPathFlags.mFlags[theSector->GetKind()] != 0;
     bool theRepeated = false;
     EEComplexUnit* theUnit = inMachine->mGoal.mUnit;
-    if (theUnit && theUnit->GetPlayer()->mComputerPlayer && theUnit->mIsCitizen) {
-        for (it = this->mHistory.begin(); it != this->mHistory.end(); it++) {
-            if ((*it).mTime < theTime)
-                break;
-            if ((*it).mUnitID != theUnit->GetUnitID())
-                continue;
-            if ((*it).GetX() == inTo.GetX() && (*it).GetY() == inTo.GetY())
-                theRepeated = true;
-            break;
-        }
-    }
+    if (theUnit && theUnit->GetPlayer()->mComputerPlayer && theUnit->mIsCitizen)
+        theRepeated = ee_path_record_repeated(this->mRecord, (int32_t)theUnit->GetUnitID(), (int32_t)inTo.GetX(),
+                                              (int32_t)inTo.GetY(), (uint32_t)theTime);
     inMachine->SetMaxRevs(ee_path_graph_revs((int32_t)theDistance, theAllowed, theRepeated));
 }
 
@@ -1399,13 +1384,10 @@ void EEPathManager::Reset()
     this->mBoundedMachine = NULL;
     this->FreePaths();
     this->FreeMachines();
-    this->FreeRegions();
-    this->mHistory.clear();
+    ee_path_record_reset(this->mRecord, 0, 0);
     this->mNodePool.DumpStats(false);
     this->mNodePool.Release();
     this->mNodePool.SetSize(0x32, 0x32, 2);
-    this->mNextHistoryPruneTime = 0;
-    this->mNextRegionPruneTime = 0;
     this->mLCC = 0;
     this->mNextRequestID = 0;
     this->mIsUpdatingRegions = false;
@@ -1519,8 +1501,11 @@ void EEPathManager::Clear()
     this->mBoundedMachine = NULL;
     this->FreePaths();
     this->FreeMachines();
-    this->FreeRegions();
-    this->mHistory.clear();
+    {
+        int32_t theHistory = 0, theRegions = 0;   // (Clear keeps the timers)
+        ee_path_record_timers(this->mRecord, &theHistory, &theRegions);
+        ee_path_record_reset(this->mRecord, theHistory, theRegions);
+    }
     this->mNodePool.DumpStats(true);
     this->mNodePool.Release();
     EEAIAStarGraphStorage::FreeNodePool();
@@ -1594,6 +1579,14 @@ bool EEPathManager::JoinPaths(std::vector<GE3DPoint>& inPath, std::vector<GE3DPo
     return theResult;
 }
 
+// a prune timer of the record (the region one when inRegions)
+static long EEPathRecordTimer(EePathRecord* inRecord, bool inRegions)
+{
+    int32_t theHistory = 0, theRegions = 0;
+    ee_path_record_timers(inRecord, &theHistory, &theRegions);
+    return inRegions ? theRegions : theHistory;
+}
+
 // TEST ONLY (EE-SIM's state dumps): the searches in progress, the pending requests and the timers, one line each
 void EEPathManager::DumpSim(FILE* inFile)
 {
@@ -1617,7 +1610,8 @@ void EEPathManager::DumpSim(FILE* inFile)
     for (size_t i = 0; i < this->mPending.size(); i++)
         fprintf(inFile, " u%lu@%ld,%ld", this->mPending[i].mUnitID, this->mPending[i].mTile.mX, this->mPending[i].mTile.mY);
     fprintf(inFile, "\nPATHMANAGER history=%zu regions=%zu prunehistory=%ld pruneregions=%ld nextrequest=%ld nextregion=%lu updating=%d\n",
-            this->mHistory.size(), this->mRegions.size(), this->mNextHistoryPruneTime, this->mNextRegionPruneTime,
+            (size_t)ee_path_record_history_count(this->mRecord), (size_t)ee_path_record_region_count(this->mRecord),
+            EEPathRecordTimer(this->mRecord, false), EEPathRecordTimer(this->mRecord, true),
             this->mNextRequestID, this->mNextRegionTime, this->mIsUpdatingRegions ? 1 : 0);
     // the bounded machine's storage (FindPath, FindBoundedPath: one machine kept from search to search), as a digest
     // of its bytes (ee_astar storage_save.rs), and the C++ members around it
@@ -1642,82 +1636,35 @@ void EEPathManager::DumpSim(FILE* inFile)
 // first update, not 10 s / 30 s after the saved game's last prune.
 void EEPathManager::SaveRunningState(FSFile& outFile)
 {
-    outFile.Write((unsigned long)this->mHistory.size());
-    for (size_t i = 0; i < this->mHistory.size(); i++) {
-        const EEPathHistoryEntry& theEntry = this->mHistory[i];
-        outFile.Write(theEntry.mX);
-        outFile.Write(theEntry.mY);
-        outFile.Write(theEntry.mUnitID);
-        outFile.Write(theEntry.mTime);
-    }
-    outFile.Write((unsigned long)this->mRegions.size());
-    std::map<long, std::map<U2DPoint<long>, unsigned long>*>::iterator it;
-    for (it = this->mRegions.begin(); it != this->mRegions.end(); it++) {
-        outFile.Write(it->first);
-        outFile.Write((unsigned long)it->second->size());
-        std::map<U2DPoint<long>, unsigned long>::iterator theTile;
-        for (theTile = it->second->begin(); theTile != it->second->end(); theTile++) {
-            outFile.Write(theTile->first.mX);
-            outFile.Write(theTile->first.mY);
-            outFile.Write(theTile->second);
-        }
-    }
-    outFile.Write(this->mNextHistoryPruneTime);
-    outFile.Write(this->mNextRegionPruneTime);
+    // the record's words (ee_sim::astar pm_record.rs: the history, the region maps, the two prune timers)
+    std::vector<uint32_t> theWords(ee_path_record_save(this->mRecord, NULL, 0));
+    ee_path_record_save(this->mRecord, theWords.data(), (uint32_t)theWords.size());
+    for (size_t i = 0; i < theWords.size(); i++)
+        outFile.Write(theWords[i]);
     outFile.Write(this->mLCC);
     outFile.Write(this->mNextRequestID);
     outFile.Write(this->mNextRegionTime);
     outFile.Write(this->mIsUpdatingRegions);
 }
 
+// the record's word reader over the save file
+static int32_t EEPathRecordRead(void* inFile, uint32_t* outWord)
+{
+    return (int32_t)static_cast<FSFile*>(inFile)->Read(*outWord);
+}
+
 long EEPathManager::LoadRunningState(FSFile& inFile)
 {
     struct State {
-        std::deque<EEPathHistoryEntry> mHistory;
-        std::vector<std::pair<long, std::vector<std::pair<U2DPoint<long>, unsigned long> > > > mRegions;
-        long mNextHistoryPruneTime = 0, mNextRegionPruneTime = 0, mLCC = 0, mNextRequestID = 0;
+        EePathRecord* mRecord = NULL;
+        long mLCC = 0, mNextRequestID = 0;
         unsigned long mNextRegionTime = 0;
         bool mIsUpdatingRegions = false;
+        ~State() { ee_path_record_free(mRecord); }
     };
     std::shared_ptr<State> theState = std::make_shared<State>();
-    unsigned long theCount = 0;
-    long theResult = inFile.Read(theCount);
-    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-        EEPathHistoryEntry theEntry;
-        theResult = inFile.Read(theEntry.mX);
-        if (theResult == 0)
-            theResult = inFile.Read(theEntry.mY);
-        if (theResult == 0)
-            theResult = inFile.Read(theEntry.mUnitID);
-        if (theResult == 0)
-            theResult = inFile.Read(theEntry.mTime);
-        theState->mHistory.push_back(theEntry);
-    }
-    if (theResult == 0)
-        theResult = inFile.Read(theCount);
-    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-        long theID = 0;
-        unsigned long theTiles = 0;
-        theResult = inFile.Read(theID);
-        if (theResult == 0)
-            theResult = inFile.Read(theTiles);
-        std::vector<std::pair<U2DPoint<long>, unsigned long> > theMap;
-        for (unsigned long t = 0; t < theTiles && theResult == 0; t++) {
-            U2DPoint<long> theTile;
-            unsigned long theValue = 0;
-            theResult = inFile.Read(theTile.mX);
-            if (theResult == 0)
-                theResult = inFile.Read(theTile.mY);
-            if (theResult == 0)
-                theResult = inFile.Read(theValue);
-            theMap.push_back(std::make_pair(theTile, theValue));
-        }
-        theState->mRegions.push_back(std::make_pair(theID, theMap));
-    }
-    if (theResult == 0)
-        theResult = inFile.Read(theState->mNextHistoryPruneTime);
-    if (theResult == 0)
-        theResult = inFile.Read(theState->mNextRegionPruneTime);
+    theState->mRecord = ee_path_record_load(EEPathRecordRead, &inFile);
+    long theResult = theState->mRecord != NULL ? 0 : kErrorBeyondEnd;
     if (theResult == 0)
         theResult = inFile.Read(theState->mLCC);
     if (theResult == 0)
@@ -1729,16 +1676,7 @@ long EEPathManager::LoadRunningState(FSFile& inFile)
     if (theResult == 0)
         EEAfterLoad([theState]() {
             EEPathManager& theManager = gPathManager;
-            theManager.FreeRegions();
-            theManager.mHistory = theState->mHistory;
-            for (size_t i = 0; i < theState->mRegions.size(); i++) {
-                std::map<U2DPoint<long>, unsigned long>* theMap = new std::map<U2DPoint<long>, unsigned long>;
-                for (size_t t = 0; t < theState->mRegions[i].second.size(); t++)
-                    theMap->insert(theState->mRegions[i].second[t]);
-                theManager.mRegions.insert(std::make_pair(theState->mRegions[i].first, theMap));
-            }
-            theManager.mNextHistoryPruneTime = theState->mNextHistoryPruneTime;
-            theManager.mNextRegionPruneTime = theState->mNextRegionPruneTime;
+            ee_path_record_assign(theManager.mRecord, theState->mRecord);
             theManager.mLCC = theState->mLCC;
             theManager.mNextRequestID = theState->mNextRequestID;
             theManager.mNextRegionTime = theState->mNextRegionTime;
@@ -2520,81 +2458,26 @@ void EEPathManager::UpdateAutoPaths()
 
 // Called every 10 s (UpdatePaths)
 // Counts the path requests of the last 5.5 s per unit and goal tile and adds a tile asked for more than once to
-// its unit's region map (an existing entry counts up by one); then clears the history (no counting while loading)
+// its unit's region map (an existing entry counts up by one); then clears the history (no counting while loading):
+// ee_sim::astar pm_record.rs
 void EEPathManager::PruneHistory()
 {
-    std::vector<std::pair<EEPathHistoryEntry, unsigned long> > theCounts;
-    std::deque<EEPathHistoryEntry>::iterator it;
-    unsigned long theTime = gPhysics->GetGameTime();
-    long i;
-    if (theTime > 0x157c)
-        theTime -= 0x157c;
-    if (!gLoadingSavedGame) {
-        for (it = this->mHistory.begin(); it != this->mHistory.end(); it++) {
-            if ((*it).mTime <= theTime) {
-                this->mHistory.erase(it, this->mHistory.end());
-                break;
-            }
-            long theID = (*it).mUnitID;
-            for (i = theCounts.size() - 1; i >= 0; i--) {
-                if ((theCounts.begin() + i)->first.mUnitID == theID &&
-                    (theCounts.begin() + i)->first == *it) {
-                    (theCounts.begin() + i)->second++;
-                    break;
-                }
-            }
-            if (i == -1)
-                theCounts.push_back(std::make_pair(*it, 1));
-        }
-        for (i = theCounts.size() - 1; i >= 0; i--) {
-            if (!(theCounts[i].second > 1))
-                continue;
-            std::map<long, std::map<U2DPoint<long>, unsigned long>*>::iterator theRegion =
-                this->mRegions.find(theCounts[i].first.mUnitID);
-            if (theRegion != this->mRegions.end()) {
-                std::map<U2DPoint<long>, unsigned long>::iterator theTile =
-                    theRegion->second->find(theCounts[i].first);
-                if (theTile != theRegion->second->end())
-                    theTile->second++;
-                else
-                    theRegion->second->insert(std::pair<U2DPoint<long>, unsigned long>(
-                        theCounts[i].first, theCounts[i].second));
-            } else {
-                std::map<U2DPoint<long>, unsigned long>* theMap = new std::map<U2DPoint<long>, unsigned long>;
-                theMap->insert(std::pair<U2DPoint<long>, unsigned long>(theCounts[i].first,
-                    theCounts[i].second));
-                this->mRegions.insert(std::make_pair(theCounts[i].first.mUnitID, theMap));
-            }
-        }
-    }
-    this->mHistory.clear();
+    ee_path_record_prune_history(this->mRecord, (uint32_t)gPhysics->GetGameTime(), gLoadingSavedGame);
 }
 
 // Called every 30 s (UpdatePaths)
 // Cancels the paths of each unit whose region map holds a tile counted 8 or more and tells its player the unit is
-// stranded, after freeing every region map (nothing while loading a saved game)
+// stranded, after freeing every region map (nothing while loading a saved game); the choice is pm_record.rs's
 void EEPathManager::PruneRegions()
 {
-    std::vector<long> theUnitIDs;
-    std::map<long, std::map<U2DPoint<long>, unsigned long>*>::iterator it;
-    std::map<U2DPoint<long>, unsigned long>::iterator theEntry;
-    if (!gLoadingSavedGame) {
-        for (it = this->mRegions.begin(); it != this->mRegions.end(); it++) {
-            for (theEntry = it->second->begin(); theEntry != it->second->end(); theEntry++) {
-                if ((unsigned long)theEntry->second >= 8) {
-                    theUnitIDs.push_back(it->first);
-                    break;
-                }
-            }
-        }
-        this->FreeRegions();
-        for (long i = theUnitIDs.size() - 1; i >= 0; i--) {
-            long theID = theUnitIDs[i];
-            EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(theID)));
-            if (theUnit != NULL) {
-                this->CancelPaths(theUnit, true);
-                theUnit->mPlayer->UnitStranded(theUnit);
-            }
+    std::vector<int32_t> theUnitIDs(ee_path_record_region_count(this->mRecord));
+    uint32_t theCount = ee_path_record_prune_regions(this->mRecord, gLoadingSavedGame,
+                                                     theUnitIDs.empty() ? NULL : theUnitIDs.data(), (uint32_t)theUnitIDs.size());
+    for (uint32_t i = 0; i < theCount && i < theUnitIDs.size(); i++) {
+        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(theUnitIDs[i])));
+        if (theUnit != NULL) {
+            this->CancelPaths(theUnit, true);
+            theUnit->mPlayer->UnitStranded(theUnit);
         }
     }
 }
@@ -2626,16 +2509,12 @@ void EEPathManager::UpdatePaths()
         }
         this->mPaths.pop_front();
     }
-    if (this->mNextHistoryPruneTime <= theTime) {
-        if (this->mHistory.size() > 0)
-            this->PruneHistory();
-        this->mNextHistoryPruneTime = theTime + 10000;
-    }
-    if (!(this->mNextRegionPruneTime <= theTime))
-        return;
-    if (this->mRegions.size() > 0)
+    // the history every 10 s, the region maps every 30 s, each when it holds something (pm_record.rs due)
+    uint32_t theDue = ee_path_record_due(this->mRecord, (uint32_t)theTime);
+    if (theDue & 1)
+        this->PruneHistory();
+    if (theDue & 2)
         this->PruneRegions();
-    this->mNextRegionPruneTime = theTime + 30000;
 }
 
 // The path graph machine's goal hooks (ee/EEAIAStarPathGraphGoal.h). GetGoalID and the node tile are read inline

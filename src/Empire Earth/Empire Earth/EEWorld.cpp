@@ -123,6 +123,7 @@
 #include "ee/EEUIMiniMap.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEWorldLayout.h"
 
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
 extern bool gLocalPlayerOut;                // 0x4e6099 (ee/EEMessage.h)
@@ -154,6 +155,7 @@ inline unsigned long EEGameState::GetNumTeams() const
 // and empty statistics
 EEWorld::EEWorld()
 {
+    EEWorldLayoutRegister();   // port: where Rust's views read the world's objects (ee/EEWorldLayout.h)
     this->mWindYaw = 0.0f;
     this->mEffectManager = NULL;
     this->mUB80 = 0;

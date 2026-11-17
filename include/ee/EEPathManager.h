@@ -52,13 +52,9 @@ struct EEPathManagerPending {
     unsigned long mUnitID;                  // +0x00
     EETileCoordinate mTile;                 // +0x04 the goal tile
 };
-// A finished request remembered for a while (the deque at +0x48; push_front 0xa95ae, newest first; 0x10 bytes)
-// The goal tile is its U2DPoint<long> base: PruneHistory 0xa8ea1 passes an entry to the mRegions inner map's find
-// 0xa992c (U2DPoint<long>::operator<) and pair ctor 0xaa7fb as the key
-struct EEPathHistoryEntry : public U2DPoint<long> {
-    long mUnitID;                           // +0x08
-    unsigned long mTime;                    // +0x0c (gPhysics's game time)
-};
+// The request history (the deque at +0x48, newest first), the region maps (+0x3c) and their prune timers (+0xc0,
+// +0xc4) are one Rust record (ee_sim::astar pm_record.rs, EePathRecord in rust/sim/astar.h)
+struct EePathRecord;
 
 class EEPathManager {
 public:
@@ -165,19 +161,13 @@ public:
     void ClampTile(EEMap* inMap, EETileCoordinate& ioTile);
 
     UMemoryPool<EEPathManagerNode> mNodePool;           // +0x04
-    // +0x3c per unit id: its recent goal tiles and their request counts (PruneHistory 0xa8ea1: find 0xa992c calls
-    // U2DPoint<long>::operator<; insert is the ICF-folded map<U2DPoint<long>, long> one 0x75d7d; its own dtor 0xa9901:
-    // an unsigned mapped count, PruneRegions `jb`)
-    std::map<long, std::map<U2DPoint<long>, unsigned long>*> mRegions;
-    std::deque<EEPathHistoryEntry> mHistory;            // +0x48
+    EePathRecord* mRecord;                              // the history, the region maps, their timers (Rust)
     std::deque<EEPathManagerNode*> mPaths;              // +0x5c (path machines in progress)
     std::deque<EEPathManagerNode*> mAutoPaths;          // +0x70 (graph machines in progress)
     std::deque<EEPathMachine*> mSparePathMachines;      // +0x84 (at most 0x23)
     std::deque<EEGraphPathMachine*> mSpareGraphMachines;    // +0x98 (at most 0x19)
     std::vector<EEPathManagerPending> mPending;         // +0xac (12-byte elements: RequestPendingPaths; was mScratchPath)
     EEBoundedPathMachine* mBoundedMachine;              // +0xbc
-    long mNextHistoryPruneTime;                         // +0xc0
-    long mNextRegionPruneTime;                          // +0xc4
     long mLC8;                                          // +0xc8 (= 5)
     long mLCC;                                          // +0xcc
     long mNextRequestID;                                // +0xd0

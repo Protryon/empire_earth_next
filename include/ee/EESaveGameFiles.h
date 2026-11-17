@@ -213,6 +213,14 @@ inline bool EESaveHasTechAllowed(unsigned long inMajorVersion, unsigned long inM
 {
     return inMajorVersion > 0 || inMinorVersion >= 282;
 }
+// port: from 0.283 a save holds every map tile's terrain type (EEPWorldHelper.cpp EESaveTileTypes, after the tech
+// flags). EEMap::Load re-types each tile from the terrain table of its mesh vertex's texture, which is not the type the
+// random map's painting gave it (a painted vertex types the four tiles around it): a loaded map had about 1,000 tiles
+// of another type (grass, forest floor, cliff), and a unit that the continued game let onto a tile stopped at its edge
+inline bool EESaveHasTileTypes(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 283;
+}
 class FSFile;
 void EESaveActiveGroups(FSFile& outFile);
 long EELoadActiveGroups(FSFile& inFile);   // the groups back at the loaded game's first tick (EEAfterLoad)

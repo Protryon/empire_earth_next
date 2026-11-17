@@ -20,3 +20,5 @@ pub mod scenario;
 pub mod tech;
 /// The crate ee_units before the restructure.
 pub mod units;
+/// The world's objects as Rust reads them in place: the records, the layout, the views (the world views' lane).
+pub mod world;

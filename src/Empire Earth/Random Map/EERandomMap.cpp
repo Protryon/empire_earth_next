@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <algorithm>
+#include <string>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -79,10 +80,6 @@ inline EECliffTerrainTable* EEGetCliffTerrainTable(unsigned long inIndex)
 {
     return EETerrainTable::sCliffTable[inIndex];
 }
-
-// the generator list's keys (unguarded file-scope globals, 0x5655e0 / 0x5655d0)
-const UString kUseMapGeneratorKey("UseMapGenerator");
-const UString kStringTableIDKey("StringTableID");
 
 FSFileSpec EERandomMap::sGeneratorDirectory;
 std::vector<EERMGenerator> EERandomMap::sRandomMapGenerators;
@@ -639,12 +636,6 @@ long EERandomMap::Initialize(const FSFileSpec& inDirectory)
     std::vector<UString> theValidPlugIns;
     FSFileSpec theDirectory;
     FSFileSpec theFile;
-    std::vector<UString> theTokens;
-    UString theQuote("\"");
-    UString theSeparators(" \t\n,");
-    UString theBrackets("()");
-    UString theLine(0x400);
-    UString theName;
     EERMGenerator theGenerator;
     PIMModule* theModule;
     EERandomMap::sRandomMapGenerators.clear();
@@ -663,34 +654,27 @@ long EERandomMap::Initialize(const FSFileSpec& inDirectory)
         do {
             if (theFile.FOpen("r") != 0)
                 continue;
-            FILE* theStream = theFile;
-            bool theHasStringID = false;
-            bool theHasGenerator = false;
-            long theStringID = 0;
-            char theBuffer[1024];
-            while (fgets(theBuffer, 0x400, theStream) != NULL) {
-                theLine = theBuffer;
-                theLine.Tokenize(theQuote, theTokens);
-                if (theTokens.size() >= 2 &&
-                    theTokens[0].GetSubstring(0, kUseMapGeneratorKey.GetLength()) == kUseMapGeneratorKey) {
-                    theName = theFile.GetFile();
-                    theName.ToLower();
-                    theGenerator.mName = theFile.GetFile().GetSubstring(0, theName.FindBackwards(".rmv", -1));
-                    theGenerator.mModuleName = theTokens[1];
-                    theHasGenerator = true;
-                }
-                theLine.NestedTokenize(theSeparators, theBrackets, theTokens);
-                if (theTokens.size() >= 2 &&
-                    theTokens[0].GetSubstring(0, kStringTableIDKey.GetLength()) == kStringTableIDKey) {
-                    sscanf(theTokens[1], "%ld", &theStringID);
-                    theHasStringID = true;
-                }
-            }
+            std::string theText;            // the script, as the C runtime's text mode reads it
+            char theBuffer[0x1000];
+            size_t theRead;
+            while ((theRead = fread(theBuffer, 1, sizeof(theBuffer), (FILE*)theFile)) != 0)
+                theText.append(theBuffer, theRead);
             theFile.Close();
+            // its UseMapGenerator and StringTableID lines (ee_rmap rmv.rs)
+            const UString& theFileName = theFile.GetFile();
+            EeRmapScriptGenerator theScript;
+            void* theHandle = NULL;
+            bool theHasGenerator = ee_rmap_script_generator(theFileName, theFileName.GetLength(), theText.data(),
+                                                            theText.size(), &theScript, &theHandle);
+            if (theHasGenerator) {
+                theGenerator.mName = UString().Copy(theScript.name, 0, (unsigned long)theScript.name_length, 0, true);
+                theGenerator.mModuleName = UString().Copy(theScript.module, 0, (unsigned long)theScript.module_length, 0, true);
+                ee_rmap_script_generator_free(theHandle);
+            }
             if (theHasGenerator &&
                 std::find(theValidPlugIns.begin(), theValidPlugIns.end(), theGenerator.mModuleName) !=
                     theValidPlugIns.end()) {
-                if (!theHasStringID || gResource->GetString(theStringID, theGenerator.mDisplayName) != 0)
+                if (!theScript.has_string_id || gResource->GetString(theScript.string_id, theGenerator.mDisplayName) != 0)
                     theGenerator.mDisplayName = theGenerator.mName;
                 EERandomMap::sRandomMapGenerators.push_back(theGenerator);
             }
@@ -702,19 +686,26 @@ long EERandomMap::Initialize(const FSFileSpec& inDirectory)
     return 0;
 }
 
+// A name as the scripts name it: its words joined (ee_rmap rmv.rs); false for a name of spaces only
+static bool EERMScriptName(const UString& inName, UString& outName)
+{
+    std::vector<char> theJoined(inName.GetLength() + 1);
+    intptr_t theLength = ee_rmap_script_name(inName, inName.GetLength(), theJoined.data());
+    if (theLength < 0)
+        return false;
+    outName.Copy(theJoined.data(), 0, (unsigned long)theLength, 0, true);
+    return true;
+}
+
 // Fills the generator state from the game: seeds, map dimensions and size class, players, start epoch, and the unit,
 // terrain and cliff names (spaces removed) the scripts refer to
 void EERandomMap::InitializeValues(unsigned long inSeed)
 {
-    std::vector<UString> theTokens;
-    UString theSeparator(" ");
-    UString theUnitName;
     UString theName;
     EERMNamedValue theCliff;
     EERMNamedValue theTerrain;
     EERMNamedEntry theUnit;
     unsigned long i;
-    unsigned long j;
     this->mData.mSeed = inSeed;
     this->mData.mRandom.mSeed = inSeed;
     this->mData.mRandomIntegers.mSeed = inSeed;
@@ -743,13 +734,8 @@ void EERandomMap::InitializeValues(unsigned long inSeed)
         EEUnitClass* theClass = gUnitClassTable[i];
         if (theClass == NULL || !theClass->mIsEnabled)
             continue;
-        theClass->mName.Tokenize(theSeparator, theTokens);
-        if (theTokens.size() <= 0)
+        if (!EERMScriptName(theClass->mName, theUnit.mName))
             continue;
-        theUnitName = theTokens[0];
-        for (j = 1; j < theTokens.size(); j++)
-            theUnitName += theTokens[j];
-        theUnit.mName = theUnitName;
         theUnit.mUnitClass = i;
         theUnit.mSize = theClass->mTileSize <= 1 ? 1 : theClass->mTileSize;
         this->mData.mUnitNames.push_back(theUnit);
@@ -760,12 +746,8 @@ void EERandomMap::InitializeValues(unsigned long inSeed)
         EETerrainTable* theTable = EETerrainTable::Get(i);
         if (theTable == NULL)
             continue;
-        theTable->mName.Tokenize(theSeparator, theTokens);
-        if (theTokens.size() <= 0)
+        if (!EERMScriptName(theTable->mName, theName))
             continue;
-        theName = theTokens[0];
-        for (j = 1; j < theTokens.size(); j++)
-            theName += theTokens[j];
         theTerrain.mName = theName;
         theTerrain.mValue = i;
         this->mData.mTerrainNames.push_back(theTerrain);
@@ -778,13 +760,8 @@ void EERandomMap::InitializeValues(unsigned long inSeed)
         EECliffTerrainTable* theTable = EEGetCliffTerrainTable(i);
         if (theTable == NULL)
             continue;
-        theTable->mName.Tokenize(theSeparator, theTokens);
-        if (theTokens.size() <= 0)
+        if (!EERMScriptName(theTable->mName, theCliff.mName))
             continue;
-        theName = theTokens[0];
-        for (j = 1; j < theTokens.size(); j++)
-            theName += theTokens[j];
-        theCliff.mName = theName;
         theCliff.mValue = i;
         theCliffs.push_back(theCliff);
     }

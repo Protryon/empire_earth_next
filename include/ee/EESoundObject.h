@@ -5,12 +5,16 @@
 #ifndef EE_EESOUNDOBJECT_H
 #define EE_EESOUNDOBJECT_H
 
+#include "rust/data/tables.h"
+
 class EESoundObject;
 class FSFile;
 class FSFileSpec;
 extern std::vector<EESoundObject*> gSoundObjects;   // 0x4e867c (the sound table; provisional name; needs <vector>)
 
-class EESoundObject : public EEMedia {
+// The record's members (mVolume, mMaxInstances, mCategory, mL24, mLooping) are EeDataSoundFields
+// (rust/crates/ee_data tables.rs: the record and its copy), the second base.
+class EESoundObject : public EEMedia, public EeDataSoundFields {
 public:
     // the table of every sound by index (inline; its out-of-line COMDAT 0x525d sits in EEAUpgradeImprovement.cpp's
     // range after its first user; 0 past the end) (provisional name)
@@ -37,13 +41,8 @@ public:
     long Play(float inVolume, float inPan, float inPitch);   // 0xda8a9 (EEUGUnloadTransport::Unload) (provisional name)
 
     UString mName;                          // +0x04 (the ctor's member ctor)
-    float mVolume;                          // +0x14
     unsigned long mSampleID;                // +0x18 SESoundManager sample id
-    long mMaxInstances;                     // +0x1c (+0x1c..+0x28: the ctor's stores)
-    long mCategory;                         // +0x20
-    long mL24;                              // +0x24
     unsigned long mMediaCount;              // +0x28 (the use count)
-    bool mLooping;                          // +0x2c
     volatile bool mIsLoading;                      // +0x2d (sizeof 0x30)
 };
 

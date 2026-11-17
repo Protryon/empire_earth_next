@@ -1569,6 +1569,15 @@ pub unsafe extern "C" fn ee_won_smart_new(wchar_size: u32, path: *const u8, path
     Box::into_raw(Box::new(EeWonSmartRoute(Model::new(wchar_size, p))))
 }
 
+/// `new SmartRoutingConnection`'s model (SmartRoutingConnection.cpp's constructor, R6 WONLobby round 12): the ignore
+/// file `_wonignore.bin` under the WON directory (`WONAPICore::GetDefaultFileDirectory()`, hostnative.rs).
+#[no_mangle]
+pub extern "C" fn ee_won_smart_new_default(wchar_size: u32) -> *mut EeWonSmartRoute {
+    let mut path = crate::hostnative::file_directory();
+    path.extend_from_slice(b"_wonignore.bin");
+    Box::into_raw(Box::new(EeWonSmartRoute(Model::new(wchar_size, &path))))
+}
+
 /// # Safety
 /// `r` is from `ee_won_smart_new` (or NULL), not used afterwards.
 #[no_mangle]

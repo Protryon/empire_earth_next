@@ -194,8 +194,6 @@ EETerrainTable gTerrainTable;
 EETerrainColorTable gTerrainColorTable;
 // chain at 0x53ed1b (wrapper)
 EETerrainTypeTable gTerrainTypeTable;
-// chain at 0x53ed46 (wrapper)
-EERandomMapTable gRandomMapTable;
 // chain at 0x53ed71 (wrapper)
 EEGameState gGameState;
 // data the original placed inside gGameState (it addressed them as globals): references to the members
@@ -680,8 +678,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 281 the merge of main's stages 5 and 6: the computer players without the C++ managers' timers and intelligence files,
 // main's next engine state block (EESaveHasLuaOnlyComputers)
 // 282 the players' tech nodes that are not allowed (EESaveHasTechAllowed), the location goals' group path state
+// 283 every map tile's terrain type (EESaveHasTileTypes)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 282;
+const unsigned long kSaveGameMinorVersion = 283;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
@@ -2449,7 +2448,6 @@ void EEDeleteGameObjects(bool inShutdown)
 
 // Cleanup routines defined in other units
 void EEReportLeakingUnits();
-void EEUnloadBuiltInGraphicObjects();
 void EEDeleteMediaTable();
 
 // Unloads every database table and its media, deletes the calamity manager and language resources, frees the pools
@@ -2464,7 +2462,6 @@ void EEDeleteDatabase(bool inShutdown)
     unsigned long theSound = 962;
     if (EESoundObject::Get(theSound) != NULL)
         EESoundObject::Get(theSound)->UnloadMedia();
-    EEUnloadBuiltInGraphicObjects();
     EEAnimal::Unload();
     gAmbientSoundManager.ClearSounds();
     EETerrainTypeTable::ClearDamageTables();
@@ -2481,7 +2478,6 @@ void EEDeleteDatabase(bool inShutdown)
     EETerrainColorTable::Unload();
     EETerrainTypeTable::Unload();
     EECliffTerrainTable::Unload();
-    EERandomMapTable::Unload();
     EEUCUpgradeTable::Unload();
     EEUnitBehavior::Unload();
     EEStartingResources::Unload();

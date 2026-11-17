@@ -62,6 +62,12 @@ enum class EeWonModelOp : uint32_t {
   GameCanStartHook,
   /// `((RoutingConnection*)a)->QueueClose(-1)`.
   ConnectionClose,
+  /// `new GUIStringData(text)` of `b` UTF-16 units at `a` (held): a routing record's name (net round 30: the
+  /// records are read here, no C++ record is made).
+  TextOfUnits,
+  /// `((LobbyGame*)a)->ReadSummaryBuffer(buffer)` over `c` bytes at `b`, NULL (`b` 0) for an op or object without
+  /// a buffer.
+  GameReadSummaryBytes,
 };
 
 /// A member read by [`ee_won_model_get`] and written by [`ee_won_model_set`]. Numbers are the member's value; a
@@ -380,6 +386,18 @@ ptrdiff_t ee_won_model_call(const EeWonModel *m,
                             ptrdiff_t b,
                             ptrdiff_t c,
                             ptrdiff_t d);
+
+/// The game's model's answer to one of RoutingLogic's record ops ([`route_record_op`]; `won_routemodel_test`'s): true
+/// with the answer in `out`, false for another op.
+///
+/// # Safety
+/// The op's arguments as `EeWonRouteLogicOp` documents them (live shells; C++ routing ops on a bound core table);
+/// `out` is valid.
+bool ee_won_model_route_record_op(uint32_t op,
+                                  ptrdiff_t a,
+                                  ptrdiff_t b,
+                                  ptrdiff_t c,
+                                  ptrdiff_t *out);
 
 }  // extern "C"
 

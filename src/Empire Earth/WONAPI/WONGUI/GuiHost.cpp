@@ -366,32 +366,10 @@ static Button* Btn(intptr_t a) { return (Button*)a; }
 static intptr_t ContainerOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (op) {
-    case Op::ChildSetEnabled: Comp(a)->SetEnabled(b != 0); return 0;
-    case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
-    case Op::ChildSetPosSize: {
-        const EeWonRect4* r = (const EeWonRect4*)b;
-        Comp(a)->SetPosSize(r->x, r->y, r->w, r->h);
-        return 0;
-    }
-    case Op::ChildSetPos: Comp(a)->SetPos((int)b, (int)c); return 0;
-    case Op::ChildSetSize: Comp(a)->SetSize((int)b, (int)c); return 0;
-    case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
-    case Op::ChildIsVisible: return Comp(a)->IsVisible() ? 1 : 0;
-    case Op::ChildIsMine: return Comp(a)->mParent == t ? 1 : 0;
-    case Op::ChildWidth: return Comp(a)->Width();
-    case Op::ChildHeight: return Comp(a)->Height();
-    case Op::ChildLeft: return Comp(a)->Left();
-    case Op::ChildTop: return Comp(a)->Top();
     case Op::ChildHold: Comp(a)->AddRef(); return 0;
     case Op::ChildRelease: Comp(a)->Release(); return 0;
-    case Op::ChildFlagSet: return Comp(a)->ComponentFlagSet((int)b) ? 1 : 0;
-    case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
-    case Op::ChildHasDefaultCursor: return Comp(a)->GetDefaultCursor() != NULL ? 1 : 0;
     case Op::ChildSetDefaultCursor: Comp(a)->SetDefaultCursor(CursorOf(b)); return 0;
-    case Op::ChildMouseChild: return (intptr_t)Comp(a)->GetMouseChild();
     case Op::AddChild: t->AddChild(Comp(a)); return 0;
-    case Op::MouseChild: return (intptr_t)t->GetMouseChild();
-    case Op::IsDisabled: return t->IsDisabled() ? 1 : 0;
     case Op::EventType: return ((ComponentEvent*)a)->mType;
     case Op::EventComponent: return (intptr_t)((ComponentEvent*)a)->mComponent;
     default: return ComponentOp(t, op, a, b);
@@ -407,8 +385,6 @@ intptr_t SplitterHostCall(Splitter* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::BaseMouseUp: t->Container::MouseUp((int)a, (int)b, (int)c); return 0;
     case Op::BaseMouseDrag: t->Container::MouseDrag((int)a, (int)b); return 0;
     case Op::BaseHandleEvent: t->Container::HandleComponentEvent((ComponentEvent*)a); return 0;
-    case Op::ButtonControlId: return Btn(a)->mControlId;
-    case Op::ButtonSetControlId: Btn(a)->mControlId = (int)b; return 0;
     case Op::ButtonSetCheck: Btn(a)->SetCheck(b != 0, false); return 0;
     case Op::ButtonIsChecked: return Btn(a)->IsChecked() ? 1 : 0;
     case Op::NewDragComponent: {
@@ -459,7 +435,6 @@ extern "C" intptr_t ee_won_guicpp_bar_call(void* inComp, EeWonGuiOp op, intptr_t
     case Op::BaseMouseDrag: t->Container::MouseDrag((int)a, (int)b); return 0;
     case Op::BaseAddedToParent: t->Container::AddedToParent(); return 0;
     case Op::BaseHandleEvent: t->Container::HandleComponentEvent((ComponentEvent*)a); return 0;
-    case Op::BaseSetEnabled: t->Component::SetEnabled(a != 0); return 0;
     case Op::NewButton: return (intptr_t)static_cast<Component*>(new Button);
     case Op::ButtonSetFlags: static_cast<Button*>(Comp(a))->SetButtonFlags((int)b, c != 0); return 0;
     default: return ContainerOp(t, op, a, b, c);
@@ -494,7 +469,6 @@ extern "C" intptr_t ee_won_guicpp_scroller_call(void* inComp, EeWonGuiOp op, int
     case Op::AreaGet: return area->GetField((Fd)b);
     case Op::AreaSet: area->SetField((Fd)b, (int)c); return 0;
     case Op::AreaAdjustPosition: area->AdjustPosition(b != 0); return 0;
-    case Op::AreaRequestFocus: area->RequestFocus(); return 0;
     case Op::AreaMouseWheel: return area->MouseWheel((int)b) ? 1 : 0;
     case Op::AreaSetScroller: area->SetScroller(t); return 0;
     default: return ContainerOp(t, op, a, b, c);
@@ -646,7 +620,6 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
         t->GetViewport()->AddChild(v);
         return (intptr_t)v;
     }
-    case Op::ChildSetPos: Comp(a)->SetPos((int)b, (int)c); return 0;
     case Op::ChildRelease: Comp(a)->Release(); return 0;
     case Op::HeaderNotify: ((MultiListHeader*)a)->NotifyColumnChange(); return 0;
     case Op::HeaderSetSortColumn: ((MultiListHeader*)a)->SetSortColumn((int)b, (ListSortType)c); return 0;
@@ -779,10 +752,6 @@ extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr
     case Op::BaseHandleEvent: t->Container::HandleComponentEvent((ComponentEvent*)a); return 0;
     case Op::MultiOf: return (intptr_t)((MultiListArea*)a)->mMulti;
     case Op::RemoveChild: t->RemoveChild(Comp(a)); return 0;
-    case Op::ChildSetControlId: Comp(a)->mControlId = (int)b; return 0;
-    case Op::ChildControlId: return Comp(a)->mControlId;
-    case Op::ChildDesiredSize: { int* wh = (int*)b; Comp(a)->GetDesiredSize(wh[0], wh[1]); return 0; }
-    case Op::ChildRight: return Comp(a)->Right();
     case Op::EventIsButtonPress: return ((ComponentEvent*)a)->mType == ComponentEvent_ButtonPressed ? 1 : 0;
     case Op::EventChildUnder: {
         Component* child = ((ComponentEvent*)a)->mComponent;

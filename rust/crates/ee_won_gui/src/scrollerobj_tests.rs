@@ -4,14 +4,16 @@
 //! host's model (the components, the areas' numbers, the focus child, the wheel's answers, the events) from the
 //! golden's driver lines and the traced ops, answers the untraced reads from it, and runs what the C++ virtuals
 //! run (a bar's SetEnabled and AddedToParent, the area's AdjustPosition and the scroller's NotifyScrollChange
-//! calling the scroller back).
+//! calling the scroller back). The components are blocks (compmem's map world): the Rust reads and moves them in
+//! place, the world's SetVisible and a plain component's SetEnabled set their flags as the driver's do.
 
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::ffi::c_void;
 
 use crate::barobj::{EeWonBarCall as B, EeWonScrollbar};
-use crate::guictl::EeWonRect4;
+use crate::compmem::{self, map_block};
+use crate::compobj::{host_world, EeWonComp as K};
 use crate::guihost::{ee_won_gui_event_type, EeWonGuiEvent, EeWonGuiField as F, EeWonGuiOp as Op};
 use crate::scrollerobj::{EeWonScroller, EeWonScrollerCall as C};
 
@@ -20,13 +22,6 @@ const SCROLLER: isize = 0x54;
 
 #[derive(Clone, Copy, Default)]
 struct Comp {
-    x: i32,
-    y: i32,
-    w: i32,
-    h: i32,
-    visible: bool,
-    disabled: bool,
-    parent: isize,
     held: i32,
 }
 
@@ -83,22 +78,31 @@ fn scroller() -> *const EeWonScroller {
 unsafe extern "C" fn replay_host(comp: *mut c_void, op: Op, a: isize, b: isize, c: isize, _d: isize) -> isize {
     let me = comp as isize;
     let n = op as u32;
-    let comp_of = |id: isize| with(|r| r.comps.get(&id).copied().unwrap_or_default());
     match op {
-        Op::Get => {
-            let k = comp_of(me);
-            return if a == F::Width as isize {
-                k.w
-            } else if a == F::Height as isize {
-                k.h
-            } else {
-                0
-            } as isize;
+        Op::Comp if a == K::VPositionChanged as isize || a == K::VSizeChanged as isize => {
+            let r = compmem::bounds(b);
+            expect(&format!("{n} comp {a} {b:x} at {} {} {} {}", r.x, r.y, r.width, r.height), false);
+            return 0;
         }
-        Op::ChildIsVisible => return comp_of(a).visible as isize,
-        Op::ChildIsMine => return (comp_of(a).parent == me) as isize,
-        Op::IsDisabled => return comp_of(me).disabled as isize,
-        Op::MouseChild => return 0,
+        Op::Comp if a == K::VSetEnabled as isize => {
+            // a bar's own SetEnabled, another's the world's flag
+            expect(&format!("{n} comp {a} {b:x} {c}"), false);
+            let p = bar_ptr(b);
+            if p.is_null() {
+                compmem::set_flags(b, 0x80, c == 0);
+            } else {
+                // SAFETY: a live bar of the replay
+                unsafe { (*p).call(B::SetEnabled, c, 0, 0) };
+            }
+            return 0;
+        }
+        Op::Comp => {
+            let w = expect(&format!("{n} comp {a} {b:x} {c} -> "), true);
+            if a == K::VSetVisible as isize {
+                compmem::set_flags(b, 0x1, c == 0);
+            }
+            return hex(&w);
+        }
         Op::EventType => return with(|r| r.events.get(&a).map_or(0, |e| e.0)),
         Op::EventComponent => return with(|r| r.events.get(&a).map_or(0, |e| e.1)),
         Op::GetMousePos => {
@@ -120,32 +124,11 @@ unsafe extern "C" fn replay_host(comp: *mut c_void, op: Op, a: isize, b: isize, 
             expect(&format!("fire {} from {:x}", ee_won_gui_event_type(e), me as i64), false);
             return 0;
         }
-        Op::ChildSetPosSize => {
-            // SAFETY: the object passes a live rectangle
-            let q = unsafe { *(b as *const EeWonRect4) };
-            expect(&format!("{n} pos-size {:x} {} {} {} {}", a as i64, q.x, q.y, q.w, q.h), false);
-            with(|r| {
-                let k = r.comps.entry(a).or_default();
-                k.x = q.x;
-                k.y = q.y;
-                k.w = q.w;
-                k.h = q.h;
-            });
-            return 0;
-        }
-        Op::ChildSetEnabled | Op::AddChild | Op::AreaAdjustPosition | Op::VirtNotifyScrollChange => {
+        Op::AddChild | Op::AreaAdjustPosition | Op::VirtNotifyScrollChange => {
             expect(&format!("{n} {:x} {:x} {:x}", a as i64, b as i64, c as i64), false);
             match op {
-                Op::ChildSetEnabled => {
-                    let p = bar_ptr(a);
-                    if p.is_null() {
-                        return 0;
-                    }
-                    // SAFETY: a live bar of the replay
-                    unsafe { (*p).call(B::SetEnabled, b, 0, 0) };
-                }
                 Op::AddChild => {
-                    with(|r| r.comps.entry(a).or_default().parent = me);
+                    compmem::set_parent(a, me);
                     let p = bar_ptr(a);
                     if !p.is_null() {
                         // SAFETY: as above
@@ -171,27 +154,17 @@ unsafe extern "C" fn replay_host(comp: *mut c_void, op: Op, a: isize, b: isize, 
     if op == Op::NewButton {
         let id = hex(&expect(&head, true));
         with(|r| {
-            r.comps.insert(id, Comp { visible: true, ..Comp::default() });
+            r.comps.insert(id, Comp::default());
         });
+        // SAFETY: the map world's block of the new button
+        unsafe { *map_block(id) = compmem::EeWonCompMembers::default() };
         return id;
     }
     let result = with(|r| {
         let mut result = 0isize;
         match op {
-            Op::ChildSetPos => {
-                let k = r.comps.entry(a).or_default();
-                k.x = b as i32;
-                k.y = c as i32;
-            }
-            Op::ChildSetSize => {
-                let k = r.comps.entry(a).or_default();
-                k.w = b as i32;
-                k.h = c as i32;
-            }
-            Op::ChildSetVisible => r.comps.entry(a).or_default().visible = b != 0,
             Op::ChildHold => r.comps.entry(a).or_default().held += 1,
             Op::ChildRelease => r.comps.entry(a).or_default().held -= 1,
-            Op::BaseSetEnabled => r.comps.entry(me).or_default().disabled = a == 0,
             Op::AreaSet => {
                 r.areas.entry(a).or_default().insert(b as u32, c as i32);
             }
@@ -232,16 +205,17 @@ const AREA_FIELDS: [F; 11] = [
 
 fn replay(lines: &[String]) -> Option<String> {
     let start = words(&lines[0]);
-    let me = Comp { w: num(start[1]), h: num(start[2]), visible: true, ..Comp::default() };
     REPLAY.with(|r| {
         let mut rp = Replay { lines: lines.to_vec(), at: 1, ..Replay::default() };
-        rp.comps.insert(SCROLLER, me);
+        rp.comps.insert(SCROLLER, Comp::default());
         *r.borrow_mut() = Some(rp);
     });
-    // the components' bounds, read by the Rust from compmem's blocks
-    let _w = crate::compmem::filled_world(|c| {
-        with(|r| r.comps.get(&c).map_or_else(Default::default, |k| crate::compmem::block(k.x, k.y, k.w, k.h)))
-    });
+    let _world = compmem::map_world();
+    let _host = host_world(Some(replay_host));
+    let mut m = compmem::block(0, 0, num(start[1]), num(start[2]));
+    m.bits = num(start[3]);
+    // SAFETY: the map world's block of the scroller
+    unsafe { *map_block(SCROLLER) = m };
     let mut holder = Some(Box::new(EeWonScroller::new(SCROLLER as *mut c_void, Some(replay_host))));
     let t: *const EeWonScroller = &**holder.as_ref().expect("the scroller");
     with(|r| r.scroller = t as usize);
@@ -259,17 +233,14 @@ fn replay(lines: &[String]) -> Option<String> {
         }
         let ws = words(&line);
         match ws[0] {
-            "comp" => with(|r| {
-                let k = Comp {
-                    x: num(ws[2]),
-                    y: num(ws[3]),
-                    w: num(ws[4]),
-                    h: num(ws[5]),
-                    visible: ws[6] == "1",
-                    ..Comp::default()
-                };
-                r.comps.insert(hex(ws[1]), k);
-            }),
+            "comp" => {
+                let id = hex(ws[1]);
+                with(|r| r.comps.insert(id, Comp::default()));
+                let mut m = compmem::block(num(ws[2]), num(ws[3]), num(ws[4]), num(ws[5]));
+                m.bits = num(ws[6]);
+                // SAFETY: the map world's block, no other reference to it live
+                unsafe { *map_block(id) = m };
+            }
             "area" => with(|r| {
                 let f = r.areas.entry(hex(ws[1])).or_default();
                 for (i, field) in AREA_FIELDS.iter().enumerate() {
@@ -301,7 +272,7 @@ fn replay(lines: &[String]) -> Option<String> {
             }),
             "focus" => with(|r| r.focus = ws[1] == "1"),
             "wheel" => with(|r| r.wheel = (num(ws[1]) as isize, num(ws[2]) as isize)),
-            "visible" => with(|r| r.comps.entry(hex(ws[1])).or_default().visible = ws[2] == "1"),
+            "visible" => compmem::set_flags(hex(ws[1]), 0x1, ws[2] != "1"),
             "free" => {
                 drop(holder.take());
                 with(|r| r.scroller = 0);
