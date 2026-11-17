@@ -47,6 +47,7 @@
 #include "ee/EECPCombatManager.h"
 #include "ee/EEWheel.h"
 #include "ee/EECPTrace.h"
+#include <string.h>
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 #include "ee/EECPPlacement.h"
@@ -91,9 +92,18 @@ static bool EECPRMNear(EEUnit* inUnit, long inX, long inY, long inRange)
     return theDX * theDX + theDY * theDY <= inRange * inRange;
 }
 
+static unsigned long sMilitiaLast[64];     // per player: the game ms of the last militia call (0: none)
+static unsigned long sNavalFleeLast[64];   // per player: the game ms of the last naval flee (0: none)
+
+void EECPReflexesNewGame()
+{
+    memset(sMilitiaLast, 0, sizeof(sMilitiaLast));
+    memset(sNavalFleeLast, 0, sizeof(sNavalFleeLast));
+}
+
 static void EECPRMMilitia(EEComputerPlayer* inPlayer, EEUnit* inCitizen, unsigned long inAttacker)
 {
-    static unsigned long sLast[64];
+    unsigned long* sLast = sMilitiaLast;
     EEComputerPlayer* thePlayer = inPlayer;
     unsigned long theID = thePlayer->mPlayerID < 64 ? thePlayer->mPlayerID : 63;
     if (sLast[theID] != 0 && gPhysics->mGameTime >= sLast[theID] && gPhysics->mGameTime - sLast[theID] < kMilitiaMs)
@@ -254,7 +264,7 @@ static const unsigned long kNavalFleeMs = 4000;
 
 void EECPRMNavalFlee(EEComputerPlayer* inPlayer, EEUnit* inVictim, EEComplexUnit* inAttacker)
 {
-    static unsigned long sLast[64];
+    unsigned long* sLast = sNavalFleeLast;
     EEComputerPlayer* thePlayer = inPlayer;
     if (inAttacker == NULL || !(inAttacker->mHitPoints > 0))
         return;

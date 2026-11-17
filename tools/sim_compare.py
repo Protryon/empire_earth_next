@@ -19,7 +19,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / "harness"))
 import ai_trace  # noqa: E402
 
-WALL = {"wall", "wall_seconds", "wall_seconds_game"}
+WALL = {"wall", "wall_seconds", "wall_seconds_game", "wall_phases"}
 
 
 def strip(value):

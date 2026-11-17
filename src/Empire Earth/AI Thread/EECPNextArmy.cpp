@@ -343,6 +343,16 @@ static std::vector<EECPNextIncident> sNextIncidents[64];
 static long sNextIncidentID[64];
 static long sNextLossTime[64];
 
+void EECPNextArmyNewGame()
+{
+    for (long k = 0; k < 64; k++) {
+        sNextHits[k].clear();
+        sNextIncidents[k].clear();
+        sNextIncidentID[k] = 0;
+        sNextLossTime[k] = 0;
+    }
+}
+
 enum {
     kDoingIdle = 0, kDoingForage, kDoingHunt, kDoingFish, kDoingFarm, kDoingFood, kDoingWood, kDoingStone, kDoingGold,
     kDoingIron, kDoingBuild, kDoingFight, kDoingMove, kDoingOther,

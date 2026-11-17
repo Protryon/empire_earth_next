@@ -78,6 +78,24 @@ static long sLostNear[kMaxTracedPlayers][3];   // citizens lost by distance from
 static long sLostBy[kMaxTracedPlayers][3];     // citizens lost by their last attacker: a player's unit, a wild one (player 0), none
 static long sIncome[kMaxTracedPlayers][kResourceIron + 1];   // resources got since the last income line
 static long sSpend[kMaxTracedPlayers][8][5];                 // TEST ONLY: paid since the last spend line, by kind
+static unsigned long sNextHash = 0;                           // the game ms of the next sim hash line
+
+void EECPNewGame()
+{
+    memset(sNextStats, 0, sizeof(sNextStats));
+    memset(sNextProfile, 0, sizeof(sNextProfile));
+    memset(sProfileSum, 0, sizeof(sProfileSum));
+    memset(sProfileMax, 0, sizeof(sProfileMax));
+    memset(sProfileCount, 0, sizeof(sProfileCount));
+    memset(sLost, 0, sizeof(sLost));
+    memset(sLostNear, 0, sizeof(sLostNear));
+    memset(sLostBy, 0, sizeof(sLostBy));
+    memset(sIncome, 0, sizeof(sIncome));
+    memset(sSpend, 0, sizeof(sSpend));
+    sNextHash = 0;
+    EECPNextArmyNewGame();
+    EECPReflexesNewGame();
+}
 
 void EECPTraceInit()
 {
@@ -783,7 +801,6 @@ unsigned long EECPOutOfSynchChecksum()
 // what first (the units, the shared random seed, the input count, or the players' resources and AI state)
 void EECPTraceHash(unsigned long inTime)
 {
-    static unsigned long sNextHash = 0;
     if (!gCPTraceOn)
         return;
     if (sNextHash > inTime + 10000)
