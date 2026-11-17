@@ -311,15 +311,6 @@ struct Ask {
         }
         return theFacts;
     }
-    static bool BeamHidden(void* inAsk)
-    {
-        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(E(inAsk)->mUnit);
-        bool theCloaked = theUnit->mIsCloakable ? theUnit->mIsCloaked : false;
-        EEPlayer* thePlayer;
-        EEPlayer* theCurrent;
-        return theCloaked && (thePlayer = theUnit->mPlayer) != (theCurrent = gWorld.GetCurrentPlayer())
-            && theCurrent->mEnemies[thePlayer->mPlayerID] != 0;
-    }
     static void PlaceLinked(void* inAsk, const EeGe3DPoint* inPoint)
     {
         EEGraphicEffect* theLinked = E(inAsk)->mGraphicEffect->mLinkedEffect1;
@@ -340,12 +331,6 @@ struct Ask {
     {
         E(inAsk)->mUnitModel = E(inAsk)->mUnit->GetModel();
         return E(inAsk)->mUnitModel->LoadMedia();
-    }
-    static float UnitScale(void* inAsk) { return E(inAsk)->mUnit->mStats->GetScale(); }
-    static EeGeTransformation UnitLocation(void* inAsk)
-    {
-        const GETransformation& theLocation = E(inAsk)->mUnit->mComplexUnit->mPhysicalModel.GetLocation();
-        return *reinterpret_cast<const EeGeTransformation*>(&theLocation);
     }
     static float UnitModelRadius(void* inAsk) { return E(inAsk)->mUnitModel->mModels[0]->GetBoundingRadius(0); }
     static EeGfxUnitFrame UnitFrame(void* inAsk)
@@ -412,25 +397,7 @@ struct Ask {
         return gEffectManager->CreatePlacedEffect(thePoint, E(inAsk)->mGraphicEffect->mLinkedEffect1, NULL);
     }
     static void* TextureAt(void* inAsk, uint32_t inIndex) { return E(inAsk)->mGraphicObject->mTextures[inIndex]; }
-    // the nuclear explosion's place off the map: its tile's (EEE3DNuclearExplosion::SetUp, 0xf4524)
-    static EeGfxUnitTile UnitTile(void* inAsk)
-    {
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        return EeGfxUnitTile{theUnit->mTileNode != NULL, (float)theUnit->GetClass()->GetTileSize(),
-                             (float)(long)theUnit->mTileX, (float)(long)theUnit->mTileY};
-    }
     static float TerrainZ(void* inAsk, float inX, float inY) { return gWorld.mMap->mTerrainMesh.GetMeshZ(inX, inY); }
-    // the energy wave's unit is a cloaked enemy's (EEE3DEnergyWave::Queue, 0xee287; the port's R5a.3 test)
-    static bool UnitHidden(void* inAsk)
-    {
-        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
-        bool theCloaked = theUnit->mIsCloakable ? theUnit->mIsCloaked : false;
-        if (!theCloaked)
-            return false;
-        EEPlayer* thePlayer = theUnit->mPlayer;
-        EEPlayer* theCurrent = gWorld.GetCurrentPlayer();
-        return thePlayer != theCurrent && theCurrent->mEnemies[thePlayer->mPlayerID] != 0;
-    }
     static bool SpaceTile(void*, uint32_t inX, uint32_t inY)
     {
         return gWorld.mMap->mTerrainMesh.GetIsSpaceTile((unsigned long)inX, (unsigned long)inY);
@@ -498,11 +465,6 @@ struct Ask {
         *outOpen = theUnit->GetOpenFraction();
         return true;
     }
-    static EeGfxColor PlayerColor(void* inAsk)
-    {
-        const GEColor& theColor = E(inAsk)->mUnit->mComplexUnit->mPlayer->mColor;
-        return EeGfxColor{theColor.mRed, theColor.mGreen, theColor.mBlue};
-    }
     // the damage vent's vents (kind 5) and aims (0x38) on the unit's model at its animation (EEE3DDamageVent::Step,
     // 0xeae33)
     static void VentLists(void* inAsk)
@@ -512,13 +474,6 @@ struct Ask {
         EEComplexUnit* theComplex = theUnit->mComplexUnit;
         theAsk->mVentFrom = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 5);
         theAsk->mVentTo = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 0x38);
-    }
-    static EeGfxVentUnit VentUnit(void* inAsk)
-    {
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        return EeGfxVentUnit{(theComplex->mCommand ? theComplex->mCommand->mType : 0) == kActionDead,
-                             (float)theUnit->mStats->mMaxHitPoints};
     }
     // the vents' count; none on a model without both tag lists (the original read the first list's count through a
     // null pointer there: a crash the effects sweep met on seed 4, a unit without vents; no vent, no jet now)
@@ -572,7 +527,6 @@ struct Ask {
         return EeGfxFrames{(uint32_t)theObject->mStartFrames[inIndex], (uint32_t)theObject->mFrameTimes[inIndex],
                            (uint32_t)theObject->mFrameCounts[inIndex], (uint32_t)theObject->mLastFrames[inIndex]};
     }
-    static float UnitClassScale(void* inAsk) { return E(inAsk)->mUnit->GetClass()->GetScale(); }
     // the icon's set-up: the graphic effect's object loaded, then the one it replaces unloaded (EEE3DIcon::SetUp,
     // 0xf23e2: after the new load, so shared media stays loaded)
     static int32_t ReloadMedia(void* inAsk)
@@ -596,14 +550,6 @@ struct Ask {
                 theLocation.SetZ(theLocation.GetZ() + theUnit->GetComplexUnit()->GetEffectHeight(false));
         }
         return EeGe3DPoint{theLocation.mX, theLocation.mY, theLocation.mZ};
-    }
-    // the icon is not shown over an unbuilt market (EEE3DIcon::Queue, 0xf21e5)
-    static bool MarketUnbuilt(void* inAsk)
-    {
-        EEUnit* theOwner = E(inAsk)->mUnit;
-        EEComplexUnit* theUnit;
-        return theOwner && (theUnit = dynamic_cast<EEComplexUnit*>(theOwner)) != 0
-            && theUnit->mUnitClass->mUnitType == kUnitTypeMarketCP && !theUnit->mIsBuilt && !theUnit->IsFoundation();
     }
     static void QueueScreen(void* inAsk, uint32_t inIndex)
     {
@@ -775,15 +721,6 @@ struct Ask {
         return (int32_t)theResult;
     }
     static void* VolcanoModel(void* inAsk) { return E(inAsk)->mVolcanoModel; }
-    // the farm's (EEE3DFarm, 0xee5c0..0xf1327): its unit, the terrain, its first drop site's tile, its crop variant
-    // (the unit's mCloaked), the graphic's loops, the doppelgangers, the draw opacity, the scaled model
-    static EeGfxFarmUnit FarmUnit(void* inAsk)
-    {
-        EEUnit* theUnit = E(inAsk)->mUnit;
-        EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        return EeGfxFarmUnit{(int32_t)theUnit->GetTileX(), (int32_t)theUnit->GetTileY(),
-                             (int32_t)theUnit->GetClass()->GetTileSize(), theComplex->mIsBuilt, (int32_t)theComplex->mCloaked};
-    }
     static EeGfxFarmTerrain FarmTerrain(void*)
     {
         EeGfxFarmTerrain theTerrain;
@@ -1043,14 +980,6 @@ struct Ask {
         E(inAsk)->MoveToPoint(thePosition);
     }
     static void* PlaneModel(void* inAsk) { return E(inAsk)->mModel; }
-    static float SelectionSize(void* inAsk) { return E(inAsk)->mUnit->mUnitClass->mSelectionSize; }
-    // an attack's target belongs to another player, not player 0, the current player's enemy
-    static bool ConfirmEnemy(void* inAsk)
-    {
-        EEPlayer* thePlayer = E(inAsk)->mUnit->mPlayer;
-        EEPlayer* theCurrent = gWorld.GetCurrentPlayer();
-        return thePlayer != theCurrent && theCurrent->mEnemies[thePlayer->mPlayerID] != 0 && thePlayer->mPlayerID != 0;
-    }
     // the goal a state-0 confirmation shows: the last goal of the unit's goal queue as a location goal (on the tile
     // at the effect: blocked when the unit cannot stand there and its player sees it; forced; a move), else whether
     // its active goal unloads a transport (EEE3DCommandConfirmation::SetUp)
@@ -1186,13 +1115,11 @@ struct Ask {
             theEffect->mSound->Dereference();
     }
     static bool DrawBlood(void*) { return gDrawBlood; }
-    static bool HasComplex(void* inAsk) { return E(inAsk)->mUnit != NULL && E(inAsk)->mUnit->mComplexUnit != NULL; }
     static EeGe3DPoint DefaultPoint(void* inAsk)
     {
         const GE3DPoint& thePoint = E(inAsk)->mUnit->GetModel()->mDefaultPoint;
         return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
     }
-    static float StatsScale(void* inAsk) { return E(inAsk)->mUnit->mStats->mScale; }
     static bool TileBlocked(void*, int32_t inX, int32_t inY) { return gWorld.IsTileBlocked(inX, inY); }
     static EeGe3DPoint Wind(void*)
     {
@@ -1258,7 +1185,6 @@ struct Ask {
         thePoint.point = EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ};
         return thePoint;
     }
-    static int32_t MaxHitPoints(void* inAsk) { return (int32_t)E(inAsk)->mUnit->mStats->mMaxHitPoints; }
     static EeGe3DPoint UnitPoint(void* inAsk)
     {
         const GE3DPoint& thePoint = E(inAsk)->GetUnitLocation();
@@ -1307,11 +1233,6 @@ struct Ask {
                 theSelected = true;
         }
         return theSelected;
-    }
-    static bool IconsOwner(void* inAsk)
-    {
-        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
-        return theUnit->mPlayer == gWorld.GetCurrentPlayer() && theUnit->mIsBuilt;
     }
     static uint32_t GhostUnits(void*) { return (uint32_t)gWorld.GetNumGhostUnits(); }
     static EeGfx2DPoint GroundAt(void*, EeGe3DPoint inAt)
@@ -1915,6 +1836,16 @@ EeGfxGraphicFacts EEEffectFacts(EEGraphicEffect* inEffect, EEUnit* inUnit)
     return theFacts;
 }
 
+// the effect's unit for the world views (ee_gfx effect_views.rs; 0 while mUnit holds a saved id) and the current player
+static uint64_t EEEffectUnit(const EEEffect* inEffect)
+{
+    return inEffect->mUnitIsSavedID ? 0 : (uint64_t)(uintptr_t)inEffect->mUnit;
+}
+static uint64_t EEEffectPlayer()
+{
+    return (uint64_t)(uintptr_t)gWorld.GetCurrentPlayer();
+}
+
 // One operation by the kind's class: the 2D kinds' (ee_gfx effect_2d.rs) over EeGfxEffect2DHost, the 3D kinds'
 // (effect_rising.rs) over EeGfxEffect3DHost, both answered by Ask (their shared answers once); Load and Save read no
 // facts (during a load the unit is still its saved id: RepairPointers resolves it)
@@ -1927,16 +1858,16 @@ long EEEffect::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEf
     theAsk.mOp = inOp;
     theAsk.mArg = inArg;
     if (this->mIs2D) {
-        EeGfxEffect2DHost theHost = {&theAsk, Ask::BaseQueue2D, Ask::Push, Ask::OwnMedia, Ask::Frames, Ask::MoveToPoint,
-                                     Ask::PlaneModel, Ask::SelectionSize, Ask::ConfirmEnemy, Ask::ConfirmGoal,
-                                     Ask::ConfirmUnit, Ask::UnitLocation, Ask::TerrainZ, Ask::CommandTexture,
+        EeGfxEffect2DHost theHost = {&theAsk, EEEffectUnit(this), EEEffectPlayer(), Ask::BaseQueue2D, Ask::Push, Ask::OwnMedia, Ask::Frames, Ask::MoveToPoint,
+                                     Ask::PlaneModel, Ask::ConfirmGoal,
+                                     Ask::ConfirmUnit, Ask::TerrainZ, Ask::CommandTexture,
                                      Ask::SpawnPoint, Ask::Media, Ask::TextureAt, Ask::TagCount, Ask::TagPoint,
-                                     Ask::WeaponPoint, Ask::PartSound, Ask::DrawBlood, Ask::HasComplex, Ask::DefaultPoint,
-                                     Ask::StatsScale, Ask::TileBlocked, Ask::Wind, Ask::CreateParts, Ask::PartCount,
+                                     Ask::WeaponPoint, Ask::PartSound, Ask::DrawBlood, Ask::DefaultPoint,
+                                     Ask::TileBlocked, Ask::Wind, Ask::CreateParts, Ask::PartCount,
                                      Ask::Part, Ask::SetPart, Ask::PartFrames, Ask::PartTexture, Ask::PartsSnapshot,
-                                     Ask::PartFollow, Ask::MaxHitPoints, Ask::UnitPoint, Ask::Model, Ask::OrbitalCount,
+                                     Ask::PartFollow, Ask::UnitPoint, Ask::Model, Ask::OrbitalCount,
                                      Ask::Orbital, Ask::IconUnit, Ask::AreaEffect, Ask::AreaEffects, Ask::SetAreaEffects,
-                                     Ask::IconsSelected, Ask::IconsOwner, Ask::GhostUnits, Ask::GroundAt, Ask::GlowSetUp,
+                                     Ask::IconsSelected, Ask::GhostUnits, Ask::GroundAt, Ask::GlowSetUp,
                                      Ask::GlowTagName, Ask::GlowPlace, Ask::GlowPoint, Ask::GlowArea, Ask::GlowRows,
                                      Ask::PositionTick, Ask::ParticleGround};
         if (inFile != NULL)
@@ -1945,20 +1876,16 @@ long EEEffect::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEf
         EeGfxGraphicFacts theFacts = EEEffectFacts(this->mGraphicEffect, this->mUnit);
         return ee_gfx_effect2d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);
     }
-    EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
+    EeGfxEffect3DHost theHost = {&theAsk, EEEffectUnit(this), EEEffectPlayer(), Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
                                  Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
-                                 Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked,
-                                 Ask::ComplexPosition, Ask::UnitModelMedia, Ask::UnitScale, Ask::UnitLocation,
-                                 Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt, Ask::OrbitalCount,
+                                 Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::PlaceLinked,
+                                 Ask::ComplexPosition, Ask::UnitModelMedia, Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt, Ask::OrbitalCount,
                                  Ask::Orbital, Ask::Animation, Ask::AnimationSound, Ask::SpawnCount, Ask::SpawnAt,
-                                 Ask::Spawn, Ask::TextureAt, Ask::UnitTile, Ask::TerrainZ, Ask::UnitHidden,
-                                 Ask::SpaceTile, Ask::CreateLinked, Ask::WallGatePosts, Ask::WallPiece,
-                                 Ask::GateOpen, Ask::PlayerColor, Ask::VentLists, Ask::VentUnit, Ask::VentCount,
-                                 Ask::VentOffsets, Ask::VentPoints, Ask::Frames, Ask::UnitClassScale,
-                                 Ask::ReloadMedia, Ask::UnitRaisedPosition, Ask::MarketUnbuilt, Ask::QueueScreen,
+                                 Ask::Spawn, Ask::TextureAt, Ask::TerrainZ, Ask::SpaceTile, Ask::CreateLinked, Ask::WallGatePosts, Ask::WallPiece,
+                                 Ask::GateOpen, Ask::VentLists, Ask::VentCount,
+                                 Ask::VentOffsets, Ask::VentPoints, Ask::Frames, Ask::ReloadMedia, Ask::UnitRaisedPosition, Ask::QueueScreen,
                                  Ask::TracerEnds, Ask::TracerImpact, Ask::TracerHit, Ask::TracerSavedTarget,
-                                 Ask::TracerTargetID, Ask::VolcanoBuild, Ask::VolcanoModel, Ask::FarmUnit,
-                                 Ask::FarmTerrain, Ask::FarmDropSite, Ask::FarmSetVariant, Ask::FarmLoops,
+                                 Ask::TracerTargetID, Ask::VolcanoBuild, Ask::VolcanoModel, Ask::FarmTerrain, Ask::FarmDropSite, Ask::FarmSetVariant, Ask::FarmLoops,
                                  Ask::FarmDoppelgangerAny, Ask::FarmDoppelganger, Ask::FarmOpacity, Ask::SetScaledModel,
                                  Ask::GroundPoint, Ask::SmokeUnit, Ask::SmokeTagPoint, Ask::SmokePlace, kStormHost,
                                  Ask::RainMedia, Ask::RainSounds, Ask::ParticleTick, Ask::ParticleGround,

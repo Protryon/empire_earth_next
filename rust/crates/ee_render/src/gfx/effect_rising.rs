@@ -41,6 +41,7 @@ use crate::gfx::effect_tracer::{tracer, tracer_file, EeGfxTracerEnds, EE_GFX_EFF
 use crate::gfx::effect_vent::{
     damage_vent, EeGfxFrames, EeGfxVentPoints, EeGfxVentUnit, EE_GFX_EFFECT_KIND_DAMAGE_VENT,
 };
+use crate::gfx::effect_views;
 use crate::gfx::effect_volcano::{volcano, volcano_file, EE_GFX_EFFECT_KIND_VOLCANO};
 use crate::gfx::effect_wall::{wall, wall_file, EE_GFX_EFFECT_KIND_ENERGY_WALL};
 use crate::gfx::effect_weather::{is_weather, weather, weather_file};
@@ -153,6 +154,10 @@ pub struct EeGfxGraphicFacts {
 #[repr(C)]
 pub struct EeGfxEffect3DHost {
     pub context: *mut c_void,
+    /// the effect's unit (`mUnit`, an `EEUnit*`; 0: none, or its saved id before RepairPointers) and the
+    /// current player (`gWorld.GetCurrentPlayer()`): ee_gfx effect_views.rs reads them through the world views
+    pub unit: u64,
+    pub player: u64,
     /// the unit's position (`EEUnit::GetPosition`)
     pub unit_position: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
     /// the graphic effect's first model's height in its bounding box at frame 0
@@ -183,18 +188,12 @@ pub struct EeGfxEffect3DHost {
     pub beam_start: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
     /// the citizen beam's unit: a complex unit, its animation and frame
     pub beam_unit: extern "C" fn(context: *mut c_void) -> EeGfxBeamUnit,
-    /// the beam's unit is cloaked, another player's and the current player's enemy
-    pub beam_hidden: extern "C" fn(context: *mut c_void) -> bool,
     /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`), when there is one
     pub place_linked: extern "C" fn(context: *mut c_void, point: *const Ge3DPoint),
     /// the unit's complex unit's position (`mComplexUnit->GetPosition`)
     pub complex_position: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
     /// the unit's model is the effect's second model (`mUnit->GetModel()`); its `LoadMedia`
     pub unit_model_media: extern "C" fn(context: *mut c_void) -> i32,
-    /// the unit's stats' scale (`mUnit->mStats->GetScale()`)
-    pub unit_scale: extern "C" fn(context: *mut c_void) -> f32,
-    /// the unit's complex unit's physical model's location
-    pub unit_location: extern "C" fn(context: *mut c_void) -> GeTransformation,
     /// the unit's model's first model's bounding radius at frame 0
     pub unit_model_radius: extern "C" fn(context: *mut c_void) -> f32,
     /// the unit's complex unit's physical model's frame and animation
@@ -218,12 +217,8 @@ pub struct EeGfxEffect3DHost {
     pub spawn: extern "C" fn(context: *mut c_void, point: *const Ge3DPoint) -> i32,
     /// the graphic object's texture `index` (`mTextures[index]`)
     pub texture_at: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxModel,
-    /// the unit's tile facts (on the map, the class's tile size, the tile)
-    pub unit_tile: extern "C" fn(context: *mut c_void) -> EeGfxUnitTile,
     /// the terrain mesh's height at a point (`GetMeshZ`)
     pub terrain_z: extern "C" fn(context: *mut c_void, x: f32, y: f32) -> f32,
-    /// the unit's complex unit is cloaked, another player's and the current player's enemy
-    pub unit_hidden: extern "C" fn(context: *mut c_void) -> bool,
     /// the terrain mesh's tile is a space tile (`GetIsSpaceTile`)
     pub space_tile: extern "C" fn(context: *mut c_void, x: u32, y: u32) -> bool,
     /// the graphic effect's linked effect `index` (1..3) made through the entry point that made the effect (on its
@@ -235,12 +230,8 @@ pub struct EeGfxEffect3DHost {
     pub wall_piece: extern "C" fn(context: *mut c_void, x: i32, y: i32, z: *mut f32) -> bool,
     /// the unit's complex unit is a gate: how open it is into `open`
     pub gate_open: extern "C" fn(context: *mut c_void, open: *mut f32) -> bool,
-    /// the unit's complex unit's player's colour
-    pub player_color: extern "C" fn(context: *mut c_void) -> EeGfxColor,
     /// the damage vent's tag point lists (kinds 5 and 0x38 of the unit's model at its animation), kept for the call
     pub vent_lists: extern "C" fn(context: *mut c_void),
-    /// the damage vent's unit: its command is to die, its maximum hit points
-    pub vent_unit: extern "C" fn(context: *mut c_void) -> EeGfxVentUnit,
     /// the number of vents (kind 5 tag points; after `vent_lists`)
     pub vent_count: extern "C" fn(context: *mut c_void) -> u32,
     /// vent `tag`'s and its aim's offsets at frame 0 into `points[0]` and `points[1]` (after `vent_lists`)
@@ -249,15 +240,11 @@ pub struct EeGfxEffect3DHost {
     pub vent_points: extern "C" fn(context: *mut c_void, tag: i32) -> EeGfxVentPoints,
     /// the kept graphic object's animation `index`
     pub frames: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxFrames,
-    /// the unit's class's scale (`GetClass()->GetScale()`)
-    pub unit_class_scale: extern "C" fn(context: *mut c_void) -> f32,
     /// the graphic object is the graphic effect's; its `LoadMedia`, then the media of the one it replaces unloaded
     pub reload_media: extern "C" fn(context: *mut c_void) -> i32,
     /// the unit's position, raised by its complex unit's effect height while on the map and alive (the origin
     /// without a unit)
     pub unit_raised_position: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
-    /// the unit is an unbuilt market (a complex unit of type market, not built, not a foundation)
-    pub market_unbuilt: extern "C" fn(context: *mut c_void) -> bool,
     /// push the effect into render queue `index` under the graphic effect's object's texture of the preferences'
     /// screen (none without an object)
     pub queue_screen: extern "C" fn(context: *mut c_void, index: u32),
@@ -281,8 +268,6 @@ pub struct EeGfxEffect3DHost {
         extern "C" fn(context: *mut c_void, points: *mut Ge3DPoint, heights: *mut f32, count: u32) -> i32,
     /// the volcano's model
     pub volcano_model: extern "C" fn(context: *mut c_void) -> EeGfxModel,
-    /// the farm's unit: its tile, size, built state and crop variant (`mCloaked`)
-    pub farm_unit: extern "C" fn(context: *mut c_void) -> EeGfxFarmUnit,
     /// the terrain the farm's meshes follow (`gWorld.mMap->mTerrainMesh`)
     pub farm_terrain: extern "C" fn(context: *mut c_void) -> EeGfxFarmTerrain,
     /// the tile of the farm's first drop site (`EEGetFarmDropSites`); false when it has none
@@ -613,7 +598,8 @@ impl Effect3DHost for &EeGfxEffect3DHost {
         (self.beam_unit)(self.context)
     }
     fn beam_hidden(&mut self) -> bool {
-        (self.beam_hidden)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::beam_hidden(self.unit, self.player) }
     }
     fn place_linked(&mut self, point: &Ge3DPoint) {
         (self.place_linked)(self.context, point)
@@ -625,10 +611,12 @@ impl Effect3DHost for &EeGfxEffect3DHost {
         (self.unit_model_media)(self.context)
     }
     fn unit_scale(&mut self) -> f32 {
-        (self.unit_scale)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::unit_scale(self.unit) }
     }
     fn unit_location(&mut self) -> GeTransformation {
-        (self.unit_location)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::unit_location(self.unit) }
     }
     fn unit_model_radius(&mut self) -> f32 {
         (self.unit_model_radius)(self.context)
@@ -664,13 +652,15 @@ impl Effect3DHost for &EeGfxEffect3DHost {
         (self.texture_at)(self.context, index)
     }
     fn unit_tile(&mut self) -> EeGfxUnitTile {
-        (self.unit_tile)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::unit_tile(self.unit) }
     }
     fn terrain_z(&mut self, x: f32, y: f32) -> f32 {
         (self.terrain_z)(self.context, x, y)
     }
     fn unit_hidden(&mut self) -> bool {
-        (self.unit_hidden)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::unit_hidden(self.unit, self.player) }
     }
     fn space_tile(&mut self, x: u32, y: u32) -> bool {
         (self.space_tile)(self.context, x, y)
@@ -691,13 +681,15 @@ impl Effect3DHost for &EeGfxEffect3DHost {
         (self.gate_open)(self.context, &mut open).then_some(open)
     }
     fn player_color(&mut self) -> EeGfxColor {
-        (self.player_color)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::player_color(self.unit) }
     }
     fn vent_lists(&mut self) {
         (self.vent_lists)(self.context)
     }
     fn vent_unit(&mut self) -> EeGfxVentUnit {
-        (self.vent_unit)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::vent_unit(self.unit) }
     }
     fn vent_count(&mut self) -> u32 {
         (self.vent_count)(self.context)
@@ -714,7 +706,8 @@ impl Effect3DHost for &EeGfxEffect3DHost {
         (self.frames)(self.context, index)
     }
     fn unit_class_scale(&mut self) -> f32 {
-        (self.unit_class_scale)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::unit_class_scale(self.unit) }
     }
     fn reload_media(&mut self) -> i32 {
         (self.reload_media)(self.context)
@@ -723,7 +716,8 @@ impl Effect3DHost for &EeGfxEffect3DHost {
         (self.unit_raised_position)(self.context)
     }
     fn market_unbuilt(&mut self) -> bool {
-        (self.market_unbuilt)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::market_unbuilt(self.unit) }
     }
     fn queue_screen(&mut self, index: u32) {
         (self.queue_screen)(self.context, index)
@@ -750,7 +744,8 @@ impl Effect3DHost for &EeGfxEffect3DHost {
         (self.volcano_model)(self.context)
     }
     fn farm_unit(&mut self) -> EeGfxFarmUnit {
-        (self.farm_unit)(self.context)
+        // SAFETY: the effect steps with the world held; its unit is live while the effect references it
+        unsafe { effect_views::farm_unit(self.unit) }
     }
     fn farm_terrain(&mut self) -> EeGfxFarmTerrain {
         (self.farm_terrain)(self.context)

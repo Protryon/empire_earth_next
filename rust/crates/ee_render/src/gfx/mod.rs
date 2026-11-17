@@ -62,6 +62,7 @@ pub mod effect_tracer;
 pub mod effect_trail;
 pub mod effect_vent;
 pub mod effect_volcano;
+pub mod effect_views;
 pub mod effect_vortex;
 pub mod effect_wall;
 pub mod effect_weather;
