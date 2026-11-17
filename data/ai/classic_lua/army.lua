@@ -1847,7 +1847,15 @@ local function assign_sea_task(view, memory, g)
         body = memory.t.largest_sea or 0
     end
     local why = nil
-    if body ~= 0 and T.random_k() < 250 then
+    -- New (AI_RESEARCH 8.96): the enemy's fishing grounds on this water first (sea.lua fishing_place)
+    if body ~= 0 and not g.spaceship then
+        local fx, fy = require("classic_lua.sea").fishing_place(memory, g.enemy, body)
+        if fx ~= nil then
+            set_place(g, "attack", fx, fy, 0, g.enemy)
+            why = "fishing"
+        end
+    end
+    if why == nil and body ~= 0 and T.random_k() < 250 then
         local list = {}
         for _, m in ipairs(ai.memory{player = g.enemy}) do
             if not m.building then
