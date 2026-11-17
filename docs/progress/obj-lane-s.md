@@ -11,6 +11,44 @@ state. Lane V (`rust-worldviews`, `ee_sim::world`) builds the typed views; the m
   on only under `EE_SGVW`). The goldens and how to check them: "SGVW" below.
 - The measure of the cases the move takes (below), and the read paths and their locks ("Threads").
 
+**Round 2, the move (after V, origin/rust f63bd44ba merged).** What the measure found plain and the views can
+answer moved; the C++ cases are deleted. Net C++ -33 (`EESEUnit.cpp` -18, `EESERBUnitTypes.cpp` -5, `EEScreens.cpp`
+-14, `EEWorldLayout.cpp` +4); Rust +133 net in the touched files plus `editor_world.rs` (238 lines with its tests).
+
+- **The editor** (`ee_game screens/editor_world.rs`): `ee_screenscpp_sepl`'s `NUM_PLAYERS`, `PLAYER_EXISTS`,
+  `IS_COMPUTER`, `ENEMY` and `PLAYER_GET`'s `PV_ID`, and `ee_screenscpp_seun`'s `CLASS_COUNT` and `CLASS` (the
+  class table's placement flags) are answered from `WorldView`, `PlayerView` and `ClassView` inside the traced host
+  wrapper every editor tab host goes through (`editor_world::host`); a token per op, no lock.
+- **The read view** (`game_view_ffi.rs world_view`): the `WORLD` group's ghost count, current player, game speed,
+  cinematic, user pause, player count, current index, team lock and cheats; the `PLAYER` group's presence, observer
+  mode, chat type and colour. The C++ fill keeps the camera's mode and zoom, the game options (lock speed, scenario
+  game), the world table's speeds, the main game form's hot key mode and the selected group's airport loop.
+- **V's API, added** (`ee_sim::world`): `EeWorldLayout.world_teams_locked`, `world_address` (`&gWorld`),
+  `unit_class_table` (`&gUnitClassTable`), `player_computer_player`; `WorldView::global`, `teams_locked`,
+  `PlayerView::has_computer_player`, `ClassView::count`, `ClassView::by_index`; a unit test over fakes.
+- **New coverage first**: `fixture_game.py --view-check` (the game speed, the camera's perspective, the UI mode's
+  cancel, the diplomacy, in-game options and chat forms) and its golden `tools/sgvw/tour_view.txt`, recorded on the
+  unmodified tree (two seeded runs identical) before the move.
+
+**Not moved, and why** (each needs more than the views have, or no session reaches it):
+
+- Read-and-write cases whose C++ body serves the set too: `WORLD_GET`/`WORLD_SET` (`SeplWorld`), `PLAYER_GET`'s
+  caps and shared LOS (`SeplPlayer`): answering the get in Rust frees no C++ line.
+- `PLAYER_GET`'s epochs, `LOAD_THREAD`, `FILL_TECHS`, `TECH_TYPES`, `PLACE_INFO`/`START_BUILD`'s node (the tech tree:
+  no view), `PV_AI`/`PV_CITIZENS` (`EEComputerPlayer`), the game options' fields (no options view), `CARGO_COUNT`
+  (the editor form's selection).
+- The player texts (`GetName`, `mCivilization.mName`: `UWideString`s, no text accessor), the hot keys' snapshot, the
+  diplomacy record, the post-game records (the statistics), the three host reads (`MG_SELECTED_COMMAND`,
+  `MG_DIALOG_SHOWN`, `DSU_SOUND`), `PICK`, `HOLD_GATE`, `DELETE_SELECTION`: the snapshot and the diplomacy record
+  are now reached (`--view-check`: `DP` lines; the hot keys still are not), but each needs view members not in V
+  (the selected group's contents, goal state kinds, the statistics, the class's sound pointers) and moves with them.
+
+**Gates (round 2)**: both builds 0/0 (EE-AOC 734, EE-SIM 735 inputs); Rust gate PASS (4,391 tests); the editor gate
+PASS 14,448 and the civilization gate PASS 4,062; oracle seeds 2-3 identical; SGVW equal to every golden (editor
+25,136 lines; tour 94; tour with `--view-check` 156, twice); the tour (`RESULT PASS tour`, F3 ok, `VIEW CHECK PASS`,
+0 MISSING direct lookups), the orders game (`BOX SELECT PASS`, `ORDERS PASS`, `RESULT PASS random-game`), all
+through `slot.py`. Not run: the LAN game, the four capture profiles, oracle seeds 4-7 (no simulation code changed).
+
 ## SGVW
 
 Recorded on the unmodified C++ (this branch's TEST ONLY hooks only), two runs each:
@@ -21,8 +59,10 @@ Recorded on the unmodified C++ (this branch's TEST ONLY hooks only), two runs ea
 | the fixture tour (`slot.py run -- fixture_game.py --exercise tour --play-seconds 60 --input-check`) | 94 | identical once the CT count's answer is masked (`TIMED`: `V 377`, the session's `GetNumberOfCTsProcessedInPhysics`, a clock) | `tools/sgvw/tour.txt` (exact or `--set`) |
 | the orders game (`--exercise random-game --orders --box-select`) | 74 | one run: nothing the tour does not read | none |
 
-Check after the move: `python -I tools/sgvw.py editor OUT` then `compare tools/sgvw/editor.txt OUT`; a tour with
-`EE_SGVW=<abs path>` then `compare tools/sgvw/tour.txt OUT` (`--set` if a timing change reorders the menu reads).
+Check: `python -I tools/sgvw.py editor OUT` then `compare tools/sgvw/editor.txt OUT`; a tour with
+`EE_SGVW=<abs path>` then `compare tools/sgvw/tour.txt OUT`, and with `--view-check --seed 7` against
+`tools/sgvw/tour_view.txt` (`--set` if a timing change reorders the menu reads). The CT count and the version text
+(the build's commit count) are masked.
 
 **What the goldens cover.** The editor gate reaches 32 of the 35 editor world ops (`sgvw.rs EDITOR_WORLD_OPS`;
 `E` lines; the classes op alone 15,264 times, `PLAYER_GET`/`PLAYER_SET` 1,792/1,578, `ENEMY`/`SET_STANCE` 1,440
