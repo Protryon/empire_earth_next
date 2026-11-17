@@ -2607,6 +2607,140 @@ struct EeGfxDrawnHost {
   bool (*model_in_view)(void *context, float x, float y);
 };
 
+/// `EERenderShadow` (ee/EERenderLists.h), field for field (the C++ static_asserts every offset).
+struct EeGfxFillObject {
+  float location[3];
+  /// `EEGraphicObject*` (the C++ sets it before the fill)
+  uint64_t object;
+  float model_scale;
+  float selection_size;
+  float scale;
+  float f1c;
+  float health;
+  float opacity;
+  float fraction;
+  unsigned long model_index;
+  unsigned long current_frame;
+  unsigned long next_frame;
+  bool is_fogged;
+  uint8_t gap[3];
+};
+
+/// The frame's values the fill reads (`EERenderFrameInfo` and the render globals).
+struct EeGfxFillFrame {
+  /// `EERenderFrameInfo::mYaw`
+  float yaw;
+  /// `gFreeCamera`
+  bool free_camera;
+  /// the objects' sway clock (`sSwayClock`)
+  uint32_t sway_clock;
+  /// the current player (`gWorld.GetCurrentPlayer()`), the world player (`gWorld.mPlayers[0]`) and the map
+  uint64_t player;
+  uint64_t world_player;
+  uint64_t map;
+  /// `gU4E9230`: the rectangle's picked unit ids
+  const unsigned long *picked;
+  size_t picked_count;
+  /// `EERenderFrameInfo::mPickedUnit` (the unit under the pointer, 0: none)
+  uint64_t pointed;
+  /// `gMusicFollowsBattle`, `gCollisionSphereMode`
+  bool music_follows_battle;
+  bool collision_spheres;
+  /// `gRenderEnvironment.mSeaLevel`, `gSpaceTurretHeight`, `gSpaceStationHeight`
+  float sea_level;
+  float space_turret_height;
+  float space_station_height;
+};
+
+/// `EERenderUnit`'s head (ee/EERenderLists.h): every member but the vectors and the name, which follow it (the C++
+/// static_asserts every offset).
+struct EeGfxFillUnit {
+  EeGeTransformation transformation;
+  float player_color[3];
+  float tint_color[3];
+  /// `EEUnitClass*`, `EEGraphicObject*` twice (the C++ sets `source` before the fill)
+  uint64_t info;
+  uint64_t source;
+  uint64_t source2;
+  float scale;
+  float selection_size;
+  float shadow_scale;
+  float ff4;
+  float ground_z;
+  float opacity;
+  float health;
+  float fraction;
+  float sub_model_offset_scale;
+  float fog_scale;
+  long category;
+  unsigned long unit_class_index;
+  long l118;
+  long command_type;
+  long current_research;
+  long animation;
+  long grid_size;
+  unsigned long current_frame;
+  unsigned long next_frame;
+  long l134;
+  unsigned long unit_id;
+  long player_id;
+  unsigned long area_effect_strength;
+  bool can_place;
+  bool is_fogged;
+  bool is_tinted;
+  bool has_sub_model_offset;
+  bool second_full_opacity;
+};
+
+/// A morale area effect's strength.
+struct EeGfxFillMorale {
+  bool found;
+  unsigned long strength;
+};
+
+/// A point the host answers (`found` false: none).
+struct EeGfxFillPoint {
+  bool found;
+  float point[3];
+};
+
+/// The C++'s [`FillHost`]: its context and the calls.
+struct EeGfxFillHost {
+  void *context;
+  float (*mesh_z)(void*, float, float);
+  uint64_t (*model_frames)(void*, uint64_t, uint64_t);
+  bool (*water_tile)(void*, long, long);
+  bool (*valid_tile)(void*, long, long);
+  float (*ground_z)(void*, float, float, float);
+  float (*physical_scale)(void*, uint64_t);
+  unsigned long (*physical_frame)(void*, uint64_t);
+  EeGfxColor (*tint)(void*, uint64_t);
+  bool (*side_part)(void*, uint64_t);
+  bool (*land_building)(void*, uint64_t);
+  void (*ground_location)(void*, uint64_t, float*);
+  bool (*group_contains)(void*, uint64_t, uint64_t);
+  void (*parts)(void*, EeGfxFillUnit*, uint64_t);
+  void (*bars_resize)(void*, EeGfxFillUnit*, size_t);
+  void (*bars_set)(void*, EeGfxFillUnit*, size_t, float);
+  void (*bars_clear)(void*, EeGfxFillUnit*);
+  void (*name_clear)(void*, EeGfxFillUnit*);
+  void (*name_from_stats)(void*, EeGfxFillUnit*, uint64_t);
+  void (*select)(void*, EeGfxFillUnit*);
+  void (*point_at)(void*, EeGfxFillUnit*);
+  void (*label)(void*, EeGfxFillUnit*, uint64_t);
+  EeGfxFillMorale (*morale)(void*, uint64_t);
+  uint64_t (*scaffolding)(void*, long, uint64_t);
+  uint64_t (*unit)(void*, long);
+  EeGfxFillPoint (*waypoint)(void*, uint64_t, long, long);
+};
+
+/// `FillUnitFields`' answers from the frame: the fighting count it adds to and whether the priest tower's circle is
+/// drawn.
+struct EeGfxFillUnitResult {
+  float fighting;
+  bool circle;
+};
+
 /// The player `Rebuild` places markers for.
 struct EeGfxGoalPlayer {
   /// its epoch is Atomic - WW2 or later
@@ -4211,6 +4345,26 @@ EeGfxColor ee_gfx_capture_waypoint_tint(int32_t carrier_id);
 
 /// `FillRenderLists`' music intensity.
 uint32_t ee_gfx_capture_music_intensity(uint32_t current, float fighting, float count);
+
+/// `FillObjectFields` (EERenderObject.cpp) through Rust.
+///
+/// # Safety
+/// The caller holds the world (the graphics thread under the world's read lock); `unit` is a live unit, the pointers
+/// are valid.
+bool ee_gfx_fill_object_fields(uint64_t unit,
+                               EeGfxFillObject *out,
+                               const EeGfxFillFrame *frame,
+                               EeGeTransformation *transformation,
+                               const EeGfxFillHost *host);
+
+/// `FillUnitFields` (EERenderObject.cpp) through Rust.
+///
+/// # Safety
+/// As [`ee_gfx_fill_object_fields`]; `out` is the head of an `EERenderUnit`.
+EeGfxFillUnitResult ee_gfx_fill_unit_fields(uint64_t unit,
+                                            EeGfxFillUnit *out,
+                                            const EeGfxFillFrame *frame,
+                                            const EeGfxFillHost *host);
 
 /// `EEGraphicalGoalManager`'s constructor: no markers.
 EeGfxGoalMarkers *ee_gfx_goals_new();

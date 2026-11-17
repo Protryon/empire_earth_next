@@ -142,6 +142,8 @@ void EEWorldLayoutRegister()
     theLayout.tile_ai_value = offsetof(EETile, mAIValue);
     theLayout.unit_node_unit = offsetof(RTSTUnitList, mUnit);
     theLayout.unit_node_next = offsetof(RTSTUnitList, mNext);
+    theLayout.player_viewed_unit = offsetof(EEPlayer, mViewedUnit);
+    theLayout.player_selected_viewed_unit = offsetof(EEPlayer, mSelectedViewedUnit);
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }

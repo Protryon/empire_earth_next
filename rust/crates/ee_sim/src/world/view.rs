@@ -724,6 +724,16 @@ impl<'t> PlayerView<'t> {
         // SAFETY: a live player's pointer member
         unsafe { pointer(self.object, layout().player_selected_group) as u64 }
     }
+    /// `mViewedUnit`'s handle (an `RTSUnit*`, 0: none)
+    pub fn viewed_unit_handle(&self) -> u64 {
+        // SAFETY: a live player's pointer member
+        unsafe { pointer(self.object, layout().player_viewed_unit) as u64 }
+    }
+    /// `mSelectedViewedUnit`'s handle (an `RTSUnit*`, 0: none)
+    pub fn selected_viewed_unit_handle(&self) -> u64 {
+        // SAFETY: a live player's pointer member
+        unsafe { pointer(self.object, layout().player_selected_viewed_unit) as u64 }
+    }
     /// `mEnemies[player]` (non-zero: at war; 0 past the table)
     pub fn enemy(&self, player: usize) -> u64 {
         let enemies: [c_ulong; 17] = crate::world_field!(self.saved(), mEnemies);

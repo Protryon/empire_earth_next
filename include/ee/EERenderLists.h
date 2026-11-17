@@ -19,59 +19,58 @@ class EEUnitClass;
 class RTSRenderObject;
 
 
-// one drawn unit (0x148 bytes; ctor 0x1118e9, dtor 0x111997): 0x200 of them in EERenderLists
-// (implicit ctor: GETransformation's, then GEColor's three fld1 twice, the vectors, the name)
+// one drawn unit (the original's 0x148 bytes; ctor 0x1118e9, dtor 0x111997): 0x200 of them in EERenderLists
+// (implicit ctor: GETransformation's, then GEColor's three fld1 twice, the vectors, the name). Port (Lane R): the
+// members ee_gfx fill.rs writes first, the vectors and the name after them
 struct EERenderUnit {
-    GETransformation mTransformation;       // +0x00 (the shadows read its position)
-    GEColor mPlayerColor;                   // +0x40 (EEGraphicObject::SetGroupColor takes its address with the part)
-    GEColor mTintColor;                     // +0x4c (class 0x104: the model's material 0 colour)
-
-    std::vector<float> mHealthBars;         // +0x58 (the extra bars' fractions: EEROUnits::DrawUnitBars)
-    // the turning parts (EEROUnits::DrawUnitModel): yaw angles for mTurretModels's models, roll for mOrbitalModels's, pitch for mWheelModels's
-    std::vector<float> mTurretAngles;       // +0x68
-    std::vector<GEModel*> mTurretModels;    // +0x78
-    std::vector<float> mOrbitalAngles;      // +0x88
-    std::vector<GEModel*> mOrbitalModels;   // +0x98
-    std::vector<float> mWheelAngles;        // +0xa8
-    std::vector<GEModel*> mWheelModels;     // +0xb8
-    UWideString mName;                      // +0xc8 (0x14 bytes)
-
-    EEUnitClass* mInfo;                     // +0xdc (its +0x178 ring size, +0x2d0 bit 0, Virtual54)
-
-    EEGraphicObject* mSource;               // +0xe0 (its models, shadow model, bar offset)
-    EEGraphicObject* mSource2;              // +0xe4 (UnloadRenderUnits unloads it when set)
-    float mScale;                           // +0xe8 (the shadow's size)
-    float mSelectionSize;                   // +0xec (> 0: the selection ring is drawn)
-    float mShadowScale;                     // +0xf0 (the shadow's opacity; > 0: drawn)
-    float mFF4;                             // +0xf4 (the class's +0x170: fld/fstp, FillDoppelgangerUnit)
-    float mGroundZ;                         // +0xf8
-    float mOpacity;                         // +0xfc
-    float mHealth;                          // +0x100 (>= 0: the health bar's fraction)
-    float mFraction;                        // +0x104 (the frame fraction, when gInterpolateFrames)
-    float mSubModelOffsetScale;             // +0x108 (scales sub model 0's internal offset)
-    float mFogScale;                        // +0x10c (the fog band's start: kFogDepth times it before the centre)
-    long mCategory;                         // +0x110 (10: no shadow; 0/1: no ring)
-    unsigned long mUnitClassIndex;          // +0x114 (into gUnitClassTable)
-    long mL118;                             // +0x118
-    long mCommandType;                      // +0x11c
-    long mCurrentResearch;                  // +0x120
-    long mAnimation;                        // +0x124 (4, 5: no ring)
-    long mGridSize;                         // +0x128 (the footprint grid's cells per side: EEROUnits::DrawPlacement)
-    unsigned long mCurrentFrame;            // +0x12c
-    unsigned long mNextFrame;               // +0x130
-    long mL134;                             // +0x134
-    unsigned long mUnitId;                  // +0x138 (class 0x33a: the unit whose +0x3c decides the opacity)
-    long mPlayerID;                         // +0x13c
-    unsigned long mAreaEffectStrength;      // +0x140 (the ring's highlighted segments)
-    bool mCanPlace;                         // +0x144 (EEROUnits::DrawPlacement: drawn by DrawUnitModel without the fog pass)
-    bool mIsFogged;                         // +0x145
-    bool mIsTinted;                         // +0x146
-
-    bool mHasSubModelOffset;                // +0x147 (sub model 0 is offset against its internal transform)
+    // the head: ee_gfx fill.rs's EeGfxFillUnit, member for member (EERenderObject.cpp static_asserts the offsets)
+    GETransformation mTransformation;       // (the shadows read its position)
+    GEColor mPlayerColor;                   // (EEGraphicObject::SetGroupColor takes its address with the part)
+    GEColor mTintColor;                     // (class 0x104: the model's material 0 colour)
+    EEUnitClass* mInfo;                     // (its ring size, Virtual54)
+    EEGraphicObject* mSource;               // (its models, shadow model, bar offset)
+    EEGraphicObject* mSource2;              // (UnloadRenderUnits unloads it when set)
+    float mScale;                           // (the shadow's size)
+    float mSelectionSize;                   // (> 0: the selection ring is drawn)
+    float mShadowScale;                     // (the shadow's opacity; > 0: drawn)
+    float mFF4;                             // (the class's +0x170: fld/fstp, FillDoppelgangerUnit)
+    float mGroundZ;
+    float mOpacity;
+    float mHealth;                          // (>= 0: the health bar's fraction)
+    float mFraction;                        // (the frame fraction, when gInterpolateFrames)
+    float mSubModelOffsetScale;             // (scales sub model 0's internal offset)
+    float mFogScale;                        // (the fog band's start: kFogDepth times it before the centre)
+    long mCategory;                         // (10: no shadow; 0/1: no ring)
+    unsigned long mUnitClassIndex;          // (into gUnitClassTable)
+    long mL118;
+    long mCommandType;
+    long mCurrentResearch;
+    long mAnimation;                        // (4, 5: no ring)
+    long mGridSize;                         // (the footprint grid's cells per side: EEROUnits::DrawPlacement)
+    unsigned long mCurrentFrame;
+    unsigned long mNextFrame;
+    long mL134;
+    unsigned long mUnitId;                  // (class 0x33a: the unit whose +0x3c decides the opacity)
+    long mPlayerID;
+    unsigned long mAreaEffectStrength;      // (the ring's highlighted segments)
+    bool mCanPlace;                         // (EEROUnits::DrawPlacement: drawn by DrawUnitModel without the fog pass)
+    bool mIsFogged;
+    bool mIsTinted;
+    bool mHasSubModelOffset;                // (sub model 0 is offset against its internal transform)
     // port (R5a.3; past the original record): a robotic farm's second model is drawn opaque (its unit gone or at
     // 1 hp). FillRenderLists takes it under the world's lock; EEROUnits::DrawUnitModel read the live unit for it
     bool mSecondFullOpacity;
 
+    // the C++ members (the original record's +0x58..+0xdc; port: after the head)
+    std::vector<float> mHealthBars;         // (the extra bars' fractions: EEROUnits::DrawUnitBars)
+    // the turning parts (EEROUnits::DrawUnitModel): yaw angles for mTurretModels's models, roll for mOrbitalModels's, pitch for mWheelModels's
+    std::vector<float> mTurretAngles;
+    std::vector<GEModel*> mTurretModels;
+    std::vector<float> mOrbitalAngles;
+    std::vector<GEModel*> mOrbitalModels;
+    std::vector<float> mWheelAngles;
+    std::vector<GEModel*> mWheelModels;
+    UWideString mName;
 };
 
 // an element of EERenderLists::mGhostRecords (0x420 bytes; its implicit dtor runs EERenderUnit's) PLACEHOLDER

@@ -116,6 +116,10 @@ pub struct EeWorldLayout {
     /// `mUnit` (an `EEUnit*`), `mNext`
     pub unit_node_unit: u64,
     pub unit_node_next: u64,
+    // ---- EEPlayer (the renderer's reads, Lane R)
+    /// `mViewedUnit`, `mSelectedViewedUnit` (`RTSUnit*`)
+    pub player_viewed_unit: u64,
+    pub player_selected_viewed_unit: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

@@ -623,6 +623,9 @@ struct EeWorldLayout {
   /// `mUnit` (an `EEUnit*`), `mNext`
   uint64_t unit_node_unit;
   uint64_t unit_node_next;
+  /// `mViewedUnit`, `mSelectedViewedUnit` (`RTSUnit*`)
+  uint64_t player_viewed_unit;
+  uint64_t player_selected_viewed_unit;
 };
 
 /// The check's counts and digest.

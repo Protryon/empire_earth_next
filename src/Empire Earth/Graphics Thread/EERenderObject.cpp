@@ -545,6 +545,65 @@ float EEGhostUnit::GetScale()
     return this->mPlayer->mUnitClassUpgrades[this->mUnitClass->GetUnitType()]->GetScale();
 }
 
+// EERenderShadow is ee_gfx fill.rs's EeGfxFillObject, field for field
+static_assert(sizeof(EERenderShadow) == sizeof(EeGfxFillObject), "the render shadow's mirror");
+static_assert(offsetof(EERenderShadow, mLocation) == offsetof(EeGfxFillObject, location)
+              && offsetof(EERenderShadow, mObject) == offsetof(EeGfxFillObject, object)
+              && offsetof(EERenderShadow, mModelScale) == offsetof(EeGfxFillObject, model_scale)
+              && offsetof(EERenderShadow, mSelectionSize) == offsetof(EeGfxFillObject, selection_size)
+              && offsetof(EERenderShadow, mScale) == offsetof(EeGfxFillObject, scale)
+              && offsetof(EERenderShadow, mF1C) == offsetof(EeGfxFillObject, f1c)
+              && offsetof(EERenderShadow, mHealth) == offsetof(EeGfxFillObject, health)
+              && offsetof(EERenderShadow, mOpacity) == offsetof(EeGfxFillObject, opacity)
+              && offsetof(EERenderShadow, mFraction) == offsetof(EeGfxFillObject, fraction)
+              && offsetof(EERenderShadow, mModelIndex) == offsetof(EeGfxFillObject, model_index)
+              && offsetof(EERenderShadow, mCurrentFrame) == offsetof(EeGfxFillObject, current_frame)
+              && offsetof(EERenderShadow, mNextFrame) == offsetof(EeGfxFillObject, next_frame)
+              && offsetof(EERenderShadow, mIsFogged) == offsetof(EeGfxFillObject, is_fogged),
+              "the render shadow's mirror");
+static_assert(sizeof(GETransformation) == sizeof(EeGeTransformation), "a transformation is 16 floats");
+// EERenderUnit's head is ee_gfx fill.rs's EeGfxFillUnit, member for member
+static_assert(offsetof(EERenderUnit, mHealthBars) >= sizeof(EeGfxFillUnit), "the render unit's head");
+static_assert(offsetof(EERenderUnit, mTransformation) == offsetof(EeGfxFillUnit, transformation)
+              && offsetof(EERenderUnit, mPlayerColor) == offsetof(EeGfxFillUnit, player_color)
+              && offsetof(EERenderUnit, mTintColor) == offsetof(EeGfxFillUnit, tint_color)
+              && offsetof(EERenderUnit, mInfo) == offsetof(EeGfxFillUnit, info)
+              && offsetof(EERenderUnit, mSource) == offsetof(EeGfxFillUnit, source)
+              && offsetof(EERenderUnit, mSource2) == offsetof(EeGfxFillUnit, source2)
+              && offsetof(EERenderUnit, mScale) == offsetof(EeGfxFillUnit, scale)
+              && offsetof(EERenderUnit, mSelectionSize) == offsetof(EeGfxFillUnit, selection_size)
+              && offsetof(EERenderUnit, mShadowScale) == offsetof(EeGfxFillUnit, shadow_scale)
+              && offsetof(EERenderUnit, mFF4) == offsetof(EeGfxFillUnit, ff4)
+              && offsetof(EERenderUnit, mGroundZ) == offsetof(EeGfxFillUnit, ground_z)
+              && offsetof(EERenderUnit, mOpacity) == offsetof(EeGfxFillUnit, opacity)
+              && offsetof(EERenderUnit, mHealth) == offsetof(EeGfxFillUnit, health)
+              && offsetof(EERenderUnit, mFraction) == offsetof(EeGfxFillUnit, fraction)
+              && offsetof(EERenderUnit, mSubModelOffsetScale) == offsetof(EeGfxFillUnit, sub_model_offset_scale)
+              && offsetof(EERenderUnit, mFogScale) == offsetof(EeGfxFillUnit, fog_scale)
+              && offsetof(EERenderUnit, mCategory) == offsetof(EeGfxFillUnit, category)
+              && offsetof(EERenderUnit, mUnitClassIndex) == offsetof(EeGfxFillUnit, unit_class_index)
+              && offsetof(EERenderUnit, mL118) == offsetof(EeGfxFillUnit, l118)
+              && offsetof(EERenderUnit, mCommandType) == offsetof(EeGfxFillUnit, command_type)
+              && offsetof(EERenderUnit, mCurrentResearch) == offsetof(EeGfxFillUnit, current_research)
+              && offsetof(EERenderUnit, mAnimation) == offsetof(EeGfxFillUnit, animation)
+              && offsetof(EERenderUnit, mGridSize) == offsetof(EeGfxFillUnit, grid_size)
+              && offsetof(EERenderUnit, mCurrentFrame) == offsetof(EeGfxFillUnit, current_frame)
+              && offsetof(EERenderUnit, mNextFrame) == offsetof(EeGfxFillUnit, next_frame)
+              && offsetof(EERenderUnit, mL134) == offsetof(EeGfxFillUnit, l134)
+              && offsetof(EERenderUnit, mUnitId) == offsetof(EeGfxFillUnit, unit_id)
+              && offsetof(EERenderUnit, mPlayerID) == offsetof(EeGfxFillUnit, player_id)
+              && offsetof(EERenderUnit, mAreaEffectStrength) == offsetof(EeGfxFillUnit, area_effect_strength)
+              && offsetof(EERenderUnit, mCanPlace) == offsetof(EeGfxFillUnit, can_place)
+              && offsetof(EERenderUnit, mIsFogged) == offsetof(EeGfxFillUnit, is_fogged)
+              && offsetof(EERenderUnit, mIsTinted) == offsetof(EeGfxFillUnit, is_tinted)
+              && offsetof(EERenderUnit, mHasSubModelOffset) == offsetof(EeGfxFillUnit, has_sub_model_offset)
+              && offsetof(EERenderUnit, mSecondFullOpacity) == offsetof(EeGfxFillUnit, second_full_opacity),
+              "the render unit's head");
+
+// the render fill's host and frame (defined with FillUnit, after its classes' includes)
+static const EeGfxFillHost* EEFillHost();
+static EeGfxFillFrame EEFillFrame(const EERenderFrameInfo& inInfo);
+
 static bool FillObjectFields(EEUnit* inUnit, EERenderShadow* outObject, EERenderFrameInfo& ioInfo,
                              GETransformation& outTransformation);
 
@@ -568,62 +627,14 @@ void EERenderObject::FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERen
                                                                             outObject));
 }
 
-// FillObject's reads and field writes: everything but its calls into other objects; outObject->mObject is set and
-// loaded. Writes the picker's transformation; returns whether the object is selected (the viewed unit, or in the free
-// camera an editor-selected or rectangle-picked one).
+// FillObject's reads and field writes: ee_gfx fill.rs over the world's views (outObject->mObject is set and loaded).
+// Writes the picker's transformation; returns whether the object is selected.
 static bool FillObjectFields(EEUnit* inUnit, EERenderShadow* outObject, EERenderFrameInfo& ioInfo,
                              GETransformation& outTransformation)
 {
-    bool theSelected = false;
-    GEPhysicalModel theModel;
-    GETransformation& theTransformation = outTransformation;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EEMap* theMap = gWorld.mMap;
-    long theID = inUnit->GetUnitID();
-    long theSize = inUnit->mUnitClass->mTileSize;
-    EEUnitClassUpgrade* theStats = inUnit->mStats;
-    // the place in its tiles, the size and the sway by id: ee_gfx capture.rs
-    EeGe2DPoint thePlace = ee_gfx_capture_object_place((int32_t)theID, (int32_t)theSize, (int32_t)inUnit->mTileX,
-                                                       (int32_t)inUnit->mTileY);
-    outObject->mLocation.SetX(thePlace.x);
-    outObject->mLocation.SetY(thePlace.y);
-    outObject->mLocation.SetZ(theMap->mTerrainMesh.GetMeshZ(outObject->mLocation.GetX(), outObject->mLocation.GetY()));
-    theTransformation.SetOrientationYPR(ioInfo.mYaw, 0.0f, 0.0f);
-    theTransformation.SetPosition(outObject->mLocation);
-    theTransformation.SetElement(3, 0, 0.0f);
-    theTransformation.SetElement(3, 1, 0.0f);
-    theTransformation.SetElement(3, 2, 0.0f);
-    theTransformation.SetElement(3, 3, 1.0f);
-    outObject->mHealth = (float)inUnit->GetHitPoints() / theStats->mMaxHitPoints;
-    outObject->mIsFogged = false;
-    outObject->mModelScale = theStats->GetScale();
-    outObject->mModelScale *= ee_gfx_capture_object_scale((int32_t)inUnit->GetUnitID());
-    long theX = inUnit->mTileX;
-    long theY = inUnit->mTileY;
-    if (!GetTileHasTree(theMap->GetTile(theX - 1, theY - 1)) || !GetTileHasTree(theMap->GetTile(theX + 1, theY + 1))) {
-        outObject->mScale = inUnit->mUnitClass->GetShadowScale();
-        outObject->mF1C = inUnit->mUnitClass->GetF170();
-    } else {
-        outObject->mScale = 0.0f;
-        outObject->mF1C = 0.0f;
-    }
-    if (inUnit == thePlayer->mViewedUnit
-        || gFreeCamera && (inUnit->mIsEditorSelected
-                           || std::find(gU4E9230.begin(), gU4E9230.end(), inUnit->GetUnitID()) != gU4E9230.end())) {
-        outObject->mSelectionSize = inUnit->mUnitClass->mSelectionSize;
-        theSelected = true;
-    }
-    outObject->mModelIndex = 0;
-    GEModel* theOne = outObject->mObject->mModels[outObject->mModelIndex];
-    outObject->mCurrentFrame = 0;
-    outObject->mNextFrame = outObject->mCurrentFrame;
-    if (theOne->GetFrameCount() > 1) {
-        outObject->mCurrentFrame++;
-        outObject->mFraction = ee_gfx_capture_sway_fraction(sSwayClock, (int32_t)inUnit->GetUnitID());
-    } else {
-        outObject->mFraction = 0.0f;
-    }
-    return theSelected;
+    EeGfxFillFrame theFrame = EEFillFrame(ioInfo);
+    return ee_gfx_fill_object_fields((uint64_t)(uintptr_t)inUnit, reinterpret_cast<EeGfxFillObject*>(outObject), &theFrame,
+                                     reinterpret_cast<EeGeTransformation*>(&outTransformation), EEFillHost());
 }
 
 // Returns whether any unit on a tile is a map object (its class has mIsTree)
@@ -804,6 +815,204 @@ std::vector<GETexture*> gU4E8EF0;
 #include "rust/render/gfx.h"
 #include "rust/sim/units.h"
 
+// the render fill's answers that are not world views (ee_gfx fill.rs FillHost) and its frame
+static EEComplexUnit* EEFillComplex(uint64_t inUnit)
+{
+    return reinterpret_cast<EEUnit*>((uintptr_t)inUnit)->GetComplexUnit();
+}
+static EERenderUnit* EEFillOut(EeGfxFillUnit* inUnit)
+{
+    return reinterpret_cast<EERenderUnit*>(inUnit);
+}
+static float EEFillMeshZ(void*, float inX, float inY)
+{
+    return gWorld.mMap->mTerrainMesh.GetMeshZ(inX, inY);
+}
+static uint64_t EEFillModelFrames(void*, uint64_t inObject, uint64_t inIndex)
+{
+    return reinterpret_cast<EEGraphicObject*>((uintptr_t)inObject)->mModels[inIndex]->GetFrameCount();
+}
+static bool EEFillWaterTile(void*, long inX, long inY)
+{
+    return gWorld.mMap->mTerrainMesh.GetIsWaterTile(inX, inY);
+}
+static bool EEFillValidTile(void*, long inX, long inY)
+{
+    return gWorld.mMap->mTerrainMesh.GetIsValidTile(inX, inY);
+}
+static float EEFillGroundZ(void*, float inX, float inY, float inZ)
+{
+    GE3DPoint thePoint(inX, inY, inZ);
+    GE3DPoint theGround;
+    gWorld.mMap->GetGroundPoint(thePoint, theGround);
+    return theGround.mZ;
+}
+static float EEFillPhysicalScale(void*, uint64_t inUnit)
+{
+    return EEFillComplex(inUnit)->mPhysicalModel.GetScale();
+}
+static unsigned long EEFillPhysicalFrame(void*, uint64_t inUnit)
+{
+    return EEFillComplex(inUnit)->mPhysicalModel.GetFrame();
+}
+static EeGfxColor EEFillTint(void*, uint64_t inUnit)
+{
+    const GEColor& theColor = EEFillComplex(inUnit)->mColor;
+    return EeGfxColor{theColor.mRed, theColor.mGreen, theColor.mBlue};
+}
+static bool EEFillSidePart(void*, uint64_t inUnit)
+{
+    EEComplexUnit* theComplex = EEFillComplex(inUnit);
+    return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theComplex->mUnitClass)->IsSidePart(theComplex);
+}
+static bool EEFillLandBuilding(void*, uint64_t inClass)
+{
+    return reinterpret_cast<EEUnitClass*>((uintptr_t)inClass)->IsLandBuilding();
+}
+static void EEFillGroundLocation(void*, uint64_t inClass, float* ioPoint)
+{
+    GE3DPoint thePoint(ioPoint[0], ioPoint[1], ioPoint[2]);
+    reinterpret_cast<EEUnitClass*>((uintptr_t)inClass)->GroundLocation(thePoint);
+    ioPoint[0] = thePoint.mX;
+    ioPoint[1] = thePoint.mY;
+    ioPoint[2] = thePoint.mZ;
+}
+static bool EEFillGroupContains(void*, uint64_t inPlayer, uint64_t inUnit)
+{
+    return reinterpret_cast<EEPlayer*>((uintptr_t)inPlayer)->mSelectedGroup->Contains(EEFillComplex(inUnit));
+}
+static void EEFillParts(void*, EeGfxFillUnit* inOut, uint64_t inUnit)
+{
+    EERenderUnit* outUnit = EEFillOut(inOut);
+    EEComplexUnit* theComplex = EEFillComplex(inUnit);
+    unsigned long theCount = theComplex->GetModel()->mTurretParts.size();
+    outUnit->mTurretAngles.resize(theCount, 0.0f);
+    outUnit->mTurretModels.resize(theCount, 0);
+    unsigned long i;
+    for (i = 0; i < theCount; i++) {
+        outUnit->mTurretAngles[i] = theComplex->mTurretAngles[i];
+        outUnit->mTurretModels[i] = outUnit->mSource->mTurretParts[i]->mModel;
+    }
+    theCount = theComplex->mNumOrbitals;
+    outUnit->mOrbitalAngles.resize(theCount, 0.0f);
+    outUnit->mOrbitalModels.resize(theCount, 0);
+    for (i = 0; i < theCount; i++) {
+        outUnit->mOrbitalAngles[i] = theComplex->mOrbitals[i]->mAngle;
+        outUnit->mOrbitalModels[i] = theComplex->mOrbitals[i]->mModel;
+    }
+    theCount = theComplex->mNumWheels;
+    outUnit->mWheelAngles.resize(theCount, 0.0f);
+    outUnit->mWheelModels.resize(theCount, 0);
+    for (i = 0; i < theCount; i++) {
+        EEWheel* theWheel = theComplex->mWheels[i];
+        outUnit->mWheelAngles[i] = theWheel->mAngle;
+        outUnit->mWheelModels[i] = theWheel->mModel;
+    }
+}
+static void EEFillBarsResize(void*, EeGfxFillUnit* inOut, size_t inCount)
+{
+    EEFillOut(inOut)->mHealthBars.resize(inCount, 0.0f);
+}
+static void EEFillBarsSet(void*, EeGfxFillUnit* inOut, size_t inIndex, float inValue)
+{
+    EEFillOut(inOut)->mHealthBars[inIndex] = inValue;
+}
+static void EEFillBarsClear(void*, EeGfxFillUnit* inOut)
+{
+    EEFillOut(inOut)->mHealthBars.clear();
+}
+static void EEFillNameClear(void*, EeGfxFillUnit* inOut)
+{
+    EEFillOut(inOut)->mName.Clear();
+}
+static void EEFillNameFromStats(void*, EeGfxFillUnit* inOut, uint64_t inUnit)
+{
+    EEFillOut(inOut)->mName = EEFillComplex(inUnit)->mStats->mName;
+}
+static void EEFillSelect(void*, EeGfxFillUnit* inOut)
+{
+    EERenderLists::sInstance.mSelectedUnits.push_back(EEFillOut(inOut));
+}
+static void EEFillPointAt(void*, EeGfxFillUnit* inOut)
+{
+    EERenderLists::sInstance.mSelectedUnit = EEFillOut(inOut);
+}
+static void EEFillLabel(void*, EeGfxFillUnit* inOut, uint64_t inPlayer)
+{
+    EEPlayer* thePlayer = reinterpret_cast<EEPlayer*>((uintptr_t)inPlayer);
+    gU529044 = EEFillOut(inOut);
+    if (!thePlayer->IsHuman() && !thePlayer->mCivilization.GetUnchanged())
+        gU529030 = thePlayer->mCivilization.mName;
+    else
+        gU529030 = thePlayer->mName;
+}
+static EeGfxFillMorale EEFillMorale(void*, uint64_t inUnit)
+{
+    EEComplexUnit* theComplex = EEFillComplex(inUnit);
+    EeGfxFillMorale theMorale = {};
+    for (std::vector<EEAreaEffect*>::iterator it = theComplex->mAffectingAreaEffects.mItems.begin();
+         it != theComplex->mAffectingAreaEffects.mItems.end(); it++) {
+        long theKind = (*it)->mTemplate->mKind;
+        if (theKind == kAreaEffectMoraleFromBuildings || theKind == kAreaEffectMoraleFromMilitaryHeroes || theKind == kAreaEffectMorale) {
+            theMorale.found = true;
+            theMorale.strength = (*it)->GetStrength();
+            break;
+        }
+    }
+    return theMorale;
+}
+static uint64_t EEFillScaffolding(void*, long inPlayer, uint64_t inClass)
+{
+    EEUnitClass* theClass = reinterpret_cast<EEUnitClass*>((uintptr_t)inClass);
+    if (theClass->mScaffoldingClass == NULL)
+        return 0;
+    return (uint64_t)(uintptr_t)gWorld.mPlayers[inPlayer]->GetUpgrade(theClass->mScaffoldingClass->GetUnitType())->mModel;
+}
+static uint64_t EEFillUnit(void*, long inID)
+{
+    return (uint64_t)(uintptr_t)static_cast<EEUnit*>(gWorld.GetUnit(inID));
+}
+static EeGfxFillPoint EEFillWaypoint(void*, uint64_t inCarrier, long inX, long inY)
+{
+    EeGfxFillPoint thePoint = {};
+    EEComplexUnitWaypoint* theWaypoint;
+    if (reinterpret_cast<EEComplexUnit*>((uintptr_t)inCarrier)->FindWaypointAtTile(inX, inY, theWaypoint)) {
+        thePoint.found = true;
+        thePoint.point[0] = theWaypoint->mLocation.mX;
+        thePoint.point[1] = theWaypoint->mLocation.mY;
+        thePoint.point[2] = theWaypoint->mLocation.mZ;
+    }
+    return thePoint;
+}
+static const EeGfxFillHost* EEFillHost()
+{
+    static const EeGfxFillHost sHost = {NULL, EEFillMeshZ, EEFillModelFrames, EEFillWaterTile, EEFillValidTile, EEFillGroundZ,
+                                        EEFillPhysicalScale, EEFillPhysicalFrame, EEFillTint, EEFillSidePart, EEFillLandBuilding,
+                                        EEFillGroundLocation, EEFillGroupContains, EEFillParts, EEFillBarsResize, EEFillBarsSet,
+                                        EEFillBarsClear, EEFillNameClear, EEFillNameFromStats, EEFillSelect, EEFillPointAt,
+                                        EEFillLabel, EEFillMorale, EEFillScaffolding, EEFillUnit, EEFillWaypoint};
+    return &sHost;
+}
+static EeGfxFillFrame EEFillFrame(const EERenderFrameInfo& inInfo)
+{
+    EeGfxFillFrame theFrame = {};
+    theFrame.yaw = inInfo.mYaw;
+    theFrame.free_camera = gFreeCamera;
+    theFrame.sway_clock = sSwayClock;
+    theFrame.player = (uint64_t)(uintptr_t)gWorld.GetCurrentPlayer();
+    theFrame.map = (uint64_t)(uintptr_t)gWorld.mMap;
+    theFrame.picked = gU4E9230.empty() ? NULL : &gU4E9230[0];
+    theFrame.picked_count = gU4E9230.size();
+    theFrame.world_player = (uint64_t)(uintptr_t)gWorld.mPlayers[0];
+    theFrame.pointed = (uint64_t)(uintptr_t)inInfo.mPickedUnit;
+    theFrame.music_follows_battle = gMusicFollowsBattle;
+    theFrame.collision_spheres = gCollisionSphereMode != 0;
+    theFrame.sea_level = gRenderEnvironment.mSeaLevel;
+    theFrame.space_turret_height = gSpaceTurretHeight;
+    theFrame.space_station_height = gSpaceStationHeight;
+    return theFrame;
+}
+
 static bool FillUnitFields(EEUnit* inUnit, EERenderUnit* outUnit, EERenderFrameInfo& ioInfo);
 
 // Fills a render unit for a unit and files it in the picker and the texture maps
@@ -836,222 +1045,15 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
         EERenderLists::sInstance.mUnits2.insert(EERenderUnitMap::value_type(outUnit->mSource->mShadowTexture, outUnit));
 }
 
-// FillUnit's reads and field writes: everything but its calls into other objects; outUnit->mSource is set and loaded.
+// FillUnit's reads and field writes: ee_gfx fill.rs over the world's views (outUnit->mSource is set and loaded).
 // Returns whether the priest tower's range circle is drawn (a built one in the current player's selection).
 static bool FillUnitFields(EEUnit* inUnit, EERenderUnit* outUnit, EERenderFrameInfo& ioInfo)
 {
-    bool theCircle = false;
-    EEMap* theMap = gWorld.mMap;
-    GE3DPoint thePoint;
-    GETerrainMesh* theMesh = &theMap->mTerrainMesh;
-    GE3DPoint theGround;
-    EETile* theTile = static_cast<EETile*>(inUnit->mTile);
-    EEComplexUnit* theComplex = inUnit->GetComplexUnit();
-    EEUnitClassUpgrade* theStats = inUnit->mStats;
-    EEPlayer* theCurrent = gWorld.GetCurrentPlayer();
-    long theTileX = inUnit->GetTileX();
-    long theTileY = inUnit->mTileY;
-    GEVector theUp(0.0f, 1.0f, 0.0f);
-    GEVector theForward;
-    bool theFogged = ee_gfx_capture_owned_food(inUnit->mResourceType == kResourceFood && inUnit->mResourceAmount > 0,
-                                               theComplex != NULL, inUnit->mUnitClass->mCategory,
-                                               inUnit->GetPlayer()->GetPlayerID());
-    outUnit->mInfo = inUnit->mUnitClass;
-    outUnit->mGridSize = inUnit->mUnitClass->mTileSize;
-    outUnit->mPlayerColor = inUnit->GetPlayer()->mColor;
-    outUnit->mCategory = inUnit->mUnitClass->mCategory;
-    outUnit->mUnitClassIndex = inUnit->mUnitClass->GetUnitType();
-    outUnit->mL118 = inUnit->mUnitClass->mFamily;
-    outUnit->mShadowScale = inUnit->GetHitPoints() > 0 ? inUnit->mUnitClass->GetShadowScale() : 0.0f;
-    outUnit->mFF4 = inUnit->GetHitPoints() > 0 ? inUnit->mUnitClass->GetF170() : 0.0f;
-    outUnit->mSelectionSize = inUnit->mUnitClass->mSelectionSize;
-    outUnit->mPlayerID = inUnit->GetPlayer()->GetPlayerID();
-    outUnit->mCurrentResearch = kTechNone;
-    outUnit->mUnitId = inUnit->GetUnitID();
-    outUnit->mSource2 = NULL;
-    outUnit->mIsTinted = false;
-    outUnit->mHasSubModelOffset = false;
-    outUnit->mName.Clear();
-    outUnit->mAreaEffectStrength = 0;
-    if (!gFreeCamera && theFogged)
-        outUnit->mIsFogged = !theTile->IsSeenBy(theCurrent);
-    else
-        outUnit->mIsFogged = false;
-    if (theComplex != NULL) {
-        outUnit->mScale = theComplex->mPhysicalModel.GetScale();
-        outUnit->mIsTinted = theComplex->mIsTinted;
-        if (outUnit->mIsTinted) {
-            outUnit->mTintColor = theComplex->mColor;
-            outUnit->mFogScale = 0.6f;
-        }
-        if (theComplex->mUnitClass->mCategory == kUnitCategoryGate) {
-            EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theComplex->mUnitClass);
-            if (theComplex->GetHitPoints() > 0 && theGate->IsSidePart(theComplex)) {
-                outUnit->mSubModelOffsetScale = theComplex->GetOpenFraction();
-                outUnit->mHasSubModelOffset = true;
-            }
-        }
-        if (gMusicFollowsBattle && theComplex->GetHitPoints() != 0 && theComplex->mActiveGoal != NULL
-            && (theComplex->mActiveGoal->mKind == kGoalAttackUnit || theComplex->mActiveGoal->mKind == kGoalAttackGround
-                || theComplex->mActiveGoal->mKind == kGoalCastCalamity))
-            ioInfo.mNumFightingUnits += 1.0f;
-        if (theComplex->mUnitClass->GetUnitType() == kUnitTypePriestTower && theComplex->mIsBuilt
-            && theCurrent->mSelectedGroup->Contains(theComplex))
-            theCircle = true;
-        if (!theComplex->IsFoundation()) {
-            unsigned long theCount = theComplex->GetModel()->mTurretParts.size();
-            outUnit->mTurretAngles.resize(theCount, 0.0f);
-            outUnit->mTurretModels.resize(theCount, 0);
-            unsigned long i;
-            for (i = 0; i < theCount; i++) {
-                outUnit->mTurretAngles[i] = theComplex->mTurretAngles[i];
-                outUnit->mTurretModels[i] = outUnit->mSource->mTurretParts[i]->mModel;
-            }
-            theCount = theComplex->mNumOrbitals;
-            outUnit->mOrbitalAngles.resize(theCount, 0.0f);
-            outUnit->mOrbitalModels.resize(theCount, 0);
-            for (i = 0; i < theCount; i++) {
-                outUnit->mOrbitalAngles[i] = theComplex->mOrbitals[i]->mAngle;
-                outUnit->mOrbitalModels[i] = theComplex->mOrbitals[i]->mModel;
-            }
-            theCount = theComplex->mNumWheels;
-            outUnit->mWheelAngles.resize(theCount, 0.0f);
-            outUnit->mWheelModels.resize(theCount, 0);
-            for (i = 0; i < theCount; i++) {
-                EEWheel* theWheel = theComplex->mWheels[i];
-                outUnit->mWheelAngles[i] = theWheel->mAngle;
-                outUnit->mWheelModels[i] = theWheel->mModel;
-            }
-        }
-        if ((!gFreeCamera && (theCurrent->mSelectedGroup->Contains(theComplex) || theCurrent->mSelectedViewedUnit == inUnit))
-            || (gFreeCamera && inUnit->mIsEditorSelected)
-            || std::find(gU4E9230.begin(), gU4E9230.end(), inUnit->GetUnitID()) != gU4E9230.end()) {
-            if (!inUnit->mUnitClass->IsLandBuilding() || inUnit->GetHitPoints() != 0) {
-                // the class's ring size (the original's never-set 0x52906c could pick the line of sight or the range)
-                outUnit->mSelectionSize = inUnit->mUnitClass->mSelectionSize;
-                if (theComplex->GetNumCargoUnits() > 0
-                    && (theComplex->GetPlayer() == theCurrent || theComplex->GetPlayer()->mEnemies[theCurrent->GetPlayerID()] == 0)) {
-                    outUnit->mHealthBars.resize(theComplex->GetNumCargoUnits() + 1, 0.0f);
-                    for (unsigned long j = 0; j < theComplex->GetNumCargoUnits(); j++)
-                        outUnit->mHealthBars[j + 1] = (float)theComplex->mCargo[j]->mHitPoints
-                                               / theComplex->mCargo[j]->GetStats()->mMaxHitPoints;
-                }
-                outUnit->mHealthBars[0] = (float)inUnit->GetHitPoints() / inUnit->mStats->mMaxHitPoints;
-                outUnit->mHealth = inUnit->mStats->mPower == 0 ? -1.0f
-                                                              : (float)theComplex->mPower / theStats->mPower;
-                EERenderLists::sInstance.mSelectedUnits.push_back(outUnit);
-            }
-        } else if (ioInfo.mPickedUnit == inUnit) {
-            outUnit->mName = theComplex->mStats->mName;
-            if (theComplex->GetNumCargoUnits() > 0
-                && (theComplex->GetPlayer() == theCurrent || theComplex->GetPlayer()->mEnemies[theCurrent->GetPlayerID()] == 0)) {
-                outUnit->mHealthBars.resize(theComplex->GetNumCargoUnits() + 1, 0.0f);
-                for (unsigned long j = 0; j < theComplex->GetNumCargoUnits(); j++)
-                    outUnit->mHealthBars[j + 1] = (float)theComplex->mCargo[j]->GetHitPoints()
-                                           / theComplex->mCargo[j]->GetStats()->GetMaxHitPoints();
-            }
-            outUnit->mHealthBars[0] = (float)inUnit->GetHitPoints() / inUnit->mStats->mMaxHitPoints;
-            outUnit->mHealth = inUnit->mStats->mPower == 0 ? -1.0f : (float)theComplex->mPower / theStats->mPower;
-            EERenderLists::sInstance.mSelectedUnit = outUnit;
-            if (inUnit->GetPlayer() != gWorld.mPlayers[0] && inUnit->GetPlayer() != gWorld.GetCurrentPlayer()) {
-                gU529044 = outUnit;
-                if (!inUnit->GetPlayer()->IsHuman() && !inUnit->GetPlayer()->mCivilization.GetUnchanged())
-                    gU529030 = inUnit->GetPlayer()->mCivilization.mName;
-                else
-                    gU529030 = inUnit->GetPlayer()->mName;
-            }
-        } else if (gCollisionSphereMode != 0) {
-            outUnit->mName = theComplex->mStats->mName;
-        }
-        if (theComplex->mCurrentResearch != kTechNone && theComplex->mProductionTime > 0)
-            outUnit->mCurrentResearch = theComplex->mCurrentResearch;
-        if (!theComplex->IsFoundation()) {
-            outUnit->mCurrentFrame = theComplex->mPhysicalModel.GetFrame();
-            outUnit->mNextFrame = theComplex->mNextFrame;
-            outUnit->mFraction = theComplex->mAnimationFraction;
-        } else {
-            outUnit->mCurrentFrame = 0;
-            outUnit->mNextFrame = 0;
-            outUnit->mFraction = 0.0f;
-        }
-        outUnit->mTransformation = theComplex->mPhysicalModel.GetLocation();
-        if (theComplex->mUnitClass->mFacesCamera) {
-            outUnit->mTransformation.Apply(theUp, theForward);
-            outUnit->mTransformation.SetOrientationYPR(ioInfo.mYaw, UMArcCos(-theForward.mZ) - 1.5707964f, 0.0f);
-        }
-        outUnit->mCommandType = theComplex->mCommand != NULL ? theComplex->mCommand->mType : 0;
-        outUnit->mAnimation = theComplex->GetAnimation();
-        for (std::vector<EEAreaEffect*>::iterator it = theComplex->mAffectingAreaEffects.mItems.begin();
-             it != theComplex->mAffectingAreaEffects.mItems.end(); it++) {
-            if (!(inUnit->GetHitPoints() > 0))
-                continue;
-            long theKind = (*it)->mTemplate->mKind;
-            if (theKind == kAreaEffectMoraleFromBuildings || theKind == kAreaEffectMoraleFromMilitaryHeroes || theKind == kAreaEffectMorale) {
-                outUnit->mAreaEffectStrength = (*it)->GetStrength();
-                break;
-            }
-        }
-        if (!theComplex->mIsBuilt && !theComplex->IsFoundation()) {
-            if (outUnit->mInfo->mScaffoldingClass != NULL)
-                outUnit->mSource2 = gWorld.mPlayers[outUnit->mPlayerID]->GetUpgrade(outUnit->mInfo->mScaffoldingClass->GetUnitType())
-                                      ->mModel;
-            float theZ = outUnit->mTransformation.mMatrix[2][3];
-            outUnit->mTransformation.mMatrix[2][3] = 0.0f;
-            outUnit->mTransformation.Scale(1.0f, 1.0f, (float)inUnit->GetHitPoints() / inUnit->mStats->mMaxHitPoints);
-            outUnit->mTransformation.mMatrix[2][3] = theZ;
-        } else if (theComplex->IsFoundation()) {
-            if (theComplex->mUnitClass->GetUnitType() == kUnitTypeSpaceTurret)
-                outUnit->mTransformation.mMatrix[2][3] = outUnit->mTransformation.mMatrix[2][3] - gSpaceTurretHeight;
-            else if (theComplex->mUnitClass->GetUnitType() == kUnitTypeOrbitalSpaceStation)
-                outUnit->mTransformation.mMatrix[2][3] = outUnit->mTransformation.mMatrix[2][3] - gSpaceStationHeight;
-        }
-    } else {
-        outUnit->mScale = theStats->GetScale();
-        if (inUnit == theCurrent->mSelectedViewedUnit || (gFreeCamera && inUnit->mIsEditorSelected)
-            || std::find(gU4E9230.begin(), gU4E9230.end(), inUnit->GetUnitID()) != gU4E9230.end()) {
-            outUnit->mHealth = -1.0f;
-            outUnit->mHealthBars.clear();
-            EERenderLists::sInstance.mSelectedUnits.push_back(outUnit);
-        }
-        thePoint.SetX(outUnit->mGridSize * 0.5f + inUnit->GetTileX());
-        thePoint.SetY(outUnit->mGridSize * 0.5f + inUnit->mTileY);
-        thePoint.SetZ(theMesh->GetMeshZ(thePoint.GetX(), thePoint.GetY()));
-        EEComplexUnitWaypoint* theWaypoint;
-        if (inUnit->IsPathMarker() && gWorld.GetUnit(inUnit->GetHitPoints()) != NULL) {
-            EEComplexUnit* theCarrier = gWorld.GetUnit(inUnit->GetHitPoints())->GetComplexUnit();
-            if (theCarrier != NULL
-                && gWorld.GetUnit(inUnit->GetHitPoints())->GetComplexUnit()->FindWaypointAtTile(inUnit->GetTileX(), inUnit->mTileY,
-                                                                                theWaypoint)) {
-                thePoint = theWaypoint->mLocation;
-                if (theMesh->GetIsValidTile(UMFloor(thePoint.GetX()), UMFloor(thePoint.GetY())))
-                    thePoint.SetZ(theMesh->GetMeshZ(thePoint.GetX(), thePoint.GetY()));
-                EeGfxColor theTint = ee_gfx_capture_waypoint_tint((int32_t)theCarrier->GetUnitID());
-                outUnit->mTintColor = GEColor(theTint.red, theTint.green, theTint.blue);
-            }
-        }
-        inUnit->mUnitClass->GroundLocation(thePoint);
-        if (inUnit->IsPathMarker() && theTile->GetHeight() < gRenderEnvironment.mSeaLevel)
-            thePoint.SetZ(gRenderEnvironment.mSeaLevel);
-        outUnit->mTransformation.SetOrientationYPR(inUnit->mUnitClass->mFacesCamera ? ioInfo.mYaw : 0.0f, 0.0f, 0.0f);
-        outUnit->mTransformation.mMatrix[0][3] = thePoint.GetX();
-        outUnit->mTransformation.mMatrix[1][3] = thePoint.GetY();
-        outUnit->mTransformation.mMatrix[2][3] = thePoint.mZ;
-        outUnit->mCurrentFrame = 0;
-        outUnit->mNextFrame = 0;
-        outUnit->mFraction = 0.0f;
-        outUnit->mCommandType = 0;
-        outUnit->mAnimation = 0;
-    }
-    if (theMesh->GetIsWaterTile(theTileX, theTileY) && outUnit->mTransformation.GetZ() >= 0.0f) {
-        outUnit->mGroundZ = 0.0f;
-    } else {
-        thePoint.SetX(outUnit->mTransformation.GetX());
-        thePoint.SetY(outUnit->mTransformation.GetY());
-        thePoint.SetZ(outUnit->mTransformation.GetZ());
-        theMap->GetGroundPoint(thePoint, theGround);
-        outUnit->mGroundZ = theGround.mZ;
-    }
-    return theCircle;
+    EeGfxFillFrame theFrame = EEFillFrame(ioInfo);
+    EeGfxFillUnitResult theResult = ee_gfx_fill_unit_fields((uint64_t)(uintptr_t)inUnit, reinterpret_cast<EeGfxFillUnit*>(outUnit),
+                                                            &theFrame, EEFillHost());
+    ioInfo.mNumFightingUnits += theResult.fighting;
+    return theResult.circle;
 }
 
 

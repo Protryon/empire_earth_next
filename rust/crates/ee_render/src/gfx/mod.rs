@@ -72,6 +72,7 @@ pub mod ffi_effect;
 pub mod ffi_manager;
 pub mod ffi_mesh;
 pub mod ffi_scene;
+pub mod fill;
 pub mod goal_markers;
 #[cfg(test)]
 mod golden_beam;
@@ -83,6 +84,8 @@ mod golden_center;
 mod golden_farm;
 #[cfg(test)]
 mod golden_fill;
+#[cfg(test)]
+mod golden_fill_replay;
 #[cfg(test)]
 mod golden_lighting;
 #[cfg(test)]
