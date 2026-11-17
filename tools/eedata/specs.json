@@ -2684,7 +2684,7 @@
   "EEButtonRecord": {
    "name": "EEButtonRecord",
    "size": 224,
-   "source": "src/Empire Earth/Database/EEButtonObject.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     224,
     "static_assert"
@@ -2697,7 +2697,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mFileName",
@@ -2706,7 +2706,7 @@
      "type": "str",
      "count": 104,
      "cls": "named",
-     "comment": "+0x64 -> mName"
+     "comment": "The texture file (the class's `mName`)."
     },
     {
      "name": "mID",
@@ -2715,7 +2715,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xcc -> +0x30"
+     "comment": "Below 50: the texture has alpha."
     },
     {
      "name": "mRow",
@@ -2724,7 +2724,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd0 -> +0x2c"
+     "comment": "The cell in the texture's grid of 41-texel cells."
     },
     {
      "name": "mColumn",
@@ -2733,7 +2733,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd4 -> +0x28"
+     "comment": ""
     },
     {
      "name": "mPosition",
@@ -2742,7 +2742,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd8 -> +0x20"
+     "comment": ""
     },
     {
      "name": "mHotKey",
@@ -2751,7 +2751,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xdc -> +0x24"
+     "comment": ""
     }
    ],
    "defaults": {}
@@ -3353,7 +3353,7 @@
   "EECliffTerrainRecord": {
    "name": "EECliffTerrainRecord",
    "size": 124,
-   "source": "src/Empire Earth/Database/EETerrainTable.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     124,
     "static_assert"
@@ -3366,7 +3366,7 @@
      "type": "str",
      "count": 104,
      "cls": "named",
-     "comment": "+0x00"
+     "comment": ""
     },
     {
      "name": "mIndex",
@@ -3375,7 +3375,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68 (negative: no entry)"
+     "comment": "Negative: no cliff terrain in this row (the table keeps NULL)."
     },
     {
      "name": "mFirstTerrain",
@@ -3384,7 +3384,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c -> +0x14"
+     "comment": "The terrains of the cliff's faces, first to last."
     },
     {
      "name": "mLastTerrain",
@@ -3393,7 +3393,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70 -> +0x18"
+     "comment": ""
     },
     {
      "name": "mUnusedValue",
@@ -3402,7 +3402,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x74 -> +0x1c"
+     "comment": ""
     },
     {
      "name": "mUnusedFlag",
@@ -3411,7 +3411,7 @@
      "type": "raw",
      "count": 1,
      "cls": "unused",
-     "comment": "+0x78 -> +0x20"
+     "comment": ""
     },
     {
      "name": "pad_0x079",
@@ -3959,7 +3959,7 @@
   "EEDamageTableRecord": {
    "name": "EEDamageTableRecord",
    "size": 380,
-   "source": "src/Empire Earth/Database/EETerrainTypeTable.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     380,
     "static_assert"
@@ -3972,7 +3972,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mUnusedDatabaseID",
@@ -3981,7 +3981,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x064 the database row id (not read)"
+     "comment": "The database row id (not read)."
     },
     {
      "name": "mUnusedIndex",
@@ -3990,7 +3990,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x068 the 0-based row index (not read)"
+     "comment": "The 0-based row index (not read)."
     },
     {
      "name": "mDamage",
@@ -3999,7 +3999,7 @@
      "type": "s32",
      "count": 68,
      "cls": "named",
-     "comment": "+0x6c (scaled by kHeightEpsilon into gDamageTable's row)"
+     "comment": "Percent, scaled by `kHeightEpsilon` into the damage table's row."
     }
    ],
    "defaults": {}
@@ -4433,7 +4433,7 @@
   "EEGraphicEffectRecord": {
    "name": "EEGraphicEffectRecord",
    "size": 232,
-   "source": "src/Empire Earth/Data Pre-Loading Thread/EEGraphicEffect.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     232,
     "static_assert"
@@ -4446,7 +4446,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mUnusedDatabaseID",
@@ -4455,7 +4455,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x064 the database row id (not read)"
+     "comment": "The database row id (not read)."
     },
     {
      "name": "mID",
@@ -4464,7 +4464,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68 -> +0x60 (> 0: a real record)"
+     "comment": "Above 0: a real record (the table keeps NULL for the others)."
     },
     {
      "name": "mKind",
@@ -4473,7 +4473,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c -> +0x58"
+     "comment": ""
     },
     {
      "name": "mTagPointKind",
@@ -4482,7 +4482,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70 -> +0x5c"
+     "comment": ""
     },
     {
      "name": "mMediaIndex",
@@ -4491,7 +4491,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x74 -> +0x0c (EEMedia::Get)"
+     "comment": "The media table index of the effect's graphic (none: a random one of its kind)."
     },
     {
      "name": "mStartSize",
@@ -4500,7 +4500,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78 -> +0x20"
+     "comment": ""
     },
     {
      "name": "mHeight",
@@ -4509,7 +4509,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c -> +0x1c"
+     "comment": ""
     },
     {
      "name": "mAlpha",
@@ -4518,7 +4518,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x80 -> +0x24"
+     "comment": ""
     },
     {
      "name": "mTime1",
@@ -4527,7 +4527,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x84 -> +0x70"
+     "comment": ""
     },
     {
      "name": "mTime2",
@@ -4536,7 +4536,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x88 -> +0x74"
+     "comment": ""
     },
     {
      "name": "mDuration",
@@ -4545,7 +4545,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x8c -> +0x78"
+     "comment": ""
     },
     {
      "name": "mIntParam1",
@@ -4554,7 +4554,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x90 -> +0x64"
+     "comment": ""
     },
     {
      "name": "mIntParam2",
@@ -4563,7 +4563,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x94 -> +0x68"
+     "comment": ""
     },
     {
      "name": "mIntParam3",
@@ -4572,7 +4572,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x98 -> +0x6c"
+     "comment": ""
     },
     {
      "name": "mLinkedEffectIndex1",
@@ -4581,7 +4581,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x9c -> +0x10 (an index until Load links it)"
+     "comment": "Three follow-on effects, by table index (out of the table: none)."
     },
     {
      "name": "mLinkedEffectIndex2",
@@ -4590,7 +4590,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa0 -> +0x14"
+     "comment": ""
     },
     {
      "name": "mLinkedEffectIndex3",
@@ -4599,7 +4599,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa4 -> +0x18"
+     "comment": ""
     },
     {
      "name": "mNameStringId",
@@ -4608,7 +4608,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa8 -> +0x7c"
+     "comment": ""
     },
     {
      "name": "mParam1",
@@ -4617,7 +4617,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xac -> +0x28"
+     "comment": ""
     },
     {
      "name": "mParam2",
@@ -4626,7 +4626,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb0 -> +0x2c"
+     "comment": ""
     },
     {
      "name": "mParam3",
@@ -4635,7 +4635,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb4 -> +0x30"
+     "comment": ""
     },
     {
      "name": "mParam4",
@@ -4644,7 +4644,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb8 -> +0x34"
+     "comment": ""
     },
     {
      "name": "mParam5",
@@ -4653,7 +4653,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xbc -> +0x38"
+     "comment": ""
     },
     {
      "name": "mParam6",
@@ -4662,7 +4662,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc0 -> +0x3c"
+     "comment": ""
     },
     {
      "name": "mParam7",
@@ -4671,7 +4671,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc4 -> +0x40"
+     "comment": ""
     },
     {
      "name": "mParam8",
@@ -4680,7 +4680,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc8 -> +0x44"
+     "comment": ""
     },
     {
      "name": "mParam9",
@@ -4689,7 +4689,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xcc -> +0x48"
+     "comment": ""
     },
     {
      "name": "mParam10",
@@ -4698,7 +4698,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd0 -> +0x4c"
+     "comment": ""
     },
     {
      "name": "mParam11",
@@ -4707,7 +4707,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd4 -> +0x50"
+     "comment": ""
     },
     {
      "name": "mEmitPositionSpread",
@@ -4716,7 +4716,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd8 -> +0x54"
+     "comment": ""
     },
     {
      "name": "mFlag1",
@@ -4725,7 +4725,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xdc -> +0x88"
+     "comment": ""
     },
     {
      "name": "mFlag2",
@@ -4734,7 +4734,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xdd -> +0x89"
+     "comment": ""
     },
     {
      "name": "mIsScenarioListed",
@@ -4743,7 +4743,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xde -> +0x8b"
+     "comment": ""
     },
     {
      "name": "mIsEmitFlat",
@@ -4752,7 +4752,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xdf -> +0x8c"
+     "comment": ""
     },
     {
      "name": "mEndsWithUnitOrDuration",
@@ -4761,7 +4761,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xe0 -> +0x8a"
+     "comment": ""
     },
     {
      "name": "pad_0x0e1",
@@ -4779,7 +4779,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xe4 -> +0x84"
+     "comment": ""
     }
    ],
    "defaults": {}
@@ -4787,7 +4787,7 @@
   "EEGraphicObjectRecord": {
    "name": "EEGraphicObjectRecord",
    "size": 716,
-   "source": "src/Empire Earth/Data Pre-Loading Thread/EEGraphicObject.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     716,
     "static_assert"
@@ -4800,7 +4800,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mUnusedDatabaseID",
@@ -4809,7 +4809,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x064 the database row id (not read)"
+     "comment": "The database row id (not read)."
     },
     {
      "name": "mMediaIndex",
@@ -4818,7 +4818,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68"
+     "comment": ""
     },
     {
      "name": "mIsDrawn",
@@ -4827,7 +4827,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c"
+     "comment": ""
     },
     {
      "name": "pad_0x06d",
@@ -4845,7 +4845,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x70"
+     "comment": ""
     },
     {
      "name": "mUnusedBuildingValue2",
@@ -4854,7 +4854,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x74"
+     "comment": ""
     },
     {
      "name": "mSharesFrames0",
@@ -4863,7 +4863,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78"
+     "comment": ""
     },
     {
      "name": "pad_0x079",
@@ -4881,7 +4881,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c"
+     "comment": ""
     },
     {
      "name": "mLastFrame0",
@@ -4890,7 +4890,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x80"
+     "comment": ""
     },
     {
      "name": "mFrameTime0",
@@ -4899,7 +4899,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x84"
+     "comment": ""
     },
     {
      "name": "mLoops0",
@@ -4908,7 +4908,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x88"
+     "comment": ""
     },
     {
      "name": "pad_0x089",
@@ -4926,7 +4926,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x8c (not read: the loader sets mCamouflageTimer[0] to 300000)"
+     "comment": "Not read: the loader sets the hold time of state 0 to 300000."
     },
     {
      "name": "mSound1Frame0",
@@ -4935,7 +4935,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x90"
+     "comment": ""
     },
     {
      "name": "mSound2Frame0",
@@ -4944,7 +4944,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x94"
+     "comment": ""
     },
     {
      "name": "mSound1Index0",
@@ -4953,7 +4953,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x98"
+     "comment": ""
     },
     {
      "name": "mSound2Index0",
@@ -4962,7 +4962,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x9c"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled0",
@@ -4971,7 +4971,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa0"
+     "comment": ""
     },
     {
      "name": "mSharesFrames13",
@@ -4980,7 +4980,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa1"
+     "comment": ""
     },
     {
      "name": "pad_0x0a2",
@@ -4998,7 +4998,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa4"
+     "comment": ""
     },
     {
      "name": "mLastFrame13",
@@ -5007,7 +5007,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa8"
+     "comment": ""
     },
     {
      "name": "mFrameTime13",
@@ -5016,7 +5016,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xac"
+     "comment": ""
     },
     {
      "name": "mLoops13",
@@ -5025,7 +5025,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb0"
+     "comment": ""
     },
     {
      "name": "pad_0x0b1",
@@ -5043,7 +5043,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb4"
+     "comment": ""
     },
     {
      "name": "mSound1Frame13",
@@ -5052,7 +5052,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb8"
+     "comment": ""
     },
     {
      "name": "mSound2Frame13",
@@ -5061,7 +5061,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xbc"
+     "comment": ""
     },
     {
      "name": "mSound1Index13",
@@ -5070,7 +5070,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc0"
+     "comment": ""
     },
     {
      "name": "mSound2Index13",
@@ -5079,7 +5079,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc4"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled13",
@@ -5088,7 +5088,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc8"
+     "comment": ""
     },
     {
      "name": "mSharesFrames7",
@@ -5097,7 +5097,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xc9"
+     "comment": ""
     },
     {
      "name": "pad_0x0ca",
@@ -5115,7 +5115,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xcc"
+     "comment": ""
     },
     {
      "name": "mLastFrame7",
@@ -5124,7 +5124,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd0"
+     "comment": ""
     },
     {
      "name": "mFrameTime7",
@@ -5133,7 +5133,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd4"
+     "comment": ""
     },
     {
      "name": "mLoops7",
@@ -5142,7 +5142,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xd8"
+     "comment": ""
     },
     {
      "name": "pad_0x0d9",
@@ -5160,7 +5160,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xdc"
+     "comment": ""
     },
     {
      "name": "mSound1Frame7",
@@ -5169,7 +5169,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xe0"
+     "comment": ""
     },
     {
      "name": "mSound2Frame7",
@@ -5178,7 +5178,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xe4"
+     "comment": ""
     },
     {
      "name": "mSound1Index7",
@@ -5187,7 +5187,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xe8"
+     "comment": ""
     },
     {
      "name": "mSound2Index7",
@@ -5196,7 +5196,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xec"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled7",
@@ -5205,7 +5205,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xf0"
+     "comment": ""
     },
     {
      "name": "mSharesFrames8",
@@ -5214,7 +5214,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xf1"
+     "comment": ""
     },
     {
      "name": "pad_0x0f2",
@@ -5232,7 +5232,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xf4"
+     "comment": ""
     },
     {
      "name": "mLastFrame8",
@@ -5241,7 +5241,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xf8"
+     "comment": ""
     },
     {
      "name": "mFrameTime8",
@@ -5250,7 +5250,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xfc"
+     "comment": ""
     },
     {
      "name": "mLoops8",
@@ -5259,7 +5259,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x100"
+     "comment": ""
     },
     {
      "name": "pad_0x101",
@@ -5277,7 +5277,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x104"
+     "comment": ""
     },
     {
      "name": "mSound1Frame8",
@@ -5286,7 +5286,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x108"
+     "comment": ""
     },
     {
      "name": "mSound2Frame8",
@@ -5295,7 +5295,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x10c"
+     "comment": ""
     },
     {
      "name": "mSound1Index8",
@@ -5304,7 +5304,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x110"
+     "comment": ""
     },
     {
      "name": "mSound2Index8",
@@ -5313,7 +5313,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x114"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled8",
@@ -5322,7 +5322,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x118"
+     "comment": ""
     },
     {
      "name": "mSharesFrames4",
@@ -5331,7 +5331,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x119"
+     "comment": ""
     },
     {
      "name": "pad_0x11a",
@@ -5349,7 +5349,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x11c"
+     "comment": ""
     },
     {
      "name": "mLastFrame4",
@@ -5358,7 +5358,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x120"
+     "comment": ""
     },
     {
      "name": "mFrameTime4",
@@ -5367,7 +5367,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x124"
+     "comment": ""
     },
     {
      "name": "mLoops4",
@@ -5376,7 +5376,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x128"
+     "comment": ""
     },
     {
      "name": "pad_0x129",
@@ -5394,7 +5394,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x12c"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled4",
@@ -5403,7 +5403,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x130"
+     "comment": ""
     },
     {
      "name": "mSharesFrames5",
@@ -5412,7 +5412,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x131"
+     "comment": ""
     },
     {
      "name": "pad_0x132",
@@ -5430,7 +5430,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x134"
+     "comment": ""
     },
     {
      "name": "mLastFrame5",
@@ -5439,7 +5439,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x138"
+     "comment": ""
     },
     {
      "name": "mFrameTime5",
@@ -5448,7 +5448,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x13c"
+     "comment": ""
     },
     {
      "name": "mLoops5",
@@ -5457,7 +5457,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x140"
+     "comment": ""
     },
     {
      "name": "pad_0x141",
@@ -5475,7 +5475,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x144"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled5",
@@ -5484,7 +5484,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x148"
+     "comment": ""
     },
     {
      "name": "mSharesFrames12",
@@ -5493,7 +5493,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x149"
+     "comment": ""
     },
     {
      "name": "pad_0x14a",
@@ -5511,7 +5511,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x14c"
+     "comment": ""
     },
     {
      "name": "mLastFrame12",
@@ -5520,7 +5520,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x150"
+     "comment": ""
     },
     {
      "name": "mFrameTime12",
@@ -5529,7 +5529,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x154"
+     "comment": ""
     },
     {
      "name": "mLoops12",
@@ -5538,7 +5538,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x158"
+     "comment": ""
     },
     {
      "name": "pad_0x159",
@@ -5556,7 +5556,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x15c"
+     "comment": ""
     },
     {
      "name": "mSound1Frame12",
@@ -5565,7 +5565,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x160"
+     "comment": ""
     },
     {
      "name": "mSound2Frame12",
@@ -5574,7 +5574,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x164"
+     "comment": ""
     },
     {
      "name": "mSound1Index12",
@@ -5583,7 +5583,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x168"
+     "comment": ""
     },
     {
      "name": "mSound2Index12",
@@ -5592,7 +5592,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x16c"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled12",
@@ -5601,7 +5601,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x170"
+     "comment": ""
     },
     {
      "name": "mSharesFrames11",
@@ -5610,7 +5610,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x171"
+     "comment": ""
     },
     {
      "name": "pad_0x172",
@@ -5628,7 +5628,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x174"
+     "comment": ""
     },
     {
      "name": "mLastFrame11",
@@ -5637,7 +5637,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x178"
+     "comment": ""
     },
     {
      "name": "mFrameTime11",
@@ -5646,7 +5646,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x17c"
+     "comment": ""
     },
     {
      "name": "mLoops11",
@@ -5655,7 +5655,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x180"
+     "comment": ""
     },
     {
      "name": "pad_0x181",
@@ -5673,7 +5673,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x184"
+     "comment": ""
     },
     {
      "name": "mSound1Frame11",
@@ -5682,7 +5682,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x188"
+     "comment": ""
     },
     {
      "name": "mSound2Frame11",
@@ -5691,7 +5691,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x18c"
+     "comment": ""
     },
     {
      "name": "mSound1Index11",
@@ -5700,7 +5700,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x190"
+     "comment": ""
     },
     {
      "name": "mSound2Index11",
@@ -5709,7 +5709,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x194"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled11",
@@ -5718,7 +5718,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x198"
+     "comment": ""
     },
     {
      "name": "mSharesFrames9",
@@ -5727,7 +5727,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x199"
+     "comment": ""
     },
     {
      "name": "pad_0x19a",
@@ -5745,7 +5745,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x19c"
+     "comment": ""
     },
     {
      "name": "mLastFrame9",
@@ -5754,7 +5754,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1a0"
+     "comment": ""
     },
     {
      "name": "mFrameTime9",
@@ -5763,7 +5763,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1a4"
+     "comment": ""
     },
     {
      "name": "mLoops9",
@@ -5772,7 +5772,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1a8"
+     "comment": ""
     },
     {
      "name": "pad_0x1a9",
@@ -5790,7 +5790,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1ac"
+     "comment": ""
     },
     {
      "name": "mSound1Frame9",
@@ -5799,7 +5799,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1b0"
+     "comment": ""
     },
     {
      "name": "mSound2Frame9",
@@ -5808,7 +5808,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1b4"
+     "comment": ""
     },
     {
      "name": "mSound1Index9",
@@ -5817,7 +5817,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1b8"
+     "comment": ""
     },
     {
      "name": "mSound2Index9",
@@ -5826,7 +5826,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1bc"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled9",
@@ -5835,7 +5835,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1c0"
+     "comment": ""
     },
     {
      "name": "mSharesFrames10",
@@ -5844,7 +5844,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1c1"
+     "comment": ""
     },
     {
      "name": "pad_0x1c2",
@@ -5862,7 +5862,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1c4"
+     "comment": ""
     },
     {
      "name": "mLastFrame10",
@@ -5871,7 +5871,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1c8"
+     "comment": ""
     },
     {
      "name": "mFrameTime10",
@@ -5880,7 +5880,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1cc"
+     "comment": ""
     },
     {
      "name": "mLoops10",
@@ -5889,7 +5889,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1d0"
+     "comment": ""
     },
     {
      "name": "pad_0x1d1",
@@ -5907,7 +5907,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1d4"
+     "comment": ""
     },
     {
      "name": "mSound1Frame10",
@@ -5916,7 +5916,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1d8"
+     "comment": ""
     },
     {
      "name": "mSound2Frame10",
@@ -5925,7 +5925,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1dc"
+     "comment": ""
     },
     {
      "name": "mSound1Index10",
@@ -5934,7 +5934,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1e0"
+     "comment": ""
     },
     {
      "name": "mSound2Index10",
@@ -5943,7 +5943,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1e4"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled10",
@@ -5952,7 +5952,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1e8"
+     "comment": ""
     },
     {
      "name": "mSharesFrames6",
@@ -5961,7 +5961,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1e9"
+     "comment": ""
     },
     {
      "name": "pad_0x1ea",
@@ -5979,7 +5979,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1ec"
+     "comment": ""
     },
     {
      "name": "mLastFrame6",
@@ -5988,7 +5988,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1f0"
+     "comment": ""
     },
     {
      "name": "mFrameTime6",
@@ -5997,7 +5997,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1f4"
+     "comment": ""
     },
     {
      "name": "mLoops6",
@@ -6006,7 +6006,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1f8"
+     "comment": ""
     },
     {
      "name": "pad_0x1f9",
@@ -6024,7 +6024,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x1fc"
+     "comment": ""
     },
     {
      "name": "mSound1Frame6",
@@ -6033,7 +6033,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x200"
+     "comment": ""
     },
     {
      "name": "mSound2Frame6",
@@ -6042,7 +6042,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x204"
+     "comment": ""
     },
     {
      "name": "mSound1Index6",
@@ -6051,7 +6051,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x208"
+     "comment": ""
     },
     {
      "name": "mSound2Index6",
@@ -6060,7 +6060,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x20c"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled6",
@@ -6069,7 +6069,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x210"
+     "comment": ""
     },
     {
      "name": "mSharesFrames3",
@@ -6078,7 +6078,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x211"
+     "comment": ""
     },
     {
      "name": "pad_0x212",
@@ -6096,7 +6096,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x214"
+     "comment": ""
     },
     {
      "name": "mLastFrame3",
@@ -6105,7 +6105,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x218"
+     "comment": ""
     },
     {
      "name": "mFrameTime3",
@@ -6114,7 +6114,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x21c"
+     "comment": ""
     },
     {
      "name": "mLoops3",
@@ -6123,7 +6123,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x220"
+     "comment": ""
     },
     {
      "name": "pad_0x221",
@@ -6141,7 +6141,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x224"
+     "comment": ""
     },
     {
      "name": "mSound1Frame3",
@@ -6150,7 +6150,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x228"
+     "comment": ""
     },
     {
      "name": "mSound2Frame3",
@@ -6159,7 +6159,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x22c"
+     "comment": ""
     },
     {
      "name": "mSound1Index3",
@@ -6168,7 +6168,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x230"
+     "comment": ""
     },
     {
      "name": "mSound2Index3",
@@ -6177,7 +6177,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x234"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled3",
@@ -6186,7 +6186,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x238"
+     "comment": ""
     },
     {
      "name": "mSharesFrames1",
@@ -6195,7 +6195,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x239"
+     "comment": ""
     },
     {
      "name": "pad_0x23a",
@@ -6213,7 +6213,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x23c"
+     "comment": ""
     },
     {
      "name": "mLastFrame1",
@@ -6222,7 +6222,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x240"
+     "comment": ""
     },
     {
      "name": "mFrameTime1",
@@ -6231,7 +6231,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x244"
+     "comment": ""
     },
     {
      "name": "mLoops1",
@@ -6240,7 +6240,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x248"
+     "comment": ""
     },
     {
      "name": "pad_0x249",
@@ -6258,7 +6258,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x24c"
+     "comment": ""
     },
     {
      "name": "mSound1Frame1",
@@ -6267,7 +6267,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x250"
+     "comment": ""
     },
     {
      "name": "mSound2Frame1",
@@ -6276,7 +6276,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x254"
+     "comment": ""
     },
     {
      "name": "mSound1Index1",
@@ -6285,7 +6285,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x258"
+     "comment": ""
     },
     {
      "name": "mSound2Index1",
@@ -6294,7 +6294,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x25c"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled1",
@@ -6303,7 +6303,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x260"
+     "comment": ""
     },
     {
      "name": "mSharesFrames2",
@@ -6312,7 +6312,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x261"
+     "comment": ""
     },
     {
      "name": "pad_0x262",
@@ -6330,7 +6330,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x264"
+     "comment": ""
     },
     {
      "name": "mLastFrame2",
@@ -6339,7 +6339,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x268"
+     "comment": ""
     },
     {
      "name": "mFrameTime2",
@@ -6348,7 +6348,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x26c"
+     "comment": ""
     },
     {
      "name": "mLoops2",
@@ -6357,7 +6357,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x270"
+     "comment": ""
     },
     {
      "name": "pad_0x271",
@@ -6375,7 +6375,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x274"
+     "comment": ""
     },
     {
      "name": "mSound1Frame2",
@@ -6384,7 +6384,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x278"
+     "comment": ""
     },
     {
      "name": "mSound2Frame2",
@@ -6393,7 +6393,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x27c"
+     "comment": ""
     },
     {
      "name": "mSound1Index2",
@@ -6402,7 +6402,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x280"
+     "comment": ""
     },
     {
      "name": "mSound2Index2",
@@ -6411,7 +6411,7 @@
      "type": "u32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x284"
+     "comment": ""
     },
     {
      "name": "mIsSpeedScaled2",
@@ -6420,7 +6420,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x288"
+     "comment": ""
     },
     {
      "name": "pad_0x289",
@@ -6438,7 +6438,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x28c"
+     "comment": ""
     },
     {
      "name": "mUnusedIsSprite",
@@ -6447,7 +6447,7 @@
      "type": "raw",
      "count": 1,
      "cls": "unused",
-     "comment": "+0x290"
+     "comment": ""
     },
     {
      "name": "_gap291",
@@ -6465,7 +6465,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x298"
+     "comment": ""
     },
     {
      "name": "mUnusedBaseGraphic",
@@ -6474,7 +6474,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x29c"
+     "comment": ""
     },
     {
      "name": "mAlphaReference",
@@ -6483,7 +6483,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2a0"
+     "comment": ""
     },
     {
      "name": "mUnusedBuildingIndex",
@@ -6492,7 +6492,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x2a4"
+     "comment": ""
     },
     {
      "name": "_gap2A8",
@@ -6510,7 +6510,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2ac"
+     "comment": ""
     },
     {
      "name": "mHasAlpha",
@@ -6519,7 +6519,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2b0"
+     "comment": ""
     },
     {
      "name": "pad_0x2b1",
@@ -6537,7 +6537,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2b4"
+     "comment": ""
     },
     {
      "name": "_gap2B8",
@@ -6555,7 +6555,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2bc"
+     "comment": ""
     },
     {
      "name": "mNumMipLevelsToDrop",
@@ -6564,7 +6564,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2c0"
+     "comment": ""
     },
     {
      "name": "mMaxMipLevelsToDrop",
@@ -6573,7 +6573,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2c4"
+     "comment": ""
     },
     {
      "name": "mCreateMipMaps",
@@ -6582,7 +6582,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x2c8"
+     "comment": ""
     },
     {
      "name": "pad_0x2c9",
@@ -6599,7 +6599,7 @@
   "EEMusicRecord": {
    "name": "EEMusicRecord",
    "size": 196,
-   "source": "src/Empire Earth/Data Pre-Loading Thread/EEMusicObject.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     196,
     "static_assert"
@@ -6612,7 +6612,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x000 the database row id (not read)"
+     "comment": "The database row id (not read)."
     },
     {
      "name": "mUnusedIndex",
@@ -6621,7 +6621,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x004 the 0-based row index (not read)"
+     "comment": "The 0-based row index (not read)."
     },
     {
      "name": "label",
@@ -6630,7 +6630,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x008 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mFileName",
@@ -6639,7 +6639,7 @@
      "type": "str",
      "count": 52,
      "cls": "named",
-     "comment": "+0x6c (a plain name; the song object appends \".sgt\")"
+     "comment": "A plain name: the song appends \".sgt\"."
     },
     {
      "name": "mReverbGain",
@@ -6648,7 +6648,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa0"
+     "comment": ""
     },
     {
      "name": "mReverbHighFreqRTRatio",
@@ -6657,7 +6657,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa4"
+     "comment": ""
     },
     {
      "name": "mReverbMix",
@@ -6666,7 +6666,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa8"
+     "comment": ""
     },
     {
      "name": "mReverbTime",
@@ -6675,7 +6675,7 @@
      "type": "f32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xac"
+     "comment": ""
     },
     {
      "name": "_gapB0",
@@ -6693,7 +6693,7 @@
      "type": "bool",
      "count": 14,
      "cls": "named",
-     "comment": "+0xb5..+0xc2"
+     "comment": "The epochs the song plays in (prehistoric .. nano; the space age plays the nano age's)."
     },
     {
      "name": "_gapC3",
@@ -9165,7 +9165,7 @@
   "EESoundRecord": {
    "name": "EESoundRecord",
    "size": 132,
-   "source": "src/Empire Earth/Data Pre-Loading Thread/EESoundObject.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     132,
     "static_assert"
@@ -9178,7 +9178,7 @@
      "type": "str",
      "count": 100,
      "cls": "label",
-     "comment": "+0x000 the row name (the game never reads it; the text's label)"
+     "comment": "The row name (the game never reads it; the text's label)."
     },
     {
      "name": "mUnusedDatabaseID",
@@ -9187,7 +9187,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x064 the database row id (not read)"
+     "comment": "The database row id (not read)."
     },
     {
      "name": "mUnusedIndex",
@@ -9196,7 +9196,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x068 the 0-based row index (not read)"
+     "comment": "The 0-based row index (not read)."
     },
     {
      "name": "mMaxInstances",
@@ -9205,7 +9205,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c -> +0x1c"
+     "comment": ""
     },
     {
      "name": "mCategory",
@@ -9214,7 +9214,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70 -> +0x20"
+     "comment": ""
     },
     {
      "name": "mUnusedPriority",
@@ -9223,7 +9223,7 @@
      "type": "raw",
      "count": 4,
      "cls": "unused",
-     "comment": "+0x74 -> +0x24"
+     "comment": ""
     },
     {
      "name": "mLooping",
@@ -9232,7 +9232,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78 -> +0x2c (looping)"
+     "comment": ""
     },
     {
      "name": "pad_0x079",
@@ -9250,7 +9250,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c: percent -> +0x14 (float, * 0.01)"
+     "comment": "Percent (the class keeps a factor)."
     },
     {
      "name": "_gap80",
@@ -9804,7 +9804,7 @@
   "EETerrainRecord": {
    "name": "EETerrainRecord",
    "size": 204,
-   "source": "src/Empire Earth/Database/EETerrainTable.cpp",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     204,
     "static_assert"
@@ -9817,7 +9817,7 @@
      "type": "str",
      "count": 104,
      "cls": "named",
-     "comment": "+0x00 -> mFamilies"
+     "comment": "The terrain's name (the class's `mName`: the random map scripts name a terrain by it, spaces removed)."
     },
     {
      "name": "mID",
@@ -9826,7 +9826,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68 -> +0x50"
+     "comment": "Negative: an unused row (`EETerrainTable::Get` returns NULL)."
     },
     {
      "name": "mTextureID",
@@ -9835,7 +9835,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c -> +0x4c"
+     "comment": ""
     },
     {
      "name": "mNameID",
@@ -9844,7 +9844,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70 -> +0x54"
+     "comment": "The name's string id."
     },
     {
      "name": "mTextureTileCoverage",
@@ -9853,7 +9853,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x74 -> +0x58"
+     "comment": ""
     },
     {
      "name": "mTerrainType",
@@ -9862,7 +9862,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x78 -> +0x5c"
+     "comment": ""
     },
     {
      "name": "mColumns",
@@ -9871,7 +9871,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x7c -> +0x60"
+     "comment": "The texture grid: `mColumns` x `mRows` textures, the file name numbered `_1` .. `_n`."
     },
     {
      "name": "mRows",
@@ -9880,7 +9880,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x80 -> +0x64"
+     "comment": ""
     },
     {
      "name": "mIsWater",
@@ -9889,7 +9889,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x84 -> +0x84"
+     "comment": ""
     },
     {
      "name": "mHasAlpha",
@@ -9898,7 +9898,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x85 -> +0x86"
+     "comment": ""
     },
     {
      "name": "mIsInEditor",
@@ -9907,7 +9907,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0x86 -> +0x85"
+     "comment": ""
     },
     {
      "name": "pad_0x087",
@@ -9925,7 +9925,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x88 -> +0x68"
+     "comment": ""
     },
     {
      "name": "mFirst",
@@ -9934,7 +9934,7 @@
      "type": "u32",
      "count": 3,
      "cls": "named",
-     "comment": "+0x8c: unit class ranges [mFirst[k], mLast[k]] -> mUnitClasses"
+     "comment": "Three ranges of ambient unit classes, [first, last] (both nonzero: used)."
     },
     {
      "name": "mLast",
@@ -9943,7 +9943,7 @@
      "type": "u32",
      "count": 3,
      "cls": "named",
-     "comment": "+0x98"
+     "comment": ""
     },
     {
      "name": "mAmbientUnitChance",
@@ -9952,7 +9952,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa4 -> +0x7c"
+     "comment": ""
     },
     {
      "name": "mWaterAnimationPeriod",
@@ -9961,7 +9961,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xa8 -> +0x44"
+     "comment": ""
     },
     {
      "name": "mWaterDepth",
@@ -9970,7 +9970,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xac -> +0x80"
+     "comment": ""
     },
     {
      "name": "mRed",
@@ -9979,7 +9979,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb0 (0..255)"
+     "comment": "The colour, 0..255 a component."
     },
     {
      "name": "mGreen",
@@ -9988,7 +9988,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb4"
+     "comment": ""
     },
     {
      "name": "mBlue",
@@ -9997,7 +9997,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb8"
+     "comment": ""
     },
     {
      "name": "_gapBC",
@@ -10015,7 +10015,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xcb -> +0x87"
+     "comment": ""
     }
    ],
    "defaults": {}
@@ -12192,7 +12192,7 @@
   "EERandomMapRecord": {
    "name": "EERandomMapRecord",
    "size": 132,
-   "source": "include/ee/EEDatabaseTables.h",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     132,
     "static_assert"
@@ -12205,7 +12205,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x00 4..71, unique"
+     "comment": "4..71, unique."
     },
     {
      "name": "mGroup",
@@ -12214,7 +12214,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x04 1..10: two or three rows per group"
+     "comment": "1..10: two or three rows per group."
     },
     {
      "name": "mName",
@@ -12223,7 +12223,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x08 the terrain's name (\"Grass Tufts\", \"Snow\", \"StoneWork\")"
+     "comment": "The terrain's name (\"Grass Tufts\", \"Snow\", \"StoneWork\")."
     },
     {
      "name": "mElevationLow",
@@ -12232,7 +12232,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x6c -10, -2, 0"
+     "comment": "-10, -2, 0."
     },
     {
      "name": "mElevationHigh",
@@ -12241,7 +12241,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x70 -4, -3, -1, 20"
+     "comment": "-4, -3, -1, 20."
     },
     {
      "name": "mTerrain",
@@ -12250,7 +12250,7 @@
      "type": "s32",
      "count": 4,
      "cls": "named",
-     "comment": "+0x74 four equal dbterrain ids (2..71)"
+     "comment": "Four equal dbterrain ids (2..71)."
     }
    ],
    "defaults": {}
@@ -12258,7 +12258,7 @@
   "EETerrainGrayTextureRecord": {
    "name": "EETerrainGrayTextureRecord",
    "size": 120,
-   "source": "include/ee/EEDatabaseTables.h",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     120,
     "static_assert"
@@ -12271,7 +12271,7 @@
      "type": "str",
      "count": 100,
      "cls": "named",
-     "comment": "+0x00 \"Grass Rough (x)\" ... \"Space\""
+     "comment": "\"Grass Rough (x)\" ... \"Space\"."
     },
     {
      "name": "mID",
@@ -12280,7 +12280,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x64 2..60"
+     "comment": "2..60."
     },
     {
      "name": "mIndex",
@@ -12289,7 +12289,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x68 -1 (row 0) .. 58"
+     "comment": "-1 (row 0) .. 58."
     },
     {
      "name": "mColor",
@@ -12298,7 +12298,7 @@
      "type": "s32",
      "count": 3,
      "cls": "named",
-     "comment": "+0x6c red, green, blue (0..255), like dbterrain's colour"
+     "comment": "Red, green, blue (0..255), like dbterrain's colour."
     }
    ],
    "defaults": {}

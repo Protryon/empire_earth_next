@@ -8,21 +8,21 @@ importer writes where the text has none, and the TABLES rows describe each file'
 # Source files of the on-disk record structs (relative to the repository root).
 STRUCT_SOURCES = {
     'EEUnitClassRecord': 'include/ee/EEUnitClassRecord.h',
-    'EEGraphicObjectRecord': 'src/Empire Earth/Data Pre-Loading Thread/EEGraphicObject.cpp',
-    'EESoundRecord': 'src/Empire Earth/Data Pre-Loading Thread/EESoundObject.cpp',
-    'EEGraphicEffectRecord': 'src/Empire Earth/Data Pre-Loading Thread/EEGraphicEffect.cpp',
-    'EEMusicRecord': 'src/Empire Earth/Data Pre-Loading Thread/EEMusicObject.cpp',
+    'EEGraphicObjectRecord': 'rust/crates/ee_data/src/tables.rs',
+    'EESoundRecord': 'rust/crates/ee_data/src/tables.rs',
+    'EEGraphicEffectRecord': 'rust/crates/ee_data/src/tables.rs',
+    'EEMusicRecord': 'rust/crates/ee_data/src/tables.rs',
     'EEWorldTableEntry': 'include/ee/EEDatabaseTables.h',
-    'EEDamageTableRecord': 'src/Empire Earth/Database/EETerrainTypeTable.cpp',
+    'EEDamageTableRecord': 'rust/crates/ee_data/src/tables.rs',
     'EETerrainTypeRecord': 'rust/crates/ee_data/src/tables.rs',
-    'EEButtonRecord': 'src/Empire Earth/Database/EEButtonObject.cpp',
+    'EEButtonRecord': 'rust/crates/ee_data/src/tables.rs',
     'EETechTreeRecord': 'include/ee/EETechTreeRecord.h',
     'EEEventEffect': 'include/ee/EEEvent.h',
     'EEAnimalRecord': 'rust/crates/ee_data/src/tables.rs',
     'EEColorTableRecord': 'rust/crates/ee_data/src/tables.rs',
     'EEAIUnitTargetingRecord': 'rust/crates/ee_data/src/tables.rs',
-    'EETerrainRecord': 'src/Empire Earth/Database/EETerrainTable.cpp',
-    'EECliffTerrainRecord': 'src/Empire Earth/Database/EETerrainTable.cpp',
+    'EETerrainRecord': 'rust/crates/ee_data/src/tables.rs',
+    'EECliffTerrainRecord': 'rust/crates/ee_data/src/tables.rs',
     'EECivPower': 'include/ee/EECivPowersManager.h',
     'EECivilizationCategoryEntry': 'include/ee/EECivilizationManager.h',
     'EECivilizationEntry': 'include/ee/EECivilizationManager.h',
@@ -42,8 +42,8 @@ STRUCT_SOURCES = {
     'UIDbDataEvents': 'rust/crates/ee_ui/src/event.rs',
     'UIDbDataFonts': 'rust/crates/ee_ui/src/font.rs',
     'UIDbDataHotKeys': 'rust/crates/ee_ui/src/hotkey.rs',
-    'EERandomMapRecord': 'include/ee/EEDatabaseTables.h',
-    'EETerrainGrayTextureRecord': 'include/ee/EEDatabaseTables.h',
+    'EERandomMapRecord': 'rust/crates/ee_data/src/tables.rs',
+    'EETerrainGrayTextureRecord': 'rust/crates/ee_data/src/tables.rs',
 }
 
 # Tables the game loads but never reads a field of (dbrandommap: EERandomMapTable::Load drops every record) or never
@@ -53,7 +53,7 @@ UNREAD_TABLES = {'dbrandommap', 'dbterraingraytextures'}
 
 # Records whose definition is Rust (the record's name -> the `#[repr(C)]` struct in its STRUCT_SOURCES file): specgen
 # reads the Rust struct (field names to mCamelCase, `id` as ID; a scalar u8 is a one-byte bool, a u8/c_char array
-# char[N]) and its `assert!(size_of::<T>() == N)`.
+# char[N], a `[DbFlag; N]` array bool[N]) and its `assert!(size_of::<T>() == N)`.
 RUST_STRUCTS = {
     'EEAnimalRecord': 'DbAnimal',
     'EEToHitRecord': 'DbToHit',
@@ -64,6 +64,16 @@ RUST_STRUCTS = {
     'EEAIUnitTargetingRecord': 'DbAiTargeting',
     'EETerrainTypeRecord': 'DbTerrainType',
     'EEGameVariantData': 'DbGameVariant',
+    'EEGraphicObjectRecord': 'DbGraphicObject',
+    'EESoundRecord': 'DbSound',
+    'EEGraphicEffectRecord': 'DbGraphicEffect',
+    'EEMusicRecord': 'DbMusic',
+    'EEDamageTableRecord': 'DbDamageTable',
+    'EEButtonRecord': 'DbButton',
+    'EETerrainRecord': 'DbTerrain',
+    'EECliffTerrainRecord': 'DbCliffTerrain',
+    'EERandomMapRecord': 'DbRandomMap',
+    'EETerrainGrayTextureRecord': 'DbTerrainGrayTexture',
     'UIDbControl': 'DbControl',
     'UIDbDataBackgrounds': 'DbBackground',
     'UIDbDataEvents': 'DbEvent',

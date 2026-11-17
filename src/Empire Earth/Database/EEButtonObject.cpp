@@ -26,6 +26,7 @@
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEButtonObject.h"
+#include "ee/EEDbRecords.h"
 
 std::vector<EEButtonObject*> EEButtonObject::sTable;
 
@@ -34,21 +35,9 @@ std::vector<EEButtonObject*> EEButtonObject::sTable;
 // 0x5308b4: the pixel depth textures are loaded with (16 or 32; provisional name)
 extern unsigned long& gTexturePixelDepth;
 
-// One record of db\dbButtons.dat (0xe0 bytes, read whole). Inferred layout.
-struct EEButtonRecord {
-    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    char mFileName[0x68];                   // +0x64 -> mName
-    int32_t mID;                            // +0xcc -> +0x30
-    int32_t mRow;                           // +0xd0 -> +0x2c
-    int32_t mColumn;                        // +0xd4 -> +0x28
-    int32_t mPosition;                      // +0xd8 -> +0x20
-    int32_t mHotKey;                        // +0xdc -> +0x24
-};
-static_assert(sizeof(EEButtonRecord) == 224, "on-disk record: 224 bytes on every target");
-
 // Creates a button image entry with no texture and no references
 EEButtonObject::EEButtonObject()
-    : mTexture(NULL), mCellU(0.0f), mCellV(0.0f), mMediaCount(0)
+    : EeDataButtonFields(), mTexture(NULL), mCellU(0.0f), mCellV(0.0f), mMediaCount(0)
 {
     this->mIsLoading = false;
 }
@@ -60,34 +49,17 @@ EEButtonObject::~EEButtonObject()
         this->mTexture->Dereference();
 }
 
-// Loads the button image entries (file name, cell row and column, id, hot key, position) from db\dbButtons.dat;
-// stops at the first read error and returns it
+// Loads the button image entries (file name, cell row and column, id, hot key, position: the record and its copy are
+// ee_data tables.rs') from db\dbButtons.dat; stops at the first read error and returns it
 long EEButtonObject::Load(FSFileSpec* inFile)
 {
-    unsigned long theCount = 0;
-    long theResult;
-    unsigned long theRead = 0;
-    EEButtonRecord theRecord;
-    inFile->Open(kFileAccessRead);
-    theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
-        EEButtonObject::sTable.resize(theCount, NULL);
-        for (unsigned long i = 0; i < theCount; i++) {
+    return EEDbReadRecords(inFile, ee_data_button_record_size(),
+        [](unsigned long inCount) { EEButtonObject::sTable.resize(inCount, NULL); return true; },
+        [](unsigned long inIndex, const unsigned char* inRecord) {
             EEButtonObject* theButton = new EEButtonObject;
-            EEButtonObject::sTable[i] = theButton;
-            theResult = inFile->Read(reinterpret_cast<char*>(&theRecord), sizeof(theRecord), theRead);
-            theButton->mColumn = theRecord.mColumn;
-            theButton->mRow = theRecord.mRow;
-            theButton->mID = theRecord.mID;
-            theButton->mName.Copy(theRecord.mFileName, 0, strlen(theRecord.mFileName), 0, true);
-            theButton->mHotKeyIndex = theRecord.mHotKey;
-            theButton->mPosition = theRecord.mPosition;
-            if (theResult != kErrorOK)
-                break;
-        }
-    }
-    inFile->Close();
-    return theResult;
+            EEButtonObject::sTable[inIndex] = theButton;
+            EEDbCopyName(theButton->mName, ee_data_button_from_record(inRecord, theButton));
+        }, true);
 }
 
 // Destroys every button image entry and empties the table
@@ -160,91 +132,57 @@ long EEButtonObject::LoadTexture()
         this->mTexture->SetStageMagFilterMode(0, -1);
         this->mTexture->SetStageMipFilterMode(kMipFilterNone, -1);
         this->mTexture->SetStageMipMapBias(0.0f, -1);
-        this->mCellU = (float)(this->mColumn * 41) / (float)(this->mTexture->GetWidth() << this->mTexture->GetNumMipLevelsToDrop());
-        this->mCellV = (float)(this->mRow * 41) / (float)(this->mTexture->GetHeight() << this->mTexture->GetNumMipLevelsToDrop());
+        EeDataButtonTexture theSize = {this->mTexture->GetWidth(), this->mTexture->GetHeight(),
+                                       this->mTexture->GetNumMipLevelsToDrop(), 0};
+        float theCell[2];
+        ee_data_button_cell_offset(this->mColumn, this->mRow, &theSize, theCell);
+        this->mCellU = theCell[0];
+        this->mCellV = theCell[1];
     } else {
         theResult = 3;
     }
     return theResult;
 }
 
-// Shows the button's cell, inset by one texel, on a bitmap scaled to a rectangle (a 40-texel cell on textures 256 or
-// more wide, else the whole texture); a button without a texture is skipped
-void EEButtonObject::SetFaceBitmap(GEBitmap* inBitmap, const GERectangle& inRectangle, unsigned long inScreen)
+// Shows the button's cell on a bitmap scaled to a rectangle: a 40-texel cell on textures 256 or more wide, else the
+// whole texture (ee_data tables.rs); inInset: one texel in
+static void EESetButtonBitmap(GETexture* inTexture, float inCellU, float inCellV, bool inInset, GEBitmap* inBitmap,
+                              const GERectangle& inRectangle, unsigned long inScreen)
 {
+    EeDataButtonTexture theSize = {inTexture->GetWidth(), inTexture->GetHeight(), inTexture->GetNumMipLevelsToDrop(),
+                                   inTexture->GetSurface()->GetHeight()};
+    inBitmap->SetTexture(inTexture, inScreen);
+    EeDataButtonCell theCell = ee_data_button_cell(&theSize, inCellU, inCellV, inInset, inRectangle.GetWidth(),
+                                                   inRectangle.GetHeight());
     GETextureCoordinate theTopLeft;
     GETextureCoordinate theTopRight;
     GETextureCoordinate theBottomLeft;
     GETextureCoordinate theBottomRight;
-    // Test the texture before reading its size (a button whose texture failed to load is skipped; so is one whose
-    // surface is not loaded: EE-SIM's textures, a scenario's information portrait).
-    if (this->mTexture == NULL || this->mTexture->GetSurface() == NULL)
-        return;
-    float theWidth = (float)(this->mTexture->GetWidth() << this->mTexture->GetNumMipLevelsToDrop());
-    unsigned long theHeight = this->mTexture->GetSurface()->GetHeight();
-    unsigned long theDrop = this->mTexture->GetNumMipLevelsToDrop();
-    inBitmap->SetTexture(this->mTexture, inScreen);
-    float theU;
-    float theV;
-    if (theWidth >= 256.0f) {
-        theU = 40.0f / theWidth;
-        theV = 40.0f / (float)(theHeight << theDrop);
-    } else {
-        theU = (float)(this->mTexture->GetWidth() - 1) / (float)this->mTexture->GetWidth();
-        theV = (float)(this->mTexture->GetHeight() - 1) / (float)this->mTexture->GetHeight();
-    }
-    float theTexel = 1.0f / (float)this->mTexture->GetWidth();
-    theTopLeft.SetU(theTexel + this->mCellU);
-    theTopLeft.SetV(theTexel + this->mCellV);
-    theBottomRight.SetU(theTexel + this->mCellU + theU);
-    theBottomRight.SetV(theTexel + this->mCellV + theV);
-    theTopRight.SetU(theBottomRight.GetU());
-    theTopRight.SetV(theTopLeft.GetV());
-    theBottomLeft.SetU(theTopLeft.GetU());
-    theBottomLeft.SetV(theBottomRight.GetV());
+    theTopLeft.SetU(theCell.left);
+    theTopLeft.SetV(theCell.top);
+    theTopRight.SetU(theCell.right);
+    theTopRight.SetV(theCell.top);
+    theBottomLeft.SetU(theCell.left);
+    theBottomLeft.SetV(theCell.bottom);
+    theBottomRight.SetU(theCell.right);
+    theBottomRight.SetV(theCell.bottom);
     inBitmap->SetTextureCoordinates(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
-    unsigned long theTextureHeight = this->mTexture->GetSurface()->GetHeight();
-    unsigned long theTextureWidth = this->mTexture->GetWidth();
-    inBitmap->SetXYScale((inRectangle.GetWidth() + 1.0f) / theTextureWidth,
-                         (inRectangle.GetHeight() + 1.0f) / theTextureHeight);
+    inBitmap->SetXYScale(theCell.scale_x, theCell.scale_y);
 }
 
-// Shows the pressed button's cell (no texel inset) on a bitmap scaled to a rectangle; as SetFaceBitmap without the
-// texture test
-// NEAR: the original converts (theHeight << theDrop) through fild qword + fdivp; ours fuses it into fidiv
+// Shows the button's cell, inset by one texel, on a bitmap scaled to a rectangle; a button without a texture (or
+// whose surface is not loaded: EE-SIM's textures, a scenario's information portrait) is skipped
+void EEButtonObject::SetFaceBitmap(GEBitmap* inBitmap, const GERectangle& inRectangle, unsigned long inScreen)
+{
+    if (this->mTexture == NULL || this->mTexture->GetSurface() == NULL)
+        return;
+    EESetButtonBitmap(this->mTexture, this->mCellU, this->mCellV, true, inBitmap, inRectangle, inScreen);
+}
+
+// Shows the pressed button's cell (no texel inset) on a bitmap scaled to a rectangle (no texture test)
 void EEButtonObject::SetPressedBitmap(GEBitmap* inBitmap, const GERectangle& inRectangle, unsigned long inScreen)
 {
-    GETextureCoordinate theTopLeft;
-    GETextureCoordinate theTopRight;
-    GETextureCoordinate theBottomLeft;
-    GETextureCoordinate theBottomRight;
-    float theWidth = (float)(this->mTexture->GetWidth() << this->mTexture->GetNumMipLevelsToDrop());
-    unsigned long theHeight = this->mTexture->GetSurface()->GetHeight();
-    unsigned long theDrop = this->mTexture->GetNumMipLevelsToDrop();
-    inBitmap->SetTexture(this->mTexture, inScreen);
-    float theU;
-    float theV;
-    if (theWidth >= 256.0f) {
-        theU = 40.0f / theWidth;
-        float theScaledHeight = (float)(theHeight << theDrop);
-        theV = 40.0f / theScaledHeight;
-    } else {
-        theU = (float)(this->mTexture->GetWidth() - 1) / (float)this->mTexture->GetWidth();
-        theV = (float)(this->mTexture->GetHeight() - 1) / (float)this->mTexture->GetHeight();
-    }
-    theTopLeft.SetU(this->mCellU);
-    theTopLeft.SetV(this->mCellV);
-    theBottomRight.SetU(theU + this->mCellU);
-    theBottomRight.SetV(theV + this->mCellV);
-    theTopRight.SetU(theBottomRight.GetU());
-    theTopRight.SetV(theTopLeft.GetV());
-    theBottomLeft.SetU(theTopLeft.GetU());
-    theBottomLeft.SetV(theBottomRight.GetV());
-    inBitmap->SetTextureCoordinates(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
-    unsigned long theTextureHeight = this->mTexture->GetSurface()->GetHeight();
-    unsigned long theTextureWidth = this->mTexture->GetWidth();
-    inBitmap->SetXYScale((inRectangle.GetWidth() + 1.0f) / theTextureWidth,
-                         (inRectangle.GetHeight() + 1.0f) / theTextureHeight);
+    EESetButtonBitmap(this->mTexture, this->mCellU, this->mCellV, false, inBitmap, inRectangle, inScreen);
 }
 
 // Drops a reference to the button image once any load has finished, releasing its texture with the last one; returns 0

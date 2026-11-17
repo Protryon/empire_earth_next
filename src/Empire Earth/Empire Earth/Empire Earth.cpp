@@ -194,8 +194,6 @@ EETerrainTable gTerrainTable;
 EETerrainColorTable gTerrainColorTable;
 // chain at 0x53ed1b (wrapper)
 EETerrainTypeTable gTerrainTypeTable;
-// chain at 0x53ed46 (wrapper)
-EERandomMapTable gRandomMapTable;
 // chain at 0x53ed71 (wrapper)
 EEGameState gGameState;
 // data the original placed inside gGameState (it addressed them as globals): references to the members
@@ -2481,7 +2479,6 @@ void EEDeleteDatabase(bool inShutdown)
     EETerrainColorTable::Unload();
     EETerrainTypeTable::Unload();
     EECliffTerrainTable::Unload();
-    EERandomMapTable::Unload();
     EEUCUpgradeTable::Unload();
     EEUnitBehavior::Unload();
     EEStartingResources::Unload();
