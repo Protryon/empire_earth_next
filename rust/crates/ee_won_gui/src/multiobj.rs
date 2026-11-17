@@ -17,8 +17,9 @@
 use std::cell::RefCell;
 use std::ffi::c_void;
 
-use crate::guictl::EeWonRect4;
 use crate::guidraw::{self, EeWonDrawOp, EeWonMultiRowPaint, EE_WON_DRAW_CALL};
+use crate::compmem as mem;
+use crate::compobj::comp;
 use crate::guihost::{EeWonGuiCursor as Cursor, EeWonGuiField as F, EeWonGuiHostFn, EeWonGuiOp as Op};
 use crate::guimulti::{self, EeWonHeaderButton};
 use crate::listobj::{EeWonList, EeWonListCall as L};
@@ -26,7 +27,7 @@ use crate::listobj::{EeWonList, EeWonListCall as L};
 /// `ListSortType_None`.
 const SORT_NONE: i32 = 2;
 /// `ComponentFlag_Clip`.
-const CLIP: isize = 0x2000;
+const CLIP: i32 = 0x2000;
 /// The list flag of full-row selection.
 const FULL_ROW: isize = 0x10;
 
@@ -252,7 +253,7 @@ impl EeWonMulti {
                 s.cols[i].viewport
             };
             if v != 0 {
-                self.op(Op::ChildSetPos, v, xs[i] as isize, 0, 0);
+                comp().set_pos(v, xs[i], 0);
             }
             self.st.borrow_mut().cols[i].x = xs[i];
         }
@@ -918,17 +919,16 @@ impl EeWonMHead {
         if old != 0 {
             self.op1(Op::RemoveChild, old);
         }
-        self.op(Op::ChildSetControlId, item, col as isize, 0);
-        self.op(Op::ChildSetFlags, item, CLIP, 1);
+        mem::set_control_id(item, col);
+        mem::set_flags(item, CLIP, true);
         self.st.borrow_mut().cols[c].0 = item;
         self.op1(Op::AddChild, item);
         let list = self.st.borrow().list;
         if list != 0 {
             let m = self.multi(list);
             if c < m.ncols() && m.column_width(col) <= 0 {
-                let mut wh = [0i32; 2];
-                self.op(Op::ChildDesiredSize, item, wh.as_mut_ptr() as isize, 0);
-                m.set_column_width(col, wh[0], false);
+                let (w, _) = comp().v_desired_size(item);
+                m.set_column_width(col, w, false);
                 if m.st.borrow().sort_col == col {
                     let kind = m.base(L::SortType, 0, 0, 0) as i32;
                     let mut s = self.st.borrow_mut();
@@ -954,22 +954,20 @@ impl EeWonMHead {
         for (i, &c) in comps.iter().enumerate() {
             if c != 0 {
                 let p = places[i];
-                self.op(Op::ChildSetEnabled, c, p.enabled as isize, 0);
-                self.op(Op::ChildSetVisible, c, (p.width != 0) as isize, 0);
-                let r = EeWonRect4 { x: p.x, y: 0, w: p.width, h: self.get(F::Height) };
-                self.op(Op::ChildSetPosSize, c, &r as *const EeWonRect4 as isize, 0);
+                comp().v_set_enabled(c, p.enabled);
+                comp().v_set_visible(c, p.width != 0);
+                comp().set_pos_size(c, p.x, 0, p.width, self.get(F::Height));
             }
         }
         if let Some(&c) = comps.last() {
             // the original assumed the last column has a button
             if c != 0 {
-                self.op(Op::ChildSetVisible, c, 1, 0);
-                let left = self.op1(Op::ChildLeft, c) as i32;
-                let r = EeWonRect4 { x: left, y: 0, w: self.get(F::Width), h: self.get(F::Height) };
-                self.op(Op::ChildSetPosSize, c, &r as *const EeWonRect4 as isize, 0);
+                comp().v_set_visible(c, true);
+                let left = mem::left(c);
+                comp().set_pos_size(c, left, 0, self.get(F::Width), self.get(F::Height));
             }
         }
-        self.op1(Op::Invalidate, 0);
+        comp().v_invalidate(self.comp as isize);
     }
 
     pub fn size_changed(&self) {
@@ -997,7 +995,7 @@ impl EeWonMHead {
             if child == 0 {
                 return;
             }
-            let col = self.op1(Op::ChildControlId, child) as i32;
+            let col = mem::control_id(child);
             let m = self.multi(list);
             let n = self.st.borrow().cols.len();
             if col >= 0 && (col as usize) < m.ncols() && (col as usize) < n {
@@ -1028,9 +1026,9 @@ impl EeWonMHead {
         for (i, &c) in comps.iter().enumerate() {
             buttons[i].present = c != 0;
             if c != 0 {
-                buttons[i].left = self.op1(Op::ChildLeft, c) as i32;
-                buttons[i].right = self.op1(Op::ChildRight, c) as i32;
-                buttons[i].width = self.op1(Op::ChildWidth, c) as i32;
+                buttons[i].left = mem::left(c);
+                buttons[i].right = mem::right(c);
+                buttons[i].width = mem::width(c);
             }
         }
         let (widths, modes, partners) = {
