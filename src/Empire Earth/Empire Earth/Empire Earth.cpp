@@ -2447,7 +2447,6 @@ void EEDeleteGameObjects(bool inShutdown)
 
 // Cleanup routines defined in other units
 void EEReportLeakingUnits();
-void EEUnloadBuiltInGraphicObjects();
 void EEDeleteMediaTable();
 
 // Unloads every database table and its media, deletes the calamity manager and language resources, frees the pools
@@ -2462,7 +2461,6 @@ void EEDeleteDatabase(bool inShutdown)
     unsigned long theSound = 962;
     if (EESoundObject::Get(theSound) != NULL)
         EESoundObject::Get(theSound)->UnloadMedia();
-    EEUnloadBuiltInGraphicObjects();
     EEAnimal::Unload();
     gAmbientSoundManager.ClearSounds();
     EETerrainTypeTable::ClearDamageTables();

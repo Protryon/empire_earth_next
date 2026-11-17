@@ -42,13 +42,6 @@ extern unsigned long& gTexturePixelDepth;
 extern unsigned long& gTextureMipLevelsToDrop;
 extern bool& gTrilinearFilter;
 
-// 0x4e8434..0x4e8440: four built-in graphic objects outside gMediaTable; LoadTable clears them, EEEvent EEUnloadBuiltInGraphicObjects
-// 0x1ca6d9 unloads them and deletes those with mMediaIndex -1 (provisional names)
-EEGraphicObject* gGraphicObjectU4E8434;
-EEGraphicObject* gGraphicObjectU4E8438;
-EEGraphicObject* gGraphicObjectU4E843C;
-EEGraphicObject* gGraphicObjectU4E8440;
-
 // Creates an empty, unloaded graphic object: no names, models, textures or sounds, drawn, mip maps on (the record's
 // members: ee_data tables.rs)
 EEGraphicObject::EEGraphicObject()
@@ -128,10 +121,6 @@ long EEGraphicObject::LoadTable(FSFile* inFile)
 {
     UString theName;
     EEGraphicObject* theObject = NULL;
-    gGraphicObjectU4E8440 = NULL;
-    gGraphicObjectU4E843C = NULL;
-    gGraphicObjectU4E8438 = NULL;
-    gGraphicObjectU4E8434 = NULL;
     auto theNextName = [&]() { theName.Load(*inFile); return new UString((const char*)theName); };
     return EEDbReadLeadRecords(inFile, ee_data_graphic_object_record_size(),
         [](unsigned long inCount) { gMediaTable.resize(inCount, NULL); return true; },
