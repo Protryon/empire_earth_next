@@ -29414,3 +29414,21 @@ the gate library had never been checked off Windows since the restructure (and t
   "A+1"; the golden is unchanged, and b landing anywhere else still fails. Under the port script it passes 4/4.
   `gamespy_tests.rs` `a_failed_start_leaves_the_current_record` assumes qport + 1 the same way, but binds at once
   (a window of microseconds); left as is.
+
+## Object storage, lane S: the screens' and the editor's game reads on the world's views (branch rust-objS, 2026-11-17)
+
+- **Measure before the plan's counts.** The plan expected 99 plain cases in `EEScreens.cpp`, 42 in `EESEUnit.cpp`
+  and 70 in `EESERBUnitTypes.cpp`; the files held about 35 fill lines, 6 and 23. `ee_screenscpp_call`'s 97 cases are
+  all game calls. A read-and-write case (`SeplWorld`, `SeplPlayer`) frees no C++ line when only its read moves.
+  Net C++ for the move: -33.
+- **Record the lock state with the read.** The TEST ONLY SGVW trace (`ee_game screens/sgvw.rs`, `EE_SGVW`) notes
+  the world lock's holds by the reading thread (`ee_base ts/held.rs` counts them per thread and lock). Two thirds of
+  the editor's world reads run under the world's write lock (`ProcessActions`' `EE_SCREENS_ACTION_LOCK`, the tab
+  switch), where `EeTsLock` deadlocks a read on top; some run with no lock (the editor's construction thread, the
+  lobby, the main menu). That is why V's `WorldRead::begin` takes no lock.
+- **Reach a read before moving it.** No fixture session reached the read view's world and player groups (in play
+  the HUD reads the world through its own hosts). `fixture_game.py --view-check` (screen events on the game form:
+  speed, perspective, the diplomacy, options and chat forms) reaches them; record its golden on the unmodified
+  tree with `--seed` (the players' civilizations are random otherwise).
+- **Mask what is not state.** A live trace's CT count and the version text (it carries the build's commit count)
+  differ between runs and builds; `tools/sgvw.py` masks them (`TIMED`), everything else compares line for line.

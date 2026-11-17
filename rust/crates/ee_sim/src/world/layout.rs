@@ -77,6 +77,8 @@ pub struct EeWorldLayout {
     pub player_color: u64,
     pub player_first_unit: u64,
     pub player_selected_group: u64,
+    /// `EEPlayer::mComputerPlayer` (an `EEComputerPlayer*`, 0 for a human)
+    pub player_computer_player: u64,
     // ---- RTSWorld / EEWorld
     /// `mPlayers` (17 pointers), `mMap`, `mNumPlayers` (an `unsigned long`), `EEWorld::mCurrentPlayer` (a `long`)
     pub world_players: u64,
@@ -99,6 +101,12 @@ pub struct EeWorldLayout {
     pub world_in_cinematic: u64,
     pub world_user_paused: u64,
     pub world_using_carbon: u64,
+    /// `EEWorld::mTeamsLocked` (a bool)
+    pub world_teams_locked: u64,
+    /// `&gWorld` (an address, not an offset: the one world's handle) and `&gUnitClassTable` (the address of the
+    /// `std::vector<EEUnitClass*>`; its begin and end are its first two words)
+    pub world_address: u64,
+    pub unit_class_table: u64,
     // ---- RTSMap
     /// `mTiles` (the `EETile*` array, row-major, `mSize` x `mSize`)
     pub map_tiles: u64,

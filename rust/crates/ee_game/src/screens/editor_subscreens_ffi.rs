@@ -32,7 +32,20 @@ macro_rules! host {
     };
 }
 
-host!(Sepl, ee_screenscpp_sepl);
+// (the control maker's world ops traced: SGVW)
+struct Sepl;
+
+impl SeplHost for Sepl {
+    fn op(&mut self, op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]) -> i32 {
+        let p = p.map(|x| x as *mut c_void);
+        unsafe {
+            crate::screens::editor_world::host(op, i, f, |i, f| {
+                sys::ee_screenscpp_sepl(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
+            })
+        }
+    }
+}
+
 host!(Sect, ee_screenscpp_sect);
 host!(Seet, ee_screenscpp_seet);
 
