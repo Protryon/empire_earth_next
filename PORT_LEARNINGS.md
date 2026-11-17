@@ -28999,3 +28999,13 @@ the gate library had never been checked off Windows since the restructure (and t
   Rust (their `EEARemovePlayer`, `EEABootClientFromCanceledGame`, `EEAServerMigration` became its one-line
   classes); the stand-in world (tests/net/ee_stand) had the three old headers but not that one, so the real header
   (and the real game) was found. Fix: a stand-in `tests/net/ee_stand/ee/EEARust.h` that includes `ee_world.h`.
+- **won_gamespy_test: the second instance's port (xbuild.py wontest).** The driver started b asking for A's port
+  and expected it at A+1, the SDK's next port. Windows hands out ephemeral ports in order, machine-wide
+  (consecutive binds anywhere get A+1, A+2, ...), so whenever any program bound a port during the seconds of
+  queries after A, A+1 was taken and b took A+2: 7 failures (b's heartbeats one port ahead, the queries sent to A+1
+  unanswered), seen on the busy shared machine and reproduced with a script that binds a port every 0.5 s. Not the
+  port nor the restructure: the SDK's scan is right. Fix: just before b's start-up the driver finds the first port
+  above A that binds (any address, as the SDK binds a localhost address), sends b's queries there and names it
+  "A+1"; the golden is unchanged, and b landing anywhere else still fails. Under the port script it passes 4/4.
+  `gamespy_tests.rs` `a_failed_start_leaves_the_current_record` assumes qport + 1 the same way, but binds at once
+  (a window of microseconds); left as is.
