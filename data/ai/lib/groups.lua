@@ -7,6 +7,10 @@
 --            buildings; at its place the target's nearest unit within 30 tiles, else its town; nothing: arrived
 --   raid     the enemy's gatherers and fishing boats; soldiers only within 6 tiles; nothing within 9 tiles of a known
 --            tower; flees home when the seen soldiers and towers within 10 tiles are 1.5 times its strength
+--   push     take a town: soldiers within 12 tiles first, then towers, citizens within 20, the town centre, the
+--            other buildings; its places the target's known towers and town centre (the memory), then its nearest
+--            known building; nothing known: as attack. g.cover_max: nothing that more known defences cover, its places
+--            too (nothing left: arrived). The script judges it and calls it home (classic_lua's push)
 --   defend   hold a place: the enemies within its radius of the place (or 6 tiles of the group); strays come back
 --   retreat  a forced move home (no fighting), then it defends there
 --   scout    forced moves to the unexplored grid point on its land nearest it and furthest from the town
@@ -300,8 +304,24 @@ local function kind_of(u)
     return "soldier"
 end
 
+-- a town centre or capitol (a push's main building)
+local function is_centre(t)
+    return t == "b_town_center" or t == "b_capitol"
+end
+M.is_centre = is_centre
+
 -- the priority of a kind for a task (lower first; nil: no target)
-local function priority(task, kind, dist)
+local function priority(task, kind, dist, t)
+    if task == "push" then
+        if kind == "soldier" then return 0 end
+        if kind == "tower" then return 1 end
+        if kind == "citizen" and dist <= M.CITIZEN_RANGE then return 2 end
+        if kind == "building" then return is_centre(t) and 3 or 4 end
+        if kind == "ship" then return 5 end
+        if kind == "boat" then return 6 end
+        if kind == "wall" then return 7 end
+        return nil
+    end
     if task == "raid" then
         if kind == "citizen" then return 1 end
         if kind == "boat" then return 2 end
@@ -329,13 +349,14 @@ local function priority(task, kind, dist)
 end
 
 -- [attack.c] the known defences near a tile (for the leash): their tile, range (centi) and attack
-local function defences_near(x, y, r)
+local function defences_near(x, y, r, margin)
+    margin = margin or M.LEASH_MARGIN
     local out = {}
     for _, m in ipairs(ai.memory{buildings = true, near = {x, y, r}}) do
         if not is_wall(m.type) and string.sub(m.type, 1, 2) ~= "aa" then
             local c = ai.class(m.type)
             if c ~= nil and (c.attack or 0) > 0 and (c.range or 0) > 100 then
-                out[#out + 1] = {x = m.x, y = m.y, r = c.range // 100 + M.LEASH_MARGIN}
+                out[#out + 1] = {x = m.x, y = m.y, r = c.range // 100 + margin}
             end
         end
     end
@@ -349,6 +370,17 @@ local function defended(defs, x, y)
         end
     end
     return false
+end
+
+-- [push] how many of the defences reach a tile, the one standing on it left out (a tower is not its own cover)
+local function cover(defs, x, y)
+    local n = 0
+    for _, d in ipairs(defs) do
+        if (d.x ~= x or d.y ~= y) and d2(x, y, d.x, d.y) <= d.r * d.r then
+            n = n + 1
+        end
+    end
+    return n
 end
 
 -- the known enemy towers (armed buildings in the memory) near a tile
@@ -367,7 +399,7 @@ end
 local function candidates(g, cx, cy, radius)
     local r = radius
     local f = {enemy = true, near = {cx, cy, r}}
-    if g.task == "attack" or g.task == "raid" then
+    if g.task == "attack" or g.task == "raid" or g.task == "push" then
         if g.target ~= 0 then
             f.player = g.target
         end
@@ -384,6 +416,13 @@ local function candidates(g, cx, cy, radius)
             leash = nil
         end
     end
+    -- [push] g.cover_max: no target that more than that many known defences cover (their range + PUSH_COVER): the
+    -- push takes a defended town from its edges (a tower that one other covers at most, the buildings and citizens
+    -- outside the towers' cover) instead of chasing its soldiers into the towers
+    local pdefs = nil
+    if g.task == "push" and g.cover_max ~= nil then
+        pdefs = defences_near(cx, cy, M.LEASH_SCAN, M.PUSH_COVER)
+    end
     local fx, fy = g.focus_x or -1, g.focus_y or -1
     for _, id in ipairs(ids) do
         local u = ai.unit(id)
@@ -391,7 +430,7 @@ local function candidates(g, cx, cy, radius)
             local kind = kind_of(u)
             if kind ~= nil then
                 local dist = isqrt(d2(u.x, u.y, cx, cy))
-                local p = priority(g.task, kind, dist)
+                local p = priority(g.task, kind, dist, u.type)
                 if p ~= nil and (g.task ~= "raid" or kind == "soldier" or not tower_near(u.x, u.y, M.TOWER_AVOID)) then
                     if (kind == "ship" or kind == "boat") and dist > M.BOAT_RANGE then
                         p = nil
@@ -400,6 +439,9 @@ local function candidates(g, cx, cy, radius)
                 if p ~= nil and kind == "wall" and fx >= 0 and math.abs(u.x - fx) <= 1 and math.abs(u.y - fy) <= 1 then
                     p = (u.x == fx and u.y == fy) and -2 or -1
                 elseif p ~= nil and leash ~= nil and kind ~= "wall" and defended(leash, u.x, u.y) then
+                    p = nil
+                    g.leashed = (g.leashed or 0) + 1
+                elseif p ~= nil and pdefs ~= nil and #pdefs > g.cover_max and cover(pdefs, u.x, u.y) > g.cover_max then
                     p = nil
                     g.leashed = (g.leashed or 0) + 1
                 end
@@ -424,7 +466,7 @@ local function candidates(g, cx, cy, radius)
                 local kind = u ~= nil and kind_of(u) or nil
                 if kind ~= nil then
                     local dist = isqrt(d2(u.x, u.y, cx, cy))
-                    local p = priority(g.task, kind, dist)
+                    local p = priority(g.task, kind, dist, u.type)
                     if p ~= nil and ((kind ~= "ship" and kind ~= "boat") or dist <= M.BOAT_RANGE) then
                         out[#out + 1] = {u = u, kind = kind, dist = dist, p = p}
                     end
@@ -732,6 +774,38 @@ local function enemy_place(view, mem, player, not_x, not_y, from)
     return nil
 end
 
+-- a push's next place: the target's known building (the memory) within PUSH_SCAN tiles nearest the group, a tower
+-- or its town centre counting PUSH_PULL tiles nearer than the rest, walls left out, and with g.cover_max those more
+-- known defences cover left out too; not the place just reached (nil: none known)
+M.PUSH_SCAN = 60
+M.PUSH_PULL = 15
+M.PUSH_COVER = 2       -- a defence covers its range + this
+M.PUSH_LOOK_MS = 10000
+local function push_place(g, cx, cy, keep)
+    if g.target == 0 then
+        return nil
+    end
+    local defs = g.cover_max ~= nil and defences_near(cx, cy, M.PUSH_SCAN + 10, M.PUSH_COVER) or nil
+    local best, bs = nil, nil
+    for _, m in ipairs(ai.memory{player = g.target, buildings = true, near = {cx, cy, M.PUSH_SCAN}, limit = 64}) do
+        if not is_wall(m.type) and (keep or not (g.x >= 0 and near(m.x, m.y, g.x, g.y, 1)))
+                and (defs == nil or cover(defs, m.x, m.y) <= g.cover_max) then
+            local s = isqrt(d2(m.x, m.y, cx, cy))
+            local c = ai.class(m.type)
+            if is_centre(m.type) or (c ~= nil and (c.attack or 0) > 0) then
+                s = s - M.PUSH_PULL
+            end
+            if bs == nil or s < bs or (s == bs and m.id < best.id) then
+                best, bs = m, s
+            end
+        end
+    end
+    if best == nil then
+        return nil
+    end
+    return best.x, best.y
+end
+
 -- the enemies' gather spots (citizens or boats seen; one spot per 8 tiles, 8 per player; forgotten when seen empty
 -- for a minute). Cheap: one ai.seen over citizens and boats a step
 function M.note_spots(mem)
@@ -913,12 +987,26 @@ local function group_step(g, view, mem)
         move(g, cx, cy, g.x, g.y, false)
         return
     end
+    -- [push] on its way, the place looked at again every PUSH_LOOK_MS (a place the towers now cover is given up)
+    if g.task == "push" and g.cover_max ~= nil and g.x >= 0 and ai.time() - (g.place_t or 0) >= M.PUSH_LOOK_MS then
+        g.place_t = ai.time()
+        local nx, ny = push_place(g, cx, cy, true)
+        if nx ~= nil and (nx ~= g.x or ny ~= g.y) then
+            g.x, g.y = nx, ny
+            g.way_t = 0
+            print(string.format("group next id=%d task=%s to=%d,%d", g.id, g.task, nx, ny))
+        end
+    end
     -- attack and raid
     if g.x < 0 or near(cx, cy, g.x, g.y, M.ARRIVE) then
         local nx, ny = nil, nil
         if g.task == "raid" then
             nx, ny = enemy_place(view, mem, g.target, g.x, g.y, g.same_land and {cx, cy} or nil)
-        else
+        end
+        if g.task == "push" then
+            nx, ny = push_place(g, cx, cy)
+        end
+        if nx == nil and g.task ~= "raid" and not (g.task == "push" and g.cover_max ~= nil) then
             -- the target's nearest unit seen within 30 tiles, else its town as last seen
             local f = {enemy = true, near = {cx, cy, 30}}
             if g.target ~= 0 then
