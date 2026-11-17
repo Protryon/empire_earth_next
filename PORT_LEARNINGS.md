@@ -2256,3 +2256,48 @@ a game (seeds 2 and 3, 45 minutes, classic_lua against Age of AI) plays identica
 (`tools/sim_compare.py`: traces and reports identical). The PDB still resolves the game's functions
 (`llvm-symbolizer --obj=EE-SIM.exe` from another folder finds `EEPhysics::Tick`). EE-SIM.exe built from the same
 commit now has the same cache key in every worktree.
+
+## Sequential tests for AI benches (2026-11-16)
+
+`tools/sim_bench.py --sprt` plays a variant against a baseline seed by seed and stops when a sequential test decides
+(`tools/sim_sprt.py`; README "Testing").
+- **Pairs, not counts.** Both builds play the same seed (map, start, opponent); the outcome of a pair is the
+  difference of the two W-L-C scores. Most pairs of a small change are identical (d = 0), which a fixed W-L-C count
+  ignores and the paired test uses.
+- **The textbook pentanomial GSPRT is too weak at 64 pairs.** Its maximum-likelihood distributions can put the
+  mean on an outcome not seen yet (no pair at d = +1) at no cost, so the LLR moved by the same -0.1 a pair whether
+  the pairs were identical or all lost (the 8.86 pool variant, 5-6-21 -> 5-13-14, and an identical variant both
+  stopped at pair 28). The normal model of d with a variance prior (4 pseudo-pairs of 0.2) is used instead; its
+  error rates were measured on the benches' own outcomes (`sim_sprt.py oc`), not assumed.
+- **A normal model of a heavy-tailed continuous score misleads.** The paired difference of the mixed share accepted
+  "better" after 13-16 pairs for a variant whose 32-pair mean was negative (a few -0.2..-0.35 pairs came late). The
+  optional continuous statistic is the sign of that difference (`--stat ahead`).
+- **Order matters.** A defeat ends a game early, so the first games to finish are not a random sample; the test
+  reads only the seeds whose games are all done, in seed order.
+- **64 seeds resolve about +0.2 a game, not +0.1** (power 58% at +0.1, 33% inconclusive; +0.05 needs about 170
+  pairs). The test saves games mostly on variants that change nothing or lose (H0 after 17-26 pairs instead of 32).
+- **Replaying past benches from the cache**: the cache's key.json files name the exe, the scripts and the options of
+  each game, so the A/B benches of §8.86 and §8.93 (whose folders were gone with their worktrees) could be rebuilt
+  from build/sim/cache for the replay.
+
+## The shared bench queue (2026-11-16)
+
+`tools/bench.py` (README "Testing") is one daemon per machine that plays the games every checkout's `sim_bench.py
+--queue` submits.
+- **The game runs on the requester's own tools**, not the daemon's: a worker `python -I <checkout>/tools/bench.py
+  work JOB` stages the requester's data/ai and data/db (sim.stage_tree) with the requester's EE_* variables. A daemon
+  that played with its own checkout's scripts would have stored other inputs under the requester's cache key.
+- **The key is checked again when the game starts.** An exe rebuilt or a script edited while the game waited in the
+  queue would otherwise be played and cached under the key of the old inputs; the worker recomputes the key and
+  fails the game instead.
+- **The cache key no longer needs a stage**: the rules documents are hashed from the checkout's data/db (the stage
+  holds a copy with LF line ends), so a cached game is found before any staging, and a requester can key a game
+  without a slot. The keys are the same as before (checked against the old code).
+- **Ports belong to slots, slots to the daemon**: slot k plays on port offset 9000 + 64 k (TCP 42334 and up), so
+  no bench needs a --port-base. An offset over 32201 wraps the 16-bit port (33334 + offset): 41000 gave port 8798.
+- **A requester's death is its connection's end**: its queued games are dropped unless another bench waits for them;
+  a running game finishes and goes to the cache.
+- **A sync of the data tree dropped every cached game.** The key hashed the tree's open_data.json and its Data/ai and
+  Data/db, which the harness rewrites (`open_data.py sync`, e.g. for the gates) whenever main's data/ai or data/db
+  moved on, although the stage replaces both with the requester's own data/ai and data/db (already in the key).
+  The key now leaves them out (CACHE_FORMAT 2: every older entry misses once).
