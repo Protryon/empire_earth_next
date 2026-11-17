@@ -20,6 +20,13 @@
 // same, and every reference given back when the scroller and the bars go. The first 40 sequences and every later
 // one that makes an op or a call none before made are rust/crates/ee_won_gui/src/golden_scrollerobj.txt, which the
 // Rust tests replay; `--print` prints them.
+//
+// WONGUI B round 3: the Rust scroller and bars call Component's methods themselves (compobj.rs over the component
+// host) and read the members in place (compmem.rs). The world's components are blocks (bounds, flags, parent),
+// and the original statements make the calls the C++ makes: a nonvirtual method (RequestFocus, the moves) is
+// compobj's, a virtual one (SetVisible, SetEnabled, Invalidate, GetMouseChild) the component host's op (a bar's
+// SetEnabled its own method), an inline member read (IsVisible, mParent) the block's. The moves' bounds are traced
+// at PositionChanged and the size change.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -29,6 +36,7 @@
 #include <set>
 #include "rust/won_gui/barobj.h"
 #include "rust/won_gui/compmem.h"
+#include "rust/won_gui/compobj.h"
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/guiscroll.h"
@@ -46,24 +54,15 @@ static unsigned sDriverSeed;
 static unsigned DR(unsigned n) { sDriverSeed = sDriverSeed * 69069u + 1u; return n ? (sDriverSeed >> 16) % n : 0; }
 
 struct HostComp {
-    int x, y, w, h;
-    bool visible, enabled, disabled;
-    intptr_t parent;
+    EeWonCompMembers m; // the block compmem.rs reads (bounds, flags, parent)
     int held;
 };
+typedef EeWonComp K;
 static const intptr_t kScroller = 0x54;
 static std::map<intptr_t, HostComp> sComps;
 
-// the Rust reads the components' members from compmem.rs's blocks: each read gets a block filled from the world
-static EeWonCompMembers sFillBlock;
-static EeWonCompMembers* FillBlock(intptr_t c)
-{
-    memset(&sFillBlock, 0, sizeof(sFillBlock));
-    if (sComps.count(c) == 0) return &sFillBlock;
-    const HostComp& k = sComps[c];
-    sFillBlock.bounds.x = k.x; sFillBlock.bounds.y = k.y; sFillBlock.bounds.width = k.w; sFillBlock.bounds.height = k.h;
-    return &sFillBlock;
-}
+static EeWonCompMembers& Blk(intptr_t c) { return sComps[c].m; }
+static EeWonCompMembers* Resolve(intptr_t c) { return &Blk(c); }
 static std::map<intptr_t, std::map<int, int> > sAreas; // the scroll areas' fields by EeWonGuiField
 static std::map<intptr_t, intptr_t> sAreaScroller;
 static std::map<intptr_t, EeWonScrollbar*> sBars;
@@ -85,12 +84,15 @@ static void Line(const char* f, long long a, long long b = 0, long long c = 0, l
 static intptr_t NewComp(int w, int h)
 {
     HostComp c;
-    c.x = (int)DR(30); c.y = (int)DR(30); c.w = w; c.h = h;
-    c.visible = DR(5) != 0; c.enabled = true; c.disabled = false; c.parent = 0; c.held = 0;
+    memset(&c.m, 0, sizeof(c.m));
+    c.m.bounds.x = (int)DR(30); c.m.bounds.y = (int)DR(30); c.m.bounds.width = w; c.m.bounds.height = h;
+    if (DR(5) == 0) c.m.bits |= 0x1; // invisible
+    if (DR(2) == 0) c.m.bits |= 0x8; // wants the focus
+    c.held = 0;
     intptr_t id = 0x2000 + (++sNextId);
     sComps[id] = c;
-    Line("comp %llx %lld %lld %lld %lld", (long long)id, c.x, c.y, c.w, c.h);
-    sTrace.back() += c.visible ? " 1" : " 0";
+    Line("comp %llx %lld %lld %lld %lld", (long long)id, c.m.bounds.x, c.m.bounds.y, w, h);
+    sTrace.back() += " " + std::to_string(c.m.bits);
     return id;
 }
 
@@ -105,15 +107,6 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
     int n = (int)inOp;
     switch (inOp) {
     // pure reads: not traced
-    case Op::Get: return (Fd)a == Fd::Width ? sComps[self].w : (Fd)a == Fd::Height ? sComps[self].h : 0;
-    case Op::ChildLeft: return sComps[a].x;
-    case Op::ChildTop: return sComps[a].y;
-    case Op::ChildWidth: return sComps[a].w;
-    case Op::ChildHeight: return sComps[a].h;
-    case Op::ChildIsVisible: return sComps[a].visible ? 1 : 0;
-    case Op::ChildIsMine: return sComps[a].parent == self ? 1 : 0;
-    case Op::IsDisabled: return sComps[self].disabled ? 1 : 0;
-    case Op::MouseChild: return 0;
     case Op::EventType: return sEvents[a].first;
     case Op::EventComponent: return sEvents[a].second;
     case Op::GetMousePos: *(int*)a = 0; *(int*)b = 0; return 0;
@@ -122,23 +115,32 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
     case Op::HasFocusChild: return sFocusChild ? 1 : 0;
     // what listeners receive: the type GuiHost.cpp fires
     case Op::FireEvent: Line("fire %lld from %llx", ee_won_gui_event_type((EeWonGuiEvent)a), (long long)self); return 0;
-    case Op::ChildSetPosSize: {
-        const EeWonRect4* q = (const EeWonRect4*)b;
-        HostComp& k = sComps[a];
-        k.x = q->x; k.y = q->y; k.w = q->w; k.h = q->h;
-        Line("%lld pos-size %llx %lld %lld %lld", n, (long long)a, q->x, q->y, q->w);
-        sTrace.back() += " " + std::to_string(q->h);
-        return 0;
+    case Op::Comp: {
+        // the component host: a component's virtual or service (b the component)
+        sOpsMet.insert(1000 + (int)a);
+        EeWonCompMembers& m = Blk(b);
+        switch ((K)a) {
+        case K::VPositionChanged: case K::VSizeChanged:
+            Line("%lld comp %lld %llx at %lld %lld", n, (long long)a, (long long)b, m.bounds.x, m.bounds.y);
+            sTrace.back() += " " + std::to_string(m.bounds.width) + " " + std::to_string(m.bounds.height);
+            return 0;
+        case K::VSetEnabled:
+            // a bar's SetEnabled is its own (traced first, then what it does), another's the world's flag
+            Line("%lld comp %lld %llx %lld", n, (long long)a, (long long)b, (long long)c);
+            if (sBars.count(b)) ee_won_bar_call(sBars[b], EeWonBarCall::SetEnabled, c, 0, 0);
+            else if (c) m.bits &= ~0x80;
+            else m.bits |= 0x80;
+            return 0;
+        case K::VSetVisible: if (c) m.bits &= ~0x1; else m.bits |= 0x1; break;
+        default: break; // (the mouse child, a parent's modality: none)
+        }
+        Line("%lld comp %lld %llx %lld -> %llx", n, (long long)a, (long long)b, (long long)c, (long long)r);
+        return r;
     }
     // the C++ virtuals the ops run: traced first, then what they do
-    case Op::ChildSetEnabled:
-        Line("%lld %llx %llx %llx", n, (long long)a, (long long)b, (long long)c);
-        if (sBars.count(a)) ee_won_bar_call(sBars[a], EeWonBarCall::SetEnabled, b, 0, 0);
-        else sComps[a].enabled = b != 0;
-        return 0;
     case Op::AddChild:
         Line("%lld %llx %llx %llx", n, (long long)a, (long long)b, (long long)c);
-        sComps[a].parent = self;
+        sComps[a].m.parent = self;
         if (sBars.count(a)) ee_won_bar_call(sBars[a], EeWonBarCall::AddedToParent, 0, 0, 0);
         return 0;
     case Op::AreaAdjustPosition:
@@ -149,19 +151,16 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
         Line("%lld %llx %llx %llx", n, (long long)a, (long long)b, (long long)c);
         SideNotify(a != 0);
         return 0;
-    case Op::ChildSetPos: sComps[a].x = (int)b; sComps[a].y = (int)c; break;
-    case Op::ChildSetSize: sComps[a].w = (int)b; sComps[a].h = (int)c; break;
-    case Op::ChildSetVisible: sComps[a].visible = b != 0; break;
     case Op::ChildHold: sComps[a].held++; break;
     case Op::ChildRelease: sComps[a].held--; break;
     case Op::NewButton: {
         HostComp k;
-        k.x = k.y = k.w = k.h = 0; k.visible = true; k.enabled = true; k.disabled = false; k.parent = 0; k.held = 0;
+        memset(&k.m, 0, sizeof(k.m));
+        k.held = 0;
         r = 0x2000 + (++sNextId);
         sComps[r] = k;
         break;
     }
-    case Op::BaseSetEnabled: sComps[self].disabled = a == 0; break;
     case Op::AreaSet: sAreas[a][(int)b] = (int)c; break;
     case Op::AreaSetScroller: sAreaScroller[a] = self; break;
     case Op::BaseMouseWheel: r = sWheelBase; break;
@@ -175,6 +174,13 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
 static intptr_t H(Op inOp, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0)
 {
     return ScriptedHost((void*)kScroller, inOp, a, b, c, 0);
+}
+// a component's virtual (the component host's op, as the C++ dispatches it)
+static intptr_t HK(K k, intptr_t comp, intptr_t c = 0) { return ScriptedHost((void*)comp, Op::Comp, (intptr_t)k, comp, c, 0); }
+// a nonvirtual Component method (compobj's, over the component host)
+static intptr_t KC(intptr_t comp, EeWonCompCall k, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0)
+{
+    return ee_won_comp_call((void*)comp, ScriptedHost, k, a, b, c);
 }
 
 // ---- the original (Scroller.cpp, ScrollbarScroller.cpp; the base Container, the area, the bars and the events
@@ -224,8 +230,8 @@ struct ScrollbarScroller {
     {
         H(Op::BaseMouseDown, x, y, button);
         if (button == 0) {
-            if (H(Op::HasFocusChild) == 0) H(Op::AreaRequestFocus, this->mScrollArea.get());
-            else H(Op::RequestFocus);
+            if (H(Op::HasFocusChild) == 0) KC(this->mScrollArea.get(), EeWonCompCall::RequestFocus);
+            else KC(kScroller, EeWonCompCall::RequestFocus);
         }
     }
     bool MouseWheel(int amount)
@@ -243,7 +249,7 @@ struct ScrollbarScroller {
     }
     void AddedToParent()
     {
-        if (H(Op::ChildIsMine, this->mVertScrollbar.get()) == 0) this->AddControls();
+        if (Blk(this->mVertScrollbar.get()).parent != kScroller) this->AddControls(); // mVertScrollbar->mParent != this
         H(Op::BaseAddedToParent);
     }
     void AddControls()
@@ -266,12 +272,12 @@ struct ScrollbarScroller {
     bool EnableScrollbar(intptr_t scrollbar, int condition)
     {
         if (scrollbar == 0 || this->mScrollArea.get() == 0) return false;
-        bool visible = H(Op::ChildIsVisible, scrollbar) != 0;
+        bool visible = !(Blk(scrollbar).bits & 0x1); // IsVisible()
         EeWonScrollArea anArea = this->Numbers();
         int k = ee_won_gui_scrollbar_condition(condition, this->mSettingScrollbarConditions, visible, IsVertical(scrollbar), anArea);
         if (k < 0) return false;
-        if (k == 0 || k == 1) H(Op::ChildSetVisible, scrollbar, k == 1);
-        return visible != (H(Op::ChildIsVisible, scrollbar) != 0);
+        if (k == 0 || k == 1) HK(K::VSetVisible, scrollbar, k == 1);
+        return visible != !(Blk(scrollbar).bits & 0x1);
     }
     void SetScrollbarConditions(int horizontal, int vertical)
     {
@@ -281,7 +287,7 @@ struct ScrollbarScroller {
         changed = this->EnableScrollbar(this->mVertScrollbar.get(), this->mVertCondition) || changed;
         this->mSettingScrollbarConditions = true;
         if (changed) {
-            H(Op::Invalidate);
+            HK(K::VInvalidate, kScroller);
             H(Op::VirtSizeChanged);
         }
         this->mSettingScrollbarConditions = false;
@@ -310,8 +316,8 @@ struct ScrollbarScroller {
             ee_won_bar_call(v, EeWonBarCall::SetLineScrollSizes, up, down, 0);
             if (!becauseOfScroller) ee_won_bar_call(v, EeWonBarCall::SetPosition, AreaField(this->mScrollArea.get(), Fd::VertOffset), 0, 0);
             ee_won_bar_call(v, EeWonBarCall::LayoutThumb, !becauseOfScroller, 0, 0);
-            H(Op::ChildSetEnabled, this->mVertScrollbar.get(), anEnabled);
-            H(Op::ChildInvalidate, this->mVertScrollbar.get());
+            HK(K::VSetEnabled, this->mVertScrollbar.get(), anEnabled);
+            HK(K::VInvalidate, this->mVertScrollbar.get());
         }
         if (this->mHorzScrollbar.get() != 0) {
             const EeWonScrollbar* h = Bar(this->mHorzScrollbar.get());
@@ -319,8 +325,8 @@ struct ScrollbarScroller {
             ee_won_bar_call(h, EeWonBarCall::SetRange, aTotal, aPage, 0);
             if (!becauseOfScroller) ee_won_bar_call(h, EeWonBarCall::SetPosition, AreaField(this->mScrollArea.get(), Fd::HorzOffset), 0, 0);
             ee_won_bar_call(h, EeWonBarCall::LayoutThumb, !becauseOfScroller, 0, 0);
-            H(Op::ChildSetEnabled, this->mHorzScrollbar.get(), anEnabled);
-            H(Op::ChildInvalidate, this->mHorzScrollbar.get());
+            HK(K::VSetEnabled, this->mHorzScrollbar.get(), anEnabled);
+            HK(K::VInvalidate, this->mHorzScrollbar.get());
         }
         this->SetScrollbarConditions(this->mHorzCondition, this->mVertCondition);
     }
@@ -490,7 +496,7 @@ static void Run(bool inRust)
     case kVisible: {
         intptr_t id = SomeBar();
         bool v = DR(2) != 0;
-        sComps[id].visible = v;
+        if (v) sComps[id].m.bits &= ~0x1; else sComps[id].m.bits |= 0x1;
         Line("visible %llx %lld", (long long)id, v ? 1 : 0);
         return;
     }
@@ -509,10 +515,13 @@ static std::vector<std::string> RunSide(bool inRust, unsigned inSeq, int inCalls
     sFocusChild = false; sWheelBase = sWheelArea = 0;
     sRustSide = inRust;
     HostComp self;
-    self.x = self.y = 0; self.w = 50 + (int)DR(300); self.h = 50 + (int)DR(300);
-    self.visible = true; self.enabled = true; self.disabled = false; self.parent = 0; self.held = 0;
+    memset(&self.m, 0, sizeof(self.m));
+    self.m.bounds.width = 50 + (int)DR(300); self.m.bounds.height = 50 + (int)DR(300);
+    self.m.bits = DR(2) == 0 ? 0x8 : 0x18; // wants the focus (and has it)
+    self.held = 0;
     sComps[kScroller] = self;
-    Line("start %lld %lld", self.w, self.h);
+    Line("start %lld %lld", self.m.bounds.width, self.m.bounds.height);
+    sTrace.back() += " " + std::to_string(self.m.bits);
     if (inRust) sRust = ee_won_scroller_new((void*)kScroller, ScriptedHost);
     else sOrig = new orig::ScrollbarScroller;
     NewArea();
@@ -542,7 +551,8 @@ static std::vector<std::string> RunSide(bool inRust, unsigned inSeq, int inCalls
 
 int main(int argc, char** argv)
 {
-    ee_won_comp_members_resolver(FillBlock);
+    ee_won_comp_members_resolver(Resolve);
+    ee_won_comp_host_world(ScriptedHost);
     bool aPrint = argc > 1 && strcmp(argv[1], "--print") == 0;
     const int kSequences = 20000;
     const int kCallsPer = aPrint ? 16 : 40;

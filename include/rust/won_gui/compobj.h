@@ -281,6 +281,10 @@ enum class EeWonComp : uint32_t {
   GTranslucent,
   /// `((const ControlIdSet*)b)->find(c) != end()` (0 or 1).
   IdIn,
+  /// `SetVisible(c != 0)`.
+  VSetVisible,
+  /// `GetMouseChild()`.
+  VMouseChild,
 };
 
 /// A member of a component's extra data (`EeWonComp::Extra` / `SetExtra`).
@@ -300,6 +304,13 @@ enum class EeWonCompExtra : uint32_t {
 };
 
 extern "C" {
+
+/// Registers the game's component host: the one C++ host every Rust object's call on a component goes through
+/// (its virtuals, its parent, window, events and extra data).
+void ee_won_comp_host_register(EeWonGuiHostFn host);
+
+/// A world's component host on this thread (drivers and tests; NULL removes it).
+void ee_won_comp_host_world(EeWonGuiHostFn host);
 
 /// One of Component's methods on the C++ component `me` (`EeWonCompCall`), its calls out through `host`.
 ///
