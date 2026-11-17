@@ -112,8 +112,8 @@ fn parse() -> World {
                 complex_scale: (t.len() > 12 && t[12] == "C").then(|| hex(t[29])),
             };
             cur.units.insert(num(head, "W"), unit);
-        } else if head.starts_with('T') {
-            let (x, y) = head[1..].split_once(',').unwrap();
+        } else if let Some(tile) = head.strip_prefix('T') {
+            let (x, y) = tile.split_once(',').unwrap();
             cur.seen.insert((x.parse().unwrap(), y.parse().unwrap()), t[2] == "s1");
         } else if head == "X" {
             let at = t.iter().position(|s| *s == "sway").unwrap();
