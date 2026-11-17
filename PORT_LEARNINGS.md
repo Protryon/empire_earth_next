@@ -28962,3 +28962,34 @@ from a snapshot commit, one commit per new crate.
   root's in `rust/<dir>/<dir>.h`, `rust/common.h`, the umbrella `rust/all.h`; ee_won_net's cppcore, hostop, opobj
   and thread name each other and share `rust/won_net/hostop.h`.
 - **Gates.** See docs/progress/crate-restructure.md "Phase 2".
+
+## Object plan, Lane R preparation: RFIL, the fill's golden, the fill split into reads and calls (branch rust-objR, 2026-11-17)
+
+The preparation for moving `EERenderObject.cpp`'s fill and `EEEffectHost.cpp`'s `Ask` readers onto Lane V's views
+(`ee_sim::world`); nothing moved to Rust yet. docs/progress/obj-lane-r.md has the gates and every read by object.
+
+- **RFIL in the live game.** `EE_RENDER_CAPTURE=<file>` (TEST ONLY, `EERenderCapture.cpp`) digests every filled
+  frame. The game draws on wall time, so no two runs fill the same frames: `tools/rfil.py compare` matches frames by
+  keys (physics tick, camera, flags, the unit under the pointer and a digest of the visible tiles' units) and requires
+  the matched ones equal. To share ticks between runs the RFIL tours run the harness clock at 1/20
+  (`--time-factor 1/20`: the software renderer draws about one frame per physics tick); seed 7: 65 to 89 matched
+  frames between runs, all equal.
+  - **Trap (addresses):** the texture maps are multimaps keyed by `GETexture*`: their order differs between runs. The
+    capture names a key by its lowest pool index and writes the keys in that order.
+  - **Trap (indeterminate fields):** `FillGhostRecords` fills a local `EERenderUnitRecord`; the scalars it does not set
+    are stack garbage (the driver's two runs differed until only the set fields were compared).
+  - **Trap (input):** the box selection's "dead" step fails at the 1/20 clock (the disbanded unit does not finish dying
+    within its wait), and a selection or kill changes the world at a wall time: the world digest in the key keeps such
+    frames unmatched instead of reported.
+  - **Coverage gap:** the tours at seeds 2, 3 and 7 drew the start's six units and no map object; selections, objects,
+    ghosts and circles are covered only by the driver.
+- **The stub-GE driver** (`build/gxR/drv/make_rfil.py`, scratch): the fill's functions cut verbatim from a commit or the
+  working tree over a stand-in world; prints every call and each frame's full lists. 3,000 frames of seed 2: 21,344
+  render units, 10,882 objects, 1,512 ghost records, 125 circles; two runs identical. 40 frames are the committed
+  `golden_fill.txt`; `golden_fill.rs` replays the parts already in Rust (`capture.rs`' place, jitter and sway,
+  `walk.rs`' owned food) against it.
+  - **Trap (Git Bash heredocs):** a quoted heredoc (`<<'EOF'`) feeding Python on this machine turned `\\n` in the
+    script into a real newline twice (the patched C++ string literals broke). Write such scripts with the Write tool.
+- **The split.** `FillUnit` and `FillObject` keep their calls (counters, `LoadMedia`, the circle, `AddUnit`, the list
+  and map inserts) in the original order and hand every read and field write to `FillUnitFields` /
+  `FillObjectFields`: the driver's trace byte-identical, RFIL equal against the unmodified exe's tours.
