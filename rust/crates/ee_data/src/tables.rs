@@ -2462,15 +2462,20 @@ mod list_tests {
 // ---- the songs by epoch (EEMusicObject::sSongs, sShuffled)
 
 /// Each epoch's songs and what is left of its shuffled order (the C++'s song objects, as addresses).
-static SONGS: std::sync::Mutex<(Vec<Vec<usize>>, Vec<Vec<usize>>)> = std::sync::Mutex::new((Vec::new(), Vec::new()));
+type SongLists = (Vec<Vec<usize>>, Vec<Vec<usize>>);
+static SONGS: std::sync::Mutex<SongLists> = std::sync::Mutex::new((Vec::new(), Vec::new()));
 
-fn songs() -> std::sync::MutexGuard<'static, (Vec<Vec<usize>>, Vec<Vec<usize>>)> {
+fn songs() -> std::sync::MutexGuard<'static, SongLists> {
     SONGS.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 /// `GetRandom`'s pick: the epoch's shuffled order, refilled when empty by drawing each next song from the songs not
 /// yet drawn (`draw(0, left - 1)`, the music's generator), then taken from its end; `None` for an epoch without songs.
-pub fn pick_song(songs: &[usize], shuffled: &mut Vec<usize>, mut draw: impl FnMut(c_long, c_long) -> c_long) -> Option<usize> {
+pub fn pick_song(
+    songs: &[usize],
+    shuffled: &mut Vec<usize>,
+    mut draw: impl FnMut(c_long, c_long) -> c_long,
+) -> Option<usize> {
     if shuffled.is_empty() && !songs.is_empty() {
         let mut left = songs.to_vec();
         while !left.is_empty() {
