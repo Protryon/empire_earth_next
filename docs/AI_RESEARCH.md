@@ -6313,6 +6313,120 @@ second dock, the island granary): identical. 0 script errors.
 10), which the warships of §8.96 only partly cover; the second dock stops at three; a small home island has room for
 few farms, and the farms come from the granary's foundations only.
 
+### 8.98 classic_lua's epoch pace: the advance ordered sooner (2026-11-16, EE-SIM)
+
+**The question** (the coordinator): classic_lua reached the Bronze Age in 42 of 64 games (Hard, Small, 90 minutes,
+against Age of AI). Make the Copper, Bronze and Dark Ages come faster without losing games. Levers to try one at a
+time: an earlier save, citizens moved off low-value resources, research timing, houses and population, the reserve
+rule. Keep the reserve rule as the owner chose it (§8.88: the whole cost kept once the advance is ordered); bench the
+alternatives for his decision.
+
+**Where the time goes** (the trace's `epoch.advance` lines against the report's epoch times, 64 seeds):
+
+| advance | epoch reached -> advance ordered | ordered -> next epoch | binding resource at the end of the save |
+|---|---|---|---|
+| Stone | 9.0 min (stone_span 30 x start 0.3) | 18.8 | food (all 32 of the first half) |
+| Copper | 16.2 | 10.8 | iron 17, food 8, gold 7 (of 32) |
+| Bronze | 15.6 | 11.9 | gold 8, food 7, iron 6 |
+
+From the Stone Age, the epoch timer, not the save, holds the advance back. On Hard the timer's early start
+(epoch_pressure.start 0.3 of a 45-minute span) orders the next advance 6-21 minutes after an epoch is reached. Once
+it is ordered, the whole cost is kept and paid in about 11 minutes, 2.2 of them the research itself. Before the
+order, the stock does not cover the cost: on average it covers it 3.5 minutes after the order. Gold and iron go to
+the army and the research, and the gatherer split puts 2-6 citizens on gold until the advance enters its tier 2.
+
+**Two more findings, kept out of the change:**
+- **The building counts depend on stone.** The managers' rotation (main.lua enable_managers, the classic's
+  enable_stock_build) turns on the building counts only with wood and stone at 300 or more. Stone is spent on towers
+  and walls and stays below 300 for long stretches. The first granary, and with it the farms, came a median 12
+  minutes after the Copper Age, and up to 33. Food in the Copper Age is bushes, game and fish.
+- **The citizens past the gather capacity.** At 150-180 citizens, the split wants 80-100: gold and iron are capped by
+  their sites x mining_limit, food by the bushes and farms. The rest overflow to wood (60-90 citizens, a wood stock of
+  5,000-11,000).
+
+**The variants** (Hard, Small, 90 min, against Age of AI, seeds 2-33, the scripts of 1ba6afb3; W-L-C by the
+scorecard's body rule; no variant had a defeat):
+
+| variant | W-L-C | Stone | Copper | Bronze | Dark | note |
+|---|---|---|---|---|---|---|
+| baseline | 30-0-2 | 27.1 | 32 @ 55.0 | 21 @ 80.2 | 1 | |
+| **the advance due 5 min after an epoch** | 24-0-8 | 27.1 | 32 @ 51.1 | **28 @ 76.5** | 6 | army at 90 min 55 against 77 |
+| ... 10 min | 22-1-9 | 27.1 | 32 @ 52.8 | 26 @ 78.8 | 3 | |
+| the building counts on wood alone | 28-1-3 | 27.1 | 32 @ 54.0 | 24 @ 79.1 | 0 | granary 5.5 min after Copper (12.0) |
+| a granary at once in the Copper Age | 28-0-4 | 27.1 | 32 @ 55.0 | 22 @ 80.1 | 0 | granary at Copper |
+| 5 min + counts on wood + granary | 22-1-9 | 27.1 | 32 @ 52.2 | 27 @ 76.1 | 4 | as 5 min alone |
+| citizens capped at the gather capacity + 20 | 28-1-3 | 27.1 | 32 @ 55.0 | 19 @ 79.8 | 1 | citizens at 90 min 145 (165) |
+| the next epoch at half weight in the split before the order | 28-0-4 | 27.1 | 32 @ 56.1 | 20 @ 76.6 | 1 | |
+| citizens past the reserve below 35 workers in the Prehistoric (50) | 19-2-11 | **22.4** | 31 @ 52.6 | 23 @ 78.9 | 0 | |
+| 5 min + below 40 in the Prehistoric | 20-3-9 | 24.2 | 31 @ 50.8 | 25 @ 78.8 | 3 | |
+| the random research only from the stock above the next epoch's cost | 29-0-3 | 27.1 | 32 @ 55.0 | 19 @ 78.4 | 0 | |
+| no morale houses before the Bronze Age | 26-0-6 | 27.1 | 32 @ 56.5 | 18 @ 77.5 | 0 | |
+
+**The reserve rule** (the owner's decision, §8.88; the same bench, every other rule as shipped). FULL_ONCE_ORDERED is
+unchanged in the change below:
+
+| reserve once the advance is ordered | W-L-C | Stone | Copper | Bronze | Copper save (ordered -> reached) |
+|---|---|---|---|---|---|
+| **the whole cost, always (shipped)** | 30-0-2 | 27.1 | 32 @ 55.0 | **21 @ 80.2** | 10.3 min |
+| the whole cost only while an enemy is a whole epoch ahead, else the ramp | 28-1-3 | 28.3 | 31 @ 64.1 | 1 @ 87.3 | 22.9 |
+| at least half the cost (the whole while an enemy is ahead) | 27-3-2 | 27.0 | 31 @ 64.3 | 2 @ 87.5 | 23.1 |
+| the classic's ramp alone (epoch_pressure start -> full) | 26-1-5 | 28.3 | 31 @ 68.0 | 1 @ 87.3 | 23.3 |
+
+Against Age of AI, which rarely leaves the Stone and Copper Ages, "always" wins as many games as the alternatives and
+is the only one that reaches the Bronze Age. §8.88's result for "only behind" came against the C++ classic, which is
+gone.
+
+**The change** (civ.lua ORDER_AFTER_MS). From the Stone Age, the next advance is due at most 5 minutes after an epoch
+is reached, while the standing army is at its target (military.standing_army x the workers, as main.lua keeps it).
+Otherwise the timer stands as before. The army condition came after the first 5-minute bench, the one that cost the
+most wins (the scripts of 3f6a6a4f, seeds 2-33):
+
+| | W-L-C | Copper | Bronze | Dark |
+|---|---|---|---|---|
+| baseline | 30-0-2 | 32 @ 55.6 | 21 @ 80.9 | 0 |
+| 5 min | 23-1-8 | 32 @ 51.1 | 27 @ 76.0 | 4 |
+| **5 min while the army is at its target (kept)** | 27-1-4 | 32 @ 51.6 | 28 @ 74.6 | 4 |
+
+**Confirmed on 64 seeds** (2-65, the merged build of 158e3be7). Income is per minute over the game, citizens are the
+mean at 30/60/90 minutes:
+
+| | W-L-C | defeats (before Copper) | Stone | Copper | Bronze | Dark | income f/w/s/g/i | citizens |
+|---|---|---|---|---|---|---|---|---|
+| baseline | 54-2-8 | 0 (0) | 64 @ 27.8 | 63 @ 55.5 | 42 @ 82.8 | 0 | 190/146/45/71/73 | 56/130/162 |
+| **the change** | 44-6-14 | 0 (0) | 64 @ 27.8 | 63 @ 51.7 | **52 @ 76.7** | **9 @ 86.2** | 184/135/42/70/68 | 56/121/154 |
+| army at 1.5 x its target | 48-5-11 | 0 (0) | 64 @ 27.8 | 63 @ 54.3 | 50 @ 79.0 | 1 @ 86.2 | 188/139/43/70/71 | 56/128/157 |
+
+The Copper advance is now ordered 5.3 minutes after the Stone Age is reached (16.2 before) and the Bronze one 6.8 after
+the Copper Age (15.6). The save takes longer: 14.9 and 13.5 minutes, against 10.8 and 11.9, because the stock is lower
+at the order. The cost is the army: smaller at the end, so fewer of Age of AI's citizens are killed and more games end
+close by the body rule. No game is lost by defeat, and no seat is defeated before the Copper Age. The six score losses
+on 64 seeds are games where Age of AI ends with 1.5 times the bodies; classic_lua is still alive in all of them and an
+epoch ahead in most.
+
+**The other cells** (seeds 2-33, the merged build; no defeat against Age of AI):
+
+| cell | W-L-C | Copper | Bronze | Dark |
+|---|---|---|---|---|
+| Small Islands, baseline | 19-4-9 | 28 @ 61.6 | 10 @ 87.3 | 0 |
+| Small Islands, the change | 17-5-10 | 30 @ 55.5 | 16 @ 78.7 | 1 |
+| Continental Medium, baseline | 19-5-8 | 31 @ 59.7 | 12 @ 80.6 | 0 |
+| Continental Medium, the change | 11-7-14 | 32 @ 57.2 | 18 @ 74.8 | 0 |
+| classic_lua mirror (Small, 64 seats), baseline | 1 seat defeated, before Copper | 57 @ 54.4 | 26 @ 80.5 | 0 |
+| classic_lua mirror, the change | 1 seat defeated, before Copper | 59 @ 52.3 | 32 @ 74.9 | 3 |
+
+In the mirror the citizens lost per seat are 50.2 before and 47.8 after: the earlier advances do not open the towns to
+the other side's raids.
+
+Determinism (seed 2, `--repeat 2`): the traces are identical (21,865 lines). 0 script errors from classic_lua in every
+cell.
+
+**Still open:**
+- the win cost on Continental Medium (19 -> 11 wins, the losses 5 -> 7);
+- the building counts gated by stone (a granary 12 minutes late in the Copper Age);
+- the citizens past the gather capacity, on wood;
+- the Prehistoric save (18.8 minutes, food-bound, the citizens free below 50 workers: below 35 the Stone Age comes
+  at 22.4 but the games go 19-2-11).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
