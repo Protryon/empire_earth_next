@@ -1139,7 +1139,9 @@ FIXUPS = [
     ("down", "rust/crates/ee_openformats/src/png.rs", "use crate::{fail, Failure};\n",
      FAILURE_DEFS.replace("pub(crate) fn fail", "pub fn fail").rstrip("\n") + "\n"),
     # ee_won's items the three crates share (pub(crate) -> pub)
-    # every pub(crate) item of chat.rs (the chat's character types and command numbers: gui and lobby name them)
+    # every pub(crate) item of chat.rs (the chat's character types and command numbers: gui and lobby name them);
+    # the constants kept out of the headers, where bare names (BLOCK, ALERT) would reach every C++ includer
+    ("won", "rust/crates/ee_won/src/chat.rs", ALL + "pub(crate) const ", "/// cbindgen:ignore\npub const "),
     ("won", "rust/crates/ee_won/src/chat.rs", ALL + "pub(crate) ", "pub "),
     # CrtChat's C-locale stand-in, which the tests of ee_won_gui and ee_won_lobby saw (cfg(test) is per crate)
     ("won", "rust/crates/ee_won/src/chat.rs", "/// cbindgen:ignore\n#[cfg(not(test))]\nmod crt {",
@@ -1479,6 +1481,10 @@ class Rewriter:
                 return
             m = re.compile(IDENT).search(code, start)
             self.add(m.start(), m.end(), n)
+            if old == "ee_won" and n == "ee_won_net":
+                # ee_won is three crates now: the other two are linked in the same way
+                e = text.find(";", end)
+                self.add(e + 1, e + 1, "\nuse ee_won_gui as _;\nuse ee_won_lobby as _;")
             return
         out = []
         changed = False
@@ -1937,6 +1943,8 @@ def dep_kinds(st, keep, n):
                     dev.add(t)
                 else:
                     normal.add(t)
+                    if r.segs == ["ee_won as _"] and t == "ee_won_net":
+                        normal |= {"ee_won_gui", "ee_won_lobby"}   # linked in with it (Rewriter.use_tree)
     return normal, dev - normal, build
 
 
