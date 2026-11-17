@@ -20,9 +20,13 @@ python -I tools/clang_build.py [-j N] [module ...]                 # compile cen
 python -I tools/rust_build.py gate                                 # the Rust library: tests, clippy, rustfmt, header check
 ```
 
-- The Rust library's C interface is one generated header per crate: include `rust/<crate>.h` (e.g. `rust/ee_won.h`)
-  for the crates a file calls, not the umbrella `rust/ee_rust.h` (it rebuilds every unit on any FFI change).
-  `tools/rust_includes.py` narrows umbrella includes by the names a file uses.
+- The Rust crates (rust/crates, docs/progress/crate-restructure.md): `ee_base` (platform, leaves, files, input, the GE
+  math, the PNG reader), `ee_data`, `ee_sim` (never render, audio or ui), `ee_render`, `ee_audio`, `ee_net`, `ee_ui`,
+  `ee_won_net` <- `ee_won_gui` <- `ee_won_lobby`, and `ee_game`, the one static library (`ee_game.lib`). An old crate
+  is a module named after it (`ee_units` is `ee_sim::units`; its C names, `ee_units_*`, are unchanged).
+- The Rust library's C interface is one generated header per module: include `rust/<crate>/<module>.h` (e.g.
+  `rust/sim/units.h`, `rust/won_net/ffi.h`) for the modules a file calls, not the umbrella `rust/all.h` (it
+  rebuilds every unit on any FFI change). `tools/rust_includes.py` narrows umbrella includes by the names a file uses.
 - Requirements: LLVM, the VS 2022 Build Tools C++ workload (MSVC STL, UCRT, Windows SDK), Rust through rustup, Python 3.12 and 7-Zip.
   The harness also needs MSYS2 `mingw-w64-x86_64-gcc` and pip `pefile capstone`. See README.md.
 - A full build takes about 2 minutes. A link must report `0 unresolved, 0 duplicates`.

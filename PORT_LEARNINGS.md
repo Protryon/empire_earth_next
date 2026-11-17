@@ -28910,3 +28910,55 @@ Branch `rust-won-net29`. Net C++ over src + include (without include/rust) again
   and from there the state is a short search.
 - **Gates.** The editor gate's expected.txt was re-recorded: every chunk carries the save version, and the world
   chunk grows by the tech flags (17-28 bytes). No other line changed.
+
+## The crate restructure: ~40 crates into eleven (2026-11-16)
+
+The owner's layout (docs/progress/crate-restructure.md): `ee_base`, `ee_data`, `ee_sim`, `ee_render`, `ee_audio`,
+`ee_net`, `ee_ui`, `ee_won_net` <- `ee_won_gui` <- `ee_won_lobby`, `ee_game` (the one staticlib, `ee_game.lib` /
+`libee_game.a`), and `ee_net_tcp` (the TCP plug-in, see below), and the tooling crates `ee_rmap_gatelib` and `xtask`. A pure move, made by `tools/crate_move.py move`
+from a snapshot commit, one commit per new crate.
+
+- **Where an old path went.** An old crate is a module of its new crate, named after it less `ee_`
+  (`ee_units` -> `ee_sim::units`, `rust/crates/ee_units/src/x.rs` -> `rust/crates/ee_sim/src/units/x.rs`, its
+  `lib.rs` -> `units/mod.rs`). ee_data and ee_ui kept their names. The exceptions: the GE math (`types`, `um`,
+  `transform`, `hull`, `vector`, `point`, `line`, `bbox`, the math half of `ee_ge/src/ffi.rs`) is `ee_base::math`;
+  `ee_openformats/src/png.rs` is `ee_base::png`; ee_app's `map`, `storm`, `cheats` are `ee_sim::app` (its `map_ffi`
+  stays in `ee_game::app`); ee_won's modules are split by WON part (`WON_GROUPS` in the script); ee_rust's `lib.rs`
+  is ee_game's root; ee_data_cabi is ee_data's `staticlib` crate type. The older sections of this file keep the old
+  paths. C symbol names did not change.
+- **Lesson: a merge changes what the linker pulls.** Archives are pulled one object (codegen unit) at a time. As
+  separate crates, a test binary or example linked only the crates it named; merged, the object it needs also holds
+  the calls into the game's C++ (the units' host, the Lua runtime, DX7 trampolines, SDL) of modules it never uses.
+  Nine cargo programs stopped linking. Fix: a `build.rs` in those crates passes "leave unresolved"
+  (`/FORCE:UNRESOLVED`, `-Wl,--unresolved-symbols=ignore-all`, `-Wl,-undefined,dynamic_lookup`) for cargo-linked
+  programs only; the game's library is linked by build.py and xbuild.py, which this does not reach. The opposite
+  case: test fakes of a function another crate defines (ee_sound's 17 fakes of ee_ts, ee_util, Plat*) become a
+  second definition once that crate is linked alongside; they now have their own symbol names
+  (`#[export_name]` on the fake, `#[cfg_attr(test, link_name)]` on the import).
+- **Lesson: `cfg(test)` is per crate.** A sibling module's test-only stand-in now applies to every module's tests
+  of that crate, and a crate split off loses it. ee_won's `CrtChat` (a C-locale stand-in for the CRT's case
+  functions) became `cfg(any(test, feature = "c_locale"))`, a feature the gui and lobby crates turn on for their
+  tests (the `no_cpp` pattern of ee_ui).
+- **Lesson: cbindgen sees more of a merged crate.** Old crates cbindgen never read (`plat_*`, `random`, `panic`,
+  `gx`) would have put their `#[no_mangle]` Plat* functions into the headers next to C++'s own declarations; their
+  module declarations carry `/// cbindgen:ignore` (honoured on `mod` items). Constants made `pub` for a sibling
+  crate would be exported bare (`BLOCK`, `ALERT`): they carry `cbindgen:ignore` too.
+- **Lesson: a link-forcing `use` names a crate.** `use ee_won as _;` in the staticlib linked ee_won; mapping it to
+  the crate of ee_won's root (`ee_won_net`) dropped the gui and lobby from the library, and their 14k header lines
+  with them. The header check caught it (the item sets of every header are compared against the snapshot's).
+- **Lesson: a plug-in its tests replace stays a crate.** The Network Engine reaches its TCP plug-in only through
+  the C ABI `ee_tcp_*`, and `ne_protocol_test` links stand-ins of that ABI. Merged into ee_net, the plug-in's
+  definitions sat in the Network Engine's objects and clashed with the stand-ins, so ee_net_tcp stayed a crate.
+  ee_plat_sdl was split off for the same reason (its old manifest said so) and it did not help: ee_input, inside
+  ee_base, imports its `PlatMouseSetRelative` and pulls it back in; it went back into ee_base and the C++ test
+  programs (xbuild.py wontest, nettest) link loosely like cargo's (`TEST_LINK_LOOSE`).
+- **Lesson: read the old manifests' comments before merging.** The generated manifests dropped them; two of them
+  (ee_plat_sdl, ee_dx7) explained a crate boundary that the linker relied on.
+- **Lesson: a build killed mid-edit leaves cargo "fresh".** A release build started while files were being moved
+  compiled the old sources with timestamps newer than the edits, and later builds called it current. Touching the
+  sources made cargo rebuild. (Its stale library also made ne_client_test differ in 5 sequences.)
+- **Headers.** During the crate moves `split.rs` kept the old names (a merged crate's module -> `ee_<module>.h`).
+  Then one header per top-level module: `include/rust/<crate dir>/<module>.h` (`rust/sim/units.h`), the crate
+  root's in `rust/<dir>/<dir>.h`, `rust/common.h`, the umbrella `rust/all.h`; ee_won_net's cppcore, hostop, opobj
+  and thread name each other and share `rust/won_net/hostop.h`.
+- **Gates.** See docs/progress/crate-restructure.md "Phase 2".

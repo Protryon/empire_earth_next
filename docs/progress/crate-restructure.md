@@ -1,7 +1,9 @@
 # Crate restructure: ~40 crates into the owner's layout
 
 Lane state (one file per lane). Branch `rust-crates`, from `origin/rust` 907e34d92. Phase 1 (this file and
-`tools/crate_move.py`) is done; phase 2 (the move) waits for the lead's go-ahead and a merge of `origin/rust`.
+`tools/crate_move.py`) is done. Phase 2 (the move) is done on the merge of `origin/rust` 22734d86b (ae379c7ad, the
+snapshot): steps base, data, audio, net, render, sim, game, won, down (one commit each), the module headers, the
+include rewrite. Its results are in "Phase 2: results" at the end.
 
 The owner's decision (2026-11-15): `ee_base`, `ee_data`, `ee_sim`, `ee_render`, `ee_audio`, `ee_net`, `ee_ui`, the WON
 crates and `ee_game` (the one staticlib, replacing the `ee_rust` umbrella). `xtask` stays tooling. Behaviour must not
@@ -29,7 +31,7 @@ change: this is a move of files and paths, nothing else.
   `ee_math.h`, `ee_png.h` (step `down`, as planned). The C++ builds and the runtime gates are phase 2.
 - **Main risks**: which objects the linker pulls changes with the crate boundaries (examples, test binaries, the WON
   drivers, tools that link only part of the library); `cfg(test)` is per crate; a POSIX-only duplicate symbol in
-  `ee_base`'s tests. See "Risks".
+  `ee_base`'s tests. See "Risks" and, for what phase 2 met, "Phase 2: results".
 
 ## The layout
 
@@ -183,8 +185,8 @@ the move's map, then directories). The script's trial rewrote 2,088 files (1,685
   function would crash, not pass. The opposite case, two definitions: ee_sound's golden fakes of 17 functions ee_base
   defines for real (the Thread System, `PlatSleep`, ...). They get their own symbol names in the test build
   (`#[export_name = "ee_sound_fake_..."]`, and `#[cfg_attr(test, link_name = ...)]` on sys.rs's imports), so the
-  golden still drives the fakes. Still open: the programs outside cargo that link only part of the library (the
-  WON drivers of `xbuild.py wontest`, the gate tools; the gatelib's tool already links with `/FORCE:UNRESOLVED`).
+  golden still drives the fakes. Phase 2 met the same in the programs outside cargo: the WON and network drivers
+  of xbuild.py link loosely too (`TEST_LINK_LOOSE`), and ee_net_tcp stayed a crate ("Phase 2: results").
 - **R2 `cfg(test)` is per crate.** 257 `cfg(test)`/`cfg(not(test))` sites in library code. Once two old crates
   share a crate, a module's tests see a sibling compiled for test (and vice versa). `analyze` lists the sites whose
   crate another old crate of the same new crate names: astar (by units), ge (dx7, gfx, openformats), gx (dx7),
@@ -258,3 +260,50 @@ POSIX check (`cargo check --target x86_64-unknown-linux-gnu`; the POSIX C++ buil
 `python -I tools/crate_move.py analyze`, `won`, `headers` on 907e34d92 print the full tables (every forbidden edge
 with its files, every bridge, every `cfg(test)` site's crate, every location-dependent macro, every header's items
 and includes).
+
+## Phase 2: results
+
+The move was made from the merge of `origin/rust` 22734d86b (ae379c7ad), one commit per step, then by hand where
+the steps' tree met the tests and tools (each its own commit):
+
+| Commits | What |
+|---|---|
+| base, data, audio, net, render, sim, game, won, down | `crate_move.py move --from ae379c7ad --to <step>`, `cargo fmt`, headers regenerated (their item sets equal the snapshot's after every step) |
+| headers per module | `include/rust/<crate dir>/<module>.h`, 259 headers (ee_won_net's cppcore, opobj, thread share `won_net/hostop.h`), `rust/all.h`, `rust/common.h`; forwarding headers at the old names |
+| C++ includes | `rust_includes.py`: 548 includes narrowed, 36 added, the forwarding headers deleted; the original units' copies under `tests/net` find the old names in `tests/net/rust_names` |
+| fixes found by the gates | `lang_strings.py`'s path; `units::header_consts` reads `src/units`; a plat_sys timed-wait test takes `test_globals` (same test binary as plat_core's harness-clock tests now); the split test's umbrella order |
+| ee_net_tcp | stays a crate of its own (see below); the WON and network test programs link loosely |
+
+**Deviations from the layout (for the owner).**
+
+- `ee_net_tcp` is a crate of its own beside `ee_net`. The Network Engine reaches its TCP plug-in only through the C
+  ABI `ee_tcp_*`, and `ne_protocol_test` (xbuild.py nettest) puts stand-ins of that ABI in its place; merged, the
+  plug-in's objects are the Network Engine's and the stand-ins clash with them (duplicate symbols). Its header is
+  still `rust/net/net_tcp.h`.
+- ee_plat_sdl was tried as a crate of its own too (its old manifest said it was one so that text-only programs
+  don't pull SDL in); it did not help, because ee_input inside ee_base imports `PlatMouseSetRelative` and pulls it
+  back, so it stays a module of ee_base (reverted) and the test programs link loosely instead.
+- Test and example programs (cargo's, and xbuild.py's WON and network drivers) link with "leave unresolved"
+  (R1): `build.rs` in the crates of `LOOSE_LINK`, `TEST_LINK_LOOSE` in xbuild.py. The game, EE-SIM and the gate
+  tools' own links are unchanged.
+
+**Gates on the final tree** (Windows; staging per CLAUDE.md, no `EE_ORIG_SRC_ROOT`):
+
+| Gate | Result |
+|---|---|
+| `build.py -j 3 --sim` | EE-AOC 737 inputs, EE-SIM 738: 0 unresolved, 0 duplicates |
+| `build.py -j 3 --test-profile windowed-software` | EE-AOC 737 inputs: 0 unresolved, 0 duplicates |
+| Rust gate (`cargo test --workspace --no-fail-fast`, clippy `-D warnings`, rustfmt, header check) | 4,344 passed, 0 failed, 9 ignored: the merge's 4,343 (counted the same way on ae379c7ad) and the new `header_of` test; clippy, rustfmt clean; 259 headers current |
+| oracle seeds 2-7 vs `empire_earth_next/build/rust_oracle/ref` | identical, all six (on the step-down exe and again on the final one) |
+| capture profiles, seeds 2-3 | PASS: oracle 200, late 204, space 202, calamity 212, missile 22, effects 6, scenario 43, units 175, app 18, groups 2, transport 185 digests equal to the goldens |
+| editor gate (`sim_editor.py`) / civ builder (`--civbuilder`) | PASS (14,448 lines) / PASS (4,062 lines) |
+| `eedata check` / `cppgate` | PASS / PASS |
+| `xbuild.py wontest` | exit 0, 143 programs exit 0 |
+| `xbuild.py nettest` | the 7 NE programs exit 0 (client 0 of 1,500 differing, protocol over its stand-in plug-in); `ee_session_test` fails to compile exactly as on the snapshot (ee/EEARust.h against the ee_stand world): not this lane's |
+| `xbuild.py targets`; Linux | windows-x86_64 and linux-x86_64 build here, macOS needs the Xcode SDK. `cargo check --target x86_64-unknown-linux-gnu --workspace --all-targets`: ee_base, ee_data, ee_sim, ee_audio, ee_net, ee_net_tcp and the WON crates check; ee_render's `openformats/surface_file.rs` has 4 LP64 `c_long`/`c_int` errors that the snapshot has too (so ee_ui, ee_game and the gatelib were not checked). ee_base's Linux test objects define the three R3 symbols once each. Running the POSIX tests, the POSIX C++ build and macOS: not verified here |
+| `gates.sh` (harness lock, slot 0, open tree) | GATES PASS: tour PASS; ai-game time-cap, PT 14,026, units [4, 43, 44], alive_computers [2, 3]; lan-game PASS (host 2,693, joiner 2,687 PTs) |
+
+**Left for the lead.** Every open lane branch conflicts on every moved path: merge them by path (old -> new is
+mechanical: `ee_x` -> its module, PORT_LEARNINGS "The crate restructure"). The bridges of F5 can now move into
+ee_sim. The two deviations above want the owner's yes. `C:\EEX-crates` (staged sources of the first phase-2 builds,
+before CLAUDE.md said not to set `EE_ORIG_SRC_ROOT`) is outside this worktree and was left in place.
