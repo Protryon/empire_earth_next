@@ -6101,6 +6101,65 @@ from the Bronze Age, or a weaker tower weight once the enemy's army is gone (gam
 citizens and its towers standing, not defeated); the enemy town found by scouting rather than by the raids'
 sightings.
 
+### 8.95 classic_lua defending its gatherers: tried, not kept (2026-11-16, EE-SIM)
+
+**The question** (the coordinator, after §8.94): classic_lua loses about 21 citizens a game. When raiders threaten
+gatherers, pull them to towers or the town centre (garrisoned where possible), send the home pool at the raiders, and
+send the citizens back once the threat is gone. The owner's rule: kept only if the standard cell's W-L-close and the
+Bronze Age do not drop.
+
+**Who kills its citizens** (the standard cell with the push, seeds 2-33; per game): 24.9 citizens lost.
+- Age of AI's citizens: 8.7. Its citizen militia attacks gatherers near it, and classic_lua's militia.lua never
+  answered them: the raiders it counted were soldiers only.
+- Towers: 5.5 (gatherers at resources an enemy tower reaches). Soldiers: 5.0. Animals 2.3, unknown 3.4.
+- Most die more than 30 tiles from the town centre, as they flee ("move": 177 of 576) or fight (93).
+- The engine's C++ reflexes (the militia, the danger zones) are off for classic_lua (`ai.reflex{militia = false,
+  danger = false}`) and skip the units a script holds, so militia.lua is the only answer and nothing overlaps; the
+  naval flight stays the engine's.
+
+**Built** (classic_lua/militia.lua, unit-level commands only):
+- the enemy citizens seen attacking count as raiders;
+- the pool's soldiers within 45 tiles join the militia, and go at the raiders when they alone hold them (a sortie,
+  committed 30 s);
+- a fleeing citizen within 15 tiles of an own town centre with room goes inside (ai.garrison; towers hold no
+  garrison, and a full settlement or granary would start its upgrade, so only town centres and capitols);
+- the shelter: the citizens sent away are remembered with the resource they worked, and sent back to it once no enemy
+  soldier has been seen within 14 tiles of the spot for 15 s (unloaded first; given up after 3 minutes);
+- a gatherer shot by an enemy tower leaves 8 tiles away from it with its neighbours, and the spot becomes a danger
+  zone.
+
+**Results** (the standard cell, seeds 2-33, against the push of §8.94; deaths: citizens lost a game; Bronze: players,
+median minute):
+
+| variant | W-L-C | Age of AI defeated | deaths (by enemy citizens / towers / soldiers) | Bronze |
+|---|---|---|---|---|
+| baseline (§8.94) | 30-0-2 | 7 | 24.9 (8.7 / 5.5 / 5.0) | 21, 80.9 m |
+| everything; our citizens fight or flee raiding citizens | 24-1-7 | 4 | 25.8 (8.2 / 6.5 / 5.9) | 17 |
+| raiding citizens answered by the soldiers alone, the citizens stay at work | 25-1-6 | 3 | 23.6 (5.8 / 6.8 / 4.9) | 19 |
+| the shelter, the return and the tower flight only (no sortie, no citizen raiders) | 28-1-3 | 3 | 28.2 (8.3 / 6.7 / 8.0) | 19, 81.8 m |
+
+- Fighting the citizen militia with citizens lost more citizens in fights (93 -> 149 deaths while fighting) and
+  slowed the economy (Bronze 21 -> 17).
+- Answering it with the pool saved 2.9 citizens a game, but the sorties drained the soldiers the raids and the push
+  need: Age of AI's citizens killed 89.5 -> 78.1, defeats 7 -> 3.
+- The shelter alone: 311 citizens sent back, 79 s away on average (765 citizen-seconds a game), and more lost, not
+  fewer (the long walks to a refuge are where they die).
+
+**The raiding mirror** (seat-split: the shelter-only variant in one seat, the push of §8.94 in the other, each seat
+order 32 seeds; the classic_lua copy renamed classic_t1 in the snapshot's ais.json): the seat decides most games
+(seat 2 won 18-4 and 16-6). The variant 24 wins, the push 20, 20 close; citizens lost 48.3 against 53.0 a game; the
+variant's Bronze 26 against 26. Inside the noise.
+
+**Not kept:** every variant lowered the standard cell's W-L-close and the Bronze Age, so militia.lua stays as on
+main. 0 script errors in every bench.
+
+**Still open:**
+- The cheaper fix for the tower deaths: not to send gatherers to resources an enemy tower reaches (the economy's
+  site choice; with the manifest's sees_all, HasEnemyNear already skips them at assignment, but not the gatherers
+  already there when the tower goes up).
+- A guard that does not drain the raids: a fixed small escort at the far resource centres, or sorties only with
+  soldiers beyond the next raid's need.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
