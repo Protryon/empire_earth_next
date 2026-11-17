@@ -17,29 +17,6 @@ volatile long gPlatSimNoHumanDefeatHits = 0;
 }
 
 static std::atomic<PlatDebugHandler> sDebugHandler{nullptr};
-static std::atomic<long> sLobbyPosts{0}, sLobbyApplies{0};
-
-extern "C" void PlatSimLobbyPosted(void)
-{
-    if (gPlatSimMode)
-        sLobbyPosts++;
-}
-
-extern "C" void PlatSimLobbyApplied(void)
-{
-    if (gPlatSimMode)
-        sLobbyApplies++;
-}
-
-extern "C" long PlatSimLobbyPosts(void)
-{
-    return sLobbyPosts.load();
-}
-
-extern "C" long PlatSimLobbyApplies(void)
-{
-    return sLobbyApplies.load();
-}
 
 extern "C" void PlatDebugSetHandler(PlatDebugHandler inHandler)
 {
