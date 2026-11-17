@@ -1,7 +1,7 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SESoundManager.cpp
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 // SESoundManager, its instance nodes (SESMInstanceNode) and the samples (SESample) whole in Rust
-// (rust/crates/ee_sound managerobj.rs, objects.rs; LLE lane round 6): every member is a forwarder. This file keeps
+// (rust/crates/ee_audio/src/sound managerobj.rs, objects.rs; LLE lane round 6): every member is a forwarder. This file keeps
 // the C++ the Rust reaches (extern "C" ee_soundcpp_*): ESVerify, the floating-point control, the sound path and its
 // file specs.
 #include <windows.h>
@@ -121,7 +121,7 @@ long SESoundManager::Stop(SESMInstanceNode* inNode, bool inImmediately) { return
 long SESoundManager::StopAllOneShotSounds() { return ee_sound_manager_stop_all_one_shots(RUST); }
 long SESoundManager::Unload(unsigned long inSampleID) { return ee_sound_manager_unload(RUST, (uint32_t)inSampleID); }
 
-// ---- the C++ the Rust objects reach (rust/crates/ee_sound sys.rs)
+// ---- the C++ the Rust objects reach (rust/crates/ee_audio/src/sound sys.rs)
 extern "C" {
 void ee_soundcpp_verify(const char* inExpression, uint32_t inLine) { ESVerify(__FILE__, inLine, inExpression); }
 void ee_soundcpp_fp_precision53() { UMSetFloatingPointPrecision(kFPPrecision53); }

@@ -24,21 +24,21 @@ use ee_ge as _;
 // the Graphics Thread's and the camera's math (ee_gfx/src/ffi.rs), called by EECameraControl.cpp
 use ee_gfx as _;
 // the DX7 renderer plug-in behind the C++ trampolines (ee_dx7/src/ffi.rs); it imports them, absent from a test binary
+#[cfg(not(test))] // its FFI imports the C++ shim
+use ee_audio as _;
 #[cfg(not(test))]
 use ee_dx7 as _;
 #[cfg(not(test))] // its FFI imports the platform layer's window functions (absent from a test binary)
 use ee_gx as _;
-#[cfg(not(test))] // its FFI imports the C++ shim
-use ee_mixer as _;
 #[cfg(not(test))] // its FFI imports the platform layer, absent from a test binary
 use ee_net_tcp as _;
 // the Network Engine's whole classes (ee_net/src/ffi.rs), called by NESynchronousServer.cpp
+#[cfg(not(test))]
+// the sound manager behind SESoundManager.cpp: its FFI imports the C++ trampolines (ee_soundcpp_*)
+use ee_audio as _;
 use ee_base as _;
 #[cfg(not(test))] // its protocol imports the TCP plug-in's C ABI (ee_net_tcp, absent from a test binary)
 use ee_net as _;
-#[cfg(not(test))]
-// the sound manager behind SESoundManager.cpp: its FFI imports the C++ trampolines (ee_soundcpp_*)
-use ee_sound as _;
 // the UI toolkit's algorithms behind the C++ UI* classes (ee_ui); its FFI imports C++ host functions, absent from a
 // test binary
 #[cfg(not(test))]

@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 use std::ffi::c_void;
 use std::fmt::Write;
 
-use crate::conductor::{Conductor, ConductorFields, Embellishment, Host, Score, Timing};
+use crate::sound::conductor::{Conductor, ConductorFields, Embellishment, Host, Score, Timing};
 
 #[derive(Default)]
 struct Fake {

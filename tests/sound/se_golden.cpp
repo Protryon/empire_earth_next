@@ -9,7 +9,7 @@
 //     which reads real files from the music folder;
 //   - FSPath::FindFile (a fake path: names starting with 'm' are not found).
 // Each line is "<op> <args> :<the fake calls> = <result>". The relinked driver (-DSE_NEW, the new units and Rust)
-// must print the same; rust/crates/ee_sound/src/golden_objects.rs replays the lines over the Rust objects.
+// must print the same; rust/crates/ee_audio/src/sound/golden_objects.rs replays the lines over the Rust objects.
 //
 //   python -I build/lle6/drv.py orig|new        (compile with the game's flags, link with the units' objects)
 //   build/lle6/seg_<orig|new>.exe <music folder> <sequences> [first seed] > golden.txt

@@ -11,7 +11,7 @@
 
 use ee_base::random::float_to_long;
 
-use crate::conductor::Score;
+use crate::sound::conductor::Score;
 
 /// An `EEMusicObject*` (never null).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

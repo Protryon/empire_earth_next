@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 use std::ffi::c_void;
 
-use crate::manager::{FileSpec, Host, Node, NodeFields, Sample, CHANNEL_IDLE, CHANNEL_PLAYING, NONE, OK};
+use crate::sound::manager::{FileSpec, Host, Node, NodeFields, Sample, CHANNEL_IDLE, CHANNEL_PLAYING, NONE, OK};
 
 /// A pooled node: its fields, reference count and whether it is back in the pool.
 #[derive(Clone, Copy, Debug)]

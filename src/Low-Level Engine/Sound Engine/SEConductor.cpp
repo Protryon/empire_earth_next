@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SEConductor.cpp
 // Music score playback on dmusic (src/ThirdParty/dmusic), replacing the original's DirectMusic. Whole in Rust
-// (rust/crates/ee_sound conductorobj.rs: dmusic's loader and performance, the scores, the music folder's files, the
+// (rust/crates/ee_audio/src/sound conductorobj.rs: dmusic's loader and performance, the scores, the music folder's files, the
 // lock; the decisions conductor.rs; LLE lane round 6): every member is a forwarder.
 #include <windows.h>
 

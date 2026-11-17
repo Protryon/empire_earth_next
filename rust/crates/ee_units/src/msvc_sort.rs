@@ -262,7 +262,7 @@ mod tests {
 
     #[test]
     fn permutations_equal_the_msvc_std_sort() {
-        let golden = include_str!("../../ee_sound/src/golden_sound.txt");
+        let golden = include_str!("../../ee_audio/src/sound/golden_sound.txt");
         let mut n = 0;
         for l in golden.lines().filter(|l| l.starts_with("sort\t")) {
             let f: Vec<&str> = l.split('\t').collect();

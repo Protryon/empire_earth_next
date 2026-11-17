@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SESoundManager.h (RECONSTRUCTION; SESoundManager.cpp 0x4f08e..0x532d9).
 // Loads sounds into categories and plays instances of them on a mixer's channels; a scavenger thread retires
-// finished instances. Whole in Rust (rust/crates/ee_sound managerobj.rs, the decisions manager.rs; LLE lane round
+// finished instances. Whole in Rust (rust/crates/ee_audio/src/sound managerobj.rs, the decisions manager.rs; LLE lane round
 // 6): an SESoundManager* is an EeSoundManager*, made by Create and deleted by Destroy (the original's constructor
 // and destructor); the members are defined in SESoundManager.cpp. Requires lle/LowLevelEngine.h.
 #ifndef LLE_SESOUNDMANAGER_H

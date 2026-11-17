@@ -17,11 +17,11 @@ use std::ffi::{c_char, c_int, c_long, c_ulong, c_void, CStr};
 use std::fmt::Write as _;
 use std::ptr::null_mut;
 
-use crate::conductorobj::*;
-use crate::managerobj::*;
-use crate::mixerobj::*;
-use crate::objects::*;
-use crate::sys::DmResolver;
+use crate::sound::conductorobj::*;
+use crate::sound::managerobj::*;
+use crate::sound::mixerobj::*;
+use crate::sound::objects::*;
+use crate::sound::sys::DmResolver;
 
 // ---- the fakes' state (the driver's globals)
 #[derive(Default)]
@@ -96,17 +96,17 @@ fn next_ts() -> i32 {
 }
 
 /// ee_util's shutdown list: `ee_sound_initialize` is not part of the golden.
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_util_register_shutdown"]
 extern "C" fn ee_util_register_shutdown(_function: unsafe extern "C" fn(bool)) -> std::ffi::c_long {
     0
 }
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_ts_section_new"]
 extern "C" fn ee_ts_section_new() -> *mut c_void {
     let id = next_ts();
     t(format!("cs+{id}"));
     Box::into_raw(Box::new(Section { id, depth: 0 })).cast()
 }
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_ts_section_free"]
 unsafe extern "C" fn ee_ts_section_free(s: *mut c_void) {
     if s.is_null() {
         return;
@@ -114,26 +114,26 @@ unsafe extern "C" fn ee_ts_section_free(s: *mut c_void) {
     let s = unsafe { Box::from_raw(s as *mut Section) };
     t(format!("cs-{}/{}", s.id, s.depth));
 }
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_ts_section_enter"]
 unsafe extern "C" fn ee_ts_section_enter(s: *const c_void) {
     let s = unsafe { &mut *(s as *mut Section) };
     s.depth += 1;
     t(format!("E{}", s.id));
 }
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_ts_section_leave"]
 unsafe extern "C" fn ee_ts_section_leave(s: *const c_void) {
     let s = unsafe { &mut *(s as *mut Section) };
     s.depth -= 1;
     t(format!("L{}", s.id));
 }
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_ts_event_new"]
 unsafe extern "C" fn ee_ts_event_new(out: *mut *mut c_void, manual: bool) -> c_long {
     let id = next_ts();
     t(format!("ev+{id}{}", if manual { "m" } else { "" }));
     unsafe { *out = Box::into_raw(Box::new(Event { id })).cast() };
     0
 }
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_ts_event_free"]
 unsafe extern "C" fn ee_ts_event_free(e: *mut c_void) {
     if e.is_null() {
         return;
@@ -141,32 +141,32 @@ unsafe extern "C" fn ee_ts_event_free(e: *mut c_void) {
     let e = unsafe { Box::from_raw(e as *mut Event) };
     t(format!("ev-{}", e.id));
 }
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_ts_event_set"]
 unsafe extern "C" fn ee_ts_event_set(e: *const c_void) -> c_long {
     t(format!("set{}", unsafe { (*(e as *const Event)).id }));
     0
 }
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_ts_event_clear"]
 unsafe extern "C" fn ee_ts_event_clear(e: *const c_void) -> c_long {
     t(format!("clr{}", unsafe { (*(e as *const Event)).id }));
     0
 }
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_ts_event_wait"]
 unsafe extern "C" fn ee_ts_event_wait(e: *const c_void, timeout: u32) -> c_long {
     t(format!("wait{}/{timeout}", unsafe { (*(e as *const Event)).id }));
     0
 }
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_ts_event_wait_any"]
 unsafe extern "C" fn ee_ts_event_wait_any(events: *const *const c_void, count: u32, timeout: u32) -> i32 {
     let r = w(|w| if w.wait_script.is_empty() { 0 } else { w.wait_script.remove(0) });
     let id = unsafe { (*(*events as *const Event)).id };
     t(format!("any{id}/{count}/{timeout}>{r}"));
     r
 }
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_ts_thread_new"]
 unsafe extern "C" fn ee_ts_thread_new(
     out: *mut *mut c_void,
-    function: crate::sys::EeSoundThreadFunction,
+    function: crate::sound::sys::EeSoundThreadFunction,
     parameter: *mut c_void,
     stack: u32,
     suspended: bool,
@@ -177,7 +177,7 @@ unsafe extern "C" fn ee_ts_thread_new(
     unsafe { *out = Box::into_raw(Box::new(Thread { id })).cast() };
     0
 }
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_ts_thread_free"]
 unsafe extern "C" fn ee_ts_thread_free(th: *mut c_void) -> c_long {
     if th.is_null() {
         return 0;
@@ -186,25 +186,28 @@ unsafe extern "C" fn ee_ts_thread_free(th: *mut c_void) -> c_long {
     t(format!("th-{}", th.id));
     0
 }
-#[no_mangle]
+#[export_name = "ee_sound_fake_ee_ts_thread_set_name"]
 unsafe extern "C" fn ee_ts_thread_set_name(th: *const c_void, name: *const c_char) {
     let name = unsafe { CStr::from_ptr(name) }.to_str().unwrap();
     t(format!("name{}={name}", unsafe { (*(th as *const Thread)).id }));
 }
 
 // ---- the platform, the engine's leaves, the C++ trampolines
-#[no_mangle]
+#[allow(non_snake_case)]
+#[export_name = "ee_sound_fake_PlatSleep"]
 extern "C" fn PlatSleep(ms: u32) {
     t(format!("sleep{ms}"));
 }
-#[no_mangle]
+#[allow(non_snake_case)]
+#[export_name = "ee_sound_fake_PlatGetLastError"]
 extern "C" fn PlatGetLastError() -> u32 {
     0
 }
 extern "C" {
     fn fopen(path: *const c_char, mode: *const c_char) -> *mut c_void;
 }
-#[no_mangle]
+#[allow(non_snake_case)]
+#[export_name = "ee_sound_fake_PlatFOpen"]
 unsafe extern "C" fn PlatFOpen(path: *const c_char, mode: *const c_char) -> *mut c_void {
     let p = unsafe { CStr::from_ptr(path) }.to_bytes().to_vec();
     #[cfg(not(windows))]

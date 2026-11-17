@@ -15,10 +15,10 @@ use std::ffi::{c_char, c_long, c_ulong, c_void, CStr};
 use std::ptr::null_mut;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::manager::{FileSpec, Host, Node, NodeFields, Sample, SoundManager, NONE};
-use crate::mixerobj::{self, spim, EeSoundMixer};
-use crate::objects::{self, EeSoundNode, EeSoundSample};
-use crate::sys;
+use crate::sound::manager::{FileSpec, Host, Node, NodeFields, Sample, SoundManager, NONE};
+use crate::sound::mixerobj::{self, spim, EeSoundMixer};
+use crate::sound::objects::{self, EeSoundNode, EeSoundSample};
+use crate::sound::sys;
 
 /// The manager.
 pub struct EeSoundManager {

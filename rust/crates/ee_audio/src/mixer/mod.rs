@@ -3,6 +3,7 @@
 //! (`Mixer.cpp`); `SESample` stays a C++ object reached through the `SampleHost` trait.
 
 /// cbindgen:ignore
+#[allow(clippy::module_inception)] // the module was the crate ee_mixer
 pub mod mixer;
 
 #[cfg(not(test))]

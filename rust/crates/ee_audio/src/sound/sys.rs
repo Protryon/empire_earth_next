@@ -24,17 +24,29 @@ pub(crate) const WAIT_FAILED: i32 = -2;
 
 extern "C" {
     /// The engine's shutdown list (ee_util, a sibling crate of the static library; faked by the tests).
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_util_register_shutdown")]
     pub fn ee_util_register_shutdown(function: unsafe extern "C" fn(bool)) -> std::ffi::c_long;
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_ts_section_new")]
     pub fn ee_ts_section_new() -> *mut c_void;
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_ts_section_free")]
     pub fn ee_ts_section_free(section: *mut c_void);
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_ts_section_enter")]
     pub fn ee_ts_section_enter(section: *const c_void);
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_ts_section_leave")]
     pub fn ee_ts_section_leave(section: *const c_void);
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_ts_event_new")]
     pub fn ee_ts_event_new(out: *mut *mut c_void, manual: bool) -> c_long;
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_ts_event_free")]
     pub fn ee_ts_event_free(event: *mut c_void);
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_ts_event_set")]
     pub fn ee_ts_event_set(event: *const c_void) -> c_long;
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_ts_event_clear")]
     pub fn ee_ts_event_clear(event: *const c_void) -> c_long;
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_ts_event_wait")]
     pub fn ee_ts_event_wait(event: *const c_void, timeout: u32) -> c_long;
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_ts_event_wait_any")]
     pub fn ee_ts_event_wait_any(events: *const *const c_void, count: u32, timeout: u32) -> i32;
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_ts_thread_new")]
     pub fn ee_ts_thread_new(
         out: *mut *mut c_void,
         function: EeSoundThreadFunction,
@@ -42,11 +54,16 @@ extern "C" {
         stack: u32,
         suspended: bool,
     ) -> c_long;
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_ts_thread_free")]
     pub fn ee_ts_thread_free(thread: *mut c_void) -> c_long;
+    #[cfg_attr(test, link_name = "ee_sound_fake_ee_ts_thread_set_name")]
     pub fn ee_ts_thread_set_name(thread: *const c_void, name: *const c_char);
 
+    #[cfg_attr(test, link_name = "ee_sound_fake_PlatSleep")]
     pub fn PlatSleep(milliseconds: u32);
+    #[cfg_attr(test, link_name = "ee_sound_fake_PlatGetLastError")]
     pub fn PlatGetLastError() -> u32;
+    #[cfg_attr(test, link_name = "ee_sound_fake_PlatFOpen")]
     pub fn PlatFOpen(path: *const c_char, mode: *const c_char) -> *mut c_void;
     pub fn fseek(stream: *mut c_void, offset: c_long, origin: c_int) -> c_int;
     pub fn ftell(stream: *mut c_void) -> c_long;

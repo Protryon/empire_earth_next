@@ -9,7 +9,7 @@ use std::ffi::{c_long, c_ulong, c_void};
 use std::slice;
 use std::sync::{Arc, OnceLock};
 
-use crate::mixer::{Mixer, SampleData, SampleHandle, SampleHost, CHANNEL_NONE};
+use crate::mixer::mixer::{Mixer, SampleData, SampleHandle, SampleHost, CHANNEL_NONE};
 
 /// cbindgen:ignore
 mod sys {

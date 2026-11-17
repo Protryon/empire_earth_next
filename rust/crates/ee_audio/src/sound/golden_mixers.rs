@@ -7,7 +7,7 @@
 use std::ffi::c_void;
 use std::fmt::Write;
 
-use crate::mixers::{self, EngineHost, Host, Mixer, Registry};
+use crate::sound::mixers::{self, EngineHost, Host, Mixer, Registry};
 
 #[derive(Default)]
 struct Fake {

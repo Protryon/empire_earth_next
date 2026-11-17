@@ -1,5 +1,5 @@
 // Golden driver for the mixer plug-in's entry table (LLE lane round 7: the SPIM entry points that only reach the Rust
-// mixer moved to rust/crates/ee_mixer ffi.rs under their own names). Looks every name up in gPIMPluginMixer, as
+// mixer moved to rust/crates/ee_audio/src/mixer ffi.rs under their own names). Looks every name up in gPIMPluginMixer, as
 // SEMixer does, and calls the entries that need no sample on the null backend (gPlatSimMode), in random orders:
 // activation, channels, their states, volumes, the tuning entry points, deactivation.
 //

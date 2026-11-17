@@ -6,8 +6,8 @@
 
 use core::ffi::{c_ulong, c_void};
 
-use ee_sound::conductorobj::{self, EeSoundConductor};
-use ee_sound::managerobj::{self, EeSoundManager};
+use ee_audio::sound::conductorobj::{self, EeSoundConductor};
+use ee_audio::sound::managerobj::{self, EeSoundManager};
 use ee_ui::direct;
 use ee_ui::obj::EeUiOp;
 use ee_ui::statusobj::EeUiStatusBarCall;

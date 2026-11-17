@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SESample.h (RECONSTRUCTION). A sound sample bound to the mixer that was
-// active when it was made: the mixer's wave data and its playing state. Whole in Rust (rust/crates/ee_sound
+// active when it was made: the mixer's wave data and its playing state. Whole in Rust (rust/crates/ee_audio/src/sound
 // objects.rs, LLE lane round 6): an SESample* is an EeSoundSample*; the members are defined in SESoundManager.cpp.
 // The sound manager makes and deletes samples; the mixer plug-in duplicates them (Duplicate, the original's copy
 // constructor) and fills them. The "SetThe*" setters store without telling the mixer (the plug-in uses them).

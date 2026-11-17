@@ -17,9 +17,9 @@ use std::ptr::null_mut;
 use std::sync::atomic::{AtomicPtr, AtomicU32, Ordering};
 use std::sync::Mutex;
 
-use crate::manager::{NodeFields, NONE};
-use crate::mixerobj::{self, EeSoundMixer};
-use crate::sys;
+use crate::sound::manager::{NodeFields, NONE};
+use crate::sound::mixerobj::{self, EeSoundMixer};
+use crate::sound::sys;
 
 /// An instance node: its reference count, free flag and fields.
 pub struct EeSoundNode {
@@ -444,7 +444,7 @@ pub unsafe extern "C" fn ee_sound_sample_load_wave_data(s: *mut EeSoundSample, s
     unsafe { mixerobj::spim(sample(s).mixer).load_wave_data.expect("SPIMLoadWaveData")(spec, s.cast()) as i32 }
 }
 
-// The plug-in's view of a sample (rust/crates/ee_mixer's `ee_mixer_host_*`; the mixer plug-in's sample access).
+// The plug-in's view of a sample (rust/crates/ee_audio/src/mixer's `ee_mixer_host_*`; the mixer plug-in's sample access).
 
 /// # Safety
 /// `s` is a live sample.

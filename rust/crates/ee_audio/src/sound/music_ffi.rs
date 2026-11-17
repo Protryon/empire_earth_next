@@ -5,8 +5,8 @@
 
 use std::ffi::c_void;
 
-use crate::conductor::Score;
-use crate::music::{self, Host, Song};
+use crate::sound::conductor::Score;
+use crate::sound::music::{self, Host, Song};
 
 /// cbindgen:ignore
 mod sys {

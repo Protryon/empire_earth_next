@@ -1,7 +1,7 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SEConductor.h (RECONSTRUCTION). Music score playback, on dmusic (a
 // DirectMusic reimplementation: segments, styles, bands, DLS and its own synthesizer; src/ThirdParty/dmusic) instead
 // of Microsoft's DirectMusic. The performance renders into the mixer's output (SEMixer::SetMusicSource). Every
-// SEMixer has one (SEMixer::GetConductor). Whole in Rust (rust/crates/ee_sound conductorobj.rs, the decisions
+// SEMixer has one (SEMixer::GetConductor). Whole in Rust (rust/crates/ee_audio/src/sound conductorobj.rs, the decisions
 // conductor.rs; LLE lane round 6): an SEConductor* is an EeSoundConductor* inside its mixer; the members are
 // defined in SEConductor.cpp. Requires lle/LowLevelEngine.h.
 #ifndef LLE_SECONDUCTOR_H

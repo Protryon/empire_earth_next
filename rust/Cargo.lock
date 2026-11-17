@@ -207,6 +207,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ee_audio"
+version = "0.1.0"
+dependencies = [
+ "ee_base",
+]
+
+[[package]]
 name = "ee_base"
 version = "0.1.0"
 dependencies = [
@@ -268,10 +275,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ee_mixer"
-version = "0.1.0"
-
-[[package]]
 name = "ee_net"
 version = "0.1.0"
 dependencies = [
@@ -320,6 +323,7 @@ dependencies = [
  "ee_ai",
  "ee_app",
  "ee_astar",
+ "ee_audio",
  "ee_base",
  "ee_combat",
  "ee_data",
@@ -328,7 +332,6 @@ dependencies = [
  "ee_ge",
  "ee_gfx",
  "ee_gx",
- "ee_mixer",
  "ee_net",
  "ee_net_tcp",
  "ee_netmsg",
@@ -336,7 +339,6 @@ dependencies = [
  "ee_rmap",
  "ee_scenario",
  "ee_screens",
- "ee_sound",
  "ee_tech",
  "ee_ui",
  "ee_units",
@@ -354,19 +356,12 @@ dependencies = [
 name = "ee_screens"
 version = "0.1.0"
 dependencies = [
+ "ee_audio",
  "ee_base",
  "ee_ge",
  "ee_gfx",
  "ee_scenario",
- "ee_sound",
  "ee_ui",
-]
-
-[[package]]
-name = "ee_sound"
-version = "0.1.0"
-dependencies = [
- "ee_base",
 ]
 
 [[package]]

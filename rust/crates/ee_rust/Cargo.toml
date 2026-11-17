@@ -11,7 +11,7 @@ crate-type = ["staticlib", "rlib"]
 [dependencies]
 ee_base = { path = "../ee_base" }
 ee_data = { path = "../ee_data" }
-ee_mixer = { path = "../ee_mixer" }
+ee_audio = { path = "../ee_audio" }
 ee_net_tcp = { path = "../ee_net_tcp" }
 ee_net = { path = "../ee_net" }
 ee_rmap = { path = "../ee_rmap" }
@@ -23,7 +23,6 @@ ee_ge = { path = "../ee_ge" }
 ee_gfx = { path = "../ee_gfx" }
 ee_gx = { path = "../ee_gx" }
 ee_dx7 = { path = "../ee_dx7" }
-ee_sound = { path = "../ee_sound" }
 ee_ui = { path = "../ee_ui" }
 ee_openformats = { path = "../ee_openformats" }
 ee_won = { path = "../ee_won" }

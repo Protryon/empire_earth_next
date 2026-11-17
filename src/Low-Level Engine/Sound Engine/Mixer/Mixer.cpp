@@ -1,8 +1,8 @@
 // Low-Level Engine\Sound Engine\Mixer\Mixer.cpp
 // The sound mixer plug-in's shim (' snd'). The mixing, the sample/channel logic and the SPIM entry points that only
-// reach them are Rust (rust/crates/ee_mixer ffi.rs, which defines them under their SPIM names); this file keeps the
+// reach them are Rust (rust/crates/ee_audio/src/mixer ffi.rs, which defines them under their SPIM names); this file keeps the
 // miniaudio device and decoder, the entry points over C++ objects (samples' files, the name) and the plug-in's entry
-// table the engine looks names up in. The samples are Rust's (rust/crates/ee_sound objects.rs, which also serves
+// table the engine looks names up in. The samples are Rust's (rust/crates/ee_audio/src/sound objects.rs, which also serves
 // ee_mixer's ee_mixer_host_* sample access).
 #include <windows.h>
 #include "platform/PlatFile.h"

@@ -3,7 +3,7 @@
 // each after its first user). Unit flags: the exe's module set. Data: the fade constants 0x441fb0/0x441fb4, the vtable
 // 0x441fbc, the song delay constants 0x441fc0/0x441fc4.
 // The decisions (the thread's step, start, pause, stop, the song changes, the fades, the intensity rules, the time
-// to the next song) are Rust: rust/crates/ee_sound music.rs (docs/RUST_PLAN.md R3.6). This file keeps the members,
+// to the next song) are Rust: rust/crates/ee_audio/src/sound music.rs (docs/RUST_PLAN.md R3.6). This file keeps the members,
 // the thread, its events and the wait; the Rust reaches the rest through the trampolines ee_musiccpp_*.
 #include <windows.h>
 

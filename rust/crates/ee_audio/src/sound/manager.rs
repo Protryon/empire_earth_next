@@ -12,7 +12,7 @@ use std::ffi::c_void;
 
 use ee_base::random::{float_to_long, URandom};
 
-use crate::msvc_sort;
+use crate::sound::msvc_sort;
 
 /// The "none" value of an id, index or channel (`UIsNone32`).
 pub(crate) const NONE: u32 = u32::MAX;
@@ -1225,7 +1225,7 @@ impl SoundManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fake::Fake;
+    use crate::sound::fake::Fake;
 
     fn loaded(h: &mut Fake, m: &mut SoundManager, name: &str, cat: u32, max: u32, len: u32) -> u32 {
         h.add_file(name, len, 1000);

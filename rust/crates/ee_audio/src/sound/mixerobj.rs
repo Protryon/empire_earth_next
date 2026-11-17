@@ -12,9 +12,9 @@ use std::ptr::null_mut;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use std::sync::Mutex;
 
-use crate::conductorobj::{self, EeSoundConductor};
-use crate::mixers::{self, EngineHost, Host, Mixer, Registry};
-use crate::sys;
+use crate::sound::conductorobj::{self, EeSoundConductor};
+use crate::sound::mixers::{self, EngineHost, Host, Mixer, Registry};
+use crate::sound::sys;
 
 /// A mixer's music or movie source: interleaved stereo float frames added at the output rate.
 pub type EeSoundSource = Option<unsafe extern "C" fn(*mut c_void, *mut f32, c_ulong)>;
@@ -138,7 +138,7 @@ pub(crate) unsafe fn spim<'a>(m: *mut EeSoundMixer) -> &'a EeSoundSpim {
 ///
 /// # Safety
 /// `m` is a live mixer, `s` a live sample.
-pub(crate) unsafe fn delete_wave_data(m: *mut EeSoundMixer, s: *mut crate::objects::EeSoundSample) {
+pub(crate) unsafe fn delete_wave_data(m: *mut EeSoundMixer, s: *mut crate::sound::objects::EeSoundSample) {
     unsafe { spim(m).delete_wave_data.expect("SPIMDeleteWaveData")(s.cast()) }
 }
 
@@ -239,7 +239,7 @@ pub unsafe extern "C" fn ee_sound_mixers_initialize(start: *mut EeSoundMixerStar
 /// As `ee_sound_mixers_initialize`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_sound_initialize(start: *mut EeSoundMixerStart) -> i32 {
-    crate::sys::ee_util_register_shutdown(ee_sound_shutdown);
+    crate::sound::sys::ee_util_register_shutdown(ee_sound_shutdown);
     ee_sound_mixers_initialize(start)
 }
 

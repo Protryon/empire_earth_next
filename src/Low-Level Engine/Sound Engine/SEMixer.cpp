@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SEMixer.cpp
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-// SEMixer whole in Rust (rust/crates/ee_sound mixerobj.rs: the plug-in's entry points, the registry, the active
+// SEMixer whole in Rust (rust/crates/ee_audio/src/sound mixerobj.rs: the plug-in's entry points, the registry, the active
 // mixer; the decisions mixers.rs; LLE lane round 6): every member is a forwarder. This file keeps the plug-in
 // module's calls (extern "C" ee_soundcpp_module_*, the start's walk over the plug-in table).
 #include <windows.h>
@@ -37,7 +37,7 @@ void SEMixer::SetMovieSource(void (*inSource)(void*, float*, unsigned long), voi
     ee_sound_mixer_set_movie_source(RUST, inSource, inContext);
 }
 
-// ---- the plug-in module as the Rust mixers reach it (rust/crates/ee_sound sys.rs)
+// ---- the plug-in module as the Rust mixers reach it (rust/crates/ee_audio/src/sound sys.rs)
 extern "C" {
 void* ee_soundcpp_module_entry(void* inModule, const char* inName)
 {

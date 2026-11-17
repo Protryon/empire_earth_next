@@ -9,8 +9,8 @@ use std::collections::BTreeMap;
 use std::ffi::c_void;
 use std::fmt::Write;
 
-use crate::conductor::Score;
-use crate::music::{self, Host, Song};
+use crate::sound::conductor::Score;
+use crate::sound::music::{self, Host, Song};
 
 struct Fake<'g> {
     golden: Vec<&'g str>,

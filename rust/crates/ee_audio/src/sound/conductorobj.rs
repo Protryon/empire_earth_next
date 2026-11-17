@@ -11,10 +11,10 @@ use std::ffi::{c_char, c_ulong, c_void, CStr};
 use std::ptr::null_mut;
 use std::sync::atomic::{AtomicPtr, Ordering};
 
-use crate::conductor::{Conductor, ConductorFields, Embellishment, Host, Score, Timing};
-use crate::mixerobj::{self, EeSoundMixer};
-use crate::objects::{self, EeSoundScore};
-use crate::sys;
+use crate::sound::conductor::{Conductor, ConductorFields, Embellishment, Host, Score, Timing};
+use crate::sound::mixerobj::{self, EeSoundMixer};
+use crate::sound::objects::{self, EeSoundScore};
+use crate::sound::sys;
 
 /// `MAX_PATH`: the resolver's path buffer.
 const MAX_PATH: usize = 260;

@@ -8,8 +8,8 @@
 //! `total`, `ends`, `rem`, `failset`, `scav`, `upd`, `oneshot`, `stopos`, `unload`, `maxch`, `pct`, `prio`,
 //! `dump`, `end`.
 
-use crate::fake::{hex, signed, Fake};
-use crate::manager::{Host, Node, SoundManager, NONE};
+use crate::sound::fake::{hex, signed, Fake};
+use crate::sound::manager::{Host, Node, SoundManager, NONE};
 
 struct Run {
     h: Fake,

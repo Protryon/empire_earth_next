@@ -18,7 +18,7 @@ long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow)
 }
 
 // Creates a mixer for every valid sound plug-in of the plug-in table; kErrorNotFound when none loads (the choice:
-// rust/crates/ee_sound mixers.rs)
+// rust/crates/ee_audio/src/sound mixers.rs)
 long SEInitializeMixers(const FSFileSpec& inDirectory, GEWindow* inWindow)
 {
     SEMixerStart theStart = {&inDirectory, inWindow, NULL};
