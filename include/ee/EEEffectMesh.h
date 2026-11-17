@@ -1,4 +1,4 @@
-// New (R4.4): the effects' meshes built in Rust (rust/crates/ee_gfx mesh.rs: the farm's, the volcano's) stored into a
+// New (R4.4): the effects' meshes built in Rust (rust/crates/ee_render/src/gfx mesh.rs: the farm's, the volcano's) stored into a
 // model's vertex and polygon arrays. Each record says which values its builder set; only those are stored (the
 // builders' later writes to a slot already won in Rust, as they did in the arrays). Requires lle/GEModel.h,
 // lle/GEVertexArray.h and lle/GEPolygonArray.h.

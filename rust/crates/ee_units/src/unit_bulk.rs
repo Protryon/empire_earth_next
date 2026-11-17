@@ -93,7 +93,7 @@ fn fraction(value: c_long, maximum: c_long) -> f32 {
 /// `UMFloatToLong(maximum * fraction)`.
 #[allow(clippy::cast_precision_loss)]
 fn scaled(maximum: c_long, fraction: f32) -> c_long {
-    c_long::from(ee_ge::um::lrintf(maximum as f32 * fraction))
+    c_long::from(ee_render::ge::um::lrintf(maximum as f32 * fraction))
 }
 
 /// `CopyFrom`'s first block (0x5f713d, after the sound): the timers and plain state, the hit points, power, flight

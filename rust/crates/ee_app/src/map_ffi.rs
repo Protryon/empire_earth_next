@@ -3,11 +3,11 @@
 #![allow(clippy::unnecessary_cast)]
 
 use crate::map::{self, EeAppMapDims, MapHost, Terrain};
-use ee_ge::tmobj::{
+use ee_render::ge::tmobj::{
     ee_ge_tm_is_space_tile, ee_ge_tm_is_valid, ee_ge_tm_point, ee_ge_tm_point_edit, ee_ge_tm_tile, ee_ge_tm_tile_edit,
     EeGeTerrainMesh,
 };
-use ee_ge::types::GeVector;
+use ee_render::ge::types::GeVector;
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 

@@ -12,6 +12,6 @@ crate-type = ["staticlib"]
 [dependencies]
 ee_rmap = { path = "../ee_rmap" }
 # the engine units the tool compiles (UMath.cpp, the GE math) forward to ee_ge
-ee_ge = { path = "../ee_ge" }
+ee_render = { path = "../ee_render" }
 # FSFileSpec (the reader host's script files) and the thread/section forwarders the engine units call
 ee_base = { path = "../ee_base" }

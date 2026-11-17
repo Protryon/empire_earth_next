@@ -1,4 +1,4 @@
-// GEViewport's Rust mirror (rust/crates/ee_ge viewport.rs, docs/RUST_PLAN.md R4.3): the class stays the type callers
+// GEViewport's Rust mirror (rust/crates/ee_render/src/ge viewport.rs, docs/RUST_PLAN.md R4.3): the class stays the type callers
 // use and its matrices, planes and frustum are computed by Rust on the object itself. The layout is pinned here.
 // Include after lle/GEViewport.h and GERustMath.h.
 #ifndef GERUSTVIEWPORT_H

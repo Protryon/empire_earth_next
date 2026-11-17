@@ -7,7 +7,7 @@
 //! and decides. The C++ applies the outcome: the attack-ground goal, the missile's placement on the ground and its
 //! tile, the shell hole.
 
-use ee_ge::types::Ge3DPoint;
+use ee_render::ge::types::Ge3DPoint;
 use std::ffi::c_void;
 
 /// `EEUCProjectile::CheckGroundImpact`.

@@ -68,7 +68,7 @@ pub enum Clipping {
 
 /// `RemoveIntersectingRectangle(other, out)` appending to `out` (`existing` = its size before the call).
 fn remove_intersecting(r: &UiRect, other: &UiRect, out: &mut Vec<UiRect>) {
-    let g = |x: &UiRect| ee_ge::types::GeRectangle::new(x.left, x.top, x.right, x.bottom);
+    let g = |x: &UiRect| ee_render::ge::types::GeRectangle::new(x.left, x.top, x.right, x.bottom);
     let existing = out.len();
     g(r).remove_intersecting(&g(other), existing, |p| out.push(UiRect::new(p.left, p.top, p.right, p.bottom)));
 }

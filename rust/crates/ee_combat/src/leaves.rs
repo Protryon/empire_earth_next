@@ -26,8 +26,8 @@ use crate::world::{
     EE_COMBAT_W_OTHER_CONTINENT,
 };
 use crate::{can_reach, range, EeCombatRangeIn, EeCombatReachIn, CONTACT_MARGIN};
-use ee_ge::types::{Ge3DPoint, GeTransformation};
-use ee_ge::um::{sqrt, um_quadratic};
+use ee_render::ge::types::{Ge3DPoint, GeTransformation};
+use ee_render::ge::um::{sqrt, um_quadratic};
 
 // ---- the reads (reads.rs's numbering goes on from damage.rs's 72)
 

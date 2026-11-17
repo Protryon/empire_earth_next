@@ -6,7 +6,7 @@
 
 // The engine's helpers and the table trigonometry: one implementation, the one the game's UMath.cpp forwards to
 // (ee_ge::um, which also pins the tables to the C++ digest).
-pub use ee_ge::um::{
+pub use ee_render::ge::um::{
     floor, floor_unsigned, lrintf, sqrt, sqrt_u32, tables_digest, um_arccos, um_arctan2, um_cos, um_sin, HALF_PI,
     MINUS_HALF_PI, PI, TWO_PI,
 };

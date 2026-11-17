@@ -5,7 +5,7 @@
 // 0x10080c07..0x1008104b: UMFastMath::BuildSqrtTable (empty), then the UM functions alphabetical. Its .data is the two
 // lookup tables (0x100dd8a4, 0x100ed8a8), its .rdata the named constants 0x10099bf0..0x10099c18.
 // UReferenceCounter.cpp's sReferenceDebugInfo init chain starts at 0x1008104b.
-// The table trigonometry and the quadratic forward to Rust (rust/crates/ee_ge um.rs, RUST_PLAN R4.3); the tables
+// The table trigonometry and the quadratic forward to Rust (rust/crates/ee_render/src/ge um.rs, RUST_PLAN R4.3); the tables
 // (UMTables.h, deleted) are rebuilt there and pinned by a digest. The floating-point control is ee_util fp.rs (LLE lane round 7).
 #include <windows.h>
 

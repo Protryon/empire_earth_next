@@ -20,9 +20,9 @@
 use core::ffi::c_void;
 use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
 
-use ee_ge::hull::trunc_long;
-use ee_ge::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeVector};
-use ee_ge::um::{floor, um_arctan2};
+use ee_render::ge::hull::trunc_long;
+use ee_render::ge::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeVector};
+use ee_render::ge::um::{floor, um_arctan2};
 
 // ---- the kinds (ee/EEARust.h's kEEA*) ----
 pub const EE_SCREENS_GA_CHAT: u32 = 1;

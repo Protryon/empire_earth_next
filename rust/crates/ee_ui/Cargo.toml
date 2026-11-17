@@ -18,5 +18,5 @@ no_cpp = []
 [dependencies]
 ee_base = { path = "../ee_base" }
 # the blinking button's fade: UMSin, the Graphics Engine's table cosine
-ee_ge = { path = "../ee_ge" }
+ee_render = { path = "../ee_render" }
 # the graphs' series and ranges (UGraph, graphobj.rs)

@@ -2,8 +2,8 @@
 #![allow(clippy::excessive_precision)]
 
 use crate::minimap::{diagonal_order, EeAppMiniMap, EeAppMiniMapItem, MiniMapHost, TileSight, CELLS, OFF_MAP};
-use ee_ge::types::GeTransformation;
-use ee_ge::types::GeVector;
+use ee_render::ge::types::GeTransformation;
+use ee_render::ge::types::GeVector;
 use std::collections::BTreeMap;
 use std::os::raw::{c_long, c_ulong};
 
@@ -230,7 +230,7 @@ fn pixel_colours_average_the_lit_vertices_or_take_the_nearest() {
     assert_eq!(c, [0.5 * 1.0 + 0.102745101, 0.132549018 + 0.5 * 1.0, (0.188235298f32 + 0.25 * 2.0).min(1.0)]);
     let mut bits = vec![0u16; 8 * 8];
     f.map.redraw_pixels(&mut h, light, &mut bits, 8, 5, 6, 5, 6);
-    assert_eq!(bits[8 * 5 + 5], ee_ge::pixel::pack_float(7, c[0], c[1], c[2], 1.0) as u16);
+    assert_eq!(bits[8 * 5 + 5], ee_render::ge::pixel::pack_float(7, c[0], c[1], c[2], 1.0) as u16);
     // the nearest vertex unlit, or off the mesh: black
     assert_eq!(f.map.pixel_color(&mut h, light, 2, 2), [0.0, 0.0, 0.0]);
     assert_eq!(f.map.pixel_color(&mut h, light, 20, 20), [0.0, 0.0, 0.0]);

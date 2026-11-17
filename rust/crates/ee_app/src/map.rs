@@ -11,7 +11,7 @@
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use ee_base::random::URandom;
-use ee_ge::types::GeVector;
+use ee_render::ge::types::GeVector;
 use std::os::raw::{c_long, c_ulong};
 
 /// `kTerrainCliff`: the terrain type `UpdateCliffs` gives a steep tile.

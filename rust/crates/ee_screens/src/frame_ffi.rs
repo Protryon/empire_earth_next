@@ -4,7 +4,7 @@
 
 use core::ffi::{c_long, c_void};
 
-use ee_ge::types::GeRectangle;
+use ee_render::ge::types::GeRectangle;
 
 use crate::frame::{EeScreensFramePiece, Frame, FrameHost};
 

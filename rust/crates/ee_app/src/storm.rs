@@ -6,7 +6,7 @@
 //! manager), the route request, `Load`/`Save` and `Restore`; `EEEMStorm` derives from [`EeAppStormFields`].
 #![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
-use ee_ge::um::lrintf;
+use ee_render::ge::um::lrintf;
 use std::ffi::CStr;
 use std::os::raw::{c_long, c_ulong};
 

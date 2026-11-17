@@ -64,7 +64,7 @@ pub fn ftol(value: f32) -> i32 {
 /// `UMCeil` (`LowLevelEngineCore.h`): `lrintf`, then one up when that is below the value (compared as a float).
 #[inline]
 pub fn um_ceil(value: f32) -> i32 {
-    let result = ee_ge::um::lrintf(value);
+    let result = ee_render::ge::um::lrintf(value);
     if (result as f32) < value {
         result.wrapping_add(1)
     } else {

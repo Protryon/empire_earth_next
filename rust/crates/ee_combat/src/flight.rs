@@ -6,9 +6,9 @@
 //! the result (`EEUpdateUnitTile`).
 
 use crate::geometry::matrix;
-use ee_ge::transform::RotationOrder;
-use ee_ge::types::{GeQuaternion, GeTransformation, GeVector};
-use ee_ge::um::{um_arccos, um_arctan2, um_cos};
+use ee_render::ge::transform::RotationOrder;
+use ee_render::ge::types::{GeQuaternion, GeTransformation, GeVector};
+use ee_render::ge::um::{um_arccos, um_arctan2, um_cos};
 
 /// A flight step's inputs (the capture's CBPJ, CBPS, CBMA, CBMH layout; each step reads its own fields).
 #[repr(C)]

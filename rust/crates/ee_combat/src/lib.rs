@@ -45,7 +45,7 @@ pub mod walks_ffi;
 mod walks_tests;
 pub mod world;
 
-use ee_ge::um::{lrintf, sqrt, um_arccos, um_arctan, um_cos, HALF_PI};
+use ee_render::ge::um::{lrintf, sqrt, um_arccos, um_arctan, um_cos, HALF_PI};
 
 /// `kDamageDirect`, `kDamageSplash`, `kDamageTrample` (`ee/EERules.h`).
 pub const DAMAGE_DIRECT: i32 = 0;

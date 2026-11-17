@@ -1,7 +1,7 @@
 // C:\EEX\Low-Level Engine\Graphics Engine\GERasterizer.cpp
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 //
-// GERasterizer's base state is whole in Rust (rust/crates/ee_ge rastobj.rs, R4.3 part 12): the members, the screen
+// GERasterizer's base state is whole in Rust (rust/crates/ee_render/src/ge rastobj.rs, R4.3 part 12): the members, the screen
 // records, the statics and every method below. The class keeps its vtable (the plug-in's base) and one member,
 // mRust; the methods forward, and GERasterizerHost makes the calls on other objects Rust asks for.
 #include <windows.h>

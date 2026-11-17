@@ -24,8 +24,8 @@ use crate::unit_class_fields::EeUnitsUnitClassFields;
 use crate::unit_fields::bool_byte;
 use crate::uu::EeUnitsUuUnit;
 use crate::uu_tiles::Tile;
-use ee_ge::types::Ge3DPoint;
-use ee_ge::um::{floor, floor_unsigned};
+use ee_render::ge::types::Ge3DPoint;
+use ee_render::ge::um::{floor, floor_unsigned};
 
 /// The categories, unit types, terrains, movement bits and continent categories the bodies test (the C++ enums).
 /// cbindgen:ignore
@@ -780,7 +780,7 @@ pub fn best_shore_tile<H: TrHost + ?Sized>(
     }
     if out[0] != TR_NONE && out[1] != TR_NONE {
         // `U2DPoint<long>::DistanceToF`: the float sqrt of the float sum
-        ee_ge::um::sqrt(tile_distance_squared(*out, from))
+        ee_render::ge::um::sqrt(tile_distance_squared(*out, from))
     } else {
         0.0
     }

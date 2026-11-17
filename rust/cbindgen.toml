@@ -7,8 +7,8 @@ usize_is_size_t = true
 
 [parse]
 parse_deps = true
-include = ["ee_base", "ee_rust", "ee_net", "ee_audio", "ee_data", "ee_rmap", "ee_dx7", "ee_openformats", "ee_formations", "ee_ge", "ee_gfx", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units", "ee_netmsg", "ee_screens", "ee_scenario", "ee_ai", "ee_app"]
-extra_bindings = ["ee_base", "ee_net", "ee_audio", "ee_rmap", "ee_dx7", "ee_openformats", "ee_formations", "ee_ge", "ee_gfx", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units", "ee_netmsg", "ee_screens", "ee_scenario", "ee_ai", "ee_app"]
+include = ["ee_base", "ee_rust", "ee_net", "ee_audio", "ee_data", "ee_rmap", "ee_render", "ee_formations", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units", "ee_netmsg", "ee_screens", "ee_scenario", "ee_ai", "ee_app"]
+extra_bindings = ["ee_base", "ee_net", "ee_audio", "ee_rmap", "ee_render", "ee_formations", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units", "ee_netmsg", "ee_screens", "ee_scenario", "ee_ai", "ee_app"]
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]

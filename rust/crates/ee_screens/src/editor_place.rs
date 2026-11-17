@@ -11,8 +11,8 @@
 //! Units are held by id (the original's `EEUnitHandle`s), referenced while held. The world is the host's
 //! ([`SepHost`]); every call in the original's order, the floats the original's.
 
-use ee_ge::transform::RotationOrder;
-use ee_ge::types::GeTransformation;
+use ee_render::ge::transform::RotationOrder;
+use ee_render::ge::types::GeTransformation;
 
 // ---- the host's ops (`ee_screenscpp_sep`: `t` a transformation, `i` up to 8 integers, `f` up to 4 floats)
 

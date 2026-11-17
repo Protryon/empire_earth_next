@@ -912,6 +912,13 @@ struct EeGe3DPlane {
   EeGeVector normal;
 };
 
+/// `GEColor`: red, green, blue.
+struct EeGeRastColor {
+  float red;
+  float green;
+  float blue;
+};
+
 /// The host: `owner` is the C++ bitmap of the object calling.
 using EeGeBmpHostFn = ptrdiff_t(*)(void *owner, EeGeBmpOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
@@ -1086,13 +1093,6 @@ struct EeGeViewport {
   float y_clipping_plane;
   float near_depth;
   float far_depth;
-};
-
-/// `GEColor`: red, green, blue.
-struct EeGeRastColor {
-  float red;
-  float green;
-  float blue;
 };
 
 /// `GERFogAttributes` (sizeof 0x20 on Windows).

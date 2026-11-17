@@ -7,7 +7,7 @@
 
 use core::ffi::c_long;
 
-use ee_ge::types::GeRectangle;
+use ee_render::ge::types::GeRectangle;
 
 /// The frame texture's cells: the edges, the large corners, the small corners, the side ornaments.
 pub const EE_SCREENS_FRAME_CELL_EDGE: u32 = 0;

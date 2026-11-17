@@ -15,8 +15,8 @@
 #![allow(non_snake_case, clippy::unnecessary_cast)]
 
 use crate::ftol;
-use ee_ge::types::Ge2DPoint;
-use ee_ge::um::lrintf;
+use ee_render::ge::types::Ge2DPoint;
+use ee_render::ge::um::lrintf;
 use std::os::raw::{c_char, c_long, c_void};
 
 /// `kAreaEffectHealing` (ee/EEAreaEffectKindIDs.h).

@@ -20,8 +20,8 @@
 //! The world, the screens and the files are the host's ([`SewHost`]); every call is in the original's order and
 //! the elevation file's floats are the original's operations (`f32`, in order; Windows' `min` and `max` macros).
 
-use ee_ge::types::GeTransformation;
-use ee_ge::um::lrintf;
+use ee_render::ge::types::GeTransformation;
+use ee_render::ge::um::lrintf;
 
 use crate::editor_actions::{area_rectangle, SeuDelete};
 use crate::editor_place::{SepHost, SepMove, SepPlace};

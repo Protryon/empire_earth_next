@@ -1,4 +1,4 @@
-// A field stream over an FSFile for the Graphics Engine's loaders and savers in Rust (rust/crates/ee_ge io.rs,
+// A field stream over an FSFile for the Graphics Engine's loaders and savers in Rust (rust/crates/ee_render/src/ge io.rs,
 // docs/RUST_PLAN.md R4.3): Rust decides the order, the checks and the error handling, and every field still goes
 // through the file's own typed Read/Write, so the bytes, the per-class short-read rules and the position a failed
 // load leaves are the C++'s. Include after lle/FSFile.h (and lle/FSFileSpec.h for GERustFieldIO(FSFileSpec&), which

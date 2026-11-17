@@ -9,7 +9,7 @@
 //! them; plain field reads are asked where the original read them. The returned value is the cursor kind written to
 //! `gMouse->mPointer`.
 
-use ee_ge::types::Ge3DPoint;
+use ee_render::ge::types::Ge3DPoint;
 
 /// Whether the mouse is over no control, or over the command units control.
 pub const EE_SCREENS_CURSOR_OP_MOUSE_OK: u32 = 1;

@@ -12,8 +12,7 @@ crate-type = ["rlib"]
 
 [dependencies]
 # the camera's math (GE value types, the table trigonometry) and its ee_gfx functions
-ee_ge = { path = "../ee_ge" }
-ee_gfx = { path = "../ee_gfx" }
+ee_render = { path = "../ee_render" }
 # config.yaml (PlatConfig*): the settings' rows
 ee_base = { path = "../ee_base" }
 # the cliffs' table generator (URandomIntegers)

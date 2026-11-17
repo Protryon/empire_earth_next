@@ -14,7 +14,7 @@
 use std::collections::BTreeMap;
 use std::sync::Mutex;
 
-use ee_ge::types::Ge3DPoint;
+use ee_render::ge::types::Ge3DPoint;
 
 use crate::build::BuildHost;
 use crate::load::um_floor;

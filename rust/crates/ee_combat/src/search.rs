@@ -9,8 +9,8 @@
 //! searches draw no random number themselves.
 
 use crate::walks::EeCombatHandle;
-use ee_ge::types::Ge2DPoint;
-use ee_ge::um::lrintf;
+use ee_render::ge::types::Ge2DPoint;
+use ee_render::ge::um::lrintf;
 
 /// The tests a search asks of a candidate (`SearchHost::test`). The C++ host answers each as its search's original
 /// expression did (`EESearchTarget`'s candidate is a complex unit, `EESearchTargetAlongList`'s a list unit whose

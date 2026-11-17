@@ -1,7 +1,7 @@
 // GEValues.cpp (port, R4.3 part 16): the Graphics Engine's value types' out-of-line members, one unit for what were
 // fifteen (GE3DPoint, GEVector, GE3DLine, GE3DPlane, GETransformation, GEOrientation, GEQuaternion, GEBoundingBox,
 // GEViewport, GERectangle, GEColor, GELight, GETextureCoordinate, GEVertexArray, GEPolygonArray; their address
-// markers went with them). The algorithms are Rust (rust/crates/ee_ge: point.rs, vector.rs, line.rs, transform.rs,
+// markers went with them). The algorithms are Rust (rust/crates/ee_render/src/ge: point.rs, vector.rs, line.rs, transform.rs,
 // bbox.rs, viewport.rs, values.rs, io.rs; GERustMath.h, GERustIO.h, GERustViewport.h); these are the forwarders, the
 // statics (string ids, the quantized vector table) and the file I/O. The simulation reads these types in nearly every
 // unit: the members are the same statements as before (every unit compiles with -ffp-contract=off, tools/ee.py).

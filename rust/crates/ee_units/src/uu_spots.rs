@@ -8,8 +8,8 @@ use crate::uu::k::UU_CATEGORY_NAVAL_CITIZEN;
 use crate::uu::k::UU_MOVEMENT_SEA;
 use crate::uu::{can_stand_on, pick_tile_near, tiles_around, units_on_tiles, UuHost, UuView};
 use crate::uu_tiles::{tiles_near_point, Tile};
-use ee_ge::types::{Ge2DPoint, Ge3DPlane, Ge3DPoint};
-use ee_ge::um::floor;
+use ee_render::ge::types::{Ge2DPoint, Ge3DPlane, Ge3DPoint};
+use ee_render::ge::um::floor;
 
 /// `EEGetUnitsNearTile` (0x24c003): the units on the tiles within `radius` of the point whose position (a complex
 /// unit's location, else its tile's centre) lies within it too.

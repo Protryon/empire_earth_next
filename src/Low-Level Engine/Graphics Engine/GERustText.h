@@ -1,4 +1,4 @@
-// The Graphics Engine's text in Rust (rust/crates/ee_ge font.rs, docs/RUST_PLAN.md R4.3): GEText's extent and
+// The Graphics Engine's text in Rust (rust/crates/ee_render/src/ge font.rs, docs/RUST_PLAN.md R4.3): GEText's extent and
 // GEFontBitmap's cell layout, alpha pass and draw plan. The platform's text functions reach the
 // Rust through this table (ee_ge keeps no platform dependency).
 #ifndef GERUSTTEXT_H

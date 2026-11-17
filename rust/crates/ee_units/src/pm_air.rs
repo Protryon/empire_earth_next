@@ -12,8 +12,8 @@
     clippy::unnecessary_cast
 )]
 
-use ee_ge::types::{Ge3DPoint, GeOrientation, GeTransformation, GeVector};
-use ee_ge::um::{floor, um_arccos, um_arctan2, um_sin};
+use ee_render::ge::types::{Ge3DPoint, GeOrientation, GeTransformation, GeVector};
+use ee_render::ge::um::{floor, um_arccos, um_arctan2, um_sin};
 
 use crate::pm::*;
 use crate::pm_ground::step1_target;

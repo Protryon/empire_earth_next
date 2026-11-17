@@ -17,9 +17,9 @@ use std::collections::BTreeMap;
 use std::f32::consts::{PI, TAU};
 use std::sync::Mutex;
 
-use ee_ge::transform::RotationOrder;
-use ee_ge::types::{GeTransformation, GeVector};
-use ee_ge::um::um_arctan2;
+use ee_render::ge::transform::RotationOrder;
+use ee_render::ge::types::{GeTransformation, GeVector};
+use ee_render::ge::um::um_arctan2;
 
 use crate::rust_goal::{base_condition, EeUnitsGoalIo, GoalHost, TRIGGER_UNIT_FACING_NOT_REQUIRED};
 

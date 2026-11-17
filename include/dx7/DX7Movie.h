@@ -1,7 +1,7 @@
 // DX7Movie: a GEMovie playing an MPEG-1 movie (pl_mpeg) on its own thread into a system-memory frame buffer, which
 // RenderFrame copies to the screen's back buffer (the original played Bink files: a movie the game names X.bik plays
 // from X.mpg, tools/convert_movies.py); its sound goes through the mixer (SEMixer::SetMovieSource). Whole in Rust
-// (rust/crates/ee_dx7/src/movobj.rs, R4.3 part 14): the class keeps its vtable and one member, the object; the calls on
+// (rust/crates/ee_render/src/dx7/movobj.rs, R4.3 part 14): the class keeps its vtable and one member, the object; the calls on
 // C++ objects are DX7Trampolines.cpp's host.
 #ifndef DX7_DX7MOVIE_H
 #define DX7_DX7MOVIE_H

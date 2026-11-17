@@ -12,4 +12,4 @@ crate-type = ["rlib"]
 
 [dependencies]
 # the engine's float helpers (lrintf, the f64 square root, the UMCos/UMArcCos/UMArcTan tables), bit for bit
-ee_ge = { path = "../ee_ge" }
+ee_render = { path = "../ee_render" }

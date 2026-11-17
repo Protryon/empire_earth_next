@@ -195,15 +195,14 @@ name = "ee_app"
 version = "0.1.0"
 dependencies = [
  "ee_base",
- "ee_ge",
- "ee_gfx",
+ "ee_render",
 ]
 
 [[package]]
 name = "ee_astar"
 version = "0.1.0"
 dependencies = [
- "ee_ge",
+ "ee_render",
 ]
 
 [[package]]
@@ -226,7 +225,7 @@ dependencies = [
 name = "ee_combat"
 version = "0.1.0"
 dependencies = [
- "ee_ge",
+ "ee_render",
 ]
 
 [[package]]
@@ -234,44 +233,10 @@ name = "ee_data"
 version = "0.1.0"
 
 [[package]]
-name = "ee_dx7"
-version = "0.1.0"
-dependencies = [
- "ee_ge",
-]
-
-[[package]]
 name = "ee_formations"
 version = "0.1.0"
 dependencies = [
  "ee_rmap",
-]
-
-[[package]]
-name = "ee_ge"
-version = "0.1.0"
-dependencies = [
- "ee_base",
-]
-
-[[package]]
-name = "ee_gfx"
-version = "0.1.0"
-dependencies = [
- "ee_base",
- "ee_ge",
-]
-
-[[package]]
-name = "ee_gx"
-version = "0.1.0"
-dependencies = [
- "ee_base",
- "log",
- "naga",
- "parking_lot",
- "raw-window-handle",
- "wgpu",
 ]
 
 [[package]]
@@ -286,10 +251,15 @@ name = "ee_netmsg"
 version = "0.1.0"
 
 [[package]]
-name = "ee_openformats"
+name = "ee_render"
 version = "0.1.0"
 dependencies = [
- "ee_ge",
+ "ee_base",
+ "log",
+ "naga",
+ "parking_lot",
+ "raw-window-handle",
+ "wgpu",
 ]
 
 [[package]]
@@ -297,7 +267,7 @@ name = "ee_rmap"
 version = "0.1.0"
 dependencies = [
  "ee_base",
- "ee_ge",
+ "ee_render",
 ]
 
 [[package]]
@@ -305,7 +275,7 @@ name = "ee_rmap_gatelib"
 version = "0.1.0"
 dependencies = [
  "ee_base",
- "ee_ge",
+ "ee_render",
  "ee_rmap",
 ]
 
@@ -320,14 +290,10 @@ dependencies = [
  "ee_base",
  "ee_combat",
  "ee_data",
- "ee_dx7",
  "ee_formations",
- "ee_ge",
- "ee_gfx",
- "ee_gx",
  "ee_net",
  "ee_netmsg",
- "ee_openformats",
+ "ee_render",
  "ee_rmap",
  "ee_scenario",
  "ee_screens",
@@ -350,8 +316,7 @@ version = "0.1.0"
 dependencies = [
  "ee_audio",
  "ee_base",
- "ee_ge",
- "ee_gfx",
+ "ee_render",
  "ee_scenario",
  "ee_ui",
 ]
@@ -362,7 +327,7 @@ version = "0.1.0"
 dependencies = [
  "ee_base",
  "ee_data",
- "ee_ge",
+ "ee_render",
 ]
 
 [[package]]
@@ -370,7 +335,7 @@ name = "ee_ui"
 version = "0.1.0"
 dependencies = [
  "ee_base",
- "ee_ge",
+ "ee_render",
 ]
 
 [[package]]
@@ -380,7 +345,7 @@ dependencies = [
  "ee_astar",
  "ee_base",
  "ee_data",
- "ee_ge",
+ "ee_render",
 ]
 
 [[package]]
@@ -388,7 +353,7 @@ name = "ee_won"
 version = "0.1.0"
 dependencies = [
  "ee_base",
- "ee_openformats",
+ "ee_render",
 ]
 
 [[package]]

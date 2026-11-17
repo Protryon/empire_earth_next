@@ -1,7 +1,7 @@
 // C:\EEX\Low-Level Engine\Graphics Engine\GETerrainMesh.h (RECONSTRUCTION). The diamond-shaped terrain height field,
 // its tile/point rows and the per-frame visible polygon lists. GETerrainMesh.cpp (0x10026fde..0x10032ae2) holds the
 // out-of-line members; the inline members of the original header were emitted first by GEBoundingBox.cpp
-// (0x100125b7..0x10012ae4, in declaration order). The mesh is a whole Rust object now (rust/crates/ee_ge tmobj.rs,
+// (0x100125b7..0x10012ae4, in declaration order). The mesh is a whole Rust object now (rust/crates/ee_render/src/ge tmobj.rs,
 // R4.3 eleventh part): every member below forwards to it, and its only member is the object. Requires
 // lle/LowLevelEngine.h, GE3DPoint.h, GEVector.h, GEColor.h, GETextureCoordinate.h, GE3DPlane.h.
 #ifndef LLE_GETERRAINMESH_H

@@ -14,10 +14,12 @@
 
 #![allow(non_snake_case)]
 
-use ee_ge::transform::RotationOrder;
-use ee_ge::types::{Ge3DLine, Ge3DPoint, GeQuaternion, GeTransformation, GeVector};
-use ee_ge::um::{um_arccos, um_arctan2};
-use ee_gfx::camera::{self as math, EeGfxCameraPose, EeGfxCameraRays, EeGfxCameraStep, EeGfxEdgePlanes, Ground};
+use ee_render::ge::transform::RotationOrder;
+use ee_render::ge::types::{Ge3DLine, Ge3DPoint, GeQuaternion, GeTransformation, GeVector};
+use ee_render::ge::um::{um_arccos, um_arctan2};
+use ee_render::gfx::camera::{
+    self as math, EeGfxCameraPose, EeGfxCameraRays, EeGfxCameraStep, EeGfxEdgePlanes, Ground,
+};
 use std::os::raw::c_long;
 
 /// No followed unit (`EEUnitHandle::kNone`).

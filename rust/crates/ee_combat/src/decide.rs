@@ -4,7 +4,7 @@
 //! (`EEFindDropLocation`'s drop point). The C++ gathers every input (pure reads of the world) and acts on the
 //! result; the field order is the CBCN/CBCH/CBDP capture's layout.
 
-use ee_ge::types::{Ge3DPoint, GeTransformation};
+use ee_render::ge::types::{Ge3DPoint, GeTransformation};
 
 /// `EECanConvert`'s inputs (`inPriest`, `inTarget`; every flag 0 or 1).
 #[repr(C)]

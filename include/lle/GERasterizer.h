@@ -47,7 +47,7 @@ struct GERFogAttributes {                   // sizeof 0x20 (GetFogAttributes 0xe
 };
 
 // The rasterizer's state for one screen (provisional name; offsets proven by the inline accessors and setters): the
-// layout of the Rust record (rust/crates/ee_ge rastobj.rs EeGeRastScreen, pinned by GERasterizer.cpp). Rust makes,
+// layout of the Rust record (rust/crates/ee_render/src/ge rastobj.rs EeGeRastScreen, pinned by GERasterizer.cpp). Rust makes,
 // sets and frees it; the plug-in reads and writes its device-side fields through GERasterizer::GetScreenState.
 struct GERScreenState {
     GEViewport mViewport;                   // +0x000 (GetViewport returns the element)
@@ -283,7 +283,7 @@ protected:
     virtual long PromoteTexture(GETexture* inTexture) = 0;          // slot 0x130
     virtual void SetRenderTarget(GESurface* inTarget, unsigned long inScreen) = 0;      // slot 0x134
 
-    // The state is Rust's (rust/crates/ee_ge rastobj.rs: the colours, the screen records, the debug font and text,
+    // The state is Rust's (rust/crates/ee_render/src/ge rastobj.rs: the colours, the screen records, the debug font and text,
     // the drawing lock, the ripple, the culling, the flags, the name, the screen id, and the statics sRasterizers and
     // sActiveRasterizer); every call it makes on another object goes through GERasterizerHost (GERasterizer.cpp).
     EeGeRasterizer* mRust;

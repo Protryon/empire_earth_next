@@ -11,8 +11,8 @@
 //! f32 operation for operation; the two sorts are MSVC's `std::sort` ([`crate::msvc_sort`]). The C++ members stay
 //! (EEActiveGroup.cpp) and call these through ag_host.rs.
 
-use ee_ge::types::Ge3DPoint;
-use ee_ge::um;
+use ee_render::ge::types::Ge3DPoint;
+use ee_render::ge::um;
 
 // ---- the original's constants (checked against the headers by header_consts.rs)
 const ACTION_IDLE: i32 = 5000;

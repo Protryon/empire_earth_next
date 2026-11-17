@@ -27,7 +27,7 @@
 #include "lle/GERhombus.h"
 #include "lle/GEText.h"
 
-// DX7Rasterizer is whole in Rust (rust/crates/ee_dx7/src/rastobj.rs, R4.3 part 13): the per-screen DX7 records, the
+// DX7Rasterizer is whole in Rust (rust/crates/ee_render/src/dx7/rastobj.rs, R4.3 part 13): the per-screen DX7 records, the
 // debug colour, the light slots and every method below; DX7TnLRasterizer is its T&L flavour. The class keeps its vtable
 // (the game calls it through GERasterizer) and one member, mDX7; the methods forward, and DX7RasterizerHost makes the
 // calls on other objects Rust asks for.

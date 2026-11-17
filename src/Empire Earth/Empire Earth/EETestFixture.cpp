@@ -173,7 +173,7 @@ void EETestOrdersInstall();
 const char* EETestOrderStart(unsigned long inSeq, unsigned long inKind);
 std::string EETestOrderSnapshot();
 
-// the renderer's test hooks (rust/crates/ee_gx ffi.rs; GX.cpp keeps them linked): a callback before every presented
+// the renderer's test hooks (rust/crates/ee_render/src/gx ffi.rs; GX.cpp keeps them linked): a callback before every presented
 // frame, and a read-back of that frame as 32-bit BGRA rows
 extern "C" void GXTestSetPresentHook(void (*inHook)(void* inWindow, void* inFrame));
 extern "C" long GXTestReadFrame(void* inFrame, void* outPixels, unsigned long inCapacity, unsigned long* outWidth,

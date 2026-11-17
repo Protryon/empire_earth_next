@@ -1,4 +1,4 @@
-// DX7Surface (RECONSTRUCTION): a GESurface over a GXSurface, whole in Rust (rust/crates/ee_dx7/src/surfobj.rs, R4.3
+// DX7Surface (RECONSTRUCTION): a GESurface over a GXSurface, whole in Rust (rust/crates/ee_render/src/dx7/surfobj.rs, R4.3
 // part 14: the description, the attached surfaces, the transparency colour, the lock state). The class keeps its
 // vtable, the GESurface base (reference count, logical size) and one member, the object. The original's layout:
 // sizeof 0x60 (ctor 0x1000eced); DX7Screen::CreateSurface builds them.

@@ -4,7 +4,7 @@
 //! on screen. The box's geometry is `ee_gfx`'s `select.rs`. The record is the class's members but the lines and the
 //! click and lasso actions (C++ objects, reached through the host). The scenario editor's subclass reads the record.
 
-use ee_gfx::select;
+use ee_render::gfx::select;
 
 use crate::hud_ctl::{
     EeScreensPoint, EeScreensRect, HudHost, HudOps, Rec, EE_SCREENS_HC_ADD_DIRTY, EE_SCREENS_HC_CAPTURE_KEYBOARD,

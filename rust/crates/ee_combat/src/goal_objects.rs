@@ -157,8 +157,8 @@ fn ground_of(goal: u64) -> GroundGoal {
 /// else the target; the unit's group told. Returns the location's bits.
 pub fn ground_destination<H: GoalHost>(h: &mut H, goal: u64, unit: u64) -> [u32; 3] {
     let target = ground_of(goal).target;
-    let y = ee_ge::um::floor(f32::from_bits(target[1]));
-    let x = ee_ge::um::floor(f32::from_bits(target[0]));
+    let y = ee_render::ge::um::floor(f32::from_bits(target[1]));
+    let x = ee_render::ge::um::floor(f32::from_bits(target[0]));
     let mut args = [0i64; 8];
     args[0] = i64::from(x);
     args[1] = i64::from(y);

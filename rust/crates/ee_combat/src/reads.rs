@@ -10,9 +10,9 @@
 
 use std::ffi::c_void;
 
-use ee_ge::transform::RotationOrder;
-use ee_ge::types::{Ge3DLine, Ge3DPoint, GeTransformation, GeVector};
-use ee_ge::um::um_arccos;
+use ee_render::ge::transform::RotationOrder;
+use ee_render::ge::types::{Ge3DLine, Ge3DPoint, GeTransformation, GeVector};
+use ee_render::ge::um::um_arccos;
 
 use crate::geometry::matrix;
 use crate::store::{

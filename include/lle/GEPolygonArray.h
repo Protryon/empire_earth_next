@@ -6,7 +6,7 @@
 #ifndef LLE_GEPOLYGONARRAY_H
 #define LLE_GEPOLYGONARRAY_H
 
-struct EeGePolygonArray;   // rust/crates/ee_ge/src/vertarr.rs
+struct EeGePolygonArray;   // rust/crates/ee_render/src/ge/vertarr.rs
 
 class LLE_API GEPolygonArray {
 public:

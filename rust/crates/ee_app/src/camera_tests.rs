@@ -1,8 +1,8 @@
 //! camera.rs over a mock world: the units by id, a flat terrain of 10 x 10 tiles at height 1, the switches, the keys.
 
 use crate::camera::*;
-use ee_ge::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeTransformation, GeVector};
-use ee_gfx::camera::EeGfxEdgePlanes;
+use ee_render::ge::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeTransformation, GeVector};
+use ee_render::gfx::camera::EeGfxEdgePlanes;
 use std::collections::BTreeMap;
 
 #[derive(Clone, Copy, Default)]
@@ -261,7 +261,7 @@ fn scroll_leaves_the_free_camera_and_stays_on_the_map() {
     let mut w = World::new();
     set_location(&mut c, &mut w, Ge3DPoint::new(9.5, 5.0, 0.0), true, true);
     c.mMode = 3;
-    c.mView.set_orientation(ee_ge::transform::RotationOrder::Ypr, 1.0, -0.5, 0.0);
+    c.mView.set_orientation(ee_render::ge::transform::RotationOrder::Ypr, 1.0, -0.5, 0.0);
     scroll(&mut c, &mut w, 3.0, 0.0);
     assert_eq!(c.mMode, 0);
     assert!(c.mEndFocus.x <= 10.0 && c.mEndFocus.x >= 0.0);

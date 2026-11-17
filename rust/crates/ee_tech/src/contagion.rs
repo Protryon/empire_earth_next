@@ -10,7 +10,7 @@
 // the C++'s own tests, kept as written
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
-use ee_ge::um::lrintf;
+use ee_render::ge::um::lrintf;
 
 /// The functor's answers an update reads (all plain getters, read once before it).
 #[repr(C)]

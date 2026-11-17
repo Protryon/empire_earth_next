@@ -9,9 +9,9 @@
 // the C++'s literals, kept
 #![allow(clippy::excessive_precision)]
 
-use ee_ge::types::GeTransformation;
-use ee_ge::types::{Ge2DPoint, Ge3DPoint, GeVector};
-use ee_ge::um::lrintf;
+use ee_render::ge::types::GeTransformation;
+use ee_render::ge::types::{Ge2DPoint, Ge3DPoint, GeVector};
+use ee_render::ge::um::lrintf;
 use std::os::raw::{c_long, c_ulong};
 
 /// The cells per side and in all.
@@ -453,7 +453,7 @@ impl EeAppMiniMap {
         for y in bottom..top {
             for x in left..right {
                 let c = self.pixel_color(h, light, x, y);
-                let packed = ee_ge::pixel::pack_float(R5G6B5, c[0], c[1], c[2], 1.0);
+                let packed = ee_render::ge::pixel::pack_float(R5G6B5, c[0], c[1], c[2], 1.0);
                 bits[pitch * y as usize + x as usize] = packed as u16;
             }
         }

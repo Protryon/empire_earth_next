@@ -8,7 +8,7 @@
 //! Determinism: the original's `unsigned long` arithmetic wrapping, its `float` operations in order, `UMFloatToLong`
 //! as the UCRT's `lrintf` (ee_ge), no random draw here (the C++ draws for [`EeUnitsAnimateOut::idle_pick`]).
 
-use ee_ge::um::lrintf;
+use ee_render::ge::um::lrintf;
 
 /// The unit's and its model's numbers for its current animation state (`state`).
 #[repr(C)]

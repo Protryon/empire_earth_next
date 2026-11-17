@@ -15,7 +15,7 @@
 
 use crate::calamity::update_time_alive;
 use crate::ftol;
-use ee_ge::um::lrintf;
+use ee_render::ge::um::lrintf;
 
 /// The calamity classes (`EECalamityEnum`, `ee/EECalamityManager.h`).
 pub(crate) mod kind {

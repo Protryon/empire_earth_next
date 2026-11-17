@@ -12,4 +12,4 @@ crate-type = ["rlib"]
 ee_base = { path = "../ee_base" }
 # the platform fonts (the lobby's fonts and window captions, platfont.rs and platwm.rs)
 # the lobby's PNG pictures (imgdec.rs), as the game reads its own
-ee_openformats = { path = "../ee_openformats" }
+ee_render = { path = "../ee_render" }

@@ -38,9 +38,9 @@
     clippy::unnecessary_cast
 )]
 
-use ee_ge::transform::RotationOrder;
-use ee_ge::types::{Ge2DPoint, Ge3DLine, Ge3DPlane, Ge3DPoint, GeOrientation, GeTransformation, GeVector};
-use ee_ge::um::{floor, um_arccos, um_arctan2};
+use ee_render::ge::transform::RotationOrder;
+use ee_render::ge::types::{Ge2DPoint, Ge3DLine, Ge3DPlane, Ge3DPoint, GeOrientation, GeTransformation, GeVector};
+use ee_render::ge::um::{floor, um_arccos, um_arctan2};
 
 use crate::physics::{self, EeUnitsPitchIn, EeUnitsSpeedIn, EeUnitsTurnIn};
 use crate::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};

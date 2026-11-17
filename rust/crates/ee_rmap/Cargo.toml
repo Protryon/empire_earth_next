@@ -9,6 +9,6 @@ crate-type = ["rlib"]
 
 [dependencies]
 ee_base = { path = "../ee_base" }
-ee_ge = { path = "../ee_ge" }
+ee_render = { path = "../ee_render" }
 # the .rmv reader splits lines with UString's tokenizers
 # the game passes' terrain fractal (U2DFractal)

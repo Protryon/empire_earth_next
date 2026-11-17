@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::rust_goal::*;
-use ee_ge::types::GeTransformation;
+use ee_render::ge::types::GeTransformation;
 
 const U: u64 = 0x7100;
 

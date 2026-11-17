@@ -2,7 +2,7 @@
 
 use crate::map::{self, EeAppMapDims, MapHost, Terrain, TERRAIN_CLIFF};
 use ee_base::random::URandom;
-use ee_ge::types::GeVector;
+use ee_render::ge::types::GeVector;
 use std::collections::BTreeMap;
 use std::os::raw::{c_long, c_ulong};
 

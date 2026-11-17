@@ -1,5 +1,5 @@
 // DX7Screen (RECONSTRUCTION): a GEScreen over one DirectDraw device (one per monitor), whole in Rust
-// (rust/crates/ee_dx7/src/scrobj.rs, R4.3 part 14: the modes, the desktop rectangle, the name, the device, the flags and
+// (rust/crates/ee_render/src/dx7/scrobj.rs, R4.3 part 14: the modes, the desktop rectangle, the name, the device, the flags and
 // the screen list). The class keeps its vtable, CreateAWindow (the platform window calls, DX7Trampolines.cpp) and one
 // member, the object. The original's layout: sizeof 0x44 (ctor 0x1000d271).
 #ifndef DX7_DX7SCREEN_H

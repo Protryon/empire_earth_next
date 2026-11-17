@@ -1,5 +1,5 @@
 // GX: the subset of DirectDraw 7 and Direct3D 7 the renderer uses, reimplemented on the wgpu crate
-// (rust/crates/ee_gx, docs/RUST_PLAN.md R4.1). These classes are C++ shims forwarding to its extern "C" functions; a
+// (rust/crates/ee_render/src/gx, docs/RUST_PLAN.md R4.1). These classes are C++ shims forwarding to its extern "C" functions; a
 // GXSurface*, GXDevice*, GXVertexBuffer* or GXDirectDraw* is an opaque handle owned by Rust. PORT.md
 // "Plan: DirectX -> wgpu". The renderer (DX7 Display Plug-ins) keeps its structure; its DirectX objects became the
 // GX classes below, which keep the COM-style method names and HRESULT-style results, with the constants renamed

@@ -1,7 +1,7 @@
 use super::*;
 use crate::reads::{QueryHost, EE_COMBAT_H_OWNER};
 use crate::world::EeCombatWorldArgs;
-use ee_ge::types::{Ge3DLine, GeTransformation};
+use ee_render::ge::types::{Ge3DLine, GeTransformation};
 use std::collections::BTreeMap;
 
 const UNIT: u64 = 0x100;

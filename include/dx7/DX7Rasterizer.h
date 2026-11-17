@@ -2,7 +2,7 @@
 // includes. Slot order from the vtable 0x10010324 and the exports. The original's sizeof 0x7c (copy ctor 0x10001271):
 // GERasterizer 0x68, the per-screen DX7 state vector +0x68, the debug color +0x78.
 //
-// Whole in Rust (rust/crates/ee_dx7 rastobj.rs, R4.3 part 13): the per-screen DX7 records, the debug colour, the light
+// Whole in Rust (rust/crates/ee_render/src/dx7 rastobj.rs, R4.3 part 13): the per-screen DX7 records, the debug colour, the light
 // slots and every method; DX7TnLRasterizer is the object's T&L flavour (inTnL). The class keeps the vtable the game
 // calls through GERasterizer and one member; DX7Rasterizer's own four virtuals (GetIsScreenValid, CreateVertexBuffers,
 // DrawTerrainMaterial, GetVideoMemory) and the protected LockVB/Set2DMode/Set3DMode/UnlockVB are Rust's.

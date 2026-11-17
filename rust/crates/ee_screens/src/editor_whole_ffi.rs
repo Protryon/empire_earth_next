@@ -5,7 +5,7 @@
 
 use core::ffi::c_void;
 
-use ee_ge::types::GeTransformation;
+use ee_render::ge::types::GeTransformation;
 
 use crate::editor_events::{SeeHost, SeeKind};
 use crate::editor_place::SepHost;

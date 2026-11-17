@@ -10,9 +10,9 @@
 //! summation order (ee_ge `apply_point`, `apply_vector`), `SetOrientationYPR` and `UMArcTan2` as ee_ge's (the C++
 //! forwards both there), `GEVector::Normalize`'s 0.0001 cut.
 
-use ee_ge::transform::RotationOrder;
-use ee_ge::types::{Ge3DPoint, GeTransformation, GeVector};
-use ee_ge::um::um_arctan2;
+use ee_render::ge::transform::RotationOrder;
+use ee_render::ge::types::{Ge3DPoint, GeTransformation, GeVector};
+use ee_render::ge::um::um_arctan2;
 
 /// The original's pi and two pi (`3.1415927f`, `6.2831855f`: the same floats).
 const PI: f32 = std::f32::consts::PI;

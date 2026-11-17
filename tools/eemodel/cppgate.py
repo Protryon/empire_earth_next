@@ -5,7 +5,7 @@ the open tree equal what the game stored before D9.
    loads every model and texture of the open tree and digests the stored GEModel / GETexture (every array and
    pixel); the digests were recorded from the loaders before D9 (glTF -> .cem bytes -> GEModel::Load, PNG -> .sst
    bytes -> GETexture::Load) and the native loaders gave the same.
-2. The decoder gate: the game's decoder (rust/crates/ee_openformats, the eemodel_gate program) over every model and
+2. The decoder gate: the game's decoder (rust/crates/ee_render/src/openformats, the eemodel_gate program) over every model and
    texture of the open tree as files, the same models without the EE_model extension (what an editor that drops it
    leaves), every 25th as .glb, edited models (TRS instead of matrices, Blender's ".NNN" name suffixes, no Z-up
    wrapper, a rotated wrapper: an error, broken EE_model data: frame fixes an error, LODs dropped, frame transforms
@@ -46,10 +46,10 @@ sys.path.insert(0, str(ROOT / 'tools'))
 GOLDEN = HERE / 'cppgate' / 'golden_store.json'
 
 def build(out):
-    """The game's decoder's gate program (rust/crates/ee_openformats, src/bin/eemodel_gate.rs), built for the host."""
+    """The game's decoder's gate program (rust/crates/ee_render/src/openformats, src/bin/eemodel_gate.rs), built for the host."""
     from rust_build import TARGET_DIR
     env = dict(os.environ, CARGO_TARGET_DIR=str(TARGET_DIR))
-    r = subprocess.run(['cargo', 'build', '-p', 'ee_openformats', '--bin', 'eemodel_gate', '--release', '--offline'],
+    r = subprocess.run(['cargo', 'build', '-p', 'ee_render', '--bin', 'eemodel_gate', '--release', '--offline'],
                        cwd=ROOT / 'rust', env=env, capture_output=True, text=True)
     if r.returncode:
         sys.exit(f'cargo build: {r.stdout}{r.stderr}')

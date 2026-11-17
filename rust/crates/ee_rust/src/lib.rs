@@ -20,18 +20,18 @@ use ee_base as _;
 // the string classes' searches and tokenizers (ee_ustring)
 use ee_base as _;
 // the Graphics Engine's math and the table trigonometry (ee_ge/src/ffi.rs), called by the C++ GE classes and UMath.cpp
-use ee_ge as _;
+use ee_render as _;
 // the Graphics Thread's and the camera's math (ee_gfx/src/ffi.rs), called by EECameraControl.cpp
-use ee_gfx as _;
+use ee_render as _;
 // the DX7 renderer plug-in behind the C++ trampolines (ee_dx7/src/ffi.rs); it imports them, absent from a test binary
 #[cfg(not(test))] // its FFI imports the C++ shim
 use ee_audio as _;
-#[cfg(not(test))]
-use ee_dx7 as _;
-#[cfg(not(test))] // its FFI imports the platform layer's window functions (absent from a test binary)
-use ee_gx as _;
 #[cfg(not(test))] // its FFI imports the platform layer, absent from a test binary
 use ee_net as _;
+#[cfg(not(test))]
+use ee_render as _;
+#[cfg(not(test))] // its FFI imports the platform layer's window functions (absent from a test binary)
+use ee_render as _;
 // the Network Engine's whole classes (ee_net/src/ffi.rs), called by NESynchronousServer.cpp
 #[cfg(not(test))]
 // the sound manager behind SESoundManager.cpp: its FFI imports the C++ trampolines (ee_soundcpp_*)
@@ -63,7 +63,7 @@ use ee_app as _;
 use ee_data as _;
 
 // glTF -> .cem and PNG -> .sst (ee_openformats/src/ffi.rs): the open-format readers GEOpenFormatsFile.cpp calls
-use ee_openformats as _;
+use ee_render as _;
 
 // The platform layer's leaves: its `#[no_mangle]` functions and variables reach the staticlib through this
 // dependency.

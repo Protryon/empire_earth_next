@@ -6,9 +6,9 @@
 //! when the floor tile is off the map, the shot's creation, its goal and launch).
 
 use crate::geometry::{matrix, up_the_chain};
-use ee_ge::transform::RotationOrder;
-use ee_ge::types::{Ge3DPoint, GeTransformation, GeVector};
-use ee_ge::um::{floor, um_arctan2};
+use ee_render::ge::transform::RotationOrder;
+use ee_render::ge::types::{Ge3DPoint, GeTransformation, GeVector};
+use ee_render::ge::um::{floor, um_arctan2};
 use std::f32::consts::{PI, TAU};
 
 /// `LaunchShot`: the shot's launch from the weapon tag point (or half a tile up), turned toward the target.

@@ -1,4 +1,4 @@
-// The Graphics Engine's math in Rust (rust/crates/ee_ge, docs/RUST_PLAN.md R4.3): the C++ value classes stay the
+// The Graphics Engine's math in Rust (rust/crates/ee_render/src/ge, docs/RUST_PLAN.md R4.3): the C++ value classes stay the
 // types every caller uses, and their algorithms forward to ee_ge's C ABI with the objects themselves as arguments.
 // Each class has a #[repr(C)] mirror (EeGe*, include/rust/ee_rust.h); the layouts are pinned here.
 #ifndef GERUSTMATH_H

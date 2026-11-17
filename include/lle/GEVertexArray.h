@@ -12,7 +12,7 @@ class GEColor;
 class GEVector;
 class GE3DPoint;
 class GETextureCoordinate;
-struct EeGeVertexArray;   // rust/crates/ee_ge/src/vertarr.rs
+struct EeGeVertexArray;   // rust/crates/ee_render/src/ge/vertarr.rs
 
 class LLE_API GEVertexArray {
 public:

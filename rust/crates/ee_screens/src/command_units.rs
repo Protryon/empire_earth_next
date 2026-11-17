@@ -6,8 +6,8 @@
 //! editor's subclass (`EESEUICCommandUnits`, `mEditor` set) is the same control: its drag rotates the selected units,
 //! its right click without a drag deletes the unit under the mouse.
 
-use ee_ge::types::Ge2DPoint;
-use ee_ge::um::{lrintf, um_arctan2};
+use ee_render::ge::types::Ge2DPoint;
+use ee_render::ge::um::{lrintf, um_arctan2};
 
 use crate::hud_ctl::{
     EeScreensPoint, EeScreensPoint3, EeScreensRect, HudHost, HudOps, Rec, EE_SCREENS_HC_CAPTURE_KEYBOARD,

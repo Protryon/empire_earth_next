@@ -1,4 +1,4 @@
-// include/gx/GX.h's classes: the shims over the Rust implementation (rust/crates/ee_gx/src/ffi.rs). Every method forwards
+// include/gx/GX.h's classes: the shims over the Rust implementation (rust/crates/ee_render/src/gx/ffi.rs). Every method forwards
 // to an extern "C" function; the object is the opaque handle behind `this`.
 #include <windows.h>
 
