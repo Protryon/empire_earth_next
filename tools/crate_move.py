@@ -1107,6 +1107,31 @@ LOOSE_LINK_RS = """    // cargo's test and example programs of this crate link o
     println!("cargo:rustc-link-arg={ignore}");
     println!("cargo:rerun-if-changed=build.rs");
 """
+PLAT_CORE_SEAM = """/// Stand-ins for `seam` in this crate's tests, which link no C++.
+#[cfg(all(test, unix))]
+pub(crate) mod test_seam {
+    use std::ffi::{c_int, c_void};
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    pub static LAST_ERROR: AtomicU32 = AtomicU32::new(0);
+    pub static EVENTS_SET: AtomicU32 = AtomicU32::new(0);
+
+    #[no_mangle]
+    pub extern "C" fn ee_plat_posix_set_last_error(error: u32) {
+        LAST_ERROR.store(error, Ordering::SeqCst);
+    }
+    #[no_mangle]
+    pub extern "C" fn ee_plat_posix_set_last_error_errno(error: c_int) {
+        LAST_ERROR.store(0x2000_0000 | error as u32, Ordering::SeqCst);
+    }
+    #[no_mangle]
+    pub extern "C" fn PlatEventSet(_event: *mut c_void) -> c_int {
+        EVENTS_SET.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+}
+
+"""
 ALL = "<every>"   # a fixup whose old text starts with this replaces every occurrence
 FIXUPS = [
     # the PNG reader's failure type goes down with it (ee_openformats names it as ee_base::png::Failure)
@@ -1134,6 +1159,32 @@ FIXUPS = [
      "/// # Safety\n/// `t` is a live text of `t.length` characters of `wchar_size` bytes each.\npub unsafe fn units("),
     ("won", "rust/crates/ee_won/src/ffi.rs", "pub(crate) unsafe fn give(",
      "/// # Safety\n/// `sink` may be called with `context`.\npub unsafe fn give("),
+    # ee_plat_core's POSIX test stand-ins for three functions ee_plat_sys defines (R3): one crate now, so the tests
+    # read the real ones (the thread's last error, a real event)
+    ("base", "rust/crates/ee_plat_core/src/lib.rs", PLAT_CORE_SEAM, ""),
+    ("base", "rust/crates/ee_plat_core/src/path.rs",
+     "        use crate::test_seam::LAST_ERROR;\n        use std::sync::atomic::Ordering;\n",
+     "        extern \"C\" {\n            fn PlatGetLastError() -> u32;\n        }\n"),
+    ("base", "rust/crates/ee_plat_core/src/path.rs", ALL + "LAST_ERROR.load(Ordering::SeqCst)",
+     "unsafe { PlatGetLastError() }"),
+    ("base", "rust/crates/ee_plat_core/src/time.rs", "        use crate::test_seam::EVENTS_SET;\n",
+     "        extern \"C\" {\n"
+     "            fn PlatEventCreate(manual_reset: i32, initially_set: i32) -> *mut PlatEvent;\n"
+     "            fn PlatEventWait(event: *mut PlatEvent, timeout_ms: u32) -> i32;\n"
+     "            fn PlatEventDestroy(event: *mut PlatEvent);\n"
+     "        }\n"),
+    ("base", "rust/crates/ee_plat_core/src/time.rs",
+     "            let before = EVENTS_SET.load(Ordering::SeqCst);\n"
+     "            let id = unsafe { PlatTimerStartEvent(5, 0, 0x10 as *mut PlatEvent) };\n"
+     "            assert_ne!(id, 0);\n"
+     "            PlatSleep(100);\n"
+     "            assert_eq!(EVENTS_SET.load(Ordering::SeqCst), before + 1);\n",
+     "            let event = unsafe { PlatEventCreate(0, 0) };\n"
+     "            let id = unsafe { PlatTimerStartEvent(5, 0, event) };\n"
+     "            assert_ne!(id, 0);\n"
+     "            PlatSleep(100);\n"
+     "            assert_eq!(unsafe { PlatEventWait(event, 0) }, 0, \"the timer set the event\");\n"
+     "            unsafe { PlatEventDestroy(event) };\n"),
     # the tools that name a package or the static library
     ("game", "tools/rust_build.py", '"ee_rust.lib" if target.startswith("windows") else "libee_rust.a"',
      '"ee_game.lib" if target.startswith("windows") else "libee_game.a"'),
@@ -2124,10 +2175,13 @@ fn header_of(crates_dir: &Path, krate: &str, file: &Path) -> String {
     if krate.starts_with("ee_won_") {
         return "ee_won".to_string();
     }
-    if !MERGED.contains(&krate) {
+    let src = crates_dir.join(krate).join("src");
+    // ee_net is also the name of the crate before (its root then has no module "before the restructure")
+    let merged = MERGED.contains(&krate)
+        && std::fs::read_to_string(src.join("lib.rs")).is_ok_and(|t| t.contains("before the restructure."));
+    if !merged {
         return krate.to_string();
     }
-    let src = crates_dir.join(krate).join("src");
     let first = file.strip_prefix(&src).ok().and_then(|p| p.components().next()).and_then(|c| c.as_os_str().to_str());
     match first {
         Some("lib.rs") | None if krate == "ee_game" => "ee_rust".to_string(),
