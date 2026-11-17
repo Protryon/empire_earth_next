@@ -2914,33 +2914,19 @@ extern "C" void ee_screenscpp_game_view(uint32_t inGroup, uint32_t inArg, EeScre
                                       : static_cast<NESynchronousClient*>(gCommunications)->IsPlaybackRecordingSession();
         v->humans = gCommunications->GetNumHumanPlayers();
         break;
-    case EE_SCREENS_VIEW_WORLD:
-        v->ghosts = gWorld.GetNumGhostUnits();
-        v->has_player = EEScreensViewPlayer(EE_SCREENS_VIEW_CURRENT) != NULL;
+    case EE_SCREENS_VIEW_WORLD:   // (the world's members are the views': game_view_ffi.rs world_view)
         v->camera_mode = gWorld.mCameraControl.mMode;
         v->lock_speed = gWorld.mGameOptions.GetLockSpeed() != false;
-        v->game_speed = gWorld.GetGameSpeed();
-        v->cinematic = gWorld.mInCinematic;
         v->zoom = gWorld.mCameraControl.GetZoom();
-        v->user_paused = gWorld.mUserPaused == true;
-        v->players = gWorld.GetNumPlayers();
-        v->current = gWorld.mCurrentPlayer;
-        v->teams_locked = gWorld.GetTeamsLocked();
-        v->cheats = gWorld.GetCheatsEnabled();
         v->scenario_game = gWorld.GetGameOptions().GetIsScenarioGame() == true;
         v->speed_step = gWorldTable.GetFloatValue(kWorldGameSpeedStep);
         v->speed_low = gWorldTable.GetFloatValue(kWorldGameSpeedRange);
         v->speed_high = gWorldTable.GetFloatValue2(kWorldGameSpeedRange);
         v->hot_key_mode = gUIManager->mMainGameForm ? gUIManager->mMainGameForm->mHotKeyMode : 0;
         break;
-    case EE_SCREENS_VIEW_PLAYER:
+    case EE_SCREENS_VIEW_PLAYER:   // (the player's members are the views': game_view_ffi.rs world_view)
         if (EEPlayer* thePlayer = EEScreensViewPlayer(inArg)) {
-            const GEColor& theColour = thePlayer->GetColor();
             EESelectedGroup* theGroup = thePlayer->mSelectedGroup;
-            v->present = true;
-            v->observer = thePlayer->GetObserverMode() != false;
-            v->chat_type = thePlayer->mChatType;
-            v->colour[0] = theColour.mRed, v->colour[1] = theColour.mGreen, v->colour[2] = theColour.mBlue;
             for (unsigned long i = 0; theGroup && i < theGroup->GetNumUnits(); i++)
                 if (theGroup->GetUnit(i) && theGroup->GetUnit(i)->mUnitClass->mUnitType == kUnitTypeAirport)
                     v->airport_selected = true;
