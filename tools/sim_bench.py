@@ -27,8 +27,9 @@ gates and a played game keep their CPU while a bench runs; --normal-priority tur
 --cache [DIR] reuses a finished game: a run whose EE-SIM.exe, data tree, rules documents, AI scripts, settings and seed
 all equal an earlier cached run's copies that run's report, trace and progress instead of playing it (the game is
 deterministic: the same inputs give the same game). The key hashes the exe's bytes, the data tree's Data files (names,
-sizes, times; Data/ai and Data/db by content), the stage's generated rules documents, the EE_AI_SCRIPTS folder's
-files by content (not its path), every option a run passes to EE-SIM.exe and every EE_* environment variable. DIR
+sizes, times; not its Data/ai and Data/db: the stage plays this checkout's data/ai and data/db, by content), the rules
+documents, the EE_AI_SCRIPTS folder's files by content (not its path), every option a run passes to EE-SIM.exe and
+every EE_* environment variable. DIR
 defaults to the main checkout's build/sim/cache (shared by the worktrees: a different exe is a different key). Runs of
 --repeat past the first are always played (the determinism check). Only finished games (rc 0, a report, no
 wall-timeout) are stored. Delete the folder to drop the cache.
@@ -106,7 +107,7 @@ def slots_index(slot):
 
 # ------------------------------------------------------------------------------------------------ the cache
 
-CACHE_FORMAT = 1
+CACHE_FORMAT = 2   # 2: the tree hashed without its own Data/ai, Data/db (tree_hash)
 NOT_INPUTS = {"EE_ORIG_SRC_ROOT", "EE_LLVM", "EE_XBUILD_OUT", "EE_SIM_CACHE", "EE_BENCH_QUEUE_PORT"}   # tool settings
 _memo = {}
 _memo_lock = threading.Lock()
@@ -144,7 +145,9 @@ def folder_hash(folder, content=True):
 
 
 def tree_hash(data):
-    """the data tree: open_data.json, Data/ai and Data/db by content, the rest of Data by name, size and time"""
+    """the data tree as a stage plays it: open_data.json without the hashes of its Data/ai and Data/db, the rest of
+    Data by name, size and time, and this checkout's data/ai and data/db (sim.stage_tree replaces the tree's own:
+    a sync of the tree, e.g. by the harness for the gates, must not drop every cached game)"""
     key = ("tree", data)
     with _memo_lock:
         if key in _memo:
@@ -152,11 +155,17 @@ def tree_hash(data):
     tree = sim.data_tree(data)
     h = hashlib.sha256()
     meta = tree / "open_data.json"
-    h.update(meta.read_bytes() if meta.exists() else b"-")
+    try:
+        made = json.loads(meta.read_text()) if meta.exists() else {}
+    except ValueError:
+        made = {"raw": meta.read_bytes().hex()}
+    h.update(json.dumps({k: v for k, v in made.items() if k not in ("ai", "db")}, sort_keys=True).encode())
     h.update(sim.overlay_hash(tree).encode())   # the stage's Data/ai and Data/db: this checkout's (sim.stage_tree)
     for sub in sorted((tree / "Data").iterdir()):
+        if sub.is_dir() and sub.name.lower() in ("ai", "db"):
+            continue
         h.update(f"{sub.name.lower()}\0".encode())
-        h.update((folder_hash(sub, sub.name.lower() in ("ai", "db")) if sub.is_dir() else file_hash(sub)).encode())
+        h.update((folder_hash(sub, False) if sub.is_dir() else file_hash(sub)).encode())
     with _memo_lock:
         _memo[key] = h.hexdigest()
     return _memo[key]
