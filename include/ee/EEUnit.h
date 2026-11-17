@@ -961,7 +961,6 @@ struct EEUnitClassImprovementEntry {
 // mMaxLevel is `long` as EEUCUpgradeTable's is (8 bytes on LP64, both).
 struct EEUnitClassImprovementTable {
     long GetMaxLevel() const { return this->mMaxLevel; }  // (provisional name; inline-budget evidence: 0x563c6d)
-    void* mU00;                             // +0x00 (EEUCUpgradeTable's vtable pointer)
     EEUnitClassImprovementEntry mEntries[16];   // +0x04
     long mMaxLevel;                         // +0x84
 };

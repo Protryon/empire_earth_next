@@ -10,6 +10,8 @@
 
 #include "ee/EEWorldConstants.h"
 #include "rust/data/tables.h"
+#include "ee/EEDbList.h"
+#include "rust/data/media.h"
 
 class FSFileSpec;
 class EEUnitClass;
@@ -79,8 +81,9 @@ private:
 extern EEWorldTable gWorldTable;            // 0x52fca0 (Empire Earth.cpp)
 
 // RTTI EETerrainTable (vtable 0x43f7e4; ctor 0xdb245, dtor 0xdbc7d, ??_G 0xdbc61). The record's members are
-// EeDataTerrainFields (rust/crates/ee_data tables.rs: the record and its copy), the base.
-class EETerrainTable : public EeDataTerrainFields {
+// EeDataTerrainFields (rust/crates/ee_data tables.rs: the record and its copy), the base; the mesh textures' use
+// count (mMediaCount, mIsLoading) is EeDataMediaUse (media.rs).
+class EETerrainTable : public EeDataTerrainFields, public EeDataMediaUse {
 public:
     EETerrainTable();
     virtual ~EETerrainTable();
@@ -108,9 +111,7 @@ public:
     GETexture** mTextures;                  // [mColumns * row + column]
     long mFirstTexture;                     // the textures numbered over the table
     long mTextureSetID;                     // the mesh's texture set index
-    unsigned long mLoadCount;               // Load counts it, Unload counts it down
     std::vector<long> mUnitClasses;         // ambient unit classes (gUnitClassTable indices; Handle408 loads their media)
-    volatile bool mIsLoading;               // set while Load runs; polled by other threads
     static std::vector<EETerrainTable*> sTable;
     static std::vector<class EECliffTerrainTable*> sCliffTable;
 };
@@ -128,18 +129,15 @@ public:
 };
 
 // RTTI EETerrainTypeTable (vtable 0x43f7f8; ctor 0xdbd11, ??_G 0xdbe27). Inline dtor.
-// mID..mIsInEditor are EeDataTerrainTypeFields (rust/crates/ee_data tables.rs: the record and its copy), the base
+// mColorSetID (EEMap sets it) and mID..mIsInEditor are EeDataTerrainTypeFields (rust/crates/ee_data tables.rs: the
+// record, its copy and the list), the base
 class EETerrainTypeTable : public EeDataTerrainTypeFields {
 public:
-    EETerrainTypeTable();
-    virtual ~EETerrainTypeTable() {}
     static long Load(FSFileSpec* inFile);   // 0xdbd2e (db\dbterrainType.dat)
     static void Unload();
     static long LoadDamageTables(FSFileSpec* inFile);  // 0xdbf11 (gDamageTable and its two twins; provisional name)
     static void ClearDamageTables();
-    // members from the ctor: +0x08..+0x18 = 0, +0x1c = false; sizeof 0x20 (new site)
-    long mColorSetID;                       // +0x04 (untouched by the ctor)
-    static std::vector<EETerrainTypeTable*> sTable;  // 0x8e86f8 (guard 0x8e86f0 bit 1; only its unit sees it)
+    static EEDbList<EETerrainTypeTable, EeDataList::TerrainTypes> sTable;  // 0x8e86f8 (guard 0x8e86f0 bit 1; only its unit sees it)
     // inline (out-of-line COMDATs 0x11e22b / 0x11e24e after their first user in EEMap.cpp) (provisional names)
     static EETerrainTypeTable* Get(unsigned long inIndex) { return inIndex < EETerrainTypeTable::sTable.size() ? EETerrainTypeTable::sTable[inIndex] : NULL; }
     static unsigned long GetCount() { return EETerrainTypeTable::sTable.size(); }
