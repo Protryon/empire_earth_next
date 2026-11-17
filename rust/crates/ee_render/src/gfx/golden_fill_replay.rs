@@ -1045,3 +1045,76 @@ fn the_unit_and_object_fields_replay_the_cpp_bit_for_bit() {
     }
     assert!(units_checked > 200 && objects_checked > 40, "{units_checked} units, {objects_checked} objects");
 }
+
+#[test]
+fn the_effect_readers_and_the_drawn_facts_read_the_golden_world() {
+    use crate::gfx::effect_views;
+    use crate::gfx::fill::unit_drawn_facts;
+    use ee_sim::world::{PlayerView, TileView};
+    register_layout();
+    let g = parse();
+    let mut checked = 0;
+    for f in g.frames.iter().take(12) {
+        let w = build(&g, f);
+        let current = addr(&*w.players[f.current]) as u64;
+        for (i, k) in f.units.iter().enumerate() {
+            let h = addr(&*w.units[i]) as u64;
+            let class = &g.classes[k.class];
+            let stats = &g.stats[k.stats];
+            // SAFETY: the fake world lives through the test
+            unsafe {
+                assert_eq!(effect_views::unit_scale(h).to_bits(), stats.scale.to_bits());
+                assert_eq!(effect_views::selection_size(h).to_bits(), class.selection.to_bits());
+                assert_eq!(effect_views::max_hit_points(h), stats.max as i32);
+                assert_eq!(effect_views::unit_class_scale(h).to_bits(), class.scale.to_bits());
+                assert_eq!(effect_views::has_complex(h), k.complex.is_some());
+                let tile = effect_views::unit_tile(h);
+                assert_eq!((tile.size, tile.x, tile.y), (class.tile as f32, k.tile.0 as f32, k.tile.1 as f32));
+                let owner = &g.players[k.player];
+                let enemy = k.player != f.current && g.players[f.current].enemies[k.player] != 0 && k.player != 0;
+                assert_eq!(effect_views::confirm_enemy(h, current), enemy);
+                if let Some(c) = &k.complex {
+                    assert_eq!(effect_views::unit_location(h).m, c.transform);
+                    let color = effect_views::player_color(h);
+                    assert_eq!([color.red, color.green, color.blue], owner.color);
+                    assert_eq!(effect_views::icons_owner(h, current), k.player == f.current && c.built);
+                    let vent = effect_views::vent_unit(h);
+                    assert_eq!((vent.dead, vent.max_hit_points), (c.command == 6003, stats.max as f32));
+                    let farm = effect_views::farm_unit(h);
+                    assert_eq!(
+                        (farm.tile_x, farm.tile_y, farm.tile_size, farm.built),
+                        (k.tile.0 as i32, k.tile.1 as i32, class.tile as i32, c.built)
+                    );
+                    assert_eq!(effect_views::market_unbuilt(h), class.kind == 0x321 && !c.built && !c.foundation);
+                }
+                // the drawn facts of a unit on its tile
+                let t = WorldRead::begin();
+                let Some(tile_handle) = (w.units[i].tile != 0).then_some(w.units[i].tile as u64) else { continue };
+                let unit = UnitView::of(&t, h).unwrap();
+                let tile = TileView::of(&t, tile_handle).unwrap();
+                let player = PlayerView::of(&t, current).unwrap();
+                let facts = unit_drawn_facts(unit, tile, player, f.free, 7, 9);
+                let words = w.tiles[(k.tile.1 * 64 + k.tile.0) as usize].words[0];
+                assert_eq!(facts.seen, (words >> ((f.current & 1) << 4) & 0xff) > 1);
+                assert_eq!(
+                    (facts.food, facts.has_complex, facts.category, facts.owner_id, facts.unit_type, facts.tile_size),
+                    (
+                        k.resource.0 == 2 && k.resource.1 > 0,
+                        k.complex.is_some(),
+                        class.category as i32,
+                        k.player as i32,
+                        class.kind as i32,
+                        class.tile as i32
+                    )
+                );
+                assert_eq!(
+                    (facts.mine, facts.id, facts.unit_count, facts.object_count),
+                    (k.player == f.current, k.id as i32, 7, 9)
+                );
+                assert_eq!(facts.path_marker, class.kind == 0x104 || class.kind == 0xdf);
+            }
+            checked += 1;
+        }
+    }
+    assert!(checked > 200, "{checked}");
+}
