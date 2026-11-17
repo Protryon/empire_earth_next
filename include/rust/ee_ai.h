@@ -137,6 +137,8 @@ struct EeAiUnitsSave {
   size_t mark_count;
   const int32_t *trades;
   size_t trade_count;
+  bool reflex_militia;
+  bool reflex_held;
 };
 
 /// The limits of a decode the C++ owns.

@@ -28858,3 +28858,55 @@ Branch `rust-won-net29`. Net C++ over src + include (without include/rust) again
   the first Roman scenario (its players chunk cut to half and stored raw): the build before the fix faults in
   ~EEEffect, the fixed one exits with "load failed: Load game file is corrupt.". "Building Up" has one computer:
   EE-SIM's last-computer-standing rule ends it after 1.7 s, which counts as played.
+
+## Load equals continue on the Lua AI: the tech nodes' allowed flags (save 0.282, 2026-11-16)
+
+- **The evidence.** After the merge of main ff7db710 (the Lua AI, save 0.281), 5 of the oracle's 18 saves (seeds
+  2-7 at 600, 1350 and 2100 s) parted from the continued game 36 to 443 ticks after the load. Every parting looked
+  alike: unit count and `ai=` equal, then rng and oos. (The `inputs=3` against `inputs=0` there is the session's
+  input count, which a load resets and the comparison leaves out: no clue.)
+- **How it was found.** saveload with no `--clean` keeps both games' EE-AI traces. Compare the decision lines from
+  the load's game ms on, leaving out the trace-only lines a load moves (next.save/next.load, `restored=1`, the `cp`
+  stats, `sim hash`). The first different line on seed 6 at 2100 s was in the first step after the load:
+  `next.cmd research a=1308 ... result=refused reason=cannot_afford` in the continued game, `result=ok` in the
+  loaded one.
+- **The cause: EETechTreeNode::mIsAllowed was not saved.** QueueResearch clears it for a one-off technology, a
+  queued or researched one (only the cancels set it again). The tech tree's block holds only the researched,
+  obsolete and editor ids, and a load builds every node afresh, allowed. classic_lua asks for tech 1308 (the town
+  centre's garrison storage: cost 0, kind 9, its researched event the garrison's move to the capitol) every second
+  once it is researched. The continued game refused it. The loaded game researched it again, and its event parted
+  the games. Under the C++ classic AI nothing asked twice, so this never showed. A human could do the same after a
+  load: the button shows while the node is allowed.
+- **The fix (save 0.282, EESaveHasTechAllowed).** A world part after the graph searches (ee_units world_save.rs
+  EE_UNITS_WORLD_PART_TECH_ALLOWED, EEPWorldHelper.cpp EESaveTechAllowed): per player, the sorted ids of the nodes
+  not allowed. At the first tick (EEAfterLoad, after ApplySavedState and the map restrictions) every node of each
+  tree is set as it was saved. 0.281 saves still load, without the part. The flags were not put in the tech tree's
+  own block: EEPlayer::ReloadTechTree round-trips that block in a running game, and the flags there would change
+  an uninterrupted game.
+- **Two more gaps of the per-unit block (EENU version 4).** `ai.reflex`'s militia and held flags were not saved: a
+  load had the defaults (militia on) where classic_lua had turned the militia off at init. And the index of each
+  unit's pending attacked event (mAttackedAt) was cleared by a load while the events came back, so a hit after the
+  load added a second event. The index is now rebuilt from the events. Versions 1-3 still load, with the reflexes
+  at their defaults. The golden's `nenu` lines compare the version 3 layout the driver wrote (`as_v3`). Neither
+  gap parted an oracle save; they are fixed because they are real state.
+- **The location goal's group path state is saved from 0.282** (location.rs GROUP_PATH_STATE_MINOR; the original
+  never saved it). A goal waiting for its group path (state 1) asked for an ordinary path after a load. It is in
+  the out-of-synch checksum. No row changed with it.
+- **Results.** Oracle saveload, seeds 2-7 at 600/1350/2100 s: 18 of 18 continue identically to 2700 s (13 before).
+  The matrix (`--settings all --seeds 2-3 --at 1000,1900`), in two runs with the same outcome: five rows went from
+  parting to END (plains-medium-3ai 2 1900, islands 3 1900, highlands-large-4ai 2 1900, mediterranean-easy 2 and 3
+  at 1900). Every setting now has all its saves at END except calamity seed 2 (the game ends at 1083 s: no 1900 s
+  save) and `next` seed 2 (309 and 0 ticks, as before).
+- **`next` seed 2 still parts, and not through AI state.** At 1900 s it parts at the loaded game's first tick:
+  units and oos differ, rng and `ai=` are equal. A `--dump-tick` of both games at that ms (EE-SIM) shows a location
+  goal at group path state 3 in the continued game and 0 in the loaded one. Saving the state did not change this,
+  so the continued game set it during that tick: EEComplexUnit's path-taken code sets 3 when a path comes back.
+  The same dump shows another unit already a tile apart, and the path manager's bounded machine storage differs
+  (BOUNDED bytes 70165 against 69237). So a path came back in one game and not in the other. That is the path
+  manager's state (the bounded machine kept from search to search), not the Lua AI's. It is left for the path
+  lane.
+- **Lesson.** For a "load equals continue" parting, diff the two games' EE-AI decision lines from the load on
+  before diffing state. The first decision that differs names the input that was lost (here a command's result),
+  and from there the state is a short search.
+- **Gates.** The editor gate's expected.txt was re-recorded: every chunk carries the save version, and the world
+  chunk grows by the tech flags (17-28 bytes). No other line changed.

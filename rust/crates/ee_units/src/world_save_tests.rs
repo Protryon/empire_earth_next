@@ -220,7 +220,7 @@ fn the_save_writes_every_part_in_order() {
     expect.extend([2, 0, 3, 2, 0x82, 5]); // the players' lists
     assert_eq!(words, expect);
     let parts: Vec<i64> = w.parts.iter().map(|p| p.1).collect();
-    assert_eq!(parts, vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    assert_eq!(parts, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 }
 
 #[test]
@@ -230,7 +230,7 @@ fn a_load_reads_the_parts_and_queues_their_restores_in_order() {
     let mut l = World { file: w.file.clone(), has_upto: 99, ..Default::default() };
     load_live(&mut l);
     assert!(l.file.is_empty());
-    assert_eq!(l.parts.iter().map(|p| p.1).collect::<Vec<_>>(), vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    assert_eq!(l.parts.iter().map(|p| p.1).collect::<Vec<_>>(), vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     let pending: Vec<Box<Pending>> =
         l.after.iter().map(|&p| unsafe { Box::from_raw(p as usize as *mut Pending) }).collect();
     assert_eq!(pending.len(), 7);
@@ -250,6 +250,26 @@ fn a_load_reads_the_parts_and_queues_their_restores_in_order() {
     assert!(!unsafe { ee_units_world_ghost_find(42, &mut found) });
     restore(&mut l, &Pending::Ghosts);
     assert!(!unsafe { ee_units_world_ghost_find(40, &mut found) });
+}
+
+#[test]
+fn the_tech_flags_follow_the_graph_searches_from_0_282_only() {
+    // a 0.281 save (the predicates up to the graph searches): no tech flags part either way
+    let mut w = sample();
+    w.has_upto = EE_UNITS_WORLD_HAS_GRAPH_SEARCHES;
+    save_live(&mut w);
+    assert_eq!(w.parts.iter().map(|p| p.1).collect::<Vec<_>>(), vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    let mut l = World { file: w.file.clone(), has_upto: EE_UNITS_WORLD_HAS_GRAPH_SEARCHES, ..Default::default() };
+    load_live(&mut l);
+    assert_eq!(l.parts.iter().map(|p| p.1).collect::<Vec<_>>(), vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    // 0.282: the tech flags last, after the graph searches
+    let mut n = World { file: w.file.clone(), has_upto: EE_UNITS_WORLD_HAS_TECH_ALLOWED, ..Default::default() };
+    load_live(&mut n);
+    assert_eq!(n.parts.len(), 10);
+    assert_eq!(n.parts.last(), Some(&(EE_UNITS_WORLD_PART_LOAD, EE_UNITS_WORLD_PART_TECH_ALLOWED)));
+    for p in l.after.iter().chain(n.after.iter()) {
+        drop(unsafe { Box::from_raw(*p as usize as *mut Pending) });
+    }
 }
 
 #[test]

@@ -1,13 +1,15 @@
 //! The per-unit Lua interface's block in a saved game ("EENU"; `EECPNextUnits.cpp` `EECPUnitsSave` /
 //! `EECPUnitsLoad`, after the next engine's block from save version 0.280). Little-endian int32 fields:
 //!
-//! - "EENU", version (written: 3; read: 1-3);
+//! - "EENU", version (written: 4; read: 1-4);
 //! - the held units (count, then each), the pending events (count, then kind, unit, other, type, amount, time each),
 //!   the swaps' forwarding (count, then old id, new id, game ms each), the enemy memory (count, then id, player, type,
 //!   x, y, hit points, seen, building each); the memory's ms and next time, the naval flee and danger reflexes (0/1),
 //!   the micro step's next time;
 //! - version 2: the hurt spots (count, then place, time each) and the marks (count, then x, y, r, value, until each);
-//! - version 3: the lost layer's trades (count, then minute, cell, lost, dealt each).
+//! - version 3: the lost layer's trades (count, then minute, cell, lost, dealt each);
+//! - version 4: the militia and held reflexes (0/1 each; before it a load had the militia on and held off, the
+//!   C++ defaults, whatever `ai.reflex` had set).
 //!
 //! The lists are in the C++ containers' order on both sides: the encoder writes them as given, the decoder returns
 //! them as read, and the C++ puts them back into its sets and maps (a repeated key: the last wins, as before). The
@@ -15,7 +17,7 @@
 //! decode; the format's own are 2^20 held units and forwards, 256 hurt spots, 64 marks.
 
 /// The version the encoder writes.
-pub(crate) const VERSION: i32 = 3;
+pub(crate) const VERSION: i32 = 4;
 const MAX_HELD: i32 = 1 << 20;
 const MAX_FORWARD: i32 = 1 << 20;
 const MAX_HURT: i32 = 256;
@@ -77,6 +79,10 @@ pub struct UnitsSave {
     pub marks: Vec<EeAiUnitsMark>,
     /// minute, cell, lost, dealt
     pub trades: Vec<[i32; 4]>,
+    /// version 4 (older blocks: true, the C++ default)
+    pub reflex_militia: bool,
+    /// version 4 (older blocks: false, the C++ default)
+    pub reflex_held: bool,
 }
 
 /// The limits of a decode the C++ owns.
@@ -95,7 +101,7 @@ fn put(out: &mut Vec<u8>, v: i32) {
     out.extend_from_slice(&v.to_le_bytes());
 }
 
-/// The block of a state (always version 3; `s.version` is not read).
+/// The block of a state (always version 4; `s.version` is not read).
 pub fn encode(s: &UnitsSave) -> Vec<u8> {
     let mut out = Vec::with_capacity(64 + 4 * s.held.len() + 32 * s.memory.len());
     out.extend_from_slice(b"EENU");
@@ -144,6 +150,8 @@ pub fn encode(s: &UnitsSave) -> Vec<u8> {
             put(&mut out, v);
         }
     }
+    put(&mut out, s.reflex_militia as i32);
+    put(&mut out, s.reflex_held as i32);
     out
 }
 
@@ -178,7 +186,7 @@ impl Reader<'_> {
     }
 }
 
-/// The state of a block, None when it is not one (no "EENU", a version not 1-3, a count past its limit, an event of
+/// The state of a block, None when it is not one (no "EENU", a version not 1-4, a count past its limit, an event of
 /// another kind, a field past the end, bytes left over).
 pub fn decode(bytes: &[u8], limits: &EeAiUnitsLimits) -> Option<UnitsSave> {
     if bytes.len() < 8 || &bytes[0..4] != b"EENU" {
@@ -186,10 +194,10 @@ pub fn decode(bytes: &[u8], limits: &EeAiUnitsLimits) -> Option<UnitsSave> {
     }
     let mut g = Reader { b: bytes, at: 4, ok: true };
     let version = g.get();
-    if !(1..=3).contains(&version) {
+    if !(1..=4).contains(&version) {
         return None;
     }
-    let mut s = UnitsSave { version, ..UnitsSave::default() };
+    let mut s = UnitsSave { version, reflex_militia: true, ..UnitsSave::default() };
     let n = g.count(MAX_HELD);
     let mut k = 0;
     while k < n && g.ok {
@@ -262,6 +270,10 @@ pub fn decode(bytes: &[u8], limits: &EeAiUnitsLimits) -> Option<UnitsSave> {
             k += 1;
         }
     }
+    if version >= 4 {
+        s.reflex_militia = g.get() != 0;
+        s.reflex_held = g.get() != 0;
+    }
     if !g.ok || g.at != bytes.len() {
         return None;
     }
@@ -304,6 +316,8 @@ mod tests {
             hurt: vec![[65537, 99]],
             marks: vec![EeAiUnitsMark { x: 1, y: 2, r: 3, value: 4, until: 5 }],
             trades: vec![[1, 2, 3, 4]],
+            reflex_militia: false,
+            reflex_held: true,
         }
     }
 
@@ -311,7 +325,8 @@ mod tests {
     fn round_trip() {
         let s = sample();
         let b = encode(&s);
-        assert_eq!(&b[0..8], b"EENU\x03\0\0\0");
+        assert_eq!(&b[0..8], b"EENU\x04\0\0\0");
+        assert_eq!(&b[b.len() - 8..], &[0, 0, 0, 0, 1, 0, 0, 0]);
         assert_eq!(decode(&b, &LIMITS).unwrap(), s);
     }
 
@@ -336,6 +351,14 @@ mod tests {
     fn older_versions() {
         let s = sample();
         let b = encode(&s);
+        // version 3: without the militia and held reflexes, which load as the C++ defaults
+        let mut v3 = b[..b.len() - 8].to_vec();
+        v3[4] = 3;
+        let d = decode(&v3, &LIMITS).unwrap();
+        assert_eq!(d.version, 3);
+        assert_eq!(d.trades, s.trades);
+        assert!(d.reflex_militia && !d.reflex_held);
+        let b = v3;
         // version 2: without the trades
         let mut v2 = b[..b.len() - 4 - 16].to_vec();
         v2[4] = 2;

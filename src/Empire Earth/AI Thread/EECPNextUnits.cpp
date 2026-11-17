@@ -2026,7 +2026,7 @@ static int LuaRelease(lua_State* L)
 }
 
 // ai.reflex{naval_flee = false, danger = false, militia = false, held = true, memory_ms = 180000} (held: the militia
-// and the danger zones take the held citizens too; not saved: a script that wants it says so every step)
+// and the danger zones take the held citizens too; every flag saved, the militia and held ones from EENU version 4)
 static int LuaReflex(lua_State* L)
 {
     EECPUnitsCharge(L, kCostCall);
@@ -4603,8 +4603,10 @@ void EECPUnitsMicroTick(unsigned long inTime)
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// The save: "EENU" (version 3: the lost layer's trades; 2: the hurt spots and the marks). The format is Rust's (ee_ai
-// units_save.rs); the state's lists go over in its containers' order and come back into them.
+// The save: "EENU" (version 4: the militia and held reflexes; 3: the lost layer's trades; 2: the hurt spots and the
+// marks). The format is Rust's (ee_ai units_save.rs); the state's lists go over in its containers' order and come back
+// into them. Not saved, rebuilt: mAttackedAt from the pending events (the attacked event of each unit, as the damage
+// hook merges them), the layers at the next game second.
 
 static void EECPUnitsSaveState(const EECPUnitsState* s, std::string& outBytes)
 {
@@ -4666,6 +4668,8 @@ static void EECPUnitsSaveState(const EECPUnitsState* s, std::string& outBytes)
     v.mark_count = theMarks.size();
     v.trades = theTrades.data();
     v.trade_count = s->mTrades.size();
+    v.reflex_militia = s->mReflexMilitia;
+    v.reflex_held = s->mReflexHeld;
     size_t theAt = outBytes.size();
     size_t theLength = ee_ai_units_save_encode(&v, NULL, 0);
     outBytes.resize(theAt + theLength);
@@ -4695,6 +4699,8 @@ static bool EECPUnitsLoadState(EECPUnitsState* s, const std::string& inBytes)
         e.mType = v.events[k].unit_type;
         e.mAmount = v.events[k].amount;
         e.mTime = v.events[k].time;
+        if (e.mKind == kEvAttacked)
+            s->mAttackedAt[e.mUnit] = (long)s->mEvents.size();   // a later hit adds to it, as in the running game
         s->mEvents.push_back(e);
     }
     s->mForward.clear();
@@ -4717,6 +4723,8 @@ static bool EECPUnitsLoadState(EECPUnitsState* s, const std::string& inBytes)
     s->mMemoryNext = v.memory_next;
     s->mReflexNavalFlee = v.reflex_naval_flee;
     s->mReflexDanger = v.reflex_danger;
+    s->mReflexMilitia = v.reflex_militia;   // (a version 1-3 block: the defaults, militia on and held off)
+    s->mReflexHeld = v.reflex_held;
     s->mMicroNext = v.micro_next;
     s->mHurt.clear();
     for (size_t k = 0; k < v.hurt_count; k++)

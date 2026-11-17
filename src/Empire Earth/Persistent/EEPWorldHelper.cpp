@@ -74,6 +74,7 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGRust.h"
 #include <algorithm>
+#include <memory>
 #include <vector>
 #include "rust/ee_combat.h"
 
@@ -218,6 +219,73 @@ static void GatherGhosts(std::vector<EEComplexUnit*>& outDead, std::vector<EEUni
     }
 }
 
+// 0.282 (EESaveHasTechAllowed): per player, the ids of its tech nodes that are not allowed (EETechTreeNode::mIsAllowed
+// false: a one-off technology queued or researched, EEComplexUnit::QueueResearch; a building the map or the capitol
+// count forbids). The tech tree's own block holds only the researched and obsolete ids, so a load had every node
+// allowed again: a computer player that asks for a researched one-off technology each second (classic_lua and the
+// town centre's garrison storage) researched it a second time. The flags go back at the first tick, after the load's
+// own passes (EETechTree::ApplySavedState, the map restrictions): every node of each tree as it was saved.
+static long EESaveTechAllowed(FSFile& outFile)
+{
+    unsigned long thePlayers = gWorld.mNumPlayers;
+    long theResult = outFile.Write(thePlayers);
+    for (unsigned long p = 0; p < thePlayers && theResult == kErrorOK; p++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[p];
+        EETechTree* theTree = thePlayer != NULL ? thePlayer->GetTechTree() : NULL;
+        std::vector<long> theIDs, theOff;
+        if (theTree != NULL)
+            theTree->GetNodeIDs(theIDs);
+        for (unsigned long k = 0; k < theIDs.size(); k++) {
+            EETechTreeNode* theNode = theTree->Get(theIDs[k]);
+            if (theNode != NULL && !theNode->mIsAllowed)
+                theOff.push_back(theIDs[k]);
+        }
+        std::sort(theOff.begin(), theOff.end());
+        unsigned long theCount = (unsigned long)theOff.size();
+        theResult = outFile.Write(theCount);
+        for (unsigned long k = 0; k < theCount && theResult == kErrorOK; k++)
+            theResult = outFile.Write(theOff[k]);
+    }
+    return theResult;
+}
+
+static long EELoadTechAllowed(FSFile& inFile)
+{
+    std::shared_ptr<std::vector<std::vector<long> > > theLists = std::make_shared<std::vector<std::vector<long> > >();
+    unsigned long thePlayers = 0;
+    long theResult = inFile.Read(thePlayers);
+    for (unsigned long p = 0; p < thePlayers && theResult == kErrorOK; p++) {
+        unsigned long theCount = 0;
+        theResult = inFile.Read(theCount);
+        theLists->push_back(std::vector<long>());
+        for (unsigned long k = 0; k < theCount && theResult == kErrorOK; k++) {
+            long theID = 0;
+            theResult = inFile.Read(theID);
+            theLists->back().push_back(theID);
+        }
+        std::sort(theLists->back().begin(), theLists->back().end());
+    }
+    if (theResult != kErrorOK)
+        return theResult;
+    EEAfterLoad([theLists]() {
+        for (unsigned long p = 0; p < theLists->size() && p < gWorld.mNumPlayers; p++) {
+            EEPlayer* thePlayer = gWorld.mPlayers[p];
+            EETechTree* theTree = thePlayer != NULL ? thePlayer->GetTechTree() : NULL;
+            if (theTree == NULL)
+                continue;
+            const std::vector<long>& theOff = (*theLists)[p];
+            std::vector<long> theIDs;
+            theTree->GetNodeIDs(theIDs);
+            for (unsigned long k = 0; k < theIDs.size(); k++) {
+                EETechTreeNode* theNode = theTree->Get(theIDs[k]);
+                if (theNode != NULL)
+                    theNode->mIsAllowed = !std::binary_search(theOff.begin(), theOff.end(), theIDs[k]);
+            }
+        }
+    });
+    return kErrorOK;
+}
+
 static int64_t EEPWorldHost(void* inContext, int32_t inOp, EeUnitsWorldIo* io);
 
 static int64_t EEPWorldPart(EEPWorldContext& inContext, bool inLoad, int64_t inPart, bool inTownAreas)
@@ -233,6 +301,7 @@ static int64_t EEPWorldPart(EEPWorldContext& inContext, bool inLoad, int64_t inP
     case EE_UNITS_WORLD_PART_PATH_SEARCHES: if (inLoad) return gPathManager.LoadSearches(theFile); gPathManager.SaveSearches(theFile); return 0;
     case EE_UNITS_WORLD_PART_ACTIVE_GROUPS: if (inLoad) return EELoadActiveGroups(theFile); EESaveActiveGroups(theFile); return 0;
     case EE_UNITS_WORLD_PART_GRAPH_SEARCHES: if (inLoad) return gPathManager.LoadGraphSearches(theFile); gPathManager.SaveGraphSearches(theFile); return 0;
+    case EE_UNITS_WORLD_PART_TECH_ALLOWED: if (inLoad) return EELoadTechAllowed(theFile); EESaveTechAllowed(theFile); return 0;
     }
     return 0;
 }
@@ -256,6 +325,7 @@ static bool EEPWorldHas(const EEPWorldContext& inContext, int64_t inWhich)
     case EE_UNITS_WORLD_HAS_PATH_SEARCHES: return EESaveHasPathSearches(theMajor, theMinor);
     case EE_UNITS_WORLD_HAS_ACTIVE_GROUPS: return EESaveHasActiveGroups(theMajor, theMinor);
     case EE_UNITS_WORLD_HAS_GRAPH_SEARCHES: return EESaveHasGraphSearches(theMajor, theMinor);
+    case EE_UNITS_WORLD_HAS_TECH_ALLOWED: return EESaveHasTechAllowed(theMajor, theMinor);
     }
     return false;
 }
