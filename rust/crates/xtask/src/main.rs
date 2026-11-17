@@ -1,8 +1,8 @@
 //! Repository tasks: `cargo run -p xtask -- cbindgen [--check]`, `capture-digest SEED=PATH ...`
 //! (tools/sim_capture.py's digests, [`capture_digest`]).
 //!
-//! The headers in `include/rust` are generated from the `extern "C"` items of `ee_rust` and checked in: one per crate
-//! (`ee_won.h`, ...; [`split`]), `ee_rust_common.h`, and `ee_rust.h`, which includes them all. `--check` fails if one
+//! The headers in `include/rust` are generated from the `extern "C"` items of `ee_game` and checked in: one per module
+//! (`sim/units.h`, ...; [`split`]), `common.h`, and `all.h`, which includes them all. `--check` fails if one
 //! is stale or a generated header is left over, as `eedata.py cppgen --check` does for the generated C++.
 
 mod capture_digest;
@@ -61,15 +61,22 @@ fn normalized(text: &str) -> String {
     text.replace("\r\n", "\n")
 }
 
-/// The headers in `include/rust` this task wrote (they start with its note).
+/// The headers under `include/rust` this task wrote (they start with its note), in its subdirectories too.
 fn generated_headers(dir: &Path) -> Vec<PathBuf> {
-    let Ok(entries) = std::fs::read_dir(dir) else { return Vec::new() };
-    let mut out: Vec<PathBuf> = entries
-        .flatten()
-        .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|e| e == "h"))
-        .filter(|p| std::fs::read_to_string(p).is_ok_and(|t| t.starts_with(HEADER_NOTE)))
-        .collect();
+    let mut out = Vec::new();
+    let mut todo = vec![dir.to_path_buf()];
+    while let Some(d) = todo.pop() {
+        let Ok(entries) = std::fs::read_dir(&d) else { continue };
+        for p in entries.flatten().map(|e| e.path()) {
+            if p.is_dir() {
+                todo.push(p);
+            } else if p.extension().is_some_and(|e| e == "h")
+                && std::fs::read_to_string(&p).is_ok_and(|t| t.starts_with(HEADER_NOTE))
+            {
+                out.push(p);
+            }
+        }
+    }
     out.sort();
     out
 }
@@ -99,6 +106,9 @@ fn cbindgen_task(check: bool) -> Result<(), String> {
         for (path, text) in &wanted {
             let have = std::fs::read_to_string(path).map(|t| normalized(&t)).unwrap_or_default();
             if have != **text {
+                if let Some(parent) = path.parent() {
+                    std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+                }
                 std::fs::write(path, text.as_bytes()).map_err(|e| format!("{}: {e}", path.display()))?;
                 println!("wrote {}", path.display());
             }

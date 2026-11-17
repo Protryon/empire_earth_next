@@ -1,4 +1,4 @@
-//! Splits cbindgen's one header into a header per crate, so that a C++ unit depends only on the crates it uses.
+//! Splits cbindgen's one header into a header per module, so that a C++ unit depends only on the modules it uses.
 //!
 //! cbindgen runs once over `ee_rust` (renames, the order of declarations and the dropped duplicates stay those of one
 //! shared header); this module cuts its output into its top-level items and gives each to the crate that defines it,
@@ -11,9 +11,9 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::Path;
 
 /// The header with the items of `ee_rust` itself and the names no one crate owns.
-pub const COMMON: &str = "ee_rust_common";
+pub const COMMON: &str = "common";
 /// The umbrella that includes every header.
-pub const UMBRELLA: &str = "ee_rust";
+pub const UMBRELLA: &str = "all";
 
 const EXTERN_OPEN: &str = "extern \"C\" {";
 const EXTERN_CLOSE: &str = "}  // extern \"C\"";
@@ -236,28 +236,48 @@ fn rust_files(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
     }
 }
 
-/// The crates the restructure merged (docs/progress/crate-restructure.md). Until the headers are split by module, a
-/// merged crate's module keeps the header of the crate it was (`src/units/` of ee_sim: `ee_units`), the root of ee_game
-/// is ee_rust's (the common header), and the three WON crates share `ee_won`.
-const MERGED: &[&str] = &["ee_base", "ee_sim", "ee_render", "ee_audio", "ee_net", "ee_game"];
+/// The crates and their header directories: `rust/<dir>/<module>.h` holds the C interface of one top-level module of
+/// the crate (`rust/sim/units.h`: `ee_sim::units`), `rust/<dir>/<dir>.h` the crate root's own items.
+const CRATE_DIRS: &[(&str, &str)] = &[
+    ("ee_base", "base"),
+    ("ee_data", "data"),
+    ("ee_sim", "sim"),
+    ("ee_render", "render"),
+    ("ee_audio", "audio"),
+    ("ee_net", "net"),
+    ("ee_ui", "ui"),
+    ("ee_won_net", "won_net"),
+    ("ee_won_gui", "won_gui"),
+    ("ee_won_lobby", "won_lobby"),
+    ("ee_game", "game"),
+];
 
-/// The header a source file's items go to (see [`MERGED`]).
+/// Modules whose C interfaces name each other share one header (a header cannot include one that includes it).
+const SHARED: &[(&str, &str)] =
+    &[("won_net/cppcore", "won_net/hostop"), ("won_net/opobj", "won_net/hostop"), ("won_net/thread", "won_net/hostop")];
+
+/// The header a source file's items go to: its crate's directory and its top-level module; ee_game's root (the
+/// library's own items) is the common header.
 fn header_of(crates_dir: &Path, krate: &str, file: &Path) -> String {
-    if krate.starts_with("ee_won_") {
-        return "ee_won".to_string();
-    }
+    let dir = CRATE_DIRS.iter().find(|(k, _)| *k == krate).map_or(krate, |(_, d)| *d);
     let src = crates_dir.join(krate).join("src");
-    // ee_net is also the name of the crate before (its root then has no module "before the restructure")
-    let merged = MERGED.contains(&krate)
-        && std::fs::read_to_string(src.join("lib.rs")).is_ok_and(|t| t.contains("before the restructure."));
-    if !merged {
-        return krate.to_string();
-    }
     let first = file.strip_prefix(&src).ok().and_then(|p| p.components().next()).and_then(|c| c.as_os_str().to_str());
-    match first {
-        Some("lib.rs") | None if krate == "ee_game" => "ee_rust".to_string(),
-        Some("lib.rs") | None => krate.to_string(),
-        Some(name) => format!("ee_{}", name.strip_suffix(".rs").unwrap_or(name)),
+    let unit = match first {
+        Some("lib.rs") | None if krate == "ee_game" => return UMBRELLA.to_string(),
+        Some("lib.rs") | None => format!("{dir}/{dir}"),
+        Some(name) => format!("{dir}/{}", name.strip_suffix(".rs").unwrap_or(name)),
+    };
+    SHARED.iter().find(|(m, _)| *m == unit).map_or(unit.clone(), |(_, h)| h.to_string())
+}
+
+/// The module a header holds, for its first line (`sim/units`: `ee_sim::units`).
+fn module_of(header: &str) -> String {
+    let (dir, module) = header.split_once('/').unwrap_or((header, header));
+    let krate = CRATE_DIRS.iter().find(|(_, d)| *d == dir).map_or(dir, |(k, _)| *k);
+    if module == dir {
+        format!("the crate {krate}'s root")
+    } else {
+        format!("{krate}::{module}")
     }
 }
 
@@ -429,11 +449,12 @@ pub fn split(
         out.insert(header.to_string(), render(header, note, &parsed.sys_includes, includes, &types, &functions));
     }
     let mut umbrella = format!(
-        "{note}\n// Every crate's C interface. Include only the headers of the crates a file uses (rust/<crate>.h).\n\n\
+        "{note}\n// Every module's C interface. Include only the headers of the modules a file uses \
+         (rust/<crate>/<module>.h).\n\n\
          #ifndef EE_RUST_H\n#define EE_RUST_H\n\n"
     );
     for header in out.keys() {
-        umbrella.push_str(&format!("#include \"{header}.h\"\n"));
+        umbrella.push_str(&format!("#include \"rust/{header}.h\"\n"));
     }
     umbrella.push_str("\n#endif  // EE_RUST_H\n");
     out.insert(UMBRELLA.to_string(), umbrella);
@@ -451,7 +472,7 @@ fn check_acyclic(deps: &BTreeMap<&str, BTreeSet<&str>>) -> Result<(), String> {
             Some(true) => return Ok(()),
             Some(false) => {
                 path.push(node);
-                return Err(format!("the crates' headers include each other: {}", path.join(" -> ")));
+                return Err(format!("the modules' headers include each other: {}", path.join(" -> ")));
             }
             None => {}
         }
@@ -472,7 +493,7 @@ fn check_acyclic(deps: &BTreeMap<&str, BTreeSet<&str>>) -> Result<(), String> {
 }
 
 fn guard(header: &str) -> String {
-    format!("EE_RUST_{}_H", header.to_ascii_uppercase())
+    format!("EE_RUST_{}_H", header.replace('/', "_").to_ascii_uppercase())
 }
 
 /// One header's text: the preamble, the types in cbindgen's order, the functions in an `extern "C"` block.
@@ -485,19 +506,19 @@ pub fn render(
     functions: &[&Item],
 ) -> String {
     let what = if header == COMMON {
-        "The C interface of rust/crates/ee_game and the names more than one crate defines alike".to_string()
+        "The C interface of ee_game's root and the names more than one module defines alike".to_string()
     } else {
-        format!("The C interface of rust/crates/{header}")
+        format!("The C interface of {}", module_of(header))
     };
     let guard = guard(header);
     let mut text =
-        format!("{note}\n// {what} (rust/ee_rust.h includes every crate's).\n\n#ifndef {guard}\n#define {guard}\n\n");
+        format!("{note}\n// {what} (rust/all.h includes every module's).\n\n#ifndef {guard}\n#define {guard}\n\n");
     for line in sys_includes {
         text.push_str(line);
         text.push('\n');
     }
     for include in includes {
-        text.push_str(&format!("#include \"{include}.h\"\n"));
+        text.push_str(&format!("#include \"rust/{include}.h\"\n"));
     }
     text.push('\n');
     for item in types {
@@ -601,19 +622,19 @@ mod tests {
         let all: Vec<&Item> = parsed.types.iter().chain(&parsed.functions).collect();
         let owner = owners(&all, &defs(), &renames());
         // OK: the same in both, so common; EeGePoint: ee_ge's doc comment matches
-        assert_eq!(owner, ["ee_rust_common", "ee_ge", "ee_ge", "ee_won", "ee_won", "ee_ge"]);
+        assert_eq!(owner, ["common", "ee_ge", "ee_ge", "ee_won", "ee_won", "ee_ge"]);
     }
 
     #[test]
     fn each_header_includes_the_headers_its_items_name() {
         let headers = split(SINGLE, &defs(), &renames(), "// note").unwrap();
         let won = &headers["ee_won"];
-        assert!(won.contains("#include \"ee_ge.h\"\n"));
-        assert!(!headers["ee_ge"].contains("#include \"ee_won.h\""));
+        assert!(won.contains("#include \"rust/ee_ge.h\"\n"));
+        assert!(!headers["ee_ge"].contains("#include \"rust/ee_won.h\""));
         assert!(won.contains(
             "extern \"C\" {\n\n/// Makes one.\nEeWonThing ee_won_make(EeGePoint at);\n\n}  // extern \"C\"\n"
         ));
-        assert!(headers["ee_rust"].contains("#include \"ee_rust_common.h\"\n#include \"ee_won.h\"\n"));
+        assert!(headers["all"].contains("#include \"rust/common.h\"\n#include \"rust/ee_won.h\"\n"));
         assert!(!headers["ee_ge"].contains("extern \"C\" {\n\n}"));
     }
 
@@ -628,5 +649,25 @@ mod tests {
         let deps: BTreeMap<&str, BTreeSet<&str>> =
             [("a", ["b"].into_iter().collect()), ("b", ["a"].into_iter().collect())].into_iter().collect();
         assert!(check_acyclic(&deps).unwrap_err().contains("a -> b -> a"));
+    }
+}
+
+#[cfg(test)]
+mod module_tests {
+    use super::*;
+
+    #[test]
+    fn a_file_belongs_to_its_crates_top_level_module() {
+        let crates = Path::new("/r/rust/crates");
+        let h = |k: &str, f: &str| header_of(crates, k, &crates.join(k).join("src").join(f));
+        assert_eq!(h("ee_sim", "units/mod.rs"), "sim/units");
+        assert_eq!(h("ee_sim", "units/world/save.rs"), "sim/units");
+        assert_eq!(h("ee_base", "png.rs"), "base/png");
+        assert_eq!(h("ee_ui", "lib.rs"), "ui/ui");
+        assert_eq!(h("ee_game", "lib.rs"), UMBRELLA);
+        assert_eq!(h("ee_won_net", "opobj.rs"), "won_net/hostop");
+        assert_eq!(module_of("sim/units"), "ee_sim::units");
+        assert_eq!(module_of("ui/ui"), "the crate ee_ui's root");
+        assert_eq!(guard("sim/units"), "EE_RUST_SIM_UNITS_H");
     }
 }
