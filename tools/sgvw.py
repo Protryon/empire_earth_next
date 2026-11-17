@@ -8,8 +8,10 @@ screens and the scenario editor make of the game's objects, recorded where the R
   python -I tools/sgvw.py distinct OUT                # the distinct lines in first-seen order (a --set golden)
   python -I tools/sgvw.py summary OUT                 # reads by kind and op, with the world lock's state
 
-The goldens are tools/sgvw/editor.txt (the editor gate, exact) and tools/sgvw/tour.txt (the fixture tour's distinct
-lines), recorded on the C++ before the move. A tour is run through tools/harness/slot.py with EE_SGVW set.
+The goldens, recorded on the C++ before the move: tools/sgvw/editor.txt (the editor gate, exact),
+tools/sgvw/tour.txt (the fixture tour: --exercise tour --play-seconds 60 --input-check) and tools/sgvw/tour_view.txt
+(the same with --view-check --seed 7: the read view's in-game reads, the speed, camera, diplomacy, options and chat;
+the seed fixes the players' civilizations). A tour is run through tools/harness/slot.py with EE_SGVW set.
 """
 import argparse
 import collections
