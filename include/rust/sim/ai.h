@@ -19,6 +19,9 @@ struct EeAiNextDecoded;
 /// A decoded per-unit state and its view.
 struct EeAiUnitsDecoded;
 
+/// The output the C++ registers (`ESDebugOut("%s", text)`).
+using EeAiBindingTraceOut = void(*)(const char *text);
+
 /// An event since the last step: kind, unit type, count.
 struct EeAiNextEvent {
   int32_t kind;
@@ -254,6 +257,35 @@ struct EeAiUnitsFilter {
 };
 
 extern "C" {
+
+/// Whether the binding trace is on.
+bool ee_ai_binding_trace_on();
+
+/// Registers the trace's output.
+void ee_ai_binding_trace_set_out(EeAiBindingTraceOut out);
+
+/// A binding's call begins: its arguments are the stack.
+///
+/// # Safety
+/// `state` is the binding's live state; `name` NUL-terminated.
+void ee_ai_binding_trace_enter(void *state, const char *name);
+
+/// A binding returned `results` values (the stack's top ones).
+///
+/// # Safety
+/// As [`ee_ai_binding_trace_enter`].
+void ee_ai_binding_trace_leave(void *state, const char *name, int results);
+
+/// A strategy step's view and orders (their `EECPLuaValue` texts).
+///
+/// # Safety
+/// The texts are `len` bytes each (or null with 0).
+void ee_ai_binding_trace_step(int64_t player,
+                              const char *what,
+                              const uint8_t *view,
+                              size_t view_len,
+                              const uint8_t *orders,
+                              size_t orders_len);
 
 /// The "EENS" block of a state into `out` when `cap` holds it -> the block's length (call with `cap` 0 to size it).
 ///

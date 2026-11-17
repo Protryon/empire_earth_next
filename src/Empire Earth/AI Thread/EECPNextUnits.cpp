@@ -23,6 +23,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <string>
+#include <utility>
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
@@ -4521,35 +4522,64 @@ static int LuaEpoch(lua_State* L)
 // ---------------------------------------------------------------------------------------------------------------
 // Opening, the micro step
 
+static const luaL_Reg kUnitsFunctions[] = {
+    {"me", LuaMe}, {"time", LuaTime}, {"players", LuaPlayers}, {"map", LuaMap},
+    {"units", LuaUnits}, {"unit", LuaUnit}, {"get", LuaGet}, {"seen", LuaSeen}, {"memory", LuaMemory},
+    {"resources", LuaResources}, {"tile", LuaTile}, {"class", LuaClass}, {"can_hurt", LuaCanHurt}, {"wonders", LuaWonders}, {"events", LuaEvents},
+    {"can_place", LuaCanPlace}, {"reach", LuaReach}, {"strength", LuaStrength},
+    {"move", LuaMove}, {"attack", LuaAttack}, {"attack_ground", LuaAttackGround}, {"gather", LuaGather},
+    {"build", LuaBuild}, {"repair", LuaRepair}, {"garrison", LuaGarrison}, {"load", LuaLoad}, {"unload", LuaUnload},
+    {"train", LuaTrain}, {"research", LuaResearch}, {"stance", LuaStance}, {"stop", LuaStop},
+    {"explore", LuaExplore}, {"delete", LuaDelete}, {"take", LuaTake}, {"release", LuaRelease},
+    {"reflex", LuaReflex}, {"test_spawn", LuaTestSpawn}, {"test_town", LuaTestTown},
+    {"danger", LuaDanger}, {"danger_box", LuaDangerBox}, {"mark", LuaMark}, {"route", LuaRoute},
+    {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
+    {"improve", LuaImprove}, {"improve_cost", LuaImproveCost}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
+    {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
+    {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"wall_path", LuaWallPath}, {"wall_route", LuaWallRoute}, {"wall_route_result", LuaWallRouteResult}, {"wall_line", LuaWallLine}, {"wall_stretches", LuaWallStretches}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
+    {"config", LuaConfig}, {"used", LuaUsed},
+    {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
+    {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
+    {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", LuaGatherers},
+    {"place", LuaPlace}, {"site_blocked", LuaSiteBlocked}, {"build_unsafe", LuaBuildUnsafe},
+    {NULL, NULL}};
+static const size_t kUnitsFunctionCount = sizeof(kUnitsFunctions) / sizeof(kUnitsFunctions[0]) - 1;
+
+// TEST ONLY (EE_AI_BINDING_TRACE, ee_ai binding_trace.rs): each binding's arguments and results, the port's golden
+template <size_t K>
+static int LuaTraced(lua_State* L)
+{
+    ee_ai_binding_trace_enter(L, kUnitsFunctions[K].name);
+    int theResults = kUnitsFunctions[K].func(L);
+    ee_ai_binding_trace_leave(L, kUnitsFunctions[K].name, theResults);
+    return theResults;
+}
+
+template <size_t... K>
+static void EECPUnitsTracedTable(lua_CFunction* outTable, std::index_sequence<K...>)
+{
+    ((outTable[K] = LuaTraced<K>), ...);
+}
+
+static void EECPUnitsTraceOut(const char* inText)
+{
+    ESDebugOut("%s", inText);
+}
+
 void EECPUnitsOpen(lua_State* L, void* inPlayer)
 {
     EEComputerPlayer* thePlayer = (EEComputerPlayer*)inPlayer;
     EECPUnitsGet(thePlayer);
-    static const luaL_Reg kFunctions[] = {
-        {"me", LuaMe}, {"time", LuaTime}, {"players", LuaPlayers}, {"map", LuaMap},
-        {"units", LuaUnits}, {"unit", LuaUnit}, {"get", LuaGet}, {"seen", LuaSeen}, {"memory", LuaMemory},
-        {"resources", LuaResources}, {"tile", LuaTile}, {"class", LuaClass}, {"can_hurt", LuaCanHurt}, {"wonders", LuaWonders}, {"events", LuaEvents},
-        {"can_place", LuaCanPlace}, {"reach", LuaReach}, {"strength", LuaStrength},
-        {"move", LuaMove}, {"attack", LuaAttack}, {"attack_ground", LuaAttackGround}, {"gather", LuaGather},
-        {"build", LuaBuild}, {"repair", LuaRepair}, {"garrison", LuaGarrison}, {"load", LuaLoad}, {"unload", LuaUnload},
-        {"train", LuaTrain}, {"research", LuaResearch}, {"stance", LuaStance}, {"stop", LuaStop},
-        {"explore", LuaExplore}, {"delete", LuaDelete}, {"take", LuaTake}, {"release", LuaRelease},
-        {"reflex", LuaReflex}, {"test_spawn", LuaTestSpawn}, {"test_town", LuaTestTown},
-        {"danger", LuaDanger}, {"danger_box", LuaDangerBox}, {"mark", LuaMark}, {"route", LuaRoute},
-        {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
-        {"improve", LuaImprove}, {"improve_cost", LuaImproveCost}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
-        {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"wall_path", LuaWallPath}, {"wall_route", LuaWallRoute}, {"wall_route_result", LuaWallRouteResult}, {"wall_line", LuaWallLine}, {"wall_stretches", LuaWallStretches}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
-        {"config", LuaConfig}, {"used", LuaUsed},
-        {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
-        {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
-        {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", LuaGatherers},
-        {"place", LuaPlace}, {"site_blocked", LuaSiteBlocked}, {"build_unsafe", LuaBuildUnsafe},
-        {NULL, NULL}};
-    for (const luaL_Reg* f = kFunctions; f->name != NULL; f++) {
+    static lua_CFunction sTraced[kUnitsFunctionCount] = {};
+    bool theTrace = ee_ai_binding_trace_on();
+    if (theTrace && sTraced[0] == NULL) {
+        ee_ai_binding_trace_set_out(EECPUnitsTraceOut);
+        EECPUnitsTracedTable(sTraced, std::make_index_sequence<kUnitsFunctionCount>());
+    }
+    for (size_t k = 0; k < kUnitsFunctionCount; k++) {
         lua_pushlightuserdata(L, inPlayer);
-        lua_pushcclosure(L, f->func, 1);
-        lua_setfield(L, -2, f->name);
+        lua_pushcclosure(L, theTrace ? sTraced[k] : kUnitsFunctions[k].func, 1);
+        lua_setfield(L, -2, kUnitsFunctions[k].name);
     }
 }
 

@@ -9,11 +9,13 @@
 //!   the seed and SplitMix64;
 //! - `units_lua`: the per-unit bindings' Lua helpers (argument readers, result pushers, the units filter);
 //! - `lua_host`: the Lua runtime's state (`EECPLuaState`'s body) over the vendored Lua;
+//! - `binding_trace` (TEST ONLY): the trace of the bindings' calls, the port's golden;
 //! - `ffi`: the C ABI the C++ (`EECPNextLua.cpp`, `EECPNextUnits.cpp`, `EECPEngine.cpp`, `EECPNext.cpp`) calls.
 //!
 //! The C++ keeps its objects (the states, the manifest's entries) and hands plain values over. `golden` checks every
 //! piece against what the unmodified C++ gave (a scratch driver over the original functions).
 
+pub mod binding_trace;
 pub mod ffi;
 pub mod json;
 // Lua's C API, declared by lua.h: not in the headers
