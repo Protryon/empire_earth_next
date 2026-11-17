@@ -835,6 +835,10 @@ WON_TESTS["won_gamespy_test"] = WON_TESTS["won_serverop_test"]
 # CDKey's registry and file storage (ee_won cdkeystore.rs) against the original statements of AuthContext.cpp,
 # run against run on a scratch config.yaml; the same units as won_serverop_test
 WON_TESTS["won_cdkeystore_test"] = WON_TESTS["won_serverop_test"]
+# the lobby model reading the routing server's records in Rust (modelobj.rs route_record_op) against RoutingOp.cpp's
+# copies, RoutingLogic.cpp's cases and LobbyModelHost.cpp's reads as they were, on real routing ops (golden:
+# rust/crates/ee_won_lobby/src/golden_routerec.txt); won_servconn_test's units (a connection binds the core)
+WON_TESTS["won_routemodel_test"] = WON_TESTS["won_servconn_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]

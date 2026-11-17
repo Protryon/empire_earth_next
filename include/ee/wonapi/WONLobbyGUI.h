@@ -200,7 +200,6 @@ class Scroller;
 class LobbyClient;
 class LobbyPlayer;
 class LobbyClientList;
-struct RoutingClientInfo;
 class ConfigParser;
 class StringParser;
 class ReadBuffer;

@@ -211,6 +211,7 @@ unsafe extern "C" fn host(op: EeWonModelOp, a: isize, b: isize, c: isize) -> isi
                 return ((*ra).handle % 2 != 0) as isize;
             }
             O::ConnectionClose => line(format!("op close h{}", (*ra).handle)),
+            O::TextOfUnits | O::GameReadSummaryBytes => line(format!("op {op:?}")),
         }
     }
     0

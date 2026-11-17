@@ -33,6 +33,7 @@
 #include "ee/wonapi/WONRoutingDerivedServerOp.h"
 #endif
 #include "won_blocking.h"
+#include "won_routerecords.h"
 
 using namespace WONAPI;
 
@@ -523,7 +524,7 @@ static void DumpFields(RoutingOp* inOp, std::vector<std::string>& out)
                       + N(NUM(HAS_CLIENT_FLAGS)));
         break;
     case RoutingOp_ClientJoinedServer: {
-        RoutingClientInfoPtr c = inOp->GetClientInfo();
+        RoutingClientInfoPtr c = RouteOpRecords(inOp).GetClientInfo();
         Line(out, "client " + Client(c.get()) + " name " + Esc(c.get() != NULL ? c->mName : std::wstring()));
         break;
     }
@@ -557,14 +558,14 @@ static void DumpFields(RoutingOp* inOp, std::vector<std::string>& out)
     case RoutingOp_GetBadUserList: {
         Line(out, "list=" + N(NUM(LIST_TYPE)) + " group=" + N(inOp->GetGroupId()) + " f=" + N(NUM(FLAGS8)));
         RoutingBadUserList aList;
-        inOp->GetBadUsers(aList);
+        RouteOpRecords(inOp).GetBadUsers(aList);
         BadUsers(out, aList);
         break;
     }
     case RoutingOp_GetClientList: {
         Line(out, "ex=" + N(NUM(IS_EX)));
         RoutingClientMap aMap;
-        inOp->GetClients(aMap);
+        RouteOpRecords(inOp).GetClients(aMap);
         Clients(out, "clients", aMap);
         break;
     }
@@ -572,7 +573,7 @@ static void DumpFields(RoutingOp* inOp, std::vector<std::string>& out)
         Line(out, "f=" + X((unsigned long)NUM(FLAGS16)) + " parent=" + N(NUM(PARENT_ID)) + " members="
                       + N((NUM(FLAGS16) & 0x80) != 0));
         RoutingGroupMap aMap;
-        inOp->GetGroups(aMap);
+        RouteOpRecords(inOp).GetGroups(aMap);
         Groups(out, aMap);
         break;
     }
@@ -582,7 +583,7 @@ static void DumpFields(RoutingOp* inOp, std::vector<std::string>& out)
                                   + N(NUM(HAS_CLIENT_FLAGS))
                             : std::string()));
         RoutingMemberMap aMap;
-        inOp->GetMembers(aMap);
+        RouteOpRecords(inOp).GetMembers(aMap);
         Members(out, "members", aMap);
         break;
     }
@@ -592,7 +593,7 @@ static void DumpFields(RoutingOp* inOp, std::vector<std::string>& out)
     case RoutingOp_GroupCreated: {
         Line(out, "group=" + N(inOp->GetGroupId()) + " " + Esc(TXT(NAME)) + " maxc=" + N(NUM(MAX_CLIENTS)) + " f="
                       + X((unsigned long)NUM(GROUP_FLAGS)) + " af=" + X((unsigned long)NUM(ASYNC_FLAGS)));
-        RoutingGroupInfoPtr g = inOp->GetGroupInfo();
+        RoutingGroupInfoPtr g = RouteOpRecords(inOp).GetGroupInfo();
         Line(out, "info " + Group(g.get()) + " members " + N(g->mMembers.size()));
         break;
     }
@@ -623,7 +624,7 @@ static void DumpFields(RoutingOp* inOp, std::vector<std::string>& out)
         Line(out, "group=" + N(inOp->GetGroupId()) + " pw=" + Esc(TXT(PASSWORD)) + " " + Esc(TXT(COMMENT)) + " jf="
                       + N(NUM(JOIN_FLAGS)) + " mf=" + N(NUM(MEMBER_FLAGS)));
         RoutingMemberMap aMap;
-        inOp->GetMembers(aMap);
+        RouteOpRecords(inOp).GetMembers(aMap);
         Members(out, "members", aMap);
         break;
     }
@@ -643,7 +644,7 @@ static void DumpFields(RoutingOp* inOp, std::vector<std::string>& out)
         Line(out, "link=" + N(inOp->GetLinkId()) + " type=" + Esc(inOp->DataType()) + " f=" + N(NUM(FLAGS8))
                       + " sub=" + N(NUM(ON)));
         RoutingDataObjectList aList;
-        inOp->GetDataObjects(aList);
+        RouteOpRecords(inOp).GetDataObjects(aList);
         Objects(out, aList);
         break;
     }
@@ -653,7 +654,7 @@ static void DumpFields(RoutingOp* inOp, std::vector<std::string>& out)
                       + " cf=" + X((unsigned long)NUM(CLIENT_FLAGS))
                       + (ok ? " client=" + N(inOp->GetClientId()) : std::string()));
         RoutingClientMap aMap;
-        inOp->GetClients(aMap);
+        RouteOpRecords(inOp).GetClients(aMap);
         Clients(out, "clients", aMap);
         break;
     }
@@ -1257,7 +1258,7 @@ static void Requests(RoutingConnection* c)
         sServer.Send("clients", Msg(23).S(0).S(1).S(50).W2("anon").L(0x44));
         PumpRoute(d, 1);
         RoutingClientMap aClients;
-        op->GetClients(aClients);
+        RouteOpRecords(op).GetClients(aClients);
         Log("register reconnect " + N(op->Num(EE_WON_RTF_RECONNECT_ID)) + " client " + N(op->GetClientId())
             + " clients " + N(aClients.size()));
     }
@@ -1345,7 +1346,7 @@ static void ParseGroupBody()
 #else
     SmartPtr<RoutingOp> op = new RoutingOp(NULL, RoutingOp_GetGroupList);
     RoutingGroupMap aMap;
-#define GROUPS_OF(op) ((op)->GetGroups(aMap), aMap)
+#define GROUPS_OF(op) (RouteOpRecords(op).GetGroups(aMap), aMap)
 #define FLAGS_OF(op) (unsigned long)(op)->Num(EE_WON_RTF_FLAGS16)
 #endif
     W w;

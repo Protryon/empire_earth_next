@@ -230,6 +230,19 @@ pub(crate) fn object_of(object: *mut c_void, kind: EeWonCoreObject) -> *mut c_vo
     core().and_then(|c| c.object_of).map_or(null_mut(), |h| unsafe { h(object, kind) })
 }
 
+/// The Rust op of a C++ `RoutingOp` (its `RefCount*`; none for NULL or another class), for the lobby's readers
+/// (ee_won_lobby modelobj.rs): borrowed while the caller holds the C++ op.
+pub fn route_op_of<'a>(o: *mut c_void) -> Option<&'a crate::routeop::RouteOp> {
+    // SAFETY: a Rust op lives as long as its C++ op, which the caller holds
+    unsafe { (object_of(o, EeWonCoreObject::RouteOp) as *const crate::routeop::EeWonRouteOp).as_ref() }.map(|r| &r.0)
+}
+
+/// The Rust op of a C++ `RustServerOp` (its `RefCount*`; none for NULL or another class), as above.
+pub fn host_op_of<'a>(o: *mut c_void) -> Option<&'a crate::hostop::EeWonHostOp> {
+    // SAFETY: as above
+    unsafe { (object_of(o, EeWonCoreObject::HostOp) as *const crate::hostop::EeWonHostOp).as_ref() }
+}
+
 pub(crate) fn op<'a>(o: *mut c_void) -> Option<&'a EeWonAsyncOp> {
     // SAFETY: an op's Rust object lives as long as the op, which the caller holds
     unsafe { (object_of(o, EeWonCoreObject::Op) as *const EeWonAsyncOp).as_ref() }

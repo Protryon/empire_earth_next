@@ -1,0 +1,3409 @@
+seq 0
+new list h2
+new server h1
+new game h3
+step 4 41 0 030731000002003c00014700040063af96090a000447616d65013a260100ee
+objects 2
+link 60
+summary h3 63af9609 -> 0
+=> 0
+link 10
+summary h3 ee -> 1
+=> 1
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 6 19 1 03071500000164000002000a008d1300000200610065000c00df1300000300630064006500
+bad name=00610065 id=5005 exp=0 mod=0 modname=- comment=-
+bad name=006300640065 id=5087 exp=0 mod=0 modname=- comment=-
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+delete h3
+delete h1
+delete h2
+left 0
+seq 1
+new list h2
+new server h1
+new game h3
+step 1 8 0 0307080600020062006100200000000202041500000001042b570000
+new client h4
+text h5 00620061
+ignored? h5 -> 0
+blocked? 21 -> 1
+=> h4
+D clients 1
+D c 6 h4 id=6 name=00620061 flags=32 won=22315 cd=21 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1
+step 1 8 1 0307080500030064006500610004000000010901ec
+new client h6
+text h7 006400650061
+ignored? h7 -> 1
+blocked? 0 -> 1
+=> h6
+D clients 2
+D c 5 h6 id=5 name=006400650061 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h4 id=6 name=00620061 flags=32 won=22315 cd=21 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1
+step 1 8 0 0307080200040065006200630062000008000000
+new client h8
+text h9 0065006200630062
+ignored? h9 -> 0
+blocked? 0 -> 1
+=> h8
+D clients 3
+D c 2 h8 id=2 name=0065006200630062 flags=2048 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h6 id=5 name=006400650061 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h4 id=6 name=00620061 flags=32 won=22315 cd=21 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+step 5 40 0 03073006000100fd
+summary h3 fd -> 1
+=> 1
+D clients 3
+D c 2 h8 id=2 name=0065006200630062 flags=2048 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h6 id=5 name=006400650061 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h4 id=6 name=00620061 flags=32 won=22315 cd=21 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+step 6 19 1 03071500000264000001000c00ea1300000300640061006200
+bad name=006400610062 id=5098 exp=0 mod=0 modname=- comment=-
+D clients 3
+D c 2 h8 id=2 name=0065006200630062 flags=2048 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h6 id=5 name=006400650061 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h4 id=6 name=00620061 flags=32 won=22315 cd=21 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+step 2 20 0 03074a00000400060001006100010000000004000300650065006400100800000201040a20000002041e00000002000000ffffffff0002000100620004000000030104e45300000104232000000901df
+text h10 0062
+delete h9
+new client h11
+text h12 006500650064
+delete h6
+delete h7
+text h13 0061
+delete h5
+ignored? h10 -> 1
+blocked? 0 -> 1
+ignored? h12 -> 1
+blocked? 30 -> 1
+ignored? h13 -> 1
+blocked? 0 -> 1
+D clients 3
+D c 2 h8 id=2 name=0062 flags=4 won=8227 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h11 id=4 name=006500650064 flags=2064 won=8202 cd=30 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h4 id=6 name=0061 flags=1 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h8=1 h10=1 h11=1 h12=1 h13=1
+delete h3
+delete h1
+delete h2
+delete h8
+delete h10
+delete h11
+delete h12
+delete h4
+delete h13
+left 0
+seq 2
+new list h2
+new server h1
+new game h3
+step 3 21 0 0307190000ff0003001a0032000000040036000008000004100000010002000300010300021e00140002006500610004000600ffffffff00000400050002000200000200011d002800000003001f00010800000100000000000300050005010004040005
+new list h5
+new group h4
+text h6 00650061
+new list h8
+new group h7
+text h9 -
+new list h11
+new group h10
+text h12 -
+D clients 0
+D groups 3
+D g h4 id=20 name=00650061 num=2 flags=4294967295 cap=4 max=6 members0:
+D g h7 id=40 name=- num=3 flags=2049 cap=3 max=31 members0:
+D g h10 id=50 name=- num=2 flags=2048 cap=4 max=54 members0:
+D pop chat=7 total=7
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 6 19 1 0307150000016400000000
+D clients 0
+D groups 3
+D g h4 id=20 name=00650061 num=2 flags=4294967295 cap=4 max=6 members0:
+D g h7 id=40 name=- num=3 flags=2049 cap=3 max=31 members0:
+D g h10 id=50 name=- num=2 flags=2048 cap=4 max=54 members0:
+D pop chat=7 total=7
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 4 41 0 03073100000000
+objects 0
+D clients 0
+D groups 3
+D g h4 id=20 name=00650061 num=2 flags=4294967295 cap=4 max=6 members0:
+D g h7 id=40 name=- num=3 flags=2049 cap=3 max=31 members0:
+D g h10 id=50 name=- num=2 flags=2048 cap=4 max=54 members0:
+D pop chat=7 total=7
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 0 24 0 0307200500020062003a2613002000000000000400
+new list h14
+new group h13
+text h15 0062263a
+=> h13
+D clients 0
+D groups 4
+D g h13 id=5 name=0062263a num=0 flags=32 cap=0 max=19 members0:
+D g h4 id=20 name=00650061 num=2 flags=4294967295 cap=4 max=6 members0:
+D g h7 id=40 name=- num=3 flags=2049 cap=3 max=31 members0:
+D g h10 id=50 name=- num=2 flags=2048 cap=4 max=54 members0:
+D pop chat=7 total=7
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1
+step 2 20 1 03074a0000030001000000040000000302040c00000001042d1c000002041300000004000100620000000000020901c702040a000000030004006400650064006500ffffffff00
+new client h16
+text h17 -
+new client h18
+text h19 0064006500640065
+new client h20
+text h21 0062
+ignored? h17 -> 0
+blocked? 19 -> 0
+ignored? h19 -> 0
+blocked? 0 -> 1
+ignored? h21 -> 1
+blocked? 10 -> 0
+D clients 3
+D c 1 h16 id=1 name=- flags=4 won=7213 cd=19 ign=0 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h18 id=3 name=0064006500640065 flags=4294967295 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h20 id=4 name=0062 flags=0 won=0 cd=10 ign=1 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 4
+D g h13 id=5 name=0062263a num=0 flags=32 cap=0 max=19 members0:
+D g h4 id=20 name=00650061 num=2 flags=4294967295 cap=4 max=6 members0:
+D g h7 id=40 name=- num=3 flags=2049 cap=3 max=31 members0:
+D g h10 id=50 name=- num=2 flags=2048 cap=4 max=54 members0:
+D pop chat=7 total=7
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1 h19=1 h20=1 h21=1
+step 2 20 0 03071700000300060001003a260000000002000200630065000410000005000400640062006100650001080000
+delete h16
+delete h17
+new client h22
+text h23 00630065
+delete h18
+delete h19
+delete h20
+delete h21
+new client h24
+text h25 0064006200610065
+new client h26
+text h27 263a
+ignored? h23 -> 0
+blocked? 0 -> 1
+ignored? h25 -> 0
+blocked? 0 -> 1
+ignored? h27 -> 1
+blocked? 0 -> 1
+D clients 3
+D c 2 h22 id=2 name=00630065 flags=4100 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h24 id=5 name=0064006200610065 flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h26 id=6 name=263a flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 4
+D g h13 id=5 name=0062263a num=0 flags=32 cap=0 max=19 members0:
+D g h4 id=20 name=00650061 num=2 flags=4294967295 cap=4 max=6 members0:
+D g h7 id=40 name=- num=3 flags=2049 cap=3 max=31 members0:
+D g h10 id=50 name=- num=2 flags=2048 cap=4 max=54 members0:
+D pop chat=7 total=7
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h22=1 h23=1 h24=1 h25=1 h26=1 h27=1
+step 0 24 1 0307200400030064006200630009001008000000000000
+new list h29
+new group h28
+text h30 006400620063
+=> h28
+D clients 3
+D c 2 h22 id=2 name=00630065 flags=4100 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h24 id=5 name=0064006200610065 flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h26 id=6 name=263a flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 5
+D g h28 id=4 name=006400620063 num=0 flags=2064 cap=0 max=9 members0:
+D g h13 id=5 name=0062263a num=0 flags=32 cap=0 max=19 members0:
+D g h4 id=20 name=00650061 num=2 flags=4294967295 cap=4 max=6 members0:
+D g h7 id=40 name=- num=3 flags=2049 cap=3 max=31 members0:
+D g h10 id=50 name=- num=2 flags=2048 cap=4 max=54 members0:
+D pop chat=7 total=7
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h22=1 h23=1 h24=1 h25=1 h26=1 h27=1 h28=1 h29=1 h30=1
+step 6 19 1 03071500000164000f0000
+D clients 3
+D c 2 h22 id=2 name=00630065 flags=4100 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h24 id=5 name=0064006200610065 flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h26 id=6 name=263a flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 5
+D g h28 id=4 name=006400620063 num=0 flags=2064 cap=0 max=9 members0:
+D g h13 id=5 name=0062263a num=0 flags=32 cap=0 max=19 members0:
+D g h4 id=20 name=00650061 num=2 flags=4294967295 cap=4 max=6 members0:
+D g h7 id=40 name=- num=3 flags=2049 cap=3 max=31 members0:
+D g h10 id=50 name=- num=2 flags=2048 cap=4 max=54 members0:
+D pop chat=7 total=7
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h22=1 h23=1 h24=1 h25=1 h26=1 h27=1 h28=1 h29=1 h30=1
+step 6 19 0 03071500000264000003000a00bc1300000200650062000e00ca1300000400630064003a2665000e00cc13000004006500620065003a26
+bad name=00650062 id=5052 exp=0 mod=0 modname=- comment=-
+bad name=00630064263a0065 id=5066 exp=0 mod=0 modname=- comment=-
+bad name=006500620065263a id=5068 exp=0 mod=0 modname=- comment=-
+D clients 3
+D c 2 h22 id=2 name=00630065 flags=4100 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h24 id=5 name=0064006200610065 flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h26 id=6 name=263a flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 5
+D g h28 id=4 name=006400620063 num=0 flags=2064 cap=0 max=9 members0:
+D g h13 id=5 name=0062263a num=0 flags=32 cap=0 max=19 members0:
+D g h4 id=20 name=00650061 num=2 flags=4294967295 cap=4 max=6 members0:
+D g h7 id=40 name=- num=3 flags=2049 cap=3 max=31 members0:
+D g h10 id=50 name=- num=2 flags=2048 cap=4 max=54 members0:
+D pop chat=7 total=7
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h22=1 h23=1 h24=1 h25=1 h26=1 h27=1 h28=1 h29=1 h30=1
+step 2 20 0 03074a00000000
+delete h22
+delete h23
+delete h24
+delete h25
+delete h26
+delete h27
+D clients 0
+D groups 5
+D g h28 id=4 name=006400620063 num=0 flags=2064 cap=0 max=9 members0:
+D g h13 id=5 name=0062263a num=0 flags=32 cap=0 max=19 members0:
+D g h4 id=20 name=00650061 num=2 flags=4294967295 cap=4 max=6 members0:
+D g h7 id=40 name=- num=3 flags=2049 cap=3 max=31 members0:
+D g h10 id=50 name=- num=2 flags=2048 cap=4 max=54 members0:
+D pop chat=7 total=7
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h28=1 h29=1 h30=1
+delete h3
+delete h1
+delete h2
+delete h28
+delete h29
+delete h30
+delete h13
+delete h14
+delete h15
+delete h4
+delete h5
+delete h6
+delete h7
+delete h8
+delete h9
+delete h10
+delete h11
+delete h12
+left 0
+seq 3
+new list h2
+new server h1
+new game h3
+step 5 40 0 0307300100040040b4d786
+summary h3 40b4d786 -> 0
+=> 0
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 6 19 0 0307150000016400000000
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 3 21 1 0307190000ff00030021002800020065006400060036000100000020000000060003000400070200020400011d0014000300650063006300030007000100000004000000020001000300041b00140002006100610003000a00010800000410000001000100050001
+new list h5
+new group h4
+text h6 00610061
+new list h8
+new group h7
+text h9 00650064
+D clients 0
+D groups 2
+D g h4 id=20 name=00610061 num=0 flags=2049 cap=3 max=10 members0:
+D g h7 id=40 name=00650064 num=0 flags=1 cap=6 max=54 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+step 1 8 1 0307080400020062006400ffffffff
+new client h10
+text h11 00620064
+ignored? h11 -> 0
+blocked? 0 -> 1
+=> h10
+D clients 1
+D c 4 h10 id=4 name=00620064 flags=4294967295 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h4 id=20 name=00610061 num=0 flags=2049 cap=3 max=10 members0:
+D g h7 id=40 name=00650064 num=0 flags=1 cap=6 max=54 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1
+step 0 24 0 03072003000400640065006300620011000410000000000000
+new list h13
+new group h12
+text h14 0064006500630062
+=> h12
+D clients 1
+D c 4 h10 id=4 name=00620064 flags=4294967295 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 3
+D g h12 id=3 name=0064006500630062 num=0 flags=4100 cap=0 max=17 members0:
+D g h4 id=20 name=00610061 num=0 flags=2049 cap=3 max=10 members0:
+D g h7 id=40 name=00650064 num=0 flags=1 cap=6 max=54 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1
+step 6 19 1 03071500000264000002000a00a31300000200610063000c00d913000003003a2665006400
+bad name=00610063 id=5027 exp=0 mod=0 modname=- comment=-
+bad name=263a00650064 id=5081 exp=0 mod=0 modname=- comment=-
+D clients 1
+D c 4 h10 id=4 name=00620064 flags=4294967295 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 3
+D g h12 id=3 name=0064006500630062 num=0 flags=4100 cap=0 max=17 members0:
+D g h4 id=20 name=00610061 num=0 flags=2049 cap=3 max=10 members0:
+D g h7 id=40 name=00650064 num=0 flags=1 cap=6 max=54 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1
+delete h3
+delete h1
+delete h2
+delete h10
+delete h11
+delete h12
+delete h13
+delete h14
+delete h4
+delete h5
+delete h6
+delete h7
+delete h8
+delete h9
+left 0
+seq 4
+new list h2
+new server h1
+new game h3
+step 0 24 0 030720050003006200640061000b000008000001080000
+new list h5
+new group h4
+text h6 006200640061
+=> h4
+D clients 0
+D groups 1
+D g h4 id=5 name=006200640061 num=0 flags=2048 cap=0 max=11 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 3 21 1 0307190000ff000000
+delete h4
+delete h5
+delete h6
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 0 24 1 0307200400030064003a2664000d000008000000080000
+new list h8
+new group h7
+text h9 0064263a0064
+=> h7
+D clients 0
+D groups 1
+D g h7 id=4 name=0064263a0064 num=0 flags=2048 cap=0 max=13 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1
+step 3 21 1 0307190000ff00010025001e000400650061006500640004002000000004000410000003000300030004060007010005
+delete h7
+delete h8
+delete h9
+new list h11
+new group h10
+text h12 0065006100650064
+D clients 0
+D groups 1
+D g h10 id=30 name=0065006100650064 num=0 flags=262144 cap=4 max=32 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h10=1 h11=1 h12=1
+step 3 21 1 0307190000ff0003001d001e00000003000a000000000000080000050003000600000200010300051a003c000000050012000100000020000000030002000300060500001600140001003a2604000500040000000008000002000000
+new list h14
+new group h13
+text h15 263a
+text h16 -
+delete h12
+new list h18
+new group h17
+text h19 -
+D clients 0
+D groups 3
+D g h13 id=20 name=263a num=0 flags=4 cap=4 max=5 members0:
+D g h10 id=30 name=- num=0 flags=0 cap=3 max=10 members0:
+D g h17 id=60 name=- num=0 flags=1 cap=5 max=18 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h10=1 h11=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1 h19=1
+step 3 21 0 0307190000ff00020022000a0004003a266300650064000200010004000000040000000400020005000605000318001e0002006100640002000c00100800000108000005000000
+new list h21
+new group h20
+text h22 263a006300650064
+delete h13
+delete h14
+delete h15
+text h23 00610064
+delete h16
+delete h17
+delete h18
+delete h19
+D clients 0
+D groups 2
+D g h20 id=10 name=263a006300650064 num=2 flags=4 cap=2 max=1 members0:
+D g h10 id=30 name=00610064 num=0 flags=2064 cap=2 max=12 members0:
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h10=1 h11=1 h20=1 h21=1 h22=1 h23=1
+step 5 40 0 030730
+=> 0
+D clients 0
+D groups 2
+D g h20 id=10 name=263a006300650064 num=2 flags=4 cap=2 max=1 members0:
+D g h10 id=30 name=00610064 num=0 flags=2064 cap=2 max=12 members0:
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h10=1 h11=1 h20=1 h21=1 h22=1 h23=1
+step 2 20 0 030717ffff
+D clients 0
+D groups 2
+D g h20 id=10 name=263a006300650064 num=2 flags=4 cap=2 max=1 members0:
+D g h10 id=30 name=00610064 num=0 flags=2064 cap=2 max=12 members0:
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h10=1 h11=1 h20=1 h21=1 h22=1 h23=1
+step 5 40 1 03073004000000
+summary h3 - -> 0
+=> 0
+D clients 0
+D groups 2
+D g h20 id=10 name=263a006300650064 num=2 flags=4 cap=2 max=1 members0:
+D g h10 id=30 name=00610064 num=0 flags=2064 cap=2 max=12 members0:
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h10=1 h11=1 h20=1 h21=1 h22=1 h23=1
+step 3 21 0 0307190000ff000000
+delete h20
+delete h21
+delete h22
+delete h10
+delete h11
+delete h23
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+delete h3
+delete h1
+delete h2
+left 0
+seq 5
+new list h2
+new server h1
+new game h3
+step 3 21 0 0307190000ff00010025000a0004003a2665006200630002000a00200000000100000000000300030006010003050002
+new list h5
+new group h4
+text h6 263a006500620063
+D clients 0
+D groups 1
+D g h4 id=10 name=263a006500620063 num=3 flags=32 cap=2 max=10 members0:
+D pop chat=0 total=3
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 2 20 0 03074a0000020006000100630000080000010204040000000200040061006100630061001008000000
+new client h7
+text h8 0061006100630061
+new client h9
+text h10 0063
+ignored? h8 -> 0
+blocked? 0 -> 1
+ignored? h10 -> 1
+blocked? 4 -> 0
+D clients 2
+D c 2 h7 id=2 name=0061006100630061 flags=2064 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h9 id=6 name=0063 flags=2048 won=0 cd=4 ign=1 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h4 id=10 name=263a006500620063 num=3 flags=32 cap=2 max=10 members0:
+D pop chat=0 total=3
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1
+delete h3
+delete h1
+delete h2
+delete h7
+delete h8
+delete h9
+delete h10
+delete h4
+delete h5
+delete h6
+left 0
+seq 6
+new list h2
+new server h1
+new game h3
+step 4 41 1 030731000001003c000447616d6503610064003a26030015f277
+objects 1
+link 60
+summary h3 15f277 -> 1
+=> 1
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 1 8 1 030708050002006200640001000000
+new client h4
+text h5 00620064
+ignored? h5 -> 0
+blocked? 0 -> 1
+=> h4
+D clients 1
+D c 5 h4 id=5 name=00620064 flags=1 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1
+step 2 20 1 030717000003000600030062006200640004100000060000001008000001000100620004000000
+new client h6
+text h7 0062
+delete h4
+delete h5
+new client h8
+text h9 -
+ignored? h7 -> 1
+blocked? 0 -> 1
+ignored? h9 -> 0
+blocked? 0 -> 1
+D clients 2
+D c 1 h6 id=1 name=0062 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=- flags=2064 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1
+step 3 21 0 0307190000ff000000
+D clients 2
+D c 1 h6 id=1 name=0062 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=- flags=2064 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1
+step 5 40 0 03073001000300e373ac
+summary h3 e373ac -> 1
+=> 1
+D clients 2
+D c 1 h6 id=1 name=0062 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=- flags=2064 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1
+step 2 20 0 03074a00000300040001006200ffffffff0302041f0000000204240000000104920b00000300030065006200650001080000020104c961000009013a0100030065003a266300000000000109012f
+text h10 0065263a0063
+delete h7
+new client h11
+text h12 006500620065
+new client h13
+text h14 0062
+delete h8
+delete h9
+ignored? h10 -> 1
+blocked? 0 -> 1
+ignored? h12 -> 1
+blocked? 0 -> 1
+ignored? h14 -> 1
+blocked? 36 -> 1
+D clients 3
+D c 1 h6 id=1 name=0065263a0063 flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h11 id=3 name=006500620065 flags=2049 won=25033 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h13 id=4 name=0062 flags=4294967295 won=2962 cd=36 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h10=1 h11=1 h12=1 h13=1 h14=1
+step 0 24 0 0307200100010061000f000108000000080000
+new list h16
+new group h15
+text h17 0061
+=> h15
+D clients 3
+D c 1 h6 id=1 name=0065263a0063 flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h11 id=3 name=006500620065 flags=2049 won=25033 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h13 id=4 name=0062 flags=4294967295 won=2962 cd=36 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h15 id=1 name=0061 num=0 flags=2049 cap=0 max=15 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1
+step 5 40 0 03073003000000
+summary h3 - -> 0
+=> 0
+D clients 3
+D c 1 h6 id=1 name=0065263a0063 flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h11 id=3 name=006500620065 flags=2049 won=25033 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h13 id=4 name=0062 flags=4294967295 won=2962 cd=36 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h15 id=1 name=0061 num=0 flags=2049 cap=0 max=15 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1
+step 3 21 0 0307190000ff000200230032000300620065006500050025000000000001080000050003000200040200060300041c001e00010063000400250000000400ffffffff01000200020003020007
+delete h15
+delete h16
+delete h17
+new list h19
+new group h18
+text h20 0063
+new list h22
+new group h21
+text h23 006200650065
+D clients 3
+D c 1 h6 id=1 name=0065263a0063 flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h11 id=3 name=006500620065 flags=2049 won=25033 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h13 id=4 name=0062 flags=4294967295 won=2962 cd=36 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h18 id=30 name=0063 num=2 flags=262144 cap=4 max=37 members0:
+D g h21 id=50 name=006200650065 num=3 flags=0 cap=5 max=37 members0:
+D pop chat=0 total=5
+D rc h1=1 h2=1 h3=1 h6=1 h10=1 h11=1 h12=1 h13=1 h14=1 h18=1 h19=1 h20=1 h21=1 h22=1 h23=1
+step 3 21 0 0307190000ff0003001e001400020061006100020024000008000001080000030002000500020300041d0028000000030005000108000004000000000003000200030200030600041f00320004003a2661003a26650003000a00041000000108000000000100040000
+new list h25
+new group h24
+text h26 00610061
+delete h18
+delete h19
+delete h20
+new list h28
+new group h27
+text h29 -
+text h30 263a0061263a0065
+delete h23
+D clients 3
+D c 1 h6 id=1 name=0065263a0063 flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h11 id=3 name=006500620065 flags=2049 won=25033 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h13 id=4 name=0062 flags=4294967295 won=2962 cd=36 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 3
+D g h24 id=20 name=00610061 num=2 flags=2048 cap=2 max=36 members0:
+D g h27 id=40 name=- num=3 flags=2049 cap=3 max=5 members0:
+D g h21 id=50 name=263a0061263a0065 num=1 flags=4100 cap=3 max=10 members0:
+D pop chat=5 total=6
+D rc h1=1 h2=1 h3=1 h6=1 h10=1 h11=1 h12=1 h13=1 h14=1 h21=1 h22=1 h24=1 h25=1 h26=1 h27=1 h28=1 h29=1 h30=1
+delete h3
+delete h1
+delete h2
+delete h6
+delete h10
+delete h11
+delete h12
+delete h13
+delete h14
+delete h24
+delete h25
+delete h26
+delete h27
+delete h28
+delete h29
+delete h21
+delete h22
+delete h30
+left 0
+seq 7
+new list h2
+new server h1
+new game h3
+step 2 20 1 03074a0000040004000300620062006400100800000109017003000100620001080000020104622000000104ca5c000006000100610000000400030204000000000901f20104d86e00000400000001080000020901b20104aa320000
+new client h4
+text h5 0062
+new client h6
+text h7 -
+new client h8
+text h9 0061
+ignored? h5 -> 1
+blocked? 0 -> 1
+ignored? h7 -> 0
+blocked? 0 -> 1
+ignored? h9 -> 1
+blocked? 0 -> 1
+D clients 3
+D c 3 h4 id=3 name=0062 flags=2049 won=23754 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h6 id=4 name=- flags=2049 won=12970 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=0061 flags=262144 won=28376 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+step 5 40 1 03073001000300637b5d
+summary h3 637b5d -> 1
+=> 1
+D clients 3
+D c 3 h4 id=3 name=0062 flags=2049 won=23754 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h6 id=4 name=- flags=2049 won=12970 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=0061 flags=262144 won=28376 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+delete h3
+delete h1
+delete h2
+delete h4
+delete h5
+delete h6
+delete h7
+delete h8
+delete h9
+left 0
+seq 8
+new list h2
+new server h1
+new game h3
+step 3 21 0 0307190000ff0003001c001e00040061006400620065000500050010080000040000000700000020002800030061006400620004001c000400000004000000050002000200020500071d001400000006003300010000000108000001000300020002010002060004
+new list h5
+new group h4
+text h6 -
+new list h8
+new group h7
+text h9 0061006400620065
+new list h11
+new group h10
+text h12 006100640062
+D clients 0
+D groups 3
+D g h4 id=20 name=- num=3 flags=1 cap=6 max=51 members0:
+D g h7 id=30 name=0061006400620065 num=0 flags=2064 cap=5 max=5 members0:
+D g h10 id=40 name=006100640062 num=2 flags=4 cap=4 max=28 members0:
+D pop chat=0 total=5
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 6 19 1 03071500000264000001000e00b813000004006300620065006200
+bad name=0063006200650062 id=5048 exp=0 mod=0 modname=- comment=-
+D clients 0
+D groups 3
+D g h4 id=20 name=- num=3 flags=1 cap=6 max=51 members0:
+D g h7 id=30 name=0061006400620065 num=0 flags=2064 cap=5 max=5 members0:
+D g h10 id=40 name=006100640062 num=2 flags=4 cap=4 max=28 members0:
+D pop chat=0 total=5
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 2 20 0 03074affff
+D clients 0
+D groups 3
+D g h4 id=20 name=- num=3 flags=1 cap=6 max=51 members0:
+D g h7 id=30 name=0061006400620065 num=0 flags=2064 cap=5 max=5 members0:
+D g h10 id=40 name=006100640062 num=2 flags=4 cap=4 max=28 members0:
+D pop chat=0 total=5
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 3 21 0 0307190000ff000000
+delete h4
+delete h5
+delete h6
+delete h7
+delete h8
+delete h9
+delete h10
+delete h11
+delete h12
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 6 19 1 0307150000016400000000
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 6 19 1 03071500000264000001000e00a513000004006300630064003a26
+bad name=006300630064263a id=5029 exp=0 mod=0 modname=- comment=-
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+delete h3
+delete h1
+delete h2
+left 0
+seq 9
+new list h2
+new server h1
+new game h3
+step 6 19 0 03071500000264000003000c00af13000003006200610062000c00e113000003006500620062000a00c9130000020062006500
+bad name=006200610062 id=5039 exp=0 mod=0 modname=- comment=-
+bad name=006500620062 id=5089 exp=0 mod=0 modname=- comment=-
+bad name=00620065 id=5065 exp=0 mod=0 modname=- comment=-
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 0 24 0 030720040003003a26640062000f00ffffffff00000000
+new list h5
+new group h4
+text h6 263a00640062
+=> h4
+D clients 0
+D groups 1
+D g h4 id=4 name=263a00640062 num=0 flags=4294967295 cap=0 max=15 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 6 19 1 03071500000164000f0000
+D clients 0
+D groups 1
+D g h4 id=4 name=263a00640062 num=0 flags=4294967295 cap=0 max=15 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 2 20 0 030717ffff
+D clients 0
+D groups 1
+D g h4 id=4 name=263a00640062 num=0 flags=4294967295 cap=0 max=15 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 2 20 0 03071700000000
+D clients 0
+D groups 1
+D g h4 id=4 name=263a00640062 num=0 flags=4294967295 cap=0 max=15 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 3 21 0 0307190000ff000000
+delete h4
+delete h5
+delete h6
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 3 21 1 0307190000ff0001001800280002006100610002002900040000000000000000000000
+new list h8
+new group h7
+text h9 00610061
+D clients 0
+D groups 1
+D g h7 id=40 name=00610061 num=0 flags=4 cap=2 max=41 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1
+step 5 40 1 030730050002006dc0
+summary h3 6dc0 -> 0
+=> 0
+D clients 0
+D groups 1
+D g h7 id=40 name=00610061 num=0 flags=4 cap=2 max=41 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1
+step 3 21 0 030719fdff
+delete h7
+delete h8
+delete h9
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 6 19 1 03071500000264000001000c00b51300
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+delete h3
+delete h1
+delete h2
+left 0
+seq 10
+new list h2
+new server h1
+new game h3
+step 1 8 0 0307080400000001000000010104771a0000
+new client h4
+text h5 -
+ignored? h5 -> 0
+blocked? 0 -> 1
+=> h4
+D clients 1
+D c 4 h4 id=4 name=- flags=1 won=6775 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1
+step 2 20 1 0307170000020003000400620061003a2664002000000005000100610001000000
+new client h6
+text h7 00620061263a0064
+delete h4
+delete h5
+new client h8
+text h9 0061
+ignored? h7 -> 0
+blocked? 0 -> 1
+ignored? h9 -> 1
+blocked? 0 -> 1
+D clients 2
+D c 3 h6 id=3 name=00620061263a0064 flags=32 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h8 id=5 name=0061 flags=1 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1
+step 5 40 1 03073006000400f1d090d7
+summary h3 f1d090d7 -> 0
+=> 0
+D clients 2
+D c 3 h6 id=3 name=00620061263a0064 flags=32 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h8 id=5 name=0061 flags=1 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1
+step 5 40 0 03073003000200b3cf
+summary h3 b3cf -> 0
+=> 0
+D clients 2
+D c 3 h6 id=3 name=00620061263a0064 flags=32 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h8 id=5 name=0061 flags=1 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1
+step 3 21 0 0307190000ff0001001a003c00030062006300630004003400ffffffff0008000007000000
+new list h11
+new group h10
+text h12 006200630063
+D clients 2
+D c 3 h6 id=3 name=00620061263a0064 flags=32 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h8 id=5 name=0061 flags=1 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h10 id=60 name=006200630063 num=0 flags=4294967295 cap=4 max=52 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 0 24 0 03072003000200630064000a000000000000000000
+new list h14
+new group h13
+text h15 00630064
+=> h13
+D clients 2
+D c 3 h6 id=3 name=00620061263a0064 flags=32 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h8 id=5 name=0061 flags=1 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h13 id=3 name=00630064 num=0 flags=0 cap=0 max=10 members0:
+D g h10 id=60 name=006200630063 num=0 flags=4294967295 cap=4 max=52 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1
+delete h3
+delete h1
+delete h2
+delete h6
+delete h7
+delete h8
+delete h9
+delete h13
+delete h14
+delete h15
+delete h10
+delete h11
+delete h12
+left 0
+seq 11
+new list h2
+new server h1
+new game h3
+step 3 21 0 0307190000ff000000
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 5 40 0 03073006000100e2
+summary h3 e2 -> 1
+=> 1
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 3 21 0 0307190000ff00010017000a00000003002000041000000400000006000100060003
+new list h5
+new group h4
+text h6 -
+D clients 0
+D groups 1
+D g h4 id=10 name=- num=1 flags=4100 cap=3 max=32 members0:
+D pop chat=0 total=1
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 3 21 1 0307190000ff00020021003c000200620062000300020010080000041000000000030002000205000304000117003200000006002100200000000000000000000100050006
+delete h4
+delete h5
+delete h6
+new list h8
+new group h7
+text h9 -
+new list h11
+new group h10
+text h12 00620062
+D clients 0
+D groups 2
+D g h7 id=50 name=- num=0 flags=32 cap=6 max=33 members0:
+D g h10 id=60 name=00620062 num=0 flags=2064 cap=3 max=2 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 1 8 1 03070805000300630062003a2604100000
+new client h13
+text h14 00630062263a
+ignored? h14 -> 1
+blocked? 0 -> 1
+=> h13
+D clients 1
+D c 5 h13 id=5 name=00630062263a flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h7 id=50 name=- num=0 flags=32 cap=6 max=33 members0:
+D g h10 id=60 name=00620062 num=0 flags=2064 cap=3 max=2 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1
+step 3 21 1 030719
+delete h7
+delete h8
+delete h9
+delete h10
+delete h11
+delete h12
+D clients 1
+D c 5 h13 id=5 name=00630062263a flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h13=1 h14=1
+step 5 40 1 03073002000400c22c7a51
+summary h3 c22c7a51 -> 0
+=> 0
+D clients 1
+D c 5 h13 id=5 name=00630062263a flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h13=1 h14=1
+step 3 21 1 0307190000ff000100190028000100630005000800ffffffff0108000001000100040002
+new list h16
+new group h15
+text h17 0063
+D clients 1
+D c 5 h13 id=5 name=00630062263a flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h15 id=40 name=0063 num=0 flags=4294967295 cap=5 max=8 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h13=1 h14=1 h15=1 h16=1 h17=1
+step 6 19 1 03071500000164000f0000
+D clients 1
+D c 5 h13 id=5 name=00630062263a flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h15 id=40 name=0063 num=0 flags=4294967295 cap=5 max=8 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h13=1 h14=1 h15=1 h16=1 h17=1
+step 0 24 1 0307200100010064000f000000000000000400
+new list h19
+new group h18
+text h20 0064
+=> h18
+D clients 1
+D c 5 h13 id=5 name=00630062263a flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h18 id=1 name=0064 num=0 flags=0 cap=0 max=15 members0:
+D g h15 id=40 name=0063 num=0 flags=4294967295 cap=5 max=8 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1 h19=1 h20=1
+delete h3
+delete h1
+delete h2
+delete h13
+delete h14
+delete h18
+delete h19
+delete h20
+delete h15
+delete h16
+delete h17
+left 0
+seq 12
+new list h2
+new server h1
+new game h3
+step 0 24 0 0307200200000012000410000004100000
+new list h5
+new group h4
+text h6 -
+=> h4
+D clients 0
+D groups 1
+D g h4 id=2 name=- num=0 flags=4100 cap=0 max=18 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 6 19 1 03071500000164000f02001c00d2130000030064003a266400403600004c00000001006200010063002200d913000002006500630000000000500000000400650061003a266200020065006300
+bad name=0064263a0064 id=5074 exp=13888 mod=76 modname=0062 comment=0063
+bad name=00650063 id=5081 exp=0 mod=80 modname=00650061263a0062 comment=00650063
+D clients 0
+D groups 1
+D g h4 id=2 name=- num=0 flags=4100 cap=0 max=18 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+delete h3
+delete h1
+delete h2
+delete h4
+delete h5
+delete h6
+left 0
+seq 13
+new list h2
+new server h1
+new game h3
+step 2 20 0 030717000003000200010063000410000006000100610004100000050002006500650001000000
+new client h4
+text h5 0063
+new client h6
+text h7 00650065
+new client h8
+text h9 0061
+ignored? h5 -> 1
+blocked? 0 -> 1
+ignored? h7 -> 0
+blocked? 0 -> 1
+ignored? h9 -> 1
+blocked? 0 -> 1
+D clients 3
+D c 2 h4 id=2 name=0063 flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h6 id=5 name=00650065 flags=1 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=0061 flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+step 3 21 1 0307190000ff0001001d001e00000002000b00000004000100000005000300050006020006060001
+new list h11
+new group h10
+text h12 -
+D clients 3
+D c 2 h4 id=2 name=0063 flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=30 cm=0 gm=6 cc=0 gc=1
+D c 5 h6 id=5 name=00650065 flags=1 won=0 cd=0 ign=0 blk=1 chat=65535 game=30 cm=0 gm=6 cc=0 gc=0
+D c 6 h8 id=6 name=0061 flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=30 cm=0 gm=1 cc=0 gc=0
+D groups 1
+D g h10 id=30 name=- num=3 flags=262144 cap=2 max=11 members3: h4 h6 h8
+D pop chat=0 total=3
+D rc h1=1 h2=1 h3=1 h4=2 h5=1 h6=2 h7=1 h8=2 h9=1 h10=1 h11=1 h12=1
+step 6 19 0 03071500000264000f02
+D clients 3
+D c 2 h4 id=2 name=0063 flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=30 cm=0 gm=6 cc=0 gc=1
+D c 5 h6 id=5 name=00650065 flags=1 won=0 cd=0 ign=0 blk=1 chat=65535 game=30 cm=0 gm=6 cc=0 gc=0
+D c 6 h8 id=6 name=0061 flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=30 cm=0 gm=1 cc=0 gc=0
+D groups 1
+D g h10 id=30 name=- num=3 flags=262144 cap=2 max=11 members3: h4 h6 h8
+D pop chat=0 total=3
+D rc h1=1 h2=1 h3=1 h4=2 h5=1 h6=2 h7=1 h8=2 h9=1 h10=1 h11=1 h12=1
+step 2 20 1 03071700000300020004006400610064006500200000000600020064006500ffffffff050002006400640000000400
+text h13 0064006100640065
+delete h5
+text h14 00640064
+delete h7
+text h15 00640065
+delete h9
+ignored? h13 -> 0
+blocked? 0 -> 1
+ignored? h14 -> 0
+blocked? 0 -> 1
+ignored? h15 -> 0
+blocked? 0 -> 1
+D clients 3
+D c 2 h4 id=2 name=0064006100640065 flags=32 won=0 cd=0 ign=0 blk=1 chat=65535 game=30 cm=0 gm=6 cc=0 gc=1
+D c 5 h6 id=5 name=00640064 flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=30 cm=0 gm=6 cc=0 gc=0
+D c 6 h8 id=6 name=00640065 flags=4294967295 won=0 cd=0 ign=0 blk=1 chat=65535 game=30 cm=0 gm=1 cc=0 gc=0
+D groups 1
+D g h10 id=30 name=- num=3 flags=262144 cap=2 max=11 members3: h4 h6 h8
+D pop chat=0 total=3
+D rc h1=1 h2=1 h3=1 h4=2 h6=2 h8=2 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1
+step 2 20 1 0307170000030005000300640063006400100800000300020062006100ffffffff0300000004100000
+new client h16
+text h17 -
+text h18 006400630064
+delete h14
+ignored? h17 -> 0
+blocked? 0 -> 1
+ignored? h18 -> 1
+blocked? 0 -> 1
+D clients 2
+D c 3 h16 id=3 name=- flags=4100 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h6 id=5 name=006400630064 flags=2064 won=0 cd=0 ign=1 blk=1 chat=65535 game=30 cm=0 gm=6 cc=0 gc=0
+D groups 1
+D g h10 id=30 name=- num=3 flags=262144 cap=2 max=11 members3: h4 h6 h8
+D pop chat=0 total=3
+D rc h1=1 h2=1 h3=1 h4=1 h6=2 h8=1 h10=1 h11=1 h12=1 h13=1 h15=1 h16=1 h17=1 h18=1
+step 3 21 1 0307190000ff0003001a001e00000005000c0000000400100800000500020005000603000717000a00000006001b0000000000000000000700010004000617000a00000005000700100800000410000004000100060005
+new list h20
+new group h19
+text h21 -
+text h22 -
+delete h12
+delete h4
+delete h13
+delete h8
+delete h15
+D clients 2
+D c 3 h16 id=3 name=- flags=4100 won=0 cd=0 ign=0 blk=1 chat=65535 game=30 cm=0 gm=7 cc=0 gc=0
+D c 5 h6 id=5 name=006400630064 flags=2064 won=0 cd=0 ign=1 blk=1 chat=65535 game=30 cm=0 gm=6 cc=0 gc=1
+D groups 2
+D g h19 id=10 name=- num=0 flags=2064 cap=5 max=7 members0:
+D g h10 id=30 name=- num=2 flags=262144 cap=5 max=12 members2: h16 h6
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h6=2 h10=1 h11=1 h16=2 h17=1 h18=1 h19=1 h20=1 h21=1 h22=1
+step 5 40 1 03073005000000
+summary h3 - -> 0
+=> 0
+D clients 2
+D c 3 h16 id=3 name=- flags=4100 won=0 cd=0 ign=0 blk=1 chat=65535 game=30 cm=0 gm=7 cc=0 gc=0
+D c 5 h6 id=5 name=006400630064 flags=2064 won=0 cd=0 ign=1 blk=1 chat=65535 game=30 cm=0 gm=6 cc=0 gc=1
+D groups 2
+D g h19 id=10 name=- num=0 flags=2064 cap=5 max=7 members0:
+D g h10 id=30 name=- num=2 flags=262144 cap=5 max=12 members2: h16 h6
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h6=2 h10=1 h11=1 h16=2 h17=1 h18=1 h19=1 h20=1 h21=1 h22=1
+step 1 8 0 03070805000300650061006300100800000101043e310000
+new client h23
+text h24 006500610063
+ignored? h24 -> 1
+blocked? 0 -> 1
+=> h23
+D clients 2
+D c 3 h16 id=3 name=- flags=4100 won=0 cd=0 ign=0 blk=1 chat=65535 game=30 cm=0 gm=7 cc=0 gc=0
+D c 5 h23 id=5 name=006500610063 flags=2064 won=12606 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h19 id=10 name=- num=0 flags=2064 cap=5 max=7 members0:
+D g h10 id=30 name=- num=2 flags=262144 cap=5 max=12 members2: h16 h6
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h6=1 h10=1 h11=1 h16=2 h17=1 h18=1 h19=1 h20=1 h21=1 h22=1 h23=1 h24=1
+step 5 40 0 03073005000400ec976bdf
+summary h3 ec976bdf -> 0
+=> 0
+D clients 2
+D c 3 h16 id=3 name=- flags=4100 won=0 cd=0 ign=0 blk=1 chat=65535 game=30 cm=0 gm=7 cc=0 gc=0
+D c 5 h23 id=5 name=006500610063 flags=2064 won=12606 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h19 id=10 name=- num=0 flags=2064 cap=5 max=7 members0:
+D g h10 id=30 name=- num=2 flags=262144 cap=5 max=12 members2: h16 h6
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h6=1 h10=1 h11=1 h16=2 h17=1 h18=1 h19=1 h20=1 h21=1 h22=1 h23=1 h24=1
+step 1 8 0 03070803000400610062006100640001080000
+new client h25
+text h26 0061006200610064
+ignored? h26 -> 0
+blocked? 0 -> 1
+=> h25
+D clients 2
+D c 3 h25 id=3 name=0061006200610064 flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h23 id=5 name=006500610063 flags=2064 won=12606 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h19 id=10 name=- num=0 flags=2064 cap=5 max=7 members0:
+D g h10 id=30 name=- num=2 flags=262144 cap=5 max=12 members2: h16 h6
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h6=1 h10=1 h11=1 h16=1 h17=1 h18=1 h19=1 h20=1 h21=1 h22=1 h23=1 h24=1 h25=1 h26=1
+delete h3
+delete h1
+delete h2
+delete h25
+delete h26
+delete h23
+delete h24
+delete h19
+delete h20
+delete h21
+delete h10
+delete h11
+delete h16
+delete h17
+delete h6
+delete h18
+delete h22
+left 0
+seq 14
+new list h2
+new server h1
+new game h3
+step 4 41 1 030731000002001400014702640062000300c42c0a3c000447616d6502640063000300704ba4
+objects 2
+link 20
+summary h3 c42c0a -> 1
+=> 1
+link 60
+summary h3 704ba4 -> 1
+=> 1
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 3 21 0 0307190000ff00030014
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+delete h3
+delete h1
+delete h2
+left 0
+seq 15
+new list h2
+new server h1
+new game h3
+step 0 24 0 03072001000100630010001008000004100000
+new list h5
+new group h4
+text h6 0063
+=> h4
+D clients 0
+D groups 1
+D g h4 id=1 name=0063 num=0 flags=2064 cap=0 max=16 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 6 19 0 03071500000264000f03001c008a13000001006400c23300000a000000020061003a260200610062001800bc13000001006500427600000500000002006200610000002400c113000004006500650061006100000000002200000001003a2604006300650064006400
+bad name=0064 id=5002 exp=13250 mod=10 modname=0061263a comment=00610062
+bad name=0065 id=5052 exp=30274 mod=5 modname=00620061 comment=-
+bad name=0065006500610061 id=5057 exp=0 mod=34 modname=263a comment=0063006500640064
+D clients 0
+D groups 1
+D g h4 id=1 name=0063 num=0 flags=2064 cap=0 max=16 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 3 21 0 0307190000ff00030022001e00040061006400620064000300140001080000100800000600020002000606000625000a000400630061006100630003001a000100000004100000020003000600000400030600011e00280002006400640004002d00000000001008000004000200050006020004
+delete h4
+delete h5
+delete h6
+new list h8
+new group h7
+text h9 0063006100610063
+new list h11
+new group h10
+text h12 0061006400620064
+new list h14
+new group h13
+text h15 00640064
+D clients 0
+D groups 3
+D g h7 id=10 name=0063006100610063 num=3 flags=1 cap=3 max=26 members0:
+D g h10 id=30 name=0061006400620064 num=2 flags=2049 cap=3 max=20 members0:
+D g h13 id=40 name=00640064 num=2 flags=0 cap=4 max=45 members0:
+D pop chat=2 total=7
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1
+step 0 24 0 030720030003006500630064000a00ffffffff10080000
+new list h17
+new group h16
+text h18 006500630064
+=> h16
+D clients 0
+D groups 4
+D g h16 id=3 name=006500630064 num=0 flags=4294967295 cap=0 max=10 members0:
+D g h7 id=10 name=0063006100610063 num=3 flags=1 cap=3 max=26 members0:
+D g h10 id=30 name=0061006400620064 num=2 flags=2049 cap=3 max=20 members0:
+D g h13 id=40 name=00640064 num=2 flags=0 cap=4 max=45 members0:
+D pop chat=2 total=7
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1
+step 2 20 1 03074a00000300040000000108000003010412630000010414
+D clients 0
+D groups 4
+D g h16 id=3 name=006500630064 num=0 flags=4294967295 cap=0 max=10 members0:
+D g h7 id=10 name=0063006100610063 num=3 flags=1 cap=3 max=26 members0:
+D g h10 id=30 name=0061006400620064 num=2 flags=2049 cap=3 max=20 members0:
+D g h13 id=40 name=00640064 num=2 flags=0 cap=4 max=45 members0:
+D pop chat=2 total=7
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1
+step 2 20 1 03074a0000
+D clients 0
+D groups 4
+D g h16 id=3 name=006500630064 num=0 flags=4294967295 cap=0 max=10 members0:
+D g h7 id=10 name=0063006100610063 num=3 flags=1 cap=3 max=26 members0:
+D g h10 id=30 name=0061006400620064 num=2 flags=2049 cap=3 max=20 members0:
+D g h13 id=40 name=00640064 num=2 flags=0 cap=4 max=45 members0:
+D pop chat=2 total=7
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1
+delete h3
+delete h1
+delete h2
+delete h16
+delete h17
+delete h18
+delete h7
+delete h8
+delete h9
+delete h10
+delete h11
+delete h12
+delete h13
+delete h14
+delete h15
+left 0
+seq 16
+new list h2
+new server h1
+new game h3
+step 3 21 1 0307190000ff000000
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 3 21 0 0307190000ff000000
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 6 19 0 030715000001640000020006008f13000000000e00ca1300000400640062003a266400
+bad name=- id=5007 exp=0 mod=0 modname=- comment=-
+bad name=00640062263a0064 id=5066 exp=0 mod=0 modname=- comment=-
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 4 41 1 030731000001001e0001470164000000
+objects 1
+link 30
+summary h3 - -> 0
+=> 0
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 6 19 1 03071500000264000002000c008f13000003006100640062000e009213000004006200640064006400
+bad name=006100640062 id=5007 exp=0 mod=0 modname=- comment=-
+bad name=0062006400640064 id=5010 exp=0 mod=0 modname=- comment=-
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 1 8 1 0307080400000000000000030204080000000104b3520000020402000000
+new client h4
+text h5 -
+ignored? h5 -> 0
+blocked? 2 -> 0
+=> h4
+D clients 1
+D c 4 h4 id=4 name=- flags=0 won=21171 cd=2 ign=0 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1
+step 2 20 1 03074a00000400020001006200000000000302040b000000090195020427000000020002003a266500010800000102042300000006000200620065000000000001090108060000000000000000
+new client h6
+text h7 263a0065
+delete h4
+delete h5
+new client h8
+text h9 -
+ignored? h7 -> 0
+blocked? 35 -> 0
+ignored? h9 -> 0
+blocked? 0 -> 1
+D clients 2
+D c 2 h6 id=2 name=263a0065 flags=2049 won=0 cd=35 ign=0 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1
+step 3 21 0 0307190000ff0001001b001e0002006300610003003300010800000108000002000100030007
+new list h11
+new group h10
+text h12 00630061
+D clients 2
+D c 2 h6 id=2 name=263a0065 flags=2049 won=0 cd=35 ign=0 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h10 id=30 name=00630061 num=1 flags=2049 cap=3 max=51 members0:
+D pop chat=1 total=1
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 5 40 1 03073003000000
+summary h3 - -> 0
+=> 0
+D clients 2
+D c 2 h6 id=2 name=263a0065 flags=2049 won=0 cd=35 ign=0 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h10 id=30 name=00630061 num=1 flags=2049 cap=3 max=51 members0:
+D pop chat=1 total=1
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 3 21 1 0307190000ff00030020000a000300630063006100060031002000000004100000030002000300010500051c003c000100630002002f0001080000ffffffff0400020001000102000722003200040063006100630062000300380000000400ffffffff02000200030006040004
+new list h14
+new group h13
+text h15 006300630061
+delete h10
+delete h11
+delete h12
+new list h17
+new group h16
+text h18 0063006100630062
+new list h20
+new group h19
+text h21 0063
+D clients 2
+D c 2 h6 id=2 name=263a0065 flags=2049 won=0 cd=35 ign=0 blk=0 chat=60 game=65535 cm=7 gm=0 cc=1 gc=0
+D c 6 h8 id=6 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 3
+D g h13 id=10 name=006300630061 num=0 flags=32 cap=6 max=49 members0:
+D g h16 id=50 name=0063006100630062 num=0 flags=262144 cap=3 max=56 members0:
+D g h19 id=60 name=0063 num=1 flags=2049 cap=2 max=47 members1: h6
+D pop chat=1 total=1
+D rc h1=1 h2=1 h3=1 h6=2 h7=1 h8=1 h9=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1 h19=1 h20=1 h21=1
+delete h3
+delete h1
+delete h2
+delete h8
+delete h9
+delete h13
+delete h14
+delete h15
+delete h16
+delete h17
+delete h18
+delete h19
+delete h20
+delete h6
+delete h7
+delete h21
+left 0
+seq 17
+new list h2
+new server h1
+new game h3
+step 3 21 0 0307190000ff000000
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 3 21 1 0307190000ff0000
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 1 8 1 0307080400010061000100000001010446640000
+new client h4
+text h5 0061
+ignored? h5 -> 1
+blocked? 0 -> 1
+=> h4
+D clients 1
+D c 4 h4 id=4 name=0061 flags=1 won=25670 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1
+step 5 40 0 03073004000200a69f
+summary h3 a69f -> 0
+=> 0
+D clients 1
+D c 4 h4 id=4 name=0061 flags=1 won=25670 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1
+step 2 20 0 03074a0000020001000400650064006500640001000000030104f3300000020408000000020416000000010003006400650065000008000000
+new client h6
+text h7 006400650065
+delete h4
+delete h5
+ignored? h7 -> 1
+blocked? 0 -> 1
+D clients 1
+D c 1 h6 id=1 name=006400650065 flags=2048 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h7=1
+step 6 19 0 03071500000264000001000600d11300000000
+bad name=- id=5073 exp=0 mod=0 modname=- comment=-
+D clients 1
+D c 1 h6 id=1 name=006400650065 flags=2048 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h7=1
+delete h3
+delete h1
+delete h2
+delete h6
+delete h7
+left 0
+seq 18
+new list h2
+new server h1
+new game h3
+step 1 8 1 030708010002003a26620010080000
+new client h4
+text h5 263a0062
+ignored? h5 -> 0
+blocked? 0 -> 1
+=> h4
+D clients 1
+D c 1 h4 id=1 name=263a0062 flags=2064 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1
+step 2 20 0 03074a00000300030004006400650065006400010000000101045b760000020002006300640020000000000300020064006500000004000109014d
+delete h4
+delete h5
+new client h6
+text h7 00630064
+new client h8
+text h9 00640065
+ignored? h7 -> 0
+blocked? 0 -> 1
+ignored? h9 -> 0
+blocked? 0 -> 1
+D clients 2
+D c 2 h6 id=2 name=00630064 flags=32 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h8 id=3 name=00640065 flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1
+step 3 21 0 0307190000ff0003001c00320001006300060026002000000000000400060002000300050400041b002800020061003a26020024001008000001080000050001000300061a001e00030064006200630001002c00100800000108000001000000
+new list h11
+new group h10
+text h12 006400620063
+new list h14
+new group h13
+text h15 0061263a
+new list h17
+new group h16
+text h18 0063
+D clients 2
+D c 2 h6 id=2 name=00630064 flags=32 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h8 id=3 name=00640065 flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 3
+D g h10 id=30 name=006400620063 num=0 flags=2064 cap=1 max=44 members0:
+D g h13 id=40 name=0061263a num=1 flags=2064 cap=2 max=36 members0:
+D g h16 id=50 name=0063 num=2 flags=32 cap=6 max=38 members0:
+D pop chat=1 total=3
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1
+step 1 8 0 0307080100000001080000
+new client h19
+text h20 -
+ignored? h20 -> 0
+blocked? 0 -> 1
+=> h19
+D clients 3
+D c 1 h19 id=1 name=- flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 2 h6 id=2 name=00630064 flags=32 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h8 id=3 name=00640065 flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 3
+D g h10 id=30 name=006400620063 num=0 flags=2064 cap=1 max=44 members0:
+D g h13 id=40 name=0061263a num=1 flags=2064 cap=2 max=36 members0:
+D g h16 id=50 name=0063 num=2 flags=32 cap=6 max=38 members0:
+D pop chat=1 total=3
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1 h19=1 h20=1
+step 1 8 1 03070802000100610020000000
+new client h21
+text h22 0061
+ignored? h22 -> 1
+blocked? 0 -> 1
+delete h6
+delete h7
+=> h21
+D clients 3
+D c 1 h19 id=1 name=- flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 2 h21 id=2 name=0061 flags=32 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h8 id=3 name=00640065 flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 3
+D g h10 id=30 name=006400620063 num=0 flags=2064 cap=1 max=44 members0:
+D g h13 id=40 name=0061263a num=1 flags=2064 cap=2 max=36 members0:
+D g h16 id=50 name=0063 num=2 flags=32 cap=6 max=38 members0:
+D pop chat=1 total=3
+D rc h1=1 h2=1 h3=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1 h19=1 h20=1 h21=1 h22=1
+step 1 8 0 0307080500
+new client h23
+text h24 -
+ignored? h24 -> 0
+blocked? 0 -> 1
+=> h23
+D clients 4
+D c 1 h19 id=1 name=- flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 2 h21 id=2 name=0061 flags=32 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h8 id=3 name=00640065 flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h23 id=5 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 3
+D g h10 id=30 name=006400620063 num=0 flags=2064 cap=1 max=44 members0:
+D g h13 id=40 name=0061263a num=1 flags=2064 cap=2 max=36 members0:
+D g h16 id=50 name=0063 num=2 flags=32 cap=6 max=38 members0:
+D pop chat=1 total=3
+D rc h1=1 h2=1 h3=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1 h19=1 h20=1 h21=1 h22=1 h23=1 h24=1
+step 3 21 0 0307190000ff000000
+delete h10
+delete h11
+delete h12
+delete h13
+delete h14
+delete h15
+delete h16
+delete h17
+delete h18
+D clients 4
+D c 1 h19 id=1 name=- flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 2 h21 id=2 name=0061 flags=32 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h8 id=3 name=00640065 flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h23 id=5 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h8=1 h9=1 h19=1 h20=1 h21=1 h22=1 h23=1 h24=1
+step 0 24 1 030720060002006400640012001008000004100000
+new list h26
+new group h25
+text h27 00640064
+=> h25
+D clients 4
+D c 1 h19 id=1 name=- flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 2 h21 id=2 name=0061 flags=32 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h8 id=3 name=00640065 flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h23 id=5 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h25 id=6 name=00640064 num=0 flags=2064 cap=0 max=18 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h8=1 h9=1 h19=1 h20=1 h21=1 h22=1 h23=1 h24=1 h25=1 h26=1 h27=1
+step 5 40 0 030730040004002e5bdc14
+summary h3 2e5bdc14 -> 0
+=> 0
+D clients 4
+D c 1 h19 id=1 name=- flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 2 h21 id=2 name=0061 flags=32 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h8 id=3 name=00640065 flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h23 id=5 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h25 id=6 name=00640064 num=0 flags=2064 cap=0 max=18 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h8=1 h9=1 h19=1 h20=1 h21=1 h22=1 h23=1 h24=1 h25=1 h26=1 h27=1
+step 0 24 0 030720040002006200610007001008000001080000
+new list h29
+new group h28
+text h30 00620061
+=> h28
+D clients 4
+D c 1 h19 id=1 name=- flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 2 h21 id=2 name=0061 flags=32 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h8 id=3 name=00640065 flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h23 id=5 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h28 id=4 name=00620061 num=0 flags=2064 cap=0 max=7 members0:
+D g h25 id=6 name=00640064 num=0 flags=2064 cap=0 max=18 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h8=1 h9=1 h19=1 h20=1 h21=1 h22=1 h23=1 h24=1 h25=1 h26=1 h27=1 h28=1 h29=1 h30=1
+delete h3
+delete h1
+delete h2
+delete h19
+delete h20
+delete h21
+delete h22
+delete h8
+delete h9
+delete h23
+delete h24
+delete h28
+delete h29
+delete h30
+delete h25
+delete h26
+delete h27
+left 0
+seq 19
+new list h2
+new server h1
+new game h3
+step 2 20 1 03071700000300020000000108000004000400650065006500620004100000030002006400640000080000
+new client h4
+text h5 -
+new client h6
+text h7 00640064
+new client h8
+text h9 0065006500650062
+ignored? h5 -> 0
+blocked? 0 -> 1
+ignored? h7 -> 0
+blocked? 0 -> 1
+ignored? h9 -> 0
+blocked? 0 -> 1
+D clients 3
+D c 2 h4 id=2 name=- flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h6 id=3 name=00640064 flags=2048 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h8 id=4 name=0065006500650062 flags=4100 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+step 1 8 0 0307080500000001080000020104951200000104df6b0000
+new client h10
+text h11 -
+ignored? h11 -> 0
+blocked? 0 -> 1
+=> h10
+D clients 4
+D c 2 h4 id=2 name=- flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h6 id=3 name=00640064 flags=2048 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h8 id=4 name=0065006500650062 flags=4100 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h10 id=5 name=- flags=2049 won=27615 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1
+delete h3
+delete h1
+delete h2
+delete h4
+delete h5
+delete h6
+delete h7
+delete h8
+delete h9
+delete h10
+delete h11
+left 0
+seq 20
+new list h2
+new server h1
+new game h3
+step 5 40 1 03073005000400e30e8c62
+summary h3 e30e8c62 -> 0
+=> 0
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 5 40 0 03073003000300fddcf8
+summary h3 fddcf8 -> 1
+=> 1
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 4 41 0 03073100000300320001470000001e000147000300bc390d280001470161000000
+objects 3
+link 50
+summary h3 - -> 0
+=> 0
+link 30
+summary h3 bc390d -> 1
+=> 1
+link 40
+summary h3 - -> 0
+=> 0
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 0 24 0 03072004000400650061003a26630010000000040020000000
+new list h5
+new group h4
+text h6 00650061263a0063
+=> h4
+D clients 0
+D groups 1
+D g h4 id=4 name=00650061263a0063 num=0 flags=262144 cap=0 max=16 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 0 24 0 030720040003006500650064000d00ffffffff00000000
+new list h8
+new group h7
+text h9 006500650064
+delete h4
+delete h5
+delete h6
+=> h7
+D clients 0
+D groups 1
+D g h7 id=4 name=006500650064 num=0 flags=4294967295 cap=0 max=13 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1
+step 3 21 0 0307190000ff00020025001e0004006200630063006300010026000100000010080000010003000300020400000500071d002800000002002300ffffffff0008000002000300030004010004050003
+delete h7
+delete h8
+delete h9
+new list h11
+new group h10
+text h12 0062006300630063
+new list h14
+new group h13
+text h15 -
+D clients 0
+D groups 2
+D g h10 id=30 name=0062006300630063 num=3 flags=1 cap=1 max=38 members0:
+D g h13 id=40 name=- num=3 flags=4294967295 cap=2 max=35 members0:
+D pop chat=3 total=6
+D rc h1=1 h2=1 h3=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1
+step 4 41 0 030731000002000a000447616d6504640062006500640000003c000447616d650365003a2663000000
+objects 2
+link 10
+summary h3 - -> 0
+=> 0
+link 60
+summary h3 - -> 0
+=> 0
+D clients 0
+D groups 2
+D g h10 id=30 name=0062006300630063 num=3 flags=1 cap=1 max=38 members0:
+D g h13 id=40 name=- num=3 flags=4294967295 cap=2 max=35 members0:
+D pop chat=3 total=6
+D rc h1=1 h2=1 h3=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1
+step 4 41 0 030731fcff
+objects 0
+D clients 0
+D groups 2
+D g h10 id=30 name=0062006300630063 num=3 flags=1 cap=1 max=38 members0:
+D g h13 id=40 name=- num=3 flags=4294967295 cap=2 max=35 members0:
+D pop chat=3 total=6
+D rc h1=1 h2=1 h3=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1
+step 2 20 1 030717000001000400030065003a26620000080000
+new client h16
+text h17 0065263a0062
+ignored? h17 -> 1
+blocked? 0 -> 1
+D clients 1
+D c 4 h16 id=4 name=0065263a0062 flags=2048 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h10 id=30 name=0062006300630063 num=3 flags=1 cap=1 max=38 members0:
+D g h13 id=40 name=- num=3 flags=4294967295 cap=2 max=35 members0:
+D pop chat=3 total=6
+D rc h1=1 h2=1 h3=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1
+step 3 21 1 0307190000ff0001001c001e000100640004001400ffffffffffffffff04000200060006050004
+text h18 0064
+delete h12
+delete h13
+delete h14
+delete h15
+D clients 1
+D c 4 h16 id=4 name=0065263a0062 flags=2048 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h10 id=30 name=0064 num=0 flags=4294967295 cap=4 max=20 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h10=1 h11=1 h16=1 h17=1 h18=1
+delete h3
+delete h1
+delete h2
+delete h16
+delete h17
+delete h10
+delete h11
+delete h18
+left 0
+seq 21
+new list h2
+new server h1
+new game h3
+step 0 24 1 030720060003006300640062000a000000040000000400
+new list h5
+new group h4
+text h6 006300640062
+=> h4
+D clients 0
+D groups 1
+D g h4 id=6 name=006300640062 num=0 flags=262144 cap=0 max=10 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 0 24 0 0307200200000006001008000000000400
+new list h8
+new group h7
+text h9 -
+=> h7
+D clients 0
+D groups 2
+D g h7 id=2 name=- num=0 flags=2064 cap=0 max=6 members0:
+D g h4 id=6 name=006300640062 num=0 flags=262144 cap=0 max=10 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+delete h3
+delete h1
+delete h2
+delete h7
+delete h8
+delete h9
+delete h4
+delete h5
+delete h6
+left 0
+seq 22
+new list h2
+new server h1
+new game h3
+step 3 21 1 0307190000ff00030022001e000400650061006200630006001b00010800001008000005
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 2 20 0 03074a00000000
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 6 19 0 03071500000264000f01002400a113000004006500640063006100ca5400001200000004003a26620062003a2601006100
+bad name=0065006400630061 id=5025 exp=21706 mod=18 modname=263a00620062263a comment=0061
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 3 21 0 0307190000ff0003001d003c000300630065006100010000000410000001080000060001000100061d00280000000500000000080000010000000400030004000206000403000525000a00040064006100610063
+new list h5
+new group h4
+text h6 -
+new list h8
+new group h7
+text h9 006300650061
+D clients 0
+D groups 2
+D g h4 id=40 name=- num=3 flags=2048 cap=5 max=0 members0:
+D g h7 id=60 name=006300650061 num=1 flags=4100 cap=1 max=0 members0:
+D pop chat=3 total=4
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+step 4 41 1 030731000001001e000447616d650161000000
+objects 1
+link 30
+summary h3 - -> 0
+=> 0
+D clients 0
+D groups 2
+D g h4 id=40 name=- num=3 flags=2048 cap=5 max=0 members0:
+D g h7 id=60 name=006300650061 num=1 flags=4100 cap=1 max=0 members0:
+D pop chat=3 total=4
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+delete h3
+delete h1
+delete h2
+delete h4
+delete h5
+delete h6
+delete h7
+delete h8
+delete h9
+left 0
+seq 23
+new list h2
+new server h1
+new game h3
+step 4 41 1 0307310000
+objects 0
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 1 8 1 030708040002006500630001000000
+new client h4
+text h5 00650063
+ignored? h5 -> 0
+blocked? 0 -> 1
+=> h4
+D clients 1
+D c 4 h4 id=4 name=00650063 flags=1 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1
+step 3 21 0 0307190000ff000300250032000400630065006300640006000a001008000001080000020003000300050400030500011900140001003a260500340004100000010800000200010001000323003200030065006200630005000000ffffffff0400000001000300030004030000010002
+new list h7
+new group h6
+text h8 263a
+new list h10
+new group h9
+text h11 006500620063
+D clients 1
+D c 4 h4 id=4 name=00650063 flags=1 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h6 id=20 name=263a num=1 flags=4100 cap=5 max=52 members0:
+D g h9 id=50 name=006500620063 num=3 flags=4294967295 cap=5 max=0 members0:
+D pop chat=3 total=4
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1
+step 2 20 0 0307170000030006000300630064006500ffffffff0600010061000410000005000300630061006200ffffffff
+delete h4
+delete h5
+new client h12
+text h13 006300610062
+new client h14
+text h15 0061
+ignored? h13 -> 1
+blocked? 0 -> 1
+ignored? h15 -> 1
+blocked? 0 -> 1
+D clients 2
+D c 5 h12 id=5 name=006300610062 flags=4294967295 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h14 id=6 name=0061 flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h6 id=20 name=263a num=1 flags=4100 cap=5 max=52 members0:
+D g h9 id=50 name=006500620063 num=3 flags=4294967295 cap=5 max=0 members0:
+D pop chat=3 total=4
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1
+step 1 8 0 030708020002006200640001000000
+new client h16
+text h17 00620064
+ignored? h17 -> 0
+blocked? 0 -> 1
+=> h16
+D clients 3
+D c 2 h16 id=2 name=00620064 flags=1 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h12 id=5 name=006300610062 flags=4294967295 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h14 id=6 name=0061 flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h6 id=20 name=263a num=1 flags=4100 cap=5 max=52 members0:
+D g h9 id=50 name=006500620063 num=3 flags=4294967295 cap=5 max=0 members0:
+D pop chat=3 total=4
+D rc h1=1 h2=1 h3=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1
+step 3 21 0 0307190000ff000000
+delete h6
+delete h7
+delete h8
+delete h9
+delete h10
+delete h11
+D clients 3
+D c 2 h16 id=2 name=00620064 flags=1 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h12 id=5 name=006300610062 flags=4294967295 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h14 id=6 name=0061 flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1
+step 1 8 1 03070801000300
+new client h18
+text h19 -
+ignored? h19 -> 0
+blocked? 0 -> 1
+=> h18
+D clients 4
+D c 1 h18 id=1 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 2 h16 id=2 name=00620064 flags=1 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h12 id=5 name=006300610062 flags=4294967295 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h14 id=6 name=0061 flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1 h19=1
+step 6 19 1 03071500000264000f02001a00d81300000100620000000000190000000000030065006200620016008c130000010062000f50000002000000010063000000
+bad name=0062 id=5080 exp=0 mod=25 modname=- comment=006500620062
+bad name=0062 id=5004 exp=20495 mod=2 modname=0063 comment=-
+D clients 4
+D c 1 h18 id=1 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 2 h16 id=2 name=00620064 flags=1 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h12 id=5 name=006300610062 flags=4294967295 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h14 id=6 name=0061 flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1 h19=1
+step 4 41 1 03073100000000
+objects 0
+D clients 4
+D c 1 h18 id=1 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 2 h16 id=2 name=00620064 flags=1 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h12 id=5 name=006300610062 flags=4294967295 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h14 id=6 name=0061 flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1 h19=1
+delete h3
+delete h1
+delete h2
+delete h18
+delete h19
+delete h16
+delete h17
+delete h12
+delete h13
+delete h14
+delete h15
+left 0
+seq 24
+new list h2
+new server h1
+new game h3
+step 2 20 0 0307170000040006000400650065006200610001000000030001006200040000000600020064003a2600000400040003003a266300620004100000
+new client h4
+text h5 0062
+new client h6
+text h7 263a00630062
+new client h8
+text h9 0064263a
+ignored? h5 -> 1
+blocked? 0 -> 1
+ignored? h7 -> 1
+blocked? 0 -> 1
+ignored? h9 -> 0
+blocked? 0 -> 1
+D clients 3
+D c 3 h4 id=3 name=0062 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h6 id=4 name=263a00630062 flags=4100 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=0064263a flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+step 3 21 1 0307190000ff0001001b00320002006100620006000f00010800000400000001000100040003
+new list h11
+new group h10
+text h12 00610062
+D clients 3
+D c 3 h4 id=3 name=0062 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h6 id=4 name=263a00630062 flags=4100 won=0 cd=0 ign=1 blk=1 chat=50 game=65535 cm=3 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=0064263a flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h10 id=50 name=00610062 num=1 flags=2049 cap=6 max=15 members1: h6
+D pop chat=1 total=1
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=2 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 5 40 1 03073001000000
+summary h3 - -> 0
+=> 0
+D clients 3
+D c 3 h4 id=3 name=0062 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h6 id=4 name=263a00630062 flags=4100 won=0 cd=0 ign=1 blk=1 chat=50 game=65535 cm=3 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=0064263a flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h10 id=50 name=00610062 num=1 flags=2049 cap=6 max=15 members1: h6
+D pop chat=1 total=1
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=2 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 3 21 1 0307190000ff00020019001e000100620002003600010000000100000000000100050005160032000100640006000100200000000008000002000000
+new list h14
+new group h13
+text h15 0062
+text h16 0064
+delete h12
+D clients 3
+D c 3 h4 id=3 name=0062 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h6 id=4 name=263a00630062 flags=4100 won=0 cd=0 ign=1 blk=1 chat=50 game=65535 cm=3 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=0064263a flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h13 id=30 name=0062 num=0 flags=1 cap=2 max=54 members0:
+D g h10 id=50 name=0064 num=0 flags=32 cap=6 max=1 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h13=1 h14=1 h15=1 h16=1
+step 1 8 0 03070803
+new client h17
+text h18 -
+ignored? h18 -> 0
+blocked? 0 -> 1
+=> h17
+D clients 4
+D c 0 h17 id=0 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h4 id=3 name=0062 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h6 id=4 name=263a00630062 flags=4100 won=0 cd=0 ign=1 blk=1 chat=50 game=65535 cm=3 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=0064263a flags=262144 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h13 id=30 name=0062 num=0 flags=1 cap=2 max=54 members0:
+D g h10 id=50 name=0064 num=0 flags=32 cap=6 max=1 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1
+delete h3
+delete h1
+delete h2
+delete h17
+delete h18
+delete h4
+delete h5
+delete h6
+delete h7
+delete h8
+delete h9
+delete h13
+delete h14
+delete h15
+delete h10
+delete h11
+delete h16
+left 0
+seq 25
+new list h2
+new server h1
+new game h3
+step 3 21 1 0307190000ff00010023000a0003003a266500640006001000041000001008000000000300010004030005050000
+new list h5
+new group h4
+text h6 263a00650064
+D clients 0
+D groups 1
+D g h4 id=10 name=263a00650064 num=0 flags=4100 cap=6 max=16 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 3 21 0 0307190000ff00030020003c00030062006200650004000a0010080000010000000500020003000604000220003c0003006300620061000400030004000000000800000200020006000004000620001400030065006200650003000900040000000410000003000200060003010003
+delete h4
+delete h5
+delete h6
+new list h8
+new group h7
+text h9 006500620065
+new list h11
+new group h10
+text h12 006300620061
+D clients 0
+D groups 2
+D g h7 id=20 name=006500620065 num=2 flags=4 cap=3 max=9 members0:
+D g h10 id=60 name=006300620061 num=2 flags=4 cap=4 max=3 members0:
+D pop chat=0 total=4
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 4 41 1 0307310000030032000447616d6501650002006b5332000147016200020060b528000447616d650465006200610064000000
+objects 3
+link 50
+summary h3 6b53 -> 0
+=> 0
+link 50
+summary h3 60b5 -> 0
+=> 0
+link 40
+summary h3 - -> 0
+=> 0
+D clients 0
+D groups 2
+D g h7 id=20 name=006500620065 num=2 flags=4 cap=3 max=9 members0:
+D g h10 id=60 name=006300620061 num=2 flags=4 cap=4 max=3 members0:
+D pop chat=0 total=4
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 3 21 1 030719fdff
+delete h7
+delete h8
+delete h9
+delete h10
+delete h11
+delete h12
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 2 20 1 03074a0000020001000400610061006400640004000000010901b20400030063006500610001000000010901
+new client h13
+text h14 0061006100640064
+ignored? h14 -> 0
+blocked? 0 -> 1
+D clients 1
+D c 1 h13 id=1 name=0061006100640064 flags=4 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h13=1 h14=1
+step 3 21 1 0307190000ff0003001a001400030061003a266400040009002000000000000000030000002300320003003a266400610006000e00ffffffff000800000400030001000606000006000414003200000002002d0000080000ffffffff01000000
+new list h16
+new group h15
+text h17 0061263a0064
+new list h19
+new group h18
+text h20 -
+D clients 1
+D c 1 h13 id=1 name=0061006100640064 flags=4 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h15 id=20 name=0061263a0064 num=0 flags=32 cap=4 max=9 members0:
+D g h18 id=50 name=- num=0 flags=2048 cap=2 max=45 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1 h19=1 h20=1
+step 3 21 1 0307190000ff00010017001400000002003600100800001008000004000100030001
+text h21 -
+delete h17
+delete h18
+delete h19
+delete h20
+D clients 1
+D c 1 h13 id=1 name=0061006100640064 flags=4 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h15 id=20 name=- num=0 flags=2064 cap=2 max=54 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h13=1 h14=1 h15=1 h16=1 h21=1
+step 2 20 1 030717000003000200010064001008000006000000000800000500030061006100650000000000
+delete h13
+delete h14
+new client h22
+text h23 0064
+new client h24
+text h25 006100610065
+new client h26
+text h27 -
+ignored? h23 -> 1
+blocked? 0 -> 1
+ignored? h25 -> 1
+blocked? 0 -> 1
+ignored? h27 -> 0
+blocked? 0 -> 1
+D clients 3
+D c 2 h22 id=2 name=0064 flags=2064 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h24 id=5 name=006100610065 flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h26 id=6 name=- flags=2048 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h15 id=20 name=- num=0 flags=2064 cap=2 max=54 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h15=1 h16=1 h21=1 h22=1 h23=1 h24=1 h25=1 h26=1 h27=1
+step 1 8 0 03070801000100620004000000
+new client h28
+text h29 0062
+ignored? h29 -> 1
+blocked? 0 -> 1
+=> h28
+D clients 4
+D c 1 h28 id=1 name=0062 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 2 h22 id=2 name=0064 flags=2064 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h24 id=5 name=006100610065 flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h26 id=6 name=- flags=2048 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h15 id=20 name=- num=0 flags=2064 cap=2 max=54 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h15=1 h16=1 h21=1 h22=1 h23=1 h24=1 h25=1 h26=1 h27=1 h28=1 h29=1
+delete h3
+delete h1
+delete h2
+delete h28
+delete h29
+delete h22
+delete h23
+delete h24
+delete h25
+delete h26
+delete h27
+delete h15
+delete h16
+delete h21
+left 0
+seq 26
+new list h2
+new server h1
+new game h3
+step 6 19 1 03071500000164000f02001800ca130000020065006200d22300002f00000001003a2600001400a113000000000000000008000000000001006100
+bad name=00650062 id=5066 exp=9170 mod=47 modname=263a comment=-
+bad name=- id=5025 exp=0 mod=8 modname=- comment=0061
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+delete h3
+delete h1
+delete h2
+left 0
+seq 27
+new list h2
+new server h1
+new game h3
+step 1 8 1 03070802000400610061003a26650000080000020104212500000104a9160000
+new client h4
+text h5 00610061263a0065
+ignored? h5 -> 0
+blocked? 0 -> 1
+=> h4
+D clients 1
+D c 2 h4 id=2 name=00610061263a0065 flags=2048 won=5801 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1
+step 3 21 0 0307190000ff0003001f00140004006400610065006100010019000108000001080000060001000100031f000a000400630062003a26650003002e0020000000010800000300010002000521001e0002003a26610001002a00200000000000000003000300030003030005050002
+new list h7
+new group h6
+text h8 00630062263a0065
+new list h10
+new group h9
+text h11 0064006100650061
+new list h13
+new group h12
+text h14 263a0061
+D clients 1
+D c 2 h4 id=2 name=00610061263a0065 flags=2048 won=5801 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 3
+D g h6 id=10 name=00630062263a0065 num=1 flags=32 cap=3 max=46 members0:
+D g h9 id=20 name=0064006100650061 num=1 flags=2049 cap=1 max=25 members0:
+D g h12 id=30 name=263a0061 num=3 flags=32 cap=1 max=42 members0:
+D pop chat=1 total=5
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1
+step 5 40 0 03073001000400ec
+=> 0
+D clients 1
+D c 2 h4 id=2 name=00610061263a0065 flags=2048 won=5801 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 3
+D g h6 id=10 name=00630062263a0065 num=1 flags=32 cap=3 max=46 members0:
+D g h9 id=20 name=0064006100650061 num=1 flags=2049 cap=1 max=25 members0:
+D g h12 id=30 name=263a0061 num=3 flags=32 cap=1 max=42 members0:
+D pop chat=1 total=5
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1
+step 3 21 1 0307190000ff0003001a002800000005001700010800001008000004000200060002010007230032000300610065006100060035001008000001080000020003000300060400050500051d002800000001001d00100800000400000003000300060001040007020006
+delete h6
+delete h7
+delete h8
+delete h9
+delete h10
+delete h11
+delete h12
+delete h13
+delete h14
+new list h16
+new group h15
+text h17 -
+new list h19
+new group h18
+text h20 006100650061
+D clients 1
+D c 2 h4 id=2 name=00610061263a0065 flags=2048 won=5801 cd=0 ign=0 blk=1 chat=40 game=65535 cm=6 gm=0 cc=0 gc=0
+D groups 2
+D g h15 id=40 name=- num=1 flags=2064 cap=1 max=29 members1: h4
+D g h18 id=50 name=006100650061 num=0 flags=2064 cap=6 max=53 members0:
+D pop chat=1 total=1
+D rc h1=1 h2=1 h3=1 h4=2 h5=1 h15=1 h16=1 h17=1 h18=1 h19=1 h20=1
+step 1 8 1 03070805000400630061006200620000000000
+new client h21
+text h22 0063006100620062
+ignored? h22 -> 0
+blocked? 0 -> 1
+=> h21
+D clients 2
+D c 2 h4 id=2 name=00610061263a0065 flags=2048 won=5801 cd=0 ign=0 blk=1 chat=40 game=65535 cm=6 gm=0 cc=0 gc=0
+D c 5 h21 id=5 name=0063006100620062 flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h15 id=40 name=- num=1 flags=2064 cap=1 max=29 members1: h4
+D g h18 id=50 name=006100650061 num=0 flags=2064 cap=6 max=53 members0:
+D pop chat=1 total=1
+D rc h1=1 h2=1 h3=1 h4=2 h5=1 h15=1 h16=1 h17=1 h18=1 h19=1 h20=1 h21=1 h22=1
+step 5 40 1 030730020004
+=> 0
+D clients 2
+D c 2 h4 id=2 name=00610061263a0065 flags=2048 won=5801 cd=0 ign=0 blk=1 chat=40 game=65535 cm=6 gm=0 cc=0 gc=0
+D c 5 h21 id=5 name=0063006100620062 flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h15 id=40 name=- num=1 flags=2064 cap=1 max=29 members1: h4
+D g h18 id=50 name=006100650061 num=0 flags=2064 cap=6 max=53 members0:
+D pop chat=1 total=1
+D rc h1=1 h2=1 h3=1 h4=2 h5=1 h15=1 h16=1 h17=1 h18=1 h19=1 h20=1 h21=1 h22=1
+step 6 19 0 03071500000164000003000800bb130000010062000600a7130000000008008a13000001006100
+bad name=0062 id=5051 exp=0 mod=0 modname=- comment=-
+bad name=- id=5031 exp=0 mod=0 modname=- comment=-
+bad name=0061 id=5002 exp=0 mod=0 modname=- comment=-
+D clients 2
+D c 2 h4 id=2 name=00610061263a0065 flags=2048 won=5801 cd=0 ign=0 blk=1 chat=40 game=65535 cm=6 gm=0 cc=0 gc=0
+D c 5 h21 id=5 name=0063006100620062 flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h15 id=40 name=- num=1 flags=2064 cap=1 max=29 members1: h4
+D g h18 id=50 name=006100650061 num=0 flags=2064 cap=6 max=53 members0:
+D pop chat=1 total=1
+D rc h1=1 h2=1 h3=1 h4=2 h5=1 h15=1 h16=1 h17=1 h18=1 h19=1 h20=1 h21=1 h22=1
+step 3 21 0 0307190000ff000000
+delete h15
+delete h16
+delete h17
+delete h18
+delete h19
+delete h20
+D clients 2
+D c 2 h4 id=2 name=00610061263a0065 flags=2048 won=5801 cd=0 ign=0 blk=1 chat=40 game=65535 cm=6 gm=0 cc=0 gc=0
+D c 5 h21 id=5 name=0063006100620062 flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h21=1 h22=1
+step 5 40 1 0307300100020040af
+summary h3 40af -> 0
+=> 0
+D clients 2
+D c 2 h4 id=2 name=00610061263a0065 flags=2048 won=5801 cd=0 ign=0 blk=1 chat=40 game=65535 cm=6 gm=0 cc=0 gc=0
+D c 5 h21 id=5 name=0063006100620062 flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h21=1 h22=1
+delete h3
+delete h1
+delete h2
+delete h4
+delete h5
+delete h21
+delete h22
+left 0
+seq 28
+new list h2
+new server h1
+new game h3
+step 3 21 0 0307190000ff00030018001e00020065003a2604002e0000000400010000000400000022000a00040063006500650063000100200004000000000800000200020002000203000516003c0001003a260500010004000000ffffffff05000000
+new list h5
+new group h4
+text h6 0063006500650063
+new list h8
+new group h7
+text h9 0065263a
+new list h11
+new group h10
+text h12 263a
+D clients 0
+D groups 3
+D g h4 id=10 name=0063006500650063 num=2 flags=4 cap=1 max=32 members0:
+D g h7 id=30 name=0065263a num=0 flags=262144 cap=4 max=46 members0:
+D g h10 id=60 name=263a num=0 flags=4 cap=5 max=1 members0:
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+delete h3
+delete h1
+delete h2
+delete h4
+delete h5
+delete h6
+delete h7
+delete h8
+delete h9
+delete h10
+delete h11
+delete h12
+left 0
+seq 29
+new list h2
+new server h1
+new game h3
+step 0 24 0 0307200300020065003a2608000100000000080000
+new list h5
+new group h4
+text h6 0065263a
+=> h4
+D clients 0
+D groups 1
+D g h4 id=3 name=0065263a num=0 flags=1 cap=0 max=8 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 2 20 0 03074a00000300030000000400000000030000002000000000040001003a261008000001020413000000
+new client h7
+text h8 -
+new client h9
+text h10 263a
+ignored? h8 -> 0
+blocked? 0 -> 1
+ignored? h10 -> 1
+blocked? 19 -> 0
+D clients 2
+D c 3 h7 id=3 name=- flags=32 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h9 id=4 name=263a flags=2064 won=0 cd=19 ign=1 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h4 id=3 name=0065263a num=0 flags=1 cap=0 max=8 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1
+step 0 24 0 030720060004006200650061003a260c000400000000080000
+new list h12
+new group h11
+text h13 006200650061263a
+=> h11
+D clients 2
+D c 3 h7 id=3 name=- flags=32 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h9 id=4 name=263a flags=2064 won=0 cd=19 ign=1 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h4 id=3 name=0065263a num=0 flags=1 cap=0 max=8 members0:
+D g h11 id=6 name=006200650061263a num=0 flags=4 cap=0 max=12 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1
+step 3 21 0 0307190000ff0001001c003c000400630062006200620003002a00000800000100000004000000
+delete h4
+delete h5
+delete h6
+delete h11
+delete h12
+delete h13
+new list h15
+new group h14
+text h16 0063006200620062
+D clients 2
+D c 3 h7 id=3 name=- flags=32 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h9 id=4 name=263a flags=2064 won=0 cd=19 ign=1 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h14 id=60 name=0063006200620062 num=0 flags=2048 cap=3 max=42 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h14=1 h15=1 h16=1
+step 3 21 0 0307190000ff00020023001400030062006100640002000200ffffffff00080000070003000500020500020400051a002800030061006400640004003100200000000000040002000000
+new list h18
+new group h17
+text h19 006200610064
+new list h21
+new group h20
+text h22 006100640064
+delete h14
+delete h15
+delete h16
+D clients 2
+D c 3 h7 id=3 name=- flags=32 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h9 id=4 name=263a flags=2064 won=0 cd=19 ign=1 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h17 id=20 name=006200610064 num=3 flags=4294967295 cap=2 max=2 members0:
+D g h20 id=40 name=006100640064 num=0 flags=32 cap=4 max=49 members0:
+D pop chat=3 total=3
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h17=1 h18=1 h19=1 h20=1 h21=1 h22=1
+delete h3
+delete h1
+delete h2
+delete h7
+delete h8
+delete h9
+delete h10
+delete h17
+delete h18
+delete h19
+delete h20
+delete h21
+delete h22
+left 0
+seq 30
+new list h2
+new server h1
+new game h3
+step 2 20 0 0307170000030004000100630004000000030004006500630061006400000000000500020063006200ffffffff
+new client h4
+text h5 0065006300610064
+new client h6
+text h7 0063
+new client h8
+text h9 00630062
+ignored? h5 -> 0
+blocked? 0 -> 1
+ignored? h7 -> 1
+blocked? 0 -> 1
+ignored? h9 -> 0
+blocked? 0 -> 1
+D clients 3
+D c 3 h4 id=3 name=0065006300610064 flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h6 id=4 name=0063 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h8 id=5 name=00630062 flags=4294967295 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+delete h3
+delete h1
+delete h2
+delete h4
+delete h5
+delete h6
+delete h7
+delete h8
+delete h9
+left 0
+seq 31
+new list h2
+new server h1
+new game h3
+step 4 41 1 03073100000100320001470262006100010057
+objects 1
+link 50
+summary h3 57 -> 1
+=> 1
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 2 20 0 03074a00000200020004003a26620064006400010800000101049c3800000500000000000000020104131700000901dd
+new client h4
+text h5 263a006200640064
+new client h6
+text h7 -
+ignored? h5 -> 0
+blocked? 0 -> 1
+ignored? h7 -> 0
+blocked? 0 -> 1
+D clients 2
+D c 2 h4 id=2 name=263a006200640064 flags=2049 won=14492 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h6 id=5 name=- flags=0 won=5907 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1
+step 1 8 1 03070806000100640004000000
+new client h8
+text h9 0064
+ignored? h9 -> 1
+blocked? 0 -> 1
+=> h8
+D clients 3
+D c 2 h4 id=2 name=263a006200640064 flags=2049 won=14492 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h6 id=5 name=- flags=0 won=5907 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=0064 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+step 3 21 1 030719fdff
+D clients 3
+D c 2 h4 id=2 name=263a006200640064 flags=2049 won=14492 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h6 id=5 name=- flags=0 won=5907 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=0064 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+step 3 21 1 0307190000ff00030022000a0004006100610063006200060038000000040001080000030002000600050300051a0014000000050013000400000010080000020002000400040200001c00320004003a2661006400610002003200041000000008000002000000
+new list h11
+new group h10
+text h12 0061006100630062
+new list h14
+new group h13
+text h15 -
+new list h17
+new group h16
+text h18 263a006100640061
+D clients 3
+D c 2 h4 id=2 name=263a006200640064 flags=2049 won=14492 cd=0 ign=0 blk=1 chat=65535 game=20 cm=0 gm=0 cc=0 gc=0
+D c 5 h6 id=5 name=- flags=0 won=5907 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h8 id=6 name=0064 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=10 cm=0 gm=5 cc=0 gc=1
+D groups 3
+D g h10 id=10 name=0061006100630062 num=1 flags=262144 cap=6 max=56 members1: h8
+D g h13 id=20 name=- num=1 flags=4 cap=5 max=19 members1: h4
+D g h16 id=50 name=263a006100640061 num=0 flags=4100 cap=2 max=50 members0:
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h4=2 h5=1 h6=1 h7=1 h8=2 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1
+delete h3
+delete h1
+delete h2
+delete h6
+delete h7
+delete h10
+delete h11
+delete h8
+delete h9
+delete h12
+delete h13
+delete h14
+delete h4
+delete h5
+delete h15
+delete h16
+delete h17
+delete h18
+left 0
+seq 32
+new list h2
+new server h1
+new game h3
+step 6 19 0 03071500000164000f01001800d213000001003a26b94500001700000001003a2601003a26
+bad name=263a id=5074 exp=17849 mod=23 modname=263a comment=263a
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 3 21 1 0307190000ff00010014001e00000001003a00010800001008000007000000
+new list h5
+new group h4
+text h6 -
+D clients 0
+D groups 1
+D g h4 id=30 name=- num=0 flags=2049 cap=1 max=58 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 0 24 0 03072005000400620065006100630003001008000004100000
+new list h8
+new group h7
+text h9 0062006500610063
+=> h7
+D clients 0
+D groups 2
+D g h7 id=5 name=0062006500610063 num=0 flags=2064 cap=0 max=3 members0:
+D g h4 id=30 name=- num=0 flags=2049 cap=1 max=58 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1
+step 2 20 1 03074a00000400060003006100630065000000000002020422000000090127060001003a26040000000301040c0d00000901da090126010002006200640000000400030901cb02040f000000020427000000020001006400ffffffff0302040800000002042600000009018a
+new client h10
+text h11 00620064
+new client h12
+text h13 0064
+new client h14
+text h15 263a
+ignored? h11 -> 0
+blocked? 39 -> 1
+ignored? h13 -> 1
+blocked? 38 -> 0
+ignored? h15 -> 1
+blocked? 0 -> 1
+D clients 3
+D c 1 h10 id=1 name=00620064 flags=262144 won=0 cd=39 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 2 h12 id=2 name=0064 flags=4294967295 won=0 cd=38 ign=1 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h14 id=6 name=263a flags=4 won=3340 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h7 id=5 name=0062006500610063 num=0 flags=2064 cap=0 max=3 members0:
+D g h4 id=30 name=- num=0 flags=2049 cap=1 max=58 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1
+step 2 20 1 03074a00000200010000000008000000050001006200ffffffff030204040000000104f8350000020419000000
+text h16 -
+delete h11
+delete h12
+delete h13
+new client h17
+text h18 0062
+delete h14
+delete h15
+ignored? h16 -> 0
+blocked? 0 -> 1
+ignored? h18 -> 1
+blocked? 25 -> 0
+D clients 2
+D c 1 h10 id=1 name=- flags=2048 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h17 id=5 name=0062 flags=4294967295 won=13816 cd=25 ign=1 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h7 id=5 name=0062006500610063 num=0 flags=2064 cap=0 max=3 members0:
+D g h4 id=30 name=- num=0 flags=2049 cap=1 max=58 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h16=1 h17=1 h18=1
+step 6 19 0 03071500000264000f0000
+D clients 2
+D c 1 h10 id=1 name=- flags=2048 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 5 h17 id=5 name=0062 flags=4294967295 won=13816 cd=25 ign=1 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h7 id=5 name=0062006500610063 num=0 flags=2064 cap=0 max=3 members0:
+D g h4 id=30 name=- num=0 flags=2049 cap=1 max=58 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1 h8=1 h9=1 h10=1 h16=1 h17=1 h18=1
+step 3 21 1 0307190000ff00030019001e000100640006003a0020000000100800000000010005000618001e0002006500650003002900ffffffff041000000300000020001400030062006500610001002100000000000008000007000200010000050003
+delete h7
+delete h8
+delete h9
+new list h20
+new group h19
+text h21 006200650061
+text h22 00650065
+delete h6
+D clients 2
+D c 1 h10 id=1 name=- flags=2048 won=0 cd=0 ign=0 blk=1 chat=65535 game=20 cm=0 gm=0 cc=0 gc=1
+D c 5 h17 id=5 name=0062 flags=4294967295 won=13816 cd=25 ign=1 blk=0 chat=65535 game=20 cm=0 gm=3 cc=0 gc=0
+D groups 2
+D g h19 id=20 name=006200650061 num=2 flags=0 cap=1 max=33 members2: h10 h17
+D g h4 id=30 name=00650065 num=0 flags=4294967295 cap=3 max=41 members0:
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h10=2 h16=1 h17=2 h18=1 h19=1 h20=1 h21=1 h22=1
+step 2 20 1 03074a000004000600030062006500650010080000000600010064000000000000060001006500100800000006000100610004100000030104580500000104f05b000009016e
+new client h23
+text h24 0061
+ignored? h24 -> 1
+blocked? 0 -> 1
+D clients 1
+D c 6 h23 id=6 name=0061 flags=4100 won=23536 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h19 id=20 name=006200650061 num=2 flags=0 cap=1 max=33 members2: h10 h17
+D g h4 id=30 name=00650065 num=0 flags=4294967295 cap=3 max=41 members0:
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h10=1 h16=1 h17=1 h18=1 h19=1 h20=1 h21=1 h22=1 h23=1 h24=1
+step 5 40 0 03073004000000
+summary h3 - -> 0
+=> 0
+D clients 1
+D c 6 h23 id=6 name=0061 flags=4100 won=23536 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h19 id=20 name=006200650061 num=2 flags=0 cap=1 max=33 members2: h10 h17
+D g h4 id=30 name=00650065 num=0 flags=4294967295 cap=3 max=41 members0:
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h10=1 h16=1 h17=1 h18=1 h19=1 h20=1 h21=1 h22=1 h23=1 h24=1
+delete h3
+delete h1
+delete h2
+delete h23
+delete h24
+delete h19
+delete h20
+delete h10
+delete h16
+delete h17
+delete h18
+delete h21
+delete h4
+delete h5
+delete h22
+left 0
+seq 33
+new list h2
+new server h1
+new game h3
+step 3 21 0 0307190000ff000200140014000000060029000410000001080000000000001a003c00000005002c0000000000200000000300
+new list h5
+new group h4
+text h6 -
+D clients 0
+D groups 1
+D g h4 id=20 name=- num=0 flags=4100 cap=6 max=41 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+delete h3
+delete h1
+delete h2
+delete h4
+delete h5
+delete h6
+left 0
+seq 34
+new list h2
+new server h1
+new game h3
+step 3 21 0 0307190000ff00030019001e00010064000500130000080000200000000600010001000119003c0001003a2606002f
+new list h5
+new group h4
+text h6 0064
+D clients 0
+D groups 1
+D g h4 id=30 name=0064 num=1 flags=2048 cap=5 max=19 members0:
+D pop chat=1 total=1
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 4 41 1 030731000003001e000447616d65013a2601004a28000147023a2664000200d7091e0001470162000000
+objects 3
+link 30
+summary h3 4a -> 1
+=> 1
+link 40
+summary h3 d709 -> 0
+=> 0
+link 30
+summary h3 - -> 0
+=> 0
+D clients 0
+D groups 1
+D g h4 id=30 name=0064 num=1 flags=2048 cap=5 max=19 members0:
+D pop chat=1 total=1
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 4 41 0 03073100000000
+objects 0
+D clients 0
+D groups 1
+D g h4 id=30 name=0064 num=1 flags=2048 cap=5 max=19 members0:
+D pop chat=1 total=1
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 3 21 1 0307190000ff0002001800280002006400610004003400ffffffff01080000060000001a000a00030064006200630002003400040000001008000002000000
+new list h8
+new group h7
+text h9 006400620063
+delete h4
+delete h5
+delete h6
+new list h11
+new group h10
+text h12 00640061
+D clients 0
+D groups 2
+D g h7 id=10 name=006400620063 num=0 flags=4 cap=2 max=52 members0:
+D g h10 id=40 name=00640061 num=0 flags=4294967295 cap=4 max=52 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 3 21 1 0307190000ff000000
+delete h7
+delete h8
+delete h9
+delete h10
+delete h11
+delete h12
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 1 8 1 030708050003003a266300630000000000
+new client h13
+text h14 263a00630063
+ignored? h14 -> 1
+blocked? 0 -> 1
+=> h13
+D clients 1
+D c 5 h13 id=5 name=263a00630063 flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h13=1 h14=1
+step 4 41 1 0307310000010032000447616d650003000d2295
+objects 1
+link 50
+summary h3 0d2295 -> 1
+=> 1
+D clients 1
+D c 5 h13 id=5 name=263a00630063 flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h13=1 h14=1
+step 3 21 0 0307190000ff000000
+D clients 1
+D c 5 h13 id=5 name=263a00630063 flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h13=1 h14=1
+step 3 21 1 0307190000ff0002001e001e0002003a266500060038000400000010080000010002000600000400051a001400000006000400000000000000000004000200050005040005
+new list h16
+new group h15
+text h17 -
+new list h19
+new group h18
+text h20 263a0065
+D clients 1
+D c 5 h13 id=5 name=263a00630063 flags=0 won=0 cd=0 ign=1 blk=1 chat=65535 game=20 cm=0 gm=5 cc=0 gc=0
+D groups 2
+D g h15 id=20 name=- num=1 flags=0 cap=6 max=4 members1: h13
+D g h18 id=30 name=263a0065 num=0 flags=4 cap=6 max=56 members0:
+D pop chat=0 total=1
+D rc h1=1 h2=1 h3=1 h13=2 h14=1 h15=1 h16=1 h17=1 h18=1 h19=1 h20=1
+delete h3
+delete h1
+delete h2
+delete h15
+delete h16
+delete h13
+delete h14
+delete h17
+delete h18
+delete h19
+delete h20
+left 0
+seq 35
+new list h2
+new server h1
+new game h3
+step 1 8 1 0307080500030064006200650004000000
+new client h4
+text h5 006400620065
+ignored? h5 -> 1
+blocked? 0 -> 1
+=> h4
+D clients 1
+D c 5 h4 id=5 name=006400620065 flags=4 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1
+delete h3
+delete h1
+delete h2
+delete h4
+delete h5
+left 0
+seq 36
+new list h2
+new server h1
+new game h3
+step 2 20 1 03074a0000030004000400640065003a266500000000000004000400650062006400650010080000010901eb0200040065006500620064000008000000
+new client h4
+text h5 0065006500620064
+new client h6
+text h7 0065006200640065
+ignored? h5 -> 0
+blocked? 0 -> 1
+ignored? h7 -> 0
+blocked? 0 -> 1
+D clients 2
+D c 2 h4 id=2 name=0065006500620064 flags=2048 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h6 id=4 name=0065006200640065 flags=2064 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1 h7=1
+step 2 20 0 03074a000004000200020064006500ffffffff0102041c000000060002006400610001080000000400030063006500630001000000020901a10104c6470000030001003a261008000000
+text h8 00640065
+delete h5
+new client h9
+text h10 263a
+text h11 006300650063
+delete h7
+new client h12
+text h13 00640061
+ignored? h8 -> 0
+blocked? 28 -> 0
+ignored? h10 -> 1
+blocked? 0 -> 1
+ignored? h11 -> 1
+blocked? 0 -> 1
+ignored? h13 -> 0
+blocked? 0 -> 1
+D clients 4
+D c 2 h4 id=2 name=00640065 flags=4294967295 won=0 cd=28 ign=0 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h9 id=3 name=263a flags=2064 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h6 id=4 name=006300650063 flags=1 won=18374 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h12 id=6 name=00640061 flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h6=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1
+step 4 41 1 03073100000300320001470364006100640003001faccb140001470000001400014700040022fd0d0d
+objects 3
+link 50
+summary h3 1faccb -> 1
+=> 1
+link 20
+summary h3 - -> 0
+=> 0
+link 20
+summary h3 22fd0d0d -> 0
+=> 0
+D clients 4
+D c 2 h4 id=2 name=00640065 flags=4294967295 won=0 cd=28 ign=0 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h9 id=3 name=263a flags=2064 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h6 id=4 name=006300650063 flags=1 won=18374 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h12 id=6 name=00640061 flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h6=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1
+step 4 41 0 030731fcff
+objects 0
+D clients 4
+D c 2 h4 id=2 name=00640065 flags=4294967295 won=0 cd=28 ign=0 blk=0 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h9 id=3 name=263a flags=2064 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 4 h6 id=4 name=006300650063 flags=1 won=18374 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h12 id=6 name=00640061 flags=2049 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h6=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1
+step 2 20 1 0307170000010005000000ffffffff
+delete h4
+delete h8
+delete h9
+delete h10
+delete h6
+delete h11
+new client h14
+text h15 -
+delete h12
+delete h13
+ignored? h15 -> 0
+blocked? 0 -> 1
+D clients 1
+D c 5 h14 id=5 name=- flags=4294967295 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h14=1 h15=1
+delete h3
+delete h1
+delete h2
+delete h14
+delete h15
+left 0
+seq 37
+new list h2
+new server h1
+new game h3
+step 5 40 1 030730060004008668403e
+summary h3 8668403e -> 0
+=> 0
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+delete h3
+delete h1
+delete h2
+left 0
+seq 38
+new list h2
+new server h1
+new game h3
+step 0 24 1 030720040002006200640003000100000001000000
+new list h5
+new group h4
+text h6 00620064
+=> h4
+D clients 0
+D groups 1
+D g h4 id=4 name=00620064 num=0 flags=1 cap=0 max=3 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 5 40 0 030730
+=> 0
+D clients 0
+D groups 1
+D g h4 id=4 name=00620064 num=0 flags=1 cap=0 max=3 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 3 21 0 030719fdff
+delete h4
+delete h5
+delete h6
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 3 21 1 0307190000ff0001001a002800030063006300630006002f00010800001008000001000000
+new list h8
+new group h7
+text h9 006300630063
+D clients 0
+D groups 1
+D g h7 id=40 name=006300630063 num=0 flags=2049 cap=6 max=47 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1
+step 2 20 0 030717000004000200010062002000000003000400630061006200620004000000060001003a26010000000200000004100000
+new client h10
+text h11 -
+new client h12
+text h13 0063006100620062
+new client h14
+text h15 263a
+ignored? h11 -> 0
+blocked? 0 -> 1
+ignored? h13 -> 0
+blocked? 0 -> 1
+ignored? h15 -> 1
+blocked? 0 -> 1
+D clients 3
+D c 2 h10 id=2 name=- flags=4100 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 3 h12 id=3 name=0063006100620062 flags=4 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D c 6 h14 id=6 name=263a flags=1 won=0 cd=0 ign=1 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 1
+D g h7 id=40 name=006300630063 num=0 flags=2049 cap=6 max=47 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1 h15=1
+delete h3
+delete h1
+delete h2
+delete h10
+delete h11
+delete h12
+delete h13
+delete h14
+delete h15
+delete h7
+delete h8
+delete h9
+left 0
+seq 39
+new list h2
+new server h1
+new game h3
+step 3 21 0 0307190000ff0002001d003c0003003a26650062000100300004100000100800000700010004000416003c000100610001002600041000000000000004000000
+new list h5
+new group h4
+text h6 0061
+D clients 0
+D groups 1
+D g h4 id=60 name=0061 num=0 flags=4100 cap=1 max=38 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h4=1 h5=1 h6=1
+step 3 21 1 0307190000ff00020023001e
+delete h4
+delete h5
+delete h6
+D clients 0
+D groups 0
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1
+step 3 21 0 0307190000ff0003001d0028000000020016000108000000000400010003000400030400030200001d00320000000500130000000000000004000700030006000003000706000320003200030064006300610004001700010800000400000006000200060004020003
+new list h8
+new group h7
+text h9 -
+new list h11
+new group h10
+text h12 006400630061
+D clients 0
+D groups 2
+D g h7 id=40 name=- num=3 flags=2049 cap=2 max=22 members0:
+D g h10 id=50 name=006400630061 num=2 flags=2049 cap=4 max=23 members0:
+D pop chat=5 total=5
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 6 19 0 03071500000264000f03002600a21300000400650063003a266200c7420000150000000200620063000400650065003a26640022009513000004006400640063006500000000001b0000000200620062000200610063001c009713000000008c400000380000000300640061006300020061003a26
+bad name=00650063263a0062 id=5026 exp=17095 mod=21 modname=00620063 comment=00650065263a0064
+bad name=0064006400630065 id=5013 exp=0 mod=27 modname=00620062 comment=00610063
+bad name=- id=5015 exp=16524 mod=56 modname=006400610063 comment=0061263a
+D clients 0
+D groups 2
+D g h7 id=40 name=- num=3 flags=2049 cap=2 max=22 members0:
+D g h10 id=50 name=006400630061 num=2 flags=2049 cap=4 max=23 members0:
+D pop chat=5 total=5
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 6 19 0 03071500000264000002000e00ac130000040063006500650065000c00b513000003003a263a266300
+bad name=0063006500650065 id=5036 exp=0 mod=0 modname=- comment=-
+bad name=263a263a0063 id=5045 exp=0 mod=0 modname=- comment=-
+D clients 0
+D groups 2
+D g h7 id=40 name=- num=3 flags=2049 cap=2 max=22 members0:
+D g h10 id=50 name=006400630061 num=2 flags=2049 cap=4 max=23 members0:
+D pop chat=5 total=5
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1
+step 1 8 0 03070806000300
+new client h13
+text h14 -
+ignored? h14 -> 0
+blocked? 0 -> 1
+=> h13
+D clients 1
+D c 6 h13 id=6 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 2
+D g h7 id=40 name=- num=3 flags=2049 cap=2 max=22 members0:
+D g h10 id=50 name=006400630061 num=2 flags=2049 cap=4 max=23 members0:
+D pop chat=5 total=5
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h9=1 h10=1 h11=1 h12=1 h13=1 h14=1
+step 3 21 0 0307190000ff00030022000a00040061006400620064000200270004100000000000000700020002000603000314002800000005003b001008000000080000010000001c0032000400640063003a26630006001d0001000000ffffffff05000000
+new list h16
+new group h15
+text h17 0061006400620064
+text h18 -
+delete h9
+text h19 00640063263a0063
+delete h12
+D clients 1
+D c 6 h13 id=6 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=65535 game=65535 cm=0 gm=0 cc=0 gc=0
+D groups 3
+D g h15 id=10 name=0061006400620064 num=2 flags=4100 cap=2 max=39 members0:
+D g h7 id=40 name=- num=0 flags=2064 cap=5 max=59 members0:
+D g h10 id=50 name=00640063263a0063 num=0 flags=1 cap=6 max=29 members0:
+D pop chat=0 total=2
+D rc h1=1 h2=1 h3=1 h7=1 h8=1 h10=1 h11=1 h13=1 h14=1 h15=1 h16=1 h17=1 h18=1 h19=1
+step 3 21 1 0307190000ff00010023001400030063006200650005000d00000800000000040006000300060003050007040000
+delete h15
+delete h16
+delete h17
+new list h21
+new group h20
+text h22 006300620065
+delete h7
+delete h8
+delete h18
+delete h10
+delete h11
+delete h19
+D clients 1
+D c 6 h13 id=6 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=20 game=65535 cm=3 gm=0 cc=0 gc=0
+D groups 1
+D g h20 id=20 name=006300620065 num=1 flags=2048 cap=5 max=13 members1: h13
+D pop chat=1 total=1
+D rc h1=1 h2=1 h3=1 h13=2 h14=1 h20=1 h21=1 h22=1
+step 3 21 1 0307190000ff0001001f001e000100620005002f00040000002000000003000300040001030003050000
+delete h20
+delete h21
+delete h22
+new list h24
+new group h23
+text h25 0062
+D clients 1
+D c 6 h13 id=6 name=- flags=0 won=0 cd=0 ign=0 blk=1 chat=20 game=65535 cm=3 gm=0 cc=0 gc=0
+D groups 1
+D g h23 id=30 name=0062 num=0 flags=4 cap=5 max=47 members0:
+D pop chat=0 total=0
+D rc h1=1 h2=1 h3=1 h13=1 h14=1 h23=1 h24=1 h25=1
+delete h3
+delete h1
+delete h2
+delete h13
+delete h14
+delete h23
+delete h24
+delete h25
+left 0
