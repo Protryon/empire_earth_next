@@ -88,6 +88,7 @@
 #include "ee/EEMessageCapture.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEUnitStore.h"
+#include "ee/EEWorldLayout.h"
 #include "rust/sim/units.h"   // ee_units_store_checksum_flag1
 #include <functional>
 #include "ee/EEGameLog.h"
@@ -587,8 +588,10 @@ void EEPhysics::Idle()
 // NEAR: GetLongValue(0x5e) out of line and signed in the original (fild dword); TMGetTime hoisted into ebx
 void EEPhysics::Tick()
 {
-    if (EESimCaptureRecord::Active())   // TEST ONLY: the unit store equals the objects (ee/EEUnitStore.h)
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY: the unit store equals the objects (ee/EEUnitStore.h)
         EEUnitStoreCheck(0);
+        EEWorldViewCheck();   // TEST ONLY: the world views' check (VWCK, ee/EEWorldLayout.h)
+    }
     if (sLoadedSeedPending) {   // port: a loaded game goes on from the saved seed (sLoadedSeed)
         sLoadedSeedPending = false;
         this->mRandom.SetSeed(sLoadedSeed);
