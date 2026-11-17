@@ -4,7 +4,7 @@
 // follow/zoom/scroll movers, the per-frame update), the vector<EECameraKey> COMDATs and EEIsSeen. The unnamed
 // 0x1273d7 unit ends at 0x127584, EECheatCodes.cpp starts at 0x12a54a. Names are provisional.
 //
-// The camera is whole in Rust (rust/crates/ee_app camera.rs, app and world lane round 1): its plain members are the
+// The camera is whole in Rust (rust/crates/ee_game/src/app camera.rs, app and world lane round 1): its plain members are the
 // record EeAppCameraFields the class derives from, every body is Rust over the host below (the followed units' handles,
 // the key list, the units, the terrain mesh, the viewport and the world's switches). This unit keeps the host, the
 // forwarders, Update's tail (the view to the world and the viewport, the mini map) and EEIsSeen.

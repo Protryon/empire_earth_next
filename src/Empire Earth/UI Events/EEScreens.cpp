@@ -1,5 +1,5 @@
 // C:\EEX\Empire Earth\UI Events\EEScreens.cpp (NEW, no original address: units.EXTRA_UNITS). The host of the game
-// screens that are Rust's whole (rust/crates/ee_screens menus.rs: the main menu, the editors' sub-menu, the single
+// screens that are Rust's whole (rust/crates/ee_game/src/screens menus.rs: the main menu, the editors' sub-menu, the single
 // player and play campaign screens; settings_form.rs: the game settings; docs/RUST_PLAN.md "R6 game screens", step
 // 2; lobby_form.rs: the lobby and its load screens; main_game_options.rs: the in-game options menu; main_game.rs:
 // the main game form's events; chat.rs: the chat forms' events; hot_keys.rs: the hot keys; diplomacy.rs; camera.rs:

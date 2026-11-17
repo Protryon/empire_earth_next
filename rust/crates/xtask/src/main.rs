@@ -27,7 +27,7 @@ fn find_root(start: &Path) -> Option<PathBuf> {
 
 /// cbindgen's one header over `ee_rust`, as the renames and the crate list of `rust/cbindgen.toml` make it.
 fn generate_single(root: &Path, config: cbindgen::Config) -> Result<String, String> {
-    let crate_dir = root.join("rust/crates/ee_rust");
+    let crate_dir = root.join("rust/crates/ee_game");
     let bindings = cbindgen::Builder::new()
         .with_crate(crate_dir)
         // a dependency's `extern "C"` functions: cbindgen emits functions only from the binding crate or from

@@ -1,6 +1,6 @@
 """The Rust static library (rust/, docs/RUST_PLAN.md section 4): build it for a target, and its gates.
 
-  python -I tools/rust_build.py build [--target T]     ee_rust for a target (default: the host) -> build/rust/<triple>/release
+  python -I tools/rust_build.py build [--target T]     ee_game for a target (default: the host) -> build/rust/<triple>/release
   python -I tools/rust_build.py gate                   cargo test, clippy -D warnings, rustfmt --check, the header check
   python -I tools/rust_build.py header                 regenerate include/rust/*.h (cbindgen: a header per crate, ee_rust.h all)
 
@@ -53,7 +53,7 @@ def cargo_env(target=None):
 
 
 def lib_path(target):
-    name = "ee_rust.lib" if target.startswith("windows") else "libee_rust.a"
+    name = "ee_game.lib" if target.startswith("windows") else "libee_game.a"
     return TARGET_DIR / TRIPLES[target] / "release" / name
 
 
@@ -62,9 +62,9 @@ def run_cargo(args, target=None):
 
 
 def ensure(target=None):
-    """Builds ee_rust for the target if it is out of date; returns the static library's path."""
+    """Builds ee_game for the target if it is out of date; returns the static library's path."""
     target = target or host_target()
-    code = run_cargo(["build", "--release", "-p", "ee_rust", "--target", TRIPLES[target]], target)
+    code = run_cargo(["build", "--release", "-p", "ee_game", "--target", TRIPLES[target]], target)
     if code:
         sys.exit(f"cargo build for {target} failed ({code})")
     return lib_path(target)

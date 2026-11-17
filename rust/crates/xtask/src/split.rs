@@ -485,7 +485,7 @@ pub fn render(
     functions: &[&Item],
 ) -> String {
     let what = if header == COMMON {
-        "The C interface of rust/crates/ee_rust and the names more than one crate defines alike".to_string()
+        "The C interface of rust/crates/ee_game and the names more than one crate defines alike".to_string()
     } else {
         format!("The C interface of rust/crates/{header}")
     };

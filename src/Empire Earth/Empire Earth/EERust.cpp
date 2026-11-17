@@ -1,4 +1,4 @@
-// The game's start of the Rust library (rust/crates/ee_rust; docs/RUST_PLAN.md).
+// The game's start of the Rust library (rust/crates/ee_game; docs/RUST_PLAN.md).
 #include <stdio.h>
 #include <string>
 #include "ee/EEGameLog.h"

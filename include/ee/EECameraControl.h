@@ -15,7 +15,7 @@ class GE3DPoint;
 class EEUnit;
 class EECameraKey;                          // 0xa4-byte camera keys (provisional name; also EEScenarioManager+8)
 
-// The camera is whole in Rust (rust/crates/ee_app camera.rs): the plain members below the methods are the record
+// The camera is whole in Rust (rust/crates/ee_game/src/app camera.rs): the plain members below the methods are the record
 // EeAppCameraFields (rust/ee_app.h) the class derives from, in the original's order and names (mQ014, mQ024 the
 // start turns, mStartOffset, mStartFocus, mQ04C, mQ05C the end turns, mEndOffset, mEndFocus, mView, mTargetPoint (x =
 // -10000: none), mFraction, mRate, mZoom, mWait, mWaited, mTurnYaw, mTurnPitch, mMode (3: free), mPathIndex, mChanged,

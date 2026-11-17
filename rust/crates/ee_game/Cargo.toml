@@ -1,0 +1,22 @@
+# ee_game: ee_app, ee_rust, ee_screens (docs/progress/crate-restructure.md)
+[package]
+name = "ee_game"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+ee_audio = { path = "../ee_audio" }
+ee_base = { path = "../ee_base" }
+ee_data = { path = "../ee_data" }
+ee_net = { path = "../ee_net" }
+ee_render = { path = "../ee_render" }
+ee_sim = { path = "../ee_sim" }
+ee_ui = { path = "../ee_ui" }
+ee_won = { path = "../ee_won" }
+
+[dev-dependencies]
+ee_ui = { path = "../ee_ui", features = ["no_cpp"] }

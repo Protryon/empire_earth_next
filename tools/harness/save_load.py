@@ -15,7 +15,7 @@ clicks Load (EEUIESPLELoadFile: validates, EEMStartLoading(1, ...)). The game fo
 (no lobby, no civilization pre-empt: the saved players carry their flags).
 Controls are found by their trigger event's ProcessEvent rva (ui-state `control i event-rva X`): original rvas from
 analysis/exe/names.txt, full link by map name; nothing is hardcoded but the form ids (data-defined, both images). An
-event the game screens moved to Rust (rust/crates/ee_screens) has no class in the full link: it is an EEScreenEvent,
+event the game screens moved to Rust (rust/crates/ee_game/src/screens) has no class in the full link: it is an EEScreenEvent,
 found by that class's ProcessEvent and its code (ui-state `... screen CODE`; SCREEN_CODES).
 """
 import pathlib,re,shutil,time

@@ -181,14 +181,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ee_app"
-version = "0.1.0"
-dependencies = [
- "ee_base",
- "ee_render",
-]
-
-[[package]]
 name = "ee_audio"
 version = "0.1.0"
 dependencies = [
@@ -207,6 +199,20 @@ dependencies = [
 [[package]]
 name = "ee_data"
 version = "0.1.0"
+
+[[package]]
+name = "ee_game"
+version = "0.1.0"
+dependencies = [
+ "ee_audio",
+ "ee_base",
+ "ee_data",
+ "ee_net",
+ "ee_render",
+ "ee_sim",
+ "ee_ui",
+ "ee_won",
+]
 
 [[package]]
 name = "ee_net"
@@ -234,33 +240,6 @@ dependencies = [
  "ee_base",
  "ee_render",
  "ee_sim",
-]
-
-[[package]]
-name = "ee_rust"
-version = "0.1.0"
-dependencies = [
- "ee_app",
- "ee_audio",
- "ee_base",
- "ee_data",
- "ee_net",
- "ee_render",
- "ee_screens",
- "ee_sim",
- "ee_ui",
- "ee_won",
-]
-
-[[package]]
-name = "ee_screens"
-version = "0.1.0"
-dependencies = [
- "ee_audio",
- "ee_base",
- "ee_render",
- "ee_sim",
- "ee_ui",
 ]
 
 [[package]]

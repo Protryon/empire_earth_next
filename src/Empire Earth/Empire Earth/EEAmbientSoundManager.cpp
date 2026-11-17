@@ -6,7 +6,7 @@
 // Also EEAmbientSound.cpp's 0x124a88..0x124ee2 (the ambient sound and the world analyzer's counters; the unit is
 // folded in here).
 //
-// The ambient sounds are whole in Rust (rust/crates/ee_app ambient.rs, app and world lane round 1): the manager's, the
+// The ambient sounds are whole in Rust (rust/crates/ee_game/src/app ambient.rs, app and world lane round 1): the manager's, the
 // sounds' and the analyzer's plain members are records the classes derive from, every decision is Rust over the host
 // below (the sound objects and instances, the random generator, the world's reads). This unit keeps the host, Load
 // (the file), the analyzer's counting of the rendered units and the forwarders.
