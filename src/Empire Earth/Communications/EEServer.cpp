@@ -46,7 +46,8 @@
 #include "ee/EECPEngine.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/ee_screens.h"   // EE_SCREENS_MG_*: the main game form's events (ee_screens main_game.rs)
+#include "rust/game/screens.h"   // EE_SCREENS_MG_*: the main game form's events (ee_screens main_game.rs)
+#include "rust/sim/netmsg.h"
 #include "ee/EEWonNet.h"
 #include "ee/EEPSaveGameHeader.h"
 #include "ee/EEARust.h"
@@ -61,7 +62,8 @@
 #include "ee/EEGraphics.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEHumanPlayer.h"
-#include "rust/ee_netmsg.h"   // ee_netmsg session.rs
+#include "rust/game/screens.h"   // ee_netmsg session.rs
+#include "rust/sim/netmsg.h"
 long gDefaultPlayerColors[16] = {0, 1, 4, 9, 2, 15, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15};
 void EELobbyPostConnectStatus(bool inConnected);   // 0x295ce3 (EELobbyInit.cpp; provisional name)
 static unsigned long sSample = 0xffffffff;   // 0x4bb8b8 (ExecuteRemovePlayer: the last booted/out-of-synch sound)

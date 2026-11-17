@@ -10,7 +10,7 @@
 
 #include <vector>
 #include "lle/UWideString.h"
-#include "rust/ee_scenario.h"
+#include "rust/sim/scenario.h"
 class EEComplexUnit;
 class EEUnit;
 

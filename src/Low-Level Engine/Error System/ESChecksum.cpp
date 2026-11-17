@@ -7,7 +7,7 @@
 #include "lle/UWideString.h"
 #include "lle/UString.h"
 #include "lle/ESChecksum.h"
-#include "rust/ee_error.h"
+#include "rust/base/error.h"
 
 // Creates an empty checksum set, verbose (one described entry per checksum) or summed
 ESChecksum::ESChecksum(bool inVerbose) : mRust(ee_error_checksum_new(inVerbose))

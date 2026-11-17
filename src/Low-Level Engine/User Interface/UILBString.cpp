@@ -7,7 +7,10 @@
 #include <windows.h>
 #include <mbstring.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/draw_ffi.h"
+#include "rust/ui/obj.h"
+#include "rust/ui/rect.h"
+#include "rust/ui/string_list_ffi.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"

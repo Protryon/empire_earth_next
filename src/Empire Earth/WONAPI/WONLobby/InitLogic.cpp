@@ -16,7 +16,14 @@
 #include "ee/wonapi/WONLobbyAccountLogic.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/EELobbySound.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/flow.h"
+#include "rust/won_lobby/logics.h"
+#include "rust/won_net/hostop.h"
+#include "rust/won_net/httpcache.h"
+#include "rust/won_net/httpdoc.h"
+#include "rust/won_net/httpget.h"
+#include "rust/won_net/reqdir.h"
+#include "rust/won_net/reqops.h"
 // A Rust object since R6 WONLobby round 8 (rust/crates/ee_won_lobby/src/logics.rs: the errors, the order of the checks
 // and every decision, over flow.rs's); this unit keeps the shell (the HTTP session, the firewall test's socket, op
 // and address, the adapter dialog, the advert's link) and the host's ops, each one the original's calls on a C++

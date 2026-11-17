@@ -17,6 +17,7 @@
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONStatus.h"
 #include "won_dir_flags.h"
+#include "rust/won_net/dir.h"
 
 using namespace WONAPI;
 

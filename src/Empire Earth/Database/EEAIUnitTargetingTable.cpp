@@ -9,7 +9,7 @@
 
 #include "ee/EEAIUnitTargetingTable.h"
 #include "ee/EEDbRecords.h"
-#include "rust/ee_data.h"
+#include "rust/data/tables.h"
 
 long** EEAIUnitTargetingTable::sTable;      // 0x4e60c0: three rows of ten values (provisional name)
 

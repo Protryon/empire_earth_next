@@ -12,7 +12,8 @@
 #include <windows.h>
 #include <stdlib.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/editobj.h"
+#include "rust/ui/obj.h"
 #include "lle/LowLevelEngine.h"
 #include "platform/PlatWindow.h"
 #include "lle/GEColor.h"

@@ -23,7 +23,11 @@
 #include <vector>
 #include <set>
 #include <map>
-#include "rust/ee_won.h"
+#include "rust/won_gui/compmem.h"
+#include "rust/won_gui/compobj.h"
+#include "rust/won_gui/guifocus.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/guilayout.h"
 
 typedef uint32_t DWORD;
 static unsigned sSeed;

@@ -70,7 +70,8 @@
 #include "ee/EERandomMapClass.h"
 #include "ee/EEGlobalConstants.h"
 #include "ee/EERules.h"
-#include "rust/ee_rmap.h"
+#include "rust/sim/rmap.h"
+#include "rust/sim/units.h"
 #include "ee/EERandomMapView.h"
 
 // EETerrainTable::sCliffTable[inIndex] (its COMDAT 0x28aaf7 follows the unit's code; provisional name)

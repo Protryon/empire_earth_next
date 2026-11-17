@@ -8,7 +8,8 @@
 // movie). UIMovie.cpp's forwarders live here too.
 #include <windows.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/mediaobj.h"
+#include "rust/ui/obj.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"

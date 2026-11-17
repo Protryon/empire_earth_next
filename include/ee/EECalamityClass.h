@@ -9,7 +9,7 @@
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 
-#include "rust/ee_tech.h"   // EeCalamityClassFields, EeCalamityClassMedia (ee_tech calamity_class.rs)
+#include "rust/sim/tech.h"   // EeCalamityClassFields, EeCalamityClassMedia (ee_tech calamity_class.rs)
 
 class EECalamity;
 class EEContagionFunctor;

@@ -25,7 +25,9 @@
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyParser.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/lobbymap.h"
+#include "rust/won_lobby/persist.h"
+#include "rust/won_lobby/prefsobj.h"
 
 namespace WONAPI {
 // The files' layouts (written from lists, read as events in the original's order of assignments), the user file

@@ -22,8 +22,10 @@
 
 #include "ee/RTSMouse.h"
 #include "lle/GERenderState.h"
-#include "rust/ee_ge.h"   // ee_gfx mouse.rs (ClampPosition, Update's move), mouse_frame.rs (the frame)
-#include "rust/ee_gfx.h"
+#include "rust/base/math.h"   // ee_gfx mouse.rs (ClampPosition, Update's move), mouse_frame.rs (the frame)
+#include "rust/render/gfx.h"
+#include "rust/base/math.h"
+#include "rust/render/gfx.h"
 // the GE value classes as their #[repr(C)] mirrors (the same storage)
 static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GERectangle) == sizeof(EeGeRectangle), "GE mirrors");
 

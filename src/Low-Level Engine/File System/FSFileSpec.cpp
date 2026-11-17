@@ -13,7 +13,7 @@
 #include "lle/UWideString.h"
 #include "lle/UString.h"
 #include "lle/FSMemoryFile.h"
-#include "rust/ee_fs.h"
+#include "rust/base/fs.h"
 
 static_assert(sizeof(UString) == sizeof(EeFsString), "a UString member is an EeFsString");
 static_assert(sizeof(FSFileSpec) == sizeof(EeFsSpec), "FSFileSpec is an EeFsSpec");

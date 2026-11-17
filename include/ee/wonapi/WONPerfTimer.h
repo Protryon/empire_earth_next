@@ -4,7 +4,7 @@
 #ifndef EE_WONAPI_WONPERFTIMER_H
 #define EE_WONAPI_WONPERFTIMER_H
 #include <string>
-#include "rust/ee_won.h"
+#include "rust/won_net/perftimer.h"
 namespace WONAPI {
 class PerfTimer {
 protected:

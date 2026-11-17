@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include "rust/ee_won.h"
+#include "rust/won_gui/surface.h"
 
 typedef uint32_t DWORD;
 namespace WONAPI {

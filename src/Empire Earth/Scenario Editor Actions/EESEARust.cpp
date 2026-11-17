@@ -43,7 +43,7 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEPaint.h"
 #include "lle/UIRadioButton.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
 #include "lle/GEText.h"
 #include "lle/UIListBox.h"
 #include "lle/UILBString.h"

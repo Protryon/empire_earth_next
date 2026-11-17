@@ -37,7 +37,9 @@
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEARust.h"
 #include "ee/EEUIMiniMap.h"
-#include "rust/ee_gfx.h"
+#include "rust/base/math.h"
+#include "rust/game/screens.h"
+#include "rust/render/gfx.h"
 
 extern unsigned long& gTexturePixelDepth;
 

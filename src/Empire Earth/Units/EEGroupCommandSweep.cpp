@@ -44,7 +44,7 @@
 #include "ee/EESimCapture.h"
 #include "ee/EEUnitHost.h"
 #include "ee/EEUnitGoal.h"
-#include "rust/ee_units.h"
+#include "rust/sim/units.h"
 
 namespace {
 

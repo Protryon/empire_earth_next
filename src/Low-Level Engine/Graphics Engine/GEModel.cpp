@@ -42,7 +42,9 @@
 #include "lle/GEModelManager.h"
 #include "GERustMath.h"
 #include "lle/FSMemoryFile.h"
-#include "rust/ee_ge.h"
+#include "rust/base/math.h"
+#include "rust/render/ge.h"
+#include "rust/render/openformats.h"
 #include <stdio.h>
 #include <map>
 #include "lle/UWideString.h"

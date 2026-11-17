@@ -31,6 +31,7 @@
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
 #include "won_blocking.h"
+#include "rust/won_net/hostop.h"
 
 using namespace WONAPI;
 

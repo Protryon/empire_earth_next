@@ -9,7 +9,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/UResourceFile.h"
-#include "rust/ee_util.h"
+#include "rust/base/util.h"
 
 // The strings come from a Rust table generated from Language.rc (tools/lang_strings.py; ee_util strings.rs), on
 // every system: the original enumerated the module's RT_STRING resources for their language (URFEnumNames/

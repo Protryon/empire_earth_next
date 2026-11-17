@@ -5,7 +5,7 @@
 #ifndef GE_OPENFORMATS_H
 #define GE_OPENFORMATS_H
 
-#include "rust/ee_openformats.h"
+#include "rust/render/openformats.h"
 
 intptr_t GEOpenFormatsHost(EeOfFileOp inOp, void* inObj, intptr_t a, intptr_t b);
 

@@ -13,7 +13,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONBuffer.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/ffi_lan.h"
 
 using namespace WONAPI;
 

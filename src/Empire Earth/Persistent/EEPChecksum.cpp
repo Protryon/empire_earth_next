@@ -9,7 +9,7 @@
 
 #include "ee/EEPChecksum.h"
 #include "ee/EEPersistentTag.h"
-#include "rust/ee_error.h"
+#include "rust/base/error.h"
 
 const UString EEPChecksum::sNumChecksums("EEPChecksum-NumChecksums");
 const UString EEPChecksum::sChecksum("EEPChecksum-Checksum");

@@ -19,7 +19,9 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/EELobbyGameCode.h" // declares LobbyMessageBox
-#include "rust/ee_won.h"
+#include "rust/won_lobby/logics.h"
+#include "rust/won_net/adminop.h"
+#include "rust/won_net/reqdir.h"
 using namespace WONAPI;
 namespace WONAPI {
 static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t)

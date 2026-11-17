@@ -43,7 +43,7 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EEUIFSERBBrush.h"
 #include "ee/EEStringIDs.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
 
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 // a text transparent and yellow (the tab's and the brush group's labels)

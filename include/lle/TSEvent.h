@@ -6,7 +6,7 @@
 #define LLE_TSEVENT_H
 
 #include "platform/PlatThread.h"
-#include "rust/ee_ts.h"
+#include "rust/base/ts.h"
 
 // TSEvent::Wait / WaitAny timeouts are milliseconds; this one waits forever (Win32 INFINITE)
 const unsigned long kTSWaitInfinite = PLAT_WAIT_INFINITE;

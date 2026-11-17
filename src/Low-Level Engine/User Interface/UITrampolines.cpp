@@ -4,7 +4,9 @@
 #include <windows.h>
 #include <stddef.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/layout.h"
+#include "rust/ui/layout_ffi.h"
+#include "rust/ui/rect.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/UILayoutUtility.h"
 

@@ -50,7 +50,7 @@
 
 #include "ee/EmpireEarth.h"
 #include "ee/EECBUIListBox.h"
-#include "rust/ee_screens.h"   // ee_screens_cbl_*: the list's logic (civ_list.rs); EE_SCREENS_CBW_L_*
+#include "rust/game/screens.h"   // ee_screens_cbl_*: the list's logic (civ_list.rs); EE_SCREENS_CBW_L_*
 
 // the scroll bar's opacity (a unit-local float ahead of the statics' strings in .rdata: 0x4cfa64)
 static const float kScrollBarBgOpacity = 0.2f;

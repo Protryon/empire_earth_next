@@ -13,7 +13,8 @@
 #include <map>
 #include <stdint.h>
 #include "lle/GEBoundingBox.h"
-#include "rust/ee_ge.h"   // the model (ee_ge modobj.rs), its host's EeGeModOp
+#include "rust/base/math.h"   // the model (ee_ge modobj.rs), its host's EeGeModOp
+#include "rust/render/ge.h"
 
 class FSFileSpec;
 class GEMaterial;

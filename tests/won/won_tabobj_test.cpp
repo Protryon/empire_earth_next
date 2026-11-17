@@ -27,7 +27,11 @@
 #include <list>
 #include <map>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_gui/ctobj.h"
+#include "rust/won_gui/guictl.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/guilayout.h"
+#include "rust/won_gui/tabobj.h"
 #include "ee/wonapi/WONEventTypes.h"
 
 typedef EeWonGuiOp Op;

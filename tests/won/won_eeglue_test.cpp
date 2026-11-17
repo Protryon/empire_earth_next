@@ -22,7 +22,10 @@
 #include <vector>
 #include <set>
 #include <map>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/eecolor.h"
+#include "rust/won_lobby/eegame.h"
+#include "rust/won_lobby/eeglue.h"
+#include "rust/won_lobby/lobbydlg.h"
 
 typedef EeWonEeGlueOp Op;
 typedef EeWonEeGlueCall Call;

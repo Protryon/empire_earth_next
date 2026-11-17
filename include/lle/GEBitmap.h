@@ -10,7 +10,8 @@
 #define LLE_GEBITMAP_H
 
 #include <stdint.h>
-#include "rust/ee_ge.h"   // the bitmap (ee_ge bmpobj.rs), its host's EeGeBmpOp
+#include "rust/base/math.h"   // the bitmap (ee_ge bmpobj.rs), its host's EeGeBmpOp
+#include "rust/render/ge.h"
 
 class GETexture;
 class GEVertexArray;

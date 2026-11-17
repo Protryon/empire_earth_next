@@ -31,7 +31,11 @@
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONRoutingTypes.h"
 #include "ee/wonapi/WONLobbyResourceGlobals.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/routelogic.h"
+#include "rust/won_net/hostop.h"
+#include "rust/won_net/reqdir.h"
+#include "rust/won_net/reqops.h"
+#include "rust/won_net/routeop.h"
 extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss; defined in EEWonNet.cpp)
 
 // Routes one server notification on a routing connection to the logic (its code, routelogic.rs's).

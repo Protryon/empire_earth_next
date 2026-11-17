@@ -23,7 +23,7 @@
 #include <string>
 #include <vector>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/eegame.h"
 
 typedef EeWonEeGameOp Op;
 typedef EeWonEeGameCall Call;

@@ -9,7 +9,7 @@
 #include <exception>
 #include <stdexcept>
 #include <string>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guicfg.h"
 
 static int sFailures;
 static int sChecks;

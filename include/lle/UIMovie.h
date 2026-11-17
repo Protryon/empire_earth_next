@@ -8,6 +8,7 @@
 #define LLE_UIMOVIE_H
 
 #include "lle/UIControl.h"
+#include "rust/ui/mediaobj.h"
 
 class GEMovie;
 

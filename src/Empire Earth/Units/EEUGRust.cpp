@@ -83,7 +83,7 @@
 #include "lle/SESoundManager.h"
 #include "lle/UResourceFile.h"
 #include "ee/EEUnitKind.h"
-#include "rust/ee_units.h"
+#include "rust/sim/units.h"
 
 // the location goal's host hands the unit's transformation to ee_ge's GeTransformation (the same 4x4 floats)
 static_assert(sizeof(GETransformation) == 64, "GETransformation is ee_ge's GeTransformation");

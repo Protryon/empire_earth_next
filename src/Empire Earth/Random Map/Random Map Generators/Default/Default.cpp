@@ -12,7 +12,7 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/U2DGeometry.h"
 #include "ee/EERandomMap.h"
-#include "rust/ee_rmap.h"
+#include "rust/sim/rmap.h"
 #include "platform/PlatFile.h"
 #include "ee/EERandomMapIDs.h"
 

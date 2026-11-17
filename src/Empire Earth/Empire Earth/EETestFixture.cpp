@@ -157,9 +157,13 @@
 #include "ee/EEGraphics.h"
 #include "ee/EEUICSelectUnits.h"
 #include "lle/ISModifierState.h"
-#include "rust/ee_gfx.h"   // the drag end the selection control computes
+#include "rust/base/math.h"   // the drag end the selection control computes
+#include "rust/game/screens.h"
+#include "rust/render/gfx.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/ee_screens.h"   // ee_screens_event (the editor exercise's exit)
+#include "rust/base/math.h"   // ee_screens_event (the editor exercise's exit)
+#include "rust/game/screens.h"
+#include "rust/render/gfx.h"
 #include <algorithm>
 #include <atomic>
 #include <mutex>

@@ -17,7 +17,9 @@
 #include <stdarg.h>
 #include <string>
 #include <vector>
-#include "rust/ee_won.h"
+#include "rust/won_gui/grabobj.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/rootobj.h"
 
 typedef uint32_t DWORD;
 static unsigned sSeed;

@@ -33,7 +33,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEStringIDs.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
 extern GEFont* gU531938;                    // 0x531938 (Empire Earth.cpp's fonts)
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")

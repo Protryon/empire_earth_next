@@ -1,6 +1,7 @@
 #ifndef EE_WONAPI_WONLOBBYWONBUTTON_H
 #define EE_WONAPI_WONLOBBYWONBUTTON_H
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/won_gui/wonbtnobj.h"
 namespace WONAPI {
 // WONButton (R6 WON round 35): its ten states (a wrapped text, an image and a colour each), the wrapped text per font,
 // the pads, the push, the colours, the flags, the alignments and every method are the Rust WONButton

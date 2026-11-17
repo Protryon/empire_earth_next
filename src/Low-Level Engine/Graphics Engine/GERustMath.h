@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <vector>
 
-#include "rust/ee_ge.h"
+#include "rust/base/math.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GEVector.h"
 #include "lle/GE3DPoint.h"

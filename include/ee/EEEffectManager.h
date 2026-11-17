@@ -8,7 +8,7 @@
 #include <vector>
 #include "lle/FSRestorable.h"
 #include "ee/EEGraphicalGoalManager.h"
-#include "rust/ee_gfx.h"            // effect_store.rs (RUST_PLAN R4.4)
+#include "rust/render/gfx.h"            // effect_store.rs (RUST_PLAN R4.4)
 
 class EEGraphicEffect;
 class EEUnit;

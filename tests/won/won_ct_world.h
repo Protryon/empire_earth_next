@@ -6,7 +6,11 @@
 // (an op line it prints itself); and WON_CT_N / WON_CT_CT for a bigger world (won_tabobj_test).
 #ifndef WON_CT_WORLD_H
 #define WON_CT_WORLD_H
-#include "rust/ee_won.h"
+#include "rust/won_gui/compmem.h"
+#include "rust/won_gui/ctobj.h"
+#include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/guifocus.h"
+#include "rust/won_gui/guilayout.h"
 
 static int sFailures;
 static int sChecks;

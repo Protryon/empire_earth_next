@@ -24,7 +24,7 @@
 #include "lle/FSPersistentList.h"
 #include "lle/FSMemoryFile.h"
 #include "lle/File System.h"
-#include "rust/ee_fs.h"
+#include "rust/base/fs.h"
 
 UString gStartupVolume(256);
 UString gStartupDirectory(256);

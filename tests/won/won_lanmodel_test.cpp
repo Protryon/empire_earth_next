@@ -19,7 +19,13 @@
 #include <set>
 #include <string>
 #include <vector>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/ffi_lan.h"
+#include "rust/won_lobby/lanlogic.h"
+#include "rust/won_lobby/lanobj.h"
+#include "rust/won_lobby/lobbyhost.h"
+#include "rust/won_lobby/modelobj.h"
+#include "rust/won_lobby/resource.h"
+#include "rust/won_net/ipobj.h"
 
 typedef EeWonLobbyOp Op;
 typedef EeWonModelField MF;

@@ -4,7 +4,7 @@
 #define EE_EESCENARIOHOST_H
 
 #include <vector>
-#include "rust/ee_scenario.h"
+#include "rust/sim/scenario.h"
 
 class FSFile;
 class UWideString;

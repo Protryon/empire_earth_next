@@ -9,7 +9,7 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousServer.h"
-#include "rust/ee_net.h"
+#include "rust/net/net.h"
 #include "platform/PlatSim.h"
 
 // Creates the game server on protocol 0 and publishes it as "EEService"; on failure stops with no threads/events

@@ -10,7 +10,9 @@
 #include <mbstring.h>
 #include <string.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/eventobj.h"
+#include "rust/ui/managerobj.h"
+#include "rust/ui/obj.h"
 #include "lle/LowLevelEngine.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "lle/GEColor.h"

@@ -3,7 +3,8 @@
 // PlatGraphics, image and font calls stay C++).
 #ifndef EE_WONAPI_WONGUIDRAW_H
 #define EE_WONAPI_WONGUIDRAW_H
-#include "rust/ee_won.h"
+#include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/mspaint.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include <vector>
 

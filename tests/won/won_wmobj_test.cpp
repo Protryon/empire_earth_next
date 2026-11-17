@@ -48,7 +48,14 @@
 #include <set>
 #include <map>
 #include <ctype.h>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guictl.h"
+#include "rust/won_gui/guievent.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/guiwin.h"
+#include "rust/won_gui/wmcache.h"
+#include "rust/won_gui/wmloop.h"
+#include "rust/won_gui/wmobj.h"
+#include "rust/won_net/strcase.h"
 
 typedef EeWonGuiOp Op;
 typedef EeWonWmComp CC;

@@ -6,7 +6,7 @@
 #ifndef EE_EEAIASTARFASTSTORAGE_H
 #define EE_EEAIASTARFASTSTORAGE_H
 #include "ee/EEAIKindIDs.h"
-#include "rust/ee_astar.h"
+#include "rust/sim/astar.h"
 
 class EEAIAStarFastStorage : public EEAIAStarStorage {
 public:

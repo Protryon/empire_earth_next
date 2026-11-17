@@ -109,8 +109,10 @@
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEMessageCapture.h"
-#include "rust/ee_netmsg.h"   // ee_netmsg
-#include "rust/ee_units.h"
+#include "rust/sim/netmsg.h"   // ee_netmsg
+#include "rust/sim/units.h"
+#include "rust/sim/netmsg.h"
+#include "rust/sim/units.h"
 #include "ee/EEUnitHost.h"   // EESortFarms
 
 // Registers the game's message factory for every game message type (0x41..0xfd) with the network engine

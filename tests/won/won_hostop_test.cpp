@@ -22,7 +22,18 @@
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONBlowfish.h"
 #include "won_ftp_msg.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/admin.h"
+#include "rust/won_net/filepush.h"
+#include "rust/won_net/ftpop.h"
+#include "rust/won_net/hostop.h"
+#include "rust/won_net/http.h"
+#include "rust/won_net/httpdoc.h"
+#include "rust/won_net/httpget.h"
+#include "rust/won_net/multiping.h"
+#include "rust/won_net/reqhost.h"
+#include "rust/won_net/reqop.h"
+#include "rust/won_net/reqops.h"
+#include "rust/won_net/server.h"
 
 using namespace WONAPI;
 using std::string;

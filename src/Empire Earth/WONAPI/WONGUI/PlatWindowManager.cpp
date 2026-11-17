@@ -16,7 +16,9 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyPlatform.h"
 #include "platform/PlatTime.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/platimg.h"
+#include "rust/won_gui/platwin.h"
+#include "rust/won_gui/platwm.h"
 
 namespace WONAPI {
 

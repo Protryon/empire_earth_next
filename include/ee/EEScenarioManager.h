@@ -12,7 +12,7 @@
 #include "ee/EESMMediaStrings.h"
 
 #include "ee/EESMDialogMessage.h"
-#include "rust/ee_scenario.h"           // EeScenarioManagerFields, the timed effects' queue
+#include "rust/sim/scenario.h"           // EeScenarioManagerFields, the timed effects' queue
 
 class EESMArea;
 class FSFileSpec;

@@ -20,7 +20,9 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/lobbyhost.h"
+#include "rust/won_lobby/staging.h"
+#include "rust/won_lobby/stagingobj.h"
 namespace WONAPI {
 void LobbyNetSendToCaptain(const ByteBuffer*);
 void LobbyNetBroadcastToGame(const ByteBuffer*);

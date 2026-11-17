@@ -3,6 +3,8 @@
 #define EE_WONAPI_WONLOBBYLAN_H
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyModel.h"
+#include "rust/won_lobby/lanobj.h"
+#include "rust/won_net/qsock.h"
 namespace WONAPI {
 class DirectConnectDialog;
 class LanNameDialog;

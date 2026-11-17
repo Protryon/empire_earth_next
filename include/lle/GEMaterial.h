@@ -6,7 +6,7 @@
 #ifndef LLE_GEMATERIAL_H
 #define LLE_GEMATERIAL_H
 
-#include "rust/ee_ge.h"   // the material (ee_ge smallobj.rs)
+#include "rust/render/ge.h"   // the material (ee_ge smallobj.rs)
 
 class GETexture;
 LLE_API intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b);   // GEBitmap.cpp

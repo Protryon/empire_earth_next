@@ -16,7 +16,11 @@
 #include <windows.h>
 #include <algorithm>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/bgobj.h"
+#include "rust/ui/direct.h"
+#include "rust/ui/layout.h"
+#include "rust/ui/obj.h"
+#include "rust/ui/rect.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"

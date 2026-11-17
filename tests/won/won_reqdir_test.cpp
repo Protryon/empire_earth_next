@@ -24,7 +24,12 @@
 #include "won_profiledata.h"
 #include "won_db_msg.h"
 #include "won_dir_msg.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/admin.h"
+#include "rust/won_net/db.h"
+#include "rust/won_net/dir.h"
+#include "rust/won_net/dirops.h"
+#include "rust/won_net/reqop.h"
+#include "rust/won_net/reqops.h"
 
 // 0 records the golden from the original's half alone
 #ifndef REQDIR_RUST

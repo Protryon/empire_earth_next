@@ -10,7 +10,7 @@
 
 #include <vector>
 #include "lle/UWideString.h"
-#include "rust/ee_scenario.h"
+#include "rust/sim/scenario.h"
 
 // the numbers (mPlayerAttribute .. mB193, their order and types) are EeScenarioEffectFields (ee_scenario fields.rs):
 // their defaults, saves and index upkeep are Rust's

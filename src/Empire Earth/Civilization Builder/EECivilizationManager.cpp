@@ -87,7 +87,7 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEGraphicEffect.h"
 #include "lle/FSMemoryFile.h"
-#include "rust/ee_tech.h"
+#include "rust/sim/tech.h"
 
 // 0x24f0e9 (EEFOFindNewTargetNearOldTarget.cpp; as ee/EEUnitUtilities.h and EEWorld.cpp declare it)
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);

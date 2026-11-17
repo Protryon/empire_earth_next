@@ -21,7 +21,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONURL.h"
 #include "won_http_glue.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/http.h"
 
 using namespace WONAPI;
 using std::string;

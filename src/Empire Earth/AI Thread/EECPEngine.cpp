@@ -39,7 +39,7 @@
 #include "platform/PlatFile.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatString.h"
-#include "rust/ee_ai.h"   // ee_ai_*: the manifest, the choices and the resolve (ee_ai manifest.rs, seat.rs)
+#include "rust/sim/ai.h"   // ee_ai_*: the manifest, the choices and the resolve (ee_ai manifest.rs, seat.rs)
 
 // ---------------------------------------------------------------------------------------------------------------
 // The log: "EE-AI engine ..." lines to the debug output, the game log when one is open, and EE-SIM's stderr

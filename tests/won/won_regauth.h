@@ -1,3 +1,4 @@
+#include "rust/won_net/regauth.h"
 
 #if !defined(REG_AUTH_H)
 #define REG_AUTH_H

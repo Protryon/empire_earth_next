@@ -9,7 +9,7 @@
 #include "lle/GE3DPoint.h"
 #include "lle/GEQuaternion.h"
 #include "ee/EEUnitHandle.h"
-#include "rust/ee_app.h"
+#include "rust/game/app.h"
 
 class GE3DPoint;
 class EEUnit;

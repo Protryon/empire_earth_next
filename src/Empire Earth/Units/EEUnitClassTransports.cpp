@@ -25,7 +25,7 @@
 #include "lle/GEModel.h"
 
 #include "ee/EEUnitUpdate.h"
-#include "rust/ee_units.h"
+#include "rust/sim/units.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"

@@ -12,7 +12,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONRouting.h" // WONTickCount
-#include "rust/ee_won.h"
+#include "rust/won_gui/fontmap.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/winobj.h"
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;

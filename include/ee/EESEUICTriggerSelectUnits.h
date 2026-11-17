@@ -5,7 +5,7 @@
 // record's mTrigger and mRightButton). Requires ee/EEUICSelectUnits.h.
 #ifndef EE_EESEUICTRIGGERSELECTUNITS_H
 #define EE_EESEUICTRIGGERSELECTUNITS_H
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
 
 class EESEUICTriggerSelectUnits : public EEUICSelectUnits {
 public:

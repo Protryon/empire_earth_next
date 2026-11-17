@@ -9,7 +9,7 @@
 #include <windows.h>
 #include <string.h>
 #include "ee/EEWonNet.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/surface.h"
 
 namespace WONAPI
 {

@@ -10,7 +10,7 @@
 
 #include "ee/EEColorTable.h"
 #include "ee/EEDbRecords.h"
-#include "rust/ee_data.h"
+#include "rust/data/tables.h"
 
 std::vector<EEColorTable*> EEColorTable::sTable;
 GEColor EEColorTable::sColor;

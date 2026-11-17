@@ -17,7 +17,8 @@
 #include <string>
 #include <vector>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/mspaint.h"
 
 static int sFailures;
 static unsigned sSeed;

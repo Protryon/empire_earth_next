@@ -28,7 +28,10 @@
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
-#include "rust/ee_gfx.h"
+#include "rust/base/math.h"
+#include "rust/render/ge.h"
+#include "rust/render/gfx.h"
+#include "rust/sim/units.h"
 #include "lle/GEPolygonArray.h"
 #include "lle/GELine.h"
 #include "lle/GERasterizer.h"
@@ -77,7 +80,10 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEMouse.h"
 #include "ee/EEAreaEffectKindIDs.h"
-#include "rust/ee_ge.h"   // ee_gfx view.rs: GetUnitOpacity's near fade (RUST_PLAN R4.4)
+#include "rust/base/math.h"   // ee_gfx view.rs: GetUnitOpacity's near fade (RUST_PLAN R4.4)
+#include "rust/render/ge.h"
+#include "rust/render/gfx.h"
+#include "rust/sim/units.h"
 
 // the 3D lines (0x529050) and a name (0x529030): one guard byte (0x529048) (provisional names)
 std::vector<EERenderLine> gU529050;
@@ -774,7 +780,10 @@ std::vector<GETexture*> gU4E8EF0;
 
 // FillUnit reads the goal's kind
 #include "ee/EEUnitGoal.h"
-#include "rust/ee_gfx.h"
+#include "rust/base/math.h"
+#include "rust/render/ge.h"
+#include "rust/render/gfx.h"
+#include "rust/sim/units.h"
 
 // Fills a render unit for a unit and files it in the picker and the texture maps
 // (out of address order: see the note at 0x50d3ad above)

@@ -15,7 +15,7 @@
 #include <stdarg.h>
 #include <string>
 #include <vector>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guidraw.h"
 
 typedef uint32_t DWORD;
 enum { COLOR_INVALID = 0xffffffff };

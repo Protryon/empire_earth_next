@@ -12,8 +12,10 @@
 #include "lle/GEColor.h"
 #include "ee/EECivilization.h"          // held by value (+0x468)
 #include "ee/EEResourceType.h"
-#include "rust/ee_units.h"             // EeUnitsPlayerSaved (EEPlayer's saved numbers)
-#include "rust/ee_tech.h"              // EeTechNodeFields, EeTechTreeFields (the tech tree's records)
+#include "rust/sim/tech.h"             // EeUnitsPlayerSaved (EEPlayer's saved numbers)
+#include "rust/sim/units.h"
+#include "rust/sim/tech.h"              // EeTechNodeFields, EeTechTreeFields (the tech tree's records)
+#include "rust/sim/units.h"
 class FSFile;
 // New (R5b.4, round 28): the Rust saves' file primitives (ee_units player_save.rs's READ_ULONG .. WRITE_BOOL and the
 // unsigned short's two, shared by the player's, the physics', the map's and the units' hosts; EEPlayer.cpp); -1 for

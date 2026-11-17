@@ -5,6 +5,7 @@
 #define EE_WONAPI_WONROUTINGDETECTFIREWALLOP_H
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONRoutingOpTypes.h"
+#include "rust/won_net/routeop.h"
 
 namespace WONAPI
 {

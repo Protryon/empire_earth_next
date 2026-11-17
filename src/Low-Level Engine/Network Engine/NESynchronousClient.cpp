@@ -9,7 +9,7 @@
 #include "lle/NEMessage.h"
 #include "lle/FSFile.h"
 #include "lle/NESynchronousClient.h"
-#include "rust/ee_net.h"
+#include "rust/net/net.h"
 
 NESynchronousClient::NESynchronousClient()
 {

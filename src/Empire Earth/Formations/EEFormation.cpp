@@ -62,7 +62,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EESimCapture.h"
-#include "rust/ee_formations.h"
+#include "rust/sim/formations.h"
 #include "ee/EEFormationRust.h"
 
 // Creates the formation of a type: 0-3 short, long, loose, staggered line; 4-5 deep, shallow wedge;

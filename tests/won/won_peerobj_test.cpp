@@ -28,7 +28,10 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
 #include "won_auth_orig.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/ffi.h"
+#include "rust/won_net/peerauth.h"
+#include "rust/won_net/peerobj.h"
+#include "rust/won_net/random.h"
 
 using namespace WONAPI;
 using std::string;

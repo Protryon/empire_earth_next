@@ -10,7 +10,7 @@
 #include <windows.h>
 #include <string.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/labelobj.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"

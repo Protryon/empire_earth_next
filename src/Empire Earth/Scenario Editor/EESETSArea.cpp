@@ -47,7 +47,8 @@
 #include "ee/EESEARust.h"
 #include "ee/EESMArea.h"
 #include "ee/EESETSArea.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
+#include "rust/sim/scenario.h"
 
 extern GEViewport gViewport;
 extern GEFont* gSeplScreenFont;   // the screen's font while a screen makes its controls (EESERBUnitTypes.cpp)

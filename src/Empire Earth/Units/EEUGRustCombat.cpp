@@ -32,8 +32,10 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEUnitKind.h"
-#include "rust/ee_combat.h"
-#include "rust/ee_units.h"
+#include "rust/sim/combat.h"
+#include "rust/sim/units.h"
+#include "rust/sim/combat.h"
+#include "rust/sim/units.h"
 
 namespace {
 

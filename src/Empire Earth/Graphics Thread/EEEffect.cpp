@@ -47,8 +47,12 @@
 #include "lle/GEQuaternion.h"
 #include "ee/EEWorld.h"
 #include "ee/EERenderSnapshot.h"
-#include "rust/ee_ge.h"   // ee_gfx effects.rs (RUST_PLAN R4.4)
-#include "rust/ee_gfx.h"
+#include "rust/base/math.h"   // ee_gfx effects.rs (RUST_PLAN R4.4)
+#include "rust/render/ge.h"
+#include "rust/render/gfx.h"
+#include "rust/base/math.h"
+#include "rust/render/ge.h"
+#include "rust/render/gfx.h"
 #include "ee/EEEffectMesh.h"
 #include "lle/SESoundManager.h"
 #include "ee/EEGameSound.h"

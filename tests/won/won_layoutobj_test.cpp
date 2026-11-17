@@ -23,7 +23,11 @@
 #include <vector>
 #include <list>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_gui/compmem.h"
+#include "rust/won_gui/guictl.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/guilayout.h"
+#include "rust/won_gui/layoutobj.h"
 
 typedef EeWonGuiOp Op;
 

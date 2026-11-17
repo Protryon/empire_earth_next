@@ -62,8 +62,10 @@
 #include "ee/EEFormation.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEUnitClassKinds.h"   // EEObj
-#include "rust/ee_units.h"   // ee_units_keeps_ground_attacker, ee_units_ag_*
-#include "rust/ee_combat.h"   // ee_combat_regions_size
+#include "rust/sim/combat.h"   // ee_units_keeps_ground_attacker, ee_units_ag_*
+#include "rust/sim/units.h"
+#include "rust/sim/combat.h"   // ee_combat_regions_size
+#include "rust/sim/units.h"
 
 // The order Fill sorts a slot's units in (RTTI EEAGIncreasingVelocityUnitSorter; vtable 0x446d50: only its
 // user-declared empty virtual dtor, whose ??_G 0x1edaa8 follows Fill, its first user): slower first, the same
@@ -842,7 +844,8 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
 #include <stddef.h>
 #include "lle/FSFile.h"
 #include "ee/EESaveGameFiles.h"
-#include "rust/ee_combat.h"
+#include "rust/sim/combat.h"
+#include "rust/sim/units.h"
 
 namespace {
 struct EESavedGroupRequest {

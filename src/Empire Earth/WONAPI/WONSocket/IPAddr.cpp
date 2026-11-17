@@ -14,6 +14,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "platform/PlatSocket.h"
+#include "rust/won_net/ffi_net.h"
 namespace WONAPI {
 
 static const uint8_t* Bytes(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }

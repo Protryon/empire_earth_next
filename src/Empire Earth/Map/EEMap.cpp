@@ -42,7 +42,10 @@
 #include "ee/EEPersistentTag.h"
 #include "ee/EEUnitRegions.h"
 #include "ee/EEAppCapture.h"
-#include "rust/ee_app.h"
+#include "rust/game/app.h"
+#include "rust/sim/app.h"
+#include "rust/sim/combat.h"
+#include "rust/sim/units.h"
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 extern long gFirstCliffTerrain;             // 0x4e86e8 (EETerrainTable.cpp)

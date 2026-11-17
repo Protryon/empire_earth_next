@@ -7,7 +7,7 @@
 #ifndef LLE_UIFULLBACKGROUND_H
 #define LLE_UIFULLBACKGROUND_H
 
-#include "rust/ee_ui.h"
+#include "rust/ui/bgobj.h"
 
 class GERectangle;
 class UIForm;

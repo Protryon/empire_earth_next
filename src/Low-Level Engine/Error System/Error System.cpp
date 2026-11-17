@@ -18,7 +18,7 @@
 #include "lle/FSBasicFile.h"
 #include "lle/FSFileSpec.h"
 #include "lle/TSScheduler.h"
-#include "rust/ee_error.h"
+#include "rust/base/error.h"
 #include <string>
 
 // The Error System's state and logic are Rust's (rust/crates/ee_base/src/error, LLE lane round 2): the Filter.txt filters,

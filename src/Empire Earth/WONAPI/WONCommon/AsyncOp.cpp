@@ -17,6 +17,8 @@
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatSocket.h"
+#include "rust/won_net/hostop.h"
+#include "rust/won_net/sockobj.h"
 // The socket error codes WON reports are Winsock's; the platform layer reports them in that numbering everywhere
 static_assert(WS_WSAEINTR == PLAT_SOCK_EINTR, "Winsock numbering");
 static_assert(WS_WSAEBADF == PLAT_SOCK_EBADF, "Winsock numbering");

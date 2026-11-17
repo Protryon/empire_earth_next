@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <vector>
-#include "rust/ee_rmap.h"
+#include "rust/sim/rmap.h"
 
 template <class T> inline void EERMRows(std::vector<std::vector<T> >& inGrid, std::vector<T*>& outRows)
 {

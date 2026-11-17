@@ -1,6 +1,7 @@
 #ifndef EE_WONAPI_WONTIMERTHREAD_H
 #define EE_WONAPI_WONTIMERTHREAD_H
 #include "ee/wonapi/WONRouting.h"
+#include "rust/won_net/hostop.h"
 namespace WONAPI {
 // TimerThread: a Rust object (ee_won thread.rs EeWonTimerThread: the two deadline maps of the original, its lock, its
 // thread and signal) behind this shim. The queue holds a reference per op, taken here before an op goes in and given

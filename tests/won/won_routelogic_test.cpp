@@ -23,7 +23,9 @@
 #include <list>
 #include <set>
 #include <map>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/resource.h"
+#include "rust/won_lobby/routelogic.h"
+#include "rust/won_lobby/routing.h"
 
 typedef EeWonRouteLogicOp Op;
 typedef EeWonRouteLogicCall Call;

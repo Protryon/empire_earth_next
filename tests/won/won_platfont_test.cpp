@@ -26,7 +26,7 @@
 #include "ee/wonapi/WONSurface.h"
 #include "platform/PlatFont.h"
 #include "platform/PlatString.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/platfont.h"
 
 static unsigned long long sSeed = 0xD1B54A32D192ED03ull;
 static unsigned Rand(unsigned n) { sSeed = sSeed * 6364136223846793005ull + 1442695040888963407ull; return n ? (unsigned)((sSeed >> 33) % n) : 0; }

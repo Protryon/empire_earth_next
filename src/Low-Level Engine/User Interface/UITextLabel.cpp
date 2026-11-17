@@ -11,7 +11,8 @@
 #include <windows.h>
 #include <stdlib.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/labelobj.h"
+#include "rust/ui/obj.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"

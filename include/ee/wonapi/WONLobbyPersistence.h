@@ -1,6 +1,8 @@
 #ifndef EE_WONAPI_WONLOBBYPERSISTENCE_H
 #define EE_WONAPI_WONLOBBYPERSISTENCE_H
-#include "rust/ee_won.h"
+#include "rust/won_lobby/lobbymap.h"
+#include "rust/won_lobby/prefsobj.h"
+#include "rust/won_net/file.h"
 #include <string>
 #include <set>
 #include <exception>

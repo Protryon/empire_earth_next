@@ -8,7 +8,7 @@
 #include "dx7/DX7Common.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
-#include "rust/ee_dx7.h"
+#include "rust/render/dx7.h"
 
 class DX7_API DX7Surface : public GESurface {
 public:

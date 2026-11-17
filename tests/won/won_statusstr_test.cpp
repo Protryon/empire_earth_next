@@ -6,7 +6,8 @@
 #include <stdint.h>
 #include <limits.h>
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/resource.h"
+#include "rust/won_lobby/statusstr.h"
 
 struct Text { int mRes; bool mGeneral; };
 

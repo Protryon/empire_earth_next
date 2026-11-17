@@ -10,7 +10,7 @@
 #include "lle/NEMessage.h"
 #include "lle/NEProtocol.h"
 #include "lle/NESynchronousCommunications.h"
-#include "rust/ee_net.h"
+#include "rust/net/net.h"
 
 // Creates the shared client/server state (ee_net comms.rs): the CTs processed given, the last tick received -2, the
 // rest 0. (The debug lock, the bytes-per-second meters and their clock reads went: no caller.)

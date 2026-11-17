@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <vector>
 #include <utility>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guitree.h"
 
 static int sFailures;
 static int sChecks;

@@ -37,7 +37,7 @@
 #include "lle/GEPhysicalModel.h"
 #include "lle/Graphics Engine.h"
 #include "platform/PlatFont.h"
-#include "rust/ee_ge.h"
+#include "rust/render/ge.h"
 #include "GERustMath.h"
 #include "GERustViewport.h"
 

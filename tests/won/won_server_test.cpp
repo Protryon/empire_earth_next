@@ -18,7 +18,8 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONBuffer.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/servctx.h"
+#include "rust/won_net/server.h"
 
 using namespace WONAPI;
 

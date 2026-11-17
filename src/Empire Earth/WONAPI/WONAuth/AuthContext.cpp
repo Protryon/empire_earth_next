@@ -17,6 +17,8 @@
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatPath.h"
+#include "rust/won_net/authcpp.h"
+#include "rust/won_net/cdkeystore.h"
 namespace WONAPI {
 // the certificate op the auth flow makes (ee_won authcpp.rs: one maker for the program)
 static void* NewCertOp(void* inContext)

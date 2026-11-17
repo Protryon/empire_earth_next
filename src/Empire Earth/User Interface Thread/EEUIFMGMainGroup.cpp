@@ -24,7 +24,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFMGMainGroup.h"
-#include "rust/ee_screens.h"   // ee_screens_panel_*: the command panel's layout (ee_screens command_panel.rs)
+#include "rust/game/screens.h"   // ee_screens_panel_*: the command panel's layout (ee_screens command_panel.rs)
 #include "ee/EEUIManager.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EEUnitBehavior.h"

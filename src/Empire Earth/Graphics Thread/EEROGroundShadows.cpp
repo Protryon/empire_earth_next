@@ -45,7 +45,8 @@
 #include "ee/EERenderLists.h"
 #include "ee/EEROGroundShadows.h"
 #include "ee/EERenderSnapshot.h"
-#include "rust/ee_gfx.h"
+#include "rust/base/math.h"
+#include "rust/render/gfx.h"
 
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)
 extern const EeGfxRaster gEERustRaster;

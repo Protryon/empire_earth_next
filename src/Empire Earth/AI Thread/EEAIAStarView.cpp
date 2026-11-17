@@ -50,7 +50,8 @@
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIAStarView.h"
 #include "ee/EEAIAStarCapture.h"
-#include "rust/ee_combat.h"
+#include "rust/sim/astar.h"
+#include "rust/sim/combat.h"
 
 // EEAIContinentManager.cpp's (out of line at 0x29ced): non-zero when a resource unit stands on inTile
 long EEAIHasResourceUnit(EETile* inTile);

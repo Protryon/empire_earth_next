@@ -13,6 +13,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/hostnative.h"
 namespace WONAPI {
 WONAPICore* WONAPICore::mInstance;
 bool WONAPICore::mHaveWrittenVersion;

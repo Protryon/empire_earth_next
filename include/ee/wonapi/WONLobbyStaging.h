@@ -3,7 +3,7 @@
 #define EE_WONAPI_WONLOBBYSTAGING_H
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyModel.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/stagingobj.h"
 namespace WONAPI {
 class CreateGameDialog;
 // RTTI: StagingLogic > LobbyLogic > RefCount; vtable 0x855ae0 with six slots; constructor 0x7ef160.

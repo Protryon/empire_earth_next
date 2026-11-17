@@ -19,7 +19,7 @@
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/WONLobbyDialogLogic.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/dlglogic.h"
 namespace WONAPI {
 
 static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d);

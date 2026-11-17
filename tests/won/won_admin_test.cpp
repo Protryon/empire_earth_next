@@ -18,7 +18,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "won_admin_msg.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/admin.h"
 
 using namespace WONAPI;
 using std::string;

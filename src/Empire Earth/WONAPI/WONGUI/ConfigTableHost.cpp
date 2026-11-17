@@ -36,7 +36,7 @@
 #include "ee/wonapi/WONLobbyWONSkinConfig.h"
 #include "ee/wonapi/WONPerfTimer.h"
 #include "ee/wonapi/WONLobbyParser.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/guiconf.h"
 extern bool gShowParseTime; // ComponentConfigResource.cpp's
 extern int gLinesParsed;
 #define EE_CFG_LAYOUT_GLOBAL

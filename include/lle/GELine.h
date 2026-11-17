@@ -5,7 +5,8 @@
 #ifndef LLE_GELINE_H
 #define LLE_GELINE_H
 
-#include "rust/ee_ge.h"   // the line (ee_ge prim.rs), the host's EeGeBmpOp
+#include "rust/base/math.h"   // the line (ee_ge prim.rs), the host's EeGeBmpOp
+#include "rust/render/ge.h"
 
 class GE2DPoint;
 class GEColor;

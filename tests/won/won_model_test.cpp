@@ -19,7 +19,11 @@
 #include <list>
 #include <iterator>
 #include <wchar.h>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guistring.h"
+#include "rust/won_lobby/lobbymap.h"
+#include "rust/won_lobby/model.h"
+#include "rust/won_net/ipobj.h"
+#include "rust/won_net/strcase.h"
 
 static int sFailures;
 static int sChecks;

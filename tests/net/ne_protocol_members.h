@@ -7,7 +7,7 @@
 #include <string.h>
 #include <string>
 #include <vector>
-#include "rust/ee_net.h"
+#include "rust/net/net.h"
 
 // the original class's members over the Rust's C ABI (ee_net ffi_protocol.rs), each taking what the original took
 static const uint8_t* PBytes(const char* inText) { return reinterpret_cast<const uint8_t*>(inText); }

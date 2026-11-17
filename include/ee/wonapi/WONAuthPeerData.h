@@ -7,6 +7,7 @@
 #define EE_WONAPI_WONAUTHPEERDATA_H
 #include <time.h>
 #include "ee/wonapi/WONElGamal.h"
+#include "rust/won_net/peerobj.h"
 namespace WONAPI {
 class AuthBase : public RefCount {
     EeWonAuthObj* mImpl;

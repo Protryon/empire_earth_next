@@ -28,7 +28,7 @@
 #include "ee/EEUIBUpgrade.h"
 #include "lle/UIBitmap.h"
 #include "ee/EEUIFMGStatusBar.h"
-#include "rust/ee_screens.h"   // ee_screens_upgrade_* (ee_screens upgrade.rs)
+#include "rust/game/screens.h"   // ee_screens_upgrade_* (ee_screens upgrade.rs)
 static const float kBgOpacity = 0.15f;
 
 // Creates an improvement button, faintly tinted with a thin border, without a cost label

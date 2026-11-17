@@ -28,7 +28,7 @@ NetWorld* gWorld;
 #define private public
 #include "orig/NEMessageManager.cpp"
 #undef private
-#include "rust/ee_net.h"
+#include "rust/net/net.h"
 #include "ne_tcp_host.h"
 
 int NetWorld::IdOf(NEMessage* inMessage)

@@ -19,7 +19,8 @@
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyPing.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/logics.h"
+#include "rust/won_net/buffer.h"
 using namespace WONAPI;
 
 namespace WONAPI {

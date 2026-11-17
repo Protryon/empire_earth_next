@@ -28,7 +28,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitGoal.h"
-#include "rust/ee_units.h"
+#include "rust/sim/units.h"
 
 extern FSPath* gDataPath;
 

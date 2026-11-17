@@ -13,7 +13,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfigImages.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/imgfilter.h"
 namespace WONAPI {
 static_assert(sizeof(DWORD)==4,"the pixels and colours are 32-bit");
 static_assert(TransparentImageFilter::UpperRight==1 && TransparentImageFilter::LowerRight==3,"imgfilter.rs sample_place");

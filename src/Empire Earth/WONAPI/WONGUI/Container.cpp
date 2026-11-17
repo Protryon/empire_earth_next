@@ -13,7 +13,9 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/ctobj.h"
+#include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/guihost.h"
 #include "ee/wonapi/WONGUIDraw.h"
 using namespace WONAPI;
 

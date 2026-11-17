@@ -15,7 +15,8 @@
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/btnobj.h"
+#include "rust/won_gui/guihost.h"
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;

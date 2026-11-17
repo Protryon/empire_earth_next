@@ -10,8 +10,10 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "rust/ee_ge.h"
-#include "rust/ee_util.h"
+#include "rust/base/math.h"
+#include "rust/base/util.h"
+#include "rust/base/math.h"
+#include "rust/base/util.h"
 
 // Does nothing (the square root table is not built in the retail engine)
 void UMFastMath::BuildSqrtTable()

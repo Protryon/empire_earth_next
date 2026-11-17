@@ -11,7 +11,7 @@
 #include "lle/FSMemoryFile.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "rust/ee_fs.h"
+#include "rust/base/fs.h"
 
 static EeFsSpec* PathSpec(FSFileSpec* inSpec) { return reinterpret_cast<EeFsSpec*>(inSpec); }
 static const EeFsSpec* PathSpec(const FSFileSpec* inSpec) { return reinterpret_cast<const EeFsSpec*>(inSpec); }

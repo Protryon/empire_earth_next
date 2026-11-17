@@ -4,6 +4,7 @@
 #ifndef EE_WONAPI_WONGAMESPYSUPPORT_H
 #define EE_WONAPI_WONGAMESPYSUPPORT_H
 #include "ee/wonapi/WONRouting.h"
+#include "rust/won_net/gamespy.h"
 #define EE_WON_GAMESPY_RUST 1 // (won_gamespy_test: the master server's host is set through the class)
 namespace WONAPI
 {

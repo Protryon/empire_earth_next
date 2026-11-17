@@ -10,7 +10,7 @@
 #ifndef LLE_UIGRAPH_H
 #define LLE_UIGRAPH_H
 
-#include "rust/ee_ui.h"
+#include "rust/ui/graphobj.h"
 
 class GEFont;
 

@@ -19,7 +19,8 @@
 #include "ee/wonapi/WONMD5Digest.h"
 #include "won_md5.h"
 #include "platform/PlatFile.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/authctx.h"
+#include "rust/won_net/authlogin.h"
 
 using namespace WONAPI;
 

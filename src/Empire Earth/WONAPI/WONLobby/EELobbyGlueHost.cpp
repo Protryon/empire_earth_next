@@ -86,7 +86,9 @@
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/eecolor.h"
+#include "rust/won_lobby/eeglue.h"
+#include "rust/won_lobby/eesound.h"
 
 using namespace WONAPI;
 

@@ -39,7 +39,7 @@
 #include "ee/EECommunications.h"
 #include "ee/EECheatCodes.h"
 #include "ee/EEAppCapture.h"
-#include "rust/ee_app.h"
+#include "rust/sim/app.h"
 
 // New (port): the Rust table's host (ee_app cheats_ffi.rs)
 struct EECheatHostContext {

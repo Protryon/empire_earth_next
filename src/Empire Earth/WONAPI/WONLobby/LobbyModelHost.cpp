@@ -21,7 +21,9 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyParser.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/model.h"
+#include "rust/won_lobby/modelobj.h"
+#include "rust/won_lobby/staging.h"
 namespace WONAPI {
 
 static_assert(offsetof(LobbyModelObject, mModel) == 2 * sizeof(void*), "modelobj.rs reads the model at this offset");

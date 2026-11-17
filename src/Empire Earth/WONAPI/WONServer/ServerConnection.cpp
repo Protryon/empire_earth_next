@@ -11,7 +11,8 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/hostop.h"
+#include "rust/won_net/servconn.h"
 namespace WONAPI {
 static RefCount* Ref(void* inObject) { return static_cast<RefCount*>(inObject); }
 static ServerConnection* Conn(void* inConn) { return static_cast<ServerConnection*>(inConn); }

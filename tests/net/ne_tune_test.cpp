@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "rust/ee_net.h"
+#include "rust/net/net.h"
 #include "ne_tcp_host.h"
 
 // ---- the world

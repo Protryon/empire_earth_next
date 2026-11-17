@@ -22,7 +22,8 @@
 #include <string>
 #include <vector>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/eegame.h"
+#include "rust/won_lobby/lobbyctl.h"
 
 typedef EeWonLobbyCtlOp Op;
 typedef EeWonLobbyCtlCall Call;

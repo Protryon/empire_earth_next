@@ -9,7 +9,7 @@
 #ifndef LLE_UIBACKGROUND_H
 #define LLE_UIBACKGROUND_H
 
-#include "rust/ee_ui.h"
+#include "rust/ui/bgobj.h"
 #include "lle/UILayoutUtility.h"
 
 class UIForm;

@@ -1,7 +1,8 @@
 // WONLobby configuration: WONAPI's config file parser and registry key, and the lobby's private state
 #ifndef EE_WONAPI_WONLOBBYCONFIG_H
 #define EE_WONAPI_WONLOBBYCONFIG_H
-#include "rust/ee_won.h"
+#include "rust/won_net/config.h"
+#include "rust/won_net/regkey.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include <vector>

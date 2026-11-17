@@ -11,7 +11,8 @@
 #include "lle/U2DRectangle.h"           // RTSColoredRectangle holds one by value
 #include "lle/GEColor.h"               // RTSColoredRectangle holds one by value
 #include "ee/EERandomMapIDs.h"
-#include "rust/ee_units.h"             // EeUnitsRtsMapFields, EeUnitsMapFields (the maps' plain members)
+#include "rust/sim/combat.h"             // EeUnitsRtsMapFields, EeUnitsMapFields (the maps' plain members)
+#include "rust/sim/units.h"
 
 // One map tile (provisional name and layout)
 class EEDoppelganger;

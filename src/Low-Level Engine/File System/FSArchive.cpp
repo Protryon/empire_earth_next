@@ -12,7 +12,7 @@
 #include "lle/UString.h"
 #include "lle/FSMemoryFile.h"
 #include "lle/FSArchive.h"
-#include "rust/ee_fs.h"
+#include "rust/base/fs.h"
 
 static_assert(sizeof(FSArchive) == sizeof(EeFsArchiveObj), "FSArchive is an EeFsArchiveObj");
 

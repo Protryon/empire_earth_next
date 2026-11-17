@@ -1,4 +1,5 @@
-#include "rust/ee_won.h"
+#include "rust/won_gui/cfgtab.h"
+#include "rust/won_gui/guiconf.h"
 // The table reader's host (R6 WON round 39): the reads, the frame and the setters of the 49 table-shaped config
 // handlers whose programs are ee_won's cfgtab.rs. Included inside a namespace by ConfigTableHost.cpp (WONAPI) and
 // by tests/won/won_cfgtab_test.cpp (over its stand-ins), so both run these very statements. A read or setter that

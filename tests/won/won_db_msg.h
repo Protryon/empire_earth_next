@@ -10,7 +10,8 @@
 #include <vector>
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/db.h"
+#include "rust/won_net/dirops.h"
 
 namespace WONAPI {
 

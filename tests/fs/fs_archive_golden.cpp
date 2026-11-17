@@ -42,7 +42,8 @@
 #include "lle/FSPath.h"
 #undef private
 #undef protected
-#include "rust/ee_error.h"
+#include "rust/base/error.h"
+#include "rust/base/ustring.h"
 UString::~UString() { ee_ustring_free(&this->mState); }
 UWideString::~UWideString() { ee_uwstring_free(&this->mState); }
 

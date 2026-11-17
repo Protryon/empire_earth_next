@@ -13,7 +13,10 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/bgtableobj.h"
+#include "rust/ui/button.h"
+#include "rust/ui/layout.h"
+#include "rust/ui/obj.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"

@@ -9,7 +9,7 @@
 #ifndef LLE_UIHOTKEY_H
 #define LLE_UIHOTKEY_H
 
-#include "rust/ee_ui.h"
+#include "rust/ui/hotkeyobj.h"
 #include "lle/UIEntity.h"
 #include "lle/TMPoll.h"
 

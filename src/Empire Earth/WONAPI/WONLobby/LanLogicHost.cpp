@@ -28,7 +28,11 @@
 #include "ee/wonapi/WONLobbyEventTypes.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/EELobbyGameCode.h" // LobbyMessageBox
-#include "rust/ee_won.h"
+#include "rust/won_lobby/lanlogic.h"
+#include "rust/won_lobby/lanobj.h"
+#include "rust/won_lobby/lobbyhost.h"
+#include "rust/won_net/ipobj.h"
+#include "rust/won_net/qsock.h"
 extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss; defined in EEWonNet.cpp)
 namespace WONAPI {
 AuthContext* GetLobbyAuthContext(); // the lobby's authentication context (cdecl)

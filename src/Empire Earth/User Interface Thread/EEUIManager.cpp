@@ -90,7 +90,8 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 #include "lle/UGraph.h"
 #include "lle/UIGraph.h"
 #include "ee/EEStringIDs.h"
-#include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
+#include "rust/game/screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
+#include "rust/ui/graphobj.h"
 // The host's record of one call of ee_screens ui_manager.rs (the manager, StartScenarioEditor's two names,
 // UpdateMouse's location)
 struct EEUIManagerCall {

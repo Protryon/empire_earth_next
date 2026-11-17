@@ -53,7 +53,7 @@
 #include "ee/EEUnitKind.h"
 #include "ee/EEUnitStore.h"
 #include "ee/EEUnitUpdate.h"
-#include "rust/ee_units.h"
+#include "rust/sim/units.h"
 
 namespace {
 

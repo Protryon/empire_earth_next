@@ -11,7 +11,7 @@
 #define EE_EEAREAEFFECTTEMPLATE_H
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
-#include "rust/ee_tech.h"
+#include "rust/sim/tech.h"
 
 class EEGraphicEffect;
 class EEMedia;

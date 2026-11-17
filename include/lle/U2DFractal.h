@@ -8,7 +8,7 @@
 #ifndef LLE_U2DFRACTAL_H
 #define LLE_U2DFRACTAL_H
 
-#include "rust/ee_util.h"
+#include "rust/base/util.h"
 
 class LLE_API U2DFractal {
 public:

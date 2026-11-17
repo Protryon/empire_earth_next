@@ -5,7 +5,7 @@
 #ifndef EE_WONAPI_WONLOBBYRUSTCTRL_H
 #define EE_WONAPI_WONLOBBYRUSTCTRL_H
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/lobbyctl.h"
 namespace WONAPI {
 class LobbyRustCtrl : public Container {
 public:

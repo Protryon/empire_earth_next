@@ -23,7 +23,9 @@
 #include <string>
 #include <vector>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guievent.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/winobj.h"
 
 typedef EeWonGuiOp Op;
 typedef uint32_t DWORD;

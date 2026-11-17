@@ -1,7 +1,9 @@
 // WONLobby dialogs and popup menus.
 #ifndef EE_WONAPI_WONLOBBYDIALOGS_H
 #define EE_WONAPI_WONLOBBYDIALOGS_H
-#include "rust/ee_won.h"
+#include "rust/won_lobby/lobbydlg.h"
+#include "rust/won_lobby/lobbypopup.h"
+#include "rust/won_lobby/scrolltext.h"
 namespace WONAPI {
 class LobbyGame;
 class LobbyClient;

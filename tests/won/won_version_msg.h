@@ -7,7 +7,8 @@
 #include <string>
 #include <vector>
 #include "won_patch_msg.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/miscops.h"
+#include "rust/won_net/patch.h"
 
 namespace WONAPI {
 

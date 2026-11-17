@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyLayout.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/guilayout.h"
 namespace WONAPI {
 // Sets the four anchor components; a missing edge takes the opposite edge on the same axis, then the last
 // anchor supplied

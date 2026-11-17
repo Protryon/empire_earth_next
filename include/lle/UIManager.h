@@ -10,7 +10,8 @@
 #include <stdint.h>
 
 #include "lle/UIEvent.h"
-#include "rust/ee_ui.h"
+#include "rust/ui/managerobj.h"
+#include "rust/ui/obj.h"
 
 class FSPath;
 class GEBitmap;

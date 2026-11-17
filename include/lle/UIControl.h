@@ -15,7 +15,9 @@
 
 #include <map>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/controlobj.h"
+#include "rust/ui/obj.h"
+#include "rust/ui/rect.h"
 #include "lle/ISEntity.h"
 #include "lle/UIEntity.h"
 

@@ -22,7 +22,9 @@
 #include <list>
 #include <map>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_gui/ctobj.h"
+#include "rust/won_gui/dialogobj.h"
+#include "rust/won_gui/guihost.h"
 
 typedef EeWonGuiOp Op;
 typedef EeWonCtVirt V;

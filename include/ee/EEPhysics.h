@@ -8,7 +8,7 @@
 
 #include <vector>
 #include <deque>
-#include "rust/ee_units.h"             // EeUnitsPhysicsSaved (EEPhysics' saved block)
+#include "rust/sim/units.h"             // EeUnitsPhysicsSaved (EEPhysics' saved block)
 
 class FSFile;
 class RTSGraphics;

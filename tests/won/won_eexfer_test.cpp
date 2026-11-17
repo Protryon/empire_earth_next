@@ -22,7 +22,8 @@
 #include <vector>
 #include <set>
 #include <map>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/eesound.h"
+#include "rust/won_lobby/eexfer.h"
 
 typedef EeWonEeXferOp Op;
 typedef EeWonEeXferCall Call;

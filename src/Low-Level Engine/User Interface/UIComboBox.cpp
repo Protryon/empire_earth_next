@@ -19,7 +19,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/comboobj.h"
+#include "rust/ui/obj.h"
+#include "rust/ui/rect.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"

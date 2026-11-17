@@ -88,7 +88,7 @@
 #include "ee/EEMessageCapture.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEUnitStore.h"
-#include "rust/ee_units.h"   // ee_units_store_checksum_flag1
+#include "rust/sim/units.h"   // ee_units_store_checksum_flag1
 #include <functional>
 #include "ee/EEGameLog.h"
 #include "ee/EECPNext.h"

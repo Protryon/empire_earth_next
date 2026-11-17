@@ -8,7 +8,7 @@
 // the number of failed checks.
 #include <stdio.h>
 #include <limits.h>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guiscroll.h"
 
 static int sFailures;
 static int sChecks;

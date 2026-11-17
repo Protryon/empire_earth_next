@@ -17,7 +17,9 @@
 #include <string>
 #include <vector>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/msbtnobj.h"
 
 typedef EeWonGuiOp Op;
 typedef EeWonGuiField Fd;

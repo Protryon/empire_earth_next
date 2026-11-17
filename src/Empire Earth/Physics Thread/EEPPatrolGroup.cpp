@@ -30,7 +30,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EESaveGameFiles.h"
-#include "rust/ee_units.h"
+#include "rust/sim/units.h"
 
 static uint64_t PGObject(const void* inPointer)
 {

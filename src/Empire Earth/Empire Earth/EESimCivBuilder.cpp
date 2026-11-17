@@ -96,7 +96,7 @@
 #include "ee/EECivilizationManager.h"
 #include "ee/EECBUIListBox.h"
 #include "ee/EECivilizationBuilder.h"
-#include "rust/ee_screens.h"   // the edited civilization's TEST ONLY queries
+#include "rust/game/screens.h"   // the edited civilization's TEST ONLY queries
 #include "ee/EEARust.h"
 #include "ee/EESimEditor.h"
 

@@ -14,7 +14,8 @@
 #include <string.h>
 #include <string>
 #include <vector>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/imgfilter.h"
 
 typedef uint32_t DWORD;
 static unsigned sSeed;

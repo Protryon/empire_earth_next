@@ -198,7 +198,9 @@
 #include "ee/EETileCoordinate.h"
 #include "ee/EEAreaEffect.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/ee_screens.h"
+#include "rust/base/time.h"
+#include "rust/game/screens.h"
+#include "rust/sim/scenario.h"
 #include "lle/UISlider.h"
 #include "lle/UIScrollBar.h"
 #include "ee/EESEUITechListBox.h"
@@ -241,7 +243,9 @@ long EESETestSaveTriggersOnly(UIForm* inForm);   // EEUIFScenarioEditor.cpp (TES
 #include "lle/TSEvent.h"
 #include "ee/EESELoadThread.h"
 #include "ee/EEScenarioEditorIDs.h"
-#include "rust/ee_time.h"
+#include "rust/base/time.h"
+#include "rust/game/screens.h"
+#include "rust/sim/scenario.h"
 #include <vector>
 // the civilization builder's steps (TEST ONLY; EESimCivBuilder.cpp): false for an unknown one
 bool EESimCivBuilderStep(const std::vector<std::string>& w, std::vector<std::string>& outLines);

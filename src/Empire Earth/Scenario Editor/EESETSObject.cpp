@@ -60,7 +60,8 @@
 
 // 0x563678: the unit action ids by name (the object screen's action combo box) are EEUnitAction::sActionIDs
 #include "ee/EEStringIDs.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
+#include "rust/sim/scenario.h"
 // The unit type combo box's sort (0x19330c, the std::sort instantiation 0x193077..0x19370e): type 0 first, then the
 // unit classes by name (provisional name)
 struct EESETSOUnitTypeNameLess {

@@ -76,7 +76,8 @@
 #include <algorithm>
 #include <memory>
 #include <vector>
-#include "rust/ee_combat.h"
+#include "rust/sim/combat.h"
+#include "rust/sim/units.h"
 
 const UString EEPWorldHelper::sTheScenarioManager("EEWorldHelper-The Scenario Manager");
 const UString EEPWorldHelper::sTheTeams("EEPWorldHelper-The Teams");

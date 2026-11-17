@@ -4,7 +4,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/SEScore.h"
-#include "rust/ee_sound.h"
+#include "rust/audio/sound.h"
 
 #define RUST reinterpret_cast<const EeSoundScore*>(this)
 

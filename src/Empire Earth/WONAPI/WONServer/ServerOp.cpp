@@ -16,6 +16,16 @@
 #include <vector>
 #include "ee/wonapi/WONLobbyResource.h" // WONFile
 #include "ee/wonapi/WONLobbyGUI.h" // WONAPICore::GetDefaultFileDirectory
+#include "rust/won_net/certhost.h"
+#include "rust/won_net/fwhost.h"
+#include "rust/won_net/hostbase.h"
+#include "rust/won_net/hostop.h"
+#include "rust/won_net/httpdoc.h"
+#include "rust/won_net/httpget.h"
+#include "rust/won_net/peerop.h"
+#include "rust/won_net/reqhost.h"
+#include "rust/won_net/reqmake.h"
+#include "rust/won_net/reqop.h"
 namespace WONAPI {
 namespace {
 // the Rust objects' maker of a Rust op's C++ op (ee_won cppcore.rs new_host_op: the peer auth and HTTP get ops

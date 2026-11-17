@@ -65,7 +65,8 @@
 #include "lle/UIESliderChange.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
+#include "rust/sim/scenario.h"
 // The screen is whole in Rust (ee_screens editor_subscreens.rs) with its seven effect types (editor_effects.rs): the
 // constructor (0x582629), the destructor (0x5829a4), ChangeEffectAction (0x582a3b), ChangeEffectType (0x582a69),
 // Sort, MoveDown, MoveUp, Delete, Duplicate, Activate (0x582b22), Store (0x582b96), GetNames, Load (0x582c55), New,

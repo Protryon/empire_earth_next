@@ -5,7 +5,8 @@
 // checks.
 #include <stdio.h>
 #include <vector>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guictl.h"
+#include "rust/won_gui/guiwin.h"
 
 static int sFailures;
 static int sChecks;

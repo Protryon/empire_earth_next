@@ -8,7 +8,8 @@
 #ifndef LLE_UIEVENT_H
 #define LLE_UIEVENT_H
 
-#include "rust/ee_ui.h"
+#include "rust/ui/eventobj.h"
+#include "rust/ui/obj.h"
 
 class FSFileSpec;
 class UIEntity;

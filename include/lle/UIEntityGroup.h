@@ -6,7 +6,8 @@
 #ifndef LLE_UIENTITYGROUP_H
 #define LLE_UIENTITYGROUP_H
 
-#include "rust/ee_ui.h"
+#include "rust/ui/groupobj.h"
+#include "rust/ui/obj.h"
 
 class UIEntity;
 

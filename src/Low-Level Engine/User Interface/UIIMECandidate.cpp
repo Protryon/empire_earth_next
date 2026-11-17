@@ -11,7 +11,9 @@
 #include <windows.h>
 #include <mbstring.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/ime.h"
+#include "rust/ui/ime_ffi.h"
+#include "rust/ui/rect.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"

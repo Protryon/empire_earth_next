@@ -26,7 +26,8 @@
 #include "platform/PlatSocket.h"
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/hostop.h"
+#include "rust/won_net/smartroute.h"
 #include "won_blocking.h"
 
 using namespace WONAPI;

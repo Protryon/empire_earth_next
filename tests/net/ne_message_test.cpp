@@ -19,7 +19,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
-#include "rust/ee_netmsg.h"
+#include "rust/sim/netmsg.h"
 
 // ---- the engine functions the units call
 

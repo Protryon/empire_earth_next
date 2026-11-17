@@ -10,7 +10,7 @@
 #include <string.h>
 #include <string>
 #include <vector>
-#include "rust/ee_net.h"
+#include "rust/net/net.h"
 
 class NEConnection;                         // the plug-in's connection handle (ee_net_tcp's Connection), never defined
 class NEServer;                             // the plug-in's server handle (ee_net_tcp's Server), never defined

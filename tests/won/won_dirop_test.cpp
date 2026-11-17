@@ -22,7 +22,8 @@
 #include "ee/wonapi/WONRouting.h"
 #include "won_dir_flags.h"
 #include "won_dir_msg.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/dirchange.h"
+#include "rust/won_net/reqop.h"
 
 // 0 records the golden from the original's half alone
 #ifndef DIROP_RUST

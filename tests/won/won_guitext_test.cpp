@@ -10,7 +10,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guilist.h"
+#include "rust/won_gui/guitext.h"
 
 static int sFailures;
 static int sChecks;

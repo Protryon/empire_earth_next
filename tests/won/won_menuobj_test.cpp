@@ -20,7 +20,13 @@
 #include <vector>
 #include <map>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guictl.h"
+#include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/guimenu.h"
+#include "rust/won_gui/guiwin.h"
+#include "rust/won_gui/listobj.h"
+#include "rust/won_gui/menuobj.h"
 
 typedef EeWonGuiOp Op;
 typedef EeWonGuiField Fd;

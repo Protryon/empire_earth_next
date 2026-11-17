@@ -24,7 +24,12 @@
 #include <map>
 #include <set>
 #include <algorithm>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guictl.h"
+#include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/guimulti.h"
+#include "rust/won_gui/listobj.h"
+#include "rust/won_gui/multiobj.h"
 
 typedef EeWonGuiOp Op;
 typedef EeWonGuiField Fd;

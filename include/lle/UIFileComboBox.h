@@ -10,6 +10,7 @@
 
 #include <vector>
 #include "lle/UIComboBox.h"
+#include "rust/ui/filelistobj.h"
 
 class FSPath;
 

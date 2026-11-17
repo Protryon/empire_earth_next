@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONRoutingOpTypes.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/routeop.h"
 namespace WONAPI {
 static std::wstring Wide(const uint16_t* inUnits, size_t inCount)
 {

@@ -11,7 +11,7 @@
 #include <wctype.h>
 #include <string>
 #include <vector>
-#include "rust/ee_rust.h"
+#include "rust/all.h"
 
 namespace WONAPI {
 std::string StringToUpperCase(const std::string& theStr);

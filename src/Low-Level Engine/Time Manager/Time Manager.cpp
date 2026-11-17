@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #include "lle/LowLevelEngine.h"
-#include "rust/ee_time.h"
+#include "rust/base/time.h"
 
 // Returns the current time in milliseconds (performance counter if present, else the millisecond clock); a time
 // pinned on this thread (EE-SIM's scripted editor, ee_time_pin) instead of either

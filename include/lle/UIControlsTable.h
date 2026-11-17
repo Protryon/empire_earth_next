@@ -10,7 +10,8 @@
 
 #include <vector>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/controls_table.h"
+#include "rust/ui/tableobj.h"
 
 class FSFileSpec;
 class GEBitmap;

@@ -31,7 +31,7 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "rust/ee_tech.h"
+#include "rust/sim/tech.h"
 #include "ee/EETechCapture.h"
 #include "ee/EEGameVariant.h"
 #include "lle/USingleton.h"

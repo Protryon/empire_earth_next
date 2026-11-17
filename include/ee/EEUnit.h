@@ -56,7 +56,7 @@ class EEPhysicsModel;                       // ee/EEPhysicsModel.h (EEUnitClass 
 class EESoundObject;
 
 #include "ee/EEUnitClassImprovement.h"
-#include "rust/ee_units.h"              // EeUnitsUnitClassUpgradeFields (EEUnitClassUpgrade's base)
+#include "rust/sim/units.h"              // EeUnitsUnitClassUpgradeFields (EEUnitClassUpgrade's base)
 
 // What +0x34 of a unit points to: the owner's RTTI EEUnitClassUpgrade for the unit's class (vtable 0x449ad8, sizeof
 // 0x16c, ctor 0x23b6ae(EEUnitClass*); EEPlayer's Reset news one per gUnitClassTable entry into its vector at +0x884).

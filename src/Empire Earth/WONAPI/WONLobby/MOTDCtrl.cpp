@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyScreens.h"
 #include "ee/wonapi/WONLobbyEvents.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/httpdoc.h"
 namespace WONAPI {
 MOTDCtrl::MOTDCtrl() : mNeedGenHTML(false) {}
 // The original stores its own vtable (0x7c0bff) before destroying the two paths, the browser and the base

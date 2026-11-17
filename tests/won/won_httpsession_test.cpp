@@ -21,7 +21,7 @@
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatTime.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/httpget.h"
 #include "won_blocking.h"
 
 using namespace WONAPI;

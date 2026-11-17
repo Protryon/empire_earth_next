@@ -4,6 +4,7 @@
 #define EE_WONAPI_WONURL_H
 #include <string>
 #include "ee/wonapi/WONLobbyResource.h" // WONFile, rust/ee_won.h
+#include "rust/won_net/http.h"
 namespace WONAPI {
 enum URLType { URLType_None,URLType_File,URLType_HTTP,URLType_FTP };
 class URL {

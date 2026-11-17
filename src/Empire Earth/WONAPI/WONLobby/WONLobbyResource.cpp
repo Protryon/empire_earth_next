@@ -13,7 +13,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyResourceGlobals.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/resource.h"
 using namespace WONAPI;
 
 // the original's globals (0x5663f4..0x566a9c) and its id table (0x566944..), one slot per row

@@ -1,7 +1,7 @@
 #ifndef EE_WONAPI_WONLOBBYTEXTAREACONFIG_H
 #define EE_WONAPI_WONLOBBYTEXTAREACONFIG_H
 #include "ee/wonapi/WONLobbyResourceConfig.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/textobj.h"
 namespace WONAPI {
 // The text area (R6 WON round 21): its layout, lines, selection, links and paint are the Rust TextArea
 // (rust/crates/ee_won_gui/src/textobj.rs); this is the type the lobby holds and the segments it makes.

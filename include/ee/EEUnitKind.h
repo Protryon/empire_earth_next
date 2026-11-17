@@ -11,7 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "rust/ee_units.h"   // the EE_GOAL_KIND_* and EE_CLASS_KIND_* bits
+#include "rust/sim/units.h"   // the EE_GOAL_KIND_* and EE_CLASS_KIND_* bits
 
 // the tables (kinds.rs; cbindgen exports no statics)
 extern "C" {

@@ -6,7 +6,7 @@
 #define EE_EEEFFECTMESH_H
 
 #include <vector>
-#include "rust/ee_gfx.h"
+#include "rust/render/gfx.h"
 
 // A built mesh's set records stored into inModel's first vertex and polygon arrays (EEEffectMesh::Store; the raster
 // table's store_mesh)

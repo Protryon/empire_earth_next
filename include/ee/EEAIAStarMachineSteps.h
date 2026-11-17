@@ -6,7 +6,7 @@
 #define EE_EEAIASTARMACHINESTEPS_H
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAIAStarCapture.h"
-#include "rust/ee_astar.h"
+#include "rust/sim/astar.h"
 template <class S, class G, class M>
 void EEAIAStarMachine<S, G, M>::Run()
 {

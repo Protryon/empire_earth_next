@@ -24,7 +24,11 @@
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "won_patch_msg.h"
 #include "won_version_msg.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/admin.h"
+#include "rust/won_net/dir.h"
+#include "rust/won_net/miscops.h"
+#include "rust/won_net/reqop.h"
+#include "rust/won_net/reqops.h"
 
 #ifndef VEROP_RUST
 #define VEROP_RUST 1

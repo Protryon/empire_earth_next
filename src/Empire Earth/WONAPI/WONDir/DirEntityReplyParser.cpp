@@ -14,6 +14,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/dir.h"
 namespace WONAPI {
 
 static void DirAssign(std::wstring& outText, const uint16_t* inUnits, size_t inCount)

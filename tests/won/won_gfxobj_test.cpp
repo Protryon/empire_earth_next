@@ -18,6 +18,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/won_gui/wmobj.h"
 
 using namespace WONAPI;
 

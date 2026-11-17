@@ -27,7 +27,7 @@
 #include "ee/EEUnitClassImprovement.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEImprovementIDs.h"
-#include "rust/ee_units.h"
+#include "rust/sim/units.h"
 
 namespace {
 

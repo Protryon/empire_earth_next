@@ -23,7 +23,7 @@
 #include "lle/GE3DLine.h"
 
 #include "ee/EEUnitUpdate.h"
-#include "rust/ee_units.h"
+#include "rust/sim/units.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"

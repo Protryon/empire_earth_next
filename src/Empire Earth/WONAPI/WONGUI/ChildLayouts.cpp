@@ -16,7 +16,9 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyLayout.h"
 #include "ee/wonapi/WONPercentLayout.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/guictl.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/layoutobj.h"
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;

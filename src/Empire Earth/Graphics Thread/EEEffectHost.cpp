@@ -76,7 +76,9 @@
 #include "ee/EEAEManager.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEE2DBattlefieldAmbient.h"
-#include "rust/ee_combat.h"
+#include "rust/base/math.h"
+#include "rust/render/gfx.h"
+#include "rust/sim/units.h"
 
 class EEComplexUnit;
 // 0x23cee2 (EERenderLists.h): the unit's draw opacity (the farm's)

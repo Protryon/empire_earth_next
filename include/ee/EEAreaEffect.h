@@ -12,7 +12,7 @@
 #define EE_EEAREAEFFECT_H
 
 #include "ee/UReferenceContainer.h"
-#include "rust/ee_tech.h"
+#include "rust/sim/tech.h"
 #include <stdio.h>
 
 class EEAreaEffectTemplate;

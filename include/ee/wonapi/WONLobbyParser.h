@@ -2,7 +2,8 @@
 // Names are provisional by behavior; field representations follow constructors, callers and EH cleanup.
 #ifndef EE_WONAPI_WONLOBBYPARSER_H
 #define EE_WONAPI_WONLOBBYPARSER_H
-#include "rust/ee_won.h"
+#include "rust/won_lobby/chatobj.h"
+#include "rust/won_net/ffi_parse.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONStringCompare.h"
 namespace WONAPI {

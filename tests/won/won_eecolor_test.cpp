@@ -19,7 +19,8 @@
 #include <string>
 #include <vector>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/eecolor.h"
+#include "rust/won_lobby/eegame.h"
 
 typedef EeWonEeColorOp Op;
 typedef EeWonEeColorCall Call;

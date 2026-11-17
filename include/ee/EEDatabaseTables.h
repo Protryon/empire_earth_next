@@ -9,7 +9,7 @@
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 
 #include "ee/EEWorldConstants.h"
-#include "rust/ee_data.h"
+#include "rust/data/tables.h"
 
 class FSFileSpec;
 class EEUnitClass;

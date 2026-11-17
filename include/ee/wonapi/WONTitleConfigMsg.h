@@ -8,7 +8,7 @@
 #include <map>
 #include <string>
 #include <vector>
-#include "rust/ee_won.h"
+#include "rust/won_net/titlecfg.h"
 
 namespace WONAPI {
 

@@ -8,7 +8,8 @@
 #pragma once
 #include <stdint.h>
 #include <string>
-#include "rust/ee_won.h"
+#include "rust/won_net/ffi.h"
+#include "rust/won_net/peerauth.h"
 
 namespace WONAPI {
 

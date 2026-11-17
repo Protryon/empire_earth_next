@@ -10,6 +10,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
 #include "won_profiledata.h"
+#include "rust/won_net/db.h"
 namespace WONAPI {
 // Creates an empty profile (no birth date, no custom action)
 ProfileData::ProfileData()

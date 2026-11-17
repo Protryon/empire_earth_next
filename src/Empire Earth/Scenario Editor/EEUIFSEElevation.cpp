@@ -35,7 +35,7 @@
 #include "ee/EEUIFSEPaintElevation.h"
 #include "ee/EEUIFSEElevation.h"
 #include "ee/EEStringIDs.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 
 // Builds the elevation tab: the paint area, the hills / cliffs / cliff paths radio buttons, the titles,

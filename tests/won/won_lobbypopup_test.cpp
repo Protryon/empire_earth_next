@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/lobbypopup.h"
 
 typedef EeWonLobbyPopupOp Op;
 typedef EeWonLobbyPopupCall Call;

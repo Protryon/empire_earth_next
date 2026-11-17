@@ -12,7 +12,8 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/gfxobj.h"
+#include "rust/won_gui/guilayout.h"
 using namespace WONAPI;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Winvalid-offsetof"

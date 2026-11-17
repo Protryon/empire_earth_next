@@ -9,7 +9,7 @@
 #define LLE_UIFILELISTBOX_H
 
 #include "lle/UILBString.h"
-#include "rust/ee_ui.h"
+#include "rust/ui/filelistobj.h"
 
 class FSPath;
 

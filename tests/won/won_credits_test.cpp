@@ -20,7 +20,8 @@
 #include <string>
 #include <vector>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/lobbydlg.h"
+#include "rust/won_lobby/scrolltext.h"
 
 static int sFailures;
 static int sChecks;

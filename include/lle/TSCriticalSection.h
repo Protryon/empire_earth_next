@@ -6,7 +6,7 @@
 #define LLE_TSCRITICALSECTION_H
 
 #include "platform/PlatThread.h"
-#include "rust/ee_ts.h"
+#include "rust/base/ts.h"
 
 class LLE_API TSCriticalSection {
     friend class TSScheduler;               // only the scheduler creates/destroys

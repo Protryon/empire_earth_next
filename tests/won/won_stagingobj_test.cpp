@@ -14,7 +14,10 @@
 #include <string.h>
 #include <string>
 #include <vector>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/flow.h"
+#include "rust/won_lobby/lobbyhost.h"
+#include "rust/won_lobby/staging.h"
+#include "rust/won_lobby/stagingobj.h"
 
 typedef EeWonLobbyOp Op;
 typedef EeWonLobbyText LT;

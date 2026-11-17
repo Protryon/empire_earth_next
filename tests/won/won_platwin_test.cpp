@@ -17,7 +17,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include "rust/ee_won.h"
+#include "rust/won_gui/platwin.h"
+#include "rust/won_gui/platwm.h"
 
 static unsigned sSeed;
 static unsigned R(unsigned n) { sSeed = sSeed * 1103515245u + 12345u; return ((sSeed >> 8) & 0xffffff) % n; }

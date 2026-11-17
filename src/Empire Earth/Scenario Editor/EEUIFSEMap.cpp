@@ -35,7 +35,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EERules.h"
 #include "ee/EEScenarioEditorIDs.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
 
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 void SeplLinePush(const UWideString& inLine);   // a line for the next combo box made with pending lines (the same)

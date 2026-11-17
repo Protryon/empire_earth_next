@@ -2,6 +2,8 @@
 #define EE_WONAPI_WONPING_H
 #include <time.h>
 #include "ee/wonapi/WONRouting.h"
+#include "rust/won_net/hostop.h"
+#include "rust/won_net/multiping.h"
 namespace WONAPI {
 // PingOp is a Rust op (rust/crates/ee_won_net/src/reqops.rs, EE_WON_REQOPS_PING).
 //

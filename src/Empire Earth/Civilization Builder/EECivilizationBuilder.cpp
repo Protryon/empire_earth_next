@@ -81,7 +81,7 @@
 #include "ee/EECivilizationBuilder.h"
 #include "ee/EEStringIDs.h"
 #include "EEDataText.h"   // QuoteText: the keyed .civ text's name
-#include "rust/ee_screens.h"   // the builder (civ_whole.rs) and its host's ops (EE_SCREENS_CBW_*)
+#include "rust/game/screens.h"   // the builder (civ_whole.rs) and its host's ops (EE_SCREENS_CBW_*)
 
 // the civilization file being saved or loaded (EECBCivilizationFiles.cpp's file spec 0x565518: EELoadCivilization
 // shares it)

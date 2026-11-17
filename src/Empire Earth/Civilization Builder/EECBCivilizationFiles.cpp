@@ -86,7 +86,7 @@
 #include "ee/EECivilizationBuilder.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EECivCapture.h"
-#include "rust/ee_tech.h"
+#include "rust/sim/tech.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // chain at 0x67fe94 (wrapper)

@@ -12,7 +12,7 @@
 #include "platform/PlatThread.h"
 
 #include "lle/LowLevelEngine.h"
-#include "rust/ee_net_tcp.h"
+#include "rust/net/net_tcp.h"
 
 // ---- the engine calls Rust needs (extern "C" so Rust can link them)
 

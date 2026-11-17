@@ -2,6 +2,7 @@
 #ifndef EE_WONAPI_WONLOBBYLAYOUT_H
 #define EE_WONAPI_WONLOBBYLAYOUT_H
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/won_gui/layoutobj.h"
 namespace WONAPI {
 // PercentLayoutParam (0x40 bytes): explicit constructor, borrowed component pointers, plain copy.
 class PercentLayoutParam {

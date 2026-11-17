@@ -5,7 +5,7 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "rust/ee_util.h"
+#include "rust/base/util.h"
 
 // Returns the user's default language id
 unsigned short UGetOSLanguage() { return ee_util_os_language(); }

@@ -9,7 +9,7 @@
 #ifndef LLE_UIBACKGROUNDTABLE_H
 #define LLE_UIBACKGROUNDTABLE_H
 
-#include "rust/ee_ui.h"
+#include "rust/ui/bgtableobj.h"
 #include "lle/UILayoutUtility.h"
 
 class FSFileSpec;

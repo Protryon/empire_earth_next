@@ -6,7 +6,8 @@
 // UIGraphHost::Op (UIControl's members, the texts, a line).
 #include <windows.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/graphobj.h"
+#include "rust/ui/obj.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"

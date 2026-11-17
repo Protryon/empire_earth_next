@@ -8,7 +8,8 @@
 // the Rust object, which calls out through UIStatusBarHost::Op (UIControl's members, the two rhombi, the texts).
 #include <windows.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/obj.h"
+#include "rust/ui/statusobj.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"

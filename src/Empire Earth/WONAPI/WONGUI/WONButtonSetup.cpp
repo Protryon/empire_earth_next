@@ -12,7 +12,8 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyWONButton.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/wonbtnobj.h"
 extern "C" intptr_t ee_won_guicpp_wonbtn_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 namespace WONAPI {
 // Creates a skinned button (the Rust button holds 8/4 text padding, centred text, scaled images, grey disabled text

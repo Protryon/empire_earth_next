@@ -15,6 +15,8 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyPlatform.h" // CreateNativeWindow
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/won_gui/grabobj.h"
+#include "rust/won_gui/guihost.h"
 
 using namespace WONAPI;
 

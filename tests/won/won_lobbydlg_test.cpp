@@ -22,7 +22,8 @@
 #include <string>
 #include <vector>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/dialogs.h"
+#include "rust/won_lobby/lobbydlg.h"
 
 typedef EeWonLobbyDlgOp Op;
 typedef EeWonLobbyDlgCall Call;

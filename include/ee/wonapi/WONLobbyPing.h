@@ -2,7 +2,7 @@
 #define EE_WONAPI_WONLOBBYPING_H
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyModel.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/logics.h"
 // PingGameOp (0x98 bytes; global namespace, not WONAPI, per its RTTI) is defined in PingLogic.cpp.
 // PingLogic (0x50 bytes): pings listed games and answers ping requests; a Rust object since R6 WONLobby round 8
 // (rust/crates/ee_won_lobby/src/logics.rs: the request id and the queue there).

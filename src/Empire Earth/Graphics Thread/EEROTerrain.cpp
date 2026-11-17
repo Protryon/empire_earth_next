@@ -42,7 +42,7 @@
 #include "ee/EERenderLists.h"
 #include "ee/EEROTerrain.h"
 #include "ee/EERenderSnapshot.h"
-#include "rust/ee_gfx.h"
+#include "rust/render/gfx.h"
 
 extern unsigned long& gTextureMipLevelsToDrop;
 extern bool& gDrawClouds;                    // 0x5308d3 (the clouds are drawn; provisional name)

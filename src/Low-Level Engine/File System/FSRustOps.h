@@ -3,7 +3,7 @@
 #ifndef FSRUSTOPS_H
 #define FSRUSTOPS_H
 
-#include "rust/ee_fs.h"
+#include "rust/base/fs.h"
 
 class FSFile;
 

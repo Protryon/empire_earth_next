@@ -28,7 +28,8 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONStringCompare.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/ffi.h"
+#include "rust/won_net/httpengine.h"
 
 using namespace WONAPI;
 using std::string;

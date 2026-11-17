@@ -10,7 +10,7 @@
 #define EE_EECALAMITY_H
 
 #include "lle/U2DPoint.h"
-#include "rust/ee_tech.h"   // EeCalamityFields (ee_tech calamity_record.rs)
+#include "rust/sim/tech.h"   // EeCalamityFields (ee_tech calamity_record.rs)
 class EECalamityClass;
 class EEUnit;
 class SESMInstanceNode;

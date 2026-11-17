@@ -15,7 +15,10 @@
 #include <set>
 #include <string>
 #include <vector>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/ffi_lan.h"
+#include "rust/won_lobby/lanlogic.h"
+#include "rust/won_lobby/lanobj.h"
+#include "rust/won_lobby/lobbyhost.h"
 
 typedef EeWonLobbyOp Op;
 typedef EeWonLobbyText LT;

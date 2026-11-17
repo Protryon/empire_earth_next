@@ -45,7 +45,7 @@
 #include "ee/EEClient.h"
 #include "lle/NESynchronousServer.h"
 #include "ee/EEServer.h"
-#include "rust/ee_netmsg.h"   // ee_netmsg session.rs (EESession: EEServer.cpp's host)
+#include "rust/sim/netmsg.h"   // ee_netmsg session.rs (EESession: EEServer.cpp's host)
 
 // 0x4e6058: default-constructed (its init chain 0xb71b5 opens the unit; use inferred, provisional name)
 UWideString gU4E6058;

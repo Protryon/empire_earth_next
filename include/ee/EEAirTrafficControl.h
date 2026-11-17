@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <vector>
 
-#include "rust/ee_units.h"
+#include "rust/sim/units.h"
 
 class EEComplexUnit;
 class EEPlayer;

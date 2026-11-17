@@ -31,7 +31,8 @@ unsigned long EEMenuHeight();
 #include "ee/EEMessage.h"
 #include "ee/EECommunications.h"
 #include "ee/EEUIManager.h"
-#include "rust/ee_screens.h"   // the lobby's updates (ee_screens lobby_form.rs)
+#include "rust/audio/mixer.h"   // the lobby's updates (ee_screens lobby_form.rs)
+#include "rust/game/screens.h"
 #include "ee/EEUIFMainGame.h"
 #include "lle/UResourceFile.h"
 #include "lle/UIEditBox.h"

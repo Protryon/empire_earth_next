@@ -9,7 +9,7 @@
 
 #include <vector>
 #include "ee/EETileCoordinate.h"
-#include "rust/ee_app.h"   // EeAppStormFields (ee_app storm.rs)
+#include "rust/sim/app.h"   // EeAppStormFields (ee_app storm.rs)
 
 class EEEnvironmentManager;
 class FSFile;

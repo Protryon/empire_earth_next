@@ -40,7 +40,8 @@
 #include "ee/EESETSTrigger.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
+#include "rust/sim/scenario.h"
 
 // NEAR: register choice (the original keeps this in edi and the selection in a stack slot) and the screen via the refused vector operator[]
 // Opens the tab of the entry picked in the combo box on a right click and selects it there: triggers,

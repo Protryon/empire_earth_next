@@ -21,7 +21,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "won_routemsg_glue.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/routemsg.h"
 
 using namespace WONAPI;
 

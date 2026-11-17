@@ -5,7 +5,7 @@
 #define EE_WONAPI_WONCRC16_H
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ee_won.h"
+#include "rust/won_net/ffi.h"
 namespace WONAPI {
 class CRC16 {
 public:

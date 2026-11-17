@@ -27,7 +27,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIBGenericBackground.h"
 #include "ee/EEUIFError.h"
-#include "rust/ee_screens.h"   // ee_screens_dialog_show, _open, _construct (ee_screens dialog.rs)
+#include "rust/game/screens.h"   // ee_screens_dialog_show, _open, _construct (ee_screens dialog.rs)
 static const float kMessageButtonOpacity = 0.4f;
 static const GEColor kMessageButtonColor(1.0f, 1.0f, 1.0f);
 static const GEColor kMessageTextColor(0.0f, 0.0f, 0.0f);

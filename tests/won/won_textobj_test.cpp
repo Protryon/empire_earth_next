@@ -28,7 +28,11 @@
 #include <deque>
 #include <map>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/guilist.h"
+#include "rust/won_gui/guitext.h"
+#include "rust/won_gui/textobj.h"
 
 typedef EeWonGuiOp Op;
 typedef EeWonGuiField Fd;

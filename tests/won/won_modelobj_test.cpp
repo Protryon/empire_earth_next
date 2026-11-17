@@ -23,7 +23,10 @@
 #include <map>
 #include <set>
 #include <algorithm>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/model.h"
+#include "rust/won_lobby/modelobj.h"
+#include "rust/won_lobby/staging.h"
+#include "rust/won_net/ipobj.h"
 
 typedef EeWonModelCall MC;
 typedef EeWonModelField MF;

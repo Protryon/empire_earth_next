@@ -8,7 +8,11 @@
 #include "ee/wonapi/WONLobbyEventTypes.h"
 #include "ee/wonapi/WONLobbyRustCtrl.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/eecolor.h"
+#include "rust/won_lobby/eegame.h"
+#include "rust/won_lobby/eexfer.h"
+#include "rust/won_lobby/lobbyctl.h"
+#include "rust/won_lobby/lobbydlg.h"
 
 namespace WONAPI {
 

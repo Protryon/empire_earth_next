@@ -4,6 +4,7 @@
 // won_reqlast_test), moved here from src/Empire Earth/WONAPI/WONDB/ProfileData.cpp and WONRouting.h.
 #pragma once
 #include "ee/wonapi/WONRouting.h"
+#include "rust/won_net/db.h"
 namespace WONAPI {
 class ProfileData : public RefCount {
 public:

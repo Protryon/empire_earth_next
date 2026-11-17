@@ -11,7 +11,7 @@
 #include "lle/UWideString.h"
 #include "lle/UReferenceCounter.h"
 #include "lle/NEMessage.h"
-#include "rust/ee_netmsg.h"   // ee_netmsg: the engine messages' wire layout and records
+#include "rust/sim/netmsg.h"   // ee_netmsg: the engine messages' wire layout and records
 
 // ---- the codec (ee_netmsg engine.rs, docs/RUST_PLAN.md R5b.4): a message hands its members to the Rust as slots in
 // wire order, the header's four first ----

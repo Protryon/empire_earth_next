@@ -84,7 +84,8 @@
 #include "ee/EEUIFSEMap.h"
 #include "ee/EEUIFSETerrain.h"
 #include "ee/EESEInstructions.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
+#include "rust/sim/scenario.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern unsigned long& gTexturePixelDepth;
 extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's fonts)

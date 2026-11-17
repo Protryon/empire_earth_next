@@ -4,7 +4,7 @@
 #ifndef LLE_TMTIMER_H
 #define LLE_TMTIMER_H
 
-#include "rust/ee_time.h"
+#include "rust/base/time.h"
 #include "lle/TSEvent.h"
 
 class LLE_API TMTimer {

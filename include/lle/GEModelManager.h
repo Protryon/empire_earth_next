@@ -6,7 +6,7 @@
 
 #include <map>
 #include <stdint.h>
-#include "rust/ee_ge.h"   // the manager (ee_ge manobj.rs), its host's EeGeManOp
+#include "rust/render/ge.h"   // the manager (ee_ge manobj.rs), its host's EeGeManOp
 
 class FSFileSpec;
 class FSPath;

@@ -12,7 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/statusstr.h"
 namespace WONAPI {
 const char* WONStatusToString(WONStatus);
 }

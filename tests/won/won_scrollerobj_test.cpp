@@ -27,7 +27,12 @@
 #include <vector>
 #include <map>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_gui/barobj.h"
+#include "rust/won_gui/compmem.h"
+#include "rust/won_gui/guictl.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/guiscroll.h"
+#include "rust/won_gui/scrollerobj.h"
 #include "ee/wonapi/WONEventTypes.h"
 
 typedef EeWonGuiOp Op;

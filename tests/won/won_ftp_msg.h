@@ -6,7 +6,7 @@
 #pragma once
 #include <string>
 #include "won_http_glue.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/ftp.h"
 
 namespace WONAPI {
 

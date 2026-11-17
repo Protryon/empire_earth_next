@@ -849,6 +849,9 @@ def build_won_test(t, name, units, folder="won", first_inc=None):
     exe = out / (name + t.exe_suffix)
     game = [ROOT / "tests" / folder / f"{name}.cpp", *units]
     inc = [*([first_inc] if first_inc else []), ROOT / "include", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
+    # the original units' copies (tests/net/orig_*) include the Rust headers by the names they had before the crate
+    # restructure: forwarding headers to the module headers, after the include path
+    inc.append(ROOT / "tests" / "net" / "rust_names")
     defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS"]
     # an engine unit gets the engine's module define (tools/ee.py MODULE_FLAGS "lle"), as tcptest's do
     lle = ROOT / "src" / "Low-Level Engine"

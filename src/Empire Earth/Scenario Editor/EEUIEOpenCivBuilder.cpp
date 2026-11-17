@@ -70,7 +70,7 @@ struct EESEToolbarButton {
 extern RTSRenderObject* gU56535C; // the terrain render object (an EEROTerrain newed in Empire Earth.cpp)
 extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's fonts)
 extern GEFont* gU531938;
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
 
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 

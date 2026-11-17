@@ -6,7 +6,7 @@
 #ifndef EE_EETECHRUST_H
 #define EE_EETECHRUST_H
 
-#include "rust/ee_tech.h"
+#include "rust/sim/tech.h"
 
 // the host of every walk (ctx: the tree)
 int32_t EETechHost(void* inTree, int32_t inOp, EeTechHostIo* io);

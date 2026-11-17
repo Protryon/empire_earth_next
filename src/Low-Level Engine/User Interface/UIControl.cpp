@@ -7,7 +7,12 @@
 // starts at 0x10065f69.
 #include <windows.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/controlobj.h"
+#include "rust/ui/draw.h"
+#include "rust/ui/draw_ffi.h"
+#include "rust/ui/mouse_ffi.h"
+#include "rust/ui/obj.h"
+#include "rust/ui/rect.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"

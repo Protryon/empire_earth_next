@@ -6,7 +6,7 @@
 #define EE_EEAMBIENTSOUNDMANAGER_H
 
 #include <vector>
-#include "rust/ee_app.h"
+#include "rust/game/app.h"
 
 class EEAmbientSound;
 class FSFile;

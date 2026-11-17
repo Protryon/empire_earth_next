@@ -6,7 +6,7 @@
 #ifndef LLE_TSTHREAD_H
 #define LLE_TSTHREAD_H
 
-#include "rust/ee_ts.h"
+#include "rust/base/ts.h"
 
 // winbase.h's `#define Yield()` would swallow TSThread::Yield (exported ?Yield@TSThread@@SAXK@Z)
 #ifdef Yield

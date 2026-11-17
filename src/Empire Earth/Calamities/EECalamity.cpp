@@ -31,7 +31,7 @@
 #include "ee/EEVectorIO.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "rust/ee_tech.h"
+#include "rust/sim/tech.h"
 #include "lle/FSFile.h"
 
 const UString EECalamity::mEffectGenerationStringID("EffectGenerationStringID");

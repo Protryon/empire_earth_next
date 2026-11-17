@@ -13,7 +13,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyPlatform.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/platgfx.h"
 
 namespace WONAPI {
 

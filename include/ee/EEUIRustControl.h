@@ -7,7 +7,7 @@
 #ifndef EE_EEUIRUSTCONTROL_H
 #define EE_EEUIRUSTCONTROL_H
 
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
 
 class EEUIRustControl : public UIControl {
 public:

@@ -52,7 +52,7 @@
 #include "ee/EEFormation.h"
 #include "ee/EEFWedge.h"
 #include "ee/EESimCapture.h"
-#include "rust/ee_formations.h"
+#include "rust/sim/formations.h"
 #include "ee/EEFormationRust.h"
 
 // Creates a wedge formation: arms opening at inAngle with inSpacing between units, inCount units per

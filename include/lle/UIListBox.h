@@ -14,7 +14,8 @@
 #ifndef LLE_UILISTBOX_H
 #define LLE_UILISTBOX_H
 #include "platform/PlatString.h"
-#include "rust/ee_ui.h"
+#include "rust/ui/listobj.h"
+#include "rust/ui/obj.h"
 #include <stddef.h>
 
 #include <vector>

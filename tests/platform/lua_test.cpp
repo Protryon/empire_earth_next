@@ -12,7 +12,7 @@
 
 #include "ee/EECPLua.h"
 #include "ee/EELuaApi.h"
-#include "rust/ee_ai.h"
+#include "rust/sim/ai.h"
 
 static int sChecks;
 static int sFailures;

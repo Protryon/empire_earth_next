@@ -19,7 +19,7 @@
 #include "lle/U2DSparseArray.h"
 
 #include "ee/EEUnitUpdate.h"
-#include "rust/ee_units.h"
+#include "rust/sim/units.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"

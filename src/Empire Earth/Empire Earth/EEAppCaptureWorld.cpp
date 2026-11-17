@@ -41,12 +41,15 @@
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEEffect.h"
-#include "rust/ee_gfx.h"
+#include "rust/render/ge.h"
+#include "rust/sim/units.h"
 #include "ee/EESimCapture.h"
 #include "ee/EETechCapture.h"
 #include "ee/EEAppCapture.h"
-#include "rust/ee_ge.h"
-#include "rust/ee_units.h"
+#include "rust/render/ge.h"
+#include "rust/sim/units.h"
+#include "rust/render/ge.h"
+#include "rust/sim/units.h"
 
 namespace {
 

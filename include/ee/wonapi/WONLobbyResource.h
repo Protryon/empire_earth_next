@@ -3,14 +3,18 @@
 // Requires <string>, ee/EEWonNet.h (RefCount, SmartPtr).
 #ifndef EE_WONAPI_WONLOBBYRESOURCE_H
 #define EE_WONAPI_WONLOBBYRESOURCE_H
-#include "rust/ee_won.h"
+#include "rust/won_gui/guistring.h"
+#include "rust/won_gui/guistrobj.h"
+#include "rust/won_net/wonfile.h"
 #include <stdexcept>
 #include <set>
 #include <map>
 #include <string.h>
 #include <wchar.h>
 #include "ee/wonapi/WONConfigObject.h"
-#include "rust/ee_won.h" // guistrobj.rs, guistring.rs
+#include "rust/won_gui/guistring.h" // guistrobj.rs, guistring.rs
+#include "rust/won_gui/guistrobj.h"
+#include "rust/won_net/wonfile.h"
 #include "ee/wonapi/WONLobbyBackground.h"
 
 namespace WONAPI {

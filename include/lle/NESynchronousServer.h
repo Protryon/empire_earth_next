@@ -14,7 +14,7 @@
 #include <vector>
 #include "lle/NESynchronousCommunications.h"
 #include "lle/NEProtocol.h"
-#include "rust/ee_net.h"
+#include "rust/net/net.h"
 
 class NEMessage;
 struct EeNetServer;                         // the server, whole in Rust (rust/ee_net.h)

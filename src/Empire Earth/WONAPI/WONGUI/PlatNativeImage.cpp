@@ -19,7 +19,9 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 #include "lle/GETextureManager.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/imgfilter.h"
+#include "rust/won_gui/platcursor.h"
+#include "rust/won_gui/platimg.h"
 
 namespace WONAPI {
 

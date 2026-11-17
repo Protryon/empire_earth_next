@@ -64,14 +64,16 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEEffect.h"
 #include "ee/EEEffect.h"
-#include "rust/ee_gfx.h"
+#include "rust/sim/app.h"
+#include "rust/sim/astar.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEStormModifiers.h"
 #include "ee/EEStormType.h"
 #include "ee/EEAppCapture.h"
-#include "rust/ee_app.h"
+#include "rust/sim/app.h"
+#include "rust/sim/astar.h"
 
 // Constructs the storm's "Storm-Data" key at startup and destroys it at exit (wrapper, constructor, registrar,
 // destructor)

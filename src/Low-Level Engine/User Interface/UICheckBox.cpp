@@ -12,7 +12,8 @@
 #include <windows.h>
 #include <stddef.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/buttonobj.h"
+#include "rust/ui/checkobj.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"

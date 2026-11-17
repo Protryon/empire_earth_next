@@ -36,7 +36,9 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEUnit.h"
 #include "ee/EEAreaUtilities.h"
-#include "rust/ee_app.h"
+#include "rust/base/math.h"
+#include "rust/game/app.h"
+#include "rust/render/gfx.h"
 #include "ee/EEAppCapture.h"
 
 // the GE value classes and their Rust mirrors share their storage (GERustMath.h)

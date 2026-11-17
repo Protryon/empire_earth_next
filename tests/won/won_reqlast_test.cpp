@@ -27,7 +27,11 @@
 #include "ee/wonapi/WONElGamal.h"
 #include "won_db_msg.h"
 #include "won_routemsg_glue.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/admin.h"
+#include "rust/won_net/db.h"
+#include "rust/won_net/random.h"
+#include "rust/won_net/reqop.h"
+#include "rust/won_net/reqops.h"
 
 // 0 records the golden from the original's half alone
 #ifndef REQLAST_RUST

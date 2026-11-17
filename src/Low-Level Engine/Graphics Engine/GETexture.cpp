@@ -38,8 +38,12 @@
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/Graphics Engine.h"
-#include "rust/ee_ge.h"
-#include "rust/ee_openformats.h"
+#include "rust/base/png.h"
+#include "rust/render/ge.h"
+#include "rust/render/openformats.h"
+#include "rust/base/png.h"
+#include "rust/render/ge.h"
+#include "rust/render/openformats.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <map>

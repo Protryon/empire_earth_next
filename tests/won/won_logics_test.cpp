@@ -23,7 +23,11 @@
 #include <list>
 #include <set>
 #include <map>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/flow.h"
+#include "rust/won_lobby/logics.h"
+#include "rust/won_lobby/resource.h"
+#include "rust/won_net/buffer.h"
+#include "rust/won_net/strcase.h"
 
 typedef EeWonLogicOp Op;
 typedef EeWonLogicCall Call;

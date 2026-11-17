@@ -8,7 +8,7 @@
 #ifndef LLE_UGRAPH_H
 #define LLE_UGRAPH_H
 
-#include "rust/ee_util.h"
+#include "rust/base/util.h"
 
 class LLE_API UGraphSeries {                // one pointer (was sizeof 0x30)
 public:

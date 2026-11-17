@@ -6,7 +6,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/UEncryption.h"
-#include "rust/ee_codec.h"
+#include "rust/base/codec.h"
 
 static const uint8_t* Bytes(const UString& inString)
 {

@@ -20,7 +20,7 @@
 #include "GEWindow.h"
 #include "lle/Input System.h"
 #include "platform/PlatWindow.h"
-#include "rust/ee_time.h"
+#include "rust/base/time.h"
 
 void ISHandleEvent(const PlatInputEvent& inEvent);   // Input System.cpp
 

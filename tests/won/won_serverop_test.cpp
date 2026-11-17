@@ -21,6 +21,7 @@
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatTime.h"
+#include "rust/won_net/hostop.h"
 
 using namespace WONAPI;
 

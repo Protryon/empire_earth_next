@@ -1,4 +1,5 @@
-#include "rust/ee_won.h"
+#include "rust/won_gui/platwin.h"
+#include "rust/won_gui/platwm.h"
 // PlatGUIWindow.cpp's shell over ee_won's platwin.rs (R6 WON round 41, copied from the working tree; the font, the
 // factory and the pixel scale's new image left out), for tests/won/won_platwin_test.cpp
 

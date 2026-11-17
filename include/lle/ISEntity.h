@@ -7,7 +7,7 @@
 #ifndef LLE_ISENTITY_H
 #define LLE_ISENTITY_H
 
-#include "rust/ee_input.h"
+#include "rust/base/input.h"
 
 class ISEntity {
 public:

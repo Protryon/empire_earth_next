@@ -2,7 +2,7 @@
 #ifndef EE_WONAPI_WONLOBBYRESOURCEGLOBALS_H
 #define EE_WONAPI_WONLOBBYRESOURCEGLOBALS_H
 #include "ee/wonapi/WONLobbyResource.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/resource.h"
 
 // The lobby's 469 resources (the original's named globals and their ids) are the rows of ee_won's table
 // (rust/crates/ee_won_lobby/src/resource.rs: EeWonLobbyRes names them in order); one slot each, read by name through these

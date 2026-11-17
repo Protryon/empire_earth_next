@@ -13,7 +13,8 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include <exception>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guicfg.h"
+#include "rust/won_gui/guiconf.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won_gui/src/guiconf.rs).
 // The integer expressions' parse and the operand names' scan and kinds are ee_won's guicfg module

@@ -15,7 +15,7 @@
 #ifndef EE_EEAIASTARVIEW_H
 #define EE_EEAIASTARVIEW_H
 
-#include "rust/ee_astar.h"   // EeAStarViewCallbacks
+#include "rust/sim/astar.h"   // EeAStarViewCallbacks
 
 class EEMap;
 class EEComplexUnit;

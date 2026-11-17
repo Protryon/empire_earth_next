@@ -6,7 +6,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/SEConductor.h"
-#include "rust/ee_sound.h"
+#include "rust/audio/sound.h"
 
 #define RUST reinterpret_cast<EeSoundConductor*>(const_cast<SEConductor*>(this))
 

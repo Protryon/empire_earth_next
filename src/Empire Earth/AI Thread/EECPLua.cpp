@@ -16,7 +16,7 @@
 
 #include "ee/EELuaApi.h"
 #include "platform/PlatFile.h"
-#include "rust/ee_ai.h"   // ee_ai_lua_*: the tree's order, equality, text and bytes (lua_value.rs), the state (lua_host.rs)
+#include "rust/sim/ai.h"   // ee_ai_lua_*: the tree's order, equality, text and bytes (lua_value.rs), the state (lua_host.rs)
 
 // ---- the value tree
 

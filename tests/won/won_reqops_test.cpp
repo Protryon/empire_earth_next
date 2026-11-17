@@ -23,7 +23,11 @@
 #include "ee/wonapi/WONRouting.h"
 #include "won_db_msg.h"
 #include "won_patch_msg.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/admin.h"
+#include "rust/won_net/db.h"
+#include "rust/won_net/reqop.h"
+#include "rust/won_net/reqops.h"
+#include "rust/won_net/server.h"
 
 // 0 records the golden from the original's half alone
 #ifndef REQOPS_RUST

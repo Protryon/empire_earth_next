@@ -68,7 +68,7 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/ee_screens.h"   // EE_SCREENS_MAIN_MULTI_PLAYER (ee_screens menus.rs)
+#include "rust/game/screens.h"   // EE_SCREENS_MAIN_MULTI_PLAYER (ee_screens menus.rs)
 #include "ee/EECameraControl.h"
 #include "ee/EESaveLoad.h"
 #include "ee/EESaveGameFiles.h"

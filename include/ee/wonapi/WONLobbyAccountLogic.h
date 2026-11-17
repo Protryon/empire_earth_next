@@ -6,7 +6,7 @@
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/logics.h"
 namespace WONAPI {
 class ComponentEvent;
 class HTTPSession;

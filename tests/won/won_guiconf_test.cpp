@@ -16,7 +16,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/guiconf.h"
 using namespace WONAPI;
 wchar_t gEmptyWideString[2]; // EEWonNet.cpp's (GetEmptyGUIStringData)
 

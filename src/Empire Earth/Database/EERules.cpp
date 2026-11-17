@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "EEDataText.h"
-#include "rust/ee_data.h"
+#include "rust/data/ffi.h"
 
 #include "EERulesGenDecode.h"
 

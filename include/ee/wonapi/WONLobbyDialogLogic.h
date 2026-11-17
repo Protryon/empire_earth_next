@@ -3,6 +3,7 @@
 #define EE_WONAPI_WONLOBBYDIALOGLOGIC_H
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
+#include "rust/won_lobby/dlglogic.h"
 namespace WONAPI {
 // The class is one Rust object (R6 WONLobby round 2: ee_won dlglogic.rs holds the dialog stack, the two dialogs,
 // the status operation and runs every method); these are its forwarders. The host is in DialogLogic.cpp.

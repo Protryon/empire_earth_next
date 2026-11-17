@@ -8,7 +8,8 @@
 #define LLE_GETEXTURE_H
 
 #include <stdint.h>
-#include "rust/ee_ge.h"   // the texture (ee_ge texobj_tex.rs), its host's EeGeTexOp
+#include "rust/base/png.h"   // the texture (ee_ge texobj_tex.rs), its host's EeGeTexOp
+#include "rust/render/ge.h"
 
 class FSFileSpec;
 class GERasterizer;

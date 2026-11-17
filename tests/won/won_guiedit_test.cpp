@@ -10,7 +10,7 @@
 #include <limits.h>
 #include <algorithm>
 #include <vector>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guiedit.h"
 
 static int sFailures;
 static int sChecks;

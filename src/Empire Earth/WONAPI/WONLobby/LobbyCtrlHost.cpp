@@ -24,7 +24,8 @@
 #include "ee/wonapi/WONLobbyScreens.h"
 #include "ee/wonapi/WONURL.h"
 #include "ee/wonapi/EELobbyGameCode.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/guiconf.h"
+#include "rust/won_lobby/lobbyctl.h"
 
 namespace WONAPI {
 bool LobbyIAmReady();

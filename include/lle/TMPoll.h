@@ -6,7 +6,7 @@
 #ifndef LLE_TMPOLL_H
 #define LLE_TMPOLL_H
 
-#include "rust/ee_time.h"
+#include "rust/base/time.h"
 
 class LLE_API TMPoll {
 public:

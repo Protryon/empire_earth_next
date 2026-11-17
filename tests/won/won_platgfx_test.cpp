@@ -23,7 +23,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONSurface.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/platgfx.h"
 
 namespace WONAPI {
 // WONLobbyPlatform.h's

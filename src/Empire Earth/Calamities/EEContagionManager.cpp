@@ -34,7 +34,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EETechCapture.h"
-#include "rust/ee_tech.h"
+#include "rust/sim/tech.h"
 #include "ee/EESaveGameFiles.h"
 
 

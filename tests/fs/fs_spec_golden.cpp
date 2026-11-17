@@ -42,7 +42,8 @@ UString gStartupVolume(256);
 UString gStartupDirectory(256);
 
 #ifdef FS_NEW
-#include "rust/ee_error.h"
+#include "rust/base/error.h"
+#include "rust/base/ustring.h"
 #include "lle/FSBasicFile.h"
 #include "lle/FSFileSpec.h"
 unsigned long ESRecordNativeError(unsigned long inError) { return ee_error_record_native(inError); }

@@ -23,7 +23,10 @@
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/EELobbyGameCode.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/dialogs.h"
+#include "rust/won_lobby/lobbydlg.h"
+#include "rust/won_lobby/lobbypopup.h"
+#include "rust/won_net/httpdoc.h"
 
 using namespace WONAPI;
 

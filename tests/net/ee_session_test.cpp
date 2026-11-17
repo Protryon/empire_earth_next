@@ -20,7 +20,7 @@
 #include "ee/EEMessage.h"
 #include "ee/EEServer.h"
 #include "ee/EEClient.h"
-#include "rust/ee_netmsg.h"
+#include "rust/sim/netmsg.h"
 
 // ---- the trace ----
 static std::string sTrace;

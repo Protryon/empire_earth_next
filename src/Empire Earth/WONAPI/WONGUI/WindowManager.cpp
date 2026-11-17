@@ -14,7 +14,10 @@
 #include "platform/PlatKeys.h"
 #include "ee/wonapi/WONLobbyDelayLoadImage.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/guictl.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/wmcache.h"
+#include "rust/won_gui/wmobj.h"
 using namespace WONAPI;
 // The popup stack, the modal dialog, the message loop, focus and the caches are ee_won's Rust manager (wmobj.rs,
 // wmcache.rs; R6 WON round 33); the window set, the event list, the timers, the broadcasts, the event loop and the

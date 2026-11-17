@@ -46,9 +46,18 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEUIMiniMap.h"
 #include "lle/GERenderState.h"
-#include "rust/ee_ge.h"   // ee_gfx minimap.rs (RUST_PLAN R4.4)
-#include "rust/ee_gfx.h"
-#include "rust/ee_app.h"
+#include "rust/base/math.h"   // ee_gfx minimap.rs (RUST_PLAN R4.4)
+#include "rust/game/app.h"
+#include "rust/render/ge.h"
+#include "rust/render/gfx.h"
+#include "rust/base/math.h"
+#include "rust/game/app.h"
+#include "rust/render/ge.h"
+#include "rust/render/gfx.h"
+#include "rust/base/math.h"
+#include "rust/game/app.h"
+#include "rust/render/ge.h"
+#include "rust/render/gfx.h"
 #include "ee/EEAppCapture.h"
 
 extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)

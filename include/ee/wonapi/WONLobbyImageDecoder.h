@@ -2,7 +2,7 @@
 // imgdec.rs EeWonImgDec now, R6 WON round 41).
 #ifndef EE_WONAPI_WONLOBBYIMAGEDECODER_H
 #define EE_WONAPI_WONLOBBYIMAGEDECODER_H
-#include "rust/ee_won.h"
+#include "rust/won_gui/imgdec.h"
 namespace WONAPI {
 class FileReader;
 class DisplayContext;

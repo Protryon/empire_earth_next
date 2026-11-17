@@ -15,7 +15,7 @@
 
 #include "miniaudio/ee_miniaudio.h"
 #include "lle/LowLevelEngine.h"
-#include "rust/ee_mixer.h"
+#include "rust/audio/mixer.h"
 
 // ---- Result codes returned by the SPIM entry points
 enum {

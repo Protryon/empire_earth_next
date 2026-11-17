@@ -19,7 +19,7 @@
 #include "won_profiledata.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "won_db_msg.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/db.h"
 
 using namespace WONAPI;
 

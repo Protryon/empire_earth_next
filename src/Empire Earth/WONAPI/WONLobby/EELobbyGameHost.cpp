@@ -23,7 +23,8 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/EELobbyGameCode.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/eegame.h"
+#include "rust/won_lobby/eexfer.h"
 
 using namespace WONAPI;
 

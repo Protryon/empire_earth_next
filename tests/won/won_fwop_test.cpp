@@ -23,7 +23,8 @@
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/ffi.h"
+#include "rust/won_net/fwop.h"
 
 using namespace WONAPI;
 using std::string;

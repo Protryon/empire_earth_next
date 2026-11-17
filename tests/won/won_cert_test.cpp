@@ -26,7 +26,8 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBlowfish.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/ffi.h"
+#include "rust/won_net/getcert.h"
 
 using namespace WONAPI;
 

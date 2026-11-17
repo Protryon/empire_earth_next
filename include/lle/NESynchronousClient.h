@@ -9,7 +9,7 @@
 
 #include "lle/NESynchronousCommunications.h"
 #include "lle/NEProtocol.h"
-#include "rust/ee_net.h"
+#include "rust/net/net.h"
 
 class FSFile;
 struct EeNetClient;                         // the client, whole in Rust (rust/ee_net.h, ee_net client.rs)

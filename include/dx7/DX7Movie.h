@@ -9,7 +9,7 @@
 #include "dx7/DX7Common.h"
 #include "lle/GERectangle.h"
 #include "lle/GEMovie.h"
-#include "rust/ee_dx7.h"
+#include "rust/render/dx7.h"
 
 class DX7_API DX7Movie : public GEMovie {
 public:

@@ -10,7 +10,7 @@
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "lle/SESoundManager.h"
-#include "rust/ee_sound.h"
+#include "rust/audio/sound.h"
 
 // a none (-1) or paused (-2) id or channel keeps all bits set on LP64, as the C++ stored it (`= -1`)
 static unsigned long Wide(uint32_t inValue)

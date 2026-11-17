@@ -17,7 +17,8 @@
 #include <vector>
 
 #include "platform/PlatThread.h"
-#include "rust/ee_ts.h"
+#include "rust/net/net.h"
+#include "rust/net/net_tcp.h"
 #include "lle/LowLevelEngine.h"
 #ifdef NE_PROTOCOL_ORIG
 #include "orig_p/lle/NEProtocol.h"   // the original's (tests/net/orig_p: the units before LLE Network Engine round 2)
@@ -26,7 +27,8 @@
 #ifdef NE_PROTOCOL_ORIG
 #include "lle/PIMModule.h"
 #endif
-#include "rust/ee_net_tcp.h"
+#include "rust/net/net.h"
+#include "rust/net/net_tcp.h"
 
 #ifdef NE_PROTOCOL_ORIG
 // NEProtocol's constructor and destructor are its friends' (NEInitialize, NEShutdown, the server): the test is the

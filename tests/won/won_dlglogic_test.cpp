@@ -25,7 +25,9 @@
 #include <vector>
 #include <list>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_lobby/dialogs.h"
+#include "rust/won_lobby/dlglogic.h"
+#include "rust/won_lobby/lobbydlg.h"
 
 typedef EeWonDlgLogicOp Op;
 typedef EeWonDlgLogicCall Call;

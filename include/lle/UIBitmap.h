@@ -8,6 +8,7 @@
 #define LLE_UIBITMAP_H
 
 #include "lle/UIControl.h"
+#include "rust/ui/mediaobj.h"
 
 class LLE_API UIBitmap : public UIControl, private EeUiBitmapFields {
     friend struct UIMediaHost;              // UIBitmap.cpp: the Rust record's calls out

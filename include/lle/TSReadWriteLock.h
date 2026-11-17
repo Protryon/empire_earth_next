@@ -7,7 +7,7 @@
 #define LLE_TSREADWRITELOCK_H
 
 #include "platform/PlatThread.h"
-#include "rust/ee_ts.h"
+#include "rust/base/ts.h"
 
 class LLE_API TSReadWriteLock {
     friend class TSScheduler;

@@ -11,7 +11,9 @@
 #include <vector>
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/dirops.h"
+#include "rust/won_net/reqlast.h"
+#include "rust/won_net/routemsg.h"
 // (the part below was include/ee/wonapi/WONRoutingMsg.h until net round 19, for RoutingGetUserStatusOp, a Rust
 // object now: userstatus.rs)
 

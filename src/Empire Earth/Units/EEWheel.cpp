@@ -27,7 +27,7 @@
 #include "ee/EEMapDimensions.h"
 #include "ee/EEGlobalConstants.h"
 #include "ee/EEAIKindIDs.h"
-#include "rust/ee_netmsg.h"   // ee_netmsg_trade_price
+#include "rust/sim/netmsg.h"   // ee_netmsg_trade_price
 
 // A cdecl helper defined in another unit (also declared in EEUnitUtilities.h)
 float EEJitterHeading(float inAngle, float inMin, float inMax);

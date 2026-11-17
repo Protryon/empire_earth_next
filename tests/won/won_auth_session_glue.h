@@ -7,7 +7,8 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBlowfish.h"
 #include "ee/wonapi/WONBuffer.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/blowfish.h"
+#include "rust/won_net/peerauth.h"
 
 namespace WONAPI {
 class AuthSession : public RefCount {

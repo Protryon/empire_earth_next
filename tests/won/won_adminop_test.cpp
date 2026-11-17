@@ -25,7 +25,10 @@
 #include "won_db_msg.h"
 #include "won_patch_msg.h"
 #include "won_admin_msg.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/admin.h"
+#include "rust/won_net/adminop.h"
+#include "rust/won_net/db.h"
+#include "rust/won_net/reqop.h"
 
 // 0 records the golden from the original's half alone
 #ifndef ADMINOP_RUST

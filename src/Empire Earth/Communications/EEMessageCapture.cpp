@@ -117,7 +117,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEMessageCapture.h"
-#include "rust/ee_netmsg.h"
+#include "rust/sim/netmsg.h"
 #include <initializer_list>
 
 static bool sSweeping = false;

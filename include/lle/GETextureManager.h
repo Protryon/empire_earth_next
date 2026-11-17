@@ -5,7 +5,7 @@
 
 #include <map>   // (the original's cache; kept for the units that rely on it)
 #include <stdint.h>
-#include "rust/ee_ge.h"   // the manager (ee_ge texobj.rs), its host's EeGeManOp
+#include "rust/render/ge.h"   // the manager (ee_ge texobj.rs), its host's EeGeManOp
 
 class FSFileSpec;
 class FSPath;

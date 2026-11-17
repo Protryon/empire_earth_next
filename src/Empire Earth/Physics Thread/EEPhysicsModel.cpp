@@ -51,7 +51,8 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEUnitStore.h"
 #include "ee/EESimCapture.h"
-#include "rust/ee_units.h"
+#include "rust/sim/combat.h"
+#include "rust/sim/units.h"
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 

@@ -10,7 +10,8 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/guiwin.h"
 #include "ee/wonapi/WONGUIDraw.h"
 // The submenu delay, the swallowed first release, the keyboard mode's end, an item's size and the submenu's place
 // are ee_won's guiwin module (rust/crates/ee_won_gui/src/guiwin.rs); the keys and the submenus' open, close and

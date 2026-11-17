@@ -17,6 +17,7 @@
 #include "ee/wonapi/WONBlowfish.h"
 #include "ee/wonapi/WONElGamal.h"
 #include "ee/wonapi/WONAuthPeerData.h"
+#include "rust/won_net/peerobj.h"
 
 using namespace WONAPI;
 

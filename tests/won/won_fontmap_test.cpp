@@ -10,7 +10,8 @@
 #include <set>
 #include <string>
 #include <vector>
-#include "rust/ee_won.h"
+#include "rust/won_gui/fontmap.h"
+#include "rust/won_net/strcase.h"
 
 static int sFailures, sChecks;
 #define CHECK(c) do { sChecks++; if (!(c)) { sFailures++; if (sFailures < 20) printf("FAIL line %d: %s\n", __LINE__, #c); } } while (0)

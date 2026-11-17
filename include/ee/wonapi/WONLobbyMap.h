@@ -9,7 +9,8 @@
 #include <string>
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
-#include "rust/ee_won.h"
+#include "rust/won_lobby/lobbymap.h"
+#include "rust/won_net/ipobj.h"
 
 namespace WONAPI {
 

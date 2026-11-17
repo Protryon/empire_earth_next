@@ -6,7 +6,7 @@
 
 #include <stddef.h>
 
-#include "rust/ee_ge.h"
+#include "rust/render/ge.h"
 #include "platform/PlatFont.h"
 #include "platform/PlatString.h"
 

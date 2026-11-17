@@ -25,7 +25,7 @@
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/hostop.h"
 
 using namespace WONAPI;
 using std::string;

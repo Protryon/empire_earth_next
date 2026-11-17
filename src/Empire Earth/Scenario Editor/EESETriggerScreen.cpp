@@ -45,7 +45,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EESEARust.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
 extern char gEmptyString[]; // 0x4e5b98: the shared empty string
 extern GEFont* gSeplScreenFont;   // the screen's font while the tab makes its controls (EESERBUnitTypes.cpp)
 

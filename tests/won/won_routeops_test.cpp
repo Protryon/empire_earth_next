@@ -27,7 +27,8 @@
 #include "platform/PlatSocket.h"
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/hostop.h"
+#include "rust/won_net/routeop.h"
 #ifndef EE_WON_ROUTE_OPS_RUST
 #include "ee/wonapi/WONRoutingDerivedServerOp.h"
 #endif

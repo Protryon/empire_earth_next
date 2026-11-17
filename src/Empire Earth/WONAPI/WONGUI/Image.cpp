@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyImageHelpers.h"
-#include "rust/ee_won.h"
+#include "rust/won_gui/imgfilter.h"
 
 // Image, NativeImage and RawImage are one original object: the base destructor ~Image is defined first, so
 // VC6 knows it cannot throw and the derived destructors call it without the -1 EH state store.

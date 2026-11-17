@@ -77,7 +77,7 @@ GEBitmap* EESEUIBDiplomacy::sPressedBitmaps[2];
 #include "ee/EEGlobalConstants.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
 extern FSPath* gCivilizationDataPath;
 extern UString gSECivilizationExtension;
 

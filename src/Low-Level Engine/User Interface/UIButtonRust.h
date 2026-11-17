@@ -5,7 +5,8 @@
 #define LLE_UIBUTTONRUST_H
 
 #include <stddef.h>
-#include "rust/ee_ui.h"
+#include "rust/ui/buttonobj.h"
+#include "rust/ui/rect.h"
 
 struct UIButtonRust {
     // a whole subclass's method (its record is the Rust button's, buttonobj.rs Sub): one inward call

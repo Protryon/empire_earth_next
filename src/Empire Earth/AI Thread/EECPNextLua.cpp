@@ -55,7 +55,7 @@
 #include "ee/EEImprovementIDs.h"
 #include "EEDataText.h"
 #include "platform/PlatFile.h"
-#include "rust/ee_ai.h"   // ee_ai_*: the name tables and the state block's format (ee_ai names.rs, next_save.rs)
+#include "rust/sim/ai.h"   // ee_ai_*: the name tables and the state block's format (ee_ai names.rs, next_save.rs)
 #include "platform/PlatSim.h"
 
 static const char* const kNextResourceNames[kNextResources] = {"food", "wood", "stone", "gold", "iron"};

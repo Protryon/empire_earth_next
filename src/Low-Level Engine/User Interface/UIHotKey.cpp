@@ -12,7 +12,9 @@
 #include <windows.h>
 #include <string.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/hotkey_ffi.h"
+#include "rust/ui/hotkeyobj.h"
+#include "rust/ui/obj.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/TMPoll.h"
 #include "lle/FSFileSpec.h"

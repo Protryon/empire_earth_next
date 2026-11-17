@@ -7,7 +7,7 @@
 #ifndef EE_EECONTAGIONHELPER_H
 #define EE_EECONTAGIONHELPER_H
 
-#include "rust/ee_tech.h"   // EeContagionHelperFields
+#include "rust/sim/tech.h"   // EeContagionHelperFields
 
 class EECalamity;
 class EEComplexUnit;

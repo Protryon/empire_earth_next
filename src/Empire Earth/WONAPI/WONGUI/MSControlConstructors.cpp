@@ -21,6 +21,7 @@
 #include "ee/wonapi/WONLobbyMSPainters.h"
 #include "ee/wonapi/WONLobbyMSBorderPainters.h"
 #include "ee/wonapi/WONGUIDraw.h"
+#include "rust/won_gui/msbtnobj.h"
 namespace WONAPI {
 // Creates an arrow button pointing the given way that repeats while held (emitted at 0x006ff0c0)
 MSArrowButton::MSArrowButton(Direction direction)

@@ -72,7 +72,8 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/ee_screens.h"   // ee_screens_hot_key_unit_selection: the docks' hot keys (ee_screens hot_keys.rs)
+#include "rust/game/screens.h"   // ee_screens_hot_key_unit_selection: the docks' hot keys (ee_screens hot_keys.rs)
+#include "rust/sim/units.h"
 #include "lle/U2DRectangle.h"
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"

@@ -3,7 +3,7 @@
 // Requires ee/EEFormation.h.
 #ifndef EE_EEFORMATIONRUST_H
 #define EE_EEFORMATIONRUST_H
-#include "rust/ee_formations.h"
+#include "rust/sim/formations.h"
 
 struct EEFormationRadii {
     EEFormationRadii(const EEFormation* inFormation, std::vector<EEComplexUnit*>& inUnits);

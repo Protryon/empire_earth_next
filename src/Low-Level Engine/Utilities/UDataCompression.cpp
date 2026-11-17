@@ -5,7 +5,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/UDataCompression.h"
-#include "rust/ee_codec.h"
+#include "rust/base/codec.h"
 
 UDataCompression::UDataCompression()
 {

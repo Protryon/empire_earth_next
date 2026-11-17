@@ -15,7 +15,7 @@
 #include "lle/UIBitmap.h"
 #include "lle/UIStatusBar.h"
 #include "ee/EEUIFMGStatusBar.h"
-#include "rust/ee_screens.h"   // ee_screens_upgrade_bar_mouse's constants (ee_screens upgrade.rs)
+#include "rust/game/screens.h"   // ee_screens_upgrade_bar_mouse's constants (ee_screens upgrade.rs)
 
 const float kScenarioEditorInset = 0.43f;
 const float kInset = 0.46f;

@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "lle/U2DRectangle.h"
-#include "rust/ee_combat.h"
+#include "rust/sim/combat.h"
 
 class EEComplexUnit;
 

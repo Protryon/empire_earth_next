@@ -9,7 +9,8 @@
 // ButtonUp and SetDirty, the thumb bitmap, the manager's drag bar).
 #include <windows.h>
 
-#include "rust/ee_ui.h"
+#include "rust/ui/obj.h"
+#include "rust/ui/sliderobj.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"

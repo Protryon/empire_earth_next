@@ -8,7 +8,7 @@
 
 #include <vector>
 
-#include "rust/ee_data.h"
+#include "rust/data/tables.h"
 
 class EEMedia;
 class EEUnitClass;

@@ -5,7 +5,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/NEProtocol.h"
-#include "rust/ee_net.h"
+#include "rust/net/net.h"
 
 // Registers the network protocol, TCP/IP (the original loaded every 'ntwk' plug-in in the directory; the one there
 // was is linked in, Rust: rust/crates/ee_net/src/net_tcp); fails if its plug-in is not usable (ee_net ffi_protocol.rs)

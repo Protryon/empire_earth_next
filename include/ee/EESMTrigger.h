@@ -10,7 +10,7 @@
 #include <vector>
 #include "ee/EESMTConditionWrapper.h"
 #include "ee/EESMTEffectWrapper.h"
-#include "rust/ee_scenario.h"
+#include "rust/sim/scenario.h"
 
 // the numbers (mConditionDuration .. mIsInCinematic) are EeScenarioTriggerFields (ee_scenario fields.rs)
 class EESMTrigger : public EeScenarioTriggerFields {

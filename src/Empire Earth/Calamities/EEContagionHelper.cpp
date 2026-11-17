@@ -30,7 +30,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EETechCapture.h"
-#include "rust/ee_tech.h"
+#include "rust/sim/tech.h"
 
 
 // Creates an empty contagion helper with no calamity or functor (for loading)

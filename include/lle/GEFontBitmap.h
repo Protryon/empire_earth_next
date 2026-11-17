@@ -5,7 +5,7 @@
 #define LLE_GEFONTBITMAP_H
 
 #include <stdint.h>
-#include "rust/ee_ge.h"   // the font bitmap (ee_ge fbobj.rs), its host's EeGeFbOp
+#include "rust/render/ge.h"   // the font bitmap (ee_ge fbobj.rs), its host's EeGeFbOp
 
 class GEFont;
 class GERasterizer;

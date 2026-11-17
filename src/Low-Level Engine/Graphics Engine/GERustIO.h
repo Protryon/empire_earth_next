@@ -5,7 +5,7 @@
 // adds the position).
 #ifndef GERUSTIO_H
 #define GERUSTIO_H
-#include "rust/ee_ge.h"
+#include "rust/render/ge.h"
 
 struct GERustIO {
     static long ReadU8(void* inFile, uint8_t* outValue) { return static_cast<FSFile*>(inFile)->Read(*outValue); }

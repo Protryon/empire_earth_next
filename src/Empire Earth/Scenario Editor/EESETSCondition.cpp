@@ -29,7 +29,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETSCondition.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
 
 extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
 

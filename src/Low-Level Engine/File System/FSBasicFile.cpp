@@ -8,7 +8,7 @@
 #include "lle/UWideString.h"
 #include "lle/UString.h"
 #include "lle/FSMemoryFile.h"
-#include "rust/ee_fs.h"
+#include "rust/base/fs.h"
 
 static EeFsSpec* Record(FSBasicFile* inFile) { return reinterpret_cast<EeFsSpec*>(inFile); }
 static const EeFsSpec* Record(const FSBasicFile* inFile) { return reinterpret_cast<const EeFsSpec*>(inFile); }

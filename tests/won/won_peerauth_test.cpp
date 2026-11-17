@@ -26,7 +26,8 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
 #include "won_peerauth_msg.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/blowfish.h"
+#include "rust/won_net/peerauth.h"
 
 using namespace WONAPI;
 using std::string;

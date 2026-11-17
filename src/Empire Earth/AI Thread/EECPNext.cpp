@@ -42,7 +42,7 @@
 #include "ee/EECPEngine.h"
 #include "ee/EECPLua.h"
 #include "ee/EECPNext.h"
-#include "rust/ee_ai.h"   // ee_ai_*_name: the name tables (ee_ai names.rs)
+#include "rust/sim/ai.h"   // ee_ai_*_name: the name tables (ee_ai names.rs)
 
 const char* EECPNextCodeName(long inCode)
 {

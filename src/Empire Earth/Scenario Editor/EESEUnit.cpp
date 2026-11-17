@@ -60,7 +60,7 @@
 #include "ee/EESEUICCommandUnits.h"
 #include "ee/EESELoadThread.h"
 #include "ee/EEMiniMap.h"
-#include "rust/ee_screens.h"
+#include "rust/game/screens.h"
 
 
 // cdecl helpers of other units (provisional names; types inferred)

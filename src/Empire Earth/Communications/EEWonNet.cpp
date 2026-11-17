@@ -53,6 +53,9 @@
 #include "ee/EEStringIDs.h"
 #include "ee/wonapi/WONRoutingOpTypes.h"
 #include "ee/wonapi/WONStatus.h"
+#include "rust/won_net/httpdoc.h"
+#include "rust/won_net/reqdir.h"
+#include "rust/won_net/routeop.h"
 using namespace WONAPI;
 
 char* kWonGameKey = "GAME";

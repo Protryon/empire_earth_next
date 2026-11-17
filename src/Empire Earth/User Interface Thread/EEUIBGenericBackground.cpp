@@ -28,7 +28,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEUIBMapBackground.h"
-#include "rust/ee_screens.h"   // ee_screens_frame_draw (ee_screens frame.rs)
+#include "rust/game/screens.h"   // ee_screens_frame_draw (ee_screens frame.rs)
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 

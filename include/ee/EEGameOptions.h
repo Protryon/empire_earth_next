@@ -8,7 +8,7 @@
 #ifndef EE_EEGAMEOPTIONS_H
 #define EE_EEGAMEOPTIONS_H
 
-#include "rust/ee_app.h"
+#include "rust/game/app.h"
 
 class FSFile;
 class TSReadWriteLock;

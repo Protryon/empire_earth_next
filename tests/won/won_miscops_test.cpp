@@ -22,7 +22,7 @@
 #include "won_little_endian.h"
 #include "won_miscops_glue.h"
 #include "won_version_msg.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/miscops.h"
 
 using namespace WONAPI;
 using std::string;

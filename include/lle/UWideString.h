@@ -6,7 +6,7 @@
 #ifndef LLE_UWIDESTRING_H
 #define LLE_UWIDESTRING_H
 #include "platform/PlatString.h"
-#include "rust/ee_ustring.h"
+#include "rust/base/ustring.h"
 
 #include <vector>
 #include <string.h>

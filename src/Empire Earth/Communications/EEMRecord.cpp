@@ -9,7 +9,7 @@
 #include "lle/NEMessage.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEMessage.h"
-#include "rust/ee_netmsg.h"
+#include "rust/sim/netmsg.h"
 
 // ---- the codec (ee_netmsg, docs/RUST_PLAN.md R5b.4): each message hands its members to the Rust as slots in wire
 // order, the header's four first; the layout (sizes, order, the strings' and lists' forms) is the Rust table's ----

@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 #include "ee/wonapi/WONBuffer.h"
-#include "rust/ee_won.h"
+#include "rust/won_net/admin.h"
 
 namespace WONAPI {
 

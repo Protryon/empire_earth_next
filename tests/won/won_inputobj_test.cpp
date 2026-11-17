@@ -25,7 +25,10 @@
 #include <deque>
 #include <map>
 #include <set>
-#include "rust/ee_won.h"
+#include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/guiedit.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/inputobj.h"
 #include "ee/wonapi/WONEventTypes.h"
 
 typedef EeWonGuiOp Op;

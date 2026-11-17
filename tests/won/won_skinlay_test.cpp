@@ -18,7 +18,9 @@
 #include <string.h>
 #include <string>
 #include <vector>
-#include "rust/ee_won.h"
+#include "rust/won_gui/compmem.h"
+#include "rust/won_gui/guihost.h"
+#include "rust/won_gui/skinlay.h"
 
 static unsigned sSeed;
 static unsigned Rand() { sSeed = sSeed * 1103515245u + 12345u; return (sSeed >> 16) & 0x7fff; }

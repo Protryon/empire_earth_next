@@ -14,7 +14,7 @@
 // What is left is the seam: the point type and the geometry capture records.
 #ifdef LLE_EXE_HEADERS
 #include <vector>
-#include "rust/ee_astar.h"
+#include "rust/sim/astar.h"
 
 // New (port), TEST ONLY (EE_SIM_CAPTURE, tools/sim_capture.py; defined in EEAIContinentCapture.cpp): the records of
 // the hulls' geometry (HULL: kind 1 SetPoints, 2 GetClosestOutlinePoint, 4 GetClosestPoint, 6 Contains; ee/EEAIArea.h

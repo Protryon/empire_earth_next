@@ -25,7 +25,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitStore.h"
-#include "rust/ee_units.h"
+#include "rust/sim/units.h"
 #include "ee/EECalamityManager.h"
 
 const UString EEUnitVectorItem::sData("EEGoalQueueContainer-Data");

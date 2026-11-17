@@ -62,7 +62,7 @@
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGameSound.h"
-#include "rust/ee_units.h"
+#include "rust/sim/units.h"
 
 static EEUnit* UnitOf(uint32_t inID)
 {

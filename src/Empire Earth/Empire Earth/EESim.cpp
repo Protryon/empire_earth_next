@@ -140,7 +140,8 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/ee_screens.h"   // EE_SCREENS_SP_LOAD_GAME (ee_screens menus.rs)
+#include "rust/game/screens.h"   // EE_SCREENS_SP_LOAD_GAME (ee_screens menus.rs)
+#include "rust/sim/combat.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GEVector.h"
@@ -206,7 +207,8 @@ void EEActiveGroupCaptureSweep();          // the active groups' sweep (Units/EE
 #include "lle/USingleton.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
-#include "rust/ee_combat.h"
+#include "rust/game/screens.h"
+#include "rust/sim/combat.h"
 
 // TEST ONLY: the combat formulas' sweep of the simulation capture (ee/EECombatFormulas.h). The computer players'
 // games never regenerate, heal or convert, and seldom test the range to hit, so with EE_SIM_CAPTURE on this calls

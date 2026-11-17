@@ -8,7 +8,7 @@
 #define EE_EEAMBIENTSOUND_H
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
-#include "rust/ee_app.h"
+#include "rust/game/app.h"
 
 class EESoundObject;
 class SESMInstanceNode;

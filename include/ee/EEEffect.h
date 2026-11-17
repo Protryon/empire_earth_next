@@ -16,7 +16,7 @@
 #include <new>
 #include <stdint.h>
 #include "lle/GE3DPoint.h"
-#include "rust/ee_gfx.h"            // effect_state.rs: the effects' records (RUST_PLAN R4.4)
+#include "rust/render/gfx.h"            // effect_state.rs: the effects' records (RUST_PLAN R4.4)
 
 class EEUnit;
 class EEGraphicEffect;
