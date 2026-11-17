@@ -35,11 +35,12 @@ impl SeplHost for Host {
                 1000.. => sys::ee_screenscpp_setn(op, p, i, f),
                 900.. => sys::ee_screenscpp_seel(op, p, i, f),
                 500.. => sys::ee_screenscpp_semp(op, p, i, f),
-                _ => {
-                    crate::screens::sgvw::editor(op, &mut *(i as *mut [i32; 4]), &mut *(f as *mut [f32; 4]), |i, f| {
-                        sys::ee_screenscpp_sepl(op, p, i.as_mut_ptr(), f.as_mut_ptr())
-                    })
-                }
+                _ => crate::screens::editor_world::host(
+                    op,
+                    &mut *(i as *mut [i32; 4]),
+                    &mut *(f as *mut [f32; 4]),
+                    |i, f| sys::ee_screenscpp_sepl(op, p, i.as_mut_ptr(), f.as_mut_ptr()),
+                ),
             }
         }
     }

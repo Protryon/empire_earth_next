@@ -26,7 +26,7 @@ impl SeplHost for Host {
             if op >= 600 {
                 sys::ee_screenscpp_sear(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
             } else {
-                crate::screens::sgvw::editor(op, i, f, |i, f| {
+                crate::screens::editor_world::host(op, i, f, |i, f| {
                     sys::ee_screenscpp_sepl(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
                 })
             }

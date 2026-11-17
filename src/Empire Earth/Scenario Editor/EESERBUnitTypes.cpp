@@ -704,7 +704,6 @@ int32_t SeplPlayer(bool inSet, int32_t* i, float* f)
         if (inSet) thePlayer->mComputerPlayer->SetCitizenPercentage((float)i[3] * kHeightEpsilon);
         f[0] = thePlayer->mComputerPlayer->mCitizenPercentage;
         return 0;
-    case EE_SCREENS_SEPL_PV_ID: return (int32_t)thePlayer->mPlayerID;
     }
     return 0;
 }
@@ -847,7 +846,8 @@ void SeplLinePush(const UWideString& inLine)
     sSeplLines.push_back(inLine);
 }
 
-// The ops (editor_players.rs; p: three handles, i: four integers, f: four floats)
+// The ops (editor_players.rs; p: three handles, i: four integers, f: four floats). The plain world reads (the
+// player count, a player's presence, computer player, enemies and id) are Rust's (ee_game editor_world.rs).
 extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
     UIControl* c = static_cast<UIControl*>(p[0]);
@@ -931,8 +931,6 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
         i[1] = EERuleLong(EEGetRules().mGameOptions.mUnitLimitMaximum);
         i[2] = EERuleLong(EEGetRules().mGameOptions.mUnitLimitDefault);
         return 0;
-    case EE_SCREENS_SEPL_OP_NUM_PLAYERS: return (int32_t)gWorld.GetNumPlayers();
-    case EE_SCREENS_SEPL_OP_PLAYER_EXISTS: return gWorld.GetPlayer(i[0]) != NULL;
     case EE_SCREENS_SEPL_OP_MAX_PLAYERS: return (int32_t)gMaxPlayers;
     case EE_SCREENS_SEPL_OP_POST_PLAYER_COUNT: {
         EEAction* theAction = new EESEAChangeWorldPlayerCount((unsigned long)i[0]);
@@ -940,7 +938,6 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
         theAction->Dereference();
         return 0;
     }
-    case EE_SCREENS_SEPL_OP_IS_COMPUTER: return gWorld.mPlayers[i[0]] != NULL && gWorld.mPlayers[i[0]]->mComputerPlayer != NULL;
     case EE_SCREENS_SEPL_OP_TECH_TYPES: SeplTechTypes(); return 0;
     case EE_SCREENS_SEPL_OP_FILL_TECHS:
         SeplFillTechs(static_cast<EESEUITechListBox*>(p[0]), static_cast<EESEUITechListBox*>(p[1]),
@@ -978,8 +975,6 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
         thePlayer->SetColor(EEGetPlayerColor(static_cast<EEUIBColor*>(c)->GetColor()));
         return theDiffers;
     }
-    case EE_SCREENS_SEPL_OP_ENEMY:
-        return gWorld.mPlayers[i[0]] != NULL ? (int32_t)gWorld.mPlayers[i[0]]->mEnemies[i[1]] : 0;
     case EE_SCREENS_SEPL_OP_SET_STANCE: gWorld.SetDiplomaticStance(i[0], i[1], i[2]); return 0;
     case EE_SCREENS_SEPL_OP_WORLD_GET: return (int32_t)SeplWorld(i[0], false, 0);
     case EE_SCREENS_SEPL_OP_WORLD_SET: SeplWorld(i[0], true, i[1]); return 0;

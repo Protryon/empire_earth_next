@@ -228,6 +228,7 @@ mod editor_unit_ffi;
 pub mod editor_whole;
 #[cfg(not(test))]
 mod editor_whole_ffi;
+pub(crate) mod editor_world;
 pub mod factories;
 pub mod frame;
 #[cfg(not(test))]

@@ -21,7 +21,7 @@ impl SeplHost for Host {
     fn op(&mut self, op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]) -> i32 {
         let p = p.map(|x| x as *mut c_void);
         unsafe {
-            crate::screens::sgvw::editor(op, i, f, |i, f| {
+            crate::screens::editor_world::host(op, i, f, |i, f| {
                 sys::ee_screenscpp_sepl(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr())
             })
         }
