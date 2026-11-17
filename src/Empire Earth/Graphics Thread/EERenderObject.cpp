@@ -545,13 +545,38 @@ float EEGhostUnit::GetScale()
     return this->mPlayer->mUnitClassUpgrades[this->mUnitClass->GetUnitType()]->GetScale();
 }
 
+static bool FillObjectFields(EEUnit* inUnit, EERenderShadow* outObject, EERenderFrameInfo& ioInfo,
+                             GETransformation& outTransformation);
+
 // Fills a render object for a map object (a class with mIsTree: trees, rocks ...) and files it by texture,
 // in the picker and in the shadow lists
 void EERenderObject::FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERenderShadowMap& ioMap,
                               EERenderFrameInfo& ioInfo)
 {
-    GEPhysicalModel theModel;
+    // the calls into other objects (the ambient counter, the media, the selected list, the texture maps and the
+    // picker) are made here in the original's order; FillObjectFields makes every read and field write between
     GETransformation theTransformation(false);
+    if (ioInfo.mAmbient)
+        gAmbientSoundManager.mAnalyzer.CountTree(inUnit);
+    outObject->mObject = inUnit->GetModel();
+    outObject->mObject->LoadMedia();
+    if (FillObjectFields(inUnit, outObject, ioInfo, theTransformation))
+        EERenderLists::sInstance.mSelectedObjects.push_back(outObject);
+    ioMap.insert(EERenderShadowMap::value_type(outObject->mObject->mTextures[outObject->mModelIndex], outObject));
+    gUnitPicker.AddUnit(inUnit, theTransformation, outObject->mOpacity);
+    EERenderLists::sInstance.mShadows2.insert(EERenderShadowMap::value_type(outObject->mObject->mShadowTexture,
+                                                                            outObject));
+}
+
+// FillObject's reads and field writes: everything but its calls into other objects; outObject->mObject is set and
+// loaded. Writes the picker's transformation; returns whether the object is selected (the viewed unit, or in the free
+// camera an editor-selected or rectangle-picked one).
+static bool FillObjectFields(EEUnit* inUnit, EERenderShadow* outObject, EERenderFrameInfo& ioInfo,
+                             GETransformation& outTransformation)
+{
+    bool theSelected = false;
+    GEPhysicalModel theModel;
+    GETransformation& theTransformation = outTransformation;
     EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
     EEMap* theMap = gWorld.mMap;
     long theID = inUnit->GetUnitID();
@@ -569,12 +594,8 @@ void EERenderObject::FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERen
     theTransformation.SetElement(3, 1, 0.0f);
     theTransformation.SetElement(3, 2, 0.0f);
     theTransformation.SetElement(3, 3, 1.0f);
-    if (ioInfo.mAmbient)
-        gAmbientSoundManager.mAnalyzer.CountTree(inUnit);
     outObject->mHealth = (float)inUnit->GetHitPoints() / theStats->mMaxHitPoints;
     outObject->mIsFogged = false;
-    outObject->mObject = inUnit->GetModel();
-    outObject->mObject->LoadMedia();
     outObject->mModelScale = theStats->GetScale();
     outObject->mModelScale *= ee_gfx_capture_object_scale((int32_t)inUnit->GetUnitID());
     long theX = inUnit->mTileX;
@@ -590,7 +611,7 @@ void EERenderObject::FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERen
         || gFreeCamera && (inUnit->mIsEditorSelected
                            || std::find(gU4E9230.begin(), gU4E9230.end(), inUnit->GetUnitID()) != gU4E9230.end())) {
         outObject->mSelectionSize = inUnit->mUnitClass->mSelectionSize;
-        EERenderLists::sInstance.mSelectedObjects.push_back(outObject);
+        theSelected = true;
     }
     outObject->mModelIndex = 0;
     GEModel* theOne = outObject->mObject->mModels[outObject->mModelIndex];
@@ -602,10 +623,7 @@ void EERenderObject::FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERen
     } else {
         outObject->mFraction = 0.0f;
     }
-    ioMap.insert(EERenderShadowMap::value_type(outObject->mObject->mTextures[outObject->mModelIndex], outObject));
-    gUnitPicker.AddUnit(inUnit, theTransformation, outObject->mOpacity);
-    EERenderLists::sInstance.mShadows2.insert(EERenderShadowMap::value_type(outObject->mObject->mShadowTexture,
-                                                                            outObject));
+    return theSelected;
 }
 
 // Returns whether any unit on a tile is a map object (its class has mIsTree)
@@ -786,6 +804,8 @@ std::vector<GETexture*> gU4E8EF0;
 #include "rust/render/gfx.h"
 #include "rust/sim/units.h"
 
+static bool FillUnitFields(EEUnit* inUnit, EERenderUnit* outUnit, EERenderFrameInfo& ioInfo);
+
 // Fills a render unit for a unit and files it in the picker and the texture maps
 // (out of address order: see the note at 0x50d3ad above)
 // The class's fields, the team colour, the ring and shadow sizes, then for a complex unit its scale, flash colour,
@@ -795,6 +815,32 @@ std::vector<GETexture*> gU4E8EF0;
 // finally the ground height (0 over water)
 void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUnitMap& ioMap, EERenderFrameInfo& ioInfo)
 {
+    // the calls into other objects (the ambient counters, the media, the priest tower's circle, the picker and the
+    // texture maps) are made here in the original's order; FillUnitFields makes every read and field write between
+    EEComplexUnit* theComplex = inUnit->GetComplexUnit();
+    if (theComplex != NULL) {
+        if (ioInfo.mAmbient)
+            gAmbientSoundManager.mAnalyzer.CountUnit(theComplex);
+    } else if (ioInfo.mAmbient) {
+        gAmbientSoundManager.mAnalyzer.CountTree(inUnit);
+    }
+    outUnit->mSource = inUnit->GetModel();
+    outUnit->mSource->LoadMedia();
+    if (FillUnitFields(inUnit, outUnit, ioInfo))
+        this->DrawGroundCircle(theComplex->mPhysicalModel.GetLocation(), inUnit->mStats->mRange, 2);
+    if (outUnit->mSource2 != NULL)
+        outUnit->mSource2->LoadMedia();
+    gUnitPicker.AddUnit(inUnit, outUnit->mTransformation, outUnit->mOpacity);
+    ioMap.insert(EERenderUnitMap::value_type(outUnit->mSource->mTextures[outUnit->mAnimation], outUnit));
+    if (theComplex != NULL && !theComplex->IsFoundation())
+        EERenderLists::sInstance.mUnits2.insert(EERenderUnitMap::value_type(outUnit->mSource->mShadowTexture, outUnit));
+}
+
+// FillUnit's reads and field writes: everything but its calls into other objects; outUnit->mSource is set and loaded.
+// Returns whether the priest tower's range circle is drawn (a built one in the current player's selection).
+static bool FillUnitFields(EEUnit* inUnit, EERenderUnit* outUnit, EERenderFrameInfo& ioInfo)
+{
+    bool theCircle = false;
     EEMap* theMap = gWorld.mMap;
     GE3DPoint thePoint;
     GETerrainMesh* theMesh = &theMap->mTerrainMesh;
@@ -810,12 +856,6 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
     bool theFogged = ee_gfx_capture_owned_food(inUnit->mResourceType == kResourceFood && inUnit->mResourceAmount > 0,
                                                theComplex != NULL, inUnit->mUnitClass->mCategory,
                                                inUnit->GetPlayer()->GetPlayerID());
-    if (theComplex != NULL) {
-        if (ioInfo.mAmbient)
-            gAmbientSoundManager.mAnalyzer.CountUnit(theComplex);
-    } else if (ioInfo.mAmbient) {
-        gAmbientSoundManager.mAnalyzer.CountTree(inUnit);
-    }
     outUnit->mInfo = inUnit->mUnitClass;
     outUnit->mGridSize = inUnit->mUnitClass->mTileSize;
     outUnit->mPlayerColor = inUnit->GetPlayer()->mColor;
@@ -837,8 +877,6 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
         outUnit->mIsFogged = !theTile->IsSeenBy(theCurrent);
     else
         outUnit->mIsFogged = false;
-    outUnit->mSource = inUnit->GetModel();
-    outUnit->mSource->LoadMedia();
     if (theComplex != NULL) {
         outUnit->mScale = theComplex->mPhysicalModel.GetScale();
         outUnit->mIsTinted = theComplex->mIsTinted;
@@ -859,7 +897,7 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
             ioInfo.mNumFightingUnits += 1.0f;
         if (theComplex->mUnitClass->GetUnitType() == kUnitTypePriestTower && theComplex->mIsBuilt
             && theCurrent->mSelectedGroup->Contains(theComplex))
-            this->DrawGroundCircle(theComplex->mPhysicalModel.GetLocation(), theStats->mRange, 2);
+            theCircle = true;
         if (!theComplex->IsFoundation()) {
             unsigned long theCount = theComplex->GetModel()->mTurretParts.size();
             outUnit->mTurretAngles.resize(theCount, 0.0f);
@@ -957,8 +995,6 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
             if (outUnit->mInfo->mScaffoldingClass != NULL)
                 outUnit->mSource2 = gWorld.mPlayers[outUnit->mPlayerID]->GetUpgrade(outUnit->mInfo->mScaffoldingClass->GetUnitType())
                                       ->mModel;
-            if (outUnit->mSource2 != NULL)
-                outUnit->mSource2->LoadMedia();
             float theZ = outUnit->mTransformation.mMatrix[2][3];
             outUnit->mTransformation.mMatrix[2][3] = 0.0f;
             outUnit->mTransformation.Scale(1.0f, 1.0f, (float)inUnit->GetHitPoints() / inUnit->mStats->mMaxHitPoints);
@@ -1015,10 +1051,7 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
         theMap->GetGroundPoint(thePoint, theGround);
         outUnit->mGroundZ = theGround.mZ;
     }
-    gUnitPicker.AddUnit(inUnit, outUnit->mTransformation, outUnit->mOpacity);
-    ioMap.insert(EERenderUnitMap::value_type(outUnit->mSource->mTextures[outUnit->mAnimation], outUnit));
-    if (theComplex != NULL && !theComplex->IsFoundation())
-        EERenderLists::sInstance.mUnits2.insert(EERenderUnitMap::value_type(outUnit->mSource->mShadowTexture, outUnit));
+    return theCircle;
 }
 
 
