@@ -1,6 +1,7 @@
 //! Unit tests of the effect types (`editor_effects*.rs`) over a recording host: no game, data or window.
 
 use std::collections::HashMap;
+use std::ffi::c_ulong;
 
 use ee_sim::scenario::fields::EeScenarioEffectFields;
 
@@ -220,7 +221,7 @@ fn task_area_lists_the_actions_then_the_calamities() {
     m.selections.insert((ECOMBO as i32, 0), 0);
     m.selections.insert((COMBO as i32, 0), 6);
     run(&mut m, &mut e, |c| types.call(c, 1, EE_SCREENS_SEET_STORE));
-    assert_eq!(e.mTaskAction, want[0] as u32);
+    assert_eq!(e.mTaskAction, want[0] as c_ulong);
 }
 
 #[test]

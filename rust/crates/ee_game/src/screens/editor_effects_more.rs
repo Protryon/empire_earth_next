@@ -6,7 +6,11 @@
 //! `EESETSETCreateAIMilitaryGroup`, `EESETSETBuildObject`, `EESETSETMaintainObject`, `EESETSETToggleAI`,
 //! `EESETSETSetAIAttribute`, `EESETSETSetFavoriteUnit`).
 
+// the entry's `c_ulong`/`c_long` fields are 32 bits on Windows and 64 elsewhere: the casts are needed there
+#![allow(clippy::unnecessary_cast)]
+
 use core::cell::RefCell;
+use std::ffi::{c_long, c_ulong};
 
 use crate::screens::editor_effects::*;
 use crate::screens::editor_players::SeplHost;
@@ -34,7 +38,7 @@ impl MediaTypes {
             }
             EE_SCREENS_SEET_STORE => {
                 if let Some(s) = c.selection(COMBO, 0) {
-                    c.e().mMediaAction = s;
+                    c.e().mMediaAction = s as c_ulong;
                     self.family.current.set(s);
                 }
                 media(c, cur(), EE_SCREENS_SEET_HIDE);
@@ -49,7 +53,7 @@ impl MediaTypes {
             }
             EE_SCREENS_SEET_LOAD => {
                 let action = c.e().mMediaAction;
-                load_action(c, &self.family, action);
+                load_action(c, &self.family, action as u32);
                 media(c, cur(), EE_SCREENS_SEET_SHOW);
                 media(c, cur(), EE_SCREENS_SEET_LOAD);
             }
@@ -98,7 +102,7 @@ fn media<H: SeplHost + ?Sized>(c: &mut Fx<H>, k: u32, slot: u32) {
         // change text: the text object (`mEffectComboBoxes[1]`), clear or add a line (`mRadioButtons[0..2]`), the line
         (1, EE_SCREENS_SEET_STORE) => {
             if let Some(s) = c.selection(ECOMBO, 1) {
-                c.e().mTextObject = s;
+                c.e().mTextObject = s as c_ulong;
             }
             let clear = c.checked(RADIO, 0);
             c.e().mIsClearText = clear;
@@ -119,7 +123,7 @@ fn media<H: SeplHost + ?Sized>(c: &mut Fx<H>, k: u32, slot: u32) {
         }
         (1, EE_SCREENS_SEET_LOAD) => {
             let (object, clear) = (c.e().mTextObject, c.e().mIsClearText);
-            c.select_silent(ECOMBO, 1, object);
+            c.select_silent(ECOMBO, 1, object as u32);
             if clear {
                 c.check(0);
                 c.hide(TEXT, 0);
@@ -161,18 +165,18 @@ fn media<H: SeplHost + ?Sized>(c: &mut Fx<H>, k: u32, slot: u32) {
         // send dialogue (`EESETSETMediaSendDialog`)
         (2, EE_SCREENS_SEET_STORE) => {
             if let Some(s) = c.selection(SCEN, 1) {
-                c.e().mObject = s;
+                c.e().mObject = s as c_ulong;
             }
             let p = c.player(0);
-            c.e().mMessagePlayer = p;
+            c.e().mMessagePlayer = p as c_ulong;
             let d = c.text_int(EDIT, 0);
-            c.e().mDuration = d as u32;
+            c.e().mDuration = d as c_ulong;
             let message = c.get_all_text(EDIT2, 1);
             c.set_effect_text(EE_SCREENS_SEET_S_MESSAGE, &message);
             let file = c.get_text(TEXT, 0);
             c.set_effect_text(EE_SCREENS_SEET_S_FILE_NAME, &file);
             let v = c.slider(0);
-            c.e().mIntValue1 = v.wrapping_sub(1);
+            c.e().mIntValue1 = v.wrapping_sub(1) as c_long;
         }
         (2, EE_SCREENS_SEET_HIDE) => {
             c.hide(LABEL, 2);
@@ -192,14 +196,14 @@ fn media<H: SeplHost + ?Sized>(c: &mut Fx<H>, k: u32, slot: u32) {
         }
         (2, EE_SCREENS_SEET_LOAD) => {
             let (p, d, o, v) = (c.e().mMessagePlayer, c.e().mDuration, c.e().mObject, c.e().mIntValue1);
-            c.set_player_silent(0, p);
+            c.set_player_silent(0, p as u32);
             c.number(EDIT, 0, d as i32);
             let message = c.effect_text(EE_SCREENS_SEET_S_MESSAGE);
             c.text(EDIT2, 1, &message);
-            c.select_silent(SCEN, 1, o);
+            c.select_silent(SCEN, 1, o as u32);
             let file = c.effect_text(EE_SCREENS_SEET_S_FILE_NAME);
             c.text(TEXT, 0, &file);
-            c.set_slider_if(0, v.wrapping_add(1));
+            c.set_slider_if(0, v.wrapping_add(1) as i32);
             show_camera_scroll_speed(c);
         }
         (2, EE_SCREENS_SEET_SHOW) => {
@@ -263,9 +267,9 @@ fn media<H: SeplHost + ?Sized>(c: &mut Fx<H>, k: u32, slot: u32) {
         // send chat message (`EESETSETMediaSendMessage`)
         (3, EE_SCREENS_SEET_STORE) => {
             let p = c.player(0);
-            c.e().mMessagePlayer = p;
+            c.e().mMessagePlayer = p as c_ulong;
             let d = c.text_int(EDIT, 0);
-            c.e().mDuration = d as u32;
+            c.e().mDuration = d as c_ulong;
             let message = c.get_all_text(EDIT2, 0);
             c.set_effect_text(EE_SCREENS_SEET_S_MESSAGE, &message);
         }
@@ -279,7 +283,7 @@ fn media<H: SeplHost + ?Sized>(c: &mut Fx<H>, k: u32, slot: u32) {
         }
         (3, EE_SCREENS_SEET_LOAD) => {
             let (p, d) = (c.e().mMessagePlayer, c.e().mDuration);
-            c.set_player_silent(0, p);
+            c.set_player_silent(0, p as u32);
             c.number(EDIT, 0, d as i32);
             let message = c.effect_text(EE_SCREENS_SEET_S_MESSAGE);
             c.text(EDIT2, 0, &message);
@@ -342,7 +346,7 @@ impl GameTypes {
             }
             EE_SCREENS_SEET_STORE => {
                 if let Some(s) = c.selection(COMBO, 0) {
-                    c.e().mGameAction = s;
+                    c.e().mGameAction = s as c_ulong;
                     self.family.current.set(s);
                 }
                 self.sub(c, cur(), EE_SCREENS_SEET_HIDE);
@@ -357,7 +361,7 @@ impl GameTypes {
             }
             EE_SCREENS_SEET_LOAD => {
                 let action = c.e().mGameAction;
-                load_action(c, &self.family, action);
+                load_action(c, &self.family, action as u32);
                 self.sub(c, cur(), EE_SCREENS_SEET_SHOW);
                 self.sub(c, cur(), EE_SCREENS_SEET_LOAD);
             }
@@ -388,7 +392,7 @@ fn hour_slider<H: SeplHost + ?Sized>(c: &mut Fx<H>, speed: bool, slot: u32) {
     match slot {
         EE_SCREENS_SEET_STORE => {
             let v = c.slider(0);
-            c.e().mDaylightHour = v as u32;
+            c.e().mDaylightHour = v as c_ulong;
         }
         EE_SCREENS_SEET_HIDE => {
             c.align(LABEL, 2, AL_LEFT);
@@ -436,7 +440,7 @@ fn cycle_time<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
     match slot {
         EE_SCREENS_SEET_STORE => {
             let v = c.text_int(EDIT, 0);
-            c.e().mCycleTime = v as u32;
+            c.e().mCycleTime = v as c_ulong;
         }
         EE_SCREENS_SEET_HIDE => {
             c.align(LABEL, 2, AL_LEFT);
@@ -471,16 +475,16 @@ fn place<H: SeplHost + ?Sized>(c: &mut Fx<H>, list: &RefCell<Vec<i32>>, graphic:
         EE_SCREENS_SEET_STORE => {
             if let Some(s) = c.selection(COMBO, 1) {
                 if let Some(&id) = list.borrow().get(s as usize) {
-                    c.e().mPlacedEffect = id as u32;
+                    c.e().mPlacedEffect = id as c_ulong;
                 }
             }
             let area = c.checked(RADIO, 0);
             c.e().mUsesPlaceArea = area;
             if let Some(s) = c.selection(COMBO, 2) {
                 if area {
-                    c.e().mPlaceArea = s;
+                    c.e().mPlaceArea = s as c_ulong;
                 } else {
-                    c.e().mPlaceObject = s;
+                    c.e().mPlaceObject = s as c_ulong;
                 }
             }
             c.event_null(RADIO, 0, T_CHECKED);
@@ -521,7 +525,7 @@ fn place<H: SeplHost + ?Sized>(c: &mut Fx<H>, list: &RefCell<Vec<i32>>, graphic:
                 let held = c.event_hold(RADIO, radio, T_CHECKED);
                 c.check(radio);
                 c.event_restore(RADIO, radio, T_CHECKED, held);
-                c.select(COMBO, 2, at);
+                c.select(COMBO, 2, at as u32);
             } else {
                 c.event_null(RADIO, 0, T_CHECKED);
                 c.event_null(RADIO, 1, T_CHECKED);
@@ -533,7 +537,7 @@ fn place<H: SeplHost + ?Sized>(c: &mut Fx<H>, list: &RefCell<Vec<i32>>, graphic:
                     c.fill_place(3, 2, false);
                     c.check(1);
                 }
-                c.select(COMBO, 2, at);
+                c.select(COMBO, 2, at as u32);
                 place_event(c);
             }
         }
@@ -635,11 +639,11 @@ impl AiTypes {
             }
             EE_SCREENS_SEET_STORE => {
                 if let Some(s) = c.selection(COMBO, 0) {
-                    c.e().mAIAction = s;
+                    c.e().mAIAction = s as c_ulong;
                     self.family.current.set(s);
                 }
                 let p = c.player(0);
-                c.e().mPlayer = p;
+                c.e().mPlayer = p as c_ulong;
                 self.sub(c, cur(), EE_SCREENS_SEET_HIDE);
                 self.sub(c, cur(), EE_SCREENS_SEET_STORE);
                 c.event_null(COMBO, 0, T_SELECTION);
@@ -655,8 +659,8 @@ impl AiTypes {
             }
             EE_SCREENS_SEET_LOAD => {
                 let (action, p) = (c.e().mAIAction, c.e().mPlayer);
-                load_action(c, &self.family, action);
-                c.set_player_silent(0, p);
+                load_action(c, &self.family, action as u32);
+                c.set_player_silent(0, p as u32);
                 self.sub(c, cur(), EE_SCREENS_SEET_SHOW);
                 self.sub(c, cur(), EE_SCREENS_SEET_LOAD);
             }
@@ -709,9 +713,9 @@ impl AiTypes {
                 // the original stores an unset selection when there is none: kept then
                 if let Some(s) = s {
                     if area {
-                        c.e().mTargetArea = s;
+                        c.e().mTargetArea = s as c_ulong;
                     } else {
-                        c.e().mTargetObject = s;
+                        c.e().mTargetObject = s as c_ulong;
                     }
                 }
                 let attack = c.checked(CHECK, 0);
@@ -747,7 +751,7 @@ impl AiTypes {
                 c.check(if area { 0 } else { 1 });
                 c.fill_scenario(3, 1, area);
                 let held = c.event_hold(SCEN, 1, T_SELECTION);
-                c.select(SCEN, 1, if area { e.mTargetArea } else { e.mTargetObject });
+                c.select(SCEN, 1, if area { e.mTargetArea as u32 } else { e.mTargetObject as u32 });
                 c.event_restore(SCEN, 1, T_SELECTION, held);
                 c.set_checked_if(0, e.mIsAttack);
                 c.set_checked_if(1, e.mUsesFavorites);
@@ -836,11 +840,11 @@ impl AiTypes {
                     return;
                 };
                 let scale = c.behavior(b as u32, EE_SCREENS_SEET_B_FLOAT_SCALE);
-                c.e().mAIAttribute = b as u32;
+                c.e().mAIAttribute = b as c_ulong;
                 let v = c.text_int(LABEL, 6);
-                c.e().mIntValue1 = v;
+                c.e().mIntValue1 = v as c_long;
                 let v = c.text_int(LABEL, 9);
-                c.e().mIntValue2 = v;
+                c.e().mIntValue2 = v as c_long;
                 let v = c.slider(2);
                 c.e().mFloatValue = v as f32 / scale as f32;
             }
@@ -897,10 +901,10 @@ impl AiTypes {
                 // the original reads past an empty list: nothing more then
                 let Some(b) = self.attributes.borrow().get(at).copied() else { return };
                 self.show_ranges(c, at as u32);
-                c.set_slider_if(0, e.mIntValue1);
-                c.number(LABEL, 6, e.mIntValue1);
-                c.set_slider_if(1, e.mIntValue2);
-                c.number(LABEL, 9, e.mIntValue2);
+                c.set_slider_if(0, e.mIntValue1 as i32);
+                c.number(LABEL, 6, e.mIntValue1 as i32);
+                c.set_slider_if(1, e.mIntValue2 as i32);
+                c.number(LABEL, 9, e.mIntValue2 as i32);
                 let mut scale = c.behavior(b as u32, EE_SCREENS_SEET_B_FLOAT_SCALE);
                 if scale == 0 {
                     scale = 1;
@@ -1020,9 +1024,9 @@ impl AiTypes {
                     let Some(s) = c.selection(COMBO, k) else { continue };
                     let Some(&t) = list.borrow().get(s as usize) else { continue };
                     match k {
-                        1 => c.e().mObject = t as u32,
-                        2 => c.e().mIntValue1 = t,
-                        _ => c.e().mIntValue2 = t,
+                        1 => c.e().mObject = t as c_ulong,
+                        2 => c.e().mIntValue1 = t as c_long,
+                        _ => c.e().mIntValue2 = t as c_long,
                     }
                 }
             }
@@ -1039,8 +1043,8 @@ impl AiTypes {
                 for (k, list) in lists {
                     let want = match k {
                         1 => e.mObject as i32,
-                        2 => e.mIntValue1,
-                        _ => e.mIntValue2,
+                        2 => e.mIntValue1 as i32,
+                        _ => e.mIntValue2 as i32,
                     };
                     let found = list.borrow().iter().position(|&t| t == want);
                     c.select(COMBO, k, found.map_or(0, |p| p as u32));
@@ -1095,9 +1099,9 @@ fn military_target<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
             // the original stores an unset selection when there is none: kept then
             if let Some(s) = s {
                 if area {
-                    c.e().mTargetArea = s;
+                    c.e().mTargetArea = s as c_ulong;
                 } else {
-                    c.e().mTargetObject = s;
+                    c.e().mTargetObject = s as c_ulong;
                 }
             }
             let add = c.checked(RADIO, 0);
@@ -1122,7 +1126,7 @@ fn military_target<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
             let area = e.mUsesTargetArea;
             c.check(if area { 2 } else { 3 });
             c.fill_scenario(3, 1, area);
-            c.select(SCEN, 1, if area { e.mTargetArea } else { e.mTargetObject });
+            c.select(SCEN, 1, if area { e.mTargetArea as u32 } else { e.mTargetObject as u32 });
             c.scen_mode(1, if area { MODE_AREA } else { MODE_OBJECT });
             c.event_restore(SCEN, 1, T_SELECTION, held);
             c.check(if e.mIsAddTarget { 0 } else { 1 });
@@ -1163,7 +1167,7 @@ fn build_object<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
     match slot {
         EE_SCREENS_SEET_STORE => {
             if let Some(s) = c.selection(SCEN, 1) {
-                c.e().mTargetObject = s;
+                c.e().mTargetObject = s as c_ulong;
             }
         }
         EE_SCREENS_SEET_HIDE => {
@@ -1172,7 +1176,7 @@ fn build_object<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
         }
         EE_SCREENS_SEET_LOAD => {
             let o = c.e().mTargetObject;
-            c.select_silent(SCEN, 1, o);
+            c.select_silent(SCEN, 1, o as u32);
         }
         EE_SCREENS_SEET_SHOW => {
             label(c, 3, IDS_TRIGGER_SCREEN_TAB_OBJECT, 405.0, 641.0, 200.0, 20.0);
@@ -1195,7 +1199,7 @@ fn toggle_ai<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
             let on = c.checked(RADIO, 0);
             c.e().mIsOn = on;
             if let Some(s) = c.selection(COMBO, 1) {
-                c.e().mAIToggle = s;
+                c.e().mAIToggle = s as c_ulong;
             }
         }
         EE_SCREENS_SEET_HIDE => {
@@ -1207,7 +1211,7 @@ fn toggle_ai<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
         EE_SCREENS_SEET_LOAD => {
             let (on, toggle) = (c.e().mIsOn, c.e().mAIToggle);
             c.check(if on { 0 } else { 1 });
-            c.select_silent(COMBO, 1, toggle);
+            c.select_silent(COMBO, 1, toggle as u32);
         }
         EE_SCREENS_SEET_SHOW => {
             label(c, 3, IDS_AI_TOGGLE, 405.0, 641.0, 200.0, 20.0);

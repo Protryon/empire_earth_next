@@ -5,8 +5,8 @@
 // echo, the validation, several queries in one datagram and two datagrams in one pump, a reply split into packets,
 // a key too big to send, the map dump's buffer limit, a secure value too long, the auto pump, a second instance on
 // the next port, an instance whose start-up failed pumping the last one started (the SDK's current record), the
-// shutdown's state change. The query port is chosen by the system: lines name it "A" (and "A+1"). `--print` prints
-// the lines instead. The exit code is the number of failures.
+// shutdown's state change. The query port is chosen by the system: lines name it "A", and the second instance's
+// (the first free port above A, see sPortB) "A+1". `--print` prints the lines instead. The exit code is the number of failures.
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,9 +50,15 @@ static void Log(const std::string& inLine)
 static std::string N(long long inValue) { return std::to_string(inValue); }
 
 static int sPortA = -1; // the first instance's query port
+// The port the second instance takes, asked for A's: the first free one above A, found by the driver just before
+// (SecondPort) and named "A+1" as in the golden. The system hands out ports in order, machine-wide, so A+1 itself is
+// taken whenever any program on the machine bound a port after A (2026-11-17: b got A+2 on a busy machine).
+static int sPortB = -1;
 // the bytes as text: the port numbers named relative to A, long texts as their length, hash, head and tail
 static std::string Port(int inPort)
 {
+    if (sPortB >= 0 && inPort == sPortB)
+        return "A+1";
     if (sPortA < 0 || inPort < sPortA || inPort > sPortA + 5)
         return N(inPort);
     return inPort == sPortA ? "A" : "A+" + N(inPort - sPortA);
@@ -175,6 +181,21 @@ static void LogState(const char* inWhat, GameSpySupport* g)
         + N(g->IsAutoPumping()));
 }
 
+// the first port above A that binds on any address (as the SDK binds a localhost address): the one qr_init's scan
+// from A's port will take
+static int SecondPort()
+{
+    for (int aPort = sPortA + 1; aPort < sPortA + 100; aPort++) {
+        PlatSocket aProbe = PlatSocketOpen(PLAT_SOCKET_DGRAM);
+        PlatSockAddrIn anAddr = Addr(0, aPort);
+        bool aBound = PlatSocketBind(aProbe, &anAddr) != 0;
+        PlatSocketClose(aProbe);
+        if (aBound)
+            return aPort;
+    }
+    return -1;
+}
+
 static void Script()
 {
     SmartPtr<ServerContext> aDirs = new ServerContext; // no directory server: the service lookup fails at once
@@ -276,10 +297,11 @@ static void Script()
     SmartPtr<GameSpySupport> b = new GameSpySupport("eetest2", "2.00", "key2", aDirs.get());
     b->SetGameMode("closedplaying");
     b->SetKeyValue(GameSpyQueryType_Info, "hostname", "Second");
+    sPortB = SecondPort();
     Log("b startup " + N(b->Startup(IPAddr("127.0.0.1", (unsigned short)sPortA))));
     LogState("b started", b.get());
     PumpUntilHeartbeat("b first", b.get());
-    Query(b.get(), sPortA + 1, "\\basic\\\\info\\");
+    Query(b.get(), sPortB, "\\basic\\\\info\\");
     Query(a.get(), sPortA, "\\basic\\");
 
     // an instance whose start-up failed (no port on an address not this machine's) pumps the SDK's current
@@ -289,7 +311,7 @@ static void Script()
     Log("f startup " + N(f->Startup(IPAddr("192.0.2.1", 0))));
     LogState("f started", f.get());
     PumpUntilHeartbeat("f first", f.get());
-    Query(f.get(), sPortA + 1, "\\info\\");
+    Query(f.get(), sPortB, "\\info\\");
     Query(f.get(), sPortA, "\\info\\");
     Drain(sClient, 300);
     LogHeartbeats("f quiet", 100);

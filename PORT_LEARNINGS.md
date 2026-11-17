@@ -29368,3 +29368,49 @@ The machine froze and restarted once during the round (all processes lost): the 
 - RoutingLogic.cpp's remaining host: the events, dialogs and the connection's request helpers (Rust could call
   routeconn.rs directly, but EEWonNet.cpp also calls most helpers).
 - IPAddr.cpp and StringUtil.cpp stay forwarders while the lobby's C++ calls them.
+## LP64 after the crate restructure: cargo check for Linux and macOS, nettest's session test (2026-11-17)
+
+`cargo check --target x86_64-unknown-linux-gnu --workspace --all-targets` stopped in ee_render, so ee_ui, ee_game and
+the gate library had never been checked off Windows since the restructure (and the owner's Mac build was broken).
+
+- **ee_render `openformats/surface_file.rs`.** The JPG2 trailer is two 4-byte words (`_getw`/`_putw`, int) holding
+  file positions that the C++ keeps as `long` (`FSFileSpec::GetPosition(long&)`, `ftell`). On Windows the two are
+  one type, so the Rust mixed `c_int` and `c_long`. Fix: `c_long::from(get_word(..))` where a word becomes a
+  position, `position as c_int` where one is written (`_putw` truncates the same way); `FileWriteLong` already
+  writes 4 bytes on every data model (`FSFile::Write(const long&)`). Windows: the casts are no-ops.
+- **ee_game screens (187 errors, the scenario editor and the settings form).** `EeScenarioEffectFields` and
+  `EeScenarioConditionFields` keep the C++ classes' `unsigned long`/`long` (ee_sim/scenario/fields.rs: C++ derives
+  from them, so the C++ readers are unchanged), while the screens' host calls are 32-bit (`u32`/`i32`). Fix: casts
+  at that boundary (`as c_ulong` / `as u32`, `as c_long` / `as i32`), not new field types: changing a field to
+  `u32` would change `unsigned long` to `uint32_t` in the generated header and break the C++ that binds
+  `unsigned long&` to it. The settings form's `list_selection` (`c_ulong`) into `call_with`/`text` (`u32`) the same.
+  Every cast is a no-op on Windows (`c_ulong` is `u32` there), so behaviour there cannot change.
+- **ee_won_net `routeconn_tests.rs`.** A test hook declared `-> c_long` where `EeWonRouteConnHooks::handle_reply`
+  returns `i32`: a fn item that only matched on Windows. Now `-> i32`.
+- **Lesson: an alias-typed field leaks the data model into every user.** Rust's type checker is stricter than C's
+  implicit conversions, so each `c_long`/`c_ulong` record field is a compile error on LP64 wherever it meets a
+  fixed-width value; on Windows nothing shows it. Check a change touching such records with
+  `cargo check --target x86_64-unknown-linux-gnu` (the target is installed here; no sysroot is needed for a check)
+  and `--target aarch64-apple-darwin` (also checks here: no Xcode SDK is needed for `cargo check`).
+- **clippy off Windows.** With the checks clean, `cargo clippy --target <linux or macOS> --workspace --all-targets
+  -- -D warnings` (the gate's clippy) failed in ee_base, ee_sim, ee_ui and ee_won_net: 30 `unnecessary_cast` and
+  `useless_conversion` hits, each a cast or `from` that Windows needs (`c_long` to `i64`) and LP64 does not. The
+  opposite also holds: the new casts in the ee_game screens are same-type on Windows, so those six files carry
+  `#![allow(clippy::unnecessary_cast)]` like ee_sim's `fields.rs`. Fix: every crate root has
+  `#![cfg_attr(not(windows), allow(clippy::unnecessary_cast, clippy::useless_conversion))]`, so the Windows gate
+  keeps both lints and the Mac's gate no longer fails on the other data model's casts. Clippy is now clean for
+  x86_64-unknown-linux-gnu and aarch64-apple-darwin.
+- **nettest's `ee_session_test`.** EEServer.cpp and EEClient.cpp include `ee/EEARust.h` since the actions moved to
+  Rust (their `EEARemovePlayer`, `EEABootClientFromCanceledGame`, `EEAServerMigration` became its one-line
+  classes); the stand-in world (tests/net/ee_stand) had the three old headers but not that one, so the real header
+  (and the real game) was found. Fix: a stand-in `tests/net/ee_stand/ee/EEARust.h` that includes `ee_world.h`.
+- **won_gamespy_test: the second instance's port (xbuild.py wontest).** The driver started b asking for A's port
+  and expected it at A+1, the SDK's next port. Windows hands out ephemeral ports in order, machine-wide
+  (consecutive binds anywhere get A+1, A+2, ...), so whenever any program bound a port during the seconds of
+  queries after A, A+1 was taken and b took A+2: 7 failures (b's heartbeats one port ahead, the queries sent to A+1
+  unanswered), seen on the busy shared machine and reproduced with a script that binds a port every 0.5 s. Not the
+  port nor the restructure: the SDK's scan is right. Fix: just before b's start-up the driver finds the first port
+  above A that binds (any address, as the SDK binds a localhost address), sends b's queries there and names it
+  "A+1"; the golden is unchanged, and b landing anywhere else still fails. Under the port script it passes 4/4.
+  `gamespy_tests.rs` `a_failed_start_leaves_the_current_record` assumes qport + 1 the same way, but binds at once
+  (a window of microseconds); left as is.
