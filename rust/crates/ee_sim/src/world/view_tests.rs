@@ -72,6 +72,7 @@ struct FakePlayer {
     saved: EeUnitsPlayerSaved,
     fields: EeUnitsPlayerFields,
     selected_group: usize,
+    allies: [usize; 3],
 }
 
 impl Default for FakePlayer {
@@ -84,6 +85,7 @@ impl Default for FakePlayer {
             saved: EeUnitsPlayerSaved::default(),
             fields: EeUnitsPlayerFields::default(),
             selected_group: 0,
+            allies: [0; 3],
         }
     }
 }
@@ -172,6 +174,12 @@ fn fake_layout() -> EeWorldLayout {
         player_color: offset_of!(FakePlayer, color) as u64,
         player_first_unit: offset_of!(FakePlayer, first_unit) as u64,
         player_selected_group: offset_of!(FakePlayer, selected_group) as u64,
+        player_allies: offset_of!(FakePlayer, allies) as u64,
+        player_sight_sharers: 0,
+        player_pending_units: 0,
+        player_towns: 0,
+        player_herds: 0,
+        player_viewed_unit: 0,
         world_players: offset_of!(FakeWorld, players) as u64,
         world_map: offset_of!(FakeWorld, map) as u64,
         world_num_players: offset_of!(FakeWorld, num_players) as u64,
@@ -189,6 +197,8 @@ fn fake_layout() -> EeWorldLayout {
         world_user_paused: offset_of!(FakeWorld, flags) as u64 + 5,
         world_using_carbon: offset_of!(FakeWorld, flags) as u64 + 6,
         map_tiles: offset_of!(FakeMap, tiles) as u64,
+        map_tile_array: 0,
+        map_visibility_words: 0,
         tile_stride: std::mem::size_of::<FakeTile>() as u64,
         tile_terrain_type: offset_of!(FakeTile, terrain) as u64,
         tile_units: offset_of!(FakeTile, units) as u64,

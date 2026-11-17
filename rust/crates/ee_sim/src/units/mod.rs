@@ -87,6 +87,8 @@ pub mod script;
 pub mod select;
 pub mod sight;
 pub mod sight_host;
+pub mod tile_sight;
+pub mod tile_sight_host;
 pub mod stats;
 pub mod step;
 pub mod store;

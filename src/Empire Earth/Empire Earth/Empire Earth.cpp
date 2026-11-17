@@ -2115,7 +2115,6 @@ void EELoadSound(const UString& inName, unsigned long inType, unsigned long& out
 void EEDeleteDatabase(bool inShutdown); // Original registered callback 0x143d0c.
 void EEDeleteGameObjects(bool inShutdown);
 long EEFn0FCA98(); // 0x4fca98: a post-load check that returns 0
-void EEBuildSightRings(); // the start-up's sight distance tables
 long EEClearRandomMapGenerators(); // clears the random-map generator list; returns 0
 
 // Starts the sound engine and music conductor from the preferences and creates the sound manager; returns false
@@ -2392,7 +2391,6 @@ void EEInitializeGameObjects()
     gGameOptions.SetDefaults();
     gWorld.mGameOptions.SetDefaults();
     EEInitPhysicsModels();
-    EEBuildSightRings();
     gMouse = new EEMouse;
     if (gMouse == NULL) ESVerify(__FILE__, 0x4ee, "gMouse != NULL");
     long theResult = gMouse->Load(gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID()));

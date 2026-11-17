@@ -77,6 +77,14 @@ pub struct EeWorldLayout {
     pub player_color: u64,
     pub player_first_unit: u64,
     pub player_selected_group: u64,
+    /// lane P: the `std::vector<EEPlayer*>`s `mAllies` and `mSightSharers`, `mPendingUnits` (`RTSUnit*`), `mTowns`,
+    /// `mHerds`; `mViewedUnit` (an `EEUnit*`)
+    pub player_allies: u64,
+    pub player_sight_sharers: u64,
+    pub player_pending_units: u64,
+    pub player_towns: u64,
+    pub player_herds: u64,
+    pub player_viewed_unit: u64,
     // ---- RTSWorld / EEWorld
     /// `mPlayers` (17 pointers), `mMap`, `mNumPlayers` (an `unsigned long`), `EEWorld::mCurrentPlayer` (a `long`)
     pub world_players: u64,
@@ -102,6 +110,9 @@ pub struct EeWorldLayout {
     // ---- RTSMap
     /// `mTiles` (the `EETile*` array, row-major, `mSize` x `mSize`)
     pub map_tiles: u64,
+    /// lane P: `EEMap::mTileArray` (the `EETile` array), `mVisibilityWords` (the tiles' visibility words)
+    pub map_tile_array: u64,
+    pub map_visibility_words: u64,
     // ---- RTSTile / EETile
     /// `sizeof(EETile)` (`EEMap::mTileArray`'s element)
     pub tile_stride: u64,

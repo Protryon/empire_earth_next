@@ -2926,6 +2926,18 @@ constexpr static const int32_t EE_UNITS_SIGHT_NUM_PLAYERS = 16;
 /// `gWorld.mPlayers[c]`
 constexpr static const int32_t EE_UNITS_SIGHT_PLAYER = 17;
 
+/// `gDoppelgangerManager.TileShown(tile a, x c, y d, player b)`
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_SHOWN = 1;
+
+/// `gDoppelgangerManager.TileHidden(tile a, player b)`
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_HIDDEN = 2;
+
+/// player a's `mSavedGroups.Reset(0x18, 1)`
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_FIRST = 3;
+
+/// `gMiniMap->CountCellOn/Off(c, d)` (a != 0: on), the terrain mesh's `ReferenceTile/DereferenceTile(c, d)`
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_SHOW = 4;
+
 /// The kinds of countdown (`ee_units_step_countdown`'s `which`).
 constexpr static const uint32_t EE_UNITS_STEP_RELOAD = 1;
 
@@ -6846,6 +6858,39 @@ extern int64_t ee_units_sight_host(int32_t op,
 
 /// `EEComplexUnit::SightOn(x, y)` (`on` 1) and `SightOff(x, y)` (0) of unit `unit`.
 void ee_units_sight(uint64_t unit, uint32_t x, uint32_t y, uint8_t on);
+
+extern int64_t ee_units_tile_sight_host(int32_t op, uint64_t a, uint64_t b, int64_t c, int64_t d);
+
+/// `RTSTile::AddSight(player)` (`on` 1) / `RemoveSight(player)` of tile `tile`
+void ee_units_tile_sight_tile(uint64_t world, uint8_t on, uint64_t tile, uint64_t player);
+
+/// EEPlayer's `AddSharedSight(tile, x, y)` (`on` 1, `shared` 1), `RemoveSharedSight(tile)` (0, 1), `AddOwnSight`
+/// (1, 0), `RemoveOwnSight` (0, 0)
+void ee_units_tile_sight_player(uint64_t world,
+                                uint8_t on,
+                                uint8_t shared,
+                                uint64_t player,
+                                uint64_t tile,
+                                int64_t x,
+                                int64_t y);
+
+/// `EEAddSightCircle` (kind 0) / `EERemoveSightCircle` (1) of (x0, y0); `EEAddSightRingStep` (2),
+/// `EERemoveSightRingStep` (3), `EEMoveSightCircle` (4) from (x0, y0) to (x1, y1)
+void ee_units_tile_sight_circle(uint64_t world,
+                                uint32_t kind,
+                                float x0,
+                                float y0,
+                                float x1,
+                                float y1,
+                                float radius,
+                                uint64_t player);
+
+/// `RTSMap::FogSeen(player)` (kind 0), `ExploreUnseen(player)` (1), `EEMap::PrepareSave`'s visibility pass (2)
+/// of map `map`
+void ee_units_tile_sight_map(uint64_t world,
+                             uint64_t map,
+                             uint32_t kind,
+                             uint64_t player);
 
 /// `Init`'s copies before `Reapply` ([`init`]).
 ///
