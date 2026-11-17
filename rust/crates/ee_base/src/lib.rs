@@ -16,6 +16,9 @@ pub mod panic;
 /// The crate ee_plat_core before the restructure.
 /// cbindgen:ignore
 pub mod plat_core;
+/// The crate ee_plat_sdl before the restructure.
+/// cbindgen:ignore
+pub mod plat_sdl;
 /// The crate ee_plat_sys before the restructure.
 /// cbindgen:ignore
 pub mod plat_sys;

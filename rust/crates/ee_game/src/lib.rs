@@ -74,9 +74,9 @@ use ee_base as _;
 // The window (PlatWindow.h on SDL3) and the fonts (PlatFont.h): `#[no_mangle]` exports. Two
 // crates so that a program using only text does not pull in an object file that references SDL (the linker pulls whole
 // objects); ee_plat_sdl's exports are compiled out of `cargo test`, whose binaries do not link SDL.
-use ee_base as _;
 #[cfg(not(test))]
-use ee_plat_sdl as _;
+use ee_base as _;
+use ee_base as _;
 
 // the WON library's leaves (ee_won/src/ffi.rs): the buffers' and text helpers, CRC-16, MD5, Blowfish, ElGamal, the auth
 // blocks and the CD keys behind the C++ forwarders of src/Empire Earth/WONAPI

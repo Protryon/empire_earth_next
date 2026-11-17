@@ -7,12 +7,12 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::{AtomicI32, AtomicPtr, AtomicU32, Ordering};
 use std::sync::Mutex;
 
-use ee_base::plat_ui::event::*;
-use ee_base::plat_ui::font::{c_bytes, c_terminated};
-use ee_base::plat_ui::keys;
-use ee_base::plat_ui::window::*;
+use crate::plat_ui::event::*;
+use crate::plat_ui::font::{c_bytes, c_terminated};
+use crate::plat_ui::keys;
+use crate::plat_ui::window::*;
 
-use crate::ffi::*;
+use crate::plat_sdl::ffi::*;
 
 const INIT_VIDEO: u32 = 0x20;
 const PIXELFORMAT_ARGB8888: u32 = 0x1636_2004;
@@ -57,7 +57,7 @@ unsafe fn set_last_error_sdl() {
 
 /// The game's text for SDL: both UTF-8 (decision D6), so a terminated copy with any stray byte made U+FFFD.
 unsafe fn utf8_c(text: *const c_char) -> Vec<u8> {
-    c_terminated(&ee_base::plat_core::utf8::lossy(c_bytes(text)))
+    c_terminated(&crate::plat_core::utf8::lossy(c_bytes(text)))
 }
 
 unsafe fn window_of(id: u32) -> *mut c_void {
