@@ -29533,3 +29533,71 @@ behaviour-identical refactor; no Rust change.
   202 and app 24 digests PASS (TSGT, MAPS, MAPK included). The merge-time numbers are in the lane's report.
 - **Only a person reaches**: sight shared between allies (`mSharedLOS` with allies): no random map makes an alliance,
   so TSGT covers that path only in a scenario or lobby team game.
+
+## Object storage, lane P, round 2: the tile sight, the visibility words, the player hosts' plain reads and the end-of-game check on the world views (ee_units tile_sight.rs, map_words.rs, player_views.rs, game_over.rs; branch rust-objP, 2026-11-17)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 2288f358 | (merge) origin/rust f63bd44b: lane V's views, save 0.283 | |
+| dcb6884c | the tile sight in Rust: the circles, ring steps and their table, RTSTile's and EEPlayer's tile sight, FogSeen, ExploreUnseen, PrepareSave's pass; the player view's vectors, the tile's words' address | +64 -274, net -210 |
+| a01842c8 | `EEMap::mVisibilityWords` a Rust buffer (allocation, SetPlayerCount's copy, the free) | +7 -23, net -16 |
+| 156bd162 | 16 EEPlayerHost cases and the tick's unit hit points through the views | +1 -55, net -54 |
+| 5d6d8c05 | `CheckGameOver` and `EEWorldCanRecover` in Rust | +24 -110, net -86 |
+| e490e5b8 | (merge) origin/rust d2bb8d7f: lane S, R6 data round 4, the LP64 fixes | |
+| d5df6c54 | the player views read the world through lane S's `WorldView::global` | -1 |
+| bb332e7f | rustfmt, the module order, a dead assignment clippy found; the header | Rust only |
+
+The round's C++: **net -367** (src, include/ee), short of the plan's -550 to -700, as round 1's measure said: about
+56 of the 203 player-host cases were plain, and 17 of them were movable on the views as they are (the rest need a
+tech-node view, the class and upgrade tables' views, the herds, or the C++ context's player); `RecordStatistics`
+(277 lines) has no gate.
+
+- **The tile sight over the views.** `tile_sight.rs` is the C++ bodies over a `SightWorld` trait (the game's
+  reads `MapView::tile`, `TileView::visibility_word`, the `PlayerView`s' `id`, `shared_los`, `enemy`, `allies`, and
+  `WorldView::current_player`; it writes the words through each tile's `mVisibility`). `IsAlliedWith` and the
+  "the current player sees it" test are the C++'s expressions in their order; `UMFloatToLong` is `lrintf`,
+  `UMFloor` the round-then-step (load.rs's), the ring table `sqrt` of a double cast to float as `EEBuildSightRings`
+  built it (now a `OnceLock`). What ee_sim cannot call stays a C++ host operation: the doppelganger manager, the mini
+  map's cell counts (ee_game) and the mesh's reference counts (ee_render), the statistics' `Reset(0x18, 1)` (its
+  `Set` gate). `RTSTile::SetVisibility` (an inline) and `EEBuildSightRings` are gone; FogSeen and ExploreUnseen take
+  the map they are called on (`EEWorld::StartGame` fogs the state's map, which may not be `gWorld.mMap` yet).
+- **TSGT survives the move by its outermost scope.** The C++ entry points (`EEAddSightCircle`,
+  `EERemoveSightCircle`, `EEMoveSightCircle`, `RTSTile::AddSight`/`RemoveSight`, EEPlayer's four, FogSeen,
+  ExploreUnseen, PrepareSave) stay as forwarders holding the TEST ONLY scope; the inner calls (the ring steps,
+  SetVisibility, the player calls inside a circle) are Rust now and recorded nothing before either (round 1 records
+  only the outermost call). TSGT, MAPS and MAPK stayed equal to their goldens after each step, with the same capture
+  sizes to the byte.
+- **The visibility words.** `map_words.rs`'s buffer carries its length in two words before the pointer the C++
+  holds (the destructor frees without a count). `SetPlayerCount`'s copy indexes the old words by the count of tiles
+  found (y outer, x inner), not by the tile's own pointer, as the C++ did. The save reads and writes through the
+  tiles' pointers, unchanged: the saveload matrix passes.
+- **The player hosts.** `FnHost::call` asks `player_views::answer` first; the unit tests' hosts answer every
+  operation themselves, so the bodies' tests did not change. `GetPopulationCost()` is `mWeight` for every class kind;
+  `IsLandBuilding()` is read from the class body table's row (`EE_UNIT_CLASS_BODIES`), not the cached
+  `mIsLandBuildingClass`. The tick host's context is the C++'s, not the player, so only its unit-only operation
+  (TICK_UNIT_HIT_POINTS) moved.
+- **The end-of-game check.** The C++'s gotos (`alone`, `results`, `done`) are one labelled block that yields the
+  label, then the shared tail. The short circuit of the defeat test is kept: `CanRecover` (and its `CanAfford`, which
+  TCST pins) runs only where the C++ ran it.
+- **A merge lesson.** Lane S added `WorldView::global` (the layout's `&gWorld`) in the same hour as this lane added
+  its own world registration; after the merge the duplicate went (d5df6c54). Check the other lanes' view additions
+  before adding a world-level accessor.
+- **A split lesson.** Splitting one working tree into commits by copying files aside and back failed silently once
+  (a `cp` refusing to overwrite a same-named file stopped a `&&` chain halfway) and committed module lines without
+  their files; the commit was amended before anything built on it. Staging prepared contents with `git hash-object
+  -w` and `git update-index --cacheinfo` leaves the worktree alone and is safer.
+- **Tests.** tile_sight_tests.rs 6, map_words 2, game_over_tests.rs 4 (ee_sim +12).
+- **Behaviour:** none (the oracle identical, every capture tag equal to its golden, the saveload matrix as expected).
+- **Gates.** Per step at seeds 2-3: oracle identical, captures oracle and app (TSGT, MAPS, MAPK) PASS; the views'
+  step also late (PLST, PLEC); the game-over step oracle 2-7 identical, captures oracle 204, app 24, late 206, space
+  202, calamity 214 digests PASS, the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) `saveload expect: PASS`. On the tree merged with origin/rust d2bb8d7f (conflicts: the layout,
+  its fake in view_tests.rs and EEWorldLayout.cpp, where both lanes added player members: both kept; PORT_LEARNINGS
+  both sections; `strip_markers.py --check` clean; the headers regenerated): both builds 0/0 (the test profile too),
+  oracle seeds 2-7 identical to `ref`, captures at seeds 2-3 oracle 204, app 24, late 206, space 202, calamity 214
+  digests PASS (TSGT, MAPS, MAPK, PLST, PLEC, TCST among them), the Rust gate PASS (4,411 tests; two unrelated tests
+  failed once each under load, ee_render's movie thread and ee_base's golden_spec temp-dir replay, and passed alone
+  and in the next gate), and through `slot.py` the LAN game `RESULT PASS lan-game` (PT host 2710, joiner 2706; MAPK's
+  out-of-synch checksum runs there).
+- **Only a tour reaches**: nothing new: the moved code is simulation; the mini map's counts and the mesh's
+  references the sight drives are the same host calls as before (MMSN covers the counts).
