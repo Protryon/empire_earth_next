@@ -20,6 +20,7 @@
 #include "lle/GETexture.h"
 
 #include "ee/EEDatabaseTables.h"
+#include "ee/EEDbRecords.h"
 #include "lle/GERenderState.h"
 
 std::vector<EETerrainTable*> EETerrainTable::sTable;
@@ -40,121 +41,46 @@ long gFirstCliffTerrain;
 
 
 
-// One record of db\dbterrain.dat (0xcc bytes after the file name string). Inferred layout.
-struct EETerrainRecord {
-    char mName[0x68];                       // +0x00 -> mFamilies
-    int32_t mID;                            // +0x68 -> +0x50
-    int32_t mTextureID;                     // +0x6c -> +0x4c
-    int32_t mNameID;                        // +0x70 -> +0x54
-    int32_t mTextureTileCoverage;           // +0x74 -> +0x58
-    int32_t mTerrainType;                   // +0x78 -> +0x5c
-    int32_t mColumns;                       // +0x7c -> +0x60
-    int32_t mRows;                          // +0x80 -> +0x64
-    bool mIsWater;                          // +0x84 -> +0x84
-    bool mHasAlpha;                         // +0x85 -> +0x86
-    bool mIsInEditor;                       // +0x86 -> +0x85
-    int32_t mColorType;                     // +0x88 -> +0x68
-    uint32_t mFirst[3];                     // +0x8c: unit class ranges [mFirst[k], mLast[k]] -> mUnitClasses
-    uint32_t mLast[3];                      // +0x98
-    int32_t mAmbientUnitChance;             // +0xa4 -> +0x7c
-    int32_t mWaterAnimationPeriod;          // +0xa8 -> +0x44
-    int32_t mWaterDepth;                    // +0xac -> +0x80
-    int32_t mRed;                           // +0xb0 (0..255)
-    int32_t mGreen;                         // +0xb4
-    int32_t mBlue;                          // +0xb8
-    char _gapBC[0x0f];
-    bool mIsAmbientsOnly;                   // +0xcb -> +0x87
-};
-static_assert(sizeof(EETerrainRecord) == 204, "on-disk record: 204 bytes on every target");
-
-// One record of db\dbcliffterrain.dat (0x7c bytes). Inferred layout.
-struct EECliffTerrainRecord {
-    char mName[0x68];                       // +0x00
-    int32_t mIndex;                         // +0x68 (negative: no entry)
-    int32_t mFirstTerrain;                  // +0x6c -> +0x14
-    int32_t mLastTerrain;                   // +0x70 -> +0x18
-    int32_t mUnusedValue;                   // +0x74 -> +0x1c
-    bool mUnusedFlag;                       // +0x78 -> +0x20
-};
-static_assert(sizeof(EECliffTerrainRecord) == 124, "on-disk record: 124 bytes on every target");
-
-// Creates an empty terrain: no textures, not water, colour type -1
+// Creates an empty terrain: no textures, not water, colour type -1 (ee_data tables.rs)
 EETerrainTable::EETerrainTable()
 {
-    this->mColorType = -1;
+    ee_data_terrain_default(this);
     this->mFirstTexture = 0;
-    this->mNumTextures = 0;
-    this->mTextureID = 0;
-    this->mID = 0;
-    this->mNameID = 0;
-    this->mTextureTileCoverage = 0;
-    this->mTerrainType = 0;
-    this->mColumns = 0;
-    this->mRows = 0;
-    this->mAmbientUnitChance = 0;
-    this->mWaterAnimationPeriod = 0;
-    this->mIsWater = false;
-    this->mIsInEditor = false;
-    this->mHasAlpha = false;
     this->mTextures = NULL;
     this->mLoadCount = 0;
     this->mIsLoading = false;
     this->mPreviewTexture = NULL;
 }
 
-// Loads the terrains from db\dbterrain.dat (texture grid, ambient unit classes, colour, water) numbering their
-// textures, and notes the first named one as the default terrain; returns the last read status
+// Loads the terrains from db\dbterrain.dat (each record after its texture file name; the record and its copy are
+// ee_data tables.rs': texture grid, ambient unit classes, colour, water) numbering their textures, and notes the first
+// named one as the default terrain; returns the last read status
 long EETerrainTable::Load(FSFileSpec* inFile)
 {
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
     long theTextureBase = 0;
-    EETerrainRecord theRecord;
-    inFile->Open(kFileAccessRead);
+    EETerrainTable* theTerrain = NULL;
     gDefaultTerrain = -1;
-    long theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
-        EETerrainTable::sTable.resize(theCount, NULL);
-        for (unsigned long i = 0; i < theCount; i++) {
-            EETerrainTable* theTerrain = new EETerrainTable;
+    return EEDbReadLeadRecords(inFile, ee_data_terrain_record_size(),
+        [](unsigned long inCount) { EETerrainTable::sTable.resize(inCount, NULL); return true; },
+        [&](unsigned long) {
+            theTerrain = new EETerrainTable;
             theTerrain->mFirstTexture = theTextureBase;
             theTerrain->mTextureName.Load(*inFile);
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-            theTerrain->mName.Copy(theRecord.mName, 0, strlen(theRecord.mName), 0, true);
-            theTerrain->mID = theRecord.mID;
-            theTerrain->mNameID = theRecord.mNameID;
-            theTerrain->mTextureTileCoverage = theRecord.mTextureTileCoverage;
-            theTerrain->mTextureID = theRecord.mTextureID;
-            for (long k = 0; k < 3; k++) {
-                unsigned long theFirst = theRecord.mFirst[k];
-                unsigned long theLast = theRecord.mLast[k];
-                if (theFirst > 0 && theLast > 0)
-                    for (long theClass = theFirst; theClass <= theLast; theClass++)
+        },
+        [&](unsigned long inIndex, const unsigned char* inRecord) {
+            EeDataTerrainExtra theExtra;
+            ee_data_terrain_from_record(inRecord, theTerrain, &theExtra);
+            EEDbCopyName(theTerrain->mName, theExtra.name);
+            for (long k = 0; k < 3; k++)
+                if (theExtra.first[k] > 0 && theExtra.last[k] > 0)
+                    for (long theClass = theExtra.first[k]; (unsigned long)theClass <= theExtra.last[k]; theClass++)
                         theTerrain->mUnitClasses.push_back(theClass);
-            }
-            theTerrain->mAmbientUnitChance = theRecord.mAmbientUnitChance;
-            theTerrain->mWaterAnimationPeriod = theRecord.mWaterAnimationPeriod;
-            theTerrain->mColumns = theRecord.mColumns;
-            theTerrain->mRows = theRecord.mRows;
-            long theTextureCount = theTerrain->mColumns * theRecord.mRows;
-            theTerrain->mTerrainType = theRecord.mTerrainType;
-            theTerrain->mIsWater = theRecord.mIsWater;
-            theTerrain->mIsInEditor = theRecord.mIsInEditor;
-            theTerrain->mHasAlpha = theRecord.mHasAlpha;
-            theTerrain->mColorType = theRecord.mColorType;
-            theTerrain->mWaterDepth = theRecord.mWaterDepth;
-            theTerrain->mColor = GEColor(theRecord.mRed / 255.0f, theRecord.mGreen / 255.0f,
-                                         theRecord.mBlue / 255.0f);
-            theTerrain->mIsAmbientsOnly = theRecord.mIsAmbientsOnly;
+            theTerrain->mColor = GEColor(theExtra.color[0], theExtra.color[1], theExtra.color[2]);
             if (gDefaultTerrain == -1 && theTerrain->mName.GetLength() > 0 && theTerrain->mID != -1)
                 gDefaultTerrain = theTerrain->mID;
-            EETerrainTable::sTable[i] = theTerrain;
-            theTextureBase += theTextureCount;
-            theTerrain->mNumTextures = theTextureCount;
-        }
-    }
-    inFile->Close();
-    return theResult;
+            EETerrainTable::sTable[inIndex] = theTerrain;
+            theTextureBase += theTerrain->mNumTextures;
+        });
 }
 
 // Releases every terrain's textures, destroys the terrains and empties the table (the texture arrays are not freed)
@@ -240,51 +166,33 @@ GETexture* EETerrainTable::LoadTexture(const UString& inFile)
     return theTexture;
 }
 
+// A terrain texture's file: the texture name numbered _n before its extension (ee_data tables.rs)
+static UString EETerrainTextureFile(const UString& inName, long inNumber)
+{
+    char theName[256];
+    ee_data_terrain_texture_file(inName, inNumber, theName, sizeof(theName));
+    return UString(theName);
+}
+
 // Loads every texture of the terrain's grid (its file name numbered _n, from the last down) into its texture array
 void EETerrainTable::LoadTextures()
 {
     unsigned long theCount = this->mRows * this->mColumns;
     this->mTextures = new GETexture*[theCount];
     unsigned long theIndex = 0;
-    for (unsigned long n = theCount; n > 0; n--) {
-        const char* theDot = strrchr(this->mTextureName, '.');
-        if (theDot != NULL) {
-            char theName[256];
-            long theLength = theDot - (const char*)this->mTextureName;
-            memcpy(theName, (const char*)this->mTextureName, theLength);
-            sprintf(theName + theLength, "_%ld%s", n, theDot);
-            UString theFile(theName);
-            this->mTextures[theIndex++] = this->LoadTexture(theFile);
-        } else {
-            UString theFile;
-            sprintf(theFile, "%s_%ld", (const char*)this->mTextureName, n);
-            this->mTextures[theIndex++] = this->LoadTexture(theFile);
-        }
-    }
+    for (unsigned long n = theCount; n > 0; n--)
+        this->mTextures[theIndex++] = this->LoadTexture(EETerrainTextureFile(this->mTextureName, n));
 }
 
 // Loads each terrain's list-box preview texture (its file name with _1) and references the button of its first unit
-// class
-// (the terrain list of EEUIFSETerrain)
+// class (the terrain list of EEUIFSETerrain)
 void EELoadTerrainPreviews()
 {
     for (unsigned long i = 0; i < EETerrainTable::sTable.size(); i++) {
         EETerrainTable* theTable = EETerrainTable::Get(i);
         if (theTable == NULL)
             continue;
-        const char* theDot = strrchr(theTable->mTextureName, '.');
-        if (theDot != NULL) {
-            char theName[256];
-            long theLength = theDot - (const char*)theTable->mTextureName;
-            memcpy(theName, (const char*)theTable->mTextureName, theLength);
-            sprintf(theName + theLength, "_1%s", theDot);
-            UString theFile(theName);
-            theTable->mPreviewTexture = theTable->LoadTexture(theFile);
-        } else {
-            UString theFile;
-            sprintf(theFile, "%s_1", (const char*)theTable->mTextureName);
-            theTable->mPreviewTexture = theTable->LoadTexture(theFile);
-        }
+        theTable->mPreviewTexture = theTable->LoadTexture(EETerrainTextureFile(theTable->mTextureName, 1));
         if (theTable->mUnitClasses.size() <= 0)
             continue;
         EEUnitClass* theClass = gUnitClassTable[theTable->mUnitClasses[0]];
@@ -351,49 +259,28 @@ void EEReleaseTerrainPreviews()
     }
 }
 
-// Creates an empty cliff terrain entry
-EECliffTerrainTable::EECliffTerrainTable()
-{
-    this->mFirstTerrain = 0;
-    this->mLastTerrain = 0;
-    this->mL1C = 0;
-    this->mB20 = false;
-}
-
-// Loads the cliff terrains from db\dbcliffterrain.dat (empty slots for negative indices) and notes the first one;
-// returns the last read status
+// Loads the cliff terrains from db\dbcliffterrain.dat (empty slots for negative indices; the record and its copy are
+// ee_data tables.rs') and notes the first one; returns the last read status
 long EECliffTerrainTable::Load(FSFileSpec* inFile)
 {
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    EECliffTerrainRecord theRecord;
-    inFile->Open(kFileAccessRead);
     bool theFound = false;
-    long theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
-        EETerrainTable::sCliffTable.resize(theCount, NULL);
-        for (unsigned long i = 0; i < theCount; i++) {
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-            EECliffTerrainTable* theCliff;
-            if (theRecord.mIndex >= 0) {
-                theCliff = new EECliffTerrainTable;
-                theCliff->mName = theRecord.mName;
-                theCliff->mFirstTerrain = theRecord.mFirstTerrain;
-                theCliff->mLastTerrain = theRecord.mLastTerrain;
-                theCliff->mB20 = theRecord.mUnusedFlag;
-                theCliff->mL1C = theRecord.mUnusedValue;
+    return EEDbReadRecords(inFile, ee_data_cliff_terrain_record_size(),
+        [](unsigned long inCount) { EETerrainTable::sCliffTable.resize(inCount, NULL); return true; },
+        [&](unsigned long inIndex, const unsigned char* inRecord) {
+            EECliffTerrainTable* theCliff = new EECliffTerrainTable;
+            EeDataName theName;
+            if (ee_data_cliff_terrain_from_record(inRecord, theCliff, &theName)) {
+                EEDbCopyName(theCliff->mName, theName);
                 if (!theFound) {
-                    gFirstCliffTerrain = i;
+                    gFirstCliffTerrain = inIndex;
                     theFound = true;
                 }
             } else {
+                delete theCliff;
                 theCliff = NULL;
             }
-            EETerrainTable::sCliffTable[i] = theCliff;
-        }
-    }
-    inFile->Close();
-    return theResult;
+            EETerrainTable::sCliffTable[inIndex] = theCliff;
+        });
 }
 
 // Destroys every cliff terrain and empties the cliff table; returns 0

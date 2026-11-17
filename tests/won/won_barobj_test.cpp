@@ -19,6 +19,13 @@
 // orientation and thumb options, the getters). The traces must be the same, and every reference the bar takes
 // must be given back when it goes. The first 40 sequences and every later one that makes an op or a call none
 // before made are rust/crates/ee_won_gui/src/golden_barobj.txt, which the Rust tests replay; `--print` prints them.
+//
+// WONGUI B round 3: the Rust bar calls Component's methods itself (compobj.rs over the component host) and reads
+// the members in place (compmem.rs). The world's parts and the bar itself are blocks (bounds, flags, parent), and
+// the original statements make the calls the C++ makes: a nonvirtual method (SetPos, SetSize, SetPosSize, the base
+// Component::SetEnabled) is compobj's, a virtual one (SetVisible, SetEnabled, Invalidate, GetMouseChild) the
+// component host's op, an inline member read (Left .. Height, IsDisabled, mParent) the block's. The moves' bounds
+// are traced at PositionChanged and the size change.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -28,6 +35,7 @@
 #include <set>
 #include "rust/won_gui/barobj.h"
 #include "rust/won_gui/compmem.h"
+#include "rust/won_gui/compobj.h"
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/guiscroll.h"
@@ -45,30 +53,23 @@ static unsigned Rand() { sSeed = sSeed * 1103515245u + 12345u; return (sSeed >> 
 static unsigned R(unsigned n) { return n ? Rand() % n : 0; }
 
 struct HostComp {
-    int x, y, w, h;
-    bool visible, enabled, mine;
+    EeWonCompMembers m; // the block compmem.rs reads (a part of the bar: its parent the bar, 0x54)
     int flags, held;
 };
+typedef EeWonComp K;
 struct HostEvent {
     int type;
     intptr_t comp;
 };
 static std::map<intptr_t, HostComp> sComps;
 
-// the Rust reads the components' members from compmem.rs's blocks: each read gets a block filled from the world
-static EeWonCompMembers sFillBlock;
-static EeWonCompMembers* FillBlock(intptr_t c)
-{
-    memset(&sFillBlock, 0, sizeof(sFillBlock));
-    if (sComps.count(c) == 0) return &sFillBlock;
-    const HostComp& k = sComps[c];
-    sFillBlock.bounds.x = k.x; sFillBlock.bounds.y = k.y; sFillBlock.bounds.width = k.w; sFillBlock.bounds.height = k.h;
-    return &sFillBlock;
-}
+// the bar's own block (0x54: its size and disabled flag) and the copied bar's (0x55)
+static EeWonCompMembers sSelf, sOther;
+static EeWonCompMembers& Blk(intptr_t c) { return c == 0x54 ? sSelf : c == 0x55 ? sOther : sComps[c].m; }
+static EeWonCompMembers* Resolve(intptr_t c) { return &Blk(c); }
 static std::map<intptr_t, HostEvent> sEvents;
 static intptr_t sNextId;
 static int sWidth, sHeight;
-static bool sDisabled;
 static intptr_t sMouseChild;
 static int sMouseX, sMouseY;
 static std::vector<std::string> sTrace;
@@ -84,12 +85,14 @@ static void Line(const char* f, long long a, long long b = 0, long long c = 0, l
 static intptr_t NewComp(int w, int h)
 {
     HostComp c;
-    c.x = (int)R(30); c.y = (int)R(30); c.w = w; c.h = h;
-    c.visible = R(5) != 0; c.enabled = true; c.mine = false; c.flags = 0; c.held = 0;
+    memset(&c.m, 0, sizeof(c.m));
+    c.m.bounds.x = (int)R(30); c.m.bounds.y = (int)R(30); c.m.bounds.width = w; c.m.bounds.height = h;
+    if (R(5) == 0) c.m.bits |= 0x1; // invisible
+    c.flags = 0; c.held = 0;
     intptr_t id = 0x2000 + (++sNextId);
     sComps[id] = c;
-    Line("comp %llx %lld %lld %lld %lld", (long long)id, c.x, c.y, c.w, c.h);
-    sTrace.back() += c.visible ? " 1" : " 0";
+    Line("comp %llx %lld %lld %lld %lld", (long long)id, c.m.bounds.x, c.m.bounds.y, w, h);
+    sTrace.back() += (c.m.bits & 0x1) ? " 0" : " 1";
     return id;
 }
 
@@ -101,43 +104,41 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
     int n = (int)inOp;
     switch (inOp) {
     // pure reads: not traced
-    case Op::Get: return (Fd)a == Fd::Width ? sWidth : (Fd)a == Fd::Height ? sHeight : 0;
-    case Op::ChildLeft: return sComps[a].x;
-    case Op::ChildTop: return sComps[a].y;
-    case Op::ChildWidth: return sComps[a].w;
-    case Op::ChildHeight: return sComps[a].h;
-    case Op::ChildIsMine: return sComps[a].mine ? 1 : 0;
-    case Op::IsDisabled: return sDisabled ? 1 : 0;
-    case Op::MouseChild: return sMouseChild;
     case Op::EventType: return sEvents[a].type;
     case Op::EventComponent: return sEvents[a].comp;
     case Op::GetMousePos: *(int*)a = sMouseX; *(int*)b = sMouseY; return 0;
     // what listeners receive: the type GuiHost.cpp fires
     case Op::FireEvent: Line("fire %lld", ee_won_gui_event_type((EeWonGuiEvent)a)); return 0;
-    case Op::ChildSetPosSize: {
-        const EeWonRect4* q = (const EeWonRect4*)b;
-        HostComp& k = sComps[a];
-        k.x = q->x; k.y = q->y; k.w = q->w; k.h = q->h;
-        Line("%lld pos-size %llx %lld %lld %lld", n, (long long)a, q->x, q->y, q->w);
-        sTrace.back() += " " + std::to_string(q->h);
-        return 0;
+    case Op::Comp: {
+        // the component host: a component's virtual or service (b the component)
+        sOpsMet.insert(1000 + (int)a);
+        EeWonCompMembers& m = Blk(b);
+        switch ((K)a) {
+        case K::VPositionChanged: case K::VSizeChanged:
+            Line("%lld comp %lld %llx at %lld %lld", n, (long long)a, (long long)b, m.bounds.x, m.bounds.y);
+            sTrace.back() += " " + std::to_string(m.bounds.width) + " " + std::to_string(m.bounds.height);
+            return 0;
+        // the world's SetEnabled and SetVisible: the flag (the replay keeps the same rule)
+        case K::VSetEnabled: if (c) m.bits &= ~0x80; else m.bits |= 0x80; break;
+        case K::VSetVisible: if (c) m.bits &= ~0x1; else m.bits |= 0x1; break;
+        case K::VMouseChild: r = b == 0x54 ? sMouseChild : 0; break;
+        default: break;
+        }
+        Line("%lld comp %lld %llx %lld -> %llx", n, (long long)a, (long long)b, (long long)c, (long long)r);
+        return r;
     }
-    case Op::ChildSetPos: sComps[a].x = (int)b; sComps[a].y = (int)c; break;
-    case Op::ChildSetSize: sComps[a].w = (int)b; sComps[a].h = (int)c; break;
-    case Op::ChildSetVisible: sComps[a].visible = b != 0; break;
-    case Op::ChildSetEnabled: sComps[a].enabled = b != 0; break;
     case Op::ChildHold: sComps[a].held++; break;
     case Op::ChildRelease: sComps[a].held--; break;
-    case Op::AddChild: sComps[a].mine = true; break;
+    case Op::AddChild: sComps[a].m.parent = 0x54; break;
     case Op::NewButton: {
         HostComp k;
-        k.x = k.y = k.w = k.h = 0; k.visible = true; k.enabled = true; k.mine = false; k.flags = 0; k.held = 0;
+        memset(&k.m, 0, sizeof(k.m));
+        k.flags = 0; k.held = 0;
         r = 0x2000 + (++sNextId);
         sComps[r] = k;
         break;
     }
     case Op::ButtonSetFlags: if (c) sComps[a].flags |= (int)b; else sComps[a].flags &= ~(int)b; break;
-    case Op::BaseSetEnabled: sDisabled = a == 0; break;
     default: break;
     }
     Line("%lld %llx %llx %llx -> %llx", n, (long long)a, (long long)b, (long long)c, (long long)r);
@@ -147,6 +148,13 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
 static intptr_t H(Op inOp, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0)
 {
     return ScriptedHost((void*)0x54, inOp, a, b, c, 0);
+}
+// a component's virtual (the component host's op, as the C++ dispatches it)
+static intptr_t HK(K k, intptr_t comp, intptr_t c = 0) { return ScriptedHost((void*)comp, Op::Comp, (intptr_t)k, comp, c, 0); }
+// a nonvirtual Component method (compobj's, over the component host)
+static intptr_t KC(intptr_t comp, EeWonCompCall k, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0)
+{
+    return ee_won_comp_call((void*)comp, ScriptedHost, k, a, b, c);
 }
 
 // ---- the original (Scrollbar.cpp; the base Container, the parts and the events through the host)
@@ -169,10 +177,10 @@ struct Ptr {
 };
 struct Comp {
     intptr_t id;
-    int Left() { return (int)H(Op::ChildLeft, id); }
-    int Top() { return (int)H(Op::ChildTop, id); }
-    int Width() { return (int)H(Op::ChildWidth, id); }
-    int Height() { return (int)H(Op::ChildHeight, id); }
+    int Left() { return Blk(id).bounds.x; }
+    int Top() { return Blk(id).bounds.y; }
+    int Width() { return Blk(id).bounds.width; }
+    int Height() { return Blk(id).bounds.height; }
 };
 static Comp C(intptr_t id) { Comp c; c.id = id; return c; }
 struct Scrollbar {
@@ -195,9 +203,9 @@ struct Scrollbar {
         this->mMinThumbSize = 10;
         this->mDragX = this->mDragY = 0;
     }
-    int Width() { return (int)H(Op::Get, (intptr_t)Fd::Width); }
-    int Height() { return (int)H(Op::Get, (intptr_t)Fd::Height); }
-    bool IsDisabled() { return H(Op::IsDisabled) != 0; }
+    int Width() { return sSelf.bounds.width; }
+    int Height() { return sSelf.bounds.height; }
+    bool IsDisabled() { return (sSelf.bits & 0x80) != 0; }
     int S_Left(intptr_t c) { return this->mVertical?C(c).Left():C(c).Top(); }
     int S_Top(intptr_t c) { return this->mVertical?C(c).Top():C(c).Left(); }
     int S_Bottom(intptr_t c) { return this->mVertical?C(c).Top()+C(c).Height():C(c).Left()+C(c).Width(); }
@@ -207,20 +215,21 @@ struct Scrollbar {
     int S_Width(Scrollbar*) { return this->mVertical?this->Width():this->Height(); }
     void S_SetPos(intptr_t c, int x, int y)
     {
-        if (this->mVertical) H(Op::ChildSetPos, c, x, y);
-        else H(Op::ChildSetPos, c, y, x);
+        if (this->mVertical) KC(c, EeWonCompCall::SetPos, x, y);
+        else KC(c, EeWonCompCall::SetPos, y, x);
     }
     void S_SetSize(intptr_t c, int width, int height)
     {
-        if (this->mVertical) H(Op::ChildSetSize, c, width, height);
-        else H(Op::ChildSetSize, c, height, width);
+        if (this->mVertical) KC(c, EeWonCompCall::SetSize, width, height);
+        else KC(c, EeWonCompCall::SetSize, height, width);
     }
     void S_SetPosSize(intptr_t c, int x, int y, int width, int height)
     {
         EeWonRect4 r;
         if (this->mVertical) { r.x = x; r.y = y; r.w = width; r.h = height; }
         else { r.x = y; r.y = x; r.w = height; r.h = width; }
-        H(Op::ChildSetPosSize, c, (intptr_t)&r);
+        int s[2] = {r.w, r.h};
+        KC(c, EeWonCompCall::SetPosSize, r.x, r.y, (intptr_t)s);
     }
     void CopyAttributes(Scrollbar* theCopyFrom)
     {
@@ -231,7 +240,7 @@ struct Scrollbar {
     }
     void AddedToParent()
     {
-        if (H(Op::ChildIsMine, this->mUpArrow.get()) == 0)
+        if (Blk(this->mUpArrow.get()).parent != 0x54) // mUpArrow->mParent != this
             this->AddControls();
         H(Op::BaseAddedToParent);
     }
@@ -262,10 +271,10 @@ struct Scrollbar {
         anIn.change_pos = changePos;
         EeWonThumbOut anOut = ee_won_gui_thumb_layout(anIn);
         if (anOut.hidden) {
-            H(Op::ChildSetVisible, this->mThumb.get(), 0);
+            HK(K::VSetVisible, this->mThumb.get(), 0);
             return;
         }
-        H(Op::ChildSetVisible, this->mThumb.get(), !this->IsDisabled());
+        HK(K::VSetVisible, this->mThumb.get(), !this->IsDisabled());
         int aThumbWidth = this->S_Width(this->mThumb.get());
         if (aThumbWidth == 0)
             aThumbWidth = this->S_Width(this);
@@ -289,7 +298,7 @@ struct Scrollbar {
     void MouseDown(int x, int y, int theButton)
     {
         H(Op::BaseMouseDown, x, y, theButton);
-        if (theButton == 0 && H(Op::MouseChild) == this->mThumb.get()) {
+        if (theButton == 0 && HK(K::VMouseChild, 0x54) == this->mThumb.get()) {
             this->mDragX = x - C(this->mThumb.get()).Left();
             this->mDragY = y - C(this->mThumb.get()).Top();
         }
@@ -297,7 +306,7 @@ struct Scrollbar {
     void MouseDrag(int x, int y)
     {
         H(Op::BaseMouseDrag, x, y);
-        if (H(Op::MouseChild) != this->mThumb.get())
+        if (HK(K::VMouseChild, 0x54) != this->mThumb.get())
             return;
         int dx = (x - C(this->mThumb.get()).Left()) - this->mDragX;
         int dy = (y - C(this->mThumb.get()).Top()) - this->mDragY;
@@ -309,7 +318,7 @@ struct Scrollbar {
         aNewY = aTop;
         if (aNewY != this->S_Top(this->mThumb.get())) {
             this->S_SetPos(this->mThumb.get(), this->S_Left(this->mThumb.get()), aNewY);
-            H(Op::ChildInvalidate, this->mScrollRect.get());
+            HK(K::VInvalidate, this->mScrollRect.get());
         }
         if (this->mPosition != oldPosition)
             Line("fire %lld", WONAPI::ComponentEvent_Scroll); // Fn2F5380(ComponentEvent_Scroll, 0)
@@ -344,18 +353,18 @@ struct Scrollbar {
         if (this->mPosition == anOldPosition)
             return;
         this->LayoutThumb(true);
-        H(Op::ChildInvalidate, this->mScrollRect.get());
+        HK(K::VInvalidate, this->mScrollRect.get());
         Line("fire %lld", WONAPI::ComponentEvent_Scroll);
     }
     void SetEnabled(bool isEnabled)
     {
         if (isEnabled == !this->IsDisabled())
             return;
-        H(Op::BaseSetEnabled, isEnabled);
-        H(Op::ChildSetEnabled, this->mUpArrow.get(), isEnabled);
-        H(Op::ChildSetEnabled, this->mDownArrow.get(), isEnabled);
+        KC(0x54, EeWonCompCall::SetEnabled, isEnabled); // Component::SetEnabled
+        HK(K::VSetEnabled, this->mUpArrow.get(), isEnabled);
+        HK(K::VSetEnabled, this->mDownArrow.get(), isEnabled);
         if (this->mTotalSize > this->mPageSize)
-            H(Op::ChildSetVisible, this->mThumb.get(), isEnabled);
+            HK(K::VSetVisible, this->mThumb.get(), isEnabled);
     }
     Ptr& Part(int i) { return i == 0 ? mUpArrow : i == 1 ? mDownArrow : i == 2 ? mScrollRect : mThumb; }
 };
@@ -470,6 +479,7 @@ static void Run(bool inRust)
         if (DR(4) == 0) { int t = sWidth; sWidth = sHeight; sHeight = t; }
         a = sWidth; b = sHeight;
         Line("size %lld %lld", sWidth, sHeight);
+        sSelf.bounds.width = sWidth; sSelf.bounds.height = sHeight;
         break;
     case kDown: case kDrag:
         a = (int)DR(sWidth + 20) - 10; b = (int)DR(sHeight + 20) - 10; c = k == kDown ? DR(3) : 0;
@@ -520,7 +530,9 @@ static std::vector<std::string> RunSide(bool inRust, unsigned inSeq, int inCalls
     sWidth = 8 + (int)DR(20);
     sHeight = 40 + (int)DR(300);
     if (!aVertical) { int t = sWidth; sWidth = sHeight; sHeight = t; }
-    sDisabled = false;
+    memset(&sSelf, 0, sizeof(sSelf)); memset(&sOther, 0, sizeof(sOther));
+    sSelf.bounds.width = sWidth; sSelf.bounds.height = sHeight;
+    ee_won_comp_host_world(ScriptedHost);
     sMouseChild = 0; sMouseX = sMouseY = 0;
     for (int i = 0; i < 4; i++) sParts[i] = 0;
     char aLine[100];
@@ -549,7 +561,7 @@ static std::vector<std::string> RunSide(bool inRust, unsigned inSeq, int inCalls
 
 int main(int argc, char** argv)
 {
-    ee_won_comp_members_resolver(FillBlock);
+    ee_won_comp_members_resolver(Resolve);
     bool aPrint = argc > 1 && strcmp(argv[1], "--print") == 0;
     // the events a component object fires are the original enum's types
     CHECK(ee_won_gui_event_type(EeWonGuiEvent::Scroll) == WONAPI::ComponentEvent_Scroll);
