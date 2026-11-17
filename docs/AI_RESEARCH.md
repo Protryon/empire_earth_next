@@ -6427,6 +6427,77 @@ cell.
 - the Prehistoric save (18.8 minutes, food-bound, the citizens free below 50 workers: below 35 the Stone Age comes
   at 22.4 but the games go 19-2-11).
 
+The owner took the 5-minute advance (2026-11-16): "an epoch up is a huge advantage, even if the enemy has more units".
+
+### 8.99 classic_lua: the building counts' stone gate and the citizens past the gather capacity (2026-11-17, EE-SIM)
+
+**The question** (the owner, after §8.98): fix the two leaks §8.98 found, then win back army and wins without slowing
+the epochs. The 5-minute advance stays, and so does the "always" reserve.
+
+**The two leaks:**
+- **The stone gate.** The building counts ran only with wood and stone both at 300 or more (main.lua
+  enable_managers, the classic's enable_stock_build). Every building the counts queue costs wood alone, except the
+  towers, the temple, the university and the hospital, which also take stone. So stone, which went to towers and walls,
+  held back the granary, the farms and the barracks. With the 5-minute advance, the first granary came a median 17.2
+  minutes after the Copper Age.
+- **The citizens past the room.** 60-90 of 150-180 citizens were on wood, with a wood stock of 5,000-11,000. Gold
+  and iron are capped by their sites x mining_limit, food by the bushes and farms.
+
+**The variants** (Hard, Small, 90 min, against Age of AI, all with the 5-minute advance). The baseline is §8.98's change
+on the same build. Army and Age of AI's citizens are the means at the end:
+
+| variant | seeds | W-L-C | Copper | Bronze | Dark | food income /min | granary after Copper | army / AoA citizens / wood stock |
+|---|---|---|---|---|---|---|---|---|
+| baseline | 64 | 44-6-14 | 63 @ 51.7 | 52 @ 76.7 | 9 @ 86.2 | 184 | 17.2 min | 56.3 / 86.5 / 2389 |
+| **A** the counts on wood or stone, a building queued when the stock pays it | 64 | 39-5-20 | 61 @ 51.6 | 53 @ 76.0 | 11 @ 86.0 | 189 | 8.2 | 60.6 / 95.3 / 2142 |
+| **B** spare gatherers to farms: a granary a minute while 10+ are spare and food is at its room | 64 | 45-5-14 | 63 @ 51.7 | 45 @ 76.9 | 14 @ 86.9 | 208 | 1.3 | 58.2 / 86.1 / 1314 |
+| **A + B (kept)** | 64 | **46-5-13** | 61 @ 51.6 | 51 @ **75.4** | 8 @ 85.6 | **208** | 3.6 | 54.7 / 93.2 / 1048 |
+| spare gatherers: one more gold or iron centre a minute while those are at their room | 32 | 24-1-7 | 32 @ 52.1 | 26 @ 76.8 | 5 | 190 | | 55.1 / 74.2 / 2428 |
+| A + that | 32 | 21-2-9 | 31 @ 53.2 | 26 @ 75.0 | 8 | 196 | 7.6 | 64.5 / 89.8 / 2123 |
+| fewer citizens: the target capped at the gather capacity + 20 | 32 | 20-3-9 | 32 @ 51.6 | 27 @ 74.8 | 6 | 190 | | 55.3 / 74.6 / 753 |
+
+On seeds 2-33 the baseline is 27-1-4, Bronze 28.
+
+- **Fewer citizens.** Capping the citizen target cleared the wood stock but did not help the army or the wins.
+- **More gold and iron sites.** One more centre while gold and iron were at their room seldom fired. On a small map
+  the other sites lie by the enemy, so the capacity leaves them out (§8.88).
+- **Farms.** Sending the spare citizens to farms takes food income up by 13% and halves the wood stock.
+- **A + B.** Together the two win back two games on 64 seeds and keep the Bronze Age's pace (median 75.4 against 76.7,
+  51 seats against 52, Dark 8 against 9). They do not win back the army: 54.7 against 56.3.
+
+**The stuck Stone Age** (seeds 19, 39 and 50; the baseline already has seed 39, and seed 50 reached Copper only at 84.5
+minutes). The Copper advance is ordered, but it costs 1584/844/844 as the player pays it. The only iron site the town
+may use (the others lie by the enemy) gives 6 gatherers. Then the site runs out, the reserve lets go (claim_needed: no
+gatherer on a short resource) and the army spends the iron. A centre by the enemy is never claimed. Variant A changes
+the games' course, and seeds 19 and 50 then stay in the Stone Age. Two fixes were tried on seed 50, and neither was it:
+- the epoch at the least busy producer when no town centre is idle (two town centres were training citizens);
+- the SOL buildings ordered again after the advance.
+
+**The other cells** (seeds 2-33, the baseline is §8.98's change):
+
+| cell | W-L-C | Stone | Copper | Bronze | Dark |
+|---|---|---|---|---|---|
+| Continental Medium, baseline | 11-7-14 | 32 @ 34.4 | 32 @ 57.2 | 18 @ 74.8 | 0 |
+| Continental Medium, A + B | **14-6-12** | 32 @ 32.1 | 31 @ 52.3 | **22** @ 76.2 | 1 |
+| Small Islands, baseline | 17-5-10 | 32 @ 34.7 | 30 @ 55.5 | 16 @ 78.7 | 1 |
+| Small Islands, A + B | 17-6-9 | 32 @ 37.0 | 29 @ 56.4 | 15 @ 79.5 | 0 |
+| classic_lua mirror (64 seats), baseline | 1 seat defeated | 61 @ 28.0 | 59 @ 52.3 | 32 @ 74.9 | 3 |
+| classic_lua mirror, A + B | no seat defeated | 63 @ 27.8 | 61 @ 51.8 | 38 @ 79.5 | 4 |
+
+- **Continental Medium:** three of §8.98's eight lost wins come back, and the Bronze Age comes in 4 more games.
+- **Small Islands:** the Stone Age is 2.3 minutes later. The counts now run in the Prehistoric too and spend the wood
+  sooner.
+- **Mirror:** the citizens lost per seat are 47.8 in both.
+
+No game was lost by defeat against Age of AI. Determinism (seed 2, `--repeat 2`): identical (17,848 lines). The
+committed scripts give the benched variant's traces byte for byte (seeds 2 and 3). 0 script errors from classic_lua.
+
+**Still open:**
+- the army (A + B do not win it back);
+- the iron-starved maps: the sites by the enemy, the reserve let go when the last site runs out;
+- the islands' later Stone Age with A;
+- the Prehistoric save.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
