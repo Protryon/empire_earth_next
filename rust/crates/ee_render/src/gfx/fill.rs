@@ -429,7 +429,11 @@ fn bars<H: FillHost>(
 /// offset, turning parts, bars, name, frames, orientation, command, morale ring, scaffolding and build height; a
 /// placed object's place on its footprint or its carrier's waypoint) and its ground height. `out.source` is set. The
 /// result's `circle`: the priest tower's range circle is drawn; `fighting`: what it adds to the frame's count.
-pub fn fill_unit_fields<H: FillHost>(
+///
+/// # Safety
+/// `out` is a valid render unit head (the host gets it back for the vectors and the name); `frame.player` is a
+/// live player.
+pub unsafe fn fill_unit_fields<H: FillHost>(
     t: &WorldRead,
     unit: UnitView<'_>,
     out: *mut EeGfxFillUnit,

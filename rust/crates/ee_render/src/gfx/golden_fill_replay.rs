@@ -493,6 +493,8 @@ fn parse_unit(t: &[&str]) -> KUnit {
 
 // ---- a frame's fake world
 
+// boxed: the fakes' addresses are their handles, taken while the vectors still grow
+#[allow(clippy::vec_box)]
 struct World {
     units: Vec<Box<FUnit>>,
     classes: Vec<Box<FClass>>,
@@ -969,7 +971,8 @@ fn the_unit_and_object_fields_replay_the_cpp_bit_for_bit() {
                     b
                 });
                 let mut host = Host { g: &g, f, w: &w, out: Out { bars, ..Out::default() } };
-                fill_unit_fields(&t, unit, &mut head, &frame, &mut host);
+                // SAFETY: the head is a local; the fake world lives through the frame
+                unsafe { fill_unit_fields(&t, unit, &mut head, &frame, &mut host) };
                 assert_eq!(head_words(&head), head_words(&want.head), "frame {k} unit entry {i}: {line:?}");
                 assert_eq!(
                     host.out.bars.iter().map(|b| b.to_bits()).collect::<Vec<_>>(),
@@ -1047,6 +1050,8 @@ fn the_unit_and_object_fields_replay_the_cpp_bit_for_bit() {
 }
 
 #[test]
+// c_long is 32 or 64 bits by the data model
+#[allow(clippy::unnecessary_cast)]
 fn the_effect_readers_and_the_drawn_facts_read_the_golden_world() {
     use crate::gfx::effect_views;
     use crate::gfx::fill::unit_drawn_facts;
