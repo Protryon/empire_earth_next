@@ -280,6 +280,10 @@ again for 6 hours), and starts games by `--priority` (`confirm` before `explore`
 played by the requesting checkout's own tools and inputs, its key checked again when it starts. Killing a bench drops
 its queued games (its running ones finish, into the cache). Logs: the main checkout's `build/sim/queue/queue.log`,
 each game's files in `build/sim/queue/jobs/`.
+Each slot keeps one EE-SIM process that plays its games one after the other (`EE-SIM --games`, below; `bench.py serve
+--single`: one process per game): a slot worker (`bench.py slotwork`, log `build/sim/queue/slot-<k>.log`) per
+slot and checkout, ended after 60 s idle and on pause or stop. A direct bench does the same with `--batch`. A game
+that fails before its game ran is retried in a process of its own.
 
 ```
 python -I tools/sim_bench.py --name v1 --queue --priority confirm --seeds 2-65 --engine classic,ageofai --cache
@@ -294,8 +298,30 @@ random, an AI's id such as boom, or next for the manifest's first AI; docs/AI_LU
 boxes, as the lobby's host does: one value for every seat, or a comma list by seat. `classic` is the lobby's Classic:
 the AI the manifest marks `"classic": true` (classic_lua, the classic computer player's port to Lua). Every computer
 player runs a Lua AI: the C++ classic's decision code was deleted in stage 5 (docs/AI_RESEARCH.md §8.90). The report (JSON) holds the outcome, the game time and per player the
-epoch, citizens, army, buildings, population and resources every `--sample-seconds`. See PORT_LEARNINGS.md "The
+epoch, citizens, army, buildings, population and resources every `--sample-seconds`, and `wall_phases` (the wall
+seconds of start-up, menus, lobby, loading and game). See PORT_LEARNINGS.md "The
 headless simulation" for what it shares with the game and where it differs.
+
+**Several games a process.** `EE-SIM.exe --games FILE` (or `-`: stdin) plays one game a line, one after the other, in
+one process: the start-up is paid once, each game is left as a player leaves it (CancelGame, the post-game summary)
+and the next starts from the single player menu. A line holds the game's options (`--seed --ai --map-size --map-type
+--difficulty --lobby --engine --game-seconds ...`, `--out DIR` for DIR/report.json, trace.txt and err.txt, or
+`--report`, `--trace`, `--err` FILE); the command line's other options (`--set`, `--cheats`, `--personality`,
+`--ai-trace`, `--port-offset`, ...) hold for every game. A line is read when the last game has ended, so a bench
+can feed games from a queue. stderr carries `EE-SIM GAME k BEGIN id`, `EE-SIM GAME k END code outcome` and `EE-SIM
+BATCH END n`. Each game's report (its wall times aside) and trace equal the game's run alone, in any order
+(PORT_LEARNINGS.md "Several games a process"). A failed game (an error, the wall timeout) ends its process. From
+Python, `tools/sim.py`'s `Batch` keeps one process per slot and starts a new one after a failure or when the process
+options or the environment change:
+
+```
+import sim
+stage = sim.prepare("open", "slot0")
+with sim.Batch(stage) as b:     # popen=dict(creationflags=...), wrap=nice-wrapper, log=FILE: optional
+    r = b.play(["--seed", "3", "--engine", "classic,boom", "--ai-trace", "--port-offset", "2000",
+                "--report", "r.json", "--trace", "t.txt"], err="e.txt")   # -> rc, outcome, wall, report, restarted
+results = sim.play_games([dict(args=[...], err=...), ...], stage)          # a list, a failed start retried once
+```
 
 **Benches on a Linux machine** (headless, many cores; Ubuntu 24.04 x86_64). `python3 -I tools/xbuild.py sim` builds
 the game and links `ee-sim` beside it (`build/xbuild/linux-x86_64/game/`): the same exe, started as the simulation by

@@ -26,6 +26,12 @@ worker.log; kept 6 hours).
 - **A requester killed** (its connection gone): its queued games no other requester waits for are dropped; its
   running games finish (and go to the cache with --cache).
 - **pause** finishes the running games and starts none until resume; it waits for them unless --no-wait.
+- **One EE-SIM process per slot** (serve's default; --single: one process per game). Slot k's worker
+  (`<checkout>/tools/bench.py slotwork`, started for the first game of a checkout in that slot) keeps a sim.Batch: its
+  EE-SIM plays the slot's games one after the other (EE-SIM --games: the start-up paid once; each game's report and
+  trace as alone), a new process when the exe, the process options or the EE_* variables change. A game that fails
+  before its game ran is retried in a process of its own (sim_bench.play). A worker idle 60 s, and every worker on
+  pause or stop, ends with its EE-SIM; its log is build/sim/queue/slot-<k>.log.
 """
 import argparse
 import heapq
@@ -58,7 +64,10 @@ def main_checkout():
 
 
 def state_dir():
-    return main_checkout() / "build" / "sim" / "queue"
+    """build/sim/queue of the main checkout (EE_BENCH_QUEUE_DIR: another, e.g. a second daemon's for a test, with
+    EE_BENCH_QUEUE_PORT)"""
+    d = os.environ.get("EE_BENCH_QUEUE_DIR")
+    return pathlib.Path(d) if d else main_checkout() / "build" / "sim" / "queue"
 
 
 # ------------------------------------------------------------------------------------------------ the protocol
@@ -147,11 +156,34 @@ class Job:
         self.who = spec.get("who", "?")
 
 
+class SlotWorker:
+    """a slot's persistent worker (bench.py slotwork) and its EE-SIM process"""
+
+    def __init__(self, tool, proc):
+        self.tool, self.proc = tool, proc
+        self.busy = False
+        self.idle_since = time.time()
+
+    def close(self):
+        def end(proc):
+            try:
+                proc.stdin.close()   # EOF: the worker closes its EE-SIM and ends
+                proc.wait(timeout=60)
+            except (OSError, subprocess.TimeoutExpired):
+                proc.kill()
+        threading.Thread(target=end, args=(self.proc,), daemon=True).start()
+
+
+WORKER_IDLE_SECONDS = 60
+
+
 class Daemon:
-    def __init__(self, jobs, port_base):
+    def __init__(self, jobs, port_base, batch=True):
         self.lock = threading.Lock()
         self.idle = threading.Condition(self.lock)
         self.max_jobs, self.port_base = jobs, port_base
+        self.batch = batch        # one EE-SIM process per slot (SlotWorker), else one per game
+        self.workers = {}         # slot -> SlotWorker
         self.paused = self.stopping = False
         self.heap = []            # (order, job id)
         self.jobs = {}            # job id -> queued or running Job
@@ -185,6 +217,9 @@ class Daemon:
         d.mkdir(parents=True, exist_ok=True)
         spec = dict(job.spec, slot=f"queue-{slot}", port=self.port_base + 64 * slot, dir=str(d), key=job.key)
         (d / "job.json").write_text(json.dumps(spec, indent=1))
+        if self.batch:
+            self.start_batch(job, slot, spec, d)
+            return
         log = open(d / "worker.log", "wb")
         kw = dict(stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
         if sys.platform == "win32":
@@ -201,6 +236,70 @@ class Daemon:
         self.log(f"start {job.id} slot {slot} {job.spec['rid']} for {job.who} (priority {job.priority}, "
                  f"{len(job.waiters)} waiting)")
         threading.Thread(target=self.watch, args=(job, d), daemon=True).start()
+
+    def start_batch(self, job, slot, spec, d):
+        """the game to the slot's worker (started, or restarted for another checkout's tools) (under the lock)"""
+        w = self.workers.get(slot)
+        if w is not None and (w.tool != spec["tool"] or w.proc.poll() is not None):
+            del self.workers[slot]
+            w.close()
+            w = None
+        if w is None:
+            log = open(self.dir / f"slot-{slot}.log", "ab")
+            kw = dict(stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log, text=True, bufsize=1)
+            if sys.platform == "win32":
+                kw["creationflags"] = subprocess.CREATE_NO_WINDOW
+            try:
+                proc = subprocess.Popen([sys.executable, "-I", spec["tool"], "slotwork"], **kw)
+            except OSError as e:
+                log.close()
+                self.finish(job, dict(rc=-4, error=f"slot worker did not start: {e}"), d)
+                return
+            log.close()
+            w = self.workers[slot] = SlotWorker(spec["tool"], proc)
+            self.log(f"slot {slot}: worker pid {proc.pid} ({spec['tool']})")
+        w.busy = True
+        job.proc = w.proc
+        job.state, job.slot, job.started = "running", slot, time.time()
+        self.running[slot] = job
+        self.log(f"start {job.id} slot {slot} {job.spec['rid']} for {job.who} (priority {job.priority}, "
+                 f"{len(job.waiters)} waiting, slot process)")
+        threading.Thread(target=self.watch_batch, args=(job, w, d), daemon=True).start()
+
+    def watch_batch(self, job, w, d):
+        line = ""
+        try:
+            w.proc.stdin.write(str(d / "job.json") + "\n")
+            w.proc.stdin.flush()
+            line = w.proc.stdout.readline()
+        except OSError:
+            pass
+        try:
+            result = json.loads((d / "result.json").read_text())
+        except (OSError, ValueError):
+            result = dict(rc=-1, error=f"slot worker ended without a result ({line.strip() or 'no answer'}; see "
+                                       f"{self.dir / f'slot-{job.slot}.log'})")
+        with self.lock:
+            w.busy = False
+            w.idle_since = time.time()
+            if not line and self.workers.get(job.slot) is w:   # the worker died: the next game starts a new one
+                del self.workers[job.slot]
+                w.close()
+            self.running.pop(job.slot, None)
+            self.finish(job, result, d)
+            self.schedule()
+            self.idle.notify_all()
+
+    def reap_workers(self):
+        """end the idle slot workers: idle 60 s, past the slot count, or all on pause or stop (under the lock)"""
+        for slot, w in list(self.workers.items()):
+            if w.busy:
+                continue
+            if self.paused or self.stopping or slot >= self.max_jobs or \
+                    time.time() - w.idle_since > WORKER_IDLE_SECONDS or w.proc.poll() is not None:
+                self.log(f"slot {slot}: worker pid {w.proc.pid} ends")
+                del self.workers[slot]
+                w.close()
 
     def watch(self, job, d):
         rc = job.proc.wait()
@@ -373,7 +472,8 @@ class Daemon:
         last_prune = 0
         while True:
             with self.lock:
-                if self.stopping and not self.running:
+                self.reap_workers()
+                if self.stopping and not self.running and not self.workers:
                     self.log("stopped")
                     return
             if time.time() - last_prune > 600:
@@ -392,8 +492,9 @@ class Daemon:
 
 # ------------------------------------------------------------------------------------------------ the worker
 
-def work(job_file):
-    """play one queued game with this checkout's sim_bench (the daemon starts it) -> result.json beside the job"""
+def work(job_file, batches=None):
+    """play one queued game with this checkout's sim_bench (the daemon starts it) -> result.json beside the job.
+    batches: the slot worker's sim.Batch by slot (slotwork)"""
     spec = json.loads(pathlib.Path(job_file).read_text())
     out = pathlib.Path(spec["dir"])
     sys.path.insert(0, str(HERE))
@@ -413,11 +514,39 @@ def work(job_file):
             result = dict(rc=-3, error="the game's inputs changed after it was queued (exe, scripts, data or "
                                        "documents): not played")
     if result is None:
-        res = sim_bench.play(run, a, spec["slot"], spec["port"], out)
+        res = sim_bench.play(run, a, spec["slot"], spec["port"], out, batch=batches)
         rep = res.get("report") or {}
         result = dict(rc=res["rc"], wall=res["wall"], lua_errors=res.get("lua_errors", 0), cached=res.get("cached"),
                       outcome=rep.get("outcome"))
     (out / "result.json").write_text(json.dumps(result) + "\n")
+    return 0
+
+
+def slot_work():
+    """a slot's worker (the daemon starts it): a job file a line on stdin, played in the slot's one EE-SIM process
+    (sim_bench.play with a sim.Batch), answered "done FILE" on stdout; EOF closes the EE-SIM process"""
+    proto = sys.stdout
+    sys.stdout = sys.stderr   # (sim_bench's progress to the slot's log)
+    environ = dict(os.environ)
+    batches = {}
+    try:
+        for line in sys.stdin:
+            job_file = line.strip()
+            if not job_file:
+                continue
+            os.environ.clear()
+            os.environ.update(environ)
+            try:
+                work(job_file, batches)
+            except Exception as e:   # noqa: BLE001 (a bad job fails alone; the worker goes on)
+                out = pathlib.Path(json.loads(pathlib.Path(job_file).read_text())["dir"])
+                (out / "result.json").write_text(json.dumps(dict(rc=-5, error=f"slot worker: {e!r}")) + "\n")
+            print(f"[{time.strftime('%H:%M:%S')}] done {job_file}", flush=True)
+            proto.write(f"done {job_file}\n")
+            proto.flush()
+    finally:
+        for b in batches.values():
+            b.close()
     return 0
 
 
@@ -442,17 +571,20 @@ def print_status(st):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0], epilog=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=("serve", "status", "pause", "resume", "jobs", "stop", "work"))
+    ap.add_argument("cmd", choices=("serve", "status", "pause", "resume", "jobs", "stop", "work", "slotwork"))
     ap.add_argument("arg", nargs="?")
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 4) - 2))
     ap.add_argument("--port-base", type=int, default=9000)
     ap.add_argument("--no-wait", action="store_true", help="pause: do not wait for the running games")
+    ap.add_argument("--single", action="store_true", help="serve: one EE-SIM process per game (default: one per slot)")
     ap.add_argument("--json", action="store_true", help="status: the raw status")
     a = ap.parse_args()
     if a.cmd == "work":
         return work(a.arg)
+    if a.cmd == "slotwork":
+        return slot_work()
     if a.cmd == "serve":
-        Daemon(a.jobs, a.port_base).serve()
+        Daemon(a.jobs, a.port_base, batch=not a.single).serve()
         return 0
     try:
         if a.cmd == "status":

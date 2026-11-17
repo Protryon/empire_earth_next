@@ -108,7 +108,7 @@ def slots_index(slot):
 # ------------------------------------------------------------------------------------------------ the cache
 
 CACHE_FORMAT = 2   # 2: the tree hashed without its own Data/ai, Data/db (tree_hash)
-NOT_INPUTS = {"EE_ORIG_SRC_ROOT", "EE_LLVM", "EE_XBUILD_OUT", "EE_SIM_CACHE", "EE_BENCH_QUEUE_PORT"}   # tool settings
+NOT_INPUTS = {"EE_ORIG_SRC_ROOT", "EE_LLVM", "EE_XBUILD_OUT", "EE_SIM_CACHE", "EE_BENCH_QUEUE_PORT", "EE_BENCH_QUEUE_DIR"}   # tool settings
 _memo = {}
 _memo_lock = threading.Lock()
 
@@ -296,18 +296,34 @@ def game_opts(run, args):
     return opts + list(args.sim_arg)
 
 
+BATCHES = {}   # --batch: slot -> sim.Batch
+
+
 def run_one(run, args, slots, out):
     """a run in the next free slot of this bench (its ports: --port-base + 64 per slot)"""
     slot = slots.get()
     try:
-        return play(run, args, slot, args.port_base + 64 * slots_index(slot), out)
+        return play(run, args, slot, args.port_base + 64 * slots_index(slot), out,
+                    batch=BATCHES if args.batch else None)
     finally:
         slots.put(slot)
 
 
-def play(run, args, slot, port_offset, out, quiet=False):
+def slot_batch(batches, slot, stage, args):
+    """the slot's sim.Batch (one EE-SIM process playing the slot's games one after the other), made at its first use"""
+    b = batches.get(slot)
+    if b is None or b.stage != stage:
+        if b is not None:
+            b.close()
+        b = batches[slot] = sim.Batch(stage, popen=priority(args), wrap=lambda cmd: lowered(cmd, args))
+    return b
+
+
+def play(run, args, slot, port_offset, out, quiet=False, batch=None):
     """a run in a slot's stage with that port offset, its files in out -> its result (the cached game's, or the one
-    played; with --cache a finished game is stored)"""
+    played; with --cache a finished game is stored). batch: a dict slot -> sim.Batch (--batch, the queue's slot
+    workers): the game is played by the slot's EE-SIM process after its last game (EE-SIM --games; the same report and
+    trace as alone); a game that fails before its game ran is retried in a process of its own"""
     rid = run["id"]
     report, trace, err = out / f"{rid}.json", out / f"{rid}.trace.txt", out / f"{rid}.err.txt"
     opts = game_opts(run, args)
@@ -333,9 +349,14 @@ def play(run, args, slot, port_offset, out, quiet=False):
     env = run_env(run)
     for attempt in range(2):   # one retry of a start-up fault: no report, or an error before the game ran
         report.unlink(missing_ok=True)
-        with open(err, "w", encoding="utf-8") as f:
-            rc = subprocess.run(lowered(sim.command(run_exe(run, args), stage, opts, cfg), args),
-                                stdout=subprocess.DEVNULL, stderr=f, env=env, **priority(args)).returncode
+        if batch is not None and attempt == 0:
+            b = slot_batch(batch, slot, stage, args)
+            b.exe = run_exe(run, args)
+            rc = b.play(opts, err=err, env=env)["rc"]
+        else:
+            with open(err, "w", encoding="utf-8") as f:
+                rc = subprocess.run(lowered(sim.command(run_exe(run, args), stage, opts, cfg), args),
+                                    stdout=subprocess.DEVNULL, stderr=f, env=env, **priority(args)).returncode
         try:
             rep = json.loads(report.read_text())
         except (OSError, ValueError):
@@ -611,6 +632,9 @@ def main():
     ap.add_argument("--port-base", type=int, default=2000,
                     help="the first slot's port offset (64 more per slot); give benches run at the same time ranges apart, e.g. 2000 and 6000")
     ap.add_argument("--human-defeat", action="store_true", help="let the idle human be defeated")
+    ap.add_argument("--batch", action="store_true",
+                    help="each slot plays its games in one EE-SIM process, one after the other (EE-SIM --games; the "
+                         "start-up paid once; each game's report and trace as alone; a failed game retried alone)")
     ap.add_argument("--normal-priority", action="store_true",
                     help="run the games at normal priority (default: below normal, so that a windowed game or the "
                          "gates keep their CPU while a bench runs; the game's results do not depend on it)")
@@ -743,6 +767,8 @@ def main():
     else:
         results = play(runs)
     pool.shutdown()
+    for b in BATCHES.values():   # (--batch: the slots' processes end)
+        b.close()
     total = time.monotonic() - t0
     # determinism: the repeats of a cell print the same trace
     sys.path.insert(0, str(HERE / "harness"))

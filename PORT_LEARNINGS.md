@@ -1602,6 +1602,57 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   faults at the main menu in `NERecordPlayback::Process`: give concurrent benches ranges apart. A freshly linked exe
   can also take ~100 s to reach the main menu on its first runs with the CPU idle (seen on several new exes at once; probably the virus scanner).
 
+## Several games a process (EE-SIM --games, branch simmulti, 2026-11-16)
+
+- **Where a game's wall time goes now** (Hard Small, 2 AIs, the report's new `wall_phases`): process start ~0.1 s,
+  the engine and database to the main menu ~2.2 s (up to 7 s while other benches load the machine), menus 0.1 s,
+  lobby 4.9 s (fixed sleeps: 1.5 s, 200 ms a change, 1 s), loading 2.8 s, report and exit under 0.4 s (the exit is
+  TerminateProcess). The game itself is no longer 4-7 s: with the Lua AIs a 45-minute game takes ~20 s and a
+  90-minute one ~65-80 s. The overhead a game (~10 s) is a third of a 45-minute game at most.
+- **The AI is two thirds of the game** (tools/sim_profile.py, 90 minutes, classic and boom against Age of AI, the
+  physics thread): EEArtificialIntelligence::Update 67%, of it EECPLuaState::Call 38-40% (luaV_execute's own
+  instructions 7.4% self; the C functions the scripts call, LuaUnit 6%, LuaGet 4%, LuaUnits, LuaTechs, LuaClass;
+  the GC 6%; Lua's realloc 5.7%), the view built per step (EECPNextBuildView) 8.6-9.6%, the save check after each call
+  (EECPLuaState::CheckMemory) 6-9%, the per-unit micro tick 10-11%; the engine (EEPhysics::UpdateUnits) 27%. The
+  heap (RtlAllocateHeap + RtlFreeHeap) is ~10% of the thread, mostly Lua and EECPLuaValue vectors.
+  EETechTreeEpoch::Get's std::map<long, string> lookup is 1.5%. Per player (EE-AIPROF): classic_lua 21-24 s, boom
+  18-20 s, Age of AI 17-19 s of a 90-minute game.
+- **The game supports a second game in a process** (a player quits to the menus and starts another), so a batch
+  leaves each game the player's way: EEUserInterface::CancelGame (the physics stopped, the game media unloaded, a
+  fresh client, LeaveMap: the action queues, the world and the game state cleared), then the post-game summary's exit
+  (EEUIEPGSEExit), which lands on the single player menu (form 6), not the main menu. Fire the summary's exit once and
+  let form 6 settle: a second close, still queued, closed the next lobby ("control 30 is not a combo on the lobby"),
+  and a click into a form still opening was lost (12 of 32 games of the first try).
+- **What the port kept between games**: the computer players' per-player file statics. EECPTrace's counters (the
+  next game's first "cp losses" line counted the units the world clear removed, "cp income" the last game's tail),
+  EECPNextArmy's loss incidents (a heuristic "new game" reset only when the new game's time was below the last one's)
+  and EECPReflexes' cool-downs (militia, naval flee: per player id, so a call late in one game could block one in the
+  next: a behaviour change, not only a trace one). EECPNewGame (ee/EECPTrace.h) clears them in EEWorld's world set-up,
+  before the players are made; they are zero at the process's start, so a single game is unchanged (the 16 games
+  below equal main's exe). The original game's own globals have their resets (EEPPatrolGroup's IDs, the herd counter
+  in EEWorld, the pools, the path manager); the Lua states are made per player per game (EECPNextOpen) and seeded
+  from the game's seed.
+- **The trace's start-up lines**: the AI manifest's line ("EE-AI engine Data\ai\ais.json: ...") is written once, at
+  start-up; the driver keeps the debug strings written before the first game and writes them at the head of every
+  game's trace and log, and drops those between games (a single run has quit by then).
+- **The proof** (16 games: seeds 2-17, the engines classic, boom, ageofai, classic+ageofai, boom+ageofai,
+  boom+classic in turn, Small Continental, Small Islands and Medium Continental in turn, 900 game s; one batch
+  process in the list's order, one in a shuffled order, each game alone, and each game alone with main's EE-SIM.exe):
+  every report (wall fields aside) and every trace (EE-AIPROF lines aside: wall time) identical, 64 of 64.
+- **What it gains**: little now. 45-minute games on 2 slots: 229 games an hour one process a game, 237 in a batch
+  (the start-up's 2.2 s saved, the leave's 0.9 s paid, the second lobby 1 s shorter); 90-minute games 93.2 against
+  94.7 (4 games each; the game parts vary by 10 s from load alone). The game part dominates; the lobby (3.9-4.9 s) and the loading (2.8 s) are the rest.
+- **A lobby without fixed sleeps failed**: counting the lobby updates posted to the UI thread and applied, and waiting
+  for each change's own update, found that most changes (slots to Open, several option combos) post none back (each
+  waited its full 2 s), and with the last fixed second gone the game hung in loading after Start (2 of 2 games in one
+  run, 1 of 4 in another). Reverted; a faster lobby needs to know which change is answered by what.
+- **Crashes**: a failed game (error 2, wall timeout 3) ends its process after its report and END marker; a fault
+  kills it, the frames in the game's own err file (its stderr). tools/sim.py's Batch starts a new process for the next
+  game; sim_bench.play retries a game that failed before its game ran in a process of its own.
+- **Fork after loading (POSIX)** was the alternative: a fresh copy of every global for free, but not on Windows, and
+  the game's threads (UI, graphics, physics, preloading, the local server's) do not survive fork(). The in-process
+  leave is the player's own path, and the proof checks it.
+
 ## macOS playtesting under lldb and ASan (2026-11-06)
 
 - **Play under the debugger.** `tools/play_posix.py` runs the ASan build under `lldb --batch`; a crash, a sanitizer
