@@ -151,6 +151,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
                        "Empire Earth/Empire Earth/EETestFixtureOrders.cpp",
                        # the render phase's snapshot of the world (ee/EERenderSnapshot.h; RUST_PLAN R5a.3)
                        "Empire Earth/Graphics Thread/EERenderSnapshot.cpp",
+                       # TEST ONLY: RFIL, the render fill's capture (EE_RENDER_CAPTURE; ee/EERenderCapture.h, tools/rfil.py)
+                       "Empire Earth/Graphics Thread/EERenderCapture.cpp",
                        # the host of the screens that are Rust's whole: their event class and toolkit and game calls
                        # (ee/EEScreenEvent.h; ee_screens menus.rs: the main menu, the editors' menu, single player, play campaign;
                        # settings_form.rs: the game settings; custom_campaign.rs: the custom campaign form)

@@ -80,6 +80,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEMouse.h"
 #include "ee/EEAreaEffectKindIDs.h"
+#include "ee/EERenderCapture.h"     // RFIL (TEST ONLY)
 #include "rust/base/math.h"   // ee_gfx view.rs: GetUnitOpacity's near fade (RUST_PLAN R4.4)
 #include "rust/render/ge.h"
 #include "rust/render/gfx.h"
@@ -1225,6 +1226,7 @@ void EERenderObject::FillRenderLists()
                 && ((theLive = static_cast<EEUnit*>(gWorld.GetUnit(theRenderUnit.mUnitId))) == NULL
                     || theLive->mHitPoints == 1);
         }
+        EERenderCaptureFill(theInfo, sSwayClock, theCount);   // RFIL (TEST ONLY)
         gB529068 = true;
         if (gMusicFollowsBattle && theTime - sU529090 >= 0xfa) {
             sU529090 = theTime;
