@@ -3,7 +3,7 @@
 
 use std::ffi::{c_char, c_int, c_void};
 
-use crate::plat_ui::event::{SdlDisplayMode, SdlEvent, SdlRect};
+use ee_base::plat_ui::event::{SdlDisplayMode, SdlEvent, SdlRect};
 
 pub enum SdlWindow {}
 pub enum SdlSurface {}

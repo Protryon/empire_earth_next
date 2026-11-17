@@ -38,6 +38,9 @@ LAYOUT = {
     "ee_plat_core": ("ee_base", ["plat_core"]),
     "ee_plat_sys": ("ee_base", ["plat_sys"]),
     "ee_plat_ui": ("ee_base", ["plat_ui"]),
+    # was ("ee_base", ["plat_sdl"]) in the move's commits; then split off by hand into a crate of its own on ee_base,
+    # as it was before: its SDL calls must not share codegen units with the rest of the platform layer (the WON and
+    # network test programs link the library without SDL)
     "ee_plat_sdl": ("ee_base", ["plat_sdl"]),
     "ee_util": ("ee_base", ["util"]),
     "ee_error": ("ee_base", ["error"]),

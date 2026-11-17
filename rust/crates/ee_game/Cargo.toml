@@ -13,6 +13,7 @@ ee_audio = { path = "../ee_audio" }
 ee_base = { path = "../ee_base" }
 ee_data = { path = "../ee_data" }
 ee_net = { path = "../ee_net" }
+ee_plat_sdl = { path = "../ee_plat_sdl" }
 ee_render = { path = "../ee_render" }
 ee_sim = { path = "../ee_sim" }
 ee_ui = { path = "../ee_ui" }
