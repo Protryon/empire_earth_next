@@ -148,6 +148,184 @@ def command(exe, stage, args, config=None):
     return [str(exe), *sim, "--data", str(stage), "--config", str(cfg), *args]
 
 
+# ------------------------------------------------------------------------------------------------ several games a process
+
+# EE-SIM's options that belong to one game (EESim.cpp GameOption; the value-less ones in GAME_FLAGS): a batch process
+# takes them per game, the rest (--set, --cheats, --personality, --ai-trace, --pt-rate, --autosave-ms, --port-offset,
+# --data, --config, --quiet) hold for the process
+GAME_VALUED = {"--seed", "--ai", "--map-size", "--map-type", "--difficulty", "--lobby", "--game-seconds",
+               "--sample-seconds", "--wall-timeout", "--flare", "--volcano", "--engine", "--report", "--trace", "--log",
+               "--err", "--out", "--id"}
+GAME_FLAGS = {"--human-defeat", "--no-human-defeat", "--keep-human"}
+PROCESS_VALUED = {"--set", "--cheats", "--personality", "--pt-rate", "--autosave-ms", "--port-offset", "--data",
+                  "--config"}
+
+
+def split_args(args):
+    """EE-SIM options -> (process options, game options), each in its given order"""
+    proc, game = [], []
+    k = 0
+    while k < len(args):
+        a = args[k]
+        if a in GAME_VALUED or a in PROCESS_VALUED:
+            (game if a in GAME_VALUED else proc).extend(args[k:k + 2])
+            k += 2
+        else:
+            (game if a in GAME_FLAGS else proc).append(a)
+            k += 1
+    return proc, game
+
+
+def game_line(args):
+    """a game's options as a line of EE-SIM --games (EESim.cpp Words: "..." quotes, \\" a quote)"""
+    return " ".join('"' + str(a).replace('"', '\\"') + '"' for a in args)
+
+
+class Batch:
+    """One EE-SIM process that plays games one after another (EE-SIM --games -: one game's options a line on stdin,
+    read when the last game has ended). The start-up (the exe, the database, the menus' media) is paid once; each game
+    is left as a player leaves it and the next one starts from the main menu, with a report and trace equal to the
+    game's run alone (PORT_LEARNINGS.md "The headless simulation", several games a process).
+
+      with sim.Batch(stage, popen=dict(creationflags=...)) as b:
+          r = b.play(["--seed", "3", "--engine", "classic,boom", "--ai-trace", "--report", rep, "--trace", tr],
+                     err=err_path, env=dict(os.environ, EE_AI_EXP="x"))
+          # r: dict(rc, outcome, wall, game_wall, restarted, report: the parsed report or None)
+
+    play() takes a run's whole option list: the game's options go on the line, the process's (--set, --cheats,
+    --personality, --ai-trace, ...) and the environment start the process; a game whose process options or environment
+    differ from the running process's starts a new process first. A game that fails (rc 2 or 3: an error, the wall
+    timeout) or crashes ends its process; the next play() starts a new one. err (the game's stderr: its progress, script
+    errors, a fault's frames) is the game's own file even in a shared process. A batch process is not safe to share
+    between threads: one Batch per slot (its stage, its --port-offset)."""
+
+    def __init__(self, stage, exe=DEFAULT_EXE, config=None, popen=None, wrap=None, log=None):
+        self.stage = pathlib.Path(stage)
+        self.exe = exe
+        self.config = config or (self.stage / "config.yaml")
+        self.popen = popen or {}
+        self.wrap = wrap or (lambda cmd: cmd)   # e.g. sim_bench's nice
+        self.log = log                          # a file for the process's own stderr (start-up, between games)
+        self.proc = None
+        self.key = None
+        self.lines = None
+        self.index = 0
+        self.games = 0       # games played by the current process
+        self.processes = 0   # processes started
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+    def close(self):
+        if self.proc is None:
+            return
+        try:
+            self.proc.stdin.close()   # EOF: the process ends after its game
+            self.proc.wait(timeout=30)
+        except (OSError, subprocess.TimeoutExpired):
+            self.proc.kill()
+            self.proc.wait()
+        self.proc = None
+
+    def _start(self, proc_args, env):
+        import queue
+        import threading
+        self.close()
+        self.config.unlink(missing_ok=True)   # a fresh config.yaml per process
+        cmd = self.wrap(command(self.exe, self.stage, [*proc_args, "--games", "-"], self.config))
+        self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                                     env=env, text=True, errors="replace", bufsize=1, **self.popen)
+        self.lines = queue.Queue()
+        proc, lines, log = self.proc, self.lines, self.log
+
+        def pump():
+            with open(log, "a", encoding="utf-8") if log else open(os.devnull, "w") as f:
+                for line in proc.stderr:
+                    if line.startswith("EE-SIM GAME ") or line.startswith("EE-SIM BATCH"):
+                        lines.put(line.rstrip("\n"))
+                    f.write(line)
+            lines.put(None)
+        threading.Thread(target=pump, daemon=True).start()
+        self.index = 0
+        self.games = 0
+        self.processes += 1
+
+    def play(self, args, err=None, env=None, timeout=None):
+        """one game (EE-SIM options; --report is required, read back) -> dict(rc, outcome, wall, ...)"""
+        import time
+        proc_args, game_args = split_args([str(a) for a in args])
+        report = pathlib.Path(game_args[game_args.index("--report") + 1])
+        if err:
+            game_args += ["--err", str(err)]
+        env = dict(os.environ if env is None else env)
+        key = (tuple(proc_args), tuple(sorted(env.items())))
+        restarted = False
+        if self.proc is None or self.proc.poll() is not None or key != self.key:
+            self._start(proc_args, env)
+            self.key = key
+            restarted = True
+        report.unlink(missing_ok=True)
+        t0 = time.monotonic()
+        index = self.index
+        self.index += 1
+        try:
+            self.proc.stdin.write(game_line(game_args) + "\n")
+            self.proc.stdin.flush()
+        except OSError:
+            pass
+        rc, outcome = None, None
+        deadline = None if timeout is None else t0 + timeout
+        while True:
+            try:
+                line = self.lines.get(timeout=None if deadline is None else max(0.1, deadline - time.monotonic()))
+            except Exception:   # queue.Empty: the wall limit
+                self.proc.kill()
+                rc, outcome = -9, "killed"
+                break
+            if line is None:    # the process ended without the game's end: a crash
+                rc = self.proc.wait()
+                break
+            parts = line.split()
+            if parts[:3] == ["EE-SIM", "GAME", str(index)] and parts[3] == "END":
+                rc, outcome = int(parts[4]), parts[5] if len(parts) > 5 else None
+                break
+        wall = time.monotonic() - t0
+        self.games += 1
+        try:
+            rep = json.loads(report.read_text())
+        except (OSError, ValueError):
+            rep = None
+        if rc != 0:
+            self.close()   # a failed game's process is not reused (its state is unknown)
+        if rep is None and err:
+            with open(err, "a", encoding="utf-8") as f:
+                f.write(f"sim.Batch: the process ended with {rc} during the game (no report)\n")
+        return dict(rc=rc, outcome=(rep or {}).get("outcome", outcome or "no-report"), wall=round(wall, 2),
+                    game_wall=(rep or {}).get("wall_seconds_game"), restarted=restarted, report=rep)
+
+
+def play_games(games, stage, exe=DEFAULT_EXE, env=None, popen=None, wrap=None, retries=1, on_result=None):
+    """A list of games in one process after the other (Batch): games is a list of dicts with "args" (EE-SIM options
+    with --report; the process options must agree to share a process) and optionally "err"; a crashed or failed game
+    is retried `retries` times when it failed before its game ran (no game time), then recorded; the rest go on in a
+    new process. on_result(game, result) is called after each game; returning False stops the list. -> the results in
+    order (None for the games not played)"""
+    results = [None] * len(games)
+    with Batch(stage, exe=exe, popen=popen, wrap=wrap) as b:
+        for k, g in enumerate(games):
+            for attempt in range(retries + 1):
+                r = b.play(g["args"], err=g.get("err"), env=env)
+                if r["rc"] == 0 or (r["report"] or {}).get("game_ms", 0) > 0:
+                    break
+            results[k] = r
+            if on_result is not None and on_result(g, r) is False:
+                break
+    return results
+
+
 def resolve(map_path, addresses):
     """The functions of exe addresses (an "EE-SIM FAULT" line's frames) from the exe's map -> [(address, name+off)]."""
     import bisect

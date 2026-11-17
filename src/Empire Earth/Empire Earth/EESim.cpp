@@ -19,8 +19,10 @@
 // harness's session-log form (tools/harness/ai_trace.py extract/compare/summary read the file as it is).
 #ifdef _WIN32
 #include <winsock2.h>
+#include <io.h>
 #else
 #include <execinfo.h>
+#include <sys/stat.h>
 #include <pthread.h>
 #include <signal.h>
 #include <unistd.h>
@@ -186,6 +188,8 @@ struct Options {
     unsigned long mFlarePlayer = 0;
     long mVolcanoMs = -1;                                // --volcano SECONDS:PLAYER (TEST ONLY): -1 none
     unsigned long mVolcanoPlayer = 0;
+    std::string mErr;                                    // --games: the game's stderr ("" the process's)
+    std::string mID;                                     // --games: the game's name in the batch's markers
 };
 
 Options sOptions;
@@ -194,6 +198,25 @@ FILE* sLogFile = NULL;
 std::mutex sOutLock;
 std::chrono::steady_clock::time_point sStartWall;
 std::chrono::steady_clock::time_point sGameWall;
+// the wall time of each phase of the game's run (start-up to the main menu, menus, lobby, loading, game), in the report
+std::vector<std::pair<std::string, double> > sPhases;
+std::chrono::steady_clock::time_point sPhaseWall;
+
+void Phase(const char* inName)
+{
+    auto theNow = std::chrono::steady_clock::now();
+    sPhases.push_back({inName, std::chrono::duration<double>(theNow - sPhaseWall).count()});
+    sPhaseWall = theNow;
+}
+
+// --games (several games in one process): the debug strings the start-up wrote before the first game (the AI
+// manifest's line), written again at the head of every game's trace and log, so each holds what a run of its own
+// would; between two games the debug strings go nowhere (a single run has quit by then)
+FILE* sGamesFile = NULL;   // --games FILE or - (stdin): read a line at a time, when the last game has ended
+Options sBase;              // the command line's options, under every game's own
+bool sBatch = false;
+enum { kOutPreamble, kOutGame, kOutBetween } sOutState = kOutPreamble;
+std::string sPreambleTrace, sPreambleLog;
 
 void Note(const char* inFormat, ...)
 {
@@ -216,6 +239,16 @@ void DebugHandler(const char* inText)
     if (!inText)
         return;
     std::lock_guard<std::mutex> theGuard(sOutLock);
+    if (sBatch && sOutState != kOutGame) {
+        if (sOutState == kOutPreamble) {
+            size_t theLength = strlen(inText);
+            bool theNewLine = theLength == 0 || inText[theLength - 1] != '\n';
+            if (!strncmp(inText, "EE-AI", 5))
+                sPreambleTrace += std::string("debugstring ") + inText + (theNewLine ? "\n" : "");
+            sPreambleLog += std::string(inText) + (theNewLine ? "\n" : "");
+        }
+        return;
+    }
     if (!strncmp(inText, "EE-AI", 5)) {
         FILE* theOut = sTraceFile ? sTraceFile : stdout;
         fputs("debugstring ", theOut);
@@ -314,6 +347,10 @@ std::vector<unsigned long> sResults;   // per world player, the last result seen
 std::vector<std::vector<long> > sEpochMs;   // per world player: the game ms each epoch was first reached (-1: not)
 long sNextSampleMs = 0;
 long sStandingSince = -1;              // game ms the last-computer-standing condition holds from
+long sVolcanoCastMs = -1;              // --volcano: the cast's game ms, the second logged, the boulders seen
+long sVolcanoSecond = 0;
+unsigned long sVolcanoShots = 0, sVolcanoTotal = 0;
+std::vector<unsigned long> sVolcanoSeen;
 
 bool IsBuildingCategory(long inCategory)
 {
@@ -466,10 +503,6 @@ void AfterTick()
     // --volcano (TEST ONLY): once, a volcano (the calamity class 9, no caster) cast 6 tiles off the player's first
     // building for that player; then every game second the volcano projectiles (boulders) launched in it
     {
-        static long sVolcanoCastMs = -1;
-        static long sVolcanoSecond = 0;
-        static unsigned long sVolcanoShots = 0, sVolcanoTotal = 0;
-        static std::vector<unsigned long> sVolcanoSeen;
         if (sOptions.mVolcanoMs >= 0 && theTime >= sOptions.mVolcanoMs) {
             sOptions.mVolcanoMs = -1;
             EEPlayer* theTarget = sOptions.mVolcanoPlayer < theCount ? gWorld.GetPlayer(sOptions.mVolcanoPlayer) : NULL;
@@ -833,6 +866,12 @@ void WriteReport(int inCode, const std::string& inError)
     snprintf(buf, sizeof(buf), "  \"wall_seconds\": %.2f,\n  \"wall_seconds_game\": %.2f,\n", theWall,
              sGameWall.time_since_epoch().count() ? theGame : 0.0);
     j += buf;
+    j += "  \"wall_phases\": {";
+    for (size_t k = 0; k < sPhases.size(); k++) {
+        snprintf(buf, sizeof(buf), "%s\"%s\": %.2f", k ? ", " : "", sPhases[k].first.c_str(), sPhases[k].second);
+        j += buf;
+    }
+    j += "},\n";
     const Sample* theLast = sSamples.empty() ? NULL : &sSamples.back();
     j += "  \"game_ms\": " + std::to_string(theLast ? theLast->mGameMs : 0) + ",\n";
     j += "  \"pt\": " + std::to_string(theLast ? theLast->mPT : 0) + ",\n";
@@ -916,39 +955,172 @@ void WriteReport(int inCode, const std::string& inError)
     }
 }
 
+void EndGameOutput(int inCode);
+
 void Fail(const std::string& inError)
 {
     gPlatSimRun = 0;
     Note("FAILED: %s", inError.c_str());
     WriteReport(2, inError);
-    Quit(2);
+    EndGameOutput(2);
+    Quit(2);   // (in a batch too: the process's state is unknown; tools/sim.py plays the rest in a new one)
 }
 
 // ------------------------------------------------------------------------------------------------ the driver
 
-void Drive()
+bool sLeftGame = false;    // --games: the last game was left (LeaveGame), this one's first phase is the leave
+int sProcessStderr = -1;   // --games: the process's stderr while a game's own (--err) is in place
+size_t sGameIndex = 0;
+
+// a line on the process's stderr (the batch's markers), whatever the game's stderr is
+void Marker(const char* inFormat, ...)
+{
+    char theText[1024];
+    va_list theArguments;
+    va_start(theArguments, inFormat);
+    int n = vsnprintf(theText, sizeof(theText) - 1, inFormat, theArguments);
+    va_end(theArguments);
+    if (n < 0)
+        return;
+    if (n > (int)sizeof(theText) - 2)
+        n = (int)sizeof(theText) - 2;
+    theText[n++] = '\n';
+    std::lock_guard<std::mutex> theGuard(sOutLock);
+    fflush(stderr);
+    if (sProcessStderr >= 0) {
+#ifdef _WIN32
+        _write(sProcessStderr, theText, (unsigned)n);
+#else
+        if (write(sProcessStderr, theText, (size_t)n) < 0)
+            return;
+#endif
+        return;
+    }
+    fwrite(theText, 1, (size_t)n, stderr);
+    fflush(stderr);
+}
+
+void SetStderr(int inFile)
+{
+    fflush(stderr);
+#ifdef _WIN32
+    _dup2(inFile, 2);
+#else
+    dup2(inFile, 2);
+#endif
+}
+
+// the driver's state of one game, cleared before each game of a batch
+void ResetRun()
+{
+    {
+        std::lock_guard<std::mutex> theGuard(sStateLock);
+        sFinished = false;
+        sOutcome.clear();
+        sSamples.clear();
+        sDefeats.clear();
+        sResults.clear();
+        sEpochMs.clear();
+        sNextSampleMs = 0;
+        sStandingSince = -1;
+        sVolcanoCastMs = -1;
+        sVolcanoSecond = 0;
+        sVolcanoShots = sVolcanoTotal = 0;
+        sVolcanoSeen.clear();
+    }
+    sChosen.clear();
+    gPlatSimNoHumanDefeatHits = 0;
+    gPlatSimAfterTick = NULL;
+    sGameWall = std::chrono::steady_clock::time_point();
+}
+
+// --games: the next game's options, files and stderr in place (the physics thread holds between games)
+void BeginGame(size_t inIndex, const Options& inGame, bool inAfterGame)
+{
+    sGameIndex = inIndex;
+    sOptions = inGame;
+    ResetRun();
+    gPlatSimSeed = (uint32_t)sOptions.mSeed;
+    gPlatSimNoHumanDefeat = sOptions.mNoHumanDefeat ? 1 : 0;
+    if (inAfterGame) {   // (the first game's wall time and phases count from the process's start)
+        sStartWall = sPhaseWall = std::chrono::steady_clock::now();
+        sPhases.clear();
+    }
+    Marker("EE-SIM GAME %lu BEGIN %s", (unsigned long)inIndex, sOptions.mID.c_str());
+    std::lock_guard<std::mutex> theGuard(sOutLock);
+    if (!sOptions.mErr.empty()) {
+        FILE* theErr = fopen(sOptions.mErr.c_str(), "w");
+        if (theErr != NULL) {
+#ifdef _WIN32
+            SetStderr(_fileno(theErr));
+#else
+            SetStderr(fileno(theErr));
+#endif
+            fclose(theErr);
+        }
+    }
+}
+
+// --games: the game's trace and log from here (after the last game was left), headed by the start-up's lines
+void StartGameOutput()
+{
+    std::lock_guard<std::mutex> theGuard(sOutLock);
+    if (!sOptions.mTrace.empty())
+        sTraceFile = fopen(sOptions.mTrace.c_str(), "w");
+    if (!sOptions.mLog.empty())
+        sLogFile = fopen(sOptions.mLog.c_str(), "w");
+    fputs(sPreambleTrace.c_str(), sTraceFile ? sTraceFile : stdout);
+    if (sLogFile)
+        fputs(sPreambleLog.c_str(), sLogFile);
+    sOutState = kOutGame;
+}
+
+// --games: the game's files closed and the process's stderr back, then the end marker (exit code and outcome)
+void EndGameOutput(int inCode)
+{
+    if (!sBatch)
+        return;
+    {
+        std::lock_guard<std::mutex> theGuard(sOutLock);
+        sOutState = kOutBetween;
+        fflush(stdout);
+        if (sTraceFile)
+            fclose(sTraceFile);
+        if (sLogFile)
+            fclose(sLogFile);
+        sTraceFile = sLogFile = NULL;
+        if (!sOptions.mErr.empty() && sProcessStderr >= 0)
+            SetStderr(sProcessStderr);
+    }
+    std::string theOutcome;
+    {
+        std::lock_guard<std::mutex> theGuard(sStateLock);
+        theOutcome = sOutcome;
+    }
+    Marker("EE-SIM GAME %lu END %d %s", (unsigned long)sGameIndex, inCode,
+           inCode == 2 ? "error" : theOutcome.empty() ? "-" : theOutcome.c_str());
+}
+
+// the main menu to the end of the game, then the report -> the exit code (0, or 3 at the wall timeout)
+int PlayGame()
 {
     int theCode = 0;
-    std::string theError;
     {
-        std::vector<std::string> theProblems;
-        EERulesOverrideProblems(theProblems);
-        if (!theProblems.empty()) {
-            std::string theText;
-            for (const std::string& p : theProblems)
-                theText += (theText.empty() ? "" : "; ") + p;
-            Fail("--set did not apply: " + theText);
+        Phase(sLeftGame ? "leave" : "startup");
+        sLeftGame = false;
+        if (TopForm() == kFormMain) {   // (a game left returns to the single player menu)
+            Note("UI main menu");
+            Click(kFormMain, 0);
         }
-        WaitForm(kFormMain, 300);
-        Note("UI main menu");
-        Click(kFormMain, 0);
         WaitForm(kFormSingle);
         Click(kFormSingle, 1);
         WaitForm(kFormLobbyID);
         Note("UI lobby");
+        Phase("menus");
         SetUpLobby();
         Click(kFormLobbyID, 10);
         Note("UI start");
+        Phase("lobby");
         long theExpected = sOptions.mComputers + 2;
         WaitFor("the game", 600, [&] {
             return TopForm() == kFormGame && gPhysics != NULL && gPhysics->mTimerRunning &&
@@ -981,6 +1153,7 @@ void Drive()
             gWorld.mLock->WriteUnlock();
         }
         Note("GAME players %lu local %ld: running", gWorld.GetNumPlayers(), gWorld.mCurrentPlayer);
+        Phase("loading");
         sGameWall = std::chrono::steady_clock::now();
         gPlatSimAfterTick = AfterTick;
         gPlatSimRun = 1;
@@ -993,7 +1166,7 @@ void Drive()
     }
     gPlatSimRun = 0;
     SimSleep(50);
-    if (theError.empty() && gPhysics != NULL) {
+    if (gPhysics != NULL) {
         // the final state (the physics thread has stopped between two communications ticks)
         gWorld.mLock->ReadLock();
         Sample s = TakeSample();
@@ -1011,13 +1184,99 @@ void Drive()
                 theUnits += " " + std::to_string(p.mIndex) + ":" + std::to_string(p.mPopulation) + "/" +
                             std::to_string(p.mVictoryUnits);
         double theGame = std::chrono::duration<double>(std::chrono::steady_clock::now() - sGameWall).count();
-        Note("SIM %s: PT %lu game s %ld units%s; %.1f wall s in game (%.0fx real time)",
-             theError.empty() ? sOutcome.c_str() : "error", theLast ? theLast->mPT : 0UL,
-             theLast ? theLast->mGameMs / 1000 : 0L, theUnits.c_str(), theGame,
+        Note("SIM %s: PT %lu game s %ld units%s; %.1f wall s in game (%.0fx real time)", sOutcome.c_str(),
+             theLast ? theLast->mPT : 0UL, theLast ? theLast->mGameMs / 1000 : 0L, theUnits.c_str(), theGame,
              theLast && theGame > 0 ? theLast->mGameMs / 1000.0 / theGame : 0.0);
     }
-    WriteReport(theCode, theError);
-    Quit(theCode);
+    Phase("game");
+    WriteReport(theCode, std::string());
+    return theCode;
+}
+
+// --games: the game left as a player leaves it (the game menu's quit: EEUserInterface::CancelGame clears the world and
+// the game state and opens the post-game summary), then the summary's exit, back to the single player menu
+void LeaveGame()
+{
+    sLeftGame = true;
+    gUserInterface->PostCancelGame();
+    unsigned long theLast = 0;
+    bool theExited = false;   // (the summary's exit once: a second close, still queued, would close the next form)
+    WaitFor("the single player menu after the game", 120, [&] {
+        unsigned long theTop = TopForm();
+        if (theTop != theLast) {
+            Note("UI form %lu", theTop);
+            theLast = theTop;
+        }
+        if (theTop == kFormPostGameSummary && !theExited) {
+            theExited = true;
+            UILock theLock;
+            UIForm* theForm = gUIManager->GetCurrentForm();
+            for (unsigned long k = 0; theForm && theForm->GetFormID() == kFormPostGameSummary &&
+                                      k < theForm->GetControlCount(); k++) {
+                UIControl* theControl = theForm->GetControl(k);
+                if (theControl && dynamic_cast<EEUIEPGSEExit*>(theControl->GetTriggerEvent(kTriggerEvent))) {
+                    theControl->FireTriggerEvent(kTriggerEvent);
+                    break;
+                }
+            }
+        }
+        return (theTop == kFormSingle || theTop == kFormMain) && theExited;
+    });
+    // (the menu settled: the form on top for 300 ms; a click into a form still opening was lost)
+    auto theSince = std::chrono::steady_clock::now();
+    unsigned long theTop = TopForm();
+    WaitFor("the single player menu to settle", 30, [&] {
+        unsigned long theNow = TopForm();
+        if (theNow != theTop) {
+            theTop = theNow;
+            theSince = std::chrono::steady_clock::now();
+        }
+        return (theTop == kFormSingle || theTop == kFormMain) &&
+               std::chrono::steady_clock::now() - theSince > std::chrono::milliseconds(300);
+    });
+}
+
+int NextGame(size_t inIndex, Options& outGame, std::string& outError);
+
+void Drive()
+{
+    std::vector<std::string> theProblems;
+    EERulesOverrideProblems(theProblems);
+    if (!theProblems.empty()) {
+        std::string theText;
+        for (const std::string& p : theProblems)
+            theText += (theText.empty() ? "" : "; ") + p;
+        if (sBatch)
+            BeginGame(0, sOptions, false);
+        Fail("--set did not apply: " + theText);
+    }
+    WaitForm(kFormMain, 300);
+    if (!sBatch)
+        Quit(PlayGame());
+    bool thePlayed = false;   // a game ran and was not left yet
+    size_t k = 0;
+    for (;; k++) {
+        Options theGame;
+        std::string theError;
+        int theNext = NextGame(k, theGame, theError);
+        if (theNext == 0)
+            break;
+        if (theNext < 0) {
+            Marker("EE-SIM GAME %lu END 64 bad-options %s", (unsigned long)k, theError.c_str());
+            continue;
+        }
+        BeginGame(k, theGame, thePlayed);
+        if (thePlayed)
+            LeaveGame();   // (a failure here is this game's: its report has the error)
+        thePlayed = true;
+        StartGameOutput();
+        int theCode = PlayGame();
+        EndGameOutput(theCode);
+        if (theCode != 0)
+            Quit(theCode);   // a wall timeout leaves a game running: the rest in a new process
+    }
+    Marker("EE-SIM BATCH END %lu", (unsigned long)k);
+    Quit(0);
 }
 
 const char* kUsage =
@@ -1054,7 +1313,17 @@ const char* kUsage =
     "  --log FILE             every debug string of the game\n"
     "  --autosave-ms N        the game's autosave period in PT time (default 0: none; the game and the harness: 600000)\n"
     "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: a free pair from 35334 up)\n"
-    "  --quiet                no progress on stderr\n";
+    "  --quiet                no progress on stderr\n"
+    "  --games FILE           several games in a row in this process, one a line: the line's game options over the\n"
+    "                         command line's (# comments; \"...\" quotes). Game options: --seed --ai --map-size\n"
+    "                         --map-type --difficulty --lobby --engine --game-seconds --sample-seconds --wall-timeout\n"
+    "                         --human-defeat --keep-human --flare --volcano --report --trace --log and\n"
+    "                         --err FILE (the game's stderr), --out DIR (DIR/report.json, trace.txt, err.txt),\n"
+    "                         --id NAME (the markers' name). The rest (--set --cheats --personality --ai-trace\n"
+    "                         --pt-rate --autosave-ms --data --config --port-offset) holds for every game. stderr gets\n"
+    "                         \"EE-SIM GAME k BEGIN id\" / \"EE-SIM GAME k END code outcome\" per game and \"EE-SIM\n"
+    "                         BATCH END n\"; a failed game (code 2 or 3) ends the process (tools/sim.py play_games\n"
+    "                         goes on with the rest in a new one). Each game's report and trace equal its run alone\n";
 
 // a port offset whose TCP and UDP ports 33334/33335 are free now, from one the process id picks (the harness's
 // parallel games use 33334 + 16 k, k <= 32)
@@ -1115,6 +1384,180 @@ void SetEnv(const char* inName, const std::string& inValue)
 #else
     setenv(inName, inValue.c_str(), 1);
 #endif
+}
+
+// the process's stderr, kept while a game's own is in place (--games)
+int EESimDupStderr()
+{
+#ifdef _WIN32
+    return _dup(2);
+#else
+    return dup(2);
+#endif
+}
+
+// a game's own option (the command line's, or a line's of the --games file) at inArgs[ioIndex] -> 1 taken (ioIndex
+// at its last word), 0 not a game option, -1 a bad one (outError)
+int GameOption(const std::vector<std::string>& inArgs, size_t& ioIndex, Options& ioOptions, std::string& outError)
+{
+    const std::string& a = inArgs[ioIndex];
+    static const char* const kWithValue[] = {"--seed", "--ai", "--map-size", "--map-type", "--difficulty", "--lobby",
+        "--game-seconds", "--sample-seconds", "--wall-timeout", "--flare", "--volcano", "--engine", "--report",
+        "--trace", "--log", "--err", "--out", "--id"};
+    bool theValued = false;
+    for (const char* n : kWithValue)
+        theValued = theValued || a == n;
+    std::string v;
+    if (theValued) {
+        if (ioIndex + 1 >= inArgs.size()) {
+            outError = a + " needs a value";
+            return -1;
+        }
+        v = inArgs[++ioIndex];
+    }
+    auto pair = [&](const char* inForm, long& outMs, unsigned long& outPlayer) {
+        size_t c = v.find(':');
+        if (c == std::string::npos) {
+            outError = std::string(a) + " " + inForm;
+            return -1;
+        }
+        outMs = (long)(atof(v.substr(0, c).c_str()) * 1000);
+        outPlayer = (unsigned long)atol(v.substr(c + 1).c_str());
+        return 1;
+    };
+    if (a == "--seed")
+        ioOptions.mSeed = strtoul(v.c_str(), NULL, 0);
+    else if (a == "--ai")
+        ioOptions.mComputers = atol(v.c_str());
+    else if (a == "--map-size")
+        ioOptions.mMapSize = v;
+    else if (a == "--map-type")
+        ioOptions.mMapType = v;
+    else if (a == "--difficulty")
+        ioOptions.mDifficulty = v;
+    else if (a == "--lobby") {
+        size_t eq = v.find('=');
+        if (eq == std::string::npos) {
+            outError = "--lobby CONTROL=VALUE";
+            return -1;
+        }
+        ioOptions.mLobby.push_back({atol(v.substr(0, eq).c_str()), v.substr(eq + 1)});
+    } else if (a == "--game-seconds")
+        ioOptions.mGameSeconds = atof(v.c_str());
+    else if (a == "--sample-seconds")
+        ioOptions.mSampleSeconds = atof(v.c_str());
+    else if (a == "--wall-timeout")
+        ioOptions.mWallTimeout = atof(v.c_str());
+    else if (a == "--human-defeat")
+        ioOptions.mNoHumanDefeat = false;
+    else if (a == "--no-human-defeat")
+        ioOptions.mNoHumanDefeat = true;
+    else if (a == "--keep-human")
+        ioOptions.mHumanOut = false;
+    else if (a == "--flare")
+        return pair("SECONDS:PLAYER", ioOptions.mFlareMs, ioOptions.mFlarePlayer);
+    else if (a == "--volcano")
+        return pair("SECONDS:PLAYER", ioOptions.mVolcanoMs, ioOptions.mVolcanoPlayer);
+    else if (a == "--engine")
+        ioOptions.mEngine = v;
+    else if (a == "--report")
+        ioOptions.mReport = Absolute(v);
+    else if (a == "--trace")
+        ioOptions.mTrace = Absolute(v);
+    else if (a == "--log")
+        ioOptions.mLog = Absolute(v);
+    else if (a == "--err")
+        ioOptions.mErr = Absolute(v);
+    else if (a == "--id")
+        ioOptions.mID = v;
+    else if (a == "--out") {   // a game's folder: report.json, trace.txt, err.txt
+        std::string d = Absolute(v);
+#ifdef _WIN32
+        CreateDirectoryA(d.c_str(), NULL);
+        d += "\\";
+#else
+        mkdir(d.c_str(), 0777);
+        d += "/";
+#endif
+        ioOptions.mReport = d + "report.json";
+        ioOptions.mTrace = d + "trace.txt";
+        ioOptions.mErr = d + "err.txt";
+    } else
+        return 0;
+    return 1;
+}
+
+bool OptionsInRange(const Options& inOptions)
+{
+    return inOptions.mComputers >= 1 && inOptions.mComputers <= 7 && inOptions.mGameSeconds > 0 &&
+           inOptions.mSampleSeconds > 0;
+}
+
+// a line of the --games file -> its words (blanks between them; "..." keeps blanks, \" a quote)
+std::vector<std::string> Words(const std::string& inLine)
+{
+    std::vector<std::string> theWords;
+    std::string theWord;
+    bool theIn = false, theQuoted = false;
+    for (size_t k = 0; k < inLine.size(); k++) {
+        char c = inLine[k];
+        if (c == '\\' && k + 1 < inLine.size() && inLine[k + 1] == '"') {
+            theWord += '"';
+            theIn = true;
+            k++;
+        } else if (c == '"') {
+            theQuoted = !theQuoted;
+            theIn = true;
+        } else if (!theQuoted && (c == ' ' || c == '\t' || c == '\r' || c == '\n')) {
+            if (theIn)
+                theWords.push_back(theWord);
+            theWord.clear();
+            theIn = false;
+        } else {
+            theWord += c;
+            theIn = true;
+        }
+    }
+    if (theIn)
+        theWords.push_back(theWord);
+    return theWords;
+}
+
+// --games: the next game's line (blank lines and # comments skipped): its game options over the command line's ->
+// 1 a game, 0 the end of the file, -1 a bad line (outError)
+int NextGame(size_t inIndex, Options& outGame, std::string& outError)
+{
+    std::string theRow;
+    while (true) {
+        theRow.clear();
+        int c;
+        while ((c = fgetc(sGamesFile)) != EOF && c != '\n')
+            theRow += (char)c;
+        if (c == EOF && theRow.empty())
+            return 0;
+        std::vector<std::string> theWords = Words(theRow);
+        if (theWords.empty() || theWords[0][0] == '#')
+            continue;
+        outGame = sBase;   // (a game's files are its own: none from the command line)
+        outGame.mReport.clear();
+        outGame.mTrace.clear();
+        outGame.mLog.clear();
+        outGame.mErr.clear();
+        outGame.mID = std::to_string(inIndex);
+        for (size_t i = 0; i < theWords.size(); i++) {
+            int r = GameOption(theWords, i, outGame, outError);
+            if (r <= 0) {
+                if (r == 0)
+                    outError = theWords[i] + " is not a game's option (--help)";
+                return -1;
+            }
+        }
+        if (!OptionsInRange(outGame)) {
+            outError = "an option is out of range";
+            return -1;
+        }
+        return 1;
+    }
 }
 
 }   // namespace
@@ -1202,81 +1645,38 @@ void EESimGameEnded(int inResult);
 // POSIX the game's main calls it for "ee-aoc --sim ..." and goes on with the game when it returns -1.
 int EESimMain(int argc, char** argv)
 {
-    sStartWall = std::chrono::steady_clock::now();
-    std::string theData, theConfig;
+    sStartWall = sPhaseWall = std::chrono::steady_clock::now();
+    std::string theData, theConfig, theGames;
     bool theTraceOn = false;
-    for (int i = 1; i < argc; i++) {
-        std::string a = argv[i];
+    std::vector<std::string> theArgs(argv + 1, argv + argc);
+    for (size_t i = 0; i < theArgs.size(); i++) {
+        std::string a = theArgs[i];
         auto value = [&]() -> std::string {
-            if (i + 1 >= argc) {
+            if (i + 1 >= theArgs.size()) {
                 fprintf(stderr, "EE-SIM: %s needs a value\n", a.c_str());
                 exit(64);
             }
-            return argv[++i];
+            return theArgs[++i];
         };
+        std::string theError;
+        int theGameOption = GameOption(theArgs, i, sOptions, theError);
+        if (theGameOption < 0) {
+            fprintf(stderr, "EE-SIM: %s\n", theError.c_str());
+            return 64;
+        }
+        if (theGameOption > 0)
+            continue;
         if (a == "-h" || a == "--help") {
             fputs(kUsage, stdout);
             return 0;
-        } else if (a == "--seed")
-            sOptions.mSeed = strtoul(value().c_str(), NULL, 0);
-        else if (a == "--ai")
-            sOptions.mComputers = atol(value().c_str());
-        else if (a == "--map-size")
-            sOptions.mMapSize = value();
-        else if (a == "--map-type")
-            sOptions.mMapType = value();
-        else if (a == "--difficulty")
-            sOptions.mDifficulty = value();
-        else if (a == "--lobby") {
-            std::string v = value();
-            size_t eq = v.find('=');
-            if (eq == std::string::npos) {
-                fprintf(stderr, "EE-SIM: --lobby CONTROL=VALUE\n");
-                return 64;
-            }
-            sOptions.mLobby.push_back({atol(v.substr(0, eq).c_str()), v.substr(eq + 1)});
-        } else if (a == "--game-seconds")
-            sOptions.mGameSeconds = atof(value().c_str());
-        else if (a == "--sample-seconds")
-            sOptions.mSampleSeconds = atof(value().c_str());
-        else if (a == "--wall-timeout")
-            sOptions.mWallTimeout = atof(value().c_str());
-        else if (a == "--pt-rate")
+        } else if (a == "--pt-rate")
             sOptions.mPTRate = atol(value().c_str());
-        else if (a == "--human-defeat")
-            sOptions.mNoHumanDefeat = false;
-        else if (a == "--no-human-defeat")
-            sOptions.mNoHumanDefeat = true;
-        else if (a == "--keep-human")
-            sOptions.mHumanOut = false;
-        else if (a == "--flare") {
-            std::string v = value();
-            size_t c = v.find(':');
-            if (c == std::string::npos) {
-                fprintf(stderr, "EE-SIM: --flare SECONDS:PLAYER\n");
-                return 64;
-            }
-            sOptions.mFlareMs = (long)(atof(v.substr(0, c).c_str()) * 1000);
-            sOptions.mFlarePlayer = (unsigned long)atol(v.substr(c + 1).c_str());
-        }
-        else if (a == "--volcano") {
-            std::string v = value();
-            size_t c = v.find(':');
-            if (c == std::string::npos) {
-                fprintf(stderr, "EE-SIM: --volcano SECONDS:PLAYER\n");
-                return 64;
-            }
-            sOptions.mVolcanoMs = (long)(atof(v.substr(0, c).c_str()) * 1000);
-            sOptions.mVolcanoPlayer = (unsigned long)atol(v.substr(c + 1).c_str());
-        }
         else if (a == "--cheats")
             sOptions.mCheats = value();
         else if (a == "--personality")
             sOptions.mPersonality = value();
-        else if (a == "--engine")
-            sOptions.mEngine = value();
         else if (a == "--set") {
-            std::string v = value(), theError;
+            std::string v = value();
             if (!EERulesAddOverride(v, theError)) {
                 fprintf(stderr, "EE-SIM: --set %s\n", theError.c_str());
                 return 64;
@@ -1286,14 +1686,10 @@ int EESimMain(int argc, char** argv)
             theData = Absolute(value());
         else if (a == "--config")
             theConfig = Absolute(value());
-        else if (a == "--report")
-            sOptions.mReport = Absolute(value());
-        else if (a == "--trace")
-            sOptions.mTrace = Absolute(value());
+        else if (a == "--games")
+            theGames = value() == "-" ? std::string("-") : Absolute(theArgs[i]);
         else if (a == "--ai-trace")
             theTraceOn = true;
-        else if (a == "--log")
-            sOptions.mLog = Absolute(value());
         else if (a == "--quiet")
             sOptions.mQuiet = true;
         else if (a == "--port-offset")
@@ -1305,10 +1701,20 @@ int EESimMain(int argc, char** argv)
             return 64;
         }
     }
-    if (sOptions.mComputers < 1 || sOptions.mComputers > 7 || sOptions.mPTRate < 1 || sOptions.mPTRate > 250 ||
-        !(sOptions.mGameSeconds > 0) || !(sOptions.mSampleSeconds > 0)) {
+    if (!OptionsInRange(sOptions) || sOptions.mPTRate < 1 || sOptions.mPTRate > 250) {
         fprintf(stderr, "EE-SIM: an option is out of range (--help)\n");
         return 64;
+    }
+    if (!theGames.empty()) {
+        std::string theError;
+        sGamesFile = theGames == "-" ? stdin : fopen(theGames.c_str(), "rb");
+        if (sGamesFile == NULL) {
+            fprintf(stderr, "EE-SIM: cannot read --games %s\n", theGames.c_str());
+            return 66;
+        }
+        sBase = sOptions;
+        sBatch = true;
+        sProcessStderr = EESimDupStderr();
     }
     if (!theData.empty())
         SetEnv("EE_DATA_ROOT", theData);
@@ -1320,18 +1726,18 @@ int EESimMain(int argc, char** argv)
         SetEnv("EE_AI_CHEATS", sOptions.mCheats);
     if (!sOptions.mPersonality.empty())
         SetEnv("EE_AI_PERSONALITY", sOptions.mPersonality);
-    if (!sOptions.mTrace.empty()) {
+    if (!sBatch && !sOptions.mTrace.empty()) {
         sTraceFile = fopen(sOptions.mTrace.c_str(), "w");
         if (!sTraceFile) {
             fprintf(stderr, "EE-SIM: cannot write %s\n", sOptions.mTrace.c_str());
             return 66;
         }
     }
-    if (!sOptions.mLog.empty())
+    if (!sBatch && !sOptions.mLog.empty())
         sLogFile = fopen(sOptions.mLog.c_str(), "w");
     gPlatSimMode = 1;
     gPlatSimSeedSet = 1;
-    gPlatSimSeed = (uint32_t)sOptions.mSeed;
+    gPlatSimSeed = (uint32_t)sOptions.mSeed;   // (--games: each game's, BeginGame)
     gPlatSimNoHumanDefeat = sOptions.mNoHumanDefeat ? 1 : 0;
     gPlatSimPortOffset = sOptions.mPortOffset >= 0 ? (int)sOptions.mPortOffset : (int)FreePortOffset();
     PlatDebugSetHandler(DebugHandler);
@@ -1349,8 +1755,12 @@ int EESimMain(int argc, char** argv)
     setenv("LP_NUM_THREADS", "1", 0);
 #endif
 #endif
-    Note("EE-SIM seed %lu, %ld computers, cap %.0f game s, ports %d/%d", sOptions.mSeed, sOptions.mComputers,
-         sOptions.mGameSeconds, 33334 + gPlatSimPortOffset, 33335 + gPlatSimPortOffset);
+    if (sBatch)
+        Note("EE-SIM games from %s, ports %d/%d", theGames.c_str(), 33334 + gPlatSimPortOffset,
+             33335 + gPlatSimPortOffset);
+    else
+        Note("EE-SIM seed %lu, %ld computers, cap %.0f game s, ports %d/%d", sOptions.mSeed, sOptions.mComputers,
+             sOptions.mGameSeconds, 33334 + gPlatSimPortOffset, 33335 + gPlatSimPortOffset);
 #ifdef _WIN32
     char theEmpty[1] = {0};
     EESimGameEnded(WinMain(GetModuleHandleA(NULL), NULL, theEmpty, SW_HIDE));
