@@ -10,6 +10,7 @@
 # the merge of main daf9dadb (2026-11-13): next rows re-read (declared) with the tree's Data/ai main's (folder hash df82b2b8): the random Boom is boom_order now. With the previous Data/ai (1494ba43) the merged exe gives the old 479/END/828/END; gather(exact)'s setting saved (EENS version 6) lifted 114/10/102/10 to these.
 # the merge of main ff7db710 (2026-11-15, save 0.281): every row re-read on the Lua AI (the lobby's Classic is classic_lua; the C++ classic is gone), the same in two runs. calamity seed 2 ends at 1083 s (a player defeated): no 1900 s save (-).
 # save 0.282 (2026-11-16): the tech nodes' allowed flags saved (classic_lua re-researched a one-off technology after a load): plains-medium-3ai 2 1900, islands 3 1900, highlands-large-4ai 2 1900, mediterranean-easy 2-3 1900 -> END, the same in two runs; next seed 2 (309, 0) parts in the path manager's state, not the AI's (PORT_LEARNINGS).
+# the merge of main 158e3be7 (2026-11-17: classic_lua raids, push, water war, island food): every row re-read on the merged tree, the same outcomes in two runs (the next rows 309/0 part where they did).
 oracle 2 1000 END
 oracle 2 1900 END
 oracle 3 1000 END
