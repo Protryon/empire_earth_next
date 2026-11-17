@@ -5,6 +5,11 @@
 //! Text is UTF-8 bytes (`&[u8]`; decision D6, `text.rs`). Each module's behaviour is pinned by golden values
 //! that a scratch driver printed from the real C++ unit (the module's tests say how).
 
+// `c_long`/`c_ulong` are `i32`/`u32` on Windows and `i64`/`u64` on Linux and macOS: a cast or `from` that one data
+// model needs is to the same type on the other. The Windows gate keeps both lints; off Windows they would flag
+// only those.
+#![cfg_attr(not(windows), allow(clippy::unnecessary_cast, clippy::useless_conversion))]
+
 pub mod background;
 pub mod background_table;
 pub mod bgobj;
