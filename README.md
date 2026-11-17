@@ -244,6 +244,34 @@ twice as often as the baseline's, and 3 games more (`--screen-factor`, `--screen
 from chance alone). The games run below normal priority (`--normal-priority` turns that off), so the windowed
 gates can run beside a bench.
 
+**Sequential tests** (`--sprt`; the statistics in `tools/sim_sprt.py`). A variant is played against a baseline on
+paired seeds (the same seed and matchup with both builds), seed by seed, and the bench stops as soon as the test
+decides, at most `--sprt-max` seeds (64):
+
+```
+python -I tools/sim_bench.py --name v1 --sprt --engine classic,ageofai --ai-scripts X --base-ai-scripts Y --cache
+python -I tools/sim_bench.py --name v1 --sprt --engine classic,ageofai --ai-scripts X --sprt-baseline build/sim/bench/base
+python -I tools/sim_sprt.py replay build/sim/bench/base build/sim/bench/v1      # the test over finished benches
+```
+
+The baseline is `--base-exe`/`--base-ai-scripts`/`--base-set`/`--base-env` (this bench with those changed), the first
+of a two-value `--vary`/`--env-vary`, or `--sprt-baseline DIR`. A pair scores the first computer (`--sprt-player`) W
+1, close 0.5, L 0 by the scorecard's rule; the test is a GSPRT of the mean gain d = variant - baseline, H0 0 against
+H1 0.1 a game (`--sprt-gains`; about +6 points in 64 games), alpha = beta = 0.05, on a normal model of d whose
+variance carries 4 pseudo-pairs of 0.2 (a run of identical games is not a variance of 0). It answers H1 (better), H0
+(not better: equal or worse) or, at 64 seeds, inconclusive (the W-L-C stands as before). `--sprt-stat ahead` scores
+which build was further ahead at the cap (the scorecard's mixed share) instead. Measured on the recorded benches' own
+outcomes (`sim_sprt.py oc`): with W-L-C, a true gain of 0 is called better in 0.3% of runs and not better in 94%,
+after 31 seeds on average; -0.1 is rejected after 22 seeds; +0.2 is accepted in 97% after 35; +0.1 in only 58% (33%
+inconclusive: 64 seeds cannot resolve +0.1 reliably, nor +0.05, which needs about 170). Replayed over the 26 recorded
+A/B benches of docs/AI_RESEARCH.md 8.86-8.94 (`sim_sprt.py replay`; those of 8.86 and 8.93 rebuilt from
+build/sim/cache), it uses 74% of the pairs and contradicts no recorded conclusion: none is called better; the 8.86
+options and the rejected 8.94 variants stop at H0 after 17-26 of 32 pairs (8.86's hurt after 59 of 63); the 8.93 raid
+variants are undecided at 32 and the kept raids inconclusive at 64 (+0.047 a game); the kept 8.94 push is H0 in W-L-C
+(53-2-9 -> 54-2-8: kept for the defeats it caused). `--sprt-stat ahead` calls the raids better after 12 pairs (and the
+pre-merge raids after 19). For what the test leaves inconclusive the old rule stands: decide on 32 seeds, confirm on
+64.
+
 `tools/sim.py` stages the data tree per slot (`build/sim/stage/<slot>`: hard links, the tree is only read) and passes
 EE-SIM.exe its options (`EE-SIM.exe --help`). `--engine` picks each computer seat's engine (classic,
 random, an AI's id such as boom, or next for the manifest's first AI; docs/AI_LUA_PLAN.md) through the lobby's engine

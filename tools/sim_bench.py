@@ -11,6 +11,7 @@ results.json and results.csv (one row per run and player). With --repeat 2 the r
   python -I tools/sim_bench.py --name floor --seeds 2,3 --vary aipersonalities.balanced.military.army_floor=0.1,0.2,0.3
   python -I tools/sim_bench.py --name det --seeds 2 --repeat 2
   python -I tools/sim_bench.py --name eng --seeds 2-7 --engine "classic;classic,boom"   # the engine by seat
+  python -I tools/sim_bench.py --name v1 --sprt --engine classic,ageofai --ai-scripts X --base-ai-scripts Y --cache
 
 --set DOC.KEY=VALUE applies to every run; each --vary DOC.KEY=V1,V2,... adds a dimension (one run per value).
 --env NAME=VALUE sets an environment variable for every run; each --env-vary NAME=V1,V2,... adds a dimension, e.g.
@@ -39,6 +40,21 @@ size, map, difficulty, AIs, cheats, personality, engine), or "first" (default): 
 --env-vary values (matched in the same way), which always go on. With "first", engines, personalities and cheats are
 matchups, not variants: to screen one engine against another, bench the baseline engine first and name its folder. A stopped variant keeps its first-stage rows in results.csv; results.json's "screen" has the counts.
 16 seeds at a factor of 2 only stops gross regressions: defeats vary by several games in 32 from chance alone.
+
+--sprt plays a variant against a baseline seed by seed and stops when the sequential test decides (tools/sim_sprt.py:
+the model, the error rates, the replay of finished benches). The two sides of a pair are the same seed and matchup:
+  - --base-exe EXE, --base-ai-scripts DIR, --base-set DOC.KEY=V, --base-env NAME=V: the baseline is this bench with
+    those changed (its run ids end in -base; without --base-ai-scripts it plays without the variant's --ai-scripts);
+  - or one --vary/--env-vary of two values: the first is the baseline;
+  - or --sprt-baseline DIR[+DIR]: a finished bench's games (by seed and matchup).
+The seeds (--seeds in their order, default 2 and on) start in turn, both sides of a seed together, --jobs games at
+once; the test reads every seed whose games are all done, in seed order (an early defeat must not count first); no
+seed starts after the decision (the games out finish, for the cache). It stops at H1 (better by about G1), H0 (not
+better) or --sprt-max seeds (default 64: inconclusive; the W-L-C stands as before). --sprt-gains G0,G1 (default
+0,0.1 a game, W 1, close 0.5, L 0), --sprt-stat ahead (which build was further ahead at the cap, default 0,0.2),
+--sprt-alpha/--sprt-beta (0.05), --sprt-player (2). results.json's "sprt" has the verdict and the LLR by seed. With
+the cache the baseline's games are usually free: only the variant's are played.
+
 """
 import argparse
 import concurrent.futures
@@ -59,6 +75,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 import sim  # noqa: E402
+import sim_sprt  # noqa: E402
 
 BENCH = ROOT / "build" / "sim" / "bench"
 
@@ -141,8 +158,7 @@ def tree_hash(data):
 
 def cache_key(run, args, stage, opts):
     """-> (the hash of everything a game's result depends on (the module doc), its parts)"""
-    env = {k: v for k, v in os.environ.items() if k.upper().startswith("EE_") and k.upper() not in NOT_INPUTS}
-    env.update(run["env"])
+    env = {k: v for k, v in run_env(run).items() if k.upper().startswith("EE_") and k.upper() not in NOT_INPUTS}
     scripts = env.pop("EE_AI_SCRIPTS", None)
     # the options without the run's own paths and ports (they do not change the game)
     skip = {"--report", "--trace", "--port-offset", "--wall-timeout", "--log"}
@@ -155,7 +171,7 @@ def cache_key(run, args, stage, opts):
         k += 1
     db = stage / "Data" / "db"
     docs = sorted({s.split(".", 1)[0] for s in run["sets"]})
-    parts = dict(format=CACHE_FORMAT, exe=file_hash(args.exe.resolve()), tree=tree_hash(args.data),
+    parts = dict(format=CACHE_FORMAT, exe=file_hash(run_exe(run, args).resolve()), tree=tree_hash(args.data),
                  docs={d: file_hash(db / f"{d}.yaml") if (db / f"{d}.yaml").exists() else "-" for d in docs},
                  scripts=folder_hash(scripts) if scripts else None, env=sorted(env.items()), opts=game_opts)
     return hashlib.sha256(json.dumps(parts, sort_keys=True).encode()).hexdigest(), parts
@@ -209,6 +225,18 @@ def cache_put(cache, key, parts, report, trace, err, meta):
 
 
 # ------------------------------------------------------------------------------------------------ a run
+
+def run_exe(run, args):
+    """the run's EE-SIM exe: its side's (--base-exe), else --exe"""
+    return pathlib.Path(run.get("exe") or args.exe)
+
+
+def run_env(run):
+    """the run's environment: this process's, with the run's variables (a None value unsets one: a baseline side
+    without the variant's --ai-scripts)"""
+    env = dict(os.environ, **run["env"])
+    return {k: v for k, v in env.items() if v is not None}
+
 
 def priority(args):
     """subprocess options for a game below normal priority (Windows), unless --normal-priority"""
@@ -266,11 +294,11 @@ def run_one(run, args, slots, out):
         if not any(o == "--port-offset" for o in args.sim_arg):
             opts += ["--port-offset", str(args.port_base + 64 * slots_index(slot))]
         t0 = time.monotonic()
-        env = dict(os.environ, **run["env"])
+        env = run_env(run)
         for attempt in range(2):   # one retry of a start-up fault: no report, or an error before the game ran
             report.unlink(missing_ok=True)
             with open(err, "w", encoding="utf-8") as f:
-                rc = subprocess.run(lowered(sim.command(args.exe, stage, opts, cfg), args), stdout=subprocess.DEVNULL,
+                rc = subprocess.run(lowered(sim.command(run_exe(run, args), stage, opts, cfg), args), stdout=subprocess.DEVNULL,
                                     stderr=f, env=env, **priority(args)).returncode
             try:
                 rep = json.loads(report.read_text())
@@ -303,7 +331,7 @@ MATCHUP = ("size", "map", "difficulty", "ai", "cheats", "personality", "engine")
 
 def variant_of(run):
     """a run's variant: everything but the seed and the repeat"""
-    return json.dumps([run[k] for k in MATCHUP] + [run["variant"], sorted(run["env"].items())])
+    return json.dumps([run[k] for k in MATCHUP] + [run["variant"], sorted(run["env"].items()), run.get("side")])
 
 
 def defeated(report, player):
@@ -355,11 +383,76 @@ def screening(results, a):
     return rows
 
 
+# ------------------------------------------------------------------------------------------------ the sequential test
+
+def sequential(runs, a, start, window):
+    """--sprt: the runs seed by seed (both sides of a seed together, at most `window` games out at once), the test fed
+    the pairs of every seed whose games are all done, in seed order (a game that ends early, a defeat, must not
+    come first); no seed is started after the decision (the games out finish, for the cache) -> (results, summary)"""
+    test = sim_sprt.Test(a.sprt_stat, tuple(float(x) for x in a.sprt_gains.split(",")) if a.sprt_gains else None,
+                         a.sprt_alpha, a.sprt_beta, 10 ** 9, a.sprt_min)
+    print(test.describe().replace(f"..{test.max_pairs} pairs", f" pairs at least; at most {a.sprt_max} seeds"),
+          flush=True)
+    matchup = lambda r: (r["seed"],) + tuple(str(r[k]) for k in MATCHUP)
+    base = {}
+    if a.sprt_baseline:   # the baseline's games from finished benches
+        base = {k: rep for k, rep in sim_sprt.bench_runs(a.sprt_baseline).items()}
+    order, by_seed = [], {}
+    for r in runs:
+        if r["seed"] not in by_seed:
+            order.append(r["seed"])
+        by_seed.setdefault(r["seed"], []).append(r)
+    done, out, ds, scores, path = {}, {}, [], [], []
+    decision, value, k, played = None, 0.0, 0, 0
+    nxt = iter(order)
+    while True:
+        while decision is None and len(out) < window:
+            seed = next(nxt, None)
+            if seed is None:
+                break
+            for r in by_seed[seed]:
+                out[start(r)] = r
+        if not out:
+            break
+        finished, _ = concurrent.futures.wait(out, return_when=concurrent.futures.FIRST_COMPLETED)
+        for f in finished:
+            done[out.pop(f)["id"]] = f.result()
+        while decision is None and k < len(order) and all(r["id"] in done for r in by_seed[order[k]]):
+            seed = order[k]
+            k += 1
+            played += 1
+            sides = {}
+            for r in by_seed[seed]:
+                sides.setdefault(matchup(r), {})[r["side"] or "variant"] = done[r["id"]]["report"]
+            for key, pair in sorted(sides.items()):
+                b = pair.get("base", base.get((key[0], key[1:])))
+                if b is None or "variant" not in pair:
+                    print(f"SPRT seed {seed}: no baseline game for {key[1:]}: not counted", flush=True)
+                    continue
+                po = sim_sprt.pair_outcome(a.sprt_stat, b, pair["variant"], a.sprt_player)
+                if po is None:
+                    print(f"SPRT seed {seed}: a game without a result: not counted", flush=True)
+                    continue
+                ds.append(po[0])
+                scores.append(po)
+            decision, value = test.verdict(ds) if ds else (None, 0.0)
+            if decision is None and played >= a.sprt_max:
+                decision = "max"
+            path.append(dict(seed=seed, pairs=len(ds), llr=round(value, 3)))
+            print(f"SPRT seed {seed}: {len(ds)} pairs, LLR {value:+.2f} ({test.lower:.2f}, {test.upper:.2f})"
+                  + (f": {sim_sprt.Test.word(decision)}" if decision else ""), flush=True)
+    results = [done[r["id"]] for r in runs if r["id"] in done]
+    verdict = (f"{sim_sprt.Test.word(decision)} after {played} seeds, {len(ds)} pairs, LLR {value:+.2f}; "
+               f"{sim_sprt.summary(scores)}")
+    return results, dict(test=test.describe(), decision=decision, seeds=played, pairs=len(ds), llr=round(value, 3),
+                         verdict=verdict, path=path, games=len(results))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split("\n", 2)[2])
     ap.add_argument("--name", required=True)
-    ap.add_argument("--seeds", default="2", help="comma separated, ranges a-b (default 2)")
+    ap.add_argument("--seeds", help="comma separated, ranges a-b (default 2; with --sprt 2 and on, --sprt-max of them)")
     ap.add_argument("--sizes", default="Small")
     ap.add_argument("--maps", default="-", help="map type lines (- the lobby default, Continental)")
     ap.add_argument("--difficulty", default="Hard")
@@ -402,7 +495,27 @@ def main():
     ap.add_argument("--screen-player", type=int, default=2)
     ap.add_argument("--screen-factor", type=float, default=2.0)
     ap.add_argument("--screen-margin", type=int, default=3)
+    ap.add_argument("--base-exe", type=pathlib.Path, help="the baseline side's EE-SIM exe (see --sprt)")
+    ap.add_argument("--base-ai-scripts", type=pathlib.Path, help="the baseline side's EE_AI_SCRIPTS (see --sprt)")
+    ap.add_argument("--base-set", action="append", default=[], help="DOC.KEY=VALUE for the baseline side only")
+    ap.add_argument("--base-env", action="append", default=[], help="NAME=VALUE for the baseline side only")
+    ap.add_argument("--sprt", action="store_true", help="the sequential test of the variant against the baseline "
+                                                        "(see above)")
+    ap.add_argument("--sprt-baseline", metavar="DIR", help="the baseline: finished bench folders (DIR+DIR)")
+    ap.add_argument("--sprt-stat", choices=sim_sprt.STATS, default="wlc")
+    ap.add_argument("--sprt-gains", metavar="G0,G1", help="the mean gain a pair under H0 and H1 (default 0,0.1; "
+                                                          "ahead 0,0.2); --sprt-gains=-0.1,0: no regression")
+    ap.add_argument("--sprt-alpha", type=float, default=0.05)
+    ap.add_argument("--sprt-beta", type=float, default=0.05)
+    ap.add_argument("--sprt-max", type=int, default=64, help="the most seeds (default 64)")
+    ap.add_argument("--sprt-min", type=int, default=8, help="the fewest pairs before a decision (default 8)")
+    ap.add_argument("--sprt-player", type=int, default=2, help="the player scored (default 2: the first computer)")
     a = ap.parse_args()
+    if a.seeds is None:
+        a.seeds = f"2-{1 + a.sprt_max}" if a.sprt else "2"
+    base_side = bool(a.base_exe or a.base_ai_scripts or a.base_set or a.base_env)
+    if a.sprt and (a.screen or a.repeat != 1):
+        sys.exit("--sprt: not with --screen or --repeat")
     a.cache_dir = cache_dir(a.cache) if a.cache else None
     if not a.exe.exists():
         sys.exit(f"{a.exe} is missing: {sim.BUILD_HINT}")
@@ -420,22 +533,42 @@ def main():
         envs = [dict(old, **{key: x}) for old in envs for x in values.split(",")]
     fixed = dict(e.split("=", 1) for e in a.env)
     if a.ai_scripts:
-        os.environ["EE_AI_SCRIPTS"] = fixed["EE_AI_SCRIPTS"] = str(a.ai_scripts.resolve())
-    cells = list(itertools.product([int(s, 0) for s in split(a.seeds)], split(a.sizes), split(a.maps),
+        fixed["EE_AI_SCRIPTS"] = str(a.ai_scripts.resolve())
+    # the sides: the variant (every option above) and, with --base-*, the baseline (those options changed)
+    sides = [dict(side=None, exe=None, env={}, sets=[], tag="")]
+    if base_side:
+        benv = dict(e.split("=", 1) for e in a.base_env)
+        if a.base_ai_scripts:
+            benv["EE_AI_SCRIPTS"] = str(a.base_ai_scripts.resolve())
+        elif "EE_AI_SCRIPTS" in fixed:
+            benv["EE_AI_SCRIPTS"] = None   # (unset: the stage's Data/ai)
+        if a.base_exe and not a.base_exe.exists():
+            sys.exit(f"--base-exe {a.base_exe}: missing")
+        sides = [dict(side="base", exe=str(a.base_exe.resolve()) if a.base_exe else None, env=benv,
+                      sets=list(a.base_set), tag="-base"), dict(side="variant", exe=None, env={}, sets=[], tag="")]
+    seeds = [int(s, 0) for s in split(a.seeds)]
+    if a.sprt:
+        seeds = seeds[:a.sprt_max]
+        if not base_side and not a.sprt_baseline and len(variants) * len(envs) != 2:
+            sys.exit("--sprt needs a baseline: --base-exe/--base-ai-scripts/--base-set/--base-env, --sprt-baseline "
+                     "DIR, or one --vary or --env-vary of two values (the first the baseline)")
+    cells = list(itertools.product(seeds, split(a.sizes), split(a.maps),
                                    split(a.difficulty), [int(x) for x in split(a.ai)], split(a.cheats),
                                    [p for p in a.personality.split(";") if p] or ["-"],
                                    [e for e in a.engine.split(";") if e] or ["-"], range(len(variants)),
-                                   range(len(envs))))
+                                   range(len(envs)), range(len(sides))))
     runs = []
-    for (seed, size, map_type, difficulty, ai, cheats, pers, eng, v, ev), k in itertools.product(cells, range(a.repeat)):
+    for (seed, size, map_type, difficulty, ai, cheats, pers, eng, v, ev, sd), k in itertools.product(cells, range(a.repeat)):
+        side = sides[sd]
         tag = "-".join([s.split(".")[-1] + "=" + s.split("=", 1)[1] for s in variants[v]] +
                        [n + "=" + x.replace("/", "~") for n, x in envs[ev].items()])
         rid = (f"s{seed}-{map_type.replace(' ', '_')}-{size}-{difficulty}-{ai}ai-{cheats.replace('/', '~')}"
                f"-{pers.replace(',', '+').replace('/', '~')}" + (f"-eng={eng.replace(',', '+')}" if eng != "-" else "")
-               + (f"-{tag}" if tag else "") + f"-r{k}").replace("--", "-")
+               + (f"-{tag}" if tag else "") + side["tag"] + f"-r{k}").replace("--", "-")
+        vside = side["side"] if base_side else ("base" if (v, ev) == (0, 0) else "variant") if a.sprt else None
         runs.append(dict(id=rid, seed=seed, size=size, map=map_type, difficulty=difficulty, ai=ai, cheats=cheats,
-                         personality=pers, engine=eng, variant=variants[v], sets=a.set + variants[v], repeat=k,
-                         env=dict(fixed, **envs[ev])))
+                         personality=pers, engine=eng, variant=variants[v], sets=a.set + variants[v] + side["sets"],
+                         repeat=k, env=dict(fixed, **envs[ev], **side["env"]), side=vside, exe=side["exe"]))
     out = BENCH / a.name / "runs"
     out.mkdir(parents=True, exist_ok=True)
     print(f"{len(runs)} runs, {a.jobs} at once -> {out.parent}", flush=True)
@@ -445,11 +578,15 @@ def main():
         slots.put(f"{a.name}-{k}" if a.jobs > 1 else a.name)
     t0 = time.monotonic()
 
+    pool = concurrent.futures.ThreadPoolExecutor(max(1, a.jobs))
+    start = lambda r: pool.submit(run_one, r, a, slots, out)
+
     def play(batch):
-        with concurrent.futures.ThreadPoolExecutor(max(1, a.jobs)) as ex:
-            return list(ex.map(lambda r: run_one(r, a, slots, out), batch))
-    screen = None
-    if a.screen:
+        return [f.result() for f in [start(r) for r in batch]]
+    screen = sprt = None
+    if a.sprt:
+        results, sprt = sequential(runs, a, start, max(2, a.jobs))
+    elif a.screen:
         first = {int(s, 0) for s in split(a.screen)}
         stage1 = [r for r in runs if r["seed"] in first]
         print(f"screen: the first stage, {len(stage1)} runs (seeds {a.screen})", flush=True)
@@ -465,6 +602,7 @@ def main():
         screen = list(screen.values())
     else:
         results = play(runs)
+    pool.shutdown()
     total = time.monotonic() - t0
     # determinism: the repeats of a cell print the same trace
     sys.path.insert(0, str(HERE / "harness"))
@@ -482,8 +620,9 @@ def main():
             print(f"DETERMINISM {cell}: {'identical' if same else 'DIFFERENT'}: {buf.getvalue().strip().splitlines()[-1]}",
                   flush=True)
     (out.parent / "results.json").write_text(json.dumps(dict(test_only=True, runs=results, determinism=checks,
-                                                             wall_seconds=round(total, 1), screen=screen), indent=2) + "\n")
-    fields = ["run", "seed", "size", "map", "difficulty", "ai", "cheats", "personality", "engine", "variant", "repeat", "rc",
+                                                             wall_seconds=round(total, 1), screen=screen, sprt=sprt),
+                                                        indent=2) + "\n")
+    fields = ["run", "seed", "size", "map", "difficulty", "ai", "cheats", "personality", "engine", "variant", "side", "repeat", "rc",
               "cached", "lua_errors", "outcome", "game_s", "wall", "wall_game", "winner", "player", "human", "result", "epoch", "population",
               "victory_units", "citizens", "army", "buildings", "food", "wood", "stone", "gold", "iron"]
     with open(out.parent / "results.csv", "w", newline="", encoding="utf-8") as f:
@@ -493,7 +632,7 @@ def main():
             rep = r["report"]
             base = dict(run=r["id"], seed=r["seed"], size=r["size"], map=r["map"], difficulty=r["difficulty"],
                         ai=r["ai"], cheats=r["cheats"], personality=r["personality"], engine=r["engine"],
-                        variant=";".join(r["variant"]),
+                        variant=";".join(r["variant"]), side=r.get("side") or "",
                         repeat=r["repeat"], rc=r["rc"], cached=1 if r.get("cached") else 0, lua_errors=r.get("lua_errors", 0), outcome=rep.get("outcome"),
                         game_s=rep.get("game_ms", 0) // 1000, wall=r["wall"], wall_game=rep.get("wall_seconds_game"),
                         winner=rep.get("winner"))
@@ -509,6 +648,8 @@ def main():
     print(f"done: {len(results)} runs in {total:.0f} s ({len(failed)} failed"
           + (f", {cached} from the cache" if cached else "")
           + (f", {errors} script errors" if errors else "") + f") -> {out.parent / 'results.csv'}", flush=True)
+    if sprt:
+        print(f"SPRT: {sprt['verdict']}", flush=True)
     sys.exit(1 if failed or any(not c["identical"] for c in checks) else 0)
 
 

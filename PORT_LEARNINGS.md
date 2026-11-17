@@ -2256,3 +2256,26 @@ a game (seeds 2 and 3, 45 minutes, classic_lua against Age of AI) plays identica
 (`tools/sim_compare.py`: traces and reports identical). The PDB still resolves the game's functions
 (`llvm-symbolizer --obj=EE-SIM.exe` from another folder finds `EEPhysics::Tick`). EE-SIM.exe built from the same
 commit now has the same cache key in every worktree.
+
+## Sequential tests for AI benches (2026-11-16)
+
+`tools/sim_bench.py --sprt` plays a variant against a baseline seed by seed and stops when a sequential test decides
+(`tools/sim_sprt.py`; README "Testing").
+- **Pairs, not counts.** Both builds play the same seed (map, start, opponent); the outcome of a pair is the
+  difference of the two W-L-C scores. Most pairs of a small change are identical (d = 0), which a fixed W-L-C count
+  ignores and the paired test uses.
+- **The textbook pentanomial GSPRT is too weak at 64 pairs.** Its maximum-likelihood distributions can put the
+  mean on an outcome not seen yet (no pair at d = +1) at no cost, so the LLR moved by the same -0.1 a pair whether
+  the pairs were identical or all lost (the 8.86 pool variant, 5-6-21 -> 5-13-14, and an identical variant both
+  stopped at pair 28). The normal model of d with a variance prior (4 pseudo-pairs of 0.2) is used instead; its
+  error rates were measured on the benches' own outcomes (`sim_sprt.py oc`), not assumed.
+- **A normal model of a heavy-tailed continuous score misleads.** The paired difference of the mixed share accepted
+  "better" after 13-16 pairs for a variant whose 32-pair mean was negative (a few -0.2..-0.35 pairs came late). The
+  optional continuous statistic is the sign of that difference (`--stat ahead`).
+- **Order matters.** A defeat ends a game early, so the first games to finish are not a random sample; the test
+  reads only the seeds whose games are all done, in seed order.
+- **64 seeds resolve about +0.2 a game, not +0.1** (power 58% at +0.1, 33% inconclusive; +0.05 needs about 170
+  pairs). The test saves games mostly on variants that change nothing or lose (H0 after 17-26 pairs instead of 32).
+- **Replaying past benches from the cache**: the cache's key.json files name the exe, the scripts and the options of
+  each game, so the A/B benches of §8.86 and §8.93 (whose folders were gone with their worktrees) could be rebuilt
+  from build/sim/cache for the replay.
