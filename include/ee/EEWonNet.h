@@ -336,8 +336,6 @@ class RustServerOp;
 class RoutingConnection;
 class SmartRoutingConnection;
 class RoutingOp;
-struct RoutingClientInfo;
-typedef SmartPtr<RoutingClientInfo> RoutingClientInfoPtr;
 class WONAPICore; //actual core owner, not a synthetic lobby-host alias
 class WONLobbyWindow;
 class ServerContext;
@@ -461,7 +459,7 @@ public:
     EEWonNetGameInfo mGameInfo;             // +0x0e4
     std::map<unsigned short, EEWonNetGameInfo> mGames;      // +0x134 (by game group id)
     std::map<unsigned short, EEWonNetRoomInfo> mRooms;      // +0x140 (by room group id)
-    std::map<unsigned short, WONAPI::RoutingClientInfoPtr> mClients;     // +0x14c (RefreshGameList)
+    std::map<unsigned short, std::wstring> mClients;     // +0x14c (RefreshGameList: the client list's names by id)
     // +0x158: the directory server addresses (base game 0x4c9e16 fills it from SierraCom.cfg; the ctor and dtor
     // clear it). AoC: only EEWonNet.cpp's dead code uses it
     std::vector<std::string> mDirectoryServers;

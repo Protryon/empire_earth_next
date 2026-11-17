@@ -272,15 +272,60 @@ wchar_t* EEWonNet::A2W(wchar_t* outString, const char* inString, int inLength)
     return outString;
 }
 
-// The routing groups in id order (copies: the model is a Rust object, ee_won smartroute.rs)
-static std::vector<SmartRoutingConnection::GroupInfo> RoutingGroups(SmartRoutingConnection* inRouting)
+// The routing server's records, read from the Rust objects (R6 WONLobby round 12; the C++ copies, RoutingOp.cpp's and
+// SmartRoutingConnection.cpp's, are gone): a group, client or member of the smart connection's model
+// (ee_won smartroute.rs, copied under its lock), a finished op's data objects, members and clients (routeop.rs).
+struct EEWonRoutingGroup {
+    std::wstring mName;
+    unsigned short mId;
+    unsigned long mFlags;
+    unsigned short mMemberCount; // the group list's member count (the group record's +0x2a)
+};
+struct EEWonRoutingObject {
+    unsigned short mLinkId;
+    std::string mDataType;
+    std::string mData;
+};
+static std::wstring SmartName(const EeWonSmartRecord& inRecord)
 {
-    std::vector<SmartRoutingConnection::GroupInfo> theGroups;
-    SmartRoutingConnection::GroupInfo theGroup;
+    std::wstring theName;
+    for (size_t i = 0; i < inRecord.name_len; i++)
+        theName += static_cast<wchar_t>(inRecord.name[i]);
+    return theName;
+}
+// a record of the model (ee_won_smart_get): false when there is none; its name with a client, else outName kept
+static bool SmartGet(SmartRoutingConnection* inRouting, EeWonSmartGet inWhich, unsigned short inId,
+                     EeWonSmartRecord& outRecord, std::wstring& outName)
+{
+    AutoCrit theCrit(inRouting->GetDataLock());
+    if (!ee_won_smart_get(inRouting->mModel, inWhich, inId, 0, &outRecord))
+        return false;
+    if (inWhich != EeWonSmartGet::NextMember || outRecord.has_client)
+        outName = SmartName(outRecord);
+    return true;
+}
+// FindClient: the client a typed name refers to; outFound when the search set one
+static void SmartFind(SmartRoutingConnection* inRouting, const std::wstring& inName, EeWonSmartRecord& outRecord,
+                      std::wstring& outName, bool& outFound)
+{
+    AutoCrit theCrit(inRouting->GetDataLock());
+    ee_won_smart_find(inRouting->mModel, inName.data(), inName.length(), &outRecord, &outFound);
+    if (outFound)
+        outName = SmartName(outRecord);
+}
+
+// The routing groups in id order
+static std::vector<EEWonRoutingGroup> RoutingGroups(SmartRoutingConnection* inRouting)
+{
+    std::vector<EEWonRoutingGroup> theGroups;
+    EeWonSmartRecord theRecord;
+    std::wstring theName;
     PlatMutexLock(inRouting->GetDataLock());
     inRouting->StartGroupItr();
-    while (inRouting->GetNextGroup(theGroup))
+    while (SmartGet(inRouting, EeWonSmartGet::NextGroup, 0, theRecord, theName)) {
+        EEWonRoutingGroup theGroup = {theName, theRecord.id, theRecord.flags, theRecord.member_count};
         theGroups.push_back(theGroup);
+    }
     PlatMutexUnlock(inRouting->GetDataLock());
     return theGroups;
 }
@@ -288,8 +333,9 @@ static std::vector<SmartRoutingConnection::GroupInfo> RoutingGroups(SmartRouting
 // Resets two counters and walks every routing group and member, converting each name into a scratch buffer
 void EEWonNet::ConnectToLobby()
 {
-    std::vector<SmartRoutingConnection::GroupInfo> theGroups;
-    SmartRoutingConnection::MemberInfo theMember;
+    std::vector<EEWonRoutingGroup> theGroups;
+    EeWonSmartRecord theMember;
+    std::wstring theMemberName;
     char theName[1024];
 
     if (this->mRouting.get() == NULL)
@@ -302,40 +348,60 @@ void EEWonNet::ConnectToLobby()
         wcstombs(theName, theGroups[i].mName.c_str(), 1024);
         if (!this->mRouting->StartMemberItr(theGroups[i].mId))
             continue;
-        while (this->mRouting->GetNextMember(theMember)) {
+        while (SmartGet(this->mRouting, EeWonSmartGet::NextMember, 0, theMember, theMemberName)) {
             memset(theName, 0, 1024);
-            wcstombs(theName, theMember.mName.c_str(), 1024);
+            wcstombs(theName, theMemberName.c_str(), 1024);
         }
     }
 }
 
-// A finished routing op's data objects and members, copied from the Rust op (routeop.rs)
-static RoutingDataObjectList ObjectsOf(AsyncOp* inOp)
+// A finished routing op's data objects, its members' client ids and its clients' names (routeop.rs)
+static void OnObject(void* inObjects, const EeWonRouteRecord* inRecord)
 {
-    RoutingDataObjectList theObjects;
-    static_cast<RoutingOp*>(inOp)->GetDataObjects(theObjects);
+    EEWonRoutingObject theObject;
+    theObject.mLinkId = inRecord->id;
+    theObject.mDataType.assign(reinterpret_cast<const char*>(inRecord->data_type), inRecord->data_type_len);
+    if (inRecord->has_data)
+        theObject.mData.assign(reinterpret_cast<const char*>(inRecord->data), inRecord->data_len);
+    static_cast<std::vector<EEWonRoutingObject>*>(inObjects)->push_back(theObject);
+}
+static std::vector<EEWonRoutingObject> ObjectsOf(AsyncOp* inOp)
+{
+    std::vector<EEWonRoutingObject> theObjects;
+    ee_won_routeop_records(static_cast<RoutingOp*>(inOp)->mRust, EE_WON_RTR_OBJECT, OnObject, &theObjects);
     return theObjects;
 }
-static RoutingMemberMap MembersOf(AsyncOp* inOp)
+static void OnMember(void* inIds, const EeWonRouteRecord* inRecord)
 {
-    RoutingMemberMap theMembers;
-    static_cast<RoutingOp*>(inOp)->GetMembers(theMembers);
+    if (inRecord->kind == EE_WON_RTR_MEMBER)
+        static_cast<std::vector<unsigned short>*>(inIds)->push_back(inRecord->id);
+}
+static std::vector<unsigned short> MembersOf(AsyncOp* inOp)
+{
+    std::vector<unsigned short> theMembers;
+    ee_won_routeop_records(static_cast<RoutingOp*>(inOp)->mRust, EE_WON_RTR_MEMBER, OnMember, &theMembers);
     return theMembers;
+}
+static void OnClient(void* inClients, const EeWonRouteRecord* inRecord)
+{
+    std::wstring theName;
+    WonWideSink(&theName, inRecord->name, inRecord->name_len);
+    (*static_cast<std::map<unsigned short, std::wstring>*>(inClients))[inRecord->key] = theName;
 }
 
 // Replaces the game list with the game objects read from the server and marks the game and room lists changed
 void EEWonNet::ListGamesCallback(AsyncOp* inOp)
 {
-    RoutingDataObjectList theObjects(ObjectsOf(inOp));
+    std::vector<EEWonRoutingObject> theObjects(ObjectsOf(inOp));
     EEWonNetGameInfo theInfo;
 
     if (inOp->GetStatus() == WS_Success) {
         this->mLock->Enter();
         this->mGames.clear();
-        for (RoutingDataObjectList::iterator theObject = theObjects.begin();
+        for (std::vector<EEWonRoutingObject>::iterator theObject = theObjects.begin();
              theObject != theObjects.end(); theObject++) {
-            this->ImportGameInfo((unsigned char*)(*theObject)->GetData(), theInfo);
-            this->mGames[(*theObject)->mLinkId] = theInfo;
+            this->ImportGameInfo((unsigned char*)theObject->mData.data(), theInfo);
+            this->mGames[theObject->mLinkId] = theInfo;
             this->mGamesChanged = true;
         }
         this->mRoomListChanged = true;
@@ -351,11 +417,11 @@ void EEWonNet::ListGamesCallback(AsyncOp* inOp)
 // from their data objects
 void EEWonNet::ListRoomCallback(AsyncOp* inOp)
 {
-    RoutingDataObjectList theObjects(ObjectsOf(inOp));
+    std::vector<EEWonRoutingObject> theObjects(ObjectsOf(inOp));
     WONStatus theStatus = inOp->GetStatus();
-    std::vector<SmartRoutingConnection::GroupInfo> theGroups;
-    RoutingDataObjectList::iterator theObject = theObjects.begin();
-    RoutingDataObjectList::iterator theData = theObject;
+    std::vector<EEWonRoutingGroup> theGroups;
+    std::vector<EEWonRoutingObject>::iterator theObject = theObjects.begin();
+    std::vector<EEWonRoutingObject>::iterator theData = theObject;
     char theName[1024];
     UWideString theString;
     std::wstring theWide;
@@ -368,7 +434,7 @@ void EEWonNet::ListRoomCallback(AsyncOp* inOp)
         this->mRooms.clear();
         theGroups = RoutingGroups(this->mRouting);
         for (size_t i = 0; i < theGroups.size(); i++) {
-            const SmartRoutingConnection::GroupInfo& theGroup = theGroups[i];
+            const EEWonRoutingGroup& theGroup = theGroups[i];
             if (!(theGroup.mFlags & 0x800))
                 continue;
             memset(theName, 0, 1024);
@@ -382,13 +448,13 @@ void EEWonNet::ListRoomCallback(AsyncOp* inOp)
         }
         for (; theData != theObjects.end(); theData++) {
             theWide = gEmptyWideString;
-            theWide.assign((const wchar_t*)(*theData)->GetData(), (*theData)->GetDataLength() / 2);
+            theWide.assign((const wchar_t*)theData->mData.data(), theData->mData.length() / 2);
             memset(theName, 0, 1024);
             // Fix: the description is the data object's text; this used to read the name of the past-the-end
             // group left over from the loop above.
             wcstombs(theName, theWide.c_str(), 1023);
             theString = UWideString(theName);
-            this->mRooms[(*theData)->mLinkId].mDescription = theString;
+            this->mRooms[theData->mLinkId].mDescription = theString;
         }
         this->mRoomListChanged = true;
         PlatMutexUnlock(this->mRouting->GetDataLock());
@@ -683,7 +749,7 @@ void EEWonNet::ImportGameInfo(unsigned char* inMemoryPointer, EEWonNetGameInfo& 
 void EEWonNet::JoinGame(const char* inName, const char* inPassword)
 {
     UWideString theMessage;
-    std::vector<SmartRoutingConnection::GroupInfo> theGroups;
+    std::vector<EEWonRoutingGroup> theGroups;
     size_t theGroup;
     std::wstring thePassword;
     std::string theName;
@@ -756,20 +822,20 @@ void EEWonNet::JoinGroupCallback(AsyncOp* inOp)
 // Joins the host of each game object read, or rejoins the room and reports that the game was not found
 void EEWonNet::JoinGameObjectsCallback(AsyncOp* inOp)
 {
-    RoutingDataObjectList theObjects(ObjectsOf(inOp));
+    std::vector<EEWonRoutingObject> theObjects(ObjectsOf(inOp));
     UWideString theMessage;
-    RoutingDataObjectList::iterator theObject = theObjects.begin();
+    std::vector<EEWonRoutingObject>::iterator theObject = theObjects.begin();
     UWideString theString;
     EEWonNetGameInfo theInfo;
     bool theFound = false;
 
     if (inOp->GetStatus() == WS_Success) {
         for (; theObject != theObjects.end(); theObject++) {
-            if ((*theObject)->mDataType.compare(0, (*theObject)->mDataType.length(), kWonGameObject,
+            if (theObject->mDataType.compare(0, theObject->mDataType.length(), kWonGameObject,
                                                 strlen(kWonGameObject)) != 0)
                 continue;
-            unsigned char* theData = new unsigned char[(*theObject)->GetDataLength()];
-            memcpy(theData, (*theObject)->GetData(), (*theObject)->GetDataLength());
+            unsigned char* theData = new unsigned char[theObject->mData.length()];
+            memcpy(theData, theObject->mData.data(), theObject->mData.length());
             this->ImportGameInfo(theData, theInfo);
             delete theData;
             EEAction* theAction = new EEAJoinOrHostAGame(3, UWideString(this->ToString(this->mUser->GetName()).c_str()), theInfo.mAddress);
@@ -812,7 +878,7 @@ bool EEWonNet::RejoinRoom(bool inFlag)
 // Leaves the current groups and joins the named chat room with the password, showing a cancel box
 void EEWonNet::JoinRoom(const char* inRoom, const char* inPassword)
 {
-    std::vector<SmartRoutingConnection::GroupInfo> theGroups;
+    std::vector<EEWonRoutingGroup> theGroups;
     UWideString theMessage;
     std::wstring thePassword;
     std::string theName;
@@ -822,7 +888,7 @@ void EEWonNet::JoinRoom(const char* inRoom, const char* inPassword)
         theGroups = RoutingGroups(this->mRouting);
         if (theGroups.size() != 0) {
             for (size_t i = 0; i < theGroups.size(); i++) {
-                const SmartRoutingConnection::GroupInfo& theGroup = theGroups[i];
+                const EEWonRoutingGroup& theGroup = theGroups[i];
                 if (PlatMbsCmp((const unsigned char*)this->ToString(theGroup.mName).c_str(),
                             reinterpret_cast<const unsigned char*>(inRoom)) == 0
                     && (theGroup.mFlags & 0x800) != 0)
@@ -980,7 +1046,8 @@ void EEWonNet::RefreshGameList(UIControl* inGamesBox)
 void EEWonNet::ClientListCallback(AsyncOp* inOp)
 {
     if (inOp->GetStatus() == WS_Success) {
-        static_cast<RoutingOp*>(inOp)->GetClients(this->mClients);
+        this->mClients.clear();
+        ee_won_routeop_records(static_cast<RoutingOp*>(inOp)->mRust, EE_WON_RTR_CLIENT, OnClient, &this->mClients);
         this->mRouting->GetMembersOfGroup(this->mGameListPort, new RoutingCompletion(&EEWonNet::MembersCallback));
     } else {
         this->mIsListingPlayers = false;
@@ -991,8 +1058,8 @@ void EEWonNet::ClientListCallback(AsyncOp* inOp)
 void EEWonNet::MembersCallback(AsyncOp* inOp)
 {
     WONStatus theStatus = inOp->GetStatus();
-    RoutingMemberMap theMembers(MembersOf(inOp));
-    RoutingMemberMap::const_iterator theMember = theMembers.begin();
+    std::vector<unsigned short> theMembers(MembersOf(inOp));
+    std::vector<unsigned short>::const_iterator theMember = theMembers.begin();
     EEAction* theAction;
 
     if (theStatus != WS_Success) {
@@ -1002,10 +1069,9 @@ void EEWonNet::MembersCallback(AsyncOp* inOp)
         gUserInterface->PostAction(theAction);
         theAction->Dereference();
         for (; theMember != theMembers.end(); theMember++) {
-            if (this->mClients.find(theMember->second->mClientId) == this->mClients.end())
+            if (this->mClients.find(*theMember) == this->mClients.end())
                 continue;
-            theAction = new EEAWonNet(4, NULL,
-                                      UWideString(this->ToString(this->mClients[theMember->second->mClientId]->mName).c_str()), false);
+            theAction = new EEAWonNet(4, NULL, UWideString(this->ToString(this->mClients[*theMember]).c_str()), false);
             gUserInterface->PostAction(theAction);
             theAction->Dereference();
         }
@@ -1261,21 +1327,23 @@ void EEWonNet::OnChat(AsyncOp* inOp)
     UWideString theU64;
     UWideString theU50;
     UWideString theText;
-    SmartRoutingConnection::ClientInfo theClient;
-    bool theHasClient = this->mRouting->GetClient(static_cast<RoutingOp*>(inOp)->GetClientId(), theClient);
+    EeWonSmartRecord theClient;
+    std::wstring theClientName;
+    bool theHasClient = SmartGet(this->mRouting, EeWonSmartGet::Client, static_cast<RoutingOp*>(inOp)->GetClientId(),
+                                 theClient, theClientName);
     EEAction* theAction;
 
     if (theHasClient && !static_cast<RoutingOp*>(inOp)->Recipients().empty()) {
-        theFrom = UWideString(this->ToString(theClient.mName).c_str());
+        theFrom = UWideString(this->ToString(theClientName).c_str());
         if ((static_cast<RoutingOp*>(inOp)->Num(EE_WON_RTF_FLAGS16) & 4)
-            && theClient.mId != this->mRouting->GetMyClientId())
+            && theClient.id != this->mRouting->GetMyClientId())
             this->mReplyClientId = static_cast<RoutingOp*>(inOp)->GetClientId();
         theText = UWideString(this->ToString(static_cast<RoutingOp*>(inOp)->Text(EE_WON_RTT_TEXT)).c_str());
         if (gUIManager->GetCurrentForm() == gUIManager->GetFormByID(kFormAvailableGames)) {
             theAction = new EEAWonNet(6, static_cast<UITextLabel*>(gUIManager->GetCurrentForm()->GetControl(15)), theFrom, theText,
-                                      theClient.mId == this->mRouting->GetMyClientId());
+                                      theClient.id == this->mRouting->GetMyClientId());
         } else if (gUIManager->GetCurrentForm() == gUIManager->GetFormByID(kFormLobby)) {
-            theAction = new EEAWonNet(7, NULL, theFrom, theText, theClient.mId == this->mRouting->GetMyClientId());
+            theAction = new EEAWonNet(7, NULL, theFrom, theText, theClient.id == this->mRouting->GetMyClientId());
         } else {
             return;
         }
@@ -1393,7 +1461,8 @@ void EEWonNet::SendChat(const UWideString& inText)
     UWideString theName;
     UWideString theMessage;
     UWideString theText;
-    SmartRoutingConnection::ClientInfo theClient;
+    EeWonSmartRecord theClient;
+    std::wstring theClientName;
     bool theHasClient = false;
     int theEnd;
     EEAction* theAction;
@@ -1416,13 +1485,13 @@ void EEWonNet::SendChat(const UWideString& inText)
                     theName.CopyString((const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inText), 5),
                                        theEnd - 5);
                 }
-                this->mRouting->FindClient(this->ToWString(theName), theClient, theHasClient);
+                SmartFind(this->mRouting, this->ToWString(theName), theClient, theClientName, theHasClient);
                 if (theHasClient) {
                     if (inText[3] == 'i' || inText[3] == 'I') {
-                        this->mRouting->IgnoreClient(theClient.mId, true);
+                        this->mRouting->IgnoreClient(theClient.id, true);
                         gResource->GetString(IDS_IS_NOW_IGNORING, theMessage);
                     } else {
-                        this->mRouting->IgnoreClient(theClient.mId, false);
+                        this->mRouting->IgnoreClient(theClient.id, false);
                         gResource->GetString(IDS_IS_NO_LONGER_IGNORING, theMessage);
                     }
                 }
@@ -1450,12 +1519,12 @@ void EEWonNet::SendChat(const UWideString& inText)
                     theEnd += 1;
                 }
                 unsigned char* theRest = PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inText), theEnd);
-                this->mRouting->FindClient(this->ToWString(theName), theClient, theHasClient);
+                SmartFind(this->mRouting, this->ToWString(theName), theClient, theClientName, theHasClient);
                 if (theHasClient) {
                     gResource->GetString(IDS_WHISPERED, theMessage);
                     theMessage += reinterpret_cast<const char*>(theRest);
                     theRecipients.push_back(this->mRouting->GetMyClientId());
-                    theRecipients.push_back(theClient.mId);
+                    theRecipients.push_back(theClient.id);
                     this->mRouting->SendChatTo(this->ToWString(theMessage), 4, theRecipients, NULL);
                 }
             }
@@ -1480,7 +1549,7 @@ void EEWonNet::SendChat(const UWideString& inText)
             break;
         }
     } else {
-        this->mRouting->FindClient(this->ToWString(theName), theClient, theHasClient);
+        SmartFind(this->mRouting, this->ToWString(theName), theClient, theClientName, theHasClient);
         this->mRouting->SendChat(this->ToWString(inText), 0, this->mGameListPort, new RoutingCompletion(&EEWonNet::SendChatCallback));
     }
 }

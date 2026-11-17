@@ -29028,7 +29028,6 @@ Round total: net -1,076 (short of the 1,500 aimed at; see "Left" below).
   `golden_spec_replays` failed once under the captures' load, passed alone and in the final run); the tour through slot.py `RESULT PASS tour` (84.3% lit, F3 ok).
 - The machine restarted mid-round (the work was uncommitted): every file was intact; the build, `eedata check` and
   the golden were rerun before committing.
-||||||| 4aeedb1a1
 ## R6 WONGUI B round 3: one registered component host; the scroll bar, scroller, scroll area, splitter and multi-column list call Component through compobj; the containers' member writes in place (ee_won_gui compobj.rs, compmem.rs; branch rust-wonguib3, 2026-11-17)
 
 The second WONGUI lane's third round, from origin/rust 4aeedb1a1 (after the crate restructure). WON C++ (`wc -l` of
@@ -29145,6 +29144,230 @@ The round's target was 1,500; it is not reached (below, "Why so few lines").
 - **What is left** (`docs/progress/r6-won-gui-b.md`): the ComponentOp self cases (seven objects first), the ct
   cluster's component calls through the comp host (the ct world answering it), layoutobj's and skinlay's moves,
   wmobj's and winobj's component enums, the skin buttons' reads, the MS constructors, SkinnedContainers' paints.
+
+## R5b.1: the next setting's saveload parting was the map's terrain types (save 0.283), and the path manager's request record in Rust (ee_sim::astar pm_record.rs; branch rust-astar1, 2026-11-17)
+
+- **The parting was not the path manager.** The Lua save lane left `next` seed 2 (309 ticks from 1000 s, 0 from
+  1900 s) to this lane: a path had come back in one game and not in the other, and the bounded machine's storage
+  dump differed (70165 against 69237 bytes). The byte count is only the arena's high-water mark (a node arena never
+  shrinks; a loaded game starts it empty), and the bounded storage's span clear does cover every flag a search
+  writes, so its kept bytes do not change a result.
+- **How it was found.** `--dump-tick` at every physics tick of the first communications tick (two EE-SIM runs: the
+  continued game from the start, the loaded game from the save) put the first difference on one citizen: equal
+  waypoints, but in the loaded game its y stopped at 54.006, a tile edge. Temporary `fprintf`s in the physics
+  models' C++ hosts (`passable_by`, `can_stand_on`, `can_move_on_terrain`) showed `CanMoveOnTerrain` refusing tile
+  (81,53): terrain type 9 in the loaded game, 6 in the continued one. A `TERR` dump of every tile's type then gave
+  1,040 tiles of another type after the load, the same at 10 s, 300 s, 1000 s and 1900 s of the continued game: the
+  types never change in a game, the load gets them wrong.
+- **The cause: EEMap::Load re-types every tile from its mesh vertex's texture** (the terrain table of
+  `GetTextureSetID(x, y)`; a cliff or no table: the default). The random map's painting types the four tiles around
+  each vertex it paints, so the vertex's texture is not always the tile's type. The original game did the same: a
+  loaded game had other terrain under about 8% of the land. Every setting's saves had the difference; it parted only
+  where a unit walked over such a tile.
+- **The fix (save 0.283, EESaveHasTileTypes).** A world part after the tech flags (world_save.rs
+  `EE_UNITS_WORLD_PART_TILE_TYPES`, EEPWorldHelper.cpp `EESaveTileTypes`): every tile's type, row by row, as runs
+  of a count and a type (-1: no tile). The types go back at the part's load and again at the first tick. 0.282 saves
+  load as before.
+- **Results.** Matrix (`--settings all --seeds 2-3 --at 1000,1900`): one full run and two runs of `next`, the same: next seed 2 1000 s 309 -> 915,
+  1900 s 0 -> 276; every other row as before (END; calamity seed 2 has no 1900 s save). The plain saveload (seeds 2-7 at
+  600/1350/2100 s) 18/18. The oracle seeds 2-7 identical (the change only adds to a save).
+- **What still parts `next` seed 2 is the Lua AI, not the path manager.** At 2142875 ms (the 1900 s save, 276 ticks
+  on) `next.cmd gather` takes two citizens in the continued game and one in the loaded one. Everything the script
+  reads before that step is equal: the units' dumps, every Lua unit event (a temporary print of
+  `EECPUnitsEventAdd`), the action each binding reports for the citizen (`move`, a location goal, in both), the
+  restored Lua memory (`next.load` hash = `next.save` hash), and the bounded searches (inputs and results printed:
+  equal). So the script's own state decides differently after a load: likely an order that depends on a Lua table's
+  internals (`pairs`/`next` over a hash part, or `#` of a table with holes), which a deserialised table does not
+  share with one built up in the game. Left for the Lua AI lanes; the 1000 s save's parting (915 ticks, rng first)
+  was not traced.
+- **Lesson.** A unit that stops at a tile edge with its waypoints equal is a tile test, not a path: print the
+  physics models' host answers for that unit before suspecting the searches. And a state that a load recomputes
+  (here the tile types) can differ from the start of the game, not from the save: dump it at several times of the
+  continued game to tell the two apart.
+
+### The path manager's request record (pm_record.rs)
+
+- `EEPathManager`'s `mHistory` (deque, newest first), `mRegions` (`std::map<long, std::map<U2DPoint<long>,
+  unsigned long>*>`) and the two prune timers are one Rust record behind a handle (`EePathRecord`): `AddHistory`,
+  `SetGraphRevs`' history walk, `PruneHistory`, `PruneRegions`' choice, `FreeRegions`, `UpdatePaths`' prune
+  schedule and the record's part of `SaveRunningState`/`LoadRunningState`. The C++ keeps cancelling the stranded
+  units' paths and telling their players. `EEPathHistoryEntry` is deleted.
+- The orders are the containers': `U2DPoint<long>::operator<` is lower y first, then the larger x (a `TileKey(y,
+  Reverse(x))` in a `BTreeMap`); the ids `PruneRegions` handles come out last found first, as the C++ walked its
+  vector backwards. The timers compare as the Windows build's `long <= unsigned long` (unsigned 32 bits).
+- The save layout is unchanged: Rust gives the 4-byte words, the C++ writes them one by one through `FSFile::Write
+  (uint32_t)` and reads them through a reader callback, so a text or big-endian FSFile would still see typed
+  values. The plain saveload and the matrix ran on it unchanged.
+- Net C++: -131 lines (EEPathManager.cpp 59+/180-, EEPathManager.h 4+/14-). 8 Rust tests (orders, the window and
+  its small-time case, the count-up rule, loading, the schedule's unsigned compare, the words' layout, the handles).
+  No golden driver was built for it: the gates are the oracle (seeds 2-7 identical), the captures and the saveloads.
+## The world views: ee_sim::world, the records, the layout and read-only views over the C++ objects (lane V; branch rust-worldviews, 2026-11-17)
+
+"Rust layout, C++ allocation" (the object storage plan): the records stay inline in the C++ objects, and Rust reads
+them in place. docs/progress/world-views.md documents the API for the lanes on top (U, R, P, S).
+
+- **What moved.** The unit, class, stats, player and map records (`EeUnits*`, C names unchanged) are defined in
+  `ee_sim::world` and re-exported at their old `ee_sim::units` paths, so no reader changed. Their C declarations
+  went from `rust/sim/units.h` to `rust/sim/world.h`, which the header splitter makes `units.h` include, so no C++
+  include changed. The player record points to two Rust objects (`EeUnitsQueued`, `EeUnitsPlayerWonders`); they
+  moved too, because a record in `world.h` naming a type of `units.h` would make the two headers include each other
+  (the splitter refuses a cycle).
+- **The layout is registered, never written down.** `EEWorldLayout.cpp` fills `EeWorldLayout` with `offsetof` and
+  base casts of a made-up address (the unit store's old trick) and registers it from `EEWorld::EEWorld()`, the
+  first thing that exists before any unit. It aborts when a first base is not at offset 0 (a handle is the first
+  base's address) or when a `std::vector`'s first two words are not its begin and end: MSVC, libc++ and libstdc++
+  all keep them there, which lets Rust read `mCargo`, `mBuildQueue` and `mGhostUnits` without a C++ call.
+  `GEPhysicalModel::mLocation` is private: its offset comes from `&model->GetLocation()` on the made-up address.
+- **Lesson: the layout must not be global in unit tests.** `cfg(test)` is per crate and the tests share a process:
+  a test that registered a fake layout would make the unit store's tests on other threads follow pointers in
+  their fake records. The registered layout is the C++'s only; a test sets one for its own thread
+  (`layout::with_test_layout`), and the store and stats reads see none.
+- **Lesson: a read token takes no lock.** Lane S measured the editor: two thirds of its reads run while the thread
+  holds `gWorld.mLock` for write (an EeTsLock read on top deadlocks), and some run with no lock at all (the
+  construction thread, the menus). `WorldRead` is the caller's statement that it holds the world, counted per
+  thread in debug builds; `ee_world_read_begin`/`end` let C++ open one.
+- **Views copy, never borrow.** Each accessor reads the member's bytes (`bool`s as bytes, also through
+  `world_field!` and in arrays); a view holds an address, so a call back into C++ while one exists is sound.
+  Debug builds check the object-kind byte and that an `EEComplexUnit` member is read from an `EEComplexUnit`.
+- **VWCK.** The C++ side (a fixed list of the world's, players', units' and tiles' fields as 32-bit words, FNV-1a
+  64) was committed and captured first (51225ab08: oracle, late and calamity, seeds 2-7: the golden lines); the
+  Rust side folds the same words through the views and EE-SIM exits 3 on a difference. view_tests.rs spells the
+  list out word by word over a hand-built world, so the two sides share one written order.
+- **Lesson: two background runs of one script share their stage slots.** A capture started with `&` from a tool
+  call survived the call; the same script started again ran beside it with the same NAMEs, and one game faulted in
+  a combat leaf (the data under it was being re-staged). Each run needs its own NAME, and a "lost" run must be
+  found (`Get-CimInstance Win32_Process` by command line) and stopped before a rerun.
+- **Converted callers.** Fifteen plain operations of the goals' host (`rust_goal.rs` `read_unit`) read through
+  the views; their `GoalOp` cases left `EEUGRust.cpp`.
+## R6 WONLobby, round 12: the routing records read in Rust; ServerConnection.cpp and WONAPICore (ee_won_lobby modelobj.rs route_record_op, ee_won_net apicore.rs; branch rust-wonlobby12, 2026-11-17)
+
+Three WON lanes reported that their remaining C++ waited on the lobby's C++ classes: the routing records copied into
+C++ records, the server connection's peer authentication maker, the WONGUI hosts. The round measured which lobby
+classes held those readers, moved the readers' work into Rust and deleted the network shims it freed, with WONAPICore.
+
+### The measure
+
+| What stayed C++ | Its readers before the round |
+|---|---|
+| RoutingOp.cpp: the Rust ops' records copied into `RoutingClientInfo` .. `RoutingBadUser` | RoutingLogic.cpp's host (ServerAddGroup, ServerAddClient, ServerSyncClients, ServerSyncGroups, SyncGroupsOfQuery, GameReadSummary, RDataObjects / DataObjectLink / GameReadDataObject, BadUserSet); LobbyModelHost.cpp (the model's ClientReadRouting / GroupReadRouting host ops: `ReadRoutingInfo` x2, `SyncClients` x2, `SyncGroups`, `SetMembers`); LobbyDialogHost.cpp's BadUserItem; the game's EEWonNet.cpp (data objects, members, client names); three drivers |
+| SmartRoutingConnection.cpp: the model's records copied | EEWonNet.cpp alone (no lobby class read it); won_smartroute_test |
+| ServerConnection.cpp: the peer authentication maker, the virtual MsgCallback | no lobby class: RoutingConnection's MsgCallback override, three drivers' stand-in PeerAuthOps |
+| WONAPI.cpp (WONAPICore) | EELobbyGlueHost.cpp (the lobby's core), EEWonNet.cpp, AsyncOp.cpp's hooks, every GetDefaultFileDirectory caller |
+| the WONGUI hosts (GuiHost.cpp and the skins' hosts, WONGUI B's) | the lobby's own Container and ListItem subclasses: ServerListCtrl (904 lines), ChatCtrl (676), RoomCtrl (531), FriendsListCtrl (388), UserListCtrl (268), QuickPlayCtrl (241), the account and login controls; not moved this round |
+
+### What moved (net WON C++ = every tracked file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| b27a7a93 | the routing records read in Rust; RoutingOp.cpp, SmartRoutingConnection.cpp deleted | +58 -505 = -447 (42,039 -> 41,592) |
+| 0c5d4559 | ServerConnection.cpp deleted: the peer authentication maker and MsgCallback in Rust | +5 -40 = -35 (41,592 -> 41,557) |
+| 2b0b262d | WONAPICore a Rust object; WONAPI.cpp deleted | +56 -242 = -186 (41,557 -> 41,371) |
+
+Round total: WON C++ 42,039 -> 41,371 (-668), short of the 1,500 asked: the shims the measure found were small (their
+logic was Rust already); the large remaining lobby C++ is the Internet controls listed above, the WONGUI hosts'
+readers, which this round did not reach. Outside the count, EEWonNet.cpp grew by 67 lines (it reads the Rust records
+itself, with its own two small structs), and the drivers keep the deleted statements in test headers.
+
+- **The routing records (modelobj.rs `route_record_op`).** The lobby model answers RoutingLogic's record ops for the
+  game's logic (`route_op`, before the host) by reading the routing op's Rust object (`ee_won_net::cppcore::
+  route_op_of`, the core table's `CoreObjectOf`; the query's group list op from the request op's replies,
+  `routeop::group_list_of`). The records are copied first, as the original's copies were, so no Rust borrow lives
+  across a host call. The merges take a reader (`list_sync_with`, `server_sync_groups_with`, `server_add_*_with`):
+  the M calls' readers still ask the host (`ClientReadRouting`), the game's read the Rust records (`client_read_route`,
+  `group_read_route`: `ReadRoutingInfo`'s stores in order, the name's temporary released last, then `SetMembers`).
+  Two new host ops: `TextOfUnits` (a record's name as a `GUIStringData`) and `GameReadSummaryBytes`
+  (`ReadSummaryBuffer` over bytes). The data object list is a Rust list. The bad user rows (`BadUserItem`) read the
+  `EeWonRouteRecord`s (`BadUsersInsert` over `ee_won_routeop_records`); EEWonNet.cpp reads the client, member, data
+  object and smart connection records over the C ABI. The C++ record structs, RoutingOp's getters and the smart
+  connection's copies are `tests/won/won_routerecords.h` (`RouteOpRecords(op).GetClients(map)`, `SmartCopies(conn)`),
+  their statements unchanged, so won_routeops_test, won_smartroute_test, won_routemsg_test and won_reqlast_test print
+  the same lines over the Rust records.
+- **SmartRoutingConnection's constructor** is inline over `ee_won_smart_new_default` (the ignore file under the WON
+  directory, hostnative.rs's rule).
+- **ServerConnection.cpp deleted.** `n_new_peer_auth` (cppcore.rs) makes the peer authentication op with
+  hostcore.rs's `new_peer_auth` (the constructor's members; the address's six bytes read through the `IPAddr`'s one
+  member), and a received message goes to the connection's Rust routing object when it is a RoutingConnection (its
+  one override of the virtual; the base's is empty). A bound C++ table still wins:
+  `tests/won/won_servconn_cpp.h` keeps the unit's two hooks; won_servconn_test binds both (its connections override
+  MsgCallback), won_routeops_test and won_smartroute_test bind the maker alone, so their messages take the game's path.
+- **WONAPICore (apicore.rs `EeWonApiCore`).** The core holds the op container and the timer thread (thread.rs) and its
+  own pump thread (a Rust `EeWonThread`), the flags and the version; Startup, Shutdown, Pump, WriteVersion and the
+  static calls (QueueOp, AddTimerOp, RemoveTimerOp, AddToSocketThread, RemoveFromSocketThread, IsStarted,
+  GetInstance, SetDefaultFileDirectory) are Rust, in the original's order. The socket thread stays a C++
+  `SocketThread*` the game may replace: AsyncOp.cpp's `WonApiHooks()` (its virtuals, its deletion,
+  `new SocketThreadSimple`). WONAPICore.h is the shim (the vtable, the statics); `GetDefaultFileDirectory` returns a
+  per-thread copy of the Rust directory (the original returned the member; every caller copies it at once).
+
+### Goldens, mutations, replays
+
+| Driver | What | Result |
+|---|---|---|
+| won_routemodel_test (new) | the original statements (RoutingOp.cpp's copies, RoutingLogic.cpp's cases, LobbyModelHost.cpp's reads) against `ee_won_model_route_record_op`, on real routing ops fed generated server messages (client lists plain and extended, group lists, the two notices, data objects, peer data, bad users; cut and failing ones), two worlds of model objects over stand-in shells | 30,000 sequences, 2,751,105 lines identical on the first run; `golden_routerec.txt` (40 sequences) replayed by cargo |
+| won_apicore_test (new) | WONAPI.cpp's statements copied as OrigCore against the shim, a tracing stand-in socket thread, never-run ops | 3,000 sequences, 40,828 lines identical (stable run to run) |
+| won_routeops_test, won_smartroute_test, won_routemsg_test, won_reqlast_test, won_servconn_test, won_opcore_test, won_core_test, won_ops_test, won_asyncop_test, won_sockobj_test, won_serverop_test, won_authhost_test, won_modelobj_test, won_routelogic_test, won_lobbydlg_test | the existing goldens over the moved code | 0 failures |
+
+| Mutation | Caught by |
+|---|---|
+| the CD key id read from the user id | 12,228 of 30,000 sequences |
+| a room's count read from its capacity | 13,460 |
+| the members never set | 12,242 |
+| no ignore update after the client merge | 17,142 |
+| the notice's capacity from the async flags | 13,156 |
+| a missing buffer read as an empty one | 1,878 |
+| the update-clients flag inverted | 18,955 |
+| a record name's temporary never released | 22,353 |
+| a data object's link id one off | 9,999 |
+| the Rust MsgCallback dispatch dropped | won_smartroute_test 656 lines; won_routeops_test stalls |
+| WONAPICore: the socket thread never set single-threaded | won_apicore_test 55 of 3,000 |
+| WONAPICore: no socket purge at shutdown | 329 |
+| WONAPICore: a socket thread set after start-up kept (not deleted) | 401 |
+| WONAPICore: the directory set after start-up | 83 |
+| WONAPICore: another version text | 1 (the first sequence's file) |
+| WONAPICore: the socket thread started without asking NeedThread | 103 |
+| WONAPICore: a finished op dropped before start-up; a timer op of no started core not killed | 0: equivalent in the driver (its ops never run, and Kill of a never-run op is a no-op; won_core_test's and won_ops_test's real ops pass these rules) |
+
+### Behaviour changes
+
+- `ServerAddClient` of a client joined notice with no client record: the original read a NULL record and faulted;
+  the client now keeps its constructor's fields. A data object without a buffer in EEWonNet.cpp: the original
+  dereferenced the NULL buffer; it is read as empty. Neither path is reachable (no WON server).
+- The original's `WONAPICore::Pump` single-threaded with no socket thread (before any start-up) dereferenced NULL;
+  the Rust passes NULL to the C++ hook, which faults the same way (no caller pumps before start-up).
+
+### What runs it
+
+EE-SIM never builds the lobby (the oracle is unchanged by construction). The records are the Internet lobby's (no
+routing server exists), reached by the drivers only. WONAPICore runs in every lobby session: its start-up, pump and
+shutdown are on the LAN game's path, as is the server connection's class (the LAN path makes none).
+
+### Gates
+
+| Gate | b27a7a93 (records) | 0c5d4559 (ServerConnection) | 2b0b262d (WONAPICore), the round's head |
+|---|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same | the same |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | tests passed; clippy failed on one lint in the replay test (`is_multiple_of`), fixed, clippy and rustfmt clean before the commit | clippy, rustfmt, ee_won_net's 399 tests | PASS |
+| `build.py --test-profile windowed-software` | (end only) | (end only) | 0 / 0 |
+| `xbuild.py wontest` | the record drivers above, 0 failures | servconn, routeops, smartroute, opcore, routemodel: 0 failures | all 145 programs exit 0 (won_routemodel_test and won_apicore_test the new ones) |
+| `lan_game.py` (slot.py) | (end only) | (end only) | `RESULT PASS lan-game PT host=2819 joiner=2823` (the pre-round exe: host 3042, joiner 3048) |
+
+origin/rust had nothing new at the end of the round (no merge). The lobby captures of this branch's test-profile exe
+and the pre-round one (4aeedb1a, built at the round's start) were compared by pixel: the lobby's first screen, the
+LAN screen, the create dialog, the LAN list, the joiner's staging screen and the ready host's are identical; the
+host's staging screen differs in 15 pixels, one column at x 121 (the input box's caret, blinking); the in-game frames
+differ throughout (another moment of another game) and are not lobby pictures.
+
+The machine froze and restarted once during the round (all processes lost): the uncommitted files were checked
+(no NUL bytes, every file ending in a newline, the build and the drivers rerun) before the first commit.
+
+### Left
+
+- The WONGUI hosts' readers: the Internet controls (ServerListCtrl, ChatCtrl, RoomCtrl, FriendsListCtrl,
+  UserListCtrl, QuickPlayCtrl) and the account and login controls as `lobbyctl.rs` kinds (round 4's pattern), about
+  3,000 lines; then GuiHost.cpp's virtual hooks they override can go (the WONGUI B lane's).
+- RoutingLogic.cpp's remaining host: the events, dialogs and the connection's request helpers (Rust could call
+  routeconn.rs directly, but EEWonNet.cpp also calls most helpers).
+- IPAddr.cpp and StringUtil.cpp stay forwarders while the lobby's C++ calls them.
 
 ## R6 data, round 4: one media use count, five table classes as Rust lists, EECivilization's costs, the songs (branch rust-data4, 2026-11-17)
 

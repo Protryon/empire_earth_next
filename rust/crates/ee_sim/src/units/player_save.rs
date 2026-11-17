@@ -26,44 +26,9 @@
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 
-use crate::units::player::{load_list, save_list, EeUnitsQueued};
+pub use crate::world::player_fields::EeUnitsPlayerSaved;
 
-/// `EEPlayer`'s saved numbers (their C++ names and types).
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct EeUnitsPlayerSaved {
-    /// the scenario's player variables (zeroed together; saved)
-    pub mScenarioVariables: [c_ulong; 10],
-    /// non-zero: at war with that player (calamity targets; the store's diplomacy table)
-    pub mEnemies: [c_ulong; 17],
-    /// the tributes given and received by resource (two rows of 5)
-    pub mTributes: [c_ulong; 10],
-    /// 0..3 (the chat form's radio buttons 3, 2, 4, 5)
-    pub mChatType: c_ulong,
-    pub mCombatState: c_ulong,
-    pub mGameResult: c_ulong,
-    pub mFreeUnitCounter: c_ulong,
-    pub mFreeUnitInterval: c_ulong,
-    /// indexed by a resource (2..6 used)
-    pub mResourceCaps: [c_long; 7],
-    pub mPopLimit: c_long,
-    pub mPopulationCount: c_long,
-    pub mEndOfGameCount: c_long,
-    /// written, never read back (a load reads and drops the word)
-    pub mNumCapitols: c_long,
-    /// indexed by a resource 2..6 as `[resource - 2]`
-    pub mResourceTrade: [c_long; 5],
-    pub mInsuranceRefunds: [c_long; 5],
-    pub mNumVitalBuildings: c_long,
-    pub mHighGroundBonus: f32,
-    pub mHealTimer: f32,
-    pub mSendChatMessage: [bool; 17],
-    pub mSharedLOS: bool,
-    pub mDisconnected: bool,
-    pub mCivilizationLocked: bool,
-    pub mCivilizationChosen: bool,
-    pub mCivUpgradesPurchased: bool,
-}
+use crate::units::player::{load_list, save_list, EeUnitsQueued};
 
 /// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
 #[repr(C)]

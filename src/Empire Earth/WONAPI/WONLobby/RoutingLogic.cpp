@@ -74,7 +74,6 @@ template <class X> static intptr_t Held(const SmartPtr<X>& inPtr)
     return (intptr_t)inPtr.get();
 }
 static void Broadcast(LobbyEvent* inEvent) { LobbyBroadcastEvent(inEvent, true); }
-typedef std::vector<RoutingDataObjectPtr> RoutingDataObjectVector;
 
 static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d,
                             intptr_t e)
@@ -86,9 +85,8 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case O::TextFree: delete T(a); return 0;
     case O::TextLength: return T(a)->length();
-    case O::ListFree:
-        if (b == 1) delete reinterpret_cast<RoutingDataObjectVector*>(a);
-        else if (b == 2) delete reinterpret_cast<DirEntityList*>(a);
+    case O::ListFree: // (kind 1, the data objects, is Rust's)
+        if (b == 2) delete reinterpret_cast<DirEntityList*>(a);
         else delete reinterpret_cast<LobbyClientIterator*>(a);
         return 0;
     // ---- the lobby
@@ -167,12 +165,8 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         return 0;
     }
     // ---- the model
-    // (the model's other values are its Rust objects': modelobj.rs route_op)
+    // (the model's other values, and the routing records read into it, are its Rust objects': modelobj.rs route_op)
     case O::ServerNum: return b == 4 ? S(a)->GetName() == LobbyGetLastServerName() : S(a)->HasAddress(GetLobbyConfig()->mLanguage);
-    case O::ServerAddGroup: return (intptr_t)S(a)->AddGroup(RO(b)->GetGroupInfo().get());
-    case O::ServerAddClient: return (intptr_t)S(a)->AddClient(RO(b)->GetClientInfo().get());
-    case O::ServerSyncClients: { RoutingClientMap m; RO(b)->GetClients(m); S(a)->SyncClients(m); return 0; }
-    case O::ServerSyncGroups: { RoutingGroupMap m; RO(b)->GetGroups(m); S(a)->SyncGroups(m, c != 0); return 0; }
     case O::ListNum: return b == 0 ? (intptr_t)L->mServerList->GetCount() : L->mServerList->IsEmpty();
     case O::ListAt: return (intptr_t)L->mServerList->ServerAt((size_t)a);
     case O::ListAddressIs: return S(b)->GetAddress() == L->mServerList->AddressAt((size_t)a);
@@ -183,7 +177,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::RemoveFriend: LobbyRemoveFriend((unsigned long)a); return 0;
     case O::FriendCount: return (intptr_t)LobbyGetFriendCount();
     case O::FriendAt: return (intptr_t)LobbyGetFriendAt((size_t)a);
-    case O::GameReadSummary: return GM(a)->ReadSummaryBuffer(RO(b)->GetData().get());
     case O::GameText: return (intptr_t) new GUIString(b == 0 ? GM(a)->GetName() : GM(a)->GetPassword());
     case O::GameCreate: return Held(SmartPtr<LobbyGame>(LobbyGame::CreateGame(LobbyGameType_Internet)));
     case O::GameList:
@@ -209,16 +202,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     }
     case O::RConnection: return (intptr_t)RO(a)->mConnection.get();
     case O::RNew: { RoutingOp* anOp = new RoutingOp(RC(a), (RoutingOpType)b); anOp->AddRef(); return (intptr_t)anOp; }
-    case O::RDataObjects: {
-        RoutingDataObjectList aList;
-        RO(a)->GetDataObjects(aList);
-        RoutingDataObjectVector* aVector = new RoutingDataObjectVector(aList.begin(), aList.end());
-        *reinterpret_cast<intptr_t*>(b) = (intptr_t)aVector->size();
-        return (intptr_t)aVector;
-    }
-    case O::DataObjectLink: return (*reinterpret_cast<RoutingDataObjectVector*>(a))[(size_t)b]->mLinkId;
-    case O::GameReadDataObject:
-        return GM(a)->ReadSummaryBuffer((*reinterpret_cast<RoutingDataObjectVector*>(b))[(size_t)c]->mData.get());
     case O::OpSocket: return (intptr_t) static_cast<RefCount*>(static_cast<SocketOp*>(AO(a))->GetSocket());
     case O::ConnNew: { RoutingConnection* aConnection = new RoutingConnection; aConnection->AddRef(); return (intptr_t)aConnection; }
     case O::ConnDo:
@@ -368,12 +351,7 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         }
         return 0;
     case O::RoomDialogEnd: GetLobbyWindow()->EndDialog(-1, NULL, L->mRoomDialog.get()); return 0;
-    case O::BadUserSet: {
-        RoutingBadUserList aBadUsers;
-        RO(a)->GetBadUsers(aBadUsers);
-        L->mBadUserDialog->SetUserList(aBadUsers, b != 0);
-        return 0;
-    }
+    case O::BadUserSet: L->mBadUserDialog->SetUserList(RO(a)->mRust, b != 0); return 0;
     case O::BadUserIds: {
         std::list<unsigned long> ids;
         L->mBadUserDialog->GetIds(ids);
@@ -469,15 +447,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     }
     case O::LobbyServerList: return (intptr_t)LobbyGetServerList();
     case O::ServerListFind: return (intptr_t)reinterpret_cast<LobbyServerList*>(a)->FindServer(RS(b)->GetAddr());
-    case O::SyncGroupsOfQuery: {
-        // the op's replies read again (reqlast.rs) into a connection-less group list op (routeop.rs)
-        SmartPtr<RoutingOp> groups = new RoutingOp(NULL, RoutingOp_GetGroupList);
-        ee_won_routeop_read_group_list_of(groups->mRust, RS(b)->GetRustOp());
-        RoutingGroupMap aGroups;
-        groups->GetGroups(aGroups);
-        S(a)->SyncGroups(aGroups, false);
-        return 0;
-    }
     case O::GroupQueryRun: {
         SmartPtr<RustServerOp> op = RustServerOp::NewGroupListReq(S(a)->GetAddress(), 0x29);
         L->RunTrackedOp(op.get(), new LogicCompletion<RoutingLogic>(&RoutingLogic::QueryServerGroupsDone, L), 0);
