@@ -180,7 +180,7 @@ mod tests {
 
     /// every `const NAME: T = expr;` of this crate's sources: (file, name, the Rust expression)
     fn rust_constants() -> Vec<(String, String, String)> {
-        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src").join("units");
         let mut out = Vec::new();
         let mut files: Vec<_> = std::fs::read_dir(&dir).expect("src").flatten().map(|e| e.path()).collect();
         files.sort();

@@ -1187,6 +1187,15 @@ FIXUPS = [
      "            PlatSleep(100);\n"
      "            assert_eq!(unsafe { PlatEventWait(event, 0) }, 0, \"the timer set the event\");\n"
      "            unsafe { PlatEventDestroy(event) };\n"),
+    # a timed wait of ee_plat_sys's tests, now in one binary with ee_plat_core's tests that set the harness clock
+    ("base", "rust/crates/ee_plat_sys/src/thread.rs",
+     "    fn auto_reset_event_releases_one_wait_and_clears() {\n        unsafe {",
+     "    fn auto_reset_event_releases_one_wait_and_clears() {\n"
+     "        // a timed wait: not while a plat_core test sets the harness clock (one test binary since the restructure)\n"
+     "        let _guard = ee_plat_core::test_globals();\n        unsafe {"),
+    # a test that reads its crate's sources by the manifest directory
+    ("sim", "rust/crates/ee_units/src/header_consts.rs", 'let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");',
+     'let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src").join("units");'),
     # a tool that names a crate path by its parts
     ("base", "tools/lang_strings.py", 'OUT = ROOT / "rust" / "crates" / "ee_util" / "src" / "language_strings.rs"',
      'OUT = ROOT / "rust" / "crates" / "ee_base" / "src" / "util" / "language_strings.rs"'),

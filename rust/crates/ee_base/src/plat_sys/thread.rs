@@ -151,6 +151,8 @@ mod tests {
 
     #[test]
     fn auto_reset_event_releases_one_wait_and_clears() {
+        // a timed wait: not while a plat_core test sets the harness clock (one test binary since the restructure)
+        let _guard = crate::plat_core::test_globals();
         unsafe {
             let e = PlatEventCreate(0, 1);
             assert!(!e.is_null());

@@ -634,7 +634,8 @@ mod tests {
         assert!(won.contains(
             "extern \"C\" {\n\n/// Makes one.\nEeWonThing ee_won_make(EeGePoint at);\n\n}  // extern \"C\"\n"
         ));
-        assert!(headers["all"].contains("#include \"rust/common.h\"\n#include \"rust/ee_won.h\"\n"));
+        assert!(headers["all"]
+            .contains("#include \"rust/common.h\"\n#include \"rust/ee_ge.h\"\n#include \"rust/ee_won.h\"\n"));
         assert!(!headers["ee_ge"].contains("extern \"C\" {\n\n}"));
     }
 
