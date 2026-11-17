@@ -87,6 +87,8 @@ pub mod script;
 pub mod select;
 pub mod sight;
 pub mod sight_host;
+pub mod game_over;
+pub mod game_over_host;
 pub mod map_words;
 pub mod player_views;
 pub mod tile_sight;

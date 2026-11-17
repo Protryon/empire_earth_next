@@ -2926,6 +2926,38 @@ constexpr static const int32_t EE_UNITS_SIGHT_NUM_PLAYERS = 16;
 /// `gWorld.mPlayers[c]`
 constexpr static const int32_t EE_UNITS_SIGHT_PLAYER = 17;
 
+/// `kUnitTypeTownCenter`, `kUnitTypeCapitol`
+constexpr static const uint64_t TOWN_CENTER = 35;
+
+constexpr static const uint64_t CAPITOL = 41;
+
+/// the game options' `mIsScenarioGame`
+constexpr static const int32_t EE_UNITS_GAME_OVER_SCENARIO = 1;
+
+/// the rules' `mGameOptions.mDefeatWithoutRecovery`
+constexpr static const int32_t EE_UNITS_GAME_OVER_DEFEAT_RULE = 2;
+
+/// `mTeams.size()`; team a's `GetVictoryState()`; its `mPlayers.size()`; its `mPlayers[b]`
+constexpr static const int32_t EE_UNITS_GAME_OVER_TEAMS = 3;
+
+constexpr static const int32_t EE_UNITS_GAME_OVER_TEAM_STATE = 4;
+
+constexpr static const int32_t EE_UNITS_GAME_OVER_TEAM_SIZE = 5;
+
+constexpr static const int32_t EE_UNITS_GAME_OVER_TEAM_PLAYER = 6;
+
+/// `mPlayers[a]->IsHuman()`
+constexpr static const int32_t EE_UNITS_GAME_OVER_IS_HUMAN = 7;
+
+/// `RemovePlayerFromGame(b != 0, a)`
+constexpr static const int32_t EE_UNITS_GAME_OVER_REMOVE = 8;
+
+/// `mPlayers[a]->SetGameResult(b)`
+constexpr static const int32_t EE_UNITS_GAME_OVER_SET_RESULT = 9;
+
+/// player a can train a citizen: no citizen node, or `EEPlayer::CanAfford(node, citizen, 1)`
+constexpr static const int32_t EE_UNITS_GAME_OVER_CAN_TRAIN = 10;
+
 /// `gDoppelgangerManager.TileShown(tile a, x c, y d, player b)`
 constexpr static const int32_t EE_UNITS_TILE_SIGHT_SHOWN = 1;
 
@@ -6858,6 +6890,11 @@ extern int64_t ee_units_sight_host(int32_t op,
 
 /// `EEComplexUnit::SightOn(x, y)` (`on` 1) and `SightOff(x, y)` (0) of unit `unit`.
 void ee_units_sight(uint64_t unit, uint32_t x, uint32_t y, uint8_t on);
+
+extern int64_t ee_units_game_over_host(int32_t op, int64_t a, int64_t b);
+
+/// `EEWorld::CheckGameOver` of the world `world` (`&gWorld`)
+int64_t ee_units_check_game_over(uint64_t world);
 
 extern int64_t ee_units_tile_sight_host(int32_t op, uint64_t a, uint64_t b, int64_t c, int64_t d);
 
