@@ -29028,7 +29028,6 @@ Round total: net -1,076 (short of the 1,500 aimed at; see "Left" below).
   `golden_spec_replays` failed once under the captures' load, passed alone and in the final run); the tour through slot.py `RESULT PASS tour` (84.3% lit, F3 ok).
 - The machine restarted mid-round (the work was uncommitted): every file was intact; the build, `eedata check` and
   the golden were rerun before committing.
-||||||| 4aeedb1a1
 ## R6 WONGUI B round 3: one registered component host; the scroll bar, scroller, scroll area, splitter and multi-column list call Component through compobj; the containers' member writes in place (ee_won_gui compobj.rs, compmem.rs; branch rust-wonguib3, 2026-11-17)
 
 The second WONGUI lane's third round, from origin/rust 4aeedb1a1 (after the crate restructure). WON C++ (`wc -l` of
