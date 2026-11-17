@@ -81,7 +81,7 @@ def _rust_fields(name):
 
     Rust types: i8/u8/i16/u16/i32/u32/f32 and the c_* integers; a scalar `u8` is a one-byte bool (a Rust `bool`
     cannot hold any byte the file may carry, so the records declare their flags `u8`); `[u8; N]` or `[c_char; N]`
-    is char[N] (text when the game reads it, bytes when not); other arrays `[T; N]`. `///` lines above a field are
+    is char[N] (text when the game reads it, bytes when not); `[DbFlag; N]` (tables.rs: a u8) is bool[N]; other arrays `[T; N]`. `///` lines above a field are
     its comment."""
     rname = overlay.RUST_STRUCTS[name]
     text = (ROOT / overlay.STRUCT_SOURCES[name]).read_text(encoding='utf-8')
@@ -107,7 +107,7 @@ def _rust_fields(name):
                 raise SystemExit(f'{name}.{n}: unknown Rust type {scalar}')
             out.append((RUST_TYPES[t], _rust_member(n), 1, ' '.join(doc)))
         else:
-            t = 'char' if elem in ('u8', 'c_char', 'i8') else elem
+            t = 'char' if elem in ('u8', 'c_char', 'i8') else 'bool' if elem == 'DbFlag' else elem
             if t not in RUST_TYPES:
                 raise SystemExit(f'{name}.{n}: unknown Rust type {elem}')
             out.append((RUST_TYPES[t], _rust_member(n), _eval_size(cnt), ' '.join(doc)))

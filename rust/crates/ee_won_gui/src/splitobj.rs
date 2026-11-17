@@ -12,14 +12,16 @@
 use std::cell::RefCell;
 use std::ffi::c_void;
 
+use crate::compmem as mem;
+use crate::compobj::comp;
 use crate::guictl::{self, EeWonRect4, EeWonSplit};
-use crate::guihost::{EeWonGuiCursor as Cursor, EeWonGuiField as F, EeWonGuiHostFn, EeWonGuiOp as Op};
+use crate::guihost::{EeWonGuiCursor as Cursor, EeWonGuiHostFn, EeWonGuiOp as Op};
 
 /// `Splitter_LeftRight` and `Splitter_UpDown` (the bits a bar's type carries).
 const LEFT_RIGHT: i32 = 5;
 const UP_DOWN: i32 = 10;
 /// `ComponentFlag_ParentDrag`.
-const PARENT_DRAG: isize = 0x20;
+const PARENT_DRAG: i32 = 0x20;
 
 /// The inward calls (the C++ shell's virtuals and methods).
 #[repr(u32)]
@@ -134,17 +136,17 @@ impl EeWonSplitter {
         }
     }
     fn width(&self) -> i32 {
-        self.op(Op::Get, F::Width as isize, 0, 0) as i32
+        mem::width(self.comp as isize)
     }
     fn height(&self) -> i32 {
-        self.op(Op::Get, F::Height as isize, 0, 0) as i32
+        mem::height(self.comp as isize)
     }
     fn pos_size(&self, c: isize, r: EeWonRect4) {
-        self.op(Op::ChildSetPosSize, c, &r as *const EeWonRect4 as isize, 0);
+        comp().set_pos_size(c, r.x, r.y, r.w, r.h);
     }
 
     pub fn register_max_button(&self, button: isize, pos: i32) {
-        self.op(Op::ButtonSetControlId, button, pos.wrapping_add(100005) as isize, 0);
+        mem::set_control_id(button, pos.wrapping_add(100005));
         self.op(Op::ChildHold, button, 0, 0);
         self.st.borrow_mut().buttons.push(button);
     }
@@ -160,8 +162,8 @@ impl EeWonSplitter {
             s.bars.push(Bar { comp: c, kind, drag: 0 });
             s.bars.len() - 1
         };
-        self.op(Op::ChildSetFlags, drag, PARENT_DRAG, 1);
-        if self.op(Op::ChildHasDefaultCursor, drag, 0, 0) == 0 {
+        mem::set_flags(drag, PARENT_DRAG, true);
+        if comp().default_cursor(drag) == 0 {
             let cursor = match guictl::split_cursor(kind) {
                 1 => Some(Cursor::NorthSouthEastWest),
                 2 => Some(Cursor::EastWest),
@@ -178,11 +180,11 @@ impl EeWonSplitter {
         }
         self.op(Op::AddChild, c, 0, 0);
         if self.st.borrow().bar_w == 0 && kind & LEFT_RIGHT != 0 {
-            let w = self.op(Op::ChildWidth, c, 0, 0) as i32;
+            let w = mem::width(c);
             self.st.borrow_mut().bar_w = w;
         }
         if self.st.borrow().bar_h == 0 && kind & UP_DOWN != 0 {
-            let h = self.op(Op::ChildHeight, c, 0, 0) as i32;
+            let h = mem::height(c);
             self.st.borrow_mut().bar_h = h;
         }
     }
@@ -214,15 +216,15 @@ impl EeWonSplitter {
             (x, y, s.buttons.clone(), s.bars.clone(), s.quadrants.clone())
         };
         for b in buttons {
-            let id = self.op(Op::ButtonControlId, b, 0, 0) as i32;
+            let id = mem::control_id(b);
             let q = guictl::split_button_quadrant(id);
             self.op(Op::ButtonSetCheck, b, (q == pos) as isize, 0);
         }
         for bar in bars {
-            self.op(Op::ChildSetEnabled, bar.drag, (bar.kind & pos == 0) as isize, 0);
+            comp().v_set_enabled(bar.drag, bar.kind & pos == 0);
         }
         for (c, p) in quadrants {
-            self.op(Op::ChildSetVisible, c, (p & pos != 0) as isize, 0);
+            comp().v_set_visible(c, p & pos != 0);
         }
         self.set_splitter_pos(x, y, false);
     }
@@ -236,10 +238,10 @@ impl EeWonSplitter {
             (s.bars.clone(), s.quadrants.clone())
         };
         for bar in bars {
-            self.op(Op::ChildSetEnabled, bar.drag, 1, 0);
+            comp().v_set_enabled(bar.drag, true);
         }
         for (c, _) in quadrants {
-            self.op(Op::ChildSetVisible, c, 1, 0);
+            comp().v_set_visible(c, true);
         }
         let (lp, tp) = {
             let s = self.st.borrow();
@@ -262,7 +264,7 @@ impl EeWonSplitter {
     fn calc_splitter_positions(&self) {
         let bars = self.st.borrow().bars.clone();
         for bar in bars {
-            if self.op(Op::ChildIsVisible, bar.comp, 0, 0) != 0 {
+            if mem::is_visible(bar.comp) {
                 let split = self.st.borrow().split;
                 let r = guictl::split_bar(bar.kind, self.width(), self.height(), &split);
                 self.pos_size(bar.comp, r);
@@ -292,7 +294,7 @@ impl EeWonSplitter {
         }
         self.calc_splitter_positions();
         self.calc_quadrants();
-        self.op(Op::Invalidate, 0, 0, 0);
+        comp().v_invalidate(self.comp as isize);
     }
 
     pub fn size_changed(&self) {
@@ -308,12 +310,12 @@ impl EeWonSplitter {
 
     pub fn mouse_down(&self, x: i32, y: i32, button: i32) {
         self.op(Op::BaseMouseDown, x as isize, y as isize, button as isize);
-        let mc = self.op(Op::MouseChild, 0, 0, 0);
+        let mc = comp().v_mouse_child(self.comp as isize);
         if button != 0 || mc == 0 {
             return;
         }
-        let dx = x.wrapping_sub(self.op(Op::ChildLeft, mc, 0, 0) as i32);
-        let dy = y.wrapping_sub(self.op(Op::ChildTop, mc, 0, 0) as i32);
+        let dx = x.wrapping_sub(mem::left(mc));
+        let dy = y.wrapping_sub(mem::top(mc));
         {
             let mut s = self.st.borrow_mut();
             s.lr_drag = false;
@@ -321,9 +323,9 @@ impl EeWonSplitter {
             s.drag_x = dx;
             s.drag_y = dy;
         }
-        let grand = self.op(Op::ChildMouseChild, mc, 0, 0);
+        let grand = comp().v_mouse_child(mc);
         let handle = if grand == 0 { mc } else { grand };
-        if self.op(Op::ChildFlagSet, handle, PARENT_DRAG, 0) == 0 {
+        if !mem::flag_set(handle, PARENT_DRAG) {
             return;
         }
         let mut s = self.st.borrow_mut();
@@ -339,7 +341,7 @@ impl EeWonSplitter {
 
     pub fn mouse_up(&self, x: i32, y: i32, button: i32) {
         self.op(Op::BaseMouseUp, x as isize, y as isize, button as isize);
-        if button != 0 || self.op(Op::MouseChild, 0, 0, 0) == 0 {
+        if button != 0 || comp().v_mouse_child(self.comp as isize) == 0 {
             return;
         }
         let mut s = self.st.borrow_mut();
@@ -349,12 +351,12 @@ impl EeWonSplitter {
 
     pub fn mouse_drag(&self, x: i32, y: i32) {
         self.op(Op::BaseMouseDrag, x as isize, y as isize, 0);
-        let mc = self.op(Op::MouseChild, 0, 0, 0);
+        let mc = comp().v_mouse_child(self.comp as isize);
         if mc == 0 {
             return;
         }
-        let cx = self.op(Op::ChildLeft, mc, 0, 0) as i32;
-        let cy = self.op(Op::ChildTop, mc, 0, 0) as i32;
+        let cx = mem::left(mc);
+        let cy = mem::top(mc);
         let (nx, ny) = {
             let s = self.st.borrow();
             guictl::split_drag(

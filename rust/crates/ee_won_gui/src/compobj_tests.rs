@@ -382,6 +382,8 @@ unsafe extern "C" fn host(_me: *mut c_void, op: EeWonGuiOp, k: isize, b: isize, 
             0
         }
         K::IdIn => with(|w| w.ids.contains(&(c as i64)) as isize),
+        // (the other Rust objects' calls on a component: compobj itself never makes them)
+        K::VSetVisible | K::VMouseChild => unreachable!("compobj makes no {k:?}"),
     }
 }
 

@@ -16,6 +16,14 @@
 // reference taken must be given back when the objects go. The first 40 sequences and every later one that makes an
 // op or a call none before made are rust/crates/ee_won_gui/src/golden_multiobj.txt, which the Rust tests replay;
 // `--print` prints them.
+//
+// WONGUI B round 3: the Rust list and header call Component's methods themselves (compobj.rs over the component
+// host) and read the members in place (compmem.rs). The column viewports and the header's buttons are blocks
+// (bounds, flags, control ids), and the original statements make the calls the C++ makes: a nonvirtual method
+// (SetPos, SetPosSize, SetComponentFlags) is compobj's, a virtual one (SetEnabled, SetVisible, GetDesiredSize,
+// Invalidate) the component host's op, an inline member read (Left, Right, Width, mControlId) or write
+// (mControlId) the block's. A new button's block is traced ("comp"), and the moves' bounds at PositionChanged and
+// the size change.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -24,6 +32,8 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include "rust/won_gui/compmem.h"
+#include "rust/won_gui/compobj.h"
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/guidraw.h"
 #include "rust/won_gui/guihost.h"
@@ -54,7 +64,8 @@ struct HostItem {
     bool selected, selectable, row;
     int calcH, calcW, key, refs;
 };
-struct HostComp { int left, width, controlId, desired, refs; bool visible, enabled; };
+struct HostComp { EeWonCompMembers m; int desired, refs; }; // m: the block compmem.rs reads
+typedef EeWonComp K;
 static std::map<intptr_t, HostItem> sItems;
 static std::map<intptr_t, HostComp> sComps;
 static std::map<intptr_t, intptr_t> sEvents; // event -> its child under the header (0: the climb ends at NULL)
@@ -62,6 +73,8 @@ static std::map<intptr_t, int> sCursor;
 static intptr_t sNextItem, sNextComp, sNextEvent;
 static int sFields[16];
 static int sHeadW, sHeadH;
+static EeWonCompMembers& Blk(intptr_t c) { return sComps[c].m; }
+static EeWonCompMembers* Resolve(intptr_t c) { return &Blk(c); }
 static std::vector<std::string> sTrace;
 static std::set<int> sOpsMet;
 
@@ -263,12 +276,37 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
     case Op::SelBackground: r = 0xabcdef; break;
     case Op::NewColumnViewport: {
         r = 0x4000 + (++sNextComp);
-        HostComp h = {0, 0, 0, 0, 1, true, true};
+        HostComp h;
+        memset(&h.m, 0, sizeof(h.m));
+        h.desired = 0; h.refs = 1;
         sComps[r] = h;
         break;
     }
     case Op::ChildRelease: sComps[a].refs--; break;
-    case Op::ChildSetPos: sComps[a].left = (int)b; break;
+    case Op::Comp: {
+        // the component host: a component's virtual (b the component)
+        sOpsMet.insert(1000 + (int)a);
+        EeWonCompMembers& m = Blk(b);
+        switch ((K)a) {
+        case K::VPositionChanged: case K::VSizeChanged:
+            Line("%lld comp %lld %llx at %lld %lld %lld", n, (long long)a, (long long)b, m.bounds.x, m.bounds.y, m.bounds.width);
+            sTrace.back() += " " + std::to_string(m.bounds.height);
+            return 0;
+        case K::VDesiredSize: {
+            int* wh = (int*)c;
+            wh[0] = sComps[b].desired;
+            wh[1] = 20;
+            Line("%lld desired %llx -> %lld", n, (long long)b, wh[0], 0, 0);
+            return 0;
+        }
+        // the world's SetEnabled and SetVisible: the flag (the replay keeps the same rule)
+        case K::VSetEnabled: if (c) m.bits &= ~0x80; else m.bits |= 0x80; break;
+        case K::VSetVisible: if (c) m.bits &= ~0x1; else m.bits |= 0x1; break;
+        default: break;
+        }
+        Line("%lld comp %lld %llx %lld -> %llx", n, (long long)a, (long long)b, (long long)c, (long long)r);
+        return r;
+    }
     case Op::HeaderNotify: Line("%lld header-notify %llx", n, (long long)a, 0, 0, 0); sSide->Head(HC::NotifyColumnChange); return 0;
     case Op::HeaderSetSortColumn:
         Line("%lld header-sort %llx %lld %lld", n, (long long)a, (long long)b, (long long)c, 0);
@@ -277,27 +315,6 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
     case Op::RowCell: r = sSide->Row(RC::GetItem, a, b); break;
     case Op::RowSetCell: Line("%lld row-set-cell %llx %llx %lld", n, (long long)a, (long long)b, (long long)c, 0); sSide->Row(RC::SetItem, a, b, c); return 0;
     case Op::MultiOf: return sSide->MultiPtr(); // not traced (a pointer)
-    case Op::ChildSetEnabled: sComps[a].enabled = b != 0; break;
-    case Op::ChildSetVisible: sComps[a].visible = b != 0; break;
-    case Op::ChildSetPosSize: {
-        const EeWonRect4* q = (const EeWonRect4*)b;
-        sComps[a].left = q->x;
-        sComps[a].width = q->w;
-        Line("%lld pos-size %llx %lld %lld %lld %lld", n, (long long)a, q->x, q->y, q->w, q->h);
-        return 0;
-    }
-    case Op::ChildLeft: r = sComps[a].left; break;
-    case Op::ChildRight: r = sComps[a].left + sComps[a].width; break;
-    case Op::ChildWidth: r = sComps[a].width; break;
-    case Op::ChildControlId: r = sComps[a].controlId; break;
-    case Op::ChildSetControlId: sComps[a].controlId = (int)b; break;
-    case Op::ChildDesiredSize: {
-        int* wh = (int*)b;
-        wh[0] = sComps[a].desired;
-        wh[1] = 20;
-        Line("%lld desired %llx -> %lld", n, (long long)a, wh[0], 0, 0);
-        return 0;
-    }
     case Op::EventIsButtonPress: r = (a & 1) != 0; break;
     case Op::EventChildUnder: r = sEvents[a]; break;
     default: break;
@@ -313,6 +330,13 @@ static intptr_t HL(Op inOp, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0, intp
 static intptr_t HH(Op inOp, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0, intptr_t d = 0)
 {
     return ScriptedHost((void*)kHead, inOp, a, b, c, d);
+}
+// a component's virtual (the component host's op, as the C++ dispatches it)
+static intptr_t HK(K k, intptr_t comp, intptr_t c = 0) { return ScriptedHost((void*)comp, Op::Comp, (intptr_t)k, comp, c, 0); }
+// a nonvirtual Component method (compobj's, over the component host)
+static intptr_t KC(intptr_t comp, EeWonCompCall k, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0)
+{
+    return ee_won_comp_call((void*)comp, ScriptedHost, k, a, b, c);
 }
 static intptr_t Base(LC c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0) { return ee_won_list_call(sList, c, a, b, cc); }
 
@@ -390,7 +414,7 @@ struct MultiListArea {
         for (size_t i = 0; i < aCount; i++) {
             this->mColumnInfoVector[i].mWidth = aWidths[i];
             intptr_t aContainer = this->mColumnInfoVector[i].mContainer;
-            if (aContainer != 0) HL(Op::ChildSetPos, aContainer, aXs[i], 0);
+            if (aContainer != 0) KC(aContainer, EeWonCompCall::SetPos, aXs[i], 0);
             this->mColumnInfoVector[i].mx = aXs[i];
         }
         this->NotifyListHeader();
@@ -710,13 +734,13 @@ struct MultiListHeader {
         if ((int)this->mColumnVector.size() <= column) this->mColumnVector.resize(column + 1);
         intptr_t old = this->mColumnVector[column].mComponent;
         if (old != 0) HH(Op::RemoveChild, old);
-        HH(Op::ChildSetControlId, item, column);
-        HH(Op::ChildSetFlags, item, 0x2000, 1);
+        Blk(item).control_id = column; // item->mControlId
+        KC(item, EeWonCompCall::SetFlags, 0x2000, 1);
         this->mColumnVector[column].mComponent = item;
         HH(Op::AddChild, item);
         if (this->mListArea != NULL && column < (int)this->mListArea->mColumnInfoVector.size() && this->mListArea->GetColumnWidth(column) <= 0) {
             int wh[2];
-            HH(Op::ChildDesiredSize, item, (intptr_t)wh);
+            HK(K::VDesiredSize, item, (intptr_t)wh);
             this->mListArea->SetColumnWidth(column, wh[0], false);
             if (this->mListArea->mSortColumn == column) {
                 this->mCurSortCol = column;
@@ -739,20 +763,20 @@ struct MultiListHeader {
         for (int i = 0; i < size; ++i) {
             intptr_t component = this->mColumnVector[i].mComponent;
             if (component != 0) {
-                HH(Op::ChildSetEnabled, component, aPlaces[i].enabled);
-                HH(Op::ChildSetVisible, component, aPlaces[i].width != 0);
-                EeWonRect4 q = {aPlaces[i].x, 0, aPlaces[i].width, (int)HH(Op::Get, (intptr_t)Fd::Height)};
-                HH(Op::ChildSetPosSize, component, (intptr_t)&q);
+                HK(K::VSetEnabled, component, aPlaces[i].enabled);
+                HK(K::VSetVisible, component, aPlaces[i].width != 0);
+                int s[2] = {aPlaces[i].width, (int)HH(Op::Get, (intptr_t)Fd::Height)};
+                KC(component, EeWonCompCall::SetPosSize, aPlaces[i].x, 0, (intptr_t)s);
             }
         }
         if (this->mColumnVector.size() > 0) {
             intptr_t component = this->mColumnVector[this->mColumnVector.size() - 1].mComponent;
-            HH(Op::ChildSetVisible, component, 1);
-            int left = (int)HH(Op::ChildLeft, component);
-            EeWonRect4 q = {left, 0, (int)HH(Op::Get, (intptr_t)Fd::Width), (int)HH(Op::Get, (intptr_t)Fd::Height)};
-            HH(Op::ChildSetPosSize, component, (intptr_t)&q);
+            HK(K::VSetVisible, component, 1);
+            int left = Blk(component).bounds.x;
+            int s[2] = {(int)HH(Op::Get, (intptr_t)Fd::Width), (int)HH(Op::Get, (intptr_t)Fd::Height)};
+            KC(component, EeWonCompCall::SetPosSize, left, 0, (intptr_t)s);
         }
-        HH(Op::Invalidate);
+        HK(K::VInvalidate, kHead);
     }
     void Virtual08() { HH(Op::BaseSizeChanged); this->NotifyColumnChange(); }
     int GetColumnIndex(intptr_t component)
@@ -772,7 +796,7 @@ struct MultiListHeader {
         if (HH(Op::EventIsButtonPress, event) && this->mListArea != NULL) {
             intptr_t child = HH(Op::EventChildUnder, event);
             if (child == 0) return;
-            int column = (int)HH(Op::ChildControlId, child);
+            int column = Blk(child).control_id;
             if (column >= 0 && column < (int)this->mListArea->mColumnInfoVector.size() && column < (int)this->mColumnVector.size()) {
                 int type = ee_won_gui_mh_toggle(this->mColumnVector[column].mSortType, column == this->mCurSortCol);
                 this->mListArea->SetSortColumn(column, type);
@@ -791,9 +815,9 @@ struct MultiListHeader {
             intptr_t component = this->mColumnVector[i].mComponent;
             aButtons[i].present = component != 0;
             if (component != 0) {
-                aButtons[i].left = (int)HH(Op::ChildLeft, component);
-                aButtons[i].right = (int)HH(Op::ChildRight, component);
-                aButtons[i].width = (int)HH(Op::ChildWidth, component);
+                aButtons[i].left = Blk(component).bounds.x;
+                aButtons[i].right = Blk(component).bounds.x + Blk(component).bounds.width; // Right()
+                aButtons[i].width = Blk(component).bounds.width;
             } else aButtons[i].left = aButtons[i].right = aButtons[i].width = 0;
         }
         std::vector<int> aWidths, aPartners;
@@ -1067,8 +1091,14 @@ static void Run()
     case kHeadItem: {
         a = (int)DR(ncols + 2);
         intptr_t id = 0x3000 + (++sNextComp);
-        HostComp h = {0, (int)DR(80), -1, DR(3) == 0 ? 0 : 20 + (int)DR(80), 0, true, true};
+        HostComp h;
+        memset(&h.m, 0, sizeof(h.m));
+        h.m.bounds.width = (int)DR(80);
+        h.m.control_id = -1;
+        h.desired = DR(3) == 0 ? 0 : 20 + (int)DR(80);
+        h.refs = 0;
         sComps[id] = h;
+        Line("comp %llx %lld", (long long)id, h.m.bounds.width, 0, 0, 0);
         b = id;
         break;
     }
@@ -1178,6 +1208,8 @@ static std::vector<std::string> RunSide(bool inRust, unsigned inSeq, int inCalls
     sHeadW = 100 + (int)R(200);
     sHeadH = 18;
     TraceFields();
+    ee_won_comp_members_resolver(Resolve);
+    ee_won_comp_host_world(ScriptedHost);
     sList = ee_won_list_new((void*)kList, ScriptedHost);
     OrigSide* o = NULL;
     RustSide* rs = NULL;

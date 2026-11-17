@@ -18,6 +18,11 @@
 // world between them, then frees the containers. The traces must be the same, every reference given back. The first
 // 40 sequences and every later one that makes an op or a call none before made are
 // rust/crates/ee_won_gui/src/golden_ctobj.txt, which the Rust tests replay; `--print` prints them.
+//
+// WONGUI B round 3: the container's own member writes (a child's parent and focus id, its invalid state and timer
+// flags) are made in place on both sides (the Rust in compmem.rs's blocks, the original statements on the world's
+// members, which are those blocks); each top call's "world" line (every component's parent, focus id, invalid state
+// and timer flags after it) checks them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -125,7 +130,7 @@ struct Container {
     void Destroy()
     {
         for (std::list<intptr_t>::iterator child = this->mChildList.begin(); child != this->mChildList.end(); ++child)
-            H(Op::CtSetParent, *child, 0);
+            sW[*child].parent = 0; // (*child)->mParent = NULL
         SetCursorField(0);
         H(Op::CtLayout, 3);
         for (std::set<uintptr_t>::iterator i = mChildTimerSet.begin(); i != mChildTimerSet.end(); ++i) Release((intptr_t)*i);
@@ -278,7 +283,7 @@ struct Container {
     void AddChild(intptr_t child)
     {
         if (ParentOf(child) != 0) H(Op::CtDetach, child);
-        H(Op::CtSetParent, child, 1);
+        sW[child].parent = mSelf; // child->mParent = this
         Hold(child); // SmartPtr<Component>(child)
         this->mItr[child] = this->mChildList.insert(this->FindTop(), child);
         Child(child, V::AddedToParent);
@@ -286,7 +291,7 @@ struct Container {
     void AddChildEx(intptr_t child, int position)
     {
         if (ParentOf(child) != 0) H(Op::CtDetach, child);
-        H(Op::CtSetParent, child, 1);
+        sW[child].parent = mSelf; // child->mParent = this
         std::list<intptr_t>::iterator i = this->mChildList.begin();
         for (int n = 0; n < position && i != this->mChildList.end(); ++n) ++i;
         Hold(child);
@@ -356,7 +361,7 @@ struct Container {
         if (!this->mRemovingAllChildren) H(Op::CtLayout, 1, child);
         if (child == this->mFocusChild) this->SetFocusToLastFocusChild();
         if (child == this->mMouseChild) this->MouseAt();
-        H(Op::CtSetParent, child, 0);
+        sW[child].parent = 0;
         Release(child); // keep
     }
     void RemoveAllChildren()
@@ -393,7 +398,7 @@ struct Container {
         this->mFocusChild = child;
         unsigned char id = this->GetNextFocusId();
         if (child == 0) return; // (the original wrote the id through NULL: not driven)
-        H(Op::CtSetFocusId, child, id);
+        sW[child].focusId = (unsigned char)id;
         if (!FlagSet(mSelf, 0x10) && ParentOf(mSelf) != 0) Parent(V::SetFocusChild);
         else {
             H(Op::ChildSetFlags, mSelf, 0x10, 1);
@@ -436,7 +441,7 @@ struct Container {
     bool ChildInvalidated(intptr_t changed)
     {
         if (H(Op::CtInvalidState, mSelf) == 2) return false;
-        H(Op::CtSetInvalidState, mSelf, 1);
+        sW[mSelf].invalid = 1;
         bool higherInvalid = false;
         std::list<intptr_t>::iterator i = this->mChildList.end();
         while (i != this->mChildList.begin()) {
@@ -455,7 +460,7 @@ struct Container {
     {
         if (H(Op::CtInvalidState, mSelf) == 2) return;
         Base(V::MarkInvalid);
-        H(Op::CtSetInvalidState, mSelf, 2);
+        sW[mSelf].invalid = 2;
         for (std::list<intptr_t>::iterator i = this->mChildList.begin(); i != this->mChildList.end(); ++i)
             Child(*i, V::MarkInvalid);
     }
@@ -541,7 +546,7 @@ struct Container {
             if (this->mChildTimerSet.insert((uintptr_t)child).second) Hold(child);
             int flags = (int)H(Op::CtTimerFlags, mSelf);
             bool requestParent = flags == 0;
-            H(Op::CtSetTimerFlags, flags | 1);
+            sW[mSelf].timer = (signed char)(flags | 1);
             if (requestParent && ParentOf(mSelf) != 0) Parent(V::AddTimerChild);
         }
     }
@@ -560,7 +565,7 @@ struct Container {
                 Release(child);
             }
         }
-        if (!childNeeds) H(Op::CtSetTimerFlags, H(Op::CtTimerFlags, mSelf) & ~1);
+        if (!childNeeds) sW[mSelf].timer = (signed char)(H(Op::CtTimerFlags, mSelf) & ~1);
         return H(Op::CtTimerFlags, mSelf) != 0;
     }
     void SetCursor(intptr_t cursor)
