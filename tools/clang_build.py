@@ -19,18 +19,18 @@ Objects go to <out>/obj/<module>/<unit>.obj (default out: build/clang). A failed
 """
 import argparse
 import concurrent.futures
+import hashlib
 import os
 import pathlib
 import re
 import subprocess
 import sys
-import threading
 import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import units
 import verify
-from ee import CLANG, ROOT
+from ee import CLANG, FILE_PREFIX, ORIG_SRC_ROOT, ROOT
 
 CLANG_FLAGS = ["--target=x86_64-pc-windows-msvc", "/nologo", "/c", "-fms-compatibility", "-fms-extensions",
                "-fms-compatibility-version=19.44", "/Zc:wchar_t", "-fdelayed-template-parsing", "/GS-",
@@ -46,10 +46,11 @@ def clang_flags(flags, opt):
     return [{"-MD": "-MT", "/MD": "-MT"}.get(f, f) for f in flags.split() if not DROP.match(f)] + opt.split()
 
 
-def apply_overlay(staged, rules):
+def apply_overlay(staged, rules, tag):
     """A copy of the staged unit rewritten with (old, new, expected count) text rules, next to it (so its sibling
-    headers resolve) under a per-compile name (two modules may compile the same unit in parallel) -> its path. Test
-    profiles only; the source tree is never touched. Refuses when a rule does not match exactly its expected count."""
+    headers resolve) under a per-compile name (two modules may compile the same unit in parallel: tag, from the
+    object; the same in every build, since the name is in the exe: main_file_name) -> its path. Test profiles only;
+    the source tree is never touched. Refuses when a rule does not match exactly its expected count."""
     staged = pathlib.Path(staged)
     raw = staged.read_bytes()
     crlf = b"\r\n" in raw
@@ -62,9 +63,23 @@ def apply_overlay(staged, rules):
         if n != want:
             raise SystemExit(f"overlay {staged.name}: {old!r} matches {n} times, expected {want}")
         text = text.replace(old, new)
-    copy = staged.with_name(f"{staged.stem}.test{os.getpid()}-{threading.get_ident()}{staged.suffix}")
+    copy = staged.with_name(f"{staged.stem}.test-{tag}{staged.suffix}")
     copy.write_bytes((text.replace("\n", "\r\n") if crlf else text).encode("latin-1"))
     return copy
+
+
+def main_file_name(staged):
+    """-> (the directory clang-cl runs in, the unit's path as given to it): the unit relative to a directory that is
+    the same in every checkout, build/eex's parent for a staged unit (eex/...), the checkout for one compiled in
+    place (src/ThirdParty/...). The MSVC ABI names a unit's anonymous namespaces ?A0x<hash> by a hash of the main
+    file's name as given (clang's MicrosoftMangle; no prefix map applies to it), and the RTTI names of their classes
+    are in the exe: an absolute path made every checkout's exe differ (PORT_LEARNINGS.md "Checkout-independent
+    builds")."""
+    staged = pathlib.Path(staged)
+    for base in (ORIG_SRC_ROOT.parent, ROOT):
+        if staged.is_relative_to(base):
+            return base, str(staged.relative_to(base))
+    return None, str(staged)
 
 
 def compile_to(src, flags, obj, opt, overlays=None, extra=()):
@@ -74,13 +89,19 @@ def compile_to(src, flags, obj, opt, overlays=None, extra=()):
     staged = verify.stage_source(src)
     rules = overlays.get(str(units.rel_src(src))) if overlays else None
     iflags, inc = verify.include_paths(staged)
+    obj = pathlib.Path(obj).resolve()
     if rules:
-        staged = apply_overlay(staged, rules)
+        # the tag: the object's path below its obj folder (<module>/<unit>), the same in every checkout
+        below = obj.parts[len(obj.parts) - obj.parts[::-1].index("obj"):] if "obj" in obj.parts else obj.parts[-2:]
+        staged = apply_overlay(staged, rules, hashlib.sha256("/".join(below).lower().encode()).hexdigest()[:8])
     std = [] if str(src).lower().endswith(".c") else ["/std:c++17"]
-    pathlib.Path(obj).parent.mkdir(parents=True, exist_ok=True)
+    obj.parent.mkdir(parents=True, exist_ok=True)
+    cwd, name = main_file_name(staged)
+    # (a staged unit given as eex/...: its __FILE__ still reads C:\EEX\..., as from build/eex)
+    relmap = [f"/clang:-fmacro-prefix-map={ORIG_SRC_ROOT.name}={FILE_PREFIX}"] if cwd == ORIG_SRC_ROOT.parent else []
     cmd = [str(CLANG), *CLANG_FLAGS, *std, *clang_flags(flags, opt), *extra, *verify.DEFINES.split(), *iflags,
-           f"/Fo{obj}", str(staged)]
-    r = subprocess.run(cmd, env=dict(os.environ, INCLUDE=inc), capture_output=True, text=True,
+           *relmap, f"/Fo{obj}", name]
+    r = subprocess.run(cmd, env=dict(os.environ, INCLUDE=inc), capture_output=True, text=True, cwd=cwd,
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     if rules:
         staged.unlink(missing_ok=True)

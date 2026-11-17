@@ -235,9 +235,10 @@ python -I tools/sim_bench.py --name v1 --seeds 2-33 --engine boom,classic --ai-s
 
 `--cache` keeps every finished game (report, gzipped trace, progress) in the main checkout's `build/sim/cache`, keyed
 by everything the game depends on: the EE-SIM exe's bytes, the data tree, the rules documents, the AI scripts'
-contents (`--ai-scripts` by content, not by path), every option and `EE_*` variable, the seed. A bench whose runs
-have all been played before (e.g. the baseline of each round) takes seconds; any change to the exe or the scripts
-misses. `--screen SEEDS` plays those seeds first and drops every variant whose first computer is defeated at least
+contents (`--ai-scripts` by content, not by path), every option and `EE_*` variable, the seed. A commit builds
+the same exe bytes in every checkout (PORT_LEARNINGS.md "Checkout-independent builds"), so the worktrees share
+the games. A bench whose runs have all been played before (e.g. the baseline of each round) takes seconds; any
+change to the exe or the scripts misses. `--screen SEEDS` plays those seeds first and drops every variant whose first computer is defeated at least
 twice as often as the baseline's, and 3 games more (`--screen-factor`, `--screen-margin`); the rest go on to
 `--seeds`. With 16 first-stage seeds it only catches gross regressions (32-seed defeat counts move by several games
 from chance alone). The games run below normal priority (`--normal-priority` turns that off), so the windowed

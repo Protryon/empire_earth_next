@@ -3987,8 +3987,8 @@ local function raid_step(view, memory)
         end
         return
     end
-    if view.epoch < 1 or view.time < o.start or view.time < (a.next_raid or 0) then
-        return
+    if view.epoch < 1 or view.time < o.start or view.time < (a.next_raid or 0) or a.push_hold then
+        return   -- (a push out, or one about to go: AI_RESEARCH 8.94)
     end
     local pool = G.role(a, "pool")
     if pool == nil or #pool.units < o.min then
@@ -4010,6 +4010,266 @@ local function raid_step(view, memory)
     g.raid_n, g.raid_sent = #ids, view.time
     print(string.format("classic_lua army.raid sent=%d enemy=%d town=%d,%d pool=%d", #ids, e.player, e.town_x,
         e.town_y, #pool.units))
+end
+
+-- New (AI_RESEARCH 8.94): the push. The raids kill gatherers but never take a town, and close games ran to the time
+-- cap with the classic's army standing at home. When it is clearly ahead, the home soldiers go at the nearest enemy
+-- town on its land as a lib.groups push: soldiers near first, then towers, citizens near, the town centre, the other
+-- buildings, but nothing that a known tower other than itself covers (g.cover_max: the town is taken from its edges;
+-- Age of AI's paleolithic towers killed most of a push that chased its soldiers into them).
+-- - Ahead (looked at every PUSH.check_ms from the Stone Age and PUSH.start, no push out): at least PUSH.min soldiers at
+--   home (the pool, the free soldiers, the land army groups at home that are not attacking), their strength (hit
+--   points x attack) PUSH.ratio percent of the enemy's known army (the memory's soldiers, or the strength last seen
+--   at once, the larger) plus its known towers within PUSH.town_r of the place (hit points x attack / PUSH.tower_k);
+--   not an epoch behind it, and at least as many citizens as the most it was seen with at once (fogged: what the
+--   player saw, a lower bound). The place: the enemy's town as last seen, else its nearest known building (many
+--   towns were never seen until late).
+-- - It goes with all but PUSH.keep_pct (PUSH.keep_min at least) of them, PUSH.max at most. No raid starts while it is
+--   out or about to go.
+-- - Judged every PUSH.judge_ms: home (lib.groups retreat: a forced move; disbanded there, the next push no sooner than
+--   PUSH.gap_ms) when the armed enemies it sees within PUSH.judge_r tiles (soldiers hp x attack, towers / tower_k) are
+--   above PUSH.back_pct percent of its strength twice running, when it lost PUSH.trend_pct of its strength in the
+--   last trend_n looks with that enemy at half its strength or more, when it is under PUSH.bleed_pct of what it left
+--   with, or after PUSH.out_ms. Nothing known left to take: disbanded where it stands (the pool takes them home).
+-- Unit-level commands only (lib.groups: ai.move, ai.attack); the memory and the seen units only (no fog deviation).
+M.PUSH = {start = 30 * 60000, check_ms = 10000, min = 20, max = 48, ratio = 200, keep_pct = 20, keep_min = 4,
+          tower_k = 4, town_r = 30, gap_ms = 180000, out_ms = 900000, judge_ms = 4000, judge_r = 12, back_pct = 150,
+          trend_n = 5, trend_pct = 20, bleed_pct = 60, cover_max = 0}
+
+-- hit points x attack of seen or remembered records (towers / tower_k); ids: seen units, recs: memory records
+local function foe_strength(recs, tower_k)
+    local s = 0
+    for _, m in ipairs(recs) do
+        local c = ai.class(m.type)
+        local atk = c ~= nil and (c.attack or 0) or 0
+        if atk > 0 then
+            local v = (m.hp or 0) * atk
+            if m.category == "building" or m.building then
+                v = v // tower_k
+            end
+            s = s + v
+        end
+    end
+    return s
+end
+
+-- the soldiers at home a push may take: the pool's, the free ones, those of the land army groups at home that are
+-- not attacking, fighting or crossing (ids, strength)
+local function push_candidates(view, a)
+    local o = M.PUSH
+    local ids, seen = {}, {}
+    local function add(id)
+        if not seen[id] then
+            seen[id] = true
+            ids[#ids + 1] = id
+        end
+    end
+    local pool = G.role(a, "pool")
+    if pool ~= nil then
+        for _, id in ipairs(pool.units) do
+            add(id)
+        end
+    end
+    for _, id in ipairs(G.free_soldiers(view.town_x, view.town_y, 40)) do
+        add(id)
+    end
+    for _, g in ipairs(G.all(a)) do
+        if g.role == "army" and not g.sea and not g.air and g.mission ~= 2 and g.phase == "task" and g.crossing == nil
+                and g.state ~= "fighting" and g.cx ~= nil and d2(g.cx, g.cy, view.town_x, view.town_y) <= 40 * 40 then
+            for _, id in ipairs(g.units) do
+                add(id)
+            end
+        end
+    end
+    local out, str = {}, 0
+    if #ids == 0 then
+        return out, 0
+    end
+    local land = ai.tile(view.town_x, view.town_y)
+    land = land and land.continent or 0
+    local cols = ai.get(ids, {"hp", "attack", "x", "y", "inside"})
+    for k, id in ipairs(ids) do
+        if cols.hp[k] ~= nil and cols.inside[k] == nil and #out < o.max * 2 then
+            local t = ai.tile(cols.x[k], cols.y[k])
+            if t ~= nil and (land == 0 or t.continent == land) then
+                out[#out + 1] = id
+                str = str + cols.hp[k] * (cols.attack[k] or 0)
+            end
+        end
+    end
+    return out, str
+end
+
+-- the push's enemy and place: the nearest enemy whose town (as last seen) is on the own land; one whose town was never
+-- seen counts by its nearest known building on the own land (walls left out) - the classic scouts little, and many
+-- towns stayed unknown until late (the raids wait for the town). nil: none
+local function push_target(view, a)
+    local best, bx, by, bd
+    for _, e in ipairs(view.enemies or {}) do
+        local x, y = nil, nil
+        if e.town_x ~= nil and e.town_x >= 0 then
+            if ai.reach(view.town_x, view.town_y, e.town_x, e.town_y) then
+                x, y = e.town_x, e.town_y
+            end
+        else
+            for _, m in ipairs(ai.memory{player = e.player, buildings = true, near = {view.town_x, view.town_y, 1000},
+                                         limit = 8}) do
+                local t = string.sub(m.type, 1, 7)
+                if t ~= "b_wall_" and t ~= "b_gate_" and ai.reach(view.town_x, view.town_y, m.x, m.y) then
+                    x, y = m.x, m.y
+                    break
+                end
+            end
+        end
+        if x ~= nil then
+            local d = d2(x, y, view.town_x, view.town_y)
+            if bd == nil or d < bd or (d == bd and e.player < best.player) then
+                best, bx, by, bd = e, x, y, d
+            end
+        end
+    end
+    return best, bx, by
+end
+
+local function push_step(view, memory)
+    local a = army(memory)
+    local o = M.PUSH
+    if o.min <= 0 or view.town_x < 0 then
+        a.push_hold = nil
+        return
+    end
+    local g = G.role(a, "push")
+    if g ~= nil then
+        a.push_hold = true
+        if view.time - (a.push_judge_t or 0) < o.judge_ms then
+            return
+        end
+        a.push_judge_t = view.time
+        local why = nil
+        if g.task ~= "push" and g.task ~= "retreat" then
+            why = "home"
+        elseif g.task == "push" and g.state == "arrived" then
+            why = "nowhere"
+        end
+        if why ~= nil then
+            print(string.format("classic_lua army.push done ms=%d sent=%d back=%d why=%s", view.time - (g.push_sent or 0),
+                g.push_n or 0, #g.units, why))
+            G.disband(a, g)
+            a.next_push = view.time + (why == "home" and o.gap_ms or o.check_ms)
+            a.push_hold = nil
+            return
+        end
+        if g.task ~= "push" or g.cx == nil then
+            return
+        end
+        local foes = ai.seen{enemy = true, armed = true, near = {g.cx, g.cy, o.judge_r}}
+        local recs = {}
+        if #foes > 0 then
+            local cols = ai.get(foes, {"type", "hp", "category"})
+            for k = 1, #foes do
+                if cols.type[k] ~= nil and (cols.category[k] == "soldier" or cols.category[k] == "building"
+                        or cols.category[k] == "siege" or cols.category[k] == "hero") then
+                    recs[#recs + 1] = {type = cols.type[k], hp = cols.hp[k], category = cols.category[k]}
+                end
+            end
+        end
+        local foe = foe_strength(recs, o.tower_k)
+        local own = g.strength or 0
+        -- (the strength a few looks ago: the attrition test)
+        g.hist = g.hist or {}
+        local h = g.hist
+        h[#h + 1] = own
+        while #h > o.trend_n + 1 do
+            table.remove(h, 1)
+        end
+        if foe > 0 and foe * 100 > own * o.back_pct then
+            g.losing = (g.losing or 0) + 1
+        else
+            g.losing = 0
+        end
+        local back = nil
+        if g.losing >= 2 then
+            back = "losing"
+        elseif #h > o.trend_n and h[1] > 0 and (h[1] - own) * 100 >= h[1] * o.trend_pct and foe * 2 >= own then
+            back = "attrition"
+        elseif own * 100 < (g.push_str or 0) * o.bleed_pct then
+            back = "bled"
+        elseif view.time - (g.push_sent or 0) >= o.out_ms then
+            back = "time"
+        end
+        if back ~= nil then
+            print(string.format("classic_lua army.push back why=%s ms=%d sent=%d alive=%d own=%d foe=%d at=%d,%d", back,
+                view.time - (g.push_sent or 0), g.push_n or 0, #g.units, own, foe, g.cx, g.cy))
+            G.retreat(view, a, g, g.home_x, g.home_y)
+        end
+        return
+    end
+    if view.epoch < 1 or view.time < o.start or view.time < (a.next_push or 0) then
+        a.push_hold = nil
+        return
+    end
+    if view.time - (a.push_t or 0) < o.check_ms then
+        return
+    end
+    a.push_t = view.time
+    a.push_hold = nil
+    local e, bx, by = push_target(view, a)
+    if e == nil then
+        return
+    end
+    a.cit_seen = a.cit_seen or {}
+    a.cit_seen[e.player] = math.max(a.cit_seen[e.player] or 0, e.citizens_seen or 0)
+    if (e.epoch or 0) > view.epoch or view.citizens < a.cit_seen[e.player] then
+        return
+    end
+    local ids, own = push_candidates(view, a)
+    if #ids < o.min then
+        return
+    end
+    local army_foe = foe_strength(ai.memory{player = e.player, category = "soldier"}, o.tower_k)
+    army_foe = math.max(army_foe, e.seen_strength or 0)
+    local towers = {}
+    for _, m in ipairs(ai.memory{player = e.player, buildings = true, near = {bx, by, o.town_r}}) do
+        towers[#towers + 1] = {type = m.type, hp = m.hp, building = true}
+    end
+    local tower_foe = foe_strength(towers, o.tower_k)
+    local ahead = own * 100 >= (army_foe + tower_foe) * o.ratio
+    if view.time % 60000 < o.check_ms then
+        print(string.format("classic_lua army.push look n=%d own=%d army=%d towers=%d ratio=%d cit=%d/%d epoch=%d/%d%s",
+            #ids, own, army_foe, tower_foe, (own * 100) // math.max(army_foe + tower_foe, 1), view.citizens,
+            a.cit_seen[e.player], view.epoch, e.epoch or 0, ahead and " ahead" or ""))
+    end
+    if not ahead then
+        return
+    end
+    a.push_hold = true
+    if G.role(a, "raid") ~= nil then
+        return   -- (the raid comes home first: raid_step starts no other)
+    end
+    local keep = math.max(o.keep_min, #ids * o.keep_pct // 100)
+    local n = math.min(o.max, #ids - keep)
+    if n < o.min then
+        return
+    end
+    local take = {}
+    for k = 1, n do
+        take[k] = ids[k]
+    end
+    g = G.create(a, {task = "push", role = "push", target = e.player, x = bx, y = by,
+                     home_x = view.town_x, home_y = view.town_y})
+    G.add(a, g, take)
+    g.cover_max = o.cover_max
+    g.route, g.route_avoid = true, RAID_ROUTE_AVOID   -- (lib.groups: the legs by ai.route round the known towers)
+    local cols = ai.get(take, {"hp", "attack"})
+    local str = 0
+    for k = 1, #take do
+        str = str + (cols.hp[k] or 0) * (cols.attack[k] or 0)
+    end
+    g.push_n, g.push_sent, g.push_str = #take, view.time, str
+    a.push_judge_t = view.time
+    print(string.format("classic_lua army.push sent=%d enemy=%d at=%d,%d town=%s own=%d army=%d towers=%d cit=%d/%d epoch=%d/%d",
+        #take, e.player, bx, by, tostring(e.town_x >= 0), str, army_foe, tower_foe, view.citizens, a.cit_seen[e.player],
+        view.epoch, e.epoch or 0))
 end
 
 -- explore.lua's draft with lib.tactics POOL: a pool soldier of the class, out of the pool (nil: none)
@@ -4043,6 +4303,7 @@ function M.step(view, memory)
     local a = army(memory)
     G.init(a)
     pool_step(view, memory)
+    push_step(view, memory)
     raid_step(view, memory)
     if memory.t.deathmatch and not a.built_up then
         a.built_up = true
