@@ -98,6 +98,7 @@
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEAIContinentManager.h"
+#include "ee/EECPTrace.h"
 #include "ee/EEArtificialIntelligence.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EEGraphicEffect.h"
@@ -942,6 +943,7 @@ void EEWorld::StartGame(EEGameState* inState, bool inLocked)
     this->CreateMiniMap(inState);
     gUserInterface->SetLoadProgress(kWorldLoadProgress20);
     this->mUsingCarbon = inState->mUsingCarbon;
+    EECPNewGame();   // port: the computer players' per-game file statics cleared (ee/EECPTrace.h)
     this->CreatePlayers(inState);
     gUserInterface->SetLoadProgress(kWorldLoadProgress21);
     if (inState->mInScenarioEditor == true)
