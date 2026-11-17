@@ -287,6 +287,81 @@ static long EELoadTechAllowed(FSFile& inFile)
     return kErrorOK;
 }
 
+// 0.283 (EESaveHasTileTypes): every map tile's terrain type, row by row (y outer, x inner), as runs of a count and a
+// type (-1: no tile). EEMap::Load re-types each tile from the terrain table of its mesh vertex's texture, which is
+// not always the type the map's painting gave it (EEMap::PaintTerrain types the four tiles around the vertex it
+// paints): about 1,000 tiles of a random map came back as another type, and movement (CanMoveOnTerrain), the path
+// searches and the placement read the type. The saved types go back at once (the units and the analysis the load
+// reads next see them) and again at the first tick, after the load's own passes.
+static void EEApplyTileTypes(const std::vector<long>& inTypes)
+{
+    EEMap* theMap = gWorld.mMap;
+    if (theMap == NULL || (long)inTypes.size() != theMap->mSize * theMap->mSize)
+        return;
+    for (long y = 0; y < theMap->mSize; y++)
+        for (long x = 0; x < theMap->mSize; x++) {
+            EEMapTile* theTile = theMap->GetTile(x, y);
+            long theType = inTypes[y * theMap->mSize + x];
+            if (theTile != NULL && theType >= 0)
+                theTile->mTerrainType = theType;
+        }
+}
+
+static long EESaveTileTypes(FSFile& outFile)
+{
+    EEMap* theMap = gWorld.mMap;
+    long theSize = theMap != NULL ? theMap->mSize : 0;
+    long theResult = outFile.Write(theSize);
+    unsigned long theRun = 0;
+    long theRunType = -1;
+    for (long i = 0; i < theSize * theSize && theResult == kErrorOK; i++) {
+        EEMapTile* theTile = theMap->GetTile(i % theSize, i / theSize);
+        long theType = theTile != NULL ? theTile->mTerrainType : -1;
+        if (theRun != 0 && theType != theRunType) {
+            theResult = outFile.Write(theRun);
+            if (theResult == kErrorOK)
+                theResult = outFile.Write(theRunType);
+            theRun = 0;
+        }
+        theRunType = theType;
+        theRun++;
+    }
+    if (theRun != 0 && theResult == kErrorOK) {
+        theResult = outFile.Write(theRun);
+        if (theResult == kErrorOK)
+            theResult = outFile.Write(theRunType);
+    }
+    return theResult;
+}
+
+static long EELoadTileTypes(FSFile& inFile)
+{
+    long theSize = 0;
+    long theResult = inFile.Read(theSize);
+    if (theResult != kErrorOK)
+        return theResult;
+    if (theSize < 0 || theSize > 0x4000)
+        return kErrorBeyondEnd;
+    std::shared_ptr<std::vector<long> > theTypes = std::make_shared<std::vector<long> >();
+    theTypes->reserve((size_t)(theSize * theSize));
+    while ((long)theTypes->size() < theSize * theSize && theResult == kErrorOK) {
+        unsigned long theRun = 0;
+        long theType = -1;
+        theResult = inFile.Read(theRun);
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(theType);
+        if (theResult == kErrorOK && (theRun == 0 || theRun > (unsigned long)(theSize * theSize) - theTypes->size()))
+            theResult = kErrorBeyondEnd;
+        if (theResult == kErrorOK)
+            theTypes->insert(theTypes->end(), theRun, theType);
+    }
+    if (theResult != kErrorOK)
+        return theResult;
+    EEApplyTileTypes(*theTypes);
+    EEAfterLoad([theTypes]() { EEApplyTileTypes(*theTypes); });
+    return kErrorOK;
+}
+
 static int64_t EEPWorldHost(void* inContext, int32_t inOp, EeUnitsWorldIo* io);
 
 static int64_t EEPWorldPart(EEPWorldContext& inContext, bool inLoad, int64_t inPart, bool inTownAreas)
@@ -303,6 +378,7 @@ static int64_t EEPWorldPart(EEPWorldContext& inContext, bool inLoad, int64_t inP
     case EE_UNITS_WORLD_PART_ACTIVE_GROUPS: if (inLoad) return EELoadActiveGroups(theFile); EESaveActiveGroups(theFile); return 0;
     case EE_UNITS_WORLD_PART_GRAPH_SEARCHES: if (inLoad) return gPathManager.LoadGraphSearches(theFile); gPathManager.SaveGraphSearches(theFile); return 0;
     case EE_UNITS_WORLD_PART_TECH_ALLOWED: if (inLoad) return EELoadTechAllowed(theFile); EESaveTechAllowed(theFile); return 0;
+    case EE_UNITS_WORLD_PART_TILE_TYPES: if (inLoad) return EELoadTileTypes(theFile); EESaveTileTypes(theFile); return 0;
     }
     return 0;
 }
@@ -327,6 +403,7 @@ static bool EEPWorldHas(const EEPWorldContext& inContext, int64_t inWhich)
     case EE_UNITS_WORLD_HAS_ACTIVE_GROUPS: return EESaveHasActiveGroups(theMajor, theMinor);
     case EE_UNITS_WORLD_HAS_GRAPH_SEARCHES: return EESaveHasGraphSearches(theMajor, theMinor);
     case EE_UNITS_WORLD_HAS_TECH_ALLOWED: return EESaveHasTechAllowed(theMajor, theMinor);
+    case EE_UNITS_WORLD_HAS_TILE_TYPES: return EESaveHasTileTypes(theMajor, theMinor);
     }
     return false;
 }

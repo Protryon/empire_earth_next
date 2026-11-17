@@ -680,8 +680,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 281 the merge of main's stages 5 and 6: the computer players without the C++ managers' timers and intelligence files,
 // main's next engine state block (EESaveHasLuaOnlyComputers)
 // 282 the players' tech nodes that are not allowed (EESaveHasTechAllowed), the location goals' group path state
+// 283 every map tile's terrain type (EESaveHasTileTypes)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 282;
+const unsigned long kSaveGameMinorVersion = 283;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"

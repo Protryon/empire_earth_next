@@ -3793,6 +3793,8 @@ constexpr static const int64_t EE_UNITS_WORLD_HAS_GRAPH_SEARCHES = 14;
 
 constexpr static const int64_t EE_UNITS_WORLD_HAS_TECH_ALLOWED = 15;
 
+constexpr static const int64_t EE_UNITS_WORLD_HAS_TILE_TYPES = 16;
+
 /// `gPathManager.LoadRunningState` / `SaveRunningState`
 constexpr static const int64_t EE_UNITS_WORLD_PART_PATH_RUNNING = 1;
 
@@ -3822,6 +3824,9 @@ constexpr static const int64_t EE_UNITS_WORLD_PART_GRAPH_SEARCHES = 9;
 
 /// `EELoadTechAllowed` / `EESaveTechAllowed` (the players' tech nodes not allowed, from 0.282)
 constexpr static const int64_t EE_UNITS_WORLD_PART_TECH_ALLOWED = 10;
+
+/// `EELoadTileTypes` / `EESaveTileTypes` (every map tile's terrain type, from 0.283)
+constexpr static const int64_t EE_UNITS_WORLD_PART_TILE_TYPES = 11;
 
 /// The list a host operation fills.
 struct EeUnitsAgListHandle;
