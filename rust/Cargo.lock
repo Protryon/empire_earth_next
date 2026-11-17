@@ -227,13 +227,6 @@ name = "ee_data"
 version = "0.1.0"
 
 [[package]]
-name = "ee_data_cabi"
-version = "0.1.0"
-dependencies = [
- "ee_data",
-]
-
-[[package]]
 name = "ee_dx7"
 version = "0.1.0"
 dependencies = [

@@ -25,11 +25,11 @@ def cargo_build():
     """Builds the Rust side: the C ABI staticlib for the C++ gate, and the float-sweep tool -> their paths."""
     import rust_build
     target = rust_build.TRIPLES[rust_build.host_target()]
-    if rust_build.run_cargo(['build', '--release', '--target', target, '-p', 'ee_data_cabi']):
-        sys.exit('cargo build of ee_data_cabi failed')
+    if rust_build.run_cargo(['build', '--release', '--target', target, '-p', 'ee_data', '--lib']):
+        sys.exit('cargo build of the ee_data staticlib failed')
     if rust_build.run_cargo(['build', '--release', '-p', 'ee_data', '--bin', 'ee_data_gate']):
         sys.exit('cargo build of ee_data_gate failed')
-    name = 'ee_data_cabi.lib' if sys.platform == 'win32' else 'libee_data_cabi.a'
+    name = 'ee_data.lib' if sys.platform == 'win32' else 'libee_data.a'
     tool = 'ee_data_gate.exe' if sys.platform == 'win32' else 'ee_data_gate'
     return rust_build.TARGET_DIR / target / 'release' / name, rust_build.TARGET_DIR / 'release' / tool
 

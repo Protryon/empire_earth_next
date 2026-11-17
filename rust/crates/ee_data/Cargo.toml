@@ -8,6 +8,8 @@ publish.workspace = true
 # open formats. An rlib of the staticlib ee_rust: its extern "C" items (ffi.rs) reach the exe through ee_rust.
 [lib]
 path = "src/lib.rs"
+# and the staticlib of the C++ gate tool (tools/eedata/cppgate.py; it was the crate ee_data_cabi)
+crate-type = ["rlib", "staticlib"]
 
 [[bin]]
 name = "ee_data_gate"
