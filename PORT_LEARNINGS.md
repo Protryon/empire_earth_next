@@ -29422,3 +29422,6 @@ Round total: net -211, far short of the 1,500 aimed at (see "Why short").
   (14,448 lines), the civ gate PASS (4,062 lines); the rmap gate 2088/2088 and `--reader` 2088/2088; the tour through
   slot.py `RESULT PASS tour` (83.5% lit, F3 ok); the Rust gate: tests and clippy PASS after naming the song lists'
   type, rustfmt PASS after the module order, the header check current (the full gate rerun is the lead's).
+- **After the merge of origin/rust f63bd44b** (WONLobby 12, world views, A* round 1; PORT_LEARNINGS conflicted on
+  appended sections only: rust's taken, this one appended): both builds 0/0 (734/735 inputs), the oracle seeds 2-7
+  identical, the saveload matrix `--expect` PASS, the Rust gate PASS (the full run).
