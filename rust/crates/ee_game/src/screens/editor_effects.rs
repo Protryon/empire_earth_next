@@ -14,6 +14,7 @@
 //! host call.
 
 use core::cell::{Cell, RefCell};
+use std::ffi::c_ulong;
 
 use ee_sim::scenario::fields::EeScenarioEffectFields;
 
@@ -956,10 +957,10 @@ fn trigger<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
         }
         EE_SCREENS_SEET_STORE => {
             if let Some(s) = c.selection(SCEN, 0) {
-                c.e().mTrigger = s;
+                c.e().mTrigger = s as c_ulong;
             }
             if let Some(s) = c.selection(ECOMBO, 1) {
-                c.e().mTriggerState = s;
+                c.e().mTriggerState = s as c_ulong;
             }
         }
         EE_SCREENS_SEET_HIDE => {
@@ -971,8 +972,8 @@ fn trigger<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
         }
         EE_SCREENS_SEET_LOAD => {
             let (t, s) = (c.e().mTrigger, c.e().mTriggerState);
-            c.select_silent(SCEN, 0, t);
-            c.select_silent(ECOMBO, 1, s);
+            c.select_silent(SCEN, 0, t as u32);
+            c.select_silent(ECOMBO, 1, s as u32);
         }
         EE_SCREENS_SEET_SHOW => {
             label(c, 2, IDS_TRIGGER_EFFECT, 4.0, 616.0, 206.0, 20.0);
@@ -996,7 +997,7 @@ fn trigger<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
         }
         EE_SCREENS_SEET_UPDATE_NAME if default_named(c) => {
             let t = c.e().mTrigger;
-            let name = match c.trigger_name(t) {
+            let name = match c.trigger_name(t as u32) {
                 Some(n) => n,
                 None => c.string(IDS_NONE),
             };

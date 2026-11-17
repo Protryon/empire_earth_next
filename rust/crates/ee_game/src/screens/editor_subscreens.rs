@@ -14,6 +14,7 @@ use crate::screens::editor_controls::{
     condition_controls, delete_controls, effect_controls, make_controls, CONDITION_DELETE_ORDER, EFFECT_DELETE_ORDER,
 };
 use core::cell::Cell;
+use std::ffi::c_ulong;
 
 use crate::screens::editor_conditions::{ConditionTypes, Cx};
 use crate::screens::editor_effects::*;
@@ -227,10 +228,10 @@ impl ConditionScreen {
                 // the original reads a missing condition: nothing here
                 let Some(e) = self.entry(h, sel) else { return };
                 let mut c = self.cx(h, Some(e));
-                if c.e().mType != C_ALWAYS_TRUE {
+                if c.e().mType != C_ALWAYS_TRUE as c_ulong {
                     store_texts(&mut c);
                     self.types.call(&mut c, self.ty.get(), EE_SCREENS_SEET_STORE);
-                    c.e().mType = self.ty.get();
+                    c.e().mType = self.ty.get() as c_ulong;
                 }
             }
             EE_SCREENS_SESC_HIDE => {
@@ -272,17 +273,17 @@ impl ConditionScreen {
             show_texts(&mut c);
             c.e().mType
         };
-        if self.ty.get() != entry_ty {
+        if self.ty.get() != entry_ty as u32 {
             self.type_call(h, EE_SCREENS_SEET_HIDE, None);
-            self.ty.set(entry_ty);
-            if entry_ty > C_OBJECT {
-                set_selection(s, self.type_combo, entry_ty.wrapping_sub(2));
+            self.ty.set(entry_ty as u32);
+            if entry_ty > C_OBJECT as c_ulong {
+                set_selection(s, self.type_combo, entry_ty.wrapping_sub(2) as u32);
             }
-            if entry_ty != C_OBJECT {
+            if entry_ty != C_OBJECT as c_ulong {
                 self.type_call(h, EE_SCREENS_SEET_SHOW, None);
             }
         }
-        if entry_ty != C_OBJECT {
+        if entry_ty != C_OBJECT as c_ulong {
             self.type_call(h, EE_SCREENS_SEET_LOAD, Some(e));
             self.refresh(h, sel);
         }
@@ -424,7 +425,7 @@ impl EffectScreen {
                 let mut c = self.fx(h, Some(e), me);
                 store_texts(&mut c);
                 self.types.call(&mut c, self.ty.get(), EE_SCREENS_SEET_STORE);
-                c.e().mType = self.ty.get();
+                c.e().mType = self.ty.get() as c_ulong;
             }
             EE_SCREENS_SESC_HIDE => {
                 display(s, self.type_combo, false);
@@ -475,9 +476,9 @@ impl EffectScreen {
             c.e().mType
         };
         self.type_call(h, me, EE_SCREENS_SEET_HIDE, None);
-        self.ty.set(entry_ty);
+        self.ty.set(entry_ty as u32);
         if entry_ty != 0 {
-            set_selection(s, self.type_combo, entry_ty.wrapping_sub(1));
+            set_selection(s, self.type_combo, entry_ty.wrapping_sub(1) as u32);
             // the original compares an unset selection when there is none: not shown then
             let picked = self.fx(h, None, me).handle_selection(self.type_combo);
             if picked.map(|p| p.wrapping_add(1)) == Some(self.ty.get()) {
@@ -530,7 +531,11 @@ mod tests {
     }
 
     fn log(ty: u32, selection: i32) -> Log {
-        Log { ops: Vec::new(), fields: EeScenarioEffectFields { mType: ty, ..Default::default() }, selection }
+        Log {
+            ops: Vec::new(),
+            fields: EeScenarioEffectFields { mType: ty as c_ulong, ..Default::default() },
+            selection,
+        }
     }
 
     #[test]

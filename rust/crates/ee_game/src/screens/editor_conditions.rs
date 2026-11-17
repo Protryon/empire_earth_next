@@ -11,6 +11,7 @@
 //! list in a `RefCell` never borrowed across a host call.
 
 use core::cell::RefCell;
+use std::ffi::{c_long, c_ulong};
 
 use ee_sim::scenario::fields::EeScenarioConditionFields;
 
@@ -80,11 +81,11 @@ impl ConditionTypes {
     fn player_technology<H: SeplHost + ?Sized>(&self, c: &mut Cx<H>, slot: u32) {
         match slot {
             EE_SCREENS_SEET_STORE => {
-                c.e().mPlayer = c.player(0);
+                c.e().mPlayer = c.player(0) as c_ulong;
                 // the original indexes its list with an unset selection when there is none: kept then
                 if let Some(s) = c.selection(COMBO, 0) {
                     if let Some(&t) = self.techs.borrow().get(s as usize) {
-                        c.e().mTechnology = t;
+                        c.e().mTechnology = t as c_long;
                     }
                 }
             }
@@ -96,8 +97,8 @@ impl ConditionTypes {
             }
             EE_SCREENS_SEET_LOAD => {
                 let (p, t) = (c.e().mPlayer, c.e().mTechnology);
-                c.set_player(0, p);
-                let line = self.techs.borrow().iter().position(|&x| x == t).unwrap_or(0);
+                c.set_player(0, p as u32);
+                let line = self.techs.borrow().iter().position(|&x| x == t as i32).unwrap_or(0);
                 c.select(COMBO, 0, line as u32);
             }
             EE_SCREENS_SEET_SHOW => {
@@ -132,17 +133,17 @@ impl ConditionTypes {
     fn player_attribute<H: SeplHost + ?Sized>(&self, c: &mut Cx<H>, slot: u32) {
         match slot {
             EE_SCREENS_SEET_STORE => {
-                c.e().mPlayer = c.player(0);
+                c.e().mPlayer = c.player(0) as c_ulong;
                 if let Some(s) = c.selection(COMBO, 0) {
-                    c.e().mAttribute = s;
+                    c.e().mAttribute = s as c_ulong;
                 }
                 if let Some(s) = c.selection(COMBO, 1) {
-                    c.e().mOperator = s;
+                    c.e().mOperator = s as c_ulong;
                 }
-                c.e().mAmount = c.text_int(EDIT, 0) as u32;
-                c.e().mOtherPlayer = c.player(1);
+                c.e().mAmount = c.text_int(EDIT, 0) as c_ulong;
+                c.e().mOtherPlayer = c.player(1) as c_ulong;
                 if let Some(s) = c.selection(COMBO, 2) {
-                    c.e().mOtherAttribute = s;
+                    c.e().mOtherAttribute = s as c_ulong;
                 }
                 c.e().mUsesPlayerAttribute = c.checked(RADIO, 1);
             }
@@ -166,12 +167,12 @@ impl ConditionTypes {
             }
             EE_SCREENS_SEET_LOAD => {
                 let e = *c.e();
-                c.set_player(0, e.mPlayer);
-                c.select(COMBO, 0, e.mAttribute);
-                c.select(COMBO, 1, e.mOperator);
+                c.set_player(0, e.mPlayer as u32);
+                c.select(COMBO, 0, e.mAttribute as u32);
+                c.select(COMBO, 1, e.mOperator as u32);
                 c.number(EDIT, 0, e.mAmount as i32);
-                c.set_player(1, e.mOtherPlayer);
-                c.select(COMBO, 2, e.mOtherAttribute);
+                c.set_player(1, e.mOtherPlayer as u32);
+                c.select(COMBO, 2, e.mOtherAttribute as u32);
                 let k = if e.mUsesPlayerAttribute { 1 } else { 0 };
                 c.check(k);
                 c.event_process(self.resource_event, RADIO, k);
@@ -315,10 +316,10 @@ fn chat<H: SeplHost + ?Sized>(c: &mut Cx<H>, slot: u32) {
 fn diplomacy<H: SeplHost + ?Sized>(c: &mut Cx<H>, slot: u32) {
     match slot {
         EE_SCREENS_SEET_STORE => {
-            c.e().mPlayer = c.player(0);
-            c.e().mOtherPlayer = c.player(1);
+            c.e().mPlayer = c.player(0) as c_ulong;
+            c.e().mOtherPlayer = c.player(1) as c_ulong;
             if let Some(s) = c.selection(COMBO, 0) {
-                c.e().mDiplomacy = s;
+                c.e().mDiplomacy = s as c_ulong;
             }
         }
         EE_SCREENS_SEET_HIDE => {
@@ -334,9 +335,9 @@ fn diplomacy<H: SeplHost + ?Sized>(c: &mut Cx<H>, slot: u32) {
         }
         EE_SCREENS_SEET_LOAD => {
             let e = *c.e();
-            c.set_player(0, e.mPlayer);
-            c.set_player(1, e.mOtherPlayer);
-            c.select(COMBO, 0, e.mDiplomacy);
+            c.set_player(0, e.mPlayer as u32);
+            c.set_player(1, e.mOtherPlayer as u32);
+            c.select(COMBO, 0, e.mDiplomacy as u32);
         }
         EE_SCREENS_SEET_SHOW => {
             label(c, 0, IDS_DIPLOMACY_CONDITION_DETAILS, 4.0, 616.0, 300.0, 20.0);
@@ -396,17 +397,17 @@ fn game<H: SeplHost + ?Sized>(c: &mut Cx<H>, slot: u32) {
         EE_SCREENS_SEET_STORE => {
             c.e().mUsesDifficulty = c.checked(CHECK, 0);
             if let Some(s) = c.selection(COMBO, 0) {
-                c.e().mDifficulty = s;
+                c.e().mDifficulty = s as c_ulong;
             }
             c.e().mUsesElapsedTime = c.checked(CHECK, 1);
-            c.e().mMinTime = c.text_int(EDIT, 0) as u32;
-            c.e().mMaxTime = c.text_int(EDIT, 1) as u32;
+            c.e().mMinTime = c.text_int(EDIT, 0) as c_ulong;
+            c.e().mMaxTime = c.text_int(EDIT, 1) as c_ulong;
             // a typed minimum above the maximum raises the maximum
             if c.e().mMinTime > c.e().mMaxTime {
                 c.e().mMaxTime = c.e().mMinTime;
             }
             c.e().mUsesHour = c.checked(CHECK, 2);
-            c.e().mHour = c.slider(0) as u32;
+            c.e().mHour = c.slider(0) as c_ulong;
         }
         EE_SCREENS_SEET_HIDE => {
             for (a, k) in [(LABEL, 0), (CHECK, 0), (COMBO, 0), (CHECK, 1), (LABEL, 1), (EDIT, 0), (LABEL, 2), (EDIT, 1)]
@@ -427,7 +428,7 @@ fn game<H: SeplHost + ?Sized>(c: &mut Cx<H>, slot: u32) {
         EE_SCREENS_SEET_LOAD => {
             let e = *c.e();
             c.set_checked(0, e.mUsesDifficulty);
-            c.select(COMBO, 0, e.mDifficulty);
+            c.select(COMBO, 0, e.mDifficulty as u32);
             c.set_checked(1, e.mUsesElapsedTime);
             c.number(EDIT, 0, e.mMinTime as i32);
             c.number(EDIT, 1, e.mMaxTime as i32);
@@ -501,7 +502,7 @@ fn trigger_attribute<H: SeplHost + ?Sized>(c: &mut Cx<H>, slot: u32) {
     match slot {
         EE_SCREENS_SEET_STORE => {
             if let Some(s) = c.selection(SCEN, 0) {
-                c.e().mTrigger = s;
+                c.e().mTrigger = s as c_ulong;
             }
             c.e().mIsTriggerOn = c.checked(CHECK, 0);
             c.e().mHasTriggerFired = c.checked(CHECK, 1);
@@ -515,7 +516,7 @@ fn trigger_attribute<H: SeplHost + ?Sized>(c: &mut Cx<H>, slot: u32) {
         }
         EE_SCREENS_SEET_LOAD => {
             let e = *c.e();
-            c.select(SCEN, 0, e.mTrigger);
+            c.select(SCEN, 0, e.mTrigger as u32);
             c.set_checked(0, e.mIsTriggerOn);
             c.set_checked(1, e.mHasTriggerFired);
         }
