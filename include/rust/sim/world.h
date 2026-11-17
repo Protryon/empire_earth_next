@@ -597,7 +597,6 @@ struct EeWorldLayout {
   uint64_t player_pending_units;
   uint64_t player_towns;
   uint64_t player_herds;
-  uint64_t player_viewed_unit;
   /// `mPlayers` (17 pointers), `mMap`, `mNumPlayers` (an `unsigned long`), `EEWorld::mCurrentPlayer` (a `long`)
   uint64_t world_players;
   uint64_t world_map;
