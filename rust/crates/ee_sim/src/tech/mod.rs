@@ -40,6 +40,7 @@ pub mod capture;
 pub mod civ;
 pub mod civ_apply;
 pub mod civ_file;
+pub mod civilization;
 #[cfg(test)]
 mod civ_tests;
 pub mod contagion;
