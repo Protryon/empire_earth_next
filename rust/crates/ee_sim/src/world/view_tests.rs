@@ -10,9 +10,7 @@ use super::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUnitsRtsPl
 use super::stats_fields::EeUnitsUnitClassUpgradeFields;
 use super::unit_class_fields::EeUnitsUnitClassFields;
 use super::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
-use super::view::{
-    read_depth, ClassView, FieldRead, MapView, PlayerView, TileView, UnitView, WorldRead, WorldView,
-};
+use super::view::{read_depth, ClassView, FieldRead, MapView, PlayerView, TileView, UnitView, WorldRead, WorldView};
 
 #[repr(C)]
 #[derive(Default)]
@@ -402,7 +400,10 @@ fn a_unit_view_reads_its_records_and_pointer_members() {
     assert_eq!((s.command_type(), s.goal(), s.active_goal()), (5000, Some((11, 0x1234)), None));
     assert_eq!(s.complex_unit().map(|u| u.handle()), Some(s.handle()));
     assert_eq!(s.container().map(|u| u.id()), Some(0x0100_0001));
-    assert_eq!((s.cargo_len(), s.cargo(0).map(|u| u.id()), s.cargo_handle(1), s.cargo_handle(2)), (2, Some(0x0100_0003), 0, 0));
+    assert_eq!(
+        (s.cargo_len(), s.cargo(0).map(|u| u.id()), s.cargo_handle(1), s.cargo_handle(2)),
+        (2, Some(0x0100_0003), 0, 0)
+    );
     let c = s.class().unwrap();
     assert_eq!((c.category(), c.unit_type(), c.family(), c.range(), c.unload_range()), (6, 0x2e7, 9, 4.5, 2.0));
     assert_eq!((s.build_queue_len(), s.build_queue_technology(1), s.build_queue_technology(2)), (2, Some(41), None));
@@ -467,12 +468,22 @@ fn players_world_map_and_tiles() {
     assert_eq!((w.game_speed(), w.population_limit(), w.wonders_to_win()), (1.5, 800, 1));
     assert_eq!(w.game_options_handle(), addr(&f.world.options) as u64);
     assert_eq!((w.ghost_units_len(), w.ghost_unit_handle(0), w.ghost_unit_handle(1)), (1, 0x99, 0));
-    let flags = [w.victory_enabled(), w.game_screen_active(), w.loading_saved_game(), w.cheats_enabled(),
-        w.in_cinematic(), w.user_paused(), w.using_carbon()];
+    let flags = [
+        w.victory_enabled(),
+        w.game_screen_active(),
+        w.loading_saved_game(),
+        w.cheats_enabled(),
+        w.in_cinematic(),
+        w.user_paused(),
+        w.using_carbon(),
+    ];
     assert_eq!(flags, [true, false, false, true, false, false, true]);
     let p = w.current_player().unwrap();
     assert_eq!((p.id(), p.slot(), p.sees_all(), p.observer()), (1, 0xff, true, false));
-    assert_eq!((p.color(), p.selected_group_handle(), p.enemy(2), p.enemy(3), p.enemy(99)), ([0.25, 0.5, 0.75], 0x77, 1, 0, 0));
+    assert_eq!(
+        (p.color(), p.selected_group_handle(), p.enemy(2), p.enemy(3), p.enemy(99)),
+        ([0.25, 0.5, 0.75], 0x77, 1, 0, 0)
+    );
     let ids: Vec<u32> = p.units().map(|u| u.id()).collect();
     assert_eq!(ids, [0x0100_0001, 0x0100_0002]);
     // SAFETY: the fixture's
