@@ -28962,3 +28962,133 @@ from a snapshot commit, one commit per new crate.
   root's in `rust/<dir>/<dir>.h`, `rust/common.h`, the umbrella `rust/all.h`; ee_won_net's cppcore, hostop, opobj
   and thread name each other and share `rust/won_net/hostop.h`.
 - **Gates.** See docs/progress/crate-restructure.md "Phase 2".
+
+## R6 WONLobby, round 12: the routing records read in Rust; ServerConnection.cpp and WONAPICore (ee_won_lobby modelobj.rs route_record_op, ee_won_net apicore.rs; branch rust-wonlobby12, 2026-11-17)
+
+Three WON lanes reported that their remaining C++ waited on the lobby's C++ classes: the routing records copied into
+C++ records, the server connection's peer authentication maker, the WONGUI hosts. The round measured which lobby
+classes held those readers, moved the readers' work into Rust and deleted the network shims it freed, with WONAPICore.
+
+### The measure
+
+| What stayed C++ | Its readers before the round |
+|---|---|
+| RoutingOp.cpp: the Rust ops' records copied into `RoutingClientInfo` .. `RoutingBadUser` | RoutingLogic.cpp's host (ServerAddGroup, ServerAddClient, ServerSyncClients, ServerSyncGroups, SyncGroupsOfQuery, GameReadSummary, RDataObjects / DataObjectLink / GameReadDataObject, BadUserSet); LobbyModelHost.cpp (the model's ClientReadRouting / GroupReadRouting host ops: `ReadRoutingInfo` x2, `SyncClients` x2, `SyncGroups`, `SetMembers`); LobbyDialogHost.cpp's BadUserItem; the game's EEWonNet.cpp (data objects, members, client names); three drivers |
+| SmartRoutingConnection.cpp: the model's records copied | EEWonNet.cpp alone (no lobby class read it); won_smartroute_test |
+| ServerConnection.cpp: the peer authentication maker, the virtual MsgCallback | no lobby class: RoutingConnection's MsgCallback override, three drivers' stand-in PeerAuthOps |
+| WONAPI.cpp (WONAPICore) | EELobbyGlueHost.cpp (the lobby's core), EEWonNet.cpp, AsyncOp.cpp's hooks, every GetDefaultFileDirectory caller |
+| the WONGUI hosts (GuiHost.cpp and the skins' hosts, WONGUI B's) | the lobby's own Container and ListItem subclasses: ServerListCtrl (904 lines), ChatCtrl (676), RoomCtrl (531), FriendsListCtrl (388), UserListCtrl (268), QuickPlayCtrl (241), the account and login controls; not moved this round |
+
+### What moved (net WON C++ = every tracked file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| b27a7a93 | the routing records read in Rust; RoutingOp.cpp, SmartRoutingConnection.cpp deleted | +58 -505 = -447 (42,039 -> 41,592) |
+| 0c5d4559 | ServerConnection.cpp deleted: the peer authentication maker and MsgCallback in Rust | +5 -40 = -35 (41,592 -> 41,557) |
+| 2b0b262d | WONAPICore a Rust object; WONAPI.cpp deleted | +56 -242 = -186 (41,557 -> 41,371) |
+
+Round total: WON C++ 42,039 -> 41,371 (-668), short of the 1,500 asked: the shims the measure found were small (their
+logic was Rust already); the large remaining lobby C++ is the Internet controls listed above, the WONGUI hosts'
+readers, which this round did not reach. Outside the count, EEWonNet.cpp grew by 67 lines (it reads the Rust records
+itself, with its own two small structs), and the drivers keep the deleted statements in test headers.
+
+- **The routing records (modelobj.rs `route_record_op`).** The lobby model answers RoutingLogic's record ops for the
+  game's logic (`route_op`, before the host) by reading the routing op's Rust object (`ee_won_net::cppcore::
+  route_op_of`, the core table's `CoreObjectOf`; the query's group list op from the request op's replies,
+  `routeop::group_list_of`). The records are copied first, as the original's copies were, so no Rust borrow lives
+  across a host call. The merges take a reader (`list_sync_with`, `server_sync_groups_with`, `server_add_*_with`):
+  the M calls' readers still ask the host (`ClientReadRouting`), the game's read the Rust records (`client_read_route`,
+  `group_read_route`: `ReadRoutingInfo`'s stores in order, the name's temporary released last, then `SetMembers`).
+  Two new host ops: `TextOfUnits` (a record's name as a `GUIStringData`) and `GameReadSummaryBytes`
+  (`ReadSummaryBuffer` over bytes). The data object list is a Rust list. The bad user rows (`BadUserItem`) read the
+  `EeWonRouteRecord`s (`BadUsersInsert` over `ee_won_routeop_records`); EEWonNet.cpp reads the client, member, data
+  object and smart connection records over the C ABI. The C++ record structs, RoutingOp's getters and the smart
+  connection's copies are `tests/won/won_routerecords.h` (`RouteOpRecords(op).GetClients(map)`, `SmartCopies(conn)`),
+  their statements unchanged, so won_routeops_test, won_smartroute_test, won_routemsg_test and won_reqlast_test print
+  the same lines over the Rust records.
+- **SmartRoutingConnection's constructor** is inline over `ee_won_smart_new_default` (the ignore file under the WON
+  directory, hostnative.rs's rule).
+- **ServerConnection.cpp deleted.** `n_new_peer_auth` (cppcore.rs) makes the peer authentication op with
+  hostcore.rs's `new_peer_auth` (the constructor's members; the address's six bytes read through the `IPAddr`'s one
+  member), and a received message goes to the connection's Rust routing object when it is a RoutingConnection (its
+  one override of the virtual; the base's is empty). A bound C++ table still wins:
+  `tests/won/won_servconn_cpp.h` keeps the unit's two hooks; won_servconn_test binds both (its connections override
+  MsgCallback), won_routeops_test and won_smartroute_test bind the maker alone, so their messages take the game's path.
+- **WONAPICore (apicore.rs `EeWonApiCore`).** The core holds the op container and the timer thread (thread.rs) and its
+  own pump thread (a Rust `EeWonThread`), the flags and the version; Startup, Shutdown, Pump, WriteVersion and the
+  static calls (QueueOp, AddTimerOp, RemoveTimerOp, AddToSocketThread, RemoveFromSocketThread, IsStarted,
+  GetInstance, SetDefaultFileDirectory) are Rust, in the original's order. The socket thread stays a C++
+  `SocketThread*` the game may replace: AsyncOp.cpp's `WonApiHooks()` (its virtuals, its deletion,
+  `new SocketThreadSimple`). WONAPICore.h is the shim (the vtable, the statics); `GetDefaultFileDirectory` returns a
+  per-thread copy of the Rust directory (the original returned the member; every caller copies it at once).
+
+### Goldens, mutations, replays
+
+| Driver | What | Result |
+|---|---|---|
+| won_routemodel_test (new) | the original statements (RoutingOp.cpp's copies, RoutingLogic.cpp's cases, LobbyModelHost.cpp's reads) against `ee_won_model_route_record_op`, on real routing ops fed generated server messages (client lists plain and extended, group lists, the two notices, data objects, peer data, bad users; cut and failing ones), two worlds of model objects over stand-in shells | 30,000 sequences, 2,751,105 lines identical on the first run; `golden_routerec.txt` (40 sequences) replayed by cargo |
+| won_apicore_test (new) | WONAPI.cpp's statements copied as OrigCore against the shim, a tracing stand-in socket thread, never-run ops | 3,000 sequences, 40,828 lines identical (stable run to run) |
+| won_routeops_test, won_smartroute_test, won_routemsg_test, won_reqlast_test, won_servconn_test, won_opcore_test, won_core_test, won_ops_test, won_asyncop_test, won_sockobj_test, won_serverop_test, won_authhost_test, won_modelobj_test, won_routelogic_test, won_lobbydlg_test | the existing goldens over the moved code | 0 failures |
+
+| Mutation | Caught by |
+|---|---|
+| the CD key id read from the user id | 12,228 of 30,000 sequences |
+| a room's count read from its capacity | 13,460 |
+| the members never set | 12,242 |
+| no ignore update after the client merge | 17,142 |
+| the notice's capacity from the async flags | 13,156 |
+| a missing buffer read as an empty one | 1,878 |
+| the update-clients flag inverted | 18,955 |
+| a record name's temporary never released | 22,353 |
+| a data object's link id one off | 9,999 |
+| the Rust MsgCallback dispatch dropped | won_smartroute_test 656 lines; won_routeops_test stalls |
+| WONAPICore: the socket thread never set single-threaded | won_apicore_test 55 of 3,000 |
+| WONAPICore: no socket purge at shutdown | 329 |
+| WONAPICore: a socket thread set after start-up kept (not deleted) | 401 |
+| WONAPICore: the directory set after start-up | 83 |
+| WONAPICore: another version text | 1 (the first sequence's file) |
+| WONAPICore: the socket thread started without asking NeedThread | 103 |
+| WONAPICore: a finished op dropped before start-up; a timer op of no started core not killed | 0: equivalent in the driver (its ops never run, and Kill of a never-run op is a no-op; won_core_test's and won_ops_test's real ops pass these rules) |
+
+### Behaviour changes
+
+- `ServerAddClient` of a client joined notice with no client record: the original read a NULL record and faulted;
+  the client now keeps its constructor's fields. A data object without a buffer in EEWonNet.cpp: the original
+  dereferenced the NULL buffer; it is read as empty. Neither path is reachable (no WON server).
+- The original's `WONAPICore::Pump` single-threaded with no socket thread (before any start-up) dereferenced NULL;
+  the Rust passes NULL to the C++ hook, which faults the same way (no caller pumps before start-up).
+
+### What runs it
+
+EE-SIM never builds the lobby (the oracle is unchanged by construction). The records are the Internet lobby's (no
+routing server exists), reached by the drivers only. WONAPICore runs in every lobby session: its start-up, pump and
+shutdown are on the LAN game's path, as is the server connection's class (the LAN path makes none).
+
+### Gates
+
+| Gate | b27a7a93 (records) | 0c5d4559 (ServerConnection) | 2b0b262d (WONAPICore), the round's head |
+|---|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same | the same |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | tests passed; clippy failed on one lint in the replay test (`is_multiple_of`), fixed, clippy and rustfmt clean before the commit | clippy, rustfmt, ee_won_net's 399 tests | PASS |
+| `build.py --test-profile windowed-software` | (end only) | (end only) | 0 / 0 |
+| `xbuild.py wontest` | the record drivers above, 0 failures | servconn, routeops, smartroute, opcore, routemodel: 0 failures | all 145 programs exit 0 (won_routemodel_test and won_apicore_test the new ones) |
+| `lan_game.py` (slot.py) | (end only) | (end only) | `RESULT PASS lan-game PT host=2819 joiner=2823` (the pre-round exe: host 3042, joiner 3048) |
+
+origin/rust had nothing new at the end of the round (no merge). The lobby captures of this branch's test-profile exe
+and the pre-round one (4aeedb1a, built at the round's start) were compared by pixel: the lobby's first screen, the
+LAN screen, the create dialog, the LAN list, the joiner's staging screen and the ready host's are identical; the
+host's staging screen differs in 15 pixels, one column at x 121 (the input box's caret, blinking); the in-game frames
+differ throughout (another moment of another game) and are not lobby pictures.
+
+The machine froze and restarted once during the round (all processes lost): the uncommitted files were checked
+(no NUL bytes, every file ending in a newline, the build and the drivers rerun) before the first commit.
+
+### Left
+
+- The WONGUI hosts' readers: the Internet controls (ServerListCtrl, ChatCtrl, RoomCtrl, FriendsListCtrl,
+  UserListCtrl, QuickPlayCtrl) and the account and login controls as `lobbyctl.rs` kinds (round 4's pattern), about
+  3,000 lines; then GuiHost.cpp's virtual hooks they override can go (the WONGUI B lane's).
+- RoutingLogic.cpp's remaining host: the events, dialogs and the connection's request helpers (Rust could call
+  routeconn.rs directly, but EEWonNet.cpp also calls most helpers).
+- IPAddr.cpp and StringUtil.cpp stay forwarders while the lobby's C++ calls them.
