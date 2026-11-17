@@ -597,6 +597,14 @@ struct EeWonCoreHooks {
 /// sets it at start-up ([`ee_won_core_set_new_host_op`]): a program without the class has none.
 using EeWonNewHostOp = void*(*)(EeWonHostOp *op);
 
+/// What only the C++ `ServerConnection` answers: the peer authentication op's maker and its virtual `MsgCallback`.
+struct EeWonServerConnCpp {
+  /// `new PeerAuthOp(*address, context, type, conn, true)` (the op's reference not yet taken)
+  void *(*new_peer_auth)(void *conn, const void *address, void *context, int32_t auth);
+  /// `conn->MsgCallback(message)` (a `ByteBuffer*`)
+  void (*msg_callback)(void *conn, void *message);
+};
+
 /// One call of the op on the C++ side: the code, its inputs, its outputs. Bytes come back through `out_sink`
 /// (not called: NULL).
 struct EeWonHostCall {
@@ -655,14 +663,6 @@ struct EeWonAsyncOpHooks {
   bool (*callback_hook)(void *op, void *child, int32_t param);
 };
 
-/// What only the C++ `ServerConnection` answers: the peer authentication op's maker and its virtual `MsgCallback`.
-struct EeWonServerConnCpp {
-  /// `new PeerAuthOp(*address, context, type, conn, true)` (the op's reference not yet taken)
-  void *(*new_peer_auth)(void *conn, const void *address, void *context, int32_t auth);
-  /// `conn->MsgCallback(message)` (a `ByteBuffer*`)
-  void (*msg_callback)(void *conn, void *message);
-};
-
 /// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
 /// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
 struct EeWonThreadBody {
@@ -685,6 +685,13 @@ void ee_won_core_add_transform(void *socket,
                                void *transform,
                                long (*call)(void *object, void *message, bool send),
                                void (*free)(void *object));
+
+/// The C++ calls of the drivers' server connections (`ServerConnection.cpp`'s table, kept in
+/// tests/won/won_servconn_cpp.h): their stand-in peer authentication and `MsgCallback` overrides.
+///
+/// # Safety
+/// `cpp` is a static table.
+void ee_won_servconn_bind_cpp(const EeWonServerConnCpp *cpp);
 
 /// `ServerConnectionConnectOp::RunHook` (2ac2f0): the connection's connect completion finishes the op with the
 /// connect's status while it is pending (`StaticConnectCompletion` 2ac240 / `ConnectCompletion` 2ac2d0, a

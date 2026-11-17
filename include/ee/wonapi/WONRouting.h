@@ -1420,8 +1420,9 @@ private:
 // type +0xa4, the peer authentication op +0xa8, the connect completion +0xac, the keep-alive timer +0xb0 and period
 // +0xb4, and every step of ServerConnection.cpp); this class is the shim RoutingConnection and the lobby derive from
 // Since net round 25 its calls back are Rust's (cppcore.rs NATIVE_SERVCONN: the ops, the completions the original's
-// static callbacks were, 2ab160 / 2ab6a0 / 2ab7b0, the messages, the socket) but the peer authentication op's maker
-// and the virtual MsgCallback (ServerConnection.cpp)
+// static callbacks were, 2ab160 / 2ab6a0 / 2ab7b0, the messages, the socket); since R6 WONLobby round 12 the peer
+// authentication op's maker (hostcore.rs) and the virtual MsgCallback (RoutingConnection's, the one override) too:
+// ServerConnection.cpp is deleted (the drivers bind its table: tests/won/won_servconn_cpp.h)
 class ServerConnection : public BlockingSocket {
 public:
     // restarts the keep-alive timer (none for a 0 period) (2aaf10)
@@ -1429,7 +1430,8 @@ public:
     // a no-op message, the timer restarted, when the current keep-alive timer fires (2ab840)
     void KeepAliveCallback(AsyncOp* inOp) { ee_won_servconn_keep_alive_callback(this->mConn,static_cast<RefCount*>(inOp)); }
     void SendNoOp() { ee_won_servconn_send_no_op(this->mConn); } // a no-op message queued (2ab910)
-    ServerConnection(); //2aab10: unauthenticated, a 300-second keep-alive
+    ServerConnection() : BlockingSocket(0) //2aab10: unauthenticated, a 300-second keep-alive
+    { this->mConn=ee_won_servconn_new(static_cast<void*>(this),WonCore(),NULL,static_cast<void*>(this->GetDataLock())); }
     virtual ~ServerConnection() { ee_won_servconn_free(this->mConn); } // the original's was implicit, 2aabe0
     // the keep-alive timer and a pending connect stopped, the message callback dropped, the socket closed (2abe70)
     virtual void CloseHook() { ee_won_servconn_close_hook(this->mConn); }

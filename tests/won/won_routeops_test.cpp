@@ -33,6 +33,7 @@
 #include "ee/wonapi/WONRoutingDerivedServerOp.h"
 #endif
 #include "won_blocking.h"
+#include "won_servconn_cpp.h" // the stand-in PeerAuthOp reached (the messages the game's way)
 #include "won_routerecords.h"
 
 using namespace WONAPI;
@@ -1407,6 +1408,7 @@ static std::string GoldenPath()
 
 int main(int argc, char** argv)
 {
+    BindServerConnectionCpp(false);
     AsyncSocket::StartWinsock();
     {
         WONAPICoreEx aCore;

@@ -1123,9 +1123,31 @@ unsafe extern "C" fn n_op_run_block(o: *mut c_void, t: u32) {
         x.run(2, t);
     }
 }
+/// `new PeerAuthOp(*address, context, type, conn, true)` (ServerConnection.cpp's maker until R6 WONLobby round 12):
+/// the Rust peer op and its C++ op (hostcore.rs), or a bound C++ table's (the drivers' stand-ins).
 unsafe extern "C" fn n_new_peer_auth(conn: *mut c_void, a: *const c_void, ctx: *mut c_void, auth: i32) -> *mut c_void {
-    // SAFETY: the table's contract
-    servconn_cpp().and_then(|c| c.new_peer_auth).map_or(null_mut(), |h| unsafe { h(conn, a, ctx, auth) })
+    if let Some(h) = servconn_cpp().and_then(|c| c.new_peer_auth) {
+        // SAFETY: the table's contract
+        return unsafe { h(conn, a, ctx, auth) };
+    }
+    // SAFETY: `a` is a live `IPAddr*`, whose one member is its Rust value (`GetSixByte()`: six bytes)
+    let six = unsafe {
+        let value = *(a as *const *const crate::ipobj::EeWonIpAddr);
+        std::slice::from_raw_parts(crate::ipobj::ee_won_ipaddr_six(value).cast::<u8>(), 6)
+    };
+    let mut addr = [0u8; 6];
+    addr.copy_from_slice(six);
+    let obj = |p: *mut c_void| crate::hostop::HostObj(p as usize);
+    crate::hostcore::new_peer_auth(addr, obj(ctx), auth, obj(conn), true)
+}
+/// The C++ calls of the drivers' server connections (`ServerConnection.cpp`'s table, kept in
+/// tests/won/won_servconn_cpp.h): their stand-in peer authentication and `MsgCallback` overrides.
+///
+/// # Safety
+/// `cpp` is a static table.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_servconn_bind_cpp(cpp: *const EeWonServerConnCpp) {
+    bind_servconn(cpp);
 }
 /// `StaticConnectCallback` / `StaticKeepAliveCallback`, holding the connection
 fn conn_completion(conn: *mut c_void, keep_alive: bool) -> *mut c_void {
@@ -1207,6 +1229,20 @@ unsafe extern "C" fn n_start_messages(conn: *mut c_void) {
         if let Some(h) = servconn_cpp().and_then(|c| c.msg_callback) {
             // SAFETY: the table's contract
             unsafe { h(held.get(), message.get()) };
+        } else if let Some(r) = crate::routecpp::route_conn_of(held.get()) {
+            // the virtual MsgCallback: RoutingConnection's, the game's one override (the base's is empty)
+            // SAFETY: the held message's buffer
+            let b = unsafe { n_bytes_of(message.get()) };
+            if !b.is_null() {
+                // SAFETY: the buffer's bytes, alive while the message is held
+                let (data, len) = unsafe { (ee_won_bytes_data(b), ee_won_bytes_length(b) as usize) };
+                // SAFETY: as above
+                r.msg_callback(if data.is_null() || len == 0 {
+                    &[]
+                } else {
+                    unsafe { std::slice::from_raw_parts(data, len) }
+                });
+            }
         }
     }));
     q.set_repeat_op(new_socket_op(EeWonCoreSocketOp::RecvMsg, null_mut(), null_mut(), std::ptr::null(), 0));

@@ -396,8 +396,8 @@ WON_TESTS = {
     "won_core_test": "won_ops_test",
     # ServerConnection and ServerConnectionConnectOp over 127.0.0.1 with a stand-in peer authentication (golden:
     # rust/crates/ee_won_net/src/golden_servconn.txt, recorded over the C++ classes), then RoutingConnection's op list
-    # and reply dispatch; its units (won_ops_test's, WONServer's ServerConnection, WONRouting's but the smart
-    # connection) are set below the table
+    # and reply dispatch; its units are won_ops_test's (ServerConnection is header-only since R6 WONLobby round 12;
+    # the driver binds the deleted unit's hooks, tests/won/won_servconn_cpp.h), set below the table
     "won_servconn_test": [],
     # SmartRoutingConnection (the client, group and member model, the ignore list, the chat commands, the snapshots)
     # over 127.0.0.1 with a routing server stand-in (golden: rust/crates/ee_won_net/src/golden_smartroute.txt, recorded
@@ -781,7 +781,6 @@ WON_TESTS = {
                         WON_SRC / "WONCommon" / "StringUtil.cpp"],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
-                                  WON_SRC / "WONServer" / "ServerConnection.cpp",
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
 WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"], WON_SRC / "WONCommon" / "StringUtil.cpp"]
 # WONRouting's RoutingGetUserStatusOp over 127.0.0.1 with a routing server stand-in (golden:
