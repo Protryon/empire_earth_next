@@ -99,9 +99,8 @@ impl GameOverHost for Game<'_> {
     }
     fn complex_units(&mut self, player: u64) -> Vec<u64> {
         // `GetNextComplexUnit`'s walk: each unit's complex unit, in list order
-        self.player(player).map_or_else(Vec::new, |p| {
-            p.units().map(|u| u.complex_unit_handle()).filter(|&x| x != 0).collect()
-        })
+        self.player(player)
+            .map_or_else(Vec::new, |p| p.units().map(|u| u.complex_unit_handle()).filter(|&x| x != 0).collect())
     }
     fn unit(&mut self, unit: u64) -> RecoverUnit {
         // SAFETY: one of the player's live complex units (listed just above; nothing ran in between but reads)

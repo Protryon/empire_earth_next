@@ -89,7 +89,8 @@ mod tests {
 
     #[test]
     fn a_resize_copies_each_found_tiles_words_in_order() {
-        let old = alloc(6); // three tiles of two words
+        // three tiles of two words
+        let old = alloc(6);
         // SAFETY: the buffers made here
         unsafe {
             for i in 0..6 {

@@ -85,7 +85,7 @@ pub fn check_game_over<H: GameOverHost + ?Sized>(h: &mut H) -> i64 {
             while i < h.teams() {
                 let state = h.team_state(i);
                 if state != 0 {
-                    result = 0;
+                    // (the C++ set it to 0 first: never read)
                     for p in h.team_players(i) {
                         results.push((p, state));
                     }

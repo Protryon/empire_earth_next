@@ -200,9 +200,14 @@ pub unsafe extern "C" fn ee_units_map_words_resize(
     let at = crate::world::layout::layout().tile_visibility as usize;
     // SAFETY: the caller's contract; each found tile is live and its `mVisibility` member at `at`
     unsafe {
-        let words = crate::units::map_words::resize(old, &found, tiles as usize, old_words as usize, new_words as usize, |t, p| {
-            ((t as usize + at) as *mut *mut u32).write(p)
-        });
+        let words = crate::units::map_words::resize(
+            old,
+            &found,
+            tiles as usize,
+            old_words as usize,
+            new_words as usize,
+            |t, p| ((t as usize + at) as *mut *mut u32).write(p),
+        );
         crate::units::map_words::free(old);
         words
     }
