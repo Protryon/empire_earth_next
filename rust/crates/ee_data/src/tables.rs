@@ -675,6 +675,8 @@ const _: () = assert!(core::mem::size_of::<DbTerrainType>() == 128);
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct EeDataTerrainTypeFields {
+    /// The map's colour set of the type (EEMap sets it; not from the record).
+    pub mColorSetID: c_long,
     pub mID: c_long,
     pub mFirstColor: c_long,
     pub mLastColor: c_long,
@@ -686,6 +688,7 @@ pub struct EeDataTerrainTypeFields {
 /// `EETerrainTypeTable::Load`'s copy of a record (the unused palette index is kept as `mL18`).
 pub fn terrain_type_fields(r: &DbTerrainType) -> EeDataTerrainTypeFields {
     EeDataTerrainTypeFields {
+        mColorSetID: 0,
         mID: r.mID as c_long,
         mFirstColor: r.mFirstColor as c_long,
         mLastColor: r.mLastColor as c_long,
@@ -2270,6 +2273,191 @@ pub struct DbTerrainGrayTexture {
 }
 
 const _: () = assert!(core::mem::size_of::<DbTerrainGrayTexture>() == 120);
+
+// ---- the tables as Rust lists
+
+/// The db tables whose entries are only their records' members, held here (`ee/EEDbRecords.h` `EEDbList`: the
+/// classes' `sTable` reads them as the vectors they were).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeDataList {
+    /// `EEStartingResources::sTable` (rows with a negative index skipped).
+    StartingResources = 0,
+    /// `gGameVariants` (rows with a negative index skipped).
+    GameVariants = 1,
+    /// `EEUnitBehavior::sTable` (a row with a negative index is NULL).
+    UnitBehaviors = 2,
+    /// `EEUCUpgradeTable::sTable` (likewise).
+    Upgrades = 3,
+    /// `EETerrainTypeTable::sTable` (every row).
+    TerrainTypes = 4,
+}
+
+/// One entry of a list (boxed: its address is the C++'s object pointer until the list is cleared).
+enum Entry {
+    StartingResources(EeDataStartingResourcesFields),
+    GameVariant(EeDataGameVariantFields),
+    UnitBehavior(EeDataUnitBehaviorFields),
+    Upgrade(EeDataUpgradeFields),
+    TerrainType(EeDataTerrainTypeFields),
+}
+
+impl Entry {
+    fn fields(&mut self) -> *mut c_void {
+        match self {
+            Entry::StartingResources(f) => f as *mut _ as *mut c_void,
+            Entry::GameVariant(f) => f as *mut _ as *mut c_void,
+            Entry::UnitBehavior(f) => f as *mut _ as *mut c_void,
+            Entry::Upgrade(f) => f as *mut _ as *mut c_void,
+            Entry::TerrainType(f) => f as *mut _ as *mut c_void,
+        }
+    }
+}
+
+const LISTS: usize = 5;
+type Lists = [Vec<Option<Box<Entry>>>; LISTS];
+static TABLES: std::sync::Mutex<Lists> =
+    std::sync::Mutex::new([Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new()]);
+
+fn tables() -> std::sync::MutexGuard<'static, Lists> {
+    TABLES.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// A record's entry for `list` (`None`: a skipped or NULL row), by the tables' copies above.
+///
+/// # Safety
+/// `bytes` holds a whole record of the list's table.
+unsafe fn entry_of(list: EeDataList, bytes: *const u8) -> Option<Entry> {
+    // SAFETY: the caller's guarantee
+    unsafe {
+        match list {
+            EeDataList::StartingResources => starting_resources_fields(&record(bytes)).map(Entry::StartingResources),
+            EeDataList::GameVariants => game_variant_fields(&record(bytes)).map(Entry::GameVariant),
+            EeDataList::UnitBehaviors => unit_behavior_fields(&record(bytes)).map(Entry::UnitBehavior),
+            EeDataList::Upgrades => upgrade_fields(&record(bytes)).map(Entry::Upgrade),
+            EeDataList::TerrainTypes => Some(Entry::TerrainType(terrain_type_fields(&record(bytes)))),
+        }
+    }
+}
+
+/// Whether a list keeps a slot (NULL) for a row without an entry, rather than skipping it.
+fn slotted(list: EeDataList) -> bool {
+    matches!(list, EeDataList::UnitBehaviors | EeDataList::Upgrades | EeDataList::TerrainTypes)
+}
+
+/// The size of a record of `list`'s table.
+#[no_mangle]
+pub extern "C" fn ee_data_list_record_size(list: EeDataList) -> usize {
+    match list {
+        EeDataList::StartingResources => core::mem::size_of::<DbStartingResources>(),
+        EeDataList::GameVariants => core::mem::size_of::<DbGameVariant>(),
+        EeDataList::UnitBehaviors => core::mem::size_of::<DbUnitBehavior>(),
+        EeDataList::Upgrades => core::mem::size_of::<DbUpgrade>(),
+        EeDataList::TerrainTypes => core::mem::size_of::<DbTerrainType>(),
+    }
+}
+
+/// A load's start: a slotted list gets `count` slots (as `resize(count, NULL)` did: the first ones stay).
+#[no_mangle]
+pub extern "C" fn ee_data_list_begin(list: EeDataList, count: usize) {
+    if slotted(list) {
+        let mut t = tables();
+        t[list as usize].resize_with(count, || None);
+    }
+}
+
+/// Row `index`'s record: a slotted list's slot gets its entry, another list appends it (a skipped row adds nothing).
+///
+/// # Safety
+/// `bytes` holds `ee_data_list_record_size(list)` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_data_list_load(list: EeDataList, index: usize, bytes: *const u8) {
+    // SAFETY: the caller's guarantee
+    let entry = unsafe { entry_of(list, bytes) }.map(Box::new);
+    let mut t = tables();
+    let v = &mut t[list as usize];
+    if slotted(list) {
+        if index >= v.len() {
+            v.resize_with(index + 1, || None);
+        }
+        v[index] = entry;
+    } else if entry.is_some() {
+        v.push(entry);
+    }
+}
+
+/// The entry at `index` (its members: the class's base), NULL for a NULL slot or past the end.
+#[no_mangle]
+pub extern "C" fn ee_data_list_get(list: EeDataList, index: usize) -> *mut c_void {
+    let mut t = tables();
+    match t[list as usize].get_mut(index) {
+        Some(Some(e)) => e.fields(),
+        _ => std::ptr::null_mut(),
+    }
+}
+
+/// The list's length.
+#[no_mangle]
+pub extern "C" fn ee_data_list_count(list: EeDataList) -> usize {
+    tables()[list as usize].len()
+}
+
+/// Empties the list (its entries' pointers end).
+#[no_mangle]
+pub extern "C" fn ee_data_list_clear(list: EeDataList) {
+    tables()[list as usize].clear();
+}
+
+#[cfg(test)]
+mod list_tests {
+    use super::*;
+
+    fn bytes_of<T: Copy>(r: &T) -> Vec<u8> {
+        // SAFETY: a record is `size_of::<T>()` plain bytes
+        unsafe { std::slice::from_raw_parts(r as *const T as *const u8, std::mem::size_of::<T>()) }.to_vec()
+    }
+
+    #[test]
+    fn skipped_rows_and_null_slots() {
+        // the lists are process statics: this test is the only one using them
+        ee_data_list_clear(EeDataList::StartingResources);
+        // SAFETY: plain integers and bytes
+        let mut r: DbStartingResources = unsafe { std::mem::zeroed() };
+        for (i, index) in [0, -1, 2].into_iter().enumerate() {
+            r.mIndex = index;
+            r.mFood = i as i32 * 10;
+            // SAFETY: a whole record
+            unsafe { ee_data_list_load(EeDataList::StartingResources, i, bytes_of(&r).as_ptr()) };
+        }
+        assert_eq!(ee_data_list_count(EeDataList::StartingResources), 2);
+        let second = ee_data_list_get(EeDataList::StartingResources, 1) as *const EeDataStartingResourcesFields;
+        // SAFETY: a live entry
+        assert_eq!(unsafe { (*second).mAmounts[0] }, 20);
+        assert!(ee_data_list_get(EeDataList::StartingResources, 2).is_null());
+
+        ee_data_list_clear(EeDataList::UnitBehaviors);
+        ee_data_list_begin(EeDataList::UnitBehaviors, 3);
+        // SAFETY: plain integers and bytes
+        let mut b: DbUnitBehavior = unsafe { std::mem::zeroed() };
+        b.mIndex = 0;
+        b.mCanFlee = 1;
+        // SAFETY: a whole record
+        unsafe { ee_data_list_load(EeDataList::UnitBehaviors, 2, bytes_of(&b).as_ptr()) };
+        b.mIndex = -1;
+        // SAFETY: a whole record
+        unsafe { ee_data_list_load(EeDataList::UnitBehaviors, 0, bytes_of(&b).as_ptr()) };
+        assert_eq!(ee_data_list_count(EeDataList::UnitBehaviors), 3);
+        assert!(ee_data_list_get(EeDataList::UnitBehaviors, 0).is_null());
+        assert!(ee_data_list_get(EeDataList::UnitBehaviors, 1).is_null());
+        let p = ee_data_list_get(EeDataList::UnitBehaviors, 2) as *const EeDataUnitBehaviorFields;
+        // SAFETY: a live entry; its address is stable
+        assert!(unsafe { (*p).mCanFlee });
+        assert_eq!(ee_data_list_get(EeDataList::UnitBehaviors, 2) as *const EeDataUnitBehaviorFields, p);
+        ee_data_list_clear(EeDataList::UnitBehaviors);
+        assert_eq!(ee_data_list_count(EeDataList::UnitBehaviors), 0);
+        assert_eq!(ee_data_list_record_size(EeDataList::Upgrades), 240);
+    }
+}
 
 #[cfg(test)]
 mod tests_more {

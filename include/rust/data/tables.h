@@ -13,6 +13,21 @@ constexpr static const size_t EE_DATA_GRAPHIC_STATES = 14;
 /// The model slot of the shared model in the frame maps (the parts' models take 0 .. 13 in first-seen order).
 constexpr static const long EE_DATA_GRAPHIC_SHARED_MODEL = 14;
 
+/// The db tables whose entries are only their records' members, held here (`ee/EEDbRecords.h` `EEDbList`: the
+/// classes' `sTable` reads them as the vectors they were).
+enum class EeDataList {
+  /// `EEStartingResources::sTable` (rows with a negative index skipped).
+  StartingResources = 0,
+  /// `gGameVariants` (rows with a negative index skipped).
+  GameVariants = 1,
+  /// `EEUnitBehavior::sTable` (a row with a negative index is NULL).
+  UnitBehaviors = 2,
+  /// `EEUCUpgradeTable::sTable` (likewise).
+  Upgrades = 3,
+  /// `EETerrainTypeTable::sTable` (every row).
+  TerrainTypes = 4,
+};
+
 /// `EEAnimal`'s plain members, in the class's order (`include/ee/EEAnimal.h`: the class's base).
 struct EeDataAnimalFields {
   float mF28;
@@ -95,6 +110,8 @@ struct EeDataPlayerColors {
 
 /// `EETerrainTypeTable`'s members from `mID` (`include/ee/EEDatabaseTables.h`: the class's base).
 struct EeDataTerrainTypeFields {
+  /// The map's colour set of the type (EEMap sets it; not from the record).
+  long mColorSetID;
   long mID;
   long mFirstColor;
   long mLastColor;
@@ -567,6 +584,30 @@ void ee_data_graphic_frame_maps(const EeDataGraphicFramePart *parts,
                                                unsigned long frame,
                                                long value),
                                 void *context);
+
+/// The size of a record of `list`'s table.
+size_t ee_data_list_record_size(EeDataList list);
+
+/// A load's start: a slotted list gets `count` slots (as `resize(count, NULL)` did: the first ones stay).
+void ee_data_list_begin(EeDataList list,
+                        size_t count);
+
+/// Row `index`'s record: a slotted list's slot gets its entry, another list appends it (a skipped row adds nothing).
+///
+/// # Safety
+/// `bytes` holds `ee_data_list_record_size(list)` bytes.
+void ee_data_list_load(EeDataList list,
+                       size_t index,
+                       const uint8_t *bytes);
+
+/// The entry at `index` (its members: the class's base), NULL for a NULL slot or past the end.
+void *ee_data_list_get(EeDataList list, size_t index);
+
+/// The list's length.
+size_t ee_data_list_count(EeDataList list);
+
+/// Empties the list (its entries' pointers end).
+void ee_data_list_clear(EeDataList list);
 
 }  // extern "C"
 

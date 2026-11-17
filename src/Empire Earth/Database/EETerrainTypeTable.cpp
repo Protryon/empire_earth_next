@@ -23,32 +23,20 @@ float** gDamageTableScaled2;
 unsigned long gDamageTableRowCount;
 unsigned long gDamageTableColumnCount;
 
-std::vector<EETerrainTypeTable*> EETerrainTypeTable::sTable;
+EEDbList<EETerrainTypeTable, EeDataList::TerrainTypes> EETerrainTypeTable::sTable;
 
-// Creates an empty terrain type
-EETerrainTypeTable::EETerrainTypeTable() : EeDataTerrainTypeFields()
-{
-}
 
-// Loads the terrain types (id, colour range, name, editor flag: the record and its copy are ee_data tables.rs) from
-// db\dbterrainType.dat; returns the last read status
+// Loads the terrain types (id, colour range, name, editor flag) from db\dbterrainType.dat into the Rust list (the
+// record, its copy and the list: ee_data tables.rs); returns the last read status
 long EETerrainTypeTable::Load(FSFileSpec* inFile)
 {
-    return EEDbReadRecords(inFile, ee_data_terrain_type_record_size(),
-        [](unsigned long inCount) { EETerrainTypeTable::sTable.resize(inCount, NULL); return true; },
-        [](unsigned long inIndex, const unsigned char* inRecord) {
-            EETerrainTypeTable* theType = new EETerrainTypeTable;
-            ee_data_terrain_type_from_record(inRecord, theType);
-            EETerrainTypeTable::sTable[inIndex] = theType;
-        });
+    return EEDbLoadList(inFile, EeDataList::TerrainTypes);
 }
 
-// Destroys every terrain type and empties the table
+// Empties the table
 void EETerrainTypeTable::Unload()
 {
-    for (unsigned long i = 0; i < EETerrainTypeTable::sTable.size(); i++)
-        delete EETerrainTypeTable::sTable[i];
-    EETerrainTypeTable::sTable.resize(0);
+    EETerrainTypeTable::sTable.clear();
 }
 
 // the lookup's classes (included after the table's init chain, as EETerrainTable.cpp does)

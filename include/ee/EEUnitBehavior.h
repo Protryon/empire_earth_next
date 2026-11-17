@@ -5,18 +5,14 @@
 #ifndef EE_EEUNITBEHAVIOR_H
 #define EE_EEUNITBEHAVIOR_H
 
-#include <vector>
-
-#include "rust/data/tables.h"
+#include "ee/EEDbList.h"
 
 class EEUnit;
 class FSFileSpec;
 
-// the flags are EeDataUnitBehaviorFields (rust/crates/ee_data tables.rs: the record and its copy), the base
+// the flags are EeDataUnitBehaviorFields (rust/crates/ee_data tables.rs: the record, its copy and the list), the base
 class EEUnitBehavior : public EeDataUnitBehaviorFields {
 public:
-    EEUnitBehavior();
-    virtual ~EEUnitBehavior();              // +0x00 0xdc96c (??_G 0xdc950)
     static long Load(FSFileSpec* inFile);   // 0xdc973 (records with a negative +0x68 stay NULL)
     static void Unload();
     bool CanMoveFreely(EEUnit* inUnit);     // 0xdca7d (by the unit class's +0x318 flag; provisional name)
@@ -26,7 +22,7 @@ public:
 
 
     // 0x8e8740 (guard 0x8e8738 bit 1; only its unit sees it: other units read its _First as gUnitBehaviors)
-    static std::vector<EEUnitBehavior*> sTable;
+    static EEDbList<EEUnitBehavior, EeDataList::UnitBehaviors> sTable;   // Rust's list (ee/EEDbList.h)
 };
 
 // 0x4e8750: the weapon to-hit factors, defined in EEUnitBehavior.cpp (provisional name; EEPhysicsModel::Push)

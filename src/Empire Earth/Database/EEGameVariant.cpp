@@ -14,41 +14,21 @@
 
 // NEAR (chain 0x4d68c7): the original's dtor registrar is guarded (a class static data member's guard byte
 // 0x8e7f70); the header declares a plain global.
-std::vector<EEGameVariant*> gGameVariants;
+EEDbList<EEGameVariant, EeDataList::GameVariants> gGameVariants;   // Rust's list (ee/EEDbList.h)
 
-// Creates an empty game variant
-EEGameVariant::EEGameVariant()
-{
-}
 
-// Destroys the game variant (nothing to release)
-EEGameVariant::~EEGameVariant()
-{
-}
 
-// Loads the game variants (unit-set factors, cost, work-time, morale and earthquake factors: the record and its copy
-// are ee_data tables.rs) from db\dbGameVariant.dat; rows with a negative index are skipped. Returns the last read status
+// Loads the game variants (unit-set factors, cost, work-time, morale and earthquake factors) from db\dbGameVariant.dat
+// into the Rust list (the record, its copy and the list: ee_data tables.rs); rows with a negative index are skipped.
+// Returns the last read status
 long EEGameVariant::Load(FSFileSpec* inFile)
 {
-    return EEDbReadRecords(inFile, ee_data_game_variant_record_size(), [](unsigned long) { return true; },
-        [](unsigned long, const unsigned char* inRecord) {
-            EeDataGameVariantFields theFields;
-            if (ee_data_game_variant_from_record(inRecord, &theFields)) {
-                EEGameVariant* theVariant = new EEGameVariant;
-                *static_cast<EeDataGameVariantFields*>(theVariant) = theFields;
-                gGameVariants.push_back(theVariant);
-            }
-        });
+    return EEDbLoadList(inFile, EeDataList::GameVariants);
 }
 
-// Destroys every game variant and empties the list
+// Empties the list
 void EEGameVariant::Unload()
 {
-    for (unsigned long i = 0; i < gGameVariants.size(); i++) {
-        if (gGameVariants[i] != NULL)
-            delete gGameVariants[i];
-        gGameVariants[i] = NULL;
-    }
     gGameVariants.clear();
 }
 

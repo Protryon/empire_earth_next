@@ -12,35 +12,19 @@
 #include "ee/EEUCUpgradeTable.h"
 #include "ee/EEDbRecords.h"
 
-std::vector<EEUCUpgradeTable*> EEUCUpgradeTable::sTable;
+EEDbList<EEUCUpgradeTable, EeDataList::Upgrades> EEUCUpgradeTable::sTable;
 
-// Creates a unit upgrade entry: 16 factors of scale 1 and offset 0, max level 0
-EEUCUpgradeTable::EEUCUpgradeTable()
-{
-    ee_data_upgrade_default(this);
-}
 
-// Loads the unit upgrade costs and steps from db\dbupgrade.dat (the record and its copy: ee_data tables.rs; the repair
-// step as a 0/1 flag, factor 13 never set); a row with a negative index stays NULL. Returns the last read status
+// Loads the unit upgrade costs and steps from db\dbupgrade.dat into the Rust list (the record, its copy and the list:
+// ee_data tables.rs; the repair step as a 0/1 flag, factor 13 never set); a row with a negative index stays NULL.
+// Returns the last read status
 long EEUCUpgradeTable::Load(FSFileSpec* inFile)
 {
-    return EEDbReadRecords(inFile, ee_data_upgrade_record_size(),
-        [](unsigned long inCount) { EEUCUpgradeTable::sTable.resize(inCount, NULL); return true; },
-        [](unsigned long inIndex, const unsigned char* inRecord) {
-            EeDataUpgradeFields theFields;
-            EEUCUpgradeTable* theTable = NULL;
-            if (ee_data_upgrade_from_record(inRecord, &theFields)) {
-                theTable = new EEUCUpgradeTable;
-                *static_cast<EeDataUpgradeFields*>(theTable) = theFields;
-            }
-            EEUCUpgradeTable::sTable[inIndex] = theTable;
-        });
+    return EEDbLoadList(inFile, EeDataList::Upgrades);
 }
 
-// Destroys every unit upgrade entry and empties the table
+// Empties the table
 void EEUCUpgradeTable::Unload()
 {
-    for (unsigned long i = 0; i < EEUCUpgradeTable::sTable.size(); i++)
-        delete EEUCUpgradeTable::sTable[i];
-    EEUCUpgradeTable::sTable.resize(0);
+    EEUCUpgradeTable::sTable.clear();
 }
