@@ -5,7 +5,6 @@
 2b2350 2b38d3 WONSocket/IPAddr.cpp
 2ddb70 2e1b5f WONAuth/AuthContext.cpp
 2f04f0 2f0d9a WONDir/DirEntityReplyParser.cpp
-2f2750 2f2f3f WONAPI.cpp
 2f3070 2f3962 WONGUI/Button.cpp
 2f3a50 2f4888 WONGUI/ComboBox.cpp
 2f4890 2f4aeb WONGUI/ComponentLifetime.cpp

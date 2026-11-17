@@ -384,8 +384,7 @@ WON_TESTS = {
     "won_socket_test": "won_ops_test",
     # the socket ops, BlockingSocket / QueueSocket, the async op machinery and WONAPICore's threads
     "won_ops_test": [WON_SRC / "WONSocket" / "IPAddr.cpp",
-                     WON_SRC / "WONCommon" / "AsyncOp.cpp",
-                     WON_SRC / "WONAPI.cpp"],
+                     WON_SRC / "WONCommon" / "AsyncOp.cpp"],  # (WONAPICore is header-only: ee_won apicore.rs)
     # the async machinery's events (golden: rust/crates/ee_won_net/src/golden_asyncop.txt, recorded over the C++ classes)
     "won_asyncop_test": "won_ops_test",
     # the socket classes' events (golden: rust/crates/ee_won_net/src/golden_sockobj.txt, recorded over the C++ classes)
@@ -838,6 +837,9 @@ WON_TESTS["won_cdkeystore_test"] = WON_TESTS["won_serverop_test"]
 # copies, RoutingLogic.cpp's cases and LobbyModelHost.cpp's reads as they were, on real routing ops (golden:
 # rust/crates/ee_won_lobby/src/golden_routerec.txt); won_servconn_test's units (a connection binds the core)
 WON_TESTS["won_routemodel_test"] = WON_TESTS["won_servconn_test"]
+# WONAPICore as a Rust object (apicore.rs) against WONAPI.cpp's statements copied into the driver, over the same op
+# container, timer and thread shims; won_ops_test's units
+WON_TESTS["won_apicore_test"] = WON_TESTS["won_ops_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]
