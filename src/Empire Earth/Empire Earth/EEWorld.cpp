@@ -156,7 +156,6 @@ inline unsigned long EEGameState::GetNumTeams() const
 EEWorld::EEWorld()
 {
     EEWorldLayoutRegister();   // port: where Rust's views read the world's objects (ee/EEWorldLayout.h)
-    ee_world_register_world((uint64_t)(uintptr_t)this);   // port: the world the Rust hosts' views read (lane P)
     this->mWindYaw = 0.0f;
     this->mEffectManager = NULL;
     this->mUB80 = 0;

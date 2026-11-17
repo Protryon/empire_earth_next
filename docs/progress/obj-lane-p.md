@@ -28,8 +28,8 @@ stay the same). Round 1 (branch rust-objP) was the preparation that did not need
   views before calling the C++ (UNIT_INFO, CONTAINER_CATEGORY, NEXT_UNIT, BUILD_QUEUE_TECH, PENDING_COUNT,
   PENDING_POPULATION, COMPLEX_VALUES, IS_LOCAL, IS_CURRENT, NUM_PLAYERS, ID, AT, VIEW, VIEWED_OF, AREA_COUNT,
   AREA_AT), the tick's host TICK_UNIT_HIT_POINTS; their C++ cases are gone. `GetPopulationCost()` is `mWeight` (every
-  class kind's body), `IsLandBuilding()` the class body table's row for the category. EEWorld's constructor
-  registers its handle (`ee_world_register_world`) for the hosts that read `gWorld`.
+  class kind's body), `IsLandBuilding()` the class body table's row for the category. The world is
+  `WorldView::global` (the layout's `&gWorld`, lane S's).
 - **`EEWorld::CheckGameOver` and `EEWorldCanRecover` are Rust** (`game_over.rs`, its world `game_over_host.rs`): the
   decision in the C++'s order (its gotos as one labelled block), the players' and units' fields through the views;
   the teams' victory conditions, `IsHuman`, `RemovePlayerFromGame`, `SetGameResult`, the rules and the citizen's

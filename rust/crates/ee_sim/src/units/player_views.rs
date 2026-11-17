@@ -13,7 +13,7 @@ use crate::units::player_units::{
     EE_UNITS_PLAYER_CONTAINER_CATEGORY, EE_UNITS_PLAYER_ID, EE_UNITS_PLAYER_NEXT_UNIT, EE_UNITS_PLAYER_NUM_PLAYERS,
     EE_UNITS_PLAYER_PENDING_COUNT, EE_UNITS_PLAYER_PENDING_POPULATION, EE_UNITS_PLAYER_UNIT_INFO,
 };
-use crate::world::{world_handle, ClassView, PlayerView, UnitView, WorldRead, WorldView};
+use crate::world::{ClassView, PlayerView, UnitView, WorldRead, WorldView};
 use std::os::raw::{c_long, c_ulong};
 
 /// `GetPopulationCost()`: every class kind's body is `mWeight`
@@ -66,14 +66,12 @@ fn unit_info(u: &UnitView<'_>) -> EeUnitsPlayerUnit {
 /// `player` is a live `EEPlayer` and the operation's handles are the live objects the C++ host would have read; the
 /// caller holds the world (a call from the simulation into the player's Rust).
 pub unsafe fn answer(player: u64, op: i32, io: &mut EeUnitsPlayerIo) -> Option<i64> {
-    let world = world_handle();
-    if world == 0 {
-        return None;
-    }
+    // no layout yet (a unit test's host never gets here: its hosts answer every operation)
+    crate::world::layout::get()?;
     // SAFETY: the caller's contract
     let t = unsafe { WorldRead::begin() };
-    // SAFETY: `&gWorld`, registered by its constructor
-    let w = unsafe { WorldView::of(&t, world) }?;
+    // `&gWorld` (registered with the layout)
+    let w = WorldView::global(&t)?;
     // SAFETY: the caller's contract
     let me = unsafe { PlayerView::of(&t, player) }?;
     let (a0, a1) = (io.i[0], io.i[1]);
