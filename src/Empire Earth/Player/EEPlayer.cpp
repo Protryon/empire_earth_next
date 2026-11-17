@@ -513,41 +513,9 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
     }
     case EE_UNITS_PLAYER_IMPROVEMENT_TIME:
         return a[1] ? (long)gWorldTable.GetLongValue2(EEWorldImprovementTime(a[0])) : (long)gWorldTable.GetLongValue(EEWorldImprovementTime(a[0]));
-    case EE_UNITS_PLAYER_IS_LOCAL: return thePlayer == gWorld.GetCurrentPlayer();
     case EE_UNITS_PLAYER_UPDATE_JIT: gUserInterface->UpdateJITManufacturing(); return 0;
     case EE_UNITS_PLAYER_PAY_IMPROVEMENT: thePlayer->PayImprovement(theClass, (long)a[1]); return 0;
     // the unit bookkeeping and the wonders (ee_units player_units.rs): the units as RTSUnit addresses
-    case EE_UNITS_PLAYER_UNIT_INFO: {
-        EEUnitClass* c = theUnit->mUnitClass;
-        EEComplexUnit* x = theUnit->GetComplexUnit();
-        EeUnitsPlayerUnit& u = *reinterpret_cast<EeUnitsPlayerUnit*>(a[1]);
-        u.complex = EEPlayerUnitArg(x);
-        u.unit_type = c->mUnitType;
-        u.technology = c->mTechnology;
-        u.population = c->GetPopulationCost();
-        u.category = c->mCategory;
-        u.ai_kind = c->mAIKind;
-        u.wonder_bonus = c->mWonderBonus;
-        u.wonder_unit_set = c->mWonderUnitSet;
-        u.land_building = c->IsLandBuilding();
-        u.vital = c->mIsVital;
-        u.inactive = c->mIsInactive;
-        u.blocks_tile = c->mBlocksTile;
-        u.wall = c->mIsWall;
-        u.tree = c->mIsTree;
-        u.on_tile = theUnit->mTileNode != NULL;
-        u.built = x != NULL && x->mIsBuilt;
-        u.first_part = x != NULL && x->mPreviousPart == NULL;
-        u.hit_points = theUnit->mHitPoints;
-        u.tile_x = theUnit->mTileX;
-        u.resource_amount = theUnit->mResourceAmount;
-        u.container = EEPlayerUnitArg(x != NULL ? x->mContainer : NULL);   // (not followed: a loading unit's is an id)
-        u.current_research = x != NULL ? x->mCurrentResearch : 0;
-        u.build_queue = x != NULL ? (long)x->GetBuildQueueSize() : 0;
-        return 0;
-    }
-    case EE_UNITS_PLAYER_CONTAINER_CATEGORY: return theComplex->mUnitClass->mCategory;
-    case EE_UNITS_PLAYER_NEXT_UNIT: return EEPlayerUnitArg(theUnit == NULL ? thePlayer->mFirstUnit : static_cast<EEUnit*>(theUnit->mNext));
     case EE_UNITS_PLAYER_NEXT_COMPLEX: return EEPlayerUnitArg(thePlayer->GetNextComplexUnit(theUnit));
     case EE_UNITS_PLAYER_STATE:
         return (gLoadingSavedGame ? 1 : 0) | (gGameScreenActive ? 2 : 0) | (gWorldClearing ? 4 : 0) | (UShutdownInProgress() ? 8 : 0)
@@ -557,8 +525,6 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
     case EE_UNITS_PLAYER_NODE_IS_AVAILABLE: return theNode->mIsAvailable;
     case EE_UNITS_PLAYER_SET_NODE_AVAILABLE: thePlayer->mTechnologies->SetNodeAvailable((long)a[0], a[1] != 0); return 0;
     case EE_UNITS_PLAYER_RESEARCH: thePlayer->mTechnologies->Research((long)a[0], NULL); return 0;
-    case EE_UNITS_PLAYER_NUM_PLAYERS: return gWorld.mNumPlayers;
-    case EE_UNITS_PLAYER_ID: return thePlayer->mPlayerID;
     case EE_UNITS_PLAYER_UNIT_PLACED: thePlayer->UnitPlaced(theComplex); return 0;
     case EE_UNITS_PLAYER_CITIZEN_CONTAINS: return thePlayer->GetTechTree()->Get(kTechCitizen)->Contains((long)a[0]);
     case EE_UNITS_PLAYER_TECH_OBSOLETE: return thePlayer->mTechnologies->Get((long)a[0]) != NULL && thePlayer->mTechnologies->Get((long)a[0])->GetIsObsolete();
@@ -603,9 +569,6 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
             gWorld.mPlayers[a[0]]->WonderStarted(static_cast<EEComplexUnit*>(reinterpret_cast<RTSUnit*>(a[1])));
         return 0;
     case EE_UNITS_PLAYER_CLEAR_FOOTPRINT: thePlayer->ClearFootprint(theComplex); return 0;
-    case EE_UNITS_PLAYER_BUILD_QUEUE_TECH: return theComplex->mBuildQueue[(size_t)a[1]].mTechnology;
-    case EE_UNITS_PLAYER_PENDING_COUNT: return thePlayer->mPendingUnits.size();
-    case EE_UNITS_PLAYER_PENDING_POPULATION: return dynamic_cast<EEUnit*>(thePlayer->mPendingUnits[(size_t)a[0]])->GetUnitClass()->GetPopulationCost();
     case EE_UNITS_PLAYER_WONDER_LIST:
         if (a[1] != 0) {
             thePlayer->mWonders->Add(theComplex);
@@ -655,10 +618,6 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         else
             theUnit->GetComplexUnit()->SightOffHere();
         return 0;
-    case EE_UNITS_PLAYER_COMPLEX_VALUES:
-        a[0] = theComplex->mFlightTime;
-        a[1] = theComplex->mPower;
-        return 0;
     case EE_UNITS_PLAYER_SET_VALUE:
         if (a[2] == 0)
             theComplex->SetFlightTime((long)a[1]);
@@ -673,13 +632,7 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         gSoundManager->Play(EESoundObject::Get(kSoundSlavery)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
         return 0;
     case EE_UNITS_PLAYER_HEALED_SET: thePlayer->mHealedUnitSet = a[1] != 0 ? gUnitSetManager.GetSet((long)a[0]) : NULL; return 0;
-    case EE_UNITS_PLAYER_AT: return (int64_t)reinterpret_cast<uintptr_t>((uint64_t)a[0] < gWorld.mNumPlayers ? gWorld.mPlayers[a[0]] : NULL);
     // the diplomacy and the shared sight (ee_units player_diplomacy.rs): the players as EEPlayer addresses, 0 this one
-    case EE_UNITS_PLAYER_VIEW:
-        a[2] = theOther->mEnemies[a[1]];
-        a[0] = theOther->mPlayerID;
-        a[1] = theOther->mSaveVisMap;
-        return 0;
     case EE_UNITS_PLAYER_UNITS_SIGHT:
         for (RTSUnit* u = theOther->mFirstUnit; u != NULL; u = u->mNext)
             if (a[2] == 0 || static_cast<EEUnit*>(u)->mUnitClass->IsLandBuilding()) {
@@ -711,19 +664,13 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         else if (std::find(thePlayer->mSightSharers.begin(), thePlayer->mSightSharers.end(), theOther) != thePlayer->mSightSharers.end())
             thePlayer->mSightSharers.erase(std::find(thePlayer->mSightSharers.begin(), thePlayer->mSightSharers.end(), theOther));
         return 0;
-    case EE_UNITS_PLAYER_VIEWED_OF: return thePlayer->mViewedUnit != NULL && thePlayer->mViewedUnit->mPlayer == theOther;
     case EE_UNITS_PLAYER_UNVIEW: thePlayer->UpdateSelection(NULL, true); return 0;
-    case EE_UNITS_PLAYER_IS_CURRENT: return theOther == gWorld.GetCurrentPlayer();
     case EE_UNITS_PLAYER_REFRESH_TERRAIN: gWorld.GetCurrentPlayer()->RefreshTerrainVisibility(); return 0;
     case EE_UNITS_PLAYER_MINIMAP_REDRAW:
         if (gMiniMap != NULL)
             gMiniMap->Redraw();
         return 0;
     // the towns and herds (ee_units player_areas.rs): list a[0] (0 the towns, 1 the herds), the areas and units by address
-    case EE_UNITS_PLAYER_AREA_COUNT: return a[0] == 0 ? thePlayer->mTowns.size() : thePlayer->mHerds.size();
-    case EE_UNITS_PLAYER_AREA_AT:
-        return a[0] == 0 ? (int64_t)reinterpret_cast<uintptr_t>(thePlayer->mTowns[(size_t)a[1]])
-                         : (int64_t)reinterpret_cast<uintptr_t>(thePlayer->mHerds[(size_t)a[1]]);
     case EE_UNITS_PLAYER_TOWN_UNIT: return EETown::IsTownUnit(theUnit);
     case EE_UNITS_PLAYER_HERD_ANIMAL: return EEHerd::IsAnimalOnMap(theUnit);
     case EE_UNITS_PLAYER_AREA_CAN_TAKE:
@@ -3308,8 +3255,6 @@ static int32_t EEPlayerTickOperation(void* inContext, int32_t inOp, uint32_t inI
         theUnit = theUnit == NULL ? thePlayer->mFirstUnit : static_cast<EEUnit*>(theUnit->mNext);
         io->i = (int64_t)reinterpret_cast<uintptr_t>(theUnit);
         return theUnit != NULL && thePlayer->mHealedUnitSet->Contains(theUnit->mUnitClass->mUnitType) ? 1 : 0;
-    case EE_UNITS_PLAYER_TICK_UNIT_HIT_POINTS:
-        return inIndex == 0 ? (int32_t)theUnit->mHitPoints : (int32_t)theUnit->mStats->mMaxHitPoints;
     case EE_UNITS_PLAYER_TICK_UNIT_SET_HIT_POINTS:
         theUnit->SetHitPoints((long)(int32_t)inIndex);
         return 0;

@@ -88,6 +88,7 @@ pub mod select;
 pub mod sight;
 pub mod sight_host;
 pub mod map_words;
+pub mod player_views;
 pub mod tile_sight;
 pub mod tile_sight_host;
 pub mod stats;

@@ -32,6 +32,19 @@ pub unsafe extern "C" fn ee_world_set_layout(layout: *const EeWorldLayout) -> bo
     layout::set(unsafe { *layout })
 }
 
+static WORLD: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// The world's handle (`&gWorld`), registered by `EEWorld`'s constructor (0 before it).
+pub fn world_handle() -> u64 {
+    WORLD.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// `EEWorld`'s constructor registers the game's one world (lane P: the hosts' reads of `gWorld`).
+#[no_mangle]
+pub extern "C" fn ee_world_register_world(world: u64) {
+    WORLD.store(world, std::sync::atomic::Ordering::Relaxed);
+}
+
 /// A C++ read of the world through Rust views begins on this thread (counted per thread in debug builds,
 /// `view::read_depth`).
 #[no_mangle]

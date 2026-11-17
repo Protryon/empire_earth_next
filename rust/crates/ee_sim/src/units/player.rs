@@ -831,6 +831,11 @@ pub(crate) struct FnHost {
 
 impl PlayerHost for FnHost {
     fn call(&mut self, op: i32, io: &mut EeUnitsPlayerIo) -> i64 {
+        // the plain reads through the world views (player_views.rs); SAFETY: the C++ passes a live player and the
+        // operations' live objects, and holds the world while the player's Rust runs
+        if let Some(v) = unsafe { crate::units::player_views::answer(self.player as u64, op, io) } {
+            return v;
+        }
         // SAFETY: the C++ callback's contract
         unsafe { (self.f)(self.player, op, io) }
     }
