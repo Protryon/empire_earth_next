@@ -28962,3 +28962,46 @@ from a snapshot commit, one commit per new crate.
   root's in `rust/<dir>/<dir>.h`, `rust/common.h`, the umbrella `rust/all.h`; ee_won_net's cppcore, hostop, opobj
   and thread name each other and share `rust/won_net/hostop.h`.
 - **Gates.** See docs/progress/crate-restructure.md "Phase 2".
+
+## Object storage, lane P, round 1: TSGT, a game for MAPS and MAPK, the lane measured, the tile sight gathered (branch rust-objP, 2026-11-17)
+
+The preparation that does not need lane V's views (the move waits for V). TEST ONLY code and goldens, one
+behaviour-identical refactor; no Rust change.
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| b8e9a06f | TEST ONLY: TSGT (`EESightScope` in every sight function), the app profile's end sweep of EEMap's sight and checksum | +328 -1 (test code) |
+| bfa3170e | TEST ONLY: the TSGT golden (oracle, app) and MAPS, MAPK (app), seeds 2-7 | 0 |
+| 3b4efb20 | RTSTile's and EEPlayer's tile sight moved into EESightRings.cpp, bodies unchanged | +113 -107 |
+
+- **TSGT, outermost only.** The sight calls nest (a circle calls `AddSharedSight` per tile, which calls
+  `RTSTile::AddSight`, which may call `SetVisibility`), and the move will put the inner ones in Rust. So a record is
+  written only when the outermost sight call on the thread returns (a thread-local depth, as MAPC's scope), and it
+  hashes the tile range the call can reach (a circle's square, clamped to 32 tiles as the walk is; a whole-map call's
+  map; a tile call's own words, with its index in `mTileArray`) after the call, not the tiles the inner calls
+  touched. Then the record does not change when the inner calls move; only the outermost boundary must keep
+  recording, from Rust if it moves there. A whole-map record each game minute (EE-SIM's tick hook) is a backstop.
+- **Size.** A per-call record looked costly (the circles run on every unit's tile step), but the oracle game makes
+  only 31-40 thousand outermost sight calls in 45 minutes: about 3 MB of a 0.5 GB capture. No folding was needed.
+- **MAPS and MAPK get a game.** EEMap's sight is reached only by a wonder with wonder bonus 3 and the out-of-synch
+  checksum only by a multiplayer game. The app profile now sweeps both at the game's end (`EESightCaptureSweep` from
+  EE-SIM's `FinishGame` under `--app-sweep`): every player's `AddSight` and `RemoveSight` at three points with the
+  wonder sight radius (70), `ExploreUnseen` and `FogSeen`, two full cycles of `ComputeChecksum`'s windows. Recording
+  is limited to MAPS, MAPK and TSGT (`Only`) and to the physics thread (`Exclusive`: the changed sight would make the
+  UI thread redraw the mini map, MMPX), the combat records are flushed first, and the capture is closed after it, so
+  every earlier tag of the profile keeps its golden (the app golden's 18 lines PASS with the sweep).
+- **Stable.** Two runs of each profile at seeds 2-7 gave the same TSGT, MAPS and MAPK digests (and the same capture
+  sizes byte for byte).
+- **The measure** (docs/progress/obj-lane-p.md): EEPlayerHost has 111 cases, of which 33 are plain field reads a
+  view replaces (UNIT_INFO's 27 fields the largest; 5 need a tech-node view and 2 the world table, which are not in
+  V's list); EEPlayer.cpp's other four switches add 23 plain of 92. About 56 plain of 203, not the plan's 97: the
+  rest call C++ objects (virtuals the computer player overrides, the towns and herds, the tech tree, the RNG in its
+  order). EEWorld.cpp's plain bodies are about 550 lines, half of them `RecordStatistics`, which no capture records
+  yet. The doc lists every sight function's callers and the fields each reads.
+- **A machine restart mid-round** killed the second app run; the worktree's files were intact (no NUL bytes, every
+  file ending as written). The half-written capture directory was deleted and that run repeated.
+- **Gates.** Build `--sim` 0/0 after each code commit; the TSGT commit: oracle and app profiles at seeds 2-7 PASS
+  (578 and 18 digests, twice); the gathered tree: oracle seeds 2-3 identical to `ref`, captures at seeds 2-3 oracle
+  202 and app 24 digests PASS (TSGT, MAPS, MAPK included). The merge-time numbers are in the lane's report.
+- **Only a person reaches**: sight shared between allies (`mSharedLOS` with allies): no random map makes an alliance,
+  so TSGT covers that path only in a scenario or lobby team game.
