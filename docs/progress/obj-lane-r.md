@@ -4,30 +4,51 @@ The object plan's Lane R (scratchpad `object_model_plan.md`): move `EERenderObje
 `FillObject`, `FillUnit`, `FillRenderLists`' tile walk, `GetUnitOpacity`, the ghost and doppelganger records) to
 `ee_render::gfx` over Lane V's views, keep a host of about 250 lines (`LoadMedia`, the picker's `AddUnit`, the ambient
 counters, the render-list and texture-map inserts, `DrawGroundCircle`), and move `EEEffectHost.cpp`'s `Ask` readers
-to the views. The move waits for Lane V (`ee_sim::world`) to merge.
+to the views. Lane V's `ee_sim::world` merged (origin/rust f63bd44ba); round 2 is the move.
 
-## State (branch rust-objR, from origin/rust 4aeedb1a1)
+## State (branch rust-objR; round 2, the move, on origin/rust f63bd44ba with Lane V's views)
 
-Preparation only; no C++ moved yet.
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 4bc91446, a90033b6, e2489fb6 | round 1: RFIL (TEST ONLY), the fill golden, the split of `FillUnit`/`FillObject` into calls and fields | +432 test code; split net +27 |
+| merge of origin/rust f63bd44ba | Lane V's `ee_sim::world` | |
+| f2e5e267 | `FillUnitFields` and `FillObjectFields` are `ee_gfx fill.rs` over the views; `EERenderUnit`'s head and `EERenderShadow` mirrored; the players' `mViewedUnit`/`mSelectedViewedUnit` in `EeWorldLayout`; `golden_fill_replay.rs` | +317 -314, net +3 |
+| 29cec903 | sixteen `Ask` readers of `EEEffectHost.cpp` are `ee_gfx effect_views.rs` (the hosts carry the unit and the current player) | +24 -97, net -73 |
+| 1147a921 | `IsUnitDrawn`'s facts and `GetUnitOpacity` over the views | +56 -75, net -19 |
 
-| Commit | What |
-|---|---|
-| 4bc91446 | RFIL capture, TEST ONLY: `ee/EERenderCapture.h`, `EERenderCapture.cpp`, one line in `FillRenderLists`; `tools/rfil.py` |
-| a90033b6 | the fill golden: `ee_render/src/gfx/golden_fill.txt` (the stub-GE driver over 4aeedb1a1's C++, 40 frames) and `golden_fill.rs` (3 tests) |
-| the split | `FillUnit` and `FillObject` split into their calls (the host) and `FillUnitFields` / `FillObjectFields` (every read and field write) |
-| this file | the reads list below |
+**Not reached: the plan's -850 to -1,050.** The round's code commits are net -89 C++. The views made every plain
+read free, but most of what the fill and the effect host do is not a plain read of a record: the graphic objects
+(`mModels`, `mTextures`, `mTurretParts`, `LoadMedia`), the physical model, virtual class members (`GetModel`,
+`IsLandBuilding`, `GroundLocation`, `IsSidePart`, `UpdateHidden`), the C++ vectors and names of `EERenderUnit`, the
+render lists, the picker, the upgrades table and `FindWaypointAtTile`. Each became a host entry of three to ten
+lines, so `FillUnitFields` (210 lines) became 26 host functions (about 190 lines). Only the `Ask` readers, whose
+answers were wholly record fields, freed real C++. What would free more: views of `EEGraphicObject` and
+`GEPhysicalModel` (a render-side layout like `EeWorldLayout`: the models, textures, turret parts, frame counts, the
+physical model's scale and frame), Rust ports of the class virtuals' bodies (`IsLandBuilding` is a body table
+already in `ee_sim::units::cls_dispatch`), and moving `EERenderUnit`'s vectors into a Rust record. Then the host
+shrinks to the media, the picker and the lists, and the tile walk, the doppelgangers and the ghost records can
+follow without a host entry per read.
 
-**The split** (behaviour-identical). `FillUnit` now makes, in the original's order, the ambient count, `GetModel` and
-`LoadMedia` of the source, `FillUnitFields`, the priest tower's `DrawGroundCircle` (when `FillUnitFields` returns
-true), the scaffolding's `LoadMedia` (`mSource2` is set only where the original loaded it), the picker's `AddUnit`
-and the two texture-map inserts. `FillObject` likewise: the ambient count, `GetModel` and `LoadMedia`,
-`FillObjectFields` (it writes the picker's transformation and returns whether the object is selected), the
-selected-list push, the texture-map insert, `AddUnit`, the shadow-map insert. The calls moved only across field
-writes and pure reads (no read depends on a moved call: the turret parts are read after the source's `LoadMedia`,
-as before), so the stub GE's call trace is unchanged byte for byte. The `*Fields` functions are what the move
-replaces with Rust over the views; the host functions stay. The driver takes the helpers as extra signatures
-(`run.sh WORKTREE DIR "static bool FillUnitFields(...)\n{" ...`); a mutation (the circle's flag forced false) made
-it differ (125 circles to 0).
+**Left:** the tile walk of `FillRenderLists`, `FillDoppelgangerUnit`/`FillDoppelgangerObject` (they read
+`EEDoppelganger`, which has no view), `FillGhostRecords` (`EEGhostUnit`, no view), the `Ask` readers that call into
+C++ objects (tag points, models, media, the effect manager, the doppelganger manager).
+
+### How each move is checked
+
+- The stub-GE driver (`build/gxR/drv/`) now holds the Rust records as the game's classes do (`rust/sim/world.h`:
+  units, classes, stats, players, the map, its tiles with their visibility words and unit nodes) and registers its own
+  `EeWorldLayout`, so the moved Rust reads the stand-in world through the same views the game uses. Its stubs answer
+  as the game does where the Rust re-implements a C++ member (`IsPathMarker` by class type, `IsSeenBy` /
+  `IsVisibleTo` through the visibility words, `Fn27C0B4` `return false`, the mesh's rows on the map). `run.sh
+  4aeedb1a1 o2` (the unmodified fill) and `runw.sh` (the working tree with its helpers, `helpers.py`): seed 1 (300
+  frames) and seed 2 (3,000 frames) byte-identical after every step; mutations of the Rust (a fog scale, the
+  see-through opacity, the size jitter, a circle's flag) make them differ.
+- `golden_fill_replay.rs` rebuilds each of the golden's 40 frames as fake objects at a test layout and replays
+  `fill_unit_fields` and `fill_object_fields` for every render unit and object the C++ filled, each from its pool
+  slot's previous dump: every head member bit for bit, the bars, the name, the selected and pointed lists and the
+  label. 
+- RFIL: the tours of the moved exe against the unmodified exe's two (`a.bin`, `b.bin`): all matched frames equal.
+- The oracle at seeds 2-3; the effects capture at seeds 2-7 for the `Ask` readers (EE-SIM steps every effect kind).
 
 ## The gates
 
