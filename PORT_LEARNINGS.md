@@ -28962,3 +28962,69 @@ from a snapshot commit, one commit per new crate.
   root's in `rust/<dir>/<dir>.h`, `rust/common.h`, the umbrella `rust/all.h`; ee_won_net's cppcore, hostop, opobj
   and thread name each other and share `rust/won_net/hostop.h`.
 - **Gates.** See docs/progress/crate-restructure.md "Phase 2".
+
+## R6 data, round 3: the remaining db records in Rust, the generator list's script read (branch rust-data3, 2026-11-17)
+
+Branch `rust-data3` from origin/rust 4aeedb1a1 (after the crate restructure; origin/rust had not moved at the end).
+
+| Commit | What | Net C++ (src + include, include/rust excluded) |
+|---|---|---|
+| b28925b80 | the remaining db table records and their copies in ee_data `tables.rs` | +313 -1337, net -1024 |
+| b4822beea | the generator list's `.rmv` read and the script names (ee_sim rmap `rmv.rs`) | +32 -55, net -23 |
+| a7d840aea | the four built-in graphic objects (never set) gone | +2 -31, net -29 |
+
+Round total: net -1,076 (short of the 1,500 aimed at; see "Left" below).
+
+- **The records** (ee_data `tables.rs`; `overlay.RUST_STRUCTS` names them, so `specs.json` reads them from Rust):
+  dbterrain, dbcliffterrain, dbbuttons, dbfamily (the damage tables' rows), dbgraphics, dbsounds, dbgfxeffects,
+  dbmusic, and the two tables the game never reads (dbrandommap, dbterraingraytextures). Each copy writes the
+  class's plain members through an `EeData*Fields` base named as the members (`EETerrainTable`, `EECliffTerrainTable`,
+  `EEButtonObject`, `EESoundObject`, `EEGraphicObject`; `EEGraphicEffect` and `EEMusicObject` take it as a third
+  base), so every reader compiles unchanged. Names in records come back as `EeDataName` (a pointer into the record
+  and its length up to the first NUL; `EEDbCopyName`). What stays C++: the objects, their vectors, `UString`s,
+  `GEColor`, the media and sound lookups (`EEMedia::Get`, `EESoundObject::Get`: the copies return the indices).
+  - **Lead strings**: `EEDbRecords.h`'s `EEDbReadLeadRecords` calls a lead callback before each record (dbterrain's
+    texture file, dbsounds' sample, dbgraphics' 33 names); `inStopOnError` keeps the button loader's stop at the
+    first failed read. The damage table loader reads through it too.
+  - **specgen**: a Rust record's `[DbFlag; N]` (`type DbFlag = u8`) is `bool[N]` (dbmusic's `mInEpoch`; a `[u8; N]`
+    is `char[N]`, and a Rust `bool` array cannot hold any byte of the file). Comparing every field of every record
+    with the old specs.json: names, offsets, types and counts identical; only comments and sources changed.
+  - **Moved logic besides the copies**: the terrain texture file names (`_n` before the extension:
+    `ee_data_terrain_texture_file`, LoadTextures and the previews), the button cells' texture coordinates and scale
+    (`ee_data_button_cell`, both bitmap setters), the tag-point kind names and their prefix match
+    (`ee_data_tag_point_kinds`), LoadMedia's texture-frame maps (`ee_data_graphic_frame_maps`: the slots by model
+    name in first-seen order and the entries in the original insertion order; the C++ map keeps the first value of a
+    frame), New Music.txt's record (`ee_data_new_music_record`; a file name longer than the field is cut instead of
+    overflowing it).
+  - **Trap (cbindgen renames)**: a `pub const DAMAGE_COLUMNS` in tables.rs was renamed by the global rename to
+    `EE_COMBAT_DAMAGE_COLUMNS`, moved into `rust/data/tables.h` and taken out of `rust/sim/combat.h` (which then
+    included tables.h). The consts are now private or `EE_DATA_`-prefixed.
+  - `EERandomMapTable` (its loader was removed by D9: the table was always empty) and its global are gone.
+- **Golden** (scratch, `build/data3/golden`): `make.py` cuts 4aeedb1a1's record structs, `EELoadGraphicObjectRecord`
+  and the tag names verbatim; `golden.cpp` built `-DORIG` runs the original copies (terrain, cliff, button, sound,
+  effect, music ctor, damage row, the frame-map loops, the tag-point loop, the texture file names, the button cell
+  arithmetic, New Music.txt's record) and without it the Rust, over the real tables (`eedata import` of the open
+  tree's text) plus 20,000 random frame-map cases and 3,528 button-cell cases: 28,674 lines identical. (A random
+  range ending below 0 made the original loop run ~4 G frames: the driver keeps the ranges at 0 or above.)
+- **The generator list** (`rmv.rs` `script_generator`, `script_name`): `EERandomMap::Initialize` reads each `.rmv` in
+  text mode and Rust finds its `UseMapGenerator` and `StringTableID` lines as the fgets loop did (1,023-byte chunks,
+  `Tokenize` on `"`, `NestedTokenize` on `" \t\n,"` with `()`; a `StringTableID` that does not parse keeps the value
+  before). `InitializeValues` joins the names' words with `ee_rmap_script_name` (ee_base's `tokenize`).
+- **What only the tour exercises**: the texture loads (terrain textures and previews, button cells, graphic objects'
+  frame maps and tag points). EE-SIM loads the tables (the oracle covers the copies the simulation reads).
+- **Data**: no text layout changed (`eedata check` PASS, `cppgate` PASS). The converter code changed
+  (`specgen.py`, `overlay.py`, `specs.json`): `open_data.json`'s converter hash changes, so the harness rebuilds an old
+  tree; the db content is the same.
+- **Left**: `PlaceWall` (its steps are the wall functions of EEFOFindNewTargetNearOldTarget.cpp and unit creation:
+  a Rust version would be a host of callbacks longer than the C++), `EETerrainColorTable` (a palette read from a PNG,
+  not a db record), whole table classes as Rust lists (their readers take the C++ objects' members and `UString`s),
+  `EEDataPreLoading` (the thread's message queue), the media use counts (the same lock pattern five times).
+- **Gates** (the round's tree, f941e04a3; origin/rust had not moved, so no merge): `build.py --sim` and
+  `--test-profile windowed-software` 0/0 (736/737 inputs); the oracle seeds 2-7 identical; the captures at seeds 2-3
+  PASS (oracle 200, late 204, space 202, calamity 212, scenario 43 digests); `saveload --settings all --seeds 2-3
+  --at 1000,1900 --expect tools/saveload_expect.txt` PASS; `eedata check` PASS, `cppgate` PASS; the rmap gate
+  2088/2088 and `--reader` 2088/2088; the editor gate PASS (14,448 lines), the civ gate PASS (4,062 lines); the Rust
+  gate PASS (a first run's clippy caught two casts that LP64 needs: allowed in place; `ee_base`'s
+  `golden_spec_replays` failed once under the captures' load, passed alone and in the final run); the tour through slot.py `RESULT PASS tour` (84.3% lit, F3 ok).
+- The machine restarted mid-round (the work was uncommitted): every file was intact; the build, `eedata check` and
+  the golden were rerun before committing.
