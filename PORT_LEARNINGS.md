@@ -29145,3 +29145,57 @@ The round's target was 1,500; it is not reached (below, "Why so few lines").
 - **What is left** (`docs/progress/r6-won-gui-b.md`): the ComponentOp self cases (seven objects first), the ct
   cluster's component calls through the comp host (the ct world answering it), layoutobj's and skinlay's moves,
   wmobj's and winobj's component enums, the skin buttons' reads, the MS constructors, SkinnedContainers' paints.
+
+## R6 data, round 4: one media use count, five table classes as Rust lists, EECivilization's costs, the songs (branch rust-data4, 2026-11-17)
+
+Branch `rust-data4` from rust-data3 (669ae7ba2), merged with origin/rust 48b2f4f0 (clean).
+
+| Commit | What | Net C++ (src + include, include/rust excluded) |
+|---|---|---|
+| 3c6032ccb | `tools/datafmt/structs.py` reads the layouts through eedata's specgen (the Rust records too) | tools |
+| 5bb1bea30 | one media use count (ee_data `media.rs`) behind EEButtonObject, EESoundObject, EEGraphicObject, EETerrainTable, EEMusicObject | +143 -198, net -55 |
+| 6fe9154f3 | EEStartingResources, EEGameVariant, EEUnitBehavior, EEUCUpgradeTable, EETerrainTypeTable as Rust lists | +73 -153, net -80 |
+| 975ad35cc | EECivilization's costs, affordability and reapply order (ee_sim tech `civilization.rs`) | +31 -78, net -47 |
+| 236904e20 | the songs by epoch and their shuffle (ee_data `tables.rs`) | +7 -36, net -29 |
+
+Round total: net -211, far short of the 1,500 aimed at (see "Why short").
+
+- **The media use count** (`media.rs`, `ee/EEMediaUse.h`). Five classes repeated: under the unit's lock the first
+  user sets the count and the loading flag, leaves the lock and loads; later users count themselves and poll the
+  flag with `PlatSleep(1)`; the last release unloads under the lock. `EeDataMediaUse` (`mMediaCount`, `mIsLoading`) is
+  now their base and Rust runs the pattern; the lock stays each unit's `sDatabaseLock` (passed in as callbacks: one
+  global lock would deadlock, an unload under one unit's lock waiting on another unit's loading flag) and the
+  classes' steps are lambdas (a failed button or score load resets the count, a busy score keeps its use, the terrain
+  attaches its textures under the lock). The terrain's `mLoadCount` and the song's `mState` are `mMediaCount`.
+  `EEUnitClassUpgrade` has the same pattern twice but its counts are in ee_units' record (`stats.rs`): left alone.
+- **Table classes as Rust lists** (`tables.rs` `EeDataList`, `ee/EEDbList.h`). The entries are boxed records'
+  members in Rust; `EEDbList<T, K>` reads a list as the `std::vector<T*>` it replaced (`operator[]`, `size`), so the
+  readers (the units' behaviours, the lobby's presets, the unit class's upgrade table, the map's terrain types)
+  compile unchanged. The classes lose their vtables, constructors and destructors; `EEUnitClassImprovementTable`'s
+  mirrored vtable slot (`mU00`) went with it (its static_asserts against `EEUCUpgradeTable` hold), and the terrain
+  type's `mColorSetID` (EEMap writes it) is in `EeDataTerrainTypeFields`. Behaviour change: an index past a list is
+  NULL (the vectors read past their end).
+- **EECivilization** (`civilization.rs`): `CanAfford`, `CanAffordAll` and `GetBaseCost` count against the Rust
+  civilization tables (the base cost is the level's *bonus* times 100: the original passed its value pointer second);
+  `Reapply`, `ApplyDeferred` and `ApplyLevel21ToWorld` walk the upgrades in Rust and apply each through
+  `EECivilizationManager::ApplyUpgrade` (its capture hooks stay). The class keeps its members (its vectors are read
+  directly by a dozen units) and its save format; a whole-class move needs those readers changed first.
+- **The songs** (`tables.rs`): the per-epoch lists and `GetRandom`'s shuffle (each next song drawn from those left
+  with `gMusicRandom`, played from the end); `ClearAll` releases them through a callback.
+- **Goldens** (scratch, `build/data4/golden`, over the ee_data staticlib): `media.cpp` (the five classes' original
+  bodies, 669ae7ba2's, against the adapters: 3,000 random sequences of 12 operations, every lock call, load, unload
+  and count logged; 36,000 lines identical; a mutation of the button's reset flag is caught) and `songs.cpp` (the
+  original GetRandom/ClearAll against the lists: 400 cases, 16,400 lines identical). The lists and the civilization
+  are simulation input: the oracle, the captures, the saveload matrix and the civ gate cover them.
+- **Why short**: what is left in the Data Pre-Loading Thread and Database is mostly C++ object management around
+  GE models, textures and sounds (EEGraphicObject's tag points, parts and colour groups; the terrain mesh's texture
+  sets; the effects' loads), the threads (EEDataPreLoading) and classes whose members are read by many units
+  (EECivilization's vectors). Each needs either its readers rewritten or a Rust object model of the GE objects first.
+- **Data**: no converter or format change this round (`specs.json` unchanged): no `data/db` regeneration.
+- **Gates** (the tree merged with origin/rust 48b2f4f0; the clippy and rustfmt fixes after it touch Rust only):
+  `build.py --sim` and `--test-profile windowed-software` 0/0 (736/737 inputs); `eedata check` PASS, `cppgate` PASS;
+  the oracle seeds 2-7 identical; the captures at seeds 2-3 PASS (oracle 200, late 204, space 202, calamity 212,
+  scenario 43 digests); `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` PASS; the editor gate PASS
+  (14,448 lines), the civ gate PASS (4,062 lines); the rmap gate 2088/2088 and `--reader` 2088/2088; the tour through
+  slot.py `RESULT PASS tour` (83.5% lit, F3 ok); the Rust gate: tests and clippy PASS after naming the song lists'
+  type, rustfmt PASS after the module order, the header check current (the full gate rerun is the lead's).
