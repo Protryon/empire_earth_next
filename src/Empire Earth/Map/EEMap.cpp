@@ -183,8 +183,7 @@ EEMap::~EEMap()
     ee_combat_regions_free(this->mUnitRegions);
     delete this->mEffectRegions;
     delete[] this->mTileArray;
-    if (this->mVisibilityWords)
-        delete[] this->mVisibilityWords;
+    ee_units_map_words_free(this->mVisibilityWords);   // Rust's (ee_units map_words.rs)
     EETerrainTable::Get(this->mTerrainMesh.GetGlobalWaterSetID())->Unload(this->mTerrainMesh);
     for (unsigned long x = 0; x < this->mSize + 1; x++) {
         for (unsigned long y = 0; y < this->mSize + 1; y++) {
@@ -211,13 +210,12 @@ void EEMap::ReserveTiles(unsigned long inCount)
     unsigned long theWords = (this->mU19561C >> 1) + (this->mU19561C & 1);
     if (this->mTileArray) {
         delete[] this->mTileArray;
-        delete[] this->mVisibilityWords;
+        ee_units_map_words_free(this->mVisibilityWords);
         this->mTileArray = NULL;
         this->mVisibilityWords = NULL;
     }
     this->mTileArray = new EETile[inCount];
-    this->mVisibilityWords = new uint32_t[theWords * inCount];
-    memset(this->mVisibilityWords, 0, theWords * inCount * sizeof(uint32_t));
+    this->mVisibilityWords = ee_units_map_words_new(theWords * inCount);   // zeroed, Rust's (ee_units map_words.rs)
     this->mNextTile = 0;
     this->mTileArrayCount = inCount;
 }
@@ -227,24 +225,10 @@ void EEMap::SetPlayerCount(unsigned long inPlayerCount)
 {
     unsigned long theOldWords = (this->mU19561C >> 1) + (this->mU19561C & 1);
     unsigned long theNewWords = (inPlayerCount >> 1) + (inPlayerCount & 1);
-    unsigned long theCopy = theOldWords < theNewWords ? theOldWords * sizeof(uint32_t) : theNewWords * sizeof(uint32_t);
-    uint32_t* theWords = new uint32_t[this->GetTileCount() * theNewWords];
-    memset(theWords, 0, this->GetTileCount() * theNewWords * sizeof(uint32_t));
-    if (this->mVisibilityWords) {
-        unsigned long theIndex = 0;
-        for (long y = 0; y < this->mSize; y++) {
-            for (long x = 0; x < this->mSize; x++) {
-                EETile* theTile = this->GetTile(x, y);
-                if (!theTile)
-                    continue;
-                memcpy(&theWords[theIndex * theNewWords], &this->mVisibilityWords[theIndex * theOldWords], theCopy);
-                theTile->mVisibility = &theWords[theIndex * theNewWords];
-                theIndex++;
-            }
-        }
-        delete[] this->mVisibilityWords;
-    }
-    this->mVisibilityWords = theWords;
+    // each tile's words copied in tile order and its pointer moved to the new words; the old ones freed (ee_units
+    // map_words.rs)
+    this->mVisibilityWords = ee_units_map_words_resize((uint64_t)(uintptr_t)this, this->mVisibilityWords,
+                                                       this->GetTileCount(), theOldWords, theNewWords);
     this->mU19561C = inPlayerCount;
 }
 

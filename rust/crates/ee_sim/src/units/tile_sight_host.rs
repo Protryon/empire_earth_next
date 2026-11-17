@@ -151,3 +151,59 @@ pub extern "C" fn ee_units_tile_sight_map(world: u64, map: u64, kind: u32, playe
         _ => tile_sight::prepare_save(g),
     });
 }
+
+/// `EEMap::ReserveTiles`' `new uint32_t[count]` and memset (map_words.rs)
+#[no_mangle]
+pub extern "C" fn ee_units_map_words_new(count: u64) -> *mut u32 {
+    crate::units::map_words::alloc(count as usize)
+}
+
+/// `delete[] mVisibilityWords` (null: nothing)
+///
+/// # Safety
+/// `words` is null or a buffer of `ee_units_map_words_new`/`_resize`, not used after.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_map_words_free(words: *mut u32) {
+    // SAFETY: the caller's contract
+    unsafe { crate::units::map_words::free(words) }
+}
+
+/// `EEMap::SetPlayerCount`'s new words for map `map`: `tiles * new_words` words, each tile found (y outer, x inner)
+/// given the next old slice's words and pointed at its new slice; the old buffer freed. Returns the new buffer.
+///
+/// # Safety
+/// `map` is a live map, `old` null or its live buffer of `old_words` words a tile.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_map_words_resize(
+    map: u64,
+    old: *mut u32,
+    tiles: u64,
+    old_words: u64,
+    new_words: u64,
+) -> *mut u32 {
+    // SAFETY: the C++ holds the map (its own member function)
+    let token = unsafe { WorldRead::begin() };
+    let mut found = Vec::new();
+    if !old.is_null() {
+        // SAFETY: the caller's contract
+        if let Some(m) = unsafe { MapView::of(&token, map) } {
+            let size = m.size();
+            for y in 0..size {
+                for x in 0..size {
+                    if let Some(t) = m.tile(x, y) {
+                        found.push(t.handle());
+                    }
+                }
+            }
+        }
+    }
+    let at = crate::world::layout::layout().tile_visibility as usize;
+    // SAFETY: the caller's contract; each found tile is live and its `mVisibility` member at `at`
+    unsafe {
+        let words = crate::units::map_words::resize(old, &found, tiles as usize, old_words as usize, new_words as usize, |t, p| {
+            ((t as usize + at) as *mut *mut u32).write(p)
+        });
+        crate::units::map_words::free(old);
+        words
+    }
+}

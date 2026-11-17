@@ -653,6 +653,9 @@ extern "C" {
 /// `layout` points to a valid layout.
 bool ee_world_set_layout(const EeWorldLayout *layout);
 
+/// `EEWorld`'s constructor registers the game's one world (lane P: the hosts' reads of `gWorld`).
+void ee_world_register_world(uint64_t world);
+
 /// A C++ read of the world through Rust views begins on this thread (counted per thread in debug builds,
 /// `view::read_depth`).
 void ee_world_read_begin();

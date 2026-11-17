@@ -6892,6 +6892,26 @@ void ee_units_tile_sight_map(uint64_t world,
                              uint32_t kind,
                              uint64_t player);
 
+/// `EEMap::ReserveTiles`' `new uint32_t[count]` and memset (map_words.rs)
+uint32_t *ee_units_map_words_new(uint64_t count);
+
+/// `delete[] mVisibilityWords` (null: nothing)
+///
+/// # Safety
+/// `words` is null or a buffer of `ee_units_map_words_new`/`_resize`, not used after.
+void ee_units_map_words_free(uint32_t *words);
+
+/// `EEMap::SetPlayerCount`'s new words for map `map`: `tiles * new_words` words, each tile found (y outer, x inner)
+/// given the next old slice's words and pointed at its new slice; the old buffer freed. Returns the new buffer.
+///
+/// # Safety
+/// `map` is a live map, `old` null or its live buffer of `old_words` words a tile.
+uint32_t *ee_units_map_words_resize(uint64_t map,
+                                    uint32_t *old,
+                                    uint64_t tiles,
+                                    uint64_t old_words,
+                                    uint64_t new_words);
+
 /// `Init`'s copies before `Reapply` ([`init`]).
 ///
 /// # Safety
