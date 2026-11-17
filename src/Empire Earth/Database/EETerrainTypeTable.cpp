@@ -96,15 +96,6 @@ float EEToHitTable::GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned 
 }
 
 
-// One record of the damage tables' file (0x17c bytes, read whole): 0x44 damage values from +0x6c. Inferred layout.
-struct EEDamageTableRecord {
-    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
-    int32_t mUnusedIndex;                   // +0x068 the 0-based row index (not read)
-    int32_t mDamage[0x44];                  // +0x6c (scaled by kHeightEpsilon into gDamageTable's row)
-};
-static_assert(sizeof(EEDamageTableRecord) == 380, "on-disk record: 380 bytes on every target");
-
 // The number of unit families: the rows of dbfamily (the original refused a file of more than 60)
 unsigned long EEFamilyCount()
 {
@@ -123,19 +114,22 @@ float EEDamageFactor(long inRow, long inColumn)
 long EETerrainTypeTable::LoadDamageTables(FSFileSpec* inFile)
 {
     unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    EEDamageTableRecord theRecord;
-    std::vector<int32_t> thePercents;       // read whole, then the Rust tables
+    bool theCounted = false;
+    std::vector<int32_t> thePercents;       // read whole (the record and its copy are ee_data tables.rs'), then the Rust tables
     if (gDamageTable != NULL || gDamageTableScaled1 != NULL || gDamageTableScaled2 != NULL)
         EETerrainTypeTable::ClearDamageTables();
-    inFile->Open(kFileAccessRead);
-    long theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
+    long theResult = EEDbReadRecords(inFile, ee_data_damage_table_record_size(),
+        [&](unsigned long inCount) {
+            theCount = inCount;
+            theCounted = true;
+            thePercents.resize(inCount * EE_COMBAT_DAMAGE_COLUMNS);
+            return true;
+        },
+        [&](unsigned long inIndex, const unsigned char* inRecord) {
+            ee_data_damage_table_from_record(inRecord, &thePercents[inIndex * EE_COMBAT_DAMAGE_COLUMNS]);
+        });
+    if (theCounted) {
         unsigned long i;
-        for (i = 0; i < theCount; i++) {
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-            thePercents.insert(thePercents.end(), theRecord.mDamage, theRecord.mDamage + EE_COMBAT_DAMAGE_COLUMNS);
-        }
         float theScale = kHeightEpsilon;
         float theTwin1 = gWorldTable.GetFloatValue(kWorldDifficultyDamageScale);
         float theTwin2 = gWorldTable.GetFloatValue2(kWorldDifficultyDamageScale);
@@ -164,7 +158,6 @@ long EETerrainTypeTable::LoadDamageTables(FSFileSpec* inFile)
             }
         }
     }
-    inFile->Close();
     return theResult;
 }
 

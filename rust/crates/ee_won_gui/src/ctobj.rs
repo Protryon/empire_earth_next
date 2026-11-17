@@ -603,7 +603,7 @@ impl EeWonContainer {
         if self.parent_of(c) != 0 {
             self.op(Op::CtDetach, c, 0, 0, 0);
         }
-        self.op(Op::CtSetParent, c, 1, 0, 0);
+        mem::set_parent(c, self.me());
     }
 
     pub fn add_child(&self, c: isize) {
@@ -710,7 +710,7 @@ impl EeWonContainer {
         if c == self.mouse() {
             self.mouse_at();
         }
-        self.op(Op::CtSetParent, c, 0, 0, 0);
+        mem::set_parent(c, 0);
         self.release(c);
     }
 
@@ -776,7 +776,7 @@ impl EeWonContainer {
         if c == 0 {
             return;
         }
-        self.op(Op::CtSetFocusId, c, id as isize, 0, 0);
+        mem::set_focus_id(c, id);
         let parent = self.parent_of(me);
         if !self.has_focus() && parent != 0 {
             self.parent_call(V::SetFocusChild, 0);
@@ -833,7 +833,7 @@ impl EeWonContainer {
         if self.invalid_state(me) == 2 {
             return false;
         }
-        self.op(Op::CtSetInvalidState, me, 1, 0, 0);
+        mem::set_invalid(me, 1);
         let mut higher = false;
         let mut i = HEAD;
         while i != self.st.borrow().list.begin() {
@@ -862,7 +862,7 @@ impl EeWonContainer {
             return;
         }
         self.base(V::MarkInvalid, 0, 0);
-        self.op(Op::CtSetInvalidState, me, 2, 0, 0);
+        mem::set_invalid(me, 2);
         self.each(|c| {
             self.child(c, V::MarkInvalid, 0, 0);
         });
@@ -1024,7 +1024,7 @@ impl EeWonContainer {
         let me = self.me();
         let flags = self.timer_flags(me);
         let request_parent = flags == 0;
-        self.op(Op::CtSetTimerFlags, (flags | 1) as isize, 0, 0, 0);
+        mem::set_timer(me, (flags | 1) as i8);
         if request_parent && self.parent_of(me) != 0 {
             self.parent_call(V::AddTimerChild, 0);
         }
@@ -1056,7 +1056,7 @@ impl EeWonContainer {
         }
         if !child_needs {
             let flags = self.timer_flags(me);
-            self.op(Op::CtSetTimerFlags, (flags & !1) as isize, 0, 0, 0);
+            mem::set_timer(me, (flags & !1) as i8);
         }
         self.timer_flags(me) != 0
     }
@@ -1245,7 +1245,7 @@ impl EeWonContainer {
     /// tree went in its own order) and the children released front to back.
     pub fn destroy(&self) {
         for c in self.children() {
-            self.op(Op::CtSetParent, c, 0, 0, 0);
+            mem::set_parent(c, 0);
         }
         self.set_cursor_field(0);
         self.op(Op::CtLayout, 3, 0, 0, 0);

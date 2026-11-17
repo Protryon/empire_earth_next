@@ -20,33 +20,15 @@
 #include "ee/EEMedia.h"
 #include "EEDatabase.h"
 #include "ee/EESoundObject.h"
+#include "ee/EEDbRecords.h"
 
 std::vector<EESoundObject*> gSoundObjects;
 
-// One record of db\dbsounds.dat (0x84 bytes, read whole). Layout inferred (only the fields LoadTable copies).
-struct EESoundRecord {
-    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
-    int32_t mUnusedIndex;                   // +0x068 the 0-based row index (not read)
-    int32_t mMaxInstances;                  // +0x6c -> +0x1c
-    int32_t mCategory;                      // +0x70 -> +0x20
-    int32_t mUnusedPriority;                // +0x74 -> +0x24
-    bool mLooping;                          // +0x78 -> +0x2c (looping)
-    int32_t mVolume;                        // +0x7c: percent -> +0x14 (float, * 0.01)
-    char _gap80[4];
-};
-static_assert(sizeof(EESoundRecord) == 132, "on-disk record: 132 bytes on every target");
-
 // Creates an empty, unloaded sound with no sample
-EESoundObject::EESoundObject()
+EESoundObject::EESoundObject() : EeDataSoundFields()
 {
-    this->mVolume = 0.0f;
     this->mSampleID = 0;
-    this->mMaxInstances = 0;
-    this->mCategory = 0;
-    this->mL24 = 0;
     this->mMediaCount = 0;
-    this->mLooping = false;
     this->mIsLoading = false;
 }
 
@@ -59,31 +41,21 @@ EESoundObject::~EESoundObject()
     }
 }
 
-// Reads the sound table (name, instance limit, category, looping, volume percent); returns the last read result
+// Reads the sound table (each record after its sample's name; the record and its copy are ee_data tables.rs':
+// instance limit, category, looping, volume percent); returns the last read result
 long EESoundObject::LoadTable(FSFile* inFile)
 {
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    unsigned long i;
-    EESoundRecord theRecord;
-    inFile->Open(kFileAccessRead);
-    long theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
-        gSoundObjects.resize(theCount, NULL);
-        for (i = 0; i < theCount; i++) {
-            EESoundObject* theSound = new EESoundObject;
+    EESoundObject* theSound = NULL;
+    return EEDbReadLeadRecords(inFile, ee_data_sound_record_size(),
+        [](unsigned long inCount) { gSoundObjects.resize(inCount, NULL); return true; },
+        [&](unsigned long) {
+            theSound = new EESoundObject;
             theSound->mName.Load(*inFile);
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-            theSound->mMaxInstances = theRecord.mMaxInstances;
-            theSound->mCategory = theRecord.mCategory;
-            theSound->mL24 = theRecord.mUnusedPriority;
-            theSound->mLooping = theRecord.mLooping;
-            theSound->mVolume = theRecord.mVolume * 0.01f;
-            gSoundObjects[i] = theSound;
-        }
-    }
-    inFile->Close();
-    return theResult;
+        },
+        [&](unsigned long inIndex, const unsigned char* inRecord) {
+            ee_data_sound_from_record(inRecord, theSound);
+            gSoundObjects[inIndex] = theSound;
+        });
 }
 
 // Deletes every sound of the table and empties it

@@ -155,7 +155,11 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
     case K::GNeedDrawBG: return g->NeedDrawBG();
     case K::GTranslucent: g->SetTranslucentColor((int)c, (int)d); return 0;
     case K::IdIn: return ((const ControlIdSet*)b)->find((long)c) != ((const ControlIdSet*)b)->end();
+    case K::VSetVisible: t->SetVisible(c != 0); return 0;
+    case K::VMouseChild: return (intptr_t)t->GetMouseChild();
     default: return 0;
     }
 }
+// the one component host every Rust object calls a component through (compobj.rs comp())
+[[maybe_unused]] static const bool sCompHost = (ee_won_comp_host_register(ee_won_guicpp_comp_call), true);
 }

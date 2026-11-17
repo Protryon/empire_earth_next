@@ -10,6 +10,7 @@ class FSFile;
 #include <vector>
 #include <map>                      // mTagPointMaps
 #include "ee/EEMedia.h"
+#include "rust/data/tables.h"
 #include "lle/GE3DPoint.h"          // mDefaultPoint, mTopPoint
 
 class GETexture;
@@ -115,7 +116,10 @@ struct EEColorGroup {
     std::vector<long> mMaterials;           // +0x04 (indices into the model's materials)
 };
 
-class EEGraphicObject : public EEMedia {
+// The record's members (mKind, the mip and alpha settings, mMediaIndex, the per-state animation arrays mHoldTimes ..
+// mSharesFrames, mIsDrawn, mHasAlpha, mCreateMipMaps, the unread mL*) are EeDataGraphicObjectFields
+// (rust/crates/ee_data tables.rs: the record and its copy), the second base.
+class EEGraphicObject : public EEMedia, public EeDataGraphicObjectFields {
 public:
     EEGraphicObject();                      // 0xd7354 (LoadTable 0xd7833 news 0x4f0 bytes)
     virtual ~EEGraphicObject();
@@ -204,41 +208,8 @@ public:
     GETexture* mShadowTexture;              // +0x288 (EEROGroundShadows 0x1122bb) (provisional name)
     EESoundObject* mSounds1[14];   // actual original ctor zero loop and sample-ID reader
     EESoundObject* mSounds2[14];   // +0x2c4
-    long mL2FC;                             // +0x2fc (the loader 0xd7b37 copies record +0x29c) (provisional name)
-    unsigned char _gap300[4];               // +0x300 not decoded
-    unsigned long mKind;                    // +0x304 (SortMediaByKind 0x4d70b7: cmp 0x48; jae, unsigned; EEGraphicEffect::SortMediaByKind files the object under it)
-    float mMipMapBias;                      // +0x308 (0xd8b09: GETexture::SetStageMipMapBias) (provisional name)
-    float mOpacity;                         // +0x30c (EEROUnits' model pass 0x115674 passes it to Draw) (provisional name)
-    float mAlphaReference;                  // +0x310 (ctor 0; the 2D effects' alpha-test reference value) (provisional name)
-    // +0x314..: the animation the 3D effects run (EEE3DDisease::SetUp/Virtual4C) (provisional names)
-    long mMediaIndex;                       // +0x314 (EEComplexDoppelganger::Save 0x1f23bd writes it; RepairPointers 0x1f2329: EEMedia::Get) (provisional name)
-    long mL318;                             // +0x318 (ctor 0) (provisional name)
-    long mL31C;                             // +0x31c (ctor 0)
-    long mL320;                             // +0x320 (ctor 0)
-    long mNumMipLevelsToDrop;               // +0x324 (ctor 0; 0xd85ed adds gTextureMipLevelsToDrop)
-    unsigned long mHoldTimes[14];           // +0x328 by unit state (EEUnitClass::Virtual74 action 5000: GetRandom(0, [state])) (provisional name)
-    // +0x360..+0x4b0: six per-model-part animation arrays (the ctor's 14-iteration loop zeroes them; the 2D effects
-    // read [0], the 3D effects [13]) (provisional names)
-    unsigned long mStartFrames[14];         // +0x360 (the frame at which the sound starts; [13] the first frame)
-    unsigned long mLastFrames[14];          // +0x398 (the 2D effects compare the new frame `jbe` against it)
-    unsigned long mFrameTimes[14];          // +0x3d0 (the time per frame)
-    unsigned long mSound1Frames[14];        // +0x408 (EEUGAttackGround/EEUGAttackUnit::Step index it by set)
-    unsigned long mSound2Frames[14];        // +0x440
-    unsigned long mFrameCounts[14];         // +0x478 (the frame count)
-    long mL4B0;                             // +0x4b0 (ctor 0) (provisional name)
-    long mL4B4;                             // +0x4b4 (ctor 0)
-    unsigned long mMediaCount;                       // +0x4b8 (0: EEGraphicEffect::RecordNotPreloaded records the effect's id)
-    unsigned long mMaxMipLevelsToDrop;      // +0x4bc (ctor 2; 0xd85ed caps the mip level count with it) (provisional name)
-    bool mIsSpeedScaled[14]; // actual independent14-element animation flags
-    bool mB4CE; // +4ce, original explicit zero
-    bool mIsDrawn;                          // +0x4cf (EEROUnits::DrawUnitModel draws the object only when set)
-                                            // (provisional name)
-    bool mHasAlpha;                         // +0x4d0
-    bool mLoops[14];                        // +0x4d1 per model part (EEE3DFarm::Step 0xf1043 skips the sway when set)
-    bool mSharesFrames[14]; // +4df, actual producer loop and reader
-    bool mCreateMipMaps; // original initialized true
-    volatile bool mIsLoading; // original initialized false; a load is under way (spun on with Sleep(1))
-
+    unsigned long mMediaCount;              // the use count (0: EEGraphicEffect::RecordNotPreloaded records the effect's id)
+    volatile bool mIsLoading;               // a load is under way (spun on with Sleep(1))
 };
 
 #endif

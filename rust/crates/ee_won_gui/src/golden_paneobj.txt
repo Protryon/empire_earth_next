@@ -6,13 +6,13 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets 17 d9 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field e eb 0 0 -> 0 0
 relayout 0
@@ -32,12 +32,12 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call translate ed 99 0 0 -> 237 153
 relayout 0
@@ -58,21 +58,23 @@ call get-field 2 0 0 0 -> 0 0
 relayout 0
 call offsets 13b 22a 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 119 435 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 281 1077
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 281 1077
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 44 3c6 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 68 966
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 281 1077
+622 comp 5 3001 at 0 0 68 966
+622 comp 10 54 0 -> 0
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 68 966
+622 comp 4 3001 at 0 0 68 966
 free
 seq 1
 start 300 301
@@ -81,8 +83,9 @@ call get-field 9 0 0 0 -> 10 0
 relayout 1
 call dimension 234 5bd 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 564 1469
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 564 1469
+622 comp 10 54 0 -> 0
 relayout 0
 call on-bottom 0 0 0 0 -> 0 0
 relayout 1
@@ -92,36 +95,37 @@ call set-field 8 137 0 0 -> 0 0
 relayout 0
 call dimension 14f 17c 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 335 380
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 564 1469
+622 comp 5 3001 at 0 0 335 380
+622 comp 10 54 0 -> 0
 relayout 0
 size 377 250
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 335 380
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 335 380
+622 comp 10 54 0 -> 0
 relayout 0
 call fit a4 19e 0 0 -> 0 0
-45 14f 19e 0 -> 0
+622 comp 5 54 at 0 0 335 414
 relayout 0
 call vert-offset 3b9 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 -130 335 380
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -130 335 380
+622 comp 10 54 0 -> 0
 relayout 1
 wheel 0
 call wheel 8 0 0 0 -> 1 0
 349 8 0 0 -> 0
 190 0
-152 pos-size 3001 0 -122 335 380
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -122 335 380
+622 comp 10 54 0 -> 0
 relayout 1
 call vert-offset 3f2 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 -130 335 380
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -130 335 380
+622 comp 10 54 0 -> 0
 relayout 1
 call set-scroller 0 0 0 0 -> 0 0
 relayout 0
@@ -130,15 +134,16 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 -351 335 380
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -351 335 380
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 1 0 0 0 -> 29 0
 relayout 0
 call dimension 1b8 394 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 -351 440 916
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -351 335 380
+622 comp 5 3001 at 0 -351 440 916
+622 comp 10 54 0 -> 0
 relayout 0
 call untranslate c0 ffffffffffffffd6 0 0 -> 192 -393
 free
@@ -148,8 +153,8 @@ relayout 1
 call set-field 12 db 0 0 -> 0 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call paint 7001 0 0 0 -> 0 0
 368 7001 0 0 -> 0
@@ -165,8 +170,8 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call desired 0 0 0 0 -> 0 0
 relayout 1
@@ -179,8 +184,8 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call paint 7001 0 0 0 -> 0 0
 368 7001 0 0 -> 0
@@ -195,8 +200,9 @@ call get-field 9 0 0 0 -> 10 0
 relayout 0
 call dimension 8e 370 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 142 880
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 142 880
+622 comp 10 54 0 -> 0
 relayout 0
 scroller 5000 0
 call set-scroller 5000 0 0 0 -> 0 0
@@ -205,8 +211,8 @@ relayout 0
 call offsets 242 424 0 0 -> 0 0
 190 0
 360 5000 0
-152 pos-size 3001 -46 -677 142 880
-30 0 0 0 -> 0
+622 comp 4 3001 at -46 -677 142 880
+622 comp 10 54 0 -> 0
 relayout 0
 call set-scroller 0 0 0 0 -> 0 0
 relayout 0
@@ -229,45 +235,45 @@ draw 7002 11 0 0 0 0
 draw 7002 10 0 0 0 0
 relayout 1
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call padding 5 1 5 3 -> 0 0
 351
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 5 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 5 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call untranslate 141 76 0 0 -> 326 119
 relayout 0
 call vert-offset 20c 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 5 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 5 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 size 77 9
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 5 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 5 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 size 111 292
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 5 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 5 1 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 5 1 0 0
+622 comp 4 3001 at 5 1 0 0
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 5 1 0 0
+622 comp 4 3001 at 5 1 0 0
 relayout 0
 call get-field 10 0 0 0 -> 5 0
 relayout 0
@@ -275,29 +281,29 @@ wheel 0
 call wheel 24 0 0 0 -> 1 0
 349 24 0 0 -> 0
 190 0
-152 pos-size 3001 5 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 5 1 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 wheel 0
 call wheel ffffffffffffffd6 0 0 0 -> 1 0
 349 ffffffffffffffd6 0 0 -> 0
 190 0
-152 pos-size 3001 5 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 5 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call desired 0 0 0 0 -> 0 0
 relayout 0
 call vert-offset 1df 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 5 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 5 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 wheel 0
 call wheel 15 0 0 0 -> 1 0
 349 15 0 0 -> 0
 190 0
-152 pos-size 3001 5 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 5 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 scroller 5003 1
 call set-scroller 5003 0 0 0 -> 0 0
@@ -312,7 +318,7 @@ call set-scrollbar 6004 0 0 0 -> 0 0
 364 5065 6004 0 -> 0
 relayout 0
 call fit 4d 4d 0 0 -> 0 0
-45 4d 4d 0 -> 0
+622 comp 5 54 at 0 0 77 77
 relayout 0
 call paint 7002 0 0 0 -> 0 0
 368 7002 0 0 -> 0
@@ -337,7 +343,7 @@ relayout 0
 call set-field c 1d1 0 0 -> 0 0
 relayout 0
 call fit 1a2 f0 0 0 -> 0 0
-45 1a2 f0 0 -> 0
+622 comp 5 54 at 0 0 418 240
 relayout 0
 size 314 183
 call size 0 0 0 0 -> 0 0
@@ -345,8 +351,8 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call paint 7001 0 0 0 -> 0 0
 368 7001 0 0 -> 0
@@ -370,7 +376,7 @@ call set-scrollbar 6002 0 0 0 -> 0 0
 364 5065 6002 0 -> 0
 relayout 1
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
+622 comp 4 3001 at 0 0 0 0
 relayout 1
 call dimension 11d 244 0 0 -> 0 0
 190 0
@@ -379,31 +385,33 @@ call dimension 11d 244 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 285 580
-30 0 0 0 -> 0
-152 pos-size 3001 0 0 285 580
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 285 580
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 0 0 285 580
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
 360 5065 1
-152 pos-size 3001 0 0 285 580
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 285 580
+622 comp 10 54 0 -> 0
 relayout 1
 call translate 92 c 0 0 -> 146 12
 relayout 0
 call dimension e9 550 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 233 1360
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 285 580
+622 comp 5 3001 at 0 0 233 1360
+622 comp 10 54 0 -> 0
 free
 seq 5
 start 38 184
 relayout 0
 call offsets cd 30a 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 wheel 1
 call wheel ffffffffffffffe2 0 0 0 -> 1 0
@@ -414,12 +422,12 @@ call padding 6 5 4 1 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 6 5 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 6 5 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 6 5 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 6 5 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call paint 7000 0 0 0 -> 0 0
 368 7000 0 0 -> 0
@@ -431,15 +439,15 @@ draw 7000 11 -6 -5 0 0
 draw 7000 10 0 0 0 0
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 6 5 0 0
+622 comp 4 3001 at 6 5 0 0
 relayout 0
 call desired 0 0 0 0 -> 0 0
 relayout 0
 call desired 0 0 0 0 -> 0 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 6 5 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 6 5 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field f 0 0 0 -> 10 0
 relayout 1
@@ -452,16 +460,16 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 6 5 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 6 5 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 size 18 274
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 6 5 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 6 5 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call untranslate a5 2d 0 0 -> 171 50
 relayout 1
@@ -469,8 +477,8 @@ wheel 0
 call wheel 1d 0 0 0 -> 1 0
 349 1d 0 0 -> 0
 190 0
-152 pos-size 3001 6 5 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 6 5 0 0
+622 comp 10 54 0 -> 0
 free
 seq 6
 start 324 87
@@ -484,8 +492,8 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call desired 0 0 0 0 -> 0 0
 relayout 0
@@ -504,22 +512,22 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset 183 0 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset fffffffffffffffe 0 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 size 386 21
 call size 0 0 0 0 -> 0 0
@@ -527,8 +535,8 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field 2 de 0 0 -> 0 0
 relayout 0
@@ -538,8 +546,8 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 wheel 1
 call wheel 25 0 0 0 -> 1 0
@@ -566,8 +574,9 @@ relayout 0
 call dimension 146 19b 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 326 411
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 326 411
+622 comp 10 54 0 -> 0
 relayout 0
 call padding 6 1 7 1 -> 0 0
 351
@@ -575,8 +584,8 @@ call padding 6 1 7 1 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 6 1 326 411
-30 0 0 0 -> 0
+622 comp 4 3001 at 6 1 326 411
+622 comp 10 54 0 -> 0
 relayout 0
 call padding 6 2 7 6 -> 0 0
 351
@@ -584,16 +593,17 @@ call padding 6 2 7 6 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 6 2 326 411
-30 0 0 0 -> 0
+622 comp 4 3001 at 6 2 326 411
+622 comp 10 54 0 -> 0
 free
 seq 7
 start 275 389
 relayout 0
 call dimension 249 30a 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 585 778
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 585 778
+622 comp 10 54 0 -> 0
 relayout 0
 call set-scrollbar 6000 0 0 0 -> 0 0
 363 0 0 0 -> 5065
@@ -602,8 +612,8 @@ call set-scrollbar 6000 0 0 0 -> 0 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
 360 5065 1
-152 pos-size 3001 0 0 585 778
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 585 778
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field f 0 0 0 -> 10 0
 relayout 0
@@ -615,14 +625,14 @@ call padding 1 2 6 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 1 -76 585 778
-30 0 0 0 -> 0
+622 comp 4 3001 at 1 -76 585 778
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets 28d ffffffffffffffc6 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 -316 2 585 778
-30 0 0 0 -> 0
+622 comp 4 3001 at -316 2 585 778
+622 comp 10 54 0 -> 0
 relayout 1
 call padding 2 0 4 2 -> 0 0
 351
@@ -634,10 +644,10 @@ call padding 2 0 4 2 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 -314 0 585 778
-30 0 0 0 -> 0
-152 pos-size 3001 -314 0 585 778
-30 0 0 0 -> 0
+622 comp 4 3001 at -314 0 585 778
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at -314 0 585 778
+622 comp 10 54 0 -> 0
 relayout 0
 wheel 1
 call wheel fffffffffffffff7 0 0 0 -> 1 0
@@ -650,10 +660,10 @@ call vert-offset 23 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 -314 -35 585 778
-30 0 0 0 -> 0
-152 pos-size 3001 -314 -35 585 778
-30 0 0 0 -> 0
+622 comp 4 3001 at -314 -35 585 778
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at -314 -35 585 778
+622 comp 10 54 0 -> 0
 relayout 0
 call paint 7001 0 0 0 -> 0 0
 368 7001 13c 23 -> 0
@@ -683,14 +693,14 @@ call padding 2 4 6 6 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 -314 -31 585 778
-30 0 0 0 -> 0
+622 comp 4 3001 at -314 -31 585 778
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset 246 0 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 -314 -395 585 778
-30 0 0 0 -> 0
+622 comp 4 3001 at -314 -395 585 778
+622 comp 10 54 0 -> 0
 relayout 0
 size 307 58
 call size 0 0 0 0 -> 0 0
@@ -698,8 +708,8 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 -284 -726 585 778
-30 0 0 0 -> 0
+622 comp 4 3001 at -284 -726 585 778
+622 comp 10 54 0 -> 0
 free
 seq 8
 start 225 228
@@ -709,32 +719,32 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call padding 3 1 0 6 -> 0 0
 351
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset 3dd 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call rect-visible 142 4fb 58 b5 -> 0 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset 1a7 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 scroller 5002 0
 call set-scroller 5002 0 0 0 -> 0 0
@@ -743,8 +753,8 @@ relayout 0
 call vert-offset 3a7 0 0 0 -> 0 0
 190 0
 360 5002 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call paint 7001 0 0 0 -> 0 0
 368 7001 0 0 -> 0
@@ -759,25 +769,25 @@ call set-scroller 0 0 0 0 -> 0 0
 relayout 0
 call vert-offset d 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset ffffffffffffffe7 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call on-bottom 0 0 0 0 -> 0 0
 relayout 0
 call vert-offset 30a 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets ffffffffffffffdf 26e 0 0 -> 0 0
 190 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call desired 0 0 0 0 -> 0 0
 free
@@ -789,16 +799,16 @@ call padding 4 1 0 1 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 4 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 size 373 374
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 4 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call set-scrollbar 6001 0 0 0 -> 0 0
 363 0 0 0 -> 5065
@@ -808,8 +818,9 @@ relayout 0
 call dimension fffffffffffffffb 2cd 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 4 1 -5 717
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 1 0 0
+622 comp 5 3001 at 4 1 0 717
+622 comp 10 54 0 -> 0
 relayout 0
 call paint 7001 0 0 0 -> 0 0
 368 7001 0 0 -> 0
@@ -823,8 +834,9 @@ relayout 0
 call dimension f7 253 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 4 1 247 595
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 1 0 717
+622 comp 5 3001 at 4 1 247 595
+622 comp 10 54 0 -> 0
 relayout 1
 call vert-offset 181 0 0 0 -> 0 0
 190 0
@@ -833,10 +845,10 @@ call vert-offset 181 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 4 -222 247 595
-30 0 0 0 -> 0
-152 pos-size 3001 4 -222 247 595
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 -222 247 595
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 4 -222 247 595
+622 comp 10 54 0 -> 0
 relayout 0
 call desired 0 0 0 0 -> 247 300
 relayout 1
@@ -846,17 +858,17 @@ call get-field 8 0 0 0 -> 10 0
 relayout 0
 call vert-offset 10e 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 4 -222 247 595
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 -222 247 595
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset 3a7 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 4 -222 247 595
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 -222 247 595
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 4 -222 247 595
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 -222 247 595
+622 comp 10 54 0 -> 0
 relayout 0
 call paint 7001 0 0 0 -> 0 0
 368 7001 0 df -> 0
@@ -878,8 +890,8 @@ call set-field 9 1ba 0 0 -> 0 0
 relayout 0
 call vert-offset 34c 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 wheel 1
 call wheel f 0 0 0 -> 1 0
@@ -887,13 +899,14 @@ call wheel f 0 0 0 -> 1 0
 relayout 0
 call vert-offset 382 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call dimension 13a 2c0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 314 704
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 314 704
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field 5 159 0 0 -> 0 0
 relayout 1
@@ -912,8 +925,9 @@ call padding 0 1 3 3 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 1 314 345
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 1 314 704
+622 comp 5 3001 at 0 1 314 345
+622 comp 10 54 0 -> 0
 relayout 0
 call set-scrollbar 6004 0 0 0 -> 0 0
 363 0 0 0 -> 5065
@@ -923,13 +937,13 @@ relayout 0
 call get-field 4 0 0 0 -> 314 0
 relayout 1
 call fit 28 155 0 0 -> 0 0
-45 13d 15d 0 -> 0
+622 comp 5 54 at 0 0 317 349
 relayout 0
 call vert-offset 27d 0 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 0 -315 314 345
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -315 314 345
+622 comp 10 54 0 -> 0
 free
 seq 11
 start 13 272
@@ -948,13 +962,13 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call offsets dc 16d 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field 7 19 0 0 -> 0 0
 relayout 1
@@ -964,7 +978,7 @@ call set-scrollbar 6002 0 0 0 -> 0 0
 364 5065 6002 0 -> 0
 relayout 1
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
+622 comp 4 3001 at 0 0 0 0
 relayout 0
 call set-field 3 ffffffffffffffe3 0 0 -> 0 0
 relayout 0
@@ -974,21 +988,23 @@ relayout 0
 call dimension 25e 5a0 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 606 1440
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 606 1440
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 3 0 0 0 -> 0 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
 360 5065 0
-152 pos-size 3001 0 0 606 1440
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 606 1440
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 202 594 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 514 1428
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 606 1440
+622 comp 5 3001 at 0 0 514 1428
+622 comp 10 54 0 -> 0
 relayout 0
 call paint 7000 0 0 0 -> 0 0
 368 7000 0 0 -> 0
@@ -1009,16 +1025,17 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 514 1428
-30 0 0 0 -> 0
-152 pos-size 3001 0 0 514 1428
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 514 1428
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 0 0 514 1428
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 4f 4aa 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 79 1194
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 514 1428
+622 comp 5 3001 at 0 0 79 1194
+622 comp 10 54 0 -> 0
 relayout 0
 size 97 230
 call size 0 0 0 0 -> 0 0
@@ -1026,8 +1043,8 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 79 1194
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 79 1194
+622 comp 10 54 0 -> 0
 free
 seq 12
 start 299 175
@@ -1036,8 +1053,9 @@ call on-bottom 0 0 0 0 -> 0 0
 relayout 0
 call dimension 225 44c 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 549 1100
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 549 1100
+622 comp 10 54 0 -> 0
 relayout 0
 call paint 7002 0 0 0 -> 0 0
 368 7002 0 0 -> 0
@@ -1054,33 +1072,34 @@ call desired 0 0 0 0 -> 300 300
 relayout 0
 call offsets 265 401 0 0 -> 0 0
 190 0
-152 pos-size 3001 -549 -1025 549 1100
-30 0 0 0 -> 0
+622 comp 4 3001 at -549 -1025 549 1100
+622 comp 10 54 0 -> 0
 relayout 0
 size 173 132
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 -376 -968 549 1100
-30 0 0 0 -> 0
+622 comp 4 3001 at -376 -968 549 1100
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 1ce 2f5 0 0 -> 0 0
 190 0
-152 pos-size 3001 -289 -625 462 757
-30 0 0 0 -> 0
+622 comp 4 3001 at -289 -625 549 1100
+622 comp 5 3001 at -289 -625 462 757
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field f 69 0 0 -> 0 0
 relayout 0
 call vert-offset 3cc 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 -289 -625 462 757
-30 0 0 0 -> 0
+622 comp 4 3001 at -289 -625 462 757
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets c3 325 0 0 -> 0 0
 190 0
-152 pos-size 3001 -195 -625 462 757
-30 0 0 0 -> 0
+622 comp 4 3001 at -195 -625 462 757
+622 comp 10 54 0 -> 0
 relayout 0
 scroller 5002 1
 call set-scroller 5002 0 0 0 -> 0 0
@@ -1094,8 +1113,8 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5002 0
-152 pos-size 3001 -195 -675 462 757
-30 0 0 0 -> 0
+622 comp 4 3001 at -195 -675 462 757
+622 comp 10 54 0 -> 0
 relayout 1
 call dimension ad 317 0 0 -> 0 0
 190 0
@@ -1104,13 +1123,14 @@ call dimension ad 317 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5002 0
-152 pos-size 3001 -26 -675 173 791
-30 0 0 0 -> 0
-152 pos-size 3001 -26 -675 173 791
-30 0 0 0 -> 0
+622 comp 4 3001 at -26 -675 462 757
+622 comp 5 3001 at -26 -675 173 791
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at -26 -675 173 791
+622 comp 10 54 0 -> 0
 relayout 0
 call fit ffffffffffffffec 71 0 0 -> 0 0
-45 ad 317 0 -> 0
+622 comp 5 54 at 0 0 173 791
 free
 seq 13
 start 250 78
@@ -1121,13 +1141,14 @@ call set-field 9 12d 0 0 -> 0 0
 relayout 0
 call dimension 45 48d 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 69 1165
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 69 1165
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets 311 32b 0 0 -> 0 0
 190 0
-152 pos-size 3001 -69 -811 69 1165
-30 0 0 0 -> 0
+622 comp 4 3001 at -69 -811 69 1165
+622 comp 10 54 0 -> 0
 relayout 0
 call paint 7001 0 0 0 -> 0 0
 368 7001 45 32b -> 0
@@ -1143,11 +1164,11 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 -811 69 1165
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -811 69 1165
+622 comp 10 54 0 -> 0
 relayout 0
 call fit a d7 0 0 -> 0 0
-45 45 48d 0 -> 0
+622 comp 5 54 at 0 0 69 1165
 relayout 0
 call set-scrollbar 6004 0 0 0 -> 0 0
 363 0 0 0 -> 5065
@@ -1162,8 +1183,8 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 0 -769 69 1165
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -769 69 1165
+622 comp 10 54 0 -> 0
 relayout 0
 call set-scrollbar 6000 0 0 0 -> 0 0
 364 5065 6000 0 -> 0
@@ -1181,10 +1202,10 @@ call padding 6 2 2 4 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 6 -773 69 1165
-30 0 0 0 -> 0
-152 pos-size 3001 6 -773 69 1165
-30 0 0 0 -> 0
+622 comp 4 3001 at 6 -773 69 1165
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 6 -773 69 1165
+622 comp 10 54 0 -> 0
 relayout 0
 size 284 194
 call size 0 0 0 0 -> 0 0
@@ -1192,8 +1213,8 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 6 -975 69 1165
-30 0 0 0 -> 0
+622 comp 4 3001 at 6 -975 69 1165
+622 comp 10 54 0 -> 0
 relayout 1
 call offsets 133 46 0 0 -> 0 0
 190 0
@@ -1202,10 +1223,10 @@ call offsets 133 46 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 6 -68 69 1165
-30 0 0 0 -> 0
-152 pos-size 3001 6 -68 69 1165
-30 0 0 0 -> 0
+622 comp 4 3001 at 6 -68 69 1165
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 6 -68 69 1165
+622 comp 10 54 0 -> 0
 relayout 1
 call dimension 227 550 0 0 -> 0 0
 190 0
@@ -1214,10 +1235,11 @@ call dimension 227 550 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 6 -68 551 1360
-30 0 0 0 -> 0
-152 pos-size 3001 6 -68 551 1360
-30 0 0 0 -> 0
+622 comp 4 3001 at 6 -68 69 1165
+622 comp 5 3001 at 6 -68 551 1360
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 6 -68 551 1360
+622 comp 10 54 0 -> 0
 free
 seq 14
 start 200 380
@@ -1227,24 +1249,24 @@ call wheel ffffffffffffffde 0 0 0 -> 1 0
 349 ffffffffffffffde 0 0 -> 1
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call padding 2 6 6 4 -> 0 0
 351
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 2 6 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 6 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 size 339 308
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 2 6 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 6 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field f 0 0 0 -> 10 0
 relayout 1
@@ -1253,51 +1275,52 @@ call padding 1 3 7 5 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 1 3 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 1 3 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field c 1ca 0 0 -> 0 0
 relayout 0
 call dimension fe 397 0 0 -> 0 0
 190 0
-152 pos-size 3001 458 3 254 919
-30 0 0 0 -> 0
+622 comp 4 3001 at 458 3 0 0
+622 comp 5 3001 at 458 3 254 919
+622 comp 10 54 0 -> 0
 relayout 0
 call untranslate 69 11b 0 0 -> 563 286
 relayout 0
 call offsets 243 15d 0 0 -> 0 0
 190 0
-152 pos-size 3001 458 -346 254 919
-30 0 0 0 -> 0
+622 comp 4 3001 at 458 -346 254 919
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets 6d 74 0 0 -> 0 0
 190 0
-152 pos-size 3001 458 -113 254 919
-30 0 0 0 -> 0
+622 comp 4 3001 at 458 -113 254 919
+622 comp 10 54 0 -> 0
 relayout 0
 call padding 5 7 0 1 -> 0 0
 351
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 5 -109 254 919
-30 0 0 0 -> 0
+622 comp 4 3001 at 5 -109 254 919
+622 comp 10 54 0 -> 0
 relayout 0
 size 311 4
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 5 -109 254 919
-30 0 0 0 -> 0
+622 comp 4 3001 at 5 -109 254 919
+622 comp 10 54 0 -> 0
 relayout 0
 call padding 5 3 1 3 -> 0 0
 351
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 5 -113 254 919
-30 0 0 0 -> 0
+622 comp 4 3001 at 5 -113 254 919
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field d ffffffffffffffe0 0 0 -> 0 0
 relayout 0
@@ -1306,42 +1329,43 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 5 -113 254 919
-30 0 0 0 -> 0
+622 comp 4 3001 at 5 -113 254 919
+622 comp 10 54 0 -> 0
 free
 seq 15
 start 87 219
 relayout 0
 call dimension c0 472 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 192 1138
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 192 1138
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset ffffffffffffffa0 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 192 1138
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 192 1138
+622 comp 10 54 0 -> 0
 relayout 0
 size 114 83
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 192 1138
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 192 1138
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets 3c 3e4 0 0 -> 0 0
 190 0
-152 pos-size 3001 -60 -996 192 1138
-30 0 0 0 -> 0
+622 comp 4 3001 at -60 -996 192 1138
+622 comp 10 54 0 -> 0
 relayout 0
 size 50 346
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 -60 -792 192 1138
-30 0 0 0 -> 0
+622 comp 4 3001 at -60 -792 192 1138
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 7 0 0 0 -> 0 0
 relayout 1
@@ -1349,8 +1373,9 @@ call set-field 7 96 0 0 -> 0 0
 relayout 0
 call dimension 6d 263 0 0 -> 0 0
 190 0
-152 pos-size 3001 -59 -265 109 611
-30 0 0 0 -> 0
+622 comp 4 3001 at -59 -265 192 1138
+622 comp 5 3001 at -59 -265 109 611
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field c 197 0 0 -> 0 0
 relayout 0
@@ -1368,37 +1393,39 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 -7 -483 109 611
-30 0 0 0 -> 0
+622 comp 4 3001 at -7 -483 109 611
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 2b1 1f3 0 0 -> 0 0
 190 0
-152 pos-size 3001 -7 -371 689 499
-30 0 0 0 -> 0
+622 comp 4 3001 at -7 -371 109 611
+622 comp 5 3001 at -7 -371 689 499
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 -7 -371 689 499
-30 0 0 0 -> 0
+622 comp 4 3001 at -7 -371 689 499
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 1de 2ab 0 0 -> 0 0
 190 0
-152 pos-size 3001 -7 -371 478 683
-30 0 0 0 -> 0
+622 comp 4 3001 at -7 -371 689 499
+622 comp 5 3001 at -7 -371 478 683
+622 comp 10 54 0 -> 0
 relayout 0
 call desired 0 0 0 0 -> 300 300
 relayout 0
 call offsets 2d2 ffffffffffffffea 0 0 -> 0 0
 190 0
-152 pos-size 3001 -376 0 478 683
-30 0 0 0 -> 0
+622 comp 4 3001 at -376 0 478 683
+622 comp 10 54 0 -> 0
 free
 seq 16
 start 37 122
 relayout 1
 call vert-offset 23c 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field f 0 0 0 -> 10 0
 relayout 0
@@ -1416,22 +1443,24 @@ call padding 0 0 7 3 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 2f1 f0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 753 240
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 753 240
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 0 0 753 240
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 753 240
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 2e5 35f 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 741 863
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 753 240
+622 comp 5 3001 at 0 0 741 863
+622 comp 10 54 0 -> 0
 relayout 0
 call paint 7001 0 0 0 -> 0 0
 368 7001 0 0 -> 0
@@ -1446,52 +1475,54 @@ wheel 0
 call wheel ffffffffffffffd6 0 0 0 -> 1 0
 349 ffffffffffffffd6 0 0 -> 0
 190 0
-152 pos-size 3001 0 -42 741 863
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -42 741 863
+622 comp 10 54 0 -> 0
 relayout 1
 call vert-offset 14e 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 -334 741 863
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -334 741 863
+622 comp 10 54 0 -> 0
 relayout 0
 size 199 166
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 -334 741 863
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -334 741 863
+622 comp 10 54 0 -> 0
 relayout 0
 size 57 343
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 -334 741 863
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -334 741 863
+622 comp 10 54 0 -> 0
 relayout 0
 call padding 0 0 0 7 -> 0 0
 351
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 -334 741 863
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -334 741 863
+622 comp 10 54 0 -> 0
 relayout 1
 call dimension 79 1d3 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 -131 121 467
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -131 741 863
+622 comp 5 3001 at 0 -131 121 467
+622 comp 10 54 0 -> 0
 relayout 1
 call offsets af 73 0 0 -> 0 0
 190 0
-152 pos-size 3001 -64 -115 121 467
-30 0 0 0 -> 0
+622 comp 4 3001 at -64 -115 121 467
+622 comp 10 54 0 -> 0
 relayout 1
 call dimension 187 41a 0 0 -> 0 0
 190 0
-152 pos-size 3001 -64 -115 391 1050
-30 0 0 0 -> 0
+622 comp 4 3001 at -64 -115 121 467
+622 comp 5 3001 at -64 -115 391 1050
+622 comp 10 54 0 -> 0
 free
 seq 17
 start 388 24
@@ -1501,15 +1532,15 @@ call padding 3 1 7 1 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 10 0 0 0 -> 3 0
 relayout 1
 call vert-offset c0 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 scroller 5003 1
 call set-scroller 5003 0 0 0 -> 0 0
@@ -1518,8 +1549,8 @@ relayout 0
 call vert-offset 307 0 0 0 -> 0 0
 190 0
 360 5003 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 size 219 321
 call size 0 0 0 0 -> 0 0
@@ -1527,34 +1558,35 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5003 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call desired 0 0 0 0 -> 0 0
 relayout 0
 call vert-offset 27a 0 0 0 -> 0 0
 190 0
 360 5003 0
-152 pos-size 3001 3 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call rect-visible 10b 3b9 36 4f -> 0 0
 relayout 0
 call fit 12f 17 0 0 -> 0 0
-45 139 19 0 -> 0
+622 comp 5 54 at 0 0 313 25
 relayout 0
 call rect-visible ffffffffffffffdf 33 bc bd -> 1 0
 relayout 0
 call dimension 1bc 33d 0 0 -> 0 0
 190 0
 360 5003 0
-152 pos-size 3001 3 1 444 829
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 0 0
+622 comp 5 3001 at 3 1 444 829
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
 360 5003 1
-152 pos-size 3001 3 1 444 829
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 444 829
+622 comp 10 54 0 -> 0
 relayout 0
 size 190 178
 call size 0 0 0 0 -> 0 0
@@ -1562,16 +1594,16 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5003 0
-152 pos-size 3001 3 1 444 829
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 444 829
+622 comp 10 54 0 -> 0
 relayout 0
 wheel 0
 call wheel 2d 0 0 0 -> 1 0
 349 2d 0 0 -> 0
 190 0
 360 5003 0
-152 pos-size 3001 3 1 444 829
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 1 444 829
+622 comp 10 54 0 -> 0
 relayout 1
 call untranslate ea b0 0 0 -> 237 177
 free
@@ -1585,29 +1617,32 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 202 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 202 0
+622 comp 10 54 0 -> 0
 relayout 1
 call dimension 3b 44 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 59 68
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 202 0
+622 comp 5 3001 at 0 0 59 68
+622 comp 10 54 0 -> 0
 relayout 1
 call dimension 1a4 3f2 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 420 1010
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 59 68
+622 comp 5 3001 at 0 0 420 1010
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 12 0 0 0 -> 0 0
 relayout 0
 call vert-offset 13a 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 -314 420 1010
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -314 420 1010
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 0 -314 420 1010
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -314 420 1010
+622 comp 10 54 0 -> 0
 relayout 0
 call paint 7000 0 0 0 -> 0 0
 368 7000 0 13a -> 0
@@ -1621,41 +1656,42 @@ relayout 0
 call set-field 3 10d 0 0 -> 0 0
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 -269 -314 420 1010
+622 comp 4 3001 at -269 -314 420 1010
 relayout 0
 call desired 0 0 0 0 -> 300 300
 relayout 0
 call translate 65 134 0 0 -> 370 622
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 -269 -314 420 1010
+622 comp 4 3001 at -269 -314 420 1010
 relayout 0
 call set-field d 103 0 0 -> 0 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 -193 -55 420 1010
-30 0 0 0 -> 0
+622 comp 4 3001 at -193 -55 420 1010
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset 16b 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 -193 -104 420 1010
-30 0 0 0 -> 0
+622 comp 4 3001 at -193 -104 420 1010
+622 comp 10 54 0 -> 0
 free
 seq 19
 start 224 166
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
+622 comp 4 3001 at 0 0 0 0
 relayout 0
 call dimension e 4d0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 14 1232
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 14 1232
+622 comp 10 54 0 -> 0
 relayout 0
 call rect-visible 2d0 dd 5f 31 -> 0 0
 relayout 0
 call fit 104 7b 0 0 -> 0 0
-45 104 4d0 0 -> 0
+622 comp 5 54 at 0 0 260 1232
 relayout 0
 call desired 0 0 0 0 -> 14 300
 relayout 0
@@ -1664,11 +1700,11 @@ relayout 0
 call on-bottom 0 0 0 0 -> 0 0
 relayout 1
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 14 1232
+622 comp 4 3001 at 0 0 14 1232
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 0 0 14 1232
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 14 1232
+622 comp 10 54 0 -> 0
 relayout 0
 call set-scrollbar 6000 0 0 0 -> 0 0
 363 0 0 0 -> 5065
@@ -1681,8 +1717,8 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 14 1232
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 14 1232
+622 comp 10 54 0 -> 0
 relayout 1
 size 295 359
 call size 0 0 0 0 -> 0 0
@@ -1694,22 +1730,23 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 14 1232
-30 0 0 0 -> 0
-152 pos-size 3001 0 0 14 1232
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 14 1232
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 0 0 14 1232
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset ffffffffffffffdd 0 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 14 1232
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 14 1232
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 30b 561 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 779 1377
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 14 1232
+622 comp 5 3001 at 0 0 779 1377
+622 comp 10 54 0 -> 0
 relayout 1
 call padding 2 3 2 6 -> 0 0
 351
@@ -1721,10 +1758,10 @@ call padding 2 3 2 6 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 2 3 779 1377
-30 0 0 0 -> 0
-152 pos-size 3001 2 3 779 1377
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 3 779 1377
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 2 3 779 1377
+622 comp 10 54 0 -> 0
 relayout 1
 call vert-offset 1f3 0 0 0 -> 0 0
 190 0
@@ -1733,10 +1770,10 @@ call vert-offset 1f3 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 2 -496 779 1377
-30 0 0 0 -> 0
-152 pos-size 3001 2 -496 779 1377
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 -496 779 1377
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 2 -496 779 1377
+622 comp 10 54 0 -> 0
 free
 seq 20
 start 175 68
@@ -1751,46 +1788,48 @@ call translate 17 b8 0 0 -> 23 184
 relayout 0
 call vert-offset 27b 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 -263 0 263
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -263 0 0
+622 comp 5 3001 at 0 -263 0 263
+622 comp 10 54 0 -> 0
 relayout 0
 size 390 307
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 263
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 263
+622 comp 10 54 0 -> 0
 relayout 1
 call vert-offset 352 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 263
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 263
+622 comp 10 54 0 -> 0
 relayout 0
 call padding 2 2 0 7 -> 0 0
 351
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 2 2 0 263
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 2 0 263
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension af 9b 0 0 -> 0 0
 190 0
-152 pos-size 3001 2 2 175 155
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 2 0 263
+622 comp 5 3001 at 2 2 175 155
+622 comp 10 54 0 -> 0
 relayout 0
 wheel 0
 call wheel 4 0 0 0 -> 1 0
 349 4 0 0 -> 0
 190 0
-152 pos-size 3001 2 2 175 155
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 2 175 155
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets ffffffffffffffdf 31 0 0 -> 0 0
 190 0
-152 pos-size 3001 2 2 175 155
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 2 175 155
+622 comp 10 54 0 -> 0
 relayout 1
 call get-field 12 0 0 0 -> 0 0
 relayout 0
@@ -1798,22 +1837,22 @@ wheel 0
 call wheel ffffffffffffffd5 0 0 0 -> 1 0
 349 ffffffffffffffd5 0 0 -> 0
 190 0
-152 pos-size 3001 2 2 175 155
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 2 175 155
+622 comp 10 54 0 -> 0
 relayout 0
 size 256 382
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 2 2 175 155
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 2 175 155
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field c 9a 0 0 -> 0 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 154 2 175 155
-30 0 0 0 -> 0
+622 comp 4 3001 at 154 2 175 155
+622 comp 10 54 0 -> 0
 free
 seq 21
 start 61 307
@@ -1840,24 +1879,24 @@ draw 7002 10 0 0 0 0
 relayout 0
 call vert-offset 2d5 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field 1 1f5 0 0 -> 0 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets ffffffffffffff9e 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset 342 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field e 0 0 0 -> 10 0
 relayout 0
@@ -1865,27 +1904,28 @@ call on-bottom 0 0 0 0 -> 0 0
 relayout 0
 call vert-offset 3c7 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call rect-visible 13e 295 48 f -> 0 0
 relayout 0
 call dimension b9 42d 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 185 1069
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 185 1069
+622 comp 10 54 0 -> 0
 relayout 1
 wheel 0
 call wheel ffffffffffffffef 0 0 0 -> 1 0
 349 ffffffffffffffef 0 0 -> 0
 190 0
-152 pos-size 3001 0 -17 185 1069
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -17 185 1069
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset 369 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 -568 185 1069
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -568 185 1069
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 5 0 0 0 -> 1069 0
 free
@@ -1893,12 +1933,12 @@ seq 22
 start 12 210
 relayout 0
 call fit ad 158 0 0 -> 0 0
-45 ad 158 0 -> 0
+622 comp 5 54 at 0 0 173 344
 relayout 0
 call vert-offset 89 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call paint 7000 0 0 0 -> 0 0
 368 7000 0 0 -> 0
@@ -1916,19 +1956,19 @@ call padding 4 6 2 4 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 4 6 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 6 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call desired 0 0 0 0 -> 0 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 4 6 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 6 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset ffffffffffffffc7 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 4 6 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 6 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call set-scrollbar 6002 0 0 0 -> 0 0
 363 0 0 0 -> 5065
@@ -1938,28 +1978,30 @@ relayout 0
 call dimension 22a 56e 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 4 6 554 1390
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 6 0 0
+622 comp 5 3001 at 4 6 554 1390
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field 2 10d 0 0 -> 0 0
 relayout 0
 call dimension 1b 185 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 4 -49 27 389
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 -49 554 1390
+622 comp 5 3001 at 4 -49 27 389
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets 12e 82 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 4 -49 27 389
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 -49 27 389
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset 3e4 0 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 4 -49 27 389
-30 0 0 0 -> 0
+622 comp 4 3001 at 4 -49 27 389
+622 comp 10 54 0 -> 0
 relayout 1
 call desired 0 0 0 0 -> 27 300
 relayout 1
@@ -1971,22 +2013,22 @@ seq 23
 start 298 112
 relayout 1
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field 1 ad 0 0 -> 0 0
 relayout 1
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 size 140 322
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call rect-visible 31c 4f0 41 39 -> 0 0
 relayout 0
@@ -1995,8 +2037,8 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call set-scrollbar 6002 0 0 0 -> 0 0
 363 0 0 0 -> 5065
@@ -2006,15 +2048,16 @@ relayout 0
 call dimension 182 340 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 386 832
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 386 832
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 6 0 0 0 -> 0 0
 relayout 0
 call get-field 4 0 0 0 -> 386 0
 relayout 0
 call fit 1c1 c5 0 0 -> 0 0
-45 1c1 340 0 -> 0
+622 comp 5 54 at 0 0 449 832
 relayout 0
 wheel 1
 call wheel 22 0 0 0 -> 1 0
@@ -2030,10 +2073,10 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 386 832
-30 0 0 0 -> 0
-152 pos-size 3001 0 0 386 832
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 386 832
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 0 0 386 832
+622 comp 10 54 0 -> 0
 relayout 0
 call translate 119 d5 0 0 -> 281 213
 relayout 0
@@ -2047,28 +2090,28 @@ start 249 351
 relayout 0
 call vert-offset 243 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call padding 1 2 0 5 -> 0 0
 351
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 1 2 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 1 2 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 1 2 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 1 2 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 1 2 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 1 2 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 1 2 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 1 2 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call paint 7000 0 0 0 -> 0 0
 368 7000 0 0 -> 0
@@ -2081,13 +2124,14 @@ draw 7000 10 0 0 0 0
 relayout 1
 call vert-offset 30e 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 1 2 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 1 2 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 251 4a2 0 0 -> 0 0
 190 0
-152 pos-size 3001 1 2 593 1186
-30 0 0 0 -> 0
+622 comp 4 3001 at 1 2 0 0
+622 comp 5 3001 at 1 2 593 1186
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field d 5a 0 0 -> 0 0
 relayout 0
@@ -2105,14 +2149,14 @@ relayout 0
 call offsets 15d 267 0 0 -> 0 0
 190 0
 360 5000 0
-152 pos-size 3001 -344 -525 593 1186
-30 0 0 0 -> 0
+622 comp 4 3001 at -344 -525 593 1186
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets 218 439 0 0 -> 0 0
 190 0
 360 5000 0
-152 pos-size 3001 -344 -752 593 1186
-30 0 0 0 -> 0
+622 comp 4 3001 at -344 -752 593 1186
+622 comp 10 54 0 -> 0
 relayout 1
 size 23 87
 call size 0 0 0 0 -> 0 0
@@ -2124,32 +2168,32 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5000 0
-152 pos-size 3001 -344 -1104 593 1186
-30 0 0 0 -> 0
-152 pos-size 3001 -344 -1104 593 1186
-30 0 0 0 -> 0
+622 comp 4 3001 at -344 -1104 593 1186
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at -344 -1104 593 1186
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset ca 0 0 0 -> 0 0
 190 0
 360 5000 0
-152 pos-size 3001 -344 -200 593 1186
-30 0 0 0 -> 0
+622 comp 4 3001 at -344 -200 593 1186
+622 comp 10 54 0 -> 0
 free
 seq 25
 start 199 254
 relayout 1
 call offsets 1c6 ffffffffffffffe5 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 size 60 149
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 1 0 0 0 -> 149 0
 relayout 1
@@ -2161,8 +2205,9 @@ call set-field 3 46 0 0 -> 0 0
 relayout 1
 call dimension 2b4 327 0 0 -> 0 0
 190 0
-152 pos-size 3001 -70 0 692 807
-30 0 0 0 -> 0
+622 comp 4 3001 at -70 0 0 0
+622 comp 5 3001 at -70 0 692 807
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 3 0 0 0 -> 70 0
 relayout 0
@@ -2172,35 +2217,35 @@ call wheel ffffffffffffffec 0 0 0 -> 1 0
 relayout 1
 call offsets 17b 231 0 0 -> 0 0
 190 0
-152 pos-size 3001 -379 -561 692 807
-30 0 0 0 -> 0
+622 comp 4 3001 at -379 -561 692 807
+622 comp 10 54 0 -> 0
 relayout 1
 call padding 2 3 2 2 -> 0 0
 351
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 -377 -558 692 807
-30 0 0 0 -> 0
+622 comp 4 3001 at -377 -558 692 807
+622 comp 10 54 0 -> 0
 relayout 1
 call vert-offset 140 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 -377 -317 692 807
-30 0 0 0 -> 0
+622 comp 4 3001 at -377 -317 692 807
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 10 0 0 0 -> 2 0
 relayout 1
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 -377 -317 692 807
-30 0 0 0 -> 0
+622 comp 4 3001 at -377 -317 692 807
+622 comp 10 54 0 -> 0
 relayout 0
 size 38 305
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 -377 -317 692 807
-30 0 0 0 -> 0
+622 comp 4 3001 at -377 -317 692 807
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field 4 ffffffffffffffe9 0 0 -> 0 0
 free
@@ -2209,8 +2254,9 @@ start 86 157
 relayout 0
 call dimension 2f7 132 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 759 306
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 759 306
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 5 0 0 0 -> 306 0
 relayout 1
@@ -2219,54 +2265,54 @@ call wheel ffffffffffffffcf 0 0 0 -> 1 0
 349 ffffffffffffffcf 0 0 -> 1
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 759 306
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 759 306
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 0 0 759 306
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 759 306
+622 comp 10 54 0 -> 0
 relayout 1
 call vert-offset 1c7 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 -306 759 306
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -306 759 306
+622 comp 10 54 0 -> 0
 relayout 1
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 0 -306 759 306
+622 comp 4 3001 at 0 -306 759 306
 relayout 0
 call offsets 6 312 0 0 -> 0 0
 190 0
-152 pos-size 3001 -6 -306 759 306
-30 0 0 0 -> 0
+622 comp 4 3001 at -6 -306 759 306
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 -6 -306 759 306
-30 0 0 0 -> 0
+622 comp 4 3001 at -6 -306 759 306
+622 comp 10 54 0 -> 0
 relayout 0
 wheel 0
 call wheel 23 0 0 0 -> 1 0
 349 23 0 0 -> 0
 190 0
-152 pos-size 3001 -6 -271 759 306
-30 0 0 0 -> 0
+622 comp 4 3001 at -6 -271 759 306
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 -6 -271 759 306
-30 0 0 0 -> 0
+622 comp 4 3001 at -6 -271 759 306
+622 comp 10 54 0 -> 0
 relayout 0
 call padding 7 5 7 0 -> 0 0
 351
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 1 -149 759 306
-30 0 0 0 -> 0
+622 comp 4 3001 at 1 -149 759 306
+622 comp 10 54 0 -> 0
 relayout 1
 call get-field 3 0 0 0 -> 6 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 1 -149 759 306
-30 0 0 0 -> 0
+622 comp 4 3001 at 1 -149 759 306
+622 comp 10 54 0 -> 0
 relayout 1
 call get-field 13 0 0 0 -> 0 0
 relayout 0
@@ -2279,31 +2325,31 @@ seq 27
 start 36 395
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
+622 comp 4 3001 at 0 0 0 0
 relayout 0
 call set-field 1 5f 0 0 -> 0 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call vert-offset ffffffffffffffbf 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset b8 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 size 211 67
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call get-field 1 0 0 0 -> 67 0
 relayout 1
@@ -2311,8 +2357,9 @@ call desired 0 0 0 0 -> 0 0
 relayout 0
 call dimension 2d1 410 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 721 1040
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 721 1040
+622 comp 10 54 0 -> 0
 relayout 1
 call desired 0 0 0 0 -> 300 300
 relayout 0
@@ -2327,8 +2374,9 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 145 1040
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 721 1040
+622 comp 5 3001 at 0 0 145 1040
+622 comp 10 54 0 -> 0
 relayout 1
 call set-field f cc 0 0 -> 0 0
 relayout 1
@@ -2336,8 +2384,8 @@ wheel 0
 call wheel ffffffffffffffd3 0 0 0 -> 1 0
 349 ffffffffffffffd3 0 0 -> 0
 190 0
-152 pos-size 3001 0 -45 145 1040
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -45 145 1040
+622 comp 10 54 0 -> 0
 free
 seq 28
 start 387 298
@@ -2352,8 +2400,8 @@ wheel 0
 call wheel 39 0 0 0 -> 1 0
 349 39 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call desired 0 0 0 0 -> 0 0
 relayout 0
@@ -2370,10 +2418,10 @@ call offsets ffffffffffffffe7 b9 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5000 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call set-field 3 150 0 0 -> 0 0
 relayout 0
@@ -2385,10 +2433,10 @@ call adjust 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5000 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call adjust 0 0 0 0 -> 0 0
 360 5000 0
@@ -2396,10 +2444,10 @@ call adjust 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5000 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call paint 7001 0 0 0 -> 0 0
 368 7001 0 0 -> 0
@@ -2418,13 +2466,13 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5000 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
 360 5000 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 free
 seq 29
 start 273 201
@@ -2436,8 +2484,8 @@ call padding 1 6 7 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 1 6 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 1 6 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field 12 1ad 0 0 -> 0 0
 relayout 0
@@ -2448,24 +2496,24 @@ call padding 2 1 0 5 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 2 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 size 263 360
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 2 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 size 116 248
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 2 1 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 1 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 2 0 0 0 -> 0 0
 relayout 0
@@ -2479,54 +2527,56 @@ draw 7002 11 -2 -1 0 0
 draw 7002 10 0 0 0 0
 relayout 1
 call fit 1b 7c 0 0 -> 0 0
-45 1d 82 0 -> 0
+622 comp 5 54 at 0 0 29 130
 relayout 1
 call set-field 6 1d6 0 0 -> 0 0
 relayout 0
 call dimension 1a9 308 0 0 -> 0 0
 190 0
-152 pos-size 3001 2 1 425 776
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 1 0 0
+622 comp 5 3001 at 2 1 425 776
+622 comp 10 54 0 -> 0
 relayout 1
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 2 1 425 776
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 1 425 776
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 2ac 51a 0 0 -> 0 0
 190 0
-152 pos-size 3001 2 1 684 1306
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 1 425 776
+622 comp 5 3001 at 2 1 684 1306
+622 comp 10 54 0 -> 0
 relayout 0
 call translate 108 c1 0 0 -> 262 192
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 2 1 684 1306
+622 comp 4 3001 at 2 1 684 1306
 free
 seq 30
 start 224 103
 relayout 1
 call fit ffffffffffffffec cb 0 0 -> 0 0
-45 0 cb 0 -> 0
+622 comp 5 54 at 0 0 0 203
 relayout 0
 size 320 275
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call get-field 5 0 0 0 -> 0 0
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
+622 comp 4 3001 at 0 0 0 0
 relayout 0
 wheel 0
 call wheel ffffffffffffffda 0 0 0 -> 1 0
 349 ffffffffffffffda 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call translate 141 a1 0 0 -> 321 161
 relayout 0
@@ -2537,63 +2587,67 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call dimension 271 c0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 625 192
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 625 192
+622 comp 10 54 0 -> 0
 relayout 0
 size 175 55
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 625 192
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 625 192
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 625 192
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 625 192
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 271 373 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 625 883
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 625 192
+622 comp 5 3001 at 0 0 625 883
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 625 883
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 625 883
+622 comp 10 54 0 -> 0
 relayout 1
 call dimension e2 9f 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 226 159
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 625 883
+622 comp 5 3001 at 0 0 226 159
+622 comp 10 54 0 -> 0
 relayout 0
 size 244 111
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 226 159
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 226 159
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 18e d3 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 398 211
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 226 159
+622 comp 5 3001 at 0 0 398 211
+622 comp 10 54 0 -> 0
 free
 seq 31
 start 174 342
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 scroller 5003 0
 call set-scroller 5003 0 0 0 -> 0 0
@@ -2601,14 +2655,15 @@ call set-scroller 5003 0 0 0 -> 0 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
 360 5003 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension b5 53a 0 0 -> 0 0
 190 0
 360 5003 0
-152 pos-size 3001 0 0 181 1338
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 181 1338
+622 comp 10 54 0 -> 0
 relayout 1
 call on-bottom 0 0 0 0 -> 0 0
 relayout 0
@@ -2635,15 +2690,15 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 0 -49 181 1338
-30 0 0 0 -> 0
-152 pos-size 3001 0 -49 181 1338
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -49 181 1338
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 0 -49 181 1338
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
 360 5065 1
-152 pos-size 3001 0 -49 181 1338
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -49 181 1338
+622 comp 10 54 0 -> 0
 relayout 0
 call untranslate c2 64 0 0 -> 194 51
 relayout 1
@@ -2656,8 +2711,8 @@ seq 32
 start 61 245
 relayout 1
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call untranslate ffffffffffffffe7 133 0 0 -> -25 307
 relayout 1
@@ -2666,24 +2721,25 @@ call padding 7 6 2 4 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 7 6 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 7 6 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 size 235 383
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 7 6 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 7 6 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 151 5b2 0 0 -> 0 0
 190 0
-152 pos-size 3001 7 6 337 1458
-30 0 0 0 -> 0
+622 comp 4 3001 at 7 6 0 0
+622 comp 5 3001 at 7 6 337 1458
+622 comp 10 54 0 -> 0
 relayout 0
 call fit 54 191 0 0 -> 0 0
-45 15a 5bc 0 -> 0
+622 comp 5 54 at 0 0 346 1468
 relayout 0
 call set-scrollbar 6002 0 0 0 -> 0 0
 363 0 0 0 -> 5065
@@ -2696,8 +2752,8 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 7 6 337 1458
-30 0 0 0 -> 0
+622 comp 4 3001 at 7 6 337 1458
+622 comp 10 54 0 -> 0
 relayout 1
 size 288 124
 call size 0 0 0 0 -> 0 0
@@ -2709,10 +2765,10 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 7 6 337 1458
-30 0 0 0 -> 0
-152 pos-size 3001 7 6 337 1458
-30 0 0 0 -> 0
+622 comp 4 3001 at 7 6 337 1458
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 7 6 337 1458
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field 1 32 0 0 -> 0 0
 relayout 1
@@ -2723,10 +2779,10 @@ call vert-offset 116 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 7 -272 337 1458
-30 0 0 0 -> 0
-152 pos-size 3001 7 -272 337 1458
-30 0 0 0 -> 0
+622 comp 4 3001 at 7 -272 337 1458
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 7 -272 337 1458
+622 comp 10 54 0 -> 0
 relayout 1
 wheel 0
 call wheel ffffffffffffffea 0 0 0 -> 1 0
@@ -2737,10 +2793,10 @@ call wheel ffffffffffffffea 0 0 0 -> 1 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 7 -294 337 1458
-30 0 0 0 -> 0
-152 pos-size 3001 7 -294 337 1458
-30 0 0 0 -> 0
+622 comp 4 3001 at 7 -294 337 1458
+622 comp 10 54 0 -> 0
+622 comp 4 3001 at 7 -294 337 1458
+622 comp 10 54 0 -> 0
 relayout 0
 size 33 379
 call size 0 0 0 0 -> 0 0
@@ -2748,14 +2804,15 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 7 -294 337 1458
-30 0 0 0 -> 0
+622 comp 4 3001 at 7 -294 337 1458
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 29c 4a0 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 7 -294 668 1184
-30 0 0 0 -> 0
+622 comp 4 3001 at 7 -294 337 1458
+622 comp 5 3001 at 7 -294 668 1184
+622 comp 10 54 0 -> 0
 relayout 0
 call untranslate 153 14a 0 0 -> 346 36
 relayout 0
@@ -2765,16 +2822,16 @@ call padding 2 5 7 6 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 2 -295 668 1184
-30 0 0 0 -> 0
+622 comp 4 3001 at 2 -295 668 1184
+622 comp 10 54 0 -> 0
 free
 seq 33
 start 11 147
 relayout 0
 call vert-offset 424 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call on-bottom 0 0 0 0 -> 0 0
 relayout 1
@@ -2782,13 +2839,14 @@ wheel 0
 call wheel 36 0 0 0 -> 1 0
 349 36 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 2ca 171 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 714 369
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 714 369
+622 comp 10 54 0 -> 0
 relayout 0
 call translate d 83 0 0 -> 13 131
 relayout 1
@@ -2797,21 +2855,21 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 714 369
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 714 369
+622 comp 10 54 0 -> 0
 relayout 1
 call vert-offset 3e8 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 -330 714 369
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -330 714 369
+622 comp 10 54 0 -> 0
 relayout 0
 size 119 153
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 -216 714 369
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -216 714 369
+622 comp 10 54 0 -> 0
 relayout 0
 call rect-visible 2fa 206 2e 3b -> 0 0
 relayout 0
@@ -2819,25 +2877,26 @@ call set-field 13 13b 0 0 -> 0 0
 relayout 1
 call offsets 4 ffffffffffffffcc 0 0 -> 0 0
 190 0
-152 pos-size 3001 -4 0 714 369
-30 0 0 0 -> 0
+622 comp 4 3001 at -4 0 714 369
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 1fe cb 0 0 -> 0 0
 190 0
-152 pos-size 3001 -4 0 510 203
-30 0 0 0 -> 0
+622 comp 4 3001 at -4 0 714 369
+622 comp 5 3001 at -4 0 510 203
+622 comp 10 54 0 -> 0
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 -4 0 510 203
+622 comp 4 3001 at -4 0 510 203
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 -4 0 510 203
-30 0 0 0 -> 0
+622 comp 4 3001 at -4 0 510 203
+622 comp 10 54 0 -> 0
 relayout 1
 call vert-offset 3b3 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 -4 -50 510 203
-30 0 0 0 -> 0
+622 comp 4 3001 at -4 -50 510 203
+622 comp 10 54 0 -> 0
 relayout 0
 call set-scroller 0 0 0 0 -> 0 0
 free
@@ -2849,12 +2908,12 @@ call padding 3 3 5 1 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 3 3 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 3 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 3 3 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 3 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 wheel 1
 call wheel ffffffffffffffd7 0 0 0 -> 1 0
@@ -2864,8 +2923,8 @@ wheel 0
 call wheel 23 0 0 0 -> 1 0
 349 23 0 0 -> 0
 190 0
-152 pos-size 3001 3 3 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 3 0 0
+622 comp 10 54 0 -> 0
 relayout 1
 call get-field 12 0 0 0 -> 5 0
 relayout 0
@@ -2873,12 +2932,13 @@ call on-bottom 0 0 0 0 -> 0 0
 relayout 0
 call dimension 2b0 1d0 0 0 -> 0 0
 190 0
-152 pos-size 3001 3 3 688 464
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 3 0 0
+622 comp 5 3001 at 3 3 688 464
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 3 3 688 464
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 3 688 464
+622 comp 10 54 0 -> 0
 relayout 0
 call translate 100 fffffffffffffffb 0 0 -> 253 -8
 relayout 1
@@ -2894,35 +2954,36 @@ relayout 0
 call rect-visible ac 155 30 62 -> 1 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 3 3 688 464
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 3 688 464
+622 comp 10 54 0 -> 0
 relayout 0
 size 383 47
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 3 3 688 464
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 3 688 464
+622 comp 10 54 0 -> 0
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 3 3 688 464
+622 comp 4 3001 at 3 3 688 464
 relayout 0
 call adjust 0 0 0 0 -> 0 0
-152 pos-size 3001 3 3 688 464
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 3 688 464
+622 comp 10 54 0 -> 0
 relayout 1
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 3 3 688 464
-30 0 0 0 -> 0
+622 comp 4 3001 at 3 3 688 464
+622 comp 10 54 0 -> 0
 free
 seq 35
 start 248 289
 relayout 0
 call dimension 1b9 4d1 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 441 1233
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 441 1233
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field 13 ffffffffffffffcf 0 0 -> 0 0
 relayout 0
@@ -2931,15 +2992,15 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 441 1233
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 441 1233
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field 13 44 0 0 -> 0 0
 relayout 0
 call vert-offset 5b 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 -91 441 1233
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -91 441 1233
+622 comp 10 54 0 -> 0
 relayout 0
 scroller 5000 0
 call set-scroller 5000 0 0 0 -> 0 0
@@ -2948,27 +3009,28 @@ relayout 0
 call vert-offset 3e 0 0 0 -> 0 0
 190 0
 360 5000 0
-152 pos-size 3001 0 -62 441 1233
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -62 441 1233
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset 1d6 0 0 0 -> 0 0
 190 0
 360 5000 0
-152 pos-size 3001 0 -470 441 1233
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -470 441 1233
+622 comp 10 54 0 -> 0
 relayout 1
 call set-field 10 118 0 0 -> 0 0
 relayout 0
 call dimension 1ec 534 0 0 -> 0 0
 190 0
 360 5000 0
-152 pos-size 3001 0 -470 492 1332
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -470 441 1233
+622 comp 5 3001 at 0 -470 492 1332
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 0 0 0 0 -> 0 0
 360 5000 0
-152 pos-size 3001 0 -470 492 1332
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -470 492 1332
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 13 0 0 0 -> 68 0
 relayout 0
@@ -2982,14 +3044,14 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5000 0
-152 pos-size 3001 280 -470 492 1332
-30 0 0 0 -> 0
+622 comp 4 3001 at 280 -470 492 1332
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets 205 387 0 0 -> 0 0
 190 0
 360 5000 0
-152 pos-size 3001 -212 -903 492 1332
-30 0 0 0 -> 0
+622 comp 4 3001 at -212 -903 492 1332
+622 comp 10 54 0 -> 0
 free
 seq 36
 start 199 191
@@ -2999,12 +3061,12 @@ call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call get-field 2 0 0 0 -> 0 0
 relayout 0
@@ -3021,46 +3083,47 @@ draw 7001 10 0 0 0 0
 relayout 0
 call dimension 56 3b9 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 86 953
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 86 953
+622 comp 10 54 0 -> 0
 relayout 1
 wheel 0
 call wheel 8 0 0 0 -> 1 0
 349 8 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 86 953
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 86 953
+622 comp 10 54 0 -> 0
 relayout 1
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 86 953
+622 comp 4 3001 at 0 0 86 953
 relayout 0
 call vert-offset 3d8 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 -912 86 953
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -912 86 953
+622 comp 10 54 0 -> 0
 relayout 0
 wheel 0
 call wheel fffffffffffffff6 0 0 0 -> 1 0
 349 fffffffffffffff6 0 0 -> 0
 190 0
-152 pos-size 3001 0 -912 86 953
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -912 86 953
+622 comp 10 54 0 -> 0
 relayout 1
 call desired 0 0 0 0 -> 86 300
 relayout 0
 call on-bottom 0 0 0 0 -> 1 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 0 -912 86 953
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -912 86 953
+622 comp 10 54 0 -> 0
 relayout 0
 size 91 65
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 -888 86 953
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 -888 86 953
+622 comp 10 54 0 -> 0
 relayout 1
 call set-scrollbar 6000 0 0 0 -> 0 0
 363 0 0 0 -> 5065
@@ -3073,8 +3136,8 @@ call padding 1 3 3 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 1 -888 86 953
-30 0 0 0 -> 0
+622 comp 4 3001 at 1 -888 86 953
+622 comp 10 54 0 -> 0
 free
 seq 37
 start 149 30
@@ -3085,15 +3148,16 @@ wheel 0
 call wheel ffffffffffffffee 0 0 0 -> 1 0
 349 ffffffffffffffee 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call on-bottom 0 0 0 0 -> 0 0
 relayout 0
 call dimension 27c 530 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 636 1328
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 636 1328
+622 comp 10 54 0 -> 0
 relayout 0
 call set-scrollbar 6004 0 0 0 -> 0 0
 363 0 0 0 -> 5065
@@ -3106,8 +3170,8 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 0 0 636 1328
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 636 1328
+622 comp 10 54 0 -> 0
 relayout 1
 call paint 7001 0 0 0 -> 0 0
 368 7001 0 0 -> 0
@@ -3125,13 +3189,13 @@ relayout 0
 call offsets a 418 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 -10 -1048 636 1328
-30 0 0 0 -> 0
+622 comp 4 3001 at -10 -1048 636 1328
+622 comp 10 54 0 -> 0
 relayout 1
 call get-field 9 0 0 0 -> 10 0
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 -10 -1048 636 1328
+622 comp 4 3001 at -10 -1048 636 1328
 relayout 0
 size 211 335
 call size 0 0 0 0 -> 0 0
@@ -3139,20 +3203,21 @@ call size 0 0 0 0 -> 0 0
 365 0 0 0 -> 0
 190 0
 360 5065 0
-152 pos-size 3001 -10 -993 636 1328
-30 0 0 0 -> 0
+622 comp 4 3001 at -10 -993 636 1328
+622 comp 10 54 0 -> 0
 relayout 0
 call vert-offset 19e 0 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 -10 -414 636 1328
-30 0 0 0 -> 0
+622 comp 4 3001 at -10 -414 636 1328
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 27b 1c6 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 -10 -119 635 454
-30 0 0 0 -> 0
+622 comp 4 3001 at -10 -119 636 1328
+622 comp 5 3001 at -10 -119 635 454
+622 comp 10 54 0 -> 0
 relayout 0
 call paint 7000 0 0 0 -> 0 0
 368 7000 a 77 -> 0
@@ -3167,7 +3232,7 @@ seq 38
 start 36 333
 relayout 0
 call fit 11f 1b 0 0 -> 0 0
-45 11f 1b 0 -> 0
+622 comp 5 54 at 0 0 287 27
 relayout 0
 call get-field 10 0 0 0 -> 0 0
 relayout 1
@@ -3176,36 +3241,37 @@ relayout 0
 call rect-visible ffffffffffffffe4 21d 26 31 -> 0 0
 relayout 0
 call fit 17b ea 0 0 -> 0 0
-45 17b ea 0 -> 0
+622 comp 5 54 at 0 0 379 234
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 0 0
+622 comp 4 3001 at 0 0 0 0
 relayout 0
 size 4 237
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 226 44b 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 550 1099
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 550 1099
+622 comp 10 54 0 -> 0
 relayout 0
 size 251 82
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 550 1099
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 550 1099
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets 2bc ffffffffffffffa0 0 0 -> 0 0
 190 0
-152 pos-size 3001 -299 0 550 1099
-30 0 0 0 -> 0
+622 comp 4 3001 at -299 0 550 1099
+622 comp 10 54 0 -> 0
 relayout 0
 wheel 1
 call wheel 2c 0 0 0 -> 1 0
@@ -3221,19 +3287,20 @@ relayout 0
 call vert-offset e 0 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 -299 -14 550 1099
-30 0 0 0 -> 0
+622 comp 4 3001 at -299 -14 550 1099
+622 comp 10 54 0 -> 0
 relayout 0
 call adjust 1 0 0 0 -> 0 0
 360 5065 1
-152 pos-size 3001 -299 -14 550 1099
-30 0 0 0 -> 0
+622 comp 4 3001 at -299 -14 550 1099
+622 comp 10 54 0 -> 0
 relayout 0
 call dimension 317 14d 0 0 -> 0 0
 190 0
 360 5065 0
-152 pos-size 3001 -299 -14 791 333
-30 0 0 0 -> 0
+622 comp 4 3001 at -299 -14 550 1099
+622 comp 5 3001 at -299 -14 791 333
+622 comp 10 54 0 -> 0
 free
 seq 39
 start 386 235
@@ -3242,8 +3309,8 @@ call rect-visible 2ff 64 56 34 -> 0 0
 relayout 0
 call vert-offset 3a1 0 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 0 0
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 0 0
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field f 107 0 0 -> 0 0
 relayout 0
@@ -3252,42 +3319,44 @@ relayout 0
 call set-field 5 1bd 0 0 -> 0 0
 relayout 0
 call fit 50 1b7 0 0 -> 0 0
-45 139 1bd 0 -> 0
+622 comp 5 54 at 0 0 313 445
 relayout 0
 call delegate 0 0 0 0 -> 0 0
-152 pos-size 3001 0 0 313 445
+622 comp 4 3001 at 0 0 0 0
+622 comp 5 3001 at 0 0 313 445
 relayout 0
 call adjust 1 0 0 0 -> 0 0
-152 pos-size 3001 0 0 313 445
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 313 445
+622 comp 10 54 0 -> 0
 relayout 0
 call set-field 7 1e4 0 0 -> 0 0
 relayout 0
 call dimension 290 498 0 0 -> 0 0
 190 0
-152 pos-size 3001 0 0 656 1176
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 313 445
+622 comp 5 3001 at 0 0 656 1176
+622 comp 10 54 0 -> 0
 relayout 0
 size 33 319
 call size 0 0 0 0 -> 0 0
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 0 0 656 1176
-30 0 0 0 -> 0
+622 comp 4 3001 at 0 0 656 1176
+622 comp 10 54 0 -> 0
 relayout 0
 call offsets 11d 180 0 0 -> 0 0
 190 0
-152 pos-size 3001 -285 -384 656 1176
-30 0 0 0 -> 0
+622 comp 4 3001 at -285 -384 656 1176
+622 comp 10 54 0 -> 0
 relayout 0
 call padding 3 5 6 2 -> 0 0
 351
 3 0 0 0 -> 0
 365 0 0 0 -> 0
 190 0
-152 pos-size 3001 -282 -379 656 1176
-30 0 0 0 -> 0
+622 comp 4 3001 at -282 -379 656 1176
+622 comp 10 54 0 -> 0
 relayout 0
 call rect-visible 150 32f 91 46 -> 0 0
 relayout 0
@@ -3295,9 +3364,9 @@ wheel 0
 call wheel 1e 0 0 0 -> 1 0
 349 1e 0 0 -> 0
 190 0
-152 pos-size 3001 -282 -349 656 1176
-30 0 0 0 -> 0
+622 comp 4 3001 at -282 -349 656 1176
+622 comp 10 54 0 -> 0
 relayout 0
 call fit 1d 14e 0 0 -> 0 0
-45 299 49f 0 -> 0
+622 comp 5 54 at 0 0 665 1183
 free

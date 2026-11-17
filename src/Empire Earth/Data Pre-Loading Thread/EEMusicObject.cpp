@@ -19,6 +19,7 @@
 #include "ee/EEMedia.h"
 #include "EEDatabase.h"
 #include "ee/EEMusicObject.h"
+#include "ee/EEDbRecords.h"
 #include "ee/EETechTreeTechID.h"
 #include "ee/EERules.h"
 
@@ -26,87 +27,40 @@ std::vector<std::vector<EEMusicObject*>> EEMusicObject::sSongs;      // 0x4e8568
 std::vector<std::vector<EEMusicObject*>> EEMusicObject::sShuffled;
 URandomIntegers gMusicRandom;
 
-// One record of db\dbmusic.dat (0xc4 bytes, read whole; also what ReadNewMusic fills). Layout inferred.
-struct EEMusicRecord {
-    int32_t mUnusedDatabaseID;              // +0x000 the database row id (not read)
-    int32_t mUnusedIndex;                   // +0x004 the 0-based row index (not read)
-    char mLabel[100];                       // +0x008 the row name (the game never reads it; the text's label)
-    char mFileName[0x34];                   // +0x6c (a plain name; the song object appends ".sgt")
-    float mReverbGain;                      // +0xa0
-    float mReverbHighFreqRTRatio;           // +0xa4
-    float mReverbMix;                       // +0xa8
-    float mReverbTime;                      // +0xac
-    char _gapB0[5];
-    bool mInEpoch[14];                      // +0xb5..+0xc2
-    char _gapC3[1];
-};
-static_assert(sizeof(EEMusicRecord) == 196, "on-disk record: 196 bytes on every target");
-
-// Reads a song override from Data\Music\New Music.txt (file name, four reverb values; every epoch on);
-// returns 0 when the file was read
-long EEMusicObject::ReadNewMusic(EEMusicRecord* outRecord)
+// Reads a song override from Data\Music\New Music.txt (file name, four reverb values; every epoch on) into a dbmusic
+// record (ee_data tables.rs); returns 0 when the file was read
+long EEMusicObject::ReadNewMusic(unsigned char* outRecord)
 {
     FSFileSpec theDirectory;
     FSFileSpec theFile;
     char theName[0x100];
+    float theReverb[4];
     FILE* theHandle;
     theDirectory.SetVolume(gStartupVolume);
-    theDirectory.SetDirectory(gStartupDirectory + "Data\\Music\\");
+    theDirectory.SetDirectory(gStartupDirectory + "Data\Music\\");
     long theResult = theDirectory.GetFirstFile("New Music.txt", theFile);
     if (theResult != 0)
         return theResult;
     theResult = theFile.FOpen("r");
     if (theResult == 0) {
         theHandle = theFile;
-        fscanf(theHandle, "%s\n", theName);
-        sprintf(outRecord->mFileName, "%s", theName);
-        fscanf(theHandle, "%f\n", &outRecord->mReverbGain);
-        fscanf(theHandle, "%f\n", &outRecord->mReverbHighFreqRTRatio);
-        fscanf(theHandle, "%f\n", &outRecord->mReverbMix);
-        fscanf(theHandle, "%f\n", &outRecord->mReverbTime);
-        outRecord->mInEpoch[kTechEpochPrehistoric] = true;
-        outRecord->mInEpoch[kTechEpochStone] = true;
-        outRecord->mInEpoch[kTechEpochCopper] = true;
-        outRecord->mInEpoch[kTechEpochBronze] = true;
-        outRecord->mInEpoch[kTechEpochDark] = true;
-        outRecord->mInEpoch[kTechEpochMiddle] = true;
-        outRecord->mInEpoch[kTechEpochRenaissance] = true;
-        outRecord->mInEpoch[kTechEpochImperial] = true;
-        outRecord->mInEpoch[kTechEpochIndustrial] = true;
-        outRecord->mInEpoch[kTechEpochAtomicWW1] = true;
-        outRecord->mInEpoch[kTechEpochAtomicWW2] = true;
-        outRecord->mInEpoch[kTechEpochAtomicModern] = true;
-        outRecord->mInEpoch[kTechEpochDigital] = true;
-        outRecord->mInEpoch[kTechEpochNano] = true;
+        fscanf(theHandle, "%255s\n", theName);
+        for (int k = 0; k < 4; k++)
+            fscanf(theHandle, "%f\n", &theReverb[k]);
+        ee_data_new_music_record(theName, theReverb, outRecord);
         theResult = theFile.Close();
     }
     return theResult;
 }
 
-// Creates an unloaded song from its record (name + ".sgt", reverb, epochs; the space epoch copies nano's flag)
-EEMusicObject::EEMusicObject(EEMusicRecord* inRecord)
+// Creates an unloaded song from its record (name + ".sgt", reverb, epochs; the space epoch copies nano's flag: the
+// record and its copy are ee_data tables.rs')
+EEMusicObject::EEMusicObject(const unsigned char* inRecord)
 {
-    this->mFileName = inRecord->mFileName;
+    UString theName;
+    EEDbCopyName(theName, ee_data_music_from_record(inRecord, this));
+    this->mFileName = (const char*)theName;
     this->mFileName += ".sgt";
-    this->mReverbHighFreqRTRatio = inRecord->mReverbHighFreqRTRatio;
-    this->mReverbGain = inRecord->mReverbGain;
-    this->mReverbMix = inRecord->mReverbMix;
-    this->mReverbTime = inRecord->mReverbTime;
-    this->mInEpoch[kTechEpochPrehistoric] = inRecord->mInEpoch[kTechEpochPrehistoric];
-    this->mInEpoch[kTechEpochStone] = inRecord->mInEpoch[kTechEpochStone];
-    this->mInEpoch[kTechEpochCopper] = inRecord->mInEpoch[kTechEpochCopper];
-    this->mInEpoch[kTechEpochBronze] = inRecord->mInEpoch[kTechEpochBronze];
-    this->mInEpoch[kTechEpochDark] = inRecord->mInEpoch[kTechEpochDark];
-    this->mInEpoch[kTechEpochMiddle] = inRecord->mInEpoch[kTechEpochMiddle];
-    this->mInEpoch[kTechEpochRenaissance] = inRecord->mInEpoch[kTechEpochRenaissance];
-    this->mInEpoch[kTechEpochImperial] = inRecord->mInEpoch[kTechEpochImperial];
-    this->mInEpoch[kTechEpochIndustrial] = inRecord->mInEpoch[kTechEpochIndustrial];
-    this->mInEpoch[kTechEpochAtomicWW1] = inRecord->mInEpoch[kTechEpochAtomicWW1];
-    this->mInEpoch[kTechEpochAtomicWW2] = inRecord->mInEpoch[kTechEpochAtomicWW2];
-    this->mInEpoch[kTechEpochAtomicModern] = inRecord->mInEpoch[kTechEpochAtomicModern];
-    this->mInEpoch[kTechEpochDigital] = inRecord->mInEpoch[kTechEpochDigital];
-    this->mInEpoch[kTechEpochNano] = inRecord->mInEpoch[kTechEpochNano];
-    this->mInEpoch[kTechEpochSpace] = inRecord->mInEpoch[kTechEpochNano];
     this->mScoreID = -1;
     this->mState = 0;
     this->mIsLoading = false;
@@ -123,27 +77,22 @@ EEMusicObject::~EEMusicObject()
 // table's per-epoch flags, as in the original (the space age plays the nano age's songs).
 long EEMusicObject::LoadTable(FSFile* inFile)
 {
-    EEMusicRecord theRecord;
-    inFile->Open(kFileAccessRead);
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    unsigned long i;
-    EEMusicObject* theSong;
+    std::vector<unsigned char> theRecord(ee_data_music_record_size(), 0);
     EERules& theRules = EEGetRules();
     EEMusicObject::sSongs.assign(theRules.mEpochs.size(), std::vector<EEMusicObject*>());
     EEMusicObject::sShuffled.assign(theRules.mEpochs.size(), std::vector<EEMusicObject*>());
     gMusicRandom.SetSeed(TMGetTime());
-    long theResult = EEMusicObject::ReadNewMusic(&theRecord);
+    long theResult = EEMusicObject::ReadNewMusic(theRecord.data());
     if (theResult != 0) {
         std::vector<EEMusicObject*> theSongs;   // by row
-        theResult = inFile->Read(theCount);
-        if (theResult == 0) {
-            for (i = 0; i < theCount; i++) {
-                theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-                theSongs.push_back(new EEMusicObject(&theRecord));
-                theRules.SetMusicFromFlags((long)i, theRecord.mInEpoch, 14);   // (no-op when epochs.yaml has them)
-            }
-        }
+        theResult = EEDbReadRecords(inFile, ee_data_music_record_size(),
+            [](unsigned long) { return true; },
+            [&](unsigned long inIndex, const unsigned char* inRow) {
+                bool theFlags[14];
+                theSongs.push_back(new EEMusicObject(inRow));
+                ee_data_music_epoch_flags(inRow, theFlags);
+                theRules.SetMusicFromFlags((long)inIndex, theFlags, 14);   // (no-op when epochs.yaml has them)
+            });
         for (unsigned long j = 0; j < theRules.mEpochs.size(); j++) {
             for (long theRow : theRules.mEpochs[j].mMusic) {
                 if (theRow < 0 || (unsigned long)theRow >= theSongs.size())
@@ -155,14 +104,13 @@ long EEMusicObject::LoadTable(FSFile* inFile)
         for (EEMusicObject* s : theSongs)
             s->Dereference();
     } else {
-        theSong = new EEMusicObject(&theRecord);
+        EEMusicObject* theSong = new EEMusicObject(theRecord.data());
         for (unsigned long j = 0; j < EEMusicObject::sSongs.size(); j++) {   // the override plays in every epoch
             EEMusicObject::sSongs[j].push_back(theSong);
             theSong->Reference();
         }
         theSong->Dereference();
     }
-    inFile->Close();
     return theResult;
 }
 

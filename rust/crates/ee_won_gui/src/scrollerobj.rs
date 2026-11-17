@@ -14,6 +14,8 @@ use std::cell::RefCell;
 use std::ffi::c_void;
 
 use crate::barobj::EeWonScrollbar;
+use crate::compmem as mem;
+use crate::compobj::comp;
 use crate::guihost::{EeWonGuiField as F, EeWonGuiHostFn, EeWonGuiOp as Op};
 use crate::guiscroll::{self, EeWonScrollArea};
 
@@ -178,9 +180,9 @@ impl EeWonScroller {
         self.op(Op::BaseMouseDown, x as isize, y as isize, button as isize);
         if button == 0 {
             if self.op(Op::HasFocusChild, 0, 0, 0) == 0 {
-                self.op(Op::AreaRequestFocus, self.area(), 0, 0);
+                comp().request_focus(self.area());
             } else {
-                self.op(Op::RequestFocus, 0, 0, 0);
+                comp().request_focus(self.comp as isize);
             }
         }
     }
@@ -208,7 +210,7 @@ impl EeWonScroller {
 
     pub fn added_to_parent(&self) {
         let vert = self.st.borrow().vert;
-        if self.op(Op::ChildIsMine, vert, 0, 0) == 0 {
+        if mem::parent(vert) != self.comp as isize {
             self.add_controls();
         }
         self.op(Op::BaseAddedToParent, 0, 0, 0);
@@ -231,18 +233,18 @@ impl EeWonScroller {
         if s == 0 || self.area() == 0 {
             return false;
         }
-        let visible = self.op(Op::ChildIsVisible, s, 0, 0) != 0;
+        let visible = mem::is_visible(s);
         let a = self.area_numbers();
         let vertical = self.bar(s).is_some_and(|b| b.is_vertical());
         let setting = self.st.borrow().setting;
         match guiscroll::scrollbar_condition(condition, setting, visible, vertical, &a) {
             None => return false,
             Some(Some(v)) => {
-                self.op(Op::ChildSetVisible, s, v as isize, 0);
+                comp().v_set_visible(s, v);
             }
             Some(None) => {}
         }
-        visible != (self.op(Op::ChildIsVisible, s, 0, 0) != 0)
+        visible != mem::is_visible(s)
     }
 
     pub fn set_scrollbar_conditions(&self, horizontal: i32, vertical: i32) {
@@ -256,7 +258,7 @@ impl EeWonScroller {
         changed = self.enable_scrollbar(vert, vertical) || changed;
         self.st.borrow_mut().setting = true;
         if changed {
-            self.op(Op::Invalidate, 0, 0, 0);
+            comp().v_invalidate(self.comp as isize);
             self.op(Op::VirtSizeChanged, 0, 0, 0);
         }
         self.st.borrow_mut().setting = false;
@@ -296,8 +298,8 @@ impl EeWonScroller {
                 b.set_position(self.area_get(F::VertOffset));
             }
             b.layout_thumb(!because_of_scroller);
-            self.op(Op::ChildSetEnabled, vert, enabled as isize, 0);
-            self.op(Op::ChildInvalidate, vert, 0, 0);
+            comp().v_set_enabled(vert, enabled);
+            comp().v_invalidate(vert);
         }
         let horz = self.st.borrow().horz;
         if let Some(b) = self.bar(horz) {
@@ -307,8 +309,8 @@ impl EeWonScroller {
                 b.set_position(self.area_get(F::HorzOffset));
             }
             b.layout_thumb(!because_of_scroller);
-            self.op(Op::ChildSetEnabled, horz, enabled as isize, 0);
-            self.op(Op::ChildInvalidate, horz, 0, 0);
+            comp().v_set_enabled(horz, enabled);
+            comp().v_invalidate(horz);
         }
         let (h, v) = {
             let s = self.st.borrow();

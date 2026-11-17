@@ -10,7 +10,11 @@ class FSFileSpec;
 class GETexture;
 class UIHotKey;
 
-class EEButtonObject {                      // RTTI, vtable 0x43e4f4 (two slots), sizeof 0x3c, ctor 0xd5498
+#include "rust/data/tables.h"
+
+// RTTI, vtable 0x43e4f4 (two slots), ctor 0xd5498. The record's members (mPosition, mHotKeyIndex, mColumn, mRow,
+// mID) are EeDataButtonFields (rust/crates/ee_data tables.rs: the record and its copy), the base.
+class EEButtonObject : public EeDataButtonFields {
 public:
     EEButtonObject();
     virtual ~EEButtonObject();              // +0x00 (??_G 0xd54c3)
@@ -43,11 +47,6 @@ public:
     GETexture* mTexture;                    // +0x14 (referenced: GETexture::Dereference in the dtor)
     float mCellU;                           // +0x18
     float mCellV;                           // +0x1c
-    long mPosition;                         // +0x20 (+0x20..+0x30 untouched by the ctor)
-    long mHotKeyIndex;                      // +0x24
-    long mColumn;                           // +0x28
-    long mRow;                              // +0x2c
-    long mID;                               // +0x30
     long mMediaCount;                       // +0x34 the reference count
     volatile bool mIsLoading;               // +0x38 loading (spun on with Sleep(1))
     // 0x8e60e8 (guard byte 0x8e60e4 bit 1). Only EEButtonObject.cpp sees it: its $E number would renumber the

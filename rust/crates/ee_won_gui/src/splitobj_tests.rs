@@ -1,12 +1,14 @@
 //! The Rust Splitter against the original's (`golden_splitobj.txt`, printed by `tests/won/won_splitobj_test.cpp
 //! --print` over the original Splitter's methods and a scripted host): each sequence is replayed op for op, the
-//! replay host answering from the golden.
+//! replay host answering from the golden. The components are blocks (compmem's map world): a "comp" line makes one,
+//! the splitter's own is 0x54; the world's SetEnabled and SetVisible set their flags as the driver's do.
 
 use std::cell::RefCell;
 use std::ffi::c_void;
 
-use crate::guictl::EeWonRect4;
-use crate::guihost::{EeWonGuiField as F, EeWonGuiOp as Op};
+use crate::compmem::{self, map_block};
+use crate::compobj::{host_world, EeWonComp as K};
+use crate::guihost::EeWonGuiOp as Op;
 use crate::splitobj::{EeWonSplitCall as C, EeWonSplitter};
 
 const GOLDEN: &str = include_str!("golden_splitobj.txt");
@@ -14,8 +16,6 @@ const GOLDEN: &str = include_str!("golden_splitobj.txt");
 struct Replay {
     lines: Vec<String>,
     at: usize,
-    width: i32,
-    height: i32,
     failure: Option<String>,
 }
 
@@ -27,7 +27,37 @@ fn with<R>(f: impl FnOnce(&mut Replay) -> R) -> R {
     REPLAY.with(|r| f(r.borrow_mut().as_mut().expect("a replay")))
 }
 
+/// A block of the world (`comp ID W H BITS EXTRA`).
+fn make_comp(words: &[&str]) {
+    let id = hex(words[0]);
+    // SAFETY: the map world's block, no other reference to it live
+    let m = unsafe { &mut *map_block(id) };
+    *m = compmem::EeWonCompMembers::default();
+    m.bounds.width = words[1].parse().unwrap_or(0);
+    m.bounds.height = words[2].parse().unwrap_or(0);
+    m.bits = hex(words[3]) as i32;
+    m.extra = hex(words[4]);
+}
+
+/// The world's blocks made before the next op line.
+fn take_comps() {
+    loop {
+        let l = with(|r| r.lines.get(r.at).cloned().unwrap_or_default());
+        let Some(rest) = l.strip_prefix("comp ") else { return };
+        with(|r| r.at += 1);
+        make_comp(&rest.split_whitespace().collect::<Vec<_>>());
+    }
+}
+
+fn set_self_size(w: i32, h: i32) {
+    // SAFETY: the map world's block of the splitter
+    let m = unsafe { &mut *map_block(0x54) };
+    m.bounds.width = w;
+    m.bounds.height = h;
+}
+
 fn expect(want: &str) -> Vec<String> {
+    take_comps();
     let line = with(|r| {
         let l = r.lines.get(r.at).cloned().unwrap_or_default();
         r.at += 1;
@@ -47,20 +77,20 @@ fn expect(want: &str) -> Vec<String> {
 unsafe extern "C" fn replay_host(_comp: *mut c_void, op: Op, a: isize, b: isize, c: isize, _d: isize) -> isize {
     let n = op as u32;
     match op {
-        Op::Get => with(|r| {
-            if a == F::Width as isize {
-                r.width
-            } else if a == F::Height as isize {
-                r.height
-            } else {
-                0
-            }
-        }) as isize,
-        Op::ChildSetPosSize => {
-            // SAFETY: the object passes a live rectangle
-            let q = unsafe { *(b as *const EeWonRect4) };
-            expect(&format!("{n} pos-size {a:x} {} {} {} {}", q.x, q.y, q.w, q.h));
+        Op::Comp if a == K::VPositionChanged as isize || a == K::VSizeChanged as isize => {
+            let r = compmem::bounds(b);
+            expect(&format!("{n} comp {a} {b:x} at {} {} {} {}", r.x, r.y, r.width, r.height));
             0
+        }
+        Op::Comp => {
+            let w = expect(&format!("{n} comp {a} {b:x} {c} -> "));
+            // the world's SetEnabled and SetVisible (the driver's rule)
+            if a == K::VSetEnabled as isize {
+                compmem::set_flags(b, 0x80, c == 0);
+            } else if a == K::VSetVisible as isize {
+                compmem::set_flags(b, 0x1, c == 0);
+            }
+            w.first().map_or(0, |x| hex(x))
         }
         _ => {
             let w = expect(&format!("{n} {a:x} {b:x} {c} -> "));
@@ -76,10 +106,10 @@ fn hex(w: &str) -> isize {
 
 fn replay(lines: &[String]) -> Option<String> {
     let start: Vec<i32> = lines[0].split_whitespace().skip(1).filter_map(|w| w.parse().ok()).collect();
-    REPLAY.with(|r| {
-        *r.borrow_mut() =
-            Some(Replay { lines: lines.to_vec(), at: 1, width: start[0], height: start[1], failure: None })
-    });
+    REPLAY.with(|r| *r.borrow_mut() = Some(Replay { lines: lines.to_vec(), at: 1, failure: None }));
+    let _world = compmem::map_world();
+    let _host = host_world(Some(replay_host));
+    set_self_size(start[0], start[1]);
     let holder = Box::new(EeWonSplitter::new(0x54 as *mut c_void, Some(replay_host)));
     let t: &EeWonSplitter = &holder;
     loop {
@@ -93,6 +123,10 @@ fn replay(lines: &[String]) -> Option<String> {
         });
         if done || line == "free" {
             break;
+        }
+        if let Some(rest) = line.strip_prefix("comp ") {
+            make_comp(&rest.split_whitespace().collect::<Vec<_>>());
+            continue;
         }
         let Some(rest) = line.strip_prefix("call ") else {
             return Some(format!("unexpected golden line '{line}'"));
@@ -114,10 +148,7 @@ fn replay(lines: &[String]) -> Option<String> {
             "unmax" => C::UnMaxQuadrant,
             "set-pos" => C::SetSplitterPos,
             "size" => {
-                with(|r| {
-                    r.width = a as i32;
-                    r.height = b as i32;
-                });
+                set_self_size(a as i32, b as i32);
                 C::SizeChanged
             }
             "down" => C::MouseDown,
@@ -173,7 +204,7 @@ fn golden_splitobj_replays() {
 fn a_changed_answer_is_seen() {
     let seqs = sequences();
     let (s, k) =
-        seqs.iter().find_map(|s| s.iter().position(|l| l.contains(" pos-size ")).map(|k| (s, k))).expect("a placement");
+        seqs.iter().find_map(|s| s.iter().position(|l| l.contains(" at ")).map(|k| (s, k))).expect("a placement");
     let mut m = s.clone();
     let head = m[k].rsplit_once(' ').map_or(String::new(), |(h, _)| h.to_string());
     m[k] = format!("{head} -77");

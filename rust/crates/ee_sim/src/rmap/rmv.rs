@@ -1535,6 +1535,185 @@ pub unsafe extern "C" fn ee_rmap_script_free(script: *mut EeRmapScript) {
     }
 }
 
+// ---------------------------------------------------------------------------------------------- the generator list
+
+/// What `EERandomMap::Initialize` reads from one `.rmv` file for the generator list.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ScriptGenerator {
+    /// The generator's name: the file name before its (last, any case) `.rmv`.
+    pub name: Vec<u8>,
+    /// The `rmap` PIM the script names (`UseMapGenerator "<module>"`; the last such line wins).
+    pub module: Vec<u8>,
+    /// `StringTableID <id>`: the display name's string id (the last such line; a value that does not parse keeps the
+    /// one before, 0 at first).
+    pub string_id: Option<i32>,
+}
+
+/// `EERandomMap::Initialize`'s read of a script: its lines as `fgets` with a 0x400 buffer gave them (at most 1,023
+/// bytes, up to and including a newline, cut at a NUL), each split on `"` for `UseMapGenerator` and nested-tokenized
+/// (`" \t\n,"`, brackets `()`) for `StringTableID`. `None` without a `UseMapGenerator` line.
+pub fn script_generator(file: &[u8], text: &[u8]) -> Option<ScriptGenerator> {
+    const USE_MAP_GENERATOR: &[u8] = b"UseMapGenerator";
+    const STRING_TABLE_ID: &[u8] = b"StringTableID";
+    let mut found: Option<ScriptGenerator> = None;
+    let mut string_id: Option<i32> = None;
+    let mut at = 0;
+    while at < text.len() {
+        let mut end = at;
+        while end < text.len() && end - at < 0x3ff {
+            end += 1;
+            if text[end - 1] == b'\n' {
+                break;
+            }
+        }
+        let chunk = &text[at..end];
+        let line = chunk.iter().position(|&c| c == 0).map_or(chunk, |n| &chunk[..n]);
+        at = end;
+        let quoted = tokens(line, b"\"");
+        if quoted.len() >= 2 && quoted[0].starts_with(USE_MAP_GENERATOR) {
+            let lower = file.to_ascii_lowercase();
+            let cut = lower.windows(4).rposition(|w| w == b".rmv").unwrap_or(file.len());
+            found = Some(ScriptGenerator { name: file[..cut].to_vec(), module: quoted[1].clone(), string_id: None });
+        }
+        let words = nested_tokens(line, b" \t\n,");
+        if words.len() >= 2 && words[0].starts_with(STRING_TABLE_ID) {
+            string_id = Some(scan_long(&words[1]).unwrap_or(string_id.unwrap_or(0)));
+        }
+    }
+    found.map(|g| ScriptGenerator { string_id, ..g })
+}
+
+/// A unit's, terrain's or cliff's name as the scripts name it (`EERandomMap::InitializeValues`): its space-separated
+/// words joined; `None` for a name of spaces only.
+pub fn script_name(name: &[u8]) -> Option<Vec<u8>> {
+    let words = tokens(name, b" ");
+    (!words.is_empty()).then(|| words.concat())
+}
+
+/// [`script_generator`]'s answer for the C++: the name and module point into the handle's buffers.
+#[repr(C)]
+pub struct EeRmapScriptGenerator {
+    pub name: *const c_char,
+    pub name_length: usize,
+    pub module: *const c_char,
+    pub module_length: usize,
+    pub has_string_id: bool,
+    pub string_id: c_long,
+}
+
+/// [`script_generator`] over a file's name and text: false (and `out` untouched) without a generator; else `out`'s
+/// strings are valid until [`ee_rmap_script_generator_free`] of `*handle`.
+///
+/// # Safety
+/// `file` (`file_length` bytes) and `text` (`text_length`) are readable; `out` and `handle` writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_rmap_script_generator(
+    file: *const c_char,
+    file_length: usize,
+    text: *const c_char,
+    text_length: usize,
+    out: *mut EeRmapScriptGenerator,
+    handle: *mut *mut c_void,
+) -> bool {
+    let slice = |p: *const c_char, n: usize| {
+        // SAFETY: the caller's guarantee
+        if n == 0 {
+            &[][..]
+        } else {
+            unsafe { std::slice::from_raw_parts(p as *const u8, n) }
+        }
+    };
+    let Some(g) = script_generator(slice(file, file_length), slice(text, text_length)) else { return false };
+    let g = Box::new(g);
+    // SAFETY: the caller's guarantee
+    unsafe {
+        *out = EeRmapScriptGenerator {
+            name: g.name.as_ptr() as *const c_char,
+            name_length: g.name.len(),
+            module: g.module.as_ptr() as *const c_char,
+            module_length: g.module.len(),
+            has_string_id: g.string_id.is_some(),
+            string_id: g.string_id.unwrap_or(0) as c_long,
+        };
+        *handle = Box::into_raw(g) as *mut c_void;
+    }
+    true
+}
+
+/// Frees a [`ee_rmap_script_generator`] answer.
+///
+/// # Safety
+/// `handle` came from [`ee_rmap_script_generator`] and is freed once.
+#[no_mangle]
+pub unsafe extern "C" fn ee_rmap_script_generator_free(handle: *mut c_void) {
+    // SAFETY: the caller's guarantee
+    drop(unsafe { Box::from_raw(handle as *mut ScriptGenerator) });
+}
+
+/// [`script_name`] of `name` (`length` bytes) into `out` (room for `length` bytes); returns the joined length, or
+/// -1 for a name of spaces only.
+///
+/// # Safety
+/// `name` holds `length` bytes; `out` has room for `length`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_rmap_script_name(name: *const c_char, length: usize, out: *mut c_char) -> isize {
+    // SAFETY: the caller's guarantee
+    let text = if length == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(name as *const u8, length) } };
+    match script_name(text) {
+        Some(n) => {
+            // SAFETY: the joined name is no longer than the name
+            unsafe { std::ptr::copy_nonoverlapping(n.as_ptr(), out as *mut u8, n.len()) };
+            n.len() as isize
+        }
+        None => -1,
+    }
+}
+
+#[cfg(test)]
+mod generator_list_tests {
+    use super::*;
+
+    #[test]
+    fn a_script_names_its_generator_module_and_string() {
+        let text = b"// a map\r\nUseMapGenerator \"rmap_default\"\nStringTableID 1234 , x\nMapSize(3)\n";
+        let g = script_generator(b"Continental.RMV", text).unwrap();
+        assert_eq!(g.name, b"Continental");
+        assert_eq!(g.module, b"rmap_default");
+        assert_eq!(g.string_id, Some(1234));
+        assert_eq!(script_generator(b"x.rmv", b"StringTableID 5\n"), None);
+        // a string id that does not parse keeps the one before; the last generator line wins
+        let text = b"StringTableID 7\nStringTableID x\nUseMapGenerator \"b\"\nUseMapGenerator\"c\"";
+        let g = script_generator(b"a.rmv", text).unwrap();
+        assert_eq!((g.module.as_slice(), g.string_id), (&b"c"[..], Some(7)));
+        let g = script_generator(b"a.rmv", b"UseMapGenerator \"m\"\nStringTableID\n").unwrap();
+        assert_eq!(g.string_id, None);
+    }
+
+    #[test]
+    fn lines_are_fgets_chunks() {
+        // a key past the first 1,023 bytes of a line starts a chunk of its own
+        let mut text = vec![b'x'; 0x3ff];
+        text.extend_from_slice(b"UseMapGenerator \"late\"\n");
+        assert_eq!(script_generator(b"a.rmv", &text).unwrap().module, b"late");
+        let mut text = vec![b'x'; 0x3fe];
+        text.extend_from_slice(b"UseMapGenerator \"late\"\n");
+        assert_eq!(script_generator(b"a.rmv", &text), None);
+        // a NUL ends the line
+        assert_eq!(script_generator(b"a.rmv", b"\0UseMapGenerator \"m\"\n"), None);
+    }
+
+    #[test]
+    fn script_names_drop_their_spaces() {
+        assert_eq!(script_name(b"Grass  Rough (x)"), Some(b"GrassRough(x)".to_vec()));
+        assert_eq!(script_name(b" Space "), Some(b"Space".to_vec()));
+        assert_eq!(script_name(b"   "), None);
+        assert_eq!(script_name(b""), None);
+        let mut out = [0 as c_char; 8];
+        // SAFETY: 6 readable bytes, room for 6
+        assert_eq!(unsafe { ee_rmap_script_name(c"a b c ".as_ptr(), 6, out.as_mut_ptr()) }, 3);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

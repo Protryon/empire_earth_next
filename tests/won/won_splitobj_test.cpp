@@ -9,7 +9,15 @@
 // and without their own drag handles, invisible bars, maximise buttons, minimums, percentages, maximise and
 // restore, positions with and without remembering, size changes, the mouse on bars and panes, button events and
 // other events). The traces (every op with its arguments and answer) must be the same, and every reference the
-// splitter takes must be given back when it goes. The first 40 sequences and every later one that makes an op or a
+// splitter takes must be given back when it goes.
+//
+// WONGUI B round 3: the Rust splitter calls Component's methods itself (compobj.rs over the component host) and
+// reads the components' members in place (compmem.rs). The world's components are blocks (their bounds, flags and
+// control ids; the default cursor as the extra data's pointer), and the original statements make the calls the
+// C++ makes: a nonvirtual method (SetPosSize, SetComponentFlags, GetDefaultCursor) is compobj's, a virtual one
+// (SetEnabled, SetVisible, Invalidate, GetMouseChild) the component host's op, an inline member read (Width, Left,
+// IsVisible, ComponentFlagSet, mControlId) the block's. A new component's block is traced ("comp"), as are the
+// moves' bounds, so the Rust replay keeps the same blocks. The first 40 sequences and every later one that makes an op or a
 // call none before made are rust/crates/ee_won_gui/src/golden_splitobj.txt, which the Rust tests replay; `--print`
 // prints them.
 #include <stdio.h>
@@ -20,6 +28,8 @@
 #include <list>
 #include <map>
 #include <set>
+#include "rust/won_gui/compmem.h"
+#include "rust/won_gui/compobj.h"
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/splitobj.h"
@@ -36,11 +46,12 @@ static unsigned Rand() { sSeed = sSeed * 1103515245u + 12345u; return (sSeed >> 
 static unsigned R(unsigned n) { return n ? Rand() % n : 0; }
 
 struct HostComp {
-    int w, h, x, y;
-    bool visible, enabled, hasCursor, checked;
-    int flags, controlId, held;
+    EeWonCompMembers m; // the block compmem.rs reads (the extra data's pointer: the default cursor, 0 for none)
+    bool checked;
+    int held;
     intptr_t mouseChild;
 };
+typedef EeWonComp K;
 struct HostEvent {
     bool press;
     int controlId;
@@ -50,6 +61,7 @@ static std::map<intptr_t, HostComp> sComps;
 static std::map<intptr_t, HostEvent> sEvents;
 static intptr_t sNextId;
 static int sWidth, sHeight;
+static EeWonCompMembers sSelf; // the splitter's own block (its size)
 static intptr_t sMouseChild;
 static std::vector<std::string> sTrace;
 static std::set<int> sOpsMet;
@@ -57,12 +69,24 @@ static std::set<int> sOpsMet;
 static intptr_t NewComp()
 {
     HostComp c;
-    c.w = 2 + (int)R(12); c.h = 2 + (int)R(12); c.x = c.y = 0;
-    c.visible = R(6) != 0; c.enabled = true; c.hasCursor = R(4) == 0; c.checked = false;
-    c.flags = R(3) == 0 ? 0x20 : 0; c.controlId = 0; c.held = 0; c.mouseChild = 0;
+    memset(&c.m, 0, sizeof(c.m));
+    c.m.bounds.width = 2 + (int)R(12); c.m.bounds.height = 2 + (int)R(12);
+    if (R(6) == 0) c.m.bits |= 0x1; // invisible
+    c.m.extra = R(4) == 0 ? 0x5000 : 0; // a default cursor
+    if (R(3) == 0) c.m.bits |= 0x20;
+    c.checked = false; c.held = 0; c.mouseChild = 0;
     intptr_t id = 0x2000 + (++sNextId);
     sComps[id] = c;
     return id;
+}
+static EeWonCompMembers& Blk(intptr_t c) { return c == 0x54 ? sSelf : sComps[c].m; }
+static EeWonCompMembers* Resolve(intptr_t c) { return &Blk(c); }
+static void Line(const char* f, long long a, long long b, long long c, long long d, long long e);
+// a new component's block (the replay makes the same)
+static void CompLine(intptr_t id)
+{
+    const EeWonCompMembers& m = Blk(id);
+    Line("comp %llx %lld %lld %llx %llx", (long long)id, m.bounds.width, m.bounds.height, m.bits, (long long)m.extra);
 }
 
 static void Line(const char* f, long long a, long long b, long long c, long long d, long long e)
@@ -80,37 +104,36 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
     int n = (int)inOp;
     switch (inOp) {
     case Op::Get: return (Fd)a == Fd::Width ? sWidth : (Fd)a == Fd::Height ? sHeight : 0; // pure reads: not traced
-    case Op::ChildSetPosSize: {
-        const EeWonRect4* q = (const EeWonRect4*)b;
-        HostComp& k = sComps[a];
-        k.x = q->x; k.y = q->y; k.w = q->w; k.h = q->h;
-        char aLine[200];
-        snprintf(aLine, sizeof(aLine), "%d pos-size %llx %d %d %d %d", n, (long long)a, q->x, q->y, q->w, q->h);
-        sTrace.push_back(aLine);
-        return 0;
+    case Op::Comp: {
+        // the component host: a component's virtual or service (b the component)
+        sOpsMet.insert(1000 + (int)a);
+        EeWonCompMembers& m = Blk(b);
+        switch ((K)a) {
+        case K::VPositionChanged: case K::VSizeChanged:
+            Line("%lld comp %lld %llx at %lld %lld", n, (long long)a, (long long)b, m.bounds.x, m.bounds.y);
+            sTrace.back() += " " + std::to_string(m.bounds.width) + " " + std::to_string(m.bounds.height);
+            return 0;
+        // the world's SetEnabled and SetVisible: the flag (the replay keeps the same rule)
+        case K::VSetEnabled: if (c) m.bits &= ~0x80; else m.bits |= 0x80; break;
+        case K::VSetVisible: if (c) m.bits &= ~0x1; else m.bits |= 0x1; break;
+        case K::VMouseChild: r = b == 0x54 ? sMouseChild : sComps[b].mouseChild; break;
+        case K::Extra: r = m.extra; break; // the default cursor
+        default: break;
+        }
+        Line("%lld comp %lld %llx %lld -> %llx", n, (long long)a, (long long)b, (long long)c, (long long)r);
+        return r;
     }
-    case Op::ChildSetEnabled: sComps[a].enabled = b != 0; break;
-    case Op::ChildSetVisible: sComps[a].visible = b != 0; break;
-    case Op::ChildIsVisible: r = sComps[a].visible; break;
-    case Op::ChildWidth: r = sComps[a].w; break;
-    case Op::ChildHeight: r = sComps[a].h; break;
-    case Op::ChildLeft: r = sComps[a].x; break;
-    case Op::ChildTop: r = sComps[a].y; break;
     case Op::ChildHold: sComps[a].held++; break;
     case Op::ChildRelease: sComps[a].held--; break;
-    case Op::ChildFlagSet: r = (sComps[a].flags & b) != 0; break;
-    case Op::ChildSetFlags: if (c) sComps[a].flags |= (int)b; else sComps[a].flags &= ~(int)b; break;
-    case Op::ChildHasDefaultCursor: r = sComps[a].hasCursor; break;
-    case Op::ChildSetDefaultCursor: sComps[a].hasCursor = b != 0; break;
-    case Op::ChildMouseChild: r = sComps[a].mouseChild; break;
+    case Op::ChildSetDefaultCursor: sComps[a].m.extra = b != 0 ? 0x5000 + b : 0; break;
     case Op::AddChild: break;
-    case Op::MouseChild: r = sMouseChild; break;
-    case Op::ButtonControlId: r = sComps[a].controlId; break;
-    case Op::ButtonSetControlId: sComps[a].controlId = (int)b; break;
     case Op::ButtonSetCheck: sComps[a].checked = b != 0; break;
     case Op::ButtonIsChecked: r = sComps[a].checked; break;
-    case Op::NewDragComponent: r = NewComp(); sComps[r].flags = 0; sComps[r].hasCursor = false; break;
-    case Op::NewSizedComponent: r = NewComp(); sComps[r].w = sComps[r].h = (int)a; sComps[r].flags = 0; sComps[r].hasCursor = false; sComps[r].held = 1; break;
+    case Op::NewDragComponent: r = NewComp(); sComps[r].m.bits = 0; sComps[r].m.extra = 0; CompLine(r); break;
+    case Op::NewSizedComponent:
+        r = NewComp(); sComps[r].m.bounds.width = sComps[r].m.bounds.height = (int)a; sComps[r].m.bits = 0;
+        sComps[r].m.extra = 0; sComps[r].held = 1; CompLine(r);
+        break;
     case Op::EventIsButtonPress: r = sEvents[a].press; break;
     case Op::EventControlId: r = sEvents[a].controlId; break;
     case Op::EventButton: r = sEvents[a].button; break;
@@ -123,6 +146,13 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
 static intptr_t H(Op inOp, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0)
 {
     return ScriptedHost((void*)0x54, inOp, a, b, c, 0);
+}
+// a component's virtual (the component host's op, as the C++ dispatches it)
+static intptr_t HK(K k, intptr_t comp, intptr_t c = 0) { return ScriptedHost((void*)comp, Op::Comp, (intptr_t)k, comp, c, 0); }
+// a nonvirtual Component method (compobj's, over the component host)
+static intptr_t KC(intptr_t comp, EeWonCompCall k, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0)
+{
+    return ee_won_comp_call((void*)comp, ScriptedHost, k, a, b, c);
 }
 
 // ---- the original (Splitter.cpp; the base Container, its children and the events through the host)
@@ -171,13 +201,13 @@ struct Splitter {
         for (std::list<SplitterParam>::iterator i = this->mSplitterList.begin(); i != this->mSplitterList.end(); ++i)
             if (i->mDragComponent) H(Op::ChildRelease, i->mDragComponent);
     }
-    int Width() { return sWidth; }
-    int Height() { return sHeight; }
-    void SetPosSize(intptr_t c, const EeWonRect4& r) { H(Op::ChildSetPosSize, c, (intptr_t)&r); }
+    int Width() { return sSelf.bounds.width; }
+    int Height() { return sSelf.bounds.height; }
+    void SetPosSize(intptr_t c, const EeWonRect4& r) { int s[2] = {r.w, r.h}; KC(c, EeWonCompCall::SetPosSize, r.x, r.y, (intptr_t)s); }
 
     void RegisterMaxButton(intptr_t theButton, int thePosition)
     {
-        H(Op::ButtonSetControlId, theButton, thePosition + 100005);
+        Blk(theButton).control_id = thePosition + 100005; // theButton->mControlId
         H(Op::ChildHold, theButton); // mButtonList.push_back(SmartPtr)
         this->mButtonList.push_back(theButton);
     }
@@ -190,8 +220,8 @@ struct Splitter {
     {
         this->mSplitterList.push_back(SplitterParam(theSplitter, theType));
         SplitterParam& aParam = this->mSplitterList.back();
-        H(Op::ChildSetFlags, theDragComponent, ComponentFlag_ParentDrag, 1);
-        if (!H(Op::ChildHasDefaultCursor, theDragComponent)) {
+        KC(theDragComponent, EeWonCompCall::SetFlags, ComponentFlag_ParentDrag, 1);
+        if (KC(theDragComponent, EeWonCompCall::DefaultCursor) == 0) {
             switch (ee_won_gui_split_cursor(theType)) {
             case 1: H(Op::ChildSetDefaultCursor, theDragComponent, (intptr_t)EeWonGuiCursor::NorthSouthEastWest); break;
             case 2: H(Op::ChildSetDefaultCursor, theDragComponent, (intptr_t)EeWonGuiCursor::EastWest); break;
@@ -202,9 +232,9 @@ struct Splitter {
         aParam.mDragComponent = theDragComponent;
         H(Op::AddChild, theSplitter);
         if (this->mLeftRightSplitterWidth == 0 && (theType & Splitter_LeftRight))
-            this->mLeftRightSplitterWidth = (int)H(Op::ChildWidth, theSplitter);
+            this->mLeftRightSplitterWidth = Blk(theSplitter).bounds.width;
         if (this->mUpDownSplitterHeight == 0 && (theType & Splitter_UpDown))
-            this->mUpDownSplitterHeight = (int)H(Op::ChildHeight, theSplitter);
+            this->mUpDownSplitterHeight = Blk(theSplitter).bounds.height;
     }
     void AddSplitter(intptr_t c, int t) { this->AddSplitterPrv(c, t, c); }
     void AddComplexSplitter(intptr_t theContainer, int theType, intptr_t theDragComponent)
@@ -228,16 +258,16 @@ struct Splitter {
                              this->mUpDownSplitterHeight, this->mSplitX, this->mSplitY, &x, &y, &this->mLeftRightMax,
                              &this->mUpDownMax);
         for (std::list<intptr_t>::iterator i = this->mButtonList.begin(); i != this->mButtonList.end(); ++i) {
-            int aPosition = ee_won_gui_split_button_quadrant((int)H(Op::ButtonControlId, *i));
+            int aPosition = ee_won_gui_split_button_quadrant(Blk(*i).control_id);
             H(Op::ButtonSetCheck, *i, aPosition == thePosition);
         }
         for (std::list<SplitterParam>::iterator i = this->mSplitterList.begin(); i != this->mSplitterList.end(); ++i) {
-            if (i->mType & thePosition) H(Op::ChildSetEnabled, i->mDragComponent, 0);
-            else H(Op::ChildSetEnabled, i->mDragComponent, 1);
+            if (i->mType & thePosition) HK(K::VSetEnabled, i->mDragComponent, 0);
+            else HK(K::VSetEnabled, i->mDragComponent, 1);
         }
         for (std::list<Quadrant>::iterator i = this->mQuadrantList.begin(); i != this->mQuadrantList.end(); ++i) {
-            if (i->mPosition & thePosition) H(Op::ChildSetVisible, i->mComponent, 1);
-            else H(Op::ChildSetVisible, i->mComponent, 0);
+            if (i->mPosition & thePosition) HK(K::VSetVisible, i->mComponent, 1);
+            else HK(K::VSetVisible, i->mComponent, 0);
         }
         this->SetSplitterPos(x, y, false);
     }
@@ -246,9 +276,9 @@ struct Splitter {
         this->mHaveMaxQuadrant = false;
         this->mUpDownMax = this->mLeftRightMax = false;
         for (std::list<SplitterParam>::iterator i = this->mSplitterList.begin(); i != this->mSplitterList.end(); ++i)
-            H(Op::ChildSetEnabled, i->mDragComponent, 1);
+            HK(K::VSetEnabled, i->mDragComponent, 1);
         for (std::list<Quadrant>::iterator i = this->mQuadrantList.begin(); i != this->mQuadrantList.end(); ++i)
-            H(Op::ChildSetVisible, i->mComponent, 1);
+            HK(K::VSetVisible, i->mComponent, 1);
         int x = ee_won_gui_split_at(this->Width(), this->mLeftPercent, 0);
         int y = ee_won_gui_split_at(this->Height(), this->mTopPercent, 0);
         this->SetSplitterPos(x, y, false);
@@ -265,7 +295,7 @@ struct Splitter {
     void CalcSplitterPositions()
     {
         for (std::list<SplitterParam>::iterator i = this->mSplitterList.begin(); i != this->mSplitterList.end(); ++i) {
-            if (H(Op::ChildIsVisible, i->mComponent)) {
+            if (!(Blk(i->mComponent).bits & 0x1)) { // IsVisible()
                 EeWonRect4 r = ee_won_gui_split_bar(i->mType, this->Width(), this->Height(),
                                                     SplitOf(this->mSplitX, this->mSplitY, this->mSplitLeft,
                                                             this->mSplitRight, this->mSplitTop, this->mSplitBottom));
@@ -291,7 +321,7 @@ struct Splitter {
         }
         this->CalcSplitterPositions();
         this->CalcQuadrants();
-        H(Op::Invalidate);
+        HK(K::VInvalidate, 0x54);
     }
     void Virtual08()
     {
@@ -306,17 +336,17 @@ struct Splitter {
     void MouseDown(int x, int y, int theButton)
     {
         H(Op::BaseMouseDown, x, y, theButton);
-        intptr_t aMouseChild = H(Op::MouseChild);
+        intptr_t aMouseChild = HK(K::VMouseChild, 0x54);
         if (theButton != 0 || aMouseChild == 0)
             return;
         this->mLeftRightDrag = this->mUpDownDrag = false;
-        this->mDragX = x - (int)H(Op::ChildLeft, aMouseChild);
-        this->mDragY = y - (int)H(Op::ChildTop, aMouseChild);
-        intptr_t aGrandChild = H(Op::ChildMouseChild, aMouseChild);
+        this->mDragX = x - Blk(aMouseChild).bounds.x;
+        this->mDragY = y - Blk(aMouseChild).bounds.y;
+        intptr_t aGrandChild = HK(K::VMouseChild, aMouseChild);
         if (aGrandChild == 0) {
-            if (!H(Op::ChildFlagSet, aMouseChild, ComponentFlag_ParentDrag))
+            if (!(Blk(aMouseChild).bits & ComponentFlag_ParentDrag))
                 return;
-        } else if (!H(Op::ChildFlagSet, aGrandChild, ComponentFlag_ParentDrag))
+        } else if (!(Blk(aGrandChild).bits & ComponentFlag_ParentDrag))
             return;
         for (std::list<SplitterParam>::iterator i = this->mSplitterList.begin(); i != this->mSplitterList.end(); ++i) {
             if (i->mComponent == aMouseChild) {
@@ -329,18 +359,18 @@ struct Splitter {
     void MouseUp(int x, int y, int theButton)
     {
         H(Op::BaseMouseUp, x, y, theButton);
-        if (theButton != 0 || H(Op::MouseChild) == 0)
+        if (theButton != 0 || HK(K::VMouseChild, 0x54) == 0)
             return;
         this->mLeftRightDrag = this->mUpDownDrag = false;
     }
     void MouseDrag(int x, int y)
     {
         H(Op::BaseMouseDrag, x, y);
-        intptr_t aMouseChild = H(Op::MouseChild);
+        intptr_t aMouseChild = HK(K::VMouseChild, 0x54);
         if (aMouseChild == 0)
             return;
-        int aLeft = (int)H(Op::ChildLeft, aMouseChild);
-        int aTop = (int)H(Op::ChildTop, aMouseChild);
+        int aLeft = Blk(aMouseChild).bounds.x;
+        int aTop = Blk(aMouseChild).bounds.y;
         int aNewY;
         int aNewX = ee_won_gui_split_drag(x, y, aLeft, aTop, this->mDragX, this->mDragY,
                                           this->mLeftRightDrag && !this->mLeftRightMax,
@@ -398,16 +428,23 @@ static void Run(bool inRust)
     long long a = 0, b = 0, c = 0;
     // the host's side of the call (the same on both sides: the driver's stream)
     switch (k) {
-    case kQuadrant: a = NewComp(); b = kPositions[DR(8)]; break;
-    case kSplitter: a = NewComp(); b = kTypes[DR(7)]; sBars.push_back((intptr_t)a); break;
-    case kComplex: a = NewComp(); b = kTypes[DR(7)]; c = DR(2) ? NewComp() : 0; sBars.push_back((intptr_t)a); break;
+    case kQuadrant: a = NewComp(); CompLine(a); b = kPositions[DR(8)]; break;
+    case kSplitter: a = NewComp(); CompLine(a); b = kTypes[DR(7)]; sBars.push_back((intptr_t)a); break;
+    case kComplex:
+        a = NewComp(); CompLine(a); b = kTypes[DR(7)]; c = DR(2) ? NewComp() : 0;
+        if (c) CompLine(c);
+        sBars.push_back((intptr_t)a);
+        break;
     case kInvisible: a = kTypes[DR(7)]; b = 1 + DR(12); break;
-    case kButton: a = NewComp(); b = kPositions[DR(8)]; sComps[(intptr_t)a].checked = DR(2); sButtons.push_back((intptr_t)a); break;
+    case kButton: a = NewComp(); CompLine(a); b = kPositions[DR(8)]; sComps[(intptr_t)a].checked = DR(2); sButtons.push_back((intptr_t)a); break;
     case kMinLR: case kMinTB: a = DR(80); b = DR(80); break;
     case kPercent: a = DR(101); b = DR(101); break;
     case kMax: a = kPositions[DR(8)]; break;
     case kSetPos: a = (int)DR(sWidth + 40) - 20; b = (int)DR(sHeight + 40) - 20; c = DR(2); break;
-    case kSize: a = 20 + DR(400); b = 20 + DR(300); sWidth = (int)a; sHeight = (int)b; break;
+    case kSize:
+        a = 20 + DR(400); b = 20 + DR(300); sWidth = (int)a; sHeight = (int)b;
+        sSelf.bounds.width = sWidth; sSelf.bounds.height = sHeight;
+        break;
     case kDown: case kUp: case kDrag: {
         a = (int)DR(sWidth + 20) - 10; b = (int)DR(sHeight + 20) - 10; c = DR(4) == 0;
         unsigned w = DR(4);
@@ -420,7 +457,7 @@ static void Run(bool inRust)
         HostEvent e;
         e.press = DR(5) != 0;
         e.button = !sButtons.empty() && DR(4) != 0 ? sButtons[DR((unsigned)sButtons.size())] : 0;
-        e.controlId = e.button && DR(3) ? sComps[e.button].controlId : 100000 + (int)DR(20);
+        e.controlId = e.button && DR(3) ? sComps[e.button].m.control_id : 100000 + (int)DR(20);
         if (e.button && DR(2)) sComps[e.button].checked = !sComps[e.button].checked;
         a = 0x9000 + (long long)sEvents.size();
         sEvents[(intptr_t)a] = e;
@@ -490,6 +527,10 @@ static std::vector<std::string> RunSide(bool inRust, unsigned inSeq, int inCalls
     sWidth = 100 + (int)R(400);
     sHeight = 80 + (int)R(300);
     sMouseChild = 0;
+    memset(&sSelf, 0, sizeof(sSelf));
+    sSelf.bounds.width = sWidth; sSelf.bounds.height = sHeight;
+    ee_won_comp_members_resolver(Resolve);
+    ee_won_comp_host_world(ScriptedHost);
     char aLine[100];
     snprintf(aLine, sizeof(aLine), "start %d %d", sWidth, sHeight);
     sTrace.push_back(aLine);
