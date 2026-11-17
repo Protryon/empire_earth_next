@@ -37,6 +37,7 @@
 #include "rust/sim/scenario.h"
 #include "rust/sim/tech.h"
 #include "rust/sim/units.h"
+#include "rust/sim/world.h"
 #include "rust/ui/bgobj.h"
 #include "rust/ui/bgtableobj.h"
 #include "rust/ui/button.h"

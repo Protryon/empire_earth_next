@@ -455,6 +455,7 @@ void TilesOut(EeUnitsGoalIo* ioArgs, const U2DPoint<long>* inTiles, int inCount)
 }
 
 // one operation (EE_UNITS_GOAL_HOST_*) of a body: inA, inB the handles it names, ioArgs the rest
+// (the plain reads of a unit, its class, stats and player are Rust's views: rust_goal.rs read_unit)
 int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnitsGoalIo* ioArgs)
 {
     EEGoalContext* theContext = static_cast<EEGoalContext*>(inContext);
@@ -476,16 +477,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         else
             theUnit->Dereference();
         return 0;
-    case EE_UNITS_GOAL_HOST_UNIT_ID:
-        return (uint32_t)theUnit->mUnitID;
-    case EE_UNITS_GOAL_HOST_UNIT_TILE:
-        ioArgs->i[0] = theUnit->mTileX;
-        ioArgs->i[1] = theUnit->mTileY;
-        return 0;
-    case EE_UNITS_GOAL_HOST_UNIT_VALID:
-        return theUnit->mIsValid ? 1 : 0;
-    case EE_UNITS_GOAL_HOST_UNIT_COMMAND:
-        return theComplex->mCommand ? (int64_t)theComplex->mCommand->mType : 0;
     case EE_UNITS_GOAL_HOST_RESET_PATH_ATTEMPTS:
         ObjectOf<EEUnitGoal>(inA)->SetPathAttempts(0);
         return 0;
@@ -641,9 +632,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             EEUnitSet* theSet = gUnitSetManager.GetSet((long)ioArgs->i[0]);
             return theSet != NULL && theSet->Contains(theComplex->mUnitClass->mUnitType);
         }
-    case EE_UNITS_GOAL_HOST_STATS_RANGE:
-        ioArgs->f[0] = theComplex->mStats->mRange;
-        return 0;
     case EE_UNITS_GOAL_HOST_CONTACT_RANGE: {
             GE3DPoint theTarget;
             ObjectOf<EEUnit>(inB)->GetPosition(theTarget);
@@ -653,11 +641,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_DISTANCE_TO_UNIT:
         ioArgs->f[0] = theComplex->DistanceSquaredToUnit(ObjectOf<EEUnit>(inB));
         return 0;
-    case EE_UNITS_GOAL_HOST_UNIT_HEIGHT:
-        ioArgs->f[0] = theComplex->mHeight;
-        return 0;
-    case EE_UNITS_GOAL_HOST_HIT_POINTS:
-        return theUnit->mHitPoints;
     case EE_UNITS_GOAL_HOST_UNDETECTABLE: {
             EEUnit* theTarget = ObjectOf<EEUnit>(inB);
             return theTarget->mComplexUnit->mIsCloakable && theTarget->mComplexUnit->GetIsCloaked()
@@ -665,16 +648,10 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
                 && theComplex->mPlayer->mEnemies[theTarget->mPlayer->mPlayerID] != 0
                 && theTarget->mUnitClass->mCloakRadius == 0;
         }
-    case EE_UNITS_GOAL_HOST_COMPLEX_UNIT:
-        return Handle(theUnit->mComplexUnit);
 
     // the explore goal's
     case EE_UNITS_GOAL_HOST_PLAYER_HUMAN:
         return theComplex->mPlayer->IsHuman() ? 1 : 0;
-    case EE_UNITS_GOAL_HOST_PLAYER_SEES_ALL:
-        return theComplex->mPlayer->mSeesAll ? 1 : 0;
-    case EE_UNITS_GOAL_HOST_CONTAINER:
-        return Handle(theComplex->mContainer);
     case EE_UNITS_GOAL_HOST_GROUP_UNITS:
         return theComplex->mActiveGroup == NULL ? -1 : (int64_t)theComplex->mActiveGroup->GetNumUnits();
     case EE_UNITS_GOAL_HOST_PATH_AREA_BOUNDS: {
@@ -779,8 +756,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
                 theComplex->mPlayer->NoticeForeignUnit(theTarget);
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_UNIT_FAMILY:
-        return theComplex->mUnitClass->mFamily;
     case EE_UNITS_GOAL_HOST_OWNS_LIGHTHOUSE: {
             std::vector<EEUnit*> theUnits;
             EEGetPlayerUnitsOfType(kUnitTypeLighthouseAtAlexandria, theComplex->mPlayer->GetPlayerID(), theUnits);
@@ -788,15 +763,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         }
 
     // the unload transport's
-    case EE_UNITS_GOAL_HOST_UNLOAD_RANGE:
-        ioArgs->f[0] = theComplex->mUnitClass->mUnloadRange;
-        return 0;
-    case EE_UNITS_GOAL_HOST_CLASS_TYPE:
-        return theComplex->mUnitClass->mUnitType;
-    case EE_UNITS_GOAL_HOST_CARGO_COUNT:
-        return (uint32_t)theComplex->GetNumCargoUnits();
-    case EE_UNITS_GOAL_HOST_CARGO_CATEGORY:
-        return theComplex->mCargo[0]->mUnitClass->mCategory;
     case EE_UNITS_GOAL_HOST_TRANSPORT_KIND:
         return (EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass()) != NULL ? 1 : 0)
             | (EEUnitClassOfKind<EE_CLASS_KIND_AIRPLANE>(theComplex->GetUnitClass()) != NULL ? 2 : 0);

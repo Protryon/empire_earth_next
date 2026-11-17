@@ -1,5 +1,5 @@
 // New (port): the unit store's C++ side (ee/EEUnitStore.h; docs/RUST_PLAN.md R5b.4 leaf 5): the location's write
-// reports, the pointer members' places, the insert's seed, the removal, the box selection's pick, and the TEST ONLY consistency check and pick
+// reports, the insert's seed, the removal, the box selection's pick, and the TEST ONLY consistency check and pick
 // records. The records are Rust's
 // (rust/crates/ee_sim/src/units/store.rs).
 #include <windows.h>
@@ -70,20 +70,6 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
     }
 }
 
-// the pointer members' places and what the store reads behind them (store.rs EeUnitsStoreSlots), once
-static void SetSlots()
-{
-    EEUnitClass* theClass = reinterpret_cast<EEUnitClass*>(static_cast<uintptr_t>(0x10000));
-    EEUnitClassUpgrade* theStats = reinterpret_cast<EEUnitClassUpgrade*>(static_cast<uintptr_t>(0x10000));
-    EeUnitsStoreSlots theSlots = {offsetof(EEUnit, mUnitClass), offsetof(EEUnit, mComplexUnit),
-        offsetof(EEComplexUnit, mActiveGroup), offsetof(EEComplexUnit, mContainer), offsetof(EEComplexUnit, mCommand),
-        offsetof(EEComplexUnit, mGoalState), offsetof(EEComplexUnit, mHerd),
-        reinterpret_cast<uintptr_t>(static_cast<EeUnitsUnitClassFields*>(theClass)) - 0x10000,
-        offsetof(EEUnitGoal, mKind), offsetof(EEUnitGoal, mID), offsetof(EEUnitAction, mType), offsetof(EEUnit, mStats),
-        reinterpret_cast<uintptr_t>(static_cast<EeUnitsUnitClassUpgradeFields*>(theStats)) - 0x10000};
-    ee_units_store_set_slots(&theSlots);
-}
-
 // in the world's unit chain (gWorld.mUnits: x-sorted, through mTileNode; RTSUnit::Link puts the previous link, the
 // chain's head or a unit, in mPrev, RTSUnit::Unlink clears it)
 static bool OnMap(RTSUnit* inUnit)
@@ -142,8 +128,6 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
     outRecord.player = reinterpret_cast<uintptr_t>(inPlayer);
     outRecord.object_kind = inUnit->mObjectKind.mValue;
     outRecord.on_map = OnMap(inUnit) ? 1 : 0;
-    static bool sSlots = (SetSlots(), true);
-    (void)sSlots;
     if (inUnit->mObjectKind.mValue >= EE_OBJECT_UNIT)
         outRecord.stats = reinterpret_cast<uintptr_t>(static_cast<EEUnit*>(inUnit)->mStats);
     if (inUnit->mObjectKind.mValue == EE_OBJECT_COMPLEX_UNIT) {
