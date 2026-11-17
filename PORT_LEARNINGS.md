@@ -2228,3 +2228,31 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Units the deleted units emitted:** `EEComplexUnit::IsResearchQueued` (EECPUnitManager.cpp's range),
   `EEUnit::IsPathMarker` (EECPCivilizationManager.cpp's) and `RTSMapTileRun`'s two members (EECPWallManager.cpp's)
   moved to EECPEngineHelpers.cpp. The link names them as unresolved when they are missing.
+
+## Checkout-independent builds (2026-11-16)
+
+`tools/sim_bench.py --cache` keys a game on the EE-SIM exe's bytes, and every worktree builds its own exe, so each
+worktree replayed the baselines the others had cached. Two checkouts of the same commit gave different bytes for
+three reasons (found by diffing the two exes section by section, then the PDBs):
+- **The link time**: the COFF header's and the debug directory's time stamps. `/Brepro` writes a hash of the image
+  there instead.
+- **The PDB's path** in the debug directory (the CodeView record), whose length also moved everything after it in
+  .rdata (so .text's RIP-relative displacements and every .pdata entry differed too). `/PDBALTPATH:%_PDB%` writes the
+  file name only; a debugger looks for it beside the exe first.
+- **The PDB's GUID**, which lld derives from a hash of the PDB, and the PDB named the checkout: every object's path
+  (its module records), the archives' member paths and the linker's command line and folder. The link now gets every
+  input relative to its folder (`build.py relative()`, also in exeimg.lib's response file) and
+  `/PDBSOURCEPATH:C:\EEX\out\exe` makes them absolute against a fixed name.
+- **The anonymous namespaces' names**: the MSVC ABI mangles them `?A0x<hash>`, the hash of the main source file's
+  name as it was given to the compiler (clang's MicrosoftMangle; no `-fmacro-prefix-map`/`-ffile-prefix-map` applies
+  to it), and the RTTI type names of their polymorphic classes are strings in the exe. clang-cl now runs in the
+  staging root's parent and gets the unit as `eex\...` (a third-party unit compiled in place as `src\...` from the
+  checkout); `-fmacro-prefix-map=eex=C:\EEX` keeps `__FILE__` reading `C:\EEX\...` as before. A test profile's
+  rewritten copy of a unit had the compiler's process and thread ids in its name; it is named by its object now.
+
+Proof: the same commit built in two worktrees whose paths differ in length (`empire_earth_next-benchtools`,
+`empire_earth_next-bt2`, each with its own SDL3 build) gives byte-identical EE-SIM.exe, EE-AOC.exe and their PDBs, and the same for the test profile's EE-AOC.exe;
+a game (seeds 2 and 3, 45 minutes, classic_lua against Age of AI) plays identically on the exe of before and after
+(`tools/sim_compare.py`: traces and reports identical). The PDB still resolves the game's functions
+(`llvm-symbolizer --obj=EE-SIM.exe` from another folder finds `EEPhysics::Tick`). EE-SIM.exe built from the same
+commit now has the same cache key in every worktree.

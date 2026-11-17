@@ -53,7 +53,7 @@ def main():
     objdir = (pathlib.Path(a.out) / "obj").resolve()
     rsp = pathlib.Path(a.out) / "exe" / "link.rsp"   # the objects the exe really links (obj/ keeps stale ones)
     linked = [pathlib.Path(ln.strip().strip('"')) for ln in rsp.read_text().splitlines() if ln.strip()]
-    linked = [p if p.is_absolute() else rsp.parent / p for p in linked]
+    linked = [p if p.is_absolute() else (rsp.parent / p).resolve() for p in linked]   # (build.py: relative)
     variants = collections.defaultdict(lambda: collections.defaultdict(list))
     for obj in sorted(p for p in linked if p.suffix.lower() == ".obj" and p.is_relative_to(objdir)):
         mod = obj.relative_to(objdir).parts[0]
