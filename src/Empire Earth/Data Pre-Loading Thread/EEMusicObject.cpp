@@ -24,8 +24,6 @@
 #include "ee/EETechTreeTechID.h"
 #include "ee/EERules.h"
 
-std::vector<std::vector<EEMusicObject*>> EEMusicObject::sSongs;      // 0x4e8568 (per epoch)
-std::vector<std::vector<EEMusicObject*>> EEMusicObject::sShuffled;
 URandomIntegers gMusicRandom;
 
 // Reads a song override from Data\Music\New Music.txt (file name, four reverb values; every epoch on) into a dbmusic
@@ -78,8 +76,7 @@ long EEMusicObject::LoadTable(FSFile* inFile)
 {
     std::vector<unsigned char> theRecord(ee_data_music_record_size(), 0);
     EERules& theRules = EEGetRules();
-    EEMusicObject::sSongs.assign(theRules.mEpochs.size(), std::vector<EEMusicObject*>());
-    EEMusicObject::sShuffled.assign(theRules.mEpochs.size(), std::vector<EEMusicObject*>());
+    ee_data_songs_reset(theRules.mEpochs.size());   // the songs by epoch: ee_data tables.rs
     gMusicRandom.SetSeed(TMGetTime());
     long theResult = EEMusicObject::ReadNewMusic(theRecord.data());
     if (theResult != 0) {
@@ -96,7 +93,7 @@ long EEMusicObject::LoadTable(FSFile* inFile)
             for (long theRow : theRules.mEpochs[j].mMusic) {
                 if (theRow < 0 || (unsigned long)theRow >= theSongs.size())
                     continue;
-                EEMusicObject::sSongs[j].push_back(theSongs[theRow]);
+                ee_data_songs_add(j, theSongs[theRow]);
                 theSongs[theRow]->Reference();
             }
         }
@@ -104,8 +101,8 @@ long EEMusicObject::LoadTable(FSFile* inFile)
             s->Dereference();
     } else {
         EEMusicObject* theSong = new EEMusicObject(theRecord.data());
-        for (unsigned long j = 0; j < EEMusicObject::sSongs.size(); j++) {   // the override plays in every epoch
-            EEMusicObject::sSongs[j].push_back(theSong);
+        for (unsigned long j = 0; j < theRules.mEpochs.size(); j++) {   // the override plays in every epoch
+            ee_data_songs_add(j, theSong);
             theSong->Reference();
         }
         theSong->Dereference();
@@ -116,38 +113,14 @@ long EEMusicObject::LoadTable(FSFile* inFile)
 // Releases every song and empties all epoch song lists and shuffled lists
 void EEMusicObject::ClearAll()
 {
-    for (unsigned long i = 0; i < EEMusicObject::sSongs.size(); i++) {
-        unsigned long theCount = EEMusicObject::sSongs[i].size();
-        for (unsigned long j = 0; j < theCount; j++)
-            EEMusicObject::sSongs[i][j]->Dereference();
-        EEMusicObject::sSongs[i].clear();
-        EEMusicObject::sShuffled[i].clear();
-    }
+    ee_data_songs_clear([](void* inSong) { static_cast<EEMusicObject*>(inSong)->Dereference(); });
 }
 
 // Returns the next song of the epoch's shuffled order, reshuffling when it runs out; NULL if the epoch has none
 EEMusicObject* EEMusicObject::GetRandom(long inEpoch)
 {
-    std::vector<EEMusicObject*> theSongs;
-    EEMusicObject* theResult;
-    if (inEpoch < 0 || (unsigned long)inEpoch >= EEMusicObject::sSongs.size())   // the rules' epochs
-        return NULL;
-    if (EEMusicObject::sShuffled[inEpoch].size() == 0 && EEMusicObject::sSongs[inEpoch].size() > 0) {
-        for (unsigned long i = 0; i < EEMusicObject::sSongs[inEpoch].size(); i++)
-            theSongs.push_back(EEMusicObject::sSongs[inEpoch][i]);
-        while (theSongs.size() != 0) {
-            long theIndex = gMusicRandom.Generate(0, theSongs.size() - 1);
-            EEMusicObject::sShuffled[inEpoch].push_back(theSongs[theIndex]);
-            theSongs.erase(theSongs.begin() + theIndex);
-        }
-    }
-    if (EEMusicObject::sShuffled[inEpoch].size() > 0) {
-        theResult = EEMusicObject::sShuffled[inEpoch].back();
-        EEMusicObject::sShuffled[inEpoch].pop_back();
-    } else {
-        theResult = NULL;
-    }
-    return theResult;
+    return static_cast<EEMusicObject*>(ee_data_songs_random(inEpoch,
+        [](void*, long inMinimum, long inMaximum) { return gMusicRandom.Generate(inMinimum, inMaximum); }, NULL));
 }
 
 // Loads the song's score on first use (counting later uses, which wait for the load); returns the load result

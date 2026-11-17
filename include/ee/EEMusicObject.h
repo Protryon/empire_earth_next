@@ -34,8 +34,6 @@ public:
 
     // each epoch's songs and their shuffled play order (0x4e8568 / 0x4e8470: [15] arrays in the original): one list
     // per epoch of the rules (epochs.yaml music, or dbmusic's flags; ee/EERules.h)
-    static std::vector<std::vector<EEMusicObject*>> sSongs;
-    static std::vector<std::vector<EEMusicObject*>> sShuffled;
 };
 
 #endif

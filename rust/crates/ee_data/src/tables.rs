@@ -2459,6 +2459,101 @@ mod list_tests {
     }
 }
 
+// ---- the songs by epoch (EEMusicObject::sSongs, sShuffled)
+
+/// Each epoch's songs and what is left of its shuffled order (the C++'s song objects, as addresses).
+static SONGS: std::sync::Mutex<(Vec<Vec<usize>>, Vec<Vec<usize>>)> = std::sync::Mutex::new((Vec::new(), Vec::new()));
+
+fn songs() -> std::sync::MutexGuard<'static, (Vec<Vec<usize>>, Vec<Vec<usize>>)> {
+    SONGS.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// `GetRandom`'s pick: the epoch's shuffled order, refilled when empty by drawing each next song from the songs not
+/// yet drawn (`draw(0, left - 1)`, the music's generator), then taken from its end; `None` for an epoch without songs.
+pub fn pick_song(songs: &[usize], shuffled: &mut Vec<usize>, mut draw: impl FnMut(c_long, c_long) -> c_long) -> Option<usize> {
+    if shuffled.is_empty() && !songs.is_empty() {
+        let mut left = songs.to_vec();
+        while !left.is_empty() {
+            let index = draw(0, left.len() as c_long - 1) as usize;
+            shuffled.push(left.remove(index));
+        }
+    }
+    shuffled.pop()
+}
+
+/// `LoadTable`'s start: `epochs` empty song lists.
+#[no_mangle]
+pub extern "C" fn ee_data_songs_reset(epochs: usize) {
+    let mut s = songs();
+    s.0 = vec![Vec::new(); epochs];
+    s.1 = vec![Vec::new(); epochs];
+}
+
+/// Adds a song to an epoch's list (the C++ takes its reference).
+#[no_mangle]
+pub extern "C" fn ee_data_songs_add(epoch: usize, song: *mut c_void) {
+    if let Some(list) = songs().0.get_mut(epoch) {
+        list.push(song as usize);
+    }
+}
+
+/// `GetRandom`: the epoch's next song (see [`pick_song`]); NULL for an epoch out of range or without songs.
+#[no_mangle]
+pub extern "C" fn ee_data_songs_random(
+    epoch: c_long,
+    draw: extern "C" fn(context: *mut c_void, minimum: c_long, maximum: c_long) -> c_long,
+    context: *mut c_void,
+) -> *mut c_void {
+    let mut s = songs();
+    let (all, shuffled) = &mut *s;
+    if epoch < 0 || epoch as usize >= all.len() {
+        return std::ptr::null_mut();
+    }
+    let e = epoch as usize;
+    pick_song(&all[e], &mut shuffled[e], |a, b| draw(context, a, b)).map_or(std::ptr::null_mut(), |p| p as *mut c_void)
+}
+
+/// `ClearAll`: `release` for each song of each epoch (in order), then every list empty (the epochs stay).
+#[no_mangle]
+pub extern "C" fn ee_data_songs_clear(release: extern "C" fn(song: *mut c_void)) {
+    let lists: Vec<Vec<usize>> = {
+        let mut s = songs();
+        let lists = s.0.iter_mut().map(std::mem::take).collect();
+        s.1.iter_mut().for_each(Vec::clear);
+        lists
+    };
+    for song in lists.into_iter().flatten() {
+        release(song as *mut c_void);
+    }
+}
+
+#[cfg(test)]
+mod song_tests {
+    use super::*;
+
+    #[test]
+    fn the_shuffle_draws_from_the_songs_left_and_plays_from_the_end() {
+        let mut shuffled = Vec::new();
+        let mut draws = Vec::new();
+        // always the last song left: the order reversed, then played from the end: the original order
+        let mut pick = |shuffled: &mut Vec<usize>| {
+            pick_song(&[10, 20, 30], shuffled, |a, b| {
+                draws.push((a, b));
+                b
+            })
+        };
+        assert_eq!(pick(&mut shuffled), Some(10));
+        assert_eq!(pick(&mut shuffled), Some(20));
+        assert_eq!(pick(&mut shuffled), Some(30));
+        assert_eq!(draws, vec![(0, 2), (0, 1), (0, 0)]);
+        assert_eq!(pick_song(&[], &mut shuffled, |_, _| 0), None);
+        // always the first: played back to front
+        let mut s = Vec::new();
+        assert_eq!(pick_song(&[1, 2, 3], &mut s, |a, _| a), Some(3));
+        assert_eq!(s, vec![1, 2]);
+    }
+}
+
 #[cfg(test)]
 mod tests_more {
     use super::*;

@@ -609,6 +609,20 @@ size_t ee_data_list_count(EeDataList list);
 /// Empties the list (its entries' pointers end).
 void ee_data_list_clear(EeDataList list);
 
+/// `LoadTable`'s start: `epochs` empty song lists.
+void ee_data_songs_reset(size_t epochs);
+
+/// Adds a song to an epoch's list (the C++ takes its reference).
+void ee_data_songs_add(size_t epoch, void *song);
+
+/// `GetRandom`: the epoch's next song (see [`pick_song`]); NULL for an epoch out of range or without songs.
+void *ee_data_songs_random(long epoch,
+                           long (*draw)(void *context, long minimum, long maximum),
+                           void *context);
+
+/// `ClearAll`: `release` for each song of each epoch (in order), then every list empty (the epochs stay).
+void ee_data_songs_clear(void (*release)(void *song));
+
 }  // extern "C"
 
 #endif  // EE_RUST_DATA_TABLES_H
