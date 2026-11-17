@@ -272,6 +272,22 @@ variants are undecided at 32 and the kept raids inconclusive at 64 (+0.047 a gam
 pre-merge raids after 19). For what the test leaves inconclusive the old rule stands: decide on 32 seeds, confirm on
 64.
 
+**The shared bench queue** (`--queue`; `tools/bench.py`). One daemon per machine plays every checkout's games on all
+cores (`--jobs`, default the cores less 2; `bench.py jobs N` changes it live). A bench with `--queue` starts it when
+none runs and submits its games; the daemon gives each slot its stage and ports (no `--port-base` to pick), plays a
+game whose cache key a queued or running game already has once for every bench that asks (and serves a finished one
+again for 6 hours), and starts games by `--priority` (`confirm` before `explore`), then first come. Each game is
+played by the requesting checkout's own tools and inputs, its key checked again when it starts. Killing a bench drops
+its queued games (its running ones finish, into the cache). Logs: the main checkout's `build/sim/queue/queue.log`,
+each game's files in `build/sim/queue/jobs/`.
+
+```
+python -I tools/sim_bench.py --name v1 --queue --priority confirm --seeds 2-65 --engine classic,ageofai --cache
+python -I tools/bench.py status          # running and queued games by requester
+python -I tools/bench.py pause           # before tools/gates.sh: the running games finish, none starts
+python -I tools/bench.py resume
+```
+
 `tools/sim.py` stages the data tree per slot (`build/sim/stage/<slot>`: hard links, the tree is only read) and passes
 EE-SIM.exe its options (`EE-SIM.exe --help`). `--engine` picks each computer seat's engine (classic,
 random, an AI's id such as boom, or next for the manifest's first AI; docs/AI_LUA_PLAN.md) through the lobby's engine

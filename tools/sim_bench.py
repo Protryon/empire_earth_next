@@ -12,6 +12,7 @@ results.json and results.csv (one row per run and player). With --repeat 2 the r
   python -I tools/sim_bench.py --name det --seeds 2 --repeat 2
   python -I tools/sim_bench.py --name eng --seeds 2-7 --engine "classic;classic,boom"   # the engine by seat
   python -I tools/sim_bench.py --name v1 --sprt --engine classic,ageofai --ai-scripts X --base-ai-scripts Y --cache
+  python -I tools/sim_bench.py --name v1 --queue --priority confirm --seeds 2-65 --engine classic,ageofai --cache
 
 --set DOC.KEY=VALUE applies to every run; each --vary DOC.KEY=V1,V2,... adds a dimension (one run per value).
 --env NAME=VALUE sets an environment variable for every run; each --env-vary NAME=V1,V2,... adds a dimension, e.g.
@@ -55,6 +56,11 @@ better) or --sprt-max seeds (default 64: inconclusive; the W-L-C stands as befor
 --sprt-alpha/--sprt-beta (0.05), --sprt-player (2). results.json's "sprt" has the verdict and the LLR by seed. With
 the cache the baseline's games are usually free: only the variant's are played.
 
+--queue plays the games on the shared bench queue (tools/bench.py: one daemon for every checkout, started when none
+runs): it picks the slots and ports (--port-base is not used), plays identical games (the same cache key) once for
+every bench that asks, and starts the games by --priority (confirm before explore), then first come. --jobs is then
+how many games an --sprt bench has out at once; a fixed bench submits all its games. Killing the bench drops its
+queued games. tools/bench.py pause stops the queue for the gates.
 """
 import argparse
 import concurrent.futures
@@ -101,7 +107,7 @@ def slots_index(slot):
 # ------------------------------------------------------------------------------------------------ the cache
 
 CACHE_FORMAT = 1
-NOT_INPUTS = {"EE_ORIG_SRC_ROOT", "EE_LLVM", "EE_XBUILD_OUT", "EE_SIM_CACHE"}   # build and tool settings, not the game's
+NOT_INPUTS = {"EE_ORIG_SRC_ROOT", "EE_LLVM", "EE_XBUILD_OUT", "EE_SIM_CACHE", "EE_BENCH_QUEUE_PORT"}   # tool settings
 _memo = {}
 _memo_lock = threading.Lock()
 
@@ -156,8 +162,15 @@ def tree_hash(data):
     return _memo[key]
 
 
-def cache_key(run, args, stage, opts):
-    """-> (the hash of everything a game's result depends on (the module doc), its parts)"""
+def doc_hash(path):
+    """a rules document as the stage holds it (sim.stage_tree: this checkout's data/db, LF line ends)"""
+    if not path.exists():
+        return "-"
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
+def cache_key(run, args, opts):
+    """-> (the hash of everything a game's result depends on (the module doc), its parts); opts: game_opts"""
     env = {k: v for k, v in run_env(run).items() if k.upper().startswith("EE_") and k.upper() not in NOT_INPUTS}
     scripts = env.pop("EE_AI_SCRIPTS", None)
     # the options without the run's own paths and ports (they do not change the game)
@@ -169,10 +182,10 @@ def cache_key(run, args, stage, opts):
             continue
         game_opts.append(opts[k])
         k += 1
-    db = stage / "Data" / "db"
+    db = ROOT / "data" / "db"   # (the stage's Data/db is a copy of it)
     docs = sorted({s.split(".", 1)[0] for s in run["sets"]})
     parts = dict(format=CACHE_FORMAT, exe=file_hash(run_exe(run, args).resolve()), tree=tree_hash(args.data),
-                 docs={d: file_hash(db / f"{d}.yaml") if (db / f"{d}.yaml").exists() else "-" for d in docs},
+                 docs={d: doc_hash(db / f"{d}.yaml") for d in docs},
                  scripts=folder_hash(scripts) if scripts else None, env=sorted(env.items()), opts=game_opts)
     return hashlib.sha256(json.dumps(parts, sort_keys=True).encode()).hexdigest(), parts
 
@@ -252,76 +265,187 @@ def lowered(command, args):
     return ["nice", "-n", "10", *command]
 
 
+def game_opts(run, args):
+    """EE-SIM's options for a run, without its own paths, ports and time-out (the cache key's opts)"""
+    opts = ["--seed", str(run["seed"]), "--ai", str(run["ai"]), "--difficulty", run["difficulty"],
+            "--map-size", run["size"], "--game-seconds", str(args.game_seconds),
+            "--sample-seconds", str(args.sample_seconds), "--pt-rate", str(args.pt_rate), "--ai-trace"]
+    if run["map"] != "-":
+        opts += ["--map-type", run["map"]]
+    if args.start_epoch:
+        opts += ["--lobby", "183=" + args.start_epoch]   # the lobby's starting epoch (late-start benches)
+    if run["cheats"] != "-":
+        opts += ["--cheats", run["cheats"]]
+    if run["personality"] != "-":
+        opts += ["--personality", run["personality"]]
+    if run["engine"] != "-":
+        opts += ["--engine", run["engine"]]
+    if args.human_defeat:
+        opts.append("--human-defeat")
+    for s in run["sets"]:
+        opts += ["--set", s]
+    return opts + list(args.sim_arg)
+
+
 def run_one(run, args, slots, out):
+    """a run in the next free slot of this bench (its ports: --port-base + 64 per slot)"""
     slot = slots.get()
     try:
-        stage = sim.prepare(args.data, slot, run["sets"])
-        cfg = stage / "config.yaml"
-        cfg.unlink(missing_ok=True)
-        rid = run["id"]
-        report, trace, err = out / f"{rid}.json", out / f"{rid}.trace.txt", out / f"{rid}.err.txt"
-        opts = ["--seed", str(run["seed"]), "--ai", str(run["ai"]), "--difficulty", run["difficulty"],
-                "--map-size", run["size"], "--game-seconds", str(args.game_seconds),
-                "--sample-seconds", str(args.sample_seconds), "--pt-rate", str(args.pt_rate),
-                "--report", str(report), "--trace", str(trace), "--ai-trace", "--wall-timeout", str(args.wall_timeout)]
-        if run["map"] != "-":
-            opts += ["--map-type", run["map"]]
-        if args.start_epoch:
-            opts += ["--lobby", "183=" + args.start_epoch]   # the lobby's starting epoch (late-start benches)
-        if run["cheats"] != "-":
-            opts += ["--cheats", run["cheats"]]
-        if run["personality"] != "-":
-            opts += ["--personality", run["personality"]]
-        if run["engine"] != "-":
-            opts += ["--engine", run["engine"]]
-        if args.human_defeat:
-            opts.append("--human-defeat")
-        for s in run["sets"]:
-            opts += ["--set", s]
-        opts += args.sim_arg
-        key = None
-        if args.cache_dir is not None and run["repeat"] == 0:
-            key, parts = cache_key(run, args, stage, opts)
-            meta = cache_get(args.cache_dir, key, report, trace, err)
-            if meta is not None:
-                rep = json.loads(report.read_text())
-                print(f"== {rid} [cache {key[:12]}]: {rep.get('outcome')} game s {rep.get('game_ms', 0) // 1000} "
-                      f"(played in {meta['wall']:.1f} s)", flush=True)
-                return dict(run, rc=meta["rc"], wall=meta["wall"], report=rep, lua_errors=meta["lua_errors"],
-                            cached=key)
-        # each slot its own TCP ports (sims picking a free pair at once could both take one, and the local server
-        # then failed to publish: a crash at the main menu)
-        if not any(o == "--port-offset" for o in args.sim_arg):
-            opts += ["--port-offset", str(args.port_base + 64 * slots_index(slot))]
-        t0 = time.monotonic()
-        env = run_env(run)
-        for attempt in range(2):   # one retry of a start-up fault: no report, or an error before the game ran
-            report.unlink(missing_ok=True)
-            with open(err, "w", encoding="utf-8") as f:
-                rc = subprocess.run(lowered(sim.command(run_exe(run, args), stage, opts, cfg), args), stdout=subprocess.DEVNULL,
-                                    stderr=f, env=env, **priority(args)).returncode
-            try:
-                rep = json.loads(report.read_text())
-            except (OSError, ValueError):
-                rep = dict(outcome="no-report")
-            # (the lobby's "slot 0 human: index #0 outside the combo's 0 lines": a menu race, the game never started)
-            if rep.get("outcome") not in ("no-report", "error") or rep.get("game_ms", 0) > 0:
-                break
-            print(f"== {rid} [slot {slot}]: rc {rc}, {rep.get('outcome')} {rep.get('error', '')} before the game"
-                  + (": retrying" if attempt == 0 else ""), flush=True)
-        wall = time.monotonic() - t0
-        # the next engine's script errors (EE-SIM writes "SIM next.error ..." to stderr: a seat without orders that step)
-        lua_errors = sum(1 for x in err.read_text(errors="replace").splitlines() if x.startswith("SIM next.error"))
-        print(f"== {rid} [slot {slot}]: rc {rc} {rep.get('outcome')} game s {rep.get('game_ms', 0) // 1000} "
-              f"in {wall:.1f} s (game part {rep.get('wall_seconds_game', 0):.1f} s)"
-              + (f", {lua_errors} script errors" if lua_errors else ""), flush=True)
-        if key is not None and rc == 0 and rep.get("outcome") not in ("no-report", "error", "wall-timeout") \
-                and trace.exists():
-            cache_put(args.cache_dir, key, parts, report, trace, err,
-                      dict(rc=rc, wall=round(wall, 2), lua_errors=lua_errors, run=rid))
-        return dict(run, rc=rc, wall=round(wall, 2), report=rep, lua_errors=lua_errors)
+        return play(run, args, slot, args.port_base + 64 * slots_index(slot), out)
     finally:
         slots.put(slot)
+
+
+def play(run, args, slot, port_offset, out, quiet=False):
+    """a run in a slot's stage with that port offset, its files in out -> its result (the cached game's, or the one
+    played; with --cache a finished game is stored)"""
+    rid = run["id"]
+    report, trace, err = out / f"{rid}.json", out / f"{rid}.trace.txt", out / f"{rid}.err.txt"
+    opts = game_opts(run, args)
+    key = None
+    if args.cache_dir is not None and run["repeat"] == 0:
+        key, parts = cache_key(run, args, opts)
+        meta = cache_get(args.cache_dir, key, report, trace, err)
+        if meta is not None:
+            rep = json.loads(report.read_text())
+            print(f"== {rid} [cache {key[:12]}]: {rep.get('outcome')} game s {rep.get('game_ms', 0) // 1000} "
+                  f"(played in {meta['wall']:.1f} s)", flush=True)
+            return dict(run, rc=meta["rc"], wall=meta["wall"], report=rep, lua_errors=meta["lua_errors"],
+                        cached=key)
+    stage = sim.prepare(args.data, slot, run["sets"])
+    cfg = stage / "config.yaml"
+    cfg.unlink(missing_ok=True)
+    opts += ["--report", str(report), "--trace", str(trace), "--wall-timeout", str(args.wall_timeout)]
+    # each slot its own TCP ports (sims picking a free pair at once could both take one, and the local server
+    # then failed to publish: a crash at the main menu)
+    if not any(o == "--port-offset" for o in args.sim_arg):
+        opts += ["--port-offset", str(port_offset)]
+    t0 = time.monotonic()
+    env = run_env(run)
+    for attempt in range(2):   # one retry of a start-up fault: no report, or an error before the game ran
+        report.unlink(missing_ok=True)
+        with open(err, "w", encoding="utf-8") as f:
+            rc = subprocess.run(lowered(sim.command(run_exe(run, args), stage, opts, cfg), args),
+                                stdout=subprocess.DEVNULL, stderr=f, env=env, **priority(args)).returncode
+        try:
+            rep = json.loads(report.read_text())
+        except (OSError, ValueError):
+            rep = dict(outcome="no-report")
+        # (the lobby's "slot 0 human: index #0 outside the combo's 0 lines": a menu race, the game never started)
+        if rep.get("outcome") not in ("no-report", "error") or rep.get("game_ms", 0) > 0:
+            break
+        print(f"== {rid} [slot {slot}]: rc {rc}, {rep.get('outcome')} {rep.get('error', '')} before the game"
+              + (": retrying" if attempt == 0 else ""), flush=True)
+    wall = time.monotonic() - t0
+    # the next engine's script errors (EE-SIM writes "SIM next.error ..." to stderr: a seat without orders that step)
+    lua_errors = sum(1 for x in err.read_text(errors="replace").splitlines() if x.startswith("SIM next.error"))
+    print(f"== {rid} [slot {slot}]: rc {rc} {rep.get('outcome')} game s {rep.get('game_ms', 0) // 1000} "
+          f"in {wall:.1f} s (game part {rep.get('wall_seconds_game', 0):.1f} s)"
+          + (f", {lua_errors} script errors" if lua_errors else ""), flush=True)
+    if key is not None and rc == 0 and rep.get("outcome") not in ("no-report", "error", "wall-timeout") \
+            and trace.exists():
+        cache_put(args.cache_dir, key, parts, report, trace, err,
+                  dict(rc=rc, wall=round(wall, 2), lua_errors=lua_errors, run=rid))
+    return dict(run, rc=rc, wall=round(wall, 2), report=rep, lua_errors=lua_errors)
+
+
+# ------------------------------------------------------------------------------------------------ the queue
+
+class QueueClient:
+    """--queue: the runs played by the shared daemon (tools/bench.py), which this starts when none runs. start(run)
+    -> a Future of run_one's result. A game found in --cache is taken here, without the daemon."""
+    ARGS = ("data", "game_seconds", "sample_seconds", "pt_rate", "wall_timeout", "start_epoch", "human_defeat",
+            "sim_arg", "normal_priority")
+
+    def __init__(self, args, out):
+        import bench
+        self.args, self.out = args, out
+        self.conn = bench.ensure_daemon()
+        self.lock = threading.Lock()
+        self.pending = {}   # request id -> (run, Future)
+        self.ids = itertools.count(1)
+        self.conn.send(dict(op="hello", who=f"{ROOT.name}:{args.name}", pid=os.getpid()))
+        hello = self.conn.recv()
+        print(f"queue: the daemon plays {hello['jobs']} games at once" + (" (PAUSED)" if hello["paused"] else ""),
+              flush=True)
+        self.environ = {k: v for k, v in os.environ.items()
+                        if k.upper().startswith("EE_") and k.upper() not in NOT_INPUTS}
+        threading.Thread(target=self.reader, daemon=True).start()
+
+    def start(self, run):
+        f = concurrent.futures.Future()
+        a = self.args
+        key = None
+        if run["repeat"] == 0:   # (the determinism check's repeats are always played)
+            key, _ = cache_key(run, a, game_opts(run, a))
+            if a.cache_dir is not None:
+                rid = run["id"]
+                meta = cache_get(a.cache_dir, key, self.out / f"{rid}.json", self.out / f"{rid}.trace.txt",
+                                 self.out / f"{rid}.err.txt")
+                if meta is not None:
+                    rep = json.loads((self.out / f"{rid}.json").read_text())
+                    print(f"== {rid} [cache {key[:12]}]: {rep.get('outcome')} game s {rep.get('game_ms', 0) // 1000} "
+                          f"(played in {meta['wall']:.1f} s)", flush=True)
+                    f.set_result(dict(run, rc=meta["rc"], wall=meta["wall"], report=rep,
+                                      lua_errors=meta["lua_errors"], cached=key))
+                    return f
+        spec = dict(tool=str(HERE / "bench.py"), who=f"{ROOT.name}:{a.name}", rid=run["id"], run=run,
+                    environ=self.environ, args=dict({k: getattr(a, k) for k in self.ARGS}, exe=str(a.exe.resolve()),
+                                                    data=a.data if a.data == "open" else str(pathlib.Path(a.data).resolve()),
+                                                    cache_dir=str(a.cache_dir) if a.cache_dir else None))
+        with self.lock:
+            n = next(self.ids)
+            self.pending[n] = (run, f)
+        self.conn.send(dict(op="submit", id=n, key=key, priority=a.priority, job=spec))
+        return f
+
+    def reader(self):
+        while True:
+            try:
+                msg = self.conn.recv()
+            except (OSError, ValueError):
+                msg = None
+            if msg is None:
+                with self.lock:
+                    for run, f in self.pending.values():
+                        f.set_exception(RuntimeError("the queue daemon went away (tools/bench.py status)"))
+                    self.pending.clear()
+                return
+            if msg.get("op") == "queued":
+                if msg.get("shared"):
+                    print(f"queue: {self.pending.get(msg['id'], ({'id': '?'},))[0]['id']} shares job {msg['job']} "
+                          f"({msg['state']})", flush=True)
+                continue
+            if msg.get("op") != "done":
+                continue
+            with self.lock:
+                run, f = self.pending.pop(msg["id"], (None, None))
+            if f is None:
+                continue
+            try:
+                f.set_result(self.finished(run, msg))
+            except Exception as e:   # noqa: BLE001 (handed to the bench's thread)
+                f.set_exception(e)
+
+    def finished(self, run, msg):
+        """a game the daemon finished: its files copied to this bench under the run's id -> run_one's result"""
+        res, rid, src = msg["result"], run["id"], pathlib.Path(msg["dir"])
+        for ext in (".json", ".trace.txt", ".err.txt"):
+            if (src / f"{msg['rid']}{ext}").exists():
+                shutil.copyfile(src / f"{msg['rid']}{ext}", self.out / f"{rid}{ext}")
+        try:
+            rep = json.loads((self.out / f"{rid}.json").read_text())
+        except (OSError, ValueError):
+            rep = dict(outcome="no-report", error=res.get("error", ""))
+        if res.get("error"):
+            print(f"== {rid} [queue]: {res['error']}", flush=True)
+        else:
+            print(f"== {rid} [queue {src.name}]: rc {res.get('rc')} {rep.get('outcome')} game s "
+                  f"{rep.get('game_ms', 0) // 1000} in {res.get('wall', 0):.1f} s", flush=True)
+        out = dict(run, rc=res.get("rc", -1), wall=res.get("wall", 0), report=rep, lua_errors=res.get("lua_errors", 0))
+        if res.get("cached"):
+            out["cached"] = res["cached"]
+        return out
 
 
 # ------------------------------------------------------------------------------------------------ the screening
@@ -495,6 +619,11 @@ def main():
     ap.add_argument("--screen-player", type=int, default=2)
     ap.add_argument("--screen-factor", type=float, default=2.0)
     ap.add_argument("--screen-margin", type=int, default=3)
+    ap.add_argument("--queue", action="store_true", help="play the games on the shared queue (tools/bench.py; see "
+                                                         "above); --jobs: how many this bench has out at once with "
+                                                         "--sprt")
+    ap.add_argument("--priority", choices=("confirm", "explore"), default="explore",
+                    help="--queue: confirmations go before explorations (default explore)")
     ap.add_argument("--base-exe", type=pathlib.Path, help="the baseline side's EE-SIM exe (see --sprt)")
     ap.add_argument("--base-ai-scripts", type=pathlib.Path, help="the baseline side's EE_AI_SCRIPTS (see --sprt)")
     ap.add_argument("--base-set", action="append", default=[], help="DOC.KEY=VALUE for the baseline side only")
@@ -580,12 +709,14 @@ def main():
 
     pool = concurrent.futures.ThreadPoolExecutor(max(1, a.jobs))
     start = lambda r: pool.submit(run_one, r, a, slots, out)
+    if a.queue:
+        start = QueueClient(a, out).start
 
     def play(batch):
         return [f.result() for f in [start(r) for r in batch]]
     screen = sprt = None
     if a.sprt:
-        results, sprt = sequential(runs, a, start, max(2, a.jobs))
+        results, sprt = sequential(runs, a, start, max(2, a.jobs))   # (--queue: --jobs games out at once)
     elif a.screen:
         first = {int(s, 0) for s in split(a.screen)}
         stage1 = [r for r in runs if r["seed"] in first]
