@@ -29086,3 +29086,58 @@ commit now has the same cache key in every worktree.
   Data/db, which the harness rewrites (`open_data.py sync`, e.g. for the gates) whenever main's data/ai or data/db
   moved on, although the stage replaces both with the requester's own data/ai and data/db (already in the key).
   The key now leaves them out (CACHE_FORMAT 2: every older entry misses once).
+
+## main merge 4: classic_lua's raids and water war, EE-SIM --games, checkout-independent builds (branch rust-mainmerge4, 2026-11-17)
+
+- **What came.** main 158e3be7 (33 commits since ff7db710, 24 files): classic_lua's raids from the pool, the push
+  when clearly ahead, the war on water and the island food (data/ai/classic_lua, lib/groups.lua; AI_RESEARCH
+  8.93-8.97); EE-SIM `--games` (several games a process) with the AI's per-game statics cleared at each new world
+  (EECPNewGame from EEWorld::StartGame); the shared bench queue (tools/bench.py), sim_bench `--sprt`
+  (tools/sim_sprt.py), `--batch` and `wall_phases`; checkout-independent exes. Main's C++ edits all landed in code
+  rust still has in C++ (EECPTrace, EECPNextArmy, EECPReflexes, EEWorld, EESim): nothing to port into Rust, and
+  main touched no Rust.
+- **The conflicts.**
+  - EESim.cpp: main split Drive into PlayGame (one game), LeaveGame and a batch loop, and moved the game options into
+    GameOption; rust had added the scenario, campaign, load, save, dump, rng-trace and editor paths to the same
+    Drive. PlayGame now holds rust's branches (the editor from the main menu, the save files removed per game, the
+    saves copied at the end) with main's phases; rust's options stay process options (in a batch they hold for
+    every game). ResetRun also clears the save and dump cursors and the load failure. The start note prints "ports
+    any free" for rust's system-picked ports (kPlatSimAnyPort).
+  - LeaveGame found the post-game summary's Exit by `dynamic_cast<EEUIEPGSEExit*>`: on rust that screen is ee_game's
+    post_game.rs and its controls carry EEScreenEvent `EE_SCREENS_PGS_EXIT`, so it uses ControlWithEvent and Click.
+    Checked: two 600 s games in one process give the traces and reports of their runs alone (the EE-AIPROF lines
+    and the wall fields aside), the second one after a LeaveGame.
+  - sim_bench.py: main moved a run into `play()` with a per-slot `--port-offset`; rust's rule stays (no fixed ports:
+    EE-SIM's server binds ports the system picks, "EE-SIM: the local server binds ports the system picks"). The
+    queue daemon still hands a port to `play()`; it is not used.
+  - clang_build.py: main compiles a unit by a relative name from a fixed folder (`main_file_name`: build/eex's
+    parent or the checkout) because the MSVC ABI names anonymous namespaces by a hash of the main file's name as
+    given. Merged into rust's cached compile: the relative top folder (`eex`, `src`) gets its own
+    `-ffile-prefix-map` to the canonical root, the test overlay copy's map uses its relative name, and the object
+    cache resolves a relative dependency against the compile's folder (it dropped every entry before: a relative
+    path hashed as missing). objcache's SCHEMA is 2, since every object's anonymous namespace names changed under
+    the same key (the first build after the merge recompiles everything once).
+  - build.py: rust's (no image library archive) with main's reproducible link (`/Brepro`, `/PDBALTPATH`, inputs
+    relative to the link folder). PORT_LEARNINGS: main's four new sections appended at the end.
+- **The re-baseline (each run twice on the merged tree, equal).** The oracle ref (seeds 2-7: 6,087, 5,300, 6,072,
+  7,649, 7,842 and 6,540 EE-AI lines; in the worktree's build/rust_oracle/ref, not tracked). Capture goldens, every
+  (seed, tag) scope kept, no tag dropped: oracle 312 of 578 digests changed (seeds 2, 5, 6, 7 broadly; seeds 3 and 4
+  only TCST, +1,600 and +2,105 GetCost records, the same in both runs: the new scripts ask costs without deciding
+  differently there), missile 44 of 66 (the oracle's four seeds), transport 167 of 185 (Small Islands: the war on
+  water), units 3 TCST lines. late, space, calamity, effects, scenario, app and groups did not change: the new
+  behaviour waits for conditions those games never meet (raids after 20 minutes with 16 in the pool, the island
+  food after an hour, water maps). saveload_expect.txt: the same outcomes (a comment line). The editor and
+  civilization builder gates did not change.
+- **Flakes seen under load, not the merge.** The Rust gate's `device_dropped_bind_groups_stay_bounded_when_the_gpu_lags`
+  (ee_render, timing) and `gamespy a_failed_start_leaves_the_current_record` (ee_won_net: the base port's
+  neighbour taken by another process) each failed once beside running sims and passed 3/3 alone; the full gate then
+  passed. One scenario capture (seed 7, "the meat grinder") stopped at start in EETerrainColorTable's verification
+  and played to its cap when rerun alone.
+- **Lesson: memory.** Two capture chains (four EE-SIMs), a test-profile build, the Rust gate and the data gate at
+  once, beside other lanes, exhausted the commit charge: Rust aborted on an allocation, the data gate raised
+  MemoryError, bash could not fork, and Windows froze and restarted. Every result of that hour was discarded and
+  rerun one chain at a time.
+- **Gates on the final tree.** Both builds 0/0; the Rust gate PASS (4,344 tests); the oracle against the new ref
+  identical on seeds 2-7; the eleven capture profiles PASS; the plain saveload 18/18 identical; the matrix `--expect`
+  PASS; the editor (14,448 lines) and civilization builder (4,062) gates PASS; eedata check and cppgate PASS;
+  scenario_check 27/27; gates.sh GATES PASS (tour, ai-game time-cap with both classic_lua players alive, lan-game).
