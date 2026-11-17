@@ -80,7 +80,7 @@ unsafe extern "C" fn handle_reply(
     len: usize,
     pos: usize,
     threw: *mut bool,
-) -> c_long {
+) -> i32 {
     let o = obj(p as usize);
     let r = if o.replies.is_empty() { Some(EE_WON_RT_DONT_WANT) } else { o.replies.remove(0) };
     log(format!("{} reply {t} {len} at {pos} -> {r:?}", o.name));

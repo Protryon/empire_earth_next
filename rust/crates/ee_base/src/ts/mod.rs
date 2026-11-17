@@ -13,6 +13,7 @@
 
 #[cfg(test)]
 mod golden;
+pub mod held;
 
 use std::cell::UnsafeCell;
 use std::collections::VecDeque;
@@ -850,24 +851,28 @@ pub unsafe extern "C" fn ee_ts_lock_read_count(lock: *const EeTsLock) -> i32 {
 /// `lock` is live.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ts_lock_read(lock: *const EeTsLock) {
-    (*lock).read_lock(&PlatHost)
+    (*lock).read_lock(&PlatHost);
+    held::note(lock as usize, 1, 0);
 }
 /// # Safety
 /// `lock` is live.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ts_lock_read_unlock(lock: *const EeTsLock) {
+    held::note(lock as usize, -1, 0);
     (*lock).read_unlock(&PlatHost)
 }
 /// # Safety
 /// `lock` is live.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ts_lock_write(lock: *const EeTsLock) {
-    (*lock).write_lock(&PlatHost)
+    (*lock).write_lock(&PlatHost);
+    held::note(lock as usize, 0, 1);
 }
 /// # Safety
 /// `lock` is live.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ts_lock_write_unlock(lock: *const EeTsLock) {
+    held::note(lock as usize, 0, -1);
     (*lock).write_unlock(&PlatHost)
 }
 

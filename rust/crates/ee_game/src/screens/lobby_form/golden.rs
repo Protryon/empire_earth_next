@@ -10,6 +10,7 @@
 //! the size.
 
 use std::collections::BTreeMap;
+use std::ffi::{c_long, c_ulong};
 use std::sync::Mutex;
 
 use super::*;
@@ -98,15 +99,15 @@ struct Header {
 
 fn header_of(f: &[u8]) -> Header {
     let mut o = Options::default();
-    o.r.map_size = hk(f, 5) % 5;
-    o.r.resources = hk(f, 6) % 6;
+    o.r.map_size = (hk(f, 5) % 5) as c_ulong;
+    o.r.resources = (hk(f, 6) % 6) as c_ulong;
     o.r.epoch_start = (hk(f, 7) % 6) as c_long;
     o.r.epoch_end = (hk(f, 8) % 6) as c_long;
-    o.r.unit_limit = 50 * (hk(f, 9) % 6);
-    o.r.wonders = hk(f, 10) % 4;
-    o.r.variant = hk(f, 11) % 8;
-    o.r.difficulty = hk(f, 12) % 4;
-    o.r.speed = hk(f, 13) % 4;
+    o.r.unit_limit = (50 * (hk(f, 9) % 6)) as c_ulong;
+    o.r.wonders = (hk(f, 10) % 4) as c_ulong;
+    o.r.variant = (hk(f, 11) % 8) as c_ulong;
+    o.r.difficulty = (hk(f, 12) % 4) as c_ulong;
+    o.r.speed = (hk(f, 13) % 4) as c_ulong;
     o.r.record_games = !hk(f, 14).is_multiple_of(2);
     o.r.custom_civs = !hk(f, 15).is_multiple_of(2);
     o.r.reveal_map = !hk(f, 16).is_multiple_of(2);
@@ -117,14 +118,14 @@ fn header_of(f: &[u8]) -> Header {
     let slots = (0..16)
         .map(|j| LobbyPlayer {
             r: EeScreensLobbyPlayerRecord {
-                kind: hk(f, 30 + j) % 5,
+                kind: (hk(f, 30 + j) % 5) as c_ulong,
                 loaded_type: (hk(f, 50 + j) % 5) as c_long,
-                citizens: 1 + hk(f, 90 + j) % 20,
-                color: hk(f, 110 + j) % 16,
-                team: hk(f, 130 + j) % 5,
+                citizens: (1 + hk(f, 90 + j) % 20) as c_ulong,
+                color: (hk(f, 110 + j) % 16) as c_ulong,
+                team: (hk(f, 130 + j) % 5) as c_ulong,
                 b36: !hk(f, 150 + j).is_multiple_of(2),
-                engine: hk(f, 170 + j) % 4,
-                slot: j,
+                engine: (hk(f, 170 + j) % 4) as c_ulong,
+                slot: j as c_ulong,
                 ..Default::default()
             },
             name: NAMES[(hk(f, 70 + j) % 6) as usize].to_vec(),
@@ -321,7 +322,7 @@ impl World {
         }
         let header = header_of(file);
         let ok = !hk(&self.last_file, 2).is_multiple_of(3);
-        let current = if start { self.options.r.load_type } else { load_type };
+        let current = if start { self.options.r.load_type as u32 } else { load_type };
         self.line(format!(
             "  checksaved {} {} load {current} -> {}",
             start as i32,
@@ -365,16 +366,16 @@ impl World {
     fn set_option(&mut self, option: u32, v: u32) {
         let o = &mut self.options.r;
         match option {
-            0 => o.load_type = v,
-            1 => o.map_size = v,
-            3 => o.resources = v,
+            0 => o.load_type = v as c_ulong,
+            1 => o.map_size = v as c_ulong,
+            3 => o.resources = v as c_ulong,
             4 => o.epoch_start = v as i32 as c_long,
             5 => o.epoch_end = v as i32 as c_long,
-            6 => o.unit_limit = v,
-            7 => o.wonders = v,
-            8 => o.variant = v,
-            9 => o.difficulty = v,
-            10 => o.speed = v,
+            6 => o.unit_limit = v as c_ulong,
+            7 => o.wonders = v as c_ulong,
+            8 => o.variant = v as c_ulong,
+            9 => o.difficulty = v as c_ulong,
+            10 => o.speed = v as c_ulong,
             11 => o.record_games = v != 0,
             12 => o.custom_civs = v != 0,
             13 => o.reveal_map = v != 0,

@@ -12,7 +12,11 @@ use ee_ui::direct;
 use ee_ui::obj::EeUiOp;
 use ee_ui::statusobj::EeUiStatusBarCall;
 
-use crate::screens::game_view::{EeScreensGameView, Sound, ViewHost};
+use ee_sim::world::{PlayerView, WorldRead, WorldView};
+
+use crate::screens::game_view::{
+    EeScreensGameView, Sound, ViewHost, EE_SCREENS_VIEW_CURRENT, EE_SCREENS_VIEW_PLAYER, EE_SCREENS_VIEW_WORLD,
+};
 use crate::screens::lobby_form::{LobbyHost, EE_SCREENS_LE_SOURCE_LOBBY};
 use crate::screens::menus_ffi::Form;
 
@@ -29,6 +33,16 @@ impl ViewHost for Form {
         let mut v = EeScreensGameView::default();
         // SAFETY: the host's fill writes the record
         unsafe { ee_screenscpp_game_view(group, arg, &mut v) };
+        // the world's and a player's members from the world's views (the C++ fill keeps the camera, the game
+        // options, the world table, the main game form and the selected group's airport)
+        if group == EE_SCREENS_VIEW_WORLD || group == EE_SCREENS_VIEW_PLAYER {
+            // SAFETY: the screens read the world on the UI thread with the world's lock held or no game running
+            // (the token takes none: docs/progress/obj-lane-s.md "Threads")
+            let t = unsafe { WorldRead::begin() };
+            if let Some(w) = WorldView::global(&t) {
+                world_view(&w, group, arg, &mut v);
+            }
+        }
         v
     }
     fn texts(&mut self, group: u32, arg: u32) -> Vec<u8> {
@@ -93,5 +107,37 @@ impl ViewHost for Form {
     fn set_bar_colour(&mut self, control: u32, colour: [f32; 3]) {
         let c: *mut c_void = direct::control(self.0, control as c_ulong);
         direct::status_call(c, EeUiStatusBarCall::SetStatusBarColor, 0, 0, &mut [colour[0], colour[1], colour[2], 0.0]);
+    }
+}
+
+/// The player of a view's argument (an index, or the current player; `EEScreensViewPlayer`): None past the 17
+/// slots, for an empty one, or for no current player.
+fn view_player<'t>(w: &WorldView<'t>, arg: u32) -> Option<PlayerView<'t>> {
+    // (`(unsigned long)gWorld.mCurrentPlayer`: -1 is past the slots)
+    let index = if arg == EE_SCREENS_VIEW_CURRENT { w.current_player_index() as u64 } else { arg as u64 };
+    if index < 17 {
+        w.player(index as usize)
+    } else {
+        None
+    }
+}
+
+/// The world group's and the player group's members the views hold, over the C++ fill's record.
+fn world_view(w: &WorldView<'_>, group: u32, arg: u32, v: &mut EeScreensGameView) {
+    if group == EE_SCREENS_VIEW_WORLD {
+        v.ghosts = w.ghost_units_len() as u32;
+        v.has_player = view_player(w, EE_SCREENS_VIEW_CURRENT).is_some();
+        v.game_speed = w.game_speed();
+        v.cinematic = w.in_cinematic();
+        v.user_paused = w.user_paused();
+        v.players = w.num_players() as u32;
+        v.current = w.current_player_index() as i32;
+        v.teams_locked = w.teams_locked();
+        v.cheats = w.cheats_enabled();
+    } else if let Some(p) = view_player(w, arg) {
+        v.present = true;
+        v.observer = p.observer();
+        v.chat_type = ee_sim::world_field!(p.saved(), mChatType) as u32;
+        v.colour = p.color();
     }
 }

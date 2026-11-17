@@ -1,6 +1,11 @@
 //! The game's Rust static library. `include/rust/ee_rust.h` is generated from the `extern "C"` items here
 //! (`cargo run -p xtask -- cbindgen`).
 
+// `c_long`/`c_ulong` are `i32`/`u32` on Windows and `i64`/`u64` on Linux and macOS: a cast or `from` that one data
+// model needs is to the same type on the other. The Windows gate keeps both lints; off Windows they would flag
+// only those.
+#![cfg_attr(not(windows), allow(clippy::unnecessary_cast, clippy::useless_conversion))]
+
 use std::ffi::c_char;
 
 use ee_base as _;

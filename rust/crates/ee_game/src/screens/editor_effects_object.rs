@@ -3,7 +3,11 @@
 //! `EESETSETSetObjectOwner`, `EESETSETSetObjectName`, `EESETSETLogObject`, `EESETSETSetObjectClassAttribute`) over
 //! the effect screen's controls (`editor_effects.rs`).
 
+// the entry's `c_ulong`/`c_long` fields are 32 bits on Windows and 64 elsewhere: the casts are needed there
+#![allow(clippy::unnecessary_cast)]
+
 use core::cell::RefCell;
+use std::ffi::c_ulong;
 
 use crate::screens::editor_effects::*;
 use crate::screens::editor_players::SeplHost;
@@ -52,11 +56,11 @@ impl ObjectTypes {
             }
             EE_SCREENS_SEET_STORE => {
                 if let Some(s) = c.selection(COMBO, 0) {
-                    c.e().mObjectAction = s;
+                    c.e().mObjectAction = s as c_ulong;
                     self.family.current.set(s);
                 }
                 if let Some(s) = c.selection(SCEN, 1) {
-                    c.e().mObject = s;
+                    c.e().mObject = s as c_ulong;
                 }
                 self.sub(c, cur(), EE_SCREENS_SEET_HIDE);
                 self.sub(c, cur(), EE_SCREENS_SEET_STORE);
@@ -72,12 +76,12 @@ impl ObjectTypes {
             }
             EE_SCREENS_SEET_LOAD => {
                 let action = c.e().mObjectAction;
-                self.family.current.set(action);
+                self.family.current.set(action as u32);
                 c.event_null(COMBO, 0, T_SELECTION);
-                c.select(COMBO, 0, action);
+                c.select(COMBO, 0, action as u32);
                 self.sub(c, cur(), EE_SCREENS_SEET_SHOW);
                 let o = c.e().mObject;
-                c.select(SCEN, 1, o);
+                c.select(SCEN, 1, o as u32);
                 c.event_set(COMBO, 0, T_SELECTION, self.family.event);
                 self.sub(c, cur(), EE_SCREENS_SEET_LOAD);
             }
@@ -166,15 +170,15 @@ fn task<H: SeplHost + ?Sized>(c: &mut Fx<H>, actions: &RefCell<Vec<i32>>, area: 
         EE_SCREENS_SEET_STORE => {
             if let Some(s) = c.selection(SCEN, scen) {
                 if area {
-                    c.e().mTaskArea = s;
+                    c.e().mTaskArea = s as c_ulong;
                 } else {
-                    c.e().mTaskObject = s;
+                    c.e().mTaskObject = s as c_ulong;
                 }
             }
             // the original indexes its list with an unset selection when there is none: nothing stored then
             if let Some(s) = c.selection(ECOMBO, combo) {
                 if let Some(&a) = actions.borrow().get(s as usize) {
-                    c.e().mTaskAction = a as u32;
+                    c.e().mTaskAction = a as c_ulong;
                 }
             }
         }
@@ -189,7 +193,7 @@ fn task<H: SeplHost + ?Sized>(c: &mut Fx<H>, actions: &RefCell<Vec<i32>>, area: 
         EE_SCREENS_SEET_LOAD => {
             let target = if area { c.e().mTaskArea } else { c.e().mTaskObject };
             let value = c.e().mTaskAction as i32;
-            c.select(SCEN, scen, target);
+            c.select(SCEN, scen, target as u32);
             let found = actions.borrow().iter().position(|&a| a == value);
             match found {
                 Some(p) => c.select(ECOMBO, combo, p as u32),
@@ -239,7 +243,7 @@ fn stance<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
     match slot {
         EE_SCREENS_SEET_STORE => {
             if let Some(s) = c.selection(ECOMBO, 1) {
-                c.e().mStance = s;
+                c.e().mStance = s as c_ulong;
             }
         }
         EE_SCREENS_SEET_HIDE => {
@@ -249,7 +253,7 @@ fn stance<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
         }
         EE_SCREENS_SEET_LOAD => {
             let s = c.e().mStance;
-            c.select_silent(ECOMBO, 1, s);
+            c.select_silent(ECOMBO, 1, s as u32);
         }
         EE_SCREENS_SEET_SHOW => {
             to_label(c, 3);
@@ -276,13 +280,13 @@ fn attribute<H: SeplHost + ?Sized>(c: &mut Fx<H>, class: bool, slot: u32) {
             c.e().mUsesPercent = percent;
             // the original stores an unset selection when there is none: kept then
             if let Some(s) = c.selection(ECOMBO, 1) {
-                c.e().mAttributeMode = s;
+                c.e().mAttributeMode = s as c_ulong;
             }
             if let Some(s) = c.selection(ECOMBO, 0) {
-                c.e().mAttribute = if class { s.wrapping_add(0x14) } else { s };
+                c.e().mAttribute = if class { s.wrapping_add(0x14) as c_ulong } else { s as c_ulong };
             }
             let amount = c.text_int(EDIT, 0);
-            c.e().mAttributeAmount = amount as u32;
+            c.e().mAttributeAmount = amount as c_ulong;
         }
         EE_SCREENS_SEET_HIDE => {
             c.hide(ECOMBO, 1);
@@ -296,17 +300,17 @@ fn attribute<H: SeplHost + ?Sized>(c: &mut Fx<H>, class: bool, slot: u32) {
                 (c.e().mAttribute, c.e().mAttributeMode, c.e().mAttributeAmount, c.e().mUsesPercent);
             if class {
                 let held = c.event_hold(ECOMBO, 0, T_SELECTION);
-                c.select(ECOMBO, 0, a.wrapping_sub(0x14));
+                c.select(ECOMBO, 0, a.wrapping_sub(0x14) as u32);
                 if c.selection(ECOMBO, 0).is_none() {
                     c.select(ECOMBO, 0, 0);
                 }
                 c.event_restore(ECOMBO, 0, T_SELECTION, held);
-                c.select(ECOMBO, 1, if mode < 2 { mode } else { 0 });
+                c.select(ECOMBO, 1, if mode < 2 { mode as u32 } else { 0 });
                 c.number(EDIT, 0, amount as i32);
                 c.set_checked(0, percent);
             } else {
-                c.select_silent(ECOMBO, 0, a);
-                c.select_silent(ECOMBO, 1, mode);
+                c.select_silent(ECOMBO, 0, a as u32);
+                c.select_silent(ECOMBO, 1, mode as u32);
                 c.number(EDIT, 0, amount as i32);
                 c.set_checked_if(0, percent);
             }
@@ -347,7 +351,7 @@ fn owner<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
     match slot {
         EE_SCREENS_SEET_STORE => {
             let p = c.player(0);
-            c.e().mNewOwner = p;
+            c.e().mNewOwner = p as c_ulong;
         }
         EE_SCREENS_SEET_HIDE => {
             c.hide(LABEL, 3);
@@ -357,7 +361,7 @@ fn owner<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
         }
         EE_SCREENS_SEET_LOAD => {
             let p = c.e().mNewOwner;
-            c.set_player_silent(0, p);
+            c.set_player_silent(0, p as u32);
         }
         EE_SCREENS_SEET_SHOW => {
             to_label(c, 3);
@@ -405,7 +409,7 @@ fn face_object<H: SeplHost + ?Sized>(c: &mut Fx<H>, slot: u32) {
     match slot {
         EE_SCREENS_SEET_STORE => {
             let degrees = c.text_int(EDIT, 0);
-            c.e().mAttributeAmount = degrees as u32;
+            c.e().mAttributeAmount = degrees as c_ulong;
             let snap = c.checked(CHECK, 0);
             c.e().mUsesPercent = snap;
         }

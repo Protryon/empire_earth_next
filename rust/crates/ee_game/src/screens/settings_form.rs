@@ -584,9 +584,9 @@ fn apply_settings<H: SettingsHost>(host: &mut H, state: &Mutex<SettingsForm>) ->
     }
     let (_, adapter) = host.combo_selection(GS_ADAPTER_BOX);
     s.network_adapter = adapter as c_long;
-    let name = host.text(EE_SCREENS_TEXT_RASTERIZER_NAME, rasterizer);
+    let name = host.text(EE_SCREENS_TEXT_RASTERIZER_NAME, rasterizer as u32);
     if host.text(EE_SCREENS_TEXT_RASTERIZER_SETTING, 0) != name || s.screen_id as c_ulong != screen {
-        host.call_with(EE_SCREENS_GAME_CHANGE_RASTERIZER, rasterizer, screen);
+        host.call_with(EE_SCREENS_GAME_CHANGE_RASTERIZER, rasterizer as u32, screen as u32);
         host.put_text(EE_SCREENS_TEXT_RASTERIZER_SETTING, 0, &name);
         s.screen_id = screen as c_long;
     }
@@ -687,10 +687,10 @@ fn show_screens<H: SettingsHost>(host: &mut H, s: &EeScreensSettingsRecord) {
     host.release_mouse(GS_VIDEO_CARD_BOX);
     host.combo_clear(GS_VIDEO_CARD_BOX);
     let (_, rasterizer) = host.list_selection(GS_RENDERING_LIST);
-    let count = host.call_with(EE_SCREENS_GAME_SCREEN_COUNT, rasterizer, 0);
+    let count = host.call_with(EE_SCREENS_GAME_SCREEN_COUNT, rasterizer as u32, 0);
     let line = screen_line(count as c_ulong, s.screen_id as c_ulong);
     for i in 0..count {
-        let name = host.text(EE_SCREENS_TEXT_DISPLAY_SCREEN, (rasterizer << 16) | i);
+        let name = host.text(EE_SCREENS_TEXT_DISPLAY_SCREEN, ((rasterizer as u32) << 16) | i);
         host.combo_append(GS_VIDEO_CARD_BOX, &name);
         if line == i as c_ulong {
             host.combo_select(GS_VIDEO_CARD_BOX, i as c_ulong);

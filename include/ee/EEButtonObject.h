@@ -11,10 +11,12 @@ class GETexture;
 class UIHotKey;
 
 #include "rust/data/tables.h"
+#include "rust/data/media.h"
 
 // RTTI, vtable 0x43e4f4 (two slots), ctor 0xd5498. The record's members (mPosition, mHotKeyIndex, mColumn, mRow,
-// mID) are EeDataButtonFields (rust/crates/ee_data tables.rs: the record and its copy), the base.
-class EEButtonObject : public EeDataButtonFields {
+// mID) are EeDataButtonFields (rust/crates/ee_data tables.rs: the record and its copy), the base; the use count
+// (mMediaCount, mIsLoading) is EeDataMediaUse (media.rs).
+class EEButtonObject : public EeDataButtonFields, public EeDataMediaUse {
 public:
     EEButtonObject();
     virtual ~EEButtonObject();              // +0x00 (??_G 0xd54c3)
@@ -47,8 +49,6 @@ public:
     GETexture* mTexture;                    // +0x14 (referenced: GETexture::Dereference in the dtor)
     float mCellU;                           // +0x18
     float mCellV;                           // +0x1c
-    long mMediaCount;                       // +0x34 the reference count
-    volatile bool mIsLoading;               // +0x38 loading (spun on with Sleep(1))
     // 0x8e60e8 (guard byte 0x8e60e4 bit 1). Only EEButtonObject.cpp sees it: its $E number would renumber the
     // includers' chains (provisional name, as the engine's LOWLEVELENGINE_EXPORTS statics)
     static std::vector<EEButtonObject*> sTable;

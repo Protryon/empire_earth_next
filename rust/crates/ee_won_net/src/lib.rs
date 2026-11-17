@@ -4,6 +4,11 @@
 //! layer's sockets: the status names, NetStats, IPAddr, AsyncSocket's core and the socket ops' algorithms. The C++
 //! classes of `src/Empire Earth/WONAPI` that remain call these through `ffi` and `ffi_net`.
 
+// `c_long`/`c_ulong` are `i32`/`u32` on Windows and `i64`/`u64` on Linux and macOS: a cast or `from` that one data
+// model needs is to the same type on the other. The Windows gate keeps both lints; off Windows they would flag
+// only those.
+#![cfg_attr(not(windows), allow(clippy::unnecessary_cast, clippy::useless_conversion))]
+
 pub mod admin;
 pub mod adminop;
 pub mod apicore;

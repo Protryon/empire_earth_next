@@ -1,5 +1,10 @@
 //! WONLobby: the lobby's screens, logic and data model, and the Empire Earth lobby glue.
 
+// `c_long`/`c_ulong` are `i32`/`u32` on Windows and `i64`/`u64` on Linux and macOS: a cast or `from` that one data
+// model needs is to the same type on the other. The Windows gate keeps both lints; off Windows they would flag
+// only those.
+#![cfg_attr(not(windows), allow(clippy::unnecessary_cast, clippy::useless_conversion))]
+
 #[cfg(test)]
 mod chat_golden;
 pub mod chatobj;

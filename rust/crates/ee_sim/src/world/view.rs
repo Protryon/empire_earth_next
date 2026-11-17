@@ -179,6 +179,17 @@ macro_rules! world_field {
     }};
 }
 
+/// `gUnitClassTable`'s begin and end.
+fn class_table() -> (usize, usize) {
+    let at = layout().unit_class_table as usize;
+    if at == 0 {
+        return (0, 0);
+    }
+    let w = std::mem::size_of::<usize>() as u64;
+    // SAFETY: the registered vector's first two words (EEWorldLayout.cpp checks the library's layout)
+    unsafe { (pointer(at, 0), pointer(at, w)) }
+}
+
 /// The value of type `T` at `object + offset`.
 ///
 /// # Safety
@@ -565,6 +576,20 @@ impl<'t> ClassView<'t> {
     fn at(object: usize) -> Option<Self> {
         (object != 0).then_some(ClassView { object, _t: PhantomData })
     }
+    /// `gUnitClassTable.size()` (`EEUnitClassCount()`).
+    pub fn count(token: &'t WorldRead) -> usize {
+        let _ = token;
+        let (begin, end) = class_table();
+        (end - begin) / std::mem::size_of::<usize>()
+    }
+    /// `gUnitClassTable[index]` (None for an empty slot or past the table).
+    pub fn by_index(token: &'t WorldRead, index: usize) -> Option<Self> {
+        if index >= Self::count(token) {
+            return None;
+        }
+        // SAFETY: an element of the table; a listed class is live while the world is read
+        Self::at(unsafe { pointer(class_table().0, (index * std::mem::size_of::<usize>()) as u64) })
+    }
     /// The view of the class `handle` (an `EEUnitClass*`; None for 0).
     ///
     /// # Safety
@@ -723,6 +748,11 @@ impl<'t> PlayerView<'t> {
     pub fn selected_group_handle(&self) -> u64 {
         // SAFETY: a live player's pointer member
         unsafe { pointer(self.object, layout().player_selected_group) as u64 }
+    }
+    /// `mComputerPlayer != NULL`
+    pub fn has_computer_player(&self) -> bool {
+        // SAFETY: a live player's pointer member
+        unsafe { pointer(self.object, layout().player_computer_player) != 0 }
     }
     /// `mEnemies[player]` (non-zero: at war; 0 past the table)
     pub fn enemy(&self, player: usize) -> u64 {
@@ -919,6 +949,14 @@ impl<'t> WorldView<'t> {
     }
     pub fn using_carbon(&self) -> bool {
         self.flag(layout().world_using_carbon)
+    }
+    pub fn teams_locked(&self) -> bool {
+        self.flag(layout().world_teams_locked)
+    }
+    /// The world (`&gWorld`, registered with the layout).
+    pub fn global(token: &'t WorldRead) -> Option<Self> {
+        // SAFETY: the registered address is the one live world
+        unsafe { Self::of(token, layout().world_address) }
     }
     /// `mMap`
     pub fn map(&self) -> Option<MapView<'t>> {

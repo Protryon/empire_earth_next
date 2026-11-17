@@ -4,9 +4,7 @@
 #ifndef EE_EEUCUPGRADETABLE_H
 #define EE_EEUCUPGRADETABLE_H
 
-#include <vector>
-
-#include "rust/data/tables.h"
+#include "ee/EEDbList.h"
 
 class FSFileSpec;
 
@@ -16,12 +14,10 @@ typedef EeDataUpgradeFactor EEUCUpgradeFactor;
 // mFactors (16) and mMaxLevel are EeDataUpgradeFields (ee_data tables.rs: the record, its copy and the defaults)
 class EEUCUpgradeTable : public EeDataUpgradeFields {
 public:
-    EEUCUpgradeTable();
-    virtual ~EEUCUpgradeTable() {}          // +0x00 (??_G 0xdc8ca)
     static long Load(FSFileSpec* inFile);   // 0xdc6f0 (records with a negative +0xe0 stay NULL)
     static void Unload();
 
-    static std::vector<EEUCUpgradeTable*> sTable;   // 0x8e8728 (guard 0x8e8720 bit 1; only its unit sees it)
+    static EEDbList<EEUCUpgradeTable, EeDataList::Upgrades> sTable;   // Rust's list (ee/EEDbList.h)
 };
 
 #endif

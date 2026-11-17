@@ -797,7 +797,8 @@ EEUIFScenarioEditor* SeunEditor(void* inControl)
 
 }   // namespace
 
-// The ops (editor_unit.rs; p: three handles, i: four integers, f: four floats)
+// The ops (editor_unit.rs; p: three handles, i: four integers, f: four floats). The class table's count and
+// placement flags are Rust's (ee_game editor_world.rs).
 extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
     EESEUnit* theTab = static_cast<EESEUnit*>(p[0]);
@@ -1031,25 +1032,6 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
         theUnitList->DeleteAllEntries();
         return 0;
     case EE_SCREENS_SEUN_OP_LIST_ADD: theUnitList->AddUnitType(i[0]); return 0;
-    case EE_SCREENS_SEUN_OP_CLASS_COUNT: return (int32_t)EEUnitClassCount();
-    case EE_SCREENS_SEUN_OP_CLASS: {
-        EEUnitClass* theClass = gUnitClassTable[i[0]];
-        if (theClass == NULL)
-            return 0;
-        i[1] = (int32_t)theClass->mUnitType;
-        int32_t theFlags = 0;
-        if (theClass->mIsScenarioSelectable) theFlags |= EE_SCREENS_SEUN_CLASS_SELECTABLE;
-        if (theClass->mIsGaiaPlaceable) theFlags |= EE_SCREENS_SEUN_CLASS_GAIA;
-        if (theClass->mIsPlayerPlaceable) theFlags |= EE_SCREENS_SEUN_CLASS_PLAYER;
-        if (theClass->mAIKind == kAIKindHero || theClass->mCategory == kUnitCategoryLandMilitaryHero)
-            theFlags |= EE_SCREENS_SEUN_CLASS_HERO;
-        if (theClass->mDomains & kMovementAir) theFlags |= EE_SCREENS_SEUN_CLASS_AIR;
-        if (theClass->IsLandBuilding()) theFlags |= EE_SCREENS_SEUN_CLASS_BUILDING;
-        if (theClass->mDomains & kMovementLand) theFlags |= EE_SCREENS_SEUN_CLASS_LAND;
-        if (theClass->mDomains & kMovementSea) theFlags |= EE_SCREENS_SEUN_CLASS_SEA;
-        if (theClass->mDomains & kMovementSpace) theFlags |= EE_SCREENS_SEUN_CLASS_SPACE;
-        return theFlags;
-    }
     case EE_SCREENS_SEUN_OP_IN_VIEW: return gViewport.GetViewRectangle().Contains(GE2DPoint(f[0], f[1])) ? 1 : 0;
     case EE_SCREENS_SEUN_OP_MOUSE: {
         int32_t theButtons = 0;

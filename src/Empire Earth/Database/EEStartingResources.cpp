@@ -13,40 +13,21 @@
 #include "ee/EEStartingResources.h"
 #include "ee/EEDbRecords.h"
 
-std::vector<EEStartingResources*> EEStartingResources::sTable;
+EEDbList<EEStartingResources, EeDataList::StartingResources> EEStartingResources::sTable;
 
-// Creates a starting-resources preset with every amount zero
-EEStartingResources::EEStartingResources() : EeDataStartingResourcesFields()
-{
-}
 
-// Destroys the starting-resources preset (nothing to release)
-EEStartingResources::~EEStartingResources()
-{
-}
 
-// Loads the starting-resource presets (food, wood, stone, gold, iron, name) from db\dbStartingResources.dat (the
-// record and its copy: ee_data tables.rs); rows with a negative index are skipped. Returns the last read status
+// Loads the starting-resource presets (food, wood, stone, gold, iron, name) from db\dbStartingResources.dat into the
+// Rust list (the record, its copy and the list: ee_data tables.rs); rows with a negative index are skipped. Returns the
+// last read status
 long EEStartingResources::Load(FSFileSpec* inFile)
 {
-    return EEDbReadRecords(inFile, ee_data_starting_resources_record_size(), [](unsigned long) { return true; },
-        [](unsigned long, const unsigned char* inRecord) {
-            EeDataStartingResourcesFields theFields;
-            if (ee_data_starting_resources_from_record(inRecord, &theFields)) {
-                EEStartingResources* theResources = new EEStartingResources;
-                *static_cast<EeDataStartingResourcesFields*>(theResources) = theFields;
-                EEStartingResources::sTable.push_back(theResources);
-            }
-        });
+    return EEDbLoadList(inFile, EeDataList::StartingResources);
 }
 
-// Destroys every starting-resources preset and empties the table
+// Empties the table
 void EEStartingResources::Unload()
 {
-    for (unsigned long i = 0; i < EEStartingResources::sTable.size(); i++) {
-        delete EEStartingResources::sTable[i];
-        EEStartingResources::sTable[i] = NULL;
-    }
     EEStartingResources::sTable.clear();
 }
 

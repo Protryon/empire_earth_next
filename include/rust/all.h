@@ -18,6 +18,7 @@
 #include "rust/base/util.h"
 #include "rust/common.h"
 #include "rust/data/ffi.h"
+#include "rust/data/media.h"
 #include "rust/data/tables.h"
 #include "rust/game/app.h"
 #include "rust/game/screens.h"
