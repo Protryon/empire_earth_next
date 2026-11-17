@@ -62,17 +62,6 @@ pub unsafe extern "C" fn ee_units_store_set_fields(
     crate::units::store::refresh(record);
 }
 
-/// The twenty-seventh round's: where the store reads the units' pointer members (`store::EeUnitsStoreSlots`; once,
-/// before the first record).
-///
-/// # Safety
-/// `slots` is readable.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_store_set_slots(slots: *const crate::units::store::EeUnitsStoreSlots) {
-    // SAFETY: the caller's contract
-    crate::units::store::set_slots(unsafe { *slots });
-}
-
 /// A unit leaves its player's list (or is freed): the record of that object, if it is the one under the id.
 #[no_mangle]
 pub extern "C" fn ee_units_store_remove(id: u32, object: u64) -> bool {

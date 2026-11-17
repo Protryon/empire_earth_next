@@ -78,78 +78,53 @@ private:
 
 extern EEWorldTable gWorldTable;            // 0x52fca0 (Empire Earth.cpp)
 
-// RTTI EETerrainTable (vtable 0x43f7e4; ctor 0xdb245, dtor 0xdbc7d, ??_G 0xdbc61)
-class EETerrainTable {
+// RTTI EETerrainTable (vtable 0x43f7e4; ctor 0xdb245, dtor 0xdbc7d, ??_G 0xdbc61). The record's members are
+// EeDataTerrainFields (rust/crates/ee_data tables.rs: the record and its copy), the base.
+class EETerrainTable : public EeDataTerrainFields {
 public:
     EETerrainTable();
     virtual ~EETerrainTable();
 
     // (from EESELoadThread's Handle408 0x172433; provisional names)
-    // 0xdbc39 (cdecl): the loaded entry inIndex of the static table (vector at 0x8e86d8), 0 past its end or when the
-    // entry's +0x50 is negative
+    // 0xdbc39 (cdecl): the loaded entry inIndex of the static table, 0 past its end or when the entry's id is negative
     static EETerrainTable* Get(long inIndex);
     static long Load(FSFileSpec* inFile);   // 0xdb2ce (db\dbterrain.dat)
     static void Unload();
     static void DumpAllLoadedMedia(FSFileSpec& inFile);
-    void Load(GETerrainMesh& ioMesh);       // 0xdb5c8 (counted by +0x48; sets the mesh's texture sets)
+    void Load(GETerrainMesh& ioMesh);       // 0xdb5c8 (counted by mLoadCount; sets the mesh's texture sets)
     void Unload(GETerrainMesh& ioMesh);
     GETexture* LoadTexture(const UString& inFile);
     void LoadTextures();                    // 0xdb762 (Load's worker, outside the lock; provisional name)
     void AttachTextures(GETextureSet* inTextureSet);  // 0xdb96c (EEMap::RegisterTerrainSets hands it the registered set) (provisional name)
-    // inline (out-of-line COMDAT 0x11e1d8 after its first user, EEMap::Load) (provisional name)
     static unsigned long GetNumCliffTerrains() { return EETerrainTable::sCliffTable.size(); }
-    // inline (out-of-line COMDAT 0x1a3ef8 after its first user, EEUIFSEMap's ctor) (provisional name)
     static unsigned long GetNumTables() { return EETerrainTable::sTable.size(); }
     unsigned long GetNumUnitClasses() const { return this->mUnitClasses.size(); }
     const long& GetUnitClass(unsigned long inIndex) const { return this->mUnitClasses[inIndex]; }
 
-    // members (layout from the ctor 0xdb245: two UStrings, GEColor's three fld1, the vector's _Buy(0), +0x68 = -1
-    // before the vptr store (init list), the rest zeroed in the body; sizeof 0x8c: Load's `new`)
-    UString mName;                          // +0x04
-    UString mTextureName;                   // +0x14
-    GEColor mColor;                         // +0x24
-    GETexture* mPreviewTexture;             // +0x30 actual Terrain Virtual18 texture receiver; constructor0/reader!=0
-    GETexture** mTextures;                  // +0x34 (Load: [+0x60 * row + column])
-    long mFirstTexture;                     // +0x38
-    long mNumTextures;                      // +0x3c
-    long mTextureSetID;                     // +0x40 (Load: the mesh's texture set index)
-    long mWaterAnimationPeriod;             // +0x44
-    unsigned long mLoadCount;               // +0x48 (Load increments it; Unload 0xdba81 tests it unsigned: jbe)
-    long mTextureID;                        // +0x4c
-    long mID;                               // +0x50 (Get: negative = no entry)
-    long mNameID;                           // +0x54 (gResource string id of the name; Handle408)
-    long mTextureTileCoverage;              // +0x58
-    long mTerrainType;                      // +0x5c
-    long mColumns;                          // +0x60 (Load)
-    long mRows;                             // +0x64 (Load)
-    long mColorType;                        // +0x68 (= -1)
-    std::vector<long> mUnitClasses;         // +0x6c unit classes (gUnitClassTable indices; Handle408 loads their media)
-    long mAmbientUnitChance;                // +0x7c
-    long mWaterDepth;                       // +0x80 (untouched by the ctor)
-    bool mIsWater;                          // +0x84
-    bool mIsInEditor;                       // +0x85
-    bool mHasAlpha;                         // +0x86
-    bool mIsAmbientsOnly;                   // +0x87 (untouched)
-    volatile bool mIsLoading;               // +0x88 (set while Load runs; polled by other threads)
-    // the two tables share the guard byte 0x8e86d4 (bits 1, 2); only their unit sees them
+    UString mName;
+    UString mTextureName;                   // the lead string: the texture file, numbered _1 .. _n
+    GEColor mColor;
+    GETexture* mPreviewTexture;             // the terrain list's preview (EELoadTerrainPreviews)
+    GETexture** mTextures;                  // [mColumns * row + column]
+    long mFirstTexture;                     // the textures numbered over the table
+    long mTextureSetID;                     // the mesh's texture set index
+    unsigned long mLoadCount;               // Load counts it, Unload counts it down
+    std::vector<long> mUnitClasses;         // ambient unit classes (gUnitClassTable indices; Handle408 loads their media)
+    volatile bool mIsLoading;               // set while Load runs; polled by other threads
     static std::vector<EETerrainTable*> sTable;
     static std::vector<class EECliffTerrainTable*> sCliffTable;
 };
 
-// RTTI EECliffTerrainTable (vtable 0x43f7f0; ctor 0xdbafe, ??_G 0xdbca2; sizeof 0x24): db\dbcliffterrain.dat
-// (provisional names)
-class EECliffTerrainTable {
+// RTTI EECliffTerrainTable (vtable 0x43f7f0; ctor 0xdbafe, ??_G 0xdbca2): db\dbcliffterrain.dat. The record's
+// members are EeDataCliffTerrainFields, the base (provisional names)
+class EECliffTerrainTable : public EeDataCliffTerrainFields {
 public:
-    EECliffTerrainTable();
+    EECliffTerrainTable() : EeDataCliffTerrainFields() {}
     virtual ~EECliffTerrainTable() {}
-    static long Load(FSFileSpec* inFile);   // 0xdbb22 (records with a negative +0x68 stay NULL)
+    static long Load(FSFileSpec* inFile);   // 0xdbb22 (records with a negative index stay NULL)
     static long Unload();                   // 0xdbbfb (returns 0)
 
-    UString mName;                          // +0x04
-    long mFirstTerrain;                     // +0x14
-    long mLastTerrain;                      // +0x18
-    long mL1C;                              // +0x1c
-    bool mB20;                              // +0x20
+    UString mName;
 };
 
 // RTTI EETerrainTypeTable (vtable 0x43f7f8; ctor 0xdbd11, ??_G 0xdbe27). Inline dtor.
@@ -170,63 +145,7 @@ public:
     static unsigned long GetCount() { return EETerrainTypeTable::sTable.size(); }
 };
 
-// db\dbrandommap's record (docs/DATA_FORMATS.md 3.38; the text form dbrandommap.csv, tools/eedata): a terrain band
-// of a random map's terrain group. EERandomMapTable::Load reads the records and drops them: nothing in the game reads
-// a field (the text keeps the retail values; overlay.UNREAD_TABLES).
-struct EERandomMapRecord {
-    int32_t mID;                            // +0x00 4..71, unique
-    int32_t mGroup;                         // +0x04 1..10: two or three rows per group
-    char mName[100];                        // +0x08 the terrain's name ("Grass Tufts", "Snow", "StoneWork")
-    int32_t mElevationLow;                  // +0x6c -10, -2, 0
-    int32_t mElevationHigh;                 // +0x70 -4, -3, -1, 20
-    int32_t mTerrain[4];                    // +0x74 four equal dbterrain ids (2..71)
-};
-static_assert(sizeof(EERandomMapRecord) == 0x84, "on-disk record: 132 bytes on every target");
-
-// db\dbterraingraytextures's record (docs/DATA_FORMATS.md 3.39; the text form dbterraingraytextures.csv, after its
-// lead string, the texture file name): a terrain's grey texture. No Art of Conquest code opens the table (only the key
-// kDbTerrainGrayTexturesFile exists); the text keeps the retail values (overlay.UNREAD_TABLES).
-struct EETerrainGrayTextureRecord {
-    char mName[100];                        // +0x00 "Grass Rough (x)" ... "Space"
-    int32_t mID;                            // +0x64 2..60
-    int32_t mIndex;                         // +0x68 -1 (row 0) .. 58
-    int32_t mColor[3];                      // +0x6c red, green, blue (0..255), like dbterrain's colour
-};
-static_assert(sizeof(EETerrainGrayTextureRecord) == 120, "on-disk record: 120 bytes on every target");
-
-// RTTI EERandomMapTable (vtable 0x43f7b8; ctor 0xda407, ??_G 0xda550). Inline dtor.
-class EERandomMapTable {
-public:
-    EERandomMapTable();
-    virtual ~EERandomMapTable() {}
-    // 0xda47b Load (db\dbrandommap.dat, every record dropped): removed (RUST_PLAN D9); the table stays empty
-    static void Unload();
-    // members from the ctor: longs 0, eighteen floats 0.0f; sizeof 0x60 (new site)
-    long mL04;                              // +0x04
-    long mL08;                              // +0x08
-    float mF0C;                             // +0x0c
-    float mF10;                             // +0x10
-    float mF14;                             // +0x14
-    float mF18;                             // +0x18
-    float mF1C;                             // +0x1c
-    float mF20;                             // +0x20
-    float mF24;                             // +0x24
-    float mF28;                             // +0x28
-    float mF2C;                             // +0x2c
-    float mF30;                             // +0x30
-    float mF34;                             // +0x34
-    float mF38;                             // +0x38
-    float mF3C;                             // +0x3c
-    float mF40;                             // +0x40
-    float mF44;                             // +0x44
-    float mF48;                             // +0x48
-    float mF4C;                             // +0x4c
-    float mF50;                             // +0x50
-    long mL54;                              // +0x54
-    long mL58;                              // +0x58
-    long mL5C;                              // +0x5c
-    static std::vector<EERandomMapTable*> sTable;   // 0x8e8660 (guard 0x8e8658 bit 1; only its unit sees it)
-};
+// db\dbrandommap's and db\dbterraingraytextures' records are ee_data tables.rs' (the game reads neither).
 
 // Original-backed terrain preparation/cleanup, cdecl noargs; caller/callee proof.
 void EELoadTerrainPreviews();

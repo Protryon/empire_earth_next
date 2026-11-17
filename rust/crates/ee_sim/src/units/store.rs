@@ -5,7 +5,8 @@
 //! object), removed by `RTSPlayer::RemoveKilledUnits`, a player's records dropped by `RTSPlayer::Reset`. That is
 //! the domain of `RTSPlayer::GetUnit` / `gWorld.GetUnit`. Between, every read refreshes the record from its object
 //! ([`refresh`]): the plain members from the Rust records the unit classes derive from (round 26), the pointer
-//! members' derived values from the members at their places in the object ([`EeUnitsStoreSlots`], round 27); only
+//! members' derived values from the members at their places in the object (round 27; the world's layout,
+//! [`crate::world::layout`], since the world views' lane); only
 //! the location and the on-map flag are still reported (`set`); the stats object (`mStats`) is read in place too
 //! (round 28).
 //!
@@ -14,6 +15,8 @@
 //! C++ value (the `long`s as 64-bit values): no float operation, no random draw.
 
 use std::collections::BTreeMap;
+
+use crate::world::layout::EeWorldLayout;
 use std::sync::Mutex;
 
 /// The record's fields that a holder reports (`EEUnitStoreFieldID` in ee/EEUnitStore.h: the same values).
@@ -283,41 +286,9 @@ pub fn refresh(r: &mut EeUnitRecord) {
         r.cloakable = flag!(p, mIsCloakable);
         r.cloaked = flag!(p, mIsCloaked);
     }
-    if let Some(slots) = SLOTS.get() {
-        refresh_pointers(r, slots);
+    if let Some(layout) = crate::world::layout::get() {
+        refresh_pointers(r, layout);
     }
-}
-
-/// The twenty-seventh round's: where the store finds a unit's pointer members (byte offsets from the unit object:
-/// `EEUnit::mUnitClass`, `mComplexUnit`; `EEComplexUnit::mActiveGroup`, `mContainer`, `mCommand`, `mGoalState`,
-/// `mHerd`) and what it reads behind them (the class's record base in `EEUnitClass`, the goal's `mKind` and `mID`,
-/// the action's `mType`). The C++ sets it once, before the first record (`EEUnitStore.cpp`).
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct EeUnitsStoreSlots {
-    pub unit_class: u64,
-    pub complex_unit: u64,
-    pub active_group: u64,
-    pub container: u64,
-    pub command: u64,
-    pub goal_state: u64,
-    pub herd: u64,
-    pub class_fields: u64,
-    pub goal_kind: u64,
-    pub goal_id: u64,
-    pub action_type: u64,
-    /// the twenty-eighth round's: `EEUnit::mStats` (the record's `stats`) and the record base's offset in
-    /// `EEUnitClassUpgrade` (stats.rs)
-    pub stats: u64,
-    pub stats_fields: u64,
-}
-
-static SLOTS: std::sync::OnceLock<EeUnitsStoreSlots> = std::sync::OnceLock::new();
-
-/// Sets the slots (the first call wins: the layout is the build's).
-pub fn set_slots(slots: EeUnitsStoreSlots) {
-    crate::units::stats::set_fields_offset(slots.stats_fields);
-    let _ = SLOTS.set(slots);
 }
 
 /// A pointer member's value at `base + offset`.
@@ -330,7 +301,7 @@ unsafe fn pointer_at(base: usize, offset: u64) -> usize {
 }
 
 /// The class-derived values of a unit whose class is `class` (0: none), as the holders reported them.
-fn refresh_class(r: &mut EeUnitRecord, class: usize, slots: &EeUnitsStoreSlots) {
+fn refresh_class(r: &mut EeUnitRecord, class: usize, layout: &EeWorldLayout) {
     use crate::units::unit_class_fields::EeUnitsUnitClassFields;
     if class == 0 {
         r.category = -1;
@@ -346,7 +317,7 @@ fn refresh_class(r: &mut EeUnitRecord, class: usize, slots: &EeUnitsStoreSlots) 
         r.class_flags = 0;
         return;
     }
-    let p = (class + slots.class_fields as usize) as *const EeUnitsUnitClassFields;
+    let p = (class + layout.unit_class_fields as usize) as *const EeUnitsUnitClassFields;
     r.category = member!(p, mCategory) as i64;
     let unit_type = member!(p, mUnitType);
     r.unit_type = unit_type as i64;
@@ -379,18 +350,18 @@ const CRUSADER_FIRST: u64 = 0x2e6;
 const CRUSADER_LAST: u64 = 0x2e9;
 
 /// The values derived from the unit's pointer members (the class's, the complex unit, the goal, the command, the
-/// group, the container, the herd), read at their places in the object. Nothing until the C++ has set the slots
+/// group, the container, the herd), read at their places in the object. Nothing until the C++ has registered the layout
 /// (the unit tests never do: their objects are not units).
-fn refresh_pointers(r: &mut EeUnitRecord, slots: &EeUnitsStoreSlots) {
+fn refresh_pointers(r: &mut EeUnitRecord, layout: &EeWorldLayout) {
     let object = r.object as usize;
     if r.unit_fields != 0 {
         // SAFETY: the object is a live EEUnit (its record is in the store): its pointer members are readable
-        let class = unsafe { pointer_at(object, slots.unit_class) };
-        refresh_class(r, class, slots);
+        let class = unsafe { pointer_at(object, layout.unit_class) };
+        refresh_class(r, class, layout);
         // SAFETY: as above
-        r.stats = unsafe { pointer_at(object, slots.stats) } as u64;
+        r.stats = unsafe { pointer_at(object, layout.unit_stats) } as u64;
         // SAFETY: as above
-        let complex = unsafe { pointer_at(object, slots.complex_unit) };
+        let complex = unsafe { pointer_at(object, layout.unit_complex_unit) };
         r.complex = if complex == 0 {
             EE_UNIT_COMPLEX_NONE
         } else if complex == object {
@@ -403,24 +374,24 @@ fn refresh_pointers(r: &mut EeUnitRecord, slots: &EeUnitsStoreSlots) {
         // SAFETY: the object is a live EEComplexUnit: its pointer members are readable, and a goal or an action it
         // points to is live while it does
         unsafe {
-            let goal = pointer_at(object, slots.goal_state);
+            let goal = pointer_at(object, layout.complex_goal_state);
             if goal == 0 {
                 r.goal_kind = -1;
                 r.goal_id = 0;
             } else {
-                r.goal_kind = i32::from(std::ptr::read_volatile((goal + slots.goal_kind as usize) as *const u8));
+                r.goal_kind = i32::from(std::ptr::read_volatile((goal + layout.goal_kind as usize) as *const u8));
                 r.goal_id =
-                    std::ptr::read_volatile((goal + slots.goal_id as usize) as *const std::os::raw::c_ulong) as u32;
+                    std::ptr::read_volatile((goal + layout.goal_id as usize) as *const std::os::raw::c_ulong) as u32;
             }
-            let command = pointer_at(object, slots.command);
+            let command = pointer_at(object, layout.complex_command);
             r.command = if command == 0 {
                 0
             } else {
-                i64::from(std::ptr::read_volatile((command + slots.action_type as usize) as *const u32))
+                i64::from(std::ptr::read_volatile((command + layout.action_type as usize) as *const u32))
             };
-            r.active_group = u8::from(pointer_at(object, slots.active_group) != 0);
-            r.herd = u8::from(pointer_at(object, slots.herd) != 0);
-            r.container = u8::from(pointer_at(object, slots.container) != 0);
+            r.active_group = u8::from(pointer_at(object, layout.complex_active_group) != 0);
+            r.herd = u8::from(pointer_at(object, layout.complex_herd) != 0);
+            r.container = u8::from(pointer_at(object, layout.complex_container) != 0);
         }
     }
 }
@@ -730,6 +701,11 @@ impl Store {
         let r = self.records.get_mut(&id)?;
         refresh(r);
         Some(r)
+    }
+
+    /// The object of the record under `id` (no read of the object: the world views' lookup, `UnitView::by_id`).
+    pub fn object_of(&self, id: u32) -> Option<u64> {
+        self.records.get(&id).map(|r| r.object)
     }
 
     /// Whether a record is under `id` (no read of the object).
@@ -1294,7 +1270,7 @@ mod tests {
 
     /// a fake unit object: pointer members at known offsets, a class record, a goal and an action behind them
     #[test]
-    fn the_pointer_members_are_read_where_the_slots_say() {
+    fn the_pointer_members_are_read_where_the_layout_says() {
         use crate::units::unit_class_fields::EeUnitsUnitClassFields;
         let mut class = EeUnitsUnitClassFields {
             mCategory: 6,
@@ -1330,20 +1306,20 @@ mod tests {
         object[6] = 0x80; // a herd
         object[7] = 0x5000; // the stats object
         let w = std::mem::size_of::<usize>() as u64;
-        let slots = EeUnitsStoreSlots {
+        let slots = EeWorldLayout {
             unit_class: 0,
-            complex_unit: w,
-            active_group: 2 * w,
-            container: 3 * w,
-            command: 4 * w,
-            goal_state: 5 * w,
-            herd: 6 * w,
-            class_fields: 0,
+            unit_complex_unit: w,
+            complex_active_group: 2 * w,
+            complex_container: 3 * w,
+            complex_command: 4 * w,
+            complex_goal_state: 5 * w,
+            complex_herd: 6 * w,
+            unit_class_fields: 0,
             goal_kind: 5,
             goal_id: 16,
             action_type: 0,
-            stats: 7 * w,
-            stats_fields: 0,
+            unit_stats: 7 * w,
+            ..Default::default()
         };
         let mut r = EeUnitRecord { object: base as u64, unit_fields: 1, complex_fields: 1, ..Default::default() };
         refresh_pointers(&mut r, &slots);

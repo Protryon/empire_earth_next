@@ -11,8 +11,9 @@ use crate::compmem as mem;
 use std::cell::RefCell;
 use std::ffi::c_void;
 
+use crate::compobj::comp;
 use crate::guictl::EeWonRect4;
-use crate::guihost::{EeWonGuiEvent, EeWonGuiField as F, EeWonGuiHostFn, EeWonGuiOp as Op};
+use crate::guihost::{EeWonGuiEvent, EeWonGuiHostFn, EeWonGuiOp as Op};
 use crate::guiscroll::{self, EeWonScrollPress, EeWonThumbIn};
 
 /// `ComponentEvent_ButtonPressed` (WindowEventType).
@@ -175,27 +176,35 @@ impl EeWonScrollbar {
     }
     /// `S_Width(this)` and `S_Height(this)`.
     fn own_width(&self) -> i32 {
-        let f = if self.vert() { F::Width } else { F::Height };
-        self.op(Op::Get, f as isize, 0, 0) as i32
+        let me = self.comp as isize;
+        if self.vert() {
+            mem::width(me)
+        } else {
+            mem::height(me)
+        }
     }
     fn own_height(&self) -> i32 {
-        let f = if self.vert() { F::Height } else { F::Width };
-        self.op(Op::Get, f as isize, 0, 0) as i32
+        let me = self.comp as isize;
+        if self.vert() {
+            mem::height(me)
+        } else {
+            mem::width(me)
+        }
     }
     fn s_set_pos(&self, c: isize, x: i32, y: i32) {
         let (x, y) = if self.vert() { (x, y) } else { (y, x) };
-        self.op(Op::ChildSetPos, c, x as isize, y as isize);
+        comp().set_pos(c, x, y);
     }
     fn s_set_size(&self, c: isize, w: i32, h: i32) {
         let (w, h) = if self.vert() { (w, h) } else { (h, w) };
-        self.op(Op::ChildSetSize, c, w as isize, h as isize);
+        comp().set_size(c, w, h);
     }
     fn s_set_pos_size(&self, c: isize, x: i32, y: i32, w: i32, h: i32) {
         let r = if self.vert() { EeWonRect4 { x, y, w, h } } else { EeWonRect4 { x: y, y: x, w: h, h: w } };
-        self.op(Op::ChildSetPosSize, c, &r as *const EeWonRect4 as isize, 0);
+        comp().set_pos_size(c, r.x, r.y, r.w, r.h);
     }
     fn disabled(&self) -> bool {
-        self.op(Op::IsDisabled, 0, 0, 0) != 0
+        mem::is_disabled(self.comp as isize)
     }
 
     /// The `SmartPtr` assignment: the old part given back, then the new one held.
@@ -226,7 +235,7 @@ impl EeWonScrollbar {
     }
 
     pub fn added_to_parent(&self) {
-        if self.op(Op::ChildIsMine, self.part(UP), 0, 0) == 0 {
+        if mem::parent(self.part(UP)) != self.comp as isize {
             self.add_controls();
         }
         self.op(Op::BaseAddedToParent, 0, 0, 0);
@@ -268,10 +277,10 @@ impl EeWonScrollbar {
         };
         let out = guiscroll::thumb_layout(t);
         if out.hidden {
-            self.op(Op::ChildSetVisible, thumb, 0, 0);
+            comp().v_set_visible(thumb, false);
             return;
         }
-        self.op(Op::ChildSetVisible, thumb, (!self.disabled()) as isize, 0);
+        comp().v_set_visible(thumb, !self.disabled());
         let mut w = self.s_width(thumb);
         if w == 0 {
             w = self.own_width();
@@ -301,7 +310,7 @@ impl EeWonScrollbar {
     pub fn mouse_down(&self, x: i32, y: i32, button: i32) {
         self.op(Op::BaseMouseDown, x as isize, y as isize, button as isize);
         let thumb = self.part(THUMB);
-        if button == 0 && self.op(Op::MouseChild, 0, 0, 0) == thumb {
+        if button == 0 && comp().v_mouse_child(self.comp as isize) == thumb {
             let dx = x.wrapping_sub(self.left(thumb));
             let dy = y.wrapping_sub(self.top(thumb));
             let mut s = self.st.borrow_mut();
@@ -313,7 +322,7 @@ impl EeWonScrollbar {
     pub fn mouse_drag(&self, x: i32, y: i32) {
         self.op(Op::BaseMouseDrag, x as isize, y as isize, 0);
         let (rect, thumb) = (self.part(RECT), self.part(THUMB));
-        if self.op(Op::MouseChild, 0, 0, 0) != thumb {
+        if comp().v_mouse_child(self.comp as isize) != thumb {
             return;
         }
         let (drag_x, drag_y, total, page, old) = {
@@ -328,7 +337,7 @@ impl EeWonScrollbar {
         self.st.borrow_mut().position = position;
         if top != self.s_top(thumb) {
             self.s_set_pos(thumb, self.s_left(thumb), top);
-            self.op(Op::ChildInvalidate, rect, 0, 0);
+            comp().v_invalidate(rect);
         }
         if position != old {
             self.op(Op::FireEvent, EeWonGuiEvent::Scroll as isize, 0, 0);
@@ -340,13 +349,13 @@ impl EeWonScrollbar {
             self.op(Op::BaseHandleEvent, event, 0, 0);
             return;
         }
-        let comp = self.op(Op::EventComponent, event, 0, 0);
+        let from = self.op(Op::EventComponent, event, 0, 0);
         let mut mouse = 0i32;
-        let press = if comp == self.part(UP) {
+        let press = if from == self.part(UP) {
             EeWonScrollPress::LineUp
-        } else if comp == self.part(DOWN) {
+        } else if from == self.part(DOWN) {
             EeWonScrollPress::LineDown
-        } else if comp == self.part(RECT) {
+        } else if from == self.part(RECT) {
             let (mut mx, mut my) = (0i32, 0i32);
             self.op(Op::GetMousePos, &mut mx as *mut i32 as isize, &mut my as *mut i32 as isize, 0);
             mouse = if self.vert() { my } else { mx };
@@ -378,7 +387,7 @@ impl EeWonScrollbar {
             return;
         }
         self.layout_thumb(true);
-        self.op(Op::ChildInvalidate, self.part(RECT), 0, 0);
+        comp().v_invalidate(self.part(RECT));
         self.op(Op::FireEvent, EeWonGuiEvent::Scroll as isize, 0, 0);
     }
 
@@ -386,15 +395,15 @@ impl EeWonScrollbar {
         if on == !self.disabled() {
             return;
         }
-        self.op(Op::BaseSetEnabled, on as isize, 0, 0);
-        self.op(Op::ChildSetEnabled, self.part(UP), on as isize, 0);
-        self.op(Op::ChildSetEnabled, self.part(DOWN), on as isize, 0);
+        comp().set_enabled(self.comp as isize, on);
+        comp().v_set_enabled(self.part(UP), on);
+        comp().v_set_enabled(self.part(DOWN), on);
         let overflow = {
             let s = self.st.borrow();
             s.total > s.page
         };
         if overflow {
-            self.op(Op::ChildSetVisible, self.part(THUMB), on as isize, 0);
+            comp().v_set_visible(self.part(THUMB), on);
         }
     }
 

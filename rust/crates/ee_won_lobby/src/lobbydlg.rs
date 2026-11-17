@@ -273,8 +273,8 @@ pub enum EeWonLobbyDlgOp {
     ListEndUpdate,
     /// `((ListArea*)a)->Clear(b != 0)`.
     ListClear,
-    /// `for (each user of *(const RoutingBadUserList*)b) ((ListArea*)a)->InsertItem(new BadUserItem(user, c != 0),
-    /// -1)`.
+    /// `for (each bad user record of (const EeWonRouteOp*)b) ((ListArea*)a)->InsertItem(new BadUserItem(record,
+    /// c != 0), -1)`.
     BadUsersInsert,
     /// `((BadUserDialog::IdList*)a)->clear()`.
     IdsClear,
@@ -438,7 +438,7 @@ pub enum EeWonLobbyDlgCall {
     SetStatus,
     /// StatusDialog: `mStartTick = a`.
     SetStartTick,
-    /// BadUserDialog: `SetUserList(*(const RoutingBadUserList*)a, b != 0)`.
+    /// BadUserDialog: `SetUserList((const EeWonRouteOp*)a, b != 0)` (the routing op's bad users).
     SetUserList,
     /// BadUserDialog: `GetIds(*(IdList*)a)`.
     GetIds,

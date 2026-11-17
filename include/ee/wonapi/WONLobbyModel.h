@@ -43,8 +43,6 @@ public:
 class LobbyGroup : public LobbyModelObject {
 public:
     LobbyGroup() : LobbyModelObject(EeWonModelKind::Group) {}
-    void ReadRoutingInfo(RoutingGroupInfo*, LobbyClientList*);
-    void SetMembers(const RoutingMemberMap&, LobbyClientList*);
     void AddClient(LobbyClient* inClient, unsigned char inFlags) { this->M(LobbyMC::GroupAdd, (intptr_t)inClient, inFlags); }
     SmartPtr<LobbyClient> RemoveClient(unsigned short inId) { return LobbyModelHeld<LobbyClient>(this->M(LobbyMC::GroupRemove, inId)); }
     LobbyClient* SetCaptain(unsigned short inId, LobbyClient** outOld) { return (LobbyClient*)this->M(LobbyMC::GroupSetCaptain, inId, (intptr_t)outOld); }
@@ -74,16 +72,12 @@ public:
     bool HasAddress(const std::string& inName) { return this->M(LobbyMC::ServerHasAddress, (intptr_t)inName.data(), (intptr_t)inName.length()) != 0; }
     void SetConnection(RoutingConnection* inConnection) { this->MSet(LobbyMF::ServerConnection, (intptr_t)inConnection); }
     void ReadDirEntity(DirEntity* inEntity);
-    void SyncClients(const RoutingClientMap& inClients);
     void UpdateFriends() { this->M(LobbyMC::ServerUpdateFriends); }
     void ClearFriendLocations() { this->M(LobbyMC::ServerClearFriendLocations, (intptr_t)time(NULL)); }
-    void SyncGroups(const RoutingGroupMap& inGroups, bool inFlag);
-    LobbyClient* AddClient(RoutingClientInfo* inInfo) { return (LobbyClient*)this->M(LobbyMC::ServerAddClient, (intptr_t)inInfo); }
     void AddClientToGroup(LobbyClient* inClient, unsigned char inFlags, LobbyGroup* inGroup)
     {
         this->M(LobbyMC::ServerAddClientToGroup, (intptr_t)inClient, inFlags, (intptr_t)inGroup);
     }
-    LobbyGroup* AddGroup(RoutingGroupInfo* inInfo) { return (LobbyGroup*)this->M(LobbyMC::ServerAddGroup, (intptr_t)inInfo); }
     SmartPtr<LobbyGroup> RemoveGroup(unsigned short inId) { return LobbyModelHeld<LobbyGroup>(this->M(LobbyMC::ServerRemoveGroup, inId)); }
     SmartPtr<LobbyClient> RemoveClient(unsigned short inId) { return LobbyModelHeld<LobbyClient>(this->M(LobbyMC::ServerRemoveClient, inId)); }
     SmartPtr<LobbyClient> RemoveClientFromGroup(unsigned short inId, LobbyGroup* inGroup)

@@ -4,6 +4,7 @@
 #include "rust/won_lobby/lobbydlg.h"
 #include "rust/won_lobby/lobbypopup.h"
 #include "rust/won_lobby/scrolltext.h"
+#include "rust/won_net/routeop.h"
 namespace WONAPI {
 class LobbyGame;
 class LobbyClient;
@@ -201,15 +202,15 @@ public:
     RoomDialog() : LobbyRustDialog(EeWonLobbyDlgKind::Room) {}
 };
 
-struct RoutingBadUser; // defined in WONRouting.h
 // BadUserDialog: the muted/banned user list (the full list for moderators, the simple one for others).
 class BadUserDialog : public LobbyRustDialog {
 public:
     typedef std::list<unsigned long> IdList;
     BadUserDialog() : LobbyRustDialog(EeWonLobbyDlgKind::BadUser) {}
-    void SetUserList(const std::list<RoutingBadUser>& inList, bool inSimple)
+    // the bad users of a routing op's Rust object (its records: ee_won routeop.rs)
+    void SetUserList(const EeWonRouteOp* inOp, bool inSimple)
     {
-        this->LCall(EeWonLobbyDlgCall::SetUserList, (intptr_t)&inList, inSimple);
+        this->LCall(EeWonLobbyDlgCall::SetUserList, (intptr_t)inOp, inSimple);
     }
     void GetIds(IdList& outIds) { this->LCall(EeWonLobbyDlgCall::GetIds, (intptr_t)&outIds); }
 };

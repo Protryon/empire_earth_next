@@ -18,6 +18,7 @@
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
+#include "ee/EEDbRecords.h"
 
 // The unit's three dynamic initializers open it (0xd6bed..0xd6ceb), in definition order; one guard byte 0x4e8418
 // (bits 1/2/4) for the three atexit destructors. .bss layout is reverse definition order.
@@ -29,86 +30,15 @@ std::vector<EEMedia*> EEGraphicEffect::sMediaByKind[0x48];
 std::set<unsigned long> EEGraphicEffect::sIDs;
 extern std::vector<EEMedia*> gMediaTable;   // 0x4e8448 (EEAnimal.cpp)
 
-// One record of db\dbgfxeffects.dat (0xe8 bytes, read whole). Layout inferred (only the fields the ctor copies).
-struct EEGraphicEffectRecord {
-    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
-    int32_t mID;                            // +0x68 -> +0x60 (> 0: a real record)
-    int32_t mKind;                          // +0x6c -> +0x58
-    int32_t mTagPointKind;                  // +0x70 -> +0x5c
-    int32_t mMediaIndex;                    // +0x74 -> +0x0c (EEMedia::Get)
-    float mStartSize;                       // +0x78 -> +0x20
-    float mHeight;                          // +0x7c -> +0x1c
-    float mAlpha;                           // +0x80 -> +0x24
-    int32_t mTime1;                         // +0x84 -> +0x70
-    int32_t mTime2;                         // +0x88 -> +0x74
-    int32_t mDuration;                      // +0x8c -> +0x78
-    int32_t mIntParam1;                     // +0x90 -> +0x64
-    int32_t mIntParam2;                     // +0x94 -> +0x68
-    int32_t mIntParam3;                     // +0x98 -> +0x6c
-    int32_t mLinkedEffectIndex1;            // +0x9c -> +0x10 (an index until Load links it)
-    int32_t mLinkedEffectIndex2;            // +0xa0 -> +0x14
-    int32_t mLinkedEffectIndex3;            // +0xa4 -> +0x18
-    int32_t mNameStringId;                  // +0xa8 -> +0x7c
-    float mParam1;                          // +0xac -> +0x28
-    float mParam2;                          // +0xb0 -> +0x2c
-    float mParam3;                          // +0xb4 -> +0x30
-    float mParam4;                          // +0xb8 -> +0x34
-    float mParam5;                          // +0xbc -> +0x38
-    float mParam6;                          // +0xc0 -> +0x3c
-    float mParam7;                          // +0xc4 -> +0x40
-    float mParam8;                          // +0xc8 -> +0x44
-    float mParam9;                          // +0xcc -> +0x48
-    float mParam10;                         // +0xd0 -> +0x4c
-    float mParam11;                         // +0xd4 -> +0x50
-    float mEmitPositionSpread;                          // +0xd8 -> +0x54
-    bool mFlag1;                            // +0xdc -> +0x88
-    bool mFlag2;                            // +0xdd -> +0x89
-    bool mIsScenarioListed;                 // +0xde -> +0x8b
-    bool mIsEmitFlat;                       // +0xdf -> +0x8c
-    bool mEndsWithUnitOrDuration;           // +0xe0 -> +0x8a
-    int32_t mDetailLevel;                   // +0xe4 -> +0x84
-};
-static_assert(sizeof(EEGraphicEffectRecord) == 232, "on-disk record: 232 bytes on every target");
-
-// Creates a graphic effect from its table record; linked effects stay table indices until LoadTable links them
-EEGraphicEffect::EEGraphicEffect(EEGraphicEffectRecord* inRecord)
+// Creates a graphic effect from its table record's members (ee_data tables.rs) and its graphic; LoadTable links the
+// follow-on effects
+EEGraphicEffect::EEGraphicEffect(const EeDataGraphicEffectFields& inFields, EEGraphicObject* inGraphicObject)
+    : EeDataGraphicEffectFields(inFields)
 {
-    this->mGraphicObject = static_cast<EEGraphicObject*>(EEMedia::Get(inRecord->mMediaIndex));
-    this->mAlpha = inRecord->mAlpha;
-    this->mSize = inRecord->mHeight;
-    this->mStartSize = inRecord->mStartSize;
-    this->mKind = inRecord->mKind;
-    this->mTagPointKind = inRecord->mTagPointKind;
-    this->mTime1 = inRecord->mTime1;
-    this->mTime2 = inRecord->mTime2;
-    this->mDuration = inRecord->mDuration;
-    this->mID = inRecord->mID;
-    this->mLinkedEffect1 = reinterpret_cast<EEGraphicEffect*>(inRecord->mLinkedEffectIndex1);
-    this->mLinkedEffect2 = reinterpret_cast<EEGraphicEffect*>(inRecord->mLinkedEffectIndex2);
-    this->mLinkedEffect3 = reinterpret_cast<EEGraphicEffect*>(inRecord->mLinkedEffectIndex3);
-    this->mIntParam1 = inRecord->mIntParam1;
-    this->mIntParam2 = inRecord->mIntParam2;
-    this->mIntParam3 = inRecord->mIntParam3;
-    this->mParam1 = inRecord->mParam1;
-    this->mParam2 = inRecord->mParam2;
-    this->mParam3 = inRecord->mParam3;
-    this->mParam4 = inRecord->mParam4;
-    this->mParam5 = inRecord->mParam5;
-    this->mParam6 = inRecord->mParam6;
-    this->mParam7 = inRecord->mParam7;
-    this->mParam8 = inRecord->mParam8;
-    this->mParam9 = inRecord->mParam9;
-    this->mParam10 = inRecord->mParam10;
-    this->mParam11 = inRecord->mParam11;
-    this->mEmitPositionSpread = inRecord->mEmitPositionSpread;
-    this->mFlag1 = inRecord->mFlag1;
-    this->mFlag2 = inRecord->mFlag2;
-    this->mEndsWithUnitOrDuration = inRecord->mEndsWithUnitOrDuration;
-    this->mIsEmitFlat = inRecord->mIsEmitFlat;
-    this->mIsScenarioListed = inRecord->mIsScenarioListed;
-    this->mNameStringId = inRecord->mNameStringId;
-    this->mDetailLevel = inRecord->mDetailLevel;
+    this->mGraphicObject = inGraphicObject;
+    this->mLinkedEffect1 = NULL;
+    this->mLinkedEffect2 = NULL;
+    this->mLinkedEffect3 = NULL;
     this->mNumLoads = 0;
 }
 
@@ -117,43 +47,35 @@ EEGraphicEffect::~EEGraphicEffect()
 {
 }
 
-// Reads the graphic effect table from the file and links each effect's three follow-on effects by index;
-// returns the last read result
+// Reads the graphic effect table from the file (the record and its copy are ee_data tables.rs'; rows whose id is not
+// above 0 stay NULL) and links each effect's three follow-on effects by index; returns the last read result
 long EEGraphicEffect::LoadTable(FSFile* inFile)
 {
-    EEGraphicEffectRecord theRecord;
-    inFile->Open(kFileAccessRead);
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    long theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
-        EEGraphicEffect::sEffects.resize(theCount, NULL);
-        for (unsigned long i = 0; i < theCount; i++) {
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-            EEGraphicEffect::sEffects[i] = theRecord.mID > 0 ? new EEGraphicEffect(&theRecord) : NULL;
-        }
-    }
-    for (unsigned long j = 0; j < EEGraphicEffect::sEffects.size(); j++) {
+    std::vector<EeDataGraphicEffectLinks> theLinks;
+    long theResult = EEDbReadRecords(inFile, ee_data_graphic_effect_record_size(),
+        [&](unsigned long inCount) {
+            EEGraphicEffect::sEffects.resize(inCount, NULL);
+            theLinks.resize(inCount);
+            return true;
+        },
+        [&](unsigned long inIndex, const unsigned char* inRecord) {
+            EeDataGraphicEffectFields theFields;
+            EEGraphicEffect* theEffect = NULL;
+            if (ee_data_graphic_effect_from_record(inRecord, &theFields, &theLinks[inIndex]))
+                theEffect = new EEGraphicEffect(theFields,
+                    static_cast<EEGraphicObject*>(EEMedia::Get(theLinks[inIndex].media)));
+            EEGraphicEffect::sEffects[inIndex] = theEffect;
+        });
+    for (unsigned long j = 0; j < EEGraphicEffect::sEffects.size() && j < theLinks.size(); j++) {
         EEGraphicEffect* theEffect = EEGraphicEffect::sEffects[j];
         if (theEffect == NULL)
             continue;
-        unsigned long theIndex = USavedID(theEffect->mLinkedEffect1);
-        if (theIndex < EEGraphicEffect::sEffects.size())
-            theEffect->mLinkedEffect1 = EEGraphicEffect::sEffects[theIndex];
-        else
-            theEffect->mLinkedEffect1 = NULL;
-        theIndex = USavedID(theEffect->mLinkedEffect2);
-        if (theIndex < EEGraphicEffect::sEffects.size())
-            theEffect->mLinkedEffect2 = EEGraphicEffect::sEffects[theIndex];
-        else
-            theEffect->mLinkedEffect2 = NULL;
-        theIndex = USavedID(theEffect->mLinkedEffect3);
-        if (theIndex < EEGraphicEffect::sEffects.size())
-            theEffect->mLinkedEffect3 = EEGraphicEffect::sEffects[theIndex];
-        else
-            theEffect->mLinkedEffect3 = NULL;
+        EEGraphicEffect** theLinked[3] = {&theEffect->mLinkedEffect1, &theEffect->mLinkedEffect2, &theEffect->mLinkedEffect3};
+        for (int k = 0; k < 3; k++) {
+            unsigned long theIndex = theLinks[j].linked[k];
+            *theLinked[k] = theIndex < EEGraphicEffect::sEffects.size() ? EEGraphicEffect::sEffects[theIndex] : NULL;
+        }
     }
-    inFile->Close();
     return theResult;
 }
 

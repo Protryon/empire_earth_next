@@ -93,24 +93,8 @@ long EEEvent::LoadEvents(FSFileSpec& inEvents, FSFileSpec& inEffects)
     return theResult;
 }
 
-extern EEGraphicObject* gGraphicObjectU4E8434;   // the built-in graphic objects outside gMediaTable (EEGraphicObject.cpp)
-extern EEGraphicObject* gGraphicObjectU4E8438;
-extern EEGraphicObject* gGraphicObjectU4E843C;
-extern EEGraphicObject* gGraphicObjectU4E8440;
-
-// Unloads the four built-in graphic objects and deletes those that are not in the media table (the last first)
-void EEUnloadBuiltInGraphicObjects()
-{
-    EEGraphicObject* theObjects[] = {gGraphicObjectU4E8440, gGraphicObjectU4E843C, gGraphicObjectU4E8438,
-                                     gGraphicObjectU4E8434};
-    for (EEGraphicObject* theObject : theObjects) {
-        if (theObject == NULL)
-            continue;
-        theObject->UnloadMedia();
-        if (theObject->mMediaIndex == -1)
-            delete theObject;
-    }
-}
+// (EEUnloadBuiltInGraphicObjects 0x1ca6d9 unloaded four graphic objects outside the media table: nothing ever set
+// them, so it is gone with them; data lane round 3)
 
 // Runs every effect of an event for a player (a given player's own index wins); returns the last effect's result
 long EEEvent::Trigger(long inEvent, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit)

@@ -13,6 +13,8 @@
 use std::cell::RefCell;
 use std::ffi::c_void;
 
+use crate::compmem as mem;
+use crate::compobj::comp;
 use crate::guictl::EeWonRect4;
 use crate::guidraw::{EeWonDrawOp, EE_WON_DRAW_POP_CLIP, EE_WON_DRAW_PUSH_CLIP, EE_WON_DRAW_TRANSLATE};
 use crate::guihost::{EeWonGuiField as F, EeWonGuiHostFn, EeWonGuiOp as Op};
@@ -183,7 +185,7 @@ impl EeWonScrollPane {
             }
         };
         let viewport = self.op(Op::GetViewport, 0, 0, 0);
-        self.op(Op::ChildSetPosSize, viewport, &r as *const EeWonRect4 as isize, 0);
+        comp().set_pos_size(viewport, r.x, r.y, r.w, r.h);
     }
 
     pub fn adjust_position(&self, scrollbar: bool) {
@@ -208,7 +210,7 @@ impl EeWonScrollPane {
             s.old_h = s.view.height;
         }
         self.set_delegate_pos();
-        self.op(Op::Invalidate, 0, 0, 0);
+        comp().v_invalidate(self.comp as isize);
     }
 
     pub fn set_vert_offset(&self, offset: i32) {
@@ -227,8 +229,8 @@ impl EeWonScrollPane {
 
     pub fn size_changed(&self) {
         self.op(Op::BaseSizeChanged, 0, 0, 0);
-        let w = self.op(Op::Get, F::Width as isize, 0, 0) as i32;
-        let h = self.op(Op::Get, F::Height as isize, 0, 0) as i32;
+        let w = mem::width(self.comp as isize);
+        let h = mem::height(self.comp as isize);
         let pads = self.st.borrow().pads;
         let n = guiscroll::view_layout(&self.numbers(), w, h, pads[0], pads[1], pads[2], pads[3]);
         {
@@ -277,7 +279,7 @@ impl EeWonScrollPane {
     pub fn set_size_equal_to_total(&self, min_width: i32, min_height: i32) {
         let pads = self.st.borrow().pads;
         let (w, h) = guiscroll::size_equal_to_total(&self.numbers(), min_width, min_height, pads);
-        self.op(Op::SetSize, w as isize, h as isize, 0);
+        comp().set_size(self.comp as isize, w, h);
     }
 
     pub fn desired_size(&self) -> (i32, i32) {

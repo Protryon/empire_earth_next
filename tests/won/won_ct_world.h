@@ -293,10 +293,6 @@ static intptr_t Host(void* inComp, Op inOp, intptr_t a, intptr_t b, intptr_t c, 
         break;
     case Op::CtVirt: r = Do(self, OverrideOf((V)a), b, c); break;
     case Op::CtDetach: Do(sW[a].parent, C::RemoveChild, a); break;
-    case Op::CtSetParent: sW[a].parent = b ? self : 0; break;
-    case Op::CtSetFocusId: sW[a].focusId = (unsigned char)b; break;
-    case Op::CtSetInvalidState: sW[a].invalid = (signed char)b; break;
-    case Op::CtSetTimerFlags: w.timer = (signed char)a; break;
     case Op::ChildSetFlags: sW[a].bits = c ? (sW[a].bits | (uint32_t)b) : (sW[a].bits & ~(uint32_t)b); break;
     case Op::CtSetScheme: sScheme = b; break;
     case Op::ChildInvalidate: VCall(a, V::Invalidate); break;
@@ -322,6 +318,12 @@ static void TopCall(int ct, C call, intptr_t a, intptr_t b, intptr_t c)
         r = w; r2 = h;
     } else r = SideCall(ct, call, a, b, c);
     Line("-> %lld %lld", r, r2);
+    // the members the containers write in place: every component's parent, focus id, invalid state and timer flags
+    std::string s = "world";
+    for (int id = 1; id <= kN; id++)
+        s += " " + std::to_string((long long)sW[id].parent) + " " + std::to_string((int)sW[id].focusId) + " " +
+             std::to_string((int)sW[id].invalid) + " " + std::to_string((int)sW[id].timer);
+    sTrace.push_back(s);
 }
 
 static intptr_t AnyComp() { return 1 + DR(kN); }
