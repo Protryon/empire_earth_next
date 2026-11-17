@@ -19,7 +19,7 @@
 use core::cell::RefCell;
 use core::ffi::{c_int, c_long, c_ulong, c_void};
 
-use ee_util::graph::{EeUtilColor, EeUtilGraph, EeUtilPoint, EeUtilSeries};
+use ee_base::util::graph::{EeUtilColor, EeUtilGraph, EeUtilPoint, EeUtilSeries};
 
 use crate::graph::{self, GraphAxis, GraphHost, GraphRange, GraphText, GraphTexts, SeriesHost, SeriesListHost};
 use crate::obj::{read_buf, EeUiHostFn, EeUiOp as Op, Host};

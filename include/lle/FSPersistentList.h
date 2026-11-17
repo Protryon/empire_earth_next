@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\File System\FSPersistentList.h (file name inferred): the registry of FSPersistent
-// prototypes by tag. The registry is Rust's (rust/crates/ee_fs persistent_list.rs, LLE lane round 2; a lazily
+// prototypes by tag. The registry is Rust's (rust/crates/ee_base/src/fs persistent_list.rs, LLE lane round 2; a lazily
 // created singleton holding a std::map before): these static members make the prototypes' virtual calls.
 // Requires lle/FSPersistent.h.
 #ifndef LLE_FSPERSISTENTLIST_H

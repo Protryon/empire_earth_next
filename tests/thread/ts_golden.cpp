@@ -1,7 +1,7 @@
 // Golden driver for the Thread System (TSCriticalSection, TSEvent, TSReadWriteLock, TSThread, TSScheduler,
 // TSInitialize): random single-threaded call sequences over the original units (ts_orig.h) on a scripted platform
 // layer. Every platform call is printed with its arguments and the result the driver chose; the Rust replay
-// (rust/crates/ee_ts/src/golden.rs) makes the same calls on the Rust objects, checks each platform call it makes
+// (rust/crates/ee_base/src/ts/golden.rs) makes the same calls on the Rust objects, checks each platform call it makes
 // against the next recorded one and answers with the recorded result, and regenerates every other line.
 //
 //   python -I build/lle3/cc.py build/lle3/tsg.exe tests/thread/ts_golden.cpp -Itests/thread

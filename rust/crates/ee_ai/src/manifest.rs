@@ -59,7 +59,7 @@ pub fn module_ok(name: &[u8]) -> bool {
 
 /// `EECPAIToGameText`: the text up to an embedded NUL, a byte that is not part of a well-formed sequence as U+FFFD.
 pub fn to_game_text(text: &[u8]) -> Vec<u8> {
-    use ee_plat_core::utf8;
+    use ee_base::plat_core::utf8;
     let end = text.iter().position(|&c| c == 0).unwrap_or(text.len());
     let text = &text[..end];
     let mut out = Vec::with_capacity(text.len());

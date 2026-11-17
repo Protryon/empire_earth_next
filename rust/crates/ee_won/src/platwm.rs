@@ -24,8 +24,8 @@ use std::ffi::{c_char, c_void};
 use std::sync::atomic::{AtomicI32, AtomicU32, Ordering};
 use std::sync::{Condvar, Mutex};
 
-use ee_plat_core::string::{PlatUtf8ToWide, WChar};
-use ee_plat_ui::font::{
+use ee_base::plat_core::string::{PlatUtf8ToWide, WChar};
+use ee_base::plat_ui::font::{
     PlatFont, PlatFontCreate, PlatFontDestroy, PlatFontDraw, PlatFontGetMetrics, PlatFontMetrics, PlatFontRect,
     PlatFontScaled, PlatFontTarget,
 };
@@ -289,7 +289,7 @@ unsafe impl Sync for EeWonPlatWm {}
 unsafe impl Send for EeWonPlatWm {}
 
 fn tick() -> u32 {
-    ee_plat_core::time::PlatTimeMilliseconds64() as u32
+    ee_base::plat_core::time::PlatTimeMilliseconds64() as u32
 }
 
 /// The WONAPI key modifiers of PLAT_MOD_* (shift 1, alt 2, control 4).

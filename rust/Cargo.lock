@@ -185,7 +185,7 @@ name = "ee_ai"
 version = "0.1.0"
 dependencies = [
  "cc",
- "ee_plat_core",
+ "ee_base",
  "libc",
  "mlua-sys",
 ]
@@ -194,10 +194,9 @@ dependencies = [
 name = "ee_app"
 version = "0.1.0"
 dependencies = [
+ "ee_base",
  "ee_ge",
  "ee_gfx",
- "ee_plat_core",
- "ee_random",
 ]
 
 [[package]]
@@ -208,8 +207,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "ee_codec"
+name = "ee_base"
 version = "0.1.0"
+dependencies = [
+ "libc",
+ "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
+]
 
 [[package]]
 name = "ee_combat"
@@ -237,13 +241,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ee_error"
-version = "0.1.0"
-dependencies = [
- "ee_util",
-]
-
-[[package]]
 name = "ee_formations"
 version = "0.1.0"
 dependencies = [
@@ -251,51 +248,30 @@ dependencies = [
 ]
 
 [[package]]
-name = "ee_fs"
-version = "0.1.0"
-dependencies = [
- "ee_codec",
- "ee_error",
- "ee_plat_core",
- "ee_plat_sys",
- "ee_ustring",
-]
-
-[[package]]
 name = "ee_ge"
 version = "0.1.0"
 dependencies = [
- "ee_plat_core",
- "ee_random",
- "ee_ustring",
+ "ee_base",
 ]
 
 [[package]]
 name = "ee_gfx"
 version = "0.1.0"
 dependencies = [
+ "ee_base",
  "ee_ge",
- "ee_random",
 ]
 
 [[package]]
 name = "ee_gx"
 version = "0.1.0"
 dependencies = [
- "ee_plat_core",
+ "ee_base",
  "log",
  "naga",
  "parking_lot",
  "raw-window-handle",
  "wgpu",
-]
-
-[[package]]
-name = "ee_input"
-version = "0.1.0"
-dependencies = [
- "ee_time",
- "ee_util",
 ]
 
 [[package]]
@@ -306,14 +282,14 @@ version = "0.1.0"
 name = "ee_net"
 version = "0.1.0"
 dependencies = [
- "ee_random",
+ "ee_base",
 ]
 
 [[package]]
 name = "ee_net_tcp"
 version = "0.1.0"
 dependencies = [
- "ee_random",
+ "ee_base",
 ]
 
 [[package]]
@@ -328,63 +304,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "ee_panic"
-version = "0.1.0"
-
-[[package]]
-name = "ee_plat_core"
-version = "0.1.0"
-dependencies = [
- "libc",
- "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "ee_plat_sdl"
-version = "0.1.0"
-dependencies = [
- "ee_plat_core",
- "ee_plat_ui",
-]
-
-[[package]]
-name = "ee_plat_sys"
-version = "0.1.0"
-dependencies = [
- "ee_plat_core",
- "libc",
- "windows-sys 0.60.2",
-]
-
-[[package]]
-name = "ee_plat_ui"
-version = "0.1.0"
-dependencies = [
- "ee_plat_core",
-]
-
-[[package]]
-name = "ee_random"
-version = "0.1.0"
-
-[[package]]
 name = "ee_rmap"
 version = "0.1.0"
 dependencies = [
+ "ee_base",
  "ee_ge",
- "ee_random",
- "ee_ustring",
- "ee_util",
 ]
 
 [[package]]
 name = "ee_rmap_gatelib"
 version = "0.1.0"
 dependencies = [
- "ee_fs",
+ "ee_base",
  "ee_ge",
  "ee_rmap",
- "ee_ts",
 ]
 
 [[package]]
@@ -394,39 +327,26 @@ dependencies = [
  "ee_ai",
  "ee_app",
  "ee_astar",
- "ee_codec",
+ "ee_base",
  "ee_combat",
  "ee_data",
  "ee_dx7",
- "ee_error",
  "ee_formations",
- "ee_fs",
  "ee_ge",
  "ee_gfx",
  "ee_gx",
- "ee_input",
  "ee_mixer",
  "ee_net",
  "ee_net_tcp",
  "ee_netmsg",
  "ee_openformats",
- "ee_panic",
- "ee_plat_core",
- "ee_plat_sdl",
- "ee_plat_sys",
- "ee_plat_ui",
- "ee_random",
  "ee_rmap",
  "ee_scenario",
  "ee_screens",
  "ee_sound",
  "ee_tech",
- "ee_time",
- "ee_ts",
  "ee_ui",
  "ee_units",
- "ee_ustring",
- "ee_util",
  "ee_won",
 ]
 
@@ -434,65 +354,43 @@ dependencies = [
 name = "ee_scenario"
 version = "0.1.0"
 dependencies = [
- "ee_plat_core",
- "ee_ustring",
+ "ee_base",
 ]
 
 [[package]]
 name = "ee_screens"
 version = "0.1.0"
 dependencies = [
+ "ee_base",
  "ee_ge",
  "ee_gfx",
- "ee_plat_core",
- "ee_random",
  "ee_scenario",
  "ee_sound",
  "ee_ui",
- "ee_util",
 ]
 
 [[package]]
 name = "ee_sound"
 version = "0.1.0"
 dependencies = [
- "ee_random",
+ "ee_base",
 ]
 
 [[package]]
 name = "ee_tech"
 version = "0.1.0"
 dependencies = [
+ "ee_base",
  "ee_data",
  "ee_ge",
- "ee_plat_core",
-]
-
-[[package]]
-name = "ee_time"
-version = "0.1.0"
-dependencies = [
- "ee_plat_core",
- "ee_util",
-]
-
-[[package]]
-name = "ee_ts"
-version = "0.1.0"
-dependencies = [
- "ee_error",
- "ee_plat_core",
- "ee_plat_sys",
- "ee_util",
 ]
 
 [[package]]
 name = "ee_ui"
 version = "0.1.0"
 dependencies = [
+ "ee_base",
  "ee_ge",
- "ee_plat_core",
- "ee_util",
 ]
 
 [[package]]
@@ -500,34 +398,17 @@ name = "ee_units"
 version = "0.1.0"
 dependencies = [
  "ee_astar",
+ "ee_base",
  "ee_data",
  "ee_ge",
- "ee_random",
-]
-
-[[package]]
-name = "ee_ustring"
-version = "0.1.0"
-dependencies = [
- "ee_plat_core",
-]
-
-[[package]]
-name = "ee_util"
-version = "0.1.0"
-dependencies = [
- "ee_plat_core",
- "ee_random",
 ]
 
 [[package]]
 name = "ee_won"
 version = "0.1.0"
 dependencies = [
+ "ee_base",
  "ee_openformats",
- "ee_plat_core",
- "ee_plat_sys",
- "ee_plat_ui",
 ]
 
 [[package]]

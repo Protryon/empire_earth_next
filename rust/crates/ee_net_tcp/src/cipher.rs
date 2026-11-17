@@ -1,6 +1,6 @@
 //! The plug-in's datagram cipher: RC4 keyed from a 0x105-byte buffer that a fixed-seed `URandom` fills.
 
-use ee_random::URandom;
+use ee_base::random::URandom;
 
 const KEY_BUFFER_SIZE: usize = 0x105;
 const KEY_LENGTH: usize = 7;

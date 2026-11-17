@@ -3,7 +3,7 @@
 // Read/Write, GetLength, GetPosition, SetLength, SetPosition, the directory search, GetParentDirectory,
 // GetLengthFromClosedFile, operator<): random sequences on four specs through the original classes
 // (fs_spec_orig.h, the unmodified units) against a real directory, emptied before each sequence. The Rust replay
-// (rust/crates/ee_fs/src/golden_spec.rs) makes the same calls on Rust records in a directory of its own whose path
+// (rust/crates/ee_base/src/fs/golden_spec.rs) makes the same calls on Rust records in a directory of its own whose path
 // has the same length, and regenerates every line.
 //
 //   python -I build/lle5/cc.py build/lle5/fsg.exe tests/fs/fs_spec_golden.cpp -Itests/fs <relink library + system libs>

@@ -18,7 +18,7 @@ use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering::SeqCst};
 use std::sync::Mutex;
 
-use ee_random::URandom;
+use ee_base::random::URandom;
 
 use crate::qhost::*;
 use crate::rlock::RLock;

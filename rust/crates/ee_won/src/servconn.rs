@@ -16,7 +16,7 @@ use std::cell::UnsafeCell;
 use std::ffi::{c_long, c_void};
 use std::ptr::null_mut;
 
-use ee_plat_sys::thread::imp as plat;
+use ee_base::plat_sys::thread::imp as plat;
 
 use crate::server::{keep_alive_ms, no_op};
 use crate::status::*;

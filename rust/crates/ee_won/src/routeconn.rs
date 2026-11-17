@@ -14,7 +14,7 @@ use std::cell::UnsafeCell;
 use std::collections::VecDeque;
 use std::ffi::{c_long, c_void};
 
-use ee_plat_sys::thread::imp as plat;
+use ee_base::plat_sys::thread::imp as plat;
 
 use crate::routemsg::{dispatch, header, unsolicited, EE_WON_RT_UNPACK_FAILURE};
 

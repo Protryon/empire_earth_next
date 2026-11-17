@@ -76,7 +76,7 @@ fn lower(text: &[u8]) -> Vec<u8> {
     let mut b = text.to_vec();
     b.push(0);
     // SAFETY: a NUL-terminated buffer, lowered in place
-    unsafe { ee_plat_core::string::PlatMbsLwr(b.as_mut_ptr()) };
+    unsafe { ee_base::plat_core::string::PlatMbsLwr(b.as_mut_ptr()) };
     b.pop();
     b
 }
@@ -86,7 +86,7 @@ fn prefix(text: &[u8], count: usize) -> &[u8] {
     let mut b = text.to_vec();
     b.push(0);
     // SAFETY: a NUL-terminated buffer
-    let end = unsafe { ee_plat_core::string::PlatMbsNInc(b.as_ptr(), count).offset_from(b.as_ptr()) } as usize;
+    let end = unsafe { ee_base::plat_core::string::PlatMbsNInc(b.as_ptr(), count).offset_from(b.as_ptr()) } as usize;
     &text[..end.min(text.len())]
 }
 
@@ -96,7 +96,7 @@ fn mbs_icmp(left: &[u8], right: &[u8]) -> i32 {
     let mut r = right.to_vec();
     r.push(0);
     // SAFETY: NUL-terminated buffers
-    unsafe { ee_plat_core::string::PlatMbsICmp(l.as_ptr(), r.as_ptr()) }
+    unsafe { ee_base::plat_core::string::PlatMbsICmp(l.as_ptr(), r.as_ptr()) }
 }
 
 /// `EECBLineSorter`: whether `left` goes before `right`: the lines that start with the special powers' name
@@ -132,7 +132,7 @@ fn char_count(text: &[u8]) -> usize {
     let mut b = text.to_vec();
     b.push(0);
     // SAFETY: a NUL-terminated buffer
-    unsafe { ee_plat_core::string::PlatMbsLen(b.as_ptr()) }
+    unsafe { ee_base::plat_core::string::PlatMbsLen(b.as_ptr()) }
 }
 
 /// The lines sorted by [`line_order`] (no two lines of a list compare equal: their upgrades or categories differ,

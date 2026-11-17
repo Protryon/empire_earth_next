@@ -17,7 +17,7 @@ use std::os::raw::{c_char, c_long, c_ulong};
 
 use crate::lists::EeScenarioListHost;
 use crate::lists::{self, Element, HostLists, Lists, EE_SCENARIO_LIST_CONDITIONS, EE_SCENARIO_LIST_EFFECTS};
-use ee_plat_core::utf8;
+use ee_base::plat_core::utf8;
 
 /// An element's text by slot: an effect's `mDescription`, `mMessage`, `mNewName`; a condition's `mChatText`.
 pub const EE_SCENARIO_TEXT_DESCRIPTION: u32 = 0;
@@ -236,7 +236,7 @@ pub fn read_entries<T: Text + ?Sized>(t: &mut T) -> Result<Entries, c_long> {
     while !t.eof() && result == 0 {
         match t.read_line() {
             Some(read) => {
-                let tokens = ee_ustring::tokenize(&read, b"{}");
+                let tokens = ee_base::ustring::tokenize(&read, b"{}");
                 if tokens.len() == 2 {
                     if in_entry {
                         trim(&mut text);
@@ -270,7 +270,7 @@ pub fn read_entries<T: Text + ?Sized>(t: &mut T) -> Result<Entries, c_long> {
 /// position) and the name after `skip` characters (None when the tag ends the line: the caller's name kept); None
 /// when the tag is not in the line after its first byte.
 fn parse(line: &[u8], tag: &[u8], skip: usize) -> Option<(c_long, Option<Vec<u8>>)> {
-    let index = ee_ustring::find(line, tag, 0) as usize;
+    let index = ee_base::ustring::find(line, tag, 0) as usize;
     if index == 0 || index >= line.len() {
         return None;
     }

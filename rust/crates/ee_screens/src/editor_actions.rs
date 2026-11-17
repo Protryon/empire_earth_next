@@ -20,7 +20,7 @@
 
 use std::collections::VecDeque;
 
-use ee_random::URandom;
+use ee_base::random::URandom;
 
 // ---- the host's ops (`ee_screenscpp_sea`: `i` up to 6 integers, `f` up to 5 floats, in and out)
 

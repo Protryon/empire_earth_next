@@ -1,6 +1,6 @@
 // Golden driver for the Time Manager (TMPoll, TMTimer, TMGetTime, TMGetMicroTime, TMGetTimeOfDay, TMInitialize):
 // random call sequences over the original units (tm_orig.h) on a scripted platform clock and timer table. The Rust
-// replay (rust/crates/ee_time/src/golden.rs) reads the input lines, makes the same calls on the Rust objects and
+// replay (rust/crates/ee_base/src/time/golden.rs) reads the input lines, makes the same calls on the Rust objects and
 // regenerates every line; the whole text must be equal.
 //
 //   python -I build/lle3/cc.py build/lle3/tmg.exe tests/time/tm_golden.cpp -Itests/time

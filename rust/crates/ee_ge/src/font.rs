@@ -214,7 +214,7 @@ pub fn draw_plan(
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use ee_plat_core::string::{PlatCp1252ByteOf, PlatMbsNInc, PlatUtf8Decode};
+    use ee_base::plat_core::string::{PlatCp1252ByteOf, PlatMbsNInc, PlatUtf8Decode};
 
     /// The platform's own functions (the ones the game passes in).
     pub(crate) struct Plat;

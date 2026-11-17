@@ -1,6 +1,6 @@
 // Golden driver for the Error System's debug-output filter (Filter.txt, ESFilterDebugOutput): random Filter.txt
 // contents and messages over the original function (es_filter_orig.h). The Rust replay
-// (rust/crates/ee_error/src/golden.rs) loads the same text and filters the same messages.
+// (rust/crates/ee_base/src/error/golden.rs) loads the same text and filters the same messages.
 //
 //   python -I build/lle1/cc.py build/lle2/esf.exe tests/error/es_filter_golden.cpp -Itests/error
 //   build/lle2/esf.exe <sequences> [first seed] > golden.txt

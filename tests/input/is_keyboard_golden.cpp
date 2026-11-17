@@ -1,7 +1,7 @@
 // Golden driver for the Input System's keyboard and mouse with their entities (ISKeyboard, ISMouse, ISKey,
 // ISExtendedKey, ISMouseButton, ISMouseAxis): random call sequences over the original C++ classes
 // (is_keyboard_orig.h) on the original device (is_device_orig.h), one trace line per call and a dump of every
-// observable state after it. The Rust replay (rust/crates/ee_input/src/golden_keyboard.rs) makes the same calls on
+// observable state after it. The Rust replay (rust/crates/ee_base/src/input/golden_keyboard.rs) makes the same calls on
 // the Rust keyboard and mouse and compares every dump.
 //
 //   python -I build/lle1/cc.py build/lle2/iskb.exe tests/input/is_keyboard_golden.cpp /I tests/input

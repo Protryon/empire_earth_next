@@ -56,7 +56,7 @@ IS_LINUX = sys.platform.startswith("linux")
 IS_MACOS = sys.platform == "darwin"
 
 PLATFORM_HEADERS = ROOT / "include"
-# the platform layer that is still C++; the rest is Rust (rust/crates/ee_plat_core and ee_plat_sys, in ee_rust:
+# the platform layer that is still C++; the rest is Rust (rust/crates/ee_base/src/plat_core and ee_plat_sys, in ee_rust:
 # rust_libs below)
 POSIX_IMPL = []
 WIN32_IMPL = []
@@ -302,7 +302,7 @@ def cmd_fonttest(a):
     why = t.can_build()
     if why:
         sys.exit(f"{t.name}: {why}")
-    # PlatFont is Rust (rust/crates/ee_plat_ui, in ee_rust); nothing else of the library pulls SDL in
+    # PlatFont is Rust (rust/crates/ee_base/src/plat_ui, in ee_rust); nothing else of the library pulls SDL in
     srcs = [ROOT / "tests" / "platform" / "font_test.cpp"]
     exe = build_program(t, "font_test", srcs, includes=[PLATFORM_HEADERS], libs=rust_libs(t))
     print(f"built {exe}")
@@ -1112,7 +1112,7 @@ def cmd_sdltest(a):
     if why:
         sys.exit(f"{t.name}: {why}")
     wlib = rust_lib(t)
-    # the window layer (rust/crates/ee_plat_sdl) with the platform layer it uses, all in the Rust library; it comes
+    # the window layer (rust/crates/ee_base/src/plat_sdl) with the platform layer it uses, all in the Rust library; it comes
     # before SDL on the link line (it references SDL, and a POSIX link scans each archive once)
     srcs = [ROOT / "tools" / "sdl_test" / "sdl_test.cpp",
             ROOT / "src" / "Low-Level Engine" / "Graphics Engine" / "DX7 Display Plug-ins" / "GX" / "GX.cpp"]

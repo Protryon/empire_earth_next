@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use ee_random::URandom;
+use ee_base::random::URandom;
 
 use crate::cipher::Cipher;
 use crate::host::*;

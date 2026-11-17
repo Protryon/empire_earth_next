@@ -1,12 +1,18 @@
 //! platfont: the font over the platform fonts with the test face of ee_plat_ui's goldens.
 use super::*;
 
-const FONT: &[u8] = include_bytes!("../../ee_plat_ui/src/golden_font.ttf");
+const FONT: &[u8] = include_bytes!("../../ee_base/src/plat_ui/golden_font.ttf");
 
 fn register() {
     // SAFETY: a static face's data
     unsafe {
-        ee_plat_ui::font::PlatFontRegister(c"Synth".as_ptr(), 0, 0, FONT.as_ptr() as *const c_void, FONT.len() as u32)
+        ee_base::plat_ui::font::PlatFontRegister(
+            c"Synth".as_ptr(),
+            0,
+            0,
+            FONT.as_ptr() as *const c_void,
+            FONT.len() as u32,
+        )
     };
 }
 

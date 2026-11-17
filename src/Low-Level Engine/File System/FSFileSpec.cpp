@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\File System\FSFileSpec.cpp
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-// Whole in Rust (rust/crates/ee_fs/src/spec.rs, LLE lane round 5): each member forwards the object, from its vtable
+// Whole in Rust (rust/crates/ee_base/src/fs/spec.rs, LLE lane round 5): each member forwards the object, from its vtable
 // pointer on (EeFsSpec), to Rust, which makes the original's platform calls in its order. operator< and
 // GetLengthFromClosedFile stay here: they call the virtuals FSMemoryFile overrides.
 #include <windows.h>

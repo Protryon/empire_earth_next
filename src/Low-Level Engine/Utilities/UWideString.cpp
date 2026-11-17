@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\Utilities\UWideString.cpp
-// Whole in Rust (rust/crates/ee_ustring wide.rs, LLE lane round 4; UWideString.h): what stays here touches C++ (the
+// Whole in Rust (rust/crates/ee_base/src/ustring wide.rs, LLE lane round 4; UWideString.h): what stays here touches C++ (the
 // FSFile virtuals, the token vector, the checksum's entry and the varargs formatter).
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>

@@ -3,7 +3,7 @@
 
 use crate::grid::is_shore_tile;
 use crate::map::{Grid, Map, URandomState};
-use ee_random::URandom;
+use ee_base::random::URandom;
 
 fn is_tile_clear(tiles: &Grid<u32>, x: u32, y: u32) -> bool {
     (tiles.get(x, y) & 0x7fff) == 0

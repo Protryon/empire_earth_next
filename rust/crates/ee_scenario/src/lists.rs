@@ -151,7 +151,7 @@ fn cat(parts: &[&[u8]]) -> Vec<u8> {
 
 /// The number of characters (`UWideString::GetLength`, ee_plat_core's `PlatMbsLen`).
 fn chars(s: &[u8]) -> usize {
-    ee_plat_core::utf8::char_len(s)
+    ee_base::plat_core::utf8::char_len(s)
 }
 
 /// `inString[index]`: the first byte of character `index` (0 out of range).
@@ -159,17 +159,17 @@ fn char_at(s: &[u8], index: usize) -> u8 {
     if index >= chars(s) {
         return 0;
     }
-    s[ee_plat_core::utf8::bytes_of_chars(s, index)]
+    s[ee_base::plat_core::utf8::bytes_of_chars(s, index)]
 }
 
 /// The first `count` characters (`CopyString(s, count)`).
 fn first_chars(s: &[u8], count: usize) -> &[u8] {
-    &s[..ee_plat_core::utf8::bytes_of_chars(s, count)]
+    &s[..ee_base::plat_core::utf8::bytes_of_chars(s, count)]
 }
 
 /// Without its first character (`PlatMbsNInc(s, 1)`).
 fn after_first(s: &[u8]) -> &[u8] {
-    &s[ee_plat_core::utf8::bytes_of_chars(s, 1)..]
+    &s[ee_base::plat_core::utf8::bytes_of_chars(s, 1)..]
 }
 
 /// The `Duplicate*` name's stem: a bracketed name ("<name>", over 2 characters) loses its brackets (the closing one

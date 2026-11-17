@@ -11,7 +11,7 @@ publish.workspace = true
 crate-type = ["rlib"]
 
 [dependencies]
-ee_plat_core = { path = "../ee_plat_core" }
+ee_base = { path = "../ee_base" }
 libc = "0.2"
 # the C API of the vendored Lua the C++ build compiles (src/ThirdParty/lua/ee_lua.c): `external` links no Lua of its
 # own (never `vendored`: lua-src brings its own luaconf and a random hash seed)

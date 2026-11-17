@@ -760,9 +760,9 @@ impl EeWonSocketOp {
 const FLAG_APPEND: i32 = 0;
 const FLAG_BINARY: i32 = 1;
 
-fn sockaddr(a: Addr) -> ee_plat_sys::constants::PlatSockAddrIn {
-    ee_plat_sys::constants::PlatSockAddrIn {
-        mFamily: ee_plat_sys::constants::PLAT_AF_INET,
+fn sockaddr(a: Addr) -> ee_base::plat_sys::constants::PlatSockAddrIn {
+    ee_base::plat_sys::constants::PlatSockAddrIn {
+        mFamily: ee_base::plat_sys::constants::PLAT_AF_INET,
         mPort: a.port,
         mAddress: a.address,
         mZero: [0; 8],

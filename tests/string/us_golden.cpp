@@ -1,6 +1,6 @@
 // Golden driver for UString's searches and tokenizers (Find, FindBackwards, Tokenize, NestedTokenize): random
 // strings over a small alphabet through the original class (us_orig.h). The Rust replay
-// (rust/crates/ee_ustring/src/golden.rs) makes the same searches and splits with the Rust functions and regenerates
+// (rust/crates/ee_base/src/ustring/golden.rs) makes the same searches and splits with the Rust functions and regenerates
 // every line.
 //
 //   python -I build/lle3/cc.py build/lle3/usg.exe tests/string/us_golden.cpp -Itests/string

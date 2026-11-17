@@ -10,7 +10,7 @@
 use std::collections::BTreeMap;
 use std::ffi::c_void;
 
-use ee_random::{float_to_long, URandom};
+use ee_base::random::{float_to_long, URandom};
 
 use crate::msvc_sort;
 

@@ -1,6 +1,6 @@
 // Platform layer: fonts and text drawing into pixel buffers (see platform/Platform.h), the replacement of GDI text
 // (CreateFont, GetTextMetrics, GetTextExtentPoint32, ExtTextOut on a DIB) for the renderer's text path and the
-// engine's GEFont / GEFontBitmap. The same implementation on every system (rust/crates/ee_plat_ui: font.rs, on a
+// engine's GEFont / GEFontBitmap. The same implementation on every system (rust/crates/ee_base/src/plat_ui: font.rs, on a
 // byte-exact port of stb_truetype's rasteriser in ttf.rs), so text looks and measures the same everywhere.
 //
 // Faces are TrueType data the caller registers (PlatFontRegister: the build embeds them, or they are read from the

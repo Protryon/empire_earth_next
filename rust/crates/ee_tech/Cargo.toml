@@ -14,4 +14,4 @@ crate-type = ["rlib"]
 # lrintf as the C++ build rounds (UMCeil)
 ee_ge = { path = "../ee_ge" }
 ee_data = { path = "../ee_data" }
-ee_plat_core = { path = "../ee_plat_core" }
+ee_base = { path = "../ee_base" }

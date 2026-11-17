@@ -11,8 +11,8 @@
 
 use crate::map::{Feature, Object, Rect};
 use crate::math::{floor, floor_unsigned, lrintf, um_cos, um_sin, Point};
-use ee_random::URandom;
-use ee_util::EeUtilFractal;
+use ee_base::random::URandom;
+use ee_base::util::EeUtilFractal;
 use std::ffi::{c_ulong, c_void};
 
 /// `kRMMinimumPlayerDistance`: the least distance between two players' starts.

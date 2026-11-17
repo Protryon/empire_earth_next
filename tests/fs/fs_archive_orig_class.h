@@ -9,7 +9,7 @@
 #include <vector>
 
 class FSMemoryFile;                         // only by pointer: File System.cpp emits FSMemoryFile's inlines after these
-struct EeFsArchive;                         // rust/crates/ee_fs/src/archive.rs: the file and tag tables
+struct EeFsArchive;                         // rust/crates/ee_base/src/fs/archive.rs: the file and tag tables
 
 typedef long int32;                         // Inferred home: the assert text "(int32)theCompressedSize" (0x100d8f64)
 
@@ -56,7 +56,7 @@ private:
     void CheckFATAfterCreate();
 
     FSFileSpec mArchiveFile;                            // +0x04
-    EeFsArchive* mTable;                                // the FAT and the tags (rust/crates/ee_fs/src/archive.rs)
+    EeFsArchive* mTable;                                // the FAT and the tags (rust/crates/ee_base/src/fs/archive.rs)
     PlatFileMapping* mMapping;                          // PlatFileMap (CreateFileMappingA in the original)
     const unsigned char* mView;                         // the mapped view
     unsigned long mViewLength;                          // the view's size (the file's length)

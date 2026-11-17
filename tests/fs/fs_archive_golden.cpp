@@ -2,7 +2,7 @@
 // and FSPath.cpp unmodified) against a real directory, emptied before each sequence: a source tree of random files is
 // made, archives are built from it (the directory walk with patterns and recursion, or a list of names), opened,
 // searched (case-insensitively), tagged, listed and extracted; search paths of archives and directories find files,
-// list them and report where a file comes from. The Rust replay (rust/crates/ee_fs/src/golden_archive.rs) makes the
+// list them and report where a file comes from. The Rust replay (rust/crates/ee_base/src/fs/golden_archive.rs) makes the
 // same calls on Rust records in a directory of its own (its path the same length) and regenerates every line.
 //
 //   python -I build/lle5/cc.py build/lle5/fsag.exe tests/fs/fs_archive_golden.cpp -Itests/fs <relink library + libs>

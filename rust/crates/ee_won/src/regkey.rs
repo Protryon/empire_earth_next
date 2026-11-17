@@ -211,7 +211,12 @@ impl EeWonRegKey {
         let (block, key) = (c_text(&self.block), c_text(&config_name(name)));
         // SAFETY: C strings and a writable buffer of its size
         let ok = unsafe {
-            ee_plat_core::config::PlatConfigGetString(block.as_ptr(), key.as_ptr(), buffer.as_mut_ptr().cast(), 65536)
+            ee_base::plat_core::config::PlatConfigGetString(
+                block.as_ptr(),
+                key.as_ptr(),
+                buffer.as_mut_ptr().cast(),
+                65536,
+            )
         };
         if ok == 0 {
             return None;
@@ -229,7 +234,7 @@ impl EeWonRegKey {
         let (block, key) = (c_text(&self.block), c_text(&config_name(name)));
         let mut number = 0i32;
         // SAFETY: C strings and a writable integer
-        if unsafe { ee_plat_core::config::PlatConfigGetInt(block.as_ptr(), key.as_ptr(), &mut number) } != 0 {
+        if unsafe { ee_base::plat_core::config::PlatConfigGetInt(block.as_ptr(), key.as_ptr(), &mut number) } != 0 {
             return (0, number as u32);
         }
         (if self.get_to_buf(name).is_some() { 2 } else { 1 }, 0)
@@ -248,7 +253,7 @@ impl EeWonRegKey {
         let key = key.map(c_text);
         // SAFETY: C strings (or NULL for the whole block)
         unsafe {
-            ee_plat_core::config::PlatConfigDelete(
+            ee_base::plat_core::config::PlatConfigDelete(
                 block.as_ptr(),
                 key.as_ref().map_or(std::ptr::null(), |k| k.as_ptr()),
             ) != 0
@@ -283,14 +288,14 @@ impl EeWonRegKey {
             match value {
                 RegValue::Text(t) => {
                     let t = c_text(t);
-                    ee_plat_core::config::PlatConfigSetString(block.as_ptr(), key.as_ptr(), t.as_ptr()) != 0
+                    ee_base::plat_core::config::PlatConfigSetString(block.as_ptr(), key.as_ptr(), t.as_ptr()) != 0
                 }
                 RegValue::Dword(n) => {
-                    ee_plat_core::config::PlatConfigSetInt(block.as_ptr(), key.as_ptr(), n as i32) != 0
+                    ee_base::plat_core::config::PlatConfigSetInt(block.as_ptr(), key.as_ptr(), n as i32) != 0
                 }
                 RegValue::Binary(b) => {
                     let t = c_text(&binary_text(b));
-                    ee_plat_core::config::PlatConfigSetString(block.as_ptr(), key.as_ptr(), t.as_ptr()) != 0
+                    ee_base::plat_core::config::PlatConfigSetString(block.as_ptr(), key.as_ptr(), t.as_ptr()) != 0
                 }
             }
         }

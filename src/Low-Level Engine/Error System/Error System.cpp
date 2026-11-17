@@ -21,7 +21,7 @@
 #include "rust/ee_error.h"
 #include <string>
 
-// The Error System's state and logic are Rust's (rust/crates/ee_error, LLE lane round 2): the Filter.txt filters,
+// The Error System's state and logic are Rust's (rust/crates/ee_base/src/error, LLE lane round 2): the Filter.txt filters,
 // the verification report and the last native error. This unit keeps the exported names, ESDebugOut's formatting
 // and the platform's debug output, and reads Filter.txt through the File System (text mode, as fgets read it).
 // The error log the original opened at start-up ("<n>_Error.log", ESBeginRecording/ESEndRecording) went: nothing

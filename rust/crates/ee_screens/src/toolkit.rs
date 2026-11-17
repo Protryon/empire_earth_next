@@ -16,7 +16,7 @@
 use core::ffi::{c_long, c_ulong, c_void};
 use std::sync::Mutex;
 
-use ee_util::graph::{EeUtilColor, EeUtilGraph, EeUtilPoint, EeUtilSeries};
+use ee_base::util::graph::{EeUtilColor, EeUtilGraph, EeUtilPoint, EeUtilSeries};
 
 use ee_ui::bgobj::EeUiBgCall;
 use ee_ui::buttonobj::EeUiButtonCall;

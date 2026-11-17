@@ -1,5 +1,5 @@
 // The original Time Manager (include/lle/TMPoll.h, include/lle/TMTimer.h and src/Low-Level Engine/Time Manager/
-// TMPoll.cpp, TMTimer.cpp, Time Manager.cpp at a1775ddf, before they moved to rust/crates/ee_time), unchanged but
+// TMPoll.cpp, TMTimer.cpp, Time Manager.cpp at a1775ddf, before they moved to rust/crates/ee_base/src/time), unchanged but
 // for the includes, for the golden driver tm_golden.cpp (which supplies the platform clock and timers, TSEvent and
 // URegisterShutdown).
 // C:\EEX\Low-Level Engine\Time Manager\TMPoll.h (folder name inferred; RECONSTRUCTION from TMPoll.cpp

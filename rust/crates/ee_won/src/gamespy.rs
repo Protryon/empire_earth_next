@@ -38,9 +38,9 @@ use std::ffi::{c_char, c_void, CString};
 use std::ptr::null_mut;
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, Weak};
 
-use ee_plat_sys::constants::PLAT_SOCKET_WAIT_READ;
-use ee_plat_sys::constants::{PlatSockAddrIn, PlatSocket, PLAT_AF_INET, PLAT_SOCKET_DGRAM, PLAT_SOCKET_INVALID};
-use ee_plat_sys::socket::imp as plat;
+use ee_base::plat_sys::constants::PLAT_SOCKET_WAIT_READ;
+use ee_base::plat_sys::constants::{PlatSockAddrIn, PlatSocket, PLAT_AF_INET, PLAT_SOCKET_DGRAM, PLAT_SOCKET_INVALID};
+use ee_base::plat_sys::socket::imp as plat;
 
 use crate::authobj::ReLock;
 use crate::cppcore::{self, EeWonCoreHooks, Hold};
@@ -59,7 +59,7 @@ pub fn current_time() -> u32 {
     if let Some(t) = tests::clock() {
         return t;
     }
-    ee_plat_core::time::PlatTimeMilliseconds64() as u32
+    ee_base::plat_core::time::PlatTimeMilliseconds64() as u32
 }
 
 /// `msleep(msec)`.

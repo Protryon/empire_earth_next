@@ -9,7 +9,7 @@
 //! and simulation threads) and the music thread call in as they called the C++, reading and writing the members in
 //! the original's order.
 
-use ee_random::float_to_long;
+use ee_base::random::float_to_long;
 
 use crate::conductor::Score;
 

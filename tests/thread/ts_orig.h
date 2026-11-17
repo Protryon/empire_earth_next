@@ -1,6 +1,6 @@
 // The original Thread System (include/lle/TSCriticalSection.h, TSEvent.h, TSReadWriteLock.h, TSThread.h,
 // TSScheduler.h and src/Low-Level Engine/Thread System/TSCriticalSection.cpp, TSEvent.cpp, TSReadWriteLock.cpp,
-// TSScheduler.cpp, TSThread.cpp, Thread System.cpp at a1775ddf, before they moved to rust/crates/ee_ts), unchanged
+// TSScheduler.cpp, TSThread.cpp, Thread System.cpp at a1775ddf, before they moved to rust/crates/ee_base/src/ts), unchanged
 // but for the includes, for the golden driver ts_golden.cpp (which supplies the platform layer, UString, the Error
 // System's calls and URegisterShutdown).
 // C:\EEX\Low-Level Engine\Thread System\TSCriticalSection.h (RECONSTRUCTION; layout proven by the engine's own

@@ -17,4 +17,4 @@ ee_ge = { path = "../ee_ge" }
 
 [dev-dependencies]
 # the copied MSVC sort's golden inputs (msvc_sort.rs, as ee_sound's)
-ee_random = { path = "../ee_random" }
+ee_base = { path = "../ee_base" }

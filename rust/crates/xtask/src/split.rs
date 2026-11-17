@@ -236,6 +236,31 @@ fn rust_files(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
     }
 }
 
+/// The crates the restructure merged (docs/progress/crate-restructure.md). Until the headers are split by module, a
+/// merged crate's module keeps the header of the crate it was (`src/units/` of ee_sim: `ee_units`), the root of ee_game
+/// is ee_rust's (the common header), and the three WON crates share `ee_won`.
+const MERGED: &[&str] = &["ee_base", "ee_sim", "ee_render", "ee_audio", "ee_net", "ee_game"];
+
+/// The header a source file's items go to (see [`MERGED`]).
+fn header_of(crates_dir: &Path, krate: &str, file: &Path) -> String {
+    if krate.starts_with("ee_won_") {
+        return "ee_won".to_string();
+    }
+    let src = crates_dir.join(krate).join("src");
+    // ee_net is also the name of the crate before (its root then has no module "before the restructure")
+    let merged = MERGED.contains(&krate)
+        && std::fs::read_to_string(src.join("lib.rs")).is_ok_and(|t| t.contains("before the restructure."));
+    if !merged {
+        return krate.to_string();
+    }
+    let first = file.strip_prefix(&src).ok().and_then(|p| p.components().next()).and_then(|c| c.as_os_str().to_str());
+    match first {
+        Some("lib.rs") | None if krate == "ee_game" => "ee_rust".to_string(),
+        Some("lib.rs") | None => krate.to_string(),
+        Some(name) => format!("ee_{}", name.strip_suffix(".rs").unwrap_or(name)),
+    }
+}
+
 /// Every definition in the sources of the named crates (`rust/crates/<name>/src`), test sources left out.
 pub fn scan(crates_dir: &Path, crates: &[String]) -> HashMap<String, Vec<Def>> {
     let mut defs: HashMap<String, Vec<Def>> = HashMap::new();
@@ -244,7 +269,7 @@ pub fn scan(crates_dir: &Path, crates: &[String]) -> HashMap<String, Vec<Def>> {
         rust_files(&crates_dir.join(krate).join("src"), &mut files);
         for file in files.iter().filter(|f| !is_test_source(f)) {
             let Ok(text) = std::fs::read_to_string(file) else { continue };
-            scan_text(krate, &text, &mut defs);
+            scan_text(&header_of(crates_dir, krate, file), &text, &mut defs);
         }
     }
     defs

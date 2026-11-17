@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Input System\ISKeyboard.h (RECONSTRUCTION; ISKeyboard.cpp 0x39ca1..0x3b2ce before). The
 // system keyboard (DirectInput's in the original; the window layer's events now: lle/ISDeviceInput.h). Whole in
-// Rust (rust/crates/ee_input devices.rs, LLE lane round 2): gISKeyboard points at Rust's keyboard and these
+// Rust (rust/crates/ee_base/src/input devices.rs, LLE lane round 2): gISKeyboard points at Rust's keyboard and these
 // forwarders call it; Refresh and Resume pass TMGetTime (Input System.cpp). The class has no data.
 #ifndef LLE_ISKEYBOARD_H
 #define LLE_ISKEYBOARD_H

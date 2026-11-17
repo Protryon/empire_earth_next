@@ -513,7 +513,7 @@ pub const WATER_GRID: usize = 33;
 /// (seed 1) draws one in 0..texture_count per cell, `UMFloatToLong` of `Generate() * count`, the count itself clamped
 /// to the last.
 pub fn water_texture_indices(texture_count: c_long) -> Vec<Vec<c_ulong>> {
-    let mut random = ee_random::URandom::new(0);
+    let mut random = ee_base::random::URandom::new(0);
     let last = texture_count.wrapping_sub(1);
     let mut grid = vec![vec![0 as c_ulong; WATER_GRID]; WATER_GRID];
     for row in grid.iter_mut() {
@@ -593,7 +593,7 @@ mod tests {
         assert_eq!(g.len(), WATER_GRID);
         assert!(g.iter().all(|r| r.len() == WATER_GRID && r.iter().all(|&i| i < 6)));
         // URandom(1): the first draw is 0x343fd + 0x269ec3 over 2^31; its index at 6 textures
-        let mut r = ee_random::URandom::new(1);
+        let mut r = ee_base::random::URandom::new(1);
         let first = lrintf(r.generate() * 6.0) as c_ulong;
         assert_eq!(g[0][0], first);
         assert_eq!(water_texture_indices(6), g); // the same every time

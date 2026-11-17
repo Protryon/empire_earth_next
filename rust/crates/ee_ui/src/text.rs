@@ -6,7 +6,7 @@
 
 use core::ffi::{c_int, c_uint};
 
-use ee_plat_core::utf8;
+use ee_base::plat_core::utf8;
 
 /// The multibyte stepping of the C++'s `_mbs*` calls, on NUL-terminated byte slices (`s` includes the terminator).
 pub trait Mbcs {

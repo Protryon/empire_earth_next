@@ -1,5 +1,5 @@
 // The original UWideString (include/lle/UWideString.h and src/Low-Level Engine/Utilities/UWideString.cpp at
-// f37096a0, before its storage moved to rust/crates/ee_ustring), unchanged but for the includes, for the golden
+// f37096a0, before its storage moved to rust/crates/ee_base/src/ustring), unchanged but for the includes, for the golden
 // driver uws_golden.cpp (which supplies FSFile, ESChecksum, UString, the platform's string functions and the
 // error codes).
 // C:\EEX\Low-Level Engine\Utilities\UWideString.h (RECONSTRUCTION; UWideString.cpp 0x838f7..0x847e1). A multibyte

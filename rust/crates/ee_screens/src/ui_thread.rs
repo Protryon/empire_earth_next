@@ -696,7 +696,7 @@ pub type Utf8Length = fn(&[u8]) -> usize;
 pub fn plat_utf8_length(text: &[u8]) -> usize {
     let mut n = 0u32;
     // the decoder stops at the terminator after the slice
-    unsafe { ee_plat_core::string::PlatUtf8Decode(text.as_ptr().cast(), &mut n) };
+    unsafe { ee_base::plat_core::string::PlatUtf8Decode(text.as_ptr().cast(), &mut n) };
     n as usize
 }
 

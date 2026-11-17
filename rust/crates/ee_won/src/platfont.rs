@@ -12,8 +12,8 @@
 
 use std::ffi::{c_char, c_void};
 
-use ee_plat_core::string::{PlatWideToUtf8, WChar};
-use ee_plat_ui::font::{
+use ee_base::plat_core::string::{PlatWideToUtf8, WChar};
+use ee_base::plat_ui::font::{
     PlatFont, PlatFontCreate, PlatFontDestroy, PlatFontDraw, PlatFontGetMetrics, PlatFontMeasure, PlatFontMetrics,
     PlatFontRect, PlatFontTarget,
 };

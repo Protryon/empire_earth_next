@@ -682,11 +682,14 @@ fn float_to_long(value: f32) -> i32 {
 }
 
 fn tokens(text: &[u8], separators: &[u8]) -> Vec<Vec<u8>> {
-    ee_ustring::tokenize(text, separators).into_iter().map(|(a, b)| text[a as usize..=b as usize].to_vec()).collect()
+    ee_base::ustring::tokenize(text, separators)
+        .into_iter()
+        .map(|(a, b)| text[a as usize..=b as usize].to_vec())
+        .collect()
 }
 
 fn nested_tokens(text: &[u8], separators: &[u8]) -> Vec<Vec<u8>> {
-    ee_ustring::nested_tokenize(text, separators, b'(', b')')
+    ee_base::ustring::nested_tokenize(text, separators, b'(', b')')
         .into_iter()
         .map(|(a, b)| text[a as usize..=b as usize].to_vec())
         .collect()

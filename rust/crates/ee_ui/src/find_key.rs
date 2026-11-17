@@ -7,7 +7,7 @@
 
 use core::ffi::{c_long, c_ulong};
 
-use ee_plat_core::utf8;
+use ee_base::plat_core::utf8;
 
 /// The key's lower- and upper-case first bytes (`UWideString(inKey)` after `ToLower`/`ToUpper`, then `[0]`).
 pub fn key_bytes(key: &[u8]) -> (u8, u8) {

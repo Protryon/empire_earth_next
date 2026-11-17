@@ -246,7 +246,7 @@ long EESETestSaveTriggersOnly(UIForm* inForm);   // EEUIFScenarioEditor.cpp (TES
 // the civilization builder's steps (TEST ONLY; EESimCivBuilder.cpp): false for an unknown one
 bool EESimCivBuilderStep(const std::vector<std::string>& w, std::vector<std::string>& outLines);
 
-// TEST ONLY: ee_time_pin sets the time TMGetTime answers on this thread (-1: the clock; rust/crates/ee_time)
+// TEST ONLY: ee_time_pin sets the time TMGetTime answers on this thread (-1: the clock; rust/crates/ee_base/src/time)
 
 // EESaveLoad.cpp: the save's chunks (the map, the scenario, the players, the world, ...), in their order
 void BuildSaveGameChunks(std::vector<FSPersistent*>& outList);

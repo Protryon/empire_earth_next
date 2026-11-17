@@ -1,7 +1,7 @@
 """Build and run the GX self-test (gx_test.cpp + the shim classes) against ee_gx, the renderer's GX layer in Rust.
 
-The window comes from the platform layer on SDL3 (rust/crates/ee_plat_sdl, in ee_rust; tools/xbuild.py sdl3) and the
-text from PlatFont with the built-in fonts (rust/crates/ee_plat_ui, src/Platform/Common/PlatFontData.c; toolchain/fonts,
+The window comes from the platform layer on SDL3 (rust/crates/ee_base/src/plat_sdl, in ee_rust; tools/xbuild.py sdl3) and the
+text from PlatFont with the built-in fonts (rust/crates/ee_base/src/plat_ui, src/Platform/Common/PlatFontData.c; toolchain/fonts,
 embedded with #embed).
 
   python -I tools/gx_test/build.py [--run] [-- test arguments]
@@ -29,7 +29,7 @@ LIBS = ["libcmt.lib", "libvcruntime.lib", "libucrt.lib", "oldnames.lib", "kernel
 
 GX = ROOT / "src" / "Low-Level Engine" / "Graphics Engine" / "DX7 Display Plug-ins" / "GX"
 PLATFORM = ROOT / "src" / "Platform"
-# PlatMessage, PlatString, PlatTime and PlatSim come with the Rust library (rust/crates/ee_plat_core)
+# PlatMessage, PlatString, PlatTime and PlatSim come with the Rust library (rust/crates/ee_base/src/plat_core)
 SOURCES = [HERE / "gx_test.cpp", GX / "GX.cpp",
            PLATFORM / "Common" / "PlatFontData.c"]   # the rest: ee_rust
 # what SDL3 (static) imports besides LIBS

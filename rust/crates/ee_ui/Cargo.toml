@@ -16,8 +16,7 @@ crate-type = ["rlib"]
 no_cpp = []
 
 [dependencies]
-ee_plat_core = { path = "../ee_plat_core" }
+ee_base = { path = "../ee_base" }
 # the blinking button's fade: UMSin, the Graphics Engine's table cosine
 ee_ge = { path = "../ee_ge" }
 # the graphs' series and ranges (UGraph, graphobj.rs)
-ee_util = { path = "../ee_util" }

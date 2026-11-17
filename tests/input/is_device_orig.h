@@ -1,5 +1,5 @@
 // The original ISDeviceInput and ISHandleEvent (src/Low-Level Engine/Input System/Input System.cpp and
-// include/lle/ISDeviceInput.h at 5d3ce6a9, before the class moved to rust/crates/ee_input), unchanged, for the golden
+// include/lle/ISDeviceInput.h at 5d3ce6a9, before the class moved to rust/crates/ee_base/src/input), unchanged, for the golden
 // driver is_device_golden.cpp. Needs <deque>, <string.h>, <math.h>, platform/PlatWindow.h and the PlatMutex calls.
 struct ISMouseState {
     long lX;

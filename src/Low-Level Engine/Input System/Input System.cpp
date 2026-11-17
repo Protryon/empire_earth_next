@@ -24,7 +24,7 @@
 
 ISKeyboard* gISKeyboard;
 ISMouse* gISMouse;
-// ---- the devices, the keyboard, the mouse and their entities are Rust's (rust/crates/ee_input); so are the members
+// ---- the devices, the keyboard, the mouse and their entities are Rust's (rust/crates/ee_base/src/input); so are the members
 // that read the clock or the window's relative mode, and the shutdown (ee_input system.rs)
 
 // Feeds a window event to the system keyboard and mouse: its type and the fields of the key and mouse views (only

@@ -1,7 +1,7 @@
 // C:\EEX\Low-Level Engine\File System\FSPath.cpp (RTTI .?AVFSPath@@; 0x1000a843..0x1000bdb4)
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 // A search path of archives and directories (FindFile looks in the directories first). The searches are Rust's
-// (rust/crates/ee_fs/src/path.rs, LLE lane round 5) over the vectors' element arrays; the vectors (of C++ objects:
+// (rust/crates/ee_base/src/fs/path.rs, LLE lane round 5) over the vectors' element arrays; the vectors (of C++ objects:
 // GetArchive hands out a reference into one) and their plumbing stay here.
 #include <windows.h>
 

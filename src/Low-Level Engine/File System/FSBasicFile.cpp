@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\File System\FSBasicFile.cpp
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-// Whole in Rust (rust/crates/ee_fs/src/spec.rs, LLE lane round 5): the bodies forward the object, from its vtable
+// Whole in Rust (rust/crates/ee_base/src/fs/spec.rs, LLE lane round 5): the bodies forward the object, from its vtable
 // pointer on (EeFsSpec), to Rust; the strings stay the C++ members (their getters and setters are one assignment).
 #include <windows.h>
 

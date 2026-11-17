@@ -155,7 +155,7 @@ int main(int argc, char** argv)
 {
     bool print = argc > 1 && !strcmp(argv[1], "--print");
     std::string ttf = std::string(__FILE__);
-    ttf = ttf.substr(0, ttf.find_last_of("/\\")) + "/../../rust/crates/ee_plat_ui/src/golden_font.ttf";
+    ttf = ttf.substr(0, ttf.find_last_of("/\\")) + "/../../rust/crates/ee_base/src/plat_ui/golden_font.ttf";
     std::ifstream in(ttf.c_str(), std::ios::binary);
     static std::vector<char> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
     if (data.empty() || !PlatFontRegister("Synth", 0, 0, data.data(), (uint32_t)data.size())) { printf("no test font at %s\n", ttf.c_str()); return 1; }

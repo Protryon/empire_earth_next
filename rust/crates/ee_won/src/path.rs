@@ -111,7 +111,7 @@ pub fn absolute(path: &[u8], current: Option<&[u8]>) -> Result<Vec<u8>, OutOfRan
                 [volume, path].concat()
             } else if !has_volume {
                 [&current[..], path].concat()
-            } else if ee_plat_core::utf8::compare_folded_bytes(volume, path, 2) == 0 {
+            } else if ee_base::plat_core::utf8::compare_folded_bytes(volume, path, 2) == 0 {
                 // "C:dir" on the current volume
                 [&current[..], &path[2..]].concat()
             } else {

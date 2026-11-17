@@ -827,7 +827,7 @@ impl MusicHost for Media<'_> {
     fn lower(&self, name: &[u8]) -> Vec<u8> {
         // PlatMbsLwr on a copy (UWideString's bytes)
         let mut v = name.to_vec();
-        ee_plat_core::utf8::map_in_place(&mut v, ee_plat_core::utf8::fold);
+        ee_base::plat_core::utf8::map_in_place(&mut v, ee_base::plat_core::utf8::fold);
         v
     }
     fn music_id(&self) -> c_long {

@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\Utilities\UDataCompression.cpp
-// The class forwards to Rust (rust/crates/ee_codec: the PKWARE DCL stream and the "PK01" block format). The stream
+// The class forwards to Rust (rust/crates/ee_base/src/codec: the PKWARE DCL stream and the "PK01" block format). The stream
 // code that lived in src/ThirdParty/pkdcl is gone; only the implode() error's assert stays here.
 #include <windows.h>
 

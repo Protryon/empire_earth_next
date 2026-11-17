@@ -1,7 +1,7 @@
 // C:\EEX\Low-Level Engine\File System\FSPersistentList.cpp (file name inferred: no __FILE__; RTTI
 // .?AVFSPersistentList@@)
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-// The registry is Rust's (rust/crates/ee_fs persistent_list.rs): the prototypes' virtual calls stay here.
+// The registry is Rust's (rust/crates/ee_base/src/fs persistent_list.rs): the prototypes' virtual calls stay here.
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"

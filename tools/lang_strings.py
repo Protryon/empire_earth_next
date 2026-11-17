@@ -1,6 +1,6 @@
 """The game's language strings as a Rust table, generated from Language.rc's STRINGTABLE blocks.
 
-  python -I tools/lang_strings.py            writes rust/crates/ee_util/src/language_strings.rs
+  python -I tools/lang_strings.py            writes rust/crates/ee_base/src/util/language_strings.rs
   python -I tools/lang_strings.py --check    fails when that file is not what Language.rc gives (build.py runs it)
   python -I tools/lang_strings.py --check-res FILE.res
                                              also compares the table with the string tables rc.exe compiled

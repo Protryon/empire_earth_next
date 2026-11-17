@@ -621,7 +621,7 @@ impl Clumps {
 mod tests {
     use super::*;
     use crate::map::{Grid, Player, URandomState};
-    use ee_random::URandom;
+    use ee_base::random::URandom;
 
     fn test_map() -> Map {
         let mut map = Map::default();

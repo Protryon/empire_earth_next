@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Thread System\TSCriticalSection.h (RECONSTRUCTION; the engine's own TSCriticalSection.cpp
 // 0x53ca1..0x53cee and TSScheduler::CreateCriticalSection operator new(0x20)). A recursive lock with its owner and
-// count. Whole in Rust (rust/crates/ee_ts, LLE lane round 3): the class has no data; a TSCriticalSection* is the
+// count. Whole in Rust (rust/crates/ee_base/src/ts, LLE lane round 3): the class has no data; a TSCriticalSection* is the
 // Rust section TSScheduler made, and every member forwards.
 #ifndef LLE_TSCRITICALSECTION_H
 #define LLE_TSCRITICALSECTION_H

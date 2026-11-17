@@ -9,9 +9,7 @@ crate-type = ["rlib"]
 
 # the platform layer's sockets, threads and clock, called as Rust (ee_rust links them as the C ABI too)
 [dependencies]
-ee_plat_core = { path = "../ee_plat_core" }
-ee_plat_sys = { path = "../ee_plat_sys" }
+ee_base = { path = "../ee_base" }
 # the platform fonts (the lobby's fonts and window captions, platfont.rs and platwm.rs)
-ee_plat_ui = { path = "../ee_plat_ui" }
 # the lobby's PNG pictures (imgdec.rs), as the game reads its own
 ee_openformats = { path = "../ee_openformats" }

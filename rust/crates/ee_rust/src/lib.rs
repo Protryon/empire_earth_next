@@ -3,22 +3,22 @@
 
 use std::ffi::c_char;
 
-use ee_codec as _;
-use ee_fs as _;
+use ee_base as _;
+use ee_base as _;
 // the Input System's devices (ee_input/src/ffi.rs), called by Input System.cpp, ISKeyboard and ISMouse; its entry
 // points import the window layer's PlatMouseSetRelative (absent from a test binary)
 #[cfg(not(test))]
-use ee_input as _;
+use ee_base as _;
 // the Error System (ee_error): Filter.txt, ESVerify, the native error, the checksum sets
-use ee_error as _;
+use ee_base as _;
 // the Time Manager (ee_time): TMPoll, TMTimer, the clocks
-use ee_time as _;
+use ee_base as _;
 // the Thread System (ee_ts): the locks, the events, the threads and their registry
-use ee_ts as _;
+use ee_base as _;
 // the Utilities (ee_util): UGraph, U2DFractal, the shutdown list
-use ee_util as _;
+use ee_base as _;
 // the string classes' searches and tokenizers (ee_ustring)
-use ee_ustring as _;
+use ee_base as _;
 // the Graphics Engine's math and the table trigonometry (ee_ge/src/ffi.rs), called by the C++ GE classes and UMath.cpp
 use ee_ge as _;
 // the Graphics Thread's and the camera's math (ee_gfx/src/ffi.rs), called by EECameraControl.cpp
@@ -33,9 +33,9 @@ use ee_mixer as _;
 #[cfg(not(test))] // its FFI imports the platform layer, absent from a test binary
 use ee_net_tcp as _;
 // the Network Engine's whole classes (ee_net/src/ffi.rs), called by NESynchronousServer.cpp
+use ee_base as _;
 #[cfg(not(test))] // its protocol imports the TCP plug-in's C ABI (ee_net_tcp, absent from a test binary)
 use ee_net as _;
-use ee_random as _;
 #[cfg(not(test))]
 // the sound manager behind SESoundManager.cpp: its FFI imports the C++ trampolines (ee_soundcpp_*)
 use ee_sound as _;
@@ -67,17 +67,17 @@ use ee_openformats as _;
 
 // The platform layer's leaves: its `#[no_mangle]` functions and variables reach the staticlib through this
 // dependency.
-use ee_plat_core as _;
+use ee_base as _;
 
 // The platform layer's PlatFile, PlatThread and PlatSocket: `#[no_mangle]` exports, as above.
-use ee_plat_sys as _;
+use ee_base as _;
 
 // The window (PlatWindow.h on SDL3) and the fonts (PlatFont.h): `#[no_mangle]` exports. Two
 // crates so that a program using only text does not pull in an object file that references SDL (the linker pulls whole
 // objects); ee_plat_sdl's exports are compiled out of `cargo test`, whose binaries do not link SDL.
 #[cfg(not(test))]
-use ee_plat_sdl as _;
-use ee_plat_ui as _;
+use ee_base as _;
+use ee_base as _;
 
 // the WON library's leaves (ee_won/src/ffi.rs): the buffers' and text helpers, CRC-16, MD5, Blowfish, ElGamal, the auth
 // blocks and the CD keys behind the C++ forwarders of src/Empire Earth/WONAPI
@@ -274,7 +274,7 @@ pub extern "C" fn ee_rust_abi_version() -> u32 {
 /// call.
 #[no_mangle]
 pub unsafe extern "C" fn ee_rust_init(log: unsafe extern "C" fn(line: *const c_char)) {
-    ee_panic::install(log);
+    ee_base::panic::install(log);
     // the combat goals' bodies behind ee_units' goal dispatch (attack unit, attack ground: ee_combat goal_dispatch.rs)
     #[cfg(not(test))]
     ee_units::rust_goal::register_other_goal_kinds(ee_combat::goal_dispatch::rust_goal);

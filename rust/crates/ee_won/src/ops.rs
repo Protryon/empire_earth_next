@@ -16,7 +16,7 @@ pub const MODE_BLOCK: i32 = 2;
 
 /// WON's millisecond tick (`WONTickCount`): the platform clock cut to 32 bits.
 pub fn tick() -> u32 {
-    ee_plat_core::time::PlatTimeMilliseconds64() as u32
+    ee_base::plat_core::time::PlatTimeMilliseconds64() as u32
 }
 
 /// An op's run timing (`AsyncOp`'s `mRunMode`, `mStartTime`, `mTimeout`).
@@ -102,9 +102,9 @@ impl LockedSocket {
         // SAFETY: the C++ AsyncSocket's mutex and core, alive while the op holds the socket (the op's SmartPtr);
         // the mutex is recursive, so a caller already holding it is fine
         unsafe {
-            ee_plat_sys::thread::imp::PlatMutexLock(lock);
+            ee_base::plat_sys::thread::imp::PlatMutexLock(lock);
             let r = f(&mut *self.core);
-            ee_plat_sys::thread::imp::PlatMutexUnlock(lock);
+            ee_base::plat_sys::thread::imp::PlatMutexUnlock(lock);
             r
         }
     }
@@ -171,7 +171,7 @@ mod tests {
     use super::*;
     use crate::ipaddr::Addr;
     use crate::socket::{Socket, KIND_STREAM};
-    use ee_plat_sys::thread::imp::{PlatMutexCreate, PlatMutexDestroy};
+    use ee_base::plat_sys::thread::imp::{PlatMutexCreate, PlatMutexDestroy};
 
     #[test]
     fn time_left() {
@@ -216,7 +216,7 @@ mod tests {
     }
 
     struct Pair {
-        lock: *mut ee_plat_sys::thread::imp::PlatMutex,
+        lock: *mut ee_base::plat_sys::thread::imp::PlatMutex,
         client: Box<Socket>,
         server: Box<Socket>,
     }

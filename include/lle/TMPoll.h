@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Time Manager\TMPoll.h (folder name inferred; RECONSTRUCTION from TMPoll.cpp
 // 0x53819..0x53ad3). A polled countdown on the platform's high-resolution counter (or its millisecond clock when there
-// is none; platform/PlatTime.h). Whole in Rust (rust/crates/ee_time, LLE lane round 3): the class holds the Rust
+// is none; platform/PlatTime.h). Whole in Rust (rust/crates/ee_base/src/time, LLE lane round 3): the class holds the Rust
 // record by value (the original's members, sizeof 0x20, 8-aligned: the classes that embed a poll keep their layout)
 // and every member forwards. The original's shared TMPoll::sCounterFrequency is ee_time's TIME state.
 #ifndef LLE_TMPOLL_H

@@ -31,7 +31,7 @@ const GPU_WAIT_MS: u64 = 10_000;
 /// Polls the device until `done` (no blocking wait: a blocking device poll never returned in an x64 session, wgpu-native
 /// v29 on DX12/WARP); false after `timeout_ms`.
 fn poll_until(core: &Core, done: impl Fn() -> bool, timeout_ms: u64) -> bool {
-    let start = ee_plat_core::time::PlatTimeMilliseconds64();
+    let start = ee_base::plat_core::time::PlatTimeMilliseconds64();
     let mut spin = 0u64;
     loop {
         if done() {
@@ -42,11 +42,11 @@ fn poll_until(core: &Core, done: impl Fn() -> bool, timeout_ms: u64) -> bool {
         if done() {
             return true;
         }
-        if ee_plat_core::time::PlatTimeMilliseconds64() - start > timeout_ms {
+        if ee_base::plat_core::time::PlatTimeMilliseconds64() - start > timeout_ms {
             return false;
         }
         if spin > 64 {
-            ee_plat_core::time::PlatSleep(if spin > 1000 { 1 } else { 0 });
+            ee_base::plat_core::time::PlatSleep(if spin > 1000 { 1 } else { 0 });
         }
         spin += 1;
     }

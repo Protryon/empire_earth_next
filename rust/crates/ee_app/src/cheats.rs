@@ -7,7 +7,7 @@
 //! C++ called them.
 #![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
-use ee_plat_core::string::{PlatMbsDec, PlatMbsLen, PlatMbsLwr, PlatMbsNInc};
+use ee_base::plat_core::string::{PlatMbsDec, PlatMbsLen, PlatMbsLwr, PlatMbsNInc};
 use std::collections::BTreeMap;
 use std::os::raw::{c_long, c_ulong};
 

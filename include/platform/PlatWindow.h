@@ -4,8 +4,8 @@
 // message loop (Empire Earth.cpp WinMain/WndProc, TSThread's message dispatch), DirectInput (the Input System) and
 // the IMM calls of the edit boxes.
 //
-// Implementation: rust/crates/ee_plat_sdl (SDL3: Windows, Linux X11/Wayland, macOS Cocoa) with its logic in
-// rust/crates/ee_plat_ui, on every system (the game's window since PORT.md step 4.3).
+// Implementation: rust/crates/ee_base/src/plat_sdl (SDL3: Windows, Linux X11/Wayland, macOS Cocoa) with its logic in
+// rust/crates/ee_base/src/plat_ui, on every system (the game's window since PORT.md step 4.3).
 //
 // Keys are the game's numbering on every system (platform/PlatKeys.h): mScanCode is a DirectInput scan code
 // (DIK_*), mVirtualKey a Windows virtual-key code (VK_*). Text is UTF-8 (platform/PlatString.h, decision D6;

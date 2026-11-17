@@ -1,7 +1,7 @@
 // C:\EEX\Low-Level Engine\Utilities\UGraph.h (RECONSTRUCTION). Requires lle/LowLevelEngine.h, lle/U2DPoint.h,
 // lle/GEColor.h. A set of named series of integer points (UIGraph/UILineGraph draw it).
 //
-// Whole in Rust (rust/crates/ee_util graph.rs, LLE lane round 7): a series is an EeUtilSeries and a graph's series and
+// Whole in Rust (rust/crates/ee_base/src/util graph.rs, LLE lane round 7): a series is an EeUtilSeries and a graph's series and
 // range an EeUtilGraph; these classes hold the pointer and forward. GetSeries hands out the graph's slot for a series
 // (a UGraphSeries is that one pointer), GetDataPoint and GetColor the Rust values' addresses (laid out as U2DPoint<long>
 // and GEColor): each lasts until its container changes, as the C++ vectors' did. The title and labels stay here.

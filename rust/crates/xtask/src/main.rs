@@ -143,7 +143,7 @@ mod tests {
     fn the_root_is_found_from_inside_the_workspace() {
         let root = repo_root();
         assert!(root.join("rust/Cargo.toml").is_file());
-        assert_eq!(find_root(&root.join("rust/crates/xtask/src")), Some(root));
+        assert_eq!(find_root(&root.join("rust/crates/xtask/src/")), Some(root));
     }
 
     #[test]

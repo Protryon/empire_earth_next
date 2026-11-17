@@ -239,7 +239,7 @@ mod tests {
     /// The golden inputs: `count` (key, tag) pairs, keys from the engine's LCG in `0..keys` (many ties), tags the
     /// original positions. The C++ driver builds the same pairs.
     pub(crate) fn input(count: usize, keys: u32, seed: u32) -> Vec<(u32, u32)> {
-        let mut r = ee_random::URandom::new(seed);
+        let mut r = ee_base::random::URandom::new(seed);
         (0..count as u32).map(|i| (r.next_in_series() % keys, i)).collect()
     }
 

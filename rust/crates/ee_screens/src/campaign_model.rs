@@ -88,7 +88,7 @@ fn same(a: &[u8], b: &[u8]) -> bool {
 fn characters(text: &[u8]) -> usize {
     let mut z = c_view(text).to_vec();
     z.push(0);
-    unsafe { ee_plat_core::string::PlatMbsLen(z.as_ptr()) }
+    unsafe { ee_base::plat_core::string::PlatMbsLen(z.as_ptr()) }
 }
 
 /// `GetIndexedSubstring(first, last)`: from character `first`, `last - first + 1` characters.
@@ -96,8 +96,8 @@ fn indexed(text: &[u8], first: usize, last: usize) -> Vec<u8> {
     let mut z = c_view(text).to_vec();
     z.push(0);
     unsafe {
-        let start = ee_plat_core::string::PlatMbsNInc(z.as_ptr(), first);
-        let end = ee_plat_core::string::PlatMbsNInc(start, last.wrapping_sub(first).wrapping_add(1));
+        let start = ee_base::plat_core::string::PlatMbsNInc(z.as_ptr(), first);
+        let end = ee_base::plat_core::string::PlatMbsNInc(start, last.wrapping_sub(first).wrapping_add(1));
         let from = start.offset_from(z.as_ptr()) as usize;
         let to = end.offset_from(z.as_ptr()) as usize;
         z[from..to].to_vec()
@@ -108,7 +108,7 @@ fn indexed(text: &[u8], first: usize, last: usize) -> Vec<u8> {
 fn lower(text: &[u8]) -> Vec<u8> {
     let mut z = c_view(text).to_vec();
     z.push(0);
-    unsafe { ee_plat_core::string::PlatMbsLwr(z.as_mut_ptr()) };
+    unsafe { ee_base::plat_core::string::PlatMbsLwr(z.as_mut_ptr()) };
     z.pop();
     z
 }

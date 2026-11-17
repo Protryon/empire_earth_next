@@ -14,9 +14,9 @@
 
 use std::sync::Mutex;
 
+use ee_base::random::URandom;
 use ee_ge::types::{Ge3DPoint, GeTransformation};
 use ee_ge::um;
-use ee_random::URandom;
 
 use crate::effect_icon::EeGfxEffectIcon;
 use crate::effect_shot::EeGfxEffectShot;

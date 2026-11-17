@@ -7,7 +7,7 @@
 // and filled rectangles, blends, polygons and filled polygons of 0..7 points, ellipses, filled ellipses, arcs, clip
 // rectangles set and cleared) with coordinates -12..60, negative sizes, any colour. After each hook the two
 // surfaces' pixel bytes, clip rectangles and colours, and GetPixel's answer, must be the same. `--print` writes the
-// first 300 sequences (each hook with the FNV-1a hash of the pixels after it): rust/crates/ee_won/src/
+// first 300 sequences (each hook with the FNV-1a hash of the pixels after it): rust/crates/ee_won/src//
 // golden_platgfx.txt, which the Rust tests replay. Exit code: the number of mismatches.
 #include <windows.h>
 #include <stdio.h>

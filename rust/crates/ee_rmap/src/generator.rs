@@ -703,7 +703,7 @@ pub fn run_step(map: &mut Map, step: Step) {
 mod tests {
     use super::*;
     use crate::map::{Grid, URandomState};
-    use ee_random::URandom;
+    use ee_base::random::URandom;
 
     fn test_map(size: u32) -> Map {
         let n = size + 1;

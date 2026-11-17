@@ -17,7 +17,7 @@ use std::ffi::{c_long, c_void};
 use std::ptr::null_mut;
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicPtr, AtomicU32, Ordering::Relaxed};
 
-use ee_plat_sys::thread::imp as plat;
+use ee_base::plat_sys::thread::imp as plat;
 
 use crate::asyncop::{FinishAction, OpState, RunAction, TimerAction};
 use crate::ops::{self, OpTiming};

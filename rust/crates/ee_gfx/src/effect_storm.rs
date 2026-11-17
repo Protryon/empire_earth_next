@@ -552,7 +552,7 @@ pub fn storm_draws(l: &EeGfxStormLists, out: &mut [EeGfxStormDraw]) {
 mod tests {
     use super::*;
     use crate::effect_state::{random_seed, set_random_seed, RANDOM_TESTS};
-    use ee_random::URandom;
+    use ee_base::random::URandom;
 
     /// A map of land tiles at height x + y, water where x is 7, 0..20 square; the moves step one tile in x towards
     /// the target and the ripples are kept.

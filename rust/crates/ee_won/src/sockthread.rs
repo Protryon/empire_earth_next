@@ -8,7 +8,7 @@
 use std::cell::UnsafeCell;
 use std::ffi::{c_long, c_void};
 
-use ee_plat_sys::thread::imp as plat;
+use ee_base::plat_sys::thread::imp as plat;
 
 use crate::asyncop::{socket_op_finishes, socket_pump_wait, OpHandle, OpSet};
 use crate::status::*;

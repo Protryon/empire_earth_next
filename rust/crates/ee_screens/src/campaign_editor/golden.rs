@@ -12,7 +12,7 @@
 use std::collections::BTreeMap;
 
 use super::*;
-use ee_plat_core::utf8;
+use ee_base::plat_core::utf8;
 
 const GOLDEN: &[u8] = include_bytes!("../golden_campaign_editor.txt");
 

@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Utilities\UString.h (RECONSTRUCTION; UString.cpp 0x82c43..0x837ad). An 8-bit string with
 // a capacity (mCapacity counts the terminator). Requires <vector> (Tokenize) and windows.h-free declarations only.
-// Whole in Rust (rust/crates/ee_ustring, LLE lane round 4): the class holds the Rust record by value (the original's
+// Whole in Rust (rust/crates/ee_base/src/ustring, LLE lane round 4): the class holds the Rust record by value (the original's
 // buffer, length and capacity in their order: sizeof and every embedding class keep their layout), the buffer is
 // Rust's, and every member forwards. sprintf stays a C++ formatter writing into the record's buffer.
 #ifndef LLE_USTRING_H

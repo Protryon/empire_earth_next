@@ -80,7 +80,7 @@ pub struct GeFbCharacter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ee_plat_core::string::{PlatCp1252ByteOf, PlatMbsNInc, PlatUtf8Decode};
+    use ee_base::plat_core::string::{PlatCp1252ByteOf, PlatMbsNInc, PlatUtf8Decode};
 
     unsafe extern "C" fn measure(_font: *const c_void, _text: *const c_char, length: u32) -> i32 {
         3 * length as i32

@@ -11,12 +11,12 @@
 use crate::ipaddr::Addr;
 use crate::netstats;
 use crate::status::*;
-use ee_plat_sys::constants::{
+use ee_base::plat_sys::constants::{
     PlatSockAddrIn, PlatSocket, PLAT_AF_INET, PLAT_SOCKET_DGRAM, PLAT_SOCKET_INVALID, PLAT_SOCKET_SHUT_SEND,
     PLAT_SOCKET_STREAM, PLAT_SOCKET_WAIT_EXCEPT, PLAT_SOCKET_WAIT_READ, PLAT_SOCKET_WAIT_WRITE, PLAT_SOCK_EINPROGRESS,
     PLAT_SOCK_EWOULDBLOCK,
 };
-use ee_plat_sys::socket::imp as plat;
+use ee_base::plat_sys::socket::imp as plat;
 use std::ffi::{c_long, c_void};
 use std::sync::Mutex;
 

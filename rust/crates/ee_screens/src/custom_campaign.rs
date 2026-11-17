@@ -8,7 +8,7 @@ use crate::menus::{
     EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN, EE_SCREENS_TEXT_CAMPAIGN_DESCRIPTION, EE_SCREENS_TEXT_CAMPAIGN_FIRST,
     EE_SCREENS_TEXT_CAMPAIGN_NAME,
 };
-use ee_plat_core::utf8;
+use ee_base::plat_core::utf8;
 
 // ---- the events (EEScreenEvent::mEvent)
 

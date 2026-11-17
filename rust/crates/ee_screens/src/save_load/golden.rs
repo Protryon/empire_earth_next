@@ -18,7 +18,7 @@ use crate::menus::{
     EE_SCREENS_OP_OPEN_FORM, EE_SCREENS_OP_POP, EE_SCREENS_OP_PUSH, EE_SCREENS_TEXT_EDIT, EE_SCREENS_TEXT_MESSAGE,
 };
 use crate::settings_form::{EE_SCREENS_GAME_IS_SERVER, EE_SCREENS_OP_CLOSE_FORM, EE_SCREENS_TEXT_LIST_DATA};
-use ee_plat_core::utf8;
+use ee_base::plat_core::utf8;
 
 const GOLDEN: &[u8] = include_bytes!("../golden_save_load.txt");
 

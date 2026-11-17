@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\Error System\ESChecksum.h (file name inferred): named checksums of the world database,
-// saved with a game (EEPChecksum) and compared between network peers. The set is Rust's (rust/crates/ee_error
+// saved with a game (EEPChecksum) and compared between network peers. The set is Rust's (rust/crates/ee_base/src/error
 // checksum.rs, LLE lane round 2; a vector of ESChecksumEntry before): ESChecksum keeps its vtable (EEPChecksum
 // derives from it) and owns a pointer to the Rust set; copies clone it. Requires UString.
 #ifndef LLE_ESCHECKSUM_H

@@ -5,7 +5,7 @@
 // ---- src/Low-Level Engine/File System/FSArchive.cpp
 // C:\EEX\Low-Level Engine\File System\FSArchive.cpp (__FILE__ in the asserts; RTTI .?AVFSArchive@@)
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-// The tables and the file format are Rust's (rust/crates/ee_fs/src/archive.rs); this file keeps the directory walk, the
+// The tables and the file format are Rust's (rust/crates/ee_base/src/fs/archive.rs); this file keeps the directory walk, the
 // file specs, the mapping and the asserts. The ESVERIFY_ATs carry their original __LINE__.
 
 namespace {

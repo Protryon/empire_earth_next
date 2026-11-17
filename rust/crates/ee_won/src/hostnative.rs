@@ -279,7 +279,7 @@ pub(crate) fn file_directory() -> Vec<u8> {
     if root.is_empty() {
         let mut buf = [0u8; 1024];
         // SAFETY: the buffer and its size
-        let n = unsafe { ee_plat_core::path::PlatPathGetDataRoot(buf.as_mut_ptr().cast(), buf.len() as u32) };
+        let n = unsafe { ee_base::plat_core::path::PlatPathGetDataRoot(buf.as_mut_ptr().cast(), buf.len() as u32) };
         if n != 0 {
             let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
             *root = buf[..end].to_vec();

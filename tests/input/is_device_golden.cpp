@@ -1,6 +1,6 @@
 // Golden driver for the Input System's device buffers (ISDeviceInput, ISHandleEvent): random call sequences over the
 // original C++ class (is_device_orig.h), one trace line per call with its results. The Rust replay
-// (rust/crates/ee_input/src/golden.rs) makes the same calls on the Rust devices and compares every result.
+// (rust/crates/ee_base/src/input/golden.rs) makes the same calls on the Rust devices and compares every result.
 //
 //   clang-cl /nologo /EHsc /O1 -I include tests\input\is_device_golden.cpp /Fe:build\lle1\is_device_golden.exe
 //   build\lle1\is_device_golden.exe <sequences> [first seed] > golden.txt

@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Time Manager\TMTimer.h (folder name inferred; RECONSTRUCTION from TMTimer.cpp
 // 0x53ad3..0x53ca1). A system-timer wrapper (platform/PlatTime.h: the multimedia timers on Win32). Whole in Rust
-// (rust/crates/ee_time, LLE lane round 3): the class owns the Rust timer and every member forwards.
+// (rust/crates/ee_base/src/time, LLE lane round 3): the class owns the Rust timer and every member forwards.
 #ifndef LLE_TMTIMER_H
 #define LLE_TMTIMER_H
 

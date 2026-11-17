@@ -162,7 +162,7 @@ pub fn spread_points(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ee_random::URandom;
+    use ee_base::random::URandom;
 
     #[test]
     fn closest_point_is_the_first_minimum() {

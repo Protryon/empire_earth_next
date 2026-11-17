@@ -1,7 +1,7 @@
 // C:\EEX\Low-Level Engine\Time Manager\Time Manager.cpp (folder and file name inferred: sorts between
 // Thread System.cpp and TMPoll.cpp)
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-// Whole in Rust (rust/crates/ee_time, LLE lane round 3): the clocks, the time base and the pinned time; the exported
+// Whole in Rust (rust/crates/ee_base/src/time, LLE lane round 3): the clocks, the time base and the pinned time; the exported
 // names forward, and TMInitialize registers the Rust shutdown with the engine's list.
 #include <windows.h>
 #include <stdint.h>

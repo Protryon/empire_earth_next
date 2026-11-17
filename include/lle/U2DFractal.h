@@ -1,7 +1,7 @@
 // Low-Level Engine U2DFractal (exported class), as seen by its includers. Member names are provisional.
 // Requires lle/LowLevelEngine.h. A square height map filled by diamond-square subdivision.
 //
-// Whole in Rust (rust/crates/ee_util fractal.rs, LLE lane round 7): the class holds the map's pointer and forwards.
+// Whole in Rust (rust/crates/ee_base/src/util fractal.rs, LLE lane round 7): the class holds the map's pointer and forwards.
 // The original's virtual value generator was overridden only by Default.dll's HMUFractal, which is Rust's (ee_rmap
 // fractal.rs): nothing derives from this class now, so its vtable went. Values not computed are 0 (they were
 // uninitialised).

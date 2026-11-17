@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Utilities\UWideString.h (RECONSTRUCTION; UWideString.cpp 0x838f7..0x847e1). A multibyte
 // (MBCS) string: lengths through _mbslen/_mbsnbcnt; UTF-8 since decision D6 (platform/PlatString.h). Capacity grows in blocks of sDefaultAllocationLength.
-// Whole in Rust (rust/crates/ee_ustring wide.rs, LLE lane round 4): the class holds the Rust record by value (the
+// Whole in Rust (rust/crates/ee_base/src/ustring wide.rs, LLE lane round 4): the class holds the Rust record by value (the
 // original's buffer, byte length, length and capacity in their order: sizeof and every embedding class keep their
 // layout), the buffer is Rust's, and every member forwards. sprintf stays a C++ formatter writing into the record.
 #ifndef LLE_UWIDESTRING_H

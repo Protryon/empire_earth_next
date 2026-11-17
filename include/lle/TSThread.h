@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Thread System\TSThread.h (RECONSTRUCTION; TSThread.cpp 0x54203..0x545ff, operator
 // new(0x3c) in TSScheduler::CreateThread). A platform thread with its message queues. Whole in Rust
-// (rust/crates/ee_ts, LLE lane round 3): the class has no data; a TSThread* is the Rust thread object TSScheduler
+// (rust/crates/ee_base/src/ts, LLE lane round 3): the class has no data; a TSThread* is the Rust thread object TSScheduler
 // made, and every member forwards. The message-id queue is under the thread's message lock (LockMessageQueue), the
 // posted messages (the original's Win32 thread messages) under a lock of their own.
 #ifndef LLE_TSTHREAD_H

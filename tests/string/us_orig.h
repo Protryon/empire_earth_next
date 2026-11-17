@@ -1,5 +1,5 @@
 // The original UString (include/lle/UString.h and src/Low-Level Engine/Utilities/UString.cpp at a1775ddf, before
-// its searches and tokenizers moved to rust/crates/ee_ustring), unchanged but for the includes, for the golden
+// its searches and tokenizers moved to rust/crates/ee_base/src/ustring), unchanged but for the includes, for the golden
 // driver us_golden.cpp (which supplies FSFile, the platform's string functions and the error codes).
 // C:\EEX\Low-Level Engine\Utilities\UString.h (RECONSTRUCTION; UString.cpp 0x82c43..0x837ad). An 8-bit string with
 // a capacity (mCapacity counts the terminator). Requires <vector> (Tokenize) and windows.h-free declarations only.

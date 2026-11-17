@@ -4,7 +4,7 @@
 use crate::generator::{run_step, Step};
 use crate::map::{Grid, Map, ResourceKind, ResourceSlot, SpacingRule, Team, URandomState};
 use crate::math::Point;
-use ee_random::URandom;
+use ee_base::random::URandom;
 
 /// (scenario, seed, digest) from the C++ generator.
 const GOLDEN: [(u32, u32, u64); 12] = [

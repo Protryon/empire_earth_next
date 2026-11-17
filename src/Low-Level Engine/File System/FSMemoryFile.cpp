@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\File System\FSMemoryFile.cpp
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-// The class forwards to Rust (rust/crates/ee_fs/src/memfile.rs): this file keeps the C++ surface (the FSFile
+// The class forwards to Rust (rust/crates/ee_base/src/fs/memfile.rs): this file keeps the C++ surface (the FSFile
 // overloads, the stdio temporary file, the FSFile&-to-table glue).
 #include <windows.h>
 #include "platform/PlatFile.h"

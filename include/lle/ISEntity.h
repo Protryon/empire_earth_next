@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Input System\ISEntity.h (RECONSTRUCTION). An input element: a keyboard key (by DIK_* scan
 // code; 0xe0..0xe2 the either-side Control, Shift and Alt keys), a mouse axis or button. The entities are Rust's
-// (rust/crates/ee_input devices.rs, LLE lane round 2; the abstract class with the ISKey, ISExtendedKey, ISMouseAxis
+// (rust/crates/ee_base/src/input devices.rs, LLE lane round 2; the abstract class with the ISKey, ISExtendedKey, ISMouseAxis
 // and ISMouseButton subclasses before): the devices' GetEntity hands out pointers to Rust's records and these
 // forwarders read the system keyboard's or mouse's state. The class has no data and is never constructed in C++.
 // A NULL entity (a scan code without a key) reads as released.

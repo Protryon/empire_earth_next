@@ -3,7 +3,7 @@
 // the default capacity): random sequences on four strings through the original class (uws_orig.h, the unmodified
 // UWideString, over us_orig.h's UString). The platform's UTF-8 functions are the real ones (ee_plat_core, linked
 // from build/lle4/usrelink), so the multibyte steps are the game's. The heap is zero-filled, as in
-// us_store_golden.cpp. The Rust replay is rust/crates/ee_ustring/src/golden_wide.rs.
+// us_store_golden.cpp. The Rust replay is rust/crates/ee_base/src/ustring/golden_wide.rs.
 //
 //   python -I build/lle4/cc.py build/lle4/uwsg.exe tests/string/uws_golden.cpp -Itests/string <usrelink.lib + libs>
 //   build/lle4/uwsg.exe <sequences> [first seed] > golden.txt

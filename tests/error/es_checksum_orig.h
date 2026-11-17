@@ -1,5 +1,5 @@
 // The original ESChecksum and ESChecksumEntry (include/lle/ESChecksum.h and src/Low-Level Engine/Error System/
-// ESChecksum.cpp at 810a3eb2, before they moved to rust/crates/ee_error), unchanged but for the includes, for the
+// ESChecksum.cpp at 810a3eb2, before they moved to rust/crates/ee_base/src/error), unchanged but for the includes, for the
 // golden driver es_checksum_golden.cpp (which supplies UString and its sprintf).
 // C:\EEX\Low-Level Engine\Error System\ESChecksum.h (file name inferred): named checksums of the world database,
 // compared between network peers. ESChecksum.cpp 0x28ca..0x36c5. Requires <vector> and UString.

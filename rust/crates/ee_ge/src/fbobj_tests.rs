@@ -7,7 +7,7 @@
 //! with the golden's.
 
 use super::*;
-use ee_plat_core::string::{PlatCp1252ByteOf, PlatCp1252ToUtf8, PlatMbsNInc, PlatUtf8Decode};
+use ee_base::plat_core::string::{PlatCp1252ByteOf, PlatCp1252ToUtf8, PlatMbsNInc, PlatUtf8Decode};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 

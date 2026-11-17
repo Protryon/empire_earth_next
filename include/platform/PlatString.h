@@ -1,6 +1,6 @@
 // Platform layer: string functions the MSVC runtime has and standard C does not (see platform/Platform.h).
 //
-// Game text is UTF-8 on every system (docs/RUST_PLAN.md, decision D6; rust/crates/ee_plat_core, utf8.rs and
+// Game text is UTF-8 on every system (docs/RUST_PLAN.md, decision D6; rust/crates/ee_base/src/plat_core, utf8.rs and
 // string.rs): one implementation, no C runtime locale or code page behind it. Two groups:
 //  - byte strings: case-insensitive compares (Unicode's simple lower-case folding, which for ASCII is MSVC
 //    _stricmp's), integer formatting (_itoa), a malloc'ed copy (_strdup, free it with free());

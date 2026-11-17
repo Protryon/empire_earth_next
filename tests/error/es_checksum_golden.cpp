@@ -1,6 +1,6 @@
 // Golden driver for the Error System's checksum sets (ESChecksum, ESChecksumEntry): random call sequences over the
 // original classes (es_checksum_orig.h) on three sets, one trace line per call with its results. The Rust replay
-// (rust/crates/ee_error/src/golden_checksum.rs) makes the same calls on the Rust sets and compares every line.
+// (rust/crates/ee_base/src/error/golden_checksum.rs) makes the same calls on the Rust sets and compares every line.
 //
 //   python -I build/lle1/cc.py build/lle2/esc.exe tests/error/es_checksum_golden.cpp -Itests/error
 //   build/lle2/esc.exe <sequences> [first seed] > golden.txt

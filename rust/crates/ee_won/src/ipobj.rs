@@ -9,7 +9,7 @@
 use std::ffi::{c_char, c_long, c_void};
 use std::sync::atomic::{AtomicI32, Ordering::Relaxed};
 
-use ee_plat_sys::constants::{PlatSockAddrIn, PLAT_AF_INET};
+use ee_base::plat_sys::constants::{PlatSockAddrIn, PLAT_AF_INET};
 
 use crate::ffi::EeWonByteSink;
 use crate::ipaddr::{self, Addr};

@@ -23,7 +23,7 @@ fn stack_file() -> std::sync::MutexGuard<'static, Vec<u8>> {
 }
 
 /// `strftime("%c")` in the Windows CRT's C locale: `11/15/26 14:03:05`.
-pub fn time_text(t: &ee_plat_core::time::PlatDateTime) -> String {
+pub fn time_text(t: &ee_base::plat_core::time::PlatDateTime) -> String {
     format!("{:02}/{:02}/{:02} {:02}:{:02}:{:02}", t.month, t.day, t.year % 100, t.hour, t.minute, t.second)
 }
 
@@ -51,9 +51,9 @@ pub fn dump_stack() -> i32 {
     let Ok(mut file) = std::fs::OpenOptions::new().append(true).create(true).open(path) else {
         return EE_WON_DEBUG_CONTINUE_SEARCH;
     };
-    let mut now = ee_plat_core::time::PlatDateTime::default();
+    let mut now = ee_base::plat_core::time::PlatDateTime::default();
     // SAFETY: a writable value
-    unsafe { ee_plat_core::time::PlatGetLocalTime(&mut now) };
+    unsafe { ee_base::plat_core::time::PlatGetLocalTime(&mut now) };
     let trace = std::backtrace::Backtrace::force_capture().to_string();
     let _ = file.write_all(dump_text(&time_text(&now), &trace).as_bytes());
     EE_WON_DEBUG_CONTINUE_SEARCH
@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn time_is_the_c_locale_form() {
-        let t = ee_plat_core::time::PlatDateTime {
+        let t = ee_base::plat_core::time::PlatDateTime {
             year: 2026,
             month: 11,
             day_of_week: 0,

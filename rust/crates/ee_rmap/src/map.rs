@@ -3,7 +3,7 @@
 //! recorded gate and the original 32-bit generator have.
 
 use crate::math::Point;
-use ee_random::URandom;
+use ee_base::random::URandom;
 
 /// A square grid, `size` x `size`, indexed `[x][y]` as the C++ `vector<vector<T>>`.
 #[derive(Clone, Debug, Default, PartialEq)]

@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\Utilities\UString.cpp
-// Whole in Rust (rust/crates/ee_ustring, LLE lane round 4; UString.h): what stays here touches C++ (the FSFile
+// Whole in Rust (rust/crates/ee_base/src/ustring, LLE lane round 4; UString.h): what stays here touches C++ (the FSFile
 // virtuals, the token vectors, the varargs formatter).
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>

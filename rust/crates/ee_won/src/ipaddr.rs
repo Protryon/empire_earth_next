@@ -5,8 +5,8 @@
 //!
 //! Addresses are kept as the platform layer keeps them: the IPv4 address and the port in network byte order.
 
-use ee_plat_sys::constants::{PlatNetAdapter, PLAT_INADDR_NONE};
-use ee_plat_sys::socket::imp as plat;
+use ee_base::plat_sys::constants::{PlatNetAdapter, PLAT_INADDR_NONE};
+use ee_base::plat_sys::socket::imp as plat;
 use std::ffi::CString;
 
 /// An IPv4 address and port, both in network byte order (`PlatSockAddrIn`'s `mAddress` and `mPort`).

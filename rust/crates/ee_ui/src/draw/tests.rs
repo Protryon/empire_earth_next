@@ -26,7 +26,7 @@ fn width(text: &[u8], height: c_ulong) -> f32 {
     z.push(0);
     while at < text.len() {
         let mut l = 0u32;
-        let c = unsafe { ee_plat_core::string::PlatUtf8Decode(z.as_ptr().add(at).cast(), &mut l) };
+        let c = unsafe { ee_base::plat_core::string::PlatUtf8Decode(z.as_ptr().add(at).cast(), &mut l) };
         let l = if l == 0 { 1 } else { l as usize };
         w += (3u32.wrapping_add(c.wrapping_mul(7) % 9)) as f32 * (height / 8 + 1) as f32;
         at += l;

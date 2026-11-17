@@ -240,7 +240,7 @@ pub struct Menus {
 
 /// Each character's first byte, as `EEIsValidName` reads a `UWideString` (`operator[]` over `PlatMbsNInc`).
 fn first_bytes(text: &[u8]) -> Vec<u8> {
-    ee_plat_core::utf8::chars(text).map(|(at, _, _)| text[at]).collect()
+    ee_base::plat_core::utf8::chars(text).map(|(at, _, _)| text[at]).collect()
 }
 
 /// The single player screen's typed name into the player name, unless the box is empty (`SPESavePlayerName`).

@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Input System\ISMouse.h (RECONSTRUCTION; ISMouse.cpp 0x3b2ce..0x3bab2 before). The system
 // mouse (DirectInput's exclusive mouse in the original; the window layer's events in relative mode now:
-// lle/ISDeviceInput.h). Whole in Rust (rust/crates/ee_input devices.rs, LLE lane round 2): gISMouse points at Rust's
+// lle/ISDeviceInput.h). Whole in Rust (rust/crates/ee_base/src/input devices.rs, LLE lane round 2): gISMouse points at Rust's
 // mouse and these forwarders call it; Resume and Suspend also put the game window's pointer in and out of relative
 // mode, and Refresh passes TMGetTime (Input System.cpp). The class has no data.
 #ifndef LLE_ISMOUSE_H

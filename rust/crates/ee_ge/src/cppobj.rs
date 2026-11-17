@@ -15,7 +15,7 @@
 
 use std::ffi::{c_char, c_ulong, c_void};
 
-use ee_ustring::{EeUString, EeUWideString};
+use ee_base::ustring::{EeUString, EeUWideString};
 
 /// A `UReferenceCounter`-derived C++ object whose only member is its Rust object.
 #[repr(C)]
@@ -153,7 +153,7 @@ pub unsafe fn wstr<'a>(s: usize) -> &'a mut EeUWideString {
 /// Both are live `UString`s.
 pub unsafe fn str_assign(target: usize, source: usize) {
     // SAFETY: the caller's contract
-    unsafe { ee_ustring::ee_ustring_assign(ustr(target), ustr(source)) }
+    unsafe { ee_base::ustring::ee_ustring_assign(ustr(target), ustr(source)) }
 }
 
 /// `*target = UString(bytes)` (the bytes hold no NUL): a temporary string of the bytes assigned, then freed, as
@@ -167,9 +167,9 @@ pub unsafe fn str_set_bytes(target: usize, bytes: &[u8]) {
     let mut temp = EeUString { string: std::ptr::null_mut(), length: 0, capacity: 0 };
     // SAFETY: the caller's contract; `text` is NUL-terminated; `temp` is a fresh record, freed once
     unsafe {
-        ee_ustring::ee_ustring_init_text(&mut temp, text.as_ptr() as *const c_char);
-        ee_ustring::ee_ustring_assign(ustr(target), &temp);
-        ee_ustring::ee_ustring_free(&mut temp);
+        ee_base::ustring::ee_ustring_init_text(&mut temp, text.as_ptr() as *const c_char);
+        ee_base::ustring::ee_ustring_assign(ustr(target), &temp);
+        ee_base::ustring::ee_ustring_free(&mut temp);
     }
 }
 
@@ -197,7 +197,7 @@ pub unsafe fn str_length(s: usize) -> c_ulong {
 /// `s` is a live `UString`.
 pub unsafe fn str_size_of(s: usize) -> c_ulong {
     // SAFETY: the caller's contract
-    unsafe { ee_ustring::ee_ustring_size_of(ustr(s)) }
+    unsafe { ee_base::ustring::ee_ustring_size_of(ustr(s)) }
 }
 
 /// `*a == *b` (`UString::operator==`: `strcmp` of the texts is 0).
@@ -206,7 +206,7 @@ pub unsafe fn str_size_of(s: usize) -> c_ulong {
 /// Both are live `UString`s.
 pub unsafe fn str_equal(a: usize, b: usize) -> bool {
     // SAFETY: the caller's contract
-    unsafe { ee_ustring::ee_ustring_compare(str_text(a), str_text(b)) == 0 }
+    unsafe { ee_base::ustring::ee_ustring_compare(str_text(a), str_text(b)) == 0 }
 }
 
 /// `&array[i]` of a `new UString[n]` array.
@@ -220,7 +220,7 @@ pub fn str_at(array: usize, i: usize) -> usize {
 /// Both are live `UWideString`s.
 pub unsafe fn wstr_assign(target: usize, source: usize) {
     // SAFETY: the caller's contract
-    unsafe { ee_ustring::ee_uwstring_assign(wstr(target), wstr(source)) }
+    unsafe { ee_base::ustring::ee_uwstring_assign(wstr(target), wstr(source)) }
 }
 
 /// `(const char*)*s` of a `UWideString`.
@@ -263,7 +263,7 @@ pub mod testing {
         let mut bytes = text.as_bytes().to_vec();
         bytes.push(0);
         // SAFETY: a fresh record; NUL-terminated text
-        unsafe { ee_ustring::ee_ustring_init_text(&mut (*s).state, bytes.as_ptr() as *const c_char) };
+        unsafe { ee_base::ustring::ee_ustring_init_text(&mut (*s).state, bytes.as_ptr() as *const c_char) };
         s as usize
     }
 
@@ -274,7 +274,7 @@ pub mod testing {
             state: EeUString { string: std::ptr::null_mut(), length: 0, capacity: 0 },
         }));
         // SAFETY: a fresh record
-        unsafe { ee_ustring::ee_ustring_init(&mut (*s).state) };
+        unsafe { ee_base::ustring::ee_ustring_init(&mut (*s).state) };
         s as usize
     }
 
@@ -286,7 +286,7 @@ pub mod testing {
         // SAFETY: the caller's contract
         unsafe {
             let mut b = Box::from_raw(s as *mut CppUString);
-            ee_ustring::ee_ustring_free(&mut b.state);
+            ee_base::ustring::ee_ustring_free(&mut b.state);
         }
     }
 
@@ -300,7 +300,7 @@ pub mod testing {
                 state: EeUString { string: std::ptr::null_mut(), length: 0, capacity: 0 },
             };
             // SAFETY: a fresh record
-            unsafe { ee_ustring::ee_ustring_init(&mut s.state) };
+            unsafe { ee_base::ustring::ee_ustring_init(&mut s.state) };
             v.push(s);
         }
         let b = v.into_boxed_slice();
@@ -324,7 +324,7 @@ pub mod testing {
         unsafe {
             let mut b = Box::from_raw(std::ptr::slice_from_raw_parts_mut(p as *mut CppUString, len));
             for s in b.iter_mut() {
-                ee_ustring::ee_ustring_free(&mut s.state);
+                ee_base::ustring::ee_ustring_free(&mut s.state);
             }
         }
     }
@@ -348,7 +348,7 @@ pub mod testing {
             state: EeUWideString { string: std::ptr::null_mut(), byte_length: 0, length: 0, capacity: 0 },
         }));
         // SAFETY: a fresh record
-        unsafe { ee_ustring::ee_uwstring_init_characters(&mut (*s).state, characters) };
+        unsafe { ee_base::ustring::ee_uwstring_init_characters(&mut (*s).state, characters) };
         s as usize
     }
 
@@ -358,7 +358,7 @@ pub mod testing {
         let mut bytes = text.as_bytes().to_vec();
         bytes.push(0);
         // SAFETY: a live record; NUL-terminated text
-        unsafe { ee_ustring::ee_uwstring_assign_text(wstr(s), bytes.as_ptr() as *const c_char) };
+        unsafe { ee_base::ustring::ee_uwstring_assign_text(wstr(s), bytes.as_ptr() as *const c_char) };
         s
     }
 
@@ -370,7 +370,7 @@ pub mod testing {
         // SAFETY: the caller's contract
         unsafe {
             let mut b = Box::from_raw(s as *mut CppUWideString);
-            ee_ustring::ee_uwstring_free(&mut b.state);
+            ee_base::ustring::ee_uwstring_free(&mut b.state);
         }
     }
 
@@ -439,7 +439,7 @@ mod tests {
             assert_eq!(text(a), "gamma ray");
             assert_eq!(str_length(a), 9);
             assert_eq!(*str_text(a) as u8, b'g');
-            assert_eq!(str_size_of(a), ee_ustring::ee_ustring_size_of(ustr(a)));
+            assert_eq!(str_size_of(a), ee_base::ustring::ee_ustring_size_of(ustr(a)));
             delete_ustring(a);
             delete_ustring(b);
         }

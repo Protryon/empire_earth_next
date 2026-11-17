@@ -21,7 +21,7 @@ pub fn gx_log(line: &str) {
     text.push('\n');
     if let Ok(text) = CString::new(text) {
         // SAFETY: a valid NUL-terminated string
-        unsafe { ee_plat_core::message::PlatDebugOutput(text.as_ptr()) };
+        unsafe { ee_base::plat_core::message::PlatDebugOutput(text.as_ptr()) };
         if std::env::var_os("EE_GX_LOG").is_some() {
             eprint!("{}", text.to_string_lossy());
         }
@@ -71,7 +71,7 @@ impl Platform for RealPlatform {
     }
 
     fn now_ms(&self) -> u64 {
-        ee_plat_core::time::PlatTimeMilliseconds64()
+        ee_base::plat_core::time::PlatTimeMilliseconds64()
     }
 
     fn now_us(&self) -> u64 {

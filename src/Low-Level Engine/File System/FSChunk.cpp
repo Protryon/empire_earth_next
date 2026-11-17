@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\File System\FSChunk.cpp (file name inferred: no __FILE__; RTTI .?AVFSChunk@@)
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-// The class forwards to Rust (rust/crates/ee_fs/src/chunk.rs); what stays here is the persistent's virtual Load/Save.
+// The class forwards to Rust (rust/crates/ee_base/src/fs/chunk.rs); what stays here is the persistent's virtual Load/Save.
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"

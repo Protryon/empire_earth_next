@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\File System\FSArchive.cpp (__FILE__ in the asserts; RTTI .?AVFSArchive@@)
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-// Whole in Rust (rust/crates/ee_fs/src/archive_obj.rs, LLE lane round 5; the tables and the format: archive.rs): each
+// Whole in Rust (rust/crates/ee_base/src/fs/archive_obj.rs, LLE lane round 5; the tables and the format: archive.rs): each
 // member forwards the object, from its vtable pointer on (EeFsArchiveObj), to Rust. What stays here: the sinks that
 // fill a UWideString and a std::set (GetTag, ListFiles), FindFile's new FSMemoryFile, Create's list of names.
 #include <windows.h>

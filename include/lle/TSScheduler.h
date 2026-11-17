@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Thread System\TSScheduler.h (RECONSTRUCTION; TSScheduler.cpp 0x53e55..0x54203).
 // Include <windows.h> first: CreateEvent is exported as ?CreateEventA@TSScheduler@@...
-// Whole in Rust (rust/crates/ee_ts, LLE lane round 3): the statics forward (inline since round 7: TSScheduler.cpp
+// Whole in Rust (rust/crates/ee_base/src/ts, LLE lane round 3): the statics forward (inline since round 7: TSScheduler.cpp
 // and Thread System.cpp went); the thread registry is the crate's SCHEDULER.
 #ifndef LLE_TSSCHEDULER_H
 #define LLE_TSSCHEDULER_H

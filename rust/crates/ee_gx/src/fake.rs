@@ -78,7 +78,7 @@ impl Platform for PlatformBase {
         NativeWindow::default()
     }
     fn now_ms(&self) -> u64 {
-        ee_plat_core::time::PlatTimeMilliseconds64()
+        ee_base::plat_core::time::PlatTimeMilliseconds64()
     }
     fn now_us(&self) -> u64 {
         0

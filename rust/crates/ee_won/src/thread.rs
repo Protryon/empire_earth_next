@@ -14,11 +14,11 @@ use std::ffi::c_void;
 use std::ptr::null_mut;
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicPtr, AtomicU32, Ordering};
 
-use ee_plat_sys::constants::{
+use ee_base::plat_sys::constants::{
     PLAT_PRIORITY_ABOVE_NORMAL, PLAT_PRIORITY_BELOW_NORMAL, PLAT_PRIORITY_HIGHEST, PLAT_PRIORITY_LOWEST,
     PLAT_PRIORITY_NORMAL, PLAT_WAIT_INFINITE,
 };
-use ee_plat_sys::thread::imp as plat;
+use ee_base::plat_sys::thread::imp as plat;
 
 use crate::asyncop::{OpHandle, OpQueue, PumpPlan, QueueResult, TimerQueue};
 use crate::ops;

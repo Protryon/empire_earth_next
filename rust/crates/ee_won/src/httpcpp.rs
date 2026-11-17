@@ -10,7 +10,7 @@
 use std::ffi::{c_int, c_long, c_void};
 use std::ptr::null_mut;
 
-use ee_plat_sys::thread::imp as plat;
+use ee_base::plat_sys::thread::imp as plat;
 
 use crate::cppcore::{
     completion, core, hold, n_completion_call, n_op_completion, n_op_force_finish, n_op_kill, n_op_set_completion,

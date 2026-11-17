@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\Utilities\UEncryption.cpp
-// The encryption itself is Rust (rust/crates/ee_codec, encryption.rs): these forwarders only convert UStrings. The
+// The encryption itself is Rust (rust/crates/ee_base/src/codec, encryption.rs): these forwarders only convert UStrings. The
 // exported signatures stay, so nothing above this file changed.
 #include <windows.h>
 #include <string>

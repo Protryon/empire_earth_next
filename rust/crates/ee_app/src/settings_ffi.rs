@@ -3,7 +3,7 @@
 
 use crate::game_options::EeAppOptionsFields;
 use crate::settings::{self, Config, EeAppSettingsFields, Records, Strings};
-use ee_plat_core::config::{
+use ee_base::plat_core::config::{
     PlatConfigGetInt, PlatConfigGetString, PlatConfigSetBool, PlatConfigSetInt, PlatConfigSetString,
 };
 use std::ffi::{c_void, CString};

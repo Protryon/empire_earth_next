@@ -7,7 +7,7 @@
 
 #include "lle/FSFileSpec.h"  // the base class
 
-struct EeFsMemFile;          // rust/crates/ee_fs: the contents and position
+struct EeFsMemFile;          // rust/crates/ee_base/src/fs: the contents and position
 
 class LLE_API FSMemoryFile : public FSFileSpec {
 public:
@@ -76,7 +76,7 @@ public:
 
 protected:
     UString mTemporaryFileName;                       // +0x48
-    EeFsMemFile* mState;                              // the contents (rust/crates/ee_fs/src/memfile.rs)
+    EeFsMemFile* mState;                              // the contents (rust/crates/ee_base/src/fs/memfile.rs)
     bool mOwnsState;                                  // false for the view a chunk wraps around its payload
 };
 

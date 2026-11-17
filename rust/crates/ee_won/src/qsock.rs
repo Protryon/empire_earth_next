@@ -16,7 +16,7 @@ use std::collections::VecDeque;
 use std::ffi::{c_long, c_void};
 use std::ptr::null_mut;
 
-use ee_plat_sys::thread::imp as plat;
+use ee_base::plat_sys::thread::imp as plat;
 
 use crate::asyncop::{self, QueueCompletion, QueueNext, QueueOpKind};
 use crate::status::*;

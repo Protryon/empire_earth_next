@@ -15,6 +15,5 @@ crate-type = ["rlib"]
 ee_ge = { path = "../ee_ge" }
 ee_gfx = { path = "../ee_gfx" }
 # config.yaml (PlatConfig*): the settings' rows
-ee_plat_core = { path = "../ee_plat_core" }
+ee_base = { path = "../ee_base" }
 # the cliffs' table generator (URandomIntegers)
-ee_random = { path = "../ee_random" }

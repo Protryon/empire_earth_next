@@ -1,5 +1,5 @@
 // The original Error System's debug-output filter (ESFilterDebugOutput and its globals, src/Low-Level Engine/Error
-// System/Error System.cpp at 810a3eb2, before it moved to rust/crates/ee_error), unchanged, for the golden driver
+// System/Error System.cpp at 810a3eb2, before it moved to rust/crates/ee_base/src/error), unchanged, for the golden driver
 // es_filter_golden.cpp, which supplies UString, FSFileSpec, gStartupVolume and gStartupDirectory.
 static std::vector<UString*> gFilters;            // 0x1010f6b8: the lines of Filter.txt (ESFilterDebugOutput)
 static long gFilterMode = 1;

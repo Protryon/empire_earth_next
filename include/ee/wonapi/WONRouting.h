@@ -865,7 +865,7 @@ enum RoutingBadUserListType {
     RoutingBadUserListType_MutedUsers=2
 };
 
-// Every routing op, request or notification, is one Rust object since net round 18 (rust/crates/ee_won/src/
+// Every routing op, request or notification, is one Rust object since net round 18 (rust/crates/ee_won/src//
 // routeop.rs EeWonRouteOp: the op's members by field number EE_WON_RTF_* and text EE_WON_RTT_*, its data type,
 // data and recipients, the records its replies build, SendRequest's message and HandleReply's read, and
 // RoutingCreateGroupOp::CheckLeaveGroup). This class is the AsyncOp the connection's list and the completions hold,

@@ -819,7 +819,7 @@ pub unsafe fn character_bytes(text: *const c_char, characters: u32) -> Vec<c_cha
     }
     (0..characters)
         // SAFETY: the caller's contract; PlatMbsNInc stops at the terminator
-        .map(|i| unsafe { *ee_plat_core::string::PlatMbsNInc(text as *const u8, i as usize) } as c_char)
+        .map(|i| unsafe { *ee_base::plat_core::string::PlatMbsNInc(text as *const u8, i as usize) } as c_char)
         .collect()
 }
 

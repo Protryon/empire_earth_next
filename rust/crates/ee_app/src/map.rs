@@ -10,8 +10,8 @@
 // the negated float tests are the C++'s (a NaN takes the same branch)
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use ee_base::random::URandom;
 use ee_ge::types::GeVector;
-use ee_random::URandom;
 use std::os::raw::{c_long, c_ulong};
 
 /// `kTerrainCliff`: the terrain type `UpdateCliffs` gives a steep tile.

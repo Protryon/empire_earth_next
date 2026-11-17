@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Error System\ESChecksum.cpp (file name inferred: no __FILE__; RTTI .?AVESChecksum@@)
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-// The checksum set is Rust's (rust/crates/ee_error checksum.rs, LLE lane round 2): these are its forwarders.
+// The checksum set is Rust's (rust/crates/ee_base/src/error checksum.rs, LLE lane round 2): these are its forwarders.
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"

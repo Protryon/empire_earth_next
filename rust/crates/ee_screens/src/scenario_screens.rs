@@ -10,7 +10,7 @@
 
 use std::sync::Mutex;
 
-use ee_plat_core::utf8;
+use ee_base::plat_core::utf8;
 
 use crate::custom_campaign::{
     EE_SCREENS_OP_FORM_LIST_CLEAR, EE_SCREENS_OP_FORM_LIST_COUNT, EE_SCREENS_OP_FORM_LIST_SELECT,

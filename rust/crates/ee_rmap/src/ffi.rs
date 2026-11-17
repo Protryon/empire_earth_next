@@ -7,7 +7,7 @@ use crate::map::{
     Circle, Feature, Grid, Map, Object, Player, ResourceKind, ResourceSlot, Settings, SpacingRule, Team, URandomState,
 };
 use crate::math::Point;
-use ee_random::URandom;
+use ee_base::random::URandom;
 use std::ptr;
 
 /// One player; `tiles_start`/`centers_start` index `EeRmapState::player_points`.

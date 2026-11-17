@@ -296,7 +296,7 @@ impl EditHost for Fake {
         let mut width = 0.0f32;
         let mut at = 0;
         while at < n {
-            let (c, l) = ee_plat_core::utf8::decode(&text[at..n]);
+            let (c, l) = ee_base::plat_core::utf8::decode(&text[at..n]);
             let advance = (3 + (c.wrapping_mul(7)) % 9) as f32;
             width += advance * (self.font_height / 8 + 1) as f32;
             at += l.max(1);

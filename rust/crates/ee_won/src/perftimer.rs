@@ -98,10 +98,10 @@ static STATE: Mutex<State> = Mutex::new(State {
 });
 
 fn ticks() -> i64 {
-    ee_plat_core::time::PlatCounterTicks()
+    ee_base::plat_core::time::PlatCounterTicks()
 }
 fn frequency() -> i64 {
-    ee_plat_core::time::PlatCounterFrequency()
+    ee_base::plat_core::time::PlatCounterFrequency()
 }
 fn with<R>(f: impl FnOnce(&mut State) -> R) -> R {
     f(&mut STATE.lock().unwrap_or_else(|e| e.into_inner()))

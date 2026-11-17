@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Utilities\Utilities.cpp (file name inferred: no __FILE__; by analogy with Error System.cpp:
 // sorts between UString.cpp and UWideString.cpp)
-// Whole in Rust (rust/crates/ee_util system.rs, LLE lane round 7): the shutdown list and the system questions; the
+// Whole in Rust (rust/crates/ee_base/src/util system.rs, LLE lane round 7): the shutdown list and the system questions; the
 // exported names forward.
 #include <windows.h>
 

@@ -67,22 +67,22 @@ pub fn from_utf8(text: &str) -> Vec<u16> {
 /// The game's text (UTF-8 bytes, decision D6) as UTF-16 units, where a `UString` meets a WON `wchar_t` string
 /// (`StringToWString`): a stray byte becomes U+FFFD.
 pub fn utf16_from_game(text: &[u8]) -> Vec<u16> {
-    ee_plat_core::utf8::to_utf16(text)
+    ee_base::plat_core::utf8::to_utf16(text)
 }
 
 /// UTF-16 units as the game's text (`WStringToString`): a lone surrogate becomes U+FFFD.
 pub fn game_from_utf16(units: &[u16]) -> Vec<u8> {
-    ee_plat_core::utf8::from_utf16(units)
+    ee_base::plat_core::utf8::from_utf16(units)
 }
 
 /// The game's text as UTF-32 code points (a `wchar_t` of 4 bytes): a stray byte becomes U+FFFD.
 pub fn utf32_from_game(text: &[u8]) -> Vec<u32> {
-    ee_plat_core::utf8::to_utf32(text)
+    ee_base::plat_core::utf8::to_utf32(text)
 }
 
 /// UTF-32 code points as the game's text: a surrogate or a value past U+10FFFF becomes U+FFFD.
 pub fn game_from_utf32(text: &[u32]) -> Vec<u8> {
-    ee_plat_core::utf8::from_utf32(text)
+    ee_base::plat_core::utf8::from_utf32(text)
 }
 
 #[cfg(test)]

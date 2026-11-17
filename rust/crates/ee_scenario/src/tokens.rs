@@ -10,7 +10,7 @@
 //! empty replacement (no object or condition 0, or one that gives nothing) the text did not change and the loop never
 //! ended: the game hung. Here that case goes on to the next tag (the reads of the one pass are made, as before).
 
-use ee_plat_core::utf8;
+use ee_base::plat_core::utf8;
 
 use crate::condition::{choose_player_recorded, player_value};
 use crate::host::Host;

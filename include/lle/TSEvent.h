@@ -1,6 +1,6 @@
 // C:\EEX\Low-Level Engine\Thread System\TSEvent.h (RECONSTRUCTION; TSEvent.cpp 0x53cee..0x53d8b,
 // TSScheduler::CreateEvent operator new(8)). A platform event, manual or automatic reset. Whole in Rust
-// (rust/crates/ee_ts, LLE lane round 3): the class has no data; a TSEvent* is the Rust event TSScheduler made, and
+// (rust/crates/ee_base/src/ts, LLE lane round 3): the class has no data; a TSEvent* is the Rust event TSScheduler made, and
 // every member forwards.
 #ifndef LLE_TSEVENT_H
 #define LLE_TSEVENT_H

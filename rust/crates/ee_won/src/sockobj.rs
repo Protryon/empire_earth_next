@@ -15,8 +15,8 @@ use std::cell::UnsafeCell;
 use std::ffi::{c_long, c_void};
 use std::sync::atomic::{AtomicU8, AtomicUsize, Ordering::Relaxed};
 
-use ee_plat_sys::constants::PlatSocket;
-use ee_plat_sys::thread::imp as plat;
+use ee_base::plat_sys::constants::PlatSocket;
+use ee_base::plat_sys::thread::imp as plat;
 
 use crate::ipaddr::Addr;
 use crate::ipobj::EeWonIpAddr;
@@ -464,9 +464,9 @@ impl Drop for EeWonAsyncSocket {
 }
 
 /// An accepted peer's sockaddr (family, network-order port and address, zero padding).
-fn peer_sockaddr(a: Addr) -> ee_plat_sys::constants::PlatSockAddrIn {
-    ee_plat_sys::constants::PlatSockAddrIn {
-        mFamily: ee_plat_sys::constants::PLAT_AF_INET,
+fn peer_sockaddr(a: Addr) -> ee_base::plat_sys::constants::PlatSockAddrIn {
+    ee_base::plat_sys::constants::PlatSockAddrIn {
+        mFamily: ee_base::plat_sys::constants::PLAT_AF_INET,
         mPort: a.port,
         mAddress: a.address,
         mZero: [0; 8],

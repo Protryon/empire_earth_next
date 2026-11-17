@@ -1,7 +1,7 @@
 // Golden driver for UString's storage (every member: the constructors, assignment, appends, Copy, substrings,
 // concatenation, comparisons, searches, tokenizers, Load, Save, sprintf, Compact, the default capacity, the legacy
 // text load): random sequences on four strings through the original class (us_orig.h, the unmodified UString). The
-// Rust replay (rust/crates/ee_ustring/src/golden_store.rs) makes the same calls on Rust records and regenerates
+// Rust replay (rust/crates/ee_base/src/ustring/golden_store.rs) makes the same calls on Rust records and regenerates
 // every line. The heap is zero-filled (operator new[] below) so the bytes past a terminator, which the original
 // copies and prints here, are what the Rust buffer holds.
 //

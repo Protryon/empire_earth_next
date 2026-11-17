@@ -20,7 +20,7 @@
 use std::ffi::c_ulong;
 use std::fmt::Write;
 
-use ee_plat_core::string::{PlatCp1252ToUtf8, PlatMbsLen, PlatUtf8Decode};
+use ee_base::plat_core::string::{PlatCp1252ToUtf8, PlatMbsLen, PlatUtf8Decode};
 
 use crate::bitmap::stretched_coords;
 use crate::font::tests::Plat;

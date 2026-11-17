@@ -12,8 +12,8 @@
 
 use std::sync::Mutex;
 
+use ee_base::random::{float_to_long, URandom};
 use ee_ge::types::Ge3DPoint;
-use ee_random::{float_to_long, URandom};
 
 use crate::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::effect_state::{load_point, save_point, EeGfxEffectRecord, EffectFile};
