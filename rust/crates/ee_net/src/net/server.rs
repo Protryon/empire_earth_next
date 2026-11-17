@@ -19,17 +19,17 @@ use std::collections::{BTreeMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU8, AtomicUsize, Ordering::SeqCst};
 use std::sync::{Arc, Mutex};
 
-use crate::ffi::EeNetMmOp;
-use crate::msgmgr::MsgMgr;
-use crate::qhost::*;
-use crate::recplay::RecPlay;
-use crate::rlock::RLock;
-use crate::tune::{f32_to_u32, Field as TuField, Tune, TuneHost};
+use crate::net::ffi::EeNetMmOp;
+use crate::net::msgmgr::MsgMgr;
+use crate::net::qhost::*;
+use crate::net::recplay::RecPlay;
+use crate::net::rlock::RLock;
+use crate::net::tune::{f32_to_u32, Field as TuField, Tune, TuneHost};
 
-pub use crate::comms::Comms;
-pub use crate::ffi::{MmCall, MmVia};
-pub use crate::ffi_comms::EeNetCommsField as BaseField;
-pub use crate::ffi_server::{
+pub use crate::net::comms::Comms;
+pub use crate::net::ffi::{MmCall, MmVia};
+pub use crate::net::ffi_comms::EeNetCommsField as BaseField;
+pub use crate::net::ffi_server::{
     EeNetSvEvent as SvEvent, EeNetSvGet as SvGet, EeNetSvMsgFlag as MsgFlag, EeNetSvSet as SvSet,
 };
 
@@ -837,7 +837,7 @@ impl<H: ServerHost> Server<H> {
         g == STATE_RUNNING || g == STATE_PAUSED
     }
     pub fn record_playback_mode(&self) -> u8 {
-        self.rec().map_or(crate::recplay::MODE_PASSING, |r| r.mode())
+        self.rec().map_or(crate::net::recplay::MODE_PASSING, |r| r.mode())
     }
 
     // ---- the members

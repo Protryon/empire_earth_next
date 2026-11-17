@@ -1,3 +1,4 @@
+# ee_net: ee_net, ee_net_tcp (docs/progress/crate-restructure.md)
 [package]
 name = "ee_net"
 version.workspace = true

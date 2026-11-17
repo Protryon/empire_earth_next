@@ -20,8 +20,8 @@ use std::sync::Mutex;
 
 use ee_base::random::URandom;
 
-use crate::qhost::*;
-use crate::rlock::RLock;
+use crate::net::qhost::*;
+use crate::net::rlock::RLock;
 
 const LOSS_SCALE: f32 = 99.0;
 const UNIT: u32 = 0;

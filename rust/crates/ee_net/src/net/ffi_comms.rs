@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use crate::comms::Comms;
+use crate::net::comms::Comms;
 
 /// The base class's fields
 #[repr(u32)]

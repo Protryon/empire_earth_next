@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\Network Engine\NEProtocol.h (RECONSTRUCTION; NEProtocol.cpp 0x4440f..0x44c71). The network
-// protocol: the game's one, TCP/IP, over its plug-in (rust/crates/ee_net_tcp), with the registry of protocols and the
+// protocol: the game's one, TCP/IP, over its plug-in (rust/crates/ee_net/src/net_tcp), with the registry of protocols and the
 // traffic counters. Whole in Rust (ee_net ffi_protocol.rs; PORT_LEARNINGS "LLE Network Engine, round 7"): a
 // NEProtocol* is the Rust protocol (the class has no data); the class keeps the members the game calls, each
 // forwarding. The Rust server and client call the protocol themselves.

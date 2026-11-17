@@ -16,7 +16,7 @@
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering::SeqCst};
 use std::sync::Mutex;
 
-pub use crate::ffi_tune::EeNetTuField as Field;
+pub use crate::net::ffi_tune::EeNetTuField as Field;
 
 pub const SLOT_SERVER: u8 = 0xfe;
 pub const SLOT_NONE: u8 = 0xff;

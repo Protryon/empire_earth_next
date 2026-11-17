@@ -6,7 +6,7 @@
 use std::cell::RefCell;
 use std::collections::VecDeque;
 
-use crate::tune::*;
+use crate::net::tune::*;
 
 const GOLDEN: &str = include_str!("golden_tune.txt");
 

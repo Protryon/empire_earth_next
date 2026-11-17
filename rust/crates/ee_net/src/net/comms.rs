@@ -12,7 +12,7 @@
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering::SeqCst;
 
-use crate::ffi_comms::EeNetCommsField as Field;
+use crate::net::ffi_comms::EeNetCommsField as Field;
 
 const FIELDS: usize = 8;
 

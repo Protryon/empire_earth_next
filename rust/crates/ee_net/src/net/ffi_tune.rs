@@ -3,7 +3,7 @@
 
 use std::ffi::c_void;
 
-use crate::tune::{Tune, TuneHost};
+use crate::net::tune::{Tune, TuneHost};
 
 /// The server's fields the tuning reads and writes
 #[repr(u32)]

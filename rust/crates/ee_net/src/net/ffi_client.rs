@@ -5,14 +5,14 @@
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
-use crate::client::*;
-use crate::ffi::{EeNetQHostFn, QFfiHost};
-use crate::ffi_comms::{comms_of, EeNetComms};
-use crate::ffi_protocol::*;
-use crate::lagloss::LagLoss;
-use crate::native;
-use crate::qhost::{Ev, FileH, Msg, QHost, Thr};
-use crate::recplay::RecPlay;
+use crate::net::client::*;
+use crate::net::ffi::{EeNetQHostFn, QFfiHost};
+use crate::net::ffi_comms::{comms_of, EeNetComms};
+use crate::net::ffi_protocol::*;
+use crate::net::lagloss::LagLoss;
+use crate::net::native;
+use crate::net::qhost::{Ev, FileH, Msg, QHost, Thr};
+use crate::net::recplay::RecPlay;
 
 /// The client's calls out besides the queues' (`client::ClientHost`); a, b, c, d as each op says, the answer as
 /// isize.

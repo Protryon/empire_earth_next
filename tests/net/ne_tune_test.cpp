@@ -8,7 +8,7 @@
 // effect and their state (the tuning's own fields included) after each call; the traces must be the same.
 //
 // The Rust side's host also records each op with its answer: the first sequences are
-// rust/crates/ee_net/src/golden_tune.txt, which cargo replays against the Rust alone (`--print FILE` writes it).
+// rust/crates/ee_net/src/net/golden_tune.txt, which cargo replays against the Rust alone (`--print FILE` writes it).
 #include <windows.h>
 #include <stdarg.h>
 #include <stdint.h>

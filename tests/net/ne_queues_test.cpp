@@ -14,7 +14,7 @@
 // and the messages left (the originals' leaks) are listed.
 //
 // The Rust side's host also records each op with its arguments and answer (messages, events, threads and files by
-// world id), the API calls and the thread switches: the first sequences are rust/crates/ee_net/src/golden_queues.txt,
+// world id), the API calls and the thread switches: the first sequences are rust/crates/ee_net/src/net/golden_queues.txt,
 // which cargo replays against the Rust alone (`--print FILE` writes it).
 #include <windows.h>
 #include <stdint.h>

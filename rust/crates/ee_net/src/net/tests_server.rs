@@ -12,9 +12,9 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use crate::ffi::EeNetMmOp;
-use crate::qhost::*;
-use crate::server::*;
+use crate::net::ffi::EeNetMmOp;
+use crate::net::qhost::*;
+use crate::net::server::*;
 
 const GOLDEN: &str = include_str!("golden_server.txt");
 

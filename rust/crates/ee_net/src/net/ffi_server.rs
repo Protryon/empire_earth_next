@@ -5,13 +5,13 @@
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
-use crate::ffi::{EeNetMmHostFn, EeNetMmOp, EeNetQHostFn, QFfiHost};
-use crate::ffi_comms::{comms_of, EeNetComms};
-use crate::ffi_protocol::*;
-use crate::native;
-use crate::qhost::*;
-use crate::recplay::RecPlay;
-use crate::server::{Back, Server, ServerArgs, ServerHost};
+use crate::net::ffi::{EeNetMmHostFn, EeNetMmOp, EeNetQHostFn, QFfiHost};
+use crate::net::ffi_comms::{comms_of, EeNetComms};
+use crate::net::ffi_protocol::*;
+use crate::net::native;
+use crate::net::qhost::*;
+use crate::net::recplay::RecPlay;
+use crate::net::server::{Back, Server, ServerArgs, ServerHost};
 
 /// The messages' flags the server reads
 #[repr(u32)]

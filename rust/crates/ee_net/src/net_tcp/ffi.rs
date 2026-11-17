@@ -5,8 +5,8 @@ use std::ffi::{c_char, c_int, c_void};
 use std::slice;
 use std::sync::{Arc, OnceLock};
 
-use crate::host::*;
-use crate::plugin::{Connection, Server, Tcp};
+use crate::net_tcp::host::*;
+use crate::net_tcp::plugin::{Connection, Server, Tcp};
 
 /// cbindgen:ignore
 mod sys {
@@ -470,7 +470,7 @@ pub unsafe extern "C" fn ee_tcp_receive(
 ) -> i32 {
     let raw = unsafe { *connection } as *const Connection;
     if raw.is_null() {
-        return crate::plugin::WOULD_BLOCK;
+        return crate::net_tcp::plugin::WOULD_BLOCK;
     }
     let buffer = unsafe { slice::from_raw_parts_mut(buffer, size as usize) };
     tcp().receive(unsafe { &*raw }, buffer, unsafe { &mut *received })

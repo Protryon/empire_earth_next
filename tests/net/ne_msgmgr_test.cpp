@@ -12,7 +12,7 @@
 // message must have been given back. The traces must be the same.
 //
 // The Rust side's host also records each op with its arguments and answer (messages and files by world id): the
-// first sequences are rust/crates/ee_net/src/golden_msgmgr.txt, which cargo replays against the Rust alone
+// first sequences are rust/crates/ee_net/src/net/golden_msgmgr.txt, which cargo replays against the Rust alone
 // (`--print FILE` writes it).
 #include <stdint.h>
 #include <stdio.h>

@@ -1,4 +1,4 @@
-// Loopback test of the TCP/IP network plug-in (Rust: rust/crates/ee_net_tcp) on the platform layer's sockets
+// Loopback test of the TCP/IP network plug-in (Rust: rust/crates/ee_net/src/net_tcp) on the platform layer's sockets
 // (platform/PlatSocket.h): one process plays host and client over 127.0.0.1 through the engine's protocol
 // (NEProtocol, whole in Rust: ee_net ffi_protocol.rs; its servers and connections), with the arguments the network engine passes
 // (NESynchronousServer::Publish: "EEService", port 2 = the datagram game socket; NESynchronousClient::Connect: type

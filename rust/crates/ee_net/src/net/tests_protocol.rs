@@ -5,7 +5,7 @@
 use std::ffi::c_void;
 use std::sync::Mutex;
 
-use crate::ffi_protocol::*;
+use crate::net::ffi_protocol::*;
 
 /// The stand-in plug-in (the names `ffi_protocol` calls under `cfg(test)`)
 pub mod stub {

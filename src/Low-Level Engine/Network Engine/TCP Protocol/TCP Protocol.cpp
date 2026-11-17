@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\Network Engine\TCP Protocol\TCP Protocol.cpp
-// The TCP/IP network plug-in is Rust (rust/crates/ee_net_tcp), which NEProtocol calls directly (its NPIM* entry
+// The TCP/IP network plug-in is Rust (rust/crates/ee_net/src/net_tcp), which NEProtocol calls directly (its NPIM* entry
 // points, their PIMPlugin table and the conversions went in LLE Network Engine round 2; its configuration, in round
 // 1). This file keeps the engine calls the Rust makes.
 #include <string.h>

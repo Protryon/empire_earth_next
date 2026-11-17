@@ -334,7 +334,7 @@ def cmd_tcptest(a):
     defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS"]
     # the engine units with the engine's module define (tools/ee.py MODULE_FLAGS "lle")
     unit_defs = lambda src: [*defs, *(["LOWLEVELENGINE_EXPORTS"] if src in TCP_ENGINE_UNITS else [])]
-    rust_lib = rust_build.ensure(t.name)   # the plug-in itself (rust/crates/ee_net_tcp)
+    rust_lib = rust_build.ensure(t.name)   # the plug-in itself (rust/crates/ee_net/src/net_tcp)
     objs = []
     if t.os == "windows":
         env = windows_env()
@@ -930,16 +930,16 @@ SESSION_UNITS = [ROOT / "src" / p for p in (
 # program -> the units it links besides its source (the originals it compares are #included over tests/net/orig's
 # stand-in headers)
 NET_TESTS = {
-    # NEMessageManager (golden: rust/crates/ee_net/src/golden_msgmgr.txt; `--print FILE` writes it)
+    # NEMessageManager (golden: rust/crates/ee_net/src/net/golden_msgmgr.txt; `--print FILE` writes it)
     "ne_msgmgr_test": [],
-    # NELagLossSimulator, NERecordPlayback, NETimestampedMessage (golden: rust/crates/ee_net/src/golden_queues.txt)
+    # NELagLossSimulator, NERecordPlayback, NETimestampedMessage (golden: rust/crates/ee_net/src/net/golden_queues.txt)
     "ne_queues_test": [],
-    # NESynchronousClient (golden: rust/crates/ee_net/src/golden_client.txt; the original unit is tests/net/orig_c)
+    # NESynchronousClient (golden: rust/crates/ee_net/src/net/golden_client.txt; the original unit is tests/net/orig_c)
     "ne_client_test": [],
-    # NESynchronousServer's tuning and booting (golden: rust/crates/ee_net/src/golden_tune.txt; the original members are
+    # NESynchronousServer's tuning and booting (golden: rust/crates/ee_net/src/net/golden_tune.txt; the original members are
     # tests/net/orig_s/NESynchronousServerTune.inc)
     "ne_tune_test": [],
-    # NESynchronousServer (golden: rust/crates/ee_net/src/golden_server.txt; the original unit is
+    # NESynchronousServer (golden: rust/crates/ee_net/src/net/golden_server.txt; the original unit is
     # tests/net/orig_s/NESynchronousServer.cpp)
     "ne_server_test": [],
     # NEProtocol, NEConnection, NEServer over a stand-in plug-in (golden: tests/net/golden_protocol.txt, made by the

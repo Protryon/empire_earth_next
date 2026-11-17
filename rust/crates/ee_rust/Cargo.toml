@@ -12,7 +12,6 @@ crate-type = ["staticlib", "rlib"]
 ee_base = { path = "../ee_base" }
 ee_data = { path = "../ee_data" }
 ee_audio = { path = "../ee_audio" }
-ee_net_tcp = { path = "../ee_net_tcp" }
 ee_net = { path = "../ee_net" }
 ee_rmap = { path = "../ee_rmap" }
 ee_formations = { path = "../ee_formations" }

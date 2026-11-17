@@ -17,7 +17,7 @@
 //
 // The Rust side's hosts also record each op with its arguments and answer (messages, events, threads, the server and
 // files by world id), the API calls and the thread switches: the first sequences are
-// rust/crates/ee_net/src/golden_server.txt, which cargo replays against the Rust alone (`--print FILE` writes it).
+// rust/crates/ee_net/src/net/golden_server.txt, which cargo replays against the Rust alone (`--print FILE` writes it).
 #define _ALLOW_KEYWORD_MACROS
 #include <windows.h>
 #include <stdint.h>

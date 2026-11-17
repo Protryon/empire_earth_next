@@ -106,7 +106,7 @@ mod sys {
     }
 }
 #[cfg(test)]
-use crate::tests_protocol::stub::*;
+use crate::net::tests_protocol::stub::*;
 #[cfg(not(test))]
 use sys::*;
 

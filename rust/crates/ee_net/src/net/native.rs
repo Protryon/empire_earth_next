@@ -7,7 +7,7 @@
 
 use std::ffi::{c_char, c_ulong, c_void, CString};
 
-use crate::qhost::{Ev, Thr};
+use crate::net::qhost::{Ev, Thr};
 
 type ThreadFn = Option<unsafe extern "C" fn(*mut c_void) -> c_ulong>;
 
@@ -157,16 +157,16 @@ macro_rules! entries {
 }
 
 entries! {
-    lag_thread => crate::ffi::ee_net_ll_thread as *const crate::ffi::EeNetLagLoss,
-    playback_thread => crate::ffi::ee_net_rp_thread as *const crate::ffi::EeNetRecPlay,
-    client_lag_thread => crate::ffi_client::ee_net_cl_lag_thread as *const c_void,
-    client_playback_thread => crate::ffi_client::ee_net_cl_playback_thread as *const c_void,
-    client_main_thread => crate::ffi_client::ee_net_cl_main_thread as *const crate::ffi_client::EeNetClient,
-    client_receive_thread => crate::ffi_client::ee_net_cl_receive_thread as *const crate::ffi_client::EeNetClient,
-    server_playback_thread => crate::ffi_server::ee_net_sv_playback_thread as *const c_void,
-    server_main_thread => crate::ffi_server::ee_net_sv_main_thread as *const crate::ffi_server::EeNetServer,
-    server_send_thread => crate::ffi_server::ee_net_sv_send_thread as *const crate::ffi_server::EeNetServer,
-    server_xfer_thread => crate::ffi_server::ee_net_sv_xfer_thread as *const crate::ffi_server::EeNetServer,
+    lag_thread => crate::net::ffi::ee_net_ll_thread as *const crate::net::ffi::EeNetLagLoss,
+    playback_thread => crate::net::ffi::ee_net_rp_thread as *const crate::net::ffi::EeNetRecPlay,
+    client_lag_thread => crate::net::ffi_client::ee_net_cl_lag_thread as *const c_void,
+    client_playback_thread => crate::net::ffi_client::ee_net_cl_playback_thread as *const c_void,
+    client_main_thread => crate::net::ffi_client::ee_net_cl_main_thread as *const crate::net::ffi_client::EeNetClient,
+    client_receive_thread => crate::net::ffi_client::ee_net_cl_receive_thread as *const crate::net::ffi_client::EeNetClient,
+    server_playback_thread => crate::net::ffi_server::ee_net_sv_playback_thread as *const c_void,
+    server_main_thread => crate::net::ffi_server::ee_net_sv_main_thread as *const crate::net::ffi_server::EeNetServer,
+    server_send_thread => crate::net::ffi_server::ee_net_sv_send_thread as *const crate::net::ffi_server::EeNetServer,
+    server_xfer_thread => crate::net::ffi_server::ee_net_sv_xfer_thread as *const crate::net::ffi_server::EeNetServer,
 }
 
 /// The entry function of each thread kind (the queues' 0, 1; the client's 2..5; the server's 6..9), 0 out of range
@@ -198,7 +198,7 @@ mod tests {
     fn every_thread_kind_has_its_entry() {
         // the kinds the objects start (qhost/client/server's THREAD_* constants) are the table's indexes
         assert_eq!(super::THREADS.len(), 10);
-        assert_eq!(crate::server::THREAD_SV_XFER, 9);
-        assert_eq!(crate::server::THREAD_SV_PLAYBACK, 6);
+        assert_eq!(crate::net::server::THREAD_SV_XFER, 9);
+        assert_eq!(crate::net::server::THREAD_SV_PLAYBACK, 6);
     }
 }

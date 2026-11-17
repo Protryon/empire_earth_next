@@ -15,7 +15,7 @@
 
 use std::sync::atomic::{AtomicU32, AtomicU8, AtomicUsize, Ordering::SeqCst};
 
-use crate::qhost::*;
+use crate::net::qhost::*;
 
 pub const MODE_PASSING: u8 = 1;
 pub const MODE_RECORDING: u8 = 2;

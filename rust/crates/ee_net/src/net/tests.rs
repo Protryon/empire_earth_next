@@ -5,7 +5,7 @@
 use std::cell::RefCell;
 use std::collections::VecDeque;
 
-use crate::msgmgr::{File, Host, Msg, MsgMgr};
+use crate::net::msgmgr::{File, Host, Msg, MsgMgr};
 
 const GOLDEN: &str = include_str!("golden_msgmgr.txt");
 

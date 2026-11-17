@@ -3,12 +3,12 @@
 
 use std::ffi::{c_char, c_void, CStr};
 
-use crate::native;
+use crate::net::native;
 
-use crate::lagloss::LagLoss;
-use crate::msgmgr::{File, Host, Msg, MsgMgr};
-use crate::qhost::{Ev, FileH, Msg as QMsg, QHost, Thr};
-use crate::recplay::RecPlay;
+use crate::net::lagloss::LagLoss;
+use crate::net::msgmgr::{File, Host, Msg, MsgMgr};
+use crate::net::qhost::{Ev, FileH, Msg as QMsg, QHost, Thr};
+use crate::net::recplay::RecPlay;
 
 /// A message manager's calls out (`msgmgr::Host`); a, b, c, d as each op says, the answer as isize.
 #[repr(u32)]
@@ -658,7 +658,7 @@ pub extern "C" fn ee_net_rp_thread(r: *const EeNetRecPlay) -> u32 {
 /// The mode (1 passing, 2 recording, 3 playing back); a NULL recorder (a server that was not published) passes.
 #[no_mangle]
 pub extern "C" fn ee_net_rp_mode(r: *const EeNetRecPlay) -> u8 {
-    rp(r).map_or(crate::recplay::MODE_PASSING, |r| r.mode())
+    rp(r).map_or(crate::net::recplay::MODE_PASSING, |r| r.mode())
 }
 
 /// A message for the game (a NULL recorder: nothing, where the original crashed).

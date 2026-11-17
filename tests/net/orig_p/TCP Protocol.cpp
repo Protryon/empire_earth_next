@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\Network Engine\TCP Protocol\TCP Protocol.cpp
-// The TCP/IP network plug-in's shim: the plug-in itself is Rust (rust/crates/ee_net_tcp). This file keeps the NPIM*
+// The TCP/IP network plug-in's shim: the plug-in itself is Rust (rust/crates/ee_net/src/net_tcp). This file keeps the NPIM*
 // entry points the engine looks up by name (their table is PIMPlugin below), converts UStrings and TSEvents, and
 // holds what is engine data: PIMGetName's string. (The protocol's configuration, a table of no parameters that
 // nothing read, went with NEProtocolConfiguration: LLE Network Engine round 1.)

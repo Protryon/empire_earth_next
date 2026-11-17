@@ -14,8 +14,8 @@ use std::time::Duration;
 
 use ee_base::random::URandom;
 
-use crate::cipher::Cipher;
-use crate::host::*;
+use crate::net_tcp::cipher::Cipher;
+use crate::net_tcp::host::*;
 
 /// Result codes of the NPIM entry points.
 pub const OK: i32 = 0;

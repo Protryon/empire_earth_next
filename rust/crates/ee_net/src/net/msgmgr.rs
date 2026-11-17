@@ -21,7 +21,7 @@ use std::cell::UnsafeCell;
 use std::collections::{BTreeMap, VecDeque};
 use std::ops::Bound::{Excluded, Unbounded};
 
-use crate::rlock::RLock;
+use crate::net::rlock::RLock;
 
 /// A C++ `NEMessage*` (0: none).
 pub type Msg = usize;

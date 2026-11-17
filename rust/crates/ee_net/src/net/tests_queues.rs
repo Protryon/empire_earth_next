@@ -10,9 +10,9 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use crate::lagloss::LagLoss;
-use crate::qhost::*;
-use crate::recplay::RecPlay;
+use crate::net::lagloss::LagLoss;
+use crate::net::qhost::*;
+use crate::net::recplay::RecPlay;
 
 const GOLDEN: &str = include_str!("golden_queues.txt");
 
@@ -518,6 +518,6 @@ fn a_null_recorders_calls_are_harmless_and_a_missing_event_is_not_set() {
     r.set_normal_playback();
     assert!(!r.playback_complete());
     assert_eq!(host.0.ops.lock().unwrap().clone(), vec!["verify 86"]);
-    assert_eq!(crate::ffi::ee_net_rp_mode(std::ptr::null()), crate::recplay::MODE_PASSING);
-    crate::ffi::ee_net_rp_process(std::ptr::null(), std::ptr::null_mut());
+    assert_eq!(crate::net::ffi::ee_net_rp_mode(std::ptr::null()), crate::net::recplay::MODE_PASSING);
+    crate::net::ffi::ee_net_rp_process(std::ptr::null(), std::ptr::null_mut());
 }

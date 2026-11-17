@@ -12,8 +12,8 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use crate::client::*;
-use crate::qhost::*;
+use crate::net::client::*;
+use crate::net::qhost::*;
 
 const GOLDEN: &str = include_str!("golden_client.txt");
 

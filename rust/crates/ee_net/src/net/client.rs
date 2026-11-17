@@ -16,10 +16,10 @@ use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU32, AtomicU8, AtomicUsize, Ordering::SeqCst};
 use std::sync::Arc;
 
-use crate::lagloss::LagLoss;
-use crate::qhost::*;
-use crate::recplay::{RecPlay, MODE_PLAYING};
-use crate::rlock::RLock;
+use crate::net::lagloss::LagLoss;
+use crate::net::qhost::*;
+use crate::net::recplay::{RecPlay, MODE_PLAYING};
+use crate::net::rlock::RLock;
 
 /// `ESVERIFY_AT`'s unit for this file (QHost::verify)
 pub const UNIT: u32 = 3;
@@ -80,9 +80,9 @@ const XFER_ID: u32 = 0;
 const XFER_DATA_SIZE: u32 = 1;
 const XFER_DATA: u32 = 2;
 
-pub use crate::comms::Comms;
-pub use crate::ffi_client::EeNetClMsgFlag as MsgFlag;
-pub use crate::ffi_comms::EeNetCommsField as BaseField;
+pub use crate::net::comms::Comms;
+pub use crate::net::ffi_client::EeNetClMsgFlag as MsgFlag;
+pub use crate::net::ffi_comms::EeNetCommsField as BaseField;
 
 /// The client's calls out besides the queues' (`QHost`): the engine, the protocol and its connections, the messages,
 /// the received file and the C++ class's virtual members.

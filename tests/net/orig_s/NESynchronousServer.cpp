@@ -173,7 +173,7 @@ NESynchronousServer::~NESynchronousServer()
 }
 
 // New (port): the message manager's calls out. The manager (NEMessageManager.cpp before) is a Rust object
-// (rust/crates/ee_net/src/msgmgr.rs); each op is the statement the original made on a message, this server, its
+// (rust/crates/ee_net/src/net/msgmgr.rs); each op is the statement the original made on a message, this server, its
 // protocol server or a transfer's file spec, which is the manager's own copy (FileClone/FileFree).
 ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp, size_t a, size_t b, size_t c, size_t d)
 {
