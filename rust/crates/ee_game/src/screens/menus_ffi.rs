@@ -63,17 +63,29 @@ impl Form {
         if let Some(r) = crate::screens::toolkit::op(self.0, self.1, op, a, b, c, d) {
             return r;
         }
+        let begun = crate::screens::sgvw::begin();
         if let Some(r) = crate::screens::game_view::op(self, op, a, b) {
+            if let Some(g) = begun {
+                crate::screens::sgvw::record(g, &format!("V {op} {a} {b} -> {r}"));
+            }
             return r;
         }
-        unsafe { sys::ee_screenscpp_call(self.0, self.1, op, a, b, c, d) }
+        let r = unsafe { sys::ee_screenscpp_call(self.0, self.1, op, a, b, c, d) };
+        if let Some(g) = begun.filter(|_| crate::screens::sgvw::HOST_WORLD_OPS.contains(&op)) {
+            crate::screens::sgvw::record(g, &format!("C {op} {a} {b} {c} {d} -> {r}"));
+        }
+        r
     }
     /// A text, `None` when the host says it is missing (`usize::MAX`).
     pub(crate) fn get_checked(&mut self, which: u32, arg: u32) -> Option<Vec<u8>> {
         if let Some(t) = crate::screens::toolkit::text(self.0, which, arg) {
             return Some(t);
         }
+        let begun = crate::screens::sgvw::begin();
         if let Some(t) = crate::screens::game_view::text(self, which, arg) {
+            if let Some(g) = begun {
+                crate::screens::sgvw::record(g, &format!("T {which} {arg} -> {}", crate::screens::sgvw::quote(&t)));
+            }
             return Some(t);
         }
         let mut out = vec![0u8; 256];

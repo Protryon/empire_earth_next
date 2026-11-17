@@ -3026,3 +3026,6 @@ extern "C" size_t ee_screenscpp_game_texts(uint32_t inGroup, uint32_t inArg, uin
     memcpy(outText, theBytes.data(), theBytes.size() < inCapacity ? theBytes.size() : inCapacity);
     return theBytes.size();
 }
+
+// TEST ONLY: the world lock, for the SGVW trace's note of the reading thread's holds (ee_game screens/sgvw.rs)
+extern "C" const void* ee_screenscpp_sgvw_world_lock() { return gWorld.mLock; }

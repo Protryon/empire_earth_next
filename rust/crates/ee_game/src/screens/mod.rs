@@ -301,6 +301,8 @@ pub mod settings;
 pub mod settings_form;
 #[cfg(not(test))]
 mod settings_form_ffi;
+// TEST ONLY: the SGVW trace of the screens' and the editor's game reads (EE_SGVW)
+pub(crate) mod sgvw;
 pub mod single_player;
 mod single_player_ffi;
 pub mod splash;

@@ -26,6 +26,7 @@ impl HotKeyHost for Form {
         self.op(op, a, b, c, 0)
     }
     fn units(&mut self, aircraft: bool) -> Vec<EeScreensHotKeyUnit> {
+        let begun = crate::screens::sgvw::begin();
         let mut out = vec![EeScreensHotKeyUnit::default(); 1024];
         let mut n = unsafe { sys::ee_screenscpp_hot_key_units(aircraft, out.as_mut_ptr(), out.len()) };
         if n > out.len() {
@@ -33,6 +34,9 @@ impl HotKeyHost for Form {
             n = unsafe { sys::ee_screenscpp_hot_key_units(aircraft, out.as_mut_ptr(), out.len()) }.min(n);
         }
         out.truncate(n);
+        if let Some(g) = begun {
+            crate::screens::sgvw::record(g, &format!("HK {} {out:?}", aircraft as u32));
+        }
         out
     }
 }
