@@ -355,7 +355,9 @@ pub fn host() -> EeWonGuiHostFn {
         return None;
     }
     // SAFETY: a value `ee_won_comp_host_register` stored from a host function pointer
-    Some(unsafe { std::mem::transmute::<usize, unsafe extern "C" fn(*mut c_void, Op, isize, isize, isize, isize) -> isize>(f) })
+    Some(unsafe {
+        std::mem::transmute::<usize, unsafe extern "C" fn(*mut c_void, Op, isize, isize, isize, isize) -> isize>(f)
+    })
 }
 
 /// A test's component host on its thread, until the guard is dropped.

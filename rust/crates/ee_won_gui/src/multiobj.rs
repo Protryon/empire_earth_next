@@ -17,9 +17,9 @@
 use std::cell::RefCell;
 use std::ffi::c_void;
 
-use crate::guidraw::{self, EeWonDrawOp, EeWonMultiRowPaint, EE_WON_DRAW_CALL};
 use crate::compmem as mem;
 use crate::compobj::comp;
+use crate::guidraw::{self, EeWonDrawOp, EeWonMultiRowPaint, EE_WON_DRAW_CALL};
 use crate::guihost::{EeWonGuiCursor as Cursor, EeWonGuiField as F, EeWonGuiHostFn, EeWonGuiOp as Op};
 use crate::guimulti::{self, EeWonHeaderButton};
 use crate::listobj::{EeWonList, EeWonListCall as L};

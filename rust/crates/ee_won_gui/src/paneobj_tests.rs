@@ -142,9 +142,7 @@ fn num(w: &str) -> i32 {
 
 fn replay(lines: &[String]) -> Option<String> {
     let start = words(&lines[0]);
-    REPLAY.with(|r| {
-        *r.borrow_mut() = Some(Replay { lines: lines.to_vec(), at: 1, ..Replay::default() })
-    });
+    REPLAY.with(|r| *r.borrow_mut() = Some(Replay { lines: lines.to_vec(), at: 1, ..Replay::default() }));
     let _world = compmem::map_world();
     let _host = host_world(Some(replay_host));
     set_size(num(start[1]), num(start[2]));

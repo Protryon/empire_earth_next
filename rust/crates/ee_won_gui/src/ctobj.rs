@@ -776,7 +776,7 @@ impl EeWonContainer {
         if c == 0 {
             return;
         }
-        mem::set_focus_id(c, id as u8);
+        mem::set_focus_id(c, id);
         let parent = self.parent_of(me);
         if !self.has_focus() && parent != 0 {
             self.parent_call(V::SetFocusChild, 0);

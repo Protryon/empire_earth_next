@@ -616,10 +616,8 @@ fn golden_multiobj_replays() {
 #[test]
 fn a_changed_answer_is_seen() {
     let seqs = sequences();
-    let (s, k) = seqs
-        .iter()
-        .find_map(|s| s.iter().position(|l| l.contains(" at ")).map(|k| (s, k)))
-        .expect("a header layout");
+    let (s, k) =
+        seqs.iter().find_map(|s| s.iter().position(|l| l.contains(" at ")).map(|k| (s, k))).expect("a header layout");
     let mut m = s.clone();
     m[k] = m[k].replacen(" at ", " at 1", 1);
     assert!(replay(&m).is_some());

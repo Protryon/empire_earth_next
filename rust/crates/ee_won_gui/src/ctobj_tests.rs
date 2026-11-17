@@ -579,11 +579,12 @@ pub(crate) fn replay_with(seq: &[&'static str], ext: Option<Ext>) -> Option<Stri
                 // component from 1)
                 let want: String = with(|r| {
                     let k = n.len() / 4;
-                    (1..=k).map(|i| {
-                        let w = r.w[i];
-                        format!(" {} {} {} {}", w.parent, w.focus_id, w.invalid, w.timer)
-                    })
-                    .collect()
+                    (1..=k)
+                        .map(|i| {
+                            let w = r.w[i];
+                            format!(" {} {} {} {}", w.parent, w.focus_id, w.invalid, w.timer)
+                        })
+                        .collect()
                 });
                 if l != format!("world{want}") {
                     fail(format!("line {}: golden {l:?}, rust \"world{want}\"", with(|r| r.at)));

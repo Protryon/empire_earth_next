@@ -11,8 +11,8 @@ use crate::compmem as mem;
 use std::cell::RefCell;
 use std::ffi::c_void;
 
-use crate::guictl::EeWonRect4;
 use crate::compobj::comp;
+use crate::guictl::EeWonRect4;
 use crate::guihost::{EeWonGuiEvent, EeWonGuiHostFn, EeWonGuiOp as Op};
 use crate::guiscroll::{self, EeWonScrollPress, EeWonThumbIn};
 
