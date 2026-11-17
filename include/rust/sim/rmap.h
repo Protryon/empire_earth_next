@@ -844,6 +844,16 @@ struct EeRmapScriptOutput {
   uint32_t rule_count;
 };
 
+/// [`script_generator`]'s answer for the C++: the name and module point into the handle's buffers.
+struct EeRmapScriptGenerator {
+  const char *name;
+  size_t name_length;
+  const char *module;
+  size_t module_length;
+  bool has_string_id;
+  long string_id;
+};
+
 extern "C" {
 
 /// Runs generator step `step` (0 player positions, 1 neutral positions, 2 land and water, 3 flat map, 4 height map,
@@ -951,6 +961,33 @@ EeRmapScript *ee_rmap_script_read(const EeRmapScriptHost *host,
 /// # Safety
 /// `script` came from `ee_rmap_script_read` (or is null) and is not used again.
 void ee_rmap_script_free(EeRmapScript *script);
+
+/// [`script_generator`] over a file's name and text: false (and `out` untouched) without a generator; else `out`'s
+/// strings are valid until [`ee_rmap_script_generator_free`] of `*handle`.
+///
+/// # Safety
+/// `file` (`file_length` bytes) and `text` (`text_length`) are readable; `out` and `handle` writable.
+bool ee_rmap_script_generator(const char *file,
+                              size_t file_length,
+                              const char *text,
+                              size_t text_length,
+                              EeRmapScriptGenerator *out,
+                              void **handle);
+
+/// Frees a [`ee_rmap_script_generator`] answer.
+///
+/// # Safety
+/// `handle` came from [`ee_rmap_script_generator`] and is freed once.
+void ee_rmap_script_generator_free(void *handle);
+
+/// [`script_name`] of `name` (`length` bytes) into `out` (room for `length` bytes); returns the joined length, or
+/// -1 for a name of spaces only.
+///
+/// # Safety
+/// `name` holds `length` bytes; `out` has room for `length`.
+ptrdiff_t ee_rmap_script_name(const char *name,
+                              size_t length,
+                              char *out);
 
 }  // extern "C"
 

@@ -1,7 +1,8 @@
 // The lobby model's player, client, client list and game (R6 WONLobby round 10): included by WONLobbyGUI.h inside
 // namespace WONAPI where the classes were. Each class is a shell over its Rust object (rust/crates/ee_won_net/src//
 // modelobj.rs: the members and the methods); the shells keep the vtables, the reference counts, the game code's
-// hooks and factories, and the methods over buffers and the routing server's records (WONLobby/LobbyModelHost.cpp).
+// hooks and factories, and the methods over buffers (WONLobby/LobbyModelHost.cpp; the routing server's records are
+// read in Rust since R6 WONLobby round 12).
 // The rest of the model (friends, rooms, servers, the lists) is WONLobbyModel.h's.
 #ifndef EE_WONAPI_WONLOBBYMODELOBJ_H
 #define EE_WONAPI_WONLOBBYMODELOBJ_H
@@ -10,7 +11,6 @@
 
 typedef EeWonModelField LobbyMF;
 typedef EeWonModelCall LobbyMC;
-struct RoutingClientInfo;
 
 // the shells' base: the Rust object at the first member (asserted by LobbyModelHost.cpp: modelobj.rs reads it)
 class LobbyModelObject : public RefCount {
@@ -71,7 +71,6 @@ public:
     bool IsInChatGroup() { return this->M(LobbyMC::ClientInChat) != 0; }
     bool IsFriend() { return this->MGet(LobbyMF::ClientIsFriend) != 0; }
     bool IsInGameGroup() { return this->M(LobbyMC::ClientInGame) != 0; }
-    void ReadRoutingInfo(RoutingClientInfo* inInfo);
     void UpdateIgnoreStatus() { this->M(LobbyMC::ClientUpdateIgnore); }
     bool IsAnonymous() { return this->M(LobbyMC::ClientAnonymous) != 0; }
     bool IsMuted(bool inGame) { return this->M(LobbyMC::ClientMuted, inGame) != 0; }
@@ -112,7 +111,6 @@ class LobbyClientList : public LobbyModelObject {
 public:
     LobbyClientList() : LobbyModelObject(EeWonModelKind::ClientList) {}
     void Clear() { this->M(LobbyMC::ListClear); }
-    void SyncClients(const std::map<unsigned short, SmartPtr<RoutingClientInfo> >& inMap);
     void UpdateIgnoreStatus() { this->M(LobbyMC::ListUpdateIgnore); }
     void AddClient(LobbyClient* inClient) { this->M(LobbyMC::ListAdd, (intptr_t)inClient); }
     LobbyClient* FindClient(unsigned short inId) { return (LobbyClient*)this->M(LobbyMC::ListFind, inId); }

@@ -22,38 +22,42 @@ call added 0 0 0 -> 0
 165 2002 0 0 -> 0
 326 0 0 0 -> 0
 call layout 0 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 call position 72 0 0 -> 0
 size 292 5
 call size 124 5 0 -> 0
 3 0 0 0 -> 0
-320 2001 124 124 -> 0
-257 2002 0 fffffffffffffffc -> 0
-152 pos-size 2003 0 308 292 -296
-151 2004 0 0 -> 0
+622 comp 5 2001 at 17 16 292 292
+622 comp 4 2002 at 0 -4 0 9
+622 comp 4 2003 at 0 308 8 0
+622 comp 5 2003 at 0 308 292 0
+622 comp 58 2004 0 -> 0
 call enable 1 0 0 -> 0
 call enable 1 0 0 -> 0
 mouse-child 2004
 call down b5 fffffffffffffff9 0 -> 0
 6 b5 fffffffffffffff9 0 -> 0
+622 comp 59 54 0 -> 2004
 call position 6f 0 0 -> 0
 call enable 0 0 0 -> 0
-327 0 0 0 -> 0
-150 2001 0 0 -> 0
-150 2002 0 0 -> 0
+622 comp 16 54 0 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 0 -> 0
+622 comp 15 2002 0 -> 0
 call get-part 1 0 0 -> 8194
 size 33 126
 call size 21 7e 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 75 -> 0
-152 pos-size 2003 0 308 33 -175
-151 2004 0 0 -> 0
+622 comp 4 2002 at 0 117 0 9
+622 comp 4 2003 at 0 308 292 0
+622 comp 5 2003 at 0 308 33 0
+622 comp 58 2004 0 -> 0
 call get-part 0 0 0 -> 8193
 event 9000 15 2001
 mouse-pos 34 35
 call event 9000 0 0 -> 0
-151 2004 0 0 -> 0
-321 2003 0 0 -> 0
+622 comp 58 2004 0 -> 0
+622 comp 10 2003 0 -> 0
 fire 16
 event 9001 15 2002
 mouse-pos 24 133
@@ -63,6 +67,7 @@ call get-position 0 0 0 -> 0
 mouse-child 2004
 call down fffffffffffffff6 6d 0 -> 0
 6 fffffffffffffff6 6d 0 -> 0
+622 comp 59 54 0 -> 2004
 free
 159 2004 0 0 -> 0
 159 2003 0 0 -> 0
@@ -97,15 +102,17 @@ call enable 1 0 0 -> 0
 mouse-child 2004
 call drag be 8 0 -> 0
 11 be 8 0 -> 0
-257 2004 21 1d -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 33 29 4 40
+622 comp 10 2003 0 -> 0
 size 27 107
 call size 1b 6b 0 -> 0
 3 0 0 0 -> 0
-320 2002 6b 6b -> 0
-257 2002 ffffffffffffffb0 0 -> 0
-152 pos-size 2003 18 0 -92 107
-151 2004 0 0 -> 0
+622 comp 5 2002 at 2 17 107 107
+622 comp 4 2002 at -80 0 107 107
+622 comp 4 2003 at 18 0 14 0
+622 comp 5 2003 at 18 0 0 107
+622 comp 58 2004 0 -> 0
 call position ffffffffffffffdb 0 0 -> 0
 mouse-child 2001
 call down fffffffffffffffc 2e 2 -> 0
@@ -113,21 +120,24 @@ call down fffffffffffffffc 2e 2 -> 0
 size 102 13
 call size 66 d 0 -> 0
 3 0 0 0 -> 0
-257 2002 fffffffffffffffb 0 -> 0
-152 pos-size 2003 18 0 -17 13
-151 2004 0 0 -> 0
+622 comp 4 2002 at -5 0 107 107
+622 comp 4 2003 at 18 0 0 107
+622 comp 5 2003 at 18 0 0 13
+622 comp 58 2004 0 -> 0
 size 46 7
 call size 2e 7 0 -> 0
 3 0 0 0 -> 0
-257 2002 ffffffffffffffc3 0 -> 0
-152 pos-size 2003 18 0 -73 7
-151 2004 0 0 -> 0
+622 comp 4 2002 at -61 0 107 107
+622 comp 4 2003 at 18 0 0 13
+622 comp 5 2003 at 18 0 0 7
+622 comp 58 2004 0 -> 0
 size 22 124
 call size 16 7c 0 -> 0
 3 0 0 0 -> 0
-257 2002 ffffffffffffffab 0 -> 0
-152 pos-size 2003 18 0 -97 124
-151 2004 0 0 -> 0
+622 comp 4 2002 at -85 0 107 107
+622 comp 4 2003 at 18 0 0 7
+622 comp 5 2003 at 18 0 0 124
+622 comp 58 2004 0 -> 0
 call min 22 0 0 -> 0
 call enable 1 0 0 -> 0
 call enable 1 0 0 -> 0
@@ -136,9 +146,10 @@ call lines 3 2b 0 -> 0
 size 32 229
 call size 20 e5 0 -> 0
 3 0 0 0 -> 0
-257 2002 ffffffffffffffb5 0 -> 0
-152 pos-size 2003 18 0 -87 229
-151 2004 0 0 -> 0
+622 comp 4 2002 at -75 0 107 107
+622 comp 4 2003 at 18 0 0 124
+622 comp 5 2003 at 18 0 0 229
+622 comp 58 2004 0 -> 0
 call position fffffffffffffff2 0 0 -> 0
 free
 159 2004 0 0 -> 0
@@ -178,8 +189,8 @@ call enable 1 0 0 -> 0
 event 9001 15 2001
 mouse-pos -7 77
 call event 9001 0 0 -> 0
-151 2004 0 0 -> 0
-321 2003 0 0 -> 0
+622 comp 58 2004 0 -> 0
+622 comp 10 2003 0 -> 0
 fire 16
 event 9002 15 2003
 mouse-pos 15 97
@@ -187,19 +198,22 @@ call event 9002 0 0 -> 0
 mouse-child 2004
 call drag fffffffffffffffd 53 0 -> 0
 11 fffffffffffffffd 53 0 -> 0
-257 2004 16 1a -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 22 26 0 17
+622 comp 10 2003 0 -> 0
 size 15 118
 call size f 76 0 -> 0
 3 0 0 0 -> 0
-320 2001 f f -> 0
-320 2002 f f -> 0
-257 2002 0 67 -> 0
-152 pos-size 2003 0 26 15 88
-151 2004 0 0 -> 0
+622 comp 5 2001 at 25 11 15 15
+622 comp 5 2002 at 22 13 15 15
+622 comp 4 2002 at 0 103 15 15
+622 comp 4 2003 at 0 26 11 18
+622 comp 5 2003 at 0 26 15 88
+622 comp 58 2004 0 -> 0
 mouse-child 0
 call drag 0 30 0 -> 0
 11 0 30 0 -> 0
+622 comp 59 54 0 -> 0
 call resize 0 0 0 -> 0
 event 9003 15 2001
 mouse-pos 15 97
@@ -214,8 +228,8 @@ call position 14 0 0 -> 0
 event 9005 15 2002
 mouse-pos 14 44
 call event 9005 0 0 -> 0
-151 2004 0 0 -> 0
-321 2003 0 0 -> 0
+622 comp 58 2004 0 -> 0
+622 comp 10 2003 0 -> 0
 fire 16
 free
 159 2004 0 0 -> 0
@@ -258,12 +272,14 @@ call down b 43 1 -> 0
 size 22 181
 call size 16 b5 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 ac -> 0
-152 pos-size 2003 0 27 22 153
-151 2004 0 0 -> 0
+622 comp 4 2002 at 0 172 0 9
+622 comp 4 2003 at 0 27 19 17
+622 comp 5 2003 at 0 27 22 153
+622 comp 58 2004 0 -> 0
 mouse-child 2001
 call drag 4 4f 0 -> 0
 11 4 4f 0 -> 0
+622 comp 59 54 0 -> 2001
 call lines 9 21 0 -> 0
 call is-vertical 0 0 0 -> 1
 call vertical 1 0 0 -> 0
@@ -314,17 +330,18 @@ call get-part 1 0 0 -> 8194
 call is-vertical 0 0 0 -> 1
 call position 74 0 0 -> 0
 call enable 0 0 0 -> 0
-327 0 0 0 -> 0
-150 2001 0 0 -> 0
-150 2002 0 0 -> 0
+622 comp 16 54 0 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 0 -> 0
+622 comp 15 2002 0 -> 0
 event 9000 15 2002
 mouse-pos 2 53
 call event 9000 0 0 -> 0
-151 2004 0 0 -> 0
-321 2003 0 0 -> 0
+622 comp 58 2004 0 -> 0
+622 comp 10 2003 0 -> 0
 fire 16
 call layout 1 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 event 9001 15 2003
 mouse-pos 2 21
 call event 9001 0 0 -> 0
@@ -332,6 +349,7 @@ call get-position 0 0 0 -> 0
 mouse-child 2003
 call drag e 38 0 -> 0
 11 e 38 0 -> 0
+622 comp 59 54 0 -> 2003
 event 9002 15 2003
 mouse-pos 22 47
 call event 9002 0 0 -> 0
@@ -339,11 +357,12 @@ call range f7 c4 0 -> 0
 call get-part 2 0 0 -> 8195
 call is-vertical 0 0 0 -> 1
 call layout 0 0 0 -> 0
-151 2004 0 0 -> 0
-152 pos-size 2004 24 13 19 12
+622 comp 58 2004 0 -> 0
+622 comp 4 2004 at 24 13 19 33
+622 comp 5 2004 at 24 13 19 12
 call layout 0 0 0 -> 0
-151 2004 0 0 -> 0
-152 pos-size 2004 24 13 19 12
+622 comp 58 2004 0 -> 0
+622 comp 4 2004 at 24 13 19 12
 call enable 0 0 0 -> 0
 free
 159 2004 0 0 -> 0
@@ -374,11 +393,12 @@ call added 0 0 0 -> 0
 165 2002 0 0 -> 0
 326 0 0 0 -> 0
 call layout 1 0 0 -> 0
-151 2003 0 0 -> 0
+622 comp 58 2003 0 -> 0
 call enable 0 0 0 -> 0
-327 0 0 0 -> 0
-150 2001 0 0 -> 0
-150 2002 0 0 -> 0
+622 comp 16 54 0 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 0 -> 0
+622 comp 15 2002 0 -> 0
 call vertical 1 0 0 -> 0
 call get-position 0 0 0 -> 0
 mouse-child 2003
@@ -386,21 +406,23 @@ call down 0 b2 2 -> 0
 6 0 b2 2 -> 0
 call position e8 0 0 -> 0
 call enable 1 0 0 -> 0
-327 1 0 0 -> 0
-150 2001 1 0 -> 0
-150 2002 1 0 -> 0
+622 comp 16 54 1 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 1 -> 0
+622 comp 15 2002 1 -> 0
 event 9000 15 2002
 mouse-pos 13 176
 call event 9000 0 0 -> 0
-151 2003 0 0 -> 0
-321 2004 0 0 -> 0
+622 comp 58 2003 0 -> 0
+622 comp 10 2004 0 -> 0
 fire 16
 call enable 1 0 0 -> 0
 mouse-child 2003
 call drag 8 4 0 -> 0
 11 8 4 0 -> 0
-257 2003 1a ffffffffffffffed -> 0
-321 2004 0 0 -> 0
+622 comp 59 54 0 -> 2003
+622 comp 4 2003 at 26 -19 12 19
+622 comp 10 2004 0 -> 0
 event 9001 15 2001
 mouse-pos 7 144
 call event 9001 0 0 -> 0
@@ -408,6 +430,7 @@ call copy 14 3b da -> 0
 mouse-child 2004
 call down 8 86 0 -> 0
 6 8 86 0 -> 0
+622 comp 59 54 0 -> 2004
 call position e8 0 0 -> 0
 call position 16f 0 0 -> 0
 call vertical 1 0 0 -> 0
@@ -446,16 +469,18 @@ call position 7f 0 0 -> 0
 size 12 148
 call size c 94 0 -> 0
 3 0 0 0 -> 0
-257 2002 3 0 -> 0
-152 pos-size 2003 40 0 -11 148
-151 2004 0 0 -> 0
+622 comp 4 2002 at 3 0 9 18
+622 comp 4 2003 at 40 0 14 0
+622 comp 5 2003 at 40 0 0 148
+622 comp 58 2004 0 -> 0
 call get-position 0 0 0 -> 127
 size 16 116
 call size 10 74 0 -> 0
 3 0 0 0 -> 0
-257 2002 7 0 -> 0
-152 pos-size 2003 40 0 -7 116
-151 2004 0 0 -> 0
+622 comp 4 2002 at 7 0 9 18
+622 comp 4 2003 at 40 0 0 148
+622 comp 5 2003 at 40 0 0 116
+622 comp 58 2004 0 -> 0
 call is-vertical 0 0 0 -> 0
 mouse-child 2004
 call down c 4e 1 -> 0
@@ -463,12 +488,13 @@ call down c 4e 1 -> 0
 size 17 50
 call size 11 32 0 -> 0
 3 0 0 0 -> 0
-257 2002 8 0 -> 0
-152 pos-size 2003 40 0 -6 50
-151 2004 0 0 -> 0
+622 comp 4 2002 at 8 0 9 18
+622 comp 4 2003 at 40 0 0 116
+622 comp 5 2003 at 40 0 0 50
+622 comp 58 2004 0 -> 0
 call get-part 0 0 0 -> 8193
 call layout 1 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 call lines a 38 0 -> 0
 mouse-child 2004
 call down fffffffffffffffc a 1 -> 0
@@ -476,18 +502,20 @@ call down fffffffffffffffc a 1 -> 0
 mouse-child 2004
 call down 16 14 0 -> 0
 6 16 14 0 -> 0
+622 comp 59 54 0 -> 2004
 call position ca 0 0 -> 0
 event 9000 15 2003
 mouse-pos -3 12
 call event 9000 0 0 -> 0
-151 2004 0 0 -> 0
-321 2003 0 0 -> 0
+622 comp 58 2004 0 -> 0
+622 comp 10 2003 0 -> 0
 fire 16
 mouse-child 2004
 call drag 9 1b 0 -> 0
 11 9 1b 0 -> 0
-257 2004 22 13 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 40 19 0 30
+622 comp 10 2003 0 -> 0
 free
 159 2004 0 0 -> 0
 159 2003 0 0 -> 0
@@ -528,9 +556,10 @@ call part 2 2005 0 -> 0
 159 2003 0 0 -> 0
 158 2005 0 0 -> 0
 call enable 0 0 0 -> 0
-327 0 0 0 -> 0
-150 2001 0 0 -> 0
-150 2002 0 0 -> 0
+622 comp 16 54 0 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 0 -> 0
+622 comp 15 2002 0 -> 0
 call vertical 0 0 0 -> 0
 call is-vertical 0 0 0 -> 0
 call add-controls 0 0 0 -> 0
@@ -549,13 +578,15 @@ call get-position 0 0 0 -> 0
 size 29 223
 call size 1d df 0 -> 0
 3 0 0 0 -> 0
-320 2006 df df -> 0
-257 2006 ffffffffffffff3e 0 -> 0
-152 pos-size 2005 25 0 -205 223
-151 2004 0 0 -> 0
+622 comp 5 2006 at 7 4 223 223
+622 comp 4 2006 at -194 0 223 223
+622 comp 4 2005 at 25 0 18 0
+622 comp 5 2005 at 25 0 0 223
+622 comp 58 2004 0 -> 0
 mouse-child 2004
 call down fffffffffffffff6 e8 0 -> 0
 6 fffffffffffffff6 e8 0 -> 0
+622 comp 59 54 0 -> 2004
 call position 182 0 0 -> 0
 mouse-child 0
 call down 3 98 1 -> 0
@@ -595,20 +626,21 @@ call added 0 0 0 -> 0
 size 10 323
 call size a 143 0 -> 0
 3 0 0 0 -> 0
-320 2001 a a -> 0
-257 2002 0 13a -> 0
-152 pos-size 2003 0 13 10 304
-151 2004 0 0 -> 0
+622 comp 5 2001 at 3 3 10 10
+622 comp 4 2002 at 0 314 0 9
+622 comp 4 2003 at 0 13 15 14
+622 comp 5 2003 at 0 13 10 304
+622 comp 58 2004 0 -> 0
 call copy 1d 16 16 -> 0
 call layout 1 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 call range c2 8f 0 -> 0
 event 9000 15 2003
 mouse-pos -3 326
 call event 9000 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 20 305 9 12
-321 2003 0 0 -> 0
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 20 305 9 12
+622 comp 10 2003 0 -> 0
 fire 16
 call added 0 0 0 -> 0
 326 0 0 0 -> 0
@@ -616,46 +648,52 @@ call copy 13 b 71 -> 0
 mouse-child 2004
 call drag d 26 0 -> 0
 11 d 26 0 -> 0
-257 2004 14 26 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 20 38 9 12
+622 comp 10 2003 0 -> 0
 fire 16
 call is-vertical 0 0 0 -> 1
 event 9001 15 2003
 mouse-pos 5 236
 call event 9001 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 20 93 9 224
-321 2003 0 0 -> 0
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 20 93 9 12
+622 comp 5 2004 at 20 93 9 224
+622 comp 10 2003 0 -> 0
 fire 16
 mouse-child 2004
 call down fffffffffffffff8 86 0 -> 0
 6 fffffffffffffff8 86 0 -> 0
+622 comp 59 54 0 -> 2004
 event 9002 15 2001
 mouse-pos 7 270
 call event 9002 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 20 63 9 224
-321 2003 0 0 -> 0
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 20 63 9 224
+622 comp 10 2003 0 -> 0
 fire 16
 call vertical 0 0 0 -> 0
 call layout 1 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 -46 63 56 224
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at -46 63 9 224
+622 comp 5 2004 at -46 63 56 224
 size 14 297
 call size e 129 0 -> 0
 3 0 0 0 -> 0
-320 2002 129 129 -> 0
-257 2002 fffffffffffffee5 0 -> 0
-152 pos-size 2003 13 0 -293 297
-151 2004 1 0 -> 0
-152 pos-size 2004 -336 63 56 224
+622 comp 5 2002 at 0 314 297 297
+622 comp 4 2002 at -283 0 297 297
+622 comp 4 2003 at 13 0 10 304
+622 comp 5 2003 at 13 0 0 297
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at -43 63 56 224
 size 17 201
 call size 11 c9 0 -> 0
 3 0 0 0 -> 0
-257 2002 fffffffffffffee8 0 -> 0
-152 pos-size 2003 13 0 -290 201
-151 2004 1 0 -> 0
-152 pos-size 2004 -333 63 56 224
+622 comp 4 2002 at -280 0 297 297
+622 comp 4 2003 at 13 0 0 297
+622 comp 5 2003 at 13 0 0 201
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at -43 63 56 224
 free
 159 2004 0 0 -> 0
 159 2003 0 0 -> 0
@@ -688,11 +726,13 @@ call added 0 0 0 -> 0
 mouse-child 2004
 call drag 5c 1 0 -> 0
 11 5c 1 0 -> 0
-257 2004 16 d -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 22 13 0 24
+622 comp 10 2003 0 -> 0
 mouse-child 2001
 call drag a0 fffffffffffffffd 0 -> 0
 11 a0 fffffffffffffffd 0 -> 0
+622 comp 59 54 0 -> 2001
 call range c4 0 0 -> 0
 comp 2005 19 25 10 0 1
 call part 0 2005 0 -> 0
@@ -715,6 +755,7 @@ call event 9000 0 0 -> 0
 mouse-child 2002
 call drag d4 1c 0 -> 0
 11 d4 1c 0 -> 0
+622 comp 59 54 0 -> 2002
 call position 4c 0 0 -> 0
 call add-controls 0 0 0 -> 0
 325 2005 2 1 -> 0
@@ -730,15 +771,16 @@ call enable 1 0 0 -> 0
 event 9001 15 2003
 mouse-pos 113 7
 call event 9001 0 0 -> 0
-151 2004 0 0 -> 0
-321 2003 0 0 -> 0
+622 comp 58 2004 0 -> 0
+622 comp 10 2003 0 -> 0
 fire 16
 size 5 223
 call size 5 df 0 -> 0
 3 0 0 0 -> 0
-257 2002 fffffffffffffff4 0 -> 0
-152 pos-size 2003 29 0 -22 223
-151 2004 0 0 -> 0
+622 comp 4 2002 at -12 0 17 9
+622 comp 4 2003 at 29 0 15 11
+622 comp 5 2003 at 29 0 0 223
+622 comp 58 2004 0 -> 0
 free
 159 2004 0 0 -> 0
 159 2003 0 0 -> 0
@@ -776,8 +818,8 @@ call get-part 3 0 0 -> 8196
 call min 123 0 0 -> 0
 call copy 2b 31 1ee -> 0
 call layout 0 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 15 -14 3 32
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 15 -14 3 32
 call range 97 bf 0 -> 0
 call added 0 0 0 -> 0
 326 0 0 0 -> 0
@@ -793,6 +835,7 @@ call position 137 0 0 -> 0
 mouse-child 2004
 call drag fffffffffffffff9 7f 0 -> 0
 11 fffffffffffffff9 7f 0 -> 0
+622 comp 59 54 0 -> 2004
 fire 16
 event 9002 15 2002
 mouse-pos -5 63
@@ -852,37 +895,43 @@ call range 0 0 0 -> 0
 mouse-child 2003
 call drag 1 52 0 -> 0
 11 1 52 0 -> 0
-257 2003 fffffffffffffff2 d -> 0
-321 2004 0 0 -> 0
+622 comp 59 54 0 -> 2003
+622 comp 4 2003 at -14 13 14 28
+622 comp 10 2004 0 -> 0
 call range 1a6 ad 0 -> 0
 mouse-child 2003
 call drag d 2 0 -> 0
 11 d 2 0 -> 0
+622 comp 59 54 0 -> 2003
 call layout 1 0 0 -> 0
-151 2003 1 0 -> 0
-152 pos-size 2003 -10 13 10 28
+622 comp 58 2003 1 -> 0
+622 comp 4 2003 at -10 13 14 28
+622 comp 5 2003 at -10 13 10 28
 event 9001 15 2004
 mouse-pos 19 65
 call event 9001 0 0 -> 0
-151 2003 1 0 -> 0
-152 pos-size 2003 -10 13 10 28
-321 2004 0 0 -> 0
+622 comp 58 2003 1 -> 0
+622 comp 4 2003 at -10 13 10 28
+622 comp 10 2004 0 -> 0
 fire 16
 mouse-child 2003
 call drag 1 a8 0 -> 0
 11 1 a8 0 -> 0
+622 comp 59 54 0 -> 2003
 fire 16
 size 17 327
 call size 11 147 0 -> 0
 3 0 0 0 -> 0
-257 2002 5 0 -> 0
-152 pos-size 2004 19 0 -7 327
-151 2003 1 0 -> 0
-152 pos-size 2003 2 13 10 28
+622 comp 4 2002 at 5 0 12 14
+622 comp 4 2004 at 19 0 0 0
+622 comp 5 2004 at 19 0 0 327
+622 comp 58 2003 1 -> 0
+622 comp 4 2003 at 9 13 10 28
 call range c 14 0 -> 0
 mouse-child 2003
 call drag 3 4d 0 -> 0
 11 3 4d 0 -> 0
+622 comp 59 54 0 -> 2003
 free
 159 2003 0 0 -> 0
 159 2004 0 0 -> 0
@@ -918,29 +967,32 @@ call event 9000 0 0 -> 0
 mouse-child 2004
 call drag a 3f 0 -> 0
 11 a 3f 0 -> 0
-257 2004 11 15 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 17 21 0 11
+622 comp 10 2003 0 -> 0
 mouse-child 2004
 call drag 19 85 0 -> 0
 11 19 85 0 -> 0
+622 comp 59 54 0 -> 2004
 call added 0 0 0 -> 0
 326 0 0 0 -> 0
 call position 14f 0 0 -> 0
 call layout 0 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 event 9001 15 2002
 mouse-pos 10 81
 call event 9001 0 0 -> 0
-151 2004 0 0 -> 0
-321 2003 0 0 -> 0
+622 comp 58 2004 0 -> 0
+622 comp 10 2003 0 -> 0
 fire 16
 size 8 312
 call size 8 138 0 -> 0
 3 0 0 0 -> 0
-320 2002 8 8 -> 0
-257 2002 0 130 -> 0
-152 pos-size 2003 0 9 8 296
-151 2004 0 0 -> 0
+622 comp 5 2002 at 27 13 8 8
+622 comp 4 2002 at 0 304 8 8
+622 comp 4 2003 at 0 9 13 12
+622 comp 5 2003 at 0 9 8 296
+622 comp 58 2004 0 -> 0
 call min d2 0 0 -> 0
 call lines 32 28 0 -> 0
 call lines 2b 14 0 -> 0
@@ -951,13 +1003,14 @@ call event 9002 0 0 -> 0
 mouse-child 2003
 call drag fffffffffffffff7 81 0 -> 0
 11 fffffffffffffff7 81 0 -> 0
+622 comp 59 54 0 -> 2003
 event 9003 15 2002
 mouse-pos -10 199
 call event 9003 0 0 -> 0
 call layout 0 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 call layout 0 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 free
 159 2004 0 0 -> 0
 159 2003 0 0 -> 0
@@ -991,10 +1044,11 @@ call get-part 3 0 0 -> 8196
 size 12 226
 call size c e2 0 -> 0
 3 0 0 0 -> 0
-320 2001 c c -> 0
-257 2002 0 d9 -> 0
-152 pos-size 2003 0 40 12 205
-151 2004 0 0 -> 0
+622 comp 5 2001 at 23 28 12 12
+622 comp 4 2002 at 0 217 11 9
+622 comp 4 2003 at 0 40 14 0
+622 comp 5 2003 at 0 40 12 205
+622 comp 58 2004 0 -> 0
 event 9000 15 2001
 mouse-pos 15 220
 call event 9000 0 0 -> 0
@@ -1004,16 +1058,19 @@ call event 9001 0 0 -> 0
 size 31 16
 call size 1f 10 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 7 -> 0
-152 pos-size 2003 0 40 31 -5
-151 2004 0 0 -> 0
+622 comp 4 2002 at 0 7 11 9
+622 comp 4 2003 at 0 40 12 205
+622 comp 5 2003 at 0 40 31 0
+622 comp 58 2004 0 -> 0
 call range 137 0 0 -> 0
 call layout 1 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 18 25 8 10
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 18 30 8 29
+622 comp 5 2004 at 18 30 8 10
 mouse-child 2004
 call down 19 c 0 -> 0
 6 19 c 0 -> 0
+622 comp 59 54 0 -> 2004
 mouse-child 2004
 call down fffffffffffffffa 9 2 -> 0
 6 fffffffffffffffa 9 2 -> 0
@@ -1024,11 +1081,13 @@ call vertical 1 0 0 -> 0
 mouse-child 2001
 call drag fffffffffffffff6 fffffffffffffffe 0 -> 0
 11 fffffffffffffff6 fffffffffffffffe 0 -> 0
+622 comp 59 54 0 -> 2001
 call get-position 0 0 0 -> 0
 call lines 14 5 0 -> 0
 mouse-child 2004
 call drag fffffffffffffff8 fffffffffffffff9 0 -> 0
 11 fffffffffffffff8 fffffffffffffff9 0 -> 0
+622 comp 59 54 0 -> 2004
 mouse-child 2004
 call down fffffffffffffffc d 1 -> 0
 6 fffffffffffffffc d 1 -> 0
@@ -1074,23 +1133,26 @@ call event 9000 0 0 -> 0
 mouse-child 0
 call drag 12 9 0 -> 0
 11 12 9 0 -> 0
+622 comp 59 54 0 -> 0
 call vertical 1 0 0 -> 0
 call enable 1 0 0 -> 0
 call get-position 0 0 0 -> 0
 mouse-child 2004
 call drag 6a b 0 -> 0
 11 6a b 0 -> 0
-257 2004 13 0 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 19 0 0 12
+622 comp 10 2003 0 -> 0
 call added 0 0 0 -> 0
 326 0 0 0 -> 0
 call layout 0 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 call position fb 0 0 -> 0
 call enable 0 0 0 -> 0
-327 0 0 0 -> 0
-150 2001 0 0 -> 0
-150 2002 0 0 -> 0
+622 comp 16 54 0 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 0 -> 0
+622 comp 15 2002 0 -> 0
 event 9001 15 0
 mouse-pos 52 10
 call event 9001 0 0 -> 0
@@ -1101,14 +1163,15 @@ call down 3f 3 1 -> 0
 size 34 192
 call size 22 c0 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 af -> 0
-152 pos-size 2003 0 40 34 161
-151 2004 0 0 -> 0
+622 comp 4 2002 at 0 175 8 17
+622 comp 4 2003 at 0 40 16 0
+622 comp 5 2003 at 0 40 34 161
+622 comp 58 2004 0 -> 0
 event 9002 15 2002
 mouse-pos 8 200
 call event 9002 0 0 -> 0
-151 2004 0 0 -> 0
-321 2003 0 0 -> 0
+622 comp 58 2004 0 -> 0
+622 comp 10 2003 0 -> 0
 fire 16
 free
 159 2004 0 0 -> 0
@@ -1143,9 +1206,10 @@ mouse-pos 12 137
 call event 9000 0 0 -> 0
 176 9000 0 0 -> 0
 call enable 0 0 0 -> 0
-327 0 0 0 -> 0
-150 2001 0 0 -> 0
-150 2002 0 0 -> 0
+622 comp 16 54 0 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 0 -> 0
+622 comp 15 2002 0 -> 0
 call add-controls 0 0 0 -> 0
 325 2001 2 1 -> 0
 325 2002 2 1 -> 0
@@ -1173,22 +1237,25 @@ call get-position 0 0 0 -> 442
 event 9002 15 2002
 mouse-pos 34 182
 call event 9002 0 0 -> 0
-151 2003 0 0 -> 0
-321 2004 0 0 -> 0
+622 comp 58 2003 0 -> 0
+622 comp 10 2004 0 -> 0
 fire 16
 mouse-child 2003
 call drag 5 cc 0 -> 0
 11 5 cc 0 -> 0
-257 2003 b ffffffffffffffd8 -> 0
-321 2004 0 0 -> 0
+622 comp 59 54 0 -> 2003
+622 comp 4 2003 at 11 -40 6 40
+622 comp 10 2004 0 -> 0
 mouse-child 2003
 call drag 4 85 0 -> 0
 11 4 85 0 -> 0
+622 comp 59 54 0 -> 2003
 call layout 0 0 0 -> 0
-151 2003 0 0 -> 0
+622 comp 58 2003 0 -> 0
 mouse-child 2003
 call down ffffffffffffffff e0 0 -> 0
 6 ffffffffffffffff e0 0 -> 0
+622 comp 59 54 0 -> 2003
 call is-vertical 0 0 0 -> 1
 free
 159 2003 0 0 -> 0
@@ -1234,8 +1301,9 @@ call part 3 2006 0 -> 0
 mouse-child 2006
 call drag fffffffffffffffc 5c 0 -> 0
 11 fffffffffffffffc 5c 0 -> 0
-257 2006 b 1 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2006
+622 comp 4 2006 at 11 1 22 24
+622 comp 10 2003 0 -> 0
 mouse-child 2006
 call down 5 ae 1 -> 0
 6 5 ae 1 -> 0
@@ -1247,6 +1315,7 @@ call event 9001 0 0 -> 0
 mouse-child 2006
 call drag 12 77 0 -> 0
 11 12 77 0 -> 0
+622 comp 59 54 0 -> 2006
 event 9002 15 2006
 mouse-pos 4 48
 call event 9002 0 0 -> 0
@@ -1297,18 +1366,21 @@ call enable 1 0 0 -> 0
 mouse-child 2003
 call drag d4 15 0 -> 0
 11 d4 15 0 -> 0
-257 2003 0 2 -> 0
-321 2004 0 0 -> 0
+622 comp 59 54 0 -> 2003
+622 comp 4 2003 at 0 2 0 27
+622 comp 10 2004 0 -> 0
 mouse-child 2004
 call drag e7 11 0 -> 0
 11 e7 11 0 -> 0
+622 comp 59 54 0 -> 2004
 mouse-child 2003
 call drag 26 15 0 -> 0
 11 26 15 0 -> 0
+622 comp 59 54 0 -> 2003
 call layout 0 0 0 -> 0
-151 2003 0 0 -> 0
+622 comp 58 2003 0 -> 0
 call layout 1 0 0 -> 0
-151 2003 0 0 -> 0
+622 comp 58 2003 0 -> 0
 call enable 1 0 0 -> 0
 call lines 19 20 0 -> 0
 call min 143 0 0 -> 0
@@ -1317,19 +1389,23 @@ mouse-pos 7 7
 call event 9000 0 0 -> 0
 176 9000 0 0 -> 0
 call enable 0 0 0 -> 0
-327 0 0 0 -> 0
-150 2001 0 0 -> 0
-150 2002 0 0 -> 0
+622 comp 16 54 0 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 0 -> 0
+622 comp 15 2002 0 -> 0
 mouse-child 2004
 call drag 59 fffffffffffffff7 0 -> 0
 11 59 fffffffffffffff7 0 -> 0
+622 comp 59 54 0 -> 2004
 mouse-child 2003
 call drag 95 8 0 -> 0
 11 95 8 0 -> 0
+622 comp 59 54 0 -> 2003
 call enable 1 0 0 -> 0
-327 1 0 0 -> 0
-150 2001 1 0 -> 0
-150 2002 1 0 -> 0
+622 comp 16 54 1 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 1 -> 0
+622 comp 15 2002 1 -> 0
 call get-part 2 0 0 -> 8196
 call position 17 0 0 -> 0
 free
@@ -1364,18 +1440,20 @@ call added 0 0 0 -> 0
 size 28 254
 call size 1c fe 0 -> 0
 3 0 0 0 -> 0
-320 2001 1c 1c -> 0
-320 2002 1c 1c -> 0
-257 2002 0 e2 -> 0
-152 pos-size 2003 0 51 28 198
-151 2004 0 0 -> 0
+622 comp 5 2001 at 13 23 28 28
+622 comp 5 2002 at 4 10 28 28
+622 comp 4 2002 at 0 226 28 28
+622 comp 4 2003 at 0 51 0 18
+622 comp 5 2003 at 0 51 28 198
+622 comp 58 2004 0 -> 0
 call lines 15 23 0 -> 0
 call part 1 2002 0 -> 0
 mouse-child 2004
 call drag fffffffffffffffe 8e 0 -> 0
 11 fffffffffffffffe 8e 0 -> 0
-257 2004 10 8e -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 16 142 0 19
+622 comp 10 2003 0 -> 0
 comp 2005 17 29 19 0 0
 call part 2 2005 0 -> 0
 159 2003 0 0 -> 0
@@ -1393,8 +1471,9 @@ call added 0 0 0 -> 0
 mouse-child 2004
 call drag fffffffffffffffd c7 0 -> 0
 11 fffffffffffffffd c7 0 -> 0
-257 2004 10 a -> 0
-321 2005 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 16 10 0 19
+622 comp 10 2005 0 -> 0
 mouse-child 2004
 call down 2 47 1 -> 0
 6 2 47 1 -> 0
@@ -1402,10 +1481,12 @@ call copy 33 6 a0 -> 0
 size 231 5
 call size e7 5 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 ffffffffffffffe9 -> 0
-152 pos-size 2005 0 51 231 -51
-151 2004 1 0 -> 0
-152 pos-size 2004 16 -19 231 19
+622 comp 4 2002 at 0 -23 28 28
+622 comp 4 2005 at 0 51 19 0
+622 comp 5 2005 at 0 51 231 0
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 16 32 0 19
+622 comp 5 2004 at 16 32 231 19
 call enable 1 0 0 -> 0
 mouse-child 2004
 call down 6e 6 2 -> 0
@@ -1450,17 +1531,18 @@ call add-controls 0 0 0 -> 0
 165 2002 0 0 -> 0
 call resize 1 0 0 -> 0
 call layout 0 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 call resize 1 0 0 -> 0
 call get-position 0 0 0 -> 0
 call copy 1b 9 9a -> 0
 call range 5a 0 0 -> 0
 call range 0 0 0 -> 0
 call layout 1 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 mouse-child 2002
 call drag fffffffffffffffa 1 0 -> 0
 11 fffffffffffffffa 1 0 -> 0
+622 comp 59 54 0 -> 2002
 call get-position 0 0 0 -> 0
 call vertical 1 0 0 -> 0
 call copy e 7 11a -> 0
@@ -1500,7 +1582,7 @@ mouse-pos 21 64
 call event 9000 0 0 -> 0
 176 9000 0 0 -> 0
 call layout 1 0 0 -> 0
-151 2003 0 0 -> 0
+622 comp 58 2003 0 -> 0
 event 9001 15 2004
 mouse-pos -2 -3
 call event 9001 0 0 -> 0
@@ -1519,12 +1601,13 @@ event 9005 15 2002
 mouse-pos 7 104
 call event 9005 0 0 -> 0
 call layout 0 0 0 -> 0
-151 2003 0 0 -> 0
+622 comp 58 2003 0 -> 0
 mouse-child 2003
 call drag b 68 0 -> 0
 11 b 68 0 -> 0
-257 2003 17 ffffffffffffffe7 -> 0
-321 2004 0 0 -> 0
+622 comp 59 54 0 -> 2003
+622 comp 4 2003 at 23 -25 17 25
+622 comp 10 2004 0 -> 0
 mouse-child 0
 call down 16 9a 1 -> 0
 6 16 9a 1 -> 0
@@ -1534,11 +1617,12 @@ call event 9006 0 0 -> 0
 size 22 168
 call size 16 a8 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 9c -> 0
-152 pos-size 2004 0 33 22 141
-151 2003 0 0 -> 0
+622 comp 4 2002 at 0 156 0 12
+622 comp 4 2004 at 0 33 0 0
+622 comp 5 2004 at 0 33 22 141
+622 comp 58 2003 0 -> 0
 call layout 1 0 0 -> 0
-151 2003 0 0 -> 0
+622 comp 58 2003 0 -> 0
 call min d 0 0 -> 0
 mouse-child 2003
 call down 6 d 2 -> 0
@@ -1576,6 +1660,7 @@ call get-part 2 0 0 -> 8195
 mouse-child 0
 call drag fffffffffffffff7 10c 0 -> 0
 11 fffffffffffffff7 10c 0 -> 0
+622 comp 59 54 0 -> 0
 event 9000 15 2003
 mouse-pos 20 2
 call event 9000 0 0 -> 0
@@ -1584,20 +1669,23 @@ call vertical 0 0 0 -> 0
 mouse-child 2004
 call drag 15 109 0 -> 0
 11 15 109 0 -> 0
-257 2004 18 13 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 24 19 8 8
+622 comp 10 2003 0 -> 0
 mouse-child 2001
 call down 12 101 2 -> 0
 6 12 101 2 -> 0
 size 5 204
 call size 5 cc 0 -> 0
 3 0 0 0 -> 0
-320 2001 cc cc -> 0
-320 2002 cc cc -> 0
-257 2002 ffffffffffffff39 0 -> 0
-152 pos-size 2003 221 0 -403 204
-151 2004 1 0 -> 0
-152 pos-size 2004 -192 19 10 8
+622 comp 5 2001 at 17 23 204 204
+622 comp 5 2002 at 4 8 204 204
+622 comp 4 2002 at -199 0 204 204
+622 comp 4 2003 at 221 0 10 19
+622 comp 5 2003 at 221 0 0 204
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 211 19 8 8
+622 comp 5 2004 at 211 19 10 8
 call get-part 3 0 0 -> 8196
 event 9001 15 2001
 mouse-pos 13 138
@@ -1607,6 +1695,7 @@ call added 0 0 0 -> 0
 mouse-child 2004
 call down c 76 0 -> 0
 6 c 76 0 -> 0
+622 comp 59 54 0 -> 2004
 call position a9 0 0 -> 0
 comp 2005 21 20 10 20 1
 call part 3 2005 0 -> 0
@@ -1615,12 +1704,14 @@ call part 3 2005 0 -> 0
 mouse-child 2005
 call drag 1 3e 0 -> 0
 11 1 3e 0 -> 0
-257 2005 ffffffffffffff40 14 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2005
+622 comp 4 2005 at 211 20 10 20
+622 comp 10 2003 0 -> 0
 fire 16
 mouse-child 2004
 call down 2 66 0 -> 0
 6 2 66 0 -> 0
+622 comp 59 54 0 -> 2004
 free
 159 2005 0 0 -> 0
 159 2003 0 0 -> 0
@@ -1666,9 +1757,10 @@ call event 9001 0 0 -> 0
 event 9002 15 2002
 mouse-pos 31 26
 call event 9002 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 23 17 10 5
-321 2003 0 0 -> 0
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 23 17 8 5
+622 comp 5 2004 at 23 17 10 5
+622 comp 10 2003 0 -> 0
 fire 16
 event 9003 15 0
 mouse-pos 216 0
@@ -1678,19 +1770,22 @@ call range 5 d 0 -> 0
 mouse-child 2004
 call down db 11 0 -> 0
 6 db 11 0 -> 0
+622 comp 59 54 0 -> 2004
 call range 3e 57 0 -> 0
 mouse-child 2004
 call drag 9f 19 0 -> 0
 11 9f 19 0 -> 0
+622 comp 59 54 0 -> 2004
 fire 16
 event 9004 15 0
 mouse-pos 218 4
 call event 9004 0 0 -> 0
 176 9004 0 0 -> 0
 call enable 0 0 0 -> 0
-327 0 0 0 -> 0
-150 2001 0 0 -> 0
-150 2002 0 0 -> 0
+622 comp 16 54 0 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 0 -> 0
+622 comp 15 2002 0 -> 0
 free
 159 2004 0 0 -> 0
 159 2003 0 0 -> 0
@@ -1722,25 +1817,30 @@ call added 0 0 0 -> 0
 mouse-child 2001
 call down fffffffffffffff8 50 0 -> 0
 6 fffffffffffffff8 50 0 -> 0
+622 comp 59 54 0 -> 2001
 call layout 0 0 0 -> 0
-151 2003 0 0 -> 0
+622 comp 58 2003 0 -> 0
 size 14 256
 call size e 100 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 f1 -> 0
-152 pos-size 2004 0 26 14 233
-151 2003 0 0 -> 0
+622 comp 4 2002 at 0 241 8 15
+622 comp 4 2004 at 0 26 0 0
+622 comp 5 2004 at 0 26 14 233
+622 comp 58 2003 0 -> 0
 call range 173 b1 0 -> 0
 size 32 32
 call size 20 20 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 11 -> 0
-152 pos-size 2004 0 26 32 9
-151 2003 1 0 -> 0
-152 pos-size 2003 26 25 32 10
+622 comp 4 2002 at 0 17 8 15
+622 comp 4 2004 at 0 26 14 233
+622 comp 5 2004 at 0 26 32 9
+622 comp 58 2003 1 -> 0
+622 comp 4 2003 at 26 25 0 17
+622 comp 5 2003 at 26 25 32 10
 mouse-child 2004
 call drag fffffffffffffffc c 0 -> 0
 11 fffffffffffffffc c 0 -> 0
+622 comp 59 54 0 -> 2004
 call get-position 0 0 0 -> 0
 event 9000 15 2004
 mouse-pos 20 -6
@@ -1750,13 +1850,14 @@ call enable 1 0 0 -> 0
 event 9001 15 2004
 mouse-pos 37 39
 call event 9001 0 0 -> 0
-151 2003 1 0 -> 0
-152 pos-size 2003 26 25 32 10
-321 2004 0 0 -> 0
+622 comp 58 2003 1 -> 0
+622 comp 4 2003 at 26 25 32 10
+622 comp 10 2004 0 -> 0
 fire 16
 mouse-child 2003
 call down 24 11 0 -> 0
 6 24 11 0 -> 0
+622 comp 59 54 0 -> 2003
 event 9002 11 2002
 mouse-pos -3 36
 call event 9002 0 0 -> 0
@@ -1765,13 +1866,14 @@ call range 98 1c 0 -> 0
 mouse-child 2003
 call drag 1d 6 0 -> 0
 11 1d 6 0 -> 0
+622 comp 59 54 0 -> 2003
 fire 16
 event 9003 15 2002
 mouse-pos 22 16
 call event 9003 0 0 -> 0
-151 2003 1 0 -> 0
-152 pos-size 2003 26 25 32 10
-321 2004 0 0 -> 0
+622 comp 58 2003 1 -> 0
+622 comp 4 2003 at 26 25 32 10
+622 comp 10 2004 0 -> 0
 fire 16
 free
 159 2003 0 0 -> 0
@@ -1828,8 +1930,9 @@ call min 128 0 0 -> 0
 mouse-child 2003
 call drag a 78 0 -> 0
 11 a 78 0 -> 0
-257 2003 1a fffffffffffffff0 -> 0
-321 2004 0 0 -> 0
+622 comp 59 54 0 -> 2003
+622 comp 4 2003 at 26 -16 0 16
+622 comp 10 2004 0 -> 0
 fire 16
 call resize 0 0 0 -> 0
 call added 0 0 0 -> 0
@@ -1880,10 +1983,11 @@ call get-part 1 0 0 -> 8194
 mouse-child 2004
 call drag 1a 35 0 -> 0
 11 1a 35 0 -> 0
-257 2004 f ffffffffffffffed -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 15 -19 18 42
+622 comp 10 2003 0 -> 0
 call layout 0 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 call added 0 0 0 -> 0
 326 0 0 0 -> 0
 call resize 1 0 0 -> 0
@@ -1911,6 +2015,7 @@ call copy 32 19 179 -> 0
 mouse-child 2002
 call drag 1b 2c 0 -> 0
 11 1b 2c 0 -> 0
+622 comp 59 54 0 -> 2002
 free
 159 2004 0 0 -> 0
 159 2003 0 0 -> 0
@@ -1959,11 +2064,13 @@ call add-controls 0 0 0 -> 0
 mouse-child 2004
 call drag 20 36 0 -> 0
 11 20 36 0 -> 0
-257 2004 8 8 -> 0
-321 2005 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 8 8 6 29
+622 comp 10 2005 0 -> 0
 mouse-child 2004
 call drag 7 68 0 -> 0
 11 7 68 0 -> 0
+622 comp 59 54 0 -> 2004
 mouse-child 2005
 call down 14 25 2 -> 0
 6 14 25 2 -> 0
@@ -1975,6 +2082,7 @@ call lines 2b 24 0 -> 0
 mouse-child 2004
 call down 1a 0 0 -> 0
 6 1a 0 0 -> 0
+622 comp 59 54 0 -> 2004
 call lines 26 2f 0 -> 0
 call resize 0 0 0 -> 0
 call position ffffffffffffffce 0 0 -> 0
@@ -2021,10 +2129,11 @@ call event 9000 0 0 -> 0
 size 126 30
 call size 7e 1e 0 -> 0
 3 0 0 0 -> 0
-320 2001 1e 1e -> 0
-257 2002 6c 0 -> 0
-152 pos-size 2003 55 0 78 30
-151 2004 0 0 -> 0
+622 comp 5 2001 at 25 16 30 30
+622 comp 4 2002 at 108 0 18 9
+622 comp 4 2003 at 55 0 19 0
+622 comp 5 2003 at 55 0 78 30
+622 comp 58 2004 0 -> 0
 call get-part 3 0 0 -> 8196
 mouse-child 2004
 call down 5b 20 1 -> 0
@@ -2044,18 +2153,20 @@ call down 7d 22 2 -> 0
 mouse-child 2004
 call drag 23 4 0 -> 0
 11 23 4 0 -> 0
-257 2004 37 7 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 55 7 7 22
+622 comp 10 2003 0 -> 0
 call layout 0 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 call range 1bf 46 0 -> 0
 call position 3e 0 0 -> 0
 event 9001 15 2002
 mouse-pos 102 37
 call event 9001 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 67 7 12 22
-321 2003 0 0 -> 0
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 67 7 7 22
+622 comp 5 2004 at 67 7 12 22
+622 comp 10 2003 0 -> 0
 fire 16
 event 9002 15 0
 mouse-pos 52 5
@@ -2109,8 +2220,9 @@ call event 9000 0 0 -> 0
 mouse-child 2004
 call drag ffffffffffffffff 88 0 -> 0
 11 ffffffffffffffff 88 0 -> 0
-257 2004 b ffffffffffffffea -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 11 -22 22 26
+622 comp 10 2003 0 -> 0
 fire 16
 call add-controls 0 0 0 -> 0
 325 2001 2 1 -> 0
@@ -2123,14 +2235,15 @@ call add-controls 0 0 0 -> 0
 size 191 31
 call size bf 1f 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 14 -> 0
-152 pos-size 2003 0 23 191 10
-151 2004 0 0 -> 0
+622 comp 4 2002 at 0 20 10 11
+622 comp 4 2003 at 0 23 9 0
+622 comp 5 2003 at 0 23 191 10
+622 comp 58 2004 0 -> 0
 event 9001 15 2003
 mouse-pos 7 28
 call event 9001 0 0 -> 0
 call layout 1 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 call add-controls 0 0 0 -> 0
 325 2001 2 1 -> 0
 325 2002 2 1 -> 0
@@ -2146,12 +2259,13 @@ mouse-child 2004
 call down 26 fffffffffffffff8 1 -> 0
 6 26 fffffffffffffff8 1 -> 0
 call layout 0 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 mouse-child 2004
 call drag 3d 1 0 -> 0
 11 3d 1 0 -> 0
-257 2004 b 7 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 11 7 22 26
+622 comp 10 2003 0 -> 0
 free
 159 2004 0 0 -> 0
 159 2003 0 0 -> 0
@@ -2188,6 +2302,7 @@ call position 56 0 0 -> 0
 mouse-child 2003
 call down b 38 0 -> 0
 6 b 38 0 -> 0
+622 comp 59 54 0 -> 2003
 mouse-child 2003
 call down 11 5b 2 -> 0
 6 11 5b 2 -> 0
@@ -2195,12 +2310,14 @@ call range fc 21 0 -> 0
 mouse-child 2004
 call drag fffffffffffffff9 40 0 -> 0
 11 fffffffffffffff9 40 0 -> 0
+622 comp 59 54 0 -> 2004
 call get-part 0 0 0 -> 8193
 mouse-child 2003
 call drag 4 fffffffffffffff6 0 -> 0
 11 4 fffffffffffffff6 0 -> 0
-257 2003 ffffffffffffffed 13 -> 0
-321 2004 0 0 -> 0
+622 comp 59 54 0 -> 2003
+622 comp 4 2003 at -19 19 19 12
+622 comp 10 2004 0 -> 0
 fire 16
 call copy 4 28 1a0 -> 0
 mouse-child 2003
@@ -2210,13 +2327,15 @@ call part 3 2003 0 -> 0
 size 6 292
 call size 6 124 0 -> 0
 3 0 0 0 -> 0
-257 2002 fffffffffffffffb 0 -> 0
-152 pos-size 2004 19 0 -21 292
-151 2003 1 0 -> 0
-152 pos-size 2003 -21 19 19 12
+622 comp 4 2002 at -5 0 11 9
+622 comp 4 2004 at 19 0 0 0
+622 comp 5 2004 at 19 0 0 292
+622 comp 58 2003 1 -> 0
+622 comp 4 2003 at 0 19 19 12
 mouse-child 2003
 call drag a cc 0 -> 0
 11 a cc 0 -> 0
+622 comp 59 54 0 -> 2003
 event 9001 15 2003
 mouse-pos 11 287
 call event 9001 0 0 -> 0
@@ -2224,6 +2343,7 @@ call event 9001 0 0 -> 0
 mouse-child 2003
 call down 6 20 0 -> 0
 6 6 20 0 -> 0
+622 comp 59 54 0 -> 2003
 free
 159 2003 0 0 -> 0
 159 2004 0 0 -> 0
@@ -2256,44 +2376,51 @@ call added 0 0 0 -> 0
 call get-position 0 0 0 -> 0
 call range d4 0 0 -> 0
 call layout 1 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 8 1 10 24
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 8 1 18 24
+622 comp 5 2004 at 8 1 10 24
 mouse-child 2004
 call drag 8d fffffffffffffffd 0 -> 0
 11 8d fffffffffffffffd 0 -> 0
+622 comp 59 54 0 -> 2004
 size 11 87
 call size b 57 0 -> 0
 3 0 0 0 -> 0
-320 2001 57 57 -> 0
-257 2002 fffffffffffffffc 0 -> 0
-152 pos-size 2003 116 0 -91 87
-151 2004 1 0 -> 0
-152 pos-size 2004 15 1 10 24
+622 comp 5 2001 at 29 8 87 87
+622 comp 4 2002 at -4 0 15 9
+622 comp 4 2003 at 116 0 9 9
+622 comp 5 2003 at 116 0 0 87
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 106 1 10 24
 mouse-child 2004
 call drag fffffffffffffffc 43 0 -> 0
 11 fffffffffffffffc 43 0 -> 0
+622 comp 59 54 0 -> 2004
 size 20 205
 call size 14 cd 0 -> 0
 3 0 0 0 -> 0
-257 2002 5 0 -> 0
-152 pos-size 2003 116 0 -82 205
-151 2004 1 0 -> 0
-152 pos-size 2004 24 1 10 24
+622 comp 4 2002 at 5 0 15 9
+622 comp 4 2003 at 116 0 0 87
+622 comp 5 2003 at 116 0 0 205
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 106 1 10 24
 call enable 0 0 0 -> 0
-327 0 0 0 -> 0
-150 2001 0 0 -> 0
-150 2002 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 16 54 0 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 0 -> 0
+622 comp 15 2002 0 -> 0
+622 comp 58 2004 0 -> 0
 comp 2005 19 2 0 8 1
 call part 2 2005 0 -> 0
 159 2003 0 0 -> 0
 158 2005 0 0 -> 0
 call layout 0 0 0 -> 0
-151 2004 0 0 -> 0
-152 pos-size 2004 9 1 10 24
+622 comp 58 2004 0 -> 0
+622 comp 4 2004 at 9 1 10 24
 mouse-child 2004
 call drag a 79 0 -> 0
 11 a 79 0 -> 0
+622 comp 59 54 0 -> 2004
 mouse-child 2004
 call down 19 6d 1 -> 0
 6 19 6d 1 -> 0
@@ -2342,16 +2469,18 @@ call vertical 0 0 0 -> 0
 mouse-child 2004
 call drag 5 8e 0 -> 0
 11 5 8e 0 -> 0
-257 2004 a 1d -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 10 29 9 28
+622 comp 10 2003 0 -> 0
 call resize 1 0 0 -> 0
 call enable 1 0 0 -> 0
 call copy 20 35 3f -> 0
 call lines 8 11 0 -> 0
 call enable 0 0 0 -> 0
-327 0 0 0 -> 0
-150 2001 0 0 -> 0
-150 2002 0 0 -> 0
+622 comp 16 54 0 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 0 -> 0
+622 comp 15 2002 0 -> 0
 call enable 0 0 0 -> 0
 event 9001 15 2001
 mouse-pos 1 2
@@ -2398,29 +2527,33 @@ call vertical 1 0 0 -> 0
 mouse-child 2004
 call drag 4 ac 0 -> 0
 11 4 ac 0 -> 0
-257 2004 7 fffffffffffffff2 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 7 -14 0 37
+622 comp 10 2003 0 -> 0
 call position 1b4 0 0 -> 0
 call get-part 1 0 0 -> 8194
 call range 39 2f 0 -> 0
 event 9000 15 2003
 mouse-pos -7 78
 call event 9000 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 7 12 13 11
-321 2003 0 0 -> 0
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 7 12 0 37
+622 comp 5 2004 at 7 12 13 11
+622 comp 10 2003 0 -> 0
 fire 16
 call layout 0 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 7 12 13 11
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 7 12 13 11
 call resize 1 0 0 -> 0
 size 31 122
 call size 1f 7a 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 71 -> 0
-152 pos-size 2003 0 20 31 104
-151 2004 1 0 -> 0
-152 pos-size 2004 7 20 13 85
+622 comp 4 2002 at 0 113 8 9
+622 comp 4 2003 at 0 20 0 14
+622 comp 5 2003 at 0 20 31 104
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 7 20 13 11
+622 comp 5 2004 at 7 20 13 85
 event 9001 5 2004
 mouse-pos -10 73
 call event 9001 0 0 -> 0
@@ -2429,14 +2562,16 @@ call enable 1 0 0 -> 0
 mouse-child 2004
 call drag 1e 2b 0 -> 0
 11 1e 2b 0 -> 0
-257 2004 7 27 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 7 39 13 85
+622 comp 10 2003 0 -> 0
 call lines 3 1e 0 -> 0
 call enable 0 0 0 -> 0
-327 0 0 0 -> 0
-150 2001 0 0 -> 0
-150 2002 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 16 54 0 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 0 -> 0
+622 comp 15 2002 0 -> 0
+622 comp 58 2004 0 -> 0
 call added 0 0 0 -> 0
 326 0 0 0 -> 0
 event 9002 15 2003
@@ -2475,15 +2610,17 @@ call range b6 0 0 -> 0
 size 7 294
 call size 7 126 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 11d -> 0
-152 pos-size 2004 0 24 7 269
-151 2003 1 0 -> 0
-320 2003 16 a -> 0
+622 comp 4 2002 at 0 285 0 9
+622 comp 4 2004 at 0 24 0 0
+622 comp 5 2004 at 0 24 7 269
+622 comp 58 2003 1 -> 0
+622 comp 5 2003 at 11 24 22 10
 mouse-child 2003
 call drag fffffffffffffffe 11e 0 -> 0
 11 fffffffffffffffe 11e 0 -> 0
-257 2003 b 11b -> 0
-321 2004 0 0 -> 0
+622 comp 59 54 0 -> 2003
+622 comp 4 2003 at 11 283 22 10
+622 comp 10 2004 0 -> 0
 fire 16
 mouse-child 2003
 call down 3 2b 2 -> 0
@@ -2502,13 +2639,13 @@ call get-part 3 0 0 -> 8195
 mouse-child 2003
 call drag fffffffffffffff9 b6 0 -> 0
 11 fffffffffffffff9 b6 0 -> 0
-257 2003 b b6 -> 0
-321 2004 0 0 -> 0
+622 comp 59 54 0 -> 2003
+622 comp 4 2003 at 11 182 22 10
+622 comp 10 2004 0 -> 0
 fire 16
 call lines 17 26 0 -> 0
 call layout 0 0 0 -> 0
-151 2003 1 0 -> 0
-320 2003 16 a -> 0
+622 comp 58 2003 1 -> 0
 call get-position 0 0 0 -> 111
 call range 1b 15 0 -> 0
 comp 2005 8 25 0 21 1
@@ -2518,9 +2655,10 @@ call part 3 2005 0 -> 0
 event 9000 15 2004
 mouse-pos -8 32
 call event 9000 0 0 -> 0
-151 2005 1 0 -> 0
-152 pos-size 2005 8 272 7 21
-321 2004 0 0 -> 0
+622 comp 58 2005 1 -> 0
+622 comp 4 2005 at 8 272 0 21
+622 comp 5 2005 at 8 272 7 21
+622 comp 10 2004 0 -> 0
 fire 16
 free
 159 2005 0 0 -> 0
@@ -2567,19 +2705,22 @@ call event 9001 0 0 -> 0
 size 6 70
 call size 6 46 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 34 -> 0
-152 pos-size 2003 0 21 6 37
-151 2004 0 0 -> 0
+622 comp 4 2002 at 0 52 0 18
+622 comp 4 2003 at 0 21 0 0
+622 comp 5 2003 at 0 21 6 37
+622 comp 58 2004 0 -> 0
 call get-part 3 0 0 -> 8196
 mouse-child 2003
 call drag 9 10 0 -> 0
 11 9 10 0 -> 0
+622 comp 59 54 0 -> 2003
 size 10 313
 call size a 139 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 127 -> 0
-152 pos-size 2003 0 21 10 280
-151 2004 0 0 -> 0
+622 comp 4 2002 at 0 295 0 18
+622 comp 4 2003 at 0 21 6 37
+622 comp 5 2003 at 0 21 10 280
+622 comp 58 2004 0 -> 0
 call get-position 0 0 0 -> 419
 call copy 19 36 14 -> 0
 call copy 1c 21 3e -> 0
@@ -2634,19 +2775,22 @@ call position 135 0 0 -> 0
 size 10 135
 call size a 87 0 -> 0
 3 0 0 0 -> 0
-257 2002 fffffffffffffffa 0 -> 0
-152 pos-size 2003 30 0 -25 135
-151 2004 1 0 -> 0
-152 pos-size 2004 -5 21 10 22
+622 comp 4 2002 at -6 0 16 13
+622 comp 4 2003 at 30 0 10 0
+622 comp 5 2003 at 30 0 0 135
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 20 21 21 22
+622 comp 5 2004 at 20 21 10 22
 call vertical 1 0 0 -> 0
 call lines 16 28 0 -> 0
 call min 97 0 0 -> 0
 event 9003 15 2001
 mouse-pos 1 43
 call event 9003 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 -5 -16 10 151
-321 2003 0 0 -> 0
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 20 -16 10 22
+622 comp 5 2004 at 20 -16 10 151
+622 comp 10 2003 0 -> 0
 fire 16
 call get-part 3 0 0 -> 8196
 event 9004 15 2003
@@ -2690,28 +2834,32 @@ call copy c 2b 5b -> 0
 mouse-child 2004
 call drag 8 5c 0 -> 0
 11 8 5c 0 -> 0
-257 2004 4 fffffffffffffff4 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 4 -12 7 39
+622 comp 10 2003 0 -> 0
 call copy 19 4 f7 -> 0
 call enable 0 0 0 -> 0
-327 0 0 0 -> 0
-150 2001 0 0 -> 0
-150 2002 0 0 -> 0
+622 comp 16 54 0 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 0 -> 0
+622 comp 15 2002 0 -> 0
 event 9000 15 2003
 mouse-pos -1 241
 call event 9000 0 0 -> 0
 size 8 284
 call size 8 11c 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 113 -> 0
-152 pos-size 2003 0 9 8 266
-151 2004 0 0 -> 0
+622 comp 4 2002 at 0 275 0 9
+622 comp 4 2003 at 0 9 13 12
+622 comp 5 2003 at 0 9 8 266
+622 comp 58 2004 0 -> 0
 size 28 280
 call size 1c 118 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 10f -> 0
-152 pos-size 2003 0 9 28 262
-151 2004 0 0 -> 0
+622 comp 4 2002 at 0 271 0 9
+622 comp 4 2003 at 0 9 8 266
+622 comp 5 2003 at 0 9 28 262
+622 comp 58 2004 0 -> 0
 event 9001 15 0
 mouse-pos 2 120
 call event 9001 0 0 -> 0
@@ -2726,18 +2874,22 @@ call event 9002 0 0 -> 0
 mouse-child 2004
 call drag 17 77 0 -> 0
 11 17 77 0 -> 0
-257 2004 4 77 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 4 119 7 39
+622 comp 10 2003 0 -> 0
 mouse-child 2003
 call drag fffffffffffffffe 14 0 -> 0
 11 fffffffffffffffe 14 0 -> 0
+622 comp 59 54 0 -> 2003
 call enable 1 0 0 -> 0
-327 1 0 0 -> 0
-150 2001 1 0 -> 0
-150 2002 1 0 -> 0
+622 comp 16 54 1 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 1 -> 0
+622 comp 15 2002 1 -> 0
 mouse-child 2004
 call down 11 6c 0 -> 0
 6 11 6c 0 -> 0
+622 comp 59 54 0 -> 2004
 call get-part 0 0 0 -> 8193
 free
 159 2004 0 0 -> 0
@@ -2771,8 +2923,9 @@ call added 0 0 0 -> 0
 mouse-child 2004
 call drag 0 39 0 -> 0
 11 0 39 0 -> 0
-257 2004 5 9 -> 0
-321 2003 0 0 -> 0
+622 comp 59 54 0 -> 2004
+622 comp 4 2004 at 5 9 12 22
+622 comp 10 2003 0 -> 0
 event 9000 15 2004
 mouse-pos 21 32
 call event 9000 0 0 -> 0
@@ -2784,15 +2937,17 @@ call event 9001 0 0 -> 0
 size 10 93
 call size a 5d 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 54 -> 0
-152 pos-size 2003 0 22 10 68
-151 2004 0 0 -> 0
+622 comp 4 2002 at 0 84 10 9
+622 comp 4 2003 at 0 22 12 9
+622 comp 5 2003 at 0 22 10 68
+622 comp 58 2004 0 -> 0
 size 27 41
 call size 1b 29 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 20 -> 0
-152 pos-size 2003 0 22 27 16
-151 2004 0 0 -> 0
+622 comp 4 2002 at 0 32 10 9
+622 comp 4 2003 at 0 22 10 68
+622 comp 5 2003 at 0 22 27 16
+622 comp 58 2004 0 -> 0
 event 9002 15 0
 mouse-pos 19 22
 call event 9002 0 0 -> 0
@@ -2806,6 +2961,7 @@ call event 9004 0 0 -> 0
 mouse-child 0
 call drag 11 7 0 -> 0
 11 11 7 0 -> 0
+622 comp 59 54 0 -> 0
 call range b1 4e 0 -> 0
 call range 105 93 0 -> 0
 event 9005 15 0
@@ -2813,24 +2969,28 @@ mouse-pos 24 33
 call event 9005 0 0 -> 0
 176 9005 0 0 -> 0
 call enable 0 0 0 -> 0
-327 0 0 0 -> 0
-150 2001 0 0 -> 0
-150 2002 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 16 54 0 -> 0
+622 comp 10 54 0 -> 0
+622 comp 15 2001 0 -> 0
+622 comp 15 2002 0 -> 0
+622 comp 58 2004 0 -> 0
 size 16 322
 call size 10 142 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 139 -> 0
-152 pos-size 2003 0 22 16 297
-151 2004 0 0 -> 0
-152 pos-size 2004 5 22 12 167
+622 comp 4 2002 at 0 313 10 9
+622 comp 4 2003 at 0 22 27 16
+622 comp 5 2003 at 0 22 16 297
+622 comp 58 2004 0 -> 0
+622 comp 4 2004 at 5 22 12 22
+622 comp 5 2004 at 5 22 12 167
 size 24 83
 call size 18 53 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 4a -> 0
-152 pos-size 2003 0 22 24 58
-151 2004 0 0 -> 0
-320 2004 c 20 -> 0
+622 comp 4 2002 at 0 74 10 9
+622 comp 4 2003 at 0 22 16 297
+622 comp 5 2003 at 0 22 24 58
+622 comp 58 2004 0 -> 0
+622 comp 5 2004 at 5 22 12 32
 free
 159 2004 0 0 -> 0
 159 2003 0 0 -> 0
@@ -2863,6 +3023,7 @@ call position 125 0 0 -> 0
 mouse-child 2001
 call drag 74 14 0 -> 0
 11 74 14 0 -> 0
+622 comp 59 54 0 -> 2001
 call get-position 0 0 0 -> 293
 mouse-child 2003
 call down f fffffffffffffffb 2 -> 0
@@ -2870,13 +3031,15 @@ call down f fffffffffffffffb 2 -> 0
 size 29 161
 call size 1d a1 0 -> 0
 3 0 0 0 -> 0
-320 2002 a1 a1 -> 0
-257 2002 ffffffffffffff7c 0 -> 0
-152 pos-size 2004 32 0 -149 161
-151 2003 0 0 -> 0
+622 comp 5 2002 at 28 1 161 161
+622 comp 4 2002 at -132 0 161 161
+622 comp 4 2004 at 32 0 0 0
+622 comp 5 2004 at 32 0 0 161
+622 comp 58 2003 0 -> 0
 mouse-child 2003
 call down 15 9 0 -> 0
 6 15 9 0 -> 0
+622 comp 59 54 0 -> 2003
 call get-position 0 0 0 -> 293
 event 9000 15 2003
 mouse-pos 38 37
@@ -2888,8 +3051,8 @@ call down fffffffffffffffe 61 1 -> 0
 event 9001 15 2001
 mouse-pos 3 26
 call event 9001 0 0 -> 0
-151 2003 0 0 -> 0
-321 2004 0 0 -> 0
+622 comp 58 2003 0 -> 0
+622 comp 10 2004 0 -> 0
 fire 16
 call vertical 1 0 0 -> 0
 call add-controls 0 0 0 -> 0
@@ -2947,38 +3110,42 @@ call event 9000 0 0 -> 0
 call get-position 0 0 0 -> 0
 call min c5 0 0 -> 0
 call layout 1 0 0 -> 0
-151 2004 0 0 -> 0
+622 comp 58 2004 0 -> 0
 call is-vertical 0 0 0 -> 1
 size 20 264
 call size 14 108 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 ff -> 0
-152 pos-size 2005 0 9 20 246
-151 2004 0 0 -> 0
+622 comp 4 2002 at 0 255 0 9
+622 comp 4 2005 at 0 9 15 0
+622 comp 5 2005 at 0 9 20 246
+622 comp 58 2004 0 -> 0
 call position 6f 0 0 -> 0
 size 23 33
 call size 17 21 0 -> 0
 3 0 0 0 -> 0
-257 2002 0 18 -> 0
-152 pos-size 2005 0 9 23 15
-151 2004 0 0 -> 0
+622 comp 4 2002 at 0 24 0 9
+622 comp 4 2005 at 0 9 20 246
+622 comp 5 2005 at 0 9 23 15
+622 comp 58 2004 0 -> 0
 call range ea 95 0 -> 0
 mouse-child 0
 call down 15 19 2 -> 0
 6 15 19 2 -> 0
 call layout 0 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 7 -173 16 197
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 7 -173 16 8
+622 comp 5 2004 at 7 -173 16 197
 mouse-child 2004
 call drag 10 1d 0 -> 0
 11 10 1d 0 -> 0
+622 comp 59 54 0 -> 2004
 fire 16
 event 9001 15 2005
 mouse-pos 1 27
 call event 9001 0 0 -> 0
-151 2004 1 0 -> 0
-152 pos-size 2004 7 -173 16 197
-321 2005 0 0 -> 0
+622 comp 58 2004 1 -> 0
+622 comp 4 2004 at 7 -173 16 197
+622 comp 10 2005 0 -> 0
 fire 16
 comp 2006 12 24 14 8 1
 call part 2 2006 0 -> 0

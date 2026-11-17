@@ -31,6 +31,7 @@
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
 #include "won_blocking.h"
+#include "won_servconn_cpp.h" // the stand-in PeerAuthOp and MsgCallback overrides reached
 #include "rust/won_net/hostop.h"
 
 using namespace WONAPI;
@@ -586,6 +587,7 @@ static std::string GoldenPath()
 
 int main(int argc, char** argv)
 {
+    BindServerConnectionCpp();
     AsyncSocket::StartWinsock();
     {
         WONAPICoreEx aCore;

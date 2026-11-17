@@ -112,10 +112,6 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
         return CtOwnCall(t->mParent, (V)a, (intptr_t)static_cast<Component*>(t), 0);
     case Op::CtVirt: return CtOwnCall(t, (V)a, b, c);
     case Op::CtDetach: Comp(a)->mParent->RemoveChild(Comp(a)); return 0;
-    case Op::CtSetParent: Comp(a)->mParent = b != 0 ? t : NULL; return 0;
-    case Op::CtSetFocusId: Comp(a)->mFocusId = (unsigned char)b; return 0;
-    case Op::CtSetInvalidState: Comp(a)->mInvalidState = (char)b; return 0;
-    case Op::CtSetTimerFlags: t->mTimerFlags = (char)a; return 0;
     case Op::CtAddBG: {
         // A container not yet under a root (the lobby's tab control is laid out, and brings its page to the top, before
         // the lobby screen joins the root) has no root container. The original called AddBG on that NULL root, which

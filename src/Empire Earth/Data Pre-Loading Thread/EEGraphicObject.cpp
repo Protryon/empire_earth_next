@@ -33,6 +33,7 @@ std::vector<EEMedia*> gMediaTable;          // 0x4e8448 (EEMedia::Get/GetCount r
 #include "ee/EEPhysics.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEGraphicObject.h"
+#include "ee/EEDbRecords.h"
 #include "ee/EEWheel.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGlobalConstants.h"
@@ -41,263 +42,29 @@ extern unsigned long& gTexturePixelDepth;
 extern unsigned long& gTextureMipLevelsToDrop;
 extern bool& gTrilinearFilter;
 
-// 0x43e584: the tag-point kind names, one per graphic-effect kind (0x48 of 0x40 chars; the last two empty). .rdata
-// after EEGraphicEffect.cpp's vtables, so this unit defines it; initializer from the original bytes
-extern const char gTagPointKindNames[0x48][0x40];
-const char gTagPointKindNames[0x48][0x40] = {
-    "damage_trail", "2ddebris", "invalid", "exhaust_trail",
-    "2dexplosion", "2dfire", "impact", "impact",
-    "invalid", "weapon_mount", "invalid", "damage_trail",
-    "water_splash", "light", "invalid", "invalid",
-    "invalid", "invalid", "blast_wave", "invalid",
-    "invalid", "invalid", "winter_breath", "invalid",
-    "2dexplosion", "3ddebris", "invalid", "exhaust_trail",
-    "3dexplosion", "3dfire", "weapon_mount", "weapon_mount",
-    "terrain_deformation", "weapon_mount", "water_ripple", "invalid",
-    "invalid", "invalid", "invalid", "invalid",
-    "invalid", "invalid", "invalid", "invalid",
-    "invalid", "invalid", "invalid", "invalid",
-    "invalid", "invalid", "invalid", "invalid",
-    "invalid", "invalid", "invalid", "end_water_ripple",
-    "end_2dfire", "invalid", "invalid", "invalid",
-    "invalid", "invalid", "invalid", "invalid",
-    "invalid", "invalid", "invalid", "invalid",
-    "invalid", "invalid", "", ""
-};
-
-// 0x4e8434..0x4e8440: four built-in graphic objects outside gMediaTable; LoadTable clears them, EEEvent EEUnloadBuiltInGraphicObjects
-// 0x1ca6d9 unloads them and deletes those with mMediaIndex -1 (provisional names)
-EEGraphicObject* gGraphicObjectU4E8434;
-EEGraphicObject* gGraphicObjectU4E8438;
-EEGraphicObject* gGraphicObjectU4E843C;
-EEGraphicObject* gGraphicObjectU4E8440;
-
-// One record of the graphics table (0x2cc bytes, read whole; LoadTable passes it to the loader 0xd7b37). Field names
-// by offset: the loader's copies give the types (the per-state animation blocks are packed: each state's closing
-// flag shares a dword with the next state's first flag). +0x00..+0x68 is not read by the loader
-struct EEGraphicObjectRecord {
-    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
-    int32_t mMediaIndex;      // +0x68
-    bool mIsDrawn;            // +0x6c
-    int32_t mUnusedBuildingValue1; // +0x70
-    int32_t mUnusedBuildingValue2; // +0x74
-    bool mSharesFrames0;      // +0x78
-    uint32_t mFirstFrame0;       // +0x7c
-    uint32_t mLastFrame0;       // +0x80
-    uint32_t mFrameTime0;       // +0x84
-    bool mLoops0;             // +0x88
-    uint32_t mUnusedHoldTime0;      // +0x8c (not read: the loader sets mCamouflageTimer[0] to 300000)
-    uint32_t mSound1Frame0;       // +0x90
-    uint32_t mSound2Frame0;       // +0x94
-    uint32_t mSound1Index0;       // +0x98
-    uint32_t mSound2Index0;       // +0x9c
-    bool mIsSpeedScaled0;     // +0xa0
-    bool mSharesFrames13;     // +0xa1
-    uint32_t mFirstFrame13;       // +0xa4
-    uint32_t mLastFrame13;       // +0xa8
-    uint32_t mFrameTime13;       // +0xac
-    bool mLoops13;            // +0xb0
-    uint32_t mHoldTime13;       // +0xb4
-    uint32_t mSound1Frame13;       // +0xb8
-    uint32_t mSound2Frame13;       // +0xbc
-    uint32_t mSound1Index13;       // +0xc0
-    uint32_t mSound2Index13;       // +0xc4
-    bool mIsSpeedScaled13;    // +0xc8
-    bool mSharesFrames7;      // +0xc9
-    uint32_t mFirstFrame7;       // +0xcc
-    uint32_t mLastFrame7;       // +0xd0
-    uint32_t mFrameTime7;       // +0xd4
-    bool mLoops7;             // +0xd8
-    uint32_t mHoldTime7;       // +0xdc
-    uint32_t mSound1Frame7;       // +0xe0
-    uint32_t mSound2Frame7;       // +0xe4
-    uint32_t mSound1Index7;       // +0xe8
-    uint32_t mSound2Index7;       // +0xec
-    bool mIsSpeedScaled7;     // +0xf0
-    bool mSharesFrames8;      // +0xf1
-    uint32_t mFirstFrame8;       // +0xf4
-    uint32_t mLastFrame8;       // +0xf8
-    uint32_t mFrameTime8;       // +0xfc
-    bool mLoops8;             // +0x100
-    uint32_t mHoldTime8;       // +0x104
-    uint32_t mSound1Frame8;       // +0x108
-    uint32_t mSound2Frame8;       // +0x10c
-    uint32_t mSound1Index8;       // +0x110
-    uint32_t mSound2Index8;       // +0x114
-    bool mIsSpeedScaled8;     // +0x118
-    bool mSharesFrames4;      // +0x119
-    uint32_t mFirstFrame4;       // +0x11c
-    uint32_t mLastFrame4;       // +0x120
-    uint32_t mFrameTime4;       // +0x124
-    bool mLoops4;             // +0x128
-    uint32_t mHoldTime4;       // +0x12c
-    bool mIsSpeedScaled4;     // +0x130
-    bool mSharesFrames5;      // +0x131
-    uint32_t mFirstFrame5;       // +0x134
-    uint32_t mLastFrame5;       // +0x138
-    uint32_t mFrameTime5;       // +0x13c
-    bool mLoops5;             // +0x140
-    uint32_t mHoldTime5;       // +0x144
-    bool mIsSpeedScaled5;     // +0x148
-    bool mSharesFrames12;     // +0x149
-    uint32_t mFirstFrame12;       // +0x14c
-    uint32_t mLastFrame12;       // +0x150
-    uint32_t mFrameTime12;       // +0x154
-    bool mLoops12;            // +0x158
-    uint32_t mHoldTime12;       // +0x15c
-    uint32_t mSound1Frame12;       // +0x160
-    uint32_t mSound2Frame12;       // +0x164
-    uint32_t mSound1Index12;       // +0x168
-    uint32_t mSound2Index12;       // +0x16c
-    bool mIsSpeedScaled12;    // +0x170
-    bool mSharesFrames11;     // +0x171
-    uint32_t mFirstFrame11;       // +0x174
-    uint32_t mLastFrame11;       // +0x178
-    uint32_t mFrameTime11;       // +0x17c
-    bool mLoops11;            // +0x180
-    uint32_t mHoldTime11;       // +0x184
-    uint32_t mSound1Frame11;       // +0x188
-    uint32_t mSound2Frame11;       // +0x18c
-    uint32_t mSound1Index11;       // +0x190
-    uint32_t mSound2Index11;       // +0x194
-    bool mIsSpeedScaled11;    // +0x198
-    bool mSharesFrames9;      // +0x199
-    uint32_t mFirstFrame9;       // +0x19c
-    uint32_t mLastFrame9;       // +0x1a0
-    uint32_t mFrameTime9;       // +0x1a4
-    bool mLoops9;             // +0x1a8
-    uint32_t mHoldTime9;       // +0x1ac
-    uint32_t mSound1Frame9;       // +0x1b0
-    uint32_t mSound2Frame9;       // +0x1b4
-    uint32_t mSound1Index9;       // +0x1b8
-    uint32_t mSound2Index9;       // +0x1bc
-    bool mIsSpeedScaled9;     // +0x1c0
-    bool mSharesFrames10;     // +0x1c1
-    uint32_t mFirstFrame10;       // +0x1c4
-    uint32_t mLastFrame10;       // +0x1c8
-    uint32_t mFrameTime10;       // +0x1cc
-    bool mLoops10;            // +0x1d0
-    uint32_t mHoldTime10;       // +0x1d4
-    uint32_t mSound1Frame10;       // +0x1d8
-    uint32_t mSound2Frame10;       // +0x1dc
-    uint32_t mSound1Index10;       // +0x1e0
-    uint32_t mSound2Index10;       // +0x1e4
-    bool mIsSpeedScaled10;    // +0x1e8
-    bool mSharesFrames6;      // +0x1e9
-    uint32_t mFirstFrame6;       // +0x1ec
-    uint32_t mLastFrame6;       // +0x1f0
-    uint32_t mFrameTime6;       // +0x1f4
-    bool mLoops6;             // +0x1f8
-    uint32_t mHoldTime6;       // +0x1fc
-    uint32_t mSound1Frame6;       // +0x200
-    uint32_t mSound2Frame6;       // +0x204
-    uint32_t mSound1Index6;       // +0x208
-    uint32_t mSound2Index6;       // +0x20c
-    bool mIsSpeedScaled6;     // +0x210
-    bool mSharesFrames3;      // +0x211
-    uint32_t mFirstFrame3;       // +0x214
-    uint32_t mLastFrame3;       // +0x218
-    uint32_t mFrameTime3;       // +0x21c
-    bool mLoops3;             // +0x220
-    uint32_t mHoldTime3;       // +0x224
-    uint32_t mSound1Frame3;       // +0x228
-    uint32_t mSound2Frame3;       // +0x22c
-    uint32_t mSound1Index3;       // +0x230
-    uint32_t mSound2Index3;       // +0x234
-    bool mIsSpeedScaled3;     // +0x238
-    bool mSharesFrames1;      // +0x239
-    uint32_t mFirstFrame1;       // +0x23c
-    uint32_t mLastFrame1;       // +0x240
-    uint32_t mFrameTime1;       // +0x244
-    bool mLoops1;             // +0x248
-    uint32_t mHoldTime1;       // +0x24c
-    uint32_t mSound1Frame1;       // +0x250
-    uint32_t mSound2Frame1;       // +0x254
-    uint32_t mSound1Index1;       // +0x258
-    uint32_t mSound2Index1;       // +0x25c
-    bool mIsSpeedScaled1;     // +0x260
-    bool mSharesFrames2;      // +0x261
-    uint32_t mFirstFrame2;       // +0x264
-    uint32_t mLastFrame2;       // +0x268
-    uint32_t mFrameTime2;       // +0x26c
-    bool mLoops2;             // +0x270
-    uint32_t mHoldTime2;       // +0x274
-    uint32_t mSound1Frame2;       // +0x278
-    uint32_t mSound2Frame2;       // +0x27c
-    uint32_t mSound1Index2;       // +0x280
-    uint32_t mSound2Index2;       // +0x284
-    bool mIsSpeedScaled2;     // +0x288
-    int32_t mUnusedIsBuilding; // +0x28c
-    bool mUnusedIsSprite;     // +0x290
-    char _gap291[0x7];
-    int32_t mUnusedDummyValue; // +0x298
-    int32_t mUnusedBaseGraphic; // +0x29c
-    int32_t mAlphaReference;  // +0x2a0
-    int32_t mUnusedBuildingIndex; // +0x2a4
-    char _gap2A8[0x4];
-    int32_t mKind;            // +0x2ac
-    bool mHasAlpha;           // +0x2b0
-    float mOpacity;           // +0x2b4
-    char _gap2B8[0x4];
-    float mMipMapBias;        // +0x2bc
-    int32_t mNumMipLevelsToDrop; // +0x2c0
-    int32_t mMaxMipLevelsToDrop; // +0x2c4
-    bool mCreateMipMaps;      // +0x2c8
-};
-static_assert(sizeof(EEGraphicObjectRecord) == 716, "on-disk record: 716 bytes on every target");
-
-void EELoadGraphicObjectRecord(EEGraphicObject* inObject, EEGraphicObjectRecord* inRecord);
-
-// Creates an empty, unloaded graphic object: no names, models, textures or sounds, drawn, mip maps on
+// Creates an empty, unloaded graphic object: no names, models, textures or sounds, drawn, mip maps on (the record's
+// members: ee_data tables.rs)
 EEGraphicObject::EEGraphicObject()
 {
+    ee_data_graphic_object_default(this);
     for (unsigned long i = 0; i < 14; i++) {
         this->mTextures[i] = NULL;
         this->mModels[i] = NULL;
-        this->mFrameCounts[i] = 0;
         this->mSounds1[i] = NULL;
         this->mSounds2[i] = NULL;
-        this->mIsSpeedScaled[i] = false;
-        this->mHoldTimes[i] = 0;
-        this->mStartFrames[i] = 0;
-        this->mLastFrames[i] = 0;
-        this->mFrameTimes[i] = 0;
-        this->mSound1Frames[i] = 0;
-        this->mSound2Frames[i] = 0;
-        this->mLoops[i] = false;
-        this->mSharesFrames[i] = false;
         this->mTagPoints[i] = NULL;
+        this->mModelNames[i] = NULL;
+        this->mTextureNames[i] = NULL;
     }
     this->mFileName = NULL;
     this->mTextureName = NULL;
     this->mShadowModelName = NULL;
     this->mShadowTextureName = NULL;
-    for (unsigned long j = 0; j < 14; j++) {
-        this->mModelNames[j] = NULL;
-        this->mTextureNames[j] = NULL;
-    }
-    this->mMediaIndex = -1;
-    this->mKind = -1;
-    this->mMipMapBias = 0.0f;
     this->mModel = NULL;
-    this->mAlphaReference = 0.0f;
     this->mTexture = NULL;
     this->mShadowModel = NULL;
     this->mShadowTexture = NULL;
-    this->mL318 = 0;
-    this->mL31C = 0;
-    this->mL320 = 0;
-    this->mL4B0 = 0;
-    this->mL4B4 = 0;
     this->mMediaCount = 0;
-    this->mOpacity = 0.01f;
-    this->mMaxMipLevelsToDrop = 2;
-    this->mNumMipLevelsToDrop = 0;
-    this->mB4CE = false;
-    this->mIsDrawn = true;
-    this->mHasAlpha = false;
-    this->mCreateMipMaps = true;
     this->mIsLoading = false;
 }
 
@@ -347,50 +114,44 @@ void EEGraphicObject::CollectParts(GEModel* inModel, const GETransformation& inP
         this->CollectParts(inModel->GetSubModel(i), theTransformation);
 }
 
-// Reads the graphics table into the media table (names, then the record); entries with media index 0 are
-// dropped. Returns the last read result
+// Reads the graphics table into the media table (each record after its 32 names; the record and its copy are ee_data
+// tables.rs': the animation states, the sounds by id, alpha and mip settings); entries with media index 0 are dropped.
+// Returns the last read result
 long EEGraphicObject::LoadTable(FSFile* inFile)
 {
     UString theName;
-    unsigned long theCount = 0;
-    unsigned long theRead;
-    EEGraphicObjectRecord theRecord;
-    inFile->Open(kFileAccessRead);
-    gGraphicObjectU4E8440 = NULL;
-    gGraphicObjectU4E843C = NULL;
-    gGraphicObjectU4E8438 = NULL;
-    gGraphicObjectU4E8434 = NULL;
-    long theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK) {
-        gMediaTable.resize(theCount, NULL);
-        for (unsigned long i = 0; i < theCount; i++) {
-            EEGraphicObject* theObject = new EEGraphicObject;
-            gMediaTable[i] = theObject;
+    EEGraphicObject* theObject = NULL;
+    auto theNextName = [&]() { theName.Load(*inFile); return new UString((const char*)theName); };
+    return EEDbReadLeadRecords(inFile, ee_data_graphic_object_record_size(),
+        [](unsigned long inCount) { gMediaTable.resize(inCount, NULL); return true; },
+        [&](unsigned long inIndex) {
+            theObject = new EEGraphicObject;
+            gMediaTable[inIndex] = theObject;
             theName.Load(*inFile);
-            theName.Load(*inFile);
-            theObject->mFileName = new UString((const char*)theName);
-            theName.Load(*inFile);
-            theObject->mTextureName = new UString((const char*)theName);
+            theObject->mFileName = theNextName();
+            theObject->mTextureName = theNextName();
             for (unsigned long j = 0; j < 14; j++) {
-                theName.Load(*inFile);
-                theObject->mTextureNames[j] = new UString((const char*)theName);
-                theName.Load(*inFile);
-                theObject->mModelNames[j] = new UString((const char*)theName);
+                theObject->mTextureNames[j] = theNextName();
+                theObject->mModelNames[j] = theNextName();
             }
-            theName.Load(*inFile);
-            theObject->mShadowModelName = new UString((const char*)theName);
-            theName.Load(*inFile);
-            theObject->mShadowTextureName = new UString((const char*)theName);
-            theResult = inFile->Read(reinterpret_cast<char*>(&theRecord), sizeof(theRecord), theRead);
-            EELoadGraphicObjectRecord(theObject, &theRecord);
+            theObject->mShadowModelName = theNextName();
+            theObject->mShadowTextureName = theNextName();
+        },
+        [&](unsigned long inIndex, const unsigned char* inRecord) {
+            EeDataGraphicObjectSounds theSounds = ee_data_graphic_object_from_record(inRecord, theObject);
+            for (unsigned long i = 0; i < 14; i++) {
+                theObject->mSounds1[i] = EESoundObject::Get(theSounds.sound1[i]);
+                if (theObject->mSounds1[i] == NULL)
+                    theObject->mSound1Frames[i] = -1;
+                theObject->mSounds2[i] = EESoundObject::Get(theSounds.sound2[i]);
+                if (theObject->mSounds2[i] == NULL)
+                    theObject->mSound2Frames[i] = -1;
+            }
             if (theObject->mMediaIndex == 0) {
                 delete theObject;
-                gMediaTable[i] = NULL;
+                gMediaTable[inIndex] = NULL;
             }
-        }
-    }
-    inFile->Close();
-    return theResult;
+        });
 }
 
 // Deletes every entry of the media table and empties it
@@ -412,261 +173,6 @@ void EEDumpGraphicObjectTable(FSFileSpec& inFile)
                     theObject->mMediaCount);
     }
 }
-
-// Copies a graphics table record into the graphic object: animation states, sounds, alpha and mip settings
-// The record loader: the record's fields into the object, the sounds by id (an unset sound clears its index to -1),
-// then the frame counts from the frame ranges
-void EELoadGraphicObjectRecord(EEGraphicObject* inObject, EEGraphicObjectRecord* inRecord)
-{
-    if (inObject != NULL) {
-        inObject->mMediaIndex = inRecord->mMediaIndex;
-        inObject->mKind = inRecord->mKind;
-        inObject->mIsDrawn = inRecord->mIsDrawn;
-        inObject->mL318 = inRecord->mUnusedBuildingValue1;
-        inObject->mL31C = inRecord->mUnusedBuildingValue2;
-        inObject->mStartFrames[0] = inRecord->mFirstFrame0;
-        inObject->mLastFrames[0] = inRecord->mLastFrame0;
-        inObject->mFrameTimes[0] = inRecord->mFrameTime0;
-        inObject->mLoops[0] = inRecord->mLoops0;
-        inObject->mSharesFrames[0] = inRecord->mSharesFrames0;
-        inObject->mHoldTimes[0] = 300000;
-        inObject->mSounds1[0] = EESoundObject::Get(inRecord->mSound1Index0);
-        if (inObject->mSounds1[0] != NULL)
-            inObject->mSound1Frames[0] = inRecord->mSound1Frame0;
-        else
-            inObject->mSound1Frames[0] = -1;
-        inObject->mSounds2[0] = EESoundObject::Get(inRecord->mSound2Index0);
-        if (inObject->mSounds2[0] != NULL)
-            inObject->mSound2Frames[0] = inRecord->mSound2Frame0;
-        else
-            inObject->mSound2Frames[0] = -1;
-        inObject->mIsSpeedScaled[0] = inRecord->mIsSpeedScaled0;
-        inObject->mStartFrames[13] = inRecord->mFirstFrame13;
-        inObject->mLastFrames[13] = inRecord->mLastFrame13;
-        inObject->mFrameTimes[13] = inRecord->mFrameTime13;
-        inObject->mLoops[13] = inRecord->mLoops13;
-        inObject->mSharesFrames[13] = inRecord->mSharesFrames13;
-        inObject->mHoldTimes[13] = inRecord->mHoldTime13;
-        inObject->mSounds1[13] = EESoundObject::Get(inRecord->mSound1Index13);
-        if (inObject->mSounds1[13] != NULL)
-            inObject->mSound1Frames[13] = inRecord->mSound1Frame13;
-        else
-            inObject->mSound1Frames[13] = -1;
-        inObject->mSounds2[13] = EESoundObject::Get(inRecord->mSound2Index13);
-        if (inObject->mSounds2[13] != NULL)
-            inObject->mSound2Frames[13] = inRecord->mSound2Frame13;
-        else
-            inObject->mSound2Frames[13] = -1;
-        inObject->mIsSpeedScaled[13] = inRecord->mIsSpeedScaled13;
-        inObject->mStartFrames[7] = inRecord->mFirstFrame7;
-        inObject->mLastFrames[7] = inRecord->mLastFrame7;
-        inObject->mFrameTimes[7] = inRecord->mFrameTime7;
-        inObject->mLoops[7] = inRecord->mLoops7;
-        inObject->mSharesFrames[7] = inRecord->mSharesFrames7;
-        inObject->mHoldTimes[7] = inRecord->mHoldTime7;
-        inObject->mSounds1[7] = EESoundObject::Get(inRecord->mSound1Index7);
-        if (inObject->mSounds1[7] != NULL)
-            inObject->mSound1Frames[7] = inRecord->mSound1Frame7;
-        else
-            inObject->mSound1Frames[7] = -1;
-        inObject->mSounds2[7] = EESoundObject::Get(inRecord->mSound2Index7);
-        if (inObject->mSounds2[7] != NULL)
-            inObject->mSound2Frames[7] = inRecord->mSound2Frame7;
-        else
-            inObject->mSound2Frames[7] = -1;
-        inObject->mIsSpeedScaled[7] = inRecord->mIsSpeedScaled7;
-        inObject->mStartFrames[8] = inRecord->mFirstFrame8;
-        inObject->mLastFrames[8] = inRecord->mLastFrame8;
-        inObject->mFrameTimes[8] = inRecord->mFrameTime8;
-        inObject->mLoops[8] = inRecord->mLoops8;
-        inObject->mSharesFrames[8] = inRecord->mSharesFrames8;
-        inObject->mHoldTimes[8] = inRecord->mHoldTime8;
-        inObject->mSounds1[8] = EESoundObject::Get(inRecord->mSound1Index8);
-        if (inObject->mSounds1[8] != NULL)
-            inObject->mSound1Frames[8] = inRecord->mSound1Frame8;
-        else
-            inObject->mSound1Frames[8] = -1;
-        inObject->mSounds2[8] = EESoundObject::Get(inRecord->mSound2Index8);
-        if (inObject->mSounds2[8] != NULL)
-            inObject->mSound2Frames[8] = inRecord->mSound2Frame8;
-        else
-            inObject->mSound2Frames[8] = -1;
-        inObject->mIsSpeedScaled[8] = inRecord->mIsSpeedScaled8;
-        inObject->mStartFrames[4] = inRecord->mFirstFrame4;
-        inObject->mLastFrames[4] = inRecord->mLastFrame4;
-        inObject->mFrameTimes[4] = inRecord->mFrameTime4;
-        inObject->mLoops[4] = inRecord->mLoops4;
-        inObject->mSharesFrames[4] = inRecord->mSharesFrames4;
-        inObject->mHoldTimes[4] = inRecord->mHoldTime4;
-        inObject->mSounds1[4] = NULL;
-        inObject->mSound1Frames[4] = -1;
-        inObject->mSounds2[4] = NULL;
-        inObject->mSound2Frames[4] = -1;
-        inObject->mIsSpeedScaled[4] = inRecord->mIsSpeedScaled4;
-        inObject->mStartFrames[5] = inRecord->mFirstFrame5;
-        inObject->mLastFrames[5] = inRecord->mLastFrame5;
-        inObject->mFrameTimes[5] = inRecord->mFrameTime5;
-        inObject->mLoops[5] = inRecord->mLoops5;
-        inObject->mSharesFrames[5] = inRecord->mSharesFrames5;
-        inObject->mHoldTimes[5] = inRecord->mHoldTime5;
-        inObject->mSounds1[5] = NULL;
-        inObject->mSound1Frames[5] = -1;
-        inObject->mSounds2[5] = NULL;
-        inObject->mSound2Frames[5] = -1;
-        inObject->mIsSpeedScaled[5] = inRecord->mIsSpeedScaled5;
-        inObject->mStartFrames[12] = inRecord->mFirstFrame12;
-        inObject->mLastFrames[12] = inRecord->mLastFrame12;
-        inObject->mFrameTimes[12] = inRecord->mFrameTime12;
-        inObject->mLoops[12] = inRecord->mLoops12;
-        inObject->mSharesFrames[12] = inRecord->mSharesFrames12;
-        inObject->mHoldTimes[12] = inRecord->mHoldTime12;
-        inObject->mSounds1[12] = EESoundObject::Get(inRecord->mSound1Index12);
-        if (inObject->mSounds1[12] != NULL)
-            inObject->mSound1Frames[12] = inRecord->mSound1Frame12;
-        else
-            inObject->mSound1Frames[12] = -1;
-        inObject->mSounds2[12] = EESoundObject::Get(inRecord->mSound2Index12);
-        if (inObject->mSounds2[12] != NULL)
-            inObject->mSound2Frames[12] = inRecord->mSound2Frame12;
-        else
-            inObject->mSound2Frames[12] = -1;
-        inObject->mIsSpeedScaled[12] = inRecord->mIsSpeedScaled12;
-        inObject->mStartFrames[11] = inRecord->mFirstFrame11;
-        inObject->mLastFrames[11] = inRecord->mLastFrame11;
-        inObject->mFrameTimes[11] = inRecord->mFrameTime11;
-        inObject->mLoops[11] = inRecord->mLoops11;
-        inObject->mSharesFrames[11] = inRecord->mSharesFrames11;
-        inObject->mHoldTimes[11] = inRecord->mHoldTime11;
-        inObject->mSounds1[11] = EESoundObject::Get(inRecord->mSound1Index11);
-        if (inObject->mSounds1[11] != NULL)
-            inObject->mSound1Frames[11] = inRecord->mSound1Frame11;
-        else
-            inObject->mSound1Frames[11] = -1;
-        inObject->mSounds2[11] = EESoundObject::Get(inRecord->mSound2Index11);
-        if (inObject->mSounds2[11] != NULL)
-            inObject->mSound2Frames[11] = inRecord->mSound2Frame11;
-        else
-            inObject->mSound2Frames[11] = -1;
-        inObject->mIsSpeedScaled[11] = inRecord->mIsSpeedScaled11;
-        inObject->mStartFrames[9] = inRecord->mFirstFrame9;
-        inObject->mLastFrames[9] = inRecord->mLastFrame9;
-        inObject->mFrameTimes[9] = inRecord->mFrameTime9;
-        inObject->mLoops[9] = inRecord->mLoops9;
-        inObject->mSharesFrames[9] = inRecord->mSharesFrames9;
-        inObject->mHoldTimes[9] = inRecord->mHoldTime9;
-        inObject->mSounds1[9] = EESoundObject::Get(inRecord->mSound1Index9);
-        if (inObject->mSounds1[9] != NULL)
-            inObject->mSound1Frames[9] = inRecord->mSound1Frame9;
-        else
-            inObject->mSound1Frames[9] = -1;
-        inObject->mSounds2[9] = EESoundObject::Get(inRecord->mSound2Index9);
-        if (inObject->mSounds2[9] != NULL)
-            inObject->mSound2Frames[9] = inRecord->mSound2Frame9;
-        else
-            inObject->mSound2Frames[9] = -1;
-        inObject->mIsSpeedScaled[9] = inRecord->mIsSpeedScaled9;
-        inObject->mStartFrames[10] = inRecord->mFirstFrame10;
-        inObject->mLastFrames[10] = inRecord->mLastFrame10;
-        inObject->mFrameTimes[10] = inRecord->mFrameTime10;
-        inObject->mLoops[10] = inRecord->mLoops10;
-        inObject->mSharesFrames[10] = inRecord->mSharesFrames10;
-        inObject->mHoldTimes[10] = inRecord->mHoldTime10;
-        inObject->mSounds1[10] = EESoundObject::Get(inRecord->mSound1Index10);
-        if (inObject->mSounds1[10] != NULL)
-            inObject->mSound1Frames[10] = inRecord->mSound1Frame10;
-        else
-            inObject->mSound1Frames[10] = -1;
-        inObject->mSounds2[10] = EESoundObject::Get(inRecord->mSound2Index10);
-        if (inObject->mSounds2[10] != NULL)
-            inObject->mSound2Frames[10] = inRecord->mSound2Frame10;
-        else
-            inObject->mSound2Frames[10] = -1;
-        inObject->mIsSpeedScaled[10] = inRecord->mIsSpeedScaled10;
-        inObject->mStartFrames[6] = inRecord->mFirstFrame6;
-        inObject->mLastFrames[6] = inRecord->mLastFrame6;
-        inObject->mFrameTimes[6] = inRecord->mFrameTime6;
-        inObject->mLoops[6] = inRecord->mLoops6;
-        inObject->mSharesFrames[6] = inRecord->mSharesFrames6;
-        inObject->mHoldTimes[6] = inRecord->mHoldTime6;
-        inObject->mSounds1[6] = EESoundObject::Get(inRecord->mSound1Index6);
-        if (inObject->mSounds1[6] != NULL)
-            inObject->mSound1Frames[6] = inRecord->mSound1Frame6;
-        else
-            inObject->mSound1Frames[6] = -1;
-        inObject->mSounds2[6] = EESoundObject::Get(inRecord->mSound2Index6);
-        if (inObject->mSounds2[6] != NULL)
-            inObject->mSound2Frames[6] = inRecord->mSound2Frame6;
-        else
-            inObject->mSound2Frames[6] = -1;
-        inObject->mIsSpeedScaled[6] = inRecord->mIsSpeedScaled6;
-        inObject->mStartFrames[3] = inRecord->mFirstFrame3;
-        inObject->mLastFrames[3] = inRecord->mLastFrame3;
-        inObject->mFrameTimes[3] = inRecord->mFrameTime3;
-        inObject->mLoops[3] = inRecord->mLoops3;
-        inObject->mSharesFrames[3] = inRecord->mSharesFrames3;
-        inObject->mHoldTimes[3] = inRecord->mHoldTime3;
-        inObject->mSounds1[3] = EESoundObject::Get(inRecord->mSound1Index3);
-        if (inObject->mSounds1[3] != NULL)
-            inObject->mSound1Frames[3] = inRecord->mSound1Frame3;
-        else
-            inObject->mSound1Frames[3] = -1;
-        inObject->mSounds2[3] = EESoundObject::Get(inRecord->mSound2Index3);
-        if (inObject->mSounds2[3] != NULL)
-            inObject->mSound2Frames[3] = inRecord->mSound2Frame3;
-        else
-            inObject->mSound2Frames[3] = -1;
-        inObject->mIsSpeedScaled[3] = inRecord->mIsSpeedScaled3;
-        inObject->mStartFrames[1] = inRecord->mFirstFrame1;
-        inObject->mLastFrames[1] = inRecord->mLastFrame1;
-        inObject->mFrameTimes[1] = inRecord->mFrameTime1;
-        inObject->mLoops[1] = inRecord->mLoops1;
-        inObject->mSharesFrames[1] = inRecord->mSharesFrames1;
-        inObject->mHoldTimes[1] = inRecord->mHoldTime1;
-        inObject->mSounds1[1] = EESoundObject::Get(inRecord->mSound1Index1);
-        if (inObject->mSounds1[1] != NULL)
-            inObject->mSound1Frames[1] = inRecord->mSound1Frame1;
-        else
-            inObject->mSound1Frames[1] = -1;
-        inObject->mSounds2[1] = EESoundObject::Get(inRecord->mSound2Index1);
-        if (inObject->mSounds2[1] != NULL)
-            inObject->mSound2Frames[1] = inRecord->mSound2Frame1;
-        else
-            inObject->mSound2Frames[1] = -1;
-        inObject->mIsSpeedScaled[1] = inRecord->mIsSpeedScaled1;
-        inObject->mStartFrames[2] = inRecord->mFirstFrame2;
-        inObject->mLastFrames[2] = inRecord->mLastFrame2;
-        inObject->mFrameTimes[2] = inRecord->mFrameTime2;
-        inObject->mLoops[2] = inRecord->mLoops2;
-        inObject->mSharesFrames[2] = inRecord->mSharesFrames2;
-        inObject->mHoldTimes[2] = inRecord->mHoldTime2;
-        inObject->mSounds1[2] = EESoundObject::Get(inRecord->mSound1Index2);
-        if (inObject->mSounds1[2] != NULL)
-            inObject->mSound1Frames[2] = inRecord->mSound1Frame2;
-        else
-            inObject->mSound1Frames[2] = -1;
-        inObject->mSounds2[2] = EESoundObject::Get(inRecord->mSound2Index2);
-        if (inObject->mSounds2[2] != NULL)
-            inObject->mSound2Frames[2] = inRecord->mSound2Frame2;
-        else
-            inObject->mSound2Frames[2] = -1;
-        inObject->mIsSpeedScaled[2] = inRecord->mIsSpeedScaled2;
-        inObject->mL4B4 = inRecord->mUnusedIsBuilding;
-        inObject->mB4CE = inRecord->mUnusedIsSprite;
-        inObject->mL4B0 = inRecord->mUnusedDummyValue;
-        inObject->mL2FC = inRecord->mUnusedBaseGraphic;
-        inObject->mL320 = inRecord->mUnusedBuildingIndex;
-        inObject->mHasAlpha = inRecord->mHasAlpha;
-        inObject->mMipMapBias = inRecord->mMipMapBias;
-        inObject->mOpacity = inRecord->mOpacity;
-        inObject->mAlphaReference = inRecord->mAlphaReference * kHeightEpsilon;
-        inObject->mNumMipLevelsToDrop = inRecord->mNumMipLevelsToDrop;
-        inObject->mCreateMipMaps = inRecord->mCreateMipMaps;
-        inObject->mMaxMipLevelsToDrop = inRecord->mMaxMipLevelsToDrop;
-        for (unsigned long i = 0; i < 14; i++)
-            inObject->mFrameCounts[i] = inObject->mLastFrames[i] - inObject->mStartFrames[i] + 1;
-    }
-}
-
 
 // Returns the tag points of a kind on a part's model, or NULL when it has none
 EETagPointList* EEGraphicObject::GetTagPoints(unsigned long inPart, long inKind)
@@ -736,44 +242,22 @@ long EEGraphicObject::LoadMedia()
     theDescription.mCreateMIPMaps = true;
     std::map<unsigned long, long> theFrames[15];
     std::map<unsigned long, long> theNoFrames;
-    std::map<UString, long> theModelIndices;
+    long theSlots[14];
     long theResult = 0;
-    long theNextIndex = 0;
     sDatabaseLock.mLock->Enter();
     if (this->mMediaCount == 0) {
         this->mMediaCount = 1;
         this->mIsLoading = true;
         sDatabaseLock.mLock->Leave();
-        for (unsigned long i = 0; i < 14; i++) {
-            if (this->mFrameCounts[i] > 4 && this->mSharesFrames[i]) {
-                long theIndex;
-                if (this->mModelNames[i] != NULL && this->mModelNames[i]->GetLength() > 0) {
-                    std::map<UString, long>::iterator theFound = theModelIndices.find(*this->mModelNames[i]);
-                    if (theFound == theModelIndices.end()) {
-                        theModelIndices.insert(std::make_pair(*this->mModelNames[i], theNextIndex));
-                        theIndex = theNextIndex++;
-                    } else
-                        theIndex = theFound->second;
-                } else
-                    theIndex = 14;
-                unsigned long theFrame;
-                if (this->mFrameCounts[i] % 2 == 0) {
-                    for (theFrame = this->mStartFrames[i]; theFrame <= this->mLastFrames[i]; theFrame++) {
-                        if ((theFrame - this->mStartFrames[i]) % 2 == 1) {
-                            if (theFrame != this->mLastFrames[i])
-                                theFrames[theIndex].insert(std::map<unsigned long, long>::value_type(theFrame, -1));
-                            else
-                                theFrames[theIndex].insert(std::map<unsigned long, long>::value_type(theFrame - 1, 1));
-                        }
-                    }
-                } else {
-                    for (theFrame = this->mStartFrames[i]; theFrame <= this->mLastFrames[i]; theFrame++) {
-                        if ((theFrame - this->mStartFrames[i]) % 2 == 1)
-                            theFrames[theIndex].insert(std::map<unsigned long, long>::value_type(theFrame, -1));
-                    }
-                }
-            }
-        }
+        // the texture-frame maps of the animated parts that share frames, by model (ee_data tables.rs)
+        EeDataGraphicFramePart theParts[14];
+        for (unsigned long i = 0; i < 14; i++)
+            theParts[i] = {this->mFrameCounts[i], this->mStartFrames[i], this->mLastFrames[i],
+                           this->mModelNames[i] != NULL ? (const char*)*this->mModelNames[i] : NULL, this->mSharesFrames[i]};
+        ee_data_graphic_frame_maps(theParts, 14, theSlots,
+            [](void* inFrames, long inSlot, unsigned long inFrame, long inValue) {
+                static_cast<std::map<unsigned long, long>*>(inFrames)[inSlot].insert(std::make_pair(inFrame, inValue));
+            }, theFrames);
         if (this->mModel == NULL && this->mFileName != NULL && this->mFileName->GetLength() > 0) {
             this->mModel = gModelManager->LoadModel(*this->mFileName, theFrames[14]);
             if (this->mModel != NULL)
@@ -804,8 +288,7 @@ long EEGraphicObject::LoadMedia()
             }
             if (this->mModelNames[thePart] != NULL && this->mModelNames[thePart]->GetLength() > 0) {
                 if (this->mFrameCounts[thePart] > 4 && this->mSharesFrames[thePart])
-                    this->mModels[thePart] = gModelManager->LoadModel(*this->mModelNames[thePart],
-                        theFrames[theModelIndices.find(*this->mModelNames[thePart])->second]);
+                    this->mModels[thePart] = gModelManager->LoadModel(*this->mModelNames[thePart], theFrames[theSlots[thePart]]);
                 else
                     this->mModels[thePart] = gModelManager->LoadModel(*this->mModelNames[thePart], theNoFrames);
                 if (this->mModels[thePart] != NULL)
@@ -881,28 +364,16 @@ void EEGraphicObject::CollectTagPoints(unsigned long inPart, GEModel* inModel, c
     unsigned long i;
     for (i = 0; i < theTagPointCount; i++) {
         if (theRoot != this->mModels[0] || inPart == 0) {
-            for (long theKind = 0; (unsigned long)theKind < 0x48; theKind++) {
-                size_t theLength = strlen(gTagPointKindNames[theKind]);
-                if (theLength > 0
-                    && strncmp(inModel->GetTagPointName(i), gTagPointKindNames[theKind], theLength) == 0) {
-                    std::map<const GEModel*, EETagPointList*>* theLists;
-                    std::map<long, std::map<const GEModel*, EETagPointList*>*>::iterator theKindFound =
-                        this->mTagPointMaps.find(theKind);
-                    if (theKindFound == this->mTagPointMaps.end()) {
-                        theLists = new std::map<const GEModel*, EETagPointList*>;
-                        this->mTagPointMaps.insert(
-                            std::map<long, std::map<const GEModel*, EETagPointList*>*>::value_type(theKind, theLists));
-                    } else
-                        theLists = theKindFound->second;
-                    EETagPointList* theList;
-                    std::map<const GEModel*, EETagPointList*>::iterator theListFound = theLists->find(theRoot);
-                    if (theListFound == theLists->end()) {
-                        theList = new EETagPointList;
-                        theLists->insert(std::map<const GEModel*, EETagPointList*>::value_type(theRoot, theList));
-                    } else
-                        theList = theListFound->second;
-                    theList->Add(inModel, i);
-                }
+            long theKinds[0x48];
+            size_t theKindCount = ee_data_tag_point_kinds(inModel->GetTagPointName(i), theKinds);
+            for (size_t k = 0; k < theKindCount; k++) {
+                std::map<const GEModel*, EETagPointList*>*& theLists = this->mTagPointMaps[theKinds[k]];
+                if (theLists == NULL)
+                    theLists = new std::map<const GEModel*, EETagPointList*>;
+                EETagPointList*& theList = (*theLists)[theRoot];
+                if (theList == NULL)
+                    theList = new EETagPointList;
+                theList->Add(inModel, i);
             }
         }
         if (strncmp(inModel->GetTagPointName(i), "weapon_mount", strlen("weapon_mount")) == 0) {

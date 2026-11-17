@@ -7,6 +7,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// The animation states of a graphic.
+constexpr static const size_t EE_DATA_GRAPHIC_STATES = 14;
+
+/// The model slot of the shared model in the frame maps (the parts' models take 0 .. 13 in first-seen order).
+constexpr static const long EE_DATA_GRAPHIC_SHARED_MODEL = 14;
+
 /// `EEAnimal`'s plain members, in the class's order (`include/ee/EEAnimal.h`: the class's base).
 struct EeDataAnimalFields {
   float mF28;
@@ -117,6 +123,197 @@ struct EeDataGameVariantFields {
   bool mSelectable;
 };
 
+/// `EETerrainTable`'s members from the record (`include/ee/EEDatabaseTables.h`: the class's base).
+struct EeDataTerrainFields {
+  long mWaterAnimationPeriod;
+  long mTextureID;
+  long mID;
+  long mNameID;
+  long mTextureTileCoverage;
+  long mTerrainType;
+  long mColumns;
+  long mRows;
+  /// -1 in an empty terrain.
+  long mColorType;
+  long mAmbientUnitChance;
+  long mWaterDepth;
+  /// `mColumns * mRows`.
+  long mNumTextures;
+  bool mIsWater;
+  bool mIsInEditor;
+  bool mHasAlpha;
+  bool mIsAmbientsOnly;
+};
+
+/// A text field of a record as the C++ copies it into a `UString`: its bytes up to the first NUL (or the whole
+/// field), pointing into the record the C++ read.
+struct EeDataName {
+  const char *text;
+  size_t length;
+};
+
+/// What a terrain record gives the C++ besides its plain members.
+struct EeDataTerrainExtra {
+  EeDataName name;
+  /// The colour, a component each in 0..1.
+  float color[3];
+  /// The ambient unit class ranges ([first, last], used when both are nonzero).
+  uint32_t first[3];
+  uint32_t last[3];
+};
+
+/// `EECliffTerrainTable`'s plain members (`include/ee/EEDatabaseTables.h`: the class's base).
+struct EeDataCliffTerrainFields {
+  long mFirstTerrain;
+  long mLastTerrain;
+  long mL1C;
+  bool mB20;
+};
+
+/// `EEButtonObject`'s members from the record (`include/ee/EEButtonObject.h`: the class's base).
+struct EeDataButtonFields {
+  long mPosition;
+  long mHotKeyIndex;
+  long mColumn;
+  long mRow;
+  long mID;
+};
+
+/// A button texture's sizes, as `EEButtonObject`'s bitmap setters read them.
+struct EeDataButtonTexture {
+  /// `GETexture::GetWidth`, `GetHeight` (the logical size) and `GetNumMipLevelsToDrop`.
+  unsigned long width;
+  unsigned long height;
+  unsigned long drop;
+  /// The surface's `GetHeight`.
+  unsigned long surface_height;
+};
+
+/// A button's cell on a bitmap: the texture coordinates of its corners and the bitmap's scale.
+struct EeDataButtonCell {
+  float left;
+  float top;
+  float right;
+  float bottom;
+  float scale_x;
+  float scale_y;
+};
+
+/// `EESoundObject`'s members from the record (`include/ee/EESoundObject.h`: the class's base).
+struct EeDataSoundFields {
+  float mVolume;
+  long mMaxInstances;
+  long mCategory;
+  long mL24;
+  bool mLooping;
+};
+
+/// `EEGraphicEffect`'s members from the record (`include/ee/EEGraphicEffect.h`: the class's third base).
+struct EeDataGraphicEffectFields {
+  float mSize;
+  float mStartSize;
+  float mAlpha;
+  float mParam1;
+  float mParam2;
+  float mParam3;
+  float mParam4;
+  float mParam5;
+  float mParam6;
+  float mParam7;
+  float mParam8;
+  float mParam9;
+  float mParam10;
+  float mParam11;
+  float mEmitPositionSpread;
+  long mKind;
+  long mTagPointKind;
+  unsigned long mID;
+  long mIntParam1;
+  long mIntParam2;
+  long mIntParam3;
+  unsigned long mTime1;
+  long mTime2;
+  unsigned long mDuration;
+  long mNameStringId;
+  long mDetailLevel;
+  bool mFlag1;
+  bool mFlag2;
+  bool mEndsWithUnitOrDuration;
+  bool mIsScenarioListed;
+  bool mIsEmitFlat;
+};
+
+/// The table indices a graphic effect record names, for the C++ to look up.
+struct EeDataGraphicEffectLinks {
+  /// `EEMedia::Get`'s index (the record's, sign-extended: a negative one is past the table).
+  long media;
+  /// The three follow-on effects' indices into the effect table.
+  unsigned long linked[3];
+};
+
+/// `EEMusicObject`'s members from the record (`include/ee/EEMusicObject.h`: the class's third base).
+struct EeDataMusicFields {
+  float mReverbGain;
+  float mReverbHighFreqRTRatio;
+  float mReverbMix;
+  float mReverbTime;
+  /// By epoch; the space age (14) copies the nano age's flag.
+  bool mInEpoch[15];
+};
+
+/// `EEGraphicObject`'s members from the record (`include/ee/EEGraphicObject.h`: the class's second base).
+struct EeDataGraphicObjectFields {
+  /// The graphic-effect kind it is filed under (below 0x48; -1 in an empty object).
+  unsigned long mKind;
+  float mMipMapBias;
+  float mOpacity;
+  /// The alpha-test reference: the record's percent times 0.01.
+  float mAlphaReference;
+  /// -1 in an empty object; 0: the loader drops the object.
+  long mMediaIndex;
+  long mL318;
+  long mL31C;
+  long mL320;
+  long mL2FC;
+  long mL4B0;
+  long mL4B4;
+  long mNumMipLevelsToDrop;
+  unsigned long mMaxMipLevelsToDrop;
+  /// By state: the hold time (state 0's is 300000).
+  unsigned long mHoldTimes[EE_DATA_GRAPHIC_STATES];
+  unsigned long mStartFrames[EE_DATA_GRAPHIC_STATES];
+  unsigned long mLastFrames[EE_DATA_GRAPHIC_STATES];
+  unsigned long mFrameTimes[EE_DATA_GRAPHIC_STATES];
+  /// The frames the sounds start at (the record's; the C++ sets -1 where the sound is missing).
+  unsigned long mSound1Frames[EE_DATA_GRAPHIC_STATES];
+  unsigned long mSound2Frames[EE_DATA_GRAPHIC_STATES];
+  /// `mLastFrames - mStartFrames + 1`.
+  unsigned long mFrameCounts[EE_DATA_GRAPHIC_STATES];
+  bool mIsSpeedScaled[EE_DATA_GRAPHIC_STATES];
+  bool mLoops[EE_DATA_GRAPHIC_STATES];
+  bool mSharesFrames[EE_DATA_GRAPHIC_STATES];
+  bool mB4CE;
+  bool mIsDrawn;
+  bool mHasAlpha;
+  bool mCreateMipMaps;
+};
+
+/// The sounds a graphic record names by state, for `EESoundObject::Get` ([`EE_DATA_NO_SOUND`]: none).
+struct EeDataGraphicObjectSounds {
+  unsigned long sound1[EE_DATA_GRAPHIC_STATES];
+  unsigned long sound2[EE_DATA_GRAPHIC_STATES];
+};
+
+/// One part for [`ee_data_graphic_frame_maps`].
+struct EeDataGraphicFramePart {
+  unsigned long frame_count;
+  unsigned long start;
+  unsigned long last;
+  /// NUL-terminated, or NULL.
+  const char *model;
+  bool shares;
+};
+
 extern "C" {
 
 /// The size of a dbanimals record.
@@ -210,6 +407,166 @@ size_t ee_data_game_variant_record_size();
 /// # Safety
 /// `bytes` holds `ee_data_game_variant_record_size()` bytes; `fields` is writable.
 bool ee_data_game_variant_from_record(const uint8_t *bytes, EeDataGameVariantFields *fields);
+
+/// The size of a dbterrain record (after its lead string).
+size_t ee_data_terrain_record_size();
+
+/// The terrain constructor's members.
+///
+/// # Safety
+/// `fields` is writable.
+void ee_data_terrain_default(EeDataTerrainFields *fields);
+
+/// `EETerrainTable::Load`'s copy of one record: the plain members, and the name (pointing into `bytes`), colour and
+/// unit class ranges.
+///
+/// # Safety
+/// `bytes` holds `ee_data_terrain_record_size()` bytes and outlives the name's use; `fields` and `extra` are
+/// writable.
+void ee_data_terrain_from_record(const uint8_t *bytes,
+                                 EeDataTerrainFields *fields,
+                                 EeDataTerrainExtra *extra);
+
+/// [`terrain_texture_file`] of the NUL-terminated `name` into `out` (NUL-terminated, cut to `capacity - 1`
+/// bytes); returns the file name's full length.
+///
+/// # Safety
+/// `name` is NUL-terminated; `out` has room for `capacity` bytes (`capacity` > 0).
+size_t ee_data_terrain_texture_file(const char *name,
+                                    long n,
+                                    char *out,
+                                    size_t capacity);
+
+/// The size of a dbcliffterrain record.
+size_t ee_data_cliff_terrain_record_size();
+
+/// `EECliffTerrainTable::Load`'s copy of one record; false (and the outputs untouched) for a row without one.
+///
+/// # Safety
+/// `bytes` holds `ee_data_cliff_terrain_record_size()` bytes and outlives the name's use; `fields` and `name` are
+/// writable.
+bool ee_data_cliff_terrain_from_record(const uint8_t *bytes,
+                                       EeDataCliffTerrainFields *fields,
+                                       EeDataName *name);
+
+/// The size of a dbbuttons record.
+size_t ee_data_button_record_size();
+
+/// `EEButtonObject::Load`'s copy of one record; returns the texture file's name (pointing into `bytes`).
+///
+/// # Safety
+/// `bytes` holds `ee_data_button_record_size()` bytes and outlives the name's use; `fields` is writable.
+EeDataName ee_data_button_from_record(const uint8_t *bytes,
+                                      EeDataButtonFields *fields);
+
+/// [`button_cell_offset`] for the C++.
+///
+/// # Safety
+/// `texture` is readable; `out` has room for two floats.
+void ee_data_button_cell_offset(long column,
+                                long row,
+                                const EeDataButtonTexture *texture,
+                                float *out);
+
+/// [`button_cell`] for the C++: the cell offset (`mCellU`, `mCellV`), the inset flag and the rectangle's size.
+///
+/// # Safety
+/// `texture` is readable.
+EeDataButtonCell ee_data_button_cell(const EeDataButtonTexture *texture,
+                                     float cell_u,
+                                     float cell_v,
+                                     bool inset,
+                                     float width,
+                                     float height);
+
+/// The size of a dbfamily record.
+size_t ee_data_damage_table_record_size();
+
+/// `EETerrainTypeTable::LoadDamageTables`' row of percentages from one record.
+///
+/// # Safety
+/// `bytes` holds `ee_data_damage_table_record_size()` bytes; `out` has room for 0x44 `int32_t`s.
+void ee_data_damage_table_from_record(const uint8_t *bytes, int32_t *out);
+
+/// The size of a dbsounds record (after its lead string).
+size_t ee_data_sound_record_size();
+
+/// `EESoundObject::LoadTable`'s copy of one record.
+///
+/// # Safety
+/// `bytes` holds `ee_data_sound_record_size()` bytes; `fields` is writable.
+void ee_data_sound_from_record(const uint8_t *bytes, EeDataSoundFields *fields);
+
+/// The size of a dbgfxeffects record.
+size_t ee_data_graphic_effect_record_size();
+
+/// `EEGraphicEffect`'s copy of one record; false (and the outputs untouched) for a row that is not an effect.
+///
+/// # Safety
+/// `bytes` holds `ee_data_graphic_effect_record_size()` bytes; `fields` and `links` are writable.
+bool ee_data_graphic_effect_from_record(const uint8_t *bytes,
+                                        EeDataGraphicEffectFields *fields,
+                                        EeDataGraphicEffectLinks *links);
+
+/// The size of a dbmusic record.
+size_t ee_data_music_record_size();
+
+/// `EEMusicObject`'s copy of one record (the file name points into `bytes`; the C++ appends ".sgt").
+///
+/// # Safety
+/// `bytes` holds `ee_data_music_record_size()` bytes and outlives the name's use; `fields` is writable.
+EeDataName ee_data_music_from_record(const uint8_t *bytes,
+                                     EeDataMusicFields *fields);
+
+/// The flags of a record for `EERules::SetMusicFromFlags` (14, prehistoric .. nano).
+///
+/// # Safety
+/// `bytes` holds `ee_data_music_record_size()` bytes; `out` has room for 14 bools.
+void ee_data_music_epoch_flags(const uint8_t *bytes, bool *out);
+
+/// [`new_music_record`] into `out` from the NUL-terminated file name and the four reverb values.
+///
+/// # Safety
+/// `file` is NUL-terminated, `reverb` holds four floats; `out` has room for `ee_data_music_record_size()` bytes.
+void ee_data_new_music_record(const char *file,
+                              const float *reverb,
+                              uint8_t *out);
+
+/// The size of a dbgraphics record (after its lead strings).
+size_t ee_data_graphic_object_record_size();
+
+/// The graphic object constructor's members.
+///
+/// # Safety
+/// `fields` is writable.
+void ee_data_graphic_object_default(EeDataGraphicObjectFields *fields);
+
+/// The record loader's copy of one record over the object's members; returns the sounds the states name.
+///
+/// # Safety
+/// `bytes` holds `ee_data_graphic_object_record_size()` bytes; `fields` is readable and writable.
+EeDataGraphicObjectSounds ee_data_graphic_object_from_record(const uint8_t *bytes,
+                                                             EeDataGraphicObjectFields *fields);
+
+/// [`tag_point_kinds`] of a NUL-terminated name into `out` (room for 0x48); returns the count.
+///
+/// # Safety
+/// `name` is NUL-terminated; `out` has room for 0x48 `long`s.
+size_t ee_data_tag_point_kinds(const char *name, long *out);
+
+/// [`graphic_frame_maps`] over `count` parts: `insert(context, slot, frame, value)` for each entry, each part's slot
+/// into `slots`.
+///
+/// # Safety
+/// `parts` holds `count` parts (their models NUL-terminated or NULL); `slots` has room for `count`.
+void ee_data_graphic_frame_maps(const EeDataGraphicFramePart *parts,
+                                size_t count,
+                                long *slots,
+                                void (*insert)(void *context,
+                                               long slot,
+                                               unsigned long frame,
+                                               long value),
+                                void *context);
 
 }  // extern "C"
 

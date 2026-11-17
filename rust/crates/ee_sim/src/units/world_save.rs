@@ -145,6 +145,7 @@ pub const EE_UNITS_WORLD_HAS_PATH_SEARCHES: i64 = 12;
 pub const EE_UNITS_WORLD_HAS_ACTIVE_GROUPS: i64 = 13;
 pub const EE_UNITS_WORLD_HAS_GRAPH_SEARCHES: i64 = 14;
 pub const EE_UNITS_WORLD_HAS_TECH_ALLOWED: i64 = 15;
+pub const EE_UNITS_WORLD_HAS_TILE_TYPES: i64 = 16;
 
 // the other systems' parts (`EE_UNITS_WORLD_PART_LOAD`/`_SAVE`'s `a`)
 /// `gPathManager.LoadRunningState` / `SaveRunningState`
@@ -167,6 +168,8 @@ pub const EE_UNITS_WORLD_PART_ACTIVE_GROUPS: i64 = 8;
 pub const EE_UNITS_WORLD_PART_GRAPH_SEARCHES: i64 = 9;
 /// `EELoadTechAllowed` / `EESaveTechAllowed` (the players' tech nodes not allowed, from 0.282)
 pub const EE_UNITS_WORLD_PART_TECH_ALLOWED: i64 = 10;
+/// `EELoadTileTypes` / `EESaveTileTypes` (every map tile's terrain type, from 0.283)
+pub const EE_UNITS_WORLD_PART_TILE_TYPES: i64 = 11;
 
 const OK: i32 = 0;
 
@@ -530,8 +533,11 @@ pub fn load_live<H: WorldHost + ?Sized>(h: &mut H) {
     if h.has(EE_UNITS_WORLD_HAS_GRAPH_SEARCHES) && part_load(h, EE_UNITS_WORLD_PART_GRAPH_SEARCHES, 0) != OK {
         return;
     }
-    if h.has(EE_UNITS_WORLD_HAS_TECH_ALLOWED) {
-        part_load(h, EE_UNITS_WORLD_PART_TECH_ALLOWED, 0);
+    if h.has(EE_UNITS_WORLD_HAS_TECH_ALLOWED) && part_load(h, EE_UNITS_WORLD_PART_TECH_ALLOWED, 0) != OK {
+        return;
+    }
+    if h.has(EE_UNITS_WORLD_HAS_TILE_TYPES) {
+        part_load(h, EE_UNITS_WORLD_PART_TILE_TYPES, 0);
     }
 }
 
@@ -749,6 +755,9 @@ pub fn save_live<H: WorldHost + ?Sized>(h: &mut H) {
     }
     if h.has(EE_UNITS_WORLD_HAS_TECH_ALLOWED) {
         part_save(h, EE_UNITS_WORLD_PART_TECH_ALLOWED);
+    }
+    if h.has(EE_UNITS_WORLD_HAS_TILE_TYPES) {
+        part_save(h, EE_UNITS_WORLD_PART_TILE_TYPES);
     }
 }
 

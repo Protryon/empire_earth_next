@@ -318,6 +318,10 @@ fn sends(kind: i32, values: &[Value]) -> bool {
 fn route_op(o: *mut c_void) -> *mut EeWonRouteOp {
     object_of(o, EeWonCoreObject::RouteOp).cast()
 }
+/// A `RoutingConnection*`'s Rust object (none for another connection).
+pub(crate) fn route_conn_of<'a>(conn: *mut c_void) -> Option<&'a EeWonRouteConn> {
+    route_conn(conn)
+}
 fn route_conn<'a>(conn: *mut c_void) -> Option<&'a EeWonRouteConn> {
     // SAFETY: a connection's Rust object lives as long as the connection, which the caller holds
     unsafe { (object_of(conn, EeWonCoreObject::RouteConn) as *const EeWonRouteConn).as_ref() }

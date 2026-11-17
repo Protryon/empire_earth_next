@@ -7,11 +7,15 @@
 #include <set>
 #include <vector>
 
+#include "rust/data/tables.h"
+
 class EEGraphicObject;
 class FSFile;
 class FSFileSpec;
 
-class EEGraphicEffect : public UReferenceCounter, public EEMedia {
+// The record's members (mSize .. mIsEmitFlat but the graphic, the links and mNumLoads) are EeDataGraphicEffectFields
+// (rust/crates/ee_data tables.rs: the record and its copy), the third base.
+class EEGraphicEffect : public UReferenceCounter, public EEMedia, public EeDataGraphicEffectFields {
 public:
     // the table of every effect by index (out-of-line COMDAT 0x432f: 0 past the end; vector 0x4e8424) (provisional
     // name)
@@ -37,7 +41,7 @@ public:
     float GetParam6() const { return this->mParam6; }
     float GetParam7() const { return this->mParam7; }  // inline (EEE2DParticle::DrawPass6 loads the colour as values)
     // the unit EEGraphicEffect.cpp (0xd6bed..0xd72c1); the ctor copies a database record
-    EEGraphicEffect(struct EEGraphicEffectRecord* inRecord);
+    EEGraphicEffect(const EeDataGraphicEffectFields& inFields, EEGraphicObject* inGraphicObject);
     virtual ~EEGraphicEffect();             // ??_G 0xd6e5d (EEMedia's adjusting thunk 0xd726c), dtor 0xd6e79
     virtual long LoadMedia();               // EEMedia +0x04 0xd72a9
     virtual long UnloadMedia();             // EEMedia +0x08 0xd72b6
@@ -56,41 +60,10 @@ public:
     EEGraphicEffect* mLinkedEffect1;       // +0x10 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
     EEGraphicEffect* mLinkedEffect2;       // +0x14 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
     EEGraphicEffect* mLinkedEffect3;       // +0x18 a sub-effect (EEE3DMultiEffect ctors pass it to CreatePlacedEffect)
-    float mSize;                            // +0x1c (provisional name; a float: the hurricane fld/fstp's it)
-    float mStartSize;                       // +0x20 (fld/fmul in the EEE3D effects)
-    float mAlpha;                           // +0x24 (the 2D effects' V18 fld/fchs it; db record +0x80 holds 1.0/0.9)
-    float mParam1;                          // +0x28
-    float mParam2;                          // +0x2c (fld/fmul in the EEE3D effects)
-    float mParam3;                          // +0x30 (fld/fmul in the EEE3D effects)
-    float mParam4;                          // +0x34 (fld/fmul in the EEE3D effects)
-    float mParam5;                          // +0x38 (fld/fmul in the EEE3D effects)
-    float mParam6;                          // +0x3c (fld/fmul in the EEE3D effects)
-    float mParam7;                          // +0x40 (fld/fmul in the EEE3D effects)
     float GetParam8() const { return this->mParam8; }  // inline value getters
     float GetParam9() const { return this->mParam9; }
     float GetParam10() const { return this->mParam10; }
-    float mParam8;                          // +0x44 (fld/fmul in the EEE3D effects)
-    float mParam9;                          // +0x48 (fld/fmul in the EEE3D effects)
-    float mParam10;                         // +0x4c (fld/fmul in the EEE3D effects)
-    float mParam11;                         // +0x50 (fld/fmul in the EEE3D effects)
-    float mEmitPositionSpread;                          // +0x54
-    long mKind;                             // +0x58 (the plague draws 0x23 between two points, 0x40 unit to unit)
-    long mTagPointKind;                     // +0x5c
-    unsigned long mID;                      // +0x60 (unsigned: EESETSETGameGraphicEffect::Show 0x185790 pushes a converted temporary)
-    long mIntParam1;                        // +0x64
-    long mIntParam2;                        // +0x68
-    long mIntParam3;                        // +0x6c
-    unsigned long mTime1;                   // +0x70 (unsigned: the volcano converts it with fild qword)
-    long mTime2;                            // +0x74
-    unsigned long mDuration;                // +0x78 (provisional name)
-    long mNameStringId;                     // +0x7c
     long mNumLoads;                         // +0x80
-    long mDetailLevel;                      // +0x84
-    bool mFlag1;                            // +0x88
-    bool mFlag2;                            // +0x89
-    bool mEndsWithUnitOrDuration;                            // +0x8a
-    bool mIsScenarioListed;                 // +0x8b
-    bool mIsEmitFlat;                            // +0x8c
 
     // the table Get/GetCount read (0x4e8420: allocator byte, _First 0x4e8424, _Last 0x4e8428; a class static like
     // Get) (provisional name)

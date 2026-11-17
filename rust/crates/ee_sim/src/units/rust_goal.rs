@@ -543,6 +543,18 @@ pub struct EeUnitsBuildUnit {
     pub animation: i32,
 }
 
+/// A plain read of the unit `unit` (a handle the C++ passed in) through the world's views, where the adapter called
+/// the C++ host for it before (the world views' lane: the `UNIT_ID`, `UNIT_TILE`, `UNIT_VALID`, `UNIT_COMMAND`,
+/// `STATS_RANGE`, `UNIT_HEIGHT`, `HIT_POINTS`, `COMPLEX_UNIT`, `PLAYER_SEES_ALL`, `CONTAINER`, `UNIT_FAMILY`,
+/// `UNLOAD_RANGE`, `CLASS_TYPE`, `CARGO_COUNT` and `CARGO_CATEGORY` operations, gone from `GoalOp`).
+fn read_unit<R>(unit: u64, f: impl FnOnce(&crate::world::UnitView) -> R) -> R {
+    // SAFETY: a goal body runs inside the C++ call that handed out the host, which holds the world
+    let token = unsafe { crate::world::WorldRead::begin() };
+    // SAFETY: the host's unit handles are live units (the C++ dereferenced them as such)
+    let view = unsafe { crate::world::UnitView::of(&token, unit) }.expect("a unit handle");
+    f(&view)
+}
+
 /// The FFI adapter over the callback.
 pub struct OpHost<'a>(pub &'a EeUnitsGoalHost);
 
@@ -591,18 +603,16 @@ impl GoalHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_DEREFERENCE, object, u64::from(group));
     }
     fn unit_id(&mut self, unit: u64) -> u32 {
-        self.op(EE_UNITS_GOAL_HOST_UNIT_ID, unit, 0) as u32
+        read_unit(unit, |u| u.id())
     }
     fn unit_tile(&mut self, unit: u64) -> (i64, i64) {
-        let mut io = EeUnitsGoalIo::default();
-        self.call(EE_UNITS_GOAL_HOST_UNIT_TILE, unit, 0, &mut io);
-        (io.i[0], io.i[1])
+        read_unit(unit, |u| u.tile_xy())
     }
     fn unit_valid(&mut self, unit: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_UNIT_VALID, unit, 0) != 0
+        read_unit(unit, |u| u.valid())
     }
     fn unit_command(&mut self, unit: u64) -> i64 {
-        self.op(EE_UNITS_GOAL_HOST_UNIT_COMMAND, unit, 0)
+        read_unit(unit, |u| i64::from(u.command_type()))
     }
     fn reset_path_attempts(&mut self, goal: u64) {
         self.op(EE_UNITS_GOAL_HOST_RESET_PATH_ATTEMPTS, goal, 0);
@@ -750,7 +760,7 @@ impl CalamityHost for OpHost<'_> {
         self.op_ints(EE_UNITS_GOAL_HOST_UNIT_IN_SET, unit, 0, &[set]) != 0
     }
     fn stats_range(&mut self, unit: u64) -> f32 {
-        self.op_point(EE_UNITS_GOAL_HOST_STATS_RANGE, unit, 0, &[])[0]
+        read_unit(unit, |u| u.stats().expect("a unit's stats").range())
     }
     fn contact_range(&mut self, unit: u64, target: u64) -> bool {
         self.op(EE_UNITS_GOAL_HOST_CONTACT_RANGE, unit, target) != 0
@@ -759,16 +769,16 @@ impl CalamityHost for OpHost<'_> {
         self.op_point(EE_UNITS_GOAL_HOST_DISTANCE_TO_UNIT, unit, target, &[])[0]
     }
     fn unit_height(&mut self, unit: u64) -> f32 {
-        self.op_point(EE_UNITS_GOAL_HOST_UNIT_HEIGHT, unit, 0, &[])[0]
+        read_unit(unit, |u| u.height())
     }
     fn hit_points(&mut self, unit: u64) -> i32 {
-        self.op(EE_UNITS_GOAL_HOST_HIT_POINTS, unit, 0) as i32
+        read_unit(unit, |u| u.hit_points() as i32)
     }
     fn undetectable(&mut self, unit: u64, target: u64) -> bool {
         self.op(EE_UNITS_GOAL_HOST_UNDETECTABLE, unit, target) != 0
     }
     fn complex_unit(&mut self, unit: u64) -> u64 {
-        self.op(EE_UNITS_GOAL_HOST_COMPLEX_UNIT, unit, 0) as u64
+        read_unit(unit, |u| u.complex_unit_handle())
     }
 }
 
@@ -777,10 +787,10 @@ impl ExploreHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_PLAYER_HUMAN, unit, 0) != 0
     }
     fn player_sees_all(&mut self, unit: u64) -> bool {
-        self.op(EE_UNITS_GOAL_HOST_PLAYER_SEES_ALL, unit, 0) != 0
+        read_unit(unit, |u| u.player().expect("a unit's player").sees_all())
     }
     fn container(&mut self, unit: u64) -> u64 {
-        self.op(EE_UNITS_GOAL_HOST_CONTAINER, unit, 0) as u64
+        read_unit(unit, |u| u.container_handle())
     }
     fn group_units(&mut self, unit: u64) -> i64 {
         self.op(EE_UNITS_GOAL_HOST_GROUP_UNITS, unit, 0)
@@ -839,7 +849,7 @@ impl ExploreHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_NOTICE_FOREIGN, unit, 0);
     }
     fn unit_family(&mut self, unit: u64) -> i64 {
-        self.op(EE_UNITS_GOAL_HOST_UNIT_FAMILY, unit, 0)
+        read_unit(unit, |u| u.class().expect("a unit's class").family() as i64)
     }
     fn owns_lighthouse(&mut self, unit: u64) -> bool {
         self.op(EE_UNITS_GOAL_HOST_OWNS_LIGHTHOUSE, unit, 0) != 0
@@ -973,16 +983,19 @@ fn tiles_out(io: &EeUnitsGoalIo, tiles: &mut [(i32, i32)]) {
 
 impl UnloadHost for OpHost<'_> {
     fn unload_range(&mut self, unit: u64) -> f32 {
-        self.op_point(EE_UNITS_GOAL_HOST_UNLOAD_RANGE, unit, 0, &[])[0]
+        read_unit(unit, |u| u.class().expect("a unit's class").unload_range())
     }
     fn class_type(&mut self, unit: u64) -> i64 {
-        self.op(EE_UNITS_GOAL_HOST_CLASS_TYPE, unit, 0)
+        read_unit(unit, |u| u.class().expect("a unit's class").unit_type() as i64)
     }
     fn cargo_count(&mut self, unit: u64) -> u32 {
-        self.op(EE_UNITS_GOAL_HOST_CARGO_COUNT, unit, 0) as u32
+        read_unit(unit, |u| u.cargo_len() as u32)
     }
     fn cargo_category(&mut self, unit: u64) -> i64 {
-        self.op(EE_UNITS_GOAL_HOST_CARGO_CATEGORY, unit, 0)
+        read_unit(unit, |u| {
+            let cargo = u.cargo(0).expect("a transport's first cargo");
+            cargo.class().expect("a unit's class").category() as i64
+        })
     }
     fn transport_kind(&mut self, unit: u64) -> i64 {
         self.op(EE_UNITS_GOAL_HOST_TRANSPORT_KIND, unit, 0)
@@ -1010,7 +1023,7 @@ impl UnloadHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_SAME_PLAYER, unit, other) != 0
     }
     fn hit_points(&mut self, unit: u64) -> i32 {
-        self.op(EE_UNITS_GOAL_HOST_HIT_POINTS, unit, 0) as i32
+        read_unit(unit, |u| u.hit_points() as i32)
     }
     fn start_action_only(&mut self, unit: u64, action: i64) {
         self.op_ints(EE_UNITS_GOAL_HOST_START_ACTION, unit, 0, &[action, 1]);
@@ -1025,7 +1038,7 @@ impl UnloadHost for OpHost<'_> {
         self.op_ints(EE_UNITS_GOAL_HOST_UNLOAD_SOUND, unit, 0, &[i64::from(space)]);
     }
     fn complex_unit(&mut self, unit: u64) -> u64 {
-        self.op(EE_UNITS_GOAL_HOST_COMPLEX_UNIT, unit, 0) as u64
+        read_unit(unit, |u| u.complex_unit_handle())
     }
 }
 
@@ -1115,7 +1128,7 @@ impl LoadHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_CLEAR_GOALS, unit, index as u64);
     }
     fn holder(&mut self, unit: u64) -> u64 {
-        self.op(EE_UNITS_GOAL_HOST_CONTAINER, unit, 0) as u64
+        read_unit(unit, |u| u.container_handle())
     }
     fn deposit(&mut self, unit: u64, container: u64) {
         self.op(EE_UNITS_GOAL_HOST_DEPOSIT, unit, container);
@@ -1145,10 +1158,10 @@ impl LoadHost for OpHost<'_> {
         self.op(EE_UNITS_GOAL_HOST_SAME_PLAYER, unit, other) != 0
     }
     fn hit_points(&mut self, unit: u64) -> i32 {
-        self.op(EE_UNITS_GOAL_HOST_HIT_POINTS, unit, 0) as i32
+        read_unit(unit, |u| u.hit_points() as i32)
     }
     fn complex_unit(&mut self, unit: u64) -> u64 {
-        self.op(EE_UNITS_GOAL_HOST_COMPLEX_UNIT, unit, 0) as u64
+        read_unit(unit, |u| u.complex_unit_handle())
     }
     fn write_f32(&mut self, value: f32) -> i32 {
         self.write(3, i64::from(value.to_bits()))
