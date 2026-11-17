@@ -1,0 +1,219 @@
+//! The world as the scenario logic reads it: one read by operation code (`EE_SCENARIO_READ_*`) with four integer
+//! arguments (unused ones 0) and an integer answer, each the original's expression at its place (the C++ host in
+//! `Scenario Manager/EEScenarioHost.cpp`). A read may run game code (an object's or a condition's `Evaluate`, a random
+//! draw), so the logic makes each read exactly where and as often as the original did.
+
+use std::ffi::c_void;
+use std::os::raw::c_long;
+
+/// `gWorld.mNumPlayers`.
+pub const EE_SCENARIO_READ_NUM_PLAYERS: u32 = 0;
+/// `gWorld.mPlayers[a] != NULL` (1/0).
+pub const EE_SCENARIO_READ_PLAYER_EXISTS: u32 = 1;
+/// `gWorld.GetPlayer(a)->mHumanPlayer != NULL` (1/0).
+pub const EE_SCENARIO_READ_PLAYER_HUMAN: u32 = 2;
+/// `gWorld.GetPlayer(a)->mComputerPlayer != NULL` (1/0).
+pub const EE_SCENARIO_READ_PLAYER_COMPUTER: u32 = 3;
+/// `gPhysics->GetRandom(a, b)` (the physics stream's draw: `long`s, both inclusive).
+pub const EE_SCENARIO_READ_RANDOM: u32 = 4;
+/// `gWorld.mPlayers[a]->mEnemies[b]`.
+pub const EE_SCENARIO_READ_ENEMY: u32 = 5;
+/// `gWorld.mPlayers[a]->mResourceCaps[b]` (a `long`).
+pub const EE_SCENARIO_READ_RESOURCE: u32 = 6;
+/// `GetTotalPopulation(false, false)`.
+pub const EE_SCENARIO_READ_POPULATION: u32 = 7;
+/// `GetPopulationLimit(0)`.
+pub const EE_SCENARIO_READ_POPULATION_LIMIT: u32 = 8;
+/// `mUnitCount`.
+pub const EE_SCENARIO_READ_UNIT_COUNT: u32 = 9;
+/// `mComputerPlayer->mDifficulty`, -1 without a computer player.
+pub const EE_SCENARIO_READ_COMPUTER_DIFFICULTY: u32 = 10;
+/// `mScenarioVariables[b]`.
+pub const EE_SCENARIO_READ_VARIABLE: u32 = 11;
+/// `mTributes[b]`.
+pub const EE_SCENARIO_READ_TRIBUTE: u32 = 12;
+/// `mSavedGroups.GetLastValue(b)` (the statistics).
+pub const EE_SCENARIO_READ_STATISTIC: u32 = 13;
+/// `mMiningLimit`.
+pub const EE_SCENARIO_READ_MINING_LIMIT: u32 = 14;
+/// `EEEpochCount()`.
+pub const EE_SCENARIO_READ_EPOCH_COUNT: u32 = 15;
+/// `GetTechTree()->mCurrentEpoch`.
+pub const EE_SCENARIO_READ_EPOCH: u32 = 16;
+/// `GetTechTree()->Get(b)`: -1 without a node, else bit 0 `mData->mMakesUnit`, bit 1 `mIsResearched`.
+pub const EE_SCENARIO_READ_TECH_NODE: u32 = 17;
+/// The node's `GetIsAvailable()` with `mIsResearched` cleared around the call (and restored).
+pub const EE_SCENARIO_READ_TECH_AVAILABLE: u32 = 18;
+/// `GetScenarioObject(a)`: -1 without an object, else its `Evaluate(0)` (1/0).
+pub const EE_SCENARIO_READ_OBJECT: u32 = 19;
+/// `GetTrigger(a)`: -1 without a trigger, else bit 0 `mHasFired`, bit 1 `mIsOn`.
+pub const EE_SCENARIO_READ_TRIGGER: u32 = 20;
+/// The scenario clock `mTime`'s bits (an `f32`).
+pub const EE_SCENARIO_READ_TIME: u32 = 21;
+/// `gWorld.GetTimeOfDay()`'s bits (an `f32`).
+pub const EE_SCENARIO_READ_TIME_OF_DAY: u32 = 22;
+/// `gDifficultyLevel`.
+pub const EE_SCENARIO_READ_DIFFICULTY: u32 = 23;
+/// Whether the last chat text contains the condition's chat text, both lowered (`PlatMbsLwr`; 1/0; `a` unused).
+pub const EE_SCENARIO_READ_CHAT_CONTAINS: u32 = 24;
+/// `GetCondition(a)`: -1 without a condition, else its `Evaluate()` (1/0).
+pub const EE_SCENARIO_READ_CONDITION: u32 = 25;
+
+/// `gContinentManager.GetContinentID(a, b)`.
+pub const EE_SCENARIO_READ_CONTINENT: u32 = 26;
+/// `gContinentManager.GetContinentCenter(a, ...)`: the tile packed (x in the low 32 bits, y in the high).
+pub const EE_SCENARIO_READ_CONTINENT_CENTER: u32 = 27;
+/// `gWorld.GetPlayer(a)->GetNumTowns()`.
+pub const EE_SCENARIO_READ_TOWN_COUNT: u32 = 28;
+/// `GetPlayer(a)->mTowns[b]->mHull.BoundedContains(U2DPoint(c, d))` (1/0).
+pub const EE_SCENARIO_READ_TOWN_CONTAINS: u32 = 29;
+/// `GetPlayer(a)->mTowns[b]->mHull.GetCenter()`, packed.
+pub const EE_SCENARIO_READ_TOWN_CENTER: u32 = 30;
+/// The host's unit's `GetTileX()`, `GetTileY()`, packed.
+pub const EE_SCENARIO_READ_UNIT_TILE: u32 = 31;
+/// The host's unit's `GetComplexUnit() != NULL` (1/0).
+pub const EE_SCENARIO_READ_UNIT_HAS_COMPLEX: u32 = 32;
+/// The host's unit's complex unit's `mU0DC` (its previous tile), packed.
+pub const EE_SCENARIO_READ_UNIT_PREVIOUS_TILE: u32 = 33;
+
+/// TEST ONLY: the physics random seed while the simulation capture records (`EESMCaptureSeed()`), -1 while it does
+/// not (ee/EEScenarioCapture.h).
+pub const EE_SCENARIO_READ_CAPTURE_SEED: u32 = 49;
+
+/// `EEUnitClassCount()`.
+pub const EE_SCENARIO_READ_CLASS_COUNT: u32 = 34;
+/// `gUnitClassTable[a] != NULL` (1/0; 0 past the table).
+pub const EE_SCENARIO_READ_CLASS_EXISTS: u32 = 35;
+/// `gUnitClassTable[a]->mIsScenarioSelectable` (0 for no class).
+pub const EE_SCENARIO_READ_CLASS_SELECTABLE: u32 = 36;
+/// `gUnitClassTable[a]->mCategory`.
+pub const EE_SCENARIO_READ_CLASS_CATEGORY: u32 = 37;
+/// `gUnitClassTable[a]->mEpoch`.
+pub const EE_SCENARIO_READ_CLASS_EPOCH: u32 = 38;
+/// `gUnitClassTable[a]->mFamily`.
+pub const EE_SCENARIO_READ_CLASS_FAMILY: u32 = 39;
+/// `gUnitClassTable[a]->mAIKind`.
+pub const EE_SCENARIO_READ_CLASS_AI_KIND: u32 = 40;
+/// `gUnitClassTable[a]->GetUnitType()`.
+pub const EE_SCENARIO_READ_CLASS_TYPE: u32 = 41;
+/// `gUnitSetManager.Contains(a, b)` (1/0).
+pub const EE_SCENARIO_READ_CATEGORY_IN_SET: u32 = 42;
+/// `gUnitSetManager.GetSize()`.
+pub const EE_SCENARIO_READ_UNIT_SET_COUNT: u32 = 43;
+/// `gUnitSetManager.GetSet(a)`: -1 without the set, else its `Contains(b)` (1/0).
+pub const EE_SCENARIO_READ_UNIT_SET_HAS: u32 = 44;
+/// `GetScenarioObject(a) != NULL` (1/0).
+pub const EE_SCENARIO_READ_OBJECT_EXISTS: u32 = 45;
+/// `GetScenarioObject(a)->GetIsSelectOnMap()` (1/0).
+pub const EE_SCENARIO_READ_OBJECT_SELECT_ON_MAP: u32 = 46;
+/// The class (`GetUnitType()`) of the first unit of `GetScenarioObject(a)->GetUnits`, -1 for no units or no unit.
+pub const EE_SCENARIO_READ_OBJECT_FIRST_UNIT_TYPE: u32 = 47;
+/// `GetScenarioObject(a)->PickUnitType()`.
+pub const EE_SCENARIO_READ_OBJECT_PICK: u32 = 48;
+
+/// `gWorld.mPlayers[a]->mShareBonus`.
+pub const EE_SCENARIO_READ_SHARE_BONUS: u32 = 50;
+/// `gWorld.mPlayerPopulationLimit`.
+pub const EE_SCENARIO_READ_WORLD_POPULATION_LIMIT: u32 = 51;
+/// `gWorld.mPlayers[a]->mPlayerID`.
+pub const EE_SCENARIO_READ_PLAYER_ID: u32 = 52;
+
+/// The world's reads, and the writes of the logic that plans them (`EE_SCENARIO_WRITE_*`, player.rs).
+pub trait Host {
+    fn read4(&mut self, op: u32, a: i32, b: i32, c: i32, d: i32) -> i64;
+    /// TEST ONLY: a player choice's capture record (SMCP: the choice, the single flag, the result, the players or
+    /// `None` for a caller without a list, the seed before).
+    fn players(&mut self, _kind: i32, _single: bool, _result: i32, _players: Option<&[i32]>, _seed: u32) {}
+    /// A read of two arguments.
+    fn read(&mut self, op: u32, a: i32, b: i32) -> i64 {
+        self.read4(op, a, b, 0, 0)
+    }
+    /// One write of a plan (`EE_SCENARIO_WRITE_*`) on player `player`.
+    fn write(&mut self, _op: u32, _player: c_long, _b: i64, _c: i64, _d: i64) {}
+    /// A tile list the world makes (`EE_SCENARIO_TILES_*`), in its order.
+    fn tiles(&mut self, _op: u32, _a: i32, _b: i32, _c: i32) -> Vec<(i32, i32)> {
+        Vec::new()
+    }
+    /// A world call of an effect's run (`EE_SCENARIO_WORLD_*`, effect.rs), six arguments (unused ones 0).
+    fn world(&mut self, _op: u32, _args: [i64; 6]) -> i64 {
+        0
+    }
+    /// `GetScenarioObject(index)`'s numbers, `None` for no object.
+    fn object(&mut self, _index: i32) -> Option<crate::scenario::fields::EeScenarioObjectFields> {
+        None
+    }
+}
+
+/// A tile list handed over by the host ([`Host::tiles`]): the C++ appends with [`ee_scenario_tiles_push`].
+pub struct EeScenarioTiles(pub Vec<(i32, i32)>);
+
+/// Appends tile (x, y) to a list the host is filling.
+///
+/// # Safety
+/// `list` must be the list a [`EeScenarioHost::tiles`] call handed over, during that call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_tiles_push(list: *mut EeScenarioTiles, x: i32, y: i32) {
+    // SAFETY: the caller's contract
+    unsafe { (*list).0.push((x, y)) }
+}
+
+/// The C ABI's host: a context and the read callback.
+#[repr(C)]
+pub struct EeScenarioHost {
+    pub ctx: *mut c_void,
+    pub read: unsafe extern "C" fn(ctx: *mut c_void, op: u32, a: i32, b: i32, c: i32, d: i32) -> i64,
+    /// TEST ONLY: [`Host::players`] (`players` null when `listed` is false).
+    pub players: unsafe extern "C" fn(
+        ctx: *mut c_void,
+        kind: i32,
+        single: bool,
+        result: i32,
+        listed: bool,
+        players: *const i32,
+        count: usize,
+        seed: u32,
+    ),
+    /// [`Host::write`].
+    pub write: unsafe extern "C" fn(ctx: *mut c_void, op: u32, player: c_long, b: i64, c: i64, d: i64),
+    /// [`Host::tiles`]: the C++ fills `list` with [`ee_scenario_tiles_push`].
+    pub tiles: unsafe extern "C" fn(ctx: *mut c_void, op: u32, a: i32, b: i32, c: i32, list: *mut EeScenarioTiles),
+    /// [`Host::world`] (`args` six values).
+    pub world: unsafe extern "C" fn(ctx: *mut c_void, op: u32, args: *const i64) -> i64,
+    /// [`Host::object`]: the object's numbers, null for none.
+    pub object:
+        unsafe extern "C" fn(ctx: *mut c_void, index: i32) -> *const crate::scenario::fields::EeScenarioObjectFields,
+}
+
+impl Host for EeScenarioHost {
+    fn read4(&mut self, op: u32, a: i32, b: i32, c: i32, d: i32) -> i64 {
+        // SAFETY: the table's contract: `ctx` is live for the call that handed the table over and `read` is callable
+        // with it
+        unsafe { (self.read)(self.ctx, op, a, b, c, d) }
+    }
+    fn players(&mut self, kind: i32, single: bool, result: i32, players: Option<&[i32]>, seed: u32) {
+        let (listed, at, count) = match players {
+            Some(p) => (true, p.as_ptr(), p.len()),
+            None => (false, std::ptr::null(), 0),
+        };
+        // SAFETY: as `read`; `at` points to `count` players for the call
+        unsafe { (self.players)(self.ctx, kind, single, result, listed, at, count, seed) }
+    }
+    fn write(&mut self, op: u32, player: c_long, b: i64, c: i64, d: i64) {
+        // SAFETY: as `read`
+        unsafe { (self.write)(self.ctx, op, player, b, c, d) }
+    }
+    fn tiles(&mut self, op: u32, a: i32, b: i32, c: i32) -> Vec<(i32, i32)> {
+        let mut list = EeScenarioTiles(Vec::new());
+        // SAFETY: as `read`; `list` lives through the call
+        unsafe { (self.tiles)(self.ctx, op, a, b, c, &mut list) };
+        list.0
+    }
+    fn world(&mut self, op: u32, args: [i64; 6]) -> i64 {
+        // SAFETY: as `read`; `args` lives through the call
+        unsafe { (self.world)(self.ctx, op, args.as_ptr()) }
+    }
+    fn object(&mut self, index: i32) -> Option<crate::scenario::fields::EeScenarioObjectFields> {
+        // SAFETY: as `read`; a non-null answer points to the live object's numbers, copied at once
+        unsafe { (self.object)(self.ctx, index).as_ref().copied() }
+    }
+}

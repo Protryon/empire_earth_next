@@ -4,7 +4,7 @@
 // and EEAIAStarHillGoal). The twin of EEAIAStarStorage.cpp.
 //
 // Port (docs/RUST_PLAN.md R5b.1): the nodes, the lists, the tables, the per-index flag and node arrays and the
-// machine's search steps are Rust (rust/crates/ee_astar/src/graph.rs, the members line by line there: the node free
+// machine's search steps are Rust (rust/crates/ee_sim/src/astar/graph.rs, the members line by line there: the node free
 // list 0x16070/0x1616b/0x162b0, AddClosed 0x1613f, AddOpen 0x1618a, GetBucket 0x16233, Clear 0x16394, UpdateOpen
 // 0x1656d, RemoveNearestClosed 0x1665f, RemoveNearestOpen 0x16771, RemoveBestOpen 0x16905, RemoveClosed 0x16aa5,
 // InsertSorted 0x16b5b, Push 0x16bb5, Pop 0x16be1); the class forwards to it.

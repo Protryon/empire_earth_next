@@ -8,7 +8,7 @@
 // is still referenced resolves to itself, as the pointer it replaces did.
 //
 // The registry is only looked up, never iterated: it orders nothing and draws no random number. It is Rust
-// (rust/crates/ee_units, a lock-free radix tree of atomic pointers), so a thread may resolve a handle while another
+// (rust/crates/ee_sim/src/units, a lock-free radix tree of atomic pointers), so a thread may resolve a handle while another
 // inserts a unit or frees one: the physics thread under the world's write lock, the UI and graphics threads under
 // its read lock (where a unit's last Dereference can run). A resolve gives the registered object or NULL, never a
 // torn value; whether the object is still alive is the holder's business, as it was with the pointer.

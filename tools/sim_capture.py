@@ -398,8 +398,8 @@ def main():
     files = [str(OUT / a.name / f"capture-{seed}.bin") for seed in seed_list]
     # this checkout's build/rust, as every cargo run of tools/rust_build.py
     codes = [rust_build.run_cargo(["run", "-q", "--release", "-p", crate, "--example", example, "--", *files])
-             for crate, example in (("ee_formations", "formation_replay"), ("ee_combat", "combat_replay"),
-                                    ("ee_tech", "tech_replay"))]
+             for crate, example in (("ee_sim", "formation_replay"), ("ee_sim", "combat_replay"),
+                                    ("ee_sim", "tech_replay"))]
     return 1 if any(codes) else 0
 
 

@@ -495,7 +495,7 @@ impl EffectScreen {
 
 #[cfg(test)]
 mod tests {
-    use ee_scenario::fields::EeScenarioEffectFields;
+    use ee_sim::scenario::fields::EeScenarioEffectFields;
 
     use super::*;
 

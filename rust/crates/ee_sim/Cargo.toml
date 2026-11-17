@@ -1,0 +1,19 @@
+# ee_sim: ee_ai, ee_astar, ee_combat, ee_formations, ee_netmsg, ee_rmap, ee_scenario, ee_tech, ee_units (docs/progress/crate-restructure.md)
+[package]
+name = "ee_sim"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+ee_base = { path = "../ee_base" }
+ee_data = { path = "../ee_data" }
+ee_render = { path = "../ee_render" }
+libc = "0.2"
+mlua-sys = { version = "0.13", default-features = false, features = ["lua54", "external"] }
+
+[build-dependencies]
+cc = "1"

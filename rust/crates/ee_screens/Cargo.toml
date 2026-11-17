@@ -17,7 +17,7 @@ ee_base = { path = "../ee_base" }
 # GERectangle and its And (the framed background's clips: frame.rs)
 ee_render = { path = "../ee_render" }
 # the effect types read and write an effect's numbers in place (editor_effects.rs: EeScenarioEffectFields)
-ee_scenario = { path = "../ee_scenario" }
+ee_sim = { path = "../ee_sim" }
 # the box selection's geometry (select_units.rs)
 # the scenario editor's terrain paint draws its ambient units from URandom (editor_actions.rs)
 # the toolkit's Rust objects, reached directly (toolkit.rs over ee_ui direct.rs)

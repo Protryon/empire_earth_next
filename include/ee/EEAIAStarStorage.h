@@ -6,7 +6,7 @@
 // per-goal storages. Slots named by vtable offset; fields by offset (provisional names).
 //
 // Port (docs/RUST_PLAN.md R5b.1): the nodes, the lists, the tile flags, the node map, the bounds and the machine's
-// search steps are Rust (rust/crates/ee_astar, one EeAStarStorage per storage). The C++ classes keep their vtables,
+// search steps are Rust (rust/crates/ee_sim/src/astar, one EeAStarStorage per storage). The C++ classes keep their vtables,
 // their own per-tile arrays (the flood storages' ids) and forward the rest; what the goals read of the storage while a
 // search runs comes from the machine's hooks (mHook*), since a hook must not call back into the running storage.
 #ifndef EE_EEAIASTARSTORAGE_H

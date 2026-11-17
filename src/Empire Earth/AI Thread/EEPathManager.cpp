@@ -1808,7 +1808,7 @@ long EELoadAutoPathRequest(FSFile& inFile, EEAutoPathRequest*& outRequest)
 }
 
 // port (save version 0.276): a unit's tile search in progress as saved (SaveSearches); its storage as ee_astar's
-// bytes (rust/crates/ee_astar storage_save.rs)
+// bytes (rust/crates/ee_sim/src/astar storage_save.rs)
 namespace {
 struct EESavedSearch {
     unsigned long mUnitID = 0;
@@ -2064,7 +2064,7 @@ long EEPathManager::LoadSearches(FSFile& inFile)
 }
 
 // port (save version 0.278): the graph searches in progress (SaveGraphSearches); their storage as ee_astar's bytes
-// (rust/crates/ee_astar graph_save.rs), the objects by the nodes' index (the path sub sector ids)
+// (rust/crates/ee_sim/src/astar graph_save.rs), the objects by the nodes' index (the path sub sector ids)
 namespace {
 enum EEGraphModifierKind {
     kGraphModifierNone = 0,

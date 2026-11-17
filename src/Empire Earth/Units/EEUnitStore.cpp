@@ -1,7 +1,7 @@
 // New (port): the unit store's C++ side (ee/EEUnitStore.h; docs/RUST_PLAN.md R5b.4 leaf 5): the location's write
 // reports, the pointer members' places, the insert's seed, the removal, the box selection's pick, and the TEST ONLY consistency check and pick
 // records. The records are Rust's
-// (rust/crates/ee_units/src/store.rs).
+// (rust/crates/ee_sim/src/units/store.rs).
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>

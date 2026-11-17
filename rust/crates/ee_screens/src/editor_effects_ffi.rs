@@ -4,7 +4,7 @@
 
 use core::ffi::c_void;
 
-use ee_scenario::fields::EeScenarioEffectFields;
+use ee_sim::scenario::fields::EeScenarioEffectFields;
 
 use crate::editor_effects::{EffectTypes, Fx};
 use crate::editor_players::SeplHost;

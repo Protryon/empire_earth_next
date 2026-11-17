@@ -44,19 +44,19 @@ use ee_net as _;
 #[cfg(not(test))]
 use ee_ui as _;
 // the random map generator's `extern "C"` API (ee_rmap/src/ffi.rs) reaches the staticlib through this dependency
-use ee_rmap as _;
+use ee_sim as _;
 // formations (ee_formations/src/ffi.rs): the geometry the formation classes call
-use ee_formations as _;
+use ee_sim as _;
 // the tile A* searches' storage and machine (ee_astar/src/ffi.rs), called by the C++ EEAIAStar* classes
-use ee_astar as _;
+use ee_sim as _;
 // the combat and unit formulas (ee_combat/src/ffi.rs) the C++ unit methods call (ee/EECombatFormulas.h)
-use ee_combat as _;
+use ee_sim as _;
 // the tech tree's research and prerequisites, the event effects' arithmetic, the calamities' timing (ee_tech/src/ffi.rs),
 // called by the C++ tech tree, EEEvent.cpp and the calamity classes
-use ee_tech as _;
+use ee_sim as _;
 // the scenario manager's conditions, player choices and triggers (ee_scenario/src/ffi.rs), called by the C++
 // EESMCondition, EESMTrigger and EEScenarioManager over their host (Scenario Manager/EEScenarioHost.cpp)
-use ee_scenario as _;
+use ee_sim as _;
 // the app and world lane's classes (ee_app): the game options, settings, camera and ambient sounds behind their C++ classes
 use ee_app as _;
 // the data layer's `extern "C"` API (ee_data/src/ffi.rs) reaches the staticlib through this dependency
@@ -86,7 +86,7 @@ use ee_won as _;
 // the unit registry behind EEUnitHandle<T> and the unit store (ee_units/src/ffi.rs), called by RTSUnit.cpp and
 // EEUnitStore.cpp; its host imports the C++ world calls (EEUnitHost.cpp), absent from a test binary
 #[cfg(not(test))]
-use ee_units as _;
+use ee_sim as _;
 
 /// The combat reads' bridge to the unit store (ee_combat store.rs: ee_combat cannot depend on ee_units, whose host
 /// imports C++): the record of the unit object (an `EEUnit*`'s address: ee_units' object index) into `out`; a unit
@@ -96,16 +96,19 @@ use ee_units as _;
 /// # Safety
 /// `out` must point to a writable record; `object` is 0 or a live unit.
 #[no_mangle]
-pub unsafe extern "C" fn ee_combat_store_unit_of(object: u64, out: *mut ee_combat::store::EeCombatStoredUnit) -> bool {
+pub unsafe extern "C" fn ee_combat_store_unit_of(
+    object: u64,
+    out: *mut ee_sim::combat::store::EeCombatStoredUnit,
+) -> bool {
     #[cfg(not(test))]
     {
         if object == 0 {
             return false;
         }
-        let r = match ee_units::store::with_store(|s| s.by_object(object).copied()) {
+        let r = match ee_sim::units::store::with_store(|s| s.by_object(object).copied()) {
             Some(r) => r,
             None => {
-                let mut r = ee_units::store::EeUnitRecord::default();
+                let mut r = ee_sim::units::store::EeUnitRecord::default();
                 // SAFETY: the C++ fills one record of the live unit
                 unsafe { host::ee_combat_host_unit_record(object, &mut r) };
                 r
@@ -131,12 +134,12 @@ pub unsafe extern "C" fn ee_combat_store_unit_of(object: u64, out: *mut ee_comba
 #[no_mangle]
 pub unsafe extern "C" fn ee_combat_store_stats_of(
     object: u64,
-    out: *mut ee_combat::store::EeCombatStoredStats,
+    out: *mut ee_sim::combat::store::EeCombatStoredStats,
 ) -> bool {
     #[cfg(not(test))]
     {
-        let Some(s) = ee_units::stats::stats_of(object) else { return false };
-        let stats = ee_combat::store::EeCombatStoredStats {
+        let Some(s) = ee_sim::units::stats::stats_of(object) else { return false };
+        let stats = ee_sim::combat::store::EeCombatStoredStats {
             scale: s.scale,
             range: s.range,
             max_velocity: s.max_velocity,
@@ -167,17 +170,17 @@ pub unsafe extern "C" fn ee_combat_store_stats_of(
 #[no_mangle]
 pub unsafe extern "C" fn ee_combat_store_player_of(
     object: u64,
-    out: *mut ee_combat::store::EeCombatStoredPlayer,
+    out: *mut ee_sim::combat::store::EeCombatStoredPlayer,
 ) -> bool {
     #[cfg(not(test))]
     {
         if object == 0 {
             return false;
         }
-        let table = match ee_units::players::with_players(|p| p.get(object).copied()) {
-            Some(p) => ee_combat::store::EeCombatStoredPlayer { id: p.id, enemies: p.enemies },
+        let table = match ee_sim::units::players::with_players(|p| p.get(object).copied()) {
+            Some(p) => ee_sim::combat::store::EeCombatStoredPlayer { id: p.id, enemies: p.enemies },
             None => {
-                let mut t = ee_combat::store::EeCombatStoredPlayer::default();
+                let mut t = ee_sim::combat::store::EeCombatStoredPlayer::default();
                 // SAFETY: the C++ reads the live player's id and 17 stances
                 unsafe { host::ee_combat_host_player_table(object, &mut t.id, t.enemies.as_mut_ptr()) };
                 t
@@ -200,15 +203,15 @@ pub unsafe extern "C" fn ee_combat_store_player_of(
 mod host {
     extern "C" {
         /// The record of the live unit `object` as its object is now (its `mPlayer` as the list's player).
-        pub fn ee_combat_host_unit_record(object: u64, out: *mut ee_units::store::EeUnitRecord);
+        pub fn ee_combat_host_unit_record(object: u64, out: *mut ee_sim::units::store::EeUnitRecord);
         /// The live player `object`'s `mPlayerID` and 17 `mEnemies` words.
         pub fn ee_combat_host_player_table(object: u64, id: *mut u32, enemies: *mut u32);
     }
 }
 
 #[cfg(not(test))]
-fn combat_stored(r: &ee_units::store::EeUnitRecord) -> ee_combat::store::EeCombatStoredUnit {
-    ee_combat::store::EeCombatStoredUnit {
+fn combat_stored(r: &ee_sim::units::store::EeUnitRecord) -> ee_sim::combat::store::EeCombatStoredUnit {
+    ee_sim::combat::store::EeCombatStoredUnit {
         object: r.object,
         player: r.player,
         id: r.id,
@@ -247,7 +250,7 @@ fn combat_stored(r: &ee_units::store::EeUnitRecord) -> ee_combat::store::EeComba
 }
 
 // the game messages' wire codec (ee_netmsg/src/ffi.rs), called by EEMessage.cpp's ExportMessage/ImportMessage
-use ee_netmsg as _;
+use ee_sim as _;
 // the game screens' decisions (ee_screens: the settings form's presets and value tables) behind the C++ event classes
 // (the menus' FFI imports the C++ host's calls, absent from a test binary)
 #[cfg(not(test))]
@@ -256,7 +259,7 @@ use ee_screens as _;
 // the name tables, called by EECPNextLua.cpp, EECPNextUnits.cpp, EECPEngine.cpp and EECPNext.cpp; the Lua runtime
 // (lua_ffi.rs), called by EECPLua.cpp (it imports the vendored Lua the C++ build compiles, absent from a test binary)
 #[cfg(not(test))]
-use ee_ai as _;
+use ee_sim as _;
 
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 pub const EE_RUST_ABI_VERSION: u32 = 1;
@@ -277,19 +280,19 @@ pub unsafe extern "C" fn ee_rust_init(log: unsafe extern "C" fn(line: *const c_c
     ee_base::panic::install(log);
     // the combat goals' bodies behind ee_units' goal dispatch (attack unit, attack ground: ee_combat goal_dispatch.rs)
     #[cfg(not(test))]
-    ee_units::rust_goal::register_other_goal_kinds(ee_combat::goal_dispatch::rust_goal);
+    ee_sim::units::rust_goal::register_other_goal_kinds(ee_sim::combat::goal_dispatch::rust_goal);
     // the game messages' unit orders through the units lane's bodies (ee_netmsg bodies.rs)
     #[cfg(not(test))]
-    ee_netmsg::bodies::register_unit_orders(unit_order);
+    ee_sim::netmsg::bodies::register_unit_orders(unit_order);
 }
 
 /// A game message's unit order (ee_netmsg bodies.rs) by the units lane's body for it (ee_units ffi.rs): the sender (or
 /// the message's player) and its selection (0 for the orders that take none); a path's point as the body moved it, a
 /// hacked unit's class (its bits in `.0`).
 #[cfg(not(test))]
-fn unit_order(player: u64, group: u64, order: ee_netmsg::bodies::Order) -> ee_netmsg::bodies::OrderResult {
-    use ee_netmsg::bodies::Order::*;
-    use ee_units::ffi::*;
+fn unit_order(player: u64, group: u64, order: ee_sim::netmsg::bodies::Order) -> ee_sim::netmsg::bodies::OrderResult {
+    use ee_sim::netmsg::bodies::Order::*;
+    use ee_sim::units::ffi::*;
     let (p, g) = (player as *mut std::ffi::c_void, group as *mut std::ffi::c_void);
     match order {
         AddPatrolPoint { x, y } => ee_units_add_patrol_point(p, g, x, y),
@@ -333,19 +336,26 @@ fn unit_order(player: u64, group: u64, order: ee_netmsg::bodies::Order) -> ee_ne
 #[cfg(not(test))]
 const _: () = {
     use std::mem::{align_of, size_of};
-    assert!(size_of::<ee_units::rust_goal::EeUnitsGoalIo>() == size_of::<ee_combat::goal_objects::EeCombatGoalIo>());
-    assert!(align_of::<ee_units::rust_goal::EeUnitsGoalIo>() == align_of::<ee_combat::goal_objects::EeCombatGoalIo>());
     assert!(
-        size_of::<ee_units::rust_goal::EeUnitsGoalHost>() == size_of::<ee_combat::goal_objects::EeCombatGoalTable>()
+        size_of::<ee_sim::units::rust_goal::EeUnitsGoalIo>()
+            == size_of::<ee_sim::combat::goal_objects::EeCombatGoalIo>()
     );
-    assert!(ee_units::rust_goal::EE_UNITS_GOAL_SET_PATH_ATTEMPTS == 22);
-    assert!(ee_units::rust_goal::EE_UNITS_GOAL_SUITS == 19);
-    assert!(ee_units::rust_goal::EE_UNITS_GOAL_DESTROY == 1);
-    assert!(ee_units::rust_goal::EE_UNITS_GOAL_HOST_NEW_GOAL == 16);
-    assert!(ee_units::rust_goal::EE_UNITS_GOAL_HOST_APPEND == 20);
-    assert!(ee_units::rust_goal::EE_UNITS_GOAL_HOST_UNIT_ID == 3);
-    assert!(ee_units::rust_goal::EE_UNITS_GOAL_HOST_UNIT_TILE == 4);
-    assert!(ee_units::rust_goal::EE_UNITS_GOAL_HOST_HIT_POINTS == 64);
+    assert!(
+        align_of::<ee_sim::units::rust_goal::EeUnitsGoalIo>()
+            == align_of::<ee_sim::combat::goal_objects::EeCombatGoalIo>()
+    );
+    assert!(
+        size_of::<ee_sim::units::rust_goal::EeUnitsGoalHost>()
+            == size_of::<ee_sim::combat::goal_objects::EeCombatGoalTable>()
+    );
+    assert!(ee_sim::units::rust_goal::EE_UNITS_GOAL_SET_PATH_ATTEMPTS == 22);
+    assert!(ee_sim::units::rust_goal::EE_UNITS_GOAL_SUITS == 19);
+    assert!(ee_sim::units::rust_goal::EE_UNITS_GOAL_DESTROY == 1);
+    assert!(ee_sim::units::rust_goal::EE_UNITS_GOAL_HOST_NEW_GOAL == 16);
+    assert!(ee_sim::units::rust_goal::EE_UNITS_GOAL_HOST_APPEND == 20);
+    assert!(ee_sim::units::rust_goal::EE_UNITS_GOAL_HOST_UNIT_ID == 3);
+    assert!(ee_sim::units::rust_goal::EE_UNITS_GOAL_HOST_UNIT_TILE == 4);
+    assert!(ee_sim::units::rust_goal::EE_UNITS_GOAL_HOST_HIT_POINTS == 64);
 };
 
 #[cfg(test)]
@@ -385,11 +395,11 @@ mod goal_op_tables {
         out
     }
 
-    const UNITS: &str = include_str!("../../ee_units/src/rust_goal.rs");
-    const DISPATCH: &str = include_str!("../../ee_combat/src/goal_dispatch.rs");
-    const OBJECTS: &str = include_str!("../../ee_combat/src/goal_objects.rs");
-    const ATTACK: &str = include_str!("../../ee_combat/src/goal_attack.rs");
-    const HEAL: &str = include_str!("../../ee_combat/src/goal_heal.rs");
+    const UNITS: &str = include_str!("../../ee_sim/src/units/rust_goal.rs");
+    const DISPATCH: &str = include_str!("../../ee_sim/src/combat/goal_dispatch.rs");
+    const OBJECTS: &str = include_str!("../../ee_sim/src/combat/goal_objects.rs");
+    const ATTACK: &str = include_str!("../../ee_sim/src/combat/goal_attack.rs");
+    const HEAL: &str = include_str!("../../ee_sim/src/combat/goal_heal.rs");
 
     #[test]
     fn the_crates_goal_operations_do_not_overlap() {

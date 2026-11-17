@@ -1,4 +1,4 @@
-// New (port): the world calls a Rust decision makes (src/Empire Earth/Units/EEUnitHost.cpp; rust/crates/ee_units/src//
+// New (port): the world calls a Rust decision makes (src/Empire Earth/Units/EEUnitHost.cpp; rust/crates/ee_sim/src/units//
 // host.rs, which declares them on its side), declared for the C++ that calls them too: the TEST ONLY group command
 // sweep (EEGroupCommandSweep.cpp) runs the original bodies' statements over these calls.
 //

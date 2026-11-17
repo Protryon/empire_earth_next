@@ -12,7 +12,7 @@
 
 use core::cell::RefCell;
 
-use ee_scenario::fields::EeScenarioConditionFields;
+use ee_sim::scenario::fields::EeScenarioConditionFields;
 
 use crate::editor_effects::*;
 use crate::editor_events::EE_SCREENS_SEE_CHECK_DISPLAY;

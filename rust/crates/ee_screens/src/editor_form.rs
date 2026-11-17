@@ -20,7 +20,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
 use ee_render::ge::types::GeRectangle;
-use ee_scenario::fields::{
+use ee_sim::scenario::fields::{
     EeScenarioConditionFields, EeScenarioEffectFields, EeScenarioObjectFields, EeScenarioTriggerFields,
 };
 

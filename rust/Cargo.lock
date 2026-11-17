@@ -181,27 +181,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "ee_ai"
-version = "0.1.0"
-dependencies = [
- "cc",
- "ee_base",
- "libc",
- "mlua-sys",
-]
-
-[[package]]
 name = "ee_app"
 version = "0.1.0"
 dependencies = [
  "ee_base",
- "ee_render",
-]
-
-[[package]]
-name = "ee_astar"
-version = "0.1.0"
-dependencies = [
  "ee_render",
 ]
 
@@ -222,22 +205,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "ee_combat"
-version = "0.1.0"
-dependencies = [
- "ee_render",
-]
-
-[[package]]
 name = "ee_data"
 version = "0.1.0"
-
-[[package]]
-name = "ee_formations"
-version = "0.1.0"
-dependencies = [
- "ee_rmap",
-]
 
 [[package]]
 name = "ee_net"
@@ -245,10 +214,6 @@ version = "0.1.0"
 dependencies = [
  "ee_base",
 ]
-
-[[package]]
-name = "ee_netmsg"
-version = "0.1.0"
 
 [[package]]
 name = "ee_render"
@@ -263,51 +228,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "ee_rmap"
-version = "0.1.0"
-dependencies = [
- "ee_base",
- "ee_render",
-]
-
-[[package]]
 name = "ee_rmap_gatelib"
 version = "0.1.0"
 dependencies = [
  "ee_base",
  "ee_render",
- "ee_rmap",
+ "ee_sim",
 ]
 
 [[package]]
 name = "ee_rust"
 version = "0.1.0"
 dependencies = [
- "ee_ai",
  "ee_app",
- "ee_astar",
  "ee_audio",
  "ee_base",
- "ee_combat",
  "ee_data",
- "ee_formations",
  "ee_net",
- "ee_netmsg",
  "ee_render",
- "ee_rmap",
- "ee_scenario",
  "ee_screens",
- "ee_tech",
+ "ee_sim",
  "ee_ui",
- "ee_units",
  "ee_won",
-]
-
-[[package]]
-name = "ee_scenario"
-version = "0.1.0"
-dependencies = [
- "ee_base",
 ]
 
 [[package]]
@@ -317,17 +259,20 @@ dependencies = [
  "ee_audio",
  "ee_base",
  "ee_render",
- "ee_scenario",
+ "ee_sim",
  "ee_ui",
 ]
 
 [[package]]
-name = "ee_tech"
+name = "ee_sim"
 version = "0.1.0"
 dependencies = [
+ "cc",
  "ee_base",
  "ee_data",
  "ee_render",
+ "libc",
+ "mlua-sys",
 ]
 
 [[package]]
@@ -335,16 +280,6 @@ name = "ee_ui"
 version = "0.1.0"
 dependencies = [
  "ee_base",
- "ee_render",
-]
-
-[[package]]
-name = "ee_units"
-version = "0.1.0"
-dependencies = [
- "ee_astar",
- "ee_base",
- "ee_data",
  "ee_render",
 ]
 

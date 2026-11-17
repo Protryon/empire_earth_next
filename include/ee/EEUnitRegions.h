@@ -1,5 +1,5 @@
 // New (port; docs/RUST_PLAN.md R5b.2, the fifteenth round): the map's unit regions are a Rust table
-// (rust/crates/ee_combat regions.rs; was RTSRegionTable<EEComplexUnit*>, EEMap::mUnitRegions). Here the C++ callers'
+// (rust/crates/ee_sim/src/combat regions.rs; was RTSRegionTable<EEComplexUnit*>, EEMap::mUnitRegions). Here the C++ callers'
 // view of one region: its units as the table's slice, valid until the table next changes (as the original's vector
 // was), and the sorted collection of an area's units.
 #ifndef EE_EEUNITREGIONS_H

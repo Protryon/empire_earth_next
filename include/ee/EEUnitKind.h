@@ -1,5 +1,5 @@
 // New (port): unit kinds as data (docs/RUST_PLAN.md R5b.4). The class tests the code made with dynamic_cast, as
-// reads of the kind tables ee_units owns (rust/crates/ee_units/src/kinds.rs):
+// reads of the kind tables ee_units owns (rust/crates/ee_sim/src/units/kinds.rs):
 //   EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theClass) == dynamic_cast<EEUCGate*>(theClass) (the classes until round 32)
 //   EEUnitCast<EEComplexUnit>(theUnit)           == dynamic_cast<EEComplexUnit*>(theUnit)   (from any RTSUnit)
 // A unit class's from EEUnitClass::mCategory and a unit object's from

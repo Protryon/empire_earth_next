@@ -1,0 +1,21 @@
+//! The simulation: the units, combat, path finding, formations, the random maps, the tech tree, the scenarios, the
+//! computer players, the game messages and the simulation parts of the app.
+
+/// The crate ee_ai before the restructure.
+pub mod ai;
+/// The crate ee_astar before the restructure.
+pub mod astar;
+/// The crate ee_combat before the restructure.
+pub mod combat;
+/// The crate ee_formations before the restructure.
+pub mod formations;
+/// The crate ee_netmsg before the restructure.
+pub mod netmsg;
+/// The crate ee_rmap before the restructure.
+pub mod rmap;
+/// The crate ee_scenario before the restructure.
+pub mod scenario;
+/// The crate ee_tech before the restructure.
+pub mod tech;
+/// The crate ee_units before the restructure.
+pub mod units;

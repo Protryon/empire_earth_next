@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use ee_scenario::fields::EeScenarioEffectFields;
+use ee_sim::scenario::fields::EeScenarioEffectFields;
 
 use crate::editor_effects::*;
 use crate::editor_effects_more::AiTypes;

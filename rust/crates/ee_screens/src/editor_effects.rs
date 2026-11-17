@@ -15,7 +15,7 @@
 
 use core::cell::{Cell, RefCell};
 
-use ee_scenario::fields::EeScenarioEffectFields;
+use ee_sim::scenario::fields::EeScenarioEffectFields;
 
 use crate::editor_players::SeplHost;
 
@@ -285,9 +285,9 @@ pub(crate) const MODE_OBJECT: i32 = 3;
 pub(crate) const MODE_AREA: i32 = 4;
 
 /// The scenario's names (`EE_SCENARIO_NAMES_TRIGGERS`, `OBJECTS`, `AREAS`).
-pub(crate) const NAMES_TRIGGERS: i32 = ee_scenario::lists::EE_SCENARIO_NAMES_TRIGGERS as i32;
-pub(crate) const NAMES_OBJECTS: i32 = ee_scenario::lists::EE_SCENARIO_NAMES_OBJECTS as i32;
-pub(crate) const NAMES_AREAS: i32 = ee_scenario::lists::EE_SCENARIO_NAMES_AREAS as i32;
+pub(crate) const NAMES_TRIGGERS: i32 = ee_sim::scenario::lists::EE_SCENARIO_NAMES_TRIGGERS as i32;
+pub(crate) const NAMES_OBJECTS: i32 = ee_sim::scenario::lists::EE_SCENARIO_NAMES_OBJECTS as i32;
+pub(crate) const NAMES_AREAS: i32 = ee_sim::scenario::lists::EE_SCENARIO_NAMES_AREAS as i32;
 
 /// The form's control the camera and dialogue types hide while shown (id 8).
 pub(crate) const CONTROL_8: i32 = 8;

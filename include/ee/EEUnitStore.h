@@ -1,5 +1,5 @@
 // New (port): the unit store, stage one (docs/RUST_PLAN.md R5b.4 leaf 5). Each unit's plain state is a Rust record
-// (rust/crates/ee_units/src/store.rs), readable by id without a call into C++, while the unit is in a player's list:
+// (rust/crates/ee_sim/src/units/store.rs), readable by id without a call into C++, while the unit is in a player's list:
 // RTSPlayer::InsertUnit inserts it (EEUnitStoreInsert: seeded whole from the object), RTSPlayer::RemoveKilledUnits
 // removes it, ~RTSPlayer drops the player's records.
 //

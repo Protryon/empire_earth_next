@@ -105,7 +105,7 @@ public:
 
     // Run's search steps (the <EEAIAStarChokePointStorage, EEAIAStarChokePointGoal, EEMap> COMDATs 0x1d184.. in
     // EEAIChokePoint.cpp's range) (provisional names). Port: Start 0x1d184, Expand 0x1d1fb and their Restart
-    // 0x1d527, TestTile 0x1d63b, NextNode 0x1d6b1 and AddNode 0x28fc9 are Rust (rust/crates/ee_astar machine.rs);
+    // 0x1d527, TestTile 0x1d63b, NextNode 0x1d6b1 and AddNode 0x28fc9 are Rust (rust/crates/ee_sim/src/astar machine.rs);
     // these call it with the goal behind EeAStarCallbacks (EEAIAStarHooks, ee/EEAIAStarMachineSteps.h)
     bool Start();                           // 0x1d184: the start node, the goal tile
     void Expand();                          // 0x1d1fb: pops nodes and adds the neighbours the goal accepts
@@ -142,7 +142,7 @@ public:
     // machine's 0xaacf0.. in EEPathManager.cpp's). The goal supplies the hooks: IsGoalNode, GetStartObject,
     // GetGoalID, Estimate, GetStepCost, AcceptNeighbor, SearchDone; M its mNeighbors, GetNumNeighbors, mID and
     // GetGraphLocation. (provisional names) Port: Start 0x27434, Expand 0x274a3 and their Restart 0x28a34, NextNode
-    // 0x2945f and AddNode 0x28aa7 are Rust (rust/crates/ee_astar graph.rs); these call it with the goal and the
+    // 0x2945f and AddNode 0x28aa7 are Rust (rust/crates/ee_sim/src/astar graph.rs); these call it with the goal and the
     // objects behind EeAStarGraphCallbacks (EEAIAStarGraphHooks below)
     bool Start();
     void Expand();

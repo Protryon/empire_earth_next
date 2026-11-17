@@ -1,4 +1,4 @@
-// New (port): the world calls a Rust decision makes (rust/crates/ee_units/src/host.rs; docs/RUST_PLAN.md R5b.4
+// New (port): the world calls a Rust decision makes (rust/crates/ee_sim/src/units/host.rs; docs/RUST_PLAN.md R5b.4
 // leaf 5): a group's units as ids, goals built from a plain record (units by id, resolved through the registry) and
 // handed back as opaque handles. Every call runs on the thread that called the decision (the physics thread, under
 // the world's write lock). TEST ONLY: the dry host (ee/EEUnitHost.h) answers the same calls without acting.

@@ -7,7 +7,7 @@
 // EEAIAStarGraphTerrainStorage. Slots named by vtable offset (provisional names).
 //
 // Port (docs/RUST_PLAN.md R5b.1): the nodes, the lists, the tables, the per-index arrays and the machine's search
-// steps are Rust (rust/crates/ee_astar/src/graph.rs, one EeAStarGraphStorage per storage). The class keeps its vtable
+// steps are Rust (rust/crates/ee_sim/src/astar/graph.rs, one EeAStarGraphStorage per storage). The class keeps its vtable
 // and forwards; the goals get the nodes the machine hands them (IsGoalNode, GetStepCost) and the current node
 // (SearchDone) as EEAIAStarGraphNode views built from the Rust node, and the lists' objects through ListObjects.
 // Requires ee/EETileCoordinate.h.

@@ -1,6 +1,6 @@
 // New (port), TEST ONLY: the group command sweep (docs/RUST_PLAN.md R5b.4 leaf 4 (c)). No capture game sends a group
 // command (EE-SIM's human idles; the computer players send only walls), so the Rust bodies of the group commands
-// (rust/crates/ee_units/src/group.rs) are run here over the live world through the dry host (ee/EEUnitHost.h: every
+// (rust/crates/ee_sim/src/units/group.rs) are run here over the live world through the dry host (ee/EEUnitHost.h: every
 // world call logged, nothing changed), every five game minutes, for every player and a set of selections and
 // arguments. The USGC record holds the Rust body's log, so the capture's digest gates it like the others; a dry host
 // mismatch stops EE-SIM (exit code 3). (R5b.4 round 31: the original bodies' statements, which ran next to the Rust

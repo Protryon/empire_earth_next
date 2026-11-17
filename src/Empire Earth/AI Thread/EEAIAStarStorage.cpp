@@ -2,7 +2,7 @@
 // EEAIAStarStorage, vtable 0x43a0f0). The A* node storage: 0x1b991..0x1c666 (EEAIAStarPathSectorStorage's Virtual10
 // ends at 0x1b991, EEAIAStarTerrainStorage's ctor starts at 0x1c666).
 //
-// Port (docs/RUST_PLAN.md R5b.1): the storage is Rust (rust/crates/ee_astar/src/storage.rs, the members line by line
+// Port (docs/RUST_PLAN.md R5b.1): the storage is Rust (rust/crates/ee_sim/src/astar/storage.rs, the members line by line
 // there); the class forwards to it.
 #include <windows.h>
 #include <string.h>

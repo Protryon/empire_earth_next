@@ -1,6 +1,6 @@
 // New (port): the scenario logic's host (ee_scenario, docs/RUST_PLAN.md R5b.5; ee/EEScenarioHost.h). The Rust
 // conditions, player choices and triggers read the world through one callback by operation code
-// (EE_SCENARIO_READ_*, rust/crates/ee_scenario/src/host.rs); each case is the original's expression at its place.
+// (EE_SCENARIO_READ_*, rust/crates/ee_sim/src/scenario/host.rs); each case is the original's expression at its place.
 #include <windows.h>
 #include <vector>
 #include "lle/LowLevelEngine.h"

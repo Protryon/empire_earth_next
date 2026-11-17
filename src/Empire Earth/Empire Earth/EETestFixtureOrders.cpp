@@ -1,7 +1,7 @@
 // New (port), TEST ONLY: the UI fixture's orders (EETestFixture.cpp; on only with EE_TEST_UI). "<seq> order <form>
 // <kind>" gives an order to a group of the local player's units through the real input path, then judges every unit
 // of the group by the original's rule once the physics has executed the order's message. The group commands' bodies
-// (EEMGatherResource, EEMRepairUnit, EEMPatrol, EEMAttackGround, EEMPathTo: rust/crates/ee_units group.rs) are reached
+// (EEMGatherResource, EEMRepairUnit, EEMPatrol, EEMAttackGround, EEMPathTo: rust/crates/ee_sim/src/units group.rs) are reached
 // by no capture game (EE-SIM's human idles), so this is the only run of their world calls (Fill's sorts, the keeps,
 // the spreads, SetGoal, Plan, the markers, the acknowledgements) in a played game.
 //

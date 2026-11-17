@@ -1,5 +1,5 @@
 // New (port): the plain reads of the goals' and shots' trigger tests and of the goals' steps (ee/EECombatGoals.h;
-// rust/crates/ee_combat/src/goals.rs; docs/RUST_PLAN.md R5b.2, sixth round), the hosts of the Rust tests and steps
+// rust/crates/ee_sim/src/combat/goals.rs; docs/RUST_PLAN.md R5b.2, sixth round), the hosts of the Rust tests and steps
 // (each lazy read and each operation the original's statement), and their CBTC/CBGS capture records.
 // Every read here is a field or a trivial accessor: no side effect, no random draw, nothing the test would not
 // survive reading early; a missing unit, target, player or class leaves its fields 0.

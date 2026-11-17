@@ -1,4 +1,4 @@
-// New (port): the C++ side of the Rust tech tree (rust/crates/ee_tech nodes.rs; docs/RUST_PLAN.md R5b.2, R5b.4 round
+// New (port): the C++ side of the Rust tech tree (rust/crates/ee_sim/src/tech nodes.rs; docs/RUST_PLAN.md R5b.2, R5b.4 round
 // 29). The tree's, the epochs' and the nodes' plain members are Rust records the classes derive from (ee/EEPlayer.h);
 // the bodies are Rust, over one host (EETechHost, EETechTree.cpp) for the containers, the captured entry points, the
 // events, the interface, the player, the media and the file. Include after ee/EEPlayer.h (and ee/EEEvent.h for the

@@ -845,7 +845,7 @@ static bool RunOne(const RunKey& inKey, const std::string& inVolume, const std::
 }
 
 
-// ---- small synthetic maps: the golden values of ee_rmap's own unit tests (rust/crates/ee_rmap/src/golden.rs builds
+// ---- small synthetic maps: the golden values of ee_rmap's own unit tests (rust/crates/ee_sim/src/rmap/golden.rs builds
 // the same maps by hand and must reach the same digests). FNV-1a over every generator output as little-endian words.
 struct Fnv {
     uint64_t mHash;

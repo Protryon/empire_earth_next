@@ -1,5 +1,5 @@
 // New (port): the attack, attack-ground and heal goals' trigger tests and steps, and the shots' trigger tests, as
-// plain records (docs/RUST_PLAN.md R5b.2, sixth round; rust/crates/ee_combat/src/goals.rs). The C++ fills the plain
+// plain records (docs/RUST_PLAN.md R5b.2, sixth round; rust/crates/ee_sim/src/combat/goals.rs). The C++ fills the plain
 // reads of a test (EeCombatConditionIn, null-safe) or a step (EeCombatStepIn); the lazy reads and the step's
 // operations are logged into the record in the order they are made.
 //

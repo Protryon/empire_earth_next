@@ -15,7 +15,7 @@
 #include "rust/ee_combat.h"
 #include "ee/EESimCapture.h"
 
-// The records (EeCombat*In, EeCombat*Out) and the formulas are ee_combat's (rust/crates/ee_combat; the field order
+// The records (EeCombat*In, EeCombat*Out) and the formulas are ee_combat's (rust/crates/ee_sim/src/combat; the field order
 // is the capture's layout). The C++ formulas they replace were deleted after the capture equalled theirs.
 
 // ---- the calls (and the capture)

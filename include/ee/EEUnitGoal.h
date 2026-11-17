@@ -6,7 +6,7 @@
 // New (port; docs/RUST_PLAN.md R5b.4, rounds 16 to 22; R5b.2 for the attack and heal goals): every goal class moved
 // whole into Rust, so the base class and the one class left (EEUGRust, now a second name of this one: ee/EEUGRust.h)
 // are one class with no vtable. The object is the goal the queues, the unit's mGoalState and the save hold: its base
-// fields here, its own state and every body Rust's (rust/crates/ee_units/src/rust_goal.rs dispatches by mKind:
+// fields here, its own state and every body Rust's (rust/crates/ee_sim/src/units/rust_goal.rs dispatches by mKind:
 // location.rs, patrol.rs, calamity.rs, explore.rs, unload.rs, load.rs, build.rs, gather.rs; the attack and heal
 // kinds go to ee_combat's goal dispatch: goal_objects.rs, goal_attack.rs, goal_heal.rs). The base goal's own bodies
 // (EEUnitGoal.cpp 0x23c332..0x23c83a: GetDestination, Start, EvaluateCondition, the base record's Save and Load,

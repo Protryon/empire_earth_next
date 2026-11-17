@@ -1,5 +1,5 @@
 // New (port; docs/RUST_PLAN.md R5b.4 leaf 6, the twelfth and thirteenth rounds): the host of the unit classes' Update
-// sequences and ActionChanged decisions (ee/EEUnitUpdate.h; rust/crates/ee_units/src/update.rs, actions.rs; the
+// sequences and ActionChanged decisions (ee/EEUnitUpdate.h; rust/crates/ee_sim/src/units/update.rs, actions.rs; the
 // fourteenth round's overrides with their classes' operations). Rust
 // decides which of a unit's leaves run and in which order; each read and operation here is one expression or call of
 // the original bodies, through the class (its virtuals dispatch as before) and the unit. TEST ONLY: every call is noted
