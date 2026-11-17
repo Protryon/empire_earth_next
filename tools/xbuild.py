@@ -384,8 +384,7 @@ WON_TESTS = {
     "won_socket_test": "won_ops_test",
     # the socket ops, BlockingSocket / QueueSocket, the async op machinery and WONAPICore's threads
     "won_ops_test": [WON_SRC / "WONSocket" / "IPAddr.cpp",
-                     WON_SRC / "WONCommon" / "AsyncOp.cpp",
-                     WON_SRC / "WONAPI.cpp"],
+                     WON_SRC / "WONCommon" / "AsyncOp.cpp"],  # (WONAPICore is header-only: ee_won apicore.rs)
     # the async machinery's events (golden: rust/crates/ee_won_net/src/golden_asyncop.txt, recorded over the C++ classes)
     "won_asyncop_test": "won_ops_test",
     # the socket classes' events (golden: rust/crates/ee_won_net/src/golden_sockobj.txt, recorded over the C++ classes)
@@ -396,8 +395,8 @@ WON_TESTS = {
     "won_core_test": "won_ops_test",
     # ServerConnection and ServerConnectionConnectOp over 127.0.0.1 with a stand-in peer authentication (golden:
     # rust/crates/ee_won_net/src/golden_servconn.txt, recorded over the C++ classes), then RoutingConnection's op list
-    # and reply dispatch; its units (won_ops_test's, WONServer's ServerConnection, WONRouting's but the smart
-    # connection) are set below the table
+    # and reply dispatch; its units are won_ops_test's (ServerConnection is header-only since R6 WONLobby round 12;
+    # the driver binds the deleted unit's hooks, tests/won/won_servconn_cpp.h), set below the table
     "won_servconn_test": [],
     # SmartRoutingConnection (the client, group and member model, the ignore list, the chat commands, the snapshots)
     # over 127.0.0.1 with a routing server stand-in (golden: rust/crates/ee_won_net/src/golden_smartroute.txt, recorded
@@ -781,7 +780,6 @@ WON_TESTS = {
                         WON_SRC / "WONCommon" / "StringUtil.cpp"],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
-                                  WON_SRC / "WONServer" / "ServerConnection.cpp",
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
 WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"], WON_SRC / "WONCommon" / "StringUtil.cpp"]
 # WONRouting's RoutingGetUserStatusOp over 127.0.0.1 with a routing server stand-in (golden:
@@ -835,6 +833,13 @@ WON_TESTS["won_gamespy_test"] = WON_TESTS["won_serverop_test"]
 # CDKey's registry and file storage (ee_won cdkeystore.rs) against the original statements of AuthContext.cpp,
 # run against run on a scratch config.yaml; the same units as won_serverop_test
 WON_TESTS["won_cdkeystore_test"] = WON_TESTS["won_serverop_test"]
+# the lobby model reading the routing server's records in Rust (modelobj.rs route_record_op) against RoutingOp.cpp's
+# copies, RoutingLogic.cpp's cases and LobbyModelHost.cpp's reads as they were, on real routing ops (golden:
+# rust/crates/ee_won_lobby/src/golden_routerec.txt); won_servconn_test's units (a connection binds the core)
+WON_TESTS["won_routemodel_test"] = WON_TESTS["won_servconn_test"]
+# WONAPICore as a Rust object (apicore.rs) against WONAPI.cpp's statements copied into the driver, over the same op
+# container, timer and thread shims; won_ops_test's units
+WON_TESTS["won_apicore_test"] = WON_TESTS["won_ops_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]

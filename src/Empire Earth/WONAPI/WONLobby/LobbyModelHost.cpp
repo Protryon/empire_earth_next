@@ -1,10 +1,10 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 // The lobby model's shells and host (NEW, no original address: R6 WONLobby round 10). LobbyModel.cpp's classes are
 // Rust objects (rust/crates/ee_won_lobby/src/modelobj.rs: every member and the methods over them); this unit is the
-// shells' base, the host the Rust calls (the factories, the game code's hooks, the routing server's records, the
+// shells' base, the host the Rust calls (the factories, the game code's hooks, a record's name as a GUIString, the
 // persistent ignore and friend lists, the connection's close) and the methods that read and write the C++ buffers
-// and records: the routing infos and the directory's entries handed to the Rust as values, the summaries, the join
-// request and reply, a player's bytes, the status texts.
+// and records: the directory's entries handed to the Rust as values, the summaries, the join request and reply, a
+// player's bytes, the status texts. The routing server's records are read in Rust (R6 WONLobby round 12).
 #include <windows.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -47,10 +47,6 @@ static intptr_t ModelHost(EeWonModelOp inOp, intptr_t a, intptr_t b, intptr_t c)
     case O::NewServer: return Held(new LobbyServer);
     case O::NewGame: return Held(LobbyGame::CreateGame(static_cast<LobbyGameType>(a)));
     case O::NewPlayer: return Held(LobbyPlayer::CreatePlayer());
-    case O::ClientReadRouting: reinterpret_cast<LobbyClient*>(a)->ReadRoutingInfo(reinterpret_cast<RoutingClientInfo*>(b)); return 0;
-    case O::GroupReadRouting:
-        reinterpret_cast<LobbyGroup*>(a)->ReadRoutingInfo(reinterpret_cast<RoutingGroupInfo*>(b), reinterpret_cast<LobbyClientList*>(c));
-        return 0;
     case O::NameIgnored: return LobbyIsNameIgnored(GUIString(reinterpret_cast<GUIStringData*>(a)));
     case O::CdKeyBlocked: return LobbyIsCDKeyBlocked((unsigned long)a);
     case O::FindFriend: return (intptr_t)LobbyFindFriend((unsigned long)a);
@@ -63,6 +59,15 @@ static intptr_t ModelHost(EeWonModelOp inOp, intptr_t a, intptr_t b, intptr_t c)
     case O::GameJoinStatusHook: return reinterpret_cast<LobbyGame*>(a)->GetJoinStatusHook();
     case O::GameCanStartHook: return reinterpret_cast<LobbyGame*>(a)->CanStartGameHook();
     case O::ConnectionClose: reinterpret_cast<RoutingConnection*>(a)->QueueClose(-1); return 0;
+    case O::TextOfUnits: {
+        std::wstring aText;
+        WonWideSink(&aText, reinterpret_cast<const uint16_t*>(a), (size_t)b);
+        return Held(new GUIStringData(aText));
+    }
+    case O::GameReadSummaryBytes: {
+        ReadBuffer aBuffer(reinterpret_cast<const char*>(b), (unsigned long)c);
+        return reinterpret_cast<LobbyGame*>(a)->ReadSummary(aBuffer);
+    }
     }
     return 0;
 }
@@ -82,75 +87,7 @@ static void ModelAppendUnits(void* inContext, const uint16_t* inUnits, size_t in
         WideAppendUtf16Unit(*anOut, inUnits[i]);
 }
 
-// ---- the routing server's and the directory's records
-
-// Copies the client's name, flags, ids and CD key id from the routing server's client info
-void LobbyClient::ReadRoutingInfo(RoutingClientInfo* inInfo)
-{
-    intptr_t aValues[4] = { (intptr_t)inInfo->mFlags, inInfo->mClientId, (intptr_t)inInfo->mUserId, (intptr_t)inInfo->mAddress };
-    GUIString aName(new GUIStringData(inInfo->mName));
-    this->M(LobbyMC::ClientSetRouting, (intptr_t)aName.mData.get(), (intptr_t)aValues);
-}
-
-// the merge of a routing map into a model list (the Rust applies ee_won_model_sync_plan): its ids and records
-template <class Map> static void SyncArgs(const Map& inMap, std::vector<uint16_t>& outIds, std::vector<intptr_t>& outInfos)
-{
-    for (typename Map::const_iterator it = inMap.begin(); it != inMap.end(); ++it) {
-        outIds.push_back(it->first);
-        outInfos.push_back((intptr_t)it->second.get());
-    }
-}
-
-// Merges the routing server's client map into the list: drops gone clients, adds new ones, refreshes the rest
-void LobbyClientList::SyncClients(const RoutingClientMap& inMap)
-{
-    std::vector<uint16_t> anIds;
-    std::vector<intptr_t> anInfos;
-    SyncArgs(inMap, anIds, anInfos);
-    this->M(LobbyMC::ListSync, anIds.empty() ? 0 : (intptr_t)&anIds[0], anInfos.empty() ? 0 : (intptr_t)&anInfos[0], anIds.size());
-}
-
-// Merges the routing server's client map into the server's clients and refreshes who is ignored
-void LobbyServer::SyncClients(const RoutingClientMap& inMap)
-{
-    std::vector<uint16_t> anIds;
-    std::vector<intptr_t> anInfos;
-    SyncArgs(inMap, anIds, anInfos);
-    this->M(LobbyMC::ServerSyncClients, anIds.empty() ? 0 : (intptr_t)&anIds[0], anInfos.empty() ? 0 : (intptr_t)&anInfos[0], anIds.size());
-}
-
-// Merges the routing server's room map into the server's rooms and recounts the people in them
-void LobbyServer::SyncGroups(const RoutingGroupMap& inGroups, bool inUpdateClients)
-{
-    std::vector<uint16_t> anIds;
-    std::vector<intptr_t> anInfos;
-    SyncArgs(inGroups, anIds, anInfos);
-    this->M(LobbyMC::ServerSyncGroups, anIds.empty() ? 0 : (intptr_t)&anIds[0], anInfos.empty() ? 0 : (intptr_t)&anInfos[0],
-            (intptr_t)((uint64_t)anIds.size() | (uint64_t)inUpdateClients << 32));
-}
-
-// Copies a room's id, name, member count, flags, captain and capacity from the routing server; fills members
-void LobbyGroup::ReadRoutingInfo(RoutingGroupInfo* inInfo, LobbyClientList* inClients)
-{
-    // the routing field at +0x2a is the current member count despite its name
-    intptr_t aValues[5] = { inInfo->mId, inInfo->mMaxPlayers, (intptr_t)inInfo->mFlags, inInfo->mCaptainId, inInfo->mMaxClients };
-    GUIString aName(new GUIStringData(inInfo->mName));
-    this->M(LobbyMC::GroupSetRouting, (intptr_t)aName.mData.get(), (intptr_t)aValues);
-    if (inClients != NULL) this->SetMembers(inInfo->mMembers, inClients);
-}
-
-// Rebuilds the member list from the routing server, setting each member's flags, captaincy and room
-void LobbyGroup::SetMembers(const RoutingMemberMap& inMembers, LobbyClientList* inClients)
-{
-    std::vector<uint16_t> anIds;
-    std::vector<uint8_t> aFlags;
-    for (RoutingMemberMap::const_iterator it = inMembers.begin(); it != inMembers.end(); ++it) {
-        anIds.push_back(it->first);
-        aFlags.push_back(it->second->mFlags);
-    }
-    this->M(LobbyMC::GroupSetMembersList, (intptr_t)inClients);
-    this->M(LobbyMC::GroupSetMembers, anIds.empty() ? 0 : (intptr_t)&anIds[0], aFlags.empty() ? 0 : (intptr_t)&aFlags[0], anIds.size());
-}
+// ---- the directory's records (the routing server's are read in Rust: modelobj.rs route_record_op)
 
 // Reads the server's name, address, population (_C) and address names (_L) from its directory entry
 void LobbyServer::ReadDirEntity(DirEntity* inEntity)

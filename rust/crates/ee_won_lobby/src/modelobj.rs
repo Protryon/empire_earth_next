@@ -365,6 +365,12 @@ pub enum EeWonModelOp {
     GameCanStartHook,
     /// `((RoutingConnection*)a)->QueueClose(-1)`.
     ConnectionClose,
+    /// `new GUIStringData(text)` of `b` UTF-16 units at `a` (held): a routing record's name (net round 30: the
+    /// records are read here, no C++ record is made).
+    TextOfUnits,
+    /// `((LobbyGame*)a)->ReadSummaryBuffer(buffer)` over `c` bytes at `b`, NULL (`b` 0) for an op or object without
+    /// a buffer.
+    GameReadSummaryBytes,
 }
 
 /// The host: `ModelHost(op, a, b, c)`.
@@ -1136,6 +1142,12 @@ impl EeWonModel {
     /// `SyncClients`: the merge of the routing map (ee_won_model_sync_plan; the walk's place a position, moved past
     /// an entry inserted before it).
     fn list_sync(&self, ids: &[u16], infos: &[isize]) {
+        self.list_sync_with(ids, &|client, i| {
+            self.op(EeWonModelOp::ClientReadRouting, client, infos[i], 0);
+        });
+    }
+    /// The merge, each new or kept client read by `read(client, i)` from the `i`th record.
+    fn list_sync_with(&self, ids: &[u16], read: &dyn Fn(isize, usize)) {
         let l = &self.list().clients;
         let plan = model::sync_plan(&l.keys(), ids);
         let mut at = 0usize;
@@ -1147,7 +1159,7 @@ impl EeWonModel {
                 }
                 SyncStep::Insert(i) => {
                     let client = self.op(EeWonModelOp::NewClient, 0, 0, 0);
-                    self.op(EeWonModelOp::ClientReadRouting, client, infos[i as usize], 0);
+                    read(client, i as usize);
                     let (pos, new) = l.insert(ids[i as usize]);
                     if new {
                         self.add_ref(client);
@@ -1162,7 +1174,7 @@ impl EeWonModel {
                 SyncStep::Update(_, i) => {
                     let client = l.at(at);
                     self.add_ref(client);
-                    self.op(EeWonModelOp::ClientReadRouting, client, infos[i as usize], 0);
+                    read(client, i as usize);
                     self.release(client);
                     at += 1;
                 }
@@ -1657,6 +1669,12 @@ impl EeWonModel {
     }
     /// `SyncGroups` (the plan and the walk as `SyncClients`; the populations `EeWonPopulation`).
     fn server_sync_groups(&self, ids: &[u16], infos: &[isize], update_clients: bool) {
+        self.server_sync_groups_with(ids, update_clients, &|group, i, clients| {
+            self.op(EeWonModelOp::GroupReadRouting, group, infos[i], clients);
+        });
+    }
+    /// The merge, each new or kept room read by `read(group, i, clients)` from the `i`th record.
+    fn server_sync_groups_with(&self, ids: &[u16], update_clients: bool, read: &dyn Fn(isize, usize, isize)) {
         let s = self.server();
         let clients = if update_clients { s.clients.get() } else { 0 };
         let mut pop = EeWonPopulation::default();
@@ -1671,7 +1689,7 @@ impl EeWonModel {
                 }
                 SyncStep::Insert(i) => {
                     let group = self.op(EeWonModelOp::NewGroup, 0, 0, 0);
-                    self.op(EeWonModelOp::GroupReadRouting, group, infos[i as usize], clients);
+                    read(group, i as usize, clients);
                     let (pos, new) = groups.insert(ids[i as usize]);
                     if new {
                         self.add_ref(group);
@@ -1688,7 +1706,7 @@ impl EeWonModel {
                 SyncStep::Update(_, i) => {
                     let group = groups.at(at);
                     self.add_ref(group);
-                    self.op(EeWonModelOp::GroupReadRouting, group, infos[i as usize], clients);
+                    read(group, i as usize, clients);
                     let g = must(group).group();
                     pop.add_group(g.flags.get() as u32, g.num_clients.get() as u32);
                     self.release(group);
@@ -1705,8 +1723,13 @@ impl EeWonModel {
         s.num_clients.set(pop.total);
     }
     fn server_add_client(&self, info: isize) -> isize {
+        self.server_add_client_with(&|client| {
+            self.op(EeWonModelOp::ClientReadRouting, client, info, 0);
+        })
+    }
+    fn server_add_client_with(&self, read: &dyn Fn(isize)) -> isize {
         let client = self.op(EeWonModelOp::NewClient, 0, 0, 0);
-        self.op(EeWonModelOp::ClientReadRouting, client, info, 0);
+        read(client);
         must(client).client_update_ignore();
         self.server_clients().list_add(client);
         self.release(client);
@@ -1721,9 +1744,14 @@ impl EeWonModel {
         s.num_chat.set(pop.chat);
     }
     fn server_add_group(&self, info: isize) -> isize {
+        self.server_add_group_with(&|group, clients| {
+            self.op(EeWonModelOp::GroupReadRouting, group, info, clients);
+        })
+    }
+    fn server_add_group_with(&self, read: &dyn Fn(isize, isize)) -> isize {
         let s = self.server();
         let group = self.op(EeWonModelOp::NewGroup, 0, 0, 0);
-        self.op(EeWonModelOp::GroupReadRouting, group, info, s.clients.get());
+        read(group, s.clients.get());
         let (i, _) = s.groups.insert(must(group).group().id.get());
         self.add_ref(group);
         let old = s.groups.replace(i, group);
@@ -2197,6 +2225,242 @@ unsafe fn dispatch(m: &EeWonModel, call: EeWonModelCall, a: isize, bb: isize, c:
     }
 }
 
+// ---- the routing server's records (R6 WONLobby round 12): read from the routing op's Rust object (routeop.rs), as
+// `RoutingOp::GetClients` / `GetGroups` / `GetClientInfo` / `GetGroupInfo` / `GetDataObjects` copied them into C++
+// records (RoutingOp.cpp, deleted) and `ReadRoutingInfo` / `SyncClients` / `SyncGroups` / `SetMembers`
+// (LobbyModelHost.cpp) read those; the copies are taken before the first C++ call, as the original's were.
+
+/// A client record (`RoutingClientInfo`): its map key, id, name, flags, WON user id and CD key id.
+struct RouteClient {
+    key: u16,
+    id: u16,
+    name: Vec<u16>,
+    flags: u32,
+    user_id: u32,
+    cd_key: u32,
+}
+
+/// A room record (`RoutingGroupInfo`): its map key, the fields `ReadRoutingInfo` reads, its members' ids and flags
+/// in key order.
+struct RouteGroup {
+    key: u16,
+    id: u16,
+    name: Vec<u16>,
+    captain: u16,
+    max_clients: u16,
+    flags: c_ulong,
+    /// the field at +0x2a: the current member count despite its name
+    max_players: u16,
+    members: Vec<(u16, u8)>,
+}
+
+fn route_client(key: u16, c: &ee_won_net::routeop::Client) -> RouteClient {
+    RouteClient { key, id: c.id, name: c.name.clone(), flags: c.flags, user_id: c.user_id, cd_key: c.address }
+}
+
+/// The op's client map (`GetClients`).
+fn route_clients(op: Option<&ee_won_net::routeop::RouteOp>) -> Vec<RouteClient> {
+    op.map_or_else(Vec::new, |o| o.clients.iter().map(|(&k, c)| route_client(k, &c.borrow())).collect())
+}
+
+/// The op's group map with each group's members (`GetGroups`).
+fn route_groups(op: Option<&ee_won_net::routeop::RouteOp>) -> Vec<RouteGroup> {
+    let Some(o) = op else { return Vec::new() };
+    o.groups
+        .iter()
+        .map(|(&key, g)| {
+            let g = g.borrow();
+            RouteGroup {
+                key,
+                id: g.id,
+                name: g.name.clone(),
+                captain: g.captain,
+                max_clients: g.max_clients,
+                flags: g.flags as c_ulong,
+                max_players: g.max_players,
+                members: g.members.iter().map(|(&k, m)| (k, m.borrow().flags)).collect(),
+            }
+        })
+        .collect()
+}
+
+/// The group created notice's room (`GetGroupInfo`: a new record, the rest of it the constructor's).
+fn route_notice_group(op: Option<&ee_won_net::routeop::RouteOp>) -> RouteGroup {
+    use ee_won_net::routeop::{EE_WON_RTF_GROUP_FLAGS, EE_WON_RTF_GROUP_ID, EE_WON_RTF_MAX_CLIENTS, EE_WON_RTT_NAME};
+    let num = |f: i32| op.map_or(0, |o| o.num(f));
+    RouteGroup {
+        key: 0,
+        id: num(EE_WON_RTF_GROUP_ID) as u16,
+        name: op.map_or_else(Vec::new, |o| o.text(EE_WON_RTT_NAME).to_vec()),
+        captain: 0,
+        max_clients: num(EE_WON_RTF_MAX_CLIENTS) as u16,
+        flags: num(EE_WON_RTF_GROUP_FLAGS) as c_ulong,
+        max_players: 0,
+        members: Vec::new(),
+    }
+}
+
+/// A data object list (`RDataObjects`): each object's link id and buffer.
+type RouteObjects = Vec<(u16, Option<Vec<u8>>)>;
+
+impl EeWonModel {
+    /// The text of a record's name: a new `GUIStringData` (held).
+    fn route_text(&self, units: &[u16]) -> isize {
+        self.op(EeWonModelOp::TextOfUnits, units.as_ptr() as isize, units.len() as isize, 0)
+    }
+    /// `LobbyClient::ReadRoutingInfo` (this a client): the name, the flags, the id, the user id, the CD key id.
+    fn client_read_route(&self, r: &RouteClient) {
+        let name = self.route_text(&r.name);
+        let cc = self.client();
+        self.assign(&cc.name, name);
+        cc.flags.set(r.flags as c_ulong);
+        cc.id.set(r.id);
+        cc.won_user_id.set(r.user_id as c_ulong);
+        cc.cd_key_id.set(r.cd_key as c_ulong);
+        self.release(name);
+    }
+    /// `LobbyGroup::ReadRoutingInfo` (this a room): the id, name, current count, flags, captain and capacity; then,
+    /// with a client list, `SetMembers` over it. The name's temporary is released last, as the original's was.
+    fn group_read_route(&self, r: &RouteGroup, clients: isize) {
+        let name = self.route_text(&r.name);
+        let g = self.group();
+        g.id.set(r.id);
+        self.assign(&g.name, name);
+        g.num_clients.set(r.max_players as c_ulong);
+        g.flags.set(r.flags);
+        g.captain.set(r.captain);
+        g.max_clients.set(r.max_clients as c_ulong);
+        if clients != 0 {
+            g.members_from.set(clients);
+            let ids: Vec<u16> = r.members.iter().map(|m| m.0).collect();
+            let flags: Vec<u8> = r.members.iter().map(|m| m.1).collect();
+            self.group_set_members(&ids, &flags);
+        }
+        self.release(name);
+    }
+    /// `ReadSummaryBuffer` of a game over a buffer (none: false, the C++ not asked).
+    fn game_read_bytes(&self, data: Option<&[u8]>) -> isize {
+        match data {
+            None => 0,
+            Some(d) => self.op(EeWonModelOp::GameReadSummaryBytes, self.shell, d.as_ptr() as isize, d.len() as isize),
+        }
+    }
+}
+
+/// RoutingLogic's ops on the routing server's records (the C++ was RoutingLogic.cpp's host over RoutingOp.cpp's
+/// copies): the answer, or `None` for another op. `a`, `bb`, `c` as `EeWonRouteLogicOp` documents; the C++ ops'
+/// Rust objects through the core table.
+fn route_record_op(op: crate::routelogic::EeWonRouteLogicOp, a: isize, bb: isize, c: isize) -> Option<isize> {
+    use ee_won_net::cppcore::{host_op_of, route_op_of};
+    route_record_op_in(op, a, bb, c, &|p| route_op_of(p as *mut c_void), &|p| {
+        host_op_of(p as *mut c_void).map(ee_won_net::routeop::group_list_of)
+    })
+}
+
+/// [`route_record_op`] over a routing op's lookup `ro` (`RoutingOp*` -> its Rust op) and `group_list` (a group
+/// list request op -> the connection-less group list op its replies make).
+fn route_record_op_in<'r>(
+    op: crate::routelogic::EeWonRouteLogicOp,
+    a: isize,
+    bb: isize,
+    c: isize,
+    ro: &dyn Fn(isize) -> Option<&'r ee_won_net::routeop::RouteOp>,
+    group_list: &dyn Fn(isize) -> Option<ee_won_net::routeop::RouteOp>,
+) -> Option<isize> {
+    use crate::routelogic::EeWonRouteLogicOp as O;
+    Some(match op {
+        O::ServerAddGroup => {
+            let g = route_notice_group(ro(bb));
+            must(a).server_add_group_with(&|group, clients| must(group).group_read_route(&g, clients))
+        }
+        O::ServerAddClient => {
+            // (no client record: the original read a NULL record and faulted; the client keeps its defaults)
+            let r = ro(bb).and_then(|o| o.op_client.as_ref().map(|c| route_client(c.borrow().id, &c.borrow())));
+            must(a).server_add_client_with(&|client| {
+                if let Some(r) = &r {
+                    must(client).client_read_route(r);
+                }
+            })
+        }
+        O::ServerSyncClients => {
+            let recs = route_clients(ro(bb));
+            let ids: Vec<u16> = recs.iter().map(|r| r.key).collect();
+            let l = must(a).server_clients();
+            l.list_sync_with(&ids, &|client, i| must(client).client_read_route(&recs[i]));
+            l.list_update_ignore();
+            0
+        }
+        O::ServerSyncGroups | O::SyncGroupsOfQuery => {
+            let recs =
+                if op == O::ServerSyncGroups { route_groups(ro(bb)) } else { route_groups(group_list(bb).as_ref()) };
+            let ids: Vec<u16> = recs.iter().map(|r| r.key).collect();
+            let update = op == O::ServerSyncGroups && c != 0;
+            must(a).server_sync_groups_with(&ids, update, &|group, i, clients| {
+                must(group).group_read_route(&recs[i], clients)
+            });
+            0
+        }
+        O::GameReadSummary => {
+            let data = ro(bb).and_then(|o| o.data.clone());
+            must(a).game_read_bytes(data.as_deref())
+        }
+        O::RDataObjects => {
+            let list: RouteObjects = ro(a).map_or_else(Vec::new, |o| {
+                o.objects.iter().map(|x| (x.borrow().link, x.borrow().data.clone())).collect()
+            });
+            // SAFETY: the count's slot (the op's contract)
+            unsafe { *(bb as *mut isize) = list.len() as isize };
+            Box::into_raw(Box::new(list)) as isize
+        }
+        // SAFETY (the list ops): a list from RDataObjects, not yet freed
+        O::DataObjectLink => unsafe { (&*(a as *const RouteObjects))[bb as usize].0 as isize },
+        O::GameReadDataObject => {
+            // SAFETY: as above
+            let list = unsafe { &*(bb as *const RouteObjects) };
+            must(a).game_read_bytes(list[c as usize].1.as_deref())
+        }
+        O::ListFree if bb == 1 => {
+            // SAFETY: as above; freed once
+            drop(unsafe { Box::from_raw(a as *mut RouteObjects) });
+            0
+        }
+        _ => return None,
+    })
+}
+
+/// The game's model's answer to one of RoutingLogic's record ops ([`route_record_op`]; `won_routemodel_test`'s): true
+/// with the answer in `out`, false for another op.
+///
+/// # Safety
+/// The op's arguments as `EeWonRouteLogicOp` documents them (live shells; C++ routing ops on a bound core table);
+/// `out` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_model_route_record_op(op: u32, a: isize, b: isize, c: isize, out: *mut isize) -> bool {
+    // (the op as its number: this header is included inside namespace WONAPI, routelogic.h outside it)
+    use crate::routelogic::EeWonRouteLogicOp as O;
+    const OPS: [O; 10] = [
+        O::ServerAddGroup,
+        O::ServerAddClient,
+        O::ServerSyncClients,
+        O::ServerSyncGroups,
+        O::SyncGroupsOfQuery,
+        O::GameReadSummary,
+        O::RDataObjects,
+        O::DataObjectLink,
+        O::GameReadDataObject,
+        O::ListFree,
+    ];
+    let Some(&op) = OPS.iter().find(|o| **o as u32 == op) else { return false };
+    match route_record_op(op, a, b, c) {
+        Some(r) => {
+            // SAFETY: the caller's slot
+            unsafe { *out = r };
+            true
+        }
+        None => false,
+    }
+}
+
 // ---- the logics' calls on the model, answered here (the logics made with `_model` constructors: the game's; the
 // logics' goldens keep their scripted hosts)
 
@@ -2218,6 +2482,9 @@ pub(crate) fn route_op(
     d: isize,
 ) -> Option<isize> {
     use crate::routelogic::EeWonRouteLogicOp as O;
+    if let Some(r) = route_record_op(op, a, bb, c) {
+        return Some(r);
+    }
     let m = || must(a);
     let empty = EMPTY_TEXT.load(std::sync::atomic::Ordering::Relaxed);
     // SAFETY (the calls): the arguments each call takes, live shells (the logic's contract)
@@ -2588,3 +2855,7 @@ mod golden;
 #[cfg(test)]
 #[path = "modelobj_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "routerec_tests.rs"]
+mod routerec_tests;

@@ -102,6 +102,10 @@ extern "C" {
 /// `path` holds `path_len` bytes.
 EeWonSmartRoute *ee_won_smart_new(uint32_t wchar_size, const uint8_t *path, size_t path_len);
 
+/// `new SmartRoutingConnection`'s model (SmartRoutingConnection.cpp's constructor, R6 WONLobby round 12): the ignore
+/// file `_wonignore.bin` under the WON directory (`WONAPICore::GetDefaultFileDirectory()`, hostnative.rs).
+EeWonSmartRoute *ee_won_smart_new_default(uint32_t wchar_size);
+
 /// # Safety
 /// `r` is from `ee_won_smart_new` (or NULL), not used afterwards.
 void ee_won_smart_free(EeWonSmartRoute *r);

@@ -57,7 +57,7 @@ public:
 // One row of the bad user list (global namespace, 0x50 bytes)
 class BadUserItem : public ListItem {
 public:
-    BadUserItem(const RoutingBadUser& inUser,bool inSimple);
+    BadUserItem(const EeWonRouteRecord& inUser,bool inSimple);
     virtual void Paint(Graphics& inGraphics,ListArea* inList);
     virtual void CalcDimensions(ListArea* inList);
     virtual int Compare(const ListItem* inOther,ListArea* inList) const;
@@ -66,17 +66,24 @@ public:
     unsigned long mValues[6]; // 0x34..0x48: sort keys; only the WON id (1), expiry (2) and moderator id (4) are set
     bool mIsSimple; // 0x4c (padded to 0x50)
 };
-// Creates a row from a bad user entry, writing the expiry as days, hours, minutes, seconds or infinite
-BadUserItem::BadUserItem(const RoutingBadUser& inUser, bool inSimple)
+static std::wstring RecordText(const uint16_t* inUnits, size_t inCount)
+{
+    std::wstring aText;
+    WonWideSink(&aText, inUnits, inCount);
+    return aText;
+}
+// Creates a row from a bad user record (the routing op's: ee_won routeop.rs), writing the expiry as days, hours,
+// minutes, seconds or infinite
+BadUserItem::BadUserItem(const EeWonRouteRecord& inUser, bool inSimple)
 {
     this->mIsSimple = inSimple;
-    this->mStrings[0] = GUIString(new GUIStringData(inUser.mName));
+    this->mStrings[0] = GUIString(new GUIStringData(RecordText(inUser.name, inUser.name_len)));
     char aBuffer[100];
-    sprintf(aBuffer, "%d", inUser.mWONId);
+    sprintf(aBuffer, "%d", inUser.user_id);
     this->mStrings[1] = aBuffer;
-    this->mValues[1] = inUser.mWONId;
+    this->mValues[1] = inUser.user_id;
 
-    unsigned long aDuration = inUser.mExpirationDiff;
+    unsigned long aDuration = inUser.expiration;
     GUIString aText;
     GUIString aUnit;
     if (aDuration > 86400) {
@@ -94,13 +101,13 @@ BadUserItem::BadUserItem(const RoutingBadUser& inUser, bool inSimple)
         aUnit = LOBBY_STRING(BadUserDialog_Infinite_String);
     }
     sprintf(aBuffer, "%d", aDuration);
-    this->mValues[2] = inUser.mExpirationDiff;
+    this->mValues[2] = inUser.expiration;
     this->mStrings[2] = LobbyFormatString(aUnit, GUIString(aBuffer));
-    this->mStrings[3] = GUIString(inUser.mModeratorName);
-    sprintf(aBuffer, "%d", inUser.mModeratorWONId);
+    this->mStrings[3] = GUIString(RecordText(inUser.moderator_name, inUser.moderator_name_len));
+    sprintf(aBuffer, "%d", inUser.moderator_id);
     this->mStrings[4] = GUIString(aBuffer);
-    this->mValues[4] = inUser.mModeratorWONId;
-    this->mStrings[5] = GUIString(inUser.mModeratorComment);
+    this->mValues[4] = inUser.moderator_id;
+    this->mStrings[5] = GUIString(RecordText(inUser.comment, inUser.comment_len));
 }
 
 // Takes the list's font and makes the row one text line high
@@ -247,6 +254,12 @@ static const GUIString& AdminString(intptr_t inString)
     }
 }
 
+// a bad user record into the list (BadUsersInsert)
+static void InsertBadUser(void* inTarget, const EeWonRouteRecord* inRecord)
+{
+    std::pair<ListArea*, bool>& aTarget = *static_cast<std::pair<ListArea*, bool>*>(inTarget);
+    aTarget.first->InsertItem(new BadUserItem(*inRecord, aTarget.second), -1);
+}
 static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
     typedef EeWonLobbyDlgOp Op;
@@ -371,9 +384,8 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::ListEndUpdate: aList->EndUpdate(); return 0;
     case Op::ListClear: aList->Clear(b != 0); return 0;
     case Op::BadUsersInsert: {
-        const RoutingBadUserList& aUsers = *reinterpret_cast<const RoutingBadUserList*>(b);
-        for (RoutingBadUserList::const_iterator anItr = aUsers.begin(); anItr != aUsers.end(); ++anItr)
-            aList->InsertItem(new BadUserItem(*anItr, c != 0), -1);
+        std::pair<ListArea*, bool> aTarget(aList, c != 0);
+        ee_won_routeop_records(reinterpret_cast<const EeWonRouteOp*>(b), EE_WON_RTR_BAD_USER, InsertBadUser, &aTarget);
         return 0;
     }
     case Op::IdsClear: reinterpret_cast<BadUserDialog::IdList*>(a)->clear(); return 0;

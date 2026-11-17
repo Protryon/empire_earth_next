@@ -180,6 +180,7 @@
 #include "rust/won_lobby/statusstr.h"
 #include "rust/won_net/admin.h"
 #include "rust/won_net/adminop.h"
+#include "rust/won_net/apicore.h"
 #include "rust/won_net/auth.h"
 #include "rust/won_net/authcpp.h"
 #include "rust/won_net/authctx.h"

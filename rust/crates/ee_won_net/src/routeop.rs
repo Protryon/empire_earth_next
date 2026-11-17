@@ -1487,6 +1487,16 @@ pub unsafe extern "C" fn ee_won_routeop_read_group_list_of(op: *mut EeWonRouteOp
     unsafe { op_mut(op) }.read_group_list_replies(&replies);
 }
 
+/// A connection-less group list op holding the groups of a group list request op's replies (`SyncGroupsOfQuery`:
+/// `new RoutingOp(NULL, RoutingOp_GetGroupList)` read by [`ee_won_routeop_read_group_list_of`]).
+pub fn group_list_of(host: &EeWonHostOp) -> RouteOp {
+    let n = host.num(EE_WON_REQOP_GROUP_REPLIES, 0);
+    let replies: Vec<Vec<u8>> = (0..n).map(|k| host.bytes(EE_WON_REQOP_GROUP_REPLY, k).unwrap_or_default()).collect();
+    let mut op = RouteOp::new(T_GROUP_LIST);
+    op.read_group_list_replies(&replies);
+    op
+}
+
 /// The op's records of one container, each into `sink` in the container's order: `EE_WON_RTR_CLIENT` (the client
 /// map), `EE_WON_RTR_MEMBER` (the member map; each member with a client is followed by its
 /// `EE_WON_RTR_MEMBER_CLIENT`), `EE_WON_RTR_GROUP` (the group map; each group followed by its
