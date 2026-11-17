@@ -1187,6 +1187,9 @@ FIXUPS = [
      "            PlatSleep(100);\n"
      "            assert_eq!(unsafe { PlatEventWait(event, 0) }, 0, \"the timer set the event\");\n"
      "            unsafe { PlatEventDestroy(event) };\n"),
+    # a tool that names a crate path by its parts
+    ("base", "tools/lang_strings.py", 'OUT = ROOT / "rust" / "crates" / "ee_util" / "src" / "language_strings.rs"',
+     'OUT = ROOT / "rust" / "crates" / "ee_base" / "src" / "util" / "language_strings.rs"'),
     # the tools that name a package or the static library
     ("game", "tools/rust_build.py", '"ee_rust.lib" if target.startswith("windows") else "libee_rust.a"',
      '"ee_game.lib" if target.startswith("windows") else "libee_game.a"'),

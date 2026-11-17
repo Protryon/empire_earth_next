@@ -20,7 +20,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 RC = ROOT / "src" / "Empire Earth" / "Language" / "Language.rc"
-OUT = ROOT / "rust" / "crates" / "ee_util" / "src" / "language_strings.rs"
+OUT = ROOT / "rust" / "crates" / "ee_base" / "src" / "util" / "language_strings.rs"
 ENTRY = re.compile(r'^\s*(-?\d+|0x[0-9a-fA-F]+)\s*,\s*L?"((?:[^"]|"")*)"\s*$')
 
 
