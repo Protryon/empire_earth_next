@@ -10,6 +10,9 @@
 //! A host call can come back into the types (a radio button's event): they are used through `&self`, the research
 //! list in a `RefCell` never borrowed across a host call.
 
+// the entry's `c_ulong`/`c_long` fields are 32 bits on Windows and 64 elsewhere: the casts are needed there
+#![allow(clippy::unnecessary_cast)]
+
 use core::cell::RefCell;
 use std::ffi::{c_long, c_ulong};
 

@@ -10,6 +10,9 @@
 //! tab). A host call can come back into a screen (picking a line of the type combo box runs `ChangeConditionType`):
 //! the screens are used through `&self`, their type a `Cell`.
 
+// the entry's `c_ulong`/`c_long` fields are 32 bits on Windows and 64 elsewhere: the casts are needed there
+#![allow(clippy::unnecessary_cast)]
+
 use crate::screens::editor_controls::{
     condition_controls, delete_controls, effect_controls, make_controls, CONDITION_DELETE_ORDER, EFFECT_DELETE_ORDER,
 };

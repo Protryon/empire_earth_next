@@ -3,6 +3,9 @@
 //! `EESETSETPlayerTechnology`, `EESETSETPlayerCivPoint`, the camera fades and visibility, `EESETSETMiniMapFlare`) over
 //! the effect screen's controls (`editor_effects.rs`).
 
+// the entry's `c_ulong`/`c_long` fields are 32 bits on Windows and 64 elsewhere: the casts are needed there
+#![allow(clippy::unnecessary_cast)]
+
 use core::cell::RefCell;
 use std::ffi::{c_long, c_ulong};
 

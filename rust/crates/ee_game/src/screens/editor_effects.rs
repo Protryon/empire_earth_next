@@ -13,6 +13,9 @@
 //! the effect): the types are used through `&self`, their state in `Cell`s and `RefCell`s never borrowed across a
 //! host call.
 
+// the entry's `c_ulong`/`c_long` fields are 32 bits on Windows and 64 elsewhere: the casts are needed there
+#![allow(clippy::unnecessary_cast)]
+
 use core::cell::{Cell, RefCell};
 use std::ffi::c_ulong;
 
