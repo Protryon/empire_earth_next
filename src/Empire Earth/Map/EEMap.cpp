@@ -290,6 +290,7 @@ FSPersistent* EEMap::CreateDefault() const
 // through it, updates the mini map and terrain visibility counts too (ee_app map.rs)
 void EEMap::RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared)
 {
+    EESightScope theCapture(kSightMapRemove, inPlayer, inX, inY, 0.0f, 0.0f, inRadius, inShared);   // TSGT (TEST ONLY)
     EEMapHostContext theContext = {this, inPlayer, {}};
     EeAppMapHost theHost = EEMapHost(this, theContext);
     ee_app_map_sight(&theHost, inX, inY, inRadius, inShared, false);
@@ -568,6 +569,7 @@ void EEMap::DumpOutOfSynch(FILE* inFile)
 // it, updates the mini map and terrain visibility counts too (ee_app map.rs)
 void EEMap::AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared)
 {
+    EESightScope theCapture(kSightMapAdd, inPlayer, inX, inY, 0.0f, 0.0f, inRadius, inShared);   // TSGT (TEST ONLY)
     EEMapHostContext theContext = {this, inPlayer, {}};
     EeAppMapHost theHost = EEMapHost(this, theContext);
     ee_app_map_sight(&theHost, inX, inY, inRadius, inShared, true);

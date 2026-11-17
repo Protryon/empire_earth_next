@@ -11,6 +11,7 @@
 #include "lle/U2DRectangle.h"           // RTSColoredRectangle holds one by value
 #include "lle/GEColor.h"               // RTSColoredRectangle holds one by value
 #include "ee/EERandomMapIDs.h"
+#include "ee/EESightCapture.h"       // TSGT (TEST ONLY): RTSTile::SetVisibility's scope
 #include "rust/sim/combat.h"             // EeUnitsRtsMapFields, EeUnitsMapFields (the maps' plain members)
 #include "rust/sim/units.h"
 
@@ -417,6 +418,7 @@ inline RTSTUnitList::~RTSTUnitList()
 #ifdef EE_EEPLAYER_H
 inline void RTSTile::SetVisibility(unsigned long inValue, EEPlayer* inPlayer)
 {
+    EESightScope theCapture(kSightTileSet, inPlayer, this, -1, -1, inValue);   // TSGT (TEST ONLY)
     unsigned long thePlayerID = inPlayer->GetPlayerID();
     this->mVisibility[thePlayerID >> 1] = (this->mVisibility[thePlayerID >> 1] & (0xffff << (((thePlayerID + 1) & 1) << 4)))
         | (inValue << ((thePlayerID & 1) << 4));

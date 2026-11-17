@@ -89,6 +89,12 @@ pixels) and MMSN (every mini map cell each game minute) are in every profile, MA
 MAPK (the out-of-synch checksum: multiplayer only) where a game reaches them; --profile app types cheat lines and starts
 storms (CHET, CHEF, CHLS, STRM; its golden also lists CAMU for the "goto" and "find" lines). Their goldens come from the
 C++ before EEMap, EEMiniMap, EECheatCodes and EEEMStorm moved (app and world lane, round 2; ee/EEAppCapture.h).
+TSGT (ee/EESightCapture.h; every profile) is the tile sight: when the outermost sight call returns (a tile's, a
+player's of a tile, a sight circle or ring step, EEMap's, the fog and explore of the whole map), its kind, player,
+arguments, tile range and an FNV-1a of that range's visibility words and mesh reference counts; also the whole map
+every game minute. At the app profile's end, EE-SIM sweeps EEMap's AddSight and RemoveSight and the out-of-synch
+checksum's windows (MAPS, MAPK and their TSGT; no other record). Its goldens (oracle, app) come from the C++ before
+the tile sight moved (the object-storage plan's lane P).
 CALW (every calamity update with its state before and after and its world calls), CCAS (CanCastAt: the game's
 calls and a sweep over every class, the computer players' first units and real points and targets), TRTE
 (ResearchToEpoch's steps) and EVUN (the units an effect walks, with what applies and the values) were recorded from
@@ -203,7 +209,8 @@ PROFILES = {
     # --unit-sweep: no other profile steps those physics models); the map by seed (UNIT_MAPS: water or space)
     # the oracle's game to twenty minutes with EE-SIM --app-sweep: cheat lines typed at five game minutes, a storm of
     # each kind at ten (no game of the other profiles types a cheat or starts a storm); its golden lists the app and
-    # world lane's tags (CHET, CHEF, CHLS, STRM, CAMU, MAP*, MM*)
+    # world lane's tags (CHET, CHEF, CHLS, STRM, CAMU, MAP*, MM*); at its end EEMap's sight and checksum (MAPS, MAPK,
+    # TSGT)
     "app": ["--difficulty", "Hard", "--game-seconds", "1200", "--cheats", "none", "--app-sweep"],
     "units": ["--difficulty", "Hard", "--game-seconds", "1500", "--cheats", "all", "--ai", "3", "--lobby", "183=#9",
               "--map-type", "{map}", "--unit-sweep"],

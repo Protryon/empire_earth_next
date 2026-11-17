@@ -1321,6 +1321,7 @@ void EEPlayer::UnitRemoved(RTSUnit* inUnit)
 // Removes the player's sight from a tile, and its allies' sight when line of sight is shared
 void EEPlayer::RemoveSharedSight(RTSTile* inTile)
 {
+    EESightScope theCapture(kSightPlayerRemoveShared, this, inTile);   // TSGT (TEST ONLY)
     if (inTile == NULL)
         return;
     inTile->RemoveSight(this);
@@ -1344,6 +1345,7 @@ void EEPlayer::RemoveSharedSightAt(const EETileLocation& inLocation)
 // Removes only the player's own sight from a tile
 void EEPlayer::RemoveOwnSight(RTSTile* inTile)
 {
+    EESightScope theCapture(kSightPlayerRemoveOwn, this, inTile);   // TSGT (TEST ONLY)
     if (inTile != NULL) {
         inTile->RemoveSight(this);
         gDoppelgangerManager.TileHidden(inTile, this);
@@ -2278,6 +2280,7 @@ void EEPlayer::RestartTowns()
 // Reveals a tile to the player and, with shared line of sight, to every ally that shares it too
 void EEPlayer::AddSharedSight(EETile* inTile, long inX, long inY)
 {
+    EESightScope theCapture(kSightPlayerAddShared, this, inTile, inX, inY);   // TSGT (TEST ONLY)
     if (inTile == NULL)
         return;
     if (inTile->GetVisibility(this->mPlayerID) == 0)
@@ -2304,6 +2307,7 @@ void EEPlayer::AddSharedSightAt(const EETileLocation& inLocation)
 // Reveals a tile to the player only (a first sighting adds to statistics series 0x18)
 void EEPlayer::AddOwnSight(EETile* inTile, long inX, long inY)
 {
+    EESightScope theCapture(kSightPlayerAddOwn, this, inTile, inX, inY);   // TSGT (TEST ONLY)
     if (inTile == NULL)
         return;
     if (inTile->GetVisibility(this->mPlayerID) == 0)

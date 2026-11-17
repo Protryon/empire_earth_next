@@ -44,6 +44,7 @@ RTSTile::~RTSTile()
 // Drops one of the player's sight references on the tile; the last one leaves it explored
 void RTSTile::RemoveSight(EEPlayer* inPlayer)
 {
+    EESightScope theCapture(kSightTileRemove, inPlayer, this);   // TSGT (TEST ONLY)
     if (this->GetVisibility(inPlayer->GetPlayerID()) > 1)
         this->mVisibility[inPlayer->GetPlayerID() >> 1] += -1 << ((inPlayer->GetPlayerID() & 1) << 4);
 }
@@ -86,6 +87,7 @@ void RTSTile::Dump(FILE* inFile, unsigned long inPlayerCount) const
 // Adds a sight reference of the player to the tile; an unexplored tile becomes seen
 void RTSTile::AddSight(EEPlayer* inPlayer)
 {
+    EESightScope theCapture(kSightTileAdd, inPlayer, this);   // TSGT (TEST ONLY)
     if (this->GetVisibility(inPlayer->GetPlayerID()) != 0)
         this->mVisibility[inPlayer->GetPlayerID() >> 1] += 1 << ((inPlayer->GetPlayerID() & 1) << 4);
     else

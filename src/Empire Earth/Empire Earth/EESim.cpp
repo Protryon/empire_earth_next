@@ -168,6 +168,7 @@
 #include "ee/EECPTrace.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEAppCapture.h"
+#include "ee/EESightCapture.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEMap.h"
 #include "ee/RTSRegionTable.h"
@@ -742,6 +743,18 @@ void FinishGame(const char* inOutcome)
             return;
         }
         EECombatListSearchSweep();
+        if (sOptions.mAppSweep) {
+            // EEMap's sight and out-of-synch checksum (MAPS, MAPK; their TSGT): no game reaches them. The changed
+            // sight would reach the other threads: nothing records after it
+            EECombatCaptureFlush();
+            const unsigned int kTags[] = {EECaptureTag("MAPS"), EECaptureTag("MAPK"), EECaptureTag("TSGT")};
+            EESimCaptureRecord::Only(kTags, 3);
+            EESimCaptureRecord::Exclusive(true);
+            EESightCaptureSweep();
+            EESimCaptureRecord::Exclusive(false);
+            EESimCaptureRecord::Only(0);
+            EESimCaptureRecord::Close();
+        }
         if (sOptions.mMissileSweep) {
             EECombatMissileSweep();
             // the missiles it made stay on the map (the AI and UI threads would see them): nothing records after it
@@ -1151,6 +1164,7 @@ void AfterTick()
     if (EESimCaptureRecord::Active() && theTime >= sNextMiniMapMs) {
         sNextMiniMapMs += 60000;
         EEAppCaptureMiniMapSnapshot();
+        EESightCaptureSnapshot();   // TSGT: the whole map's visibility words
     }
     static int sAppSweeps = 0;
     if (sOptions.mAppSweep && sAppSweeps == 0 && theTime >= 300000) {
@@ -2185,7 +2199,8 @@ const char* kUsage =
     "  --unit-sweep           TEST ONLY: every five game minutes every player gets aircraft, ships under water,\n"
     "                         sea animals and spaceships sent at the next player (the capture's units game)\n"
     "  --app-sweep            TEST ONLY: with EE_SIM_CAPTURE, cheat lines at five game minutes (CHET, CHEF, CHLS) and\n"
-    "                         one storm of each kind at ten (STRM; the capture's app game, ee/EEAppCapture.h)\n"
+    "                         one storm of each kind at ten (STRM; the capture's app game, ee/EEAppCapture.h); at\n"
+    "                         the game's end EEMap's sight and checksum (MAPS, MAPK, TSGT; ee/EESightCapture.h)\n"
     "  --effect-sweep         TEST ONLY: with EE_SIM_CAPTURE, only the end of the game records: every swept 3D effect\n"
     "                         kind made, stepped, saved and loaded (the capture's effects game: EFSW, EFST, EFMU)\n"
     "  --group-sweep          TEST ONLY: with EE_SIM_CAPTURE, only the end of the game records: every player's units\n"

@@ -44,6 +44,7 @@ bool gSightRingsBuilt;
 // is that player or an ally both sharing line of sight
 void EEAddSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer)
 {
+    EESightScope theCapture(kSightCircleAdd, inPlayer, inX, inY, 0.0f, 0.0f, inRadius);   // TSGT (TEST ONLY)
     EEMap* theMap = gWorld.mMap;
     long theRadius = UMFloatToLong(inRadius);
     bool theShow;
@@ -77,6 +78,7 @@ void EEAddSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer)
 // Adds a player's sight to the tiles of the outer two rings around the new centre that the old one did not see
 void EEAddSightRingStep(float inOldX, float inOldY, float inNewX, float inNewY, float inRadius, EEPlayer* inPlayer)
 {
+    EESightScope theCapture(kSightRingAdd, inPlayer, inOldX, inOldY, inNewX, inNewY, inRadius);   // TSGT (TEST ONLY)
     EEMap* theMap = gWorld.mMap;
     bool theShow;
     if (gWorld.GetCurrentPlayer() == inPlayer ||
@@ -134,6 +136,7 @@ void EEBuildSightRings()
 // is that player or an ally both sharing line of sight
 void EERemoveSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer)
 {
+    EESightScope theCapture(kSightCircleRemove, inPlayer, inX, inY, 0.0f, 0.0f, inRadius);   // TSGT (TEST ONLY)
     EEMap* theMap = gWorld.mMap;
     long theRadius = UMFloatToLong(inRadius);
     bool theShow;
@@ -167,6 +170,7 @@ void EERemoveSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlaye
 // Removes a player's sight from the tiles of the outer two rings around the old centre that the new one does not see
 void EERemoveSightRingStep(float inOldX, float inOldY, float inNewX, float inNewY, float inRadius, EEPlayer* inPlayer)
 {
+    EESightScope theCapture(kSightRingRemove, inPlayer, inOldX, inOldY, inNewX, inNewY, inRadius);   // TSGT (TEST ONLY)
     EEMap* theMap = gWorld.mMap;
     bool theShow;
     if (gWorld.GetCurrentPlayer() == inPlayer ||
@@ -207,6 +211,7 @@ void EERemoveSightRingStep(float inOldX, float inOldY, float inNewX, float inNew
 // Moves a unit's sight: a step of at most one tile updates only the outer rings, a longer one redoes the whole circle
 void EEMoveSightCircle(float inOldX, float inOldY, float inNewX, float inNewY, float inRadius, EEPlayer* inPlayer)
 {
+    EESightScope theCapture(kSightCircleMove, inPlayer, inOldX, inOldY, inNewX, inNewY, inRadius);   // TSGT (TEST ONLY)
     float theDX = inOldX - inNewX;
     float theDY = inOldY - inNewY;
     if (theDX < -1.0f || theDX > 1.0f || theDY < -1.0f || theDY > 1.0f) {

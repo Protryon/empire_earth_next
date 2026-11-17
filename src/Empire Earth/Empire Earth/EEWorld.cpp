@@ -902,6 +902,7 @@ void EEWorld::StartGame(EEGameState* inState, bool inLocked)
         this->mMap->SetPlayerCount(this->mNumPlayers);
     gMiniMap->mViewingPlayer = this->mPlayers[this->mCurrentPlayer];
     if (inState->mRevealMap == true) {
+        EESightScope theCapture(kSightRevealMap, NULL);   // TSGT (TEST ONLY)
         for (long y = 0; y < this->mMap->mSize; y++) {
             for (long x = 0; x < this->mMap->mSize; x++) {
                 EEMapTile* theTile = this->mMap->GetTile(x, y);

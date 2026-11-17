@@ -93,6 +93,9 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
                        "Empire Earth/Empire Earth/EEAppCapture.cpp",
                        # TEST ONLY: its map, mini map, cheat and storm records and the --app-sweep (MAPS ... STRM)
                        "Empire Earth/Empire Earth/EEAppCaptureWorld.cpp",
+                       # TEST ONLY: the tile sight's records (ee/EESightCapture.h: TSGT) and the app profile's end
+                       # sweep of EEMap's sight and checksum (MAPS, MAPK)
+                       "Empire Earth/Map/EESightCapture.cpp",
                        # TEST ONLY: the tech tree's, events' and calamities' capture records (ee/EETechCapture.h)
                        "Empire Earth/Tech Tree/EETechCapture.cpp",
                        # TEST ONLY: the units sweep of EE-SIM --unit-sweep (the capture's units profile)

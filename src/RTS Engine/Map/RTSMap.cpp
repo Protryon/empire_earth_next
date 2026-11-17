@@ -265,6 +265,7 @@ long RTSMap::GetNumRaisedCorners(unsigned long inX, unsigned long inY)
 // those players from the doppelganger manager (done before a scenario is saved)
 void EEMap::PrepareSave()
 {
+    EESightScope theCapture(kSightPrepareSave, NULL);   // TSGT (TEST ONLY)
     long theY;
     for (theY = 0; theY < this->mSize; theY++) {
         for (long theX = 0; theX < this->mSize; theX++) {
@@ -632,6 +633,7 @@ void RTSMap::DeleteTiles()
 // Fogs every tile the player has seen or explored: it becomes explored but not in sight
 void RTSMap::FogSeen(EEPlayer* inPlayer)
 {
+    EESightScope theCapture(kSightFogSeen, inPlayer);   // TSGT (TEST ONLY)
     for (long theX = 0; theX < this->mSize; theX++) {
         for (long theY = 0; theY < this->mSize; theY++) {
             EEMapTile* theTile = this->GetTile(theX, theY);
@@ -644,6 +646,7 @@ void RTSMap::FogSeen(EEPlayer* inPlayer)
 // Marks every unexplored tile as explored for the player (reveals the map)
 void RTSMap::ExploreUnseen(EEPlayer* inPlayer)
 {
+    EESightScope theCapture(kSightExploreUnseen, inPlayer);   // TSGT (TEST ONLY)
     for (long theX = 0; theX < this->mSize; theX++) {
         for (long theY = 0; theY < this->mSize; theY++) {
             EEMapTile* theTile = this->GetTile(theX, theY);
