@@ -28962,3 +28962,60 @@ from a snapshot commit, one commit per new crate.
   root's in `rust/<dir>/<dir>.h`, `rust/common.h`, the umbrella `rust/all.h`; ee_won_net's cppcore, hostop, opobj
   and thread name each other and share `rust/won_net/hostop.h`.
 - **Gates.** See docs/progress/crate-restructure.md "Phase 2".
+
+## R5b.1: the next setting's saveload parting was the map's terrain types (save 0.283), and the path manager's request record in Rust (ee_sim::astar pm_record.rs; branch rust-astar1, 2026-11-17)
+
+- **The parting was not the path manager.** The Lua save lane left `next` seed 2 (309 ticks from 1000 s, 0 from
+  1900 s) to this lane: a path had come back in one game and not in the other, and the bounded machine's storage
+  dump differed (70165 against 69237 bytes). The byte count is only the arena's high-water mark (a node arena never
+  shrinks; a loaded game starts it empty), and the bounded storage's span clear does cover every flag a search
+  writes, so its kept bytes do not change a result.
+- **How it was found.** `--dump-tick` at every physics tick of the first communications tick (two EE-SIM runs: the
+  continued game from the start, the loaded game from the save) put the first difference on one citizen: equal
+  waypoints, but in the loaded game its y stopped at 54.006, a tile edge. Temporary `fprintf`s in the physics
+  models' C++ hosts (`passable_by`, `can_stand_on`, `can_move_on_terrain`) showed `CanMoveOnTerrain` refusing tile
+  (81,53): terrain type 9 in the loaded game, 6 in the continued one. A `TERR` dump of every tile's type then gave
+  1,040 tiles of another type after the load, the same at 10 s, 300 s, 1000 s and 1900 s of the continued game: the
+  types never change in a game, the load gets them wrong.
+- **The cause: EEMap::Load re-types every tile from its mesh vertex's texture** (the terrain table of
+  `GetTextureSetID(x, y)`; a cliff or no table: the default). The random map's painting types the four tiles around
+  each vertex it paints, so the vertex's texture is not always the tile's type. The original game did the same: a
+  loaded game had other terrain under about 8% of the land. Every setting's saves had the difference; it parted only
+  where a unit walked over such a tile.
+- **The fix (save 0.283, EESaveHasTileTypes).** A world part after the tech flags (world_save.rs
+  `EE_UNITS_WORLD_PART_TILE_TYPES`, EEPWorldHelper.cpp `EESaveTileTypes`): every tile's type, row by row, as runs
+  of a count and a type (-1: no tile). The types go back at the part's load and again at the first tick. 0.282 saves
+  load as before.
+- **Results.** Matrix (`--settings all --seeds 2-3 --at 1000,1900`): one full run and two runs of `next`, the same: next seed 2 1000 s 309 -> 915,
+  1900 s 0 -> 276; every other row as before (END; calamity seed 2 has no 1900 s save). The plain saveload (seeds 2-7 at
+  600/1350/2100 s) 18/18. The oracle seeds 2-7 identical (the change only adds to a save).
+- **What still parts `next` seed 2 is the Lua AI, not the path manager.** At 2142875 ms (the 1900 s save, 276 ticks
+  on) `next.cmd gather` takes two citizens in the continued game and one in the loaded one. Everything the script
+  reads before that step is equal: the units' dumps, every Lua unit event (a temporary print of
+  `EECPUnitsEventAdd`), the action each binding reports for the citizen (`move`, a location goal, in both), the
+  restored Lua memory (`next.load` hash = `next.save` hash), and the bounded searches (inputs and results printed:
+  equal). So the script's own state decides differently after a load: likely an order that depends on a Lua table's
+  internals (`pairs`/`next` over a hash part, or `#` of a table with holes), which a deserialised table does not
+  share with one built up in the game. Left for the Lua AI lanes; the 1000 s save's parting (915 ticks, rng first)
+  was not traced.
+- **Lesson.** A unit that stops at a tile edge with its waypoints equal is a tile test, not a path: print the
+  physics models' host answers for that unit before suspecting the searches. And a state that a load recomputes
+  (here the tile types) can differ from the start of the game, not from the save: dump it at several times of the
+  continued game to tell the two apart.
+
+### The path manager's request record (pm_record.rs)
+
+- `EEPathManager`'s `mHistory` (deque, newest first), `mRegions` (`std::map<long, std::map<U2DPoint<long>,
+  unsigned long>*>`) and the two prune timers are one Rust record behind a handle (`EePathRecord`): `AddHistory`,
+  `SetGraphRevs`' history walk, `PruneHistory`, `PruneRegions`' choice, `FreeRegions`, `UpdatePaths`' prune
+  schedule and the record's part of `SaveRunningState`/`LoadRunningState`. The C++ keeps cancelling the stranded
+  units' paths and telling their players. `EEPathHistoryEntry` is deleted.
+- The orders are the containers': `U2DPoint<long>::operator<` is lower y first, then the larger x (a `TileKey(y,
+  Reverse(x))` in a `BTreeMap`); the ids `PruneRegions` handles come out last found first, as the C++ walked its
+  vector backwards. The timers compare as the Windows build's `long <= unsigned long` (unsigned 32 bits).
+- The save layout is unchanged: Rust gives the 4-byte words, the C++ writes them one by one through `FSFile::Write
+  (uint32_t)` and reads them through a reader callback, so a text or big-endian FSFile would still see typed
+  values. The plain saveload and the matrix ran on it unchanged.
+- Net C++: -131 lines (EEPathManager.cpp 59+/180-, EEPathManager.h 4+/14-). 8 Rust tests (orders, the window and
+  its small-time case, the count-up rule, loading, the schedule's unsigned compare, the words' layout, the handles).
+  No golden driver was built for it: the gates are the oracle (seeds 2-7 identical), the captures and the saveloads.
