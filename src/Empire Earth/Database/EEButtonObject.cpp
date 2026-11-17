@@ -27,6 +27,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EEDbRecords.h"
+#include "ee/EEMediaUse.h"
 
 std::vector<EEButtonObject*> EEButtonObject::sTable;
 
@@ -37,9 +38,8 @@ extern unsigned long& gTexturePixelDepth;
 
 // Creates a button image entry with no texture and no references
 EEButtonObject::EEButtonObject()
-    : EeDataButtonFields(), mTexture(NULL), mCellU(0.0f), mCellV(0.0f), mMediaCount(0)
+    : EeDataButtonFields(), EeDataMediaUse(), mTexture(NULL), mCellU(0.0f), mCellV(0.0f)
 {
-    this->mIsLoading = false;
 }
 
 // Destroys the button image entry, releasing its texture
@@ -84,29 +84,7 @@ void EEButtonObject::DumpAllLoadedMedia(FSFileSpec& inFile)
 // returns the load error
 long EEButtonObject::Acquire()
 {
-    long theResult = 0;
-    sDatabaseLock.mLock->Enter();
-    if (this->mMediaCount == 0) {
-        this->mMediaCount = 1;
-        this->mIsLoading = true;
-        sDatabaseLock.mLock->Leave();
-        theResult = this->LoadTexture();
-        if (theResult != 0) {
-            sDatabaseLock.mLock->Enter();
-            this->mMediaCount = 0;
-            sDatabaseLock.mLock->Leave();
-        }
-        sDatabaseLock.mLock->Enter();
-        this->mIsLoading = false;
-    } else {
-        this->mMediaCount++;
-        sDatabaseLock.mLock->Leave();
-        while (this->mIsLoading == true)
-            PlatSleep(1);
-        sDatabaseLock.mLock->Enter();
-    }
-    sDatabaseLock.mLock->Leave();
-    return theResult;
+    return EEMediaAcquire(this, sDatabaseLock.mLock, [this] { return this->LoadTexture(); }, [] {}, true);
 }
 
 // Loads the button's texture (a mip level dropped at 800 pixels wide or less, alpha for ids below 50) and computes
@@ -188,17 +166,10 @@ void EEButtonObject::SetPressedBitmap(GEBitmap* inBitmap, const GERectangle& inR
 // Drops a reference to the button image once any load has finished, releasing its texture with the last one; returns 0
 long EEButtonObject::Release()
 {
-    while (this->mIsLoading == true)
-        PlatSleep(1);
-    sDatabaseLock.mLock->Enter();
-    if (this->mMediaCount == 1) {
+    EEMediaRelease(this, sDatabaseLock.mLock, [this] {
         this->mTexture->Dereference();
         this->mTexture = NULL;
-        this->mMediaCount = 0;
-    } else if (this->mMediaCount > 0) {
-        this->mMediaCount--;
-    }
-    sDatabaseLock.mLock->Leave();
+    });
     return 0;
 }
 

@@ -42,6 +42,7 @@ pub mod civ_apply;
 pub mod civ_file;
 #[cfg(test)]
 mod civ_tests;
+pub mod civilization;
 pub mod contagion;
 pub mod contagion_functor;
 pub mod contagion_save;

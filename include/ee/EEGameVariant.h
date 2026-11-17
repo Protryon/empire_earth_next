@@ -5,9 +5,7 @@
 #ifndef EE_EEGAMEVARIANT_H
 #define EE_EEGAMEVARIANT_H
 
-#include <vector>
-
-#include "rust/data/tables.h"
+#include "ee/EEDbList.h"
 
 class FSFileSpec;
 
@@ -19,8 +17,6 @@ class FSFileSpec;
 // Layout gap-free; names are provisional unless a reader names them.
 class EEGameVariant : public EeDataGameVariantFields {
 public:
-    EEGameVariant();
-    virtual ~EEGameVariant();               // +0x00 0xd6935 (??_G 0xd6919)
     static EEGameVariant* GetGameVariant(long inIndex);
     static long Load(FSFileSpec* inFile);
     static void Unload();
@@ -38,7 +34,7 @@ public:
 };
 
 // 0x4e7f78: every variant (GetGameVariant's table; 0xd6b34 deletes them; provisional name)
-extern std::vector<EEGameVariant*> gGameVariants;
+extern EEDbList<EEGameVariant, EeDataList::GameVariants> gGameVariants;   // Rust's list (ee/EEDbList.h)
 inline EEGameVariant* EEGetGameVariantAt(unsigned long inIndex) { return gGameVariants[inIndex]; }   // inline (lobby 0x5dde02) (provisional name)
 // 0x1304b4: gGameVariants.size() (the lobby's variant box; provisional name)
 unsigned long EEGetNumberOfGameVariants();

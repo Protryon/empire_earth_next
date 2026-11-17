@@ -588,6 +588,8 @@ struct EeWorldLayout {
   uint64_t player_color;
   uint64_t player_first_unit;
   uint64_t player_selected_group;
+  /// `EEPlayer::mComputerPlayer` (an `EEComputerPlayer*`, 0 for a human)
+  uint64_t player_computer_player;
   /// `mPlayers` (17 pointers), `mMap`, `mNumPlayers` (an `unsigned long`), `EEWorld::mCurrentPlayer` (a `long`)
   uint64_t world_players;
   uint64_t world_map;
@@ -609,6 +611,12 @@ struct EeWorldLayout {
   uint64_t world_in_cinematic;
   uint64_t world_user_paused;
   uint64_t world_using_carbon;
+  /// `EEWorld::mTeamsLocked` (a bool)
+  uint64_t world_teams_locked;
+  /// `&gWorld` (an address, not an offset: the one world's handle) and `&gUnitClassTable` (the address of the
+  /// `std::vector<EEUnitClass*>`; its begin and end are its first two words)
+  uint64_t world_address;
+  uint64_t unit_class_table;
   /// `mTiles` (the `EETile*` array, row-major, `mSize` x `mSize`)
   uint64_t map_tiles;
   /// `sizeof(EETile)` (`EEMap::mTileArray`'s element)

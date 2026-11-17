@@ -15,6 +15,7 @@
 #include "ee/EEGameOptions.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EECivilization.h"
+#include "rust/sim/tech.h"
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern EECivilizationManager gCivilizationManager;
@@ -27,6 +28,12 @@ const UString EECivilization::sAvailablePoints("EECivilization-AvailablePoints")
 const UString EECivilization::sMaxPoints("EECivilization-MaxPoints");
 const UString EECivilization::sCivBuilderLastVisited("EECivilization-CivBuilderLastVisited");
 const UString EECivilization::sIsDefaultCiv("EECivilization-IsDefaultCiv");
+
+// The upgrades' application step for ee_tech civilization.rs: gCivilizationManager.ApplyUpgrade for the player
+static bool EECivApply(void* inPlayerID, uint32_t inUpgrade)
+{
+    return gCivilizationManager.ApplyUpgrade(inUpgrade, *static_cast<long*>(inPlayerID));
+}
 
 // Creates an unnamed civilization with no points or upgrades, marked unchanged
 EECivilization::EECivilization()
@@ -46,46 +53,26 @@ long EECivilization::ComputeCost(long inBase, long inStep, long inCount)
 }
 
 // Returns whether the civilization can afford an upgrade (always, when custom civilizations are off) and its cost
+// against a list (by default the purchased upgrades): ee_tech civilization.rs
 bool EECivilization::CanAfford(EECivUpgrade inUpgrade, unsigned long* outCost, std::vector<EECivUpgrade>* inList)
 {
-    bool theResult = false;
-    long theBase = this->GetBaseCost(inUpgrade);
-    long theStep = this->GetExtraCost(inUpgrade);
-    unsigned long theCost = this->ComputeCost(theBase, theStep, this->CountInCategory(inUpgrade, inList));
-    if (outCost != NULL)
-        *outCost = theCost;
-    if (theCost <= this->mAvailablePoints || !gGameOptions.mAllowCustomCivs)
-        theResult = true;
-    return theResult;
+    std::vector<EECivUpgrade>& theList = inList != NULL ? *inList : this->mPurchasedUpgrades;
+    return ee_tech_civ_can_afford(inUpgrade, theList.data(), theList.size(), this->mAvailablePoints,
+                                  gGameOptions.mAllowCustomCivs, outCost);
 }
 
 // Returns whether the civilization can afford every upgrade in a list, bought one after another
 bool EECivilization::CanAffordAll(std::vector<EECivUpgrade>& inUpgrades)
 {
-    std::vector<EECivUpgrade> theList;
-    EECivUpgrade theUpgrade = 0;
-    bool theResult = true;
-    theList = this->mPurchasedUpgrades;
-    for (std::vector<EECivUpgrade>::iterator i = inUpgrades.begin(); i != inUpgrades.end(); i++) {
-        theUpgrade = *i;
-        theResult = this->CanAfford(theUpgrade, NULL, &theList);
-        if (!theResult)
-            break;
-        theList.push_back(theUpgrade);
-    }
-    return theResult;
+    return ee_tech_civ_can_afford_all(this->mPurchasedUpgrades.data(), this->mPurchasedUpgrades.size(),
+                                      inUpgrades.data(), inUpgrades.size(), this->mAvailablePoints,
+                                      gGameOptions.mAllowCustomCivs);
 }
 
-// Returns an upgrade's base cost (its level value times 100), or 0 when unknown
+// Returns an upgrade's base cost (its level's bonus times 100), or 0 when unknown
 long EECivilization::GetBaseCost(EECivUpgrade inUpgrade)
 {
-    float theValue = 0.0f;
-    long theResult = 0;
-    if (gCivilizationManager.LookupLevel(inUpgrade, NULL, &theValue)) {
-        theValue *= 100.0f;
-        theResult = UMFloatToLong(theValue);
-    }
-    return theResult;
+    return ee_tech_civ_base_cost(inUpgrade);
 }
 
 // Returns whether no points were ever added
@@ -209,66 +196,32 @@ void EECivilization::AddUpgrades(std::vector<EECivUpgrade>& inUpgrades, long inP
 // Applies the purchased upgrades with attribute index 21 to the world (player 0)
 void EECivilization::ApplyLevel21ToWorld()
 {
-    std::vector<EECivUpgrade>::iterator i = this->mPurchasedUpgrades.begin();
-    while (true) {
-        if (i == this->mPurchasedUpgrades.end())
-            break;
-        EECivUpgrade theUpgrade = *i;
-        unsigned long theCategory;
-        unsigned long theIndex;
-        gCivilizationManager.SplitAttribute(theUpgrade, &theCategory, &theIndex);
-        if (theIndex == 0x15)
-            gCivilizationManager.ApplyUpgrade(theUpgrade, 0);
-        i++;
-    }
+    long thePlayerID = 0;
+    ee_tech_civ_apply_deferred_kind(this->mPurchasedUpgrades.data(), this->mPurchasedUpgrades.size(), EECivApply,
+                                    &thePlayerID);
 }
 
 // Reapplies the purchased upgrades to a player after loading, deferring those with attribute index 21; returns 13
 // when one fails
 long EECivilization::Reapply(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
-    EECivUpgrade theUpgrade = 0;
-    long theResult = 0;
-    bool theApplied = true;
-    unsigned long thePlayerID = inPlayer->mPlayerID;
-    std::vector<EECivUpgrade>::iterator i = this->mPurchasedUpgrades.begin();
-    while (true) {
-        if (i == this->mPurchasedUpgrades.end() || !theApplied)
-            break;
-        theUpgrade = *i;
-        unsigned long theCategory;
-        unsigned long theIndex;
-        gCivilizationManager.SplitAttribute(theUpgrade, &theCategory, &theIndex);
-        if (theIndex == 0x15)
-            this->mDeferredUpgrades.push_back(theUpgrade);
-        else
-            theApplied = gCivilizationManager.ApplyUpgrade(theUpgrade, thePlayerID);
-        i++;
-    }
-    if (!theApplied)
-        theResult = 0xd;
-    return theResult;
+    long thePlayerID = inPlayer->mPlayerID;
+    std::vector<EECivUpgrade> theDeferred(this->mPurchasedUpgrades.size());
+    size_t theCount = 0;
+    bool theApplied = ee_tech_civ_reapply(this->mPurchasedUpgrades.data(), this->mPurchasedUpgrades.size(), EECivApply,
+                                          &thePlayerID, theDeferred.data(), &theCount);
+    this->mDeferredUpgrades.insert(this->mDeferredUpgrades.end(), theDeferred.begin(), theDeferred.begin() + theCount);
+    return theApplied ? 0 : 0xd;
 }
 
 // Applies the deferred upgrades to a player and forgets them; returns 13 when one fails
 long EECivilization::ApplyDeferred(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
-    bool theApplied = true;
-    long theResult = 0;
-    unsigned long thePlayerID = inPlayer->mPlayerID;
-    std::vector<EECivUpgrade>::iterator i = this->mDeferredUpgrades.begin();
-    while (true) {
-        if (!(i != this->mDeferredUpgrades.end() && theApplied))
-            break;
-        EECivUpgrade theId = *i;
-        theApplied = gCivilizationManager.ApplyUpgrade(theId, thePlayerID);
-        i++;
-    }
-    if (!theApplied)
-        theResult = 0xd;
-    else
-        this->mDeferredUpgrades.clear();
-    return theResult;
+    long thePlayerID = inPlayer->mPlayerID;
+    if (!ee_tech_civ_apply_all(this->mDeferredUpgrades.data(), this->mDeferredUpgrades.size(), EECivApply, &thePlayerID))
+        return 0xd;
+    this->mDeferredUpgrades.clear();
+    return 0;
 }
 
 // Writes the purchased upgrades, points, flags and name to the saved game; returns the first error

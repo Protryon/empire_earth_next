@@ -24,42 +24,20 @@ float gWeaponToHitFactors[6][6];
 // 0x52fb54: world table entry 42's float, cached after the load (provisional name)
 extern float& gGameStateGameSpeed;
 
-std::vector<EEUnitBehavior*> EEUnitBehavior::sTable;
+EEDbList<EEUnitBehavior, EeDataList::UnitBehaviors> EEUnitBehavior::sTable;
 
-// Creates a unit behaviour with every permission off
-EEUnitBehavior::EEUnitBehavior() : EeDataUnitBehaviorFields()
-{
-}
 
-// Destroys the unit behaviour (nothing to release)
-EEUnitBehavior::~EEUnitBehavior()
-{
-}
 
-// Loads the unit behaviours (move, pursue, target, return and flee permissions) from db\dbUnitBehavior.dat (the record
-// and its copy: ee_data tables.rs); a row with a negative index stays NULL. Returns the last read status
+// Loads the unit behaviours (move, pursue, target, return and flee permissions) from db\dbUnitBehavior.dat into the
+// Rust list (ee_data tables.rs); a row with a negative index stays NULL. Returns the last read status
 long EEUnitBehavior::Load(FSFileSpec* inFile)
 {
-    return EEDbReadRecords(inFile, ee_data_unit_behavior_record_size(),
-        [](unsigned long inCount) { EEUnitBehavior::sTable.resize(inCount, NULL); return true; },
-        [](unsigned long inIndex, const unsigned char* inRecord) {
-            EeDataUnitBehaviorFields theFields;
-            EEUnitBehavior* theBehavior = NULL;
-            if (ee_data_unit_behavior_from_record(inRecord, &theFields)) {
-                theBehavior = new EEUnitBehavior;
-                *static_cast<EeDataUnitBehaviorFields*>(theBehavior) = theFields;
-            }
-            EEUnitBehavior::sTable[inIndex] = theBehavior;
-        });
+    return EEDbLoadList(inFile, EeDataList::UnitBehaviors);
 }
 
-// Destroys every unit behaviour and empties the table
+// Empties the table
 void EEUnitBehavior::Unload()
 {
-    for (unsigned long i = 0; i < EEUnitBehavior::sTable.size(); i++) {
-        delete EEUnitBehavior::sTable[i];
-        EEUnitBehavior::sTable[i] = NULL;
-    }
     EEUnitBehavior::sTable.clear();
 }
 

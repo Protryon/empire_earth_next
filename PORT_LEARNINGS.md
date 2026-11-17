@@ -29368,6 +29368,127 @@ The machine froze and restarted once during the round (all processes lost): the 
 - RoutingLogic.cpp's remaining host: the events, dialogs and the connection's request helpers (Rust could call
   routeconn.rs directly, but EEWonNet.cpp also calls most helpers).
 - IPAddr.cpp and StringUtil.cpp stay forwarders while the lobby's C++ calls them.
+## LP64 after the crate restructure: cargo check for Linux and macOS, nettest's session test (2026-11-17)
+
+`cargo check --target x86_64-unknown-linux-gnu --workspace --all-targets` stopped in ee_render, so ee_ui, ee_game and
+the gate library had never been checked off Windows since the restructure (and the owner's Mac build was broken).
+
+- **ee_render `openformats/surface_file.rs`.** The JPG2 trailer is two 4-byte words (`_getw`/`_putw`, int) holding
+  file positions that the C++ keeps as `long` (`FSFileSpec::GetPosition(long&)`, `ftell`). On Windows the two are
+  one type, so the Rust mixed `c_int` and `c_long`. Fix: `c_long::from(get_word(..))` where a word becomes a
+  position, `position as c_int` where one is written (`_putw` truncates the same way); `FileWriteLong` already
+  writes 4 bytes on every data model (`FSFile::Write(const long&)`). Windows: the casts are no-ops.
+- **ee_game screens (187 errors, the scenario editor and the settings form).** `EeScenarioEffectFields` and
+  `EeScenarioConditionFields` keep the C++ classes' `unsigned long`/`long` (ee_sim/scenario/fields.rs: C++ derives
+  from them, so the C++ readers are unchanged), while the screens' host calls are 32-bit (`u32`/`i32`). Fix: casts
+  at that boundary (`as c_ulong` / `as u32`, `as c_long` / `as i32`), not new field types: changing a field to
+  `u32` would change `unsigned long` to `uint32_t` in the generated header and break the C++ that binds
+  `unsigned long&` to it. The settings form's `list_selection` (`c_ulong`) into `call_with`/`text` (`u32`) the same.
+  Every cast is a no-op on Windows (`c_ulong` is `u32` there), so behaviour there cannot change.
+- **ee_won_net `routeconn_tests.rs`.** A test hook declared `-> c_long` where `EeWonRouteConnHooks::handle_reply`
+  returns `i32`: a fn item that only matched on Windows. Now `-> i32`.
+- **Lesson: an alias-typed field leaks the data model into every user.** Rust's type checker is stricter than C's
+  implicit conversions, so each `c_long`/`c_ulong` record field is a compile error on LP64 wherever it meets a
+  fixed-width value; on Windows nothing shows it. Check a change touching such records with
+  `cargo check --target x86_64-unknown-linux-gnu` (the target is installed here; no sysroot is needed for a check)
+  and `--target aarch64-apple-darwin` (also checks here: no Xcode SDK is needed for `cargo check`).
+- **clippy off Windows.** With the checks clean, `cargo clippy --target <linux or macOS> --workspace --all-targets
+  -- -D warnings` (the gate's clippy) failed in ee_base, ee_sim, ee_ui and ee_won_net: 30 `unnecessary_cast` and
+  `useless_conversion` hits, each a cast or `from` that Windows needs (`c_long` to `i64`) and LP64 does not. The
+  opposite also holds: the new casts in the ee_game screens are same-type on Windows, so those six files carry
+  `#![allow(clippy::unnecessary_cast)]` like ee_sim's `fields.rs`. Fix: every crate root has
+  `#![cfg_attr(not(windows), allow(clippy::unnecessary_cast, clippy::useless_conversion))]`, so the Windows gate
+  keeps both lints and the Mac's gate no longer fails on the other data model's casts. Clippy is now clean for
+  x86_64-unknown-linux-gnu and aarch64-apple-darwin.
+- **nettest's `ee_session_test`.** EEServer.cpp and EEClient.cpp include `ee/EEARust.h` since the actions moved to
+  Rust (their `EEARemovePlayer`, `EEABootClientFromCanceledGame`, `EEAServerMigration` became its one-line
+  classes); the stand-in world (tests/net/ee_stand) had the three old headers but not that one, so the real header
+  (and the real game) was found. Fix: a stand-in `tests/net/ee_stand/ee/EEARust.h` that includes `ee_world.h`.
+- **won_gamespy_test: the second instance's port (xbuild.py wontest).** The driver started b asking for A's port
+  and expected it at A+1, the SDK's next port. Windows hands out ephemeral ports in order, machine-wide
+  (consecutive binds anywhere get A+1, A+2, ...), so whenever any program bound a port during the seconds of
+  queries after A, A+1 was taken and b took A+2: 7 failures (b's heartbeats one port ahead, the queries sent to A+1
+  unanswered), seen on the busy shared machine and reproduced with a script that binds a port every 0.5 s. Not the
+  port nor the restructure: the SDK's scan is right. Fix: just before b's start-up the driver finds the first port
+  above A that binds (any address, as the SDK binds a localhost address), sends b's queries there and names it
+  "A+1"; the golden is unchanged, and b landing anywhere else still fails. Under the port script it passes 4/4.
+  `gamespy_tests.rs` `a_failed_start_leaves_the_current_record` assumes qport + 1 the same way, but binds at once
+  (a window of microseconds); left as is.
+
+## Object storage, lane S: the screens' and the editor's game reads on the world's views (branch rust-objS, 2026-11-17)
+
+- **Measure before the plan's counts.** The plan expected 99 plain cases in `EEScreens.cpp`, 42 in `EESEUnit.cpp`
+  and 70 in `EESERBUnitTypes.cpp`; the files held about 35 fill lines, 6 and 23. `ee_screenscpp_call`'s 97 cases are
+  all game calls. A read-and-write case (`SeplWorld`, `SeplPlayer`) frees no C++ line when only its read moves.
+  Net C++ for the move: -33.
+- **Record the lock state with the read.** The TEST ONLY SGVW trace (`ee_game screens/sgvw.rs`, `EE_SGVW`) notes
+  the world lock's holds by the reading thread (`ee_base ts/held.rs` counts them per thread and lock). Two thirds of
+  the editor's world reads run under the world's write lock (`ProcessActions`' `EE_SCREENS_ACTION_LOCK`, the tab
+  switch), where `EeTsLock` deadlocks a read on top; some run with no lock (the editor's construction thread, the
+  lobby, the main menu). That is why V's `WorldRead::begin` takes no lock.
+- **Reach a read before moving it.** No fixture session reached the read view's world and player groups (in play
+  the HUD reads the world through its own hosts). `fixture_game.py --view-check` (screen events on the game form:
+  speed, perspective, the diplomacy, options and chat forms) reaches them; record its golden on the unmodified
+  tree with `--seed` (the players' civilizations are random otherwise).
+- **Mask what is not state.** A live trace's CT count and the version text (it carries the build's commit count)
+  differ between runs and builds; `tools/sgvw.py` masks them (`TIMED`), everything else compares line for line.
+
+## R6 data, round 4: one media use count, five table classes as Rust lists, EECivilization's costs, the songs (branch rust-data4, 2026-11-17)
+
+Branch `rust-data4` from rust-data3 (669ae7ba2), merged with origin/rust 48b2f4f0 (clean).
+
+| Commit | What | Net C++ (src + include, include/rust excluded) |
+|---|---|---|
+| 3c6032ccb | `tools/datafmt/structs.py` reads the layouts through eedata's specgen (the Rust records too) | tools |
+| 5bb1bea30 | one media use count (ee_data `media.rs`) behind EEButtonObject, EESoundObject, EEGraphicObject, EETerrainTable, EEMusicObject | +143 -198, net -55 |
+| 6fe9154f3 | EEStartingResources, EEGameVariant, EEUnitBehavior, EEUCUpgradeTable, EETerrainTypeTable as Rust lists | +73 -153, net -80 |
+| 975ad35cc | EECivilization's costs, affordability and reapply order (ee_sim tech `civilization.rs`) | +31 -78, net -47 |
+| 236904e20 | the songs by epoch and their shuffle (ee_data `tables.rs`) | +7 -36, net -29 |
+
+Round total: net -211, far short of the 1,500 aimed at (see "Why short").
+
+- **The media use count** (`media.rs`, `ee/EEMediaUse.h`). Five classes repeated: under the unit's lock the first
+  user sets the count and the loading flag, leaves the lock and loads; later users count themselves and poll the
+  flag with `PlatSleep(1)`; the last release unloads under the lock. `EeDataMediaUse` (`mMediaCount`, `mIsLoading`) is
+  now their base and Rust runs the pattern; the lock stays each unit's `sDatabaseLock` (passed in as callbacks: one
+  global lock would deadlock, an unload under one unit's lock waiting on another unit's loading flag) and the
+  classes' steps are lambdas (a failed button or score load resets the count, a busy score keeps its use, the terrain
+  attaches its textures under the lock). The terrain's `mLoadCount` and the song's `mState` are `mMediaCount`.
+  `EEUnitClassUpgrade` has the same pattern twice but its counts are in ee_units' record (`stats.rs`): left alone.
+- **Table classes as Rust lists** (`tables.rs` `EeDataList`, `ee/EEDbList.h`). The entries are boxed records'
+  members in Rust; `EEDbList<T, K>` reads a list as the `std::vector<T*>` it replaced (`operator[]`, `size`), so the
+  readers (the units' behaviours, the lobby's presets, the unit class's upgrade table, the map's terrain types)
+  compile unchanged. The classes lose their vtables, constructors and destructors; `EEUnitClassImprovementTable`'s
+  mirrored vtable slot (`mU00`) went with it (its static_asserts against `EEUCUpgradeTable` hold), and the terrain
+  type's `mColorSetID` (EEMap writes it) is in `EeDataTerrainTypeFields`. Behaviour change: an index past a list is
+  NULL (the vectors read past their end).
+- **EECivilization** (`civilization.rs`): `CanAfford`, `CanAffordAll` and `GetBaseCost` count against the Rust
+  civilization tables (the base cost is the level's *bonus* times 100: the original passed its value pointer second);
+  `Reapply`, `ApplyDeferred` and `ApplyLevel21ToWorld` walk the upgrades in Rust and apply each through
+  `EECivilizationManager::ApplyUpgrade` (its capture hooks stay). The class keeps its members (its vectors are read
+  directly by a dozen units) and its save format; a whole-class move needs those readers changed first.
+- **The songs** (`tables.rs`): the per-epoch lists and `GetRandom`'s shuffle (each next song drawn from those left
+  with `gMusicRandom`, played from the end); `ClearAll` releases them through a callback.
+- **Goldens** (scratch, `build/data4/golden`, over the ee_data staticlib): `media.cpp` (the five classes' original
+  bodies, 669ae7ba2's, against the adapters: 3,000 random sequences of 12 operations, every lock call, load, unload
+  and count logged; 36,000 lines identical; a mutation of the button's reset flag is caught) and `songs.cpp` (the
+  original GetRandom/ClearAll against the lists: 400 cases, 16,400 lines identical). The lists and the civilization
+  are simulation input: the oracle, the captures, the saveload matrix and the civ gate cover them.
+- **Why short**: what is left in the Data Pre-Loading Thread and Database is mostly C++ object management around
+  GE models, textures and sounds (EEGraphicObject's tag points, parts and colour groups; the terrain mesh's texture
+  sets; the effects' loads), the threads (EEDataPreLoading) and classes whose members are read by many units
+  (EECivilization's vectors). Each needs either its readers rewritten or a Rust object model of the GE objects first.
+- **Data**: no converter or format change this round (`specs.json` unchanged): no `data/db` regeneration.
+- **Gates** (the tree merged with origin/rust 48b2f4f0; the clippy and rustfmt fixes after it touch Rust only):
+  `build.py --sim` and `--test-profile windowed-software` 0/0 (736/737 inputs); `eedata check` PASS, `cppgate` PASS;
+  the oracle seeds 2-7 identical; the captures at seeds 2-3 PASS (oracle 200, late 204, space 202, calamity 212,
+  scenario 43 digests); `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` PASS; the editor gate PASS
+  (14,448 lines), the civ gate PASS (4,062 lines); the rmap gate 2088/2088 and `--reader` 2088/2088; the tour through
+  slot.py `RESULT PASS tour` (83.5% lit, F3 ok); the Rust gate: tests and clippy PASS after naming the song lists'
+  type, rustfmt PASS after the module order, the header check current (the full gate rerun is the lead's).
+- **After the merge of origin/rust f63bd44b** (WONLobby 12, world views, A* round 1; PORT_LEARNINGS conflicted on
+  appended sections only: rust's taken, this one appended): both builds 0/0 (734/735 inputs), the oracle seeds 2-7
+  identical, the saveload matrix `--expect` PASS, the Rust gate PASS (the full run).
 ## Object plan, Lane R preparation: RFIL, the fill's golden, the fill split into reads and calls (branch rust-objR, 2026-11-17)
 
 The preparation for moving `EERenderObject.cpp`'s fill and `EEEffectHost.cpp`'s `Ask` readers onto Lane V's views

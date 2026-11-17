@@ -21,15 +21,14 @@
 #include "EEDatabase.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEDbRecords.h"
+#include "ee/EEMediaUse.h"
 
 std::vector<EESoundObject*> gSoundObjects;
 
 // Creates an empty, unloaded sound with no sample
-EESoundObject::EESoundObject() : EeDataSoundFields()
+EESoundObject::EESoundObject() : EeDataSoundFields(), EeDataMediaUse()
 {
     this->mSampleID = 0;
-    this->mMediaCount = 0;
-    this->mIsLoading = false;
 }
 
 // Destroys the sound, unloading its sample if it is loaded
@@ -77,32 +76,15 @@ void EESoundObject::Dump(FSFileSpec& inFile)
     }
 }
 
-// Loads the sound's sample on first use (counting later uses, which wait for the load); returns 9 on failure
+// Loads the sound's sample on first use (later uses wait for the load: ee/EEMediaUse.h); returns 9 on failure
 long EESoundObject::LoadMedia()
 {
-    sDatabaseLock.mLock->Enter();
-    long theResult = 0;
-    if (this->mMediaCount == 0) {
-        this->mMediaCount = 1;
-        this->mIsLoading = true;
-        sDatabaseLock.mLock->Leave();
-        if (this->mName.GetLength() > 0) {
-            this->mSampleID = gSoundManager->Load(this->mName, this->mCategory, this->mMaxInstances);
-            theResult = !UIsNone32(this->mSampleID) ? 0 : 9;
-        } else {
-            theResult = 9;
-        }
-        sDatabaseLock.mLock->Enter();
-        this->mIsLoading = false;
-    } else {
-        this->mMediaCount++;
-        sDatabaseLock.mLock->Leave();
-        while (this->mIsLoading == true)
-            PlatSleep(1);
-        sDatabaseLock.mLock->Enter();
-    }
-    sDatabaseLock.mLock->Leave();
-    return theResult;
+    return EEMediaAcquire(this, sDatabaseLock.mLock, [this]() -> long {
+        if (this->mName.GetLength() <= 0)
+            return 9;
+        this->mSampleID = gSoundManager->Load(this->mName, this->mCategory, this->mMaxInstances);
+        return !UIsNone32(this->mSampleID) ? 0 : 9;
+    });
 }
 
 // Sets the sound's volume (folded with EEContagionHelper::SetFunctor in the original: the store to +0x14; a float
@@ -143,16 +125,9 @@ long EESoundObject::Play(float inVolume, float inPan, float inPitch)
 // Counts one use down; on the last use unloads the sample. Returns 0
 long EESoundObject::UnloadMedia()
 {
-    while (this->mIsLoading == true)
-        PlatSleep(1);
-    sDatabaseLock.mLock->Enter();
-    if (this->mMediaCount == 1) {
-        this->mMediaCount = 0;
+    EEMediaRelease(this, sDatabaseLock.mLock, [this] {
         gSoundManager->Unload(this->mSampleID);
         this->mSampleID = 0;
-    } else if (this->mMediaCount > 1) {
-        this->mMediaCount--;
-    }
-    sDatabaseLock.mLock->Leave();
+    });
     return 0;
 }

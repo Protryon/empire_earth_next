@@ -74,6 +74,7 @@ struct FakePlayer {
     selected_group: usize,
     viewed_unit: usize,
     selected_viewed_unit: usize,
+    computer: usize,
 }
 
 impl Default for FakePlayer {
@@ -88,6 +89,7 @@ impl Default for FakePlayer {
             selected_group: 0,
             viewed_unit: 0,
             selected_viewed_unit: 0,
+            computer: 0,
         }
     }
 }
@@ -133,7 +135,7 @@ struct FakeWorld {
     wonders: c_ulong,
     options: [u8; 16],
     ghosts: [usize; 3],
-    flags: [bool; 7],
+    flags: [bool; 8],
 }
 
 fn fake_layout() -> EeWorldLayout {
@@ -176,6 +178,7 @@ fn fake_layout() -> EeWorldLayout {
         player_color: offset_of!(FakePlayer, color) as u64,
         player_first_unit: offset_of!(FakePlayer, first_unit) as u64,
         player_selected_group: offset_of!(FakePlayer, selected_group) as u64,
+        player_computer_player: offset_of!(FakePlayer, computer) as u64,
         world_players: offset_of!(FakeWorld, players) as u64,
         world_map: offset_of!(FakeWorld, map) as u64,
         world_num_players: offset_of!(FakeWorld, num_players) as u64,
@@ -192,6 +195,9 @@ fn fake_layout() -> EeWorldLayout {
         world_in_cinematic: offset_of!(FakeWorld, flags) as u64 + 4,
         world_user_paused: offset_of!(FakeWorld, flags) as u64 + 5,
         world_using_carbon: offset_of!(FakeWorld, flags) as u64 + 6,
+        world_teams_locked: offset_of!(FakeWorld, flags) as u64 + 7,
+        world_address: 0,
+        unit_class_table: 0,
         map_tiles: offset_of!(FakeMap, tiles) as u64,
         tile_stride: std::mem::size_of::<FakeTile>() as u64,
         tile_terrain_type: offset_of!(FakeTile, terrain) as u64,
@@ -351,7 +357,7 @@ fn fixture() -> Fixture {
     f.world.speed = 1.5;
     f.world.population_limit = 800;
     f.world.wonders = 1;
-    f.world.flags = [true, false, false, true, false, false, true];
+    f.world.flags = [true, false, false, true, false, false, true, false];
     let ghosts = Box::leak(Box::new([0x99usize]));
     f.world.ghosts = [ghosts.as_ptr() as usize, ghosts.as_ptr() as usize + 8, 0];
     f
@@ -584,4 +590,37 @@ fn a_unit_by_id_is_the_stores_object() {
     assert_eq!(UnitView::by_id(&t, id).map(|u| u.handle()), Some(object));
     assert!(UnitView::by_id(&t, id + 1).is_none());
     crate::units::store::with_store(|s| s.remove(id, object));
+}
+
+#[test]
+fn the_world_by_address_the_class_table_and_the_lane_s_members() {
+    let mut w = Box::<FakeWorld>::default();
+    w.flags[7] = true;
+    w.num_players = 3;
+    let mut p = Box::<FakePlayer>::default();
+    p.computer = 0x1234;
+    w.players[1] = addr(&*p);
+    let classes = [Box::<FakeClass>::default(), Box::<FakeClass>::default()];
+    let table: Vec<usize> = vec![addr(&*classes[0]), 0, addr(&*classes[1])];
+    // the vector's first two words: begin and end (as EEWorldLayout.cpp checks the library's)
+    let words: [usize; 2] = [table.as_ptr() as usize, table.as_ptr() as usize + 3 * std::mem::size_of::<usize>()];
+    let mut l = fake_layout();
+    l.world_address = addr(&*w) as u64;
+    l.unit_class_table = words.as_ptr() as u64;
+    let _guard = with_test_layout(l);
+    // SAFETY: the fakes live
+    let t = unsafe { WorldRead::begin() };
+    let world = WorldView::global(&t).unwrap();
+    assert_eq!(world.num_players(), 3);
+    assert!(world.teams_locked());
+    assert!(world.player(1).unwrap().has_computer_player());
+    assert_eq!(ClassView::count(&t), 3);
+    assert_eq!(ClassView::by_index(&t, 0).unwrap().handle(), addr(&*classes[0]) as u64);
+    assert!(ClassView::by_index(&t, 1).is_none());
+    assert_eq!(ClassView::by_index(&t, 2).unwrap().handle(), addr(&*classes[1]) as u64);
+    assert!(ClassView::by_index(&t, 3).is_none());
+    // no registered table: an empty one
+    drop(_guard);
+    let _guard = with_test_layout(fake_layout());
+    assert_eq!(ClassView::count(&t), 0);
 }

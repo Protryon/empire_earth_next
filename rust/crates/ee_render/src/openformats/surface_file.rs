@@ -400,14 +400,14 @@ fn load_jpg2(io: &Io) -> c_long {
         let alpha_position = unsafe {
             fseek(stream, position, SEEK_SET);
             let alpha = get_word(stream);
-            end = get_word(stream);
+            end = c_long::from(get_word(stream));
             alpha
         };
         let first = decoder(io);
         if io.lock() == K_ERROR_OK {
             read_jpeg(io, format, first, stream, false);
             // SAFETY: as above
-            unsafe { fseek(stream, alpha_position, SEEK_SET) };
+            unsafe { fseek(stream, c_long::from(alpha_position), SEEK_SET) };
             let second = decoder(io);
             read_jpeg(io, format, second, stream, true);
             io.unlock();
@@ -530,8 +530,9 @@ fn save_jpg2(io: &Io) -> c_long {
     if !stream.is_null() {
         // SAFETY: the file's open C stream
         unsafe {
-            put_word(alpha, stream);
-            put_word(end, stream);
+            // `_putw` takes an int: the file holds 4-byte words on every data model
+            put_word(alpha as c_int, stream);
+            put_word(end as c_int, stream);
         }
         let (jpeg, buffer) = encoder(io, stream, width, height);
         let locked = io.lock() == K_ERROR_OK;

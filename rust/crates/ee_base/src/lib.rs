@@ -1,6 +1,11 @@
 //! The platform layer, the leaves (utilities, errors, time, threads, strings, codecs, files, input), the GE math and
 //! the PNG reader: what every other crate of the game builds on.
 
+// `c_long`/`c_ulong` are `i32`/`u32` on Windows and `i64`/`u64` on Linux and macOS: a cast or `from` that one data
+// model needs is to the same type on the other. The Windows gate keeps both lints; off Windows they would flag
+// only those.
+#![cfg_attr(not(windows), allow(clippy::unnecessary_cast, clippy::useless_conversion))]
+
 /// The crate ee_codec before the restructure.
 pub mod codec;
 /// The crate ee_error before the restructure.

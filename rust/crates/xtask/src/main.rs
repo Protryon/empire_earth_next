@@ -34,6 +34,7 @@ fn generate_single(root: &Path, config: cbindgen::Config) -> Result<String, Stri
         // loose source files
         .with_src(root.join("rust/crates/ee_data/src/ffi.rs"))
         .with_src(root.join("rust/crates/ee_data/src/tables.rs"))
+        .with_src(root.join("rust/crates/ee_data/src/media.rs"))
         .with_config(config)
         .with_header(HEADER_NOTE)
         .generate()

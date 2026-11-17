@@ -41,6 +41,14 @@ long EEDbReadRecords(F* inFile, size_t inSize, B inBegin, E inEach, bool inStopO
     return EEDbReadLeadRecords(inFile, inSize, inBegin, [](unsigned long) {}, inEach, inStopOnError);
 }
 
+// Loads a table held by ee_data (ee/EEDbList.h) from its file; returns the last read status
+template <class F> long EEDbLoadList(F* inFile, EeDataList inList)
+{
+    return EEDbReadRecords(inFile, ee_data_list_record_size(inList),
+        [inList](unsigned long inCount) { ee_data_list_begin(inList, inCount); return true; },
+        [inList](unsigned long inIndex, const unsigned char* inRecord) { ee_data_list_load(inList, inIndex, inRecord); });
+}
+
 // A record's name field (ee_data's EeDataName: up to its first NUL) copied into a UString.
 inline void EEDbCopyName(UString& outName, const EeDataName& inName)
 {
