@@ -377,34 +377,34 @@ WON_SRC = ROOT / "src" / "Empire Earth" / "WONAPI"
 # program -> the WON units it links besides its test source and the platform layer
 WON_TESTS = {
     "won_wire_test": [],
-    # the message buffers' script (golden: rust/crates/ee_won/src/golden_buffer.txt, recorded over the C++ classes)
+    # the message buffers' script (golden: rust/crates/ee_won_net/src/golden_buffer.txt, recorded over the C++ classes)
     "won_buffer_test": [],
-    # the forwarders to ee_won (rust/crates/ee_won)
+    # the forwarders to ee_won (rust/crates/ee_won_net)
     "won_crypto_test": [],  # (the crypto classes are header-only since net round 28)
     "won_socket_test": "won_ops_test",
     # the socket ops, BlockingSocket / QueueSocket, the async op machinery and WONAPICore's threads
     "won_ops_test": [WON_SRC / "WONSocket" / "IPAddr.cpp",
                      WON_SRC / "WONCommon" / "AsyncOp.cpp",
                      WON_SRC / "WONAPI.cpp"],
-    # the async machinery's events (golden: rust/crates/ee_won/src/golden_asyncop.txt, recorded over the C++ classes)
+    # the async machinery's events (golden: rust/crates/ee_won_net/src/golden_asyncop.txt, recorded over the C++ classes)
     "won_asyncop_test": "won_ops_test",
-    # the socket classes' events (golden: rust/crates/ee_won/src/golden_sockobj.txt, recorded over the C++ classes)
+    # the socket classes' events (golden: rust/crates/ee_won_net/src/golden_sockobj.txt, recorded over the C++ classes)
     "won_sockobj_test": "won_ops_test",
     # the references and lifetimes of the queue socket, the UDP manager and its ops, the timer, the op container and
-    # the socket thread (golden: rust/crates/ee_won/src/golden_core.txt, recorded over QueueSocket.cpp, UDPManager.cpp,
+    # the socket thread (golden: rust/crates/ee_won_net/src/golden_core.txt, recorded over QueueSocket.cpp, UDPManager.cpp,
     # SocketThread.cpp and AsyncOp.cpp before their hooks were answered in Rust, net round 25)
     "won_core_test": "won_ops_test",
     # ServerConnection and ServerConnectionConnectOp over 127.0.0.1 with a stand-in peer authentication (golden:
-    # rust/crates/ee_won/src/golden_servconn.txt, recorded over the C++ classes), then RoutingConnection's op list
+    # rust/crates/ee_won_net/src/golden_servconn.txt, recorded over the C++ classes), then RoutingConnection's op list
     # and reply dispatch; its units (won_ops_test's, WONServer's ServerConnection, WONRouting's but the smart
     # connection) are set below the table
     "won_servconn_test": [],
     # SmartRoutingConnection (the client, group and member model, the ignore list, the chat commands, the snapshots)
-    # over 127.0.0.1 with a routing server stand-in (golden: rust/crates/ee_won/src/golden_smartroute.txt, recorded
+    # over 127.0.0.1 with a routing server stand-in (golden: rust/crates/ee_won_net/src/golden_smartroute.txt, recorded
     # over the C++ class); its units (won_servconn_test's, the smart connection's, StringUtil) are set below the table
     "won_smartroute_test": [],
     # WONRouting's request helpers and its request and notification ops over 127.0.0.1 with a routing server
-    # stand-in (golden: rust/crates/ee_won/src/golden_routeops.txt, recorded over the C++ op classes); its units
+    # stand-in (golden: rust/crates/ee_won_net/src/golden_routeops.txt, recorded over the C++ op classes); its units
     # (won_servconn_test's, StringUtil) are set below the table
     "won_routeops_test": [],
     # the LAN lobby's messages, the original's WriteBuffer statements against ee_won's lan module
@@ -413,7 +413,7 @@ WON_TESTS = {
     # staging module
     "won_staging_test": [],
     # StagingLogic as a whole Rust object (stagingobj.rs): the original's methods over a scripted host against the
-    # Rust object's calls out, op for op (golden: rust/crates/ee_won/src/golden_stagingobj.txt)
+    # Rust object's calls out, op for op (golden: rust/crates/ee_won_lobby/src/golden_stagingobj.txt)
     "won_stagingobj_test": [],
     # the lobby's saved settings (LobbyPersistentData's files and rules), the original's statements against ee_won's
     # persist module
@@ -425,116 +425,116 @@ WON_TESTS = {
     # statements against ee_won's lanlogic module
     "won_lanlogic_test": [],
     # LanLogic as a whole Rust object (lanobj.rs): the original's methods over a scripted host against the Rust
-    # object's calls out, op for op (golden: rust/crates/ee_won/src/golden_lanobj.txt)
+    # object's calls out, op for op (golden: rust/crates/ee_won_lobby/src/golden_lanobj.txt)
     "won_lanobj_test": [],
     # the game's LanLogic holding the shell's members (lanown.rs) against the golden's over LanLogicHost.cpp's cases
     # as they were, on the model's objects
     "won_lanmodel_test": [],
     # TextArea as a whole Rust object (textobj.rs): the original's methods and its segments' layout virtuals over a
-    # scripted host against the Rust object's calls out, op for op (golden: rust/crates/ee_won/src/golden_textobj.txt)
+    # scripted host against the Rust object's calls out, op for op (golden: rust/crates/ee_won_gui/src/golden_textobj.txt)
     "won_textobj_test": [],
     # InputBox as a whole Rust object (inputobj.rs): the original's methods over a scripted host against the Rust
-    # object's calls out, op for op (golden: rust/crates/ee_won/src/golden_inputobj.txt)
+    # object's calls out, op for op (golden: rust/crates/ee_won_gui/src/golden_inputobj.txt)
     "won_inputobj_test": [],
-    # Label as a whole Rust object (labelobj.rs), the same way (golden: rust/crates/ee_won/src/golden_labelobj.txt)
+    # Label as a whole Rust object (labelobj.rs), the same way (golden: rust/crates/ee_won_gui/src/golden_labelobj.txt)
     "won_labelobj_test": [],
-    # Splitter as a whole Rust object (splitobj.rs), the same way (golden: rust/crates/ee_won/src/golden_splitobj.txt)
+    # Splitter as a whole Rust object (splitobj.rs), the same way (golden: rust/crates/ee_won_gui/src/golden_splitobj.txt)
     "won_splitobj_test": [],
-    # ListArea as a whole Rust object (listobj.rs), the same way (golden: rust/crates/ee_won/src/golden_listobj.txt)
+    # ListArea as a whole Rust object (listobj.rs), the same way (golden: rust/crates/ee_won_gui/src/golden_listobj.txt)
     "won_listobj_test": [],
     # MultiListArea, its rows and header as whole Rust objects (multiobj.rs), the same way (golden:
-    # rust/crates/ee_won/src/golden_multiobj.txt)
+    # rust/crates/ee_won_gui/src/golden_multiobj.txt)
     "won_multiobj_test": [],
     # TreeArea and TreeItem as whole Rust objects (treeobj.rs), the same way (golden:
-    # rust/crates/ee_won/src/golden_treeobj.txt)
+    # rust/crates/ee_won_gui/src/golden_treeobj.txt)
     "won_treeobj_test": [],
-    # PopupMenu as a whole Rust object (menuobj.rs), the same way (golden: rust/crates/ee_won/src/golden_menuobj.txt)
+    # PopupMenu as a whole Rust object (menuobj.rs), the same way (golden: rust/crates/ee_won_gui/src/golden_menuobj.txt)
     "won_menuobj_test": [],
     # Scrollbar as a whole Rust object (barobj.rs), the same way; the scroll event traced as the type the C++ fires
-    # (golden: rust/crates/ee_won/src/golden_barobj.txt)
+    # (golden: rust/crates/ee_won_gui/src/golden_barobj.txt)
     "won_barobj_test": [],
     # Scroller and ScrollbarScroller as one whole Rust object (scrollerobj.rs) over real Rust bars, the same way
-    # (golden: rust/crates/ee_won/src/golden_scrollerobj.txt)
+    # (golden: rust/crates/ee_won_gui/src/golden_scrollerobj.txt)
     "won_scrollerobj_test": [],
     # TextListItem's and MenuItem's measure and MenuItem's paint, the original statements over a recording
-    # Graphics against ee_won's guidraw (golden: rust/crates/ee_won/src/golden_itemobj.txt)
+    # Graphics against ee_won's guidraw (golden: rust/crates/ee_won_gui/src/golden_itemobj.txt)
     "won_itemobj_test": [],
     # ScrollArea as a whole Rust object (paneobj.rs), the same way as Scrollbar's (golden:
-    # rust/crates/ee_won/src/golden_paneobj.txt)
+    # rust/crates/ee_won_gui/src/golden_paneobj.txt)
     "won_paneobj_test": [],
     # Container as a whole Rust object (ctobj.rs), over a scripted world of components (golden:
-    # rust/crates/ee_won/src/golden_ctobj.txt)
+    # rust/crates/ee_won_gui/src/golden_ctobj.txt)
     "won_ctobj_test": [],
     # Dialog as a whole Rust object (dialogobj.rs) over the container goldens' world (golden:
-    # rust/crates/ee_won/src/golden_dialogobj.txt)
+    # rust/crates/ee_won_gui/src/golden_dialogobj.txt)
     "won_dialogobj_test": [],
     # TabBar and TabCtrl as whole Rust objects (tabobj.rs) over the container goldens' world (golden:
-    # rust/crates/ee_won/src/golden_tabobj.txt)
+    # rust/crates/ee_won_gui/src/golden_tabobj.txt)
     "won_tabobj_test": [],
     # ComboBox as a whole Rust object (comboobj.rs) over the container goldens' world and a model of its parts (golden:
-    # rust/crates/ee_won/src/golden_comboobj.txt)
+    # rust/crates/ee_won_gui/src/golden_comboobj.txt)
     "won_comboobj_test": [],
     # RootContainer as a whole Rust object (rootobj.rs) over the container goldens' world, the grabbers, the images and
-    # the window (golden: rust/crates/ee_won/src/golden_rootobj.txt)
+    # the window (golden: rust/crates/ee_won_gui/src/golden_rootobj.txt)
     "won_rootobj_test": [],
     # Button as a whole Rust object (btnobj.rs) over the container goldens' world: the radio groups, the default
-    # buttons, the click sound and the event (golden: rust/crates/ee_won/src/golden_btnobj.txt)
+    # buttons, the click sound and the event (golden: rust/crates/ee_won_gui/src/golden_btnobj.txt)
     "won_btnobj_test": [],
     # The child layouts (the manager and the eight instruction classes) as whole Rust objects (layoutobj.rs) over a
-    # world of components (golden: rust/crates/ee_won/src/golden_layoutobj.txt)
+    # world of components (golden: rust/crates/ee_won_gui/src/golden_layoutobj.txt)
     "won_layoutobj_test": [],
     # Window as a whole Rust object (winobj.rs) over a world that models the platform window, the root and the
-    # manager as logged host ops (golden: rust/crates/ee_won/src/golden_winobj.txt)
+    # manager as logged host ops (golden: rust/crates/ee_won_gui/src/golden_winobj.txt)
     "won_winobj_test": [],
     # WindowManager's popup stack, modal dialog, message loop and focus as a Rust object (wmobj.rs) over a world
     # that models the platform, the windows and the components as logged host ops (golden:
-    # rust/crates/ee_won/src/golden_wmobj.txt)
+    # rust/crates/ee_won_gui/src/golden_wmobj.txt)
     "won_wmobj_test": [],
     # MSButtonBase and the check box and radio button over it as whole Rust objects (msbtnobj.rs) over a logged draw
-    # world (golden: rust/crates/ee_won/src/golden_msbtnobj.txt)
+    # world (golden: rust/crates/ee_won_gui/src/golden_msbtnobj.txt)
     "won_msbtnobj_test": [],
     # WONButton as a whole Rust object (wonbtnobj.rs) over a logged world of texts, images and fonts with reference
-    # counts (golden: rust/crates/ee_won/src/golden_wonbtnobj.txt)
+    # counts (golden: rust/crates/ee_won_gui/src/golden_wonbtnobj.txt)
     "won_wonbtnobj_test": [],
     # the Windows skin's drawing helpers and MS control paints as Rust plans (mspaint.rs) against the original
-    # statements over a logged Graphics (golden: rust/crates/ee_won/src/golden_mspaint.txt)
+    # statements over a logged Graphics (golden: rust/crates/ee_won_gui/src/golden_mspaint.txt)
     "won_mspaint_test": [],
     # the software raster surface as a whole Rust object (surface.rs) against the WON SDK's Surface.cpp
-    # (golden: rust/crates/ee_won/src/golden_surface.txt)
+    # (golden: rust/crates/ee_won_gui/src/golden_surface.txt)
     "won_surface_test": [],
     # the skins' layouts (skinlay.rs: the combo boxes', scroll containers' and list controls' Virtual08, the column
-    # headers, three desired sizes) against the original statements (golden: rust/crates/ee_won/src/golden_skinlay.txt)
+    # headers, three desired sizes) against the original statements (golden: rust/crates/ee_won_gui/src/golden_skinlay.txt)
     "won_skinlay_test": [],
     # BackgroundGrabber as a whole Rust object (grabobj.rs) against the original statements over a traced world
-    # (golden: rust/crates/ee_won/src/golden_grabobj.txt)
+    # (golden: rust/crates/ee_won_gui/src/golden_grabobj.txt)
     "won_grabobj_test": [],
     # Component wholly in Rust (compobj.rs) against the original statements over a traced world of components,
-    # windows, events and grabbers (golden: rust/crates/ee_won/src/golden_compobj.txt)
+    # windows, events and grabbers (golden: rust/crates/ee_won_gui/src/golden_compobj.txt)
     "won_compobj_test": [],
     # WrappedText as a Rust object (wrapobj.rs) against the original statements over stand-in texts and fonts
-    # (golden: rust/crates/ee_won/src/golden_wrapobj.txt)
+    # (golden: rust/crates/ee_won_gui/src/golden_wrapobj.txt)
     "won_wrapobj_test": [],
     # StretchImage's settings as a Rust object (stretchobj.rs) against the original statements over stand-in images
-    # (golden: rust/crates/ee_won/src/golden_stretchobj.txt)
+    # (golden: rust/crates/ee_won_gui/src/golden_stretchobj.txt)
     "won_stretchobj_test": [],
     # the image and rectangle components' paints as Rust plans (guidraw.rs image_component_paint, rectangle_paint,
-    # rectangle_3d_paint) against the original statements (golden: rust/crates/ee_won/src/golden_compaint.txt)
+    # rectangle_3d_paint) against the original statements (golden: rust/crates/ee_won_gui/src/golden_compaint.txt)
     "won_compaint_test": [],
     # StretchImageFilter's pixel work (imgfilter.rs stretch_run) against the original CopyRawImage and RawStretch over
-    # guidraw's plan (golden: rust/crates/ee_won/src/golden_stretchpx.txt)
+    # guidraw's plan (golden: rust/crates/ee_won_gui/src/golden_stretchpx.txt)
     "won_stretchpx_test": [],
     # the raw images' transparency masks (imgfilter.rs mask32, mask8) against Image.cpp's GetNative loops
-    # (golden: rust/crates/ee_won/src/golden_imgmask.txt)
+    # (golden: rust/crates/ee_won_gui/src/golden_imgmask.txt)
     "won_imgmask_test": [],
     # the image filters' pixel loops (imgfilter.rs) against the original statements over stand-in raw images
-    # (golden: rust/crates/ee_won/src/golden_imgfilter.txt)
+    # (golden: rust/crates/ee_won_gui/src/golden_imgfilter.txt)
     "won_imgfilter_test": [],
     # PlatGraphics' hooks (platgfx.rs) against their original statements on copies of one real surface, at every
-    # pixel scale (golden: rust/crates/ee_won/src/golden_platgfx.txt)
+    # pixel scale (golden: rust/crates/ee_won_gui/src/golden_platgfx.txt)
     "won_platgfx_test": [],
     # PlatNativeImage's pixel work (platimg.rs: draws, scaled draws, raw copies, the raw images' native images, the
     # texture pack's copies, the hand cursor) against the original statements over one stand-in world (golden:
-    # rust/crates/ee_won/src/golden_platimg.txt)
+    # rust/crates/ee_won_gui/src/golden_platimg.txt)
     "won_platimg_test": [],
     # PlatGUIFont as a Rust object (platfont.rs) against its original statements on the platform fonts (golden-free:
     # the Rust tests check the font over the same face)
@@ -595,7 +595,7 @@ WON_TESTS = {
     # WONGUI's config readers' key tables (the instruction keys, the flag and value names), the original's compares
     # against ee_won's guiconf tables, the names through the real GUIString
     # the resource configs' table reader (cfgtab.rs) against the 45 handlers' original statements over the shipped
-    # resource files and random instructions (golden: rust/crates/ee_won/src/golden_cfgtab.txt)
+    # resource files and random instructions (golden: rust/crates/ee_won_gui/src/golden_cfgtab.txt)
     "won_cfgtab_test": "won_guiconf_test",
     "won_guiconf_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # WONGUI's config readers' integer expressions and operand names, the original's statements against ee_won's
@@ -607,43 +607,43 @@ WON_TESTS = {
     # the lobby dialogs' decisions (the create and OK buttons, the skill, the LAN port, the adapters' order, the
     # status dialog's sizes), the original's statements against ee_won's dialogs module
     "won_dialogs_test": [],
-    # the lobby's eight small dialogs as one Rust object (golden: rust/crates/ee_won/src/golden_lobbydlg.txt)
+    # the lobby's eight small dialogs as one Rust object (golden: rust/crates/ee_won_lobby/src/golden_lobbydlg.txt)
     "won_lobbydlg_test": [],
-    # DialogLogic and its status and OK/Cancel boxes in Rust (golden: rust/crates/ee_won/src/golden_dlglogic.txt)
+    # DialogLogic and its status and OK/Cancel boxes in Rust (golden: rust/crates/ee_won_lobby/src/golden_dlglogic.txt)
     "won_dlglogic_test": [],
     # RoomDialog, TOUDialog, BadUserDialog and ChooseNetworkAdapterDialog as lobby dialog kinds (golden:
-    # rust/crates/ee_won/src/golden_lobbyscr.txt)
+    # rust/crates/ee_won_lobby/src/golden_lobbyscr.txt)
     "won_lobbyscr_test": [],
-    # the credits: ScrollingTextComponent (golden: rust/crates/ee_won/src/golden_scrolltext.txt) and CreditsDialog as
+    # the credits: ScrollingTextComponent (golden: rust/crates/ee_won_lobby/src/golden_scrolltext.txt) and CreditsDialog as
     # a lobby dialog kind (golden_credits.txt)
     "won_credits_test": [],
     # ClientOptionsPopup, GameOptionsPopup and FriendOptionsPopup as one Rust object (golden:
-    # rust/crates/ee_won/src/golden_lobbypopup.txt)
+    # rust/crates/ee_won_lobby/src/golden_lobbypopup.txt)
     "won_lobbypopup_test": [],
     # GameBrowserCtrl, GameStagingCtrl, LobbyOptionsCtrl and GameUserListCtrl as one Rust object (golden:
-    # rust/crates/ee_won/src/golden_lobbyctl.txt)
+    # rust/crates/ee_won_lobby/src/golden_lobbyctl.txt)
     "won_lobbyctl_test": [],
-    # EELobbyGame and its player slots as one Rust object (golden: rust/crates/ee_won/src/golden_eegame.txt)
+    # EELobbyGame and its player slots as one Rust object (golden: rust/crates/ee_won_lobby/src/golden_eegame.txt)
     "won_eegame_test": [],
-    # EELobbyConnectDialog and EELobbyFileDialog as lobby dialog kinds (golden: rust/crates/ee_won/src/golden_eedlg.txt)
+    # EELobbyConnectDialog and EELobbyFileDialog as lobby dialog kinds (golden: rust/crates/ee_won_lobby/src/golden_eedlg.txt)
     "won_eedlg_test": [],
-    # EELobbyColorButton and its chooser as Rust objects (golden: rust/crates/ee_won/src/golden_eecolor.txt)
+    # EELobbyColorButton and its chooser as Rust objects (golden: rust/crates/ee_won_lobby/src/golden_eecolor.txt)
     "won_eecolor_test": [],
     # the EE lobby's glue (EELobbyInit, EELobbyMisc, EELobbyInterface's decisions) in Rust (golden:
-    # rust/crates/ee_won/src/golden_eeglue.txt)
+    # rust/crates/ee_won_lobby/src/golden_eeglue.txt)
     "won_eeglue_test": [],
     # GetWONStatusString's choice (statusstr.rs) against the original switch over every status
     "won_statusstr_test": [],
     # EELobbyFileTransfer, its SendFileOp and the EE lobby's sounds as Rust objects (golden:
-    # rust/crates/ee_won/src/golden_eexfer.txt)
+    # rust/crates/ee_won_lobby/src/golden_eexfer.txt)
     "won_eexfer_test": [],
     # PingLogic (with PingGameOp), AccountLogic and InitLogic as Rust objects (golden:
-    # rust/crates/ee_won/src/golden_logics.txt)
+    # rust/crates/ee_won_lobby/src/golden_logics.txt)
     "won_logics_test": [],
-    # RoutingLogic as a Rust object (golden: rust/crates/ee_won/src/golden_routelogic.txt)
+    # RoutingLogic as a Rust object (golden: rust/crates/ee_won_lobby/src/golden_routelogic.txt)
     "won_routelogic_test": [],
     # the lobby model (LobbyModel.cpp's classes) as Rust objects over stand-in shells (golden:
-    # rust/crates/ee_won/src/golden_modelobj.txt)
+    # rust/crates/ee_won_lobby/src/golden_modelobj.txt)
     "won_modelobj_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 and libjpeg 6b decoders; both are
@@ -651,31 +651,31 @@ WON_TESTS = {
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
                        WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # JPGDecoder: the original's statements on libjpeg 6b (tests/won/won_jpeg_orig.h) against ee_won's jpeg.rs over
-    # libjpeg's own compressed pictures, the lobby's, and their corruptions (golden: rust/crates/ee_won/src/golden_jpeg.txt)
+    # libjpeg's own compressed pictures, the lobby's, and their corruptions (golden: rust/crates/ee_won_gui/src/golden_jpeg.txt)
     "won_jpeg_test": [*[WON_SRC / "WONGUI" / f for f in ("Image.cpp", "ImageDecoder.cpp")],
                       WON_SRC / "WONCommon" / "StringUtil.cpp",
                       *[ROOT / "src" / "ThirdParty" / "libjpeg" / l.split()[2]
                         for l in (ROOT / "link" / "jpeg" / "units.txt").read_text().splitlines() if l.strip()]],
     # StringUtil's case maps and compares (D6: ASCII only), the original's loops against the forwarders
     "won_strcase_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
-    # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won/src/golden_parse.txt)
+    # StringParser, the forwarders to ee_won's parser (golden: rust/crates/ee_won_net/src/golden_parse.txt)
     "won_parse_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
-    # FileReader / FileWriter (golden: rust/crates/ee_won/src/golden_file.txt)
+    # FileReader / FileWriter (golden: rust/crates/ee_won_net/src/golden_file.txt)
     "won_file_test": [],
-    # ConfigParser, the lobby's .cfg reader (golden: rust/crates/ee_won/src/golden_config.txt)
+    # ConfigParser, the lobby's .cfg reader (golden: rust/crates/ee_won_net/src/golden_config.txt)
     "won_config_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigParser.cpp", "ConfigToken.cpp")],
                         WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # AuthContext's secrets, community data and hashes, and its login data as one object: the original's statements
-    # against ee_won's authctx and authlogin modules (golden: rust/crates/ee_won/src/golden_authlogin.txt)
+    # against ee_won's authctx and authlogin modules (golden: rust/crates/ee_won_net/src/golden_authlogin.txt)
     "won_auth_test": [],
-    # the directory server's entity replies (golden: rust/crates/ee_won/src/golden_dir.txt)
+    # the directory server's entity replies (golden: rust/crates/ee_won_net/src/golden_dir.txt)
     "won_dir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
                      WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # the directory server's ops (every request's bytes, the status replies, the multi-directory accounting, the
     # find's parser choice, the listing's grouping), the original's statements against ee_won's dirops module
     "won_dirops_test": [],
     # WONDir's entity changes as whole ops (every op's request and status replies), the original's statements
-    # against the Rust ops (ee_won dirchange.rs) through their C ABI (golden: rust/crates/ee_won/src/golden_dirop.txt)
+    # against the Rust ops (ee_won dirchange.rs) through their C ABI (golden: rust/crates/ee_won_net/src/golden_dirop.txt)
     "won_dirop_test": [],
     # the routing server's protocol (every routing op's request and reply, the notifications, the user status
     # datagram, the group list request, the connection's header, dispatch rule and table), the original's
@@ -685,97 +685,97 @@ WON_TESTS = {
     # requests and replies), the original's statements against tests/won/won_db_msg.h over ee_won's db module
     "won_db_test": [ROOT / "tests" / "won" / "won_profiledata.cpp"],
     # GetCertOp (its requests, replies and the whole op's steps), the original's statements against the Rust op
-    # (ee_won getcert.rs) through its hooks over stand-ins (goldens: rust/crates/ee_won/src/golden_cert.txt,
+    # (ee_won getcert.rs) through its hooks over stand-ins (goldens: rust/crates/ee_won_net/src/golden_cert.txt,
     # golden_getcert.txt)
     "won_cert_test": [],
     # WONMisc's HTTP (HTTPGetOp's dates, lines, request and URL split, URL, HTTPCache's ids and names), the
     # original's statements against tests/won/won_http_glue.h over ee_won's http module and the URL unit
-    # (golden: rust/crates/ee_won/src/golden_http.txt)
+    # (golden: rust/crates/ee_won_net/src/golden_http.txt)
     "won_http_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # WONMisc's FTP and patch code (FTPGetOp's URL, commands and reply steps; the version and patch records; the
     # version filter; the patch ops' requests and replies), the original's statements against
     # tests/won/won_ftp_msg.h and won_patch_msg.h over ee_won's ftp and patch modules
     "won_misc_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # DetectFirewallOp as a whole op (its steps over scripted sockets and receive ops), the original's statements
-    # against the Rust op (ee_won fwop.rs) through its hooks (golden: rust/crates/ee_won/src/golden_fwop.txt)
+    # against the Rust op (ee_won fwop.rs) through its hooks (golden: rust/crates/ee_won_net/src/golden_fwop.txt)
     "won_fwop_test": [],
     # WONInternal's admin ops (the key ops', account's, version and patch ops' requests and replies), the original's
     # statements against tests/won/won_admin_msg.h over ee_won's admin module
     "won_admin_test": [],
     # WONInternal's admin ops as whole ops (every op's request and replies), the original's statements against the
-    # Rust ops (ee_won adminop.rs) through their C ABI (golden: rust/crates/ee_won/src/golden_adminop.txt)
+    # Rust ops (ee_won adminop.rs) through their C ABI (golden: rust/crates/ee_won_net/src/golden_adminop.txt)
     "won_adminop_test": [ROOT / "tests" / "won" / "won_profiledata.cpp"],
     # WONDB's contest call and event report ops, WONMisc's patch status report and WONServer's ping op as whole ops
     # (requests, replies, Reset), the original's statements against the Rust ops (ee_won reqops.rs) through their C
-    # ABI (golden: rust/crates/ee_won/src/golden_reqops.txt)
+    # ABI (golden: rust/crates/ee_won_net/src/golden_reqops.txt)
     "won_reqops_test": [],
     # WONDir's list, multi-list, alias, find and get-service ops and WONDB's get and update account ops as whole ops
     # (requests, replies, Reset, the results), the original's statements against the Rust ops (ee_won reqdir.rs)
-    # through their C ABI (golden: rust/crates/ee_won/src/golden_reqdir.txt)
+    # through their C ABI (golden: rust/crates/ee_won_net/src/golden_reqdir.txt)
     "won_reqdir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp", WON_SRC / "WONSocket" / "IPAddr.cpp",
                         ROOT / "tests" / "won" / "won_profiledata.cpp"],
     # WONDB's create account op and WONRouting's group list request op as whole ops (requests, replies, Reset, the
     # keys, the group map read again), the original's statements against the Rust ops (ee_won reqlast.rs) through
-    # their C ABI (golden: rust/crates/ee_won/src/golden_reqlast.txt)
+    # their C ABI (golden: rust/crates/ee_won_net/src/golden_reqlast.txt)
     "won_reqlast_test": [ROOT / "tests" / "won" / "won_profiledata.cpp"],
     # WONMisc's GetVersionOp and FindPatchOp as whole ops (the directory request, the versions and patches read from
     # its listing, the version checks and patch lists), the original's statements against the Rust ops (ee_won
-    # verop.rs) through their C ABI (golden: rust/crates/ee_won/src/golden_verop.txt)
+    # verop.rs) through their C ABI (golden: rust/crates/ee_won_net/src/golden_verop.txt)
     "won_verop_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp", WON_SRC / "WONCommon" / "StringUtil.cpp",
                        WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # the Rust op base and the ops on it (MultiPingOp, FilePushOp, FTPGetOp): the original's statements against the
     # Rust ops (ee_won hostop.rs, multiping.rs, filepush.rs, ftpop.rs) through the base's one call over a stand-in
-    # (golden: rust/crates/ee_won/src/golden_hostop.txt)
+    # (golden: rust/crates/ee_won_net/src/golden_hostop.txt)
     "won_hostop_test": [WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # WONInternal's TitleConfig and CommunityConfig (the instructions' children and errors, PostParse's rules, the
     # texts), the original's statements against include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module
-    # (golden: rust/crates/ee_won/src/golden_titlecfg.txt)
+    # (golden: rust/crates/ee_won_net/src/golden_titlecfg.txt)
     "won_titlecfg_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # WONAuth's peer authentication (PeerAuthClient's and PeerAuthServer's handshake) and AuthSession, the original's
     # statements against tests/won/won_peerauth_msg.h over ee_won's peerauth module and its session object
-    # (golden: rust/crates/ee_won/src/golden_peerauth.txt)
+    # (golden: rust/crates/ee_won_net/src/golden_peerauth.txt)
     "won_peerauth_test": [],
     # the certificate classes, the peer data and PeerAuthClient / PeerAuthServer: the original's statements
     # (tests/won/won_auth_orig.h) against the game's classes over ee_won's peerobj module (golden:
-    # rust/crates/ee_won/src/golden_peerobj.txt)
+    # rust/crates/ee_won_net/src/golden_peerobj.txt)
     "won_peerobj_test": [],
     # PeerAuthOp and PeerAuthServerOp: the original's statements against the Rust ops on the op base (golden:
-    # rust/crates/ee_won/src/golden_peerop.txt)
+    # rust/crates/ee_won_net/src/golden_peerop.txt)
     "won_peerop_test": "won_peerobj_test",
     # AuthContext's peer sessions and certificate flow, the original's statements against ee_won's authflow object
-    # over the same stand-ins (golden: rust/crates/ee_won/src/golden_authflow.txt)
+    # over the same stand-ins (golden: rust/crates/ee_won_net/src/golden_authflow.txt)
     "won_authctx_test": [WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # HTTPEngine (HTTPSession, HTTPConnection), the original's statements against ee_won's httpengine objects over the
-    # same stand-ins (golden: rust/crates/ee_won/src/golden_httpengine.txt)
+    # same stand-ins (golden: rust/crates/ee_won_net/src/golden_httpengine.txt)
     "won_httpengine_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # FindPatchOp's patch choice, DetectFirewallOp's request, reply and wait, RegAuth's password and port, the
     # original's statements against tests/won/won_miscops_glue.h over ee_won's miscops module
-    # (golden: rust/crates/ee_won/src/golden_miscops.txt)
+    # (golden: rust/crates/ee_won_net/src/golden_miscops.txt)
     "won_miscops_test": [],
     # HTTPCache's index file (cachemap.dat read and written on the Rust file layer, the kept entries and the deleted
     # files), the original's statements over the real FileReader / FileWriter against won_cachemap_glue.h over ee_won's
     # cachemap module
     "won_cachemap_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
-    # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
+    # WONFile's path logic (golden: rust/crates/ee_won_net/src/golden_path.txt)
     "won_path_test": [],
-    # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)
+    # RegKey on config.yaml (golden: rust/crates/ee_won_net/src/golden_regkey.txt)
     "won_regkey_test": [],
-    # RegAuth's settings on config.yaml through the Rust RegKey (golden: rust/crates/ee_won/src/golden_regauth.txt,
+    # RegAuth's settings on config.yaml through the Rust RegKey (golden: rust/crates/ee_won_net/src/golden_regauth.txt,
     # recorded over RegAuth.cpp before its port in net round 27)
     "won_regauth_test": [],
-    # the lobby's chat command parser (golden: rust/crates/ee_won/src/golden_chat.txt)
+    # the lobby's chat command parser (golden: rust/crates/ee_won_lobby/src/golden_chat.txt)
     "won_chat_test": [*[WON_SRC / "WONLobby" / f for f in ("ChatCommandParser.cpp",)],
                       WON_SRC / "WONGUI" / "GUIStringSingleton.cpp",
                       WON_SRC / "WONCommon" / "StringUtil.cpp"],
-    # WONGUI's GUIStringData (golden: rust/crates/ee_won/src/golden_guistring.txt)
+    # WONGUI's GUIStringData (golden: rust/crates/ee_won_gui/src/golden_guistring.txt)
     "won_guistring_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
-    # GUIStringData's buffer: the original's edits against guistrobj.rs (golden: rust/crates/ee_won/src/golden_guistrobj.txt)
+    # GUIStringData's buffer: the original's edits against guistrobj.rs (golden: rust/crates/ee_won_gui/src/golden_guistrobj.txt)
     "won_guistrobj_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
-    # Graphics: the original's statements against gfxobj.rs under traced hooks (golden: rust/crates/ee_won/src/golden_gfxobj.txt)
+    # Graphics: the original's statements against gfxobj.rs under traced hooks (golden: rust/crates/ee_won_gui/src/golden_gfxobj.txt)
     "won_gfxobj_test": [WON_SRC / "WONGUI" / f for f in ("Graphics.cpp", "GUIStringSingleton.cpp")],
     # Window::GetFont's font cache: the original's std::map statements against fontmap.rs (no units)
     "won_fontmap_test": [],
-    # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won/src/golden_cfgobj.txt)
+    # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won_net/src/golden_cfgobj.txt)
     "won_cfgobj_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigObject.cpp", "ConfigValue.cpp", "ConfigParser.cpp",
                                                              "ConfigToken.cpp")],
                         WON_SRC / "WONCommon" / "StringUtil.cpp"],
@@ -785,12 +785,12 @@ WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
 WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"], WON_SRC / "WONCommon" / "StringUtil.cpp"]
 # WONRouting's RoutingGetUserStatusOp over 127.0.0.1 with a routing server stand-in (golden:
-# rust/crates/ee_won/src/golden_userstatus.txt, recorded over the C++ class); its units are won_ops_test's (the op
+# rust/crates/ee_won_net/src/golden_userstatus.txt, recorded over the C++ class); its units are won_ops_test's (the op
 # is header-only since net round 26)
 WON_TESTS["won_userstatus_test"] = WON_TESTS["won_ops_test"]
 # RustServerOp's host calls that need no C++ object (the clock, the CRT's random numbers, an address, the op's file,
 # the files it measures, the web proxy file) through the op's own call path (golden:
-# rust/crates/ee_won/src/golden_serverop.txt, recorded over ServerOp.cpp's HostCall); its units (won_ops_test's,
+# rust/crates/ee_won_net/src/golden_serverop.txt, recorded over ServerOp.cpp's HostCall); its units (won_ops_test's,
 # ServerOp.cpp and what it names) are set here
 WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
                                   WON_SRC / "WONServer" / "ServerOp.cpp",
@@ -798,38 +798,38 @@ WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
                                   WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
                                   WON_SRC / "WONAuth" / "AuthContext.cpp"]
 # RustServerOp's certificate and auth context calls and the AuthContext class, through the op's own call path with
-# real certificates (golden: rust/crates/ee_won/src/golden_authhost.txt, recorded over ServerOp.cpp's HostCall and
+# real certificates (golden: rust/crates/ee_won_net/src/golden_authhost.txt, recorded over ServerOp.cpp's HostCall and
 # AuthContext.cpp); the same units as won_serverop_test
 WON_TESTS["won_authhost_test"] = WON_TESTS["won_serverop_test"]
 # the HTTP cache and its entries through the HTTP get op's own cache calls (golden:
-# rust/crates/ee_won/src/golden_httpcache.txt, recorded over HTTPCache.cpp and ServerOp.cpp's HostCall, before the
+# rust/crates/ee_won_net/src/golden_httpcache.txt, recorded over HTTPCache.cpp and ServerOp.cpp's HostCall, before the
 # classes moved into ee_won httpcache.rs); the same units as won_serverop_test
 WON_TESTS["won_httpcache_test"] = WON_TESTS["won_serverop_test"]
 # the peer sessions over real sockets on 127.0.0.1: a real peer authentication's sessions and keys, the transforms
 # (ADD_CRYPT) and messages through them, the auth context's session cache, sessions made with a known key (golden:
-# rust/crates/ee_won/src/golden_authsession.txt, recorded over AuthSession.cpp and ServerOp.cpp's HostCall before
+# rust/crates/ee_won_net/src/golden_authsession.txt, recorded over AuthSession.cpp and ServerOp.cpp's HostCall before
 # the session became an ee_won handle in round 22: hostauth.rs); the same units as won_serverop_test
 WON_TESTS["won_authsession_test"] = WON_TESTS["won_serverop_test"]
 # the op base's socket and op calls over real sockets on 127.0.0.1: the sockets' bind, listen, port, length field,
 # flags, close and kill, the blocking connect, sends and receives, the socket ops' results and settings, the ops'
-# status, kill and runs, the queue (golden: rust/crates/ee_won/src/golden_hostsock.txt, recorded over ServerOp.cpp's
+# status, kill and runs, the queue (golden: rust/crates/ee_won_net/src/golden_hostsock.txt, recorded over ServerOp.cpp's
 # HostCall before these calls were answered in Rust in net round 23: hostsock.rs); the same units as
 # won_serverop_test
 WON_TESTS["won_hostsock_test"] = WON_TESTS["won_serverop_test"]
 # the op base's own calls and the AsyncOp machinery behind them over real sockets on 127.0.0.1: the op's status, mode,
 # time left, timeout and Finish, ServerOp's members, the tracker, the timers' and repeating receives' completions, a
 # completion called, references, another Rust op's numbers and bytes, a server context's addresses, an HTTP session's
-# AddOp, a new peer authentication op (golden: rust/crates/ee_won/src/golden_opcore.txt, recorded over ServerOp.cpp's
+# AddOp, a new peer authentication op (golden: rust/crates/ee_won_net/src/golden_opcore.txt, recorded over ServerOp.cpp's
 # HostCall, AsyncOp.cpp and AsyncOpWithTracker.cpp before they moved into Rust in net round 24); the same units as
 # won_serverop_test
 WON_TESTS["won_opcore_test"] = WON_TESTS["won_serverop_test"]
 # HTTPSession and HTTPConnection over real sockets on 127.0.0.1 with a server stand-in: a get on a new connection,
 # the socket reused, a new one after the server closed, a kill of queued gets (golden:
-# rust/crates/ee_won/src/golden_httpsession.txt, recorded over HTTPEngine.cpp before its hooks moved into Rust in
+# rust/crates/ee_won_net/src/golden_httpsession.txt, recorded over HTTPEngine.cpp before its hooks moved into Rust in
 # net round 26: httpcpp.rs); the same units as won_serverop_test
 WON_TESTS["won_httpsession_test"] = WON_TESTS["won_serverop_test"]
 # GameSpySupport and the GameSpy Query & Reporting SDK over 127.0.0.1 with a master server stand-in (golden:
-# rust/crates/ee_won/src/golden_gamespy.txt, recorded over GameSpySupport.cpp, gqueryreporting.c and nonport.c before
+# rust/crates/ee_won_net/src/golden_gamespy.txt, recorded over GameSpySupport.cpp, gqueryreporting.c and nonport.c before
 # they moved into ee_won gamespy.rs in net round 28); the same units as won_serverop_test (the service lookup's op)
 WON_TESTS["won_gamespy_test"] = WON_TESTS["won_serverop_test"]
 # CDKey's registry and file storage (ee_won cdkeystore.rs) against the original statements of AuthContext.cpp,

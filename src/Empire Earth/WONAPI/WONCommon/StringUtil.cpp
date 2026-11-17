@@ -16,7 +16,7 @@
 #include "rust/ee_won.h"
 #include <wchar.h>
 namespace WONAPI {
-// The case maps and compares are ee_won's strcase module (rust/crates/ee_won/src/strcase.rs): under D6 game text is
+// The case maps and compares are ee_won's strcase module (rust/crates/ee_won_net/src/strcase.rs): under D6 game text is
 // UTF-8 and the C runtime's character classes the "C" locale's, so only ASCII letters change case, as the original's
 // toupper / tolower / towupper / towlower did in the game.
 static void StringUtilCaseInPlace(std::string& ioText, bool inUpper)
@@ -44,7 +44,7 @@ std::string StringToUpperCase(const std::string& theStr)
 // of the CRT locale's LC_CTYPE suffix (0x006a63e0/0x6a6570: none in the "C" locale, so the ANSI one again). The
 // game's narrow text is UTF-8 on every system (decision D6) and WON's wide text UTF-16 units (UTF-32 code points
 // where wchar_t is 4 bytes): this is where the two meet, and the conversions are ee_won's text module
-// (rust/crates/ee_won/src/text.rs). A stray byte or a lone surrogate becomes U+FFFD. Embedded NULs are kept.
+// (rust/crates/ee_won_net/src/text.rs). A stray byte or a lone surrogate becomes U+FFFD. Embedded NULs are kept.
 static void StringUtilWideSink(void* inContext, const void* inText, size_t inCount)
 {
     std::wstring* theOut = static_cast<std::wstring*>(inContext);

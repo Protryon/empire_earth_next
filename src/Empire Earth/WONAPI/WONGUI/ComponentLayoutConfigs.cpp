@@ -14,7 +14,7 @@
 #include "ee/wonapi/WONLayoutConfigs.h"
 #include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
-// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
+// (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 using namespace WONAPI;
 // Finds the component this config is named after in the parent config; reports an error if it is missing
 bool PercentLayoutConfig::PreParse(ConfigParser* parser)

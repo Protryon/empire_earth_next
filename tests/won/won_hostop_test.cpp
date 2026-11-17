@@ -6,7 +6,7 @@
 // op: the trace, the return and the members after each step; after each sequence the Rust op is freed and every
 // reference it took must be gone. The exit code is the number of failed checks.
 //
-// `--print N` prints N sequences of each op with what the original did (rust/crates/ee_won/src/golden_hostop.txt,
+// `--print N` prints N sequences of each op with what the original did (rust/crates/ee_won_net/src/golden_hostop.txt,
 // recorded before the port; `hostop::tests::golden` replays it); `--count N` runs N sequences of each.
 #include <windows.h>
 #include <stdarg.h>

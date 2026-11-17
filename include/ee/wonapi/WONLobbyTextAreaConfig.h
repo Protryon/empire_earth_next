@@ -4,7 +4,7 @@
 #include "rust/ee_won.h"
 namespace WONAPI {
 // The text area (R6 WON round 21): its layout, lines, selection, links and paint are the Rust TextArea
-// (rust/crates/ee_won/src/textobj.rs); this is the type the lobby holds and the segments it makes.
+// (rust/crates/ee_won_gui/src/textobj.rs); this is the type the lobby holds and the segments it makes.
 class TextArea;
 // A segment the lobby makes: data the Rust TextArea holds a reference to and asks for its measures, colour and link
 // state (a TextSegment's text, colour and font; a TextLink's parameter and pressed colour; the chat's ChatLink over

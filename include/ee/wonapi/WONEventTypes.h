@@ -1,5 +1,5 @@
 // WONGUI's event types (WindowEventType), apart so the goldens (tests/won) compare the events the Rust component
-// objects fire (rust/crates/ee_won/src/guihost.rs ee_won_gui_event_type) with the original's enum.
+// objects fire (rust/crates/ee_won_gui/src/guihost.rs ee_won_gui_event_type) with the original's enum.
 #ifndef EE_WONAPI_WONEVENTTYPES_H
 #define EE_WONAPI_WONEVENTTYPES_H
 namespace WONAPI {

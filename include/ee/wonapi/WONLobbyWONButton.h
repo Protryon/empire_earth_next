@@ -4,7 +4,7 @@
 namespace WONAPI {
 // WONButton (R6 WON round 35): its ten states (a wrapped text, an image and a colour each), the wrapped text per font,
 // the pads, the push, the colours, the flags, the alignments and every method are the Rust WONButton
-// (rust/crates/ee_won/src/wonbtnobj.rs); the C++ is the type the skins hold, its forwarders and the host
+// (rust/crates/ee_won_gui/src/wonbtnobj.rs); the C++ is the type the skins hold, its forwarders and the host
 // (WONButton.cpp). The skin code allocates it with its constructor.
 class WONButton : public Button {
 public:

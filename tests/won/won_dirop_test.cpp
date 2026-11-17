@@ -6,7 +6,7 @@
 // then up to four generated status replies (headers right and wrong, a returned address or none, cut and mutated),
 // each reply's verdict and the op's address after it.
 //
-// `--print N` prints N sequences with what the original did (rust/crates/ee_won/src/golden_dirop.txt, recorded
+// `--print N` prints N sequences with what the original did (rust/crates/ee_won_net/src/golden_dirop.txt, recorded
 // before the port; `dirchange::tests::golden` replays it). The exit code is the number of failed checks.
 #include <windows.h>
 #include <stdio.h>

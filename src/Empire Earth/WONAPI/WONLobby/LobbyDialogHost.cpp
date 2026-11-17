@@ -1,7 +1,7 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 // The lobby's small dialogs' shell and host (R6 WONLobby round 1): LanNameDialog, PasswordDialog, AddFriendDialog,
 // DirectConnectDialog, LanPortDialog, CreateRoomDialog, CreateGameDialog and AdminActionDialog are one Rust object
-// each (rust/crates/ee_won/src/lobbydlg.rs), as are StatusDialog and OkCancelDialog (round 2), RoomDialog,
+// each (rust/crates/ee_won_lobby/src/lobbydlg.rs), as are StatusDialog and OkCancelDialog (round 2), RoomDialog,
 // TOUDialog, BadUserDialog, ChooseNetworkAdapterDialog and CreditsDialog (round 3) and the EE game room's connect
 // (round 5) and saved game (round 6) dialogs; the options popups
 // (ClientOptionsPopup, GameOptionsPopup, FriendOptionsPopup) are lobbypopup.rs objects with their host below. This unit is the C++ shell's two virtuals and the host: each op is the

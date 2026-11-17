@@ -6,7 +6,7 @@
 //
 // 200,000 random items (text and font sizes, with and without an icon, selected or not, full-row select, disabled,
 // with a submenu, every selection colour mode; negative and odd sizes) must give the same sizes and the same draw
-// operations. The first 400 cases are rust/crates/ee_won/src/golden_itemobj.txt, which the Rust tests replay;
+// operations. The first 400 cases are rust/crates/ee_won_gui/src/golden_itemobj.txt, which the Rust tests replay;
 // `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>

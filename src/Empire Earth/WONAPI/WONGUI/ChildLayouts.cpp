@@ -1,5 +1,5 @@
 // The child layouts (R6 WON round 31): the Rust layout manager's and instructions' calls out
-// (rust/crates/ee_won/src/layoutobj.rs, EeWonGuiOp's layout ops), the shells' constructors and destructors, the
+// (rust/crates/ee_won_gui/src/layoutobj.rs, EeWonGuiOp's layout ops), the shells' constructors and destructors, the
 // manager's AddInstruction and Container::AddChildLayout's statements, and CenterLayout::Center. The original's
 // ChildLayouts.cpp, ChildLayoutsAdvanced.cpp's Execute bodies and DoCalc, and CenterLayoutExecute.cpp are the Rust
 // objects.

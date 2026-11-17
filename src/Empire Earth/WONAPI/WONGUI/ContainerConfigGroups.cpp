@@ -15,7 +15,7 @@
 #include "ee/wonapi/WONPercentLayout.h"
 #include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
-// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
+// (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // Reads a PERCENTLAYOUT group into a percent layout (relative to the component if no reference is given)
 // or a COLORSCHEME group into the container's colour scheme; other instructions go to the base config

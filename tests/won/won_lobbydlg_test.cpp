@@ -15,7 +15,7 @@
 // are made left to right on both sides; the original's order was the compiler's and changed nothing.
 //
 // The first 60 sequences and every later one that makes an op or call none before made are
-// rust/crates/ee_won/src/golden_lobbydlg.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_lobby/src/golden_lobbydlg.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

@@ -10,7 +10,7 @@
 namespace WONAPI {
 class ComponentEvent;
 class HTTPSession;
-// Both are Rust objects since R6 WONLobby round 8 (rust/crates/ee_won/src/logics.rs): the shells keep what
+// Both are Rust objects since R6 WONLobby round 8 (rust/crates/ee_won_lobby/src/logics.rs): the shells keep what
 // the host's ops reach (the dialogs, the HTTP session, the firewall test's socket, op and address, the advert's link).
 class AccountLogic : public LobbyLogic {
 public:

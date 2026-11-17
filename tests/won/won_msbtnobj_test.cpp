@@ -10,7 +10,7 @@
 // Each of 20,000 sequences creates the button and makes 40 random inward calls (texts, alignments, colours, pads,
 // fit to text, transparency, size changes, desired sizes, the text's paint, field reads, world changes). The traces
 // must be the same. The first 40 sequences and every later one that makes an op or a call none before made are
-// rust/crates/ee_won/src/golden_msbtnobj.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_gui/src/golden_msbtnobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

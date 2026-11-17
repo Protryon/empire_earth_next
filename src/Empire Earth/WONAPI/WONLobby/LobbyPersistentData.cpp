@@ -30,7 +30,7 @@
 namespace WONAPI {
 // The files' layouts (written from lists, read as events in the original's order of assignments), the user file
 // name, the first free id, the pruning and the recent LAN name are ee_won's persist module
-// (rust/crates/ee_won/src/persist.rs); the maps and sets are Rust containers (lobbymap.rs, round 17); this class
+// (rust/crates/ee_won_lobby/src/persist.rs); the maps and sets are Rust containers (lobbymap.rs, round 17); this class
 // keeps them, the password key and the defaults.
 static void PersistAppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
 {

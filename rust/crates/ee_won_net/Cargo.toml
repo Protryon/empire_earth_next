@@ -1,0 +1,15 @@
+# ee_won_net: ee_won (docs/progress/crate-restructure.md)
+[package]
+name = "ee_won_net"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[features]
+c_locale = []
+
+[dependencies]
+ee_base = { path = "../ee_base" }

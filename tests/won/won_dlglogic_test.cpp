@@ -14,7 +14,7 @@
 //
 // The traces (every op with its arguments and answer, every call's result, the releases at the end) must be the
 // same. The first sequences and every later one that makes an op or call none before made are
-// rust/crates/ee_won/src/golden_dlglogic.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_lobby/src/golden_dlglogic.txt, which the Rust tests replay; `--print` prints them.
 //
 // The one deliberate change: RunOpWithStatus no longer reads the status operation after the box when a KillHook in
 // the box's loop cleared it (the original read through NULL); both sides here skip it.

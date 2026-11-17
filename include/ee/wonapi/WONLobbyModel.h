@@ -1,5 +1,5 @@
 // WONLobby data model: friends, groups (rooms and games), servers and game lists. Shells over their Rust objects
-// (R6 WONLobby round 10; rust/crates/ee_won/src/modelobj.rs, as WONLobbyModelObj.h's player, client and game); the
+// (R6 WONLobby round 10; rust/crates/ee_won_lobby/src/modelobj.rs, as WONLobbyModelObj.h's player, client and game); the
 // methods over the routing server's and directory's records are WONLobby/LobbyModelHost.cpp's.
 #ifndef EE_WONAPI_WONLOBBYMODEL_H
 #define EE_WONAPI_WONLOBBYMODEL_H

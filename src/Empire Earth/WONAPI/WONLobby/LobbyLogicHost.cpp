@@ -1,5 +1,5 @@
 // The lobby logic objects' C++ host (NEW, no original address: units.EXTRA_UNITS): the shells of the logic modules
-// that are Rust objects (StagingLogic: rust/crates/ee_won/src/stagingobj.rs) and ee_won_lobbycpp_call, the one
+// that are Rust objects (StagingLogic: rust/crates/ee_won_lobby/src/stagingobj.rs) and ee_won_lobbycpp_call, the one
 // table of their calls out (lobbyhost.rs EeWonLobbyOp): each op is a run of the original's C++ statements with no
 // decision between them (LanLogic's in LanLogicHost.cpp). It replaces StagingLogic.cpp.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233

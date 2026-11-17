@@ -1,5 +1,5 @@
 // Software surface classes (optional; not identified in the original exe).
-// R6 WON round 37: the surface is ee_won's Rust object (rust/crates/ee_won/src/surface.rs: the format, size, row
+// R6 WON round 37: the surface is ee_won's Rust object (rust/crates/ee_won_gui/src/surface.rs: the format, size, row
 // pitch, pixels, clip rectangle and colour, and every drawing method of the SDK's Surface.cpp); SurfaceBase is its
 // reference-counted shell, each method a forwarder. The SDK's Surface<PixelType> (Surface16, Surface32) is the one
 // class, its pixel size from the format. The pixels stay where callers write them (GetPixelsBase). The SDK's

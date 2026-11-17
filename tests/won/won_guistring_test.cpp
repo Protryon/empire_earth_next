@@ -1,6 +1,6 @@
 // WONGUI's GUIStringData (the lobby's text: every label, list item, chat line and input): the comparisons, searches,
 // case maps, number read and the crossing to and from narrow text (UTF-8, D6) over a table of strings, one line per
-// case, compared with rust/crates/ee_won/src/golden_guistring.txt (recorded over the C++ before its port and
+// case, compared with rust/crates/ee_won_gui/src/golden_guistring.txt (recorded over the C++ before its port and
 // re-recorded when the narrow crossing became UTF-8; the Rust test
 // `guistring_golden` replays the C-locale pass). A second pass runs under setlocale(LC_ALL, "English"): the case maps
 // and the space test are the C runtime's. `--print` prints the lines instead. The exit code is the number of failures.
@@ -135,7 +135,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_guistring.txt";
+    return aPath + "../../rust/crates/ee_won_gui/src/golden_guistring.txt";
 }
 
 int main(int argc, char** argv)

@@ -48,7 +48,7 @@ const EeWonCoreHooks* WonCore();
 const EeWonAsyncOpHooks* AsyncOpHooks(); // the ops' own table (AsyncOp.cpp: the virtual hooks, the core's queue and timer)
 
 // AsyncOp: 0x44 bytes in the original (ctor 29ef80, dtor 29f000, three vtable slots). A Rust object since round 13
-// (rust/crates/ee_won/src/opobj.rs EeWonAsyncOp: the run state, the lock, the completion's reference, the
+// (rust/crates/ee_won_net/src/opobj.rs EeWonAsyncOp: the run state, the lock, the completion's reference, the
 // container, and the run, finish, kill and completion steps) behind this shim; the virtual hooks, the completion's
 // call, the references and WONAPICore's queue and timer come back through AsyncOp.cpp's hook table. The timer
 // thread's entry of the op is the Rust timer thread's (thread.rs)
@@ -104,7 +104,7 @@ public:
     // the time before the time-out; 0 for async runs or once it passed (0x29f700)
     unsigned long TimeLeft() { return ee_won_asyncop_time_left(this->mOp); }
     DWORD RealTimeLeft() { return ee_won_asyncop_real_time_left(this->mOp); }
-    // the run mode, start and timeout for the Rust op algorithms (rust/crates/ee_won/src/ops.rs)
+    // the run mode, start and timeout for the Rust op algorithms (rust/crates/ee_won_net/src/ops.rs)
     EeWonOpTiming GetTiming() const { return ee_won_asyncop_timing(this->mOp); }
     bool IsAsync() const { return this->GetMode()==1; }
     //: 0x291983 (an inline COMDAT of EELobbyFileTransfer.cpp): finished without error
@@ -155,7 +155,7 @@ inline void AsyncOp::SetContainer(AsyncOpContainer* inContainer)
 class SocketOp;
 // (MsgTransform, 2ad880, and its one class, CryptTransform, are Rust's since net round 29: ee_won cppcore.rs)
 
-// WON SDK NetStats: static functions only. The counters are Rust's (rust/crates/ee_won/src/netstats.rs)
+// WON SDK NetStats: static functions only. The counters are Rust's (rust/crates/ee_won_net/src/netstats.rs)
 class NetStats
 {
 public:
@@ -266,7 +266,7 @@ public:
 private:
     AsyncSocket(const AsyncSocket&);
     AsyncSocket& operator=(const AsyncSocket&);
-    // A Rust object since round 14 (rust/crates/ee_won/src/sockobj.rs EeWonAsyncSocket): the handle, type, flags,
+    // A Rust object since round 14 (rust/crates/ee_won_net/src/sockobj.rs EeWonAsyncSocket): the handle, type, flags,
     // status and times (the original's +0x20..+0x5c), the length field size (+0x50), the message transforms (+0x60,
     // owned) and the socket thread's close callback (+0x6c), and every step of the class; since round 15 also
     // the lock (mDataCrit, +0x08) and the destination address (mDestAddr, +0x28)
@@ -313,7 +313,7 @@ public:
     EeWonSocketOp* GetSocketOpObject() const { return this->mSockOp; }
     static void HookAddToSocketThread(void* inOp); // WONAPICore's friend (AsyncOp.cpp: the core table's)
 private:
-    // A Rust object since round 14 (rust/crates/ee_won/src/sockop.rs EeWonSocketOp): the socket thread flag (+0x44),
+    // A Rust object since round 14 (rust/crates/ee_won_net/src/sockop.rs EeWonSocketOp): the socket thread flag (+0x44),
     // the event indices (+0x48), the socket (+0x54, a reference) and the wait flags (+0x58), and RunHook
     EeWonSocketOp* mSockOp;
 };
@@ -326,7 +326,7 @@ public:
 };
 
 // waits for a connection on its (listening) socket
-// (a Rust object since round 15, rust/crates/ee_won/src/sockops.rs: the accepted socket, +0x5c, a reference held)
+// (a Rust object since round 15, rust/crates/ee_won_net/src/sockops.rs: the accepted socket, +0x5c, a reference held)
 class AcceptOp : public SocketOp {
 public:
     AcceptOp(AsyncSocket* inSocket) : SocketOp(inSocket)
@@ -495,7 +495,7 @@ public:
     EeWonQueueSocket* GetQueueObject() const { return this->mQueue; }
 
 private:
-    // A Rust object since round 14 (rust/crates/ee_won/src/qsock.rs EeWonQueueSocket): the default, current, repeat
+    // A Rust object since round 14 (rust/crates/ee_won_net/src/qsock.rs EeWonQueueSocket): the default, current, repeat
     // and close completions (+0x74..+0x80), the repeat and queued ops (+0x84, +0x88), the close timer (+0x8c), the
     // op queue (+0x90) and the queued-close flag (+0x9c), each a reference held, and every step of the class
     EeWonQueueSocket* mQueue;
@@ -583,7 +583,7 @@ public:
 // Rust objects (udpmgr.rs, udpops.rs), whose calls back (the ops, sockets, completions) are Rust's (cppcore.rs)
 // but the virtual message checks
 class UDPManager;
-// A Rust object since round 16 (rust/crates/ee_won/src/udpops.rs EeWonUdpRecvOp: the socket +0x44, the manager
+// A Rust object since round 16 (rust/crates/ee_won_net/src/udpops.rs EeWonUdpRecvOp: the socket +0x44, the manager
 // +0x48, the own-socket flag +0x4c, the address +0x50, the datagram +0x78, the check +0x7c and its context +0x80, and
 // RunHook, CleanupHook, QueueRecv and RecvCallback); the class is a shim the lobby subclasses
 class UDPManagerRecvOp : public AsyncOp {
@@ -662,7 +662,7 @@ private:
     EeWonUdpSendRecvOp* mUdp;
 };
 
-// A Rust object since round 15 (rust/crates/ee_won/src/udpmgr.rs EeWonUdpManager: the socket +0x08, the default
+// A Rust object since round 15 (rust/crates/ee_won_net/src/udpmgr.rs EeWonUdpManager: the socket +0x08, the default
 // completion +0x0c, the auto-receive op +0x10, the clean-up cursors +0x14/+0x18, the list +0x1c and the multimap
 // +0x28 of waiting receive ops, the receive size +0x34, and Close, SetAutoRecv, QueueOp, Send, CleanOps, Bind, the
 // erases 0x2b8160/0x2b81b0 and RecvCallback's dispatch). The original's mAutoRecv (+0x38) was never read: gone
@@ -744,7 +744,7 @@ public:
 class RustServerOp; // an HTTPGetOp (httpget.rs)
 class HTTPSession;
 // HTTPConnection: a host's keep-alive connection; its socket, queues, running ops, pipelining and retry state are
-// ee_won's (rust/crates/ee_won/src/httpengine.rs EeWonHttpConn): this class is the RefCount its ops' completions hold.
+// ee_won's (rust/crates/ee_won_net/src/httpengine.rs EeWonHttpConn): this class is the RefCount its ops' completions hold.
 // Its calls back are Rust's since net round 26 (httpcpp.rs, over the core table; HTTPEngine.cpp is deleted); the
 // forwarders that take an op are below RustServerOp.
 class HTTPConnection : public RefCount {
@@ -865,7 +865,7 @@ enum RoutingBadUserListType {
     RoutingBadUserListType_MutedUsers=2
 };
 
-// Every routing op, request or notification, is one Rust object since net round 18 (rust/crates/ee_won/src//
+// Every routing op, request or notification, is one Rust object since net round 18 (rust/crates/ee_won_net/src//
 // routeop.rs EeWonRouteOp: the op's members by field number EE_WON_RTF_* and text EE_WON_RTT_*, its data type,
 // data and recipients, the records its replies build, SendRequest's message and HandleReply's read, and
 // RoutingCreateGroupOp::CheckLeaveGroup). This class is the AsyncOp the connection's list and the completions hold,
@@ -943,7 +943,7 @@ typedef SmartPtr<RoutingOp> RoutingOpPtr;
 #define EE_WON_ROUTE_OPS_RUST 1 // the ops are Rust objects (won_routeops_test reads them so)
 
 // The friend status map (the original's +0x88), the request datagram and the reply's read are a Rust object since
-// net round 19 (rust/crates/ee_won/src/userstatus.rs EeWonUserStatus); the map is read and set through copies
+// net round 19 (rust/crates/ee_won_net/src/userstatus.rs EeWonUserStatus); the map is read and set through copies
 class RoutingGetUserStatusOp : public UDPManagerSendRecvOp {
 public:
     typedef std::map<unsigned long,unsigned char> FriendStatusMap;
@@ -1005,7 +1005,7 @@ inline const char* GetBufferData(const ByteBufferPtr& inBuffer)
 // (provisional member names)
 typedef std::map<std::wstring,DirEntityList> DirEntityMap;
 typedef std::set<IPAddr> AddrSet;
-// A shim over ee_won's server list (rust/crates/ee_won/src/servctx.rs: the addresses, their order, the one-time
+// A shim over ee_won's server list (rust/crates/ee_won_net/src/servctx.rs: the addresses, their order, the one-time
 // shuffle and the lock); the original's 0x3c-byte layout is gone
 // a shim over ee_won's server list (servctx.rs: the addresses, their order, the one-time shuffle and the lock);
 // header-only since net round 27 (ServerContext.cpp deleted): it converts IPAddr values and walks the entities
@@ -1081,7 +1081,7 @@ private:
     EeWonServerList* mList;
 };
 
-// AsyncOpWithTracker's op tracker: a Rust object since round 13 (rust/crates/ee_won/src/opobj.rs EeWonOpTracker: the
+// AsyncOpWithTracker's op tracker: a Rust object since round 13 (rust/crates/ee_won_net/src/opobj.rs EeWonOpTracker: the
 // ops tracked by id, a reference each, in id order, the latest first among equal ids; an op tracked once; its lock).
 // The original's two multimaps (AsyncOpTrackerMaps, AsyncOpTrackerEntry) are gone.
 class AsyncOpTracker {
@@ -1133,7 +1133,7 @@ protected:
     ServerOp() {}
 };
 
-// An op of the Rust op base (rust/crates/ee_won/src/hostop.rs): its members and steps are the Rust op's
+// An op of the Rust op base (rust/crates/ee_won_net/src/hostop.rs): its members and steps are the Rust op's
 // (MultiPingOp: ee_won_multiping_new, FilePushOp: ee_won_filepush_new, FTPGetOp: ee_won_ftpget_new and _new_url;
 // the ops derived from ServerRequestOp: NewRequest over reqhost.rs); this class runs its hooks there, and its calls
 // on the C++ objects are answered over the core table (hostcore.rs). Results and setters by number:
@@ -1221,7 +1221,7 @@ inline void HTTPSession::AddOp(RustServerOp* inOp)
 
 // The directory server's entity replies: the reading is ee_won's (dir.rs); a list of what it read as DirEntity
 // objects (DirEntityReplyParser.cpp), for RustServerOp::GetEntities. GetEntityRequest, GetDirOp, GetMultiDirOp,
-// GetAliasDirOp, FindEntityOp and GetServiceOp are Rust ops (rust/crates/ee_won/src/reqdir.rs).
+// GetAliasDirOp, FindEntityOp and GetServiceOp are Rust ops (rust/crates/ee_won_net/src/reqdir.rs).
 class DirEntityReplyParser {
 public:
     static void TakeEntity(void* inList, const EeWonDirEntity* inEntity); // appends to the DirEntityList
@@ -1246,9 +1246,9 @@ public:
 // HTTP operation, 0x15c bytes.
 class FileReader;
 class FileWriter;
-// HTTPCache and HTTPCacheEntry (cache 0x34 bytes, entry 0x68) are Rust's whole (rust/crates/ee_won/src/httpcache.rs):
+// HTTPCache and HTTPCacheEntry (cache 0x34 bytes, entry 0x68) are Rust's whole (rust/crates/ee_won_net/src/httpcache.rs):
 // the HTTP get op's cache and entry are Rust handles; the global cache is ee_won_http_cache_global
-// HTTPGetOp is a Rust op on the base (rust/crates/ee_won/src/httpget.rs): RustServerOp::NewHttpGet, its members by
+// HTTPGetOp is a Rust op on the base (rust/crates/ee_won_net/src/httpget.rs): RustServerOp::NewHttpGet, its members by
 // EE_WON_HTTPGET_* number
 
 // DNS operation, 0x7c bytes; explicit destructor and borrowed address getter.
@@ -1352,7 +1352,7 @@ enum HTTPDocOwner {
     HTTPDocOwner_Count=2
 };
 
-// GetHTTPDocumentOp (and GetMOTDOp, its MOTD) is a Rust op on the base (rust/crates/ee_won/src/httpdoc.rs):
+// GetHTTPDocumentOp (and GetMOTDOp, its MOTD) is a Rust op on the base (rust/crates/ee_won_net/src/httpdoc.rs):
 // RustServerOp::NewHttpDocument, its members by EE_WON_HTTPDOC_* number and owner, GetHttpDocument
 
 // WONAPI's CD key (dead in AoC; from the base game's Login: ctor base exe 0x68ab90, an 0x1c-byte local;
@@ -1374,11 +1374,11 @@ public:
 };
 
 
-// DBProxyOp is a Rust op base (rust/crates/ee_won/src/reqop.rs DbProxy)
+// DBProxyOp is a Rust op base (rust/crates/ee_won_net/src/reqop.rs DbProxy)
 // The patch server's records (VersionData 0x48, PatchData 0xa4; constructors 2d83a0/2d86f0) are Rust's: their wire
 // forms are ee_won patch.rs, the ops that read them verop.rs; no game code made the C++ classes, deleted in WON
 // Internet round 21 (their statements are tests/won/won_patch_msg.h, over the drivers' stand-ins)
-// CheckValidVersionOp is a Rust op (rust/crates/ee_won/src/reqops.rs)
+// CheckValidVersionOp is a Rust op (rust/crates/ee_won_net/src/reqops.rs)
 // DetectFirewallOp (2cf600): a Rust op on the base (ee_won fwhost.rs over fwop.rs: its members and every step);
 // the class is its constructor (ServerOp.cpp) and the setters and the public address the lobby uses.
 class DetectFirewallOp : public RustServerOp {
@@ -1390,12 +1390,12 @@ public:
     IPAddr GetPublicAddr() const; // a copy (the original returned a reference to the member)
 };
 
-// RequestPasswordEmailOp and RequestAccountInfoEmailOp are Rust ops (rust/crates/ee_won/src/adminop.rs)
+// RequestPasswordEmailOp and RequestAccountInfoEmailOp are Rust ops (rust/crates/ee_won_net/src/adminop.rs)
 
-// GetUserIdFromNameOp is a Rust op (rust/crates/ee_won/src/reqops.rs)
+// GetUserIdFromNameOp is a Rust op (rust/crates/ee_won_net/src/reqops.rs)
 
 
-// GetAccountOp and UpdateAccountOp are Rust ops (rust/crates/ee_won/src/reqdir.rs), CreateAccountOp and
+// GetAccountOp and UpdateAccountOp are Rust ops (rust/crates/ee_won_net/src/reqdir.rs), CreateAccountOp and
 // RoutingGetGroupListReqOp too (reqlast.rs: RustServerOp::NewCreateAccount, NewGroupListReq), and no C++ op derives
 // from ServerRequestOp any more (its exchange is reqhost.rs's)
 
@@ -1439,7 +1439,7 @@ public:
     static bool DoOp(SocketOp* inOp) { return ee_won_socket_thread_do_op(WonCore(),static_cast<AsyncOp*>(inOp)); }
     bool mSingleThreaded; //34; total38 (the original's lock at 1c is SocketThreadSimple's Rust object's)
 };
-// SocketThreadSimple: a Rust object since round 13 (rust/crates/ee_won/src/sockthread.rs EeWonSocketThread: the ops
+// SocketThreadSimple: a Rust object since round 13 (rust/crates/ee_won_net/src/sockthread.rs EeWonSocketThread: the ops
 // held, a reference each, in address order as the original's std::set of SmartPtrs; the lock; DoOp, the pump, the
 // purge, the adds and removes) behind this shim; the ops' steps come back through SocketThread.cpp's hook table. The
 // thread is the Thread shim's; ThreadFunc pumps the object, then waits on the thread's signal
@@ -1461,7 +1461,7 @@ private:
     EeWonSocketThread* mOps; //owned
 };
 
-// A Rust object since net round 16 (rust/crates/ee_won/src/servconn.rs EeWonServerConn: the auth context +0xa0 and
+// A Rust object since net round 16 (rust/crates/ee_won_net/src/servconn.rs EeWonServerConn: the auth context +0xa0 and
 // type +0xa4, the peer authentication op +0xa8, the connect completion +0xac, the keep-alive timer +0xb0 and period
 // +0xb4, and every step of ServerConnection.cpp); this class is the shim RoutingConnection and the lobby derive from
 // Since net round 25 its calls back are Rust's (cppcore.rs NATIVE_SERVCONN: the ops, the completions the original's
@@ -1523,7 +1523,7 @@ public:
 };
 
 // The op list, the completions and the reply dispatch are a Rust object since net round 16
-// (rust/crates/ee_won/src/routeconn.rs EeWonRouteConn: the list +0xb8, the completions +0xc8 and the default one
+// (rust/crates/ee_won_net/src/routeconn.rs EeWonRouteConn: the list +0xb8, the completions +0xc8 and the default one
 // +0x1bc, and AddOp 2ba630, CalcCompletion 2ba740, GetUnsolicitedOp 2ba830, MsgCallback 2bc850, CloseHook 2bcb20,
 // KillHook 2bcbb0). Since net round 26 its calls back are Rust's (routecpp.rs NATIVE_ROUTECONN) but a new op and
 // the two virtuals below (AsyncOp.cpp's core table), and every request helper is Rust's (ee_won_routeconn_request:
@@ -1722,7 +1722,7 @@ inline RoutingOp::RoutingOp(RoutingConnection* inConnection, RoutingOpType inTyp
     : mConnection(inConnection), mRust(ee_won_routeop_new_on((int32_t)inType, static_cast<RefCount*>(inConnection))) {}
 
 // The client, group and member model, the ignore list, the chat commands and the snapshots are a Rust object since
-// net round 17 (rust/crates/ee_won/src/smartroute.rs EeWonSmartRoute: the maps +0x1c0..0x1d7, the iterators, the
+// net round 17 (rust/crates/ee_won_net/src/smartroute.rs EeWonSmartRoute: the maps +0x1c0..0x1d7, the iterators, the
 // default group, this client's record, id and async flags, the command table and settings, the last input's state,
 // the handled records, the ignore set and its file; RoutingOpCompleteHook 2c0be0's steps, HandleInput, FindClient
 // 2c35a0, IgnoreClient 2c37d0, LoadIgnoreSet 2c3110, SaveIgnoreSet 2c3460 and the copies). The class hands each

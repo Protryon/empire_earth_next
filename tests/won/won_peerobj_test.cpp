@@ -11,7 +11,7 @@
 // draw in the same order): the transcripts must be equal. Times are chosen so the answers do not change for years
 // (expiries far in the past or in 2037, clock deltas that cross them or not).
 //
-// `--print N` prints N scenarios with the original's transcript (rust/crates/ee_won/src/golden_peerobj.txt; the Rust
+// `--print N` prints N scenarios with the original's transcript (rust/crates/ee_won_net/src/golden_peerobj.txt; the Rust
 // replay is `peerobj::tests::golden`). The exit code is the number of failed checks.
 #include <windows.h>
 #include <stdio.h>

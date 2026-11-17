@@ -3,7 +3,7 @@
 // statements (copied from TitleConfig.cpp before the port, over stand-ins) against
 // include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module, on generated configs. The exit code is the
 // number of failed checks.
-// `--print N` prints N cases in the golden's format (rust/crates/ee_won/src/golden_titlecfg.txt: the inputs and the
+// `--print N` prints N cases in the golden's format (rust/crates/ee_won_net/src/golden_titlecfg.txt: the inputs and the
 // original's results in hex; `titlecfg::tests::golden` replays them).
 #include <windows.h>
 #include <stdio.h>

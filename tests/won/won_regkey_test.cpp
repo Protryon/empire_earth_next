@@ -1,6 +1,6 @@
 // WON's RegKey on config.yaml (the lobby's UseLocalIP, the CD key's store): a script of opens, writes, reads and
 // deletes over a scratch configuration file ($EE_CONFIG = won_regkey.yaml in the current directory), one line per
-// step and the file's lines at the end, compared with rust/crates/ee_won/src/golden_regkey.txt (recorded over the C++
+// step and the file's lines at the end, compared with rust/crates/ee_won_net/src/golden_regkey.txt (recorded over the C++
 // RegKey before its port; the Rust test `regkey_golden` replays the names and values). `--print` prints the lines
 // instead. The exit code is the number of failures.
 #include <windows.h>
@@ -185,7 +185,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_regkey.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_regkey.txt";
 }
 
 int main(int argc, char** argv)

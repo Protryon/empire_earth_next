@@ -1,4 +1,4 @@
-// Window (R6 WON round 32): the Rust Window's calls out (rust/crates/ee_won/src/winobj.rs, EeWonGuiOp's Win* ops), its
+// Window (R6 WON round 32): the Rust Window's calls out (rust/crates/ee_won_gui/src/winobj.rs, EeWonGuiOp's Win* ops), its
 // constructor and destructor, and the methods over the members that stay C++ (the fonts, the images). The original's
 // Window.cpp (the input dispatch, the cursor, the resize, closing, centring, the child windows) is the Rust object.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233

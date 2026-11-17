@@ -1,4 +1,4 @@
-// WON's socket classes over 127.0.0.1 and IPAddr's values, one line per event, compared with rust/crates/ee_won/src/golden_sockobj.txt:
+// WON's socket classes over 127.0.0.1 and IPAddr's values, one line per event, compared with rust/crates/ee_won_net/src/golden_sockobj.txt:
 // AsyncSocket (open, bind, listen, connect, accept and the accepted socket's Duplicate, the hooks, the message
 // transforms' order and refusals, sends and receives, datagrams, type changes, close, kill, disconnect), the socket
 // ops run blocking (connect, accept, close, raw bytes with the progress completion, length-prefixed messages,
@@ -1417,7 +1417,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_sockobj.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_sockobj.txt";
 }
 
 int main(int argc, char** argv)

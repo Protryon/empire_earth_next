@@ -6,7 +6,7 @@
 // CleanupHook, RecvServerDatagram, the setters) on one op: the trace, the return and the members after each step.
 // The exit code is the number of failed checks.
 //
-// `--print N` prints N sequences with what the original did (rust/crates/ee_won/src/golden_fwop.txt, recorded
+// `--print N` prints N sequences with what the original did (rust/crates/ee_won_net/src/golden_fwop.txt, recorded
 // before the port; `fwop::tests::golden` replays it).
 #include <windows.h>
 #include <stdarg.h>

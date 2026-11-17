@@ -9,7 +9,7 @@
 // server's request. The group list's map is the original's inner op's against the Rust op's replies applied again
 // through RouteGroupListOf (what RoutingLogic::QueryServerGroupsDone reads).
 //
-// `--print N` prints N sequences with what the original did (rust/crates/ee_won/src/golden_reqlast.txt, recorded
+// `--print N` prints N sequences with what the original did (rust/crates/ee_won_net/src/golden_reqlast.txt, recorded
 // before the port; `reqlast::tests::golden` replays it). The exit code is the number of failed checks.
 #include <windows.h>
 #include <stdio.h>

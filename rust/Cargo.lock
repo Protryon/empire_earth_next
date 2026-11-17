@@ -211,7 +211,9 @@ dependencies = [
  "ee_render",
  "ee_sim",
  "ee_ui",
- "ee_won",
+ "ee_won_gui",
+ "ee_won_lobby",
+ "ee_won_net",
 ]
 
 [[package]]
@@ -263,11 +265,27 @@ dependencies = [
 ]
 
 [[package]]
-name = "ee_won"
+name = "ee_won_gui"
 version = "0.1.0"
 dependencies = [
  "ee_base",
  "ee_render",
+ "ee_won_net",
+]
+
+[[package]]
+name = "ee_won_lobby"
+version = "0.1.0"
+dependencies = [
+ "ee_won_gui",
+ "ee_won_net",
+]
+
+[[package]]
+name = "ee_won_net"
+version = "0.1.0"
+dependencies = [
+ "ee_base",
 ]
 
 [[package]]

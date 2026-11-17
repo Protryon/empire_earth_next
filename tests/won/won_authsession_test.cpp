@@ -1,6 +1,6 @@
 // The peer sessions a peer authentication makes and the encryption they put on a socket (AuthSession,
 // CryptTransform, AuthContext's session cache), over real sockets on 127.0.0.1, one line per event, compared with
-// rust/crates/ee_won/src/golden_authsession.txt (recorded over the C++ AuthSession and ServerOp.cpp's HostCall
+// rust/crates/ee_won_net/src/golden_authsession.txt (recorded over the C++ AuthSession and ServerOp.cpp's HostCall
 // before the session became a Rust handle). A real PeerAuthOp and PeerAuthServerOp authenticate over a socket pair
 // with real auth contexts and signed certificates (won_peerop_test's keys); every session call goes through an
 // op's own call path (ee_won_hostop_call): the ops' sessions and keys, the transforms the ops and the calls add
@@ -515,7 +515,7 @@ int main(int argc, char** argv)
     string aPath = __FILE__;
     aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == string::npos ? 0 : aSlash + 1);
-    aPath += "../../rust/crates/ee_won/src/golden_authsession.txt";
+    aPath += "../../rust/crates/ee_won_net/src/golden_authsession.txt";
     FILE* aFile = fopen(aPath.c_str(), "rb");
     if (aFile == NULL) {
         printf("FAIL: cannot open %s\n", aPath.c_str());

@@ -17,7 +17,7 @@
 // Each of 20,000 sequences builds a tree and makes 40 random calls on random containers, with random changes of the
 // world between them, then frees the containers. The traces must be the same, every reference given back. The first
 // 40 sequences and every later one that makes an op or a call none before made are
-// rust/crates/ee_won/src/golden_ctobj.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_gui/src/golden_ctobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

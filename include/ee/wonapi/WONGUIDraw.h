@@ -1,4 +1,4 @@
-// WONGUI's draw plans (ee_won's guidraw module, rust/crates/ee_won/src/guidraw.rs): the C++ gathers a paint's
+// WONGUI's draw plans (ee_won's guidraw module, rust/crates/ee_won_gui/src/guidraw.rs): the C++ gathers a paint's
 // inputs, Rust returns the ordered draw operations, and WONDrawRun executes them on the Graphics (the Surface,
 // PlatGraphics, image and font calls stay C++).
 #ifndef EE_WONAPI_WONGUIDRAW_H

@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include "rust/ee_won.h"
 namespace WONAPI {
-// WONCommon MD5 (the original's 0x58 bytes): plain MD5, the state and rounds ee_won's (rust/crates/ee_won/src/md5.rs).
+// WONCommon MD5 (the original's 0x58 bytes): plain MD5, the state and rounds ee_won's (rust/crates/ee_won_net/src/md5.rs).
 // Digest resets the state.
 class MD5 {
     EeWonMd5 mState;

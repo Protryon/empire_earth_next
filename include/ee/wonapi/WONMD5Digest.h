@@ -1,4 +1,4 @@
-// MD5Digest (WONCrypt's MD5, used by the auth hashes): plain MD5, ee_won's (rust/crates/ee_won/src/md5.rs). A
+// MD5Digest (WONCrypt's MD5, used by the auth hashes): plain MD5, ee_won's (rust/crates/ee_won_net/src/md5.rs). A
 // finished digest resets the state. Header-only since net round 28 (MD5Digest.cpp's forwarders inline; its C++
 // rounds had shifted by negative counts, PORT_LEARNINGS "R6: WON's leaves in Rust").
 #ifndef __WON_MINICRYPT_MD5DIGEST_H__

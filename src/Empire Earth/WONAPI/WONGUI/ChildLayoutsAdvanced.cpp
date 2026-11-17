@@ -1,5 +1,5 @@
 // The percentage layout's parameters (file name inferred). The layouts' Execute bodies, DoCalc and SameSizeLayout::Add
-// are the Rust instructions (rust/crates/ee_won/src/layoutobj.rs, R6 WON round 31).
+// are the Rust instructions (rust/crates/ee_won_gui/src/layoutobj.rs, R6 WON round 31).
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>

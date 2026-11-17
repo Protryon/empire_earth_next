@@ -1,5 +1,5 @@
 // WON SDK title/community configuration; the instructions' children, PostParse's rules and the texts are ee_won's
-// (rust/crates/ee_won/src/titlecfg.rs, applied by include/ee/wonapi/WONTitleConfigMsg.h)
+// (rust/crates/ee_won_net/src/titlecfg.rs, applied by include/ee/wonapi/WONTitleConfigMsg.h)
 // No original address identified
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>

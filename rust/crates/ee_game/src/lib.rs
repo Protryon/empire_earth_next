@@ -80,7 +80,9 @@ use ee_base as _;
 
 // the WON library's leaves (ee_won/src/ffi.rs): the buffers' and text helpers, CRC-16, MD5, Blowfish, ElGamal, the auth
 // blocks and the CD keys behind the C++ forwarders of src/Empire Earth/WONAPI
-use ee_won as _;
+use ee_won_gui as _;
+use ee_won_lobby as _;
+use ee_won_net as _;
 
 // the unit registry behind EEUnitHandle<T> and the unit store (ee_units/src/ffi.rs), called by RTSUnit.cpp and
 // EEUnitStore.cpp; its host imports the C++ world calls (EEUnitHost.cpp), absent from a test binary

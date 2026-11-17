@@ -1,5 +1,5 @@
 // The lobby model's player, client, client list and game (R6 WONLobby round 10): included by WONLobbyGUI.h inside
-// namespace WONAPI where the classes were. Each class is a shell over its Rust object (rust/crates/ee_won/src//
+// namespace WONAPI where the classes were. Each class is a shell over its Rust object (rust/crates/ee_won_net/src//
 // modelobj.rs: the members and the methods); the shells keep the vtables, the reference counts, the game code's
 // hooks and factories, and the methods over buffers and the routing server's records (WONLobby/LobbyModelHost.cpp).
 // The rest of the model (friends, rooms, servers, the lists) is WONLobbyModel.h's.

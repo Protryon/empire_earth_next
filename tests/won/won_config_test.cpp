@@ -1,7 +1,7 @@
 // WON's ConfigParser (the lobby's .cfg reader): characters with pushback and line counts, comments, tokens (narrow
 // and wide, to the end of a line, skipped), $define$ expansion, define scopes, group defines with saved states,
 // parents, errors and warnings, over a table of inputs written as plain and as UTF-16 files. One line per step,
-// compared with rust/crates/ee_won/src/golden_config.txt (recorded over the C++ parser before its port; the Rust
+// compared with rust/crates/ee_won_net/src/golden_config.txt (recorded over the C++ parser before its port; the Rust
 // test `config_golden` replays the C-locale pass). `--print` prints the lines instead. A second pass runs under
 // setlocale(LC_ALL, "English") as the game's UI thread sets it (isspace is the C runtime's). `--files DIR...`
 // prints, instead, one line per .cfg file under the given directories: the narrow token stream's CRC-16 and count
@@ -448,7 +448,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_config.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_config.txt";
 }
 
 int main(int argc, char** argv)

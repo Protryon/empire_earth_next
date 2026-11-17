@@ -1,7 +1,7 @@
 // RustServerOp's socket and op host calls (ServerOp.cpp's HostCall: the sockets' bind, listen, port, length field,
 // connected flag, status, close and kill; the blocking connect, sends and receives; the socket ops' bytes, address,
 // socket and kind, their receive file, skip and progress settings; the ops' status, killed flag, kill and runs; the
-// queue), over real sockets on 127.0.0.1, one line per call, compared with rust/crates/ee_won/src/golden_hostsock.txt
+// queue), over real sockets on 127.0.0.1, one line per call, compared with rust/crates/ee_won_net/src/golden_hostsock.txt
 // (recorded over ServerOp.cpp's HostCall before these calls moved into the Rust op base, net round 23). Every call
 // goes through an op's own call path (ee_won_hostop_call), so the same lines are the C++ side's answers before the
 // move and the Rust op's after it. Waits are on events (a blocking call returns when its data arrives; an async op
@@ -496,7 +496,7 @@ int main(int argc, char** argv)
     string aPath = __FILE__;
     aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == string::npos ? 0 : aSlash + 1);
-    aPath += "../../rust/crates/ee_won/src/golden_hostsock.txt";
+    aPath += "../../rust/crates/ee_won_net/src/golden_hostsock.txt";
     FILE* aGolden = fopen(aPath.c_str(), "rb");
     if (aGolden == NULL) {
         printf("FAIL: cannot open %s\n", aPath.c_str());

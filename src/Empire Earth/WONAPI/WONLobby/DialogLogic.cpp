@@ -1,6 +1,6 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 // DialogLogic: the lobby's modal dialogs (OK/Cancel, Yes/No, status and error boxes), inline or in popup windows.
-// The class is one Rust object (R6 WONLobby round 2: rust/crates/ee_won/src/dlglogic.rs: the dialog stack, the
+// The class is one Rust object (R6 WONLobby round 2: rust/crates/ee_won_lobby/src/dlglogic.rs: the dialog stack, the
 // status operation, every method); this unit is its C++ shell and host: each op is the original's statements on a
 // window, a component, an operation or a lobby global, with no decision.
 #include <windows.h>

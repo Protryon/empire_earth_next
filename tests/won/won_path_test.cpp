@@ -1,6 +1,6 @@
 // WON's WONFile path logic (the lobby's file paths: its persistent data, images, the file dialog): every path
 // accessor over a table of paths, the normalisation, the absolute path and the relative path, one line per case,
-// compared with rust/crates/ee_won/src/golden_path.txt (recorded over the C++ WONFile before its port; the Rust test
+// compared with rust/crates/ee_won_net/src/golden_path.txt (recorded over the C++ WONFile before its port; the Rust test
 // `path_golden` replays the same table). `--print` prints the lines instead. The exit code is the number of failures.
 // The absolute paths are made in a directory the test creates (<T>\a\b, <T> = won_path_cwd under the current
 // directory) and printed with <T> for it and <V> for its volume; "%v" in an input is that volume in lower case.
@@ -149,7 +149,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_path.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_path.txt";
 }
 
 int main(int argc, char** argv)

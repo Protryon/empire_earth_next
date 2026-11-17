@@ -5,7 +5,7 @@
 // blocking and asynchronous, and its CallbackHook over generated scripts: both traces and the final members must
 // agree. The ping requests against the original's WriteBuffer statements, the ping replies (generated, cut at every
 // length, mutated) against the original's ReadBuffer statements; MultiPingOp's rules, order and the context's
-// shuffle. `--print N` prints N scenarios in the golden's format (rust/crates/ee_won/src/golden_server.txt);
+// shuffle. `--print N` prints N scenarios in the golden's format (rust/crates/ee_won_net/src/golden_server.txt);
 // `--seed S` changes the scenarios. The exit code is the number of failed checks.
 #include <windows.h>
 #include <stdio.h>

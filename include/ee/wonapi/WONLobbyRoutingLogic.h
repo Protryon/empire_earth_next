@@ -16,7 +16,7 @@ class CreateRoomDialog;
 class RoomDialog;
 class PasswordDialog;
 // RTTI: RoutingLogic > NetLogic > LobbyLogic > RefCount; vtable 0x855a60.
-// A Rust object since R6 WONLobby round 9 (rust/crates/ee_won/src/routelogic.rs): the servers it is on and
+// A Rust object since R6 WONLobby round 9 (rust/crates/ee_won_lobby/src/routelogic.rs): the servers it is on and
 // connecting to, the joined rooms, the idle and moderator state, the last server refresh (the original's 0x40,
 // 0x5c..0x5f, 0x60..0x70) and every method; this shell keeps the lists it owns, the dialogs and the data type.
 class RoutingLogic : public NetLogic {

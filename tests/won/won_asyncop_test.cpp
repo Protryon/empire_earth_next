@@ -2,8 +2,8 @@
 // purge, the op being pumped queued again, the pump's op limit), the TimerThread (timeouts due and replaced, removed,
 // purged; its own thread), and Thread (start, InThisThread, stop, auto-delete), one line per event with every op's
 // reference count, then (round 13) the op's remaining transitions, its time left and AsyncOpTracker /
-// AsyncOpWithTracker, then SocketThreadSimple's adds, pumps, removes and purges, compared with rust/crates/ee_won/src/golden_asyncop.txt. The golden was recorded over the C++
-// classes before their move to Rust (rust/crates/ee_won/src/thread.rs). Deadlines are 0 ms or an hour, so the
+// AsyncOpWithTracker, then SocketThreadSimple's adds, pumps, removes and purges, compared with rust/crates/ee_won_net/src/golden_asyncop.txt. The golden was recorded over the C++
+// classes before their move to Rust (rust/crates/ee_won_net/src/thread.rs). Deadlines are 0 ms or an hour, so the
 // lines do not depend on the clock. `--print` prints the lines instead. The exit code is the number of failures.
 #include <windows.h>
 #include <stdio.h>
@@ -719,7 +719,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_asyncop.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_asyncop.txt";
 }
 
 int main(int argc, char** argv)

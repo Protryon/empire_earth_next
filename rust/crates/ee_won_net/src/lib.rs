@@ -1,0 +1,120 @@
+//! The WON library in Rust (docs/RUST_PLAN.md R6, decision D8), leaves first: the message buffers, the text
+//! conversions, CRC-16, MD5, the random generator, Blowfish, big integers, ElGamal, the auth blocks and the CD key
+//! logic; the plain text the lobby shows where it showed HTML (`plaintext`); and the network layer on the platform
+//! layer's sockets: the status names, NetStats, IPAddr, AsyncSocket's core and the socket ops' algorithms. The C++
+//! classes of `src/Empire Earth/WONAPI` that remain call these through `ffi` and `ffi_net`.
+
+pub mod admin;
+pub mod adminop;
+pub mod asyncop;
+pub mod auth;
+pub mod authcpp;
+pub mod authctx;
+pub mod authflow;
+pub mod authlogin;
+pub mod authobj;
+pub mod bigint;
+pub mod blowfish;
+mod blowfish_tables;
+pub mod buffer;
+pub mod cachemap;
+pub mod cdkey;
+pub mod cdkeystore;
+pub mod cert;
+pub mod certhost;
+pub mod chat;
+pub mod config;
+pub mod configobj;
+pub mod cppcore;
+pub mod crc16;
+pub mod db;
+pub mod debug;
+pub mod der;
+pub mod dir;
+pub mod dirchange;
+pub mod dirops;
+pub mod elgamal;
+pub mod ffi;
+pub mod ffi_net;
+pub mod ffi_ops;
+pub mod ffi_parse;
+pub mod file;
+pub mod filepush;
+pub mod ftp;
+pub mod ftpop;
+pub mod fwhost;
+pub mod fwop;
+pub mod gamespy;
+pub mod getcert;
+pub mod hostauth;
+pub mod hostbase;
+pub mod hostcore;
+pub mod hostnative;
+pub mod hostop;
+pub mod hostsock;
+pub mod http;
+pub mod httpcache;
+pub mod httpcpp;
+pub mod httpdoc;
+pub mod httpengine;
+pub mod httpget;
+/// cbindgen:ignore
+pub mod ipaddr;
+pub mod ipobj;
+pub mod md5;
+pub mod miscops;
+pub mod multiping;
+/// cbindgen:ignore
+pub mod netstats;
+pub mod opobj;
+pub mod ops;
+pub mod parser;
+pub mod patch;
+pub mod path;
+pub mod peerauth;
+pub mod peerobj;
+pub mod peerop;
+pub mod perftimer;
+pub mod plaintext;
+pub mod qsock;
+pub mod random;
+pub mod regauth;
+pub mod regkey;
+pub mod reqdir;
+pub mod reqhost;
+pub mod reqlast;
+pub mod reqmake;
+pub mod reqop;
+pub mod reqops;
+pub mod routeconn;
+pub mod routecpp;
+pub mod routemsg;
+pub mod routeop;
+pub mod servconn;
+pub mod servctx;
+pub mod server;
+pub mod smartroute;
+pub mod socket;
+pub mod sockobj;
+pub mod sockop;
+pub mod sockops;
+pub mod sockthread;
+/// cbindgen:ignore
+pub mod status;
+pub mod strcase;
+pub mod text;
+pub mod thread;
+pub mod titlecfg;
+pub mod udpmgr;
+pub mod udpops;
+pub mod userstatus;
+pub mod verop;
+pub mod wire;
+pub mod wonfile;
+
+#[cfg(test)]
+mod buffer_golden;
+#[cfg(test)]
+mod golden;
+#[cfg(test)]
+mod parser_golden;

@@ -1,7 +1,7 @@
 // WON's config object model (ConfigObject, ConfigValue: the grammar of the lobby's .cfg files over the ConfigParser
 // lexer): a table of snippets, each written to a file in the current directory and parsed into a test group with
 // typed keys and three kinds of child group, one block of lines per snippet (the result, the error, the warnings and
-// every group's keys), compared with rust/crates/ee_won/src/golden_cfgobj.txt (recorded over the C++ before its port;
+// every group's keys), compared with rust/crates/ee_won_net/src/golden_cfgobj.txt (recorded over the C++ before its port;
 // the Rust test `cfgobj_golden` checks the decisions against it). `--print` prints the lines instead;
 // `--files DIR` parses each .cfg file of DIR into a plain ConfigObject and prints its result and warnings' CRC.
 // The exit code is the number of failures.
@@ -177,7 +177,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_cfgobj.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_cfgobj.txt";
 }
 
 int main(int argc, char** argv)

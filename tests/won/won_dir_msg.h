@@ -1,4 +1,4 @@
-// The directory ops' requests and status replies through ee_won's dirops module (rust/crates/ee_won/src/dirops.rs),
+// The directory ops' requests and status replies through ee_won's dirops module (rust/crates/ee_won_net/src/dirops.rs),
 // as the C++ ops called it before they became Rust ops (reqdir.rs, dirchange.rs): the drivers' original halves hand
 // their members over as an EeWonDirRequest (strings as UTF-16 LE bytes) and copy the results back
 #pragma once

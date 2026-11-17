@@ -594,7 +594,7 @@ static void RunAutoRefresh()
 // statements (AuthContext.cpp before round 13, without its lock: OrigLogin below, the maps and MD5 loop as they
 // were) against ee_won's login object (authlogin.rs) through its C ABI. After each step the members, the
 // community data block, the hashes block and the secrets' block must be the same. `--print N` prints N sequences
-// with what the original did (rust/crates/ee_won/src/golden_authlogin.txt; `authlogin::tests::golden` replays it).
+// with what the original did (rust/crates/ee_won_net/src/golden_authlogin.txt; `authlogin::tests::golden` replays it).
 
 static unsigned int sSeed = 5151;
 static unsigned int Next()

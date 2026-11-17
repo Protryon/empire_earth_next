@@ -12,7 +12,7 @@
 // wheel, adjustments with and without the scroller's notification, scrollers and bars set, translations, the
 // desired and fitted sizes, visible rectangles, paints, every field read and written). The traces must be the
 // same. The first 40 sequences and every later one that makes an op or a call none before made are
-// rust/crates/ee_won/src/golden_paneobj.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_gui/src/golden_paneobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

@@ -11,7 +11,7 @@
 // sorts of the tree and of rows, tree flags, the expand button's event, the list's mouse over the rows and their
 // +/- boxes, paints, size changes, refreshes, the rows' walks and queries). The traces must be the same, and every
 // reference taken must be given back when the tree goes. The first 40 sequences and every later one that makes an
-// op or a call none before made are rust/crates/ee_won/src/golden_treeobj.txt, which the Rust tests replay;
+// op or a call none before made are rust/crates/ee_won_gui/src/golden_treeobj.txt, which the Rust tests replay;
 // `--print` prints them.
 #include <stdio.h>
 #include <stdlib.h>

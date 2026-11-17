@@ -1,5 +1,5 @@
 // ServerConnection: persistent authenticated server socket with keep-alive and message callbacks. A Rust object
-// since net round 16 (rust/crates/ee_won/src/servconn.rs EeWonServerConn: the auth, the peer authentication op, the
+// since net round 16 (rust/crates/ee_won_net/src/servconn.rs EeWonServerConn: the auth, the peer authentication op, the
 // connect completion, the keep-alive timer and period, and every step); the C++ class keeps the objects' calls the
 // Rust object makes (the hooks below)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233

@@ -1,5 +1,5 @@
 // The version and patch records and the patch ops' messages through ee_won's patch module
-// (rust/crates/ee_won/src/patch.rs): Rust reads a record or reply into the original's ordered assignments (a cut
+// (rust/crates/ee_won_net/src/patch.rs): Rust reads a record or reply into the original's ordered assignments (a cut
 // one keeps what was read, a string cut after its length erased) and writes the records and requests; these apply
 // them through the records' setters. Templates over the record types so that tests/won/won_misc_test.cpp runs the
 // same code over stand-ins. Test glue since WON Internet round 21 (moved from include/ee/wonapi/WONPatchMsg.h): the

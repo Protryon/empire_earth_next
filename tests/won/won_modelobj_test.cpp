@@ -14,7 +14,7 @@
 // and the dumps are traced; the traces must be the same. Host answers are functions of their arguments.
 //
 // The first 60 sequences and every later one that makes a call none before made are
-// rust/crates/ee_won/src/golden_modelobj.txt (`--print`); the Rust tests replay its steps and compare the traces.
+// rust/crates/ee_won_lobby/src/golden_modelobj.txt (`--print`); the Rust tests replay its steps and compare the traces.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

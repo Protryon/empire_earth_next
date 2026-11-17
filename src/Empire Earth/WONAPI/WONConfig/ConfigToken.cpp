@@ -1,5 +1,5 @@
 // ConfigParser token reader (wide and narrow), with quotes, line joins and $define$ expansion. The reading is
-// ee_won's (rust/crates/ee_won/src/config.rs read_token); the errors it names are set here.
+// ee_won's (rust/crates/ee_won_net/src/config.rs read_token); the errors it names are set here.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>

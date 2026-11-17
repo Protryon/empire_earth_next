@@ -1,6 +1,6 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 // The lobby model's shells and host (NEW, no original address: R6 WONLobby round 10). LobbyModel.cpp's classes are
-// Rust objects (rust/crates/ee_won/src/modelobj.rs: every member and the methods over them); this unit is the
+// Rust objects (rust/crates/ee_won_lobby/src/modelobj.rs: every member and the methods over them); this unit is the
 // shells' base, the host the Rust calls (the factories, the game code's hooks, the routing server's records, the
 // persistent ignore and friend lists, the connection's close) and the methods that read and write the C++ buffers
 // and records: the routing infos and the directory's entries handed to the Rust as values, the summaries, the join

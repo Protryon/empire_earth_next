@@ -1,5 +1,5 @@
 // PeerAuthClient's and PeerAuthServer's handshake through ee_won's peerauth module
-// (rust/crates/ee_won/src/peerauth.rs) as the C++ classes ran it until round 14 (include/ee/wonapi/
+// (rust/crates/ee_won_net/src/peerauth.rs) as the C++ classes ran it until round 14 (include/ee/wonapi/
 // WONPeerAuthMsg.h; the classes are ee_won's peerobj.rs objects now): Rust reads and writes the messages, keeps the
 // state and the order of every step; the certificates, the peer data's keys and the two secrets are the class's,
 // reached through its Pa* methods as hooks. The original half of tests/won/won_peerauth_test.cpp (over a stand-in)

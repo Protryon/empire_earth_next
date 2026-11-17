@@ -1,5 +1,5 @@
 // LanLogic's C++ host (NEW, no original address: units.EXTRA_UNITS): the shell of LanLogic, a Rust object since
-// round 20 (rust/crates/ee_won/src/lanobj.rs; its members, the lists, sockets and timers it held, Rust's since
+// round 20 (rust/crates/ee_won_lobby/src/lanobj.rs; its members, the lists, sockets and timers it held, Rust's since
 // WONLobby round 11: lanown.rs), LobbyLanSocket, and the LanLogic ops of ee_won_lobbycpp_call (LobbyLogicHost.cpp;
 // lobbyhost.rs EeWonLobbyOp from LanMyClient on): the C++ calls on the sockets, ops, dialogs and events. It
 // replaces LanLogic.cpp.

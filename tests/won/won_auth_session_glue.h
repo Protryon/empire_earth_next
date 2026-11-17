@@ -1,7 +1,7 @@
 // The game's AuthSession class as it was until WON Internet round 22 (include/ee/wonapi/WONRouting.h and
 // WONAuth/AuthSession.cpp: a RefCount shim owning an ee_won EeWonAuthSession), kept for the drivers whose original
 // statements hold one (won_auth_orig.h's PeerAuthClient / PeerAuthServer, won_peerobj_test, won_peerop_test). The
-// game's session is an ee_won handle now (rust/crates/ee_won/src/hostauth.rs).
+// game's session is an ee_won handle now (rust/crates/ee_won_net/src/hostauth.rs).
 #pragma once
 #include <time.h>
 #include "ee/wonapi/WONRouting.h"

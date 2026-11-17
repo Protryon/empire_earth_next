@@ -1,6 +1,6 @@
 // The WONAPI GUI's window manager on the platform layer (WONLobbyPlatform.h), in place of the GDI backend's
 // MSWindowManager.cpp and MSWindow's window procedure. R6 WON round 40: the manager is ee_won's Rust object
-// (rust/crates/ee_won/src/platwm.rs: the surface's size and scale, the frame and its lock, the windows' z order,
+// (rust/crates/ee_won_gui/src/platwm.rs: the surface's size and scale, the frame and its lock, the windows' z order,
 // focus, capture and drag, the event translation, the compositor); this class is its shell: the base class, the
 // standard cursors, the platform event loop's wait and the host the Rust calls the windows and the platform through.
 #include <windows.h>

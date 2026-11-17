@@ -10,7 +10,7 @@
 // For each, the two traces (every read and its value, every call with its arguments, every field write, the base
 // calls, the result or exception message, the reader's position, the percent layout's arrays) must be identical.
 // `--print` prints the port's host events (where the reader held the key) of the resource files' instructions and of the
-// first 400 random instructions, on every config: rust/crates/ee_won/src/golden_cfgtab.txt, which cargo replays. Exit code: the number of mismatches.
+// first 400 random instructions, on every config: rust/crates/ee_won_gui/src/golden_cfgtab.txt, which cargo replays. Exit code: the number of mismatches.
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>

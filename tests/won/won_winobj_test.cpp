@@ -16,7 +16,7 @@
 //
 // Each of 20,000 sequences makes 40 random calls on the windows (every Window method, the accessors' setters, world
 // changes), after a set-up that puts windows 2..4 under smaller ones and opens most windows. The traces must be the
-// same. The first 30 sequences and every later one that makes an op or a call none before made are rust/crates/ee_won/src/golden_winobj.txt, which the Rust tests replay; `--print` prints them.
+// same. The first 30 sequences and every later one that makes an op or a call none before made are rust/crates/ee_won_gui/src/golden_winobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

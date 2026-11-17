@@ -14,7 +14,7 @@ namespace WONAPI {
 // WON's wide text is UTF-16 on the wire and in its files (wchar_t of the original Windows build). wchar_t is UTF-32
 // on Linux and macOS, so every byte boundary converts per 16-bit unit, little-endian (characters past U+FFFF as
 // surrogate pairs). On Windows each wchar_t is one unit and the bytes are unchanged. The conversions are Rust's
-// (rust/crates/ee_won/src/text.rs, the one place WON's text is converted: docs/RUST_PLAN.md D6).
+// (rust/crates/ee_won_net/src/text.rs, the one place WON's text is converted: docs/RUST_PLAN.md D6).
 
 // the number of UTF-16 units (the wire's character count) of a wide string
 inline unsigned long WideUtf16Length(const std::wstring& inText)
@@ -54,12 +54,12 @@ inline void WideAssignUtf16LE(std::wstring& outText, const void* inBytes, unsign
     outText.resize(n);
 }
 
-// WONCommon's buffers are Rust objects (rust/crates/ee_won/src/buffer.rs: the state, growth, length prefixes,
+// WONCommon's buffers are Rust objects (rust/crates/ee_won_net/src/buffer.rs: the state, growth, length prefixes,
 // bounds and field codings); the classes below are the shims the C++ callers use. ByteBuffer keeps the reference
 // count and holds an EeWonByteBuffer; WriteBuffer holds an EeWonWriteBuffer; ReadBuffer embeds its EeWonReadBuffer
 // by value (a reader over bytes it does not own) and throws ReadBufferException where Rust reports a read past the
 // end. The original units (ByteBuffer.cpp with OffsetByteBuffer, ReadBuffer.cpp, WriteBuffer.cpp) are deleted;
-// their answers to tests/won/won_buffer_test.cpp's script are rust/crates/ee_won/src/golden_buffer.txt.
+// their answers to tests/won/won_buffer_test.cpp's script are rust/crates/ee_won_net/src/golden_buffer.txt.
 
 // a reference-counted byte buffer
 class ByteBuffer : public RefCount {

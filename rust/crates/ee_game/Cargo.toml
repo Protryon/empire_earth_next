@@ -16,7 +16,9 @@ ee_net = { path = "../ee_net" }
 ee_render = { path = "../ee_render" }
 ee_sim = { path = "../ee_sim" }
 ee_ui = { path = "../ee_ui" }
-ee_won = { path = "../ee_won" }
+ee_won_gui = { path = "../ee_won_gui" }
+ee_won_lobby = { path = "../ee_won_lobby" }
+ee_won_net = { path = "../ee_won_net" }
 
 [dev-dependencies]
 ee_ui = { path = "../ee_ui", features = ["no_cpp"] }

@@ -19,7 +19,7 @@
 // ops are allocated in creation order from an arena, so the refresh set's address order is the creation order on
 // both sides. Runs of consecutive frees are compared sorted (a map's or set's clear frees in its tree's order).
 //
-// `--print N` prints N scripts in the golden's format (rust/crates/ee_won/src/golden_authflow.txt; the Rust replay
+// `--print N` prints N scripts in the golden's format (rust/crates/ee_won_net/src/golden_authflow.txt; the Rust replay
 // is `authflow::tests::golden`). The exit code is the number of failed checks.
 #include <windows.h>
 #include <stdio.h>

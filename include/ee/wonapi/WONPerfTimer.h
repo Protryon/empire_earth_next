@@ -1,4 +1,4 @@
-// PerfTimer static API (2a3820..2a3990): ee_won's (rust/crates/ee_won/src/perftimer.rs, net round 26: PerfTimer.cpp
+// PerfTimer static API (2a3820..2a3990): ee_won's (rust/crates/ee_won_net/src/perftimer.rs, net round 26: PerfTimer.cpp
 // is deleted). The instance members are from the WON SDK (no original address identified); a named timer does
 // nothing.
 #ifndef EE_WONAPI_WONPERFTIMER_H

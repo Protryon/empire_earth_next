@@ -7,7 +7,7 @@
 // RunHook verdict and the request, then up to five generated replies (headers right and wrong, cut and mutated),
 // each reply's verdict and the op's members after it; a ping op is also Reset between replies at times.
 //
-// `--print N` prints N sequences with what the original did (rust/crates/ee_won/src/golden_reqops.txt, recorded
+// `--print N` prints N sequences with what the original did (rust/crates/ee_won_net/src/golden_reqops.txt, recorded
 // before the port; `reqops::tests::golden` replays it). The exit code is the number of failed checks.
 #include <windows.h>
 #include <stdio.h>

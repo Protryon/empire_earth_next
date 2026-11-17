@@ -8,7 +8,7 @@
 // Each of 20,000 sequences creates the label and makes 30 random inward calls (texts, alignments, wrap, fit to
 // text, pads, colours, size changes, desired sizes, paints). The traces (every op with its arguments and answer,
 // the draws) must be the same. The first 40 sequences and every later one that makes an op or a call none before
-// made are rust/crates/ee_won/src/golden_labelobj.txt, which the Rust tests replay; `--print` prints them.
+// made are rust/crates/ee_won_gui/src/golden_labelobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

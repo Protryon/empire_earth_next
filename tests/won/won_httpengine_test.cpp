@@ -10,7 +10,7 @@
 // add another op from inside (a queue changing during a kill or a callback). Objects are allocated in creation order
 // from an arena. Runs of consecutive frees are compared sorted.
 //
-// `--print N` prints N scripts in the golden's format (rust/crates/ee_won/src/golden_httpengine.txt; the Rust replay
+// `--print N` prints N scripts in the golden's format (rust/crates/ee_won_net/src/golden_httpengine.txt; the Rust replay
 // is `httpengine::tests::golden`). The exit code is the number of failed checks.
 #include <windows.h>
 #include <stdio.h>

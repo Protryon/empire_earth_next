@@ -1,5 +1,5 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
-// BackgroundGrabber (R6 WON round 37): the Rust grabber (rust/crates/ee_won/src/grabobj.rs) holds the captured image's
+// BackgroundGrabber (R6 WON round 37): the Rust grabber (rust/crates/ee_won_gui/src/grabobj.rs) holds the captured image's
 // place, its clip, the flags, the translucent colour and level and the capture's order and runs every method (the
 // capture, the debug window, the tint, putting the background back); this is its host (the component, the Graphics,
 // the background image, the debug window) and the constructor and destructor.

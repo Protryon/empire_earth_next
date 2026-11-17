@@ -12,7 +12,7 @@
 #include "ee/wonapi/WONAPICore.h"
 #include "ee/wonapi/WONRoutingOpTypes.h"
 #include "ee/wonapi/WONStatus.h"
-// The model, the ignore list, the chat commands and the copies are a Rust object (rust/crates/ee_won/src//
+// The model, the ignore list, the chat commands and the copies are a Rust object (rust/crates/ee_won_net/src//
 // smartroute.rs EeWonSmartRoute); the class's forwarders are in WONRouting.h, the copies into its records here
 #include "rust/ee_won.h"
 namespace WONAPI {

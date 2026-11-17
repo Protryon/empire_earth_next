@@ -14,7 +14,7 @@
 // columns and functions, the dynamic column, size changes, paints, the list's mouse over the rows and cells, deletes
 // and clears, the header's buttons, layout, mouse drags and presses, events). The traces must be the same, and every
 // reference taken must be given back when the objects go. The first 40 sequences and every later one that makes an
-// op or a call none before made are rust/crates/ee_won/src/golden_multiobj.txt, which the Rust tests replay;
+// op or a call none before made are rust/crates/ee_won_gui/src/golden_multiobj.txt, which the Rust tests replay;
 // `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>

@@ -6,7 +6,7 @@
 // random calls: texts of 0-60 units from letters, spaces, CR, LF and units past 0xff; wrap on and off; centring;
 // a font, the other or none; maximum widths -5..120; paints at random points. After each call the width, the
 // height (the member, not GetHeight), the break list and the paint's operations (with a font) are compared. The first
-// 300 sequences are rust/crates/ee_won/src/golden_wrapobj.txt, which the Rust tests replay; `--print` prints them.
+// 300 sequences are rust/crates/ee_won_gui/src/golden_wrapobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

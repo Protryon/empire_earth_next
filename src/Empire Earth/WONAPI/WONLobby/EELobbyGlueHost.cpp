@@ -1,5 +1,5 @@
 // The Empire Earth lobby's glue (R6 WONLobby round 6). The colour button and its chooser (EELobbyColorButton.cpp)
-// are Rust objects (rust/crates/ee_won/src/eecolor.rs), as are the glue's decisions (eeglue.rs: the original
+// are Rust objects (rust/crates/ee_won_lobby/src/eecolor.rs), as are the glue's decisions (eeglue.rs: the original
 // EELobbyInit.cpp and EELobbyMisc.cpp, and EELobbyInterface.cpp's options, players, adapter, run loop and return
 // from a game). This unit is the classes the lobby's factories make (their virtuals forward), one function per entry
 // point the game and the lobby call, the two hosts (each op the original's statements on a game object, a lobby

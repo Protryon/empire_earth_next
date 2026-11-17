@@ -22,7 +22,7 @@
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
-// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
+// (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 using namespace WONAPI;
 // Filter combo box row that offers to add or remove the typed filter text (RTTI .?AVFilterListItem@@, global
 // namespace); a TextListItem (0x28 bytes) with no new virtual functions, 0x38 bytes in all

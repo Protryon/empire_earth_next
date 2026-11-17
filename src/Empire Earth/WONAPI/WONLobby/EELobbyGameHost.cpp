@@ -1,6 +1,6 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 // The Empire Earth lobby game's shell and host (R6 WONLobby round 5): EELobbyGame and its player slots are one Rust
-// object (rust/crates/ee_won/src/eegame.rs: the options, the slots, the counts, the file transfer, the details'
+// object (rust/crates/ee_won_lobby/src/eegame.rs: the options, the slots, the counts, the file transfer, the details'
 // player names, every method and hook). This unit is the shell (the class's methods and virtual hooks forward; a hook
 // whose read threw throws ReadBufferException again for the lobby's handler), the slot view's methods, and the host:
 // each op the original's statements on a buffer, a client, a player, the file transfer, the lobby or a global, with

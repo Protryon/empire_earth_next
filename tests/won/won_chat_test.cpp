@@ -1,6 +1,6 @@
 // The lobby's chat command parser (ChatCommandParser: slash commands, emotes, broadcasts, name matching, durations,
 // the help text): every input of a table through HandleInput under several settings, one line per case, compared
-// with rust/crates/ee_won/src/golden_chat.txt (recorded over the C++ parser before its port; the Rust test
+// with rust/crates/ee_won_lobby/src/golden_chat.txt (recorded over the C++ parser before its port; the Rust test
 // `chat_golden` replays the same table; round 17's `state` lines, the object's state over sequences, recorded over
 // the C++ class before its move to chatobj.rs). `--print` prints the lines instead. The exit code is the number of failures.
 // The command names are the lobby's own (_LobbyResource.cfg's ChatCommandLogic resource); this driver stands in for
@@ -249,7 +249,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_chat.txt";
+    return aPath + "../../rust/crates/ee_won_lobby/src/golden_chat.txt";
 }
 
 int main(int argc, char** argv)

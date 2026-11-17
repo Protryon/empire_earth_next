@@ -15,9 +15,9 @@
 #include <exception>
 #include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
-// (rust/crates/ee_won/src/guiconf.rs).
+// (rust/crates/ee_won_gui/src/guiconf.rs).
 // The integer expressions' parse and the operand names' scan and kinds are ee_won's guicfg module
-// (rust/crates/ee_won/src/guicfg.rs); this unit keeps the readers, the StringParser and the operands' lookups. The
+// (rust/crates/ee_won_gui/src/guicfg.rs); this unit keeps the readers, the StringParser and the operands' lookups. The
 // Rust reads through these; an operand's exception is caught here and rethrown after the Rust returns.
 namespace WONAPI {
 struct ConfigExprHost { ComponentConfig* mConfig; std::exception_ptr mError; };

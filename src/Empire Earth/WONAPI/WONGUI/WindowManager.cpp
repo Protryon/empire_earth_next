@@ -25,7 +25,7 @@ static EeWonRect4 WinRect4(const WONRectangle& inRect)
     EeWonRect4 aRect = { inRect.x, inRect.y, inRect.width, inRect.height };
     return aRect;
 }
-// R6 WON rounds 33-34: the Rust manager's calls out (EeWonGuiOp's Wm* ops; rust/crates/ee_won/src/wmobj.rs,
+// R6 WON rounds 33-34: the Rust manager's calls out (EeWonGuiOp's Wm* ops; rust/crates/ee_won_gui/src/wmobj.rs,
 // wmloop.rs)
 typedef EeWonGuiOp Op;
 

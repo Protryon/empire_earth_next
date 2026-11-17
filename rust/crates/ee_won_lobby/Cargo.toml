@@ -1,0 +1,16 @@
+# ee_won_lobby: ee_won (docs/progress/crate-restructure.md)
+[package]
+name = "ee_won_lobby"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+ee_won_gui = { path = "../ee_won_gui" }
+ee_won_net = { path = "../ee_won_net" }
+
+[dev-dependencies]
+ee_won_net = { path = "../ee_won_net", features = ["c_locale"] }

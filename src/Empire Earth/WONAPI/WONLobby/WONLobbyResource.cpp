@@ -1,5 +1,5 @@
 // The lobby's resources: their slots, the table by id, registration, load and unload. The 469 resources are the
-// rows of ee_won's table (rust/crates/ee_won/src/resource.rs: each one's section, key and kind in the original's load
+// rows of ee_won's table (rust/crates/ee_won_lobby/src/resource.rs: each one's section, key and kind in the original's load
 // order, EeWonLobbyRes their names); the original's named globals are one slot per row (LOBBY_STRING(name) etc.).
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>

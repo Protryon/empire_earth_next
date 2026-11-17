@@ -1,5 +1,5 @@
 // WONRouting's RoutingGetUserStatusOp over 127.0.0.1, one line per event, compared with
-// rust/crates/ee_won/src/golden_userstatus.txt (recorded over the C++ class before its move to Rust): a UDPManager
+// rust/crates/ee_won_net/src/golden_userstatus.txt (recorded over the C++ class before its move to Rust): a UDPManager
 // bound on the loopback, a routing server stand-in (a datagram socket) that logs each request it receives and sends
 // the scripted reply; the queried ids added one by one (a duplicate kept once) or as a whole map (LocateFriends),
 // the statuses read in the map's order, a reply with the wrong header, a count that does not match, a reply cut
@@ -129,7 +129,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_userstatus.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_userstatus.txt";
 }
 
 int main(int argc, char** argv)

@@ -9,7 +9,7 @@
 // sequences of up to four per side. The trace, the statuses, the out messages and the members must agree. The
 // session runs over the real Blowfish (ee_won's), on generated messages and sequence numbers.
 //
-// `--print N` prints N scenarios per side in the golden's format (rust/crates/ee_won/src/golden_peerauth.txt; the
+// `--print N` prints N scenarios per side in the golden's format (rust/crates/ee_won_net/src/golden_peerauth.txt; the
 // Rust replay is `peerauth::tests::golden`). The exit code is the number of failed checks.
 #include <windows.h>
 #include <stdio.h>

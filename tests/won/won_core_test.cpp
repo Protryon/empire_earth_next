@@ -2,7 +2,7 @@
 // container and socket thread (QueueSocket.cpp's, UDPManager.cpp's, SocketThread.cpp's and AsyncOp.cpp's C++ hooks
 // and the completion classes they made: ParamCompletion, QueueOpFastCompletion, the close timer, QueueCloseOp,
 // CloseOp), over real sockets on 127.0.0.1, one line per event, compared with
-// rust/crates/ee_won/src/golden_core.txt (recorded over those units before their hooks were answered in Rust, net
+// rust/crates/ee_won_net/src/golden_core.txt (recorded over those units before their hooks were answered in Rust, net
 // round 25). Every line carries the reference counts of the objects involved, and the objects made here log their
 // destruction: a completion that holds its socket, manager or op one reference too many, or one too few, shows as a
 // count or a missing (or early) destruction. The core runs single-threaded (SetDoSocketAndTimerThreads(false)): the
@@ -604,7 +604,7 @@ int main(int argc, char** argv)
     string aGoldenPath = __FILE__;
     size_t aSlash = aGoldenPath.find_last_of("/\\");
     aGoldenPath.resize(aSlash == string::npos ? 0 : aSlash + 1);
-    aGoldenPath += "../../rust/crates/ee_won/src/golden_core.txt";
+    aGoldenPath += "../../rust/crates/ee_won_net/src/golden_core.txt";
     FILE* aGolden = fopen(aGoldenPath.c_str(), "rb");
     if (aGolden == NULL) {
         printf("FAIL: cannot open %s\n", aGoldenPath.c_str());

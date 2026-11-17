@@ -15,7 +15,7 @@
 // Each of 20,000 sequences makes two buttons and 40 random calls (states set, texts, sizes, fit to text, wrap,
 // alignments, colours, fonts, copies, the state, the text's paint, paints, fields, world changes); at the end both
 // buttons go and every reference must be back at the world's. The first 40 sequences and every later one that makes
-// an op or a call none before made are rust/crates/ee_won/src/golden_wonbtnobj.txt, which the Rust tests replay;
+// an op or a call none before made are rust/crates/ee_won_gui/src/golden_wonbtnobj.txt, which the Rust tests replay;
 // `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>

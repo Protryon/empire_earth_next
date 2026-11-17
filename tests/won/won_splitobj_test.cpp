@@ -10,7 +10,7 @@
 // restore, positions with and without remembering, size changes, the mouse on bars and panes, button events and
 // other events). The traces (every op with its arguments and answer) must be the same, and every reference the
 // splitter takes must be given back when it goes. The first 40 sequences and every later one that makes an op or a
-// call none before made are rust/crates/ee_won/src/golden_splitobj.txt, which the Rust tests replay; `--print`
+// call none before made are rust/crates/ee_won_gui/src/golden_splitobj.txt, which the Rust tests replay; `--print`
 // prints them.
 #include <stdio.h>
 #include <stdint.h>

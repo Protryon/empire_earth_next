@@ -1,4 +1,4 @@
-// WONAPI routing ops: the records a Rust routing op built (rust/crates/ee_won/src/routeop.rs EeWonRouteOp), copied
+// WONAPI routing ops: the records a Rust routing op built (rust/crates/ee_won_net/src/routeop.rs EeWonRouteOp), copied
 // into new C++ records; the op class is WONRouting.h's
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>

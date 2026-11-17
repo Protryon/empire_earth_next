@@ -96,10 +96,10 @@ enum DirFindFlags
 };
 
 // The entity changes (AddEntityOp, ModifyEntityOp, RemoveEntityOp, RenameEntityOp, RenewEntityOp and the data
-// object ops, with their service and directory forms) are Rust ops: rust/crates/ee_won/src/dirchange.rs
+// object ops, with their service and directory forms) are Rust ops: rust/crates/ee_won_net/src/dirchange.rs
 // (ee_won_dirop_new)
 
-// FindEntityOp (FindServiceOp, FindDirOp) and GetServiceOp are Rust ops: rust/crates/ee_won/src/reqdir.rs
+// FindEntityOp (FindServiceOp, FindDirOp) and GetServiceOp are Rust ops: rust/crates/ee_won_net/src/reqdir.rs
 // (RustServerOp::NewGetService; EE_WON_REQOPS_DIR_FIND through ee_won_reqops_new)
 } // namespace WONAPI
 #endif

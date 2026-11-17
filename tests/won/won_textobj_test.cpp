@@ -18,7 +18,7 @@
 // segments are not counted: they never outlived the list's.
 //
 // The first 100 sequences and every later one that makes an op or a call none before made are
-// rust/crates/ee_won/src/golden_textobj.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_gui/src/golden_textobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

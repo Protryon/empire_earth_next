@@ -7,262 +7,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-constexpr static const int32_t EE_WON_ADMIN_INSERT_MASTER_KEY = 1;
-
-constexpr static const int32_t EE_WON_ADMIN_UPDATE_MASTER_KEY = 2;
-
-constexpr static const int32_t EE_WON_ADMIN_DELETE_MASTER_KEY = 3;
-
-constexpr static const int32_t EE_WON_ADMIN_QUERY_MASTER_KEY = 4;
-
-constexpr static const int32_t EE_WON_ADMIN_AUTH_CHECK_KEY = 5;
-
-constexpr static const int32_t EE_WON_ADMIN_INSERT_BANNED_KEY = 6;
-
-constexpr static const int32_t EE_WON_ADMIN_QUERY_BANNED_KEY = 7;
-
-constexpr static const int32_t EE_WON_ADMIN_QUERY_LIST_BANNED_KEY = 8;
-
-constexpr static const int32_t EE_WON_ADMIN_REMOVE_BANNED_KEY = 9;
-
-constexpr static const int32_t EE_WON_ADMIN_INSERT_KEY_SUBSCRIBE = 10;
-
-constexpr static const int32_t EE_WON_ADMIN_UPDATE_KEY_SUBSCRIBE = 11;
-
-constexpr static const int32_t EE_WON_ADMIN_REMOVE_KEY_SUBSCRIBE = 12;
-
-constexpr static const int32_t EE_WON_ADMIN_QUERY_KEY_SUBSCRIBE = 13;
-
-/// the CD key account's request before the profile (the key, the community)
-constexpr static const int32_t EE_WON_ADMIN_ACCOUNT_FROM_CDKEY = 14;
-
-/// the same with the action flag
-constexpr static const int32_t EE_WON_ADMIN_ACCOUNT_FROM_CDKEY_EX = 15;
-
-/// the version ops' requests: the product (before the version record)
-constexpr static const int32_t EE_WON_ADMIN_PRODUCT = 16;
-
-/// `RemoveVersionOp`: product, config, version
-constexpr static const int32_t EE_WON_ADMIN_REMOVE_VERSION = 17;
-
-/// `GetVersionListOp`: product, config, state filter
-constexpr static const int32_t EE_WON_ADMIN_GET_VERSION_LIST = 18;
-
-/// `RemovePatchOp`: product, config, from, to, patch URL
-constexpr static const int32_t EE_WON_ADMIN_REMOVE_PATCH = 19;
-
-/// `ActivatePatchOp`: the same and the active flag
-constexpr static const int32_t EE_WON_ADMIN_ACTIVATE_PATCH = 20;
-
-/// `GetPatchServerModuleListOp`'s reply (its request has no data)
-constexpr static const int32_t EE_WON_ADMIN_MODULE_LIST = 21;
-
-constexpr static const uint8_t EE_WON_ADMIN_VALUE = 0;
-
-/// the read ended whole (`at`: where the account reply's profile starts)
-constexpr static const uint8_t EE_WON_ADMIN_END = 1;
-
-/// the read failed here
-constexpr static const uint8_t EE_WON_ADMIN_CUT = 2;
-
-constexpr static const int32_t EE_WON_ADMINOP_INSERT_MASTER_KEY = 1;
-
-constexpr static const int32_t EE_WON_ADMINOP_UPDATE_MASTER_KEY = 2;
-
-constexpr static const int32_t EE_WON_ADMINOP_DELETE_MASTER_KEY = 3;
-
-constexpr static const int32_t EE_WON_ADMINOP_QUERY_MASTER_KEY = 4;
-
-constexpr static const int32_t EE_WON_ADMINOP_AUTH_CHECK_KEY = 5;
-
-constexpr static const int32_t EE_WON_ADMINOP_INSERT_BANNED_KEY = 6;
-
-constexpr static const int32_t EE_WON_ADMINOP_QUERY_BANNED_KEY = 7;
-
-constexpr static const int32_t EE_WON_ADMINOP_QUERY_LIST_BANNED_KEY = 8;
-
-constexpr static const int32_t EE_WON_ADMINOP_REMOVE_BANNED_KEY = 9;
-
-constexpr static const int32_t EE_WON_ADMINOP_INSERT_KEY_SUBSCRIBE = 10;
-
-constexpr static const int32_t EE_WON_ADMINOP_UPDATE_KEY_SUBSCRIBE = 11;
-
-constexpr static const int32_t EE_WON_ADMINOP_REMOVE_KEY_SUBSCRIBE = 12;
-
-constexpr static const int32_t EE_WON_ADMINOP_QUERY_KEY_SUBSCRIBE = 13;
-
-/// `GetAccountFromCDKeyOp`: the key, the community (and the profile)
-constexpr static const int32_t EE_WON_ADMINOP_ACCOUNT_FROM_CDKEY = 14;
-
-/// `GetAccountFromCDKeyExOp`: the same and the action flag
-constexpr static const int32_t EE_WON_ADMINOP_ACCOUNT_FROM_CDKEY_EX = 15;
-
-/// `AddVersionOp`: the product, then the version record's config, version, type count, types, description, state
-constexpr static const int32_t EE_WON_ADMINOP_ADD_VERSION = 30;
-
-/// `UpdateVersionOp`: as `AddVersionOp` (the state is sent)
-constexpr static const int32_t EE_WON_ADMINOP_UPDATE_VERSION = 31;
-
-/// `RemoveVersionOp`: product, config, version
-constexpr static const int32_t EE_WON_ADMINOP_REMOVE_VERSION = 32;
-
-/// `GetVersionListOp`: product, config, state filter
-constexpr static const int32_t EE_WON_ADMINOP_GET_VERSION_LIST = 33;
-
-/// `AddPatchOp`: the product, the patch record's config, from, to, display name, net address, checksum, size,
-/// host name, host URL, host text, host image URL, must-visit and active flags, then the update flag
-constexpr static const int32_t EE_WON_ADMINOP_ADD_PATCH = 34;
-
-/// `RemovePatchOp`: product, config, from, to, net address
-constexpr static const int32_t EE_WON_ADMINOP_REMOVE_PATCH = 35;
-
-/// `ActivatePatchOp`: the same and the active flag
-constexpr static const int32_t EE_WON_ADMINOP_ACTIVATE_PATCH = 36;
-
-/// `PatchCleanupOp`: no members
-constexpr static const int32_t EE_WON_ADMINOP_PATCH_CLEANUP = 37;
-
-/// `GetPatchServerModuleListOp`: no members
-constexpr static const int32_t EE_WON_ADMINOP_MODULE_LIST = 38;
-
-/// WONDB's `RequestAccountInfoEmailOp`: the email (and the profile)
-constexpr static const int32_t EE_WON_ADMINOP_ACCOUNT_INFO_EMAIL = 40;
-
-/// WONDB's `RequestPasswordEmailOp`: the user name (and the profile)
-constexpr static const int32_t EE_WON_ADMINOP_PASSWORD_EMAIL = 41;
-
-/// WONMisc's `GetPatchListOp`: product, config, from, to, state filter
-constexpr static const int32_t EE_WON_ADMINOP_GET_PATCH_LIST = 42;
-
-/// `SetUserName(text)`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_NAME = 1;
-
-/// `SetPassword(text)`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_PASSWORD = 2;
-
-/// `SetLoginSecretFile(bytes)`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_SECRET_FILE = 3;
-
-/// `AddCommunity(key)`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_COMMUNITY = 4;
-
-/// `SetCommunity(key)`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_SET_COMMUNITY = 5;
-
-/// `RemoveCommunity(key)`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_REMOVE_COMMUNITY = 6;
-
-/// `RemoveAllCommunity()`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_REMOVE_ALL_COMMUNITY = 7;
-
-/// `SetCDKey(key, CDKey)`: the key's bytes, `num` bit 0 its `mKey` present, bit 1 `mValid`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_CDKEY = 8;
-
-/// `AddCDKeyCommunityJoin(key, CDKey)`: the key's bytes, `num` bit 0 present
-constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_JOIN = 9;
-
-/// `ClearCDKeyCommunityJoins()`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_JOINS = 10;
-
-/// `AddUserData(key, data)`: the data, `num` bit 0 present
-constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_USER_DATA = 11;
-
-/// `ClearUserData()`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_USER_DATA = 12;
-
-/// `ClearOneTimeData()`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_ONE_TIME = 13;
-
-/// `AddNickname(key)`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_NICKNAME = 14;
-
-/// `SetNickname(key, text)`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_SET_NICKNAME = 15;
-
-/// `ClearNicknames()`
-constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_NICKNAMES = 16;
-
-/// `SendPubKeyRequest`'s message.
-constexpr static const int32_t EE_WON_CERT_REQ_PUBKEYS = 1;
-
-/// `SendLoginRequest`'s message (`key_id`, `a` the encrypted session key, `b` the encrypted login data).
-constexpr static const int32_t EE_WON_CERT_REQ_LOGIN = 2;
-
-/// `SendLoginConfirm`'s message (`a` the encrypted hashes).
-constexpr static const int32_t EE_WON_CERT_REQ_CONFIRM = 3;
-
-/// The read failed here: the original threw `ReadBufferException`.
-constexpr static const uint8_t EE_WON_CERT_CUT = 0;
-
-/// `return InvalidReplyHeader()`.
-constexpr static const uint8_t EE_WON_CERT_INVALID_HEADER = 1;
-
-/// A key block reply's failure status `num`: `SetLastServerError(num)`, try the next server.
-constexpr static const uint8_t EE_WON_CERT_SERVER_ERROR = 2;
-
-/// A key block reply's block (`at`, `len`).
-constexpr static const uint8_t EE_WON_CERT_KEY_BLOCK = 3;
-
-/// A login challenge outside the challenge state.
-constexpr static const uint8_t EE_WON_CERT_UNEXPECTED_CHALLENGE = 4;
-
-/// A login challenge's encrypted block (`at`, `len`).
-constexpr static const uint8_t EE_WON_CERT_CHALLENGE = 5;
-
-/// The login reply's status `num` (the read stops after -1).
-constexpr static const uint8_t EE_WON_CERT_LOGIN_STATUS = 6;
-
-/// An error string (`at`, `len`): `mErrorList.push_back`.
-constexpr static const uint8_t EE_WON_CERT_ERROR = 7;
-
-/// A clear (or decrypted) entry of type `kind` (`at`, `len`); type 7 comes as `EE_WON_CERT_COMMUNITY` instead.
-constexpr static const uint8_t EE_WON_CERT_ENTRY = 8;
-
-/// A community status entry: `kind` = the fields read of its sub message (0 none, 1 the status `num`, 2 and the
-/// id `id`, 3 and the name: `at`, `len` UTF-16 units). Fewer than 3: a `EE_WON_CERT_CUT` follows.
-constexpr static const uint8_t EE_WON_CERT_COMMUNITY = 9;
-
-/// The clear part's end: the rest (`at`, `len`) is the encrypted part.
-constexpr static const uint8_t EE_WON_CERT_REST = 10;
-
-/// the op's peer data object as the op holds it (a hostauth.rs handle in the game, a stand-in's number in the drivers;
-/// 0 before a login): `ee_won_hostop_num`
-constexpr static const int32_t EE_WON_GETCERT_PEER = 1;
-
-/// `GetSessionKey()` (the `Blowfish`, as round 6's `ee_won_getcert_session_key`): `ee_won_hostop_num`
-constexpr static const int32_t EE_WON_GETCERT_SESSION_KEY = 2;
-
-/// the number of error strings: `ee_won_hostop_num`; string `index`: `ee_won_hostop_bytes`
-constexpr static const int32_t EE_WON_GETCERT_ERRORS = 3;
-
-/// the number of community statuses: `ee_won_hostop_num`; status `index`'s name (UTF-16 LE): `ee_won_hostop_bytes`
-constexpr static const int32_t EE_WON_GETCERT_COMMUNITIES = 4;
-
-/// community status `index`'s status: `ee_won_hostop_num`
-constexpr static const int32_t EE_WON_GETCERT_COMMUNITY_STATUS = 5;
-
-/// community status `index`'s id: `ee_won_hostop_num`
-constexpr static const int32_t EE_WON_GETCERT_COMMUNITY_ID = 6;
-
-/// `SetCreateAccount(num)`: `ee_won_hostop_set`
-constexpr static const int32_t EE_WON_GETCERT_CREATE_ACCOUNT = 7;
-
-/// `SetNewPassword(data)` (UTF-16 LE): `ee_won_hostop_set`
-constexpr static const int32_t EE_WON_GETCERT_NEW_PASSWORD = 8;
-
-/// `SetAuthContext(obj)` (the op takes its own reference): `ee_won_hostop_set`
-constexpr static const int32_t EE_WON_GETCERT_AUTH_CONTEXT = 9;
-
-/// `GetPeerData()`: a new `EeWonAuthObj*` reference (`ee_won_authobj_free`), 0 before a login or for a driver's
-/// stand-in: `ee_won_hostop_num`
-constexpr static const int32_t EE_WON_GETCERT_PEER_DATA = 10;
-
-/// The sink's `which`: the target name.
-constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
-
-/// The sink's `which`: the text.
-constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
-
 /// The block's offset in a C++ `Component` (RefCount's vtable pointer and its 32-bit count, padded).
 constexpr static const size_t EE_WON_COMP_MEMBERS_AT = 16;
 
@@ -288,255 +32,6 @@ constexpr static const int32_t EE_WON_COMP_FLAG_ROOT_VISIBLE = 262144;
 constexpr static const uint32_t EE_WON_COMP_TIP_START = 500;
 
 constexpr static const uint32_t EE_WON_COMP_TIP_END = 5000;
-
-/// The reply kinds (`ee_won_db_reply`).
-constexpr static const int32_t EE_WON_DB_PROXY = 0;
-
-/// `CreateAccountOp` waiting for the server's public key
-constexpr static const int32_t EE_WON_DB_CREATE_KEY = 1;
-
-/// `CreateAccountOp` past the key
-constexpr static const int32_t EE_WON_DB_CREATE = 2;
-
-constexpr static const int32_t EE_WON_DB_GET_ACCOUNT = 3;
-
-constexpr static const int32_t EE_WON_DB_UPDATE_ACCOUNT = 4;
-
-constexpr static const int32_t EE_WON_DB_CONTEST = 5;
-
-constexpr static const int32_t EE_WON_DB_EVENT = 6;
-
-/// What the op does after the read.
-/// Return `status`.
-constexpr static const int32_t EE_WON_DB_RETURN = 0;
-
-/// Return `InvalidReplyHeader()`.
-constexpr static const int32_t EE_WON_DB_INVALID_HEADER = 1;
-
-/// DBProxy: keep the rest (`rest_*`) and receive the next reply.
-constexpr static const int32_t EE_WON_DB_RECEIVE = 2;
-
-/// DBProxy: keep the rest, then take the collected data as the reply and return `status`.
-constexpr static const int32_t EE_WON_DB_DONE = 3;
-
-/// CreateAccount: set the public key at `key_*` (its failure: an invalid key, the next server; else the
-/// session key goes next)
-constexpr static const int32_t EE_WON_DB_PUBLIC_KEY = 4;
-
-/// The DBProxy family's requests (`EeWonDbRequest::kind`).
-constexpr static const int32_t EE_WON_DB_REQ_PROXY = 0;
-
-constexpr static const int32_t EE_WON_DB_REQ_CREATE_KEY = 1;
-
-constexpr static const int32_t EE_WON_DB_REQ_CREATE_SESSION = 2;
-
-/// the account data to encrypt
-constexpr static const int32_t EE_WON_DB_REQ_CREATE_DATA = 3;
-
-constexpr static const int32_t EE_WON_DB_REQ_CREATE_ACCOUNT = 4;
-
-constexpr static const int32_t EE_WON_DB_REQ_GET_ACCOUNT = 5;
-
-constexpr static const int32_t EE_WON_DB_REQ_UPDATE_ACCOUNT = 6;
-
-constexpr static const int32_t EE_WON_DB_REQ_USER_ID = 7;
-
-constexpr static const int32_t EE_WON_DB_REQ_PASSWORD_EMAIL = 8;
-
-constexpr static const int32_t EE_WON_DB_REQ_INFO_EMAIL = 9;
-
-constexpr static const int32_t EE_WON_DB_REQ_CONTEST = 10;
-
-/// `EXCEPTION_CONTINUE_SEARCH`
-constexpr static const int32_t EE_WON_DEBUG_CONTINUE_SEARCH = 0;
-
-/// `DIR_UF_UNIQUEDISPLAYNAME`
-constexpr static const uint32_t EE_WON_DIR_UF_UNIQUE_DISPLAY_NAME = 1;
-
-/// `DIR_UF_SERVRETURNADDR`
-constexpr static const uint32_t EE_WON_DIR_UF_SERV_RETURN_ADDR = 16;
-
-constexpr static const int32_t CHOOSER_SIZE = 120;
-
-/// An auth block's kind for `ee_won_auth_unpack`: the header only.
-constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
-
-/// `AuthCertificate`.
-constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE = 1;
-
-/// `Auth2Certificate`.
-constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE2 = 2;
-
-/// `AuthPubKeyBlock`.
-constexpr static const uint32_t EE_WON_AUTH_PUB_KEY_BLOCK = 3;
-
-/// No error.
-constexpr static const int32_t WON_FILE_OK = 0;
-
-/// "NULL File.": a read with nothing open, or a write with no file.
-constexpr static const int32_t WON_FILE_NULL = 1;
-
-/// "Attempt to read past end of mem buffer."
-constexpr static const int32_t WON_FILE_PAST_END_MEM = 2;
-
-/// "Attempt to read past end of file."
-constexpr static const int32_t WON_FILE_PAST_END_FILE = 3;
-
-/// "Attempt to setpos past end of mem buffer."
-constexpr static const int32_t WON_FILE_SETPOS_MEM = 4;
-
-/// "Attempt to setpos past end of file."
-constexpr static const int32_t WON_FILE_SETPOS_FILE = 5;
-
-/// "fwrite failed (disk full)"
-constexpr static const int32_t WON_FILE_WRITE_FAILED = 6;
-
-/// `SetFile`, `SetRemoteFile`, `SetComment` (the bytes)
-constexpr static const int32_t EE_WON_FILEPUSH_FILE = 1;
-
-constexpr static const int32_t EE_WON_FILEPUSH_REMOTE_FILE = 2;
-
-constexpr static const int32_t EE_WON_FILEPUSH_COMMENT = 3;
-
-/// `SetCompress`, `SetBlockTransferSize` (the number)
-constexpr static const int32_t EE_WON_FILEPUSH_COMPRESS = 4;
-
-constexpr static const int32_t EE_WON_FILEPUSH_BLOCK_SIZE = 5;
-
-/// `SetModifyTime` (the number: high 32 bits `dwHighDateTime`, low `dwLowDateTime`)
-constexpr static const int32_t EE_WON_FILEPUSH_MODIFY_TIME = 6;
-
-/// `SetProgressCompletion` (the object)
-constexpr static const int32_t EE_WON_FILEPUSH_PROGRESS = 7;
-
-/// `GetTotalBytesSent`, `GetLastBytesSent`
-constexpr static const int32_t EE_WON_FILEPUSH_TOTAL_SENT = 10;
-
-constexpr static const int32_t EE_WON_FILEPUSH_LAST_SENT = 11;
-
-/// `WS_FTP_InvalidResponse`, `WS_FTP_StatusError`, `WS_FTP_InvalidPasvResponse`.
-constexpr static const int32_t EE_WON_FTP_INVALID_RESPONSE = 100089;
-
-constexpr static const int32_t EE_WON_FTP_STATUS_ERROR = 100090;
-
-constexpr static const int32_t EE_WON_FTP_INVALID_PASV = 100091;
-
-/// The request states (`RequestState`).
-constexpr static const int32_t EE_WON_FTP_START = 0;
-
-constexpr static const int32_t EE_WON_FTP_USER = 1;
-
-constexpr static const int32_t EE_WON_FTP_PASSWORD = 2;
-
-constexpr static const int32_t EE_WON_FTP_CHANGE_DIR = 3;
-
-constexpr static const int32_t EE_WON_FTP_CHANGE_TYPE = 4;
-
-constexpr static const int32_t EE_WON_FTP_PASSIVE = 5;
-
-constexpr static const int32_t EE_WON_FTP_RESTART = 6;
-
-constexpr static const int32_t EE_WON_FTP_RETRIEVE = 7;
-
-/// What `HandleReply` does with a line.
-constexpr static const int32_t EE_WON_FTP_MORE = 0;
-
-/// finish with `status`
-constexpr static const int32_t EE_WON_FTP_FINISH = 1;
-
-/// send the command of `state`
-constexpr static const int32_t EE_WON_FTP_SEND = 2;
-
-/// the passive reply: the data address (`host`, `port`), then the data connection, then the command of `state`
-constexpr static const int32_t EE_WON_FTP_DATA = 3;
-
-/// receive the content
-constexpr static const int32_t EE_WON_FTP_RECV = 4;
-
-/// return false (an unknown state)
-constexpr static const int32_t EE_WON_FTP_NONE = 5;
-
-/// `SetLocalPath`, `SetRemotePath`, `SetUserName`, `SetPassword` (the bytes)
-constexpr static const int32_t EE_WON_FTPGET_LOCAL_PATH = 1;
-
-constexpr static const int32_t EE_WON_FTPGET_REMOTE_PATH = 2;
-
-constexpr static const int32_t EE_WON_FTPGET_USER = 3;
-
-constexpr static const int32_t EE_WON_FTPGET_PASSWORD = 4;
-
-/// `SetIsBinary`, `SetDoResume` (the number)
-constexpr static const int32_t EE_WON_FTPGET_BINARY = 5;
-
-constexpr static const int32_t EE_WON_FTPGET_RESUME = 6;
-
-/// `SetRecvChunkCompletion(completion, size)` (the object, the number)
-constexpr static const int32_t EE_WON_FTPGET_CHUNK = 7;
-
-/// `GetFTPStatus()` (`ee_won_hostop_num`)
-constexpr static const int32_t EE_WON_FTPGET_STATUS = 10;
-
-/// `GetContent()` (`ee_won_hostop_bytes`; none: NULL)
-constexpr static const int32_t EE_WON_FTPGET_CONTENT = 11;
-
-/// `GetLocalPath()`, `GetRemotePath()` (`ee_won_hostop_bytes`)
-constexpr static const int32_t EE_WON_FTPGET_LOCAL = 12;
-
-constexpr static const int32_t EE_WON_FTPGET_REMOTE = 13;
-
-/// `SetListenPort(num)`: `ee_won_hostop_set`
-constexpr static const int32_t EE_WON_FWOP_LISTEN_PORT = 1;
-
-/// `SetDoListen(num)`: `ee_won_hostop_set`
-constexpr static const int32_t EE_WON_FWOP_DO_LISTEN = 2;
-
-/// `SetWaitForConnect(num)`: `ee_won_hostop_set`
-constexpr static const int32_t EE_WON_FWOP_WAIT_FOR_CONNECT = 3;
-
-/// whether the server gave our public address (`ee_won_hostop_num`)
-constexpr static const int32_t EE_WON_FWOP_HAS_PUBLIC = 4;
-
-/// the public address's host, set with port 0 (`ee_won_hostop_num`)
-constexpr static const int32_t EE_WON_FWOP_PUBLIC_HOST = 5;
-
-/// `qr_init`'s errors (the SDK's `E_GOA_*`).
-constexpr static const int32_t E_GOA_WSOCKERROR = 1;
-
-constexpr static const int32_t E_GOA_BINDERROR = 2;
-
-constexpr static const int32_t E_GOA_DNSERROR = 3;
-
-constexpr static const int32_t E_GOA_CONNERROR = 4;
-
-/// `NUM_PORTS_TO_TRY`: the ports `qr_init` scans from its base port.
-constexpr static const int32_t NUM_PORTS_TO_TRY = 100;
-
-/// `BUF_SIZE`: a callback's buffer
-constexpr static const size_t BUF_SIZE = 1400;
-
-/// `GameSpyQueryType`'s maps: 0 the basic keys, 1 info, 2 rules, 3 players.
-constexpr static const size_t EE_WON_GAMESPY_MAPS = 4;
-
-/// `EE_WON_GAMESPY_*`: [`ee_won_gamespy_op`]'s calls.
-constexpr static const int32_t EE_WON_GAMESPY_SHUTDOWN = 0;
-
-constexpr static const int32_t EE_WON_GAMESPY_PUMP = 1;
-
-/// the number: the time in ms
-constexpr static const int32_t EE_WON_GAMESPY_SET_AUTO_PUMP = 2;
-
-constexpr static const int32_t EE_WON_GAMESPY_IS_AUTO_PUMPING = 3;
-
-constexpr static const int32_t EE_WON_GAMESPY_STATUS = 4;
-
-constexpr static const int32_t EE_WON_GAMESPY_GAMESPY_STATUS = 5;
-
-constexpr static const int32_t EE_WON_GAMESPY_LOCK = 6;
-
-constexpr static const int32_t EE_WON_GAMESPY_UNLOCK = 7;
-
-/// the number: the map
-constexpr static const int32_t EE_WON_GAMESPY_ERASE_ALL = 8;
 
 /// `ComponentFlag_DebugBG` and `ComponentFlag_Translucent` (WONComponentFlags.h; the C++ asserts them).
 constexpr static const ptrdiff_t EE_WON_GRAB_FLAG_DEBUG_BG = 131072;
@@ -913,6 +408,572 @@ constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 /// The stretch filter's `RawStretch(src, dst, a, b, c, d, e, f, g, h)` (x1, x2, y1, y2, tile left, top, width,
 /// height).
 constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
+
+/// `Graphics::SetPixel(a, b, g.GetStandardColor(c))`: a pixel in a standard colour.
+constexpr static const int32_t EE_WON_DRAW_SYS_PIXEL = 22;
+
+/// `Graphics::FillEllipse(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_FILL_ELLIPSE = 23;
+
+/// `Graphics::DrawArc(a, b, c, d, e, f)` (the start and arc angles in degrees).
+constexpr static const int32_t EE_WON_DRAW_ARC = 24;
+
+/// The `EE_WON_DRAW_CALL` of a button's paint: `DrawButtonText(g, b, c)`.
+constexpr static const int32_t EE_WON_MSPAINT_CALL_TEXT = 1;
+
+/// The state bits of an [`EeWonMsPaint`].
+constexpr static const uint32_t EE_WON_MSPAINT_PRESSED = 1;
+
+constexpr static const uint32_t EE_WON_MSPAINT_DISABLED = 2;
+
+constexpr static const uint32_t EE_WON_MSPAINT_TRANSPARENT = 4;
+
+constexpr static const uint32_t EE_WON_MSPAINT_DEFAULT = 8;
+
+constexpr static const uint32_t EE_WON_MSPAINT_FRAME2 = 16;
+
+constexpr static const uint32_t EE_WON_MSPAINT_CHECKED = 32;
+
+constexpr static const uint32_t EE_WON_MSPAINT_DRAW_FRAME = 64;
+
+constexpr static const uint32_t EE_WON_MSPAINT_DRAW_3D = 128;
+
+constexpr static const uint32_t EE_WON_MSPAINT_VERT = 256;
+
+constexpr static const uint32_t EE_WON_MSPAINT_HORZ = 512;
+
+constexpr static const uint32_t EE_WON_MSPAINT_INVALID = 1024;
+
+/// The classic dialog frame: a 3-pixel border and an 18-pixel caption.
+constexpr static const int32_t FRAME_BORDER = 3;
+
+constexpr static const int32_t FRAME_CAPTION = 18;
+
+/// `SurfaceFormat`.
+constexpr static const int32_t EE_WON_SURFACE_32 = 0;
+
+constexpr static const int32_t EE_WON_SURFACE_555 = 1;
+
+constexpr static const int32_t EE_WON_SURFACE_565 = 2;
+
+/// `Window::WindowState`.
+constexpr static const int32_t EE_WON_WIN_OPEN = 0;
+
+constexpr static const int32_t EE_WON_WIN_CLOSING = 1;
+
+constexpr static const int32_t EE_WON_WIN_CLOSED = 2;
+
+/// The last field.
+constexpr static const int32_t EE_WON_WIN_FIELD_COUNT = 38;
+
+/// The last field (`EeWonWmField::BroadcastCount`; a number, as a cbindgen constant from an enum does not compile).
+constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 37;
+
+/// The last of round 33's fields (`EeWonWmField::PopupFront`; the goldens' first state line).
+constexpr static const int32_t EE_WON_WM_FIELD_POPUP_LAST = 22;
+
+constexpr static const int32_t EE_WON_ADMIN_INSERT_MASTER_KEY = 1;
+
+constexpr static const int32_t EE_WON_ADMIN_UPDATE_MASTER_KEY = 2;
+
+constexpr static const int32_t EE_WON_ADMIN_DELETE_MASTER_KEY = 3;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_MASTER_KEY = 4;
+
+constexpr static const int32_t EE_WON_ADMIN_AUTH_CHECK_KEY = 5;
+
+constexpr static const int32_t EE_WON_ADMIN_INSERT_BANNED_KEY = 6;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_BANNED_KEY = 7;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_LIST_BANNED_KEY = 8;
+
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_BANNED_KEY = 9;
+
+constexpr static const int32_t EE_WON_ADMIN_INSERT_KEY_SUBSCRIBE = 10;
+
+constexpr static const int32_t EE_WON_ADMIN_UPDATE_KEY_SUBSCRIBE = 11;
+
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_KEY_SUBSCRIBE = 12;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_KEY_SUBSCRIBE = 13;
+
+/// the CD key account's request before the profile (the key, the community)
+constexpr static const int32_t EE_WON_ADMIN_ACCOUNT_FROM_CDKEY = 14;
+
+/// the same with the action flag
+constexpr static const int32_t EE_WON_ADMIN_ACCOUNT_FROM_CDKEY_EX = 15;
+
+/// the version ops' requests: the product (before the version record)
+constexpr static const int32_t EE_WON_ADMIN_PRODUCT = 16;
+
+/// `RemoveVersionOp`: product, config, version
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_VERSION = 17;
+
+/// `GetVersionListOp`: product, config, state filter
+constexpr static const int32_t EE_WON_ADMIN_GET_VERSION_LIST = 18;
+
+/// `RemovePatchOp`: product, config, from, to, patch URL
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_PATCH = 19;
+
+/// `ActivatePatchOp`: the same and the active flag
+constexpr static const int32_t EE_WON_ADMIN_ACTIVATE_PATCH = 20;
+
+/// `GetPatchServerModuleListOp`'s reply (its request has no data)
+constexpr static const int32_t EE_WON_ADMIN_MODULE_LIST = 21;
+
+constexpr static const uint8_t EE_WON_ADMIN_VALUE = 0;
+
+/// the read ended whole (`at`: where the account reply's profile starts)
+constexpr static const uint8_t EE_WON_ADMIN_END = 1;
+
+/// the read failed here
+constexpr static const uint8_t EE_WON_ADMIN_CUT = 2;
+
+constexpr static const int32_t EE_WON_ADMINOP_INSERT_MASTER_KEY = 1;
+
+constexpr static const int32_t EE_WON_ADMINOP_UPDATE_MASTER_KEY = 2;
+
+constexpr static const int32_t EE_WON_ADMINOP_DELETE_MASTER_KEY = 3;
+
+constexpr static const int32_t EE_WON_ADMINOP_QUERY_MASTER_KEY = 4;
+
+constexpr static const int32_t EE_WON_ADMINOP_AUTH_CHECK_KEY = 5;
+
+constexpr static const int32_t EE_WON_ADMINOP_INSERT_BANNED_KEY = 6;
+
+constexpr static const int32_t EE_WON_ADMINOP_QUERY_BANNED_KEY = 7;
+
+constexpr static const int32_t EE_WON_ADMINOP_QUERY_LIST_BANNED_KEY = 8;
+
+constexpr static const int32_t EE_WON_ADMINOP_REMOVE_BANNED_KEY = 9;
+
+constexpr static const int32_t EE_WON_ADMINOP_INSERT_KEY_SUBSCRIBE = 10;
+
+constexpr static const int32_t EE_WON_ADMINOP_UPDATE_KEY_SUBSCRIBE = 11;
+
+constexpr static const int32_t EE_WON_ADMINOP_REMOVE_KEY_SUBSCRIBE = 12;
+
+constexpr static const int32_t EE_WON_ADMINOP_QUERY_KEY_SUBSCRIBE = 13;
+
+/// `GetAccountFromCDKeyOp`: the key, the community (and the profile)
+constexpr static const int32_t EE_WON_ADMINOP_ACCOUNT_FROM_CDKEY = 14;
+
+/// `GetAccountFromCDKeyExOp`: the same and the action flag
+constexpr static const int32_t EE_WON_ADMINOP_ACCOUNT_FROM_CDKEY_EX = 15;
+
+/// `AddVersionOp`: the product, then the version record's config, version, type count, types, description, state
+constexpr static const int32_t EE_WON_ADMINOP_ADD_VERSION = 30;
+
+/// `UpdateVersionOp`: as `AddVersionOp` (the state is sent)
+constexpr static const int32_t EE_WON_ADMINOP_UPDATE_VERSION = 31;
+
+/// `RemoveVersionOp`: product, config, version
+constexpr static const int32_t EE_WON_ADMINOP_REMOVE_VERSION = 32;
+
+/// `GetVersionListOp`: product, config, state filter
+constexpr static const int32_t EE_WON_ADMINOP_GET_VERSION_LIST = 33;
+
+/// `AddPatchOp`: the product, the patch record's config, from, to, display name, net address, checksum, size,
+/// host name, host URL, host text, host image URL, must-visit and active flags, then the update flag
+constexpr static const int32_t EE_WON_ADMINOP_ADD_PATCH = 34;
+
+/// `RemovePatchOp`: product, config, from, to, net address
+constexpr static const int32_t EE_WON_ADMINOP_REMOVE_PATCH = 35;
+
+/// `ActivatePatchOp`: the same and the active flag
+constexpr static const int32_t EE_WON_ADMINOP_ACTIVATE_PATCH = 36;
+
+/// `PatchCleanupOp`: no members
+constexpr static const int32_t EE_WON_ADMINOP_PATCH_CLEANUP = 37;
+
+/// `GetPatchServerModuleListOp`: no members
+constexpr static const int32_t EE_WON_ADMINOP_MODULE_LIST = 38;
+
+/// WONDB's `RequestAccountInfoEmailOp`: the email (and the profile)
+constexpr static const int32_t EE_WON_ADMINOP_ACCOUNT_INFO_EMAIL = 40;
+
+/// WONDB's `RequestPasswordEmailOp`: the user name (and the profile)
+constexpr static const int32_t EE_WON_ADMINOP_PASSWORD_EMAIL = 41;
+
+/// WONMisc's `GetPatchListOp`: product, config, from, to, state filter
+constexpr static const int32_t EE_WON_ADMINOP_GET_PATCH_LIST = 42;
+
+/// `SetUserName(text)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_NAME = 1;
+
+/// `SetPassword(text)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_PASSWORD = 2;
+
+/// `SetLoginSecretFile(bytes)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_SECRET_FILE = 3;
+
+/// `AddCommunity(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_COMMUNITY = 4;
+
+/// `SetCommunity(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_SET_COMMUNITY = 5;
+
+/// `RemoveCommunity(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_REMOVE_COMMUNITY = 6;
+
+/// `RemoveAllCommunity()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_REMOVE_ALL_COMMUNITY = 7;
+
+/// `SetCDKey(key, CDKey)`: the key's bytes, `num` bit 0 its `mKey` present, bit 1 `mValid`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CDKEY = 8;
+
+/// `AddCDKeyCommunityJoin(key, CDKey)`: the key's bytes, `num` bit 0 present
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_JOIN = 9;
+
+/// `ClearCDKeyCommunityJoins()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_JOINS = 10;
+
+/// `AddUserData(key, data)`: the data, `num` bit 0 present
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_USER_DATA = 11;
+
+/// `ClearUserData()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_USER_DATA = 12;
+
+/// `ClearOneTimeData()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_ONE_TIME = 13;
+
+/// `AddNickname(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_NICKNAME = 14;
+
+/// `SetNickname(key, text)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_SET_NICKNAME = 15;
+
+/// `ClearNicknames()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_NICKNAMES = 16;
+
+/// `SendPubKeyRequest`'s message.
+constexpr static const int32_t EE_WON_CERT_REQ_PUBKEYS = 1;
+
+/// `SendLoginRequest`'s message (`key_id`, `a` the encrypted session key, `b` the encrypted login data).
+constexpr static const int32_t EE_WON_CERT_REQ_LOGIN = 2;
+
+/// `SendLoginConfirm`'s message (`a` the encrypted hashes).
+constexpr static const int32_t EE_WON_CERT_REQ_CONFIRM = 3;
+
+/// The read failed here: the original threw `ReadBufferException`.
+constexpr static const uint8_t EE_WON_CERT_CUT = 0;
+
+/// `return InvalidReplyHeader()`.
+constexpr static const uint8_t EE_WON_CERT_INVALID_HEADER = 1;
+
+/// A key block reply's failure status `num`: `SetLastServerError(num)`, try the next server.
+constexpr static const uint8_t EE_WON_CERT_SERVER_ERROR = 2;
+
+/// A key block reply's block (`at`, `len`).
+constexpr static const uint8_t EE_WON_CERT_KEY_BLOCK = 3;
+
+/// A login challenge outside the challenge state.
+constexpr static const uint8_t EE_WON_CERT_UNEXPECTED_CHALLENGE = 4;
+
+/// A login challenge's encrypted block (`at`, `len`).
+constexpr static const uint8_t EE_WON_CERT_CHALLENGE = 5;
+
+/// The login reply's status `num` (the read stops after -1).
+constexpr static const uint8_t EE_WON_CERT_LOGIN_STATUS = 6;
+
+/// An error string (`at`, `len`): `mErrorList.push_back`.
+constexpr static const uint8_t EE_WON_CERT_ERROR = 7;
+
+/// A clear (or decrypted) entry of type `kind` (`at`, `len`); type 7 comes as `EE_WON_CERT_COMMUNITY` instead.
+constexpr static const uint8_t EE_WON_CERT_ENTRY = 8;
+
+/// A community status entry: `kind` = the fields read of its sub message (0 none, 1 the status `num`, 2 and the
+/// id `id`, 3 and the name: `at`, `len` UTF-16 units). Fewer than 3: a `EE_WON_CERT_CUT` follows.
+constexpr static const uint8_t EE_WON_CERT_COMMUNITY = 9;
+
+/// The clear part's end: the rest (`at`, `len`) is the encrypted part.
+constexpr static const uint8_t EE_WON_CERT_REST = 10;
+
+/// the op's peer data object as the op holds it (a hostauth.rs handle in the game, a stand-in's number in the drivers;
+/// 0 before a login): `ee_won_hostop_num`
+constexpr static const int32_t EE_WON_GETCERT_PEER = 1;
+
+/// `GetSessionKey()` (the `Blowfish`, as round 6's `ee_won_getcert_session_key`): `ee_won_hostop_num`
+constexpr static const int32_t EE_WON_GETCERT_SESSION_KEY = 2;
+
+/// the number of error strings: `ee_won_hostop_num`; string `index`: `ee_won_hostop_bytes`
+constexpr static const int32_t EE_WON_GETCERT_ERRORS = 3;
+
+/// the number of community statuses: `ee_won_hostop_num`; status `index`'s name (UTF-16 LE): `ee_won_hostop_bytes`
+constexpr static const int32_t EE_WON_GETCERT_COMMUNITIES = 4;
+
+/// community status `index`'s status: `ee_won_hostop_num`
+constexpr static const int32_t EE_WON_GETCERT_COMMUNITY_STATUS = 5;
+
+/// community status `index`'s id: `ee_won_hostop_num`
+constexpr static const int32_t EE_WON_GETCERT_COMMUNITY_ID = 6;
+
+/// `SetCreateAccount(num)`: `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_GETCERT_CREATE_ACCOUNT = 7;
+
+/// `SetNewPassword(data)` (UTF-16 LE): `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_GETCERT_NEW_PASSWORD = 8;
+
+/// `SetAuthContext(obj)` (the op takes its own reference): `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_GETCERT_AUTH_CONTEXT = 9;
+
+/// `GetPeerData()`: a new `EeWonAuthObj*` reference (`ee_won_authobj_free`), 0 before a login or for a driver's
+/// stand-in: `ee_won_hostop_num`
+constexpr static const int32_t EE_WON_GETCERT_PEER_DATA = 10;
+
+/// The sink's `which`: the target name.
+constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
+
+/// The sink's `which`: the text.
+constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
+
+/// The reply kinds (`ee_won_db_reply`).
+constexpr static const int32_t EE_WON_DB_PROXY = 0;
+
+/// `CreateAccountOp` waiting for the server's public key
+constexpr static const int32_t EE_WON_DB_CREATE_KEY = 1;
+
+/// `CreateAccountOp` past the key
+constexpr static const int32_t EE_WON_DB_CREATE = 2;
+
+constexpr static const int32_t EE_WON_DB_GET_ACCOUNT = 3;
+
+constexpr static const int32_t EE_WON_DB_UPDATE_ACCOUNT = 4;
+
+constexpr static const int32_t EE_WON_DB_CONTEST = 5;
+
+constexpr static const int32_t EE_WON_DB_EVENT = 6;
+
+/// What the op does after the read.
+/// Return `status`.
+constexpr static const int32_t EE_WON_DB_RETURN = 0;
+
+/// Return `InvalidReplyHeader()`.
+constexpr static const int32_t EE_WON_DB_INVALID_HEADER = 1;
+
+/// DBProxy: keep the rest (`rest_*`) and receive the next reply.
+constexpr static const int32_t EE_WON_DB_RECEIVE = 2;
+
+/// DBProxy: keep the rest, then take the collected data as the reply and return `status`.
+constexpr static const int32_t EE_WON_DB_DONE = 3;
+
+/// CreateAccount: set the public key at `key_*` (its failure: an invalid key, the next server; else the
+/// session key goes next)
+constexpr static const int32_t EE_WON_DB_PUBLIC_KEY = 4;
+
+/// The DBProxy family's requests (`EeWonDbRequest::kind`).
+constexpr static const int32_t EE_WON_DB_REQ_PROXY = 0;
+
+constexpr static const int32_t EE_WON_DB_REQ_CREATE_KEY = 1;
+
+constexpr static const int32_t EE_WON_DB_REQ_CREATE_SESSION = 2;
+
+/// the account data to encrypt
+constexpr static const int32_t EE_WON_DB_REQ_CREATE_DATA = 3;
+
+constexpr static const int32_t EE_WON_DB_REQ_CREATE_ACCOUNT = 4;
+
+constexpr static const int32_t EE_WON_DB_REQ_GET_ACCOUNT = 5;
+
+constexpr static const int32_t EE_WON_DB_REQ_UPDATE_ACCOUNT = 6;
+
+constexpr static const int32_t EE_WON_DB_REQ_USER_ID = 7;
+
+constexpr static const int32_t EE_WON_DB_REQ_PASSWORD_EMAIL = 8;
+
+constexpr static const int32_t EE_WON_DB_REQ_INFO_EMAIL = 9;
+
+constexpr static const int32_t EE_WON_DB_REQ_CONTEST = 10;
+
+/// `EXCEPTION_CONTINUE_SEARCH`
+constexpr static const int32_t EE_WON_DEBUG_CONTINUE_SEARCH = 0;
+
+/// `DIR_UF_UNIQUEDISPLAYNAME`
+constexpr static const uint32_t EE_WON_DIR_UF_UNIQUE_DISPLAY_NAME = 1;
+
+/// `DIR_UF_SERVRETURNADDR`
+constexpr static const uint32_t EE_WON_DIR_UF_SERV_RETURN_ADDR = 16;
+
+/// An auth block's kind for `ee_won_auth_unpack`: the header only.
+constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
+
+/// `AuthCertificate`.
+constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE = 1;
+
+/// `Auth2Certificate`.
+constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE2 = 2;
+
+/// `AuthPubKeyBlock`.
+constexpr static const uint32_t EE_WON_AUTH_PUB_KEY_BLOCK = 3;
+
+/// No error.
+constexpr static const int32_t WON_FILE_OK = 0;
+
+/// "NULL File.": a read with nothing open, or a write with no file.
+constexpr static const int32_t WON_FILE_NULL = 1;
+
+/// "Attempt to read past end of mem buffer."
+constexpr static const int32_t WON_FILE_PAST_END_MEM = 2;
+
+/// "Attempt to read past end of file."
+constexpr static const int32_t WON_FILE_PAST_END_FILE = 3;
+
+/// "Attempt to setpos past end of mem buffer."
+constexpr static const int32_t WON_FILE_SETPOS_MEM = 4;
+
+/// "Attempt to setpos past end of file."
+constexpr static const int32_t WON_FILE_SETPOS_FILE = 5;
+
+/// "fwrite failed (disk full)"
+constexpr static const int32_t WON_FILE_WRITE_FAILED = 6;
+
+/// `SetFile`, `SetRemoteFile`, `SetComment` (the bytes)
+constexpr static const int32_t EE_WON_FILEPUSH_FILE = 1;
+
+constexpr static const int32_t EE_WON_FILEPUSH_REMOTE_FILE = 2;
+
+constexpr static const int32_t EE_WON_FILEPUSH_COMMENT = 3;
+
+/// `SetCompress`, `SetBlockTransferSize` (the number)
+constexpr static const int32_t EE_WON_FILEPUSH_COMPRESS = 4;
+
+constexpr static const int32_t EE_WON_FILEPUSH_BLOCK_SIZE = 5;
+
+/// `SetModifyTime` (the number: high 32 bits `dwHighDateTime`, low `dwLowDateTime`)
+constexpr static const int32_t EE_WON_FILEPUSH_MODIFY_TIME = 6;
+
+/// `SetProgressCompletion` (the object)
+constexpr static const int32_t EE_WON_FILEPUSH_PROGRESS = 7;
+
+/// `GetTotalBytesSent`, `GetLastBytesSent`
+constexpr static const int32_t EE_WON_FILEPUSH_TOTAL_SENT = 10;
+
+constexpr static const int32_t EE_WON_FILEPUSH_LAST_SENT = 11;
+
+/// `WS_FTP_InvalidResponse`, `WS_FTP_StatusError`, `WS_FTP_InvalidPasvResponse`.
+constexpr static const int32_t EE_WON_FTP_INVALID_RESPONSE = 100089;
+
+constexpr static const int32_t EE_WON_FTP_STATUS_ERROR = 100090;
+
+constexpr static const int32_t EE_WON_FTP_INVALID_PASV = 100091;
+
+/// The request states (`RequestState`).
+constexpr static const int32_t EE_WON_FTP_START = 0;
+
+constexpr static const int32_t EE_WON_FTP_USER = 1;
+
+constexpr static const int32_t EE_WON_FTP_PASSWORD = 2;
+
+constexpr static const int32_t EE_WON_FTP_CHANGE_DIR = 3;
+
+constexpr static const int32_t EE_WON_FTP_CHANGE_TYPE = 4;
+
+constexpr static const int32_t EE_WON_FTP_PASSIVE = 5;
+
+constexpr static const int32_t EE_WON_FTP_RESTART = 6;
+
+constexpr static const int32_t EE_WON_FTP_RETRIEVE = 7;
+
+/// What `HandleReply` does with a line.
+constexpr static const int32_t EE_WON_FTP_MORE = 0;
+
+/// finish with `status`
+constexpr static const int32_t EE_WON_FTP_FINISH = 1;
+
+/// send the command of `state`
+constexpr static const int32_t EE_WON_FTP_SEND = 2;
+
+/// the passive reply: the data address (`host`, `port`), then the data connection, then the command of `state`
+constexpr static const int32_t EE_WON_FTP_DATA = 3;
+
+/// receive the content
+constexpr static const int32_t EE_WON_FTP_RECV = 4;
+
+/// return false (an unknown state)
+constexpr static const int32_t EE_WON_FTP_NONE = 5;
+
+/// `SetLocalPath`, `SetRemotePath`, `SetUserName`, `SetPassword` (the bytes)
+constexpr static const int32_t EE_WON_FTPGET_LOCAL_PATH = 1;
+
+constexpr static const int32_t EE_WON_FTPGET_REMOTE_PATH = 2;
+
+constexpr static const int32_t EE_WON_FTPGET_USER = 3;
+
+constexpr static const int32_t EE_WON_FTPGET_PASSWORD = 4;
+
+/// `SetIsBinary`, `SetDoResume` (the number)
+constexpr static const int32_t EE_WON_FTPGET_BINARY = 5;
+
+constexpr static const int32_t EE_WON_FTPGET_RESUME = 6;
+
+/// `SetRecvChunkCompletion(completion, size)` (the object, the number)
+constexpr static const int32_t EE_WON_FTPGET_CHUNK = 7;
+
+/// `GetFTPStatus()` (`ee_won_hostop_num`)
+constexpr static const int32_t EE_WON_FTPGET_STATUS = 10;
+
+/// `GetContent()` (`ee_won_hostop_bytes`; none: NULL)
+constexpr static const int32_t EE_WON_FTPGET_CONTENT = 11;
+
+/// `GetLocalPath()`, `GetRemotePath()` (`ee_won_hostop_bytes`)
+constexpr static const int32_t EE_WON_FTPGET_LOCAL = 12;
+
+constexpr static const int32_t EE_WON_FTPGET_REMOTE = 13;
+
+/// `SetListenPort(num)`: `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_FWOP_LISTEN_PORT = 1;
+
+/// `SetDoListen(num)`: `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_FWOP_DO_LISTEN = 2;
+
+/// `SetWaitForConnect(num)`: `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_FWOP_WAIT_FOR_CONNECT = 3;
+
+/// whether the server gave our public address (`ee_won_hostop_num`)
+constexpr static const int32_t EE_WON_FWOP_HAS_PUBLIC = 4;
+
+/// the public address's host, set with port 0 (`ee_won_hostop_num`)
+constexpr static const int32_t EE_WON_FWOP_PUBLIC_HOST = 5;
+
+/// `qr_init`'s errors (the SDK's `E_GOA_*`).
+constexpr static const int32_t E_GOA_WSOCKERROR = 1;
+
+constexpr static const int32_t E_GOA_BINDERROR = 2;
+
+constexpr static const int32_t E_GOA_DNSERROR = 3;
+
+constexpr static const int32_t E_GOA_CONNERROR = 4;
+
+/// `NUM_PORTS_TO_TRY`: the ports `qr_init` scans from its base port.
+constexpr static const int32_t NUM_PORTS_TO_TRY = 100;
+
+/// `BUF_SIZE`: a callback's buffer
+constexpr static const size_t BUF_SIZE = 1400;
+
+/// `GameSpyQueryType`'s maps: 0 the basic keys, 1 info, 2 rules, 3 players.
+constexpr static const size_t EE_WON_GAMESPY_MAPS = 4;
+
+/// `EE_WON_GAMESPY_*`: [`ee_won_gamespy_op`]'s calls.
+constexpr static const int32_t EE_WON_GAMESPY_SHUTDOWN = 0;
+
+constexpr static const int32_t EE_WON_GAMESPY_PUMP = 1;
+
+/// the number: the time in ms
+constexpr static const int32_t EE_WON_GAMESPY_SET_AUTO_PUMP = 2;
+
+constexpr static const int32_t EE_WON_GAMESPY_IS_AUTO_PUMPING = 3;
+
+constexpr static const int32_t EE_WON_GAMESPY_STATUS = 4;
+
+constexpr static const int32_t EE_WON_GAMESPY_GAMESPY_STATUS = 5;
+
+constexpr static const int32_t EE_WON_GAMESPY_LOCK = 6;
+
+constexpr static const int32_t EE_WON_GAMESPY_UNLOCK = 7;
+
+/// the number: the map
+constexpr static const int32_t EE_WON_GAMESPY_ERASE_ALL = 8;
 
 /// `mSocket` (an object: a `BlockingSocket*`, a reference held)
 constexpr static const int32_t EE_WON_HOSTBASE_SOCKET = 0;
@@ -1479,45 +1540,6 @@ constexpr static const int32_t EE_WON_HTTPGET_ONLY_SEND = 20;
 
 constexpr static const int32_t EE_WON_HTTPGET_ONLY_RECV = 21;
 
-/// `PingGameOp::CheckResponse`'s answer when a read went past the reply's end (the C++ rethrows
-/// `ReadBufferException`).
-constexpr static const int64_t EE_WON_LOGIC_THREW = INT64_MIN;
-
-/// `Graphics::SetPixel(a, b, g.GetStandardColor(c))`: a pixel in a standard colour.
-constexpr static const int32_t EE_WON_DRAW_SYS_PIXEL = 22;
-
-/// `Graphics::FillEllipse(a, b, c, d)`.
-constexpr static const int32_t EE_WON_DRAW_FILL_ELLIPSE = 23;
-
-/// `Graphics::DrawArc(a, b, c, d, e, f)` (the start and arc angles in degrees).
-constexpr static const int32_t EE_WON_DRAW_ARC = 24;
-
-/// The `EE_WON_DRAW_CALL` of a button's paint: `DrawButtonText(g, b, c)`.
-constexpr static const int32_t EE_WON_MSPAINT_CALL_TEXT = 1;
-
-/// The state bits of an [`EeWonMsPaint`].
-constexpr static const uint32_t EE_WON_MSPAINT_PRESSED = 1;
-
-constexpr static const uint32_t EE_WON_MSPAINT_DISABLED = 2;
-
-constexpr static const uint32_t EE_WON_MSPAINT_TRANSPARENT = 4;
-
-constexpr static const uint32_t EE_WON_MSPAINT_DEFAULT = 8;
-
-constexpr static const uint32_t EE_WON_MSPAINT_FRAME2 = 16;
-
-constexpr static const uint32_t EE_WON_MSPAINT_CHECKED = 32;
-
-constexpr static const uint32_t EE_WON_MSPAINT_DRAW_FRAME = 64;
-
-constexpr static const uint32_t EE_WON_MSPAINT_DRAW_3D = 128;
-
-constexpr static const uint32_t EE_WON_MSPAINT_VERT = 256;
-
-constexpr static const uint32_t EE_WON_MSPAINT_HORZ = 512;
-
-constexpr static const uint32_t EE_WON_MSPAINT_INVALID = 1024;
-
 /// the finished list's length
 constexpr static const int32_t EE_WON_MULTIPING_COUNT = 1;
 
@@ -1698,11 +1720,6 @@ constexpr static const int32_t EE_WON_PEEROP_GET_CERT_STATUS = 2;
 
 /// the server's: the client's certificate's `VerifyPermissions(0, index, 0)`
 constexpr static const int32_t EE_WON_PEEROP_CLIENT_PERMITS = 3;
-
-/// The classic dialog frame: a 3-pixel border and an 18-pixel caption.
-constexpr static const int32_t FRAME_BORDER = 3;
-
-constexpr static const int32_t FRAME_CAPTION = 18;
 
 /// The texts `ee_won_regauth_read` hands back, by the sink's `which`.
 constexpr static const int32_t EE_WON_REGAUTH_ADDRESS = 0;
@@ -1897,9 +1914,6 @@ constexpr static const int32_t EE_WON_REQOP_USER_ID = 30;
 constexpr static const int32_t EE_WON_REQOP_VERSION_TO = 31;
 
 constexpr static const int32_t EE_WON_REQOP_VERSION_URL = 32;
-
-/// The number of rows (`gLobbyResources`' size).
-constexpr static const size_t EE_WON_LOBBYRES_COUNT = 469;
 
 /// How many op types have a completion slot (`mCompletions[61]`).
 constexpr static const size_t EE_WON_ROUTE_COMPLETIONS = 61;
@@ -2509,13 +2523,6 @@ constexpr static const int32_t EE_WON_SMART_ACT_BAN = 6;
 /// `BanClientByCDKeyId(group, on, seconds, text, value, NULL)`
 constexpr static const int32_t EE_WON_SMART_ACT_BAN_CDKEY = 7;
 
-/// `SurfaceFormat`.
-constexpr static const int32_t EE_WON_SURFACE_32 = 0;
-
-constexpr static const int32_t EE_WON_SURFACE_555 = 1;
-
-constexpr static const int32_t EE_WON_SURFACE_565 = 2;
-
 /// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
 constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
 
@@ -2561,22 +2568,6 @@ constexpr static const int32_t EE_WON_REQOP_PATCH_SIZE = 71;
 /// `GetHighestPatchList(from)` (3), the bytes "from\0to"; the chosen patches' indexes read as this number (the
 /// element: the position; -1 past the end)
 constexpr static const int32_t EE_WON_REQOP_PATCH_QUERY = 72;
-
-/// `Window::WindowState`.
-constexpr static const int32_t EE_WON_WIN_OPEN = 0;
-
-constexpr static const int32_t EE_WON_WIN_CLOSING = 1;
-
-constexpr static const int32_t EE_WON_WIN_CLOSED = 2;
-
-/// The last field.
-constexpr static const int32_t EE_WON_WIN_FIELD_COUNT = 38;
-
-/// The last field (`EeWonWmField::BroadcastCount`; a number, as a cbindgen constant from an enum does not compile).
-constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 37;
-
-/// The last of round 33's fields (`EeWonWmField::PopupFront`; the goldens' first state line).
-constexpr static const int32_t EE_WON_WM_FIELD_POPUP_LAST = 22;
 
 /// `GetFilePath`
 constexpr static const int32_t EE_WON_FILE_PATH = 0;
@@ -2634,65 +2625,14 @@ constexpr static const int32_t EE_WON_FILE_CREATE_DIRECTORY = 12;
 /// `NormalizePath` (0 false, 1 true, 2 where it threw)
 constexpr static const int32_t EE_WON_FILE_NORMALIZE = 13;
 
-/// Which Rust object of a C++ object [`EeWonCoreHooks::object_of`] returns.
-enum class EeWonCoreObject {
-  /// an `AsyncOp*`'s [`EeWonAsyncOp`]
-  Op = 0,
-  /// a `SocketOp*`'s [`EeWonSocketOp`]
-  SocketOp = 1,
-  /// an `AsyncSocket*`'s [`EeWonAsyncSocket`]
-  Socket = 2,
-  /// a `QueueSocket*`'s [`EeWonQueueSocket`]
-  Queue = 3,
-  /// a `UDPManager*`'s [`EeWonUdpManager`]
-  UdpManager = 4,
-  /// a `UDPManagerRecvOp*`'s [`EeWonUdpRecvOp`]
-  UdpRecv = 5,
-  /// a `UDPManagerSendRecvOp*`'s [`EeWonUdpSendRecvOp`]
-  UdpSendRecv = 6,
-  /// a `ServerConnection*`'s [`EeWonServerConn`]
-  ServerConn = 7,
-  /// a `RoutingOp*`'s [`EeWonRouteOp`](crate::routeop::EeWonRouteOp)
-  RouteOp = 8,
-  /// a `RoutingConnection*`'s [`EeWonRouteConn`](crate::routeconn::EeWonRouteConn)
-  RouteConn = 9,
-  /// an `AuthContext*`'s [`EeWonAuthCtx`](crate::authobj::EeWonAuthCtx)
-  AuthCtx = 10,
-  /// a `RustServerOp*`'s [`EeWonHostOp`](crate::hostop::EeWonHostOp)
-  HostOp = 11,
-  /// an `HTTPConnection*`'s [`EeWonHttpConn`](crate::httpengine::EeWonHttpConn)
-  HttpConn = 12,
-  /// an `HTTPConnection*`'s or `HTTPSession*`'s lock (its `CriticalSection`'s platform mutex)
-  Lock = 13,
-  /// an `HTTPSession*`'s [`EeWonHttpSession`](crate::httpengine::EeWonHttpSession)
-  HttpSession = 14,
-  /// a `ServerContext*`'s [`ServerList`](crate::servctx::ServerList)
-  Context = 15,
-};
+constexpr static const int32_t CHOOSER_SIZE = 120;
 
-/// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
-enum class EeWonCoreSocketOp {
-  /// `new CloseOp(socket)`
-  Close = 0,
-  /// the queue socket's queued close: a socket op without a socket whose `Continue` succeeds, not run at once
-  QueueClose = 1,
-  /// `new RecvBytesFromOp(size, socket)`
-  RecvFrom = 2,
-  /// `new SendBytesToOp(bytes, addr, socket)`
-  SendTo = 3,
-  /// `new RecvMsgOp(socket)`
-  RecvMsg = 4,
-  /// `new SendMsgOp(bytes, socket)`
-  SendMsg = 5,
-  /// `new ConnectOp(addr, socket)`
-  Connect = 6,
-  /// `new SendBytesOp(bytes, socket)`
-  SendBytes = 7,
-  /// `new RecvBytesOp(size, socket)`
-  RecvBytes = 8,
-  /// `new RecvCRMsgOp(socket)`
-  RecvCrMsg = 9,
-};
+/// `PingGameOp::CheckResponse`'s answer when a read went past the reply's end (the C++ rethrows
+/// `ReadBufferException`).
+constexpr static const int64_t EE_WON_LOGIC_THREW = INT64_MIN;
+
+/// The number of rows (`gLobbyResources`' size).
+constexpr static const size_t EE_WON_LOBBYRES_COUNT = 469;
 
 /// The op codes. `a`..`d` are integers or pointers as each says.
 enum class EeWonGuiOp : uint32_t {
@@ -3563,26 +3503,6 @@ enum class EeWonCfgRead : int32_t {
   RawStr = 26,
 };
 
-/// A number of the parser.
-enum class EeWonChatParserNumber {
-  Error = 0,
-  Command = 1,
-  Prefix = 2,
-  RoomFlags = 3,
-  Duration = 4,
-  Invitation = 5,
-  MatchThreshold = 6,
-  AllowColonEmote = 7,
-};
-
-/// A text of the parser.
-enum class EeWonChatParserText {
-  /// `mInput`: the reply target's name
-  Input = 0,
-  TargetName = 1,
-  Text = 2,
-};
-
 /// The inward calls (the C++ shell's virtuals and methods).
 enum class EeWonComboCall : uint32_t {
   /// `Virtual08` (SizeChanged).
@@ -3771,55 +3691,6 @@ enum class EeWonCompCall : uint32_t {
   FontMod,
 };
 
-/// What an upper-cased token is in a group.
-enum class EeWonCfgToken {
-  /// `}`: the group's end.
-  Close,
-  /// `name:`: a key's value follows (the key is the token without its last character).
-  Key,
-  /// Anything else: a child group or an instruction.
-  Group,
-};
-
-/// `ReadGroupStart`'s next step after a token.
-enum class EeWonCfgStart {
-  /// The token is the group's name (read through a StringParser); read the next token.
-  Name,
-  /// `:` read: the next token is the base name.
-  Colon,
-  /// The token is the base name; read the next token.
-  Base,
-  /// `{`: the header is complete.
-  Open,
-  /// Not `{` where it was expected: "Expecting '{' but got <token>".
-  Error,
-};
-
-/// `HandleInstruction`'s and `HandleValueInstruction`'s instructions (upper-cased tokens).
-enum class EeWonCfgInstruction {
-  /// A registered child group, or unknown.
-  Other,
-  GroupDefine,
-  IfDefined,
-  IfNotDefined,
-  Define,
-  Redefine,
-  IncludeGroup,
-  IncludeFile,
-};
-
-/// The `, optional` suffix of `INCLUDEGROUP` / `INCLUDEFILE`.
-enum class EeWonCfgOptional {
-  /// No suffix, or a bad one (see the warnings): required.
-  Required,
-  /// `, optional`.
-  Optional,
-  /// A comma and no string: "Expecting string: 'optional' after include ..., include is required."
-  WarnNoString,
-  /// A comma and another word: "Expecting string: optional after include ..., include is required."
-  WarnOtherWord,
-};
-
 /// The inward calls (the C++ shell's virtuals and methods; `a`, `b`, `c` as each says).
 enum class EeWonCtCall : uint32_t {
   /// `Virtual08` (SizeChanged).
@@ -3933,6 +3804,1701 @@ enum class EeWonDlgCall : uint32_t {
   GetField,
   /// the field `a` = `b`.
   SetField,
+};
+
+/// A virtual the Rust calls on the C++ object (`args` its ints, `p` its object).
+enum class EeWonGfxHook {
+  ClearClipRect,
+  /// (x, y, width, height)
+  SetClipRect,
+  /// (x, y, colour)
+  SetPixel,
+  SetColor,
+  /// (x1, y1, x2, y2)
+  DrawLine,
+  /// (x, y, width, height): the virtual (the base's is `GfxCall::BaseRect`)
+  DrawRect,
+  FillRect,
+  DrawDottedRect,
+  DrawEllipse,
+  FillEllipse,
+  /// (x, y, width, height, start, arc)
+  DrawArc,
+  /// (x, y, width, height, amount)
+  FillRectBlend,
+  /// `p` the Image: `DrawEntire(context, x, y)`
+  ImageEntire,
+  /// `p` the Image: `Draw(context, x, y, left, top, width, height)`
+  ImagePart,
+  /// `p` the GUIString: the font's `DrawString(context, text, offset, length, x, y)`
+  String,
+};
+
+/// The method `ee_won_gfx_call` runs (`a` its ints, `p` its object).
+enum class EeWonGfxCall {
+  /// `SetColor(a0)`
+  SetColor,
+  /// `GetStandardColor(a0)`: the scheme's colour, 0 without a scheme
+  StandardColor,
+  /// `SetSysColor(a0)`
+  SetSysColor,
+  /// `Translate(a0, a1)`
+  Translate,
+  /// `SetPixel(x, y, colour)`
+  SetPixel,
+  /// `DrawImage(p, x, y)`
+  DrawImage,
+  /// `DrawImage(p, x, y, left, top, width, height)`
+  DrawImagePart,
+  DrawLine,
+  DrawRect,
+  FillRect,
+  /// `FillRectBlend(x, y, width, height, amount)`
+  FillRectBlend,
+  DrawDottedRect,
+  DrawEllipse,
+  FillEllipse,
+  DrawArc,
+  /// `DrawString(p, x, y)` with `a2` the text's length (the whole text)
+  DrawString,
+  /// `DrawString(p, offset, length, x, y)`
+  DrawStringPart,
+  PerformClip,
+  /// `PushClipRect(x, y, width, height)`
+  PushClip,
+  PopClip,
+  /// Graphics' own `DrawRectHook`: four lines to the far edges
+  BaseRect,
+  /// Graphics' own `DrawDottedRectHook`: every other pixel of the four edges in the current colour
+  BaseDottedRect,
+  /// Graphics' own `FillRectHook`: a line per row
+  BaseFillRect,
+};
+
+/// The inward calls (the C++ shell's methods; `a` the component, `b` the Graphics where they take them).
+enum class EeWonGrabCall : uint32_t {
+  /// `Clear()`.
+  Clear = 1,
+  /// `PrePaint((Component*)a, *(Graphics*)b)`.
+  PrePaint,
+  /// `Paint((Component*)a, *(Graphics*)b)`.
+  Paint,
+  /// `SetTranslucentColor(a, b)`.
+  SetTranslucentColor,
+  /// `Invalidate((Component*)a)`.
+  Invalidate,
+  /// `SizeChanged((Component*)a)` (nothing).
+  SizeChanged,
+  /// `NeedDrawBG()` (0 or 1).
+  NeedDrawBG,
+};
+
+/// What `ButtonUp` does.
+enum class EeWonButtonUp {
+  /// Still held (or not pressed): nothing.
+  Ignore = 0,
+  /// Released: a repeating button stops its timer.
+  StopRepeat = 1,
+  /// Released without activating.
+  Release = 2,
+  /// Released and activated.
+  Activate = 3,
+};
+
+/// What `Button::KeyDown` does.
+enum class EeWonButtonKey {
+  /// Not handled (false).
+  None = 0,
+  /// Enter on the default button: activate (true).
+  Activate = 1,
+  /// Space: held down and pressed (true).
+  Press = 2,
+  /// An arrow in a radio group: the previous radio activated and focused (true).
+  RadioBack = 3,
+  /// The next radio.
+  RadioForward = 4,
+};
+
+/// The events a component object fires (`FireEvent`).
+enum class EeWonGuiEvent : uint32_t {
+  /// `ComponentEvent_InputReturn`.
+  InputReturn = 1,
+  /// `ComponentEvent_InputTextChanged`.
+  InputTextChanged = 2,
+  /// `ComponentEvent_ListSelChanged`.
+  ListSelChanged = 3,
+  /// `ComponentEvent_Scroll`.
+  Scroll = 4,
+  /// `ComponentEvent_TabCtrlTabSelected`.
+  TabCtrlTabSelected = 5,
+  /// `ComponentEvent_ButtonPressed`.
+  ButtonPressed = 6,
+};
+
+/// What pressed a scrollbar's button (`Scrollbar::HandleComponentEvent`).
+enum class EeWonScrollPress {
+  LineUp = 0,
+  LineDown = 1,
+  /// The track, with the mouse along the axis.
+  Track = 2,
+};
+
+/// The search or compare `ee_won_guistring_op` runs.
+enum class EeWonGuiStringOp {
+  Compare,
+  CompareNoCase,
+  Find,
+  FindNoCase,
+  FindOneOf,
+  RFind,
+};
+
+/// The edit `ee_won_gstr` runs (each the original's method; `a`, `b`, `c` its arguments, `other` its other string
+/// or its units).
+enum class EeWonGstrOp {
+  /// `GUIStringData(unsigned short a)`: room for `a` units, empty.
+  NewCapacity,
+  /// The copy constructor: `other`'s text and terminator.
+  NewCopy,
+  /// `GUIStringData(other, a, b)`: `b` units of `other` from `a`.
+  NewSub,
+  /// `Reserve(a, b != 0)`.
+  Reserve,
+  /// `resize(a, b != 0)`.
+  Resize,
+  /// `AssignWStr(other, a)`: `a` units at `other` (wchar_t*).
+  AssignUnits,
+  /// `AssignStr(other, a)`: `a` bytes of UTF-8 at `other` (char*).
+  AssignNarrow,
+  /// `Fill(a, b, c)`: units `b..b+c` set to `a`, the length `b + c`.
+  Fill,
+  /// `assign(other, a, b)`.
+  Assign,
+  /// `append(a)`: one unit.
+  AppendUnit,
+  /// `append(other, a, b)`.
+  Append,
+  /// `erase(a, b)`.
+  Erase,
+  /// `insert(a, other)`.
+  Insert,
+  /// `setAt(a, b)`: answers `b`.
+  SetAt,
+  /// The destructor: the buffer freed.
+  Free,
+};
+
+/// The decoders.
+enum class EeWonImgKind : int32_t {
+  Png = 0,
+  Jpg = 1,
+};
+
+/// The multi-decoder's calls (`ee_won_img_dec`).
+enum class EeWonImgDecCall : int32_t {
+  /// `AddDecoder((ImageDecoder*)a, extension b of c bytes)`.
+  Add = 0,
+  /// `SetCurExtension(b of c bytes)`.
+  SetExtension = 1,
+  /// The decoder for the current extension (0: none).
+  Find = 2,
+  /// The map's size.
+  Count = 3,
+  /// The map's entry a's decoder.
+  Entry = 4,
+  /// The map's entry a's decoder becomes the decoder b (Duplicate's copy), which the set now owns.
+  SetEntry = 5,
+  /// The set's size.
+  OwnedCount = 6,
+  /// The set's member a (in address order).
+  Owned = 7,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
+enum class EeWonInputCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  GotFocus,
+  LostFocus,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  MouseExit,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `TimerEvent(a)` (0 or 1).
+  TimerEvent,
+  /// `KeyChar(a)` (0 or 1).
+  KeyChar,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `Paint(*a)` (`a` the Graphics).
+  Paint,
+  /// `SetText(text a, b, c != 0)`.
+  SetText,
+  /// `SetPasswordChar(a)` (a `char`, sign-extended).
+  SetPasswordChar,
+  /// `SetAllowSelection(a != 0)`.
+  SetAllowSelection,
+  /// `SelectRange(a, b)`.
+  SelectRange,
+  /// `SetIcon`'s steps after the C++ set the icon.
+  IconChanged,
+  /// `SetCharWidth(a)`.
+  SetCharWidth,
+  /// `SetCursorBlinkRate(a, b)`.
+  SetCursorBlinkRate,
+  /// `AdjustPosition()`.
+  AdjustPosition,
+  /// `CopySelection()`.
+  CopySelection,
+  /// `SetSelText(text a, b, c != 0)`.
+  SetSelText,
+  /// `AddInputHistory(text a, b, c != 0)`.
+  AddInputHistory,
+  /// `SetInputHistory(text a, b, c != 0)`.
+  SetInputHistory,
+  /// `mMaxChars = a`.
+  SetMaxChars,
+  /// `mSelectOnFocus = a != 0`.
+  SetSelectOnFocus,
+  /// `mMaxInputHistory = a`.
+  SetMaxInputHistory,
+  /// `mLeftPad = a`.
+  SetLeftPad,
+  /// `mSelStartChar` (the numeric filter reads it).
+  SelStart,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonLabelCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `Paint(*a)` (`a` the Graphics).
+  Paint,
+  /// `SetText`'s steps after the C++ set the wrapped text: refit, and repaint when `a != 0`.
+  TextSet,
+  /// `SetHorzAlign(a)`.
+  SetHorzAlign,
+  /// `SetVertAlign(a)`.
+  SetVertAlign,
+  /// `SetWrap(a != 0)`.
+  SetWrap,
+  /// `SetAdjustHeightToFitText(a != 0)`.
+  SetAdjustHeightToFitText,
+  /// `SetVertPad(a, b)`.
+  SetVertPad,
+  /// `SetTextColor(a)`.
+  SetTextColor,
+  /// `mColor`.
+  TextColor,
+};
+
+/// The instruction classes.
+enum class EeWonLayoutKind : uint32_t {
+  /// `ChildLayoutInstructionBase` itself: Execute does nothing, UsesComponent is false.
+  Base = 0,
+  /// `ChildLayoutInstruction`: refs child, reference; ints flags, x, y, width, height.
+  Child,
+  /// `CenterLayout`: ref the centre box (may be NULL); horz, vert; the list.
+  Center,
+  /// `SameSizeLayout`: horz, vert; the list.
+  SameSize,
+  /// `ClearRightLayout`: ref the component; int the pad; the list.
+  ClearRight,
+  /// `SpaceEvenlyLayout`: ref the space box; ints the left and right pads; horz (`mIsHorz`); the list.
+  SpaceEvenly,
+  /// `NoOverlapLayout`: refs the reference, the target; ints the type, the horizontal and vertical pads; the list.
+  NoOverlap,
+  /// `SizeAtLeastLayout`: ref the target; ints the horizontal and vertical pads; the list.
+  SizeAtLeast,
+  /// `PercentLayout`: refs the target and the param's left, top, right, bottom anchors; ints px, py, pw, ph, lp,
+  /// tp, rp, bp.
+  Percent,
+};
+
+/// An instruction's inward calls.
+enum class EeWonLayoutCall : uint32_t {
+  /// `Execute((Component*)a)` (the parent).
+  Execute = 1,
+  /// `UsesComponent((Component*)a)` (0 or 1).
+  UsesComponent,
+  /// `Add((Component*)a)`: appended to the list (the C++ returns its own `this`).
+  Add,
+  /// `mGroupId`.
+  GroupId,
+  /// `mEnabled` (0 or 1).
+  Enabled,
+};
+
+/// The manager's inward calls.
+enum class EeWonLayoutMgrCall : uint32_t {
+  /// `ExecuteInstructions((Component*)a)` (the container).
+  Execute = 1,
+  /// `AddInstruction(a)` (`a` the `ChildLayoutInstructionBase*`, `b` its `EeWonLayout*`).
+  AddInstruction,
+  /// `AddLayoutPoint((LayoutPoint*)a)` (as a `Component*`).
+  AddLayoutPoint,
+  /// `RemoveComponent((Component*)a)`.
+  RemoveComponent,
+  Clear,
+  /// `EnableInstructions(a, b != 0)`.
+  EnableInstructions,
+  /// `Container::AddChildLayout(a, c)` on the container `d` (`a` the instruction, `b` its `EeWonLayout*`, `c` the
+  /// group id).
+  AddChildLayout,
+  /// The number of instructions (a test read).
+  Count,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods). Items are `ListItem*`s.
+enum class EeWonListCall : uint32_t {
+  /// `ListArea::Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `ListArea::AdjustPosition(a != 0)`.
+  AdjustPosition,
+  /// `ListArea::ScrollPaint(*a)` (`a` the Graphics).
+  ScrollPaint,
+  /// `ListArea::MouseEnter(a, b)`.
+  MouseEnter,
+  MouseExit,
+  /// `ListArea::MouseDown(a, b, c)`.
+  MouseDown,
+  /// `ListArea::MouseUp(a, b, c)`.
+  MouseUp,
+  /// `ListArea::MouseMove(a, b)`.
+  MouseMove,
+  /// `ListArea::MouseDrag(a, b)`.
+  MouseDrag,
+  /// `ListArea::KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `ListArea::NotifyMouseItemGone()`.
+  NotifyMouseItemGone,
+  /// `ListArea::Sort()` (0 or 1).
+  Sort,
+  BeginUpdate,
+  EndUpdate,
+  /// `Clear(a != 0)`.
+  Clear,
+  /// `GetItem(a)`.
+  GetItem,
+  /// `InsertItem(a, b)`: the item.
+  InsertItem,
+  /// `RefreshItem(a)`.
+  RefreshItem,
+  /// `DeleteItem(a)`.
+  DeleteItem,
+  /// `RemoveItem(a)`.
+  RemoveItem,
+  /// `DeleteRange(a, b)`.
+  DeleteRange,
+  /// `SetListFlags(a, b != 0)`.
+  SetListFlags,
+  /// `mListFlags`.
+  ListFlags,
+  /// `GetNumItems()`.
+  NumItems,
+  /// `GetItemPos(a)`.
+  GetItemPos,
+  /// `SetSelItem(int a, b != 0)`.
+  SetSelItemAt,
+  /// `SetSelItem(ListItem* a, b != 0, c != 0)` (0 or 1).
+  SetSelItem,
+  /// `EnsureVisible(a)`.
+  EnsureVisible,
+  /// `ClearSelection(a != 0)`.
+  ClearSelection,
+  /// `SelectRange(a, b)`.
+  SelectRange,
+  /// `FindItemAt(a)`.
+  FindItemAt,
+  /// `IsItemVisible(a)` (0 or 1).
+  IsItemVisible,
+  EnforceInvariants,
+  RewindSelections,
+  /// `HasMoreSelections()` (0 or 1).
+  HasMoreSelections,
+  /// `GetNextSelection()`.
+  GetNextSelection,
+  /// `GetItemPosAtYPos(a)`.
+  GetItemPosAtYPos,
+  /// `FindSelectableItem(a, b != 0, c != 0)`.
+  FindSelectableItem,
+  /// `SetSortType(a)`.
+  SetSortType,
+  /// `mSortType`.
+  SortType,
+  /// `mSortType = a` (no sort).
+  SetSortTypeOnly,
+  /// `mSelItem`.
+  SelItem,
+  /// `mMouseItem`.
+  MouseItem,
+  /// `mMouseItem = NULL` (the field only).
+  ClearMouseItem,
+  /// `mPaintWidth`.
+  PaintWidth,
+  /// `mPaintWidth = a`.
+  SetPaintWidth,
+};
+
+/// The inward calls (`PopupMenu`'s virtuals and methods).
+enum class EeWonMenuCall : uint32_t {
+  /// `MouseDown(a, b, c)`.
+  MouseDown = 1,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseMove(a, b)`.
+  MouseMove,
+  /// `TimerEvent(a)` (0 or 1).
+  TimerEvent,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  ListSelChangedHook,
+  EndSubMenu,
+  CheckSubMenu,
+  /// `TryKeyDown(a)` (0 or 1).
+  TryKeyDown,
+  Reset,
+  /// `mCurSubMenu`.
+  SubMenu,
+  /// `mKeyboardMode` (0 or 1).
+  KeyboardMode,
+  /// `mTimerAcc`.
+  TimerAcc,
+  /// `mMouseUpCount`.
+  MouseUpCount,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonMsBtnCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `SetTextHook`'s step after the C++ set the text: `AdjustHeightToFitText`.
+  TextSet,
+  /// `SetTransparent(a != 0)`.
+  SetTransparent,
+  /// `SetAdjustHeightToFitText(a != 0)`.
+  SetAdjustHeightToFitText,
+  /// `AdjustHeightToFitText()`.
+  AdjustHeightToFitText,
+  /// `DrawButtonText(*a, b, c)` (`a` the Graphics).
+  DrawButtonText,
+  /// the field `a` (`EeWonMsBtnField`).
+  Get,
+  /// the field `a` = `b`.
+  Set,
+  /// `SetHorzAlign(a)`: the field, then the text centred when it is `HorzAlign_Center`.
+  SetHorzAlign,
+  /// `SetStandardTextColor(a)`: the standard colour, the own colour -1.
+  SetStandardTextColor,
+  /// `IncrementHorzTextPad(a, b)` (each pad plus the low byte, as `unsigned char`).
+  IncrementHorzTextPad,
+  /// `IncrementVertTextPad(a, b)`.
+  IncrementVertTextPad,
+  /// the subclass `a`'s (`EeWonMsBox`) `Init()`, its box `b` pixels wide.
+  BoxInit,
+  /// the subclass `a`'s `Paint(*b)`, its box `c` pixels high.
+  BoxPaint,
+};
+
+/// What is drawn; the arguments per kind are [`EeWonMsPaint`]'s.
+enum class EeWonMsPaintKind : int32_t {
+  /// `LobbyDraw3DFrame(g, a, b, width, height, PRESSED)`.
+  Frame3D = 1,
+  /// `LobbyDrawFrame(g, a, b, width, height, PRESSED)`.
+  Frame,
+  /// `MSGraphicsUtil::DrawFrame3(g, a, b, width, height, _)` (the down flag is not read).
+  Frame3,
+  /// `MSGraphicsUtil::DrawArrow(g, a, _, _, width, height, DISABLED)` (the offsets are not read).
+  Arrow,
+  /// `MSGraphicsUtil::DrawCheck(g, a, b, width, height, PRESSED, CHECKED)`.
+  Check,
+  /// `MSGraphicsUtil::DrawRadio(g, a, b, width, height, PRESSED, CHECKED)`.
+  Radio,
+  /// `MSGraphicsUtil::DrawTab(g, a, b, width, height)`.
+  Tab,
+  /// `MSGraphicsUtil::DrawCloseX(g, a, b, width, height)`.
+  CloseX,
+  /// `MSButton::Paint` after `Component::Paint` (PRESSED, TRANSPARENT, DEFAULT: `IsDefaultButton`, FRAME2).
+  Button,
+  /// `MSTabButton::Paint` after `Component::Paint`.
+  TabButton,
+  /// `MSLabel::Paint` after `MSButtonBase::Paint` (TRANSPARENT).
+  Label,
+  /// `MSHeaderButton::Paint` after `MSButton::Paint`: the sort arrow (`a` the sort type, `b` the text's width,
+  /// `c` the left pad, PRESSED).
+  HeaderSort,
+  /// `MSCloseButton::Paint` after `Button::Paint` (PRESSED).
+  CloseButton,
+  /// `MSScrollThumb::Paint` after `Component::Paint`.
+  ScrollThumb,
+  /// `MSArrowButton::Paint` after `Component::Paint` (`a` the direction, PRESSED, DISABLED).
+  ArrowButton,
+  /// `MS3DFrame::Paint` after `Component::Paint` (`a` the type, PRESSED: not `mIsUp`).
+  Frame3DComponent,
+  /// `MSPopup::Paint` after `Component::Paint`.
+  Popup,
+  /// `MSDlgBack::Paint` after `Component::Paint`.
+  DlgBack,
+  /// `MSEtchedFrame::Paint` after `Component::Paint`.
+  EtchedFrame,
+  /// `MSInputBox::Paint` after `InputBox::Paint`.
+  InputBox,
+  /// `MSScrollbar::Paint` before `Container::Paint` (INVALID: the scroll rectangle's invalid state, TRANSPARENT,
+  /// `a`..`d` the rectangle's left, top, width and height).
+  Scrollbar,
+  /// `MSComboBox::Paint` after `ComboBox::Paint` (DRAW_FRAME).
+  ComboBox,
+  /// `MSScrollContainer::Paint` after `Container::Paint` (VERT / HORZ: the scrollbars visible, TRANSPARENT,
+  /// DRAW_FRAME, DRAW_3D; `a`, `b`, `c`, `d` the vertical bar's left, top, width and height, `e` the horizontal
+  /// bar's height).
+  ScrollContainer,
+  /// `MSEtchedFrameGroup::Paint` after `Container::Paint` (`a` the label's height, `b` its left, `c` its right).
+  EtchedGroup,
+  /// `WONMSSkin::MSImage::Paint` (`a` the image type, `b` the image flags; the size is the image's).
+  SkinImage,
+};
+
+/// The inward calls of the list (`MultiListArea`'s virtuals and methods).
+enum class EeWonMultiCall : uint32_t {
+  /// `AdjustPosition(a != 0)`.
+  AdjustPosition = 1,
+  /// `Virtual08` (SizeChanged).
+  SizeChanged,
+  /// `ScrollPaint(*a)`.
+  ScrollPaint,
+  NotifyMouseItemGone,
+  /// `SetNumColumns(a)`.
+  SetNumColumns,
+  /// `SetColumnWidth(a, b, c != 0)`.
+  SetColumnWidth,
+  /// `SetSortColumn(a, b)`.
+  SetSortColumn,
+  /// `SetSortColumnFunc(a, b)` (`b` a `ListArea::SortFunc`).
+  SetSortColumnFunc,
+  /// `SetColumnHAlign(a, b)`.
+  SetColumnHAlign,
+  /// `SetColumnSizeMode(a, b)`.
+  SetColumnSizeMode,
+  /// `UpdateItem(a)`: the row.
+  UpdateItem,
+  /// `SetCell(a, b, c)`: the row or 0.
+  SetCell,
+  /// `GetColumnAt(a)`.
+  ColumnAt,
+  /// `GetColumnWidth(a)`.
+  ColumnWidth,
+  /// `GetColumnPos(a)`.
+  ColumnPos,
+  /// `mColumnPaintContext`.
+  PaintContext,
+  /// `mSortColumn`.
+  SortColumn,
+  /// `mSortColumnPrev`.
+  SortColumnPrev,
+  /// `mDynamicSizeColumn = a`.
+  SetDynamicSizeColumn,
+  /// `mAutoGrowColumns = a != 0`.
+  SetAutoGrowColumns,
+  /// `mColumnInfoVector.size()`.
+  NumColumns,
+  /// `mTotalColumnWidth`.
+  TotalColumnWidth,
+  /// `mMouseColItem`.
+  MouseColItem,
+  /// `mListHeader`.
+  Header,
+};
+
+/// The inward calls of a row (`MultiListItem`'s virtuals and methods; the list's calls need its Rust list).
+enum class EeWonMRowCall : uint32_t {
+  /// `CalcDimensions(list)`.
+  CalcDimensions = 1,
+  /// `Compare(a, list)`.
+  Compare,
+  /// `SetPos(a, b)` (no list needed).
+  SetPos,
+  /// `Paint(*a, list)`.
+  Paint,
+  /// `SetViewport(list, a)`.
+  SetViewport,
+  /// `CanSelect(list, a, b)` (0 or 1).
+  CanSelect,
+  /// `MouseEnter(list, a, b)`.
+  MouseEnter,
+  /// `MouseExit(list)`.
+  MouseExit,
+  /// `MouseMove(list, a, b)`.
+  MouseMove,
+  /// `MouseDrag(list, a, b)`.
+  MouseDrag,
+  /// `MouseDown(list, a, b, c)`.
+  MouseDown,
+  /// `MouseUp(list, a, b, c)`.
+  MouseUp,
+  /// `SetItem(a, b)` (no list needed).
+  SetItem,
+  /// `GetItem(a)` (no list needed).
+  GetItem,
+  /// `InsertItem(a)` (no list needed).
+  InsertItem,
+};
+
+/// The inward calls of the header (`MultiListHeader`'s virtuals and methods).
+enum class EeWonMHeadCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  MouseExit,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseMove(a, b)`.
+  MouseMove,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  /// `SetColumnItem(a, b)`.
+  SetColumnItem,
+  /// `SetMultiListArea(a)`.
+  SetMultiListArea,
+  NotifyColumnChange,
+  /// `SetSortColumn(a, b)`.
+  SetSortColumn,
+  /// `GetColumnIndex(a)`.
+  ColumnIndex,
+  /// `GetSortType(a)`.
+  SortType,
+  /// `mDrawSortArrow` (0 or 1).
+  DrawSortArrow,
+  /// `mListArea`.
+  ListArea,
+  /// `mDragColumn`.
+  DragColumn,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonPaneCall : uint32_t {
+  /// `AdjustPosition(a != 0)`.
+  AdjustPosition = 1,
+  /// `Virtual08` (SizeChanged).
+  SizeChanged,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `MouseWheel(a)` (0 or 1).
+  MouseWheel,
+  /// `Paint(*a)` (`a` the Graphics).
+  Paint,
+  SetDelegatePos,
+  /// `OnBottom()` (0 or 1).
+  OnBottom,
+  /// `SetBorderPadding(a[0], a[1], a[2], a[3])` (`a` points at the left, top, right and bottom padding).
+  SetBorderPadding,
+  /// `ScrollTranslate(*a, *b)` (`a`, `b` point at i32s).
+  ScrollTranslate,
+  /// `ScrollUntranslate(*a, *b)`.
+  ScrollUntranslate,
+  /// `SetSizeEqualToTotal(a, b)`.
+  SetSizeEqualToTotal,
+  /// `IsRectVisible(*a)` (`a` a `WONRectangle`; 0 or 1).
+  IsRectVisible,
+  /// `SetScrollDimension(a, b)`.
+  SetScrollDimension,
+  /// `SetScrollbar(a)` (a `Scrollbar*`).
+  SetScrollbar,
+  /// `SetScroller(a)` (a `Scroller*`, borrowed).
+  SetScroller,
+  /// `SetVertOffset(a)`.
+  SetVertOffset,
+  /// `SetOffsets(a, b)` (horizontal, vertical).
+  SetOffsets,
+  /// the field `a` (`EeWonGuiField`).
+  GetField,
+  /// the field `a` = `b`.
+  SetField,
+};
+
+/// A hook (`ee_won_plat_gfx`; its arguments in the hook's order).
+enum class EeWonPlatGfx : uint32_t {
+  /// `GetPixelHook(a, b)`: the pixel as a COLORREF (0x00BBGGRR).
+  GetPixel = 1,
+  /// `SetPixelHook(a, b, c)`.
+  SetPixel,
+  /// `DrawLineHook(a, b, c, d)`.
+  Line,
+  /// `DrawRectHook(a, b, c, d)`.
+  Rect,
+  /// `FillRectHook(a, b, c, d)`.
+  FillRect,
+  /// `FillRectBlendHook(a, b, c, d, e)`.
+  FillRectBlend,
+  /// `DrawEllipseHook(a, b, c, d)`.
+  Ellipse,
+  /// `FillEllipseHook(a, b, c, d)`.
+  FillEllipse,
+  /// `DrawArcHook(a, b, c, d, e, f)`.
+  Arc,
+  /// `ClearClipRectHook()`.
+  ClearClip,
+  /// `SetClipRectHook(a, b, c, d)`.
+  SetClip,
+};
+
+/// What the window asks of its C++ shell (`me`).
+enum class EeWonPlatWinOp : int32_t {
+  /// The window has a PlatWindowManager (`GetPlatManager() != NULL`).
+  HasWm = 0,
+  /// The manager's `Call(a, b, c)`.
+  Wm = 1,
+  /// `GetMousePosition(x, y)` into `a` (two ints) -> whether the pointer is over the surface.
+  Mouse = 2,
+  /// `FillsSurface()`.
+  Fills = 3,
+  /// `HasFrame()`.
+  Frame = 4,
+  /// `IsPopup()`.
+  Popup = 5,
+  /// `GetWindowState() == WindowState_Open`.
+  Open = 6,
+  /// `GetStyle()`.
+  Style = 7,
+  /// `Window::Create(WONRectangle(a..d))`, the display context and the offscreen image of the root's size.
+  WindowCreate = 8,
+  /// `Center(a)`.
+  Center = 9,
+  /// `SetIsShowing(a)`.
+  Showing = 10,
+  /// `PlatformShow(a)` (the virtual call).
+  Show = 11,
+  /// `QueueEvent(new SizeEvent(a, b, c, d))`.
+  QueueSize = 12,
+  /// `QueueEvent(new InputEvent(InputEvent_MouseExit))`.
+  QueueExit = 13,
+  /// `QueueEvent(new MouseEvent(p[0] .. p[4]))`, `a` five ints.
+  QueueMouse = 14,
+  /// `InvalidateRoot()`.
+  InvalidateRoot = 15,
+  /// `IsMouseInClientArea()`.
+  MouseIn = 16,
+  /// `mRoot->Contains(a, b)`.
+  RootContains = 17,
+  /// The root repainted into the offscreen image when it is invalid and there is one -> whether it was.
+  Paint = 18,
+  /// The parent when it is a PlatGUIWindow and visible, else 0.
+  ParentVisible = 19,
+  /// `Window::PlatformClose()`.
+  WindowClose = 20,
+  /// `Window::TimerEvent(a)`.
+  WindowTimer = 21,
+  /// The cursor `a` when it is a PlatCursor: the system pointer shown and the cursor applied.
+  ApplyCursor = 22,
+  /// Whether the manager's popup window does not want the mouse and is the window `a`.
+  PopupHit = 23,
+  /// `PlatCursorShow(a)`.
+  CursorShow = 24,
+  /// `PlatWindowMinimize((PlatWindow*)a)`.
+  PlatMinimize = 25,
+};
+
+/// The window's calls (`ee_won_plat_win`).
+enum class EeWonPlatWinCall : int32_t {
+  /// The destructor's: off the manager when registered.
+  Destroy = 0,
+  /// `Create(rect a)` (four ints).
+  Create = 1,
+  FollowSurface = 2,
+  /// `SetPosSize(a, b, c, d)`.
+  SetPosSize = 3,
+  /// `GetRect(out a, b)` (four ints; b: the client area).
+  GetRect = 4,
+  SetTitle = 5,
+  /// `PlatformSetCursor(a)`.
+  SetCursor = 6,
+  /// `PlatformShowNativeCursor(a)`.
+  ShowNativeCursor = 7,
+  /// `PlatformShow(a)`.
+  Show = 8,
+  /// `PlatformMinimize(a)`.
+  Minimize = 9,
+  /// `PlatformSetTopMost(a)`.
+  SetTopMost = 10,
+  Close = 11,
+  SetFocus = 12,
+  /// `PlatformSetMouseCapture(a)`.
+  SetCapture = 13,
+  IsVisible = 14,
+  /// `TimerEvent(a)`.
+  Timer = 15,
+  /// `OnPaint()`.
+  Paint = 16,
+  /// `QueueMouse(a: five ints)`.
+  QueueMouse = 17,
+  /// The fields the manager reads into `a` (EeWonPlatWinInfo).
+  Info = 18,
+  /// `mRegistered = a`.
+  SetRegistered = 19,
+  /// `SetMinimizeOnAltTab(a)`.
+  SetMinimizeOnAltTab = 20,
+  /// `SetForwardKeyMsgToParent(a)`.
+  SetForwardKeys = 21,
+};
+
+/// The host's calls (the receiver the C++ `PlatWindowManager*`; a window is a `PlatGUIWindow*`).
+enum class EeWonPlatWmOp : uint32_t {
+  /// `PlatCurrentThreadId() == WindowManager::GetThreadId()` (0 or 1).
+  IsUiThread = 1,
+  /// the window `a`'s fields into the `EeWonPlatWinInfo` at `b`.
+  Info,
+  /// `a->mRegistered = b != 0`.
+  SetRegistered,
+  /// `a->FollowSurface()`.
+  FollowSurface,
+  /// `a->FollowPixelScale()`.
+  FollowPixelScale,
+  /// `a->QueueEvent(new InputEvent(t))`, `t` GotFocus (b 0), LostFocus (1), MouseExit (2).
+  QueueInput,
+  /// `a->QueueEvent(new KeyEvent(t, c, d))`, `t` KeyDown (b 0), KeyUp (1), KeyChar (2).
+  QueueKey,
+  /// `a->QueueMouse(t, p[0], p[1], p[2], p[3])` with `p` the four ints at `c`, `t` MouseMove (b 0), MouseDown (1),
+  /// MouseDoubleClick (2), MouseUp (3), MouseWheel (4).
+  QueueMouse,
+  /// `dynamic_cast<PlatGUIWindow*>(a->GetParent())`.
+  Parent,
+  /// the window `a` held (a `SmartPtr<Window>`'s AddRef) / let go.
+  Hold,
+  Release,
+  /// `a->Close()`.
+  Close,
+  /// `a->ClosePopup(NULL)`.
+  ClosePopup,
+  /// `NotModalWindow(a)` (0 or 1).
+  NotModal,
+  /// `a->PlatformSetFocus()`.
+  SetFocus,
+  /// `a->SetPosSize(b, c, -1, -1)`.
+  SetPosSize,
+  /// `a->OnPaint()`.
+  Paint,
+  /// the window `a`'s title: its wide characters (the count into the int at `b`), valid until the next call.
+  Title,
+  /// the window `a`'s offscreen image's surface (`dynamic_cast<PlatNativeImage*>`), null when it has none.
+  Offscreen,
+  /// `PlatModifiers()`.
+  Modifiers,
+  /// `PlatWindowGetClientSize((PlatWindow*)a, &p[0], &p[1])` with `p` the two ints at `b`.
+  ClientSize,
+  /// `PlatWindowMinimize((PlatWindow*)a)`.
+  Minimize,
+  /// `PlatWindowWake()`.
+  Wake,
+};
+
+/// The manager's calls (`ee_won_plat_wm`; `a`, `b` their arguments, a window as a `PlatGUIWindow*`).
+enum class EeWonPlatWmCall : uint32_t {
+  /// `SetSurfaceSize(a, b)`.
+  SetSurfaceSize = 1,
+  /// `Signal()`.
+  Signal,
+  /// GetNextEvent's start: the timeout.
+  BeginPass,
+  /// GetNextEvent after the wait.
+  EndWait,
+  /// `AddPlatWindow(a)`.
+  Add,
+  /// `RemovePlatWindow(a)`.
+  Remove,
+  /// `BringToFront(a)`.
+  BringToFront,
+  /// `SetFocusWindow(a)`.
+  SetFocus,
+  /// `SetCaptureWindow(a)`.
+  SetCapture,
+  /// `GetCaptureWindow()`.
+  Capture,
+  /// `GetFocusWindow()`.
+  Focus,
+  /// `WindowFromPoint(a, b)`.
+  WindowFromPoint,
+  /// `SetDirty()`.
+  SetDirty,
+  /// `GetSurfaceWidth()`.
+  SurfaceWidth,
+  /// `GetSurfaceHeight()`.
+  SurfaceHeight,
+  /// `GetPlatWindow()`.
+  PlatWindow,
+  /// `PaintAndComposite()`.
+  PaintAndComposite,
+  /// `UnlockFrame()`.
+  UnlockFrame,
+  /// the classic scheme's colour `a` (0..14), -1 past it.
+  Classic,
+  /// the destructor's: every window in the z order unregistered, the order emptied.
+  UnregisterAll,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonRootCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `PrePaint(*a)` (`a` the Graphics).
+  PrePaint,
+  /// `Paint(*a)`.
+  Paint,
+  MouseExit,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseMove(a, b)`.
+  MouseMove,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `KeyChar(a)` (always 1).
+  KeyChar,
+  /// `KeyDown(a)` (always 1).
+  KeyDown,
+  /// `KeyUp(a)` (always 1).
+  KeyUp,
+  /// `InvalidateRect(*a)` (a `WONRectangle*`, not changed), also Window::InvalidateRoot's union.
+  InvalidateRect,
+  /// `SetCursor(a)` (a `Cursor*`).
+  SetCursor,
+  /// `RemoveChild(a)`.
+  RemoveChild,
+  /// `AddBG(a)` (a `BackgroundGrabber*`).
+  AddBG,
+  /// the field `a` (`EeWonRootField`).
+  GetField,
+};
+
+/// The inward calls (the C++ shells' virtuals and methods).
+enum class EeWonScrollerCall : uint32_t {
+  /// `MouseDown(a, b, c)`.
+  MouseDown = 1,
+  /// `MouseWheel(a)` (0 or 1).
+  MouseWheel,
+  GetScrollArea,
+  /// `SetScrollArea(a)` (the original's `SmartPtr` assignment).
+  SetScrollArea,
+  /// `SetOffsets(a, b)` (horizontal, vertical).
+  SetOffsets,
+  /// `SetVertOffset(a)`.
+  SetVertOffset,
+  /// `SetHorzOffset(a)`.
+  SetHorzOffset,
+  AddedToParent,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  /// `NotifyScrollChange(a != 0)`.
+  NotifyScrollChange,
+  /// `SetScrollbar(a)`.
+  SetScrollbar,
+  AddControls,
+  /// `GetScrollbar(a != 0)`.
+  GetScrollbar,
+  /// `SetBar(a != 0, b)` (the field only).
+  SetBar,
+  /// `EnableScrollbar(a, b)` (0 or 1).
+  EnableScrollbar,
+  /// `SetScrollbarConditions(a, b)` (horizontal, vertical).
+  SetScrollbarConditions,
+};
+
+/// Which method (`ee_won_skin_layout`'s `kind`).
+enum class EeWonSkinLayKind : uint32_t {
+  /// `MSComboBox::Virtual08` (after `ComboBox::Virtual08`).
+  MsCombo = 1,
+  /// `MSScrollContainer::Virtual08` (after `Container::Virtual08`).
+  MsScroll,
+  /// `MSListCtrl::Virtual08`: the scroll container's, then the header.
+  MsList,
+  /// `WONComboBox::GetDesiredSize` (the size out).
+  WonComboSize,
+  /// `WONComboBox::Virtual08` (after `ComboBox::Virtual08`).
+  WonCombo,
+  /// `WONScrollContainer::Virtual08` (after `Container::Virtual08`).
+  WonScroll,
+  /// `WONListCtrl::Virtual08`: the scroll container's, then the header.
+  WonList,
+  /// `WONListCtrl::SetStandarColumnHeader(a, *(const GUIString*)b, c)`.
+  WonListTextHeader,
+  /// `WONListCtrl::SetColumnHeader(a, (Component*)b, c)`.
+  WonListHeader,
+  /// `MSEtchedFrameGroup::GetDesiredSize` (the size out).
+  EtchedSize,
+  /// `WONSimpleButton::GetDesiredSize` (the size out).
+  SimpleButtonSize,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonSplitCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  /// `CheckMaxButton(a)` (0 or 1).
+  CheckMaxButton,
+  /// `RegisterMaxButton(a, b)`.
+  RegisterMaxButton,
+  /// `AddQuadrant(a, b)`.
+  AddQuadrant,
+  /// `AddSplitter(a, b)`.
+  AddSplitter,
+  /// `AddComplexSplitter(a, b, c)` (`c` the drag handle or NULL).
+  AddComplexSplitter,
+  /// `AddInvisibleSplitter(a, b)`.
+  AddInvisibleSplitter,
+  /// `MaxQuadrant(a)`.
+  MaxQuadrant,
+  UnMaxQuadrant,
+  /// `SetMinLeftRight(a, b)`.
+  SetMinLeftRight,
+  /// `SetMinTopBottom(a, b)`.
+  SetMinTopBottom,
+  /// `SetPercentages(a, b)`.
+  SetPercentages,
+  /// `SetSplitterPos(a, b, c != 0)`.
+  SetSplitterPos,
+};
+
+/// A setting (`ee_won_stretch_get`).
+enum class EeWonStretchField : uint32_t {
+  Left = 1,
+  Top,
+  Right,
+  Bottom,
+  TileHorz,
+  TileVert,
+  SkipCenter,
+  NeedRecalc,
+};
+
+/// A surface's field (`ee_won_surface_get`).
+enum class EeWonSurfaceField : uint32_t {
+  /// `GetSurfaceFormat()`.
+  Format = 1,
+  Width,
+  Height,
+  BytesPerRow,
+  PixelsPerRow,
+  /// `GetPixelSize()` (4 or 2).
+  PixelSize,
+  ClipX1,
+  ClipY1,
+  ClipX2,
+  ClipY2,
+  /// `GetColor()` (the pixel value: a 16-bit surface's converted colour).
+  Color,
+};
+
+/// A drawing method (`ee_won_surface_draw`; its arguments in the original's order).
+enum class EeWonSurfaceDraw : uint32_t {
+  /// `SetColor(a)`.
+  SetColor = 1,
+  /// `FillRect(a, b, c, d)`.
+  FillRect,
+  /// `DrawRect(a, b, c, d)`.
+  DrawRect,
+  /// `DrawHorzLine(a, b, c)` (x1, x2, y).
+  HorzLine,
+  /// `DrawVertLine(a, b, c)` (x, y1, y2).
+  VertLine,
+  /// `DrawLine(a, b, c, d)`.
+  Line,
+  /// `DrawCircle(a, b, c)`.
+  Circle,
+  /// `FillCircle(a, b, c)`.
+  FillCircle,
+  /// `DrawEllipse(a, b, c, d)`.
+  Ellipse,
+  /// `FillEllipse(a, b, c, d)`.
+  FillEllipse,
+  /// `DrawArc(a, b, c, d, e, f)`.
+  Arc,
+  /// `PutPixel(a, b)`.
+  PutPixel,
+  /// `SetPixel(a, b, c)`.
+  SetPixel,
+  /// `SetClipRect(a, b, c, d)`.
+  SetClipRect,
+  /// `ClearClipRect()`.
+  ClearClipRect,
+};
+
+/// The inward calls of the C++ `TabBar` shell.
+enum class EeWonTabBarCall : uint32_t {
+  /// `HandleComponentEvent(a)` (a `ComponentEvent*`).
+  HandleComponentEvent = 1,
+};
+
+/// The inward calls of the C++ `TabCtrl` shell.
+enum class EeWonTabCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  AddedToParent,
+  /// `HandleComponentEvent(a)` (a `ComponentEvent*`).
+  HandleComponentEvent,
+  /// `TabFocus(a != 0, b != 0)` (0 or 1).
+  TabFocus,
+  /// `CopyAttributes(a)` (`a` the other control's `EeWonTabCtrl*`).
+  CopyAttributes,
+  /// `SetTabBarOnRight(a != 0)`.
+  SetTabBarOnRight,
+  /// `SetArrowsOnLeft(a != 0)`.
+  SetArrowsOnLeft,
+  /// `SetTabArrows(a, b)` (two `Button*` as `Component*`).
+  SetTabArrows,
+  /// `SetCurTab(a, b != 0)`.
+  SetCurTab,
+  /// `SetCurTabByName(*a, b != 0)` (`a` a `const GUIString*`).
+  SetCurTabByName,
+  /// `GetTabIdForContainer(a)` (a `Container*` as a `Component*`).
+  GetTabIdForContainer,
+  /// `EnableTab(a, b != 0)`.
+  EnableTab,
+  /// `AddTab(a, b)` (a `Button*` and a `Container*` as `Component*`s, `b` may be NULL).
+  AddTab,
+  /// `RemoveTab(a)`.
+  RemoveTab,
+  /// the field `a` (`EeWonTabField`).
+  GetField,
+  /// the field `a` = `b`.
+  SetField,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods). `a`..`d` as each says.
+enum class EeWonTextCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `MouseEnter(a, b)`.
+  MouseEnter,
+  MouseExit,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseMove(a, b)`.
+  MouseMove,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `TimerEvent()` (0 or 1).
+  TimerEvent,
+  /// `KeyChar(a)` (0 or 1).
+  KeyChar,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `NotifyRootVisibility(a != 0)`.
+  NotifyRootVisibility,
+  /// `AdjustPosition(a != 0)`.
+  AdjustPosition,
+  /// `ScrollPaint(*a)` (`a` the Graphics).
+  ScrollPaint,
+  /// `CheckSel(a, b, c != 0)`.
+  CheckSel,
+  /// `Reset(a != 0)`.
+  Reset,
+  /// `AddSegment(a)` (a C++ `TextSegment` or one derived from it).
+  AddSegment,
+  /// `LineBreak(a)`.
+  LineBreak,
+  /// `SetLineAlignment(a)` (`HorzAlign`).
+  SetLineAlignment,
+  /// `SetTextFlags(a, b != 0)`.
+  SetTextFlags,
+  /// `SetMaxChars(a)`.
+  SetMaxChars,
+  /// `SetMaxLines(a)`.
+  SetMaxLines,
+  /// `SetWrapIndentSize(a)`.
+  SetWrapIndentSize,
+  /// `GetNumLines()`.
+  GetNumLines,
+  /// `mTextFlags`.
+  TextFlags,
+};
+
+/// The inward calls of the tree (`TreeArea`'s virtuals and methods; rows are `TreeItem*`s).
+enum class EeWonTreeCall : uint32_t {
+  /// the constructor's steps (the root row made and opened, the list flags, the tree flags).
+  Init = 1,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  NotifyMouseItemGone,
+  /// `SetSortType(a)`.
+  SetSortType,
+  /// `Sort(a, b != 0)` (`a` a row or NULL: the root).
+  SortItem,
+  /// `SetTreeFlags(a, b != 0)`.
+  SetTreeFlags,
+  /// `mTreeFlags`.
+  TreeFlags,
+  /// `InsertTreeItem(a, b, c)`: the new row.
+  InsertTreeItem,
+  /// `RemoveTreeItem(a)`.
+  RemoveTreeItem,
+  /// `RemoveAllItems(a)` (`ClearTree` with NULL).
+  RemoveAllItems,
+  /// `OpenItem(a, b != 0)`.
+  OpenItem,
+  /// `CloseItem(a, b != 0, c != 0)`.
+  CloseItem,
+  /// `ToggleItem(a, b != 0, c != 0)`.
+  ToggleItem,
+  /// `mRoot`.
+  Root,
+  /// `mTreeSortType`.
+  SortType,
+  /// `mMouseColItem`.
+  MouseColItem,
+};
+
+/// The inward calls of a row (`TreeItem`'s virtuals and methods; `tree` is given for the ones that have one).
+enum class EeWonTNodeCall : uint32_t {
+  /// `Paint(*a, tree)`.
+  Paint = 1,
+  /// `CalcDimensions(tree)`.
+  CalcDimensions,
+  /// `SetViewport(tree, a)`.
+  SetViewport,
+  /// `Compare(a, tree)`.
+  Compare,
+  /// `CanSelect(tree, a, b)` (0 or 1).
+  CanSelect,
+  /// `SetPos(a, b)` (no tree).
+  SetPos,
+  /// `MouseEnter(tree, a, b)`.
+  MouseEnter,
+  /// `MouseExit(tree)`.
+  MouseExit,
+  /// `MouseMove(tree, a, b)`.
+  MouseMove,
+  /// `MouseDrag(tree, a, b)`.
+  MouseDrag,
+  /// `MouseDown(tree, a, b, c)`.
+  MouseDown,
+  /// `MouseUp(tree, a, b, c)`.
+  MouseUp,
+  /// `GetChild(a)` (no tree).
+  GetChild,
+  /// `GetNextNonChild()` (no tree).
+  GetNextNonChild,
+  /// `GetNextNonChildPos(tree)`.
+  GetNextNonChildPos,
+  /// `InsertChild(tree, a, b)`.
+  InsertChild,
+  /// `RemoveAllChildren(tree)`.
+  RemoveAllChildren,
+  /// `RemoveChild(tree, a)`.
+  RemoveChild,
+  /// `RemoveFromParent(tree)`.
+  RemoveFromParent,
+  /// `CloseAll()` (no tree).
+  CloseAll,
+  /// `InsertChildren(tree, a)`.
+  InsertChildren,
+  /// `SetOpen(tree, a != 0, b != 0, c != 0)`.
+  SetOpen,
+  /// `ToggleOpen(tree, a != 0, b != 0)`.
+  ToggleOpen,
+  /// `IsLastChild()` (no tree; 0 or 1).
+  IsLastChild,
+  /// `ContainsPoint(a, b)` (no tree; 0 or 1).
+  ContainsPoint,
+  /// `Sort(tree, a != 0)`.
+  Sort,
+  /// `mItem` (no tree).
+  Item,
+  /// `mChildren.size()` (no tree).
+  NumChildren,
+  /// `mParent` (no tree).
+  Parent,
+  /// `mOpen` (no tree; 0 or 1).
+  IsOpen,
+  /// `mX` (no tree).
+  Indent,
+  /// `mIndex` (no tree).
+  Index,
+};
+
+/// The inward calls (`ee_won_win_call`).
+enum class EeWonWinCall : uint32_t {
+  CanClose = 1,
+  Close,
+  /// `CheckResize(a)` (a tick).
+  CheckResize,
+  /// `SetTitle`'s platform part (the C++ stored the title).
+  TitleChanged,
+  /// `SetIcon`'s platform part (the C++ stored the icon).
+  IconChanged,
+  /// `Center(a != 0)`.
+  Center,
+  SetClientSize,
+  Show,
+  HandleMouseExit,
+  /// `HandleKeyEvent`, `HandleMouseDown`, `HandleMouseEvent`, `HandleInputEvent` with `a` an `EeWonWinEvent*`.
+  HandleKeyEvent,
+  HandleMouseDown,
+  HandleMouseEvent,
+  HandleInputEvent,
+  /// `IdleUpdate()` (0 or 1).
+  IdleUpdate,
+  /// `TimerEvent(a)`.
+  TimerEvent,
+  /// `Create`'s statements after the icon (`a`, `b` the rectangle's width and height).
+  Create,
+  /// the base `PlatformClose`.
+  PlatformClose,
+  ShowNativeCursor,
+  CheckSetCursor,
+  InvalidateRoot,
+  Minimize,
+  SuspendRootResize,
+  RemoveComponent,
+  IsMouseDown,
+  AddComponent,
+  SetModal,
+  CheckDoubleClick,
+  /// `SetParent((Window*)a)`.
+  SetParent,
+  /// the child window set: `a` inserted (`b != 0`) or erased (the parent's half of `Create` / `PlatformClose`).
+  ChildSet,
+  /// the field `a` (`EeWonWinField`).
+  GetField,
+  /// the field `a` set to `b`.
+  SetField,
+};
+
+/// The inward calls (`ee_won_wm_call`).
+enum class EeWonWmCall : uint32_t {
+  NotifyLostFocus = 1,
+  /// `NotifyGotFocus((Window*)a)`.
+  NotifyGotFocus,
+  /// `GetPopupWindow()` (a `Window*`).
+  PopupWindow,
+  CalcModality,
+  /// `NotModalWindow((Window*)a)` (0 or 1).
+  NotModalWindow,
+  /// `DoDialog((Window*)a, (Component*)b)` (the result).
+  DoDialog,
+  /// `EndDialog(a, (Window*)b, (Component*)c)`.
+  EndDialog,
+  ExitMessageLoop,
+  /// `MessageLoop()` (the result).
+  MessageLoop,
+  /// `AdjustPopupPosition((Window*)a, (Component*)b, c != 0, *(EeWonRect4*)d)`.
+  AdjustPopupPosition,
+  /// `DoPopup` of `*(EeWonWmPopup*)a`.
+  DoPopup,
+  /// `EndPopup((Component*)a)`.
+  EndPopup,
+  /// `CheckEndPopup((Component*)a)`.
+  CheckEndPopup,
+  /// `FindMouseWindow` over `*(EeWonWmMouse*)a` (changed in place).
+  FindMouseWindow,
+  /// `CheckPopupClick` over `*(EeWonWmMouse*)a` (changed in place; 0 or 1).
+  CheckPopupClick,
+  /// `CheckModalValid()` (0 or 1).
+  CheckModalValid,
+  /// the field `a` (`EeWonWmField`).
+  GetField,
+  /// the field `a` set to `b`.
+  SetField,
+  /// `SetNamedFont` of the name `a` (`b` bytes) to the font `c`.
+  SetNamedFont,
+  /// `GetNamedFont` of the name `a` (`b` bytes; a raw `Font*`).
+  GetNamedFont,
+  /// `GetDefaultFont()` (a raw `Font*`).
+  GetDefaultFont,
+  /// `SetDefaultFont((Font*)a)`.
+  SetDefaultFont,
+  /// `SetCacheImages(a != 0)`.
+  SetCacheImages,
+  /// `DecodeImage((DisplayContext*)a, path b of c bytes)` (a `NativeImage*` with the caller's reference).
+  DecodeImage,
+  /// `DecodeImageRaw(path a of b bytes)` (a `RawImage*` with the caller's reference).
+  DecodeImageRaw,
+  /// `DecodeDelayImage(path a of b bytes)` (an `Image*` with the caller's reference).
+  DecodeDelayImage,
+  /// `SetScreenResolution(a, b)`.
+  SetScreenResolution,
+  RestoreScreenResolution,
+  CloseAllWindows,
+  /// `AddWindow((Window*)a)` (always 1).
+  AddWindow,
+  /// `RemoveWindow((Window*)a)` (0 or 1).
+  RemoveWindow,
+  /// `PostEvent((WindowEventBase*)a, b != 0)` (any thread).
+  PostEvent,
+  /// `AddTimerEvent((WindowEventBase*)a)`.
+  AddTimerEvent,
+  /// `RemoveTimerEvent((WindowEventBase*)a)`.
+  RemoveTimerEvent,
+  RemoveAllTimerEvents,
+  /// `SubscribeToBroadcast((Component*)a, b != 0)`.
+  SubscribeToBroadcast,
+  ClearSubscriptions,
+  /// `BroadcastEvent((ComponentEvent*)a)`.
+  BroadcastEvent,
+  /// `PeekNextEvent()` (a `WindowEventBase*`, or 0; any thread).
+  PeekNextEvent,
+  ProcessEvents,
+  /// `DeliverEvent((WindowEventBase*)a)`.
+  DeliverEvent,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonWbCall : uint32_t {
+  /// `SetTextHook(*(const GUIString*)a)`.
+  SetTextHook = 1,
+  /// `Virtual08` (SizeChanged).
+  SizeChanged,
+  /// `AdjustHeightToFitText()`.
+  AdjustHeightToFitText,
+  /// `SetAdjustHeightToFitText(a != 0)`.
+  SetAdjustHeightToFitText,
+  /// `SetWrapText(a != 0)`.
+  SetWrapText,
+  /// `SetTransparent(a != 0)`.
+  SetTransparent,
+  /// `SetButtonState(a, (Image*)b, c, (Font*)d, checked)` with the checked flag as `e`: see
+  /// `ee_won_wonbtn_set_state`.
+  SetButtonState,
+  /// `GetTextSize(*a, *b)` (`a`, `b` point at i32s).
+  GetTextSize,
+  /// `GetDesiredSize(*a, *b)`.
+  DesiredSize,
+  /// `SetHorzAlign(a)`.
+  SetHorzAlign,
+  /// `SetTextColor(a)`.
+  SetTextColor,
+  /// `SetFont((Font*)a)`.
+  SetFont,
+  /// `CopyAttributes(from)`, `a` the source's Rust button (`ee_won_wonbtn_of`) and `b` its C++ `WONButton*`.
+  CopyAttributes,
+  /// `DrawButtonText(*a, (WrappedText*)b, c)`.
+  DrawButtonText,
+  /// `GetButtonState`: the colour into `*(int*)b`, the text into `*(WrappedText**)c` and the image into
+  /// `*(Image**)d` (each skipped when NULL); `a` the Graphics (unused, as in the original).
+  GetButtonState,
+  /// `Paint(*a)`.
+  Paint,
+  /// `GetText()`: the first font's text's `GUIString*`, 0 when there is no font.
+  GetText,
+  /// the field `a` (`EeWonWbField`).
+  Get,
+  /// the field `a` = `b`.
+  Set,
+};
+
+/// Which Rust object of a C++ object [`EeWonCoreHooks::object_of`] returns.
+enum class EeWonCoreObject {
+  /// an `AsyncOp*`'s [`EeWonAsyncOp`]
+  Op = 0,
+  /// a `SocketOp*`'s [`EeWonSocketOp`]
+  SocketOp = 1,
+  /// an `AsyncSocket*`'s [`EeWonAsyncSocket`]
+  Socket = 2,
+  /// a `QueueSocket*`'s [`EeWonQueueSocket`]
+  Queue = 3,
+  /// a `UDPManager*`'s [`EeWonUdpManager`]
+  UdpManager = 4,
+  /// a `UDPManagerRecvOp*`'s [`EeWonUdpRecvOp`]
+  UdpRecv = 5,
+  /// a `UDPManagerSendRecvOp*`'s [`EeWonUdpSendRecvOp`]
+  UdpSendRecv = 6,
+  /// a `ServerConnection*`'s [`EeWonServerConn`]
+  ServerConn = 7,
+  /// a `RoutingOp*`'s [`EeWonRouteOp`](crate::routeop::EeWonRouteOp)
+  RouteOp = 8,
+  /// a `RoutingConnection*`'s [`EeWonRouteConn`](crate::routeconn::EeWonRouteConn)
+  RouteConn = 9,
+  /// an `AuthContext*`'s [`EeWonAuthCtx`](crate::authobj::EeWonAuthCtx)
+  AuthCtx = 10,
+  /// a `RustServerOp*`'s [`EeWonHostOp`](crate::hostop::EeWonHostOp)
+  HostOp = 11,
+  /// an `HTTPConnection*`'s [`EeWonHttpConn`](crate::httpengine::EeWonHttpConn)
+  HttpConn = 12,
+  /// an `HTTPConnection*`'s or `HTTPSession*`'s lock (its `CriticalSection`'s platform mutex)
+  Lock = 13,
+  /// an `HTTPSession*`'s [`EeWonHttpSession`](crate::httpengine::EeWonHttpSession)
+  HttpSession = 14,
+  /// a `ServerContext*`'s [`ServerList`](crate::servctx::ServerList)
+  Context = 15,
+};
+
+/// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
+enum class EeWonCoreSocketOp {
+  /// `new CloseOp(socket)`
+  Close = 0,
+  /// the queue socket's queued close: a socket op without a socket whose `Continue` succeeds, not run at once
+  QueueClose = 1,
+  /// `new RecvBytesFromOp(size, socket)`
+  RecvFrom = 2,
+  /// `new SendBytesToOp(bytes, addr, socket)`
+  SendTo = 3,
+  /// `new RecvMsgOp(socket)`
+  RecvMsg = 4,
+  /// `new SendMsgOp(bytes, socket)`
+  SendMsg = 5,
+  /// `new ConnectOp(addr, socket)`
+  Connect = 6,
+  /// `new SendBytesOp(bytes, socket)`
+  SendBytes = 7,
+  /// `new RecvBytesOp(size, socket)`
+  RecvBytes = 8,
+  /// `new RecvCRMsgOp(socket)`
+  RecvCrMsg = 9,
+};
+
+/// What an upper-cased token is in a group.
+enum class EeWonCfgToken {
+  /// `}`: the group's end.
+  Close,
+  /// `name:`: a key's value follows (the key is the token without its last character).
+  Key,
+  /// Anything else: a child group or an instruction.
+  Group,
+};
+
+/// `ReadGroupStart`'s next step after a token.
+enum class EeWonCfgStart {
+  /// The token is the group's name (read through a StringParser); read the next token.
+  Name,
+  /// `:` read: the next token is the base name.
+  Colon,
+  /// The token is the base name; read the next token.
+  Base,
+  /// `{`: the header is complete.
+  Open,
+  /// Not `{` where it was expected: "Expecting '{' but got <token>".
+  Error,
+};
+
+/// `HandleInstruction`'s and `HandleValueInstruction`'s instructions (upper-cased tokens).
+enum class EeWonCfgInstruction {
+  /// A registered child group, or unknown.
+  Other,
+  GroupDefine,
+  IfDefined,
+  IfNotDefined,
+  Define,
+  Redefine,
+  IncludeGroup,
+  IncludeFile,
+};
+
+/// The `, optional` suffix of `INCLUDEGROUP` / `INCLUDEFILE`.
+enum class EeWonCfgOptional {
+  /// No suffix, or a bad one (see the warnings): required.
+  Required,
+  /// `, optional`.
+  Optional,
+  /// A comma and no string: "Expecting string: 'optional' after include ..., include is required."
+  WarnNoString,
+  /// A comma and another word: "Expecting string: optional after include ..., include is required."
+  WarnOtherWord,
+};
+
+/// What an ElGamal call computes into a sink.
+enum class EeWonElGamalOp : uint32_t {
+  Encrypt = 0,
+  Decrypt = 1,
+  Sign = 2,
+  RawPrivateKey = 3,
+  RawPublicKey = 4,
+};
+
+/// What `ee_won_auth_cert2_query` asks of an `Auth2Certificate`.
+enum class EeWonCert2Query : uint32_t {
+  /// the community's key id
+  KeyId = 0,
+  /// the first community (0 if none)
+  FirstCommunity = 1,
+  /// the first community's trust
+  FirstCommunityTrust = 2,
+};
+
+/// Which copy `ee_won_smart_get` makes.
+enum class EeWonSmartGet {
+  /// `GetClient(a)`
+  Client = 0,
+  /// `GetGroup(a)`
+  Group = 1,
+  /// `GetMember(a group, b client)`
+  Member = 2,
+  NextClient = 3,
+  NextGroup = 4,
+  NextMember = 5,
+  LastMember = 6,
+  LastClient = 7,
+};
+
+/// A number of the model (`ee_won_smart_number` / `ee_won_smart_set`).
+enum class EeWonSmartNumber {
+  /// `mClientId` (this client's id)
+  ClientId = 0,
+  /// `mMatchTolerance` set by `SetAllowPartialNameMatch` (1: partial names, 0: exact names only)
+  PartialNames = 1,
+  ServerWide = 2,
+  ColonEmote = 3,
+  LastError = 4,
+  LastCommand = 5,
+};
+
+/// What `HandleInstruction` does with an instruction its `ConfigObject` base did not take.
+enum class EeWonTitleInstr {
+  /// Not a title instruction: `false`.
+  NotMine,
+  /// Parse a child `TitleConfig(true)`.
+  ChildTitle,
+  /// Parse a child `CommunityConfig` (`alreadyInCommunity` as the field says).
+  ChildCommunity,
+  /// `"You can't nest Title definitions!"`.
+  ErrorNestTitle,
+  /// `"You can't have a title definition within a community!"`.
+  ErrorTitleInCommunity,
+  /// `"You can't nest communities!"`.
+  ErrorNestCommunity,
+};
+
+/// A number of the parser.
+enum class EeWonChatParserNumber {
+  Error = 0,
+  Command = 1,
+  Prefix = 2,
+  RoomFlags = 3,
+  Duration = 4,
+  Invitation = 5,
+  MatchThreshold = 6,
+  AllowColonEmote = 7,
+};
+
+/// A text of the parser.
+enum class EeWonChatParserText {
+  /// `mInput`: the reply target's name
+  Input = 0,
+  TargetName = 1,
+  Text = 2,
 };
 
 /// The ops (`a`..`d` as documented).
@@ -4764,25 +6330,6 @@ enum class EeWonEeXferSendCall : uint32_t {
   Cleanup,
 };
 
-/// What an ElGamal call computes into a sink.
-enum class EeWonElGamalOp : uint32_t {
-  Encrypt = 0,
-  Decrypt = 1,
-  Sign = 2,
-  RawPrivateKey = 3,
-  RawPublicKey = 4,
-};
-
-/// What `ee_won_auth_cert2_query` asks of an `Auth2Certificate`.
-enum class EeWonCert2Query : uint32_t {
-  /// the community's key id
-  KeyId = 0,
-  /// the first community (0 if none)
-  FirstCommunity = 1,
-  /// the first community's trust
-  FirstCommunityTrust = 2,
-};
-
 /// Where StagingLogic sends a room message: nowhere, handled by itself (the host), or handed to the network logic.
 enum class EeWonStageRoute {
   Drop = 0,
@@ -4790,299 +6337,6 @@ enum class EeWonStageRoute {
   Net = 2,
   /// Handled locally and handed to the network logic too (the host's broadcast).
   LocalAndNet = 3,
-};
-
-/// A virtual the Rust calls on the C++ object (`args` its ints, `p` its object).
-enum class EeWonGfxHook {
-  ClearClipRect,
-  /// (x, y, width, height)
-  SetClipRect,
-  /// (x, y, colour)
-  SetPixel,
-  SetColor,
-  /// (x1, y1, x2, y2)
-  DrawLine,
-  /// (x, y, width, height): the virtual (the base's is `GfxCall::BaseRect`)
-  DrawRect,
-  FillRect,
-  DrawDottedRect,
-  DrawEllipse,
-  FillEllipse,
-  /// (x, y, width, height, start, arc)
-  DrawArc,
-  /// (x, y, width, height, amount)
-  FillRectBlend,
-  /// `p` the Image: `DrawEntire(context, x, y)`
-  ImageEntire,
-  /// `p` the Image: `Draw(context, x, y, left, top, width, height)`
-  ImagePart,
-  /// `p` the GUIString: the font's `DrawString(context, text, offset, length, x, y)`
-  String,
-};
-
-/// The method `ee_won_gfx_call` runs (`a` its ints, `p` its object).
-enum class EeWonGfxCall {
-  /// `SetColor(a0)`
-  SetColor,
-  /// `GetStandardColor(a0)`: the scheme's colour, 0 without a scheme
-  StandardColor,
-  /// `SetSysColor(a0)`
-  SetSysColor,
-  /// `Translate(a0, a1)`
-  Translate,
-  /// `SetPixel(x, y, colour)`
-  SetPixel,
-  /// `DrawImage(p, x, y)`
-  DrawImage,
-  /// `DrawImage(p, x, y, left, top, width, height)`
-  DrawImagePart,
-  DrawLine,
-  DrawRect,
-  FillRect,
-  /// `FillRectBlend(x, y, width, height, amount)`
-  FillRectBlend,
-  DrawDottedRect,
-  DrawEllipse,
-  FillEllipse,
-  DrawArc,
-  /// `DrawString(p, x, y)` with `a2` the text's length (the whole text)
-  DrawString,
-  /// `DrawString(p, offset, length, x, y)`
-  DrawStringPart,
-  PerformClip,
-  /// `PushClipRect(x, y, width, height)`
-  PushClip,
-  PopClip,
-  /// Graphics' own `DrawRectHook`: four lines to the far edges
-  BaseRect,
-  /// Graphics' own `DrawDottedRectHook`: every other pixel of the four edges in the current colour
-  BaseDottedRect,
-  /// Graphics' own `FillRectHook`: a line per row
-  BaseFillRect,
-};
-
-/// The inward calls (the C++ shell's methods; `a` the component, `b` the Graphics where they take them).
-enum class EeWonGrabCall : uint32_t {
-  /// `Clear()`.
-  Clear = 1,
-  /// `PrePaint((Component*)a, *(Graphics*)b)`.
-  PrePaint,
-  /// `Paint((Component*)a, *(Graphics*)b)`.
-  Paint,
-  /// `SetTranslucentColor(a, b)`.
-  SetTranslucentColor,
-  /// `Invalidate((Component*)a)`.
-  Invalidate,
-  /// `SizeChanged((Component*)a)` (nothing).
-  SizeChanged,
-  /// `NeedDrawBG()` (0 or 1).
-  NeedDrawBG,
-};
-
-/// What `ButtonUp` does.
-enum class EeWonButtonUp {
-  /// Still held (or not pressed): nothing.
-  Ignore = 0,
-  /// Released: a repeating button stops its timer.
-  StopRepeat = 1,
-  /// Released without activating.
-  Release = 2,
-  /// Released and activated.
-  Activate = 3,
-};
-
-/// What `Button::KeyDown` does.
-enum class EeWonButtonKey {
-  /// Not handled (false).
-  None = 0,
-  /// Enter on the default button: activate (true).
-  Activate = 1,
-  /// Space: held down and pressed (true).
-  Press = 2,
-  /// An arrow in a radio group: the previous radio activated and focused (true).
-  RadioBack = 3,
-  /// The next radio.
-  RadioForward = 4,
-};
-
-/// The events a component object fires (`FireEvent`).
-enum class EeWonGuiEvent : uint32_t {
-  /// `ComponentEvent_InputReturn`.
-  InputReturn = 1,
-  /// `ComponentEvent_InputTextChanged`.
-  InputTextChanged = 2,
-  /// `ComponentEvent_ListSelChanged`.
-  ListSelChanged = 3,
-  /// `ComponentEvent_Scroll`.
-  Scroll = 4,
-  /// `ComponentEvent_TabCtrlTabSelected`.
-  TabCtrlTabSelected = 5,
-  /// `ComponentEvent_ButtonPressed`.
-  ButtonPressed = 6,
-};
-
-/// What pressed a scrollbar's button (`Scrollbar::HandleComponentEvent`).
-enum class EeWonScrollPress {
-  LineUp = 0,
-  LineDown = 1,
-  /// The track, with the mouse along the axis.
-  Track = 2,
-};
-
-/// The search or compare `ee_won_guistring_op` runs.
-enum class EeWonGuiStringOp {
-  Compare,
-  CompareNoCase,
-  Find,
-  FindNoCase,
-  FindOneOf,
-  RFind,
-};
-
-/// The edit `ee_won_gstr` runs (each the original's method; `a`, `b`, `c` its arguments, `other` its other string
-/// or its units).
-enum class EeWonGstrOp {
-  /// `GUIStringData(unsigned short a)`: room for `a` units, empty.
-  NewCapacity,
-  /// The copy constructor: `other`'s text and terminator.
-  NewCopy,
-  /// `GUIStringData(other, a, b)`: `b` units of `other` from `a`.
-  NewSub,
-  /// `Reserve(a, b != 0)`.
-  Reserve,
-  /// `resize(a, b != 0)`.
-  Resize,
-  /// `AssignWStr(other, a)`: `a` units at `other` (wchar_t*).
-  AssignUnits,
-  /// `AssignStr(other, a)`: `a` bytes of UTF-8 at `other` (char*).
-  AssignNarrow,
-  /// `Fill(a, b, c)`: units `b..b+c` set to `a`, the length `b + c`.
-  Fill,
-  /// `assign(other, a, b)`.
-  Assign,
-  /// `append(a)`: one unit.
-  AppendUnit,
-  /// `append(other, a, b)`.
-  Append,
-  /// `erase(a, b)`.
-  Erase,
-  /// `insert(a, other)`.
-  Insert,
-  /// `setAt(a, b)`: answers `b`.
-  SetAt,
-  /// The destructor: the buffer freed.
-  Free,
-};
-
-/// The decoders.
-enum class EeWonImgKind : int32_t {
-  Png = 0,
-  Jpg = 1,
-};
-
-/// The multi-decoder's calls (`ee_won_img_dec`).
-enum class EeWonImgDecCall : int32_t {
-  /// `AddDecoder((ImageDecoder*)a, extension b of c bytes)`.
-  Add = 0,
-  /// `SetCurExtension(b of c bytes)`.
-  SetExtension = 1,
-  /// The decoder for the current extension (0: none).
-  Find = 2,
-  /// The map's size.
-  Count = 3,
-  /// The map's entry a's decoder.
-  Entry = 4,
-  /// The map's entry a's decoder becomes the decoder b (Duplicate's copy), which the set now owns.
-  SetEntry = 5,
-  /// The set's size.
-  OwnedCount = 6,
-  /// The set's member a (in address order).
-  Owned = 7,
-};
-
-/// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
-enum class EeWonInputCall : uint32_t {
-  /// `Virtual08` (SizeChanged).
-  SizeChanged = 1,
-  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
-  DesiredSize,
-  GotFocus,
-  LostFocus,
-  /// `MouseDown(a, b, c)`.
-  MouseDown,
-  /// `MouseUp(a, b, c)`.
-  MouseUp,
-  MouseExit,
-  /// `MouseDrag(a, b)`.
-  MouseDrag,
-  /// `TimerEvent(a)` (0 or 1).
-  TimerEvent,
-  /// `KeyChar(a)` (0 or 1).
-  KeyChar,
-  /// `KeyDown(a)` (0 or 1).
-  KeyDown,
-  /// `Paint(*a)` (`a` the Graphics).
-  Paint,
-  /// `SetText(text a, b, c != 0)`.
-  SetText,
-  /// `SetPasswordChar(a)` (a `char`, sign-extended).
-  SetPasswordChar,
-  /// `SetAllowSelection(a != 0)`.
-  SetAllowSelection,
-  /// `SelectRange(a, b)`.
-  SelectRange,
-  /// `SetIcon`'s steps after the C++ set the icon.
-  IconChanged,
-  /// `SetCharWidth(a)`.
-  SetCharWidth,
-  /// `SetCursorBlinkRate(a, b)`.
-  SetCursorBlinkRate,
-  /// `AdjustPosition()`.
-  AdjustPosition,
-  /// `CopySelection()`.
-  CopySelection,
-  /// `SetSelText(text a, b, c != 0)`.
-  SetSelText,
-  /// `AddInputHistory(text a, b, c != 0)`.
-  AddInputHistory,
-  /// `SetInputHistory(text a, b, c != 0)`.
-  SetInputHistory,
-  /// `mMaxChars = a`.
-  SetMaxChars,
-  /// `mSelectOnFocus = a != 0`.
-  SetSelectOnFocus,
-  /// `mMaxInputHistory = a`.
-  SetMaxInputHistory,
-  /// `mLeftPad = a`.
-  SetLeftPad,
-  /// `mSelStartChar` (the numeric filter reads it).
-  SelStart,
-};
-
-/// The inward calls (the C++ shell's virtuals and methods).
-enum class EeWonLabelCall : uint32_t {
-  /// `Virtual08` (SizeChanged).
-  SizeChanged = 1,
-  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
-  DesiredSize,
-  /// `Paint(*a)` (`a` the Graphics).
-  Paint,
-  /// `SetText`'s steps after the C++ set the wrapped text: refit, and repaint when `a != 0`.
-  TextSet,
-  /// `SetHorzAlign(a)`.
-  SetHorzAlign,
-  /// `SetVertAlign(a)`.
-  SetVertAlign,
-  /// `SetWrap(a != 0)`.
-  SetWrap,
-  /// `SetAdjustHeightToFitText(a != 0)`.
-  SetAdjustHeightToFitText,
-  /// `SetVertPad(a, b)`.
-  SetVertPad,
-  /// `SetTextColor(a)`.
-  SetTextColor,
-  /// `mColor`.
-  TextColor,
 };
 
 /// Where a message goes: nowhere, handled by this lobby itself (the host), or queued on a socket.
@@ -5528,154 +6782,6 @@ enum class EeWonLanCall : uint32_t {
   ClientList,
   /// `AddPendingSocket(a)` (a peer-authenticated socket the shell accepted).
   AddPending,
-};
-
-/// The instruction classes.
-enum class EeWonLayoutKind : uint32_t {
-  /// `ChildLayoutInstructionBase` itself: Execute does nothing, UsesComponent is false.
-  Base = 0,
-  /// `ChildLayoutInstruction`: refs child, reference; ints flags, x, y, width, height.
-  Child,
-  /// `CenterLayout`: ref the centre box (may be NULL); horz, vert; the list.
-  Center,
-  /// `SameSizeLayout`: horz, vert; the list.
-  SameSize,
-  /// `ClearRightLayout`: ref the component; int the pad; the list.
-  ClearRight,
-  /// `SpaceEvenlyLayout`: ref the space box; ints the left and right pads; horz (`mIsHorz`); the list.
-  SpaceEvenly,
-  /// `NoOverlapLayout`: refs the reference, the target; ints the type, the horizontal and vertical pads; the list.
-  NoOverlap,
-  /// `SizeAtLeastLayout`: ref the target; ints the horizontal and vertical pads; the list.
-  SizeAtLeast,
-  /// `PercentLayout`: refs the target and the param's left, top, right, bottom anchors; ints px, py, pw, ph, lp,
-  /// tp, rp, bp.
-  Percent,
-};
-
-/// An instruction's inward calls.
-enum class EeWonLayoutCall : uint32_t {
-  /// `Execute((Component*)a)` (the parent).
-  Execute = 1,
-  /// `UsesComponent((Component*)a)` (0 or 1).
-  UsesComponent,
-  /// `Add((Component*)a)`: appended to the list (the C++ returns its own `this`).
-  Add,
-  /// `mGroupId`.
-  GroupId,
-  /// `mEnabled` (0 or 1).
-  Enabled,
-};
-
-/// The manager's inward calls.
-enum class EeWonLayoutMgrCall : uint32_t {
-  /// `ExecuteInstructions((Component*)a)` (the container).
-  Execute = 1,
-  /// `AddInstruction(a)` (`a` the `ChildLayoutInstructionBase*`, `b` its `EeWonLayout*`).
-  AddInstruction,
-  /// `AddLayoutPoint((LayoutPoint*)a)` (as a `Component*`).
-  AddLayoutPoint,
-  /// `RemoveComponent((Component*)a)`.
-  RemoveComponent,
-  Clear,
-  /// `EnableInstructions(a, b != 0)`.
-  EnableInstructions,
-  /// `Container::AddChildLayout(a, c)` on the container `d` (`a` the instruction, `b` its `EeWonLayout*`, `c` the
-  /// group id).
-  AddChildLayout,
-  /// The number of instructions (a test read).
-  Count,
-};
-
-/// The inward calls (the C++ shell's virtuals and methods). Items are `ListItem*`s.
-enum class EeWonListCall : uint32_t {
-  /// `ListArea::Virtual08` (SizeChanged).
-  SizeChanged = 1,
-  /// `ListArea::AdjustPosition(a != 0)`.
-  AdjustPosition,
-  /// `ListArea::ScrollPaint(*a)` (`a` the Graphics).
-  ScrollPaint,
-  /// `ListArea::MouseEnter(a, b)`.
-  MouseEnter,
-  MouseExit,
-  /// `ListArea::MouseDown(a, b, c)`.
-  MouseDown,
-  /// `ListArea::MouseUp(a, b, c)`.
-  MouseUp,
-  /// `ListArea::MouseMove(a, b)`.
-  MouseMove,
-  /// `ListArea::MouseDrag(a, b)`.
-  MouseDrag,
-  /// `ListArea::KeyDown(a)` (0 or 1).
-  KeyDown,
-  /// `ListArea::NotifyMouseItemGone()`.
-  NotifyMouseItemGone,
-  /// `ListArea::Sort()` (0 or 1).
-  Sort,
-  BeginUpdate,
-  EndUpdate,
-  /// `Clear(a != 0)`.
-  Clear,
-  /// `GetItem(a)`.
-  GetItem,
-  /// `InsertItem(a, b)`: the item.
-  InsertItem,
-  /// `RefreshItem(a)`.
-  RefreshItem,
-  /// `DeleteItem(a)`.
-  DeleteItem,
-  /// `RemoveItem(a)`.
-  RemoveItem,
-  /// `DeleteRange(a, b)`.
-  DeleteRange,
-  /// `SetListFlags(a, b != 0)`.
-  SetListFlags,
-  /// `mListFlags`.
-  ListFlags,
-  /// `GetNumItems()`.
-  NumItems,
-  /// `GetItemPos(a)`.
-  GetItemPos,
-  /// `SetSelItem(int a, b != 0)`.
-  SetSelItemAt,
-  /// `SetSelItem(ListItem* a, b != 0, c != 0)` (0 or 1).
-  SetSelItem,
-  /// `EnsureVisible(a)`.
-  EnsureVisible,
-  /// `ClearSelection(a != 0)`.
-  ClearSelection,
-  /// `SelectRange(a, b)`.
-  SelectRange,
-  /// `FindItemAt(a)`.
-  FindItemAt,
-  /// `IsItemVisible(a)` (0 or 1).
-  IsItemVisible,
-  EnforceInvariants,
-  RewindSelections,
-  /// `HasMoreSelections()` (0 or 1).
-  HasMoreSelections,
-  /// `GetNextSelection()`.
-  GetNextSelection,
-  /// `GetItemPosAtYPos(a)`.
-  GetItemPosAtYPos,
-  /// `FindSelectableItem(a, b != 0, c != 0)`.
-  FindSelectableItem,
-  /// `SetSortType(a)`.
-  SetSortType,
-  /// `mSortType`.
-  SortType,
-  /// `mSortType = a` (no sort).
-  SetSortTypeOnly,
-  /// `mSelItem`.
-  SelItem,
-  /// `mMouseItem`.
-  MouseItem,
-  /// `mMouseItem = NULL` (the field only).
-  ClearMouseItem,
-  /// `mPaintWidth`.
-  PaintWidth,
-  /// `mPaintWidth = a`.
-  SetPaintWidth,
 };
 
 /// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
@@ -6821,34 +7927,6 @@ enum class EeWonPingOpCall : uint32_t {
   Field,
 };
 
-/// The inward calls (`PopupMenu`'s virtuals and methods).
-enum class EeWonMenuCall : uint32_t {
-  /// `MouseDown(a, b, c)`.
-  MouseDown = 1,
-  /// `MouseUp(a, b, c)`.
-  MouseUp,
-  /// `MouseMove(a, b)`.
-  MouseMove,
-  /// `TimerEvent(a)` (0 or 1).
-  TimerEvent,
-  /// `HandleComponentEvent(a)`.
-  HandleEvent,
-  ListSelChangedHook,
-  EndSubMenu,
-  CheckSubMenu,
-  /// `TryKeyDown(a)` (0 or 1).
-  TryKeyDown,
-  Reset,
-  /// `mCurSubMenu`.
-  SubMenu,
-  /// `mKeyboardMode` (0 or 1).
-  KeyboardMode,
-  /// `mTimerAcc`.
-  TimerAcc,
-  /// `mMouseUpCount`.
-  MouseUpCount,
-};
-
 /// A model object's class.
 enum class EeWonModelKind : uint32_t {
   Player = 0,
@@ -7162,258 +8240,6 @@ enum class EeWonModelCall : uint32_t {
   ServerListAddressAt,
 };
 
-/// The inward calls (the C++ shell's virtuals and methods).
-enum class EeWonMsBtnCall : uint32_t {
-  /// `Virtual08` (SizeChanged).
-  SizeChanged = 1,
-  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
-  DesiredSize,
-  /// `SetTextHook`'s step after the C++ set the text: `AdjustHeightToFitText`.
-  TextSet,
-  /// `SetTransparent(a != 0)`.
-  SetTransparent,
-  /// `SetAdjustHeightToFitText(a != 0)`.
-  SetAdjustHeightToFitText,
-  /// `AdjustHeightToFitText()`.
-  AdjustHeightToFitText,
-  /// `DrawButtonText(*a, b, c)` (`a` the Graphics).
-  DrawButtonText,
-  /// the field `a` (`EeWonMsBtnField`).
-  Get,
-  /// the field `a` = `b`.
-  Set,
-  /// `SetHorzAlign(a)`: the field, then the text centred when it is `HorzAlign_Center`.
-  SetHorzAlign,
-  /// `SetStandardTextColor(a)`: the standard colour, the own colour -1.
-  SetStandardTextColor,
-  /// `IncrementHorzTextPad(a, b)` (each pad plus the low byte, as `unsigned char`).
-  IncrementHorzTextPad,
-  /// `IncrementVertTextPad(a, b)`.
-  IncrementVertTextPad,
-  /// the subclass `a`'s (`EeWonMsBox`) `Init()`, its box `b` pixels wide.
-  BoxInit,
-  /// the subclass `a`'s `Paint(*b)`, its box `c` pixels high.
-  BoxPaint,
-};
-
-/// What is drawn; the arguments per kind are [`EeWonMsPaint`]'s.
-enum class EeWonMsPaintKind : int32_t {
-  /// `LobbyDraw3DFrame(g, a, b, width, height, PRESSED)`.
-  Frame3D = 1,
-  /// `LobbyDrawFrame(g, a, b, width, height, PRESSED)`.
-  Frame,
-  /// `MSGraphicsUtil::DrawFrame3(g, a, b, width, height, _)` (the down flag is not read).
-  Frame3,
-  /// `MSGraphicsUtil::DrawArrow(g, a, _, _, width, height, DISABLED)` (the offsets are not read).
-  Arrow,
-  /// `MSGraphicsUtil::DrawCheck(g, a, b, width, height, PRESSED, CHECKED)`.
-  Check,
-  /// `MSGraphicsUtil::DrawRadio(g, a, b, width, height, PRESSED, CHECKED)`.
-  Radio,
-  /// `MSGraphicsUtil::DrawTab(g, a, b, width, height)`.
-  Tab,
-  /// `MSGraphicsUtil::DrawCloseX(g, a, b, width, height)`.
-  CloseX,
-  /// `MSButton::Paint` after `Component::Paint` (PRESSED, TRANSPARENT, DEFAULT: `IsDefaultButton`, FRAME2).
-  Button,
-  /// `MSTabButton::Paint` after `Component::Paint`.
-  TabButton,
-  /// `MSLabel::Paint` after `MSButtonBase::Paint` (TRANSPARENT).
-  Label,
-  /// `MSHeaderButton::Paint` after `MSButton::Paint`: the sort arrow (`a` the sort type, `b` the text's width,
-  /// `c` the left pad, PRESSED).
-  HeaderSort,
-  /// `MSCloseButton::Paint` after `Button::Paint` (PRESSED).
-  CloseButton,
-  /// `MSScrollThumb::Paint` after `Component::Paint`.
-  ScrollThumb,
-  /// `MSArrowButton::Paint` after `Component::Paint` (`a` the direction, PRESSED, DISABLED).
-  ArrowButton,
-  /// `MS3DFrame::Paint` after `Component::Paint` (`a` the type, PRESSED: not `mIsUp`).
-  Frame3DComponent,
-  /// `MSPopup::Paint` after `Component::Paint`.
-  Popup,
-  /// `MSDlgBack::Paint` after `Component::Paint`.
-  DlgBack,
-  /// `MSEtchedFrame::Paint` after `Component::Paint`.
-  EtchedFrame,
-  /// `MSInputBox::Paint` after `InputBox::Paint`.
-  InputBox,
-  /// `MSScrollbar::Paint` before `Container::Paint` (INVALID: the scroll rectangle's invalid state, TRANSPARENT,
-  /// `a`..`d` the rectangle's left, top, width and height).
-  Scrollbar,
-  /// `MSComboBox::Paint` after `ComboBox::Paint` (DRAW_FRAME).
-  ComboBox,
-  /// `MSScrollContainer::Paint` after `Container::Paint` (VERT / HORZ: the scrollbars visible, TRANSPARENT,
-  /// DRAW_FRAME, DRAW_3D; `a`, `b`, `c`, `d` the vertical bar's left, top, width and height, `e` the horizontal
-  /// bar's height).
-  ScrollContainer,
-  /// `MSEtchedFrameGroup::Paint` after `Container::Paint` (`a` the label's height, `b` its left, `c` its right).
-  EtchedGroup,
-  /// `WONMSSkin::MSImage::Paint` (`a` the image type, `b` the image flags; the size is the image's).
-  SkinImage,
-};
-
-/// The inward calls of the list (`MultiListArea`'s virtuals and methods).
-enum class EeWonMultiCall : uint32_t {
-  /// `AdjustPosition(a != 0)`.
-  AdjustPosition = 1,
-  /// `Virtual08` (SizeChanged).
-  SizeChanged,
-  /// `ScrollPaint(*a)`.
-  ScrollPaint,
-  NotifyMouseItemGone,
-  /// `SetNumColumns(a)`.
-  SetNumColumns,
-  /// `SetColumnWidth(a, b, c != 0)`.
-  SetColumnWidth,
-  /// `SetSortColumn(a, b)`.
-  SetSortColumn,
-  /// `SetSortColumnFunc(a, b)` (`b` a `ListArea::SortFunc`).
-  SetSortColumnFunc,
-  /// `SetColumnHAlign(a, b)`.
-  SetColumnHAlign,
-  /// `SetColumnSizeMode(a, b)`.
-  SetColumnSizeMode,
-  /// `UpdateItem(a)`: the row.
-  UpdateItem,
-  /// `SetCell(a, b, c)`: the row or 0.
-  SetCell,
-  /// `GetColumnAt(a)`.
-  ColumnAt,
-  /// `GetColumnWidth(a)`.
-  ColumnWidth,
-  /// `GetColumnPos(a)`.
-  ColumnPos,
-  /// `mColumnPaintContext`.
-  PaintContext,
-  /// `mSortColumn`.
-  SortColumn,
-  /// `mSortColumnPrev`.
-  SortColumnPrev,
-  /// `mDynamicSizeColumn = a`.
-  SetDynamicSizeColumn,
-  /// `mAutoGrowColumns = a != 0`.
-  SetAutoGrowColumns,
-  /// `mColumnInfoVector.size()`.
-  NumColumns,
-  /// `mTotalColumnWidth`.
-  TotalColumnWidth,
-  /// `mMouseColItem`.
-  MouseColItem,
-  /// `mListHeader`.
-  Header,
-};
-
-/// The inward calls of a row (`MultiListItem`'s virtuals and methods; the list's calls need its Rust list).
-enum class EeWonMRowCall : uint32_t {
-  /// `CalcDimensions(list)`.
-  CalcDimensions = 1,
-  /// `Compare(a, list)`.
-  Compare,
-  /// `SetPos(a, b)` (no list needed).
-  SetPos,
-  /// `Paint(*a, list)`.
-  Paint,
-  /// `SetViewport(list, a)`.
-  SetViewport,
-  /// `CanSelect(list, a, b)` (0 or 1).
-  CanSelect,
-  /// `MouseEnter(list, a, b)`.
-  MouseEnter,
-  /// `MouseExit(list)`.
-  MouseExit,
-  /// `MouseMove(list, a, b)`.
-  MouseMove,
-  /// `MouseDrag(list, a, b)`.
-  MouseDrag,
-  /// `MouseDown(list, a, b, c)`.
-  MouseDown,
-  /// `MouseUp(list, a, b, c)`.
-  MouseUp,
-  /// `SetItem(a, b)` (no list needed).
-  SetItem,
-  /// `GetItem(a)` (no list needed).
-  GetItem,
-  /// `InsertItem(a)` (no list needed).
-  InsertItem,
-};
-
-/// The inward calls of the header (`MultiListHeader`'s virtuals and methods).
-enum class EeWonMHeadCall : uint32_t {
-  /// `Virtual08` (SizeChanged).
-  SizeChanged = 1,
-  MouseExit,
-  /// `MouseDown(a, b, c)`.
-  MouseDown,
-  /// `MouseUp(a, b, c)`.
-  MouseUp,
-  /// `MouseMove(a, b)`.
-  MouseMove,
-  /// `MouseDrag(a, b)`.
-  MouseDrag,
-  /// `HandleComponentEvent(a)`.
-  HandleEvent,
-  /// `SetColumnItem(a, b)`.
-  SetColumnItem,
-  /// `SetMultiListArea(a)`.
-  SetMultiListArea,
-  NotifyColumnChange,
-  /// `SetSortColumn(a, b)`.
-  SetSortColumn,
-  /// `GetColumnIndex(a)`.
-  ColumnIndex,
-  /// `GetSortType(a)`.
-  SortType,
-  /// `mDrawSortArrow` (0 or 1).
-  DrawSortArrow,
-  /// `mListArea`.
-  ListArea,
-  /// `mDragColumn`.
-  DragColumn,
-};
-
-/// The inward calls (the C++ shell's virtuals and methods).
-enum class EeWonPaneCall : uint32_t {
-  /// `AdjustPosition(a != 0)`.
-  AdjustPosition = 1,
-  /// `Virtual08` (SizeChanged).
-  SizeChanged,
-  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
-  DesiredSize,
-  /// `MouseWheel(a)` (0 or 1).
-  MouseWheel,
-  /// `Paint(*a)` (`a` the Graphics).
-  Paint,
-  SetDelegatePos,
-  /// `OnBottom()` (0 or 1).
-  OnBottom,
-  /// `SetBorderPadding(a[0], a[1], a[2], a[3])` (`a` points at the left, top, right and bottom padding).
-  SetBorderPadding,
-  /// `ScrollTranslate(*a, *b)` (`a`, `b` point at i32s).
-  ScrollTranslate,
-  /// `ScrollUntranslate(*a, *b)`.
-  ScrollUntranslate,
-  /// `SetSizeEqualToTotal(a, b)`.
-  SetSizeEqualToTotal,
-  /// `IsRectVisible(*a)` (`a` a `WONRectangle`; 0 or 1).
-  IsRectVisible,
-  /// `SetScrollDimension(a, b)`.
-  SetScrollDimension,
-  /// `SetScrollbar(a)` (a `Scrollbar*`).
-  SetScrollbar,
-  /// `SetScroller(a)` (a `Scroller*`, borrowed).
-  SetScroller,
-  /// `SetVertOffset(a)`.
-  SetVertOffset,
-  /// `SetOffsets(a, b)` (horizontal, vertical).
-  SetOffsets,
-  /// the field `a` (`EeWonGuiField`).
-  GetField,
-  /// the field `a` = `b`.
-  SetField,
-};
-
 /// How a read ended: the whole file read, another version (or tag: nothing given), or cut (the events before the
 /// cut given).
 enum class EeWonPrefsRead {
@@ -7450,225 +8276,6 @@ enum class EeWonPrefsEventKind {
   OptionsBegin,
   OptionName,
   OptionValue,
-};
-
-/// A hook (`ee_won_plat_gfx`; its arguments in the hook's order).
-enum class EeWonPlatGfx : uint32_t {
-  /// `GetPixelHook(a, b)`: the pixel as a COLORREF (0x00BBGGRR).
-  GetPixel = 1,
-  /// `SetPixelHook(a, b, c)`.
-  SetPixel,
-  /// `DrawLineHook(a, b, c, d)`.
-  Line,
-  /// `DrawRectHook(a, b, c, d)`.
-  Rect,
-  /// `FillRectHook(a, b, c, d)`.
-  FillRect,
-  /// `FillRectBlendHook(a, b, c, d, e)`.
-  FillRectBlend,
-  /// `DrawEllipseHook(a, b, c, d)`.
-  Ellipse,
-  /// `FillEllipseHook(a, b, c, d)`.
-  FillEllipse,
-  /// `DrawArcHook(a, b, c, d, e, f)`.
-  Arc,
-  /// `ClearClipRectHook()`.
-  ClearClip,
-  /// `SetClipRectHook(a, b, c, d)`.
-  SetClip,
-};
-
-/// What the window asks of its C++ shell (`me`).
-enum class EeWonPlatWinOp : int32_t {
-  /// The window has a PlatWindowManager (`GetPlatManager() != NULL`).
-  HasWm = 0,
-  /// The manager's `Call(a, b, c)`.
-  Wm = 1,
-  /// `GetMousePosition(x, y)` into `a` (two ints) -> whether the pointer is over the surface.
-  Mouse = 2,
-  /// `FillsSurface()`.
-  Fills = 3,
-  /// `HasFrame()`.
-  Frame = 4,
-  /// `IsPopup()`.
-  Popup = 5,
-  /// `GetWindowState() == WindowState_Open`.
-  Open = 6,
-  /// `GetStyle()`.
-  Style = 7,
-  /// `Window::Create(WONRectangle(a..d))`, the display context and the offscreen image of the root's size.
-  WindowCreate = 8,
-  /// `Center(a)`.
-  Center = 9,
-  /// `SetIsShowing(a)`.
-  Showing = 10,
-  /// `PlatformShow(a)` (the virtual call).
-  Show = 11,
-  /// `QueueEvent(new SizeEvent(a, b, c, d))`.
-  QueueSize = 12,
-  /// `QueueEvent(new InputEvent(InputEvent_MouseExit))`.
-  QueueExit = 13,
-  /// `QueueEvent(new MouseEvent(p[0] .. p[4]))`, `a` five ints.
-  QueueMouse = 14,
-  /// `InvalidateRoot()`.
-  InvalidateRoot = 15,
-  /// `IsMouseInClientArea()`.
-  MouseIn = 16,
-  /// `mRoot->Contains(a, b)`.
-  RootContains = 17,
-  /// The root repainted into the offscreen image when it is invalid and there is one -> whether it was.
-  Paint = 18,
-  /// The parent when it is a PlatGUIWindow and visible, else 0.
-  ParentVisible = 19,
-  /// `Window::PlatformClose()`.
-  WindowClose = 20,
-  /// `Window::TimerEvent(a)`.
-  WindowTimer = 21,
-  /// The cursor `a` when it is a PlatCursor: the system pointer shown and the cursor applied.
-  ApplyCursor = 22,
-  /// Whether the manager's popup window does not want the mouse and is the window `a`.
-  PopupHit = 23,
-  /// `PlatCursorShow(a)`.
-  CursorShow = 24,
-  /// `PlatWindowMinimize((PlatWindow*)a)`.
-  PlatMinimize = 25,
-};
-
-/// The window's calls (`ee_won_plat_win`).
-enum class EeWonPlatWinCall : int32_t {
-  /// The destructor's: off the manager when registered.
-  Destroy = 0,
-  /// `Create(rect a)` (four ints).
-  Create = 1,
-  FollowSurface = 2,
-  /// `SetPosSize(a, b, c, d)`.
-  SetPosSize = 3,
-  /// `GetRect(out a, b)` (four ints; b: the client area).
-  GetRect = 4,
-  SetTitle = 5,
-  /// `PlatformSetCursor(a)`.
-  SetCursor = 6,
-  /// `PlatformShowNativeCursor(a)`.
-  ShowNativeCursor = 7,
-  /// `PlatformShow(a)`.
-  Show = 8,
-  /// `PlatformMinimize(a)`.
-  Minimize = 9,
-  /// `PlatformSetTopMost(a)`.
-  SetTopMost = 10,
-  Close = 11,
-  SetFocus = 12,
-  /// `PlatformSetMouseCapture(a)`.
-  SetCapture = 13,
-  IsVisible = 14,
-  /// `TimerEvent(a)`.
-  Timer = 15,
-  /// `OnPaint()`.
-  Paint = 16,
-  /// `QueueMouse(a: five ints)`.
-  QueueMouse = 17,
-  /// The fields the manager reads into `a` (EeWonPlatWinInfo).
-  Info = 18,
-  /// `mRegistered = a`.
-  SetRegistered = 19,
-  /// `SetMinimizeOnAltTab(a)`.
-  SetMinimizeOnAltTab = 20,
-  /// `SetForwardKeyMsgToParent(a)`.
-  SetForwardKeys = 21,
-};
-
-/// The host's calls (the receiver the C++ `PlatWindowManager*`; a window is a `PlatGUIWindow*`).
-enum class EeWonPlatWmOp : uint32_t {
-  /// `PlatCurrentThreadId() == WindowManager::GetThreadId()` (0 or 1).
-  IsUiThread = 1,
-  /// the window `a`'s fields into the `EeWonPlatWinInfo` at `b`.
-  Info,
-  /// `a->mRegistered = b != 0`.
-  SetRegistered,
-  /// `a->FollowSurface()`.
-  FollowSurface,
-  /// `a->FollowPixelScale()`.
-  FollowPixelScale,
-  /// `a->QueueEvent(new InputEvent(t))`, `t` GotFocus (b 0), LostFocus (1), MouseExit (2).
-  QueueInput,
-  /// `a->QueueEvent(new KeyEvent(t, c, d))`, `t` KeyDown (b 0), KeyUp (1), KeyChar (2).
-  QueueKey,
-  /// `a->QueueMouse(t, p[0], p[1], p[2], p[3])` with `p` the four ints at `c`, `t` MouseMove (b 0), MouseDown (1),
-  /// MouseDoubleClick (2), MouseUp (3), MouseWheel (4).
-  QueueMouse,
-  /// `dynamic_cast<PlatGUIWindow*>(a->GetParent())`.
-  Parent,
-  /// the window `a` held (a `SmartPtr<Window>`'s AddRef) / let go.
-  Hold,
-  Release,
-  /// `a->Close()`.
-  Close,
-  /// `a->ClosePopup(NULL)`.
-  ClosePopup,
-  /// `NotModalWindow(a)` (0 or 1).
-  NotModal,
-  /// `a->PlatformSetFocus()`.
-  SetFocus,
-  /// `a->SetPosSize(b, c, -1, -1)`.
-  SetPosSize,
-  /// `a->OnPaint()`.
-  Paint,
-  /// the window `a`'s title: its wide characters (the count into the int at `b`), valid until the next call.
-  Title,
-  /// the window `a`'s offscreen image's surface (`dynamic_cast<PlatNativeImage*>`), null when it has none.
-  Offscreen,
-  /// `PlatModifiers()`.
-  Modifiers,
-  /// `PlatWindowGetClientSize((PlatWindow*)a, &p[0], &p[1])` with `p` the two ints at `b`.
-  ClientSize,
-  /// `PlatWindowMinimize((PlatWindow*)a)`.
-  Minimize,
-  /// `PlatWindowWake()`.
-  Wake,
-};
-
-/// The manager's calls (`ee_won_plat_wm`; `a`, `b` their arguments, a window as a `PlatGUIWindow*`).
-enum class EeWonPlatWmCall : uint32_t {
-  /// `SetSurfaceSize(a, b)`.
-  SetSurfaceSize = 1,
-  /// `Signal()`.
-  Signal,
-  /// GetNextEvent's start: the timeout.
-  BeginPass,
-  /// GetNextEvent after the wait.
-  EndWait,
-  /// `AddPlatWindow(a)`.
-  Add,
-  /// `RemovePlatWindow(a)`.
-  Remove,
-  /// `BringToFront(a)`.
-  BringToFront,
-  /// `SetFocusWindow(a)`.
-  SetFocus,
-  /// `SetCaptureWindow(a)`.
-  SetCapture,
-  /// `GetCaptureWindow()`.
-  Capture,
-  /// `GetFocusWindow()`.
-  Focus,
-  /// `WindowFromPoint(a, b)`.
-  WindowFromPoint,
-  /// `SetDirty()`.
-  SetDirty,
-  /// `GetSurfaceWidth()`.
-  SurfaceWidth,
-  /// `GetSurfaceHeight()`.
-  SurfaceHeight,
-  /// `GetPlatWindow()`.
-  PlatWindow,
-  /// `PaintAndComposite()`.
-  PaintAndComposite,
-  /// `UnlockFrame()`.
-  UnlockFrame,
-  /// the classic scheme's colour `a` (0..14), -1 past it.
-  Classic,
-  /// the destructor's: every window in the z order unregistered, the order emptied.
-  UnregisterAll,
 };
 
 /// A flag of the saved settings (the C++ `LobbyPersistentData::Flag`).
@@ -8186,41 +8793,6 @@ enum class EeWonLobbyRes : uint32_t {
   WONStatus_ConnRefused_String,
 };
 
-/// The inward calls (the C++ shell's virtuals and methods).
-enum class EeWonRootCall : uint32_t {
-  /// `Virtual08` (SizeChanged).
-  SizeChanged = 1,
-  /// `PrePaint(*a)` (`a` the Graphics).
-  PrePaint,
-  /// `Paint(*a)`.
-  Paint,
-  MouseExit,
-  /// `MouseDown(a, b, c)`.
-  MouseDown,
-  /// `MouseUp(a, b, c)`.
-  MouseUp,
-  /// `MouseMove(a, b)`.
-  MouseMove,
-  /// `MouseDrag(a, b)`.
-  MouseDrag,
-  /// `KeyChar(a)` (always 1).
-  KeyChar,
-  /// `KeyDown(a)` (always 1).
-  KeyDown,
-  /// `KeyUp(a)` (always 1).
-  KeyUp,
-  /// `InvalidateRect(*a)` (a `WONRectangle*`, not changed), also Window::InvalidateRoot's union.
-  InvalidateRect,
-  /// `SetCursor(a)` (a `Cursor*`).
-  SetCursor,
-  /// `RemoveChild(a)`.
-  RemoveChild,
-  /// `AddBG(a)` (a `BackgroundGrabber*`).
-  AddBG,
-  /// the field `a` (`EeWonRootField`).
-  GetField,
-};
-
 /// The host's ops. `a`..`e` are pointers or integers as each op says; `L` is the shell (`RoutingLogic*`).
 enum class EeWonRouteLogicOp : uint32_t {
   /// `((RefCount*)a)->AddRef()`.
@@ -8645,39 +9217,6 @@ enum class EeWonRouteLogicCall : uint32_t {
   Field,
 };
 
-/// The inward calls (the C++ shells' virtuals and methods).
-enum class EeWonScrollerCall : uint32_t {
-  /// `MouseDown(a, b, c)`.
-  MouseDown = 1,
-  /// `MouseWheel(a)` (0 or 1).
-  MouseWheel,
-  GetScrollArea,
-  /// `SetScrollArea(a)` (the original's `SmartPtr` assignment).
-  SetScrollArea,
-  /// `SetOffsets(a, b)` (horizontal, vertical).
-  SetOffsets,
-  /// `SetVertOffset(a)`.
-  SetVertOffset,
-  /// `SetHorzOffset(a)`.
-  SetHorzOffset,
-  AddedToParent,
-  /// `HandleComponentEvent(a)`.
-  HandleEvent,
-  /// `NotifyScrollChange(a != 0)`.
-  NotifyScrollChange,
-  /// `SetScrollbar(a)`.
-  SetScrollbar,
-  AddControls,
-  /// `GetScrollbar(a != 0)`.
-  GetScrollbar,
-  /// `SetBar(a != 0, b)` (the field only).
-  SetBar,
-  /// `EnableScrollbar(a, b)` (0 or 1).
-  EnableScrollbar,
-  /// `SetScrollbarConditions(a, b)` (horizontal, vertical).
-  SetScrollbarConditions,
-};
-
 /// The ops (`a` the `Graphics*` of a paint or a `GUIString*`; `b` a `GUIString*`; `x`, `y`, `w`, `h` as named).
 enum class EeWonScrollTextOp : uint32_t {
   /// `Width()` of the component.
@@ -8735,96 +9274,6 @@ enum class EeWonScrollTextCall : uint32_t {
   Field,
 };
 
-/// Which method (`ee_won_skin_layout`'s `kind`).
-enum class EeWonSkinLayKind : uint32_t {
-  /// `MSComboBox::Virtual08` (after `ComboBox::Virtual08`).
-  MsCombo = 1,
-  /// `MSScrollContainer::Virtual08` (after `Container::Virtual08`).
-  MsScroll,
-  /// `MSListCtrl::Virtual08`: the scroll container's, then the header.
-  MsList,
-  /// `WONComboBox::GetDesiredSize` (the size out).
-  WonComboSize,
-  /// `WONComboBox::Virtual08` (after `ComboBox::Virtual08`).
-  WonCombo,
-  /// `WONScrollContainer::Virtual08` (after `Container::Virtual08`).
-  WonScroll,
-  /// `WONListCtrl::Virtual08`: the scroll container's, then the header.
-  WonList,
-  /// `WONListCtrl::SetStandarColumnHeader(a, *(const GUIString*)b, c)`.
-  WonListTextHeader,
-  /// `WONListCtrl::SetColumnHeader(a, (Component*)b, c)`.
-  WonListHeader,
-  /// `MSEtchedFrameGroup::GetDesiredSize` (the size out).
-  EtchedSize,
-  /// `WONSimpleButton::GetDesiredSize` (the size out).
-  SimpleButtonSize,
-};
-
-/// Which copy `ee_won_smart_get` makes.
-enum class EeWonSmartGet {
-  /// `GetClient(a)`
-  Client = 0,
-  /// `GetGroup(a)`
-  Group = 1,
-  /// `GetMember(a group, b client)`
-  Member = 2,
-  NextClient = 3,
-  NextGroup = 4,
-  NextMember = 5,
-  LastMember = 6,
-  LastClient = 7,
-};
-
-/// A number of the model (`ee_won_smart_number` / `ee_won_smart_set`).
-enum class EeWonSmartNumber {
-  /// `mClientId` (this client's id)
-  ClientId = 0,
-  /// `mMatchTolerance` set by `SetAllowPartialNameMatch` (1: partial names, 0: exact names only)
-  PartialNames = 1,
-  ServerWide = 2,
-  ColonEmote = 3,
-  LastError = 4,
-  LastCommand = 5,
-};
-
-/// The inward calls (the C++ shell's virtuals and methods).
-enum class EeWonSplitCall : uint32_t {
-  /// `Virtual08` (SizeChanged).
-  SizeChanged = 1,
-  /// `MouseDown(a, b, c)`.
-  MouseDown,
-  /// `MouseUp(a, b, c)`.
-  MouseUp,
-  /// `MouseDrag(a, b)`.
-  MouseDrag,
-  /// `HandleComponentEvent(a)`.
-  HandleEvent,
-  /// `CheckMaxButton(a)` (0 or 1).
-  CheckMaxButton,
-  /// `RegisterMaxButton(a, b)`.
-  RegisterMaxButton,
-  /// `AddQuadrant(a, b)`.
-  AddQuadrant,
-  /// `AddSplitter(a, b)`.
-  AddSplitter,
-  /// `AddComplexSplitter(a, b, c)` (`c` the drag handle or NULL).
-  AddComplexSplitter,
-  /// `AddInvisibleSplitter(a, b)`.
-  AddInvisibleSplitter,
-  /// `MaxQuadrant(a)`.
-  MaxQuadrant,
-  UnMaxQuadrant,
-  /// `SetMinLeftRight(a, b)`.
-  SetMinLeftRight,
-  /// `SetMinTopBottom(a, b)`.
-  SetMinTopBottom,
-  /// `SetPercentages(a, b)`.
-  SetPercentages,
-  /// `SetSplitterPos(a, b, c != 0)`.
-  SetSplitterPos,
-};
-
 /// The sound `UpdateReadyState` plays (if the staging sounds are on).
 enum class EeWonReadySound {
   Silent = 0,
@@ -8862,455 +9311,6 @@ enum class EeWonStagingCall : uint32_t {
   LeaveGame,
   NotifyStagingChange,
   NotifyPingChange,
-};
-
-/// A setting (`ee_won_stretch_get`).
-enum class EeWonStretchField : uint32_t {
-  Left = 1,
-  Top,
-  Right,
-  Bottom,
-  TileHorz,
-  TileVert,
-  SkipCenter,
-  NeedRecalc,
-};
-
-/// A surface's field (`ee_won_surface_get`).
-enum class EeWonSurfaceField : uint32_t {
-  /// `GetSurfaceFormat()`.
-  Format = 1,
-  Width,
-  Height,
-  BytesPerRow,
-  PixelsPerRow,
-  /// `GetPixelSize()` (4 or 2).
-  PixelSize,
-  ClipX1,
-  ClipY1,
-  ClipX2,
-  ClipY2,
-  /// `GetColor()` (the pixel value: a 16-bit surface's converted colour).
-  Color,
-};
-
-/// A drawing method (`ee_won_surface_draw`; its arguments in the original's order).
-enum class EeWonSurfaceDraw : uint32_t {
-  /// `SetColor(a)`.
-  SetColor = 1,
-  /// `FillRect(a, b, c, d)`.
-  FillRect,
-  /// `DrawRect(a, b, c, d)`.
-  DrawRect,
-  /// `DrawHorzLine(a, b, c)` (x1, x2, y).
-  HorzLine,
-  /// `DrawVertLine(a, b, c)` (x, y1, y2).
-  VertLine,
-  /// `DrawLine(a, b, c, d)`.
-  Line,
-  /// `DrawCircle(a, b, c)`.
-  Circle,
-  /// `FillCircle(a, b, c)`.
-  FillCircle,
-  /// `DrawEllipse(a, b, c, d)`.
-  Ellipse,
-  /// `FillEllipse(a, b, c, d)`.
-  FillEllipse,
-  /// `DrawArc(a, b, c, d, e, f)`.
-  Arc,
-  /// `PutPixel(a, b)`.
-  PutPixel,
-  /// `SetPixel(a, b, c)`.
-  SetPixel,
-  /// `SetClipRect(a, b, c, d)`.
-  SetClipRect,
-  /// `ClearClipRect()`.
-  ClearClipRect,
-};
-
-/// The inward calls of the C++ `TabBar` shell.
-enum class EeWonTabBarCall : uint32_t {
-  /// `HandleComponentEvent(a)` (a `ComponentEvent*`).
-  HandleComponentEvent = 1,
-};
-
-/// The inward calls of the C++ `TabCtrl` shell.
-enum class EeWonTabCall : uint32_t {
-  /// `Virtual08` (SizeChanged).
-  SizeChanged = 1,
-  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
-  DesiredSize,
-  /// `KeyDown(a)` (0 or 1).
-  KeyDown,
-  AddedToParent,
-  /// `HandleComponentEvent(a)` (a `ComponentEvent*`).
-  HandleComponentEvent,
-  /// `TabFocus(a != 0, b != 0)` (0 or 1).
-  TabFocus,
-  /// `CopyAttributes(a)` (`a` the other control's `EeWonTabCtrl*`).
-  CopyAttributes,
-  /// `SetTabBarOnRight(a != 0)`.
-  SetTabBarOnRight,
-  /// `SetArrowsOnLeft(a != 0)`.
-  SetArrowsOnLeft,
-  /// `SetTabArrows(a, b)` (two `Button*` as `Component*`).
-  SetTabArrows,
-  /// `SetCurTab(a, b != 0)`.
-  SetCurTab,
-  /// `SetCurTabByName(*a, b != 0)` (`a` a `const GUIString*`).
-  SetCurTabByName,
-  /// `GetTabIdForContainer(a)` (a `Container*` as a `Component*`).
-  GetTabIdForContainer,
-  /// `EnableTab(a, b != 0)`.
-  EnableTab,
-  /// `AddTab(a, b)` (a `Button*` and a `Container*` as `Component*`s, `b` may be NULL).
-  AddTab,
-  /// `RemoveTab(a)`.
-  RemoveTab,
-  /// the field `a` (`EeWonTabField`).
-  GetField,
-  /// the field `a` = `b`.
-  SetField,
-};
-
-/// The inward calls (the C++ shell's virtuals and methods). `a`..`d` as each says.
-enum class EeWonTextCall : uint32_t {
-  /// `Virtual08` (SizeChanged).
-  SizeChanged = 1,
-  /// `MouseEnter(a, b)`.
-  MouseEnter,
-  MouseExit,
-  /// `MouseDown(a, b, c)`.
-  MouseDown,
-  /// `MouseUp(a, b, c)`.
-  MouseUp,
-  /// `MouseMove(a, b)`.
-  MouseMove,
-  /// `MouseDrag(a, b)`.
-  MouseDrag,
-  /// `TimerEvent()` (0 or 1).
-  TimerEvent,
-  /// `KeyChar(a)` (0 or 1).
-  KeyChar,
-  /// `KeyDown(a)` (0 or 1).
-  KeyDown,
-  /// `NotifyRootVisibility(a != 0)`.
-  NotifyRootVisibility,
-  /// `AdjustPosition(a != 0)`.
-  AdjustPosition,
-  /// `ScrollPaint(*a)` (`a` the Graphics).
-  ScrollPaint,
-  /// `CheckSel(a, b, c != 0)`.
-  CheckSel,
-  /// `Reset(a != 0)`.
-  Reset,
-  /// `AddSegment(a)` (a C++ `TextSegment` or one derived from it).
-  AddSegment,
-  /// `LineBreak(a)`.
-  LineBreak,
-  /// `SetLineAlignment(a)` (`HorzAlign`).
-  SetLineAlignment,
-  /// `SetTextFlags(a, b != 0)`.
-  SetTextFlags,
-  /// `SetMaxChars(a)`.
-  SetMaxChars,
-  /// `SetMaxLines(a)`.
-  SetMaxLines,
-  /// `SetWrapIndentSize(a)`.
-  SetWrapIndentSize,
-  /// `GetNumLines()`.
-  GetNumLines,
-  /// `mTextFlags`.
-  TextFlags,
-};
-
-/// What `HandleInstruction` does with an instruction its `ConfigObject` base did not take.
-enum class EeWonTitleInstr {
-  /// Not a title instruction: `false`.
-  NotMine,
-  /// Parse a child `TitleConfig(true)`.
-  ChildTitle,
-  /// Parse a child `CommunityConfig` (`alreadyInCommunity` as the field says).
-  ChildCommunity,
-  /// `"You can't nest Title definitions!"`.
-  ErrorNestTitle,
-  /// `"You can't have a title definition within a community!"`.
-  ErrorTitleInCommunity,
-  /// `"You can't nest communities!"`.
-  ErrorNestCommunity,
-};
-
-/// The inward calls of the tree (`TreeArea`'s virtuals and methods; rows are `TreeItem*`s).
-enum class EeWonTreeCall : uint32_t {
-  /// the constructor's steps (the root row made and opened, the list flags, the tree flags).
-  Init = 1,
-  /// `HandleComponentEvent(a)`.
-  HandleEvent,
-  NotifyMouseItemGone,
-  /// `SetSortType(a)`.
-  SetSortType,
-  /// `Sort(a, b != 0)` (`a` a row or NULL: the root).
-  SortItem,
-  /// `SetTreeFlags(a, b != 0)`.
-  SetTreeFlags,
-  /// `mTreeFlags`.
-  TreeFlags,
-  /// `InsertTreeItem(a, b, c)`: the new row.
-  InsertTreeItem,
-  /// `RemoveTreeItem(a)`.
-  RemoveTreeItem,
-  /// `RemoveAllItems(a)` (`ClearTree` with NULL).
-  RemoveAllItems,
-  /// `OpenItem(a, b != 0)`.
-  OpenItem,
-  /// `CloseItem(a, b != 0, c != 0)`.
-  CloseItem,
-  /// `ToggleItem(a, b != 0, c != 0)`.
-  ToggleItem,
-  /// `mRoot`.
-  Root,
-  /// `mTreeSortType`.
-  SortType,
-  /// `mMouseColItem`.
-  MouseColItem,
-};
-
-/// The inward calls of a row (`TreeItem`'s virtuals and methods; `tree` is given for the ones that have one).
-enum class EeWonTNodeCall : uint32_t {
-  /// `Paint(*a, tree)`.
-  Paint = 1,
-  /// `CalcDimensions(tree)`.
-  CalcDimensions,
-  /// `SetViewport(tree, a)`.
-  SetViewport,
-  /// `Compare(a, tree)`.
-  Compare,
-  /// `CanSelect(tree, a, b)` (0 or 1).
-  CanSelect,
-  /// `SetPos(a, b)` (no tree).
-  SetPos,
-  /// `MouseEnter(tree, a, b)`.
-  MouseEnter,
-  /// `MouseExit(tree)`.
-  MouseExit,
-  /// `MouseMove(tree, a, b)`.
-  MouseMove,
-  /// `MouseDrag(tree, a, b)`.
-  MouseDrag,
-  /// `MouseDown(tree, a, b, c)`.
-  MouseDown,
-  /// `MouseUp(tree, a, b, c)`.
-  MouseUp,
-  /// `GetChild(a)` (no tree).
-  GetChild,
-  /// `GetNextNonChild()` (no tree).
-  GetNextNonChild,
-  /// `GetNextNonChildPos(tree)`.
-  GetNextNonChildPos,
-  /// `InsertChild(tree, a, b)`.
-  InsertChild,
-  /// `RemoveAllChildren(tree)`.
-  RemoveAllChildren,
-  /// `RemoveChild(tree, a)`.
-  RemoveChild,
-  /// `RemoveFromParent(tree)`.
-  RemoveFromParent,
-  /// `CloseAll()` (no tree).
-  CloseAll,
-  /// `InsertChildren(tree, a)`.
-  InsertChildren,
-  /// `SetOpen(tree, a != 0, b != 0, c != 0)`.
-  SetOpen,
-  /// `ToggleOpen(tree, a != 0, b != 0)`.
-  ToggleOpen,
-  /// `IsLastChild()` (no tree; 0 or 1).
-  IsLastChild,
-  /// `ContainsPoint(a, b)` (no tree; 0 or 1).
-  ContainsPoint,
-  /// `Sort(tree, a != 0)`.
-  Sort,
-  /// `mItem` (no tree).
-  Item,
-  /// `mChildren.size()` (no tree).
-  NumChildren,
-  /// `mParent` (no tree).
-  Parent,
-  /// `mOpen` (no tree; 0 or 1).
-  IsOpen,
-  /// `mX` (no tree).
-  Indent,
-  /// `mIndex` (no tree).
-  Index,
-};
-
-/// The inward calls (`ee_won_win_call`).
-enum class EeWonWinCall : uint32_t {
-  CanClose = 1,
-  Close,
-  /// `CheckResize(a)` (a tick).
-  CheckResize,
-  /// `SetTitle`'s platform part (the C++ stored the title).
-  TitleChanged,
-  /// `SetIcon`'s platform part (the C++ stored the icon).
-  IconChanged,
-  /// `Center(a != 0)`.
-  Center,
-  SetClientSize,
-  Show,
-  HandleMouseExit,
-  /// `HandleKeyEvent`, `HandleMouseDown`, `HandleMouseEvent`, `HandleInputEvent` with `a` an `EeWonWinEvent*`.
-  HandleKeyEvent,
-  HandleMouseDown,
-  HandleMouseEvent,
-  HandleInputEvent,
-  /// `IdleUpdate()` (0 or 1).
-  IdleUpdate,
-  /// `TimerEvent(a)`.
-  TimerEvent,
-  /// `Create`'s statements after the icon (`a`, `b` the rectangle's width and height).
-  Create,
-  /// the base `PlatformClose`.
-  PlatformClose,
-  ShowNativeCursor,
-  CheckSetCursor,
-  InvalidateRoot,
-  Minimize,
-  SuspendRootResize,
-  RemoveComponent,
-  IsMouseDown,
-  AddComponent,
-  SetModal,
-  CheckDoubleClick,
-  /// `SetParent((Window*)a)`.
-  SetParent,
-  /// the child window set: `a` inserted (`b != 0`) or erased (the parent's half of `Create` / `PlatformClose`).
-  ChildSet,
-  /// the field `a` (`EeWonWinField`).
-  GetField,
-  /// the field `a` set to `b`.
-  SetField,
-};
-
-/// The inward calls (`ee_won_wm_call`).
-enum class EeWonWmCall : uint32_t {
-  NotifyLostFocus = 1,
-  /// `NotifyGotFocus((Window*)a)`.
-  NotifyGotFocus,
-  /// `GetPopupWindow()` (a `Window*`).
-  PopupWindow,
-  CalcModality,
-  /// `NotModalWindow((Window*)a)` (0 or 1).
-  NotModalWindow,
-  /// `DoDialog((Window*)a, (Component*)b)` (the result).
-  DoDialog,
-  /// `EndDialog(a, (Window*)b, (Component*)c)`.
-  EndDialog,
-  ExitMessageLoop,
-  /// `MessageLoop()` (the result).
-  MessageLoop,
-  /// `AdjustPopupPosition((Window*)a, (Component*)b, c != 0, *(EeWonRect4*)d)`.
-  AdjustPopupPosition,
-  /// `DoPopup` of `*(EeWonWmPopup*)a`.
-  DoPopup,
-  /// `EndPopup((Component*)a)`.
-  EndPopup,
-  /// `CheckEndPopup((Component*)a)`.
-  CheckEndPopup,
-  /// `FindMouseWindow` over `*(EeWonWmMouse*)a` (changed in place).
-  FindMouseWindow,
-  /// `CheckPopupClick` over `*(EeWonWmMouse*)a` (changed in place; 0 or 1).
-  CheckPopupClick,
-  /// `CheckModalValid()` (0 or 1).
-  CheckModalValid,
-  /// the field `a` (`EeWonWmField`).
-  GetField,
-  /// the field `a` set to `b`.
-  SetField,
-  /// `SetNamedFont` of the name `a` (`b` bytes) to the font `c`.
-  SetNamedFont,
-  /// `GetNamedFont` of the name `a` (`b` bytes; a raw `Font*`).
-  GetNamedFont,
-  /// `GetDefaultFont()` (a raw `Font*`).
-  GetDefaultFont,
-  /// `SetDefaultFont((Font*)a)`.
-  SetDefaultFont,
-  /// `SetCacheImages(a != 0)`.
-  SetCacheImages,
-  /// `DecodeImage((DisplayContext*)a, path b of c bytes)` (a `NativeImage*` with the caller's reference).
-  DecodeImage,
-  /// `DecodeImageRaw(path a of b bytes)` (a `RawImage*` with the caller's reference).
-  DecodeImageRaw,
-  /// `DecodeDelayImage(path a of b bytes)` (an `Image*` with the caller's reference).
-  DecodeDelayImage,
-  /// `SetScreenResolution(a, b)`.
-  SetScreenResolution,
-  RestoreScreenResolution,
-  CloseAllWindows,
-  /// `AddWindow((Window*)a)` (always 1).
-  AddWindow,
-  /// `RemoveWindow((Window*)a)` (0 or 1).
-  RemoveWindow,
-  /// `PostEvent((WindowEventBase*)a, b != 0)` (any thread).
-  PostEvent,
-  /// `AddTimerEvent((WindowEventBase*)a)`.
-  AddTimerEvent,
-  /// `RemoveTimerEvent((WindowEventBase*)a)`.
-  RemoveTimerEvent,
-  RemoveAllTimerEvents,
-  /// `SubscribeToBroadcast((Component*)a, b != 0)`.
-  SubscribeToBroadcast,
-  ClearSubscriptions,
-  /// `BroadcastEvent((ComponentEvent*)a)`.
-  BroadcastEvent,
-  /// `PeekNextEvent()` (a `WindowEventBase*`, or 0; any thread).
-  PeekNextEvent,
-  ProcessEvents,
-  /// `DeliverEvent((WindowEventBase*)a)`.
-  DeliverEvent,
-};
-
-/// The inward calls (the C++ shell's virtuals and methods).
-enum class EeWonWbCall : uint32_t {
-  /// `SetTextHook(*(const GUIString*)a)`.
-  SetTextHook = 1,
-  /// `Virtual08` (SizeChanged).
-  SizeChanged,
-  /// `AdjustHeightToFitText()`.
-  AdjustHeightToFitText,
-  /// `SetAdjustHeightToFitText(a != 0)`.
-  SetAdjustHeightToFitText,
-  /// `SetWrapText(a != 0)`.
-  SetWrapText,
-  /// `SetTransparent(a != 0)`.
-  SetTransparent,
-  /// `SetButtonState(a, (Image*)b, c, (Font*)d, checked)` with the checked flag as `e`: see
-  /// `ee_won_wonbtn_set_state`.
-  SetButtonState,
-  /// `GetTextSize(*a, *b)` (`a`, `b` point at i32s).
-  GetTextSize,
-  /// `GetDesiredSize(*a, *b)`.
-  DesiredSize,
-  /// `SetHorzAlign(a)`.
-  SetHorzAlign,
-  /// `SetTextColor(a)`.
-  SetTextColor,
-  /// `SetFont((Font*)a)`.
-  SetFont,
-  /// `CopyAttributes(from)`, `a` the source's Rust button (`ee_won_wonbtn_of`) and `b` its C++ `WONButton*`.
-  CopyAttributes,
-  /// `DrawButtonText(*a, (WrappedText*)b, c)`.
-  DrawButtonText,
-  /// `GetButtonState`: the colour into `*(int*)b`, the text into `*(WrappedText**)c` and the image into
-  /// `*(Image**)d` (each skipped when NULL); `a` the Graphics (unused, as in the original).
-  GetButtonState,
-  /// `Paint(*a)`.
-  Paint,
-  /// `GetText()`: the first font's text's `GUIString*`, 0 when there is no font.
-  GetText,
-  /// the field `a` (`EeWonWbField`).
-  Get,
-  /// the field `a` = `b`.
-  Set,
 };
 
 /// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
@@ -10767,136 +10767,8 @@ struct EeWonWriteBuffer;
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
 
+/// The server list.
 struct EeWonServerList;
-
-/// A member handed over.
-struct EeWonAdminValue {
-  int64_t num;
-  const uint8_t *data;
-  size_t len;
-};
-
-/// Receives bytes; valid only during the call.
-using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
-
-/// One value read: a number, or a string's range in the reply (`whole` false: its length was read but not its
-/// bytes, so the original erased the member).
-struct EeWonAdminField {
-  /// `EE_WON_ADMIN_VALUE`, `EE_WON_ADMIN_END`, `EE_WON_ADMIN_CUT`
-  uint8_t tag;
-  bool whole;
-  int32_t num;
-  uint32_t at;
-  uint32_t len;
-};
-
-/// The values of a reply, handed over once.
-using EeWonAdminSink = void(*)(void *context, const EeWonAdminField *fields, size_t count);
-
-/// A C++ call on one object.
-using EeWonCoreFn = void(*)(void *object);
-
-/// The C++ calls of the whole library (AsyncOp.cpp's one table). Every object crosses as its `RefCount*`; a `new`
-/// object holds no reference yet.
-struct EeWonCoreHooks {
-  /// `object->AddRef()`, `object->Release()` (any `RefCount*`)
-  EeWonCoreFn ref_add;
-  EeWonCoreFn ref_release;
-  /// `completion->Complete(op)` (the C++ makes the `AsyncOpPtr`)
-  void (*completion_call)(void *completion, void *op);
-  /// the object's Rust object of that kind (null for a null object or one not of the kind's class)
-  void *(*object_of)(void *object, EeWonCoreObject kind);
-  /// a socket op's virtual `Duplicate()` (a new op, or null)
-  void *(*socketop_duplicate)(void *op);
-  /// `new AsyncOp`
-  void *(*new_op)();
-  /// `new RustCompletion(body)`: its `Complete` runs the body, its deletion frees it
-  void *(*new_completion)(EeWonCompletion *body);
-  /// a new socket op of the class (`socket`, `bytes` and `addr` may be null where the class takes none)
-  void *(*new_socket_op)(EeWonCoreSocketOp kind,
-                         void *socket,
-                         void *bytes,
-                         const EeWonIpAddr *addr,
-                         uint32_t size);
-  /// `new QueueSocket(type)`, or `new BlockingSocket(type)` (the ops' own sockets)
-  void *(*new_queue_socket)(int32_t kind, bool blocking);
-  /// `new UDPManagerRecvOp` (from `addr`; any sender for null)
-  void *(*new_udp_recv_op)(const EeWonIpAddr *addr);
-  /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
-  long (*udp_check)(void *op, const uint8_t *data, size_t length, bool *threw);
-  /// `UDPManagerSendRecvOp::StaticCheckResponse`, a reply wait's message check (kept as the C++ function's address)
-  void *udp_response_check;
-  /// a socket's `Fn2B0D90(port, reuse)`: bound to the local host
-  long (*socket_bind_local)(void *socket, uint16_t port, bool reuse);
-  /// a `ByteBuffer`'s bytes (its `mBytes`)
-  const EeWonByteBuffer *(*bytes_of)(void *buffer);
-  /// a socket op's virtual `Continue()`
-  long (*socketop_continue)(void *op);
-  /// a socket op's virtual `Start()`
-  long (*socketop_start)(void *op);
-  /// `WONAPICore::AddToSocketThread(op)`
-  EeWonCoreFn socket_thread_add;
-  /// a new `ByteBuffer` adopting Rust's bytes, a reference taken
-  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
-  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
-  /// result's
-  long (*transform)(void *socket, void **message, bool send);
-  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
-  void (*progress)(void *op, void *completion);
-  /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
-  long (*accept)(void *socket, void **out);
-  /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
-  void (*socket_hook)(void *socket, int32_t which);
-  /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
-  void *(*new_route_op)(void *conn, int32_t ty);
-  /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
-  /// `GetUnsolicitedDerivedOp(type)` (1: the new op with one reference for the caller, or null)
-  void *(*route_virtual)(void *conn, int32_t which, void *op, uint8_t message_type);
-  /// `new HTTPConnection(NULL)`
-  void *(*new_http_conn)();
-};
-
-/// One entry of the login's maps across the C ABI: a name (UTF-16 LE bytes), a second text (UTF-16 LE bytes: a
-/// nickname's value), bytes (a CD key, user data, a file hash) when `present`, and more bytes (the keyed hash
-/// data).
-struct EeWonAuthEntry {
-  const uint8_t *name;
-  size_t name_len;
-  const uint8_t *value;
-  size_t value_len;
-  const uint8_t *bytes;
-  size_t bytes_len;
-  const uint8_t *extra;
-  size_t extra_len;
-  bool present;
-};
-
-/// The C++ side: `context` is the `AuthContext`; every object is a `RefCount*`.
-struct EeWonAuthFlowHooks {
-  void *context;
-  /// `RefCount::AddRef`
-  void (*add_ref)(void*);
-  /// `RefCount::Release`
-  void (*release)(void*);
-  /// `AsyncOp::Kill(true)`
-  void (*op_kill)(void*);
-  /// `AsyncOp::IsKilled`
-  bool (*op_killed)(void*);
-  /// `AsyncOp::GetStatus`
-  long (*op_status)(void*);
-  /// `AsyncOp::RunAsync`
-  void (*op_run_async)(void*, long);
-  /// `AsyncOp::Run(mode, timeout)`
-  long (*op_run)(void*, long, unsigned long);
-  /// `AsyncOp::Finish`
-  void (*op_finish)(void*, long);
-  /// a new `AsyncOp` (one reference) whose completion is `StaticAutoRefreshCallback` on the context
-  void *(*new_timer)(void*);
-  /// a new `GetCertOp` on the context (one reference), its completion `StaticGetCertCallback` when asked
-  void *(*new_cert_op)(void*, bool);
-  /// `GetCertOp::GetPeerData`: a new reference to its peer data, or NULL
-  EeWonAuthObj *(*cert_peer_data)(void*);
-};
 
 /// The host: `(component, op, a, b, c, d) -> result`. `component` is the C++ object the Rust one belongs to.
 using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
@@ -10905,24 +10777,6 @@ using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
                                     ptrdiff_t b,
                                     ptrdiff_t c,
                                     ptrdiff_t d);
-
-/// `ReadBuffer`'s state, embedded by value in the C++ object (a reader over bytes someone else owns).
-struct EeWonReadBuffer {
-  /// the read position
-  long pos;
-  const uint8_t *data;
-  long length;
-};
-
-/// An entry across the C ABI: the fields, then the four strings (remote location, file name, type, entity tag).
-struct EeWonCacheEntry {
-  int32_t id;
-  bool valid;
-  int64_t expiration;
-  int64_t last_access;
-  const uint8_t *strings[4];
-  size_t lengths[4];
-};
 
 /// The host: the C++ config's reads, its frame and its setters. Every callback that can throw catches and keeps
 /// the exception and answers false.
@@ -10947,32 +10801,6 @@ struct EeWonCfgTabHost {
   /// The frame's int `slot` (a value a read or a setter put there).
   int32_t (*peek)(void *ctx, int32_t slot);
 };
-
-/// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
-struct EeWonChatText {
-  const void *text;
-  size_t length;
-};
-
-/// Receives wide units (`wchar_t` values); valid only during the call.
-using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
-
-/// The parse's result for the C++ to apply; `*_set` false leaves that member alone.
-struct EeWonChatOutcome {
-  bool ok;
-  int32_t error;
-  int32_t command;
-  bool target_set;
-  /// The client's index in the names handed in, -1 for NULL.
-  int32_t target;
-  bool duration_set;
-  uint32_t duration;
-  bool invitation_set;
-  bool invitation;
-};
-
-/// Receives a text the parse set (`which`: `EE_WON_CHAT_TARGET_NAME` or `EE_WON_CHAT_TEXT`).
-using EeWonChatSink = void(*)(void *context, int32_t which, const uint32_t *units, size_t count);
 
 /// A `WONRectangle` (x, y, width, height).
 struct EeWonRect {
@@ -11004,488 +10832,6 @@ struct EeWonCompMembers {
 
 /// A world's own lookup of a component's block (`ee_won_comp_members_resolver`).
 using EeWonCompResolveFn = EeWonCompMembers*(*)(ptrdiff_t c);
-
-/// `FileReader`'s state: the file, or the memory buffer (owned when read into memory), its length and position.
-/// `memory_mode` is the original's flag: set by a memory open and by `length()` once it measured the file.
-struct EeWonFileReader {
-  void *file;
-  const uint8_t *buffer;
-  unsigned long length;
-  unsigned long position;
-  bool own_buffer;
-  bool memory_mode;
-};
-
-/// A parser's members the C++ keeps, for one call.
-struct EeWonConfigIo {
-  EeWonFileReader *reader;
-  int32_t *line;
-  bool unicode;
-};
-
-/// A saved state across the C ABI: the file position, name and line, and the pushback's units.
-struct EeWonConfigState {
-  long pos;
-  const uint8_t *path;
-  size_t path_len;
-  int32_t line;
-  const uint16_t *back;
-  size_t back_len;
-};
-
-/// Receives a saved state; valid only during the call.
-using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
-
-/// `new RustServerOp(op)`: the C++ op of a Rust op on the op base (it takes `op`; no reference yet). ServerOp.cpp
-/// sets it at start-up ([`ee_won_core_set_new_host_op`]): a program without the class has none.
-using EeWonNewHostOp = void*(*)(EeWonHostOp *op);
-
-/// Bytes handed over by the C++ (`present` false: a NULL buffer).
-struct EeWonDirBytes {
-  const uint8_t *data;
-  size_t len;
-  bool present;
-};
-
-/// A request's fields from the C++ (texts as UTF-16 LE bytes).
-struct EeWonDbRequest {
-  int32_t kind;
-  uint8_t field_size;
-  int16_t message;
-  int16_t sub;
-  uint32_t user_id;
-  /// the request data, the encrypted key or account data
-  EeWonDirBytes data;
-  EeWonDirBytes name;
-  EeWonDirBytes password;
-  EeWonDirBytes email;
-  const EeWonProfile *profile;
-};
-
-/// An event detail from the C++.
-struct EeWonDbDetail {
-  uint16_t detail_type;
-  int32_t data_type;
-  uint32_t number;
-  EeWonDirBytes text;
-};
-
-/// An event attachment from the C++.
-struct EeWonDbAttachment {
-  EeWonDirBytes description;
-  uint8_t content_type;
-  EeWonDirBytes data;
-};
-
-/// An event report from the C++ (`present` false on a part: not related).
-struct EeWonDbEvent {
-  uint8_t field_size;
-  uint16_t activity_type;
-  bool has_server;
-  uint16_t server_type;
-  EeWonDirBytes server_name;
-  EeWonDirBytes server_addr;
-  bool has_client;
-  EeWonDirBytes client_name;
-  EeWonDirBytes client_addr;
-  bool has_user;
-  uint32_t user_id;
-  EeWonDirBytes user_name;
-  const EeWonDbDetail *details;
-  size_t detail_count;
-  const EeWonDbAttachment *attachments;
-  size_t attachment_count;
-};
-
-/// A DBProxy-style reply read for the C++.
-struct EeWonDbReply {
-  /// how many of the header's fields were read whole (header, service, message, sub-message, status, error
-  /// string, flags): the members the original assigned on the way are the message (3), the sub-message (4)
-  /// and the error string (6)
-  uint8_t read;
-  /// the error string's length was read but not its bytes: the original erased the string
-  bool error_erased;
-  int16_t message;
-  int16_t sub;
-  int32_t status;
-  uint32_t error_at;
-  uint32_t error_len;
-  /// the original threw `ReadBufferException` after the assignments
-  bool cut;
-  int32_t verdict;
-  /// what the op returns with `EE_WON_DB_RETURN` / `EE_WON_DB_DONE`
-  int32_t result;
-  /// the rest of the reply (DBProxy's data, the contest's reply data)
-  uint32_t rest_at;
-  uint32_t rest_len;
-  /// the server's public key (create account)
-  uint32_t key_at;
-  uint32_t key_len;
-  /// the email (get account): 0 not read, 1 erased, 2 read whole at `email_*`
-  uint8_t email;
-  uint32_t email_at;
-  uint32_t email_len;
-  /// where the profile starts (get account)
-  uint32_t profile_at;
-};
-
-/// A parse's end across the C ABI: `kind` 0 parsed (`status` the reply's status), 1 invalid header, 2 the server's
-/// negative `status`, 3 cut short; `sequence` when `has_sequence`.
-struct EeWonDirReply {
-  int32_t kind;
-  int32_t status;
-  bool has_sequence;
-  uint8_t sequence;
-};
-
-/// A data object across the C ABI.
-struct EeWonDirDataObject {
-  const uint8_t *data_type;
-  size_t data_type_len;
-  bool has_data;
-  const uint8_t *data;
-  size_t data_len;
-};
-
-/// An ACL permission across the C ABI (the raw values).
-struct EeWonDirAcl {
-  uint8_t kind;
-  int32_t user;
-  int32_t community;
-  int16_t trust;
-};
-
-/// An entity across the C ABI; valid only during the sink's call. `fields` is the `read` bits.
-struct EeWonDirEntity {
-  uint32_t fields;
-  uint8_t kind;
-  const uint16_t *path;
-  size_t path_len;
-  const uint16_t *name;
-  size_t name_len;
-  const uint16_t *display_name;
-  size_t display_name_len;
-  const uint8_t *net_addr;
-  size_t net_addr_len;
-  bool req_unique;
-  int32_t lifespan;
-  int32_t created;
-  int32_t touched;
-  int32_t crc;
-  int32_t create_ip;
-  int32_t touch_ip;
-  int32_t create_id;
-  int32_t touch_id;
-  const EeWonDirDataObject *objects;
-  size_t object_count;
-  const EeWonDirAcl *acls;
-  size_t acl_count;
-};
-
-/// Receives an entity; valid only during the call.
-using EeWonDirEntitySink = void(*)(void *context, const EeWonDirEntity *entity);
-
-/// A data object.
-struct EeWonDirObject {
-  EeWonDirBytes data_type;
-  EeWonDirBytes data;
-};
-
-/// A data object change.
-struct EeWonDirMod {
-  uint16_t offset;
-  bool insert;
-  EeWonDirObject object;
-};
-
-/// A query: the path as UTF-16 LE bytes.
-struct EeWonDirQuery {
-  uint32_t flags;
-  EeWonDirBytes path;
-  const EeWonDirBytes *types;
-  size_t type_count;
-};
-
-/// A request's fields (strings as UTF-16 LE bytes, the arrays as pointer and count).
-struct EeWonDirRequest {
-  int32_t op;
-  bool is_service;
-  uint32_t flags;
-  EeWonDirBytes path;
-  EeWonDirBytes name;
-  EeWonDirBytes display_name;
-  EeWonDirBytes net_addr;
-  EeWonDirBytes new_name;
-  EeWonDirBytes new_display_name;
-  EeWonDirBytes new_net_addr;
-  uint32_t lifespan;
-  bool is_unique;
-  uint8_t mode;
-  uint8_t find_flags;
-  const EeWonDirObject *objects;
-  size_t object_count;
-  const EeWonDirMod *mods;
-  size_t mod_count;
-  const EeWonDirBytes *types;
-  size_t type_count;
-  const EeWonDirQuery *queries;
-  size_t query_count;
-  EeWonDirBytes product;
-};
-
-/// A status reply for the C++.
-struct EeWonDirStatusReply {
-  /// 0 read whole, 1 not a status reply, 2 cut short
-  int32_t end;
-  int16_t status;
-  /// a returned address: its offset and length in the reply
-  bool has_addr;
-  uint32_t addr_at;
-  uint32_t addr_len;
-};
-
-/// An entity for [`ee_won_dir_group_keys`]: its type, path and name as UTF-16 LE bytes.
-struct EeWonDirListed {
-  uint8_t kind;
-  EeWonDirBytes path;
-  EeWonDirBytes name;
-};
-
-/// The host: `(logic, op, a, b, c, d) -> result`; `logic` is the C++ DialogLogic.
-using EeWonDlgLogicHostFn = ptrdiff_t(*)(void *logic,
-                                         EeWonDlgLogicOp op,
-                                         ptrdiff_t a,
-                                         ptrdiff_t b,
-                                         ptrdiff_t c,
-                                         ptrdiff_t d);
-
-/// The host: `(object, op, a, b, c, d, e, f) -> result`.
-using EeWonEeColorHostFn = ptrdiff_t(*)(void *obj,
-                                        EeWonEeColorOp op,
-                                        ptrdiff_t a,
-                                        ptrdiff_t b,
-                                        ptrdiff_t c,
-                                        ptrdiff_t d,
-                                        ptrdiff_t e,
-                                        ptrdiff_t f);
-
-/// The host: `(game, op, a, b, c, d) -> result`.
-using EeWonEeGameHostFn = ptrdiff_t(*)(void *game,
-                                       EeWonEeGameOp op,
-                                       ptrdiff_t a,
-                                       ptrdiff_t b,
-                                       ptrdiff_t c,
-                                       ptrdiff_t d);
-
-/// The host: `(op, a, b, c, d, e, f) -> result`.
-using EeWonEeGlueHostFn = ptrdiff_t(*)(EeWonEeGlueOp op,
-                                       ptrdiff_t a,
-                                       ptrdiff_t b,
-                                       ptrdiff_t c,
-                                       ptrdiff_t d,
-                                       ptrdiff_t e,
-                                       ptrdiff_t f);
-
-/// A row for the C++: NUL-terminated texts; `new_section` when the section differs from the previous row's.
-struct EeWonEeResource {
-  const char *section;
-  const char *key;
-  const char *name;
-  bool new_section;
-};
-
-/// The host: `(object, op, a) -> result` (`object` the C++ sound, or null for the decoder's load).
-using EeWonEeSoundHostFn = ptrdiff_t(*)(void *obj, EeWonEeSoundOp op, ptrdiff_t a);
-
-/// The host: `(object, op, a, b, c) -> result`.
-using EeWonEeXferHostFn = ptrdiff_t(*)(void *obj,
-                                       EeWonEeXferOp op,
-                                       ptrdiff_t a,
-                                       ptrdiff_t b,
-                                       ptrdiff_t c);
-
-/// Receives UTF-16 units; valid only during the call.
-using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
-
-/// Receives `wchar_t` text (`wchar_size` bytes a character); valid only during the call.
-using EeWonWideSink = void(*)(void *context, const void *text, size_t count);
-
-/// A running MD5 digest. `#[repr(C)]` and plain data: the C++ forwarders embed it by value.
-struct EeWonMd5 {
-  uint32_t state[4];
-  /// bytes hashed so far
-  uint64_t count;
-  uint8_t pending[64];
-};
-
-/// A keyed cipher. `#[repr(C)]` plain data: the C++ `Blowfish` embeds it by value and copies it with the class.
-struct EeWonBlowfish {
-  uint32_t s[1024];
-  uint32_t p[18];
-  uint8_t key[56];
-  uint32_t key_len;
-  uint32_t valid;
-};
-
-/// An auth block's header and validity.
-struct EeWonAuthHeader {
-  bool valid;
-  uint16_t family;
-  uint16_t data_len;
-  int32_t issue_time;
-  int32_t expire_time;
-  /// a certificate's user id
-  uint32_t user_id;
-  /// a key block's id
-  uint16_t key_block_id;
-};
-
-/// What `ee_won_cdkey_decrypt` found.
-struct EeWonCdKeyDecoded {
-  bool has_raw;
-  bool valid;
-  bool used_machine;
-  uint8_t raw[8];
-};
-
-/// A game-channel message read: `kind` is the type byte (0 when the read failed: nothing to do), the ids and
-/// flags per type; the text (a name, a password's companion or a chat line) goes to the sinks.
-struct EeWonLanMsg {
-  uint8_t kind;
-  uint16_t flags;
-  uint16_t id;
-  uint16_t target;
-};
-
-/// Receives one player of a join reply.
-using EeWonLanClientSink = void(*)(void *context, uint16_t id, const uint16_t *name, size_t count);
-
-/// Receives one local address: its name (`length` bytes) and the host-order address.
-using EeWonAddressSink = void(*)(void *context, const uint8_t *name, size_t length, uint32_t host);
-
-/// `QueueSocket::OpCallback`'s decisions: `completion` 0 none, 1 the queued op's own, 2 the repeat completion,
-/// 3 a fast op's original; `next` 0 nothing, 1 run the next queued op, 2 duplicate and rerun the repeat op,
-/// 3 forget the repeat op.
-struct EeWonQueueDecision {
-  bool close;
-  int32_t completion;
-  int32_t next;
-  bool clear_current;
-};
-
-/// `FileWriter`'s state.
-struct EeWonFileWriter {
-  void *file;
-};
-
-/// `ToggleReady`: the host tries to start the game (1); another player asks for the other ready flag (2, ready
-/// in `want_ready`, when the game code allows readying: `CanReady` is asked only for ready); nothing without a
-/// client or game (0).
-struct EeWonToggleReady {
-  int32_t action;
-  bool want_ready;
-  bool ask_can_ready;
-};
-
-/// `HandleKicked`: the moderation event's kind (0 a ban, 1 a kick) and room flags (6 an Internet game, 10 the
-/// others), and the message when it is us (0 none, 1 banned, 2 kicked).
-struct EeWonKicked {
-  int32_t kind;
-  int32_t flags;
-  int32_t message;
-};
-
-/// `SetError`: the errors not ignored, and whether the player may ignore them (only no-Internet, 1, and
-/// account-server, 4, errors).
-struct EeWonInitErrors {
-  int32_t errors;
-  bool allow_ignore;
-};
-
-/// A reply's step.
-struct EeWonFtpStep {
-  int32_t action;
-  /// the status scanned (assigned to `mFTPStatus` when `scanned`)
-  bool scanned;
-  int32_t ftp_status;
-  int32_t status;
-  /// the new request state (`SEND`, `DATA`)
-  int32_t state;
-  /// `mDoResume` turned off (a 504 to the restart)
-  bool no_resume;
-  uint32_t host;
-  uint16_t port;
-};
-
-/// The C++ side of a `DetectFirewallOp`: `context` is the op; objects are `RefCount*`. `set_public` is NULL for
-/// the real op (the address is this object's).
-struct EeWonFirewallHooks {
-  void *context;
-  void (*release)(void*);
-  void *(*new_socket)(void*, bool);
-  long (*bind)(void*, void*, uint16_t);
-  long (*listen)(void*, void*);
-  uint16_t (*local_port)(void*, void*);
-  void (*close)(void*, void*);
-  void *(*new_recv)(void*, void*);
-  long (*recv_run)(void*, void*, uint32_t);
-  bool (*recv_from_current)(void*, void*);
-  uint32_t (*time_left)(void*);
-  int32_t (*mode)(void*);
-  void (*set_request)(void*, const uint8_t*, size_t);
-  void (*response)(void*, EeWonByteSink, void*);
-  long (*invalid_header)(void*);
-  void (*set_public)(void*, int32_t);
-};
-
-/// The C++ side of a `GetCertOp`: `context` is the op (the hooks' first argument); objects are `RefCount*`. The
-/// four key hooks are NULL for the real op (the session key is the object's own `Blowfish`); a driver hands
-/// stand-ins.
-struct EeWonGetCertHooks {
-  void *context;
-  void (*add_ref)(void*);
-  void (*release)(void*);
-  bool (*verifier_public)(void*, void*);
-  void *(*ctx_peer)(void*, void*);
-  void *(*peer_block)(void*, void*);
-  int64_t (*peer_delta)(void*, void*);
-  void (*load_secrets)(void*, void*);
-  long (*op_status)(void*);
-  bool (*block_valid)(void*, void*);
-  void (*set_peer_from_block)(void*, void*, void*);
-  uint16_t (*block_id)(void*, void*);
-  /// false for NULL
-  bool (*block_encrypt)(void*, void*, const uint8_t*, size_t, EeWonByteSink, void*);
-  void (*key_create)(void*, int32_t);
-  void (*key)(void*, EeWonByteSink, void*);
-  bool (*key_encrypt)(void*, const uint8_t*, size_t, EeWonByteSink, void*);
-  bool (*key_decrypt)(void*, const uint8_t*, size_t, EeWonByteSink, void*);
-  void (*user)(void*, void*, EeWonByteSink, void*);
-  void (*password)(void*, void*, EeWonByteSink, void*);
-  void (*community)(void*, void*, EeWonByteSink, void*);
-  void (*hashes)(void*, void*, const uint8_t*, size_t, EeWonByteSink, void*);
-  void (*set_request)(void*, const uint8_t*, size_t);
-  void (*response)(void*, EeWonByteSink, void*);
-  void (*set_last_error)(void*, long);
-  long (*invalid_header)(void*);
-  void (*add_secret)(void*, void*, const uint8_t*, size_t);
-  void (*remove_secret)(void*, void*, const uint8_t*, size_t);
-  void *(*new_cert)(void*, int32_t, const uint8_t*, size_t);
-  bool (*cert_valid)(void*, int32_t, void*);
-  bool (*block_verify)(void*, void*, int32_t, void*);
-  int64_t (*cert_delta)(void*, int32_t, void*);
-  void (*cert_times)(void*, int32_t, void*, int64_t*, int64_t*);
-  void *(*new_block)(void*, const uint8_t*, size_t);
-  bool (*block_verified)(void*, void*, void*);
-  void (*commit)(void*, void*, int64_t, int64_t);
-  void *(*priv_new)(void*);
-  bool (*priv_set)(void*, void*, const uint8_t*, size_t);
-  void (*priv_free)(void*, void*);
-  void *(*new_peer)(void*, void*, void*, void*, int64_t, void*);
-  void (*set_password)(void*, void*, const uint8_t*, size_t);
-  void (*set_peer)(void*, void*, void*);
-  void (*clear_one_time)(void*, void*);
-};
 
 /// The host: the hook on the C++ Graphics `g` with up to seven ints at `args` and an object `p`; its answer.
 using EeWonGfxHost = uint32_t(*)(void *g, EeWonGfxHook hook, const int32_t *args, const void *p);
@@ -11887,6 +11233,12 @@ struct EeWonScrollArea {
   int32_t view_height;
 };
 
+/// Receives bytes; valid only during the call.
+using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// Receives `wchar_t` text (`wchar_size` bytes a character); valid only during the call.
+using EeWonWideSink = void(*)(void *context, const void *text, size_t count);
+
 /// The C++ `GUIStringData`'s members as one block (`mText`, `mLength`, `mCapacity`, in that order).
 struct EeWonGuiStrBuf {
   /// `wchar_t* mText`: units of `wchar_size` bytes, NULL before the first reservation.
@@ -11967,6 +11319,682 @@ struct EeWonBreak {
   int32_t pos;
   int32_t next;
   int32_t width;
+};
+
+/// `FileReader`'s state: the file, or the memory buffer (owned when read into memory), its length and position.
+/// `memory_mode` is the original's flag: set by a memory open and by `length()` once it measured the file.
+struct EeWonFileReader {
+  void *file;
+  const uint8_t *buffer;
+  unsigned long length;
+  unsigned long position;
+  bool own_buffer;
+  bool memory_mode;
+};
+
+/// A decoded image: its size, its transparency flag, and its ARGB pixels (rows top first) until taken.
+struct EeWonImgRaw {
+  int32_t width;
+  int32_t height;
+  bool transparent;
+  /// A `Box<Vec<u32>>`.
+  void *pixels;
+};
+
+/// One raw image's pixels: `kind` 0 (1-bit), 1 (8-bit) or 2 (32-bit), its size and its row pitch in bytes.
+struct EeWonRawPixels {
+  int32_t kind;
+  uint8_t *data;
+  int32_t width;
+  int32_t height;
+  int32_t pitch;
+};
+
+/// A new instruction's numbers, as its C++ constructor received them (see `EeWonLayoutKind` for each class's).
+struct EeWonLayoutInit {
+  EeWonLayoutKind kind;
+  ptrdiff_t refs[5];
+  int32_t ints[8];
+  bool horz;
+  bool vert;
+};
+
+/// One paint's inputs: the kind, the state bits (`EE_WON_MSPAINT_*`), the size and the kind's arguments.
+struct EeWonMsPaint {
+  EeWonMsPaintKind kind;
+  uint32_t flags;
+  int32_t width;
+  int32_t height;
+  int32_t a;
+  int32_t b;
+  int32_t c;
+  int32_t d;
+  int32_t e;
+};
+
+/// The platform's cursor calls (platform/PlatWindow.h), as the C++ shell hands them: PlatCursorSetSystem,
+/// PlatCursorCreate, PlatCursorSet, PlatCursorDestroy.
+struct EeWonPlatCursorFns {
+  void (*set_system)(uint32_t cursor);
+  void *(*create)(const uint32_t *bgra, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y);
+  void (*set)(void *cursor);
+  void (*destroy)(void *cursor);
+};
+
+/// A 1-bit mask (`PlatNativeMask`: RawImage1's rows, MSB first, rows padded to 4 bytes); a set bit is a transparent
+/// pixel.
+struct EeWonPlatMask {
+  const uint8_t *bits;
+  int32_t width;
+  int32_t height;
+  int32_t bytes_per_row;
+};
+
+using EeWonPlatWinHost = ptrdiff_t(*)(void *me,
+                                      EeWonPlatWinOp op,
+                                      ptrdiff_t a,
+                                      ptrdiff_t b,
+                                      ptrdiff_t c,
+                                      ptrdiff_t d);
+
+/// The host: `(manager, op, a, b, c, d) -> result`.
+using EeWonPlatWmHost = ptrdiff_t(*)(void *me,
+                                     EeWonPlatWmOp op,
+                                     ptrdiff_t a,
+                                     ptrdiff_t b,
+                                     ptrdiff_t c,
+                                     ptrdiff_t d);
+
+/// `PlatInputEvent` (platform/PlatWindow.h): its header and its union's bytes.
+struct EeWonPlatEvent {
+  uint32_t kind;
+  uint32_t time;
+  void *window;
+  /// The union: mKey (scan code, virtual key, modifiers, repeat), mMouse (x, y, dx, dy, button, clicks, wheel,
+  /// modifiers), mText (64 bytes, cursor, length), mSize.
+  uint32_t data[18];
+};
+
+/// A window's fields the manager reads (`Info`).
+struct EeWonPlatWinInfo {
+  /// The window rectangle in surface pixels (frame included).
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  bool visible;
+  bool top_most;
+  bool registered;
+  /// `IsPopup()`.
+  bool popup;
+  /// `FillsSurface()` (no parent).
+  bool fills;
+  /// `HasFrame()`.
+  bool frame;
+  /// `GetWindowState() == WindowState_Open`.
+  bool open;
+  bool minimize_on_alt_tab;
+  bool forward_keys;
+};
+
+/// The constructor's parts (`ee_won_tab_init`): the bottom bar's Rust object, the four containers and the layout
+/// point, as `Component*`s.
+struct EeWonTabParts {
+  const EeWonTabBar *bar;
+  ptrdiff_t bottom_bar;
+  ptrdiff_t top_bar;
+  ptrdiff_t bottom_bar_container;
+  ptrdiff_t top_bar_container;
+  ptrdiff_t layout;
+};
+
+/// A member handed over.
+struct EeWonAdminValue {
+  int64_t num;
+  const uint8_t *data;
+  size_t len;
+};
+
+/// One value read: a number, or a string's range in the reply (`whole` false: its length was read but not its
+/// bytes, so the original erased the member).
+struct EeWonAdminField {
+  /// `EE_WON_ADMIN_VALUE`, `EE_WON_ADMIN_END`, `EE_WON_ADMIN_CUT`
+  uint8_t tag;
+  bool whole;
+  int32_t num;
+  uint32_t at;
+  uint32_t len;
+};
+
+/// The values of a reply, handed over once.
+using EeWonAdminSink = void(*)(void *context, const EeWonAdminField *fields, size_t count);
+
+/// A C++ call on one object.
+using EeWonCoreFn = void(*)(void *object);
+
+/// The C++ calls of the whole library (AsyncOp.cpp's one table). Every object crosses as its `RefCount*`; a `new`
+/// object holds no reference yet.
+struct EeWonCoreHooks {
+  /// `object->AddRef()`, `object->Release()` (any `RefCount*`)
+  EeWonCoreFn ref_add;
+  EeWonCoreFn ref_release;
+  /// `completion->Complete(op)` (the C++ makes the `AsyncOpPtr`)
+  void (*completion_call)(void *completion, void *op);
+  /// the object's Rust object of that kind (null for a null object or one not of the kind's class)
+  void *(*object_of)(void *object, EeWonCoreObject kind);
+  /// a socket op's virtual `Duplicate()` (a new op, or null)
+  void *(*socketop_duplicate)(void *op);
+  /// `new AsyncOp`
+  void *(*new_op)();
+  /// `new RustCompletion(body)`: its `Complete` runs the body, its deletion frees it
+  void *(*new_completion)(EeWonCompletion *body);
+  /// a new socket op of the class (`socket`, `bytes` and `addr` may be null where the class takes none)
+  void *(*new_socket_op)(EeWonCoreSocketOp kind,
+                         void *socket,
+                         void *bytes,
+                         const EeWonIpAddr *addr,
+                         uint32_t size);
+  /// `new QueueSocket(type)`, or `new BlockingSocket(type)` (the ops' own sockets)
+  void *(*new_queue_socket)(int32_t kind, bool blocking);
+  /// `new UDPManagerRecvOp` (from `addr`; any sender for null)
+  void *(*new_udp_recv_op)(const EeWonIpAddr *addr);
+  /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
+  long (*udp_check)(void *op, const uint8_t *data, size_t length, bool *threw);
+  /// `UDPManagerSendRecvOp::StaticCheckResponse`, a reply wait's message check (kept as the C++ function's address)
+  void *udp_response_check;
+  /// a socket's `Fn2B0D90(port, reuse)`: bound to the local host
+  long (*socket_bind_local)(void *socket, uint16_t port, bool reuse);
+  /// a `ByteBuffer`'s bytes (its `mBytes`)
+  const EeWonByteBuffer *(*bytes_of)(void *buffer);
+  /// a socket op's virtual `Continue()`
+  long (*socketop_continue)(void *op);
+  /// a socket op's virtual `Start()`
+  long (*socketop_start)(void *op);
+  /// `WONAPICore::AddToSocketThread(op)`
+  EeWonCoreFn socket_thread_add;
+  /// a new `ByteBuffer` adopting Rust's bytes, a reference taken
+  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
+  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
+  /// result's
+  long (*transform)(void *socket, void **message, bool send);
+  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
+  void (*progress)(void *op, void *completion);
+  /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
+  long (*accept)(void *socket, void **out);
+  /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
+  void (*socket_hook)(void *socket, int32_t which);
+  /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
+  void *(*new_route_op)(void *conn, int32_t ty);
+  /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
+  /// `GetUnsolicitedDerivedOp(type)` (1: the new op with one reference for the caller, or null)
+  void *(*route_virtual)(void *conn, int32_t which, void *op, uint8_t message_type);
+  /// `new HTTPConnection(NULL)`
+  void *(*new_http_conn)();
+};
+
+/// One entry of the login's maps across the C ABI: a name (UTF-16 LE bytes), a second text (UTF-16 LE bytes: a
+/// nickname's value), bytes (a CD key, user data, a file hash) when `present`, and more bytes (the keyed hash
+/// data).
+struct EeWonAuthEntry {
+  const uint8_t *name;
+  size_t name_len;
+  const uint8_t *value;
+  size_t value_len;
+  const uint8_t *bytes;
+  size_t bytes_len;
+  const uint8_t *extra;
+  size_t extra_len;
+  bool present;
+};
+
+/// The C++ side: `context` is the `AuthContext`; every object is a `RefCount*`.
+struct EeWonAuthFlowHooks {
+  void *context;
+  /// `RefCount::AddRef`
+  void (*add_ref)(void*);
+  /// `RefCount::Release`
+  void (*release)(void*);
+  /// `AsyncOp::Kill(true)`
+  void (*op_kill)(void*);
+  /// `AsyncOp::IsKilled`
+  bool (*op_killed)(void*);
+  /// `AsyncOp::GetStatus`
+  long (*op_status)(void*);
+  /// `AsyncOp::RunAsync`
+  void (*op_run_async)(void*, long);
+  /// `AsyncOp::Run(mode, timeout)`
+  long (*op_run)(void*, long, unsigned long);
+  /// `AsyncOp::Finish`
+  void (*op_finish)(void*, long);
+  /// a new `AsyncOp` (one reference) whose completion is `StaticAutoRefreshCallback` on the context
+  void *(*new_timer)(void*);
+  /// a new `GetCertOp` on the context (one reference), its completion `StaticGetCertCallback` when asked
+  void *(*new_cert_op)(void*, bool);
+  /// `GetCertOp::GetPeerData`: a new reference to its peer data, or NULL
+  EeWonAuthObj *(*cert_peer_data)(void*);
+};
+
+/// `ReadBuffer`'s state, embedded by value in the C++ object (a reader over bytes someone else owns).
+struct EeWonReadBuffer {
+  /// the read position
+  long pos;
+  const uint8_t *data;
+  long length;
+};
+
+/// An entry across the C ABI: the fields, then the four strings (remote location, file name, type, entity tag).
+struct EeWonCacheEntry {
+  int32_t id;
+  bool valid;
+  int64_t expiration;
+  int64_t last_access;
+  const uint8_t *strings[4];
+  size_t lengths[4];
+};
+
+/// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
+struct EeWonChatText {
+  const void *text;
+  size_t length;
+};
+
+/// Receives wide units (`wchar_t` values); valid only during the call.
+using EeWonWideUnitSink = void(*)(void *context, const uint32_t *units, size_t count);
+
+/// The parse's result for the C++ to apply; `*_set` false leaves that member alone.
+struct EeWonChatOutcome {
+  bool ok;
+  int32_t error;
+  int32_t command;
+  bool target_set;
+  /// The client's index in the names handed in, -1 for NULL.
+  int32_t target;
+  bool duration_set;
+  uint32_t duration;
+  bool invitation_set;
+  bool invitation;
+};
+
+/// Receives a text the parse set (`which`: `EE_WON_CHAT_TARGET_NAME` or `EE_WON_CHAT_TEXT`).
+using EeWonChatSink = void(*)(void *context, int32_t which, const uint32_t *units, size_t count);
+
+/// A parser's members the C++ keeps, for one call.
+struct EeWonConfigIo {
+  EeWonFileReader *reader;
+  int32_t *line;
+  bool unicode;
+};
+
+/// A saved state across the C ABI: the file position, name and line, and the pushback's units.
+struct EeWonConfigState {
+  long pos;
+  const uint8_t *path;
+  size_t path_len;
+  int32_t line;
+  const uint16_t *back;
+  size_t back_len;
+};
+
+/// Receives a saved state; valid only during the call.
+using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
+
+/// `new RustServerOp(op)`: the C++ op of a Rust op on the op base (it takes `op`; no reference yet). ServerOp.cpp
+/// sets it at start-up ([`ee_won_core_set_new_host_op`]): a program without the class has none.
+using EeWonNewHostOp = void*(*)(EeWonHostOp *op);
+
+/// Bytes handed over by the C++ (`present` false: a NULL buffer).
+struct EeWonDirBytes {
+  const uint8_t *data;
+  size_t len;
+  bool present;
+};
+
+/// A request's fields from the C++ (texts as UTF-16 LE bytes).
+struct EeWonDbRequest {
+  int32_t kind;
+  uint8_t field_size;
+  int16_t message;
+  int16_t sub;
+  uint32_t user_id;
+  /// the request data, the encrypted key or account data
+  EeWonDirBytes data;
+  EeWonDirBytes name;
+  EeWonDirBytes password;
+  EeWonDirBytes email;
+  const EeWonProfile *profile;
+};
+
+/// An event detail from the C++.
+struct EeWonDbDetail {
+  uint16_t detail_type;
+  int32_t data_type;
+  uint32_t number;
+  EeWonDirBytes text;
+};
+
+/// An event attachment from the C++.
+struct EeWonDbAttachment {
+  EeWonDirBytes description;
+  uint8_t content_type;
+  EeWonDirBytes data;
+};
+
+/// An event report from the C++ (`present` false on a part: not related).
+struct EeWonDbEvent {
+  uint8_t field_size;
+  uint16_t activity_type;
+  bool has_server;
+  uint16_t server_type;
+  EeWonDirBytes server_name;
+  EeWonDirBytes server_addr;
+  bool has_client;
+  EeWonDirBytes client_name;
+  EeWonDirBytes client_addr;
+  bool has_user;
+  uint32_t user_id;
+  EeWonDirBytes user_name;
+  const EeWonDbDetail *details;
+  size_t detail_count;
+  const EeWonDbAttachment *attachments;
+  size_t attachment_count;
+};
+
+/// A DBProxy-style reply read for the C++.
+struct EeWonDbReply {
+  /// how many of the header's fields were read whole (header, service, message, sub-message, status, error
+  /// string, flags): the members the original assigned on the way are the message (3), the sub-message (4)
+  /// and the error string (6)
+  uint8_t read;
+  /// the error string's length was read but not its bytes: the original erased the string
+  bool error_erased;
+  int16_t message;
+  int16_t sub;
+  int32_t status;
+  uint32_t error_at;
+  uint32_t error_len;
+  /// the original threw `ReadBufferException` after the assignments
+  bool cut;
+  int32_t verdict;
+  /// what the op returns with `EE_WON_DB_RETURN` / `EE_WON_DB_DONE`
+  int32_t result;
+  /// the rest of the reply (DBProxy's data, the contest's reply data)
+  uint32_t rest_at;
+  uint32_t rest_len;
+  /// the server's public key (create account)
+  uint32_t key_at;
+  uint32_t key_len;
+  /// the email (get account): 0 not read, 1 erased, 2 read whole at `email_*`
+  uint8_t email;
+  uint32_t email_at;
+  uint32_t email_len;
+  /// where the profile starts (get account)
+  uint32_t profile_at;
+};
+
+/// A parse's end across the C ABI: `kind` 0 parsed (`status` the reply's status), 1 invalid header, 2 the server's
+/// negative `status`, 3 cut short; `sequence` when `has_sequence`.
+struct EeWonDirReply {
+  int32_t kind;
+  int32_t status;
+  bool has_sequence;
+  uint8_t sequence;
+};
+
+/// A data object across the C ABI.
+struct EeWonDirDataObject {
+  const uint8_t *data_type;
+  size_t data_type_len;
+  bool has_data;
+  const uint8_t *data;
+  size_t data_len;
+};
+
+/// An ACL permission across the C ABI (the raw values).
+struct EeWonDirAcl {
+  uint8_t kind;
+  int32_t user;
+  int32_t community;
+  int16_t trust;
+};
+
+/// An entity across the C ABI; valid only during the sink's call. `fields` is the `read` bits.
+struct EeWonDirEntity {
+  uint32_t fields;
+  uint8_t kind;
+  const uint16_t *path;
+  size_t path_len;
+  const uint16_t *name;
+  size_t name_len;
+  const uint16_t *display_name;
+  size_t display_name_len;
+  const uint8_t *net_addr;
+  size_t net_addr_len;
+  bool req_unique;
+  int32_t lifespan;
+  int32_t created;
+  int32_t touched;
+  int32_t crc;
+  int32_t create_ip;
+  int32_t touch_ip;
+  int32_t create_id;
+  int32_t touch_id;
+  const EeWonDirDataObject *objects;
+  size_t object_count;
+  const EeWonDirAcl *acls;
+  size_t acl_count;
+};
+
+/// Receives an entity; valid only during the call.
+using EeWonDirEntitySink = void(*)(void *context, const EeWonDirEntity *entity);
+
+/// A data object.
+struct EeWonDirObject {
+  EeWonDirBytes data_type;
+  EeWonDirBytes data;
+};
+
+/// A data object change.
+struct EeWonDirMod {
+  uint16_t offset;
+  bool insert;
+  EeWonDirObject object;
+};
+
+/// A query: the path as UTF-16 LE bytes.
+struct EeWonDirQuery {
+  uint32_t flags;
+  EeWonDirBytes path;
+  const EeWonDirBytes *types;
+  size_t type_count;
+};
+
+/// A request's fields (strings as UTF-16 LE bytes, the arrays as pointer and count).
+struct EeWonDirRequest {
+  int32_t op;
+  bool is_service;
+  uint32_t flags;
+  EeWonDirBytes path;
+  EeWonDirBytes name;
+  EeWonDirBytes display_name;
+  EeWonDirBytes net_addr;
+  EeWonDirBytes new_name;
+  EeWonDirBytes new_display_name;
+  EeWonDirBytes new_net_addr;
+  uint32_t lifespan;
+  bool is_unique;
+  uint8_t mode;
+  uint8_t find_flags;
+  const EeWonDirObject *objects;
+  size_t object_count;
+  const EeWonDirMod *mods;
+  size_t mod_count;
+  const EeWonDirBytes *types;
+  size_t type_count;
+  const EeWonDirQuery *queries;
+  size_t query_count;
+  EeWonDirBytes product;
+};
+
+/// A status reply for the C++.
+struct EeWonDirStatusReply {
+  /// 0 read whole, 1 not a status reply, 2 cut short
+  int32_t end;
+  int16_t status;
+  /// a returned address: its offset and length in the reply
+  bool has_addr;
+  uint32_t addr_at;
+  uint32_t addr_len;
+};
+
+/// An entity for [`ee_won_dir_group_keys`]: its type, path and name as UTF-16 LE bytes.
+struct EeWonDirListed {
+  uint8_t kind;
+  EeWonDirBytes path;
+  EeWonDirBytes name;
+};
+
+/// Receives UTF-16 units; valid only during the call.
+using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
+
+/// A running MD5 digest. `#[repr(C)]` and plain data: the C++ forwarders embed it by value.
+struct EeWonMd5 {
+  uint32_t state[4];
+  /// bytes hashed so far
+  uint64_t count;
+  uint8_t pending[64];
+};
+
+/// A keyed cipher. `#[repr(C)]` plain data: the C++ `Blowfish` embeds it by value and copies it with the class.
+struct EeWonBlowfish {
+  uint32_t s[1024];
+  uint32_t p[18];
+  uint8_t key[56];
+  uint32_t key_len;
+  uint32_t valid;
+};
+
+/// An auth block's header and validity.
+struct EeWonAuthHeader {
+  bool valid;
+  uint16_t family;
+  uint16_t data_len;
+  int32_t issue_time;
+  int32_t expire_time;
+  /// a certificate's user id
+  uint32_t user_id;
+  /// a key block's id
+  uint16_t key_block_id;
+};
+
+/// What `ee_won_cdkey_decrypt` found.
+struct EeWonCdKeyDecoded {
+  bool has_raw;
+  bool valid;
+  bool used_machine;
+  uint8_t raw[8];
+};
+
+/// Receives one local address: its name (`length` bytes) and the host-order address.
+using EeWonAddressSink = void(*)(void *context, const uint8_t *name, size_t length, uint32_t host);
+
+/// `QueueSocket::OpCallback`'s decisions: `completion` 0 none, 1 the queued op's own, 2 the repeat completion,
+/// 3 a fast op's original; `next` 0 nothing, 1 run the next queued op, 2 duplicate and rerun the repeat op,
+/// 3 forget the repeat op.
+struct EeWonQueueDecision {
+  bool close;
+  int32_t completion;
+  int32_t next;
+  bool clear_current;
+};
+
+/// `FileWriter`'s state.
+struct EeWonFileWriter {
+  void *file;
+};
+
+/// A reply's step.
+struct EeWonFtpStep {
+  int32_t action;
+  /// the status scanned (assigned to `mFTPStatus` when `scanned`)
+  bool scanned;
+  int32_t ftp_status;
+  int32_t status;
+  /// the new request state (`SEND`, `DATA`)
+  int32_t state;
+  /// `mDoResume` turned off (a 504 to the restart)
+  bool no_resume;
+  uint32_t host;
+  uint16_t port;
+};
+
+/// The C++ side of a `DetectFirewallOp`: `context` is the op; objects are `RefCount*`. `set_public` is NULL for
+/// the real op (the address is this object's).
+struct EeWonFirewallHooks {
+  void *context;
+  void (*release)(void*);
+  void *(*new_socket)(void*, bool);
+  long (*bind)(void*, void*, uint16_t);
+  long (*listen)(void*, void*);
+  uint16_t (*local_port)(void*, void*);
+  void (*close)(void*, void*);
+  void *(*new_recv)(void*, void*);
+  long (*recv_run)(void*, void*, uint32_t);
+  bool (*recv_from_current)(void*, void*);
+  uint32_t (*time_left)(void*);
+  int32_t (*mode)(void*);
+  void (*set_request)(void*, const uint8_t*, size_t);
+  void (*response)(void*, EeWonByteSink, void*);
+  long (*invalid_header)(void*);
+  void (*set_public)(void*, int32_t);
+};
+
+/// The C++ side of a `GetCertOp`: `context` is the op (the hooks' first argument); objects are `RefCount*`. The
+/// four key hooks are NULL for the real op (the session key is the object's own `Blowfish`); a driver hands
+/// stand-ins.
+struct EeWonGetCertHooks {
+  void *context;
+  void (*add_ref)(void*);
+  void (*release)(void*);
+  bool (*verifier_public)(void*, void*);
+  void *(*ctx_peer)(void*, void*);
+  void *(*peer_block)(void*, void*);
+  int64_t (*peer_delta)(void*, void*);
+  void (*load_secrets)(void*, void*);
+  long (*op_status)(void*);
+  bool (*block_valid)(void*, void*);
+  void (*set_peer_from_block)(void*, void*, void*);
+  uint16_t (*block_id)(void*, void*);
+  /// false for NULL
+  bool (*block_encrypt)(void*, void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  void (*key_create)(void*, int32_t);
+  void (*key)(void*, EeWonByteSink, void*);
+  bool (*key_encrypt)(void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  bool (*key_decrypt)(void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  void (*user)(void*, void*, EeWonByteSink, void*);
+  void (*password)(void*, void*, EeWonByteSink, void*);
+  void (*community)(void*, void*, EeWonByteSink, void*);
+  void (*hashes)(void*, void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  void (*set_request)(void*, const uint8_t*, size_t);
+  void (*response)(void*, EeWonByteSink, void*);
+  void (*set_last_error)(void*, long);
+  long (*invalid_header)(void*);
+  void (*add_secret)(void*, void*, const uint8_t*, size_t);
+  void (*remove_secret)(void*, void*, const uint8_t*, size_t);
+  void *(*new_cert)(void*, int32_t, const uint8_t*, size_t);
+  bool (*cert_valid)(void*, int32_t, void*);
+  bool (*block_verify)(void*, void*, int32_t, void*);
+  int64_t (*cert_delta)(void*, int32_t, void*);
+  void (*cert_times)(void*, int32_t, void*, int64_t*, int64_t*);
+  void *(*new_block)(void*, const uint8_t*, size_t);
+  bool (*block_verified)(void*, void*, void*);
+  void (*commit)(void*, void*, int64_t, int64_t);
+  void *(*priv_new)(void*);
+  bool (*priv_set)(void*, void*, const uint8_t*, size_t);
+  void (*priv_free)(void*, void*);
+  void *(*new_peer)(void*, void*, void*, void*, int64_t, void*);
+  void (*set_password)(void*, void*, const uint8_t*, size_t);
+  void (*set_peer)(void*, void*, void*);
+  void (*clear_one_time)(void*, void*);
 };
 
 /// One call of the op on the C++ side: the code, its inputs, its outputs. Bytes come back through `out_sink`
@@ -12100,24 +12128,6 @@ struct EeWonHttpSessionHooks {
   int (*conn_num_ops)(void*);
 };
 
-/// A decoded image: its size, its transparency flag, and its ARGB pixels (rows top first) until taken.
-struct EeWonImgRaw {
-  int32_t width;
-  int32_t height;
-  bool transparent;
-  /// A `Box<Vec<u32>>`.
-  void *pixels;
-};
-
-/// One raw image's pixels: `kind` 0 (1-bit), 1 (8-bit) or 2 (32-bit), its size and its row pitch in bytes.
-struct EeWonRawPixels {
-  int32_t kind;
-  uint8_t *data;
-  int32_t width;
-  int32_t height;
-  int32_t pitch;
-};
-
 /// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
 struct EeWonAddr {
   uint8_t sockaddr[16];
@@ -12126,122 +12136,6 @@ struct EeWonAddr {
   const uint8_t *host;
   size_t host_len;
 };
-
-/// A received message (`HandleRecvMsg`): whether the socket's time is stamped, and whether it is a new socket's
-/// first message (only a join request counts) or goes to `HandleMessage`; nothing for a failed or killed op.
-struct EeWonLanRecv {
-  bool handle;
-  bool stamp;
-  bool new_socket;
-};
-
-/// `HandleSocketClosed`: the host announces a player's departure (and unlinks it) and forgets the socket; a joiner
-/// whose host socket closed kills it and reports the lost game.
-struct EeWonLanClosed {
-  bool announce_left;
-  bool forget_socket;
-  bool lost_host;
-};
-
-/// `HandleGameSummary`: a summary read keeps the game (stamped) and reports it added (0) or changed (2); an
-/// unreadable one drops the game and reports a known game as changed (2: the original's `aFlag ? 2 : 1` under
-/// `if (aFlag)`), a new one not at all (-1).
-struct EeWonLanSummary {
-  bool keep;
-  int32_t event;
-};
-
-/// `HandleChatCommand`: what a typed command does in the LAN room.
-struct EeWonLanChatCommand {
-  /// 0 nothing, 1 send a chat line (`flags`, to the target when `whisper`), 2 toggle the target's ignore,
-  /// 3 the invalid command error.
-  int32_t action;
-  uint16_t flags;
-  bool whisper;
-};
-
-/// The host: `(logic, op, a, b, c, d) -> result`. `logic` is the C++ object the Rust one belongs to.
-using EeWonLobbyHostFn = ptrdiff_t(*)(void *logic,
-                                      EeWonLobbyOp op,
-                                      void *a,
-                                      void *b,
-                                      ptrdiff_t c,
-                                      ptrdiff_t d);
-
-/// A new instruction's numbers, as its C++ constructor received them (see `EeWonLayoutKind` for each class's).
-struct EeWonLayoutInit {
-  EeWonLayoutKind kind;
-  ptrdiff_t refs[5];
-  int32_t ints[8];
-  bool horz;
-  bool vert;
-};
-
-/// One control look-up: the resource name, the original's file and line (for the missing-control report), the type,
-/// the control id `SafeGetComponent` set (-1: none) and the member it fills (-1: LobbyOptionsCtrl's local button).
-struct EeWonLobbyCtlSlot {
-  const char *name;
-  const char *file;
-  int32_t line;
-  EeWonLobbyCtlType ty;
-  int32_t control_id;
-  int32_t member;
-};
-
-/// The host: `(control, op, a, b, c) -> result`.
-using EeWonLobbyCtlHostFn = ptrdiff_t(*)(void *ctl,
-                                         EeWonLobbyCtlOp op,
-                                         ptrdiff_t a,
-                                         ptrdiff_t b,
-                                         ptrdiff_t c);
-
-/// One control of a kind: its resource name, the original's file and line (for the missing-control report) and type.
-struct EeWonLobbyDlgSlot {
-  const char *name;
-  const char *file;
-  int32_t line;
-  EeWonLobbyDlgType ty;
-};
-
-/// The host: `(dialog, op, a, b, c) -> result`. `dialog` is the C++ dialog the Rust object belongs to.
-using EeWonLobbyDlgHostFn = ptrdiff_t(*)(void *dialog,
-                                         EeWonLobbyDlgOp op,
-                                         ptrdiff_t a,
-                                         ptrdiff_t b,
-                                         ptrdiff_t c);
-
-/// What a map does with its entries' objects: `copy` makes the copy's object (a reference added, or a new record),
-/// `drop` lets one go (a reference released, or the record deleted). Either may be absent (the entries hold none).
-struct EeWonLobbyMapHooks {
-  void *(*copy)(void*);
-  void (*drop)(void*);
-};
-
-/// A key handed over by C++: `num` for the ids (an `unsigned` id zero-extended, a `long` sign-extended), `addr` for
-/// an address, `text` / `count` / `unit_size` for text (`count` units of `unit_size` bytes: a `wchar_t`'s size for a
-/// `GUIString`, 1 for narrow text).
-struct EeWonLobbyKey {
-  uint64_t num;
-  const EeWonIpAddr *addr;
-  const void *text;
-  size_t count;
-  uint32_t unit_size;
-};
-
-/// The host: `(popup, op, a, b, c) -> result`.
-using EeWonLobbyPopupHostFn = ptrdiff_t(*)(void *popup,
-                                           EeWonLobbyPopupOp op,
-                                           ptrdiff_t a,
-                                           ptrdiff_t b,
-                                           ptrdiff_t c);
-
-/// The host: `(obj, op, a, b, c, d) -> result`.
-using EeWonLogicHostFn = ptrdiff_t(*)(void *obj,
-                                      EeWonLogicOp op,
-                                      ptrdiff_t a,
-                                      ptrdiff_t b,
-                                      ptrdiff_t c,
-                                      ptrdiff_t d);
 
 /// One patch as the C++ hands it over.
 struct EeWonPatchRef {
@@ -12257,75 +12151,6 @@ struct EeWonPatchHooks {
   int32_t (*compare)(void*, const uint8_t*, size_t, const uint8_t*, size_t);
   /// in the valid set (`GetValidPatchList`) or the filtered set (`GetHighestPatchList`)
   bool (*in_set)(void*, const uint8_t*, size_t);
-};
-
-/// A `SyncStep` for the C++: `kind` 0 erase, 1 insert, 2 update, 3 erase the rest.
-struct EeWonSyncStep {
-  uint8_t kind;
-  uint32_t existing;
-  uint32_t incoming;
-};
-
-/// A server's population as `SyncGroups`, `AddClientToGroup` and `RemoveClientFromGroup` count it.
-struct EeWonPopulation {
-  /// The people in chat rooms (`mNumChatClients`).
-  int32_t chat;
-  /// The people in all rooms (`mNumClients`).
-  int32_t total;
-};
-
-/// What a client's flags say (`IsAnonymous`, `IsAway`, `IsAdmin`, `IsModerator`, `IsMuted`).
-struct EeWonClientStatus {
-  bool anonymous;
-  bool away;
-  bool admin;
-  bool moderator;
-  /// Muted server-wide or in the chat room / in the game.
-  bool muted_chat;
-  bool muted_game;
-};
-
-/// What a room's flags say.
-struct EeWonGroupKind {
-  bool password;
-  bool invite_only;
-  bool ask_to_join;
-  /// A chat room; otherwise a game.
-  bool chat;
-  /// A chat room anyone may enter: no password, invitation or approval.
-  bool public_chat;
-};
-
-/// A game member as `AreAllReady` sees it.
-struct EeWonMemberReady {
-  bool has_player;
-  bool game_captain;
-  bool ready;
-};
-
-/// The host: `ModelHost(op, a, b, c)`.
-using EeWonModelHost = ptrdiff_t(*)(EeWonModelOp op, ptrdiff_t a, ptrdiff_t b, ptrdiff_t c);
-
-/// A walk over a client list as the original's map iterator walked (`LobbyClientIterator`,
-/// `LobbyClientSetIterator`): the next client after the last one returned.
-struct EeWonModelCursor {
-  bool started;
-  /// the set iterator's: a client with a player is found and not yet returned
-  bool ready;
-  uint16_t last;
-};
-
-/// One paint's inputs: the kind, the state bits (`EE_WON_MSPAINT_*`), the size and the kind's arguments.
-struct EeWonMsPaint {
-  EeWonMsPaintKind kind;
-  uint32_t flags;
-  int32_t width;
-  int32_t height;
-  int32_t a;
-  int32_t b;
-  int32_t c;
-  int32_t d;
-  int32_t e;
 };
 
 /// A C++ call on an op (`AsyncOp*`).
@@ -12420,133 +12245,6 @@ struct EeWonPeerHooks {
   void (*new_session)(void*, int32_t, uint16_t, uint8_t, uint8_t);
 };
 
-/// A list of texts: `count` texts, text `i` the units (or bytes) from `offsets[i]` to `offsets[i + 1]`.
-struct EeWonTextList {
-  const void *data;
-  const size_t *offsets;
-  size_t count;
-};
-
-/// The global file's lists: `names.count` users with their fields at the same index; the passwords' bytes.
-struct EeWonGlobalPrefsOut {
-  EeWonTextList names;
-  const int32_t *last_use;
-  const uint16_t *ids;
-  const int32_t *value04;
-  const int32_t *value08;
-  EeWonTextList passwords;
-  bool sound_effects;
-  bool music;
-  int32_t network_adapter;
-};
-
-/// The user file's lists (`lan_user` false: the LAN part is not written). Addresses are six bytes each; a game
-/// filter `i` has the values from `option_first[i]` to `option_first[i + 1]` of `option_values`.
-struct EeWonUserPrefsOut {
-  bool lan_user;
-  EeWonTextList lan_names;
-  const int32_t *lan_times;
-  const uint8_t *direct_addresses;
-  EeWonTextList direct_names;
-  uint16_t broadcast_port;
-  size_t reconnect_count;
-  const uint8_t *reconnect_addresses;
-  const int32_t *reconnect_times;
-  const int32_t *reconnect_ids;
-  EeWonTextList ignored;
-  EeWonTextList friend_names;
-  const uint32_t *friend_ids;
-  size_t blocked_count;
-  const uint32_t *blocked;
-  bool first[6];
-  /// The tab, the last server, the last room (three texts).
-  EeWonTextList texts;
-  bool second[5];
-  uint16_t connection_speed;
-  EeWonTextList option_names;
-  const size_t *option_first;
-  EeWonTextList option_values;
-};
-
-struct EeWonPrefsEvent {
-  EeWonPrefsEventKind kind;
-  int64_t value;
-  uint8_t index;
-  const uint16_t *units;
-  size_t count;
-  const uint8_t *bytes;
-  size_t length;
-  uint8_t address[6];
-};
-
-/// Receives each event of a read in order.
-using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
-
-/// The platform's cursor calls (platform/PlatWindow.h), as the C++ shell hands them: PlatCursorSetSystem,
-/// PlatCursorCreate, PlatCursorSet, PlatCursorDestroy.
-struct EeWonPlatCursorFns {
-  void (*set_system)(uint32_t cursor);
-  void *(*create)(const uint32_t *bgra, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y);
-  void (*set)(void *cursor);
-  void (*destroy)(void *cursor);
-};
-
-/// A 1-bit mask (`PlatNativeMask`: RawImage1's rows, MSB first, rows padded to 4 bytes); a set bit is a transparent
-/// pixel.
-struct EeWonPlatMask {
-  const uint8_t *bits;
-  int32_t width;
-  int32_t height;
-  int32_t bytes_per_row;
-};
-
-using EeWonPlatWinHost = ptrdiff_t(*)(void *me,
-                                      EeWonPlatWinOp op,
-                                      ptrdiff_t a,
-                                      ptrdiff_t b,
-                                      ptrdiff_t c,
-                                      ptrdiff_t d);
-
-/// The host: `(manager, op, a, b, c, d) -> result`.
-using EeWonPlatWmHost = ptrdiff_t(*)(void *me,
-                                     EeWonPlatWmOp op,
-                                     ptrdiff_t a,
-                                     ptrdiff_t b,
-                                     ptrdiff_t c,
-                                     ptrdiff_t d);
-
-/// `PlatInputEvent` (platform/PlatWindow.h): its header and its union's bytes.
-struct EeWonPlatEvent {
-  uint32_t kind;
-  uint32_t time;
-  void *window;
-  /// The union: mKey (scan code, virtual key, modifiers, repeat), mMouse (x, y, dx, dy, button, clicks, wheel,
-  /// modifiers), mText (64 bytes, cursor, length), mSize.
-  uint32_t data[18];
-};
-
-/// A window's fields the manager reads (`Info`).
-struct EeWonPlatWinInfo {
-  /// The window rectangle in surface pixels (frame included).
-  int32_t x;
-  int32_t y;
-  int32_t width;
-  int32_t height;
-  bool visible;
-  bool top_most;
-  bool registered;
-  /// `IsPopup()`.
-  bool popup;
-  /// `FillsSurface()` (no parent).
-  bool fills;
-  /// `HasFrame()`.
-  bool frame;
-  /// `GetWindowState() == WindowState_Open`.
-  bool open;
-  bool minimize_on_alt_tab;
-  bool forward_keys;
-};
-
 /// A C++ call on one object (an op, a completion or the socket).
 using EeWonQueueFn = void(*)(void *object);
 
@@ -12561,15 +12259,6 @@ struct EeWonLanSocketHooks {
 struct EeWonRegAuthText {
   const uint8_t *data;
   size_t length;
-};
-
-/// A row for the C++: NUL-terminated texts; `new_section` when the section differs from the previous row's.
-struct EeWonResource {
-  const char *section;
-  const char *key;
-  const char *name;
-  EeWonResKind kind;
-  bool new_section;
 };
 
 /// What the routing connection object calls back in the C++. One static table serves every connection. Every
@@ -12607,14 +12296,6 @@ struct EeWonRouteConnHooks {
   void (*server_close_hook)(void *conn);
   void (*server_kill_hook)(void *conn);
 };
-
-using EeWonRouteLogicHostFn = ptrdiff_t(*)(void *obj,
-                                           EeWonRouteLogicOp op,
-                                           ptrdiff_t a,
-                                           ptrdiff_t b,
-                                           ptrdiff_t c,
-                                           ptrdiff_t d,
-                                           ptrdiff_t e);
 
 /// A request's fields from the C++ (strings as UTF-16 LE bytes).
 struct EeWonRouteRequest {
@@ -12732,34 +12413,6 @@ struct EeWonRouteRecord {
 
 /// Receives one record; valid only during the call.
 using EeWonRouteRecordSink = void(*)(void *context, const EeWonRouteRecord *record);
-
-/// `SelectGame` over one game: skipped (password, ask to join, not joinable); ranked (`Some(rank)`: the skill
-/// band, 0 the wanted skill, 10000 no skill, 20000 one below, 30000 one above, plus the ping, when the ping is
-/// under the ceiling and the limit); or, with an unknown ping (0xfffe) at or over the ceiling, pinged.
-struct EeWonQuickPlay {
-  /// 0 nothing, 1 ranked (`rank`), 2 ping it.
-  int32_t action;
-  int32_t rank;
-};
-
-/// A server as `GetDefaultServer` sees it.
-struct EeWonServerPick {
-  /// Its name is the last server's.
-  bool last_used;
-  int32_t clients;
-  /// It lists the lobby's language.
-  bool language;
-};
-
-/// The host: `(component, op, a, b, x, y, w, h) -> result`.
-using EeWonScrollTextHostFn = ptrdiff_t(*)(void *comp,
-                                           EeWonScrollTextOp op,
-                                           ptrdiff_t a,
-                                           ptrdiff_t b,
-                                           int32_t x,
-                                           int32_t y,
-                                           int32_t w,
-                                           int32_t h);
 
 /// What only the C++ `ServerConnection` answers: the peer authentication op's maker and its virtual `MsgCallback`.
 struct EeWonServerConnCpp {
@@ -12883,6 +12536,409 @@ struct EeWonSmartAction {
   size_t text_len;
 };
 
+/// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
+/// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
+struct EeWonThreadBody {
+  void (*run)(void *context);
+  void (*destroy)(void *context);
+  void *context;
+};
+
+/// The strings `ToString` prints (each a pointer and a length).
+struct EeWonTitleText {
+  const uint8_t *name;
+  size_t name_len;
+  const uint8_t *network;
+  size_t network_len;
+  const uint8_t *image_path;
+  size_t image_path_len;
+  const uint8_t *hash_string;
+  size_t hash_string_len;
+  const uint8_t *key_prefix;
+  size_t key_prefix_len;
+  uint16_t net_port;
+};
+
+/// The title fields `ToString` prints, in its order after `NetPort`.
+struct EeWonTitleFlags {
+  bool force_cd_key;
+  bool require_crc;
+  bool allow_beta_key;
+  bool require_cd_key;
+  bool fail_to_guest;
+  bool allow_guest;
+  bool concurrent_user_login;
+  bool concurrent_cd_key_login;
+  bool get_user_data;
+  bool get_forgeable_user_data;
+  bool cd_key_for_invite;
+  bool save_session_key;
+  bool get_key_id;
+  bool ascii_account_names;
+};
+
+/// One entry, to the C++ copy.
+using EeWonUserStatusSink = void(*)(void *context, uint64_t id, uint8_t status);
+
+/// The host: `(logic, op, a, b, c, d) -> result`; `logic` is the C++ DialogLogic.
+using EeWonDlgLogicHostFn = ptrdiff_t(*)(void *logic,
+                                         EeWonDlgLogicOp op,
+                                         ptrdiff_t a,
+                                         ptrdiff_t b,
+                                         ptrdiff_t c,
+                                         ptrdiff_t d);
+
+/// The host: `(object, op, a, b, c, d, e, f) -> result`.
+using EeWonEeColorHostFn = ptrdiff_t(*)(void *obj,
+                                        EeWonEeColorOp op,
+                                        ptrdiff_t a,
+                                        ptrdiff_t b,
+                                        ptrdiff_t c,
+                                        ptrdiff_t d,
+                                        ptrdiff_t e,
+                                        ptrdiff_t f);
+
+/// The host: `(game, op, a, b, c, d) -> result`.
+using EeWonEeGameHostFn = ptrdiff_t(*)(void *game,
+                                       EeWonEeGameOp op,
+                                       ptrdiff_t a,
+                                       ptrdiff_t b,
+                                       ptrdiff_t c,
+                                       ptrdiff_t d);
+
+/// The host: `(op, a, b, c, d, e, f) -> result`.
+using EeWonEeGlueHostFn = ptrdiff_t(*)(EeWonEeGlueOp op,
+                                       ptrdiff_t a,
+                                       ptrdiff_t b,
+                                       ptrdiff_t c,
+                                       ptrdiff_t d,
+                                       ptrdiff_t e,
+                                       ptrdiff_t f);
+
+/// A row for the C++: NUL-terminated texts; `new_section` when the section differs from the previous row's.
+struct EeWonEeResource {
+  const char *section;
+  const char *key;
+  const char *name;
+  bool new_section;
+};
+
+/// The host: `(object, op, a) -> result` (`object` the C++ sound, or null for the decoder's load).
+using EeWonEeSoundHostFn = ptrdiff_t(*)(void *obj, EeWonEeSoundOp op, ptrdiff_t a);
+
+/// The host: `(object, op, a, b, c) -> result`.
+using EeWonEeXferHostFn = ptrdiff_t(*)(void *obj,
+                                       EeWonEeXferOp op,
+                                       ptrdiff_t a,
+                                       ptrdiff_t b,
+                                       ptrdiff_t c);
+
+/// A game-channel message read: `kind` is the type byte (0 when the read failed: nothing to do), the ids and
+/// flags per type; the text (a name, a password's companion or a chat line) goes to the sinks.
+struct EeWonLanMsg {
+  uint8_t kind;
+  uint16_t flags;
+  uint16_t id;
+  uint16_t target;
+};
+
+/// Receives one player of a join reply.
+using EeWonLanClientSink = void(*)(void *context, uint16_t id, const uint16_t *name, size_t count);
+
+/// `ToggleReady`: the host tries to start the game (1); another player asks for the other ready flag (2, ready
+/// in `want_ready`, when the game code allows readying: `CanReady` is asked only for ready); nothing without a
+/// client or game (0).
+struct EeWonToggleReady {
+  int32_t action;
+  bool want_ready;
+  bool ask_can_ready;
+};
+
+/// `HandleKicked`: the moderation event's kind (0 a ban, 1 a kick) and room flags (6 an Internet game, 10 the
+/// others), and the message when it is us (0 none, 1 banned, 2 kicked).
+struct EeWonKicked {
+  int32_t kind;
+  int32_t flags;
+  int32_t message;
+};
+
+/// `SetError`: the errors not ignored, and whether the player may ignore them (only no-Internet, 1, and
+/// account-server, 4, errors).
+struct EeWonInitErrors {
+  int32_t errors;
+  bool allow_ignore;
+};
+
+/// A received message (`HandleRecvMsg`): whether the socket's time is stamped, and whether it is a new socket's
+/// first message (only a join request counts) or goes to `HandleMessage`; nothing for a failed or killed op.
+struct EeWonLanRecv {
+  bool handle;
+  bool stamp;
+  bool new_socket;
+};
+
+/// `HandleSocketClosed`: the host announces a player's departure (and unlinks it) and forgets the socket; a joiner
+/// whose host socket closed kills it and reports the lost game.
+struct EeWonLanClosed {
+  bool announce_left;
+  bool forget_socket;
+  bool lost_host;
+};
+
+/// `HandleGameSummary`: a summary read keeps the game (stamped) and reports it added (0) or changed (2); an
+/// unreadable one drops the game and reports a known game as changed (2: the original's `aFlag ? 2 : 1` under
+/// `if (aFlag)`), a new one not at all (-1).
+struct EeWonLanSummary {
+  bool keep;
+  int32_t event;
+};
+
+/// `HandleChatCommand`: what a typed command does in the LAN room.
+struct EeWonLanChatCommand {
+  /// 0 nothing, 1 send a chat line (`flags`, to the target when `whisper`), 2 toggle the target's ignore,
+  /// 3 the invalid command error.
+  int32_t action;
+  uint16_t flags;
+  bool whisper;
+};
+
+/// The host: `(logic, op, a, b, c, d) -> result`. `logic` is the C++ object the Rust one belongs to.
+using EeWonLobbyHostFn = ptrdiff_t(*)(void *logic,
+                                      EeWonLobbyOp op,
+                                      void *a,
+                                      void *b,
+                                      ptrdiff_t c,
+                                      ptrdiff_t d);
+
+/// One control look-up: the resource name, the original's file and line (for the missing-control report), the type,
+/// the control id `SafeGetComponent` set (-1: none) and the member it fills (-1: LobbyOptionsCtrl's local button).
+struct EeWonLobbyCtlSlot {
+  const char *name;
+  const char *file;
+  int32_t line;
+  EeWonLobbyCtlType ty;
+  int32_t control_id;
+  int32_t member;
+};
+
+/// The host: `(control, op, a, b, c) -> result`.
+using EeWonLobbyCtlHostFn = ptrdiff_t(*)(void *ctl,
+                                         EeWonLobbyCtlOp op,
+                                         ptrdiff_t a,
+                                         ptrdiff_t b,
+                                         ptrdiff_t c);
+
+/// One control of a kind: its resource name, the original's file and line (for the missing-control report) and type.
+struct EeWonLobbyDlgSlot {
+  const char *name;
+  const char *file;
+  int32_t line;
+  EeWonLobbyDlgType ty;
+};
+
+/// The host: `(dialog, op, a, b, c) -> result`. `dialog` is the C++ dialog the Rust object belongs to.
+using EeWonLobbyDlgHostFn = ptrdiff_t(*)(void *dialog,
+                                         EeWonLobbyDlgOp op,
+                                         ptrdiff_t a,
+                                         ptrdiff_t b,
+                                         ptrdiff_t c);
+
+/// What a map does with its entries' objects: `copy` makes the copy's object (a reference added, or a new record),
+/// `drop` lets one go (a reference released, or the record deleted). Either may be absent (the entries hold none).
+struct EeWonLobbyMapHooks {
+  void *(*copy)(void*);
+  void (*drop)(void*);
+};
+
+/// A key handed over by C++: `num` for the ids (an `unsigned` id zero-extended, a `long` sign-extended), `addr` for
+/// an address, `text` / `count` / `unit_size` for text (`count` units of `unit_size` bytes: a `wchar_t`'s size for a
+/// `GUIString`, 1 for narrow text).
+struct EeWonLobbyKey {
+  uint64_t num;
+  const EeWonIpAddr *addr;
+  const void *text;
+  size_t count;
+  uint32_t unit_size;
+};
+
+/// The host: `(popup, op, a, b, c) -> result`.
+using EeWonLobbyPopupHostFn = ptrdiff_t(*)(void *popup,
+                                           EeWonLobbyPopupOp op,
+                                           ptrdiff_t a,
+                                           ptrdiff_t b,
+                                           ptrdiff_t c);
+
+/// The host: `(obj, op, a, b, c, d) -> result`.
+using EeWonLogicHostFn = ptrdiff_t(*)(void *obj,
+                                      EeWonLogicOp op,
+                                      ptrdiff_t a,
+                                      ptrdiff_t b,
+                                      ptrdiff_t c,
+                                      ptrdiff_t d);
+
+/// A `SyncStep` for the C++: `kind` 0 erase, 1 insert, 2 update, 3 erase the rest.
+struct EeWonSyncStep {
+  uint8_t kind;
+  uint32_t existing;
+  uint32_t incoming;
+};
+
+/// A server's population as `SyncGroups`, `AddClientToGroup` and `RemoveClientFromGroup` count it.
+struct EeWonPopulation {
+  /// The people in chat rooms (`mNumChatClients`).
+  int32_t chat;
+  /// The people in all rooms (`mNumClients`).
+  int32_t total;
+};
+
+/// What a client's flags say (`IsAnonymous`, `IsAway`, `IsAdmin`, `IsModerator`, `IsMuted`).
+struct EeWonClientStatus {
+  bool anonymous;
+  bool away;
+  bool admin;
+  bool moderator;
+  /// Muted server-wide or in the chat room / in the game.
+  bool muted_chat;
+  bool muted_game;
+};
+
+/// What a room's flags say.
+struct EeWonGroupKind {
+  bool password;
+  bool invite_only;
+  bool ask_to_join;
+  /// A chat room; otherwise a game.
+  bool chat;
+  /// A chat room anyone may enter: no password, invitation or approval.
+  bool public_chat;
+};
+
+/// A game member as `AreAllReady` sees it.
+struct EeWonMemberReady {
+  bool has_player;
+  bool game_captain;
+  bool ready;
+};
+
+/// The host: `ModelHost(op, a, b, c)`.
+using EeWonModelHost = ptrdiff_t(*)(EeWonModelOp op, ptrdiff_t a, ptrdiff_t b, ptrdiff_t c);
+
+/// A walk over a client list as the original's map iterator walked (`LobbyClientIterator`,
+/// `LobbyClientSetIterator`): the next client after the last one returned.
+struct EeWonModelCursor {
+  bool started;
+  /// the set iterator's: a client with a player is found and not yet returned
+  bool ready;
+  uint16_t last;
+};
+
+/// A list of texts: `count` texts, text `i` the units (or bytes) from `offsets[i]` to `offsets[i + 1]`.
+struct EeWonTextList {
+  const void *data;
+  const size_t *offsets;
+  size_t count;
+};
+
+/// The global file's lists: `names.count` users with their fields at the same index; the passwords' bytes.
+struct EeWonGlobalPrefsOut {
+  EeWonTextList names;
+  const int32_t *last_use;
+  const uint16_t *ids;
+  const int32_t *value04;
+  const int32_t *value08;
+  EeWonTextList passwords;
+  bool sound_effects;
+  bool music;
+  int32_t network_adapter;
+};
+
+/// The user file's lists (`lan_user` false: the LAN part is not written). Addresses are six bytes each; a game
+/// filter `i` has the values from `option_first[i]` to `option_first[i + 1]` of `option_values`.
+struct EeWonUserPrefsOut {
+  bool lan_user;
+  EeWonTextList lan_names;
+  const int32_t *lan_times;
+  const uint8_t *direct_addresses;
+  EeWonTextList direct_names;
+  uint16_t broadcast_port;
+  size_t reconnect_count;
+  const uint8_t *reconnect_addresses;
+  const int32_t *reconnect_times;
+  const int32_t *reconnect_ids;
+  EeWonTextList ignored;
+  EeWonTextList friend_names;
+  const uint32_t *friend_ids;
+  size_t blocked_count;
+  const uint32_t *blocked;
+  bool first[6];
+  /// The tab, the last server, the last room (three texts).
+  EeWonTextList texts;
+  bool second[5];
+  uint16_t connection_speed;
+  EeWonTextList option_names;
+  const size_t *option_first;
+  EeWonTextList option_values;
+};
+
+struct EeWonPrefsEvent {
+  EeWonPrefsEventKind kind;
+  int64_t value;
+  uint8_t index;
+  const uint16_t *units;
+  size_t count;
+  const uint8_t *bytes;
+  size_t length;
+  uint8_t address[6];
+};
+
+/// Receives each event of a read in order.
+using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
+
+/// A row for the C++: NUL-terminated texts; `new_section` when the section differs from the previous row's.
+struct EeWonResource {
+  const char *section;
+  const char *key;
+  const char *name;
+  EeWonResKind kind;
+  bool new_section;
+};
+
+using EeWonRouteLogicHostFn = ptrdiff_t(*)(void *obj,
+                                           EeWonRouteLogicOp op,
+                                           ptrdiff_t a,
+                                           ptrdiff_t b,
+                                           ptrdiff_t c,
+                                           ptrdiff_t d,
+                                           ptrdiff_t e);
+
+/// `SelectGame` over one game: skipped (password, ask to join, not joinable); ranked (`Some(rank)`: the skill
+/// band, 0 the wanted skill, 10000 no skill, 20000 one below, 30000 one above, plus the ping, when the ping is
+/// under the ceiling and the limit); or, with an unknown ping (0xfffe) at or over the ceiling, pinged.
+struct EeWonQuickPlay {
+  /// 0 nothing, 1 ranked (`rank`), 2 ping it.
+  int32_t action;
+  int32_t rank;
+};
+
+/// A server as `GetDefaultServer` sees it.
+struct EeWonServerPick {
+  /// Its name is the last server's.
+  bool last_used;
+  int32_t clients;
+  /// It lists the lobby's language.
+  bool language;
+};
+
+/// The host: `(component, op, a, b, x, y, w, h) -> result`.
+using EeWonScrollTextHostFn = ptrdiff_t(*)(void *comp,
+                                           EeWonScrollTextOp op,
+                                           ptrdiff_t a,
+                                           ptrdiff_t b,
+                                           int32_t x,
+                                           int32_t y,
+                                           int32_t w,
+                                           int32_t h);
+
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
   uint8_t kind;
@@ -12936,61 +12992,6 @@ struct EeWonStatusLobbyText {
   EeWonLobbyRes res;
   bool general;
 };
-
-/// The constructor's parts (`ee_won_tab_init`): the bottom bar's Rust object, the four containers and the layout
-/// point, as `Component*`s.
-struct EeWonTabParts {
-  const EeWonTabBar *bar;
-  ptrdiff_t bottom_bar;
-  ptrdiff_t top_bar;
-  ptrdiff_t bottom_bar_container;
-  ptrdiff_t top_bar_container;
-  ptrdiff_t layout;
-};
-
-/// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
-/// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
-struct EeWonThreadBody {
-  void (*run)(void *context);
-  void (*destroy)(void *context);
-  void *context;
-};
-
-/// The strings `ToString` prints (each a pointer and a length).
-struct EeWonTitleText {
-  const uint8_t *name;
-  size_t name_len;
-  const uint8_t *network;
-  size_t network_len;
-  const uint8_t *image_path;
-  size_t image_path_len;
-  const uint8_t *hash_string;
-  size_t hash_string_len;
-  const uint8_t *key_prefix;
-  size_t key_prefix_len;
-  uint16_t net_port;
-};
-
-/// The title fields `ToString` prints, in its order after `NetPort`.
-struct EeWonTitleFlags {
-  bool force_cd_key;
-  bool require_crc;
-  bool allow_beta_key;
-  bool require_cd_key;
-  bool fail_to_guest;
-  bool allow_guest;
-  bool concurrent_user_login;
-  bool concurrent_cd_key_login;
-  bool get_user_data;
-  bool get_forgeable_user_data;
-  bool cd_key_for_invite;
-  bool save_session_key;
-  bool get_key_id;
-  bool ascii_account_names;
-};
-
-/// One entry, to the C++ copy.
-using EeWonUserStatusSink = void(*)(void *context, uint64_t id, uint8_t status);
 
 /// A click the list delivers (`ListItemClickedEvent`'s arguments besides the item; `DeliverItemClicked`'s `b`).
 struct EeWonItemClick {
@@ -13048,421 +13049,6 @@ constexpr static const uint32_t CLASSIC[15] = { 4210752, 13947080, 16777215, 842
 
 extern "C" {
 
-/// An op's request data into `sink` (`values`: its members in its table's order).
-///
-/// # Safety
-/// `values` holds `count` values whose byte ranges are valid; `sink` accepts `context`.
-void ee_won_admin_request(int32_t op,
-                          const EeWonAdminValue *values,
-                          size_t count,
-                          EeWonByteSink sink,
-                          void *context);
-
-/// A reply's values into `sink`.
-///
-/// # Safety
-/// `data` holds `len` bytes; `sink` accepts `context`.
-void ee_won_admin_reply(int32_t op,
-                        const uint8_t *data,
-                        size_t len,
-                        EeWonAdminSink sink,
-                        void *context);
-
-/// An admin op of `kind` (`EE_WON_ADMINOP_*`) with its members, for a C++ `ServerRequestOp` to run.
-///
-/// # Safety
-/// `values` holds `count` values whose byte ranges are valid.
-EeWonReqOp *ee_won_adminop_new(int32_t kind, const EeWonAdminValue *values, size_t count);
-
-/// The lobby's lost password request (`RequestPasswordEmailOp` with its user name, UTF-16 LE).
-///
-/// # Safety
-/// `name` holds `len` bytes.
-EeWonReqOp *ee_won_reqop_password_email(const uint8_t *name, size_t len);
-
-/// The lobby's lost user name request (`RequestAccountInfoEmailOp` with its email).
-///
-/// # Safety
-/// `email` holds `len` bytes.
-EeWonReqOp *ee_won_reqop_info_email(const uint8_t *email, size_t len);
-
-/// A new auth context object for the C++ `AuthContext*` `ctx` with its login secret file (`len` bytes), its calls
-/// over the core table and the certificate op's maker; one reference.
-///
-/// # Safety
-/// `core` is the library's static table; `ctx` outlives the object's use of it; `secret_file` holds `len` bytes.
-const EeWonAuthCtx *ee_won_authctx_new_core(void *ctx,
-                                            const EeWonCoreHooks *core,
-                                            void *(*new_cert_op)(void *context),
-                                            const uint8_t *secret_file,
-                                            size_t len);
-
-EeWonAuthSecrets *ee_won_auth_secrets_new();
-
-/// # Safety
-/// `s` is from `ee_won_auth_secrets_new` (or NULL), not used afterwards.
-void ee_won_auth_secrets_free(EeWonAuthSecrets *s);
-
-/// `LoadSecretList`: the list emptied, then read from the file; false when it cannot open.
-///
-/// # Safety
-/// `s` is a list, `path` a C string.
-bool ee_won_auth_secrets_load(EeWonAuthSecrets *s, const char *path);
-
-/// `SaveSecretList`: false when the file cannot be created.
-///
-/// # Safety
-/// `s` is a list, `path` a C string.
-bool ee_won_auth_secrets_save(EeWonAuthSecrets *s, const char *path);
-
-/// # Safety
-/// `s` is a list, `key` 8 bytes.
-void ee_won_auth_secrets_add(EeWonAuthSecrets *s, const uint8_t *key);
-
-/// # Safety
-/// `s` is a list, `key` 8 bytes.
-bool ee_won_auth_secrets_remove(EeWonAuthSecrets *s, const uint8_t *key);
-
-/// # Safety
-/// `s` is a list.
-bool ee_won_auth_secrets_commit(EeWonAuthSecrets *s, int64_t auth_time, int64_t duration);
-
-/// # Safety
-/// `s` is a list.
-size_t ee_won_auth_secrets_count(EeWonAuthSecrets *s);
-
-/// `AppendLoginSecrets`' bytes, to the sink.
-///
-/// # Safety
-/// `s` is a list.
-void ee_won_auth_secrets_login(EeWonAuthSecrets *s, EeWonByteSink sink, void *context);
-
-/// `AppendCommunityData`'s block, to the sink. `communities[i].bytes` is the community's valid CD key's bytes
-/// (`present` false without one).
-///
-/// # Safety
-/// Each array holds its count of entries, each entry's pointers their lengths; `s` is a list.
-void ee_won_auth_community_data(const EeWonAuthEntry *communities,
-                                size_t community_count,
-                                const EeWonAuthEntry *joins,
-                                size_t join_count,
-                                const EeWonAuthEntry *user_data,
-                                size_t user_data_count,
-                                const EeWonAuthEntry *nicknames,
-                                size_t nickname_count,
-                                EeWonAuthSecrets *s,
-                                EeWonByteSink sink,
-                                void *context);
-
-/// `AppendHashes`' block, to the sink: per community its name, its file hash in `bytes` and its section hashes in
-/// `extra`.
-///
-/// # Safety
-/// `communities` holds `count` entries; `challenge` its length.
-void ee_won_auth_hashes(const EeWonAuthEntry *communities,
-                        size_t count,
-                        const uint8_t *challenge,
-                        size_t challenge_len,
-                        EeWonByteSink sink,
-                        void *context);
-
-/// `StartAutoRefresh`'s decision: the wait in seconds, or -1 for no timer.
-int64_t ee_won_auth_auto_refresh_wait(bool enabled,
-                                      bool force,
-                                      bool peer_valid,
-                                      int64_t expire_delta);
-
-/// A flow alone (the drivers'; the game's is the auth context's): its sessions are stand-ins held through the hooks
-/// with `session_last_use` as their `GetLastUseTime`, or session handles when it is NULL.
-///
-/// # Safety
-/// `hooks` points to a hook table; its context outlives the flow.
-EeWonAuthFlow *ee_won_auth_flow_new(const EeWonAuthFlowHooks *hooks,
-                                    int64_t (*session_last_use)(void*));
-
-/// The members' references dropped.
-///
-/// # Safety
-/// `f` is from `ee_won_auth_flow_new` (or NULL), not used afterwards.
-void ee_won_auth_flow_free(EeWonAuthFlow *f);
-
-/// # Safety
-/// `f` a flow, `a` a live IPAddr value, `session` a session (as the flow was made) or NULL.
-void ee_won_auth_flow_put_session(const EeWonAuthFlow *f,
-                                  const EeWonIpAddr *a,
-                                  void *session,
-                                  int64_t now);
-
-/// A reference the caller adopts, or NULL.
-///
-/// # Safety
-/// `f` a flow, `a` a live IPAddr value.
-void *ee_won_auth_flow_get_session(const EeWonAuthFlow *f, const EeWonIpAddr *a, int64_t now);
-
-/// `SetPeerData(data)`: a reference of its own to `peer` (NULL: none), then the sessions cleared.
-///
-/// # Safety
-/// `f` a flow, `peer` a live peer data object or NULL.
-void ee_won_auth_flow_set_peer_data(const EeWonAuthFlow *f, const EeWonAuthObj *peer);
-
-/// `GetPeerData()`: a new reference the caller frees (`ee_won_authobj_free`), NULL for none.
-///
-/// # Safety
-/// `f` a flow.
-EeWonAuthObj *ee_won_auth_flow_peer_data(const EeWonAuthFlow *f);
-
-/// `IsExpired(extra)` at `now`.
-///
-/// # Safety
-/// `f` a flow.
-bool ee_won_auth_flow_is_expired(const EeWonAuthFlow *f, int64_t extra, int64_t now);
-
-/// # Safety
-/// `f` a flow, `op` the completing timer's `RefCount*`.
-void ee_won_auth_flow_auto_refresh_callback(const EeWonAuthFlow *f, void *op);
-
-/// # Safety
-/// `f` a flow.
-void ee_won_auth_flow_stop_auto_refresh(const EeWonAuthFlow *f);
-
-/// # Safety
-/// `f` a flow.
-void ee_won_auth_flow_set_do_auto_refresh(const EeWonAuthFlow *f, bool enabled, int64_t now);
-
-/// # Safety
-/// `f` a flow.
-void ee_won_auth_flow_kill(const EeWonAuthFlow *f);
-
-/// # Safety
-/// `f` a flow.
-void ee_won_auth_flow_start_auto_refresh(const EeWonAuthFlow *f, bool force, int64_t now);
-
-/// # Safety
-/// `f` a flow, `op` the completing request's `RefCount*`.
-void ee_won_auth_flow_get_cert_callback(const EeWonAuthFlow *f, void *op, int64_t now);
-
-/// `RefreshAsync(op, timeout)`: `light` the waiting op's run (an `AsyncOp`'s `RefCount*`, or NULL for none),
-/// `cert` its member (borrowed: the set takes a reference of its own).
-///
-/// # Safety
-/// `f` a flow; `light` NULL or a live op; `cert` NULL or from `ee_won_light_cert_new`.
-void ee_won_auth_flow_refresh_async(const EeWonAuthFlow *f,
-                                    void *light,
-                                    const EeWonLightCert *cert,
-                                    uint32_t timeout);
-
-/// # Safety
-/// `f` a flow.
-long ee_won_auth_flow_refresh_block(const EeWonAuthFlow *f, uint32_t timeout, int64_t now);
-
-/// `new LightGetCertOp`'s member (no peer data): a reference, freed with `ee_won_light_cert_free`.
-EeWonLightCert *ee_won_light_cert_new();
-
-/// Drops a reference (NULL: nothing).
-///
-/// # Safety
-/// `cert` from `ee_won_light_cert_new`, not used afterwards.
-void ee_won_light_cert_free(EeWonLightCert *cert);
-
-/// `GetPeerData()`: a new reference (`ee_won_authobj_free`), NULL for none.
-///
-/// # Safety
-/// `cert` a live light op member.
-EeWonAuthObj *ee_won_light_cert_peer(const EeWonLightCert *cert);
-
-/// `SetPeerData(data)` (NULL: none; a reference of its own).
-///
-/// # Safety
-/// `cert` a live light op member, `peer` NULL or a live peer data object.
-void ee_won_light_cert_set_peer(const EeWonLightCert *cert, const EeWonAuthObj *peer);
-
-/// An empty login (the secret file: `secret_file`, the WON directory's `_wonlogin.ks`).
-///
-/// # Safety
-/// `secret_file` holds `len` bytes.
-EeWonAuthLogin *ee_won_auth_login_new(const uint8_t *secret_file, size_t len);
-
-/// # Safety
-/// `l` is from `ee_won_auth_login_new` (or NULL), not used afterwards.
-void ee_won_auth_login_free(EeWonAuthLogin *l);
-
-/// A setter (`EE_WON_AUTH_LOGIN_*`): `key` a map's key and `value` a text (UTF-16 LE bytes) or bytes.
-///
-/// # Safety
-/// `l` is a login; the buffers hold their lengths.
-void ee_won_auth_login_set(const EeWonAuthLogin *l,
-                           int32_t which,
-                           const uint8_t *key,
-                           size_t key_len,
-                           const uint8_t *value,
-                           size_t value_len,
-                           int64_t num);
-
-/// `EE_WON_AUTH_LOGIN_NAME` / `_PASSWORD`: the text (UTF-16 LE bytes); `_SECRET_FILE`: its bytes.
-///
-/// # Safety
-/// `l` is a login; `sink` takes `context`.
-void ee_won_auth_login_text(const EeWonAuthLogin *l,
-                            int32_t which,
-                            EeWonByteSink sink,
-                            void *context);
-
-/// `SetHashFileList(community, files)`: the files NUL-separated (`files_len` bytes, each path NUL-ended).
-///
-/// # Safety
-/// `l` is a login; the buffers hold their lengths.
-bool ee_won_auth_login_hash_files(const EeWonAuthLogin *l,
-                                  const uint8_t *community,
-                                  size_t community_len,
-                                  const uint8_t *files,
-                                  size_t files_len);
-
-/// The members, one line (`Login::describe`, the drivers' form).
-///
-/// # Safety
-/// `l` is a login; `sink` takes `context`.
-void ee_won_auth_login_describe(const EeWonAuthLogin *l, EeWonByteSink sink, void *context);
-
-/// The login request's blocks: 0 `AppendCommunityData`, 1 `AppendHashes(challenge)` (`data`), 2
-/// `AppendLoginSecrets`.
-///
-/// # Safety
-/// `l` is a login; `data` holds `len` bytes; `sink` takes `context`.
-void ee_won_auth_login_block(const EeWonAuthLogin *l,
-                             int32_t which,
-                             const uint8_t *data,
-                             size_t len,
-                             EeWonByteSink sink,
-                             void *context);
-
-/// The secrets: 0 `LoadSecretList`, 1 `SaveSecretList` (false: the file did not open), 2 `AddSecret(key)` and save,
-/// 3 `RemoveSecret(key)` and save when removed, 4 `CommitSecrets(t0, t1)` and save when it changed anything.
-///
-/// # Safety
-/// `l` is a login; `key` 8 bytes for 2 and 3.
-bool ee_won_auth_login_secrets(const EeWonAuthLogin *l,
-                               int32_t which,
-                               const uint8_t *key,
-                               int64_t t0,
-                               int64_t t1);
-
-/// A new auth context (one reference, `ee_won_authctx_free`): `Init()`'s flow over `hooks` (whose context is the C++
-/// `AuthContext`), its login data with the secret file `secret_file` and its empty peer data.
-///
-/// # Safety
-/// `hooks` points to a hook table whose context outlives the context; `secret_file` holds `len` bytes.
-const EeWonAuthCtx *ee_won_authctx_new(const EeWonAuthFlowHooks *hooks,
-                                       const uint8_t *secret_file,
-                                       size_t len);
-
-/// Drops a reference (NULL: nothing); the last one releases the members.
-///
-/// # Safety
-/// `c` is NULL or a reference from `ee_won_authctx_new`, not used afterwards.
-void ee_won_authctx_free(const EeWonAuthCtx *c);
-
-/// The login data (borrowed, for `ee_won_auth_login_*`).
-///
-/// # Safety
-/// `c` is a live context.
-const EeWonAuthLogin *ee_won_authctx_login(const EeWonAuthCtx *c);
-
-/// `GetPeerData()`: a new reference (`ee_won_authobj_free`), NULL for none.
-///
-/// # Safety
-/// `c` a live context.
-EeWonAuthObj *ee_won_authctx_peer_data(const EeWonAuthCtx *c);
-
-/// `SetPeerData(data)` (NULL, or anything but peer data: none).
-///
-/// # Safety
-/// `c` a live context, `peer` NULL or a live object.
-void ee_won_authctx_set_peer_data(const EeWonAuthCtx *c, const EeWonAuthObj *peer);
-
-/// `IsExpired(extra)`.
-///
-/// # Safety
-/// `c` a live context.
-bool ee_won_authctx_is_expired(const EeWonAuthCtx *c, int64_t extra);
-
-/// `AutoRefreshCallback(op)` (the completing timer's `RefCount*`).
-///
-/// # Safety
-/// `c` a live context, `op` a live op.
-void ee_won_authctx_auto_refresh_callback(const EeWonAuthCtx *c, void *op);
-
-/// `StopAutoRefresh()`.
-///
-/// # Safety
-/// `c` a live context.
-void ee_won_authctx_stop_auto_refresh(const EeWonAuthCtx *c);
-
-/// `SetDoAutoRefresh(enabled)`.
-///
-/// # Safety
-/// `c` a live context.
-void ee_won_authctx_set_do_auto_refresh(const EeWonAuthCtx *c, bool enabled);
-
-/// `Kill()`.
-///
-/// # Safety
-/// `c` a live context.
-void ee_won_authctx_kill(const EeWonAuthCtx *c);
-
-/// `StartAutoRefresh(force)`.
-///
-/// # Safety
-/// `c` a live context.
-void ee_won_authctx_start_auto_refresh(const EeWonAuthCtx *c, bool force);
-
-/// `GetCertCallback(op)` (the completing `GetCertOp`'s `RefCount*`).
-///
-/// # Safety
-/// `c` a live context, `op` a live op.
-void ee_won_authctx_get_cert_callback(const EeWonAuthCtx *c, void *op);
-
-/// `RefreshAsync(op, cert, timeout)`: `light` NULL or a waiting op's run, `cert` its member (borrowed).
-///
-/// # Safety
-/// `c` a live context; `light` NULL or a live op; `cert` NULL or from `ee_won_light_cert_new`.
-void ee_won_authctx_refresh_async(const EeWonAuthCtx *c,
-                                  void *light,
-                                  const EeWonLightCert *cert,
-                                  uint32_t timeout);
-
-/// `RefreshBlock(timeout)`: the status.
-///
-/// # Safety
-/// `c` a live context.
-long ee_won_authctx_refresh_block(const EeWonAuthCtx *c, uint32_t timeout);
-
-/// `SetServerContext(context)` (a `ServerContext`'s `RefCount*`, NULL: none; a reference of its own).
-///
-/// # Safety
-/// `c` a live context, `servers` NULL or a live object.
-void ee_won_authctx_set_server_context(const EeWonAuthCtx *c,
-                                       void *servers);
-
-/// `GetServerContext()`: a new reference the caller adopts, or NULL.
-///
-/// # Safety
-/// `c` a live context.
-void *ee_won_authctx_server_context(const EeWonAuthCtx *c);
-
-/// `Init()`'s verifier file: unless a file was checked already (in this process), `LoadVerifierKey(dir +
-/// "_wonkver.pub")`.
-///
-/// # Safety
-/// `dir` holds `len` bytes.
-void ee_won_auth_verifier_init(const uint8_t *dir,
-                               size_t len);
-
-/// `AuthContext::LoadVerifierKey(filename)`.
-///
-/// # Safety
-/// `path` holds `len` bytes.
-bool ee_won_auth_verifier_load(const uint8_t *path, size_t len);
-
 /// A new Rust Scrollbar for the C++ `component`, its calls out through `host`.
 EeWonScrollbar *ee_won_bar_new(void *component, EeWonGuiHostFn host, bool vertical);
 
@@ -13505,256 +13091,6 @@ ptrdiff_t ee_won_btn_static(EeWonGuiHostFn host,
                             EeWonBtnStatic call,
                             ptrdiff_t a);
 
-/// `ByteBuffer(data, length, false)`: a copy.
-///
-/// # Safety
-/// `data` holds `length` bytes (or `length` is 0).
-EeWonByteBuffer *ee_won_bytes_copy(const uint8_t *data, unsigned long length);
-
-/// `ByteBuffer(const char*)`: the text and its terminator; null gives no bytes.
-///
-/// # Safety
-/// `text` is null or a NUL-terminated string.
-EeWonByteBuffer *ee_won_bytes_text(const char *text);
-
-/// # Safety
-/// `b` came from an `ee_won_bytes_*` constructor or `ee_won_writer_to_bytes` and is not used again.
-void ee_won_bytes_free(EeWonByteBuffer *b);
-
-/// `data()`: null for a buffer of no bytes at all.
-///
-/// # Safety
-/// `b` is valid.
-const uint8_t *ee_won_bytes_data(const EeWonByteBuffer *b);
-
-/// `length()`.
-///
-/// # Safety
-/// `b` is valid.
-unsigned long ee_won_bytes_length(const EeWonByteBuffer *b);
-
-/// `WriteBuffer(lengthFieldSize, lengthIncludesField)`.
-EeWonWriteBuffer *ee_won_writer_new(uint8_t field_size, bool includes_field);
-
-/// # Safety
-/// `w` came from `ee_won_writer_new` and is not used again.
-void ee_won_writer_free(EeWonWriteBuffer *w);
-
-/// `data()`: the data's start (null before the first growth); `capacity()` bytes may be written there until the
-/// next call that grows, resets or releases.
-///
-/// # Safety
-/// `w` is valid.
-uint8_t *ee_won_writer_data(EeWonWriteBuffer *w);
-
-/// # Safety
-/// `w` is valid.
-unsigned long ee_won_writer_length(const EeWonWriteBuffer *w);
-
-/// # Safety
-/// `w` is valid.
-unsigned long ee_won_writer_capacity(const EeWonWriteBuffer *w);
-
-/// `Reset` (and `Release`, which forgot the allocation another owner had taken: no caller takes it any more).
-///
-/// # Safety
-/// `w` is valid.
-void ee_won_writer_reset(EeWonWriteBuffer *w);
-
-/// `Reserve`.
-///
-/// # Safety
-/// `w` is valid.
-void ee_won_writer_reserve(EeWonWriteBuffer *w, unsigned long capacity);
-
-/// `CheckWrite`.
-///
-/// # Safety
-/// `w` is valid.
-void ee_won_writer_check_write(EeWonWriteBuffer *w, unsigned long add);
-
-/// `ReserveChunk`.
-///
-/// # Safety
-/// `w` is valid.
-void ee_won_writer_reserve_chunk(EeWonWriteBuffer *w, unsigned long total, unsigned long max);
-
-/// `SetSize`.
-///
-/// # Safety
-/// `w` is valid.
-void ee_won_writer_set_size(EeWonWriteBuffer *w, unsigned long size);
-
-/// `SkipBytes`.
-///
-/// # Safety
-/// `w` is valid.
-void ee_won_writer_skip(EeWonWriteBuffer *w, unsigned long n);
-
-/// `AppendBytes` (and the byte, bool, short and long appends of their little-endian bytes).
-///
-/// # Safety
-/// `w` is valid; `data` holds `length` bytes and is not the writer's own.
-void ee_won_writer_append(EeWonWriteBuffer *w, const uint8_t *data, unsigned long length);
-
-/// `AppendLength`.
-///
-/// # Safety
-/// `w` is valid.
-void ee_won_writer_append_length(EeWonWriteBuffer *w, unsigned long length, uint8_t size);
-
-/// `AppendString` / `AppendBuffer`: a `size`-byte length field, then the bytes.
-///
-/// # Safety
-/// As `ee_won_writer_append`.
-void ee_won_writer_append_field(EeWonWriteBuffer *w,
-                                const uint8_t *data,
-                                unsigned long length,
-                                uint8_t size);
-
-/// `AppendWString` of `length` UTF-16 little-endian bytes: a unit count field, then the bytes.
-///
-/// # Safety
-/// As `ee_won_writer_append`.
-void ee_won_writer_append_utf16le(EeWonWriteBuffer *w,
-                                  const uint8_t *data,
-                                  unsigned long length,
-                                  uint8_t size);
-
-/// `SetBytes` (and `SetByte`, `SetShort`).
-///
-/// # Safety
-/// `w` is valid; `data` holds `length` bytes.
-void ee_won_writer_set(EeWonWriteBuffer *w,
-                       unsigned long at,
-                       const uint8_t *data,
-                       unsigned long length);
-
-/// `ToByteBuffer`: a new byte buffer (the caller frees it with `ee_won_bytes_free`).
-///
-/// # Safety
-/// `w` is valid.
-EeWonByteBuffer *ee_won_writer_to_bytes(EeWonWriteBuffer *w, bool release);
-
-/// `ReadBuffer(data, length)` / `SetData`: points the reader at the bytes, rewound.
-///
-/// # Safety
-/// `r` is valid.
-void ee_won_reader_set(EeWonReadBuffer *r, const uint8_t *data, unsigned long length);
-
-/// `ReadBytes`: the next `amount` bytes into `*out`, skipped; false past the end (nothing moves).
-///
-/// # Safety
-/// `r` and `out` are valid; the reader's bytes are alive.
-bool ee_won_reader_take(EeWonReadBuffer *r, uint64_t amount, const uint8_t **out);
-
-/// `ReadLength`: into `*out`; false past the end.
-///
-/// # Safety
-/// As `ee_won_reader_take`.
-bool ee_won_reader_length(EeWonReadBuffer *r, uint8_t size, uint32_t *out);
-
-/// `ReadCacheMap`'s file: opened (nothing when it cannot be), read with [`read_map`], each entry handed to `put`
-/// (valid during the call), closed.
-///
-/// # Safety
-/// `path` is a C string; `put` is callable with `context`.
-void ee_won_cachemap_read(const char *path,
-                          int32_t version,
-                          void (*put)(void*, const EeWonCacheEntry*),
-                          void *context);
-
-/// As [`ee_won_cachemap_read`], the file's bytes read from memory by the same reader (its memory mode): the
-/// driver's cases that need no disk (won_cachemap_test: the file opens made it I/O bound).
-///
-/// # Safety
-/// `data` holds `length` bytes; `put` as `ee_won_cachemap_read`.
-void ee_won_cachemap_read_memory(const uint8_t *data,
-                                 size_t length,
-                                 int32_t version,
-                                 void (*put)(void*, const EeWonCacheEntry*),
-                                 void *context);
-
-/// `WriteCacheMap`'s file: opened for writing (nothing when it cannot be), written with [`write_map`] (the entries
-/// in the id map's order, `delete` called with an index for each one not kept), closed.
-///
-/// # Safety
-/// `path` is a C string; `entries` holds `count` entries whose strings hold their lengths; `delete` is callable
-/// with `context`.
-void ee_won_cachemap_write(const char *path,
-                           int32_t version,
-                           int64_t now,
-                           const EeWonCacheEntry *entries,
-                           size_t count,
-                           void (*delete_)(void*, size_t),
-                           void *context);
-
-/// As [`ee_won_cachemap_write`], the file's bytes given to `sink` instead of a file (the driver's cases that need no
-/// disk).
-///
-/// # Safety
-/// As `ee_won_cachemap_write`; `sink` is callable with `sink_context` during the call.
-void ee_won_cachemap_write_memory(int32_t version,
-                                  int64_t now,
-                                  const EeWonCacheEntry *entries,
-                                  size_t count,
-                                  void (*delete_)(void*, size_t),
-                                  void *context,
-                                  EeWonByteSink sink,
-                                  void *sink_context);
-
-/// `LoadFromRegistry`'s read: the product's value as bytes to `sink` (false when the key or value is missing, not
-/// hex, or empty: `QueryBinary` other than 0).
-///
-/// # Safety
-/// `path` is a C string or NULL; `product` holds `product_len` bytes; `sink` is valid with `context`.
-bool ee_won_cdkey_registry_read(int32_t root,
-                                const char *path,
-                                const uint8_t *product,
-                                size_t product_len,
-                                EeWonByteSink sink,
-                                void *context);
-
-/// `SaveToRegistry`'s write: the encrypted bytes as the product's value (false when the key does not open or the
-/// value is not set).
-///
-/// # Safety
-/// `path` is a C string or NULL; `product` and `data` hold their lengths.
-bool ee_won_cdkey_registry_write(int32_t root,
-                                 const char *path,
-                                 const uint8_t *product,
-                                 size_t product_len,
-                                 const uint8_t *data,
-                                 size_t data_len);
-
-/// `ClearFromRegistry`: the product's value deleted.
-///
-/// # Safety
-/// `path` is a C string or NULL; `product` holds `product_len` bytes.
-void ee_won_cdkey_registry_clear(int32_t root,
-                                 const char *path,
-                                 const uint8_t *product,
-                                 size_t product_len);
-
-/// `SaveToFile`'s write: the encrypted bytes through `PlatFOpen(path, "wb")` (false when it does not open or the
-/// write is short; the file is closed either way).
-///
-/// # Safety
-/// `path` is a C string; `data` holds `data_len` bytes.
-bool ee_won_cdkey_file_write(const char *path,
-                             const uint8_t *data,
-                             size_t data_len);
-
-/// `LoadFromFile`'s read: up to 2,048 bytes of the file to `sink` (false when it does not open).
-///
-/// # Safety
-/// `path` is a C string; `sink` is valid with `context`.
-bool ee_won_cdkey_file_read(const char *path, EeWonByteSink sink, void *context);
-
-/// A new `GetCertOp`: its auth context (`EE_WON_GETCERT_AUTH_CONTEXT`) and its server context
-/// (`EE_WON_REQHOST_CONTEXT`, the auth context's) are set after the bind.
-EeWonHostOp *ee_won_hostop_getcert();
-
 /// The handler of `table` for the instruction `key` (`len` bytes): -1 when the handler does not hold the key (the
 /// caller asks its base), 0 when it was handled, 1 when it threw (the host holds the exception).
 ///
@@ -13767,139 +13103,6 @@ int32_t ee_won_cfg_tab_run(const EeWonCfgTabHost *host,
 
 /// Whether `table` is one of the reader's handlers, for the drivers.
 bool ee_won_cfg_tab_has(int32_t table);
-
-/// `GetCommandName`.
-const char *ee_won_chat_command_name(int32_t command);
-
-/// `ParseCommand`'s first step: the command word (upper-cased, from position 1) to the sink, and the position
-/// after it.
-///
-/// # Safety
-/// `text` as `EeWonChatText`; `sink` receives the word during the call.
-int32_t ee_won_chat_command_word(EeWonChatText text,
-                                 uint32_t wchar_size,
-                                 EeWonWideUnitSink sink,
-                                 void *context);
-
-/// `ParseCommand`'s second step (`parse_command`): `command` -1 for an unknown word, `clients` the room's names.
-///
-/// # Safety
-/// The texts as `EeWonChatText`, `clients` `client_count` of them; `out` is valid; `sink` receives the texts set.
-void ee_won_chat_parse(EeWonChatText text,
-                       int32_t pos,
-                       int32_t command,
-                       EeWonChatText reply,
-                       const EeWonChatText *clients,
-                       size_t client_count,
-                       int32_t threshold,
-                       uint32_t wchar_size,
-                       EeWonChatOutcome *out,
-                       EeWonChatSink sink,
-                       void *context);
-
-/// `FindClient` (`find_client`): the match into `*matched`, the client's index or -1.
-///
-/// # Safety
-/// As `ee_won_chat_parse`; `matched` is valid.
-int32_t ee_won_chat_find_client(EeWonChatText name,
-                                const EeWonChatText *clients,
-                                size_t client_count,
-                                uint32_t wchar_size,
-                                int32_t *matched);
-
-/// `HandleInput`'s decision: 0 no client list, 1 a command, 2 an emote, 3 an emote with nothing in it, 4 a
-/// broadcast, 5 an empty broadcast. For an emote the sink gets its text.
-///
-/// # Safety
-/// `text` as `EeWonChatText`; `sink` as `ee_won_chat_parse`.
-int32_t ee_won_chat_input(EeWonChatText text,
-                          uint32_t wchar_size,
-                          int32_t prefix,
-                          bool allow_colon,
-                          bool has_clients,
-                          EeWonChatSink sink,
-                          void *context);
-
-/// `GetHelp`'s commands (`help_commands`) into `out` (room for 32); their count.
-///
-/// # Safety
-/// `out` has room for 32 ids.
-size_t ee_won_chat_help(uint32_t room_flags,
-                        bool moderator,
-                        bool room_captain,
-                        bool game_captain,
-                        bool admin,
-                        int32_t *out);
-
-/// A new parser (the constructor's state).
-EeWonChatParser *ee_won_chatparser_new();
-
-/// Frees the parser.
-///
-/// # Safety
-/// `p` from `ee_won_chatparser_new` (or null), not used after.
-void ee_won_chatparser_free(EeWonChatParser *p);
-
-/// A number.
-///
-/// # Safety
-/// `p` is live.
-int64_t ee_won_chatparser_number(const EeWonChatParser *p, EeWonChatParserNumber n);
-
-/// Sets a number.
-///
-/// # Safety
-/// `p` is live.
-void ee_won_chatparser_set_number(EeWonChatParser *p, EeWonChatParserNumber n, int64_t v);
-
-/// A text (`count` gets its units), valid until the parser changes.
-///
-/// # Safety
-/// `p` is live, `count` writable.
-const uint32_t *ee_won_chatparser_text(const EeWonChatParser *p,
-                                       EeWonChatParserText t,
-                                       size_t *count);
-
-/// Sets a text (`count` units of `unit_size` bytes).
-///
-/// # Safety
-/// `p` is live; `text` holds the units.
-void ee_won_chatparser_set_text(EeWonChatParser *p,
-                                EeWonChatParserText t,
-                                const void *text,
-                                size_t count,
-                                uint32_t unit_size);
-
-/// `AddCommand`.
-///
-/// # Safety
-/// As `ee_won_chatparser_set_text`.
-void ee_won_chatparser_add_command(EeWonChatParser *p,
-                                   const void *name,
-                                   size_t count,
-                                   uint32_t unit_size,
-                                   int32_t id);
-
-/// `GetCommandString`'s text (`count` gets its units), valid until the parser changes.
-///
-/// # Safety
-/// `p` is live, `count` writable.
-const uint32_t *ee_won_chatparser_command_string(const EeWonChatParser *p,
-                                                 int32_t id,
-                                                 size_t *count);
-
-/// `HandleInput` over the room's client names (`clients`, `client_count`; `has_clients` whether the parser has a
-/// list): the result; `target` gets the target client's position, or -1 for none.
-///
-/// # Safety
-/// `p` is live; the texts as `EeWonChatText` of `wchar_size` units; `target` writable.
-bool ee_won_chatparser_handle_input(EeWonChatParser *p,
-                                    EeWonChatText text,
-                                    const EeWonChatText *clients,
-                                    size_t client_count,
-                                    bool has_clients,
-                                    uint32_t wchar_size,
-                                    int32_t *target);
 
 /// A new Rust ComboBox for the C++ `component` over its container's Rust object `ct`, its calls out through `host`.
 ///
@@ -13949,219 +13152,6 @@ ptrdiff_t ee_won_comp_call(void *me,
                            ptrdiff_t b,
                            ptrdiff_t c);
 
-EeWonConfigLexer *ee_won_config_new();
-
-/// # Safety
-/// `l` is from `ee_won_config_new` (or NULL), not used afterwards.
-void ee_won_config_free(EeWonConfigLexer *l);
-
-int32_t ee_won_config_line_count();
-
-void ee_won_config_reset_line_count();
-
-/// # Safety
-/// `l` is a lexer.
-void ee_won_config_reset(EeWonConfigLexer *l);
-
-/// # Safety
-/// `l` is a lexer, `io` the parser's members.
-bool ee_won_config_end_of_file(EeWonConfigLexer *l, EeWonConfigIo *io);
-
-/// # Safety
-/// As `ee_won_config_end_of_file`.
-int32_t ee_won_config_get_char(EeWonConfigLexer *l, EeWonConfigIo *io);
-
-/// # Safety
-/// As `ee_won_config_end_of_file`.
-int32_t ee_won_config_peek_char(EeWonConfigLexer *l, EeWonConfigIo *io);
-
-/// # Safety
-/// As `ee_won_config_end_of_file`.
-void ee_won_config_unget_char(EeWonConfigLexer *l, EeWonConfigIo *io, int32_t ch);
-
-/// # Safety
-/// As `ee_won_config_end_of_file`; `text` holds `length` bytes.
-void ee_won_config_unget_narrow(EeWonConfigLexer *l,
-                                EeWonConfigIo *io,
-                                const uint8_t *text,
-                                size_t length);
-
-/// # Safety
-/// As `ee_won_config_end_of_file`; `units` holds `count` `wchar_t` values widened to 32 bits.
-void ee_won_config_unget_wide(EeWonConfigLexer *l,
-                              EeWonConfigIo *io,
-                              const uint32_t *units,
-                              size_t count);
-
-/// # Safety
-/// As `ee_won_config_end_of_file`.
-void ee_won_config_skip_whitespace(EeWonConfigLexer *l, EeWonConfigIo *io);
-
-/// # Safety
-/// As `ee_won_config_end_of_file`.
-void ee_won_config_skip_line(EeWonConfigLexer *l, EeWonConfigIo *io);
-
-/// # Safety
-/// As `ee_won_config_end_of_file`.
-void ee_won_config_skip_block_comment(EeWonConfigLexer *l, EeWonConfigIo *io);
-
-/// `ReadToken` (narrow when `wchar_size` is 0, else wide with `wchar_t` of that size): 0 no token, 1 a token, 2
-/// "Expecting end quote", 3 "Expecting closing '$'", 4 "Define not found: " + the name (given to `name`). The
-/// token as read (the whole token, or the part before an error) goes to `narrow` or `wide` unless the data had
-/// ended before the read (then the C++ leaves its token alone). `root` is the root parser's lexer, or NULL when this
-/// parser is the root.
-///
-/// # Safety
-/// `l` and a non-NULL `root` are distinct lexers, `io` the parser's members; the sinks take the text.
-int32_t ee_won_config_read_token(EeWonConfigLexer *l,
-                                 EeWonConfigIo *io,
-                                 const EeWonConfigLexer *root,
-                                 uint32_t wchar_size,
-                                 bool to_end_line,
-                                 bool skip,
-                                 EeWonByteSink narrow,
-                                 EeWonWideUnitSink wide,
-                                 EeWonByteSink name,
-                                 void *context);
-
-/// # Safety
-/// `root` is a lexer.
-void ee_won_config_push_scope(EeWonConfigLexer *root);
-
-/// # Safety
-/// `root` is a lexer.
-void ee_won_config_pop_scope(EeWonConfigLexer *root);
-
-/// `AddDefine` on the root's lexer: 0, or the warning (1 spaces, 2 redefinition).
-///
-/// # Safety
-/// `root` is a lexer; the texts hold their lengths.
-int32_t ee_won_config_add_define(EeWonConfigLexer *root,
-                                 const uint8_t *name,
-                                 size_t name_len,
-                                 const uint8_t *value,
-                                 size_t value_len,
-                                 bool redefine);
-
-/// `GetDefine` on the root's lexer: the value to the sink, or false.
-///
-/// # Safety
-/// `root` is a lexer; `name` holds `name_len` bytes.
-bool ee_won_config_get_define(const EeWonConfigLexer *root,
-                              const uint8_t *name,
-                              size_t name_len,
-                              EeWonByteSink sink,
-                              void *context);
-
-/// `AddGroupDefine`'s insertion on the root's lexer: 0, or the warning (1 spaces, 2 redefinition).
-///
-/// # Safety
-/// `root` is a lexer; `name` holds `name_len` bytes, `state` is a state.
-int32_t ee_won_config_add_group(EeWonConfigLexer *root,
-                                const uint8_t *name,
-                                size_t name_len,
-                                const EeWonConfigState *state);
-
-/// `GetGroupDefine` on the root's lexer: the state to the sink, or false.
-///
-/// # Safety
-/// `root` is a lexer; `name` holds `name_len` bytes.
-bool ee_won_config_get_group(const EeWonConfigLexer *root,
-                             const uint8_t *name,
-                             size_t name_len,
-                             EeWonConfigStateSink sink,
-                             void *context);
-
-/// The pushback's units, to the sink (zero-extended).
-///
-/// # Safety
-/// `l` is a lexer.
-void ee_won_config_get_back(const EeWonConfigLexer *l, EeWonWideUnitSink sink, void *context);
-
-/// Replaces the pushback (each `wchar_t` truncated to 16 bits).
-///
-/// # Safety
-/// `l` is a lexer; `units` holds `count` values.
-void ee_won_config_set_back(EeWonConfigLexer *l, const uint32_t *units, size_t count);
-
-/// `OpenFile`'s open and UTF-16 sniff (the C++ has reset the line, the flag and the pushback and split the path):
-/// whether the reader is open; `status` is the reader's.
-///
-/// # Safety
-/// `io` is the parser's members; `path` a C string.
-bool ee_won_config_open(EeWonConfigIo *io,
-                        const char *path,
-                        int32_t *status);
-
-/// `token_kind`.
-///
-/// # Safety
-/// `token` holds `length` bytes.
-EeWonCfgToken ee_won_cfg_token_kind(const uint8_t *token, size_t length);
-
-/// `group_start_step`.
-///
-/// # Safety
-/// `token` holds `length` bytes; `state` is valid.
-EeWonCfgStart ee_won_cfg_group_start(int32_t *state, const uint8_t *token, size_t length);
-
-/// `group_instruction` (`value` false) or `value_instruction`.
-///
-/// # Safety
-/// `token` holds `length` bytes.
-EeWonCfgInstruction ee_won_cfg_instruction(const uint8_t *token, size_t length, bool value);
-
-/// `condition_parses_first`.
-bool ee_won_cfg_condition(EeWonCfgInstruction instruction,
-                          bool found,
-                          bool expected_empty,
-                          bool matches);
-
-/// `is_else`.
-///
-/// # Safety
-/// `token` holds `length` bytes.
-bool ee_won_cfg_is_else(const uint8_t *token, size_t length);
-
-/// `optional_suffix`.
-EeWonCfgOptional ee_won_cfg_optional(bool comma, bool read, bool word_is_optional);
-
-/// `include_path`.
-///
-/// # Safety
-/// `path` and `base` hold their lengths' bytes; `sink` receives the path during the call.
-void ee_won_cfg_include_path(const uint8_t *path,
-                             size_t path_length,
-                             bool ignore_path,
-                             const uint8_t *base,
-                             size_t base_length,
-                             EeWonByteSink sink,
-                             void *context);
-
-/// Sets the maker of a Rust op's C++ op.
-void ee_won_core_set_new_host_op(EeWonNewHostOp maker);
-
-/// `socket->AddMsgTransform(transform)` for a C++ transform: `call(transform, ByteBufferPtr*, send)` runs its
-/// `Send` or `Recv`, `free(transform)` deletes it; the socket owns it.
-///
-/// # Safety
-/// `socket` is a live `AsyncSocket*` (its `RefCount*`); `transform` lives until `free`.
-void ee_won_core_add_transform(void *socket,
-                               void *transform,
-                               long (*call)(void *object, void *message, bool send),
-                               void (*free)(void *object));
-
-/// `ServerConnectionConnectOp::RunHook` (2ac2f0): the connection's connect completion finishes the op with the
-/// connect's status while it is pending (`StaticConnectCompletion` 2ac240 / `ConnectCompletion` 2ac2d0, a
-/// `ParamCompletion` holding the op), then `ConnectAsync(*address, timeout)`.
-///
-/// # Safety
-/// `conn` is a live `ServerConnection*`, `op` the live op (its `RefCount*`), `address` its `IPAddr*`.
-void ee_won_servconn_connect_op_run(void *conn,
-                                    void *op,
-                                    const void *address,
-                                    uint32_t timeout);
-
 /// A new Rust Container for the C++ `component`, its calls out through `host`; the wheel goes to the focus child
 /// when `wheel_to_focus` (the class default).
 EeWonContainer *ee_won_ct_new(void *component,
@@ -14184,110 +13174,6 @@ ptrdiff_t ee_won_ct_call(const EeWonContainer *ct,
                          ptrdiff_t a,
                          ptrdiff_t b,
                          ptrdiff_t c);
-
-/// `new ProfileData`.
-EeWonProfile *ee_won_profile_new();
-
-/// # Safety
-/// `p` came from `ee_won_profile_new` and is not used again.
-void ee_won_profile_free(EeWonProfile *p);
-
-/// `AddNewsletterSub`.
-///
-/// # Safety
-/// `p` is a live profile.
-void ee_won_profile_set_newsletter(EeWonProfile *p, uint16_t id, bool on);
-
-/// `GetNewsletterSub`.
-///
-/// # Safety
-/// `p` is a live profile.
-bool ee_won_profile_newsletter(const EeWonProfile *p, uint16_t id);
-
-/// `ClearNewsletterSub` (`all`: `ClearNewsletterSubs`).
-///
-/// # Safety
-/// `p` is a live profile.
-void ee_won_profile_clear_newsletter(EeWonProfile *p, uint16_t id, bool all);
-
-/// `SetCustomAction` (`data` NULL: no data) and `ClearCustomAction` (id 0, NULL).
-///
-/// # Safety
-/// `p` is a live profile; `data` holds `length` bytes when not NULL.
-void ee_won_profile_set_custom_action(EeWonProfile *p,
-                                      uint16_t id,
-                                      const uint8_t *data,
-                                      size_t length,
-                                      bool present);
-
-/// `SetBirthDate`.
-///
-/// # Safety
-/// `p` is a live profile.
-void ee_won_profile_set_birth_date(EeWonProfile *p, uint8_t month, uint8_t day, uint16_t year);
-
-/// `GetBirthDate`.
-///
-/// # Safety
-/// `p` is a live profile.
-int32_t ee_won_profile_birth_date(const EeWonProfile *p);
-
-/// `PackRequestData`'s bytes (to append) into `sink`.
-///
-/// # Safety
-/// `p` is a live profile; `sink` accepts `context`.
-void ee_won_profile_pack(const EeWonProfile *p, bool is_set, EeWonByteSink sink, void *context);
-
-/// `UnpackGetData` from `pos`; returns the reader's position after it.
-///
-/// # Safety
-/// `p` is a live profile; `data` holds `length` bytes.
-size_t ee_won_profile_unpack(EeWonProfile *p, const uint8_t *data, size_t length, size_t pos);
-
-/// A request's message (or data) into `sink`.
-///
-/// # Safety
-/// `r` and what it points to are valid (`profile` a live profile where the kind reads one); `sink` accepts
-/// `context`.
-void ee_won_db_request(const EeWonDbRequest *r,
-                       EeWonByteSink sink,
-                       void *context);
-
-/// `EventReportOp::GetNextRequest` into `sink`.
-///
-/// # Safety
-/// `e` and what it points to are valid; `sink` accepts `context`.
-void ee_won_db_event_request(const EeWonDbEvent *e, EeWonByteSink sink, void *context);
-
-/// A reply's read into `out`.
-///
-/// # Safety
-/// `data` holds `length` bytes; `out` is valid.
-void ee_won_db_reply(int32_t kind, const uint8_t *data, size_t length, EeWonDbReply *out);
-
-/// `GetUserIdFromNameOp`'s id from the reply data; false when it is cut short.
-///
-/// # Safety
-/// `data` holds `length` bytes; `out` is valid.
-bool ee_won_db_user_id(const uint8_t *data, size_t length, int32_t *out);
-
-/// Whether a DBProxy reply's sub-message answers the request's `sub` (the email requests).
-bool ee_won_db_answers(int16_t reply_sub, uint16_t sub);
-
-/// `WONDebug::SetStackFileName`.
-///
-/// # Safety
-/// `name` holds `length` bytes.
-void ee_won_debug_set_stack_file(const uint8_t *name, size_t length);
-
-/// `WONDebug::GetStackFileName`: the name to the sink.
-///
-/// # Safety
-/// `sink` receives the name during the call.
-void ee_won_debug_stack_file(EeWonByteSink sink, void *context);
-
-/// `WONDebug::DumpStackToFile`: an exception filter's value.
-int32_t ee_won_debug_dump_stack();
 
 /// A new Rust Dialog for the C++ `component` over its container's Rust object `ct`, its calls out through `host`.
 ///
@@ -14312,1115 +13198,6 @@ ptrdiff_t ee_won_dlg_call(const EeWonDialog *dlg,
                           ptrdiff_t a,
                           ptrdiff_t b,
                           ptrdiff_t c);
-
-bool ee_won_dlg_create_enabled(uint32_t name_len, bool password_shown, uint32_t password_len);
-
-bool ee_won_dlg_name_enabled(uint32_t name_len);
-
-int32_t ee_won_dlg_skill_level(int32_t sel);
-
-bool ee_won_dlg_internet_access(int32_t game_type);
-
-bool ee_won_dlg_lan_port_ok(int32_t port, uint16_t game_port);
-
-/// `adapter_order`: the order, or 2 when the columns decide.
-int32_t ee_won_dlg_adapter_order(int32_t host, int32_t other);
-
-uint32_t ee_won_dlg_selected_address(bool has_selection, uint32_t selected, uint32_t local_host);
-
-int32_t ee_won_dlg_status_body_width(int32_t text_width, int32_t m_width, int32_t root_width);
-
-/// `status_pad`: -1 for 5 lines or more.
-int32_t ee_won_dlg_status_pad(int32_t label_height, int32_t line_height);
-
-/// `status_extra_width`: false when the dialog keeps its shape, else true with the extra width in `out`.
-///
-/// # Safety
-/// `out` is writable.
-bool ee_won_dlg_status_extra_width(int32_t new_width,
-                                   int32_t new_height,
-                                   int32_t root_height,
-                                   int32_t width_change,
-                                   int32_t old_width,
-                                   int32_t *out);
-
-bool ee_won_dlg_status_young(uint32_t now, uint32_t start);
-
-int32_t ee_won_dlg_growth(int32_t new_, int32_t old);
-
-/// `ParseMultiEntityReply`: each entity read whole to the sink, in order.
-///
-/// # Safety
-/// `data` holds `length` bytes.
-EeWonDirReply ee_won_dir_parse_multi(const uint8_t *data,
-                                     size_t length,
-                                     EeWonDirEntitySink sink,
-                                     void *context);
-
-/// `ParseSingleEntityReply`: the entity to the sink when read whole.
-///
-/// # Safety
-/// `data` holds `length` bytes.
-EeWonDirReply ee_won_dir_parse_single(const uint8_t *data,
-                                      size_t length,
-                                      EeWonDirEntitySink sink,
-                                      void *context);
-
-/// An entity change with the members of `fields` (an `EeWonDirRequest` as the original ops filled it), for a C++
-/// `ServerRequestOp` to run.
-///
-/// # Safety
-/// `fields` and everything it points to are valid.
-EeWonReqOp *ee_won_dirop_new(const EeWonDirRequest *fields);
-
-/// A request's message into `sink`.
-///
-/// # Safety
-/// `r` and everything it points to are valid; `sink` accepts `context`.
-void ee_won_dir_request(const EeWonDirRequest *r,
-                        uint8_t field_size,
-                        EeWonByteSink sink,
-                        void *context);
-
-/// `GetEntityRequest::Pack`'s bytes into `sink` (`multi`: the multi-get's form).
-///
-/// # Safety
-/// `q` and what it points to are valid; `sink` accepts `context`.
-void ee_won_dir_pack_query(const EeWonDirQuery *q, bool multi, EeWonByteSink sink, void *context);
-
-/// `AddServiceOp::SetNetAddrPort`'s two bytes into `sink`.
-///
-/// # Safety
-/// `sink` accepts `context`.
-void ee_won_dir_port_net_addr(uint16_t port, EeWonByteSink sink, void *context);
-
-/// An entity change's status reply.
-///
-/// # Safety
-/// `reply` holds `length` bytes; `out` is valid.
-void ee_won_dir_status_reply(const uint8_t *reply,
-                             size_t length,
-                             bool read_addr,
-                             EeWonDirStatusReply *out);
-
-/// The multi-directory ops' step: true when the current query is done (`*failed` counts a failure).
-///
-/// # Safety
-/// `failed` is valid.
-bool ee_won_dir_multi_step(int32_t status, int32_t *failed);
-
-/// The multi-directory ops' final status.
-int32_t ee_won_dir_multi_end(int32_t failed, size_t count);
-
-/// `FindEntityOp::CheckResponse`'s parser choice (true: single-entity).
-bool ee_won_dir_find_single(bool is_service, uint8_t find_flags);
-
-/// `GetEntityRequest::GetDirEntityMap`'s keys: for each of `count` entities its directory into `sink` (UTF-16
-/// LE bytes, one call per entity, in order).
-///
-/// # Safety
-/// `query_path`, `entities` (`count` entries) are valid; `sink` accepts `context`.
-void ee_won_dir_group_keys(EeWonDirBytes query_path,
-                           const EeWonDirListed *entities,
-                           size_t count,
-                           EeWonByteSink sink,
-                           void *context);
-
-/// A new DialogLogic object for the C++ `logic`.
-EeWonDlgLogic *ee_won_dlglogic_new(void *logic, EeWonDlgLogicHostFn host);
-
-/// Releases what the object holds and frees it.
-///
-/// # Safety
-/// `obj` came from `ee_won_dlglogic_new` (or is NULL) and is not used again.
-void ee_won_dlglogic_free(EeWonDlgLogic *obj);
-
-/// One inward call (`EeWonDlgLogicCall`).
-///
-/// # Safety
-/// `obj` is live; the arguments as documented.
-ptrdiff_t ee_won_dlglogic_call(const EeWonDlgLogic *obj,
-                               EeWonDlgLogicCall call,
-                               ptrdiff_t a,
-                               ptrdiff_t b,
-                               ptrdiff_t c,
-                               ptrdiff_t d,
-                               ptrdiff_t e);
-
-/// A new colour button or chooser for the C++ object `obj`.
-EeWonEeColor *ee_won_eecolor_new(void *obj, EeWonEeColorKind kind, EeWonEeColorHostFn host);
-
-/// Releases the button's chooser and frees the object.
-///
-/// # Safety
-/// `p` came from `ee_won_eecolor_new` (or is NULL) and is not used again.
-void ee_won_eecolor_free(EeWonEeColor *p);
-
-/// One inward call (`EeWonEeColorCall`).
-///
-/// # Safety
-/// `p` is live; a paint's `a` is a `Graphics*`.
-ptrdiff_t ee_won_eecolor_call(const EeWonEeColor *p,
-                              EeWonEeColorCall call,
-                              ptrdiff_t a,
-                              ptrdiff_t b,
-                              ptrdiff_t c);
-
-/// The palette's colour `i` (0..15).
-uint32_t ee_won_eecolor_palette(uint32_t i);
-
-/// Sets the palette from `n` colours (0x00rrggbb; at most 16 are read).
-///
-/// # Safety
-/// `colors` holds `n` values.
-void ee_won_eecolor_set_palette(const uint32_t *colors, uint32_t n);
-
-/// A new lobby game for the C++ `game` (EELobbyGame's constructor).
-/// As `ee_won_eegame_new`, with the model's ops answered by its Rust objects (the game's).
-EeWonEeGame *ee_won_eegame_new_model(void *game, EeWonEeGameHostFn host);
-
-EeWonEeGame *ee_won_eegame_new(void *game, EeWonEeGameHostFn host);
-
-/// Releases the slots' members, the transfer and the names (the destructor's order) and frees the object.
-///
-/// # Safety
-/// `p` came from `ee_won_eegame_new` (or is NULL) and is not used again.
-void ee_won_eegame_free(EeWonEeGame *p);
-
-/// One inward call (`EeWonEeGameCall`); `isize::MIN` when a hook's read threw.
-///
-/// # Safety
-/// `p` is live; the call's arguments as documented.
-ptrdiff_t ee_won_eegame_call(const EeWonEeGame *p,
-                             EeWonEeGameCall call,
-                             ptrdiff_t a,
-                             ptrdiff_t b,
-                             ptrdiff_t c,
-                             ptrdiff_t d);
-
-/// EELobbyPlayer::IsTeammate's rule: team 0 (no team) has no teammates.
-bool ee_won_eegame_is_teammate(uint8_t mine, uint8_t theirs);
-
-/// Sets the glue's host (the C++ calls it once, before any other call).
-void ee_won_eeglue_set_host(EeWonEeGlueHostFn host);
-
-/// One inward call (`EeWonEeGlueCall`).
-///
-/// # Safety
-/// The call's pointer arguments as documented.
-ptrdiff_t ee_won_eeglue_call(EeWonEeGlueCall call, ptrdiff_t a, ptrdiff_t b, ptrdiff_t c);
-
-/// The number of game lobby strings.
-size_t ee_won_eeresource_count();
-
-/// Row `index` (below `ee_won_eeresource_count`) into `out`; false past the end.
-///
-/// # Safety
-/// `out` is writable.
-bool ee_won_eeresource_row(size_t index, EeWonEeResource *out);
-
-/// The row of a global's name (`EE_LOBBY_STRING`: the lobby's code names a string by its original global), -1 when
-/// the table has none.
-///
-/// # Safety
-/// `name` is NULL or a NUL-terminated string.
-ptrdiff_t ee_won_eeresource_find(const char *name);
-
-/// A new sound for the C++ object `obj` (an effect of sample `sample`; the music's is unused).
-EeWonEeSound *ee_won_eesound_new(void *obj,
-                                 EeWonEeSoundKind kind,
-                                 EeWonEeSoundHostFn host,
-                                 uint32_t sample);
-
-/// The C++ object's destructor: an effect's sample unloaded, the object freed.
-///
-/// # Safety
-/// `p` came from [`ee_won_eesound_new`] (or is null), not used after.
-void ee_won_eesound_free(EeWonEeSound *p);
-
-/// A virtual of the C++ object.
-///
-/// # Safety
-/// `p` is a live object of [`ee_won_eesound_new`].
-ptrdiff_t ee_won_eesound_call(const EeWonEeSound *p, EeWonEeSoundCall call, ptrdiff_t a);
-
-/// `EELobbySoundDecoder::Decode`'s load: the sample of `path` (a NUL-terminated `char*`), or -1 without a sound
-/// manager (no sound is made then).
-int64_t ee_won_eesound_load(EeWonEeSoundHostFn host,
-                            const uint8_t *path);
-
-/// A new transfer for the C++ shell `obj`.
-EeWonEeXfer *ee_won_eexfer_new(void *obj, EeWonEeXferHostFn host);
-
-/// The shell's destructor.
-///
-/// # Safety
-/// `p` came from [`ee_won_eexfer_new`] (or is null), not used after.
-void ee_won_eexfer_free(EeWonEeXfer *p);
-
-/// A method of the transfer.
-///
-/// # Safety
-/// `p` is a live transfer; the host's calls may come back into it (a completion run at once).
-ptrdiff_t ee_won_eexfer_call(const EeWonEeXfer *p, EeWonEeXferCall call, ptrdiff_t a, ptrdiff_t b);
-
-/// A new send op for the C++ shell `obj`, of the file at `path` (`len` bytes).
-///
-/// # Safety
-/// `path` holds `len` readable bytes (or `len` is 0).
-EeWonEeXferSend *ee_won_eexfer_send_new(void *obj,
-                                        EeWonEeXferHostFn host,
-                                        const uint8_t *path,
-                                        size_t len);
-
-/// The send op's destructor (the file is not closed: the op's cleanup does that).
-///
-/// # Safety
-/// `p` came from [`ee_won_eexfer_send_new`] (or is null), not used after.
-void ee_won_eexfer_send_free(EeWonEeXferSend *p);
-
-/// A virtual of the send op.
-///
-/// # Safety
-/// `p` is a live send op.
-int32_t ee_won_eexfer_send_call(const EeWonEeXferSend *p, EeWonEeXferSendCall call);
-
-/// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
-/// bytes); returns the byte count. `out` may be null to measure.
-///
-/// # Safety
-/// `wide` holds `count` characters of `wchar_size` (2 or 4) bytes; `out` has `capacity` bytes or is null.
-size_t ee_won_utf16le_from_wide(const void *wide,
-                                uint32_t wchar_size,
-                                size_t count,
-                                uint8_t *out,
-                                size_t capacity);
-
-/// The code point a UTF-16 unit makes with the last character of a UTF-32 text: the joined code point when `last`
-/// is a high surrogate and `unit` a low one, else 0 (append the unit as it is).
-uint32_t ee_won_utf16_join(uint32_t last,
-                           uint16_t unit);
-
-/// `wchar_t` text of UTF-16 units (`wchar_size` 2: unchanged; 4: surrogate pairs joined) written to `out` (up to
-/// `capacity` characters, which `count` always suffices for); returns the character count.
-///
-/// # Safety
-/// `data` holds `count` units; `out` has room for `capacity` characters of `wchar_size` bytes.
-size_t ee_won_wide_from_utf16(const uint16_t *data,
-                              size_t count,
-                              uint32_t wchar_size,
-                              void *out,
-                              size_t capacity);
-
-/// The UTF-16 units of little-endian bytes (`count` units read from `data`, which holds `2 * count` bytes) as
-/// `wchar_t` text; see `ee_won_wide_from_utf16`.
-///
-/// # Safety
-/// `data` holds `2 * count` bytes; `out` as for `ee_won_wide_from_utf16`.
-size_t ee_won_wide_from_utf16le(const uint8_t *data,
-                                size_t count,
-                                uint32_t wchar_size,
-                                void *out,
-                                size_t capacity);
-
-/// The UTF-16 units of `wchar_t` text, to a sink.
-///
-/// # Safety
-/// As `ee_won_utf16le_from_wide`; the sink is called once.
-void ee_won_utf16_from_wide(const void *wide,
-                            uint32_t wchar_size,
-                            size_t count,
-                            EeWonUnitSink sink,
-                            void *context);
-
-/// The game's text (UTF-8 bytes, decision D6) as `wchar_t` text (`wchar_size` 2: UTF-16 units; 4: code points),
-/// given to the sink once (`StringToWString`). A stray byte becomes U+FFFD; embedded zeros are characters.
-///
-/// # Safety
-/// `text` holds `length` bytes; the sink is called with `count` characters of `wchar_size` bytes.
-void ee_won_wide_from_utf8(const uint8_t *text,
-                           size_t length,
-                           uint32_t wchar_size,
-                           EeWonWideSink sink,
-                           void *context);
-
-/// `wchar_t` text as the game's text (UTF-8), given to the sink once (`WStringToString`). A lone surrogate becomes
-/// U+FFFD; embedded zeros are characters.
-///
-/// # Safety
-/// `wide` holds `count` characters of `wchar_size` (2 or 4) bytes.
-void ee_won_utf8_from_wide(const void *wide,
-                           uint32_t wchar_size,
-                           size_t count,
-                           EeWonByteSink sink,
-                           void *context);
-
-/// `CRC16::Put`: the register after the bytes.
-///
-/// # Safety
-/// `data` holds `length` bytes.
-uint16_t ee_won_crc16_put(uint16_t register_, const uint8_t *data, size_t length);
-
-/// Resets an MD5 state (also its initialisation).
-///
-/// # Safety
-/// `state` is valid.
-void ee_won_md5_reset(EeWonMd5 *state);
-
-/// Adds bytes.
-///
-/// # Safety
-/// `state` is valid; `data` holds `length` bytes.
-void ee_won_md5_update(EeWonMd5 *state, const uint8_t *data, size_t length);
-
-/// Writes the 16-byte digest and resets.
-///
-/// # Safety
-/// `state` is valid; `out` has 16 bytes.
-void ee_won_md5_finish(EeWonMd5 *state, uint8_t *out);
-
-/// No key.
-///
-/// # Safety
-/// `bf` is valid for a write.
-void ee_won_blowfish_init(EeWonBlowfish *bf);
-
-/// `SetKey`.
-///
-/// # Safety
-/// `bf` is valid; `key` holds `length` bytes.
-bool ee_won_blowfish_set_key(EeWonBlowfish *bf, const uint8_t *key, size_t length);
-
-/// `Create`: a random key.
-///
-/// # Safety
-/// `bf` is valid.
-bool ee_won_blowfish_create(EeWonBlowfish *bf, int32_t length);
-
-/// The raw key (`GetKey`); its length is `ee_won_blowfish_key_length`.
-///
-/// # Safety
-/// `bf` is valid; the pointer lives as long as `*bf` is unchanged.
-const uint8_t *ee_won_blowfish_key(const EeWonBlowfish *bf);
-
-/// `GetKeyLen`.
-///
-/// # Safety
-/// `bf` is valid.
-int32_t ee_won_blowfish_key_length(const EeWonBlowfish *bf);
-
-/// `Encrypt`: the cipher text to the sink; false (no call) without a key.
-///
-/// # Safety
-/// `bf` is valid; `data` holds `length` bytes.
-bool ee_won_blowfish_encrypt(const EeWonBlowfish *bf,
-                             const uint8_t *data,
-                             size_t length,
-                             EeWonByteSink sink,
-                             void *context);
-
-/// `Decrypt`: the plain text to the sink; false (no call) when refused.
-///
-/// # Safety
-/// As `ee_won_blowfish_encrypt`.
-bool ee_won_blowfish_decrypt(const EeWonBlowfish *bf,
-                             const uint8_t *data,
-                             size_t length,
-                             EeWonByteSink sink,
-                             void *context);
-
-/// A key with no key material, its generator seeded from the system.
-EeWonElGamal *ee_won_elgamal_new();
-
-/// A copy (generator state included).
-///
-/// # Safety
-/// `key` is a live key.
-EeWonElGamal *ee_won_elgamal_clone(const EeWonElGamal *key);
-
-/// Frees a key (null: nothing).
-///
-/// # Safety
-/// `key` came from this module and is not used afterwards.
-void ee_won_elgamal_free(EeWonElGamal *key);
-
-/// `SetPrivateKey` (`is_private` true) or `SetPublicKey`.
-///
-/// # Safety
-/// `key` is live; `data` holds `length` bytes.
-bool ee_won_elgamal_set_key(EeWonElGamal *key, const uint8_t *data, size_t length, bool is_private);
-
-/// `Invalidate`.
-///
-/// # Safety
-/// `key` is live.
-void ee_won_elgamal_invalidate(EeWonElGamal *key);
-
-/// `IsPrivate`.
-///
-/// # Safety
-/// `key` is live.
-bool ee_won_elgamal_is_private(const EeWonElGamal *key);
-
-/// `IsPublic`.
-///
-/// # Safety
-/// `key` is live.
-bool ee_won_elgamal_is_public(const EeWonElGamal *key);
-
-/// Encrypt, decrypt, sign (the input is the message) or write a raw key (no input): the result to the sink; false
-/// (no call) when the key cannot (`Encrypt`/`Sign` advance the key's generator, as the C++'s `mutable Random`).
-///
-/// # Safety
-/// `key` is live; `data` holds `length` bytes.
-bool ee_won_elgamal_op(EeWonElGamal *key,
-                       EeWonElGamalOp op,
-                       const uint8_t *data,
-                       size_t length,
-                       EeWonByteSink sink,
-                       void *context);
-
-/// `Verify`.
-///
-/// # Safety
-/// `key` is live; the buffers hold their lengths.
-bool ee_won_elgamal_verify(const EeWonElGamal *key,
-                           const uint8_t *message,
-                           size_t message_length,
-                           const uint8_t *signature,
-                           size_t signature_length);
-
-/// Unpacks a block of `kind` (`EE_WON_AUTH_*`).
-///
-/// # Safety
-/// `data` holds `length` bytes.
-EeWonAuth *ee_won_auth_unpack(uint32_t kind, const uint8_t *data, size_t length);
-
-/// Frees a block (null: nothing).
-///
-/// # Safety
-/// `block` came from `ee_won_auth_unpack` and is not used afterwards.
-void ee_won_auth_free(EeWonAuth *block);
-
-/// The header fields.
-///
-/// # Safety
-/// `block` is live; `out` is valid.
-void ee_won_auth_header(const EeWonAuth *block, EeWonAuthHeader *out);
-
-/// `AuthBase::Verify(key)`.
-///
-/// # Safety
-/// `block` and `key` are live.
-bool ee_won_auth_verify(const EeWonAuth *block, const EeWonElGamal *key);
-
-/// `IsExpired(extra)` at `now` (seconds).
-///
-/// # Safety
-/// `block` is live.
-bool ee_won_auth_is_expired(const EeWonAuth *block, int64_t now, int64_t extra);
-
-/// `VerifyPermissions`.
-///
-/// # Safety
-/// `block` is live.
-bool ee_won_auth_verify_permissions(const EeWonAuth *block,
-                                    uint32_t user_id,
-                                    uint32_t community,
-                                    uint16_t min_trust);
-
-/// The number of keys a block carries: a certificate's public key (0 or 1) or a key block's keys.
-///
-/// # Safety
-/// `block` is live.
-size_t ee_won_auth_key_count(const EeWonAuth *block);
-
-/// A copy of key `index` (null past the count); free it with `ee_won_elgamal_free`.
-///
-/// # Safety
-/// `block` is live.
-EeWonElGamal *ee_won_auth_key(const EeWonAuth *block, size_t index);
-
-/// `AuthPubKeyBlock::Verify(block)`.
-///
-/// # Safety
-/// Both are live.
-bool ee_won_auth_verify_with_block(const EeWonAuth *key_block, const EeWonAuth *block);
-
-/// A number from an `Auth2Certificate` (0 for another block).
-///
-/// # Safety
-/// `block` is live.
-uint32_t ee_won_auth_cert2_query(const EeWonAuth *block, EeWonCert2Query query, uint32_t community);
-
-/// `GetNickname(key)` (`first` false) or `GetFirstNickname` (`first` true): the units to the sink (empty when
-/// absent).
-///
-/// # Safety
-/// `block` is live; `key` holds `key_count` units.
-void ee_won_auth_cert2_nickname(const EeWonAuth *block,
-                                bool first,
-                                const uint16_t *key,
-                                size_t key_count,
-                                EeWonUnitSink sink,
-                                void *context);
-
-/// `GetUserData(community)` (`first` false) or `GetFirstUserData`: the bytes to the sink; false (no call) when
-/// absent.
-///
-/// # Safety
-/// `block` is live.
-bool ee_won_auth_cert2_user_data(const EeWonAuth *block,
-                                 bool first,
-                                 uint32_t community,
-                                 EeWonByteSink sink,
-                                 void *context);
-
-/// A page file's text (`plaintext::page_text`: HTML pages converted; `skip_first_if_text` drops a text page's first
-/// character) as UTF-16 units to the sink.
-///
-/// # Safety
-/// `data` holds `length` bytes.
-void ee_won_page_text(const uint8_t *data,
-                      size_t length,
-                      bool skip_first_if_text,
-                      EeWonUnitSink sink,
-                      void *context);
-
-/// `CalcKeyFromBuffer`'s test of 8 raw bytes for a product.
-///
-/// # Safety
-/// `product` holds `product_length` bytes; `raw` 8.
-bool ee_won_cdkey_is_valid(const uint8_t *product, size_t product_length, const uint8_t *raw);
-
-/// `Init(string)`'s decoding: the raw bytes into `out` (8 bytes); false when the text is not a key.
-///
-/// # Safety
-/// `text` holds `length` bytes; `out` has 8.
-bool ee_won_cdkey_parse(const uint8_t *text, size_t length, uint8_t *out);
-
-/// `GetString`: the 24 characters and a NUL into `out` (25 bytes).
-///
-/// # Safety
-/// `raw` holds 8 bytes; `out` has 25.
-void ee_won_cdkey_format(const uint8_t *raw, char *out);
-
-/// `GetSymmetricKey`'s key bytes into `out` (12 bytes of room); returns their count.
-///
-/// # Safety
-/// `product` holds `product_length` bytes; `out` has 12.
-size_t ee_won_cdkey_symmetric_key(const uint8_t *product,
-                                  size_t product_length,
-                                  uint32_t machine_id,
-                                  bool use_machine_id,
-                                  uint8_t *out);
-
-/// `GetEncrypted`: the stored form of a raw key to the sink.
-///
-/// # Safety
-/// As `ee_won_cdkey_symmetric_key`; `raw` holds 8 bytes.
-bool ee_won_cdkey_encrypt(const uint8_t *product,
-                          size_t product_length,
-                          uint32_t machine_id,
-                          bool use_machine_id,
-                          const uint8_t *raw,
-                          EeWonByteSink sink,
-                          void *context);
-
-/// `InitEncrypted`'s decoding: `has_machine_id` false when the machine has none.
-///
-/// # Safety
-/// `product` and `data` hold their lengths; `out` is valid.
-void ee_won_cdkey_decrypt(const uint8_t *product,
-                          size_t product_length,
-                          uint32_t machine_id,
-                          bool has_machine_id,
-                          bool prefer_machine,
-                          const uint8_t *data,
-                          size_t length,
-                          EeWonCdKeyDecoded *out);
-
-/// `IsBeta` (`which` 0) or `IsForceCheck` (`which` 1) of a raw key of `length` bytes.
-///
-/// # Safety
-/// `raw` holds `length` bytes.
-bool ee_won_cdkey_flag(const uint8_t *raw, size_t length, uint32_t which);
-
-/// The joiner's join request; `name` / `password` are UTF-16 LE bytes.
-///
-/// # Safety
-/// The byte arguments hold their lengths; `sink` takes the message.
-void ee_won_lan_join_request(const uint8_t *name,
-                             size_t name_len,
-                             const uint8_t *password,
-                             size_t password_len,
-                             EeWonByteSink sink,
-                             void *context);
-
-/// The host's refusal of a join (`status` 2 wrong password, 3 another subnet).
-///
-/// # Safety
-/// `sink` takes the message.
-void ee_won_lan_join_refused(int16_t status, EeWonByteSink sink, void *context);
-
-/// The host's accepted join reply: `ids[i]` and the UTF-16 LE name `names` from `name_offsets[i]` (in bytes) to
-/// `name_offsets[i + 1]` (`count + 1` offsets).
-///
-/// # Safety
-/// `ids` holds `count` ids, `name_offsets` `count + 1` offsets into `names`; `sink` takes the message.
-void ee_won_lan_join_accepted(uint16_t captain,
-                              uint16_t you,
-                              size_t count,
-                              const uint16_t *ids,
-                              const uint8_t *names,
-                              const size_t *name_offsets,
-                              EeWonByteSink sink,
-                              void *context);
-
-/// The host's announcement of a new player.
-///
-/// # Safety
-/// `name` holds `name_len` UTF-16 LE bytes; `sink` takes the message.
-void ee_won_lan_client_joined(uint16_t id,
-                              const uint8_t *name,
-                              size_t name_len,
-                              EeWonByteSink sink,
-                              void *context);
-
-/// The host's announcement of a departed player.
-///
-/// # Safety
-/// `sink` takes the message.
-void ee_won_lan_client_left(uint16_t id, EeWonByteSink sink, void *context);
-
-/// A player's chat request to the host.
-///
-/// # Safety
-/// `text` holds `text_len` UTF-16 LE bytes; `sink` takes the message.
-void ee_won_lan_chat_request(uint16_t flags,
-                             const uint8_t *text,
-                             size_t text_len,
-                             uint16_t target,
-                             EeWonByteSink sink,
-                             void *context);
-
-/// The host's relayed chat line.
-///
-/// # Safety
-/// As `ee_won_lan_chat_request`.
-void ee_won_lan_chat_line(uint16_t flags,
-                          uint16_t sender,
-                          const uint8_t *text,
-                          size_t text_len,
-                          uint16_t target,
-                          EeWonByteSink sink,
-                          void *context);
-
-/// The joiner's ping.
-///
-/// # Safety
-/// `sink` takes the message.
-void ee_won_lan_ping(EeWonByteSink sink, void *context);
-
-/// A staging message wrapped for the game channel.
-///
-/// # Safety
-/// `payload` holds `length` bytes; `sink` takes the message.
-void ee_won_lan_staging(const uint8_t *payload, size_t length, EeWonByteSink sink, void *context);
-
-/// A discovery packet's head (`kind` 1 summary, 2 keep-alive, 3 removed, 4 query).
-///
-/// # Safety
-/// `sink` takes the packet.
-void ee_won_lan_discovery(uint8_t kind, uint16_t port, EeWonByteSink sink, void *context);
-
-/// Reads a game-channel message (`skip` 2 for the host's own, else 0). The join request's name goes to
-/// `first`, its password to `second`; a joined player's name and a chat text go to `first`.
-///
-/// # Safety
-/// `bytes` holds `length` bytes; `out` is valid; the sinks take the units.
-void ee_won_lan_read_game(const uint8_t *bytes,
-                          size_t length,
-                          size_t skip,
-                          EeWonLanMsg *out,
-                          EeWonUnitSink first,
-                          EeWonUnitSink second,
-                          void *context);
-
-/// Reads a join reply: returns `ReadJoinReply`'s status; `*captain` / `*you` are set and `true` returned through
-/// `have_captain` once the captain's id was read; each player read whole goes to `client`, in order.
-///
-/// # Safety
-/// `bytes` holds `length` bytes; the out pointers are valid; `client` takes the players.
-int32_t ee_won_lan_read_join_reply(const uint8_t *bytes,
-                                   size_t length,
-                                   bool *have_captain,
-                                   uint16_t *captain,
-                                   uint16_t *you,
-                                   EeWonLanClientSink client,
-                                   void *context);
-
-/// Reads a discovery packet's head: true and its type and port, false when it is short.
-///
-/// # Safety
-/// `bytes` holds `length` bytes; the out pointers are valid.
-bool ee_won_lan_read_discovery(const uint8_t *bytes, size_t length, uint8_t *kind, uint16_t *port);
-
-/// `lan::join_status`: 0 accept, 2 wrong password, 3 another subnet.
-int16_t ee_won_lan_join_status(int32_t game_type,
-                               uint8_t peer0,
-                               uint8_t peer1,
-                               uint8_t local0,
-                               uint8_t local1,
-                               bool password_matches);
-
-/// `lan::next_client_id` over the C++ counter.
-///
-/// # Safety
-/// `next` is valid.
-uint16_t ee_won_lan_next_client_id(uint16_t *next);
-
-/// `lan::chat_route`: 0 everyone, 1 the whisper target and the sender, 2 the sender's team.
-int32_t ee_won_lan_chat_route(uint16_t flags);
-
-/// `lan::chat_line_flags`.
-uint16_t ee_won_lan_chat_line_flags(uint16_t flags);
-
-/// `lan::host_socket_stale`.
-bool ee_won_lan_host_socket_stale(int64_t now, int64_t last_message);
-
-/// `lan::joiner_ping_due`.
-bool ee_won_lan_joiner_ping_due(int64_t now, int64_t last_ping);
-
-/// `lan::summary_due`.
-bool ee_won_lan_summary_due(int64_t now, int64_t last_broadcast);
-
-/// `WONStatusToString` (WONRouting.h's inline shim; WONStatus.cpp is deleted): the status's name. A `WS_` name is a
-/// static string; another (a number, a DB proxy game-specific error) is valid until this thread's next unnamed one.
-const char *ee_won_status_text(long s);
-
-void ee_won_netstats_enable(bool on);
-
-/// Adds to counter `counter` (0 constructed sockets, 1 open sockets, 2 bytes sent, 3 bytes received, 4 messages
-/// sent, 5 messages received) while counting is on.
-void ee_won_netstats_add(uint32_t counter,
-                         int64_t amount);
-
-int64_t ee_won_netstats_get(uint32_t counter);
-
-/// `LobbyGetNetAddresses`: each of this machine's addresses to `sink`, in order.
-///
-/// # Safety
-/// The sink is called during the call only.
-void ee_won_ipaddr_local_addresses(bool details, EeWonAddressSink sink, void *context);
-
-/// `AsyncSocket::HasInternetConnection`.
-bool ee_won_has_internet_connection();
-
-/// `StartWinsock`.
-long ee_won_socket_start();
-
-/// `StopWinsock`.
-long ee_won_socket_stop();
-
-/// WON's millisecond tick (`WONTickCount`).
-uint32_t ee_won_tick();
-
-/// `AsyncOp::RealTimeLeft` / `AsyncSocket::TimeLeft` now.
-uint32_t ee_won_real_time_left(uint32_t start, uint32_t timeout);
-
-/// `RecvMsgOp`'s length prefix: 0 and the body's length in `*body`, 1 for the 2-byte escape (a 4-byte prefix
-/// follows), 2 for an invalid length.
-///
-/// # Safety
-/// `prefix` holds `length` bytes; `body` is valid.
-int32_t ee_won_op_length_step(const uint8_t *prefix,
-                              size_t length,
-                              uint32_t *body);
-
-/// `RecvMsgOp::Start`'s length field test.
-bool ee_won_op_valid_length_field(uint32_t size);
-
-/// `RecvBytesOp`'s chunk read size.
-int32_t ee_won_op_chunk_length(uint32_t length, uint32_t bytes_read);
-
-/// `QueueSocket::OpCallback` for an op of `kind` (0 the queued op, 1 the repeat op, 2 another).
-EeWonQueueDecision ee_won_queue_socket_callback(int32_t kind,
-                                                long status,
-                                                bool killed,
-                                                bool close_queued,
-                                                bool queue_empty,
-                                                bool socket_valid,
-                                                bool datagram);
-
-/// `StringParser::GetChar(offset)` at `pos`.
-///
-/// # Safety
-/// `text` is a NUL-terminated string of `unit_size`-byte units (1, 2 or 4) and `pos + offset` inside it.
-uint8_t ee_won_parser_get_char(const void *text,
-                               uint32_t unit_size,
-                               int32_t pos,
-                               int32_t offset);
-
-/// `StringParser::GetWChar(offset)` at `pos`.
-///
-/// # Safety
-/// As `ee_won_parser_get_char`.
-uint32_t ee_won_parser_get_wchar(const void *text, uint32_t unit_size, int32_t pos, int32_t offset);
-
-/// `StringParser::SkipWhitespace`.
-///
-/// # Safety
-/// `text` is a NUL-terminated string of `unit_size`-byte units, `*pos` inside it.
-void ee_won_parser_skip_whitespace(const void *text, uint32_t unit_size, int32_t *pos);
-
-/// `StringParser::SkipNonWhitespace`.
-///
-/// # Safety
-/// As `ee_won_parser_skip_whitespace`.
-void ee_won_parser_skip_non_whitespace(const void *text, uint32_t unit_size, int32_t *pos);
-
-/// `StringParser::CheckNextChar(ch)`.
-///
-/// # Safety
-/// As `ee_won_parser_skip_whitespace`.
-bool ee_won_parser_check_next_char(const void *text, uint32_t unit_size, int32_t *pos, int32_t ch);
-
-/// `StringParser::StartsWith(prefix)`.
-///
-/// # Safety
-/// As `ee_won_parser_skip_whitespace`; `prefix` is NUL-terminated.
-bool ee_won_parser_starts_with(const void *text,
-                               uint32_t unit_size,
-                               int32_t *pos,
-                               const char *prefix);
-
-/// `StringParser::Is(word)`.
-///
-/// # Safety
-/// As `ee_won_parser_starts_with`.
-bool ee_won_parser_is(const void *text, uint32_t unit_size, int32_t *pos, const char *word);
-
-/// `StringParser::ReadString(std::string&, stopAtWhitespace)`: the token to `sink` (always true in the C++).
-///
-/// # Safety
-/// As `ee_won_parser_skip_whitespace`; `sink` takes the bytes.
-void ee_won_parser_read_string(const void *text,
-                               uint32_t unit_size,
-                               int32_t *pos,
-                               bool stop_at_whitespace,
-                               EeWonByteSink sink,
-                               void *context);
-
-/// `StringParser::ReadString(std::wstring&, stopAtWhitespace)`: the token's units to `sink`.
-///
-/// # Safety
-/// As `ee_won_parser_read_string`.
-void ee_won_parser_read_wstring(const void *text,
-                                uint32_t unit_size,
-                                int32_t *pos,
-                                bool stop_at_whitespace,
-                                EeWonWideUnitSink sink,
-                                void *context);
-
-/// `StringParser::ReadValue(int&)`: true and `*out` when the cursor moved; `*out` untouched otherwise.
-///
-/// # Safety
-/// As `ee_won_parser_skip_whitespace`; `out` is valid.
-bool ee_won_parser_read_int(const void *text,
-                            uint32_t unit_size,
-                            int32_t *pos,
-                            int32_t *out);
-
-/// `StringParser::ReadValue(bool&)`: true and `*out` for a boolean word; `*out` untouched otherwise.
-///
-/// # Safety
-/// As `ee_won_parser_read_int`.
-bool ee_won_parser_read_bool(const void *text,
-                             uint32_t unit_size,
-                             int32_t *pos,
-                             bool *out);
-
-/// `StringParser::ValueToString` of a signed integer (int, long, short, char, __int64): decimal to `sink`.
-///
-/// # Safety
-/// `sink` takes the bytes.
-void ee_won_parser_format_i64(int64_t value,
-                              EeWonByteSink sink,
-                              void *context);
-
-/// `StringParser::ValueToString` of an unsigned integer (unsigned long, unsigned char, unsigned __int64).
-///
-/// # Safety
-/// As `ee_won_parser_format_i64`.
-void ee_won_parser_format_u64(uint64_t value,
-                              EeWonByteSink sink,
-                              void *context);
-
-/// `StringParser::ValueToString(const bool&)`: "True" or "False".
-///
-/// # Safety
-/// As `ee_won_parser_format_i64`.
-void ee_won_parser_format_bool(bool value, EeWonByteSink sink, void *context);
-
-extern int isspace(int c);
-
-extern int isdigit(int c);
-
-extern int isxdigit(int c);
-
-extern int isalnum(int c);
-
-extern int toupper(int c);
-
-extern int tolower(int c);
-
-/// The exception text of a status.
-const char *ee_won_file_status_text(int32_t status);
-
-void ee_won_file_reader_init(EeWonFileReader *reader);
-
-/// # Safety
-/// `path` is a C string.
-bool ee_won_file_reader_open(EeWonFileReader *reader, const char *path);
-
-/// # Safety
-/// `path` is a C string.
-bool ee_won_file_reader_open_text(EeWonFileReader *reader, const char *path);
-
-/// The buffer is not owned and must outlive the reading.
-void ee_won_file_reader_open_memory(EeWonFileReader *reader,
-                                    const void *data,
-                                    unsigned long length);
-
-void ee_won_file_reader_close(EeWonFileReader *reader);
-
-unsigned long ee_won_file_reader_pos(const EeWonFileReader *reader);
-
-unsigned long ee_won_file_reader_length(EeWonFileReader *reader, int32_t *status);
-
-int32_t ee_won_file_reader_set_pos(EeWonFileReader *reader, unsigned long pos);
-
-/// # Safety
-/// `out` holds `max` bytes.
-int ee_won_file_reader_read_max(EeWonFileReader *reader, void *out, int max, int32_t *status);
-
-/// # Safety
-/// `out` holds `length` bytes.
-int32_t ee_won_file_reader_read_bytes(EeWonFileReader *reader, void *out, unsigned long length);
-
-int ee_won_file_reader_try_read_byte(EeWonFileReader *reader);
-
-int32_t ee_won_file_reader_skip(EeWonFileReader *reader, unsigned long length);
-
-int32_t ee_won_file_reader_read_into_memory(EeWonFileReader *reader);
-
-/// A 1, 2 or 4 byte length field (0 for another size), into `value`.
-int32_t ee_won_file_reader_read_length(EeWonFileReader *reader, int field_size, int *value);
-
-void ee_won_file_reader_rewind(EeWonFileReader *reader);
-
-bool ee_won_file_reader_end_of_file(const EeWonFileReader *reader);
-
-void ee_won_file_writer_init(EeWonFileWriter *writer);
-
-/// # Safety
-/// `path` is a C string.
-bool ee_won_file_writer_open(EeWonFileWriter *writer, const char *path);
-
-void ee_won_file_writer_close(EeWonFileWriter *writer);
-
-unsigned long ee_won_file_writer_pos(const EeWonFileWriter *writer);
-
-int32_t ee_won_file_writer_set_pos(EeWonFileWriter *writer, unsigned long pos);
-
-/// # Safety
-/// `data` holds `length` bytes.
-int32_t ee_won_file_writer_write_bytes(EeWonFileWriter *writer,
-                                       const void *data,
-                                       unsigned long length);
-
-int32_t ee_won_file_writer_write_length(EeWonFileWriter *writer,
-                                        unsigned long length,
-                                        uint8_t field_size);
-
-/// `new FilePushOp(addr)` (the address's six bytes): the Rust op a `RustServerOp` runs.
-///
-/// # Safety
-/// `addr` points to six bytes.
-EeWonHostOp *ee_won_filepush_new(const uint8_t *addr);
-
-EeWonStageRoute ee_won_stage_send_to_captain(bool have_game, bool i_am_captain);
-
-EeWonStageRoute ee_won_stage_broadcast(bool have_game, bool i_am_captain);
-
-EeWonStageRoute ee_won_stage_send_to_client(bool have_game, bool i_am_captain);
-
-int32_t ee_won_stage_player_joined(bool has_player, bool i_am_captain);
-
-bool ee_won_stage_joined_keeps_all_ready(bool last_all_ready, bool ready);
-
-bool ee_won_stage_sets_in_progress(bool have_game, bool in_progress, bool want, bool i_am_captain);
-
-EeWonToggleReady ee_won_stage_toggle_ready(bool have_client,
-                                           bool have_game,
-                                           bool i_am_captain,
-                                           bool i_am_ready);
-
-int32_t ee_won_stage_host_warning(int32_t game_type,
-                                  bool show_confirmations,
-                                  bool firewall_test_done,
-                                  bool behind_firewall);
-
-int32_t ee_won_stage_verify_ping(int32_t game_type,
-                                 bool ping_replied,
-                                 bool have_config,
-                                 bool allow_join_without_ping,
-                                 bool show_confirmations);
-
-bool ee_won_stage_join_status_shown(int16_t status);
-
-int32_t ee_won_stage_leave_confirm(bool confirm, bool show_confirmations, bool i_am_captain);
-
-EeWonKicked ee_won_stage_kicked(bool ban, int32_t game_type, bool is_me);
-
-int32_t ee_won_stage_game_action(int32_t action, int32_t game_type);
-
-bool ee_won_stage_reports_ping(bool have_game, bool i_am_captain, bool same_game);
-
-bool ee_won_stage_kicks(bool have_client, bool have_game, bool i_am_captain);
-
-bool ee_won_stage_client_left(bool has_player, bool have_game);
-
-EeWonInitErrors ee_won_init_errors(int32_t error, int32_t ignored);
-
-bool ee_won_init_no_internet(bool check_for_internet, bool has_connection);
-
-int32_t ee_won_init_dir_request_target(int32_t index, bool config_has_auth_servers);
-
-bool ee_won_init_dir_answered(int32_t status);
-
-int32_t ee_won_init_missing_servers(size_t auth, size_t account, size_t versions);
-
-int32_t ee_won_init_version_outcome(int32_t status);
-
-int32_t ee_won_init_accept_outcome(bool accepted, bool from_firewall_server);
-
-bool ee_won_init_tou_saved(int32_t doc_status, int32_t modified, int32_t saved);
-
-size_t ee_won_init_document_bytes(size_t length);
-
-int32_t ee_won_init_event(int32_t kind);
-
-/// `cross_promotion`: the link, then the image, each through the sink (each given once, maybe empty).
-///
-/// # Safety
-/// `doc` holds `length` bytes (or is NULL); the sink's contract.
-void ee_won_init_cross_promotion(const uint8_t *doc,
-                                 size_t length,
-                                 EeWonByteSink link,
-                                 EeWonByteSink image,
-                                 void *context);
 
 /// A new, empty font map.
 EeWonFontMap *ee_won_fontmap_new();
@@ -15457,412 +13234,6 @@ size_t ee_won_fontmap_store(EeWonFontMap *m,
 /// # Safety
 /// `m` is a live map.
 ptrdiff_t ee_won_fontmap_pop(EeWonFontMap *m);
-
-/// The URL's ranges: [user, password, host, path] as (start, end), -1 for one not set.
-///
-/// # Safety
-/// `text` holds `len` bytes; `out` holds 8 values.
-void ee_won_ftp_url(const uint8_t *text, size_t len, bool extract, ptrdiff_t *out);
-
-/// `ExtractUserNameAndPasswordFromURL`'s ranges: [user, password] as (start, end), -1 for one not set, then
-/// the rest's start.
-///
-/// # Safety
-/// `text` holds `len` bytes; `out` holds 5 values.
-void ee_won_ftp_credentials(const uint8_t *text,
-                            size_t len,
-                            ptrdiff_t *out);
-
-/// `ExtractStatus` of a C string: 0 when no number was scanned, 1 for a status the transfer goes on with, 2 for
-/// another (`*out` the status for 1 and 2).
-///
-/// # Safety
-/// `line` is a NUL-terminated string; `out` is valid.
-int32_t ee_won_ftp_status(const uint8_t *line,
-                          int32_t *out);
-
-/// `ParsePasv` of a C string: false when malformed, else the host and port.
-///
-/// # Safety
-/// `line` is a NUL-terminated string; the outputs are valid.
-bool ee_won_ftp_pasv(const uint8_t *line, uint32_t *host, uint16_t *port);
-
-/// `SetRemotePath`'s split: the directory's end (-1: none, the file is the whole path).
-///
-/// # Safety
-/// `path` holds `len` bytes.
-ptrdiff_t ee_won_ftp_remote_split(const uint8_t *path, size_t len);
-
-/// `SendRequest`'s line of `state` into `sink`.
-///
-/// # Safety
-/// The byte ranges are valid; `sink` accepts `context`.
-void ee_won_ftp_command(int32_t state,
-                        const uint8_t *user,
-                        size_t user_len,
-                        const uint8_t *password,
-                        size_t password_len,
-                        const uint8_t *directory,
-                        size_t directory_len,
-                        const uint8_t *file,
-                        size_t file_len,
-                        bool binary,
-                        uint32_t local_size,
-                        EeWonByteSink sink,
-                        void *context);
-
-/// `HandleReply`'s step for a line of `len` bytes (its C string read up to a NUL).
-///
-/// # Safety
-/// `line` holds `len` bytes; `out` is valid.
-void ee_won_ftp_reply(const uint8_t *line,
-                      size_t len,
-                      int32_t state,
-                      bool has_directory,
-                      bool resume,
-                      EeWonFtpStep *out);
-
-/// `new FTPGetOp(host, remotePath)`: the Rust op a `RustServerOp` runs.
-///
-/// # Safety
-/// The texts hold their lengths' bytes.
-EeWonHostOp *ee_won_ftpget_new(const uint8_t *host,
-                               size_t host_len,
-                               const uint8_t *path,
-                               size_t path_len);
-
-/// `new FTPGetOp(url, doExtractUserAndPassword)`: the Rust op a `RustServerOp` runs.
-///
-/// # Safety
-/// `url` holds `len` bytes.
-EeWonHostOp *ee_won_ftpget_new_url(const uint8_t *url, size_t len, bool extract);
-
-/// A new `DetectFirewallOp`: its server context (`EE_WON_REQHOST_CONTEXT`) is set after the bind.
-EeWonHostOp *ee_won_hostop_firewall();
-
-/// `DetectFirewallOp`'s members after `Init`.
-EeWonFirewallOp *ee_won_fwop_new();
-
-/// The destructor: the socket and the receive op let go.
-///
-/// # Safety
-/// `op` came from `ee_won_fwop_new` (or is NULL); `hooks` is valid.
-void ee_won_fwop_free(EeWonFirewallOp *op, const EeWonFirewallHooks *hooks);
-
-/// `SetListenPort`.
-///
-/// # Safety
-/// `op` is valid.
-void ee_won_fwop_set_listen_port(EeWonFirewallOp *op, uint16_t port);
-
-/// `SetDoListen`.
-///
-/// # Safety
-/// `op` is valid.
-void ee_won_fwop_set_do_listen(EeWonFirewallOp *op, bool value);
-
-/// `SetWaitForConnect`.
-///
-/// # Safety
-/// `op` is valid.
-void ee_won_fwop_set_wait_for_connect(EeWonFirewallOp *op, bool value);
-
-/// The drivers' setup: the UDP flag and the longest connect wait (no setter sets them).
-///
-/// # Safety
-/// `op` is valid.
-void ee_won_fwop_setup(EeWonFirewallOp *op, bool udp, uint32_t max_wait);
-
-/// `RunHook`: true to `Finish(*status)`, false to go on to `ServerRequestOp::RunHook`.
-///
-/// # Safety
-/// `op`, `hooks` and `status` are valid.
-bool ee_won_fwop_run_hook(EeWonFirewallOp *op, const EeWonFirewallHooks *hooks, long *status);
-
-/// `CallbackHook(op, param)` with `op`'s status: 0 the base's hook, 1 `RecvServerDatagram()` then true, 2
-/// `Finish(*finish)` then true.
-///
-/// # Safety
-/// `op`, `hooks` and `finish` are valid.
-int32_t ee_won_fwop_callback_hook(EeWonFirewallOp *op,
-                                  const EeWonFirewallHooks *hooks,
-                                  int32_t param,
-                                  long status,
-                                  long *finish);
-
-/// `CleanupHook` after `ServerRequestOp::CleanupHook`.
-///
-/// # Safety
-/// `op` and `hooks` are valid.
-void ee_won_fwop_cleanup_hook(EeWonFirewallOp *op, const EeWonFirewallHooks *hooks);
-
-/// `GetNextRequest` with the base's length field size.
-///
-/// # Safety
-/// `op` and `hooks` are valid.
-long ee_won_fwop_get_next_request(EeWonFirewallOp *op,
-                                  const EeWonFirewallHooks *hooks,
-                                  uint8_t length_field_size);
-
-/// `CheckResponse`: `*kind` -1 cut short (the caller throws `ReadBufferException`), 1 `return
-/// RecvServerDatagram()`, 0 return the status.
-///
-/// # Safety
-/// `op`, `hooks` and `kind` are valid.
-long ee_won_fwop_check_response(EeWonFirewallOp *op,
-                                const EeWonFirewallHooks *hooks,
-                                int32_t *kind);
-
-/// `RecvServerDatagram`: true to `Track` the receive op (`ee_won_fwop_recv_op`) as 1000, `RunAsync(*wait)` it and
-/// return `WS_ServerReq_ExitCommunicationLoop`; false to return `*status`.
-///
-/// # Safety
-/// `op`, `hooks`, `wait` and `status` are valid.
-bool ee_won_fwop_recv_datagram(EeWonFirewallOp *op,
-                               const EeWonFirewallHooks *hooks,
-                               uint32_t *wait,
-                               long *status);
-
-/// The receive op (borrowed, or NULL).
-///
-/// # Safety
-/// `op` is valid.
-void *ee_won_fwop_recv_op(const EeWonFirewallOp *op);
-
-/// The listening socket (borrowed, or NULL).
-///
-/// # Safety
-/// `op` is valid.
-void *ee_won_fwop_listen_socket(const EeWonFirewallOp *op);
-
-/// `GetPublicAddr`'s host into `*host`: false while unset.
-///
-/// # Safety
-/// `op` and `host` are valid.
-bool ee_won_fwop_public_host(const EeWonFirewallOp *op, int32_t *host);
-
-/// The listen port.
-///
-/// # Safety
-/// `op` is valid.
-uint16_t ee_won_fwop_listen_port(const EeWonFirewallOp *op);
-
-/// The longest connect wait.
-///
-/// # Safety
-/// `op` is valid.
-uint32_t ee_won_fwop_max_wait(const EeWonFirewallOp *op);
-
-/// The listen flag.
-///
-/// # Safety
-/// `op` is valid.
-bool ee_won_fwop_do_listen(const EeWonFirewallOp *op);
-
-/// The wait-for-connect flag.
-///
-/// # Safety
-/// `op` is valid.
-bool ee_won_fwop_wait_for_connect(const EeWonFirewallOp *op);
-
-/// The UDP flag.
-///
-/// # Safety
-/// `op` is valid.
-bool ee_won_fwop_use_udp(const EeWonFirewallOp *op);
-
-/// A new instance: C strings for the name, version and key; the shim (`GameSpySupport*`), its directory servers
-/// (`ServerContext*`, a reference taken) and the library's core table (bound).
-///
-/// # Safety
-/// The strings are NUL-ended; the objects live C++ objects (the shim owns the result).
-EeWonGameSpy *ee_won_gamespy_new(const char *name,
-                                 const char *version,
-                                 const char *secret_key,
-                                 void *shim,
-                                 void *dirs,
-                                 const EeWonCoreHooks *core);
-
-/// # Safety
-/// `g` from [`ee_won_gamespy_new`], freed once.
-void ee_won_gamespy_free(EeWonGameSpy *g);
-
-/// `Startup(addr)`: the address's `GetHostString(true)` and port.
-///
-/// # Safety
-/// `g` live; `host` holds `length` bytes.
-int32_t ee_won_gamespy_startup(const EeWonGameSpy *g,
-                               const uint8_t *host,
-                               size_t length,
-                               uint16_t port);
-
-/// The calls without arguments but a number ([`EE_WON_GAMESPY_SHUTDOWN`] ..): their result (0 for none).
-///
-/// # Safety
-/// `g` live.
-int64_t ee_won_gamespy_op(const EeWonGameSpy *g,
-                          int32_t which,
-                          int64_t num);
-
-/// `SetKeyValue(type, key, value)` (C strings); a NULL value erases the key and returns whether it was there
-/// (`EraseKeyValue`); `SetGameMode(value)` for a NULL key.
-///
-/// # Safety
-/// `g` live; the strings NUL-ended or NULL.
-bool ee_won_gamespy_set(const EeWonGameSpy *g,
-                        int32_t kind,
-                        const char *key,
-                        const char *value);
-
-/// `GetKeyValue(type, key)`: the value's C string, valid until the key changes, or NULL.
-///
-/// # Safety
-/// `g` live; `key` NUL-ended.
-const char *ee_won_gamespy_get(const EeWonGameSpy *g, int32_t kind, const char *key);
-
-/// `qr_hostname`: the master server's host the next start-up resolves (a test's stand-in).
-///
-/// # Safety
-/// `host` NUL-ended.
-void ee_won_gamespy_set_master_host(const char *host);
-
-/// `GetCertOp(context)`: the op keeps a reference to `context` (taken here).
-///
-/// # Safety
-/// `hooks` is valid; `context` is a `RefCount*` or NULL.
-EeWonGetCert *ee_won_getcert_new(const EeWonGetCertHooks *hooks, void *context);
-
-/// The destructor: every reference released.
-///
-/// # Safety
-/// `op` came from `ee_won_getcert_new` (or is NULL); `hooks` is valid.
-void ee_won_getcert_free(EeWonGetCert *op, const EeWonGetCertHooks *hooks);
-
-/// `SetAuthContext`.
-///
-/// # Safety
-/// `op` and `hooks` are valid; `context` is a `RefCount*` or NULL.
-void ee_won_getcert_set_context(EeWonGetCert *op, const EeWonGetCertHooks *hooks, void *context);
-
-/// `SetCreateAccount`.
-///
-/// # Safety
-/// `op` is valid.
-void ee_won_getcert_set_create_account(EeWonGetCert *op, bool value);
-
-/// `SetNewPassword` (UTF-16 LE bytes).
-///
-/// # Safety
-/// `op` is valid; `data` holds `length` bytes.
-void ee_won_getcert_set_new_password(EeWonGetCert *op, const uint8_t *data, size_t length);
-
-/// `RunHook`: true to `Finish(*status)`, false to go on to `ServerRequestOp::RunHook`.
-///
-/// # Safety
-/// `op`, `hooks` and `status` are valid.
-bool ee_won_getcert_run_hook(EeWonGetCert *op, const EeWonGetCertHooks *hooks, long *status);
-
-/// `CleanupHook` up to `ServerRequestOp::CleanupHook`, which the caller calls next.
-///
-/// # Safety
-/// `op` and `hooks` are valid.
-void ee_won_getcert_cleanup_hook(EeWonGetCert *op, const EeWonGetCertHooks *hooks);
-
-/// `Reset`.
-///
-/// # Safety
-/// `op` is valid.
-void ee_won_getcert_reset(EeWonGetCert *op);
-
-/// `GetNextRequest`.
-///
-/// # Safety
-/// `op` and `hooks` are valid.
-long ee_won_getcert_get_next_request(EeWonGetCert *op, const EeWonGetCertHooks *hooks);
-
-/// `CheckResponse`: `*cut` true where the original threw `ReadBufferException` (the caller throws it).
-///
-/// # Safety
-/// `op`, `hooks` and `cut` are valid.
-long ee_won_getcert_check_response(EeWonGetCert *op,
-                                   const EeWonGetCertHooks *hooks,
-                                   bool *cut);
-
-/// `GetPeerData` (borrowed; NULL before a login).
-///
-/// # Safety
-/// `op` is valid.
-void *ee_won_getcert_peer_data(const EeWonGetCert *op);
-
-/// `GetSessionKey`: the C++ `Blowfish` is this one `EeWonBlowfish` (pointer-interconvertible).
-///
-/// # Safety
-/// `op` is valid; the pointer lives as long as the op.
-const EeWonBlowfish *ee_won_getcert_session_key(const EeWonGetCert *op);
-
-/// The state (`GETTING_PUB_KEYS` 1, `GETTING_CHALLENGE` 2, `GETTING_CERTIFICATE` 3).
-///
-/// # Safety
-/// `op` is valid.
-int32_t ee_won_getcert_state(const EeWonGetCert *op);
-
-/// The key block (borrowed).
-///
-/// # Safety
-/// `op` is valid.
-void *ee_won_getcert_key_block(const EeWonGetCert *op);
-
-/// The auth server's clock delta (`mAuthDelta`).
-///
-/// # Safety
-/// `op` is valid.
-int64_t ee_won_getcert_auth_delta(const EeWonGetCert *op);
-
-/// The challenge seed into `sink`.
-///
-/// # Safety
-/// `op` is valid; `sink` accepts `context`.
-void ee_won_getcert_seed(const EeWonGetCert *op, EeWonByteSink sink, void *context);
-
-/// The number of error strings (`GetErrorList`).
-///
-/// # Safety
-/// `op` is valid.
-size_t ee_won_getcert_error_count(const EeWonGetCert *op);
-
-/// Error string `index` into `sink`.
-///
-/// # Safety
-/// `op` is valid; `sink` accepts `context`.
-void ee_won_getcert_error(const EeWonGetCert *op, size_t index, EeWonByteSink sink, void *context);
-
-/// The number of community statuses (`GetCommunityStatusList`).
-///
-/// # Safety
-/// `op` is valid.
-size_t ee_won_getcert_community_count(const EeWonGetCert *op);
-
-/// Community status `index`: the status and id, the name's UTF-16 LE bytes into `sink`.
-///
-/// # Safety
-/// `op`, `status` and `id` are valid; `sink` accepts `context`.
-void ee_won_getcert_community(const EeWonGetCert *op,
-                              size_t index,
-                              int16_t *status,
-                              uint32_t *id,
-                              EeWonByteSink sink,
-                              void *context);
-
-/// The drivers' setup: the state, the challenge seed and the key block a scenario starts with.
-///
-/// # Safety
-/// `op` and `hooks` are valid; `seed` holds `length` bytes; `block` is a `RefCount*` or NULL.
-void ee_won_getcert_setup(EeWonGetCert *op,
-                          const EeWonGetCertHooks *hooks,
-                          int32_t state,
-                          const uint8_t *seed,
-                          size_t length,
-                          void *block);
 
 /// A new Graphics' clip stack (empty).
 EeWonGfx *ee_won_gfx_new();
@@ -17690,6 +15061,3253 @@ bool ee_won_gui_max_width(int32_t new_width,
                           int32_t *out_width,
                           bool *out_rewrap);
 
+/// `DoGetAttrib` -> true with the size in `wh`; `thrown` the FileReader status the C++ throws (0: none).
+bool ee_won_img_attrib(EeWonImgKind kind,
+                       EeWonFileReader *reader,
+                       int32_t (*wh)[2],
+                       int32_t *thrown);
+
+/// `DoDecodeRaw` -> true with the image in `out` (its pixels for `ee_won_img_take`), false for NULL; `thrown` the
+/// FileReader status the C++ throws (0: none).
+bool ee_won_img_decode(EeWonImgKind kind,
+                       EeWonFileReader *reader,
+                       EeWonImgRaw *out,
+                       int32_t *thrown);
+
+/// The decoded pixels into the new image's `width * height` pixels, and freed.
+///
+/// # Safety
+/// `out` came from `ee_won_img_decode`; `dst` holds its pixels.
+void ee_won_img_take(EeWonImgRaw *out, uint32_t *dst);
+
+EeWonImgDec *ee_won_img_dec_new();
+
+/// # Safety
+/// `d` came from `ee_won_img_dec_new` (or `ee_won_img_dec_copy`), freed once.
+void ee_won_img_dec_free(EeWonImgDec *d);
+
+/// A new multi-decoder with `d`'s map (Duplicate: its entries are then replaced one by one).
+EeWonImgDec *ee_won_img_dec_copy(const EeWonImgDec *d);
+
+/// # Safety
+/// `b` holds `c` bytes when the call reads them.
+size_t ee_won_img_dec(EeWonImgDec *d, EeWonImgDecCall call, size_t a, const uint8_t *b, size_t c);
+
+/// `ScaleImageFilter::CheckSize` over the filter's fields (`w`, `h` written back).
+///
+/// # Safety
+/// `w` and `h` point at live ints.
+bool ee_won_imgf_check_size(bool is_percent,
+                            int32_t pw,
+                            int32_t ph,
+                            int32_t *w,
+                            int32_t *h,
+                            int32_t img_w,
+                            int32_t img_h);
+
+/// The nearest-neighbour scale of `src` into `dst` (the same kind).
+///
+/// # Safety
+/// Both describe live images.
+void ee_won_imgf_scale(const EeWonRawPixels *src, const EeWonRawPixels *dst);
+
+/// TintImageFilter over `n` colours (a palette's, or a 32-bit image's pixels with `keep_alpha`).
+///
+/// # Safety
+/// `colors` holds `n` colours (or `n` is 0).
+void ee_won_imgf_tint(uint32_t *colors, size_t n, int32_t r, int32_t g, int32_t b, bool keep_alpha);
+
+/// TransparentImageFilter's 32-bit pass over `n` pixels.
+///
+/// # Safety
+/// `pixels` holds `n` pixels (or `n` is 0).
+void ee_won_imgf_transparent32(uint32_t *pixels, size_t n, uint32_t color);
+
+/// TransparentImageFilter's sample place in a `w` x `h` image.
+///
+/// # Safety
+/// `x` and `y` point at live ints.
+void ee_won_imgf_sample(int32_t sample, int32_t w, int32_t h, int32_t *x, int32_t *y);
+
+/// The first of `n` palette colours equal to `color`, or -1.
+///
+/// # Safety
+/// `colors` holds `n` colours (or `n` is 0).
+int32_t ee_won_imgf_palette_find(const uint32_t *colors, size_t n, uint32_t color);
+
+/// TrimImageFilter's rectangle into `rect` (left, top, width, height); false when every pixel is transparent.
+///
+/// # Safety
+/// `img` describes a live 8- or 32-bit image; `rect` has room for four ints.
+bool ee_won_imgf_trim(const EeWonRawPixels *img,
+                      uint8_t transparent,
+                      int32_t *rect);
+
+/// CropPixels' row copies.
+///
+/// # Safety
+/// Both describe live images holding the rows read and written.
+void ee_won_imgf_crop(const EeWonRawPixels *src,
+                      const EeWonRawPixels *dst,
+                      int32_t x_bytes,
+                      int32_t y,
+                      int32_t row_bytes,
+                      int32_t height);
+
+/// `StretchImageFilter`'s pixel work over the plan's `n` operations at `ops` (`stretch_run`).
+///
+/// # Safety
+/// As `stretch_run`; `ops` points at `n` operations (or `n` is 0).
+void ee_won_imgf_stretch_run(const EeWonRawPixels *src,
+                             const EeWonRawPixels *dst,
+                             const EeWonDrawOp *ops,
+                             size_t n);
+
+/// RawImage32::GetNative's transparency pass (`mask32`).
+///
+/// # Safety
+/// As `mask32`.
+void ee_won_imgf_mask32(uint32_t *pixels,
+                        int32_t width,
+                        int32_t height,
+                        uint8_t *mask,
+                        int32_t pitch);
+
+/// RawImage8::GetNative's mask (`mask8`).
+///
+/// # Safety
+/// As `mask8`.
+void ee_won_imgf_mask8(const uint8_t *pixels,
+                       int32_t width,
+                       int32_t height,
+                       int32_t pixel_pitch,
+                       int32_t transparent,
+                       uint8_t *mask,
+                       int32_t pitch);
+
+/// A new Rust InputBox for the C++ `component`, its calls out through `host`.
+EeWonInput *ee_won_input_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `input` came from `ee_won_input_new` (or is NULL) and is not used again.
+void ee_won_input_free(EeWonInput *input);
+
+/// One of InputBox's methods (`EeWonInputCall`).
+///
+/// # Safety
+/// `input` is live; the call's arguments as documented.
+ptrdiff_t ee_won_input_call(const EeWonInput *input,
+                            EeWonInputCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
+
+/// A new Rust Label for the C++ `component`, its calls out through `host`.
+EeWonLabel *ee_won_label_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `label` came from `ee_won_label_new` (or is NULL) and is not used again.
+void ee_won_label_free(EeWonLabel *label);
+
+/// One of Label's methods (`EeWonLabelCall`).
+///
+/// # Safety
+/// `label` is live; the call's arguments as documented.
+ptrdiff_t ee_won_label_call(const EeWonLabel *label,
+                            EeWonLabelCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
+
+/// A new Rust instruction for the C++ shell `comp` (its calls out through `host`), from its constructor's numbers.
+///
+/// # Safety
+/// `init` points at a live `EeWonLayoutInit`.
+EeWonLayout *ee_won_layout_new(void *comp,
+                               EeWonGuiHostFn host,
+                               const EeWonLayoutInit *init);
+
+/// Frees a Rust instruction (its list held no references).
+///
+/// # Safety
+/// `lay` came from `ee_won_layout_new` (or is NULL) and is not used again.
+void ee_won_layout_free(EeWonLayout *lay);
+
+/// One of an instruction's methods (`EeWonLayoutCall`).
+///
+/// # Safety
+/// `lay` is live.
+ptrdiff_t ee_won_layout_call(const EeWonLayout *lay,
+                             EeWonLayoutCall call,
+                             ptrdiff_t a,
+                             ptrdiff_t b);
+
+/// `CenterLayout::Center(parent, child, horz, vert)`: a temporary centre layout (centre box the parent, the child
+/// listed) run on the parent.
+void ee_won_layout_center(EeWonGuiHostFn host,
+                          ptrdiff_t parent,
+                          ptrdiff_t child,
+                          bool horz,
+                          bool vert);
+
+/// A new Rust layout manager for the C++ shell `comp`, its calls out through `host`.
+EeWonLayoutMgr *ee_won_lmgr_new(void *comp, EeWonGuiHostFn host);
+
+/// Frees a Rust layout manager: the layout points, then the instructions, released (the original's members).
+///
+/// # Safety
+/// `mgr` came from `ee_won_lmgr_new` (or is NULL) and is not used again.
+void ee_won_lmgr_free(EeWonLayoutMgr *mgr);
+
+/// One of the manager's methods (`EeWonLayoutMgrCall`).
+///
+/// # Safety
+/// `mgr` is live; an instruction passed with its live Rust object.
+ptrdiff_t ee_won_lmgr_call(const EeWonLayoutMgr *mgr,
+                           EeWonLayoutMgrCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c,
+                           ptrdiff_t d);
+
+/// A new Rust ListArea for the C++ `component`, its calls out through `host`.
+EeWonList *ee_won_list_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `list` came from `ee_won_list_new` (or is NULL) and is not used again.
+void ee_won_list_free(EeWonList *list);
+
+/// One of ListArea's methods (`EeWonListCall`).
+///
+/// # Safety
+/// `list` is live; the call's arguments as documented.
+ptrdiff_t ee_won_list_call(const EeWonList *list,
+                           EeWonListCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
+/// A new Rust PopupMenu for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
+EeWonMenu *ee_won_menu_new(void *component,
+                           EeWonGuiHostFn host,
+                           const EeWonList *list);
+
+/// # Safety
+/// `menu` came from `ee_won_menu_new` (or is NULL) and is not used again.
+void ee_won_menu_free(EeWonMenu *menu);
+
+/// One of PopupMenu's methods (`EeWonMenuCall`).
+///
+/// # Safety
+/// `menu` is live; the call's arguments as documented.
+ptrdiff_t ee_won_menu_call(const EeWonMenu *menu,
+                           EeWonMenuCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
+/// A new Rust MSButtonBase for the C++ `component`, its calls out through `host`.
+EeWonMsButton *ee_won_msbtn_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `btn` came from `ee_won_msbtn_new` (or is NULL) and is not used again.
+void ee_won_msbtn_free(EeWonMsButton *btn);
+
+/// One of MSButtonBase's methods (`EeWonMsBtnCall`).
+///
+/// # Safety
+/// `btn` is live; the call's arguments as documented.
+ptrdiff_t ee_won_msbtn_call(const EeWonMsButton *btn,
+                            EeWonMsBtnCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
+
+/// The plan of `p` (an [`EeWonMsPaintKind`] paint) into `out` (`cap` entries); answers the plan's length, which
+/// may be more than `cap` (the C++ asks again with room).
+///
+/// # Safety
+/// `p` is live; `out` has room for `cap` operations (or is NULL with `cap` 0).
+size_t ee_won_mspaint_plan(const EeWonMsPaint *p,
+                           EeWonDrawOp *out,
+                           size_t cap);
+
+/// A new Rust MultiListArea for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
+EeWonMulti *ee_won_multi_new(void *component,
+                             EeWonGuiHostFn host,
+                             const EeWonList *list);
+
+/// # Safety
+/// `multi` came from `ee_won_multi_new` (or is NULL) and is not used again.
+void ee_won_multi_free(EeWonMulti *multi);
+
+/// One of MultiListArea's methods (`EeWonMultiCall`).
+///
+/// # Safety
+/// `multi` is live; the call's arguments as documented.
+ptrdiff_t ee_won_multi_call(const EeWonMulti *multi,
+                            EeWonMultiCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
+
+/// A new Rust MultiListItem for the C++ row `component`; `host` gives the cells' references.
+EeWonMRow *ee_won_mrow_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `row` came from `ee_won_mrow_new` (or is NULL) and is not used again.
+void ee_won_mrow_free(EeWonMRow *row);
+
+/// One of MultiListItem's methods (`EeWonMRowCall`); `multi` is the row's list's Rust object (NULL for the calls
+/// that need no list).
+///
+/// # Safety
+/// `row` is live; `multi` is live or NULL; the call's arguments as documented.
+ptrdiff_t ee_won_mrow_call(const EeWonMRow *row,
+                           const EeWonMulti *multi,
+                           EeWonMRowCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
+/// A new Rust MultiListHeader for the C++ `component`, its calls out through `host`.
+EeWonMHead *ee_won_mhead_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `head` came from `ee_won_mhead_new` (or is NULL) and is not used again.
+void ee_won_mhead_free(EeWonMHead *head);
+
+/// One of MultiListHeader's methods (`EeWonMHeadCall`).
+///
+/// # Safety
+/// `head` is live; the call's arguments as documented.
+ptrdiff_t ee_won_mhead_call(const EeWonMHead *head,
+                            EeWonMHeadCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
+
+/// A new Rust ScrollArea for the C++ `component`, its calls out through `host`.
+EeWonScrollPane *ee_won_pane_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `pane` came from `ee_won_pane_new` (or is NULL) and is not used again.
+void ee_won_pane_free(EeWonScrollPane *pane);
+
+/// One of ScrollArea's methods (`EeWonPaneCall`).
+///
+/// # Safety
+/// `pane` is live; the call's arguments as documented.
+ptrdiff_t ee_won_pane_call(const EeWonScrollPane *pane,
+                           EeWonPaneCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
+/// A system cursor (`PlatSystemCursor`).
+EeWonPlatCursor *ee_won_plat_cursor_system(const EeWonPlatCursorFns *fns, uint32_t cursor);
+
+/// A cursor of `width` x `height` pixels (copied) with its hot spot.
+///
+/// # Safety
+/// `pixels` holds `width * height` values (or is NULL with a size of 0).
+EeWonPlatCursor *ee_won_plat_cursor_pixels(const EeWonPlatCursorFns *fns,
+                                           const uint32_t *pixels,
+                                           int32_t width,
+                                           int32_t height,
+                                           int32_t hot_x,
+                                           int32_t hot_y);
+
+/// # Safety
+/// `c` came from a constructor above, freed once.
+void ee_won_plat_cursor_free(EeWonPlatCursor *c);
+
+/// `PlatCursor::Apply`.
+void ee_won_plat_cursor_apply(EeWonPlatCursor *c);
+
+/// `new PlatGUIFont(context, descriptor)`'s font: `face` the descriptor's face (NUL-terminated).
+///
+/// # Safety
+/// `face` is NUL-terminated (or null: no face).
+EeWonPlatFont *ee_won_plat_font_new(const char *face, int32_t size, int32_t style);
+
+/// The font's destruction (its platform fonts with it).
+///
+/// # Safety
+/// `f` is null or from `ee_won_plat_font_new`, not freed before.
+void ee_won_plat_font_free(EeWonPlatFont *f);
+
+/// `GetHeight()` (0), `GetAscent()` (1), `GetDescent()` (2).
+///
+/// # Safety
+/// `f` is a live font.
+int32_t ee_won_plat_font_metric(const EeWonPlatFont *f, int32_t which);
+
+/// `GetStringWidth(text, offset, length)` over the `len` units at `text` (the offset applied by the caller).
+///
+/// # Safety
+/// `f` is a live font; `text` holds `len` units.
+int32_t ee_won_plat_font_width(const EeWonPlatFont *f,
+                               const void *text,
+                               uint16_t len);
+
+/// `DrawString(context, text, offset, length, x, y)` once the context is known: the text drawn into the context's
+/// surface `s` (null: none) at its pixel scale in `color` (the Graphics' colour without its top byte, 0 without
+/// one); the underline to draw into `line` (x1, y, x2) and true when the font is underlined and `graphics`.
+///
+/// # Safety
+/// `f` is a live font; `s` null or a live surface; `text` holds `len` units; `line` holds three ints.
+bool ee_won_plat_font_draw(EeWonPlatFont *f,
+                           EeWonSurface *s,
+                           float scale,
+                           bool graphics,
+                           uint32_t color,
+                           const void *text,
+                           uint16_t len,
+                           int32_t x,
+                           int32_t y,
+                           int32_t *line);
+
+/// A `PlatGraphics` hook on the surface `s` (null: the graphics has none) at pixel scale `scale`, with Graphics'
+/// colour `color`; GetPixel's answer (0 for the others).
+///
+/// # Safety
+/// `s` is null or a live surface no one else uses during the call.
+uint32_t ee_won_plat_gfx(EeWonSurface *s,
+                         float scale,
+                         uint32_t color,
+                         EeWonPlatGfx op,
+                         int32_t a,
+                         int32_t b,
+                         int32_t c,
+                         int32_t d,
+                         int32_t e,
+                         int32_t f);
+
+/// `DrawPolygonHook` (`fill` false) or `FillPolygonHook` over `count` points, `xy` their x and y in turn.
+///
+/// # Safety
+/// `s` as `ee_won_plat_gfx`; `xy` holds `2 * count` ints (or count <= 0).
+void ee_won_plat_gfx_polygon(EeWonSurface *s,
+                             float scale,
+                             uint32_t color,
+                             bool fill,
+                             const int32_t *xy,
+                             int32_t count);
+
+/// `PlatNativeImage::Draw(context, x, y, left, top, width, height)` once the context has a surface `dst` (of pixel
+/// scale `dst_scale`): the image `src` (scale `src_scale`, logical `src_w` x `src_h`, mask `mask` or null).
+///
+/// # Safety
+/// `dst` and `src` are live surfaces (they may be the same one); `mask` as `mask_of`.
+void ee_won_plat_img_draw(EeWonSurface *dst,
+                          float dst_scale,
+                          EeWonSurface *src,
+                          float src_scale,
+                          int32_t src_w,
+                          int32_t src_h,
+                          const EeWonPlatMask *mask,
+                          int32_t x,
+                          int32_t y,
+                          int32_t left,
+                          int32_t top,
+                          int32_t width,
+                          int32_t height);
+
+/// `PlatNativeImage::GetRaw`'s pixels into `out` (`width * height` of them): `src` at `scale`, logical
+/// `width` x `height`, mask `mask` or null.
+///
+/// # Safety
+/// `src` is a live surface; `out` holds `width * height` pixels; `mask` as `mask_of`.
+void ee_won_plat_img_raw(EeWonSurface *src,
+                         float scale,
+                         int32_t width,
+                         int32_t height,
+                         const EeWonPlatMask *mask,
+                         uint32_t *out);
+
+/// A raw image's native image into the new image's surface `dst` (`from_raw`); `palette` holds `colors` colours.
+///
+/// # Safety
+/// `src` describes a live raw image (its `pitch` the row bytes of a 1- or 8-bit one); `palette` null or `colors`
+/// long; `dst` a live surface.
+void ee_won_plat_img_from_raw(const EeWonRawPixels *src,
+                              const uint32_t *palette,
+                              int32_t colors,
+                              int32_t transparent,
+                              EeWonSurface *dst);
+
+/// The pack's file name `which` (0, 1) for `path` (NUL-terminated) into `out` (`cap` bytes, NUL-terminated):
+/// its length, or -1 when there is none (another path, or the .png name is the first).
+///
+/// # Safety
+/// `path` is NUL-terminated; `out` holds `cap` bytes.
+int32_t ee_won_plat_pack_name(const uint8_t *path,
+                              int32_t which,
+                              uint8_t *out,
+                              size_t cap);
+
+/// `pack_factor` and `pack_scale`: the copy's scale (0: not a pack copy) and box into `*out_box`.
+///
+/// # Safety
+/// `out_box` is valid.
+int32_t ee_won_plat_pack_fit(int32_t raw_w,
+                             int32_t raw_h,
+                             int32_t w,
+                             int32_t h,
+                             int32_t shift,
+                             int32_t *out_box);
+
+/// `pack_reduce` from the pack copy's surface `from` into the new image's surface `to`.
+///
+/// # Safety
+/// `from`, `to` live distinct surfaces; `mask` as `mask_of`.
+void ee_won_plat_pack_reduce(EeWonSurface *from,
+                             EeWonSurface *to,
+                             int32_t w,
+                             int32_t h,
+                             int32_t scale,
+                             int32_t b,
+                             const EeWonPlatMask *mask);
+
+/// The WON hand cursor's 1,024 pixels into `out`.
+///
+/// # Safety
+/// `out` holds 1,024 pixels.
+void ee_won_plat_hand_cursor(uint32_t *out);
+
+/// A new window for the shell `me` and its host.
+EeWonPlatWin *ee_won_plat_win_new(void *me, EeWonPlatWinHost host);
+
+/// # Safety
+/// `w` came from `ee_won_plat_win_new`, freed once (after its Destroy call).
+void ee_won_plat_win_free(EeWonPlatWin *w);
+
+/// One of the window's calls (`EeWonPlatWinCall`, its arguments as each says).
+///
+/// # Safety
+/// `w` is a live window; the pointers a call reads or writes are valid.
+ptrdiff_t ee_won_plat_win(EeWonPlatWin *w,
+                          EeWonPlatWinCall c,
+                          ptrdiff_t a,
+                          ptrdiff_t b,
+                          ptrdiff_t cc,
+                          ptrdiff_t d);
+
+/// A new manager for the C++ `me` and its host.
+EeWonPlatWm *ee_won_plat_wm_new(void *me, EeWonPlatWmHost host);
+
+/// The manager's destruction.
+///
+/// # Safety
+/// `m` is null or from `ee_won_plat_wm_new`, not freed before.
+void ee_won_plat_wm_free(EeWonPlatWm *m);
+
+/// A call (`EeWonPlatWmCall`).
+///
+/// # Safety
+/// `m` is a live manager; a window argument is a live window (or null where the call takes one).
+ptrdiff_t ee_won_plat_wm(const EeWonPlatWm *m, EeWonPlatWmCall call, ptrdiff_t a, ptrdiff_t b);
+
+/// `SetPixelScale(scale)`.
+///
+/// # Safety
+/// `m` is a live manager.
+void ee_won_plat_wm_set_scale(const EeWonPlatWm *m, float scale);
+
+/// `GetPixelScale()`.
+///
+/// # Safety
+/// `m` is a live manager.
+float ee_won_plat_wm_scale(const EeWonPlatWm *m);
+
+/// `SetPresentRect(l, t, w, h)`.
+///
+/// # Safety
+/// `m` is a live manager.
+void ee_won_plat_wm_present(const EeWonPlatWm *m, float l, float t, float w, float h);
+
+/// `LockFrame(...)`: `out` gets the pixels' address and then width, height, pitch, logical width, logical height,
+/// serial in `ints` (six).
+///
+/// # Safety
+/// `m` is a live manager; `pixels` writable, `ints` six writable ints.
+bool ee_won_plat_wm_lock_frame(const EeWonPlatWm *m,
+                               const uint32_t **pixels,
+                               uint32_t *ints);
+
+/// HandlePlatEvent's translation: true when the event goes on to the game's forward function.
+///
+/// # Safety
+/// `m` is a live manager; `e` a `PlatInputEvent`.
+bool ee_won_plat_wm_event(const EeWonPlatWm *m, const EeWonPlatEvent *e);
+
+/// `GetMousePosition(x, y)`.
+///
+/// # Safety
+/// `m` is a live manager; `x`, `y` writable.
+bool ee_won_plat_wm_mouse(const EeWonPlatWm *m, int32_t *x, int32_t *y);
+
+/// `PlatGUIWindow::GetClientRect` of the window's fields at `i` into the four ints at `out`.
+///
+/// # Safety
+/// `i` is readable, `out` four writable ints.
+void ee_won_plat_client_rect(const EeWonPlatWinInfo *i, int32_t *out);
+
+/// A new Rust RootContainer for the C++ `component` over its container's Rust object `ct`, its calls out through
+/// `host`.
+///
+/// # Safety
+/// `ct` is the component's live container object and outlives the root's.
+EeWonRoot *ee_won_root_new(void *component,
+                           EeWonGuiHostFn host,
+                           const EeWonContainer *ct);
+
+/// The destructor's statements (the queued backgrounds' images released), then the object freed.
+///
+/// # Safety
+/// `root` came from `ee_won_root_new` (or is NULL) and is not used again.
+void ee_won_root_free(EeWonRoot *root);
+
+/// One of RootContainer's methods (`EeWonRootCall`).
+///
+/// # Safety
+/// `root` is live; the call's arguments as documented.
+ptrdiff_t ee_won_root_call(const EeWonRoot *root,
+                           EeWonRootCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
+/// A new Rust Scroller for the C++ `component`, its calls out through `host`.
+EeWonScroller *ee_won_scroller_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `scroller` came from `ee_won_scroller_new` (or is NULL) and is not used again.
+void ee_won_scroller_free(EeWonScroller *scroller);
+
+/// One of Scroller's or ScrollbarScroller's methods (`EeWonScrollerCall`).
+///
+/// # Safety
+/// `scroller` is live; the call's arguments as documented.
+ptrdiff_t ee_won_scroller_call(const EeWonScroller *scroller,
+                               EeWonScrollerCall call,
+                               ptrdiff_t a,
+                               ptrdiff_t b,
+                               ptrdiff_t c);
+
+/// `layout` for the C++ (`w`, `h` null for a layout that has no size out).
+///
+/// # Safety
+/// `me` is the component `host` serves; `w` and `h` are null or point at ints.
+void ee_won_skin_layout(EeWonSkinLayKind kind,
+                        void *me,
+                        EeWonGuiHostFn host,
+                        int32_t a,
+                        ptrdiff_t b,
+                        int32_t c,
+                        int32_t *w,
+                        int32_t *h);
+
+/// A new Rust Splitter for the C++ `component`, its calls out through `host`.
+EeWonSplitter *ee_won_split_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `split` came from `ee_won_split_new` (or is NULL) and is not used again.
+void ee_won_split_free(EeWonSplitter *split);
+
+/// One of Splitter's methods (`EeWonSplitCall`).
+///
+/// # Safety
+/// `split` is live; the call's arguments as documented.
+ptrdiff_t ee_won_split_call(const EeWonSplitter *split,
+                            EeWonSplitCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
+
+/// A new StretchImage's settings (the constructor's borders).
+EeWonStretchImg *ee_won_stretch_new(int32_t left, int32_t top, int32_t right, int32_t bottom);
+
+/// `Duplicate()`'s settings for the copy.
+///
+/// # Safety
+/// `o` is live.
+EeWonStretchImg *ee_won_stretch_duplicate(const EeWonStretchImg *o);
+
+/// # Safety
+/// `o` is null or from `ee_won_stretch_new` / `ee_won_stretch_duplicate`, not freed before.
+void ee_won_stretch_free(EeWonStretchImg *o);
+
+/// `SetSize(width, height)` against the image's size: true when the C++ must store the new size.
+///
+/// # Safety
+/// `o` is live.
+bool ee_won_stretch_set_size(EeWonStretchImg *o,
+                             int32_t cur_w,
+                             int32_t cur_h,
+                             int32_t w,
+                             int32_t h);
+
+/// `SetBorders(left, top, right, bottom)` (the cache not marked, as the original's).
+///
+/// # Safety
+/// `o` is live.
+void ee_won_stretch_set_borders(EeWonStretchImg *o,
+                                int32_t left,
+                                int32_t top,
+                                int32_t right,
+                                int32_t bottom);
+
+/// `SetTile(horz, vert)`.
+///
+/// # Safety
+/// `o` is live.
+void ee_won_stretch_set_tile(EeWonStretchImg *o, bool horz, bool vert);
+
+/// `SetSkipCenter(skip)`.
+///
+/// # Safety
+/// `o` is live.
+void ee_won_stretch_set_skip(EeWonStretchImg *o, bool skip);
+
+/// The cache built (`CalcImage`'s end).
+///
+/// # Safety
+/// `o` is live.
+void ee_won_stretch_built(EeWonStretchImg *o);
+
+/// `CopyAttributes(from)`'s settings.
+///
+/// # Safety
+/// `o` and `from` are live.
+void ee_won_stretch_copy(EeWonStretchImg *o, const EeWonStretchImg *from);
+
+/// A setting.
+///
+/// # Safety
+/// `o` is live.
+int32_t ee_won_stretch_get(const EeWonStretchImg *o, EeWonStretchField f);
+
+/// `Paint`'s plan at the image's size: the first `cap` operations into `out`, their count returned.
+///
+/// # Safety
+/// `o` is live; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_stretch_paint(const EeWonStretchImg *o,
+                            int32_t width,
+                            int32_t height,
+                            EeWonDrawOp *out,
+                            size_t cap);
+
+/// `SurfaceBase::GetNewSurface(format)`: a new surface, or null for an unknown format.
+EeWonSurface *ee_won_surface_new(int32_t format);
+
+/// `GetNewSurface(gDefaultSurfaceFormat)`.
+EeWonSurface *ee_won_surface_new_default();
+
+/// `SetDefaultSurfaceFormat(format)`.
+void ee_won_surface_set_default_format(int32_t format);
+
+/// `SURFACE_32_TO_555` / `SURFACE_32_TO_565` (`SurfaceColorFrom32`).
+uint32_t ee_won_surface_color_from32(uint32_t c, int32_t format);
+
+/// `SURFACE_555_TO_32` / `SURFACE_565_TO_32`.
+uint32_t ee_won_surface_color_to32(uint32_t p, int32_t format);
+
+/// The surface's destruction (its pixels freed).
+///
+/// # Safety
+/// `s` is null or from `ee_won_surface_new` / `ee_won_surface_duplicate`, not freed before.
+void ee_won_surface_free(EeWonSurface *s);
+
+/// `Create(width, height)`.
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_create(EeWonSurface *s, int32_t width, int32_t height);
+
+/// `Free()`.
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_release(EeWonSurface *s);
+
+/// A field (`EeWonSurfaceField`).
+///
+/// # Safety
+/// `s` is a live surface.
+int32_t ee_won_surface_get(const EeWonSurface *s, EeWonSurfaceField f);
+
+/// `GetPixelsBase()`.
+///
+/// # Safety
+/// `s` is a live surface.
+void *ee_won_surface_pixels(EeWonSurface *s);
+
+/// A drawing method (`EeWonSurfaceDraw` with its arguments in the original's order).
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_draw(EeWonSurface *s,
+                         EeWonSurfaceDraw op,
+                         int32_t a,
+                         int32_t b,
+                         int32_t c,
+                         int32_t d,
+                         int32_t e,
+                         int32_t f);
+
+/// `GetPixel(x, y)`.
+///
+/// # Safety
+/// `s` is a live surface.
+uint32_t ee_won_surface_pixel(EeWonSurface *s, int32_t x, int32_t y);
+
+/// `CopySurface(src, mask, x, y, left, top, width, height)` (`mask` null: the copy without a mask).
+///
+/// # Safety
+/// `s` and `src` are live surfaces (possibly the same); `mask` is null or covers the source's rows.
+void ee_won_surface_copy(EeWonSurface *s,
+                         const EeWonSurface *src,
+                         const uint8_t *mask,
+                         int32_t x,
+                         int32_t y,
+                         int32_t left,
+                         int32_t top,
+                         int32_t width,
+                         int32_t height);
+
+/// `Duplicate()`: a new surface.
+///
+/// # Safety
+/// `s` is a live surface.
+EeWonSurface *ee_won_surface_duplicate(const EeWonSurface *s);
+
+/// The BITMAPINFO header's fields (`EeWonSurface::bitmap_info`) into `out` (eight ints).
+///
+/// # Safety
+/// `s` is a live surface, `out` points at eight ints.
+void ee_won_surface_bitmap_info(const EeWonSurface *s, int32_t *out);
+
+/// A new Rust TabBar for the C++ `component` over its container's Rust object `ct`, the bar of the control `ctrl`
+/// (NULL for none), its calls out through `host`.
+///
+/// # Safety
+/// `ct` is the component's live container object and outlives the bar's; `ctrl` (when not NULL) is live until it
+/// is freed (it then leaves the bar).
+EeWonTabBar *ee_won_tabbar_new(void *component,
+                               EeWonGuiHostFn host,
+                               const EeWonContainer *ct,
+                               const EeWonTabCtrl *ctrl);
+
+/// The destructor's statements (the buttons given back), then the object freed.
+///
+/// # Safety
+/// `bar` came from `ee_won_tabbar_new` (or is NULL) and is not used again.
+void ee_won_tabbar_free(EeWonTabBar *bar);
+
+/// One of TabBar's virtuals (`EeWonTabBarCall`).
+///
+/// # Safety
+/// `bar` is live.
+ptrdiff_t ee_won_tabbar_call(const EeWonTabBar *bar, EeWonTabBarCall call, ptrdiff_t a);
+
+/// A new Rust TabCtrl for the C++ `component` over its container's Rust object `ct`, its calls out through `host`.
+///
+/// # Safety
+/// `ct` is the component's live container object and outlives the control's.
+EeWonTabCtrl *ee_won_tab_new(void *component,
+                             EeWonGuiHostFn host,
+                             const EeWonContainer *ct);
+
+/// The constructor's statements over its made members (`parts`).
+///
+/// # Safety
+/// `tab` is live; `parts` is readable, its bar the live bottom bar's Rust object, held by the control's member.
+void ee_won_tab_init(const EeWonTabCtrl *tab,
+                     const EeWonTabParts *parts);
+
+/// The destructor's statements (the arrows given back), then the object freed.
+///
+/// # Safety
+/// `tab` came from `ee_won_tab_new` (or is NULL) and is not used again.
+void ee_won_tab_free(EeWonTabCtrl *tab);
+
+/// One of TabCtrl's methods (`EeWonTabCall`).
+///
+/// # Safety
+/// `tab` is live; the call's arguments as documented.
+ptrdiff_t ee_won_tab_call(const EeWonTabCtrl *tab, EeWonTabCall call, ptrdiff_t a, ptrdiff_t b);
+
+/// A new Rust TextArea for the C++ `component`, its calls out through `host`.
+EeWonText *ee_won_text_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `text` came from `ee_won_text_new` (or is NULL) and is not used again.
+void ee_won_text_free(EeWonText *text);
+
+/// One of TextArea's methods (`EeWonTextCall`).
+///
+/// # Safety
+/// `text` is live; the call's arguments as documented.
+ptrdiff_t ee_won_text_call(const EeWonText *text,
+                           EeWonTextCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
+/// A new Rust TreeArea for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
+EeWonTree *ee_won_tree_new(void *component,
+                           EeWonGuiHostFn host,
+                           const EeWonList *list);
+
+/// # Safety
+/// `tree` came from `ee_won_tree_new` (or is NULL) and is not used again.
+void ee_won_tree_free(EeWonTree *tree);
+
+/// One of TreeArea's methods (`EeWonTreeCall`).
+///
+/// # Safety
+/// `tree` is live; the call's arguments as documented.
+ptrdiff_t ee_won_tree_call(const EeWonTree *tree,
+                           EeWonTreeCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
+/// A new Rust TreeItem for the C++ row `component`; `host` answers `NodeOf`, `ItemSetTop`, `ItemSetPosXY`,
+/// `ItemTop`, `ItemContains` and the references.
+EeWonTNode *ee_won_tnode_new(void *component,
+                             EeWonGuiHostFn host);
+
+/// # Safety
+/// `node` came from `ee_won_tnode_new` (or is NULL) and is not used again.
+void ee_won_tnode_free(EeWonTNode *node);
+
+/// One of TreeItem's methods (`EeWonTNodeCall`); `tree` is the row's tree's Rust object (NULL for the calls that
+/// need none).
+///
+/// # Safety
+/// `node` is live; `tree` is live or NULL; the call's arguments as documented.
+ptrdiff_t ee_won_tnode_call(const EeWonTNode *node,
+                            const EeWonTree *tree,
+                            EeWonTNodeCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
+
+/// A new Rust Window for the C++ `window`, its calls out through `host`.
+EeWonWindow *ee_won_win_new(void *window, EeWonGuiHostFn host);
+
+/// The window's object freed (the child set with it).
+///
+/// # Safety
+/// `win` came from `ee_won_win_new` (or is NULL) and is not used again.
+void ee_won_win_free(EeWonWindow *win);
+
+/// One of Window's methods (`EeWonWinCall`).
+///
+/// # Safety
+/// `win` is live; the call's arguments as documented.
+ptrdiff_t ee_won_win_call(const EeWonWindow *win, EeWonWinCall call, ptrdiff_t a, ptrdiff_t b);
+
+/// A set's `i`-th entry (`which` an `EeWonWmSet`; 0 past the end; the goldens' trace).
+///
+/// # Safety
+/// `wm` is live.
+ptrdiff_t ee_won_wm_set_at(const EeWonWm *wm, uint32_t which, size_t i);
+
+/// A new Rust WindowManager for the C++ `manager`, its calls out through `host`.
+EeWonWm *ee_won_wm_new(void *manager, EeWonGuiHostFn host);
+
+/// The manager's object freed, its held members given back first (the broadcast set, the deferred timer
+/// removals, the timer events, the event list and the window set; then the popup members; then the caches: the
+/// original's members in reverse order).
+///
+/// # Safety
+/// `wm` came from `ee_won_wm_new` (or is NULL) and is not used again.
+void ee_won_wm_free(EeWonWm *wm);
+
+/// One of WindowManager's methods (`EeWonWmCall`).
+///
+/// # Safety
+/// `wm` is live; the call's arguments as documented.
+ptrdiff_t ee_won_wm_call(const EeWonWm *wm,
+                         EeWonWmCall call,
+                         ptrdiff_t a,
+                         ptrdiff_t b,
+                         ptrdiff_t c,
+                         ptrdiff_t d);
+
+/// The popup list's `i`-th entry (0 past the end; the goldens' trace of the list).
+///
+/// # Safety
+/// `wm` is live.
+ptrdiff_t ee_won_wm_popup_at(const EeWonWm *wm, size_t i);
+
+/// The caches as one line (the goldens' trace) into `buf` (at most `cap` bytes); the length written.
+///
+/// # Safety
+/// `wm` is live; `buf` has room for `cap` bytes.
+size_t ee_won_wm_cache_line(const EeWonWm *wm,
+                            uint8_t *buf,
+                            size_t cap);
+
+/// `WindowManager::InitColorScheme`: the 17 standard colours into `out`.
+///
+/// # Safety
+/// `out` has room for 17 colours.
+void ee_won_wm_standard_colors(uint32_t *out);
+
+/// A new Rust WONButton for the C++ `component`, its calls out through `host`.
+EeWonWonButton *ee_won_wonbtn_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `btn` came from `ee_won_wonbtn_new` (or is NULL) and is not used again.
+void ee_won_wonbtn_free(EeWonWonButton *btn);
+
+/// One of WONButton's methods (`EeWonWbCall`).
+///
+/// # Safety
+/// `btn` is live; the call's arguments as documented.
+ptrdiff_t ee_won_wonbtn_call(const EeWonWonButton *btn,
+                             EeWonWbCall call,
+                             ptrdiff_t a,
+                             ptrdiff_t b,
+                             ptrdiff_t c,
+                             ptrdiff_t d);
+
+/// `SetButtonState(state, image, color, font, checked)`.
+///
+/// # Safety
+/// `btn` is live.
+void ee_won_wonbtn_set_state(const EeWonWonButton *btn,
+                             int32_t state,
+                             void *image,
+                             int32_t color,
+                             void *font,
+                             bool checked);
+
+/// `CopyAttributes(from)`: `from` the source's Rust button, `from_comp` its C++ `WONButton*`.
+///
+/// # Safety
+/// Both buttons are live and distinct (`Duplicate` copies onto a new button).
+void ee_won_wonbtn_copy(const EeWonWonButton *btn, const EeWonWonButton *from, void *from_comp);
+
+/// A new WrappedText's state (`Init()`).
+EeWonWrapText *ee_won_wrap_new();
+
+/// # Safety
+/// `o` is null or from `ee_won_wrap_new`, not freed before.
+void ee_won_wrap_free(EeWonWrapText *o);
+
+/// `CalcWrap()`: `text` holds `len` units of `wchar_size` bytes (or is NULL with 0), `m` measures them in the font.
+///
+/// # Safety
+/// `o` is live; `text` and `m` as described.
+void ee_won_wrap_calc(EeWonWrapText *o,
+                      bool has_font,
+                      const void *text,
+                      int32_t len,
+                      uint32_t wchar_size,
+                      const EeWonTextMeasure *m,
+                      int32_t font_height);
+
+/// `SetWrap(wrap)`: true when the C++ must rewrap.
+///
+/// # Safety
+/// `o` is live.
+bool ee_won_wrap_set_wrap(EeWonWrapText *o, bool wrap);
+
+/// `SetMaxWidth(width)`: true when the C++ must rewrap.
+///
+/// # Safety
+/// `o` is live.
+bool ee_won_wrap_set_max_width(EeWonWrapText *o, int32_t width);
+
+/// `SetCentered(centered)`.
+///
+/// # Safety
+/// `o` is live.
+void ee_won_wrap_set_centered(EeWonWrapText *o, bool centered);
+
+/// `mWidth`.
+///
+/// # Safety
+/// `o` is live.
+int32_t ee_won_wrap_width(const EeWonWrapText *o);
+
+/// `mHeight` (the C++ `GetHeight` answers the font's height when it is 0).
+///
+/// # Safety
+/// `o` is live.
+int32_t ee_won_wrap_height(const EeWonWrapText *o);
+
+/// The break list (`mBreakList`): the first `cap` into `out`, their count returned.
+///
+/// # Safety
+/// `o` is live; `out` has room for `cap` breaks (or is NULL).
+size_t ee_won_wrap_breaks(const EeWonWrapText *o, EeWonLineBreak *out, size_t cap);
+
+/// `Paint`'s plan for a text of `length` units in a font `font_height` high at (`x`, `y`): the first `cap`
+/// operations into `out`, their count returned.
+///
+/// # Safety
+/// `o` and `m` are live; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_wrap_paint(const EeWonWrapText *o,
+                         int32_t length,
+                         int32_t font_height,
+                         int32_t x,
+                         int32_t y,
+                         const EeWonTextMeasure *m,
+                         EeWonDrawOp *out,
+                         size_t cap);
+
+/// An op's request data into `sink` (`values`: its members in its table's order).
+///
+/// # Safety
+/// `values` holds `count` values whose byte ranges are valid; `sink` accepts `context`.
+void ee_won_admin_request(int32_t op,
+                          const EeWonAdminValue *values,
+                          size_t count,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// A reply's values into `sink`.
+///
+/// # Safety
+/// `data` holds `len` bytes; `sink` accepts `context`.
+void ee_won_admin_reply(int32_t op,
+                        const uint8_t *data,
+                        size_t len,
+                        EeWonAdminSink sink,
+                        void *context);
+
+/// An admin op of `kind` (`EE_WON_ADMINOP_*`) with its members, for a C++ `ServerRequestOp` to run.
+///
+/// # Safety
+/// `values` holds `count` values whose byte ranges are valid.
+EeWonReqOp *ee_won_adminop_new(int32_t kind, const EeWonAdminValue *values, size_t count);
+
+/// The lobby's lost password request (`RequestPasswordEmailOp` with its user name, UTF-16 LE).
+///
+/// # Safety
+/// `name` holds `len` bytes.
+EeWonReqOp *ee_won_reqop_password_email(const uint8_t *name, size_t len);
+
+/// The lobby's lost user name request (`RequestAccountInfoEmailOp` with its email).
+///
+/// # Safety
+/// `email` holds `len` bytes.
+EeWonReqOp *ee_won_reqop_info_email(const uint8_t *email, size_t len);
+
+/// A new auth context object for the C++ `AuthContext*` `ctx` with its login secret file (`len` bytes), its calls
+/// over the core table and the certificate op's maker; one reference.
+///
+/// # Safety
+/// `core` is the library's static table; `ctx` outlives the object's use of it; `secret_file` holds `len` bytes.
+const EeWonAuthCtx *ee_won_authctx_new_core(void *ctx,
+                                            const EeWonCoreHooks *core,
+                                            void *(*new_cert_op)(void *context),
+                                            const uint8_t *secret_file,
+                                            size_t len);
+
+EeWonAuthSecrets *ee_won_auth_secrets_new();
+
+/// # Safety
+/// `s` is from `ee_won_auth_secrets_new` (or NULL), not used afterwards.
+void ee_won_auth_secrets_free(EeWonAuthSecrets *s);
+
+/// `LoadSecretList`: the list emptied, then read from the file; false when it cannot open.
+///
+/// # Safety
+/// `s` is a list, `path` a C string.
+bool ee_won_auth_secrets_load(EeWonAuthSecrets *s, const char *path);
+
+/// `SaveSecretList`: false when the file cannot be created.
+///
+/// # Safety
+/// `s` is a list, `path` a C string.
+bool ee_won_auth_secrets_save(EeWonAuthSecrets *s, const char *path);
+
+/// # Safety
+/// `s` is a list, `key` 8 bytes.
+void ee_won_auth_secrets_add(EeWonAuthSecrets *s, const uint8_t *key);
+
+/// # Safety
+/// `s` is a list, `key` 8 bytes.
+bool ee_won_auth_secrets_remove(EeWonAuthSecrets *s, const uint8_t *key);
+
+/// # Safety
+/// `s` is a list.
+bool ee_won_auth_secrets_commit(EeWonAuthSecrets *s, int64_t auth_time, int64_t duration);
+
+/// # Safety
+/// `s` is a list.
+size_t ee_won_auth_secrets_count(EeWonAuthSecrets *s);
+
+/// `AppendLoginSecrets`' bytes, to the sink.
+///
+/// # Safety
+/// `s` is a list.
+void ee_won_auth_secrets_login(EeWonAuthSecrets *s, EeWonByteSink sink, void *context);
+
+/// `AppendCommunityData`'s block, to the sink. `communities[i].bytes` is the community's valid CD key's bytes
+/// (`present` false without one).
+///
+/// # Safety
+/// Each array holds its count of entries, each entry's pointers their lengths; `s` is a list.
+void ee_won_auth_community_data(const EeWonAuthEntry *communities,
+                                size_t community_count,
+                                const EeWonAuthEntry *joins,
+                                size_t join_count,
+                                const EeWonAuthEntry *user_data,
+                                size_t user_data_count,
+                                const EeWonAuthEntry *nicknames,
+                                size_t nickname_count,
+                                EeWonAuthSecrets *s,
+                                EeWonByteSink sink,
+                                void *context);
+
+/// `AppendHashes`' block, to the sink: per community its name, its file hash in `bytes` and its section hashes in
+/// `extra`.
+///
+/// # Safety
+/// `communities` holds `count` entries; `challenge` its length.
+void ee_won_auth_hashes(const EeWonAuthEntry *communities,
+                        size_t count,
+                        const uint8_t *challenge,
+                        size_t challenge_len,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// `StartAutoRefresh`'s decision: the wait in seconds, or -1 for no timer.
+int64_t ee_won_auth_auto_refresh_wait(bool enabled,
+                                      bool force,
+                                      bool peer_valid,
+                                      int64_t expire_delta);
+
+/// A flow alone (the drivers'; the game's is the auth context's): its sessions are stand-ins held through the hooks
+/// with `session_last_use` as their `GetLastUseTime`, or session handles when it is NULL.
+///
+/// # Safety
+/// `hooks` points to a hook table; its context outlives the flow.
+EeWonAuthFlow *ee_won_auth_flow_new(const EeWonAuthFlowHooks *hooks,
+                                    int64_t (*session_last_use)(void*));
+
+/// The members' references dropped.
+///
+/// # Safety
+/// `f` is from `ee_won_auth_flow_new` (or NULL), not used afterwards.
+void ee_won_auth_flow_free(EeWonAuthFlow *f);
+
+/// # Safety
+/// `f` a flow, `a` a live IPAddr value, `session` a session (as the flow was made) or NULL.
+void ee_won_auth_flow_put_session(const EeWonAuthFlow *f,
+                                  const EeWonIpAddr *a,
+                                  void *session,
+                                  int64_t now);
+
+/// A reference the caller adopts, or NULL.
+///
+/// # Safety
+/// `f` a flow, `a` a live IPAddr value.
+void *ee_won_auth_flow_get_session(const EeWonAuthFlow *f, const EeWonIpAddr *a, int64_t now);
+
+/// `SetPeerData(data)`: a reference of its own to `peer` (NULL: none), then the sessions cleared.
+///
+/// # Safety
+/// `f` a flow, `peer` a live peer data object or NULL.
+void ee_won_auth_flow_set_peer_data(const EeWonAuthFlow *f, const EeWonAuthObj *peer);
+
+/// `GetPeerData()`: a new reference the caller frees (`ee_won_authobj_free`), NULL for none.
+///
+/// # Safety
+/// `f` a flow.
+EeWonAuthObj *ee_won_auth_flow_peer_data(const EeWonAuthFlow *f);
+
+/// `IsExpired(extra)` at `now`.
+///
+/// # Safety
+/// `f` a flow.
+bool ee_won_auth_flow_is_expired(const EeWonAuthFlow *f, int64_t extra, int64_t now);
+
+/// # Safety
+/// `f` a flow, `op` the completing timer's `RefCount*`.
+void ee_won_auth_flow_auto_refresh_callback(const EeWonAuthFlow *f, void *op);
+
+/// # Safety
+/// `f` a flow.
+void ee_won_auth_flow_stop_auto_refresh(const EeWonAuthFlow *f);
+
+/// # Safety
+/// `f` a flow.
+void ee_won_auth_flow_set_do_auto_refresh(const EeWonAuthFlow *f, bool enabled, int64_t now);
+
+/// # Safety
+/// `f` a flow.
+void ee_won_auth_flow_kill(const EeWonAuthFlow *f);
+
+/// # Safety
+/// `f` a flow.
+void ee_won_auth_flow_start_auto_refresh(const EeWonAuthFlow *f, bool force, int64_t now);
+
+/// # Safety
+/// `f` a flow, `op` the completing request's `RefCount*`.
+void ee_won_auth_flow_get_cert_callback(const EeWonAuthFlow *f, void *op, int64_t now);
+
+/// `RefreshAsync(op, timeout)`: `light` the waiting op's run (an `AsyncOp`'s `RefCount*`, or NULL for none),
+/// `cert` its member (borrowed: the set takes a reference of its own).
+///
+/// # Safety
+/// `f` a flow; `light` NULL or a live op; `cert` NULL or from `ee_won_light_cert_new`.
+void ee_won_auth_flow_refresh_async(const EeWonAuthFlow *f,
+                                    void *light,
+                                    const EeWonLightCert *cert,
+                                    uint32_t timeout);
+
+/// # Safety
+/// `f` a flow.
+long ee_won_auth_flow_refresh_block(const EeWonAuthFlow *f, uint32_t timeout, int64_t now);
+
+/// `new LightGetCertOp`'s member (no peer data): a reference, freed with `ee_won_light_cert_free`.
+EeWonLightCert *ee_won_light_cert_new();
+
+/// Drops a reference (NULL: nothing).
+///
+/// # Safety
+/// `cert` from `ee_won_light_cert_new`, not used afterwards.
+void ee_won_light_cert_free(EeWonLightCert *cert);
+
+/// `GetPeerData()`: a new reference (`ee_won_authobj_free`), NULL for none.
+///
+/// # Safety
+/// `cert` a live light op member.
+EeWonAuthObj *ee_won_light_cert_peer(const EeWonLightCert *cert);
+
+/// `SetPeerData(data)` (NULL: none; a reference of its own).
+///
+/// # Safety
+/// `cert` a live light op member, `peer` NULL or a live peer data object.
+void ee_won_light_cert_set_peer(const EeWonLightCert *cert, const EeWonAuthObj *peer);
+
+/// An empty login (the secret file: `secret_file`, the WON directory's `_wonlogin.ks`).
+///
+/// # Safety
+/// `secret_file` holds `len` bytes.
+EeWonAuthLogin *ee_won_auth_login_new(const uint8_t *secret_file, size_t len);
+
+/// # Safety
+/// `l` is from `ee_won_auth_login_new` (or NULL), not used afterwards.
+void ee_won_auth_login_free(EeWonAuthLogin *l);
+
+/// A setter (`EE_WON_AUTH_LOGIN_*`): `key` a map's key and `value` a text (UTF-16 LE bytes) or bytes.
+///
+/// # Safety
+/// `l` is a login; the buffers hold their lengths.
+void ee_won_auth_login_set(const EeWonAuthLogin *l,
+                           int32_t which,
+                           const uint8_t *key,
+                           size_t key_len,
+                           const uint8_t *value,
+                           size_t value_len,
+                           int64_t num);
+
+/// `EE_WON_AUTH_LOGIN_NAME` / `_PASSWORD`: the text (UTF-16 LE bytes); `_SECRET_FILE`: its bytes.
+///
+/// # Safety
+/// `l` is a login; `sink` takes `context`.
+void ee_won_auth_login_text(const EeWonAuthLogin *l,
+                            int32_t which,
+                            EeWonByteSink sink,
+                            void *context);
+
+/// `SetHashFileList(community, files)`: the files NUL-separated (`files_len` bytes, each path NUL-ended).
+///
+/// # Safety
+/// `l` is a login; the buffers hold their lengths.
+bool ee_won_auth_login_hash_files(const EeWonAuthLogin *l,
+                                  const uint8_t *community,
+                                  size_t community_len,
+                                  const uint8_t *files,
+                                  size_t files_len);
+
+/// The members, one line (`Login::describe`, the drivers' form).
+///
+/// # Safety
+/// `l` is a login; `sink` takes `context`.
+void ee_won_auth_login_describe(const EeWonAuthLogin *l, EeWonByteSink sink, void *context);
+
+/// The login request's blocks: 0 `AppendCommunityData`, 1 `AppendHashes(challenge)` (`data`), 2
+/// `AppendLoginSecrets`.
+///
+/// # Safety
+/// `l` is a login; `data` holds `len` bytes; `sink` takes `context`.
+void ee_won_auth_login_block(const EeWonAuthLogin *l,
+                             int32_t which,
+                             const uint8_t *data,
+                             size_t len,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The secrets: 0 `LoadSecretList`, 1 `SaveSecretList` (false: the file did not open), 2 `AddSecret(key)` and save,
+/// 3 `RemoveSecret(key)` and save when removed, 4 `CommitSecrets(t0, t1)` and save when it changed anything.
+///
+/// # Safety
+/// `l` is a login; `key` 8 bytes for 2 and 3.
+bool ee_won_auth_login_secrets(const EeWonAuthLogin *l,
+                               int32_t which,
+                               const uint8_t *key,
+                               int64_t t0,
+                               int64_t t1);
+
+/// A new auth context (one reference, `ee_won_authctx_free`): `Init()`'s flow over `hooks` (whose context is the C++
+/// `AuthContext`), its login data with the secret file `secret_file` and its empty peer data.
+///
+/// # Safety
+/// `hooks` points to a hook table whose context outlives the context; `secret_file` holds `len` bytes.
+const EeWonAuthCtx *ee_won_authctx_new(const EeWonAuthFlowHooks *hooks,
+                                       const uint8_t *secret_file,
+                                       size_t len);
+
+/// Drops a reference (NULL: nothing); the last one releases the members.
+///
+/// # Safety
+/// `c` is NULL or a reference from `ee_won_authctx_new`, not used afterwards.
+void ee_won_authctx_free(const EeWonAuthCtx *c);
+
+/// The login data (borrowed, for `ee_won_auth_login_*`).
+///
+/// # Safety
+/// `c` is a live context.
+const EeWonAuthLogin *ee_won_authctx_login(const EeWonAuthCtx *c);
+
+/// `GetPeerData()`: a new reference (`ee_won_authobj_free`), NULL for none.
+///
+/// # Safety
+/// `c` a live context.
+EeWonAuthObj *ee_won_authctx_peer_data(const EeWonAuthCtx *c);
+
+/// `SetPeerData(data)` (NULL, or anything but peer data: none).
+///
+/// # Safety
+/// `c` a live context, `peer` NULL or a live object.
+void ee_won_authctx_set_peer_data(const EeWonAuthCtx *c, const EeWonAuthObj *peer);
+
+/// `IsExpired(extra)`.
+///
+/// # Safety
+/// `c` a live context.
+bool ee_won_authctx_is_expired(const EeWonAuthCtx *c, int64_t extra);
+
+/// `AutoRefreshCallback(op)` (the completing timer's `RefCount*`).
+///
+/// # Safety
+/// `c` a live context, `op` a live op.
+void ee_won_authctx_auto_refresh_callback(const EeWonAuthCtx *c, void *op);
+
+/// `StopAutoRefresh()`.
+///
+/// # Safety
+/// `c` a live context.
+void ee_won_authctx_stop_auto_refresh(const EeWonAuthCtx *c);
+
+/// `SetDoAutoRefresh(enabled)`.
+///
+/// # Safety
+/// `c` a live context.
+void ee_won_authctx_set_do_auto_refresh(const EeWonAuthCtx *c, bool enabled);
+
+/// `Kill()`.
+///
+/// # Safety
+/// `c` a live context.
+void ee_won_authctx_kill(const EeWonAuthCtx *c);
+
+/// `StartAutoRefresh(force)`.
+///
+/// # Safety
+/// `c` a live context.
+void ee_won_authctx_start_auto_refresh(const EeWonAuthCtx *c, bool force);
+
+/// `GetCertCallback(op)` (the completing `GetCertOp`'s `RefCount*`).
+///
+/// # Safety
+/// `c` a live context, `op` a live op.
+void ee_won_authctx_get_cert_callback(const EeWonAuthCtx *c, void *op);
+
+/// `RefreshAsync(op, cert, timeout)`: `light` NULL or a waiting op's run, `cert` its member (borrowed).
+///
+/// # Safety
+/// `c` a live context; `light` NULL or a live op; `cert` NULL or from `ee_won_light_cert_new`.
+void ee_won_authctx_refresh_async(const EeWonAuthCtx *c,
+                                  void *light,
+                                  const EeWonLightCert *cert,
+                                  uint32_t timeout);
+
+/// `RefreshBlock(timeout)`: the status.
+///
+/// # Safety
+/// `c` a live context.
+long ee_won_authctx_refresh_block(const EeWonAuthCtx *c, uint32_t timeout);
+
+/// `SetServerContext(context)` (a `ServerContext`'s `RefCount*`, NULL: none; a reference of its own).
+///
+/// # Safety
+/// `c` a live context, `servers` NULL or a live object.
+void ee_won_authctx_set_server_context(const EeWonAuthCtx *c,
+                                       void *servers);
+
+/// `GetServerContext()`: a new reference the caller adopts, or NULL.
+///
+/// # Safety
+/// `c` a live context.
+void *ee_won_authctx_server_context(const EeWonAuthCtx *c);
+
+/// `Init()`'s verifier file: unless a file was checked already (in this process), `LoadVerifierKey(dir +
+/// "_wonkver.pub")`.
+///
+/// # Safety
+/// `dir` holds `len` bytes.
+void ee_won_auth_verifier_init(const uint8_t *dir,
+                               size_t len);
+
+/// `AuthContext::LoadVerifierKey(filename)`.
+///
+/// # Safety
+/// `path` holds `len` bytes.
+bool ee_won_auth_verifier_load(const uint8_t *path, size_t len);
+
+/// `ByteBuffer(data, length, false)`: a copy.
+///
+/// # Safety
+/// `data` holds `length` bytes (or `length` is 0).
+EeWonByteBuffer *ee_won_bytes_copy(const uint8_t *data, unsigned long length);
+
+/// `ByteBuffer(const char*)`: the text and its terminator; null gives no bytes.
+///
+/// # Safety
+/// `text` is null or a NUL-terminated string.
+EeWonByteBuffer *ee_won_bytes_text(const char *text);
+
+/// # Safety
+/// `b` came from an `ee_won_bytes_*` constructor or `ee_won_writer_to_bytes` and is not used again.
+void ee_won_bytes_free(EeWonByteBuffer *b);
+
+/// `data()`: null for a buffer of no bytes at all.
+///
+/// # Safety
+/// `b` is valid.
+const uint8_t *ee_won_bytes_data(const EeWonByteBuffer *b);
+
+/// `length()`.
+///
+/// # Safety
+/// `b` is valid.
+unsigned long ee_won_bytes_length(const EeWonByteBuffer *b);
+
+/// `WriteBuffer(lengthFieldSize, lengthIncludesField)`.
+EeWonWriteBuffer *ee_won_writer_new(uint8_t field_size, bool includes_field);
+
+/// # Safety
+/// `w` came from `ee_won_writer_new` and is not used again.
+void ee_won_writer_free(EeWonWriteBuffer *w);
+
+/// `data()`: the data's start (null before the first growth); `capacity()` bytes may be written there until the
+/// next call that grows, resets or releases.
+///
+/// # Safety
+/// `w` is valid.
+uint8_t *ee_won_writer_data(EeWonWriteBuffer *w);
+
+/// # Safety
+/// `w` is valid.
+unsigned long ee_won_writer_length(const EeWonWriteBuffer *w);
+
+/// # Safety
+/// `w` is valid.
+unsigned long ee_won_writer_capacity(const EeWonWriteBuffer *w);
+
+/// `Reset` (and `Release`, which forgot the allocation another owner had taken: no caller takes it any more).
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_reset(EeWonWriteBuffer *w);
+
+/// `Reserve`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_reserve(EeWonWriteBuffer *w, unsigned long capacity);
+
+/// `CheckWrite`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_check_write(EeWonWriteBuffer *w, unsigned long add);
+
+/// `ReserveChunk`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_reserve_chunk(EeWonWriteBuffer *w, unsigned long total, unsigned long max);
+
+/// `SetSize`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_set_size(EeWonWriteBuffer *w, unsigned long size);
+
+/// `SkipBytes`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_skip(EeWonWriteBuffer *w, unsigned long n);
+
+/// `AppendBytes` (and the byte, bool, short and long appends of their little-endian bytes).
+///
+/// # Safety
+/// `w` is valid; `data` holds `length` bytes and is not the writer's own.
+void ee_won_writer_append(EeWonWriteBuffer *w, const uint8_t *data, unsigned long length);
+
+/// `AppendLength`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_append_length(EeWonWriteBuffer *w, unsigned long length, uint8_t size);
+
+/// `AppendString` / `AppendBuffer`: a `size`-byte length field, then the bytes.
+///
+/// # Safety
+/// As `ee_won_writer_append`.
+void ee_won_writer_append_field(EeWonWriteBuffer *w,
+                                const uint8_t *data,
+                                unsigned long length,
+                                uint8_t size);
+
+/// `AppendWString` of `length` UTF-16 little-endian bytes: a unit count field, then the bytes.
+///
+/// # Safety
+/// As `ee_won_writer_append`.
+void ee_won_writer_append_utf16le(EeWonWriteBuffer *w,
+                                  const uint8_t *data,
+                                  unsigned long length,
+                                  uint8_t size);
+
+/// `SetBytes` (and `SetByte`, `SetShort`).
+///
+/// # Safety
+/// `w` is valid; `data` holds `length` bytes.
+void ee_won_writer_set(EeWonWriteBuffer *w,
+                       unsigned long at,
+                       const uint8_t *data,
+                       unsigned long length);
+
+/// `ToByteBuffer`: a new byte buffer (the caller frees it with `ee_won_bytes_free`).
+///
+/// # Safety
+/// `w` is valid.
+EeWonByteBuffer *ee_won_writer_to_bytes(EeWonWriteBuffer *w, bool release);
+
+/// `ReadBuffer(data, length)` / `SetData`: points the reader at the bytes, rewound.
+///
+/// # Safety
+/// `r` is valid.
+void ee_won_reader_set(EeWonReadBuffer *r, const uint8_t *data, unsigned long length);
+
+/// `ReadBytes`: the next `amount` bytes into `*out`, skipped; false past the end (nothing moves).
+///
+/// # Safety
+/// `r` and `out` are valid; the reader's bytes are alive.
+bool ee_won_reader_take(EeWonReadBuffer *r, uint64_t amount, const uint8_t **out);
+
+/// `ReadLength`: into `*out`; false past the end.
+///
+/// # Safety
+/// As `ee_won_reader_take`.
+bool ee_won_reader_length(EeWonReadBuffer *r, uint8_t size, uint32_t *out);
+
+/// `ReadCacheMap`'s file: opened (nothing when it cannot be), read with [`read_map`], each entry handed to `put`
+/// (valid during the call), closed.
+///
+/// # Safety
+/// `path` is a C string; `put` is callable with `context`.
+void ee_won_cachemap_read(const char *path,
+                          int32_t version,
+                          void (*put)(void*, const EeWonCacheEntry*),
+                          void *context);
+
+/// As [`ee_won_cachemap_read`], the file's bytes read from memory by the same reader (its memory mode): the
+/// driver's cases that need no disk (won_cachemap_test: the file opens made it I/O bound).
+///
+/// # Safety
+/// `data` holds `length` bytes; `put` as `ee_won_cachemap_read`.
+void ee_won_cachemap_read_memory(const uint8_t *data,
+                                 size_t length,
+                                 int32_t version,
+                                 void (*put)(void*, const EeWonCacheEntry*),
+                                 void *context);
+
+/// `WriteCacheMap`'s file: opened for writing (nothing when it cannot be), written with [`write_map`] (the entries
+/// in the id map's order, `delete` called with an index for each one not kept), closed.
+///
+/// # Safety
+/// `path` is a C string; `entries` holds `count` entries whose strings hold their lengths; `delete` is callable
+/// with `context`.
+void ee_won_cachemap_write(const char *path,
+                           int32_t version,
+                           int64_t now,
+                           const EeWonCacheEntry *entries,
+                           size_t count,
+                           void (*delete_)(void*, size_t),
+                           void *context);
+
+/// As [`ee_won_cachemap_write`], the file's bytes given to `sink` instead of a file (the driver's cases that need no
+/// disk).
+///
+/// # Safety
+/// As `ee_won_cachemap_write`; `sink` is callable with `sink_context` during the call.
+void ee_won_cachemap_write_memory(int32_t version,
+                                  int64_t now,
+                                  const EeWonCacheEntry *entries,
+                                  size_t count,
+                                  void (*delete_)(void*, size_t),
+                                  void *context,
+                                  EeWonByteSink sink,
+                                  void *sink_context);
+
+/// `LoadFromRegistry`'s read: the product's value as bytes to `sink` (false when the key or value is missing, not
+/// hex, or empty: `QueryBinary` other than 0).
+///
+/// # Safety
+/// `path` is a C string or NULL; `product` holds `product_len` bytes; `sink` is valid with `context`.
+bool ee_won_cdkey_registry_read(int32_t root,
+                                const char *path,
+                                const uint8_t *product,
+                                size_t product_len,
+                                EeWonByteSink sink,
+                                void *context);
+
+/// `SaveToRegistry`'s write: the encrypted bytes as the product's value (false when the key does not open or the
+/// value is not set).
+///
+/// # Safety
+/// `path` is a C string or NULL; `product` and `data` hold their lengths.
+bool ee_won_cdkey_registry_write(int32_t root,
+                                 const char *path,
+                                 const uint8_t *product,
+                                 size_t product_len,
+                                 const uint8_t *data,
+                                 size_t data_len);
+
+/// `ClearFromRegistry`: the product's value deleted.
+///
+/// # Safety
+/// `path` is a C string or NULL; `product` holds `product_len` bytes.
+void ee_won_cdkey_registry_clear(int32_t root,
+                                 const char *path,
+                                 const uint8_t *product,
+                                 size_t product_len);
+
+/// `SaveToFile`'s write: the encrypted bytes through `PlatFOpen(path, "wb")` (false when it does not open or the
+/// write is short; the file is closed either way).
+///
+/// # Safety
+/// `path` is a C string; `data` holds `data_len` bytes.
+bool ee_won_cdkey_file_write(const char *path,
+                             const uint8_t *data,
+                             size_t data_len);
+
+/// `LoadFromFile`'s read: up to 2,048 bytes of the file to `sink` (false when it does not open).
+///
+/// # Safety
+/// `path` is a C string; `sink` is valid with `context`.
+bool ee_won_cdkey_file_read(const char *path, EeWonByteSink sink, void *context);
+
+/// A new `GetCertOp`: its auth context (`EE_WON_GETCERT_AUTH_CONTEXT`) and its server context
+/// (`EE_WON_REQHOST_CONTEXT`, the auth context's) are set after the bind.
+EeWonHostOp *ee_won_hostop_getcert();
+
+/// `GetCommandName`.
+const char *ee_won_chat_command_name(int32_t command);
+
+/// `ParseCommand`'s first step: the command word (upper-cased, from position 1) to the sink, and the position
+/// after it.
+///
+/// # Safety
+/// `text` as `EeWonChatText`; `sink` receives the word during the call.
+int32_t ee_won_chat_command_word(EeWonChatText text,
+                                 uint32_t wchar_size,
+                                 EeWonWideUnitSink sink,
+                                 void *context);
+
+/// `ParseCommand`'s second step (`parse_command`): `command` -1 for an unknown word, `clients` the room's names.
+///
+/// # Safety
+/// The texts as `EeWonChatText`, `clients` `client_count` of them; `out` is valid; `sink` receives the texts set.
+void ee_won_chat_parse(EeWonChatText text,
+                       int32_t pos,
+                       int32_t command,
+                       EeWonChatText reply,
+                       const EeWonChatText *clients,
+                       size_t client_count,
+                       int32_t threshold,
+                       uint32_t wchar_size,
+                       EeWonChatOutcome *out,
+                       EeWonChatSink sink,
+                       void *context);
+
+/// `FindClient` (`find_client`): the match into `*matched`, the client's index or -1.
+///
+/// # Safety
+/// As `ee_won_chat_parse`; `matched` is valid.
+int32_t ee_won_chat_find_client(EeWonChatText name,
+                                const EeWonChatText *clients,
+                                size_t client_count,
+                                uint32_t wchar_size,
+                                int32_t *matched);
+
+/// `HandleInput`'s decision: 0 no client list, 1 a command, 2 an emote, 3 an emote with nothing in it, 4 a
+/// broadcast, 5 an empty broadcast. For an emote the sink gets its text.
+///
+/// # Safety
+/// `text` as `EeWonChatText`; `sink` as `ee_won_chat_parse`.
+int32_t ee_won_chat_input(EeWonChatText text,
+                          uint32_t wchar_size,
+                          int32_t prefix,
+                          bool allow_colon,
+                          bool has_clients,
+                          EeWonChatSink sink,
+                          void *context);
+
+/// `GetHelp`'s commands (`help_commands`) into `out` (room for 32); their count.
+///
+/// # Safety
+/// `out` has room for 32 ids.
+size_t ee_won_chat_help(uint32_t room_flags,
+                        bool moderator,
+                        bool room_captain,
+                        bool game_captain,
+                        bool admin,
+                        int32_t *out);
+
+EeWonConfigLexer *ee_won_config_new();
+
+/// # Safety
+/// `l` is from `ee_won_config_new` (or NULL), not used afterwards.
+void ee_won_config_free(EeWonConfigLexer *l);
+
+int32_t ee_won_config_line_count();
+
+void ee_won_config_reset_line_count();
+
+/// # Safety
+/// `l` is a lexer.
+void ee_won_config_reset(EeWonConfigLexer *l);
+
+/// # Safety
+/// `l` is a lexer, `io` the parser's members.
+bool ee_won_config_end_of_file(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+int32_t ee_won_config_get_char(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+int32_t ee_won_config_peek_char(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+void ee_won_config_unget_char(EeWonConfigLexer *l, EeWonConfigIo *io, int32_t ch);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`; `text` holds `length` bytes.
+void ee_won_config_unget_narrow(EeWonConfigLexer *l,
+                                EeWonConfigIo *io,
+                                const uint8_t *text,
+                                size_t length);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`; `units` holds `count` `wchar_t` values widened to 32 bits.
+void ee_won_config_unget_wide(EeWonConfigLexer *l,
+                              EeWonConfigIo *io,
+                              const uint32_t *units,
+                              size_t count);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+void ee_won_config_skip_whitespace(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+void ee_won_config_skip_line(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// # Safety
+/// As `ee_won_config_end_of_file`.
+void ee_won_config_skip_block_comment(EeWonConfigLexer *l, EeWonConfigIo *io);
+
+/// `ReadToken` (narrow when `wchar_size` is 0, else wide with `wchar_t` of that size): 0 no token, 1 a token, 2
+/// "Expecting end quote", 3 "Expecting closing '$'", 4 "Define not found: " + the name (given to `name`). The
+/// token as read (the whole token, or the part before an error) goes to `narrow` or `wide` unless the data had
+/// ended before the read (then the C++ leaves its token alone). `root` is the root parser's lexer, or NULL when this
+/// parser is the root.
+///
+/// # Safety
+/// `l` and a non-NULL `root` are distinct lexers, `io` the parser's members; the sinks take the text.
+int32_t ee_won_config_read_token(EeWonConfigLexer *l,
+                                 EeWonConfigIo *io,
+                                 const EeWonConfigLexer *root,
+                                 uint32_t wchar_size,
+                                 bool to_end_line,
+                                 bool skip,
+                                 EeWonByteSink narrow,
+                                 EeWonWideUnitSink wide,
+                                 EeWonByteSink name,
+                                 void *context);
+
+/// # Safety
+/// `root` is a lexer.
+void ee_won_config_push_scope(EeWonConfigLexer *root);
+
+/// # Safety
+/// `root` is a lexer.
+void ee_won_config_pop_scope(EeWonConfigLexer *root);
+
+/// `AddDefine` on the root's lexer: 0, or the warning (1 spaces, 2 redefinition).
+///
+/// # Safety
+/// `root` is a lexer; the texts hold their lengths.
+int32_t ee_won_config_add_define(EeWonConfigLexer *root,
+                                 const uint8_t *name,
+                                 size_t name_len,
+                                 const uint8_t *value,
+                                 size_t value_len,
+                                 bool redefine);
+
+/// `GetDefine` on the root's lexer: the value to the sink, or false.
+///
+/// # Safety
+/// `root` is a lexer; `name` holds `name_len` bytes.
+bool ee_won_config_get_define(const EeWonConfigLexer *root,
+                              const uint8_t *name,
+                              size_t name_len,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// `AddGroupDefine`'s insertion on the root's lexer: 0, or the warning (1 spaces, 2 redefinition).
+///
+/// # Safety
+/// `root` is a lexer; `name` holds `name_len` bytes, `state` is a state.
+int32_t ee_won_config_add_group(EeWonConfigLexer *root,
+                                const uint8_t *name,
+                                size_t name_len,
+                                const EeWonConfigState *state);
+
+/// `GetGroupDefine` on the root's lexer: the state to the sink, or false.
+///
+/// # Safety
+/// `root` is a lexer; `name` holds `name_len` bytes.
+bool ee_won_config_get_group(const EeWonConfigLexer *root,
+                             const uint8_t *name,
+                             size_t name_len,
+                             EeWonConfigStateSink sink,
+                             void *context);
+
+/// The pushback's units, to the sink (zero-extended).
+///
+/// # Safety
+/// `l` is a lexer.
+void ee_won_config_get_back(const EeWonConfigLexer *l, EeWonWideUnitSink sink, void *context);
+
+/// Replaces the pushback (each `wchar_t` truncated to 16 bits).
+///
+/// # Safety
+/// `l` is a lexer; `units` holds `count` values.
+void ee_won_config_set_back(EeWonConfigLexer *l, const uint32_t *units, size_t count);
+
+/// `OpenFile`'s open and UTF-16 sniff (the C++ has reset the line, the flag and the pushback and split the path):
+/// whether the reader is open; `status` is the reader's.
+///
+/// # Safety
+/// `io` is the parser's members; `path` a C string.
+bool ee_won_config_open(EeWonConfigIo *io,
+                        const char *path,
+                        int32_t *status);
+
+/// `token_kind`.
+///
+/// # Safety
+/// `token` holds `length` bytes.
+EeWonCfgToken ee_won_cfg_token_kind(const uint8_t *token, size_t length);
+
+/// `group_start_step`.
+///
+/// # Safety
+/// `token` holds `length` bytes; `state` is valid.
+EeWonCfgStart ee_won_cfg_group_start(int32_t *state, const uint8_t *token, size_t length);
+
+/// `group_instruction` (`value` false) or `value_instruction`.
+///
+/// # Safety
+/// `token` holds `length` bytes.
+EeWonCfgInstruction ee_won_cfg_instruction(const uint8_t *token, size_t length, bool value);
+
+/// `condition_parses_first`.
+bool ee_won_cfg_condition(EeWonCfgInstruction instruction,
+                          bool found,
+                          bool expected_empty,
+                          bool matches);
+
+/// `is_else`.
+///
+/// # Safety
+/// `token` holds `length` bytes.
+bool ee_won_cfg_is_else(const uint8_t *token, size_t length);
+
+/// `optional_suffix`.
+EeWonCfgOptional ee_won_cfg_optional(bool comma, bool read, bool word_is_optional);
+
+/// `include_path`.
+///
+/// # Safety
+/// `path` and `base` hold their lengths' bytes; `sink` receives the path during the call.
+void ee_won_cfg_include_path(const uint8_t *path,
+                             size_t path_length,
+                             bool ignore_path,
+                             const uint8_t *base,
+                             size_t base_length,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// Sets the maker of a Rust op's C++ op.
+void ee_won_core_set_new_host_op(EeWonNewHostOp maker);
+
+/// `socket->AddMsgTransform(transform)` for a C++ transform: `call(transform, ByteBufferPtr*, send)` runs its
+/// `Send` or `Recv`, `free(transform)` deletes it; the socket owns it.
+///
+/// # Safety
+/// `socket` is a live `AsyncSocket*` (its `RefCount*`); `transform` lives until `free`.
+void ee_won_core_add_transform(void *socket,
+                               void *transform,
+                               long (*call)(void *object, void *message, bool send),
+                               void (*free)(void *object));
+
+/// `ServerConnectionConnectOp::RunHook` (2ac2f0): the connection's connect completion finishes the op with the
+/// connect's status while it is pending (`StaticConnectCompletion` 2ac240 / `ConnectCompletion` 2ac2d0, a
+/// `ParamCompletion` holding the op), then `ConnectAsync(*address, timeout)`.
+///
+/// # Safety
+/// `conn` is a live `ServerConnection*`, `op` the live op (its `RefCount*`), `address` its `IPAddr*`.
+void ee_won_servconn_connect_op_run(void *conn,
+                                    void *op,
+                                    const void *address,
+                                    uint32_t timeout);
+
+/// `new ProfileData`.
+EeWonProfile *ee_won_profile_new();
+
+/// # Safety
+/// `p` came from `ee_won_profile_new` and is not used again.
+void ee_won_profile_free(EeWonProfile *p);
+
+/// `AddNewsletterSub`.
+///
+/// # Safety
+/// `p` is a live profile.
+void ee_won_profile_set_newsletter(EeWonProfile *p, uint16_t id, bool on);
+
+/// `GetNewsletterSub`.
+///
+/// # Safety
+/// `p` is a live profile.
+bool ee_won_profile_newsletter(const EeWonProfile *p, uint16_t id);
+
+/// `ClearNewsletterSub` (`all`: `ClearNewsletterSubs`).
+///
+/// # Safety
+/// `p` is a live profile.
+void ee_won_profile_clear_newsletter(EeWonProfile *p, uint16_t id, bool all);
+
+/// `SetCustomAction` (`data` NULL: no data) and `ClearCustomAction` (id 0, NULL).
+///
+/// # Safety
+/// `p` is a live profile; `data` holds `length` bytes when not NULL.
+void ee_won_profile_set_custom_action(EeWonProfile *p,
+                                      uint16_t id,
+                                      const uint8_t *data,
+                                      size_t length,
+                                      bool present);
+
+/// `SetBirthDate`.
+///
+/// # Safety
+/// `p` is a live profile.
+void ee_won_profile_set_birth_date(EeWonProfile *p, uint8_t month, uint8_t day, uint16_t year);
+
+/// `GetBirthDate`.
+///
+/// # Safety
+/// `p` is a live profile.
+int32_t ee_won_profile_birth_date(const EeWonProfile *p);
+
+/// `PackRequestData`'s bytes (to append) into `sink`.
+///
+/// # Safety
+/// `p` is a live profile; `sink` accepts `context`.
+void ee_won_profile_pack(const EeWonProfile *p, bool is_set, EeWonByteSink sink, void *context);
+
+/// `UnpackGetData` from `pos`; returns the reader's position after it.
+///
+/// # Safety
+/// `p` is a live profile; `data` holds `length` bytes.
+size_t ee_won_profile_unpack(EeWonProfile *p, const uint8_t *data, size_t length, size_t pos);
+
+/// A request's message (or data) into `sink`.
+///
+/// # Safety
+/// `r` and what it points to are valid (`profile` a live profile where the kind reads one); `sink` accepts
+/// `context`.
+void ee_won_db_request(const EeWonDbRequest *r,
+                       EeWonByteSink sink,
+                       void *context);
+
+/// `EventReportOp::GetNextRequest` into `sink`.
+///
+/// # Safety
+/// `e` and what it points to are valid; `sink` accepts `context`.
+void ee_won_db_event_request(const EeWonDbEvent *e, EeWonByteSink sink, void *context);
+
+/// A reply's read into `out`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `out` is valid.
+void ee_won_db_reply(int32_t kind, const uint8_t *data, size_t length, EeWonDbReply *out);
+
+/// `GetUserIdFromNameOp`'s id from the reply data; false when it is cut short.
+///
+/// # Safety
+/// `data` holds `length` bytes; `out` is valid.
+bool ee_won_db_user_id(const uint8_t *data, size_t length, int32_t *out);
+
+/// Whether a DBProxy reply's sub-message answers the request's `sub` (the email requests).
+bool ee_won_db_answers(int16_t reply_sub, uint16_t sub);
+
+/// `WONDebug::SetStackFileName`.
+///
+/// # Safety
+/// `name` holds `length` bytes.
+void ee_won_debug_set_stack_file(const uint8_t *name, size_t length);
+
+/// `WONDebug::GetStackFileName`: the name to the sink.
+///
+/// # Safety
+/// `sink` receives the name during the call.
+void ee_won_debug_stack_file(EeWonByteSink sink, void *context);
+
+/// `WONDebug::DumpStackToFile`: an exception filter's value.
+int32_t ee_won_debug_dump_stack();
+
+/// `ParseMultiEntityReply`: each entity read whole to the sink, in order.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+EeWonDirReply ee_won_dir_parse_multi(const uint8_t *data,
+                                     size_t length,
+                                     EeWonDirEntitySink sink,
+                                     void *context);
+
+/// `ParseSingleEntityReply`: the entity to the sink when read whole.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+EeWonDirReply ee_won_dir_parse_single(const uint8_t *data,
+                                      size_t length,
+                                      EeWonDirEntitySink sink,
+                                      void *context);
+
+/// An entity change with the members of `fields` (an `EeWonDirRequest` as the original ops filled it), for a C++
+/// `ServerRequestOp` to run.
+///
+/// # Safety
+/// `fields` and everything it points to are valid.
+EeWonReqOp *ee_won_dirop_new(const EeWonDirRequest *fields);
+
+/// A request's message into `sink`.
+///
+/// # Safety
+/// `r` and everything it points to are valid; `sink` accepts `context`.
+void ee_won_dir_request(const EeWonDirRequest *r,
+                        uint8_t field_size,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// `GetEntityRequest::Pack`'s bytes into `sink` (`multi`: the multi-get's form).
+///
+/// # Safety
+/// `q` and what it points to are valid; `sink` accepts `context`.
+void ee_won_dir_pack_query(const EeWonDirQuery *q, bool multi, EeWonByteSink sink, void *context);
+
+/// `AddServiceOp::SetNetAddrPort`'s two bytes into `sink`.
+///
+/// # Safety
+/// `sink` accepts `context`.
+void ee_won_dir_port_net_addr(uint16_t port, EeWonByteSink sink, void *context);
+
+/// An entity change's status reply.
+///
+/// # Safety
+/// `reply` holds `length` bytes; `out` is valid.
+void ee_won_dir_status_reply(const uint8_t *reply,
+                             size_t length,
+                             bool read_addr,
+                             EeWonDirStatusReply *out);
+
+/// The multi-directory ops' step: true when the current query is done (`*failed` counts a failure).
+///
+/// # Safety
+/// `failed` is valid.
+bool ee_won_dir_multi_step(int32_t status, int32_t *failed);
+
+/// The multi-directory ops' final status.
+int32_t ee_won_dir_multi_end(int32_t failed, size_t count);
+
+/// `FindEntityOp::CheckResponse`'s parser choice (true: single-entity).
+bool ee_won_dir_find_single(bool is_service, uint8_t find_flags);
+
+/// `GetEntityRequest::GetDirEntityMap`'s keys: for each of `count` entities its directory into `sink` (UTF-16
+/// LE bytes, one call per entity, in order).
+///
+/// # Safety
+/// `query_path`, `entities` (`count` entries) are valid; `sink` accepts `context`.
+void ee_won_dir_group_keys(EeWonDirBytes query_path,
+                           const EeWonDirListed *entities,
+                           size_t count,
+                           EeWonByteSink sink,
+                           void *context);
+
+/// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
+/// bytes); returns the byte count. `out` may be null to measure.
+///
+/// # Safety
+/// `wide` holds `count` characters of `wchar_size` (2 or 4) bytes; `out` has `capacity` bytes or is null.
+size_t ee_won_utf16le_from_wide(const void *wide,
+                                uint32_t wchar_size,
+                                size_t count,
+                                uint8_t *out,
+                                size_t capacity);
+
+/// The code point a UTF-16 unit makes with the last character of a UTF-32 text: the joined code point when `last`
+/// is a high surrogate and `unit` a low one, else 0 (append the unit as it is).
+uint32_t ee_won_utf16_join(uint32_t last,
+                           uint16_t unit);
+
+/// `wchar_t` text of UTF-16 units (`wchar_size` 2: unchanged; 4: surrogate pairs joined) written to `out` (up to
+/// `capacity` characters, which `count` always suffices for); returns the character count.
+///
+/// # Safety
+/// `data` holds `count` units; `out` has room for `capacity` characters of `wchar_size` bytes.
+size_t ee_won_wide_from_utf16(const uint16_t *data,
+                              size_t count,
+                              uint32_t wchar_size,
+                              void *out,
+                              size_t capacity);
+
+/// The UTF-16 units of little-endian bytes (`count` units read from `data`, which holds `2 * count` bytes) as
+/// `wchar_t` text; see `ee_won_wide_from_utf16`.
+///
+/// # Safety
+/// `data` holds `2 * count` bytes; `out` as for `ee_won_wide_from_utf16`.
+size_t ee_won_wide_from_utf16le(const uint8_t *data,
+                                size_t count,
+                                uint32_t wchar_size,
+                                void *out,
+                                size_t capacity);
+
+/// The UTF-16 units of `wchar_t` text, to a sink.
+///
+/// # Safety
+/// As `ee_won_utf16le_from_wide`; the sink is called once.
+void ee_won_utf16_from_wide(const void *wide,
+                            uint32_t wchar_size,
+                            size_t count,
+                            EeWonUnitSink sink,
+                            void *context);
+
+/// The game's text (UTF-8 bytes, decision D6) as `wchar_t` text (`wchar_size` 2: UTF-16 units; 4: code points),
+/// given to the sink once (`StringToWString`). A stray byte becomes U+FFFD; embedded zeros are characters.
+///
+/// # Safety
+/// `text` holds `length` bytes; the sink is called with `count` characters of `wchar_size` bytes.
+void ee_won_wide_from_utf8(const uint8_t *text,
+                           size_t length,
+                           uint32_t wchar_size,
+                           EeWonWideSink sink,
+                           void *context);
+
+/// `wchar_t` text as the game's text (UTF-8), given to the sink once (`WStringToString`). A lone surrogate becomes
+/// U+FFFD; embedded zeros are characters.
+///
+/// # Safety
+/// `wide` holds `count` characters of `wchar_size` (2 or 4) bytes.
+void ee_won_utf8_from_wide(const void *wide,
+                           uint32_t wchar_size,
+                           size_t count,
+                           EeWonByteSink sink,
+                           void *context);
+
+/// `CRC16::Put`: the register after the bytes.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+uint16_t ee_won_crc16_put(uint16_t register_, const uint8_t *data, size_t length);
+
+/// Resets an MD5 state (also its initialisation).
+///
+/// # Safety
+/// `state` is valid.
+void ee_won_md5_reset(EeWonMd5 *state);
+
+/// Adds bytes.
+///
+/// # Safety
+/// `state` is valid; `data` holds `length` bytes.
+void ee_won_md5_update(EeWonMd5 *state, const uint8_t *data, size_t length);
+
+/// Writes the 16-byte digest and resets.
+///
+/// # Safety
+/// `state` is valid; `out` has 16 bytes.
+void ee_won_md5_finish(EeWonMd5 *state, uint8_t *out);
+
+/// No key.
+///
+/// # Safety
+/// `bf` is valid for a write.
+void ee_won_blowfish_init(EeWonBlowfish *bf);
+
+/// `SetKey`.
+///
+/// # Safety
+/// `bf` is valid; `key` holds `length` bytes.
+bool ee_won_blowfish_set_key(EeWonBlowfish *bf, const uint8_t *key, size_t length);
+
+/// `Create`: a random key.
+///
+/// # Safety
+/// `bf` is valid.
+bool ee_won_blowfish_create(EeWonBlowfish *bf, int32_t length);
+
+/// The raw key (`GetKey`); its length is `ee_won_blowfish_key_length`.
+///
+/// # Safety
+/// `bf` is valid; the pointer lives as long as `*bf` is unchanged.
+const uint8_t *ee_won_blowfish_key(const EeWonBlowfish *bf);
+
+/// `GetKeyLen`.
+///
+/// # Safety
+/// `bf` is valid.
+int32_t ee_won_blowfish_key_length(const EeWonBlowfish *bf);
+
+/// `Encrypt`: the cipher text to the sink; false (no call) without a key.
+///
+/// # Safety
+/// `bf` is valid; `data` holds `length` bytes.
+bool ee_won_blowfish_encrypt(const EeWonBlowfish *bf,
+                             const uint8_t *data,
+                             size_t length,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// `Decrypt`: the plain text to the sink; false (no call) when refused.
+///
+/// # Safety
+/// As `ee_won_blowfish_encrypt`.
+bool ee_won_blowfish_decrypt(const EeWonBlowfish *bf,
+                             const uint8_t *data,
+                             size_t length,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// A key with no key material, its generator seeded from the system.
+EeWonElGamal *ee_won_elgamal_new();
+
+/// A copy (generator state included).
+///
+/// # Safety
+/// `key` is a live key.
+EeWonElGamal *ee_won_elgamal_clone(const EeWonElGamal *key);
+
+/// Frees a key (null: nothing).
+///
+/// # Safety
+/// `key` came from this module and is not used afterwards.
+void ee_won_elgamal_free(EeWonElGamal *key);
+
+/// `SetPrivateKey` (`is_private` true) or `SetPublicKey`.
+///
+/// # Safety
+/// `key` is live; `data` holds `length` bytes.
+bool ee_won_elgamal_set_key(EeWonElGamal *key, const uint8_t *data, size_t length, bool is_private);
+
+/// `Invalidate`.
+///
+/// # Safety
+/// `key` is live.
+void ee_won_elgamal_invalidate(EeWonElGamal *key);
+
+/// `IsPrivate`.
+///
+/// # Safety
+/// `key` is live.
+bool ee_won_elgamal_is_private(const EeWonElGamal *key);
+
+/// `IsPublic`.
+///
+/// # Safety
+/// `key` is live.
+bool ee_won_elgamal_is_public(const EeWonElGamal *key);
+
+/// Encrypt, decrypt, sign (the input is the message) or write a raw key (no input): the result to the sink; false
+/// (no call) when the key cannot (`Encrypt`/`Sign` advance the key's generator, as the C++'s `mutable Random`).
+///
+/// # Safety
+/// `key` is live; `data` holds `length` bytes.
+bool ee_won_elgamal_op(EeWonElGamal *key,
+                       EeWonElGamalOp op,
+                       const uint8_t *data,
+                       size_t length,
+                       EeWonByteSink sink,
+                       void *context);
+
+/// `Verify`.
+///
+/// # Safety
+/// `key` is live; the buffers hold their lengths.
+bool ee_won_elgamal_verify(const EeWonElGamal *key,
+                           const uint8_t *message,
+                           size_t message_length,
+                           const uint8_t *signature,
+                           size_t signature_length);
+
+/// Unpacks a block of `kind` (`EE_WON_AUTH_*`).
+///
+/// # Safety
+/// `data` holds `length` bytes.
+EeWonAuth *ee_won_auth_unpack(uint32_t kind, const uint8_t *data, size_t length);
+
+/// Frees a block (null: nothing).
+///
+/// # Safety
+/// `block` came from `ee_won_auth_unpack` and is not used afterwards.
+void ee_won_auth_free(EeWonAuth *block);
+
+/// The header fields.
+///
+/// # Safety
+/// `block` is live; `out` is valid.
+void ee_won_auth_header(const EeWonAuth *block, EeWonAuthHeader *out);
+
+/// `AuthBase::Verify(key)`.
+///
+/// # Safety
+/// `block` and `key` are live.
+bool ee_won_auth_verify(const EeWonAuth *block, const EeWonElGamal *key);
+
+/// `IsExpired(extra)` at `now` (seconds).
+///
+/// # Safety
+/// `block` is live.
+bool ee_won_auth_is_expired(const EeWonAuth *block, int64_t now, int64_t extra);
+
+/// `VerifyPermissions`.
+///
+/// # Safety
+/// `block` is live.
+bool ee_won_auth_verify_permissions(const EeWonAuth *block,
+                                    uint32_t user_id,
+                                    uint32_t community,
+                                    uint16_t min_trust);
+
+/// The number of keys a block carries: a certificate's public key (0 or 1) or a key block's keys.
+///
+/// # Safety
+/// `block` is live.
+size_t ee_won_auth_key_count(const EeWonAuth *block);
+
+/// A copy of key `index` (null past the count); free it with `ee_won_elgamal_free`.
+///
+/// # Safety
+/// `block` is live.
+EeWonElGamal *ee_won_auth_key(const EeWonAuth *block, size_t index);
+
+/// `AuthPubKeyBlock::Verify(block)`.
+///
+/// # Safety
+/// Both are live.
+bool ee_won_auth_verify_with_block(const EeWonAuth *key_block, const EeWonAuth *block);
+
+/// A number from an `Auth2Certificate` (0 for another block).
+///
+/// # Safety
+/// `block` is live.
+uint32_t ee_won_auth_cert2_query(const EeWonAuth *block, EeWonCert2Query query, uint32_t community);
+
+/// `GetNickname(key)` (`first` false) or `GetFirstNickname` (`first` true): the units to the sink (empty when
+/// absent).
+///
+/// # Safety
+/// `block` is live; `key` holds `key_count` units.
+void ee_won_auth_cert2_nickname(const EeWonAuth *block,
+                                bool first,
+                                const uint16_t *key,
+                                size_t key_count,
+                                EeWonUnitSink sink,
+                                void *context);
+
+/// `GetUserData(community)` (`first` false) or `GetFirstUserData`: the bytes to the sink; false (no call) when
+/// absent.
+///
+/// # Safety
+/// `block` is live.
+bool ee_won_auth_cert2_user_data(const EeWonAuth *block,
+                                 bool first,
+                                 uint32_t community,
+                                 EeWonByteSink sink,
+                                 void *context);
+
+/// A page file's text (`plaintext::page_text`: HTML pages converted; `skip_first_if_text` drops a text page's first
+/// character) as UTF-16 units to the sink.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+void ee_won_page_text(const uint8_t *data,
+                      size_t length,
+                      bool skip_first_if_text,
+                      EeWonUnitSink sink,
+                      void *context);
+
+/// `CalcKeyFromBuffer`'s test of 8 raw bytes for a product.
+///
+/// # Safety
+/// `product` holds `product_length` bytes; `raw` 8.
+bool ee_won_cdkey_is_valid(const uint8_t *product, size_t product_length, const uint8_t *raw);
+
+/// `Init(string)`'s decoding: the raw bytes into `out` (8 bytes); false when the text is not a key.
+///
+/// # Safety
+/// `text` holds `length` bytes; `out` has 8.
+bool ee_won_cdkey_parse(const uint8_t *text, size_t length, uint8_t *out);
+
+/// `GetString`: the 24 characters and a NUL into `out` (25 bytes).
+///
+/// # Safety
+/// `raw` holds 8 bytes; `out` has 25.
+void ee_won_cdkey_format(const uint8_t *raw, char *out);
+
+/// `GetSymmetricKey`'s key bytes into `out` (12 bytes of room); returns their count.
+///
+/// # Safety
+/// `product` holds `product_length` bytes; `out` has 12.
+size_t ee_won_cdkey_symmetric_key(const uint8_t *product,
+                                  size_t product_length,
+                                  uint32_t machine_id,
+                                  bool use_machine_id,
+                                  uint8_t *out);
+
+/// `GetEncrypted`: the stored form of a raw key to the sink.
+///
+/// # Safety
+/// As `ee_won_cdkey_symmetric_key`; `raw` holds 8 bytes.
+bool ee_won_cdkey_encrypt(const uint8_t *product,
+                          size_t product_length,
+                          uint32_t machine_id,
+                          bool use_machine_id,
+                          const uint8_t *raw,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// `InitEncrypted`'s decoding: `has_machine_id` false when the machine has none.
+///
+/// # Safety
+/// `product` and `data` hold their lengths; `out` is valid.
+void ee_won_cdkey_decrypt(const uint8_t *product,
+                          size_t product_length,
+                          uint32_t machine_id,
+                          bool has_machine_id,
+                          bool prefer_machine,
+                          const uint8_t *data,
+                          size_t length,
+                          EeWonCdKeyDecoded *out);
+
+/// `IsBeta` (`which` 0) or `IsForceCheck` (`which` 1) of a raw key of `length` bytes.
+///
+/// # Safety
+/// `raw` holds `length` bytes.
+bool ee_won_cdkey_flag(const uint8_t *raw, size_t length, uint32_t which);
+
+/// `WONStatusToString` (WONRouting.h's inline shim; WONStatus.cpp is deleted): the status's name. A `WS_` name is a
+/// static string; another (a number, a DB proxy game-specific error) is valid until this thread's next unnamed one.
+const char *ee_won_status_text(long s);
+
+void ee_won_netstats_enable(bool on);
+
+/// Adds to counter `counter` (0 constructed sockets, 1 open sockets, 2 bytes sent, 3 bytes received, 4 messages
+/// sent, 5 messages received) while counting is on.
+void ee_won_netstats_add(uint32_t counter,
+                         int64_t amount);
+
+int64_t ee_won_netstats_get(uint32_t counter);
+
+/// `LobbyGetNetAddresses`: each of this machine's addresses to `sink`, in order.
+///
+/// # Safety
+/// The sink is called during the call only.
+void ee_won_ipaddr_local_addresses(bool details, EeWonAddressSink sink, void *context);
+
+/// `AsyncSocket::HasInternetConnection`.
+bool ee_won_has_internet_connection();
+
+/// `StartWinsock`.
+long ee_won_socket_start();
+
+/// `StopWinsock`.
+long ee_won_socket_stop();
+
+/// WON's millisecond tick (`WONTickCount`).
+uint32_t ee_won_tick();
+
+/// `AsyncOp::RealTimeLeft` / `AsyncSocket::TimeLeft` now.
+uint32_t ee_won_real_time_left(uint32_t start, uint32_t timeout);
+
+/// `RecvMsgOp`'s length prefix: 0 and the body's length in `*body`, 1 for the 2-byte escape (a 4-byte prefix
+/// follows), 2 for an invalid length.
+///
+/// # Safety
+/// `prefix` holds `length` bytes; `body` is valid.
+int32_t ee_won_op_length_step(const uint8_t *prefix,
+                              size_t length,
+                              uint32_t *body);
+
+/// `RecvMsgOp::Start`'s length field test.
+bool ee_won_op_valid_length_field(uint32_t size);
+
+/// `RecvBytesOp`'s chunk read size.
+int32_t ee_won_op_chunk_length(uint32_t length, uint32_t bytes_read);
+
+/// `QueueSocket::OpCallback` for an op of `kind` (0 the queued op, 1 the repeat op, 2 another).
+EeWonQueueDecision ee_won_queue_socket_callback(int32_t kind,
+                                                long status,
+                                                bool killed,
+                                                bool close_queued,
+                                                bool queue_empty,
+                                                bool socket_valid,
+                                                bool datagram);
+
+/// `StringParser::GetChar(offset)` at `pos`.
+///
+/// # Safety
+/// `text` is a NUL-terminated string of `unit_size`-byte units (1, 2 or 4) and `pos + offset` inside it.
+uint8_t ee_won_parser_get_char(const void *text,
+                               uint32_t unit_size,
+                               int32_t pos,
+                               int32_t offset);
+
+/// `StringParser::GetWChar(offset)` at `pos`.
+///
+/// # Safety
+/// As `ee_won_parser_get_char`.
+uint32_t ee_won_parser_get_wchar(const void *text, uint32_t unit_size, int32_t pos, int32_t offset);
+
+/// `StringParser::SkipWhitespace`.
+///
+/// # Safety
+/// `text` is a NUL-terminated string of `unit_size`-byte units, `*pos` inside it.
+void ee_won_parser_skip_whitespace(const void *text, uint32_t unit_size, int32_t *pos);
+
+/// `StringParser::SkipNonWhitespace`.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`.
+void ee_won_parser_skip_non_whitespace(const void *text, uint32_t unit_size, int32_t *pos);
+
+/// `StringParser::CheckNextChar(ch)`.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`.
+bool ee_won_parser_check_next_char(const void *text, uint32_t unit_size, int32_t *pos, int32_t ch);
+
+/// `StringParser::StartsWith(prefix)`.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`; `prefix` is NUL-terminated.
+bool ee_won_parser_starts_with(const void *text,
+                               uint32_t unit_size,
+                               int32_t *pos,
+                               const char *prefix);
+
+/// `StringParser::Is(word)`.
+///
+/// # Safety
+/// As `ee_won_parser_starts_with`.
+bool ee_won_parser_is(const void *text, uint32_t unit_size, int32_t *pos, const char *word);
+
+/// `StringParser::ReadString(std::string&, stopAtWhitespace)`: the token to `sink` (always true in the C++).
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`; `sink` takes the bytes.
+void ee_won_parser_read_string(const void *text,
+                               uint32_t unit_size,
+                               int32_t *pos,
+                               bool stop_at_whitespace,
+                               EeWonByteSink sink,
+                               void *context);
+
+/// `StringParser::ReadString(std::wstring&, stopAtWhitespace)`: the token's units to `sink`.
+///
+/// # Safety
+/// As `ee_won_parser_read_string`.
+void ee_won_parser_read_wstring(const void *text,
+                                uint32_t unit_size,
+                                int32_t *pos,
+                                bool stop_at_whitespace,
+                                EeWonWideUnitSink sink,
+                                void *context);
+
+/// `StringParser::ReadValue(int&)`: true and `*out` when the cursor moved; `*out` untouched otherwise.
+///
+/// # Safety
+/// As `ee_won_parser_skip_whitespace`; `out` is valid.
+bool ee_won_parser_read_int(const void *text,
+                            uint32_t unit_size,
+                            int32_t *pos,
+                            int32_t *out);
+
+/// `StringParser::ReadValue(bool&)`: true and `*out` for a boolean word; `*out` untouched otherwise.
+///
+/// # Safety
+/// As `ee_won_parser_read_int`.
+bool ee_won_parser_read_bool(const void *text,
+                             uint32_t unit_size,
+                             int32_t *pos,
+                             bool *out);
+
+/// `StringParser::ValueToString` of a signed integer (int, long, short, char, __int64): decimal to `sink`.
+///
+/// # Safety
+/// `sink` takes the bytes.
+void ee_won_parser_format_i64(int64_t value,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// `StringParser::ValueToString` of an unsigned integer (unsigned long, unsigned char, unsigned __int64).
+///
+/// # Safety
+/// As `ee_won_parser_format_i64`.
+void ee_won_parser_format_u64(uint64_t value,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// `StringParser::ValueToString(const bool&)`: "True" or "False".
+///
+/// # Safety
+/// As `ee_won_parser_format_i64`.
+void ee_won_parser_format_bool(bool value, EeWonByteSink sink, void *context);
+
+extern int isspace(int c);
+
+extern int isdigit(int c);
+
+extern int isxdigit(int c);
+
+extern int isalnum(int c);
+
+extern int toupper(int c);
+
+extern int tolower(int c);
+
+/// The exception text of a status.
+const char *ee_won_file_status_text(int32_t status);
+
+void ee_won_file_reader_init(EeWonFileReader *reader);
+
+/// # Safety
+/// `path` is a C string.
+bool ee_won_file_reader_open(EeWonFileReader *reader, const char *path);
+
+/// # Safety
+/// `path` is a C string.
+bool ee_won_file_reader_open_text(EeWonFileReader *reader, const char *path);
+
+/// The buffer is not owned and must outlive the reading.
+void ee_won_file_reader_open_memory(EeWonFileReader *reader,
+                                    const void *data,
+                                    unsigned long length);
+
+void ee_won_file_reader_close(EeWonFileReader *reader);
+
+unsigned long ee_won_file_reader_pos(const EeWonFileReader *reader);
+
+unsigned long ee_won_file_reader_length(EeWonFileReader *reader, int32_t *status);
+
+int32_t ee_won_file_reader_set_pos(EeWonFileReader *reader, unsigned long pos);
+
+/// # Safety
+/// `out` holds `max` bytes.
+int ee_won_file_reader_read_max(EeWonFileReader *reader, void *out, int max, int32_t *status);
+
+/// # Safety
+/// `out` holds `length` bytes.
+int32_t ee_won_file_reader_read_bytes(EeWonFileReader *reader, void *out, unsigned long length);
+
+int ee_won_file_reader_try_read_byte(EeWonFileReader *reader);
+
+int32_t ee_won_file_reader_skip(EeWonFileReader *reader, unsigned long length);
+
+int32_t ee_won_file_reader_read_into_memory(EeWonFileReader *reader);
+
+/// A 1, 2 or 4 byte length field (0 for another size), into `value`.
+int32_t ee_won_file_reader_read_length(EeWonFileReader *reader, int field_size, int *value);
+
+void ee_won_file_reader_rewind(EeWonFileReader *reader);
+
+bool ee_won_file_reader_end_of_file(const EeWonFileReader *reader);
+
+void ee_won_file_writer_init(EeWonFileWriter *writer);
+
+/// # Safety
+/// `path` is a C string.
+bool ee_won_file_writer_open(EeWonFileWriter *writer, const char *path);
+
+void ee_won_file_writer_close(EeWonFileWriter *writer);
+
+unsigned long ee_won_file_writer_pos(const EeWonFileWriter *writer);
+
+int32_t ee_won_file_writer_set_pos(EeWonFileWriter *writer, unsigned long pos);
+
+/// # Safety
+/// `data` holds `length` bytes.
+int32_t ee_won_file_writer_write_bytes(EeWonFileWriter *writer,
+                                       const void *data,
+                                       unsigned long length);
+
+int32_t ee_won_file_writer_write_length(EeWonFileWriter *writer,
+                                        unsigned long length,
+                                        uint8_t field_size);
+
+/// `new FilePushOp(addr)` (the address's six bytes): the Rust op a `RustServerOp` runs.
+///
+/// # Safety
+/// `addr` points to six bytes.
+EeWonHostOp *ee_won_filepush_new(const uint8_t *addr);
+
+/// The URL's ranges: [user, password, host, path] as (start, end), -1 for one not set.
+///
+/// # Safety
+/// `text` holds `len` bytes; `out` holds 8 values.
+void ee_won_ftp_url(const uint8_t *text, size_t len, bool extract, ptrdiff_t *out);
+
+/// `ExtractUserNameAndPasswordFromURL`'s ranges: [user, password] as (start, end), -1 for one not set, then
+/// the rest's start.
+///
+/// # Safety
+/// `text` holds `len` bytes; `out` holds 5 values.
+void ee_won_ftp_credentials(const uint8_t *text,
+                            size_t len,
+                            ptrdiff_t *out);
+
+/// `ExtractStatus` of a C string: 0 when no number was scanned, 1 for a status the transfer goes on with, 2 for
+/// another (`*out` the status for 1 and 2).
+///
+/// # Safety
+/// `line` is a NUL-terminated string; `out` is valid.
+int32_t ee_won_ftp_status(const uint8_t *line,
+                          int32_t *out);
+
+/// `ParsePasv` of a C string: false when malformed, else the host and port.
+///
+/// # Safety
+/// `line` is a NUL-terminated string; the outputs are valid.
+bool ee_won_ftp_pasv(const uint8_t *line, uint32_t *host, uint16_t *port);
+
+/// `SetRemotePath`'s split: the directory's end (-1: none, the file is the whole path).
+///
+/// # Safety
+/// `path` holds `len` bytes.
+ptrdiff_t ee_won_ftp_remote_split(const uint8_t *path, size_t len);
+
+/// `SendRequest`'s line of `state` into `sink`.
+///
+/// # Safety
+/// The byte ranges are valid; `sink` accepts `context`.
+void ee_won_ftp_command(int32_t state,
+                        const uint8_t *user,
+                        size_t user_len,
+                        const uint8_t *password,
+                        size_t password_len,
+                        const uint8_t *directory,
+                        size_t directory_len,
+                        const uint8_t *file,
+                        size_t file_len,
+                        bool binary,
+                        uint32_t local_size,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// `HandleReply`'s step for a line of `len` bytes (its C string read up to a NUL).
+///
+/// # Safety
+/// `line` holds `len` bytes; `out` is valid.
+void ee_won_ftp_reply(const uint8_t *line,
+                      size_t len,
+                      int32_t state,
+                      bool has_directory,
+                      bool resume,
+                      EeWonFtpStep *out);
+
+/// `new FTPGetOp(host, remotePath)`: the Rust op a `RustServerOp` runs.
+///
+/// # Safety
+/// The texts hold their lengths' bytes.
+EeWonHostOp *ee_won_ftpget_new(const uint8_t *host,
+                               size_t host_len,
+                               const uint8_t *path,
+                               size_t path_len);
+
+/// `new FTPGetOp(url, doExtractUserAndPassword)`: the Rust op a `RustServerOp` runs.
+///
+/// # Safety
+/// `url` holds `len` bytes.
+EeWonHostOp *ee_won_ftpget_new_url(const uint8_t *url, size_t len, bool extract);
+
+/// A new `DetectFirewallOp`: its server context (`EE_WON_REQHOST_CONTEXT`) is set after the bind.
+EeWonHostOp *ee_won_hostop_firewall();
+
+/// `DetectFirewallOp`'s members after `Init`.
+EeWonFirewallOp *ee_won_fwop_new();
+
+/// The destructor: the socket and the receive op let go.
+///
+/// # Safety
+/// `op` came from `ee_won_fwop_new` (or is NULL); `hooks` is valid.
+void ee_won_fwop_free(EeWonFirewallOp *op, const EeWonFirewallHooks *hooks);
+
+/// `SetListenPort`.
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_fwop_set_listen_port(EeWonFirewallOp *op, uint16_t port);
+
+/// `SetDoListen`.
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_fwop_set_do_listen(EeWonFirewallOp *op, bool value);
+
+/// `SetWaitForConnect`.
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_fwop_set_wait_for_connect(EeWonFirewallOp *op, bool value);
+
+/// The drivers' setup: the UDP flag and the longest connect wait (no setter sets them).
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_fwop_setup(EeWonFirewallOp *op, bool udp, uint32_t max_wait);
+
+/// `RunHook`: true to `Finish(*status)`, false to go on to `ServerRequestOp::RunHook`.
+///
+/// # Safety
+/// `op`, `hooks` and `status` are valid.
+bool ee_won_fwop_run_hook(EeWonFirewallOp *op, const EeWonFirewallHooks *hooks, long *status);
+
+/// `CallbackHook(op, param)` with `op`'s status: 0 the base's hook, 1 `RecvServerDatagram()` then true, 2
+/// `Finish(*finish)` then true.
+///
+/// # Safety
+/// `op`, `hooks` and `finish` are valid.
+int32_t ee_won_fwop_callback_hook(EeWonFirewallOp *op,
+                                  const EeWonFirewallHooks *hooks,
+                                  int32_t param,
+                                  long status,
+                                  long *finish);
+
+/// `CleanupHook` after `ServerRequestOp::CleanupHook`.
+///
+/// # Safety
+/// `op` and `hooks` are valid.
+void ee_won_fwop_cleanup_hook(EeWonFirewallOp *op, const EeWonFirewallHooks *hooks);
+
+/// `GetNextRequest` with the base's length field size.
+///
+/// # Safety
+/// `op` and `hooks` are valid.
+long ee_won_fwop_get_next_request(EeWonFirewallOp *op,
+                                  const EeWonFirewallHooks *hooks,
+                                  uint8_t length_field_size);
+
+/// `CheckResponse`: `*kind` -1 cut short (the caller throws `ReadBufferException`), 1 `return
+/// RecvServerDatagram()`, 0 return the status.
+///
+/// # Safety
+/// `op`, `hooks` and `kind` are valid.
+long ee_won_fwop_check_response(EeWonFirewallOp *op,
+                                const EeWonFirewallHooks *hooks,
+                                int32_t *kind);
+
+/// `RecvServerDatagram`: true to `Track` the receive op (`ee_won_fwop_recv_op`) as 1000, `RunAsync(*wait)` it and
+/// return `WS_ServerReq_ExitCommunicationLoop`; false to return `*status`.
+///
+/// # Safety
+/// `op`, `hooks`, `wait` and `status` are valid.
+bool ee_won_fwop_recv_datagram(EeWonFirewallOp *op,
+                               const EeWonFirewallHooks *hooks,
+                               uint32_t *wait,
+                               long *status);
+
+/// The receive op (borrowed, or NULL).
+///
+/// # Safety
+/// `op` is valid.
+void *ee_won_fwop_recv_op(const EeWonFirewallOp *op);
+
+/// The listening socket (borrowed, or NULL).
+///
+/// # Safety
+/// `op` is valid.
+void *ee_won_fwop_listen_socket(const EeWonFirewallOp *op);
+
+/// `GetPublicAddr`'s host into `*host`: false while unset.
+///
+/// # Safety
+/// `op` and `host` are valid.
+bool ee_won_fwop_public_host(const EeWonFirewallOp *op, int32_t *host);
+
+/// The listen port.
+///
+/// # Safety
+/// `op` is valid.
+uint16_t ee_won_fwop_listen_port(const EeWonFirewallOp *op);
+
+/// The longest connect wait.
+///
+/// # Safety
+/// `op` is valid.
+uint32_t ee_won_fwop_max_wait(const EeWonFirewallOp *op);
+
+/// The listen flag.
+///
+/// # Safety
+/// `op` is valid.
+bool ee_won_fwop_do_listen(const EeWonFirewallOp *op);
+
+/// The wait-for-connect flag.
+///
+/// # Safety
+/// `op` is valid.
+bool ee_won_fwop_wait_for_connect(const EeWonFirewallOp *op);
+
+/// The UDP flag.
+///
+/// # Safety
+/// `op` is valid.
+bool ee_won_fwop_use_udp(const EeWonFirewallOp *op);
+
+/// A new instance: C strings for the name, version and key; the shim (`GameSpySupport*`), its directory servers
+/// (`ServerContext*`, a reference taken) and the library's core table (bound).
+///
+/// # Safety
+/// The strings are NUL-ended; the objects live C++ objects (the shim owns the result).
+EeWonGameSpy *ee_won_gamespy_new(const char *name,
+                                 const char *version,
+                                 const char *secret_key,
+                                 void *shim,
+                                 void *dirs,
+                                 const EeWonCoreHooks *core);
+
+/// # Safety
+/// `g` from [`ee_won_gamespy_new`], freed once.
+void ee_won_gamespy_free(EeWonGameSpy *g);
+
+/// `Startup(addr)`: the address's `GetHostString(true)` and port.
+///
+/// # Safety
+/// `g` live; `host` holds `length` bytes.
+int32_t ee_won_gamespy_startup(const EeWonGameSpy *g,
+                               const uint8_t *host,
+                               size_t length,
+                               uint16_t port);
+
+/// The calls without arguments but a number ([`EE_WON_GAMESPY_SHUTDOWN`] ..): their result (0 for none).
+///
+/// # Safety
+/// `g` live.
+int64_t ee_won_gamespy_op(const EeWonGameSpy *g,
+                          int32_t which,
+                          int64_t num);
+
+/// `SetKeyValue(type, key, value)` (C strings); a NULL value erases the key and returns whether it was there
+/// (`EraseKeyValue`); `SetGameMode(value)` for a NULL key.
+///
+/// # Safety
+/// `g` live; the strings NUL-ended or NULL.
+bool ee_won_gamespy_set(const EeWonGameSpy *g,
+                        int32_t kind,
+                        const char *key,
+                        const char *value);
+
+/// `GetKeyValue(type, key)`: the value's C string, valid until the key changes, or NULL.
+///
+/// # Safety
+/// `g` live; `key` NUL-ended.
+const char *ee_won_gamespy_get(const EeWonGameSpy *g, int32_t kind, const char *key);
+
+/// `qr_hostname`: the master server's host the next start-up resolves (a test's stand-in).
+///
+/// # Safety
+/// `host` NUL-ended.
+void ee_won_gamespy_set_master_host(const char *host);
+
+/// `GetCertOp(context)`: the op keeps a reference to `context` (taken here).
+///
+/// # Safety
+/// `hooks` is valid; `context` is a `RefCount*` or NULL.
+EeWonGetCert *ee_won_getcert_new(const EeWonGetCertHooks *hooks, void *context);
+
+/// The destructor: every reference released.
+///
+/// # Safety
+/// `op` came from `ee_won_getcert_new` (or is NULL); `hooks` is valid.
+void ee_won_getcert_free(EeWonGetCert *op, const EeWonGetCertHooks *hooks);
+
+/// `SetAuthContext`.
+///
+/// # Safety
+/// `op` and `hooks` are valid; `context` is a `RefCount*` or NULL.
+void ee_won_getcert_set_context(EeWonGetCert *op, const EeWonGetCertHooks *hooks, void *context);
+
+/// `SetCreateAccount`.
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_getcert_set_create_account(EeWonGetCert *op, bool value);
+
+/// `SetNewPassword` (UTF-16 LE bytes).
+///
+/// # Safety
+/// `op` is valid; `data` holds `length` bytes.
+void ee_won_getcert_set_new_password(EeWonGetCert *op, const uint8_t *data, size_t length);
+
+/// `RunHook`: true to `Finish(*status)`, false to go on to `ServerRequestOp::RunHook`.
+///
+/// # Safety
+/// `op`, `hooks` and `status` are valid.
+bool ee_won_getcert_run_hook(EeWonGetCert *op, const EeWonGetCertHooks *hooks, long *status);
+
+/// `CleanupHook` up to `ServerRequestOp::CleanupHook`, which the caller calls next.
+///
+/// # Safety
+/// `op` and `hooks` are valid.
+void ee_won_getcert_cleanup_hook(EeWonGetCert *op, const EeWonGetCertHooks *hooks);
+
+/// `Reset`.
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_getcert_reset(EeWonGetCert *op);
+
+/// `GetNextRequest`.
+///
+/// # Safety
+/// `op` and `hooks` are valid.
+long ee_won_getcert_get_next_request(EeWonGetCert *op, const EeWonGetCertHooks *hooks);
+
+/// `CheckResponse`: `*cut` true where the original threw `ReadBufferException` (the caller throws it).
+///
+/// # Safety
+/// `op`, `hooks` and `cut` are valid.
+long ee_won_getcert_check_response(EeWonGetCert *op,
+                                   const EeWonGetCertHooks *hooks,
+                                   bool *cut);
+
+/// `GetPeerData` (borrowed; NULL before a login).
+///
+/// # Safety
+/// `op` is valid.
+void *ee_won_getcert_peer_data(const EeWonGetCert *op);
+
+/// `GetSessionKey`: the C++ `Blowfish` is this one `EeWonBlowfish` (pointer-interconvertible).
+///
+/// # Safety
+/// `op` is valid; the pointer lives as long as the op.
+const EeWonBlowfish *ee_won_getcert_session_key(const EeWonGetCert *op);
+
+/// The state (`GETTING_PUB_KEYS` 1, `GETTING_CHALLENGE` 2, `GETTING_CERTIFICATE` 3).
+///
+/// # Safety
+/// `op` is valid.
+int32_t ee_won_getcert_state(const EeWonGetCert *op);
+
+/// The key block (borrowed).
+///
+/// # Safety
+/// `op` is valid.
+void *ee_won_getcert_key_block(const EeWonGetCert *op);
+
+/// The auth server's clock delta (`mAuthDelta`).
+///
+/// # Safety
+/// `op` is valid.
+int64_t ee_won_getcert_auth_delta(const EeWonGetCert *op);
+
+/// The challenge seed into `sink`.
+///
+/// # Safety
+/// `op` is valid; `sink` accepts `context`.
+void ee_won_getcert_seed(const EeWonGetCert *op, EeWonByteSink sink, void *context);
+
+/// The number of error strings (`GetErrorList`).
+///
+/// # Safety
+/// `op` is valid.
+size_t ee_won_getcert_error_count(const EeWonGetCert *op);
+
+/// Error string `index` into `sink`.
+///
+/// # Safety
+/// `op` is valid; `sink` accepts `context`.
+void ee_won_getcert_error(const EeWonGetCert *op, size_t index, EeWonByteSink sink, void *context);
+
+/// The number of community statuses (`GetCommunityStatusList`).
+///
+/// # Safety
+/// `op` is valid.
+size_t ee_won_getcert_community_count(const EeWonGetCert *op);
+
+/// Community status `index`: the status and id, the name's UTF-16 LE bytes into `sink`.
+///
+/// # Safety
+/// `op`, `status` and `id` are valid; `sink` accepts `context`.
+void ee_won_getcert_community(const EeWonGetCert *op,
+                              size_t index,
+                              int16_t *status,
+                              uint32_t *id,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// The drivers' setup: the state, the challenge seed and the key block a scenario starts with.
+///
+/// # Safety
+/// `op` and `hooks` are valid; `seed` holds `length` bytes; `block` is a `RefCount*` or NULL.
+void ee_won_getcert_setup(EeWonGetCert *op,
+                          const EeWonGetCertHooks *hooks,
+                          int32_t state,
+                          const uint8_t *seed,
+                          size_t length,
+                          void *block);
+
 /// `CryptTransform`'s constructor: one more reference to the session handle.
 ///
 /// # Safety
@@ -18094,147 +18712,6 @@ EeWonHostOp *ee_won_httpget_open(const uint8_t *host,
 /// `url` holds `len` bytes.
 EeWonHostOp *ee_won_httpget_open_url(const uint8_t *url, size_t len);
 
-/// `DoGetAttrib` -> true with the size in `wh`; `thrown` the FileReader status the C++ throws (0: none).
-bool ee_won_img_attrib(EeWonImgKind kind,
-                       EeWonFileReader *reader,
-                       int32_t (*wh)[2],
-                       int32_t *thrown);
-
-/// `DoDecodeRaw` -> true with the image in `out` (its pixels for `ee_won_img_take`), false for NULL; `thrown` the
-/// FileReader status the C++ throws (0: none).
-bool ee_won_img_decode(EeWonImgKind kind,
-                       EeWonFileReader *reader,
-                       EeWonImgRaw *out,
-                       int32_t *thrown);
-
-/// The decoded pixels into the new image's `width * height` pixels, and freed.
-///
-/// # Safety
-/// `out` came from `ee_won_img_decode`; `dst` holds its pixels.
-void ee_won_img_take(EeWonImgRaw *out, uint32_t *dst);
-
-EeWonImgDec *ee_won_img_dec_new();
-
-/// # Safety
-/// `d` came from `ee_won_img_dec_new` (or `ee_won_img_dec_copy`), freed once.
-void ee_won_img_dec_free(EeWonImgDec *d);
-
-/// A new multi-decoder with `d`'s map (Duplicate: its entries are then replaced one by one).
-EeWonImgDec *ee_won_img_dec_copy(const EeWonImgDec *d);
-
-/// # Safety
-/// `b` holds `c` bytes when the call reads them.
-size_t ee_won_img_dec(EeWonImgDec *d, EeWonImgDecCall call, size_t a, const uint8_t *b, size_t c);
-
-/// `ScaleImageFilter::CheckSize` over the filter's fields (`w`, `h` written back).
-///
-/// # Safety
-/// `w` and `h` point at live ints.
-bool ee_won_imgf_check_size(bool is_percent,
-                            int32_t pw,
-                            int32_t ph,
-                            int32_t *w,
-                            int32_t *h,
-                            int32_t img_w,
-                            int32_t img_h);
-
-/// The nearest-neighbour scale of `src` into `dst` (the same kind).
-///
-/// # Safety
-/// Both describe live images.
-void ee_won_imgf_scale(const EeWonRawPixels *src, const EeWonRawPixels *dst);
-
-/// TintImageFilter over `n` colours (a palette's, or a 32-bit image's pixels with `keep_alpha`).
-///
-/// # Safety
-/// `colors` holds `n` colours (or `n` is 0).
-void ee_won_imgf_tint(uint32_t *colors, size_t n, int32_t r, int32_t g, int32_t b, bool keep_alpha);
-
-/// TransparentImageFilter's 32-bit pass over `n` pixels.
-///
-/// # Safety
-/// `pixels` holds `n` pixels (or `n` is 0).
-void ee_won_imgf_transparent32(uint32_t *pixels, size_t n, uint32_t color);
-
-/// TransparentImageFilter's sample place in a `w` x `h` image.
-///
-/// # Safety
-/// `x` and `y` point at live ints.
-void ee_won_imgf_sample(int32_t sample, int32_t w, int32_t h, int32_t *x, int32_t *y);
-
-/// The first of `n` palette colours equal to `color`, or -1.
-///
-/// # Safety
-/// `colors` holds `n` colours (or `n` is 0).
-int32_t ee_won_imgf_palette_find(const uint32_t *colors, size_t n, uint32_t color);
-
-/// TrimImageFilter's rectangle into `rect` (left, top, width, height); false when every pixel is transparent.
-///
-/// # Safety
-/// `img` describes a live 8- or 32-bit image; `rect` has room for four ints.
-bool ee_won_imgf_trim(const EeWonRawPixels *img,
-                      uint8_t transparent,
-                      int32_t *rect);
-
-/// CropPixels' row copies.
-///
-/// # Safety
-/// Both describe live images holding the rows read and written.
-void ee_won_imgf_crop(const EeWonRawPixels *src,
-                      const EeWonRawPixels *dst,
-                      int32_t x_bytes,
-                      int32_t y,
-                      int32_t row_bytes,
-                      int32_t height);
-
-/// `StretchImageFilter`'s pixel work over the plan's `n` operations at `ops` (`stretch_run`).
-///
-/// # Safety
-/// As `stretch_run`; `ops` points at `n` operations (or `n` is 0).
-void ee_won_imgf_stretch_run(const EeWonRawPixels *src,
-                             const EeWonRawPixels *dst,
-                             const EeWonDrawOp *ops,
-                             size_t n);
-
-/// RawImage32::GetNative's transparency pass (`mask32`).
-///
-/// # Safety
-/// As `mask32`.
-void ee_won_imgf_mask32(uint32_t *pixels,
-                        int32_t width,
-                        int32_t height,
-                        uint8_t *mask,
-                        int32_t pitch);
-
-/// RawImage8::GetNative's mask (`mask8`).
-///
-/// # Safety
-/// As `mask8`.
-void ee_won_imgf_mask8(const uint8_t *pixels,
-                       int32_t width,
-                       int32_t height,
-                       int32_t pixel_pitch,
-                       int32_t transparent,
-                       uint8_t *mask,
-                       int32_t pitch);
-
-/// A new Rust InputBox for the C++ `component`, its calls out through `host`.
-EeWonInput *ee_won_input_new(void *component, EeWonGuiHostFn host);
-
-/// # Safety
-/// `input` came from `ee_won_input_new` (or is NULL) and is not used again.
-void ee_won_input_free(EeWonInput *input);
-
-/// One of InputBox's methods (`EeWonInputCall`).
-///
-/// # Safety
-/// `input` is live; the call's arguments as documented.
-ptrdiff_t ee_won_input_call(const EeWonInput *input,
-                            EeWonInputCall call,
-                            ptrdiff_t a,
-                            ptrdiff_t b,
-                            ptrdiff_t c);
-
 /// `IPAddr()`: zero, invalid, no remembered host.
 EeWonIpAddr *ee_won_ipaddr_new();
 
@@ -18397,473 +18874,6 @@ EeWonAddr ee_won_ipaddr_to_raw(const EeWonIpAddr *a);
 /// As `ee_won_ipaddr_clone`; `raw` is valid, its host `host_len` bytes.
 void ee_won_ipaddr_from_raw(EeWonIpAddr *a, const EeWonAddr *raw);
 
-/// A new Rust Label for the C++ `component`, its calls out through `host`.
-EeWonLabel *ee_won_label_new(void *component, EeWonGuiHostFn host);
-
-/// # Safety
-/// `label` came from `ee_won_label_new` (or is NULL) and is not used again.
-void ee_won_label_free(EeWonLabel *label);
-
-/// One of Label's methods (`EeWonLabelCall`).
-///
-/// # Safety
-/// `label` is live; the call's arguments as documented.
-ptrdiff_t ee_won_label_call(const EeWonLabel *label,
-                            EeWonLabelCall call,
-                            ptrdiff_t a,
-                            ptrdiff_t b,
-                            ptrdiff_t c);
-
-EeWonLanRecv ee_won_lanlogic_recv(bool op_ok, bool is_captain, bool socket_has_client);
-
-size_t ee_won_lanlogic_message_offset(bool is_captain, bool from_me);
-
-EeWonLanRoute ee_won_lanlogic_send_to_client(bool is_captain,
-                                             bool connected,
-                                             bool to_me,
-                                             bool has_socket);
-
-EeWonLanRoute ee_won_lanlogic_send_to_captain(bool connected,
-                                              bool is_captain,
-                                              bool has_server_socket);
-
-/// `broadcast` over `count` sockets: `send[i]` set for each socket sent to; returns whether it is handled locally.
-///
-/// # Safety
-/// Both arrays hold `count` entries (or are NULL with 0).
-bool ee_won_lanlogic_broadcast(bool is_captain,
-                               bool deliver_local,
-                               const bool *socket_has_client,
-                               bool *send,
-                               size_t count);
-
-EeWonLanClosed ee_won_lanlogic_socket_closed(bool have_socket,
-                                             bool is_captain,
-                                             bool has_client,
-                                             bool is_server_socket);
-
-EeWonLanSummary ee_won_lanlogic_summary(bool read_ok, bool existed);
-
-bool ee_won_lanlogic_can_broadcast(bool is_captain,
-                                   bool discovery,
-                                   bool have_game,
-                                   int32_t game_type);
-
-bool ee_won_lanlogic_advertises(int32_t game_type);
-
-bool ee_won_lanlogic_needs_peer_auth(int32_t game_type, bool cd_key_check);
-
-EeWonLanJoinStep ee_won_lanlogic_join_step(int32_t status);
-
-int32_t ee_won_lanlogic_reply_role(uint16_t id, uint16_t my_id, uint16_t captain_id);
-
-int32_t ee_won_lanlogic_client_action(bool connected,
-                                      int32_t room_spec,
-                                      bool has_client,
-                                      int32_t action);
-
-EeWonLanChatCommand ee_won_lanlogic_chat_command(bool connected,
-                                                 int32_t room_flags,
-                                                 int32_t command,
-                                                 bool has_target);
-
-bool ee_won_lanlogic_whisper_received(bool whisper, bool from_me);
-
-int32_t ee_won_lanlogic_refresh(int32_t screen);
-
-bool ee_won_lanlogic_name_accepted(int32_t result, size_t name_length);
-
-bool ee_won_lanlogic_port_accepted(int32_t result, int32_t old_port, int32_t new_port);
-
-int32_t ee_won_lanlogic_direct_default_port(bool have_config,
-                                            int32_t config_port,
-                                            int32_t lobby_port);
-
-bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
-
-int32_t ee_won_lanlogic_direct_event(bool existed);
-
-/// The game's LanLogic for the C++ shell `logic`: as `ee_won_lan_new`, with the model's ops answered by its Rust
-/// objects and the shell's members held here (lanown.rs): the shell's new client list and LAN (type 1) and
-/// direct-connect (type 3) game lists, a reference taken on each.
-///
-/// # Safety
-/// The lists are live model shells.
-EeWonLan *ee_won_lan_new_model(void *logic,
-                               EeWonLobbyHostFn host,
-                               void *clients,
-                               void *lan_games,
-                               void *direct_games);
-
-EeWonLan *ee_won_lan_new(void *logic, EeWonLobbyHostFn host);
-
-/// # Safety
-/// `lan` came from `ee_won_lan_new` (or is NULL) and is not used again.
-void ee_won_lan_free(EeWonLan *lan);
-
-/// One of LanLogic's methods (`EeWonLanCall`).
-///
-/// # Safety
-/// `lan` is live; the call's arguments as documented.
-ptrdiff_t ee_won_lan_call(const EeWonLan *lan,
-                          EeWonLanCall call,
-                          void *a,
-                          void *b,
-                          ptrdiff_t c,
-                          ptrdiff_t d);
-
-/// A new Rust instruction for the C++ shell `comp` (its calls out through `host`), from its constructor's numbers.
-///
-/// # Safety
-/// `init` points at a live `EeWonLayoutInit`.
-EeWonLayout *ee_won_layout_new(void *comp,
-                               EeWonGuiHostFn host,
-                               const EeWonLayoutInit *init);
-
-/// Frees a Rust instruction (its list held no references).
-///
-/// # Safety
-/// `lay` came from `ee_won_layout_new` (or is NULL) and is not used again.
-void ee_won_layout_free(EeWonLayout *lay);
-
-/// One of an instruction's methods (`EeWonLayoutCall`).
-///
-/// # Safety
-/// `lay` is live.
-ptrdiff_t ee_won_layout_call(const EeWonLayout *lay,
-                             EeWonLayoutCall call,
-                             ptrdiff_t a,
-                             ptrdiff_t b);
-
-/// `CenterLayout::Center(parent, child, horz, vert)`: a temporary centre layout (centre box the parent, the child
-/// listed) run on the parent.
-void ee_won_layout_center(EeWonGuiHostFn host,
-                          ptrdiff_t parent,
-                          ptrdiff_t child,
-                          bool horz,
-                          bool vert);
-
-/// A new Rust layout manager for the C++ shell `comp`, its calls out through `host`.
-EeWonLayoutMgr *ee_won_lmgr_new(void *comp, EeWonGuiHostFn host);
-
-/// Frees a Rust layout manager: the layout points, then the instructions, released (the original's members).
-///
-/// # Safety
-/// `mgr` came from `ee_won_lmgr_new` (or is NULL) and is not used again.
-void ee_won_lmgr_free(EeWonLayoutMgr *mgr);
-
-/// One of the manager's methods (`EeWonLayoutMgrCall`).
-///
-/// # Safety
-/// `mgr` is live; an instruction passed with its live Rust object.
-ptrdiff_t ee_won_lmgr_call(const EeWonLayoutMgr *mgr,
-                           EeWonLayoutMgrCall call,
-                           ptrdiff_t a,
-                           ptrdiff_t b,
-                           ptrdiff_t c,
-                           ptrdiff_t d);
-
-/// A new Rust ListArea for the C++ `component`, its calls out through `host`.
-EeWonList *ee_won_list_new(void *component, EeWonGuiHostFn host);
-
-/// # Safety
-/// `list` came from `ee_won_list_new` (or is NULL) and is not used again.
-void ee_won_list_free(EeWonList *list);
-
-/// One of ListArea's methods (`EeWonListCall`).
-///
-/// # Safety
-/// `list` is live; the call's arguments as documented.
-ptrdiff_t ee_won_list_call(const EeWonList *list,
-                           EeWonListCall call,
-                           ptrdiff_t a,
-                           ptrdiff_t b,
-                           ptrdiff_t c);
-
-/// The look-up `index` of `SLOTS` (NULL past the end).
-const EeWonLobbyCtlSlot *ee_won_lobbyctl_slot(uint32_t index);
-
-/// The number of look-ups in `SLOTS`.
-uint32_t ee_won_lobbyctl_slot_count();
-
-/// A new control object for the C++ `ctl` of `kind`.
-/// As `ee_won_lobbyctl_new`, with the model's ops answered by its Rust objects (the game's).
-EeWonLobbyCtl *ee_won_lobbyctl_new_model(void *ctl,
-                                         EeWonLobbyCtlKind kind,
-                                         EeWonLobbyCtlHostFn host);
-
-EeWonLobbyCtl *ee_won_lobbyctl_new(void *ctl, EeWonLobbyCtlKind kind, EeWonLobbyCtlHostFn host);
-
-/// Releases the members (reverse member order) and frees the object.
-///
-/// # Safety
-/// `p` came from `ee_won_lobbyctl_new` (or is NULL) and is not used again.
-void ee_won_lobbyctl_free(EeWonLobbyCtl *p);
-
-/// One inward call (`EeWonLobbyCtlCall`).
-///
-/// # Safety
-/// `p` is live; the call's arguments as documented.
-ptrdiff_t ee_won_lobbyctl_call(const EeWonLobbyCtl *p,
-                               EeWonLobbyCtlCall call,
-                               ptrdiff_t a,
-                               ptrdiff_t b,
-                               ptrdiff_t c);
-
-/// The control `index` of a kind's table (member order; its name, file, line and type), NULL past its end.
-const EeWonLobbyDlgSlot *ee_won_lobbydlg_slot(EeWonLobbyDlgKind kind,
-                                              uint32_t index);
-
-/// A new dialog object for the C++ `dialog` of `kind`.
-EeWonLobbyDlg *ee_won_lobbydlg_new(void *dialog, EeWonLobbyDlgKind kind, EeWonLobbyDlgHostFn host);
-
-/// Releases the controls (reverse member order) and frees the object.
-///
-/// # Safety
-/// `dlg` came from `ee_won_lobbydlg_new` (or is NULL) and is not used again.
-void ee_won_lobbydlg_free(EeWonLobbyDlg *dlg);
-
-/// One inward call (`EeWonLobbyDlgCall`).
-///
-/// # Safety
-/// `dlg` is live; the call's arguments as documented.
-ptrdiff_t ee_won_lobbydlg_call(const EeWonLobbyDlg *dlg,
-                               EeWonLobbyDlgCall call,
-                               ptrdiff_t a,
-                               ptrdiff_t b,
-                               ptrdiff_t c);
-
-/// `lobby_text` for the C++ (`won_lanmodel_test` checks it against LobbyLogicHost.cpp's table as it was).
-ptrdiff_t ee_won_lobby_text(ptrdiff_t code);
-
-/// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
-///
-/// # Safety
-/// `sink` is the `b` of a take op; `bytes` holds `length` bytes.
-void ee_won_lobby_sink(void *sink,
-                       const uint8_t *bytes,
-                       size_t length);
-
-/// A new, empty container.
-EeWonLobbyMap *ee_won_lobbymap_new(EeWonLobbyKeyKind kind, EeWonLobbyMapHooks hooks);
-
-/// Frees the container, dropping its objects.
-///
-/// # Safety
-/// `m` from `ee_won_lobbymap_new` (or null), not used after.
-void ee_won_lobbymap_free(EeWonLobbyMap *m);
-
-/// The number of entries.
-///
-/// # Safety
-/// `m` is live.
-size_t ee_won_lobbymap_len(const EeWonLobbyMap *m);
-
-/// `clear`.
-///
-/// # Safety
-/// `m` is live.
-void ee_won_lobbymap_clear(EeWonLobbyMap *m);
-
-/// `find`: the entry's position, or -1.
-///
-/// # Safety
-/// `m` is live, `key` a key of its kind.
-ptrdiff_t ee_won_lobbymap_find(const EeWonLobbyMap *m, const EeWonLobbyKey *key);
-
-/// `lower_bound`'s position (the length: `end()`).
-///
-/// # Safety
-/// As `ee_won_lobbymap_find`.
-size_t ee_won_lobbymap_lower_bound(const EeWonLobbyMap *m, const EeWonLobbyKey *key);
-
-/// `upper_bound`'s position.
-///
-/// # Safety
-/// As `ee_won_lobbymap_find`.
-size_t ee_won_lobbymap_upper_bound(const EeWonLobbyMap *m, const EeWonLobbyKey *key);
-
-/// `insert(value_type(key, empty))`: the entry's position; `inserted` (or null) says whether it is new (an empty
-/// entry: no object, numbers 0, no text). In insertion order a new value goes at the end.
-///
-/// # Safety
-/// As `ee_won_lobbymap_find`; `inserted` null or writable.
-size_t ee_won_lobbymap_insert(EeWonLobbyMap *m,
-                              const EeWonLobbyKey *key,
-                              bool *inserted);
-
-/// `erase(key)`: whether an entry went (its object dropped).
-///
-/// # Safety
-/// As `ee_won_lobbymap_find`.
-bool ee_won_lobbymap_erase(EeWonLobbyMap *m, const EeWonLobbyKey *key);
-
-/// `erase(position)` (nothing past the end).
-///
-/// # Safety
-/// `m` is live.
-void ee_won_lobbymap_erase_at(EeWonLobbyMap *m, size_t i);
-
-/// `erase(position, end())`.
-///
-/// # Safety
-/// `m` is live.
-void ee_won_lobbymap_erase_from(EeWonLobbyMap *m, size_t i);
-
-/// The container's assignment (`to = from`): `to`'s entries dropped, `from`'s copied (each object through the copy
-/// hook).
-///
-/// # Safety
-/// Both live, of the same kind and hooks; they may be the same map.
-void ee_won_lobbymap_assign(EeWonLobbyMap *to,
-                            const EeWonLobbyMap *from);
-
-/// The entry's object (null when none or past the end).
-///
-/// # Safety
-/// `m` is live.
-void *ee_won_lobbymap_obj(const EeWonLobbyMap *m, size_t i);
-
-/// Sets the entry's object (the map owns it from then on: a reference the caller added, or a record it made); the
-/// old one is dropped.
-///
-/// # Safety
-/// `m` is live, `i` a position.
-void ee_won_lobbymap_set_obj(EeWonLobbyMap *m,
-                             size_t i,
-                             void *obj);
-
-/// One of the entry's two numbers (0 past the end).
-///
-/// # Safety
-/// `m` is live.
-int64_t ee_won_lobbymap_num(const EeWonLobbyMap *m, size_t i, size_t slot);
-
-/// Sets one of the entry's numbers.
-///
-/// # Safety
-/// `m` is live.
-void ee_won_lobbymap_set_num(EeWonLobbyMap *m, size_t i, size_t slot, int64_t value);
-
-/// The entry's text (units as `u32`; `count` gets their number), valid until the map changes.
-///
-/// # Safety
-/// `m` is live, `count` writable.
-const uint32_t *ee_won_lobbymap_text(const EeWonLobbyMap *m, size_t i, size_t *count);
-
-/// Sets the entry's text (`count` units of `unit_size` bytes).
-///
-/// # Safety
-/// `m` is live; `text` holds the units.
-void ee_won_lobbymap_set_text(EeWonLobbyMap *m,
-                              size_t i,
-                              const void *text,
-                              size_t count,
-                              uint32_t unit_size);
-
-/// The entry's key as a number (an id map; 0 otherwise or past the end).
-///
-/// # Safety
-/// `m` is live.
-uint64_t ee_won_lobbymap_key_num(const EeWonLobbyMap *m, size_t i);
-
-/// The entry's key as an address (an address map; null otherwise), valid until the map changes.
-///
-/// # Safety
-/// `m` is live.
-const EeWonIpAddr *ee_won_lobbymap_key_addr(const EeWonLobbyMap *m, size_t i);
-
-/// The entry's key as text: `u32` units of a `GUIString` key, or the bytes of a narrow one (as `u8`), and their
-/// count; valid until the map changes.
-///
-/// # Safety
-/// `m` is live, `count` writable.
-const void *ee_won_lobbymap_key_text(const EeWonLobbyMap *m,
-                                     size_t i,
-                                     size_t *count);
-
-/// A new popup object for the C++ `popup` of `kind`.
-/// As `ee_won_lobbypopup_new`, with the model's ops answered by its Rust objects (the game's).
-EeWonLobbyPopup *ee_won_lobbypopup_new_model(void *popup,
-                                             EeWonLobbyPopupKind kind,
-                                             EeWonLobbyPopupHostFn host);
-
-EeWonLobbyPopup *ee_won_lobbypopup_new(void *popup,
-                                       EeWonLobbyPopupKind kind,
-                                       EeWonLobbyPopupHostFn host);
-
-/// Releases the members (reverse member order) and frees the object.
-///
-/// # Safety
-/// `p` came from `ee_won_lobbypopup_new` (or is NULL) and is not used again.
-void ee_won_lobbypopup_free(EeWonLobbyPopup *p);
-
-/// One inward call (`EeWonLobbyPopupCall`).
-///
-/// # Safety
-/// `p` is live; the call's arguments as documented.
-ptrdiff_t ee_won_lobbypopup_call(const EeWonLobbyPopup *p,
-                                 EeWonLobbyPopupCall call,
-                                 ptrdiff_t a,
-                                 ptrdiff_t b,
-                                 ptrdiff_t c);
-
-/// A new logic of `kind` for the C++ shell `obj`.
-EeWonLogic *ee_won_logic_new(EeWonLogicKind kind, void *obj, EeWonLogicHostFn host);
-
-/// The shell's destructor.
-///
-/// # Safety
-/// `p` came from [`ee_won_logic_new`] (or is null), not used after.
-void ee_won_logic_free(EeWonLogic *p);
-
-/// A method of the logic.
-///
-/// # Safety
-/// `p` is a live logic; the host's calls may come back into it (a completion run at once).
-ptrdiff_t ee_won_logic_call(const EeWonLogic *p,
-                            EeWonLogicCall call,
-                            ptrdiff_t a,
-                            ptrdiff_t b,
-                            ptrdiff_t c);
-
-/// A new ping op's members for the C++ shell `obj`.
-EeWonPingOp *ee_won_pingop_new(void *obj,
-                               EeWonLogicHostFn host,
-                               uint16_t request_id,
-                               uint8_t flags);
-
-/// The ping op's destructor.
-///
-/// # Safety
-/// `p` came from [`ee_won_pingop_new`] (or is null), not used after.
-void ee_won_pingop_free(EeWonPingOp *p);
-
-/// A virtual of the ping op.
-///
-/// # Safety
-/// `p` is a live ping op; for `CheckResponse`, `a` is a live reader.
-int64_t ee_won_pingop_call(const EeWonPingOp *p, EeWonPingOpCall call, ptrdiff_t a);
-
-/// A new Rust PopupMenu for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
-EeWonMenu *ee_won_menu_new(void *component,
-                           EeWonGuiHostFn host,
-                           const EeWonList *list);
-
-/// # Safety
-/// `menu` came from `ee_won_menu_new` (or is NULL) and is not used again.
-void ee_won_menu_free(EeWonMenu *menu);
-
-/// One of PopupMenu's methods (`EeWonMenuCall`).
-///
-/// # Safety
-/// `menu` is live; the call's arguments as documented.
-ptrdiff_t ee_won_menu_call(const EeWonMenu *menu,
-                           EeWonMenuCall call,
-                           ptrdiff_t a,
-                           ptrdiff_t b,
-                           ptrdiff_t c);
-
 /// Which list: 0 `GetPatchList`, 1 `GetValidPatchList`, 2 `GetHighestPatchList(from, to)`. The chosen patches'
 /// indices go to `put` in the list's order.
 ///
@@ -18904,194 +18914,6 @@ bool ee_won_regauth_password(bool decrypt,
 
 /// [`auth_port`].
 uint16_t ee_won_regauth_port(int32_t query_result, uint32_t value);
-
-/// `sync_plan` into `out` (room for `existing_count + incoming_count` steps); returns the step count.
-///
-/// # Safety
-/// The id arrays hold their counts; `out` has room for both counts' sum.
-size_t ee_won_model_sync_plan(const uint16_t *existing,
-                              size_t existing_count,
-                              const uint16_t *incoming,
-                              size_t incoming_count,
-                              EeWonSyncStep *out);
-
-/// `EeWonPopulation::add_group` (0), `joined` (1) or `left` (2) in place.
-///
-/// # Safety
-/// `p` is valid and writable.
-void ee_won_model_population(EeWonPopulation *p, int32_t what, uint32_t flags, uint32_t members);
-
-int32_t ee_won_model_server_num_clients(bool connected, uint32_t live, int32_t listed);
-
-EeWonClientStatus ee_won_model_client_status(uint32_t flags,
-                                             uint8_t chat_member,
-                                             uint8_t game_member);
-
-EeWonGroupKind ee_won_model_group_kind(uint32_t flags);
-
-uint8_t ee_won_model_friend_status(bool in_chat, bool in_game);
-
-uint8_t ee_won_model_friend_start_locate();
-
-uint8_t ee_won_model_friend_end_locate(uint8_t flags);
-
-bool ee_won_model_game_pinging(uint16_t ping);
-
-bool ee_won_model_game_querying(uint16_t ping);
-
-bool ee_won_model_game_stale(int64_t now, int32_t last_seen, int32_t max_age);
-
-bool ee_won_model_game_list_by_id(int32_t game_type);
-
-bool ee_won_model_same_game(int32_t type_a,
-                            int32_t type_b,
-                            uint16_t group_a,
-                            uint16_t group_b,
-                            bool same_address);
-
-/// `status_text`: the text's index, or -1.
-int32_t ee_won_model_status_text(int16_t status);
-
-/// `all_ready` over `count` members.
-///
-/// # Safety
-/// `members` holds `count` entries (or is NULL with 0).
-bool ee_won_model_all_ready(const EeWonMemberReady *members, size_t count);
-
-/// `dir_object`: 1 a population (into `out_count`), 2 the address list, 0 anything else. `data` NULL: no data.
-///
-/// # Safety
-/// `kind` holds `kind_length` bytes, `data` `data_length` (or is NULL); `out_count` is writable.
-int32_t ee_won_model_dir_object(const uint8_t *kind,
-                                size_t kind_length,
-                                const uint8_t *data,
-                                size_t data_length,
-                                uint16_t *out_count);
-
-/// A new model object for the shell (its constructor's members); `empty` is the empty string's `GUIStringData`.
-///
-/// # Safety
-/// `shell` is the C++ object whose first member will hold the result; `host` answers the ops.
-EeWonModel *ee_won_model_new(void *shell,
-                             EeWonModelKind kind,
-                             EeWonModelHost host,
-                             void *empty);
-
-/// Frees a model object (its references given back in reverse member order, after it is gone).
-///
-/// # Safety
-/// `m` came from `ee_won_model_new` and is freed once.
-void ee_won_model_free(EeWonModel *m);
-
-/// A walk's `Rewind` (`LobbyClientIterator`, `LobbyClientSetIterator`): from the first client again.
-///
-/// # Safety
-/// `c` is a live cursor.
-void ee_won_model_cursor_reset(EeWonModelCursor *c);
-
-/// A member (see [`EeWonModelField`]).
-///
-/// # Safety
-/// `m` is live.
-ptrdiff_t ee_won_model_get(const EeWonModel *m, EeWonModelField f);
-
-/// Sets a member (see [`EeWonModelField`]).
-///
-/// # Safety
-/// `m` is live; an address is a live value.
-void ee_won_model_set(const EeWonModel *m, EeWonModelField f, ptrdiff_t v);
-
-/// A method (see [`EeWonModelCall`]); `empty` (`d`) is the empty string's data where a method resets a name.
-///
-/// # Safety
-/// `m` is live; the arguments are what each call says.
-ptrdiff_t ee_won_model_call(const EeWonModel *m,
-                            EeWonModelCall call,
-                            ptrdiff_t a,
-                            ptrdiff_t b,
-                            ptrdiff_t c,
-                            ptrdiff_t d);
-
-/// A new Rust MSButtonBase for the C++ `component`, its calls out through `host`.
-EeWonMsButton *ee_won_msbtn_new(void *component, EeWonGuiHostFn host);
-
-/// # Safety
-/// `btn` came from `ee_won_msbtn_new` (or is NULL) and is not used again.
-void ee_won_msbtn_free(EeWonMsButton *btn);
-
-/// One of MSButtonBase's methods (`EeWonMsBtnCall`).
-///
-/// # Safety
-/// `btn` is live; the call's arguments as documented.
-ptrdiff_t ee_won_msbtn_call(const EeWonMsButton *btn,
-                            EeWonMsBtnCall call,
-                            ptrdiff_t a,
-                            ptrdiff_t b,
-                            ptrdiff_t c);
-
-/// The plan of `p` (an [`EeWonMsPaintKind`] paint) into `out` (`cap` entries); answers the plan's length, which
-/// may be more than `cap` (the C++ asks again with room).
-///
-/// # Safety
-/// `p` is live; `out` has room for `cap` operations (or is NULL with `cap` 0).
-size_t ee_won_mspaint_plan(const EeWonMsPaint *p,
-                           EeWonDrawOp *out,
-                           size_t cap);
-
-/// A new Rust MultiListArea for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
-EeWonMulti *ee_won_multi_new(void *component,
-                             EeWonGuiHostFn host,
-                             const EeWonList *list);
-
-/// # Safety
-/// `multi` came from `ee_won_multi_new` (or is NULL) and is not used again.
-void ee_won_multi_free(EeWonMulti *multi);
-
-/// One of MultiListArea's methods (`EeWonMultiCall`).
-///
-/// # Safety
-/// `multi` is live; the call's arguments as documented.
-ptrdiff_t ee_won_multi_call(const EeWonMulti *multi,
-                            EeWonMultiCall call,
-                            ptrdiff_t a,
-                            ptrdiff_t b,
-                            ptrdiff_t c);
-
-/// A new Rust MultiListItem for the C++ row `component`; `host` gives the cells' references.
-EeWonMRow *ee_won_mrow_new(void *component, EeWonGuiHostFn host);
-
-/// # Safety
-/// `row` came from `ee_won_mrow_new` (or is NULL) and is not used again.
-void ee_won_mrow_free(EeWonMRow *row);
-
-/// One of MultiListItem's methods (`EeWonMRowCall`); `multi` is the row's list's Rust object (NULL for the calls
-/// that need no list).
-///
-/// # Safety
-/// `row` is live; `multi` is live or NULL; the call's arguments as documented.
-ptrdiff_t ee_won_mrow_call(const EeWonMRow *row,
-                           const EeWonMulti *multi,
-                           EeWonMRowCall call,
-                           ptrdiff_t a,
-                           ptrdiff_t b,
-                           ptrdiff_t c);
-
-/// A new Rust MultiListHeader for the C++ `component`, its calls out through `host`.
-EeWonMHead *ee_won_mhead_new(void *component, EeWonGuiHostFn host);
-
-/// # Safety
-/// `head` came from `ee_won_mhead_new` (or is NULL) and is not used again.
-void ee_won_mhead_free(EeWonMHead *head);
-
-/// One of MultiListHeader's methods (`EeWonMHeadCall`).
-///
-/// # Safety
-/// `head` is live; the call's arguments as documented.
-ptrdiff_t ee_won_mhead_call(const EeWonMHead *head,
-                            EeWonMHeadCall call,
-                            ptrdiff_t a,
-                            ptrdiff_t b,
-                            ptrdiff_t c);
 
 /// `new MultiPingOp`: the Rust op a `RustServerOp` runs.
 EeWonHostOp *ee_won_multiping_new();
@@ -19305,23 +19127,6 @@ void ee_won_completion_run(const EeWonCompletion *c, void *op);
 /// # Safety
 /// `c` came from [`EeWonCompletion::make`] (or is null), not used after.
 void ee_won_completion_free(EeWonCompletion *c);
-
-/// A new Rust ScrollArea for the C++ `component`, its calls out through `host`.
-EeWonScrollPane *ee_won_pane_new(void *component, EeWonGuiHostFn host);
-
-/// # Safety
-/// `pane` came from `ee_won_pane_new` (or is NULL) and is not used again.
-void ee_won_pane_free(EeWonScrollPane *pane);
-
-/// One of ScrollArea's methods (`EeWonPaneCall`).
-///
-/// # Safety
-/// `pane` is live; the call's arguments as documented.
-ptrdiff_t ee_won_pane_call(const EeWonScrollPane *pane,
-                           EeWonPaneCall call,
-                           ptrdiff_t a,
-                           ptrdiff_t b,
-                           ptrdiff_t c);
 
 /// A record's or reply's read into `sink`: `kind` 0 a `VersionData`, 1 a `PatchData`, 2 a `PatchData` of a patch
 /// list, 3 the version check's reply data, 4 the patch list's.
@@ -19700,453 +19505,6 @@ void ee_won_perf_start(bool named, bool *running);
 /// # Safety
 /// As `ee_won_perf_start`.
 void ee_won_perf_stop(bool named, bool *running);
-
-/// `write_global` into the sink.
-///
-/// # Safety
-/// The lists and arrays hold `names.count` entries; the sink's contract.
-void ee_won_prefs_write_global(const EeWonGlobalPrefsOut *p, EeWonByteSink sink, void *context);
-
-/// `write_user` into the sink.
-///
-/// # Safety
-/// The lists and arrays hold their counts; the sink's contract.
-void ee_won_prefs_write_user(const EeWonUserPrefsOut *p, EeWonByteSink sink, void *context);
-
-/// `read_global` (the file's bytes) to the sink.
-///
-/// # Safety
-/// `bytes` holds `length` bytes; the sink's contract. No reference into Rust is kept past each call.
-EeWonPrefsRead ee_won_prefs_read_global(const uint8_t *bytes,
-                                        size_t length,
-                                        EeWonPrefsSink sink,
-                                        void *context);
-
-/// `read_user` to the sink.
-///
-/// # Safety
-/// As `ee_won_prefs_read_global`.
-EeWonPrefsRead ee_won_prefs_read_user(const uint8_t *bytes,
-                                      size_t length,
-                                      bool lan_user,
-                                      EeWonPrefsSink sink,
-                                      void *context);
-
-/// `user_file_name` into the sink.
-///
-/// # Safety
-/// The sink's contract.
-void ee_won_prefs_user_file_name(int32_t id, EeWonByteSink sink, void *context);
-
-/// `find_unused_user_id`.
-///
-/// # Safety
-/// `ids` holds `count` ids in ascending order.
-int32_t ee_won_prefs_unused_user_id(const int32_t *ids, size_t count);
-
-/// `prune_users`: `drop[i]` set to 1 for a user dropped without its file, 2 with it, else 0.
-///
-/// # Safety
-/// `ids`, `times` and `drop` hold `count` entries.
-void ee_won_prefs_prune_users(const int32_t *ids,
-                              const int64_t *times,
-                              size_t count,
-                              uint8_t *drop);
-
-/// `prune_lan_names`: `drop[i]` set for each name dropped.
-///
-/// # Safety
-/// `times` and `drop` hold `count` entries.
-void ee_won_prefs_prune_lan_names(const int64_t *times, size_t count, bool *drop);
-
-/// `recent_lan_name`, -1 for none.
-///
-/// # Safety
-/// `times` holds `count` entries.
-int64_t ee_won_prefs_recent_lan_name(const int64_t *times, size_t count);
-
-uint16_t ee_won_prefs_default_lan_number(uint32_t host);
-
-/// A system cursor (`PlatSystemCursor`).
-EeWonPlatCursor *ee_won_plat_cursor_system(const EeWonPlatCursorFns *fns, uint32_t cursor);
-
-/// A cursor of `width` x `height` pixels (copied) with its hot spot.
-///
-/// # Safety
-/// `pixels` holds `width * height` values (or is NULL with a size of 0).
-EeWonPlatCursor *ee_won_plat_cursor_pixels(const EeWonPlatCursorFns *fns,
-                                           const uint32_t *pixels,
-                                           int32_t width,
-                                           int32_t height,
-                                           int32_t hot_x,
-                                           int32_t hot_y);
-
-/// # Safety
-/// `c` came from a constructor above, freed once.
-void ee_won_plat_cursor_free(EeWonPlatCursor *c);
-
-/// `PlatCursor::Apply`.
-void ee_won_plat_cursor_apply(EeWonPlatCursor *c);
-
-/// `new PlatGUIFont(context, descriptor)`'s font: `face` the descriptor's face (NUL-terminated).
-///
-/// # Safety
-/// `face` is NUL-terminated (or null: no face).
-EeWonPlatFont *ee_won_plat_font_new(const char *face, int32_t size, int32_t style);
-
-/// The font's destruction (its platform fonts with it).
-///
-/// # Safety
-/// `f` is null or from `ee_won_plat_font_new`, not freed before.
-void ee_won_plat_font_free(EeWonPlatFont *f);
-
-/// `GetHeight()` (0), `GetAscent()` (1), `GetDescent()` (2).
-///
-/// # Safety
-/// `f` is a live font.
-int32_t ee_won_plat_font_metric(const EeWonPlatFont *f, int32_t which);
-
-/// `GetStringWidth(text, offset, length)` over the `len` units at `text` (the offset applied by the caller).
-///
-/// # Safety
-/// `f` is a live font; `text` holds `len` units.
-int32_t ee_won_plat_font_width(const EeWonPlatFont *f,
-                               const void *text,
-                               uint16_t len);
-
-/// `DrawString(context, text, offset, length, x, y)` once the context is known: the text drawn into the context's
-/// surface `s` (null: none) at its pixel scale in `color` (the Graphics' colour without its top byte, 0 without
-/// one); the underline to draw into `line` (x1, y, x2) and true when the font is underlined and `graphics`.
-///
-/// # Safety
-/// `f` is a live font; `s` null or a live surface; `text` holds `len` units; `line` holds three ints.
-bool ee_won_plat_font_draw(EeWonPlatFont *f,
-                           EeWonSurface *s,
-                           float scale,
-                           bool graphics,
-                           uint32_t color,
-                           const void *text,
-                           uint16_t len,
-                           int32_t x,
-                           int32_t y,
-                           int32_t *line);
-
-/// A `PlatGraphics` hook on the surface `s` (null: the graphics has none) at pixel scale `scale`, with Graphics'
-/// colour `color`; GetPixel's answer (0 for the others).
-///
-/// # Safety
-/// `s` is null or a live surface no one else uses during the call.
-uint32_t ee_won_plat_gfx(EeWonSurface *s,
-                         float scale,
-                         uint32_t color,
-                         EeWonPlatGfx op,
-                         int32_t a,
-                         int32_t b,
-                         int32_t c,
-                         int32_t d,
-                         int32_t e,
-                         int32_t f);
-
-/// `DrawPolygonHook` (`fill` false) or `FillPolygonHook` over `count` points, `xy` their x and y in turn.
-///
-/// # Safety
-/// `s` as `ee_won_plat_gfx`; `xy` holds `2 * count` ints (or count <= 0).
-void ee_won_plat_gfx_polygon(EeWonSurface *s,
-                             float scale,
-                             uint32_t color,
-                             bool fill,
-                             const int32_t *xy,
-                             int32_t count);
-
-/// `PlatNativeImage::Draw(context, x, y, left, top, width, height)` once the context has a surface `dst` (of pixel
-/// scale `dst_scale`): the image `src` (scale `src_scale`, logical `src_w` x `src_h`, mask `mask` or null).
-///
-/// # Safety
-/// `dst` and `src` are live surfaces (they may be the same one); `mask` as `mask_of`.
-void ee_won_plat_img_draw(EeWonSurface *dst,
-                          float dst_scale,
-                          EeWonSurface *src,
-                          float src_scale,
-                          int32_t src_w,
-                          int32_t src_h,
-                          const EeWonPlatMask *mask,
-                          int32_t x,
-                          int32_t y,
-                          int32_t left,
-                          int32_t top,
-                          int32_t width,
-                          int32_t height);
-
-/// `PlatNativeImage::GetRaw`'s pixels into `out` (`width * height` of them): `src` at `scale`, logical
-/// `width` x `height`, mask `mask` or null.
-///
-/// # Safety
-/// `src` is a live surface; `out` holds `width * height` pixels; `mask` as `mask_of`.
-void ee_won_plat_img_raw(EeWonSurface *src,
-                         float scale,
-                         int32_t width,
-                         int32_t height,
-                         const EeWonPlatMask *mask,
-                         uint32_t *out);
-
-/// A raw image's native image into the new image's surface `dst` (`from_raw`); `palette` holds `colors` colours.
-///
-/// # Safety
-/// `src` describes a live raw image (its `pitch` the row bytes of a 1- or 8-bit one); `palette` null or `colors`
-/// long; `dst` a live surface.
-void ee_won_plat_img_from_raw(const EeWonRawPixels *src,
-                              const uint32_t *palette,
-                              int32_t colors,
-                              int32_t transparent,
-                              EeWonSurface *dst);
-
-/// The pack's file name `which` (0, 1) for `path` (NUL-terminated) into `out` (`cap` bytes, NUL-terminated):
-/// its length, or -1 when there is none (another path, or the .png name is the first).
-///
-/// # Safety
-/// `path` is NUL-terminated; `out` holds `cap` bytes.
-int32_t ee_won_plat_pack_name(const uint8_t *path,
-                              int32_t which,
-                              uint8_t *out,
-                              size_t cap);
-
-/// `pack_factor` and `pack_scale`: the copy's scale (0: not a pack copy) and box into `*out_box`.
-///
-/// # Safety
-/// `out_box` is valid.
-int32_t ee_won_plat_pack_fit(int32_t raw_w,
-                             int32_t raw_h,
-                             int32_t w,
-                             int32_t h,
-                             int32_t shift,
-                             int32_t *out_box);
-
-/// `pack_reduce` from the pack copy's surface `from` into the new image's surface `to`.
-///
-/// # Safety
-/// `from`, `to` live distinct surfaces; `mask` as `mask_of`.
-void ee_won_plat_pack_reduce(EeWonSurface *from,
-                             EeWonSurface *to,
-                             int32_t w,
-                             int32_t h,
-                             int32_t scale,
-                             int32_t b,
-                             const EeWonPlatMask *mask);
-
-/// The WON hand cursor's 1,024 pixels into `out`.
-///
-/// # Safety
-/// `out` holds 1,024 pixels.
-void ee_won_plat_hand_cursor(uint32_t *out);
-
-/// A new window for the shell `me` and its host.
-EeWonPlatWin *ee_won_plat_win_new(void *me, EeWonPlatWinHost host);
-
-/// # Safety
-/// `w` came from `ee_won_plat_win_new`, freed once (after its Destroy call).
-void ee_won_plat_win_free(EeWonPlatWin *w);
-
-/// One of the window's calls (`EeWonPlatWinCall`, its arguments as each says).
-///
-/// # Safety
-/// `w` is a live window; the pointers a call reads or writes are valid.
-ptrdiff_t ee_won_plat_win(EeWonPlatWin *w,
-                          EeWonPlatWinCall c,
-                          ptrdiff_t a,
-                          ptrdiff_t b,
-                          ptrdiff_t cc,
-                          ptrdiff_t d);
-
-/// A new manager for the C++ `me` and its host.
-EeWonPlatWm *ee_won_plat_wm_new(void *me, EeWonPlatWmHost host);
-
-/// The manager's destruction.
-///
-/// # Safety
-/// `m` is null or from `ee_won_plat_wm_new`, not freed before.
-void ee_won_plat_wm_free(EeWonPlatWm *m);
-
-/// A call (`EeWonPlatWmCall`).
-///
-/// # Safety
-/// `m` is a live manager; a window argument is a live window (or null where the call takes one).
-ptrdiff_t ee_won_plat_wm(const EeWonPlatWm *m, EeWonPlatWmCall call, ptrdiff_t a, ptrdiff_t b);
-
-/// `SetPixelScale(scale)`.
-///
-/// # Safety
-/// `m` is a live manager.
-void ee_won_plat_wm_set_scale(const EeWonPlatWm *m, float scale);
-
-/// `GetPixelScale()`.
-///
-/// # Safety
-/// `m` is a live manager.
-float ee_won_plat_wm_scale(const EeWonPlatWm *m);
-
-/// `SetPresentRect(l, t, w, h)`.
-///
-/// # Safety
-/// `m` is a live manager.
-void ee_won_plat_wm_present(const EeWonPlatWm *m, float l, float t, float w, float h);
-
-/// `LockFrame(...)`: `out` gets the pixels' address and then width, height, pitch, logical width, logical height,
-/// serial in `ints` (six).
-///
-/// # Safety
-/// `m` is a live manager; `pixels` writable, `ints` six writable ints.
-bool ee_won_plat_wm_lock_frame(const EeWonPlatWm *m,
-                               const uint32_t **pixels,
-                               uint32_t *ints);
-
-/// HandlePlatEvent's translation: true when the event goes on to the game's forward function.
-///
-/// # Safety
-/// `m` is a live manager; `e` a `PlatInputEvent`.
-bool ee_won_plat_wm_event(const EeWonPlatWm *m, const EeWonPlatEvent *e);
-
-/// `GetMousePosition(x, y)`.
-///
-/// # Safety
-/// `m` is a live manager; `x`, `y` writable.
-bool ee_won_plat_wm_mouse(const EeWonPlatWm *m, int32_t *x, int32_t *y);
-
-/// `PlatGUIWindow::GetClientRect` of the window's fields at `i` into the four ints at `out`.
-///
-/// # Safety
-/// `i` is readable, `out` four writable ints.
-void ee_won_plat_client_rect(const EeWonPlatWinInfo *i, int32_t *out);
-
-/// The constructor's state (see [`EeWonLobbyPrefs::new`]).
-EeWonLobbyPrefs *ee_won_lobbyprefs_new();
-
-/// Frees the object.
-///
-/// # Safety
-/// `p` from `ee_won_lobbyprefs_new` (or null), not used after.
-void ee_won_lobbyprefs_free(EeWonLobbyPrefs *p);
-
-/// A flag.
-///
-/// # Safety
-/// `p` is live.
-bool ee_won_lobbyprefs_flag(const EeWonLobbyPrefs *p, EeWonPrefsFlag f);
-
-/// Sets a flag.
-///
-/// # Safety
-/// `p` is live.
-void ee_won_lobbyprefs_set_flag(EeWonLobbyPrefs *p, EeWonPrefsFlag f, bool on);
-
-/// The setters' rule (see [`EeWonLobbyPrefs::change_flag`]).
-///
-/// # Safety
-/// `p` is live.
-void ee_won_lobbyprefs_change_flag(EeWonLobbyPrefs *p, EeWonPrefsFlag f, bool on);
-
-/// The current user's id (0: the LAN user).
-///
-/// # Safety
-/// `p` is live.
-int64_t ee_won_lobbyprefs_current_user(const EeWonLobbyPrefs *p);
-
-/// Sets the current user's id.
-///
-/// # Safety
-/// `p` is live.
-void ee_won_lobbyprefs_set_current_user(EeWonLobbyPrefs *p, int64_t id);
-
-/// A number.
-///
-/// # Safety
-/// `p` is live.
-uint16_t ee_won_lobbyprefs_number(const EeWonLobbyPrefs *p, EeWonPrefsNumber n);
-
-/// Sets a number.
-///
-/// # Safety
-/// `p` is live.
-void ee_won_lobbyprefs_set_number(EeWonLobbyPrefs *p, EeWonPrefsNumber n, uint16_t v);
-
-/// The setters' rule for a number.
-///
-/// # Safety
-/// `p` is live.
-void ee_won_lobbyprefs_change_number(EeWonLobbyPrefs *p, EeWonPrefsNumber n, uint16_t v);
-
-/// The network adapter (a numeric IPv4 address, 0 for the default).
-///
-/// # Safety
-/// `p` is live.
-int64_t ee_won_lobbyprefs_network_adapter(const EeWonLobbyPrefs *p);
-
-/// Sets the network adapter.
-///
-/// # Safety
-/// `p` is live.
-void ee_won_lobbyprefs_set_network_adapter(EeWonLobbyPrefs *p, int64_t a);
-
-/// `LobbySaveNetworkAdapter`'s rule.
-///
-/// # Safety
-/// `p` is live.
-void ee_won_lobbyprefs_save_network_adapter(EeWonLobbyPrefs *p, int64_t local_host);
-
-/// A text's UTF-8 bytes (valid until the text changes), its length in `*length`.
-///
-/// # Safety
-/// `p` is live, `length` writable.
-const uint8_t *ee_won_lobbyprefs_text(const EeWonLobbyPrefs *p, EeWonPrefsText t, size_t *length);
-
-/// Sets a text.
-///
-/// # Safety
-/// `p` is live; `s` null or `n` readable bytes.
-void ee_won_lobbyprefs_set_text(EeWonLobbyPrefs *p, EeWonPrefsText t, const uint8_t *s, size_t n);
-
-/// `LobbySetTabSelect`'s rule.
-///
-/// # Safety
-/// As `ee_won_lobbyprefs_set_text`.
-void ee_won_lobbyprefs_change_tab_select(EeWonLobbyPrefs *p, const uint8_t *s, size_t n);
-
-/// `LobbySetLastRoom`'s rule.
-///
-/// # Safety
-/// `p` is live; each text null or its length's readable bytes.
-void ee_won_lobbyprefs_set_last_room(EeWonLobbyPrefs *p,
-                                     const uint8_t *server,
-                                     size_t server_length,
-                                     const uint8_t *room,
-                                     size_t room_length);
-
-/// `RestoreDefaults`; true for the LAN user (the caller then sets the default LAN name).
-///
-/// # Safety
-/// `p` is live; each text null or its length's readable bytes.
-bool ee_won_lobbyprefs_restore_defaults(EeWonLobbyPrefs *p,
-                                        const uint8_t *quick_play,
-                                        size_t quick_play_length,
-                                        const uint8_t *lan,
-                                        size_t lan_length);
-
-/// `LobbyRestoreDefaults`' rule after the restore.
-///
-/// # Safety
-/// `p` is live.
-void ee_won_lobbyprefs_after_restore(EeWonLobbyPrefs *p, int64_t old_adapter);
-
-/// The end of `SaveGlobalPrefs`.
-///
-/// # Safety
-/// `p` is live.
-void ee_won_lobbyprefs_after_global_save(EeWonLobbyPrefs *p);
-
-/// The end of `LoadUserPrefs`.
-///
-/// # Safety
-/// `p` is live.
-void ee_won_lobbyprefs_after_user_load(EeWonLobbyPrefs *p);
 
 /// A new queue object for the C++ `socket`, on the socket's lock `lock`; its calls are answered in Rust over the
 /// library's `core` table (cppcore.rs).
@@ -20616,42 +19974,6 @@ EeWonReqOp *ee_won_reqop_version_check(const uint8_t *product,
                                        const uint8_t *version,
                                        size_t version_len);
 
-size_t ee_won_resource_count();
-
-/// Row `index` (below `ee_won_resource_count`) into `out`; false past the end.
-///
-/// # Safety
-/// `out` is writable.
-bool ee_won_resource_row(size_t index, EeWonResource *out);
-
-/// The kind of resource `res` (its row's).
-EeWonResKind ee_won_lobbyres_kind(EeWonLobbyRes res);
-
-/// A new Rust RootContainer for the C++ `component` over its container's Rust object `ct`, its calls out through
-/// `host`.
-///
-/// # Safety
-/// `ct` is the component's live container object and outlives the root's.
-EeWonRoot *ee_won_root_new(void *component,
-                           EeWonGuiHostFn host,
-                           const EeWonContainer *ct);
-
-/// The destructor's statements (the queued backgrounds' images released), then the object freed.
-///
-/// # Safety
-/// `root` came from `ee_won_root_new` (or is NULL) and is not used again.
-void ee_won_root_free(EeWonRoot *root);
-
-/// One of RootContainer's methods (`EeWonRootCall`).
-///
-/// # Safety
-/// `root` is live; the call's arguments as documented.
-ptrdiff_t ee_won_root_call(const EeWonRoot *root,
-                           EeWonRootCall call,
-                           ptrdiff_t a,
-                           ptrdiff_t b,
-                           ptrdiff_t c);
-
 /// A new routing connection object for the C++ `conn` (the hooks get it), on the socket's lock `lock`.
 ///
 /// # Safety
@@ -20749,33 +20071,6 @@ bool ee_won_smart_handle_input(EeWonSmartRoute *r,
                                const void *text,
                                size_t len,
                                int32_t group);
-
-/// As `ee_won_routelogic_new`, with the model's ops answered by its Rust objects (the game's).
-EeWonRouteLogic *ee_won_routelogic_new_model(void *obj, EeWonRouteLogicHostFn host);
-
-/// A new logic for the shell `obj` (the members as the constructor sets them).
-EeWonRouteLogic *ee_won_routelogic_new(void *obj, EeWonRouteLogicHostFn host);
-
-/// Frees a logic, giving back the references it holds.
-///
-/// # Safety
-/// `p` is NULL or from `ee_won_routelogic_new`, not used again.
-void ee_won_routelogic_free(EeWonRouteLogic *p);
-
-/// One of the logic's methods (`EeWonRouteLogicCall`).
-///
-/// # Safety
-/// `p` is from `ee_won_routelogic_new`; the arguments are what the call says.
-ptrdiff_t ee_won_routelogic_call(const EeWonRouteLogic *p,
-                                 EeWonRouteLogicCall call,
-                                 ptrdiff_t a,
-                                 ptrdiff_t b);
-
-/// Pushes a number to a sink an op was given (`BadUserIds`, `StatusOpMap`).
-///
-/// # Safety
-/// `sink` is the pointer the op was given.
-void ee_won_routelogic_push(void *sink, uint64_t value);
 
 /// A request's message into `sink`.
 ///
@@ -20941,78 +20236,6 @@ void ee_won_routeop_records(const EeWonRouteOp *op,
                             int32_t which,
                             EeWonRouteRecordSink sink,
                             void *context);
-
-/// `room_spec`; a negative group is none.
-int32_t ee_won_routing_room_spec(uint16_t id, int32_t chat_group, int32_t game_group);
-
-int32_t ee_won_routing_group_of_spec(int32_t spec);
-
-uint16_t ee_won_routing_ping_ceiling(bool have_config, uint16_t config_ceiling);
-
-EeWonQuickPlay ee_won_routing_quick_play_rank(bool password,
-                                              bool ask_to_join,
-                                              bool can_join,
-                                              uint16_t ping,
-                                              int32_t skill,
-                                              int32_t wanted,
-                                              uint16_t ping_limit,
-                                              uint16_t ceiling);
-
-bool ee_won_routing_should_locate_friend(bool locating,
-                                         bool on_current_server,
-                                         size_t server_count,
-                                         bool connected,
-                                         uint32_t now,
-                                         uint32_t last_locate);
-
-/// `default_server` over `count` servers: the index, or -1.
-///
-/// # Safety
-/// `servers` holds `count` entries (or is NULL with 0).
-int64_t ee_won_routing_default_server(const EeWonServerPick *servers, size_t count);
-
-/// The (mask, flags) of `anonymous_flags` (`which` 0) or `dirty_word_flags` (1) into the outs.
-///
-/// # Safety
-/// Both outs are writable.
-void ee_won_routing_client_flags(int32_t which, bool on, uint32_t *out_mask, uint32_t *out_flags);
-
-bool ee_won_routing_can_add_friend(size_t count);
-
-/// A new Rust Scroller for the C++ `component`, its calls out through `host`.
-EeWonScroller *ee_won_scroller_new(void *component, EeWonGuiHostFn host);
-
-/// # Safety
-/// `scroller` came from `ee_won_scroller_new` (or is NULL) and is not used again.
-void ee_won_scroller_free(EeWonScroller *scroller);
-
-/// One of Scroller's or ScrollbarScroller's methods (`EeWonScrollerCall`).
-///
-/// # Safety
-/// `scroller` is live; the call's arguments as documented.
-ptrdiff_t ee_won_scroller_call(const EeWonScroller *scroller,
-                               EeWonScrollerCall call,
-                               ptrdiff_t a,
-                               ptrdiff_t b,
-                               ptrdiff_t c);
-
-/// A new scrolling text for the C++ component `comp`.
-EeWonScrollText *ee_won_scrolltext_new(void *comp, EeWonScrollTextHostFn host);
-
-/// Frees the lines (front to back) and the object.
-///
-/// # Safety
-/// `st` came from `ee_won_scrolltext_new` (or is NULL) and is not used again.
-void ee_won_scrolltext_free(EeWonScrollText *st);
-
-/// One inward call (`EeWonScrollTextCall`).
-///
-/// # Safety
-/// `st` is live; the call's arguments as documented.
-ptrdiff_t ee_won_scrolltext_call(const EeWonScrollText *st,
-                                 EeWonScrollTextCall call,
-                                 ptrdiff_t a,
-                                 ptrdiff_t b);
 
 /// A new connection object for the C++ `conn`, on the socket's lock `lock`; its calls are answered in Rust over the
 /// library's `core` table but the two of `cpp` (cppcore.rs).
@@ -21290,19 +20513,6 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// # Safety
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
-
-/// `layout` for the C++ (`w`, `h` null for a layout that has no size out).
-///
-/// # Safety
-/// `me` is the component `host` serves; `w` and `h` are null or point at ints.
-void ee_won_skin_layout(EeWonSkinLayKind kind,
-                        void *me,
-                        EeWonGuiHostFn host,
-                        int32_t a,
-                        ptrdiff_t b,
-                        int32_t c,
-                        int32_t *w,
-                        int32_t *h);
 
 /// A new model: the ignore file's path (`path_len` bytes), the C++'s `wchar_t` size.
 ///
@@ -21931,114 +21141,6 @@ size_t ee_won_socket_thread_len(const EeWonSocketThread *t);
 bool ee_won_socket_thread_do_op(const EeWonCoreHooks *core,
                                 void *op);
 
-/// A new Rust Splitter for the C++ `component`, its calls out through `host`.
-EeWonSplitter *ee_won_split_new(void *component, EeWonGuiHostFn host);
-
-/// # Safety
-/// `split` came from `ee_won_split_new` (or is NULL) and is not used again.
-void ee_won_split_free(EeWonSplitter *split);
-
-/// One of Splitter's methods (`EeWonSplitCall`).
-///
-/// # Safety
-/// `split` is live; the call's arguments as documented.
-ptrdiff_t ee_won_split_call(const EeWonSplitter *split,
-                            EeWonSplitCall call,
-                            ptrdiff_t a,
-                            ptrdiff_t b,
-                            ptrdiff_t c);
-
-/// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
-///
-/// # Safety
-/// `bytes` holds `length` bytes; `out` is writable.
-int32_t ee_won_room_read(const uint8_t *bytes, size_t length, bool joining, EeWonRoomMsg *out);
-
-/// `room_accepts`.
-///
-/// # Safety
-/// Both point to valid structs.
-bool ee_won_room_accepts(const EeWonRoomMsg *m, const EeWonRoomRoles *roles);
-
-/// `room_message` into the sink.
-///
-/// # Safety
-/// `m` is valid; the sink's contract.
-void ee_won_room_message(const EeWonRoomMsg *m, EeWonByteSink sink, void *context);
-
-/// `player_head` into the sink.
-///
-/// # Safety
-/// The sink's contract.
-void ee_won_room_player_head(uint16_t ping, bool ready, EeWonByteSink sink, void *context);
-
-int32_t ee_won_room_start_exit_code(bool i_am_captain);
-
-/// `ready_state` in place.
-///
-/// # Safety
-/// `s` is valid and writable.
-void ee_won_room_ready_state(EeWonReadyState *s);
-
-bool ee_won_game_is_full(int32_t players, int32_t open_slots);
-
-/// `join_status`: the status, or -1 to ask the game code's hook.
-int16_t ee_won_game_join_status(bool full,
-                                bool invite_only,
-                                bool invited,
-                                bool is_host,
-                                bool in_progress);
-
-int16_t ee_won_game_host_join_check(bool full, bool in_progress);
-
-bool ee_won_game_matches_room_spec(int32_t flags, int32_t game_type);
-
-/// `write_summary` into the sink; `name` is UTF-16 LE bytes.
-///
-/// # Safety
-/// `s` is valid; `name` holds `name_length` bytes; the sink's contract.
-void ee_won_game_write_summary(const EeWonGameSummary *s,
-                               const uint8_t *name,
-                               size_t name_length,
-                               EeWonByteSink sink,
-                               void *context);
-
-/// `read_summary` into `out`; the name (when read) goes to the sink as UTF-16 units.
-///
-/// # Safety
-/// `bytes` holds `length` bytes; `out` is writable; the sink's contract.
-void ee_won_game_read_summary(const uint8_t *bytes,
-                              size_t length,
-                              int32_t game_type,
-                              uint16_t product_id,
-                              EeWonGameSummary *out,
-                              EeWonUnitSink name_sink,
-                              void *context);
-
-/// A new StagingLogic state for the C++ shell `logic`, calling out through `host`.
-/// As `ee_won_staging_new`, with the model's ops answered by its Rust objects (the game's).
-EeWonStaging *ee_won_staging_new_model(void *logic, EeWonLobbyHostFn host);
-
-EeWonStaging *ee_won_staging_new(void *logic, EeWonLobbyHostFn host);
-
-/// # Safety
-/// `staging` came from `ee_won_staging_new` (or is NULL) and is not used again.
-void ee_won_staging_free(EeWonStaging *staging);
-
-/// One of StagingLogic's methods (`EeWonStagingCall`).
-///
-/// # Safety
-/// `staging` is live; the call's arguments as documented.
-ptrdiff_t ee_won_staging_call(const EeWonStaging *staging,
-                              EeWonStagingCall call,
-                              void *a,
-                              void *b,
-                              ptrdiff_t c,
-                              ptrdiff_t d);
-
-/// `GetWONStatusString`'s choice for `status`.
-EeWonStatusLobbyText ee_won_status_lobby_text(int32_t status);
-
 /// Upper-cases (`upper`) or lower-cases `length` bytes in place.
 ///
 /// # Safety
@@ -22083,236 +21185,6 @@ int32_t ee_won_compare_no_case32(const int32_t *a,
                                  size_t a_count,
                                  const int32_t *b,
                                  size_t b_count);
-
-/// A new StretchImage's settings (the constructor's borders).
-EeWonStretchImg *ee_won_stretch_new(int32_t left, int32_t top, int32_t right, int32_t bottom);
-
-/// `Duplicate()`'s settings for the copy.
-///
-/// # Safety
-/// `o` is live.
-EeWonStretchImg *ee_won_stretch_duplicate(const EeWonStretchImg *o);
-
-/// # Safety
-/// `o` is null or from `ee_won_stretch_new` / `ee_won_stretch_duplicate`, not freed before.
-void ee_won_stretch_free(EeWonStretchImg *o);
-
-/// `SetSize(width, height)` against the image's size: true when the C++ must store the new size.
-///
-/// # Safety
-/// `o` is live.
-bool ee_won_stretch_set_size(EeWonStretchImg *o,
-                             int32_t cur_w,
-                             int32_t cur_h,
-                             int32_t w,
-                             int32_t h);
-
-/// `SetBorders(left, top, right, bottom)` (the cache not marked, as the original's).
-///
-/// # Safety
-/// `o` is live.
-void ee_won_stretch_set_borders(EeWonStretchImg *o,
-                                int32_t left,
-                                int32_t top,
-                                int32_t right,
-                                int32_t bottom);
-
-/// `SetTile(horz, vert)`.
-///
-/// # Safety
-/// `o` is live.
-void ee_won_stretch_set_tile(EeWonStretchImg *o, bool horz, bool vert);
-
-/// `SetSkipCenter(skip)`.
-///
-/// # Safety
-/// `o` is live.
-void ee_won_stretch_set_skip(EeWonStretchImg *o, bool skip);
-
-/// The cache built (`CalcImage`'s end).
-///
-/// # Safety
-/// `o` is live.
-void ee_won_stretch_built(EeWonStretchImg *o);
-
-/// `CopyAttributes(from)`'s settings.
-///
-/// # Safety
-/// `o` and `from` are live.
-void ee_won_stretch_copy(EeWonStretchImg *o, const EeWonStretchImg *from);
-
-/// A setting.
-///
-/// # Safety
-/// `o` is live.
-int32_t ee_won_stretch_get(const EeWonStretchImg *o, EeWonStretchField f);
-
-/// `Paint`'s plan at the image's size: the first `cap` operations into `out`, their count returned.
-///
-/// # Safety
-/// `o` is live; `out` has room for `cap` operations (or is NULL).
-size_t ee_won_stretch_paint(const EeWonStretchImg *o,
-                            int32_t width,
-                            int32_t height,
-                            EeWonDrawOp *out,
-                            size_t cap);
-
-/// `SurfaceBase::GetNewSurface(format)`: a new surface, or null for an unknown format.
-EeWonSurface *ee_won_surface_new(int32_t format);
-
-/// `GetNewSurface(gDefaultSurfaceFormat)`.
-EeWonSurface *ee_won_surface_new_default();
-
-/// `SetDefaultSurfaceFormat(format)`.
-void ee_won_surface_set_default_format(int32_t format);
-
-/// `SURFACE_32_TO_555` / `SURFACE_32_TO_565` (`SurfaceColorFrom32`).
-uint32_t ee_won_surface_color_from32(uint32_t c, int32_t format);
-
-/// `SURFACE_555_TO_32` / `SURFACE_565_TO_32`.
-uint32_t ee_won_surface_color_to32(uint32_t p, int32_t format);
-
-/// The surface's destruction (its pixels freed).
-///
-/// # Safety
-/// `s` is null or from `ee_won_surface_new` / `ee_won_surface_duplicate`, not freed before.
-void ee_won_surface_free(EeWonSurface *s);
-
-/// `Create(width, height)`.
-///
-/// # Safety
-/// `s` is a live surface.
-void ee_won_surface_create(EeWonSurface *s, int32_t width, int32_t height);
-
-/// `Free()`.
-///
-/// # Safety
-/// `s` is a live surface.
-void ee_won_surface_release(EeWonSurface *s);
-
-/// A field (`EeWonSurfaceField`).
-///
-/// # Safety
-/// `s` is a live surface.
-int32_t ee_won_surface_get(const EeWonSurface *s, EeWonSurfaceField f);
-
-/// `GetPixelsBase()`.
-///
-/// # Safety
-/// `s` is a live surface.
-void *ee_won_surface_pixels(EeWonSurface *s);
-
-/// A drawing method (`EeWonSurfaceDraw` with its arguments in the original's order).
-///
-/// # Safety
-/// `s` is a live surface.
-void ee_won_surface_draw(EeWonSurface *s,
-                         EeWonSurfaceDraw op,
-                         int32_t a,
-                         int32_t b,
-                         int32_t c,
-                         int32_t d,
-                         int32_t e,
-                         int32_t f);
-
-/// `GetPixel(x, y)`.
-///
-/// # Safety
-/// `s` is a live surface.
-uint32_t ee_won_surface_pixel(EeWonSurface *s, int32_t x, int32_t y);
-
-/// `CopySurface(src, mask, x, y, left, top, width, height)` (`mask` null: the copy without a mask).
-///
-/// # Safety
-/// `s` and `src` are live surfaces (possibly the same); `mask` is null or covers the source's rows.
-void ee_won_surface_copy(EeWonSurface *s,
-                         const EeWonSurface *src,
-                         const uint8_t *mask,
-                         int32_t x,
-                         int32_t y,
-                         int32_t left,
-                         int32_t top,
-                         int32_t width,
-                         int32_t height);
-
-/// `Duplicate()`: a new surface.
-///
-/// # Safety
-/// `s` is a live surface.
-EeWonSurface *ee_won_surface_duplicate(const EeWonSurface *s);
-
-/// The BITMAPINFO header's fields (`EeWonSurface::bitmap_info`) into `out` (eight ints).
-///
-/// # Safety
-/// `s` is a live surface, `out` points at eight ints.
-void ee_won_surface_bitmap_info(const EeWonSurface *s, int32_t *out);
-
-/// A new Rust TabBar for the C++ `component` over its container's Rust object `ct`, the bar of the control `ctrl`
-/// (NULL for none), its calls out through `host`.
-///
-/// # Safety
-/// `ct` is the component's live container object and outlives the bar's; `ctrl` (when not NULL) is live until it
-/// is freed (it then leaves the bar).
-EeWonTabBar *ee_won_tabbar_new(void *component,
-                               EeWonGuiHostFn host,
-                               const EeWonContainer *ct,
-                               const EeWonTabCtrl *ctrl);
-
-/// The destructor's statements (the buttons given back), then the object freed.
-///
-/// # Safety
-/// `bar` came from `ee_won_tabbar_new` (or is NULL) and is not used again.
-void ee_won_tabbar_free(EeWonTabBar *bar);
-
-/// One of TabBar's virtuals (`EeWonTabBarCall`).
-///
-/// # Safety
-/// `bar` is live.
-ptrdiff_t ee_won_tabbar_call(const EeWonTabBar *bar, EeWonTabBarCall call, ptrdiff_t a);
-
-/// A new Rust TabCtrl for the C++ `component` over its container's Rust object `ct`, its calls out through `host`.
-///
-/// # Safety
-/// `ct` is the component's live container object and outlives the control's.
-EeWonTabCtrl *ee_won_tab_new(void *component,
-                             EeWonGuiHostFn host,
-                             const EeWonContainer *ct);
-
-/// The constructor's statements over its made members (`parts`).
-///
-/// # Safety
-/// `tab` is live; `parts` is readable, its bar the live bottom bar's Rust object, held by the control's member.
-void ee_won_tab_init(const EeWonTabCtrl *tab,
-                     const EeWonTabParts *parts);
-
-/// The destructor's statements (the arrows given back), then the object freed.
-///
-/// # Safety
-/// `tab` came from `ee_won_tab_new` (or is NULL) and is not used again.
-void ee_won_tab_free(EeWonTabCtrl *tab);
-
-/// One of TabCtrl's methods (`EeWonTabCall`).
-///
-/// # Safety
-/// `tab` is live; the call's arguments as documented.
-ptrdiff_t ee_won_tab_call(const EeWonTabCtrl *tab, EeWonTabCall call, ptrdiff_t a, ptrdiff_t b);
-
-/// A new Rust TextArea for the C++ `component`, its calls out through `host`.
-EeWonText *ee_won_text_new(void *component, EeWonGuiHostFn host);
-
-/// # Safety
-/// `text` came from `ee_won_text_new` (or is NULL) and is not used again.
-void ee_won_text_free(EeWonText *text);
-
-/// One of TextArea's methods (`EeWonTextCall`).
-///
-/// # Safety
-/// `text` is live; the call's arguments as documented.
-ptrdiff_t ee_won_text_call(const EeWonText *text,
-                           EeWonTextCall call,
-                           ptrdiff_t a,
-                           ptrdiff_t b,
-                           ptrdiff_t c);
 
 EeWonThread *ee_won_thread_new(EeWonThreadBody body);
 
@@ -22487,46 +21359,6 @@ void ee_won_titlecfg_community_text(const uint8_t *header,
                                     size_t pair_count,
                                     EeWonByteSink sink,
                                     void *context);
-
-/// A new Rust TreeArea for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
-EeWonTree *ee_won_tree_new(void *component,
-                           EeWonGuiHostFn host,
-                           const EeWonList *list);
-
-/// # Safety
-/// `tree` came from `ee_won_tree_new` (or is NULL) and is not used again.
-void ee_won_tree_free(EeWonTree *tree);
-
-/// One of TreeArea's methods (`EeWonTreeCall`).
-///
-/// # Safety
-/// `tree` is live; the call's arguments as documented.
-ptrdiff_t ee_won_tree_call(const EeWonTree *tree,
-                           EeWonTreeCall call,
-                           ptrdiff_t a,
-                           ptrdiff_t b,
-                           ptrdiff_t c);
-
-/// A new Rust TreeItem for the C++ row `component`; `host` answers `NodeOf`, `ItemSetTop`, `ItemSetPosXY`,
-/// `ItemTop`, `ItemContains` and the references.
-EeWonTNode *ee_won_tnode_new(void *component,
-                             EeWonGuiHostFn host);
-
-/// # Safety
-/// `node` came from `ee_won_tnode_new` (or is NULL) and is not used again.
-void ee_won_tnode_free(EeWonTNode *node);
-
-/// One of TreeItem's methods (`EeWonTNodeCall`); `tree` is the row's tree's Rust object (NULL for the calls that
-/// need none).
-///
-/// # Safety
-/// `node` is live; `tree` is live or NULL; the call's arguments as documented.
-ptrdiff_t ee_won_tnode_call(const EeWonTNode *node,
-                            const EeWonTree *tree,
-                            EeWonTNodeCall call,
-                            ptrdiff_t a,
-                            ptrdiff_t b,
-                            ptrdiff_t c);
 
 /// A new manager object for the C++ `manager`; its calls are answered in Rust over the library's `core` table
 /// (cppcore.rs).
@@ -22871,104 +21703,6 @@ int32_t ee_won_userstatus_reply(EeWonUserStatus *s,
                                 size_t pos,
                                 size_t *out_pos);
 
-/// A new Rust Window for the C++ `window`, its calls out through `host`.
-EeWonWindow *ee_won_win_new(void *window, EeWonGuiHostFn host);
-
-/// The window's object freed (the child set with it).
-///
-/// # Safety
-/// `win` came from `ee_won_win_new` (or is NULL) and is not used again.
-void ee_won_win_free(EeWonWindow *win);
-
-/// One of Window's methods (`EeWonWinCall`).
-///
-/// # Safety
-/// `win` is live; the call's arguments as documented.
-ptrdiff_t ee_won_win_call(const EeWonWindow *win, EeWonWinCall call, ptrdiff_t a, ptrdiff_t b);
-
-/// A set's `i`-th entry (`which` an `EeWonWmSet`; 0 past the end; the goldens' trace).
-///
-/// # Safety
-/// `wm` is live.
-ptrdiff_t ee_won_wm_set_at(const EeWonWm *wm, uint32_t which, size_t i);
-
-/// A new Rust WindowManager for the C++ `manager`, its calls out through `host`.
-EeWonWm *ee_won_wm_new(void *manager, EeWonGuiHostFn host);
-
-/// The manager's object freed, its held members given back first (the broadcast set, the deferred timer
-/// removals, the timer events, the event list and the window set; then the popup members; then the caches: the
-/// original's members in reverse order).
-///
-/// # Safety
-/// `wm` came from `ee_won_wm_new` (or is NULL) and is not used again.
-void ee_won_wm_free(EeWonWm *wm);
-
-/// One of WindowManager's methods (`EeWonWmCall`).
-///
-/// # Safety
-/// `wm` is live; the call's arguments as documented.
-ptrdiff_t ee_won_wm_call(const EeWonWm *wm,
-                         EeWonWmCall call,
-                         ptrdiff_t a,
-                         ptrdiff_t b,
-                         ptrdiff_t c,
-                         ptrdiff_t d);
-
-/// The popup list's `i`-th entry (0 past the end; the goldens' trace of the list).
-///
-/// # Safety
-/// `wm` is live.
-ptrdiff_t ee_won_wm_popup_at(const EeWonWm *wm, size_t i);
-
-/// The caches as one line (the goldens' trace) into `buf` (at most `cap` bytes); the length written.
-///
-/// # Safety
-/// `wm` is live; `buf` has room for `cap` bytes.
-size_t ee_won_wm_cache_line(const EeWonWm *wm,
-                            uint8_t *buf,
-                            size_t cap);
-
-/// `WindowManager::InitColorScheme`: the 17 standard colours into `out`.
-///
-/// # Safety
-/// `out` has room for 17 colours.
-void ee_won_wm_standard_colors(uint32_t *out);
-
-/// A new Rust WONButton for the C++ `component`, its calls out through `host`.
-EeWonWonButton *ee_won_wonbtn_new(void *component, EeWonGuiHostFn host);
-
-/// # Safety
-/// `btn` came from `ee_won_wonbtn_new` (or is NULL) and is not used again.
-void ee_won_wonbtn_free(EeWonWonButton *btn);
-
-/// One of WONButton's methods (`EeWonWbCall`).
-///
-/// # Safety
-/// `btn` is live; the call's arguments as documented.
-ptrdiff_t ee_won_wonbtn_call(const EeWonWonButton *btn,
-                             EeWonWbCall call,
-                             ptrdiff_t a,
-                             ptrdiff_t b,
-                             ptrdiff_t c,
-                             ptrdiff_t d);
-
-/// `SetButtonState(state, image, color, font, checked)`.
-///
-/// # Safety
-/// `btn` is live.
-void ee_won_wonbtn_set_state(const EeWonWonButton *btn,
-                             int32_t state,
-                             void *image,
-                             int32_t color,
-                             void *font,
-                             bool checked);
-
-/// `CopyAttributes(from)`: `from` the source's Rust button, `from_comp` its C++ `WONButton*`.
-///
-/// # Safety
-/// Both buttons are live and distinct (`Duplicate` copies onto a new button).
-void ee_won_wonbtn_copy(const EeWonWonButton *btn, const EeWonWonButton *from, void *from_comp);
-
 /// `WONFile(path)`; `path` NULL for the working directory (`GetWorkingDirectory`: empty when it cannot be read).
 ///
 /// # Safety
@@ -23013,74 +21747,1341 @@ int64_t ee_won_file_op(EeWonFile *f,
                        const uint8_t *data,
                        size_t length);
 
-/// A new WrappedText's state (`Init()`).
-EeWonWrapText *ee_won_wrap_new();
+/// A new parser (the constructor's state).
+EeWonChatParser *ee_won_chatparser_new();
 
-/// # Safety
-/// `o` is null or from `ee_won_wrap_new`, not freed before.
-void ee_won_wrap_free(EeWonWrapText *o);
-
-/// `CalcWrap()`: `text` holds `len` units of `wchar_size` bytes (or is NULL with 0), `m` measures them in the font.
+/// Frees the parser.
 ///
 /// # Safety
-/// `o` is live; `text` and `m` as described.
-void ee_won_wrap_calc(EeWonWrapText *o,
-                      bool has_font,
-                      const void *text,
-                      int32_t len,
-                      uint32_t wchar_size,
-                      const EeWonTextMeasure *m,
-                      int32_t font_height);
+/// `p` from `ee_won_chatparser_new` (or null), not used after.
+void ee_won_chatparser_free(EeWonChatParser *p);
 
-/// `SetWrap(wrap)`: true when the C++ must rewrap.
+/// A number.
 ///
 /// # Safety
-/// `o` is live.
-bool ee_won_wrap_set_wrap(EeWonWrapText *o, bool wrap);
+/// `p` is live.
+int64_t ee_won_chatparser_number(const EeWonChatParser *p, EeWonChatParserNumber n);
 
-/// `SetMaxWidth(width)`: true when the C++ must rewrap.
+/// Sets a number.
 ///
 /// # Safety
-/// `o` is live.
-bool ee_won_wrap_set_max_width(EeWonWrapText *o, int32_t width);
+/// `p` is live.
+void ee_won_chatparser_set_number(EeWonChatParser *p, EeWonChatParserNumber n, int64_t v);
 
-/// `SetCentered(centered)`.
+/// A text (`count` gets its units), valid until the parser changes.
 ///
 /// # Safety
-/// `o` is live.
-void ee_won_wrap_set_centered(EeWonWrapText *o, bool centered);
+/// `p` is live, `count` writable.
+const uint32_t *ee_won_chatparser_text(const EeWonChatParser *p,
+                                       EeWonChatParserText t,
+                                       size_t *count);
 
-/// `mWidth`.
+/// Sets a text (`count` units of `unit_size` bytes).
 ///
 /// # Safety
-/// `o` is live.
-int32_t ee_won_wrap_width(const EeWonWrapText *o);
+/// `p` is live; `text` holds the units.
+void ee_won_chatparser_set_text(EeWonChatParser *p,
+                                EeWonChatParserText t,
+                                const void *text,
+                                size_t count,
+                                uint32_t unit_size);
 
-/// `mHeight` (the C++ `GetHeight` answers the font's height when it is 0).
+/// `AddCommand`.
 ///
 /// # Safety
-/// `o` is live.
-int32_t ee_won_wrap_height(const EeWonWrapText *o);
+/// As `ee_won_chatparser_set_text`.
+void ee_won_chatparser_add_command(EeWonChatParser *p,
+                                   const void *name,
+                                   size_t count,
+                                   uint32_t unit_size,
+                                   int32_t id);
 
-/// The break list (`mBreakList`): the first `cap` into `out`, their count returned.
+/// `GetCommandString`'s text (`count` gets its units), valid until the parser changes.
 ///
 /// # Safety
-/// `o` is live; `out` has room for `cap` breaks (or is NULL).
-size_t ee_won_wrap_breaks(const EeWonWrapText *o, EeWonLineBreak *out, size_t cap);
+/// `p` is live, `count` writable.
+const uint32_t *ee_won_chatparser_command_string(const EeWonChatParser *p,
+                                                 int32_t id,
+                                                 size_t *count);
 
-/// `Paint`'s plan for a text of `length` units in a font `font_height` high at (`x`, `y`): the first `cap`
-/// operations into `out`, their count returned.
+/// `HandleInput` over the room's client names (`clients`, `client_count`; `has_clients` whether the parser has a
+/// list): the result; `target` gets the target client's position, or -1 for none.
 ///
 /// # Safety
-/// `o` and `m` are live; `out` has room for `cap` operations (or is NULL).
-size_t ee_won_wrap_paint(const EeWonWrapText *o,
-                         int32_t length,
-                         int32_t font_height,
-                         int32_t x,
-                         int32_t y,
-                         const EeWonTextMeasure *m,
-                         EeWonDrawOp *out,
-                         size_t cap);
+/// `p` is live; the texts as `EeWonChatText` of `wchar_size` units; `target` writable.
+bool ee_won_chatparser_handle_input(EeWonChatParser *p,
+                                    EeWonChatText text,
+                                    const EeWonChatText *clients,
+                                    size_t client_count,
+                                    bool has_clients,
+                                    uint32_t wchar_size,
+                                    int32_t *target);
+
+bool ee_won_dlg_create_enabled(uint32_t name_len, bool password_shown, uint32_t password_len);
+
+bool ee_won_dlg_name_enabled(uint32_t name_len);
+
+int32_t ee_won_dlg_skill_level(int32_t sel);
+
+bool ee_won_dlg_internet_access(int32_t game_type);
+
+bool ee_won_dlg_lan_port_ok(int32_t port, uint16_t game_port);
+
+/// `adapter_order`: the order, or 2 when the columns decide.
+int32_t ee_won_dlg_adapter_order(int32_t host, int32_t other);
+
+uint32_t ee_won_dlg_selected_address(bool has_selection, uint32_t selected, uint32_t local_host);
+
+int32_t ee_won_dlg_status_body_width(int32_t text_width, int32_t m_width, int32_t root_width);
+
+/// `status_pad`: -1 for 5 lines or more.
+int32_t ee_won_dlg_status_pad(int32_t label_height, int32_t line_height);
+
+/// `status_extra_width`: false when the dialog keeps its shape, else true with the extra width in `out`.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_dlg_status_extra_width(int32_t new_width,
+                                   int32_t new_height,
+                                   int32_t root_height,
+                                   int32_t width_change,
+                                   int32_t old_width,
+                                   int32_t *out);
+
+bool ee_won_dlg_status_young(uint32_t now, uint32_t start);
+
+int32_t ee_won_dlg_growth(int32_t new_, int32_t old);
+
+/// A new DialogLogic object for the C++ `logic`.
+EeWonDlgLogic *ee_won_dlglogic_new(void *logic, EeWonDlgLogicHostFn host);
+
+/// Releases what the object holds and frees it.
+///
+/// # Safety
+/// `obj` came from `ee_won_dlglogic_new` (or is NULL) and is not used again.
+void ee_won_dlglogic_free(EeWonDlgLogic *obj);
+
+/// One inward call (`EeWonDlgLogicCall`).
+///
+/// # Safety
+/// `obj` is live; the arguments as documented.
+ptrdiff_t ee_won_dlglogic_call(const EeWonDlgLogic *obj,
+                               EeWonDlgLogicCall call,
+                               ptrdiff_t a,
+                               ptrdiff_t b,
+                               ptrdiff_t c,
+                               ptrdiff_t d,
+                               ptrdiff_t e);
+
+/// A new colour button or chooser for the C++ object `obj`.
+EeWonEeColor *ee_won_eecolor_new(void *obj, EeWonEeColorKind kind, EeWonEeColorHostFn host);
+
+/// Releases the button's chooser and frees the object.
+///
+/// # Safety
+/// `p` came from `ee_won_eecolor_new` (or is NULL) and is not used again.
+void ee_won_eecolor_free(EeWonEeColor *p);
+
+/// One inward call (`EeWonEeColorCall`).
+///
+/// # Safety
+/// `p` is live; a paint's `a` is a `Graphics*`.
+ptrdiff_t ee_won_eecolor_call(const EeWonEeColor *p,
+                              EeWonEeColorCall call,
+                              ptrdiff_t a,
+                              ptrdiff_t b,
+                              ptrdiff_t c);
+
+/// The palette's colour `i` (0..15).
+uint32_t ee_won_eecolor_palette(uint32_t i);
+
+/// Sets the palette from `n` colours (0x00rrggbb; at most 16 are read).
+///
+/// # Safety
+/// `colors` holds `n` values.
+void ee_won_eecolor_set_palette(const uint32_t *colors, uint32_t n);
+
+/// A new lobby game for the C++ `game` (EELobbyGame's constructor).
+/// As `ee_won_eegame_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonEeGame *ee_won_eegame_new_model(void *game, EeWonEeGameHostFn host);
+
+EeWonEeGame *ee_won_eegame_new(void *game, EeWonEeGameHostFn host);
+
+/// Releases the slots' members, the transfer and the names (the destructor's order) and frees the object.
+///
+/// # Safety
+/// `p` came from `ee_won_eegame_new` (or is NULL) and is not used again.
+void ee_won_eegame_free(EeWonEeGame *p);
+
+/// One inward call (`EeWonEeGameCall`); `isize::MIN` when a hook's read threw.
+///
+/// # Safety
+/// `p` is live; the call's arguments as documented.
+ptrdiff_t ee_won_eegame_call(const EeWonEeGame *p,
+                             EeWonEeGameCall call,
+                             ptrdiff_t a,
+                             ptrdiff_t b,
+                             ptrdiff_t c,
+                             ptrdiff_t d);
+
+/// EELobbyPlayer::IsTeammate's rule: team 0 (no team) has no teammates.
+bool ee_won_eegame_is_teammate(uint8_t mine, uint8_t theirs);
+
+/// Sets the glue's host (the C++ calls it once, before any other call).
+void ee_won_eeglue_set_host(EeWonEeGlueHostFn host);
+
+/// One inward call (`EeWonEeGlueCall`).
+///
+/// # Safety
+/// The call's pointer arguments as documented.
+ptrdiff_t ee_won_eeglue_call(EeWonEeGlueCall call, ptrdiff_t a, ptrdiff_t b, ptrdiff_t c);
+
+/// The number of game lobby strings.
+size_t ee_won_eeresource_count();
+
+/// Row `index` (below `ee_won_eeresource_count`) into `out`; false past the end.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_eeresource_row(size_t index, EeWonEeResource *out);
+
+/// The row of a global's name (`EE_LOBBY_STRING`: the lobby's code names a string by its original global), -1 when
+/// the table has none.
+///
+/// # Safety
+/// `name` is NULL or a NUL-terminated string.
+ptrdiff_t ee_won_eeresource_find(const char *name);
+
+/// A new sound for the C++ object `obj` (an effect of sample `sample`; the music's is unused).
+EeWonEeSound *ee_won_eesound_new(void *obj,
+                                 EeWonEeSoundKind kind,
+                                 EeWonEeSoundHostFn host,
+                                 uint32_t sample);
+
+/// The C++ object's destructor: an effect's sample unloaded, the object freed.
+///
+/// # Safety
+/// `p` came from [`ee_won_eesound_new`] (or is null), not used after.
+void ee_won_eesound_free(EeWonEeSound *p);
+
+/// A virtual of the C++ object.
+///
+/// # Safety
+/// `p` is a live object of [`ee_won_eesound_new`].
+ptrdiff_t ee_won_eesound_call(const EeWonEeSound *p, EeWonEeSoundCall call, ptrdiff_t a);
+
+/// `EELobbySoundDecoder::Decode`'s load: the sample of `path` (a NUL-terminated `char*`), or -1 without a sound
+/// manager (no sound is made then).
+int64_t ee_won_eesound_load(EeWonEeSoundHostFn host,
+                            const uint8_t *path);
+
+/// A new transfer for the C++ shell `obj`.
+EeWonEeXfer *ee_won_eexfer_new(void *obj, EeWonEeXferHostFn host);
+
+/// The shell's destructor.
+///
+/// # Safety
+/// `p` came from [`ee_won_eexfer_new`] (or is null), not used after.
+void ee_won_eexfer_free(EeWonEeXfer *p);
+
+/// A method of the transfer.
+///
+/// # Safety
+/// `p` is a live transfer; the host's calls may come back into it (a completion run at once).
+ptrdiff_t ee_won_eexfer_call(const EeWonEeXfer *p, EeWonEeXferCall call, ptrdiff_t a, ptrdiff_t b);
+
+/// A new send op for the C++ shell `obj`, of the file at `path` (`len` bytes).
+///
+/// # Safety
+/// `path` holds `len` readable bytes (or `len` is 0).
+EeWonEeXferSend *ee_won_eexfer_send_new(void *obj,
+                                        EeWonEeXferHostFn host,
+                                        const uint8_t *path,
+                                        size_t len);
+
+/// The send op's destructor (the file is not closed: the op's cleanup does that).
+///
+/// # Safety
+/// `p` came from [`ee_won_eexfer_send_new`] (or is null), not used after.
+void ee_won_eexfer_send_free(EeWonEeXferSend *p);
+
+/// A virtual of the send op.
+///
+/// # Safety
+/// `p` is a live send op.
+int32_t ee_won_eexfer_send_call(const EeWonEeXferSend *p, EeWonEeXferSendCall call);
+
+/// The joiner's join request; `name` / `password` are UTF-16 LE bytes.
+///
+/// # Safety
+/// The byte arguments hold their lengths; `sink` takes the message.
+void ee_won_lan_join_request(const uint8_t *name,
+                             size_t name_len,
+                             const uint8_t *password,
+                             size_t password_len,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The host's refusal of a join (`status` 2 wrong password, 3 another subnet).
+///
+/// # Safety
+/// `sink` takes the message.
+void ee_won_lan_join_refused(int16_t status, EeWonByteSink sink, void *context);
+
+/// The host's accepted join reply: `ids[i]` and the UTF-16 LE name `names` from `name_offsets[i]` (in bytes) to
+/// `name_offsets[i + 1]` (`count + 1` offsets).
+///
+/// # Safety
+/// `ids` holds `count` ids, `name_offsets` `count + 1` offsets into `names`; `sink` takes the message.
+void ee_won_lan_join_accepted(uint16_t captain,
+                              uint16_t you,
+                              size_t count,
+                              const uint16_t *ids,
+                              const uint8_t *names,
+                              const size_t *name_offsets,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// The host's announcement of a new player.
+///
+/// # Safety
+/// `name` holds `name_len` UTF-16 LE bytes; `sink` takes the message.
+void ee_won_lan_client_joined(uint16_t id,
+                              const uint8_t *name,
+                              size_t name_len,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// The host's announcement of a departed player.
+///
+/// # Safety
+/// `sink` takes the message.
+void ee_won_lan_client_left(uint16_t id, EeWonByteSink sink, void *context);
+
+/// A player's chat request to the host.
+///
+/// # Safety
+/// `text` holds `text_len` UTF-16 LE bytes; `sink` takes the message.
+void ee_won_lan_chat_request(uint16_t flags,
+                             const uint8_t *text,
+                             size_t text_len,
+                             uint16_t target,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The host's relayed chat line.
+///
+/// # Safety
+/// As `ee_won_lan_chat_request`.
+void ee_won_lan_chat_line(uint16_t flags,
+                          uint16_t sender,
+                          const uint8_t *text,
+                          size_t text_len,
+                          uint16_t target,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// The joiner's ping.
+///
+/// # Safety
+/// `sink` takes the message.
+void ee_won_lan_ping(EeWonByteSink sink, void *context);
+
+/// A staging message wrapped for the game channel.
+///
+/// # Safety
+/// `payload` holds `length` bytes; `sink` takes the message.
+void ee_won_lan_staging(const uint8_t *payload, size_t length, EeWonByteSink sink, void *context);
+
+/// A discovery packet's head (`kind` 1 summary, 2 keep-alive, 3 removed, 4 query).
+///
+/// # Safety
+/// `sink` takes the packet.
+void ee_won_lan_discovery(uint8_t kind, uint16_t port, EeWonByteSink sink, void *context);
+
+/// Reads a game-channel message (`skip` 2 for the host's own, else 0). The join request's name goes to
+/// `first`, its password to `second`; a joined player's name and a chat text go to `first`.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; `out` is valid; the sinks take the units.
+void ee_won_lan_read_game(const uint8_t *bytes,
+                          size_t length,
+                          size_t skip,
+                          EeWonLanMsg *out,
+                          EeWonUnitSink first,
+                          EeWonUnitSink second,
+                          void *context);
+
+/// Reads a join reply: returns `ReadJoinReply`'s status; `*captain` / `*you` are set and `true` returned through
+/// `have_captain` once the captain's id was read; each player read whole goes to `client`, in order.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; the out pointers are valid; `client` takes the players.
+int32_t ee_won_lan_read_join_reply(const uint8_t *bytes,
+                                   size_t length,
+                                   bool *have_captain,
+                                   uint16_t *captain,
+                                   uint16_t *you,
+                                   EeWonLanClientSink client,
+                                   void *context);
+
+/// Reads a discovery packet's head: true and its type and port, false when it is short.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; the out pointers are valid.
+bool ee_won_lan_read_discovery(const uint8_t *bytes, size_t length, uint8_t *kind, uint16_t *port);
+
+/// `lan::join_status`: 0 accept, 2 wrong password, 3 another subnet.
+int16_t ee_won_lan_join_status(int32_t game_type,
+                               uint8_t peer0,
+                               uint8_t peer1,
+                               uint8_t local0,
+                               uint8_t local1,
+                               bool password_matches);
+
+/// `lan::next_client_id` over the C++ counter.
+///
+/// # Safety
+/// `next` is valid.
+uint16_t ee_won_lan_next_client_id(uint16_t *next);
+
+/// `lan::chat_route`: 0 everyone, 1 the whisper target and the sender, 2 the sender's team.
+int32_t ee_won_lan_chat_route(uint16_t flags);
+
+/// `lan::chat_line_flags`.
+uint16_t ee_won_lan_chat_line_flags(uint16_t flags);
+
+/// `lan::host_socket_stale`.
+bool ee_won_lan_host_socket_stale(int64_t now, int64_t last_message);
+
+/// `lan::joiner_ping_due`.
+bool ee_won_lan_joiner_ping_due(int64_t now, int64_t last_ping);
+
+/// `lan::summary_due`.
+bool ee_won_lan_summary_due(int64_t now, int64_t last_broadcast);
+
+EeWonStageRoute ee_won_stage_send_to_captain(bool have_game, bool i_am_captain);
+
+EeWonStageRoute ee_won_stage_broadcast(bool have_game, bool i_am_captain);
+
+EeWonStageRoute ee_won_stage_send_to_client(bool have_game, bool i_am_captain);
+
+int32_t ee_won_stage_player_joined(bool has_player, bool i_am_captain);
+
+bool ee_won_stage_joined_keeps_all_ready(bool last_all_ready, bool ready);
+
+bool ee_won_stage_sets_in_progress(bool have_game, bool in_progress, bool want, bool i_am_captain);
+
+EeWonToggleReady ee_won_stage_toggle_ready(bool have_client,
+                                           bool have_game,
+                                           bool i_am_captain,
+                                           bool i_am_ready);
+
+int32_t ee_won_stage_host_warning(int32_t game_type,
+                                  bool show_confirmations,
+                                  bool firewall_test_done,
+                                  bool behind_firewall);
+
+int32_t ee_won_stage_verify_ping(int32_t game_type,
+                                 bool ping_replied,
+                                 bool have_config,
+                                 bool allow_join_without_ping,
+                                 bool show_confirmations);
+
+bool ee_won_stage_join_status_shown(int16_t status);
+
+int32_t ee_won_stage_leave_confirm(bool confirm, bool show_confirmations, bool i_am_captain);
+
+EeWonKicked ee_won_stage_kicked(bool ban, int32_t game_type, bool is_me);
+
+int32_t ee_won_stage_game_action(int32_t action, int32_t game_type);
+
+bool ee_won_stage_reports_ping(bool have_game, bool i_am_captain, bool same_game);
+
+bool ee_won_stage_kicks(bool have_client, bool have_game, bool i_am_captain);
+
+bool ee_won_stage_client_left(bool has_player, bool have_game);
+
+EeWonInitErrors ee_won_init_errors(int32_t error, int32_t ignored);
+
+bool ee_won_init_no_internet(bool check_for_internet, bool has_connection);
+
+int32_t ee_won_init_dir_request_target(int32_t index, bool config_has_auth_servers);
+
+bool ee_won_init_dir_answered(int32_t status);
+
+int32_t ee_won_init_missing_servers(size_t auth, size_t account, size_t versions);
+
+int32_t ee_won_init_version_outcome(int32_t status);
+
+int32_t ee_won_init_accept_outcome(bool accepted, bool from_firewall_server);
+
+bool ee_won_init_tou_saved(int32_t doc_status, int32_t modified, int32_t saved);
+
+size_t ee_won_init_document_bytes(size_t length);
+
+int32_t ee_won_init_event(int32_t kind);
+
+/// `cross_promotion`: the link, then the image, each through the sink (each given once, maybe empty).
+///
+/// # Safety
+/// `doc` holds `length` bytes (or is NULL); the sink's contract.
+void ee_won_init_cross_promotion(const uint8_t *doc,
+                                 size_t length,
+                                 EeWonByteSink link,
+                                 EeWonByteSink image,
+                                 void *context);
+
+EeWonLanRecv ee_won_lanlogic_recv(bool op_ok, bool is_captain, bool socket_has_client);
+
+size_t ee_won_lanlogic_message_offset(bool is_captain, bool from_me);
+
+EeWonLanRoute ee_won_lanlogic_send_to_client(bool is_captain,
+                                             bool connected,
+                                             bool to_me,
+                                             bool has_socket);
+
+EeWonLanRoute ee_won_lanlogic_send_to_captain(bool connected,
+                                              bool is_captain,
+                                              bool has_server_socket);
+
+/// `broadcast` over `count` sockets: `send[i]` set for each socket sent to; returns whether it is handled locally.
+///
+/// # Safety
+/// Both arrays hold `count` entries (or are NULL with 0).
+bool ee_won_lanlogic_broadcast(bool is_captain,
+                               bool deliver_local,
+                               const bool *socket_has_client,
+                               bool *send,
+                               size_t count);
+
+EeWonLanClosed ee_won_lanlogic_socket_closed(bool have_socket,
+                                             bool is_captain,
+                                             bool has_client,
+                                             bool is_server_socket);
+
+EeWonLanSummary ee_won_lanlogic_summary(bool read_ok, bool existed);
+
+bool ee_won_lanlogic_can_broadcast(bool is_captain,
+                                   bool discovery,
+                                   bool have_game,
+                                   int32_t game_type);
+
+bool ee_won_lanlogic_advertises(int32_t game_type);
+
+bool ee_won_lanlogic_needs_peer_auth(int32_t game_type, bool cd_key_check);
+
+EeWonLanJoinStep ee_won_lanlogic_join_step(int32_t status);
+
+int32_t ee_won_lanlogic_reply_role(uint16_t id, uint16_t my_id, uint16_t captain_id);
+
+int32_t ee_won_lanlogic_client_action(bool connected,
+                                      int32_t room_spec,
+                                      bool has_client,
+                                      int32_t action);
+
+EeWonLanChatCommand ee_won_lanlogic_chat_command(bool connected,
+                                                 int32_t room_flags,
+                                                 int32_t command,
+                                                 bool has_target);
+
+bool ee_won_lanlogic_whisper_received(bool whisper, bool from_me);
+
+int32_t ee_won_lanlogic_refresh(int32_t screen);
+
+bool ee_won_lanlogic_name_accepted(int32_t result, size_t name_length);
+
+bool ee_won_lanlogic_port_accepted(int32_t result, int32_t old_port, int32_t new_port);
+
+int32_t ee_won_lanlogic_direct_default_port(bool have_config,
+                                            int32_t config_port,
+                                            int32_t lobby_port);
+
+bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
+
+int32_t ee_won_lanlogic_direct_event(bool existed);
+
+/// The game's LanLogic for the C++ shell `logic`: as `ee_won_lan_new`, with the model's ops answered by its Rust
+/// objects and the shell's members held here (lanown.rs): the shell's new client list and LAN (type 1) and
+/// direct-connect (type 3) game lists, a reference taken on each.
+///
+/// # Safety
+/// The lists are live model shells.
+EeWonLan *ee_won_lan_new_model(void *logic,
+                               EeWonLobbyHostFn host,
+                               void *clients,
+                               void *lan_games,
+                               void *direct_games);
+
+EeWonLan *ee_won_lan_new(void *logic, EeWonLobbyHostFn host);
+
+/// # Safety
+/// `lan` came from `ee_won_lan_new` (or is NULL) and is not used again.
+void ee_won_lan_free(EeWonLan *lan);
+
+/// One of LanLogic's methods (`EeWonLanCall`).
+///
+/// # Safety
+/// `lan` is live; the call's arguments as documented.
+ptrdiff_t ee_won_lan_call(const EeWonLan *lan,
+                          EeWonLanCall call,
+                          void *a,
+                          void *b,
+                          ptrdiff_t c,
+                          ptrdiff_t d);
+
+/// The look-up `index` of `SLOTS` (NULL past the end).
+const EeWonLobbyCtlSlot *ee_won_lobbyctl_slot(uint32_t index);
+
+/// The number of look-ups in `SLOTS`.
+uint32_t ee_won_lobbyctl_slot_count();
+
+/// A new control object for the C++ `ctl` of `kind`.
+/// As `ee_won_lobbyctl_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonLobbyCtl *ee_won_lobbyctl_new_model(void *ctl,
+                                         EeWonLobbyCtlKind kind,
+                                         EeWonLobbyCtlHostFn host);
+
+EeWonLobbyCtl *ee_won_lobbyctl_new(void *ctl, EeWonLobbyCtlKind kind, EeWonLobbyCtlHostFn host);
+
+/// Releases the members (reverse member order) and frees the object.
+///
+/// # Safety
+/// `p` came from `ee_won_lobbyctl_new` (or is NULL) and is not used again.
+void ee_won_lobbyctl_free(EeWonLobbyCtl *p);
+
+/// One inward call (`EeWonLobbyCtlCall`).
+///
+/// # Safety
+/// `p` is live; the call's arguments as documented.
+ptrdiff_t ee_won_lobbyctl_call(const EeWonLobbyCtl *p,
+                               EeWonLobbyCtlCall call,
+                               ptrdiff_t a,
+                               ptrdiff_t b,
+                               ptrdiff_t c);
+
+/// The control `index` of a kind's table (member order; its name, file, line and type), NULL past its end.
+const EeWonLobbyDlgSlot *ee_won_lobbydlg_slot(EeWonLobbyDlgKind kind,
+                                              uint32_t index);
+
+/// A new dialog object for the C++ `dialog` of `kind`.
+EeWonLobbyDlg *ee_won_lobbydlg_new(void *dialog, EeWonLobbyDlgKind kind, EeWonLobbyDlgHostFn host);
+
+/// Releases the controls (reverse member order) and frees the object.
+///
+/// # Safety
+/// `dlg` came from `ee_won_lobbydlg_new` (or is NULL) and is not used again.
+void ee_won_lobbydlg_free(EeWonLobbyDlg *dlg);
+
+/// One inward call (`EeWonLobbyDlgCall`).
+///
+/// # Safety
+/// `dlg` is live; the call's arguments as documented.
+ptrdiff_t ee_won_lobbydlg_call(const EeWonLobbyDlg *dlg,
+                               EeWonLobbyDlgCall call,
+                               ptrdiff_t a,
+                               ptrdiff_t b,
+                               ptrdiff_t c);
+
+/// `lobby_text` for the C++ (`won_lanmodel_test` checks it against LobbyLogicHost.cpp's table as it was).
+ptrdiff_t ee_won_lobby_text(ptrdiff_t code);
+
+/// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
+///
+/// # Safety
+/// `sink` is the `b` of a take op; `bytes` holds `length` bytes.
+void ee_won_lobby_sink(void *sink,
+                       const uint8_t *bytes,
+                       size_t length);
+
+/// A new, empty container.
+EeWonLobbyMap *ee_won_lobbymap_new(EeWonLobbyKeyKind kind, EeWonLobbyMapHooks hooks);
+
+/// Frees the container, dropping its objects.
+///
+/// # Safety
+/// `m` from `ee_won_lobbymap_new` (or null), not used after.
+void ee_won_lobbymap_free(EeWonLobbyMap *m);
+
+/// The number of entries.
+///
+/// # Safety
+/// `m` is live.
+size_t ee_won_lobbymap_len(const EeWonLobbyMap *m);
+
+/// `clear`.
+///
+/// # Safety
+/// `m` is live.
+void ee_won_lobbymap_clear(EeWonLobbyMap *m);
+
+/// `find`: the entry's position, or -1.
+///
+/// # Safety
+/// `m` is live, `key` a key of its kind.
+ptrdiff_t ee_won_lobbymap_find(const EeWonLobbyMap *m, const EeWonLobbyKey *key);
+
+/// `lower_bound`'s position (the length: `end()`).
+///
+/// # Safety
+/// As `ee_won_lobbymap_find`.
+size_t ee_won_lobbymap_lower_bound(const EeWonLobbyMap *m, const EeWonLobbyKey *key);
+
+/// `upper_bound`'s position.
+///
+/// # Safety
+/// As `ee_won_lobbymap_find`.
+size_t ee_won_lobbymap_upper_bound(const EeWonLobbyMap *m, const EeWonLobbyKey *key);
+
+/// `insert(value_type(key, empty))`: the entry's position; `inserted` (or null) says whether it is new (an empty
+/// entry: no object, numbers 0, no text). In insertion order a new value goes at the end.
+///
+/// # Safety
+/// As `ee_won_lobbymap_find`; `inserted` null or writable.
+size_t ee_won_lobbymap_insert(EeWonLobbyMap *m,
+                              const EeWonLobbyKey *key,
+                              bool *inserted);
+
+/// `erase(key)`: whether an entry went (its object dropped).
+///
+/// # Safety
+/// As `ee_won_lobbymap_find`.
+bool ee_won_lobbymap_erase(EeWonLobbyMap *m, const EeWonLobbyKey *key);
+
+/// `erase(position)` (nothing past the end).
+///
+/// # Safety
+/// `m` is live.
+void ee_won_lobbymap_erase_at(EeWonLobbyMap *m, size_t i);
+
+/// `erase(position, end())`.
+///
+/// # Safety
+/// `m` is live.
+void ee_won_lobbymap_erase_from(EeWonLobbyMap *m, size_t i);
+
+/// The container's assignment (`to = from`): `to`'s entries dropped, `from`'s copied (each object through the copy
+/// hook).
+///
+/// # Safety
+/// Both live, of the same kind and hooks; they may be the same map.
+void ee_won_lobbymap_assign(EeWonLobbyMap *to,
+                            const EeWonLobbyMap *from);
+
+/// The entry's object (null when none or past the end).
+///
+/// # Safety
+/// `m` is live.
+void *ee_won_lobbymap_obj(const EeWonLobbyMap *m, size_t i);
+
+/// Sets the entry's object (the map owns it from then on: a reference the caller added, or a record it made); the
+/// old one is dropped.
+///
+/// # Safety
+/// `m` is live, `i` a position.
+void ee_won_lobbymap_set_obj(EeWonLobbyMap *m,
+                             size_t i,
+                             void *obj);
+
+/// One of the entry's two numbers (0 past the end).
+///
+/// # Safety
+/// `m` is live.
+int64_t ee_won_lobbymap_num(const EeWonLobbyMap *m, size_t i, size_t slot);
+
+/// Sets one of the entry's numbers.
+///
+/// # Safety
+/// `m` is live.
+void ee_won_lobbymap_set_num(EeWonLobbyMap *m, size_t i, size_t slot, int64_t value);
+
+/// The entry's text (units as `u32`; `count` gets their number), valid until the map changes.
+///
+/// # Safety
+/// `m` is live, `count` writable.
+const uint32_t *ee_won_lobbymap_text(const EeWonLobbyMap *m, size_t i, size_t *count);
+
+/// Sets the entry's text (`count` units of `unit_size` bytes).
+///
+/// # Safety
+/// `m` is live; `text` holds the units.
+void ee_won_lobbymap_set_text(EeWonLobbyMap *m,
+                              size_t i,
+                              const void *text,
+                              size_t count,
+                              uint32_t unit_size);
+
+/// The entry's key as a number (an id map; 0 otherwise or past the end).
+///
+/// # Safety
+/// `m` is live.
+uint64_t ee_won_lobbymap_key_num(const EeWonLobbyMap *m, size_t i);
+
+/// The entry's key as an address (an address map; null otherwise), valid until the map changes.
+///
+/// # Safety
+/// `m` is live.
+const EeWonIpAddr *ee_won_lobbymap_key_addr(const EeWonLobbyMap *m, size_t i);
+
+/// The entry's key as text: `u32` units of a `GUIString` key, or the bytes of a narrow one (as `u8`), and their
+/// count; valid until the map changes.
+///
+/// # Safety
+/// `m` is live, `count` writable.
+const void *ee_won_lobbymap_key_text(const EeWonLobbyMap *m,
+                                     size_t i,
+                                     size_t *count);
+
+/// A new popup object for the C++ `popup` of `kind`.
+/// As `ee_won_lobbypopup_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonLobbyPopup *ee_won_lobbypopup_new_model(void *popup,
+                                             EeWonLobbyPopupKind kind,
+                                             EeWonLobbyPopupHostFn host);
+
+EeWonLobbyPopup *ee_won_lobbypopup_new(void *popup,
+                                       EeWonLobbyPopupKind kind,
+                                       EeWonLobbyPopupHostFn host);
+
+/// Releases the members (reverse member order) and frees the object.
+///
+/// # Safety
+/// `p` came from `ee_won_lobbypopup_new` (or is NULL) and is not used again.
+void ee_won_lobbypopup_free(EeWonLobbyPopup *p);
+
+/// One inward call (`EeWonLobbyPopupCall`).
+///
+/// # Safety
+/// `p` is live; the call's arguments as documented.
+ptrdiff_t ee_won_lobbypopup_call(const EeWonLobbyPopup *p,
+                                 EeWonLobbyPopupCall call,
+                                 ptrdiff_t a,
+                                 ptrdiff_t b,
+                                 ptrdiff_t c);
+
+/// A new logic of `kind` for the C++ shell `obj`.
+EeWonLogic *ee_won_logic_new(EeWonLogicKind kind, void *obj, EeWonLogicHostFn host);
+
+/// The shell's destructor.
+///
+/// # Safety
+/// `p` came from [`ee_won_logic_new`] (or is null), not used after.
+void ee_won_logic_free(EeWonLogic *p);
+
+/// A method of the logic.
+///
+/// # Safety
+/// `p` is a live logic; the host's calls may come back into it (a completion run at once).
+ptrdiff_t ee_won_logic_call(const EeWonLogic *p,
+                            EeWonLogicCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
+
+/// A new ping op's members for the C++ shell `obj`.
+EeWonPingOp *ee_won_pingop_new(void *obj,
+                               EeWonLogicHostFn host,
+                               uint16_t request_id,
+                               uint8_t flags);
+
+/// The ping op's destructor.
+///
+/// # Safety
+/// `p` came from [`ee_won_pingop_new`] (or is null), not used after.
+void ee_won_pingop_free(EeWonPingOp *p);
+
+/// A virtual of the ping op.
+///
+/// # Safety
+/// `p` is a live ping op; for `CheckResponse`, `a` is a live reader.
+int64_t ee_won_pingop_call(const EeWonPingOp *p, EeWonPingOpCall call, ptrdiff_t a);
+
+/// `sync_plan` into `out` (room for `existing_count + incoming_count` steps); returns the step count.
+///
+/// # Safety
+/// The id arrays hold their counts; `out` has room for both counts' sum.
+size_t ee_won_model_sync_plan(const uint16_t *existing,
+                              size_t existing_count,
+                              const uint16_t *incoming,
+                              size_t incoming_count,
+                              EeWonSyncStep *out);
+
+/// `EeWonPopulation::add_group` (0), `joined` (1) or `left` (2) in place.
+///
+/// # Safety
+/// `p` is valid and writable.
+void ee_won_model_population(EeWonPopulation *p, int32_t what, uint32_t flags, uint32_t members);
+
+int32_t ee_won_model_server_num_clients(bool connected, uint32_t live, int32_t listed);
+
+EeWonClientStatus ee_won_model_client_status(uint32_t flags,
+                                             uint8_t chat_member,
+                                             uint8_t game_member);
+
+EeWonGroupKind ee_won_model_group_kind(uint32_t flags);
+
+uint8_t ee_won_model_friend_status(bool in_chat, bool in_game);
+
+uint8_t ee_won_model_friend_start_locate();
+
+uint8_t ee_won_model_friend_end_locate(uint8_t flags);
+
+bool ee_won_model_game_pinging(uint16_t ping);
+
+bool ee_won_model_game_querying(uint16_t ping);
+
+bool ee_won_model_game_stale(int64_t now, int32_t last_seen, int32_t max_age);
+
+bool ee_won_model_game_list_by_id(int32_t game_type);
+
+bool ee_won_model_same_game(int32_t type_a,
+                            int32_t type_b,
+                            uint16_t group_a,
+                            uint16_t group_b,
+                            bool same_address);
+
+/// `status_text`: the text's index, or -1.
+int32_t ee_won_model_status_text(int16_t status);
+
+/// `all_ready` over `count` members.
+///
+/// # Safety
+/// `members` holds `count` entries (or is NULL with 0).
+bool ee_won_model_all_ready(const EeWonMemberReady *members, size_t count);
+
+/// `dir_object`: 1 a population (into `out_count`), 2 the address list, 0 anything else. `data` NULL: no data.
+///
+/// # Safety
+/// `kind` holds `kind_length` bytes, `data` `data_length` (or is NULL); `out_count` is writable.
+int32_t ee_won_model_dir_object(const uint8_t *kind,
+                                size_t kind_length,
+                                const uint8_t *data,
+                                size_t data_length,
+                                uint16_t *out_count);
+
+/// A new model object for the shell (its constructor's members); `empty` is the empty string's `GUIStringData`.
+///
+/// # Safety
+/// `shell` is the C++ object whose first member will hold the result; `host` answers the ops.
+EeWonModel *ee_won_model_new(void *shell,
+                             EeWonModelKind kind,
+                             EeWonModelHost host,
+                             void *empty);
+
+/// Frees a model object (its references given back in reverse member order, after it is gone).
+///
+/// # Safety
+/// `m` came from `ee_won_model_new` and is freed once.
+void ee_won_model_free(EeWonModel *m);
+
+/// A walk's `Rewind` (`LobbyClientIterator`, `LobbyClientSetIterator`): from the first client again.
+///
+/// # Safety
+/// `c` is a live cursor.
+void ee_won_model_cursor_reset(EeWonModelCursor *c);
+
+/// A member (see [`EeWonModelField`]).
+///
+/// # Safety
+/// `m` is live.
+ptrdiff_t ee_won_model_get(const EeWonModel *m, EeWonModelField f);
+
+/// Sets a member (see [`EeWonModelField`]).
+///
+/// # Safety
+/// `m` is live; an address is a live value.
+void ee_won_model_set(const EeWonModel *m, EeWonModelField f, ptrdiff_t v);
+
+/// A method (see [`EeWonModelCall`]); `empty` (`d`) is the empty string's data where a method resets a name.
+///
+/// # Safety
+/// `m` is live; the arguments are what each call says.
+ptrdiff_t ee_won_model_call(const EeWonModel *m,
+                            EeWonModelCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c,
+                            ptrdiff_t d);
+
+/// `write_global` into the sink.
+///
+/// # Safety
+/// The lists and arrays hold `names.count` entries; the sink's contract.
+void ee_won_prefs_write_global(const EeWonGlobalPrefsOut *p, EeWonByteSink sink, void *context);
+
+/// `write_user` into the sink.
+///
+/// # Safety
+/// The lists and arrays hold their counts; the sink's contract.
+void ee_won_prefs_write_user(const EeWonUserPrefsOut *p, EeWonByteSink sink, void *context);
+
+/// `read_global` (the file's bytes) to the sink.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; the sink's contract. No reference into Rust is kept past each call.
+EeWonPrefsRead ee_won_prefs_read_global(const uint8_t *bytes,
+                                        size_t length,
+                                        EeWonPrefsSink sink,
+                                        void *context);
+
+/// `read_user` to the sink.
+///
+/// # Safety
+/// As `ee_won_prefs_read_global`.
+EeWonPrefsRead ee_won_prefs_read_user(const uint8_t *bytes,
+                                      size_t length,
+                                      bool lan_user,
+                                      EeWonPrefsSink sink,
+                                      void *context);
+
+/// `user_file_name` into the sink.
+///
+/// # Safety
+/// The sink's contract.
+void ee_won_prefs_user_file_name(int32_t id, EeWonByteSink sink, void *context);
+
+/// `find_unused_user_id`.
+///
+/// # Safety
+/// `ids` holds `count` ids in ascending order.
+int32_t ee_won_prefs_unused_user_id(const int32_t *ids, size_t count);
+
+/// `prune_users`: `drop[i]` set to 1 for a user dropped without its file, 2 with it, else 0.
+///
+/// # Safety
+/// `ids`, `times` and `drop` hold `count` entries.
+void ee_won_prefs_prune_users(const int32_t *ids,
+                              const int64_t *times,
+                              size_t count,
+                              uint8_t *drop);
+
+/// `prune_lan_names`: `drop[i]` set for each name dropped.
+///
+/// # Safety
+/// `times` and `drop` hold `count` entries.
+void ee_won_prefs_prune_lan_names(const int64_t *times, size_t count, bool *drop);
+
+/// `recent_lan_name`, -1 for none.
+///
+/// # Safety
+/// `times` holds `count` entries.
+int64_t ee_won_prefs_recent_lan_name(const int64_t *times, size_t count);
+
+uint16_t ee_won_prefs_default_lan_number(uint32_t host);
+
+/// The constructor's state (see [`EeWonLobbyPrefs::new`]).
+EeWonLobbyPrefs *ee_won_lobbyprefs_new();
+
+/// Frees the object.
+///
+/// # Safety
+/// `p` from `ee_won_lobbyprefs_new` (or null), not used after.
+void ee_won_lobbyprefs_free(EeWonLobbyPrefs *p);
+
+/// A flag.
+///
+/// # Safety
+/// `p` is live.
+bool ee_won_lobbyprefs_flag(const EeWonLobbyPrefs *p, EeWonPrefsFlag f);
+
+/// Sets a flag.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_set_flag(EeWonLobbyPrefs *p, EeWonPrefsFlag f, bool on);
+
+/// The setters' rule (see [`EeWonLobbyPrefs::change_flag`]).
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_change_flag(EeWonLobbyPrefs *p, EeWonPrefsFlag f, bool on);
+
+/// The current user's id (0: the LAN user).
+///
+/// # Safety
+/// `p` is live.
+int64_t ee_won_lobbyprefs_current_user(const EeWonLobbyPrefs *p);
+
+/// Sets the current user's id.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_set_current_user(EeWonLobbyPrefs *p, int64_t id);
+
+/// A number.
+///
+/// # Safety
+/// `p` is live.
+uint16_t ee_won_lobbyprefs_number(const EeWonLobbyPrefs *p, EeWonPrefsNumber n);
+
+/// Sets a number.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_set_number(EeWonLobbyPrefs *p, EeWonPrefsNumber n, uint16_t v);
+
+/// The setters' rule for a number.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_change_number(EeWonLobbyPrefs *p, EeWonPrefsNumber n, uint16_t v);
+
+/// The network adapter (a numeric IPv4 address, 0 for the default).
+///
+/// # Safety
+/// `p` is live.
+int64_t ee_won_lobbyprefs_network_adapter(const EeWonLobbyPrefs *p);
+
+/// Sets the network adapter.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_set_network_adapter(EeWonLobbyPrefs *p, int64_t a);
+
+/// `LobbySaveNetworkAdapter`'s rule.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_save_network_adapter(EeWonLobbyPrefs *p, int64_t local_host);
+
+/// A text's UTF-8 bytes (valid until the text changes), its length in `*length`.
+///
+/// # Safety
+/// `p` is live, `length` writable.
+const uint8_t *ee_won_lobbyprefs_text(const EeWonLobbyPrefs *p, EeWonPrefsText t, size_t *length);
+
+/// Sets a text.
+///
+/// # Safety
+/// `p` is live; `s` null or `n` readable bytes.
+void ee_won_lobbyprefs_set_text(EeWonLobbyPrefs *p, EeWonPrefsText t, const uint8_t *s, size_t n);
+
+/// `LobbySetTabSelect`'s rule.
+///
+/// # Safety
+/// As `ee_won_lobbyprefs_set_text`.
+void ee_won_lobbyprefs_change_tab_select(EeWonLobbyPrefs *p, const uint8_t *s, size_t n);
+
+/// `LobbySetLastRoom`'s rule.
+///
+/// # Safety
+/// `p` is live; each text null or its length's readable bytes.
+void ee_won_lobbyprefs_set_last_room(EeWonLobbyPrefs *p,
+                                     const uint8_t *server,
+                                     size_t server_length,
+                                     const uint8_t *room,
+                                     size_t room_length);
+
+/// `RestoreDefaults`; true for the LAN user (the caller then sets the default LAN name).
+///
+/// # Safety
+/// `p` is live; each text null or its length's readable bytes.
+bool ee_won_lobbyprefs_restore_defaults(EeWonLobbyPrefs *p,
+                                        const uint8_t *quick_play,
+                                        size_t quick_play_length,
+                                        const uint8_t *lan,
+                                        size_t lan_length);
+
+/// `LobbyRestoreDefaults`' rule after the restore.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_after_restore(EeWonLobbyPrefs *p, int64_t old_adapter);
+
+/// The end of `SaveGlobalPrefs`.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_after_global_save(EeWonLobbyPrefs *p);
+
+/// The end of `LoadUserPrefs`.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_after_user_load(EeWonLobbyPrefs *p);
+
+size_t ee_won_resource_count();
+
+/// Row `index` (below `ee_won_resource_count`) into `out`; false past the end.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_resource_row(size_t index, EeWonResource *out);
+
+/// The kind of resource `res` (its row's).
+EeWonResKind ee_won_lobbyres_kind(EeWonLobbyRes res);
+
+/// As `ee_won_routelogic_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonRouteLogic *ee_won_routelogic_new_model(void *obj, EeWonRouteLogicHostFn host);
+
+/// A new logic for the shell `obj` (the members as the constructor sets them).
+EeWonRouteLogic *ee_won_routelogic_new(void *obj, EeWonRouteLogicHostFn host);
+
+/// Frees a logic, giving back the references it holds.
+///
+/// # Safety
+/// `p` is NULL or from `ee_won_routelogic_new`, not used again.
+void ee_won_routelogic_free(EeWonRouteLogic *p);
+
+/// One of the logic's methods (`EeWonRouteLogicCall`).
+///
+/// # Safety
+/// `p` is from `ee_won_routelogic_new`; the arguments are what the call says.
+ptrdiff_t ee_won_routelogic_call(const EeWonRouteLogic *p,
+                                 EeWonRouteLogicCall call,
+                                 ptrdiff_t a,
+                                 ptrdiff_t b);
+
+/// Pushes a number to a sink an op was given (`BadUserIds`, `StatusOpMap`).
+///
+/// # Safety
+/// `sink` is the pointer the op was given.
+void ee_won_routelogic_push(void *sink, uint64_t value);
+
+/// `room_spec`; a negative group is none.
+int32_t ee_won_routing_room_spec(uint16_t id, int32_t chat_group, int32_t game_group);
+
+int32_t ee_won_routing_group_of_spec(int32_t spec);
+
+uint16_t ee_won_routing_ping_ceiling(bool have_config, uint16_t config_ceiling);
+
+EeWonQuickPlay ee_won_routing_quick_play_rank(bool password,
+                                              bool ask_to_join,
+                                              bool can_join,
+                                              uint16_t ping,
+                                              int32_t skill,
+                                              int32_t wanted,
+                                              uint16_t ping_limit,
+                                              uint16_t ceiling);
+
+bool ee_won_routing_should_locate_friend(bool locating,
+                                         bool on_current_server,
+                                         size_t server_count,
+                                         bool connected,
+                                         uint32_t now,
+                                         uint32_t last_locate);
+
+/// `default_server` over `count` servers: the index, or -1.
+///
+/// # Safety
+/// `servers` holds `count` entries (or is NULL with 0).
+int64_t ee_won_routing_default_server(const EeWonServerPick *servers, size_t count);
+
+/// The (mask, flags) of `anonymous_flags` (`which` 0) or `dirty_word_flags` (1) into the outs.
+///
+/// # Safety
+/// Both outs are writable.
+void ee_won_routing_client_flags(int32_t which, bool on, uint32_t *out_mask, uint32_t *out_flags);
+
+bool ee_won_routing_can_add_friend(size_t count);
+
+/// A new scrolling text for the C++ component `comp`.
+EeWonScrollText *ee_won_scrolltext_new(void *comp, EeWonScrollTextHostFn host);
+
+/// Frees the lines (front to back) and the object.
+///
+/// # Safety
+/// `st` came from `ee_won_scrolltext_new` (or is NULL) and is not used again.
+void ee_won_scrolltext_free(EeWonScrollText *st);
+
+/// One inward call (`EeWonScrollTextCall`).
+///
+/// # Safety
+/// `st` is live; the call's arguments as documented.
+ptrdiff_t ee_won_scrolltext_call(const EeWonScrollText *st,
+                                 EeWonScrollTextCall call,
+                                 ptrdiff_t a,
+                                 ptrdiff_t b);
+
+/// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; `out` is writable.
+int32_t ee_won_room_read(const uint8_t *bytes, size_t length, bool joining, EeWonRoomMsg *out);
+
+/// `room_accepts`.
+///
+/// # Safety
+/// Both point to valid structs.
+bool ee_won_room_accepts(const EeWonRoomMsg *m, const EeWonRoomRoles *roles);
+
+/// `room_message` into the sink.
+///
+/// # Safety
+/// `m` is valid; the sink's contract.
+void ee_won_room_message(const EeWonRoomMsg *m, EeWonByteSink sink, void *context);
+
+/// `player_head` into the sink.
+///
+/// # Safety
+/// The sink's contract.
+void ee_won_room_player_head(uint16_t ping, bool ready, EeWonByteSink sink, void *context);
+
+int32_t ee_won_room_start_exit_code(bool i_am_captain);
+
+/// `ready_state` in place.
+///
+/// # Safety
+/// `s` is valid and writable.
+void ee_won_room_ready_state(EeWonReadyState *s);
+
+bool ee_won_game_is_full(int32_t players, int32_t open_slots);
+
+/// `join_status`: the status, or -1 to ask the game code's hook.
+int16_t ee_won_game_join_status(bool full,
+                                bool invite_only,
+                                bool invited,
+                                bool is_host,
+                                bool in_progress);
+
+int16_t ee_won_game_host_join_check(bool full, bool in_progress);
+
+bool ee_won_game_matches_room_spec(int32_t flags, int32_t game_type);
+
+/// `write_summary` into the sink; `name` is UTF-16 LE bytes.
+///
+/// # Safety
+/// `s` is valid; `name` holds `name_length` bytes; the sink's contract.
+void ee_won_game_write_summary(const EeWonGameSummary *s,
+                               const uint8_t *name,
+                               size_t name_length,
+                               EeWonByteSink sink,
+                               void *context);
+
+/// `read_summary` into `out`; the name (when read) goes to the sink as UTF-16 units.
+///
+/// # Safety
+/// `bytes` holds `length` bytes; `out` is writable; the sink's contract.
+void ee_won_game_read_summary(const uint8_t *bytes,
+                              size_t length,
+                              int32_t game_type,
+                              uint16_t product_id,
+                              EeWonGameSummary *out,
+                              EeWonUnitSink name_sink,
+                              void *context);
+
+/// A new StagingLogic state for the C++ shell `logic`, calling out through `host`.
+/// As `ee_won_staging_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonStaging *ee_won_staging_new_model(void *logic, EeWonLobbyHostFn host);
+
+EeWonStaging *ee_won_staging_new(void *logic, EeWonLobbyHostFn host);
+
+/// # Safety
+/// `staging` came from `ee_won_staging_new` (or is NULL) and is not used again.
+void ee_won_staging_free(EeWonStaging *staging);
+
+/// One of StagingLogic's methods (`EeWonStagingCall`).
+///
+/// # Safety
+/// `staging` is live; the call's arguments as documented.
+ptrdiff_t ee_won_staging_call(const EeWonStaging *staging,
+                              EeWonStagingCall call,
+                              void *a,
+                              void *b,
+                              ptrdiff_t c,
+                              ptrdiff_t d);
+
+/// `GetWONStatusString`'s choice for `status`.
+EeWonStatusLobbyText ee_won_status_lobby_text(int32_t status);
 
 }  // extern "C"
 

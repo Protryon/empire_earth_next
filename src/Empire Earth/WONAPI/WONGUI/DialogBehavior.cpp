@@ -1,4 +1,4 @@
-// Dialog (R6 WON round 26): the Rust Dialog's calls out (rust/crates/ee_won/src/dialogobj.rs, EeWonGuiOp's dialog
+// Dialog (R6 WON round 26): the Rust Dialog's calls out (rust/crates/ee_won_gui/src/dialogobj.rs, EeWonGuiOp's dialog
 // ops; the container's fall back to Container.cpp's), its constructor, destructor and default button. The original's
 // DialogBehavior.cpp (dragging, focus, Escape and Enter, the default button) is the Rust object.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233

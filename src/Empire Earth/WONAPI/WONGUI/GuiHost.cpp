@@ -1,5 +1,5 @@
 // WONGUI's component objects in Rust (R6 WON rounds 21-22): the one outward call table, ee_won_guicpp_call
-// (rust/crates/ee_won/src/guihost.rs EeWonGuiOp), and the C++ left of the classes that moved: the TextArea's
+// (rust/crates/ee_won_gui/src/guihost.rs EeWonGuiOp), and the C++ left of the classes that moved: the TextArea's
 // constructor and destructor and the segments it makes (the Rust TextArea is textobj.rs); the InputBox's
 // constructor, destructor and numeric filter (the Rust InputBox is inputobj.rs); the Label's constructor and
 // destructor (the Rust Label is labelobj.rs); the Splitter's (splitobj.rs); the Scrollbar's (barobj.rs); the Scroller's (scrollerobj.rs); the ScrollArea's (paneobj.rs); the ListArea's and its items'

@@ -12,7 +12,7 @@
 // header height's store) is traced with its arguments; the reads are not (the stand-ins answer them from the world,
 // which the traced calls change). Each of 200,000 sequences builds a random world (parts NULL where the original
 // tested for NULL), makes one random call on both and compares the traces and the sizes out. The first 400 are
-// rust/crates/ee_won/src/golden_skinlay.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_gui/src/golden_skinlay.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

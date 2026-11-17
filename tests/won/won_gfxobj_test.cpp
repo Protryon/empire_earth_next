@@ -3,7 +3,7 @@
 // traced hooks, images and fonts, over random call sequences: the trace of hook, image and font calls and the state
 // (translation, colour, clip rectangle) compared after each call. The base hooks (DrawRectHook, DrawDottedRectHook,
 // FillRectHook) are not overridden, so theirs run. `--print FILE` writes the first sequences as
-// rust/crates/ee_won/src/golden_gfxobj.txt (cargo replays it, gfxobj_tests.rs); without it the golden is compared
+// rust/crates/ee_won_gui/src/golden_gfxobj.txt (cargo replays it, gfxobj_tests.rs); without it the golden is compared
 // too. It also checks WindowManager::InitColorScheme's statements against wmobj.rs's table. The exit code is the
 // number of failures.
 #include <windows.h>
@@ -439,7 +439,7 @@ int main(int argc, char** argv)
     } else {
         std::string aPath = __FILE__;
         size_t aSlash = aPath.find_last_of("/\\");
-        aPath = aPath.substr(0, aSlash + 1) + "../../rust/crates/ee_won/src/golden_gfxobj.txt";
+        aPath = aPath.substr(0, aSlash + 1) + "../../rust/crates/ee_won_gui/src/golden_gfxobj.txt";
         FILE* f = fopen(aPath.c_str(), "rb");
         if (f == NULL) { printf("FAIL: no %s\n", aPath.c_str()); aFailures++; }
         else {

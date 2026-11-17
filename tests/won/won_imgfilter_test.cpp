@@ -8,7 +8,7 @@
 //
 // 40,000 random filters of each kind over 1-, 8- and 32-bit images from 0 x 0 to 24 x 24 (sizes, percentages,
 // tints, colours, samples and transparency drawn at random); the results (the filter's fields, the new image's
-// size and every pixel byte, the palette) must be the same. `--print` writes rust/crates/ee_won/src//
+// size and every pixel byte, the palette) must be the same. `--print` writes rust/crates/ee_won_net/src//
 // golden_imgfilter.txt (the first 400 filters, 80 of each kind), which the Rust tests replay.
 #include <stdio.h>
 #include <stdint.h>

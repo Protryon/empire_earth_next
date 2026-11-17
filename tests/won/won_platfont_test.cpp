@@ -8,7 +8,7 @@
 // a surrogate pair, an unpaired surrogate) at a random place onto a surface of a pixel scale (1, 1.25, 1.5, 2, 3) with a
 // clip, or none, with a Graphics of a colour or none. The answers, the surfaces' pixel bytes and the underlines the
 // Graphics was asked to draw must be the same. `--print` writes the first 400 fonts:
-// rust/crates/ee_won/src/golden_platfont.txt, which the Rust tests replay. Exit code: the number of mismatches.
+// rust/crates/ee_won_net/src/golden_platfont.txt, which the Rust tests replay. Exit code: the number of mismatches.
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>

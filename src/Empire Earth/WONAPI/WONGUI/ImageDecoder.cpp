@@ -1,6 +1,6 @@
 // Image decoders: the base class, the extension-dispatching multi-decoder, the PNG and JPEG decoders (file name
 // inferred). R6 WON round 41: the multi-decoder's map, set and current extension and both decodes are ee_won's
-// (rust/crates/ee_won/src/imgdec.rs; the JPEG decode is libjpeg 6b's in jpeg.rs, the PNG one ee_openformats'); these
+// (rust/crates/ee_won_gui/src/imgdec.rs; the JPEG decode is libjpeg 6b's in jpeg.rs, the PNG one ee_openformats'); these
 // classes are their shells: the objects, the virtual calls, the new RawImage32 and the FileReader's throws.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>

@@ -16,7 +16,7 @@
 #include "ee/wonapi/WONLobbyScreens.h"
 #include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
-// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
+// (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // UserListItem: a client of the chat room, or a separator line between the list's groups
 // Creates a room user list entry with no client (a separator line until a client is set)

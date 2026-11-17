@@ -1,7 +1,7 @@
 // Original filename: C:\EEX\Empire Earth\WONAPI\WONLobby\AccountLogic.cpp.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 // AccountLogic: login, account creation and update, lost password/user name, credits and terms of use.
-// A Rust object since R6 WONLobby round 8 (rust/crates/ee_won/src/logics.rs: the last user name, the terms-of-use
+// A Rust object since R6 WONLobby round 8 (rust/crates/ee_won_lobby/src/logics.rs: the last user name, the terms-of-use
 // prompt, every decision); this unit keeps the shell (the dialogs' SmartPtrs) and the host's ops, each one the
 // original's calls on a C++ object (the ops, the dialogs, the users, the events, the authentication context).
 #include <windows.h>

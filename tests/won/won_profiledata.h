@@ -1,5 +1,5 @@
 // WONDB's ProfileData (the account profile: newsletters, custom action and birth date), a shim over ee_won's
-// EeWonProfile (rust/crates/ee_won/src/db.rs). The game's account ops take the profile as Rust members now
+// EeWonProfile (rust/crates/ee_won_net/src/db.rs). The game's account ops take the profile as Rust members now
 // (reqdir.rs, reqlast.rs); this class is the drivers' original half (won_db_test, won_adminop_test, won_reqdir_test,
 // won_reqlast_test), moved here from src/Empire Earth/WONAPI/WONDB/ProfileData.cpp and WONRouting.h.
 #pragma once

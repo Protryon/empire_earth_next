@@ -5,7 +5,7 @@
 #include "rust/ee_won.h"
 
 // The lobby's 469 resources (the original's named globals and their ids) are the rows of ee_won's table
-// (rust/crates/ee_won/src/resource.rs: EeWonLobbyRes names them in order); one slot each, read by name through these
+// (rust/crates/ee_won_lobby/src/resource.rs: EeWonLobbyRes names them in order); one slot each, read by name through these
 // macros (EeWonLobbyRes is rust/ee_won.h's, included here as tools/rust_includes.py asks)
 struct LobbyResourceSlot {
     WONAPI::GUIString mString;

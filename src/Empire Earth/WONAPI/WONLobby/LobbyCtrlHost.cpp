@@ -1,6 +1,6 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 // The lobby screens' controls' shell and host (R6 WONLobby round 4): GameBrowserCtrl, GameStagingCtrl,
-// LobbyOptionsCtrl, GameUserListCtrl and the EE room's EELobbyGameOptionsCtrl are one Rust object each (rust/crates/ee_won/src/lobbyctl.rs). This unit is
+// LobbyOptionsCtrl, GameUserListCtrl and the EE room's EELobbyGameOptionsCtrl are one Rust object each (rust/crates/ee_won_lobby/src/lobbyctl.rs). This unit is
 // the shell's two virtuals, the host (each op the original's statements on a control, an event, the lobby's model,
 // its settings or a global, with no decision), the player row GameUserListItem (a list row: paint, size, order; its
 // icon rule is Rust) and the two config readers that were in GameBrowserCtrl.cpp and GameUserListCtrl.cpp.
@@ -432,7 +432,7 @@ ComponentConfig* GameBrowserCtrlConfig::CfgFactory()
 }
 
 // The instruction keys and the flag and value names these readers compare are ee_won's guiconf tables
-// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
+// (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 // Reads the HOMELOCATION layout key, resolving a file URL to the resource file path
 bool GameBrowserCtrlConfig::Virtual24(const std::string& instruction)
 {

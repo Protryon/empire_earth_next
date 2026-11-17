@@ -4,7 +4,7 @@
 // it is empty; the timers and repeating receives whose completions call the op back; a completion called, an
 // object's references; another Rust op's numbers and bytes; a server context's addresses; an HTTP session's AddOp;
 // the HTTP get's modify time; a new peer authentication op's members), over real sockets on 127.0.0.1, one line per
-// event, compared with rust/crates/ee_won/src/golden_opcore.txt (recorded over ServerOp.cpp's HostCall, AsyncOp.cpp
+// event, compared with rust/crates/ee_won_net/src/golden_opcore.txt (recorded over ServerOp.cpp's HostCall, AsyncOp.cpp
 // and AsyncOpWithTracker.cpp before these moved into Rust, net round 24). Every call goes through an op's own call
 // path (ee_won_hostop_call), so the lines are the C++ side's answers before the move and the Rust op's after it.
 // Running parents are HTTP get ops connected to a listener that never answers, so they stay pending until a call
@@ -601,7 +601,7 @@ int main(int argc, char** argv)
     string aGoldenPath = __FILE__;
     aSlash = aGoldenPath.find_last_of("/\\");
     aGoldenPath.resize(aSlash == string::npos ? 0 : aSlash + 1);
-    aGoldenPath += "../../rust/crates/ee_won/src/golden_opcore.txt";
+    aGoldenPath += "../../rust/crates/ee_won_net/src/golden_opcore.txt";
     FILE* aGolden = fopen(aGoldenPath.c_str(), "rb");
     if (aGolden == NULL) {
         printf("FAIL: cannot open %s\n", aGoldenPath.c_str());

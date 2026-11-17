@@ -1,4 +1,4 @@
-// TabBar and TabCtrl (R6 WON round 27): the Rust objects' calls out (rust/crates/ee_won/src/tabobj.rs, EeWonGuiOp's
+// TabBar and TabCtrl (R6 WON round 27): the Rust objects' calls out (rust/crates/ee_won_gui/src/tabobj.rs, EeWonGuiOp's
 // tab ops; the container's fall back to Container.cpp's), the constructors and destructors. The original's
 // TabCtrl.cpp (the tabs' places and selection, the bar's scroll and arrows, the page area, focus and keys) is the
 // Rust objects; each op here is a run of its C++ statements with no decision between them.

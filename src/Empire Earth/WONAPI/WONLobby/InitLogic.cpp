@@ -17,7 +17,7 @@
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/EELobbySound.h"
 #include "rust/ee_won.h"
-// A Rust object since R6 WONLobby round 8 (rust/crates/ee_won/src/logics.rs: the errors, the order of the checks
+// A Rust object since R6 WONLobby round 8 (rust/crates/ee_won_lobby/src/logics.rs: the errors, the order of the checks
 // and every decision, over flow.rs's); this unit keeps the shell (the HTTP session, the firewall test's socket, op
 // and address, the adapter dialog, the advert's link) and the host's ops, each one the original's calls on a C++
 // object (the ops, the server lists, the files, the events).

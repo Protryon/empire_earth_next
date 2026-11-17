@@ -17,7 +17,7 @@
 
 namespace WONAPI {
 // FileReader: 0x14 bytes (ConfigParser embeds one at 0x18; constructor 0x7b1d20). FileWriter: 4 bytes
-// (constructor 0x6a1e10, destructor 0x6a1e20). Both are ee_won's (rust/crates/ee_won/src/file.rs): the state is
+// (constructor 0x6a1e10, destructor 0x6a1e20). Both are ee_won's (rust/crates/ee_won_net/src/file.rs): the state is
 // its #[repr(C)] core, these methods forward and throw the exceptions its statuses name (FileReader.cpp,
 // FileReaderWideStrings.cpp and FileWriter.cpp are deleted: net round 27).
 class FileReaderException;
@@ -269,7 +269,7 @@ public:
     void SelectRecentLanName();
 
     // the members behind accessors (round 16; the Lobby* functions read them through these). The scalar state is a
-    // Rust object (rust/crates/ee_won/src/prefsobj.rs EeWonLobbyPrefs: the current user, the flags, the connection
+    // Rust object (rust/crates/ee_won_lobby/src/prefsobj.rs EeWonLobbyPrefs: the current user, the flags, the connection
     // speed, the LAN broadcast port, the network adapter and the four texts, with the setters' rules); the Flag
     // values are EeWonPrefsFlag's
     enum Flag { kFilterDirtyWords, kDoAutoAFK, kCrossPromotion, kLobbySoundEffects, kLobbyMusic, kChatSoundEffects,

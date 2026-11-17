@@ -1,5 +1,5 @@
 // Image filters: crop, scale, tint, transparent colour, plus filter chains and transparent-border trimming (R6 WON
-// round 36: the pixel loops are rust/crates/ee_won/src/imgfilter.rs; the C++ keeps the filters, the new images and
+// round 36: the pixel loops are rust/crates/ee_won_gui/src/imgfilter.rs; the C++ keeps the filters, the new images and
 // the dispatch on the image's type)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>

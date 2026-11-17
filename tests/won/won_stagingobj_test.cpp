@@ -7,7 +7,7 @@
 // traces (every op with its arguments and answer, the room messages' bytes) must be the same. One deliberate
 // difference: the original's HandleMessageBuffer re-entered HandleMessage itself, here (and in the host) it is the
 // op HandleBytes, which the scripted host records without re-entering. The first 100 sequences and every later one
-// that makes an op or a call none before made are rust/crates/ee_won/src/golden_stagingobj.txt, which the Rust
+// that makes an op or a call none before made are rust/crates/ee_won_lobby/src/golden_stagingobj.txt, which the Rust
 // tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>

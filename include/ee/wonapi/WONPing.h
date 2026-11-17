@@ -3,9 +3,9 @@
 #include <time.h>
 #include "ee/wonapi/WONRouting.h"
 namespace WONAPI {
-// PingOp is a Rust op (rust/crates/ee_won/src/reqops.rs, EE_WON_REQOPS_PING).
+// PingOp is a Rust op (rust/crates/ee_won_net/src/reqops.rs, EE_WON_REQOPS_PING).
 //
-// MultiPingOp is a Rust op on the Rust op base (rust/crates/ee_won/src/multiping.rs): new
+// MultiPingOp is a Rust op on the Rust op base (rust/crates/ee_won_net/src/multiping.rs): new
 // RustServerOp(ee_won_multiping_new()); the limits with ee_won_hostop_set (EE_WON_MULTIPING_BATCH_SIZE,
 // _MAX_FAILURES, _MAX_PING_TIME), a server with EE_WON_MULTIPING_ADD (the address's six bytes, an entity or NULL),
 // EE_WON_MULTIPING_CLEAR; once finished, the list by number (EE_WON_MULTIPING_COUNT, _ADDR, _TIME, _FAILURES,

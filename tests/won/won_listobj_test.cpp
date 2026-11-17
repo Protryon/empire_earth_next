@@ -12,7 +12,7 @@
 // sorting, size changes, scrolls, paints, the mouse over items with every flag, keys). The traces (every op with its
 // arguments and answer, the draws) must be the same, and every reference taken must be given back when the list
 // goes. The first 40 sequences and every later one that makes an op or a call none before made are
-// rust/crates/ee_won/src/golden_listobj.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_gui/src/golden_listobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

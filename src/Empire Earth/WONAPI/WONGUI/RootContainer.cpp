@@ -1,4 +1,4 @@
-// RootContainer (R6 WON round 29): the Rust RootContainer's calls out (rust/crates/ee_won/src/rootobj.rs, EeWonGuiOp's
+// RootContainer (R6 WON round 29): the Rust RootContainer's calls out (rust/crates/ee_won_gui/src/rootobj.rs, EeWonGuiOp's
 // root ops; the container's fall back to Container.cpp's), its constructor and destructor. The original's
 // RootContainer.cpp (the invalid rectangle, the queued backgrounds, the cursor's component, the window drag) is the
 // Rust object.

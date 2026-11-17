@@ -1,5 +1,5 @@
 // WONServer's ServerConnection and ServerConnectionConnectOp over 127.0.0.1, one line per event, compared with
-// rust/crates/ee_won/src/golden_servconn.txt (recorded over the C++ classes before their move to Rust): the
+// rust/crates/ee_won_net/src/golden_servconn.txt (recorded over the C++ classes before their move to Rust): the
 // blocking and async connects (the peer authentication is a stand-in below: it connects the connection's socket
 // for real, or stays pending for port 0), the connect completion, the message callback on the repeat receive, the
 // keep-alive timer and its no-op messages, a period of 0, the close hook killing a pending connect and the timer,
@@ -580,7 +580,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_servconn.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_servconn.txt";
 }
 
 int main(int argc, char** argv)

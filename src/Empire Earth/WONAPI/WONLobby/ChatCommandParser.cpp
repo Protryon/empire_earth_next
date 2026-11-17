@@ -22,7 +22,7 @@
 extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss)
 using namespace WONAPI;
 // The parsing (the command word, targets by full name or unique prefix, texts, durations, the input's kind, the help
-// lines a client is shown, the short names) is ee_won's chat module (rust/crates/ee_won/src/chat.rs); the parser's
+// lines a client is shown, the short names) is ee_won's chat module (rust/crates/ee_won_net/src/chat.rs); the parser's
 // state (the command tables, the settings, what a parse leaves) is a Rust object since round 17 (chatobj.rs). This
 // class keeps the client list and the target client and hands the clients' names over.
 namespace {

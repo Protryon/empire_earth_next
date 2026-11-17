@@ -10,7 +10,7 @@
 // disabled ones; presses, releases, moves on the same spot and elsewhere, the submenu timer, events from the submenu
 // and others, submenu checks and closes, keys, resets, selections). The traces must be the same, and every
 // reference taken must be given back when the menu goes. The first 40 sequences and every later one that makes an
-// op or a call none before made are rust/crates/ee_won/src/golden_menuobj.txt, which the Rust tests replay;
+// op or a call none before made are rust/crates/ee_won_gui/src/golden_menuobj.txt, which the Rust tests replay;
 // `--print` prints them.
 #include <stdio.h>
 #include <stdlib.h>

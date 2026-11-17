@@ -16,7 +16,7 @@
 // arguments and answer, the stored texts, the draws) must be the same.
 //
 // The first 40 sequences and every later one that makes an op or a call none before made are
-// rust/crates/ee_won/src/golden_inputobj.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_gui/src/golden_inputobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

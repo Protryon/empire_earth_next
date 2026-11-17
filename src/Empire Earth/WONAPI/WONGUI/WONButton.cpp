@@ -1,4 +1,4 @@
-// Skinned button (R6 WON round 35): the Rust WONButton (rust/crates/ee_won/src/wonbtnobj.rs) holds the states, the
+// Skinned button (R6 WON round 35): the Rust WONButton (rust/crates/ee_won_gui/src/wonbtnobj.rs) holds the states, the
 // wrapped text per font, the pads, colours, flags and alignments and runs every method; this is its host (its calls
 // out: the base Button, the wrapped texts, the images, the fonts, the button's state, the Graphics), the text getter
 // and the destructor.

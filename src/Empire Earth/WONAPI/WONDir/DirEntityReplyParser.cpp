@@ -1,4 +1,4 @@
-// The directory server's entity replies: the reading is ee_won's (rust/crates/ee_won/src/dir.rs), the ops that read
+// The directory server's entity replies: the reading is ee_won's (rust/crates/ee_won_net/src/dir.rs), the ops that read
 // them Rust's (reqdir.rs); this makes the DirEntity objects of what they read (RustServerOp::GetEntities). The
 // parsers' statements (ParseMultiEntityReply 2f0510, ParseSingleEntityReply, OnlyDirs 2f04f0, OnlyServices 2f0500)
 // are tests/won/won_dir_test.cpp's original half.

@@ -4,7 +4,7 @@
 // port, over stand-ins) against tests/won/won_miscops_glue.h over ee_won's miscops module, on generated input.
 // The version compares log their calls, so their order and count are compared too.
 //
-// `--print N` prints N patch-list cases in the golden's format (rust/crates/ee_won/src/golden_miscops.txt; the Rust
+// `--print N` prints N patch-list cases in the golden's format (rust/crates/ee_won_net/src/golden_miscops.txt; the Rust
 // replay is `miscops::tests::golden`). The exit code is the number of failed checks.
 #include <windows.h>
 #include <stdio.h>

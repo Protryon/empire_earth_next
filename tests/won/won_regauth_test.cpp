@@ -1,6 +1,6 @@
 // WONInternal's RegAuth (the auth settings kept under Software\Sierra\MPTools\Auth): a script of writes and reads of
 // both forms over a scratch configuration file ($EE_CONFIG = won_regauth.yaml in the current directory), one line
-// per step and the file's lines at the end, compared with rust/crates/ee_won/src/golden_regauth.txt (recorded over
+// per step and the file's lines at the end, compared with rust/crates/ee_won_net/src/golden_regauth.txt (recorded over
 // the C++ RegAuth.cpp before its port: net round 27). `--print` prints the lines instead. The exit code is the
 // number of failures.
 #include <windows.h>
@@ -102,7 +102,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_regauth.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_regauth.txt";
 }
 
 int main(int argc, char** argv)

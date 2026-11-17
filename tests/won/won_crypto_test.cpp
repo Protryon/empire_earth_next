@@ -1,4 +1,4 @@
-// WON's crypto, auth and digest classes as forwarders to ee_won (rust/crates/ee_won): the C++ API round trip on every
+// WON's crypto, auth and digest classes as forwarders to ee_won (rust/crates/ee_won_net): the C++ API round trip on every
 // OS. CRC16 and MD5 against known values, Blowfish by value (copies keep the key), ElGamal keys copied deeply and
 // signing and verifying, a key block (AuthBase over ee_won's peerobj) signed by its own key. Links with the won module's forwarder units and
 // the Rust library. Prints one line per failed check; the exit code is the number of failed checks.

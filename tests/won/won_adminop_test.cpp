@@ -6,7 +6,7 @@
 // members, the request, then up to five generated replies (DB proxy headers right and wrong, record lists whole, cut
 // and mutated, replies spread over several messages), each reply's verdict and the op's members after it.
 //
-// `--print N` prints N sequences with what the original did (rust/crates/ee_won/src/golden_adminop.txt, recorded
+// `--print N` prints N sequences with what the original did (rust/crates/ee_won_net/src/golden_adminop.txt, recorded
 // before the port; `adminop::tests::golden` replays it). The exit code is the number of failed checks.
 #include <windows.h>
 #include <stdio.h>

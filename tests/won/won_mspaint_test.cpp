@@ -9,7 +9,7 @@
 // the C++ makes around the plan, is not part of either side. DrawButtonText is traced with its offsets.
 //
 // 300,000 paints; the traces must be the same. The first 400 paints and every later one that makes a kind of
-// trace line none before made (per paint kind) are rust/crates/ee_won/src/golden_mspaint.txt (`--print`), which
+// trace line none before made (per paint kind) are rust/crates/ee_won_gui/src/golden_mspaint.txt (`--print`), which
 // the Rust tests replay.
 #include <stdio.h>
 #include <stdint.h>

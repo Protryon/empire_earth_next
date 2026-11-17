@@ -226,7 +226,7 @@ public:
     int height;                             // +0x0c
 };
 
-// Component (R6 WON round 38): every method is Rust (rust/crates/ee_won/src/compobj.rs), the C++ keeping the members
+// Component (R6 WON round 38): every method is Rust (rust/crates/ee_won_gui/src/compobj.rs), the C++ keeping the members
 // and the vtable; the empty defaults stay inline. The fonts are the root window's (ComponentLifetime.cpp).
 extern "C" intptr_t ee_won_guicpp_comp_call(void*,EeWonGuiOp,intptr_t,intptr_t,intptr_t,intptr_t);
 class Component : public RefCount {
@@ -367,7 +367,7 @@ public:
 
 // a component holding others (0x84 bytes: EELobbyGameOptionsCtrl's members start at +0x84; vtable 0x84d7cc, 51 slots)
 // ChildLayoutManager (R6 WON round 31): its instructions (held, in order) and layout points (held) are the Rust layout
-// manager (rust/crates/ee_won/src/layoutobj.rs); a container owns it by pointer. The methods are forwarders
+// manager (rust/crates/ee_won_gui/src/layoutobj.rs); a container owns it by pointer. The methods are forwarders
 // (ChildLayouts.cpp is the host).
 class ChildLayoutManager : public RefCount {
 public:
@@ -386,7 +386,7 @@ private:
     intptr_t MCall(EeWonLayoutMgrCall c,intptr_t a=0,intptr_t b=0) { return ee_won_lmgr_call(this->mMgr,c,a,b,0,0); }
 };
 // Container (R6 WON round 26): its children (held), mouse and focus children, timer children, focus ids, current
-// cursor, flags and modal count are the Rust Container (rust/crates/ee_won/src/ctobj.rs); this is the type every
+// cursor, flags and modal count are the Rust Container (rust/crates/ee_won_gui/src/ctobj.rs); this is the type every
 // component holds and the base of every screen, dialog, list and control group, with the child layout manager. Its
 // virtuals and methods are forwarders; the calls the Rust makes are Container.cpp's host.
 class Container;
@@ -495,7 +495,7 @@ public:
 
 // Child layout instructions (six concrete classes below)
 // The child layout instructions (R6 WON round 31): each class's numbers, its component list, its group and its enabled
-// flag are one Rust instruction (rust/crates/ee_won/src/layoutobj.rs, `EeWonLayoutKind` the class); the C++ classes
+// flag are one Rust instruction (rust/crates/ee_won_gui/src/layoutobj.rs, `EeWonLayoutKind` the class); the C++ classes
 // are the reference-counted shells the lobby makes, their constructors handing the numbers over. Only the classes
 // below derive from the base, and none overrides Execute or UsesComponent: the Rust runs each class's statements.
 class ChildLayoutInstructionBase : public RefCount {
@@ -522,7 +522,7 @@ public:
 
 // a modal or popup dialog (0x98 bytes in the original: EELobbyConnectDialog's members start at +0x98).
 // Dialog (R6 WON round 26): its drag, Escape result and default button are the Rust Dialog
-// (rust/crates/ee_won/src/dialogobj.rs) over the container's Rust object; this is the type the lobby's dialogs derive
+// (rust/crates/ee_won_gui/src/dialogobj.rs) over the container's Rust object; this is the type the lobby's dialogs derive
 // from, with one-line forwarders (DialogBehavior.cpp is its host).
 class Dialog : public Container {
 public:
@@ -555,7 +555,7 @@ private:
 };
 
 // Button (R6 WON round 30): its flags, Space's hold, the repeat delay, the mouse's press state, the radio group's walk
-// and the two default buttons are the Rust Button (rust/crates/ee_won/src/btnobj.rs); this is the type the skins and
+// and the two default buttons are the Rust Button (rust/crates/ee_won_gui/src/btnobj.rs); this is the type the skins and
 // the lobby derive from, with one-line forwarders. The click sound stays a member (Button.cpp is the host).
 class Button : public Component {
 public:
@@ -611,7 +611,7 @@ private:
 
 enum MouseButton { MouseButton_Left=0,MouseButton_Middle=1,MouseButton_Right=2 };
 // WrappedText (R6 WON round 38): the breaks, size, maximum width and the wrap and centre settings are the Rust
-// object's (rust/crates/ee_won/src/wrapobj.rs); the C++ keeps the text and the font and rewraps through it.
+// object's (rust/crates/ee_won_gui/src/wrapobj.rs); the C++ keeps the text and the font and rewraps through it.
 class WrappedText : public RefCount {
 public:
     GUIString mText; //08
@@ -634,7 +634,7 @@ public:
     int GetHeight(); // inline, defined after Font below
 };
 // MSButtonBase (R6 WON round 35): its colours, alignments, focus style, text pads, transparency, fit to text and
-// the text's paint (DrawButtonText) are the Rust MSButtonBase (rust/crates/ee_won/src/msbtnobj.rs); the C++ keeps
+// the text's paint (DrawButtonText) are the Rust MSButtonBase (rust/crates/ee_won_gui/src/msbtnobj.rs); the C++ keeps
 // the wrapped text (GetText, the fixture, the lobby and the header button's paint read it). The derived MS controls
 // are declared separately below.
 class MSButtonBase : public Button {
@@ -765,7 +765,7 @@ public:
 };
 
 // Label (R6 WON round 22): its colour, alignments, padding, fit to text and paint are the Rust Label
-// (rust/crates/ee_won/src/labelobj.rs); the C++ keeps the wrapped text (the fixture and the lobby read it) and the
+// (rust/crates/ee_won_gui/src/labelobj.rs); the C++ keeps the wrapped text (the fixture and the lobby read it) and the
 // background.
 class Label : public Component {
 public:
@@ -815,7 +815,7 @@ public:
 // InputBox (0xec bytes): Background values at +0xc4 and +0xd8
 // Constructor 0x2f7fd0 and destructor 0x2f8270 are out of line.
 // InputBox (R6 WON round 22): its text, selection, scroll, cursor, padding, history and paint are the Rust
-// InputBox (rust/crates/ee_won/src/inputobj.rs); this is the type the lobby holds and what its configs set.
+// InputBox (rust/crates/ee_won_gui/src/inputobj.rs); this is the type the lobby holds and what its configs set.
 class InputBox : public Component {
 public:
     void SetFont(Font* f) { this->mFont=f; }
@@ -934,7 +934,7 @@ public:
 // a drop-down list (vtable 0x84d638; its list at +0x90)
 // TabBar and TabCtrl (R6 WON round 27): the bar's buttons, selected tab and overlap and the control's padding, offsets,
 // bar height and overlap, arrows, placement flags, pages and selected page are the Rust objects
-// (rust/crates/ee_won/src/tabobj.rs); these are the types the configs, the skins (MSTabCtrl, WONTabCtrl) and the root
+// (rust/crates/ee_won_gui/src/tabobj.rs); these are the types the configs, the skins (MSTabCtrl, WONTabCtrl) and the root
 // screen use, with one-line forwarders (TabCtrl.cpp is their host). The control's four containers and its page area's
 // layout point stay its members: its constructor makes them and gives them to the Rust control.
 class TabCtrl;
@@ -984,7 +984,7 @@ private:
 };
 
 // Scrollbar (R6 WON round 25): its parts (arrows, track, thumb), orientation, thumb options, range, steps, position
-// and drag are the Rust Scrollbar (rust/crates/ee_won/src/barobj.rs); this is the type the skins, configs and
+// and drag are the Rust Scrollbar (rust/crates/ee_won_gui/src/barobj.rs); this is the type the skins, configs and
 // scrollers hold (MSScrollbar and WONScrollbar derive from it). Constructor 0x305e10, destructor 0x305eb0.
 class Scrollbar : public Container {
 public:
@@ -1022,7 +1022,7 @@ private:
 };
 
 // Scroller and ScrollbarScroller (R6 WON round 25): the scroll area, the bars and their conditions are one Rust
-// Scroller (rust/crates/ee_won/src/scrollerobj.rs) the Scroller constructor makes; these are the types the configs,
+// Scroller (rust/crates/ee_won_gui/src/scrollerobj.rs) the Scroller constructor makes; these are the types the configs,
 // the combo box, the scroll areas and the scroll containers (MSScrollContainer, WONScrollContainer) hold.
 class Scroller : public Container {
 public:
@@ -1060,7 +1060,7 @@ enum ScrollButtonCondition {
     ScrollButtonCondition_Conditional=2, ScrollButtonCondition_PartialConditional=3
 };
 // ComboBox (R6 WON round 28): whether the list is open, no-typing, the button while disabled and the list box's
-// configured size are the Rust ComboBox (rust/crates/ee_won/src/comboobj.rs) with every method; this is the type the
+// configured size are the Rust ComboBox (rust/crates/ee_won_gui/src/comboobj.rs) with every method; this is the type the
 // skins (MSComboBox, WONComboBox), the configs and the lobby use, with one-line forwarders (ComboBox.cpp is its
 // host). The parts and the undo text stay members: the skins make the parts and read them.
 class Scroller;
@@ -1347,7 +1347,7 @@ public:
 // the root of the lobby's components (runs the popups and modal dialogs; RTTI WONAPI::RootContainer; its base
 // Container)
 // BackgroundGrabber (0x38 bytes in the original); RootContainer keeps a pointer to it. R6 WON round 37: the Rust grabber
-// (rust/crates/ee_won/src/grabobj.rs) holds the captured image's place, its clip, the flags, the translucent colour and
+// (rust/crates/ee_won_gui/src/grabobj.rs) holds the captured image's place, its clip, the flags, the translucent colour and
 // level and the capture's order (the original's static counter), and runs every method; the C++ keeps the background
 // image and the debug window (BackgroundGrabber.cpp is the host). The root container reads it with ee_won_grab_read.
 class BackgroundGrabber {
@@ -1369,7 +1369,7 @@ private:
     BackgroundGrabber& operator=(const BackgroundGrabber&);
     intptr_t GCall(EeWonGrabCall c,intptr_t a=0,intptr_t b=0) const { return ee_won_grab_call(this->mRust,c,a,b); }
 };
-// RootContainer (R6 WON round 29): the Rust RootContainer (rust/crates/ee_won/src/rootobj.rs) holds the invalid
+// RootContainer (R6 WON round 29): the Rust RootContainer (rust/crates/ee_won_gui/src/rootobj.rs) holds the invalid
 // rectangle, the queued backgrounds (their images held), the cursor's component and the window drag; the virtuals and
 // AddBG are forwarders. The window stays a member (Component::GetRoot reads it). The original's keyboard listener (never
 // set), popup set and modal component (never read) are gone, and so are its FindChildAt, ChildInvalidated and
@@ -1641,7 +1641,7 @@ public:
     WindowEventBase* PeekNextEvent() { return (WindowEventBase*)this->WmCall(EeWonWmCall::PeekNextEvent); } //32f700
     void ProcessEvents() { this->WmCall(EeWonWmCall::ProcessEvents); } //32f760
     // R6 WON round 33: the popup stack, the modal dialog, the message loop's depths and the focus are the Rust
-    // manager (rust/crates/ee_won/src/wmobj.rs); these read and set it
+    // manager (rust/crates/ee_won_gui/src/wmobj.rs); these read and set it
     Component* GetModalComponent() const { return (Component*)this->WmField(EeWonWmField::ModalComponent); }
     Window* GetFocusWindow() const { return (Window*)this->WmField(EeWonWmField::FocusWindow); }
     int GetPopupFlags() const { return (int)this->WmField(EeWonWmField::PopupFlags); }
@@ -1760,7 +1760,7 @@ public:
     void SetParent(Window* p) { this->WCall(EeWonWinCall::SetParent, (intptr_t)p); }
     void SetTitle(const GUIString&);
     void SetIcon(NativeIcon*);
-    // R6 WON round 32: the state is the Rust window (rust/crates/ee_won/src/winobj.rs); these read and set it
+    // R6 WON round 32: the state is the Rust window (rust/crates/ee_won_gui/src/winobj.rs); these read and set it
     int GetKeyMod() const { return (int)this->WField(EeWonWinField::KeyMod); }
     int GetWindowState() const { return (int)this->WField(EeWonWinField::State); }
     int GetMouseX() const { return (int)this->WField(EeWonWinField::MouseX); }
@@ -2201,7 +2201,7 @@ public:
 };
 
 // ScrollArea (R6 WON round 25): its offsets, content, padding, view, scroller (borrowed) and scroll amounts are the
-// Rust ScrollArea (rust/crates/ee_won/src/paneobj.rs); this is the type the lists, text areas, scrollers and configs
+// Rust ScrollArea (rust/crates/ee_won_gui/src/paneobj.rs); this is the type the lists, text areas, scrollers and configs
 // hold. The viewport and the background stay C++ members.
 class ScrollArea : public Container {
 public:
@@ -2263,7 +2263,7 @@ public:
 };
 // ListArea (0x164 bytes): ScrollArea (0x110) base plus vectors and SmartPtr members.
 // ListArea (R6 WON round 23): its items, top line, flags, batch, paint width, sort type, selection, keyboard and mouse
-// items and selection walk are the Rust ListArea (rust/crates/ee_won/src/listobj.rs); this is the type the lobby
+// items and selection walk are the Rust ListArea (rust/crates/ee_won_gui/src/listobj.rs); this is the type the lobby
 // holds and the base of MultiListArea, TreeArea and PopupMenu, with what the configs and paints read (the font, the
 // colours, the selection colours, the sort function, the item tool tip). The items stay C++ data.
 class ListArea : public ScrollArea {
@@ -2343,7 +2343,7 @@ private:
 
 // TreeArea and TreeItem (R6 WON round 24): the rows' parents, indents, indices, open states, wrapped items and
 // children, the tree's root, flags, sort type and hovered item, and every method are the Rust objects of
-// rust/crates/ee_won/src/treeobj.rs; these are the types the room control and the config hold, with one-line
+// rust/crates/ee_won_gui/src/treeobj.rs; these are the types the room control and the config hold, with one-line
 // forwarders.
 class TreeArea;
 class TreeItem : public ListItem {
@@ -2413,7 +2413,7 @@ inline intptr_t TreeItem::NCall(ListArea* l,EeWonTNodeCall c,intptr_t a,intptr_t
 }
 
 // PopupMenu (R6 WON round 24): the open submenu and its item, the swallowed first release, the submenu timer, the last
-// mouse place, the keyboard mode and the input methods are the Rust PopupMenu (rust/crates/ee_won/src/menuobj.rs);
+// mouse place, the keyboard mode and the input methods are the Rust PopupMenu (rust/crates/ee_won_gui/src/menuobj.rs);
 // this is the type the lobby and the window manager hold, with its constructor's look (font, flags, background,
 // colour, padding) and the item adders, with one-line forwarders.
 class PopupMenu : public ListArea {
@@ -2453,7 +2453,7 @@ public:
 };
 
 // MultiListArea, MultiListItem and MultiListHeader (R6 WON round 24): their columns, cells, header buttons, sort,
-// paint and drags are the Rust objects of rust/crates/ee_won/src/multiobj.rs; these are the types the lobby, the
+// paint and drags are the Rust objects of rust/crates/ee_won_gui/src/multiobj.rs; these are the types the lobby, the
 // configs and the adapter list hold, with one-line forwarders.
 class MultiListItem;
 class MultiListHeader;

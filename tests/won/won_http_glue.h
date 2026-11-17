@@ -1,4 +1,4 @@
-// HTTPGetOp's lines and request through ee_won's http module (rust/crates/ee_won/src/http.rs): Rust reads the
+// HTTPGetOp's lines and request through ee_won's http module (rust/crates/ee_won_net/src/http.rs): Rust reads the
 // status and header lines, the redirect target and the chunk length and writes the request; these apply the
 // results to the op's members in the original's order (HTTPGetOp.cpp's statements). Templates over the op so that
 // tests/won/won_http_test.cpp runs the same code over a stand-in. WONStatus comes from WONRouting.h, included first.

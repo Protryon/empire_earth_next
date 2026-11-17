@@ -6,10 +6,10 @@
 // the members, the return or the throw compared; and 100,000 sequences of the op's steps (RunHook, GetNextRequest,
 // CheckResponse, Reset, CleanupHook, the setters) on one op. The exit code is the number of failed checks.
 //
-// `--print-ops N` prints N sequences with what the original did (rust/crates/ee_won/src/golden_getcert.txt,
+// `--print-ops N` prints N sequences with what the original did (rust/crates/ee_won_net/src/golden_getcert.txt,
 // recorded before the port; `getcert_tests.rs` replays it).
 //
-// `--print N` prints N replies in the golden's format (rust/crates/ee_won/src/golden_cert.txt): the state, the
+// `--print N` prints N replies in the golden's format (rust/crates/ee_won_net/src/golden_cert.txt): the state, the
 // session key, the reply and what the original read of it with every check passing (`cert_golden` replays it).
 #include <windows.h>
 #include <stdarg.h>

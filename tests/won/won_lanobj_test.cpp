@@ -8,7 +8,7 @@
 // messages, replies, packets and names. The traces (every op with its arguments and answer, the messages' bytes)
 // must be the same. Where the original's HandleMessage re-entered itself for a local delivery both do so here too.
 // The first 100 sequences and every later one that makes an op or a call none before made are
-// rust/crates/ee_won/src/golden_lanobj.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_lobby/src/golden_lanobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

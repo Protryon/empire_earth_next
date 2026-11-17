@@ -1,5 +1,5 @@
 // Windows-style drawing helpers: 3D frames, arrows, check boxes, radio circles, tabs and the close X (R6 WON round
-// 36: each is a Rust plan, rust/crates/ee_won/src/mspaint.rs, run on the Graphics)
+// 36: each is a Rust plan, rust/crates/ee_won_gui/src/mspaint.rs, run on the Graphics)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>

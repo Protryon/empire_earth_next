@@ -1,6 +1,6 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 // RoutingLogic: internet play over WON routing servers (rooms, games, friends, chat, moderation). A Rust object
-// since R6 WONLobby round 9 (rust/crates/ee_won/src/routelogic.rs: the servers it is on and connecting to, the
+// since R6 WONLobby round 9 (rust/crates/ee_won_lobby/src/routelogic.rs: the servers it is on and connecting to, the
 // joined rooms, the idle and moderator state, the server list's refresh time and every decision, over routing.rs's);
 // this unit keeps the shell (NetLogic's vtable, the tracker and completions, the server and game lists, the dialogs,
 // the game data type) and the host's ops, each one the original's calls on a C++ object (the servers, rooms,

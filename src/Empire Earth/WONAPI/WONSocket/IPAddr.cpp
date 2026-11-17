@@ -1,5 +1,5 @@
 // WONAPI IPAddr: IPv4 address and port, with DNS lookup and local adapter listing (file grouping inferred). A Rust
-// value since round 14 (rust/crates/ee_won/src/ipobj.rs EeWonIpAddr: the sockaddr, the validity, the remembered
+// value since round 14 (rust/crates/ee_won_net/src/ipobj.rs EeWonIpAddr: the sockaddr, the validity, the remembered
 // host and every step below; the parsing and lookups are ipaddr.rs's); the class is a handle copied with its value
 // at every copy, as the original's implicit copy constructor and assignment copied it.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233

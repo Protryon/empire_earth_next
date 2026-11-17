@@ -12,7 +12,7 @@
 #include "platform/PlatString.h"
 #include "rust/ee_won.h"
 // The grammar's decisions (a token's kind, the group header's sequence, the instructions, a condition's branch, the
-// optional suffix, an included file's path) are ee_won's configobj module (rust/crates/ee_won/src/configobj.rs);
+// optional suffix, an included file's path) are ee_won's configobj module (rust/crates/ee_won_net/src/configobj.rs);
 // this class keeps the objects, maps, virtual hooks, lexer calls and the error and warning texts.
 namespace {
 const uint8_t* CfgBytes(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }

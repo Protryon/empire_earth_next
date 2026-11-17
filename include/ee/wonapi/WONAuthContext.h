@@ -10,7 +10,7 @@ namespace WONAPI {
 inline const uint8_t* WonBytes(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }
 
 // CDKey (0x1c bytes, a vtable without a destructor): the key logic (the text form, the check byte, the storage key
-// and cipher) is ee_won's (rust/crates/ee_won/src/cdkey.rs); this class keeps the product, the raw key and validity
+// and cipher) is ee_won's (rust/crates/ee_won_net/src/cdkey.rs); this class keeps the product, the raw key and validity
 class CDKey {
 protected:
     static const char* mCDKeyPath; // genuine SDK static default registry path, no instance layout
@@ -121,7 +121,7 @@ public:
 };
 
 // AuthContext (0xc0 bytes in the original, allocation 362dba, ctor 2dddf0, dtor 2de370) is ee_won's
-// (rust/crates/ee_won/src/authobj.rs): its lock, sessions and certificate flow, peer data, login data, server list
+// (rust/crates/ee_won_net/src/authobj.rs): its lock, sessions and certificate flow, peer data, login data, server list
 // and the class's verifier key (0x566018, its checked flag 0x5661e1). This class is a RefCount shim holding one
 // reference to it; every method forwards. The flow's calls back are Rust's since net round 26 (authcpp.rs, over the
 // core table: AuthContextFlow is gone).

@@ -1,6 +1,6 @@
 // The auth certificates (AuthCertificate, Auth2Certificate), the auth servers' key block (AuthPubKeyBlock) and the
 // peer data (AuthPeerData, the original's 0x1c8 bytes: the certificates, the key block, the private key and the
-// server clock delta) are ee_won's objects (rust/crates/ee_won/src/peerobj.rs: the bytes, the unpacked fields and
+// server clock delta) are ee_won's objects (rust/crates/ee_won_net/src/peerobj.rs: the bytes, the unpacked fields and
 // keys, every check). These classes are RefCount shims holding one reference to one, so the ops' host calls and
 // the SmartPtrs hold them as before; a certificate's kind is the EE_WON_AUTH_* it was made as.
 #ifndef EE_WONAPI_WONAUTHPEERDATA_H

@@ -31,13 +31,13 @@ public:
     long GetLastMessageTime() const { return static_cast<long>(ee_won_lansocket_last_message_time(this->mLan)); }
     void SetLastMessageTime(long inTime) { ee_won_lansocket_set_last_message_time(this->mLan,inTime); }
 private:
-    // A Rust object since round 14 (rust/crates/ee_won/src/qsock.rs EeWonLanSocket): the client (0xa0, a reference
+    // A Rust object since round 14 (rust/crates/ee_won_net/src/qsock.rs EeWonLanSocket): the client (0xa0, a reference
     // held) and the last message's time (0xa4, time(NULL); 0 until the first)
     EeWonLanSocket* mLan;
 };
 
 // LanLogic: 0xb8 bytes in the original (allocated at 0x762f7f); vtable slots as NetLogic's.
-// A Rust object since round 20 (rust/crates/ee_won/src/lanobj.rs): its methods and state are Rust's (since WONLobby
+// A Rust object since round 20 (rust/crates/ee_won_lobby/src/lanobj.rs): its methods and state are Rust's (since WONLobby
 // round 11 also the members the shell held: the client list, the LAN and direct-connect games, this player's
 // client, the sockets and their set, the timers, the discovery address, the join password: lanown.rs), its calls out
 // the host's ops (WONLobby/LanLogicHost.cpp); this shell keeps the dialogs, the virtual slots and completions.

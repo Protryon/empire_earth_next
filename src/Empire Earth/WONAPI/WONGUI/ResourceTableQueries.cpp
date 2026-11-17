@@ -13,7 +13,7 @@
 #include "ee/wonapi/WONLobbyResourceConfig.h"
 #include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
-// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
+// (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // Returns the named resource group; throws "Resource group not found: <name>" when it is missing
 ResourceConfig* ResourceConfigTable::SafeGetConfig(const std::string &theName)

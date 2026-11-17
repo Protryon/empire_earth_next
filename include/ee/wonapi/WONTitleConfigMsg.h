@@ -1,4 +1,4 @@
-// TitleConfig's and CommunityConfig's rules through ee_won's titlecfg module (rust/crates/ee_won/src/titlecfg.rs):
+// TitleConfig's and CommunityConfig's rules through ee_won's titlecfg module (rust/crates/ee_won_net/src/titlecfg.rs):
 // Rust decides an instruction's child or error, the name-login mode and the lifespan map and writes both ToString
 // texts; these apply them to the config's members in the original's order (TitleConfig.cpp's statements).
 // Templates over the config so that tests/won/won_titlecfg_test.cpp runs the same code over a stand-in.

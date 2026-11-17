@@ -10,7 +10,7 @@
 // on each side and runs 40 random calls (Paint, PrePaint, Invalidate, Clear, SetTranslucentColor with colours of every
 // sign and levels -1..9, SizeChanged, NeedDrawBG) between random changes of the world; after each the traces and the
 // state the root container reads (ee_won_grab_read against the original's members) are compared. The first 300
-// sequences are rust/crates/ee_won/src/golden_grabobj.txt, which the Rust tests replay; `--print` prints them.
+// sequences are rust/crates/ee_won_gui/src/golden_grabobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

@@ -5,7 +5,7 @@
 // is value-initialised here (`()`) so its uninitialised units read as the port's zeroed ones; the edits stay inside
 // the original's defined behaviour (no wrapped length or capacity, no negative insert or setAt position, no erase of a
 // negative length, no insert into itself).
-// `--print FILE` writes the first sequences as rust/crates/ee_won/src/golden_guistrobj.txt, which cargo replays
+// `--print FILE` writes the first sequences as rust/crates/ee_won_gui/src/golden_guistrobj.txt, which cargo replays
 // (guistrobj_tests.rs); without it the golden is compared too. The exit code is the number of failures.
 #include <windows.h>
 #include <stdio.h>
@@ -231,7 +231,7 @@ int main(int argc, char** argv)
     } else {
         std::string aPath = __FILE__;
         size_t aSlash = aPath.find_last_of("/\\");
-        aPath = aPath.substr(0, aSlash + 1) + "../../rust/crates/ee_won/src/golden_guistrobj.txt";
+        aPath = aPath.substr(0, aSlash + 1) + "../../rust/crates/ee_won_gui/src/golden_guistrobj.txt";
         FILE* f = fopen(aPath.c_str(), "rb");
         if (f == NULL) { printf("FAIL: no %s\n", aPath.c_str()); aFailures++; }
         else {

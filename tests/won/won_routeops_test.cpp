@@ -1,5 +1,5 @@
 // WONRouting's request helpers and its request and notification ops over 127.0.0.1, one line per event, compared
-// with rust/crates/ee_won/src/golden_routeops.txt (recorded over the C++ op classes before their move to Rust): a
+// with rust/crates/ee_won_net/src/golden_routeops.txt (recorded over the C++ op classes before their move to Rust): a
 // plain RoutingConnection to a routing server stand-in on a loopback socket. Every request helper (and the ops the
 // lobby's RoutingLogic builds itself) is run; the server logs the bytes it receives and answers with the replies
 // the ops read (statuses, lists, records, a reply for another group, a join that waits, a password retry on the
@@ -1400,7 +1400,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_routeops.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_routeops.txt";
 }
 
 int main(int argc, char** argv)

@@ -1,6 +1,6 @@
 // The lobby's page view (layout type BrowserComponent): the message of the day, the terms of use and the help and
 // news tabs. WON's HTML rendering is not ported (docs/RUST_PLAN.md D8): a page is shown as plain text in a TextArea,
-// HTML pages with their tags dropped and entities decoded by ee_won (rust/crates/ee_won/src/plaintext.rs). There are
+// HTML pages with their tags dropped and entities decoded by ee_won (rust/crates/ee_won_net/src/plaintext.rs). There are
 // no links, so no history; a web address is shown as text (the WON servers are gone).
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>

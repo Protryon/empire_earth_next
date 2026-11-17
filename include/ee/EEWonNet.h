@@ -50,7 +50,7 @@ inline const wchar_t* WStringGetCStr(const std::wstring &theStr)
 
 
 // WONAPI's network address (passed by value: 0x28 bytes in the original; provisional class name). A Rust value since
-// round 14 (rust/crates/ee_won/src/ipobj.rs EeWonIpAddr: the remember flag +0x00, the host text +0x04, the
+// round 14 (rust/crates/ee_won_net/src/ipobj.rs EeWonIpAddr: the remember flag +0x00, the host text +0x04, the
 // PlatSockAddrIn +0x14 and the validity +0x24); this class is its handle, copied with the value at every copy
 // (the copy constructor clones it, the assignment copies it, the destructor frees it), as the original's implicit
 // copy constructor (COMDAT 0x291d59) and operator= (0x29181b) copied the members

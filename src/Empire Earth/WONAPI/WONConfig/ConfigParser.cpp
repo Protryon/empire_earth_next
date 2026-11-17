@@ -1,7 +1,7 @@
 // C:\EEX\Empire Earth\WONAPI\WONConfig\ConfigParser.cpp
 // ConfigParser (0x88 bytes): config file reader with comments, pushback, defines and group defines
 // (file grouping inferred). The characters, comments, pushback, define scopes, group defines and the open's
-// UTF-16 sniff are ee_won's (rust/crates/ee_won/src/config.rs); this keeps the parent walk, the file names and the
+// UTF-16 sniff are ee_won's (rust/crates/ee_won_net/src/config.rs); this keeps the parent walk, the file names and the
 // error and warning texts.
 
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233

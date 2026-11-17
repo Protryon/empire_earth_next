@@ -17,7 +17,7 @@
 // (strings and items added and deleted, selections, texts, keys, wheels, presses, events from the button, the list
 // and the input box, enabling, no-typing, list box sizes and changes), with random changes of the world between them,
 // then frees it and the containers. The traces must be the same, every reference given back. The first 40 sequences
-// and every later one that makes an op or a call none before made are rust/crates/ee_won/src/golden_comboobj.txt,
+// and every later one that makes an op or a call none before made are rust/crates/ee_won_gui/src/golden_comboobj.txt,
 // which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>

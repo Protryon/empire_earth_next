@@ -7,7 +7,7 @@
 // 60 random calls on them: sizes -3..80 (and 70,000, past the Image's unsigned short), borders -2..30, tiling,
 // skip-centre, copies between them, duplicates replacing one, GetNative and Paint. After each call every image's
 // state (size, borders, flags, the rebuild flag, the cached image's settings) and the call's trace (the filters built,
-// the paint's operations) are compared. The first 300 sequences are rust/crates/ee_won/src/golden_stretchobj.txt,
+// the paint's operations) are compared. The first 300 sequences are rust/crates/ee_won_gui/src/golden_stretchobj.txt,
 // which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>

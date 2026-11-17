@@ -22,7 +22,7 @@ public:
     void SetSkipCenter(bool b) { this->mSkipCenter=b; }
 };
 // StretchImage (R6 WON round 38): the borders, tiling, skip-centre and rebuild flag are the Rust object's
-// (rust/crates/ee_won/src/stretchobj.rs); the C++ keeps the source and cached images and the Image's size.
+// (rust/crates/ee_won_gui/src/stretchobj.rs); the C++ keeps the source and cached images and the Image's size.
 class StretchImage : public ProgramImage {
 private:
     SmartPtr<RawImage> mImage; //10

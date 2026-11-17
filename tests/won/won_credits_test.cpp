@@ -11,7 +11,7 @@
 // 20,000 dialog sequences: InitComponent, then 10 random calls (AddLine on components narrower and wider than the
 // line, the scrolling's calls, events, a second InitComponent now and then). The traces must be the same.
 //
-// `--print-scroll` and `--print-dialog` print rust/crates/ee_won/src/golden_scrolltext.txt and golden_credits.txt
+// `--print-scroll` and `--print-dialog` print rust/crates/ee_won_lobby/src/golden_scrolltext.txt and golden_credits.txt
 // (the first 20 scrolling and 60 dialog sequences and every later one that makes an op or call none before made),
 // replayed by cargo.
 #include <stdio.h>

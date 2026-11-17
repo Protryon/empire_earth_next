@@ -37,7 +37,7 @@
 //
 // Each of 20,000 sequences makes 40 random calls (every method, the setters, world changes). The traces must be
 // the same. The first 30 sequences and every later one that makes an op or a call none before made are
-// rust/crates/ee_won/src/golden_wmobj.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_gui/src/golden_wmobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

@@ -11,7 +11,7 @@
 // FileReaderException's text.
 //
 // --golden PATH writes the small cases (the inputs in hex and both answers) for ee_won's cargo tests
-// (rust/crates/ee_won/src/golden_jpeg.txt). Prints one line per failed check; the exit code is the failure count.
+// (rust/crates/ee_won_gui/src/golden_jpeg.txt). Prints one line per failed check; the exit code is the failure count.
 #include <windows.h>
 #include <stdio.h>
 #include <setjmp.h>

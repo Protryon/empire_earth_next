@@ -1,4 +1,4 @@
-// The lobby's containers over their Rust objects (round 17; rust/crates/ee_won/src/lobbymap.rs EeWonLobbyMap): the
+// The lobby's containers over their Rust objects (round 17; rust/crates/ee_won_lobby/src/lobbymap.rs EeWonLobbyMap): the
 // ordered maps and sets of LobbyModel and LobbyPersistentData, and LobbyOptionSet's values. The Rust object holds
 // the entries in the original comparator's order; these wrappers give them keys and values in the lobby's types.
 // A position is an index into that order (valid until the container changes). Object values are C++ objects the

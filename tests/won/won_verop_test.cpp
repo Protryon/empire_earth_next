@@ -6,7 +6,7 @@
 // version sets), a run (the request), a generated listing reply (directory and service entities with version and
 // patch data objects), the members after it, then version checks and patch lists.
 //
-// `--print N` prints N sequences with what the original did (rust/crates/ee_won/src/golden_verop.txt, recorded
+// `--print N` prints N sequences with what the original did (rust/crates/ee_won_net/src/golden_verop.txt, recorded
 // before the port; `verop::tests::golden` replays it). The exit code is the number of failed checks.
 #include <windows.h>
 #include <stdio.h>

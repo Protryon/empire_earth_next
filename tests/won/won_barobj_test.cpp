@@ -18,7 +18,7 @@
 // track and others, enabling, copied attributes, ranges, steps, positions, thumb layouts, new parts, the
 // orientation and thumb options, the getters). The traces must be the same, and every reference the bar takes
 // must be given back when it goes. The first 40 sequences and every later one that makes an op or a call none
-// before made are rust/crates/ee_won/src/golden_barobj.txt, which the Rust tests replay; `--print` prints them.
+// before made are rust/crates/ee_won_gui/src/golden_barobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

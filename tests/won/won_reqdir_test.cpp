@@ -7,7 +7,7 @@
 // request, then up to six generated replies (headers right and wrong, statuses, sequences, cut and mutated), each
 // reply's verdict and the op's results after it; a Reset at times, then the next server's request.
 //
-// `--print N` prints N sequences with what the original did (rust/crates/ee_won/src/golden_reqdir.txt, recorded
+// `--print N` prints N sequences with what the original did (rust/crates/ee_won_net/src/golden_reqdir.txt, recorded
 // before the port; `reqdir::tests::golden` replays it). The exit code is the number of failed checks.
 #include <windows.h>
 #include <stdio.h>

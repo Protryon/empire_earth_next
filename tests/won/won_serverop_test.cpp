@@ -1,6 +1,6 @@
 // RustServerOp's host calls that need no C++ object (ServerOp.cpp's HostCall: the clock, the CRT's random numbers,
 // an address resolved, the op's file and the files it measures, the web proxy file), one line per call, compared
-// with rust/crates/ee_won/src/golden_serverop.txt (recorded over ServerOp.cpp's HostCall before these calls moved
+// with rust/crates/ee_won_net/src/golden_serverop.txt (recorded over ServerOp.cpp's HostCall before these calls moved
 // into the Rust op base). Every call goes through the op's own call path (ee_won_hostop_call), so the same lines are
 // the C++ side's answers before the move and the Rust op's after it. Files are made fresh in a directory next to
 // the program. `--print` prints the lines instead. The exit code is the number of failures.
@@ -184,7 +184,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_serverop.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_serverop.txt";
 }
 
 int main(int argc, char** argv)

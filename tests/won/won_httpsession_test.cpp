@@ -2,7 +2,7 @@
 // their host's connection, which prepares them (its socket, no close, no range resume), sends and receives on one
 // socket, reuses it for the next get (keep-alive), drops it when the server closes, and kills its queued and running
 // ops. A server stand-in on the test's thread reads each request's lines and answers. One line per event, compared
-// with rust/crates/ee_won/src/golden_httpsession.txt (recorded over HTTPEngine.cpp's hooks before they were answered
+// with rust/crates/ee_won_net/src/golden_httpsession.txt (recorded over HTTPEngine.cpp's hooks before they were answered
 // in Rust: ee_won httpcpp.rs). Waits are on events (pumped until a completion ran), with time limits. `--print`
 // prints the lines instead, `--trace` each line as it is logged. The exit code is the number of failures.
 #include <windows.h>
@@ -209,7 +209,7 @@ int main(int argc, char** argv)
     string aGoldenPath = __FILE__;
     aSlash = aGoldenPath.find_last_of("/\\");
     aGoldenPath.resize(aSlash == string::npos ? 0 : aSlash + 1);
-    aGoldenPath += "../../rust/crates/ee_won/src/golden_httpsession.txt";
+    aGoldenPath += "../../rust/crates/ee_won_net/src/golden_httpsession.txt";
     FILE* aGolden = fopen(aGoldenPath.c_str(), "rb");
     if (aGolden == NULL) {
         printf("FAIL: cannot open %s\n", aGoldenPath.c_str());

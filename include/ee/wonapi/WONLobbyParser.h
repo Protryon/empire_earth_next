@@ -132,7 +132,7 @@ private:
     }
 };
 
-// The parser's state is a Rust object (round 17, rust/crates/ee_won/src/chatobj.rs EeWonChatParser: the command
+// The parser's state is a Rust object (round 17, rust/crates/ee_won_lobby/src/chatobj.rs EeWonChatParser: the command
 // tables, the settings, what a parse leaves); the class keeps the room's client list and the target client.
 class ChatCommandParser : public RefCount {
 public:

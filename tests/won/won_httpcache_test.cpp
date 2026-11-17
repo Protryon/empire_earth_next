@@ -1,7 +1,7 @@
 // The HTTP cache and its entries (HTTPCache.cpp: the cache's directory, index file, ids, file names, entries, the
 // 14-day keep rule and the deleted files; the global cache) through the HTTP get op's own cache calls
 // (EE_WON_HOST_CACHE_ENTRY, _ENTRY_GET, _ENTRY_SET, _CACHE_UPDATE and the references' ADD_REF / RELEASE), one line
-// per call, compared with rust/crates/ee_won/src/golden_httpcache.txt (recorded over the C++ HTTPCache and
+// per call, compared with rust/crates/ee_won_net/src/golden_httpcache.txt (recorded over the C++ HTTPCache and
 // ServerOp.cpp's HostCall before they moved into Rust). Every call goes through a real HTTP get op's call path
 // (ee_won_hostop_call); only the cache's construction and the global cache's getter and reset name the class (the
 // three functions below). Times are logged relative to now; files are listed by name. `--print` prints the lines
@@ -490,7 +490,7 @@ int main(int argc, char** argv)
     string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == string::npos ? 0 : aSlash + 1);
-    aPath += "../../rust/crates/ee_won/src/golden_httpcache.txt";
+    aPath += "../../rust/crates/ee_won_net/src/golden_httpcache.txt";
     FILE* aFile = fopen(aPath.c_str(), "rb");
     if (aFile == NULL) {
         printf("FAIL: cannot open %s\n", aPath.c_str());

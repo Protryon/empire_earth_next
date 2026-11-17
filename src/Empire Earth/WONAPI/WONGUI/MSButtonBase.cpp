@@ -1,5 +1,5 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
-// MSButtonBase (R6 WON round 35): the Rust MSButtonBase (rust/crates/ee_won/src/msbtnobj.rs) holds the colours,
+// MSButtonBase (R6 WON round 35): the Rust MSButtonBase (rust/crates/ee_won_gui/src/msbtnobj.rs) holds the colours,
 // alignments, focus style, pads and flags and runs every method; this is its host (its calls out: the base
 // Component, the wrapped text, the button's state, the Graphics) and the constructor and destructor.
 #include <windows.h>

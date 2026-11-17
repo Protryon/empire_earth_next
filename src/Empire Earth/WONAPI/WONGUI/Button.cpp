@@ -1,4 +1,4 @@
-// Button (R6 WON round 30): the Rust Button's calls out (rust/crates/ee_won/src/btnobj.rs, EeWonGuiOp's button ops and
+// Button (R6 WON round 30): the Rust Button's calls out (rust/crates/ee_won_gui/src/btnobj.rs, EeWonGuiOp's button ops and
 // the component ops it shares with the container), its constructor and destructor, the static functions' forwarders,
 // the two virtuals subclasses override (HandleActivate, SetTextHook) and the click sound. The original's Button.cpp
 // (the flags, the press and release, the keys, the repeat, the radio group, the default buttons) is the Rust object;

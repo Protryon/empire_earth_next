@@ -19,7 +19,7 @@
 //    pixel bytes and mask) and the files opened must be the same.
 //  - the hand cursor's pixels.
 // `--print` writes the first 300 draws, 200 raw copies, 300 native images, 300 pack copies (inputs by seed) and the
-// hand cursor's hash: rust/crates/ee_won/src/golden_platimg.txt, which the Rust tests replay. Exit code: mismatches.
+// hand cursor's hash: rust/crates/ee_won_gui/src/golden_platimg.txt, which the Rust tests replay. Exit code: mismatches.
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>

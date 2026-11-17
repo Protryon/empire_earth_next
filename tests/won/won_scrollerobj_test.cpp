@@ -18,7 +18,7 @@
 // scroll events from the bars and other events, offsets, mouse presses with and without a focus child, the
 // wheel, the getters, the area's numbers and the bars' visibility changed between calls). The traces must be the
 // same, and every reference given back when the scroller and the bars go. The first 40 sequences and every later
-// one that makes an op or a call none before made are rust/crates/ee_won/src/golden_scrollerobj.txt, which the
+// one that makes an op or a call none before made are rust/crates/ee_won_gui/src/golden_scrollerobj.txt, which the
 // Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>

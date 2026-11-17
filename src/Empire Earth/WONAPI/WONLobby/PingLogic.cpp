@@ -1,6 +1,6 @@
 // Game pings over the lobby UDP manager: timing a game host's reply (optionally with its summary and
 // details), queueing pings beyond the connection-speed limit, and answering pings for the hosted game.
-// PingLogic and PingGameOp are Rust objects (rust/crates/ee_won/src/logics.rs, R6 WONLobby round 8): the queue,
+// PingLogic and PingGameOp are Rust objects (rust/crates/ee_won_lobby/src/logics.rs, R6 WONLobby round 8): the queue,
 // the request ids, the retries, the request's and reply's bytes and every decision. This unit keeps the shells
 // (the tracker, the completions, the op's game) and the host's ops: each one the original's calls on a C++ object.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233

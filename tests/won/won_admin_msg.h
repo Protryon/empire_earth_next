@@ -1,4 +1,4 @@
-// WONInternal's admin ops' messages through ee_won's admin module (rust/crates/ee_won/src/admin.rs), as the C++ op
+// WONInternal's admin ops' messages through ee_won's admin module (rust/crates/ee_won_net/src/admin.rs), as the C++ op
 // classes used them before the ops became Rust's (adminop.rs): each op's request format and reply records are a
 // table in Rust; these hand the members over in the table's order and build the records from the values read (the
 // original's statements: MasterKeyOp.cpp, BannedKeyOp.cpp, KeySubscribeOp.cpp, GetAccountFromCDKeyOp.cpp, the

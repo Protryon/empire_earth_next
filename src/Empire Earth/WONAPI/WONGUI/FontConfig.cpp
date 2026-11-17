@@ -12,7 +12,7 @@
 #include "ee/wonapi/WONLobbyParser.h"
 #include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
-// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
+// (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 // Returns the configured font, first fetching it from the default window when the descriptor
 // changed and no matching font is held

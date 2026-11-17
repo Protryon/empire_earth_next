@@ -1,4 +1,4 @@
-// Container (R6 WON round 26): the Rust Container's calls out (rust/crates/ee_won/src/ctobj.rs, EeWonGuiOp's
+// Container (R6 WON round 26): the Rust Container's calls out (rust/crates/ee_won_gui/src/ctobj.rs, EeWonGuiOp's
 // container ops), its constructor and destructor. The original's Container.cpp, ContainerChildLifecycle.cpp,
 // ContainerInteraction.cpp, ContainerLifetime.cpp, ContainerOrdering.cpp, ContainerSetup.cpp, ContainerTimerCursor.cpp
 // and MouseAt are the Rust object; each op here is a run of their C++ statements with no decision between them.

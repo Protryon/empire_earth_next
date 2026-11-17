@@ -15,7 +15,7 @@
 // containers (routed to the buttons) and the static functions, with random changes of the world between them; then
 // it clears the default buttons, frees the containers and the buttons. The traces must be the same and every
 // reference given back. The first 40 sequences and every later one that makes an op or a call none before made are
-// rust/crates/ee_won/src/golden_btnobj.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_gui/src/golden_btnobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

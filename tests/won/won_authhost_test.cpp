@@ -1,7 +1,7 @@
 // RustServerOp's certificate and auth context calls (ServerOp.cpp's HostCall: GetCertOp's certificates, key blocks,
 // private keys and peer data, the auth context's peer data, login texts, community data, hashes and secrets, the
 // verifier key; the request ops' auth context: its user id, peer data, sessions and refreshes) and the AuthContext
-// class itself, one line per call, compared with rust/crates/ee_won/src/golden_authhost.txt (recorded over the C++
+// class itself, one line per call, compared with rust/crates/ee_won_net/src/golden_authhost.txt (recorded over the C++
 // HostCall and AuthContext before they moved into Rust). Every host call goes through the op's own call path
 // (ee_won_hostop_call) with real objects (certificates and key blocks signed with won_peerop_test's keys, the
 // verifier key loaded from the WON directory), so the same lines are the C++ side's answers before the move and the
@@ -525,7 +525,7 @@ int main(int argc, char** argv)
     string aPath = __FILE__;
     aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == string::npos ? 0 : aSlash + 1);
-    aPath += "../../rust/crates/ee_won/src/golden_authhost.txt";
+    aPath += "../../rust/crates/ee_won_net/src/golden_authhost.txt";
     FILE* aFile = fopen(aPath.c_str(), "rb");
     if (aFile == NULL) {
         printf("FAIL: cannot open %s\n", aPath.c_str());

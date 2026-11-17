@@ -8,7 +8,7 @@
 // 0..40, 1, or 0 with the component empty in that direction: the original never left the tiling of a 0-pixel image
 // over a component with room), stretch and tile flags, colours (-1, 0xffffffff, random), a thickness -2..6 and up
 // or down; the two traces (every Graphics and image call) are compared. The first 400 paints are
-// rust/crates/ee_won/src/golden_compaint.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_gui/src/golden_compaint.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

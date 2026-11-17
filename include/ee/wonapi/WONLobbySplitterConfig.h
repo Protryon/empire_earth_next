@@ -3,7 +3,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
 // Splitter (R6 WON round 22): its panes, bars, maximise buttons, split, drag and percentages are the Rust Splitter
-// (rust/crates/ee_won/src/splitobj.rs); this is the type the configs build.
+// (rust/crates/ee_won_gui/src/splitobj.rs); this is the type the configs build.
 class Splitter : public Container {
 public:
     Splitter(); // at 0x00707060 in the original

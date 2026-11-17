@@ -1,5 +1,5 @@
 // GameSpySupport and the GameSpy Query & Reporting SDK under it over 127.0.0.1, one line per event, compared with
-// rust/crates/ee_won/src/golden_gamespy.txt (recorded over GameSpySupport.cpp, gqueryreporting.c and nonport.c
+// rust/crates/ee_won_net/src/golden_gamespy.txt (recorded over GameSpySupport.cpp, gqueryreporting.c and nonport.c
 // before their move into ee_won gamespy.rs, net round 28). A master server stand-in on 127.0.0.1:27900 receives the
 // heartbeats; a client socket sends the queries and reads the replies: the key-value maps, every query type, the
 // echo, the validation, several queries in one datagram and two datagrams in one pump, a reply split into packets,
@@ -315,7 +315,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_gamespy.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_gamespy.txt";
 }
 
 int main(int argc, char** argv)

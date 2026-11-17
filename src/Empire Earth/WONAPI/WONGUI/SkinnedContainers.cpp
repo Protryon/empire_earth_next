@@ -1,5 +1,5 @@
 // Skinned combo box and scroll container: layout and frame painting (file name inferred); the host of the skins'
-// layouts (R6 WON round 37: rust/crates/ee_won/src/skinlay.rs lays out MSComboBox, MSScrollContainer, MSListCtrl,
+// layouts (R6 WON round 37: rust/crates/ee_won_gui/src/skinlay.rs lays out MSComboBox, MSScrollContainer, MSListCtrl,
 // WONComboBox, WONScrollContainer and WONListCtrl and sizes WONComboBox, MSEtchedFrameGroup and WONSimpleButton)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>

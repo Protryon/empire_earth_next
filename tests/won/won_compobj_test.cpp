@@ -12,7 +12,7 @@
 // Release). Every virtual a method calls is a traced override that calls the base (the method under test); every call
 // on a parent, window, event, listener or grabber is traced. Each of 20,000 sequences runs 40 random Component calls
 // from the original's side and from the Rust's over two copies of the world; after each, the traces, the result and
-// every component's members are compared. The first 300 sequences are rust/crates/ee_won/src/golden_compobj.txt, which
+// every component's members are compared. The first 300 sequences are rust/crates/ee_won_gui/src/golden_compobj.txt, which
 // the Rust tests replay over the world rebuilt in Rust; `--print` prints them.
 #include <stdio.h>
 #include <stdlib.h>

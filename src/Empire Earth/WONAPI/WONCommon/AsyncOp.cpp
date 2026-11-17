@@ -66,7 +66,7 @@ static_assert(WS_WSAVERNOTSUPPORTED == PLAT_SOCK_VERNOTSUPPORTED, "Winsock numbe
 static_assert(WS_WSANOTINITIALISED == PLAT_SOCK_NOTINITIALISED, "Winsock numbering");
 static_assert(WS_WSAEDISCON == PLAT_SOCK_EDISCON, "Winsock numbering");
 namespace WONAPI {
-// The op is a Rust object (rust/crates/ee_won/src/opobj.rs EeWonAsyncOp): its state, lock, completion and
+// The op is a Rust object (rust/crates/ee_won_net/src/opobj.rs EeWonAsyncOp): its state, lock, completion and
 // container, and every step below. These are the calls it makes back into the C++ (one table for every op and
 // AsyncOpTracker): the virtual hooks, WONAPICore's queue and timer, the completion's references and call, the op's
 // references and kill.

@@ -1,5 +1,5 @@
 // ElGamal: the keys, the big-integer arithmetic, the random generator, block encryption and the signatures are
-// ee_won's (rust/crates/ee_won/src/elgamal.rs, bigint.rs, random.rs, der.rs); this class owns one key. Copies are
+// ee_won's (rust/crates/ee_won_net/src/elgamal.rs, bigint.rs, random.rs, der.rs); this class owns one key. Copies are
 // deep (the key and its generator state), as the original's 0x1a8 bytes of value members were. Header-only since net
 // round 28 (ElGamal.cpp's forwarders inline). Encrypting and signing advance the key's random generator (the
 // original's `mutable Random`), so a const key changes there as it did.

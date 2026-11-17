@@ -13,7 +13,7 @@
 #include "rust/ee_won.h"
 #include "ee/wonapi/WONGUIDraw.h"
 // The submenu delay, the swallowed first release, the keyboard mode's end, an item's size and the submenu's place
-// are ee_won's guiwin module (rust/crates/ee_won/src/guiwin.rs); the keys and the submenus' open, close and
+// are ee_won's guiwin module (rust/crates/ee_won_gui/src/guiwin.rs); the keys and the submenus' open, close and
 // selection rules are its guimenu module (guimenu.rs); this unit keeps the menus and submenus; the item's paint is guidraw's menu_item.
 #include "ee/wonapi/WONLobbyPopupEvent.h"
 

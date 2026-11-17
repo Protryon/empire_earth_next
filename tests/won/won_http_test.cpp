@@ -4,7 +4,7 @@
 // tests/won/won_http_glue.h over ee_won's http module and the URL unit linked here, over generated input (the
 // original's CRT calls: gmtime, sscanf, atoi, toupper). The exit code is the number of failed checks.
 //
-// `--print N` prints N lines of each kind in the golden's format (rust/crates/ee_won/src/golden_http.txt): the
+// `--print N` prints N lines of each kind in the golden's format (rust/crates/ee_won_net/src/golden_http.txt): the
 // kind, the input in hex, the original's result (`http_golden` replays it).
 #include <windows.h>
 #include <stdio.h>

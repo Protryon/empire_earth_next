@@ -10,7 +10,7 @@
 // another slot of the same format or a 32-bit into a 16-bit one (with and without a transparency mask, the source
 // rectangle inside the source as the original needs), copies within one surface, duplicates, re-creates and frees.
 // After every operation each slot's fields (size, pitch, clip, colour, whether it has pixels) and every pixel byte
-// are compared. The first 150 sequences are rust/crates/ee_won/src/golden_surface.txt (each operation with the
+// are compared. The first 150 sequences are rust/crates/ee_won_gui/src/golden_surface.txt (each operation with the
 // FNV-1a hash of its slot's pixels after it), which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>

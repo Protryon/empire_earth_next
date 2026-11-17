@@ -18,7 +18,7 @@
 // tabs, arrows, keys, focus, events from the arrows and the tabs, layouts, fields), with random changes of the world
 // between them, then frees the control, the bar and the containers. The traces must be the same, every reference
 // given back. The first 40 sequences and every later one that makes an op or a call none before made are
-// rust/crates/ee_won/src/golden_tabobj.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_gui/src/golden_tabobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

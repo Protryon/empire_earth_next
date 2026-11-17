@@ -10,7 +10,7 @@
 // queued ops and the certificate refresh in order and call the op back. Every key, secret and encryption draws
 // from one fixed seed (ee_won_random_test_seed), so both halves must draw in the same order.
 //
-// `--print N` prints N sequences with the original's trace, the answers in it (rust/crates/ee_won/src//
+// `--print N` prints N sequences with the original's trace, the answers in it (rust/crates/ee_won_net/src//
 // golden_peerop.txt; `peerop::tests::golden` replays it); `--count N` runs N. The exit code is the number of failed
 // checks.
 #include <windows.h>

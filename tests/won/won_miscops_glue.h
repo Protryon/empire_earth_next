@@ -1,4 +1,4 @@
-// RegAuth's password cipher and port default through ee_won's miscops module (rust/crates/ee_won/src/miscops.rs);
+// RegAuth's password cipher and port default through ee_won's miscops module (rust/crates/ee_won_net/src/miscops.rs);
 // these apply them to the op's members in the original's order (RegAuth.cpp's statements; FindPatchOp's patch choice,
 // its op now Rust's (verop.rs), is tests/won/won_version_msg.h). DetectFirewallOp is a Rust object (fwop.rs).
 // Templates over the op so that tests/won/won_miscops_test.cpp runs the same code over stand-ins. WONStatus comes

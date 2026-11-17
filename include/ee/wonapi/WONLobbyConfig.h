@@ -24,7 +24,7 @@ private:
     ConfigParser& operator=(const ConfigParser&);
 public:
     ConfigParser();
-    // the process-wide line count (0x966b54) is ee_won's (rust/crates/ee_won/src/config.rs)
+    // the process-wide line count (0x966b54) is ee_won's (rust/crates/ee_won_net/src/config.rs)
     static void ResetLineCount() { ee_won_config_reset_line_count(); }
     static int GetLineCount() { return ee_won_config_line_count(); }
     virtual ~ConfigParser(); // 0x7b1e10 (closes the file; the only virtual)

@@ -15,7 +15,7 @@
 // static Center; the manager's ExecuteInstructions, RemoveComponent, Clear, EnableInstructions and AddLayoutPoint;
 // changes of the world. Then the manager is destroyed and every reference must have come back. The traces must be
 // the same. The first 40 sequences and every later one that makes an op or a call none before made are
-// rust/crates/ee_won/src/golden_layoutobj.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_gui/src/golden_layoutobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

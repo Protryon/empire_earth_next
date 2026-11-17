@@ -1,4 +1,4 @@
-// Component (R6 WON round 38): its methods are Rust (rust/crates/ee_won/src/compobj.rs); this unit keeps the
+// Component (R6 WON round 38): its methods are Rust (rust/crates/ee_won_gui/src/compobj.rs); this unit keeps the
 // constructor, the extra data and the destructors, the fonts (the root window's) and the host: each op a run of
 // the original's statements on a component, its parent, window, event, listener or background grabber.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233

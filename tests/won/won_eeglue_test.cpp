@@ -14,7 +14,7 @@
 // half of the time (two deep at most). The traces must be the same.
 //
 // The first 80 sequences and every later one that makes an op or call none before made are
-// rust/crates/ee_won/src/golden_eeglue.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_lobby/src/golden_eeglue.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

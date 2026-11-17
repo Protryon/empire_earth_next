@@ -1,7 +1,7 @@
 // WON's message buffers (ByteBuffer, WriteBuffer, ReadBuffer): a script of writes, growths, prefixes and reads,
 // one line per step (the op, then its result: a buffer's capacity, length and FNV-1a 64 of its bytes, a value read,
-// or the read's exception), compared with rust/crates/ee_won/src/golden_buffer.txt. The golden was recorded over the
-// C++ classes before their move to Rust (rust/crates/ee_won/src/buffer.rs; the Rust test `buffer_golden` replays the
+// or the read's exception), compared with rust/crates/ee_won_net/src/golden_buffer.txt. The golden was recorded over the
+// C++ classes before their move to Rust (rust/crates/ee_won_net/src/buffer.rs; the Rust test `buffer_golden` replays the
 // same script over the Rust objects). `--print` prints the lines instead. The exit code is the number of failures.
 // new[] is zero-filled here: the bytes a growth or SetSize/SkipBytes adds were indeterminate in the C++ and are zero
 // in Rust, so the golden sees zeros there and the defined bytes as they were.
@@ -1000,7 +1000,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_buffer.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_buffer.txt";
 }
 
 int main(int argc, char** argv)

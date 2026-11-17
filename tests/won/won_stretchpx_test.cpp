@@ -7,7 +7,7 @@
 // Each of 100,000 filters takes a random 8-bit or 32-bit source (1..24 x 1..24, random pixels), borders inside it
 // (left + right <= its width, top + bottom <= its height, as the lobby's stretch images are), a target size 0..60
 // and the tile and skip-centre flags; the new images' every byte is compared. The first 300 are
-// rust/crates/ee_won/src/golden_stretchpx.txt (the inputs and the new image's hash), which the Rust tests replay;
+// rust/crates/ee_won_gui/src/golden_stretchpx.txt (the inputs and the new image's hash), which the Rust tests replay;
 // `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>

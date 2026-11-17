@@ -7,7 +7,7 @@
 namespace WONAPI {
 class CreateGameDialog;
 // RTTI: StagingLogic > LobbyLogic > RefCount; vtable 0x855ae0 with six slots; constructor 0x7ef160.
-// A Rust object since round 20 (rust/crates/ee_won/src/stagingobj.rs): its methods and scalar state (the join
+// A Rust object since round 20 (rust/crates/ee_won_lobby/src/stagingobj.rs): its methods and scalar state (the join
 // status, the staging and ready flags, the last all-ready time) are Rust's, its calls out the host's ops
 // (WONLobby/LobbyLogicHost.cpp); this shell keeps the SmartPtrs the lobby reads and the virtual slots.
 class StagingLogic : public LobbyLogic {

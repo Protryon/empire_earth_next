@@ -1,4 +1,4 @@
-// ComboBox (R6 WON round 28): the Rust ComboBox's calls out (rust/crates/ee_won/src/comboobj.rs, EeWonGuiOp's combo
+// ComboBox (R6 WON round 28): the Rust ComboBox's calls out (rust/crates/ee_won_gui/src/comboobj.rs, EeWonGuiOp's combo
 // ops; the container's fall back to Container.cpp's), its constructor, destructor and list box setter. The original's
 // ComboBox.cpp (the list box's size and popup, the selection, the keys, the events, no-typing, enabling) is the Rust
 // object; each op here is a run of its C++ statements with no decision between them.

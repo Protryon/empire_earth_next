@@ -23,7 +23,7 @@
 #include "ee/wonapi/WONLobbyChatCommands.h"
 #include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
-// (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
+// (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 using namespace WONAPI;
 // A clickable link in the chat output (a client, friend, room or Accept/Reject). The original's RTTI names it in
 // the global namespace (vtable 0x852df8, 0x8c bytes).

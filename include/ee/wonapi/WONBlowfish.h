@@ -1,4 +1,4 @@
-// Blowfish cipher: the key schedule, the cipher and WON's framing are ee_won's (rust/crates/ee_won/src/blowfish.rs);
+// Blowfish cipher: the key schedule, the cipher and WON's framing are ee_won's (rust/crates/ee_won_net/src/blowfish.rs);
 // this class holds the keyed state by value (copied with the class, as the original's 0x10b4 bytes were). Header-only
 // since net round 28 (Blowfish.cpp's forwarders inline).
 #ifndef EE_WONAPI_WONBLOWFISH_H

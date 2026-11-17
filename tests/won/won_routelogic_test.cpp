@@ -13,7 +13,7 @@
 // is, at the end of the sequence. The traces must be the same.
 //
 // The first 60 sequences and every later one that makes an op, a call or a notice none before made are
-// rust/crates/ee_won/src/golden_routelogic.txt, which the Rust tests replay; `--print` prints them.
+// rust/crates/ee_won_lobby/src/golden_routelogic.txt, which the Rust tests replay; `--print` prints them.
 // `--mutate` is for the mutation runs (the count of differing sequences, exit 0).
 #include <stdio.h>
 #include <stdint.h>

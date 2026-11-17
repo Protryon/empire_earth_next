@@ -369,7 +369,7 @@ static void TestDirObjects()
 // (unsigned short / unsigned long, or long), IPAddr::operator< (the Rust value's compare, as the class calls it),
 // GUIStringLessNoCase (GUIStringData::CompareNoCase) and GUIString::operator< (Compare) over wchar_t units,
 // StringLessNoCase (StringCompareNoCase) over bytes, and LobbyOptionSet's Add / Erase. Each step's result is a
-// line, compared with rust/crates/ee_won/src/golden_lobbymap.txt (recorded over these std containers before the
+// line, compared with rust/crates/ee_won_lobby/src/golden_lobbymap.txt (recorded over these std containers before the
 // move; `--print` prints the lines). Keys are named by their index into the candidate lists below, which the Rust
 // replay (lobbymap.rs) repeats.
 
@@ -590,7 +590,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_lobbymap.txt";
+    return aPath + "../../rust/crates/ee_won_lobby/src/golden_lobbymap.txt";
 }
 
 // ---- the same scripts over the Rust container (lobbymap.rs) through its C ABI, as WONLobbyMap.h calls it: the

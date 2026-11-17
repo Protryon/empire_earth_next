@@ -1,5 +1,5 @@
 // WON's StringParser (the lobby's and the config files' scanner): every read and format over a table of narrow and
-// wide inputs, printed one line per case and compared with rust/crates/ee_won/src/golden_parse.txt (recorded over
+// wide inputs, printed one line per case and compared with rust/crates/ee_won_net/src/golden_parse.txt (recorded over
 // the C++ StringParser before its port; the Rust tests assert the same file). `--print` prints the lines instead.
 // A second pass runs under setlocale(LC_ALL, "English") as the game's UI thread sets it: the scanner's ctype calls
 // are the C runtime's, so the code page's letters and spaces count there. The exit code is the number of failures.
@@ -298,7 +298,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_parse.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_parse.txt";
 }
 
 int main(int argc, char** argv)

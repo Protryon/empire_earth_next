@@ -5,7 +5,7 @@
 //
 // Each of 200,000 images (32-bit or 8-bit, 0..40 x 0..20; pixels with alpha 0 or the transparent index now and then;
 // the transparent index -2..300; masks filled with random bytes first, as `new` leaves them) is masked on both sides;
-// the pixels and every mask byte are compared. The first 300 are rust/crates/ee_won/src/golden_imgmask.txt (the
+// the pixels and every mask byte are compared. The first 300 are rust/crates/ee_won_gui/src/golden_imgmask.txt (the
 // inputs' seeds and the results' hashes), which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>

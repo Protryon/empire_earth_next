@@ -1,6 +1,6 @@
 // The WONAPI GUI's window on the lobby surface (WONLobbyPlatform.h), in place of the GDI backend's MSWindow.cpp:
 // a rectangle of the surface the manager composites. R6 WON round 41: the window is ee_won's Rust object
-// (rust/crates/ee_won/src/platwin.rs: its rectangle and flags, Create, the moves and their size events, show, hide,
+// (rust/crates/ee_won_gui/src/platwin.rs: its rectangle and flags, Create, the moves and their size events, show, hide,
 // focus, capture, minimize, close, the cursor, the mouse-exit check); this class is its shell: the Window base, its
 // root and events, the manager's calls and the host the Rust calls them through.
 #include <windows.h>

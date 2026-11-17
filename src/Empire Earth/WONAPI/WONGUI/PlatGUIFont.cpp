@@ -1,5 +1,5 @@
 // The WONAPI GUI's fonts on the platform layer (WONLobbyPlatform.h), MSFont's replacement. R6 WON round 40: the font
-// is ee_won's Rust object (rust/crates/ee_won/src/platfont.rs: the platform fonts at the descriptor's size and at a
+// is ee_won's Rust object (rust/crates/ee_won_gui/src/platfont.rs: the platform fonts at the descriptor's size and at a
 // surface's pixel scale, the metrics, the widths, the drawing); the class is its shell, and draws the underline the
 // Rust answers with the context's Graphics.
 #include <windows.h>

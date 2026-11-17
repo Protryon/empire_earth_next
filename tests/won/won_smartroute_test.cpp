@@ -1,5 +1,5 @@
 // WONRouting's SmartRoutingConnection over 127.0.0.1, one line per event, compared with
-// rust/crates/ee_won/src/golden_smartroute.txt (recorded over the C++ class before its move to Rust): a routing
+// rust/crates/ee_won_net/src/golden_smartroute.txt (recorded over the C++ class before its move to Rust): a routing
 // server stand-in on a loopback socket sends the notifications and replies the connection's ops read, the
 // connection's model (clients, groups, members, the ignore list, the handled records, the chat command state) is
 // dumped after each step, the snapshot calls and iterators are logged, and every request the connection sends
@@ -1017,7 +1017,7 @@ static std::string GoldenPath()
     std::string aPath = __FILE__;
     size_t aSlash = aPath.find_last_of("/\\");
     aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
-    return aPath + "../../rust/crates/ee_won/src/golden_smartroute.txt";
+    return aPath + "../../rust/crates/ee_won_net/src/golden_smartroute.txt";
 }
 
 int main(int argc, char** argv)

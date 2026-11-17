@@ -1,6 +1,6 @@
 // The WONAPI GUI's graphics context on the platform layer (WONLobbyPlatform.h): draws into the display context's
 // software surface (WONSurface.h) with the results the GDI backend (MSGraphics.cpp) had, at the surface's pixel
-// scale. R6 WON round 40: every hook is ee_won's platgfx.rs (rust/crates/ee_won/src/platgfx.rs); the class keeps the
+// scale. R6 WON round 40: every hook is ee_won's platgfx.rs (rust/crates/ee_won_gui/src/platgfx.rs); the class keeps the
 // borrowed surface and the scale, Graphics the colour.
 #include <windows.h>
 #include <string>
