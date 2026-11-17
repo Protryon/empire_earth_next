@@ -467,10 +467,6 @@ pub(crate) unsafe extern "C" fn replay_host(
         return 0;
     }
     with(|r| match op {
-        Op::CtSetParent => r.w[a as usize].parent = if b != 0 { me } else { 0 },
-        Op::CtSetFocusId => r.w[a as usize].focus_id = b as u8,
-        Op::CtSetInvalidState => r.w[a as usize].invalid = b as i8,
-        Op::CtSetTimerFlags => r.w[me as usize].timer = a as i8,
         Op::ChildSetFlags => {
             let q = &mut r.w[a as usize];
             q.bits = if c != 0 { q.bits | b as u32 } else { q.bits & !(b as u32) };
@@ -576,6 +572,21 @@ pub(crate) fn replay_with(seq: &[&'static str], ext: Option<Ext>) -> Option<Stri
                 let got = next_line();
                 if got != want {
                     fail(format!("line {}: golden {got:?}, rust {want:?}", with(|r| r.at)));
+                }
+            }
+            "world" => {
+                // the members the containers wrote in place (parent, focus id, invalid state, timer flags per
+                // component from 1)
+                let want: String = with(|r| {
+                    let k = n.len() / 4;
+                    (1..=k).map(|i| {
+                        let w = r.w[i];
+                        format!(" {} {} {} {}", w.parent, w.focus_id, w.invalid, w.timer)
+                    })
+                    .collect()
+                });
+                if l != format!("world{want}") {
+                    fail(format!("line {}: golden {l:?}, rust \"world{want}\"", with(|r| r.at)));
                 }
             }
             _ => {
