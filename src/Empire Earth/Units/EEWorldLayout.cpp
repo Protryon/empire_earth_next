@@ -123,7 +123,6 @@ void EEWorldLayoutRegister()
     theLayout.player_pending_units = offsetof(EEPlayer, mPendingUnits);
     theLayout.player_towns = offsetof(EEPlayer, mTowns);
     theLayout.player_herds = offsetof(EEPlayer, mHerds);
-    theLayout.player_viewed_unit = offsetof(EEPlayer, mViewedUnit);
     theLayout.world_players = offsetof(EEWorld, mPlayers);
     theLayout.world_map = offsetof(EEWorld, mMap);
     theLayout.world_num_players = offsetof(EEWorld, mNumPlayers);

@@ -86,7 +86,6 @@ pub struct EeWorldLayout {
     pub player_pending_units: u64,
     pub player_towns: u64,
     pub player_herds: u64,
-    pub player_viewed_unit: u64,
     // ---- RTSWorld / EEWorld
     /// `mPlayers` (17 pointers), `mMap`, `mNumPlayers` (an `unsigned long`), `EEWorld::mCurrentPlayer` (a `long`)
     pub world_players: u64,

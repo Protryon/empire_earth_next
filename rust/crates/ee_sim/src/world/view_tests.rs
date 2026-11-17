@@ -186,7 +186,6 @@ fn fake_layout() -> EeWorldLayout {
         player_pending_units: 0,
         player_towns: 0,
         player_herds: 0,
-        player_viewed_unit: 0,
         world_players: offset_of!(FakeWorld, players) as u64,
         world_map: offset_of!(FakeWorld, map) as u64,
         world_num_players: offset_of!(FakeWorld, num_players) as u64,

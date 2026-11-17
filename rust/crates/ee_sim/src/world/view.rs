@@ -844,11 +844,6 @@ impl<'t> PlayerView<'t> {
     pub fn herd_handle(&self, i: usize) -> u64 {
         self.vector_at(layout().player_herds, i)
     }
-    /// `mViewedUnit`'s handle (0: none)
-    pub fn viewed_unit_handle(&self) -> u64 {
-        // SAFETY: a live player's pointer member
-        unsafe { pointer(self.object, layout().player_viewed_unit) as u64 }
-    }
 }
 
 /// The world (`EEWorld`, the game's one world object).
