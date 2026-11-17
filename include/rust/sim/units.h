@@ -1195,6 +1195,38 @@ constexpr static const int32_t EE_TECH_CONQUISTADORS_SPELL = 7020;
 /// the calamity class whose cast every selected caster takes a copy of (`mClassEnum` 0x12)
 constexpr static const int32_t EE_CALAMITY_CLASS_GROUP_CAST = 18;
 
+/// `kUnitTypeTownCenter`, `kUnitTypeCapitol`
+constexpr static const uint64_t TOWN_CENTER = 35;
+
+constexpr static const uint64_t CAPITOL = 41;
+
+/// the game options' `mIsScenarioGame`
+constexpr static const int32_t EE_UNITS_GAME_OVER_SCENARIO = 1;
+
+/// the rules' `mGameOptions.mDefeatWithoutRecovery`
+constexpr static const int32_t EE_UNITS_GAME_OVER_DEFEAT_RULE = 2;
+
+/// `mTeams.size()`; team a's `GetVictoryState()`; its `mPlayers.size()`; its `mPlayers[b]`
+constexpr static const int32_t EE_UNITS_GAME_OVER_TEAMS = 3;
+
+constexpr static const int32_t EE_UNITS_GAME_OVER_TEAM_STATE = 4;
+
+constexpr static const int32_t EE_UNITS_GAME_OVER_TEAM_SIZE = 5;
+
+constexpr static const int32_t EE_UNITS_GAME_OVER_TEAM_PLAYER = 6;
+
+/// `mPlayers[a]->IsHuman()`
+constexpr static const int32_t EE_UNITS_GAME_OVER_IS_HUMAN = 7;
+
+/// `RemovePlayerFromGame(b != 0, a)`
+constexpr static const int32_t EE_UNITS_GAME_OVER_REMOVE = 8;
+
+/// `mPlayers[a]->SetGameResult(b)`
+constexpr static const int32_t EE_UNITS_GAME_OVER_SET_RESULT = 9;
+
+/// player a can train a citizen: no citizen node, or `EEPlayer::CanAfford(node, citizen, 1)`
+constexpr static const int32_t EE_UNITS_GAME_OVER_CAN_TRAIN = 10;
+
 /// `kGoalGather`
 constexpr static const uint8_t GOAL_GATHER = 6;
 
@@ -3121,6 +3153,18 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 /// on-map check count those on the map (the chain holds them).
 /// The id of a unit that has none (`RTSUnit::Reset`'s 0xffffffff): its record is by object (`Store::unlisted`).
 constexpr static const uint32_t EE_UNIT_ID_UNLISTED = 4294967295;
+
+/// `gDoppelgangerManager.TileShown(tile a, x c, y d, player b)`
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_SHOWN = 1;
+
+/// `gDoppelgangerManager.TileHidden(tile a, player b)`
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_HIDDEN = 2;
+
+/// player a's `mSavedGroups.Reset(0x18, 1)`
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_FIRST = 3;
+
+/// `gMiniMap->CountCellOn/Off(c, d)` (a != 0: on), the terrain mesh's `ReferenceTile/DereferenceTile(c, d)`
+constexpr static const int32_t EE_UNITS_TILE_SIGHT_SHOW = 4;
 
 /// `kErrorBeyondEnd`: an area read short.
 constexpr static const int32_t EE_UNITS_TOWN_BEYOND_END = 10;
@@ -5684,6 +5728,11 @@ void ee_units_cast_calamity(void *player,
                             int32_t y,
                             int32_t technology);
 
+extern int64_t ee_units_game_over_host(int32_t op, int64_t a, int64_t b);
+
+/// `EEWorld::CheckGameOver` of the world `world` (`&gWorld`)
+int64_t ee_units_check_game_over(uint64_t world);
+
 /// A container's deque changed: its unit and its goals' ids (`count` at `ids`).
 ///
 /// # Safety
@@ -6947,6 +6996,59 @@ float ee_units_step_cloak_fade(float opacity,
 /// # Safety
 /// `host` points to a valid table whose calls are valid for its `ctx`.
 uint32_t ee_units_update_units(const EeUnitsTickHost *host);
+
+extern int64_t ee_units_tile_sight_host(int32_t op, uint64_t a, uint64_t b, int64_t c, int64_t d);
+
+/// `RTSTile::AddSight(player)` (`on` 1) / `RemoveSight(player)` of tile `tile`
+void ee_units_tile_sight_tile(uint64_t world, uint8_t on, uint64_t tile, uint64_t player);
+
+/// EEPlayer's `AddSharedSight(tile, x, y)` (`on` 1, `shared` 1), `RemoveSharedSight(tile)` (0, 1), `AddOwnSight`
+/// (1, 0), `RemoveOwnSight` (0, 0)
+void ee_units_tile_sight_player(uint64_t world,
+                                uint8_t on,
+                                uint8_t shared,
+                                uint64_t player,
+                                uint64_t tile,
+                                int64_t x,
+                                int64_t y);
+
+/// `EEAddSightCircle` (kind 0) / `EERemoveSightCircle` (1) of (x0, y0); `EEAddSightRingStep` (2),
+/// `EERemoveSightRingStep` (3), `EEMoveSightCircle` (4) from (x0, y0) to (x1, y1)
+void ee_units_tile_sight_circle(uint64_t world,
+                                uint32_t kind,
+                                float x0,
+                                float y0,
+                                float x1,
+                                float y1,
+                                float radius,
+                                uint64_t player);
+
+/// `RTSMap::FogSeen(player)` (kind 0), `ExploreUnseen(player)` (1), `EEMap::PrepareSave`'s visibility pass (2)
+/// of map `map`
+void ee_units_tile_sight_map(uint64_t world,
+                             uint64_t map,
+                             uint32_t kind,
+                             uint64_t player);
+
+/// `EEMap::ReserveTiles`' `new uint32_t[count]` and memset (map_words.rs)
+uint32_t *ee_units_map_words_new(uint64_t count);
+
+/// `delete[] mVisibilityWords` (null: nothing)
+///
+/// # Safety
+/// `words` is null or a buffer of `ee_units_map_words_new`/`_resize`, not used after.
+void ee_units_map_words_free(uint32_t *words);
+
+/// `EEMap::SetPlayerCount`'s new words for map `map`: `tiles * new_words` words, each tile found (y outer, x inner)
+/// given the next old slice's words and pointed at its new slice; the old buffer freed. Returns the new buffer.
+///
+/// # Safety
+/// `map` is a live map, `old` null or its live buffer of `old_words` words a tile.
+uint32_t *ee_units_map_words_resize(uint64_t map,
+                                    uint32_t *old,
+                                    uint64_t tiles,
+                                    uint64_t old_words,
+                                    uint64_t new_words);
 
 /// `EESaveTowns` over the C++ host.
 ///

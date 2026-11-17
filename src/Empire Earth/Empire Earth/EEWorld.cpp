@@ -904,6 +904,7 @@ void EEWorld::StartGame(EEGameState* inState, bool inLocked)
         this->mMap->SetPlayerCount(this->mNumPlayers);
     gMiniMap->mViewingPlayer = this->mPlayers[this->mCurrentPlayer];
     if (inState->mRevealMap == true) {
+        EESightScope theCapture(kSightRevealMap, NULL);   // TSGT (TEST ONLY)
         for (long y = 0; y < this->mMap->mSize; y++) {
             for (long x = 0; x < this->mMap->mSize; x++) {
                 EEMapTile* theTile = this->mMap->GetTile(x, y);
@@ -1926,121 +1927,35 @@ long EEWorld::UnpauseGame()
     return 0;
 }
 
-// The game result entries (player, result) the end-of-game check collects (8 bytes; its vector's COMDATs are
-// ICF-folded with vector<EETileCoordinate>'s; provisional name).
-struct EEWorldGameResult {
-    unsigned long mPlayer;
-    long mResult;
-};
-
-// New (gameoptions.yaml defeat_without_recovery): whether a player can still come back: a living unit that is
-// not a building (a citizen, a soldier, a ship), or a finished town centre or capitol and the means to train a
-// citizen there (a beaten AI kept its town centres with 10 food and no income for 50 minutes). Fishing boats do not
-// count: they cannot build or fight (the owner: "when they have nothing but fishing boats left, they should get
-// defeated too")
-static bool EEWorldCanRecover(EEPlayer* inPlayer)
+// The end-of-game check's world calls (ee_units game_over.rs reads the players and units through the world views)
+extern "C" int64_t ee_units_game_over_host(int32_t inOp, int64_t inA, int64_t inB)
 {
-    EETechTreeNode* theCitizen = inPlayer->mTechnologies != NULL ? inPlayer->mTechnologies->Get(kTechCitizen) : NULL;
-    bool theCanTrain = theCitizen == NULL || inPlayer->EEPlayer::CanAfford(theCitizen, kUnitTypeCitizen, 1);
-    EEComplexUnit* theUnit = NULL;
-    while ((theUnit = inPlayer->GetNextComplexUnit(theUnit)) != NULL) {
-        if (!(theUnit->mHitPoints > 0) || theUnit->mPreviousPart != NULL || !theUnit->mUnitClass->mIsVital
-            || theUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
-            continue;
-        if (!theUnit->mUnitClass->IsLandBuilding())
-            return true;
-        long theType = theUnit->mUnitClass->mUnitType;
-        if (theCanTrain && theUnit->mIsBuilt && (theType == kUnitTypeTownCenter || theType == kUnitTypeCapitol))
-            return true;
+    switch (inOp) {
+    case EE_UNITS_GAME_OVER_SCENARIO: return gWorld.mGameOptions.mIsScenarioGame;
+    case EE_UNITS_GAME_OVER_DEFEAT_RULE: return EEGetRules().mGameOptions.mDefeatWithoutRecovery;
+    case EE_UNITS_GAME_OVER_TEAMS: return (int64_t)gWorld.mTeams.size();
+    case EE_UNITS_GAME_OVER_TEAM_STATE: return gWorld.mTeams[(size_t)inA].GetVictoryState();
+    case EE_UNITS_GAME_OVER_TEAM_SIZE: return (int64_t)gWorld.mTeams[(size_t)inA].mPlayers.size();
+    case EE_UNITS_GAME_OVER_TEAM_PLAYER: return (int64_t)gWorld.mTeams[(size_t)inA].mPlayers[(size_t)inB];
+    case EE_UNITS_GAME_OVER_IS_HUMAN: return gWorld.mPlayers[inA]->IsHuman();
+    case EE_UNITS_GAME_OVER_REMOVE: gWorld.RemovePlayerFromGame(inB != 0, (unsigned long)inA); return 0;
+    case EE_UNITS_GAME_OVER_SET_RESULT: gWorld.mPlayers[inA]->SetGameResult((long)inB); return 0;
+    case EE_UNITS_GAME_OVER_CAN_TRAIN: {
+        // New (gameoptions.yaml defeat_without_recovery): the means to train a citizen
+        EEPlayer* thePlayer = gWorld.mPlayers[inA];
+        EETechTreeNode* theCitizen = thePlayer->mTechnologies != NULL ? thePlayer->mTechnologies->Get(kTechCitizen) : NULL;
+        return theCitizen == NULL || thePlayer->EEPlayer::CanAfford(theCitizen, kUnitTypeCitizen, 1);
     }
-    return false;
+    }
+    return 0;
 }
 
-// Ends the game when decided: applies team victories, defeats players out of units and lets a last team win; returns
-// 2 when someone won, 1 when no human (or only one player) is left, else 0
+// Ends the game when decided: applies team victories, defeats players out of units (and, with gameoptions.yaml's
+// defeat_without_recovery on a random map, players who cannot come back) and lets a last team win; returns 2 when
+// someone won, 1 when no human (or only one player) is left, else 0 (ee_units game_over.rs)
 long EEWorld::CheckGameOver()
 {
-    std::vector<EEWorldGameResult> theResults;
-    EEGameOptionsPlayer theUnused;
-    unsigned long i = 0;
-    long theResult = 0;
-    long theHumans = 0;
-    if (this->mVictoryEnabled) {
-        for (i = 0; i < this->mTeams.size(); i++) {
-            long theState = this->mTeams[i].GetVictoryState();
-            if (theState != 0) {
-                theResult = 0;
-                for (unsigned long j = 0; j < (this->mTeams.begin() + i)->mPlayers.size(); j++) {
-                    EEWorldGameResult theEntry;
-                    theEntry.mPlayer = (this->mTeams.begin() + i)->mPlayers[j];
-                    theEntry.mResult = theState;
-                    theResults.push_back(theEntry);
-                }
-                theResult = 2;
-            }
-        }
-        if (theResult != 0)
-            goto results;
-    }
-    i = 1;
-    if (this->mNumPlayers < 2)
-        goto alone;
-    for (; i < this->mNumPlayers; i++) {
-        EEPlayer* thePlayer = this->mPlayers[i];
-        if (thePlayer != NULL) {
-            if (!thePlayer->mObserverMode) {
-                // port: also out when it cannot come back (gameoptions.yaml defeat_without_recovery; random maps
-                // only, scenarios keep the original rule): the original kept a player with a last house in the game
-                if (this->mVictoryEnabled && (thePlayer->mEndOfGameCount <= 0
-                    || (EEGetRules().mGameOptions.mDefeatWithoutRecovery && !this->mGameOptions.mIsScenarioGame
-                        && thePlayer->mGameResult == 0 && !EEWorldCanRecover(thePlayer)))) {
-                    this->RemovePlayerFromGame(false, i);
-                    thePlayer->SetGameResult(2);
-                }
-                if (this->mPlayers[i]->IsHuman())
-                    theHumans++;
-            }
-            if (this->mPlayers[i]->mGameResult == 1)
-                theResult = 2;
-        }
-    }
-    if (theResult == 0) {
-        if (theHumans == 0)
-            goto alone;
-        if (!this->mVictoryEnabled || this->mTeams.size() > 1 || this->mTeams.size() == 0)
-            goto done;
-        theResult = 2;
-        for (i = 0; i < this->mTeams.begin()->GetNumPlayers(); i++) {
-            EEWorldGameResult theEntry;
-            theEntry.mPlayer = *(this->mTeams.begin()->mPlayers.begin() + i);
-            theEntry.mResult = 1;
-            theResults.push_back(theEntry);
-        }
-    }
-    goto results;
-alone:
-    theResult = 1;
-    for (i = 1; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i] != NULL && this->mPlayers[i]->mGameResult == 1) {
-            theResult = 2;
-            break;
-        }
-    }
-results:
-    for (i = 0; i < theResults.size(); i++) {
-        if (this->mPlayers[theResults[i].mPlayer] != NULL && this->mPlayers[theResults[i].mPlayer]->mGameResult == 0) {
-            this->RemovePlayerFromGame(theResults[i].mResult == 1, theResults[i].mPlayer);
-            this->mPlayers[theResults[i].mPlayer]->SetGameResult(theResults[i].mResult);
-        }
-    }
-    for (i = 1; i < this->GetNumPlayers(); i++) {
-        if (this->mPlayers[i] != NULL && this->mPlayers[i]->mGameResult == 0) {
-            this->RemovePlayerFromGame(theResult == 1, i);
-            this->mPlayers[i]->SetGameResult(theResult);
-        }
-    }
-done:
-    return theResult;
+    return (long)ee_units_check_game_over((uint64_t)(uintptr_t)this);
 }
 
 // Updates the physics timing after the game speed changed

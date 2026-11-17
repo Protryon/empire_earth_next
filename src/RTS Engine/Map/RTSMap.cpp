@@ -265,18 +265,8 @@ long RTSMap::GetNumRaisedCorners(unsigned long inX, unsigned long inY)
 // those players from the doppelganger manager (done before a scenario is saved)
 void EEMap::PrepareSave()
 {
-    long theY;
-    for (theY = 0; theY < this->mSize; theY++) {
-        for (long theX = 0; theX < this->mSize; theX++) {
-            EEMapTile* theTile = this->mTiles[theY * this->mSize + theX];
-            if (theTile == NULL)
-                continue;
-            for (unsigned long i = 1; i < this->mU19561C; i++) {
-                if (theTile->GetVisibility(::gWorld.mPlayers[i]->GetPlayerID()) == 1)
-                    theTile->SetVisibility(0, ::gWorld.mPlayers[i]);
-            }
-        }
-    }
+    EESightScope theCapture(kSightPrepareSave, NULL);   // TSGT (TEST ONLY)
+    ee_units_tile_sight_map((uint64_t)(uintptr_t)&::gWorld, (uint64_t)(uintptr_t)this, 2, 0);   // ee_units tile_sight.rs
     for (unsigned long i = 1; i < this->mU19561C; i++)
         gDoppelgangerManager.UnregisterPlayer(::gWorld.mPlayers[i]);
 }
@@ -632,25 +622,15 @@ void RTSMap::DeleteTiles()
 // Fogs every tile the player has seen or explored: it becomes explored but not in sight
 void RTSMap::FogSeen(EEPlayer* inPlayer)
 {
-    for (long theX = 0; theX < this->mSize; theX++) {
-        for (long theY = 0; theY < this->mSize; theY++) {
-            EEMapTile* theTile = this->GetTile(theX, theY);
-            if (theTile != NULL && theTile->GetVisibility(inPlayer->GetPlayerID()) > 0)
-                theTile->SetVisibility(1, inPlayer);
-        }
-    }
+    EESightScope theCapture(kSightFogSeen, inPlayer);   // TSGT (TEST ONLY)
+    ee_units_tile_sight_map((uint64_t)(uintptr_t)&::gWorld, (uint64_t)(uintptr_t)this, 0, (uint64_t)(uintptr_t)inPlayer);
 }
 
 // Marks every unexplored tile as explored for the player (reveals the map)
 void RTSMap::ExploreUnseen(EEPlayer* inPlayer)
 {
-    for (long theX = 0; theX < this->mSize; theX++) {
-        for (long theY = 0; theY < this->mSize; theY++) {
-            EEMapTile* theTile = this->GetTile(theX, theY);
-            if (theTile != NULL && theTile->GetVisibility(inPlayer->GetPlayerID()) == 0)
-                theTile->SetVisibility(1, inPlayer);
-        }
-    }
+    EESightScope theCapture(kSightExploreUnseen, inPlayer);   // TSGT (TEST ONLY)
+    ee_units_tile_sight_map((uint64_t)(uintptr_t)&::gWorld, (uint64_t)(uintptr_t)this, 1, (uint64_t)(uintptr_t)inPlayer);
 }
 
 // Writes the map's size, player count, every tile and the terrain mesh; returns the first write error

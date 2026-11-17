@@ -785,6 +785,70 @@ impl<'t> PlayerView<'t> {
     pub fn units(&self) -> impl Iterator<Item = UnitView<'t>> {
         std::iter::successors(self.first_unit(), |u| u.next())
     }
+    /// The begin and end of the pointer vector at `at`
+    fn vector(&self, at: u64) -> (usize, usize) {
+        let w = std::mem::size_of::<usize>() as u64;
+        // SAFETY: a live player's vector member: its first two words are its begin and end (EEWorldLayout.cpp checks)
+        unsafe { (pointer(self.object, at), pointer(self.object, at + w)) }
+    }
+    fn vector_len(&self, at: u64) -> usize {
+        let (begin, end) = self.vector(at);
+        (end - begin) / std::mem::size_of::<usize>()
+    }
+    fn vector_at(&self, at: u64, i: usize) -> u64 {
+        if i >= self.vector_len(at) {
+            return 0;
+        }
+        // SAFETY: an element of the vector
+        unsafe { pointer(self.vector(at).0, (i * std::mem::size_of::<usize>()) as u64) as u64 }
+    }
+    /// `mSharedLOS` (the saved record's)
+    pub fn shared_los(&self) -> bool {
+        crate::world_field!(self.saved(), mSharedLOS)
+    }
+    /// `mSaveVisMap`
+    pub fn save_vis_map(&self) -> bool {
+        crate::world_field!(self.rts(), mSaveVisMap)
+    }
+    /// `mAllies.size()`, `mAllies[i]`'s handle (0 past the end)
+    pub fn allies_len(&self) -> usize {
+        self.vector_len(layout().player_allies)
+    }
+    pub fn ally_handle(&self, i: usize) -> u64 {
+        self.vector_at(layout().player_allies, i)
+    }
+    /// `mSightSharers.size()`, `mSightSharers[i]`'s handle
+    pub fn sight_sharers_len(&self) -> usize {
+        self.vector_len(layout().player_sight_sharers)
+    }
+    pub fn sight_sharer_handle(&self, i: usize) -> u64 {
+        self.vector_at(layout().player_sight_sharers, i)
+    }
+    /// `mPendingUnits.size()`, `mPendingUnits[i]`'s handle
+    pub fn pending_units_len(&self) -> usize {
+        self.vector_len(layout().player_pending_units)
+    }
+    pub fn pending_unit_handle(&self, i: usize) -> u64 {
+        self.vector_at(layout().player_pending_units, i)
+    }
+    /// `mTowns`, `mHerds`: their sizes and entries' handles (`EETown*`, `EEHerd*`)
+    pub fn towns_len(&self) -> usize {
+        self.vector_len(layout().player_towns)
+    }
+    pub fn town_handle(&self, i: usize) -> u64 {
+        self.vector_at(layout().player_towns, i)
+    }
+    pub fn herds_len(&self) -> usize {
+        self.vector_len(layout().player_herds)
+    }
+    pub fn herd_handle(&self, i: usize) -> u64 {
+        self.vector_at(layout().player_herds, i)
+    }
+    /// `mViewedUnit`'s handle (0: none)
+    pub fn viewed_unit_handle(&self) -> u64 {
+        // SAFETY: a live player's pointer member
+        unsafe { pointer(self.object, layout().player_viewed_unit) as u64 }
+    }
 }
 
 /// The world (`EEWorld`, the game's one world object).
@@ -1016,6 +1080,12 @@ impl<'t> TileView<'t> {
         let words = unsafe { pointer(self.object, layout().tile_visibility) };
         // SAFETY: the caller's bound: one of the tile's words
         (words != 0).then(|| unsafe { member(words, (word * 4) as u64) })
+    }
+    /// `mVisibility`'s address (0: none), for the tile sight's writes (lane P, tile_sight_host.rs): the words live in
+    /// the map's `mVisibilityWords`
+    pub fn visibility_words_ptr(&self) -> *mut u32 {
+        // SAFETY: the tile's pointer member
+        unsafe { pointer(self.object, layout().tile_visibility) as *mut u32 }
     }
     /// `mVisibility != NULL` (the map gives every tile its words: `EEMap::SetPlayerCount`)
     pub fn has_visibility(&self) -> bool {
