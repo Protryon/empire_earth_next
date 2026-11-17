@@ -1,6 +1,7 @@
 // New (port), TEST ONLY: the world views' check (ee/EEWorldLayout.h, docs/progress/world-views.md). Every physics tick
 // while the capture runs, a fixed list of the world's, every player's, every listed unit's and every map tile's fields,
-// read through the C++ members, folded into one FNV-1a 64 of 32-bit words: the VWCK record.
+// read through the C++ members, folded into one FNV-1a 64 of 32-bit words: the VWCK record. Rust folds the same list
+// through its views (ee_sim world check.rs); a difference stops EE-SIM (exit code 3).
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,6 +30,7 @@
 #include "ee/EESimCapture.h"
 #include "ee/EEWorldLayout.h"
 #include "rust/sim/units.h"
+#include "rust/sim/world.h"
 
 namespace {
 
@@ -206,6 +208,18 @@ void EEWorldViewCheck()
     theDigest.Word(gWorld.mMap != NULL ? 1 : 0);
     if (gWorld.mMap != NULL)
         theTiles = MapFields(theDigest, gWorld.mMap);
+    // the same list through Rust's views (ee_sim world check.rs): a difference stops EE-SIM
+    EeWorldViewDigest theRust = {};
+    ee_world_view_digest(reinterpret_cast<uintptr_t>(&gWorld), &theRust);
+    if (theRust.digest != theDigest.mHash || theRust.players != thePlayers || theRust.units != theUnits
+        || theRust.tiles != theTiles) {
+        fprintf(stderr, "EE-WORLD-VIEWS: the views differ from the members at tick %lu: Rust %u players, %u units, "
+                "%u tiles, %016llx; C++ %u, %u, %u, %016llx\n", gPhysics != NULL ? (unsigned long)gPhysics->mNumTicksDone : 0ul,
+                theRust.players, theRust.units, theRust.tiles, (unsigned long long)theRust.digest, thePlayers, theUnits,
+                theTiles, (unsigned long long)theDigest.mHash);
+        EESimCaptureRecord::Flush();
+        exit(3);
+    }
     EESimCaptureRecord theRecord(kTag);
     theRecord.U32(gPhysics != NULL ? (unsigned int)gPhysics->mNumTicksDone : 0);
     theRecord.U32(thePlayers);
