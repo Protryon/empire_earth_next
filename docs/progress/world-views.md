@@ -136,6 +136,23 @@ calamity, seeds 2-7) were recorded from 51225ab08, the C++ side on the unmodifie
 - `TileView::visibility` reads through each tile's `mVisibility` pointer, as `GetVisibility`'s 82 readers do, so
   Lane P's move of the words to a Rust `Vec` must keep the tiles' pointers into it.
 
-## Results
+## Results (round 1, 2026-11-17)
 
-(see the end of this file, rewritten each round)
+Commits: 51225ab08 (VWCK's C++ side), 7f9371798 (its golden lines from it), f54bd9db0 (the module, the layout, the
+views, VWCK's Rust side), 0f46c5dd3 (the goal host's fifteen reads), the rustfmt, the PORT_LEARNINGS section, the
+merge of origin/rust 48b2f4f04.
+
+- C++: +118 net (EEWorldLayout.cpp +147, its header +16, EEWorld/EEPhysics +5; EEUGRust.cpp -34, EEUnitStore.cpp's
+  slot block -16), plus the TEST ONLY EEWorldViewCheck.cpp +231.
+- Rust: 9 new unit tests in world::view_tests (the layout, tokens, bool bytes, every view over fake objects, the
+  debug kind checks, the VWCK word list, the store lookup); `rust_build.py gate` PASS (4,353 tests).
+- VWCK: the C++ digests of 51225ab08 (unmodified tree) are the golden lines of oracle, late and calamity, seeds 2-7;
+  the views' digest equals the C++'s every tick of all 18 games (no `EE-WORLD-VIEWS`), and the C++ digests equal
+  the golden lines (`sim_capture.py check` PASS: oracle 584, late 590, calamity 615 digests; space 2-3 PASS).
+- Oracle seeds 2-7 identical to the reference; saveload `--expect` PASS (all settings, seeds 2-3, 1000 and 1900 s);
+  both builds 0/0; `gates.sh` via slot.py: tour, ai-game (time-cap, alive [2, 3], classic_lua) and lan-game PASS,
+  GATES PASS.
+- After the merge of origin/rust: both builds 0/0, oracle 2-7 identical, the Rust gate PASS, captures oracle, late,
+  calamity and space (seeds 2-3) PASS.
+- Linux: `cargo check` and clippy of ee_sim (lib and tests) for x86_64-unknown-linux-gnu are clean (the views and
+  the records compile with 64-bit `c_long`); not run on Linux.
