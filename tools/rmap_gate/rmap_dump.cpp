@@ -25,7 +25,7 @@
 #include "lle/FSFileSpec.h"
 #include "ee/EERandomMap.h"
 #include "ee/EERandomMapIDs.h"
-#include "rust/ee_rmap.h"
+#include "rust/sim/rmap.h"
 #include "ee/EERandomMapView.h"
 
 extern "C" {

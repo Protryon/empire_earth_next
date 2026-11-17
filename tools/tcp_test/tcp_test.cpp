@@ -31,10 +31,12 @@
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
 #include "platform/PlatSim.h"
-#include "rust/ee_ts.h"
+#include "rust/base/ts.h"
+#include "rust/net/net_tcp.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/NEProtocol.h"
-#include "rust/ee_net_tcp.h"
+#include "rust/base/ts.h"
+#include "rust/net/net_tcp.h"
 
 // the protocol (whole in Rust, ee_net ffi_protocol.rs) with the original's members, made and freed as the server
 // did (tests/net/ne_protocol_members.h)
