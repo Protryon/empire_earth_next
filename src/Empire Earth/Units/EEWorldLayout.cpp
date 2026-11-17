@@ -117,6 +117,7 @@ void EEWorldLayoutRegister()
     theLayout.player_color = offsetof(EEPlayer, mColor);
     theLayout.player_first_unit = offsetof(EEPlayer, mFirstUnit);
     theLayout.player_selected_group = offsetof(EEPlayer, mSelectedGroup);
+    theLayout.player_computer_player = offsetof(EEPlayer, mComputerPlayer);
     theLayout.world_players = offsetof(EEWorld, mPlayers);
     theLayout.world_map = offsetof(EEWorld, mMap);
     theLayout.world_num_players = offsetof(EEWorld, mNumPlayers);
@@ -133,6 +134,9 @@ void EEWorldLayoutRegister()
     theLayout.world_in_cinematic = offsetof(EEWorld, mInCinematic);
     theLayout.world_user_paused = offsetof(EEWorld, mUserPaused);
     theLayout.world_using_carbon = offsetof(EEWorld, mUsingCarbon);
+    theLayout.world_teams_locked = offsetof(EEWorld, mTeamsLocked);
+    theLayout.world_address = (uint64_t)(uintptr_t)&gWorld;
+    theLayout.unit_class_table = (uint64_t)(uintptr_t)&gUnitClassTable;
     theLayout.map_tiles = offsetof(EEMap, mTiles);
     theLayout.tile_stride = sizeof(EETile);
     theLayout.tile_terrain_type = offsetof(EETile, mTerrainType);
