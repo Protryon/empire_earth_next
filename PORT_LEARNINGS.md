@@ -28962,3 +28962,42 @@ from a snapshot commit, one commit per new crate.
   root's in `rust/<dir>/<dir>.h`, `rust/common.h`, the umbrella `rust/all.h`; ee_won_net's cppcore, hostop, opobj
   and thread name each other and share `rust/won_net/hostop.h`.
 - **Gates.** See docs/progress/crate-restructure.md "Phase 2".
+
+## The world views: ee_sim::world, the records, the layout and read-only views over the C++ objects (lane V; branch rust-worldviews, 2026-11-17)
+
+"Rust layout, C++ allocation" (the object storage plan): the records stay inline in the C++ objects, and Rust reads
+them in place. docs/progress/world-views.md documents the API for the lanes on top (U, R, P, S).
+
+- **What moved.** The unit, class, stats, player and map records (`EeUnits*`, C names unchanged) are defined in
+  `ee_sim::world` and re-exported at their old `ee_sim::units` paths, so no reader changed. Their C declarations
+  went from `rust/sim/units.h` to `rust/sim/world.h`, which the header splitter makes `units.h` include, so no C++
+  include changed. The player record points to two Rust objects (`EeUnitsQueued`, `EeUnitsPlayerWonders`); they
+  moved too, because a record in `world.h` naming a type of `units.h` would make the two headers include each other
+  (the splitter refuses a cycle).
+- **The layout is registered, never written down.** `EEWorldLayout.cpp` fills `EeWorldLayout` with `offsetof` and
+  base casts of a made-up address (the unit store's old trick) and registers it from `EEWorld::EEWorld()`, the
+  first thing that exists before any unit. It aborts when a first base is not at offset 0 (a handle is the first
+  base's address) or when a `std::vector`'s first two words are not its begin and end: MSVC, libc++ and libstdc++
+  all keep them there, which lets Rust read `mCargo`, `mBuildQueue` and `mGhostUnits` without a C++ call.
+  `GEPhysicalModel::mLocation` is private: its offset comes from `&model->GetLocation()` on the made-up address.
+- **Lesson: the layout must not be global in unit tests.** `cfg(test)` is per crate and the tests share a process:
+  a test that registered a fake layout would make the unit store's tests on other threads follow pointers in
+  their fake records. The registered layout is the C++'s only; a test sets one for its own thread
+  (`layout::with_test_layout`), and the store and stats reads see none.
+- **Lesson: a read token takes no lock.** Lane S measured the editor: two thirds of its reads run while the thread
+  holds `gWorld.mLock` for write (an EeTsLock read on top deadlocks), and some run with no lock at all (the
+  construction thread, the menus). `WorldRead` is the caller's statement that it holds the world, counted per
+  thread in debug builds; `ee_world_read_begin`/`end` let C++ open one.
+- **Views copy, never borrow.** Each accessor reads the member's bytes (`bool`s as bytes, also through
+  `world_field!` and in arrays); a view holds an address, so a call back into C++ while one exists is sound.
+  Debug builds check the object-kind byte and that an `EEComplexUnit` member is read from an `EEComplexUnit`.
+- **VWCK.** The C++ side (a fixed list of the world's, players', units' and tiles' fields as 32-bit words, FNV-1a
+  64) was committed and captured first (51225ab08: oracle, late and calamity, seeds 2-7: the golden lines); the
+  Rust side folds the same words through the views and EE-SIM exits 3 on a difference. view_tests.rs spells the
+  list out word by word over a hand-built world, so the two sides share one written order.
+- **Lesson: two background runs of one script share their stage slots.** A capture started with `&` from a tool
+  call survived the call; the same script started again ran beside it with the same NAMEs, and one game faulted in
+  a combat leaf (the data under it was being re-staged). Each run needs its own NAME, and a "lost" run must be
+  found (`Get-CimInstance Win32_Process` by command line) and stopped before a rerun.
+- **Converted callers.** Fifteen plain operations of the goals' host (`rust_goal.rs` `read_unit`) read through
+  the views; their `GoalOp` cases left `EEUGRust.cpp`.
