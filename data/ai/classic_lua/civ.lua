@@ -84,6 +84,13 @@ local SAFE_BONUS = false
 -- Copper Age since 71, waited for its epoch timer and stood in the Copper Age to the end
 local CATCH_UP = true
 
+-- New (AI_RESEARCH 8.98): from the Stone Age on, the next advance is due at most ORDER_AFTER_MS after an epoch is
+-- reached, while the standing army is at its target (military.standing_army x the workers). The epoch timer's early
+-- start alone made it 6-21 minutes on Hard (measured: 16.9 to the Copper order, 15.6 to the Bronze one), while the
+-- save itself, the whole cost kept once ordered (units.lua FULL_ONCE_ORDERED), took 10-11. Without the army rule the
+-- epochs came as early but the army at the end was a third smaller and more games were close
+local ORDER_AFTER_MS = 300000
+
 function M.enemy_ahead(view)
     for _, e in ipairs(view.enemies or {}) do
         if (e.epoch or 0) > view.epoch then
@@ -142,6 +149,10 @@ local function attempt_advance(view, memory)
                 or T.epoch_timer_span(memory) // 1000)
             due = due > sooner and due - sooner or 0
         end
+    end
+    if view.epoch >= 1 and civ.epoch_t ~= nil and due > civ.epoch_t + ORDER_AFTER_MS
+            and U.military(view, memory, false) * 1000 >= t.personality.standing_army_k * U.workers(view, memory) then
+        due = civ.epoch_t + ORDER_AFTER_MS
     end
     if view.time < due and not (CATCH_UP and M.enemy_ahead(view)) then
         return
@@ -594,6 +605,7 @@ function M.update(view, memory)
     civ.farm_type = C.farm   -- (EEGetFarmType: the robotic farm with its upgrade; not ported, Nano and later)
     if civ.schedule_advance then
         M.set_next_advance(view, memory, view.time, false)
+        civ.epoch_t = view.time   -- (the epoch reached: ORDER_AFTER_MS counts from here)
         civ.schedule_advance = false
     end
     catch_up(view, memory)
