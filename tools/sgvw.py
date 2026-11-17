@@ -23,9 +23,10 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
-# ops whose answer is the game's clock, not a stored value: their answers are masked ("*") in a comparison
-# (EE_SCREENS_GAME_CTS_PROCESSED: gCommunications->GetNumberOfCTsProcessedInPhysics())
-TIMED = {"V 377 "}
+# reads whose answer is the game's clock or the build, not a stored value: their answers are masked ("*") in a
+# comparison (EE_SCREENS_GAME_CTS_PROCESSED: gCommunications->GetNumberOfCTsProcessedInPhysics(); the version
+# text, EE_SCREENS_TEXT_VERSION, which carries the build's commit count)
+TIMED = {"V 377 ", "T 1 "}
 
 
 def mask(l):
