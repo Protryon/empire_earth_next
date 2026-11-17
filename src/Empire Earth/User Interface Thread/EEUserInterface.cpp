@@ -1207,11 +1207,13 @@ void EEUserInterface::HandleMessage(unsigned long inMessage, LONG_PTR inParamete
         gUIManager->LockUIForCopyData();
         LobbyUpdatePlayer(inParameter1, inParameter2);
         gUIManager->UnlockUIForCopyData();
+        PlatSimLobbyApplied();   // TEST ONLY (platform/PlatSim.h): nothing in the game
         break;
     case 0x437:
         gUIManager->LockUIForCopyData();
         LobbyUpdateGameOptions();
         gUIManager->UnlockUIForCopyData();
+        PlatSimLobbyApplied();
         break;
     case 0x439: {
         gUIManager->LockUIForCopyData();
@@ -1225,6 +1227,7 @@ void EEUserInterface::HandleMessage(unsigned long inMessage, LONG_PTR inParamete
         gUIManager->LockUIForCopyData();
         LobbyUpdateForm();
         gUIManager->UnlockUIForCopyData();
+        PlatSimLobbyApplied();
         break;
     case 0x442:
         this->ShowLagStatus((unsigned short)inParameter1, (unsigned long)inParameter2 > 0);
@@ -1592,6 +1595,7 @@ void EEUserInterface::UpdateJITManufacturing()
 // Posts a lobby player update (message 0x436)
 void EEUserInterface::PostLobbyUpdatePlayer(long inX, long inY)
 {
+    PlatSimLobbyPosted();   // TEST ONLY (platform/PlatSim.h): nothing in the game
     this->mThread->Post(0x436, reinterpret_cast<void*>(inX), reinterpret_cast<void*>(inY), true);
 }
 
@@ -1599,6 +1603,7 @@ void EEUserInterface::PostLobbyUpdatePlayer(long inX, long inY)
 // Posts a lobby game options update (message 0x437)
 void EEUserInterface::PostLobbyUpdateGameOptions()
 {
+    PlatSimLobbyPosted();
     this->mThread->Post(0x437, NULL, NULL, true);
 }
 
@@ -1627,6 +1632,7 @@ void EEUserInterface::PostLobbyShowTransferProgress(long inX, long inY)
 // Posts a lobby form update (message 0x438)
 void EEUserInterface::PostLobbyUpdateForm()
 {
+    PlatSimLobbyPosted();
     this->mThread->Post(0x438, NULL, NULL, true);
 }
 

@@ -721,6 +721,32 @@ struct Chosen {
 };
 std::vector<Chosen> sChosen;
 
+// the lobby's updates settled: every update posted to the UI thread applied and none new for inQuietMs (with inSince
+// >= 0 first a post after that count: the change's own round trip through the local server) -> false after
+// inMaxSeconds. Replaces fixed waits (200 ms a change, 1.5 s and 1 s around them): a lobby of ~10 changes took 4-5 s
+std::chrono::steady_clock::time_point sLastChange;
+
+bool LobbySettle(long inSince, long inQuietMs, double inMaxSeconds)
+{
+    auto theStart = std::chrono::steady_clock::now();
+    auto theStable = theStart;
+    long theLast = PlatSimLobbyPosts();
+    while (true) {
+        long thePosts = PlatSimLobbyPosts(), theApplies = PlatSimLobbyApplies();
+        auto theNow = std::chrono::steady_clock::now();
+        if (thePosts != theLast) {
+            theLast = thePosts;
+            theStable = theNow;
+        }
+        if ((inSince < 0 || thePosts > inSince) && theApplies >= thePosts &&
+            std::chrono::duration<double>(theNow - theStable).count() * 1000 >= inQuietMs)
+            return true;
+        if (std::chrono::duration<double>(theNow - theStart).count() > inMaxSeconds)
+            return false;
+        SimSleep(2);
+    }
+}
+
 void Select(long inControl, const std::string& inValue, const std::string& inLabel)
 {
     std::vector<std::string> theLines;
@@ -729,6 +755,13 @@ void Select(long inControl, const std::string& inValue, const std::string& inLab
         Fail(inLabel + ": control " + std::to_string(inControl) + " is not a combo on the lobby");
     long theIndex = Resolve(inValue, theLines, inLabel);
     if (theSelection != theIndex) {
+        // (the client drops a player's inputs past 10 a second, NESynchronousClient::ProcessUserInputMessage: one
+        // change every 110 ms at most)
+        double theSince = std::chrono::duration<double>(std::chrono::steady_clock::now() - sLastChange).count();
+        if (theSince < 0.11)
+            SimSleep((long)((0.11 - theSince) * 1000) + 1);
+        long thePosts = PlatSimLobbyPosts();
+        sLastChange = std::chrono::steady_clock::now();
         {
             UILock theLock;
             UIComboBox* theCombo = Combo(gUIManager->GetCurrentForm(), inControl);
@@ -741,7 +774,8 @@ void Select(long inControl, const std::string& inValue, const std::string& inLab
             long s = -1;
             return ComboState(inControl, l, s) && s == theIndex;
         });
-        SimSleep(200);   // the lobby's update round trip through the local server
+        if (!LobbySettle(thePosts, 20, 2.0))   // the lobby's update round trip through the local server
+            Note("LOBBY %s: no update came back in 2 s", inLabel.c_str());
     }
     sChosen.push_back(Chosen{inControl, inLabel, inValue, theLines[theIndex], theIndex});
     Note("LOBBY %s: control %ld = %ld '%s'", inLabel.c_str(), inControl, theIndex, theLines[theIndex].c_str());
@@ -758,7 +792,8 @@ void SetUpLobby()
                 return false;
         return ComboState(177, l, s) && ComboState(179, l, s) && ComboState(207, l, s);
     });
-    SimSleep(1500);   // the local server's readiness and queued lobby updates (the harness waits 3 s)
+    SimSleep(300);   // the local server's readiness and queued lobby updates (the harness waits 3 s)
+    LobbySettle(-1, 250, 5.0);
     // (control, value, label), applied in order, absolutely (ai_game.py)
     std::vector<std::pair<long, std::string>> theOptions = {
         {175, "Random Map"}, {177, "Small"}, {179, "Continental"}, {181, "Standard - High"},
@@ -824,7 +859,7 @@ void SetUpLobby()
         Select(kPlayerType + s, s <= n ? "Computer" : "Open", "slot " + std::to_string(s));
     for (auto& o : theOptions)
         Select(o.first, o.second, "control " + std::to_string(o.first));
-    SimSleep(1000);
+    LobbySettle(-1, 100, 3.0);
     for (const Chosen& c : sChosen) {
         std::vector<std::string> l;
         long s = -1;

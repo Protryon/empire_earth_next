@@ -35,6 +35,12 @@ extern int gPlatSimNoHumanDefeat;
 // added to the TCP protocol's fixed ports 33334/33335 (0 in the game), so simulations do not share them
 extern int gPlatSimPortOffset;
 extern volatile long gPlatSimNoHumanDefeatHits;
+// the lobby's updates posted to the UI thread (EEUserInterface::PostLobbyUpdatePlayer, ...GameOptions, ...Form) and
+// those it has applied: the driver waits for each lobby change's update to be applied instead of a fixed time
+void PlatSimLobbyPosted(void);
+void PlatSimLobbyApplied(void);
+long PlatSimLobbyPosts(void);
+long PlatSimLobbyApplies(void);
 
 // Where PlatDebugOutput's lines go: a handler instead of the debugger / stderr (NULL: the default)
 typedef void (*PlatDebugHandler)(const char* inText);
