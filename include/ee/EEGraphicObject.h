@@ -11,6 +11,7 @@ class FSFile;
 #include <map>                      // mTagPointMaps
 #include "ee/EEMedia.h"
 #include "rust/data/tables.h"
+#include "rust/data/media.h"
 #include "lle/GE3DPoint.h"          // mDefaultPoint, mTopPoint
 
 class GETexture;
@@ -118,8 +119,9 @@ struct EEColorGroup {
 
 // The record's members (mKind, the mip and alpha settings, mMediaIndex, the per-state animation arrays mHoldTimes ..
 // mSharesFrames, mIsDrawn, mHasAlpha, mCreateMipMaps, the unread mL*) are EeDataGraphicObjectFields
-// (rust/crates/ee_data tables.rs: the record and its copy), the second base.
-class EEGraphicObject : public EEMedia, public EeDataGraphicObjectFields {
+// (rust/crates/ee_data tables.rs: the record and its copy), the second base; the use count (mMediaCount, mIsLoading;
+// 0: EEGraphicEffect::RecordNotPreloaded records the effect's id) is EeDataMediaUse (media.rs), the third.
+class EEGraphicObject : public EEMedia, public EeDataGraphicObjectFields, public EeDataMediaUse {
 public:
     EEGraphicObject();                      // 0xd7354 (LoadTable 0xd7833 news 0x4f0 bytes)
     virtual ~EEGraphicObject();
@@ -208,8 +210,6 @@ public:
     GETexture* mShadowTexture;              // +0x288 (EEROGroundShadows 0x1122bb) (provisional name)
     EESoundObject* mSounds1[14];   // actual original ctor zero loop and sample-ID reader
     EESoundObject* mSounds2[14];   // +0x2c4
-    unsigned long mMediaCount;              // the use count (0: EEGraphicEffect::RecordNotPreloaded records the effect's id)
-    volatile bool mIsLoading;               // a load is under way (spun on with Sleep(1))
 };
 
 #endif

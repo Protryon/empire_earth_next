@@ -6,6 +6,7 @@ pub mod content;
 pub mod dump;
 pub mod ffi;
 pub mod gate;
+pub mod media;
 pub mod msg;
 pub mod node;
 pub mod rules;

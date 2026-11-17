@@ -10,6 +10,7 @@
 
 #include "ee/EEWorldConstants.h"
 #include "rust/data/tables.h"
+#include "rust/data/media.h"
 
 class FSFileSpec;
 class EEUnitClass;
@@ -79,8 +80,9 @@ private:
 extern EEWorldTable gWorldTable;            // 0x52fca0 (Empire Earth.cpp)
 
 // RTTI EETerrainTable (vtable 0x43f7e4; ctor 0xdb245, dtor 0xdbc7d, ??_G 0xdbc61). The record's members are
-// EeDataTerrainFields (rust/crates/ee_data tables.rs: the record and its copy), the base.
-class EETerrainTable : public EeDataTerrainFields {
+// EeDataTerrainFields (rust/crates/ee_data tables.rs: the record and its copy), the base; the mesh textures' use
+// count (mMediaCount, mIsLoading) is EeDataMediaUse (media.rs).
+class EETerrainTable : public EeDataTerrainFields, public EeDataMediaUse {
 public:
     EETerrainTable();
     virtual ~EETerrainTable();
@@ -108,9 +110,7 @@ public:
     GETexture** mTextures;                  // [mColumns * row + column]
     long mFirstTexture;                     // the textures numbered over the table
     long mTextureSetID;                     // the mesh's texture set index
-    unsigned long mLoadCount;               // Load counts it, Unload counts it down
     std::vector<long> mUnitClasses;         // ambient unit classes (gUnitClassTable indices; Handle408 loads their media)
-    volatile bool mIsLoading;               // set while Load runs; polled by other threads
     static std::vector<EETerrainTable*> sTable;
     static std::vector<class EECliffTerrainTable*> sCliffTable;
 };

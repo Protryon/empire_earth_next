@@ -20,6 +20,7 @@
 #include "EEDatabase.h"
 #include "ee/EEMusicObject.h"
 #include "ee/EEDbRecords.h"
+#include "ee/EEMediaUse.h"
 #include "ee/EETechTreeTechID.h"
 #include "ee/EERules.h"
 
@@ -55,15 +56,13 @@ long EEMusicObject::ReadNewMusic(unsigned char* outRecord)
 
 // Creates an unloaded song from its record (name + ".sgt", reverb, epochs; the space epoch copies nano's flag: the
 // record and its copy are ee_data tables.rs')
-EEMusicObject::EEMusicObject(const unsigned char* inRecord)
+EEMusicObject::EEMusicObject(const unsigned char* inRecord) : EeDataMediaUse()
 {
     UString theName;
     EEDbCopyName(theName, ee_data_music_from_record(inRecord, this));
     this->mFileName = (const char*)theName;
     this->mFileName += ".sgt";
     this->mScoreID = -1;
-    this->mState = 0;
-    this->mIsLoading = false;
 }
 
 // Destroys the song (nothing of its own to free)
@@ -155,32 +154,13 @@ EEMusicObject* EEMusicObject::GetRandom(long inEpoch)
 long EEMusicObject::LoadScore()
 {
     SEConductor& theConductor = gConductor->GetConductor();
-    long theResult = 0;
-    long theID;
-    sDatabaseLock.mLock->Enter();
-    if (this->mState == 0) {
-        this->mState = 1;
-        this->mIsLoading = true;
-        sDatabaseLock.mLock->Leave();
-        theResult = theConductor.LoadScore(this->mFileName, theID);
-        if (theResult == 0) {
+    return EEMediaAcquire(this, sDatabaseLock.mLock, [&] {
+        long theID;
+        long theResult = theConductor.LoadScore(this->mFileName, theID);
+        if (theResult == 0)
             this->mScoreID = theID;
-        } else {
-            sDatabaseLock.mLock->Enter();
-            this->mState = 0;
-            sDatabaseLock.mLock->Leave();
-        }
-        sDatabaseLock.mLock->Enter();
-        this->mIsLoading = false;
-    } else {
-        this->mState++;
-        sDatabaseLock.mLock->Leave();
-        while (this->mIsLoading == true)
-            PlatSleep(1);
-        sDatabaseLock.mLock->Enter();
-    }
-    sDatabaseLock.mLock->Leave();
-    return theResult;
+        return theResult;
+    }, [] {}, true);
 }
 
 // Counts one use down; on the last use unloads the score unless the conductor reports it busy (5)
@@ -188,19 +168,13 @@ long EEMusicObject::UnloadScore()
 {
     SEConductor& theConductor = gConductor->GetConductor();
     long theResult = 0;
-    while (this->mIsLoading == true)
-        PlatSleep(1);
-    sDatabaseLock.mLock->Enter();
-    if (this->mState == 1) {
+    EEMediaRelease(this, sDatabaseLock.mLock, [&] {
         theResult = theConductor.UnloadScore(this->mScoreID);
-        if (theResult != 5) {
-            this->mState = 0;
-            this->mScoreID = -1;
-        }
-    } else if (this->mState > 1) {
-        this->mState--;
-    }
-    sDatabaseLock.mLock->Leave();
+        if (theResult == 5)
+            return false;
+        this->mScoreID = -1;
+        return true;
+    });
     return theResult;
 }
 
