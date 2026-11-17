@@ -10,8 +10,8 @@
 //! order.
 
 use crate::ge::pixel;
-use crate::ge::types::{Ge2DPoint, Ge3DPoint};
-use crate::ge::um;
+use ee_base::math::types::{Ge2DPoint, Ge3DPoint};
+use ee_base::math::um;
 
 use crate::gfx::effects::EeGfxColor;
 use crate::gfx::mesh::Mesh;

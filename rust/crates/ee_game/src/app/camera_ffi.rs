@@ -3,8 +3,8 @@
 //! camera's record (camera.rs), so no Rust reference to it lives across a call into C++.
 
 use crate::app::camera::{self, CameraHost, EeAppCameraFields, EeAppCameraKey, EeAppCameraMove};
-use ee_render::ge::types::Ge3DPlane;
-use ee_render::ge::types::{Ge3DLine, Ge3DPoint, GeQuaternion, GeTransformation};
+use ee_base::math::types::Ge3DPlane;
+use ee_base::math::types::{Ge3DLine, Ge3DPoint, GeQuaternion, GeTransformation};
 use ee_render::gfx::camera::EeGfxEdgePlanes;
 use std::ffi::c_void;
 use std::os::raw::c_long;

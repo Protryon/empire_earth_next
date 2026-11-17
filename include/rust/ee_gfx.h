@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "ee_ge.h"
+#include "ee_math.h"
 
 /// The free camera mode (`mMode == 3`).
 constexpr static const int32_t MODE_FREE = 3;

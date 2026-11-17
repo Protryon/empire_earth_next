@@ -6,7 +6,7 @@
 //!
 //! A write past the arrays (an index the original would have stored out of bounds) is dropped and counted.
 
-use crate::ge::types::{Ge3DPoint, GeVector};
+use ee_base::math::types::{Ge3DPoint, GeVector};
 
 use crate::gfx::effects::{EeGfxColor, EeGfxTexCoord};
 

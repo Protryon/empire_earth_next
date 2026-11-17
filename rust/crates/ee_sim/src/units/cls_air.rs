@@ -31,8 +31,8 @@ use crate::units::kinds::*;
 use crate::units::unit_class_fields::EeUnitsUnitClassFields;
 use crate::units::uu::EeUnitsUuUnit;
 use crate::units::uu_tiles::Tile;
-use ee_render::ge::types::{Ge3DPoint, GeTransformation, GeVector};
-use ee_render::ge::um::floor;
+use ee_base::math::types::{Ge3DPoint, GeTransformation, GeVector};
+use ee_base::math::um::floor;
 
 /// The world the heights ask (the game's: cls_host.rs).
 pub trait AirHost {
@@ -284,7 +284,7 @@ pub fn approach_runway<H: FlightHost + ?Sized>(
     let start_x = fdx * far + x;
     let run = radius * 1.5;
     let start_y = fdy * far + y;
-    let turn = run / ee_render::ge::um::um_tan(APPROACH_ANGLE) + run;
+    let turn = run / ee_base::math::um::um_tan(APPROACH_ANGLE) + run;
     let (offset_y, offset_x) = (fdy * turn, fdx * turn);
     let dist_y = position.y - (start_y - offset_y);
     let dist_x = position.x - (start_x - offset_x);
@@ -792,7 +792,7 @@ mod tests {
         let c = class(3, 4.0);
         approach_runway(&mut m, 9, &*c, 1, 0, 1);
         // the turning radius ceil(4) = 4: run 6, the turn 6 / tan(30) + 6
-        let turn = 6.0 / ee_render::ge::um::um_tan(APPROACH_ANGLE) + 6.0;
+        let turn = 6.0 / ee_base::math::um::um_tan(APPROACH_ANGLE) + 6.0;
         assert_eq!(m.log[0], "drop");
         assert_eq!(m.log[1], format!("path 2.5 3.5 -> 10.5 {} 4 true", turn + 17.5));
         assert_eq!(

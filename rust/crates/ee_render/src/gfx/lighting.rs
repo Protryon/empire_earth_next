@@ -5,7 +5,7 @@
 //!
 //! Drawn only (the renderer's thread; EE-SIM never lights).
 
-use crate::ge::types::GeVector;
+use ee_base::math::types::GeVector;
 
 use crate::gfx::effects::EeGfxColor;
 

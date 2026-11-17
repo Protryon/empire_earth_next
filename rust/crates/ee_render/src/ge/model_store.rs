@@ -8,7 +8,7 @@
 
 use std::ffi::c_long;
 
-use crate::ge::types::{Ge3DPoint, GeVector};
+use ee_base::math::types::{Ge3DPoint, GeVector};
 
 /// The polygon, vertex, tag point, material, frame, sub-model and LOD counts (`GEModel`'s members).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

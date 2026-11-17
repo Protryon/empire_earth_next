@@ -24,9 +24,9 @@ use crate::ge::terrain_visible::{
     update_visible_terrain, GeTextureSetView, GeVisibleInput, VisiblePlan, TERRAIN_POLYGON_CAPACITY,
     WATER_POLYGON_CAPACITY,
 };
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge2DPoint, Ge3DPlane, Ge3DPoint, GeBoundingBox, GeRectangle, GeTransformation, GeVector};
 use crate::ge::viewport::GeViewport;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge2DPoint, Ge3DPlane, Ge3DPoint, GeBoundingBox, GeRectangle, GeTransformation, GeVector};
 
 const GOLDEN: &str = include_str!("golden_visible.txt");
 const POOL: u32 = 48;

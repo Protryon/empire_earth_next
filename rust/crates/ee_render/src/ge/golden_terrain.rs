@@ -11,7 +11,7 @@ use std::ffi::{c_long, c_ulong};
 use crate::ge::ffi::*;
 use crate::ge::golden::{Section, SENTINEL};
 use crate::ge::terrain::{GeTerrainView, GeTmPoint, GeTmRow};
-use crate::ge::types::*;
+use ee_base::math::types::*;
 
 const GOLDEN: &str = include_str!("golden_terrain.txt");
 

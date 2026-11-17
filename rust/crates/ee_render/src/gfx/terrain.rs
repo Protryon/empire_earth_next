@@ -6,8 +6,8 @@
 //!
 //! This is the renderer's, not the simulation's: nothing here is simulation state.
 
-use crate::ge::types::{Ge2DPoint, Ge3DPoint};
-use crate::ge::um::{floor, floor_unsigned};
+use ee_base::math::types::{Ge2DPoint, Ge3DPoint};
+use ee_base::math::um::{floor, floor_unsigned};
 
 use crate::gfx::effects::{EeGfxColor, EeGfxTexCoord};
 

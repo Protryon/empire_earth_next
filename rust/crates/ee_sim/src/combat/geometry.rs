@@ -2,8 +2,8 @@
 //! tag point's height of the line of fire (`EEIsLineToUnitBlocked`'s start), over the model's data passed as plain
 //! records. Pure: no world, no host.
 
-use ee_render::ge::transform::RotationOrder;
-use ee_render::ge::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 // ---- EEGetTileLine
 

@@ -6,7 +6,7 @@
 //!
 //! The record is reached through its raw pointer field by field, as there: the C++ reads it in the host calls.
 
-use crate::ge::types::Ge3DPoint;
+use ee_base::math::types::Ge3DPoint;
 
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::gfx::effect_state::{

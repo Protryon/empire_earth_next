@@ -1,7 +1,7 @@
 use super::*;
 use crate::combat::reads::QueryHost;
 use crate::combat::world::EeCombatWorldArgs;
-use ee_render::ge::types::Ge3DLine;
+use ee_base::math::types::Ge3DLine;
 use std::collections::HashMap;
 
 /// Reads by (code, object), handles by (code, object), operations answered from `answers` and logged; locations by

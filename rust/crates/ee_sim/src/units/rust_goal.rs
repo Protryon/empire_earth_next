@@ -1334,19 +1334,19 @@ impl crate::units::location::LocationHost for OpHost<'_> {
     fn unit_category(&mut self, unit: u64) -> i64 {
         self.op(EE_UNITS_GOAL_HOST_UNIT_CATEGORY, unit, 0)
     }
-    fn unit_transformation(&mut self, unit: u64) -> ee_render::ge::types::GeTransformation {
-        let mut t = ee_render::ge::types::GeTransformation::default();
+    fn unit_transformation(&mut self, unit: u64) -> ee_base::math::types::GeTransformation {
+        let mut t = ee_base::math::types::GeTransformation::default();
         let mut io = EeUnitsGoalIo {
-            sink: (&mut t as *mut ee_render::ge::types::GeTransformation).cast(),
+            sink: (&mut t as *mut ee_base::math::types::GeTransformation).cast(),
             ..Default::default()
         };
         self.call(EE_UNITS_GOAL_HOST_UNIT_TRANSFORMATION, unit, 0, &mut io);
         t
     }
-    fn set_transformation(&mut self, unit: u64, t: &ee_render::ge::types::GeTransformation) {
+    fn set_transformation(&mut self, unit: u64, t: &ee_base::math::types::GeTransformation) {
         let mut copy = *t;
         let mut io = EeUnitsGoalIo {
-            sink: (&mut copy as *mut ee_render::ge::types::GeTransformation).cast(),
+            sink: (&mut copy as *mut ee_base::math::types::GeTransformation).cast(),
             ..Default::default()
         };
         self.call(EE_UNITS_GOAL_HOST_SET_TRANSFORMATION, unit, 0, &mut io);

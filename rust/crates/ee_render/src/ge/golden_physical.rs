@@ -5,7 +5,7 @@
 //! FNV-1a digest of the outputs and its first four cases. The driver relinked over the Rust printed the same file.
 
 use crate::ge::physical::{line_hits_triangle, triangle_box};
-use crate::ge::types::{Ge3DLine, Ge3DPoint, GeVector};
+use ee_base::math::types::{Ge3DLine, Ge3DPoint, GeVector};
 
 const GOLDEN: &str = include_str!("golden_physical.txt");
 

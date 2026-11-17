@@ -14,7 +14,7 @@
 use std::collections::BTreeMap;
 use std::ffi::c_long;
 
-use crate::ge::types::{Ge3DLine, Ge3DPoint, GeVector};
+use crate::math::types::{Ge3DLine, Ge3DPoint, GeVector};
 
 /// A coordinate type of `U2DPoint<T>`: `f32` or `c_long`.
 pub trait HullCoord: Copy + PartialEq + PartialOrd {

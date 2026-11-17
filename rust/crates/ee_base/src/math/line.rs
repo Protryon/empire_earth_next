@@ -1,8 +1,8 @@
 //! `GE3DLine` (`GE3DLine.cpp`, the line block of `GE2DPoint.cpp`) and `GE3DPlane` (`GE3DPlane.cpp`): intersections,
 //! the axis solvers, the plane through three points and the point-side tests.
 
-use crate::ge::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeVector};
-use crate::ge::um::sqrt;
+use crate::math::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeVector};
+use crate::math::um::sqrt;
 
 /// `IS_ZERO`: within 0.0001 of zero.
 #[inline]

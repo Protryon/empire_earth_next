@@ -366,7 +366,7 @@ pub fn set_range(
     value: f32,
 ) {
     // the original's 0.78539819f
-    let cosine = ee_render::ge::um::um_cos(std::f32::consts::FRAC_PI_4);
+    let cosine = ee_base::math::um::um_cos(std::f32::consts::FRAC_PI_4);
     u.mRange = value;
     u.mLaunchSpeed = match projectile {
         Some(p) if u64::from(p.mCategory) == CATEGORY_BOMB => p.mMaxVelocity,
@@ -641,7 +641,7 @@ mod tests {
         let mut p = class_record();
         p.mAcceleration = 9.8;
         set_range(&mut u, &own, Some(&p), 7.0);
-        let cosine = ee_render::ge::um::um_cos(std::f32::consts::FRAC_PI_4);
+        let cosine = ee_base::math::um::um_cos(std::f32::consts::FRAC_PI_4);
         assert_eq!(u.mLaunchSpeed, (9.8f32 * 7.0 / (cosine * cosine * 2.0)).sqrt());
         // the legionnaire aims for its heal range; a bomb falls at its top speed
         let mut legion = class_record();

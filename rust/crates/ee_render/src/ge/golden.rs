@@ -9,9 +9,9 @@
 use std::collections::HashMap;
 use std::ffi::c_void;
 
-use crate::ge::ffi::*;
-use crate::ge::types::*;
-use crate::ge::vector::QUANT_COUNT;
+use ee_base::math::ffi::*;
+use ee_base::math::types::*;
+use ee_base::math::vector::QUANT_COUNT;
 
 const GOLDEN: &str = include_str!("golden_math.txt");
 pub(crate) const SENTINEL: f32 = -12345.5;
@@ -243,7 +243,7 @@ fn run_all() -> Vec<Section> {
         let a = r.v(-20.0, 20.0);
         s.i(a);
         s.o(ee_ge_um_cos(a));
-        s.o(crate::ge::um::um_sin(a));
+        s.o(ee_base::math::um::um_sin(a));
         s.end();
     }
     all.push(s);

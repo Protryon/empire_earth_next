@@ -9,9 +9,9 @@
 //! applies: the C++'s `f32` operations in its order, its `pow` and `sqrt` in `f64` (std's, the CRT's), the table
 //! trigonometry (`ee_ge::um`).
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeQuaternion, GeTransformation, GeVector};
-use crate::ge::um::{um_arccos, um_arctan2};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeQuaternion, GeTransformation, GeVector};
+use ee_base::math::um::{um_arccos, um_arctan2};
 
 /// The file's degree factor (`kCameraDegreesToRadians`).
 const DEG: f32 = 0.017453292;

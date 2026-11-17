@@ -19,7 +19,7 @@ use core::ffi::{c_long, c_ulong};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
-use ee_render::ge::types::GeRectangle;
+use ee_base::math::types::GeRectangle;
 use ee_sim::scenario::fields::{
     EeScenarioConditionFields, EeScenarioEffectFields, EeScenarioObjectFields, EeScenarioTriggerFields,
 };

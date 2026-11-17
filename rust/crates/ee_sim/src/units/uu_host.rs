@@ -6,7 +6,7 @@
 
 use std::ffi::c_void;
 
-use ee_render::ge::types::GeTransformation;
+use ee_base::math::types::GeTransformation;
 
 use crate::units::uu::{EeUnitsUuClass, EeUnitsUuUnit, UuHost};
 use crate::units::uu_tiles::Tile;

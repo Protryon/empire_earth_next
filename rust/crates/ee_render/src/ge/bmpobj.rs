@@ -11,7 +11,7 @@
 use std::ffi::{c_ulong, c_void};
 
 use crate::ge::bitmap;
-use crate::ge::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeVector};
+use ee_base::math::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeVector};
 
 /// The calls a bitmap makes on other objects. `obj` is the object called; `a`, `b` as each says.
 #[repr(u32)]

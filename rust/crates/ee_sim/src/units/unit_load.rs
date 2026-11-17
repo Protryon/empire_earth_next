@@ -732,7 +732,7 @@ pub fn finish_fractions(cx: &mut EeUnitsComplexUnitFields, input: &EeUnitsFinish
 /// `EEUnit::FinishLoad`'s hit points (0x629973): rounded by `UMFloatToLong` (the UCRT's `lrintf`), unlike the four.
 pub fn finish_hit_points(unit: &mut EeUnitsUnitFields, max_hit_points: std::os::raw::c_long) {
     let f = bits_of(unit.mHitPoints);
-    let v = ee_render::ge::um::lrintf(max_hit_points as f32 * f + 0.00001) as std::os::raw::c_long;
+    let v = ee_base::math::um::lrintf(max_hit_points as f32 * f + 0.00001) as std::os::raw::c_long;
     unit.mHitPoints = if f != 0.0 && v == 0 { 1 } else { v };
 }
 

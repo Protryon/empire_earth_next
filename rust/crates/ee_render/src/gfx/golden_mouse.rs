@@ -9,7 +9,7 @@
 
 use std::fmt::Write as _;
 
-use crate::ge::types::{Ge2DPoint, GeRectangle};
+use ee_base::math::types::{Ge2DPoint, GeRectangle};
 
 use crate::gfx::mouse::*;
 

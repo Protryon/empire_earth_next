@@ -12,7 +12,7 @@
 use std::collections::BTreeMap;
 use std::ffi::c_void;
 
-use crate::ge::types::Ge3DPoint;
+use ee_base::math::types::Ge3DPoint;
 
 /// `kGoalSpacing` (0x441294): the icons' spacing across the queues.
 const EE_GFX_MARKER_GOAL_SPACING: f32 = 0.4;

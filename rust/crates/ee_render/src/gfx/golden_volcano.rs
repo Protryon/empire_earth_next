@@ -8,7 +8,7 @@
 //! one of the Rust-built part (`vmesh`, the lines kept here: the model's final vertices and triangles, `mPoints`,
 //! `mHeights` and the centre's z). This test draws the same stream, builds with `volcano.rs` and compares.
 
-use crate::ge::types::Ge3DPoint;
+use ee_base::math::types::Ge3DPoint;
 
 use crate::gfx::effects::EeGfxColor;
 use crate::gfx::golden_farm::dump_mesh;

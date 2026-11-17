@@ -5,7 +5,7 @@
 use std::ffi::{c_char, c_int, c_ulong, c_void};
 
 use crate::ge::font::{self, TextOps};
-use crate::ge::types::GeRectangle;
+use ee_base::math::types::GeRectangle;
 
 /// The platform's text functions and the font's measure (`PlatUtf8Decode`, `PlatMbsNInc`, `PlatCp1252ByteOf`,
 /// `PlatFontMeasure`).

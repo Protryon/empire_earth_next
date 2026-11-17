@@ -6,8 +6,8 @@
 //! Units ask whether a projectile's line meets a target's model (`EEUnitClass.cpp`), so this is simulation code
 //! (RUST_PLAN 2.1): the C++'s operations in its order, through the same `ee_ge` functions the C++ math forwards to.
 
-use crate::ge::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
 use crate::ge::viewport::GeViewport;
+use ee_base::math::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
 
 /// One triangle of `Intersects(line)`: the plane through the triangle, the line's crossing with it, then whether the
 /// line from the first corner through the crossing meets the opposite edge beyond the crossing. With `exact` the
@@ -128,7 +128,7 @@ pub fn model_visible(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ge::types::GeRectangle;
+    use ee_base::math::types::GeRectangle;
 
     fn viewport() -> GeViewport {
         GeViewport::new(

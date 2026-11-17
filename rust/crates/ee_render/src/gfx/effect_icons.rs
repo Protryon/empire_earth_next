@@ -8,8 +8,8 @@
 //! `RepairPointers`) was never read: it is gone with the walk that set it. `mL98` was always 0 (its `PrepareQueue`
 //! call was empty).
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 use crate::gfx::effect_2d::Effect2DHost;
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts};

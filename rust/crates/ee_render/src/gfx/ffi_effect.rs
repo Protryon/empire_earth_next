@@ -5,7 +5,7 @@
 
 use std::ffi::c_void;
 
-use crate::ge::types::Ge3DPoint;
+use ee_base::math::types::Ge3DPoint;
 
 use crate::gfx::effect_state::{
     self, DamagedHost, EeGfxAmbientNew, EeGfxDamagedTick, EeGfxEffectLists, EeGfxEffectLoaded, EeGfxEffectPart,
@@ -759,7 +759,7 @@ pub unsafe extern "C" fn ee_gfx_effect_emitter_burst(
     r: *mut EeGfxEffectRecord,
     delta: f32,
     location: *const Ge3DPoint,
-    transformation: *const crate::ge::types::GeTransformation,
+    transformation: *const ee_base::math::types::GeTransformation,
     burst: *const EeGfxEmitterBurst,
     result: i32,
     host: *const EeGfxEmitterHost,

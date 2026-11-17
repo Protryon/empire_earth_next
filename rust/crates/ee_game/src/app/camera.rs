@@ -14,9 +14,9 @@
 
 #![allow(non_snake_case)]
 
-use ee_render::ge::transform::RotationOrder;
-use ee_render::ge::types::{Ge3DLine, Ge3DPoint, GeQuaternion, GeTransformation, GeVector};
-use ee_render::ge::um::{um_arccos, um_arctan2};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DLine, Ge3DPoint, GeQuaternion, GeTransformation, GeVector};
+use ee_base::math::um::{um_arccos, um_arctan2};
 use ee_render::gfx::camera::{
     self as math, EeGfxCameraPose, EeGfxCameraRays, EeGfxCameraStep, EeGfxEdgePlanes, Ground,
 };

@@ -10,7 +10,7 @@
 
 use std::ffi::c_void;
 
-use crate::ge::types::{Ge3DPoint, GeTransformation, GeVector};
+use ee_base::math::types::{Ge3DPoint, GeTransformation, GeVector};
 
 use crate::gfx::effect_additive::{additive, EeGfxUnitFrame, EE_GFX_EFFECT_KIND_ADDITIVE_PASS};
 use crate::gfx::effect_aged::aged;

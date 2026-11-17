@@ -1,7 +1,7 @@
 //! A scripted `Effect2DHost` and an in-memory effect file for the twenty-first round's 2D effects' tests
 //! (`effect_icons.rs`, `effect_glow.rs`, `effect_decal.rs`): every call logged, the answers set by the test.
 
-use crate::ge::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 use crate::gfx::effect_2d::Effect2DHost;
 use crate::gfx::effect_confirm::{EeGfxConfirmGoal, EeGfxConfirmUnit};

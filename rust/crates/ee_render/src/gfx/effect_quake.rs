@@ -8,9 +8,9 @@
 //! Step, Load and Save are simulation-side (the growth and the timers are saved); `Queue` stops a growing crack that
 //! reached space (its hold time), as the original did. RUST_PLAN 2.1: the C++'s f32 operations in its order.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeTransformation, GeVector};
-use crate::ge::um;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation, GeVector};
+use ee_base::math::um;
 
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::gfx::effect_state::{EeGfxEffectRecord, EffectFile};

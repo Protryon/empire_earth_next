@@ -15,8 +15,8 @@
 use std::ffi::{c_ulong, c_void};
 
 use crate::ge::physical_walk::{ee_ge_physical_line_walk, EeGePhysicalModels, GePhysicalMaterial};
-use crate::ge::types::{Ge2DPoint, Ge3DLine, Ge3DPlane, Ge3DPoint, GeTransformation, GeVector};
 use crate::ge::viewport::GeViewport;
+use ee_base::math::types::{Ge2DPoint, Ge3DLine, Ge3DPlane, Ge3DPoint, GeTransformation, GeVector};
 
 use crate::gfx::pick::{self, EeGfxPickHit, EeGfxPickQuestion, EeGfxPickUnit};
 

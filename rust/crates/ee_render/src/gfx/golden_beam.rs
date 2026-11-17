@@ -10,8 +10,8 @@
 //! `rdraw`: the model as drawn and its sub-models' internal transforms: the lines kept here). This test draws the
 //! same stream, replays the C++ glue (the tag points) around `beam.rs` and compares.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 use crate::gfx::beam::{aim, stretch, stretch_y, EeGfxBeamVertex};
 use crate::gfx::effects::EeGfxTexCoord;

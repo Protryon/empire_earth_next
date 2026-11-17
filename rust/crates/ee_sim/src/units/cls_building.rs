@@ -12,8 +12,8 @@
 
 use crate::units::uu::EeUnitsUuUnit;
 use crate::units::uu_tiles::Tile;
-use ee_render::ge::types::GeVector;
-use ee_render::ge::um::um_arctan2;
+use ee_base::math::types::GeVector;
+use ee_base::math::um::um_arctan2;
 
 /// The world the helpers ask (the game's: cls_host.rs).
 pub trait BuildingHost {

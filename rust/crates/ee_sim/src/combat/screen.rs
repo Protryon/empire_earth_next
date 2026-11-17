@@ -5,7 +5,7 @@
 //! `EEGetHitDistanceSquared`'s arithmetic: the squared map distance from the unit (or a given point) to the target
 //! point.
 
-use ee_render::ge::types::Ge3DPoint;
+use ee_base::math::types::Ge3DPoint;
 
 /// `EEFOFindNewTargetInMeleeRange`.
 pub const EE_COMBAT_SCREEN_KIND_MELEE: i32 = 0;

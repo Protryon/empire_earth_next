@@ -8,7 +8,7 @@ use std::sync::Mutex;
 
 use super::*;
 use crate::ge::io::{BufferIo, FieldIo};
-use crate::ge::types::{GeRectangle, GeTransformation};
+use ee_base::math::types::{GeRectangle, GeTransformation};
 
 /// Held by the tests that move the shared water clock (`WATER_LAST_TIME`).
 pub(super) static WATER_CLOCK: Mutex<()> = Mutex::new(());
@@ -271,7 +271,7 @@ fn the_water_state_reads_the_set_and_recolours_underwater_points() {
 
 fn viewport() -> GeViewport {
     let mut t = GeTransformation::IDENTITY;
-    t.set_orientation(crate::ge::transform::RotationOrder::Ypr, 0.6, -0.9, 0.0);
+    t.set_orientation(ee_base::math::transform::RotationOrder::Ypr, 0.6, -0.9, 0.0);
     let dir = t.apply_vector(GeVector { x: 0.0, y: 1.0, z: 0.0 });
     t.m[0][3] = 4.0 - dir.x * 12.0;
     t.m[1][3] = 4.0 - dir.y * 12.0;

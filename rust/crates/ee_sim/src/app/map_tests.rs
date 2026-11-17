@@ -1,8 +1,8 @@
 //! map.rs over a small square map host: the bodies' calls and the values they leave.
 
 use crate::app::map::{self, EeAppMapDims, MapHost, Terrain, TERRAIN_CLIFF};
+use ee_base::math::types::GeVector;
 use ee_base::random::URandom;
-use ee_render::ge::types::GeVector;
 use std::collections::BTreeMap;
 use std::os::raw::{c_long, c_ulong};
 

@@ -15,8 +15,8 @@
 use std::ffi::c_ulong;
 
 use crate::ge::physical_walk::{line_walk, scaled_walk, GePhysicalMaterial, Models, Placed};
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DLine, Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DLine, Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
 
 const GOLDEN: &str = include_str!("golden_physical_walk.txt");
 const WORLDS: u32 = 4;

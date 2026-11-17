@@ -12,8 +12,8 @@
 use std::ffi::c_void;
 use std::sync::Mutex;
 
-use crate::ge::types::{Ge3DPoint, GeTransformation, GeVector};
-use crate::ge::um;
+use ee_base::math::types::{Ge3DPoint, GeTransformation, GeVector};
+use ee_base::math::um;
 
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::gfx::effect_state::{identity, load_point, save_point, EeGfxEffectRecord, EffectFile};

@@ -14,8 +14,8 @@
 //! rasterizer table (`raster.rs`). The record is reached through its raw pointer field by field: the C++ reads it
 //! during the host calls (the region move), so no Rust reference to it lives across one.
 
-use crate::ge::types::Ge3DPoint;
-use crate::ge::um::floor_unsigned;
+use ee_base::math::types::Ge3DPoint;
+use ee_base::math::um::floor_unsigned;
 
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::gfx::effect_state::{identity, EeGfxEffectRecord, EffectFile};

@@ -12,7 +12,7 @@
 
 use std::ffi::c_void;
 
-use crate::ge::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 use crate::gfx::effect_confirm::{
     confirm, EeGfxConfirmGoal, EeGfxConfirmUnit, EE_GFX_EFFECT_KIND_COMMAND_CONFIRMATION,

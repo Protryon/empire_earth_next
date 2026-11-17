@@ -13,9 +13,9 @@ use std::ffi::{c_long, c_ulong, c_void};
 use std::fmt::Write as _;
 
 use super::*;
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{GeRectangle, GeTransformation};
-use crate::ge::vector::{build_quantized_table, quantized_index, QUANT_COUNT};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{GeRectangle, GeTransformation};
+use ee_base::math::vector::{build_quantized_table, quantized_index, QUANT_COUNT};
 
 const GOLDEN: &str = include_str!("golden_gtm.txt");
 /// The sequences replayed (the driver's first ones, in order: they share the clock, the counters and the textures'

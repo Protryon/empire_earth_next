@@ -12,8 +12,9 @@ use std::ffi::{c_char, c_long, c_ulong, c_void, CStr};
 use crate::ge::model_ffi::EeGeSharedFrame;
 use crate::ge::model_store::{CemModel, SharedFrames};
 
-use crate::openformats::png::PngTexture;
-use crate::openformats::{gltf_to_model, png_to_texture};
+use crate::openformats::gltf_to_model;
+use ee_base::png::png_to_texture;
+use ee_base::png::PngTexture;
 
 /// The calls the lookups make on the path and its files. `obj` the path or a file (`FSFileSpec*`).
 #[repr(u32)]

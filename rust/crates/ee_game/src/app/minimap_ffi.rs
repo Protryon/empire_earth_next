@@ -5,9 +5,9 @@
 use crate::app::minimap::{
     EeAppMiniMap, EeAppMiniMapDot, EeAppMiniMapItem, EeAppMiniMapUnitDot, MiniMapHost, TileSight,
 };
+use ee_base::math::types::GeTransformation;
+use ee_base::math::types::GeVector;
 use ee_render::ge::tmobj::{ee_ge_tm_is_valid, ee_ge_tm_point, ee_ge_tm_tile, ee_ge_tm_vertex_color, EeGeTerrainMesh};
-use ee_render::ge::types::GeTransformation;
-use ee_render::ge::types::GeVector;
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 

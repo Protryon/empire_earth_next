@@ -8,8 +8,8 @@
 //! Simulation state (RUST_PLAN 2.1): the C++'s f32 operations in order, the effects' random draws in the original's
 //! order and count, `lrintf` for `UMFloatToLong`.
 
-use crate::ge::types::Ge3DPoint;
-use crate::ge::um;
+use ee_base::math::types::Ge3DPoint;
+use ee_base::math::um;
 
 use crate::gfx::effect_state::{
     load_point, random, random_float, random_long, save_point, EeGfxEffectRecord, EffectFile,

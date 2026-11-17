@@ -23,33 +23,22 @@ pub mod ambient;
 pub mod ambient_ffi;
 pub mod camera;
 pub mod camera_ffi;
-pub mod cheats;
-pub mod cheats_ffi;
 pub mod ffi;
 pub mod game_options;
-pub mod map;
 pub mod map_ffi;
 pub mod minimap;
 pub mod minimap_ffi;
 pub mod save_io;
 pub mod settings;
 pub mod settings_ffi;
-pub mod storm;
-pub mod storm_ffi;
 
 #[cfg(test)]
 mod ambient_tests;
 #[cfg(test)]
 mod camera_tests;
 #[cfg(test)]
-mod cheats_tests;
-#[cfg(test)]
 mod game_options_tests;
-#[cfg(test)]
-mod map_tests;
 #[cfg(test)]
 mod minimap_tests;
 #[cfg(test)]
 mod settings_tests;
-#[cfg(test)]
-mod storm_tests;

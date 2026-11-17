@@ -8,7 +8,7 @@
 //! ways, and printed per case an FNV-1a 64 of its log (the fog colour, the stored offset and the models' final
 //! vertices). This test draws the same stream, runs each case through `terrain.rs` and compares the digests.
 
-use crate::ge::types::Ge3DPoint;
+use ee_base::math::types::Ge3DPoint;
 
 use crate::gfx::effects::{EeGfxColor, EeGfxTexCoord};
 use crate::gfx::golden_mouse::{check, Log, Rng};

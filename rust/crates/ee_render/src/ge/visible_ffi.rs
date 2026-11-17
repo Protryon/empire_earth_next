@@ -3,8 +3,8 @@
 //! (`UpdateVisibleTerrain`'s plan is the terrain mesh's own, `tmobj.rs`.)
 
 use crate::ge::physical;
-use crate::ge::types::{Ge3DPlane, Ge3DPoint, GeBoundingBox, GeRectangle, GeTransformation};
 use crate::ge::viewport::GeViewport;
+use ee_base::math::types::{Ge3DPlane, Ge3DPoint, GeBoundingBox, GeRectangle, GeTransformation};
 
 // ---- GEViewport ----
 

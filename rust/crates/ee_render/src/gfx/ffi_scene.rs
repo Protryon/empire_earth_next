@@ -2,7 +2,7 @@
 //! (`EERenderObject.cpp`), and `capture.rs`'s per-object arithmetic. The state is the C++'s storage, passed for each
 //! call.
 
-use crate::ge::types::{Ge2DPoint, Ge3DPoint};
+use ee_base::math::types::{Ge2DPoint, Ge3DPoint};
 
 use crate::gfx::capture::{self, GroundHeights, EE_GFX_RING_POINTS};
 use crate::gfx::effects::EeGfxColor;

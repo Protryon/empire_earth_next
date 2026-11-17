@@ -19,8 +19,8 @@ use std::ffi::{c_ulong, c_void};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
-use crate::ge::types::{Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
 use crate::ge::viewport::GeViewport;
+use ee_base::math::types::{Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
 
 /// `GEColor`: red, green, blue.
 #[repr(C)]

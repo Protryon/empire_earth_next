@@ -9,9 +9,9 @@
 //! question, the hold time, the growing flag, the queue entry and the model's final state). This test draws the
 //! same stream, replays the C++ glue (the ground questions in their order) around `quake.rs` and compares.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeTransformation};
-use crate::ge::um::floor_unsigned;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::um::floor_unsigned;
 
 use crate::gfx::golden_mouse::{check, Log, Rng};
 use crate::gfx::quake::{build_rows, hold_time, queue_rows, segment_polygons, EeGfxQuakeRow, EE_GFX_QUAKE_ROW_U};

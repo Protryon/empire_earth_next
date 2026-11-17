@@ -18,7 +18,7 @@ use crate::combat::reads::{
     EE_COMBAT_Q_TILE_X, EE_COMBAT_Q_TILE_Y, EE_COMBAT_Q_UNIT_TYPE, EE_COMBAT_Q_WEAPON_TAG,
 };
 use crate::combat::walks::EeCombatHandle;
-use ee_render::ge::um::lrintf;
+use ee_base::math::um::lrintf;
 use std::ffi::c_void;
 
 // ---- the reads (`QueryHost::read`; reads.rs's numbering goes on)
@@ -660,13 +660,13 @@ impl QueryHost for EeCombatWorldHost {
     fn act(&mut self, code: i32, object: EeCombatHandle, arg: i32) {
         self.query.act(code, object, arg)
     }
-    fn location(&mut self, object: EeCombatHandle) -> ee_render::ge::types::GeTransformation {
+    fn location(&mut self, object: EeCombatHandle) -> ee_base::math::types::GeTransformation {
         self.query.location(object)
     }
     fn intersects(
         &mut self,
         candidate: EeCombatHandle,
-        line: &ee_render::ge::types::Ge3DLine,
+        line: &ee_base::math::types::Ge3DLine,
         segment: bool,
         lod: u32,
         scale: f32,

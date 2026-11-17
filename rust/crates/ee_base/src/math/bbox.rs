@@ -1,8 +1,8 @@
 //! `GEBoundingBox` (`GEBoundingBox.cpp`) and `GERectangle` (`GERectangle.cpp`): the box's dimensions, containment,
 //! overlap, line hit and transformed bounds; the rectangle's clipping and its split around another rectangle.
 
-use crate::ge::line::abs;
-use crate::ge::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeBoundingBox, GeRectangle, GeTransformation, GeVector};
+use crate::math::line::abs;
+use crate::math::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeBoundingBox, GeRectangle, GeTransformation, GeVector};
 
 /// `Contains`' tolerance on every face.
 const TOLERANCE: f32 = 0.00001;

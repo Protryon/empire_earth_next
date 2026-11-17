@@ -14,7 +14,7 @@ use std::ffi::{c_long, c_ulong, c_void};
 
 use crate::ge::cppobj;
 use crate::ge::font_ffi::{ee_ge_text_extent, GeTextOps};
-use crate::ge::types::{Ge2DPoint, GeRectangle};
+use ee_base::math::types::{Ge2DPoint, GeRectangle};
 
 /// The calls the four classes make on other objects.
 #[repr(u32)]

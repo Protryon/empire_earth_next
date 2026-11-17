@@ -6,7 +6,7 @@
 
 use std::ffi::c_void;
 
-use crate::ge::types::{Ge2DPoint, Ge3DLine, Ge3DPoint, GeRectangle, GeTransformation, GeVector};
+use ee_base::math::types::{Ge2DPoint, Ge3DLine, Ge3DPoint, GeRectangle, GeTransformation, GeVector};
 
 use crate::ge::viewport::GeViewport;
 use crate::gfx::camera::{

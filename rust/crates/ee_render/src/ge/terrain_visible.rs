@@ -19,8 +19,8 @@ use crate::ge::terrain::{floor, GeTerrainView, GeTmRow};
 use crate::ge::terrain_mesh::GeTmTile;
 use crate::ge::terrain_volume::tile_rows_in_volume_raw;
 use crate::ge::texture::texture_set_slot;
-use crate::ge::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeVector};
 use crate::ge::viewport::GeViewport;
+use ee_base::math::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeVector};
 
 /// A registered texture set as the plan reads it: its textures as handles (`GETexture*` values, 0 for none) in
 /// column-major order (`mTextures[x][y]` at `x * height + y`), its grid and its tile coverage.
@@ -1013,7 +1013,7 @@ mod tests {
         let v = GeViewport::new(
             GeRectangle { bottom: 768.0, left: 0.0, right: 1024.0, top: 0.0 },
             GeRectangle { bottom: 300.0, left: -400.0, right: 400.0, top: -300.0 },
-            crate::ge::types::GeTransformation::IDENTITY,
+            ee_base::math::types::GeTransformation::IDENTITY,
             1.0,
             100.0,
             1.0,
@@ -1104,5 +1104,5 @@ mod tests {
         }
     }
 
-    use crate::ge::types::GeRectangle;
+    use ee_base::math::types::GeRectangle;
 }

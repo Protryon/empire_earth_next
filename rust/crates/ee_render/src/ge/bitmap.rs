@@ -7,7 +7,7 @@
 
 use std::ffi::c_ulong;
 
-use crate::ge::types::{Ge2DPoint, GeRectangle};
+use ee_base::math::types::{Ge2DPoint, GeRectangle};
 
 /// Corner order of a bitmap's and a rhombus's vertex array: top left, top right, bottom left, bottom right.
 pub type Corners = [Ge2DPoint; 4];
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn a_half_turn_swaps_opposite_corners_about_the_centre() {
-        let c = bitmap_corners(Ge2DPoint::new(0.5, 0.5), 10.0, 4.0, 1.0, 1.0, crate::ge::um::PI);
+        let c = bitmap_corners(Ge2DPoint::new(0.5, 0.5), 10.0, 4.0, 1.0, 1.0, ee_base::math::um::PI);
         // top left lands near the old bottom right (the table trigonometry is approximate)
         assert!((c[0].x - 10.0).abs() < 0.01 && (c[0].y - 4.0).abs() < 0.01, "{:?}", c[0]);
         assert!((c[3].x).abs() < 0.01 && (c[3].y).abs() < 0.01, "{:?}", c[3]);

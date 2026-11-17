@@ -10,7 +10,7 @@
 
 use std::ffi::{c_long, c_ulong};
 
-use crate::ge::um::lrintf;
+use ee_base::math::um::lrintf;
 
 /// One format: the right shift (from 8 bits) and the position of each channel (red, green, blue, alpha).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

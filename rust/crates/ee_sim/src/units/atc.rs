@@ -18,7 +18,7 @@
 
 #![allow(clippy::unnecessary_cast)]
 
-use ee_render::ge::types::GeTransformation;
+use ee_base::math::types::GeTransformation;
 use std::collections::VecDeque;
 use std::ffi::c_void;
 use std::fmt::Write as _;

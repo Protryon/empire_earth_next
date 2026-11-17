@@ -10,9 +10,9 @@
 //! FNV-1a 64 of its log; these tests draw the same streams, run each case through `view.rs` and the C++ glue
 //! rewritten here and compare the digests.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeTransformation};
 use crate::ge::viewport::GeViewport;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeTransformation};
 
 use crate::gfx::golden_mouse::{check, Log, Rng};
 use crate::gfx::pick::screen_ray;
@@ -71,7 +71,7 @@ fn on_ray(vp: &GeViewport, ortho: bool, sx: f32, sy: f32, depth: f32) -> Ge3DPoi
 
 /// `UMFloor`.
 fn floor(v: f32) -> i32 {
-    crate::ge::um::floor(v)
+    ee_base::math::um::floor(v)
 }
 
 #[test]

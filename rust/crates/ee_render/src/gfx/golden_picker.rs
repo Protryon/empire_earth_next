@@ -10,9 +10,9 @@
 
 use std::collections::BTreeMap;
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge2DPoint, Ge3DLine, Ge3DPlane, Ge3DPoint, GeRectangle, GeTransformation, GeVector};
 use crate::ge::viewport::GeViewport;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge2DPoint, Ge3DLine, Ge3DPlane, Ge3DPoint, GeRectangle, GeTransformation, GeVector};
 
 use crate::gfx::golden_mouse::{check, Log, Rng};
 use crate::gfx::pick::*;

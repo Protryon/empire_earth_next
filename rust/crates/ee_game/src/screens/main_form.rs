@@ -12,8 +12,8 @@
 use crate::screens::camera::*;
 use crate::screens::hot_keys::*;
 use crate::screens::main_game::*;
-use ee_render::ge::types::Ge2DPoint;
-use ee_render::ge::um::lrintf;
+use ee_base::math::types::Ge2DPoint;
+use ee_base::math::um::lrintf;
 
 // ---- the host's ops (EE_SCREENS_MF_OP_*): a and b are the op's arguments, io its in/out values
 

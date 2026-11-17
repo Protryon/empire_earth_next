@@ -8,10 +8,10 @@
 //! The camera's `Update` refreshes the trapezoid every tick (EE-SIM included) and `SetMap` runs at a game's start:
 //! simulation-run code under RUST_PLAN 2.1 (the C++'s f32 order), though nothing it computes feeds the simulation.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge2DPoint, Ge3DLine, GeRectangle, GeTransformation, GeVector};
-use crate::ge::um::{lrintf, um_arctan2};
 use crate::ge::viewport::GeViewport;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge2DPoint, Ge3DLine, GeRectangle, GeTransformation, GeVector};
+use ee_base::math::um::{lrintf, um_arctan2};
 
 use crate::gfx::pick::screen_ray;
 

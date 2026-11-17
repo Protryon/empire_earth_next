@@ -304,8 +304,8 @@ pub fn evaluate(goal: u64, unit: u64, event: i64, host: &mut dyn CalamityHost) -
 
 /// `GE3DPoint::DistanceToSquared`
 fn distance_squared(a: [f32; 3], b: [f32; 3]) -> f32 {
-    let p = ee_render::ge::types::Ge3DPoint { x: a[0], y: a[1], z: a[2] };
-    p.distance_to_squared(ee_render::ge::types::Ge3DPoint { x: b[0], y: b[1], z: b[2] })
+    let p = ee_base::math::types::Ge3DPoint { x: a[0], y: a[1], z: a[2] };
+    p.distance_to_squared(ee_base::math::types::Ge3DPoint { x: b[0], y: b[1], z: b[2] })
 }
 
 /// A unit's id, or `none` without one.

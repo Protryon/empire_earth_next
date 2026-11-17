@@ -123,10 +123,10 @@ impl EeScreensRect {
     pub fn ltrb(&self) -> [f32; 4] {
         [self.left, self.top, self.right, self.bottom]
     }
-    pub(crate) fn ge(&self) -> ee_render::ge::types::GeRectangle {
-        ee_render::ge::types::GeRectangle { bottom: self.bottom, left: self.left, right: self.right, top: self.top }
+    pub(crate) fn ge(&self) -> ee_base::math::types::GeRectangle {
+        ee_base::math::types::GeRectangle { bottom: self.bottom, left: self.left, right: self.right, top: self.top }
     }
-    pub(crate) fn of_ge(r: ee_render::ge::types::GeRectangle) -> Self {
+    pub(crate) fn of_ge(r: ee_base::math::types::GeRectangle) -> Self {
         EeScreensRect { bottom: r.bottom, left: r.left, right: r.right, top: r.top }
     }
 }
@@ -140,10 +140,10 @@ pub struct EeScreensPoint {
 }
 
 impl EeScreensPoint {
-    pub(crate) fn ge(&self) -> ee_render::ge::types::Ge2DPoint {
-        ee_render::ge::types::Ge2DPoint { x: self.x, y: self.y }
+    pub(crate) fn ge(&self) -> ee_base::math::types::Ge2DPoint {
+        ee_base::math::types::Ge2DPoint { x: self.x, y: self.y }
     }
-    pub(crate) fn of_ge(p: ee_render::ge::types::Ge2DPoint) -> Self {
+    pub(crate) fn of_ge(p: ee_base::math::types::Ge2DPoint) -> Self {
         EeScreensPoint { x: p.x, y: p.y }
     }
 }

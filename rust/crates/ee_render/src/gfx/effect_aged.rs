@@ -133,7 +133,7 @@ unsafe fn draw_flash<H: Effect3DHost, R: Raster>(
     x.set_alpha_ref(if g.has_object { g.alpha_ref } else { 0.0 });
     let fog = x.get_fog();
     let (t, draw_age) = unsafe { ((*r).transformation, (*r).aged.draw_age) };
-    let location = crate::ge::types::Ge3DPoint { x: t.m[0][3], y: t.m[1][3], z: t.m[2][3] };
+    let location = ee_base::math::types::Ge3DPoint { x: t.m[0][3], y: t.m[1][3], z: t.m[2][3] };
     x.lighting(EeGfxLighting::White);
     let mut value = x.fog_factor(&location, fog);
     value *= 1.0 - draw_age * draw_age;

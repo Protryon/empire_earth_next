@@ -3,8 +3,8 @@
 //! original's: a Rust list the record owns, `effect_orbit.rs`'s) posed at the angles the draw keeps (all 0, as the
 //! original's never set).
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 use crate::gfx::effect_2d::Effect2DHost;
 use crate::gfx::effect_orbit::EeGfxOrbitals;

@@ -7,8 +7,8 @@
 
 use std::ffi::{c_long, c_ulong};
 
-use crate::ge::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeVector};
-use crate::ge::um::lrintf;
+use ee_base::math::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeVector};
+use ee_base::math::um::lrintf;
 
 /// `GETerrainMesh::GETMPoint`: height, quantized normal (a pointer into the quantized-vector table), colour index.
 #[repr(C)]

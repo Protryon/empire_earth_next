@@ -12,7 +12,7 @@
 use std::ffi::{c_int, c_ulong};
 
 use crate::ge::pixel;
-use crate::ge::types::{Ge2DPoint, GeRectangle};
+use ee_base::math::types::{Ge2DPoint, GeRectangle};
 
 /// The glyph atlas textures' pixel format (`kPixelFormatA4R4G4B4`).
 pub const GE_FONT_ATLAS_FORMAT: c_ulong = 2;

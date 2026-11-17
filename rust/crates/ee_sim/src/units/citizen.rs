@@ -213,20 +213,20 @@ pub fn find_resource_of_kind<H: CzHost + ?Sized>(
                         }
                         let location =
                             find_gather_point(h, u, o.tile_x as u32, o.tile_y as u32, o.tile_size, o.tile_size);
-                        if ee_render::ge::um::floor(location[0]) == o.tile_x
-                            && ee_render::ge::um::floor(location[1]) == o.tile_y
+                        if ee_base::math::um::floor(location[0]) == o.tile_x
+                            && ee_base::math::um::floor(location[1]) == o.tile_y
                         {
                             continue;
                         }
                         let mut d = if o.on_map != 0 {
-                            ee_render::ge::um::floor(h.distance_2d(other, center_x, center_y))
+                            ee_base::math::um::floor(h.distance_2d(other, center_x, center_y))
                         } else {
-                            ee_render::ge::um::floor(h.tile_distance(other, center))
+                            ee_base::math::um::floor(h.tile_distance(other, center))
                         };
                         let s = h.unit(u);
                         let from = h.path_area(s.tile_x, s.tile_y);
                         let to =
-                            h.path_area(ee_render::ge::um::floor(location[0]), ee_render::ge::um::floor(location[1]));
+                            h.path_area(ee_base::math::um::floor(location[0]), ee_base::math::um::floor(location[1]));
                         if from != to {
                             d = d.wrapping_add(400);
                         }
@@ -245,9 +245,9 @@ pub fn find_resource_of_kind<H: CzHost + ?Sized>(
                             continue;
                         }
                         if o.on_map == 0 {
-                            ee_render::ge::um::floor(h.tile_distance(other, center))
+                            ee_base::math::um::floor(h.tile_distance(other, center))
                         } else {
-                            ee_render::ge::um::floor(h.distance_2d(other, center_x, center_y))
+                            ee_base::math::um::floor(h.distance_2d(other, center_x, center_y))
                         }
                     };
                     if distance < best {
@@ -462,7 +462,7 @@ pub fn find_gather_point<H: CzHost + ?Sized>(h: &mut H, u: u64, x: u32, y: u32, 
 pub fn has_gather_point<H: CzHost + ?Sized>(h: &mut H, u: u64, resource: u64) -> bool {
     let r = h.unit(resource);
     let location = find_gather_point(h, u, r.tile_x as u32, r.tile_y as u32, r.tile_size, r.tile_size);
-    !(ee_render::ge::um::floor(location[0]) == r.tile_x && ee_render::ge::um::floor(location[1]) == r.tile_y)
+    !(ee_base::math::um::floor(location[0]) == r.tile_x && ee_base::math::um::floor(location[1]) == r.tile_y)
 }
 
 #[cfg(test)]

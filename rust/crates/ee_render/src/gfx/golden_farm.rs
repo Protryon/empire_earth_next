@@ -7,7 +7,7 @@
 //! and one of the fresh model's final vertices and triangles and the place (`gmesh`, `cmesh`: the lines kept
 //! here). This test draws the same stream, builds the meshes with `farm.rs` and compares.
 
-use crate::ge::types::{Ge3DPoint, GeVector};
+use ee_base::math::types::{Ge3DPoint, GeVector};
 
 use crate::gfx::farm::{crops, ground, EeGfxFarmField, FarmTerrain};
 use crate::gfx::golden_mouse::{check, Log, Rng};

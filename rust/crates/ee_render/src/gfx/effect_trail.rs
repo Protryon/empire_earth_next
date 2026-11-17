@@ -3,8 +3,8 @@
 //! target (the weapon tag point, the target's model point, the breath's mouth point and the unit's scaled location)
 //! and hand them over in the record; the rest is here.
 
-use crate::ge::types::{Ge3DLine, Ge3DPoint, GeVector};
-use crate::ge::um;
+use ee_base::math::types::{Ge3DLine, Ge3DPoint, GeVector};
+use ee_base::math::um;
 
 use crate::gfx::effect_2d::Effect2DHost;
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts};

@@ -9,9 +9,9 @@
 //! top. From an LCG seeded 1 each printed per case an FNV-1a 64 of its log; these tests draw the same streams, run
 //! each case through `units.rs` and the C++ glue rewritten here and compare the digests.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeTransformation};
 use crate::ge::viewport::GeViewport;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeTransformation};
 
 use crate::gfx::golden_mouse::{check, Log, Rng};
 use crate::gfx::units::*;

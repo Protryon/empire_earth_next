@@ -4,8 +4,8 @@
 //! flat arrays, calls these and stores the results. The graphics thread and the UI call them (effects, selection
 //! models, the sky): no simulation caller, but the C++'s `f32` order is kept anyway.
 
-use crate::ge::types::{Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
-use crate::ge::um::sqrt;
+use ee_base::math::types::{Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
+use ee_base::math::um::sqrt;
 
 /// `ComputeBoundingBoxes` for one frame: from the first point, each axis takes a smaller value as its minimum,
 /// else a larger one as its maximum; then `Define`.

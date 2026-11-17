@@ -14,8 +14,11 @@ use std::fs;
 use std::path::Path;
 use std::process::ExitCode;
 
+use ee_base::png::png_to_texture;
+use ee_base::png::PngTexture;
 use ee_render::ge::model_store::{CemModel, SharedFrames};
-use ee_render::openformats::{gltf_to_model, png_to_texture, PngTexture, Resolver};
+use ee_render::openformats::gltf_to_model;
+use ee_render::openformats::Resolver;
 
 /// FNV-1a over every field the game stores, floats by their bits.
 struct Hash(u64);
@@ -75,7 +78,7 @@ fn hash_model(h: &mut Hash, m: &CemModel) {
     for f in &m.frames {
         h.u(f.radius.map_or(u64::MAX, |r| r.to_bits() as u64));
         h.u(f.target as u64);
-        let points = |h: &mut Hash, p: &[ee_render::ge::types::Ge3DPoint]| {
+        let points = |h: &mut Hash, p: &[ee_base::math::types::Ge3DPoint]| {
             h.u(p.len() as u64);
             p.iter().for_each(|p| [p.x, p.y, p.z].iter().for_each(|&v| h.f(v)));
         };

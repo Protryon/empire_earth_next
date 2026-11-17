@@ -27,7 +27,7 @@
 use crate::units::kinds::*;
 use crate::units::unit_class_fields::EeUnitsUnitClassFields;
 use crate::units::uu::EeUnitsUuUnit;
-use ee_render::ge::types::Ge3DPoint;
+use ee_base::math::types::Ge3DPoint;
 
 /// What `EvaluateCondition` answers for a class.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

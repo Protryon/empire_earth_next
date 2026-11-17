@@ -11,7 +11,7 @@ use std::ffi::c_void;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use std::sync::Mutex;
 
-use crate::ge::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 use crate::gfx::effects::{self, EeGfxColor, EeGfxEffectFog, EeGfxEffectQuad, EeGfxTexCoord};
 use crate::gfx::lighting::EeGfxLighting;

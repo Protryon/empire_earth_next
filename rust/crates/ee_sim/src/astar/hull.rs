@@ -10,9 +10,9 @@
 
 use std::ffi::c_long;
 
-use ee_render::ge::hull::{self, HullPoint};
-use ee_render::ge::types::{Ge3DLine, Ge3DPoint, GeVector};
-use ee_render::ge::um::sqrt;
+use ee_base::math::hull::{self, HullPoint};
+use ee_base::math::types::{Ge3DLine, Ge3DPoint, GeVector};
+use ee_base::math::um::sqrt;
 
 /// `U2DPoint<long>` (the C++ class's layout: two `long`s).
 #[repr(C)]

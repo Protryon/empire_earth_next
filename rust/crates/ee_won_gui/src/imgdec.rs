@@ -93,7 +93,7 @@ pub fn png_decode(r: &mut EeWonFileReader) -> Result<(i32, i32, bool, Vec<u32>),
         let got = read_max(r, &mut bytes)?;
         bytes.truncate(got);
     }
-    let p = ee_render::openformats::png_to_picture(&bytes).map_err(|_| Stop::Fail)?;
+    let p = ee_base::png::png_to_picture(&bytes).map_err(|_| Stop::Fail)?;
     let px = p
         .bgra
         .as_chunks::<4>()

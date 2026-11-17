@@ -3,6 +3,7 @@
 
 /// The crate ee_ai before the restructure.
 pub mod ai;
+pub mod app;
 /// The crate ee_astar before the restructure.
 pub mod astar;
 /// The crate ee_combat before the restructure.

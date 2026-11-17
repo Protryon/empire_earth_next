@@ -6,9 +6,9 @@
 //!
 //! This is the renderer's, not the simulation's: nothing here is simulation state.
 
-use crate::ge::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeTransformation};
-use crate::ge::um::floor;
 use crate::ge::viewport::GeViewport;
+use ee_base::math::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeTransformation};
+use ee_base::math::um::floor;
 
 /// `kBarFraction`: the filled part's share of a bar's own width.
 pub const BAR_FRACTION: f32 = 0.75;

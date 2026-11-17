@@ -1,11 +1,11 @@
 //! `effect_multi.rs`'s tests: the multi-effect's virtuals over a mock host and the logging rasterizer.
 
 use super::*;
-use crate::ge::types::{Ge3DPoint, GeVector};
 use crate::gfx::effect_beam::EeGfxBeamUnit;
 use crate::gfx::effect_rising::{effect3d, effect3d_file};
 use crate::gfx::effect_state::EffectFile;
 use crate::gfx::raster::{EeGfxModel, LogRaster};
+use ee_base::math::types::{Ge3DPoint, GeVector};
 
 #[derive(Default)]
 struct Host {

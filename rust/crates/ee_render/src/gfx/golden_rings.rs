@@ -8,8 +8,8 @@
 //! an FNV-1a 64 of its log. This test draws the same stream, runs each frame through `units.rs` and the C++ glue
 //! rewritten here and compares the digests.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::GeTransformation;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::GeTransformation;
 
 use crate::gfx::golden_mouse::{check, Log, Rng};
 use crate::gfx::units::*;

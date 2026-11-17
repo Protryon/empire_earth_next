@@ -2,8 +2,8 @@
 #![allow(clippy::excessive_precision)]
 
 use crate::app::minimap::{diagonal_order, EeAppMiniMap, EeAppMiniMapItem, MiniMapHost, TileSight, CELLS, OFF_MAP};
-use ee_render::ge::types::GeTransformation;
-use ee_render::ge::types::GeVector;
+use ee_base::math::types::GeTransformation;
+use ee_base::math::types::GeVector;
 use std::collections::BTreeMap;
 use std::os::raw::{c_long, c_ulong};
 

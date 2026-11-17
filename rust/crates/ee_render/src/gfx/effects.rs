@@ -7,8 +7,8 @@
 //!
 //! This is the renderer's, not the simulation's: nothing here is simulation state.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeTransformation, GeVector};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation, GeVector};
 
 use crate::gfx::mesh::{EeGfxMeshTriangle, EeGfxMeshVertex, Mesh};
 

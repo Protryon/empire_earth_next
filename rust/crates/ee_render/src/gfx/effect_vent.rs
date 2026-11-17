@@ -12,8 +12,8 @@
 //! The jets are a Rust list the record owns (`vent.parts`, made on first use, freed with the record). The C++ host
 //! answers the tag points (`vent_lists`, `vent_count`, `vent_offsets`, `vent_points`) and places the sub-effects.
 
-use crate::ge::types::{Ge3DPoint, GeTransformation, GeVector};
-use crate::ge::um;
+use ee_base::math::types::{Ge3DPoint, GeTransformation, GeVector};
+use ee_base::math::um;
 
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::gfx::effect_state::{identity, random, random_float, random_long, EeGfxEffectRecord};
@@ -159,7 +159,7 @@ unsafe fn step<H: Effect3DHost>(r: *mut EeGfxEffectRecord, g: &EeGfxGraphicFacts
     t.m[0][3] = position.x;
     t.m[1][3] = position.y;
     t.m[2][3] = position.z;
-    t.set_orientation(crate::ge::transform::RotationOrder::Ypr, 0.0, 0.0, 0.0);
+    t.set_orientation(ee_base::math::transform::RotationOrder::Ypr, 0.0, 0.0, 0.0);
     t.m[3] = [0.0, 0.0, 0.0, 1.0];
     // SAFETY (every access below): the function's contract; no reference to the record lives across a host call
     unsafe { (*r).transformation = t };

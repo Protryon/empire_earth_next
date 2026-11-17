@@ -13,7 +13,7 @@ use std::ffi::{c_long, c_ulong};
 
 use crate::ge::io::{FieldIo, OK};
 use crate::ge::terrain::{GeTerrainView, GeTmPoint, GeTmRow};
-use crate::ge::types::GeVector;
+use ee_base::math::types::GeVector;
 
 /// `GETerrainMesh::GETMTile` (sizeof 4).
 #[repr(C)]
@@ -557,13 +557,13 @@ pub fn water_animation_step(
     Some((frame.wrapping_add(frames) % frame_count, last.wrapping_add(period.wrapping_mul(frames))))
 }
 
-use crate::ge::um::lrintf;
+use ee_base::math::um::lrintf;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::ge::io::{BufferIo, END_OF_FILE, FAILED};
-    use crate::ge::types::Ge3DPlane;
+    use ee_base::math::types::Ge3DPlane;
 
     #[test]
     fn the_flat_mesh_is_a_diamond() {

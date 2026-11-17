@@ -13,7 +13,7 @@
 //! through `scene.rs` and `capture.rs`; the driver rebuilt from the new unit over the forwarders printed the same
 //! bytes.
 
-use crate::ge::types::GeVector;
+use ee_base::math::types::GeVector;
 
 use crate::gfx::capture::{ground_circle, object_place, object_scale, sway_fraction, sway_tick, GroundHeights};
 use crate::gfx::effects::EeGfxColor;

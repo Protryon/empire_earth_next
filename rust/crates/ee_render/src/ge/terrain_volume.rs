@@ -14,9 +14,9 @@
 use std::collections::BTreeMap;
 use std::ffi::{c_long, c_ulong};
 
-use crate::ge::hull;
 use crate::ge::terrain::GeTmRow;
-use crate::ge::types::{Ge3DLine, Ge3DPoint, GeVector};
+use ee_base::math::hull;
+use ee_base::math::types::{Ge3DLine, Ge3DPoint, GeVector};
 
 /// `U2DPoint<float>`.
 pub type Point2 = (f32, f32);

@@ -9,7 +9,7 @@
 
 use core::ffi::{c_long, c_void};
 
-use crate::ge::types::{Ge3DPoint, GeTransformation, GeVector};
+use ee_base::math::types::{Ge3DPoint, GeTransformation, GeVector};
 
 use crate::dx7::vertex::{float_to_long, Dx7StdColorVertex};
 

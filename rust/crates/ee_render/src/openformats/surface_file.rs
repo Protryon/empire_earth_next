@@ -14,7 +14,7 @@ use std::ffi::{c_int, c_long, c_ulong, c_void};
 
 use crate::ge::surface_px::{ee_ge_surf_png_store, ee_ge_surf_row_in, ee_ge_surf_row_out, EeGeSurfRow};
 
-use crate::openformats::png::png_to_picture;
+use ee_base::png::png_to_picture;
 
 /// The calls `GESurface`'s image members make on other objects. `obj` is the object called (the surface, the file,
 /// or a libjpeg handle); `a`, `b`, `c` as each says. Results are `long`s unless said otherwise.

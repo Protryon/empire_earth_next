@@ -25,9 +25,9 @@ use crate::ge::terrain::{edge_planes, GeTerrainView, GeTmPoint, GeTmRow};
 use crate::ge::terrain_mesh::{self, GeTerrainFog, GeTerrainLoad, GeTmTile, WATER_GRID};
 use crate::ge::terrain_visible::{self, GeTextureSetView, GeVisibleInput, GeVisiblePolygon};
 use crate::ge::terrain_volume;
-use crate::ge::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeVector};
-use crate::ge::um::lrintf;
 use crate::ge::viewport::GeViewport;
+use ee_base::math::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeVector};
+use ee_base::math::um::lrintf;
 
 /// `GETM_VISIBLE_POINTS`: the side of the visible point arrays.
 pub const EE_GE_TM_SIDE: usize = 257;

@@ -878,7 +878,7 @@ fn the_physical_table_reads_the_model_in_place() {
         _: *const GeTransformation,
         _: c_ulong,
         _: f32,
-        _: *const crate::ge::types::Ge3DLine,
+        _: *const ee_base::math::types::Ge3DLine,
         _: c_ulong,
     ) -> bool {
         true

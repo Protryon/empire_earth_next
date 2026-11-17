@@ -15,8 +15,8 @@
     clippy::unnecessary_cast
 )]
 
-use ee_render::ge::types::{Ge2DPoint, Ge3DLine, Ge3DPoint, GeVector};
-use ee_render::ge::um::{floor, um_arccos, um_arctan2, um_cos};
+use ee_base::math::types::{Ge2DPoint, Ge3DLine, Ge3DPoint, GeVector};
+use ee_base::math::um::{floor, um_arccos, um_arctan2, um_cos};
 
 use crate::units::pm::*;
 
@@ -59,12 +59,12 @@ pub(crate) fn step1_target(c: &mut Ctx, u: EeUnitsPmUnit, with_tile: bool, calam
 fn land_place(
     c: &mut Ctx,
     u: EeUnitsPmUnit,
-    mut t: ee_render::ge::types::GeTransformation,
-    mut new: ee_render::ge::types::GeTransformation,
+    mut t: ee_base::math::types::GeTransformation,
+    mut new: ee_base::math::types::GeTransformation,
     l: Ge3DPoint,
     yaw: f32,
     moved: bool,
-) -> ee_render::ge::types::GeTransformation {
+) -> ee_base::math::types::GeTransformation {
     let class = c.h.class(u.obj);
     let mut ground = c.h.ground_point(l);
     if c.h.is_swimming(u.obj) {
@@ -981,7 +981,7 @@ pub(crate) fn sea_animal_step0(c: &mut Ctx, k: Kind, u: EeUnitsPmUnit) {
     let (turn, yaw_rate, yaw) = turn_toward(c, k, u, l, target, false);
     let (pitch_rate, pitch) = pitch_toward_slope(c, k, u, l, target, distance);
     c.set_angular(u, yaw_rate, pitch_rate, 0.0);
-    c.h.set_orientation(u.obj, ee_render::ge::types::GeOrientation { yaw, pitch, roll: 0.0 });
+    c.h.set_orientation(u.obj, ee_base::math::types::GeOrientation { yaw, pitch, roll: 0.0 });
     ypr(&mut t, yaw, pitch, 0.0);
     let speed = accelerate(c, k, u, distance, turn);
     set_velocity(u, speed);

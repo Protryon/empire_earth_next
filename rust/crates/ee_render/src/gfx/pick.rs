@@ -7,9 +7,9 @@
 //!
 //! This is the UI's and the renderer's, not the simulation's.
 
-use crate::ge::types::{Ge2DPoint, Ge3DPlane, Ge3DPoint, GeTransformation, GeVector};
-use crate::ge::um::lrintf;
 use crate::ge::viewport::GeViewport;
+use ee_base::math::types::{Ge2DPoint, Ge3DPlane, Ge3DPoint, GeTransformation, GeVector};
+use ee_base::math::um::lrintf;
 
 /// `kU441C28`: the depth tolerance, in clipping ranges.
 pub const PICK_TOLERANCE: f32 = 3.0;

@@ -8,9 +8,9 @@
 //! its log. This test draws the same stream, runs each case through `units.rs` and the C++ glue rewritten here (the
 //! rhombi's rectangles, colours and draws in the original's order) and compares the digests.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeTransformation};
 use crate::ge::viewport::GeViewport;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeTransformation};
 
 use crate::gfx::golden_mouse::{check, Log, Rng};
 use crate::gfx::units::*;

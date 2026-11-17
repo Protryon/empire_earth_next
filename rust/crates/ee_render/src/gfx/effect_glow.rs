@@ -8,7 +8,7 @@
 //! at shutdown, but never drew it. A tag name's field that does not scan leaves the value at 0 (the colour's at the
 //! previous spot's: the original read an uninitialised local or the spot array's garbage).
 
-use crate::ge::types::Ge3DPoint;
+use ee_base::math::types::Ge3DPoint;
 
 use crate::gfx::effect_2d::Effect2DHost;
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts};

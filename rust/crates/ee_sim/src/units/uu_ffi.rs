@@ -7,7 +7,7 @@
 
 use std::ffi::c_void;
 
-use ee_render::ge::types::GeTransformation;
+use ee_base::math::types::GeTransformation;
 
 use crate::units::uu;
 use crate::units::uu_host::{set_tiles, set_units, tiles_of, units_of, Game};

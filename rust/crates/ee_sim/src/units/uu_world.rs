@@ -25,9 +25,9 @@ use crate::units::uu_place::can_place_unit_on_tile;
 use crate::units::uu_tiles::{
     ceil, move_in_direction, tile_direction, tiles_near_point, trunc_long, turn_direction, wall_piece, Tile,
 };
-use ee_render::ge::transform::RotationOrder;
-use ee_render::ge::types::{Ge2DPoint, Ge3DPoint, GeTransformation, GeVector};
-use ee_render::ge::um::{floor, floor_unsigned, lrintf, sqrt, um_arccos, um_arctan2, um_cos};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge2DPoint, Ge3DPoint, GeTransformation, GeVector};
+use ee_base::math::um::{floor, floor_unsigned, lrintf, sqrt, um_arccos, um_arctan2, um_cos};
 use std::f32::consts::{FRAC_2_PI, FRAC_PI_2, PI, TAU};
 
 /// The values the bodies test (the C++ enums').

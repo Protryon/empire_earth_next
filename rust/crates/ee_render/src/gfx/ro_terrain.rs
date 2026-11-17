@@ -10,7 +10,7 @@
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicPtr, Ordering};
 
-use crate::ge::types::Ge3DPoint;
+use ee_base::math::types::Ge3DPoint;
 
 use crate::gfx::effects::{EeGfxColor, EeGfxTexCoord};
 use crate::gfx::lighting::EeGfxLighting;

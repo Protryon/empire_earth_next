@@ -9,7 +9,7 @@
 //! through the rasterizer table (`raster.rs`). The record is reached through its raw pointer field by field: the C++
 //! reads it during the host calls (the region move), so no Rust reference to it lives across one.
 
-use crate::ge::um::lrintf;
+use ee_base::math::um::lrintf;
 
 use crate::gfx::effect_orbit::{copy_orbitals, keep_angles, turn_orbitals, update_orbitals};
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
@@ -64,7 +64,7 @@ pub(crate) unsafe fn hurricane<H: Effect3DHost, R: Raster>(
                     o.draw_frame = o.frame;
                     o.draw_scale = o.scale;
                     let t = (*r).transformation;
-                    (*r).aged.location = crate::ge::types::Ge3DPoint { x: t.m[0][3], y: t.m[1][3], z: t.m[2][3] };
+                    (*r).aged.location = ee_base::math::types::Ge3DPoint { x: t.m[0][3], y: t.m[1][3], z: t.m[2][3] };
                     keep_angles(r);
                 }
                 h.queue(4);
@@ -143,10 +143,10 @@ unsafe fn step<H: Effect3DHost>(r: *mut EeGfxEffectRecord, g: &EeGfxGraphicFacts
 
 /// `GetSpawnPoint`: a random tag point of kind 6 of the graphic at `frame` around the unit (scaled by the graphic
 /// effect's size); the origin when the graphic has none (no draw then).
-fn spawn_point<H: Effect3DHost>(h: &mut H, frame: u32) -> crate::ge::types::Ge3DPoint {
+fn spawn_point<H: Effect3DHost>(h: &mut H, frame: u32) -> ee_base::math::types::Ge3DPoint {
     let count = h.spawn_count();
     if count == 0 {
-        return crate::ge::types::Ge3DPoint::default();
+        return ee_base::math::types::Ge3DPoint::default();
     }
     let mut index = lrintf(random() * count as f32) as u32;
     if index == count {

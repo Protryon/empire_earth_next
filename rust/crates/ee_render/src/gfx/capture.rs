@@ -5,8 +5,8 @@
 //!
 //! Drawn only (the renderer's thread). The C++'s `long` is 32 bits on Windows: the id arithmetic wraps as `i32`/`u32`.
 
-use crate::ge::types::Ge3DPoint;
-use crate::ge::um;
+use ee_base::math::types::Ge3DPoint;
+use ee_base::math::um;
 
 /// The sway clock's step (ms; `FillRenderLists` adds 2 when more than this has passed).
 const SWAY_PERIOD: u32 = 0x21;

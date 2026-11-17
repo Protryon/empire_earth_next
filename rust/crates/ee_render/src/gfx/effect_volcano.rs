@@ -12,7 +12,7 @@
 
 use std::sync::Mutex;
 
-use crate::ge::types::Ge3DPoint;
+use ee_base::math::types::Ge3DPoint;
 use ee_base::random::{float_to_long, URandom};
 
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};

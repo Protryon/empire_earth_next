@@ -4,9 +4,9 @@
 //! blast (0x14, `EEE2DSmokeMuzzleBlast`, no parts: its puffs trail back along its direction) and the smoke puffs (0xb and
 //! 0xc, `EEE2DSmokePlume`, whose state, tick and files were already `effect_state.rs`'s); their classes deleted.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeTransformation, GeVector};
-use crate::ge::um;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation, GeVector};
+use ee_base::math::um;
 
 use crate::gfx::effect_2d::Effect2DHost;
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts};

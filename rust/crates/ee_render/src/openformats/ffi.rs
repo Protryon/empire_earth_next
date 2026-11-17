@@ -2,8 +2,8 @@
 //! and the surfaces' image files (`surface_file.rs`): a texture's frames (an `EeOfTexture`, freed with
 //! `ee_of_texture_free`) and one PNG as a picture (WONGUI's PNG decoder); bytes are `EeOfBytes` (`ee_of_bytes_free`).
 
-use crate::openformats::png::PngTexture;
-use crate::openformats::{png_to_picture, Failure};
+use ee_base::png::PngTexture;
+use ee_base::png::{png_to_picture, Failure};
 
 /// A byte buffer owned by Rust; free it with `ee_of_bytes_free`.
 #[repr(C)]

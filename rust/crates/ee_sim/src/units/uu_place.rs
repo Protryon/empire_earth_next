@@ -7,9 +7,9 @@
 use crate::units::uu::k::{UU_MOVEMENT_SEA, UU_MOVEMENT_SPACE};
 use crate::units::uu::{can_stand_on, tile_units_standing, units_on, units_on_tiles, UuClassView, UuHost, UuView};
 use crate::units::uu_tiles::{tile_direction, tile_in_direction, turn_direction, Tile};
-use ee_render::ge::transform::RotationOrder;
-use ee_render::ge::types::{Ge3DLine, Ge3DPoint, GeTransformation, GeVector};
-use ee_render::ge::um::{floor, floor_unsigned, lrintf, um_arctan2, um_cos, um_sin};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DLine, Ge3DPoint, GeTransformation, GeVector};
+use ee_base::math::um::{floor, floor_unsigned, lrintf, um_arctan2, um_cos, um_sin};
 
 const TERRAIN_DEEP_WATER: i32 = 1;
 const TERRAIN_SPACE: i32 = 12;

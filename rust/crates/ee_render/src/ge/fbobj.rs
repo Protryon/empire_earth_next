@@ -14,7 +14,7 @@ use std::ffi::{c_char, c_long, c_ulong, c_void};
 use crate::ge::font::{self, GeFontPacker, GeGlyphDraw, GE_GLYPH_FULL, GE_GLYPH_SKIPPED};
 use crate::ge::font_ffi::{GeFbCharacter, GeTextOps};
 use crate::ge::texobj::{EeGeSurfaceDescription, EeGeTexStage};
-use crate::ge::types::{Ge2DPoint, GeRectangle};
+use ee_base::math::types::{Ge2DPoint, GeRectangle};
 
 /// The calls a font bitmap makes on other objects. `obj` is the object called; `a`, `b` as each says.
 #[repr(u32)]

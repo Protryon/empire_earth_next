@@ -1,7 +1,7 @@
 use super::*;
 use crate::combat::damage::{EE_COMBAT_W_DAMAGE_IN, EE_COMBAT_W_HIT_CAPTURE};
 use crate::combat::reads::{EE_COMBAT_CLASS_PROJECTILE, EE_COMBAT_Q_ENEMY};
-use ee_render::ge::types::{Ge3DLine, GeTransformation};
+use ee_base::math::types::{Ge3DLine, GeTransformation};
 use std::collections::HashMap;
 
 /// A world of plain values: reads by (code, object) (0 when unset), handles by (code, object), the ignored lists as

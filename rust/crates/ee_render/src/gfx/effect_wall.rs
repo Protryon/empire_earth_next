@@ -6,8 +6,8 @@
 //!
 //! Simulation state (RUST_PLAN 2.1): the C++'s f32 operations in order.
 
-use crate::ge::types::Ge3DPoint;
-use crate::ge::um;
+use ee_base::math::types::Ge3DPoint;
+use ee_base::math::um;
 
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::gfx::effect_state::{load_point, random_long, save_point, EeGfxEffectRecord, EffectFile};

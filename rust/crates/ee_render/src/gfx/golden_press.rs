@@ -8,7 +8,7 @@
 //! axis differ from the centre's `else if`, and the modifiers) and printed per case an FNV-1a 64 of its log. This
 //! test draws the same stream, runs each case through `minimap.rs` and compares the digests.
 
-use crate::ge::types::{Ge2DPoint, GeRectangle};
+use ee_base::math::types::{Ge2DPoint, GeRectangle};
 
 use crate::gfx::golden_mouse::{check, Log, Rng};
 use crate::gfx::minimap::{center_point, press_point};

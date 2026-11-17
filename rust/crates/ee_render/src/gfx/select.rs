@@ -7,8 +7,8 @@
 //! This is the user interface's, not the simulation's: the selection reaches the simulation only as the lasso's
 //! message.
 
-use crate::ge::types::{Ge2DPoint, GeRectangle};
-use crate::ge::um::lrintf;
+use ee_base::math::types::{Ge2DPoint, GeRectangle};
+use ee_base::math::um::lrintf;
 
 /// `UMFloatToLong` of each coordinate, back to floats.
 fn rounded(x: f32, y: f32) -> Ge2DPoint {

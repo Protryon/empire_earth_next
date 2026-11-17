@@ -7,12 +7,12 @@
 use std::collections::HashMap;
 
 use crate::ge::model_store::{CemFrame, CemMaterial, CemModel, CemPolygons, Counts, SharedFrames};
-use crate::ge::types::{Ge3DPoint, GeVector};
 use crate::openformats::cgltf::{
     self, Accessor, AttributeKind, ComponentType, Data, Interpolation, Node, PrimitiveKind, Ref, TargetPath, ValueType,
 };
 use crate::openformats::json::{self, Value};
-use crate::openformats::{fail, Failure};
+use ee_base::math::types::{Ge3DPoint, GeVector};
+use ee_base::png::{fail, Failure};
 
 /// `kErrorOK` and `kErrorFailed` (`LowLevelEngineCore.h`).
 const OK: std::ffi::c_long = 0;

@@ -15,8 +15,8 @@ use crate::ge::cppobj;
 use crate::ge::modobj::{ee_ge_mod_get, ee_ge_mod_polygon_count, ee_ge_mod_ptr, EeGeModPtr, EeGeModVal, EeGeModel};
 use crate::ge::physical::{line_hits_triangle, triangle_box};
 use crate::ge::smallobj::{ee_ge_mat_get, EeGeMat, EeGeMatField};
-use crate::ge::types::{Ge3DLine, Ge3DPoint, GeBoundingBox, GeTransformation};
-use crate::ge::um::lrintf;
+use ee_base::math::types::{Ge3DLine, Ge3DPoint, GeBoundingBox, GeTransformation};
+use ee_base::math::um::lrintf;
 
 /// `kLODFraction` (0x10097b78).
 const LOD_FRACTION: f32 = 0.2;

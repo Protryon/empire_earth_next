@@ -8,8 +8,8 @@
 //! C++'s (the x87 build kept it in an extended register: a fade "at once" is the rate `f32::MAX`, whose product with
 //! the elapsed milliseconds overflows an `f32`).
 
-use crate::ge::types::GeVector;
-use crate::ge::um;
+use ee_base::math::types::GeVector;
+use ee_base::math::um;
 
 use crate::gfx::effects::EeGfxColor;
 

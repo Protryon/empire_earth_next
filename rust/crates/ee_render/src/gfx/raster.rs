@@ -7,7 +7,7 @@
 
 use std::ffi::c_void;
 
-use crate::ge::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeTransformation};
+use ee_base::math::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeTransformation};
 
 use crate::gfx::effects::{EeGfxColor, EeGfxEffectQuad};
 use crate::gfx::lighting::EeGfxLighting;
@@ -797,7 +797,7 @@ pub struct LogRaster {
 pub struct LogModel {
     pub name: String,
     pub points: Vec<Ge3DPoint>,
-    pub normals: Vec<crate::ge::types::GeVector>,
+    pub normals: Vec<ee_base::math::types::GeVector>,
     pub opacities: Vec<f32>,
     pub triangles: Vec<[u32; 3]>,
     pub subs: Vec<EeGfxModel>,
@@ -813,7 +813,7 @@ impl LogRaster {
         self.models.push(LogModel {
             name: name.into(),
             points: vec![Ge3DPoint::default(); vertices as usize],
-            normals: vec![crate::ge::types::GeVector::default(); vertices as usize],
+            normals: vec![ee_base::math::types::GeVector::default(); vertices as usize],
             opacities: vec![1.0; vertices as usize],
             triangles: vec![[0; 3]; polygons as usize],
             subs: Vec::new(),

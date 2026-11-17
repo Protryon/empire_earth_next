@@ -11,7 +11,7 @@
 // the driver's arithmetic as written
 #![allow(clippy::manual_is_multiple_of, clippy::manual_clamp, clippy::field_reassign_with_default)]
 
-use crate::ge::types::GeVector;
+use ee_base::math::types::GeVector;
 
 use crate::gfx::effects::EeGfxColor;
 use crate::gfx::lighting::{lighting, EeGfxLighting, EeGfxLightingInputs, EeGfxRasterOpKind as K};

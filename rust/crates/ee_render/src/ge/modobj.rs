@@ -29,7 +29,7 @@ use crate::ge::model_ffi::EeGeSharedFrame;
 use crate::ge::model_geom;
 use crate::ge::model_store::CemModel;
 use crate::ge::smallobj::{ee_ge_mat_get, ee_ge_mat_name, ee_ge_mat_set, ee_ge_mat_set_texture, EeGeMat, EeGeMatField};
-use crate::ge::types::{Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
+use ee_base::math::types::{Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
 
 /// `kErrorOK`.
 const OK: c_long = 0;

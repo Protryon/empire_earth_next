@@ -12,7 +12,7 @@ use std::ffi::{c_ulong, c_void};
 
 use crate::ge::bitmap;
 use crate::ge::bmpobj::{EeGeBmpHostFn, EeGeBmpOp};
-use crate::ge::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeVector};
+use ee_base::math::types::{Ge2DPoint, Ge3DPoint, GeRectangle, GeVector};
 
 /// Which class a default constructor builds.
 #[repr(u32)]

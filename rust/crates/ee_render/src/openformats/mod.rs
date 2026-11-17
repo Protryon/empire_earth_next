@@ -15,20 +15,11 @@ pub mod find;
 mod import;
 mod jsmn;
 mod json;
-mod png;
 pub mod surface_file;
 
+pub use ee_base::png::{png_to_picture, png_to_texture, Picture, PngFrame, PngTexture};
 pub use ffi::*;
 pub use import::{gltf_to_model, Resolver};
-pub use png::{png_to_picture, png_to_texture, Picture, PngFrame, PngTexture};
-
-/// Why a conversion failed: the message (bytes, as names in it may not be UTF-8).
-#[derive(Debug, PartialEq, Eq)]
-pub struct Failure(pub Vec<u8>);
-
-pub(crate) fn fail<T>(message: &str) -> Result<T, Failure> {
-    Err(Failure(message.as_bytes().to_vec()))
-}
 
 #[cfg(test)]
 mod tests {

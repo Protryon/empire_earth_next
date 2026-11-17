@@ -64,7 +64,7 @@ impl Effect3DHost for Host {
     fn orbital(&mut self, index: u32) -> EeGfxOrbital {
         self.orbitals[index as usize]
     }
-    fn unit_location(&mut self) -> crate::ge::types::GeTransformation {
+    fn unit_location(&mut self) -> ee_base::math::types::GeTransformation {
         self.calls.push("location".into());
         let mut t = identity();
         t.m[0][3] = 5.0;

@@ -40,8 +40,8 @@ use crate::ge::tmobj::{
     ee_ge_tm_material_map, ee_ge_tm_point, ee_ge_tm_point_visibility, ee_ge_tm_render_vertices, ee_ge_tm_vertex_color,
     ee_ge_tm_water_color, EeGeTerrainMesh, EeGeTmMaterialView, EeGeTmVal,
 };
-use crate::ge::types::GeTransformation;
 use crate::ge::viewport::GeViewport;
+use ee_base::math::types::GeTransformation;
 
 /// cbindgen:ignore
 mod cpp {
@@ -345,16 +345,16 @@ impl TerrainHost for Host {
         Some(LightData { light_type, diffuse, direction })
     }
     fn um_arctan(&mut self, value: f32) -> f32 {
-        crate::ge::um::um_arctan(value)
+        ee_base::math::um::um_arctan(value)
     }
     fn um_tan(&mut self, value: f32) -> f32 {
-        crate::ge::um::um_tan(value)
+        ee_base::math::um::um_tan(value)
     }
     fn um_sin(&mut self, value: f32) -> f32 {
-        crate::ge::um::um_sin(value)
+        ee_base::math::um::um_sin(value)
     }
     fn um_cos(&mut self, value: f32) -> f32 {
-        crate::ge::um::um_cos(value)
+        ee_base::math::um::um_cos(value)
     }
 }
 
@@ -711,7 +711,7 @@ fn tm(mesh: Handle) -> *mut EeGeTerrainMesh {
 
 /// `DX7ViewportInfoOf`: a viewport as the 3D draws read it.
 fn viewport_info(v: &GeViewport) -> ViewportInfo {
-    let plane = |p: &crate::ge::types::Ge3DPlane| Plane {
+    let plane = |p: &ee_base::math::types::Ge3DPlane| Plane {
         point: [p.point.x, p.point.y, p.point.z],
         normal: [p.normal.x, p.normal.y, p.normal.z],
     };

@@ -120,7 +120,7 @@ fn load(h: &mut impl PlayerSaveHost, r: &Rec, major: u32, minor: u32) -> i32 {
     next!(read!(h, r, mTimeOfDayStep, read_float));
     if result == OK {
         result = read!(h, r, mTickTime, read_float);
-        set!(r, mTickTimeMs, ee_render::ge::um::lrintf(get!(r, mTickTime)) as c_long);
+        set!(r, mTickTimeMs, ee_base::math::um::lrintf(get!(r, mTickTime)) as c_long);
     }
     next!(read!(h, r, mTickStartTime, read_long));
     next!(read!(h, r, mPreviousTickStartTime, read_long));

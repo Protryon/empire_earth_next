@@ -5,9 +5,9 @@
 //! record's `sprite` (the water ripple's the aged record's, as before); the C++ host keeps the graphic object, the
 //! animation sound and the unit's tag points, weapon point and model point; the draws go through the rasterizer table.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeTransformation};
-use crate::ge::um;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::um;
 
 use crate::gfx::effect_2d::Effect2DHost;
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts};

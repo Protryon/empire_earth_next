@@ -11,8 +11,8 @@
 #![allow(clippy::manual_is_multiple_of)]
 
 use super::*;
-use crate::ge::types::{GeRectangle, GeTransformation};
 use crate::ge::visible_ffi::ee_ge_viewport_init;
+use ee_base::math::types::{GeRectangle, GeTransformation};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::ffi::c_void;

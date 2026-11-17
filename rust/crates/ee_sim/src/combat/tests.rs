@@ -1,6 +1,6 @@
 use crate::combat::capture::{encode, records, replay, replay_all, Counts};
 use crate::combat::*;
-use ee_render::ge::um::{um_arccos, um_arctan, um_cos, HALF_PI};
+use ee_base::math::um::{um_arccos, um_arctan, um_cos, HALF_PI};
 
 fn rules() -> EeCombatDamageIn {
     EeCombatDamageIn {

@@ -7,7 +7,7 @@
 //!
 //! This is the renderer's, not the simulation's: nothing here is simulation state.
 
-use crate::ge::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 use crate::gfx::effects::EeGfxTexCoord;
 

@@ -28,7 +28,7 @@ use crate::ge::font::{
     draw_plan, surface_alpha, surface_alpha_len, text_extent, GeFontPacker, GeGlyphDraw, GE_GLYPH_FULL,
     GE_GLYPH_SKIPPED,
 };
-use crate::ge::types::{Ge2DPoint, GeRectangle};
+use ee_base::math::types::{Ge2DPoint, GeRectangle};
 
 const GOLDEN: &str = include_str!("golden_font.txt");
 

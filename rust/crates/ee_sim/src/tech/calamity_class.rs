@@ -252,7 +252,7 @@ pub fn initialize_base(out: &mut EeCalamityClassFields, data: &EeCalamityData) {
     out.mLifeTime = data.mLifeTime as f32;
     out.mUnitSet = data.mUnitSet as c_ulong;
     out.mCost = data.mCost as c_long;
-    out.mRange = ee_render::ge::um::lrintf(data.mRange) as c_long;
+    out.mRange = ee_base::math::um::lrintf(data.mRange) as c_long;
     out.mIsBlockedByImmunity = data.mIsBlockedByImmunity;
     out.mIsCastByAllSelected = data.mIsCastByAllSelected;
     out.mB24 = data.mUnusedClassFlag;

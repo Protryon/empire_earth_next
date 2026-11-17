@@ -5,7 +5,7 @@
 //! file statics (`sMinXValue`/`sMinYValue`), passed in and out; the C++ prints the "MinXValue now" debug lines when
 //! the result says a minimum changed.
 
-use crate::ge::types::{Ge2DPoint, GeRectangle};
+use ee_base::math::types::{Ge2DPoint, GeRectangle};
 
 /// `ClampPosition`: `position` inside `bounds` (left/top inclusive; past right/bottom: one less than the edge).
 pub fn clamp_position(position: Ge2DPoint, bounds: &GeRectangle) -> Ge2DPoint {

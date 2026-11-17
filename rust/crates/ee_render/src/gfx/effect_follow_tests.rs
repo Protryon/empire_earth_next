@@ -1,10 +1,10 @@
 //! `effect_follow.rs`'s tests: the blast wave's and shield's virtuals over a mock host and the logging rasterizer.
 
 use super::*;
-use crate::ge::types::GeVector;
 use crate::gfx::effect_rising::effect3d;
 use crate::gfx::effect_state::EeGfxEffectShield;
 use crate::gfx::raster::{EeGfxModel, LogRaster};
+use ee_base::math::types::GeVector;
 
 #[derive(Default)]
 struct Host {

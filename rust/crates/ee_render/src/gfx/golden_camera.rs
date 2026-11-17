@@ -19,10 +19,10 @@
 use std::fmt::Write as _;
 
 use crate::ge::terrain::{edge_planes, GeTmRow};
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge2DPoint, Ge3DLine, Ge3DPoint, GeQuaternion, GeRectangle, GeTransformation, GeVector};
-use crate::ge::um::floor_unsigned;
 use crate::ge::viewport::GeViewport;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge2DPoint, Ge3DLine, Ge3DPoint, GeQuaternion, GeRectangle, GeTransformation, GeVector};
+use ee_base::math::um::floor_unsigned;
 
 use crate::gfx::camera::*;
 

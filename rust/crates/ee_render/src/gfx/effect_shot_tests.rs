@@ -102,7 +102,7 @@ fn made_it_faces_along_its_path_at_the_duration_rate() {
     // the same orientation the engine's SetOrientationYPR gives for the yaw and pitch of the direction
     let mut o = identity();
     o.set_orientation(
-        crate::ge::transform::RotationOrder::Ypr,
+        ee_base::math::transform::RotationOrder::Ypr,
         um_arctan2(-0.0, 1.0),
         um_arccos(-0.0) - 1.5707964,
         0.0,

@@ -6,7 +6,7 @@
 //! width or height, the mouse over, on the edge of and off the map's image) and printed per case an FNV-1a 64 of
 //! its log. This test draws the same stream, runs each case through `minimap.rs` and compares the digests.
 
-use crate::ge::types::{Ge2DPoint, GeRectangle};
+use ee_base::math::types::{Ge2DPoint, GeRectangle};
 
 use crate::gfx::golden_mouse::{check, Log, Rng};
 use crate::gfx::minimap::center_point;

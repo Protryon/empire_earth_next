@@ -7,9 +7,9 @@
 //! `Aim` runs in the simulation tick (`Step`, before the scroll it feeds): its length and transformation are
 //! simulation state (the length is saved). RUST_PLAN 2.1: the C++'s operations in its order.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeTransformation, GeVector};
-use crate::ge::um::{um_arccos, um_arctan2};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation, GeVector};
+use ee_base::math::um::{um_arccos, um_arctan2};
 
 use crate::gfx::effects::EeGfxTexCoord;
 

@@ -7,7 +7,13 @@
 
 use std::cell::Cell;
 
-use crate::openformats::{fail, Failure};
+/// Why a conversion failed: the message (bytes, as names in it may not be UTF-8).
+#[derive(Debug, PartialEq, Eq)]
+pub struct Failure(pub Vec<u8>);
+
+pub fn fail<T>(message: &str) -> Result<T, Failure> {
+    Err(Failure(message.as_bytes().to_vec()))
+}
 
 const MAX_DIMENSIONS: u32 = 1 << 24;
 const ZFAST_BITS: usize = 9;

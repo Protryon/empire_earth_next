@@ -2,9 +2,9 @@
 //! Save.
 
 use super::*;
-use crate::ge::types::GeVector;
 use crate::gfx::effect_rising::effect3d;
 use crate::gfx::raster::{EeGfxModel, LogRaster};
+use ee_base::math::types::GeVector;
 
 #[derive(Default)]
 struct Host {

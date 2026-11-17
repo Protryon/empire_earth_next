@@ -4,8 +4,8 @@
 //! over its second half. Its age is the aged record's (`effect_state::aged_step`, `load_aged`, `save_aged`); the C++
 //! host places it (`spawn_point`), loads the media (`object_media`) and keeps `EEEffect2D`'s queue, Load and Save.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 use crate::gfx::effect_2d::Effect2DHost;
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts};

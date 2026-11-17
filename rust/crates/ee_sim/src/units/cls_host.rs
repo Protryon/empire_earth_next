@@ -11,7 +11,7 @@
 use std::ffi::c_void;
 use std::os::raw::c_long;
 
-use ee_render::ge::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 use crate::units::cls_air::{self as air, AirHost, ConditionHost, FlightHost};
 use crate::units::cls_building::{self as bld, BuildingHost};

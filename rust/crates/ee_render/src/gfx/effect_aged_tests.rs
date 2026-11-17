@@ -2,10 +2,10 @@
 //! rasterizer.
 
 use super::*;
-use crate::ge::types::{Ge3DPoint, GeVector};
 use crate::gfx::effect_rising::{effect3d, effect3d_file};
 use crate::gfx::effect_state::{EffectFile, EE_GFX_EFFECT_KIND_WATER_SPLASH};
 use crate::gfx::raster::{EeGfxModel, LogRaster};
+use ee_base::math::types::{Ge3DPoint, GeVector};
 
 #[derive(Default)]
 struct Host {

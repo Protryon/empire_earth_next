@@ -6,8 +6,8 @@
 //!
 //! This is the renderer's, not the simulation's.
 
-use crate::ge::types::Ge3DPoint;
 use crate::ge::viewport::GeViewport;
+use ee_base::math::types::Ge3DPoint;
 
 /// `kEERenderObject_F44136C`: the fade's depth, in world units in front of the near plane.
 pub(crate) const NEAR_FADE_DEPTH: f32 = 0.5;
@@ -106,7 +106,7 @@ pub fn near_fade(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ge::types::{GeRectangle, GeTransformation};
+    use ee_base::math::types::{GeRectangle, GeTransformation};
 
     fn viewport() -> GeViewport {
         // looking down +y from the origin

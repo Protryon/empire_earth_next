@@ -184,8 +184,8 @@ pub fn start<H: CalamityHost>(h: &mut H, s: &mut EeCalamityState, p: &EeCalamity
             let tile = h.call(
                 s,
                 &EeCalamityCall {
-                    index: ee_render::ge::um::floor(at[0]),
-                    index2: ee_render::ge::um::floor(at[1]),
+                    index: ee_base::math::um::floor(at[0]),
+                    index2: ee_base::math::um::floor(at[1]),
                     ..EeCalamityCall::new(EeCalamityOp::TileTerrain)
                 },
             );

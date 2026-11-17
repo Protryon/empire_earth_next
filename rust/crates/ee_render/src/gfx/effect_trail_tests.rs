@@ -1,12 +1,12 @@
 //! `effect_trail.rs`'s virtuals over a mock host and the logging rasterizer.
 
 use super::*;
-use crate::ge::types::GeTransformation;
 use crate::gfx::effect_2d::{effect2d, effect2d_file};
 use crate::gfx::effect_confirm::{EeGfxConfirmGoal, EeGfxConfirmUnit};
 use crate::gfx::effect_state::set_random_seed;
 use crate::gfx::effect_vent::EeGfxFrames;
 use crate::gfx::raster::{EeGfxModel, LogRaster};
+use ee_base::math::types::GeTransformation;
 
 #[derive(Default)]
 struct Host {

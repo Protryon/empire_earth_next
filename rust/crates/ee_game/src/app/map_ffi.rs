@@ -2,12 +2,12 @@
 //! mesh, the map's numbers). The mesh is ee_ge's object, read and edited here directly; the rest are host ops.
 #![allow(clippy::unnecessary_cast)]
 
-use crate::app::map::{self, EeAppMapDims, MapHost, Terrain};
+use ee_base::math::types::GeVector;
 use ee_render::ge::tmobj::{
     ee_ge_tm_is_space_tile, ee_ge_tm_is_valid, ee_ge_tm_point, ee_ge_tm_point_edit, ee_ge_tm_tile, ee_ge_tm_tile_edit,
     EeGeTerrainMesh,
 };
-use ee_render::ge::types::GeVector;
+use ee_sim::app::map::{self, EeAppMapDims, MapHost, Terrain};
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 

@@ -9,9 +9,9 @@
 // the C++'s literals, kept
 #![allow(clippy::excessive_precision)]
 
-use ee_render::ge::types::GeTransformation;
-use ee_render::ge::types::{Ge2DPoint, Ge3DPoint, GeVector};
-use ee_render::ge::um::lrintf;
+use ee_base::math::types::GeTransformation;
+use ee_base::math::types::{Ge2DPoint, Ge3DPoint, GeVector};
+use ee_base::math::um::lrintf;
 use std::os::raw::{c_long, c_ulong};
 
 /// The cells per side and in all.

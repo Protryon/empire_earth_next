@@ -6,8 +6,8 @@
 //! the hit at the end (7); a shell draws alpha blended in pass 5 as well. All on `EEE3DRust` like
 //! `effect_rising.rs`, the record reached through its raw pointer field by field as there.
 
-use crate::ge::types::{Ge3DLine, Ge3DPoint, GeVector};
-use crate::ge::um::{um_arccos, um_arctan2};
+use ee_base::math::types::{Ge3DLine, Ge3DPoint, GeVector};
+use ee_base::math::um::{um_arccos, um_arctan2};
 
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::gfx::effect_state::{identity, load_point, save_point, EeGfxEffectRecord, EffectFile};
@@ -91,7 +91,7 @@ pub(crate) unsafe fn shot<H: Effect3DHost, R: Raster>(
             t.m[0][3] = start.x;
             t.m[1][3] = start.y;
             t.m[2][3] = start.z;
-            t.set_orientation(crate::ge::transform::RotationOrder::Ypr, yaw, pitch, 0.0);
+            t.set_orientation(ee_base::math::transform::RotationOrder::Ypr, yaw, pitch, 0.0);
             unsafe { (*r).transformation = t };
             h.move_to();
             unsafe {

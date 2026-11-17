@@ -1,10 +1,10 @@
 //! `effect_volcano.rs`'s virtuals: the volcano over a mock host and the logging rasterizer.
 
 use super::*;
-use crate::ge::types::GeVector;
 use crate::gfx::effect_beam::EeGfxBeamUnit;
 use crate::gfx::effect_rising::{effect3d, effect3d_file};
 use crate::gfx::raster::{EeGfxModel, LogRaster};
+use ee_base::math::types::GeVector;
 
 #[derive(Default)]
 struct Host {

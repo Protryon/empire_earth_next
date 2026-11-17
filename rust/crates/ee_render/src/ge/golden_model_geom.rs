@@ -11,7 +11,7 @@ use crate::ge::model_geom::frame_is_sound;
 use crate::ge::model_geom::{
     center, frame_box, graphics_transform, radius, scale_removal, tag_point_order, vertex_normals,
 };
-use crate::ge::types::{Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
+use ee_base::math::types::{Ge3DPoint, GeBoundingBox, GeTransformation, GeVector};
 
 const GOLDEN: &str = include_str!("golden_model_geom.txt");
 

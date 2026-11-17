@@ -15,8 +15,8 @@
 //! The particles' and the emitter's steps, set-ups and files are simulation-side (the effects' random draws:
 //! RUST_PLAN 2.1); the queues and draws are the renderer's.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::gfx::effect_state::{

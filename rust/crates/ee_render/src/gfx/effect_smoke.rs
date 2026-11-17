@@ -9,7 +9,7 @@
 //! Step, Load and Save are simulation-side (the timers are saved, the puffs' random draws come from the effects'
 //! generator): RUST_PLAN 2.1.
 
-use crate::ge::types::{Ge3DPoint, GeVector};
+use ee_base::math::types::{Ge3DPoint, GeVector};
 
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::gfx::effect_state::{

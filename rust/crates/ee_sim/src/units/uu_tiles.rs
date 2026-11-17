@@ -6,7 +6,7 @@
 //!
 //! A tile is `[x, y]` (`U2DPoint<long>` / `EETileCoordinate`, one type in the port).
 
-use ee_render::ge::um::{floor, lrintf, um_arctan2};
+use ee_base::math::um::{floor, lrintf, um_arctan2};
 use std::f32::consts::{PI, TAU};
 
 /// cbindgen:ignore

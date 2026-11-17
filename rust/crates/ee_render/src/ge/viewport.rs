@@ -6,8 +6,8 @@
 //! The graphics thread, the camera control and the UI call this (not the simulation), but the C++'s `f32` order is
 //! kept throughout, so the frustum the visible terrain is cut with is the original's.
 
-use crate::ge::types::{Ge3DPlane, Ge3DPoint, GeRectangle, GeTransformation, GeVector};
-use crate::ge::um::{um_arctan, um_cos, um_sin, um_tan};
+use ee_base::math::types::{Ge3DPlane, Ge3DPoint, GeRectangle, GeTransformation, GeVector};
+use ee_base::math::um::{um_arctan, um_cos, um_sin, um_tan};
 
 /// `GEViewport` (sizeof 0x288), in the C++'s member order.
 #[repr(C)]

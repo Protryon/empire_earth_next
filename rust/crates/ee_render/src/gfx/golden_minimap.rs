@@ -7,9 +7,9 @@
 //! cases per viewport, and printed per case an FNV-1a 64 of its log. This test draws the same stream, runs each
 //! case through `minimap.rs` and compares the digests.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge2DPoint, GeRectangle, GeTransformation};
 use crate::ge::viewport::GeViewport;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge2DPoint, GeRectangle, GeTransformation};
 
 use crate::gfx::golden_mouse::{check, Log, Rng};
 use crate::gfx::minimap::*;

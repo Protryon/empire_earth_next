@@ -245,9 +245,9 @@ pub fn blink_copy_data(
     let fraction = time_left as f32 / f.blink_rate as f32;
     if f.is_blinking && state != STATE_PRESSED {
         let scale = if f.blink_phase == 1 {
-            ee_render::ge::um::um_sin((1.0 - fraction) * 1.570_796_4)
+            ee_base::math::um::um_sin((1.0 - fraction) * 1.570_796_4)
         } else {
-            ee_render::ge::um::um_sin(fraction * 1.570_796_4)
+            ee_base::math::um::um_sin(fraction * 1.570_796_4)
         };
         BlinkShow {
             background: scale * f.bg_opacity,

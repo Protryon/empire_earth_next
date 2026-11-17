@@ -9,6 +9,7 @@ pub mod error;
 pub mod fs;
 /// The crate ee_input before the restructure.
 pub mod input;
+pub mod math;
 /// The crate ee_panic before the restructure.
 /// cbindgen:ignore
 pub mod panic;
@@ -24,6 +25,7 @@ pub mod plat_sys;
 /// The crate ee_plat_ui before the restructure.
 /// cbindgen:ignore
 pub mod plat_ui;
+pub mod png;
 /// The crate ee_random before the restructure.
 /// cbindgen:ignore
 pub mod random;

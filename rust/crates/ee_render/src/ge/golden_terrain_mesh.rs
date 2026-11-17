@@ -17,7 +17,7 @@ use crate::ge::terrain::{edge_planes, GeTerrainView, GeTmPoint, GeTmRow};
 use crate::ge::terrain_mesh::{
     fog_of_war, load_body, load_size, save, vertex_normal, GeTerrainFog, GeTerrainLoad, GeTmTile,
 };
-use crate::ge::types::{Ge3DPlane, GeVector};
+use ee_base::math::types::{Ge3DPlane, GeVector};
 
 const GOLDEN: &str = include_str!("golden_terrain_mesh.txt");
 const SENTINEL: f32 = -12345.5;

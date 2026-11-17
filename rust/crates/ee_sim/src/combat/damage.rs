@@ -17,7 +17,7 @@ use crate::combat::world::{EeCombatWorldHost, WorldHost, EE_COMBAT_Q_DISTANCE_SQ
 use crate::combat::{
     ceil, damage, hit_factor, EeCombatDamageIn, EeCombatDamageOut, DAMAGE_DIRECT, DAMAGE_SPLASH, DAMAGE_TRAMPLE,
 };
-use ee_render::ge::um::lrintf;
+use ee_base::math::um::lrintf;
 
 // ---- the reads (world.rs's numbering goes on); the first three are the store's (never asked of the C++)
 

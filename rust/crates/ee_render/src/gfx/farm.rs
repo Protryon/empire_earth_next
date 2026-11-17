@@ -8,8 +8,8 @@
 //! points stored here and hands the ground model to the unit (`SetScaledModel`). RUST_PLAN 2.1: the C++'s
 //! operations in its order, wrapping integers.
 
-use crate::ge::types::{Ge3DPoint, GeVector};
-use crate::ge::um;
+use ee_base::math::types::{Ge3DPoint, GeVector};
+use ee_base::math::um;
 
 use crate::gfx::mesh::Mesh;
 

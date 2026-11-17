@@ -13,9 +13,9 @@
 //!   lit, in its colour, with the command texture for its state (state 3's animated); fog and z state restored.
 //! - Not saved: Load, Save and RepairPointers return 0 (not even the base's).
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeTransformation};
-use crate::ge::um;
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::um;
 
 use crate::gfx::effect_2d::Effect2DHost;
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts};

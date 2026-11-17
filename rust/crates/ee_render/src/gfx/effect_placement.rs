@@ -8,8 +8,8 @@
 
 use std::ffi::c_void;
 
-use crate::ge::types::Ge3DPoint;
-use crate::ge::um::{um_arctan2, um_cos};
+use ee_base::math::types::Ge3DPoint;
+use ee_base::math::um::{um_arctan2, um_cos};
 
 use crate::gfx::effect_state::{self, EeGfxEffectRecord};
 

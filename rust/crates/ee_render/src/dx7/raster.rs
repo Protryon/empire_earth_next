@@ -11,7 +11,7 @@
 
 use core::ffi::c_ulong;
 
-use crate::ge::types::GeTransformation;
+use ee_base::math::types::GeTransformation;
 
 use crate::dx7::api::*;
 use crate::dx7::screen::VideoMode;

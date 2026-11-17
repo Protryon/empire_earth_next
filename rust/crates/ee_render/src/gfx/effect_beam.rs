@@ -4,8 +4,8 @@
 //! turns on, placing the linked effect half way. On `EEE3DRust` like `effect_rising.rs`; its state is the shot
 //! part's (`effect_shot.rs`: the line, the draw location, the scale, and the beam's end, middle and flags).
 
-use crate::ge::types::Ge3DPoint;
-use crate::ge::um::{um_arccos, um_arctan2};
+use ee_base::math::types::Ge3DPoint;
+use ee_base::math::um::{um_arccos, um_arctan2};
 
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::gfx::effect_shot::{load_line, save_line};
@@ -50,7 +50,7 @@ pub(crate) unsafe fn beam<H: Effect3DHost, R: Raster>(
             unsafe {
                 let s = &mut (*r).shot;
                 s.end.z = g.param1 + s.end.z;
-                s.path.direction = crate::ge::types::GeVector { x: 1.0, y: 0.0, z: 0.0 };
+                s.path.direction = ee_base::math::types::GeVector { x: 1.0, y: 0.0, z: 0.0 };
                 s.active = false;
             }
             0
@@ -134,7 +134,7 @@ unsafe fn aim<H: Effect3DHost>(r: *mut EeGfxEffectRecord, h: &mut H) {
     let start = h.beam_start();
     // SAFETY: the function's contract
     let end = unsafe { (*r).shot.end };
-    let mut d = crate::ge::types::GeVector { x: end.x - start.x, y: end.y - start.y, z: end.z - start.z };
+    let mut d = ee_base::math::types::GeVector { x: end.x - start.x, y: end.y - start.y, z: end.z - start.z };
     unsafe {
         (*r).shot.path.start = start;
         (*r).shot.path.direction = d;
@@ -146,7 +146,7 @@ unsafe fn aim<H: Effect3DHost>(r: *mut EeGfxEffectRecord, h: &mut H) {
     t.m[0][3] = d.x * 0.25 + start.x;
     t.m[1][3] = d.y * 0.25 + start.y;
     t.m[2][3] = d.z * 0.25 + start.z;
-    t.set_orientation(crate::ge::transform::RotationOrder::Ypr, yaw, pitch, 0.0);
+    t.set_orientation(ee_base::math::transform::RotationOrder::Ypr, yaw, pitch, 0.0);
     unsafe { (*r).transformation = t };
     h.move_to();
     unsafe {

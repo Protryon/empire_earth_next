@@ -4,7 +4,7 @@
 #![allow(clippy::unnecessary_cast)]
 use std::collections::BTreeMap;
 
-use ee_render::ge::types::GeTransformation;
+use ee_base::math::types::GeTransformation;
 
 use crate::units::unit_class_fields::EeUnitsUnitClassFields;
 use crate::units::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};

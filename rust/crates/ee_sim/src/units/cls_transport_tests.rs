@@ -459,7 +459,7 @@ fn the_best_shore_tile_scans_from_the_last_tile_down() {
     let mut out = [0, 0];
     let d = best_shore_tile(&mut m, ship, [5, 2], [8, 5], [8, 5], false, &mut out);
     assert_eq!(out, [6, 4]);
-    assert_eq!(d, ee_render::ge::um::sqrt(5.0));
+    assert_eq!(d, ee_base::math::um::sqrt(5.0));
     // none: -10000 and 0
     m.shores.clear();
     let mut out = [0, 0];

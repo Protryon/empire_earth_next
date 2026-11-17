@@ -2,8 +2,8 @@
 //! and `DotProduct` (re-stated for the Rust algorithms; the C++ inlines stay C++), and the cube-face quantization
 //! (`GetQuantizedVersion`, the table `QuantizedVectorArray` builds).
 
-use crate::ge::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeVector};
-use crate::ge::um::{lrintf, sqrt};
+use crate::math::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeVector};
+use crate::math::um::{lrintf, sqrt};
 
 /// Rows and columns of the quantized-direction table (`mVectors[41][6 * 41]`).
 pub const QUANT_ROWS: usize = 41;

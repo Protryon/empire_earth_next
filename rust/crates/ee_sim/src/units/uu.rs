@@ -22,9 +22,9 @@ use crate::units::unit_fields::{bool_byte, EeUnitsComplexUnitFields, EeUnitsRtsU
 use crate::units::uu_tiles::{
     jitter_heading, square_ring, sub_tile_steps, turn_direction, Tile, RING_ORDER_12, RING_ORDER_9,
 };
-use ee_render::ge::transform::RotationOrder;
-use ee_render::ge::types::{Ge2DPoint, Ge3DPoint, GeTransformation};
-use ee_render::ge::um::{floor, um_arctan2};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge2DPoint, Ge3DPoint, GeTransformation};
+use ee_base::math::um::{floor, um_arctan2};
 
 /// The unit types, categories, families, movement bits and terrains the bodies test (the C++ enums' values).
 /// cbindgen:ignore

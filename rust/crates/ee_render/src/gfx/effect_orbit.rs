@@ -17,10 +17,9 @@
 //! The record is reached through its raw pointer field by field: the C++ reads it during the host calls (the region
 //! move), so no Rust reference to it lives across one.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeVector};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeVector};
 
-use crate::ge::um::lrintf;
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::gfx::effect_shot::{load_line, save_line};
 use crate::gfx::effect_state::{identity, random, EeGfxEffectRecord, EffectFile};
@@ -28,6 +27,7 @@ use crate::gfx::lighting::EeGfxLighting;
 use crate::gfx::raster::{
     EeGfxModel, Raster, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA, ZBUFFER_TEST_AND_WRITE, ZBUFFER_TEST_ONLY,
 };
+use ee_base::math::um::lrintf;
 
 /// `kEffect3DLinearProjectile`.
 pub const EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE: i32 = 0x25;

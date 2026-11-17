@@ -6,7 +6,7 @@
 //! The C++ keeps the decal's placement helpers (`EEPlaceImpactDecal`, `EEPlaceTrackDecal`), its constructor's
 //! terrain walk, and the particle's pool.
 
-use crate::ge::types::Ge3DPoint;
+use ee_base::math::types::Ge3DPoint;
 
 use crate::gfx::effect_2d::Effect2DHost;
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts};

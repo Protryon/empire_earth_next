@@ -3,7 +3,7 @@
 
 #![cfg(not(test))]
 
-use ee_render::ge::types::{Ge3DPlane, Ge3DPoint, GeOrientation, GeTransformation};
+use ee_base::math::types::{Ge3DPlane, Ge3DPoint, GeOrientation, GeTransformation};
 
 use crate::units::pm::{EeUnitsPmClass, EeUnitsPmStats, EeUnitsPmTick, EeUnitsPmTile, EeUnitsPmUnit, PmHost};
 
@@ -423,7 +423,7 @@ impl PmHost for Game {
         unsafe { ee_units_pm_host_edge_planes(f.as_mut_ptr()) };
         let plane = |i: usize| Ge3DPlane {
             point: point([f[i * 6], f[i * 6 + 1], f[i * 6 + 2]]),
-            normal: ee_render::ge::types::GeVector { x: f[i * 6 + 3], y: f[i * 6 + 4], z: f[i * 6 + 5] },
+            normal: ee_base::math::types::GeVector { x: f[i * 6 + 3], y: f[i * 6 + 4], z: f[i * 6 + 5] },
         };
         [plane(0), plane(1), plane(2), plane(3)]
     }

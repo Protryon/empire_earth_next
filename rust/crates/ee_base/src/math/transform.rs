@@ -2,8 +2,8 @@
 //! and `GEQuaternion` (`GEQuaternion.cpp`). The header inlines `Apply(point)` and `Apply(vector)` stay C++; they are
 //! re-stated here, in the C++'s summation order, for the Rust algorithms.
 
-use crate::ge::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeOrientation, GeQuaternion, GeTransformation, GeVector};
-use crate::ge::um::{sqrt, um_arccos, um_arctan2, um_cos, um_sin, HALF_PI, PI, TWO_PI};
+use crate::math::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeOrientation, GeQuaternion, GeTransformation, GeVector};
+use crate::math::um::{sqrt, um_arccos, um_arctan2, um_cos, um_sin, HALF_PI, PI, TWO_PI};
 
 /// The orientation `SetOrientation*` variants (the order the three rotations are applied in).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

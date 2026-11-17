@@ -9,7 +9,7 @@
 //! its log. This test draws the same stream, runs each case through `select.rs` and the C++ glue rewritten here and
 //! compares the digests.
 
-use crate::ge::types::{Ge2DPoint, GeRectangle};
+use ee_base::math::types::{Ge2DPoint, GeRectangle};
 
 use crate::gfx::golden_mouse::{check, Log, Rng};
 use crate::gfx::select::*;

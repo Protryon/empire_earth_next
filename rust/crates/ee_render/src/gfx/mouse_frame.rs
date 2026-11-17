@@ -11,8 +11,8 @@
 
 use std::ffi::c_void;
 
-use crate::ge::types::{Ge2DPoint, GeRectangle};
-use crate::ge::um::floor;
+use ee_base::math::types::{Ge2DPoint, GeRectangle};
+use ee_base::math::um::floor;
 
 /// `RTSMouse`'s ten pointers and `EEMouse`'s fourteen.
 pub const EE_GFX_MOUSE_POINTERS: usize = 24;

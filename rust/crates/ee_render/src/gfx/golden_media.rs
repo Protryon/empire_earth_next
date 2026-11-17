@@ -8,10 +8,10 @@
 //! texture coordinate, colour and opacity, the triangles and the material's ranges). This test rebuilds the model
 //! lines from `models.rs` and the unit's colours and compares the digests.
 
-use crate::ge::types::Ge3DPoint;
 use crate::gfx::effects::{EeGfxColor, EeGfxTexCoord};
 use crate::gfx::golden_mouse::{digest, Log};
 use crate::gfx::models::{area_effect_ring, selection_model};
+use ee_base::math::types::Ge3DPoint;
 
 const GOLDEN: &str = include_str!("golden_media.txt");
 

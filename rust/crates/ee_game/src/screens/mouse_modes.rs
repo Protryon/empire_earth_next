@@ -16,8 +16,8 @@ use core::cell::Cell;
 
 use crate::screens::hud_ctl::{EeScreensPoint, Rec};
 use crate::screens::main_form::*;
-use ee_render::ge::types::Ge2DPoint;
-use ee_render::ge::um::floor;
+use ee_base::math::types::Ge2DPoint;
+use ee_base::math::um::floor;
 
 // ---- the mouse modes' host ops (after main_form.rs' 151)
 

@@ -8,8 +8,8 @@
 //! Step, Load, Save and the set-up's placing are simulation-side (the drops' random draws come from the effects'
 //! generator: RUST_PLAN 2.1); the models, the queue and the draws are the renderer's.
 
-use crate::ge::transform::RotationOrder;
-use crate::ge::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 use crate::gfx::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::gfx::effect_state::{identity, EeGfxEffectRecord, EffectFile};

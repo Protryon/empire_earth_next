@@ -8,8 +8,8 @@
 use std::ffi::c_long;
 
 use crate::ge::io::{CppIo, EeGeFieldIo, FieldIo, OK};
-use crate::ge::types::{Ge3DPoint, GeTransformation};
 use crate::ge::viewport::GeViewport;
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 /// `GETransformation()` and `MakeIdentity()`: the identity.
 ///

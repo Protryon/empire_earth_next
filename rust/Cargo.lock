@@ -251,7 +251,6 @@ dependencies = [
  "cc",
  "ee_base",
  "ee_data",
- "ee_render",
  "libc",
  "mlua-sys",
 ]
@@ -269,7 +268,6 @@ name = "ee_won_gui"
 version = "0.1.0"
 dependencies = [
  "ee_base",
- "ee_render",
  "ee_won_net",
 ]
 

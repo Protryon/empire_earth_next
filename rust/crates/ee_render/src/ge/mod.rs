@@ -28,8 +28,6 @@
     clippy::needless_range_loop
 )]
 
-/// cbindgen:ignore
-pub mod bbox;
 pub mod bitmap;
 pub mod bmpobj;
 pub mod cppobj;
@@ -53,11 +51,7 @@ mod golden_terrain;
 mod golden_terrain_mesh;
 #[cfg(test)]
 mod golden_visible;
-/// cbindgen:ignore
-pub mod hull;
 pub mod io;
-/// cbindgen:ignore
-pub mod line;
 pub mod manager_ffi;
 /// cbindgen:ignore
 pub mod managers;
@@ -71,8 +65,6 @@ pub mod physical;
 pub mod physical_walk;
 /// cbindgen:ignore
 pub mod pixel;
-/// cbindgen:ignore
-pub mod point;
 pub mod prim;
 pub mod rastobj;
 pub mod smallobj;
@@ -88,14 +80,7 @@ pub mod texobj_tex;
 pub mod texture;
 pub mod texture_ffi;
 pub mod tmobj;
-/// cbindgen:ignore
-pub mod transform;
-pub mod types;
-/// cbindgen:ignore
-pub mod um;
 pub mod values;
-/// cbindgen:ignore
-pub mod vector;
 pub mod vertarr;
 pub mod viewport;
 pub mod visible_ffi;

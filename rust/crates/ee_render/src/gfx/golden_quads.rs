@@ -8,8 +8,8 @@
 //! and the C++ glue rewritten here (the counts, the flushes' rasterizer calls, the alpha references) and compares
 //! the digests.
 
-use crate::ge::types::Ge3DPoint;
 use crate::ge::viewport::GeViewport;
+use ee_base::math::types::Ge3DPoint;
 
 use crate::gfx::effects::*;
 use crate::gfx::golden_mouse::{check, Log, Rng};

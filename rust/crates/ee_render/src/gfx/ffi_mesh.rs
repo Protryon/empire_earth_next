@@ -5,7 +5,7 @@
 
 use std::ffi::c_void;
 
-use crate::ge::types::{Ge3DPoint, GeVector};
+use ee_base::math::types::{Ge3DPoint, GeVector};
 
 use crate::gfx::beam::{self, EeGfxBeamVertex};
 use crate::gfx::effect_store::EffectStore;

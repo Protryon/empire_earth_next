@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "ee_ge.h"
+#include "ee_png.h"
 
 /// The calls the lookups make on the path and its files. `obj` the path or a file (`FSFileSpec*`).
 enum class EeOfFileOp : uint32_t {
@@ -95,9 +96,6 @@ enum class EeOfSurfOp : uint32_t {
   /// `jpeg_finish_compress(obj)`, `jpeg_destroy_compress(obj)`; the handle freed.
   JpegEncEnd,
 };
-
-/// A texture's frames and the size of the surfaces they go into (frame 0's, or its "ee:surface" text).
-struct EeOfTexture;
 
 /// A byte buffer owned by Rust; free it with `ee_of_bytes_free`.
 struct EeOfBytes {

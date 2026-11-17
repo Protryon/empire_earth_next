@@ -1,8 +1,8 @@
 //! `GE2DPoint` and `GE3DPoint` (`GE2DPoint.cpp`, `GE3DPoint.cpp`): distances, the side test, rotation about a
 //! centre, and the interpolation along a segment.
 
-use crate::ge::types::{Ge2DPoint, Ge3DLine, Ge3DPoint, GeVector};
-use crate::ge::um::{sqrt, um_arctan2, um_cos, HALF_PI};
+use crate::math::types::{Ge2DPoint, Ge3DLine, Ge3DPoint, GeVector};
+use crate::math::um::{sqrt, um_arctan2, um_cos, HALF_PI};
 
 impl Ge2DPoint {
     pub const fn new(x: f32, y: f32) -> Self {

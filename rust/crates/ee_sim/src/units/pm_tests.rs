@@ -6,9 +6,9 @@
 
 use std::collections::BTreeMap;
 
-use ee_render::ge::transform::RotationOrder;
-use ee_render::ge::types::{Ge3DPlane, Ge3DPoint, GeOrientation, GeTransformation, GeVector};
-use ee_render::ge::um::{um_arctan2, um_cos};
+use ee_base::math::transform::RotationOrder;
+use ee_base::math::types::{Ge3DPlane, Ge3DPoint, GeOrientation, GeTransformation, GeVector};
+use ee_base::math::um::{um_arctan2, um_cos};
 
 use crate::units::physics::{self, EeUnitsSpeedIn};
 use crate::units::pm::*;

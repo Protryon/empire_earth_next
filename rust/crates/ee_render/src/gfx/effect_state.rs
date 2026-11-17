@@ -14,8 +14,8 @@
 
 use std::sync::Mutex;
 
-use crate::ge::types::{Ge3DPoint, GeTransformation};
-use crate::ge::um;
+use ee_base::math::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::um;
 use ee_base::random::URandom;
 
 use crate::gfx::effect_icon::EeGfxEffectIcon;
@@ -900,7 +900,7 @@ pub fn smoke_set_up<H: SmokeHost>(r: &EeGfxEffectRecord, s: &EeGfxSmokeSetUp, ho
         let b = random();
         let distance = (1.0 - a * b) * radius;
         let yaw = random() * 6.2831855;
-        turn.set_orientation(crate::ge::transform::RotationOrder::Ypr, yaw, 0.0, 0.0);
+        turn.set_orientation(ee_base::math::transform::RotationOrder::Ypr, yaw, 0.0, 0.0);
         offset.x = distance;
         let rotated = turn.apply_point(offset);
         let start = Ge3DPoint { x: rotated.x + center.x, y: rotated.y + center.y, z: center.z };
@@ -1762,7 +1762,7 @@ pub fn emitter_burst<H: EmitterHost>(
             let speed = spread(b.param6, b.param5);
             let mut turn = *transformation;
             turn.revolve(yaw, pitch, 0.0);
-            let d = turn.apply_vector(crate::ge::types::GeVector { x: 0.0, y: 0.0, z: 1.0 });
+            let d = turn.apply_vector(ee_base::math::types::GeVector { x: 0.0, y: 0.0, z: 1.0 });
             let direction = Ge3DPoint { x: speed * d.x, y: speed * d.y, z: speed * d.z };
             result = host.line(p, direction);
             i -= 1;
@@ -2505,7 +2505,7 @@ mod tests {
             assert_eq!(*s, Ge3DPoint { x, y, z: 1.0 });
             let mut turn = identity();
             turn.revolve(yaw, pitch, 0.0);
-            let v = turn.apply_vector(crate::ge::types::GeVector { x: 0.0, y: 0.0, z: 1.0 });
+            let v = turn.apply_vector(ee_base::math::types::GeVector { x: 0.0, y: 0.0, z: 1.0 });
             assert_eq!(*d, Ge3DPoint { x: speed * v.x, y: speed * v.y, z: speed * v.z });
         }
         assert_eq!(r.emitter.emit_time, (0.5 - check.generate()) * 100.0 + 300.0);
@@ -2728,7 +2728,7 @@ mod tests {
             let a = check.generate();
             let b = check.generate();
             let dist = (1.0 - a * b) * 2.0;
-            turn.set_orientation(crate::ge::transform::RotationOrder::Ypr, check.generate() * 6.2831855, 0.0, 0.0);
+            turn.set_orientation(ee_base::math::transform::RotationOrder::Ypr, check.generate() * 6.2831855, 0.0, 0.0);
             let rot = turn.apply_point(Ge3DPoint { x: dist, y: 0.0, z: 0.0 });
             assert_eq!(*s, Ge3DPoint { x: rot.x + 4.0, y: rot.y, z: 1.5 });
             assert_eq!(*d, Ge3DPoint { x: rot.x * 3.0, y: rot.y * 3.0, z: 0.0 });

@@ -1,13 +1,13 @@
 //! `effect_weather.rs`'s virtuals: a rain and a snow over a mock map and the logging rasterizer.
 
 use super::*;
-use crate::ge::types::GeVector;
 use crate::gfx::effect_beam::EeGfxBeamUnit;
 use crate::gfx::effect_rising::{effect3d, effect3d_file};
 use crate::gfx::effect_state::{random_seed, set_random_seed, RANDOM_TESTS};
 use crate::gfx::effect_storm::EeGfxStormDrop;
 use crate::gfx::ffi_effect::{ee_gfx_effect_record_free, ee_gfx_effect_record_new, ee_gfx_storm_new};
 use crate::gfx::raster::{EeGfxModel, LogRaster};
+use ee_base::math::types::GeVector;
 
 /// A map of land tiles 0..20 square at height x + y (water where x is 7); steps go one tile in x towards the target.
 #[derive(Default)]
