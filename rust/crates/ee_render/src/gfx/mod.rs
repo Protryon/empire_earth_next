@@ -82,6 +82,8 @@ mod golden_center;
 #[cfg(test)]
 mod golden_farm;
 #[cfg(test)]
+mod golden_fill;
+#[cfg(test)]
 mod golden_lighting;
 #[cfg(test)]
 mod golden_media;
