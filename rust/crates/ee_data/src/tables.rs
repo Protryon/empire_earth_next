@@ -1218,6 +1218,7 @@ pub struct EeDataButtonCell {
 }
 
 /// `EEButtonObject::LoadTexture`'s cell offset: the cell's 41-texel step over the texture's full width (height).
+#[allow(clippy::unnecessary_cast)] // `c_ulong` is u64 on LP64: the shift counts are u32
 pub fn button_cell_offset(column: c_long, row: c_long, t: &EeDataButtonTexture) -> [f32; 2] {
     [
         column.wrapping_mul(41) as f32 / t.width.wrapping_shl(t.drop as u32) as f32,
@@ -1227,15 +1228,13 @@ pub fn button_cell_offset(column: c_long, row: c_long, t: &EeDataButtonTexture) 
 
 /// `EEButtonObject::SetFaceBitmap` (`inset`: one texel in) and `SetPressedBitmap`: a 40-texel cell on a texture
 /// 256 or more wide at full size, else the whole texture less a texel; the bitmap scaled to the rectangle.
+#[allow(clippy::unnecessary_cast)] // `c_ulong` is u64 on LP64: the shift counts are u32
 pub fn button_cell(t: &EeDataButtonTexture, cell: [f32; 2], inset: bool, rect: [f32; 2]) -> EeDataButtonCell {
     let width = t.width.wrapping_shl(t.drop as u32) as f32;
     let (u, v) = if width >= 256.0 {
         (40.0 / width, 40.0 / t.surface_height.wrapping_shl(t.drop as u32) as f32)
     } else {
-        (
-            t.width.wrapping_sub(1) as f32 / t.width as f32,
-            t.height.wrapping_sub(1) as f32 / t.height as f32,
-        )
+        (t.width.wrapping_sub(1) as f32 / t.width as f32, t.height.wrapping_sub(1) as f32 / t.height as f32)
     };
     let (left, top) = if inset {
         let texel = 1.0 / t.width as f32;
@@ -1649,7 +1648,8 @@ pub fn new_music_record(file: &[u8], reverb: [f32; 4]) -> DbMusic {
     let mut r: DbMusic = unsafe { std::mem::zeroed() };
     let kept = file.len().min(r.mFileName.len() - 1);
     r.mFileName[..kept].copy_from_slice(&file[..kept]);
-    (r.mReverbGain, r.mReverbHighFreqRTRatio, r.mReverbMix, r.mReverbTime) = (reverb[0], reverb[1], reverb[2], reverb[3]);
+    (r.mReverbGain, r.mReverbHighFreqRTRatio, r.mReverbMix, r.mReverbTime) =
+        (reverb[0], reverb[1], reverb[2], reverb[3]);
     r.mInEpoch = [1; 14];
     r
 }
@@ -1862,7 +1862,6 @@ pub struct DbGraphicObject {
     pub mNumMipLevelsToDrop: i32,
     pub mMaxMipLevelsToDrop: i32,
     pub mCreateMipMaps: u8,
-
 }
 
 const _: () = assert!(core::mem::size_of::<DbGraphicObject>() == 716);
@@ -2012,10 +2011,7 @@ fn graphic_states(r: &DbGraphicObject) -> [GraphicState; EE_DATA_GRAPHIC_STATES]
 
 /// The record loader's copy (`EELoadGraphicObjectRecord`): the record's fields over `fields` (an object's
 /// constructor values) and the sounds each state names.
-pub fn graphic_object_fields(
-    r: &DbGraphicObject,
-    fields: &mut EeDataGraphicObjectFields,
-) -> EeDataGraphicObjectSounds {
+pub fn graphic_object_fields(r: &DbGraphicObject, fields: &mut EeDataGraphicObjectFields) -> EeDataGraphicObjectSounds {
     let mut sounds = EeDataGraphicObjectSounds {
         sound1: [EE_DATA_NO_SOUND; EE_DATA_GRAPHIC_STATES],
         sound2: [EE_DATA_NO_SOUND; EE_DATA_GRAPHIC_STATES],
@@ -2572,7 +2568,10 @@ mod tests_round3 {
         let mut r: DbSound = zeroed();
         (r.mMaxInstances, r.mCategory, r.mUnusedPriority, r.mLooping, r.mVolume) = (4, 2, 9, 3, 80);
         let f = sound_fields(&r);
-        assert_eq!(f, EeDataSoundFields { mVolume: 80.0 * 0.01, mMaxInstances: 4, mCategory: 2, mL24: 9, mLooping: true });
+        assert_eq!(
+            f,
+            EeDataSoundFields { mVolume: 80.0 * 0.01, mMaxInstances: 4, mCategory: 2, mL24: 9, mLooping: true }
+        );
     }
 
     #[test]
@@ -2634,7 +2633,10 @@ mod tests_round3 {
         assert_eq!(f.mFrameCounts[4], (3 as c_ulong).wrapping_sub(5).wrapping_add(1));
         assert!(f.mIsSpeedScaled[4] && f.mSharesFrames[2] && !f.mSharesFrames[1]);
         let d = graphic_object_default();
-        assert_eq!((d.mMediaIndex, d.mKind, d.mOpacity, d.mIsDrawn, d.mCreateMipMaps), (-1, c_ulong::MAX, 0.01, true, true));
+        assert_eq!(
+            (d.mMediaIndex, d.mKind, d.mOpacity, d.mIsDrawn, d.mCreateMipMaps),
+            (-1, c_ulong::MAX, 0.01, true, true)
+        );
     }
 
     #[test]

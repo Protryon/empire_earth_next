@@ -1617,7 +1617,11 @@ pub unsafe extern "C" fn ee_rmap_script_generator(
 ) -> bool {
     let slice = |p: *const c_char, n: usize| {
         // SAFETY: the caller's guarantee
-        if n == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(p as *const u8, n) } }
+        if n == 0 {
+            &[][..]
+        } else {
+            unsafe { std::slice::from_raw_parts(p as *const u8, n) }
+        }
     };
     let Some(g) = script_generator(slice(file, file_length), slice(text, text_length)) else { return false };
     let g = Box::new(g);
