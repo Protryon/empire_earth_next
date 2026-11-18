@@ -7,6 +7,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// `kAICheatAll`
+constexpr static const long CHEAT_ALL = 127;
+
 /// `EECPUnitsGet(player)`: the player's state (made when missing).
 constexpr static const int32_t EE_AI_UNITS_HOST_STATE = 1;
 
@@ -1075,6 +1078,41 @@ bool ee_ai_military_class(uint64_t class_);
 
 /// `EECPCombatManager::IsMilitaryType(type)`: `gUnitClassTable[type]`'s category is military (false: no class).
 bool ee_ai_military_type(unsigned long unit_type);
+
+/// Reads the switches from the environment (once; later calls do nothing). `find` gives a personality's position
+/// in the rules (-1: unknown), `out` writes a line to the game's debug output.
+///
+/// # Safety
+/// `find` and `out` are callable with a NUL-terminated string.
+void ee_ai_switches_init(long (*find)(const char*),
+                         void (*out)(const char*));
+
+/// `EECPExperiment`: the player `id`'s experiments name `name`.
+///
+/// # Safety
+/// `name` is a NUL-terminated string.
+bool ee_ai_switch_experiment(uint64_t id, const char *name);
+
+/// `EECPExperimentNames`: the player's set as ",a,b," ("-": none or empty); the text lives as long as the game.
+const char *ee_ai_switch_experiment_names(uint64_t id);
+
+/// `EE_AI_DEMAND`'s value for the player: 1, 0, or -1 when not set.
+int32_t ee_ai_switch_demand(uint64_t id);
+
+/// `EE_AI_PERSONALITY`'s position for the player (-1: not set).
+long ee_ai_switch_personality(uint64_t id);
+
+/// `EE_AI_CHEATS`'s set for the player (`kAICheatAll` when not set).
+long ee_ai_switch_cheats(uint64_t id);
+
+/// `EECPCheatNames`: the cheats of `bits` by name, "a,b" ("none": none) into `out` (room for `cap` bytes,
+/// NUL-terminated) -> the length.
+///
+/// # Safety
+/// `out` has room for `cap` bytes (at least 1).
+size_t ee_ai_switch_cheat_names(long bits,
+                                char *out,
+                                size_t cap);
 
 /// `EE_AI_UNITS_HOST_FACTS`'s record before the C++ fills it: no goal, no gathers (-1), no stance (-1).
 ///

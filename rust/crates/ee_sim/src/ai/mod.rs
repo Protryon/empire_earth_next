@@ -32,6 +32,7 @@ pub mod military;
 pub mod names;
 pub mod next_save;
 pub mod seat;
+pub mod switches;
 pub mod units_bind;
 pub mod units_lua;
 pub mod units_save;
