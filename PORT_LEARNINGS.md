@@ -31078,3 +31078,43 @@ Asked: 2,000 net C++ lines; done: -1,992. The round's commits are listed in docs
   (calamity 3/4, next 2/4); `sim_editor: PASS (14448 lines)`; gates.sh through slot.py: `RESULT PASS tour`,
   `RESULT PASS ai-game outcome time-cap PT 13058` units [4, 40, 40] alive [2, 3] engines classic_lua x 2,
   `RESULT PASS lan-game PT host=2799 joiner=2794`, `GATES PASS`.
+
+## The units' lane, round 1: UpdateHidden whole in Rust; the units' hosts' plain reads on the world views (ee_sim units hidden.rs, update_views.rs; combat query_views.rs; branch rust-units1, 2026-11-18)
+
+Asked: 4,000 net C++ lines from `src/Empire Earth/Units` (~29k); done: -546 (six commits; docs/progress/units.md has
+the table). Short by far: see "Why short".
+
+- **The measure.** The biggest classes (EEComplexUnit 3,720 lines, EEUnitClass 3,207, EEUGRust 2,031, EEUnitHost
+  1,906) are bags of small methods, each a sequence of world calls (effects, sounds, the path manager, the goal
+  objects, the mini map). `tools/dead_members.py report` finds nothing left here (round 2 of the LLE lane reached a
+  fixpoint). What the views make removable is the host cases that only read a member: the update / ActionChanged
+  host's read switch (44 of its 75 cases), the combat query host (16), the goal host's record fills and plain reads,
+  the unit host's plain externs (9), the active group's and the citizens' unit fills.
+- **UpdateHidden whole** (`EEUnit::` and `EEComplexUnit::`, 170 lines): Rust (units/hidden.rs) over a `HiddenHost`
+  trait, the views' implementation writing `mHiddenFlags` in place through the record's pointer (lane P's pattern for
+  the visibility words), a mock map in the tests (6 tests: the tile order, the phases, the cinematic paths, the
+  part chains). The C++ virtual is one call; `EEComplexUnit`'s override is gone (the Rust body picks by the object
+  kind). The renderer (ee_render fill.rs `unit_opacity`) calls it directly; its `update_hidden` host callback and
+  C++ function are gone. **Only a tour exercises the renderer's call**; `EEUnit::MoveTo`'s call is in every game.
+- **The physics in the views**: layout `physics_pointer` (`&gPhysics`) and `physics_saved` (the base of
+  `EeUnitsPhysicsSaved` in `EEPhysics`); `WorldView::physics`, `game_time`, `tick_ms` (0 before the physics exists).
+- **A host wrapper, not a rewrite of the bodies.** The decisions keep their host traits (the mocks in their tests
+  are unchanged); the FFI side wraps the C++ table (`ViewUpdateHost`, `EeCombatQueryHost::read` asking
+  `query_views::query_read` first, `OpHost`'s methods, `view_of` in host.rs) and answers the plain codes from the
+  views, falling back to the C++ for the rest. The update host's table gained the class (`class`, cbindgen names it
+  `class_` in C): `theClass` is the sequence's class, not always read as the unit's (`mIsMedic`, `mAttack`,
+  `IsLandBuilding`, `mRottingTime` are the host class's; the unit's class answers the others, as the C++ did).
+- **Lessons.** (1) The views' guard: a query read with no registered layout returns None, so the cargo tests'
+  fake contexts keep reaching their mocks. (2) `c_long` reads need `as` casts that clippy calls needless on
+  Windows: `#![allow(clippy::unnecessary_cast)]` per file, as view.rs does. (3) Deleting a `switch` case by script:
+  the last case's end is the switch's own `}`; one deletion took it (caught by reading the diff, not by the build).
+  (4) combat/reads.rs is one of the few CRLF Rust files: a text-mode rewrite turned it LF (restored; check
+  `git ls-files --eol` before writing a Rust file with Python). (5) Never edit Rust or C++ while the chain's build
+  runs: one restart was needed after an edit landed mid-build.
+- **Verified** (on the merge of origin/rust 9a277da24): both builds 0/0; the Rust gate PASS (4,578 tests); the
+  oracle seeds 2-7 identical to the main checkout's ref; the twelve capture profiles at seeds 2-3 PASS against the goldens (oracle 212, late 214, space 210, calamity 222, missile 22, effects 6, scenario 43, app 24, units 175, groups 2, placement 4, transport 185 digests equal); the plain saveload 18/18 identical; the matrix `saveload expect: PASS` (calamity 11/18, next 3/18 as before); `SCENARIO CHECK PASS: 27/27`; `sim_editor: PASS (14448 lines)`; the test-profile build 0/0; gates.sh through its slot: `RESULT PASS tour` (F3 input check ok), `RESULT PASS ai-game outcome time-cap PT 12565` units [4, 38, 39] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2706 joiner=2714`, `GATES PASS`; a tour with `--box-select --orders` (slot.py): `BOX SELECT PASS: 4 steps`, `ORDERS PASS: ran gather, repair, repair-queued, move` (patrol, attack-ground skipped: no button, no unit), `RESULT PASS tour`.
+- **Why short.** The plain reads are two to three lines a case; the rest of each host is world calls that move only
+  with the classes they call (the effects, the path manager, the goals' own objects). The next whole moves need a
+  layout member first (`mWaypoints`, `mMine`, `mHomeBase`, `mCitizenBuildQueue`, the class's effect and projectile
+  pointers, the physical model's frame and scale, `mInitialContactLocation`) or a host per method (FindContacts,
+  StepAside, FindPath, ProduceUnit), the pattern of hidden.rs.
