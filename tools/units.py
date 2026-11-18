@@ -2,7 +2,7 @@
 
 Units come from link/<module>/units.txt (in link order), or every .cpp of the module's source folder when the module
 has no unit list; each compiles with its module's flags (ee.MODULE_FLAGS) or its own `// UNIT-FLAGS:` line. Library
-code built from source (LIB_UNITS: dmusic for the engine, miniaudio for the mixer)
+code built from source (LIB_UNITS: miniaudio for the mixer, pl_mpeg for the movies, Lua for the computer players)
 is compiled with the modules that link it.
 """
 import pathlib
@@ -28,9 +28,7 @@ PLATFORM_UNITS = [
 UI_TRAMPOLINES = ["Low-Level Engine/User Interface/UITrampolines.cpp"]
 # the Graphics Engine's value types' out-of-line members, fifteen units folded into one (R4.3 part 16)
 GE_UNITS = ["Low-Level Engine/Graphics Engine/GEValues.cpp"]
-# the general MIDI instruments of the music, built in (EE.sf2 next to the unit)
-MUSIC_UNITS = ["Low-Level Engine/Sound Engine/SEGeneralMIDI.c"]
-EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS + MUSIC_UNITS,
+EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                "exe": ["Empire Earth/Database/EEDataTextFile.cpp", "Empire Earth/Database/EERules.cpp",
                        # the EE lobby glue's shells and hosts (R6 WONLobby round 6; ee_won eecolor.rs, eeglue.rs): the
                        # game's code, built as the GameCode units it replaced were
@@ -191,12 +189,8 @@ EXTRA_UNITS["won"] = _won_extra_units()
 LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c", "pl_mpeg": "ThirdParty/pl_mpeg/pl_mpeg.c",
              # Lua 5.4 for the computer player's strategy scripts (docs/AI_LUA_PLAN.md §3)
              "lua": "ThirdParty/lua/ee_lua.c"}
-# dmusic (DirectMusic reimplementation, src/ThirdParty/dmusic): every source (the POSIX thread file is empty on Windows)
-_DMUSIC = sorted(p for p in (ROOT / "src" / "ThirdParty" / "dmusic").rglob("*.c"))
-LIB_UNITS.update({"dmusic-" + p.relative_to(ROOT / "src" / "ThirdParty" / "dmusic").with_suffix("").as_posix()
-                  .replace("/", "-"): p.relative_to(ROOT / "src").as_posix() for p in _DMUSIC})
-LIB_MEMBERS = {"mixer": ["miniaudio"], "dx7hrtnl": ["pl_mpeg"], "exe": ["lua"], "lle": sorted(
-    n for n in LIB_UNITS if n.startswith("dmusic-"))}
+# (the music is Rust: rust/crates/ee_audio/src/dmusic, the DirectMusic port on rustysynth)
+LIB_MEMBERS = {"mixer": ["miniaudio"], "dx7hrtnl": ["pl_mpeg"], "exe": ["lua"]}
 LANGUAGE_RC = pathlib.PurePosixPath("Empire Earth/Language/Language.rc")
 EXE_RC = ROOT / "src" / "Empire Earth" / "EE-AOC.rc"
 

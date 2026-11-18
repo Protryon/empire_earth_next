@@ -63,9 +63,6 @@ def include_paths(src=None):
     # the built-in fonts (#embed in src/Platform/Common/PlatFontData.c; tools/fetch_posix.py fonts)
     if src is not None and "Platform" in pathlib.Path(src).parts and "Common" in pathlib.Path(src).parts:
         flags.append(f"/clang:--embed-dir={TOOLCHAIN / 'fonts'}")
-    # the built-in general MIDI set (#embed in src/Low-Level Engine/Sound Engine/SEGeneralMIDI.c; EE.sf2 next to it)
-    if src is not None and pathlib.Path(src).name == "SEGeneralMIDI.c":
-        flags.append(f"/clang:--embed-dir={ROOT / 'src' / 'Low-Level Engine' / 'Sound Engine'}")
     # the window layer's SDL3 headers (tools/xbuild.py sdl3), for its implementation only
     if src is not None and "Platform" in pathlib.Path(src).parts and "SDL" in pathlib.Path(src).parts:
         wgpu.append(str(ee.sdl3_dir() / "include"))
@@ -75,8 +72,8 @@ def include_paths(src=None):
         lib = THIRD_PARTY / pathlib.Path(src).resolve().relative_to(THIRD_PARTY).parts[0]
         if (lib / "include_dirs.txt").exists():
             own = [str(lib / d.strip()) for d in (lib / "include_dirs.txt").read_text().splitlines() if d.strip()]
-    # public headers of vendored libraries that live with their sources
-    public = [str(THIRD_PARTY / "dmusic" / "include")]
+    # public headers of vendored libraries that live with their sources (none now: dmusic's went with the library)
+    public = []
     # include/winsdk last: headers the Windows SDK dropped (the 2001 iphlpapi.h)
     inc = os.pathsep.join([*own, str(incdir), *public, *wgpu, *([str(dx7)] if use_dx7 else []),
                            str(msvc / "include"), str(sdk / "ucrt"), str(sdk / "um"), str(sdk / "shared"),
