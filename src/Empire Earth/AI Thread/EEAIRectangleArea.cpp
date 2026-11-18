@@ -53,44 +53,7 @@
 // of its tiles (the lowest id on a tie; 0 when none)
 unsigned short EEAIRectangleArea::UpdateContinents()
 {
-    std::map<unsigned short, long> theCounts;
-    std::map<unsigned short, long>::iterator theCount;
-    EEMap* theMap = gWorld.mMap;
-    unsigned short theResult;
-    this->num_land_tiles = 0;
-    this->num_water_tiles = 0;
-    this->num_space_tiles = 0;
-    for (long theX = this->rect.left; theX <= this->rect.right; theX++) {
-        for (long theY = this->rect.top; theY <= this->rect.bottom; theY++) {
-            if (!theMap->GetTile(theX, theY))
-                continue;
-            unsigned short theID = gContinentManager.GetContinentID(theX, theY);
-            EEAIContinent* theContinent = theID ? gContinentManager.GetContinentByID(theID) : NULL;
-            if (!theContinent)
-                continue;
-            if (theContinent->GetCategory() == kContinentCategoryLand)
-                this->num_land_tiles++;
-            else if (theContinent->GetCategory() == kContinentCategoryWater)
-                this->num_water_tiles++;
-            else if (theContinent->GetCategory() == kContinentCategorySpace)
-                this->num_space_tiles++;
-            theCount = theCounts.find((long)theContinent->GetID());
-            if (theCount != theCounts.end())
-                theCount->second++;
-            else
-                theCounts.insert(std::make_pair(theContinent->GetID(), 1L));
-        }
-    }
-    theResult = 0;
-    long theMost = 0;   // the continent covering most of it (was: the highest id present)
-    for (theCount = theCounts.begin(); theCount != theCounts.end(); ++theCount) {
-        if (theCount->second > theMost) {
-            theMost = theCount->second;
-            theResult = theCount->first;
-        }
-    }
-    this->continent_id = theResult;
-    return theResult;
+    return ee_astar_cm_rect_update_continents(&gContinentManager.mRecord, (uint64_t)(uintptr_t)this);   // Rust: cm_build.rs
 }
 
 // NEAR: the original returns EEAIArea::GetRandomPoint() straight into the hidden result; ours copies a temporary (the

@@ -13,6 +13,9 @@ constexpr static const int32_t KIND_AREA = 54;
 /// The tables by id (`EeAStarCmTable`'s numbers).
 constexpr static const size_t EE_ASTAR_CM_TABLES = 8;
 
+/// tile (`i0`, `i1`)'s `GetResourceWeight` (10 per wood unit)
+constexpr static const int32_t EE_ASTAR_CM_RESOURCE_WEIGHT = 40;
+
 /// `h0` an `EEAIArea*`, `i0`/`i1` a tile: `Contains` (1/0)
 constexpr static const int32_t EE_ASTAR_CM_CONTAINS = 1;
 
@@ -1817,6 +1820,24 @@ size_t ee_astar_cm_adjacent_ids(const EeAStarCmRecord *r,
                                 bool with_self,
                                 uint16_t *out);
 
+/// `CreateContinentGrid`'s store (the grid freed).
+///
+/// # Safety
+/// As `apply_continent_grid`; `r` the manager's record.
+void ee_astar_cm_apply_continent_grid(EeAStarCmRecord *r, EeContinentGrid *grid);
+
+/// `UpdateTileValues`.
+///
+/// # Safety
+/// `r` the manager's record; the layout and host registered.
+void ee_astar_cm_update_tile_values(EeAStarCmRecord *r, bool water);
+
+/// `EEAIRectangleArea::UpdateContinents`.
+///
+/// # Safety
+/// As `rect_update_continents`; `r` the manager's record.
+uint16_t ee_astar_cm_rect_update_continents(const EeAStarCmRecord *r, uint64_t area);
+
 /// The layout of the records in their objects (once; later calls replace it).
 ///
 /// # Safety
@@ -1905,6 +1926,18 @@ uint64_t ee_astar_cm_find_continent(const EeAStarCmRecord *r, long x, long y);
 /// # Safety
 /// As `ee_astar_cm_find_continent`.
 uint64_t ee_astar_cm_find_sub_sector(const EeAStarCmRecord *r, long x, long y);
+
+/// `ApplySubSectorLinks`.
+///
+/// # Safety
+/// As `apply_links`; `r` the manager's record.
+void ee_astar_cm_apply_links(const EeAStarCmRecord *r, EeSubSectorLinks *links);
+
+/// `RemoveSubSectors`.
+///
+/// # Safety
+/// As `remove_sub_sectors`; `r` the manager's record.
+void ee_astar_cm_remove_sub_sectors(EeAStarCmRecord *r, uint64_t sector);
 
 /// The tile lookups: `kind` 0 choke point, 1 forest, 2 hill, 3 path area, 4 continent (`GetContinentAt`).
 ///

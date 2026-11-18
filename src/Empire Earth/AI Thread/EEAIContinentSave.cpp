@@ -170,6 +170,7 @@ int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)
     }
     case EE_ASTAR_CM_AREA_REMOVE_TILE:
         return ((EEAIArea*)(uintptr_t)io->h[0])->RemoveTile(U2DPoint<long>((long)io->i[0], (long)io->i[1]));
+    case EE_ASTAR_CM_RESOURCE_WEIGHT: return gContinentManager.GetResourceWeight((long)io->i[0], (long)io->i[1]);
     case EE_ASTAR_CM_NEW: return (int64_t)(uintptr_t)NewObject((long)io->i[0]);
     case EE_ASTAR_CM_DELETE: DeleteObject((long)io->i[0], (void*)(uintptr_t)io->h[0]); return 0;
     }

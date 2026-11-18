@@ -194,8 +194,7 @@ public:
     // (EEAIContinentManager.cpp; provisional names)
     void AddSectorTiles(std::vector<U2DPoint<long> >& ioTiles);
     void GetPathAreas(EEMap* inMap, EEAIPathArea**& ioAreas);
-    void LinkSubSectors(EEAIPathSubSector* inSubSector, const unsigned short* inID, bool inAdd,
-        const std::pair<EEAIPathSubSector*, EEAIPathSubSector*>& inLink);   // 0x1f6b1 (ret 0x14; the table argument went)
+    // 0x1f6b1 LinkSubSectors: Rust (cm_links.rs link_sub_sectors, over the records)
     void FreeGrids();                       // New (port): the four tile grids freed
     void FreePathAreaID(unsigned short inID) { ee_astar_cm_add_free_ids(&this->mRecord, EeAStarCmFree::PathAreas, &inID, 1, false); }
     void Build(EEMap* inMap);
