@@ -37,9 +37,9 @@
 #include "ee/EECalamityManager.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEContagionFunctor.h"
-#include "ee/EEGlobalCalamityClass.h"
-#include "ee/EELocationCalamityClass.h"
-#include "ee/EEUnitCalamityClass.h"
+#include "ee/EEMouse.h"
+#include "ee/EEPhysics.h"
+#include "ee/EEUnitPicker.h"
 
 static_assert(sizeof(EECalamityData) == sizeof(EeCalamityData), "the db record as ee_tech reads it");
 
@@ -56,10 +56,18 @@ long EECalamityClass::GetCost()
     return this->mCost;
 }
 
-// Returns -1: no default target
+// Returns the id of the unit under the mouse for a unit class, -1 if none (and for the other classes)
 long EECalamityClass::GetDefaultTarget(GE3DPoint&, unsigned long, unsigned long, bool)
 {
-    return -1;
+    long theUnitID = -1;
+    if (this->GetTargetKind() != EE_CALAMITY_TARGET_UNIT)
+        return theUnitID;
+    EEUnit* theUnit = gUnitPicker.PickUnit(gMouse->mPosition, 0);
+    if (theUnit != NULL) {
+        theUnitID = theUnit->mUnitID;
+        theUnit->Dereference();
+    }
+    return theUnitID;
 }
 
 // Returns the unit set the calamity affects
@@ -236,10 +244,51 @@ void EECalamityClass::UpdateSound(EECalamity* inCalamity, EESoundObject* inSound
 long EECalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
                                 bool inCheck, EEUnit* inTargetUnit)
 {
-    // the rules are Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    // the rules are Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h), by the class's base
+    long theKind = this->GetTargetKind();
+    EeCalamityCastMode theMode = theKind == EE_CALAMITY_TARGET_GLOBAL     ? EeCalamityCastMode::Global
+                                 : theKind == EE_CALAMITY_TARGET_LOCATION ? EeCalamityCastMode::Location
+                                 : this->mClassEnum == kCalamitySpecialAttack ? EeCalamityCastMode::SpecialAttack
+                                                                              : EeCalamityCastMode::Unit;
     EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
     return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
-                             EECalamityCanCastAt(this, EeCalamityCastMode::Base, inUnit, inX, inY, inCheck, inTargetUnit));
+                             EECalamityCanCastAt(this, theMode, inUnit, inX, inY, inCheck, inTargetUnit));
+}
+
+// A location class's IsValidLocation: the shared rule over the class's radius, water flag, map area, space terrain
+// and placed unit class (ee_tech calamity_cast.rs, calamity_class.rs cast_fields)
+bool EECalamityClass::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
+{
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    long theUnitClass = ee_calamity_class_cast_fields(this, &theCast, kTerrainSpace);
+    return EECalamityValidLocation(this, theCast, inUnit, theUnitClass);
+}
+
+// A unit class's IsValidTarget: the fire's and the plague's functor decides (CanInfect), the other classes' the shared
+// rule (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+bool EECalamityClass::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
+{
+    if (ee_calamity_class_targets_by_functor((int32_t)this->mClassEnum))
+        return this->mFunctor->CanInfect(inTargetUnit);
+    return EECalamityValidTarget(this, inUnit, inTargetUnit);
+}
+
+// Picks a random point on the map between the minimum and maximum radius around the centre, at the tile's height
+void EECalamityClass::GetRandomLocation(const GE3DPoint& inCenter, GE3DPoint& outLocation)
+{
+    EEMapTile* theTile;
+    do {
+        float theAngle = gPhysics->mRandom.Generate() * 6.2831855f - 3.1415927f;
+        float theFraction = gPhysics->mRandom.Generate();
+        float theCos = UMCos(theAngle);
+        float theSin = UMCos(1.5707964f - theAngle);
+        float theDistance = (1.0f - theFraction) * this->mMinimumRadius + theFraction * this->mMaximumRadius;
+        outLocation.SetX(theCos * theDistance);
+        outLocation.SetY(theSin * theDistance);
+        outLocation += inCenter;
+        theTile = ::gWorld.mMap->GetTile(UMFloor(outLocation.GetX()), UMFloor(outLocation.GetY()));
+    } while (theTile == NULL);
+    outLocation.SetZ(theTile->mHeight);
 }
 
 // (the base's: every class's own, by tables keyed by its enum)

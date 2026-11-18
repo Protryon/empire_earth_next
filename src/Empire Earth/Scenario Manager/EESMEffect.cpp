@@ -346,10 +346,8 @@ void EESMStoreAI(EEComputerPlayer* inPlayer, const EeScenarioAiWrite& inWrite)
 
 #include "ee/EEHerd.h"
 
-#include "ee/EELocationCalamityClass.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEWUnitsOffMapInfo.h"
-#include "ee/EEUnitCalamityClass.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
@@ -845,12 +843,14 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
         inRun->mCalamity = EECalamityManager::GetInstance()->GetCalamityClass((EECalamityEnum)a[0]);
         return inRun->mCalamity != NULL ? (int64_t)inRun->mCalamity->GetTargetKind() : -1;
     case EE_SCENARIO_WORLD_CAL_VALID_TARGET: {
-        EEUnitCalamityClass* theClass = dynamic_cast<EEUnitCalamityClass*>(inRun->mCalamity);
-        return theClass != NULL && theClass->IsValidTarget(SMEComplex(a[0]), SMEUnit(a[1]));
+        EECalamityClass* theClass = inRun->mCalamity;
+        return theClass != NULL && theClass->GetTargetKind() == EE_CALAMITY_TARGET_UNIT &&
+               theClass->IsValidTarget(SMEComplex(a[0]), SMEUnit(a[1]));
     }
     case EE_SCENARIO_WORLD_CAL_VALID_LOCATION: {
-        EELocationCalamityClass* theClass = dynamic_cast<EELocationCalamityClass*>(inRun->mCalamity);
-        return theClass != NULL && theClass->IsValidLocation(SMEComplex(a[0]), (long)a[1], (long)a[2]);
+        EECalamityClass* theClass = inRun->mCalamity;
+        return theClass != NULL && theClass->GetTargetKind() == EE_CALAMITY_TARGET_LOCATION &&
+               theClass->IsValidLocation(SMEComplex(a[0]), (long)a[1], (long)a[2]);
     }
     case EE_SCENARIO_WORLD_CAST: {
         EEComplexUnit* theUnit = SMEComplex(a[0]);

@@ -40,8 +40,6 @@ acb75 adcd9 Empire Earth/Calamities/EECalamity.cpp
 adcd9 adf97 Empire Earth/Calamities/EECalamityClass.cpp
 adf97 aebb7 Empire Earth/Calamities/EECalamityManager.cpp
 b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
-b6f21 b6fb1 Empire Earth/Calamities/EELocationCalamityClass.cpp
-b70cc b71b5 Empire Earth/Calamities/EEUnitCalamityClass.cpp
 0b71b5 0b8cda Empire Earth/Communications/EEClient.cpp
 0b8cda 0ca90f Empire Earth/Communications/EEMessage.cpp
 0ca90f 0cd4ee Empire Earth/Communications/EEServer.cpp

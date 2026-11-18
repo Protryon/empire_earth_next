@@ -20,8 +20,6 @@
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityUpdate.h"
-#include "ee/EELocationCalamityClass.h"
-#include "ee/EEUnitCalamityClass.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffect.h"
 #include "ee/EEAreaUtilities.h"
@@ -82,10 +80,10 @@ void CastCall(void* inContext, EeCalamityState*, const EeCalamityCall* inCall, E
         break;
     }
     case EeCalamityOp::ValidLocation:
-        r.ok = static_cast<EELocationCalamityClass*>(theHost.mClass)->IsValidLocation(theUnit, theX, theY);
+        r.ok = theHost.mClass->IsValidLocation(theUnit, theX, theY);
         break;
     case EeCalamityOp::ValidTarget:
-        r.ok = static_cast<EEUnitCalamityClass*>(theHost.mClass)->IsValidTarget(theUnit, theHost.mTarget);
+        r.ok = theHost.mClass->IsValidTarget(theUnit, theHost.mTarget);
         break;
     case EeCalamityOp::TargetView: {
         EEUnit* theTarget = theHost.mTargetUnit;
