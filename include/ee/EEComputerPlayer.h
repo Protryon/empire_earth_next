@@ -7,6 +7,7 @@
 #define EE_EECOMPUTERPLAYER_H
 
 #include "ee/EEUnitHandle.h"
+#include "rust/sim/cp.h"             // EeCpFields (the plain members), the bodies over them
 
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
 class EECPCombatManager;                    // ee/EECPCombatManager.h
@@ -15,7 +16,10 @@ class EECPResourceCenter;                   // ee/EECPResourceCenter.h
 class EEAIFOUnitSelectionScreener;          // ee/EECPUnitSelector.h
 class EEAIFOUnitsToKillScoringBase;         // ee/EEAIFOUnitsToKillScoringBase.h
 
-class EEComputerPlayer : public EEPlayer {
+// port (lane B of the AI Thread): the plain members (the tuning values, timers and flags Init sets and Load and Save
+// read and write) are the Rust record EeCpFields (ee_sim::cp::fields), their bodies Rust's (cp::init, cp::save,
+// cp::player); the containers, the managers and the engines' states stay C++ members
+class EEComputerPlayer : public EEPlayer, public EeCpFields {
 public:
     static const UString sData;             // 0x4e5c70 "EEComputerPlayer-Data" (chain 0x2ce2e; guard 0x4e5c68 bit 1) (provisional name)
     static const UString sCPUOnlyFlag;      // 0x4e5c58 "EEComputerPlayer-CPU Only Flag" (chain 0x2ce71; bit 2) (provisional name)
@@ -43,13 +47,13 @@ public:
     virtual bool CanAfford(EETechnology* inTechnology, long inUnitType, long inCount);   // +0x80 0x2f033 (epochs: always)
     virtual void DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit);  // +0x84 0x2f16d
     // per-difficulty (mDifficulty 0/1/2) scales: a member in percent times 0.01, else 1 (provisional names)
-    float GetAttackDelayModifier();         // 0x2eafc (+0xd40/+0xd44)
-    float GetAttackFrequencyModifier();     // 0x2eb26 (+0xd24/+0xd28)
-    float GetUnitCostModifier();            // 0x2eb7c (+0xd80/+0xd84/+0xbec)
-    float GetDMAttackFrequencyModifier();   // 0x2eba8 (+0xcac/+0xcb0/+0xcb4)
-    float GetDMInitialAttackModifier();     // 0x2ebd9 (+0xcb8/+0xcbc/+0xcc0)
-    float GetPopLimitAdjustment();          // 0x2ec74 (+0xe2c/+0xe34/+0xe30)
-    unsigned long GetIslandExpansionTimer();  // 0x2ed01 (+0xf08/+0xf0c/+0xf10, else 60000)
+    float GetAttackDelayModifier() { return ee_cp_attack_delay_modifier(this); }   // 0x2eafc
+    float GetAttackFrequencyModifier() { return ee_cp_attack_frequency_modifier(this); }   // 0x2eb26
+    float GetUnitCostModifier() { return ee_cp_unit_cost_modifier(this); }   // 0x2eb7c
+    float GetDMAttackFrequencyModifier() { return ee_cp_dm_attack_frequency_modifier(this); }   // 0x2eba8
+    float GetDMInitialAttackModifier() { return ee_cp_dm_initial_attack_modifier(this); }   // 0x2ebd9
+    float GetPopLimitAdjustment() { return ee_cp_pop_limit_adjustment(this); }   // 0x2ec74
+    unsigned long GetIslandExpansionTimer() { return ee_cp_island_expansion_timer(this); }   // 0x2ed01 (else 60000)
     virtual void Clear();                   // +0x1c 0x3cf73 (resets the centers, the exploration and combat managers)
     virtual void EpochMediaLoaded(long inEpoch);  // +0x88 0x3c992
     virtual void FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile);  // same EEPlayer slot, 0x3ce2e
@@ -81,13 +85,12 @@ public:
     virtual void WonderStarted(EEComplexUnit* inUnit);  // +0xd4 0x3f7ba
     void SetActive(bool inActive);          // 0x3ec42 (sets mActive, telling the unit manager) (provisional name)
     void SetCitizenPercentage(float inValue);  // 0x3ec89 (mCitizenPercentage, mIsCitizenPercentageSet) (provisional name)
-    void SetDMAttackFrequencyModifier(float inValue);  // 0x3ec9d (mDMAttackFrequencyModifierEasy/mDMAttackFrequencyModifierMedium/mDMAttackFrequencyModifierHard by difficulty) (provisional name)
-    void SetDMInitialAttackModifier(float inValue);  // 0x3ecd6 (mDMInitialAttackModifierEasy/mDMInitialAttackModifierMedium/mDMInitialAttackModifierHard) (provisional name)
-    void SetIslandExpansionTimer(unsigned long inValue);  // 0x3ed0f (mIslandExpansionTimerEasy/mIslandExpansionTimerMedium/mIslandExpansionTimerHard) (provisional name)
+    // 0x3ec9d, 0x3ecd6, 0x3ed0f: the difficulty's slot (provisional names)
+    void SetDMAttackFrequencyModifier(float inValue) { ee_cp_set_by_difficulty(this, 0, inValue, 0); }
+    void SetDMInitialAttackModifier(float inValue) { ee_cp_set_by_difficulty(this, 1, inValue, 0); }
+    void SetIslandExpansionTimer(unsigned long inValue) { ee_cp_set_by_difficulty(this, 2, 0.0f, inValue); }
     virtual void RefreshResourceCenters();  // +0xdc 0x3ce56 (the computer player's own slot; EEUserInterface 0x276b97)
     void Update(unsigned long inTime);      // 0x3f175 (gArtificialIntelligence's round robin; provisional name)
-    // 0x2eca0: 1.0, or +0xe44/+0xe48 times a constant depending on +0xbd8 (0 or 2) (provisional name)
-    float GetEpochFrequencyModifier();      // 0x2ec0a (EECPCivilizationManager::SetNextEpochAdvanceTime scales by it) (provisional name)
     // inline (SetNextEpochAdvanceTime 0x70b43 loads both into registers before its fild spills) (provisional name)
     // inline (its COMDAT 0x68849 sits in EECPBuildManager.cpp's range; the civilization manager calls it out of line)
     // Provisional name
@@ -129,7 +132,6 @@ public:
     void SetFavoriteSeaType(unsigned long inValue) { this->mFavoriteSeaType = inValue; }
     void SetFavoriteAirType(unsigned long inValue) { this->mFavoriteAirType = inValue; }
     bool IsDeathmatch();                    // 0x2ec52 (gWorld.mGameOptions.mResources == 4 and a byte clear) (provisional name)
-    bool IsIslandExpansionDue();            // 0x2ed4b: the map flag 1/4 and gPhysics time >= mNextIslandExpansionTime (EECPResourceManager::AssignGatherers) (provisional name)
     void WorkOutPopulation();               // 0x2d1c7 (EECPDefenseCommander 0x78148) (provisional name)
     // 0x2e851 (ret 8): deletes inScorer.mCount own units by its scores (EECPDefenseCommander) (provisional name)
     // 0x2db6d (ret 8): fills ioMap with the classes inScreener accepts (EECPUnitSelector::GatherCandidates)
@@ -156,304 +158,66 @@ public:
     EECPPlacement* mPlacement;
     std::vector<std::pair<U2DPoint<long>, unsigned long> > mDangerZones;   // (tile, game ms) EECPReflexes.cpp
     // (+0xbc8..+0xbd0: the diplomacy, exploration and player interaction managers, deleted in stage 5)
-    unsigned long mLBD4;   // (unsigned: Load)
     unsigned long GetDifficulty() const { return this->mDifficulty; }
-    unsigned long mDifficulty;                       // +0xbd8 0 or 2 (GetResearchFrequencyModifier; CheckBuildingCounts picks +0xe14/+0xe24/+0xe1c by it) (provisional name; unsigned: Load)
-    unsigned long mFavoriteLandType;
-    unsigned long mFavoriteSeaType;
-    unsigned long mFavoriteAirType;
-    unsigned long mFavoriteSpaceType;
-    float mUnitCostMedium;
-    float mComputerAggression;              // +0xbf0 (fld at 0x47346f)
     float GetCarrierChance() const { return this->mCarrierChance; }
-    float mCarrierChance;
     float GetCarrierPopPercentage() const { return this->mCarrierPopPercentage; }
-    float mCarrierPopPercentage;
-    float mAttackFrequencyPerEpoch;
-    float mSpecializedUnitPercentage;
-    float mRPSSelectionNonIslands;
-    float mRPSSelectionIslands;
-    float mSpecializedUnitChance;
-    float mTownGuardPercentage;             // +0xc10 (EECPDefenseCommander 0x783e7: the aid chance)
-    float mCitizenPercentage;               // +0xc14 (fld at 0x4734d2)
     float GetDMEarlyAttackScale() const { return this->mDMEarlyAttackScale; }
-    float mDMEarlyAttackScale;
-    float mEpochCatchUpEasy;
-    float mEpochCatchUpHard;
-    float mEpochCatchUpDeathmatch;
-    float mGuardContinentPercentage;        // +0xc28
-    float mGuardChokepointAirPercentage;    // +0xc2c
-    float mGuardChokepointPercentage;       // +0xc30
-    float mGuardHighGroundPercentage;       // +0xc34
-    float mFC38;
-    float mFC3C;
-    float mFC40;
-    float mFC44;
-    float mFC48;
-    float mFC4C;
-    float mFC50;
-    float mFC54;
-    float mFC58;
-    float mGuardTownPercentage;             // +0xc5c
-    float mGuardTownLandPercentage;         // +0xc60
-    float mGuardWaterwayPercentage;
     float GetHeroChance() const { return this->mHeroChance; }
-    float mHeroChance;
     float GetHeroPopPercentage() const { return this->mHeroPopPercentage; }
-    float mHeroPopPercentage;
-    float mDefensiveUnitCap;                // +0xc70 (EECPDefenseCommander 0x799fa: the defense share)
-    float mSiegeWeaponPercentage;  // (float: Load/Init)
-    float mMaxAttackResponseRange;  // (float: Load/Init)
-    float mMilitaryPopPercentage;  // (float: Load/Init)
-    float mAidThreatThreshold;              // +0xc80 (EECPDefenseCommander 0x785cb: the allies' threat limit)
     float GetPriestPopPercentage() const { return this->mPriestPopPercentage; }
-    float mPriestPopPercentage;  // (float: Load/Init)
     float GetPriestChance() const { return this->mPriestChance; }
-    float mPriestChance;  // (float: Load/Init)
     float GetProphetPopPercentage() const { return this->mProphetPopPercentage; }
-    float mProphetPopPercentage;  // (float: Load/Init)
     float GetProphetChance() const { return this->mProphetChance; }
-    float mProphetChance;  // (float: Load/Init)
-    float mEnableInterval;  // (float: Load/Init)
-    float mWorkerCountWeight;               // +0xc98 (EECPIntelligencePlayerFile::Update: the worker-count weight) (provisional name)
-    float mMilitaryCountWeight;             // +0xc9c (Update: the military-count weight) (provisional name)
-    float mNavalUnitWeight;  // (float: Load/Init)
     float GetAirUnitWeight() const { return this->mAirUnitWeight; }
-    float mAirUnitWeight;  // (float: Load/Init)
-    float mTowerSpacing;                    // +0xca8 (float: EECPResourceCenter::FindBuildSite 0x48bee3 flds it)
-    float mDMAttackFrequencyModifierEasy;  // (float: Load/Init)
-    float mDMAttackFrequencyModifierMedium;  // (float: Load/Init)
-    float mDMAttackFrequencyModifierHard;  // (float: Load/Init)
-    float mDMInitialAttackModifierEasy;  // (float: Load/Init)
-    float mDMInitialAttackModifierMedium;  // (float: Load/Init)
-    float mDMInitialAttackModifierHard;  // (float: Load/Init)
-    long mLCC4;
-    long mLCC8;
-    long mLCCC;
-    long mLCD0;
-    long mLCD4;
-    long mSeed;                             // +0xcd8 (EECPPlayerInteractionManager's ctor 0x895de copies it)
-    long mShipsToMaintainDMEasy;
-    long mShipsToMaintainDMMedium;
-    long mShipsToMaintainDMHard;
-    long mShipsToMaintainEasy;
-    long mShipsToMaintainMedium;
-    long mShipsToMaintainHard;
-    long mShipMaintenanceTimer;
-    long mAssistAlliesDelayEasy;            // +0xcf8 (EECPMilitaryAidPackage 0x84e42: the aid delay against a human, by mDifficulty) (provisional name)
-    long mAssistAlliesDelayMedium;          // +0xcfc
-    long mAssistAlliesDelayHard;            // +0xd00
-    long mPopulationCap;
     long GetCarrierMaxPerGroup() const { return this->mCarrierMaxPerGroup; }
-    long mCarrierMaxPerGroup;
     long GetNumAirExplorers() const { return this->mNumAirExplorers; }
-    long mNumAirExplorers;                  // +0xd0c (EECPExplorationManager::Update: the wanted explorers of kind 2 when +0xf55)
-    long mAttackEnemyChance;
-    long mAttackToClaimResourceChance;
-    long mAttackForRevengeChance;
     long GetAttackGroupSizeMax() const { return this->mAttackGroupSizeMax; }
-    long mAttackGroupSizeMax;
     long GetAttackGroupSizeMin() const { return this->mAttackGroupSizeMin; }
-    long mAttackGroupSizeMin;
-    long mAttackFrequencyModifierEasy;
-    long mAttackFrequencyModifierHard;
-    long mAttackFrequencyCeiling;
-    long mAttackFrequencyFloor;
-    long mAttackFrequencyMax;
-    long mAttackFrequencyMin;
-    long mInitialAttackDelayPerEpoch;
-    long mAttackDelayModifierEasy;
-    long mAttackDelayModifierHard;
-    long mLD48;
-    long mLD4C;
-    long mLD50;
-    long mLD54;
-    long mAttackDelayCeiling;
-    long mAttackDelayFloor;
-    long mInitialAttackDelayMax;            // +0xd60 (EECPDefenseCommander 0x78866: minutes before the citizens' raid)
-    long mInitialAttackDelayMin;
-    long mAttackGroupModifierEasy;
-    long mAttackGroupModifierMedium;
-    long mAttackGroupModifierHard;
-    long mBonzaiAttackLevel;                // +0xd74 (EECPDefenseCommander 0x78866: the building count limit)
-    long mLD78;
-    long mLD7C;
-    long mUnitCostReductionEasy;
-    long mUnitCostReductionHard;
     long GetDefenseGroupSizeMax() const { return this->mDefenseGroupSizeMax; }
-    long mDefenseGroupSizeMax;
     long GetDefenseGroupSizeMin() const { return this->mDefenseGroupSizeMin; }
-    long mDefenseGroupSizeMin;
-    long mEpochFrequencyMax;
-    long mEpochFrequencyMin;
-    long mEpochFrequencyModifierEasy;
-    long mEpochFrequencyModifierHard;
-    long mEpochCatchUpMin;
-    long mEpochCatchUpMax;
-    long mExpansionTimerEasy;
-    long mExpansionTimerMedium;
-    long mExpansionTimerHard;
     long GetHeroMaxPerGroup() const { return this->mHeroMaxPerGroup; }
-    long mHeroMaxPerGroup;
-    long mNumImprovedAttributes;
-    long mNumImprovedUnitTypes;
-    long mReplenishDelayMax;
-    long mReplenishDelayMin;
     long GetNumLandExplorers() const { return this->mNumLandExplorers; }
-    long mNumLandExplorers;
-    long mNumChokePointsToGuard;
     long GetAntiAirMax() const { return this->mAntiAirMax; }
-    long mAntiAirMax;
     long GetAirportMax() const { return this->mAirportMax; }
-    long mAirportMax;
     long GetArcheryRangeMax() const { return this->mArcheryRangeMax; }
-    long mArcheryRangeMax;
     long GetBarracksMax() const { return this->mBarracksMax; }
-    long mBarracksMax;
     long GetDockMax() const { return this->mDockMax; }
-    long mDockMax;
     long GetGranaryMax() const { return this->mGranaryMax; }
-    long mGranaryMax;
     long GetHospitalMax() const { return this->mHospitalMax; }
-    long mHospitalMax;
     long GetCyberFactoryMax() const { return this->mCyberFactoryMax; }
-    long mCyberFactoryMax;
     long GetCyberLabMax() const { return this->mCyberLabMax; }
-    long mCyberLabMax;
     long GetNavalYardMax() const { return this->mNavalYardMax; }
-    long mNavalYardMax;
     long GetSiegeFactoryMax() const { return this->mSiegeFactoryMax; }
-    long mSiegeFactoryMax;
     long GetSpaceDockMax() const { return this->mSpaceDockMax; }
-    long mSpaceDockMax;
     long GetStableMax() const { return this->mStableMax; }
-    long mStableMax;
     long GetTankFactoryMax() const { return this->mTankFactoryMax; }
-    long mTankFactoryMax;
     long GetTempleMax() const { return this->mTempleMax; }
-    long mTempleMax;
     long GetTowerMax() const { return this->mTowerMax; }
-    long mTowerMax;
     long GetUniversityMax() const { return this->mUniversityMax; }
-    long mUniversityMax;
-    long mMinMilitaryBuildingsEasy;
-    long mMinMilitaryBuildingsEasyDM;
-    long mMinMilitaryBuildingsMedium;
-    long mMinMilitaryBuildingsMediumDM;
-    long mMinMilitaryBuildingsHard;
-    long mMinMilitaryBuildingsHardDM;
-    long mPopLimitAdjustmentEasy;
-    long mPopLimitAdjustmentMedium;
-    long mPopLimitAdjustmentHard;
     long GetPriestMaxPerGroup() const { return this->mPriestMaxPerGroup; }
-    long mPriestMaxPerGroup;
     long GetProphetMaxPerGroup() const { return this->mProphetMaxPerGroup; }
-    long mProphetMaxPerGroup;
-    long mResearchFrequency;                // +0xe40 (EECPResearchManager::SetNextTime 0x8b1fb scales it by GetResearchFrequencyModifier)
-    long mResearchFrequencyModifierEasy;
-    long mResearchFrequencyModifierHard;
     long GetDropOffDistance() const { return this->mDropOffDistance; }
-    long mDropOffDistance;
-    long mExtraResources;
     long GetNumSeaExplorers() const { return this->mNumSeaExplorers; }
-    long mNumSeaExplorers;
-    long mTownCenterUpgradeTimer;
-    long mMaxEnabledManagers;
-    long mManagerAttackWait;
-    long mManagerEpochAdvanceWait;
-    long mEnableStockProduction;
-    long mEnableStockResource;
-    long mEnableStockCivilization;
-    long mEnableStockExploration;
-    long mEnableStockDefense;
-    long mEnableStockBuild;
-    long mLE80;
-    long mEnableStockResearch;
-    long mEnableStockCombat;
     long GetUnitsPerAntiAirBuilding() const { return this->mUnitsPerAntiAirBuilding; }
-    long mUnitsPerAntiAirBuilding;
     long GetUnitsPerAirport() const { return this->mUnitsPerAirport; }
-    long mUnitsPerAirport;
     long GetUnitsPerArcheryRange() const { return this->mUnitsPerArcheryRange; }
-    long mUnitsPerArcheryRange;
     long GetUnitsPerBarracks() const { return this->mUnitsPerBarracks; }
-    long mUnitsPerBarracks;
     long GetUnitsPerDock() const { return this->mUnitsPerDock; }
-    long mUnitsPerDock;
     long GetUnitsPerGranary() const { return this->mUnitsPerGranary; }
-    long mUnitsPerGranary;
     long GetUnitsPerHospital() const { return this->mUnitsPerHospital; }
-    long mUnitsPerHospital;
     long GetUnitsPerCyberFactory() const { return this->mUnitsPerCyberFactory; }
-    long mUnitsPerCyberFactory;
     long GetUnitsPerCyberLab() const { return this->mUnitsPerCyberLab; }
-    long mUnitsPerCyberLab;
     long GetUnitsPerNavalYard() const { return this->mUnitsPerNavalYard; }
-    long mUnitsPerNavalYard;
     long GetUnitsPerSiegeFactory() const { return this->mUnitsPerSiegeFactory; }
-    long mUnitsPerSiegeFactory;
     long GetUnitsPerSpaceDock() const { return this->mUnitsPerSpaceDock; }
-    long mUnitsPerSpaceDock;
     long GetUnitsPerStable() const { return this->mUnitsPerStable; }
-    long mUnitsPerStable;
     long GetUnitsPerTankFactory() const { return this->mUnitsPerTankFactory; }
-    long mUnitsPerTankFactory;
     long GetUnitsPerTemple() const { return this->mUnitsPerTemple; }
-    long mUnitsPerTemple;
     long GetUnitsPerTower() const { return this->mUnitsPerTower; }
-    long mUnitsPerTower;
     long GetUnitsPerUniversity() const { return this->mUnitsPerUniversity; }
-    long mUnitsPerUniversity;
-    long mCapitolUpgradeTimer;
-    long mMaxFlameThrowers;
-    long mTownGuardUpdateEasy;          // +0xed8
-    long mTownGuardUpdateMedium;        // +0xedc
-    long mTownGuardUpdateHard;          // +0xee0
-    long mDMTownGuardUpdateEasy;        // +0xee4
-    long mDMTownGuardUpdateMedium;      // +0xee8
-    long mDMTownGuardUpdateHard;        // +0xeec
-    long mDefensiveUnitUpdateEasy;
-    long mDefensiveUnitUpdateMedium;
-    long mDefensiveUnitUpdateHard;
-    long mDMDefensiveUnitUpdateEasy;
-    long mDMDefensiveUnitUpdateMedium;
-    long mDMDefensiveUnitUpdateHard;
-    long mIslandExpansionTimerEasy;
-    long mIslandExpansionTimerMedium;
-    long mIslandExpansionTimerHard;
-    long mLF14;
-    long mLF18;
-    long mLF1C;
-    long mLF20;
-    long mLF24;
-    unsigned long mNextAttackTime;  // (unsigned: Load)
-    unsigned long mNextEnableTime;  // (unsigned: Load)
-    long mLastDamagedTime;
-    long mNextPopulationTime;
-    unsigned long mNextExpansionTime;  // (unsigned: Load)
     unsigned long GetDMEarlyAttackTime() const { return this->mDMEarlyAttackTime; }
-    unsigned long mDMEarlyAttackTime;  // (unsigned: Load)
-    unsigned long mNextIslandExpansionTime;  // (unsigned: Load)
-    bool mCanAttack;
-    bool mIsStarted;                        // +0xf45 (set: Update skips the managers)
-    bool mIsEnableTimeSet;
-    bool mCitizenDamaged;
-    bool mBuildingDamaged;
-    bool mActive;                           // +0xf49 (Update is only called while set; provisional name)
-    bool mUsesFishing;
-    bool mIsCheating;
-    bool mCanBuild;
     bool GetCanExplore() const { return this->mCanExplore; }
-    bool mCanExplore;
-    bool mBF4E;
-    bool mCanGather;
-    bool mCanDefend;
-    bool mIsCitizenPercentageSet;
-    bool mIgnoreOthers;
-    bool mReplaceOnLoad;
-    bool mRegroupPending;
     bool GetAttackStarted() const { return this->mAttackStarted; }
-    bool mAttackStarted;
     // port: the engine (ee/EECPEngine.h: always kEECPEngineNext since the C++ classic's decisions were deleted, stage
     // 5; EEGameState::Create sets the AI from the lobby, EEPPlayerHelper saves it), in the padding
     unsigned char mEngine = 1;
