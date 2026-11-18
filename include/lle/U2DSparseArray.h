@@ -42,6 +42,8 @@ public:
     void GetRaw(std::vector<long>& outRaw) const;
     bool SetRaw(const std::vector<long>& inRaw);
     EeSparseArray* GetHandle() const { return this->mPoints; }   // New (port): for the AI area's record (ee_astar area.rs)
+    // New (port): where the handle is (ee_sim::astar cm_io.rs reads an area's tiles from its object)
+    EeSparseArray* const* GetHandleSlot() const { return &this->mPoints; }
 
 private:
     EeSparseArray* mPoints;                 // the points (ee_sparse_new)

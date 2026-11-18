@@ -47,55 +47,13 @@
 #include "ee/EEAIRandom.h"
 
 // Creates an empty rectangle area with no scenario area, tile counts or continent
-EEAIRectangleArea::EEAIRectangleArea()
-    : mScenarioAreaID(0), mNumLandTiles(0), mNumWaterTiles(0), mNumSpaceTiles(0), mContinentID(0), mID(0)
-{
-}
-
 // NEAR: the original calls the map's _Tree(pred, alloc) ctor out of line (ours expands it and refuses _Tree_val one
 // level deeper) and keeps the inner loop counter in edi; EE_LOST_DEBUG 1..16 does not close it
 // Recounts the rectangle's land, water and space tiles and stores and returns the continent with the most
 // of its tiles (the lowest id on a tie; 0 when none)
 unsigned short EEAIRectangleArea::UpdateContinents()
 {
-    std::map<unsigned short, long> theCounts;
-    std::map<unsigned short, long>::iterator theCount;
-    EEMap* theMap = gWorld.mMap;
-    unsigned short theResult;
-    this->mNumLandTiles = 0;
-    this->mNumWaterTiles = 0;
-    this->mNumSpaceTiles = 0;
-    for (long theX = this->mRect.mLeft; theX <= this->mRect.mRight; theX++) {
-        for (long theY = this->mRect.mTop; theY <= this->mRect.mBottom; theY++) {
-            if (!theMap->GetTile(theX, theY))
-                continue;
-            unsigned short theID = gContinentManager.GetContinentID(theX, theY);
-            EEAIContinent* theContinent = theID ? gContinentManager.GetContinentByID(theID) : NULL;
-            if (!theContinent)
-                continue;
-            if (theContinent->GetCategory() == kContinentCategoryLand)
-                this->mNumLandTiles++;
-            else if (theContinent->GetCategory() == kContinentCategoryWater)
-                this->mNumWaterTiles++;
-            else if (theContinent->GetCategory() == kContinentCategorySpace)
-                this->mNumSpaceTiles++;
-            theCount = theCounts.find((long)theContinent->GetID());
-            if (theCount != theCounts.end())
-                theCount->second++;
-            else
-                theCounts.insert(std::make_pair(theContinent->GetID(), 1L));
-        }
-    }
-    theResult = 0;
-    long theMost = 0;   // the continent covering most of it (was: the highest id present)
-    for (theCount = theCounts.begin(); theCount != theCounts.end(); ++theCount) {
-        if (theCount->second > theMost) {
-            theMost = theCount->second;
-            theResult = theCount->first;
-        }
-    }
-    this->mContinentID = theResult;
-    return theResult;
+    return ee_astar_cm_rect_update_continents(&gContinentManager.mRecord, (uint64_t)(uintptr_t)this);   // Rust: cm_build.rs
 }
 
 // NEAR: the original calls RTSMap::GetTile (0x2f85), _Ptrit::operator+ and begin() out of line and builds the

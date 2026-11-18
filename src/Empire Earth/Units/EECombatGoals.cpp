@@ -843,7 +843,7 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
     case EE_COMBAT_W_CONTINENT_LINK: {
         EEAIContinent* theFrom = (EEAIContinent*)(uintptr_t)inObject;
         EEAIContinent* theTo = (EEAIContinent*)(uintptr_t)inOther;
-        return gContinentManager.mTileFlags[theFrom->GetID() * gContinentManager.mFlagsWidth + theTo->GetID()] != 0;
+        return gContinentManager.AreAdjacent(theFrom->GetID(), theTo->GetID()) != 0;
     }
     case EE_COMBAT_W_CONNECTED_FOR_UNIT:
         return gContinentManager.AreConnectedForUnit(EEQueryUnit((uint64_t)a[0]), (EEAIContinent*)(uintptr_t)inObject,

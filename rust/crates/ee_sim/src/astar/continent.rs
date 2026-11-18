@@ -38,6 +38,8 @@ pub struct EeAStarContinentLists {
     shore: Vec<EeHullPoint>,
     choke_points: Vec<c_long>,
     ids: [Vec<u16>; EE_ASTAR_CONTINENT_LISTS],
+    /// `mNeighbors`: the adjacent continents (the `EEAIContinent*`s, the chain machine's graph edges)
+    neighbors: Vec<u64>,
 }
 
 /// `EEAIContinent`'s own members (`ee_astar_continent_init` / `ee_astar_continent_free` in its ctor and dtor).
@@ -55,6 +57,15 @@ pub struct EeAStarContinentRecord {
 }
 
 impl EeAStarContinentLists {
+    /// `mNeighbors`.
+    pub fn neighbors(&self) -> &[u64] {
+        &self.neighbors
+    }
+
+    pub fn neighbors_mut(&mut self) -> &mut Vec<u64> {
+        &mut self.neighbors
+    }
+
     /// `std::sort` after a `push_back` (`AddChokePoint`, `AddForestID`, `AddHillID`).
     fn push_sorted<T: Ord + Copy>(list: &mut Vec<T>, value: T) {
         list.push(value);
@@ -156,6 +167,39 @@ impl EeAStarContinentRecord {
 }
 
 // ---- the C interface (EEAIContinent's ctor, dtor, list upkeep and views) ----
+
+/// The adjacent continents and their count; valid until they next change.
+///
+/// # Safety
+/// `r` a live record, `count` valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_neighbors(
+    r: *const EeAStarContinentRecord,
+    count: *mut usize,
+) -> *const u64 {
+    // SAFETY: the caller's contract
+    view(unsafe { (*r).lists().map(|l| l.neighbors.as_slice()) }, count)
+}
+
+/// `mNeighbors.push_back(continent)`.
+///
+/// # Safety
+/// `r` a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_add_neighbor(r: *mut EeAStarContinentRecord, continent: u64) {
+    // SAFETY: the caller's contract
+    unsafe { (*r).lists_mut().neighbors.push(continent) };
+}
+
+/// `mNeighbors.clear()`.
+///
+/// # Safety
+/// `r` a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_continent_clear_neighbors(r: *mut EeAStarContinentRecord) {
+    // SAFETY: the caller's contract
+    unsafe { (*r).lists_mut().neighbors.clear() };
+}
 
 /// The record of a new continent: no lists, counts zero, category 0, id 0 (the ctor 0x41d846).
 ///

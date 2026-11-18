@@ -20,6 +20,7 @@
 #include "rust/sim/astar.h"         // EeAStarAreaRecord
 #include "ee/EEAIAStarStorage.h"     // EEAIAStarBounds (mBounds)
 #include "ee/EEAIKindIDs.h"
+#include "ee/EEAIListView.h"
 
 class EEInfluenceTable;
 class EEUnit;
@@ -97,6 +98,7 @@ public:
     unsigned long GetSerial() const { return this->serial; }
     void SetSerial(unsigned long inSerial) { this->serial = inSerial; }
     long GetAreaType() const { return this->area_type; }
+    EeAStarAreaRecord* AreaRecord() { return this; }   // New (port): the record (ee_sim::astar cm_io.rs's layout)
     void SetAreaType(long inType) { this->area_type = inType; }
 
 private:
